@@ -8,6 +8,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
+@skipIfWasm  # no unwinder support for tail-call frames
 class TestTailCallFrameSBAPI(TestBase):
     @skipIf(compiler="clang", compiler_version=["<", "10.0"])
     @skipIf(dwarf_version=["<", "4"])

@@ -29,21 +29,20 @@ define ptx_kernel void @test_kernel_cross_block(ptr byval([2 x i64]) align 8 %r,
 ; O0-LABEL: test_kernel_cross_block(
 ; O0:       {
 ; O0-NEXT:    .reg .pred %p<2>;
-; O0-NEXT:    .reg .b64 %rd<8>;
+; O0-NEXT:    .reg .b64 %rd<7>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b64 %rd4, [test_kernel_cross_block_param_2];
-; O0-NEXT:    ld.param.b64 %rd3, [test_kernel_cross_block_param_1];
+; O0-NEXT:    ld.param.b64 %rd3, [test_kernel_cross_block_param_2];
+; O0-NEXT:    ld.param.b64 %rd2, [test_kernel_cross_block_param_1];
 ; O0-NEXT:    mov.b64 %rd1, test_kernel_cross_block_param_0;
-; O0-NEXT:    mov.b64 %rd2, %rd1;
-; O0-NEXT:    setp.lt.s64 %p1, %rd3, 1;
+; O0-NEXT:    setp.lt.s64 %p1, %rd2, 1;
 ; O0-NEXT:    @%p1 bra $L__BB0_2;
 ; O0-NEXT:    bra.uni $L__BB0_1;
 ; O0-NEXT:  $L__BB0_1: // %body
-; O0-NEXT:    ld.param.b64 %rd5, [%rd1];
-; O0-NEXT:    ld.param.b64 %rd6, [%rd1+8];
-; O0-NEXT:    mul.lo.s64 %rd7, %rd5, %rd6;
-; O0-NEXT:    st.global.b64 [%rd4], %rd7;
+; O0-NEXT:    ld.param.b64 %rd4, [%rd1];
+; O0-NEXT:    ld.param.b64 %rd5, [%rd1+8];
+; O0-NEXT:    mul.lo.s64 %rd6, %rd4, %rd5;
+; O0-NEXT:    st.global.b64 [%rd3], %rd6;
 ; O0-NEXT:    bra.uni $L__BB0_2;
 ; O0-NEXT:  $L__BB0_2: // %done
 ; O0-NEXT:    ret;
@@ -84,20 +83,19 @@ define ptx_kernel void @test_kernel_var_offset(ptr byval([8 x i64]) align 8 %r, 
 ; O0-LABEL: test_kernel_var_offset(
 ; O0:       {
 ; O0-NEXT:    .reg .pred %p<2>;
-; O0-NEXT:    .reg .b64 %rd<7>;
+; O0-NEXT:    .reg .b64 %rd<6>;
 ; O0-EMPTY:
 ; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b64 %rd4, [test_kernel_var_offset_param_2];
-; O0-NEXT:    ld.param.b64 %rd3, [test_kernel_var_offset_param_1];
+; O0-NEXT:    ld.param.b64 %rd3, [test_kernel_var_offset_param_2];
+; O0-NEXT:    ld.param.b64 %rd2, [test_kernel_var_offset_param_1];
 ; O0-NEXT:    mov.b64 %rd1, test_kernel_var_offset_param_0;
-; O0-NEXT:    mov.b64 %rd2, %rd1;
-; O0-NEXT:    setp.lt.s64 %p1, %rd3, 1;
+; O0-NEXT:    setp.lt.s64 %p1, %rd2, 1;
 ; O0-NEXT:    @%p1 bra $L__BB1_2;
 ; O0-NEXT:    bra.uni $L__BB1_1;
 ; O0-NEXT:  $L__BB1_1: // %body
-; O0-NEXT:    add.s64 %rd5, %rd1, %rd3;
-; O0-NEXT:    ld.param.b64 %rd6, [%rd5];
-; O0-NEXT:    st.global.b64 [%rd4], %rd6;
+; O0-NEXT:    add.s64 %rd4, %rd1, %rd2;
+; O0-NEXT:    ld.param.b64 %rd5, [%rd4];
+; O0-NEXT:    st.global.b64 [%rd3], %rd5;
 ; O0-NEXT:    bra.uni $L__BB1_2;
 ; O0-NEXT:  $L__BB1_2: // %done
 ; O0-NEXT:    ret;

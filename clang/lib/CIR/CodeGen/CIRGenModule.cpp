@@ -1063,8 +1063,16 @@ static mlir::Attribute getNewInitValue(CIRGenModule &cgm, cir::GlobalOp newGlob,
   };
 
   if (auto oldArray = mlir::dyn_cast<cir::ConstArrayAttr>(oldInit)) {
+    // ConstArrayAttr::verify guarantees the elements are either an ArrayAttr or
+    // a StringAttr.  A StringAttr is a string-literal initializer: raw 8-bit
+    // character bytes with no nested global references, so there is nothing to
+    // rewrite and it is returned unchanged.  The ArrayAttr case recurses to
+    // rewrite any nested global views.
+    mlir::Attribute oldElts = oldArray.getElts();
+    if (mlir::isa<mlir::StringAttr>(oldElts))
+      return oldInit;
     mlir::Attribute newElements =
-        getNewInitElements(mlir::cast<mlir::ArrayAttr>(oldArray.getElts()));
+        getNewInitElements(mlir::cast<mlir::ArrayAttr>(oldElts));
     return cgm.getBuilder().getConstArray(
         newElements, mlir::cast<cir::ArrayType>(oldArray.getType()));
   }
@@ -1449,7 +1457,7 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
 
   if (getLangOpts().CUDA &&
       (isCUDASharedVar || isCUDAShadowVar || isCUDADeviceShadowVar)) {
-    init = cir::PoisonAttr::get(convertType(vd->getType()));
+    init = cir::UndefAttr::get(convertType(vd->getType()));
   } else if (vd->hasAttr<LoaderUninitializedAttr>()) {
     errorNYI(vd->getSourceRange(),
              "emitGlobalVarDefinition: loader uninitialized attribute");
@@ -3881,29 +3889,6 @@ void CIRGenModule::mapBlockAddress(cir::BlockAddrInfoAttr blockInfo,
          "attempting to map a blockaddress info that is already mapped");
 }
 
-void CIRGenModule::mapUnresolvedBlockAddress(cir::BlockAddressOp op) {
-  [[maybe_unused]] auto result = unresolvedBlockAddressToLabel.insert(op);
-  assert(result.second &&
-         "attempting to map a blockaddress operation that is already mapped");
-}
-
-void CIRGenModule::mapResolvedBlockAddress(cir::BlockAddressOp op,
-                                           cir::LabelOp label) {
-  [[maybe_unused]] auto result = blockAddressToLabel.try_emplace(op, label);
-  assert(result.second &&
-         "attempting to map a blockaddress operation that is already mapped");
-}
-
-void CIRGenModule::updateResolvedBlockAddress(cir::BlockAddressOp op,
-                                              cir::LabelOp newLabel) {
-  auto *it = blockAddressToLabel.find(op);
-  assert(it != blockAddressToLabel.end() &&
-         "trying to update a blockaddress not previously mapped");
-  assert(!it->second && "blockaddress already has a resolved label");
-
-  it->second = newLabel;
-}
-
 cir::LabelOp
 CIRGenModule::lookupBlockAddressInfo(cir::BlockAddrInfoAttr blockInfo) {
   return blockAddressInfoToLabel.lookup(blockInfo);
@@ -4020,8 +4005,7 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
 
   gv.setAlignment(align.getAsAlign().value());
   if (supportsCOMDAT() && gv.isWeakForLinker())
-    errorNYI(mte->getSourceRange(),
-             "Global temporary with comdat/weak linkage");
+    gv.setComdat(true);
   if (varDecl->getTLSKind())
     setTLSMode(gv, *varDecl, /*isExtendingDecl=*/true);
   mlir::Operation *cv = gv;

@@ -2986,6 +2986,7 @@ struct ModuleSubprogram {
   std::variant<common::Indirection<FunctionSubprogram>,
       common::Indirection<SubroutineSubprogram>,
       common::Indirection<SeparateModuleSubprogram>,
+      common::Indirection<OpenACCRoutineConstruct>,
       common::Indirection<CompilerDirective>>
       u;
 };
@@ -3236,10 +3237,14 @@ struct ProcedureStmt {
 
 // R1502 interface-specification ->
 //         interface-body | procedure-stmt | compiler-directive
+// Flang extension: an OpenACC ROUTINE directive is also accepted directly
+// within an interface block, e.g. a named directive preceding the interface
+// body it applies to.
 struct InterfaceSpecification {
   UNION_CLASS_BOILERPLATE(InterfaceSpecification);
   std::variant<InterfaceBody, Statement<ProcedureStmt>,
-      common::Indirection<CompilerDirective>>
+      common::Indirection<CompilerDirective>,
+      common::Indirection<OpenACCRoutineConstruct>>
       u;
 };
 

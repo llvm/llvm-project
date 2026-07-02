@@ -30,9 +30,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // [concept.swappable]
 
@@ -113,9 +113,9 @@ concept swappable_with = common_reference_with<_Tp, _Up> && requires(_Tp&& __t, 
   ranges::swap(std::forward<_Up>(__u), std::forward<_Tp>(__t));
 };
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_POP_MACROS
 

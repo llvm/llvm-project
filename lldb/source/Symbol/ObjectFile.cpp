@@ -814,10 +814,10 @@ uint32_t ObjectFile::GetCacheHash() {
 std::string ObjectFile::GetObjectName() const {
   if (ModuleSP module_sp = GetModule())
     if (ConstString object_name = module_sp->GetObjectName())
-      return llvm::formatv("{0}({1})", GetFileSpec().GetFilename().GetString(),
+      return llvm::formatv("{0}({1})", GetFileSpec().GetFilename(),
                            object_name.GetString())
           .str();
-  return GetFileSpec().GetFilename().GetString();
+  return GetFileSpec().GetFilename().str();
 }
 
 namespace llvm {

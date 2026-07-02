@@ -34,21 +34,21 @@ program single
     !ERROR: 'x' appears more than once in a COPYPRIVATE clause
     !$omp end single copyprivate(x) copyprivate(x)
 
-    !ERROR: At most one NOWAIT clause can appear on the SINGLE directive
+    !ERROR: At most one NOWAIT clause can appear on SINGLE directive
     !$omp single nowait nowait
         print *, x
     !$omp end single
 
     !$omp single
         print *, x
-    !ERROR: At most one NOWAIT clause can appear on the END SINGLE directive
+    !ERROR: At most one NOWAIT clause can appear on SINGLE directive
     !$omp end single nowait nowait
 
     !ERROR: NOWAIT clause must not be used with COPYPRIVATE clause on SINGLE directive
     !$omp single copyprivate(x) nowait
         print *, x
     !ERROR: 'x' appears more than once in a COPYPRIVATE clause
-    !ERROR: At most one NOWAIT clause can appear on the SINGLE directive
+    !ERROR: At most one NOWAIT clause can appear on SINGLE directive
     !$omp end single copyprivate(x) nowait
 
     !$omp single copyprivate(x)
@@ -62,7 +62,7 @@ program single
         print *, x
     !ERROR: 'x' appears more than once in a COPYPRIVATE clause
     !ERROR: 'z' appears more than once in a COPYPRIVATE clause
-    !ERROR: At most one NOWAIT clause can appear on the SINGLE directive
+    !ERROR: At most one NOWAIT clause can appear on SINGLE directive
     !$omp end single copyprivate(x, z) copyprivate(z) nowait
 
     !ERROR: NOWAIT clause must not be used with COPYPRIVATE clause on SINGLE directive
@@ -71,6 +71,6 @@ program single
     !ERROR: 'x' appears more than once in a COPYPRIVATE clause
     !ERROR: 'y' appears more than once in a COPYPRIVATE clause
     !ERROR: 'z' appears more than once in a COPYPRIVATE clause
-    !ERROR: At most one NOWAIT clause can appear on the SINGLE directive
+    !ERROR: At most one NOWAIT clause can appear on SINGLE directive
     !$omp end single copyprivate(x, y, z) nowait
 end program

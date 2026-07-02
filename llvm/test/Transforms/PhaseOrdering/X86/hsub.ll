@@ -842,6 +842,28 @@ define <8 x i32> @sub_v8i32_01234u67(<8 x i32> %a, <8 x i32> %b) {
 }
 
 ;
+; v2f32
+;
+
+define <2 x float> @sub_v2f32_01(<4 x float> %v0) {
+; CHECK-LABEL: @sub_v2f32_01(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[V0:%.*]], <4 x float> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[V0]], <4 x float> poison, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = fsub <2 x float> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret <2 x float> [[TMP3]]
+;
+  %v0.0 = extractelement <4 x float> %v0, i32 0
+  %v0.1 = extractelement <4 x float> %v0, i32 1
+  %v0.2 = extractelement <4 x float> %v0, i32 2
+  %v0.3 = extractelement <4 x float> %v0, i32 3
+  %op0 = fsub float %v0.0, %v0.1
+  %op1 = fsub float %v0.2, %v0.3
+  %res0 = insertelement <2 x float> undef, float %op0, i32 0
+  %res1 = insertelement <2 x float> %res0, float %op1, i32 1
+  ret <2 x float> %res1
+}
+
+;
 ; v4f32
 ;
 
@@ -1283,6 +1305,44 @@ define <2 x double> @sub_v2f64_0u(<2 x double> %a, <2 x double> %b) {
   ret <2 x double> %result
 }
 
+define <2 x double> @sub_v2f64_00(<2 x double> %a, <2 x double> %b) {
+; CHECK-LABEL: @sub_v2f64_00(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[A:%.*]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[A]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[RESULT:%.*]] = fsub <2 x double> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret <2 x double> [[RESULT]]
+;
+  %a0 = extractelement <2 x double> %a, i32 0
+  %a1 = extractelement <2 x double> %a, i32 1
+  %a01 = fsub double %a0, %a1
+  %b0 = extractelement <2 x double> %b, i32 0
+  %b1 = extractelement <2 x double> %b, i32 1
+  %b01 = fsub double %b0, %b1
+  %hsub0 = insertelement <2 x double> poison, double %a01, i32 0
+  %hsub1 = insertelement <2 x double> %hsub0, double %b01, i32 1
+  %result = shufflevector <2 x double> %hsub1, <2 x double> %a, <2 x i32> <i32 0, i32 0>
+  ret <2 x double> %result
+}
+
+define <2 x double> @sub_v2f64_11(<2 x double> %a, <2 x double> %b) {
+; CHECK-LABEL: @sub_v2f64_11(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[B:%.*]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[B]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[RESULT:%.*]] = fsub <2 x double> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret <2 x double> [[RESULT]]
+;
+  %a0 = extractelement <2 x double> %a, i32 0
+  %a1 = extractelement <2 x double> %a, i32 1
+  %a01 = fsub double %a0, %a1
+  %b0 = extractelement <2 x double> %b, i32 0
+  %b1 = extractelement <2 x double> %b, i32 1
+  %b01 = fsub double %b0, %b1
+  %hsub0 = insertelement <2 x double> poison, double %a01, i32 0
+  %hsub1 = insertelement <2 x double> %hsub0, double %b01, i32 1
+  %result = shufflevector <2 x double> %hsub1, <2 x double> %a, <2 x i32> <i32 1, i32 1>
+  ret <2 x double> %result
+}
+
 ;
 ; v4f64
 ;
@@ -1612,4 +1672,141 @@ define <4 x double> @sub_v4f64_32u0(<4 x double> %a, <4 x double> %b) {
   %hsub3 = insertelement <4 x double> %hsub2, double %b23, i32 3
   %result = shufflevector <4 x double> %hsub3, <4 x double> %a, <4 x i32> <i32 3, i32 2, i32 poison, i32 0>
   ret <4 x double> %result
+}
+
+define <4 x double> @sub_v4f64_0000(<4 x double> %a) {
+; SSE2-LABEL: @sub_v4f64_0000(
+; SSE2-NEXT:    [[A0:%.*]] = extractelement <4 x double> [[A:%.*]], i64 0
+; SSE2-NEXT:    [[A1:%.*]] = extractelement <4 x double> [[A]], i64 1
+; SSE2-NEXT:    [[HOP0:%.*]] = fsub double [[A0]], [[A1]]
+; SSE2-NEXT:    [[INS:%.*]] = insertelement <4 x double> poison, double [[HOP0]], i64 0
+; SSE2-NEXT:    [[SHUF:%.*]] = shufflevector <4 x double> [[INS]], <4 x double> poison, <4 x i32> zeroinitializer
+; SSE2-NEXT:    ret <4 x double> [[SHUF]]
+;
+; SSE4-LABEL: @sub_v4f64_0000(
+; SSE4-NEXT:    [[A0:%.*]] = extractelement <4 x double> [[A:%.*]], i64 0
+; SSE4-NEXT:    [[A1:%.*]] = extractelement <4 x double> [[A]], i64 1
+; SSE4-NEXT:    [[HOP0:%.*]] = fsub double [[A0]], [[A1]]
+; SSE4-NEXT:    [[INS:%.*]] = insertelement <4 x double> poison, double [[HOP0]], i64 0
+; SSE4-NEXT:    [[SHUF:%.*]] = shufflevector <4 x double> [[INS]], <4 x double> poison, <4 x i32> zeroinitializer
+; SSE4-NEXT:    ret <4 x double> [[SHUF]]
+;
+; AVX-LABEL: @sub_v4f64_0000(
+; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A:%.*]], <4 x double> poison, <4 x i32> zeroinitializer
+; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[A]], <4 x double> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+; AVX-NEXT:    [[SHUF:%.*]] = fsub <4 x double> [[TMP1]], [[TMP2]]
+; AVX-NEXT:    ret <4 x double> [[SHUF]]
+;
+  %a0 = extractelement <4 x double> %a, i32 0
+  %a1 = extractelement <4 x double> %a, i32 1
+  %hop0 = fsub double %a0, %a1
+  %a2 = extractelement <4 x double> %a, i32 2
+  %a3 = extractelement <4 x double> %a, i32 3
+  %hop1 = fsub double %a2, %a3
+  %ins = insertelement <4 x double> undef, double %hop0, i32 0
+  %ins2 = insertelement <4 x double> %ins,  double %hop1, i32 2
+  %shuf = shufflevector <4 x double> %ins2, <4 x double> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
+  ret <4 x double> %shuf
+}
+
+define <4 x double> @sub_v4f64_0022(<4 x double> %a) {
+; SSE2-LABEL: @sub_v4f64_0022(
+; SSE2-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A:%.*]], <4 x double> poison, <2 x i32> <i32 0, i32 2>
+; SSE2-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[A]], <4 x double> poison, <2 x i32> <i32 1, i32 3>
+; SSE2-NEXT:    [[TMP3:%.*]] = fsub <2 x double> [[TMP1]], [[TMP2]]
+; SSE2-NEXT:    [[SHUF:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
+; SSE2-NEXT:    ret <4 x double> [[SHUF]]
+;
+; SSE4-LABEL: @sub_v4f64_0022(
+; SSE4-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A:%.*]], <4 x double> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+; SSE4-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[A]], <4 x double> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+; SSE4-NEXT:    [[SHUF:%.*]] = fsub <4 x double> [[TMP1]], [[TMP2]]
+; SSE4-NEXT:    ret <4 x double> [[SHUF]]
+;
+; AVX-LABEL: @sub_v4f64_0022(
+; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[A:%.*]], <4 x double> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[A]], <4 x double> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+; AVX-NEXT:    [[SHUF:%.*]] = fsub <4 x double> [[TMP1]], [[TMP2]]
+; AVX-NEXT:    ret <4 x double> [[SHUF]]
+;
+  %a0 = extractelement <4 x double> %a, i32 0
+  %a1 = extractelement <4 x double> %a, i32 1
+  %hop0 = fsub double %a0, %a1
+  %a2 = extractelement <4 x double> %a, i32 2
+  %a3 = extractelement <4 x double> %a, i32 3
+  %hop1 = fsub double %a2, %a3
+  %ins = insertelement <4 x double> undef, double %hop0, i32 0
+  %ins2 = insertelement <4 x double> %ins,  double %hop1, i32 2
+  %shuf = shufflevector <4 x double> %ins2, <4 x double> undef, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  ret <4 x double> %shuf
+}
+
+define <4 x i32> @not_a_hsub_1(<4 x i32> %A, <4 x i32> %B) {
+; CHECK-LABEL: @not_a_hsub_1(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> <i32 0, i32 2, i32 5, i32 7>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> [[B]], <4 x i32> <i32 1, i32 3, i32 4, i32 6>
+; CHECK-NEXT:    [[TMP3:%.*]] = sub <4 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret <4 x i32> [[TMP3]]
+;
+  %vecext = extractelement <4 x i32> %A, i32 0
+  %vecext1 = extractelement <4 x i32> %A, i32 1
+  %sub = sub i32 %vecext, %vecext1
+  %vecinit = insertelement <4 x i32> undef, i32 %sub, i32 0
+  %vecext2 = extractelement <4 x i32> %A, i32 2
+  %vecext3 = extractelement <4 x i32> %A, i32 3
+  %sub4 = sub i32 %vecext2, %vecext3
+  %vecinit5 = insertelement <4 x i32> %vecinit, i32 %sub4, i32 1
+  %vecext6 = extractelement <4 x i32> %B, i32 1
+  %vecext7 = extractelement <4 x i32> %B, i32 0
+  %sub8 = sub i32 %vecext6, %vecext7
+  %vecinit9 = insertelement <4 x i32> %vecinit5, i32 %sub8, i32 2
+  %vecext10 = extractelement <4 x i32> %B, i32 3
+  %vecext11 = extractelement <4 x i32> %B, i32 2
+  %sub12 = sub i32 %vecext10, %vecext11
+  %vecinit13 = insertelement <4 x i32> %vecinit9, i32 %sub12, i32 3
+  ret <4 x i32> %vecinit13
+}
+
+define <4 x float> @not_a_hsub_2(<4 x float> %A, <4 x float> %B) {
+; CHECK-LABEL: @not_a_hsub_2(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> [[B:%.*]], <4 x i32> <i32 0, i32 2, i32 4, i32 7>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[A]], <4 x float> [[B]], <4 x i32> <i32 1, i32 3, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP3:%.*]] = fsub <4 x float> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret <4 x float> [[TMP3]]
+;
+  %vecext = extractelement <4 x float> %A, i32 2
+  %vecext1 = extractelement <4 x float> %A, i32 3
+  %sub = fsub float %vecext, %vecext1
+  %vecinit = insertelement <4 x float> undef, float %sub, i32 1
+  %vecext2 = extractelement <4 x float> %A, i32 0
+  %vecext3 = extractelement <4 x float> %A, i32 1
+  %sub4 = fsub float %vecext2, %vecext3
+  %vecinit5 = insertelement <4 x float> %vecinit, float %sub4, i32 0
+  %vecext6 = extractelement <4 x float> %B, i32 3
+  %vecext7 = extractelement <4 x float> %B, i32 2
+  %sub8 = fsub float %vecext6, %vecext7
+  %vecinit9 = insertelement <4 x float> %vecinit5, float %sub8, i32 3
+  %vecext10 = extractelement <4 x float> %B, i32 0
+  %vecext11 = extractelement <4 x float> %B, i32 1
+  %sub12 = fsub float %vecext10, %vecext11
+  %vecinit13 = insertelement <4 x float> %vecinit9, float %sub12, i32 2
+  ret <4 x float> %vecinit13
+}
+
+define <2 x double> @not_a_hsub_3(<2 x double> %A, <2 x double> %B) {
+; CHECK-LABEL: @not_a_hsub_3(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[A:%.*]], <2 x double> [[B:%.*]], <2 x i32> <i32 1, i32 2>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[A]], <2 x double> [[B]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = fsub <2 x double> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret <2 x double> [[TMP3]]
+;
+  %vecext = extractelement <2 x double> %B, i32 0
+  %vecext1 = extractelement <2 x double> %B, i32 1
+  %sub = fsub double %vecext, %vecext1
+  %vecinit = insertelement <2 x double> undef, double %sub, i32 1
+  %vecext2 = extractelement <2 x double> %A, i32 1
+  %vecext3 = extractelement <2 x double> %A, i32 0
+  %sub2 = fsub double %vecext2, %vecext3
+  %vecinit2 = insertelement <2 x double> %vecinit, double %sub2, i32 0
+  ret <2 x double> %vecinit2
 }

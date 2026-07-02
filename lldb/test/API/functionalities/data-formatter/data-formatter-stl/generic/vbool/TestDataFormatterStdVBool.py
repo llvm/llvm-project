@@ -44,11 +44,12 @@ class StdVBoolDataFormatterTestCase(TestBase):
             self.runCmd("type synth clear", check=False)
             self.runCmd("settings set target.max-children-count 24", check=False)
 
+        self.runCmd("settings set target.max-children-count 128", check=False)
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
 
         self.expect(
-            "frame variable -A vBool",
+            "frame variable vBool",
             substrs=[
                 "size=73",
                 "[0] = false",
@@ -69,7 +70,7 @@ class StdVBoolDataFormatterTestCase(TestBase):
         )
 
         self.expect(
-            "expr -A -- vBool",
+            "expr -- vBool",
             substrs=[
                 "size=73",
                 "[0] = false",

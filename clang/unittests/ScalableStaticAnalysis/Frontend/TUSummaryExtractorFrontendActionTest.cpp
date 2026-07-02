@@ -98,6 +98,26 @@ public:
     return failing("writeLUSummaryEncoding");
   }
 
+  llvm::Expected<StaticLibrary>
+  readStaticLibrary(llvm::StringRef Path) override {
+    return failing("readStaticLibrary");
+  }
+
+  llvm::Error writeStaticLibrary(const StaticLibrary &S,
+                                 llvm::StringRef Path) override {
+    return failing("writeStaticLibrary");
+  }
+
+  llvm::Expected<MultiArchStaticLibrary>
+  readMultiArchStaticLibrary(llvm::StringRef Path) override {
+    return failing("readMultiArchStaticLibrary");
+  }
+
+  llvm::Error writeMultiArchStaticLibrary(const MultiArchStaticLibrary &M,
+                                          llvm::StringRef Path) override {
+    return failing("writeMultiArchStaticLibrary");
+  }
+
   llvm::Expected<WPASuite> readWPASuite(llvm::StringRef Path) override {
     return failing("readWPASuite");
   }
@@ -177,6 +197,21 @@ public:
   }
   llvm::Error writeLUSummaryEncoding(const LUSummaryEncoding &,
                                      llvm::StringRef) override {
+    return llvm::Error::success();
+  }
+  llvm::Expected<StaticLibrary> readStaticLibrary(llvm::StringRef) override {
+    return llvm::createStringError("not implemented");
+  }
+  llvm::Error writeStaticLibrary(const StaticLibrary &,
+                                 llvm::StringRef) override {
+    return llvm::Error::success();
+  }
+  llvm::Expected<MultiArchStaticLibrary>
+  readMultiArchStaticLibrary(llvm::StringRef) override {
+    return llvm::createStringError("not implemented");
+  }
+  llvm::Error writeMultiArchStaticLibrary(const MultiArchStaticLibrary &,
+                                          llvm::StringRef) override {
     return llvm::Error::success();
   }
   llvm::Expected<WPASuite> readWPASuite(llvm::StringRef) override {

@@ -5,17 +5,18 @@ define <2 x double> @repeated_imaginary_addend(i1 %c) {
 ; CHECK-LABEL: define <2 x double> @repeated_imaginary_addend(
 ; CHECK-SAME: i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x double> @llvm.vector.interleave2.v4f64(<2 x double> zeroinitializer, <2 x double> zeroinitializer)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <4 x double> [ [[TMP0]], %[[ENTRY]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP2]] = fadd reassoc contract <4 x double> zeroinitializer, [[TMP1]]
+; CHECK-NEXT:    [[ACC_R:%.*]] = phi <2 x double> [ zeroinitializer, %[[ENTRY]] ], [ [[ACC_R_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[ACC_I:%.*]] = phi <2 x double> [ zeroinitializer, %[[ENTRY]] ], [ [[ACC_I_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[R_ADDEND:%.*]] = shufflevector <4 x double> zeroinitializer, <4 x double> zeroinitializer, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[ACC_R_NEXT]] = fadd reassoc contract <2 x double> [[R_ADDEND]], [[ACC_R]]
+; CHECK-NEXT:    [[I_ADDEND:%.*]] = shufflevector <4 x double> zeroinitializer, <4 x double> zeroinitializer, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[ACC_I_TMP:%.*]] = fadd reassoc contract <2 x double> [[ACC_I]], [[I_ADDEND]]
+; CHECK-NEXT:    [[ACC_I_NEXT]] = fadd reassoc contract <2 x double> [[I_ADDEND]], [[ACC_I_TMP]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[EXIT:.*]], label %[[VECTOR_BODY]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = call { <2 x double>, <2 x double> } @llvm.vector.deinterleave2.v4f64(<4 x double> [[TMP2]])
-; CHECK-NEXT:    [[ACC_R_NEXT:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP3]], 0
 ; CHECK-NEXT:    [[REAL_USE:%.*]] = fadd <2 x double> [[ACC_R_NEXT]], zeroinitializer
-; CHECK-NEXT:    [[ACC_I_NEXT:%.*]] = extractvalue { <2 x double>, <2 x double> } [[TMP3]], 1
 ; CHECK-NEXT:    ret <2 x double> [[ACC_I_NEXT]]
 ;
 entry:

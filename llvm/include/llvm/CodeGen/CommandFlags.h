@@ -216,6 +216,13 @@ LLVM_ABI bool getDefaultValueTrackingVariableLocations(const llvm::Triple &T);
 /// line. This can be used for tools that do not need further customization of
 /// the TargetOptions.
 LLVM_ABI Expected<std::unique_ptr<TargetMachine>> createTargetMachineForTriple(
+    const Triple &TargetTriple,
+    CodeGenOptLevel OptLevel = CodeGenOptLevel::Default);
+
+// TODO: Remove after llvm 23 branches
+LLVM_DEPRECATED("Use the Triple overload instead",
+                "createTargetMachineForTriple")
+LLVM_ABI Expected<std::unique_ptr<TargetMachine>> createTargetMachineForTriple(
     StringRef TargetTriple,
     CodeGenOptLevel OptLevel = CodeGenOptLevel::Default);
 
