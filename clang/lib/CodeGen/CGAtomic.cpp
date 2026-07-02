@@ -21,6 +21,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/Transforms/Utils/LowerAtomic.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -555,6 +556,183 @@ static llvm::Value *EmitPostAtomicMinMax(CGBuilderTy &Builder,
   }
   llvm::Value *Cmp = Builder.CreateICmp(Pred, OldVal, RHS, "tst");
   return Builder.CreateSelect(Cmp, OldVal, RHS, "newval");
+}
+
+/// Classify an atomic op as an arithmetic/bitwise read-modify-write (one that
+/// normally lowers to a single `atomicrmw`), mapping it to the matching
+/// `AtomicRMWInst::BinOp` and reporting whether the builtin returns the new
+/// value (`<op>_fetch`) rather than the old value (`fetch_<op>`). \p IsSigned
+/// selects signed vs unsigned min/max. Returns false for exchange, load, store,
+/// compare-exchange, and any non-RMW op, none of which need the _BitInt loop.
+static bool classifyBitIntRMW(AtomicExpr::AtomicOp Op, bool IsSigned,
+                              llvm::AtomicRMWInst::BinOp &BinOp,
+                              bool &ReturnsNew) {
+  using RMW = llvm::AtomicRMWInst;
+  switch (Op) {
+  case AtomicExpr::AO__c11_atomic_fetch_add:
+  case AtomicExpr::AO__hip_atomic_fetch_add:
+  case AtomicExpr::AO__opencl_atomic_fetch_add:
+  case AtomicExpr::AO__atomic_fetch_add:
+  case AtomicExpr::AO__scoped_atomic_fetch_add:
+    BinOp = RMW::Add, ReturnsNew = false;
+    return true;
+  case AtomicExpr::AO__atomic_add_fetch:
+  case AtomicExpr::AO__scoped_atomic_add_fetch:
+    BinOp = RMW::Add, ReturnsNew = true;
+    return true;
+  case AtomicExpr::AO__c11_atomic_fetch_sub:
+  case AtomicExpr::AO__hip_atomic_fetch_sub:
+  case AtomicExpr::AO__opencl_atomic_fetch_sub:
+  case AtomicExpr::AO__atomic_fetch_sub:
+  case AtomicExpr::AO__scoped_atomic_fetch_sub:
+    BinOp = RMW::Sub, ReturnsNew = false;
+    return true;
+  case AtomicExpr::AO__atomic_sub_fetch:
+  case AtomicExpr::AO__scoped_atomic_sub_fetch:
+    BinOp = RMW::Sub, ReturnsNew = true;
+    return true;
+  case AtomicExpr::AO__c11_atomic_fetch_and:
+  case AtomicExpr::AO__hip_atomic_fetch_and:
+  case AtomicExpr::AO__opencl_atomic_fetch_and:
+  case AtomicExpr::AO__atomic_fetch_and:
+  case AtomicExpr::AO__scoped_atomic_fetch_and:
+    BinOp = RMW::And, ReturnsNew = false;
+    return true;
+  case AtomicExpr::AO__atomic_and_fetch:
+  case AtomicExpr::AO__scoped_atomic_and_fetch:
+    BinOp = RMW::And, ReturnsNew = true;
+    return true;
+  case AtomicExpr::AO__c11_atomic_fetch_or:
+  case AtomicExpr::AO__hip_atomic_fetch_or:
+  case AtomicExpr::AO__opencl_atomic_fetch_or:
+  case AtomicExpr::AO__atomic_fetch_or:
+  case AtomicExpr::AO__scoped_atomic_fetch_or:
+    BinOp = RMW::Or, ReturnsNew = false;
+    return true;
+  case AtomicExpr::AO__atomic_or_fetch:
+  case AtomicExpr::AO__scoped_atomic_or_fetch:
+    BinOp = RMW::Or, ReturnsNew = true;
+    return true;
+  case AtomicExpr::AO__c11_atomic_fetch_xor:
+  case AtomicExpr::AO__hip_atomic_fetch_xor:
+  case AtomicExpr::AO__opencl_atomic_fetch_xor:
+  case AtomicExpr::AO__atomic_fetch_xor:
+  case AtomicExpr::AO__scoped_atomic_fetch_xor:
+    BinOp = RMW::Xor, ReturnsNew = false;
+    return true;
+  case AtomicExpr::AO__atomic_xor_fetch:
+  case AtomicExpr::AO__scoped_atomic_xor_fetch:
+    BinOp = RMW::Xor, ReturnsNew = true;
+    return true;
+  case AtomicExpr::AO__c11_atomic_fetch_nand:
+  case AtomicExpr::AO__atomic_fetch_nand:
+  case AtomicExpr::AO__scoped_atomic_fetch_nand:
+    BinOp = RMW::Nand, ReturnsNew = false;
+    return true;
+  case AtomicExpr::AO__atomic_nand_fetch:
+  case AtomicExpr::AO__scoped_atomic_nand_fetch:
+    BinOp = RMW::Nand, ReturnsNew = true;
+    return true;
+  case AtomicExpr::AO__c11_atomic_fetch_min:
+  case AtomicExpr::AO__hip_atomic_fetch_min:
+  case AtomicExpr::AO__opencl_atomic_fetch_min:
+  case AtomicExpr::AO__atomic_fetch_min:
+  case AtomicExpr::AO__scoped_atomic_fetch_min:
+    BinOp = IsSigned ? RMW::Min : RMW::UMin, ReturnsNew = false;
+    return true;
+  case AtomicExpr::AO__atomic_min_fetch:
+  case AtomicExpr::AO__scoped_atomic_min_fetch:
+    BinOp = IsSigned ? RMW::Min : RMW::UMin, ReturnsNew = true;
+    return true;
+  case AtomicExpr::AO__c11_atomic_fetch_max:
+  case AtomicExpr::AO__hip_atomic_fetch_max:
+  case AtomicExpr::AO__opencl_atomic_fetch_max:
+  case AtomicExpr::AO__atomic_fetch_max:
+  case AtomicExpr::AO__scoped_atomic_fetch_max:
+    BinOp = IsSigned ? RMW::Max : RMW::UMax, ReturnsNew = false;
+    return true;
+  case AtomicExpr::AO__atomic_max_fetch:
+  case AtomicExpr::AO__scoped_atomic_max_fetch:
+    BinOp = IsSigned ? RMW::Max : RMW::UMax, ReturnsNew = true;
+    return true;
+  case AtomicExpr::AO__atomic_fetch_uinc:
+  case AtomicExpr::AO__scoped_atomic_fetch_uinc:
+    BinOp = RMW::UIncWrap, ReturnsNew = false;
+    return true;
+  case AtomicExpr::AO__atomic_fetch_udec:
+  case AtomicExpr::AO__scoped_atomic_fetch_udec:
+    BinOp = RMW::UDecWrap, ReturnsNew = false;
+    return true;
+  default:
+    return false;
+  }
+}
+
+/// True for a `_BitInt(N)` whose value width N differs from its in-memory width
+/// (e.g. `_BitInt(37)` occupies 64 bits), so the high bits are padding.
+static bool hasBitIntPadding(QualType T, const ASTContext &C) {
+  if (const auto *BIT = T->getAs<BitIntType>())
+    return BIT->getNumBits() != C.getTypeSize(T);
+  return false;
+}
+
+/// Map a constant C ABI memory order to an llvm ordering. A non-constant order
+/// is handled conservatively with the strongest ordering.
+static llvm::AtomicOrdering atomicOrderOrSeqCst(llvm::Value *Order) {
+  auto *C = dyn_cast<llvm::ConstantInt>(Order);
+  if (!C || !llvm::isValidAtomicOrderingCABI(C->getZExtValue()))
+    return llvm::AtomicOrdering::SequentiallyConsistent;
+  switch (static_cast<llvm::AtomicOrderingCABI>(C->getZExtValue())) {
+  case llvm::AtomicOrderingCABI::relaxed:
+    return llvm::AtomicOrdering::Monotonic;
+  case llvm::AtomicOrderingCABI::consume:
+  case llvm::AtomicOrderingCABI::acquire:
+    return llvm::AtomicOrdering::Acquire;
+  case llvm::AtomicOrderingCABI::release:
+    return llvm::AtomicOrdering::Release;
+  case llvm::AtomicOrderingCABI::acq_rel:
+    return llvm::AtomicOrdering::AcquireRelease;
+  case llvm::AtomicOrderingCABI::seq_cst:
+    return llvm::AtomicOrdering::SequentiallyConsistent;
+  }
+  llvm_unreachable("invalid CABI ordering");
+}
+
+/// Emit a `_BitInt(N)` atomic read-modify-write as a compare-exchange loop. A
+/// single `atomicrmw` on the padded memory integer would carry into / compare
+/// the padding bits, and no arbitrary-width `__atomic_fetch_*` libcall exists
+/// for wide widths.
+///
+/// The update computes at value width N (so the result wraps mod 2^N and is
+/// independent of padding). EmitAtomicUpdate carries the raw loaded
+/// representation as the cmpxchg expected, so an object with non-canonical
+/// padding (e.g. written through a union) still converges instead of spinning
+/// forever; the desired it writes back is canonical. See P0528.
+static RValue emitBitIntAtomicRMWLoop(CodeGenFunction &CGF, AtomicExpr *E,
+                                      Address Ptr, Address Val1,
+                                      QualType AtomicTy,
+                                      llvm::AtomicRMWInst::BinOp BinOp,
+                                      bool ReturnsNew, llvm::Value *Order) {
+  QualType ValTy = E->getValueType();
+  llvm::AtomicOrdering AO = atomicOrderOrSeqCst(Order);
+
+  LValue AtomicLVal = CGF.MakeAddrLValue(Ptr, AtomicTy);
+  AtomicInfo Atomics(CGF, AtomicLVal);
+
+  llvm::Value *RHS =
+      CGF.EmitLoadOfScalar(CGF.MakeAddrLValue(Val1, ValTy), E->getExprLoc());
+
+  llvm::Value *Old = nullptr, *New = nullptr;
+  Atomics.EmitAtomicUpdate(
+      AO,
+      [&](RValue OldRV) {
+        Old = OldRV.getScalarVal();
+        New = llvm::buildAtomicRMWValue(BinOp, CGF.Builder, Old, RHS);
+        return RValue::get(New);
+      },
+      E->isVolatile());
+
+  return RValue::get(ReturnsNew ? New : Old);
 }
 
 static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
@@ -1143,6 +1321,27 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
   // are compatible.
   LValue AtomicVal = MakeAddrLValue(Ptr, AtomicTy);
   AtomicInfo Atomics(*this, AtomicVal);
+
+  // A `_BitInt(N)` read-modify-write whose value width has padding bits, or
+  // whose size forces a libcall, cannot use a single atomicrmw: the op would
+  // carry into / compare the padding bits, and no arbitrary-width
+  // __atomic_fetch_* libcall exists. Emit a compare-exchange loop instead.
+  // Bitwise and/or/xor are exact even with padding, so only the wide case needs
+  // the loop for them. load/store/exchange/compare_exchange keep their paths.
+  if (MemTy->isBitIntType()) {
+    llvm::AtomicRMWInst::BinOp BinOp;
+    bool RMWReturnsNew;
+    if (classifyBitIntRMW(E->getOp(), MemTy->isSignedIntegerType(), BinOp,
+                          RMWReturnsNew)) {
+      bool WideOrNonPow2 = (Size & (Size - 1)) != 0 || Size > 16;
+      bool Bitwise = BinOp == llvm::AtomicRMWInst::And ||
+                     BinOp == llvm::AtomicRMWInst::Or ||
+                     BinOp == llvm::AtomicRMWInst::Xor;
+      if (WideOrNonPow2 || (hasBitIntPadding(MemTy, getContext()) && !Bitwise))
+        return emitBitIntAtomicRMWLoop(*this, E, Ptr, Val1, AtomicTy, BinOp,
+                                       RMWReturnsNew, Order);
+    }
+  }
 
   Address OriginalVal1 = Val1;
   if (ShouldCastToIntPtrTy) {

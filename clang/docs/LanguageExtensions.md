@@ -434,6 +434,15 @@ favor of the standard type.
 Note: the ABI for `_BitInt(N)` is still in the process of being stabilized,
 so this type should not yet be used in interfaces that require ABI stability.
 
+`_BitInt(N)` may be used as an atomic type: `_Atomic(_BitInt(N))`, the
+`__c11_atomic_*` and `__atomic_*` builtins, and `std::atomic` all accept
+it for any width. Widths the target cannot operate on inline are lowered to the
+`__atomic_*` libcalls. For a width whose representation has padding bits (`N`
+not a multiple of the type's alignment, e.g. `_BitInt(37)`), arithmetic
+read-modify-write operations are emitted as a compare-exchange loop that computes
+at width `N`, so the result wraps modulo `2**N` and the padding bits stay
+canonical.
+
 ### C keywords supported in all language modes
 
 Clang supports `_Alignas`, `_Alignof`, `_Atomic`, `_Complex`,

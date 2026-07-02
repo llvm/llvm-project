@@ -5596,11 +5596,6 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
                 ? 0
                 : 1);
 
-  if (ValType->isBitIntType()) {
-    Diag(Ptr->getExprLoc(), diag::err_atomic_builtin_bit_int_prohibit);
-    return ExprError();
-  }
-
   return AE;
 }
 

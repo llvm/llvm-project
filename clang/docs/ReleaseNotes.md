@@ -294,6 +294,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 - Added support for floating point and pointer values in most `__atomic_`
   builtins.
+- Atomic operations on `_BitInt(N)` are now supported, including
+  `_Atomic(_BitInt(N))`, the `__c11_atomic_*` / `__atomic_*` builtins, and
+  `std::atomic`. Widths the target cannot operate on inline use the
+  `__atomic_*` libcalls; arithmetic read-modify-write on a width with padding
+  bits is emitted as a compare-exchange loop computing at the value width.
 - Added `__builtin_stdc_rotate_left` and `__builtin_stdc_rotate_right`
   for bit rotation of unsigned integers including `_BitInt` types. Rotation
   counts are normalized modulo the bit-width and support negative values.
