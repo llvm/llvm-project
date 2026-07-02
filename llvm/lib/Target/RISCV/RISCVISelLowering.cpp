@@ -20469,7 +20469,7 @@ static SDValue performVSELECTCombine(SDNode *N, SelectionDAG &DAG,
   SDValue TrueVal = N->getOperand(1);
   SDValue FalseVal = N->getOperand(2);
 
-  // Convert (vselect CC, true, false) to (vselect InvertCC, false, true when)
+  // Convert (vselect CC, true, false) to (vselect InvertCC, false, true) when
   // false has one use and true has multiple use.
   // It relies on RISCVVectorPeephole.cpp foldVMergeToMask to eliminate
   // vmerge.vv
