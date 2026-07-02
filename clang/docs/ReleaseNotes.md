@@ -674,6 +674,12 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Diagnostics for the C++11 range-based for statement now report the correct
   iterator type in notes for invalid iterator types.
 
+- Added `-Wcounted-by-addrof` (default off) warning when unary `&` is applied to a `__counted_by`
+  flexible array member as a whole (e.g. `&p->fam`). This form bypasses the count when lowering
+  `__builtin_dynamic_object_size` and falls back to the object's static layout, silently discarding
+  the annotation. A fix-it removes the `&` when the object's allocation is not statically known,
+  where the count-derived bound is the useful answer.
+  
 - `-Wfortify-source` now warns when the constant-evaluated argument to
   `umask` has bits set outside `0777`. Those bits are silently discarded
   by the kernel, so setting them is almost always a typo (matching the

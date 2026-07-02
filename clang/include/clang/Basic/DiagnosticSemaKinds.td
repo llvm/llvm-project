@@ -7195,6 +7195,12 @@ def note_counted_by_consider_using_sized_by : Note<
 def warn_counted_by_attr_elt_type_unknown_size :
   Warning<err_counted_by_attr_pointee_unknown_size.Summary>,
   InGroup<BoundsSafetyCountedByEltTyUnknownSize>;
+def warn_counted_by_addrof_discards_count : Warning<
+  "taking the address of flexible array member %0 discards the "
+  "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}1' bound; "
+  "'__builtin_dynamic_object_size' on the resulting pointer uses the static "
+  "layout of the object, not the annotated count">,
+  InGroup<CountedByAddrof>, DefaultIgnore;
 
 // __builtin_counted_by_ref diagnostics:
 def err_builtin_counted_by_ref_invalid_arg

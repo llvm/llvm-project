@@ -14976,6 +14976,68 @@ bool Sema::CheckUseOfCXXMethodAsAddressOfOperand(SourceLocation OpLoc,
          << FixItHint::CreateInsertion(DRE->getSourceRange().getBegin(), Qual);
 }
 
+/// Returns true if the object holding the FAM reached by \p ME has a
+/// statically-known allocation (automatic/static/global). There the layout
+/// answer __bdos already gives is the real bound, so we offer no fix-it. Only
+/// when the object is reached through a pointer does the count carry the useful
+/// bound and the "drop the '&'" fix-it apply.
+static bool flexibleArrayMemberHasFixedStorage(const MemberExpr *ME) {
+  const Expr *E = ME;
+  while (true) {
+    if (const auto *M = dyn_cast<MemberExpr>(E)) {
+      if (M->isArrow())
+        return false; // Reached through a pointer.
+      E = M->getBase()->IgnoreParenImpCasts();
+      continue;
+    }
+    if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E)) {
+      const Expr *Base = ASE->getBase()->IgnoreParenImpCasts();
+      // Array subscript keeps the storage, pointer subscript escapes it.
+      if (Base->getType()->isPointerType())
+        return false;
+      E = Base;
+      continue;
+    }
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+      const auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
+      // Locals, params, statics and globals all have a fixed allocation.
+      return VD && (VD->hasLocalStorage() || VD->hasGlobalStorage());
+    }
+    return false; // Call temporaries, opaque returns, etc.
+  }
+}
+
+/// -Wcounted-by-addrof: warn when unary '&' is applied to a whole
+/// '__counted_by' flexible array member. CodeGen bypasses emitCountedBySize()
+/// for this shape and falls back to layout-derived llvm.objectsize, discarding
+/// the count.
+static void DiagnoseCountedByAddrOf(Sema &S, SourceLocation OpLoc, Expr *Op) {
+  if (S.getLangOpts().BoundsSafety)
+    return; // Already an error under -fbounds-safety.
+
+  const auto *ME = dyn_cast<MemberExpr>(Op->IgnoreParens());
+  if (!ME)
+    return;
+
+  const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl());
+  if (!FD)
+    return;
+
+  // The "whole FAM" shape is an incomplete array carrying a bounds attribute;
+  // this excludes &fam[idx], the decayed bare fam, and __counted_by pointers.
+  const auto *CATy = FD->getType()->getAs<CountAttributedType>();
+  if (!CATy || !CATy->desugar()->isIncompleteArrayType())
+    return;
+
+  auto DB = S.Diag(OpLoc, diag::warn_counted_by_addrof_discards_count)
+            << FD << static_cast<unsigned>(CATy->getKind())
+            << Op->getSourceRange();
+
+  // Offer "remove the '&'" only when the count is the useful bound.
+  if (!flexibleArrayMemberHasFixedStorage(ME))
+    DB << FixItHint::CreateRemoval(SourceRange(OpLoc, OpLoc));
+}
+
 QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
   if (const BuiltinType *PTy = OrigOp.get()->getType()->getAsPlaceholderType()){
     if (PTy->getKind() == BuiltinType::Overload) {
@@ -15018,6 +15080,10 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
 
   // Make sure to ignore parentheses in subsequent checks
   Expr *op = OrigOp.get()->IgnoreParens();
+
+  // -Wcounted-by-addrof: '&' on a __counted_by flexible array member silently
+  // discards the count in CodeGen.
+  DiagnoseCountedByAddrOf(*this, OpLoc, op);
 
   // In OpenCL captures for blocks called as lambda functions
   // are located in the private address space. Blocks used in
