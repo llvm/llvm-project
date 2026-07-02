@@ -40,9 +40,6 @@
   ; Function Attrs: convergent nounwind readnone
   declare i64 @llvm.amdgcn.if.break(i1, i64) #2
 
-  ; Function Attrs: convergent nounwind readnone
-  declare i64 @llvm.amdgcn.else.break(i64, i64) #2
-
   ; Function Attrs: convergent nounwind
   declare i1 @llvm.amdgcn.loop(i64) #1
 

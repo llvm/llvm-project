@@ -511,12 +511,28 @@ TSAN_INTERCEPTOR(void, dispatch_apply, size_t iterations,
   uptr parent_to_child_sync = (uptr)&sync1;
   uptr child_to_parent_sync = (uptr)&sync2;
 
+  // Capturing `block` inside `new_block` (below) causes `new_block`'s copy
+  // helper to `_Block_copy` `block`. Any captured objects must be `retain`ed
+  // and their (retained) pointers stored into the heap Block_layout. This
+  // happens on the calling thread inside `REAL(dispatch_apply)` below, after
+  // the `Release(..., parent_to_child_sync)` call.
+  //
+  // When `block` gets invoked in `new_block` on a worker thread, it reads
+  // those same captures. The worker does not see a happens-before edge
+  // between the writes during the copy and these reads, resulting in a
+  // false positive race report.
+  //
+  // We avoid this copy by taking a raw pointer to the block and directly
+  // invoking that. This is safe because `dispatch_apply` will not return
+  // until all iterations have completed - thus `block` will live past the
+  // end of all uses of `block_ptr`.
+  void* block_ptr = (void*)block;
   Release(thr, pc, parent_to_child_sync);
   void (^new_block)(size_t) = ^(size_t iteration) {
     SCOPED_INTERCEPTOR_RAW(dispatch_apply);
     Acquire(thr, pc, parent_to_child_sync);
     SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_START();
-    block(iteration);
+    ((void (^)(size_t))block_ptr)(iteration);
     SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_END();
     Release(thr, pc, child_to_parent_sync);
   };

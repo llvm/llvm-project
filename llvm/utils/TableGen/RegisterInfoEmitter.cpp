@@ -64,6 +64,8 @@ class RegisterInfoEmitter {
   const CodeGenTarget Target;
   CodeGenRegBank &RegBank;
 
+  std::string MCRegisterClassStorageType;
+
 public:
   RegisterInfoEmitter(const RecordKeeper &R)
       : Records(R), Target(R), RegBank(Target.getRegBank()) {
@@ -128,9 +130,9 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS, raw_ostream &MainOS,
 
   NamespaceEmitter LlvmNS(OS, "llvm");
 
-  OS << "class MCRegisterClass;\n"
-     << "extern const MCRegisterClass " << Target.getName()
-     << "MCRegisterClasses[];\n\n";
+  OS << "class MCRegisterClass;\n";
+  OS << "const MCRegisterClass &get" << Target.getName()
+     << "MCRegisterClass(unsigned RC);\n";
 
   {
     NamespaceEmitter RegNS(OS, Namespace);
@@ -619,6 +621,8 @@ public:
     Values[v] = true;
   }
 
+  unsigned byteSize() const { return (Values.size() + 7) / 8; }
+
   void print(raw_ostream &OS) { printBitVectorAsHex(OS, Values, 8); }
 };
 
@@ -1071,65 +1075,97 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
 
   const auto &RegisterClasses = RegBank.getRegClasses();
 
+  OS << "// Register classes...\n";
+
   SequenceToOffsetTable<std::string> RegClassStrings;
+  SmallVector<unsigned> BitSetSizes;
+  BitSetSizes.reserve(RegisterClasses.size());
+  unsigned TotalRegCount = 0;
+  unsigned TotalBitSetSize = 0;
+  for (const auto &RC : RegisterClasses) {
+    ArrayRef<const Record *> Order = RC.getOrder();
+    RegClassStrings.add(RC.getName());
 
-  // Loop over all of the register classes... emitting each one.
-  {
-    AnonNamespaceEmitter AnonNS(OS);
-    OS << "// Register classes...\n";
-
-    // Emit the register enum value arrays for each RegisterClass
-    for (const auto &RC : RegisterClasses) {
-      ArrayRef<const Record *> Order = RC.getOrder();
-
-      // Give the register class a legal C name if it's anonymous.
-      const std::string &Name = RC.getName();
-
-      RegClassStrings.add(Name);
-
-      // Emit the register list now (unless it would be a zero-length array).
-      if (!Order.empty()) {
-        OS << "  // " << Name << " Register Class...\n"
-           << "  const MCPhysReg " << Name << "[] = {\n    ";
-        for (const Record *Reg : Order)
-          OS << getQualifiedName(Reg) << ", ";
-        OS << "\n  };\n\n";
-
-        OS << "  // " << Name << " Bit set.\n"
-           << "  const uint8_t " << Name << "Bits[] = {\n    ";
-        BitVectorEmitter BVE;
-        for (const Record *Reg : Order)
-          BVE.add(RegBank.getReg(Reg)->EnumValue);
-        BVE.print(OS);
-        OS << "\n  };\n\n";
-      }
-    }
+    unsigned MaxRegVal = 0;
+    for (const Record *Reg : Order)
+      MaxRegVal = std::max(MaxRegVal, RegBank.getReg(Reg)->EnumValue);
+    // Round to next byte size.
+    BitSetSizes.push_back(Order.empty() ? 0 : (MaxRegVal / 8) + 1);
+    TotalRegCount += Order.size();
+    TotalBitSetSize += BitSetSizes.back();
   }
 
   RegClassStrings.layout();
   RegClassStrings.emitStringLiteralDef(
       OS, Twine("extern const char ") + TargetName + "RegClassStrings[]");
 
-  OS << "extern const MCRegisterClass " << TargetName
-     << "MCRegisterClasses[] = {\n";
+  raw_string_ostream(MCRegisterClassStorageType)
+      << "MCRegisterClassStorage<" << RegisterClasses.size() << ", "
+      << TotalRegCount << ", " << TotalBitSetSize << ">";
+  OS << "extern const " << MCRegisterClassStorageType << " " << TargetName
+     << "MCRegisterClassStorage = {\n"
+     << "  {\n";
 
-  for (const auto &RC : RegisterClasses) {
+  unsigned RegCount = 0;   // Number of entries in registers array.
+  unsigned BitSetSize = 0; // Number of entries in bitset array.
+  for (const auto &[Idx, RC] : enumerate(RegisterClasses)) {
     ArrayRef<const Record *> Order = RC.getOrder();
-    std::string RCName = Order.empty() ? "nullptr" : RC.getName();
-    std::string RCBitsName = Order.empty() ? "nullptr" : RC.getName() + "Bits";
-    std::string RCBitsSize = Order.empty() ? "0" : "sizeof(" + RCBitsName + ")";
     uint32_t RegSize = 0;
     if (RC.RSI.isSimple())
       RegSize = RC.RSI.getSimple().RegSize;
-    OS << "  { " << RCName << ", " << RCBitsName << ", "
-       << RegClassStrings.get(RC.getName()) << ", " << RegSize << ", "
-       << RC.getOrder().size() << ", " << RCBitsSize << ", "
+    OS << "    { " << (RegisterClasses.size() - Idx)
+       << " * sizeof(MCRegisterClass)"
+       << " + sizeof(MCPhysReg) * " << RegCount << ", "
+       << (RegisterClasses.size() - Idx) << " * sizeof(MCRegisterClass)"
+       << " + sizeof(MCPhysReg) * " << TotalRegCount << " + " << BitSetSize
+       << ", " << RegClassStrings.get(RC.getName()) << ", " << RegSize << ", "
+       << RC.getOrder().size() << ", " << BitSetSizes[Idx] << ", "
        << RC.getQualifiedIdName() << ", " << static_cast<unsigned>(RC.CopyCost)
        << ", " << (RC.Allocatable ? "true" : "false") << ", "
        << (RC.getBaseClassOrder() ? "true" : "false") << " },\n";
+
+    RegCount += Order.size();
+    BitSetSize += BitSetSizes[Idx];
   }
 
-  OS << "};\n\n";
+  OS << "  },\n  {\n";
+
+  // Emit registers.
+  // TODO: these sequences often have overlaps which could be deduplicated.
+  RegCount = 0;
+  for (const auto &RC : RegisterClasses) {
+    ArrayRef<const Record *> Order = RC.getOrder();
+    if (Order.empty())
+      continue;
+    OS << "    /* " << RegCount << " */ ";
+    for (const Record *Reg : Order)
+      OS << getQualifiedName(Reg) << ", ";
+    OS << "\n";
+    RegCount += Order.size();
+  }
+
+  OS << "  },\n  {\n";
+
+  // Emit register bit sets.
+  BitSetSize = 0;
+  for (const auto &[Idx, RC] : enumerate(RegisterClasses)) {
+    ArrayRef<const Record *> Order = RC.getOrder();
+    if (!Order.empty()) {
+      OS << "    /* " << BitSetSize << " */ ";
+      BitVectorEmitter BVE;
+      for (const Record *Reg : Order)
+        BVE.add(RegBank.getReg(Reg)->EnumValue);
+      BVE.print(OS);
+      OS << "\n";
+      BitSetSize += BitSetSizes[Idx];
+    }
+  }
+  OS << "  }\n};\n\n";
+  OS << "const MCRegisterClass &get" << Target.getName()
+     << "MCRegisterClass(unsigned RC) {\n"
+     << "  return " << Target.getName()
+     << "MCRegisterClassStorage.Classes[RC];\n"
+     << "}\n\n";
 
   EmitRegMappingTables(OS, Regs, false);
 
@@ -1152,12 +1188,13 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
      << "unsigned DwarfFlavour = 0, unsigned EHFlavour = 0, unsigned PC = 0) "
         "{\n"
      << "  RI->InitMCRegisterInfo(" << TargetName << "RegDesc, "
-     << Regs.size() + 1 << ", RA, PC, " << TargetName << "MCRegisterClasses, "
-     << RegisterClasses.size() << ", " << TargetName << "RegUnitRoots, "
-     << RegBank.getNumNativeRegUnits() << ", " << TargetName << "RegDiffLists, "
-     << TargetName << "LaneMaskLists, " << TargetName << "RegStrings, "
-     << TargetName << "RegClassStrings, " << TargetName << "SubRegIdxLists, "
-     << (llvm::size(SubRegIndices) + 1) << ",\n"
+     << Regs.size() + 1 << ", RA, PC, " << TargetName
+     << "MCRegisterClassStorage.Classes, " << RegisterClasses.size() << ", "
+     << TargetName << "RegUnitRoots, " << RegBank.getNumNativeRegUnits() << ", "
+     << TargetName << "RegDiffLists, " << TargetName << "LaneMaskLists, "
+     << TargetName << "RegStrings, " << TargetName << "RegClassStrings, "
+     << TargetName << "SubRegIdxLists, " << (llvm::size(SubRegIndices) + 1)
+     << ",\n"
      << TargetName << "RegEncodingTable, "
      << (Target.getRegistersAreIntervals() ? TargetName + "RegUnitIntervals"
                                            : "nullptr")
@@ -1259,6 +1296,12 @@ void RegisterInfoEmitter::runTargetHeader(raw_ostream &OS, raw_ostream &MainOS,
 
   const auto &RegisterClasses = RegBank.getRegClasses();
   if (llvm::any_of(RegisterClasses,
+                   [](const auto &RC) { return !RC.AltOrderSelect.empty(); })) {
+    OS << "   ArrayRef<MCPhysReg> getRawAllocationOrder("
+          "const TargetRegisterClass &RC, const MachineFunction &MF, bool Rev) "
+          "const override;\n";
+  }
+  if (llvm::any_of(RegisterClasses,
                    [](const auto &RC) { return RC.getBaseClassOrder(); })) {
     OS << "  const TargetRegisterClass *getPhysRegBaseClass(MCRegister Reg) "
           "const override;\n";
@@ -1295,8 +1338,8 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
   NamespaceEmitter LlvmNS(OS, "llvm");
 
   // Get access to MCRegisterClass data.
-  OS << "extern const MCRegisterClass " << Target.getName()
-     << "MCRegisterClasses[];\n";
+  OS << "extern const " << MCRegisterClassStorageType << " " << Target.getName()
+     << "MCRegisterClassStorage;\n";
 
   // Start out by emitting each of the register classes.
   const auto &RegisterClasses = RegBank.getRegClasses();
@@ -1475,7 +1518,8 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
            << "AltOrderSelect(const MachineFunction &MF, bool Rev) {"
            << RC.AltOrderSelect << "}\n\n"
            << "static ArrayRef<MCPhysReg> " << RC.getName()
-           << "GetRawAllocationOrder(const MachineFunction &MF, bool Rev) {\n";
+           << "GetRawAllocationOrder(const TargetRegisterClass &RC, "
+           << "const MachineFunction &MF, bool Rev) {\n";
         for (unsigned oi = 1, oe = RC.getNumOrders(); oi != oe; ++oi) {
           ArrayRef<const Record *> Elems = RC.getOrder(oi);
           if (!Elems.empty()) {
@@ -1485,10 +1529,8 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
             OS << " };\n";
           }
         }
-        OS << "  const MCRegisterClass &MCR = " << Target.getName()
-           << "MCRegisterClasses[" << RC.getQualifiedName() + "RegClassID];\n"
-           << "  const ArrayRef<MCPhysReg> Order[] = {\n"
-           << "    ArrayRef(MCR.begin(), MCR.getNumRegs()";
+        OS << "  const ArrayRef<MCPhysReg> Order[] = {\n"
+           << "    RC.getRegisters(";
         for (unsigned oi = 1, oe = RC.getNumOrders(); oi != oe; ++oi)
           if (RC.getOrder(oi).empty())
             OS << "),\n    ArrayRef<MCPhysReg>(";
@@ -1506,9 +1548,9 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
 
     for (const auto &RC : RegisterClasses) {
       OS << "  extern const TargetRegisterClass " << RC.getName()
-         << "RegClass = {\n    " << '&' << Target.getName()
-         << "MCRegisterClasses[" << RC.getName() << "RegClassID],\n    "
-         << RC.getName() << "SubClassMask,\n    SuperRegIdxSeqs + "
+         << "RegClass = {\n    " << "&" << Target.getName()
+         << "MCRegisterClassStorage.Classes[" << RC.getName() << "RegClassID],"
+         << "\n    " << RC.getName() << "SubClassMask,\n    SuperRegIdxSeqs + "
          << SuperRegIdxSeqs.get(SuperRegIdxLists[RC.EnumValue]) << ",\n    ";
       printMask(OS, RC.LaneMask);
       OS << ",\n    " << (unsigned)RC.AllocationPriority << ",\n    "
@@ -1523,11 +1565,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
         OS << "nullptr, ";
       else
         OS << RC.getName() << "Superclasses,  ";
-      OS << RC.getSuperClasses().size() << ",\n    ";
-      if (RC.AltOrderSelect.empty())
-        OS << "nullptr\n";
-      else
-        OS << RC.getName() << "GetRawAllocationOrder\n";
+      OS << RC.getSuperClasses().size() << "\n";
       OS << "  };\n\n";
     }
   }
@@ -1668,6 +1706,26 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
 
   EmitRegUnitPressure(OS, ClassName);
 
+  if (llvm::any_of(RegisterClasses,
+                   [](const auto &RC) { return !RC.AltOrderSelect.empty(); })) {
+    OS << "ArrayRef<MCPhysReg> " << ClassName
+       << "::getRawAllocationOrder("
+          "const TargetRegisterClass &RC, const MachineFunction &MF, bool Rev) "
+          "const {\n";
+    OS << "  switch (RC.getID()) {\n";
+    for (const auto &RC : RegisterClasses) {
+      if (RC.AltOrderSelect.empty())
+        continue;
+      OS << "  case " << RC.getQualifiedIdName() << ":\n"
+         << "    return " << RC.getName()
+         << "GetRawAllocationOrder(RC, MF, Rev);\n";
+      ;
+    }
+    OS << "  }\n";
+    OS << "  return RC.getRegisters();\n";
+    OS << "}\n\n";
+  }
+
   // Emit register base class mapper
   if (!RegisterClasses.empty()) {
     // Collect base classes
@@ -1782,7 +1840,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
   printMask(OS, RegBank.CoveringLanes);
   OS << formatv(R"(, {0}RegClassInfos, {0}VTLists, HwMode) {{
   InitMCRegisterInfo({0}RegDesc, {1}, RA, PC,
-    {0}MCRegisterClasses, {2}, {0}RegUnitRoots, {3}, {0}RegDiffLists,
+    &get{0}MCRegisterClass(0), {2}, {0}RegUnitRoots, {3}, {0}RegDiffLists,
     {0}LaneMaskLists, {0}RegStrings, {0}RegClassStrings, {0}SubRegIdxLists, {4},
     {0}RegEncodingTable, {5});
 

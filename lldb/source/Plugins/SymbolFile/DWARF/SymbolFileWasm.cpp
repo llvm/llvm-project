@@ -7,19 +7,59 @@
 //===----------------------------------------------------------------------===//
 
 #include "SymbolFileWasm.h"
+#include "Plugins/SymbolFile/DWARF/DWARFDebugInfo.h"
+#include "Plugins/SymbolFile/DWARF/DWARFUnit.h"
 #include "Plugins/SymbolFile/DWARF/LogChannelDWARF.h"
 #include "Utility/WasmVirtualRegisters.h"
+#include "lldb/Symbol/Symbol.h"
+#include "lldb/Symbol/Symtab.h"
 #include "lldb/Utility/LLDBLog.h"
 
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 
 SymbolFileWasm::SymbolFileWasm(ObjectFileSP objfile_sp,
                                SectionList *dwo_section_list)
     : SymbolFileDWARF(objfile_sp, dwo_section_list) {}
 
 SymbolFileWasm::~SymbolFileWasm() = default;
+
+void SymbolFileWasm::AddSymbols(Symtab &symtab) {
+  SymbolFileDWARF::AddSymbols(symtab);
+
+  // Copy each function's mangled name from its DWARF DW_AT_linkage_name onto
+  // the matching symbol. The match is by file address: a subprogram's
+  // DW_AT_low_pc resolves to the same code-section file address as its symbol.
+  DWARFDebugInfo &debug_info = DebugInfo();
+  const size_t num_units = debug_info.GetNumUnits();
+  for (size_t i = 0; i < num_units; ++i) {
+    DWARFUnit *unit = debug_info.GetUnitAtIndex(i);
+    if (!unit)
+      continue;
+
+    for (const DWARFDebugInfoEntry &entry : unit->dies()) {
+      if (entry.Tag() != DW_TAG_subprogram)
+        continue;
+
+      DWARFDIE die(unit, &entry);
+      const char *mangled =
+          die.GetMangledName(/*substitute_name_allowed=*/false);
+      if (!mangled)
+        continue;
+
+      const addr_t file_addr =
+          die.GetAttributeValueAsAddress(DW_AT_low_pc, LLDB_INVALID_ADDRESS);
+      if (file_addr == LLDB_INVALID_ADDRESS)
+        continue;
+
+      Symbol *symbol = symtab.FindSymbolAtFileAddress(file_addr);
+      if (symbol && !symbol->GetMangled().GetMangledName())
+        symbol->GetMangled().SetMangledName(ConstString(mangled));
+    }
+  }
+}
 
 lldb::offset_t
 SymbolFileWasm::GetVendorDWARFOpcodeSize(const DataExtractor &data,
