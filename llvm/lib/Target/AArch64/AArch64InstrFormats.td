@@ -2154,13 +2154,9 @@ def sys_cr_op : Operand<i32>, TImmLeaf<i32, [{
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
-class SystemXtI<string asm>
-  : RtSystemI<0, (outs),
-       (ins imm32_0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm32_0_7:$op2,
-            GPR64:$Rt),
-       asm, "\t$op1, $Cn, $Cm, $op2, $Rt",
-       [(int_aarch64_sys timm32_0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm,
-                          timm32_0_7:$op2, GPR64:$Rt)]> {
+class BaseSystemXtI<bit L, dag oops, dag iops, string asm, string operands,
+                    list<dag> pattern = []>
+  : RtSystemI<L, oops, iops, asm, operands, pattern> {
   bits<3> op1;
   bits<4> Cn;
   bits<4> Cm;
@@ -2176,19 +2172,29 @@ class SystemXtI<string asm>
   let hasSideEffects = 1;
 }
 
+class SystemXtI<string asm>
+  : BaseSystemXtI<0, (outs),
+       (ins imm32_0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm32_0_7:$op2,
+            GPR64:$Rt),
+       asm, "\t$op1, $Cn, $Cm, $op2, $Rt",
+       [(int_aarch64_sys timm32_0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm,
+                          timm32_0_7:$op2, GPR64:$Rt)]>;
+
 class SystemLXtI<bit L, string asm>
-  : RtSystemI<L, (outs),
-       (ins GPR64:$Rt, imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2),
+  : BaseSystemXtI<L, (outs GPR64:$Rt),
+       (ins imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2),
+       asm, "\t$Rt, $op1, $Cn, $Cm, $op2">;
+
+// GCS SYSL operations with register operands preserve the incoming Rt value
+// when GCS is disabled at runtime, so model them with a tied def/use through
+// the backend.
+class GCSTiedSystemLXtI<bit L, string asm>
+  : BaseSystemXtI<L, (outs GPR64:$Rt),
+       (ins GPR64:$_Rt, imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm,
+            imm0_7:$op2),
        asm, "\t$Rt, $op1, $Cn, $Cm, $op2"> {
-  bits<3> op1;
-  bits<4> Cn;
-  bits<4> Cm;
-  bits<3> op2;
-  let Inst{20-19} = 0b01;
-  let Inst{18-16} = op1;
-  let Inst{15-12} = Cn;
-  let Inst{11-8}  = Cm;
-  let Inst{7-5}   = op2;
+  let Constraints = "$Rt = $_Rt";
+  let DecoderNamespace = "GCS";
 }
 
 def RangePrefetchOperand : AsmOperandClass {

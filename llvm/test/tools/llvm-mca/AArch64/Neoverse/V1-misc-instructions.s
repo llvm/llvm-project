@@ -44,7 +44,7 @@ sysl x16, #5, c11, c8, #5
 # CHECK-NEXT:  1      1     0.13    *      *      U     pssbb
 # CHECK-NEXT:  1      1     0.13                  U     smc	#0x7e57
 # CHECK-NEXT:  1      1     0.13                  U     svc	#0x89cb
-# CHECK-NEXT:  1      1     0.13                  U     sysl	x16, #5, c11, c8, #5
+# CHECK-NEXT:  1      1     0.13    *      *      U     sysl	x16, #5, c11, c8, #5
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - V1UnitB
