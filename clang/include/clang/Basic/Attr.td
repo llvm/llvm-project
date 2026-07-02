@@ -2525,14 +2525,14 @@ def AMDGPUNumVGPR : InheritableAttr {
 def AMDGPUPinVGPR : InheritableAttr {
   let Spellings = [Clang<"amdgpu_pin_vgpr", 0>];
   let Args = [ExprArgument<"Reg">];
-  let Documentation = [AMDGPUPinRegDocs];
+  let Documentation = [Undocumented];
   let Subjects = SubjectList<[Var]>;
 }
 
 def AMDGPUPinAGPR : InheritableAttr {
   let Spellings = [Clang<"amdgpu_pin_agpr", 0>];
   let Args = [ExprArgument<"Reg">];
-  let Documentation = [AMDGPUPinRegDocs];
+  let Documentation = [Undocumented];
   let Subjects = SubjectList<[Var]>;
 }
 
