@@ -230,10 +230,12 @@ public:
     GlobalValueId = VE.getValues().size();
     if (!Index)
       return;
-    for (const auto &GUIDSummaryLists : *Index)
+    // Sort by GUID for deterministic value ID assignment.
+    for (const auto &GUIDSummaryLists :
+         Index->sortedGlobalValueSummariesRange())
       // Examine all summaries for this GUID.
       for (auto &Summary : GUIDSummaryLists.second.getSummaryList())
-        if (auto FS = dyn_cast<FunctionSummary>(Summary.get())) {
+        if (auto *FS = dyn_cast<FunctionSummary>(Summary.get())) {
           // For each call in the function summary, see if the call
           // is to a GUID (which means it is for an indirect call,
           // otherwise we would have a Value for it). If so, synthesize
@@ -583,7 +585,8 @@ public:
             Callback({AS->getAliaseeGUID(), &AS->getAliasee()}, true);
         }
     } else {
-      for (auto &Summaries : Index)
+      // Sort by GUID for deterministic output.
+      for (const auto &Summaries : Index.sortedGlobalValueSummariesRange())
         for (auto &Summary : Summaries.second.getSummaryList())
           Callback({Summaries.first, Summary.get()}, false);
     }
