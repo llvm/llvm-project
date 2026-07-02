@@ -6177,6 +6177,34 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
       Known.Zero.setHighBits(llvm::countl_zero(MaxValue));
       break;
     }
+    case Intrinsic::amdgcn_ubfe:
+    case Intrinsic::amdgcn_sbfe: {
+      bool IsSigned = (IID == Intrinsic::amdgcn_sbfe);
+      SDValue Src = Op.getOperand(1);
+      auto *OffsetNode = dyn_cast<ConstantSDNode>(Op.getOperand(2));
+      auto *WidthNode = dyn_cast<ConstantSDNode>(Op.getOperand(3));
+      if (!OffsetNode || !WidthNode)
+        break;
+
+      KnownBits SrcKnown = DAG.computeKnownBits(Src, Depth + 1);
+
+      unsigned Offset = OffsetNode->getZExtValue() & 0x1f;
+      uint64_t Width = WidthNode->getZExtValue() & 0x1f;
+
+      SrcKnown.Zero.lshrInPlace(Offset);
+      SrcKnown.One.lshrInPlace(Offset);
+
+      SrcKnown.One &= APInt::getLowBitsSet(32, Width);
+
+      if (Width == 0)
+        SrcKnown.Zero |= APInt::getAllOnes(32);
+      else
+        SrcKnown = IsSigned ? SrcKnown.trunc(Width).sext(32)
+                            : SrcKnown.trunc(Width).zext(32);
+
+      Known = SrcKnown;
+      break;
+    }
     default:
       break;
     }
