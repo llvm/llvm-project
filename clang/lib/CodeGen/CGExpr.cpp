@@ -1205,12 +1205,21 @@ llvm::Value *CodeGenFunction::GetCountedByFieldExprGEP(
   // Using getOuterLexicalRecordContext() here would be wrong because it walks
   // past named nested structs to the outermost record, causing a crash when a
   // struct with a counted_by FAM is defined nested inside another struct.
-  const RecordDecl *RD = CountDecl->getParent();
-  while (RD->isAnonymousStructOrUnion()) {
-    const auto *Parent = dyn_cast<RecordDecl>(RD->getLexicalParent());
-    if (!Parent)
-      break;
-    RD = Parent;
+  //
+  // The Base expression may itself be a pointer to a field of type 'struct'. If
+  // so, then we want to use that as the "base" RecordDecl.
+  QualType Ty = Base->IgnoreParenNoopCasts(getContext())->getType();
+  if (Ty->isPointerType())
+    Ty = Ty->getPointeeType();
+  const RecordDecl *RD = Ty->getAsRecordDecl();
+  if (!RD) {
+    RD = CountDecl->getParent();
+    while (RD->isAnonymousStructOrUnion()) {
+      const auto *Parent = dyn_cast<RecordDecl>(RD->getLexicalParent());
+      if (!Parent)
+        break;
+      RD = Parent;
+    }
   }
 
   // Find the base struct expr (i.e. p in p->a.b.c.d).
