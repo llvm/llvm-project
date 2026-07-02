@@ -211,6 +211,21 @@ def _use_msvc_substitutions(config):
     libs = os.getenv("LIB", "").split(";")
 
     config.available_features.add("msvc")
+
+    # Check if the 32-bit MSVC toolchain is available. On ARM64 hosts,
+    # --arch=32 maps to the "arm" toolchain subdirectory, while on x64/x86
+    # hosts it maps to "x86". Visual Studio 2022+ no longer ships the ARM32
+    # MSVC toolchain, so these tests need to be skipped on ARM64 Windows.
+    if platform.uname().machine.lower() == "arm64":
+        msvc_32_arch = "arm"
+    else:
+        msvc_32_arch = "x86"
+
+    compiler_parent_dir = os.path.dirname(os.path.dirname(cl.strip('"')))
+    msvc_32_cl = os.path.join(compiler_parent_dir, msvc_32_arch, "cl.exe")
+    if os.path.exists(msvc_32_cl):
+        config.available_features.add("msvc-32-bit")
+
     compiler_flags = ['"/I{}"'.format(x) for x in includes if os.path.exists(x)]
     linker_flags = ['"/LIBPATH:{}"'.format(x) for x in libs if os.path.exists(x)]
 

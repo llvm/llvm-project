@@ -1,4 +1,4 @@
-REQUIRES: system-windows, msvc
+REQUIRES: system-windows, msvc, msvc-32-bit
 
 RUN: %build -n --verbose --arch=32 --compiler=msvc --mode=compile-and-link -o %t/foo.exe foobar.c \
 RUN:    | FileCheck --check-prefix=32BIT %s
