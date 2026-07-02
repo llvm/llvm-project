@@ -25,13 +25,13 @@
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=tongapro | FileCheck --check-prefix=HSA-VI805 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx810 | FileCheck --check-prefix=HSA-VI810 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=stoney | FileCheck --check-prefix=HSA-VI810 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=-xnack | FileCheck --check-prefix=HSA-GFX900 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx900 --amdgpu-xnack=false | FileCheck --check-prefix=HSA-GFX900 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx900 | FileCheck --check-prefix=HSA-GFX901 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx902 -mattr=-xnack | FileCheck --check-prefix=HSA-GFX902 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx902 --amdgpu-xnack=false | FileCheck --check-prefix=HSA-GFX902 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx902 | FileCheck --check-prefix=HSA-GFX903 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx904 -mattr=-xnack | FileCheck --check-prefix=HSA-GFX904 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx904 --amdgpu-xnack=false | FileCheck --check-prefix=HSA-GFX904 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx904 | FileCheck --check-prefix=HSA-GFX905 %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx906 -mattr=-xnack | FileCheck --check-prefix=HSA-GFX906 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx906 --amdgpu-xnack=false | FileCheck --check-prefix=HSA-GFX906 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx906 | FileCheck --check-prefix=HSA-GFX907 %s
 
 ; NONHSA-SI600: .amd_amdgpu_isa "amdgcn-unknown-unknown-unknown-gfx600"

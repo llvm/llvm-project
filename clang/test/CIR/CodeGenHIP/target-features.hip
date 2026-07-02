@@ -18,17 +18,17 @@
 // only the delta (differing features) is emitted on cir.target-features.
 
 // RUN: %clang_cc1 -triple=amdgcn-amd-amdhsa -x hip -fclangir \
-// RUN:            -fcuda-is-device -target-cpu gfx900 -target-feature +xnack \
+// RUN:            -fcuda-is-device -target-cpu gfx900 -mxnack \
 // RUN:            -emit-cir %s -o %t-delta.cir
 // RUN: FileCheck --check-prefix=CIR-DELTA %s --input-file=%t-delta.cir
 
 // RUN: %clang_cc1 -triple=amdgcn-amd-amdhsa -x hip -fclangir \
-// RUN:            -fcuda-is-device -target-cpu gfx900 -target-feature +xnack \
+// RUN:            -fcuda-is-device -target-cpu gfx900 -mxnack \
 // RUN:            -emit-llvm %s -o %t-delta.cir.ll
 // RUN: FileCheck --check-prefix=LLVM-DELTA %s --input-file=%t-delta.cir.ll
 
 // RUN: %clang_cc1 -triple=amdgcn-amd-amdhsa -x hip \
-// RUN:            -fcuda-is-device -target-cpu gfx900 -target-feature +xnack \
+// RUN:            -fcuda-is-device -target-cpu gfx900 -mxnack \
 // RUN:            -emit-llvm %s -o %t-delta.ll
 // RUN: FileCheck --check-prefix=LLVM-DELTA %s --input-file=%t-delta.ll
 
@@ -49,17 +49,18 @@ __device__ void device_fn() {}
 // LLVM-DAG: attributes #[[K_ATTR]] = {{.*}}"target-cpu"="gfx900"
 // LLVM-DAG: attributes #[[D_ATTR]] = {{.*}}"target-cpu"="gfx900"
 
-// AMDGPU with gfx900 + an extra +xnack feature: only the delta is emitted.
+// AMDGPU with gfx900 + xnack enabled via -mxnack: emitted as module flag.
 
 // CIR-DELTA: cir.func{{.*}} @_Z6kernelv()
 // CIR-DELTA-SAME: "cir.target-cpu" = "gfx900"
-// CIR-DELTA-SAME: "cir.target-features" = "+xnack"
+// CIR-DELTA-NOT: cir.target-features
 
 // CIR-DELTA: cir.func{{.*}} @_Z9device_fnv()
 // CIR-DELTA-SAME: "cir.target-cpu" = "gfx900"
-// CIR-DELTA-SAME: "cir.target-features" = "+xnack"
+// CIR-DELTA-NOT: cir.target-features
 
 // LLVM-DELTA: define{{.*}} void @_Z6kernelv(){{.*}} #[[K_ATTR_D:[0-9]+]]
 // LLVM-DELTA: define{{.*}} void @_Z9device_fnv(){{.*}} #[[D_ATTR_D:[0-9]+]]
-// LLVM-DELTA-DAG: attributes #[[K_ATTR_D]] = {{.*}}"target-cpu"="gfx900"{{.*}}"target-features"="+xnack"
-// LLVM-DELTA-DAG: attributes #[[D_ATTR_D]] = {{.*}}"target-cpu"="gfx900"{{.*}}"target-features"="+xnack"
+// LLVM-DELTA-DAG: attributes #[[K_ATTR_D]] = {{.*}}"target-cpu"="gfx900"
+// LLVM-DELTA-DAG: attributes #[[D_ATTR_D]] = {{.*}}"target-cpu"="gfx900"
+// LLVM-DELTA-DAG: !{i32 1, !"amdgpu.xnack", i32 1}

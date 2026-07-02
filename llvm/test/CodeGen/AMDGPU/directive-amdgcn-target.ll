@@ -18,11 +18,11 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=bonaire < %s | FileCheck --check-prefixes=GFX704 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx705 < %s | FileCheck --check-prefixes=GFX705 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx801 < %s | FileCheck --check-prefixes=GFX801 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx801 -mattr=-xnack < %s | FileCheck --check-prefixes=GFX801-NOXNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx801 -mattr=+xnack < %s | FileCheck --check-prefixes=GFX801-XNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx801 -amdgpu-xnack=0 < %s | FileCheck --check-prefixes=GFX801-NOXNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx801 -amdgpu-xnack=1 < %s | FileCheck --check-prefixes=GFX801-XNACK %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=carrizo < %s | FileCheck --check-prefixes=GFX801 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=carrizo -mattr=-xnack < %s | FileCheck --check-prefixes=GFX801-NOXNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=carrizo -mattr=+xnack < %s | FileCheck --check-prefixes=GFX801-XNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=carrizo -amdgpu-xnack=0 < %s | FileCheck --check-prefixes=GFX801-NOXNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=carrizo -amdgpu-xnack=1 < %s | FileCheck --check-prefixes=GFX801-XNACK %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx802 < %s | FileCheck --check-prefixes=GFX802 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=iceland < %s | FileCheck --check-prefixes=GFX802 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=tonga < %s | FileCheck --check-prefixes=GFX802 %s
@@ -33,62 +33,62 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx805 < %s | FileCheck --check-prefixes=GFX805 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=tongapro < %s | FileCheck --check-prefixes=GFX805 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx810 < %s | FileCheck --check-prefixes=GFX810 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx810 -mattr=-xnack < %s | FileCheck --check-prefixes=GFX810-NOXNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx810 -mattr=+xnack < %s | FileCheck --check-prefixes=GFX810-XNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx810 -amdgpu-xnack=0 < %s | FileCheck --check-prefixes=GFX810-NOXNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx810 -amdgpu-xnack=1 < %s | FileCheck --check-prefixes=GFX810-XNACK %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=stoney < %s | FileCheck --check-prefixes=GFX810 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=stoney -mattr=-xnack < %s | FileCheck --check-prefixes=GFX810-NOXNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=stoney -mattr=+xnack < %s | FileCheck --check-prefixes=GFX810-XNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=stoney -amdgpu-xnack=0 < %s | FileCheck --check-prefixes=GFX810-NOXNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=stoney -amdgpu-xnack=1 < %s | FileCheck --check-prefixes=GFX810-XNACK %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck --check-prefixes=GFX900 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-xnack < %s | FileCheck --check-prefixes=GFX900-NOXNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+xnack < %s | FileCheck --check-prefixes=GFX900-XNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -amdgpu-xnack=0 < %s | FileCheck --check-prefixes=GFX900-NOXNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -amdgpu-xnack=1 < %s | FileCheck --check-prefixes=GFX900-XNACK %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx902 < %s | FileCheck --check-prefixes=GFX902 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx902 -mattr=-xnack < %s | FileCheck --check-prefixes=GFX902-NOXNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx902 -mattr=+xnack < %s | FileCheck --check-prefixes=GFX902-XNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx902 -amdgpu-xnack=0 < %s | FileCheck --check-prefixes=GFX902-NOXNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx902 -amdgpu-xnack=1 < %s | FileCheck --check-prefixes=GFX902-XNACK %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx904 < %s | FileCheck --check-prefixes=GFX904 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx904 -mattr=-xnack < %s | FileCheck --check-prefixes=GFX904-NOXNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx904 -mattr=+xnack < %s | FileCheck --check-prefixes=GFX904-XNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx904 -amdgpu-xnack=0 < %s | FileCheck --check-prefixes=GFX904-NOXNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx904 -amdgpu-xnack=1 < %s | FileCheck --check-prefixes=GFX904-XNACK %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 < %s | FileCheck --check-prefixes=GFX906 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -mattr=-sramecc < %s | FileCheck --check-prefixes=GFX906-NOSRAMECC %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -mattr=+sramecc < %s | FileCheck --check-prefixes=GFX906-SRAMECC %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -mattr=-xnack < %s | FileCheck --check-prefixes=GFX906-NOXNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -mattr=+xnack < %s | FileCheck --check-prefixes=GFX906-XNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -mattr=-sramecc,-xnack < %s | FileCheck --check-prefixes=GFX906-NOSRAMECC-NOXNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -mattr=+sramecc,-xnack < %s | FileCheck --check-prefixes=GFX906-SRAMECC-NOXNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -mattr=-sramecc,+xnack < %s | FileCheck --check-prefixes=GFX906-NOSRAMECC-XNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -mattr=+sramecc,+xnack < %s | FileCheck --check-prefixes=GFX906-SRAMECC-XNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -amdgpu-sramecc=0 < %s | FileCheck --check-prefixes=GFX906-NOSRAMECC %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -amdgpu-sramecc=1 < %s | FileCheck --check-prefixes=GFX906-SRAMECC %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -amdgpu-xnack=0 < %s | FileCheck --check-prefixes=GFX906-NOXNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -amdgpu-xnack=1 < %s | FileCheck --check-prefixes=GFX906-XNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -amdgpu-sramecc=0 -amdgpu-xnack=0 < %s | FileCheck --check-prefixes=GFX906-NOSRAMECC-NOXNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -amdgpu-sramecc=1 -amdgpu-xnack=0 < %s | FileCheck --check-prefixes=GFX906-SRAMECC-NOXNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -amdgpu-sramecc=0 -amdgpu-xnack=1 < %s | FileCheck --check-prefixes=GFX906-NOSRAMECC-XNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -amdgpu-sramecc=1 -amdgpu-xnack=1 < %s | FileCheck --check-prefixes=GFX906-SRAMECC-XNACK %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 < %s | FileCheck --check-prefixes=GFX908 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -mattr=-sramecc < %s | FileCheck --check-prefixes=GFX908-NOSRAMECC %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -mattr=+sramecc < %s | FileCheck --check-prefixes=GFX908-SRAMECC %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -mattr=-xnack < %s | FileCheck --check-prefixes=GFX908-NOXNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -mattr=+xnack < %s | FileCheck --check-prefixes=GFX908-XNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -mattr=-sramecc,-xnack < %s | FileCheck --check-prefixes=GFX908-NOSRAMECC-NOXNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -mattr=+sramecc,-xnack < %s | FileCheck --check-prefixes=GFX908-SRAMECC-NOXNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -mattr=-sramecc,+xnack < %s | FileCheck --check-prefixes=GFX908-NOSRAMECC-XNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -mattr=+sramecc,+xnack < %s | FileCheck --check-prefixes=GFX908-SRAMECC-XNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -amdgpu-sramecc=0 < %s | FileCheck --check-prefixes=GFX908-NOSRAMECC %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -amdgpu-sramecc=1 < %s | FileCheck --check-prefixes=GFX908-SRAMECC %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -amdgpu-xnack=0 < %s | FileCheck --check-prefixes=GFX908-NOXNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -amdgpu-xnack=1 < %s | FileCheck --check-prefixes=GFX908-XNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -amdgpu-sramecc=0 -amdgpu-xnack=0 < %s | FileCheck --check-prefixes=GFX908-NOSRAMECC-NOXNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -amdgpu-sramecc=1 -amdgpu-xnack=0 < %s | FileCheck --check-prefixes=GFX908-SRAMECC-NOXNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -amdgpu-sramecc=0 -amdgpu-xnack=1 < %s | FileCheck --check-prefixes=GFX908-NOSRAMECC-XNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -amdgpu-sramecc=1 -amdgpu-xnack=1 < %s | FileCheck --check-prefixes=GFX908-SRAMECC-XNACK %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx909 < %s | FileCheck --check-prefixes=GFX909 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx909 -mattr=-xnack < %s | FileCheck --check-prefixes=GFX909-NOXNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx909 -mattr=+xnack < %s | FileCheck --check-prefixes=GFX909-XNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx909 -amdgpu-xnack=0 < %s | FileCheck --check-prefixes=GFX909-NOXNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx909 -amdgpu-xnack=1 < %s | FileCheck --check-prefixes=GFX909-XNACK %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90c < %s | FileCheck --check-prefixes=GFX90C %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90c -mattr=-xnack < %s | FileCheck --check-prefixes=GFX90C-NOXNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90c -mattr=+xnack < %s | FileCheck --check-prefixes=GFX90C-XNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90c -amdgpu-xnack=0 < %s | FileCheck --check-prefixes=GFX90C-NOXNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90c -amdgpu-xnack=1 < %s | FileCheck --check-prefixes=GFX90C-XNACK %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 < %s | FileCheck --check-prefixes=GFX942 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -mattr=-xnack < %s | FileCheck --check-prefixes=GFX942-NOXNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -mattr=+xnack < %s | FileCheck --check-prefixes=GFX942-XNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -amdgpu-xnack=0 < %s | FileCheck --check-prefixes=GFX942-NOXNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -amdgpu-xnack=1 < %s | FileCheck --check-prefixes=GFX942-XNACK %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 < %s | FileCheck --check-prefixes=GFX950 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -mattr=-xnack < %s | FileCheck --check-prefixes=GFX950-NOXNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -mattr=+xnack < %s | FileCheck --check-prefixes=GFX950-XNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -amdgpu-xnack=0 < %s | FileCheck --check-prefixes=GFX950-NOXNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -amdgpu-xnack=1 < %s | FileCheck --check-prefixes=GFX950-XNACK %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 < %s | FileCheck --check-prefixes=GFX1010 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=-xnack < %s | FileCheck --check-prefixes=GFX1010-NOXNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+xnack < %s | FileCheck --check-prefixes=GFX1010-XNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -amdgpu-xnack=0 < %s | FileCheck --check-prefixes=GFX1010-NOXNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -amdgpu-xnack=1 < %s | FileCheck --check-prefixes=GFX1010-XNACK %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1011 < %s | FileCheck --check-prefixes=GFX1011 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1011 -mattr=-xnack < %s | FileCheck --check-prefixes=GFX1011-NOXNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1011 -mattr=+xnack < %s | FileCheck --check-prefixes=GFX1011-XNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1011 -amdgpu-xnack=0 < %s | FileCheck --check-prefixes=GFX1011-NOXNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1011 -amdgpu-xnack=1 < %s | FileCheck --check-prefixes=GFX1011-XNACK %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1012 < %s | FileCheck --check-prefixes=GFX1012 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1012 -mattr=-xnack < %s | FileCheck --check-prefixes=GFX1012-NOXNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1012 -mattr=+xnack < %s | FileCheck --check-prefixes=GFX1012-XNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1012 -amdgpu-xnack=0 < %s | FileCheck --check-prefixes=GFX1012-NOXNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1012 -amdgpu-xnack=1 < %s | FileCheck --check-prefixes=GFX1012-XNACK %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1013 < %s | FileCheck --check-prefixes=GFX1013 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1013 -mattr=-xnack < %s | FileCheck --check-prefixes=GFX1013-NOXNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1013 -mattr=+xnack < %s | FileCheck --check-prefixes=GFX1013-XNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1013 -amdgpu-xnack=0 < %s | FileCheck --check-prefixes=GFX1013-NOXNACK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1013 -amdgpu-xnack=1 < %s | FileCheck --check-prefixes=GFX1013-XNACK %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1030 < %s | FileCheck --check-prefixes=GFX1030 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1031 < %s | FileCheck --check-prefixes=GFX1031 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1032 < %s | FileCheck --check-prefixes=GFX1032 %s
@@ -114,12 +114,12 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1251 < %s | FileCheck --check-prefixes=GFX1251 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 < %s | FileCheck --check-prefixes=GFX1310 %s
 
-; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx9-generic -mattr=-xnack < %s | FileCheck --check-prefixes=GFX9_GENERIC_NOXNACK %s
-; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx9-generic -mattr=+xnack < %s | FileCheck --check-prefixes=GFX9_GENERIC_XNACK %s
-; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx9-4-generic -mattr=-xnack < %s | FileCheck --check-prefixes=GFX9_4_GENERIC_NOXNACK %s
-; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx9-4-generic -mattr=+xnack < %s | FileCheck --check-prefixes=GFX9_4_GENERIC_XNACK %s
-; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx10-1-generic -mattr=-xnack < %s | FileCheck --check-prefixes=GFX10_1_GENERIC_NOXNACK %s
-; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx10-1-generic -mattr=+xnack < %s | FileCheck --check-prefixes=GFX10_1_GENERIC_XNACK %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx9-generic -amdgpu-xnack=0 < %s | FileCheck --check-prefixes=GFX9_GENERIC_NOXNACK %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx9-generic -amdgpu-xnack=1 < %s | FileCheck --check-prefixes=GFX9_GENERIC_XNACK %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx9-4-generic -amdgpu-xnack=0 < %s | FileCheck --check-prefixes=GFX9_4_GENERIC_NOXNACK %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx9-4-generic -amdgpu-xnack=1 < %s | FileCheck --check-prefixes=GFX9_4_GENERIC_XNACK %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx10-1-generic -amdgpu-xnack=0 < %s | FileCheck --check-prefixes=GFX10_1_GENERIC_NOXNACK %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx10-1-generic -amdgpu-xnack=1 < %s | FileCheck --check-prefixes=GFX10_1_GENERIC_XNACK %s
 ; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx10-3-generic < %s | FileCheck --check-prefixes=GFX10_3_GENERIC %s
 ; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx11-generic < %s | FileCheck --check-prefixes=GFX11_GENERIC %s
 ; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx11-7-generic < %s | FileCheck --check-prefixes=GFX11_7_GENERIC %s

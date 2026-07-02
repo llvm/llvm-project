@@ -207,6 +207,8 @@ Makes programs 10x faster by doing Special New Thing.
   previously relied on the subtarget feature to enable misaligned buffer merging
   must now set the corresponding module flag to `1` (relaxed). An absent flag is
   treated as strict by the backend.
+* Replaced `xnack` and `sramecc` target features with `amdgpu.xnack`
+  and `amdgpu.sramecc` module flags.
 
 ### Changes to the ARM Backend
 

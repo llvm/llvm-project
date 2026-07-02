@@ -1,7 +1,7 @@
 // RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s -filetype=null 2>&1 | FileCheck -check-prefix=NOSICIVI10 --implicit-check-not=error: %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=hawaii %s -filetype=null 2>&1 | FileCheck -check-prefix=NOSICIVI10 --implicit-check-not=error: %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=tonga %s -filetype=null 2>&1 | FileCheck -check-prefix=NOSICIVI10 --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1001 -mattr=-xnack %s -filetype=null 2>&1 | FileCheck -check-prefix=NOSICIVI10 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1010 -mattr=-xnack %s -filetype=null 2>&1 | FileCheck -check-prefix=NOSICIVI10 --implicit-check-not=error: %s
 
 // RUN: not llvm-mc -triple=amdgcn -mcpu=stoney -mattr=+xnack %s -filetype=null 2>&1 | FileCheck -check-prefix=XNACKERR --implicit-check-not=error: %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=stoney -mattr=+xnack -show-encoding %s | FileCheck -check-prefix=XNACK %s

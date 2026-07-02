@@ -9426,7 +9426,7 @@ void AMDGPUAsmParser::onBeginOfFile() {
 
   if (!getTargetStreamer().getTargetID())
     getTargetStreamer().initializeTargetID(getSTI(),
-                                           getSTI().getFeatureString());
+                                           /*ApplyFeatureString=*/true);
 
   if (isHsaAbi(getSTI()))
     getTargetStreamer().EmitDirectiveAMDGCNTarget();

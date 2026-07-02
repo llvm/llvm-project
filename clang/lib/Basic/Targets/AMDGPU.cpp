@@ -229,6 +229,16 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
       ReadOnlyFeatures.insert(F);
   }
   HalfArgsAndReturns = true;
+
+  if (Opts.AMDGPUXnackState != TargetOptions::AMDGPUFeatureState::Any) {
+    OffloadArchFeatures["xnack"] =
+        Opts.AMDGPUXnackState == TargetOptions::AMDGPUFeatureState::Enabled;
+  }
+
+  if (Opts.AMDGPUSramEccState != TargetOptions::AMDGPUFeatureState::Any) {
+    OffloadArchFeatures["sramecc"] =
+        Opts.AMDGPUSramEccState == TargetOptions::AMDGPUFeatureState::Enabled;
+  }
 }
 
 void AMDGPUTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
