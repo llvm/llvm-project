@@ -2246,8 +2246,7 @@ Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
   if (getLangOpts().MicrosoftExt)
     StringToks = ExpandedToks = ExpandFunctionLocalPredefinedMacros(StringToks);
 
-  StringLiteralParser Literal(
-      StringToks, PP, StringLiteralEvalMethod::Evaluated, CA_ToLiteralEncoding);
+  StringLiteralParser Literal(StringToks, PP);
   if (Literal.hadError)
     return ExprError();
 
