@@ -2697,6 +2697,14 @@ void ASTDeclReader::VisitVarTemplatePartialSpecializationDecl(
 
   RedeclarableResult Redecl = VisitVarTemplateSpecializationDeclImpl(D);
 
+  // A partial specialization whose primary template is invalid cannot be
+  // instantiated. Mark it invalid too so InstantiateClass skips it, the same
+  // way it already skips the invalid primary, instead of later looking for an
+  // instantiated primary that was never created.
+  if (VarTemplateDecl *Primary = D->getSpecializedTemplate();
+      Primary && Primary->isInvalidDecl())
+    D->setInvalidDecl();
+
   // These are read/set from/to the first declaration.
   if (ThisDeclID == Redecl.getFirstID()) {
     D->InstantiatedFromMember.setPointer(
