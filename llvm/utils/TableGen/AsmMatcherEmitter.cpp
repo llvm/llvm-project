@@ -80,9 +80,9 @@
 //  instructions. The target specific custom operand parsing works in the
 //  following way:
 //
-//   1. A operand match table is built, each entry contains a mnemonic, an
-//      operand class, a mask for all operand positions for that same
-//      class/mnemonic and target features to be checked while trying to match.
+//   1. Each mnemonic references an ordered sequence of operand match records
+//      containing an operand class, operand mask, and required target features.
+//      Identical sequences are interned.
 //
 //   2. The operand matcher will try every possible entry with the same
 //      mnemonic and will check if the target feature for this mnemonic also
@@ -121,6 +121,8 @@
 #include <forward_list>
 #include <map>
 #include <set>
+#include <tuple>
+#include <vector>
 
 using namespace llvm;
 
@@ -2991,15 +2993,64 @@ emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
                          const StringToOffsetTable &StringTable,
                          unsigned MaxMnemonicIndex, unsigned MaxFeaturesIndex,
                          bool HasMnemonicFirst, const Record &AsmParser) {
+  using OperandMatchDataTy = std::tuple<unsigned, StringRef, std::string>;
+  using OperandMatchSequenceTy = std::vector<OperandMatchDataTy>;
+  struct OperandMatchMnemonicInfo {
+    unsigned MnemonicOffset;
+    std::string Mnemonic;
+    unsigned MatchSequenceOffset;
+    unsigned MatchSequenceLength;
+  };
+
   unsigned MaxMask = 0;
   for (const OperandMatchEntry &OMI : Info.OperandMatchInfo) {
     MaxMask |= OMI.OperandMask;
   }
 
+  auto getRequiredFeaturesName = [](const MatchableInfo &MI) {
+    std::string Name = "AMFBS";
+    if (MI.RequiredFeatures.empty())
+      return Name + "_None";
+    for (const auto &F : MI.RequiredFeatures)
+      Name += "_" + F->TheDef->getName().str();
+    return Name;
+  };
+
+  std::map<OperandMatchSequenceTy, unsigned> MatchSequenceOffsets;
+  OperandMatchSequenceTy MatchSequenceTable;
+  std::vector<OperandMatchMnemonicInfo> MnemonicTable;
+  unsigned MaxMatchSequenceLength = 0;
+
+  for (auto I = Info.OperandMatchInfo.begin(), E = Info.OperandMatchInfo.end();
+       I != E;) {
+    const MatchableInfo &FirstMI = *I->MI;
+    std::string Mnemonic = FirstMI.Mnemonic.lower();
+    std::string LenMnemonic = char(Mnemonic.size()) + Mnemonic;
+    unsigned MnemonicOffset = *StringTable.GetStringOffset(LenMnemonic);
+    OperandMatchSequenceTy MatchSequence;
+
+    do {
+      const MatchableInfo &MI = *I->MI;
+      MatchSequence.emplace_back(I->OperandMask, I->CI->Name,
+                                 getRequiredFeaturesName(MI));
+      ++I;
+    } while (I != E && I->MI->Mnemonic.equals_insensitive(Mnemonic));
+
+    auto [SequenceIt, Inserted] = MatchSequenceOffsets.try_emplace(
+        MatchSequence, MatchSequenceTable.size());
+    if (Inserted)
+      llvm::append_range(MatchSequenceTable, MatchSequence);
+
+    MaxMatchSequenceLength = std::max(
+        MaxMatchSequenceLength, static_cast<unsigned>(MatchSequence.size()));
+    MnemonicTable.push_back({MnemonicOffset, std::move(Mnemonic),
+                             SequenceIt->second,
+                             static_cast<unsigned>(MatchSequence.size())});
+  }
+
   // Emit the static custom operand parsing table;
   OS << "namespace {\n";
   OS << "  struct OperandMatchEntry {\n";
-  OS << "    " << getMinimalTypeForRange(MaxMnemonicIndex) << " Mnemonic;\n";
   OS << "    " << getMinimalTypeForRange(MaxMask) << " OperandMask;\n";
   OS << "    "
      << getMinimalTypeForRange(
@@ -3007,7 +3058,15 @@ emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
             2 /* Include 'InvalidMatchClass' and 'OptionalMatchClass' */)
      << " Class;\n";
   OS << "    " << getMinimalTypeForRange(MaxFeaturesIndex)
-     << " RequiredFeaturesIdx;\n\n";
+     << " RequiredFeaturesIdx;\n";
+  OS << "  };\n\n";
+
+  OS << "  struct OperandMatchMnemonicEntry {\n";
+  OS << "    " << getMinimalTypeForRange(MatchSequenceTable.size() - 1)
+     << " MatchSequenceOffset;\n";
+  OS << "    " << getMinimalTypeForRange(MaxMnemonicIndex) << " Mnemonic;\n";
+  OS << "    " << getMinimalTypeForRange(MaxMatchSequenceLength)
+     << " MatchSequenceLength;\n\n";
   OS << "    StringRef getMnemonic() const {\n";
   OS << "      return StringRef(MnemonicTable + Mnemonic + 1,\n";
   OS << "                       MnemonicTable[Mnemonic]);\n";
@@ -3016,54 +3075,43 @@ emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
 
   OS << "  // Predicate for searching for an opcode.\n";
   OS << "  struct LessOpcodeOperand {\n";
-  OS << "    bool operator()(const OperandMatchEntry &LHS, StringRef RHS) {\n";
+  OS << "    bool operator()(const OperandMatchMnemonicEntry &LHS, "
+        "StringRef RHS) {\n";
   OS << "      return LHS.getMnemonic()  < RHS;\n";
   OS << "    }\n";
-  OS << "    bool operator()(StringRef LHS, const OperandMatchEntry &RHS) {\n";
+  OS << "    bool operator()(StringRef LHS, const "
+        "OperandMatchMnemonicEntry &RHS) {\n";
   OS << "      return LHS < RHS.getMnemonic();\n";
-  OS << "    }\n";
-  OS << "    bool operator()(const OperandMatchEntry &LHS,";
-  OS << " const OperandMatchEntry &RHS) {\n";
-  OS << "      return LHS.getMnemonic() < RHS.getMnemonic();\n";
   OS << "    }\n";
   OS << "  };\n";
 
   OS << "} // end anonymous namespace\n\n";
 
-  OS << "static const OperandMatchEntry OperandMatchTable["
-     << Info.OperandMatchInfo.size() << "] = {\n";
+  OS << "static const OperandMatchEntry OperandMatchSequenceTable["
+     << MatchSequenceTable.size() << "] = {\n";
 
-  OS << "  /* Operand List Mnemonic, Mask, Operand Class, Features */\n";
-  for (const OperandMatchEntry &OMI : Info.OperandMatchInfo) {
-    const MatchableInfo &II = *OMI.MI;
-
-    OS << "  { ";
-
-    // Store a pascal-style length byte in the mnemonic.
-    std::string LenMnemonic = char(II.Mnemonic.size()) + II.Mnemonic.lower();
-    OS << *StringTable.GetStringOffset(LenMnemonic) << " /* " << II.Mnemonic
-       << " */, ";
-
-    OS << OMI.OperandMask;
+  OS << "  /* Operand Mask, Operand Class, Features */\n";
+  for (const auto &[Index, Data] : enumerate(MatchSequenceTable)) {
+    const auto &[OperandMask, Class, RequiredFeatures] = Data;
+    OS << "  /* " << Index << " */ { ";
+    OS << OperandMask;
     OS << " /* ";
     ListSeparator LS;
     for (int i = 0, e = 31; i != e; ++i)
-      if (OMI.OperandMask & (1 << i))
+      if (OperandMask & (1 << i))
         OS << LS << i;
     OS << " */, ";
-
-    OS << OMI.CI->Name;
-
-    // Write the required features mask.
-    OS << ", AMFBS";
-    if (II.RequiredFeatures.empty())
-      OS << "_None";
-    else
-      for (const auto &F : II.RequiredFeatures)
-        OS << '_' << F->TheDef->getName();
-
-    OS << " },\n";
+    OS << Class << ", " << RequiredFeatures << " },\n";
   }
+  OS << "};\n\n";
+
+  OS << "static const OperandMatchMnemonicEntry OperandMatchMnemonicTable["
+     << MnemonicTable.size() << "] = {\n";
+  OS << "  /* Match Sequence Offset, Mnemonic, Match Sequence Length */\n";
+  for (const OperandMatchMnemonicInfo &Entry : MnemonicTable)
+    OS << "  { " << Entry.MatchSequenceOffset << ", " << Entry.MnemonicOffset
+       << " /* " << Entry.Mnemonic << " */, " << Entry.MatchSequenceLength
+       << " },\n";
   OS << "};\n\n";
 
   // Emit the operand class switch to call the correct custom parser for
@@ -3105,51 +3153,73 @@ emitCustomOperandParsing(raw_ostream &OS, CodeGenTarget &Target,
 
   // Emit code to search the table.
   OS << "  // Search the table.\n";
+  std::string Indent;
   if (HasMnemonicFirst) {
-    OS << "  auto MnemonicRange =\n";
-    OS << "    std::equal_range(std::begin(OperandMatchTable), "
-          "std::end(OperandMatchTable),\n";
+    OS << "  auto MnemonicIt =\n";
+    OS << "    std::lower_bound(std::begin(OperandMatchMnemonicTable), "
+          "std::end(OperandMatchMnemonicTable),\n";
     OS << "                     Mnemonic, LessOpcodeOperand());\n\n";
+    OS << "  if (MnemonicIt == std::end(OperandMatchMnemonicTable) ||\n";
+    OS << "      MnemonicIt->getMnemonic() != Mnemonic)\n";
+    OS << "    return ParseStatus::NoMatch;\n\n";
+    OS << "  const unsigned MatchSequenceEnd =\n";
+    OS << "      MnemonicIt->MatchSequenceOffset + "
+          "MnemonicIt->MatchSequenceLength;\n";
+    OS << "  for (unsigned I = MnemonicIt->MatchSequenceOffset;\n";
+    OS << "       I != MatchSequenceEnd; ++I) {\n";
+    Indent = "    ";
   } else {
-    OS << "  auto MnemonicRange = std::pair(std::begin(OperandMatchTable),"
-          " std::end(OperandMatchTable));\n";
-    OS << "  if (!Mnemonic.empty())\n";
-    OS << "    MnemonicRange =\n";
-    OS << "      std::equal_range(std::begin(OperandMatchTable), "
-          "std::end(OperandMatchTable),\n";
-    OS << "                       Mnemonic, LessOpcodeOperand());\n\n";
+    OS << "  auto MnemonicBegin = std::begin(OperandMatchMnemonicTable);\n";
+    OS << "  auto MnemonicEnd = std::end(OperandMatchMnemonicTable);\n";
+    OS << "  if (!Mnemonic.empty()) {\n";
+    OS << "    MnemonicBegin =\n";
+    OS << "      std::lower_bound(MnemonicBegin, MnemonicEnd,\n";
+    OS << "                       Mnemonic, LessOpcodeOperand());\n";
+    OS << "    if (MnemonicBegin == MnemonicEnd ||\n";
+    OS << "        MnemonicBegin->getMnemonic() != Mnemonic)\n";
+    OS << "      return ParseStatus::NoMatch;\n";
+    OS << "    MnemonicEnd = MnemonicBegin + 1;\n";
+    OS << "  }\n";
+    OS << '\n';
+    OS << "  for (const OperandMatchMnemonicEntry *MnemonicIt = "
+          "MnemonicBegin;\n";
+    OS << "       MnemonicIt != MnemonicEnd; ++MnemonicIt) {\n";
+    OS << "    const unsigned MatchSequenceEnd =\n";
+    OS << "        MnemonicIt->MatchSequenceOffset + "
+          "MnemonicIt->MatchSequenceLength;\n";
+    OS << "    for (unsigned I = MnemonicIt->MatchSequenceOffset;\n";
+    OS << "         I != MatchSequenceEnd; ++I) {\n";
+    Indent = "      ";
   }
-
-  OS << "  if (MnemonicRange.first == MnemonicRange.second)\n";
-  OS << "    return ParseStatus::NoMatch;\n\n";
-
-  OS << "  for (const OperandMatchEntry *it = MnemonicRange.first,\n"
-     << "       *ie = MnemonicRange.second; it != ie; ++it) {\n";
-
-  OS << "    // equal_range guarantees that instruction mnemonic matches.\n";
-  OS << "    assert(Mnemonic == it->getMnemonic());\n\n";
+  OS << Indent
+     << "const OperandMatchEntry &Entry = OperandMatchSequenceTable[I];\n";
 
   // Emit check that the required features are available.
-  OS << "    // check if the available features match\n";
-  OS << "    const FeatureBitset &RequiredFeatures = "
-        "FeatureBitsets[it->RequiredFeaturesIdx];\n";
-  OS << "    if (!ParseForAllFeatures && (AvailableFeatures & "
+  OS << Indent << "// check if the available features match\n";
+  OS << Indent
+     << "const FeatureBitset &RequiredFeatures = "
+        "FeatureBitsets[Entry.RequiredFeaturesIdx];\n";
+  OS << Indent
+     << "if (!ParseForAllFeatures && (AvailableFeatures & "
         "RequiredFeatures) != RequiredFeatures)\n";
-  OS << "      continue;\n\n";
+  OS << Indent << "  continue;\n\n";
 
   // Emit check to ensure the operand number matches.
-  OS << "    // check if the operand in question has a custom parser.\n";
-  OS << "    if (!(it->OperandMask & (1 << NextOpNum)))\n";
-  OS << "      continue;\n\n";
+  OS << Indent << "// check if the operand in question has a custom parser.\n";
+  OS << Indent << "if (!(Entry.OperandMask & (1 << NextOpNum)))\n";
+  OS << Indent << "  continue;\n\n";
 
   // Emit call to the custom parser method
   StringRef ParserName = AsmParser.getValueAsString("OperandParserMethod");
   if (ParserName.empty())
     ParserName = "tryCustomParseOperand";
-  OS << "    // call custom parse method to handle the operand\n";
-  OS << "    ParseStatus Result = " << ParserName << "(Operands, it->Class);\n";
-  OS << "    if (!Result.isNoMatch())\n";
-  OS << "      return Result;\n";
+  OS << Indent << "// call custom parse method to handle the operand\n";
+  OS << Indent << "ParseStatus Result = " << ParserName
+     << "(Operands, Entry.Class);\n";
+  OS << Indent << "if (!Result.isNoMatch())\n";
+  OS << Indent << "  return Result;\n";
+  if (!HasMnemonicFirst)
+    OS << "    }\n";
   OS << "  }\n\n";
 
   OS << "  // Okay, we had no match.\n";
