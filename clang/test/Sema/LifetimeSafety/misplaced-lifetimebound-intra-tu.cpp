@@ -135,17 +135,109 @@ View friend_redecl(MyObj &obj) {
 }
 
 template <typename T>
-// FIXME: Current analysis suggests adding to the primary template declaration, which is not ideal, as it will affect all specializations.
-MyObj &spec_func(T &  // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead}}
-                 obj  // CHECK: fix-it:"{{.*}}":{[[@LINE]]:{{[0-9]+}}-[[@LINE]]:{{[0-9]+}}}:" {{\[\[clang::lifetimebound\]\]}}"
-                 );
+MyObj &spec_func(T &obj);
 
 template <>
-// FIXME: Attribute is inhetired, diagnostic's wording is not correct.
-MyObj &spec_func<MyObj>(MyObj &obj [[clang::lifetimebound]]); // expected-note {{'lifetimebound' attribute appears here on the definition}}
+MyObj &spec_func<MyObj>(MyObj &obj [[clang::lifetimebound]]);
 
 template <>
 MyObj &spec_func<MyObj>(MyObj &obj) { return obj; }
+
+template <typename T>
+MyObj &spec_misplaced(T &obj);
+
+template <>
+MyObj &spec_misplaced<MyObj>(MyObj &obj); // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead}}
+
+template <>
+MyObj &spec_misplaced<MyObj>(MyObj &obj [[clang::lifetimebound]]) { // expected-note {{'lifetimebound' attribute appears here on the definition}}
+  return obj;
+}
+
+template <class T>
+struct MemberSpec {
+  T data;
+  T &get();
+};
+
+template <>
+MyObj &MemberSpec<MyObj>::get(); // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead}}
+
+template <>
+MyObj &MemberSpec<MyObj>::get() [[clang::lifetimebound]] { // expected-note {{'lifetimebound' attribute appears here on the definition}}
+  return data;
+}
+
+template <class T>
+struct MemberSpecOk {
+  T data;
+  T &get();
+};
+
+template <>
+MyObj &MemberSpecOk<MyObj>::get() [[clang::lifetimebound]];
+
+template <>
+MyObj &MemberSpecOk<MyObj>::get() {
+  return data;
+}
+
+template <class T>
+struct NestedMemberSpecBoth {
+  template <class U>
+  struct Inner {
+    U data;
+    template <class V>
+    U &both(U &arg, V);
+  };
+};
+
+template <>
+template <>
+template <>
+MyObj &NestedMemberSpecBoth<int>::Inner<MyObj>::both(
+    MyObj &arg, bool); // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead}} \
+                       // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead}}
+
+template <>
+template <>
+template <>
+MyObj &NestedMemberSpecBoth<int>::Inner<MyObj>::both(
+    MyObj &arg [[clang::lifetimebound]], bool use_arg) // expected-note {{'lifetimebound' attribute appears here on the definition}}
+    [[clang::lifetimebound]] {                         // expected-note {{'lifetimebound' attribute appears here on the definition}}
+  return use_arg ? arg : data;
+}
+
+template <typename T>
+T &multi_spec(T &obj);
+
+template <>
+int &multi_spec<int>(int &obj);
+
+template <>
+MyObj &multi_spec<MyObj>(MyObj &obj); // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead}}
+
+template <>
+MyObj &multi_spec<MyObj>(MyObj &obj [[clang::lifetimebound]]) { // expected-note {{'lifetimebound' attribute appears here on the definition}}
+  return obj;
+}
+
+template <>
+int &multi_spec<int>(int &obj) { return obj; }
+
+template <typename T>
+T &multi_redecl_spec(T &obj);
+
+template <>
+MyObj &multi_redecl_spec<MyObj>(MyObj &obj); // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead}}
+
+template <>
+MyObj &multi_redecl_spec<MyObj>(MyObj &obj);
+
+template <>
+MyObj &multi_redecl_spec<MyObj>(MyObj &obj [[clang::lifetimebound]]) { // expected-note {{'lifetimebound' attribute appears here on the definition}}
+  return obj;
+}
 
 MyObj get_default_obj();
 const MyObj &default_arg_param(const MyObj&  // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead}}

@@ -23,6 +23,12 @@ struct HeaderS {
                              // CHECK: fix-it:"{{.*}}cross.h":{[[#THIS_WARN_LINE]]:{{[0-9]+}}-[[#THIS_WARN_LINE]]:{{[0-9]+}}}:" {{\[\[}}clang::lifetimebound{{\]\]}}"
 };
 
+template <typename T>
+HeaderObj &spec_cross_tu(HeaderObj &obj);
+
+template <>
+HeaderObj &spec_cross_tu<HeaderObj>(HeaderObj &obj); // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers in other translation units; add it to the declaration instead}}
+
 //--- cross_1.h
 struct HeaderObj;
 HeaderObj &multi_header_param(HeaderObj &  // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers in other translation units; add it to the declaration instead}}
@@ -30,12 +36,24 @@ HeaderObj &multi_header_param(HeaderObj &  // expected-warning {{'lifetimebound'
                               obj          // CHECK: fix-it:"{{.*}}cross_1.h":{[[#PARAM_WARN_LINE+2]]:{{[0-9]+}}-[[#PARAM_WARN_LINE+2]]:{{[0-9]+}}}:" {{\[\[}}clang::lifetimebound{{\]\]}}"
                               );
 
+template <typename T>
+struct HeaderMemberSpec {
+  T data;
+  T &get();
+};
+
+template <>
+HeaderObj &HeaderMemberSpec<HeaderObj>::get(); // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers in other translation units; add it to the declaration instead}}
+
 //--- cross_2.h
 struct HeaderObj;
 HeaderObj &multi_header_param(HeaderObj &  // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers in other translation units; add it to the declaration instead}}
                                            // CHECK: cross_2.h:[[#PARAM_WARN_LINE:]]:{{[0-9]+}}: warning: 'lifetimebound' attribute on this definition is not visible
                               obj          // CHECK: fix-it:"{{.*}}cross_2.h":{[[#PARAM_WARN_LINE+2]]:{{[0-9]+}}-[[#PARAM_WARN_LINE+2]]:{{[0-9]+}}}:" {{\[\[}}clang::lifetimebound{{\]\]}}"
                               );
+
+template <>
+HeaderObj &HeaderMemberSpec<HeaderObj>::get(); // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers in other translation units; add it to the declaration instead}}
 
 //--- cross.cpp
 #include "cross.h"
@@ -52,4 +70,14 @@ HeaderObj &HeaderS::header_this() [[clang::lifetimebound]] { // expected-note {{
 
 HeaderObj &multi_header_param(HeaderObj &obj [[clang::lifetimebound]]) { // expected-note 2 {{'lifetimebound' attribute appears here on the definition}}
   return obj;
+}
+
+template <>
+HeaderObj &spec_cross_tu<HeaderObj>(HeaderObj &obj [[clang::lifetimebound]]) { // expected-note {{'lifetimebound' attribute appears here on the definition}}
+  return obj;
+}
+
+template <>
+HeaderObj &HeaderMemberSpec<HeaderObj>::get() [[clang::lifetimebound]] { // expected-note 2 {{'lifetimebound' attribute appears here on the definition}}
+  return data;
 }
