@@ -49,12 +49,20 @@ bool NVPTXTTIImpl::isSourceOfDivergence(const Value *V) const {
   if (const Argument *Arg = dyn_cast<Argument>(V))
     return !isKernelFunction(*Arg->getParent());
 
+  // The value of a local address is divergent
+  if (isa<AllocaInst>(V))
+    return true;
+
   if (const Instruction *I = dyn_cast<Instruction>(V)) {
     // Without pointer analysis, we conservatively assume values loaded from
-    // generic or local address space are divergent.
+    // local address space are divergent.  We optimistically assume that
+    // the loads from generic address spaces are not divergent.
+    // The pessimistic assumption can preclude optimizations.  The fixpoint
+    // computation of divergence ensures correctness of the optimistic
+    // assumption.
     if (const LoadInst *LI = dyn_cast<LoadInst>(I)) {
       unsigned AS = LI->getPointerAddressSpace();
-      return AS == ADDRESS_SPACE_GENERIC || AS == ADDRESS_SPACE_LOCAL;
+      return AS == ADDRESS_SPACE_LOCAL;
     }
     // Atomic instructions may cause divergence. Atomic instructions are
     // executed sequentially across all threads in a warp. Therefore, an earlier
