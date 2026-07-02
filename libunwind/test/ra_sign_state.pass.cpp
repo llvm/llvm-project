@@ -76,6 +76,10 @@ static _Unwind_Reason_Code frame_handler(struct _Unwind_Context *ctx,
       (uint64_t)_Unwind_GetGR(ctx, UNW_AARCH64_RA_SIGN_STATE);
 
   uintptr_t ip = _Unwind_GetIP(ctx);
+
+  printf("UNW_AARCH64_RA_SIGN_STATE @ 0x%" PRIx64 " = %" PRIu64 "\n", ip,
+         ra_sign_state);
+
   if (ip >= (uintptr_t)FUNC_START(main_func) &&
       ip < (uintptr_t)FUNC_END(main_func)) {
 
@@ -94,22 +98,18 @@ static _Unwind_Reason_Code frame_handler(struct _Unwind_Context *ctx,
   return _URC_NO_REASON;
 }
 
-__attribute__((noinline)) extern "C" uintptr_t
-get_main_ra_sign_state(const char *note) {
-  printf("check: %s\n", note);
+__attribute__((noinline)) extern "C" uintptr_t get_main_ra_sign_state() {
   uint64_t sign_state = -1;
   _Unwind_Backtrace(frame_handler, &sign_state);
-  printf("UNW_AARCH64_RA_SIGN_STATE for %s = %" PRIu64 "\n", note, sign_state);
   assert((sign_state & 0x3) == sign_state);
   return sign_state;
 }
 
-__attribute__((noinline)) static uint64_t check_vanilla(const char *note) {
-  return get_main_ra_sign_state(note);
+__attribute__((noinline)) static uint64_t check_vanilla() {
+  return get_main_ra_sign_state();
 }
 
-__attribute__((naked, target("pauth"))) static uint64_t
-check_negate(const char *note) {
+__attribute__((naked, target("pauth"))) static uint64_t check_negate() {
   // clang-format off
   asm(".cfi_negate_ra_state\n"
       "pacibsp\n"
@@ -134,7 +134,7 @@ check_negate(const char *note) {
 FUNC_ATTR(main_func) int main(int, char **) {
   uint64_t ret;
 
-  ret = check_vanilla("check_vanilla");
+  ret = check_vanilla();
 #if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
   assert(ret == 1 || ret == 2);
 #endif
@@ -144,7 +144,7 @@ FUNC_ATTR(main_func) int main(int, char **) {
     return 0;
   }
 
-  ret = check_negate("check_negate");
+  ret = check_negate();
   assert(ret == 1);
 
   printf("success\n");
