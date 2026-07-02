@@ -4990,6 +4990,8 @@ defm ptrauth_vtable_pointer_address_discrimination :
   OptInCC1FFlag<"ptrauth-vtable-pointer-address-discrimination", "Enable address discrimination of vtable pointers">;
 defm ptrauth_vtable_pointer_type_discrimination :
   OptInCC1FFlag<"ptrauth-vtable-pointer-type-discrimination", "Enable type discrimination of vtable pointers">;
+defm ptrauth_vtt_vtable_pointer_discrimination :
+  OptInCC1FFlag<"ptrauth-vtt-vtable-pointer-discrimination", "Apply the same vtable pointer discrimination scheme to VTT entries as to object vtable pointers">;
 defm ptrauth_type_info_vtable_pointer_discrimination :
   OptInCC1FFlag<"ptrauth-type-info-vtable-pointer-discrimination", "Enable type and address discrimination of vtable pointer of std::type_info">;
 defm ptrauth_function_pointer_type_discrimination : OptInCC1FFlag<"ptrauth-function-pointer-type-discrimination",

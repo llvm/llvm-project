@@ -55,18 +55,17 @@ CodeGenVTables::EmitVTTDefinition(llvm::GlobalVariable *VTT,
   }
 
   SmallVector<llvm::Constant *, 8> VTTComponents;
-  for (const VTTComponent *i = Builder.getVTTComponents().begin(),
-                          *e = Builder.getVTTComponents().end(); i != e; ++i) {
-    const VTTVTable &VTTVT = Builder.getVTTVTables()[i->VTableIndex];
-    llvm::GlobalVariable *VTable = VTables[i->VTableIndex];
+  for (const auto &[Idx, C] : llvm::enumerate(Builder.getVTTComponents())) {
+    const VTTVTable &VTTVT = Builder.getVTTVTables()[C.VTableIndex];
+    llvm::GlobalVariable *VTable = VTables[C.VTableIndex];
     VTableLayout::AddressPointLocation AddressPoint;
     if (VTTVT.getBase() == RD) {
       // Just get the address point for the regular vtable.
       AddressPoint =
           getItaniumVTableContext().getVTableLayout(RD).getAddressPoint(
-              i->VTableBase);
+              C.VTableBase);
     } else {
-      AddressPoint = VTableAddressPoints[i->VTableIndex].lookup(i->VTableBase);
+      AddressPoint = VTableAddressPoints[C.VTableIndex].lookup(C.VTableBase);
       assert(AddressPoint.AddressPointIndex != 0 &&
              "Did not find ctor vtable address point!");
     }
@@ -92,10 +91,26 @@ CodeGenVTables::EmitVTTDefinition(llvm::GlobalVariable *VTT,
          VTable->getValueType(), VTable, Idxs, /*InBounds=*/true, InRange);
 
      if (const auto &Schema =
-             CGM.getCodeGenOpts().PointerAuth.CXXVTTVTablePointers)
-       Init = CGM.getConstantSignedPointer(Init, Schema, nullptr, GlobalDecl(),
-                                           QualType());
-
+             CGM.getCodeGenOpts().PointerAuth.CXXVTTVTablePointers) {
+       llvm::Constant *AddressDesc =
+           Schema.isAddressDiscriminated()
+               ? llvm::ConstantExpr::getGetElementPtr(
+                     VTT->getType(), VTT,
+                     llvm::ConstantInt::get(CGM.Int32Ty, Idx))
+               : nullptr;
+       if (Schema.getOtherDiscrimination() ==
+           PointerAuthSchema::Discrimination::Type) {
+         auto *TypeDesc = llvm::ConstantInt::get(
+             CGM.IntPtrTy,
+             CGM.getContext().getPointerAuthVTablePointerDiscriminator(
+                 VTTVT.getBase()));
+         Init = CGM.getConstantSignedPointer(Init, Schema.getKey(), AddressDesc,
+                                             TypeDesc);
+       } else {
+         Init = CGM.getConstantSignedPointer(Init, Schema, AddressDesc,
+                                             GlobalDecl(), QualType());
+       }
+     }
      VTTComponents.push_back(Init);
   }
 

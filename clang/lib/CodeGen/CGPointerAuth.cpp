@@ -14,6 +14,7 @@
 #include "CGCXXABI.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "clang/Basic/PointerAuthOptions.h"
 #include "clang/CodeGen/CodeGenABITypes.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -121,20 +122,34 @@ CGPointerAuthInfo CodeGenFunction::EmitPointerAuthInfo(
   if (!Schema)
     return CGPointerAuthInfo();
 
-  llvm::Value *Discriminator =
-      CGM.getPointerAuthOtherDiscriminator(Schema, SchemaDecl, SchemaType);
+  return EmitPointerAuthInfo(
+      Schema, StorageAddress,
+      CGM.getPointerAuthOtherDiscriminator(Schema, SchemaDecl, SchemaType));
+}
 
+CGPointerAuthInfo
+CodeGenFunction::EmitPointerAuthInfo(const PointerAuthSchema &Schema,
+                                     llvm::Value *StorageAddress,
+                                     llvm::ConstantInt *ExtraDiscriminator) {
+  if (!Schema)
+    return CGPointerAuthInfo();
+
+  PointerAuthSchema::Discrimination ExtraDiscKind =
+      Schema.getOtherDiscrimination();
+  assert(
+      (ExtraDiscKind == PointerAuthSchema::Discrimination::None ||
+       ExtraDiscriminator) &&
+      "extra discrimination is requested but no discriminator gets provided");
+
+  llvm::Value *Discriminator = ExtraDiscriminator;
   if (Schema.isAddressDiscriminated()) {
     assert(StorageAddress &&
            "address not provided for address-discriminated schema");
-
-    if (Discriminator)
-      Discriminator =
-          EmitPointerAuthBlendDiscriminator(StorageAddress, Discriminator);
-    else
-      Discriminator = Builder.CreatePtrToInt(StorageAddress, IntPtrTy);
+    Discriminator =
+        ExtraDiscKind != PointerAuthSchema::Discrimination::None
+            ? EmitPointerAuthBlendDiscriminator(StorageAddress, Discriminator)
+            : Builder.CreatePtrToInt(StorageAddress, IntPtrTy);
   }
-
   return CGPointerAuthInfo(Schema.getKey(), Schema.getAuthenticationMode(),
                            Schema.isIsaPointer(),
                            Schema.authenticatesNullValues(), Discriminator);
