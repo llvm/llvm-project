@@ -36,8 +36,6 @@ sabalb z0.s, z1.h, z2.h
 sadalp z0.d, p0/m, z1.s
 ssra z0.d, z1.d, #1
 mla z0.d, p0/m, z1.d, z2.d
-bfmlslb z0.s, z1.h, z2.h
-fdot z0.s, z1.h, z2.h
 index z0.s, w0, #1
 index z0.s, #0, w0
 index z0.s, w0, w1
@@ -45,6 +43,5 @@ insr z0.s, w0
 lasta d0, p7, z31.d
 faddv d0, p0, z1.d
 fmaxnmv d0, p0, z1.d
-psel p0, p0, p0.b[w12, 0]
 sqcvtn z0.h, { z0.s, z1.s }
 uaddv d0, p7, z31.b
