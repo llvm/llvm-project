@@ -3227,8 +3227,7 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
             .Case([](const VPWidenLoadRecipe *R) { return Instruction::Load; })
             .Case<VPWidenCallRecipe, VPWidenIntrinsicRecipe>(
                 [](const auto *R) { return Instruction::Call; })
-            .Case<VPInstruction, VPWidenRecipe, VPReplicateRecipe,
-                  VPWidenCastRecipe>(
+            .Case<VPInstruction, VPWidenRecipe, VPReplicateRecipe>(
                 [](const auto *R) { return R->getOpcode(); })
             .Case([](const VPInterleaveRecipe *R) {
               return R->getStoredValues().empty() ? Instruction::Load
@@ -3280,6 +3279,7 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
 /// assigned a vector register.
 static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
                                 const TargetTransformInfo &TTI) {
+  using namespace VPlanPatternMatch;
   assert(VF.isVector() && "Checking a scalar VF?");
   DenseSet<VPRecipeBase *> EphemeralRecipes;
   collectEphemeralRecipesForVPlan(Plan, EphemeralRecipes);
@@ -3298,7 +3298,6 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPRecipeBase::VPDerivedIVSC:
       case VPRecipeBase::VPScalarIVStepsSC:
       case VPRecipeBase::VPReplicateSC:
-      case VPRecipeBase::VPInstructionSC:
       case VPRecipeBase::VPCurrentIterationPHISC:
       case VPRecipeBase::VPVectorPointerSC:
       case VPRecipeBase::VPVectorEndPointerSC:
@@ -3306,11 +3305,15 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPRecipeBase::VPPredInstPHISC:
       case VPRecipeBase::VPBranchOnMaskSC:
         continue;
+      case VPRecipeBase::VPInstructionSC:
+        // Wide casts modeled as VPInstructions still produce vectors.
+        if (match(&R, m_WidenCast()))
+          break;
+        continue;
       case VPRecipeBase::VPReductionSC:
       case VPRecipeBase::VPActiveLaneMaskPHISC:
       case VPRecipeBase::VPWidenCallSC:
       case VPRecipeBase::VPWidenCanonicalIVSC:
-      case VPRecipeBase::VPWidenCastSC:
       case VPRecipeBase::VPWidenGEPSC:
       case VPRecipeBase::VPWidenIntrinsicSC:
       case VPRecipeBase::VPWidenMemIntrinsicSC:
@@ -6344,9 +6347,9 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
 
   if (Instruction::isCast(VPI->getOpcode())) {
     auto *CI = cast<CastInst>(Instr);
-    return new VPWidenCastRecipe(CI->getOpcode(), VPI->getOperand(0),
-                                 VPI->getScalarType(), CI, *VPI, *VPI,
-                                 VPI->getDebugLoc());
+    return VPInstruction::createWideCast(CI->getOpcode(), VPI->getOperand(0),
+                                         VPI->getScalarType(), CI, *VPI, *VPI,
+                                         VPI->getDebugLoc());
   }
 
   return tryToWiden(VPI);
@@ -6685,19 +6688,20 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
         "Unexpected recipe");
     for (VPInstruction &VPI :
          make_early_inc_range(make_isa_range<VPInstruction>(*VPBB))) {
-      // We represent single-scalar casts directly as VPInstructions.
-      if (Instruction::isCast(VPI.getOpcode()) &&
-          vputils::onlyFirstLaneUsed(&VPI))
-        continue;
-
       // Only VPInstrutions with an underlying value need to be processed.
       if (!VPI.getUnderlyingValue())
         continue;
 
       Builder.setInsertPoint(&VPI);
 
-      VPRecipeBase *Recipe =
-          RecipeBuilder.tryToCreateWidenNonPhiRecipe(&VPI, Range);
+      VPRecipeBase *Recipe;
+      if (Instruction::isCast(VPI.getOpcode()) &&
+          vputils::onlyFirstLaneUsed(&VPI))
+        Recipe = VPBuilder::createSingleScalarOp(
+            VPI.getOpcode(), VPI.operands(), /*Mask=*/nullptr, VPI, VPI,
+            VPI.getDebugLoc(), VPI.getScalarType(), VPI.getUnderlyingInstr());
+      else
+        Recipe = RecipeBuilder.tryToCreateWidenNonPhiRecipe(&VPI, Range);
       if (!Recipe)
         Recipe = RecipeBuilder.handleReplication(&VPI, Range);
       Builder.insert(Recipe);
@@ -6945,7 +6949,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
               std::next(NewExitingVPV->getDefiningRecipe()->getIterator()));
           ReductionOp =
               Builder.createWidenCast(Instruction::Trunc, NewExitingVPV, RdxTy);
-          VPWidenCastRecipe *Extnd =
+          VPInstruction *Extnd =
               Builder.createWidenCast(ExtendOpc, ReductionOp, PhiTy);
           if (PhiR->getOperand(1) == NewExitingVPV)
             PhiR->setOperand(1, Extnd);

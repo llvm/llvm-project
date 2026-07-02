@@ -109,8 +109,8 @@ define void @do_not_replace_first_order_recurrence_with_versioned_iv_for_pointer
 ; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i64> [ <i64 poison, i64 poison, i64 poison, i64 0>, %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP11:%.*]] = add <4 x i32> [[VEC_IND]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP10]] = zext <4 x i32> [[TMP11]] to <4 x i64>
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i64> [[TMP10]], i64 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i64> [[VECTOR_RECUR]], <4 x i64> [[TMP10]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i64> [[TMP10]], i64 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds double, ptr [[X]], i64 [[TMP13]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i64> [[TMP12]], i64 0
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds double, ptr [[Y]], i64 [[TMP15]]

@@ -1095,7 +1095,7 @@ define i32 @print_mulacc_extended_const_lhs(ptr %start, ptr %end) {
 ; CHECK-NEXT:      EMIT vp<%next.gep> = ptradd ir<%start>, vp<[[VP7]]>
 ; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer i8, vp<%next.gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP8]]>
-; CHECK-NEXT:      WIDEN-CAST ir<%l.ext> = zext ir<%l> to i32
+; CHECK-NEXT:      EMIT ir<%l.ext> = zext ir<%l> to i32
 ; CHECK-NEXT:      EXPRESSION vp<[[VP9]]> = ir<%red> + reduce.add (mul ir<63>, ir<%l.ext>)
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP6]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -1175,7 +1175,7 @@ define i32 @print_mulacc_not_extended_const(ptr %start, ptr %end) {
 ; CHECK-NEXT:      EMIT vp<%next.gep> = ptradd ir<%start>, vp<[[VP7]]>
 ; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer i8, vp<%next.gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP8]]>
-; CHECK-NEXT:      WIDEN-CAST ir<%l.ext> = sext ir<%l> to i32
+; CHECK-NEXT:      EMIT ir<%l.ext> = sext ir<%l> to i32
 ; CHECK-NEXT:      EXPRESSION vp<[[VP9]]> = ir<%red> + reduce.add (mul ir<%l.ext>, ir<128>)
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP6]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -1336,7 +1336,7 @@ define i64 @print_ext_mulacc_not_extended_const(ptr %start, ptr %end) {
 ; CHECK-NEXT:      EMIT vp<%next.gep> = ptradd ir<%start>, vp<[[VP7]]>
 ; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-pointer i8, vp<%next.gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP8]]>
-; CHECK-NEXT:      WIDEN-CAST ir<%l.ext> = sext ir<%l> to i32
+; CHECK-NEXT:      EMIT ir<%l.ext> = sext ir<%l> to i32
 ; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = shl ir<%l.ext>, ir<7>
 ; CHECK-NEXT:      EXPRESSION vp<[[VP10]]> = ir<%red> + reduce.add (vp<[[VP9]]> sext to i64)
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP6]]>, vp<[[VP1]]>
@@ -1411,8 +1411,8 @@ define i64 @print_ext_mul_two_uses(i64 %n, ptr %a, i16 %b, i32 %c) {
 ; CHECK-NEXT:  vector.ph:
 ; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = reduction-start-vector ir<0>, ir<0>, ir<1>
 ; CHECK-NEXT:    CLONE ir<%load> = load ir<%a>
-; CHECK-NEXT:    WIDEN-CAST ir<%load.ext> = sext ir<%load> to i32
-; CHECK-NEXT:    WIDEN-CAST ir<%load.ext.ext> = sext ir<%load.ext> to i64
+; CHECK-NEXT:    EMIT ir<%load.ext> = sext ir<%load> to i32
+; CHECK-NEXT:    EMIT ir<%load.ext.ext> = sext ir<%load.ext> to i64
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {

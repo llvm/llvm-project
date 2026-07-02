@@ -13,7 +13,7 @@ define float @fmaxnum_reduction_f32(float %base, i32 %n) {
 ; CHECK-LABEL: 'fmaxnum_reduction_f32'
 ; CHECK:  Cost of 1 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: WIDEN-REDUCTION-PHI ir<%max> = phi (fmaxnum) ir<-1.000000e+07>, ir<%max.next>
-; CHECK:  Cost of 1 for VF 2: WIDEN-CAST ir<%iv.f> = sitofp ir<%iv> to float
+; CHECK:  Cost of 1 for VF 2: EMIT ir<%iv.f> = sitofp ir<%iv> to float
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%v> = fadd ir<%base>, ir<%iv.f>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP4:%[0-9]+]]> = freeze ir<%v>
 ; CHECK:  Cost of 1 for VF 2: WIDEN-INTRINSIC ir<%max.next> = call llvm.maxnum(ir<%max>, vp<[[VP4]]>)
@@ -44,7 +44,7 @@ define float @fmaxnum_reduction_f32(float %base, i32 %n) {
 ; CHECK:  Cost of 0 for VF 2: IR %max.next.lcssa = phi float [ %max.next, %loop ] (extra operand: vp<[[VP12]]> from middle.block)
 ; CHECK:  Cost of 1 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 4: WIDEN-REDUCTION-PHI ir<%max> = phi (fmaxnum) ir<-1.000000e+07>, ir<%max.next>
-; CHECK:  Cost of 1 for VF 4: WIDEN-CAST ir<%iv.f> = sitofp ir<%iv> to float
+; CHECK:  Cost of 1 for VF 4: EMIT ir<%iv.f> = sitofp ir<%iv> to float
 ; CHECK:  Cost of 1 for VF 4: WIDEN ir<%v> = fadd ir<%base>, ir<%iv.f>
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP4]]> = freeze ir<%v>
 ; CHECK:  Cost of 1 for VF 4: WIDEN-INTRINSIC ir<%max.next> = call llvm.maxnum(ir<%max>, vp<[[VP4]]>)
@@ -96,7 +96,7 @@ define double @fmaxnum_reduction_f64(double %base, i64 %n) {
 ; CHECK-LABEL: 'fmaxnum_reduction_f64'
 ; CHECK:  Cost of 1 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: WIDEN-REDUCTION-PHI ir<%max> = phi (fmaxnum) ir<-1.000000e+07>, ir<%max.next>
-; CHECK:  Cost of 1 for VF 2: WIDEN-CAST ir<%iv.f> = sitofp ir<%iv> to double
+; CHECK:  Cost of 1 for VF 2: EMIT ir<%iv.f> = sitofp ir<%iv> to double
 ; CHECK:  Cost of 1 for VF 2: WIDEN ir<%v> = fadd ir<%base>, ir<%iv.f>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP4:%[0-9]+]]> = freeze ir<%v>
 ; CHECK:  Cost of 1 for VF 2: WIDEN-INTRINSIC ir<%max.next> = call llvm.maxnum(ir<%max>, vp<[[VP4]]>)

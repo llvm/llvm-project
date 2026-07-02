@@ -980,7 +980,7 @@ define void @zext_nneg(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-NEXT:      CLONE ir<%idx> = getelementptr ir<%p>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer i32, ir<%idx>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP5]]>
-; CHECK-NEXT:      WIDEN-CAST ir<%zext> = zext nneg ir<%l> to i64
+; CHECK-NEXT:      EMIT ir<%zext> = zext nneg ir<%l> to i64
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = extract-last-part ir<%zext>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = extract-last-lane vp<[[VP6]]>
 ; CHECK-NEXT:      CLONE store vp<[[VP7]]>, ir<%p1>

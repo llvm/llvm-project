@@ -432,7 +432,6 @@ public:
     VPVectorEndPointerSC,
     VPWidenCallSC,
     VPWidenCanonicalIVSC,
-    VPWidenCastSC,
     VPWidenGEPSC,
     VPWidenIntrinsicSC,
     VPWidenMemIntrinsicSC,
@@ -636,7 +635,6 @@ public:
     case VPRecipeBase::VPVectorEndPointerSC:
     case VPRecipeBase::VPWidenCallSC:
     case VPRecipeBase::VPWidenCanonicalIVSC:
-    case VPRecipeBase::VPWidenCastSC:
     case VPRecipeBase::VPWidenGEPSC:
     case VPRecipeBase::VPWidenIntrinsicSC:
     case VPRecipeBase::VPWidenMemIntrinsicSC:
@@ -1128,7 +1126,6 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
            R->getVPRecipeID() == VPRecipeBase::VPWidenSC ||
            R->getVPRecipeID() == VPRecipeBase::VPWidenGEPSC ||
            R->getVPRecipeID() == VPRecipeBase::VPWidenCallSC ||
-           R->getVPRecipeID() == VPRecipeBase::VPWidenCastSC ||
            R->getVPRecipeID() == VPRecipeBase::VPWidenIntrinsicSC ||
            R->getVPRecipeID() == VPRecipeBase::VPWidenMemIntrinsicSC ||
            R->getVPRecipeID() == VPRecipeBase::VPReductionSC ||
@@ -1465,6 +1462,19 @@ public:
                 DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "",
                 Type *ResultTy = nullptr, bool IsSingleScalar = false);
 
+  /// Create a new VPInstruction representing a wide (vector-producing) cast.
+  static VPInstruction *createWideCast(unsigned Opcode, VPValue *Op,
+                                       Type *ResultTy, CastInst *CI = nullptr,
+                                       const VPIRFlags &Flags = {},
+                                       const VPIRMetadata &Metadata = {},
+                                       DebugLoc DL = DebugLoc::getUnknown()) {
+    assert(Instruction::isCast(Opcode) && "Expected a cast opcode");
+    auto *VPI = new VPInstruction(Opcode, {Op}, Flags, Metadata, DL, "",
+                                  ResultTy, /*IsSingleScalar=*/false);
+    VPI->setUnderlyingValue(CI);
+    return VPI;
+  }
+
   VP_CLASSOF_IMPL(VPRecipeBase::VPInstructionSC)
 
   VPInstruction *clone() override {
@@ -1586,6 +1596,12 @@ public:
 
   /// Returns true if the recipe produces a single scalar value.
   bool isSingleScalar() const;
+
+  /// Returns the cast opcode of this recipe; the opcode must be a cast.
+  Instruction::CastOps getCastOpcode() const {
+    assert(Instruction::isCast(getOpcode()) && "not a cast opcode");
+    return static_cast<Instruction::CastOps>(getOpcode());
+  }
 
   /// Returns the symbolic name assigned to the VPInstruction.
   StringRef getName() const { return Name; }
@@ -1874,56 +1890,6 @@ protected:
     return Opcode == Instruction::Select && Op == getOperand(0) &&
            isa<VPIRValue>(Op);
   }
-};
-
-/// VPWidenCastRecipe is a recipe to create vector cast instructions.
-/// TODO: Merge with VPWidenRecipe now that type is associated to every
-/// VPRecipeValue.
-class LLVM_ABI_FOR_TEST VPWidenCastRecipe : public VPRecipeWithIRFlags,
-                                            public VPIRMetadata {
-  /// Cast instruction opcode.
-  Instruction::CastOps Opcode;
-
-public:
-  VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy,
-                    CastInst *CI = nullptr, const VPIRFlags &Flags = {},
-                    const VPIRMetadata &Metadata = {},
-                    DebugLoc DL = DebugLoc::getUnknown())
-      : VPRecipeWithIRFlags(VPRecipeBase::VPWidenCastSC, Op, ResultTy, Flags,
-                            DL),
-        VPIRMetadata(Metadata), Opcode(Opcode) {
-    assert(flagsValidForOpcode(Opcode) &&
-           "Set flags not supported for the provided opcode");
-    assert(hasRequiredFlagsForOpcode(Opcode, ResultTy) &&
-           "Opcode requires specific flags to be set");
-    setUnderlyingValue(CI);
-  }
-
-  ~VPWidenCastRecipe() override = default;
-
-  VPWidenCastRecipe *clone() override {
-    return new VPWidenCastRecipe(Opcode, getOperand(0), getScalarType(),
-                                 cast_or_null<CastInst>(getUnderlyingValue()),
-                                 *this, *this, getDebugLoc());
-  }
-
-  VP_CLASSOF_IMPL(VPRecipeBase::VPWidenCastSC)
-
-  /// Produce widened copies of the cast.
-  void execute(VPTransformState &State) override;
-
-  /// Return the cost of this VPWidenCastRecipe.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override;
-
-  Instruction::CastOps getOpcode() const { return Opcode; }
-
-protected:
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void printRecipe(raw_ostream &O, const Twine &Indent,
-                   VPSlotTracker &SlotTracker) const override;
-#endif
 };
 
 /// A recipe for widening vector intrinsics.
@@ -3592,9 +3558,9 @@ public:
   VPExpressionRecipe(ExpressionTypes ExpressionType,
                      ArrayRef<VPSingleDefRecipe *> ExpressionRecipes);
 
-  VPExpressionRecipe(VPWidenCastRecipe *Ext, VPReductionRecipe *Red)
+  VPExpressionRecipe(VPInstruction *Ext, VPReductionRecipe *Red)
       : VPExpressionRecipe(ExpressionTypes::ExtendedReduction, {Ext, Red}) {}
-  VPExpressionRecipe(VPWidenCastRecipe *Ext, VPWidenRecipe *Neg,
+  VPExpressionRecipe(VPInstruction *Ext, VPWidenRecipe *Neg,
                      VPReductionRecipe *Red)
       : VPExpressionRecipe(ExpressionTypes::NegatedExtendedReduction,
                            {Ext, Neg, Red}) {
@@ -3610,11 +3576,11 @@ public:
   }
   VPExpressionRecipe(VPWidenRecipe *Mul, VPReductionRecipe *Red)
       : VPExpressionRecipe(ExpressionTypes::MulAccReduction, {Mul, Red}) {}
-  VPExpressionRecipe(VPWidenCastRecipe *Ext0, VPWidenCastRecipe *Ext1,
+  VPExpressionRecipe(VPInstruction *Ext0, VPInstruction *Ext1,
                      VPWidenRecipe *Mul, VPReductionRecipe *Red)
       : VPExpressionRecipe(ExpressionTypes::ExtMulAccReduction,
                            {Ext0, Ext1, Mul, Red}) {}
-  VPExpressionRecipe(VPWidenCastRecipe *Ext0, VPWidenCastRecipe *Ext1,
+  VPExpressionRecipe(VPInstruction *Ext0, VPInstruction *Ext1,
                      VPWidenRecipe *Mul, VPWidenRecipe *Neg,
                      VPReductionRecipe *Red)
       : VPExpressionRecipe(ExpressionTypes::ExtNegatedMulAccReduction,
@@ -4389,11 +4355,10 @@ struct CastInfo<VPWidenMemoryRecipe, const VPSingleDefRecipe *>
 /// Support casting from VPRecipeBase -> VPIRMetadata.
 template <>
 struct CastInfo<VPIRMetadata, VPRecipeBase *>
-    : vpdetail::CastInfoMixinImpl<VPIRMetadata, VPInstruction, VPWidenRecipe,
-                                  VPWidenCastRecipe, VPWidenIntrinsicRecipe,
-                                  VPWidenCallRecipe, VPReplicateRecipe,
-                                  VPInterleaveBase, VPWidenMemoryRecipe,
-                                  VPHistogramRecipe, VPBranchOnMaskRecipe> {};
+    : vpdetail::CastInfoMixinImpl<
+          VPIRMetadata, VPInstruction, VPWidenRecipe, VPWidenIntrinsicRecipe,
+          VPWidenCallRecipe, VPReplicateRecipe, VPInterleaveBase,
+          VPWidenMemoryRecipe, VPHistogramRecipe, VPBranchOnMaskRecipe> {};
 
 template <>
 struct CastInfo<VPIRMetadata, const VPRecipeBase *>
