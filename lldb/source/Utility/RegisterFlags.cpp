@@ -6,12 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Target/RegisterFlags.h"
+#include "lldb/Utility/RegisterFlags.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringExtras.h"
 
+#include <algorithm>
 #include <limits>
 #include <numeric>
 #include <optional>
@@ -286,31 +288,31 @@ static void DumpEnumerators(StreamString &strm, size_t indent,
 }
 
 std::string RegisterFlags::DumpEnums(uint32_t max_width) const {
+  // Accumulate all fields that use the same enum, so that each enum is only
+  // printed once.
+  llvm::MapVector<const FieldEnum *, std::vector<std::string>> enum_uses;
+  for (const auto &field : m_fields)
+    if (const FieldEnum *enum_type = field.GetEnum())
+      enum_uses[enum_type].push_back(field.GetName());
+
   StreamString strm;
-  bool printed_enumerators_once = false;
+  bool printed_one_enumerator = false;
 
-  for (const auto &field : m_fields) {
-    const FieldEnum *enum_type = field.GetEnum();
-    if (!enum_type)
-      continue;
-
-    const FieldEnum::Enumerators &enumerators = enum_type->GetEnumerators();
-    if (enumerators.empty())
-      continue;
-
-    // Break between enumerators of different fields.
-    if (printed_enumerators_once)
+  for (const auto &[enum_type, field_names] : enum_uses) {
+    // Break between unique enumerator types.
+    if (printed_one_enumerator)
       strm << "\n\n";
-    else
-      printed_enumerators_once = true;
 
-    std::string name_string = field.GetName() + ": ";
+    printed_one_enumerator = true;
+
+    std::string name_string = llvm::join(field_names, ", ") + ": ";
     size_t indent = name_string.size();
     size_t current_width = indent;
 
     strm << name_string;
 
-    DumpEnumerators(strm, indent, current_width, max_width, enumerators);
+    DumpEnumerators(strm, indent, current_width, max_width,
+                    enum_type->GetEnumerators());
   }
 
   return strm.GetString().str();
