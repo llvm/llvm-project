@@ -1275,6 +1275,11 @@ public:
     Scalars.clear();
   }
 
+  /// Invalidate interleave groups that contain dead values.
+  void invalidateDeadInterleaveGroups() {
+    InterleaveInfo.invalidateDeadGroups(VecValuesToIgnore);
+  }
+
   /// Returns the expected execution cost. The unit of the cost does
   /// not matter because we use the 'cost' units to compare different
   /// vector widths. The cost that is returned is *not* normalized by
@@ -5530,6 +5535,7 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
       // values.
       CM.invalidateCostModelingDecisions();
   }
+  CM.invalidateDeadInterleaveGroups();
 
   if (CM.foldTailByMasking())
     Legal->prepareToFoldTailByMasking();

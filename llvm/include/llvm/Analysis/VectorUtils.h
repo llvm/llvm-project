@@ -725,6 +725,11 @@ public:
   /// cannot be filtered by masking the load/store.
   LLVM_ABI void invalidateGroupsRequiringScalarEpilogue();
 
+  /// Invalidate groups that contain any dead member.
+  /// \p DeadValues contains the set of values to ignore.
+  LLVM_ABI void
+  invalidateDeadGroups(const SmallPtrSetImpl<const Value *> &DeadValues);
+
   /// Returns true if we have any interleave groups.
   bool hasGroups() const { return !InterleaveGroups.empty(); }
 

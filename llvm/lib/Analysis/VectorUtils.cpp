@@ -1709,6 +1709,30 @@ void InterleavedAccessInfo::invalidateGroupsRequiringScalarEpilogue() {
   RequiresScalarEpilogue = false;
 }
 
+void InterleavedAccessInfo::invalidateDeadGroups(
+    const SmallPtrSetImpl<const Value *> &DeadValues) {
+  if (InterleaveGroups.empty() || DeadValues.empty())
+    return;
+
+  // Release groups that contain any dead member.
+  InterleaveGroups.remove_if([&](auto *Group) {
+    for (unsigned I = 0; I < Group->getFactor(); I++) {
+      Instruction *Member = Group->getMember(I);
+      if (!Member || !DeadValues.contains(Member))
+        continue;
+      LLVM_DEBUG(dbgs() << "LV: Invalidate interleaved group due to dead "
+                           "member.\n");
+      releaseGroupWithoutRemovingFromSet(Group);
+      return true;
+    }
+    return false;
+  });
+
+  // If all groups were invalidated, reset RequiresScalarEpilogue.
+  if (InterleaveGroups.empty())
+    RequiresScalarEpilogue = false;
+}
+
 template <typename InstT>
 void InterleaveGroup<InstT>::addMetadata(InstT *NewInst) const {
   llvm_unreachable("addMetadata can only be used for Instruction");
