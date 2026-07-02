@@ -73,7 +73,6 @@ define i1 @test_and_commuted(i32 %A) {
   ret i1 %res
 }
 
-
 define i1 @test_known_bits(i32 %A) {
   ; clear bit 30
   %A_and = and i32 %A, -1073741825
