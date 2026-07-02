@@ -214,6 +214,12 @@ struct ForOpConversion final : SCFToSPIRVPattern<scf::ForOp> {
       initTypes.push_back(arg.getType());
     replaceSCFOutputValue(forOp, loopOp, rewriter, scfToSPIRVContext,
                           initTypes);
+
+    // Store init values so a zero-trip loop returns them instead of undef.
+    auto &allocas = scfToSPIRVContext->outputVars[loopOp];
+    rewriter.setInsertionPoint(loopOp);
+    for (auto [alloca, init] : llvm::zip(allocas, adaptor.getInitArgs()))
+      spirv::StoreOp::create(rewriter, loc, alloca, init);
     return success();
   }
 };
