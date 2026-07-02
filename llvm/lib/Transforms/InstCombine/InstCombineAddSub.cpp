@@ -1199,7 +1199,13 @@ Value *InstCombinerImpl::SimplifyAddWithRemainder(BinaryOperator &I) {
     Div = LHS, C1 = APInt(I.getType()->getScalarSizeInBits(), 1);
   if (!RHS->hasOneUse() || !MatchMul(RHS, Rem, C2))
     Rem = RHS, C2 = APInt(I.getType()->getScalarSizeInBits(), 1);
-  if (match(Div, m_IRem(m_Value(), m_Value()))) {
+  // The remainder may be spelled `and X, lowmask` (rem by a power of two), not
+  // just urem/srem, so m_IRem alone misses the commuted form
+  // `add (and X, C), (lshr X, N)`. Detect any remainder form here so it lands
+  // in Rem. MatchDiv and MatchRem accept disjoint opcodes, so this cannot
+  // misfire on a genuine division.
+  if (match(Div, m_IRem(m_Value(), m_Value())) ||
+      match(Div, m_And(m_Value(), m_LowBitMask()))) {
     std::swap(Div, Rem);
     std::swap(C1, C2);
   }
