@@ -1350,12 +1350,8 @@ public:
     OpsEnd = VScale,
   };
 
-  /// Returns true if this VPInstruction generates scalar values for all lanes.
-  /// Most VPInstructions generate a single value per part, either vector or
-  /// scalar. VPReplicateRecipe takes care of generating multiple (scalar)
-  /// values per all lanes, stemming from an original ingredient. This method
-  /// identifies the (rare) cases of VPInstructions that do so as well, w/o an
-  /// underlying ingredient.
+  /// Returns true if this VPInstruction generates scalar values for all VF
+  /// lanes; i.e. if it behaves like a non-single-scalar VPReplicateRecipe.
   bool doesGeneratePerAllLanes() const;
 
   /// Return the number of operands determined by the opcode of the
@@ -3440,7 +3436,11 @@ public:
                                          bool IsSingleScalar, ElementCount VF,
                                          VPCostContext &Ctx);
 
+  /// Returns true if the recipe produces a single scalar value.
   bool isSingleScalar() const { return IsSingleScalar; }
+
+  /// Returns true if the recipe produces scalar values for all VF lanes.
+  bool doesGeneratePerAllLanes() const { return !IsSingleScalar; }
 
   bool isPredicated() const { return IsPredicated; }
 
@@ -4292,6 +4292,9 @@ public:
     else
       addOperand(StartIndex);
   }
+
+  /// Returns true if the recipe produces scalar values for all VF lanes.
+  bool doesGeneratePerAllLanes() const;
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
