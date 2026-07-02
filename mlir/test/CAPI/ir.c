@@ -2900,6 +2900,72 @@ int testDominanceInfo(MlirContext ctx) {
   return 0;
 }
 
+int testRegionBranchOpInterface(MlirContext ctx) {
+  fprintf(stderr, "@testRegionBranchOpInterface\n");
+  // CHECK-LABEL: @testRegionBranchOpInterface
+
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("scf"));
+
+  const char *moduleStr = "func.func @f(%cond: i1) {\n"
+                          "  scf.if %cond {\n"
+                          "    scf.yield\n"
+                          "  } else {\n"
+                          "    scf.yield\n"
+                          "  }\n"
+                          "  return\n"
+                          "}\n";
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleStr));
+
+  MlirBlock moduleBody = mlirModuleGetBody(module);
+  MlirOperation funcOp = mlirBlockGetFirstOperation(moduleBody);
+  MlirRegion funcRegion = mlirOperationGetRegion(funcOp, 0);
+  MlirBlock funcBody = mlirRegionGetFirstBlock(funcRegion);
+  MlirOperation ifOp = mlirBlockGetFirstOperation(funcBody);
+  MlirRegion thenRegion = mlirOperationGetRegion(ifOp, 0);
+  MlirRegion elseRegion = mlirOperationGetRegion(ifOp, 1);
+
+  // The scf.if op implements the interface.
+  MlirTypeID id = mlirRegionBranchOpInterfaceTypeID();
+  assert(!mlirTypeIDIsNull(id));
+  assert(mlirOperationImplementsInterface(ifOp, id));
+
+  // Entering the scf.if from its parent can branch into the then and the else
+  // regions.
+  MlirRegion successors[2];
+  intptr_t count =
+      mlirRegionBranchOpInterfaceGetEntrySuccessorRegions(ifOp, 2, successors);
+  assert(count == 2);
+  bool matchesInOrder = mlirRegionEqual(successors[0], thenRegion) &&
+                        mlirRegionEqual(successors[1], elseRegion);
+  bool matchesSwapped = mlirRegionEqual(successors[0], elseRegion) &&
+                        mlirRegionEqual(successors[1], thenRegion);
+  assert(matchesInOrder || matchesSwapped);
+
+  // Branching from a region's terminator (the scf.yield in the then region)
+  // leaves the op: the single successor is the parent, denoted by a null
+  // region.
+  MlirBlock thenBlock = mlirRegionGetFirstBlock(thenRegion);
+  MlirOperation thenYield = mlirBlockGetTerminator(thenBlock);
+  MlirRegion fromTerminator[1];
+  intptr_t fromCount = mlirRegionBranchOpInterfaceGetSuccessorRegions(
+      ifOp, thenYield, 1, fromTerminator);
+  assert(fromCount == 1);
+  assert(mlirRegionIsNull(fromTerminator[0]));
+
+  // Type compatibility along control flow uses equality by default.
+  MlirType i32 = mlirIntegerTypeGet(ctx, 32);
+  MlirType i64 = mlirIntegerTypeGet(ctx, 64);
+  assert(mlirRegionBranchOpInterfaceAreTypesCompatible(ifOp, i32, i32));
+  assert(!mlirRegionBranchOpInterfaceAreTypesCompatible(ifOp, i32, i64));
+
+  mlirModuleDestroy(module);
+
+  // CHECK: testRegionBranchOpInterface: PASSED
+  fprintf(stderr, "testRegionBranchOpInterface: PASSED\n");
+  return 0;
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   registerAllUpstreamDialects(ctx);
@@ -2955,6 +3021,8 @@ int main(void) {
     return 19;
   if (testDominanceInfo(ctx))
     return 20;
+  if (testRegionBranchOpInterface(ctx))
+    return 21;
 
   // CHECK: DESTROY MAIN CONTEXT
   // CHECK: reportResourceDelete: resource_i64_blob

@@ -15,6 +15,7 @@
 #include "mlir/CAPI/Support.h"
 #include "mlir/CAPI/Wrap.h"
 #include "mlir/IR/ValueRange.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "llvm/ADT/ScopeExit.h"
 #include <optional>
@@ -344,4 +345,45 @@ void mlirMemoryEffectsOpInterfaceAttachFallbackModel(
       opInfo->getInterface<MemoryEffectOpInterfaceFallbackModel>());
   assert(model && "Failed to get MemoryEffectOpInterfaceFallbackModel");
   model->setCallbacks(callbacks);
+}
+
+//===---------------------------------------------------------------------===//
+// RegionBranchOpInterface
+//===---------------------------------------------------------------------===//
+
+MlirTypeID mlirRegionBranchOpInterfaceTypeID(void) {
+  return wrap(RegionBranchOpInterface::getInterfaceID());
+}
+
+intptr_t mlirRegionBranchOpInterfaceGetEntrySuccessorRegions(
+    MlirOperation op, intptr_t n, MlirRegion *regions) {
+  auto branchOp = cast<RegionBranchOpInterface>(unwrap(op));
+  SmallVector<RegionSuccessor> successors;
+  branchOp.getSuccessorRegions(RegionBranchPoint::parent(), successors);
+  intptr_t count = static_cast<intptr_t>(successors.size());
+  for (intptr_t i = 0; i < count && i < n; ++i)
+    // A null successor region denotes the parent op (control leaves the op).
+    regions[i] = wrap(successors[i].getSuccessor());
+  return count;
+}
+
+intptr_t mlirRegionBranchOpInterfaceGetSuccessorRegions(
+    MlirOperation op, MlirOperation terminator, intptr_t n,
+    MlirRegion *regions) {
+  auto branchOp = cast<RegionBranchOpInterface>(unwrap(op));
+  RegionBranchPoint point(
+      cast<RegionBranchTerminatorOpInterface>(unwrap(terminator)));
+  SmallVector<RegionSuccessor> successors;
+  branchOp.getSuccessorRegions(point, successors);
+  intptr_t count = static_cast<intptr_t>(successors.size());
+  for (intptr_t i = 0; i < count && i < n; ++i)
+    // A null successor region denotes the parent op (control leaves the op).
+    regions[i] = wrap(successors[i].getSuccessor());
+  return count;
+}
+
+bool mlirRegionBranchOpInterfaceAreTypesCompatible(MlirOperation op,
+                                                   MlirType lhs, MlirType rhs) {
+  return cast<RegionBranchOpInterface>(unwrap(op))
+      .areTypesCompatible(unwrap(lhs), unwrap(rhs));
 }

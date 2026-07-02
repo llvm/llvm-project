@@ -165,6 +165,40 @@ MLIR_CAPI_EXPORTED void mlirMemoryEffectsOpInterfaceAttachFallbackModel(
     MlirContext ctx, MlirStringRef opName,
     MlirMemoryEffectsOpInterfaceCallbacks callbacks);
 
+//===---------------------------------------------------------------------===//
+// RegionBranchOpInterface
+//===---------------------------------------------------------------------===//
+
+/// Returns the interface TypeID of the RegionBranchOpInterface.
+MLIR_CAPI_EXPORTED MlirTypeID mlirRegionBranchOpInterfaceTypeID(void);
+
+/// Returns the regions that control can branch into when entering the given
+/// region-branch operation from its parent. The successor regions are written
+/// into the caller-allocated `regions` buffer, up to `n` entries, and the total
+/// number of entry successors is returned. A null MlirRegion entry denotes a
+/// successor that leaves the operation (i.e. the parent op itself). The
+/// operation must implement RegionBranchOpInterface.
+MLIR_CAPI_EXPORTED intptr_t mlirRegionBranchOpInterfaceGetEntrySuccessorRegions(
+    MlirOperation op, intptr_t n, MlirRegion *regions);
+
+/// Returns the regions that control can branch into from the given region
+/// terminator. `terminator` must be a terminator operation (implementing
+/// RegionBranchTerminatorOpInterface) nested in one of `op`'s regions. The
+/// successor regions are written into the caller-allocated `regions` buffer, up
+/// to `n` entries, and the total number of successors is returned. A null
+/// MlirRegion entry denotes a successor that leaves the operation (i.e. the
+/// parent op itself). The operation must implement RegionBranchOpInterface.
+MLIR_CAPI_EXPORTED intptr_t mlirRegionBranchOpInterfaceGetSuccessorRegions(
+    MlirOperation op, MlirOperation terminator, intptr_t n,
+    MlirRegion *regions);
+
+/// Returns true if the types are compatible for region branching between the
+/// successor regions of the given operation. The operation must implement
+/// RegionBranchOpInterface.
+MLIR_CAPI_EXPORTED bool
+mlirRegionBranchOpInterfaceAreTypesCompatible(MlirOperation op, MlirType lhs,
+                                              MlirType rhs);
+
 #ifdef __cplusplus
 }
 #endif
