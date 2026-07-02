@@ -9081,7 +9081,9 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     }
   }
 
-  // zero sized static arrays are not allowed in HIP device functions
+  // Zero-sized static arrays are not allowed in HIP device functions. For
+  // host/device functions this is only a device-side issue if the function is
+  // actually emitted for the device, so defer the diagnostic until then.
   if (getLangOpts().HIP && LangOpts.CUDAIsDevice) {
     if (FunctionDecl *FD = getCurFunctionDecl();
         FD &&
@@ -9089,7 +9091,9 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
       if (const ConstantArrayType *ArrayT =
               getASTContext().getAsConstantArrayType(T);
           ArrayT && ArrayT->isZeroSize()) {
-        Diag(NewVD->getLocation(), diag::err_typecheck_zero_array_size) << 2;
+        CUDA().DiagIfDeviceCode(NewVD->getLocation(),
+                                diag::err_typecheck_zero_array_size)
+            << 2;
       }
     }
   }
