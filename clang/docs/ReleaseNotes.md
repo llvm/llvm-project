@@ -907,6 +907,20 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 #### X86 Support
 
 - `march=znver6` is now supported.
+- Support ISA of `AVX512BMM`.
+  - Support intrinsic of `_mm512_bmacor16x16x16`.
+  - Support intrinsic of `_mm512_bmacxor16x16x16`.
+  - Support intrinsic of `_mm512_mask_bitrev_epi8`.
+  - Support intrinsic of `_mm512_maskz_bitrev_epi8`.
+  - Support intrinsic of `_mm512_bitrev_epi8`.
+  - Support intrinsic of `_mm256_bmacor16x16x16`.
+  - Support intrinsic of `_mm256_bmacxor16x16x16`.
+  - Support intrinsic of `_mm_mask_bitrev_epi8`.
+  - Support intrinsic of `_mm256_mask_bitrev_epi8`.
+  - Support intrinsic of `_mm_maskz_bitrev_epi8`.
+  - Support intrinsic of `_mm256_maskz_bitrev_epi8`.
+  - Support intrinsic of `_mm_bitrev_epi8`.
+  - Support intrinsic of `_mm256_bitrev_epi8`.
 
 #### Arm and AArch64 Support
 
@@ -1056,6 +1070,10 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed a crash when code completion is triggered inside an ill-formed lambda's trailing requires-clause. (#GH201632)  
 
 ### Static Analyzer
+
+- The `-analyzer-constraints` option `z3` was renamed to `unsupported-z3`
+  because the Z3-based (constraint) solver was known for crashing for years now.
+  Didn't receive support, so it was marked unsupported.
 
 #### Crash and bug fixes
 

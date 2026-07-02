@@ -8,13 +8,13 @@
 
 ; Verify that we correctly fold horizontal binop even in the presence of UNDEFs.
 
-define <4 x float> @test1_undef(<4 x float> %a, <4 x float> %b) {
-; SSE-LABEL: test1_undef:
+define <4 x float> @add_v4f32_01u3(<4 x float> %a, <4 x float> %b) {
+; SSE-LABEL: add_v4f32_01u3:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    haddps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test1_undef:
+; AVX-LABEL: add_v4f32_01u3:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -33,13 +33,13 @@ define <4 x float> @test1_undef(<4 x float> %a, <4 x float> %b) {
   ret <4 x float> %vecinit13
 }
 
-define <4 x float> @test2_undef(<4 x float> %a, <4 x float> %b) {
-; SSE-LABEL: test2_undef:
+define <4 x float> @add_v4f32_0u23(<4 x float> %a, <4 x float> %b) {
+; SSE-LABEL: add_v4f32_0u23:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    haddps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test2_undef:
+; AVX-LABEL: add_v4f32_0u23:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -58,13 +58,13 @@ define <4 x float> @test2_undef(<4 x float> %a, <4 x float> %b) {
   ret <4 x float> %vecinit13
 }
 
-define <4 x float> @test3_undef(<4 x float> %a, <4 x float> %b) {
-; SSE-LABEL: test3_undef:
+define <4 x float> @add_v4f32_012u(<4 x float> %a, <4 x float> %b) {
+; SSE-LABEL: add_v4f32_012u:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    haddps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test3_undef:
+; AVX-LABEL: add_v4f32_012u:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -83,25 +83,25 @@ define <4 x float> @test3_undef(<4 x float> %a, <4 x float> %b) {
   ret <4 x float> %vecinit9
 }
 
-define <4 x float> @test4_undef(<4 x float> %a, <4 x float> %b) {
-; SSE-SLOW-LABEL: test4_undef:
+define <4 x float> @add_v4f32_0uuu(<4 x float> %a, <4 x float> %b) {
+; SSE-SLOW-LABEL: add_v4f32_0uuu:
 ; SSE-SLOW:       # %bb.0:
 ; SSE-SLOW-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; SSE-SLOW-NEXT:    addss %xmm1, %xmm0
 ; SSE-SLOW-NEXT:    retq
 ;
-; SSE-FAST-LABEL: test4_undef:
+; SSE-FAST-LABEL: add_v4f32_0uuu:
 ; SSE-FAST:       # %bb.0:
 ; SSE-FAST-NEXT:    haddps %xmm0, %xmm0
 ; SSE-FAST-NEXT:    retq
 ;
-; AVX-SLOW-LABEL: test4_undef:
+; AVX-SLOW-LABEL: add_v4f32_0uuu:
 ; AVX-SLOW:       # %bb.0:
 ; AVX-SLOW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX-SLOW-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    retq
 ;
-; AVX-FAST-LABEL: test4_undef:
+; AVX-FAST-LABEL: add_v4f32_0uuu:
 ; AVX-FAST:       # %bb.0:
 ; AVX-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX-FAST-NEXT:    retq
@@ -112,26 +112,26 @@ define <4 x float> @test4_undef(<4 x float> %a, <4 x float> %b) {
   ret <4 x float> %vecinit
 }
 
-define <2 x double> @test5_undef(<2 x double> %a, <2 x double> %b) {
-; SSE-SLOW-LABEL: test5_undef:
+define <2 x double> @add_v2f64_0uuu(<2 x double> %a, <2 x double> %b) {
+; SSE-SLOW-LABEL: add_v2f64_0uuu:
 ; SSE-SLOW:       # %bb.0:
 ; SSE-SLOW-NEXT:    movapd %xmm0, %xmm1
 ; SSE-SLOW-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; SSE-SLOW-NEXT:    addsd %xmm1, %xmm0
 ; SSE-SLOW-NEXT:    retq
 ;
-; SSE-FAST-LABEL: test5_undef:
+; SSE-FAST-LABEL: add_v2f64_0uuu:
 ; SSE-FAST:       # %bb.0:
 ; SSE-FAST-NEXT:    haddpd %xmm0, %xmm0
 ; SSE-FAST-NEXT:    retq
 ;
-; AVX-SLOW-LABEL: test5_undef:
+; AVX-SLOW-LABEL: add_v2f64_0uuu:
 ; AVX-SLOW:       # %bb.0:
 ; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-SLOW-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    retq
 ;
-; AVX-FAST-LABEL: test5_undef:
+; AVX-FAST-LABEL: add_v2f64_0uuu:
 ; AVX-FAST:       # %bb.0:
 ; AVX-FAST-NEXT:    vhaddpd %xmm0, %xmm0, %xmm0
 ; AVX-FAST-NEXT:    retq
@@ -142,13 +142,13 @@ define <2 x double> @test5_undef(<2 x double> %a, <2 x double> %b) {
   ret <2 x double> %vecinit
 }
 
-define <4 x float> @test6_undef(<4 x float> %a, <4 x float> %b) {
-; SSE-LABEL: test6_undef:
+define <4 x float> @add_v4f32_01uu(<4 x float> %a, <4 x float> %b) {
+; SSE-LABEL: add_v4f32_01uu:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    haddps %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test6_undef:
+; AVX-LABEL: add_v4f32_01uu:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -163,13 +163,13 @@ define <4 x float> @test6_undef(<4 x float> %a, <4 x float> %b) {
   ret <4 x float> %vecinit5
 }
 
-define <4 x float> @test7_undef(<4 x float> %a, <4 x float> %b) {
-; SSE-LABEL: test7_undef:
+define <4 x float> @add_v4f32_uu23(<4 x float> %a, <4 x float> %b) {
+; SSE-LABEL: add_v4f32_uu23:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    haddps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test7_undef:
+; AVX-LABEL: add_v4f32_uu23:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -184,8 +184,8 @@ define <4 x float> @test7_undef(<4 x float> %a, <4 x float> %b) {
   ret <4 x float> %vecinit5
 }
 
-define <4 x float> @test8_undef(<4 x float> %a, <4 x float> %b) {
-; SSE-SLOW-LABEL: test8_undef:
+define <4 x float> @add_v4f32_0u1u(<4 x float> %a, <4 x float> %b) {
+; SSE-SLOW-LABEL: add_v4f32_0u1u:
 ; SSE-SLOW:       # %bb.0:
 ; SSE-SLOW-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; SSE-SLOW-NEXT:    addss %xmm0, %xmm1
@@ -197,13 +197,13 @@ define <4 x float> @test8_undef(<4 x float> %a, <4 x float> %b) {
 ; SSE-SLOW-NEXT:    movaps %xmm1, %xmm0
 ; SSE-SLOW-NEXT:    retq
 ;
-; SSE-FAST-LABEL: test8_undef:
+; SSE-FAST-LABEL: add_v4f32_0u1u:
 ; SSE-FAST:       # %bb.0:
 ; SSE-FAST-NEXT:    haddps %xmm0, %xmm0
 ; SSE-FAST-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1,1,1]
 ; SSE-FAST-NEXT:    retq
 ;
-; AVX-SLOW-LABEL: test8_undef:
+; AVX-SLOW-LABEL: add_v4f32_0u1u:
 ; AVX-SLOW:       # %bb.0:
 ; AVX-SLOW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX-SLOW-NEXT:    vaddss %xmm1, %xmm0, %xmm1
@@ -213,7 +213,7 @@ define <4 x float> @test8_undef(<4 x float> %a, <4 x float> %b) {
 ; AVX-SLOW-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1],xmm0[0],xmm1[3]
 ; AVX-SLOW-NEXT:    retq
 ;
-; AVX-FAST-LABEL: test8_undef:
+; AVX-FAST-LABEL: add_v4f32_0u1u:
 ; AVX-FAST:       # %bb.0:
 ; AVX-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX-FAST-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1,1,3]
@@ -229,13 +229,13 @@ define <4 x float> @test8_undef(<4 x float> %a, <4 x float> %b) {
   ret <4 x float> %vecinit5
 }
 
-define <4 x float> @test9_undef(<4 x float> %a, <4 x float> %b) {
-; SSE-LABEL: test9_undef:
+define <4 x float> @add_v4f32_0uu3(<4 x float> %a, <4 x float> %b) {
+; SSE-LABEL: add_v4f32_0uu3:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    haddps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test9_undef:
+; AVX-LABEL: add_v4f32_0uu3:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -250,13 +250,13 @@ define <4 x float> @test9_undef(<4 x float> %a, <4 x float> %b) {
   ret <4 x float> %vecinit5
 }
 
-define <8 x float> @test10_undef(<8 x float> %a, <8 x float> %b) {
-; SSE-LABEL: test10_undef:
+define <8 x float> @add_v8f32_0uu3uuuu(<8 x float> %a, <8 x float> %b) {
+; SSE-LABEL: add_v8f32_0uu3uuuu:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    haddps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test10_undef:
+; AVX-LABEL: add_v8f32_0uu3uuuu:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -271,8 +271,8 @@ define <8 x float> @test10_undef(<8 x float> %a, <8 x float> %b) {
   ret <8 x float> %vecinit5
 }
 
-define <8 x float> @test11_undef(<8 x float> %a, <8 x float> %b) {
-; SSE-SLOW-LABEL: test11_undef:
+define <8 x float> @add_v8f32_0uuuuu6u(<8 x float> %a, <8 x float> %b) {
+; SSE-SLOW-LABEL: add_v8f32_0uuuuu6u:
 ; SSE-SLOW:       # %bb.0:
 ; SSE-SLOW-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; SSE-SLOW-NEXT:    addss %xmm1, %xmm0
@@ -281,14 +281,14 @@ define <8 x float> @test11_undef(<8 x float> %a, <8 x float> %b) {
 ; SSE-SLOW-NEXT:    movddup {{.*#+}} xmm1 = xmm1[0,0]
 ; SSE-SLOW-NEXT:    retq
 ;
-; SSE-FAST-LABEL: test11_undef:
+; SSE-FAST-LABEL: add_v8f32_0uuuuu6u:
 ; SSE-FAST:       # %bb.0:
 ; SSE-FAST-NEXT:    movaps %xmm3, %xmm1
 ; SSE-FAST-NEXT:    haddps %xmm0, %xmm0
 ; SSE-FAST-NEXT:    haddps %xmm3, %xmm1
 ; SSE-FAST-NEXT:    retq
 ;
-; AVX-LABEL: test11_undef:
+; AVX-LABEL: add_v8f32_0uuuuu6u:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vhaddps %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
@@ -303,13 +303,13 @@ define <8 x float> @test11_undef(<8 x float> %a, <8 x float> %b) {
   ret <8 x float> %vecinit5
 }
 
-define <8 x float> @test12_undef(<8 x float> %a, <8 x float> %b) {
-; SSE-LABEL: test12_undef:
+define <8 x float> @add_v8f32_01uuuuuu(<8 x float> %a, <8 x float> %b) {
+; SSE-LABEL: add_v8f32_01uuuuuu:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    haddps %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test12_undef:
+; AVX-LABEL: add_v8f32_01uuuuuu:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -324,13 +324,13 @@ define <8 x float> @test12_undef(<8 x float> %a, <8 x float> %b) {
   ret <8 x float> %vecinit5
 }
 
-define <8 x float> @test13_undef(<8 x float> %a, <8 x float> %b) {
-; SSE-LABEL: test13_undef:
+define <8 x float> @add_v8f32_0145uuuu(<8 x float> %a, <8 x float> %b) {
+; SSE-LABEL: add_v8f32_0145uuuu:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    haddps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test13_undef:
+; AVX-LABEL: add_v8f32_0145uuuu:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
@@ -354,25 +354,25 @@ define <8 x float> @test13_undef(<8 x float> %a, <8 x float> %b) {
   ret <8 x float> %vecinit4
 }
 
-define <16 x float> @test13_v16f32_undef(<16 x float> %a, <16 x float> %b) {
-; SSE-LABEL: test13_v16f32_undef:
+define <16 x float> @add_v16f32_0145uuuuuuuuuuuu(<16 x float> %a, <16 x float> %b) {
+; SSE-LABEL: add_v16f32_0145uuuuuuuuuuuu:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    haddps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX1-SLOW-LABEL: test13_v16f32_undef:
+; AVX1-SLOW-LABEL: add_v16f32_0145uuuuuuuuuuuu:
 ; AVX1-SLOW:       # %bb.0:
 ; AVX1-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX1-SLOW-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
 ; AVX1-SLOW-NEXT:    retq
 ;
-; AVX-FAST-LABEL: test13_v16f32_undef:
+; AVX-FAST-LABEL: add_v16f32_0145uuuuuuuuuuuu:
 ; AVX-FAST:       # %bb.0:
 ; AVX-FAST-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX-FAST-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
 ; AVX-FAST-NEXT:    retq
 ;
-; AVX512-SLOW-LABEL: test13_v16f32_undef:
+; AVX512-SLOW-LABEL: add_v16f32_0145uuuuuuuuuuuu:
 ; AVX512-SLOW:       # %bb.0:
 ; AVX512-SLOW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX512-SLOW-NEXT:    vaddss %xmm1, %xmm0, %xmm1
@@ -407,6 +407,7 @@ define <16 x float> @test13_v16f32_undef(<16 x float> %a, <16 x float> %b) {
   %vecinit4 = insertelement <16 x float> %vecinit3, float %add4, i32 3
   ret <16 x float> %vecinit4
 }
+
 define <2 x double> @add_pd_003(<2 x double> %x) {
 ; SSE-SLOW-LABEL: add_pd_003:
 ; SSE-SLOW:       # %bb.0:
