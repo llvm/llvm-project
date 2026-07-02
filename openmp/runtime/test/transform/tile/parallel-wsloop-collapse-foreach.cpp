@@ -206,6 +206,10 @@ int main() {
 // CHECK-NEXT: i=0 v=2 w=1
 // CHECK-NEXT: [B] iterator dtor
 // CHECK-NEXT: [A] iterator dtor
+// CHECK-NEXT: [A] iterator advance: 0 += 3
+// CHECK-NEXT: [A] iterator move assign
+// CHECK-NEXT: [A] iterator deref: 3
+// CHECK-NEXT: [A] iterator dtor
 // CHECK-NEXT: [A] iterator advance: 0 += 2
 // CHECK-NEXT: [A] iterator move assign
 // CHECK-NEXT: [A] iterator deref: 2
@@ -214,6 +218,10 @@ int main() {
 // CHECK-NEXT: [B] iterator deref: 2
 // CHECK-NEXT: i=0 v=2 w=2
 // CHECK-NEXT: [B] iterator dtor
+// CHECK-NEXT: [A] iterator dtor
+// CHECK-NEXT: [A] iterator advance: 0 += 3
+// CHECK-NEXT: [A] iterator move assign
+// CHECK-NEXT: [A] iterator deref: 3
 // CHECK-NEXT: [A] iterator dtor
 // CHECK-NEXT: [A] iterator advance: 0 += 0
 // CHECK-NEXT: [A] iterator move assign
@@ -275,6 +283,10 @@ int main() {
 // CHECK-NEXT: i=1 v=2 w=1
 // CHECK-NEXT: [B] iterator dtor
 // CHECK-NEXT: [A] iterator dtor
+// CHECK-NEXT: [A] iterator advance: 0 += 3
+// CHECK-NEXT: [A] iterator move assign
+// CHECK-NEXT: [A] iterator deref: 3
+// CHECK-NEXT: [A] iterator dtor
 // CHECK-NEXT: [A] iterator advance: 0 += 2
 // CHECK-NEXT: [A] iterator move assign
 // CHECK-NEXT: [A] iterator deref: 2
@@ -283,6 +295,10 @@ int main() {
 // CHECK-NEXT: [B] iterator deref: 2
 // CHECK-NEXT: i=1 v=2 w=2
 // CHECK-NEXT: [B] iterator dtor
+// CHECK-NEXT: [A] iterator dtor
+// CHECK-NEXT: [A] iterator advance: 0 += 3
+// CHECK-NEXT: [A] iterator move assign
+// CHECK-NEXT: [A] iterator deref: 3
 // CHECK-NEXT: [A] iterator dtor
 // CHECK-NEXT: [A] iterator advance: 0 += 0
 // CHECK-NEXT: [A] iterator move assign
@@ -344,6 +360,10 @@ int main() {
 // CHECK-NEXT: i=2 v=2 w=1
 // CHECK-NEXT: [B] iterator dtor
 // CHECK-NEXT: [A] iterator dtor
+// CHECK-NEXT: [A] iterator advance: 0 += 3
+// CHECK-NEXT: [A] iterator move assign
+// CHECK-NEXT: [A] iterator deref: 3
+// CHECK-NEXT: [A] iterator dtor
 // CHECK-NEXT: [A] iterator advance: 0 += 2
 // CHECK-NEXT: [A] iterator move assign
 // CHECK-NEXT: [A] iterator deref: 2
@@ -352,6 +372,10 @@ int main() {
 // CHECK-NEXT: [B] iterator deref: 2
 // CHECK-NEXT: i=2 v=2 w=2
 // CHECK-NEXT: [B] iterator dtor
+// CHECK-NEXT: [A] iterator dtor
+// CHECK-NEXT: [A] iterator advance: 0 += 3
+// CHECK-NEXT: [A] iterator move assign
+// CHECK-NEXT: [A] iterator deref: 3
 // CHECK-NEXT: [A] iterator dtor
 // CHECK-NEXT: [B] iterator dtor
 // CHECK-NEXT: [B] iterator dtor
