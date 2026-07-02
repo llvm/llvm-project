@@ -15,7 +15,6 @@
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPULaneMaskUtils.h"
-#include "AMDGPUMemoryUtils.h"
 #include "AMDGPUSelectionDAGInfo.h"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
@@ -9863,13 +9862,6 @@ SDValue SITargetLowering::lowerBUILD_VECTOR(SDValue Op,
 
 bool SITargetLowering::isOffsetFoldingLegal(
     const GlobalAddressSDNode *GA) const {
-  // Named barriers have fixed, non-relocated LDS addresses, so a constant
-  // offset into an array of them can be folded into the address.
-  if (GA->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
-    const auto *GV = dyn_cast<GlobalVariable>(GA->getGlobal());
-    return GV && AMDGPU::isNamedBarrier(*GV);
-  }
-
   // OSes that use ELF REL relocations (instead of RELA) can only store a
   // 32-bit addend in the instruction, so it is not safe to allow offset folding
   // which can create arbitrary 64-bit addends. (This is only a problem for
@@ -18515,6 +18507,151 @@ SDValue SITargetLowering::performClampCombine(SDNode *N,
   return SDValue(CSrc, 0);
 }
 
+// Try to fold select of inf/nan check with frexp result.
+// The AMDGPU frexp instructions return 0 for inf/nan inputs (except on SI
+// which has hasFractBug). So patterns like:
+//   select (fcmp uno x, 0), 0, (frexp_exp x) -> frexp_exp x
+//   select (fcmp oeq |x|, inf), 0, (frexp_exp x) -> frexp_exp x
+//   select (fcmp ueq |x|, inf), 0, (frexp_exp x) -> frexp_exp x
+//   select (is_fpclass x, finite_mask), frexp, 0 -> frexp_exp x
+// can be simplified to just the frexp result.
+SDValue SITargetLowering::performFrexpSelectCombine(SDNode *N,
+                                                    DAGCombinerInfo &DCI) const {
+  // This optimization only applies when the hardware handles inf/nan correctly.
+  if (Subtarget->hasFractBug())
+    return SDValue();
+
+  SDValue Cond = N->getOperand(0);
+  SDValue TrueVal = N->getOperand(1);
+  SDValue FalseVal = N->getOperand(2);
+
+  // Determine which value is 0 and which might be the frexp result.
+  // Pattern 1: select cond, 0, frexp_result (cond true -> return 0)
+  // Pattern 2: select cond, frexp_result, 0 (cond false -> return 0)
+  SDValue FrexpVal;
+  bool CondSelectsZero; // If true, condition=true selects zero
+
+  auto isZero = [](SDValue V) {
+    if (auto *C = dyn_cast<ConstantSDNode>(V))
+      return C->isZero();
+    if (auto *C = dyn_cast<ConstantFPSDNode>(V))
+      return C->isZero();
+    return false;
+  };
+
+  if (isZero(TrueVal)) {
+    FrexpVal = FalseVal;
+    CondSelectsZero = true;
+  } else if (isZero(FalseVal)) {
+    FrexpVal = TrueVal;
+    CondSelectsZero = false;
+  } else {
+    return SDValue();
+  }
+
+  // Check if FrexpVal comes from amdgcn_frexp_exp or amdgcn_frexp_mant.
+  if (FrexpVal.getOpcode() != ISD::INTRINSIC_WO_CHAIN)
+    return SDValue();
+
+  unsigned IID = FrexpVal.getConstantOperandVal(0);
+  if (IID != Intrinsic::amdgcn_frexp_exp && IID != Intrinsic::amdgcn_frexp_mant)
+    return SDValue();
+
+  SDValue FrexpInput = FrexpVal.getOperand(1);
+
+  // Helper to strip fabs/fneg/fcopysign from a value.
+  auto peekFPSignOps = [](SDValue Val) {
+    if (Val.getOpcode() == ISD::FNEG)
+      Val = Val.getOperand(0);
+    if (Val.getOpcode() == ISD::FABS)
+      Val = Val.getOperand(0);
+    if (Val.getOpcode() == ISD::FCOPYSIGN)
+      Val = Val.getOperand(0);
+    return Val;
+  };
+
+  // The frexp intrinsics ignore sign, so we can strip sign ops when comparing.
+  SDValue FrexpInputStripped = peekFPSignOps(FrexpInput);
+
+  bool IsNonFiniteTest = false;
+
+  // Handle AMDGPUISD::FP_CLASS or ISD::IS_FPCLASS conditions.
+  // These test specific floating-point classes using a bitmask.
+  if (Cond.getOpcode() == AMDGPUISD::FP_CLASS ||
+      Cond.getOpcode() == ISD::IS_FPCLASS) {
+    SDValue ClassInput = Cond.getOperand(0);
+    SDValue ClassInputStripped = peekFPSignOps(ClassInput);
+
+    if (ClassInputStripped != FrexpInputStripped)
+      return SDValue();
+
+    auto *MaskNode = dyn_cast<ConstantSDNode>(Cond.getOperand(1));
+    if (!MaskNode)
+      return SDValue();
+
+    unsigned Mask = MaskNode->getZExtValue();
+
+    // fcFinite = all finite classes (not inf, not nan)
+    // If the mask tests for finite values and selects frexp when true,
+    // we can fold away the select since frexp returns 0 for non-finite.
+    constexpr unsigned fcFinite = 0x1F8; // fcPosNormal|fcNegNormal|fcPosSubnormal|fcNegSubnormal|fcPosZero|fcNegZero
+    constexpr unsigned fcInfNan = 0x207; // fcPosInf|fcNegInf|fcSNan|fcQNan
+
+    if (Mask == fcFinite) {
+      // is_fpclass(x, finite) selects frexp when x is finite
+      // frexp already returns 0 for non-finite, so select frexp, 0 -> frexp
+      IsNonFiniteTest = !CondSelectsZero;
+    } else if (Mask == fcInfNan || Mask == 0x3 || Mask == 0x204) {
+      // is_fpclass(x, inf|nan) or is_fpclass(x, nan) or is_fpclass(x, inf)
+      // selects 0 when x is non-finite
+      IsNonFiniteTest = CondSelectsZero;
+    }
+  } else if (Cond.getOpcode() == ISD::SETCC) {
+    // Handle SETCC conditions for inf/nan tests.
+    ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+    SDValue CondLHS = Cond.getOperand(0);
+    SDValue CondRHS = Cond.getOperand(1);
+    SDValue CondLHSStripped = peekFPSignOps(CondLHS);
+
+    auto isInfConstant = [](SDValue V) {
+      auto *CFP = dyn_cast<ConstantFPSDNode>(V);
+      return CFP && CFP->getValueAPF().isInfinity();
+    };
+
+    if (CC == ISD::SETUO) {
+      // fcmp uno x, y - true if either x or y is NaN
+      SDValue CondRHSStripped = peekFPSignOps(CondRHS);
+      if (CondLHSStripped == FrexpInputStripped ||
+          CondRHSStripped == FrexpInputStripped) {
+        IsNonFiniteTest = CondSelectsZero;
+      }
+    } else if ((CC == ISD::SETOEQ || CC == ISD::SETUEQ) &&
+               isInfConstant(CondRHS)) {
+      // fcmp oeq/ueq |x|, inf - true if x is inf (or inf/nan for ueq)
+      if (CondLHSStripped == FrexpInputStripped)
+        IsNonFiniteTest = CondSelectsZero;
+    } else if ((CC == ISD::SETONE || CC == ISD::SETUNE) &&
+               isInfConstant(CondRHS)) {
+      // fcmp one/une |x|, inf - true if x is NOT inf
+      if (CondLHSStripped == FrexpInputStripped)
+        IsNonFiniteTest = !CondSelectsZero;
+    } else if (CC == ISD::SETO) {
+      // fcmp ord x, y - true if both are NOT NaN
+      SDValue CondRHSStripped = peekFPSignOps(CondRHS);
+      if (CondLHSStripped == FrexpInputStripped ||
+          CondRHSStripped == FrexpInputStripped) {
+        IsNonFiniteTest = !CondSelectsZero;
+      }
+    }
+  }
+
+  if (!IsNonFiniteTest)
+    return SDValue();
+
+  // The select can be eliminated - just return the frexp result directly.
+  return FrexpVal;
+}
+
 SDValue SITargetLowering::performSelectCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
 
@@ -18639,6 +18776,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SETCC:
     return performSetCCCombine(N, DCI);
   case ISD::SELECT:
+    if (auto Res = performFrexpSelectCombine(N, DCI))
+      return Res;
     if (auto Res = performSelectCombine(N, DCI))
       return Res;
     break;
