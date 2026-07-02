@@ -10982,8 +10982,6 @@ AArch64InstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
   // plus the call, then we'll break the callee's expectations for the layout
   // of the stack.
   //
-  // FIXME: Allow calls to functions which construct a stack frame, as long
-  // as they don't access arguments on the stack.
   // FIXME: Figure out some way to analyze functions defined in other modules.
   // We should be able to compute the memory usage based on the IR calling
   // convention, even if we can't see the definition.
@@ -11026,13 +11024,20 @@ AArch64InstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
     // Check if we know anything about the callee saves on the function. If we
     // don't, then don't touch it, since that implies that we haven't
     // computed anything about its stack frame yet.
+    // A variadic callee may read stack arguments at offsets above its entry
+    // SP - some calling conventions always put variadic arguments on stack,
+    // so conservatively reject it.
     MachineFrameInfo &MFI = CalleeMF->getFrameInfo();
-    if (!MFI.isCalleeSavedInfoValid() || MFI.getStackSize() > 0 ||
-        MFI.getNumObjects() > 0)
+    if (!MFI.isCalleeSavedInfoValid() || CalleeMF->getFunction().isVarArg())
       return UnknownCallOutlineType;
 
-    // At this point, we can say that CalleeMF ought to not pass anything on the
-    // stack. Therefore, we can outline it.
+    // If the callee has fixed incoming stack arguments, outlining is unsafe
+    // except for tail calls.
+    if (MFI.getNumFixedObjects() > 0)
+      return UnknownCallOutlineType;
+
+    // At this point, we can say that CalleeMF does not access incoming stack
+    // arguments above its entry SP. Therefore, it is safe to outline.
     return outliner::InstrType::Legal;
   }
 
