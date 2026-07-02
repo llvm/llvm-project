@@ -54,7 +54,7 @@ template <>
 struct plus<void> {
   template <class _T1, class _T2>
   _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI auto operator()(_T1&& __t, _T2&& __u) const
-      noexcept(noexcept(std::forward<_T1>(__t) + std::forward<_T2>(__u))) //
+      noexcept(noexcept(std::forward<_T1>(__t) + std::forward<_T2>(__u))) // strengthened(TODO: why???)
       -> decltype(std::forward<_T1>(__t) + std::forward<_T2>(__u)) {
     return std::forward<_T1>(__t) + std::forward<_T2>(__u);
   }
@@ -80,7 +80,7 @@ template <>
 struct minus<void> {
   template <class _T1, class _T2>
   _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI auto operator()(_T1&& __t, _T2&& __u) const
-      noexcept(noexcept(std::forward<_T1>(__t) - std::forward<_T2>(__u))) //
+      noexcept(noexcept(std::forward<_T1>(__t) - std::forward<_T2>(__u))) // strengthened(TODO: why???)
       -> decltype(std::forward<_T1>(__t) - std::forward<_T2>(__u)) {
     return std::forward<_T1>(__t) - std::forward<_T2>(__u);
   }
@@ -106,7 +106,7 @@ template <>
 struct multiplies<void> {
   template <class _T1, class _T2>
   _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI auto operator()(_T1&& __t, _T2&& __u) const
-      noexcept(noexcept(std::forward<_T1>(__t) * std::forward<_T2>(__u))) //
+      noexcept(noexcept(std::forward<_T1>(__t) * std::forward<_T2>(__u))) // strengthened(TODO: why???)
       -> decltype(std::forward<_T1>(__t) * std::forward<_T2>(__u)) {
     return std::forward<_T1>(__t) * std::forward<_T2>(__u);
   }
@@ -132,7 +132,7 @@ template <>
 struct divides<void> {
   template <class _T1, class _T2>
   _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI auto operator()(_T1&& __t, _T2&& __u) const
-      noexcept(noexcept(std::forward<_T1>(__t) / std::forward<_T2>(__u))) //
+      noexcept(noexcept(std::forward<_T1>(__t) / std::forward<_T2>(__u))) // strengthened(TODO: why???)
       -> decltype(std::forward<_T1>(__t) / std::forward<_T2>(__u)) {
     return std::forward<_T1>(__t) / std::forward<_T2>(__u);
   }
@@ -158,7 +158,7 @@ template <>
 struct modulus<void> {
   template <class _T1, class _T2>
   _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI auto operator()(_T1&& __t, _T2&& __u) const
-      noexcept(noexcept(std::forward<_T1>(__t) % std::forward<_T2>(__u))) //
+      noexcept(noexcept(std::forward<_T1>(__t) % std::forward<_T2>(__u))) // strengthened(TODO: why???)
       -> decltype(std::forward<_T1>(__t) % std::forward<_T2>(__u)) {
     return std::forward<_T1>(__t) % std::forward<_T2>(__u);
   }

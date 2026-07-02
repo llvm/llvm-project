@@ -351,7 +351,8 @@ public:
   }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool empty() const noexcept { return _Extent == 0; }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr reference operator[](size_type __idx) const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr reference
+  operator[](size_type __idx) const noexcept { // noexcept(throws nothing)
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__idx < size(), "span<T, N>::operator[](index): index out of range");
     return __data_[__idx];
   }
