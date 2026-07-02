@@ -1627,3 +1627,43 @@ define i32 @lshr_two_i32(i32 %x) {
   %shr = lshr i32 2, %x
   ret i32 %shr
 }
+
+; 2 >> X --> 2 - X if 0 <= X <= 1.
+
+define i32 @lshr_two_range_zero_one(i32 range(i32 0, 2) %x) {
+; CHECK-LABEL: @lshr_two_range_zero_one(
+; CHECK-NEXT:    [[SHR:%.*]] = sub nuw nsw i32 2, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+  %shr = lshr i32 2, %x
+  ret i32 %shr
+}
+
+define i32 @lshr_two_zext_i1(i1 %b) {
+; CHECK-LABEL: @lshr_two_zext_i1(
+; CHECK-NEXT:    [[SHR:%.*]] = select i1 [[B:%.*]], i32 1, i32 2
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+  %x = zext i1 %b to i32
+  %shr = lshr i32 2, %x
+  ret i32 %shr
+}
+
+define <4 x i32> @lshr_two_range_zero_one_vec(<4 x i32> range(i32 0, 2) %x) {
+; CHECK-LABEL: @lshr_two_range_zero_one_vec(
+; CHECK-NEXT:    [[SHR:%.*]] = sub nuw nsw <4 x i32> splat (i32 2), [[X:%.*]]
+; CHECK-NEXT:    ret <4 x i32> [[SHR]]
+;
+  %shr = lshr <4 x i32> splat (i32 2), %x
+  ret <4 x i32> %shr
+}
+
+; Negative test - x is not known to be 0 or 1.
+define i32 @lshr_two_range_zero_two_fail(i32 range(i32 0, 3) %x) {
+; CHECK-LABEL: @lshr_two_range_zero_two_fail(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 2, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+  %shr = lshr i32 2, %x
+  ret i32 %shr
+}

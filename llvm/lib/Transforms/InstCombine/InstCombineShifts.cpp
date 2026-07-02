@@ -1380,6 +1380,14 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
       Value *NegX = Builder.CreateNeg(X, "neg");
       return BinaryOperator::CreateAnd(NegX, X);
     }
+
+    // 1 << X --> X + 1 if 0 <= X <= 1.
+    if (computeKnownBits(Op1, &I).countMaxActiveBits() <= 1) {
+      auto *Add = BinaryOperator::CreateAdd(Op1, ConstantInt::get(Ty, 1));
+      Add->setHasNoUnsignedWrap();
+      Add->setHasNoSignedWrap();
+      return Add;
+    }
   }
 
   return nullptr;
@@ -1405,6 +1413,15 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
   // lshr 1, X --> zext (X == 0)
   if (match(Op0, m_One()))
     return new ZExtInst(Builder.CreateIsNull(Op1), Ty);
+
+  // 2 >> X --> 2 - X if 0 <= X <= 1.
+  if (match(Op0, m_SpecificInt(2)) &&
+      computeKnownBits(Op1, &I).countMaxActiveBits() <= 1) {
+    auto *Sub = BinaryOperator::CreateSub(ConstantInt::get(Ty, 2), Op1);
+    Sub->setHasNoUnsignedWrap();
+    Sub->setHasNoSignedWrap();
+    return Sub;
+  }
 
   // (iN (~X) u>> (N - 1)) --> zext (X > -1)
   if (match(Op0, m_OneUse(m_Not(m_Value(X)))) &&

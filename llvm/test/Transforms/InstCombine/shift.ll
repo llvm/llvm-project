@@ -2321,4 +2321,44 @@ define i8 @src_ashr_exact_fail(i8 %x) {
   ret i8 %r
 }
 
+; 1 << X --> X + 1 if 0 <= X <= 1.
+
+define i32 @shl1_range_zero_one(i32 range(i32 0, 2) %x) {
+; CHECK-LABEL: @shl1_range_zero_one(
+; CHECK-NEXT:    [[SHL:%.*]] = add nuw nsw i32 [[X:%.*]], 1
+; CHECK-NEXT:    ret i32 [[SHL]]
+;
+  %shl = shl i32 1, %x
+  ret i32 %shl
+}
+
+define i32 @shl1_zext_i1(i1 %b) {
+; CHECK-LABEL: @shl1_zext_i1(
+; CHECK-NEXT:    [[SHL:%.*]] = select i1 [[B:%.*]], i32 2, i32 1
+; CHECK-NEXT:    ret i32 [[SHL]]
+;
+  %x = zext i1 %b to i32
+  %shl = shl i32 1, %x
+  ret i32 %shl
+}
+
+define <2 x i32> @shl1_range_zero_one_vec(<2 x i32> range(i32 0, 2) %x) {
+; CHECK-LABEL: @shl1_range_zero_one_vec(
+; CHECK-NEXT:    [[SHL:%.*]] = add nuw nsw <2 x i32> [[X:%.*]], splat (i32 1)
+; CHECK-NEXT:    ret <2 x i32> [[SHL]]
+;
+  %shl = shl <2 x i32> splat (i32 1), %x
+  ret <2 x i32> %shl
+}
+
+; Negative test - x is not known to be 0 or 1.
+define i32 @shl1_range_zero_two_fail(i32 range(i32 0, 3) %x) {
+; CHECK-LABEL: @shl1_range_zero_two_fail(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i32 1, [[X:%.*]]
+; CHECK-NEXT:    ret i32 [[SHL]]
+;
+  %shl = shl i32 1, %x
+  ret i32 %shl
+}
+
 declare i16 @llvm.umax.i16(i16, i16)
