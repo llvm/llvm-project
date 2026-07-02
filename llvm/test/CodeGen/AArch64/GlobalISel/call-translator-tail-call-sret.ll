@@ -13,7 +13,7 @@ define void @can_tail_call_forwarded_explicit_sret_ptr(ptr sret(i64) %arg) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x8
   ; CHECK-NEXT:   $x8 = COPY [[COPY]](p0)
   ; CHECK-NEXT:   TCRETURNdi @test_explicit_sret, 0, csr_darwin_aarch64_aapcs, implicit $sp, implicit $x8
-  tail call void @test_explicit_sret(ptr %arg)
+  tail call void @test_explicit_sret(ptr sret(i64) %arg)
   ret void
 }
 
@@ -29,7 +29,7 @@ define void @test_call_explicit_sret(ptr sret(i64) %arg) {
   ; CHECK-NEXT:   BL @test_explicit_sret, csr_darwin_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x8
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   RET_ReallyLR
-  call void @test_explicit_sret(ptr %arg)
+  call void @test_explicit_sret(ptr sret(i64) %arg)
   ret void
 }
 
@@ -43,7 +43,7 @@ define void @dont_tail_call_explicit_sret_alloca_unused() {
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   RET_ReallyLR
   %l = alloca i64, align 8
-  tail call void @test_explicit_sret(ptr %l)
+  tail call void @test_explicit_sret(ptr sret(i64) %l)
   ret void
 }
 
@@ -64,7 +64,7 @@ define void @dont_tail_call_explicit_sret_alloca_dummyusers(ptr %ptr) {
   %l = alloca i64, align 8
   %r = load i64, ptr %ptr, align 8
   store i64 %r, ptr %l, align 8
-  tail call void @test_explicit_sret(ptr %l)
+  tail call void @test_explicit_sret(ptr sret(i64) %l)
   ret void
 }
 
@@ -82,7 +82,7 @@ define void @dont_tail_call_tailcall_explicit_sret_gep(ptr %ptr) {
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   RET_ReallyLR
   %ptr2 = getelementptr i64, ptr %ptr, i32 1
-  tail call void @test_explicit_sret(ptr %ptr2)
+  tail call void @test_explicit_sret(ptr sret(i64) %ptr2)
   ret void
 }
 
@@ -98,7 +98,7 @@ define i64 @dont_tail_call_sret_alloca_returned() {
   ; CHECK-NEXT:   $x0 = COPY [[LOAD]](i64)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %l = alloca i64, align 8
-  tail call void @test_explicit_sret(ptr %l)
+  tail call void @test_explicit_sret(ptr sret(i64) %l)
   %r = load i64, ptr %l, align 8
   ret i64 %r
 }

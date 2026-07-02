@@ -518,7 +518,7 @@ define float @swifterror_param_not_on_call(ptr %error_ref) {
 entry:
   %error_ptr_ref = alloca swifterror ptr
   store ptr null, ptr %error_ptr_ref
-  %call = call float @foo(ptr %error_ptr_ref)
+  %call = call float @foo(ptr swifterror %error_ptr_ref)
   %error_from_foo = load ptr, ptr %error_ptr_ref
   %had_error_from_foo = icmp ne ptr %error_from_foo, null
   br i1 %had_error_from_foo, label %handler, label %cont
@@ -550,7 +550,7 @@ entry:
   %s = alloca %struct.S, align 8
   %error_ptr_ref = alloca swifterror ptr
   store ptr null, ptr %error_ptr_ref
-  call void @foo_sret(ptr %s, i32 1, ptr %error_ptr_ref)
+  call void @foo_sret(ptr %s, i32 1, ptr swifterror %error_ptr_ref)
   %error_from_foo = load ptr, ptr %error_ptr_ref
   %had_error_from_foo = icmp ne ptr %error_from_foo, null
   br i1 %had_error_from_foo, label %handler, label %cont

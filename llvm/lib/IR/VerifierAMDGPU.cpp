@@ -171,9 +171,9 @@ void llvm::verifyAMDGPUIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
       break;
     }
 
-    Check(Call.paramHasAttr(2, Attribute::InReg),
+    Check(Call.hasABIParamAttr(2, Attribute::InReg),
           "SGPR arguments must have the `inreg` attribute", &Call);
-    Check(!Call.paramHasAttr(3, Attribute::InReg),
+    Check(!Call.hasABIParamAttr(3, Attribute::InReg),
           "VGPR arguments must not have the `inreg` attribute", &Call);
 
     ConstantInt *FlagsArg = cast<ConstantInt>(Call.getArgOperand(4));
@@ -211,7 +211,7 @@ void llvm::verifyAMDGPUIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
     }
 
     unsigned InactiveIdx = 1;
-    Check(!Call.paramHasAttr(InactiveIdx, Attribute::InReg),
+    Check(!Call.hasABIParamAttr(InactiveIdx, Attribute::InReg),
           "Value for inactive lanes must not have the `inreg` attribute",
           &Call);
     Check(isa<Argument>(Call.getArgOperand(InactiveIdx)),
@@ -241,7 +241,7 @@ void llvm::verifyAMDGPUIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
       Check(CallArg->getType() == FuncArg.getType(),
             "Argument types must match", &Call);
 
-      Check(Call.paramHasAttr(FuncArg.getArgNo(), Attribute::InReg) ==
+      Check(Call.hasABIParamAttr(FuncArg.getArgNo(), Attribute::InReg) ==
                 FuncArg.hasInRegAttr(),
             "Argument inreg attributes must match", &Call);
     }

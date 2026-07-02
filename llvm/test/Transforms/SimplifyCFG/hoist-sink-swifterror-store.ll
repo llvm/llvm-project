@@ -155,11 +155,11 @@ define swiftcc void @sink_call(i1 %c) {
 ; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    call void @clobber1()
-; CHECK-NEXT:    call swiftcc void @foo(ptr [[TMP2]])
+; CHECK-NEXT:    call swiftcc void @foo(ptr swifterror [[TMP2]])
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       else:
 ; CHECK-NEXT:    call void @clobber2()
-; CHECK-NEXT:    call swiftcc void @foo(ptr [[TMP1]])
+; CHECK-NEXT:    call swiftcc void @foo(ptr swifterror [[TMP1]])
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -170,12 +170,12 @@ define swiftcc void @sink_call(i1 %c) {
 
 then:
   call void @clobber1()
-  call swiftcc void @foo(ptr %3)
+  call swiftcc void @foo(ptr swifterror %3)
   br label %exit
 
 else:
   call void @clobber2()
-  call swiftcc void @foo(ptr %2)
+  call swiftcc void @foo(ptr swifterror %2)
   br label %exit
 
 exit:
@@ -198,7 +198,7 @@ define swiftcc void @safe_sink_call(i1 %c) {
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[B_SINK:%.*]] = phi ptr [ [[B]], [[ELSE]] ], [ [[A]], [[THEN]] ]
-; CHECK-NEXT:    call swiftcc void @bar(ptr [[ERR]], ptr [[B_SINK]])
+; CHECK-NEXT:    call swiftcc void @bar(ptr swifterror [[ERR]], ptr [[B_SINK]])
 ; CHECK-NEXT:    ret void
 ;
   %err = alloca swifterror ptr, align 8
@@ -208,12 +208,12 @@ define swiftcc void @safe_sink_call(i1 %c) {
 
 then:
   call void @clobber1()
-  call swiftcc void @bar(ptr %err, ptr %a)
+  call swiftcc void @bar(ptr swifterror %err, ptr %a)
   br label %exit
 
 else:
   call void @clobber2()
-  call swiftcc void @bar(ptr %err, ptr %b)
+  call swiftcc void @bar(ptr swifterror %err, ptr %b)
   br label %exit
 
 exit:

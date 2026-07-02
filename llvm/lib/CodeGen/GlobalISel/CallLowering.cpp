@@ -84,8 +84,11 @@ ISD::ArgFlagsTy CallLowering::getAttributesForArgIdx(const CallBase &Call,
   ISD::ArgFlagsTy Flags;
   const AttributeList &Attrs = Call.getAttributes();
   addFlagsFromAttrSet(Flags, Attrs.getParamAttrs(ArgIdx));
-  if (const Function *F = Call.getCalledFunction())
-    addFlagsFromAttrSet(Flags, F->getAttributes().getParamAttrs(ArgIdx));
+  if (const Function *F = Call.getCalledFunction()) {
+    // "returned" is not an ABI attribute, so we can inherit it from the callee.
+    if (F->hasParamAttribute(ArgIdx, Attribute::Returned))
+      Flags.setReturned();
+  }
   return Flags;
 }
 
@@ -93,8 +96,6 @@ ISD::ArgFlagsTy
 CallLowering::getAttributesForReturn(const CallBase &Call) const {
   ISD::ArgFlagsTy Flags;
   addFlagsFromAttrSet(Flags, Call.getAttributes().getRetAttrs());
-  if (const Function *F = Call.getCalledFunction())
-    addFlagsFromAttrSet(Flags, F->getAttributes().getRetAttrs());
   return Flags;
 }
 

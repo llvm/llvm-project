@@ -237,7 +237,7 @@ bool TypePromotionImpl::isSource(Value *V) {
   else if (isa<LoadInst>(V))
     return true;
   else if (auto *Call = dyn_cast<CallInst>(V))
-    return Call->hasRetAttr(Attribute::AttrKind::ZExt);
+    return Call->hasABIRetAttr(Attribute::AttrKind::ZExt);
   else if (auto *Trunc = dyn_cast<TruncInst>(V))
     return EqualTypeSize(Trunc);
   return false;
@@ -759,7 +759,7 @@ bool TypePromotionImpl::isSupportedValue(Value *V) {
       // can still be sinks.
       auto *Call = cast<CallInst>(I);
       return isSupportedType(Call) &&
-             Call->hasRetAttr(Attribute::AttrKind::ZExt);
+             Call->hasABIRetAttr(Attribute::AttrKind::ZExt);
     }
     }
   } else if (isa<Constant>(V) && !isa<ConstantExpr>(V)) {

@@ -19,7 +19,7 @@ start:
 
 recurse:
   store i64 0, ptr %new_x, align 8
-  call void @pr64289(ptr %new_x)
+  call void @pr64289(ptr byval(i64) %new_x)
   br label %end
 
 end:

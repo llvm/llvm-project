@@ -2425,18 +2425,18 @@ bool ARMFastISel::SelectCall(const Instruction *I,
 
     ISD::ArgFlagsTy Flags;
     unsigned ArgIdx = ArgI - CI->arg_begin();
-    if (CI->paramHasAttr(ArgIdx, Attribute::SExt))
+    if (CI->hasABIParamAttr(ArgIdx, Attribute::SExt))
       Flags.setSExt();
-    if (CI->paramHasAttr(ArgIdx, Attribute::ZExt))
+    if (CI->hasABIParamAttr(ArgIdx, Attribute::ZExt))
       Flags.setZExt();
 
     // FIXME: Only handle *easy* calls for now.
-    if (CI->paramHasAttr(ArgIdx, Attribute::InReg) ||
-        CI->paramHasAttr(ArgIdx, Attribute::StructRet) ||
-        CI->paramHasAttr(ArgIdx, Attribute::SwiftSelf) ||
-        CI->paramHasAttr(ArgIdx, Attribute::SwiftError) ||
-        CI->paramHasAttr(ArgIdx, Attribute::Nest) ||
-        CI->paramHasAttr(ArgIdx, Attribute::ByVal))
+    if (CI->hasABIParamAttr(ArgIdx, Attribute::InReg) ||
+        CI->hasABIParamAttr(ArgIdx, Attribute::StructRet) ||
+        CI->hasABIParamAttr(ArgIdx, Attribute::SwiftSelf) ||
+        CI->hasABIParamAttr(ArgIdx, Attribute::SwiftError) ||
+        CI->hasABIParamAttr(ArgIdx, Attribute::Nest) ||
+        CI->hasABIParamAttr(ArgIdx, Attribute::ByVal))
       return false;
 
     Type *ArgTy = (*ArgI)->getType();
