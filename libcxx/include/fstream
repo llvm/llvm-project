@@ -744,13 +744,13 @@ basic_filebuf<_CharT, _Traits>* basic_filebuf<_CharT, _Traits>::open(const wchar
   if (__file_)
     return nullptr;
   const wchar_t* __mdstr = __make_mdwstring(__mode);
-  if (!__mdstr){
-#     if defined(_AIX) || defined(__TOS_AIX__)
+  if (!__mdstr) {
+#      if defined(_AIX) || defined(__TOS_AIX__)
     if (__mode & ios_base::noreplace)
       fprintf(stderr, "warning: fstream::open() with noreplace is not supported on AIX; returning failure\n");
-#     endif
+#      endif
     return nullptr;
-}
+  }
   return __do_open(_wfopen(__s, __mdstr), __mode);
 }
 #    endif
