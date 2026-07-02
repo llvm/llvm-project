@@ -912,7 +912,7 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
   if (BaseRegNum == BC.MRI->getProgramCounter())
     ArrayStart += getAddress() + Offset + Size;
 
-  if (FixedEntryLoadInstr) {
+  if (FixedEntryLoadInstr && BC.HasRelocations) {
     assert(BranchType == IndirectBranchType::POSSIBLE_PIC_FIXED_BRANCH &&
            "Invalid IndirectBranch type");
     MCInst::iterator FixedEntryDispOperand =
@@ -937,7 +937,8 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
 
     // Remove spurious JumpTable at EntryAddress caused by PIC reference from
     // the load instruction.
-    BC.deleteJumpTable(EntryAddress);
+    if (EntryAddress != ArrayStart)
+      BC.deleteJumpTable(EntryAddress);
 
     // Replace FixedEntryDispExpr used in target address calculation with outer
     // jump table reference.
