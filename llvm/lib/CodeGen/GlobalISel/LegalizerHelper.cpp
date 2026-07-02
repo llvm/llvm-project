@@ -2953,11 +2953,17 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     return Legalized;
 
   case TargetOpcode::G_ADD:
-  case TargetOpcode::G_AND:
-  case TargetOpcode::G_MUL:
-  case TargetOpcode::G_OR:
-  case TargetOpcode::G_XOR:
   case TargetOpcode::G_SUB:
+  case TargetOpcode::G_MUL:
+    Observer.changingInstr(MI);
+    MI.clearFlags(MachineInstr::NoUWrap);
+    MI.clearFlags(MachineInstr::NoSWrap);
+    Observer.changedInstr(MI);
+    [[fallthrough]];
+
+  case TargetOpcode::G_OR:
+  case TargetOpcode::G_AND:
+  case TargetOpcode::G_XOR:
   case TargetOpcode::G_SHUFFLE_VECTOR:
     // Perform operation at larger width (any extension is fines here, high bits
     // don't affect the result) and then truncate the result back to the
