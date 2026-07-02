@@ -572,7 +572,7 @@ std::optional<uint64_t> ARMMCInstrAnalysis::evaluateMemoryOperandAddress(
     return std::nullopt;
 
   // Find the memory addressing operand in the instruction.
-  unsigned OpIndex = Desc.NumDefs;
+  unsigned OpIndex = Desc.getNumDefs();
   while (OpIndex < Desc.getNumOperands() &&
          Desc.operands()[OpIndex].OperandType != MCOI::OPERAND_MEMORY)
     ++OpIndex;

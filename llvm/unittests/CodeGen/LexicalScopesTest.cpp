@@ -60,19 +60,15 @@ public:
   // Some meaningless instructions -- the first is fully meaningless,
   // while the second is supposed to impersonate DBG_VALUEs through its
   // opcode.
-  MCInstrDesc BeanInst{};
-  MCInstrDesc DbgValueInst{};
+  MCInstrDesc BeanInst;
+  MCInstrDesc DbgValueInst;
 
-  LexicalScopesTest() : Ctx(), Mod("beehives", Ctx) {
-    memset(&BeanInst, 0, sizeof(BeanInst));
-    BeanInst.Opcode = 1;
-    BeanInst.Size = 1;
-
-    memset(&DbgValueInst, 0, sizeof(MCInstrDesc));
-    DbgValueInst.Opcode = TargetOpcode::DBG_VALUE;
-    DbgValueInst.Size = 1;
-    DbgValueInst.Flags = 1U << MCID::Meta;
-
+  LexicalScopesTest()
+      : Ctx(), Mod("beehives", Ctx), BeanInst(/*Opcode=*/1, /*NumOperands=*/0,
+                                              /*NumDefs=*/0, /*Size=*/1),
+        DbgValueInst(TargetOpcode::DBG_VALUE, /*NumOperands=*/0,
+                     /*NumDefs=*/0, /*Size=*/1, /*SchedClass=*/0,
+                     /*Flags=*/1U << MCID::Meta) {
     // Boilerplate that creates a MachineFunction and associated blocks.
     MF = createMachineFunction(Ctx, Mod);
     llvm::Function &F = const_cast<llvm::Function &>(MF->getFunction());

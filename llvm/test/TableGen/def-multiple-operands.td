@@ -23,8 +23,7 @@ def Reg3Opnd : Operand<OtherVT> {
 
 // CHECK: archInstrTable {{.* = \{}}
 // CHECK: {{\{}}
-// CHECK: {{\{}} [[ID:[0-9]+]], 4, 3, 13, {{.+\}, \/\/}}
-// CHECK-SAME: InstA
+// CHECK: { MCInstrDesc::TableGenEncoding{}, 0x0ULL, 0xd00000180000000ULL, 0x304014aULL | (uint64_t(archOpInfoBase + {{[0-9]+}}) << MCInstrDesc::TableGenEncoding::OpInfoOffsetShift) },  // InstA
 def InstA : Instruction {
   let Namespace = "MyNS";
   let Size = 13;

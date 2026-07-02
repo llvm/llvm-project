@@ -100,7 +100,7 @@ void MachineInstr::addImplicitDefUseOperands(MachineFunction &MF) {
 MachineInstr::MachineInstr(MachineFunction &MF, const MCInstrDesc &TID,
                            DebugLoc DL, bool NoImp)
     : MCID(&TID), NumOperands(0), Flags(0), AsmPrinterFlags(0),
-      Opcode(TID.Opcode), DebugInstrNum(0), DbgLoc(std::move(DL)) {
+      Opcode(TID.getOpcode()), DebugInstrNum(0), DbgLoc(std::move(DL)) {
   // Reserve space for the expected number of operands.
   if (unsigned NumOps = MCID->getNumOperands() + MCID->implicit_defs().size() +
                         MCID->implicit_uses().size()) {
@@ -142,7 +142,7 @@ void MachineInstr::setDesc(const MCInstrDesc &TID) {
   if (getParent())
     getMF()->handleChangeDesc(*this, TID);
   MCID = &TID;
-  Opcode = TID.Opcode;
+  Opcode = TID.getOpcode();
 }
 
 void MachineInstr::moveBefore(MachineInstr *MovePos) {
@@ -1719,7 +1719,7 @@ void MachineInstr::copyImplicitOps(MachineFunction &MF,
 
 bool MachineInstr::hasComplexRegisterTies() const {
   const MCInstrDesc &MCID = getDesc();
-  if (MCID.Opcode == TargetOpcode::STATEPOINT)
+  if (MCID.getOpcode() == TargetOpcode::STATEPOINT)
     return true;
   for (unsigned I = 0, E = getNumOperands(); I < E; ++I) {
     const auto &Operand = getOperand(I);
@@ -2396,7 +2396,7 @@ MachineInstrBuilder llvm::BuildMI(MachineFunction &MF, const DebugLoc &DL,
   assert(cast<DIExpression>(Expr)->isValid() && "not an expression");
   assert(cast<DILocalVariable>(Variable)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
-  if (MCID.Opcode == TargetOpcode::DBG_VALUE) {
+  if (MCID.getOpcode() == TargetOpcode::DBG_VALUE) {
     assert(DebugOps.size() == 1 &&
            "DBG_VALUE must contain exactly one debug operand");
     MachineOperand DebugOp = DebugOps[0];

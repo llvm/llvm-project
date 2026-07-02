@@ -25,6 +25,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/SourceMgr.h"
@@ -34,6 +35,7 @@
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TGTimer.h"
 #include "llvm/TableGen/TableGenBackend.h"
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -71,6 +73,8 @@ private:
   using OperandInfoTy = std::vector<std::string>;
   using OperandInfoListTy = std::vector<OperandInfoTy>;
   using OperandInfoMapTy = std::map<OperandInfoTy, unsigned>;
+  using ImplicitListTy = std::pair<unsigned, std::vector<const Record *>>;
+  using ImplicitListMapTy = std::map<ImplicitListTy, unsigned>;
 
   DenseMap<const CodeGenInstruction *, const CodeGenInstruction *>
       TargetSpecializedPseudoInsts;
@@ -94,8 +98,7 @@ private:
   /// Write verifyInstructionPredicates methods.
   void emitFeatureVerifier(raw_ostream &OS, const CodeGenTarget &Target);
   void emitRecord(const CodeGenInstruction &Inst, unsigned Num,
-                  const Record *InstrInfo,
-                  std::map<std::vector<const Record *>, unsigned> &EL,
+                  const Record *InstrInfo, ImplicitListMapTy &EmittedLists,
                   const OperandInfoMapTy &OperandInfo, raw_ostream &OS);
   void emitOperandTypeMappings(
       raw_ostream &OS, const CodeGenTarget &Target,
@@ -934,22 +937,34 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   bool HasUseNamedOperandTable = false;
 
   Timer.startTimer("Collect uses/defs");
-  std::map<std::vector<const Record *>, unsigned> EmittedLists;
-  std::vector<std::vector<const Record *>> ImplicitLists;
-  unsigned ImplicitListSize = 0;
+  ImplicitListMapTy EmittedLists;
+  std::vector<ImplicitListTy> ImplicitLists;
+  ImplicitListTy EmptyImplicitList{0, {}};
+  EmittedLists.emplace(EmptyImplicitList, 0);
+  ImplicitLists.push_back(EmptyImplicitList);
+  unsigned ImplicitListSize = 1;
   for (const CodeGenInstruction *Inst : NumberedInstructions) {
     HasUseLogicalOperandMappings |=
         Inst->TheDef->getValueAsBit("UseLogicalOperandMappings");
     HasUseNamedOperandTable |=
         Inst->TheDef->getValueAsBit("UseNamedOperandTable");
 
-    std::vector<const Record *> ImplicitOps = Inst->ImplicitUses;
-    llvm::append_range(ImplicitOps, Inst->ImplicitDefs);
-    if (EmittedLists.try_emplace(ImplicitOps, ImplicitListSize).second) {
-      ImplicitLists.push_back(ImplicitOps);
-      ImplicitListSize += ImplicitOps.size();
+    const CodeGenInstruction *EffectiveInst = Inst;
+    auto OverrideEntry = TargetSpecializedPseudoInsts.find(Inst);
+    if (OverrideEntry != TargetSpecializedPseudoInsts.end())
+      EffectiveInst = OverrideEntry->second;
+
+    std::vector<const Record *> ImplicitOps = EffectiveInst->ImplicitUses;
+    llvm::append_range(ImplicitOps, EffectiveInst->ImplicitDefs);
+    ImplicitListTy ImplicitList{EffectiveInst->ImplicitUses.size(),
+                                std::move(ImplicitOps)};
+    if (EmittedLists.try_emplace(ImplicitList, ImplicitListSize).second) {
+      ImplicitListSize += 1 + ImplicitList.second.size();
+      ImplicitLists.push_back(std::move(ImplicitList));
     }
   }
+  if (ImplicitListSize > (1U << 15))
+    PrintFatalError("implicit operand table does not fit in 15-bit offsets");
 
   {
     IfGuardEmitter IfGuard(
@@ -1002,7 +1017,10 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
        << "InstrTable::Padding) % sizeof(MCOperandInfo) == 0);\n";
     OS << "static constexpr unsigned " << TargetName << "OpInfoBase = (sizeof "
        << TargetName << "InstrTable::ImplicitOps + sizeof " << TargetName
-       << "InstrTable::Padding) / sizeof(MCOperandInfo);\n\n";
+       << "InstrTable::Padding) / sizeof(MCOperandInfo);\n";
+    OS << "static_assert(" << TargetName << "OpInfoBase + " << OperandInfoSize
+       << " <= (1U << 16), "
+          "\"operand info table does not fit in 16-bit offsets\");\n\n";
 
     OS << "extern const " << TargetName << "InstrTable " << TargetName
        << "Descs = {\n  {\n";
@@ -1022,11 +1040,17 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
 
     OS << "  }, {\n";
 
-    // Emit all of the instruction's implicit uses and defs.
+    // Emit each implicit operand list. The first MCPhysReg stores the number of
+    // uses in its low six bits and the number of definitions in its next six
+    // bits.
     Timer.startTimer("Emit uses/defs");
-    for (auto &List : ImplicitLists) {
-      OS << "    /* " << EmittedLists[List] << " */";
-      for (auto &Reg : List)
+    for (const ImplicitListTy &List : ImplicitLists) {
+      unsigned NumImplicitUses = List.first;
+      unsigned NumImplicitDefs = List.second.size() - NumImplicitUses;
+      MCPhysReg Header = MCInstrDesc::TableGenEncoding::encodeImplicitHeader(
+          NumImplicitUses, NumImplicitDefs);
+      OS << "    /* " << EmittedLists[List] << " */ " << Header << ',';
+      for (const Record *Reg : List.second)
         OS << ' ' << getQualifiedName(Reg) << ',';
       OS << '\n';
     }
@@ -1279,10 +1303,11 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   EmitMapTable(Records, OS);
 }
 
-void InstrInfoEmitter::emitRecord(
-    const CodeGenInstruction &Inst, unsigned Num, const Record *InstrInfo,
-    std::map<std::vector<const Record *>, unsigned> &EmittedLists,
-    const OperandInfoMapTy &OperandInfoMap, raw_ostream &OS) {
+void InstrInfoEmitter::emitRecord(const CodeGenInstruction &Inst, unsigned Num,
+                                  const Record *InstrInfo,
+                                  ImplicitListMapTy &EmittedLists,
+                                  const OperandInfoMapTy &OperandInfoMap,
+                                  raw_ostream &OS) {
   int MinOperands = 0;
   if (!Inst.Operands.empty())
     // Each logical operand can be multiple MI operands.
@@ -1295,109 +1320,127 @@ void InstrInfoEmitter::emitRecord(
     DefOperands = Opnd.MIOperandNo + Opnd.MINumOperands;
   }
 
-  OS << "    { ";
-  OS << Num << ",\t" << MinOperands << ",\t" << DefOperands << ",\t"
-     << Inst.TheDef->getValueAsInt("Size") << ",\t"
-     << SchedModels.getSchedClassIdx(Inst) << ",\t";
+  int64_t Size = Inst.TheDef->getValueAsInt("Size");
+  unsigned SchedClass = SchedModels.getSchedClassIdx(Inst);
+  if (!isUInt<16>(Num))
+    PrintFatalError(Inst.TheDef, "instruction opcode does not fit in 16 bits");
+  if (!isUInt<8>(MinOperands))
+    PrintFatalError(Inst.TheDef,
+                    "instruction operand count does not fit in 8 bits");
+  if (DefOperands > MinOperands)
+    PrintFatalError(Inst.TheDef,
+                    "instruction definition count exceeds operand count");
+  if (!isUInt<8>(DefOperands))
+    PrintFatalError(Inst.TheDef,
+                    "instruction definition count does not fit in 8 bits");
+  if (!isUInt<8>(Size))
+    PrintFatalError(Inst.TheDef, "instruction size does not fit in 8 bits");
+  if (!isUInt<16>(SchedClass))
+    PrintFatalError(Inst.TheDef,
+                    "instruction scheduling class does not fit in 16 bits");
+  if (!isUInt<6>(Inst.ImplicitUses.size()) ||
+      !isUInt<6>(Inst.ImplicitDefs.size()))
+    PrintFatalError(Inst.TheDef,
+                    "implicit register count does not fit in 6 bits");
 
   const CodeGenTarget &Target = CDP.getTargetInfo();
 
-  // Emit the implicit use/def list...
-  OS << Inst.ImplicitUses.size() << ",\t" << Inst.ImplicitDefs.size() << ",\t";
+  // Collect the implicit use/def list.
   std::vector<const Record *> ImplicitOps = Inst.ImplicitUses;
   llvm::append_range(ImplicitOps, Inst.ImplicitDefs);
+  ImplicitListTy ImplicitList{Inst.ImplicitUses.size(), std::move(ImplicitOps)};
 
-  // Emit the operand info offset.
   OperandInfoTy OperandInfo = GetOperandInfo(Inst);
-  OS << Target.getName() << "OpInfoBase + "
-     << OperandInfoMap.find(OperandInfo)->second << ",\t";
+  unsigned OperandInfoOffset = OperandInfoMap.find(OperandInfo)->second;
+  auto ImplicitListEntry = EmittedLists.find(ImplicitList);
+  if (ImplicitListEntry == EmittedLists.end())
+    PrintFatalError(Inst.TheDef, "missing implicit operand list");
+  unsigned ImplicitOffset = ImplicitListEntry->second;
 
-  // Emit implicit operand base.
-  OS << EmittedLists[ImplicitOps] << ",\t0";
-
-  // Emit all of the target independent flags...
+  // Collect all of the target-independent flags.
+  uint64_t Flags = 0;
   if (Inst.isPreISelOpcode)
-    OS << "|(1ULL<<MCID::PreISelOpcode)";
+    Flags |= 1ULL << MCID::PreISelOpcode;
   if (Inst.isPseudo)
-    OS << "|(1ULL<<MCID::Pseudo)";
+    Flags |= 1ULL << MCID::Pseudo;
   if (Inst.isMeta)
-    OS << "|(1ULL<<MCID::Meta)";
+    Flags |= 1ULL << MCID::Meta;
   if (Inst.isReturn)
-    OS << "|(1ULL<<MCID::Return)";
+    Flags |= 1ULL << MCID::Return;
   if (Inst.isEHScopeReturn)
-    OS << "|(1ULL<<MCID::EHScopeReturn)";
+    Flags |= 1ULL << MCID::EHScopeReturn;
   if (Inst.isBranch)
-    OS << "|(1ULL<<MCID::Branch)";
+    Flags |= 1ULL << MCID::Branch;
   if (Inst.isIndirectBranch)
-    OS << "|(1ULL<<MCID::IndirectBranch)";
+    Flags |= 1ULL << MCID::IndirectBranch;
   if (Inst.isCompare)
-    OS << "|(1ULL<<MCID::Compare)";
+    Flags |= 1ULL << MCID::Compare;
   if (Inst.isMoveImm)
-    OS << "|(1ULL<<MCID::MoveImm)";
+    Flags |= 1ULL << MCID::MoveImm;
   if (Inst.isMoveReg)
-    OS << "|(1ULL<<MCID::MoveReg)";
+    Flags |= 1ULL << MCID::MoveReg;
   if (Inst.isBitcast)
-    OS << "|(1ULL<<MCID::Bitcast)";
+    Flags |= 1ULL << MCID::Bitcast;
   if (Inst.isAdd)
-    OS << "|(1ULL<<MCID::Add)";
+    Flags |= 1ULL << MCID::Add;
   if (Inst.isTrap)
-    OS << "|(1ULL<<MCID::Trap)";
+    Flags |= 1ULL << MCID::Trap;
   if (Inst.isSelect)
-    OS << "|(1ULL<<MCID::Select)";
+    Flags |= 1ULL << MCID::Select;
   if (Inst.isBarrier)
-    OS << "|(1ULL<<MCID::Barrier)";
+    Flags |= 1ULL << MCID::Barrier;
   if (Inst.hasDelaySlot)
-    OS << "|(1ULL<<MCID::DelaySlot)";
+    Flags |= 1ULL << MCID::DelaySlot;
   if (Inst.isCall)
-    OS << "|(1ULL<<MCID::Call)";
+    Flags |= 1ULL << MCID::Call;
   if (Inst.canFoldAsLoad)
-    OS << "|(1ULL<<MCID::FoldableAsLoad)";
+    Flags |= 1ULL << MCID::FoldableAsLoad;
   if (Inst.mayLoad)
-    OS << "|(1ULL<<MCID::MayLoad)";
+    Flags |= 1ULL << MCID::MayLoad;
   if (Inst.mayStore)
-    OS << "|(1ULL<<MCID::MayStore)";
+    Flags |= 1ULL << MCID::MayStore;
   if (Inst.mayRaiseFPException)
-    OS << "|(1ULL<<MCID::MayRaiseFPException)";
+    Flags |= 1ULL << MCID::MayRaiseFPException;
   if (Inst.isPredicable)
-    OS << "|(1ULL<<MCID::Predicable)";
+    Flags |= 1ULL << MCID::Predicable;
   if (Inst.isConvertibleToThreeAddress)
-    OS << "|(1ULL<<MCID::ConvertibleTo3Addr)";
+    Flags |= 1ULL << MCID::ConvertibleTo3Addr;
   if (Inst.isCommutable)
-    OS << "|(1ULL<<MCID::Commutable)";
+    Flags |= 1ULL << MCID::Commutable;
   if (Inst.isTerminator)
-    OS << "|(1ULL<<MCID::Terminator)";
+    Flags |= 1ULL << MCID::Terminator;
   if (Inst.isReMaterializable)
-    OS << "|(1ULL<<MCID::Rematerializable)";
+    Flags |= 1ULL << MCID::Rematerializable;
   if (Inst.isNotDuplicable)
-    OS << "|(1ULL<<MCID::NotDuplicable)";
+    Flags |= 1ULL << MCID::NotDuplicable;
   if (Inst.Operands.hasOptionalDef)
-    OS << "|(1ULL<<MCID::HasOptionalDef)";
+    Flags |= 1ULL << MCID::HasOptionalDef;
   if (Inst.usesCustomInserter)
-    OS << "|(1ULL<<MCID::UsesCustomInserter)";
+    Flags |= 1ULL << MCID::UsesCustomInserter;
   if (Inst.hasPostISelHook)
-    OS << "|(1ULL<<MCID::HasPostISelHook)";
+    Flags |= 1ULL << MCID::HasPostISelHook;
   if (Inst.Operands.isVariadic)
-    OS << "|(1ULL<<MCID::Variadic)";
+    Flags |= 1ULL << MCID::Variadic;
   if (Inst.hasSideEffects)
-    OS << "|(1ULL<<MCID::UnmodeledSideEffects)";
+    Flags |= 1ULL << MCID::UnmodeledSideEffects;
   if (Inst.isAsCheapAsAMove)
-    OS << "|(1ULL<<MCID::CheapAsAMove)";
+    Flags |= 1ULL << MCID::CheapAsAMove;
   if (!Target.getAllowRegisterRenaming() || Inst.hasExtraSrcRegAllocReq)
-    OS << "|(1ULL<<MCID::ExtraSrcRegAllocReq)";
+    Flags |= 1ULL << MCID::ExtraSrcRegAllocReq;
   if (!Target.getAllowRegisterRenaming() || Inst.hasExtraDefRegAllocReq)
-    OS << "|(1ULL<<MCID::ExtraDefRegAllocReq)";
+    Flags |= 1ULL << MCID::ExtraDefRegAllocReq;
   if (Inst.isRegSequence)
-    OS << "|(1ULL<<MCID::RegSequence)";
+    Flags |= 1ULL << MCID::RegSequence;
   if (Inst.isExtractSubreg)
-    OS << "|(1ULL<<MCID::ExtractSubreg)";
+    Flags |= 1ULL << MCID::ExtractSubreg;
   if (Inst.isInsertSubreg)
-    OS << "|(1ULL<<MCID::InsertSubreg)";
+    Flags |= 1ULL << MCID::InsertSubreg;
   if (Inst.isConvergent)
-    OS << "|(1ULL<<MCID::Convergent)";
+    Flags |= 1ULL << MCID::Convergent;
   if (Inst.variadicOpsAreDefs)
-    OS << "|(1ULL<<MCID::VariadicOpsAreDefs)";
+    Flags |= 1ULL << MCID::VariadicOpsAreDefs;
   if (Inst.isAuthenticated)
-    OS << "|(1ULL<<MCID::Authenticated)";
+    Flags |= 1ULL << MCID::Authenticated;
 
   // Emit all of the target-specific flags...
   const BitsInit *TSF = Inst.TheDef->getValueAsBitsInit("TSFlags");
@@ -1407,11 +1450,23 @@ void InstrInfoEmitter::emitRecord(
   if (!Value)
     PrintFatalError(Inst.TheDef, "Invalid TSFlags bit in " + Inst.getName());
 
-  OS << ", 0x";
-  OS.write_hex(*Value);
-  OS << "ULL";
+  uint64_t FlagsAndImplicit =
+      MCInstrDesc::TableGenEncoding::encodeFlagsAndImplicit(Flags, Size,
+                                                            ImplicitOffset);
+  uint64_t OpcodeAndOperands =
+      MCInstrDesc::TableGenEncoding::encodeOpcodeAndOperands(
+          Num, MinOperands, DefOperands, SchedClass, 0);
 
-  OS << " },  // " << Inst.getName() << '\n';
+  OS << "    { MCInstrDesc::TableGenEncoding{}, 0x";
+  OS.write_hex(*Value);
+  OS << "ULL, 0x";
+  OS.write_hex(FlagsAndImplicit);
+  OS << "ULL, 0x";
+  OS.write_hex(OpcodeAndOperands);
+  OS << "ULL | (uint64_t(" << Target.getName() << "OpInfoBase + "
+     << OperandInfoOffset
+     << ") << MCInstrDesc::TableGenEncoding::OpInfoOffsetShift) },  // "
+     << Inst.getName() << '\n';
 }
 
 // emitEnums - Print out enum values for all of the instructions.

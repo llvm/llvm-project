@@ -450,7 +450,7 @@ TEST(MachineOperandTest, RegisterLiveOutHashValue) {
   Module Mod("Module", Ctx);
   auto MF = createMachineFunction(Ctx, Mod);
   MachineBasicBlock *MBB = MF->CreateMachineBasicBlock();
-  MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  MCInstrDesc MCID;
   auto *MI1 = MF->CreateMachineInstr(MCID, DebugLoc());
   auto *MI2 = MF->CreateMachineInstr(MCID, DebugLoc());
   MBB->insert(MBB->begin(), MI1);

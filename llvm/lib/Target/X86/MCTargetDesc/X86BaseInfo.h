@@ -1264,7 +1264,7 @@ inline bool canUseApxExtendedReg(const MCInstrDesc &Desc) {
   if (Encoding == X86II::EVEX)
     return true;
 
-  unsigned Opcode = Desc.Opcode;
+  unsigned Opcode = Desc.getOpcode();
   if (isPseudo(TSFlags)) {
     switch (Opcode) {
     default:

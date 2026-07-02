@@ -2612,7 +2612,7 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
   if (MCID.getOpcode() == TargetOpcode::PATCHPOINT)
     NumDefs = (MONum == 0 && MO->isReg()) ? NumDefs : 0;
 
-  // The first MCID.NumDefs operands must be explicit register defines
+  // The first NumDefs operands must be explicit register definitions.
   if (MONum < NumDefs) {
     const MCOperandInfo &MCOI = MCID.operands()[MONum];
     if (!MO->isReg())

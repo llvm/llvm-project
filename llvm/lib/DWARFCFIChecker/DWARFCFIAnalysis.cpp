@@ -135,9 +135,8 @@ void DWARFCFIAnalysis::update(const MCInst &Inst,
     State.update(Directive);
 
   SmallSet<DWARFRegNum, 4> Writes;
-  for (unsigned I = 0; I < MCInstInfo.NumImplicitDefs; I++)
-    Writes.insert(MCRI->getDwarfRegNum(
-        getSuperReg(MCRI, MCInstInfo.implicit_defs()[I]), IsEH));
+  for (MCPhysReg Reg : MCInstInfo.implicit_defs())
+    Writes.insert(MCRI->getDwarfRegNum(getSuperReg(MCRI, Reg), IsEH));
 
   for (unsigned I = 0; I < Inst.getNumOperands(); I++) {
     auto &&Op = Inst.getOperand(I);

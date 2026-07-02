@@ -176,7 +176,7 @@ void ScoreboardHazardRecognizer::EmitInstruction(SUnit *SU) {
   // in the scoreboard at the appropriate future cycles.
   const MCInstrDesc *MCID = DAG->getInstrDesc(SU);
   assert(MCID && "The scheduler must filter non-machineinstrs");
-  if (DAG->TII->isZeroCost(MCID->Opcode))
+  if (DAG->TII->isZeroCost(MCID->getOpcode()))
     return;
 
   ++IssueCount;
