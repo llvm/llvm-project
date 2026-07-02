@@ -13,6 +13,8 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Operator.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -26,6 +28,7 @@ class StructuralHashImpl {
   stable_hash Hash = 4;
 
   bool DetailedHash;
+  bool CollectDetails;
 
   // This random value acts as a block header, as otherwise the partition of
   // opcodes into BBs wouldn't affect the hash, only the order of the opcodes.
@@ -42,6 +45,7 @@ class StructuralHashImpl {
   /// A mapping from pairs of instruction indices and operand indices
   /// to the hashes of the operands.
   std::unique_ptr<IndexOperandHashMapType> IndexOperandHashMap = nullptr;
+  FunctionStructuralHashInfo Details;
 
   /// Assign a unique ID to each Value in the order they are first seen.
   DenseMap<const Value *, int> ValueToId;
@@ -57,8 +61,10 @@ class StructuralHashImpl {
 public:
   StructuralHashImpl() = delete;
   explicit StructuralHashImpl(bool DetailedHash,
-                              IgnoreOperandFunc IgnoreOp = nullptr)
-      : DetailedHash(DetailedHash), IgnoreOp(IgnoreOp) {
+                              IgnoreOperandFunc IgnoreOp = nullptr,
+                              bool CollectDetails = false)
+      : DetailedHash(DetailedHash), CollectDetails(CollectDetails),
+        IgnoreOp(IgnoreOp) {
     if (IgnoreOp) {
       IndexInstruction = std::make_unique<IndexInstrMap>();
       IndexOperandHashMap = std::make_unique<IndexOperandHashMapType>();
@@ -75,6 +81,13 @@ public:
 
   static stable_hash hashAPFloat(const APFloat &F) {
     return hashAPInt(F.bitcastToAPInt());
+  }
+
+  static stable_hash hashAttributeList(AttributeList Attrs) {
+    std::string AttrString;
+    raw_string_ostream OS(AttrString);
+    Attrs.print(OS);
+    return stable_hash_name(OS.str());
   }
 
   static stable_hash hashGlobalVariable(const GlobalVariable &GVar) {
@@ -215,11 +228,52 @@ public:
       return stable_hash_combine(Hashes);
 
     Hashes.emplace_back(hashType(Inst.getType()));
+    Hashes.emplace_back(Inst.getRawSubclassOptionalData());
+    if (const auto *FPO = dyn_cast<FPMathOperator>(&Inst))
+      Hashes.emplace_back(FPO->getFastMathFlags().getRawFlags());
 
     // Handle additional properties of specific instructions that cause
     // semantic differences in the IR.
     if (const auto *ComparisonInstruction = dyn_cast<CmpInst>(&Inst))
       Hashes.emplace_back(ComparisonInstruction->getPredicate());
+
+    if (const auto *LI = dyn_cast<LoadInst>(&Inst)) {
+      Hashes.emplace_back(LI->isVolatile());
+      Hashes.emplace_back(LI->getAlign().value());
+      Hashes.emplace_back(static_cast<unsigned>(LI->getOrdering()));
+      Hashes.emplace_back(LI->getSyncScopeID());
+    }
+    if (const auto *SI = dyn_cast<StoreInst>(&Inst)) {
+      Hashes.emplace_back(SI->isVolatile());
+      Hashes.emplace_back(SI->getAlign().value());
+      Hashes.emplace_back(static_cast<unsigned>(SI->getOrdering()));
+      Hashes.emplace_back(SI->getSyncScopeID());
+    }
+    if (const auto *FI = dyn_cast<FenceInst>(&Inst)) {
+      Hashes.emplace_back(static_cast<unsigned>(FI->getOrdering()));
+      Hashes.emplace_back(FI->getSyncScopeID());
+    }
+    if (const auto *CXI = dyn_cast<AtomicCmpXchgInst>(&Inst)) {
+      Hashes.emplace_back(CXI->isVolatile());
+      Hashes.emplace_back(CXI->isWeak());
+      Hashes.emplace_back(CXI->getAlign().value());
+      Hashes.emplace_back(static_cast<unsigned>(CXI->getSuccessOrdering()));
+      Hashes.emplace_back(static_cast<unsigned>(CXI->getFailureOrdering()));
+      Hashes.emplace_back(CXI->getSyncScopeID());
+    }
+    if (const auto *RMWI = dyn_cast<AtomicRMWInst>(&Inst)) {
+      Hashes.emplace_back(RMWI->isVolatile());
+      Hashes.emplace_back(RMWI->getOperation());
+      Hashes.emplace_back(RMWI->getAlign().value());
+      Hashes.emplace_back(static_cast<unsigned>(RMWI->getOrdering()));
+      Hashes.emplace_back(RMWI->getSyncScopeID());
+    }
+    if (const auto *CB = dyn_cast<CallBase>(&Inst)) {
+      Hashes.emplace_back(CB->getCallingConv());
+      Hashes.emplace_back(hashAttributeList(CB->getAttributes()));
+      if (const auto *CI = dyn_cast<CallInst>(CB))
+        Hashes.emplace_back(CI->getTailCallKind());
+    }
 
     unsigned InstIdx = 0;
     if (IndexInstruction) {
@@ -257,8 +311,11 @@ public:
   // selectively.
   void update(const Function &F) {
     // Declarations don't affect analyses.
-    if (F.isDeclaration())
+    if (F.isDeclaration()) {
+      if (CollectDetails)
+        Details.FunctionHash = Hash;
       return;
+    }
 
     SmallVector<stable_hash> Hashes;
     Hashes.emplace_back(Hash);
@@ -266,6 +323,10 @@ public:
 
     Hashes.emplace_back(F.isVarArg());
     Hashes.emplace_back(F.arg_size());
+    if (DetailedHash) {
+      Hashes.emplace_back(F.getCallingConv());
+      Hashes.emplace_back(hashAttributeList(F.getAttributes()));
+    }
 
     SmallVector<const BasicBlock *, 8> BBs;
     SmallPtrSet<const BasicBlock *, 16> VisitedBBs;
@@ -279,8 +340,24 @@ public:
       const BasicBlock *BB = BBs.pop_back_val();
 
       Hashes.emplace_back(BlockHeaderHash);
-      for (auto &Inst : *BB)
-        Hashes.emplace_back(hashInstruction(Inst));
+      SmallVector<stable_hash> BlockHashes;
+      BasicBlockStructuralHashInfo *BlockDetails = nullptr;
+      if (CollectDetails) {
+        BlockHashes.emplace_back(BlockHeaderHash);
+        Details.Blocks.emplace_back(BB);
+        BlockDetails = &Details.Blocks.back();
+      }
+
+      for (auto &Inst : *BB) {
+        stable_hash InstHash = hashInstruction(Inst);
+        Hashes.emplace_back(InstHash);
+        if (CollectDetails) {
+          BlockHashes.emplace_back(InstHash);
+          BlockDetails->Instructions.push_back({&Inst, InstHash});
+        }
+      }
+      if (CollectDetails)
+        BlockDetails->BlockHash = stable_hash_combine(BlockHashes);
 
       for (const BasicBlock *Succ : successors(BB))
         if (VisitedBBs.insert(Succ).second)
@@ -289,6 +366,8 @@ public:
 
     // Update the combined hash in place.
     Hash = stable_hash_combine(Hashes);
+    if (CollectDetails)
+      Details.FunctionHash = Hash;
   }
 
   void update(const GlobalVariable &GV) {
@@ -315,6 +394,8 @@ public:
 
   uint64_t getHash() const { return Hash; }
 
+  FunctionStructuralHashInfo getDetails() { return std::move(Details); }
+
   std::unique_ptr<IndexInstrMap> getIndexInstrMap() {
     return std::move(IndexInstruction);
   }
@@ -330,6 +411,14 @@ stable_hash llvm::StructuralHash(const Function &F, bool DetailedHash) {
   StructuralHashImpl H(DetailedHash);
   H.update(F);
   return H.getHash();
+}
+
+FunctionStructuralHashInfo llvm::StructuralHashWithDetails(const Function &F,
+                                                           bool DetailedHash) {
+  StructuralHashImpl H(DetailedHash, /*IgnoreOp=*/nullptr,
+                       /*CollectDetails=*/true);
+  H.update(F);
+  return H.getDetails();
 }
 
 stable_hash llvm::StructuralHash(const GlobalVariable &GVar) {
