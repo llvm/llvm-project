@@ -17,8 +17,6 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <bit>
-
 using namespace llvm;
 using namespace llvm::PatternMatch;
 

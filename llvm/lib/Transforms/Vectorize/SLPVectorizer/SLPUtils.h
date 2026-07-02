@@ -17,28 +17,21 @@
 #define LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPUTILS_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallBitVector.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Value.h"
 
 #include <optional>
-#include <string>
 #include <type_traits>
 
 namespace llvm {
-
-class Constant;
 class Instruction;
-class TargetLibraryInfo;
-class TargetTransformInfo;
 class Type;
 class Value;
+} // namespace llvm
 
-namespace slpvectorizer {
+namespace llvm::slpvectorizer {
 
 /// \returns True if the value is a constant (but not globals/constant
 /// expressions).
@@ -111,7 +104,6 @@ std::optional<unsigned> getInsertExtractIndex(const Value *Inst,
   return std::nullopt;
 }
 
-} // end namespace slpvectorizer
-} // end namespace llvm
+} // namespace llvm::slpvectorizer
 
 #endif // LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPUTILS_H
