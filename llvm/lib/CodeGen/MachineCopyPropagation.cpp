@@ -743,10 +743,10 @@ bool MachineCopyPropagation::isForwardableRegClassCopy(const MachineInstr &Copy,
   MCRegister UseDst = getDstMCReg(*UseICopyOperands);
   bool Found = false;
   bool IsCrossClass = false;
-  for (const TargetRegisterClass *RC : TRI->regclasses()) {
-    if (RC->contains(CopySrc) && RC->contains(UseDst)) {
+  for (const TargetRegisterClass &RC : TRI->regclasses()) {
+    if (RC.contains(CopySrc) && RC.contains(UseDst)) {
       Found = true;
-      if (TRI->getCrossCopyRegClass(RC) != RC) {
+      if (TRI->getCrossCopyRegClass(&RC) != &RC) {
         IsCrossClass = true;
         break;
       }
@@ -759,9 +759,9 @@ bool MachineCopyPropagation::isForwardableRegClassCopy(const MachineInstr &Copy,
   // The forwarded copy would be cross-class. Only do this if the original copy
   // was also cross-class.
   MCRegister CopyDst = getDstMCReg(CopyOperands);
-  for (const TargetRegisterClass *RC : TRI->regclasses()) {
-    if (RC->contains(CopySrc) && RC->contains(CopyDst) &&
-        TRI->getCrossCopyRegClass(RC) != RC)
+  for (const TargetRegisterClass &RC : TRI->regclasses()) {
+    if (RC.contains(CopySrc) && RC.contains(CopyDst) &&
+        TRI->getCrossCopyRegClass(&RC) != &RC)
       return true;
   }
   return false;

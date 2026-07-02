@@ -22,7 +22,8 @@ namespace llvm {
 
 class MachineFunction;
 class RegScavenger;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class Triple;
 
 class WebAssemblyRegisterInfo final : public WebAssemblyGenRegisterInfo {
