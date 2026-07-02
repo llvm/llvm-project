@@ -41,6 +41,7 @@ class LitConfig:
         per_test_coverage=False,
         gtest_sharding=True,
         update_tests=False,
+        test_output_root=None,
     ):
         # The name of the test runner.
         self.progname = progname
@@ -94,6 +95,7 @@ class LitConfig:
         self.per_test_coverage = per_test_coverage
         self.gtest_sharding = bool(gtest_sharding)
         self.update_tests = update_tests
+        self.test_output_root = test_output_root
         self.test_updaters = [diff_test_updater]
 
     @property

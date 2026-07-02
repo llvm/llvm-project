@@ -246,6 +246,20 @@ EXECUTION OPTIONS
  setting a unique value to LLVM_PROFILE_FILE for each RUN). The coverage
  data files will be emitted in the directory specified by ``config.test_exec_root``.
 
+.. option:: --test-output-root DIR
+
+ Write all test output under ``DIR`` instead of each test suite's default
+ ``config.test_exec_root``. Each suite's exec root becomes ``DIR/<suite-name>``,
+ so ``%t``, ``%T``, the per-test ``Output`` directory and ``.lit_test_times.txt``
+ resolve under ``DIR`` (a relative ``DIR`` is resolved against the current
+ directory). This lets test output live outside the build tree, and lets
+ multiple lit runs use the same tests concurrently against a single build tree
+ (for example, test stress runs) without clobbering each other's temporary
+ files. Give each concurrent run a distinct ``DIR`` (derived from a process id,
+ CI job id, per-run temp dir, etc.); reusing a ``DIR`` reuses that output tree,
+ preserving artifacts such as ``.lit_test_times.txt`` across runs. Disabled by
+ default.
+
 .. option:: --ignore-fail
 
  Exit with status zero even if some tests fail.
