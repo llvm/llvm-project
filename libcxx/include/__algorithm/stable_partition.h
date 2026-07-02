@@ -215,9 +215,11 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 _BidirectionalIterator __stable_partition_impl(
   _BidirectionalIterator __m1          = __m;
   _BidirectionalIterator __first_false = __first;
   _Distance __len_half                 = __len2;
-  while (!__pred(*--__m1)) {
-    if (__m1 == __first)
+  while (true) {
+    if (--__m1 == __first)
       goto __first_half_done;
+    if (__pred(*__m1))
+      break;
     --__len_half;
   }
   // F???TFFF?????????T
