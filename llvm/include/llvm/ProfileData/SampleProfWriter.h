@@ -215,7 +215,15 @@ protected:
   std::error_code writeSummary();
   virtual std::error_code writeContextIdx(const SampleContext &Context);
   std::error_code writeNameIdx(FunctionId FName);
-  std::error_code writeBody(const FunctionSamples &S);
+  std::error_code writeBody(const FunctionSamples &S, bool IsNested);
+  void writeLBRProfile(const FunctionSamples &S, bool IsNested);
+
+  /// Interfaces for typified profile writing.
+  void writeTypifiedProfile(const FunctionSamples &S, bool IsNested);
+  std::pair<uint64_t, uint64_t> startProfileType(ProfTypes Type);
+  void finishProfileType(uint64_t SizeOffset, uint64_t BodyOffset);
+  void writeTypifiedLBRProfile(const FunctionSamples &S, bool IsNested);
+
   inline void stablizeNameTable(MapVector<FunctionId, uint32_t> &NameTable,
                                 std::set<FunctionId> &V);
 
@@ -231,6 +239,7 @@ protected:
                           raw_ostream &OS);
 
   bool WriteVTableProf = false;
+  bool WriteTypifiedProf = false;
 
 private:
   LLVM_ABI friend ErrorOr<std::unique_ptr<SampleProfileWriter>>
@@ -474,6 +483,9 @@ private:
 
   std::error_code writeSections(const SampleProfileMap &ProfileMap) override;
 
+  // Configure whether to use typified profile sections.
+  void configureTypifiedProfile(const SampleProfileMap &ProfileMap);
+
   std::error_code writeCustomSection(SecType Type) override {
     return sampleprof_error::success;
   };
@@ -482,6 +494,11 @@ private:
     assert((SL == DefaultLayout || SL == CtxSplitLayout) &&
            "Unsupported layout");
   }
+
+  /// Section types for profile storage and bookkeeping (used to switch between
+  /// typified and non-typified profiles).
+  SecType ProfSection = SecLBRProfile;
+  SecType FuncOffsetSection = SecFuncOffsetTable;
 };
 
 } // end namespace sampleprof

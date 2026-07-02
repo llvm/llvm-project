@@ -46,6 +46,10 @@ static cl::opt<bool> ExtBinaryWriteVTableTypeProf(
     "extbinary-write-vtable-type-prof", cl::init(false), cl::Hidden,
     cl::desc("Write vtable type profile in ext-binary sample profile writer"));
 
+static cl::opt<bool> ExtBinaryForceTypifiedProf(
+    "extbinary-force-typified-prof", cl::init(false), cl::Hidden,
+    cl::desc("Force utilization of typified profile format"));
+
 namespace llvm {
 namespace support {
 namespace endian {
@@ -260,8 +264,9 @@ SampleProfileWriterExtBinaryBase::writeSample(const FunctionSamples &S) {
   uint64_t Offset = OutputStream->tell();
   auto &Context = S.getContext();
   FuncOffsetTable[Context] = Offset - SecLBRProfileStart;
-  encodeULEB128(S.getHeadSamples(), *OutputStream);
-  return writeBody(S);
+  if (!WriteTypifiedProf)
+    encodeULEB128(S.getHeadSamples(), *OutputStream);
+  return writeBody(S, false);
 }
 
 std::error_code SampleProfileWriterExtBinaryBase::writeFuncOffsetTable() {
@@ -460,11 +465,13 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
       return EC;
     break;
   case SecLBRProfile:
+  case SecTypifiedProfile:
     SecLBRProfileStart = OutputStream->tell();
     if (std::error_code EC = writeFuncProfiles(ProfileMap))
       return EC;
     break;
   case SecFuncOffsetTable:
+  case SecTypifiedFuncOffsetTable:
     if (auto EC = writeFuncOffsetTable())
       return EC;
     break;
@@ -504,11 +511,11 @@ std::error_code SampleProfileWriterExtBinary::writeDefaultLayout(
     return EC;
   if (auto EC = writeOneSection(SecCSNameTable, 2, ProfileMap))
     return EC;
-  if (auto EC = writeOneSection(SecLBRProfile, 4, ProfileMap))
+  if (auto EC = writeOneSection(ProfSection, 4, ProfileMap))
     return EC;
   if (auto EC = writeOneSection(SecProfileSymbolList, 5, ProfileMap))
     return EC;
-  if (auto EC = writeOneSection(SecFuncOffsetTable, 3, ProfileMap))
+  if (auto EC = writeOneSection(FuncOffsetSection, 3, ProfileMap))
     return EC;
   if (auto EC = writeOneSection(SecFuncMetadata, 6, ProfileMap))
     return EC;
@@ -530,24 +537,23 @@ std::error_code SampleProfileWriterExtBinary::writeCtxSplitLayout(
     const SampleProfileMap &ProfileMap) {
   SampleProfileMap ContextProfileMap, NoContextProfileMap;
   splitProfileMapToTwo(ProfileMap, ContextProfileMap, NoContextProfileMap);
-
   if (auto EC = writeOneSection(SecProfSummary, 0, ProfileMap))
     return EC;
   if (auto EC = writeOneSection(SecNameTable, 1, ProfileMap))
     return EC;
-  if (auto EC = writeOneSection(SecLBRProfile, 3, ContextProfileMap))
+  if (auto EC = writeOneSection(ProfSection, 3, ContextProfileMap))
     return EC;
-  if (auto EC = writeOneSection(SecFuncOffsetTable, 2, ContextProfileMap))
+  if (auto EC = writeOneSection(FuncOffsetSection, 2, ContextProfileMap))
     return EC;
   // Mark the section to have no context. Note section flag needs to be set
   // before writing the section.
   addSectionFlag(5, SecCommonFlags::SecFlagFlat);
-  if (auto EC = writeOneSection(SecLBRProfile, 5, NoContextProfileMap))
+  if (auto EC = writeOneSection(ProfSection, 5, NoContextProfileMap))
     return EC;
   // Mark the section to have no context. Note section flag needs to be set
   // before writing the section.
   addSectionFlag(4, SecCommonFlags::SecFlagFlat);
-  if (auto EC = writeOneSection(SecFuncOffsetTable, 4, NoContextProfileMap))
+  if (auto EC = writeOneSection(FuncOffsetSection, 4, NoContextProfileMap))
     return EC;
   if (auto EC = writeOneSection(SecProfileSymbolList, 6, ProfileMap))
     return EC;
@@ -557,8 +563,30 @@ std::error_code SampleProfileWriterExtBinary::writeCtxSplitLayout(
   return sampleprof_error::success;
 }
 
+void SampleProfileWriterExtBinary::configureTypifiedProfile(
+    const SampleProfileMap &ProfileMap) {
+  if (!ExtBinaryForceTypifiedProf && !ProfileMap.hasNonLBRProfile()) {
+    WriteTypifiedProf = false;
+    ProfSection = SecLBRProfile;
+    FuncOffsetSection = SecFuncOffsetTable;
+    return;
+  }
+  // Use typified profile sections: directly change the section types
+  // to avoid duplicating the whole layout and its handling.
+  WriteTypifiedProf = true;
+  FuncOffsetSection = SecTypifiedFuncOffsetTable;
+  ProfSection = SecTypifiedProfile;
+  for (auto &Entry : SectionHdrLayout) {
+    if (Entry.Type == SecFuncOffsetTable)
+      Entry.Type = SecTypifiedFuncOffsetTable;
+    else if (Entry.Type == SecLBRProfile)
+      Entry.Type = SecTypifiedProfile;
+  }
+}
+
 std::error_code SampleProfileWriterExtBinary::writeSections(
     const SampleProfileMap &ProfileMap) {
+  configureTypifiedProfile(ProfileMap);
   std::error_code EC;
   if (SecLayout == DefaultLayout)
     EC = writeDefaultLayout(ProfileMap);
@@ -885,14 +913,13 @@ std::error_code SampleProfileWriterBinary::writeSummary() {
   }
   return sampleprof_error::success;
 }
-std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S) {
+
+void SampleProfileWriterBinary::writeLBRProfile(const FunctionSamples &S,
+                                                bool IsNested) {
   auto &OS = *OutputStream;
-  if (std::error_code EC = writeContextIdx(S.getContext()))
-    return EC;
-
+  if (WriteTypifiedProf && !IsNested)
+    encodeULEB128(S.getHeadSamples(), OS);
   encodeULEB128(S.getTotalSamples(), OS);
-
-  // Emit all the body samples.
   encodeULEB128(S.getBodySamples().size(), OS);
   for (const auto &I : S.getBodySamples()) {
     LineLocation Loc = I.first;
@@ -900,6 +927,62 @@ std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S) {
     Loc.serialize(OS);
     Sample.serialize(OS, getNameTable());
   }
+}
+
+std::pair<uint64_t, uint64_t>
+SampleProfileWriterBinary::startProfileType(ProfTypes Type) {
+  auto &OS = *OutputStream;
+  encodeULEB128(Type, OS);
+  // Create placeholder for profile size.
+  uint64_t SizeOffset = OS.tell();
+  support::endian::Writer PlaceWriter(OS, llvm::endianness::little);
+  PlaceWriter.write(static_cast<uint64_t>(-1));
+  uint64_t BodyOffset = OS.tell();
+  return {SizeOffset, BodyOffset};
+}
+
+void SampleProfileWriterBinary::finishProfileType(uint64_t SizeOffset,
+                                                  uint64_t BodyOffset) {
+  auto &OS = *OutputStream;
+  uint64_t BodySize = OS.tell() - BodyOffset;
+  // Write profile size.
+  support::endian::SeekableWriter PWriter(static_cast<raw_pwrite_stream &>(OS),
+                                          llvm::endianness::little);
+  PWriter.pwrite(BodySize, SizeOffset);
+}
+
+void SampleProfileWriterBinary::writeTypifiedLBRProfile(
+    const FunctionSamples &S, bool IsNested) {
+  auto [SizeOffset, BodyOffset] = startProfileType(ProfTypeLBR);
+  writeLBRProfile(S, IsNested);
+  finishProfileType(SizeOffset, BodyOffset);
+}
+
+void SampleProfileWriterBinary::writeTypifiedProfile(const FunctionSamples &S,
+                                                     bool IsNested) {
+  auto &OS = *OutputStream;
+  bool WriteLBRProf = !S.getBodySamples().empty();
+  // Other profile types should be added here.
+  uint32_t TypesNum = WriteLBRProf;
+
+  // Write the number of profile types for function.
+  encodeULEB128(TypesNum, OS);
+
+  if (WriteLBRProf)
+    writeTypifiedLBRProfile(S, IsNested);
+}
+
+std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S,
+                                                     bool IsNested) {
+  auto &OS = *OutputStream;
+  if (std::error_code EC = writeContextIdx(S.getContext()))
+    return EC;
+
+  // Emit all the body samples.
+  if (WriteTypifiedProf)
+    writeTypifiedProfile(S, IsNested);
+  else
+    writeLBRProfile(S, IsNested);
 
   // Recursively emit all the callsite samples.
   uint64_t NumCallsites = 0;
@@ -909,7 +992,7 @@ std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S) {
   for (const auto &J : S.getCallsiteSamples())
     for (const auto &FS : J.second) {
       J.first.serialize(OS);
-      if (std::error_code EC = writeBody(FS.second))
+      if (std::error_code EC = writeBody(FS.second, true))
         return EC;
     }
 
@@ -925,7 +1008,7 @@ std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S) {
 std::error_code
 SampleProfileWriterBinary::writeSample(const FunctionSamples &S) {
   encodeULEB128(S.getHeadSamples(), *OutputStream);
-  return writeBody(S);
+  return writeBody(S, false);
 }
 
 /// Create a sample profile file writer based on the specified format.
