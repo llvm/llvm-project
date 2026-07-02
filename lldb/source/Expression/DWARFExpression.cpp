@@ -1085,7 +1085,10 @@ static llvm::Error Evaluate_DW_OP_piece(EvalContext &eval_ctx,
     // In a multi-piece expression, this means that the current piece is
     // not available. Fill with zeros for now by resizing the data and
     // appending it
-    curr_piece.ResizeData(piece_byte_size);
+    if (curr_piece.ResizeData(piece_byte_size) != piece_byte_size)
+      return llvm::createStringError(
+          "failed to resize the piece buffer to %" PRIu64 " bytes",
+          piece_byte_size);
     // Note that "0" is not a correct value for the unknown bits.
     // It would be better to also return a mask of valid bits together
     // with the expression result, so the debugger can print missing

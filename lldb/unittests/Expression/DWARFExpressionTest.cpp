@@ -617,6 +617,15 @@ TEST(DWARFExpression, DW_OP_piece) {
       ExpectHostAddress(expected_host_buffer));
 }
 
+TEST(DWARFExpression, DW_OP_piece_empty_stack_huge_size) {
+  // An empty-stack DW_OP_piece with a byte size that cannot be allocated must
+  // report an error.  The ULEB128 operand here encodes INT64_MAX.
+  EXPECT_THAT_ERROR(Evaluate({DW_OP_piece, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+                              0xff, 0xff, 0x7f})
+                        .takeError(),
+                    llvm::Failed());
+}
+
 TEST(DWARFExpression, DW_OP_implicit_value) {
   unsigned char bytes = 4;
 
