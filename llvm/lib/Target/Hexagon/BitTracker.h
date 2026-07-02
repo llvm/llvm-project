@@ -26,7 +26,8 @@ class MachineRegisterInfo;
 class MachineBasicBlock;
 class MachineFunction;
 class raw_ostream;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 
 struct BitTracker {

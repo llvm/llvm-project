@@ -8,10 +8,8 @@
 include "llvm/Target/Target.td"
 
 // CHECK: extern const MCRegisterClassStorage<{{[0-9, ]+}}> MyTargetMCRegisterClassStorage = {
-// CHECK-NEXT: {
-// CHECK-NEXT:   { {{[^,]+}}, {{[^,]+}}, 0, 32, 2, {{[0-9]+}}, MyTarget::GPR32RegClassID, 1, true, false },
-// CHECK-NEXT:   { {{[^,]+}}, {{[^,]+}}, 6, 32, 1, {{[0-9]+}}, MyTarget::SPECIAL_CLASSRegClassID, 255, true, false },
-// CHECK-NEXT: },
+// CHECK: 1, /* CopyCost */
+// CHECK: 255, /* CopyCost */
 
 def MyTargetISA : InstrInfo;
 def MyTarget : Target { let InstructionSet = MyTargetISA; }
