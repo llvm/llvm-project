@@ -13,7 +13,7 @@ generates an zext/sext of x which can easily be avoided.
 
 Bitfields accesses can be shifted to simplify masking and sign
 extension. For example, if the bitfield width is 8 and it is
-appropriately aligned then is is a lot shorter to just load the char
+appropriately aligned then it is a lot shorter to just load the char
 directly.
 
 //===---------------------------------------------------------------------===//

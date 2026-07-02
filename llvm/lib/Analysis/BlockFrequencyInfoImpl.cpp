@@ -483,7 +483,7 @@ static void convertFloatingToInteger(BlockFrequencyInfoImplBase &BFI,
                                      const Scaled64 &Min, const Scaled64 &Max) {
   // Scale the Factor to a size that creates integers.  If possible scale
   // integers so that Max == UINT64_MAX so that they can be best differentiated.
-  // Is is possible that the range between min and max cannot be accurately
+  // It is possible that the range between min and max cannot be accurately
   // represented in a 64bit integer without either loosing precision for small
   // values (so small unequal numbers all map to 1) or saturaturing big numbers
   // loosing precision for big numbers (so unequal big numbers may map to

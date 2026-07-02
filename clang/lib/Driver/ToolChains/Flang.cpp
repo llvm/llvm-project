@@ -87,7 +87,7 @@ void Flang::addPreprocessingOptions(const ArgList &Args,
 ///  -Ofast
 ///  -O4
 ///  -O3
-/// For all other cases, loop versioning is is disabled.
+/// For all other cases, loop versioning is disabled.
 ///
 /// The gfortran compiler automatically enables the option for -O3 or -Ofast.
 ///

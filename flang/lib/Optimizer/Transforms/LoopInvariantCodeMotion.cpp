@@ -47,7 +47,7 @@ using namespace mlir;
 /// may be added later).
 /// The safety of hoisting is proven by:
 ///   * Proving that the loop runs at least one iteration.
-///   * Proving that is is always safe to load from this location
+///   * Proving that it is always safe to load from this location
 ///     (see isSafeToHoistLoad() comments below).
 struct LoopInvariantCodeMotion
     : fir::impl::LoopInvariantCodeMotionBase<LoopInvariantCodeMotion> {
