@@ -79,6 +79,7 @@ private:
       unsigned HwMode = DefaultMode);
   unsigned BitWidth = 0u;
   bool UseAPInt = false;
+  bool CompactTwoWordInstBits = false;
 };
 
 } // end anonymous namespace
@@ -361,6 +362,16 @@ static void emitInstBits(raw_ostream &OS, const APInt &Bits) {
     OS << ((I > 0) ? ", " : "") << "UINT64_C(" << Bits.getRawData()[I] << ")";
 }
 
+static APInt getInstructionBaseValue(const Record *EncodingDef,
+                                     unsigned BitWidth) {
+  const BitsInit *BI = EncodingDef->getValueAsBitsInit("Inst");
+  APInt Value(BitWidth, 0);
+  for (unsigned I = 0, E = BI->getNumBits(); I != E; ++I)
+    if (const auto *B = dyn_cast<BitInit>(BI->getBit(I)); B && B->getValue())
+      Value.setBit(I);
+  return Value;
+}
+
 void CodeEmitterGen::emitInstructionBaseValues(
     raw_ostream &O, ArrayRef<const CodeGenInstruction *> NumberedInstructions,
     unsigned HwMode) {
@@ -387,16 +398,12 @@ void CodeEmitterGen::emitInstructionBaseValues(
         continue;
       }
     }
-    const BitsInit *BI = EncodingDef->getValueAsBitsInit("Inst");
-
-    // Start by filling in fixed values.
-    APInt Value(BitWidth, 0);
-    for (unsigned I = 0, E = BI->getNumBits(); I != E; ++I) {
-      if (const auto *B = dyn_cast<BitInit>(BI->getBit(I)); B && B->getValue())
-        Value.setBit(I);
-    }
+    APInt Value = getInstructionBaseValue(EncodingDef, BitWidth);
     O << "    ";
-    emitInstBits(O, Value);
+    if (CompactTwoWordInstBits)
+      O << "UINT64_C(" << Value.getRawData()[0] << ")";
+    else
+      emitInstBits(O, Value);
     O << "," << '\t' << "// " << R->getName() << "\n";
   }
   O << "  };\n";
@@ -436,6 +443,8 @@ void CodeEmitterGen::run(raw_ostream &O) {
     BitWidth = std::max(BitWidth, BI->getNumBits());
   }
   UseAPInt = BitWidth > 64;
+  CompactTwoWordInstBits =
+      UseAPInt && HwModes.empty() && APInt::getNumWords(BitWidth) == 2;
 
   // Emit function declaration
   if (UseAPInt) {
@@ -474,6 +483,14 @@ void CodeEmitterGen::run(raw_ostream &O) {
     const Record *R = CGI->TheDef;
     auto [Case, BitOffsetCase] = getInstructionCases(R);
 
+    if (CompactTwoWordInstBits) {
+      APInt BaseValue = getInstructionBaseValue(R, BitWidth);
+      uint64_t HighWord = BaseValue.getRawData()[1];
+      if (HighWord)
+        Case.insert(0, "      Value.insertBits(UINT64_C(" + utostr(HighWord) +
+                           "), 64, " + utostr(BitWidth - 64) + ");\n");
+    }
+
     CaseMap[Case].push_back(Index);
     BitOffsetCaseMap[BitOffsetCase].push_back(Index);
   }
@@ -496,12 +513,17 @@ void CodeEmitterGen::run(raw_ostream &O) {
 
   // Emit initial function code
   if (UseAPInt) {
-    int NumWords = APInt::getNumWords(BitWidth);
     O << "  if (Scratch.getBitWidth() != " << BitWidth << ")\n"
-      << "    Scratch = Scratch.zext(" << BitWidth << ");\n"
-      << "  Inst = APInt(" << BitWidth << ", ArrayRef(InstBits + TableIndex * "
-      << NumWords << ", " << NumWords << "));\n"
-      << "  APInt &Value = Inst;\n"
+      << "    Scratch = Scratch.zext(" << BitWidth << ");\n";
+    if (CompactTwoWordInstBits)
+      O << "  Inst = APInt(" << BitWidth << ", InstBits[TableIndex]);\n";
+    else {
+      int NumWords = APInt::getNumWords(BitWidth);
+      O << "  Inst = APInt(" << BitWidth
+        << ", ArrayRef(InstBits + TableIndex * " << NumWords << ", " << NumWords
+        << "));\n";
+    }
+    O << "  APInt &Value = Inst;\n"
       << "  APInt &op = Scratch;\n"
       << "  switch (opcode) {\n";
   } else {
