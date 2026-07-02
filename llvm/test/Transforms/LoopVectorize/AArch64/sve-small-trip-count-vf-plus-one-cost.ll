@@ -7,13 +7,7 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @tc3_udiv_i8_reject(ptr noalias %a, ptr noalias %b,
                                 ptr noalias %c) #0 {
 ; IR-LABEL: define void @tc3_udiv_i8_reject(
-; IR-NOT: vector.body
-; IR-LABEL: define void @tc3_udiv_i8_user_vf2(
-; IR-NOT: vector.body
-; IR-LABEL: define void @tc3_smin_i8_reject(
-; IR-NOT: vector.body
-; IR-LABEL: define void @tc3_udiv_i8_forced(
-; IR: vector.body:
+; IR-NOT: vector.body:
 ;
 ; DBG-LABEL: LV: Checking a loop in 'tc3_udiv_i8_reject'
 ; DBG: LV: Picking VF=2 with 1 scalar iteration remaining.
@@ -44,6 +38,9 @@ exit:
 
 define void @tc3_udiv_i8_user_vf2(ptr noalias %a, ptr noalias %b,
                                   ptr noalias %c) #0 {
+; IR-LABEL: define void @tc3_udiv_i8_user_vf2(
+; IR-NOT: vector.body
+
 ; DBG-LABEL: LV: Checking a loop in 'tc3_udiv_i8_user_vf2'
 ; DBG: LV: Using user VF 2.
 ; DBG: LV: Scalar loop costs: 9.
@@ -71,6 +68,9 @@ exit:
 }
 
 define void @tc3_smin_i8_reject(ptr noalias %a, ptr noalias %b) #0 {
+; IR-LABEL: define void @tc3_smin_i8_reject(
+; IR-NOT: vector.body
+
 ; DBG-LABEL: LV: Checking a loop in 'tc3_smin_i8_reject'
 ; DBG: LV: Picking VF=2 with 1 scalar iteration remaining.
 ; DBG: LV: Scalar loop costs: 10.
@@ -99,6 +99,9 @@ exit:
 
 define void @tc3_udiv_i8_forced(ptr noalias %a, ptr noalias %b,
                                 ptr noalias %c) #0 {
+; IR-LABEL: define void @tc3_udiv_i8_forced(
+; IR: vector.body
+
 ; DBG-LABEL: LV: Checking a loop in 'tc3_udiv_i8_forced'
 ; DBG-NOT: Rejecting VF 2
 ; DBG: LV: Selecting VF: 2.
@@ -122,6 +125,33 @@ exit:
   ret void
 }
 
+define void @tc5_udiv_i8_reject_ic2(ptr noalias %a, ptr noalias %b, ptr noalias %c) #0{
+; IR-LABEL: define void @tc5_udiv_i8_reject_ic2(
+; IR: vector.body
+
+; DBG-LABEL: LV: Checking a loop in 'tc5_udiv_i8_reject_ic2'
+; DBG-NOT: LV: Selecting VF: 2.
+; DBG Rejecting VF 2
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %pa = getelementptr inbounds i8, ptr %a, i64 %iv
+  %pb = getelementptr inbounds i8, ptr %b, i64 %iv
+  %pc = getelementptr inbounds i8, ptr %c, i64 %iv
+  %va = load i8, ptr %pa, align 1
+  %vb = load i8, ptr %pb, align 1
+  %div = udiv i8 %va, %vb
+  store i8 %div, ptr %pc, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 5
+  br i1 %exitcond, label %exit, label %loop, !llvm.loop !4
+
+exit:
+  ret void
+}
+
 declare i8 @llvm.smin.i8(i8, i8)
 
 attributes #0 = { vscale_range(1,16) "target-features"="+sve" }
@@ -130,3 +160,5 @@ attributes #0 = { vscale_range(1,16) "target-features"="+sve" }
 !1 = !{!"llvm.loop.vectorize.enable", i1 true}
 !2 = distinct !{!2, !3}
 !3 = !{!"llvm.loop.vectorize.width", i32 2}
+!4 = distinct !{!4, !5}
+!5 = !{!"llvm.loop.interleave.count", i32 2}
