@@ -30,6 +30,9 @@ struct MacroOccurrence {
   bool IsDefinition;
   // True if the occurence is used in a conditional directive, e.g. #ifdef MACRO
   bool InConditionalDirective;
+  // True if the macro is defined via command line options (e.g. -D...)
+  // rather than in a source/header file.
+  bool IsCommandLineDefined;
 
   CharSourceRange toSourceRange(const SourceManager &SM) const;
   Range toRange(const SourceManager &SM) const;

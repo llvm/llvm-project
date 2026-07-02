@@ -75,6 +75,7 @@
 # CHECK-NEXT:            "usedAsMutablePointer",
 # CHECK-NEXT:            "constructorOrDestructor",
 # CHECK-NEXT:            "userDefined",
+# CHECK-NEXT:            "commandLineDefined",
 # CHECK-NEXT:            "functionScope",
 # CHECK-NEXT:            "classScope",
 # CHECK-NEXT:            "fileScope",
