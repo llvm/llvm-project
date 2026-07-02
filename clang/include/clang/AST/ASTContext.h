@@ -514,6 +514,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// Declaration for the CUDA cudaLaunchDevice function.
   FunctionDecl *cudaLaunchDeviceDecl = nullptr;
 
+  llvm::DenseMap<const CXXConstructorDecl *, ArrayRef<CXXDefaultArgExpr *>>
+      CtorClosureDefaultArgs;
+
   /// Keeps track of all declaration attributes.
   ///
   /// Since so few decls have attrs, we keep them in a hash map instead of
@@ -1147,6 +1150,11 @@ public:
 
   /// Erase the attributes corresponding to the given declaration.
   void eraseDeclAttrs(const Decl *D);
+
+  ArrayRef<CXXDefaultArgExpr *>
+  getCtorClosureDefaultArgs(const CXXConstructorDecl *CD);
+  void setCtorClosureDefaultArgs(const CXXConstructorDecl *CD,
+                                 ArrayRef<CXXDefaultArgExpr *> Args);
 
   /// Get all ExplicitInstantiationDecls for a given specialization.
   ArrayRef<ExplicitInstantiationDecl *>

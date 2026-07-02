@@ -400,6 +400,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .scalarizeIf(scalarOrEltWiderThan(0, 32), 0)
       .scalarSameSizeAs(0, 1);
 
+  getActionDefinitionsBuilder(G_INSERT_SUBVECTOR).lower();
+
   getActionDefinitionsBuilder(G_CTLZ_ZERO_POISON).lower();
 
   getActionDefinitionsBuilder(G_CTTZ)

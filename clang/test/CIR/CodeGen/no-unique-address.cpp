@@ -36,7 +36,7 @@ struct Outer {
 // CIR:         %[[THIS:.*]] = cir.load %{{.+}} : !cir.ptr<!cir.ptr<!rec_Outer>>, !cir.ptr<!rec_Outer>
 // CIR:         %[[M_BASE:.*]] = cir.get_member %[[THIS]][0] {name = "m"} : !cir.ptr<!rec_Outer> -> !cir.ptr<!rec_Middle2Ebase>
 // CIR-NEXT:    %[[M_COMPLETE:.*]] = cir.cast bitcast %[[M_BASE]] : !cir.ptr<!rec_Middle2Ebase> -> !cir.ptr<!rec_Middle>
-// CIR:         cir.copy %{{.+}} to %[[M_COMPLETE]] skip_tail_padding : !cir.ptr<!rec_Middle>
+// CIR:         cir.copy %{{.+}} align(4) to %[[M_COMPLETE]] align(4) skip_tail_padding : !cir.ptr<!rec_Middle>
 // CIR:         %[[EXTRA:.*]] = cir.get_member %[[THIS]][1] {name = "extra"} : !cir.ptr<!rec_Outer> -> !cir.ptr<!s8i>
 
 // Globals for the union/final NUA cases below (placed before LLVM-LABEL so
@@ -79,7 +79,7 @@ struct Outer {
 
 // LLVM-LABEL: define {{.*}} void @_ZN5OuterC2ERK6Middlec(
 // LLVM:         %[[GEP:.*]] = getelementptr inbounds nuw %struct.Outer, ptr %{{.+}}, i32 0, i32 0
-// LLVM:         call void @llvm.memcpy.p0.p0.i64(ptr %[[GEP]], ptr %{{.+}}, i64 5, i1 false)
+// LLVM:         call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[GEP]], ptr align 4 %{{.+}}, i64 5, i1 false)
 
 // OGCG-LABEL: define {{.*}} void @_ZN5OuterC2ERK6Middlec(
 // OGCG:         %[[GEP:.*]] = getelementptr inbounds nuw %struct.Outer, ptr %{{.+}}, i32 0, i32 0

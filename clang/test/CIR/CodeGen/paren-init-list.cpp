@@ -20,7 +20,7 @@ void cxx_paren_list_init_expr() { CompleteS a(1, 'a'); }
 // CIR: cir.copy %[[CONST]] to %[[A_ADDR]]
 
 // LLVM: %[[A_ADDR:.*]] = alloca %struct.CompleteS, i64 1, align 4
-// LLVM: call void @llvm.memcpy{{.*}}(ptr %[[A_ADDR]], ptr @[[PAREN_A]]
+// LLVM: call void @llvm.memcpy{{.*}}(ptr align 4 %[[A_ADDR]], ptr align 4 @[[PAREN_A]]
 
 // OGCG: %[[A_ADDR:.*]] = alloca %struct.CompleteS, align 4
 // OGCG: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[A_ADDR]], ptr align 4 @__const._Z24cxx_paren_list_init_exprv.a, i64 8, i1 false)

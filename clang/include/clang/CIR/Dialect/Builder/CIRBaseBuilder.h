@@ -377,8 +377,9 @@ public:
   cir::CopyOp createCopy(mlir::Value dst, mlir::Value src,
                          bool isVolatile = false,
                          bool skipTailPadding = false) {
-    return cir::CopyOp::create(*this, dst.getLoc(), dst, src, isVolatile,
-                               skipTailPadding);
+    return cir::CopyOp::create(*this, dst.getLoc(), dst, src,
+                               /*dst_alignment=*/{}, /*src_alignment=*/{},
+                               isVolatile, skipTailPadding);
   }
 
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, mlir::Value dst,
