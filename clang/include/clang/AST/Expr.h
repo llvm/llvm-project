@@ -623,6 +623,18 @@ public:
     /// whether @ref #Diag is set or not.
     bool DiagEmitted = false;
 
+    /// Whether part of expression is an LValue.
+    /// Used when evaluating constant expression with Microsoft extensions.
+    bool HasLValue = false;
+
+    /// Whether we've seen a ptr to int cast or null subobject while evaluating
+    /// constant expression in MS compatibility mode.
+    bool SeenCastOrNull = false;
+
+    /// Whether the expression being evaluated is converted from some other
+    /// expression. This is used to suppress duplicate warnings
+    bool IsConvertedExpr = false;
+
     /// Diag - If this is non-null, it will be filled in with a stack of notes
     /// indicating why evaluation failed (or why it failed to produce a constant
     /// expression).

@@ -2423,6 +2423,14 @@ static bool CheckLiteralType(EvalInfo &Info, const Expr *E,
   return false;
 }
 
+static void CheckMicrosoftRelaxations(EvalInfo &Info,
+                                      const SourceLocation &Loc) {
+  auto *Diag = Info.EvalStatus.Diag;
+  if (Diag && Diag->empty() && Info.EvalStatus.SeenCastOrNull &&
+      !Info.EvalStatus.IsConvertedExpr)
+    Info.report(Loc, diag::warn_relaxed_constant_fold);
+}
+
 static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
                                   EvalInfo &Info, SourceLocation DiagLoc,
                                   QualType Type, const APValue &Value,
@@ -2511,6 +2519,9 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
       CERK == CheckEvaluationResultKind::ConstantExpression)
     return CheckMemberPointerConstantExpression(Info, DiagLoc, Type, Value, Kind);
 
+  // Emit warning if expression is not LValue, member pointer,
+  // and contains C-style casts under -fms-compatibility
+  CheckMicrosoftRelaxations(Info, DiagLoc);
   // Everything else is fine.
   return true;
 }
@@ -8539,7 +8550,9 @@ public:
   }
 
   bool VisitCXXReinterpretCastExpr(const CXXReinterpretCastExpr *E) {
-    CCEDiag(E, diag::note_constexpr_invalid_cast)
+    bool IsPtrToInt = E->getCastKind() == CK_PointerToIntegral;
+    CCEDiag(E, IsPtrToInt ? diag::note_constexpr_invalid_cast_ptrtoint
+                          : diag::note_constexpr_invalid_cast)
         << diag::ConstexprInvalidCastKind::Reinterpret;
     return static_cast<Derived*>(this)->VisitCastExpr(E);
   }
@@ -19726,7 +19739,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   }
 
   case CK_PointerToIntegral: {
-    CCEDiag(E, diag::note_constexpr_invalid_cast)
+    CCEDiag(E, diag::note_constexpr_invalid_cast_ptrtoint)
         << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
         << Info.Ctx.getLangOpts().CPlusPlus << E->getSourceRange();
 
@@ -19735,6 +19748,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
       return false;
 
     if (LV.getLValueBase()) {
+      CCEDiag(E, diag::note_constexpr_has_lvalue) << E->getSourceRange();
       // Only allow based lvalue casts if they are lossless.
       // FIXME: Allow a larger integer size than the pointer size, and allow
       // narrowing back down to pointer width in subsequent integral casts.
@@ -21714,7 +21728,6 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
     // destruction.
     return false;
   }
-
   return true;
 }
 
