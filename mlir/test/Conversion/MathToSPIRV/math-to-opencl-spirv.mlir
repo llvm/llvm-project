@@ -132,6 +132,8 @@ func.func @float32_binary_scalar(%lhs: f32, %rhs: f32) {
   %0 = math.atan2 %lhs, %rhs : f32
   // CHECK: spirv.CL.pow %{{.*}}: f32
   %1 = math.powf %lhs, %rhs : f32
+  // CHECK: spirv.CL.copysign %{{.*}}, %{{.*}}: f32
+  %copysign = math.copysign %lhs, %rhs : f32
   return
 }
 
@@ -141,6 +143,8 @@ func.func @float32_binary_vector(%lhs: vector<4xf32>, %rhs: vector<4xf32>) {
   %0 = math.atan2 %lhs, %rhs : vector<4xf32>
   // CHECK: spirv.CL.pow %{{.*}}: vector<4xf32>
   %1 = math.powf %lhs, %rhs : vector<4xf32>
+  // CHECK: spirv.CL.copysign %{{.*}}, %{{.*}}: vector<4xf32>
+  %copysign = math.copysign %lhs, %rhs : vector<4xf32>
   return
 }
 
