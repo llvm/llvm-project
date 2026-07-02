@@ -3533,6 +3533,34 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     }
   }
 
+  // (icmp sge X, 0) & (icmp ne (X & INT_MAX), 0) -> (icmp sgt X, 0)
+  // (icmp slt X, 0) | (icmp eq (X & INT_MAX), 0) -> (icmp sle X, 0)
+  {
+    bool TrueIfSigned;
+    if (isSignBitCheck(PredL, *LHSC, TrueIfSigned) &&
+        PredR == (IsAnd ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ) &&
+        match(RHS1, m_Zero()) &&
+        match(RHS0, m_And(m_Specific(LHS0), m_MaxSignedValue()))) {
+      if (IsAnd && !TrueIfSigned)
+        return Builder.CreateICmpSGT(
+            LHS0, ConstantInt::getNullValue(LHS0->getType()));
+      if (!IsAnd && TrueIfSigned)
+        return Builder.CreateICmpSLE(
+            LHS0, ConstantInt::getNullValue(LHS0->getType()));
+    }
+    if (isSignBitCheck(PredR, *RHSC, TrueIfSigned) &&
+        PredL == (IsAnd ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ) &&
+        match(LHS1, m_Zero()) &&
+        match(LHS0, m_And(m_Specific(RHS0), m_MaxSignedValue()))) {
+      if (IsAnd && !TrueIfSigned)
+        return Builder.CreateICmpSGT(
+            RHS0, ConstantInt::getNullValue(RHS0->getType()));
+      if (!IsAnd && TrueIfSigned)
+        return Builder.CreateICmpSLE(
+            RHS0, ConstantInt::getNullValue(RHS0->getType()));
+    }
+  }
+
   // Match naive pattern (and its inverted form) for checking if two values
   // share same sign. An example of the pattern:
   // (icmp slt (X & Y), 0) | (icmp sgt (X | Y), -1) -> (icmp sgt (X ^ Y), -1)

@@ -3,10 +3,7 @@
 
 define i1 @test_and(i32 %A) {
 ; CHECK-LABEL: @test_and(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A]], 2147483647
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[AND]], 0
-; CHECK-NEXT:    [[RES:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[RES:%.*]] = icmp sgt i32 [[A:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %cmp1 = icmp sge i32 %A, 0
@@ -18,10 +15,7 @@ define i1 @test_and(i32 %A) {
 
 define i1 @test_or(i32 %A) {
 ; CHECK-LABEL: @test_or(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[A:%.*]], 0
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A]], 2147483647
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    [[RES:%.*]] = or i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[RES:%.*]] = icmp slt i32 [[A:%.*]], 1
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %cmp1 = icmp slt i32 %A, 0
@@ -33,10 +27,7 @@ define i1 @test_or(i32 %A) {
 
 define i1 @test_and_logical(i32 %A) {
 ; CHECK-LABEL: @test_and_logical(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A]], 2147483647
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[AND]], 0
-; CHECK-NEXT:    [[RES:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[RES:%.*]] = icmp sgt i32 [[A:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %cmp1 = icmp sge i32 %A, 0
@@ -48,10 +39,7 @@ define i1 @test_and_logical(i32 %A) {
 
 define i1 @test_or_logical(i32 %A) {
 ; CHECK-LABEL: @test_or_logical(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[A:%.*]], 0
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A]], 2147483647
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    [[RES:%.*]] = or i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[RES:%.*]] = icmp slt i32 [[A:%.*]], 1
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %cmp1 = icmp slt i32 %A, 0
@@ -63,10 +51,7 @@ define i1 @test_or_logical(i32 %A) {
 
 define <2 x i1> @test_and_vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test_and_vec(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt <2 x i32> [[A:%.*]], splat (i32 -1)
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[A]], splat (i32 2147483647)
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne <2 x i32> [[AND]], zeroinitializer
-; CHECK-NEXT:    [[RES:%.*]] = and <2 x i1> [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[RES:%.*]] = icmp sgt <2 x i32> [[A:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[RES]]
 ;
   %cmp1 = icmp sge <2 x i32> %A, zeroinitializer
@@ -78,10 +63,7 @@ define <2 x i1> @test_and_vec(<2 x i32> %A) {
 
 define i1 @test_and_commuted(i32 %A) {
 ; CHECK-LABEL: @test_and_commuted(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A]], 2147483647
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[AND]], 0
-; CHECK-NEXT:    [[RES:%.*]] = and i1 [[CMP2]], [[CMP1]]
+; CHECK-NEXT:    [[RES:%.*]] = icmp sgt i32 [[A:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %cmp1 = icmp sge i32 %A, 0
