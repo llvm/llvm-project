@@ -107,6 +107,37 @@ class TestCase(TestBase):
         # Use variable paths to access the members.
         self.expect_var_path("j1.x", type="long", value="1")
 
+        children = [
+            ValueCheck(
+                type="Extra",
+                children=[
+                    ValueCheck(
+                        type="short",
+                        name="some_value",
+                        value="3",
+                    )
+                ],
+            ),
+            ValueCheck(
+                type="VBase",
+                children=[ValueCheck(type="int", name="m_value", value="12347")],
+            ),
+            ValueCheck(
+                type="Derived1",
+                children=[
+                    ValueCheck(
+                        type="VBase",
+                        children=[
+                            ValueCheck(type="int", name="m_value", value="12347")
+                        ],
+                    )
+                ],
+            ),
+            ValueCheck(type="long", name="z", value="4"),
+        ]
+        # Test that the virtual bases are correct when v(b)table pointer is offset.
+        self.expect_expr("j3", result_type="Joiner3", result_children=children)
+
     @expectedFailureAll
     @no_debug_info_test
     def test_invalid_member(self):
