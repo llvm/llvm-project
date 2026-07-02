@@ -53,10 +53,10 @@ for.body:
 
 ; PR34711: given three consecutive instructions such that the first will be
 ; widened, the second is a cast that will be widened and needs to sink after the
-; third, and the third is a first-order-recurring load that will be replicated
-; instead of widened. Although the cast and the first instruction will both be
-; widened, and are originally adjacent to each other, make sure the replicated
-; load ends up appearing between them.
+; third, and the third is a first-order-recurring load that is widened as part of
+; an interleaved load group. Although the cast and the first instruction will
+; both be widened, and are originally adjacent to each other, make sure the
+; load/deinterleave sequence ends up appearing between them.
 ;
 ; void PR34711(short[2] *a, int *b, int *c, int n) {
 ;   for(int i = 0; i < n; i++) {
@@ -69,11 +69,13 @@ for.body:
 define void @PR34711(ptr %a, ptr %b, ptr %c, i64 %n) #0 {
 ; CHECK-VF4UF1-LABEL: @PR34711
 ; CHECK-VF4UF1: vector.body
-; CHECK-VF4UF1: %[[VEC_RECUR:.*]] = phi <vscale x 4 x i16> [ %vector.recur.init, %vector.ph ], [ %[[MGATHER:.*]], %vector.body ]
-; CHECK-VF4UF1: %[[MGATHER]] = call <vscale x 4 x i16> @llvm.masked.gather.nxv4i16.nxv4p0(<vscale x 4 x ptr> {{.*}}, <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i16> poison)
-; CHECK-VF4UF1-NEXT: %[[SPLICE:.*]] = call <vscale x 4 x i16> @llvm.vector.splice.right.nxv4i16(<vscale x 4 x i16> %[[VEC_RECUR]], <vscale x 4 x i16> %[[MGATHER]], i32 1)
+; CHECK-VF4UF1: %[[VEC_RECUR:.*]] = phi <vscale x 4 x i16> [ %vector.recur.init, %vector.ph ], [ %[[LOAD_LANE:.*]], %vector.body ]
+; CHECK-VF4UF1: %[[WIDE_LOAD:.*]] = load <vscale x 8 x i16>, ptr {{.*}}, align 2
+; CHECK-VF4UF1-NEXT: %[[DEINT:.*]] = call { <vscale x 4 x i16>, <vscale x 4 x i16> } @llvm.vector.deinterleave2.nxv8i16(<vscale x 8 x i16> %[[WIDE_LOAD]])
+; CHECK-VF4UF1-NEXT: %[[LOAD_LANE]] = extractvalue { <vscale x 4 x i16>, <vscale x 4 x i16> } %[[DEINT]], 0
+; CHECK-VF4UF1-NEXT: %[[SPLICE:.*]] = call <vscale x 4 x i16> @llvm.vector.splice.right.nxv4i16(<vscale x 4 x i16> %[[VEC_RECUR]], <vscale x 4 x i16> %[[LOAD_LANE]], i32 1)
 ; CHECK-VF4UF1-NEXT: %[[SXT1:.*]] = sext <vscale x 4 x i16> %[[SPLICE]] to <vscale x 4 x i32>
-; CHECK-VF4UF1-NEXT: %[[SXT2:.*]] = sext <vscale x 4 x i16> %[[MGATHER]] to <vscale x 4 x i32>
+; CHECK-VF4UF1-NEXT: %[[SXT2:.*]] = sext <vscale x 4 x i16> %[[LOAD_LANE]] to <vscale x 4 x i32>
 ; CHECK-VF4UF1-NEXT: mul nsw <vscale x 4 x i32> %[[SXT2]], %[[SXT1]]
 entry:
   %.pre = load i16, ptr %a
@@ -86,7 +88,7 @@ for.body:
   %cur.index = getelementptr inbounds [2 x i16], ptr %a, i64 %indvars.iv, i64 1
   store i32 7, ptr %arraycidx   ; 1st instruction, to be widened.
   %conv = sext i16 %0 to i32     ; 2nd, cast to sink after third.
-  %1 = load i16, ptr %cur.index ; 3rd, first-order-recurring load not widened.
+  %1 = load i16, ptr %cur.index ; 3rd, first-order-recurring load.
   %conv3 = sext i16 %1 to i32
   %mul = mul nsw i32 %conv3, %conv
   %arrayidx5 = getelementptr inbounds i32, ptr %b, i64 %indvars.iv
