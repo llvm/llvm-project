@@ -15,6 +15,7 @@
 #include "src/pthread/pthread_mutex_lock.h"
 #include "src/pthread/pthread_mutex_trylock.h"
 #include "src/pthread/pthread_mutex_unlock.h"
+#include "src/pthread/pthread_mutexattr.h"
 #include "src/pthread/pthread_mutexattr_destroy.h"
 #include "src/pthread/pthread_mutexattr_init.h"
 #include "src/pthread/pthread_mutexattr_settype.h"
@@ -35,6 +36,23 @@ static pthread_mutex_t snapshot_mutex(const void *mutex_storage) {
   return snapshot;
 }
 
+static void enable_priority_inherit_if_needed(pthread_mutexattr_t *attr,
+                                              bool priority_inherit) {
+  if (priority_inherit)
+    *attr |=
+        unsigned(LIBC_NAMESPACE::PThreadMutexAttrPos::PRIORITY_INHERIT_MASK);
+}
+
+static void init_mutex(pthread_mutex_t *mutex, bool priority_inherit) {
+  pthread_mutexattr_t attr;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutexattr_init(&attr), 0);
+  enable_priority_inherit_if_needed(&attr, priority_inherit);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_init(mutex, &attr), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutexattr_destroy(&attr), 0);
+  pthread_mutex_t snapshot = snapshot_mutex(mutex);
+  ASSERT_EQ(bool(snapshot.__priority_inherit), priority_inherit);
+}
+
 pthread_mutex_t mutex;
 static int shared_int = START;
 
@@ -53,8 +71,9 @@ void *counter([[maybe_unused]] void *arg) {
   return nullptr;
 }
 
-void relay_counter() {
-  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_init(&mutex, nullptr), 0);
+void relay_counter(bool priority_inherit) {
+  shared_int = START;
+  init_mutex(&mutex, priority_inherit);
 
   // The idea of this test is that two competing threads will update
   // a counter only if the other thread has updated it.
@@ -98,9 +117,9 @@ void *stepper([[maybe_unused]] void *arg) {
   return nullptr;
 }
 
-void wait_and_step() {
-  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_init(&start_lock, nullptr), 0);
-  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_init(&step_lock, nullptr), 0);
+void wait_and_step(bool priority_inherit) {
+  init_mutex(&start_lock, priority_inherit);
+  init_mutex(&step_lock, priority_inherit);
 
   // In this test, we start a new thread but block it before it can make a
   // step. Once we ensure that the thread is blocked, we unblock it.
@@ -143,9 +162,9 @@ void wait_and_step() {
   LIBC_NAMESPACE::pthread_mutex_destroy(&step_lock);
 }
 
-void trylock_test() {
+void trylock_test(bool priority_inherit) {
   pthread_mutex_t trylock_mutex;
-  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_init(&trylock_mutex, nullptr), 0);
+  init_mutex(&trylock_mutex, priority_inherit);
 
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_trylock(&trylock_mutex), 0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_trylock(&trylock_mutex), EBUSY);
@@ -164,13 +183,14 @@ void *trylock_other_thread(void *arg) {
   return reinterpret_cast<void *>(uintptr_t(result));
 }
 
-void recursive_mutex_test() {
+void recursive_mutex_test(bool priority_inherit) {
   pthread_mutexattr_t attr;
   pthread_mutex_t recursive_mutex;
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutexattr_init(&attr), 0);
   ASSERT_EQ(
       LIBC_NAMESPACE::pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE),
       0);
+  enable_priority_inherit_if_needed(&attr, priority_inherit);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_init(&recursive_mutex, &attr), 0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutexattr_destroy(&attr), 0);
 
@@ -238,13 +258,14 @@ void initializer_acts_the_same_as_null_attr() {
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_destroy(&mutex_from_init), 0);
 }
 
-void error_checking_mutex_test() {
+void error_checking_mutex_test(bool priority_inherit) {
   pthread_mutexattr_t attr;
   pthread_mutex_t error_checking_mutex;
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutexattr_init(&attr), 0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutexattr_settype(&attr,
                                                       PTHREAD_MUTEX_ERRORCHECK),
             0);
+  enable_priority_inherit_if_needed(&attr, priority_inherit);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_init(&error_checking_mutex, &attr),
             0);
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutexattr_destroy(&attr), 0);
@@ -288,9 +309,10 @@ void *waiter_func(void *) {
   return nullptr;
 }
 
-void multiple_waiters() {
-  LIBC_NAMESPACE::pthread_mutex_init(&multiple_waiter_lock, nullptr);
-  LIBC_NAMESPACE::pthread_mutex_init(&counter_lock, nullptr);
+void multiple_waiters(bool priority_inherit) {
+  wait_count = 0;
+  init_mutex(&multiple_waiter_lock, priority_inherit);
+  init_mutex(&counter_lock, priority_inherit);
 
   LIBC_NAMESPACE::pthread_mutex_lock(&multiple_waiter_lock);
   pthread_t waiters[THREAD_COUNT];
@@ -323,12 +345,15 @@ void multiple_waiters() {
 }
 
 TEST_MAIN() {
-  relay_counter();
-  wait_and_step();
-  trylock_test();
-  recursive_mutex_test();
+  for (int i = 0; i < 2; ++i) {
+    bool priority_inherit = i & 1;
+    relay_counter(priority_inherit);
+    wait_and_step(priority_inherit);
+    trylock_test(priority_inherit);
+    recursive_mutex_test(priority_inherit);
+    error_checking_mutex_test(priority_inherit);
+    multiple_waiters(priority_inherit);
+  }
   initializer_acts_the_same_as_null_attr();
-  error_checking_mutex_test();
-  multiple_waiters();
   return 0;
 }
