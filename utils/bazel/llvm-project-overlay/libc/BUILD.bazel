@@ -6879,6 +6879,21 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_erfcf",
+    hdrs = ["src/__support/math/erfcf.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_erfcf16",
     hdrs = ["src/__support/math/erfcf16.h"],
     deps = [
@@ -10606,6 +10621,13 @@ libc_math_function(
     name = "erff16",
     additional_deps = [
         ":__support_math_erff16",
+    ],
+)
+
+libc_math_function(
+    name = "erfcf",
+    additional_deps = [
+        ":__support_math_erfcf",
     ],
 )
 

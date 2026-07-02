@@ -5287,6 +5287,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  erfcf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    erfcf_test.cpp
+  DEPENDS
+    libc.src.math.erfcf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   erfcf16_test
   SUITE
     libc-math-smoke-tests
