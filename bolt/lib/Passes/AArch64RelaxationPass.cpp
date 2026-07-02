@@ -44,9 +44,9 @@ void AArch64RelaxationPass::runOnFunction(BinaryFunction &BF) {
     for (auto It = BB.begin(); It != BB.end(); ++It) {
       MCInst &Inst = *It;
       bool IsADR = BC.MIB->isADR(Inst);
-
-      // TODO: Handle other types of LDR (literal, PC-relative) instructions.
-      if (!IsADR && !BC.MIB->isLoadLiteralGPR(Inst))
+      bool IsLoadLiteralGPR = BC.MIB->isLoadLiteralGPR(Inst);
+      bool IsLoadLiteralFPR = BC.MIB->isLoadLiteralFPR(Inst);
+      if (!IsADR && !IsLoadLiteralGPR && !IsLoadLiteralFPR)
         continue;
 
       const MCSymbol *Symbol = BC.MIB->getTargetSymbol(Inst, IsADR ? 0 : 1);
@@ -77,9 +77,25 @@ void AArch64RelaxationPass::runOnFunction(BinaryFunction &BF) {
       InstructionListType AdrpMaterialization;
       {
         auto L = BC.scopeLock();
-        AdrpMaterialization =
-            IsADR ? BC.MIB->undoAdrpAddRelaxation(Inst, BC.Ctx.get())
-                  : BC.MIB->createAdrpLdr(Inst, BC.Ctx.get());
+        if (IsADR) {
+          AdrpMaterialization =
+              BC.MIB->undoAdrpAddRelaxation(Inst, BC.Ctx.get());
+        } else if (IsLoadLiteralGPR) {
+          AdrpMaterialization = BC.MIB->createAdrpLdr(Inst, BC.Ctx.get());
+        } else if (IsLoadLiteralFPR) {
+          MCInst PushReg, PopReg;
+          InstructionListType Insts;
+
+          MCPhysReg X0 = BC.MIB->getIntArgRegister(0);
+          BC.MIB->createPushRegister(PushReg, X0, 8);
+          Insts = BC.MIB->createAdrpLdr(Inst, BC.Ctx.get(), X0);
+          BC.MIB->createPopRegister(PopReg, X0, 8);
+
+          AdrpMaterialization.emplace_back(PushReg);
+          AdrpMaterialization.insert(AdrpMaterialization.end(), Insts.begin(),
+                                     Insts.end());
+          AdrpMaterialization.emplace_back(PopReg);
+        }
       }
 
       if (It != BB.begin() && BC.MIB->isNoop(*std::prev(It))) {

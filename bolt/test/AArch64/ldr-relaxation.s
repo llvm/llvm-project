@@ -137,9 +137,81 @@ _start:
 .size _start, .-_start
 .endif
 
+## Check LDR relaxation works on loading S registers.
+
+# RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown \
+# RUN:    --defsym RELAX_SIMPLE_LDR_FP32=1 %s -o %t.o
+# RUN: %clang %cflags %t.o -o %t.so -Wl,-q
+# RUN: llvm-bolt %t.so -o %t.bolt
+# RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=RELAX_LDR_FP32
+
+# RELAX_LDR_FP32: adrp
+# RELAX_LDR_FP32-NEXT: ldr s0
+.ifdef RELAX_SIMPLE_LDR_FP32
+  .text
+  .global _start
+  .type _start, %function
+_start:
+  .cfi_startproc
+  ldr s0, _bar
+  ret
+  .cfi_endproc
+.size _start, .-_start
+.endif
+
+## Check LDR relaxation works on loading D registers.
+
+# RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown \
+# RUN:    --defsym RELAX_SIMPLE_LDR_FP64=1 %s -o %t.o
+# RUN: %clang %cflags %t.o -o %t.so -Wl,-q
+# RUN: llvm-bolt %t.so -o %t.bolt
+# RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=RELAX_LDR_FP64
+
+# RELAX_LDR_FP64: adrp
+# RELAX_LDR_FP64-NEXT: ldr d0
+.ifdef RELAX_SIMPLE_LDR_FP64
+  .text
+  .global _start
+  .type _start, %function
+_start:
+  .cfi_startproc
+  ldr d0, _bar
+  ret
+  .cfi_endproc
+.size _start, .-_start
+.endif
+
+## Check LDR relaxation works on loading Q registers.
+
+# RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown \
+# RUN:    --defsym RELAX_SIMPLE_LDR_FP128=1 %s -o %t.o
+# RUN: %clang %cflags %t.o -o %t.so -Wl,-q
+# RUN: llvm-bolt %t.so -o %t.bolt
+# RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=RELAX_LDR_FP128
+
+# RELAX_LDR_FP128: adrp
+# RELAX_LDR_FP128-NEXT: ldr q0
+.ifdef RELAX_SIMPLE_LDR_FP128
+  .text
+  .global _start
+  .type _start, %function
+_start:
+  .cfi_startproc
+  ldr q0, _bar
+  ret
+  .cfi_endproc
+.size _start, .-_start
+.endif
+
   .section .text_cold
   .global _foo
   .align 3
 _foo:
   .long 0x12345678
 .size _foo, .-_foo
+  .global _bar
+  .align 4
+_bar:
+  .xword  0x0000000000000000
+  .xword  0x0000000000000000
+.size _bar, .-_bar

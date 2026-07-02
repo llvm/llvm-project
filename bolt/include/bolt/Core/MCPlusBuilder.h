@@ -866,6 +866,11 @@ public:
     return false;
   }
 
+  virtual bool isLoadLiteralFPR(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
   virtual bool isMOVW(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
@@ -1851,8 +1856,20 @@ public:
   ///
   ///     adrp x0, PageBase(label)
   ///     ldr  x0, [x0, PageOffset(label)]
-  virtual InstructionListType createAdrpLdr(const MCInst &LDRInst,
-                                            MCContext *Ctx) const {
+  ///
+  /// For
+  ///
+  ///     ldr  q0, [label]
+  ///
+  /// the following sequence will be generated:
+  ///
+  ///     adrp Reg, PageBase(label)
+  ///     ldr  q0, [Reg, PageOffset(label)]
+  ///
+  /// where Reg is provided by the 3rd argument.
+  virtual InstructionListType
+  createAdrpLdr(const MCInst &LDRInst, MCContext *Ctx,
+                const MCPhysReg Reg = MCRegister::NoRegister) const {
     llvm_unreachable("not implemented");
   }
 
