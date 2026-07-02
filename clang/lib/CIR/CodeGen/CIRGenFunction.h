@@ -1647,6 +1647,9 @@ public:
   void emitAtomicExprWithMemOrder(
       const Expr *memOrder, bool isStore, bool isLoad, bool isFence,
       llvm::function_ref<void(cir::MemOrder)> emitAtomicOp);
+  void emitAtomicExprWithSyncScope(
+      const AtomicScopeModel *scopeModel, const Expr *scopeExpr,
+      llvm::function_ref<void(cir::SyncScopeKind)> emitAtomicOp);
 
   mlir::LogicalResult emitAttributedStmt(const AttributedStmt &s);
 
