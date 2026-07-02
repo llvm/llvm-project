@@ -510,6 +510,37 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   return I.get();
 }
 
+// Encourage placing FORM_TRANSPOSED_REG immediately before the instruction that
+// uses/consumes it. This ensures it has a short live range, which means we're
+// more likely to allocate registers its operands first (which works best for
+// the hints in AArch64RegisterInfo::getRegAllocationHints).
+static bool scheduleFormTransposedTupleAdjacentToUsers(
+    const TargetInstrInfo &TII, const TargetSubtargetInfo &TSI,
+    const MachineInstr *FirstMI, const MachineInstr &SecondMI) {
+
+  auto *TRI = TSI.getRegisterInfo();
+  if (!FirstMI) {
+    // The SecondMI must be a multi-vector operation. So limit this to
+    // instructions that use full tuple registers (not a sub-register).
+    const MachineRegisterInfo &MRI = SecondMI.getMF()->getRegInfo();
+    for (const MachineOperand &Use : SecondMI.uses()) {
+      if (Use.isReg() && Use.getReg().isVirtual() && !Use.getSubReg() &&
+          TRI->isSubRegValidForRegClass(MRI.getRegClass(Use.getReg()),
+                                        AArch64::zsub0))
+        return true;
+    }
+    return false;
+  }
+
+  if (FirstMI->getOpcode() != AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO &&
+      FirstMI->getOpcode() != AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO)
+    return false;
+
+  Register TupleDef = FirstMI->getOperand(0).getReg();
+  return SecondMI.findRegisterUseOperandIdx(TupleDef, TSI.getRegisterInfo()) !=
+         -1;
+}
+
 ScheduleDAGInstrs *
 AArch64TargetMachine::createMachineScheduler(MachineSchedContext *C) const {
   const AArch64Subtarget &ST = C->MF->getSubtarget<AArch64Subtarget>();
@@ -518,6 +549,9 @@ AArch64TargetMachine::createMachineScheduler(MachineSchedContext *C) const {
   DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
   if (ST.hasFusion())
     DAG->addMutation(createAArch64MacroFusionDAGMutation());
+  if (ST.hasSME() && ST.isStreaming())
+    DAG->addMutation(createMacroFusionDAGMutation(
+        scheduleFormTransposedTupleAdjacentToUsers));
   return DAG;
 }
 

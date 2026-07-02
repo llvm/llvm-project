@@ -5,7 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
 #include "AArch64MachineFunctionInfo.h"
@@ -21,9 +20,58 @@ using namespace llvm;
 
 namespace {
 
+static bool expandFormTransposedRegTuple(MachineBasicBlock &MBB,
+                                         MachineInstr &MI, LiveIntervals &LIS) {
+  const TargetInstrInfo *TII =
+      MBB.getParent()->getSubtarget<AArch64Subtarget>().getInstrInfo();
+  unsigned TupleSize =
+      MI.getOpcode() == AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO ? 2 : 4;
+
+  DebugLoc DL = MI.getDebugLoc();
+  Register TupleReg = MI.getOperand(0).getReg();
+  SmallVector<Register, 5> OrigRegs{TupleReg};
+  MachineBasicBlock::iterator FirstCopyMBBI;
+
+  for (unsigned I = 0; I < TupleSize; ++I) {
+    MachineOperand &SrcOp = MI.getOperand(I + 1);
+    OrigRegs.push_back(SrcOp.getReg());
+
+    // Ensure that an if operand is killed the kill flag is placed on the final
+    // copy for that operand. TODO: Can we remove this? Requesting the live
+    // intervals seems to clear the kill flags anyway.
+    if (SrcOp.isKill()) {
+      for (unsigned J = I + 2; J < MI.getNumOperands(); ++J) {
+        MachineOperand &LaterOp = MI.getOperand(J);
+        if (LaterOp.getReg() == SrcOp.getReg()) {
+          LaterOp.setIsKill();
+          SrcOp.setIsKill(false);
+        }
+      }
+    }
+
+    RegState DefState = I == 0 ? RegState::Undef : RegState::NoFlags;
+    MachineInstr *CopyMI =
+        BuildMI(MBB, MI, DL, TII->get(AArch64::COPY_INTO_TRANSPOSED_TUPLE))
+            .addDef(TupleReg, DefState, AArch64::zsub0 + I)
+            .add(SrcOp)
+            .addImm(TupleSize);
+
+    if (I == 0)
+      FirstCopyMBBI = CopyMI;
+  }
+
+  MachineBasicBlock::iterator EndMBBI = std::next(MI.getIterator());
+  LIS.RemoveMachineInstrFromMaps(MI);
+  MI.eraseFromParent();
+
+  LIS.repairIntervalsInRange(&MBB, FirstCopyMBBI, EndMBBI, OrigRegs);
+  return true;
+}
+
 bool runAArch64PostCoalescer(MachineFunction &MF, LiveIntervals &LIS) {
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
-  if (!FuncInfo->hasStreamingModeChanges())
+  if (!FuncInfo->hasStreamingModeChanges() &&
+      !MF.getSubtarget<AArch64Subtarget>().isStreaming())
     return false;
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -33,6 +81,10 @@ bool runAArch64PostCoalescer(MachineFunction &MF, LiveIntervals &LIS) {
     for (MachineInstr &MI : make_early_inc_range(MBB)) {
       switch (MI.getOpcode()) {
       default:
+        break;
+      case AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO:
+      case AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO:
+        Changed |= expandFormTransposedRegTuple(MBB, MI, LIS);
         break;
       case AArch64::COALESCER_BARRIER_FPR16:
       case AArch64::COALESCER_BARRIER_FPR32:
