@@ -197,14 +197,11 @@ bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
             break;
           }
         } else if (!StringRef(ObjIt.first).ends_with(".description")) {
-          Twine NoMatchingMsg = Twine("configuration key '") +
-                                StringRef(ObjIt.first) +
-                                Twine("' not found and ignored");
+          std::string Diag = "configuration key '" + ObjIt.first.str() +
+                             "' not found and ignored";
           StringRef Closest = closestOption(BCOMap, ObjIt.first);
-          Twine Diag =
-              NoMatchingMsg + (Closest.empty() ? Twine()
-                                               : Twine("; did you mean '") +
-                                                     Closest + Twine("'?"));
+          if (!Closest.empty())
+            Diag += "; did you mean '" + Closest.str() + "'?";
           Ctx.diagnose(DiagnosticInfoInstrumentation(Diag, DS_Warning));
         }
       }
@@ -222,15 +219,13 @@ bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
       }
       auto *IO = IChoiceMap.lookup(ObjIt.first);
       if (!IO) {
-        Twine NoMatchingMsg =
-            Twine("malformed JSON configuration, expected an object matching "
-                  "an instrumentor choice, got '") +
-            StringRef(ObjIt.first) + Twine("'");
+        std::string Diag =
+            "malformed JSON configuration, expected an object matching "
+            "an instrumentor choice, got '" +
+            ObjIt.first.str() + "'";
         StringRef Closest = closestOption(IChoiceMap, ObjIt.first);
-        Twine Diag = NoMatchingMsg +
-                     (Closest.empty()
-                          ? Twine()
-                          : Twine("; did you mean '") + Closest + Twine("'?"));
+        if (!Closest.empty())
+          Diag += "; did you mean '" + Closest.str() + "'?";
         Ctx.diagnose(DiagnosticInfoInstrumentation(Diag, DS_Warning));
         continue;
       }
@@ -253,14 +248,12 @@ bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
           ValueMap[Name] = InnerObjIt.second.getAsBoolean().value_or(false);
         }
         if (!IOOpts.contains(Name)) {
-          Twine NoMatchingMsg = Twine("unrecognized JSON property '") +
-                                StringRef(Name) + ("' in configuration for '") +
-                                IO->getName() + Twine("'");
+          std::string Diag = "unrecognized JSON property '" + Name.str() +
+                             "' in configuration for '" + IO->getName().str() +
+                             "'";
           StringRef Closest = closestOption(IOOpts, Name);
-          Twine Diag =
-              NoMatchingMsg + (Closest.empty() ? Twine()
-                                               : Twine("; did you mean '") +
-                                                     Closest + Twine("'?"));
+          if (!Closest.empty())
+            Diag += "; did you mean '" + Closest.str() + "'?";
           Ctx.diagnose(DiagnosticInfoInstrumentation(Diag, DS_Warning));
         }
       }
