@@ -2193,7 +2193,28 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     const MachineMemOperand *MMO = *MI.memoperands_begin();
     return TyBits - MMO->getSizeInBits().getValue();
   }
-  case TargetOpcode::G_AND:
+  case TargetOpcode::G_AND: {
+    Register Op0 = MI.getOperand(1).getReg();
+    Register Op1 = MI.getOperand(2).getReg();
+
+    if ((MRI.getVRegDef(Op0)->getOpcode() == TargetOpcode::G_CTPOP &&
+         mi_match(Op1, MRI, m_SpecificICst(1))) ||
+        (MRI.getVRegDef(Op1)->getOpcode() == TargetOpcode::G_CTPOP &&
+         mi_match(Op0, MRI, m_SpecificICst(1)))) {
+      FirstAnswer = MRI.getType(R).getScalarSizeInBits();
+      break;
+    }
+    unsigned Src1NumSignBits = computeNumSignBits(Op0, DemandedElts, Depth + 1);
+
+    if (Src1NumSignBits != 1) {
+      unsigned Src2NumSignBits =
+          computeNumSignBits(Op1, DemandedElts, Depth + 1);
+
+      FirstAnswer = std::min(Src1NumSignBits, Src2NumSignBits);
+    }
+
+    break;
+  }
   case TargetOpcode::G_OR:
   case TargetOpcode::G_XOR: {
     Register Src1 = MI.getOperand(1).getReg();
