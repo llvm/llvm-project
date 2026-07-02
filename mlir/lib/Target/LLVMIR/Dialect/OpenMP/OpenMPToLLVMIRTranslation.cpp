@@ -8819,6 +8819,21 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
         // a deleted block.
         ompBuilder->Builder.ClearInsertionPoint();
         ompBuilder->Builder.SetCurrentDebugLocation(llvm::DebugLoc());
+      } else if (llvm::Function *llvmFunc =
+                     moduleTranslation.lookupFunction(funcOp.getName())) {
+        // Device-side declare target functions are externally visible by
+        // default so they can be referenced from other device translation
+        // units. That also prevents the offload LTO from internalizing and
+        // deleting them when they end up unused in the final device image.
+        // Such dead functions can still reference internal LDS and trigger
+        // spurious "local memory global used by non-kernel function" backend
+        // warnings. Marking them hidden keeps the symbol usable within the
+        // device image's linkage unit while letting LTO drop it when nothing
+        // references it; symbols that must stay reachable (e.g. via an offload
+        // entry that takes their address) are kept alive by that reference.
+        if (!llvmFunc->isDeclaration() && llvmFunc->hasExternalLinkage() &&
+            llvmFunc->getVisibility() == llvm::GlobalValue::DefaultVisibility)
+          llvmFunc->setVisibility(llvm::GlobalValue::HiddenVisibility);
       }
     }
     return success();
