@@ -50,30 +50,49 @@ void good_wmemmove_s_1(wchar_t *dest, const wchar_t *src) {
   wmemmove_s(dest, 13, src, wcslen(src) + 1);
 }
 
-int bad_wcsncmp_1(wchar_t *wcs0, const wchar_t *wcs1) {
+int good_wcsncmp_1(wchar_t *wcs0, const wchar_t *wcs1) {
   return wcsncmp(wcs0, wcs1, (wcslen(wcs0) + 1));
-  // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: comparison length is too long and might lead to a buffer overflow [bugprone-not-null-terminated-result]
-  // CHECK-FIXES: return wcsncmp(wcs0, wcs1, (wcslen(wcs0)));
 }
 
-int bad_wcsncmp_2(wchar_t *wcs2, const wchar_t *wcs3) {
+int good_wcsncmp_2(wchar_t *wcs2, const wchar_t *wcs3) {
   return wcsncmp(wcs2, wcs3, 1 + wcslen(wcs2));
-  // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: comparison length is too long and might lead to a buffer overflow [bugprone-not-null-terminated-result]
-  // CHECK-FIXES: return wcsncmp(wcs2, wcs3, wcslen(wcs2));
 }
 
-int good_wcsncmp_1_2(wchar_t *wcs4, const wchar_t *wcs5) {
+int good_wcsncmp_3(wchar_t *wcs4, const wchar_t *wcs5) {
   return wcsncmp(wcs4, wcs5, wcslen(wcs4));
 }
 
-int bad_wcsncmp_3(wchar_t *wcs6) {
+int good_wcsncmp_4(wchar_t *wcs6) {
   return wcsncmp(wcs6, L"string", 7);
-  // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: comparison length is too long and might lead to a buffer overflow [bugprone-not-null-terminated-result]
-  // CHECK-FIXES: return wcsncmp(wcs6, L"string", 6);
 }
 
-int good_wcsncmp_3(wchar_t *wcs7) {
+int good_wcsncmp_5(wchar_t *wcs7) {
   return wcsncmp(wcs7, L"string", 6);
+}
+
+int bad_wcsncmp_1(wchar_t *wcs9) {
+  // FIXME: This should warn. wcsncmp stops comparing at the embedded null.
+  return wcsncmp(wcs9, L"foo\0bar", 8);
+}
+
+int bad_wcsncmp_2(wchar_t *wcs6) {
+  return wcsncmp(wcs6, L"string", 8);
+  // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: comparison length is too long and might lead to a buffer overflow [bugprone-not-null-terminated-result]
+  // CHECK-FIXES: return wcsncmp(wcs6, L"string", 7);
+}
+
+int bad_wcsncmp_3(wchar_t *wcs8) {
+  const wchar_t *literal = L"string";
+  return wcsncmp(wcs8, literal, 8);
+  // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: comparison length is too long and might lead to a buffer overflow [bugprone-not-null-terminated-result]
+  // CHECK-FIXES: return wcsncmp(wcs8, literal, 7);
+}
+
+int bad_wcsncmp_4(wchar_t *wcs9) {
+  // FIXME: This should suggest 4. wcsncmp stops comparing at the embedded null.
+  return wcsncmp(wcs9, L"foo\0bar", 9);
+  // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: comparison length is too long and might lead to a buffer overflow [bugprone-not-null-terminated-result]
+  // CHECK-FIXES: return wcsncmp(wcs9, L"foo\0bar", 8);
 }
 
 void bad_wcsxfrm_1(const wchar_t *long_source_name) {

@@ -118,8 +118,9 @@ String handler functions
 The given length is incremented by one.
 
 ``strncmp``
-If the third argument is the first or the second argument's ``length + 1``
-it has to be truncated without the ``+ 1`` operation.
+If the third argument exceeds the known readable length of the first or second
+argument, it has to be truncated to avoid reading past the end of that object.
+For string literals, this length includes the null terminator.
 
 ``strxfrm``
 The given length is incremented by one.
