@@ -1,0 +1,460 @@
+# RUN: llvm-mc --disassemble %s -triple=i386 | FileCheck %s --check-prefixes=ATT
+# RUN: llvm-mc --disassemble %s -triple=i386 --output-asm-variant=1 | FileCheck %s --check-prefixes=INTEL
+
+#
+# Group A: PS->8bit truncating conversions
+#
+
+# vcvtps2bf8
+
+# ATT:   vcvtps2bf8 %zmm1, %xmm0
+# INTEL: vcvtps2bf8 xmm0, zmm1
+0x62,0xf5,0x7e,0x48,0x39,0xc1
+
+# ATT:   vcvtps2bf8 %ymm1, %xmm0
+# INTEL: vcvtps2bf8 xmm0, ymm1
+0x62,0xf5,0x7e,0x28,0x39,0xc1
+
+# ATT:   vcvtps2bf8 %xmm1, %xmm0
+# INTEL: vcvtps2bf8 xmm0, xmm1
+0x62,0xf5,0x7e,0x08,0x39,0xc1
+
+# ATT:   vcvtps2bf8 %zmm1, %xmm0 {%k1}
+# INTEL: vcvtps2bf8 xmm0 {k1}, zmm1
+0x62,0xf5,0x7e,0x49,0x39,0xc1
+
+# ATT:   vcvtps2bf8 %zmm1, %xmm0 {%k1} {z}
+# INTEL: vcvtps2bf8 xmm0 {k1} {z}, zmm1
+0x62,0xf5,0x7e,0xc9,0x39,0xc1
+
+# vcvtps2bf8s
+
+# ATT:   vcvtps2bf8s %zmm1, %xmm0
+# INTEL: vcvtps2bf8s xmm0, zmm1
+0x62,0xf5,0x7e,0x48,0x3b,0xc1
+
+# ATT:   vcvtps2bf8s %ymm1, %xmm0
+# INTEL: vcvtps2bf8s xmm0, ymm1
+0x62,0xf5,0x7e,0x28,0x3b,0xc1
+
+# ATT:   vcvtps2bf8s %xmm1, %xmm0
+# INTEL: vcvtps2bf8s xmm0, xmm1
+0x62,0xf5,0x7e,0x08,0x3b,0xc1
+
+# ATT:   vcvtps2bf8s %zmm1, %xmm0 {%k1}
+# INTEL: vcvtps2bf8s xmm0 {k1}, zmm1
+0x62,0xf5,0x7e,0x49,0x3b,0xc1
+
+# ATT:   vcvtps2bf8s %zmm1, %xmm0 {%k1} {z}
+# INTEL: vcvtps2bf8s xmm0 {k1} {z}, zmm1
+0x62,0xf5,0x7e,0xc9,0x3b,0xc1
+
+# vcvtps2hf8
+
+# ATT:   vcvtps2hf8 %zmm1, %xmm0
+# INTEL: vcvtps2hf8 xmm0, zmm1
+0x62,0xf5,0x7e,0x48,0x38,0xc1
+
+# ATT:   vcvtps2hf8 %ymm1, %xmm0
+# INTEL: vcvtps2hf8 xmm0, ymm1
+0x62,0xf5,0x7e,0x28,0x38,0xc1
+
+# ATT:   vcvtps2hf8 %xmm1, %xmm0
+# INTEL: vcvtps2hf8 xmm0, xmm1
+0x62,0xf5,0x7e,0x08,0x38,0xc1
+
+# ATT:   vcvtps2hf8 %zmm1, %xmm0 {%k1}
+# INTEL: vcvtps2hf8 xmm0 {k1}, zmm1
+0x62,0xf5,0x7e,0x49,0x38,0xc1
+
+# ATT:   vcvtps2hf8 %zmm1, %xmm0 {%k1} {z}
+# INTEL: vcvtps2hf8 xmm0 {k1} {z}, zmm1
+0x62,0xf5,0x7e,0xc9,0x38,0xc1
+
+# vcvtps2hf8s
+
+# ATT:   vcvtps2hf8s %zmm1, %xmm0
+# INTEL: vcvtps2hf8s xmm0, zmm1
+0x62,0xf5,0x7e,0x48,0x3a,0xc1
+
+# ATT:   vcvtps2hf8s %ymm1, %xmm0
+# INTEL: vcvtps2hf8s xmm0, ymm1
+0x62,0xf5,0x7e,0x28,0x3a,0xc1
+
+# ATT:   vcvtps2hf8s %xmm1, %xmm0
+# INTEL: vcvtps2hf8s xmm0, xmm1
+0x62,0xf5,0x7e,0x08,0x3a,0xc1
+
+# ATT:   vcvtps2hf8s %zmm1, %xmm0 {%k1}
+# INTEL: vcvtps2hf8s xmm0 {k1}, zmm1
+0x62,0xf5,0x7e,0x49,0x3a,0xc1
+
+# ATT:   vcvtps2hf8s %zmm1, %xmm0 {%k1} {z}
+# INTEL: vcvtps2hf8s xmm0 {k1} {z}, zmm1
+0x62,0xf5,0x7e,0xc9,0x3a,0xc1
+
+# vcvtrops2hf8
+
+# ATT:   vcvtrops2hf8 %zmm1, %xmm0
+# INTEL: vcvtrops2hf8 xmm0, zmm1
+0x62,0xf5,0x7d,0x48,0x38,0xc1
+
+# ATT:   vcvtrops2hf8 %ymm1, %xmm0
+# INTEL: vcvtrops2hf8 xmm0, ymm1
+0x62,0xf5,0x7d,0x28,0x38,0xc1
+
+# ATT:   vcvtrops2hf8 %xmm1, %xmm0
+# INTEL: vcvtrops2hf8 xmm0, xmm1
+0x62,0xf5,0x7d,0x08,0x38,0xc1
+
+# ATT:   vcvtrops2hf8 %zmm1, %xmm0 {%k1}
+# INTEL: vcvtrops2hf8 xmm0 {k1}, zmm1
+0x62,0xf5,0x7d,0x49,0x38,0xc1
+
+# ATT:   vcvtrops2hf8 %zmm1, %xmm0 {%k1} {z}
+# INTEL: vcvtrops2hf8 xmm0 {k1} {z}, zmm1
+0x62,0xf5,0x7d,0xc9,0x38,0xc1
+
+# vcvtrops2hf8s
+
+# ATT:   vcvtrops2hf8s %zmm1, %xmm0
+# INTEL: vcvtrops2hf8s xmm0, zmm1
+0x62,0xf5,0x7d,0x48,0x3a,0xc1
+
+# ATT:   vcvtrops2hf8s %ymm1, %xmm0
+# INTEL: vcvtrops2hf8s xmm0, ymm1
+0x62,0xf5,0x7d,0x28,0x3a,0xc1
+
+# ATT:   vcvtrops2hf8s %xmm1, %xmm0
+# INTEL: vcvtrops2hf8s xmm0, xmm1
+0x62,0xf5,0x7d,0x08,0x3a,0xc1
+
+# ATT:   vcvtrops2hf8s %zmm1, %xmm0 {%k1}
+# INTEL: vcvtrops2hf8s xmm0 {k1}, zmm1
+0x62,0xf5,0x7d,0x49,0x3a,0xc1
+
+# ATT:   vcvtrops2hf8s %zmm1, %xmm0 {%k1} {z}
+# INTEL: vcvtrops2hf8s xmm0 {k1} {z}, zmm1
+0x62,0xf5,0x7d,0xc9,0x3a,0xc1
+
+#
+# Group B: Bias PS->8bit conversions (3-operand)
+#
+
+# vcvtbiasps2bf8
+
+# ATT:   vcvtbiasps2bf8 %zmm2, %zmm1, %xmm0
+# INTEL: vcvtbiasps2bf8 xmm0, zmm1, zmm2
+0x62,0xf5,0x74,0x48,0x39,0xc2
+
+# ATT:   vcvtbiasps2bf8 %ymm2, %ymm1, %xmm0
+# INTEL: vcvtbiasps2bf8 xmm0, ymm1, ymm2
+0x62,0xf5,0x74,0x28,0x39,0xc2
+
+# ATT:   vcvtbiasps2bf8 %xmm2, %xmm1, %xmm0
+# INTEL: vcvtbiasps2bf8 xmm0, xmm1, xmm2
+0x62,0xf5,0x74,0x08,0x39,0xc2
+
+# ATT:   vcvtbiasps2bf8 %zmm2, %zmm1, %xmm0 {%k1}
+# INTEL: vcvtbiasps2bf8 xmm0 {k1}, zmm1, zmm2
+0x62,0xf5,0x74,0x49,0x39,0xc2
+
+# ATT:   vcvtbiasps2bf8 %zmm2, %zmm1, %xmm0 {%k1} {z}
+# INTEL: vcvtbiasps2bf8 xmm0 {k1} {z}, zmm1, zmm2
+0x62,0xf5,0x74,0xc9,0x39,0xc2
+
+# vcvtbiasps2bf8s
+
+# ATT:   vcvtbiasps2bf8s %zmm2, %zmm1, %xmm0
+# INTEL: vcvtbiasps2bf8s xmm0, zmm1, zmm2
+0x62,0xf5,0x74,0x48,0x3b,0xc2
+
+# ATT:   vcvtbiasps2bf8s %ymm2, %ymm1, %xmm0
+# INTEL: vcvtbiasps2bf8s xmm0, ymm1, ymm2
+0x62,0xf5,0x74,0x28,0x3b,0xc2
+
+# ATT:   vcvtbiasps2bf8s %xmm2, %xmm1, %xmm0
+# INTEL: vcvtbiasps2bf8s xmm0, xmm1, xmm2
+0x62,0xf5,0x74,0x08,0x3b,0xc2
+
+# ATT:   vcvtbiasps2bf8s %zmm2, %zmm1, %xmm0 {%k1}
+# INTEL: vcvtbiasps2bf8s xmm0 {k1}, zmm1, zmm2
+0x62,0xf5,0x74,0x49,0x3b,0xc2
+
+# ATT:   vcvtbiasps2bf8s %zmm2, %zmm1, %xmm0 {%k1} {z}
+# INTEL: vcvtbiasps2bf8s xmm0 {k1} {z}, zmm1, zmm2
+0x62,0xf5,0x74,0xc9,0x3b,0xc2
+
+# vcvtbiasps2hf8
+
+# ATT:   vcvtbiasps2hf8 %zmm2, %zmm1, %xmm0
+# INTEL: vcvtbiasps2hf8 xmm0, zmm1, zmm2
+0x62,0xf5,0x74,0x48,0x38,0xc2
+
+# ATT:   vcvtbiasps2hf8 %ymm2, %ymm1, %xmm0
+# INTEL: vcvtbiasps2hf8 xmm0, ymm1, ymm2
+0x62,0xf5,0x74,0x28,0x38,0xc2
+
+# ATT:   vcvtbiasps2hf8 %xmm2, %xmm1, %xmm0
+# INTEL: vcvtbiasps2hf8 xmm0, xmm1, xmm2
+0x62,0xf5,0x74,0x08,0x38,0xc2
+
+# ATT:   vcvtbiasps2hf8 %zmm2, %zmm1, %xmm0 {%k1}
+# INTEL: vcvtbiasps2hf8 xmm0 {k1}, zmm1, zmm2
+0x62,0xf5,0x74,0x49,0x38,0xc2
+
+# ATT:   vcvtbiasps2hf8 %zmm2, %zmm1, %xmm0 {%k1} {z}
+# INTEL: vcvtbiasps2hf8 xmm0 {k1} {z}, zmm1, zmm2
+0x62,0xf5,0x74,0xc9,0x38,0xc2
+
+# vcvtbiasps2hf8s
+
+# ATT:   vcvtbiasps2hf8s %zmm2, %zmm1, %xmm0
+# INTEL: vcvtbiasps2hf8s xmm0, zmm1, zmm2
+0x62,0xf5,0x74,0x48,0x3a,0xc2
+
+# ATT:   vcvtbiasps2hf8s %ymm2, %ymm1, %xmm0
+# INTEL: vcvtbiasps2hf8s xmm0, ymm1, ymm2
+0x62,0xf5,0x74,0x28,0x3a,0xc2
+
+# ATT:   vcvtbiasps2hf8s %xmm2, %xmm1, %xmm0
+# INTEL: vcvtbiasps2hf8s xmm0, xmm1, xmm2
+0x62,0xf5,0x74,0x08,0x3a,0xc2
+
+# ATT:   vcvtbiasps2hf8s %zmm2, %zmm1, %xmm0 {%k1}
+# INTEL: vcvtbiasps2hf8s xmm0 {k1}, zmm1, zmm2
+0x62,0xf5,0x74,0x49,0x3a,0xc2
+
+# ATT:   vcvtbiasps2hf8s %zmm2, %zmm1, %xmm0 {%k1} {z}
+# INTEL: vcvtbiasps2hf8s xmm0 {k1} {z}, zmm1, zmm2
+0x62,0xf5,0x74,0xc9,0x3a,0xc2
+
+#
+# Group C: 8bit->PS expanding conversions
+#
+
+# vcvtbf82ps
+
+# ATT:   vcvtbf82ps %xmm1, %zmm0
+# INTEL: vcvtbf82ps zmm0, xmm1
+0x62,0xf5,0xfc,0x48,0x36,0xc1
+
+# ATT:   vcvtbf82ps %xmm1, %ymm0
+# INTEL: vcvtbf82ps ymm0, xmm1
+0x62,0xf5,0xfc,0x28,0x36,0xc1
+
+# ATT:   vcvtbf82ps %xmm1, %xmm0
+# INTEL: vcvtbf82ps xmm0, xmm1
+0x62,0xf5,0xfc,0x08,0x36,0xc1
+
+# ATT:   vcvtbf82ps %xmm1, %zmm0 {%k1}
+# INTEL: vcvtbf82ps zmm0 {k1}, xmm1
+0x62,0xf5,0xfc,0x49,0x36,0xc1
+
+# ATT:   vcvtbf82ps %xmm1, %zmm0 {%k1} {z}
+# INTEL: vcvtbf82ps zmm0 {k1} {z}, xmm1
+0x62,0xf5,0xfc,0xc9,0x36,0xc1
+
+# vcvthf82ps
+
+# ATT:   vcvthf82ps %xmm1, %zmm0
+# INTEL: vcvthf82ps zmm0, xmm1
+0x62,0xf5,0x7c,0x48,0x36,0xc1
+
+# ATT:   vcvthf82ps %xmm1, %ymm0
+# INTEL: vcvthf82ps ymm0, xmm1
+0x62,0xf5,0x7c,0x28,0x36,0xc1
+
+# ATT:   vcvthf82ps %xmm1, %xmm0
+# INTEL: vcvthf82ps xmm0, xmm1
+0x62,0xf5,0x7c,0x08,0x36,0xc1
+
+# ATT:   vcvthf82ps %xmm1, %zmm0 {%k1}
+# INTEL: vcvthf82ps zmm0 {k1}, xmm1
+0x62,0xf5,0x7c,0x49,0x36,0xc1
+
+# ATT:   vcvthf82ps %xmm1, %zmm0 {%k1} {z}
+# INTEL: vcvthf82ps zmm0 {k1} {z}, xmm1
+0x62,0xf5,0x7c,0xc9,0x36,0xc1
+
+#
+# Group D: BF8/HF8->BF4S truncations
+#
+
+# vcvtbf82bf4s
+
+# ATT:   vcvtbf82bf4s %zmm1, %ymm0
+# INTEL: vcvtbf82bf4s ymm0, zmm1
+0x62,0xf5,0xfe,0x48,0x3d,0xc8
+
+# ATT:   vcvtbf82bf4s %ymm1, %xmm0
+# INTEL: vcvtbf82bf4s xmm0, ymm1
+0x62,0xf5,0xfe,0x28,0x3d,0xc8
+
+# ATT:   vcvtbf82bf4s %xmm1, %xmm0
+# INTEL: vcvtbf82bf4s xmm0, xmm1
+0x62,0xf5,0xfe,0x08,0x3d,0xc8
+
+# vcvthf82bf4s
+
+# ATT:   vcvthf82bf4s %zmm1, %ymm0
+# INTEL: vcvthf82bf4s ymm0, zmm1
+0x62,0xf5,0x7e,0x48,0x3d,0xc8
+
+# ATT:   vcvthf82bf4s %ymm1, %xmm0
+# INTEL: vcvthf82bf4s xmm0, ymm1
+0x62,0xf5,0x7e,0x28,0x3d,0xc8
+
+# ATT:   vcvthf82bf4s %xmm1, %xmm0
+# INTEL: vcvthf82bf4s xmm0, xmm1
+0x62,0xf5,0x7e,0x08,0x3d,0xc8
+
+#
+# Group E: Same-size reg-only conversions (no masking)
+#
+
+# vcvtbf82bf6s
+
+# ATT:   vcvtbf82bf6s %zmm1, %zmm0
+# INTEL: vcvtbf82bf6s zmm0, zmm1
+0x62,0xf5,0xfe,0x48,0x3e,0xc1
+
+# ATT:   vcvtbf82bf6s %ymm1, %ymm0
+# INTEL: vcvtbf82bf6s ymm0, ymm1
+0x62,0xf5,0xfe,0x28,0x3e,0xc1
+
+# ATT:   vcvtbf82bf6s %xmm1, %xmm0
+# INTEL: vcvtbf82bf6s xmm0, xmm1
+0x62,0xf5,0xfe,0x08,0x3e,0xc1
+
+# vcvthf82hf6s
+
+# ATT:   vcvthf82hf6s %zmm1, %zmm0
+# INTEL: vcvthf82hf6s zmm0, zmm1
+0x62,0xf5,0x7e,0x48,0x3c,0xc1
+
+# ATT:   vcvthf82hf6s %ymm1, %ymm0
+# INTEL: vcvthf82hf6s ymm0, ymm1
+0x62,0xf5,0x7e,0x28,0x3c,0xc1
+
+# ATT:   vcvthf82hf6s %xmm1, %xmm0
+# INTEL: vcvthf82hf6s xmm0, xmm1
+0x62,0xf5,0x7e,0x08,0x3c,0xc1
+
+#
+# Group F: Expanding/same-size conversions with masking
+#
+
+# vcvtbf42hf8
+
+# ATT:   vcvtbf42hf8 %ymm1, %zmm0
+# INTEL: vcvtbf42hf8 zmm0, ymm1
+0x62,0xf5,0x7c,0x48,0x37,0xc1
+
+# ATT:   vcvtbf42hf8 %xmm1, %ymm0
+# INTEL: vcvtbf42hf8 ymm0, xmm1
+0x62,0xf5,0x7c,0x28,0x37,0xc1
+
+# ATT:   vcvtbf42hf8 %xmm1, %xmm0
+# INTEL: vcvtbf42hf8 xmm0, xmm1
+0x62,0xf5,0x7c,0x08,0x37,0xc1
+
+# ATT:   vcvtbf42hf8 %ymm1, %zmm0 {%k1}
+# INTEL: vcvtbf42hf8 zmm0 {k1}, ymm1
+0x62,0xf5,0x7c,0x49,0x37,0xc1
+
+# ATT:   vcvtbf42hf8 %ymm1, %zmm0 {%k1} {z}
+# INTEL: vcvtbf42hf8 zmm0 {k1} {z}, ymm1
+0x62,0xf5,0x7c,0xc9,0x37,0xc1
+
+# vcvtbf62hf8
+
+# ATT:   vcvtbf62hf8 %zmm1, %zmm0
+# INTEL: vcvtbf62hf8 zmm0, zmm1
+0x62,0xf5,0xfd,0x48,0x37,0xc1
+
+# ATT:   vcvtbf62hf8 %ymm1, %ymm0
+# INTEL: vcvtbf62hf8 ymm0, ymm1
+0x62,0xf5,0xfd,0x28,0x37,0xc1
+
+# ATT:   vcvtbf62hf8 %xmm1, %xmm0
+# INTEL: vcvtbf62hf8 xmm0, xmm1
+0x62,0xf5,0xfd,0x08,0x37,0xc1
+
+# ATT:   vcvtbf62hf8 %zmm1, %zmm0 {%k1}
+# INTEL: vcvtbf62hf8 zmm0 {k1}, zmm1
+0x62,0xf5,0xfd,0x49,0x37,0xc1
+
+# ATT:   vcvtbf62hf8 %zmm1, %zmm0 {%k1} {z}
+# INTEL: vcvtbf62hf8 zmm0 {k1} {z}, zmm1
+0x62,0xf5,0xfd,0xc9,0x37,0xc1
+
+# vcvthf62hf8
+
+# ATT:   vcvthf62hf8 %zmm1, %zmm0
+# INTEL: vcvthf62hf8 zmm0, zmm1
+0x62,0xf5,0x7d,0x48,0x37,0xc1
+
+# ATT:   vcvthf62hf8 %ymm1, %ymm0
+# INTEL: vcvthf62hf8 ymm0, ymm1
+0x62,0xf5,0x7d,0x28,0x37,0xc1
+
+# ATT:   vcvthf62hf8 %xmm1, %xmm0
+# INTEL: vcvthf62hf8 xmm0, xmm1
+0x62,0xf5,0x7d,0x08,0x37,0xc1
+
+# ATT:   vcvthf62hf8 %zmm1, %zmm0 {%k1}
+# INTEL: vcvthf62hf8 zmm0 {k1}, zmm1
+0x62,0xf5,0x7d,0x49,0x37,0xc1
+
+# ATT:   vcvthf62hf8 %zmm1, %zmm0 {%k1} {z}
+# INTEL: vcvthf62hf8 zmm0 {k1} {z}, zmm1
+0x62,0xf5,0x7d,0xc9,0x37,0xc1
+
+#
+# Group G: VPMOVSSDB - Integer DWord->Byte signed saturation
+#
+
+# ATT:   vpmovssdb %zmm1, %xmm0
+# INTEL: vpmovssdb xmm0, zmm1
+0x62,0xf2,0x7e,0x48,0x41,0xc8
+
+# ATT:   vpmovssdb %ymm1, %xmm0
+# INTEL: vpmovssdb xmm0, ymm1
+0x62,0xf2,0x7e,0x28,0x41,0xc8
+
+# ATT:   vpmovssdb %xmm1, %xmm0
+# INTEL: vpmovssdb xmm0, xmm1
+0x62,0xf2,0x7e,0x08,0x41,0xc8
+
+# ATT:   vpmovssdb %zmm1, %xmm0 {%k1}
+# INTEL: vpmovssdb xmm0 {k1}, zmm1
+0x62,0xf2,0x7e,0x49,0x41,0xc8
+
+# ATT:   vpmovssdb %zmm1, %xmm0 {%k1} {z}
+# INTEL: vpmovssdb xmm0 {k1} {z}, zmm1
+0x62,0xf2,0x7e,0xc9,0x41,0xc8
+
+#
+# Group H: VUNPACKB - Byte unpack with immediate
+#
+
+# ATT:   vunpackb $1, %zmm1, %zmm0
+# INTEL: vunpackb zmm0, zmm1, 1
+0x62,0xf3,0x7c,0x48,0x3d,0xc1,0x01
+
+# ATT:   vunpackb $1, %ymm1, %ymm0
+# INTEL: vunpackb ymm0, ymm1, 1
+0x62,0xf3,0x7c,0x28,0x3d,0xc1,0x01
+
+# ATT:   vunpackb $1, %xmm1, %xmm0
+# INTEL: vunpackb xmm0, xmm1, 1
+0x62,0xf3,0x7c,0x08,0x3d,0xc1,0x01
+
+# ATT:   vunpackb $1, %zmm1, %zmm0 {%k1}
+# INTEL: vunpackb zmm0 {k1}, zmm1, 1
+0x62,0xf3,0x7c,0x49,0x3d,0xc1,0x01
+
+# ATT:   vunpackb $1, %zmm1, %zmm0 {%k1} {z}
+# INTEL: vunpackb zmm0 {k1} {z}, zmm1, 1
+0x62,0xf3,0x7c,0xc9,0x3d,0xc1,0x01

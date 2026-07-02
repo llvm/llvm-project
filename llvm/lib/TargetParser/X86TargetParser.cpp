@@ -669,6 +669,7 @@ constexpr FeatureBitset ImpliedFeaturesAVX10_1 =
     FeatureAVX512VBMI2 | FeatureAVX512BITALG | FeatureAVX512FP16 |
     FeatureAVX512DQ | FeatureAVX512VL;
 constexpr FeatureBitset ImpliedFeaturesAVX10_2 = FeatureAVX10_1;
+constexpr FeatureBitset ImpliedFeaturesAVX10_V2_AUX = FeatureAVX10_2;
 
 // APX Features
 constexpr FeatureBitset ImpliedFeaturesEGPR = {};

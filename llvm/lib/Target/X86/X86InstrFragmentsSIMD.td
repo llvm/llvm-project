@@ -1211,6 +1211,63 @@ def X86vmcvtph2hf8 : SDNode<"X86ISD::VMCVTPH2HF8",
 def X86vmcvtph2hf8s : SDNode<"X86ISD::VMCVTPH2HF8S",
                         SDTAVX10CONVERT_I8F16_MASK>;
 
+// AVX10 V2 AUX convert SDTypeProfiles
+def SDTAVX10CONVERT_I8F32 : SDTypeProfile<1, 1, [
+  SDTCVecEltisVT<0, i8>, SDTCVecEltisVT<1, f32>
+]>;
+
+def SDTAVX10CONVERT_I8F32_MASK : SDTypeProfile<1, 3, [
+  SDTCVecEltisVT<0, i8>, SDTCVecEltisVT<1, f32>,
+  SDTCisSameAs<0, 2>, SDTCVecEltisVT<3, i1>,
+  SDTCisSameNumEltsAs<1, 3>
+]>;
+
+def SDTAVX10CONVERT_2I8F32 : SDTypeProfile<1, 2, [
+  SDTCVecEltisVT<0, i8>, SDTCVecEltisVT<1, i8>, SDTCVecEltisVT<2, f32>
+]>;
+
+def SDTAVX10CONVERT_2I8F32_MASK : SDTypeProfile<1, 4, [
+  SDTCVecEltisVT<0, i8>, SDTCVecEltisVT<1, i8>,
+  SDTCVecEltisVT<2, f32>, SDTCisSameAs<0, 3>, SDTCVecEltisVT<4, i1>,
+  SDTCisSameNumEltsAs<2, 4>
+]>;
+
+def SDTAVX10CONVERT_F32I8 : SDTypeProfile<1, 1, [
+  SDTCVecEltisVT<0, f32>, SDTCVecEltisVT<1, i8>
+]>;
+
+// AVX10 V2 AUX convert SDNodes
+// Group A: PS->8bit truncating (single source)
+def X86vcvtps2bf8  : SDNode<"X86ISD::VCVTPS2BF8",  SDTAVX10CONVERT_I8F32>;
+def X86vcvtps2bf8s : SDNode<"X86ISD::VCVTPS2BF8S", SDTAVX10CONVERT_I8F32>;
+def X86vcvtps2hf8  : SDNode<"X86ISD::VCVTPS2HF8",  SDTAVX10CONVERT_I8F32>;
+def X86vcvtps2hf8s : SDNode<"X86ISD::VCVTPS2HF8S", SDTAVX10CONVERT_I8F32>;
+def X86vcvtrops2hf8  : SDNode<"X86ISD::VCVTROPS2HF8",  SDTAVX10CONVERT_I8F32>;
+def X86vcvtrops2hf8s : SDNode<"X86ISD::VCVTROPS2HF8S", SDTAVX10CONVERT_I8F32>;
+
+// Masked variants
+def X86vmcvtps2bf8  : SDNode<"X86ISD::VMCVTPS2BF8",  SDTAVX10CONVERT_I8F32_MASK>;
+def X86vmcvtps2bf8s : SDNode<"X86ISD::VMCVTPS2BF8S", SDTAVX10CONVERT_I8F32_MASK>;
+def X86vmcvtps2hf8  : SDNode<"X86ISD::VMCVTPS2HF8",  SDTAVX10CONVERT_I8F32_MASK>;
+def X86vmcvtps2hf8s : SDNode<"X86ISD::VMCVTPS2HF8S", SDTAVX10CONVERT_I8F32_MASK>;
+def X86vmcvtrops2hf8  : SDNode<"X86ISD::VMCVTROPS2HF8",  SDTAVX10CONVERT_I8F32_MASK>;
+def X86vmcvtrops2hf8s : SDNode<"X86ISD::VMCVTROPS2HF8S", SDTAVX10CONVERT_I8F32_MASK>;
+
+// Group B: Bias PS->8bit (3 operand)
+def X86vcvtbiasps2bf8  : SDNode<"X86ISD::VCVTBIASPS2BF8",  SDTAVX10CONVERT_2I8F32>;
+def X86vcvtbiasps2bf8s : SDNode<"X86ISD::VCVTBIASPS2BF8S", SDTAVX10CONVERT_2I8F32>;
+def X86vcvtbiasps2hf8  : SDNode<"X86ISD::VCVTBIASPS2HF8",  SDTAVX10CONVERT_2I8F32>;
+def X86vcvtbiasps2hf8s : SDNode<"X86ISD::VCVTBIASPS2HF8S", SDTAVX10CONVERT_2I8F32>;
+
+def X86vmcvtbiasps2bf8  : SDNode<"X86ISD::VMCVTBIASPS2BF8",  SDTAVX10CONVERT_2I8F32_MASK>;
+def X86vmcvtbiasps2bf8s : SDNode<"X86ISD::VMCVTBIASPS2BF8S", SDTAVX10CONVERT_2I8F32_MASK>;
+def X86vmcvtbiasps2hf8  : SDNode<"X86ISD::VMCVTBIASPS2HF8",  SDTAVX10CONVERT_2I8F32_MASK>;
+def X86vmcvtbiasps2hf8s : SDNode<"X86ISD::VMCVTBIASPS2HF8S", SDTAVX10CONVERT_2I8F32_MASK>;
+
+// Group C: 8bit->PS expanding
+def X86vcvtbf82ps  : SDNode<"X86ISD::VCVTBF82PS",  SDTAVX10CONVERT_F32I8>;
+def X86vcvthf82ps  : SDNode<"X86ISD::VCVTHF82PS",  SDTAVX10CONVERT_F32I8>;
+
 //===----------------------------------------------------------------------===//
 // SSE pattern fragments
 //===----------------------------------------------------------------------===//
