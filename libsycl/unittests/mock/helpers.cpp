@@ -46,6 +46,10 @@ void mock::MockLiboffload::initDefault() {
         DefaultDevice = mock::createDummyHandleWithData<ol_device_handle_t>(
             reinterpret_cast<unsigned char *>(&DefaultPlatform),
             sizeof(DefaultPlatform));
+        HostPlatform = mock::createDummyHandle<ol_platform_handle_t>();
+        HostDevice = mock::createDummyHandleWithData<ol_device_handle_t>(
+            reinterpret_cast<unsigned char *>(&HostPlatform),
+            sizeof(HostPlatform));
 
         return OL_SUCCESS;
       });
@@ -55,6 +59,8 @@ void mock::MockLiboffload::initDefault() {
 
     mock::releaseDummyHandle(DefaultPlatform);
     mock::releaseDummyHandle(DefaultDevice);
+    mock::releaseDummyHandle(HostPlatform);
+    mock::releaseDummyHandle(HostDevice);
 
     return OL_SUCCESS;
   });
@@ -91,7 +97,9 @@ void mock::MockLiboffload::initDefault() {
           if (PropSize != sizeof(ol_platform_backend_t))
             return makeEmptyStrError(OL_ERRC_INVALID_SIZE);
           assignAs<ol_platform_backend_t>(PropValue,
-                                          OL_PLATFORM_BACKEND_LEVEL_ZERO);
+                                          Platform == HostPlatform
+                                              ? OL_PLATFORM_BACKEND_HOST
+                                              : OL_PLATFORM_BACKEND_LEVEL_ZERO);
           return OL_SUCCESS;
         }
 
@@ -159,6 +167,8 @@ void mock::MockLiboffload::initDefault() {
 
         assert(DefaultDevice);
         std::ignore = Callback(DefaultDevice, UserData);
+        assert(HostDevice);
+        std::ignore = Callback(HostDevice, UserData);
 
         return OL_SUCCESS;
       });
@@ -276,7 +286,17 @@ void mock::MockLiboffload::initDefault() {
         }
         return OL_SUCCESS;
       });
-
+  ON_CALL(*this, olMemcpy)
+      .WillByDefault([this](ol_queue_handle_t Queue, void *DstPtr,
+                            ol_device_handle_t DstDevice, const void *SrcPtr,
+                            ol_device_handle_t SrcDevice,
+                            size_t Size) -> ol_result_t {
+        if (!Queue || !DstDevice || !DstDevice)
+          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
+        if (!DstPtr || !SrcPtr)
+          return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
+        return OL_SUCCESS;
+      });
   ON_CALL(*this, olCreateEvent)
       .WillByDefault([this](ol_queue_handle_t Queue, ol_event_flags_t Flags,
                             ol_event_handle_t *Event) -> ol_result_t {

@@ -22,6 +22,7 @@
 #include <optional>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
@@ -57,6 +58,26 @@ template <typename SyclObject>
 auto getSyclObjImpl(const SyclObject &Obj)
     -> decltype(ImplUtils::getSyclObjImpl(Obj)) {
   return ImplUtils::getSyclObjImpl(Obj);
+}
+
+template <typename SyclObject>
+auto getSyclObjImpls(const std::vector<SyclObject> &Objs) {
+  std::vector<std::remove_const_t<
+      std::remove_reference_t<decltype(getSyclObjImpl(Objs[0]))>>>
+      Result;
+  Result.reserve(Objs.size());
+  for (const SyclObject &Obj : Objs)
+    Result.push_back(getSyclObjImpl(Obj));
+  return Result;
+}
+
+template <typename SyclObjectImpl>
+auto getSyclObjHandles(const std::vector<SyclObjectImpl> &Impls) {
+  std::vector<decltype(Impls[0]->getHandle())> Result;
+  Result.reserve(Impls.size());
+  for (const SyclObjectImpl &Impl : Impls)
+    Result.push_back(Impl->getHandle());
+  return Result;
 }
 
 template <typename SyclObject, typename Impl>

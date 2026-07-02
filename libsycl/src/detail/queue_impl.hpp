@@ -96,7 +96,20 @@ public:
   void setKernelParameters(std::vector<EventImplPtr> &&Events,
                            const detail::UnifiedRangeView &Range);
 
+  /// Submits a memory copy operation from one USM or host pointer to another.
+  ///
+  /// \param Dest is the pointer to copy to.
+  /// \param Src is the pointer to copy from.
+  /// \param NumBytes is the number of bytes to copy.
+  /// \param DepEvents is a vector of dependencies for the operation.
+  /// \return an event impl object that represents the status of the operation.
+  EventImplPtr memcpy(void *Dest, const void *Src, std::size_t NumBytes,
+                      const std::vector<EventImplPtr> &DepEvents);
+
 private:
+  void handleEventDependencies(std::vector<ol_event_handle_t> &Deps);
+  EventImplPtr createEvent();
+
   // Queue features.
   ol_queue_handle_t MOffloadQueue = {};
   const bool MIsInorder;
