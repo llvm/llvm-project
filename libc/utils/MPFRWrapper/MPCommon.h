@@ -27,6 +27,11 @@ extern "C" {
 int mpfr_set_float128(mpfr_ptr, float128, mpfr_rnd_t);
 float128 mpfr_get_float128(mpfr_srcptr, mpfr_rnd_t);
 }
+#else 
+extern "C"{
+int mpfr_set_float128(mpfr_ptr, Float128, mpfr_rnd_t);
+Float128 mpfr_get_float128(mpfr_srcptr,mpfr_rnd_t);
+}
 #endif
 
 namespace LIBC_NAMESPACE_DECL {
