@@ -152,6 +152,8 @@ struct MCSchedClassDesc {
   }
 };
 
+// If either assertion fails, try to repack MCSchedClassDesc to preserve the
+// compact layout; remove the assertion if the layout can no longer be kept.
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 static_assert(sizeof(MCSchedClassDesc) == 20);
 #else
