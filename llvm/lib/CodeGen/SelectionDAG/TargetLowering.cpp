@@ -13771,6 +13771,10 @@ SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
   case ISD::PARTIAL_REDUCE_SMLA:
     ExtOpcLHS = ExtOpcRHS = ISD::SIGN_EXTEND;
     break;
+  case ISD::PARTIAL_REDUCE_SUMLA:
+    ExtOpcLHS = ISD::SIGN_EXTEND;
+    ExtOpcRHS = ISD::ZERO_EXTEND;
+    break;
   case ISD::PARTIAL_REDUCE_FMLA:
     ExtOpcLHS = ExtOpcRHS = ISD::FP_EXTEND;
     break;

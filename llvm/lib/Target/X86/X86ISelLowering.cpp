@@ -2838,6 +2838,108 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::INTRINSIC_WO_CHAIN,
                        ISD::INTRINSIC_W_CHAIN});
 
+  // Set up partial reduction MLA actions for VNNI dot product support.
+  //
+  // i8 x i8 -> i32:
+  //   SUMLA (sext x zext) -> VPDPBUSD (VNNI / AVX-VNNI)
+  //   SMLA  (sext x sext) -> VPDPBSSD (AVX-VNNI-INT8 / AVX10.2)
+  //   UMLA  (zext x zext) -> VPDPBUUD (AVX-VNNI-INT8 / AVX10.2)
+  //
+  // i16 x i16 -> i32:
+  //   SMLA  (sext x sext) -> VPDPWSSD  (VNNI / AVX-VNNI)
+  //   SUMLA (sext x zext) -> VPDPWSUD  (AVX-VNNI-INT16 / AVX10.2)
+  //   UMLA  (zext x zext) -> VPDPWUUD  (AVX-VNNI-INT16 / AVX10.2)
+
+  // VNNI i8: only SUMLA (VPDPBUSD).
+  if (Subtarget.hasVNNI()) {
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v16i32,
+                              MVT::v64i8, Custom);
+    if (Subtarget.hasVLX()) {
+      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v8i32,
+                                MVT::v32i8, Custom);
+      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v4i32,
+                                MVT::v16i8, Custom);
+    }
+  } else if (Subtarget.hasAVXVNNI()) {
+    if (Subtarget.useAVX512Regs())
+      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v16i32,
+                                MVT::v64i8, Custom);
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v8i32, MVT::v32i8,
+                              Custom);
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, MVT::v4i32, MVT::v16i8,
+                              Custom);
+  }
+
+  // VNNI-INT8 i8: SMLA (VPDPBSSD), UMLA (VPDPBUUD).
+  if (Subtarget.hasAVX10_2()) {
+    unsigned Int8MLAOps[] = {ISD::PARTIAL_REDUCE_SMLA,
+                             ISD::PARTIAL_REDUCE_UMLA};
+    setPartialReduceMLAAction(Int8MLAOps, MVT::v16i32, MVT::v64i8, Custom);
+    setPartialReduceMLAAction(Int8MLAOps, MVT::v8i32, MVT::v32i8, Custom);
+    setPartialReduceMLAAction(Int8MLAOps, MVT::v4i32, MVT::v16i8, Custom);
+  } else if (Subtarget.hasAVXVNNIINT8()) {
+    unsigned Int8MLAOps[] = {ISD::PARTIAL_REDUCE_SMLA,
+                             ISD::PARTIAL_REDUCE_UMLA};
+    // On AVX512-register targets, the vectorizer may produce 512-bit
+    // operations.
+    // Register 512-bit as Custom so SplitOpsAndApply can split to 256-bit.
+    if (Subtarget.useAVX512Regs())
+      setPartialReduceMLAAction(Int8MLAOps, MVT::v16i32, MVT::v64i8, Custom);
+    setPartialReduceMLAAction(Int8MLAOps, MVT::v8i32, MVT::v32i8, Custom);
+    setPartialReduceMLAAction(Int8MLAOps, MVT::v4i32, MVT::v16i8, Custom);
+  }
+
+  // VNNI i16: only SMLA (VPDPWSSD).
+  if (Subtarget.hasVNNI()) {
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SMLA, MVT::v16i32,
+                              MVT::v32i16, Custom);
+    if (Subtarget.hasVLX()) {
+      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SMLA, MVT::v8i32,
+                                MVT::v16i16, Custom);
+      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SMLA, MVT::v4i32,
+                                MVT::v8i16, Custom);
+    }
+  } else if (Subtarget.hasAVXVNNI()) {
+    if (Subtarget.useAVX512Regs())
+      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SMLA, MVT::v16i32,
+                                MVT::v32i16, Custom);
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SMLA, MVT::v8i32, MVT::v16i16,
+                              Custom);
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SMLA, MVT::v4i32, MVT::v8i16,
+                              Custom);
+  }
+
+  // VNNI-INT16 i16: SUMLA (VPDPWSUD), UMLA (VPDPWUUD).
+  if (Subtarget.hasAVX10_2()) {
+    unsigned Int16MLAOps[] = {ISD::PARTIAL_REDUCE_SUMLA,
+                              ISD::PARTIAL_REDUCE_UMLA};
+    setPartialReduceMLAAction(Int16MLAOps, MVT::v16i32, MVT::v32i16, Custom);
+    setPartialReduceMLAAction(Int16MLAOps, MVT::v8i32, MVT::v16i16, Custom);
+    setPartialReduceMLAAction(Int16MLAOps, MVT::v4i32, MVT::v8i16, Custom);
+  } else if (Subtarget.hasAVXVNNIINT16()) {
+    unsigned Int16MLAOps[] = {ISD::PARTIAL_REDUCE_SUMLA,
+                              ISD::PARTIAL_REDUCE_UMLA};
+    // On AVX512-register targets, the vectorizer may produce 512-bit
+    // operations.
+    // Register 512-bit as Custom so SplitOpsAndApply can split to 256-bit.
+    if (Subtarget.useAVX512Regs())
+      setPartialReduceMLAAction(Int16MLAOps, MVT::v16i32, MVT::v32i16, Custom);
+    setPartialReduceMLAAction(Int16MLAOps, MVT::v8i32, MVT::v16i16, Custom);
+    setPartialReduceMLAAction(Int16MLAOps, MVT::v4i32, MVT::v8i16, Custom);
+  }
+
+  // BF16 dot product: bf16 x bf16 -> f32 (vdpbf16ps, scale=2).
+  if (Subtarget.hasBF16()) {
+    setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::v16f32,
+                              MVT::v32bf16, Custom);
+    if (Subtarget.hasVLX()) {
+      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::v8f32,
+                                MVT::v16bf16, Custom);
+      setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::v4f32,
+                                MVT::v8bf16, Custom);
+    }
+  }
+
   computeRegisterProperties(Subtarget.getRegisterInfo());
 
   MaxStoresPerMemset = 16; // For @llvm.memset -> sequence of stores
@@ -3146,7 +3248,7 @@ static bool isX86CCSigned(X86::CondCode X86CC) {
 
 static X86::CondCode TranslateIntegerX86CC(ISD::CondCode SetCCOpcode) {
   switch (SetCCOpcode) {
-  // clang-format off
+    // clang-format off
   default: llvm_unreachable("Invalid integer condition!");
   case ISD::SETEQ:  return X86::COND_E;
   case ISD::SETGT:  return X86::COND_G;
@@ -34616,10 +34718,138 @@ SDValue X86TargetLowering::visitMaskedStore(SelectionDAG &DAG, const SDLoc &DL,
   return DAG.getMemIntrinsicNode(X86ISD::CSTORE, DL, Tys, Ops, Ty, MMO);
 }
 
+SDValue X86TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
+                                                   SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Acc = Op.getOperand(0);
+  SDValue LHS = Op.getOperand(1);
+  SDValue RHS = Op.getOperand(2);
+  EVT AccVT = Acc.getValueType();
+  unsigned Opcode = Op.getOpcode();
+
+  // BF16 dot product: bf16 x bf16 -> f32 (vdpbf16ps).
+  if (Opcode == ISD::PARTIAL_REDUCE_FMLA) {
+    auto DpBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
+                        ArrayRef<SDValue> Ops) {
+      MVT AccVT = MVT::getVectorVT(MVT::f32, Ops[0].getValueSizeInBits() / 32);
+      return DAG.getNode(X86ISD::DPBF16PS, DL, AccVT, Ops);
+    };
+    return SplitOpsAndApply(DAG, Subtarget, DL, AccVT, {Acc, LHS, RHS},
+                            DpBuilder, /*CheckBWI=*/false, Subtarget.hasBF16());
+  }
+
+  EVT InputVT = LHS.getValueType();
+  EVT InputEltVT = InputVT.getVectorElementType();
+
+  // Helper to bitcast i16 inputs to i32 (VNNI dot product instructions
+  // operate on i32 register operands that contain packed i16/i8 elements).
+  auto BitcastI16ToI32 = [&](SDValue V) {
+    EVT VT = EVT::getVectorVT(*DAG.getContext(), MVT::i32,
+                              V.getValueType().getVectorNumElements() / 2);
+    return DAG.getBitcast(VT, V);
+  };
+
+  bool HasAVX512VNNI = Subtarget.hasVNNI();
+  bool HasVNNIINT8 = Subtarget.hasAVXVNNIINT8() || Subtarget.hasAVX10_2();
+  bool HasVNNIINT16 = Subtarget.hasAVXVNNIINT16() || Subtarget.hasAVX10_2();
+
+  // i16 x i16 -> i32.
+  if (InputEltVT == MVT::i16) {
+    unsigned ISDOpc;
+    SDValue Op1 = LHS, Op2 = RHS;
+    switch (Opcode) {
+    case ISD::PARTIAL_REDUCE_SMLA:
+      // VPDPWSSD: signed x signed (VNNI).
+      ISDOpc = X86ISD::VPDPWSSD;
+      break;
+    case ISD::PARTIAL_REDUCE_SUMLA:
+      // VPDPWSUD: signed x unsigned (VNNI-INT16).
+      // SUMLA: Op1=sext, Op2=zext -> matches VPDPWSUD(acc, signed, unsigned).
+      assert(HasVNNIINT16 && "SUMLA i16 should only be Custom with "
+                             "AVXVNNIINT16 or AVX10.2");
+      ISDOpc = X86ISD::VPDPWSUD;
+      break;
+    case ISD::PARTIAL_REDUCE_UMLA:
+      // VPDPWUUD: unsigned x unsigned (VNNI-INT16).
+      assert(HasVNNIINT16 && "UMLA i16 should only be Custom with "
+                             "AVXVNNIINT16 or AVX10.2");
+      ISDOpc = X86ISD::VPDPWUUD;
+      break;
+    default:
+      llvm_unreachable("unexpected opcode");
+    }
+
+    SDValue CastLHS = BitcastI16ToI32(Op1);
+    SDValue CastRHS = BitcastI16ToI32(Op2);
+
+    // Allow 512-bit only when the specific instruction has a 512-bit encoding:
+    // VPDPWSSD (SMLA): 512-bit available with AVX512-VNNI.
+    // VPDPWSUD/VPDPWUUD (SUMLA/UMLA): 512-bit available with AVX10.2 only.
+    bool Allow512 = (Opcode == ISD::PARTIAL_REDUCE_SMLA)
+                        ? HasAVX512VNNI
+                        : Subtarget.hasAVX10_2();
+    auto DpBuilder = [ISDOpc](SelectionDAG &DAG, const SDLoc &DL,
+                              ArrayRef<SDValue> Ops) {
+      MVT VT = MVT::getVectorVT(MVT::i32, Ops[0].getValueSizeInBits() / 32);
+      return DAG.getNode(ISDOpc, DL, VT, Ops);
+    };
+    return SplitOpsAndApply(DAG, Subtarget, DL, AccVT, {Acc, CastLHS, CastRHS},
+                            DpBuilder,
+                            /*CheckBWI=*/false, Allow512);
+  }
+
+  // i8 x i8 -> i32.
+  {
+    unsigned ISDOpc;
+    SDValue Op1, Op2;
+    switch (Opcode) {
+    case ISD::PARTIAL_REDUCE_SUMLA:
+      // VPDPBUSD: unsigned x signed (VNNI).
+      // SUMLA: Op1=sext, Op2=zext -> VPDPBUSD(acc, unsigned, signed).
+      ISDOpc = X86ISD::VPDPBUSD;
+      Op1 = RHS; // zext (unsigned)
+      Op2 = LHS; // sext (signed)
+      break;
+    case ISD::PARTIAL_REDUCE_SMLA:
+      // VPDPBSSD: signed x signed (VNNI-INT8).
+      assert(HasVNNIINT8 && "SMLA i8 should only be Custom with "
+                            "AVXVNNIINT8 or AVX10.2");
+      ISDOpc = X86ISD::VPDPBSSD;
+      Op1 = LHS;
+      Op2 = RHS;
+      break;
+    case ISD::PARTIAL_REDUCE_UMLA:
+      // VPDPBUUD: unsigned x unsigned (VNNI-INT8).
+      assert(HasVNNIINT8 && "UMLA i8 should only be Custom with "
+                            "AVXVNNIINT8 or AVX10.2");
+      ISDOpc = X86ISD::VPDPBUUD;
+      Op1 = LHS;
+      Op2 = RHS;
+      break;
+    default:
+      llvm_unreachable("unexpected opcode");
+    }
+
+    // Allow 512-bit only when the specific instruction has a 512-bit encoding:
+    // VPDPBUSD (SUMLA): 512-bit available with AVX512-VNNI.
+    // VPDPBSSD/VPDPBUUD (SMLA/UMLA): 512-bit available with AVX10.2 only.
+    bool Allow512 = (Opcode == ISD::PARTIAL_REDUCE_SUMLA)
+                        ? HasAVX512VNNI
+                        : Subtarget.hasAVX10_2();
+    auto DpBuilder = [ISDOpc](SelectionDAG &DAG, const SDLoc &DL,
+                              ArrayRef<SDValue> Ops) {
+      MVT VT = MVT::getVectorVT(MVT::i32, Ops[0].getValueSizeInBits() / 32);
+      return DAG.getNode(ISDOpc, DL, VT, Ops);
+    };
+    return SplitOpsAndApply(DAG, Subtarget, DL, AccVT, {Acc, Op1, Op2},
+                            DpBuilder, /*CheckBWI=*/false, Allow512);
+  }
+}
+
 /// Provide custom lowering hooks for some operations.
 SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
-  // clang-format off
+    // clang-format off
   default: llvm_unreachable("Should not custom lower this!");
   case ISD::ATOMIC_FENCE:       return LowerATOMIC_FENCE(Op, Subtarget, DAG);
   case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS:
@@ -34784,6 +35014,11 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case X86ISD::CVTPS2PH:        return LowerCVTPS2PH(Op, DAG);
   case ISD::PREFETCH:           return LowerPREFETCH(Op, Subtarget, DAG);
   case ISD::FLDEXP:             return LowerFLDEXP(Op, Subtarget, DAG);
+  case ISD::PARTIAL_REDUCE_SMLA:
+  case ISD::PARTIAL_REDUCE_UMLA:
+  case ISD::PARTIAL_REDUCE_SUMLA:
+  case ISD::PARTIAL_REDUCE_FMLA:
+                                return LowerPARTIAL_REDUCE_MLA(Op, DAG);
     // clang-format on
   }
 }

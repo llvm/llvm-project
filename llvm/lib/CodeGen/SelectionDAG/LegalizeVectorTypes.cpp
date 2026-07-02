@@ -5320,6 +5320,12 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::GET_ACTIVE_LANE_MASK:
     Res = WidenVecRes_GET_ACTIVE_LANE_MASK(N);
     break;
+  case ISD::PARTIAL_REDUCE_UMLA:
+  case ISD::PARTIAL_REDUCE_SMLA:
+  case ISD::PARTIAL_REDUCE_SUMLA:
+  case ISD::PARTIAL_REDUCE_FMLA:
+    Res = WidenVecRes_PARTIAL_REDUCE_MLA(N);
+    break;
   case ISD::VECTOR_DEINTERLEAVE:
     WidenVecRes_VECTOR_DEINTERLEAVE(N);
     break;
@@ -5606,6 +5612,33 @@ SDValue DAGTypeLegalizer::WidenVecRes_Ternary(SDNode *N) {
       GetWidenedMask(N->getOperand(3), WidenVT.getVectorElementCount());
   return DAG.getNode(N->getOpcode(), dl, WidenVT,
                      {InOp1, InOp2, InOp3, Mask, N->getOperand(4)});
+}
+
+SDValue DAGTypeLegalizer::WidenVecRes_PARTIAL_REDUCE_MLA(SDNode *N) {
+  SDLoc DL(N);
+  EVT AccVT = N->getValueType(0);
+  EVT WidenAccVT = TLI.getTypeToTransformTo(*DAG.getContext(), AccVT);
+  SDValue Acc = GetWidenedVector(N->getOperand(0));
+
+  EVT InputVT = N->getOperand(1).getValueType();
+  ElementCount AccEC = AccVT.getVectorElementCount();
+  ElementCount InputEC = InputVT.getVectorElementCount();
+  assert(InputEC.hasKnownScalarFactor(AccEC) &&
+         "partial-reduce input must be a multiple of the accumulator");
+  unsigned ScaleFactor = InputEC.getKnownScalarFactor(AccEC);
+  EVT WidenInputVT = EVT::getVectorVT(
+      *DAG.getContext(), InputVT.getVectorElementType(),
+      WidenAccVT.getVectorElementCount().multiplyCoefficientBy(ScaleFactor));
+
+  auto WidenInput = [&](SDValue V) {
+    if (getTypeAction(V.getValueType()) == TargetLowering::TypeWidenVector)
+      V = GetWidenedVector(V);
+    return ModifyToType(V, WidenInputVT);
+  };
+
+  return DAG.getNode(N->getOpcode(), DL, WidenAccVT, Acc,
+                     WidenInput(N->getOperand(1)),
+                     WidenInput(N->getOperand(2)));
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_Binary(SDNode *N) {
