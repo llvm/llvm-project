@@ -437,7 +437,7 @@ This special section is encoded per the
 The general expectation is that a JIT compiler will parse and discard this
 format; it is not particularly memory efficient.  If you need an alternate
 format (e.g. for an ahead of time compiler), see discussion under
-:ref: `open work items <OpenWork>` below.
+:ref:`open work items <OpenWork>` below.
 
 Each statepoint generates the following Locations:
 
@@ -786,9 +786,9 @@ Bugs and Enhancements
 =====================
 
 Currently known bugs and enhancements under consideration can be
-tracked by performing a `bugzilla search
-<https://bugs.llvm.org/buglist.cgi?cmdtype=runnamed&namedcmd=Statepoint%20Bugs&list_id=64342>`_
-for [Statepoint] in the summary field. When filing new bugs, please
+tracked by performing a `GitHub issue search
+<https://github.com/llvm/llvm-project/issues?q=is%3Aissue%20state%3Aopen%20in%3Atitle%20%22%5BStatepoint%5D%22>`_
+with [Statepoint] in the issue title. When filing new bugs, please
 use this tag so that interested parties see the newly filed bug.  As
 with most LLVM features, design discussions take place on the `Discourse forums <https://discourse.llvm.org>`_ and patches
 should be sent to `llvm-commits
