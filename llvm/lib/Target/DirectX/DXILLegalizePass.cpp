@@ -528,7 +528,8 @@ public:
         Inst->eraseFromParent();
     }
 
-    MadeChange |= removeUnreachableBlocks(F);
+    if (MadeChange)
+      MadeChange |= removeUnreachableBlocks(F);
     return MadeChange;
   }
 
