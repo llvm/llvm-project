@@ -473,7 +473,10 @@ void PreprocessingRecord::InclusionDirective(
     bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
   InclusionDirective::InclusionKind Kind = InclusionDirective::Include;
 
-  switch (IncludeTok.getIdentifierInfo()->getPPKeywordID()) {
+  IdentifierInfo *II = IncludeTok.getIdentifierInfo();
+  assert(II && "Invalid include directive token");
+
+  switch (II->getPPKeywordID()) {
   case tok::pp_include:
     Kind = InclusionDirective::Include;
     break;
