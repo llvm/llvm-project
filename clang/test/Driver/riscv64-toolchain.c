@@ -58,7 +58,7 @@
 // CXX-RV64-BAREMETAL-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/crtbegin.o"
 // CXX-RV64-BAREMETAL-LP64: "-L{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1"
 // CXX-RV64-BAREMETAL-LP64: "-L{{.*}}/Inputs/basic_riscv64_tree/riscv64-unknown-elf/lib"
-// CXX-RV64-BAREMETAL-LP64: "-lstdc++" "-lm" "--start-group" "-lgcc" "-lc" "-lgloss" "--end-group"
+// CXX-RV64-BAREMETAL-LP64: "-lstdc++" "-lstdc++fs" "-lm" "--start-group" "-lgcc" "-lc" "-lgloss" "--end-group"
 // CXX-RV64-BAREMETAL-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/crtend.o"
 
 // RUN: env "PATH=" %clangxx -### %s -fuse-ld= \
@@ -73,7 +73,7 @@
 // CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/crtbegin.o"
 // CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "-L{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1"
 // CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "-L{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/../../../../riscv64-unknown-elf/lib"
-// CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "-lstdc++" "-lm" "--start-group" "-lgcc" "-lc" "-lgloss" "--end-group"
+// CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "-lstdc++" "-lstdc++fs" "-lm" "--start-group" "-lgcc" "-lc" "-lgloss" "--end-group"
 // CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/crtend.o"
 
 // RUN: env "PATH=" %clang -### %s -fuse-ld= -no-pie \
