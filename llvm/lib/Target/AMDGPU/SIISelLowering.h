@@ -231,6 +231,7 @@ private:
   SDValue performExtractVectorEltCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performInsertVectorEltCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFPRoundCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performFrexpSelectCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performSelectCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
   SDValue reassociateScalarOps(SDNode *N, SelectionDAG &DAG) const;
