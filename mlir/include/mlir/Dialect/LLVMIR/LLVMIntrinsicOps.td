@@ -504,6 +504,42 @@ class LLVM_ConstrainedIntr<string mnem, int numArgs,
   }];
 }
 
+// Convenience base class for constrained intrinsics that take a single
+// floating-point operand of the same type as the result and support a rounding
+// mode (e.g. the transcendental math functions).
+class LLVM_ConstrainedUnaryIntrRM<string mnem>
+    : LLVM_ConstrainedIntr<mnem, /*numArgs=*/1,
+        /*overloadedResult=*/1, /*overloadedOperands=*/[],
+        /*hasRoundingMode=*/1, [SameOperandsAndResultType]> {
+  let assemblyFormat = [{
+    $arg_0 $roundingmode $fpExceptionBehavior attr-dict `:` type($arg_0)
+  }];
+}
+
+// Convenience base class for constrained intrinsics that take a single
+// floating-point operand of the same type as the result and do not support a
+// rounding mode (e.g. the rounding math functions such as `ceil`).
+class LLVM_ConstrainedUnaryIntrNoRM<string mnem>
+    : LLVM_ConstrainedIntr<mnem, /*numArgs=*/1,
+        /*overloadedResult=*/1, /*overloadedOperands=*/[],
+        /*hasRoundingMode=*/0, [SameOperandsAndResultType]> {
+  let assemblyFormat = [{
+    $arg_0 $fpExceptionBehavior attr-dict `:` type($arg_0)
+  }];
+}
+
+// Convenience base class for constrained intrinsics that take two
+// floating-point operands of the same type as the result and support a rounding
+// mode (e.g. `pow` and `atan2`).
+class LLVM_ConstrainedBinaryIntrRM<string mnem>
+    : LLVM_ConstrainedIntr<mnem, /*numArgs=*/2,
+        /*overloadedResult=*/1, /*overloadedOperands=*/[],
+        /*hasRoundingMode=*/1, [SameOperandsAndResultType]> {
+  let assemblyFormat = [{
+    $arg_0 `,` $arg_1 $roundingmode $fpExceptionBehavior attr-dict `:` type($arg_0)
+  }];
+}
+
 def LLVM_ConstrainedFAddIntr
     : LLVM_ConstrainedIntr<"fadd", /*numArgs=*/2,
         /*overloadedResult=*/1, /*overloadedOperands=*/[],
@@ -566,6 +602,38 @@ def LLVM_ConstrainedFMulAddIntr
     $arg_0 `,` $arg_1 `,` $arg_2 $roundingmode $fpExceptionBehavior attr-dict `:` type($arg_0)
   }];
 }
+
+// Constrained intrinsics for math library functions. These correspond to the
+// like-named operations in the Math dialect and are produced when the source
+// operation carries a `#arith.fenv` floating-point environment attribute.
+
+// Unary transcendental functions (support a rounding mode).
+def LLVM_ConstrainedSqrtIntr  : LLVM_ConstrainedUnaryIntrRM<"sqrt">;
+def LLVM_ConstrainedSinIntr   : LLVM_ConstrainedUnaryIntrRM<"sin">;
+def LLVM_ConstrainedCosIntr   : LLVM_ConstrainedUnaryIntrRM<"cos">;
+def LLVM_ConstrainedTanIntr   : LLVM_ConstrainedUnaryIntrRM<"tan">;
+def LLVM_ConstrainedASinIntr  : LLVM_ConstrainedUnaryIntrRM<"asin">;
+def LLVM_ConstrainedACosIntr  : LLVM_ConstrainedUnaryIntrRM<"acos">;
+def LLVM_ConstrainedATanIntr  : LLVM_ConstrainedUnaryIntrRM<"atan">;
+def LLVM_ConstrainedSinhIntr  : LLVM_ConstrainedUnaryIntrRM<"sinh">;
+def LLVM_ConstrainedCoshIntr  : LLVM_ConstrainedUnaryIntrRM<"cosh">;
+def LLVM_ConstrainedTanhIntr  : LLVM_ConstrainedUnaryIntrRM<"tanh">;
+def LLVM_ConstrainedExpIntr   : LLVM_ConstrainedUnaryIntrRM<"exp">;
+def LLVM_ConstrainedExp2Intr  : LLVM_ConstrainedUnaryIntrRM<"exp2">;
+def LLVM_ConstrainedLogIntr   : LLVM_ConstrainedUnaryIntrRM<"log">;
+def LLVM_ConstrainedLog10Intr : LLVM_ConstrainedUnaryIntrRM<"log10">;
+def LLVM_ConstrainedLog2Intr  : LLVM_ConstrainedUnaryIntrRM<"log2">;
+
+// Unary rounding functions (do not support a rounding mode).
+def LLVM_ConstrainedCeilIntr      : LLVM_ConstrainedUnaryIntrNoRM<"ceil">;
+def LLVM_ConstrainedFloorIntr     : LLVM_ConstrainedUnaryIntrNoRM<"floor">;
+def LLVM_ConstrainedRoundIntr     : LLVM_ConstrainedUnaryIntrNoRM<"round">;
+def LLVM_ConstrainedRoundEvenIntr : LLVM_ConstrainedUnaryIntrNoRM<"roundeven">;
+def LLVM_ConstrainedTruncIntr     : LLVM_ConstrainedUnaryIntrNoRM<"trunc">;
+
+// Binary functions (support a rounding mode).
+def LLVM_ConstrainedPowIntr   : LLVM_ConstrainedBinaryIntrRM<"pow">;
+def LLVM_ConstrainedATan2Intr : LLVM_ConstrainedBinaryIntrRM<"atan2">;
 
 def LLVM_ConstrainedUIToFP
     : LLVM_ConstrainedIntr<"uitofp", /*numArgs=*/1,

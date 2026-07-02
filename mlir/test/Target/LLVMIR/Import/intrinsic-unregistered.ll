@@ -85,14 +85,14 @@ define signext i32 @test_intrin_arg_attr(i32 signext %a) nounwind {
 ; imported as `llvm.mlir.metadata_as_value` ops wrapping the corresponding
 ; `#llvm.md_string` attribute.
 
-declare float @llvm.experimental.constrained.sqrt.f32(float, metadata, metadata)
+declare float @llvm.experimental.constrained.nearbyint.f32(float, metadata, metadata)
 
-; CHECK-LABEL: llvm.func @constrained_sqrt
-define float @constrained_sqrt(float %a) {
+; CHECK-LABEL: llvm.func @constrained_nearbyint
+define float @constrained_nearbyint(float %a) {
   ; CHECK: %[[RM:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"round.tonearest">
   ; CHECK: %[[EB:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
-  ; CHECK: %{{.*}} = llvm.call_intrinsic "llvm.experimental.constrained.sqrt.f32"(%{{.*}}, %[[RM]], %[[EB]]) : (f32, !llvm.metadata, !llvm.metadata) -> f32
-  %r = call float @llvm.experimental.constrained.sqrt.f32(float %a, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  ; CHECK: %{{.*}} = llvm.call_intrinsic "llvm.experimental.constrained.nearbyint.f32"(%{{.*}}, %[[RM]], %[[EB]]) : (f32, !llvm.metadata, !llvm.metadata) -> f32
+  %r = call float @llvm.experimental.constrained.nearbyint.f32(float %a, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %r
 }
 
