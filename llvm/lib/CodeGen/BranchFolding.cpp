@@ -1286,6 +1286,11 @@ static bool IsBranchOnlyBlock(MachineBasicBlock *MBB) {
   return I->isBranch();
 }
 
+static bool HasPseudoProbe(const MachineBasicBlock &MBB) {
+  return llvm::any_of(
+      MBB, [](const MachineInstr &MI) { return MI.isPseudoProbe(); });
+}
+
 /// IsBetterFallthrough - Return true if it would be clearly better to
 /// fall-through to MBB1 than to fall through into MBB2.  This has to return
 /// a strict ordering, returning true for both (MBB1,MBB2) and (MBB2,MBB1) will
@@ -1350,6 +1355,13 @@ static void salvageDebugInfoFromEmptyBlock(const TargetInstrInfo *TII,
   for (MachineBasicBlock *SuccBB : MBB.successors())
     if (SuccBB->pred_size() == 1)
       copyDebugInfoToSuccessor(TII, MBB, *SuccBB);
+
+  // Prevent O(N^2) getFirstTerminator() rescans in long chains of empty blocks
+  // (a pattern common with llvm.pseudoprobe) by not salvaging them into
+  // predecessor debug tails.
+  if (HasPseudoProbe(MBB))
+    return;
+
   // If this MBB is the only successor of a predecessor it is legal to copy the
   // DBG_VALUE instructions to the end of the predecessor (just before the
   // terminators, assuming that the terminator isn't affecting the DBG_VALUE).
