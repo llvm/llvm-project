@@ -272,24 +272,17 @@ namespace llvm {
       return MVT::getVectorVT(EltVT, EltCnt * 2);
     }
 
-    MVT placeholder_206783(MVT EltVT) const {
-      EltVT = EltVT.getScalarType();
-      return isVector() ? changeVectorElementType(EltVT) : EltVT;
-    }
-
-    // Return a VT for an Integer type doubled in size
+    // Return a VT for an Integer or vetor of integer type doubled in size
     MVT widenIntegerElementType() const {
       const MVT BaseTy = getScalarType();
-      assert(BaseTy.isInteger() &&
-             "Not an integer or vector of integer MVT!");
+      assert(BaseTy.isInteger() && "Not an integer or vector of integer MVT!");
       assert((BaseTy != MVT::LAST_INTEGER_VALUETYPE) &&
              "Widening of this Integer type not supported !");
 
       MVT ResTy =
-          placeholder_206783(getIntegerVT(BaseTy.getScalarSizeInBits() * 2));
+          changeElementType(getIntegerVT(BaseTy.getScalarSizeInBits() * 2));
       assert(ResTy != MVT::INVALID_SIMPLE_VALUE_TYPE &&
              "Failed to widened to a valid MVT!");
-
       return ResTy;
     }
 
