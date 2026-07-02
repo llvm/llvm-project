@@ -1744,9 +1744,13 @@ public:
 
   const MachineOperand &getCalleeOperand(const MachineInstr &MI) const override;
 
-  ValueUniformity getValueUniformity(const MachineInstr &MI) const final;
+  ValueUniformity getValueUniformity(const MachineInstr &MI,
+                                     const MachineRegisterInfo &MRI,
+                                     unsigned DefIdx) const final;
 
   ValueUniformity getGenericValueUniformity(const MachineInstr &MI) const;
+
+  bool isTerminatorDivergent(const MachineInstr &MI) const final;
 
   const MIRFormatter *getMIRFormatter() const override;
 

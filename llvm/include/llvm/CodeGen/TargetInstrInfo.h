@@ -2369,9 +2369,21 @@ public:
     llvm_unreachable("impossible call instruction");
   }
 
-  /// Return the uniformity behavior of the given value.
-  virtual ValueUniformity getValueUniformity(const MachineInstr &MI) const {
+  /// Return the uniformity behavior of the value defined by the \p DefIdx-th
+  /// def operand (in MachineInstr::all_defs() order) of \p MI. \p MI must not
+  /// be a terminator and \p DefIdx must refer to a virtual register def; use
+  /// isTerminatorDivergent() to query branch divergence for terminators.
+  virtual ValueUniformity getValueUniformity(const MachineInstr &MI,
+                                             const MachineRegisterInfo &MRI,
+                                             unsigned DefIdx) const {
     return ValueUniformity::Default;
+  }
+
+  /// Return true if \p MI is a terminator whose branch divergence is
+  /// independent of its operands (an unconditional source of control
+  /// divergence).
+  virtual bool isTerminatorDivergent(const MachineInstr &MI) const {
+    return false;
   }
 
   /// Returns true if the given \p MI defines a TargetIndex operand that can be
