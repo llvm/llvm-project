@@ -96,6 +96,15 @@ static int64_t getDynAllocaAmount(MachineInstr *MI, MachineRegisterInfo *MRI) {
   Register AmountReg = MI->getOperand(0).getReg();
   MachineInstr *Def = MRI->getUniqueVRegDef(AmountReg);
 
+  // A zero amount uses the MOV32r0 idiom, not MOV32ri 0 / MOV64ri 0. For
+  // DYN_ALLOCA_64 the 32-bit zero is widened to 64 bits via SUBREG_TO_REG.
+  if (Def && Def->getOpcode() == X86::SUBREG_TO_REG &&
+      Def->getOperand(1).isReg() &&
+      Def->getOperand(2).getImm() == X86::sub_32bit)
+    Def = MRI->getUniqueVRegDef(Def->getOperand(1).getReg());
+  if (Def && Def->getOpcode() == X86::MOV32r0)
+    return 0;
+
   if (!Def ||
       (Def->getOpcode() != X86::MOV32ri && Def->getOpcode() != X86::MOV64ri) ||
       !Def->getOperand(1).isImm())
@@ -211,7 +220,22 @@ void X86DynAllocaExpander::lower(MachineInstr *MI, Lowering L) {
 
   int64_t Amount = getDynAllocaAmount(MI, MRI);
   if (Amount == 0) {
+    Register AmountReg = MI->getOperand(0).getReg();
     MI->eraseFromParent();
+    // Delete the now-dead amount def. Zero is materialized as MOV32r0 (or, in
+    // principle, MOV32ri/MOV64ri 0), widened to 64 bits via SUBREG_TO_REG for
+    // DYN_ALLOCA_64; peel that widening first, if present.
+    if (MRI->use_empty(AmountReg)) {
+      MachineInstr *Def = MRI->getUniqueVRegDef(AmountReg);
+      if (Def && Def->getOpcode() == X86::SUBREG_TO_REG &&
+          Def->getOperand(1).isReg()) {
+        Register SubReg = Def->getOperand(1).getReg();
+        Def->eraseFromParent();
+        Def = MRI->use_empty(SubReg) ? MRI->getUniqueVRegDef(SubReg) : nullptr;
+      }
+      if (Def)
+        Def->eraseFromParent();
+    }
     return;
   }
 
