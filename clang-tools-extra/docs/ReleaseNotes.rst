@@ -571,6 +571,9 @@ Changes in existing checks
   - Fixed false positives when pointers were later passed or bound through
     ``const``-qualified pointer references.
 
+  - Fixed false positive where a pointer returned as a non-const ``void *``
+    was incorrectly diagnosed as allowing its pointee to be made ``const``.
+
 - Improved :doc:`misc-multiple-inheritance
   <clang-tidy/checks/misc/multiple-inheritance>` by avoiding false positives when
   virtual inheritance causes concrete bases to be counted more than once.
