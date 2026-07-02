@@ -3650,7 +3650,7 @@ public:
       DR->getQualifier().print(OS, Policy, true);
       // Then print the decl itself.
       const ValueDecl *VD = DR->getDecl();
-      OS << VD->getName();
+      OS << *VD;
       if (const auto *IV = dyn_cast<VarTemplateSpecializationDecl>(VD)) {
         // This is a template variable, print the expanded template arguments.
         printTemplateArgumentList(
