@@ -4846,6 +4846,18 @@ const SCEV *ScalarEvolution::getMinusSCEV(SCEVUse LHS, SCEVUse RHS,
   if (LHS == RHS)
     return getZero(LHS->getType());
 
+  // URem identity: X - C*(X u/ C) --> X u% C, for power-of-two C.
+  if (const auto *Mul = dyn_cast<SCEVMulExpr>(RHS);
+      Mul && Mul->getNumOperands() == 2 && LHS->getType() == RHS->getType()) {
+    const auto *MC = dyn_cast<SCEVConstant>(Mul->getOperand(0));
+    const auto *UD = dyn_cast<SCEVUDivExpr>(Mul->getOperand(1));
+    if (MC && UD && MC->getAPInt().isPowerOf2() && UD->getLHS() == LHS) {
+      const auto *UDC = dyn_cast<SCEVConstant>(UD->getRHS());
+      if (UDC && UDC->getAPInt() == MC->getAPInt())
+        return getURemExpr(LHS, MC);
+    }
+  }
+
   // If we subtract two pointers with different pointer bases, bail.
   // Eventually, we're going to add an assertion to getMulExpr that we
   // can't multiply by a pointer.
@@ -11496,6 +11508,13 @@ bool ScalarEvolution::isKnownViaInduction(CmpPredicate Pred, SCEVUse LHS,
 
 bool ScalarEvolution::isKnownPredicate(CmpPredicate Pred, SCEVUse LHS,
                                        SCEVUse RHS) {
+  // Analyze AddRec for LHS before
+  // SimplifyICmpOperands can drop the nuw flag on an AddRec
+  // e.g. ULE(AR<nuw>, X) -> ULT(AR-1, X).
+
+  if (isKnownPredicateViaAddRecBound(Pred, LHS, RHS))
+    return true;
+
   // Canonicalize the inputs first.
   (void)SimplifyICmpOperands(Pred, LHS, RHS);
 
@@ -11811,7 +11830,27 @@ bool ScalarEvolution::isKnownPredicateViaConstantRanges(CmpPredicate Pred,
     return !isa<SCEVCouldNotCompute>(Diff) && isKnownNonZero(Diff);
   }
 
-  return CheckRange(CmpInst::isSigned(Pred));
+  if (CheckRange(CmpInst::isSigned(Pred)))
+    return true;
+
+  // LHS u<= RHS if Diff = RHS - LHS does not underflow.
+  // Range check: max(LHS) + max(Diff) <= UINT_MAX (i.e. DMax u<= ~LMax).
+  // ULT additionally requires Diff != 0.
+  if (Pred == CmpInst::ICMP_ULE || Pred == CmpInst::ICMP_ULT) {
+    SCEVUse Diff = getMinusSCEV(RHS, LHS);
+    if (!isa<SCEVCouldNotCompute>(Diff)) {
+      ConstantRange DR = getUnsignedRange(Diff);
+      ConstantRange LR = getUnsignedRange(LHS);
+      if (!DR.isFullSet() && !LR.isFullSet() &&
+          DR.getUnsignedMax().ule(~LR.getUnsignedMax())) {
+        if (Pred == CmpInst::ICMP_ULE ||
+            DR.getUnsignedMin().ugt(0) /*ULE Diff>0*/)
+          return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 bool ScalarEvolution::isKnownPredicateViaNoOverflow(CmpPredicate Pred,
@@ -13216,6 +13255,39 @@ static bool isKnownPredicateExtendIdiom(CmpPredicate Pred, const SCEV *LHS,
     return false;
   };
   llvm_unreachable("unhandled case");
+}
+
+// Prove the predicate by reasoning about an AddRec on LHS together with the
+// loop's iteration bound on RHS.
+//  LHS=affine {start,+,step}<L>  step >u 0 and nuw, RHS loop-invariant in L,
+//      LHS can be replaced by value at MaxIterationValue
+
+bool ScalarEvolution::isKnownPredicateViaAddRecBound(CmpPredicate Pred,
+                                                     SCEVUse LHS, SCEVUse RHS) {
+  if (Pred == ICmpInst::ICMP_UGE || Pred == ICmpInst::ICMP_UGT) {
+    std::swap(LHS, RHS);
+    Pred = ICmpInst::getSwappedCmpPredicate(Pred);
+  }
+  if (Pred != ICmpInst::ICMP_ULE && Pred != ICmpInst::ICMP_ULT)
+    return false;
+  const auto *AR = dyn_cast<SCEVAddRecExpr>(LHS);
+  if (!AR || !AR->isAffine() || !AR->hasNoUnsignedWrap())
+    return false;
+  const Loop *L = AR->getLoop();
+  if (!isLoopInvariant(RHS, L))
+    return false;
+
+  if (!isKnownPositive(AR->getStepRecurrence(*this)))
+    return false;
+
+  const SCEV *BTC = getSymbolicMaxBackedgeTakenCount(L);
+  if (isa<SCEVCouldNotCompute>(BTC))
+    return false;
+
+  const SCEV *MaxVal = AR->evaluateAtIteration(BTC, *this);
+
+  // MaxVal is loop-invariant for L, so this does not recurse.
+  return isKnownViaNonRecursiveReasoning(Pred, MaxVal, RHS);
 }
 
 bool ScalarEvolution::isKnownViaNonRecursiveReasoning(CmpPredicate Pred,
