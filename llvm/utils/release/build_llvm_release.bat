@@ -265,6 +265,7 @@ set all_cmake_flags=^
   %cmake_flags% ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;lldb;" ^
   %common_lldb_flags% ^
+  %swig_cmake_flags% ^
   -DPYTHON_HOME=%PYTHONHOME% ^
   -DCMAKE_C_COMPILER=%stage0_bin_dir%/clang-cl.exe ^
   -DCMAKE_CXX_COMPILER=%stage0_bin_dir%/clang-cl.exe ^
@@ -357,6 +358,7 @@ call :do_generate_profile || exit /b 1
 cmake -GNinja %cmake_flags% ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;lldb;flang;mlir" ^
   %common_lldb_flags% ^
+  %swig_cmake_flags% ^
   -DPYTHON_HOME=%PYTHONHOME% ^
   %cmake_profile_flags% %llvm_src%\llvm || exit /b 1
 ninja || ninja || ninja || exit /b 1
@@ -407,6 +409,33 @@ if "%local-python%" == "true" (
   set PYTHONHOME=%python_dir%
 )
 set PATH=%PYTHONHOME%;%PATH%
+
+REM Detect SWIG and resolve SWIG_DIR/SWIG_EXECUTABLE for CMake. WinGet
+REM installs swig.exe as a symlink whose -swiglib reports a path relative to
+REM the shim directory, not the real installation. When that happens, resolve
+REM the symlink target with 'dir /AL' and point CMake at the real executable.
+set swig_cmake_flags=
+set swig_found=
+FOR /F "delims=" %%s IN ('where swig.exe 2^>nul') DO if not defined swig_found set "swig_found=%%s"
+if defined swig_found (
+  FOR /F "delims=" %%d IN ('"!swig_found!" -swiglib') DO set "swig_lib=%%d"
+  if exist "!swig_lib!\swig.swg" (
+    set "swig_cmake_flags=-DSWIG_DIR=!swig_lib!"
+  ) else (
+    REM -swiglib returned an invalid path; check if the exe is a symlink.
+    FOR /F "tokens=2 delims=[]" %%t IN ('dir /AL "!swig_found!" 2^>nul ^| findstr /C:"SYMLINK"') DO (
+      if exist "%%~dptLib\swig.swg" (
+        set "swig_cmake_flags=-DSWIG_EXECUTABLE=%%t -DSWIG_DIR=%%~dptLib"
+      )
+    )
+  )
+  if defined swig_cmake_flags (
+    echo Found SWIG: !swig_found!
+    echo SWIG flags: !swig_cmake_flags!
+  ) else (
+    echo WARNING: swig.exe found but could not resolve SWIG library directory
+  )
+)
 
 set "VSCMD_START_DIR=%build_dir%"
 
