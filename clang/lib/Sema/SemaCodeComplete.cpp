@@ -415,6 +415,16 @@ public:
   bool IsImpossibleToSatisfy(const NamedDecl *ND) const;
   //@}
 };
+
+const FunctionDecl *BetterSingature(const FunctionDecl *Function,
+                                    unsigned Start) {
+  // Note that `redecls()` traverses from last to first declaration.
+  for (auto *Redecl : Function->redecls())
+    for (unsigned P = Start, N = Function->getNumParams(); P != N; ++P)
+      if (Redecl->getParamDecl(P)->getIdentifier())
+        return Redecl;
+  return Function;
+}
 } // namespace
 
 void PreferredTypeBuilder::enterReturn(Sema &S, SourceLocation Tok) {
@@ -3320,8 +3330,11 @@ static void AddFunctionParameterChunks(
   bool FirstParameter = true;
   bool AsInformativeChunk = !(FunctionCanBeCall || IsInDeclarationContext);
 
+  // Create consistent result between AST and Index.
+  const FunctionDecl *BetterSignatureDecl = BetterSingature(Function, Start);
+
   for (unsigned P = Start, N = Function->getNumParams(); P != N; ++P) {
-    const ParmVarDecl *Param = Function->getParamDecl(P);
+    const ParmVarDecl *Param = BetterSignatureDecl->getParamDecl(P);
 
     if (Param->hasDefaultArg() && !InOptional && !IsInDeclarationContext &&
         !AsInformativeChunk) {
