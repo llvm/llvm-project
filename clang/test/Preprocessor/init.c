@@ -514,7 +514,7 @@
 // MSP430-NOT:#define __LP64__
 // MSP430:#define __MSP430__ 1
 // MSP430:#define __POINTER_WIDTH__ 16
-// MSP430:#define __PTRDIFF_TYPE__ int
+// MSP430:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // MSP430:#define __PTRDIFF_WIDTH__ 16
 // MSP430:#define __SCHAR_MAX__ 127
 // MSP430:#define __SHRT_MAX__ 32767
@@ -533,7 +533,7 @@
 // MSP430:#define __SIZEOF_WCHAR_T__ 2
 // MSP430:#define __SIZEOF_WINT_T__ 2
 // MSP430:#define __SIZE_MAX__ 65535U
-// MSP430:#define __SIZE_TYPE__ unsigned int
+// MSP430:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // MSP430:#define __SIZE_WIDTH__ 16
 // MSP430-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 2U
 // MSP430:#define __UINT16_C(c) c##U
@@ -712,7 +712,7 @@
 // NVPTX32:#define __NVPTX__ 1
 // NVPTX32:#define __POINTER_WIDTH__ 32
 // NVPTX32:#define __PRAGMA_REDEFINE_EXTNAME 1
-// NVPTX32:#define __PTRDIFF_TYPE__ int
+// NVPTX32:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // NVPTX32:#define __PTRDIFF_WIDTH__ 32
 // NVPTX32:#define __PTX__ 1
 // NVPTX32:#define __SCHAR_MAX__ 127
@@ -732,7 +732,7 @@
 // NVPTX32:#define __SIZEOF_WCHAR_T__ 4
 // NVPTX32:#define __SIZEOF_WINT_T__ 4
 // NVPTX32:#define __SIZE_MAX__ 4294967295U
-// NVPTX32:#define __SIZE_TYPE__ unsigned int
+// NVPTX32:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // NVPTX32:#define __SIZE_WIDTH__ 32
 // NVPTX32-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 8U
 // NVPTX32:#define __UINT16_C(c) c
@@ -910,7 +910,7 @@
 // NVPTX64:#define __NVPTX__ 1
 // NVPTX64:#define __POINTER_WIDTH__ 64
 // NVPTX64:#define __PRAGMA_REDEFINE_EXTNAME 1
-// NVPTX64:#define __PTRDIFF_TYPE__ long int
+// NVPTX64:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // NVPTX64:#define __PTRDIFF_WIDTH__ 64
 // NVPTX64:#define __PTX__ 1
 // NVPTX64:#define __SCHAR_MAX__ 127
@@ -930,7 +930,7 @@
 // NVPTX64:#define __SIZEOF_WCHAR_T__ 4
 // NVPTX64:#define __SIZEOF_WINT_T__ 4
 // NVPTX64:#define __SIZE_MAX__ 18446744073709551615UL
-// NVPTX64:#define __SIZE_TYPE__ long unsigned int
+// NVPTX64:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // NVPTX64:#define __SIZE_WIDTH__ 64
 // NVPTX64-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 8UL
 // NVPTX64:#define __UINT16_C(c) c
@@ -1123,8 +1123,8 @@
 // SPARC:#define __LONG_MAX__ 2147483647L
 // SPARC-NOT:#define __LP64__
 // SPARC:#define __POINTER_WIDTH__ 32
-// SPARC-DEFAULT:#define __PTRDIFF_TYPE__ int
-// SPARC-NETOPENBSD:#define __PTRDIFF_TYPE__ long int
+// SPARC-DEFAULT:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
+// SPARC-NETOPENBSD:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // SPARC:#define __PTRDIFF_WIDTH__ 32
 // SPARC:#define __REGISTER_PREFIX__
 // SPARC:#define __SCHAR_MAX__ 127
@@ -1144,9 +1144,9 @@
 // SPARC:#define __SIZEOF_WCHAR_T__ 4
 // SPARC:#define __SIZEOF_WINT_T__ 4
 // SPARC-DEFAULT:#define __SIZE_MAX__ 4294967295U
-// SPARC-DEFAULT:#define __SIZE_TYPE__ unsigned int
+// SPARC-DEFAULT:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // SPARC-NETOPENBSD:#define __SIZE_MAX__ 4294967295UL
-// SPARC-NETOPENBSD:#define __SIZE_TYPE__ long unsigned int
+// SPARC-NETOPENBSD:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // SPARC:#define __SIZE_WIDTH__ 32
 // SPARC-DEFAULT-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 8U
 // SPARC:#define __UINT16_C(c) c
@@ -1313,7 +1313,7 @@
 // TCE:#define __LONG_MAX__ 2147483647L
 // TCE-NOT:#define __LP64__
 // TCE:#define __POINTER_WIDTH__ 32
-// TCE:#define __PTRDIFF_TYPE__ int
+// TCE:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // TCE:#define __PTRDIFF_WIDTH__ 32
 // TCE:#define __SCHAR_MAX__ 127
 // TCE:#define __SHRT_MAX__ 32767
@@ -1332,7 +1332,7 @@
 // TCE:#define __SIZEOF_WCHAR_T__ 4
 // TCE:#define __SIZEOF_WINT_T__ 4
 // TCE:#define __SIZE_MAX__ 4294967295U
-// TCE:#define __SIZE_TYPE__ unsigned int
+// TCE:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // TCE:#define __SIZE_WIDTH__ 32
 // TCE-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 4U
 // TCE:#define __TCE_V1__ 1
@@ -1455,7 +1455,7 @@
 // PS4:#define __POINTER_WIDTH__ 64
 // PS5ONLY:#define __PROSPERO__ 1
 // PS4:#define __PTRDIFF_MAX__ 9223372036854775807L
-// PS4:#define __PTRDIFF_TYPE__ long int
+// PS4:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // PS4:#define __PTRDIFF_WIDTH__ 64
 // PS4:#define __REGISTER_PREFIX__
 // PS4:#define __SCE__ 1
@@ -1475,7 +1475,7 @@
 // PS4:#define __SIZEOF_SIZE_T__ 8
 // PS4:#define __SIZEOF_WCHAR_T__ 2
 // PS4:#define __SIZEOF_WINT_T__ 4
-// PS4:#define __SIZE_TYPE__ long unsigned int
+// PS4:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // PS4:#define __SIZE_WIDTH__ 64
 // PS4:#define __SSE2_MATH__ 1
 // PS4:#define __SSE2__ 1
@@ -1603,8 +1603,8 @@
 // OPENBSD:#define __INTMAX_TYPE__ long long int
 // OPENBSD:#define __INTPTR_TYPE__ long int
 // OPENBSD:#define __OpenBSD__ 1
-// OPENBSD:#define __PTRDIFF_TYPE__ long int
-// OPENBSD:#define __SIZE_TYPE__ long unsigned int
+// OPENBSD:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
+// OPENBSD:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // OPENBSD:#define __UINT16_TYPE__ unsigned short
 // OPENBSD:#define __UINT32_TYPE__ unsigned int
 // OPENBSD:#define __UINT64_TYPE__ long long unsigned int
@@ -1925,7 +1925,7 @@
 // WEBASSEMBLY-NEXT:#define __PTRDIFF_FMTi__ "li"
 // WEBASSEMBLY32-NEXT:#define __PTRDIFF_MAX__ 2147483647L
 // WEBASSEMBLY64-NEXT:#define __PTRDIFF_MAX__ 9223372036854775807L
-// WEBASSEMBLY-NEXT:#define __PTRDIFF_TYPE__ long int
+// WEBASSEMBLY-NEXT:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // WEBASSEMBLY32-NEXT:#define __PTRDIFF_WIDTH__ 32
 // WEBASSEMBLY64-NEXT:#define __PTRDIFF_WIDTH__ 64
 // WEBASSEMBLY-NOT:#define __REGISTER_PREFIX__
@@ -1959,7 +1959,7 @@
 // WEBASSEMBLY-NEXT:#define __SIZE_FMTx__ "lx"
 // WEBASSEMBLY32-NEXT:#define __SIZE_MAX__ 4294967295UL
 // WEBASSEMBLY64-NEXT:#define __SIZE_MAX__ 18446744073709551615UL
-// WEBASSEMBLY-NEXT:#define __SIZE_TYPE__ long unsigned int
+// WEBASSEMBLY-NEXT:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // WEBASSEMBLY32-NEXT:#define __SIZE_WIDTH__ 32
 // WEBASSEMBLY64-NEXT:#define __SIZE_WIDTH__ 64
 // WEBASSEMBLY-NEXT:#define __STDC_EMBED_EMPTY__ 2
@@ -2244,7 +2244,7 @@
 // AVR:#define __ORDER_PDP_ENDIAN__ 3412
 // AVR:#define __PRAGMA_REDEFINE_EXTNAME 1
 // AVR:#define __PTRDIFF_MAX__ 32767
-// AVR:#define __PTRDIFF_TYPE__ int
+// AVR:#define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // AVR:#define __SCHAR_MAX__ 127
 // AVR:#define __SHRT_MAX__ 32767
 // AVR:#define __SIG_ATOMIC_MAX__ 127
@@ -2262,7 +2262,7 @@
 // AVR:#define __SIZEOF_WCHAR_T__ 2
 // AVR:#define __SIZEOF_WINT_T__ 2
 // AVR:#define __SIZE_MAX__ 65535U
-// AVR:#define __SIZE_TYPE__ unsigned int
+// AVR:#define __SIZE_TYPE__ __typeof(sizeof(0))
 // AVR:#define __STDC__ 1
 // AVR:#define __UINT16_MAX__ 65535U
 // AVR:#define __UINT16_TYPE__ unsigned int
@@ -2353,12 +2353,12 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macosx -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix MACOS-64 %s
 
 // MACOS-32: #define __INTPTR_TYPE__ long int
-// MACOS-32: #define __PTRDIFF_TYPE__ int
-// MACOS-32: #define __SIZE_TYPE__ long unsigned int
+// MACOS-32: #define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
+// MACOS-32: #define __SIZE_TYPE__ __typeof(sizeof(0))
 
 // MACOS-64: #define __INTPTR_TYPE__ long int
-// MACOS-64: #define __PTRDIFF_TYPE__ long int
-// MACOS-64: #define __SIZE_TYPE__ long unsigned int
+// MACOS-64: #define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
+// MACOS-64: #define __SIZE_TYPE__ __typeof(sizeof(0))
 
 // RUN: %clang_cc1 -triple i386-apple-ios-simulator -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix IOS-32 %s
 // RUN: %clang_cc1 -triple armv7-apple-ios -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix IOS-32 %s
@@ -2366,12 +2366,12 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix IOS-64 %s
 
 // IOS-32: #define __INTPTR_TYPE__ long int
-// IOS-32: #define __PTRDIFF_TYPE__ int
-// IOS-32: #define __SIZE_TYPE__ long unsigned int
+// IOS-32: #define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
+// IOS-32: #define __SIZE_TYPE__ __typeof(sizeof(0))
 
 // IOS-64: #define __INTPTR_TYPE__ long int
-// IOS-64: #define __PTRDIFF_TYPE__ long int
-// IOS-64: #define __SIZE_TYPE__ long unsigned int
+// IOS-64: #define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
+// IOS-64: #define __SIZE_TYPE__ __typeof(sizeof(0))
 
 // RUN: %clang_cc1 -triple i386-apple-tvos-simulator -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix TVOS-32 %s
 // RUN: %clang_cc1 -triple armv7-apple-tvos -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix TVOS-32 %s
@@ -2379,12 +2379,12 @@
 // RUN: %clang_cc1 -triple arm64-apple-tvos -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix TVOS-64 %s
 
 // TVOS-32: #define __INTPTR_TYPE__ long int
-// TVOS-32: #define __PTRDIFF_TYPE__ int
-// TVOS-32: #define __SIZE_TYPE__ long unsigned int
+// TVOS-32: #define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
+// TVOS-32: #define __SIZE_TYPE__ __typeof(sizeof(0))
 
 // TVOS-64: #define __INTPTR_TYPE__ long int
-// TVOS-64: #define __PTRDIFF_TYPE__ long int
-// TVOS-64: #define __SIZE_TYPE__ long unsigned int
+// TVOS-64: #define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
+// TVOS-64: #define __SIZE_TYPE__ __typeof(sizeof(0))
 
 // RUN: %clang_cc1 -triple i386-apple-watchos-simulator -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix WATCHOS-32 %s
 // RUN: %clang_cc1 -triple armv7k-apple-watchos -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix WATCHOS-64 %s
@@ -2392,23 +2392,23 @@
 // RUN: %clang_cc1 -triple arm64-apple-watchos -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix WATCHOS-64 %s
 
 // WATCHOS-32: #define __INTPTR_TYPE__ long int
-// WATCHOS-32: #define __PTRDIFF_TYPE__ int
-// WATCHOS-32: #define __SIZE_TYPE__ long unsigned int
+// WATCHOS-32: #define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
+// WATCHOS-32: #define __SIZE_TYPE__ __typeof(sizeof(0))
 
 // WATCHOS-64: #define __INTPTR_TYPE__ long int
-// WATCHOS-64: #define __PTRDIFF_TYPE__ long int
-// WATCHOS-64: #define __SIZE_TYPE__ long unsigned int
+// WATCHOS-64: #define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
+// WATCHOS-64: #define __SIZE_TYPE__ __typeof(sizeof(0))
 
 // RUN: %clang_cc1 -triple armv7-apple-none-macho -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix ARM-DARWIN-BAREMETAL-32 %s
 // RUN: %clang_cc1 -triple arm64-apple-none-macho -ffreestanding -dM -E /dev/null -o - | FileCheck -match-full-lines -check-prefix ARM-DARWIN-BAREMETAL-64 %s
 
 // ARM-DARWIN-BAREMETAL-32: #define __INTPTR_TYPE__ long int
-// ARM-DARWIN-BAREMETAL-32: #define __PTRDIFF_TYPE__ int
-// ARM-DARWIN-BAREMETAL-32: #define __SIZE_TYPE__ long unsigned int
+// ARM-DARWIN-BAREMETAL-32: #define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
+// ARM-DARWIN-BAREMETAL-32: #define __SIZE_TYPE__ __typeof(sizeof(0))
 
 // ARM-DARWIN-BAREMETAL-64: #define __INTPTR_TYPE__ long int
-// ARM-DARWIN-BAREMETAL-64: #define __PTRDIFF_TYPE__ long int
-// ARM-DARWIN-BAREMETAL-64: #define __SIZE_TYPE__ long unsigned int
+// ARM-DARWIN-BAREMETAL-64: #define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
+// ARM-DARWIN-BAREMETAL-64: #define __SIZE_TYPE__ __typeof(sizeof(0))
 
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=riscv32 < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefix=RISCV32 %s
@@ -2548,7 +2548,7 @@
 // RISCV32: #define __POINTER_WIDTH__ 32
 // RISCV32: #define __PRAGMA_REDEFINE_EXTNAME 1
 // RISCV32: #define __PTRDIFF_MAX__ 2147483647
-// RISCV32: #define __PTRDIFF_TYPE__ int
+// RISCV32: #define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // RISCV32: #define __PTRDIFF_WIDTH__ 32
 // RISCV32: #define __SCHAR_MAX__ 127
 // RISCV32: #define __SHRT_MAX__ 32767
@@ -2568,7 +2568,7 @@
 // RISCV32: #define __SIZEOF_WCHAR_T__ 4
 // RISCV32: #define __SIZEOF_WINT_T__ 4
 // RISCV32: #define __SIZE_MAX__ 4294967295U
-// RISCV32: #define __SIZE_TYPE__ unsigned int
+// RISCV32: #define __SIZE_TYPE__ __typeof(sizeof(0))
 // RISCV32: #define __SIZE_WIDTH__ 32
 // RISCV32: #define __STDC_HOSTED__ 0
 // RISCV32: #define __STDC_UTF_16__ 1
@@ -2773,7 +2773,7 @@
 // RISCV64: #define __POINTER_WIDTH__ 64
 // RISCV64: #define __PRAGMA_REDEFINE_EXTNAME 1
 // RISCV64: #define __PTRDIFF_MAX__ 9223372036854775807L
-// RISCV64: #define __PTRDIFF_TYPE__ long int
+// RISCV64: #define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // RISCV64: #define __PTRDIFF_WIDTH__ 64
 // RISCV64: #define __SCHAR_MAX__ 127
 // RISCV64: #define __SHRT_MAX__ 32767
@@ -2792,7 +2792,7 @@
 // RISCV64: #define __SIZEOF_WCHAR_T__ 4
 // RISCV64: #define __SIZEOF_WINT_T__ 4
 // RISCV64: #define __SIZE_MAX__ 18446744073709551615UL
-// RISCV64: #define __SIZE_TYPE__ long unsigned int
+// RISCV64: #define __SIZE_TYPE__ __typeof(sizeof(0))
 // RISCV64: #define __SIZE_WIDTH__ 64
 // RISCV64: #define __STDC_HOSTED__ 0
 // RISCV64: #define __STDC_UTF_16__ 1
@@ -3039,7 +3039,7 @@
 // XTENSA: #define __POINTER_WIDTH__ 32
 // XTENSA: #define __PRAGMA_REDEFINE_EXTNAME 1
 // XTENSA: #define __PTRDIFF_MAX__ 2147483647
-// XTENSA: #define __PTRDIFF_TYPE__ int
+// XTENSA: #define __PTRDIFF_TYPE__ __typeof((int*)0-(int*)0)
 // XTENSA: #define __PTRDIFF_WIDTH__ 32
 // XTENSA: #define __SCHAR_MAX__ 127
 // XTENSA: #define __SHRT_MAX__ 32767
@@ -3059,7 +3059,7 @@
 // XTENSA: #define __SIZEOF_WCHAR_T__ 4
 // XTENSA: #define __SIZEOF_WINT_T__ 4
 // XTENSA: #define __SIZE_MAX__ 4294967295U
-// XTENSA: #define __SIZE_TYPE__ unsigned int
+// XTENSA: #define __SIZE_TYPE__ __typeof(sizeof(0))
 // XTENSA: #define __SIZE_WIDTH__ 32
 // XTENSA: #define __STDC_EMBED_EMPTY__ 2
 // XTENSA: #define __STDC_EMBED_FOUND__ 1
