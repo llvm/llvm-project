@@ -3266,9 +3266,14 @@ SDValue SparcTargetLowering::PerformBSWAPCombine(SDNode *N,
   EVT VT = N->getValueType(0);
   bool IsLittleEndian = DAG.getDataLayout().isLittleEndian();
 
-  // Turn BSWAP (LOAD) -> ld*a #ASI_P(_L) on V9.
-  if (Subtarget->isV9() && ISD::isNormalLoad(Op.getNode()) &&
-      Op.getNode()->hasOneUse() &&
+  LoadSDNode *LN = dyn_cast<LoadSDNode>(Op.getNode());
+  bool IsAlignedLoad =
+      LN && ISD::isNormalLoad(Op.getNode()) &&
+      allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(), VT,
+                                     *LN->getMemOperand());
+
+  // Turn BSWAP (aligned-LOAD) -> ld*a #ASI_P(_L) on V9.
+  if (Subtarget->isV9() && IsAlignedLoad && Op.getNode()->hasOneUse() &&
       (VT == MVT::i16 || VT == MVT::i32 ||
        (Subtarget->is64Bit() && VT == MVT::i64))) {
     SDValue Load = Op;
@@ -3302,8 +3307,14 @@ SDValue SparcTargetLowering::PerformSTORECombine(SDNode *N,
   unsigned Opcode = Op.getOpcode();
   bool IsLittleEndian = DAG.getDataLayout().isLittleEndian();
 
-  // Turn STORE (BSWAP) -> st*a #ASI_P(_L) on V9.
+  StoreSDNode *SN = dyn_cast<StoreSDNode>(N);
+  bool IsAlignedStore = SN && allowsMemoryAccessForAlignment(
+                                  *DAG.getContext(), DAG.getDataLayout(), VT,
+                                  *SN->getMemOperand());
+
+  // Turn aligned-STORE (BSWAP) -> st*a #ASI_P(_L) on V9.
   if (Subtarget->isV9() && Opcode == ISD::BSWAP && Op.getNode()->hasOneUse() &&
+      IsAlignedStore &&
       (VT == MVT::i16 || VT == MVT::i32 ||
        (Subtarget->is64Bit() && VT == MVT::i64))) {
 
