@@ -320,8 +320,15 @@ static SPIRVTypeInst propagateSPIRVType(MachineInstr *MI,
         MIB.setInsertPt(*MI->getParent(), MI);
         const GlobalValue *Global = MI->getOperand(1).getGlobal();
         Type *ElementTy = toTypedPointer(GR->getDeducedGlobalValueType(Global));
-        auto *Ty = TypedPointerType::get(ElementTy,
-                                         Global->getType()->getAddressSpace());
+        unsigned AddrSpace = Global->getType()->getAddressSpace();
+        // Function pointers use CodeSectionINTEL storage class in SPIR-V when
+        // the SPV_INTEL_function_pointers extension is enabled.
+        const SPIRVSubtarget &ST = MIB.getMF().getSubtarget<SPIRVSubtarget>();
+        if (isa<Function>(Global) &&
+            ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers))
+          AddrSpace =
+              storageClassToAddressSpace(SPIRV::StorageClass::CodeSectionINTEL);
+        auto *Ty = TypedPointerType::get(ElementTy, AddrSpace);
         SpvType = GR->getOrCreateSPIRVType(
             Ty, MIB, SPIRV::AccessQualifier::ReadWrite, true);
         break;
@@ -371,10 +378,20 @@ static SPIRVTypeInst propagateSPIRVType(MachineInstr *MI,
             RegType.isPointer() &&
             storageClassToAddressSpace(GR->getPointerStorageClass(SpvType)) !=
                 RegType.getAddressSpace()) {
-          const SPIRVSubtarget &ST =
-              MI->getParent()->getParent()->getSubtarget<SPIRVSubtarget>();
-          auto TSC = addressSpaceToStorageClass(RegType.getAddressSpace(), ST);
-          SpvType = GR->changePointerStorageClass(SpvType, TSC, *MI);
+          // Don't correct CodeSectionINTEL back to Function for function
+          // pointer G_GLOBAL_VALUE - the LLVM register has address space 0
+          // but the SPIR-V type was intentionally set to CodeSectionINTEL.
+          bool SkipCorrection =
+              MI->getOpcode() == TargetOpcode::G_GLOBAL_VALUE &&
+              GR->getPointerStorageClass(SpvType) ==
+                  SPIRV::StorageClass::CodeSectionINTEL;
+          if (!SkipCorrection) {
+            const SPIRVSubtarget &ST =
+                MI->getParent()->getParent()->getSubtarget<SPIRVSubtarget>();
+            auto TSC =
+                addressSpaceToStorageClass(RegType.getAddressSpace(), ST);
+            SpvType = GR->changePointerStorageClass(SpvType, TSC, *MI);
+          }
         }
         GR->assignSPIRVTypeToVReg(SpvType, Reg, MIB.getMF());
       }
