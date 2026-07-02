@@ -139,6 +139,31 @@ static constexpr llvm::StringLiteral g_executable_path = "@executable_path";
 
 LLDB_PLUGIN_DEFINE(ObjectFileMachO)
 
+/// Read a Mach-O load-command header (cmd + cmdsize) from \p data at
+/// \p offset into \p cmd, advancing \p offset by 8 bytes.  \p T may be
+/// \c llvm::MachO::load_command or any of its richer variants
+/// (\c thread_command, \c dylib_command, \c encryption_info_command, ...);
+/// only the leading cmd/cmdsize fields are touched by this read.  Returns
+/// false on EOF or on a cmdsize smaller than sizeof(load_command), in which
+/// case callers should break out of their load-command loop to avoid spinning
+/// on malformed input.
+template <typename T>
+static bool ReadMachOCommand(const DataExtractor &data, lldb::offset_t &offset,
+                             T &cmd) {
+  static_assert(offsetof(T, cmd) == 0, "T::cmd must be the first field");
+  static_assert(offsetof(T, cmdsize) == sizeof(uint32_t),
+                "T::cmdsize must immediately follow T::cmd");
+  static_assert(std::is_same<decltype(T::cmd), uint32_t>::value,
+                "T::cmd must be uint32_t");
+  static_assert(std::is_same<decltype(T::cmdsize), uint32_t>::value,
+                "T::cmdsize must be uint32_t");
+  if (data.GetU32(&offset, &cmd, 2) == nullptr)
+    return false;
+  if (cmd.cmdsize < sizeof(load_command))
+    return false;
+  return true;
+}
+
 static void PrintRegisterValue(RegisterContext *reg_ctx, const char *name,
                                const char *alt_name, size_t reg_byte_size,
                                Stream &data) {
@@ -1305,7 +1330,7 @@ bool ObjectFileMachO::IsStripped() {
         const lldb::offset_t load_cmd_offset = offset;
 
         llvm::MachO::load_command lc = {};
-        if (m_data_nsp->GetU32(&offset, &lc.cmd, 2) == nullptr)
+        if (!ReadMachOCommand(*m_data_nsp, offset, lc))
           break;
         if (lc.cmd == LC_DYSYMTAB) {
           m_dysymtab.cmd = lc.cmd;
@@ -1334,7 +1359,7 @@ ObjectFileMachO::EncryptedFileRanges ObjectFileMachO::GetEncryptedFileRanges() {
   llvm::MachO::encryption_info_command encryption_cmd;
   for (uint32_t i = 0; i < m_header.ncmds; ++i) {
     const lldb::offset_t load_cmd_offset = offset;
-    if (m_data_nsp->GetU32(&offset, &encryption_cmd, 2) == nullptr)
+    if (!ReadMachOCommand(*m_data_nsp, offset, encryption_cmd))
       break;
 
     // LC_ENCRYPTION_INFO and LC_ENCRYPTION_INFO_64 have the same sizes for the
@@ -1880,7 +1905,7 @@ void ObjectFileMachO::CreateSections(SectionList &unified_section_list) {
   llvm::MachO::load_command load_cmd;
   for (uint32_t i = 0; i < m_header.ncmds; ++i) {
     const lldb::offset_t load_cmd_offset = offset;
-    if (m_data_nsp->GetU32(&offset, &load_cmd, 2) == nullptr)
+    if (!ReadMachOCommand(*m_data_nsp, offset, load_cmd))
       break;
 
     if (load_cmd.cmd == LC_SEGMENT || load_cmd.cmd == LC_SEGMENT_64)
@@ -2114,7 +2139,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
     const lldb::offset_t cmd_offset = offset;
     // Read in the load command and load command size
     llvm::MachO::load_command lc;
-    if (m_data_nsp->GetU32(&offset, &lc, 2) == nullptr)
+    if (!ReadMachOCommand(*m_data_nsp, offset, lc))
       break;
     // Watch for the symbol table load command
     switch (lc.cmd) {
@@ -4468,7 +4493,7 @@ UUID ObjectFileMachO::GetUUID(const llvm::MachO::mach_header &header,
   lldb::offset_t offset = lc_offset;
   for (i = 0; i < header.ncmds; ++i) {
     const lldb::offset_t cmd_offset = offset;
-    if (data.GetU32(&offset, &load_cmd, 2) == nullptr)
+    if (!ReadMachOCommand(data, offset, load_cmd))
       break;
 
     if (load_cmd.cmd == LC_UUID) {
@@ -4627,7 +4652,7 @@ void ObjectFileMachO::GetAllArchSpecs(const llvm::MachO::mach_header &header,
   lldb::offset_t offset = lc_offset;
   for (uint32_t i = 0; i < header.ncmds; ++i) {
     const lldb::offset_t cmd_offset = offset;
-    if (data.GetU32(&offset, &load_cmd, 2) == nullptr)
+    if (!ReadMachOCommand(data, offset, load_cmd))
       break;
 
     llvm::MachO::version_min_command version_min;
@@ -4677,7 +4702,7 @@ void ObjectFileMachO::GetAllArchSpecs(const llvm::MachO::mach_header &header,
   offset = lc_offset;
   for (uint32_t i = 0; i < header.ncmds; ++i) {
     const lldb::offset_t cmd_offset = offset;
-    if (data.GetU32(&offset, &load_cmd, 2) == nullptr)
+    if (!ReadMachOCommand(data, offset, load_cmd))
       break;
 
     do {
@@ -4763,7 +4788,7 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
   uint32_t i;
   for (i = 0; i < m_header.ncmds; ++i) {
     const uint32_t cmd_offset = offset;
-    if (m_data_nsp->GetU32(&offset, &load_cmd, 2) == nullptr)
+    if (!ReadMachOCommand(*m_data_nsp, offset, load_cmd))
       break;
 
     switch (load_cmd.cmd) {
@@ -4911,7 +4936,7 @@ lldb_private::Address ObjectFileMachO::GetEntryPointAddress() {
 
     for (i = 0; i < m_header.ncmds; ++i) {
       const lldb::offset_t cmd_offset = offset;
-      if (m_data_nsp->GetU32(&offset, &load_cmd, 2) == nullptr)
+      if (!ReadMachOCommand(*m_data_nsp, offset, load_cmd))
         break;
 
       switch (load_cmd.cmd) {
@@ -5051,7 +5076,7 @@ uint32_t ObjectFileMachO::GetNumThreadContexts() {
       llvm::MachO::thread_command thread_cmd;
       for (uint32_t i = 0; i < m_header.ncmds; ++i) {
         const uint32_t cmd_offset = offset;
-        if (m_data_nsp->GetU32(&offset, &thread_cmd, 2) == nullptr)
+        if (!ReadMachOCommand(*m_data_nsp, offset, thread_cmd))
           break;
 
         if (thread_cmd.cmd == LC_THREAD) {
@@ -5077,7 +5102,7 @@ ObjectFileMachO::FindLC_NOTEByName(std::string name) {
     for (uint32_t i = 0; i < m_header.ncmds; ++i) {
       const uint32_t cmd_offset = offset;
       llvm::MachO::load_command lc = {};
-      if (m_data_nsp->GetU32(&offset, &lc.cmd, 2) == nullptr)
+      if (!ReadMachOCommand(*m_data_nsp, offset, lc))
         break;
       if (lc.cmd == LC_NOTE) {
         char data_owner[17];
@@ -5127,7 +5152,7 @@ std::string ObjectFileMachO::GetIdentifierString() {
     for (uint32_t i = 0; i < m_header.ncmds; ++i) {
       const uint32_t cmd_offset = offset;
       llvm::MachO::ident_command ident_command;
-      if (m_data_nsp->GetU32(&offset, &ident_command, 2) == nullptr)
+      if (!ReadMachOCommand(*m_data_nsp, offset, ident_command))
         break;
       if (ident_command.cmd == LC_IDENT && ident_command.cmdsize != 0) {
         std::string result(ident_command.cmdsize, '\0');
@@ -5552,7 +5577,7 @@ llvm::VersionTuple ObjectFileMachO::GetVersion() {
     uint32_t i;
     for (i = 0; i < m_header.ncmds; ++i) {
       const lldb::offset_t cmd_offset = offset;
-      if (m_data_nsp->GetU32(&offset, &load_cmd, 2) == nullptr)
+      if (!ReadMachOCommand(*m_data_nsp, offset, load_cmd))
         break;
 
       if (load_cmd.cmd == LC_ID_DYLIB) {
@@ -5712,7 +5737,7 @@ static llvm::VersionTuple FindMinimumVersionInfo(DataExtractor &data,
   for (size_t i = 0; i < ncmds; i++) {
     const lldb::offset_t load_cmd_offset = offset;
     llvm::MachO::load_command lc = {};
-    if (data.GetU32(&offset, &lc.cmd, 2) == nullptr)
+    if (!ReadMachOCommand(data, offset, lc))
       break;
 
     uint32_t version = 0;

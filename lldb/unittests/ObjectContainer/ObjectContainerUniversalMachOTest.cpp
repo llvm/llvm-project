@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/ObjectContainer/Universal-Mach-O/ObjectContainerUniversalMachO.h"
+#include "Plugins/ObjectContainer/Mach-O-Fileset/ObjectContainerMachOFileset.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -14,6 +15,7 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/FileSpec.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Testing/Support/Error.h"
@@ -118,6 +120,75 @@ Slices:
   EXPECT_EQ(Specs.GetSize(), 0u);
 
   ASSERT_THAT_ERROR(TmpFile->discard(), llvm::Succeeded());
+}
+
+// Regression fixture: a Mach-O fileset whose single load command has
+// cmdsize = 0.  With ncmds set near INT_MAX the function hangs.  The
+// fix breaks out of the loop as soon as
+// cmdsize < sizeof(load_command).  Found by lldb-target-fuzzer.
+namespace {
+class ObjectContainerMachOFilesetTest : public ::testing::Test {
+  SubsystemRAII<FileSystem, ObjectContainerMachOFileset> subsystems;
+};
+} // namespace
+
+TEST_F(ObjectContainerMachOFilesetTest, ZeroCmdSize) {
+  // Minimal little-endian x86_64 Mach-O fileset: mach_header_64 (32 bytes)
+  // followed by a single load_command with cmdsize = 0.  ncmds is set to
+  // 0x7FFFFFFF so that without the fix ParseFileset spins ~2 billion times and
+  // never returns in practice; with the fix it breaks on the first iteration.
+  // Reaching the assertion below is the regression check.
+  const uint8_t kData[] = {
+      // mach_header_64 (little-endian)
+      0xCF,
+      0xFA,
+      0xED,
+      0xFE, // magic:      MH_MAGIC_64
+      0x07,
+      0x00,
+      0x00,
+      0x01, // cputype:    CPU_TYPE_X86_64
+      0x03,
+      0x00,
+      0x00,
+      0x80, // cpusubtype: CPU_SUBTYPE_X86_64_ALL
+      0x0C,
+      0x00,
+      0x00,
+      0x00, // filetype:   MH_FILESET
+      0xFF,
+      0xFF,
+      0xFF,
+      0x7F, // ncmds:      0x7FFFFFFF
+      0x08,
+      0x00,
+      0x00,
+      0x00, // sizeofcmds: 8
+      0x00,
+      0x00,
+      0x00,
+      0x00, // flags:      0
+      0x00,
+      0x00,
+      0x00,
+      0x00, // reserved:   0
+      // load_command
+      0x19,
+      0x00,
+      0x00,
+      0x00, // cmd:     LC_SEGMENT_64 (arbitrary)
+      0x00,
+      0x00,
+      0x00,
+      0x00, // cmdsize: 0  ← causes the spin
+  };
+  auto Buf = std::make_shared<DataBufferHeap>(kData, sizeof(kData));
+  lldb::DataExtractorSP DataSP =
+      std::make_shared<lldb_private::DataExtractor>(Buf, lldb::eByteOrderLittle,
+                                                    /*addr_size=*/8);
+  // Before the fix ParseFileset loops ~0x7FFFFFFF times and never returns.
+  (void)ObjectContainerMachOFileset::GetModuleSpecifications(FileSpec(), DataSP,
+                                                             0, sizeof(kData));
 }
 
 // Regression fixture: a universal (fat) Mach-O whose header claims a huge
