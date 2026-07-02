@@ -905,6 +905,53 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::check(Res, "error in cuMemset: %s");
   }
 
+  /// Prefetch managed memory to the device or back to the host.
+  // TODO: switch to cuMemPrefetchBatchAsync once the minimum supported CUDA
+  // driver is 13 or newer. That entry point takes the (Mems, Sizes, Count)
+  // arrays directly and lets the driver batch the migration.
+  Error dataPrefetchImpl(size_t Count, const void **Mems, const size_t *Sizes,
+                         bool ToHost,
+                         AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+    if (Count == 0)
+      return Plugin::success();
+    if (auto Err = setContext())
+      return Err;
+
+    // Certain cuda devices and Windows do not have support for some Unified
+    // Memory features. cuMemPrefetchAsync requires concurrent memory access
+    // for managed memory. Therefore, ignore prefetch hint if concurrent managed
+    // memory access is not available.
+    int ConcurrentManagedAccess = 0;
+    if (getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_CONCURRENT_MANAGED_ACCESS,
+                         ConcurrentManagedAccess) != CUDA_SUCCESS ||
+        !ConcurrentManagedAccess)
+      return Plugin::success();
+
+    CUstream Stream;
+    if (auto Err = getStream(AsyncInfoWrapper, Stream))
+      return Err;
+
+    CUdevice Dst = ToHost ? CU_DEVICE_CPU : Device;
+    for (size_t I = 0; I < Count; I++) {
+      if (Sizes[I] == 0)
+        continue;
+
+      // Prefetch only works with USM (managed) memory; ignore the hint
+      // otherwise.
+      unsigned int IsManaged = 0;
+      if (cuPointerGetAttribute(&IsManaged, CU_POINTER_ATTRIBUTE_IS_MANAGED,
+                                (CUdeviceptr)Mems[I]) != CUDA_SUCCESS ||
+          !IsManaged)
+        continue;
+
+      CUresult Res =
+          cuMemPrefetchAsync((CUdeviceptr)Mems[I], Sizes[I], Dst, Stream);
+      if (auto Err = Plugin::check(Res, "error in cuMemPrefetchAsync: %s"))
+        return Err;
+    }
+    return Plugin::success();
+  }
+
   /// Initialize the async info for interoperability purposes.
   Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override {
     if (auto Err = setContext())
