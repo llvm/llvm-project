@@ -237,7 +237,11 @@ public:
       case State::AuxArgsEnded:
         if (C == EndToken || C == PassDelimToken) {
           AddPass(PassName, StringRef(), AuxArg);
-          CurrentState = State::ScanArgs;
+          if (C == PassDelimToken) {
+            PassBeginIdx = Idx + 1;
+            AuxArg = StringRef();
+          }
+          CurrentState = State::ScanName;
         } else if (C == BeginArgsToken) {
           ++NestedArgs;
           ArgsBeginIdx = Idx + 1;
