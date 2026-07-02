@@ -2351,9 +2351,13 @@ void VPWidenIntrinsicRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 
 void VPWidenMemIntrinsicRecipe::execute(VPTransformState &State) {
   CallInst *MemI = createVectorCall(State);
+  auto PtrPos = VPIntrinsic::getMemoryPointerParamPos(getVectorIntrinsicID());
+  assert(PtrPos.has_value() &&
+         "Expected a memory intrinsic with a valid pointer position");
   MemI->addParamAttr(
-      0, Attribute::getWithAlignment(MemI->getContext(), Alignment));
-  State.set(this, MemI);
+      *PtrPos, Attribute::getWithAlignment(MemI->getContext(), Alignment));
+  if (!MemI->getType()->isVoidTy())
+    State.set(this, MemI);
 }
 
 InstructionCost VPWidenMemIntrinsicRecipe::computeMemIntrinsicCost(
@@ -2367,10 +2371,13 @@ InstructionCost VPWidenMemIntrinsicRecipe::computeMemIntrinsicCost(
 InstructionCost
 VPWidenMemIntrinsicRecipe::computeCost(ElementCount VF,
                                        VPCostContext &Ctx) const {
-  Type *Ty = toVectorTy(getScalarType(), VF);
-  return computeMemIntrinsicCost(getVectorIntrinsicID(), Ty,
-                                 !match(getOperand(2), m_True()), Alignment,
-                                 Ctx);
+  Type *DataTy = getScalarType();
+  if (DataTy->isVoidTy())
+    DataTy = getOperand(0)->getScalarType();
+  Type *Ty = toVectorTy(DataTy, VF);
+  return computeMemIntrinsicCost(
+      getVectorIntrinsicID(), Ty,
+      !match(getOperand(getNumOperands() - 2), m_True()), Alignment, Ctx);
 }
 
 void VPHistogramRecipe::execute(VPTransformState &State) {

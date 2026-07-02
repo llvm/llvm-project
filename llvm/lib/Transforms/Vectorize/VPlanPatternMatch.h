@@ -1017,7 +1017,7 @@ struct IntrinsicID_match {
 /// them with lower arity matchers. Here's some convenient typedefs for up to
 /// several arguments, and more can be added as needed
 template <typename T0 = void, typename T1 = void, typename T2 = void,
-          typename T3 = void>
+          typename T3 = void, typename T4 = void>
 struct m_Intrinsic_Ty;
 template <typename T0> struct m_Intrinsic_Ty<T0> {
   using Ty = match_combine_and<IntrinsicID_match, Argument_match<T0>>;
@@ -1032,9 +1032,14 @@ struct m_Intrinsic_Ty<T0, T1, T2> {
                                Argument_match<T2>>;
 };
 template <typename T0, typename T1, typename T2, typename T3>
-struct m_Intrinsic_Ty {
+struct m_Intrinsic_Ty<T0, T1, T2, T3> {
   using Ty = match_combine_and<typename m_Intrinsic_Ty<T0, T1, T2>::Ty,
                                Argument_match<T3>>;
+};
+template <typename T0, typename T1, typename T2, typename T3, typename T4>
+struct m_Intrinsic_Ty {
+  using Ty = match_combine_and<typename m_Intrinsic_Ty<T0, T1, T2, T3>::Ty,
+                               Argument_match<T4>>;
 };
 
 /// Match intrinsic calls like this:
@@ -1070,6 +1075,15 @@ template <Intrinsic::ID IntrID, typename T0, typename T1, typename T2,
 inline typename m_Intrinsic_Ty<T0, T1, T2, T3>::Ty
 m_Intrinsic(const T0 &Op0, const T1 &Op1, const T2 &Op2, const T3 &Op3) {
   return m_CombineAnd(m_Intrinsic<IntrID>(Op0, Op1, Op2), m_Argument<3>(Op3));
+}
+
+template <Intrinsic::ID IntrID, typename T0, typename T1, typename T2,
+          typename T3, typename T4>
+inline typename m_Intrinsic_Ty<T0, T1, T2, T3, T4>::Ty
+m_Intrinsic(const T0 &Op0, const T1 &Op1, const T2 &Op2, const T3 &Op3,
+            const T4 &Op4) {
+  return m_CombineAnd(m_Intrinsic<IntrID>(Op0, Op1, Op2, Op3),
+                      m_Argument<4>(Op4));
 }
 
 template <Intrinsic::ID IntrID, typename... T>
