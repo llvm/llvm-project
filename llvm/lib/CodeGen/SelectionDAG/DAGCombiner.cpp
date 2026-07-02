@@ -10201,7 +10201,7 @@ SDValue DAGCombiner::unfoldMaskedMerge(SDNode *N) {
     return SDValue();
 
   // We can transform if the target has AndNot
-  if (!TLI.hasAndNot(M))
+  if (!TLI.hasAndNot(SDValue(N, 0)))
     return SDValue();
 
   SDLoc DL(N);

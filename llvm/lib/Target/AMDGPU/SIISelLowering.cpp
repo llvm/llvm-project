@@ -20994,3 +20994,18 @@ SITargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
   AI->eraseFromParent();
   return LI;
 }
+
+bool SITargetLowering::hasAndNot(SDValue X) const {
+  // S_ANDN2 only exists in the scalar ALU.
+  if (X.getNode() && X.getNode()->isDivergent())
+    return false;
+
+  EVT VT = X.getValueType();
+  if (VT == MVT::i32 || VT == MVT::i16 || VT == MVT::i1)
+    return true;
+  if (VT == MVT::i64)
+    return true;
+  if (VT == MVT::v2i16 || VT == MVT::v2i32 || VT == MVT::v4i16)
+    return true;
+  return false;
+}
