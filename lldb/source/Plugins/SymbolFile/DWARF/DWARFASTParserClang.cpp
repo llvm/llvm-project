@@ -13,6 +13,7 @@
 #include "DWARFDebugInfo.h"
 #include "DWARFDeclContext.h"
 #include "DWARFDefines.h"
+#include "DWARFFormValue.h"
 #include "SymbolFileDWARF.h"
 #include "SymbolFileDWARFDebugMap.h"
 #include "SymbolFileDWARFDwo.h"
@@ -2572,7 +2573,7 @@ struct VariantMember {
   explicit VariantMember(DWARFDIE &die, ModuleSP module_sp);
   bool IsDefault() const;
 
-  std::optional<uint32_t> discr_value;
+  std::optional<llvm::APInt> discr_value;
   DWARFFormValue type_ref;
   ConstString variant_name;
   uint32_t byte_offset;
@@ -2600,8 +2601,34 @@ bool VariantMember::IsDefault() const { return !discr_value; }
 
 VariantMember::VariantMember(DWARFDIE &die, lldb::ModuleSP module_sp) {
   assert(die.Tag() == llvm::dwarf::DW_TAG_variant);
-  this->discr_value =
-      die.GetAttributeValueAsOptionalUnsigned(DW_AT_discr_value);
+
+  DWARFFormValue discr_form;
+  die.GetDIE()->GetAttributeValue(die.GetCU(), DW_AT_discr_value, discr_form);
+
+  // Rust can output 128-bit discriminants (e.g. NonNull<u128>) as
+  // `DW_FORM_block1`. There is a `data16` dwarf form, but DWARFFormValue treats
+  // it as a BlockData anyway. Handling is included for it just in case rust's
+  // output changes to the `data16` form.
+  dw_form_t form = discr_form.Form();
+  if ((form == DW_FORM_block1 && discr_form.Unsigned() == 16) ||
+      form == DW_FORM_data16) {
+    const uint8_t *block_data = discr_form.BlockData();
+
+    DataExtractor extractor(block_data, 16, die.GetCU()->GetByteOrder(),
+                            die.GetCU()->GetAddressByteSize());
+    lldb::offset_t offset = 0;
+    uint64_t lo = extractor.GetU64(&offset);
+    uint64_t hi = extractor.GetU64(&offset);
+    uint64_t words[] = {lo, hi};
+    this->discr_value = llvm::APInt(128, words);
+  } else {
+    if (auto result =
+            die.GetAttributeValueAsOptionalUnsigned(DW_AT_discr_value)) {
+      this->discr_value = llvm::APInt(sizeof(uint64_t) * 8, result.value());
+    } else {
+      this->discr_value = std::nullopt;
+    };
+  }
 
   for (auto child_die : die.children()) {
     switch (child_die.Tag()) {
@@ -3838,9 +3865,14 @@ void DWARFASTParserClang::ParseRustVariantPart(
 
     m_ast.CompleteTagDeclarationDefinition(field_type);
 
-    auto name = has_discriminant
-                    ? llvm::formatv("$variant${0}", member.discr_value.value())
-                    : std::string("$variant$");
+    auto name = std::string("$variant$");
+    if (has_discriminant) {
+      // u128::MAX = 340282366920938463463374607431768211455 which is 39 digits
+      // long + 1 for null terminator.
+      llvm::SmallString<40> discr_str;
+      member.discr_value.value().toStringUnsigned(discr_str);
+      name.append(discr_str.c_str());
+    }
 
     auto variant_decl = m_ast.AddFieldToRecordType(
         inner_holder, llvm::StringRef(name), field_type, 0);
