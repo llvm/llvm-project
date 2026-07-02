@@ -3096,10 +3096,10 @@ def int_ptrauth_resign : Intrinsic<[llvm_i64_ty],
 // The fifth and sixth arguments specify the schema used for resigning.
 // The signature must be valid.
 def int_ptrauth_auth_with_pc_and_resign : Intrinsic<[llvm_i64_ty],
-                                                     [llvm_i64_ty, llvm_i32_ty, llvm_i64_ty,
-                                                      llvm_i64_ty, llvm_i32_ty, llvm_i64_ty],
-                                                     [IntrNoMem, ImmArg<ArgIndex<1>>,
-                                                      ImmArg<ArgIndex<4>>]>;
+                                                    [llvm_i64_ty, llvm_i32_ty, llvm_i64_ty,
+                                                     llvm_i64_ty, llvm_i32_ty, llvm_i64_ty],
+                                                    [IntrNoMem, ImmArg<ArgIndex<1>>,
+                                                     ImmArg<ArgIndex<4>>]>;
 
 // Authenticate a signed pointer, load 32bit value at offset from pointer, add
 // both, and sign it. The second (key) and third (discriminator) arguments
