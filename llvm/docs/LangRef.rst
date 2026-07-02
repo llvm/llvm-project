@@ -8518,6 +8518,31 @@ without pointing to it directly (which is not possible in global
 metadata). Currently, the only metadata making use of it is
 ``llvm.loop.parallel_accesses``.
 
+'``llvm.array.bounds``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``llvm.array.bounds`` metadata can be attached to ``llvm.assume``
+intrinsic calls to indicate that the assumption originates from array
+bounds information provided by the frontend. This metadata is used by
+the optimizer to identify and remove these assumptions at appropriate
+points in the optimization pipeline.
+
+Frontends like Flang and Clang may generate ``llvm.assume`` calls based
+on array bounds information to help data dependence analysis and other
+optimizations. However, these assumes can cause IR bloat after
+vectorization and may negatively impact cost models in later passes
+like Loop Strength Reduction (LSR). The ``llvm.array.bounds`` metadata
+allows passes to selectively drop these assumptions after their primary
+purpose (aiding loop optimizations) has been fulfilled.
+
+The metadata node can be empty:
+
+.. code-block:: llvm
+
+   call void @llvm.assume(i1 %cmp), !llvm.array.bounds !0
+   ...
+   !0 = !{}
+
 '``llvm.loop.parallel_accesses``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

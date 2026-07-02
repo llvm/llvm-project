@@ -1345,6 +1345,13 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
 void PassBuilder::addVectorPasses(OptimizationLevel Level,
                                   FunctionPassManager &FPM,
                                   ThinOrFullLTOPhase LTOPhase) {
+  // Drop array bounds assumes before vectorization to prevent IR bloat from
+  // vectorized assumes and avoid negatively impacting cost models in later
+  // passes like LSR. These assumes are marked with "llvm.array.bounds" metadata
+  // by frontends like Flang and Clang.
+  FPM.addPass(DropUnnecessaryAssumesPass(/*DropDereferenceable=*/false,
+                                         /*DropArrayBounds=*/true));
+
   FPM.addPass(LoopVectorizePass(
       LoopVectorizeOptions(!PTO.LoopInterleaving, !PTO.LoopVectorization)));
 
