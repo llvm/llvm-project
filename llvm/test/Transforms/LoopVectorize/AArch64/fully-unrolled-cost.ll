@@ -11,7 +11,7 @@ define i64 @test(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT: Cost of 0 for VF 8: induction instruction   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
 ; CHECK: Cost of 1 for VF 8: EMIT branch-on-count vp<%index.next>, vp<{{.+}}>
 ; CHECK: Cost for VF 8: 30
-; CHECK-NEXT: Cost of 0 for VF 16: induction instruction   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
+; CHECK: Cost of 0 for VF 16: induction instruction   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
 ; CHECK: Cost of 0 for VF 16: EMIT branch-on-count vp<%index.next>, vp<{{.+}}>
 ; CHECK: Cost for VF 16: 56
 ; CHECK: LV: Selecting VF: 16
@@ -44,7 +44,7 @@ define i64 @test_external_iv_user(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT: Cost of 0 for VF 8: induction instruction   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
 ; CHECK: Cost of 1 for VF 8: EMIT branch-on-count vp<%index.next>, vp<{{.+}}>
 ; CHECK: Cost for VF 8: 30
-; CHECK-NEXT: Cost of 1 for VF 16: induction instruction   %i.iv.next = add nuw nsw i64 %i.iv, 1
+; CHECK: Cost of 1 for VF 16: induction instruction   %i.iv.next = add nuw nsw i64 %i.iv, 1
 ; CHECK-NEXT: Cost of 0 for VF 16: induction instruction   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
 ; CHECK: Cost of 0 for VF 16: EMIT branch-on-count vp<%index.next>, vp<{{.+}}>
 ; CHECK: Cost for VF 16: 57
@@ -80,7 +80,7 @@ define i64 @test_two_ivs(ptr %a, ptr %b, i64 %start) #0 {
 ; CHECK-NEXT: Cost of 0 for VF 8: induction instruction   %j.iv = phi i64 [ %start, %entry ], [ %j.iv.next, %for.body ]
 ; CHECK: Cost of 1 for VF 8: EMIT branch-on-count vp<%index.next>, vp<{{.+}}>
 ; CHECK: Cost for VF 8: 17
-; CHECK-NEXT: Cost of 0 for VF 16: induction instruction   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
+; CHECK: Cost of 0 for VF 16: induction instruction   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
 ; CHECK-NEXT: Cost of 0 for VF 16: induction instruction   %j.iv = phi i64 [ %start, %entry ], [ %j.iv.next, %for.body ]
 ; CHECK: Cost of 1 for VF 16: EXPRESSION vp<%11> = ir<%sum> + partial.reduce.add (mul nuw nsw (ir<%1> zext to i64), (ir<%0> zext to i64))
 ; CHECK: Cost for VF 16: 4
@@ -117,10 +117,10 @@ define i1 @test_extra_cmp_user(ptr nocapture noundef %dst, ptr nocapture noundef
 ; CHECK: Cost of 1 for VF 8: EMIT vp<%cmp.n> = icmp eq ir<16>, vp<%2>
 ; CHECK-NEXT: Cost of 0 for VF 8: EMIT branch-on-cond vp<%cmp.n>
 ; CHECK: Cost for VF 8: 9
-; CHECK-NEXT: Cost of 0 for VF 16: induction instruction   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+; CHECK: Cost of 0 for VF 16: induction instruction   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
 ; CHECK: Cost of 0 for VF 16: WIDEN ir<%exitcond.not> = icmp eq ir<%indvars.iv.next>, ir<16>
 ; CHECK: Cost of 1 for VF 16: EMIT vp<%cmp.n> = icmp eq ir<16>, vp<%2>
-; CHECK-NEXT: Cost of 0 for VF 16: EMIT branch-on-cond vp<%cmp.n>
+; CHECK: Cost of 0 for VF 16: EMIT branch-on-cond vp<%cmp.n>
 ; CHECK: Cost for VF 16: 4
 ; CHECK: LV: Selecting VF: 16
 entry:
