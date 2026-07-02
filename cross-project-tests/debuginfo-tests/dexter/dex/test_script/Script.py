@@ -18,11 +18,11 @@ import yaml
 
 from dex.test_script.Nodes import (
     Expect,
+    ExpectAll,
     FileLabels,
     Label,
     Where,
     Then,
-    ValueAll,
     Step,
     setup_yaml_parser,
 )
@@ -184,7 +184,7 @@ class DexterScript:
 
     def _validate(self):
         def validate_expect(expect: Expect, expected_value, scope: Scope):
-            if isinstance(expect, ValueAll) and expected_value is not None:
+            if isinstance(expect, ExpectAll) and expected_value is not None:
                 raise DexterScriptError(
                     f"!expect/all node {expect} should not have an expected value."
                 )

@@ -150,6 +150,11 @@ struct TestVectorUnrollingPatterns
     return "Test lowering patterns to unroll contract ops in the vector "
            "dialect";
   }
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<vector::VectorDialect>();
+  }
+
   TestVectorUnrollingPatterns() = default;
   TestVectorUnrollingPatterns(const TestVectorUnrollingPatterns &pass)
       : PassWrapper(pass) {}
