@@ -581,9 +581,7 @@ DWARF:
           .takeError(),
       llvm::Failed());
 
-  // DW_OP_convert with an empty stack must report an error rather than
-  // accessing the back of an empty stack (caught by
-  // lldb-dwarf-expression-fuzzer).
+  // DW_OP_convert with an empty stack.
   EXPECT_THAT_ERROR(
       Evaluate({DW_OP_convert, 0x00}, nullptr, nullptr).takeError(),
       llvm::Failed());
