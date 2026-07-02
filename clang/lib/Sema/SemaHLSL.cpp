@@ -3279,8 +3279,8 @@ NamedDecl *SemaHLSL::getConstantBufferConversionFunction(QualType Type,
 }
 
 std::optional<ExprResult>
-SemaHLSL::tryPerformConstantBufferConversion(ExprResult &BaseExpr) {
-  QualType BaseType = BaseExpr.get()->getType();
+SemaHLSL::tryPerformConstantBufferConversion(Expr *BaseExpr) {
+  QualType BaseType = BaseExpr->getType();
   const HLSLAttributedResourceType *ResTy =
       HLSLAttributedResourceType::findHandleTypeOnResource(
           BaseType.getTypePtr());
@@ -3297,7 +3297,7 @@ SemaHLSL::tryPerformConstantBufferConversion(ExprResult &BaseExpr) {
   auto *ConversionDecl =
       cast<CXXConversionDecl>(NamedConversionDecl->getUnderlyingDecl());
 
-  return SemaRef.BuildCXXMemberCallExpr(BaseExpr.get(), NamedConversionDecl,
+  return SemaRef.BuildCXXMemberCallExpr(BaseExpr, NamedConversionDecl,
                                         ConversionDecl,
                                         /*HadMultipleCandidates=*/false);
 }
@@ -3686,7 +3686,8 @@ static bool CheckIndexType(Sema *S, CallExpr *TheCall, unsigned IndexArgIndex) {
 
   unsigned int ExpectedDim = 1;
   if (ResAttrs.ResourceDimension != llvm::dxil::ResourceDimension::Unknown)
-    ExpectedDim = getResourceDimensions(ResAttrs.ResourceDimension);
+    ExpectedDim = getResourceDimensions(ResAttrs.ResourceDimension) +
+                  (ResAttrs.IsArray ? 1 : 0);
 
   if (ActualDim != ExpectedDim) {
     S->Diag(TheCall->getArg(IndexArgIndex)->getBeginLoc(),
@@ -3741,7 +3742,8 @@ static bool CheckVectorElementCount(Sema *S, QualType PassedType,
 
 enum class SampleKind { Sample, Bias, Grad, Level, Cmp, CmpLevelZero };
 
-static bool CheckTextureSamplerAndLocation(Sema &S, CallExpr *TheCall) {
+static bool CheckTextureSamplerAndLocation(Sema &S, CallExpr *TheCall,
+                                           bool IncludeArraySlice = true) {
   // Check the texture handle.
   if (CheckResourceHandle(&S, TheCall, 0,
                           [](const HLSLAttributedResourceType *ResType) {
@@ -3763,7 +3765,8 @@ static bool CheckTextureSamplerAndLocation(Sema &S, CallExpr *TheCall) {
 
   // Check the location.
   unsigned ExpectedDim =
-      getResourceDimensions(ResourceTy->getAttrs().ResourceDimension);
+      getResourceDimensions(ResourceTy->getAttrs().ResourceDimension) +
+      (IncludeArraySlice && ResourceTy->getAttrs().IsArray ? 1 : 0);
   if (CheckVectorElementCount(&S, TheCall->getArg(2)->getType(),
                               S.Context.FloatTy, ExpectedDim,
                               TheCall->getBeginLoc()))
@@ -3776,7 +3779,9 @@ static bool CheckCalculateLodBuiltin(Sema &S, CallExpr *TheCall) {
   if (S.checkArgCount(TheCall, 3))
     return true;
 
-  if (CheckTextureSamplerAndLocation(S, TheCall))
+  // CalculateLevelOfDetail location uses resource dimension only (e.g. float2
+  // for 2D), not an extra array slice component like Sample/Gather.
+  if (CheckTextureSamplerAndLocation(S, TheCall, /*IncludeArraySlice=*/false))
     return true;
 
   TheCall->setType(S.Context.FloatTy);
@@ -3882,11 +3887,12 @@ static bool CheckLoadLevelBuiltin(Sema &S, CallExpr *TheCall) {
   auto *ResourceTy =
       TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
 
-  // Check the location + lod (int3 for Texture2D).
-  unsigned ExpectedDim =
+  // Check the location + lod (int3 for Texture2D, int4 for Texture2DArray).
+  unsigned ResourceDim =
       getResourceDimensions(ResourceTy->getAttrs().ResourceDimension);
+  unsigned LocationDim = ResourceDim + (ResourceTy->getAttrs().IsArray ? 1 : 0);
   QualType CoordLODTy = TheCall->getArg(1)->getType();
-  if (CheckVectorElementCount(&S, CoordLODTy, S.Context.IntTy, ExpectedDim + 1,
+  if (CheckVectorElementCount(&S, CoordLODTy, S.Context.IntTy, LocationDim + 1,
                               TheCall->getArg(1)->getBeginLoc()))
     return true;
 
@@ -3899,10 +3905,10 @@ static bool CheckLoadLevelBuiltin(Sema &S, CallExpr *TheCall) {
     return true;
   }
 
-  // Check the offset operand.
+  // Check the offset operand (int2 for 2D textures; no array slice).
   if (TheCall->getNumArgs() > 2) {
     if (CheckVectorElementCount(&S, TheCall->getArg(2)->getType(),
-                                S.Context.IntTy, ExpectedDim,
+                                S.Context.IntTy, ResourceDim,
                                 TheCall->getArg(2)->getBeginLoc()))
       return true;
   }
@@ -4534,7 +4540,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyExpr);
     break;
   }
-  case Builtin::BI__builtin_hlsl_interlocked_add: {
+  case Builtin::BI__builtin_hlsl_interlocked_add:
+  case Builtin::BI__builtin_hlsl_interlocked_or: {
     // The builtin's prototype in Builtins.td is `void (...)`, so direct calls
     // to `__builtin_hlsl_interlocked_add` bypass argument checking entirely.
     // When reached via the synthesized `InterlockedAdd` overload set in
@@ -5146,7 +5153,7 @@ ExprResult SemaHLSL::ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg) {
 
   // Writebacks are performed with `=` binary operator, which allows for
   // overload resolution on writeback result expressions.
-  Res = SemaRef.ActOnBinOp(SemaRef.getCurScope(), Param->getBeginLoc(),
+  Res = SemaRef.ActOnBinOp(SemaRef.getCurScope(), Arg->getBeginLoc(),
                            tok::equal, ArgOpV, OpV);
 
   if (Res.isInvalid())

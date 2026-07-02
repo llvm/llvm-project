@@ -642,8 +642,7 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
 
   // When intrinsic functions are encountered which require upgrading they are
   // stored here with their replacement function.
-  using UpdatedIntrinsicMap = DenseMap<Function *, Function *>;
-  UpdatedIntrinsicMap UpgradedIntrinsics;
+  DenseMap<Function *, Function *> UpgradedIntrinsics;
 
   // Several operations happen after the module header has been read, but
   // before function bodies are processed. This keeps track of whether
@@ -7218,15 +7217,15 @@ Error BitcodeReader::materializeModule() {
   // delete the old functions to clean up. We can't do this unless the entire
   // module is materialized because there could always be another function body
   // with calls to the old function.
-  for (auto &I : UpgradedIntrinsics) {
-    for (auto *U : I.first->users()) {
-      if (CallInst *CI = dyn_cast<CallInst>(U))
-        UpgradeIntrinsicCall(CI, I.second);
+  for (auto &[OldFn, NewFn] : UpgradedIntrinsics) {
+    for (User *U : OldFn->users()) {
+      if (auto *CI = dyn_cast<CallInst>(U))
+        UpgradeIntrinsicCall(CI, NewFn);
     }
-    if (I.first != I.second) {
-      if (!I.first->use_empty())
-        I.first->replaceAllUsesWith(I.second);
-      I.first->eraseFromParent();
+    if (OldFn != NewFn) {
+      if (!OldFn->use_empty())
+        OldFn->replaceAllUsesWith(NewFn);
+      OldFn->eraseFromParent();
     }
   }
   UpgradedIntrinsics.clear();
