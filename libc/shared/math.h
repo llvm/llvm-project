@@ -336,6 +336,7 @@
 #include "math/log1p.h"
 #include "math/log1pf.h"
 #include "math/log2.h"
+#include "math/log2bf16.h"
 #include "math/log2f.h"
 #include "math/log2f16.h"
 #include "math/log2p1f16.h"
