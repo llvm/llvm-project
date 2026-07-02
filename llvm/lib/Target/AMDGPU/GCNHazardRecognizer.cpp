@@ -3758,7 +3758,8 @@ static bool ensureEntrySetPrio(MachineFunction *MF, int Priority,
   }
 
   BuildMI(EntryMBB, EntryMBB.begin(), DebugLoc(), TII.get(AMDGPU::S_SETPRIO))
-      .addImm(Priority);
+      .addImm(Priority)
+      .addImm(0);
   return true;
 }
 
@@ -3836,7 +3837,8 @@ bool GCNHazardRecognizer::fixRequiredExportPriority(MachineInstr *MI) {
 
   // Lower priority.
   BuildMI(*MBB, NextMI, DL, TII.get(AMDGPU::S_SETPRIO))
-      .addImm(PostExportPriority);
+      .addImm(PostExportPriority)
+      .addImm(0);
 
   if (!EndOfShader) {
     // Wait for exports to complete.
@@ -3851,7 +3853,8 @@ bool GCNHazardRecognizer::fixRequiredExportPriority(MachineInstr *MI) {
   if (!EndOfShader) {
     // Return to normal (higher) priority.
     BuildMI(*MBB, NextMI, DL, TII.get(AMDGPU::S_SETPRIO))
-        .addImm(NormalPriority);
+        .addImm(NormalPriority)
+        .addImm(0);
   }
 
   return true;

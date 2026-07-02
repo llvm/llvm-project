@@ -334,15 +334,15 @@ body: |
 
   bb.1:
     liveins: $vgpr0
-    S_SETPRIO 3
+    S_SETPRIO 3, 0
     $vgpr0 = V_OR_B32_e32 2, $vgpr0, implicit $exec
-    S_SETPRIO 0
+    S_SETPRIO 0, 0
 
   bb.2:
     liveins: $vgpr0
-    S_SETPRIO 1
+    S_SETPRIO 1, 0
     $vgpr0 = V_OR_B32_e32 3, $vgpr0, implicit $exec
-    S_SETPRIO 0
+    S_SETPRIO 0, 0
 
   bb.3:
     liveins: $vgpr0
@@ -381,9 +381,9 @@ body: |
     ; GFX1150-NEXT: S_SETPRIO 2
     ; GFX1150-NEXT: S_SETPRIO 3
     ; GFX1150-NEXT: S_ENDPGM 0
-    S_SETPRIO 3
+    S_SETPRIO 3, 0
     EXP 1, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
     EXP_DONE 0, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
-    S_SETPRIO 3
+    S_SETPRIO 3, 0
     S_ENDPGM 0
 ...

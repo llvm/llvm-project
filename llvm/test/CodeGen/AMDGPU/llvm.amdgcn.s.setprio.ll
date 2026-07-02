@@ -5,6 +5,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx90a -show-mc-encoding < %s | FileCheck -check-prefix=GFX9 %s
 
 declare void @llvm.amdgcn.s.setprio(i16) #0
+declare void @llvm.amdgcn.s.setprio.mask(i16, i32) #0
 
 define void @test_llvm_amdgcn_s_setprio() #0 {
 ; GFX9-LABEL: test_llvm_amdgcn_s_setprio:
@@ -43,6 +44,38 @@ define void @test_llvm_amdgcn_s_setprio() #0 {
   call void @llvm.amdgcn.s.setprio(i16 65536)
   call void @llvm.amdgcn.s.setprio(i16 65537)
   call void @llvm.amdgcn.s.setprio(i16 -1)
+  ret void
+}
+
+define void @test_llvm_amdgcn_s_setprio_mask0() #0 {
+; GFX9-LABEL: test_llvm_amdgcn_s_setprio_mask0:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
+; GFX9-NEXT:    s_setprio 3 ; encoding: [0x03,0x00,0x8f,0xbf]
+; GFX9-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x1d,0x80,0xbe]
+;
+; SI-LABEL: test_llvm_amdgcn_s_setprio_mask0:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
+; SI-NEXT:    s_setprio 3 ; encoding: [0x03,0x00,0x8f,0xbf]
+; SI-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x20,0x80,0xbe]
+  call void @llvm.amdgcn.s.setprio.mask(i16 3, i32 0)
+  ret void
+}
+
+define void @test_llvm_amdgcn_s_setprio_mask15() #0 {
+; GFX9-LABEL: test_llvm_amdgcn_s_setprio_mask15:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
+; GFX9-NEXT:    s_setprio 1 ; encoding: [0x01,0x00,0x8f,0xbf]
+; GFX9-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x1d,0x80,0xbe]
+;
+; SI-LABEL: test_llvm_amdgcn_s_setprio_mask15:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
+; SI-NEXT:    s_setprio 1 ; encoding: [0x01,0x00,0x8f,0xbf]
+; SI-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x20,0x80,0xbe]
+  call void @llvm.amdgcn.s.setprio.mask(i16 1, i32 15)
   ret void
 }
 

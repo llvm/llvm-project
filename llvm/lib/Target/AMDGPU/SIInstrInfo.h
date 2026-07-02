@@ -1146,6 +1146,9 @@ public:
            Opcode == AMDGPU::DS_GWS_BARRIER;
   }
 
+  bool isSchedBarrierLike(const MachineInstr &MI) const;
+  unsigned getSchedBarrierLikeMask(const MachineInstr &MI) const;
+
   static bool isLoadMonitor(unsigned Opc) {
     switch (Opc) {
     case AMDGPU::GLOBAL_LOAD_MONITOR_B32:

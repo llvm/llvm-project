@@ -2604,7 +2604,7 @@ void IGroupLPDAGMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
   for (auto R = DAG->SUnits.rbegin(), E = DAG->SUnits.rend(); R != E; ++R) {
     unsigned Opc = R->getInstr()->getOpcode();
     // SCHED_[GROUP_]BARRIER and IGLP are mutually exclusive.
-    if (Opc == AMDGPU::SCHED_BARRIER) {
+    if (TII->isSchedBarrierLike(*R->getInstr())) {
       addSchedBarrierEdges(*R);
       FoundSB = true;
     } else if (Opc == AMDGPU::SCHED_GROUP_BARRIER) {
@@ -2629,11 +2629,17 @@ void IGroupLPDAGMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
 
 void IGroupLPDAGMutation::addSchedBarrierEdges(SUnit &SchedBarrier) {
   MachineInstr &MI = *SchedBarrier.getInstr();
-  assert(MI.getOpcode() == AMDGPU::SCHED_BARRIER);
-  LLVM_DEBUG(dbgs() << "Building SchedGroup for SchedBarrier with Mask: "
-                    << MI.getOperand(0).getImm() << "\n");
-  auto InvertedMask =
-      invertSchedBarrierMask((SchedGroupMask)MI.getOperand(0).getImm());
+  assert(TII->isSchedBarrierLike(MI));
+
+  SchedGroupMask Mask =
+      static_cast<SchedGroupMask>(TII->getSchedBarrierLikeMask(MI));
+
+  LLVM_DEBUG(
+      dbgs()
+      << "Building SchedGroup for SchedBarrier-like instruction with Mask: "
+      << (unsigned)Mask << "\n");
+
+  auto InvertedMask = invertSchedBarrierMask(Mask);
   SchedGroup SG(InvertedMask, std::nullopt, DAG, TII);
 
   for (SUnit &SU : DAG->SUnits)

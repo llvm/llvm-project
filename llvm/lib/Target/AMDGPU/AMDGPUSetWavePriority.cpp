@@ -85,7 +85,8 @@ AMDGPUSetWavePriority::BuildSetprioMI(MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator I,
                                       unsigned priority) const {
   return BuildMI(MBB, I, DebugLoc(), TII->get(AMDGPU::S_SETPRIO))
-      .addImm(priority);
+      .addImm(priority)
+      .addImm(0);
 }
 
 // Checks that for every predecessor Pred that can reach a VMEM load,

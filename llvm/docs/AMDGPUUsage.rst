@@ -1741,6 +1741,16 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    - 0x0400: All Transcendental (e.g. V_EXP) instructions may be scheduled across sched_barrier.
                                                    - 0x0800: All LDSDMA instructions may be scheduled across sched_barrier.
 
+  llvm.amdgcn.s.setprio.mask                       Sets the hardware wave priority and controls instruction scheduling across
+                                                   the intrinsic in the same way as llvm.amdgcn.sched.barrier. Takes two parameters:
+
+                                                   - Priority (i16): Hardware wave priority level. 0 = lowest, 3 = highest.
+                                                   - Mask (i32): Scheduling barrier mask. Memory mask bits (VMEM, VMEM_READ,
+                                                     VMEM_WRITE, DS, DS_READ, DS_WRITE, LDSDMA) may not be set since they
+                                                     contradict the S_SETPRIO instruction's inherent scheduling dependencies.
+
+  llvm.amdgcn.s.setprio                            Like llvm.amdgcn.s.setprio.mask with Mask = 0.
+
   llvm.amdgcn.sched.group.barrier                  Creates schedule groups with specific properties to create custom scheduling
                                                    pipelines. The ordering between groups is enforced by the instruction scheduler.
                                                    The intrinsic applies to the code that precedes the intrinsic. The intrinsic

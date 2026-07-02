@@ -1754,9 +1754,23 @@ def S_SLEEP_VAR : SOP1_0_32 <"s_sleep_var", [(int_amdgcn_s_sleep_var SSrc_b32:$s
   let hasSideEffects = 1;
 }
 
-def S_SETPRIO : SOPP_Pseudo <"s_setprio", (ins i16imm:$simm16), "$simm16",
-  [(int_amdgcn_s_setprio timm:$simm16)]> {
+def S_SETPRIO : SOPP_Pseudo <"s_setprio", (ins i16imm:$simm16, i32imm:$mask), "$simm16",
+  []> {
 }
+
+} // End hasSideEffects = 1
+
+def : GCNPat<
+  (int_amdgcn_s_setprio timm:$priority),
+  (S_SETPRIO timm:$priority, (i32 0))
+>;
+
+def : GCNPat<
+  (int_amdgcn_s_setprio_mask timm:$priority, timm:$mask),
+  (S_SETPRIO timm:$priority, timm:$mask)
+>;
+
+let hasSideEffects = 1 in {
 
 def S_SETPRIO_INC_WG : SOPP_Pseudo <"s_setprio_inc_wg", (ins i16imm:$simm16), "$simm16",
   [(int_amdgcn_s_setprio_inc_wg timm:$simm16)]> {

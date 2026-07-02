@@ -2224,6 +2224,12 @@ def int_amdgcn_s_setprio :
   DefaultAttrsIntrinsic<[], [llvm_i16_ty], [ImmArg<ArgIndex<0>>, IntrNoMem,
                                 IntrHasSideEffects]>;
 
+def int_amdgcn_s_setprio_mask :
+  ClangBuiltin<"__builtin_amdgcn_s_setprio_mask">,
+  DefaultAttrsIntrinsic<[], [llvm_i16_ty, llvm_i32_ty],
+                        [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>,
+                         IntrNoMem, IntrHasSideEffects]>;
+
 def int_amdgcn_s_setprio_inc_wg :
   ClangBuiltin<"__builtin_amdgcn_s_setprio_inc_wg">,
   DefaultAttrsIntrinsic<[], [llvm_i16_ty], [ImmArg<ArgIndex<0>>, IntrNoMem,
