@@ -4140,13 +4140,19 @@ void X86AsmParser::applyLVICFIMitigation(MCInst &Inst, MCStreamer &Out) {
   case X86::RETI64: {
     MCInst ShlInst, FenceInst;
     bool Parse32 = is32BitMode() || Code16GCC;
+    // Pure 16-bit addressing cannot encode SP as a memory base, so there is no
+    // valid SHL16mi form for touching the return address at (%sp).
+    if (!is64BitMode() && !Parse32) {
+      emitWarningForSpecialLVIInstruction(Inst.getLoc());
+      return;
+    }
     MCRegister Basereg =
         is64BitMode() ? X86::RSP : (Parse32 ? X86::ESP : X86::SP);
     const MCExpr *Disp = MCConstantExpr::create(0, getContext());
     auto ShlMemOp = X86Operand::CreateMem(getPointerWidth(), /*SegReg=*/0, Disp,
                                           /*BaseReg=*/Basereg, /*IndexReg=*/0,
                                           /*Scale=*/1, SMLoc{}, SMLoc{}, 0);
-    ShlInst.setOpcode(X86::SHL64mi);
+    ShlInst.setOpcode(is64BitMode() ? X86::SHL64mi : X86::SHL32mi);
     ShlMemOp->addMemOperands(ShlInst, 5);
     ShlInst.addOperand(MCOperand::createImm(0));
     FenceInst.setOpcode(X86::LFENCE);
