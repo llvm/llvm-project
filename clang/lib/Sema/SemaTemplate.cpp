@@ -175,15 +175,12 @@ bool Sema::hasAnyAcceptableTemplateNames(LookupResult &R,
   return false;
 }
 
-TemplateNameKind Sema::isTemplateName(Scope *S,
-                                      CXXScopeSpec &SS,
-                                      bool hasTemplateKeyword,
-                                      const UnqualifiedId &Name,
-                                      ParsedType ObjectTypePtr,
-                                      bool EnteringContext,
-                                      TemplateTy &TemplateResult,
-                                      bool &MemberOfUnknownSpecialization,
-                                      bool Disambiguation) {
+TemplateNameKind
+Sema::isTemplateName(Scope *S, CXXScopeSpec &SS, bool hasTemplateKeyword,
+                     const UnqualifiedId &Name, ParsedType ObjectTypePtr,
+                     bool EnteringContext, TemplateTy &TemplateResult,
+                     bool &MemberOfUnknownSpecialization,
+                     bool AllowTypoCorrection) {
   assert(getLangOpts().CPlusPlus && "No template names in C!");
 
   DeclarationName TName;
@@ -213,8 +210,7 @@ TemplateNameKind Sema::isTemplateName(Scope *S,
   LookupResult R(*this, TName, Name.getBeginLoc(), LookupOrdinaryName);
   if (LookupTemplateName(R, S, SS, ObjectType, EnteringContext,
                          /*RequiredTemplate=*/SourceLocation(),
-                         &AssumedTemplate,
-                         /*AllowTypoCorrection=*/!Disambiguation))
+                         &AssumedTemplate, AllowTypoCorrection))
     return TNK_Non_template;
   MemberOfUnknownSpecialization = R.wasNotFoundInCurrentInstantiation();
 

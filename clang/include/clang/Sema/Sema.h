@@ -11529,7 +11529,7 @@ public:
                                   ParsedType ObjectType, bool EnteringContext,
                                   TemplateTy &Template,
                                   bool &MemberOfUnknownSpecialization,
-                                  bool Disambiguation = false);
+                                  bool AllowTypoCorrection = true);
 
   /// Try to resolve an undeclared template name as a type template.
   ///
