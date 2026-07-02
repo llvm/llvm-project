@@ -1786,9 +1786,17 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
 
   const XRayArgs &XRay = getXRayArgs(Args);
   if (XRay.needsXRayRt()) {
-    AddLinkRuntimeLib(Args, CmdArgs, "xray");
-    AddLinkRuntimeLib(Args, CmdArgs, "xray-basic");
-    AddLinkRuntimeLib(Args, CmdArgs, "xray-fdr");
+    // XRay runtime libraries use constructors for initialization and mode
+    // registration. On macOS, static archives have unreferenced objects
+    // dead-stripped by default, which removes the constructors. Use
+    // -force_load to retain all objects.
+    for (const auto *Component : {"xray", "xray-basic", "xray-fdr"}) {
+      std::string P = getCompilerRT(Args, Component, ToolChain::FT_Static);
+      if (getVFS().exists(P)) {
+        CmdArgs.push_back("-force_load");
+        CmdArgs.push_back(Args.MakeArgString(P));
+      }
+    }
   }
 
   if (isTargetDriverKit() && !Args.hasArg(options::OPT_nodriverkitlib)) {
