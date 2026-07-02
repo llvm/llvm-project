@@ -33,6 +33,7 @@ template <typename> class CanQual;
 class CXXConstructorDecl;
 class CXXMethodDecl;
 class CodeGenOptions;
+class FunctionDecl;
 class FunctionProtoType;
 class QualType;
 class RecordDecl;
@@ -89,8 +90,17 @@ class CodeGenTypes {
   llvm::DenseMap<const Type *, llvm::Type *> RecordsWithOpaqueMemberPointers;
 
   static constexpr unsigned FunctionInfosLog2InitSize = 9;
+
   /// Helper for ConvertType.
   llvm::Type *ConvertFunctionTypeInternal(QualType FT);
+
+  // Helper to insert CGFunctionInfo objects
+  CGFunctionInfo *findOrInsertCGFunctionInfo(
+      bool isInstanceMethod, bool isChainCall, bool isDelegateCall,
+      unsigned X86ABIAVXLevel, const FunctionType::ExtInfo &info,
+      ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
+      RequiredArgs required, CanQualType resultType,
+      ArrayRef<CanQualType> argTypes);
 
 public:
   CodeGenTypes(CodeGenModule &cgm);
@@ -204,6 +214,9 @@ public:
   /// Often this will be able to simply return the declaration info.
   const CGFunctionInfo &arrangeCall(const CGFunctionInfo &declFI,
                                     const CallArgList &args);
+  const CGFunctionInfo &arrangeCall(const CGFunctionInfo &declFI,
+                                    const CallArgList &args,
+                                    const FunctionDecl *ABIInfoFD);
 
   /// Free functions are functions that are compatible with an ordinary
   /// C function pointer type.
@@ -211,6 +224,10 @@ public:
   const CGFunctionInfo &arrangeFreeFunctionCall(const CallArgList &Args,
                                                 const FunctionType *Ty,
                                                 bool ChainCall);
+  const CGFunctionInfo &arrangeFreeFunctionCall(const CallArgList &Args,
+                                                const FunctionType *Ty,
+                                                bool ChainCall,
+                                                const FunctionDecl *ABIInfoFD);
   const CGFunctionInfo &arrangeFreeFunctionType(CanQual<FunctionProtoType> Ty);
   const CGFunctionInfo &arrangeFreeFunctionType(CanQual<FunctionNoProtoType> Ty);
 
@@ -240,9 +257,9 @@ public:
   const CGFunctionInfo &arrangeObjCMethodDeclaration(const ObjCMethodDecl *MD);
   const CGFunctionInfo &arrangeObjCMessageSendSignature(const ObjCMethodDecl *MD,
                                                         QualType receiverType);
-  const CGFunctionInfo &arrangeUnprototypedObjCMessageSend(
-                                                     QualType returnType,
-                                                     const CallArgList &args);
+  const CGFunctionInfo &
+  arrangeUnprototypedObjCMessageSend(QualType returnType,
+                                     const CallArgList &args);
 
   /// Block invocation functions are C functions with an implicit parameter.
   const CGFunctionInfo &arrangeBlockFunctionDeclaration(
@@ -261,10 +278,16 @@ public:
                                                   unsigned ExtraSuffixArgs,
                                                   bool PassProtoArgs = true);
 
+  const CGFunctionInfo &arrangeCXXConstructorCall(
+      const CallArgList &Args, const CXXConstructorDecl *D,
+      CXXCtorType CtorKind, unsigned ExtraPrefixArgs, unsigned ExtraSuffixArgs,
+      const FunctionDecl *ABIInfoFD, bool PassProtoArgs = true);
+
   const CGFunctionInfo &arrangeCXXMethodCall(const CallArgList &args,
                                              const FunctionProtoType *type,
                                              RequiredArgs required,
-                                             unsigned numPrefixArgs);
+                                             unsigned numPrefixArgs,
+                                             const FunctionDecl *ABIInfoFD);
   const CGFunctionInfo &
   arrangeUnprototypedMustTailThunk(const CXXMethodDecl *MD);
   const CGFunctionInfo &arrangeMSCtorClosure(const CXXConstructorDecl *CD,
@@ -283,7 +306,7 @@ public:
       CanQualType returnType, FnInfoOpts opts, ArrayRef<CanQualType> argTypes,
       FunctionType::ExtInfo info,
       ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
-      RequiredArgs args);
+      RequiredArgs args, const FunctionDecl *ABIInfoFD = nullptr);
 
   /// Compute a new LLVM record layout object for the given record.
   std::unique_ptr<CGRecordLayout> ComputeRecordLayout(const RecordDecl *D,

@@ -26,6 +26,7 @@ class FixedVectorType;
 namespace clang {
 class ASTContext;
 class CodeGenOptions;
+class FunctionDecl;
 class TargetInfo;
 
 namespace CodeGen {
@@ -68,6 +69,14 @@ public:
   /// Return the calling convention to use for system runtime
   /// functions.
   llvm::CallingConv::ID getRuntimeCC() const { return RuntimeCC; }
+
+  // Get X86ABIAVXLevel for the given FunctionDecl and ExtInfo.
+  // This can be different than the global / module level X86ABIAVXLevel
+  // due to function attributes.
+  virtual unsigned getX86ABIAVXLevel(const FunctionDecl *,
+                                     const FunctionType::ExtInfo &) const {
+    return 0;
+  }
 
   virtual void computeInfo(CodeGen::CGFunctionInfo &FI) const = 0;
 
