@@ -1124,14 +1124,16 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
           TLI->isLegalInterleavedAccessType(SubVecTy, Factor, Alignment,
                                             AddressSpace, DL)) {
 
-        // Some processors optimize segment loads/stores as one wide memory op +
-        // Factor * LMUL shuffle ops.
+        // Some processors optimize segment loads/stores as N * DLEN sized
+        // load ops + Factor * LMUL shuffle ops.
         if (ST->hasOptimizedSegmentLoadStore(Factor)) {
-          InstructionCost Cost =
-              getMemoryOpCost(Opcode, VTy, Alignment, AddressSpace, CostKind);
+          unsigned VecSizeInBits =
+              getEstimatedVLFor(VTy) * VTy->getScalarSizeInBits();
+          unsigned DLEN = ST->getRealMinVLen() / ST->getDLenFactor();
+          InstructionCost Cost = divideCeil(VecSizeInBits, DLEN);
           MVT SubVecVT = getTLI()->getValueType(DL, SubVecTy).getSimpleVT();
           Cost += Factor * TLI->getLMULCost(SubVecVT);
-          return LT.first * Cost;
+          return Cost;
         }
 
         // Otherwise, the cost is proportional to the number of elements (VL *
