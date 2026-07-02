@@ -3533,31 +3533,42 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     }
   }
 
-  // (icmp sge X, 0) & (icmp ne (X & INT_MAX), 0) -> (icmp sgt X, 0)
-  // (icmp slt X, 0) | (icmp eq (X & INT_MAX), 0) -> (icmp sle X, 0)
+  // (icmp sge X, 0) & (icmp ne (X & Mask), 0) -> (icmp sgt X, 0)
+  // (icmp slt X, 0) | (icmp eq (X & Mask), 0) -> (icmp sle X, 0)
+  // Valid if Mask covers all potentially non-zero positive bits of X.
   {
     bool TrueIfSigned;
+    const APInt *MaskC;
+    auto IsValidMask = [&](Value *X, const APInt &Mask) {
+      APInt SignBit = APInt::getSignMask(Mask.getBitWidth());
+      APInt RequiredMask = ~Mask & ~SignBit;
+      return RequiredMask.isZero() ||
+             (RequiredMask & ~computeKnownBits(X, &I, 0).Zero).isZero();
+    };
+
     if (isSignBitCheck(PredL, *LHSC, TrueIfSigned) &&
         PredR == (IsAnd ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ) &&
         match(RHS1, m_Zero()) &&
-        match(RHS0, m_And(m_Specific(LHS0), m_MaxSignedValue()))) {
+        match(RHS0, m_And(m_Specific(LHS0), m_APInt(MaskC))) &&
+        IsValidMask(LHS0, *MaskC)) {
       if (IsAnd && !TrueIfSigned)
-        return Builder.CreateICmpSGT(
-            LHS0, ConstantInt::getNullValue(LHS0->getType()));
+        return Builder.CreateICmpSGT(LHS0,
+                                     ConstantInt::getNullValue(LHS0->getType()));
       if (!IsAnd && TrueIfSigned)
-        return Builder.CreateICmpSLE(
-            LHS0, ConstantInt::getNullValue(LHS0->getType()));
+        return Builder.CreateICmpSLE(LHS0,
+                                     ConstantInt::getNullValue(LHS0->getType()));
     }
     if (isSignBitCheck(PredR, *RHSC, TrueIfSigned) &&
         PredL == (IsAnd ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ) &&
         match(LHS1, m_Zero()) &&
-        match(LHS0, m_And(m_Specific(RHS0), m_MaxSignedValue()))) {
+        match(LHS0, m_And(m_Specific(RHS0), m_APInt(MaskC))) &&
+        IsValidMask(RHS0, *MaskC)) {
       if (IsAnd && !TrueIfSigned)
-        return Builder.CreateICmpSGT(
-            RHS0, ConstantInt::getNullValue(RHS0->getType()));
+        return Builder.CreateICmpSGT(RHS0,
+                                     ConstantInt::getNullValue(RHS0->getType()));
       if (!IsAnd && TrueIfSigned)
-        return Builder.CreateICmpSLE(
-            RHS0, ConstantInt::getNullValue(RHS0->getType()));
+        return Builder.CreateICmpSLE(RHS0,
+                                     ConstantInt::getNullValue(RHS0->getType()));
     }
   }
 

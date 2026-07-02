@@ -73,3 +73,23 @@ define i1 @test_and_commuted(i32 %A) {
   ret i1 %res
 }
 
+
+define i1 @test_known_bits(i32 %A) {
+  ; clear bit 30
+  %A_and = and i32 %A, -1073741825
+  %cmp1 = icmp sge i32 %A_and, 0
+  %and = and i32 %A_and, 1073741823
+  %cmp2 = icmp ne i32 %and, 0
+  %res = and i1 %cmp1, %cmp2
+  ret i1 %res
+}
+
+define i1 @test_known_bits_or(i32 %A) {
+  ; clear bit 30
+  %A_and = and i32 %A, -1073741825
+  %cmp1 = icmp slt i32 %A_and, 0
+  %and = and i32 %A_and, 1073741823
+  %cmp2 = icmp eq i32 %and, 0
+  %res = or i1 %cmp1, %cmp2
+  ret i1 %res
+}
