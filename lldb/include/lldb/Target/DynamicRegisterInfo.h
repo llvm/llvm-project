@@ -12,8 +12,8 @@
 #include <map>
 #include <vector>
 
-#include "lldb/Target/RegisterFlags.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/RegisterFlags.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-private.h"
 
