@@ -86,34 +86,21 @@ define i8 @test_signed_i8_f32(float %f) nounwind {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_cvt_i32_f32_e32 v0, v0
-; GFX11-NEXT:    s_movk_i32 s0, 0xff80
-; GFX11-NEXT:    v_med3_i32 v0, v0, s0, 0x7f
+; GFX11-NEXT:    v_mov_b32_e32 v1, 0xffffff80
+; GFX11-NEXT:    v_med3_i32 v0, v0, v1, 0x7f
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX12-ISEL-LABEL: test_signed_i8_f32:
-; GFX12-ISEL:       ; %bb.0:
-; GFX12-ISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-ISEL-NEXT:    s_wait_expcnt 0x0
-; GFX12-ISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX12-ISEL-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-ISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-ISEL-NEXT:    v_cvt_i32_f32_e32 v0, v0
-; GFX12-ISEL-NEXT:    s_movk_i32 s0, 0xff80
-; GFX12-ISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-ISEL-NEXT:    v_med3_i32 v0, v0, s0, 0x7f
-; GFX12-ISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX12-GI-LABEL: test_signed_i8_f32:
-; GFX12-GI:       ; %bb.0:
-; GFX12-GI-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-GI-NEXT:    s_wait_expcnt 0x0
-; GFX12-GI-NEXT:    s_wait_samplecnt 0x0
-; GFX12-GI-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GI-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GI-NEXT:    v_cvt_i32_f32_e32 v0, v0
-; GFX12-GI-NEXT:    v_mov_b32_e32 v1, 0xffffff80
-; GFX12-GI-NEXT:    v_med3_i32 v0, v0, v1, 0x7f
-; GFX12-GI-NEXT:    s_setpc_b64 s[30:31]
+; GFX12-LABEL: test_signed_i8_f32:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_cvt_i32_f32_e32 v0, v0
+; GFX12-NEXT:    v_mov_b32_e32 v1, 0xffffff80
+; GFX12-NEXT:    v_med3_i32 v0, v0, v1, 0x7f
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
     %x = call i8 @llvm.fptosi.sat.i8.f32(float %f)
     ret i8 %x
 }
@@ -491,38 +478,25 @@ define i8 @test_s_signed_i8_f32(float inreg %f) nounwind {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_cvt_i32_f32_e32 v0, s0
-; GFX11-NEXT:    s_movk_i32 s0, 0xff80
-; GFX11-NEXT:    v_med3_i32 v0, v0, s0, 0x7f
+; GFX11-NEXT:    v_mov_b32_e32 v1, 0xffffff80
+; GFX11-NEXT:    v_med3_i32 v0, v0, v1, 0x7f
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX12-ISEL-LABEL: test_s_signed_i8_f32:
-; GFX12-ISEL:       ; %bb.0:
-; GFX12-ISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-ISEL-NEXT:    s_wait_expcnt 0x0
-; GFX12-ISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX12-ISEL-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-ISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-ISEL-NEXT:    v_mov_b32_e32 v0, 0x7f
-; GFX12-ISEL-NEXT:    s_cvt_i32_f32 s0, s0
-; GFX12-ISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-ISEL-NEXT:    v_med3_i32 v0, 0xffffff80, s0, v0
-; GFX12-ISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX12-GI-LABEL: test_s_signed_i8_f32:
-; GFX12-GI:       ; %bb.0:
-; GFX12-GI-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-GI-NEXT:    s_wait_expcnt 0x0
-; GFX12-GI-NEXT:    s_wait_samplecnt 0x0
-; GFX12-GI-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GI-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GI-NEXT:    s_cvt_i32_f32 s0, s0
-; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GI-NEXT:    s_min_i32 s0, s0, 0x7f
-; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GI-NEXT:    s_max_i32 s0, s0, 0xffffff80
-; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GI-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-GI-NEXT:    s_setpc_b64 s[30:31]
+; GFX12-LABEL: test_s_signed_i8_f32:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_cvt_i32_f32 s0, s0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_min_i32 s0, s0, 0x7f
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_max_i32 s0, s0, 0xffffff80
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
     %x = call i8 @llvm.fptosi.sat.i8.f32(float %f)
     ret i8 %x
 }

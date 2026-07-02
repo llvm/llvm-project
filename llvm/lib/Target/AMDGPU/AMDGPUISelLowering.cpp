@@ -3920,6 +3920,7 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT_SAT(const SDValue Op,
   EVT DstVT = Op.getValueType();
   SDValue SatVTOp = Op.getNode()->getOperand(1);
   EVT SatVT = cast<VTSDNode>(SatVTOp)->getVT();
+  const GCNSubtarget &ST = DAG.getSubtarget<GCNSubtarget>();
   SDLoc DL(Op);
 
   uint64_t DstWidth = DstVT.getScalarSizeInBits();
@@ -3934,6 +3935,14 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT_SAT(const SDValue Op,
         (DstVT == MVT::v2i16 && SrcVT == MVT::v2f32))
       return Op;
   }
+
+  // Native selection also applies to some 8-bit width cases to allow use of
+  // packed instructions.
+  if (SatWidth == 8 &&
+      ((DstVT == MVT::i16 && SrcVT == MVT::f32) ||
+       (DstVT == MVT::v2i16 && SrcVT == MVT::v2f32)) &&
+      ST.hasVCvtPkIU16F32())
+    return Op;
 
   // Vectors can only be selected natively.
   if (DstVT.isVector())

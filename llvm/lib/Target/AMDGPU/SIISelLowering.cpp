@@ -684,11 +684,15 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BSWAP, MVT::v4i16, Custom);
 
     // Legalize vector types for sat conversions to select v_cvt_pk_[iu]16_f32.
-    if (Subtarget->hasVCvtPkIU16F32())
+    if (Subtarget->hasVCvtPkIU16F32()) {
       setOperationAction(
           {ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT},
           {MVT::v2i16, MVT::v4i16, MVT::v8i16, MVT::v16i16, MVT::v32i16},
           Custom);
+      setOperationAction(
+          {ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT},
+          {MVT::v2i8, MVT::v4i8, MVT::v8i8, MVT::v16i8, MVT::v32i8}, Custom);
+    }
 
     // XXX - Do these do anything? Vector constants turn into build_vector.
     setOperationAction(ISD::Constant, {MVT::v2i16, MVT::v2f16}, Legal);
@@ -8237,6 +8241,23 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::EXTRACT_VECTOR_ELT: {
     if (SDValue Res = lowerEXTRACT_VECTOR_ELT(SDValue(N, 0), DAG))
       Results.push_back(Res);
+    return;
+  }
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT: {
+    // Re-write vNi8 vector into vNi16 vector with a truncate, so we can select
+    // a packed conversion.
+    EVT DstVT = N->getValueType(0);
+    EVT SrcVT = N->getOperand(0).getValueType();
+    if (!DstVT.isVector() || DstVT.getScalarSizeInBits() != 8 ||
+        SrcVT.getScalarType() != MVT::f32)
+      return;
+
+    SDLoc SL(N);
+    EVT NewDstVT = DstVT.changeVectorElementType(*DAG.getContext(), MVT::i16);
+    SDValue SatVTOp = DAG.getNode(N->getOpcode(), SL, NewDstVT,
+                                  N->getOperand(0), N->getOperand(1));
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, SL, DstVT, SatVTOp));
     return;
   }
   case ISD::INTRINSIC_WO_CHAIN: {

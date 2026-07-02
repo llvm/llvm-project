@@ -1245,8 +1245,17 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   auto &FPToISat = getActionDefinitionsBuilder({G_FPTOSI_SAT, G_FPTOUI_SAT})
     .legalFor({{S32, S32}, {S32, S64}, {S16, S32}})
     .legalFor(ST.has16BitInsts(), {{S16, S16}})
-    .legalFor(ST.hasVCvtPkIU16F32(), {{V2S16, V2S32}})
-    .narrowScalarFor({{S64, S16}}, changeTo(0, S32));
+    .legalFor(ST.hasVCvtPkIU16F32(), {{V2S16, V2S32}});
+
+  // Widen vNf32 -> vNi8 into vNf32 -> vNi16, so we can select a packed
+  // instruction.
+  if (ST.hasVCvtPkIU16F32())
+    FPToISat.widenScalarIf(
+        all(isVector(0), elementTypeIs(0, S8),
+            isVector(1), elementTypeIs(1, S32)),
+        changeElementTo(0, S16));
+
+  FPToISat.narrowScalarFor({{S64, S16}}, changeTo(0, S32));
 
   // If available, widen width <16 to i16, intead of i32 so v_cvt_i16/u16_f16 can be used.
   if (ST.has16BitInsts())

@@ -723,6 +723,10 @@ let SubtargetPredicate = HasSALUFloatInsts, AddedComplexity = 9 in {
                        0xffff>;
   def : SOP_FPToSSatPat<(i16 (UniformBinFrag<fp_to_sint_sat> f32:$src0, i16)),
                        0x7fff, 0xffff8000>;
+  def : SOP_FPToUSatPat<(i16 (UniformBinFrag<fp_to_uint_sat> f32:$src0, i8)),
+                       0xff>;
+  def : SOP_FPToSSatPat<(i16 (UniformBinFrag<fp_to_sint_sat> f32:$src0, i8)),
+                       0x7f, 0xffffff80>;
 }
 
 let SubtargetPredicate = isGFX12Plus in {
