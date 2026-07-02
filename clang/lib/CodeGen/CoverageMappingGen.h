@@ -160,20 +160,26 @@ class CoverageMappingGen {
   SourceManager &SM;
   const LangOptions &LangOpts;
   llvm::DenseMap<const Stmt *, CounterPair> *CounterMap;
+  llvm::DenseMap<const Stmt *, unsigned> *CallContinuationCounterMap;
   MCDC::State *MCDCState;
+  unsigned NextCounter;
 
 public:
   CoverageMappingGen(CoverageMappingModuleGen &CVM, SourceManager &SM,
                      const LangOptions &LangOpts)
       : CVM(CVM), SM(SM), LangOpts(LangOpts), CounterMap(nullptr),
-        MCDCState(nullptr) {}
+        CallContinuationCounterMap(nullptr), MCDCState(nullptr),
+        NextCounter(0) {}
 
-  CoverageMappingGen(CoverageMappingModuleGen &CVM, SourceManager &SM,
-                     const LangOptions &LangOpts,
-                     llvm::DenseMap<const Stmt *, CounterPair> *CounterMap,
-                     MCDC::State *MCDCState)
+  CoverageMappingGen(
+      CoverageMappingModuleGen &CVM, SourceManager &SM,
+      const LangOptions &LangOpts,
+      llvm::DenseMap<const Stmt *, CounterPair> *CounterMap,
+      llvm::DenseMap<const Stmt *, unsigned> *CallContinuationCounterMap,
+      MCDC::State *MCDCState, unsigned NextCounter)
       : CVM(CVM), SM(SM), LangOpts(LangOpts), CounterMap(CounterMap),
-        MCDCState(MCDCState) {}
+        CallContinuationCounterMap(CallContinuationCounterMap),
+        MCDCState(MCDCState), NextCounter(NextCounter) {}
 
   /// Emit the coverage mapping data which maps the regions of
   /// code to counters that will be used to find the execution

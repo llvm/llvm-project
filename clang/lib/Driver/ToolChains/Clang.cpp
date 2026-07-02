@@ -542,8 +542,9 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
                       Args.hasArg(options::OPT_coverage);
   bool EmitCovData = TC.needsGCovInstrumentation(Args);
 
-  if (Args.hasFlag(options::OPT_fcoverage_mapping,
-                   options::OPT_fno_coverage_mapping, false)) {
+  bool CoverageMappingEnabled = Args.hasFlag(
+      options::OPT_fcoverage_mapping, options::OPT_fno_coverage_mapping, false);
+  if (CoverageMappingEnabled) {
     if (!ProfileGenerateArg)
       D.Diag(clang::diag::err_drv_argument_only_allowed_with)
           << "-fcoverage-mapping"
@@ -552,10 +553,19 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     CmdArgs.push_back("-fcoverage-mapping");
   }
 
+  if (Args.hasFlag(options::OPT_fcoverage_call_continuations,
+                   options::OPT_fno_coverage_call_continuations, false)) {
+    if (!CoverageMappingEnabled)
+      D.Diag(clang::diag::err_drv_argument_only_allowed_with)
+          << "-fcoverage-call-continuations"
+          << "-fcoverage-mapping";
+
+    CmdArgs.push_back("-fcoverage-call-continuations");
+  }
+
   if (Args.hasFlag(options::OPT_fmcdc_coverage, options::OPT_fno_mcdc_coverage,
                    false)) {
-    if (!Args.hasFlag(options::OPT_fcoverage_mapping,
-                      options::OPT_fno_coverage_mapping, false))
+    if (!CoverageMappingEnabled)
       D.Diag(clang::diag::err_drv_argument_only_allowed_with)
           << "-fcoverage-mcdc"
           << "-fcoverage-mapping";
@@ -9712,6 +9722,8 @@ static bool requiresProfileRT(unsigned ID) {
   case options::OPT_fprofile_instr_generate_EQ:
   case options::OPT_fcoverage_mapping:
   case options::OPT_fno_coverage_mapping:
+  case options::OPT_fcoverage_call_continuations:
+  case options::OPT_fno_coverage_call_continuations:
   case options::OPT_fcoverage_compilation_dir_EQ:
   case options::OPT_ffile_compilation_dir_EQ:
   case options::OPT_fcoverage_prefix_map_EQ:
@@ -9784,6 +9796,8 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_fprofile_instr_generate_EQ,
       OPT_fcoverage_mapping,
       OPT_fno_coverage_mapping,
+      OPT_fcoverage_call_continuations,
+      OPT_fno_coverage_call_continuations,
       OPT_fcoverage_compilation_dir_EQ,
       OPT_ffile_compilation_dir_EQ,
       OPT_fcoverage_prefix_map_EQ,

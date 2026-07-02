@@ -6466,37 +6466,44 @@ RValue CodeGenFunction::EmitCallExpr(const CallExpr *E,
     }
   });
 
-  // Builtins never have block type.
-  if (E->getCallee()->getType()->isBlockPointerType())
-    return EmitBlockCallExpr(E, ReturnValue, CallOrInvoke);
+  auto EmitTheCall = [&]() -> RValue {
+    // Builtins never have block type.
+    if (E->getCallee()->getType()->isBlockPointerType())
+      return EmitBlockCallExpr(E, ReturnValue, CallOrInvoke);
 
-  if (const auto *CE = dyn_cast<CXXMemberCallExpr>(E))
-    return EmitCXXMemberCallExpr(CE, ReturnValue, CallOrInvoke);
+    if (const auto *CE = dyn_cast<CXXMemberCallExpr>(E))
+      return EmitCXXMemberCallExpr(CE, ReturnValue, CallOrInvoke);
 
-  if (const auto *CE = dyn_cast<CUDAKernelCallExpr>(E))
-    return EmitCUDAKernelCallExpr(CE, ReturnValue, CallOrInvoke);
+    if (const auto *CE = dyn_cast<CUDAKernelCallExpr>(E))
+      return EmitCUDAKernelCallExpr(CE, ReturnValue, CallOrInvoke);
 
-  // A CXXOperatorCallExpr is created even for explicit object methods, but
-  // these should be treated like static function call.
-  if (const auto *CE = dyn_cast<CXXOperatorCallExpr>(E))
-    if (const auto *MD =
-            dyn_cast_if_present<CXXMethodDecl>(CE->getCalleeDecl());
-        MD && MD->isImplicitObjectMemberFunction())
-      return EmitCXXOperatorMemberCallExpr(CE, MD, ReturnValue, CallOrInvoke);
+    // A CXXOperatorCallExpr is created even for explicit object methods, but
+    // these should be treated like static function call.
+    if (const auto *CE = dyn_cast<CXXOperatorCallExpr>(E))
+      if (const auto *MD =
+              dyn_cast_if_present<CXXMethodDecl>(CE->getCalleeDecl());
+          MD && MD->isImplicitObjectMemberFunction())
+        return EmitCXXOperatorMemberCallExpr(CE, MD, ReturnValue, CallOrInvoke);
 
-  CGCallee callee = EmitCallee(E->getCallee());
+    CGCallee callee = EmitCallee(E->getCallee());
 
-  if (callee.isBuiltin()) {
-    return EmitBuiltinExpr(callee.getBuiltinDecl(), callee.getBuiltinID(),
-                           E, ReturnValue);
-  }
+    if (callee.isBuiltin()) {
+      return EmitBuiltinExpr(callee.getBuiltinDecl(), callee.getBuiltinID(), E,
+                             ReturnValue);
+    }
 
-  if (callee.isPseudoDestructor()) {
-    return EmitCXXPseudoDestructorExpr(callee.getPseudoDestructorExpr());
-  }
+    if (callee.isPseudoDestructor()) {
+      return EmitCXXPseudoDestructorExpr(callee.getPseudoDestructorExpr());
+    }
 
-  return EmitCall(E->getCallee()->getType(), callee, E, ReturnValue,
-                  /*Chain=*/nullptr, CallOrInvoke);
+    return EmitCall(E->getCallee()->getType(), callee, E, ReturnValue,
+                    /*Chain=*/nullptr, CallOrInvoke);
+  };
+
+  RValue RV = EmitTheCall();
+  if (E != MustTailCall)
+    incrementCallContinuationProfileCounter(E);
+  return RV;
 }
 
 /// Emit a CallExpr without considering whether it might be a subclass.
