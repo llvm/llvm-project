@@ -60,4 +60,58 @@ def WrapFuncInClassPass : Pass<"wrap-emitc-func-in-class", "ModuleOp"> {
   ];
 }
 
+def MLGOAddReflectionMapPass : Pass<"mlgo-add-reflection-map", "ModuleOp"> {
+  let summary = "Add a reflection map and a helper method to EmitC classes for runtime field lookup.";
+  let description = [{
+    This pass adds a `reflectionMap` field and an accompanying `getBufferForName` method to 
+    EmitC classes, enabling runtime lookup of class fields by name. 
+    This requires that the class has fields with attributes.
+    Each `emitc.field` is expected to have an attribute (configured by the
+    `field-attr-name` option) that is an array containing a single string
+    attribute. If a field possesses both the attribute specified by
+    `field-attr-name` and an attribute specified in `excluded-field-attrs`,
+    the `field-attr-name` attribute takes precedence and the field will be
+    included in the reflection map.
+    
+    Example:
+
+    ```mlir
+    emitc.class @MyClass {
+      emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref = ["another_feature"]}
+      emitc.field @fieldName1 : !emitc.array<1xf32> {emitc.field_ref = ["some_feature"]}
+      emitc.func @execute() { ... }
+    }
+
+    Becomes:
+
+    emitc.class @MyClass {
+      emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref = ["another_feature"]}
+      emitc.field @fieldName1 : !emitc.array<1xf32> {emitc.field_ref = ["some_feature"]}
+      emitc.field @reflectionMap : !emitc.opaque<"const std::map<std::string, char*>"> = 
+        #emitc.opaque<"{ { \22another_feature\22, reinterpret_cast<char*>(&fieldName0) }, { \22some_feature\22, reinterpret_cast<char*>(&fieldName1) } }">
+      emitc.func @getBufferForName(%arg0: !emitc.opaque<"std::string">)
+          -> !emitc.ptr<!emitc.opaque<"char">> {
+        %0 = get_field @reflectionMap
+          : !emitc.opaque<"const std::map<std::string, char*>">
+        %1 = member_call_opaque %0 "at"(%arg0)
+          : !emitc.opaque<"const std::map<std::string, char*>">,
+            (!emitc.opaque<"std::string">) -> !emitc.ptr<!emitc.opaque<"char">>
+        return %1 : !emitc.ptr<!emitc.opaque<"char">>
+      }
+      emitc.func @execute() { ... }
+    }
+    ```
+  }];
+  let dependentDialects = ["emitc::EmitCDialect"];
+  let options = [
+    Option<"fieldAttrName", "field-attr-name", "std::string",
+      /*default=*/"",
+      "Attribute key used to extract field names from a field's "
+      "attribute dictionary">,
+    ListOption<"excludedFieldAttrs", "excluded-field-attrs", "std::string",
+      "Attribute keys that, if present on a field, exclude it "
+      "from the reflection map">
+  ];
+}
+
 #endif // MLIR_DIALECT_EMITC_TRANSFORMS_PASSES
