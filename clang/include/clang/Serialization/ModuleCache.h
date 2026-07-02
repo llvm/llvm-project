@@ -49,7 +49,6 @@ protected:
   AtomicLineLogger &Logger;
 
 public:
-
   explicit ModuleCache(AtomicLineLogger &Logger) : Logger(Logger) {}
 
   /// Returns an opaque pointer representing the module cache directory. This
@@ -90,6 +89,8 @@ public:
   read(StringRef FileName, off_t &Size, time_t &ModTime) = 0;
 
   virtual ~ModuleCache() = default;
+
+  AtomicLineLogger &getLogger() { return Logger; }
 };
 
 /// Creates new \c ModuleCache backed by a file system directory that may be

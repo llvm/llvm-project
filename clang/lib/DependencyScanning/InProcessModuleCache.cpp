@@ -148,7 +148,6 @@ public:
 
   std::error_code write(StringRef Path, llvm::MemoryBufferRef Buffer,
                         off_t &Size, time_t &ModTime) override {
-    Logger.log() << "pcm_write: " << Path;
     ModuleCacheEntry &Entry = getOrCreateEntry(Path);
     std::lock_guard<std::mutex> Lock(Entry.Mutex);
     Logger.log() << "pcm_write: " << Path;
