@@ -113,6 +113,9 @@ constexpr bool test() {
 
   // These two test points cause gcc to ICE
 #if !defined(TEST_COMPILER_GCC)
+
+// Remove this guard when compiler versions older than clang 23 are no longer supported.
+#  if defined(TEST_CLANG_VER) && TEST_CLANG_VER >= 2300
   // sizeof...(Types) == 1 && is_convertible_v<decltype(u), T>
   {
     const std::tuple<CvtFromConstTupleRefRef> t1{};
@@ -126,7 +129,9 @@ constexpr bool test() {
     std::tuple<ConvertibleFrom<ExplicitCtrFromConstTupleRefRef>> t2{std::move(t1)};
     assert(!constMoveCtrCalled(std::get<0>(t2).v));
   }
-#endif
+#  endif // defined(TEST_CLANG_VER) && TEST_CLANG_VER >= 2300
+
+#endif // !defined(TEST_COMPILER_GCC)
 
   return true;
 }

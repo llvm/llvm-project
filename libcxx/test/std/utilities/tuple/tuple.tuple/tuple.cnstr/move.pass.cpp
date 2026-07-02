@@ -111,18 +111,22 @@ int main(int, char**)
         assert(std::get<1>(t) == 1);
         assert(std::get<2>(t) == 2);
     }
-    // A bug in tuple caused __tuple_leaf to use its explicit converting constructor
-    //  as its move constructor. This tests that ConstructsWithTupleLeaf is not called
-    // (w/ __tuple_leaf)
-    {
-        typedef std::tuple<ConstructsWithTupleLeaf> d_t;
-        d_t d((ConstructsWithTupleLeaf()));
-        d_t d2(static_cast<d_t &&>(d));
-    }
-    {
-        test_sfinae<move_only_ebo>();
-        test_sfinae<move_only_large>();
-    }
+// Remove this guard when compiler versions older than clang 23 are no longer supported.
+#if defined(TEST_CLANG_VER) && TEST_CLANG_VER >= 2300
+  // A bug in tuple caused __tuple_leaf to use its explicit converting constructor
+  //  as its move constructor. This tests that ConstructsWithTupleLeaf is not called
+  // (w/ __tuple_leaf)
+  {
+    typedef std::tuple<ConstructsWithTupleLeaf> d_t;
+    d_t d((ConstructsWithTupleLeaf()));
+    d_t d2(static_cast<d_t&&>(d));
+  }
+#endif // defined(TEST_CLANG_VER) && TEST_CLANG_VER >= 2300
+
+  {
+    test_sfinae<move_only_ebo>();
+    test_sfinae<move_only_large>();
+  }
 
   return 0;
 }
