@@ -3629,7 +3629,24 @@ void CIRGenModule::setFuncInfoAttr(cir::FuncOp funcOp,
   if (!kind)
     return;
 
-  funcOp.setFuncInfoAttr(cir::FuncIdentityAttr::get(&getMLIRContext(), *kind));
+  clang::QualType firstPointee;
+  bool narrowCharParams =
+      !funcDecl->parameters().empty() &&
+      llvm::all_of(funcDecl->parameters(), [&](const ParmVarDecl *param) {
+        clang::QualType pointee = param->getType()->getPointeeType();
+        if (pointee.isNull() || !pointee->isCharType() ||
+            pointee.isVolatileQualified()) {
+          return false;
+        }
+        clang::QualType canonical =
+            pointee.getCanonicalType().getUnqualifiedType();
+        if (firstPointee.isNull())
+          firstPointee = canonical;
+        return canonical == firstPointee;
+      });
+
+  funcOp.setFuncInfoAttr(
+      cir::FuncIdentityAttr::get(&getMLIRContext(), *kind, narrowCharParams));
 }
 
 static void setWindowsItaniumDLLImport(CIRGenModule &cgm, bool isLocal,
