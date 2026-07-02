@@ -1,9 +1,14 @@
-//===--- Linux implementation of the Dir helpers --------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Linux implementation of the Dir helpers.
+///
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/File/dir.h"
@@ -43,5 +48,7 @@ int platform_closedir(int fd) {
   }
   return 0;
 }
+
+size_t platform_dir_reclen(struct ::dirent *d) { return d->d_reclen; }
 
 } // namespace LIBC_NAMESPACE_DECL

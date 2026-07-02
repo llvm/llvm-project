@@ -56,6 +56,7 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.generic_error_number_macros
 )
 
+add_header_library(dirent_overlay HDRS dirent_overlay.h)
 add_header_library(fcntl_overlay HDRS fcntl_overlay.h)
 add_proxy_header_library(
   fcntl_macros
