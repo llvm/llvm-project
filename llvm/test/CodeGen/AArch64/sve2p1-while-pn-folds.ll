@@ -4,16 +4,19 @@
 
 ; Tests extracting the first lane from the first segment of a
 ; predicate-as-counter while folds to a conditional set (CSET) based on the
-; "FIRST_ACTIVE" status flag from the while.
+; "FIRST_ACTIVE" status flags from the while.
 ;
-; %while = WHILE_*_PRED_COUNTER .. ; predicate-as-counter while
+; %while, %flags = WHILE_*_PRED_COUNTER .. ; predicate-as-counter while
 ; %first.segment = pext(%while, 0) ; predicate extract of segment 0
 ; %first.active = extract_elt(%first_segment, 0) ; extract first lane
 ;
 ; ->
 ;
-; %while = WHILE_*_PRED_COUNTER .. ; predicate-as-counter while
-; %first.active = cset(%while, FIRST_ACTIVE)
+; %while, %flags = WHILE_*_PRED_COUNTER .. ; predicate-as-counter while
+; %first.active = cset(%flags, FIRST_ACTIVE)
+
+; Note: FIRST_ACTIVE corresponds to the MI condition code (N == 1), and
+; not(FIRST_ACTIVE) corresponds to the PL condition code (N == 0).
 
 define i1 @whilege_first_active(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilege_first_active:
