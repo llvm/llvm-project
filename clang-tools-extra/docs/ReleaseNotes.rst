@@ -221,6 +221,12 @@ New checks
 
   Finds assignments within selection statements.
 
+- New :doc:`bugprone-lambda-capture-lifetime
+  <clang-tidy/checks/bugprone/lambda-capture-lifetime>` check.
+
+  Finds lambdas that capture local variables by reference and escape their
+  local scope by being passed to asynchronous sinks or out-of-scope containers.
+
 - New :doc:`bugprone-missing-end-comparison
   <clang-tidy/checks/bugprone/missing-end-comparison>` check.
 

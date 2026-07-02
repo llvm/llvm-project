@@ -45,6 +45,7 @@
 #include "InfiniteLoopCheck.h"
 #include "IntegerDivisionCheck.h"
 #include "InvalidEnumDefaultInitializationCheck.h"
+#include "LambdaCaptureLifetimeCheck.h"
 #include "LambdaFunctionNameCheck.h"
 #include "MacroParenthesesCheck.h"
 #include "MacroRepeatedSideEffectsCheck.h"
@@ -184,6 +185,8 @@ public:
         "bugprone-incorrect-enable-if");
     CheckFactories.registerCheck<IncorrectEnableSharedFromThisCheck>(
         "bugprone-incorrect-enable-shared-from-this");
+    CheckFactories.registerCheck<LambdaCaptureLifetimeCheck>(
+        "bugprone-lambda-capture-lifetime");
     CheckFactories.registerCheck<UnintendedCharOstreamOutputCheck>(
         "bugprone-unintended-char-ostream-output");
     CheckFactories.registerCheck<ReturnConstRefFromParameterCheck>(
