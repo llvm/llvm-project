@@ -436,7 +436,7 @@ public:
   }
 
   /// Returns true if this Expected value holds an Error of type error_type.
-  template <typename ErrT> bool isFailureOfType() const {
+  template <typename ErrT> bool isFailureOfType() const noexcept {
     return HasError && (*getErrorStorage())->template isA<ErrT>();
   }
 
