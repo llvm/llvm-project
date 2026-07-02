@@ -169,6 +169,7 @@ add_libc_test(
   SRCS
     string_test.cpp
   DEPENDS
+  libc.hdr.func.free
   libc.src.__support.CPP.string
   libc.src.__support.CPP.string_view
 )

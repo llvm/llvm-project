@@ -2,6 +2,9 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-p,+m,+zbb \
 ; RUN:   -verify-machineinstrs < %s | \
 ; RUN:   FileCheck --check-prefixes=CHECK-RV32 %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-p,+m,+zbb,+d \
+; RUN:   -verify-machineinstrs < %s | \
+; RUN:   FileCheck --check-prefixes=CHECK-RV32 %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-p,+m,+zbb \
 ; RUN:   -verify-machineinstrs < %s | \
 ; RUN:   FileCheck --check-prefixes=CHECK-RV64 %s

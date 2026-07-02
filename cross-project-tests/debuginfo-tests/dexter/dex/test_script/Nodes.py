@@ -11,14 +11,26 @@ constructor/representer in `setup_yaml_parser` before loading or printing any sc
 import abc
 from dataclasses import dataclass
 import re
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 import yaml
 from dex.dextIR.ValueIR import ValueIR
 from dex.utils.Exceptions import Error
 
 
 def setup_yaml_parser(loader):
-    reg_classes = [Where, Value, DexRange, Label, Then, Address, ValueAll, Step]
+    reg_classes = [
+        Address,
+        DexRange,
+        Float,
+        Label,
+        Step,
+        Then,
+        Type,
+        TypeAll,
+        Value,
+        ValueAll,
+        Where,
+    ]
     for c in reg_classes:
         c.register_yaml(loader)
 
@@ -167,7 +179,25 @@ class Expect:
         return None
 
 
+class ExpectAll(Expect):
+    """An Expect for all variables within a named debugger scope; used only to generate scripts from debugger output,
+    cannot be used for testing debugger output directly.
+    """
+
+    @staticmethod
+    def get_base_expect(var_name: str) -> Expect:
+        raise NotImplementedError(f"No ExpectAll base type declared")
+
+
 class Value(Expect):
+    """Expect node used to test the value(s) for a single variable, functioning similarly to !value. Allows expecting
+    a single value, a list of values, and/or values of members for aggregate variables.
+
+    This node compares the expected values against the actual values observed in the debugger, and produces a set of
+    metrics quantifying the difference between expected and actual. Can be used with script rewriting to generate
+    expected values for the tested variable.
+    """
+
     def __init__(self, variable_name: str):
         self.variable_name = variable_name
         self.actual_values = None
@@ -200,7 +230,7 @@ class Value(Expect):
         yaml.add_representer(Value, Value.representer)
 
 
-class ValueAll(Expect):
+class ValueAll(ExpectAll):
     """Expect node used to write values for all variables within a particular debugger scope, as defined by the DAP
     specification; see: https://microsoft.github.io/debug-adapter-protocol/specification#Requests_Scopes.
 
@@ -214,6 +244,10 @@ class ValueAll(Expect):
 
     def __repr__(self):
         return f"ValueAll({self.scope_name})"
+
+    @staticmethod
+    def get_base_expect(var_name: str) -> Expect:
+        return Value(var_name)
 
     @staticmethod
     def get_variable_result(value: ValueIR) -> Optional[str]:
@@ -234,6 +268,85 @@ class ValueAll(Expect):
     def register_yaml(loader):
         yaml.add_constructor("!value/all", ValueAll.constructor, loader)
         yaml.add_representer(ValueAll, ValueAll.representer)
+
+
+class Type(Expect):
+    """Expect node used to test the type(s) for a single variable, functioning similarly to !value. Allows expecting
+    a single type, a list of types, and/or types of members for aggregate variables.
+
+    This node compares the expected types against the actual types observed in the debugger, and produces a set of
+    metrics quantifying the difference between expected and actual. Can be used with script rewriting to generate
+    expected types for the tested variable.
+    """
+
+    def __init__(self, variable_name: str):
+        self.variable_name = variable_name
+        self.actual_values = None
+
+    @staticmethod
+    def get_variable_result(value: ValueIR) -> Optional[str]:
+        if value.could_evaluate:
+            return value.type_name
+        return None
+
+    def get_watched_expr(self) -> str:
+        return self.variable_name
+
+    def __repr__(self):
+        return f"Type({self.variable_name})"
+
+    @staticmethod
+    def constructor(loader: yaml.Loader, node):
+        return Type(loader.construct_scalar(node))
+
+    @staticmethod
+    def representer(dumper, data):
+        return dumper.represent_scalar("!type", data.variable_name)
+
+    @staticmethod
+    def register_yaml(loader):
+        yaml.add_constructor("!type", Type.constructor, loader)
+        yaml.add_representer(Type, Type.representer)
+
+
+class TypeAll(ExpectAll):
+    """Expect node used to write types for all variables within a particular debugger scope, as defined by the DAP
+    specification; see: https://microsoft.github.io/debug-adapter-protocol/specification#Requests_Scopes.
+
+    This node is not directly evaluated; it must have no expected values, and when Dexter rewrites the original script,
+    this node will be replaced with !type nodes for each variable that was seen in its scope inserted under !and nodes
+    that cover that variable's live range(s).
+    """
+
+    def __init__(self, scope_name: str):
+        self.scope_name = scope_name
+
+    def __repr__(self):
+        return f"TypeAll({self.scope_name})"
+
+    @staticmethod
+    def get_base_expect(var_name: str) -> Expect:
+        return Type(var_name)
+
+    @staticmethod
+    def get_variable_result(value: ValueIR) -> Optional[str]:
+        return Type.get_variable_result(value)
+
+    def get_watched_scope(self) -> Optional[str]:
+        return self.scope_name
+
+    @staticmethod
+    def constructor(loader, node):
+        return TypeAll(loader.construct_scalar(node))
+
+    @staticmethod
+    def representer(dumper, data):
+        return dumper.represent_scalar("!type/all", data.scope_name)
+
+    @staticmethod
+    def register_yaml(loader):
+        yaml.add_constructor("!type/all", TypeAll.constructor, loader)
+        yaml.add_representer(TypeAll, TypeAll.representer)
 
 
 class Step(Expect):
@@ -435,3 +548,111 @@ class Label:
     def register_yaml(loader):
         yaml.add_constructor("!label", Label.constructor, loader)
         yaml.add_representer(Label, Label.representer)
+
+
+class Float:
+    """Used to match against float values that may have an approximate range.
+    There are four possible representations for a !float node, with/without a list of values and with/without a range:
+    - `!float <value>` - checks for an exact match using floating point equality, e.g. !float 10 will match 10.0.
+    - `!float <value>+-<range>` - checks for a match within the given range, e.g. !float 10 +- 0.2 will match any
+                                  value in the range [9.8, 10.2]; range must also be a valid float value (and cannot be
+                                  omitted if "+-" is passed).
+    - `!float [<value>...] - checks for exact matches against any of the given values, e.g. !float [10, 11, 12] will
+                             match 10.0, 11.0, or 12.0. This is effectively a shorthand for using a list of single float
+                             values, e.g. `[!float 10, !float 11, !float 12]`.
+    - `!float {values: [<value>...], range: <range>} - checks for matches against any of the given values, each of which
+                                                       will match a range of +-<range>. As with normal lists, this is a
+                                                       shorthand, e.g. !float{values: [1, 2], range: 0.1} is equivalent
+                                                       to [!float 1 +- 0.1, !float 2 +- 0.1].
+    """
+
+    def __init__(self, values, range):
+        try:
+            if isinstance(values, list):
+                values = [float(v) for v in values]
+                range = float(range) if range is not None else None
+            elif isinstance(values, str) and "+-" in values:
+                assert (
+                    range is None
+                ), "Float has both an explicit range and a string-embedded range?"
+                values, range = (float(n) for n in values.split("+-", maxsplit=1))
+            else:
+                assert range is None, "Explicit range passed with single float value?"
+                values = float(values)
+        except ValueError as err:
+            raise DexterNodeError(self, f"!float received non-float value: {err}")
+        self.values: Union[float, List[float]] = values
+        self.range = range
+
+    def __repr__(self):
+        if self.range:
+            return f"Float(values={self.values}, range={self.range})"
+        return f"Float(values={self.values})"
+
+    def _format_result(self, expected: float) -> str:
+        """Formats an individual expected value for the purpose of comparing unique expected/seen values."""
+        return (
+            f"Float({expected}+-{self.range})"
+            if self.range is not None
+            else f"Float({expected})"
+        )
+
+    def get_expected_values(self) -> List[str]:
+        """Returns a list of expected values in the form 'Float(<value>[+-<range>])'."""
+        value_list = self.values if isinstance(self.values, list) else [self.values]
+        return [self._format_result(v) for v in value_list]
+
+    def matches(self, actual) -> Optional[str]:
+        """If 'actual' matches this node, return a string representation of the matching value (in the same format as
+        `get_expected_values` above), otherwise return None.
+        """
+        try:
+            actual = float(actual)
+        except ValueError:
+            return None
+
+        def float_match(expected: float) -> bool:
+            if self.range is None:
+                return expected == actual
+            return abs(expected - actual) <= self.range
+
+        if not isinstance(self.values, list):
+            return (
+                self._format_result(self.values) if float_match(self.values) else None
+            )
+        for expected in self.values:
+            if float_match(expected):
+                return self._format_result(expected)
+        return None
+
+    @staticmethod
+    def constructor(loader, node):
+        if isinstance(node, yaml.ScalarNode):
+            # `!float <value>` or `!float <value> +- <range>`
+            return Float(loader.construct_scalar(node), None)
+        if isinstance(node, yaml.SequenceNode):
+            # `!float [<value>...]`
+            return Float(loader.construct_sequence(node), None)
+        if isinstance(node, yaml.MappingNode):
+            # `!float {values: [<value>...], range: <range>}`
+            return Float(**loader.construct_mapping(node, deep=True))
+        raise Exception("Invalid args to !float")
+
+    @staticmethod
+    def representer(dumper: yaml.Dumper, data):
+        if data.range is None:
+            if isinstance(data.values, list):
+                return dumper.represent_sequence("!float", data.values, flow_style=True)
+            return dumper.represent_scalar("!float", data.values)
+        if not isinstance(data.values, list):
+            return dumper.represent_scalar("!float", f"{data.values} +- {data.range}")
+        mapping = {
+            "values": data.values,
+            "range": data.range,
+        }
+        return dumper.represent_mapping("!float", mapping, flow_style=True)
+
+    @staticmethod
+    def register_yaml(loader):
+        yaml.add_constructor("!float", Float.constructor, loader)
+        yaml.add_representer(Float, Float.representer)

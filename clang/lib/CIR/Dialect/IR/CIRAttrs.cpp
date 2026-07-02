@@ -230,15 +230,40 @@ ConstRecordAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   if (sTy.getMembers().size() != members.size())
     return emitError() << "number of elements must match";
 
-  unsigned attrIdx = 0;
-  for (auto &member : sTy.getMembers()) {
+  for (const auto &[attrIdx, member] : llvm::enumerate(sTy.getMembers())) {
     auto m = mlir::cast<mlir::TypedAttr>(members[attrIdx]);
+
+    // As a special case, we allow a flexible array member. This can only be the
+    // last element, the rest of the array type has to match (that is, the
+    // element type has to match), and the array member must be size zero.
+    if (attrIdx == sTy.getMembers().size() - 1) {
+      auto memArrayTy = dyn_cast<cir::ArrayType>(member);
+      if (memArrayTy && memArrayTy.getSize() == 0) {
+
+        // The FAM must only match another array type initializer.
+        if (!isa<cir::ArrayType>(m.getType()))
+          return emitError()
+                 << "element at index " << attrIdx << " has type "
+                 << m.getType() << " but the expected type for this element is "
+                 << member;
+
+        cir::ArrayType initArrayTy = cast<cir::ArrayType>(m.getType());
+        // The FAM only matches an equivalent array type.
+        if (initArrayTy.getElementType() != memArrayTy.getElementType())
+          return emitError()
+                 << "flexible array member at index " << attrIdx << " has type "
+                 << m.getType()
+                 << " which doesn't match the expected element type of member "
+                 << member;
+        continue;
+      }
+    }
+
     if (member != m.getType())
       return emitError() << "element at index " << attrIdx << " has type "
                          << m.getType()
                          << " but the expected type for this element is "
                          << member;
-    attrIdx++;
   }
 
   return success();
