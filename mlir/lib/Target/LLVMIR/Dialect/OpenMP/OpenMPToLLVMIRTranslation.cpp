@@ -6374,16 +6374,18 @@ static void collectMapDataFromMapOperands(
   // Process MapOperands
   for (Value mapValue : mapVars) {
     auto mapOp = cast<omp::MapInfoOp>(mapValue.getDefiningOp());
+    bool isAttachMap =
+        bitEnumContainsAll(mapOp.getMapType(), omp::ClauseMapFlags::attach);
     bool isRefPtrOrPteeMapWithAttach =
         checkRefPtrOrPteeMapWithAttach(mapOp.getMapType());
     Value offloadPtr = (mapOp.getVarPtrPtr() && !isRefPtrOrPteeMapWithAttach)
                            ? mapOp.getVarPtrPtr()
                            : mapOp.getVarPtr();
+    Value pointeePtr = isRefPtrOrPteeMapWithAttach
+                           ? mapOp.getVarPtrPtr()
+                           : (isAttachMap ? mapOp.getVarPtr() : offloadPtr);
     mapData.OriginalValue.push_back(moduleTranslation.lookupValue(offloadPtr));
-    mapData.Pointers.push_back(
-        isRefPtrOrPteeMapWithAttach
-            ? moduleTranslation.lookupValue(mapOp.getVarPtrPtr())
-            : mapData.OriginalValue.back());
+    mapData.Pointers.push_back(moduleTranslation.lookupValue(pointeePtr));
 
     if (llvm::Value *refPtr =
             getRefPtrIfDeclareTarget(offloadPtr, moduleTranslation)) {
@@ -7197,6 +7199,10 @@ createAlteredByCaptureMap(MapInfoData &mapData,
         ((convertClauseMapFlags(mapOp.getMapType()) &
           llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH) ==
          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH);
+    bool isRefPtrOrPteeMapWithAttach =
+        isAttachMap &&
+        (bitEnumContainsAll(mapOp.getMapType(), omp::ClauseMapFlags::ref_ptr) ||
+         bitEnumContainsAll(mapOp.getMapType(), omp::ClauseMapFlags::ref_ptee));
 
     // If it's declare target, skip it, it's handled separately. However, if
     // it's declare target, and an attach map, we want to calculate the exact
@@ -7219,7 +7225,7 @@ createAlteredByCaptureMap(MapInfoData &mapData,
         std::vector<llvm::Value *> offsetIdx = calculateBoundsOffset(
             moduleTranslation, builder, mapData.BaseType[i]->isArrayTy(),
             mapOp.getBounds());
-        if (isPtrTy)
+        if (isPtrTy && (!isAttachMap || isRefPtrOrPteeMapWithAttach))
           newV = builder.CreateLoad(builder.getPtrTy(), newV);
 
         if (!offsetIdx.empty())
@@ -8837,6 +8843,35 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
           convertToCaptureClauseKind(attribute.getCaptureClause().getValue());
       auto deviceClause =
           convertToDeviceClauseKind(attribute.getDeviceType().getValue());
+      llvm::StringRef entryMangledName = mangledName;
+      llvm::Constant *entryAddr = llvm::cast<llvm::Constant>(gVal);
+      std::function<llvm::GlobalValue::LinkageTypes()> variableLinkage;
+      llvm::SmallString<128> entryNameStorage;
+      if ((attribute.getCaptureClause().getValue() ==
+               mlir::omp::DeclareTargetCaptureClause::to ||
+           attribute.getCaptureClause().getValue() ==
+               mlir::omp::DeclareTargetCaptureClause::enter) &&
+          !isDeclaration &&
+          (gVal->hasLocalLinkage() || gVal->hasHiddenVisibility())) {
+        // Keep the original symbol local so target code can address it using
+        // target-specific local relocations, but create a visible alias for
+        // the offload entry so libomptarget can associate the host global with
+        // the actual device global.
+        entryNameStorage = (mangledName + llvm::Twine("_decl_tgt_entry")).str();
+        entryMangledName = entryNameStorage;
+        if (llvm::GlobalValue *existing =
+                llvmModule->getNamedValue(entryMangledName)) {
+          entryAddr = llvm::cast<llvm::Constant>(existing);
+        } else {
+          entryAddr = llvm::GlobalAlias::create(
+              gVal->getValueType(), gVal->getAddressSpace(),
+              llvm::GlobalValue::WeakAnyLinkage, entryMangledName, entryAddr,
+              llvmModule);
+          llvm::cast<llvm::GlobalAlias>(entryAddr)->setVisibility(
+              llvm::GlobalValue::DefaultVisibility);
+        }
+        variableLinkage = [] { return llvm::GlobalValue::WeakAnyLinkage; };
+      }
       // unused for MLIR at the moment, required in Clang for book
       // keeping
       std::vector<llvm::GlobalVariable *> generatedRefs;
@@ -8866,9 +8901,9 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
       ompBuilder->registerTargetGlobalVariable(
           captureClause, deviceClause, isDeclaration, isExternallyVisible,
           ompBuilder->getTargetEntryUniqueInfo(fileInfoCallBack, vfs),
-          mangledName, generatedRefs, /*OpenMPSimd*/ false, targetTriple,
-          /*GlobalInitializer*/ nullptr, /*VariableLinkage*/ nullptr,
-          gVal->getType(), gVal);
+          entryMangledName, generatedRefs, /*OpenMPSimd*/ false, targetTriple,
+          /*GlobalInitializer*/ nullptr, variableLinkage, gVal->getType(),
+          entryAddr);
 
       bool requiresUSM = ompBuilder->Config.hasRequiresUnifiedSharedMemory();
       if (ompBuilder->Config.isTargetDevice() &&

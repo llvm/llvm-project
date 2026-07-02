@@ -1612,7 +1612,9 @@ class MapInfoFinalizationPass
                "single users or up to two users when those users"
                "are a MapInfoOp and Target mapping directive");
 
-        if (hasADescriptor(op.getVarPtr().getDefiningOp(),
+        if (!bitEnumContainsAll(op.getMapType(),
+                                mlir::omp::ClauseMapFlags::attach) &&
+            hasADescriptor(op.getVarPtr().getDefiningOp(),
                            fir::unwrapRefType(op.getVarPtrType()))) {
           builder.setInsertionPoint(op);
           mlir::Operation *targetUser = getFirstTargetUser(op);
