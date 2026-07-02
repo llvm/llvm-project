@@ -6384,20 +6384,105 @@ InstructionCost X86TTIImpl::getCFInstrCost(unsigned Opcode,
   return TTI::TCC_Free;
 }
 
-int X86TTIImpl::getGatherOverhead() const {
+int X86TTIImpl::getGatherOverhead(Type *SrcVTy) const {
   // Some CPUs have more overhead for gather. The specified overhead is relative
   // to the Load operation. "2" is the number provided by Intel architects. This
   // parameter is used for cost estimation of Gather Op and comparison with
   // other alternatives.
   // TODO: Remove the explicit hasAVX512()?, That would mean we would only
   // enable gather with a -march.
+
+  // Per-shape gather costs for AMD znver4 and znver5 via
+  // TuningPreferGSCostTable (set in ZN4Tuning, inherited by ZN5Tuning).
+  if (ST->hasPreferGSCostTable() && SrcVTy) {
+    // Per-shape gather costs for AMD znver4+ targets.
+    //
+    // The numbers are the empirical "break-even" (lower-bound) costs
+    // measured by sweeping a forced gather cost while compiling a
+    // controlled gather micro-benchmark and observing the point at which
+    // the LoopVectorizer still chose the gather lowering over the scalar
+    // fallback. The sweep was run independently for every (data type,
+    // VF) combination on Genoa / Milan / Turin and re-validated on Zen 5;
+    // the value tabulated below is the cost at which gather emission
+    // was the right call for that shape.
+    //
+    // i64 entries are intentionally HIGHER than the f64 entries for the
+    // same VF: the i64 scalar fallback runs on the integer pipeline,
+    // which is cheaper per element than the FP pipeline used by f64
+    // scalars, so the integer scalar baseline is harder to beat. At the
+    // f64-style break-even, vpgatherqq was 1.7-3.5x slower than the
+    // scalarised i64 lowering across stride patterns. The i64 entries
+    // below sit at the minimum cost that suppresses vpgatherqq emission.
+    static const CostTblEntry ZenGatherCostTable[] = {
+        {ISD::LOAD, MVT::v4i32, 7},   {ISD::LOAD, MVT::v8i32, 17},
+        {ISD::LOAD, MVT::v16i32, 14}, {ISD::LOAD, MVT::v4f32, 7},
+        {ISD::LOAD, MVT::v8f32, 17},  {ISD::LOAD, MVT::v16f32, 14},
+        {ISD::LOAD, MVT::v4f64, 7},   {ISD::LOAD, MVT::v8f64, 17},
+        {ISD::LOAD, MVT::v4i64, 10},  {ISD::LOAD, MVT::v8i64, 22},
+    };
+    EVT VT = TLI->getValueType(DL, SrcVTy);
+    if (VT.isSimple()) {
+      MVT SimpleVT = VT.getSimpleVT();
+      assert(SimpleVT.getVectorNumElements() >= 4 &&
+             "VF<4 gather should be force-scalarised on AVX-512+VLX before "
+             "reaching here. Add a v{1,2} table row if "
+             "forceScalarizeMaskedGather is relaxed");
+      assert(SimpleVT != MVT::v16f64 &&
+             "v16f64 gather should be split by type legalisation in "
+             "getGSVectorCost before reaching here. Add a v16f64 table row "
+             "if that path changes");
+      if (const auto *E =
+              CostTableLookup(ZenGatherCostTable, ISD::LOAD, SimpleVT))
+        return E->Cost;
+    }
+  }
+
   if (ST->hasAVX512() || (ST->hasAVX2() && ST->hasFastGather()))
     return 2;
 
   return 1024;
 }
 
-int X86TTIImpl::getScatterOverhead() const {
+int X86TTIImpl::getScatterOverhead(Type *SrcVTy) const {
+  // Per-shape scatter costs for AMD znver4 and znver5 via
+  // TuningPreferGSCostTable (set in ZN4Tuning, inherited by ZN5Tuning).
+  // Falls through to the generic flat overhead for shapes we have not
+  // characterised.
+  if (ST->hasPreferGSCostTable() && ST->hasAVX512() && SrcVTy) {
+    // Per-shape scatter costs for AMD znver4+ targets, measured with the
+    // same break-even methodology as the gather table above. The
+    // original sweep characterised i32 and f64 lanes. The f32 rows
+    // mirror i32 because vpscatterdd and vscatterdps are the same
+    // physical 16-lane 32-bit scatter on Zen and were measured as
+    // runtime-equivalent (within 3% across VF and stride patterns).
+    // i64 entries match the i64 gather rationale: scatter is harmful
+    // for all stride patterns tested (1.2-1.4x slower than scalarised
+    // on Zen 5), so the entry is set to the minimum cost that
+    // suppresses vpscatterqq emission.
+    static const CostTblEntry ZenScatterCostTable[] = {
+        {ISD::STORE, MVT::v4i32, 12}, {ISD::STORE, MVT::v8i32, 14},
+        {ISD::STORE, MVT::v16i32, 6}, {ISD::STORE, MVT::v4f32, 12},
+        {ISD::STORE, MVT::v8f32, 14}, {ISD::STORE, MVT::v16f32, 6},
+        {ISD::STORE, MVT::v4f64, 5},  {ISD::STORE, MVT::v8f64, 15},
+        {ISD::STORE, MVT::v4i64, 10}, {ISD::STORE, MVT::v8i64, 22},
+    };
+    EVT VT = TLI->getValueType(DL, SrcVTy);
+    if (VT.isSimple()) {
+      MVT SimpleVT = VT.getSimpleVT();
+      assert(SimpleVT.getVectorNumElements() >= 4 &&
+             "VF<4 scatter should be force-scalarised on AVX-512+VLX "
+             "before reaching here. Add a v{1,2} table row if "
+             "forceScalarizeMaskedScatter is relaxed");
+      assert(SimpleVT != MVT::v16f64 &&
+             "v16f64 scatter should be split by type legalisation in "
+             "getGSVectorCost before reaching here. Add a v16f64 table "
+             "row if that path changes");
+      if (const auto *E =
+              CostTableLookup(ZenScatterCostTable, ISD::STORE, SimpleVT))
+        return E->Cost;
+    }
+  }
+
   if (ST->hasAVX512())
     return 2;
 
@@ -6469,8 +6554,9 @@ InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode,
 
   // The gather / scatter cost is given by Intel architects. It is a rough
   // number since we are looking at one instruction in a time.
-  const int GSOverhead = (Opcode == Instruction::Load) ? getGatherOverhead()
-                                                       : getScatterOverhead();
+  const int GSOverhead = (Opcode == Instruction::Load)
+                             ? getGatherOverhead(SrcVTy)
+                             : getScatterOverhead(SrcVTy);
   return GSOverhead + VF * getMemoryOpCost(Opcode, SrcVTy->getScalarType(),
                                            Alignment, AddressSpace, CostKind);
 }

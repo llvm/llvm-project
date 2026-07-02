@@ -289,6 +289,12 @@ Makes programs 10x faster by doing Special New Thing.
 * `.att_syntax` directive is now emitted for assembly files when AT&T syntax is
   in use. This matches the behaviour of Intel syntax and aids with
   compatibility when changing the default Clang syntax to the Intel syntax.
+* Masked gather and scatter cost overheads are now per-shape on AMD znver4
+  and znver5 targets via a new `TuningPreferGSCostTable` subtarget
+  feature (set in ZN4Tuning, inherited by ZN5Tuning), replacing the
+  single flat overhead inherited from the generic AVX-512 path. The
+  per-shape costs use empirical break-even values measured on Zen 4 /
+  Zen 5 hardware.
 
 * EGPR (R16-R31) now requires V3 unwind info on Windows x64. Using EGPR
   without V3 unwind produces a fatal error.
