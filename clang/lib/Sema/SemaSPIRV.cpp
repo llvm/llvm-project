@@ -324,8 +324,8 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(const TargetInfo &TI,
     QualType ArgTyA = A.get()->getType();
     if (!ArgTyA->hasFloatingRepresentation()) {
       SemaRef.Diag(A.get()->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-          << /* ordinal */ 1 << /* scalar or vector */ 5 << /* no int */ 0
-          << /* fp */ 1 << ArgTyA;
+          << /* ordinal */ 1 << /* scalar, vector, or matrix */ 6
+          << /* no int */ 0 << /* fp */ 1 << ArgTyA;
       return true;
     }
 
@@ -345,8 +345,8 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(const TargetInfo &TI,
     QualType ArgTyA = A.get()->getType();
     if (!ArgTyA->hasFloatingRepresentation()) {
       SemaRef.Diag(A.get()->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-          << /* ordinal */ 1 << /* scalar or vector */ 5 << /* no int */ 0
-          << /* fp */ 1 << ArgTyA;
+          << /* ordinal */ 1 << /* scalar, vector, or matrix */ 6
+          << /* no int */ 0 << /* fp */ 1 << ArgTyA;
       return true;
     }
 
@@ -371,8 +371,8 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(const TargetInfo &TI,
     QualType ArgTyA = A.get()->getType();
     if (!ArgTyA->hasFloatingRepresentation()) {
       SemaRef.Diag(A.get()->getBeginLoc(), diag::err_builtin_invalid_arg_type)
-          << /* ordinal */ 1 << /* scalar or vector */ 5 << /* no int */ 0
-          << /* fp */ 1 << ArgTyA;
+          << /* ordinal */ 1 << /* scalar, vector, or matrix */ 6
+          << /* no int */ 0 << /* fp */ 1 << ArgTyA;
       return true;
     }
 
