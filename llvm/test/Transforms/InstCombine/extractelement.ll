@@ -799,10 +799,7 @@ define i32 @extelt_vecselect_const_operand_vector(<3 x i1> %c) {
 
 define i32 @extelt_select_const_operand_extractelt_use(i1 %c) {
 ; ANY-LABEL: @extelt_select_const_operand_extractelt_use(
-; ANY-NEXT:    [[E:%.*]] = select i1 [[C:%.*]], i32 4, i32 7
-; ANY-NEXT:    [[M:%.*]] = shl nuw nsw i32 [[E]], 1
-; ANY-NEXT:    [[M_2:%.*]] = shl nuw nsw i32 [[E]], 2
-; ANY-NEXT:    [[R:%.*]] = mul nuw nsw i32 [[M]], [[M_2]]
+; ANY-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i32 128, i32 392
 ; ANY-NEXT:    ret i32 [[R]]
 ;
   %s = select i1 %c, <3 x i32> <i32 2, i32 3, i32 4>, <3 x i32> <i32 5, i32 6, i32 7>
