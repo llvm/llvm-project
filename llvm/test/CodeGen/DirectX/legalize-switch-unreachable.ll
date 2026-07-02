@@ -46,15 +46,14 @@ merge:
 }
 
 ; Test that a switch with an unreachable default and no common successor
-; has its default redirected to the first case block.
+; has its default redirected to the first case block. The resulting two-way
+; switch is then folded into a conditional branch.
 
 define i32 @test_no_common_successor(i32 %val) {
 ; CHECK-LABEL: define i32 @test_no_common_successor(
 ; CHECK:       entry:
-; CHECK-NEXT:    switch i32 %val, label %case0 [
-; CHECK-NEXT:      i32 0, label %case0
-; CHECK-NEXT:      i32 1, label %case1
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    %cond = icmp eq i32 %val, 1
+; CHECK-NEXT:    br i1 %cond, label %case1, label %case0
 ; CHECK:       case0:
 ; CHECK-NEXT:    ret i32 10
 ; CHECK:       case1:
@@ -76,14 +75,14 @@ case1:
   ret i32 20
 }
 
-; Test that a switch with a reachable default is not modified.
+; Test that a switch with a reachable default keeps its default destination.
+; The two-way switch is folded into a conditional branch.
 
 define i32 @test_reachable_default(i32 %val) {
 ; CHECK-LABEL: define i32 @test_reachable_default(
 ; CHECK:       entry:
-; CHECK-NEXT:    switch i32 %val, label %default [
-; CHECK-NEXT:      i32 0, label %case0
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    %cond = icmp eq i32 %val, 0
+; CHECK-NEXT:    br i1 %cond, label %case0, label %default
 ; CHECK:       default:
 ; CHECK-NEXT:    ret i32 -1
 ; CHECK:       case0:
@@ -107,10 +106,8 @@ case0:
 define i32 @test_conditional_case_blocks(i32 %val, i1 %cond) {
 ; CHECK-LABEL: define i32 @test_conditional_case_blocks(
 ; CHECK:       entry:
-; CHECK-NEXT:    switch i32 %val, label %case0 [
-; CHECK-NEXT:      i32 0, label %case0
-; CHECK-NEXT:      i32 1, label %case1
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    %cond1 = icmp eq i32 %val, 1
+; CHECK-NEXT:    br i1 %cond1, label %case1, label %case0
 ; CHECK:       case0:
 ; CHECK-NEXT:    br i1 %cond, label %merge_a, label %merge_b
 ; CHECK:       case1:
