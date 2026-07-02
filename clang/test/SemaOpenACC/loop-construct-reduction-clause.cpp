@@ -377,4 +377,47 @@ void inst() {
   templ_uses<int, CompositeOfScalars, CompositeHasComposite, 1, 2>();
 }
 
+namespace gh207180 {
+struct InlineDefFunc {
+  int I;
+  void func() {
+#pragma acc loop reduction(+:I)
+    // expected-error@+3{{OpenACC 'reduction' variable must have the same operator in all nested constructs (& vs +)}}
+    for(int i = 0; i < 5; ++i)
+    // expected-note@-3{{previous 'reduction' clause is here}}
+#pragma acc loop reduction(&:I)
+    for(int j = 0; j < 5; ++j);
+  }
+};
+struct OutlineDefFunc {
+  int I;
+  void func();
+};
+void OutlineDefFunc::func() {
+#pragma acc loop reduction(+:I)
+  // expected-error@+3{{OpenACC 'reduction' variable must have the same operator in all nested constructs (& vs +)}}
+    for(int i = 0; i < 5; ++i)
+  // expected-note@-3{{previous 'reduction' clause is here}}
+#pragma acc loop reduction(&:I)
+  for(int j = 0; j < 5; ++j);
+}
 
+template<typename T>
+struct TemplDefFunc {
+  T I;
+  void func() {
+#pragma acc loop reduction(+:I)
+    // expected-error@+3{{OpenACC 'reduction' variable must have the same operator in all nested constructs (& vs +)}}
+    for(int i = 0; i < 5; ++i)
+    // expected-note@-3{{previous 'reduction' clause is here}}
+#pragma acc loop reduction(&:I)
+    for(int j = 0; j < 5; ++j);
+  }
+};
+
+void use() {
+  TemplDefFunc<int> d;
+  d.func(); // expected-note{{in instantiation of}}
+}
+
+}

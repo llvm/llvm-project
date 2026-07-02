@@ -22,12 +22,16 @@ class TestOverridesResolver(TestBase):
     def test_overrides_resolver_resolver_cmd(self):
         """Use facade breakpoints to emulate hitting some locations"""
         self.build()
-        self.do_test(True)
+        self.do_test(False)
+
+    def test_bad_values(self):
+        self.build()
+        self.do_test_bad_values()
 
     def make_target_and_import(self):
-        target = lldbutil.run_to_breakpoint_make_target(self)
+        self.target = lldbutil.run_to_breakpoint_make_target(self)
         self.import_resolver_script()
-        return target
+        return self.target
 
     def import_resolver_script(self):
         interp = self.dbg.GetCommandInterpreter()
@@ -38,53 +42,122 @@ class TestOverridesResolver(TestBase):
         command = "command script import " + script_name
         self.runCmd(command)
 
-    def add_override(self, use_cmd, help_text, class_name, key, value):
-        if use_cmd:
-            result = lldb.SBCommandReturnObject()
-            self.ci.HandleCommand(
-                f"breakpoint override add -P {class_name} -k {key} -v {value} -d '{help_text}'",
-                result,
-            )
+    def calculate_mask_desc(self, mask):
+        mask_str = ""
+        if mask & lldb.eResolverFileAndLine:
+            mask_str += "F"
+        if mask & lldb.eResolverName:
+            mask_str += "N"
+        return mask_str
+
+    def add_override_python(
+        self,
+        help_text,
+        class_name,
+        mask,
+        key,
+        value,
+        expect_error=False,
+        error_string="",
+    ):
+        extra_args = lldb.SBStructuredData()
+        json_str = '{"' + str(key) + '":"' + str(value) + '"}'
+        extra_args.SetFromJSON(json_str)
+        error = lldb.SBError()
+        override_id = self.target.AddBreakpointOverride(
+            class_name, help_text, mask, extra_args, error
+        )
+        if not expect_error:
+            self.assertSuccess(error, "Made the override successfully")
+        else:
+            self.assertFailure(error, error_string)
+            return 0
+
+        # Check the override listing, make sure our new entry is present:
+        mask_str = self.calculate_mask_desc(mask)
+
+        self.expect(
+            "breakpoint override list", substrs=[str(override_id), mask_str, help_text]
+        )
+
+        return override_id
+
+    def add_override_cmd(
+        self,
+        help_text,
+        class_name,
+        mask_args,
+        mask_desc,
+        key,
+        value,
+        expect_error=False,
+        error_string="",
+    ):
+        result = lldb.SBCommandReturnObject()
+        self.ci.HandleCommand(
+            f"breakpoint override add -P {class_name} -k {key} -v {value} -d '{help_text}' {mask_args}",
+            result,
+        )
+        if not expect_error:
             self.assertCommandReturn(result, "breakpoint override worked")
             override_id = int(result.GetOutput())
         else:
-            extra_args = lldb.SBStructuredData()
-            json_str = '{"' + key + '":"' + value + '"}'
-            extra_args.SetFromJSON(json_str)
-            error = lldb.SBError()
-            override_id = target.AddBreakpointOverride(
-                class_name, help_text, extra_args, error
-            )
-            self.assertError(error, "Made the override successfully")
+            self.assertFalse(result.Succeeded(), "We expected this to fail")
+            return 0
 
         # Check the override listing, make sure our new entry is present:
-        self.expect("breakpoint override list", substrs=[str(override_id), help_text])
+        self.expect(
+            "breakpoint override list", substrs=[str(override_id), mask_desc, help_text]
+        )
 
         return override_id
 
     def do_test(self, use_cmd):
         """This reads in a python file and sets a breakpoint using it."""
         alternate_location = "stop_here_instead"
-        target = self.make_target_and_import()
-        # Add out trivial one first so we test more than one list element:
+        self.make_target_and_import()
+        # Add our trivial one first so we test more than one list element:
 
         trivial_help = "Trivial help text"
-        trivial_id = self.add_override(
-            use_cmd,
-            trivial_help,
-            "bkpt_resolver.TrivialExample",
-            "test_key",
-            "test_value",
-        )
+        trivial_id = 0
+        useful_id = 0
 
-        useful_help = "SOME HELP TEXT"
-        useful_id = self.add_override(
-            use_cmd,
-            useful_help,
-            "bkpt_resolver.OverrideExample",
-            "symbol",
-            "stop_here_instead",
-        )
+        if use_cmd:
+            trivial_id = self.add_override_cmd(
+                trivial_help,
+                "bkpt_resolver.TrivialExample",
+                "-m name",
+                "N",
+                "test_key",
+                "test_value",
+            )
+
+            useful_help = "SOME HELP TEXT"
+            useful_id = self.add_override_cmd(
+                useful_help,
+                "bkpt_resolver.OverrideExample",
+                "-m file_and_line",
+                "F",
+                "symbol",
+                "stop_here_instead",
+            )
+        else:
+            trivial_id = self.add_override_python(
+                trivial_help,
+                "bkpt_resolver.TrivialExample",
+                lldb.eResolverName,
+                "test_key",
+                "test_value",
+            )
+
+            useful_help = "SOME HELP TEXT"
+            useful_id = self.add_override_python(
+                useful_help,
+                "bkpt_resolver.OverrideExample",
+                lldb.eResolverFileAndLine,
+                "symbol",
+                "stop_here_instead",
+            )
 
         # Now exercise the list command by id:
         self.expect(
@@ -107,15 +180,18 @@ class TestOverridesResolver(TestBase):
         )
 
         # Now make a breakpoint by file and line:
-        # FIXME: Use source_line to find this line number:
-        bkpt = target.BreakpointCreateByLocation(
+        bkpt = self.target.BreakpointCreateByLocation(
             "main.c", line_number("main.c", "I am in the stop symbol")
         )
         self.assertEqual(bkpt.GetNumLocations(), 1, "We make one location")
+        # Make sure that the override was called but trivial was not:
+        self.expect("checker override", startstr="1")
+        self.expect("checker trivial", startstr="0")
+
         # Now continue and we'll hit this breakpoint but not in the
         # right place:
-        (target, process, thread, bkpt) = lldbutil.run_to_breakpoint_do_run(
-            self, target, bkpt
+        (_, process, thread, bkpt) = lldbutil.run_to_breakpoint_do_run(
+            self, self.target, bkpt
         )
         # This location should be bkpt_no.1:
         self.assertEqual(
@@ -127,10 +203,15 @@ class TestOverridesResolver(TestBase):
             func_name, alternate_location, "Stopped at overridden location"
         )
 
-        # Now set a source name breakpoint, that should not get overridden, and
+        # Now set a symbol name breakpoint, that should not get overridden, and
         # when we continue we should hit it:
-        name_bkpt = target.BreakpointCreateByName("change_him")
+        name_bkpt = self.target.BreakpointCreateByName("change_him")
         self.assertGreater(name_bkpt.GetNumLocations(), 0, "Found locations")
+        # Now we've made one by name and one file and line breakpoint so both
+        # override functions should have been called.
+        self.expect("checker trivial", startstr="1")
+        self.expect("checker override", startstr="1")
+
         threads = lldbutil.continue_to_breakpoint(process, name_bkpt)
         self.assertEqual(len(threads), 1, "Hit our name breakpoint")
         func_name = threads[0].frames[0].name
@@ -142,7 +223,7 @@ class TestOverridesResolver(TestBase):
             self.runCmd(f"breakpoint override delete {useful_id}")
         else:
             self.assertTrue(
-                target.DeleteBreakpointOverride(useful_id), "Delete the right one"
+                self.target.RemoveBreakpointOverride(useful_id), "Delete the right one"
             )
 
         # Make sure it's gone from the listings:
@@ -154,11 +235,71 @@ class TestOverridesResolver(TestBase):
         # And that listing it is an error:
         self.expect(f"breakpoint override list {useful_id}", error=True)
 
-        new_bkpt = target.BreakpointCreateByLocation(
+        new_bkpt = self.target.BreakpointCreateByLocation(
             "main.c", line_number("main.c", "return 0")
         )
+        # Neither override should have been called for this breakpoint
+        # so the counts should still be at 1 each:
+        self.expect("checker trivial", startstr="1")
+        self.expect("checker override", startstr="1")
+
         self.assertEqual(new_bkpt.num_locations, 1, "Made breakpoint")
         threads = lldbutil.continue_to_breakpoint(process, new_bkpt)
         self.assertEqual(len(threads), 1, "Hit our new breakpoint")
         func_name = threads[0].frames[0].name
         self.assertEqual(func_name, "main", "Stopped in unchanged location")
+
+        # Finally, make sure neither of the overrides was called with a
+        # type that was not part of the mask.
+        self.expect("checker trivial_not_name", startstr="0")
+        self.expect("checker override_not_file", startstr="0")
+
+    def do_test_bad_values(self):
+        self.make_target_and_import()
+        # Add our trivial one with a bad mask:
+
+        trivial_help = "Trivial help text"
+        bad_type_mask = lldb.BreakpointResolverAllResolversMask + 1
+        trivial_id = self.add_override_python(
+            trivial_help,
+            "bkpt_resolver.TrivialExample",
+            bad_type_mask,
+            "test_key",
+            "test_value",
+            expect_error=True,
+            error_string="invalid breakpoint type mask: 64, should be composed of the elements of the BreakpointResolverType enum.",
+        )
+
+        # Now try with an empty class name:
+        trivial_id = self.add_override_python(
+            trivial_help,
+            "",
+            lldb.eResolverName,
+            "test_key",
+            "test_value",
+            expect_error=True,
+            error_string="empty class name",
+        )
+        # FIXME: We aren't currently returning a correct
+        # error when the class name doesn't exist.
+        # And with a class name that doesn't exist:
+        # trivial_id = self.add_override_python(
+        #    trivial_help,
+        #    "NoModuleOfThisName.NoClassOfThisName",
+        #    lldb.eResolverName,
+        #    "test_key",
+        #    "test_value",
+        #    expect_error=True,
+        #    error_string=""
+        # )
+
+        trivial_id = self.add_override_cmd(
+            trivial_help,
+            "bkpt_resolver.TrivialExample",
+            "-m  no_such_resolver",
+            "",
+            "test_key",
+            "test_value",
+            expect_error=True,
+            error_string="",
+        )

@@ -11,6 +11,7 @@
 
 #include "flang/Common/api-attrs.h"
 #include "flang/Runtime/allocator-registry-consts.h"
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <vector>
@@ -19,7 +20,7 @@
 
 namespace Fortran::runtime {
 
-using AllocFct = void *(*)(std::size_t, std::int64_t *);
+using AllocFct = void *(*)(std::size_t, std::size_t, std::int64_t *);
 using FreeFct = void (*)(void *);
 
 typedef struct Allocator_t {
@@ -27,8 +28,20 @@ typedef struct Allocator_t {
   FreeFct free{nullptr};
 } Allocator_t;
 
-static RT_API_ATTRS void *MallocWrapper(
-    std::size_t size, [[maybe_unused]] std::int64_t *) {
+static RT_API_ATTRS void *MallocWrapper(std::size_t size,
+    [[maybe_unused]] std::size_t alignment, [[maybe_unused]] std::int64_t *) {
+#if !defined(RT_DEVICE_COMPILATION) && !defined(_WIN32)
+  // std::malloc only guarantees alignof(std::max_align_t). When a larger
+  // alignment is requested, use std::aligned_alloc.
+  if (alignment > alignof(std::max_align_t)) {
+    // Round size up to a multiple of the alignment
+    if (size > SIZE_MAX - alignment) {
+      return nullptr;
+    }
+    std::size_t alignedSize{((size + alignment - 1) / alignment) * alignment};
+    return std::aligned_alloc(alignment, alignedSize);
+  }
+#endif
   return std::malloc(size);
 }
 #ifdef RT_DEVICE_COMPILATION

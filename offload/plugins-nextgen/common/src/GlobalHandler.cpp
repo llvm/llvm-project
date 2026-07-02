@@ -275,11 +275,15 @@ void GPUProfGlobals::dump() const {
 }
 
 Error GPUProfGlobals::write() const {
+#ifndef _WIN32
+  // On Windows __llvm_write_custom_profile is a strong stub (see above), so its
+  // address is never null and this check triggers -Wpointer-bool-conversion.
   if (!__llvm_write_custom_profile)
     return Plugin::error(ErrorCode::INVALID_BINARY,
                          "could not find symbol __llvm_write_custom_profile. "
                          "The compiler-rt profiling library must be linked for "
                          "GPU PGO to work.");
+#endif
 
   // Lay out as [Data][Counters][Names] to match the raw profile format order.
   // TODO: Move this interface to compiler-rt.

@@ -174,6 +174,22 @@ func.func @test_reshape_for_broadcast(%arg0: tensor<4x3x2xi32>) -> tensor<4x3x2x
 
 // -----
 
+// CHECK-LABEL: @test_multi_dim_reshape_for_broadcast
+// CHECK-DAG: %[[SHAPE:.*]] = tosa.const_shape  {values = dense<[4, 1, 1]> : tensor<3xindex>}
+// CHECK: %[[RESHAPE:.*]] = tosa.reshape %arg0, %[[SHAPE]] : (tensor<1x4x1xi32>, !tosa.shape<3>) -> tensor<4x1x1xi32>
+// CHECK: %[[ADD:.*]] = tosa.add %arg1, %[[RESHAPE]]
+// CHECK: return %[[ADD]]
+func.func @test_multi_dim_reshape_for_broadcast(%arg0: tensor<1x4x1xi32>, %arg1: tensor<4x3x2xi32>) -> tensor<4x3x2xi32> {
+  %shape = tosa.const_shape {values = dense<[1, 1, 4]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %reshape = tosa.reshape %arg0, %shape : (tensor<1x4x1xi32>, !tosa.shape<3>) -> tensor<1x1x4xi32>
+  %transpose0 = tosa.transpose %arg1 {perms = array<i32: 2, 1, 0>}: (tensor<4x3x2xi32>) -> tensor<2x3x4xi32>
+  %add = tosa.add %transpose0, %reshape : (tensor<2x3x4xi32>, tensor<1x1x4xi32>) -> tensor<2x3x4xi32>
+  %transpose1 = tosa.transpose %add {perms = array<i32: 2, 1, 0>}: (tensor<2x3x4xi32>) -> tensor<4x3x2xi32>
+  return %transpose1 : tensor<4x3x2xi32>
+}
+
+// -----
+
 // COM: taken directly from ResNet18 translation.
 // COM: changes: %74 as argument instead of result of conv2d
 

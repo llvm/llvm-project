@@ -89,8 +89,8 @@ void init() {
 // LLVM: define{{.*}} void @_Z4initv()
 // LLVM:   %[[S1:.*]] = alloca %struct.S
 // LLVM:   %[[S2:.*]] = alloca %struct.S
-// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[S1]], ptr @[[INIT_S1:.*]], i64 12, i1 false)
-// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[S2]], ptr @[[INIT_S2:.*]], i64 12, i1 false)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[S1]], ptr align 4 @[[INIT_S1:.*]], i64 12, i1 false)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[S2]], ptr align 4 @[[INIT_S2:.*]], i64 12, i1 false)
 
 // OGCG: @__const._Z4initv.s1 = private unnamed_addr constant %struct.S { i32 1, i32 2, i32 3 }
 // OGCG: @__const._Z4initv.s2 = private unnamed_addr constant %struct.S { i32 4, i32 5, i32 0 }

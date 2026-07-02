@@ -1366,8 +1366,6 @@ def PseudoCCQC_E_LHU : SFBQCLoad;
 def PseudoCCQC_E_LBU : SFBQCLoad;
 }
 
-def simm12 : RISCVSImmOp<12>;
-
 def QCAccessSymbol : AsmOperandClass {
   let Name = "QCAccessSymbol";
   let RenderMethod = "addImmOperands";

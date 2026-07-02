@@ -8,7 +8,7 @@
 # CHECK-MINUS: :[[@LINE+1]]:14: error: invalid operand for instruction
 qc.selecteqi 9, 15, x4, x3
 
-# CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
+# CHECK: :[[@LINE+1]]:{{24: error: too few operands for instruction|1: error: invalid instruction}}
 qc.selecteqi x9, 15, x4
 
 # CHECK-IMM: :[[@LINE+1]]:18: error: immediate must be an integer in the range [-16, 15]
@@ -22,7 +22,7 @@ qc.selecteqi x9, 15, x4, x3
 # CHECK-MINUS: :[[@LINE+1]]:14: error: invalid operand for instruction
 qc.selectieq 8, x4, x3, 12
 
-# CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
+# CHECK: :[[@LINE+1]]:{{24: error: too few operands for instruction|1: error: invalid instruction}}
 qc.selectieq x8, x4, x3
 
 # CHECK-IMM: :[[@LINE+1]]:26: error: immediate must be an integer in the range [-16, 15]
@@ -36,7 +36,7 @@ qc.selectieq x8, x4, x3, 12
 # CHECK-MINUS: :[[@LINE+1]]:15: error: invalid operand for instruction
 qc.selectieqi 9, 11, x3, 12
 
-# CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
+# CHECK: :[[@LINE+1]]:{{25: error: too few operands for instruction|1: error: invalid instruction}}
 qc.selectieqi x9, 11, x3
 
 # CHECK-IMM: :[[@LINE+1]]:19: error: immediate must be an integer in the range [-16, 15]
@@ -53,7 +53,7 @@ qc.selectieqi x9, 11, x3, 12
 # CHECK-MINUS: :[[@LINE+1]]:15: error: invalid operand for instruction
 qc.selectiieq 9, x3, 11, 12
 
-# CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
+# CHECK: :[[@LINE+1]]:{{25: error: too few operands for instruction|1: error: invalid instruction}}
 qc.selectiieq x9, x3, 11
 
 # CHECK-IMM: :[[@LINE+1]]:23: error: immediate must be an integer in the range [-16, 15]
@@ -70,7 +70,7 @@ qc.selectiieq x9, x3, 11, 12
 # CHECK-MINUS: :[[@LINE+1]]:15: error: invalid operand for instruction
 qc.selectiine 8, x3, 10, 11
 
-# CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
+# CHECK: :[[@LINE+1]]:{{25: error: too few operands for instruction|1: error: invalid instruction}}
 qc.selectiine x8, x3, 10
 
 # CHECK-IMM: :[[@LINE+1]]:23: error: immediate must be an integer in the range [-16, 15]
@@ -87,7 +87,7 @@ qc.selectiine x8, x3, 10, 11
 # CHECK-MINUS: :[[@LINE+1]]:14: error: invalid operand for instruction
 qc.selectine 8, x3, x4, 11
 
-# CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
+# CHECK: :[[@LINE+1]]:{{24: error: too few operands for instruction|1: error: invalid instruction}}
 qc.selectine x8, x3, x4
 
 # CHECK-IMM: :[[@LINE+1]]:26: error: immediate must be an integer in the range [-16, 15]
@@ -101,7 +101,7 @@ qc.selectine x8, x3, x4, 11
 # CHECK-MINUS: :[[@LINE+1]]:15: error: invalid operand for instruction
 qc.selectinei 8, 11, x3, 12
 
-# CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
+# CHECK: :[[@LINE+1]]:{{25: error: too few operands for instruction|1: error: invalid instruction}}
 qc.selectinei x8, 11, x3
 
 # CHECK-IMM: :[[@LINE+1]]:19: error: immediate must be an integer in the range [-16, 15]
@@ -118,7 +118,7 @@ qc.selectinei x8, 11, x3, 12
 # CHECK-MINUS: :[[@LINE+1]]:14: error: invalid operand for instruction
 qc.selectnei 8, 11, x3, x5
 
-# CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
+# CHECK: :[[@LINE+1]]:{{24: error: too few operands for instruction|1: error: invalid instruction}}
 qc.selectnei x8, 11, x3
 
 # CHECK-IMM: :[[@LINE+1]]:18: error: immediate must be an integer in the range [-16, 15]

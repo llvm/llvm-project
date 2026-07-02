@@ -232,7 +232,8 @@ TargetRegisterInfo::getCommonMinimalPhysRegClass(MCRegister Reg1,
 static void getAllocatableSetForRC(const MachineFunction &MF,
                                    const TargetRegisterClass *RC, BitVector &R){
   assert(RC->isAllocatable() && "invalid for nonallocatable sets");
-  ArrayRef<MCPhysReg> Order = RC->getRawAllocationOrder(MF);
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+  ArrayRef<MCPhysReg> Order = TRI.getRawAllocationOrder(*RC, MF);
   for (MCPhysReg PR : Order)
     R.set(PR);
 }
