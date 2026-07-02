@@ -22,11 +22,15 @@ class TestCase(TestBase):
             "sp_empty",
             type="std::shared_ptr<int>",
             summary="nullptr",
-            children=[ValueCheck(name="pointer")],
         )
+        self.assertEqual(valobj.GetNumChildren(), 0)
+        self.assertEqual(valobj.GetIndexOfChildWithName("pointer"), 0)
         self.assertEqual(
-            valobj.child[0].GetValueAsUnsigned(lldb.LLDB_INVALID_ADDRESS), 0
+            valobj.member["pointer"].GetValueAsUnsigned(lldb.LLDB_INVALID_ADDRESS), 0
         )
+
+        # Null shared_ptr should not output braces.
+        self.expect("frame variable sp_empty", patterns=[" = nullptr$"])
 
         self.expect(
             "frame variable *sp_empty",
@@ -107,9 +111,11 @@ class TestCase(TestBase):
         valobj = self.expect_var_path(
             "sie", type="std::shared_ptr<int>", summary="nullptr strong=2 weak=2"
         )
+        self.assertEqual(valobj.GetNumChildren(), 0)
         valobj = self.expect_var_path(
             "wie", type="std::weak_ptr<int>", summary="nullptr strong=2 weak=2"
         )
+        self.assertEqual(valobj.GetNumChildren(), 0)
 
         self.expect_var_path("si.pointer", type="int *")
         self.expect_var_path("*si.pointer", type="int", value="47")

@@ -22,11 +22,15 @@ class TestCase(TestBase):
         valobj = self.expect_var_path(
             "up_empty",
             summary="nullptr",
-            children=[ValueCheck(name="pointer")],
         )
+        self.assertEqual(valobj.GetNumChildren(), 0)
+        self.assertEqual(valobj.GetIndexOfChildWithName("pointer"), 0)
         self.assertEqual(
-            valobj.child[0].GetValueAsUnsigned(lldb.LLDB_INVALID_ADDRESS), 0
+            valobj.member["pointer"].GetValueAsUnsigned(lldb.LLDB_INVALID_ADDRESS), 0
         )
+
+        # Null unique_ptr should not output braces.
+        self.expect("frame variable up_empty", patterns=[" = nullptr$"])
 
         self.expect(
             "frame variable *up_empty",
