@@ -9,6 +9,7 @@
 #include "lldb/Host/windows/windows.h"
 #include <dbghelp.h>
 #include <excpt.h>
+#include <pathcch.h>
 #include <psapi.h>
 
 #include "NativeProcessWindows.h"
@@ -397,26 +398,56 @@ Status NativeProcessWindows::CacheLoadedModules() {
   if (!m_loaded_modules.empty())
     return Status();
 
-  // Retrieve loaded modules by a Target/Module-free implementation.
-  AutoHandle snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, GetID()));
-  if (snapshot.IsValid()) {
-    MODULEENTRY32W me;
-    me.dwSize = sizeof(MODULEENTRY32W);
-    if (Module32FirstW(snapshot.get(), &me)) {
-      do {
-        std::string path;
-        if (!llvm::convertWideToUTF8(me.szExePath, path))
-          continue;
+  AutoHandle process(::OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,
+                                   FALSE, GetID()),
+                     nullptr);
+  if (!process.IsValid())
+    return Status(::GetLastError(), eErrorTypeWin32);
 
-        FileSpec file_spec(path);
-        FileSystem::Instance().Resolve(file_spec);
-        m_loaded_modules[file_spec] = (addr_t)me.modBaseAddr;
-      } while (Module32Next(snapshot.get(), &me));
+  std::vector<HMODULE> modules(256);
+  DWORD bytes_needed = 0;
+  while (true) {
+    if (!::EnumProcessModulesEx(
+            process.get(), modules.data(),
+            static_cast<DWORD>(modules.size() * sizeof(HMODULE)), &bytes_needed,
+            LIST_MODULES_ALL))
+      return Status(::GetLastError(), eErrorTypeWin32);
+    size_t count = bytes_needed / sizeof(HMODULE);
+    if (count <= modules.size()) {
+      modules.resize(count);
+      break;
     }
-
-    if (!m_loaded_modules.empty())
-      return Status();
+    modules.resize(count);
   }
+
+  for (HMODULE hmod : modules) {
+    std::vector<wchar_t> name(MAX_PATH);
+    DWORD len = 0;
+    while (name.size() <= PATHCCH_MAX_CCH) {
+      len = ::GetModuleFileNameExW(process.get(), hmod, name.data(),
+                                   static_cast<DWORD>(name.size()));
+      if (len == 0 || len < name.size())
+        break;
+      name.resize(name.size() * 2);
+    }
+    if (len == 0)
+      continue;
+
+    std::string path;
+    if (!llvm::convertWideToUTF8(std::wstring(name.data(), len), path))
+      continue;
+
+    MODULEINFO mi = {};
+    if (!::GetModuleInformation(process.get(), hmod, &mi, sizeof(mi)))
+      continue;
+
+    FileSpec file_spec(path);
+    FileSystem::Instance().Resolve(file_spec);
+    m_loaded_modules[file_spec] = reinterpret_cast<addr_t>(mi.lpBaseOfDll);
+  }
+
+  if (!m_loaded_modules.empty())
+    return Status();
 
   error = Status(::GetLastError(), lldb::ErrorType::eErrorTypeWin32);
   return error;
