@@ -73,19 +73,22 @@ bool BreakpointResolver::ResolverTyInMask(uint64_t mask) {
 uint64_t BreakpointResolver::MaskForResolverTy() {
   ResolverTy thisID = GetResolverTy();
 
-  if (thisID == FileLineResolver)
-    return eResolverFileAndLine;
-  if (thisID == AddressResolver)
-    return eResolverAddress;
-  if (thisID == NameResolver)
-    return eResolverName;
-  if (thisID == FileRegexResolver)
-    return eResolverFileRegex;
-  if (thisID == PythonResolver)
-    return eResolverPython;
-  if (thisID == ExceptionResolver)
-    return eResolverException;
-  return eResolverUnknown;
+  switch (thisID) {
+    case FileLineResolver:
+      return eResolverFileAndLine;
+    case AddressResolver:
+      return eResolverAddress;
+    case NameResolver:
+      return eResolverName;
+    case FileRegexResolver:
+      return eResolverFileRegex;
+    case PythonResolver:
+      return eResolverPython;
+    case ExceptionResolver:
+      return eResolverException;
+    default:
+      return eResolverUnknown;
+  }
 }
 
 std::string BreakpointResolver::DescribeMask(uint64_t mask) {

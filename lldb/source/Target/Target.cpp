@@ -1024,9 +1024,8 @@ Target::CheckBreakpointOverrides(lldb::BreakpointResolverSP original_sp) {
   for (auto const &elem : m_breakpoint_overrides) {
     if (!original_sp->ResolverTyInMask(elem.second->GetTypeMask()))
       continue;
-    lldb::BreakpointResolverSP overriden_sp;
-    overriden_sp = elem.second->CheckForOverride(*this, original_sp);
-    if (overriden_sp)
+    if (lldb::BreakpointResolverSP overriden_sp
+      = elem.second->CheckForOverride(*this, original_sp))
       return overriden_sp;
   }
   return {};

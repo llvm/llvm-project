@@ -1586,7 +1586,6 @@ enum BinaryInformationLevel {
 /// This reflects the BreakpointResolver::ResolverTy, but this is a convenient
 /// enum for making a mask to pass to RegisterOverrideResolver.  It has to be
 /// kept in sync with the ResolverTy.
-
 FLAGS_ENUM(BreakpointResolverType) {
   eResolverUnknown = 0,
   eResolverFileAndLine = (1 << 0),
