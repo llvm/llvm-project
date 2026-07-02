@@ -10,6 +10,8 @@
 
 // <deque>
 
+// constexpr since C++26
+
 // iterator insert(const_iterator p, initializer_list<value_type> il);
 
 #include "asan_testing.h"
@@ -19,7 +21,22 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
+#if TEST_STD_VER >= 26
+constexpr bool test() {
+  std::deque<int> d = {1, 4};
+  auto it           = d.insert(d.begin() + 1, {2, 3});
+  assert(*it == 2);
+  assert((d == std::deque<int>{1, 2, 3, 4}));
+  return true;
+}
+#endif
+
 int main(int, char**) {
+#if TEST_STD_VER >= 26
+  test();
+  static_assert(test());
+#endif
+
   {
     std::deque<int> d(10, 1);
     std::deque<int>::iterator i = d.insert(d.cbegin() + 2, {3, 4, 5, 6});

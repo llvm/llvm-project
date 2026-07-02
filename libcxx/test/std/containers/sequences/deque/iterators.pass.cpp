@@ -8,6 +8,8 @@
 
 // <deque>
 
+// constexpr since C++26
+
 // Test nested types and default template args:
 
 // template <class T, class Allocator = allocator<T> >
@@ -22,7 +24,24 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
+#if TEST_STD_VER >= 26
+constexpr bool test() {
+  std::deque<int> d = {1, 2, 3};
+  assert(*d.begin() == 1);
+  assert(*(d.end() - 1) == 3);
+  assert(*d.cbegin() == 1);
+  assert(*d.rbegin() == 3);
+  assert(*d.crbegin() == 3);
+  return true;
+}
+#endif
+
 int main(int, char**) {
+#if TEST_STD_VER >= 26
+  test();
+  static_assert(test());
+#endif
+
   {
     typedef std::deque<int> C;
     C c;

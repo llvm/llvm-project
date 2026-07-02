@@ -35,7 +35,7 @@ TEST_CONSTEXPR_CXX17 void check_distance(It first, It last, typename std::iterat
 }
 
 #if TEST_STD_VER >= 20
-/*TEST_CONSTEXPR_CXX26*/ void test_deque() { // TODO: Mark as TEST_CONSTEXPR_CXX26 once std::deque is constexpr
+TEST_CONSTEXPR_CXX26 void test_deque() {
   using Container = std::deque<std::deque<double>>;
   Container c;
   auto view                    = c | std::views::join;
@@ -74,7 +74,7 @@ TEST_CONSTEXPR_CXX17 bool tests() {
     auto view = c | std::views::join;
     assert(std::distance(view.begin(), view.end()) == 30);
   }
-  if (!TEST_IS_CONSTANT_EVALUATED) // TODO: Use TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED when std::deque is made constexpr
+  if (TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED)
     test_deque();
 #endif
   return true;

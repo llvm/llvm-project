@@ -8,6 +8,8 @@
 
 // <deque>
 
+// constexpr since C++26
+
 // iterator insert (const_iterator p, const value_type& v);
 
 #include "asan_testing.h"
@@ -99,7 +101,22 @@ void self_reference_test() {
   }
 }
 
+#if TEST_STD_VER >= 26
+constexpr bool test() {
+  std::deque<int> d = {1, 3};
+  auto it           = d.insert(d.begin() + 1, 2);
+  assert(*it == 2);
+  assert((d == std::deque<int>{1, 2, 3}));
+  return true;
+}
+#endif
+
 int main(int, char**) {
+#if TEST_STD_VER >= 26
+  test();
+  static_assert(test());
+#endif
+
   {
     int rng[]   = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
     const int N = sizeof(rng) / sizeof(rng[0]);

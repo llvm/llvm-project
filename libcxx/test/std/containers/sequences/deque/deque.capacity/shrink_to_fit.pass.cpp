@@ -8,6 +8,8 @@
 
 // <deque>
 
+// constexpr since C++26
+
 // void shrink_to_fit();
 
 #include "asan_testing.h"
@@ -50,7 +52,21 @@ void testN(int start, int N) {
   test(c1);
 }
 
+#if TEST_STD_VER >= 26
+constexpr bool test() {
+  std::deque<int> d = {1, 2, 3};
+  d.shrink_to_fit();
+  assert(d.size() == 3);
+  return true;
+}
+#endif
+
 int main(int, char**) {
+#if TEST_STD_VER >= 26
+  test();
+  static_assert(test());
+#endif
+
   {
     int rng[]   = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
     const int N = sizeof(rng) / sizeof(rng[0]);

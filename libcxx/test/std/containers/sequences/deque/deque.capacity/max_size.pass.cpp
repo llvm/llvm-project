@@ -8,6 +8,8 @@
 
 // <deque>
 
+// constexpr since C++26
+
 // size_type max_size() const;
 
 #include "asan_testing.h"
@@ -19,7 +21,20 @@
 #include "test_allocator.h"
 #include "test_macros.h"
 
+#if TEST_STD_VER >= 26
+constexpr bool test() {
+  std::deque<int> d;
+  assert(d.max_size() > 0);
+  return true;
+}
+#endif
+
 int main(int, char**) {
+#if TEST_STD_VER >= 26
+  test();
+  static_assert(test());
+#endif
+
   {
     typedef limited_allocator<int, 10> A;
     typedef std::deque<int, A> C;

@@ -10,6 +10,8 @@
 
 // <deque>
 
+// constexpr since C++26
+
 // deque(deque&&);
 
 #include "asan_testing.h"
@@ -21,7 +23,21 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
+#if TEST_STD_VER >= 26
+constexpr bool test() {
+  std::deque<int> d = {1, 2, 3};
+  std::deque<int> moved(static_cast<std::deque<int>&&>(d));
+  assert((moved == std::deque<int>{1, 2, 3}));
+  return true;
+}
+#endif
+
 int main(int, char**) {
+#if TEST_STD_VER >= 26
+  test();
+  static_assert(test());
+#endif
+
   {
     int ab[] = {3, 4, 2, 8, 0, 1, 44, 34, 45, 96, 80, 1, 13, 31, 45};
     int* an  = ab + sizeof(ab) / sizeof(ab[0]);

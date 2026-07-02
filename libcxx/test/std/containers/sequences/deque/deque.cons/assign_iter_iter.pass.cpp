@@ -8,6 +8,8 @@
 
 // <deque>
 
+// constexpr since C++26
+
 // template <class InputIterator>
 //   void assign(InputIterator f, InputIterator l);
 
@@ -142,7 +144,22 @@ void test_iterators() {
   test_emplacable_concept<int*>();
 }
 
+#if TEST_STD_VER >= 26
+constexpr bool test() {
+  int input[] = {1, 2, 3};
+  std::deque<int> d;
+  d.assign(input, input + 3);
+  assert((d == std::deque<int>{1, 2, 3}));
+  return true;
+}
+#endif
+
 int main(int, char**) {
+#if TEST_STD_VER >= 26
+  test();
+  static_assert(test());
+#endif
+
   basic_test();
 
   return 0;

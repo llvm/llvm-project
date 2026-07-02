@@ -75,7 +75,7 @@ struct __asan_annotate_container_with_allocator : true_type {};
 // - [__first_old_contained, __last_old_contained) is the previously allowed (unpoisoned) range, and
 // - [__first_new_contained, __last_new_contained) is the new allowed (unpoisoned) range.
 template <class _Allocator>
-_LIBCPP_HIDE_FROM_ABI void __annotate_double_ended_contiguous_container(
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __annotate_double_ended_contiguous_container(
     const void* __first_storage,
     const void* __last_storage,
     const void* __first_old_contained,
@@ -90,7 +90,8 @@ _LIBCPP_HIDE_FROM_ABI void __annotate_double_ended_contiguous_container(
   (void)__first_new_contained;
   (void)__last_new_contained;
 #else
-  if (__asan_annotate_container_with_allocator<_Allocator>::value && __first_storage != nullptr)
+  if (!__libcpp_is_constant_evaluated() && __asan_annotate_container_with_allocator<_Allocator>::value &&
+      __first_storage != nullptr)
     __sanitizer_annotate_double_ended_contiguous_container(
         __first_storage,
         __last_storage,

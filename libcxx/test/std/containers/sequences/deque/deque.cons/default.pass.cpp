@@ -8,6 +8,8 @@
 
 // <deque>
 
+// constexpr since C++26
+
 // deque()
 
 #include "asan_testing.h"
@@ -31,7 +33,21 @@ void test() {
 #endif
 }
 
+#if TEST_STD_VER >= 26
+constexpr bool test() {
+  std::deque<int> d;
+  assert(d.empty());
+  assert(d.begin() == d.end());
+  return true;
+}
+#endif
+
 int main(int, char**) {
+#if TEST_STD_VER >= 26
+  test();
+  static_assert(test());
+#endif
+
   test<int, std::allocator<int> >();
   test<NotConstructible, limited_allocator<NotConstructible, 1> >();
 #if TEST_STD_VER >= 11

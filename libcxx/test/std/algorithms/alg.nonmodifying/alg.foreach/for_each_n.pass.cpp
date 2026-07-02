@@ -38,16 +38,16 @@ struct deque_test {
   std::deque<int>* d_;
   int* i_;
 
-  deque_test(std::deque<int>& d, int& i) : d_(&d), i_(&i) {}
+  TEST_CONSTEXPR_CXX26 deque_test(std::deque<int>& d, int& i) : d_(&d), i_(&i) {}
 
-  void operator()(int& v) {
+  TEST_CONSTEXPR_CXX26 void operator()(int& v) {
     assert(&(*d_)[*i_] == &v);
     ++*i_;
   }
 };
 
 /*TEST_CONSTEXPR_CXX26*/
-void test_deque_and_join_view_iterators() { // TODO: Mark as TEST_CONSTEXPR_CXX26 once std::deque is constexpr
+TEST_CONSTEXPR_CXX26 void test_deque_and_join_view_iterators() {
   {                                         // Verify that segmented deque iterators work properly
     int sizes[] = {0, 1, 2, 1023, 1024, 1025, 2047, 2048, 2049};
     for (const int size : sizes) {
@@ -117,7 +117,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
     assert(it == (std::begin(ia) + N) && std::equal(std::begin(ia), std::end(ia), std::begin(expected)));
   }
 
-  if (!TEST_IS_CONSTANT_EVALUATED) // TODO: Use TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED when std::deque is made constexpr
+  if (TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED)
     test_deque_and_join_view_iterators();
 
 #if TEST_STD_VER >= 20

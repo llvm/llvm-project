@@ -10,6 +10,8 @@
 
 // <deque>
 
+// constexpr since C++26
+
 // deque(initializer_list<value_type> il);
 
 #include "asan_testing.h"
@@ -19,7 +21,21 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
+#if TEST_STD_VER >= 26
+constexpr bool test() {
+  std::deque<int> d = {1, 2, 3};
+  assert(d.size() == 3);
+  assert(d.back() == 3);
+  return true;
+}
+#endif
+
 int main(int, char**) {
+#if TEST_STD_VER >= 26
+  test();
+  static_assert(test());
+#endif
+
   {
     std::deque<int> d = {3, 4, 5, 6};
     assert(d.size() == 4);

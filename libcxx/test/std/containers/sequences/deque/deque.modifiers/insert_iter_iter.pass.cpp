@@ -16,6 +16,8 @@
 
 // <deque>
 
+// constexpr since C++26
+
 // template <class InputIterator>
 //   iterator insert (const_iterator p, InputIterator f, InputIterator l);
 
@@ -235,7 +237,23 @@ void test_move() {
 #endif
 }
 
+#if TEST_STD_VER >= 26
+constexpr bool test() {
+  int input[]       = {2, 3};
+  std::deque<int> d = {1, 4};
+  auto it           = d.insert(d.begin() + 1, input, input + 2);
+  assert(*it == 2);
+  assert((d == std::deque<int>{1, 2, 3, 4}));
+  return true;
+}
+#endif
+
 int main(int, char**) {
+#if TEST_STD_VER >= 26
+  test();
+  static_assert(test());
+#endif
+
   {
     int rng[]   = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
     const int N = sizeof(rng) / sizeof(rng[0]);

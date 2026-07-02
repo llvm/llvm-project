@@ -11,11 +11,14 @@
 
 // <deque>
 
+// constexpr since C++26
+
 // template <class T, class Allocator, class Predicate>
 //   typename deque<T, Allocator>::size_type
 //   erase_if(deque<T, Allocator>& c, Predicate pred);
 
 #include "asan_testing.h"
+#include <cassert>
 #include <deque>
 
 #include "test_macros.h"
@@ -68,7 +71,21 @@ void test() {
   test0(S({1, 2, 3}), False, S({1, 2, 3}), 0);
 }
 
+#if TEST_STD_VER >= 26
+constexpr bool test() {
+  std::deque<int> d = {1, 2, 3, 4};
+  assert(std::erase_if(d, [](int v) { return v % 2 == 0; }) == 2);
+  assert((d == std::deque<int>{1, 3}));
+  return true;
+}
+#endif
+
 int main(int, char**) {
+#if TEST_STD_VER >= 26
+  test();
+  static_assert(test());
+#endif
+
   test<std::deque<int>>();
   test<std::deque<int, min_allocator<int>>>();
   test<std::deque<int, safe_allocator<int>>>();

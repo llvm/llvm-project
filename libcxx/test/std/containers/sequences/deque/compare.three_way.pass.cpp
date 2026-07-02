@@ -9,6 +9,8 @@
 
 // <deque>
 
+// constexpr since C++26
+
 // template<class T, class Allocator>
 //   synth-three-way-result<T> operator<=>(const deque<T, Allocator>& x,
 //                                         const deque<T, Allocator>& y);
@@ -17,9 +19,23 @@
 #include <deque>
 
 #include "test_container_comparisons.h"
+#include "test_macros.h"
+
+#if TEST_STD_VER >= 26
+constexpr bool test() {
+  std::deque<int> a = {1, 2, 3};
+  std::deque<int> b = {1, 2, 4};
+  assert((a <=> b) < 0);
+  return true;
+}
+#endif
 
 int main(int, char**) {
+#if TEST_STD_VER >= 26
+  test();
+  static_assert(test());
+#endif
+
   assert(test_sequence_container_spaceship<std::deque>());
-  // `std::deque` is not constexpr, so no `static_assert` test here.
   return 0;
 }

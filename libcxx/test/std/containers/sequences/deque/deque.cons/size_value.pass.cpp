@@ -8,6 +8,8 @@
 
 // <deque>
 
+// constexpr since C++26
+
 // deque(size_type n, const value_type& v);
 
 #include "asan_testing.h"
@@ -31,7 +33,22 @@ void test(unsigned n, const T& x) {
     assert(*i == x);
 }
 
+#if TEST_STD_VER >= 26
+constexpr bool test() {
+  std::deque<int> d(3, 7);
+  assert(d.size() == 3);
+  assert(d.front() == 7);
+  assert(d.back() == 7);
+  return true;
+}
+#endif
+
 int main(int, char**) {
+#if TEST_STD_VER >= 26
+  test();
+  static_assert(test());
+#endif
+
   test<int, std::allocator<int> >(0, 5);
   test<int, std::allocator<int> >(1, 10);
   test<int, std::allocator<int> >(10, 11);

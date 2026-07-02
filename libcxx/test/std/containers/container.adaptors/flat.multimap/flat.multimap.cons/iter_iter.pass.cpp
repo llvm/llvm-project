@@ -256,10 +256,7 @@ constexpr bool test() {
 
   test_alloc<std::vector, std::vector>();
 
-#ifndef __cpp_lib_constexpr_deque
-  if (!TEST_IS_CONSTANT_EVALUATED)
-#endif
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     test<std::deque<int>, std::vector<double>>();
     test_alloc<std::deque, std::deque>();
   }
