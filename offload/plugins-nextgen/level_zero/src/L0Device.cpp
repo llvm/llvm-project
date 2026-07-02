@@ -685,9 +685,10 @@ Error L0DeviceTy::dataFillImpl(void *TgtPtr, const void *PatternPtr,
                         AsyncInfoWrapper);
 }
 
-Error L0DeviceTy::dataPrefetchImpl(const void *Mem, int64_t Size, bool ToHost,
+Error L0DeviceTy::dataPrefetchImpl(size_t Count, const void **Mems,
+                                   const size_t *Sizes, bool ToHost,
                                    AsyncInfoWrapperTy &AsyncInfoWrapper) {
-  if (Size == 0)
+  if (Count == 0)
     return Plugin::success();
 
   // Level Zero only supports prefetching memory to the device. A prefetch
@@ -699,7 +700,10 @@ Error L0DeviceTy::dataPrefetchImpl(const void *Mem, int64_t Size, bool ToHost,
   auto QueueOrErr = getOrCreateQueue(AsyncInfo);
   if (!QueueOrErr)
     return QueueOrErr.takeError();
-  return (*QueueOrErr)->memoryPrefetch(Mem, Size);
+  for (size_t I = 0; I < Count; I++)
+    if (auto Err = (*QueueOrErr)->memoryPrefetch(Mems[I], Sizes[I]))
+      return Err;
+  return Plugin::success();
 }
 
 Expected<void *> L0DeviceTy::dataAlloc(size_t Size, size_t Align, int32_t Kind,

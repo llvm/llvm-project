@@ -1030,15 +1030,14 @@ Error olMemFill_impl(ol_queue_handle_t Queue, void *Ptr, size_t PatternSize,
                                          Queue->AsyncInfo);
 }
 
-Error olMemPrefetch_impl(ol_queue_handle_t Queue, const void *Mem, size_t Size,
+Error olMemPrefetch_impl(ol_queue_handle_t Queue, size_t Count,
+                         const void **Mems, const size_t *Sizes,
                          ol_usm_migration_flags_t Flags) {
-  if ((Flags & ~(OL_USM_MIGRATION_FLAG_HOST_TO_DEVICE |
-                 OL_USM_MIGRATION_FLAG_DEVICE_TO_HOST)) != 0)
-    return createOffloadError(ErrorCode::INVALID_ENUMERATION,
-                              "olMemPrefetch flags '%i' are invalid", Flags);
+  if (Count == 0)
+    return Error::success();
 
   bool ToHost = (Flags & OL_USM_MIGRATION_FLAG_DEVICE_TO_HOST) != 0;
-  return Queue->Device->Device->dataPrefetch(Mem, Size, ToHost,
+  return Queue->Device->Device->dataPrefetch(Count, Mems, Sizes, ToHost,
                                              Queue->AsyncInfo);
 }
 

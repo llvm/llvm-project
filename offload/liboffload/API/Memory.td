@@ -237,16 +237,23 @@ def olMemPrefetch : Function {
       "are unchanged - only its physical location may change.",
       "Prefetching may not be supported for all devices or allocation types. If it is not "
       "supported the prefetch is ignored and the call still returns success.",
+      "`Mems` and `Sizes` must both contain `Count` elements; element `i` of `Sizes` is the "
+      "size in bytes of the region pointed to by element `i` of `Mems`.",
   ];
   let params = [
     Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>,
-    Param<"const void*", "Mem", "pointer into the USM allocation to be prefetched", PARAM_IN>,
-    Param<"size_t", "Size", "size in bytes of the region to be prefetched. Zero is allowed and is a no-op.", PARAM_IN>,
+    Param<"size_t", "Count", "number of entries in `Mems` and `Sizes`. Zero is allowed and is a no-op.", PARAM_IN>,
+    Param<"const void**", "Mems", "array of `Count` pointers, each pointing into a USM allocation to be prefetched. May be NULL if `Count` is 0.", PARAM_IN_OPTIONAL>,
+    Param<"const size_t*", "Sizes", "array of `Count` sizes in bytes. A zero entry is allowed and is a no-op for that element. May be NULL if `Count` is 0.", PARAM_IN_OPTIONAL>,
     Param<"ol_usm_migration_flags_t", "Flags", "direction of the migration; exactly one of the OL_USM_MIGRATION_FLAG_* values", PARAM_IN>,
   ];
   let returns = [
+    Return<"OL_ERRC_INVALID_NULL_POINTER", [
+      "`Count > 0 && Mems == NULL`",
+      "`Count > 0 && Sizes == NULL`"
+    ]>,
     Return<"OL_ERRC_INVALID_ENUMERATION", [
-      "Flags contains bits other than the defined OL_USM_MIGRATION_FLAG_* values"
+      "`(Flags & ~(OL_USM_MIGRATION_FLAG_HOST_TO_DEVICE | OL_USM_MIGRATION_FLAG_DEVICE_TO_HOST)) != 0`"
     ]>,
   ];
 }

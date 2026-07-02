@@ -928,15 +928,15 @@ struct CUDADeviceTy : public GenericDeviceTy {
   }
 
   /// Prefetch managed memory to the device or back to the host.
-  Error dataPrefetchImpl(const void *Mem, int64_t Size, bool ToHost,
+  // TODO: switch to cuMemPrefetchBatchAsync once the minimum supported CUDA
+  // driver is 13 or newer. That entry point takes the (Mems, Sizes, Count)
+  // arrays directly and lets the driver batch the migration.
+  Error dataPrefetchImpl(size_t Count, const void **Mems, const size_t *Sizes,
+                         bool ToHost,
                          AsyncInfoWrapperTy &AsyncInfoWrapper) override {
-    if (Size == 0)
+    if (Count == 0)
       return Plugin::success();
     if (auto Err = setContext())
-      return Err;
-
-    CUstream Stream;
-    if (auto Err = getStream(AsyncInfoWrapper, Stream))
       return Err;
 
     // Certain cuda devices and Windows do not have support for some Unified
@@ -949,17 +949,29 @@ struct CUDADeviceTy : public GenericDeviceTy {
         !ConcurrentManagedAccess)
       return Plugin::success();
 
-    // Prefetch only works with USM (managed) memory; ignore the hint otherwise.
-    unsigned int IsManaged = 0;
-    if (cuPointerGetAttribute(&IsManaged, CU_POINTER_ATTRIBUTE_IS_MANAGED,
-                              (CUdeviceptr)Mem) != CUDA_SUCCESS ||
-        !IsManaged)
-      return Plugin::success();
+    CUstream Stream;
+    if (auto Err = getStream(AsyncInfoWrapper, Stream))
+      return Err;
 
     CUdevice Dst = ToHost ? CU_DEVICE_CPU : Device;
-    CUresult Res =
-        cuMemPrefetchAsync((CUdeviceptr)Mem, (size_t)Size, Dst, Stream);
-    return Plugin::check(Res, "error in cuMemPrefetchAsync: %s");
+    for (size_t I = 0; I < Count; I++) {
+      if (Sizes[I] == 0)
+        continue;
+
+      // Prefetch only works with USM (managed) memory; ignore the hint
+      // otherwise.
+      unsigned int IsManaged = 0;
+      if (cuPointerGetAttribute(&IsManaged, CU_POINTER_ATTRIBUTE_IS_MANAGED,
+                                (CUdeviceptr)Mems[I]) != CUDA_SUCCESS ||
+          !IsManaged)
+        continue;
+
+      CUresult Res =
+          cuMemPrefetchAsync((CUdeviceptr)Mems[I], Sizes[I], Dst, Stream);
+      if (auto Err = Plugin::check(Res, "error in cuMemPrefetchAsync: %s"))
+        return Err;
+    }
+    return Plugin::success();
   }
 
   /// Initialize the async info for interoperability purposes.
