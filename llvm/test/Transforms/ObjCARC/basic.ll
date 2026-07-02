@@ -1860,16 +1860,16 @@ entry:
   ret void
 }
 
-; Don't the known-incremented retain+release elimination if the pointer is
-; autoreleased and there's an autoreleasePoolPop.
+; The autorelease is moved to a release just before the autoreleasePoolPop.
+; The retain+release pair is not eliminated.
 
 ; CHECK-LABEL: define void @test43(
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT: call ptr @llvm.objc.retain(ptr %p)
-; CHECK-NEXT: call ptr @llvm.objc.autorelease(ptr %p)
 ; CHECK-NEXT: call ptr @llvm.objc.retain
 ; CHECK-NEXT: call void @use_pointer(ptr %p)
 ; CHECK-NEXT: call void @use_pointer(ptr %p)
+; CHECK-NEXT: call void @llvm.objc.release(ptr %p) {{.*}}, !clang.imprecise_release
 ; CHECK-NEXT: call void @llvm.objc.autoreleasePoolPop(ptr undef)
 ; CHECK-NEXT: call void @llvm.objc.release
 ; CHECK-NEXT: ret void
