@@ -11144,8 +11144,6 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-GCNTRACKERS-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-GCNTRACKERS-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64 = S_MOV_B32 0
-  ; GFX908-GCNTRACKERS-NEXT:   $vgpr8 = IMPLICIT_DEF
-  ; GFX908-GCNTRACKERS-NEXT:   $vgpr9 = IMPLICIT_DEF
   ; GFX908-GCNTRACKERS-NEXT:   dead [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; GFX908-GCNTRACKERS-NEXT:   [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; GFX908-GCNTRACKERS-NEXT:   [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
@@ -11205,6 +11203,8 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT:   [[V_CVT_I32_F32_e32_26:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 [[DEF27]], implicit $exec, implicit $mode
   ; GFX908-GCNTRACKERS-NEXT:   [[DEF28:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; GFX908-GCNTRACKERS-NEXT:   [[V_CVT_I32_F32_e32_27:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 [[DEF28]], implicit $exec, implicit $mode
+  ; GFX908-GCNTRACKERS-NEXT:   $vgpr8 = IMPLICIT_DEF
+  ; GFX908-GCNTRACKERS-NEXT:   $vgpr9 = IMPLICIT_DEF
   ; GFX908-GCNTRACKERS-NEXT:   [[DEF29:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; GFX908-GCNTRACKERS-NEXT:   [[V_CVT_I32_F32_e32_28:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 $vgpr8, implicit $exec, implicit $mode
   ; GFX908-GCNTRACKERS-NEXT:   [[V_CVT_I32_F32_e32_29:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 $vgpr9, implicit $exec, implicit $mode
@@ -11445,8 +11445,6 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
   ; GFX908-GCNTRACKERS-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; GFX908-GCNTRACKERS-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64 = S_MOV_B32 0
-  ; GFX908-GCNTRACKERS-NEXT:   $vgpr8 = IMPLICIT_DEF
-  ; GFX908-GCNTRACKERS-NEXT:   $vgpr9 = IMPLICIT_DEF
   ; GFX908-GCNTRACKERS-NEXT:   dead [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; GFX908-GCNTRACKERS-NEXT:   [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; GFX908-GCNTRACKERS-NEXT:   [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
@@ -11508,18 +11506,20 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT:   [[V_CVT_I32_F32_e32_27:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 [[DEF28]], implicit $exec, implicit $mode
   ; GFX908-GCNTRACKERS-NEXT:   [[DEF29:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; GFX908-GCNTRACKERS-NEXT:   [[DEF30:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; GFX908-GCNTRACKERS-NEXT:   [[V_CVT_I32_F32_e32_28:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 2, implicit $exec, implicit $mode
-  ; GFX908-GCNTRACKERS-NEXT:   [[V_CVT_I32_F32_e32_29:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 [[DEF29]], implicit $exec, implicit $mode
-  ; GFX908-GCNTRACKERS-NEXT:   [[V_CVT_I32_F32_e32_30:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 [[DEF30]], implicit $exec, implicit $mode
+  ; GFX908-GCNTRACKERS-NEXT:   [[V_CVT_I32_F32_e32_28:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 [[DEF29]], implicit $exec, implicit $mode
+  ; GFX908-GCNTRACKERS-NEXT:   [[V_CVT_I32_F32_e32_29:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 [[DEF30]], implicit $exec, implicit $mode
+  ; GFX908-GCNTRACKERS-NEXT:   $vgpr8 = IMPLICIT_DEF
+  ; GFX908-GCNTRACKERS-NEXT:   $vgpr9 = IMPLICIT_DEF
   ; GFX908-GCNTRACKERS-NEXT:   S_BRANCH %bb.1
   ; GFX908-GCNTRACKERS-NEXT: {{  $}}
   ; GFX908-GCNTRACKERS-NEXT: bb.1:
   ; GFX908-GCNTRACKERS-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 255
   ; GFX908-GCNTRACKERS-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 [[S_MOV_B64_]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908-GCNTRACKERS-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F32_e32_1]], implicit [[V_CVT_I32_F32_e32_9]]
-  ; GFX908-GCNTRACKERS-NEXT:   [[V_CVT_I32_F32_e32_31:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 1, implicit $exec, implicit $mode
-  ; GFX908-GCNTRACKERS-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F32_e32_31]], implicit [[V_CVT_I32_F32_e32_29]], implicit [[DEF29]]
-  ; GFX908-GCNTRACKERS-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F32_e32_28]], implicit [[V_CVT_I32_F32_e32_30]], implicit [[DEF30]]
+  ; GFX908-GCNTRACKERS-NEXT:   [[V_CVT_I32_F32_e32_30:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 1, implicit $exec, implicit $mode
+  ; GFX908-GCNTRACKERS-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F32_e32_30]], implicit [[V_CVT_I32_F32_e32_28]], implicit [[DEF29]]
+  ; GFX908-GCNTRACKERS-NEXT:   [[V_CVT_I32_F32_e32_31:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 2, implicit $exec, implicit $mode
+  ; GFX908-GCNTRACKERS-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F32_e32_31]], implicit [[V_CVT_I32_F32_e32_29]], implicit [[DEF30]]
   ; GFX908-GCNTRACKERS-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F32_e32_2]], implicit [[V_CVT_I32_F32_e32_10]]
   ; GFX908-GCNTRACKERS-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F32_e32_3]], implicit [[V_CVT_I32_F32_e32_11]]
   ; GFX908-GCNTRACKERS-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F32_e32_4]], implicit [[V_CVT_I32_F32_e32_12]]

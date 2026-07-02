@@ -1,0 +1,239 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --filetype=null --run-pass=amdgpu-print-rp -amdgpu-use-amdgpu-trackers=1 %s 2>&1 | FileCheck %s --check-prefix=RPU
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --filetype=null --run-pass=amdgpu-print-rp -amdgpu-use-amdgpu-trackers=1 -amdgpu-trackers-physical-register-tracking=0 %s 2>&1 | FileCheck %s --check-prefix=RPU-NOPHYS
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --filetype=null --run-pass=amdgpu-print-rp -amdgpu-use-amdgpu-trackers=1 -amdgpu-print-rp-downward %s 2>&1 | FileCheck %s --check-prefix=RPD
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --filetype=null --run-pass=amdgpu-print-rp -amdgpu-use-amdgpu-trackers=1 -amdgpu-print-rp-downward -amdgpu-trackers-physical-register-tracking=0 %s 2>&1 | FileCheck %s --check-prefix=RPD-NOPHYS
+
+# Tests for physical register pressure tracking edge cases:
+# 1. Non-allocatable registers (e.g. $scc) should not affect pressure.
+# 2. Aliasing: a tuple def ($sgpr10_sgpr11) does not kill a live sub-register
+#    ($sgpr11) tracked under a different name, leading to over-counted pressure.
+
+# Non-allocatable physical register should not change pressure.
+---
+name:  nonallocatable_physreg
+tracksRegLiveness: true
+machineFunctionInfo:
+  sgprForEXECCopy: '$sgpr100_sgpr101'
+body:             |
+  ; RPU-LABEL: name: nonallocatable_physreg
+  ; RPU: bb.0:
+  ; RPU:   SGPR  VGPR
+  ; RPU:   2     1
+  ; RPU:   2     1      S_NOP 0, implicit-def $scc
+  ; RPU:   2     1
+  ;
+  ; RPU-NOPHYS-LABEL: name: nonallocatable_physreg
+  ; RPU-NOPHYS: bb.0:
+  ; RPU-NOPHYS:   SGPR  VGPR
+  ; RPU-NOPHYS:   2     1
+  ; RPU-NOPHYS:   2     1      S_NOP 0, implicit-def $scc
+  ; RPU-NOPHYS:   2     1
+  ;
+  ; RPD-LABEL: name: nonallocatable_physreg
+  ; RPD: bb.0:
+  ; RPD:   SGPR  VGPR
+  ;
+  ; Initial pressure includes $sgpr8_sgpr9 live-in (2 SGPR units).
+  ;
+  ; RPD:   2     0
+  ; RPD:   2     1
+  ; RPD:   2     1      S_NOP 0, implicit-def $scc
+  ; RPD:   2     1
+  ;
+  ; RPD-NOPHYS-LABEL: name: nonallocatable_physreg
+  ; RPD-NOPHYS: bb.0:
+  ; RPD-NOPHYS:   SGPR  VGPR
+  ;
+  ; Without physreg tracking, no live-in physical register pressure.
+  ;
+  ; RPD-NOPHYS:   0     0
+  ; RPD-NOPHYS:   2     1
+  ; RPD-NOPHYS:   2     1      S_NOP 0, implicit-def $scc
+  ; RPD-NOPHYS:   2     1
+  bb.0:
+    liveins: $sgpr8_sgpr9
+
+    %0:sgpr_64(p4) = COPY $sgpr8_sgpr9
+    %1:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM %0(p4), 0, 0 :: (dereferenceable invariant load (s64), align 16, addrspace 4)
+    %2:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    S_NOP 0, implicit-def $scc
+    GLOBAL_STORE_DWORD_SADDR %2, %2, %1, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    S_ENDPGM 0
+...
+
+# Aliasing: $sgpr10_sgpr11 is defined, then $sgpr11 (a sub-register) is used.
+# Unit-level tracking correctly handles this: the upward tracker adds
+# $sgpr11's unit when processing the use, and when receding past the def of
+# $sgpr10_sgpr11, it finds and removes $sgpr11's unit, correctly decrementing
+# pressure.
+---
+name:  aliased_physreg_tuple_def_subreg_use
+tracksRegLiveness: true
+machineFunctionInfo:
+  sgprForEXECCopy: '$sgpr100_sgpr101'
+body:             |
+  ; RPU-LABEL: name: aliased_physreg_tuple_def_subreg_use
+  ; RPU: bb.0:
+  ; RPU:   SGPR  VGPR
+  ;
+  ; The def of $sgpr10_sgpr11 correctly kills $sgpr11's unit via
+  ; unit-level tracking, reducing SGPR pressure from 3 to 2.
+  ;
+  ; RPU:   2     1
+  ; RPU:   3     1      INLINEASM &"s_mov_b64 $0, 0"{{.*}} implicit-def $sgpr10_sgpr11
+  ; RPU:   3     1
+  ; RPU:   3     1      %3:sreg_32 = COPY $sgpr11
+  ;
+  ; RPU-NOPHYS-LABEL: name: aliased_physreg_tuple_def_subreg_use
+  ; RPU-NOPHYS: bb.0:
+  ; RPU-NOPHYS:   SGPR  VGPR
+  ;
+  ; Without physreg tracking, no physical register pressure is counted,
+  ; so the INLINEASM shows no changes in pressure.
+  ;
+  ; RPU-NOPHYS:   2     1
+  ; RPU-NOPHYS:   2     1      INLINEASM &"s_mov_b64 $0, 0"{{.*}} implicit-def $sgpr10_sgpr11
+  ; RPU-NOPHYS:   2     1
+  ; RPU-NOPHYS:   3     1      %3:sreg_32 = COPY $sgpr11
+  ;
+  ; RPD-LABEL: name: aliased_physreg_tuple_def_subreg_use
+  ; RPD: bb.0:
+  ; RPD:   SGPR  VGPR
+  ;
+  ; Initial pressure includes $sgpr8_sgpr9 live-in (2 SGPR units).
+  ; Downward tracker: the INLINEASM def adds $sgpr10_sgpr11 (2 units =
+  ; 2 SGPRs). At the COPY use of $sgpr11, the corresponding reg-unit
+  ; is not found in the cached live ranges, so it conservatively keeps
+  ; the unit live. The virtual register def leads to the increase in
+  ; pressure from 4 to 5.
+  ;
+  ; RPD:   2     0
+  ; RPD:   2     1
+  ; RPD:   4     1      INLINEASM &"s_mov_b64 $0, 0"{{.*}} implicit-def $sgpr10_sgpr11
+  ; RPD:   4     1
+  ; RPD:   5     1      %3:sreg_32 = COPY $sgpr11
+  ;
+  ; RPD-NOPHYS-LABEL: name: aliased_physreg_tuple_def_subreg_use
+  ; RPD-NOPHYS: bb.0:
+  ; RPD-NOPHYS:   SGPR  VGPR
+  ;
+  ; Without physreg tracking, no live-in physical register pressure
+  ; and no physical register pressure changes at instructions.
+  ;
+  ; RPD-NOPHYS:   0     0
+  ; RPD-NOPHYS:   2     1
+  ; RPD-NOPHYS:   2     1      INLINEASM &"s_mov_b64 $0, 0"{{.*}} implicit-def $sgpr10_sgpr11
+  ; RPD-NOPHYS:   2     1
+  ; RPD-NOPHYS:   3     1      %3:sreg_32 = COPY $sgpr11
+  bb.0:
+    liveins: $sgpr8_sgpr9
+
+    %0:sgpr_64(p4) = COPY $sgpr8_sgpr9
+    %1:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM %0(p4), 0, 0 :: (dereferenceable invariant load (s64), align 16, addrspace 4)
+    %2:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    INLINEASM &"s_mov_b64 $0, 0", 1 /* sideeffect attdialect */, 10 /* regdef */, implicit-def $sgpr10_sgpr11
+    %3:sreg_32 = COPY $sgpr11
+    %4:vgpr_32 = COPY %3
+    GLOBAL_STORE_DWORD_SADDR %2, %4, %1, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    S_ENDPGM 0
+...
+
+# Live-out seeding: bb.0 defines $sgpr10 via INLINEASM and branches to bb.1.
+# bb.1 has $sgpr10 as a live-in. The upward tracker for bb.0 is initialized
+# with bb.0's live-outs (= successor bb.1's live-ins). Without live-out
+# seeding, the upward tracker treats the INLINEASM def as dead and never
+# accounts for $sgpr10's pressure in the region below the def.
+---
+name:  physreg_liveout
+tracksRegLiveness: true
+machineFunctionInfo:
+  sgprForEXECCopy: '$sgpr100_sgpr101'
+body:             |
+  ; RPU-LABEL: name: physreg_liveout
+  ; RPU: bb.0:
+  ; RPU:   SGPR  VGPR
+  ;
+  ; Top of bb.0: after receding past all instructions, $sgpr8_sgpr9 remains
+  ; live from the COPY use. SGPR=2 ($sgpr8_sgpr9 = 2 reg-units).
+  ;
+  ; RPU:   2     0
+  ; RPU:   2     0      %0:sgpr_64(p4) = COPY $sgpr8_sgpr9
+  ; RPU:   2     0
+  ; RPU:   2     0      %1:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM
+  ; RPU:   2     0
+  ;
+  ; Below the INLINEASM def, $sgpr10 is live (from live-out seeding),
+  ; so SGPR=3 (%1 = 2 units + $sgpr10 = 1 unit).
+  ;
+  ; RPU:   3     0      INLINEASM &"s_mov_b32 $0, 0"{{.*}} implicit-def $sgpr10
+  ; RPU:   3     0
+  ; RPU:   3     0      S_BRANCH %bb.1
+  ; RPU:   3     0
+  ;
+  ; RPU-NOPHYS-LABEL: name: physreg_liveout
+  ; RPU-NOPHYS: bb.0:
+  ; RPU-NOPHYS:   SGPR  VGPR
+  ;
+  ; Without physreg tracking, no live-out seeding: the INLINEASM def is dead
+  ; from the upward tracker's perspective, so $sgpr10 is never counted.
+  ; $sgpr8_sgpr9 is also not tracked, so top pressure is 0.
+  ;
+  ; RPU-NOPHYS:   0     0
+  ; RPU-NOPHYS:   2     0      %0:sgpr_64(p4) = COPY $sgpr8_sgpr9
+  ; RPU-NOPHYS:   2     0
+  ; RPU-NOPHYS:   2     0      %1:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM
+  ; RPU-NOPHYS:   2     0
+  ; RPU-NOPHYS:   2     0      INLINEASM &"s_mov_b32 $0, 0"{{.*}} implicit-def $sgpr10
+  ; RPU-NOPHYS:   2     0
+  ; RPU-NOPHYS:   2     0      S_BRANCH %bb.1
+  ; RPU-NOPHYS:   2     0
+  ;
+  ; RPD-LABEL: name: physreg_liveout
+  ; RPD: bb.0:
+  ; RPD:   SGPR  VGPR
+  ;
+  ; Downward tracker: initial pressure includes $sgpr8_sgpr9 live-in (2).
+  ; INLINEASM adds $sgpr10 (1 unit), bringing pressure to 3.
+  ;
+  ; RPD:   2     0
+  ; RPD:   4     0      %0:sgpr_64(p4) = COPY $sgpr8_sgpr9
+  ; RPD:   2     0
+  ; RPD:   4     0      %1:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM
+  ; RPD:   2     0
+  ; RPD:   3     0      INLINEASM &"s_mov_b32 $0, 0"{{.*}} implicit-def $sgpr10
+  ; RPD:   3     0
+  ; RPD:   3     0      S_BRANCH %bb.1
+  ; RPD:   3     0
+  ;
+  ; RPD-NOPHYS-LABEL: name: physreg_liveout
+  ; RPD-NOPHYS: bb.0:
+  ; RPD-NOPHYS:   SGPR  VGPR
+  ;
+  ; Without physreg tracking: no live-in pressure, INLINEASM has no effect.
+  ;
+  ; RPD-NOPHYS:   0     0
+  ; RPD-NOPHYS:   2     0      %0:sgpr_64(p4) = COPY $sgpr8_sgpr9
+  ; RPD-NOPHYS:   2     0
+  ; RPD-NOPHYS:   4     0      %1:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM
+  ; RPD-NOPHYS:   2     0
+  ; RPD-NOPHYS:   2     0      INLINEASM &"s_mov_b32 $0, 0"{{.*}} implicit-def $sgpr10
+  ; RPD-NOPHYS:   2     0
+  ; RPD-NOPHYS:   2     0      S_BRANCH %bb.1
+  ; RPD-NOPHYS:   2     0
+  bb.0:
+    liveins: $sgpr8_sgpr9
+    successors: %bb.1
+
+    %0:sgpr_64(p4) = COPY $sgpr8_sgpr9
+    %1:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM %0(p4), 0, 0 :: (dereferenceable invariant load (s64), align 16, addrspace 4)
+    INLINEASM &"s_mov_b32 $0, 0", 1 /* sideeffect attdialect */, 10 /* regdef */, implicit-def $sgpr10
+    S_BRANCH %bb.1
+
+  bb.1:
+    liveins: $sgpr10
+
+    %2:vgpr_32 = COPY $sgpr10
+    %3:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    GLOBAL_STORE_DWORD_SADDR %3, %2, %1, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    S_ENDPGM 0
+...

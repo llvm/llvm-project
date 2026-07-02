@@ -79,6 +79,12 @@ static cl::opt<bool> GCNTrackers(
     cl::desc("Use the AMDGPU specific RPTrackers during scheduling"),
     cl::init(false));
 
+static cl::opt<bool> TrackPhysRegInTrackers(
+    "amdgpu-trackers-physical-register-tracking", cl::Hidden,
+    cl::desc("When using GCN trackers, count physical registers (e.g. from "
+             "inline asm) in pressure."),
+    cl::init(true));
+
 static cl::opt<unsigned> PendingQueueLimit(
     "amdgpu-scheduler-pending-queue-limit", cl::Hidden,
     cl::desc(
@@ -135,7 +141,8 @@ const unsigned ScheduleMetrics::ScaleFactor = 100;
 
 GCNSchedStrategy::GCNSchedStrategy(const MachineSchedContext *C)
     : GenericScheduler(C), TargetOccupancy(0), MF(nullptr),
-      DownwardTracker(*C->LIS), UpwardTracker(*C->LIS), HasHighPressure(false) {
+      DownwardTracker(*C->LIS, C->MF->getRegInfo()),
+      UpwardTracker(*C->LIS, C->MF->getRegInfo()), HasHighPressure(false) {
   if (GCNTrackers.getNumOccurrences() > 0)
     GCNTrackersOverride = GCNTrackers;
 }
@@ -144,7 +151,6 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
   GenericScheduler::initialize(DAG);
 
   MF = &DAG->MF;
-
   const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
 
   SGPRExcessLimit =
@@ -207,6 +213,14 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
                     << ", VGPRExcessLimit = " << VGPRExcessLimit
                     << ", SGPRCriticalLimit = " << SGPRCriticalLimit
                     << ", SGPRExcessLimit = " << SGPRExcessLimit << "\n\n");
+}
+
+void GCNRPTracker::updatePhysRegTracking() {
+  if (!GCNTrackers || !TrackPhysRegInTrackers) {
+    TrackPhysRegs = false;
+    return;
+  }
+  TrackPhysRegs = true;
 }
 
 /// Checks whether \p SU can use the cached DAG pressure diffs to compute the
@@ -1068,11 +1082,19 @@ void GCNScheduleDAGMILive::schedule() {
 
 GCNRegPressure
 GCNScheduleDAGMILive::getRealRegPressure(unsigned RegionIdx) const {
-  if (Regions[RegionIdx].first == Regions[RegionIdx].second)
-    return llvm::getVirtRegPressure(MRI, VirtLiveIns[RegionIdx]);
-  GCNDownwardRPTracker RPTracker(*LIS);
+  if (Regions[RegionIdx].first == Regions[RegionIdx].second) {
+    GCNRegPressure RP = llvm::getVirtRegPressure(MRI, VirtLiveIns[RegionIdx]);
+    // Fold in physical live-in pressure so that empty regions are consistent
+    // with non-empty regions. This is a no-op when physical tracking is off,
+    // since the snapshot has no set units.
+    const auto *SRI =
+        static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
+    llvm::addPhysRegPressure(RP, *SRI, PhysLiveIns[RegionIdx]);
+    return RP;
+  }
+  GCNDownwardRPTracker RPTracker(*LIS, MF.getRegInfo());
   RPTracker.advance(Regions[RegionIdx].first, Regions[RegionIdx].second,
-                    &VirtLiveIns[RegionIdx]);
+                    &VirtLiveIns[RegionIdx], &PhysLiveIns[RegionIdx]);
   return RPTracker.moveMaxPressure();
 }
 
@@ -1084,7 +1106,7 @@ static MachineInstr *getLastMIForRegion(MachineBasicBlock::iterator RegionBegin,
 
 void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
                                                 const MachineBasicBlock *MBB) {
-  GCNDownwardRPTracker RPTracker(*LIS);
+  GCNDownwardRPTracker RPTracker(*LIS, MF.getRegInfo());
 
   // If the block has the only successor then live-ins of that successor are
   // live-outs of the current block. We can reuse calculated live set if the
@@ -1117,7 +1139,7 @@ void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
   auto *NonDbgMI = &*skipDebugInstructionsForward(Rgn.first, Rgn.second);
   if (VirtLiveInIt != MBBVirtLiveIns.end()) {
     auto VirtLiveIn = std::move(VirtLiveInIt->second);
-    RPTracker.reset(*MBB->begin(), MBB->end(), &VirtLiveIn);
+    RPTracker.reset(*MBB->begin(), MBB->end(), &VirtLiveIn, MBB);
     MBBVirtLiveIns.erase(VirtLiveInIt);
   } else {
     I = Rgn.first;
@@ -1125,7 +1147,7 @@ void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
 #ifdef EXPENSIVE_CHECKS
     assert(isEqual(getVirtLiveRegsBefore(*NonDbgMI, *LIS), VirtLiveInSet));
 #endif
-    RPTracker.reset(*I, I->getParent()->end(), &VirtLiveInSet);
+    RPTracker.reset(*I, I->getParent()->end(), &VirtLiveInSet, MBB);
   }
 
   for (;;) {
@@ -1133,10 +1155,12 @@ void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
 
     if (Regions[CurRegion].first == I || NonDbgMI == I) {
       VirtLiveIns[CurRegion] = RPTracker.getVirtLiveRegs();
+      PhysLiveIns[CurRegion] = RPTracker.getPhysLiveRegUnits();
       RPTracker.clearMaxPressure();
     }
 
     if (Regions[CurRegion].second == I) {
+      PhysLiveOuts[CurRegion] = RPTracker.getPhysLiveRegUnits();
       Pressure[CurRegion] = RPTracker.moveMaxPressure();
       if (CurRegion-- == RegionIdx)
         break;
@@ -1204,6 +1228,8 @@ void GCNScheduleDAGMILive::finalizeSchedule() {
   // MachineScheduler after all regions have been recorded by
   // GCNScheduleDAGMILive::schedule().
   VirtLiveIns.resize(Regions.size());
+  PhysLiveIns.resize(Regions.size());
+  PhysLiveOuts.resize(Regions.size());
   Pressure.resize(Regions.size());
   RegionsWithHighRP.resize(Regions.size());
   RegionsWithExcessRP.resize(Regions.size());
@@ -1250,9 +1276,11 @@ void GCNScheduleDAGMILive::runSchedStages() {
 
       if (S.useGCNTrackers()) {
         const unsigned RegionIdx = Stage->getRegionIdx();
-        S.getDownwardTracker()->reset(MRI, VirtLiveIns[RegionIdx]);
+        S.getDownwardTracker()->reset(MRI, VirtLiveIns[RegionIdx],
+                                      PhysLiveIns[RegionIdx]);
         S.getUpwardTracker()->reset(
-            MRI, RegionVirtLiveOuts.getVirtLiveRegsForRegionIdx(RegionIdx));
+            MRI, RegionVirtLiveOuts.getVirtLiveRegsForRegionIdx(RegionIdx),
+            PhysLiveOuts[RegionIdx]);
       }
 
       ScheduleDAGMILive::schedule();
