@@ -8412,6 +8412,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, SetCC);
     return;
   }
+  case Intrinsic::mask_beforefirst: {
+    SDValue Op = getValue(I.getOperand(0));
+    setValue(&I,
+             DAG.getNode(ISD::MASK_BEFOREFIRST, sdl, Op.getValueType(), Op));
+    return;
+  }
   case Intrinsic::experimental_get_vector_length: {
     assert(cast<ConstantInt>(I.getOperand(1))->getSExtValue() > 0 &&
            "Expected positive VF");

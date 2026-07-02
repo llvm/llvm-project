@@ -22193,6 +22193,47 @@ Examples:
       ; because if any more lanes were active the load would be dependent on the
       ; completion of the store.
 
+.. _int_mask_beforefirst:
+
+'``llvm.mask.beforefirst.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <4 x i1> @llvm.mask.beforefirst.v4i1(<4 x i1> %mask)
+      declare <vscale x 8 x i1> @llvm.mask.beforefirst.nxv8i1(<vscale x 8 x i1> %mask)
+
+
+Overview:
+"""""""""
+
+Given a vector mask, returns a new mask with all elements before the first active element in the input set to 1, and every element afterwards set to 0.
+
+Arguments:
+""""""""""
+
+Takes one argument which must be an i1 vector, and returns a vector of the same type.
+
+Semantics:
+""""""""""
+
+When the input is all zeroes, the result is all ones.
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+   @llvm.mask.beforefirst(<0,0,1,1>); ==> <1,1,0,0>
+   @llvm.mask.beforefirst(<0,0,0,0>); ==> <1,1,1,1>
+   @llvm.mask.beforefirst(<0,1,0,1>); ==> <1,0,0,0>
+   @llvm.mask.beforefirst(<1,0,0,1>); ==> <0,0,0,0>
+
+
 Experimental Vector Intrinsics
 ------------------------------
 

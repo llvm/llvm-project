@@ -1181,6 +1181,15 @@ let Predicates = [HasSVE_or_SME] in {
   defm BRKB_PPmP  : sve_int_break_m<0b101, "brkb",  int_aarch64_sve_brkb>;
   defm BRKBS_PPzP : sve_int_break_z<0b110, "brkbs", null_frag>;
 
+  def : Pat<(nxv16i1 (mask_beforefirst PPR8:$Pn)),
+            (BRKB_PPzP (PTRUE_B 31), PPR8:$Pn)>;
+  def : Pat<(nxv8i1 (mask_beforefirst PPR8:$Pn)),
+            (BRKB_PPzP (PTRUE_H 31), PPR8:$Pn)>;
+  def : Pat<(nxv4i1 (mask_beforefirst PPR8:$Pn)),
+            (BRKB_PPzP (PTRUE_S 31), PPR8:$Pn)>;
+  def : Pat<(nxv2i1 (mask_beforefirst PPR8:$Pn)),
+            (BRKB_PPzP (PTRUE_D 31), PPR8:$Pn)>;
+
   defm PTEST_PP : sve_int_ptest<0b010000, "ptest", AArch64ptest, AArch64ptest_any, AArch64ptest_first>;
   defm PFALSE   : sve_int_pfalse<0b000000, "pfalse">;
   defm PFIRST   : sve_int_pfirst<0b00000, "pfirst", int_aarch64_sve_pfirst>;

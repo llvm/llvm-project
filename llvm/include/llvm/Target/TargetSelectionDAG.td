@@ -921,6 +921,11 @@ def get_active_lane_mask
           SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisInt<1>, SDTCisSameAs<1, 2>]>,
           []>;
 
+def mask_beforefirst
+    : SDNode<"ISD::MASK_BEFOREFIRST",
+             SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisSameAs<0, 1>]>,
+             []>;
+
 // Nodes for intrinsics, you should use the intrinsic itself and let tblgen use
 // these internally.  Don't reference these directly.
 def intrinsic_void : SDNode<"ISD::INTRINSIC_VOID",

@@ -1616,6 +1616,10 @@ enum NodeType {
   /// bits conform to getBooleanContents similar to the SETCC operator.
   GET_ACTIVE_LANE_MASK,
 
+  /// Has one mask vector operand. Returns a mask with all ones up to but not
+  /// including the first active element in the input, followed by zeroes.
+  MASK_BEFOREFIRST,
+
   /// The `llvm.loop.dependence.{war, raw}.mask` intrinsics
   /// Operands: Load pointer, Store pointer, Element size, Lane offset
   /// Output: Mask
