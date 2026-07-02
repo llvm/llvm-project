@@ -12791,8 +12791,8 @@ SDValue PPCTargetLowering::LowerSADDO(SDValue Op, SelectionDAG &DAG) const {
 // Lower unsigned 3-way compare producing -1/0/1.
 SDValue PPCTargetLowering::LowerUCMP(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
-  SDValue A = DAG.getFreeze(Op.getOperand(0));
-  SDValue B = DAG.getFreeze(Op.getOperand(1));
+  SDValue A = Op.getOperand(0);
+  SDValue B = Op.getOperand(1);
   EVT OpVT = A.getValueType();
   EVT ResVT = Op.getValueType();
 
@@ -12805,23 +12805,28 @@ SDValue PPCTargetLowering::LowerUCMP(SDValue Op, SelectionDAG &DAG) const {
     OpVT = MVT::i64;
   }
 
-  // First compute diff = A - B.
-  SDValue Diff = DAG.getNode(ISD::SUB, DL, OpVT, A, B);
-
-  // Generate B - A using SUBC to capture carry.
   SDVTList VTs = DAG.getVTList(OpVT, MVT::i32);
-  SDValue SubC = DAG.getNode(PPCISD::SUBC, DL, VTs, B, A);
-  SDValue CA0 = SubC.getValue(1);
 
-  // t2 = A - B + CA0 using SUBE.
-  SDValue SubE1 = DAG.getNode(PPCISD::SUBE, DL, VTs, A, B, CA0);
-  SDValue CA1 = SubE1.getValue(1);
+  // 1. subfc r3, r4, r3 -> r3 = A - B, Carry1
+  SDValue SubC = DAG.getNode(PPCISD::SUBC, DL, VTs, A, B);
+  SDValue Diff = SubC.getValue(0);
+  SDValue CA1 = SubC.getValue(1);
 
-  // res = diff - t2 + CA1 using SUBE (produces desired -1/0/1).
-  SDValue ResPair = DAG.getNode(PPCISD::SUBE, DL, VTs, Diff, SubE1, CA1);
+  // 2. subfe r4, r3, r3 -> r4 = -1 + Carry1 (mask)
+  SDValue SubE = DAG.getNode(PPCISD::SUBE, DL, VTs, Diff, Diff, CA1);
+  SDValue Mask = SubE.getValue(0);
+
+  // 3. addic r3, r3, -1 -> Overwrite a with Carry flag 2
+  SDValue AddC =
+      DAG.getNode(PPCISD::ADDC, DL, VTs, Diff, DAG.getConstant(-1, DL, OpVT));
+  SDValue CA2 = AddC.getValue(1);
+
+  // 4. adde  r3, r4, r4 -> r3 = r4 + r4 + Carry2
+  SDValue AddE = DAG.getNode(PPCISD::ADDE, DL, VTs, Mask, Mask, CA2);
+  SDValue Res = AddE.getValue(0);
 
   // Extract the first result and truncate to result type if needed.
-  return DAG.getSExtOrTrunc(ResPair.getValue(0), DL, ResVT);
+  return DAG.getSExtOrTrunc(Res, DL, ResVT);
 }
 
 /// LowerOperation - Provide custom lowering hooks for some operations.
