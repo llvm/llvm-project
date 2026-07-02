@@ -638,5 +638,454 @@ exit:
   ret void
 }
 
+define void @uitofp_nxv8i16_to_nxv8f64_deinterleave_fma_with_reverse_double(ptr %src, ptr %src2, ptr %dst, <vscale x 8 x i1> %mask) #0 {
+; CHECK-LABEL: uitofp_nxv8i16_to_nxv8f64_deinterleave_fma_with_reverse_double:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    index z7.d, #0, #-4
+; CHECK-NEXT:    mov x9, #-4 // =0xfffffffffffffffc
+; CHECK-NEXT:    mov x10, #-3 // =0xfffffffffffffffd
+; CHECK-NEXT:    movk x9, #65534, lsl #16
+; CHECK-NEXT:    movk x10, #65534, lsl #16
+; CHECK-NEXT:    mov z24.d, #0xfffffffffffeffff
+; CHECK-NEXT:    mov z4.d, x9
+; CHECK-NEXT:    mov x9, #-2 // =0xfffffffffffffffe
+; CHECK-NEXT:    mov z5.d, x10
+; CHECK-NEXT:    movk x9, #65534, lsl #16
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-NEXT:    incd z7.d
+; CHECK-NEXT:    mov z6.d, x9
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    add x9, x1, #8
+; CHECK-NEXT:    cntw x10
+; CHECK-NEXT:    rdvl x11, #2
+; CHECK-NEXT:    add z4.d, z7.d, z4.d
+; CHECK-NEXT:    add z5.d, z7.d, z5.d
+; CHECK-NEXT:    add z6.d, z7.d, z6.d
+; CHECK-NEXT:    add z7.d, z7.d, z24.d
+; CHECK-NEXT:  .LBB8_1: // %loop
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ld1h { z24.h }, p0/z, [x0]
+; CHECK-NEXT:    ld1d { z28.d }, p1/z, [x9, x8, lsl #3]
+; CHECK-NEXT:    sub x8, x8, x10
+; CHECK-NEXT:    cmn x8, #2048
+; CHECK-NEXT:    add x0, x0, x11
+; CHECK-NEXT:    tbl z25.h, { z24.h }, z4.h
+; CHECK-NEXT:    tbl z26.h, { z24.h }, z5.h
+; CHECK-NEXT:    tbl z27.h, { z24.h }, z6.h
+; CHECK-NEXT:    tbl z24.h, { z24.h }, z7.h
+; CHECK-NEXT:    ucvtf z25.d, p1/m, z25.d
+; CHECK-NEXT:    ucvtf z26.d, p1/m, z26.d
+; CHECK-NEXT:    ucvtf z27.d, p1/m, z27.d
+; CHECK-NEXT:    ucvtf z24.d, p1/m, z24.d
+; CHECK-NEXT:    fmul z25.d, z25.d, z28.d
+; CHECK-NEXT:    fmul z26.d, z26.d, z28.d
+; CHECK-NEXT:    fmul z27.d, z27.d, z28.d
+; CHECK-NEXT:    fmul z24.d, z24.d, z28.d
+; CHECK-NEXT:    fadd z0.d, z0.d, z25.d
+; CHECK-NEXT:    fadd z3.d, z3.d, z26.d
+; CHECK-NEXT:    fadd z2.d, z2.d, z27.d
+; CHECK-NEXT:    fadd z1.d, z1.d, z24.d
+; CHECK-NEXT:    b.ne .LBB8_1
+; CHECK-NEXT:  // %bb.2: // %exit
+; CHECK-NEXT:    faddv d0, p1, z0.d
+; CHECK-NEXT:    faddv d3, p1, z3.d
+; CHECK-NEXT:    faddv d2, p1, z2.d
+; CHECK-NEXT:    faddv d1, p1, z1.d
+; CHECK-NEXT:    mov v0.d[1], v3.d[0]
+; CHECK-NEXT:    mov v2.d[1], v1.d[0]
+; CHECK-NEXT:    stp q0, q2, [x2]
+; CHECK-NEXT:    ret
+entry:
+  %vscale = tail call i64 @llvm.vscale.i64()
+  %stride = shl nuw nsw i64 %vscale, 2
+  %common.base = getelementptr double, ptr %src2, i64 1
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %acc.b.f64 = phi <vscale x 2 x double> [ splat(double 0.000000e+00), %entry ], [ %fadd.b.f64, %loop ]
+  %acc.g.f64 = phi <vscale x 2 x double> [ splat(double 0.000000e+00), %entry ], [ %fadd.g.f64, %loop ]
+  %acc.r.f64 = phi <vscale x 2 x double> [ splat(double 0.000000e+00), %entry ], [ %fadd.r.f64, %loop ]
+  %acc.a.f64 = phi <vscale x 2 x double> [ splat(double 0.000000e+00), %entry ], [ %fadd.a.f64, %loop ]
+  %negated = mul i64 %iv, -1
+  %common.term.ptr = getelementptr inbounds nuw double, ptr %common.base, i64 %negated
+  %common.term = load <vscale x 2 x double>, ptr %common.term.ptr, align 8
+  %reversed = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> %common.term)
+  %src.gep = getelementptr inbounds nuw [4 x i16], ptr %src, i64 %iv
+  %bgra = call <vscale x 8 x i16> @llvm.masked.load(ptr %src.gep, <vscale x 8 x i1> %mask, <vscale x 8 x i16> zeroinitializer)
+  %deinterleave = tail call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.vector.deinterleave4(<vscale x 8 x i16> %bgra)
+  %b.i16 = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } %deinterleave, 0
+  %g.i16 = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } %deinterleave, 1
+  %r.i16 = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } %deinterleave, 2
+  %a.i16 = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } %deinterleave, 3
+  %b.f64 = uitofp <vscale x 2 x i16> %b.i16 to <vscale x 2 x double>
+  %g.f64 = uitofp <vscale x 2 x i16> %g.i16 to <vscale x 2 x double>
+  %r.f64 = uitofp <vscale x 2 x i16> %r.i16 to <vscale x 2 x double>
+  %a.f64 = uitofp <vscale x 2 x i16> %a.i16 to <vscale x 2 x double>
+  %b.mul.f64 = fmul <vscale x 2 x double> %b.f64, %reversed
+  %g.mul.f64 = fmul <vscale x 2 x double> %g.f64, %reversed
+  %r.mul.f64 = fmul <vscale x 2 x double> %r.f64, %reversed
+  %a.mul.f64 = fmul <vscale x 2 x double> %a.f64, %reversed
+  %fadd.b.f64 = fadd <vscale x 2 x double> %acc.b.f64, %b.mul.f64
+  %fadd.g.f64 = fadd <vscale x 2 x double> %acc.g.f64, %g.mul.f64
+  %fadd.r.f64 = fadd <vscale x 2 x double> %acc.r.f64, %r.mul.f64
+  %fadd.a.f64 = fadd <vscale x 2 x double> %acc.a.f64, %a.mul.f64
+  %iv.next = add nuw i64 %iv, %stride
+  %ec = icmp eq i64 %iv.next, 2048
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  %b.acc = call fast double @llvm.vector.reduce.fadd.nxv2f64(double 0.000000e+00, <vscale x 2 x double> %fadd.b.f64)
+  store double %b.acc, ptr %dst
+  %g.acc = call fast double @llvm.vector.reduce.fadd.nxv2f64(double 0.000000e+00, <vscale x 2 x double> %fadd.g.f64)
+  %g.f64.gep = getelementptr double, ptr %dst, i64 1
+  store double %g.acc, ptr %g.f64.gep
+  %r.acc = call fast double @llvm.vector.reduce.fadd.nxv2f64(double 0.000000e+00, <vscale x 2 x double> %fadd.r.f64)
+  %r.f64.gep = getelementptr double, ptr %dst, i64 2
+  store double %r.acc, ptr %r.f64.gep
+  %a.acc = call fast double @llvm.vector.reduce.fadd.nxv2f64(double 0.000000e+00, <vscale x 2 x double> %fadd.a.f64)
+  %a.f64.gep = getelementptr double, ptr %dst, i64 3
+  store double %a.acc, ptr %a.f64.gep
+  ret void
+}
+
+define void @uitofp_nxv8i16_to_nxv8f64_deinterleave_fma_with_reverse_partial_coverage(ptr %src, ptr %src2, ptr %dst, <vscale x 8 x i1> %mask) #0 {
+; CHECK-LABEL: uitofp_nxv8i16_to_nxv8f64_deinterleave_fma_with_reverse_partial_coverage:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    index z5.d, #0, #-4
+; CHECK-NEXT:    mov x9, #-4 // =0xfffffffffffffffc
+; CHECK-NEXT:    mov x10, #-2 // =0xfffffffffffffffe
+; CHECK-NEXT:    movk x9, #65534, lsl #16
+; CHECK-NEXT:    index z7.d, #0, #4
+; CHECK-NEXT:    mov z6.d, #0xffffffffffff0001
+; CHECK-NEXT:    movk x10, #65534, lsl #16
+; CHECK-NEXT:    mov z24.d, #0xffffffffffff0003
+; CHECK-NEXT:    mov z4.d, x9
+; CHECK-NEXT:    mov z25.d, x10
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-NEXT:    incd z5.d
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    add z6.d, z7.d, z6.d
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    add z7.d, z7.d, z24.d
+; CHECK-NEXT:    add x9, x1, #8
+; CHECK-NEXT:    cntw x10
+; CHECK-NEXT:    add z4.d, z5.d, z4.d
+; CHECK-NEXT:    add z5.d, z5.d, z25.d
+; CHECK-NEXT:    rdvl x11, #2
+; CHECK-NEXT:  .LBB9_1: // %loop
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ld1h { z24.h }, p0/z, [x0]
+; CHECK-NEXT:    ld1d { z28.d }, p1/z, [x9, x8, lsl #3]
+; CHECK-NEXT:    sub x8, x8, x10
+; CHECK-NEXT:    cmn x8, #2048
+; CHECK-NEXT:    add x0, x0, x11
+; CHECK-NEXT:    tbl z25.h, { z24.h }, z4.h
+; CHECK-NEXT:    tbl z26.h, { z24.h }, z6.h
+; CHECK-NEXT:    tbl z27.h, { z24.h }, z5.h
+; CHECK-NEXT:    tbl z24.h, { z24.h }, z7.h
+; CHECK-NEXT:    ucvtf z25.d, p1/m, z25.d
+; CHECK-NEXT:    ucvtf z26.d, p1/m, z26.d
+; CHECK-NEXT:    ucvtf z27.d, p1/m, z27.d
+; CHECK-NEXT:    ucvtf z24.d, p1/m, z24.d
+; CHECK-NEXT:    fmul z25.d, z25.d, z28.d
+; CHECK-NEXT:    fmul z26.d, z26.d, z28.d
+; CHECK-NEXT:    fmul z27.d, z27.d, z28.d
+; CHECK-NEXT:    fmul z24.d, z24.d, z28.d
+; CHECK-NEXT:    fadd z0.d, z0.d, z25.d
+; CHECK-NEXT:    fadd z3.d, z3.d, z26.d
+; CHECK-NEXT:    fadd z2.d, z2.d, z27.d
+; CHECK-NEXT:    fadd z1.d, z1.d, z24.d
+; CHECK-NEXT:    b.ne .LBB9_1
+; CHECK-NEXT:  // %bb.2: // %exit
+; CHECK-NEXT:    faddv d0, p1, z0.d
+; CHECK-NEXT:    faddv d3, p1, z3.d
+; CHECK-NEXT:    faddv d2, p1, z2.d
+; CHECK-NEXT:    faddv d1, p1, z1.d
+; CHECK-NEXT:    mov v0.d[1], v3.d[0]
+; CHECK-NEXT:    mov v2.d[1], v1.d[0]
+; CHECK-NEXT:    stp q0, q2, [x2]
+; CHECK-NEXT:    ret
+entry:
+  %vscale = tail call i64 @llvm.vscale.i64()
+  %stride = shl nuw nsw i64 %vscale, 2
+  %common.base = getelementptr double, ptr %src2, i64 1
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %acc.b.f64 = phi <vscale x 2 x double> [ splat(double 0.000000e+00), %entry ], [ %fadd.b.f64, %loop ]
+  %acc.g.f64 = phi <vscale x 2 x double> [ splat(double 0.000000e+00), %entry ], [ %fadd.g.f64, %loop ]
+  %acc.r.f64 = phi <vscale x 2 x double> [ splat(double 0.000000e+00), %entry ], [ %fadd.r.f64, %loop ]
+  %acc.a.f64 = phi <vscale x 2 x double> [ splat(double 0.000000e+00), %entry ], [ %fadd.a.f64, %loop ]
+  %negated = mul i64 %iv, -1
+  %common.term.ptr = getelementptr inbounds nuw double, ptr %common.base, i64 %negated
+  %common.term = load <vscale x 2 x double>, ptr %common.term.ptr, align 8
+  %reversed = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> %common.term)
+  %src.gep = getelementptr inbounds nuw [4 x i16], ptr %src, i64 %iv
+  %bgra = call <vscale x 8 x i16> @llvm.masked.load(ptr %src.gep, <vscale x 8 x i1> %mask, <vscale x 8 x i16> zeroinitializer)
+  %deinterleave = tail call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.vector.deinterleave4(<vscale x 8 x i16> %bgra)
+  %b.i16 = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } %deinterleave, 0
+  %g.i16 = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } %deinterleave, 1
+  %r.i16 = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } %deinterleave, 2
+  %a.i16 = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } %deinterleave, 3
+  %b.f64 = uitofp <vscale x 2 x i16> %b.i16 to <vscale x 2 x double>
+  %g.f64 = uitofp <vscale x 2 x i16> %g.i16 to <vscale x 2 x double>
+  %r.f64 = uitofp <vscale x 2 x i16> %r.i16 to <vscale x 2 x double>
+  %a.f64 = uitofp <vscale x 2 x i16> %a.i16 to <vscale x 2 x double>
+  %b.mul.f64 = fmul <vscale x 2 x double> %b.f64, %reversed
+  %g.mul.f64 = fmul <vscale x 2 x double> %g.f64, %common.term
+  %r.mul.f64 = fmul <vscale x 2 x double> %r.f64, %reversed
+  %a.mul.f64 = fmul <vscale x 2 x double> %a.f64, %common.term
+  %fadd.b.f64 = fadd <vscale x 2 x double> %acc.b.f64, %b.mul.f64
+  %fadd.g.f64 = fadd <vscale x 2 x double> %acc.g.f64, %g.mul.f64
+  %fadd.r.f64 = fadd <vscale x 2 x double> %acc.r.f64, %r.mul.f64
+  %fadd.a.f64 = fadd <vscale x 2 x double> %acc.a.f64, %a.mul.f64
+  %iv.next = add nuw i64 %iv, %stride
+  %ec = icmp eq i64 %iv.next, 2048
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  %b.acc = call fast double @llvm.vector.reduce.fadd.nxv2f64(double 0.000000e+00, <vscale x 2 x double> %fadd.b.f64)
+  store double %b.acc, ptr %dst
+  %g.acc = call fast double @llvm.vector.reduce.fadd.nxv2f64(double 0.000000e+00, <vscale x 2 x double> %fadd.g.f64)
+  %g.f64.gep = getelementptr double, ptr %dst, i64 1
+  store double %g.acc, ptr %g.f64.gep
+  %r.acc = call fast double @llvm.vector.reduce.fadd.nxv2f64(double 0.000000e+00, <vscale x 2 x double> %fadd.r.f64)
+  %r.f64.gep = getelementptr double, ptr %dst, i64 2
+  store double %r.acc, ptr %r.f64.gep
+  %a.acc = call fast double @llvm.vector.reduce.fadd.nxv2f64(double 0.000000e+00, <vscale x 2 x double> %fadd.a.f64)
+  %a.f64.gep = getelementptr double, ptr %dst, i64 3
+  store double %a.acc, ptr %a.f64.gep
+  ret void
+}
+
+;; No reduction, so we cannot safely reorder the lanes.
+define void @uitofp_nxv8i16_to_nxv8f64_deinterleave_fma_with_reverse_double_no_rdx(ptr %src, ptr %src2, ptr %dst, <vscale x 8 x i1> %mask) #0 {
+; CHECK-LABEL: uitofp_nxv8i16_to_nxv8f64_deinterleave_fma_with_reverse_double_no_rdx:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    index z7.d, #0, #4
+; CHECK-NEXT:    mov z3.d, #0xffffffffffff0000
+; CHECK-NEXT:    mov z5.d, #0xffffffffffff0001
+; CHECK-NEXT:    mov x9, #-65534 // =0xffffffffffff0002
+; CHECK-NEXT:    mov z24.d, #0xffffffffffff0003
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    mov z6.d, x9
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    add x9, x1, #8
+; CHECK-NEXT:    add z4.d, z7.d, z3.d
+; CHECK-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-NEXT:    cntw x10
+; CHECK-NEXT:    add z5.d, z7.d, z5.d
+; CHECK-NEXT:    add z6.d, z7.d, z6.d
+; CHECK-NEXT:    rdvl x11, #2
+; CHECK-NEXT:    add z7.d, z7.d, z24.d
+; CHECK-NEXT:  .LBB10_1: // %loop
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ld1h { z24.h }, p0/z, [x0]
+; CHECK-NEXT:    ld1d { z28.d }, p1/z, [x9, x8, lsl #3]
+; CHECK-NEXT:    sub x8, x8, x10
+; CHECK-NEXT:    cmn x8, #2048
+; CHECK-NEXT:    add x0, x0, x11
+; CHECK-NEXT:    tbl z25.h, { z24.h }, z4.h
+; CHECK-NEXT:    tbl z26.h, { z24.h }, z5.h
+; CHECK-NEXT:    tbl z27.h, { z24.h }, z6.h
+; CHECK-NEXT:    tbl z24.h, { z24.h }, z7.h
+; CHECK-NEXT:    rev z28.d, z28.d
+; CHECK-NEXT:    ucvtf z25.d, p1/m, z25.d
+; CHECK-NEXT:    ucvtf z26.d, p1/m, z26.d
+; CHECK-NEXT:    ucvtf z27.d, p1/m, z27.d
+; CHECK-NEXT:    ucvtf z24.d, p1/m, z24.d
+; CHECK-NEXT:    fmul z25.d, z25.d, z28.d
+; CHECK-NEXT:    fmul z26.d, z26.d, z28.d
+; CHECK-NEXT:    fmul z27.d, z27.d, z28.d
+; CHECK-NEXT:    fmul z24.d, z24.d, z28.d
+; CHECK-NEXT:    fadd z0.d, z0.d, z25.d
+; CHECK-NEXT:    fadd z1.d, z1.d, z26.d
+; CHECK-NEXT:    fadd z2.d, z2.d, z27.d
+; CHECK-NEXT:    fadd z3.d, z3.d, z24.d
+; CHECK-NEXT:    b.ne .LBB10_1
+; CHECK-NEXT:  // %bb.2: // %exit
+; CHECK-NEXT:    str z0, [x2]
+; CHECK-NEXT:    str z1, [x2, #1, mul vl]
+; CHECK-NEXT:    str z2, [x2, #2, mul vl]
+; CHECK-NEXT:    str z3, [x2, #3, mul vl]
+; CHECK-NEXT:    ret
+entry:
+  %vscale = tail call i64 @llvm.vscale.i64()
+  %stride = shl nuw nsw i64 %vscale, 2
+  %common.base = getelementptr double, ptr %src2, i64 1
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %acc.b.f64 = phi <vscale x 2 x double> [ splat(double 0.000000e+00), %entry ], [ %fadd.b.f64, %loop ]
+  %acc.g.f64 = phi <vscale x 2 x double> [ splat(double 0.000000e+00), %entry ], [ %fadd.g.f64, %loop ]
+  %acc.r.f64 = phi <vscale x 2 x double> [ splat(double 0.000000e+00), %entry ], [ %fadd.r.f64, %loop ]
+  %acc.a.f64 = phi <vscale x 2 x double> [ splat(double 0.000000e+00), %entry ], [ %fadd.a.f64, %loop ]
+  %negated = mul i64 %iv, -1
+  %common.term.ptr = getelementptr inbounds nuw double, ptr %common.base, i64 %negated
+  %common.term = load <vscale x 2 x double>, ptr %common.term.ptr, align 8
+  %reversed = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> %common.term)
+  %src.gep = getelementptr inbounds nuw [4 x i16], ptr %src, i64 %iv
+  %bgra = call <vscale x 8 x i16> @llvm.masked.load(ptr %src.gep, <vscale x 8 x i1> %mask, <vscale x 8 x i16> zeroinitializer)
+  %deinterleave = tail call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.vector.deinterleave4(<vscale x 8 x i16> %bgra)
+  %b.i16 = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } %deinterleave, 0
+  %g.i16 = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } %deinterleave, 1
+  %r.i16 = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } %deinterleave, 2
+  %a.i16 = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } %deinterleave, 3
+  %b.f64 = uitofp <vscale x 2 x i16> %b.i16 to <vscale x 2 x double>
+  %g.f64 = uitofp <vscale x 2 x i16> %g.i16 to <vscale x 2 x double>
+  %r.f64 = uitofp <vscale x 2 x i16> %r.i16 to <vscale x 2 x double>
+  %a.f64 = uitofp <vscale x 2 x i16> %a.i16 to <vscale x 2 x double>
+  %b.mul.f64 = fmul <vscale x 2 x double> %b.f64, %reversed
+  %g.mul.f64 = fmul <vscale x 2 x double> %g.f64, %reversed
+  %r.mul.f64 = fmul <vscale x 2 x double> %r.f64, %reversed
+  %a.mul.f64 = fmul <vscale x 2 x double> %a.f64, %reversed
+  %fadd.b.f64 = fadd <vscale x 2 x double> %acc.b.f64, %b.mul.f64
+  %fadd.g.f64 = fadd <vscale x 2 x double> %acc.g.f64, %g.mul.f64
+  %fadd.r.f64 = fadd <vscale x 2 x double> %acc.r.f64, %r.mul.f64
+  %fadd.a.f64 = fadd <vscale x 2 x double> %acc.a.f64, %a.mul.f64
+  %iv.next = add nuw i64 %iv, %stride
+  %ec = icmp eq i64 %iv.next, 2048
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  store <vscale x 2 x double> %fadd.b.f64, ptr %dst
+  %g.f64.gep = getelementptr <vscale x 2 x double>, ptr %dst, i64 1
+  store <vscale x 2 x double> %fadd.g.f64, ptr %g.f64.gep
+  %r.f64.gep = getelementptr <vscale x 2 x double>, ptr %dst, i64 2
+  store <vscale x 2 x double> %fadd.r.f64, ptr %r.f64.gep
+  %a.f64.gep = getelementptr <vscale x 2 x double>, ptr %dst, i64 3
+  store <vscale x 2 x double> %fadd.a.f64, ptr %a.f64.gep
+  ret void
+}
+
+;; Skip folding the rev into the tbl because it has an extra use.
+define void @uitofp_nxv8i16_to_nxv8f64_deinterleave_fma_with_reverse_double_extra_use(ptr %src, ptr %src2, ptr %dst, ptr %dst2, <vscale x 8 x i1> %mask) #0 {
+; CHECK-LABEL: uitofp_nxv8i16_to_nxv8f64_deinterleave_fma_with_reverse_double_extra_use:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    index z7.d, #0, #4
+; CHECK-NEXT:    mov z1.d, #0xffffffffffff0000
+; CHECK-NEXT:    mov z5.d, #0xffffffffffff0001
+; CHECK-NEXT:    mov x10, #-65534 // =0xffffffffffff0002
+; CHECK-NEXT:    mov z24.d, #0xffffffffffff0003
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    mov z6.d, x10
+; CHECK-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    mov x9, xzr
+; CHECK-NEXT:    add z2.d, z7.d, z1.d
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    add x10, x1, #8
+; CHECK-NEXT:    add z5.d, z7.d, z5.d
+; CHECK-NEXT:    add z6.d, z7.d, z6.d
+; CHECK-NEXT:    cntw x11
+; CHECK-NEXT:    add z7.d, z7.d, z24.d
+; CHECK-NEXT:    rdvl x12, #2
+; CHECK-NEXT:  .LBB11_1: // %loop
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ld1d { z24.d }, p1/z, [x10, x8, lsl #3]
+; CHECK-NEXT:    sub x8, x8, x11
+; CHECK-NEXT:    add x9, x9, x11
+; CHECK-NEXT:    cmn x8, #2048
+; CHECK-NEXT:    rev z24.d, z24.d
+; CHECK-NEXT:    str z24, [x3]
+; CHECK-NEXT:    ld1h { z25.h }, p0/z, [x0]
+; CHECK-NEXT:    add x0, x0, x12
+; CHECK-NEXT:    tbl z26.h, { z25.h }, z2.h
+; CHECK-NEXT:    tbl z27.h, { z25.h }, z5.h
+; CHECK-NEXT:    tbl z28.h, { z25.h }, z6.h
+; CHECK-NEXT:    tbl z25.h, { z25.h }, z7.h
+; CHECK-NEXT:    ucvtf z26.d, p1/m, z26.d
+; CHECK-NEXT:    ucvtf z27.d, p1/m, z27.d
+; CHECK-NEXT:    ucvtf z28.d, p1/m, z28.d
+; CHECK-NEXT:    ucvtf z25.d, p1/m, z25.d
+; CHECK-NEXT:    fmul z26.d, z26.d, z24.d
+; CHECK-NEXT:    fmul z27.d, z27.d, z24.d
+; CHECK-NEXT:    fmul z28.d, z28.d, z24.d
+; CHECK-NEXT:    fmul z24.d, z25.d, z24.d
+; CHECK-NEXT:    fadd z0.d, z0.d, z26.d
+; CHECK-NEXT:    fadd z4.d, z4.d, z27.d
+; CHECK-NEXT:    fadd z3.d, z3.d, z28.d
+; CHECK-NEXT:    fadd z1.d, z1.d, z24.d
+; CHECK-NEXT:    b.ne .LBB11_1
+; CHECK-NEXT:  // %bb.2: // %exit
+; CHECK-NEXT:    faddv d0, p1, z0.d
+; CHECK-NEXT:    faddv d2, p1, z4.d
+; CHECK-NEXT:    faddv d3, p1, z3.d
+; CHECK-NEXT:    faddv d1, p1, z1.d
+; CHECK-NEXT:    mov v0.d[1], v2.d[0]
+; CHECK-NEXT:    mov v3.d[1], v1.d[0]
+; CHECK-NEXT:    stp q0, q3, [x2]
+; CHECK-NEXT:    ret
+entry:
+  %vscale = tail call i64 @llvm.vscale.i64()
+  %stride = shl nuw nsw i64 %vscale, 2
+  %common.base = getelementptr double, ptr %src2, i64 1
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %acc.b.f64 = phi <vscale x 2 x double> [ splat(double 0.000000e+00), %entry ], [ %fadd.b.f64, %loop ]
+  %acc.g.f64 = phi <vscale x 2 x double> [ splat(double 0.000000e+00), %entry ], [ %fadd.g.f64, %loop ]
+  %acc.r.f64 = phi <vscale x 2 x double> [ splat(double 0.000000e+00), %entry ], [ %fadd.r.f64, %loop ]
+  %acc.a.f64 = phi <vscale x 2 x double> [ splat(double 0.000000e+00), %entry ], [ %fadd.a.f64, %loop ]
+  %negated = mul i64 %iv, -1
+  %common.term.ptr = getelementptr inbounds nuw double, ptr %common.base, i64 %negated
+  %common.term = load <vscale x 2 x double>, ptr %common.term.ptr, align 8
+  %reversed = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> %common.term)
+  %dst2.ptr = getelementptr inbounds nuw double, ptr %dst2, i64 %iv
+  store <vscale x 2 x double> %reversed, ptr %dst2, align 8
+  %src.gep = getelementptr inbounds nuw [4 x i16], ptr %src, i64 %iv
+  %bgra = call <vscale x 8 x i16> @llvm.masked.load(ptr %src.gep, <vscale x 8 x i1> %mask, <vscale x 8 x i16> zeroinitializer)
+  %deinterleave = tail call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.vector.deinterleave4(<vscale x 8 x i16> %bgra)
+  %b.i16 = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } %deinterleave, 0
+  %g.i16 = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } %deinterleave, 1
+  %r.i16 = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } %deinterleave, 2
+  %a.i16 = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } %deinterleave, 3
+  %b.f64 = uitofp <vscale x 2 x i16> %b.i16 to <vscale x 2 x double>
+  %g.f64 = uitofp <vscale x 2 x i16> %g.i16 to <vscale x 2 x double>
+  %r.f64 = uitofp <vscale x 2 x i16> %r.i16 to <vscale x 2 x double>
+  %a.f64 = uitofp <vscale x 2 x i16> %a.i16 to <vscale x 2 x double>
+  %b.mul.f64 = fmul <vscale x 2 x double> %b.f64, %reversed
+  %g.mul.f64 = fmul <vscale x 2 x double> %g.f64, %reversed
+  %r.mul.f64 = fmul <vscale x 2 x double> %r.f64, %reversed
+  %a.mul.f64 = fmul <vscale x 2 x double> %a.f64, %reversed
+  %fadd.b.f64 = fadd <vscale x 2 x double> %acc.b.f64, %b.mul.f64
+  %fadd.g.f64 = fadd <vscale x 2 x double> %acc.g.f64, %g.mul.f64
+  %fadd.r.f64 = fadd <vscale x 2 x double> %acc.r.f64, %r.mul.f64
+  %fadd.a.f64 = fadd <vscale x 2 x double> %acc.a.f64, %a.mul.f64
+  %iv.next = add nuw i64 %iv, %stride
+  %ec = icmp eq i64 %iv.next, 2048
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  %b.acc = call fast double @llvm.vector.reduce.fadd.nxv2f64(double 0.000000e+00, <vscale x 2 x double> %fadd.b.f64)
+  store double %b.acc, ptr %dst
+  %g.acc = call fast double @llvm.vector.reduce.fadd.nxv2f64(double 0.000000e+00, <vscale x 2 x double> %fadd.g.f64)
+  %g.f64.gep = getelementptr double, ptr %dst, i64 1
+  store double %g.acc, ptr %g.f64.gep
+  %r.acc = call fast double @llvm.vector.reduce.fadd.nxv2f64(double 0.000000e+00, <vscale x 2 x double> %fadd.r.f64)
+  %r.f64.gep = getelementptr double, ptr %dst, i64 2
+  store double %r.acc, ptr %r.f64.gep
+  %a.acc = call fast double @llvm.vector.reduce.fadd.nxv2f64(double 0.000000e+00, <vscale x 2 x double> %fadd.a.f64)
+  %a.f64.gep = getelementptr double, ptr %dst, i64 3
+  store double %a.acc, ptr %a.f64.gep
+  ret void
+}
+
 attributes #0 = { "target-features"="+sve" }
 attributes #1 = { "target-features"="+sve" vscale_range(1, 8) }
