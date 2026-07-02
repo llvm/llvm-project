@@ -80,7 +80,7 @@ static _Unwind_Reason_Code frame_handler(struct _Unwind_Context *ctx,
 
   uintptr_t ip = _Unwind_GetIP(ctx);
 
-  printf("UNW_AARCH64_RA_SIGN_STATE @ 0x%" PRIx64 " = %" PRIu64 "\n", ip,
+  printf("UNW_AARCH64_RA_SIGN_STATE @ 0x%" PRIxPTR " = %" PRIu64 "\n", ip,
          ra_sign_state);
 
   if (ip >= (uintptr_t)FUNC_START(main_func) &&
