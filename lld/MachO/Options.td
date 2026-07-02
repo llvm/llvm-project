@@ -41,6 +41,9 @@ def thinlto_index_only: Flag<["--"], "thinlto-index-only">,
     Group<grp_lld>;
 def thinlto_index_only_eq: Joined<["--"], "thinlto-index-only=">,
     Group<grp_lld>;
+def lto_obj_path_eq: Joined<["--"], "lto-obj-path=">,
+    HelpText<"Write the regular LTO object to <path>">,
+    Group<grp_lld>;
 def thinlto_jobs_eq : Joined<["--"], "thinlto-jobs=">,
     HelpText<"Number of ThinLTO jobs. Default to --threads=">,
     Group<grp_lld>;
