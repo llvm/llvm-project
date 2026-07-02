@@ -27,6 +27,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _OutputIterator, class _Size, class _Generator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
 __generate_n(_OutputIterator __first, _Size __orig_n, _Generator& __gen) {
+  if (__orig_n <= 0)
+    return __first;
+
   using __iter_ref = decltype(*__first);
   __identity __proj;
   return std::__for_each_n(

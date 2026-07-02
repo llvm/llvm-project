@@ -33,6 +33,8 @@ template <class _AlgPolicy,
           __enable_if_t<__has_random_access_iterator_category<_InIter>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __in_out_result<_InIter, _OutIter>
 __copy_n(_InIter __first, typename _IterOps<_AlgPolicy>::template __difference_type<_InIter> __n, _OutIter __result) {
+  if (__n <= 0)
+    return __in_out_result<_InIter, _OutIter>{std::move(__first), std::move(__result)};
   return std::__copy(__first, __first + __n, std::move(__result));
 }
 
@@ -42,7 +44,7 @@ template <class _AlgPolicy,
           __enable_if_t<!__has_random_access_iterator_category<_InIter>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __in_out_result<_InIter, _OutIter>
 __copy_n(_InIter __first, typename _IterOps<_AlgPolicy>::template __difference_type<_InIter> __n, _OutIter __result) {
-  while (__n != 0) {
+  while (__n > 0) {
     *__result = *__first;
     ++__first;
     ++__result;
@@ -63,15 +65,14 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
 copy_n(_InputIterator __first, _Size __n, _OutputIterator __result) {
   using _IntegralSize       = decltype(std::__convert_to_integral(__n));
   _IntegralSize __converted = __n;
-  if (__converted <= 0)
-    return __result;
-
-  *__result = *__first;
-  ++__result;
-  for (--__converted; __converted > 0; --__converted) {
-    ++__first;
+  if (__converted > 0) {
     *__result = *__first;
     ++__result;
+    for (--__converted; __converted > 0; --__converted) {
+      ++__first;
+      *__result = *__first;
+      ++__result;
+    }
   }
   return __result;
 }
@@ -84,8 +85,6 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
 copy_n(_InputIterator __first, _Size __n, _OutputIterator __result) {
   using _IntegralSize       = decltype(std::__convert_to_integral(__n));
   _IntegralSize __converted = __n;
-  if (__converted < 0)
-    return __result;
   return std::__copy_n<_ClassicAlgPolicy>(__first, __iterator_difference_type<_InputIterator>(__converted), __result)
       .__out_;
 }
