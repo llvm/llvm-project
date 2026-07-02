@@ -1123,8 +1123,13 @@ def BarrierReductionAttr
   let assemblyFormat = "`<` $value `>`";
 }
 
-def NVVM_BarrierOp : NVVM_VoidIntrinsicOp<"barrier",
-    [AttrSizedOperandSegments]> {
+def NVVM_BarrierOp : LLVM_NToOneIntrOpBase<NVVM_Dialect, "barrier",
+    /*enumNames=*/["nvvm_barrier_cta_sync_all",
+                   "nvvm_barrier_cta_sync_count",
+                   "nvvm_barrier_cta_sync_aligned_all",
+                   "nvvm_barrier_cta_sync_aligned_count"],
+    /*converter=*/"convertBarrierSyncIntrinsic",
+    /*traits=*/[AttrSizedOperandSegments]> {
   let summary = "CTA Barrier Synchronization Op";
   let description = [{
     The `nvvm.barrier` operation performs barrier synchronization and communication 
@@ -1170,6 +1175,18 @@ def NVVM_BarrierOp : NVVM_VoidIntrinsicOp<"barrier",
   let builders = [OpBuilder<(ins), [{
       return build($_builder, $_state, Value{}, Value{});
     }]>];
+
+  let extraClassDeclaration = [{
+    static NVVM::IDArgPair
+      getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                            llvm::IRBuilderBase &builder);
+  }];
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::BarrierOp::getIntrinsicIDAndArgs(
+                          *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, id, builder.getVoidTy(), args);
+  }];
 }
 
 def NVVM_BarrierReductionOp :

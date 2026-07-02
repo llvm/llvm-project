@@ -303,6 +303,30 @@ static LogicalResult emitOneMLIRBuilder(const Record &record, raw_ostream &os,
   return success();
 }
 
+// Emit a dispatch block for an N-to-1 intrinsic op: an `if` matching any of
+// the listed intrinsic IDs that returns the named converter's result.
+static LogicalResult emitOneNToOneIntrMLIRBuilder(const Record &record,
+                                                  raw_ostream &os) {
+  std::vector<StringRef> enumNames =
+      record.getValueAsListOfStrings("llvmEnumNames");
+  StringRef converter = record.getValueAsString("llvmIRConverter");
+  if (enumNames.empty())
+    return emitError(record, "expected non-empty 'llvmEnumNames'");
+  if (converter.empty())
+    return emitError(record, "expected non-empty 'llvmIRConverter'");
+
+  os << "if (";
+  llvm::interleave(
+      enumNames, os,
+      [&](StringRef id) { os << "intrinsicID == llvm::Intrinsic::" << id; },
+      " ||\n    ");
+  os << ") {\n";
+  os << "  return " << converter
+     << "(odsBuilder, inst, moduleImport, llvmOperands, llvmOpBundles);\n";
+  os << "}\n";
+  return success();
+}
+
 // Emit all intrinsic MLIR builders. Returns false on success because of the
 // generator registration requirements.
 static bool emitIntrMLIRBuilders(const RecordKeeper &records, raw_ostream &os) {
@@ -314,6 +338,11 @@ static bool emitIntrMLIRBuilders(const RecordKeeper &records, raw_ostream &os) {
   for (const Record *def :
        records.getAllDerivedDefinitions("LLVM_IntrOpBase")) {
     if (failed(emitOneMLIRBuilder(*def, os, emitIntrCond)))
+      return true;
+  }
+  for (const Record *def :
+       records.getAllDerivedDefinitions("LLVM_NToOneIntrOpBase")) {
+    if (failed(emitOneNToOneIntrMLIRBuilder(*def, os)))
       return true;
   }
   return false;
@@ -554,12 +583,20 @@ static void emitOneIntrinsic(const Record &record, raw_ostream &os) {
   os << "llvm::Intrinsic::" << record.getValueAsString("llvmEnumName") << ",\n";
 }
 
+static void emitOneNToOneIntrinsic(const Record &record, raw_ostream &os) {
+  for (StringRef id : record.getValueAsListOfStrings("llvmEnumNames"))
+    os << "llvm::Intrinsic::" << id << ",\n";
+}
+
 // Emit the list of LLVM IR intrinsics identifiers that are convertible to a
 // matching MLIR LLVM dialect intrinsic operation.
 static bool emitConvertibleIntrinsics(const RecordKeeper &records,
                                       raw_ostream &os) {
   for (const Record *def : records.getAllDerivedDefinitions("LLVM_IntrOpBase"))
     emitOneIntrinsic(*def, os);
+  for (const Record *def :
+       records.getAllDerivedDefinitions("LLVM_NToOneIntrOpBase"))
+    emitOneNToOneIntrinsic(*def, os);
 
   return false;
 }
