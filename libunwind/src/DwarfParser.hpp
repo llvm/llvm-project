@@ -81,7 +81,8 @@ public:
     kRegisterOffsetFromCFA,
     kRegisterInRegister,
     kRegisterAtExpression,
-    kRegisterIsExpression
+    kRegisterIsExpression,
+    kRegisterIsPseudo,
   };
   struct RegisterLocation {
     RegisterSavedWhere location;
@@ -794,8 +795,8 @@ bool CFI_Parser<A>::parseFDEInstructions(
         case REGISTERS_ARM64: {
           int64_t value =
               results->savedRegisters[UNW_AARCH64_RA_SIGN_STATE].value ^ 0x1;
-          results->setRegisterValue(UNW_AARCH64_RA_SIGN_STATE, value,
-                                    initialState);
+          results->setRegister(UNW_AARCH64_RA_SIGN_STATE, kRegisterIsPseudo,
+                               value, initialState);
           _LIBUNWIND_TRACE_DWARF("DW_CFA_AARCH64_negate_ra_state\n");
         } break;
 #endif
@@ -846,8 +847,8 @@ bool CFI_Parser<A>::parseFDEInstructions(
       case DW_CFA_AARCH64_negate_ra_state_with_pc: {
         int64_t value =
             results->savedRegisters[UNW_AARCH64_RA_SIGN_STATE].value ^ 0x3;
-        results->setRegisterValue(UNW_AARCH64_RA_SIGN_STATE, value,
-                                  initialState);
+        results->setRegister(UNW_AARCH64_RA_SIGN_STATE, kRegisterIsPseudo,
+                             value, initialState);
         // When using Feat_PAuthLR, the PC value needs to be captured so that
         // during unwinding, the correct PC value is used for re-authentication.
         // It is assumed that the CFI is placed before the signing instruction.

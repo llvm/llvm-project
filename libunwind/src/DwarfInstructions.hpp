@@ -117,8 +117,14 @@ typename A::pint_t DwarfInstructions<A, R>::getSavedRegister(
 
   case CFI_Parser<A>::kRegisterInRegister:
     return registers.getRegister((int)savedReg.value);
+
   case CFI_Parser<A>::kRegisterUndefined:
     return 0;
+
+  case CFI_Parser<A>::kRegisterIsPseudo:
+#if defined(_LIBUNWIND_TARGET_AARCH64)
+    return savedReg.value;
+#endif
   case CFI_Parser<A>::kRegisterUnused:
   case CFI_Parser<A>::kRegisterOffsetFromCFA:
     // FIX ME
@@ -145,6 +151,7 @@ double DwarfInstructions<A, R>::getSavedFloatRegister(
 #ifndef _LIBUNWIND_TARGET_ARM
     return registers.getFloatRegister((int)savedReg.value);
 #endif
+  case CFI_Parser<A>::kRegisterIsPseudo:
   case CFI_Parser<A>::kRegisterIsExpression:
   case CFI_Parser<A>::kRegisterUnused:
   case CFI_Parser<A>::kRegisterOffsetFromCFA:
@@ -168,6 +175,7 @@ v128 DwarfInstructions<A, R>::getSavedVectorRegister(
         evaluateExpression((pint_t)savedReg.value, addressSpace,
                             registers, cfa));
 
+  case CFI_Parser<A>::kRegisterIsPseudo:
   case CFI_Parser<A>::kRegisterIsExpression:
   case CFI_Parser<A>::kRegisterUnused:
   case CFI_Parser<A>::kRegisterUndefined:
