@@ -8,6 +8,7 @@
 //
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
+#include "llvm/Support/FormatVariadic.h"
 #include <map>
 #include <utility>
 
@@ -157,6 +158,16 @@ LogicalResult DecomposeProjectedPermutation::matchAndRewrite(
     auto map = op.getMatchingIndexingMap(&opOperand);
     if (!map.isProjectedPermutation(false))
       return failure();
+
+    // If we have any inputs that aren't ranked tensor types, reject
+    // the pattern.
+    if (!dyn_cast<RankedTensorType>(opOperand.get().getType()))
+      return rewriter.notifyMatchFailure(
+          opOperand.get().getLoc(),
+          llvm::formatv("Expected operand #{0} to be "
+                        "ranked tensor of any type values, but got {1}",
+                        opOperand.getOperandNumber(),
+                        opOperand.get().getType()));
   }
 
   // Decomposing linalg.generic involves creating `tensor.empty`
