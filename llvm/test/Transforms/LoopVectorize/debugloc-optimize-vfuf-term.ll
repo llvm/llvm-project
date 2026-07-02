@@ -11,10 +11,10 @@ define i32 @foo(ptr %p) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    store i8 0, ptr [[P]], align 1, !dbg [[DBG3:![0-9]+]]
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[EXIT:.*]], !dbg [[DBG3]]
+; CHECK-NEXT:    store i8 0, ptr [[P]], align 1, !dbg [[DBG3:![0-9]+]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i32 0
 ;

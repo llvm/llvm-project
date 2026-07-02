@@ -606,7 +606,31 @@ rather than C-style casts. There are two exceptions to this:
 
 Static constructors and destructors (e.g., global variables whose types have a
 constructor or destructor) should not be added to the code base, and should be
-removed wherever possible.
+removed wherever possible. Global constants (including static variables defined
+in functions) should be `constexpr` where possible to avoid inadvertant startup
+overhead.
+
+```c++
+// Avoid: this will cause the string to be constructed in a global constructor
+// and be destructed in a global destructor. The same applies for global/static
+// maps, sets, etc.
+static std::string VeryBad = "abc123";
+
+struct BadWrapInt {
+  int x;
+  BadWrapInt(int x) : x(x) {}
+};
+// Avoid: the BadWrapInt constructor is not constexpr and this will cause the
+// initialization of Bad in a global constructor.
+static const BadWrapInt Bad(1);
+
+struct GoodWrapInt {
+  int x;
+  constexpr GoodWrapInt(int x) : x(x) {}
+};
+// Ok.
+static constexpr GoodWrapInt Good(1);
+```
 
 Globals in different source files are initialized in an [arbitrary order],
 making the code more
@@ -618,6 +642,44 @@ Static constructors have a negative impact on the launch time of programs that u
 LLVM as a library. We would really like for there to be zero cost for linking
 in an additional LLVM target or other library into an application, but static
 constructors undermine this goal.
+
+#### Avoid Pointers in Global/Static Constants
+
+Static constants that contain non-null pointers should be avoided, especially
+for large or frequently used data structures.
+
+All static constants that contain pointers need to be relocated on every startup
+when LLVM is built as position-independent code, increasing startup times and
+memory usage.
+
+```c++
+// Avoid: StringRef stores pointers to string; this array needs to be touched
+// on every startup (typically 32 bytes).
+static constexpr StringRef Bad1[] = {"abc", "def"};
+
+// Avoid: likewise (typically 16 bytes).
+static const char *const Bad2[] = {"abc", "def"};
+
+// Avoid: this is a mutable array!
+static const char *ReallyBad[] = {"abc", "def"};
+
+// Ok.
+static constexpr char OkStorage[] = "\0abc\0def";
+StringRef getOk(StringTable::Offset Off) { return StringTable(OkStorage)[Off]; }
+// Avoid: StringTable itself is just a wrapper around StringRef.
+extern constexpr StringTable Bad3(OkStorage);
+
+// Avoid.
+struct KeyValue {
+  const char *Key;
+  unsigned Value;
+};
+static constexpr KeyValue KVs[] = {{"abc", 1}, {"def", 2}};
+
+// Ok.
+constexpr EnumStringDef<unsigned> KVDefs[] = {{{"abc"}, 1}, {{"def"}, 2}};
+static constexpr auto KVs = BUILD_ENUM_STRINGS(KVDefs);
+```
 
 #### Use of `class` and `struct` Keywords
 

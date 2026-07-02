@@ -99,7 +99,7 @@ void case3() {
 // CHECK-NEXT: [[CBUFLOAD2:%.*]] = load <2 x double>, ptr addrspace([[CONST_ADDR_SPACE]]) [[CB_B_PTR]], align 8
 // CHECK-NEXT: store <2 x double> [[CBUFLOAD2]], ptr [[TMP_B_PTR]], align 8
 
-// CHECK-NEXT: call {{.*}}void @useS(S)(ptr noundef dead_on_return [[TMP]])
+// CHECK-NEXT: call {{.*}}void @useS(S)(ptr noundef align 1 dead_on_return [[TMP]])
   useS(CBS);
 }
 
@@ -250,6 +250,6 @@ void case9() {
 // CHECK-NEXT: [[CBUF_LOAD:%.*]] = load float, ptr addrspace([[CONST_ADDR_SPACE]]) [[CB_P_A_PTR]], align 4
 // CHECK-NEXT: store float [[CBUF_LOAD]], ptr [[P_A_PTR]], align 4
 
-// CHECK-NEXT: call {{.*}}void @useP(P)(ptr noundef dead_on_return [[TMP]])
+// CHECK-NEXT: call {{.*}}void @useP(P)(ptr noundef align 1 dead_on_return [[TMP]])
   useP(CBT.p);
 }

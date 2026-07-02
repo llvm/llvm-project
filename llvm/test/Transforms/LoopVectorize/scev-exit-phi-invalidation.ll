@@ -11,10 +11,10 @@ define void @test_pr63368(i1 %c, ptr %A) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[INDEX_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -41,13 +41,13 @@ define void @test_pr63368(i1 %c, ptr %A) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY3:%.*]]
 ; CHECK:       vector.body3:
 ; CHECK-NEXT:    [[INDEX4:%.*]] = phi i32 [ 0, [[VECTOR_PH2]] ], [ [[INDEX_NEXT5:%.*]], [[VECTOR_BODY3]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX4]] to i8
-; CHECK-NEXT:    [[TMP10:%.*]] = add i8 [[OFFSET_IDX]], 1
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[A]], i8 [[TMP10]]
-; CHECK-NEXT:    store <4 x i8> zeroinitializer, ptr [[TMP11]], align 1
+; CHECK-NEXT:    [[TMP10:%.*]] = trunc i32 [[INDEX4]] to i8
+; CHECK-NEXT:    [[TMP11:%.*]] = add i8 [[TMP10]], 1
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[A]], i8 [[TMP11]]
+; CHECK-NEXT:    store <4 x i8> zeroinitializer, ptr [[TMP12]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT5]] = add nuw i32 [[INDEX4]], 4
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT5]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK6:%.*]], label [[VECTOR_BODY3]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[INDEX_NEXT5]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK6:%.*]], label [[VECTOR_BODY3]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block6:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT_2:%.*]], label [[SCALAR_PH]]

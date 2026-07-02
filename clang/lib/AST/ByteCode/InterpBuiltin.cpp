@@ -4551,6 +4551,86 @@ static bool interp__builtin_ia32_vpdp(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+// Bit Matrix Multiply and Accumulate (AVX512BMM). Each 256-bit lane holds a
+// 16x16 bit matrix as 16 x i16 elements; element i is row i and bit j of that
+// element is entry [i][j]. The accumulator (third argument, src1 in the AMD
+// ISA) provides the initial value of each result bit, into which the bit-matrix
+// product of the first two arguments (src2 * src3) is reduced with OR (vbmacor)
+// or XOR (vbmacxor):
+//   for i in 0..15, j in 0..15:
+//     bit = C[16*i+j]
+//     for k in 0..15: bit OP= A[16*i+k] & B[16*k+j]
+//     dest[16*i+j] = bit
+static bool interp__builtin_ia32_bmac(InterpState &S, CodePtr OpPC,
+                                      const CallExpr *Call, bool IsXor) {
+  assert(Call->getNumArgs() == 3);
+
+  // AST-based type checks before popping the stack.
+  QualType AType = Call->getArg(0)->getType();
+  QualType BType = Call->getArg(1)->getType();
+  QualType CType = Call->getArg(2)->getType();
+  if (!AType->isVectorType() || !BType->isVectorType() ||
+      !CType->isVectorType())
+    return false;
+
+  const Pointer &C = S.Stk.pop<Pointer>();
+  const Pointer &B = S.Stk.pop<Pointer>();
+  const Pointer &A = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  // check if all three primitive arrays are with 16-bit elements.
+  auto isValid16BitArray = [](const Pointer &P) {
+    const Descriptor *D = P.getFieldDesc();
+    if (!D->isPrimitiveArray())
+      return false;
+    PrimType PT = D->getPrimType();
+    return ((PT == PT_Sint16) || (PT == PT_Uint16));
+  };
+
+  if (!isValid16BitArray(A) || !isValid16BitArray(B) || !isValid16BitArray(C))
+    return false;
+
+  PrimType ElemT = A.getFieldDesc()->getPrimType();
+  unsigned NumElems = A.getNumElems();
+  assert(NumElems % 16 == 0 && "BMM operates on 256-bit lanes of 16 x i16");
+  bool DstUnsigned = ElemT == PT_Uint16;
+
+  // Lanes are always 16-bit; gather them so the reduction below is untyped.
+  SmallVector<uint16_t> AVals(NumElems), BVals(NumElems), Acc(NumElems);
+  INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+    for (unsigned I = 0; I != NumElems; ++I) {
+      AVals[I] = (uint16_t)A.elem<T>(I).toAPSInt().getZExtValue();
+      BVals[I] = (uint16_t)B.elem<T>(I).toAPSInt().getZExtValue();
+      Acc[I] = (uint16_t)C.elem<T>(I).toAPSInt().getZExtValue();
+    }
+  });
+
+  for (unsigned Lane = 0; Lane != NumElems; Lane += 16) {
+    for (unsigned I = 0; I != 16; ++I) {
+      uint16_t AVal = AVals[Lane + I], DVal = Acc[Lane + I];
+      for (unsigned J = 0; J != 16; ++J) {
+        // Seed the reduction with the accumulator bit, then fold in each
+        // product term with the same operator (OR for vbmacor, XOR for
+        // vbmacxor).
+        unsigned Bit = (DVal >> J) & 1u;
+        for (unsigned K = 0; K != 16; ++K) {
+          unsigned Product = ((AVal >> K) & 1u) & ((BVals[Lane + K] >> J) & 1u);
+          Bit = IsXor ? (Bit ^ Product) : (Bit | Product);
+        }
+        DVal = (DVal & ~(uint16_t(1) << J)) | (uint16_t(Bit) << J);
+      }
+      Acc[Lane + I] = DVal;
+    }
+  }
+
+  INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+    for (unsigned I = 0; I != NumElems; ++I)
+      Dst.elem<T>(I) = static_cast<T>(APSInt(APInt(16, Acc[I]), DstUnsigned));
+  });
+  Dst.initializeAllElements();
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
   if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
@@ -5918,6 +5998,13 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vgf2p8mulb_v64qi:
     return interp__builtin_ia32_gfni_mul(S, OpPC, Call);
 
+  case X86::BI__builtin_ia32_bmacor16x16x16_v16hi:
+  case X86::BI__builtin_ia32_bmacor16x16x16_v32hi:
+    return interp__builtin_ia32_bmac(S, OpPC, Call, /*IsXor=*/false);
+  case X86::BI__builtin_ia32_bmacxor16x16x16_v16hi:
+  case X86::BI__builtin_ia32_bmacxor16x16x16_v32hi:
+    return interp__builtin_ia32_bmac(S, OpPC, Call, /*IsXor=*/true);
+
   case X86::BI__builtin_ia32_insertps128:
     return interp__builtin_ia32_shuffle_generic(
         S, OpPC, Call, [](unsigned DstIdx, unsigned Mask) {
@@ -6673,12 +6760,28 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
       // When generating bytecode, we put all the index expressions as Sint64 on
       // the stack.
       int64_t Index = ArrayIndices[ArrayIndex];
+      if (Index < 0)
+        return Invalid(S, OpPC);
       const ArrayType *AT = S.getASTContext().getAsArrayType(CurrentType);
       if (!AT)
         return false;
       CurrentType = AT->getElementType();
       CharUnits ElementSize = S.getASTContext().getTypeSizeInChars(CurrentType);
-      Result += Index * ElementSize;
+      int64_t ElemSize = ElementSize.getQuantity();
+      if (Index != 0 && ElemSize > llvm::maxIntN(64) / Index) {
+        S.FFDiag(S.Current->getLocation(OpPC),
+                 diag::note_constexpr_offsetof_overflow)
+            << S.Current->getRange(OpPC);
+        return false;
+      }
+      int64_t Offset = Index * ElemSize;
+      if (Result.getQuantity() > llvm::maxIntN(64) - Offset) {
+        S.FFDiag(S.Current->getLocation(OpPC),
+                 diag::note_constexpr_offsetof_overflow)
+            << S.Current->getRange(OpPC);
+        return false;
+      }
+      Result += CharUnits::fromQuantity(Offset);
       ++ArrayIndex;
       break;
     }

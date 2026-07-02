@@ -379,7 +379,6 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>; 
 #    include <__memory/allocator_arg_t.h>
 #    include <__memory/allocator_destructor.h>
 #    include <__memory/allocator_traits.h>
-#    include <__memory/compressed_pair.h>
 #    include <__memory/pointer_traits.h>
 #    include <__memory/shared_count.h>
 #    include <__memory/unique_ptr.h>
@@ -1413,8 +1412,10 @@ template <class _FD, class _Alloc, class _FB>
 class __packaged_task_func;
 
 template <class _Fp, class _Alloc, class _Rp, class... _ArgTypes>
-class __packaged_task_func<_Fp, _Alloc, _Rp(_ArgTypes...)> : public __packaged_task_base<_Rp(_ArgTypes...)> {
-  _LIBCPP_COMPRESSED_PAIR(_Fp, __func_, _Alloc, __alloc_);
+class _LIBCPP_HIDE_STRUCT_FROM_ABI
+    __packaged_task_func<_Fp, _Alloc, _Rp(_ArgTypes...)> : public __packaged_task_base<_Rp(_ArgTypes...)> {
+  _LIBCPP_NO_UNIQUE_ADDRESS _Fp __func_;
+  _LIBCPP_NO_UNIQUE_ADDRESS _Alloc __alloc_;
 
 public:
   _LIBCPP_HIDE_FROM_ABI explicit __packaged_task_func(const _Fp& __f) : __func_(__f) {}
@@ -1435,8 +1436,8 @@ void __packaged_task_func<_Fp, _Alloc, _Rp(_ArgTypes...)>::__move_to(
 
 template <class _Fp, class _Alloc, class _Rp, class... _ArgTypes>
 void __packaged_task_func<_Fp, _Alloc, _Rp(_ArgTypes...)>::destroy() {
-  __func_.~_Fp();
   __alloc_.~_Alloc();
+  __func_.~_Fp();
 }
 
 template <class _Fp, class _Alloc, class _Rp, class... _ArgTypes>
@@ -1445,8 +1446,8 @@ void __packaged_task_func<_Fp, _Alloc, _Rp(_ArgTypes...)>::destroy_deallocate() 
   typedef allocator_traits<_Ap> _ATraits;
   typedef pointer_traits<typename _ATraits::pointer> _PTraits;
   _Ap __a(__alloc_);
-  __func_.~_Fp();
   __alloc_.~_Alloc();
+  __func_.~_Fp();
   __a.deallocate(_PTraits::pointer_to(*this), 1);
 }
 
