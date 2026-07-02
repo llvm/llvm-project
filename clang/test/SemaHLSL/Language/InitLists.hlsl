@@ -106,20 +106,14 @@ struct R {
   };
 };
 
-// expected-note@#anon{{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'int' to}}
-// expected-note@#anon{{candidate constructor (the implicit move constructor) not viable: no known conversion from 'int' to}}
-
 void Err2(RWBuffer<float4> B) {
   ContainsResource RS1 = {1, B};
-  ContainsResource RS2 = (1.xx); // expected-error{{no viable conversion from 'vector<int, 2>' (vector of 2 'int' values) to 'ContainsResource'}}
+  ContainsResource RS2 = (1.xx); // expected-error{{cannot initialize a variable of type 'ContainsResource' with an rvalue of type 'vector<int, 2>' (vector of 2 'int' values)}}
   ContainsResource RS3 = {B, 1}; // expected-error{{no viable conversion from 'RWBuffer<float4>' (aka 'RWBuffer<vector<float, 4>>') to 'int'}}
   ContainsResourceInverted IR = {RS1}; // expected-error{{no viable conversion from 'int' to 'hlsl::RWBuffer<vector<float, 4>>'}}
 
-  R r = {1,2}; // expected-error{{no viable conversion from 'int' to 'R::(anonymous union at}}
+  R r = {1,2}; // expected-error-re{{cannot initialize a parameter of type 'R::(anonymous union at {{.+}} with an rvalue of type 'int'}}
 }
-
-// expected-note@#ContainsResource{{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'vector<int, 2>' (vector of 2 'int' values) to 'const ContainsResource &' for 1st argument}}
-// expected-note@#ContainsResource{{candidate constructor (the implicit move constructor) not viable: no known conversion from 'vector<int, 2>' (vector of 2 'int' values) to 'ContainsResource &&' for 1st argument}}
 
 // This note refers to the RWBuffer copy constructor that do not have a source locations
 // expected-note@*{{candidate constructor not viable}}

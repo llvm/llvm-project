@@ -82,6 +82,9 @@ static void packNonUnitDimOperandToVNNI(mlir::PatternRewriter &rewriter,
   auto elemTy = Ty.getElementType();
   auto flatTy = mlir::VectorType::get(nonUnitDimAcc, elemTy);
 
+  if (elemTy.isSignlessInteger(8))
+    flatTy = mlir::VectorType::get({2, nonUnitDimAcc / 2}, elemTy);
+
   Value srcBuff;
   SmallVector<Value> indexVals;
 
@@ -98,7 +101,18 @@ static void packNonUnitDimOperandToVNNI(mlir::PatternRewriter &rewriter,
             });
       });
 
-  auto vec1 = vector::LoadOp::create(rewriter, loc, flatTy, srcBuff, indexVals);
+  int64_t srcRank = (dyn_cast<ShapedType>(srcBuff.getType())).getRank();
+  Value padding = ub::PoisonOp::create(rewriter, loc, elemTy);
+  auto map = AffineMap::getMinorIdentityMap(srcRank, flatTy.getRank(),
+                                            rewriter.getContext());
+  SmallVector<bool> inBounds(flatTy.getRank(), true);
+
+  Value vec1 = vector::TransferReadOp::create(
+      rewriter, loc, flatTy, srcBuff, indexVals, padding, map, inBounds);
+
+  if (elemTy.isSignlessInteger(8))
+    vec1 = vector::ShapeCastOp::create(
+        rewriter, loc, VectorType::get(nonUnitDimAcc, elemTy), vec1);
 
   unsigned int offset = 1;
   if (elemTy.isSignlessInteger(8))
@@ -110,7 +124,14 @@ static void packNonUnitDimOperandToVNNI(mlir::PatternRewriter &rewriter,
                             indexVals[indexVals.size() - 2]);
   indexVals[indexVals.size() - 2] = nextIndx;
 
-  auto vec2 = vector::LoadOp::create(rewriter, loc, flatTy, srcBuff, indexVals);
+  Value vec2 = vector::TransferReadOp::create(
+      rewriter, loc, flatTy, srcBuff, indexVals, padding, map, inBounds);
+
+  if (elemTy.isSignlessInteger(8))
+    vec2 = vector::ShapeCastOp::create(
+        rewriter, loc, VectorType::get(nonUnitDimAcc, elemTy), vec2);
+
+  flatTy = mlir::VectorType::get(nonUnitDimAcc, elemTy);
 
   static constexpr int64_t maskLo_bf16[] = {
       0,  32, 1,  33, 2,  34, 3,  35, 8,  40, 9,  41, 10, 42, 11, 43,

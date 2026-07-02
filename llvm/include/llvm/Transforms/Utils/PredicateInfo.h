@@ -52,6 +52,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/IR/BundleAttributes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
@@ -132,9 +133,9 @@ protected:
 
 class PredicateBundleAssume : public PredicateAssume {
 public:
-  Attribute::AttrKind AttrKind;
+  BundleAttr AttrKind;
   PredicateBundleAssume(Value *Op, IntrinsicInst *AssumeInst,
-                        Attribute::AttrKind AttrKind)
+                        BundleAttr AttrKind)
       : PredicateAssume(PT_BundleAssume, Op, AssumeInst, nullptr),
         AttrKind(AttrKind) {}
 
@@ -235,19 +236,18 @@ private:
 
 /// Printer pass for \c PredicateInfo.
 class PredicateInfoPrinterPass
-    : public PassInfoMixin<PredicateInfoPrinterPass> {
+    : public RequiredPassInfoMixin<PredicateInfoPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit PredicateInfoPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 /// Verifier pass for \c PredicateInfo.
-struct PredicateInfoVerifierPass : PassInfoMixin<PredicateInfoVerifierPass> {
+struct PredicateInfoVerifierPass
+    : RequiredPassInfoMixin<PredicateInfoVerifierPass> {
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm

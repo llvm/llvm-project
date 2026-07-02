@@ -4,7 +4,7 @@
 
 define void @bar(ptr readonly %0) {
 ; FNATTRS-LABEL: define void @bar(
-; FNATTRS-SAME: ptr readnone captures(none) [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
+; FNATTRS-SAME: ptr nofree readnone captures(none) [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; FNATTRS-NEXT:    call void @foo(ptr [[TMP0]])
 ; FNATTRS-NEXT:    ret void
 ;
@@ -19,7 +19,7 @@ define void @bar(ptr readonly %0) {
 
 define void @foo(ptr readonly %0) {
 ; FNATTRS-LABEL: define void @foo(
-; FNATTRS-SAME: ptr readnone captures(none) [[TMP0:%.*]]) #[[ATTR0]] {
+; FNATTRS-SAME: ptr nofree readnone captures(none) [[TMP0:%.*]]) #[[ATTR0]] {
 ; FNATTRS-NEXT:    call void @bar(ptr [[TMP0]])
 ; FNATTRS-NEXT:    ret void
 ;

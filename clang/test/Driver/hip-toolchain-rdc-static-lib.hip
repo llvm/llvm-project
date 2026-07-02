@@ -2,6 +2,7 @@
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   --no-offload-new-driver --emit-static-lib -nogpulib \
 // RUN:   -fuse-ld=lld -B%S/Inputs/lld -fgpu-rdc -nogpuinc \
+// RUN:   -flto-partitions=8 \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s
@@ -27,21 +28,23 @@
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-emit-llvm-bc"
+// CHECK-SAME: "-flto=full" "-flto-unit"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu"
 // CHECK-SAME: "-fcuda-is-device"
 // CHECK-SAME: "-target-cpu" "gfx803"
 // CHECK-SAME: "-fgpu-rdc"
-// CHECK-SAME: {{.*}} "-o" [[A_BC1:".*bc"]] "-x" "hip"
+// CHECK-SAME: {{.*}} "-o" [[A_BC1:".*o"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC]]
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-emit-llvm-bc"
+// CHECK-SAME: "-flto=full" "-flto-unit"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip"
 // CHECK-SAME: "-fcuda-is-device"
 // CHECK-SAME: "-target-cpu" "gfx803"
 // CHECK-SAME: "-fgpu-rdc"
-// CHECK-SAME: {{.*}} "-o" [[B_BC1:".*bc"]] "-x" "hip"
+// CHECK-SAME: {{.*}} "-o" [[B_BC1:".*o"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC]]
 
 // CHECK-NOT: "*.llvm-link"
@@ -56,21 +59,23 @@
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-emit-llvm-bc"
+// CHECK-SAME: "-flto=full" "-flto-unit"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu"
 // CHECK-SAME: "-fcuda-is-device"
 // CHECK-SAME: "-target-cpu" "gfx900"
 // CHECK-SAME: "-fgpu-rdc"
-// CHECK-SAME: {{.*}} "-o" [[A_BC2:".*bc"]] "-x" "hip"
+// CHECK-SAME: {{.*}} "-o" [[A_BC2:".*o"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC]]
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-emit-llvm-bc"
+// CHECK-SAME: "-flto=full" "-flto-unit"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip"
 // CHECK-SAME: "-fcuda-is-device"
 // CHECK-SAME: "-target-cpu" "gfx900"
 // CHECK-SAME: "-fgpu-rdc"
-// CHECK-SAME: {{.*}} "-o" [[B_BC2:".*bc"]] "-x" "hip"
+// CHECK-SAME: {{.*}} "-o" [[B_BC2:".*o"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC]]
 
 // CHECK-NOT: "*.llvm-link"

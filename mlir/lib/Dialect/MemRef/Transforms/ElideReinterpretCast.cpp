@@ -11,10 +11,12 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/Repeated.h"
 #include <cassert>
+#include <optional>
 
 namespace mlir {
 namespace memref {
@@ -196,6 +198,193 @@ public:
   }
 };
 
+//===----------------------------------------------------------------------===//
+// Load Rewrite Helpers
+//===----------------------------------------------------------------------===//
+
+static bool hasStaticZeroOffset(memref::ReinterpretCastOp rc) {
+  ArrayRef<int64_t> offsets = rc.getStaticOffsets();
+  // FIXME: Despite what `getStaticOffsets` implies, `reinterpret_cast` takes
+  // only a single offset. That should be fixed at the op definition level.
+  assert(offsets.size() == 1 && "Expecting single offset");
+  return !ShapedType::isDynamic(offsets[0]) && offsets[0] == 0;
+}
+
+static std::optional<int64_t> getConstantIndex(Value v) {
+  if (auto cst = v.getDefiningOp<arith::ConstantIndexOp>())
+    return cst.value();
+  // Non-constant and dynamic indices
+  return std::nullopt;
+}
+
+/// Return true if input index is in bounds, i.e. `0 <= idx < upperBound`.
+/// Fully dynamic index values (i.e. non-constant) that cannot be analysed are
+/// treated as in-bounds.
+static bool isConstantIndexExplicitlyOutOfBounds(Value idx,
+                                                 int64_t upperBound) {
+  // Only statically known `arith.constant` indices are checked here.
+  std::optional<int64_t> idxVal = getConstantIndex(idx);
+  return idxVal && (*idxVal < 0 || *idxVal >= upperBound);
+}
+
+using NonUnitDimMapping = SmallVector<std::pair<int64_t, int64_t>>;
+
+/// Shape restriction accepting only unit-dim insertion/removal
+/// reinterpret_casts.
+///
+/// Examples accepted:
+///   memref<1x1x1x108xf32>    <-> memref<1x108xf32>
+///   memref<100x1xf32>        <-> memref<100x1x1xf32>
+///   memref<1x33x40xf32>      <-> memref<33x1x1x40xf32>
+///   memref<1>                <-> memref<1x1x1>
+///
+/// Returns the mapping of non-unit dimensions from the source
+/// to the result MemRef if the reinterpret_cast preserved sizes and order (no
+/// transposition) of these dimensions.
+static std::optional<NonUnitDimMapping>
+getNonUnitDimMapping(memref::ReinterpretCastOp rc) {
+  auto inputTy = cast<MemRefType>(rc.getSource().getType());
+  auto outputTy = cast<MemRefType>(rc.getResult().getType());
+
+  // Only zero, statically known offsets are accepted. Non-zero or dynamic
+  // offsets would require reasoning about storage shifts in the underlying
+  // reinterpret_cast, which this helper does not model.
+  if (!hasStaticZeroOffset(rc))
+    return std::nullopt;
+
+  // Dynamic sizes/strides prevent precise reasoning about the underlying
+  // reinterpret_cast, so only fully static shape metadata is accepted.
+  if (llvm::any_of(rc.getStaticSizes(), ShapedType::isDynamic) ||
+      llvm::any_of(rc.getStaticStrides(), ShapedType::isDynamic))
+    return std::nullopt;
+
+  ArrayRef<int64_t> inputShape = inputTy.getShape();
+  ArrayRef<int64_t> outputShape = outputTy.getShape();
+  int64_t inputDim = 0;
+  int64_t outputDim = 0;
+  int64_t inputRank = inputTy.getRank();
+  int64_t outputRank = outputTy.getRank();
+  NonUnitDimMapping mapping;
+
+  // The preserved non-unit dimensions must have the same static sizes and
+  // appear in the same order.
+  while (inputDim < inputRank || outputDim < outputRank) {
+    if (inputDim < inputRank && inputShape[inputDim] == 1) {
+      ++inputDim;
+      continue;
+    }
+    if (outputDim < outputRank && outputShape[outputDim] == 1) {
+      ++outputDim;
+      continue;
+    }
+
+    if (inputDim == inputRank || outputDim == outputRank)
+      return std::nullopt;
+
+    if (ShapedType::isDynamic(inputShape[inputDim]) ||
+        ShapedType::isDynamic(outputShape[outputDim]) ||
+        inputShape[inputDim] != outputShape[outputDim])
+      return std::nullopt;
+
+    mapping.push_back({inputDim, outputDim});
+    ++inputDim;
+    ++outputDim;
+  }
+  return mapping;
+}
+
+/// Checks statically known and constant indices accessed by a load from a
+/// unit-dim insertion/removal reinterpret_cast to ensure in-bounds only access.
+/// Fully dynamic indices are skipped (there is no way to verify them).
+[[maybe_unused]] static bool areIndicesInBounds(memref::LoadOp load) {
+  auto rc = load.getMemRef().getDefiningOp<memref::ReinterpretCastOp>();
+  auto rcOutputTy = cast<MemRefType>(rc.getResult().getType());
+
+  for (auto [pos, idx] : llvm::enumerate(load.getIndices())) {
+    // FIXME: This should be ensured by the memref.load semantics.
+    // In the long term, this sanity-check may live in the same debug-only
+    // checks as `MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS`. This rejects
+    // only explicit constant OOB indices. Dynamic/non-constant indices are not
+    // filtered here.
+    if (isConstantIndexExplicitlyOutOfBounds(idx, rcOutputTy.getDimSize(pos)))
+      return false;
+  }
+  return true;
+}
+
+/// Rewrites `memref.load` through a reinterpret_cast that only inserts/removes
+/// unit dimensions by mapping the load indices directly onto the source MemRef.
+///
+/// Shape restriction gated by getNonUnitDimMapping().
+///
+/// BEFORE (rank expansion)
+///   %view = memref.reinterpret_cast %src
+///     : memref<1xNxMxf32> to memref<Nx1x1xMxf32>
+///   %v = memref.load %view[%i, %c0, %c0, %j] : memref<Nx1x1xMxf32>
+///
+/// AFTER
+///   %v = memref.load %src[%c0, %i, %j] : memref<1xNxMxf32>
+///
+/// BEFORE (rank collapsing)
+///   %view = memref.reinterpret_cast %src
+///     : memref<Nx1x1xMxf32> to memref<1xNxMxf32>
+///   %v = memref.load %view[%c0, %i, %j] : memref<1xNxMxf32>
+///
+/// AFTER
+///   %v = memref.load %src[%i, %c0, %c0, %j] : memref<Nx1x1xMxf32>
+struct RewriteLoadFromReinterpretCast
+    : public OpRewritePattern<memref::LoadOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(memref::LoadOp op,
+                                PatternRewriter &rewriter) const override {
+    auto rc = op.getMemRef().getDefiningOp<memref::ReinterpretCastOp>();
+    if (!rc)
+      return rewriter.notifyMatchFailure(
+          op, "target is not a memref.reinterpret_cast");
+    std::optional<NonUnitDimMapping> dimMapping = getNonUnitDimMapping(rc);
+    if (!dimMapping)
+      return rewriter.notifyMatchFailure(
+          op, "reinterpret_cast is not a unit-dim insertion/removal preserving "
+              "non-unit dimensions");
+
+    assert(areIndicesInBounds(op) &&
+           "load from reinterpret_cast indexes out of bounds!");
+
+    auto rcInputTy = cast<MemRefType>(rc.getSource().getType());
+
+    int64_t rcInputRank = rcInputTy.getRank();
+
+    SmallVector<Value> oldIdxs(op.getIndices().begin(), op.getIndices().end());
+
+    // Prefer reusing an explicit constant-zero index from the old load.
+    Value zeroIndex;
+    for (Value idx : oldIdxs) {
+      std::optional<int64_t> idxVal = getConstantIndex(idx);
+      if (idxVal && *idxVal == 0) {
+        zeroIndex = idx;
+        break;
+      }
+    }
+    if (!zeroIndex)
+      zeroIndex = arith::ConstantIndexOp::create(rewriter, op.getLoc(), 0);
+
+    // Initialize new load indices to all 0s.
+    SmallVector<Value> rcInputIdxs(rcInputRank, zeroIndex);
+    for (auto [inputDim, outputDim] : *dimMapping)
+      rcInputIdxs[inputDim] = oldIdxs[outputDim];
+
+    auto rcInput = rc.getSource();
+    // If the only user of rc is the current Op (which is about to be erased),
+    // we can safely erase it.
+    if (rc.getResult().hasOneUse())
+      rewriter.eraseOp(rc);
+    rewriter.replaceOpWithNewOp<memref::LoadOp>(op, rcInput, rcInputIdxs);
+    return success();
+  }
+};
+
 struct ElideReinterpretCastPass
     : public memref::impl::ElideReinterpretCastPassBase<
           ElideReinterpretCastPass> {
@@ -211,6 +400,12 @@ struct ElideReinterpretCastPass
         return true;
       return !isScalarSlice(rc);
     });
+    target.addDynamicallyLegalOp<memref::LoadOp>([](memref::LoadOp op) {
+      auto rc = op.getMemRef().getDefiningOp<memref::ReinterpretCastOp>();
+      if (!rc)
+        return true;
+      return !getNonUnitDimMapping(rc);
+    });
     target.addLegalDialect<arith::ArithDialect, memref::MemRefDialect>();
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
@@ -222,5 +417,6 @@ struct ElideReinterpretCastPass
 
 void mlir::memref::populateElideReinterpretCastPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<CopyToScalarLoadAndStore>(patterns.getContext());
+  patterns.add<CopyToScalarLoadAndStore, RewriteLoadFromReinterpretCast>(
+      patterns.getContext());
 }

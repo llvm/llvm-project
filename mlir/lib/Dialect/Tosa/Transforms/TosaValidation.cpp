@@ -107,9 +107,30 @@ static LogicalResult checkConstantOperandConvOps(Operation *op,
 
 static LogicalResult checkConstantOperandMatMul(Operation *op,
                                                 const TargetEnv &env) {
-  if (!env.allows(Extension::dynamic) && isa<tosa::MatMulOp>(op)) {
+  if (!env.allows(Extension::dynamic) &&
+      isa<tosa::MatMulOp, tosa::MatMulTOp>(op)) {
     // Check 'A_zp' and 'B_zp'
     return checkConstantOperands(op, {2, 3});
+  }
+  return success();
+}
+
+static LogicalResult
+checkConstantOperandRowGatherBlockScaled(Operation *op, const TargetEnv &env) {
+  if (!env.allows(Extension::dynamic) &&
+      isa<tosa::RowGatherBlockScaledOp>(op)) {
+    auto rowGatherOp = cast<tosa::RowGatherBlockScaledOp>(op);
+    const unsigned rowCountIndex = rowGatherOp.getValues().size() + 1;
+    return checkConstantOperands(op, {rowCountIndex});
+  }
+  return success();
+}
+
+static LogicalResult checkConstantOperandRowGather(Operation *op,
+                                                   const TargetEnv &env) {
+  if (!env.allows(Extension::dynamic) && isa<tosa::RowGatherOp>(op)) {
+    // Check 'row_count'
+    return checkConstantOperands(op, {2});
   }
   return success();
 }
@@ -199,6 +220,8 @@ private:
     constCheckers.emplace_back(
         checkConstantOperandConvOps<tosa::TransposeConv2DOp>);
     constCheckers.emplace_back(checkConstantOperandMatMul);
+    constCheckers.emplace_back(checkConstantOperandRowGather);
+    constCheckers.emplace_back(checkConstantOperandRowGatherBlockScaled);
     constCheckers.emplace_back(checkConstantOperandAvgPool2d);
     constCheckers.emplace_back(checkConstantOperandAvgPool2dAdaptive);
     constCheckers.emplace_back(checkConstantOperandNegate);
@@ -781,6 +804,7 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   CHECK_RANKS_AND_SIZES(Concat);
   CHECK_RANKS_AND_SIZES(Pad);
   CHECK_RANKS_AND_SIZES(Reshape);
+  CHECK_RANKS_AND_SIZES(ReshapeBlockScaled);
   CHECK_RANKS_AND_SIZES(Reverse);
   CHECK_RANKS_AND_SIZES(Slice);
   CHECK_RANKS_AND_SIZES(Tile);
@@ -815,12 +839,14 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   CHECK_SIZES(TransposeConv2D);
   CHECK_SIZES(FFT2d);
   CHECK_SIZES(MatMul);
+  CHECK_SIZES(MatMulT);
   CHECK_SIZES(MatmulTBlockScaled);
   CHECK_SIZES(MaxPool2d);
   CHECK_SIZES(MaxPool2dAdaptive);
   CHECK_SIZES(RFFT2d);
   // Scatter/Gather Operators
   CHECK_SIZES(Gather);
+  CHECK_SIZES(RowGather);
   CHECK_SIZES(Scatter);
   // Image Operators
   CHECK_SIZES(Resize);
@@ -867,7 +893,7 @@ LogicalResult TosaValidation::levelCheckSize(Operation *op,
     for (auto dim : shape) {
       const bool dimIsDynamic = mlir::ShapedType::isDynamic(dim);
       const TosaSpecificationVersion targetVersion = targetEnv.getSpecVersion();
-      const TosaSpecificationVersion minRequiredVersion(1, 1);
+      const TosaSpecificationVersion minRequiredVersion(1, 1, true);
       if (targetVersion.isBackwardsCompatibleWith(minRequiredVersion) &&
           dimIsDynamic)
         // TOSA 1.1 and above supports dynamic dimensions, however, they must be

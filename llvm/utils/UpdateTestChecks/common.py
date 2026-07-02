@@ -40,6 +40,7 @@ SUPPORTED_ANALYSES = {
     "Dependence Analysis",
     "Delinearization",
     "Loop Access Analysis",
+    "Loop Cache Analysis",
     "Scalar Evolution Analysis",
     "Scalar Evolution Division",
 }
@@ -2541,7 +2542,7 @@ METADATA_FILTERS = [
         r"(?<=\")(.+ )?(\w+ version )[\d.]+(?:[^\" ]*)(?: \([^)]+\))?",
         r"{{.*}}\2{{.*}}",
     ),  # preface with glob also, to capture optional CLANG_VENDOR
-    (r'(!DIFile\(filename: ")(.+/)?([^/]+", directory: )".+"', r"\1{{.*}}\3{{.*}}"),
+    (r'(!DIFile\(filename: ")(.+/)?([^/]+", directory: )"[^"]*"', r"\1{{.*}}\3{{.*}}"),
 ]
 METADATA_FILTERS_RE = [(re.compile(f), r) for (f, r) in METADATA_FILTERS]
 

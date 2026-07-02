@@ -69,3 +69,23 @@ func.func @async_cp(%dst : memref<2x7x5xf32, 3>, %src : memref<4x5xf32>){
   nvgpu.device_async_wait %token {numGroups = 1 : i32}
   return
 }
+
+// CHECK-LABEL: func @warpgroup_mma_init_accumulator
+func.func @warpgroup_mma_init_accumulator() {
+  // CHECK: %{{.*}} = nvgpu.warpgroup.mma.init.accumulator
+  // CHECK-SAME: -> <fragmented = vector<64x128xf32>>
+  %acc = nvgpu.warpgroup.mma.init.accumulator
+      -> !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>>
+  return
+}
+
+// CHECK-LABEL: func @warpgroup_mma_store
+func.func @warpgroup_mma_store(
+    %acc: !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>>,
+    %dst: memref<64x128xf32, 3>) {
+  // CHECK: nvgpu.warpgroup.mma.store %{{.*}}, %{{.*}} : <fragmented = vector<64x128xf32>> to memref<64x128xf32, 3>
+  nvgpu.warpgroup.mma.store %acc, %dst :
+      !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>>
+      to memref<64x128xf32, 3>
+  return
+}

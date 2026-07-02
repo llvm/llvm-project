@@ -35,7 +35,7 @@ which includes :ref:`C <c>`, :ref:`Objective-C <objc>`, :ref:`C++ <cxx>`, and
 language-specific information, please see the corresponding language
 specific section:
 
--  :ref:`C Language <c>`: K&R C, ANSI C89, ISO C90, C94 (C89+AMD1), C99 (+TC1,
+-  :ref:`C Language <c>`: K&R C, ANSI C89, ISO C90, C95 (C90+AMD1), C99 (+TC1,
    TC2, TC3), C11, C17, C23, and C2y.
 -  :ref:`Objective-C Language <objc>`: ObjC 1, ObjC 2, ObjC 2.1, plus
    variants depending on base language.
@@ -763,6 +763,10 @@ control the crash diagnostics.
    Like ``-fcrash-diagnostics-dir=<dir>``, specifies where to write the
    crash diagnostics files, but with lower precedence than the option.
 
+.. option:: -fcrash-diagnostics-tar=<path>
+
+  Specify where to write the crash diagnostics files as a tarball.
+
 Clang is also capable of generating preprocessed source file(s) and associated
 run script(s) even without a crash. This is especially useful when trying to
 generate a reproducer for warnings or errors while using modules.
@@ -936,6 +940,8 @@ Clang options that don't fit neatly into other categories.
   * ``no-compact-unwind`` - Only emit DWARF unwind when compact unwind encodings
     aren't available. This is the default for arm64.
   * ``always`` - Always emit DWARF unwind regardless.
+  * ``dwarf-only`` - Always emit DWARF unwind, and force compact unwind to defer
+    to DWARF.
   * ``default`` - Use the platform-specific default (``always`` for all
     non-arm64-platforms).
 
@@ -2346,6 +2352,36 @@ are listed below.
    - There are currently no guarantees about instructions used by other
      targets.
 
+.. option:: -fstrict-bool
+
+    ``bool`` values are stored to memory as 8-bit values on most targets. C and
+    C++ specify that it is undefined behavior to put a value other than 0 or 1
+    in the storage of a ``bool`` value, and with ``-fstrict-bool``, Clang
+    leverages this knowledge for optimization opportunities. When this
+    assumption is violated, for instance if invalid data is ``memcpy``ed over a
+    ``bool``, the optimized code can lead to memory corruption.
+    ``-fstrict-bool`` is enabled by default.
+
+.. option:: -fno-strict-bool[={truncate|nonzero}]
+
+    Disable optimizations based on the assumption that all ``bool`` values,
+    which are typically represented as 8-bit integers in memory, only ever
+    contain bit patterns 0 or 1. When ``=truncate`` is specified, a ``bool``
+    is true if its least significant bit is set, and false otherwise. When
+    ``=nonzero`` is specified, a ``bool`` is true when any bit is set, and
+    false otherwise. The default is ``=nonzero``.
+
+    ``-fno-strict-bool`` does not permit developers to store a value other
+    than 0 or 1 in a ``bool``: it is a safety net against mistakes, such as
+    ``memcpy``ing invalid data over a ``bool``. Using invalid ``bool`` bit
+    patterns is still undefined behavior, even as this option limits the
+    negative consequences. In particular, enabling the UBSan
+    ``-fsanitize=bool`` check will continue to trap for invalid ``bool``
+    values when ``-fno-strict-bool`` is also specified, and program parts
+    that were compiled without ``-fno-strict-bool`` (or by different
+    compilers that have no equivalent option) will continue to behave
+    erratically.
+
 .. option:: -fstrict-vtable-pointers
 
    Enable optimizations based on the strict rules for overwriting polymorphic
@@ -2749,9 +2785,13 @@ violates the strict aliasing rules. For example:
        if Clang is able to inline this function. */
   }
 
-Strict aliasing can be explicitly enabled with ``-fstrict-aliasing`` and
-disabled with ``-fno-strict-aliasing``. ``clang-cl`` defaults to
-``-fno-strict-aliasing``. Otherwise, Clang defaults to ``-fstrict-aliasing``.
+.. option:: -fstrict-aliasing, -fno-strict-aliasing
+
+Strict aliasing can be explicitly enabled with :option:`-fstrict-aliasing` and
+disabled with :option:`-fno-strict-aliasing`. Windows MSVC platforms and UEFI
+platforms default to :option:`-fno-strict-aliasing`. Otherwise, Clang defaults
+to :option:`-fstrict-aliasing`. These options may also be affected by
+:option:`-Ofast`.
 
 C and C++ specify slightly different rules for strict aliasing. To improve
 language interoperability, Clang allows two types to alias if either language
@@ -2769,7 +2809,7 @@ works in one version of Clang may not work in another because of changes to the
 optimizer. Clang provides a :doc:`TypeSanitizer` to help detect
 violations of the strict aliasing rules, but it is currently still experimental.
 Code that is known to violate strict aliasing should generally be built with
-``-fno-strict-aliasing`` if the violation cannot be fixed.
+:option:`-fno-strict-aliasing` if the violation cannot be fixed.
 
 Clang supports several ways to fix a violation of strict aliasing:
 
@@ -3992,7 +4032,7 @@ Differences between various standard modes
 ------------------------------------------
 
 clang supports the ``-std`` option, which changes what language mode clang uses.
-The supported modes for C are c89, gnu89, c94, c99, gnu99, c11, gnu11, c17,
+The supported modes for C are c89, gnu89, iso9899:199409 (for C95), c99, gnu99, c11, gnu11, c17,
 gnu17, c23, gnu23, c2y, gnu2y, and various aliases for those modes. If no ``-std``
 option is specified, clang defaults to gnu17 mode. Many C99 and C11 features
 are supported in earlier modes as a conforming extension, with a warning. Use
@@ -4154,6 +4194,11 @@ overrides these values.  It accepts a dotted version tuple, such as 19.00.23506.
 Changing the MSVC compatibility version makes clang behave more like that
 version of MSVC. For example, ``-fms-compatibility-version=19`` will enable
 C++14 features and define ``char16_t`` and ``char32_t`` as builtin types.
+
+For compatibility with existing MSVC behavior, ``-fms-compatibility`` also
+implicitly enables several other options, including ``-fno-strict-aliasing``,
+``-fwrapv`` and ``-fdelayed-template-parsing``. When MSVC compatibility is
+set to a version earlier than 19, it also enables ``-fno-threadsafe-statics``.
 
 .. _cxx:
 

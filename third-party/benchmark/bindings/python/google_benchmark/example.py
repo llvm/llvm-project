@@ -13,7 +13,8 @@
 # limitations under the License.
 """Example of Python using C++ benchmark framework.
 
-To run this example, you must first install the `google_benchmark` Python package.
+To run this example, you must first install the `google_benchmark` Python
+package.
 
 To install using `setup.py`, download and extract the `google_benchmark` source.
 In the extracted directory, execute:
@@ -21,6 +22,7 @@ In the extracted directory, execute:
 """
 
 import random
+import sys
 import time
 
 import google_benchmark as benchmark
@@ -57,10 +59,11 @@ def skipped(state):
         state.skip_with_error("some error")
         return  # NOTE: You must explicitly return, or benchmark will continue.
 
-    ...  # Benchmark code would be here.
+    # Benchmark code would be here.
 
 
 @benchmark.register
+@benchmark.option.use_manual_time()
 def manual_timing(state):
     while state:
         # Manually count Python CPU time
@@ -77,7 +80,6 @@ def custom_counters(state):
     num_foo = 0.0
     while state:
         # Benchmark some code here
-        pass
         # Collect some custom metric named foo
         num_foo += 0.13
 
@@ -136,4 +138,5 @@ def computing_complexity(state):
 
 
 if __name__ == "__main__":
+    benchmark.add_custom_context("python", sys.version)
     benchmark.main()

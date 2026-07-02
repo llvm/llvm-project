@@ -54,7 +54,6 @@ class TestCase(PExpectTest):
         # Try using the persistent variable from before.
         self.expect_repl("$persistent + 10", substrs=["(long) $2 = 17"])
 
-        self.quit()
 
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..

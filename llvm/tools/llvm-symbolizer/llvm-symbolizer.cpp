@@ -25,6 +25,7 @@
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
 #include "llvm/Debuginfod/BuildIDFetcher.h"
 #include "llvm/Debuginfod/Debuginfod.h"
+#include "llvm/HTTP/HTTPClient.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -33,7 +34,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/HTTP/HTTPClient.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/StringSaver.h"
@@ -496,6 +496,7 @@ int llvm_symbolizer_main(int argc, char **argv, const llvm::ToolContext &) {
   Opts.DefaultArch = Args.getLastArgValue(OPT_default_arch_EQ).str();
   Opts.Demangle = Args.hasFlag(OPT_demangle, OPT_no_demangle, !IsAddr2Line);
   Opts.DWPName = Args.getLastArgValue(OPT_dwp_EQ).str();
+  Opts.PDBName = Args.getLastArgValue(OPT_pdb_EQ).str();
   Opts.FallbackDebugPath =
       Args.getLastArgValue(OPT_fallback_debug_path_EQ).str();
   Opts.GsymFileDirectory = Args.getAllArgValues(OPT_gsym_file_directory_EQ);

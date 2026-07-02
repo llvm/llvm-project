@@ -21,8 +21,8 @@ cc_library(
     deps = select(
         {
             "//conditions:default": [],
-            "//libc:mpfr_external": ["@mpfr//:mpfr_external"],
-            "//libc:mpfr_system": ["@mpfr//:mpfr_system"],
+            "//libc:mpfr_external": ["@mpfr"],
+            "//libc:mpfr_system": ["//libc:libmpfr_system"],
         },
     ),
 )

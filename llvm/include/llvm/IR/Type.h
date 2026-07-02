@@ -257,16 +257,14 @@ public:
   bool isIntegerTy() const { return getTypeID() == IntegerTyID; }
 
   /// Return true if this is an IntegerType of the given width.
-  LLVM_ABI bool isIntegerTy(unsigned Bitwidth) const;
+  LLVM_ABI inline bool isIntegerTy(unsigned BitWidth) const;
 
   /// Return true if this is an integer type or a vector of integer types.
   bool isIntOrIntVectorTy() const { return getScalarType()->isIntegerTy(); }
 
   /// Return true if this is an integer type or a vector of integer types of
   /// the given width.
-  bool isIntOrIntVectorTy(unsigned BitWidth) const {
-    return getScalarType()->isIntegerTy(BitWidth);
-  }
+  LLVM_ABI inline bool isIntOrIntVectorTy(unsigned BitWidth) const;
 
   /// Return true if this is an integer type or a pointer type.
   bool isIntOrPtrTy() const { return isIntegerTy() || isPointerTy(); }
@@ -443,6 +441,10 @@ public:
   /// Given scalar/vector integer type, returns a type with elements twice as
   /// wide as in the original type. For vectors, preserves element count.
   LLVM_ABI inline Type *getExtendedType() const;
+
+  /// Given scalar/vector integer type, returns a type with elements half as
+  /// wide as in the original type. For vectors, preserves element count.
+  LLVM_ABI inline Type *getTruncatedType() const;
 
   /// Get the address space of this pointer or pointer vector type.
   LLVM_ABI inline unsigned getPointerAddressSpace() const;

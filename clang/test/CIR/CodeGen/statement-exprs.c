@@ -13,8 +13,8 @@ int f19(void) {
 // LLVM-DAG: @[[TEST3_S:.*]] = private constant %struct.S { i32 1 }
 
 // CIR: cir.func {{.*}} @f19() -> !s32i
-// CIR:   %[[RETVAL:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
-// CIR:   %[[TMP:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["tmp"]
+// CIR:   %[[RETVAL:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[TMP:.+]] = cir.alloca "tmp" {{.*}} : !cir.ptr<!s32i>
 // CIR:   cir.scope {
 // CIR:     %[[C4:.+]] = cir.const #cir.int<4> : !s32i
 // CIR:     cir.store {{.*}} %[[C4]], %[[TMP]] : !s32i, !cir.ptr<!s32i>
@@ -64,23 +64,23 @@ int nested(void) {
 }
 
 // CIR: cir.func {{.*}} @nested() -> !s32i
-// CIR:   %[[RETVAL:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
-// CIR:   %[[TMP_OUTER:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["tmp"]
+// CIR:   %[[RETVAL:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[TMP_OUTER:.+]] = cir.alloca "tmp" {{.*}} : !cir.ptr<!s32i>
 // CIR:   cir.scope {
 // CIR:     %[[C123_OUTER:.+]] = cir.const #cir.int<123> : !s32i
 // CIR:     cir.store {{.*}} %[[C123_OUTER]], %[[TMP_OUTER]] : !s32i, !cir.ptr<!s32i>
 // CIR:   }
 // CIR:   %[[LOAD_TMP_OUTER:.+]] = cir.load {{.*}} %[[TMP_OUTER]] : !cir.ptr<!s32i>, !s32i
 // CIR:   cir.scope {
-// CIR:     %[[BAR:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["bar", init]
-// CIR:     %[[TMP_BARRET:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["tmp"]
+// CIR:     %[[BAR:.+]] = cir.alloca "bar" {{.*}} init : !cir.ptr<!s32i>
+// CIR:     %[[TMP_BARRET:.+]] = cir.alloca "tmp" {{.*}} : !cir.ptr<!s32i>
 // CIR:     %[[C987:.+]] = cir.const #cir.int<987> : !s32i
 // CIR:     cir.store {{.*}} %[[C987]], %[[BAR]] : !s32i, !cir.ptr<!s32i>
 // CIR:     cir.scope {
-// CIR:       %[[TMP1:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["tmp"]
-// CIR:       %[[TMP2:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["tmp"]
+// CIR:       %[[TMP1:.+]] = cir.alloca "tmp" {{.*}} : !cir.ptr<!s32i>
+// CIR:       %[[TMP2:.+]] = cir.alloca "tmp" {{.*}} : !cir.ptr<!s32i>
 // CIR:       cir.scope {
-// CIR:         %[[ASDF:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["asdf", init]
+// CIR:         %[[ASDF:.+]] = cir.alloca "asdf" {{.*}} init : !cir.ptr<!s32i>
 // CIR:         %[[C123_INNER:.+]] = cir.const #cir.int<123> : !s32i
 // CIR:         cir.store {{.*}} %[[C123_INNER]], %[[ASDF]] : !s32i, !cir.ptr<!s32i>
 // CIR:         %[[LOAD_ASDF:.+]] = cir.load {{.*}} %[[ASDF]] : !cir.ptr<!s32i>, !s32i
@@ -194,9 +194,9 @@ void empty2() { ({ }); }
 // Yields an out-of-scope scalar.
 void test2() { ({int x = 3; x; }); }
 // CIR: cir.func {{.*}} @test2
-// CIR: %[[RETVAL:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>
+// CIR: %[[RETVAL:.+]] = cir.alloca {{.*}} : !cir.ptr<!s32i>
 // CIR: cir.scope {
-// CIR:   %[[VAR:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
+// CIR:   %[[VAR:.+]] = cir.alloca "x" {{.*}} init : !cir.ptr<!s32i>
 //          [...]
 // CIR:   %[[TMP:.+]] = cir.load{{.*}} %[[VAR]] : !cir.ptr<!s32i>, !s32i
 // CIR:   cir.store{{.*}} %[[TMP]], %[[RETVAL]] : !s32i, !cir.ptr<!s32i>
@@ -229,42 +229,36 @@ void test2() { ({int x = 3; x; }); }
 struct S { int x; };
 int test3() { return ({ struct S s = {1}; s; }).x; }
 // CIR: cir.func {{.*}} @test3() -> !s32i
-// CIR:   %[[RETVAL:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CIR:   %[[RETVAL:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[REF_TMP0:.+]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_S>
+// CIR:   %[[TMP:.+]] = cir.alloca "tmp" {{.*}} : !cir.ptr<!rec_S>
 // CIR:   cir.scope {
-// CIR:     %[[REF_TMP0:.+]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["ref.tmp0"]
-// CIR:     %[[TMP:.+]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["tmp"]
-// CIR:     cir.scope {
-// CIR:       %[[S:.+]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["s", init]
-// CIR:       %[[CONST:.*]] = cir.get_global @[[TEST3_S]] : !cir.ptr<!rec_S>
-// CIR:       cir.copy %[[CONST]] to %[[S]] : !cir.ptr<!rec_S>
-// CIR:       cir.copy %[[S]] to %[[REF_TMP0]] : !cir.ptr<!rec_S>
-// CIR:     }
-// CIR:     %[[GEP_X_TMP:.+]] = cir.get_member %[[REF_TMP0]][0] {name = "x"} : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
-// CIR:     %[[XVAL:.+]] = cir.load {{.*}} %[[GEP_X_TMP]] : !cir.ptr<!s32i>, !s32i
-// CIR:     cir.store{{.*}} %[[XVAL]], %[[RETVAL]] : !s32i, !cir.ptr<!s32i>
+// CIR:     %[[S:.+]] = cir.alloca "s" {{.*}} init : !cir.ptr<!rec_S>
+// CIR:     %[[CONST:.*]] = cir.get_global @[[TEST3_S]] : !cir.ptr<!rec_S>
+// CIR:     cir.copy %[[CONST]] to %[[S]] : !cir.ptr<!rec_S>
+// CIR:     cir.copy %[[S]] align(4) to %[[REF_TMP0]] align(4) : !cir.ptr<!rec_S>
 // CIR:   }
+// CIR:   %[[GEP_X_TMP:.+]] = cir.get_member %[[REF_TMP0]][0] {name = "x"} : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
+// CIR:   %[[XVAL:.+]] = cir.load {{.*}} %[[GEP_X_TMP]] : !cir.ptr<!s32i>, !s32i
+// CIR:   cir.store{{.*}} %[[XVAL]], %[[RETVAL]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[RES:.+]] = cir.load %[[RETVAL]] : !cir.ptr<!s32i>, !s32i
 // CIR:   cir.return %[[RES]] : !s32i
 
 // LLVM: define dso_local i32 @test3()
 // LLVM:   %[[VAR1:.+]] = alloca %struct.S, i64 1
-// LLVM:   %[[VAR2:.+]] = alloca %struct.S, i64 1
+// LLVM:   %[[VAR2:.+]] = alloca i32, i64 1
 // LLVM:   %[[VAR3:.+]] = alloca %struct.S, i64 1
-// LLVM:   %[[VAR4:.+]] = alloca i32, i64 1
+// LLVM:   %[[VAR4:.+]] = alloca %struct.S, i64 1
 // LLVM:   br label %[[LBL5:.+]]
 // LLVM: [[LBL5]]:
+// LLVM:     call void @llvm.memcpy{{.*}}(ptr align 4 %[[VAR1]], ptr align 4 @[[TEST3_S]], i64 4, i1 false)
+// LLVM:     call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[VAR3]], ptr align 4 %[[VAR1]], i64 4, i1 false)
 // LLVM:     br label %[[LBL6:.+]]
 // LLVM: [[LBL6]]:
-// LLVM:     call void @llvm.memcpy{{.*}}(ptr %[[VAR3]], ptr @[[TEST3_S]], i64 4, i1 false)
-// LLVM:     call void @llvm.memcpy.p0.p0.i64(ptr %[[VAR1]], ptr %[[VAR3]], i64 4, i1 false)
-// LLVM:     br label %[[LBL8:.+]]
-// LLVM: [[LBL8]]:
-// LLVM:     %[[GEP_VAR1:.+]] = getelementptr %struct.S, ptr %[[VAR1]], i32 0, i32 0
-// LLVM:     %[[LOAD_X:.+]] = load i32, ptr %[[GEP_VAR1]]
-// LLVM:     store i32 %[[LOAD_X]], ptr %[[VAR4]]
-// LLVM:     br label %[[LBL11:.+]]
-// LLVM: [[LBL11]]:
-// LLVM:     %[[RES:.+]] = load i32, ptr %[[VAR4]]
+// LLVM:     %[[GEP_VAR3:.+]] = getelementptr inbounds nuw %struct.S, ptr %[[VAR3]], i32 0, i32 0
+// LLVM:     %[[LOAD_X:.+]] = load i32, ptr %[[GEP_VAR3]]
+// LLVM:     store i32 %[[LOAD_X]], ptr %[[VAR2]]
+// LLVM:     %[[RES:.+]] = load i32, ptr %[[VAR2]]
 // LLVM:     ret i32 %[[RES]]
 
 // OGCG: define dso_local i32 @test3()

@@ -71,6 +71,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
@@ -195,6 +196,25 @@ static constexpr OptionEnumValueElement s_stop_show_column_values[] = {
     },
 };
 
+static constexpr OptionEnumValueElement g_show_autosuggestion_enum_values[] = {
+    {
+        eAutosuggestionOff,
+        "false",
+        "Do not show any autosuggestion.",
+    },
+    {
+        eAutosuggestionOn,
+        "true",
+        "Show a suggestion sourced from previously entered commands.",
+    },
+    {
+        eAutosuggestionTabMode,
+        "tab-mode",
+        "Show the prefix that tab completion would insert for the current "
+        "line.",
+    },
+};
+
 #define LLDB_PROPERTIES_debugger
 #include "CoreProperties.inc"
 
@@ -213,7 +233,7 @@ enum {
 };
 #endif
 
-static const FileSpecList &GetDefaultSafeAutoLoadPaths() {
+const FileSpecList &Debugger::GetDefaultSafeAutoLoadPaths() {
   static const FileSpecList sSafePaths = [] {
     // FIXME: in c++20 this could be a std::array (with CTAD deduced size)
     // and we could statically assert that all members are non-empty.
@@ -328,7 +348,8 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
       std::lock_guard<std::mutex> guard(m_statusline_mutex);
       if (StatuslineSupported()) {
         m_statusline.emplace(*this);
-        m_statusline->Enable(GetSelectedExecutionContextRef());
+        m_statusline->Enable(
+            GetSelectedExecutionContextRef(/*adopt_dummy_target=*/true));
       } else {
         m_statusline.reset();
       }
@@ -462,19 +483,7 @@ uint64_t Debugger::GetTerminalWidth() const {
 }
 
 bool Debugger::SetTerminalWidth(uint64_t term_width) {
-  const uint32_t idx = ePropertyTerminalWidth;
-  const bool success = SetPropertyAtIndex(idx, term_width);
-
-  if (auto handler_sp = m_io_handler_stack.Top())
-    handler_sp->TerminalSizeChanged();
-
-  {
-    std::lock_guard<std::mutex> guard(m_statusline_mutex);
-    if (m_statusline)
-      m_statusline->TerminalSizeChanged();
-  }
-
-  return success;
+  return SetTerminalDimensions(term_width, GetTerminalHeight());
 }
 
 uint64_t Debugger::GetTerminalHeight() const {
@@ -484,8 +493,17 @@ uint64_t Debugger::GetTerminalHeight() const {
 }
 
 bool Debugger::SetTerminalHeight(uint64_t term_height) {
-  const uint32_t idx = ePropertyTerminalHeight;
-  const bool success = SetPropertyAtIndex(idx, term_height);
+  return SetTerminalDimensions(GetTerminalWidth(), term_height);
+}
+
+bool Debugger::SetTerminalDimensions(uint64_t term_width,
+                                     uint64_t term_height) {
+  // Set both properties before notifying, so observers never recompute from a
+  // mix of fresh and stale dimensions.
+  const bool width_success =
+      SetPropertyAtIndex(ePropertyTerminalWidth, term_width);
+  const bool height_success =
+      SetPropertyAtIndex(ePropertyTerminalHeight, term_height);
 
   if (auto handler_sp = m_io_handler_stack.Top())
     handler_sp->TerminalSizeChanged();
@@ -496,7 +514,7 @@ bool Debugger::SetTerminalHeight(uint64_t term_height) {
       m_statusline->TerminalSizeChanged();
   }
 
-  return success;
+  return width_success && height_success;
 }
 
 bool Debugger::GetUseExternalEditor() const {
@@ -602,10 +620,11 @@ bool Debugger::SetSeparator(llvm::StringRef s) {
   return ret;
 }
 
-bool Debugger::GetUseAutosuggestion() const {
+AutosuggestionMode Debugger::GetAutosuggestionMode() const {
   const uint32_t idx = ePropertyShowAutosuggestion;
-  return GetPropertyAtIndexAs<bool>(
-      idx, g_debugger_properties[idx].default_uint_value != 0);
+  return GetPropertyAtIndexAs<AutosuggestionMode>(
+      idx, static_cast<AutosuggestionMode>(
+               g_debugger_properties[idx].default_uint_value));
 }
 
 llvm::StringRef Debugger::GetAutosuggestionAnsiPrefix() const {
@@ -1105,22 +1124,6 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   if (!GetOutputFileSP()->GetIsTerminalWithColors())
     disable_color();
 
-  if (Diagnostics::Enabled()) {
-    m_diagnostics_callback_id = Diagnostics::Instance().AddCallback(
-        [this](const FileSpec &dir) -> llvm::Error {
-          for (auto &entry : m_stream_handlers) {
-            llvm::StringRef log_path = entry.first();
-            llvm::StringRef file_name = llvm::sys::path::filename(log_path);
-            FileSpec destination = dir.CopyByAppendingPathComponent(file_name);
-            std::error_code ec =
-                llvm::sys::fs::copy_file(log_path, destination.GetPath());
-            if (ec)
-              return llvm::errorCodeToError(ec);
-          }
-          return llvm::Error::success();
-        });
-  }
-
 #if defined(_WIN32) && defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
   // Enabling use of ANSI color codes because LLDB is using them to highlight
   // text.
@@ -1166,9 +1169,6 @@ void Debugger::Clear() {
     GetInputFile().Close();
 
     m_command_interpreter_up->Clear();
-
-    if (Diagnostics::Enabled())
-      Diagnostics::Instance().RemoveCallback(m_diagnostics_callback_id);
   });
 }
 
@@ -1270,7 +1270,8 @@ void Debugger::RestoreInputTerminalState() {
   {
     std::lock_guard<std::mutex> guard(m_statusline_mutex);
     if (m_statusline)
-      m_statusline->Enable(GetSelectedExecutionContext());
+      m_statusline->Enable(
+          GetSelectedExecutionContext(/*adopt_dummy_target=*/true));
   }
 }
 
@@ -1284,17 +1285,31 @@ void Debugger::RedrawStatusline(
   m_statusline->Redraw(exe_ctx_ref);
 }
 
-ExecutionContext Debugger::GetSelectedExecutionContext() {
-  bool adopt_selected = true;
-  ExecutionContextRef exe_ctx_ref(GetSelectedTarget().get(), adopt_selected);
-  return ExecutionContext(exe_ctx_ref);
+void Debugger::FlushStatusLine() {
+  std::lock_guard<std::mutex> guard(m_statusline_mutex);
+
+  if (!m_statusline)
+    return;
+
+  m_statusline->ClearExecutionContext();
 }
 
-ExecutionContextRef Debugger::GetSelectedExecutionContextRef() {
-  if (TargetSP selected_target_sp = GetSelectedTarget())
+ExecutionContext
+Debugger::GetSelectedExecutionContext(bool adopt_dummy_target) {
+  return ExecutionContext(GetSelectedExecutionContextRef(adopt_dummy_target));
+}
+
+ExecutionContextRef
+Debugger::GetSelectedExecutionContextRef(bool adopt_dummy_target) {
+  if (TargetSP selected_target_sp = m_target_list.GetSelectedTarget())
     return ExecutionContextRef(selected_target_sp.get(),
                                /*adopt_selected=*/true);
-  return ExecutionContextRef(m_dummy_target_sp.get(), /*adopt_selected=*/false);
+
+  if (adopt_dummy_target)
+    return ExecutionContextRef(m_dummy_target_sp.get(),
+                               /*adopt_selected=*/false);
+
+  return ExecutionContextRef();
 }
 
 void Debugger::DispatchInputInterrupt() {
@@ -1679,6 +1694,20 @@ void Debugger::SetLoggingCallback(lldb::LogOutputCallback log_callback,
       std::make_shared<CallbackLogHandler>(log_callback, baton);
 }
 
+std::vector<std::string>
+Debugger::CopyLogFilesToDirectory(const FileSpec &dir) {
+  std::vector<std::string> copied;
+  for (auto &entry : m_stream_handlers) {
+    llvm::StringRef log_path = entry.first();
+    llvm::StringRef file_name = llvm::sys::path::filename(log_path);
+    FileSpec destination = dir.CopyByAppendingPathComponent(file_name);
+    // Best-effort: skip logs that can't be copied rather than aborting.
+    if (!llvm::sys::fs::copy_file(log_path, destination.GetPath()))
+      copied.push_back(file_name.str());
+  }
+  return copied;
+}
+
 void Debugger::SetDestroyCallback(
     lldb_private::DebuggerDestroyCallback destroy_callback, void *baton) {
   std::lock_guard<std::mutex> guard(m_destroy_callback_mutex);
@@ -1793,7 +1822,7 @@ void Debugger::ReportDiagnosticImpl(Severity severity, std::string message,
     // The diagnostic subsystem is optional but we still want to broadcast
     // events when it's disabled.
     if (Diagnostics::Enabled())
-      Diagnostics::Instance().Report(message);
+      Diagnostics::Instance().Record(message);
 
     // We don't broadcast info events.
     if (severity == lldb::eSeverityInfo)
@@ -1871,11 +1900,11 @@ CreateLogHandler(LogHandlerKind log_handler_kind, int fd, bool should_close,
   return {};
 }
 
-bool Debugger::EnableLog(llvm::StringRef channel,
-                         llvm::ArrayRef<const char *> categories,
-                         llvm::StringRef log_file, uint32_t log_options,
-                         size_t buffer_size, LogHandlerKind log_handler_kind,
-                         llvm::raw_ostream &error_stream) {
+llvm::Error Debugger::EnableLog(llvm::StringRef channel,
+                                llvm::ArrayRef<const char *> categories,
+                                llvm::StringRef log_file, uint32_t log_options,
+                                size_t buffer_size,
+                                LogHandlerKind log_handler_kind) {
 
   std::shared_ptr<LogHandler> log_handler_sp;
   if (m_callback_handler_sp) {
@@ -1900,11 +1929,10 @@ bool Debugger::EnableLog(llvm::StringRef channel,
         flags |= File::eOpenOptionTruncate;
       llvm::Expected<FileUP> file = FileSystem::Instance().Open(
           FileSpec(log_file), flags, lldb::eFilePermissionsFileDefault, false);
-      if (!file) {
-        error_stream << "Unable to open log file '" << log_file
-                     << "': " << llvm::toString(file.takeError()) << "\n";
-        return false;
-      }
+      if (!file)
+        return llvm::createStringErrorV("Unable to open log file '{}': {}",
+                                        log_file,
+                                        llvm::fmt_consume(file.takeError()));
 
       log_handler_sp =
           CreateLogHandler(log_handler_kind, (*file)->GetDescriptor(),
@@ -1917,8 +1945,8 @@ bool Debugger::EnableLog(llvm::StringRef channel,
   if (log_options == 0)
     log_options = LLDB_LOG_OPTION_PREPEND_THREAD_NAME;
 
-  return Log::EnableLogChannel(log_handler_sp, log_options, channel, categories,
-                               error_stream);
+  return Log::EnableLogChannel(log_handler_sp, log_options, channel,
+                               categories);
 }
 
 ScriptInterpreter *
@@ -2231,7 +2259,8 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
     std::lock_guard<std::mutex> guard(m_statusline_mutex);
     if (!m_statusline) {
       m_statusline.emplace(*this);
-      m_statusline->Enable(GetSelectedExecutionContextRef());
+      m_statusline->Enable(
+          GetSelectedExecutionContextRef(/*adopt_dummy_target=*/true));
     }
   }
 
@@ -2246,10 +2275,19 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
           uint32_t event_type = event_sp->GetType();
           llvm::StringRef broadcaster_class(broadcaster->GetBroadcasterClass());
           if (broadcaster_class == broadcaster_class_process) {
-            if (ProcessSP process_sp = HandleProcessEvent(event_sp))
+            if (ProcessSP process_sp = HandleProcessEvent(event_sp)) {
+              // Don't pass adopt_selected = true if this is a stop for an
+              // auto-continue event (e.g. an auto-continue breakpoint).  We
+              // would be fetching stale state, since the process resumed since
+              // this event, and we'd needlessly interrupt the target to do so.
+              const bool adopt_selected =
+                  process_sp->GetPrivateState() == eStateStopped &&
+                  !Process::ProcessEventData::GetRestartedFromEvent(
+                      event_sp.get());
               if (!RequiresFollowChildWorkaround(*process_sp))
-                exe_ctx_ref = ExecutionContextRef(process_sp.get(),
-                                                  /*adopt_selected=*/true);
+                exe_ctx_ref =
+                    ExecutionContextRef(process_sp.get(), adopt_selected);
+            }
           } else if (broadcaster_class == broadcaster_class_target) {
             if (Breakpoint::BreakpointEventData::GetEventDataFromEvent(
                     event_sp.get())) {
@@ -2591,16 +2629,4 @@ StructuredData::DictionarySP Debugger::GetBuildConfiguration() {
       "A boolean value that indicates if lua support is enabled in LLDB");
   AddLLVMTargets(*config_up);
   return config_up;
-}
-
-FileSpecList Debugger::GetSafeAutoLoadPaths() {
-  FileSpecList fspecs = GetDefaultSafeAutoLoadPaths();
-
-#ifndef NDEBUG
-  for (const auto &fspec :
-       TestingProperties::GetGlobalTestingProperties().GetSafeAutoLoadPaths())
-    fspecs.Append(fspec);
-#endif
-
-  return fspecs;
 }

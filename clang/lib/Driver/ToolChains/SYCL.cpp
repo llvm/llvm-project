@@ -19,16 +19,53 @@ SYCLInstallationDetector::SYCLInstallationDetector(
     const Driver &D, const llvm::Triple &HostTriple,
     const llvm::opt::ArgList &Args)
     : D(D) {
-  // Detect the presence of the SYCL runtime library (libsycl.so) in the
-  // filesystem. This is used to determine whether a usable SYCL installation
-  // is available for the current driver invocation.
+  // When -fsycl is active, locate the SYCL runtime library and record its
+  // directory in SYCLRTLibPath for use by the linker.
   StringRef SysRoot = D.SysRoot;
   SmallString<128> DriverDir(D.Dir);
-  if (DriverDir.starts_with(SysRoot) &&
-      (Args.hasArg(options::OPT_fsycl) ||
-       D.getVFS().exists(DriverDir + "/../lib/libsycl.so"))) {
-    llvm::sys::path::append(DriverDir, "..", "lib");
-    SYCLRTLibPath = DriverDir;
+
+  if (HostTriple.isWindowsMSVCEnvironment() ||
+      HostTriple.isWindowsItaniumEnvironment()) {
+    // Windows: Check for LLVMSYCL.lib
+    // NOTE: Only checks for LLVMSYCL.lib existence (release variant).
+    // Debug vs release library selection happens at link time based on CRT
+    // flags.
+    if (DriverDir.starts_with(SysRoot) &&
+        Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false)) {
+      SmallString<128> LibDir(DriverDir);
+      llvm::sys::path::append(LibDir, "..", "lib");
+
+      // Verify SYCL runtime library exists
+      SmallString<128> SYCLLibPath(LibDir);
+      llvm::sys::path::append(SYCLLibPath, "LLVMSYCL.lib");
+
+      if (D.getVFS().exists(SYCLLibPath))
+        SYCLRTLibPath = LibDir;
+    }
+  } else {
+    // Linux/Unix: Check for libLLVMSYCL.so
+    SmallString<128> LibPath(DriverDir);
+    llvm::sys::path::append(LibPath, "..", "lib", HostTriple.str(),
+                            "libLLVMSYCL.so");
+    // Flat lib path for LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF builds,
+    // where the library is installed directly in lib/ with no triple subdir.
+    SmallString<128> FlatLibPath(DriverDir);
+    llvm::sys::path::append(FlatLibPath, "..", "lib", "libLLVMSYCL.so");
+
+    if (DriverDir.starts_with(SysRoot) &&
+        Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false)) {
+      // LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON: library is in lib/<triple>/
+      if (D.getVFS().exists(LibPath))
+        llvm::sys::path::append(DriverDir, "..", "lib", HostTriple.str());
+      // LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF: library is in lib/
+      else if (D.getVFS().exists(FlatLibPath))
+        llvm::sys::path::append(DriverDir, "..", "lib");
+      else
+        return; // Neither path exists : broken install, leave SYCLRTLibPath
+                // unset
+
+      SYCLRTLibPath = DriverDir;
+    }
   }
 }
 
@@ -91,16 +128,15 @@ SYCLToolChain::SYCLToolChain(const Driver &D, const llvm::Triple &Triple,
 
 void SYCLToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadingKind) const {
-  HostTC.addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadingKind);
+    BoundArch BA, Action::OffloadKind DeviceOffloadingKind) const {
+  HostTC.addClangTargetOptions(DriverArgs, CC1Args, BA, DeviceOffloadingKind);
 }
 
 llvm::opt::DerivedArgList *
 SYCLToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
-                             StringRef BoundArch,
+                             BoundArch BA,
                              Action::OffloadKind DeviceOffloadKind) const {
-  DerivedArgList *DAL =
-      HostTC.TranslateArgs(Args, BoundArch, DeviceOffloadKind);
+  DerivedArgList *DAL = HostTC.TranslateArgs(Args, BA, DeviceOffloadKind);
 
   bool IsNewDAL = false;
   if (!DAL) {
@@ -136,10 +172,10 @@ SYCLToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
   }
 
   const OptTable &Opts = getDriver().getOpts();
-  if (!BoundArch.empty()) {
+  if (BA) {
     DAL->eraseArg(options::OPT_march_EQ);
     DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
-                      BoundArch);
+                      BA.ArchName);
   }
   return DAL;
 }

@@ -7,6 +7,7 @@ from lldbsuite.test.lldbtest import *
 import lldbdap_testcase
 
 
+@skipIfWasm  # data breakpoints map to watchpoints
 class TestDAP_setDataBreakpoints(lldbdap_testcase.DAPTestCaseBase):
     def setUp(self):
         lldbdap_testcase.DAPTestCaseBase.setUp(self)
@@ -108,7 +109,8 @@ class TestDAP_setDataBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         self.build_and_launch(program)
         source = "main.cpp"
         first_loop_break_line = line_number(source, "// first loop breakpoint")
-        self.set_source_breakpoints(source, [first_loop_break_line])
+        first_bp_ids = self.set_source_breakpoints(source, [first_loop_break_line])
+        self.assertEqual(len(first_bp_ids), 1)
         self.continue_to_next_stop()
         self.dap_server.get_local_variables()
         locals_ref = self.get_locals_scope_reference()
@@ -149,6 +151,14 @@ class TestDAP_setDataBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(arr_2["value"], "42")
         self.assertEqual(i_val, "2")
         self.dap_server.request_setDataBreakpoint([])
+
+        # Verify breakpoints are unique.
+        all_breakpoints = set(
+            [first_bp_ids[0], breakpoints[0]["id"], breakpoints[1]["id"]]
+        )
+        self.assertEqual(
+            len(all_breakpoints), 3, f"found breakpoints {all_breakpoints}"
+        )
 
         # Test hit condition
         second_loop_break_line = line_number(source, "// second loop breakpoint")

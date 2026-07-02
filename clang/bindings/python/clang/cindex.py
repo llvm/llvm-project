@@ -1453,6 +1453,9 @@ class CursorKind(BaseEnumeration):
     # OpenMP fuse directive.
     OMP_FUSE_DIRECTIVE = 311
 
+    # OpenMP split directive.
+    OMP_SPLIT_DIRECTIVE = 312
+
     # OpenACC Compute Construct.
     OPEN_ACC_COMPUTE_DIRECTIVE = 320
 
@@ -2650,6 +2653,7 @@ class TypeKind(BaseEnumeration):
     HLSLRESOURCE = 179
     HLSLATTRIBUTEDRESOURCE = 180
     HLSLINLINESPIRV = 181
+    PREDEFINEDSUGAR = 182
 
 class RefQualifierKind(BaseEnumeration):
     """Describes a specific ref-qualifier of a type."""

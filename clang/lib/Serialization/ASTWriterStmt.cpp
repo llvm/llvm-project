@@ -1250,6 +1250,7 @@ void ASTStmtWriter::VisitInitListExpr(InitListExpr *E) {
     for (unsigned I = 0, N = E->getNumInits(); I != N; ++I)
       Record.AddStmt(E->getInit(I));
   }
+  Record.writeBool(E->isExplicit());
   Code = serialization::EXPR_INIT_LIST;
 }
 
@@ -1339,7 +1340,6 @@ void ASTStmtWriter::VisitSourceLocExpr(SourceLocExpr *E) {
 void ASTStmtWriter::VisitEmbedExpr(EmbedExpr *E) {
   VisitExpr(E);
   Record.AddSourceLocation(E->getBeginLoc());
-  Record.AddSourceLocation(E->getEndLoc());
   Record.AddStmt(E->getDataStringLiteral());
   Record.writeUInt32(E->getStartingElementPos());
   Record.writeUInt32(E->getDataElementCount());
@@ -1770,10 +1770,11 @@ void ASTStmtWriter::VisitMSDependentExistsStmt(MSDependentExistsStmt *S) {
 void ASTStmtWriter::VisitCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
   VisitCallExpr(E);
   Record.push_back(E->getOperator());
+  Record.push_back(E->isReversed());
   Record.AddSourceLocation(E->BeginLoc);
 
   if (!E->hasStoredFPFeatures() && !static_cast<bool>(E->getADLCallKind()) &&
-      !E->isCoroElideSafe() && !E->usesMemberSyntax())
+      !E->isCoroElideSafe() && !E->usesMemberSyntax() && !E->isReversed())
     AbbrevToUse = Writer.getCXXOperatorCallExprAbbrev();
 
   Code = serialization::EXPR_CXX_OPERATOR_CALL;
@@ -2297,10 +2298,10 @@ void ASTStmtWriter::VisitSubstNonTypeTemplateParmExpr(
                                               SubstNonTypeTemplateParmExpr *E) {
   VisitExpr(E);
   Record.AddDeclRef(E->getAssociatedDecl());
-  CurrentPackingBits.addBit(E->isReferenceParameter());
+  CurrentPackingBits.addBit(E->getFinal());
   CurrentPackingBits.addBits(E->getIndex(), /*Width=*/12);
   Record.writeUnsignedOrNone(E->getPackIndex());
-  CurrentPackingBits.addBit(E->getFinal());
+  Record.AddTypeRef(E->getParameterType());
 
   Record.AddSourceLocation(E->getNameLoc());
   Record.AddStmt(E->getReplacement());
@@ -2544,6 +2545,11 @@ void ASTStmtWriter::VisitOMPReverseDirective(OMPReverseDirective *D) {
 void ASTStmtWriter::VisitOMPInterchangeDirective(OMPInterchangeDirective *D) {
   VisitOMPCanonicalLoopNestTransformationDirective(D);
   Code = serialization::STMT_OMP_INTERCHANGE_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPSplitDirective(OMPSplitDirective *D) {
+  VisitOMPCanonicalLoopNestTransformationDirective(D);
+  Code = serialization::STMT_OMP_SPLIT_DIRECTIVE;
 }
 
 void ASTStmtWriter::VisitOMPCanonicalLoopSequenceTransformationDirective(

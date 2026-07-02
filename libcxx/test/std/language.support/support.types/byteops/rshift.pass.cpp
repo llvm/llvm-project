@@ -6,33 +6,73 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++17
+
+// template<class IntType>
+//   constexpr byte operator>>(byte b, IntType shift) noexcept;
+// Constraints: is_integral_v<IntType> is true.
+
+#include <cassert>
 #include <cstddef>
-#include <test_macros.h>
+#include <type_traits>
 
-// UNSUPPORTED: c++03, c++11, c++14
+#include "type_algorithms.h"
 
-// template <class IntegerType>
-//    constexpr byte operator <<(byte b, IntegerType shift) noexcept;
-// These functions shall not participate in overload resolution unless
-//   is_integral_v<IntegerType> is true.
+template <class, class = void>
+constexpr bool can_shr_byte = false;
+template <class T>
+constexpr bool can_shr_byte<T, std::void_t<decltype(std::byte{} >> T{})>> = true;
 
+struct test_functor {
+  template <class I>
+  constexpr void operator()() const {
+    static_assert(can_shr_byte<I>);
+    static_assert(noexcept(std::byte{} >> I{}));
+    static_assert(std::is_same_v<decltype(std::byte{} >> I{}), std::byte>);
 
-constexpr std::byte test(std::byte b) {
-    return b <<= 2;
-    }
+    std::byte b100{100};
+    std::byte b115{115};
 
+    assert(std::to_integer<int>(b100 >> 1) == 50);
+    assert(std::to_integer<int>(b100 >> 2) == 25);
+    assert(std::to_integer<int>(b115 >> 3) == 14);
+    assert(std::to_integer<int>(b115 >> 6) == 1);
+  }
+};
+
+struct test_failing_functor {
+  template <class T>
+  constexpr void operator()() const {
+    static_assert(!can_shr_byte<T>);
+  }
+};
+
+constexpr void test_bool(std::byte b) {
+  static_assert(noexcept(b >> true));
+  static_assert(std::is_same_v<decltype(b >> true), std::byte>);
+
+  assert(std::to_integer<int>(b >> true) == std::to_integer<int>(b) >> 1);
+  assert(std::to_integer<int>(b >> false) == std::to_integer<int>(b));
+}
+
+constexpr bool test() {
+  types::for_each(types::integer_types{}, test_functor{});
+  types::for_each(types::floating_point_types{}, test_failing_functor{});
+  types::for_each(types::type_list<void*, std::nullptr_t, void, int()>{}, test_failing_functor{});
+
+  test_bool(std::byte{0});
+  test_bool(std::byte{1});
+  test_bool(std::byte{127});
+  test_bool(std::byte{128});
+  test_bool(std::byte{129});
+  test_bool(std::byte{255});
+
+  return true;
+}
 
 int main(int, char**) {
-    constexpr std::byte b100{static_cast<std::byte>(100)};
-    constexpr std::byte b115{static_cast<std::byte>(115)};
-
-    static_assert(noexcept(b100 << 2), "" );
-
-    static_assert(std::to_integer<int>(b100 >> 1) ==  50, "");
-    static_assert(std::to_integer<int>(b100 >> 2) ==  25, "");
-    static_assert(std::to_integer<int>(b115 >> 3) ==  14, "");
-    static_assert(std::to_integer<int>(b115 >> 6) ==   1, "");
-
+  test();
+  static_assert(test());
 
   return 0;
 }

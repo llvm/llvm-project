@@ -24,7 +24,7 @@ end subroutine
 ! CHECK-DAG: %[[A_MAP:.*]] = omp.map.info var_ptr(%[[A_DECL]]#1 : {{.*}}) {{.*}} {name = "_QFfooEa"}
 ! CHECK-DAG: %[[N_MAP:.*]] = omp.map.info var_ptr(%{{.*}} : {{.*}}) {{.*}} {name = "_QFfooEa.extent.dim0"}
 
-! CHECK: omp.target
+! CHECK: omp.target kernel_type(spmd)
 ! CHECK-SAME: map_entries(
 ! CHECK-SAME:     %{{[[:alnum:]]+}} -> %{{[^,]+}},
 ! CHECK-SAME:     %{{[[:alnum:]]+}} -> %{{[^,]+}},

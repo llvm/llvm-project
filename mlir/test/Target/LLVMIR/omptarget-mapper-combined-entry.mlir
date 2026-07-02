@@ -25,7 +25,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
     %map_parent = omp.map.info var_ptr(%s : !llvm.ptr, !llvm.struct<"S", (i32, i32)>)
         map_clauses(tofrom) capture(ByRef) mapper(@mapper) members(%map_field0 : [0] : !llvm.ptr) -> !llvm.ptr
         {name = "s"}
-    omp.target map_entries(%map_parent -> %arg0, %map_field0 -> %arg1 : !llvm.ptr, !llvm.ptr) {
+    omp.target kernel_type(generic) map_entries(%map_parent -> %arg0, %map_field0 -> %arg1 : !llvm.ptr, !llvm.ptr) {
       omp.terminator
     }
     llvm.return
@@ -33,10 +33,12 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
 }
 
 // CHECK-LABEL: define void @test_mapper_combined_entries
-// CHECK: %[[MAPPERS:.*offload_mappers.*]] = alloca [5 x ptr]
-// CHECK: %[[MAPPER0:.*]] = getelementptr inbounds [5 x ptr], ptr %[[MAPPERS]], i64 0, i64 0
+// CHECK: %[[MAPPERS:.*offload_mappers.*]] = alloca [4 x ptr]
+// CHECK: %[[MAPPER0:.*]] = getelementptr inbounds [4 x ptr], ptr %[[MAPPERS]], i64 0, i64 0
 // CHECK: store ptr @.omp_mapper.mapper, ptr %[[MAPPER0]]
-// CHECK: %[[MAPPER1:.*]] = getelementptr inbounds [5 x ptr], ptr %[[MAPPERS]], i64 0, i64 1
+// CHECK: %[[MAPPER1:.*]] = getelementptr inbounds [4 x ptr], ptr %[[MAPPERS]], i64 0, i64 1
 // CHECK: store ptr null, ptr %[[MAPPER1]]
-// CHECK: %[[MAPPER2:.*]] = getelementptr inbounds [5 x ptr], ptr %[[MAPPERS]], i64 0, i64 2
+// CHECK: %[[MAPPER2:.*]] = getelementptr inbounds [4 x ptr], ptr %[[MAPPERS]], i64 0, i64 2
 // CHECK: store ptr null, ptr %[[MAPPER2]]
+// CHECK: %[[MAPPER3:.*]] = getelementptr inbounds [4 x ptr], ptr %[[MAPPERS]], i64 0, i64 3
+// CHECK: store ptr null, ptr %[[MAPPER3]]

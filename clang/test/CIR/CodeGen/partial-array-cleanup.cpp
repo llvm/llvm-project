@@ -16,7 +16,7 @@ void test_partial_array_cleanup() {
 }
 
 // CIR-BEFORE-LPP:     cir.func {{.*}} @_Z26test_partial_array_cleanupv()
-// CIR-BEFORE-LPP:       %[[ARRAY:.*]] = cir.alloca !cir.array<!rec_S x 4>, !cir.ptr<!cir.array<!rec_S x 4>>, ["s", init]
+// CIR-BEFORE-LPP:       %[[ARRAY:.*]] = cir.alloca "s" {{.*}} init : !cir.ptr<!cir.array<!rec_S x 4>>
 // CIR-BEFORE-LPP:       cir.array.ctor %[[ARRAY]] : !cir.ptr<!cir.array<!rec_S x 4>> {
 // CIR-BEFORE-LPP:       ^bb0(%[[CTOR_ARG:.*]]: !cir.ptr<!rec_S>):
 // CIR-BEFORE-LPP:         cir.call @_ZN1SC1Ev(%[[CTOR_ARG]]) : (!cir.ptr<!rec_S>{{.*}}) -> ()
@@ -26,11 +26,11 @@ void test_partial_array_cleanup() {
 // CIR-BEFORE-LPP:       }
 
 // CIR:     cir.func {{.*}} @_Z26test_partial_array_cleanupv()
-// CIR:       %[[ARRAY:.*]] = cir.alloca !cir.array<!rec_S x 4>, !cir.ptr<!cir.array<!rec_S x 4>>, ["s", init]
+// CIR:       %[[ARRAY:.*]] = cir.alloca "s" {{.*}} init : !cir.ptr<!cir.array<!rec_S x 4>>
 // CIR:       %[[CONST4:.*]] = cir.const #cir.int<4> : !u64i
 // CIR:       %[[BEGIN:.*]] = cir.cast array_to_ptrdecay %[[ARRAY]] : !cir.ptr<!cir.array<!rec_S x 4>> -> !cir.ptr<!rec_S>
 // CIR:       %[[END:.*]] = cir.ptr_stride %[[BEGIN]], %[[CONST4]] : (!cir.ptr<!rec_S>, !u64i) -> !cir.ptr<!rec_S>
-// CIR:       %[[ITER:.*]] = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["__array_idx"]
+// CIR:       %[[ITER:.*]] = cir.alloca "__array_idx" {{.*}} : !cir.ptr<!cir.ptr<!rec_S>>
 // CIR:       cir.store %[[BEGIN]], %[[ITER]] : !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
 // CIR:       cir.cleanup.scope {
 // CIR:         cir.do {
@@ -165,12 +165,12 @@ void test_variable_size_partial_array_cleanup(int n) {
 }
 
 // CIR-BEFORE-LPP:     cir.func {{.*}} @_Z40test_variable_size_partial_array_cleanupi
-// CIR-BEFORE-LPP:       %[[N_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["n", init]
+// CIR-BEFORE-LPP:       %[[N_ADDR:.*]] = cir.alloca "n" {{.*}} init : !cir.ptr<!s32i>
 // CIR-BEFORE-LPP:       %[[N_VAL:.*]] = cir.load {{.*}} %[[N_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR-BEFORE-LPP:       %[[N:.*]] = cir.cast integral %[[N_VAL]] : !s32i -> !u64i
 // CIR-BEFORE-LPP:       cir.stacksave
 // CIR-BEFORE-LPP:       cir.cleanup.scope {
-// CIR-BEFORE-LPP:         %[[VLA:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, %[[N]] : !u64i, ["s", init]
+// CIR-BEFORE-LPP:         %[[VLA:.*]] = cir.alloca "s" {{.*}} init size(%[[N]]) : !cir.ptr<!rec_S>
 // CIR-BEFORE-LPP:         cir.array.ctor %[[VLA]], %[[N]] : !cir.ptr<!rec_S>, !u64i {
 // CIR-BEFORE-LPP:         ^bb0(%[[CTOR_ARG:.*]]: !cir.ptr<!rec_S>):
 // CIR-BEFORE-LPP:           cir.call @_ZN1SC1Ev(%[[CTOR_ARG]]) : (!cir.ptr<!rec_S>{{.*}}) -> ()
@@ -190,19 +190,19 @@ void test_variable_size_partial_array_cleanup(int n) {
 // CIR-BEFORE-LPP:       }
 
 // CIR:     cir.func {{.*}} @_Z40test_variable_size_partial_array_cleanupi
-// CIR:       %[[N_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["n", init]
-// CIR:       %[[SAVED_STACK:.*]] = cir.alloca !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>, ["saved_stack"]
+// CIR:       %[[N_ADDR:.*]] = cir.alloca "n" {{.*}} init : !cir.ptr<!s32i>
+// CIR:       %[[SAVED_STACK:.*]] = cir.alloca "saved_stack" {{.*}} : !cir.ptr<!cir.ptr<!u8i>>
 // CIR:       %[[N_VAL:.*]] = cir.load {{.*}} %[[N_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR:       %[[N:.*]] = cir.cast integral %[[N_VAL]] : !s32i -> !u64i
 // CIR:       %[[STACK:.*]] = cir.stacksave : !cir.ptr<!u8i>
 // CIR:       cir.store {{.*}} %[[STACK]], %[[SAVED_STACK]] : !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>
 // CIR:       cir.cleanup.scope {
-// CIR:         %[[BEGIN:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, %[[N]] : !u64i, ["s", init]
+// CIR:         %[[BEGIN:.*]] = cir.alloca "s" {{.*}} init size(%[[N]]) : !cir.ptr<!rec_S>
 // CIR:         %[[END:.*]] = cir.ptr_stride %[[BEGIN]], %[[N]] : (!cir.ptr<!rec_S>, !u64i) -> !cir.ptr<!rec_S>
 // CIR:         %[[ZERO:.*]] = cir.const #cir.int<0> : !u64i
 // CIR:         %[[IS_NONZERO:.*]] = cir.cmp ne %[[N]], %[[ZERO]] : !u64i
 // CIR:         cir.if %[[IS_NONZERO]] {
-// CIR:           %[[ITER:.*]] = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["__array_idx"]
+// CIR:           %[[ITER:.*]] = cir.alloca "__array_idx" {{.*}} : !cir.ptr<!cir.ptr<!rec_S>>
 // CIR:           cir.store %[[BEGIN]], %[[ITER]] : !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
 // CIR:           cir.cleanup.scope {
 // CIR:             cir.do {
@@ -244,7 +244,7 @@ void test_variable_size_partial_array_cleanup(int n) {
 // CIR:           %[[LAST:.*]] = cir.ptr_stride %[[BEGIN]], %[[N]] : (!cir.ptr<!rec_S>, !u64i) -> !cir.ptr<!rec_S>
 // CIR:           %[[DTOR_NE:.*]] = cir.cmp ne %[[LAST]], %[[BEGIN]] : !cir.ptr<!rec_S>
 // CIR:           cir.if %[[DTOR_NE]] {
-// CIR:             %[[DTOR_ITER:.*]] = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["__array_idx"]
+// CIR:             %[[DTOR_ITER:.*]] = cir.alloca "__array_idx" {{.*}} : !cir.ptr<!cir.ptr<!rec_S>>
 // CIR:             cir.store %[[LAST]], %[[DTOR_ITER]] : !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
 // CIR:             cir.do {
 // CIR:               %[[DTOR_CUR:.*]] = cir.load %[[DTOR_ITER]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
@@ -438,8 +438,8 @@ void test_multi_dim_vla(int n, int m) {
 }
 
 // CIR-BEFORE-LPP:     cir.func {{.*}} @_Z18test_multi_dim_vlaii
-// CIR-BEFORE-LPP:       %[[N_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["n", init]
-// CIR-BEFORE-LPP:       %[[M_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["m", init]
+// CIR-BEFORE-LPP:       %[[N_ADDR:.*]] = cir.alloca "n" {{.*}} init : !cir.ptr<!s32i>
+// CIR-BEFORE-LPP:       %[[M_ADDR:.*]] = cir.alloca "m" {{.*}} init : !cir.ptr<!s32i>
 // CIR-BEFORE-LPP:       %[[N_VAL:.*]] = cir.load {{.*}} %[[N_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR-BEFORE-LPP:       %[[N:.*]] = cir.cast integral %[[N_VAL]] : !s32i -> !u64i
 // CIR-BEFORE-LPP:       %[[M_VAL:.*]] = cir.load {{.*}} %[[M_ADDR]] : !cir.ptr<!s32i>, !s32i
@@ -447,7 +447,7 @@ void test_multi_dim_vla(int n, int m) {
 // CIR-BEFORE-LPP:       cir.stacksave
 // CIR-BEFORE-LPP:       cir.cleanup.scope {
 // CIR-BEFORE-LPP:         %[[NM:.*]] = cir.mul nuw %[[N]], %[[M]] : !u64i
-// CIR-BEFORE-LPP:         %[[VLA:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, %[[NM]] : !u64i, ["s", init]
+// CIR-BEFORE-LPP:         %[[VLA:.*]] = cir.alloca "s" {{.*}} init size(%[[NM]]) : !cir.ptr<!rec_S>
 // CIR-BEFORE-LPP:         cir.array.ctor %[[VLA]], {{.*}} : !cir.ptr<!rec_S>, !u64i {
 // CIR-BEFORE-LPP:         ^bb0(%[[CTOR_ARG:.*]]: !cir.ptr<!rec_S>):
 // CIR-BEFORE-LPP:           cir.call @_ZN1SC1Ev(%[[CTOR_ARG]]) : (!cir.ptr<!rec_S>{{.*}}) -> ()
@@ -467,16 +467,16 @@ void test_multi_dim_vla(int n, int m) {
 // CIR-BEFORE-LPP:       }
 
 // CIR:     cir.func {{.*}} @_Z18test_multi_dim_vlaii
-// CIR:       %[[N_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["n", init]
-// CIR:       %[[M_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["m", init]
-// CIR:       %[[SAVED_STACK:.*]] = cir.alloca !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>, ["saved_stack"]
+// CIR:       %[[N_ADDR:.*]] = cir.alloca "n" {{.*}} init : !cir.ptr<!s32i>
+// CIR:       %[[M_ADDR:.*]] = cir.alloca "m" {{.*}} init : !cir.ptr<!s32i>
+// CIR:       %[[SAVED_STACK:.*]] = cir.alloca "saved_stack" {{.*}} : !cir.ptr<!cir.ptr<!u8i>>
 // CIR:       %[[N_VAL:.*]] = cir.load {{.*}} %[[N_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR:       %[[N:.*]] = cir.cast integral %[[N_VAL]] : !s32i -> !u64i
 // CIR:       %[[M_VAL:.*]] = cir.load {{.*}} %[[M_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR:       %[[M:.*]] = cir.cast integral %[[M_VAL]] : !s32i -> !u64i
 // CIR:       cir.cleanup.scope {
 // CIR:         %[[NM:.*]] = cir.mul nuw %[[N]], %[[M]] : !u64i
-// CIR:         %[[BEGIN:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, %[[NM]] : !u64i, ["s", init]
+// CIR:         %[[BEGIN:.*]] = cir.alloca "s" {{.*}} init size(%[[NM]]) : !cir.ptr<!rec_S>
 // CIR:         cir.call @_ZN1SC1Ev
 // CIR:         } cleanup eh {
 // CIR:           cir.call @_ZN1SD1Ev
@@ -552,12 +552,12 @@ void test_vla_of_constant_array(int n) {
 }
 
 // CIR-BEFORE-LPP:     cir.func {{.*}} @_Z26test_vla_of_constant_arrayi
-// CIR-BEFORE-LPP:       %[[N_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["n", init]
+// CIR-BEFORE-LPP:       %[[N_ADDR:.*]] = cir.alloca "n" {{.*}} init : !cir.ptr<!s32i>
 // CIR-BEFORE-LPP:       %[[N_VAL:.*]] = cir.load {{.*}} %[[N_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR-BEFORE-LPP:       %[[N:.*]] = cir.cast integral %[[N_VAL]] : !s32i -> !u64i
 // CIR-BEFORE-LPP:       cir.stacksave
 // CIR-BEFORE-LPP:       cir.cleanup.scope {
-// CIR-BEFORE-LPP:         %[[VLA:.*]] = cir.alloca !cir.array<!rec_S x 4>, !cir.ptr<!cir.array<!rec_S x 4>>, %[[N]] : !u64i, ["s", init]
+// CIR-BEFORE-LPP:         %[[VLA:.*]] = cir.alloca "s" {{.*}} init size(%[[N]]) : !cir.ptr<!cir.array<!rec_S x 4>>
 // CIR-BEFORE-LPP:         %[[FOUR:.*]] = cir.const #cir.int<4> : !u64i
 // CIR-BEFORE-LPP:         %[[TOTAL:.*]] = cir.mul nuw %[[N]], %[[FOUR]] : !u64i
 // CIR-BEFORE-LPP:         %[[ELEM_PTR:.*]] = cir.cast bitcast %[[VLA]] : !cir.ptr<!cir.array<!rec_S x 4>> -> !cir.ptr<!rec_S>
@@ -583,11 +583,11 @@ void test_vla_of_constant_array(int n) {
 // CIR-BEFORE-LPP:       }
 
 // CIR:     cir.func {{.*}} @_Z26test_vla_of_constant_arrayi
-// CIR:       %[[N_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["n", init]
+// CIR:       %[[N_ADDR:.*]] = cir.alloca "n" {{.*}} init : !cir.ptr<!s32i>
 // CIR:       %[[N_VAL:.*]] = cir.load {{.*}} %[[N_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR:       %[[N:.*]] = cir.cast integral %[[N_VAL]] : !s32i -> !u64i
 // CIR:       cir.cleanup.scope {
-// CIR:         %[[VLA:.*]] = cir.alloca !cir.array<!rec_S x 4>, !cir.ptr<!cir.array<!rec_S x 4>>, %[[N]] : !u64i, ["s", init]
+// CIR:         %[[VLA:.*]] = cir.alloca "s" {{.*}} init size(%[[N]]) : !cir.ptr<!cir.array<!rec_S x 4>>
 // CIR:         %[[FOUR:.*]] = cir.const #cir.int<4> : !u64i
 // CIR:         %[[TOTAL:.*]] = cir.mul nuw %[[N]], %[[FOUR]] : !u64i
 // CIR:         %[[ELEM_PTR:.*]] = cir.cast bitcast %[[VLA]] : !cir.ptr<!cir.array<!rec_S x 4>> -> !cir.ptr<!rec_S>
@@ -657,4 +657,166 @@ void test_vla_of_constant_array(int n) {
 // OGCG:         cleanup
 // OGCG:       call void @_ZN1SD1Ev
 //
+// OGCG:       resume { ptr, i32 }
+
+void test_init_list_partial_array_cleanup() {
+    S arr[4] = { S(), S() };
+}
+
+// CIR-LABEL:     cir.func {{.*}} @_Z36test_init_list_partial_array_cleanupv()
+// CIR:       %[[ARRAY:.*]] = cir.alloca "arr" {{.*}} init : !cir.ptr<!cir.array<!rec_S x 4>>
+// CIR:       %[[END_OF_INIT:.*]] = cir.alloca "arrayinit.endOfInit" {{.*}} : !cir.ptr<!cir.ptr<!rec_S>>
+// CIR:       %[[BEGIN:.*]] = cir.cast array_to_ptrdecay %[[ARRAY]] : !cir.ptr<!cir.array<!rec_S x 4>> -> !cir.ptr<!rec_S>
+// CIR:       cir.store {{.*}} %[[BEGIN]], %[[END_OF_INIT]] : !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
+// CIR:       cir.cleanup.scope {
+//              --- first explicit init ---
+// CIR:         cir.call @_ZN1SC1Ev(%[[BEGIN]])
+//              --- advance + update endOfInit for second element ---
+// CIR:         %[[SECOND:.*]] = cir.ptr_stride %[[BEGIN]], %{{.*}}
+// CIR:         cir.store {{.*}} %[[SECOND]], %[[END_OF_INIT]]
+//              --- second explicit init ---
+// CIR:         cir.call @_ZN1SC1Ev(%[[SECOND]])
+//              --- advance + update endOfInit for filler start ---
+// CIR:         %[[FILLER_START:.*]] = cir.ptr_stride %[[SECOND]], %{{.*}}
+// CIR:         cir.store {{.*}} %[[FILLER_START]], %[[END_OF_INIT]]
+//              --- do-while filler loop ---
+// CIR:         cir.do {
+// CIR:           %[[CUR:.*]] = cir.load {{.*}} %{{.*}} : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
+// CIR:           cir.call @_ZN1SC1Ev(%[[CUR]])
+// CIR:           %[[NEXT:.*]] = cir.ptr_stride %[[CUR]], %{{.*}}
+// CIR:           cir.store {{.*}} %[[NEXT]], %[[END_OF_INIT]]
+// CIR:           cir.yield
+// CIR:         } while {
+// CIR:           cir.condition(%{{.*}})
+// CIR:         }
+// CIR:         cir.yield
+//              --- EH cleanup: partial destruction ---
+// CIR:       } cleanup eh {
+// CIR:         %[[END_VAL:.*]] = cir.load {{.*}} %[[END_OF_INIT]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
+// CIR:         %[[NE:.*]] = cir.cmp ne %[[END_VAL]], %[[BEGIN]] : !cir.ptr<!rec_S>
+// CIR:         cir.if %[[NE]] {
+// CIR:           cir.do {
+// CIR:             %[[EL:.*]] = cir.load {{.*}} %{{.*}} : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
+// CIR:             %[[NEG1:.*]] = cir.const #cir.int<-1> : !s64i
+// CIR:             %[[PREV:.*]] = cir.ptr_stride %[[EL]], %[[NEG1]] : (!cir.ptr<!rec_S>, !s64i) -> !cir.ptr<!rec_S>
+// CIR:             cir.call @_ZN1SD1Ev(%[[PREV]])
+// CIR:             cir.yield
+// CIR:           } while {
+// CIR:             %[[EL2:.*]] = cir.load {{.*}} %{{.*}} : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
+// CIR:             %[[NE2:.*]] = cir.cmp ne %[[EL2]], %[[BEGIN]] : !cir.ptr<!rec_S>
+// CIR:             cir.condition(%[[NE2]])
+// CIR:           }
+// CIR:         }
+// CIR:         cir.yield
+// CIR:       }
+
+// LLVM-LABEL:  define dso_local void @_Z36test_init_list_partial_array_cleanupv()
+// LLVM:       %[[ARRAY:.*]] = alloca [4 x %struct.S]
+// LLVM:       %[[BEGIN:.*]] = getelementptr %struct.S, ptr %[[ARRAY]], i32 0
+// LLVM:       store ptr %[[BEGIN]], ptr %[[END_OF_INIT:.*]]
+//
+//            --- first ctor ---
+// LLVM:       invoke void @_ZN1SC1Ev(ptr {{.*}} %[[BEGIN]])
+// LLVM:         to label %[[CONT1:.*]] unwind label %[[LPAD:.*]]
+//
+//            --- second ctor ---
+// LLVM:     [[CONT1]]:
+// LLVM:       %[[SECOND:.*]] = getelementptr %struct.S, ptr %[[BEGIN]], i64 1
+// LLVM:       store ptr %[[SECOND]], ptr %[[END_OF_INIT]]
+// LLVM:       invoke void @_ZN1SC1Ev(ptr {{.*}} %[[SECOND]])
+// LLVM:         to label %{{.*}} unwind label %[[LPAD]]
+//
+//            --- filler loop with invoke ---
+// LLVM:       invoke void @_ZN1SC1Ev(ptr {{.*}})
+// LLVM:         to label %[[FILLER_CONT:.*]] unwind label %[[LPAD]]
+//
+// LLVM:     [[FILLER_CONT]]:
+// LLVM:       %[[FNEXT:.*]] = getelementptr %struct.S, ptr %{{.*}}, i64 1
+// LLVM:       store ptr %[[FNEXT]], ptr %[[END_OF_INIT]]
+//
+//            --- landing pad + cleanup guard ---
+// LLVM:     [[LPAD]]:
+// LLVM:       landingpad { ptr, i32 }
+// LLVM:         cleanup
+// LLVM:       %[[PAD_CUR:.*]] = load ptr, ptr %[[END_OF_INIT]]
+// LLVM:       %[[GUARD:.*]] = icmp ne ptr %[[PAD_CUR]], %[[BEGIN]]
+// LLVM:       br i1 %[[GUARD]], label %[[DTOR_ENTRY:.*]], label %[[EH_RESUME:.*]]
+//
+//            --- partial dtor do-while loop ---
+// LLVM:     [[DTOR_ENTRY]]:
+// LLVM:       store ptr %[[PAD_CUR]], ptr %[[DTOR_ITER:.*]]
+// LLVM:       br label %[[DTOR_BODY:.*]]
+//
+// LLVM:     [[DTOR_LOOP_COND:.*]]:
+// LLVM:       %[[DTOR_CUR:.*]] = load ptr, ptr %[[DTOR_ITER]]
+// LLVM:       %[[DTOR_CONT:.*]] = icmp ne ptr %[[DTOR_CUR]], %[[BEGIN]]
+// LLVM:       br i1 %[[DTOR_CONT]], label %[[DTOR_BODY]], label %[[DTOR_DONE:.*]]
+//
+// LLVM:     [[DTOR_BODY]]:
+// LLVM:       %[[DCUR:.*]] = load ptr, ptr %[[DTOR_ITER]]
+// LLVM:       %[[PREV:.*]] = getelementptr %struct.S, ptr %[[DCUR]], i64 -1
+// LLVM:       store ptr %[[PREV]], ptr %[[DTOR_ITER]]
+// LLVM:       call void @_ZN1SD1Ev(ptr {{.*}} %[[PREV]])
+// LLVM:       br label %[[DTOR_LOOP_COND]]
+//
+// LLVM:     [[DTOR_DONE]]:
+// LLVM:       br label %[[EH_RESUME]]
+//
+// LLVM:     [[EH_RESUME]]:
+// LLVM:       resume { ptr, i32 }
+
+// OGCG-LABEL: define dso_local void @_Z36test_init_list_partial_array_cleanupv()
+// OGCG:       %[[ARR:.*]] = alloca [4 x %struct.S]
+// OGCG:       %[[END_OF_INIT:.*]] = alloca ptr
+// OGCG:       store ptr %[[ARR]], ptr %[[END_OF_INIT]]
+//
+//            --- first explicit ctor ---
+// OGCG:       invoke void @_ZN1SC1Ev(ptr {{.*}} %[[ARR]])
+// OGCG:         to label %[[CONT1:.*]] unwind label %[[LPAD:.*]]
+//
+//            --- second explicit ctor ---
+// OGCG:     [[CONT1]]:
+// OGCG:       %[[EL1:.*]] = getelementptr inbounds %struct.S, ptr %[[ARR]], i64 1
+// OGCG:       store ptr %[[EL1]], ptr %[[END_OF_INIT]]
+// OGCG:       invoke void @_ZN1SC1Ev(ptr {{.*}} %[[EL1]])
+// OGCG:         to label %[[CONT2:.*]] unwind label %[[LPAD]]
+//
+//            --- filler loop setup ---
+// OGCG:     [[CONT2]]:
+// OGCG:       %[[FILLER_START:.*]] = getelementptr inbounds %struct.S, ptr %[[ARR]], i64 2
+// OGCG:       store ptr %[[FILLER_START]], ptr %[[END_OF_INIT]]
+// OGCG:       %[[FILLER_END:.*]] = getelementptr inbounds %struct.S, ptr %[[ARR]], i64 4
+// OGCG:       br label %[[FILLER_BODY:.*]]
+//
+//            --- filler loop body ---
+// OGCG:     [[FILLER_BODY]]:
+// OGCG:       %[[FILLER_CUR:.*]] = phi ptr [ %[[FILLER_START]], %[[CONT2]] ], [ %[[FILLER_NEXT:.*]], %[[FILLER_CONT:.*]] ]
+// OGCG:       invoke void @_ZN1SC1Ev(ptr {{.*}} %[[FILLER_CUR]])
+// OGCG:         to label %[[FILLER_CONT]] unwind label %[[LPAD]]
+//
+// OGCG:     [[FILLER_CONT]]:
+// OGCG:       %[[FILLER_NEXT]] = getelementptr inbounds %struct.S, ptr %[[FILLER_CUR]], i64 1
+// OGCG:       store ptr %[[FILLER_NEXT]], ptr %[[END_OF_INIT]]
+// OGCG:       %[[FILLER_DONE:.*]] = icmp eq ptr %[[FILLER_NEXT]], %[[FILLER_END]]
+// OGCG:       br i1 %[[FILLER_DONE]], label %{{.*}}, label %[[FILLER_BODY]]
+//
+//            --- landing pad + partial destruction ---
+// OGCG:     [[LPAD]]:
+// OGCG:       landingpad { ptr, i32 }
+// OGCG:         cleanup
+// OGCG:       %[[PAD_END:.*]] = load ptr, ptr %[[END_OF_INIT]]
+// OGCG:       %[[ISEMPTY:.*]] = icmp eq ptr %[[ARR]], %[[PAD_END]]
+// OGCG:       br i1 %[[ISEMPTY]], label %[[DTOR_DONE:.*]], label %[[DTOR_LOOP:.*]]
+//
+// OGCG:     [[DTOR_LOOP]]:
+// OGCG:       %[[DTOR_PAST:.*]] = phi ptr [ %[[PAD_END]], %[[LPAD]] ], [ %[[DTOR_PREV:.*]], %[[DTOR_LOOP]] ]
+// OGCG:       %[[DTOR_PREV]] = getelementptr inbounds %struct.S, ptr %[[DTOR_PAST]], i64 -1
+// OGCG:       call void @_ZN1SD1Ev(ptr {{.*}} %[[DTOR_PREV]])
+// OGCG:       %[[DTOR_CONT:.*]] = icmp eq ptr %[[DTOR_PREV]], %[[ARR]]
+// OGCG:       br i1 %[[DTOR_CONT]], label %[[DTOR_DONE]], label %[[DTOR_LOOP]]
+//
+// OGCG:     [[DTOR_DONE]]:
+// OGCG:       br label %[[EH_RESUME:.*]]
+//
+// OGCG:     [[EH_RESUME]]:
 // OGCG:       resume { ptr, i32 }

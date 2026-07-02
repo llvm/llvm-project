@@ -135,6 +135,88 @@ hlfir::Entity fir::factory::HomogeneousScalarStack::moveStackAsArrayExpr(
 }
 
 //===----------------------------------------------------------------------===//
+// fir::factory::ArrayTemp implementation.
+//===----------------------------------------------------------------------===//
+
+fir::factory::ArrayTemp::ArrayTemp(mlir::Location loc,
+                                   fir::FirOpBuilder &builder,
+                                   fir::SequenceType declaredType,
+                                   llvm::ArrayRef<mlir::Value> extents,
+                                   llvm::ArrayRef<mlir::Value> lowerBounds,
+                                   llvm::ArrayRef<mlir::Value> lengths,
+                                   bool allocateOnHeap, llvm::StringRef name)
+    : allocateOnHeap{allocateOnHeap},
+      typeParams{lengths.begin(), lengths.end()} {
+  assert(extents.size() == lowerBounds.size() &&
+         "extents and lowerBounds must have the same size");
+  assert(extents.size() == declaredType.getDimension() &&
+         "declared type rank must match the number of extents");
+  mlir::Value tempStorage;
+  if (allocateOnHeap)
+    tempStorage =
+        builder.createHeapTemporary(loc, declaredType, name, extents, lengths);
+  else
+    tempStorage =
+        builder.createTemporary(loc, declaredType, name, extents, lengths);
+  // Use a fir.shape_shift so the temp's lower bounds match the loop bounds:
+  // the indices passed to pushValue/fetch can then index it directly.
+  mlir::Value shape = builder.genShape(loc, lowerBounds, extents);
+  temp =
+      hlfir::DeclareOp::create(builder, loc, tempStorage, name, shape, lengths)
+          .getBase();
+}
+
+/// Generate an hlfir.designate on \p temp for the element at \p indices. The
+/// indices are interpreted in the temp's array domain (matching its lower
+/// bounds, which were set from the enclosing loop bounds).
+static mlir::Value genArrayTempElementAddr(mlir::Location loc,
+                                           fir::FirOpBuilder &builder,
+                                           mlir::Value temp,
+                                           mlir::ValueRange indices,
+                                           mlir::ValueRange typeParams) {
+  hlfir::Entity entity{temp};
+  mlir::Type refTy = fir::ReferenceType::get(entity.getFortranElementType());
+  mlir::Type idxTy = builder.getIndexType();
+  llvm::SmallVector<mlir::Value> idxs;
+  idxs.reserve(indices.size());
+  for (mlir::Value idx : indices)
+    idxs.push_back(builder.createConvert(loc, idxTy, idx));
+  return hlfir::DesignateOp::create(builder, loc, refTy, temp, idxs,
+                                    typeParams);
+}
+
+void fir::factory::ArrayTemp::pushValue(mlir::Location loc,
+                                        fir::FirOpBuilder &builder,
+                                        mlir::Value value,
+                                        mlir::ValueRange indices) {
+  hlfir::Entity entity{value};
+  assert(entity.isScalar() && "cannot use ArrayTemp with array");
+  // Match HomogeneousScalarStack: derived types go through the runtime path.
+  if (!entity.hasIntrinsicType())
+    TODO(loc, "creating ArrayTemp for derived types");
+  mlir::Value addr =
+      genArrayTempElementAddr(loc, builder, temp, indices, typeParams);
+  hlfir::AssignOp::create(builder, loc, value, addr);
+}
+
+mlir::Value fir::factory::ArrayTemp::fetch(mlir::Location loc,
+                                           fir::FirOpBuilder &builder,
+                                           mlir::ValueRange indices) {
+  mlir::Value addr =
+      genArrayTempElementAddr(loc, builder, temp, indices, typeParams);
+  return hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{addr});
+}
+
+void fir::factory::ArrayTemp::destroy(mlir::Location loc,
+                                      fir::FirOpBuilder &builder) {
+  if (allocateOnHeap) {
+    auto declare = temp.getDefiningOp<hlfir::DeclareOp>();
+    assert(declare && "temp must have been declared");
+    fir::FreeMemOp::create(builder, loc, declare.getMemref());
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // fir::factory::SimpleCopy implementation.
 //===----------------------------------------------------------------------===//
 

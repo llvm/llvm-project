@@ -40,8 +40,8 @@ static Constant *getNegativeIsTrueBoolVec(Constant *V, const DataLayout &DL) {
 /// each element's most significant bit (the sign bit).
 static Value *getBoolVecFromMask(Value *Mask, const DataLayout &DL) {
   // Fold Constant Mask.
-  if (auto *ConstantMask = dyn_cast<ConstantDataVector>(Mask))
-    return getNegativeIsTrueBoolVec(ConstantMask, DL);
+  if (isa<ConstantInt, ConstantFP, ConstantDataVector>(Mask))
+    return getNegativeIsTrueBoolVec(cast<Constant>(Mask), DL);
 
   // Mask was extended from a boolean vector.
   Value *ExtMask;
@@ -2259,94 +2259,6 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       // TODO should we convert this to an AND if the RHS is constant?
     }
     break;
-  case Intrinsic::x86_bmi_pext_32:
-  case Intrinsic::x86_bmi_pext_64:
-    if (auto *MaskC = dyn_cast<ConstantInt>(II.getArgOperand(1))) {
-      if (MaskC->isNullValue()) {
-        return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), 0));
-      }
-      if (MaskC->isAllOnesValue()) {
-        return IC.replaceInstUsesWith(II, II.getArgOperand(0));
-      }
-
-      unsigned MaskIdx, MaskLen;
-      if (MaskC->getValue().isShiftedMask(MaskIdx, MaskLen)) {
-        // any single contingous sequence of 1s anywhere in the mask simply
-        // describes a subset of the input bits shifted to the appropriate
-        // position.  Replace with the straight forward IR.
-        Value *Input = II.getArgOperand(0);
-        Value *Masked = IC.Builder.CreateAnd(Input, II.getArgOperand(1));
-        Value *ShiftAmt = ConstantInt::get(II.getType(), MaskIdx);
-        Value *Shifted = IC.Builder.CreateLShr(Masked, ShiftAmt);
-        return IC.replaceInstUsesWith(II, Shifted);
-      }
-
-      if (auto *SrcC = dyn_cast<ConstantInt>(II.getArgOperand(0))) {
-        uint64_t Src = SrcC->getZExtValue();
-        uint64_t Mask = MaskC->getZExtValue();
-        uint64_t Result = 0;
-        uint64_t BitToSet = 1;
-
-        while (Mask) {
-          // Isolate lowest set bit.
-          uint64_t BitToTest = Mask & -Mask;
-          if (BitToTest & Src)
-            Result |= BitToSet;
-
-          BitToSet <<= 1;
-          // Clear lowest set bit.
-          Mask &= Mask - 1;
-        }
-
-        return IC.replaceInstUsesWith(II,
-                                      ConstantInt::get(II.getType(), Result));
-      }
-    }
-    break;
-  case Intrinsic::x86_bmi_pdep_32:
-  case Intrinsic::x86_bmi_pdep_64:
-    if (auto *MaskC = dyn_cast<ConstantInt>(II.getArgOperand(1))) {
-      if (MaskC->isNullValue()) {
-        return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), 0));
-      }
-      if (MaskC->isAllOnesValue()) {
-        return IC.replaceInstUsesWith(II, II.getArgOperand(0));
-      }
-
-      unsigned MaskIdx, MaskLen;
-      if (MaskC->getValue().isShiftedMask(MaskIdx, MaskLen)) {
-        // any single contingous sequence of 1s anywhere in the mask simply
-        // describes a subset of the input bits shifted to the appropriate
-        // position.  Replace with the straight forward IR.
-        Value *Input = II.getArgOperand(0);
-        Value *ShiftAmt = ConstantInt::get(II.getType(), MaskIdx);
-        Value *Shifted = IC.Builder.CreateShl(Input, ShiftAmt);
-        Value *Masked = IC.Builder.CreateAnd(Shifted, II.getArgOperand(1));
-        return IC.replaceInstUsesWith(II, Masked);
-      }
-
-      if (auto *SrcC = dyn_cast<ConstantInt>(II.getArgOperand(0))) {
-        uint64_t Src = SrcC->getZExtValue();
-        uint64_t Mask = MaskC->getZExtValue();
-        uint64_t Result = 0;
-        uint64_t BitToTest = 1;
-
-        while (Mask) {
-          // Isolate lowest set bit.
-          uint64_t BitToSet = Mask & -Mask;
-          if (BitToTest & Src)
-            Result |= BitToSet;
-
-          BitToTest <<= 1;
-          // Clear lowest set bit;
-          Mask &= Mask - 1;
-        }
-
-        return IC.replaceInstUsesWith(II,
-                                      ConstantInt::get(II.getType(), Result));
-      }
-    }
-    break;
 
   case Intrinsic::x86_sse_cvtss2si:
   case Intrinsic::x86_sse_cvtss2si64:
@@ -2973,9 +2885,9 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     }
 
     // Constant Mask - select 1st/2nd argument lane based on top bit of mask.
-    if (auto *ConstantMask = dyn_cast<ConstantDataVector>(Mask)) {
+    if (isa<ConstantInt, ConstantFP, ConstantDataVector>(Mask)) {
       Constant *NewSelector =
-          getNegativeIsTrueBoolVec(ConstantMask, IC.getDataLayout());
+          getNegativeIsTrueBoolVec(cast<Constant>(Mask), IC.getDataLayout());
       return SelectInst::Create(NewSelector, Op1, Op0, "blendv");
     }
     unsigned BitWidth = Mask->getType()->getScalarSizeInBits();
@@ -3203,6 +3115,31 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return IC.replaceInstUsesWith(II, V);
     }
     break;
+
+  case Intrinsic::x86_avx512_vpmadd52h_uq_128:
+  case Intrinsic::x86_avx512_vpmadd52l_uq_128:
+  case Intrinsic::x86_avx512_vpmadd52h_uq_256:
+  case Intrinsic::x86_avx512_vpmadd52l_uq_256:
+  case Intrinsic::x86_avx512_vpmadd52h_uq_512:
+  case Intrinsic::x86_avx512_vpmadd52l_uq_512: {
+    // Fold add(vpmadd52(<zero>, a, b), x) -> vpmadd52(x, a, b)
+    Value *Acc = II.getArgOperand(0);
+    if (!match(Acc, m_Zero()) || !II.hasOneUse())
+      break;
+
+    auto *Add = dyn_cast<BinaryOperator>(*II.user_begin());
+    Value *X;
+    if (!Add || !match(Add, m_c_Add(m_Specific(&II), m_Value(X))))
+      break;
+
+    IC.Builder.SetInsertPoint(Add);
+    Value *NewCall = IC.Builder.CreateIntrinsic(
+        IID, {}, {X, II.getArgOperand(1), II.getArgOperand(2)});
+
+    IC.replaceInstUsesWith(*Add, NewCall);
+    IC.eraseInstFromFunction(*Add);
+    return IC.eraseInstFromFunction(II);
+  }
 
   default:
     break;

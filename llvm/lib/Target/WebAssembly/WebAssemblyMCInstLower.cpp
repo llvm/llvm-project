@@ -28,6 +28,8 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -35,6 +37,7 @@
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -45,6 +48,22 @@ static cl::opt<bool>
                       cl::desc("WebAssembly: output stack registers in"
                                " instruction output for test purposes only."),
                       cl::init(false));
+
+static std::optional<bool> getWasmGlobalMutable(const GlobalValue *Global,
+                                                const Function &CurrentFunc,
+                                                const DiagnosticLocation &DL) {
+  const auto *BaseObject = Global->getAliaseeObject();
+  const auto *GV = dyn_cast_or_null<GlobalVariable>(BaseObject);
+  if (!GV) {
+    CurrentFunc.getContext().diagnose(DiagnosticInfoUnsupported(
+        CurrentFunc,
+        "wasm_var address space symbol must resolve to a "
+        "GlobalVariable",
+        DL));
+    return std::nullopt;
+  }
+  return !GV->isConstant();
+}
 
 static void removeRegisterOperands(const MachineInstr *MI, MCInst &OutMI);
 
@@ -58,14 +77,21 @@ WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
     // WASM_SYMBOL_TYPE_GLOBAL.
     if (WebAssembly::isWasmVarAddressSpace(Global->getAddressSpace()) &&
         !WasmSym->getType()) {
+      const MachineInstr &MI = *MO.getParent();
       const MachineFunction &MF = *MO.getParent()->getParent()->getParent();
       const TargetMachine &TM = MF.getTarget();
       const Function &CurrentFunc = MF.getFunction();
+
+      std::optional<bool> Mutable =
+          getWasmGlobalMutable(Global, CurrentFunc, MI.getDebugLoc());
+      if (!Mutable.has_value())
+        return WasmSym;
+
       Type *GlobalVT = Global->getValueType();
       SmallVector<MVT, 1> VTs;
       computeLegalValueVTs(CurrentFunc, TM, GlobalVT, VTs);
 
-      WebAssembly::wasmSymbolSetType(WasmSym, GlobalVT, VTs);
+      WebAssembly::wasmSymbolSetType(WasmSym, GlobalVT, VTs, *Mutable);
     }
     return WasmSym;
   }

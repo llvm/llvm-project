@@ -26,13 +26,13 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Up, class = void>
-struct __is_less_than_comparable : false_type {};
+inline const bool __is_less_than_comparable_v = false;
 
 template <class _Tp, class _Up>
-struct __is_less_than_comparable<_Tp, _Up, __void_t<decltype(std::declval<_Tp>() < std::declval<_Up>())> > : true_type {
-};
+inline const bool
+    __is_less_than_comparable_v<_Tp, _Up, __void_t<decltype(std::declval<_Tp>() < std::declval<_Up>())> > = true;
 
-template <class _Tp, class _Up, __enable_if_t<__is_less_than_comparable<const _Tp*, const _Up*>::value, int> = 0>
+template <class _Tp, class _Up, __enable_if_t<__is_less_than_comparable_v<const _Tp*, const _Up*>, int> = 0>
 _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") bool
 __is_pointer_in_range(const _Tp* __begin, const _Tp* __end, const _Up* __ptr) {
   _LIBCPP_ASSERT_VALID_INPUT_RANGE(std::__is_valid_range(__begin, __end), "[__begin, __end) is not a valid range");
@@ -47,7 +47,7 @@ __is_pointer_in_range(const _Tp* __begin, const _Tp* __end, const _Up* __ptr) {
   return !__less<>()(__ptr, __begin) && __less<>()(__ptr, __end);
 }
 
-template <class _Tp, class _Up, __enable_if_t<!__is_less_than_comparable<const _Tp*, const _Up*>::value, int> = 0>
+template <class _Tp, class _Up, __enable_if_t<!__is_less_than_comparable_v<const _Tp*, const _Up*>, int> = 0>
 _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address") bool
 __is_pointer_in_range(const _Tp* __begin, const _Tp* __end, const _Up* __ptr) {
   if (__libcpp_is_constant_evaluated())

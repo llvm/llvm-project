@@ -1,9 +1,14 @@
-//===-- String converter for strftime ---------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See htto_conv.times://llvm.org/LICENSE.txt for license information.
+// See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// String converter for strftime.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC_STDIO_STRFTIME_CORE_STR_CONVERTER_H
@@ -22,11 +27,19 @@ namespace strftime_core {
 
 static constexpr cpp::string_view OUT_OF_BOUNDS_STR = "?";
 
+/// Helper to unwrap optional string view, returning "?" if empty.
 LIBC_INLINE cpp::string_view
 unwrap_opt(cpp::optional<cpp::string_view> str_opt) {
   return str_opt.has_value() ? *str_opt : OUT_OF_BOUNDS_STR;
 }
 
+/// Converts string-based format specifiers (like %a, %Z) and writes to writer.
+///
+/// \tparam write_mode The write mode for the writer.
+/// \param writer The writer to write the output to.
+/// \param to_conv The format section to convert.
+/// \param timeptr Pointer to the tm structure.
+/// \return WRITE_OK on success, or negative value on error.
 template <printf_core::WriteMode write_mode>
 LIBC_INLINE int convert_str(printf_core::Writer<write_mode> *writer,
                             const FormatSection &to_conv, const tm *timeptr) {
@@ -56,9 +69,7 @@ LIBC_INLINE int convert_str(printf_core::Writer<write_mode> *writer,
     str = time_reader.get_am_pm();
     break;
   case 'Z': // Timezone name
-    // the standard says if no time zone is determinable, write no characters.
-    return WRITE_OK;
-    // str = time_reader.get_timezone_name();
+    str = time_reader.get_timezone_name();
     break;
   default:
     __builtin_trap(); // this should be unreachable, but trap if you hit it.

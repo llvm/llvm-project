@@ -99,6 +99,23 @@ std::string mangle(StringRef baseName, ArrayRef<Type> types,
   return os.str();
 }
 
+std::string builtinElemType(ElemType elemType) {
+  switch (elemType) {
+  case ElemType::BF8:
+    return "bf8";
+  case ElemType::F8:
+    return "hf8";
+  case ElemType::BF16:
+    return "bf";
+  case ElemType::F16:
+    return "hf";
+  case ElemType::F32:
+    return "f";
+  default:
+    return stringifyElemType(elemType).str();
+  }
+}
+
 static int32_t getL1CacheControl(LoadCacheControl cc) {
   int32_t control = 0;
   switch (cc) {
@@ -521,6 +538,28 @@ static LLVM::CallOp createDeviceFunctionCall(
   return callOp;
 }
 
+static unsigned getNumOperandsPerDword(xevm::ElemType pTy) {
+  switch (pTy) {
+  case xevm::ElemType::F32:
+  case xevm::ElemType::TF32:
+    return 1;
+  case xevm::ElemType::BF16:
+  case xevm::ElemType::F16:
+    return 2;
+  case xevm::ElemType::U8:
+  case xevm::ElemType::S8:
+  case xevm::ElemType::BF8:
+  case xevm::ElemType::F8:
+    return 4;
+  case xevm::ElemType::E2M1:
+  case xevm::ElemType::U4:
+  case xevm::ElemType::S4:
+    return 8;
+  default:
+    llvm_unreachable("unsupported xevm::ElemType");
+  }
+}
+
 class MMAToOCLPattern : public OpConversionPattern<xevm::MMAOp> {
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
@@ -623,22 +662,6 @@ class MMAToOCLPattern : public OpConversionPattern<xevm::MMAOp> {
 
     rewriter.replaceOp(op, result);
     return success();
-  }
-
-private:
-  static unsigned getNumOperandsPerDword(xevm::ElemType pTy) {
-    switch (pTy) {
-    case xevm::ElemType::TF32:
-      return 1;
-    case xevm::ElemType::BF16:
-    case xevm::ElemType::F16:
-      return 2;
-    case xevm::ElemType::U8:
-    case xevm::ElemType::S8:
-      return 4;
-    default:
-      llvm_unreachable("unsupported xevm::ElemType");
-    }
   }
 };
 
@@ -787,8 +810,19 @@ class LoadStorePrefetchToOCLPattern : public OpConversionPattern<OpType> {
     } else {
       auto vecElemType = vecType.getElementType();
       auto vecElemBitWidth = vecElemType.getIntOrFloatBitWidth();
-      Value numElems = LLVM::ConstantOp::create(rewriter, loc, i32Type,
-                                                vecType.getNumElements());
+      auto vecNumElems = vecType.getNumElements();
+      // OpenCL Intel 2D block load has a special case
+      // when element bit size is 8 and tile width is 32, which is twice
+      // the subgroup size, loaded element is packed as i16.
+      // To reflect this, element bit size is updated to 16 and
+      // vector length is reduced by half.
+      if (op.getElemSizeInBits() == 8 && op.getTileWidth() == 32) {
+        vecElemBitWidth = 16;
+        vecElemType = rewriter.getI16Type();
+        vecNumElems = vecNumElems / 2;
+      }
+      Value numElems =
+          LLVM::ConstantOp::create(rewriter, loc, i32Type, vecNumElems);
       auto dstOrSrcPtr = LLVM::AllocaOp::create(
           rewriter, loc, LLVM::LLVMPointerType::get(rewriter.getContext()),
           vecElemType, numElems);
@@ -1098,6 +1132,394 @@ class SubgroupOpWorkitemOpToOCLPattern : public OpConversionPattern<OpType> {
   }
 };
 
+class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(TruncfOp op, TruncfOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Supported source and result types are resticted for now.
+    auto srcEtype = op.getSrcEtype().getEtype();
+    auto dstEtype = op.getDstEtype().getEtype();
+    // Currently only 16 input elements are supported as
+    //  - Any vector beyond 16 elements not a valid OpenCL vector.
+    //  - 2D block load can only load up to 16 16bit elements per lane.
+    //      Widest load is 8x16xi32 with 16 lanes, which is 16 16bit
+    //      elements per lane.
+    //  - mma_mx A and B operands need more than 16 elements per lane
+    //
+    // Conversion is done in batches depending on the dst type.
+    // batch_size =
+    //   16 if dst type == fp8
+    //   8  if dst type == fp4
+    // For num_elem > batch_size
+    //   convert batch of batch_size
+    //   cast batch to i32 elem type vector
+    //   concat batches by shufflevector
+    // For num_elem = batch_size
+    //   use API for conversion
+    // Scalar case is not supported until usage case become clear.
+    auto vecSrcTy = dyn_cast<VectorType>(op.getSrc().getType());
+    if (!vecSrcTy) {
+      return rewriter.notifyMatchFailure(op, "Scalar src is not supported.");
+    }
+    if (vecSrcTy.getNumElements() != 16)
+      return rewriter.notifyMatchFailure(
+          op, "Only vector src of 16 elements is supported");
+    auto vecDstTy = dyn_cast<VectorType>(op.getDst().getType());
+    if (!vecDstTy)
+      return rewriter.notifyMatchFailure(op, "Scalar dst is not supported.");
+    Value src = op.getSrc();
+    auto memAttr = rewriter.getAttr<LLVM::MemoryEffectsAttr>(
+        /*other=*/LLVM::ModRefInfo::NoModRef,
+        /*argMem=*/LLVM::ModRefInfo::NoModRef,
+        /*inaccessibleMem=*/LLVM::ModRefInfo::NoModRef,
+        /*errnoMem=*/LLVM::ModRefInfo::NoModRef,
+        /*targetMem0=*/LLVM::ModRefInfo::NoModRef,
+        /*targetMem1=*/LLVM::ModRefInfo::NoModRef);
+    auto funcAttrs = convergentNoUnwindWillReturnAttrs;
+    funcAttrs.memEffectsAttr = memAttr;
+
+    // Handle the case where dst type is fp4 first.
+    if (dstEtype == TruncfDstElemTypes::E2M1) {
+      // Convert 8 elements at a time.
+      // To convert 8 elements, vector<8xf16>:
+      // Use:
+      // uint __builtin_IB_dnscl_hf16(uint, uint, 1, 0)
+      // uint __builtin_IB_dnscl_hf16(uint, uint, 1, 3)
+      // llvm.or
+      Value cast = LLVM::BitcastOp::create(
+          rewriter, op.getLoc(), VectorType::get(8, rewriter.getI32Type()),
+          src);
+
+      std::string fnName = "__builtin_IB_dnscl_";
+      fnName += (srcEtype == TruncfSrcElemTypes::F16) ? "hf16" : "bf16";
+      auto genDnscl = [&](Value input, Value idx0, Value idx1, Value dstTy,
+                          Value mode) -> Value {
+        Value arg1 =
+            LLVM::ExtractElementOp::create(rewriter, op.getLoc(), input, idx0)
+                ->getResult(0);
+        Value arg2 =
+            LLVM::ExtractElementOp::create(rewriter, op.getLoc(), input, idx1)
+                ->getResult(0);
+        SmallVector<Type> argTypes{arg1.getType(), arg2.getType(),
+                                   dstTy.getType(), mode.getType()};
+        SmallVector<Value> args{arg1, arg2, dstTy, mode};
+        Value dnscl = createDeviceFunctionCall(
+                          rewriter, fnName, rewriter.getI32Type(), argTypes,
+                          args, {}, funcAttrs, op.getOperation())
+                          ->getResult(0);
+        return dnscl;
+      };
+
+      Value zero = LLVM::ConstantOp::create(rewriter, op.getLoc(),
+                                            rewriter.getI32Type(), 0);
+      Value one = LLVM::ConstantOp::create(rewriter, op.getLoc(),
+                                           rewriter.getI32Type(), 1);
+      Value two = LLVM::ConstantOp::create(rewriter, op.getLoc(),
+                                           rewriter.getI32Type(), 2);
+      Value three = LLVM::ConstantOp::create(rewriter, op.getLoc(),
+                                             rewriter.getI32Type(), 3);
+      Value even = genDnscl(cast, zero, two, one, zero);
+      Value odd = genDnscl(cast, one, three, one, two);
+      Value firstHalf = LLVM::OrOp::create(rewriter, op.getLoc(), even, odd);
+      Value four = LLVM::ConstantOp::create(rewriter, op.getLoc(),
+                                            rewriter.getI32Type(), 4);
+      Value five = LLVM::ConstantOp::create(rewriter, op.getLoc(),
+                                            rewriter.getI32Type(), 5);
+      Value six = LLVM::ConstantOp::create(rewriter, op.getLoc(),
+                                           rewriter.getI32Type(), 6);
+      Value seven = LLVM::ConstantOp::create(rewriter, op.getLoc(),
+                                             rewriter.getI32Type(), 7);
+      even = genDnscl(cast, four, six, one, zero);
+      odd = genDnscl(cast, five, seven, one, two);
+      Value secondHalf = LLVM::OrOp::create(rewriter, op.getLoc(), even, odd);
+      // Create vector<2xi32> from two i32 values and then bitcast to
+      // vector<8xi8> to match the dst type.
+      Value combined = LLVM::UndefOp::create(
+          rewriter, op.getLoc(), VectorType::get(2, rewriter.getI32Type()));
+      combined = LLVM::InsertElementOp::create(rewriter, op.getLoc(), combined,
+                                               firstHalf, zero)
+                     ->getResult(0);
+      combined = LLVM::InsertElementOp::create(rewriter, op.getLoc(), combined,
+                                               secondHalf, one)
+                     ->getResult(0);
+      Value result =
+          LLVM::BitcastOp::create(rewriter, op.getLoc(), vecDstTy, combined);
+      rewriter.replaceOp(op, result);
+      return success();
+    }
+
+    // Handle the case where dst type is fp8.
+    // BF16 type needs some preprocessing before conversion,
+    // First extended to F32 and then truncated to F16.
+    if (srcEtype == TruncfSrcElemTypes::BF16) {
+      // Step 1: Extend to F32
+      // Use float16 __builtin_IB_bftof_16(short16)
+      src = LLVM::BitcastOp::create(
+          rewriter, op.getLoc(),
+          VectorType::get(vecSrcTy.getShape(), rewriter.getI16Type()), src);
+      std::string fnName = "__builtin_IB_bftof_16";
+      SmallVector<Type> argTypes{src.getType()};
+      SmallVector<Value> args{src};
+      Type resTy = VectorType::get(vecSrcTy.getShape(), rewriter.getF32Type());
+      src = createDeviceFunctionCall(rewriter, fnName, resTy, argTypes, args,
+                                     {}, funcAttrs, op.getOperation())
+                ->getResult(0);
+      // Step 2: Truncf to F16
+      // Use half16 convert_half16(float16)
+      std::string truncFnName = "convert_half16";
+      SmallVector<Type> truncArgTypes{src.getType()};
+      SmallVector<Value> truncArgs{src};
+      truncFnName = mangle(truncFnName, truncArgTypes);
+      resTy = VectorType::get(vecSrcTy.getShape(), rewriter.getF16Type());
+      src =
+          createDeviceFunctionCall(rewriter, truncFnName, resTy, truncArgTypes,
+                                   truncArgs, {}, funcAttrs, op.getOperation())
+              ->getResult(0);
+    }
+    if (dstEtype == TruncfDstElemTypes::BF8) { // Float8E5M2Type
+      // Use char16 __builtin_IB_hftobf8_16(half16)
+      std::string fnName = "__builtin_IB_hftobf8_16";
+      SmallVector<Type> argTypes{src.getType()};
+      SmallVector<Value> args{src};
+      Value result =
+          createDeviceFunctionCall(rewriter, fnName, vecDstTy, argTypes, args,
+                                   {}, funcAttrs, op.getOperation())
+              ->getResult(0);
+
+      rewriter.replaceOp(op, result);
+    } else if (dstEtype == TruncfDstElemTypes::F8) { // Float8E4M3FNType
+      // Use char16 __builtin_IB_hftohf8_16(half16)
+      std::string fnName = "__builtin_IB_hftohf8_16";
+      SmallVector<Type> argTypes{src.getType()};
+      SmallVector<Value> args{src};
+      Value result =
+          createDeviceFunctionCall(rewriter, fnName, vecDstTy, argTypes, args,
+                                   {}, funcAttrs, op.getOperation())
+              ->getResult(0);
+
+      rewriter.replaceOp(op, result);
+    } else {
+      return rewriter.notifyMatchFailure(
+          op, "Unsupported src, dst element type pair.");
+    }
+    return success();
+  }
+};
+
+class ExtfToOCLPattern : public OpConversionPattern<ExtfOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(ExtfOp op, ExtfOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // `xevm.extf` is the inverse of `xevm.truncf`. Supported source and result
+    // types are restricted for now, mirroring the truncf lowering.
+    auto srcEtype = op.getSrcEtype().getEtype();
+    auto dstEtype = op.getDstEtype().getEtype();
+    // Scalar case is not supported until usage case become clear.
+    auto vecSrcTy = dyn_cast<VectorType>(op.getSrc().getType());
+    if (!vecSrcTy)
+      return rewriter.notifyMatchFailure(op, "Scalar src is not supported.");
+    auto vecDstTy = dyn_cast<VectorType>(op.getDst().getType());
+    if (!vecDstTy)
+      return rewriter.notifyMatchFailure(op, "Scalar dst is not supported.");
+    Value src = op.getSrc();
+    auto memAttr = rewriter.getAttr<LLVM::MemoryEffectsAttr>(
+        /*other=*/LLVM::ModRefInfo::NoModRef,
+        /*argMem=*/LLVM::ModRefInfo::NoModRef,
+        /*inaccessibleMem=*/LLVM::ModRefInfo::NoModRef,
+        /*errnoMem=*/LLVM::ModRefInfo::NoModRef,
+        /*targetMem0=*/LLVM::ModRefInfo::NoModRef,
+        /*targetMem1=*/LLVM::ModRefInfo::NoModRef);
+    auto funcAttrs = convergentNoUnwindWillReturnAttrs;
+    funcAttrs.memEffectsAttr = memAttr;
+
+    // Handle the case where src type is fp4 (e2m1) first.
+    if (srcEtype == ExtfSrcElemTypes::E2M1) {
+      // 16 fp4 values are packed into vector<8xi8>, the result is a
+      // vector<16xf16> or vector<16xbf16>.
+      // Use:
+      //   uint16 __builtin_IB_shfl_idx4_lut(int lut_index)
+      //   uint8  __builtin_IB_shfl_idx4_to_fp16_8_packed(uint16 lut,
+      //                                                  char8 source)
+      // The lookup table selects the target format:
+      //   7 = e2m1 -> f16, 5 = e2m1 -> bf16.
+      if (vecSrcTy.getNumElements() != 8 || vecDstTy.getNumElements() != 16)
+        return rewriter.notifyMatchFailure(
+            op, "fp4 src expects a vector<8xi8> src and a 16 element dst");
+      constexpr int kLutE2M1ToF16 = 7;
+      constexpr int kLutE2M1ToBF16 = 5;
+      int lutIndex =
+          (dstEtype == ExtfDstElemTypes::F16) ? kLutE2M1ToF16 : kLutE2M1ToBF16;
+      Value lutIdx = LLVM::ConstantOp::create(rewriter, op.getLoc(),
+                                              rewriter.getI32Type(), lutIndex);
+      Type lutTy = VectorType::get(16, rewriter.getI32Type());
+      Value lut =
+          createDeviceFunctionCall(rewriter, "__builtin_IB_shfl_idx4_lut",
+                                   lutTy, {lutIdx.getType()}, {lutIdx}, {},
+                                   funcAttrs, op.getOperation())
+              ->getResult(0);
+      Type packedResTy = VectorType::get(8, rewriter.getI32Type());
+      SmallVector<Type> convArgTypes{lut.getType(), src.getType()};
+      SmallVector<Value> convArgs{lut, src};
+      Value result =
+          createDeviceFunctionCall(
+              rewriter, "__builtin_IB_shfl_idx4_to_fp16_8_packed", packedResTy,
+              convArgTypes, convArgs, {}, funcAttrs, op.getOperation())
+              ->getResult(0);
+      // The builtin returns the f16/bf16 bits packed as i32, bitcast to the
+      // f16/bf16 dst type.
+      result = LLVM::BitcastOp::create(rewriter, op.getLoc(), vecDstTy, result);
+      rewriter.replaceOp(op, result);
+      return success();
+    }
+
+    // Handle the case where src type is fp8 (bf8/hf8).
+    // Only 16 input elements are supported, see TruncfToOCLPattern for details.
+    if (vecSrcTy.getNumElements() != 16)
+      return rewriter.notifyMatchFailure(
+          op, "Only vector src of 16 elements is supported");
+
+    // Step 1: Extend fp8 (bf8/hf8) to F16.
+    //   bf8 -> half: half16 __builtin_IB_bf8tohf_16(char16)
+    //   hf8 -> half: half16 __builtin_IB_hf8tohf_16(char16)
+    std::string fnName = (srcEtype == ExtfSrcElemTypes::BF8)
+                             ? "__builtin_IB_bf8tohf_16"
+                             : "__builtin_IB_hf8tohf_16";
+    Type f16Ty = VectorType::get(vecSrcTy.getShape(), rewriter.getF16Type());
+    SmallVector<Type> argTypes{src.getType()};
+    SmallVector<Value> args{src};
+    Value result =
+        createDeviceFunctionCall(rewriter, fnName, f16Ty, argTypes, args, {},
+                                 funcAttrs, op.getOperation())
+            ->getResult(0);
+
+    // When the destination is F16, we are done.
+    if (dstEtype == ExtfDstElemTypes::F16) {
+      rewriter.replaceOp(op, result);
+      return success();
+    }
+
+    // BF16 destination needs some postprocessing.
+    // First extend F16 to F32 and then truncate to BF16.
+    // Step 2: Extend to F32.
+    // Use float16 convert_float16(half16)
+    std::string convFnName = "convert_float16";
+    SmallVector<Type> convArgTypes{result.getType()};
+    SmallVector<Value> convArgs{result};
+    convFnName = mangle(convFnName, convArgTypes);
+    Type f32Ty = VectorType::get(vecSrcTy.getShape(), rewriter.getF32Type());
+    result =
+        createDeviceFunctionCall(rewriter, convFnName, f32Ty, convArgTypes,
+                                 convArgs, {}, funcAttrs, op.getOperation())
+            ->getResult(0);
+    // Step 3: Truncate F32 to BF16.
+    // Use short16 __builtin_IB_ftobf_16(float16)
+    constexpr StringRef ftobfFnName = "__builtin_IB_ftobf_16";
+    SmallVector<Type> ftobfArgTypes{result.getType()};
+    SmallVector<Value> ftobfArgs{result};
+    Type i16Ty = VectorType::get(vecSrcTy.getShape(), rewriter.getI16Type());
+    result =
+        createDeviceFunctionCall(rewriter, ftobfFnName, i16Ty, ftobfArgTypes,
+                                 ftobfArgs, {}, funcAttrs, op.getOperation())
+            ->getResult(0);
+    // The builtin returns the bf16 bits as i16, bitcast to the bf16 dst type.
+    result = LLVM::BitcastOp::create(rewriter, op.getLoc(), vecDstTy, result);
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
+class MMAMxToOCLPattern : public OpConversionPattern<MMAMxOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(MMAMxOp op, MMAMxOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (!op.getC()) {
+      return rewriter.notifyMatchFailure(op, "OCL requires C operand");
+    }
+    auto precisionC = op.getTypes().getC();
+    auto precisionD = op.getTypes().getD();
+    if (precisionC != precisionD) {
+      return rewriter.notifyMatchFailure(op, "type of C and D need to match");
+    }
+
+    constexpr uint32_t bitWidthPackedA{16};
+    constexpr uint32_t bitWidthPackedB{32};
+    auto loc = op.getLoc();
+
+    auto castIfNeeded = [&](Value val, Type packedType) -> Value {
+      VectorType origTy = cast<VectorType>(val.getType());
+      const uint32_t vecBitSize =
+          origTy.getNumElements() *
+          origTy.getElementType().getIntOrFloatBitWidth();
+      VectorType newTy = VectorType::get(
+          vecBitSize / packedType.getIntOrFloatBitWidth(), packedType);
+      if (origTy != newTy)
+        val = LLVM::BitcastOp::create(rewriter, loc, newTy, val);
+      return val;
+    };
+
+    Value a = op.getA();
+    Type packedAType = (op.getTypes().getA() == xevm::ElemType::TF32)
+                           ? cast<Type>(rewriter.getF32Type())
+                           : rewriter.getIntegerType(bitWidthPackedA);
+    a = castIfNeeded(a, packedAType);
+
+    Value b = op.getB();
+    Type packedBType = (op.getTypes().getB() == xevm::ElemType::TF32)
+                           ? cast<Type>(rewriter.getF32Type())
+                           : rewriter.getIntegerType(bitWidthPackedB);
+    b = castIfNeeded(b, packedBType);
+
+    Value c = op.getC();
+    VectorType cOrigTy = cast<VectorType>(c.getType());
+    VectorType resOrigTy = cast<VectorType>(op->getResultTypes()[0]);
+    assert(cOrigTy == resOrigTy && "Accumulator and result type mismatch");
+    // OCL builtins encode bfloat16 as int16
+    VectorType cTy =
+        cOrigTy.getElementType().isBF16()
+            ? VectorType::get(cOrigTy.getShape(), rewriter.getIntegerType(16))
+            : cOrigTy;
+    VectorType resTy = cTy;
+    if (cOrigTy != cTy)
+      c = LLVM::BitcastOp::create(rewriter, loc, cTy, c);
+
+    std::string fnName =
+        llvm::formatv("__builtin_IB_sub_group16_bdpas_{0}_{1}_{2}_{3}_8_8",
+                      builtinElemType(op.getTypes().getD()),
+                      builtinElemType(op.getTypes().getC()),
+                      builtinElemType(op.getTypes().getA()),
+                      builtinElemType(op.getTypes().getB()))
+            .str();
+    auto scaleA = op.getScaleA();
+    auto scaleB = op.getScaleB();
+    SmallVector<Type> argTypes{cTy, a.getType(), b.getType(), scaleA.getType(),
+                               scaleB.getType()};
+    SmallVector<Value> args{c, a, b, scaleA, scaleB};
+
+    auto memAttr = rewriter.getAttr<LLVM::MemoryEffectsAttr>(
+        /*other=*/LLVM::ModRefInfo::NoModRef,
+        /*argMem=*/LLVM::ModRefInfo::NoModRef,
+        /*inaccessibleMem=*/LLVM::ModRefInfo::NoModRef,
+        /*errnoMem=*/LLVM::ModRefInfo::NoModRef,
+        /*targetMem0=*/LLVM::ModRefInfo::NoModRef,
+        /*targetMem1=*/LLVM::ModRefInfo::NoModRef);
+    auto funcAttrs = convergentNoUnwindWillReturnAttrs;
+    funcAttrs.memEffectsAttr = memAttr;
+    Value result =
+        createDeviceFunctionCall(rewriter, fnName, resTy, argTypes, args, {},
+                                 funcAttrs, op.getOperation())
+            ->getResult(0);
+
+    if (resOrigTy != resTy)
+      result = LLVM::BitcastOp::create(rewriter, loc, resOrigTy, result);
+
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
 class AllocaToGlobalPattern : public OpConversionPattern<LLVM::AllocaOp> {
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
@@ -1275,6 +1697,9 @@ class HandleVectorExtractPattern
         // 3. Merge with load as a smaller load
         auto loadOp = cast<LLVM::LoadOp>(srcOp);
         auto loadPtr = loadOp.getAddr();
+        auto loadAddrSpace = loadPtr.getType().getAddressSpace();
+        if (loadAddrSpace != 0)
+          return failure();
         auto loadTy = dyn_cast<VectorType>(loadOp.getType());
         auto elemTy = loadTy.getElementType();
         auto firstIndex = mask[0];
@@ -1283,8 +1708,7 @@ class HandleVectorExtractPattern
         if (firstIndex) {
           auto newPtr = LLVM::GEPOp::create(
               rewriter, loc,
-              LLVM::LLVMPointerType::get(rewriter.getContext(),
-                                         loadPtr.getType().getAddressSpace()),
+              LLVM::LLVMPointerType::get(rewriter.getContext(), loadAddrSpace),
               elemTy, loadPtr, ArrayRef<LLVM::GEPArg>{firstIndex});
           auto newLoad = LLVM::LoadOp::create(rewriter, loc, newVecTy, newPtr);
           rewriter.replaceOp(op, newLoad);
@@ -1295,6 +1719,9 @@ class HandleVectorExtractPattern
       } else {
         return failure();
       }
+    } else {
+      // No defining op (e.g. function argument): nothing to hoist/merge.
+      return failure();
     }
     return success();
   }
@@ -1360,28 +1787,30 @@ void ::mlir::populateXeVMToLLVMConversionPatterns(ConversionTarget &target,
     return !op->hasAttr("cache_control");
   });
   target.addIllegalDialect<XeVMDialect>();
-  patterns.add<LoadStorePrefetchToOCLPattern<BlockLoad2dOp>,
-               LoadStorePrefetchToOCLPattern<BlockStore2dOp>,
-               LoadStorePrefetchToOCLPattern<BlockPrefetch2dOp>,
-               MMAToOCLPattern, MemfenceToOCLPattern, PrefetchToOCLPattern,
-               LLVMLoadStoreToOCLPattern<LLVM::LoadOp>,
-               LLVMLoadStoreToOCLPattern<LLVM::StoreOp>,
-               BlockLoadStore1DToOCLPattern<BlockLoadOp>,
-               BlockLoadStore1DToOCLPattern<BlockStoreOp>,
-               LaunchConfigOpToOCLPattern<WorkitemIdXOp>,
-               LaunchConfigOpToOCLPattern<WorkitemIdYOp>,
-               LaunchConfigOpToOCLPattern<WorkitemIdZOp>,
-               LaunchConfigOpToOCLPattern<WorkgroupDimXOp>,
-               LaunchConfigOpToOCLPattern<WorkgroupDimYOp>,
-               LaunchConfigOpToOCLPattern<WorkgroupDimZOp>,
-               LaunchConfigOpToOCLPattern<WorkgroupIdXOp>,
-               LaunchConfigOpToOCLPattern<WorkgroupIdYOp>,
-               LaunchConfigOpToOCLPattern<WorkgroupIdZOp>,
-               LaunchConfigOpToOCLPattern<GridDimXOp>,
-               LaunchConfigOpToOCLPattern<GridDimYOp>,
-               LaunchConfigOpToOCLPattern<GridDimZOp>,
-               SubgroupOpWorkitemOpToOCLPattern<LaneIdOp>,
-               SubgroupOpWorkitemOpToOCLPattern<SubgroupIdOp>,
-               SubgroupOpWorkitemOpToOCLPattern<SubgroupSizeOp>,
-               AllocaToGlobalPattern>(patterns.getContext());
+  patterns
+      .add<LoadStorePrefetchToOCLPattern<BlockLoad2dOp>,
+           LoadStorePrefetchToOCLPattern<BlockStore2dOp>,
+           LoadStorePrefetchToOCLPattern<BlockPrefetch2dOp>, MMAToOCLPattern,
+           MemfenceToOCLPattern, PrefetchToOCLPattern,
+           LLVMLoadStoreToOCLPattern<LLVM::LoadOp>,
+           LLVMLoadStoreToOCLPattern<LLVM::StoreOp>,
+           BlockLoadStore1DToOCLPattern<BlockLoadOp>,
+           BlockLoadStore1DToOCLPattern<BlockStoreOp>,
+           LaunchConfigOpToOCLPattern<WorkitemIdXOp>,
+           LaunchConfigOpToOCLPattern<WorkitemIdYOp>,
+           LaunchConfigOpToOCLPattern<WorkitemIdZOp>,
+           LaunchConfigOpToOCLPattern<WorkgroupDimXOp>,
+           LaunchConfigOpToOCLPattern<WorkgroupDimYOp>,
+           LaunchConfigOpToOCLPattern<WorkgroupDimZOp>,
+           LaunchConfigOpToOCLPattern<WorkgroupIdXOp>,
+           LaunchConfigOpToOCLPattern<WorkgroupIdYOp>,
+           LaunchConfigOpToOCLPattern<WorkgroupIdZOp>,
+           LaunchConfigOpToOCLPattern<GridDimXOp>,
+           LaunchConfigOpToOCLPattern<GridDimYOp>,
+           LaunchConfigOpToOCLPattern<GridDimZOp>,
+           SubgroupOpWorkitemOpToOCLPattern<LaneIdOp>,
+           SubgroupOpWorkitemOpToOCLPattern<SubgroupIdOp>,
+           SubgroupOpWorkitemOpToOCLPattern<SubgroupSizeOp>, TruncfToOCLPattern,
+           ExtfToOCLPattern, MMAMxToOCLPattern, AllocaToGlobalPattern>(
+          patterns.getContext());
 }

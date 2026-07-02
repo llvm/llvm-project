@@ -380,13 +380,28 @@ define <2 x float> @select_fdiv(i1 %cond, <2 x float> %x, <2 x float> %y) {
   ret <2 x float> %ret
 }
 
+;PR 186471
+
+define i1 @fold_select_fcmp_fpmath(i1 %cond, float %a) {
+; CHECK-LABEL: @fold_select_fcmp_fpmath(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], i1 [[CMP]], i1 false
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %lhs = select i1 %cond, float %a, float 0.000000e+00, !fpmath !4
+  %res = fcmp olt float %lhs, 0.000000e+00
+  ret i1 %res
+}
+
 !1 = !{!"branch_weights", i32 2, i32 10}
 !2 = !{!"branch_weights", i32 3, i32 10}
 !3 = !{}
+!4 = !{float 2.500000e+00}
 
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nounwind }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; CHECK: [[PROF0]] = !{!"branch_weights", i32 2, i32 10}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 10, i32 2}

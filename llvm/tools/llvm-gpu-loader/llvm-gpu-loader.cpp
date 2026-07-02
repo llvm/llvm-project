@@ -72,24 +72,6 @@ static cl::list<std::string> Args(cl::ConsumeAfter,
                                   cl::desc("<program arguments>..."),
                                   cl::cat(LoaderCategory));
 
-// The arguments to the '_begin' kernel.
-struct BeginArgs {
-  int Argc;
-  void *Argv;
-  void *Envp;
-};
-
-// The arguments to the '_start' kernel.
-struct StartArgs {
-  int Argc;
-  void *Argv;
-  void *Envp;
-  void *Ret;
-};
-
-// The arguments to the '_end' kernel.
-struct EndArgs {};
-
 [[noreturn]] static void handleError(Error E) {
   outs().flush();
   logAllUnhandledErrors(std::move(E), WithColor::error(errs(), "loader"));
@@ -183,16 +165,23 @@ ol_device_handle_t getHostDevice() {
   return Device;
 }
 
-template <typename Args>
+template <typename... Args>
 void launchKernel(ol_queue_handle_t Queue, ol_device_handle_t Device,
                   ol_program_handle_t Program, const char *Name,
-                  ol_kernel_launch_size_args_t LaunchArgs, Args &KernelArgs) {
+                  ol_kernel_launch_size_args_t LaunchArgs,
+                  Args &...KernelArgs) {
   ol_symbol_handle_t Kernel;
   OFFLOAD_ERR(olGetSymbol(Program, Name, OL_SYMBOL_KIND_KERNEL, &Kernel));
 
-  OFFLOAD_ERR(olLaunchKernel(Queue, Device, Kernel, &KernelArgs,
-                             std::is_empty_v<Args> ? 0 : sizeof(Args),
-                             &LaunchArgs));
+  if constexpr (sizeof...(Args) == 0) {
+    OFFLOAD_ERR(olLaunchKernel(Queue, Device, Kernel, &LaunchArgs, nullptr, 0,
+                               nullptr, nullptr));
+  } else {
+    void *ArgPtrs[] = {static_cast<void *>(&KernelArgs)...};
+    size_t ArgSizes[] = {sizeof(KernelArgs)...};
+    OFFLOAD_ERR(olLaunchKernel(Queue, Device, Kernel, &LaunchArgs, nullptr,
+                               sizeof...(Args), ArgPtrs, ArgSizes));
+  }
 }
 
 int main(int argc, const char **argv, const char **envp) {
@@ -273,8 +262,8 @@ int main(int argc, const char **argv, const char **envp) {
   OFFLOAD_ERR(olMemcpy(Queue, DevRet, Device, &Zero, Host, sizeof(int)));
 
   ol_kernel_launch_size_args_t BeginLaunch{1, {1, 1, 1}, {1, 1, 1}, 0};
-  BeginArgs BeginArgs = {DevArgc, DevArgv, DevEnvp};
-  launchKernel(Queue, Device, Program, "_begin", BeginLaunch, BeginArgs);
+  launchKernel(Queue, Device, Program, "_begin", BeginLaunch, DevArgc, DevArgv,
+               DevEnvp);
   OFFLOAD_ERR(olSyncQueue(Queue));
 
   uint32_t Dims = (BlocksZ > 1) ? 3 : (BlocksY > 1) ? 2 : 1;
@@ -282,12 +271,11 @@ int main(int argc, const char **argv, const char **envp) {
                                            {BlocksX, BlocksY, BlocksZ},
                                            {ThreadsX, ThreadsY, ThreadsZ},
                                            /*SharedMemBytes=*/0};
-  StartArgs StartArgs = {DevArgc, DevArgv, DevEnvp, DevRet};
-  launchKernel(Queue, Device, Program, "_start", StartLaunch, StartArgs);
+  launchKernel(Queue, Device, Program, "_start", StartLaunch, DevArgc, DevArgv,
+               DevEnvp, DevRet);
 
   ol_kernel_launch_size_args_t EndLaunch{1, {1, 1, 1}, {1, 1, 1}, 0};
-  EndArgs EndArgs = {};
-  launchKernel(Queue, Device, Program, "_end", EndLaunch, EndArgs);
+  launchKernel(Queue, Device, Program, "_end", EndLaunch);
 
   int Ret;
   OFFLOAD_ERR(olMemcpy(Queue, &Ret, Host, DevRet, Device, sizeof(int)));

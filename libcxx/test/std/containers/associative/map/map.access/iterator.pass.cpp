@@ -10,20 +10,20 @@
 
 // class map
 
-//       iterator begin();
-// const_iterator begin() const;
-//       iterator end();
-// const_iterator end()   const;
+//       iterator begin();       // constexpr since C++26
+// const_iterator begin() const; // constexpr since C++26
+//       iterator end();         // constexpr since C++26
+// const_iterator end()   const; // constexpr since C++26
 //
-//       reverse_iterator rbegin();
-// const_reverse_iterator rbegin() const;
-//       reverse_iterator rend();
-// const_reverse_iterator rend()   const;
+// reverse_iterator       rbegin();       // constexpr since C++26
+// const_reverse_iterator rbegin() const; // constexpr since C++26
+// reverse_iterator       rend();         // constexpr since C++26
+// const_reverse_iterator rend()   const; // constexpr since C++26
 //
-// const_iterator         cbegin()  const;
-// const_iterator         cend()    const;
-// const_reverse_iterator crbegin() const;
-// const_reverse_iterator crend()   const;
+// const_iterator         cbegin()  const; // constexpr since C++26
+// const_iterator         cend()    const; // constexpr since C++26
+// const_reverse_iterator crbegin() const; // constexpr since C++26
+// const_reverse_iterator crend()   const; // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -32,7 +32,7 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef std::pair<const int, double> V;
     V ar[] = {V(1, 1),   V(1, 1.5), V(1, 2),   V(2, 1),   V(2, 1.5), V(2, 2),   V(3, 1),   V(3, 1.5),
@@ -156,6 +156,13 @@ int main(int, char**) {
     assert(!(cii != ii1));
   }
 #endif
+  return true;
+}
 
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

@@ -306,6 +306,13 @@ enum TransformationMode {
   TM_SuppressedByUser = TM_Disable | TM_Force
 };
 
+/// Return a short prefix describing the loop's vectorizer origin based on
+/// the \c llvm.loop.vectorize.body and \c llvm.loop.vectorize.epilogue
+/// metadata.  The result is one of \c "vectorized epilogue ", \c "vectorized ",
+/// \c "epilogue ", or \c "" (empty) and is intended to be prepended to
+/// loop-kind tokens in optimization remarks.
+LLVM_ABI StringRef getLoopVectorizeKindPrefix(const Loop *L);
+
 /// @{
 /// Get the mode for LLVM's supported loop transformations.
 LLVM_ABI TransformationMode hasUnrollTransformation(const Loop *L);
@@ -387,14 +394,14 @@ LLVM_ABI bool setLoopEstimatedTripCount(
 /// - The probability \c P that, at the end of any iteration, the latch of \p L
 ///   will start another iteration such that `1 - P` is the probability of
 ///   exiting the loop.
-BranchProbability getLoopProbability(Loop *L);
+LLVM_ABI BranchProbability getLoopProbability(Loop *L);
 
 /// Set branch weight metadata for the latch of \p L to indicate that, at the
 /// end of any iteration, \p P and `1 - P` are the probabilities of starting
 /// another iteration and exiting the loop, respectively.  Return false if the
 /// implementation is unable to handle the loop form of \p L (e.g., \p L must
 /// have a latch block that controls the loop exit).  Otherwise, return true.
-bool setLoopProbability(Loop *L, BranchProbability P);
+LLVM_ABI bool setLoopProbability(Loop *L, BranchProbability P);
 
 /// Based on branch weight metadata, return either:
 /// - An unknown probability if the implementation cannot extract the
@@ -403,7 +410,8 @@ bool setLoopProbability(Loop *L, BranchProbability P);
 /// - The probability \c P that control flows from \p B to its first target
 ///   label such that `1 - P` is the probability of control flowing to its
 ///   second target label, or vice-versa if \p ForFirstTarget is false.
-BranchProbability getBranchProbability(CondBrInst *B, bool ForFirstTarget);
+LLVM_ABI BranchProbability getBranchProbability(CondBrInst *B,
+                                                bool ForFirstTarget);
 
 /// Calculates the edge probability from Src to Dst.
 /// Dst has to be a successor to Src.
@@ -412,13 +420,14 @@ BranchProbability getBranchProbability(CondBrInst *B, bool ForFirstTarget);
 /// This does not use BranchProbabilityInfo and the values computed by this
 /// will vary from BPI because BPI has its own more advanced heuristics to
 /// determine probabilities even without branch_weights metadata.
-BranchProbability getBranchProbability(BasicBlock *Src, BasicBlock *Dst);
+LLVM_ABI BranchProbability getBranchProbability(BasicBlock *Src,
+                                                BasicBlock *Dst);
 
 /// Set branch weight metadata for \p B to indicate that \p P and `1 - P` are
 /// the probabilities of control flowing to its first and second target labels,
 /// respectively, or vice-versa if \p ForFirstTarget is false.
-void setBranchProbability(CondBrInst *B, BranchProbability P,
-                          bool ForFirstTarget);
+LLVM_ABI void setBranchProbability(CondBrInst *B, BranchProbability P,
+                                   bool ForFirstTarget);
 
 /// Check inner loop (L) backedge count is known to be invariant on all
 /// iterations of its outer loop. If the loop has no parent, this is trivially
@@ -447,6 +456,18 @@ LLVM_ABI bool canSinkOrHoistInst(Instruction &I, AAResults *AA,
                                  bool TargetExecutesOncePerLoop,
                                  SinkAndHoistLICMFlags &LICMFlags,
                                  OptimizationRemarkEmitter *ORE = nullptr);
+
+/// Returns true if it is legal to hoist \p LI out of \p CurLoop. This is the
+/// load-specific subset of \c canSinkOrHoistInst: it rejects volatile or
+/// ordered loads, allows constant-memory / invariant.load / invariant.start-
+/// dominated loads unconditionally, and otherwise queries \p MSSA for an
+/// in-loop clobber. \p TargetExecutesOncePerLoop has the same meaning as in
+/// \c canSinkOrHoistInst (set to true when hoisting to the preheader).
+LLVM_ABI bool canHoistLoad(LoadInst &LI, AAResults *AA, DominatorTree *DT,
+                           Loop *CurLoop, MemorySSA &MSSA,
+                           bool TargetExecutesOncePerLoop,
+                           SinkAndHoistLICMFlags &LICMFlags,
+                           OptimizationRemarkEmitter *ORE = nullptr);
 
 /// Returns the llvm.vector.reduce intrinsic that corresponds to the recurrence
 /// kind.
@@ -490,6 +511,16 @@ LLVM_ABI Value *createMinMaxOp(IRBuilderBase &Builder, RecurKind RK,
 LLVM_ABI Value *getOrderedReduction(IRBuilderBase &Builder, Value *Acc,
                                     Value *Src, unsigned Op,
                                     RecurKind MinMaxKind = RecurKind::None);
+
+/// Expand a scalable vector reduction into a runtime loop that applies
+/// \p RdxOpcode element by element, starting from \p Acc as the initial
+/// accumulator value (typically the reduction identity).
+/// If \p DT and/or \p LI are provided, they are updated to reflect the
+/// new basic blocks.
+LLVM_ABI Value *expandReductionViaLoop(IRBuilderBase &Builder, Value *Vec,
+                                       unsigned RdxOpcode, Value *Acc,
+                                       DominatorTree *DT = nullptr,
+                                       LoopInfo *LI = nullptr);
 
 /// Generates a vector reduction using shufflevectors to reduce the value.
 /// Fast-math-flags are propagated using the IRBuilder's setting.

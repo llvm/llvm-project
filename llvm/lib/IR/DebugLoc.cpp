@@ -14,9 +14,12 @@ using namespace llvm;
 
 #if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
 #include "llvm/Support/Signals.h"
+namespace llvm {
+bool DebugLocOriginCollectionEnabled = false;
+} // namespace llvm
 
 DbgLocOrigin::DbgLocOrigin(bool ShouldCollectTrace) {
-  if (!ShouldCollectTrace)
+  if (!ShouldCollectTrace || !DebugLocOriginCollectionEnabled)
     return;
   auto &[Depth, StackTrace] = StackTraces.emplace_back();
   Depth = sys::getStackTrace(StackTrace);
@@ -33,21 +36,9 @@ void DbgLocOrigin::addTrace() {
 }
 #endif // LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
 
-#if LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
-DILocAndCoverageTracking::DILocAndCoverageTracking(const DILocation *L)
-    : TrackingMDNodeRef(const_cast<DILocation *>(L)), DbgLocOrigin(!L),
-      Kind(DebugLocKind::Normal) {}
-#endif // LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
-
 //===----------------------------------------------------------------------===//
 // DebugLoc Implementation
 //===----------------------------------------------------------------------===//
-DebugLoc::DebugLoc(const DILocation *L) : Loc(const_cast<DILocation *>(L)) {}
-DebugLoc::DebugLoc(const MDNode *L) : Loc(const_cast<MDNode *>(L)) {}
-
-DILocation *DebugLoc::get() const {
-  return cast_or_null<DILocation>(Loc.get());
-}
 
 unsigned DebugLoc::getLine() const {
   assert(get() && "Expected valid DebugLoc");
@@ -81,6 +72,8 @@ DebugLoc DebugLoc::getFnDebugLoc() const {
 
   return DebugLoc();
 }
+
+MDNode *DebugLoc::getAsMDNode() const { return Loc; }
 
 bool DebugLoc::isImplicitCode() const {
   if (DILocation *Loc = get())

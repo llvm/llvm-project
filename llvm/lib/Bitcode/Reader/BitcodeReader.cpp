@@ -73,6 +73,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ModRef.h"
+#include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -641,8 +642,7 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
 
   // When intrinsic functions are encountered which require upgrading they are
   // stored here with their replacement function.
-  using UpdatedIntrinsicMap = DenseMap<Function *, Function *>;
-  UpdatedIntrinsicMap UpgradedIntrinsics;
+  DenseMap<Function *, Function *> UpgradedIntrinsics;
 
   // Several operations happen after the module header has been read, but
   // before function bodies are processed. This keeps track of whether
@@ -695,6 +695,12 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
   SmallVector<SyncScope::ID, 8> SSIDs;
 
   std::optional<ValueTypeCallbackTy> ValueTypeCallback;
+
+  /// Mirrors ParserCallbacks::SkipDebugIntrinsicUpgrade. When set, debug
+  /// intrinsic calls (llvm.dbg.*) are not auto-upgraded to non-instruction
+  /// debug records by globalCleanup(); the caller is expected to perform the
+  /// upgrade manually after any custom processing.
+  bool SkipDebugIntrinsicUpgrade = false;
 
 public:
   BitcodeReader(BitstreamCursor Stream, StringRef Strtab,
@@ -1364,8 +1370,10 @@ static int getDecodedBinaryOpcode(unsigned Val, Type *Ty) {
   }
 }
 
-static AtomicRMWInst::BinOp getDecodedRMWOperation(unsigned Val) {
-  switch (Val) {
+static AtomicRMWInst::BinOp getDecodedRMWOperation(unsigned Val,
+                                                   bool &IsElementwise) {
+  IsElementwise = Val & bitc::RMW_ELEMENTWISE_FLAG;
+  switch (Val & ~bitc::RMW_ELEMENTWISE_FLAG) {
   default: return AtomicRMWInst::BAD_BINOP;
   case bitc::RMW_XCHG: return AtomicRMWInst::Xchg;
   case bitc::RMW_ADD: return AtomicRMWInst::Add;
@@ -2299,6 +2307,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::DenormalFPEnv;
   case bitc::ATTR_KIND_NOOUTLINE:
     return Attribute::NoOutline;
+  case bitc::ATTR_KIND_NOIPA:
+    return Attribute::NoIPA;
   }
 }
 
@@ -3367,7 +3377,8 @@ Error BitcodeReader::parseConstants() {
     case bitc::CST_CODE_BYTE: // BYTE: [byteval]
       if (!CurTy->isByteOrByteVectorTy() || Record.empty())
         return error("Invalid byte const record");
-      V = ConstantByte::get(CurTy, decodeSignRotatedValue(Record[0]));
+      V = ConstantByte::get(CurTy, decodeSignRotatedValue(Record[0]),
+                            /*isSigned=*/true);
       break;
     case bitc::CST_CODE_WIDE_BYTE: { // WIDE_BYTE: [n x byteval]
       if (!CurTy->isByteOrByteVectorTy() || Record.empty())
@@ -3449,86 +3460,23 @@ Error BitcodeReader::parseConstants() {
       if (Record.empty())
         return error("Invalid data record");
 
-      Type *EltTy;
-      if (auto *Array = dyn_cast<ArrayType>(CurTy))
-        EltTy = Array->getElementType();
-      else
-        EltTy = cast<VectorType>(CurTy)->getElementType();
-      if (EltTy->isIntegerTy(8)) {
-        SmallVector<uint8_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::get(Context, Elts);
-        else
-          V = ConstantDataArray::get(Context, Elts);
-      } else if (EltTy->isIntegerTy(16)) {
-        SmallVector<uint16_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::get(Context, Elts);
-        else
-          V = ConstantDataArray::get(Context, Elts);
-      } else if (EltTy->isIntegerTy(32)) {
-        SmallVector<uint32_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::get(Context, Elts);
-        else
-          V = ConstantDataArray::get(Context, Elts);
-      } else if (EltTy->isIntegerTy(64)) {
-        SmallVector<uint64_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::get(Context, Elts);
-        else
-          V = ConstantDataArray::get(Context, Elts);
-      } else if (EltTy->isByteTy(8)) {
-        SmallVector<uint8_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::getByte(EltTy, Elts);
-        else
-          V = ConstantDataArray::getByte(EltTy, Elts);
-      } else if (EltTy->isByteTy(16)) {
-        SmallVector<uint16_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::getByte(EltTy, Elts);
-        else
-          V = ConstantDataArray::getByte(EltTy, Elts);
-      } else if (EltTy->isByteTy(32)) {
-        SmallVector<uint32_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::getByte(EltTy, Elts);
-        else
-          V = ConstantDataArray::getByte(EltTy, Elts);
-      } else if (EltTy->isByteTy(64)) {
-        SmallVector<uint64_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::getByte(EltTy, Elts);
-        else
-          V = ConstantDataArray::getByte(EltTy, Elts);
-      } else if (EltTy->isHalfTy()) {
-        SmallVector<uint16_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::getFP(EltTy, Elts);
-        else
-          V = ConstantDataArray::getFP(EltTy, Elts);
-      } else if (EltTy->isBFloatTy()) {
-        SmallVector<uint16_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::getFP(EltTy, Elts);
-        else
-          V = ConstantDataArray::getFP(EltTy, Elts);
-      } else if (EltTy->isFloatTy()) {
-        SmallVector<uint32_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::getFP(EltTy, Elts);
-        else
-          V = ConstantDataArray::getFP(EltTy, Elts);
-      } else if (EltTy->isDoubleTy()) {
-        SmallVector<uint64_t, 16> Elts(Record.begin(), Record.end());
-        if (isa<VectorType>(CurTy))
-          V = ConstantDataVector::getFP(EltTy, Elts);
-        else
-          V = ConstantDataArray::getFP(EltTy, Elts);
-      } else {
+      Type *EltTy = CurTy->getContainedType(0);
+      if (!ConstantDataSequential::isElementTypeCompatible(EltTy))
         return error("Invalid type for value");
+
+      const unsigned EltBytes = EltTy->getScalarSizeInBits() / 8;
+      SmallString<128> RawData;
+      RawData.reserve(Record.size() * EltBytes);
+      for (uint64_t Val : Record) {
+        const char *Src = reinterpret_cast<const char *>(&Val);
+        if constexpr (sys::IsBigEndianHost)
+          Src += sizeof(uint64_t) - EltBytes;
+        RawData.append(Src, Src + EltBytes);
       }
+
+      V = isa<VectorType>(CurTy)
+              ? ConstantDataVector::getRaw(RawData.str(), Record.size(), EltTy)
+              : ConstantDataArray::getRaw(RawData.str(), Record.size(), EltTy);
       break;
     }
     case bitc::CST_CODE_CE_UNOP: {  // CE_UNOP: [opcode, opval]
@@ -4039,6 +3987,8 @@ Error BitcodeReader::materializeMetadata() {
     }
   }
 
+  UpgradeCFIFunctionsMetadata(*TheModule);
+
   DeferredMetadataInfo.clear();
   return Error::success();
 }
@@ -4080,7 +4030,9 @@ Error BitcodeReader::globalCleanup() {
   for (Function &F : *TheModule) {
     MDLoader->upgradeDebugIntrinsics(F);
     Function *NewFn;
-    if (UpgradeIntrinsicFunction(&F, NewFn))
+    if (UpgradeIntrinsicFunction(&F,
+                                 NewFn, /*CanUpgradeDebugIntrinsicsToRecords=*/
+                                 !SkipDebugIntrinsicUpgrade))
       UpgradedIntrinsics[&F] = NewFn;
     // Look for functions that rely on old function attribute behavior.
     UpgradeFunctionAttributes(F);
@@ -4924,6 +4876,7 @@ Error BitcodeReader::parseBitcodeInto(Module *M, bool ShouldLazyLoadMetadata,
   };
   MDCallbacks.MDType = Callbacks.MDType;
   MDLoader = MetadataLoader(Stream, *M, ValueList, IsImporting, MDCallbacks);
+  SkipDebugIntrinsicUpgrade = Callbacks.SkipDebugIntrinsicUpgrade;
   return parseModule(0, ShouldLazyLoadMetadata, Callbacks);
 }
 
@@ -5341,7 +5294,10 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
             cast<TruncInst>(I)->setHasNoSignedWrap(true);
         }
         if (isa<FPMathOperator>(I)) {
-          FastMathFlags FMF = getDecodedFastMathFlags(Record[OpNum]);
+          uint64_t Flags = Record[OpNum];
+          if (isa<UIToFPInst>(I))
+            Flags >>= 1;
+          FastMathFlags FMF = getDecodedFastMathFlags(Flags);
           if (FMF.any())
             I->setFastMathFlags(FMF);
         }
@@ -6709,8 +6665,9 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       if (!(NumRecords == (OpNum + 4) || NumRecords == (OpNum + 5)))
         return error("Invalid atomicrmw record");
 
+      bool IsElementwise = false;
       const AtomicRMWInst::BinOp Operation =
-          getDecodedRMWOperation(Record[OpNum]);
+          getDecodedRMWOperation(Record[OpNum], IsElementwise);
       if (Operation < AtomicRMWInst::FIRST_BINOP ||
           Operation > AtomicRMWInst::LAST_BINOP)
         return error("Invalid atomicrmw record");
@@ -6735,7 +6692,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         Alignment =
             Align(TheModule->getDataLayout().getTypeStoreSize(Val->getType()));
 
-      I = new AtomicRMWInst(Operation, Ptr, Val, *Alignment, Ordering, SSID);
+      I = new AtomicRMWInst(Operation, Ptr, Val, *Alignment, Ordering, SSID,
+                            IsElementwise);
       ResTypeID = ValTypeID;
       cast<AtomicRMWInst>(I)->setVolatile(IsVol);
 
@@ -7116,7 +7074,7 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
   if (!F || !F->isMaterializable())
     return Error::success();
 
-  DenseMap<Function*, uint64_t>::iterator DFII = DeferredFunctionInfo.find(F);
+  auto DFII = DeferredFunctionInfo.find(F);
   assert(DFII != DeferredFunctionInfo.end() && "Deferred function not found!");
   // If its position is recorded as 0, its body is somewhere in the stream
   // but we haven't seen it yet.
@@ -7206,6 +7164,17 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
         if (It != UpgradedIntrinsics.end())
           UpgradeIntrinsicCall(CI, It->second);
       }
+    } else if (auto *BC = dyn_cast<BitCastInst>(&I);
+               BC && BC->getSrcTy() == BC->getDestTy() &&
+               isa_and_nonnull<ReturnInst>(BC->getNextNode())) {
+      // Old bitcode allowed an optional bitcast between a musttail call and its
+      // return. Under opaque pointers that cast is always a no-op, and the
+      // verifier no longer accepts it, so drop it.
+      if (auto *CI = dyn_cast<CallInst>(BC->getOperand(0));
+          CI && CI->isMustTailCall() && CI->getNextNode() == BC) {
+        BC->replaceAllUsesWith(CI);
+        BC->eraseFromParent();
+      }
     }
   }
 
@@ -7248,15 +7217,15 @@ Error BitcodeReader::materializeModule() {
   // delete the old functions to clean up. We can't do this unless the entire
   // module is materialized because there could always be another function body
   // with calls to the old function.
-  for (auto &I : UpgradedIntrinsics) {
-    for (auto *U : I.first->users()) {
-      if (CallInst *CI = dyn_cast<CallInst>(U))
-        UpgradeIntrinsicCall(CI, I.second);
+  for (auto &[OldFn, NewFn] : UpgradedIntrinsics) {
+    for (User *U : OldFn->users()) {
+      if (auto *CI = dyn_cast<CallInst>(U))
+        UpgradeIntrinsicCall(CI, NewFn);
     }
-    if (I.first != I.second) {
-      if (!I.first->use_empty())
-        I.first->replaceAllUsesWith(I.second);
-      I.first->eraseFromParent();
+    if (OldFn != NewFn) {
+      if (!OldFn->use_empty())
+        OldFn->replaceAllUsesWith(NewFn);
+      OldFn->eraseFromParent();
     }
   }
   UpgradedIntrinsics.clear();
@@ -7517,7 +7486,7 @@ Error ModuleSummaryIndexBitcodeReader::parseModule() {
         /// MODULE_CODE_HASH: [5*i32]
         case bitc::MODULE_CODE_HASH: {
           if (Record.size() != 5)
-            return error("Invalid hash length " + Twine(Record.size()).str());
+            return error("Invalid hash length " + Twine(Record.size()));
           auto &Hash = getThisModule()->second;
           int Pos = 0;
           for (auto &Val : Record) {
@@ -7788,10 +7757,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
   // corresponding function summary.
   const bool MemProfAfterFunctionSummary = Version >= 13;
   if (Version < 1 || Version > ModuleSummaryIndex::BitcodeSummaryVersion)
-    return error("Invalid summary version " + Twine(Version) +
-                 ". Version should be in the range [1-" +
-                 Twine(ModuleSummaryIndex::BitcodeSummaryVersion) +
-                 "].");
+    return error("Invalid summary version " + Twine(Version) + " in module '" +
+                 ModulePath + "'. Version should be in the range [1-" +
+                 Twine(ModuleSummaryIndex::BitcodeSummaryVersion) + "].");
   Record.clear();
 
   // Keep around the last seen summary to be used when we see an optional
@@ -8204,17 +8172,43 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
 
     case bitc::FS_CFI_FUNCTION_DEFS: {
       auto &CfiFunctionDefs = TheIndex.cfiFunctionDefs();
-      for (unsigned I = 0; I != Record.size(); I += 2)
-        CfiFunctionDefs.emplace(Strtab.data() + Record[I],
-                                static_cast<size_t>(Record[I + 1]));
+      if (Version < 14) {
+        for (unsigned I = 0; I != Record.size(); I += 2) {
+          StringRef Name(Strtab.data() + Record[I],
+                         static_cast<size_t>(Record[I + 1]));
+          GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
+              GlobalValue::dropLLVMManglingEscape(Name));
+          CfiFunctionDefs.addSymbolWithThinLTOGUID(Name, GUID);
+        }
+      } else {
+        for (unsigned I = 0; I != Record.size(); I += 3) {
+          GlobalValue::GUID ThinLTOGUID = Record[I];
+          StringRef Name(Strtab.data() + Record[I + 1],
+                         static_cast<size_t>(Record[I + 2]));
+          CfiFunctionDefs.addSymbolWithThinLTOGUID(Name, ThinLTOGUID);
+        }
+      }
       break;
     }
 
     case bitc::FS_CFI_FUNCTION_DECLS: {
       auto &CfiFunctionDecls = TheIndex.cfiFunctionDecls();
-      for (unsigned I = 0; I != Record.size(); I += 2)
-        CfiFunctionDecls.emplace(Strtab.data() + Record[I],
-                                 static_cast<size_t>(Record[I + 1]));
+      if (Version < 14) {
+        for (unsigned I = 0; I != Record.size(); I += 2) {
+          StringRef Name(Strtab.data() + Record[I],
+                         static_cast<size_t>(Record[I + 1]));
+          GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
+              GlobalValue::dropLLVMManglingEscape(Name));
+          CfiFunctionDecls.addSymbolWithThinLTOGUID(Name, GUID);
+        }
+      } else {
+        for (unsigned I = 0; I != Record.size(); I += 3) {
+          GlobalValue::GUID ThinLTOGUID = Record[I];
+          StringRef Name(Strtab.data() + Record[I + 1],
+                         static_cast<size_t>(Record[I + 2]));
+          CfiFunctionDecls.addSymbolWithThinLTOGUID(Name, ThinLTOGUID);
+        }
+      }
       break;
     }
 
@@ -8481,7 +8475,7 @@ Error ModuleSummaryIndexBitcodeReader::parseModuleStringTable() {
     /// MST_CODE_HASH: [5*i32]
     case bitc::MST_CODE_HASH: {
       if (Record.size() != 5)
-        return error("Invalid hash length " + Twine(Record.size()).str());
+        return error("Invalid hash length " + Twine(Record.size()));
       if (!LastSeenModule)
         return error("Invalid hash that does not follow a module path");
       int Pos = 0;

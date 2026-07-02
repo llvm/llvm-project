@@ -11,11 +11,11 @@
 #define _LIBCPP___ITERATOR_INCREMENTABLE_TRAITS_H
 
 #include <__concepts/arithmetic.h>
+#include <__concepts/primary_template.h>
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/is_object.h>
-#include <__type_traits/is_primary_template.h>
 #include <__type_traits/make_signed.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/declval.h>
@@ -24,9 +24,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // [incrementable.traits]
 template <class>
@@ -68,12 +68,12 @@ struct iterator_traits;
 // generated from the primary template, and `iterator_traits<RI>::difference_type` otherwise.
 template <class _Ip>
 using iter_difference_t =
-    typename conditional_t<__is_primary_template<iterator_traits<remove_cvref_t<_Ip> > >::value,
+    typename conditional_t<__primary_template<iterator_traits<remove_cvref_t<_Ip> > >,
                            incrementable_traits<remove_cvref_t<_Ip> >,
                            iterator_traits<remove_cvref_t<_Ip> > >::difference_type;
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___ITERATOR_INCREMENTABLE_TRAITS_H

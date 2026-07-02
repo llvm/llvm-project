@@ -17,8 +17,8 @@ define bfloat @bfloat_imm() nounwind {
 define bfloat @bfloat_imm_op(bfloat %a) nounwind {
 ; CHECK-LABEL: bfloat_imm_op:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
 ; CHECK-NEXT:    lui a0, 260096
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
 ; CHECK-NEXT:    fmv.w.x fa4, a0
 ; CHECK-NEXT:    fadd.s fa5, fa5, fa4
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5

@@ -66,6 +66,8 @@ extern std::vector<std::string> MAttrs;
 extern std::string MCPU;
 extern std::string Prefix;
 extern uint32_t PrefixStrip;
+extern std::vector<std::string> SourceDirs;
+extern std::vector<std::pair<std::string, std::string>> SubstitutePaths;
 extern bool PrintImmHex;
 extern bool PrintLines;
 extern bool PrintSource;
@@ -79,6 +81,7 @@ extern bool TracebackTable;
 extern bool SymbolTable;
 extern std::string TripleName;
 extern bool UnwindInfo;
+extern bool UnwindShowWODPool;
 
 extern StringSet<> FoundSectionSet;
 

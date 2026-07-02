@@ -745,9 +745,11 @@ Error RISCVISAInfo::checkDependency() {
   bool HasZvl = MinVLen != 0;
   bool HasZcmp = Exts.count("zcmp") != 0;
   bool HasXqccmp = Exts.count("xqccmp") != 0;
+  bool HasZcmt = Exts.count("zcmt") != 0;
+  bool HasXqccmt = Exts.count("xqccmt") != 0;
 
   static constexpr StringLiteral ZcdOverlaps[] = {
-      {"zcmt"}, {"zcmp"}, {"xqccmp"}, {"xqciac"}, {"xqcicm"},
+      {"zcmt"}, {"zcmp"}, {"xqccmp"}, {"xqccmt"}, {"xqciac"}, {"xqcicm"},
   };
   static constexpr StringLiteral RV32Only[] = {
       {"zcf"},     {"zclsd"},   {"zilsd"},    {"xwchc"},   {"xqci"},
@@ -795,6 +797,9 @@ Error RISCVISAInfo::checkDependency() {
 
   if (HasZcmp && HasXqccmp)
     return getIncompatibleError("zcmp", "xqccmp");
+
+  if (HasZcmt && HasXqccmt)
+    return getIncompatibleError("zcmt", "xqccmt");
 
   return Error::success();
 }
@@ -1087,12 +1092,6 @@ std::string RISCVISAInfo::getTargetFeatureForExtension(StringRef Ext) {
   return isExperimentalExtension(Name) ? "experimental-" + Name.str()
                                        : Name.str();
 }
-
-struct RISCVExtBit {
-  const StringLiteral ext;
-  uint8_t groupid;
-  uint8_t bitpos;
-};
 
 struct RISCVExtensionBitmask {
   const char *Name;

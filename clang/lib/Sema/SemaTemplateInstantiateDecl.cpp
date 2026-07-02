@@ -838,7 +838,8 @@ void Sema::InstantiateAttrsForDecl(
 
       Attr *NewAttr = sema::instantiateTemplateAttributeForDecl(
           TmplAttr, Context, *this, TemplateArgs);
-      if (NewAttr && isRelevantAttr(*this, New, NewAttr))
+      if (NewAttr && isRelevantAttr(*this, New, NewAttr) &&
+          checkInstantiatedThreadSafetyAttrs(New, NewAttr))
         New->addAttr(NewAttr);
     }
   }
@@ -1060,7 +1061,8 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
 
       Attr *NewAttr = sema::instantiateTemplateAttribute(TmplAttr, Context,
                                                          *this, TemplateArgs);
-      if (NewAttr && isRelevantAttr(*this, New, TmplAttr))
+      if (NewAttr && isRelevantAttr(*this, New, TmplAttr) &&
+          checkInstantiatedThreadSafetyAttrs(New, NewAttr))
         New->addAttr(NewAttr);
     }
   }
@@ -1758,13 +1760,19 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
   TypeSourceInfo *TSI = SemaRef.SubstType(
       D->getTypeSourceInfo(), TemplateArgs, D->getTypeSpecStartLoc(),
       D->getDeclName(), /*AllowDeducedTST*/ true);
-  if (!TSI)
-    return nullptr;
-
-  if (TSI->getType()->isFunctionType()) {
+  bool Invalid = false;
+  if (!TSI) {
+    if (!InstantiatingVarTemplate)
+      return nullptr;
+    TSI = SemaRef.Context.getTrivialTypeSourceInfo(SemaRef.Context.IntTy,
+                                                   D->getLocation());
+    Invalid = true;
+  } else if (TSI->getType()->isFunctionType()) {
     SemaRef.Diag(D->getLocation(), diag::err_variable_instantiates_to_function)
         << D->isStaticDataMember() << TSI->getType();
-    return nullptr;
+    if (!InstantiatingVarTemplate)
+      return nullptr;
+    Invalid = true;
   }
 
   DeclContext *DC = Owner;
@@ -1832,6 +1840,9 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
 
   if (SemaRef.getLangOpts().OpenACC)
     SemaRef.OpenACC().ActOnVariableDeclarator(Var);
+
+  if (Invalid)
+    Var->setInvalidDecl();
 
   return Var;
 }
@@ -2099,6 +2110,13 @@ Decl *TemplateDeclInstantiator::VisitStaticAssertDecl(StaticAssertDecl *D) {
   return SemaRef.BuildStaticAssertDeclaration(
       D->getLocation(), InstantiatedAssertExpr.get(),
       InstantiatedMessageExpr.get(), D->getRParenLoc(), D->isFailed());
+}
+
+Decl *TemplateDeclInstantiator::VisitExplicitInstantiationDecl(
+    ExplicitInstantiationDecl *D) {
+  // ExplicitInstantiationDecl is a source-info-only node and should not
+  // appear inside a template pattern. Nothing to instantiate.
+  llvm_unreachable("ExplicitInstantiationDecl should not be instantiated");
 }
 
 Decl *TemplateDeclInstantiator::VisitEnumDecl(EnumDecl *D) {
@@ -3135,12 +3153,11 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
 
   // Instantiate enclosing template arguments for friends.
   SmallVector<TemplateParameterList *, 4> TempParamLists;
-  unsigned NumTempParamLists = 0;
-  if (isFriend && (NumTempParamLists = D->getNumTemplateParameterLists())) {
-    TempParamLists.resize(NumTempParamLists);
-    for (unsigned I = 0; I != NumTempParamLists; ++I) {
-      TemplateParameterList *TempParams = D->getTemplateParameterList(I);
-      TemplateParameterList *InstParams = SubstTemplateParams(TempParams);
+  ArrayRef<TemplateParameterList *> TPLs = D->getTemplateParameterLists();
+  if (isFriend && !TPLs.empty()) {
+    TempParamLists.resize(TPLs.size());
+    for (unsigned I = 0; I != TPLs.size(); ++I) {
+      TemplateParameterList *InstParams = SubstTemplateParams(TPLs[I]);
       if (!InstParams)
         return nullptr;
       TempParamLists[I] = InstParams;
@@ -3319,10 +3336,8 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
   // out-of-line, the instantiation will have the same lexical
   // context (which will be a namespace scope) as the template.
   if (isFriend) {
-    if (NumTempParamLists)
-      Method->setTemplateParameterListsInfo(
-          SemaRef.Context,
-          llvm::ArrayRef(TempParamLists.data(), NumTempParamLists));
+    if (!TempParamLists.empty())
+      Method->setTemplateParameterListsInfo(SemaRef.Context, TempParamLists);
 
     Method->setLexicalDeclContext(Owner);
     Method->setObjectOfFriendDecl();
@@ -5473,6 +5488,8 @@ TemplateDeclInstantiator::InitFunctionInstantiation(FunctionDecl *New,
   SemaRef.InstantiateAttrs(TemplateArgs, Definition, New,
                            LateAttrs, StartingScope);
 
+  SemaRef.inferLifetimeBoundAttribute(New);
+
   return false;
 }
 
@@ -5966,6 +5983,8 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     // FIXME: finishing the function body while in an expression evaluation
     // context seems wrong. Investigate more.
     ActOnFinishFunctionBody(Function, Body.get(), /*IsInstantiation=*/true);
+
+    inferLifetimeBoundAttribute(Function);
 
     checkReferenceToTULocalFromOtherTU(Function, PointOfInstantiation);
 

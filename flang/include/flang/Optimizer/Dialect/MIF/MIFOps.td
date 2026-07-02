@@ -17,6 +17,7 @@
 include "flang/Optimizer/Dialect/MIF/MIFDialect.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
 include "flang/Optimizer/Dialect/FIRAttr.td"
+include "mlir/IR/BuiltinAttributes.td"
 
 class mif_Op<string mnemonic, list<Trait> traits>
     : Op<MIFDialect, mnemonic, traits>;
@@ -101,11 +102,13 @@ def mif_ThisImageOp : mif_Op<"this_image", [AttrSizedOperandSegments]> {
     value 5, `this_image(A)` has the value [5, 0, 0].
   }];
 
-  let arguments = (ins Optional<fir_BoxType>:$coarray,
-      Optional<AnyInteger>:$dim, Optional<AnyRefOrBoxType>:$team);
-  let results = (outs I32:$res);
+  let arguments = (ins Optional<AnyType>:$coarray, Optional<AnyInteger>:$dim,
+      Optional<AnyRefOrBoxType>:$team);
+  let results = (outs AnyType:$res);
 
-  let builders = [OpBuilder<(ins "mlir::Value":$coarray, "mlir::Value":$team)>,
+  let builders = [OpBuilder<(ins "mlir::Value":$coarray, "mlir::Value":$dim,
+                      "mlir::Value":$team)>,
+                  OpBuilder<(ins "mlir::Value":$coarray, "mlir::Value":$team)>,
                   OpBuilder<(ins "mlir::Value":$team)>];
 
   let hasVerifier = 1;
@@ -113,6 +116,109 @@ def mif_ThisImageOp : mif_Op<"this_image", [AttrSizedOperandSegments]> {
     ( `coarray` $coarray^ )? 
     ( `team` $team^ )? 
     ( `dim` $dim^ )? 
+    attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Coarray Queries
+//===----------------------------------------------------------------------===//
+
+def mif_ImageIndexOp : mif_Op<"image_index", [AttrSizedOperandSegments]> {
+  let summary = "Image index from cosubscripts.";
+  let description = [{
+    Arguments:
+      - `coarray`: Shall be a coarray of any type.
+      - `sub`: rank-one integer array of size equal to the corank of `coarray`.
+      - `team`: Shall be a scalar of type `team_type` from ISO_FORTRAN_ENV.
+      - `team_number`: It shall identify the initial team or a sibling team 
+        of the current team.
+
+    Usage:
+    - Case(1) : `image_index(coarray, sub)`
+    - Case(2) : `image_index(coarray, sub, team)`
+    - Case(3) : `image_index(coarray, sub, team_number)`
+
+    Result: If the value of `sub` is a valid sequence of cosubscripts for `coarray` in the
+      team specified by `team` or `team_number`, or the current team if neither `team` nor
+      `team_number` appears, the result is the index of the corresponding image in that team.
+      Otherwise, the result is zero.
+  }];
+
+  let arguments = (ins AnyType:$coarray, fir_BoxType:$sub,
+      Optional<AnyRefOrBoxType>:$team, Optional<AnyInteger>:$team_number);
+  let builders = [OpBuilder<(ins "mlir::Value":$coarray, "mlir::Value":$sub,
+      "mlir::Value":$team)>];
+
+  let results = (outs I32);
+
+  let hasVerifier = 1;
+  let assemblyFormat = [{
+    `coarray` $coarray `sub` $sub 
+    ( `team` $team^ )? 
+    ( `team_number` $team_number^ )? 
+    attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+def mif_LcoboundOp : mif_Op<"lcobound", [NoMemoryEffect]> {
+  let summary =
+      "Returns the lower cobound for a given codimension of a coarray.";
+  let description = [{
+    This operation returns the lower cobound for a given codimension of a coarray.
+    Arguments: 
+      - `coarray`: Shall be a coarray of any type.
+      - `dim` : Shall be an integer scalar. Its value shall be in the range of
+          `1 <= DIM <= N`, where `N` is the corank of the coarray.
+    The result is an integer scalar equal to the lower cobound for codimension `dim`.
+  }];
+
+  let arguments = (ins AnyType:$coarray, AnyInteger:$dim);
+  let results = (outs AnyInteger);
+
+  let hasVerifier = 1;
+  let assemblyFormat = [{
+    `coarray` $coarray `dim` $dim 
+    attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+def mif_UcoboundOp : mif_Op<"ucobound", [NoMemoryEffect]> {
+  let summary = "Returns the upper cobound for a given codimension of a coarray.";
+  let description = [{
+    This operation returns the upper cobound(s) associated with a coarray.
+    Arguments: 
+      - `coarray`: Shall be a coarray of any type.
+      - `dim` : Shall be an integer scalar. Its value shall be in the range of
+          `1 <= DIM <= N`, where `N` is the corank of the coarray.
+    The result is an integer scalar equal to the upper cobound for codimension `dim`.
+  }];
+
+  let arguments = (ins AnyType:$coarray, AnyInteger:$dim);
+  let results = (outs AnyInteger);
+
+  let hasVerifier = 1;
+  let assemblyFormat = [{
+    `coarray` $coarray `dim` $dim 
+    attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+def mif_CoshapeOp : mif_Op<"coshape", [NoMemoryEffect]> {
+  let summary = "Return the sizes of codimensions of a coarray.";
+  let description = [{
+    Argument: `coarray`: Shall be a coarray of any type.
+    Result : Is an array whose size matches the corank of the indicated coarray and
+       returns `UCOBOUND - LCOBOUND + 1`.
+  }];
+
+  let arguments = (ins AnyType:$coarray);
+  let builders = [OpBuilder<(ins "mlir::Value":$coarray)>];
+  let results = (outs AnyBoxedArray);
+
+  let hasVerifier = 1;
+  let assemblyFormat = [{
+    `coarray` $coarray 
     attr-dict `:` functional-type(operands, results)
   }];
 }
@@ -421,6 +527,62 @@ def mif_TeamNumberOp : mif_Op<"team_number", []> {
 
   let assemblyFormat = [{
     (`team` $team^ )?
+    attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Allocation and Deallocation
+//===----------------------------------------------------------------------===//
+
+def mif_AllocCoarrayOp
+    : mif_Op<"alloc_coarray", [AttrSizedOperandSegments,
+                               MemoryEffects<[MemAlloc<DefaultResource>]>]> {
+  let summary = "Perform the allocation of a coarray and provide a "
+                "corresponding coarray descriptor";
+
+  let description = [{
+    This operation allocates a coarray and provides the corresponding 
+    coarray descriptor. This call is collective over the current team.
+    `lcobound` should be a rank-1 array of size equal to `corank`, and 
+    `ucobounds` should be a rank-1 array of size equal to `corank - 1`.
+  }];
+
+  let arguments = (ins StrAttr:$uniq_name,
+      Arg<fir_ReferenceType, "", [MemRead, MemWrite]>:$box,
+      AnyBoxedArray:$lcobounds, AnyBoxedArray:$ucobounds,
+      Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
+      Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
+
+  let builders = [OpBuilder<(ins "mlir::Value":$box, "llvm::StringRef":$symName,
+                      "mlir::Value":$lcobounds, "mlir::Value":$ucobounds,
+                      "mlir::Value":$stat, "mlir::Value":$errmsg)>,
+                  OpBuilder<(ins "mlir::Value":$box, "llvm::StringRef":$symName,
+                      "mlir::Value":$lcobounds, "mlir::Value":$ucobounds)>];
+
+  let hasVerifier = 1;
+  let assemblyFormat = [{
+    $box 
+    `lcobounds` $lcobounds `ucobounds` $ucobounds 
+    (`stat` $stat^ )?
+    (`errmsg` $errmsg^ )? 
+    attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+def mif_DeallocCoarrayOp
+    : mif_Op<"dealloc_coarray", [AttrSizedOperandSegments,
+                                 MemoryEffects<[MemFree<DefaultResource>]>]> {
+  let summary = "Perform the deallocation of a coarray";
+  let description = [{
+    This call releases memory allocated by `mif_AllocCoarrayOp` for a coarray.
+  }];
+  let arguments = (ins Arg<fir_ReferenceType, "", [MemFree]>:$coarray,
+      Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
+      Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
+
+  let assemblyFormat = [{
+    $coarray (`stat` $stat^ )?  (`errmsg` $errmsg^ )?
     attr-dict `:` functional-type(operands, results)
   }];
 }

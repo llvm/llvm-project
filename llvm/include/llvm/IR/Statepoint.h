@@ -242,11 +242,12 @@ struct StatepointDirectives {
 
 /// Parse out statepoint directives from the function attributes present in \p
 /// AS.
-StatepointDirectives parseStatepointDirectivesFromAttrs(AttributeList AS);
+LLVM_ABI StatepointDirectives
+parseStatepointDirectivesFromAttrs(AttributeList AS);
 
 /// Return \c true if the \p Attr is an attribute that is a statepoint
 /// directive.
-bool isStatepointDirectiveAttr(Attribute Attr);
+LLVM_ABI bool isStatepointDirectiveAttr(Attribute Attr);
 
 } // end namespace llvm
 

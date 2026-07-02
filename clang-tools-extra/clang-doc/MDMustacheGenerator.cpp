@@ -7,27 +7,30 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Contains the Markdown generator using Mustache template files.
+/// This file contains the implementation of the MDMustacheGenerator, which
+/// generates documentation in Markdown format using Mustache templates. It
+/// defines how the structured data in Info objects is mapped to template
+/// tags to produce readable markdown documents.
 ///
 //===----------------------------------------------------------------------===//
 
 #include "Generators.h"
 
-namespace clang {
 using namespace llvm;
-namespace doc {
-static OwnedPtr<MustacheTemplateFile> RecordTemplate = nullptr;
+using namespace clang::doc;
 
-static OwnedPtr<MustacheTemplateFile> NamespaceTemplate = nullptr;
+static std::unique_ptr<MustacheTemplateFile> RecordTemplate = nullptr;
 
-static OwnedPtr<MustacheTemplateFile> AllFilesTemplate = nullptr;
+static std::unique_ptr<MustacheTemplateFile> NamespaceTemplate = nullptr;
 
-static OwnedPtr<MustacheTemplateFile> IndexTemplate = nullptr;
+static std::unique_ptr<MustacheTemplateFile> AllFilesTemplate = nullptr;
 
+static std::unique_ptr<MustacheTemplateFile> IndexTemplate = nullptr;
+
+namespace {
 struct MDMustacheGenerator : public MustacheGenerator {
   static const char *Format;
-  Error generateDocumentation(StringRef RootDir,
-                              StringMap<doc::OwnedPtr<doc::Info>> Infos,
+  Error generateDocumentation(StringRef RootDir, StringMap<Info *> Infos,
                               const ClangDocContext &CDCtx,
                               std::string DirName) override;
   Error setupTemplateFiles(const ClangDocContext &CDCtx) override;
@@ -40,6 +43,7 @@ struct MDMustacheGenerator : public MustacheGenerator {
   Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                            const ClangDocContext &CDCtx) override;
 };
+} // namespace
 
 Error MDMustacheGenerator::setupTemplateFiles(const ClangDocContext &CDCtx) {
   std::string ClassFilePath = CDCtx.MustacheTemplates.lookup("class-template");
@@ -72,7 +76,7 @@ Error MDMustacheGenerator::setupTemplateFiles(const ClangDocContext &CDCtx) {
 }
 
 Error MDMustacheGenerator::generateDocumentation(
-    StringRef RootDir, StringMap<doc::OwnedPtr<doc::Info>> Infos,
+    StringRef RootDir, StringMap<Info *> Infos,
     const clang::doc::ClangDocContext &CDCtx, std::string Dirname) {
   return MustacheGenerator::generateDocumentation(RootDir, std::move(Infos),
                                                   CDCtx, "md");
@@ -110,6 +114,8 @@ static GeneratorRegistry::Add<MDMustacheGenerator>
     MDMustache(MDMustacheGenerator::Format,
                "Generator for mustache Markdown output.");
 
+namespace clang {
+namespace doc {
 volatile int MDMustacheGeneratorAnchorSource = 0;
 } // namespace doc
 } // namespace clang

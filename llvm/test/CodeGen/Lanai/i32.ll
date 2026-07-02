@@ -1,4 +1,5 @@
 ; RUN: llc < %s -asm-verbose=false | FileCheck %s
+; RUN: llc -enable-new-pm < %s -asm-verbose=false | FileCheck %s
 
 ; Test that basic 32-bit integer operations assemble as expected.
 
@@ -114,10 +115,10 @@ define i32 @clz32(i32 %x) {
   ret i32 %a
 }
 
-; CHECK-LABEL: clz32_zero_undef:
+; CHECK-LABEL: clz32_zero_poison:
 ; CHECK-NOT: sub.f
 ; CHECK: leadz %r{{[0-9]+}}, %rv
-define i32 @clz32_zero_undef(i32 %x) {
+define i32 @clz32_zero_poison(i32 %x) {
   %a = call i32 @llvm.ctlz.i32(i32 %x, i1 true)
   ret i32 %a
 }
@@ -129,10 +130,10 @@ define i32 @ctz32(i32 %x) {
   ret i32 %a
 }
 
-; CHECK-LABEL: ctz32_zero_undef:
+; CHECK-LABEL: ctz32_zero_poison:
 ; CHECK-NOT: sub.f
 ; CHECK: trailz  %r{{[0-9]+}}, %rv
-define i32 @ctz32_zero_undef(i32 %x) {
+define i32 @ctz32_zero_poison(i32 %x) {
   %a = call i32 @llvm.cttz.i32(i32 %x, i1 true)
   ret i32 %a
 }

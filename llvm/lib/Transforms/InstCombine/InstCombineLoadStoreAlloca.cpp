@@ -416,7 +416,7 @@ void PointerReplacer::replace(Instruction *I) {
                               LT->getAlign(), LT->getOrdering(),
                               LT->getSyncScopeID());
     NewI->takeName(LT);
-    copyMetadataForLoad(*NewI, *LT);
+    NewI->copyMetadata(*LT);
 
     IC.InsertNewInstWith(NewI, LT->getIterator());
     IC.replaceInstUsesWith(*LT, NewI);
@@ -1577,6 +1577,13 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
   // value. Change to PoisonValue once #52930 is resolved.
   if (isa<UndefValue>(Val))
     return eraseInstFromFunction(SI);
+
+  // Replace byte constants with integer constants in stores.
+  Constant *C;
+  if (Val->getType()->isByteOrByteVectorTy() && match(Val, m_ImmConstant(C)))
+    return replaceOperand(
+        SI, 0,
+        ConstantExpr::getBitCast(C, Type::getIntFromByteType(C->getType())));
 
   if (!NullPointerIsDefined(SI.getFunction(), SI.getPointerAddressSpace()))
     if (Value *V = simplifyNonNullOperand(Ptr, /*HasDereferenceable=*/true))

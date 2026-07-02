@@ -264,7 +264,7 @@ this check.
 
 This check corresponds to the CERT C Coding Standard rule
 `ARR39-C. Do not add or subtract a scaled integer to a pointer
-<http://wiki.sei.cmu.edu/confluence/display/c/ARR39-C.+Do+not+add+or+subtract+a+scaled+integer+to+a+pointer>`_.
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/arrays-arr/arr39-c/>`_.
 
 
 Limitations

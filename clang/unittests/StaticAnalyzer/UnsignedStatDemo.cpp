@@ -33,7 +33,7 @@ class UnsignedStatTesterChecker : public Checker<check::BeginFunction> {
 public:
   void checkBeginFunction(CheckerContext &C) const {
     StringRef Name;
-    if (const Decl *D = C.getLocationContext()->getDecl())
+    if (const Decl *D = C.getStackFrame()->getDecl())
       if (const FunctionDecl *F = D->getAsFunction())
         Name = F->getName();
 

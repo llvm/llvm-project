@@ -37,6 +37,13 @@
 ; RUN: llvm-nm -pa %t/test | FileCheck %s --check-prefixes CHECK,OBJPATH-FILE -DFILE=%t/lto-tmp.o
 ; RUN: llvm-otool -l %t/lto-tmp.o | FileCheck %s --check-prefixes=MINOS
 
+;; Test that attempting to hardlink when cache and lto-temps are not empty does NOT cause a crash
+;; Link attempt must be done twice, first run populates lto-temps/ and cache/.
+; RUN: opt -thinlto-bc %S/Inputs/large-lto-object.ll -o %t/large.o
+; RUN: rm -rf %t/lto-temps
+; RUN: rm -rf %t/cache
+; RUN: %lld %t/test.o %t/large.o -o %t/test -object_path_lto %t/lto-temps -cache_path_lto %t/cache --thinlto-jobs=all --lto-O0
+; RUN: %lld %t/test.o %t/large.o -o %t/test -object_path_lto %t/lto-temps -cache_path_lto %t/cache --thinlto-jobs=all --lto-O0
 
 ; CHECK:             0000000000000000                - 00 0000    SO /tmp/test.cpp
 ; NOOBJPATH-NEXT:    0000000000000000                - 03 0001   OSO /tmp/lto.tmp
@@ -46,7 +53,7 @@
 ; OBJPATH-FILE-NEXT: {{[0-9a-f]*[1-9a-f]+[0-9a-f]*}} - 03 0001   OSO [[FILE]]
 ; CHECK-NEXT:        {{[0-9a-f]+}}                   - 01 0000   FUN _main
 ; CHECK-NEXT:        0000000000000001                - 00 0000   FUN
-; CHECK-NEXT:        0000000000000000                - 01 0000    SO
+; CHECK:             0000000000000000                - 01 0000    SO
 ; CHECK-NEXT:        {{[0-9a-f]+}}                   T _main
 ; DSYM: DW_AT_name ("test.cpp")
 ; HARDLINK: 2

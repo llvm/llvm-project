@@ -137,7 +137,7 @@ public:
 
   /// ExecuteWorkList - Run the worklist algorithm for a maximum number of
   ///  steps.  Returns true if there is still simulation state on the worklist.
-  bool ExecuteWorkList(const LocationContext *L, unsigned Steps,
+  bool ExecuteWorkList(const StackFrame *SF, unsigned Steps,
                        ProgramStateRef InitState);
 
   /// Dispatch the work list item based on the given location information.
@@ -170,6 +170,29 @@ public:
   ExplodedNode *makeNode(const ProgramPoint &Loc, ProgramStateRef State,
                          ExplodedNode *Pred, bool MarkAsSink = false) const;
 
+  ExplodedNode *makePostStmtNode(const Stmt *S, ProgramStateRef State,
+                                 ExplodedNode *Pred,
+                                 bool MarkAsSink = false) const {
+    PostStmt Loc(S, Pred->getStackFrame(), /*tag=*/nullptr);
+    return makeNode(Loc, State, Pred, MarkAsSink);
+  }
+
+  ExplodedNode *
+  makeNodeWithBinding(ExplodedNode *Pred, const Expr *E, SVal V,
+                      ProgramStateRef State,
+                      ProgramPoint::Kind K = ProgramPoint::PostStmtKind) const {
+    const StackFrame *SF = Pred->getStackFrame();
+    State = State->BindExpr(E, SF, V);
+    const auto &L = ProgramPoint::getProgramPoint(E, K, SF, /*tag=*/nullptr);
+    return makeNode(L, State, Pred);
+  }
+
+  ExplodedNode *
+  makeNodeWithBinding(ExplodedNode *Pred, const Expr *E, SVal V,
+                      ProgramPoint::Kind K = ProgramPoint::PostStmtKind) const {
+    return makeNodeWithBinding(Pred, E, V, Pred->getState(), K);
+  }
+
   /// Enqueue the given set of nodes onto the work list.
   void enqueue(ExplodedNodeSet &Set);
 
@@ -191,17 +214,17 @@ public:
 class NodeBuilderContext {
   const CoreEngine &Eng;
   const CFGBlock *Block;
-  const LocationContext *LC;
+  const StackFrame *SF;
 
 public:
   NodeBuilderContext(const CoreEngine &E, const CFGBlock *B,
-                     const LocationContext *L)
-      : Eng(E), Block(B), LC(L) {
+                     const StackFrame *S)
+      : Eng(E), Block(B), SF(S) {
     assert(B);
   }
 
   NodeBuilderContext(const CoreEngine &E, const CFGBlock *B, ExplodedNode *N)
-      : NodeBuilderContext(E, B, N->getLocationContext()) {}
+      : NodeBuilderContext(E, B, N->getStackFrame()) {}
 
   /// Return the CoreEngine associated with this builder.
   const CoreEngine &getEngine() const { return Eng; }
@@ -209,15 +232,13 @@ public:
   /// Return the CFGBlock associated with this builder.
   const CFGBlock *getBlock() const { return Block; }
 
-  /// Return the location context associated with this builder.
-  const LocationContext *getLocationContext() const { return LC; }
+  /// Return the stack frame associated with this builder.
+  const StackFrame *getStackFrame() const { return SF; }
 
   /// Returns the number of times the current basic block has been
   /// visited on the exploded graph path.
   unsigned blockCount() const {
-    return Eng.WList->getBlockCounter().getNumVisited(
-                    LC->getStackFrame(),
-                    Block->getBlockID());
+    return Eng.WList->getBlockCounter().getNumVisited(SF, Block->getBlockID());
   }
 };
 
@@ -287,8 +308,8 @@ public:
                              ProgramStateRef St,
                              const ProgramPointTag *tag = nullptr,
                              ProgramPoint::Kind K = ProgramPoint::PostStmtKind){
-    const ProgramPoint &L = ProgramPoint::getProgramPoint(S, K,
-                                  Pred->getLocationContext(), tag);
+    const ProgramPoint &L =
+        ProgramPoint::getProgramPoint(S, K, Pred->getStackFrame(), tag);
     return generateNode(L, St, Pred);
   }
 
@@ -297,8 +318,8 @@ public:
                              ProgramStateRef St,
                              const ProgramPointTag *tag = nullptr,
                              ProgramPoint::Kind K = ProgramPoint::PostStmtKind){
-    const ProgramPoint &L = ProgramPoint::getProgramPoint(S, K,
-                                  Pred->getLocationContext(), tag);
+    const ProgramPoint &L =
+        ProgramPoint::getProgramPoint(S, K, Pred->getStackFrame(), tag);
     return generateSink(L, St, Pred);
   }
 
@@ -314,21 +335,6 @@ public:
   void takeNodes(ExplodedNode *N) { Frontier.erase(N); }
   void addNodes(const ExplodedNodeSet &S) { Frontier.insert(S); }
   void addNodes(ExplodedNode *N) { Frontier.insert(N); }
-};
-
-/// BranchNodeBuilder is responsible for constructing the nodes
-/// corresponding to the two branches of the if statement - true and false.
-class BranchNodeBuilder : public NodeBuilder {
-  const CFGBlock *DstT;
-  const CFGBlock *DstF;
-
-public:
-  BranchNodeBuilder(ExplodedNodeSet &DstSet, const NodeBuilderContext &C,
-                    const CFGBlock *DT, const CFGBlock *DF)
-      : NodeBuilder(DstSet, C), DstT(DT), DstF(DF) {}
-
-  ExplodedNode *generateNode(ProgramStateRef State, bool branch,
-                             ExplodedNode *Pred);
 };
 
 } // namespace ento

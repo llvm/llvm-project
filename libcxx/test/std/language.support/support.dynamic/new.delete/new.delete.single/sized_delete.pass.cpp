@@ -11,17 +11,18 @@
 // UNSUPPORTED: c++03, c++11
 
 // These compiler versions and platforms don't enable sized deallocation by default.
-// ADDITIONAL_COMPILE_FLAGS(apple-clang-17): -fsized-deallocation
+// ADDITIONAL_COMPILE_FLAGS(apple-clang-21): -fsized-deallocation
 // ADDITIONAL_COMPILE_FLAGS(target=x86_64-w64-windows-gnu): -fsized-deallocation
 // ADDITIONAL_COMPILE_FLAGS(target=i686-w64-windows-gnu): -fsized-deallocation
 // ADDITIONAL_COMPILE_FLAGS(target=aarch64-w64-windows-gnu): -fsized-deallocation
 // ADDITIONAL_COMPILE_FLAGS(target=armv7-w64-windows-gnu): -fsized-deallocation
 // ADDITIONAL_COMPILE_FLAGS(target=arm64ec-w64-windows-gnu): -fsized-deallocation
-
+// ADDITIONAL_COMPILE_FLAGS(target=powerpc-ibm-aix): -fsized-deallocation
+// ADDITIONAL_COMPILE_FLAGS(target=powerpc64-ibm-aix): -fsized-deallocation
 // UNSUPPORTED: sanitizer-new-delete
 
 // AIX, and z/OS default to -fno-sized-deallocation.
-// XFAIL: target={{.+}}-aix{{.*}}, target={{.+}}-zos{{.*}}
+// XFAIL: target={{.+}}-zos{{.*}}
 
 #if !defined(__cpp_sized_deallocation)
 # error __cpp_sized_deallocation should be defined

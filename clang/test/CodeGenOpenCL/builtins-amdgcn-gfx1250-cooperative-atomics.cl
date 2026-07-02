@@ -8,9 +8,9 @@ typedef int    v2i   __attribute__((ext_vector_type(2)));
 typedef int    v4i   __attribute__((ext_vector_type(4)));
 
 // CHECK-LABEL: define dso_local void @test_amdgcn_cooperative_atomic_store_32x4B(
-// CHECK-SAME: ptr addrspace(1) noundef writeonly captures(none) [[GADDR:%.*]], i32 noundef [[VAL:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr addrspace(1) nofree noundef writeonly captures(none) [[GADDR:%.*]], i32 noundef [[VAL:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    tail call void @llvm.amdgcn.cooperative.atomic.store.32x4B.p1(ptr addrspace(1) [[GADDR]], i32 [[VAL]], i32 0, metadata [[META4:![0-9]+]])
+// CHECK-NEXT:    tail call void @llvm.amdgcn.cooperative.atomic.store.32x4B.p1(ptr addrspace(1) [[GADDR]], i32 [[VAL]], i32 0, metadata [[META7:![0-9]+]])
 // CHECK-NEXT:    ret void
 //
 void test_amdgcn_cooperative_atomic_store_32x4B(global int* gaddr, int val)
@@ -19,9 +19,9 @@ void test_amdgcn_cooperative_atomic_store_32x4B(global int* gaddr, int val)
 }
 
 // CHECK-LABEL: define dso_local i32 @test_amdgcn_cooperative_atomic_load_32x4B(
-// CHECK-SAME: ptr noundef readonly captures(none) [[ADDR:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+// CHECK-SAME: ptr nofree noundef readonly captures(none) [[ADDR:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cooperative.atomic.load.32x4B.p0(ptr [[ADDR]], i32 0, metadata [[META5:![0-9]+]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.cooperative.atomic.load.32x4B.p0(ptr [[ADDR]], i32 0, metadata [[META8:![0-9]+]])
 // CHECK-NEXT:    ret i32 [[TMP0]]
 //
 int test_amdgcn_cooperative_atomic_load_32x4B(int* addr)
@@ -30,9 +30,9 @@ int test_amdgcn_cooperative_atomic_load_32x4B(int* addr)
 }
 
 // CHECK-LABEL: define dso_local void @test_amdgcn_cooperative_atomic_store_16x8B(
-// CHECK-SAME: ptr addrspace(1) noundef writeonly captures(none) [[GADDR:%.*]], <2 x i32> noundef [[VAL:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr addrspace(1) nofree noundef writeonly captures(none) [[GADDR:%.*]], <2 x i32> noundef [[VAL:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    tail call void @llvm.amdgcn.cooperative.atomic.store.16x8B.p1(ptr addrspace(1) [[GADDR]], <2 x i32> [[VAL]], i32 0, metadata [[META5]])
+// CHECK-NEXT:    tail call void @llvm.amdgcn.cooperative.atomic.store.16x8B.p1(ptr addrspace(1) [[GADDR]], <2 x i32> [[VAL]], i32 0, metadata [[META8]])
 // CHECK-NEXT:    ret void
 //
 void test_amdgcn_cooperative_atomic_store_16x8B(global v2i* gaddr, v2i val)
@@ -41,9 +41,9 @@ void test_amdgcn_cooperative_atomic_store_16x8B(global v2i* gaddr, v2i val)
 }
 
 // CHECK-LABEL: define dso_local <2 x i32> @test_amdgcn_cooperative_atomic_load_16x8B(
-// CHECK-SAME: ptr addrspace(1) noundef readonly captures(none) [[GADDR:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// CHECK-SAME: ptr addrspace(1) nofree noundef readonly captures(none) [[GADDR:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.cooperative.atomic.load.16x8B.p1(ptr addrspace(1) [[GADDR]], i32 0, metadata [[META6:![0-9]+]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <2 x i32> @llvm.amdgcn.cooperative.atomic.load.16x8B.p1(ptr addrspace(1) [[GADDR]], i32 0, metadata [[META9:![0-9]+]])
 // CHECK-NEXT:    ret <2 x i32> [[TMP0]]
 //
 v2i test_amdgcn_cooperative_atomic_load_16x8B(global v2i* gaddr)
@@ -52,9 +52,9 @@ v2i test_amdgcn_cooperative_atomic_load_16x8B(global v2i* gaddr)
 }
 
 // CHECK-LABEL: define dso_local void @test_amdgcn_cooperative_atomic_store_8x16B(
-// CHECK-SAME: ptr addrspace(1) noundef writeonly captures(none) [[GADDR:%.*]], <4 x i32> noundef [[VAL:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr addrspace(1) nofree noundef writeonly captures(none) [[GADDR:%.*]], <4 x i32> noundef [[VAL:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    tail call void @llvm.amdgcn.cooperative.atomic.store.8x16B.p1(ptr addrspace(1) [[GADDR]], <4 x i32> [[VAL]], i32 0, metadata [[META7:![0-9]+]])
+// CHECK-NEXT:    tail call void @llvm.amdgcn.cooperative.atomic.store.8x16B.p1(ptr addrspace(1) [[GADDR]], <4 x i32> [[VAL]], i32 0, metadata [[META10:![0-9]+]])
 // CHECK-NEXT:    ret void
 //
 void test_amdgcn_cooperative_atomic_store_8x16B(global v4i* gaddr, v4i val)
@@ -63,9 +63,9 @@ void test_amdgcn_cooperative_atomic_store_8x16B(global v4i* gaddr, v4i val)
 }
 
 // CHECK-LABEL: define dso_local <4 x i32> @test_amdgcn_cooperative_atomic_load_8x16B(
-// CHECK-SAME: ptr addrspace(1) noundef readonly captures(none) [[GADDR:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// CHECK-SAME: ptr addrspace(1) nofree noundef readonly captures(none) [[GADDR:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.cooperative.atomic.load.8x16B.p1(ptr addrspace(1) [[GADDR]], i32 0, metadata [[META4]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.cooperative.atomic.load.8x16B.p1(ptr addrspace(1) [[GADDR]], i32 0, metadata [[META7]])
 // CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 //
 v4i test_amdgcn_cooperative_atomic_load_8x16B(global v4i* gaddr)
@@ -74,10 +74,10 @@ v4i test_amdgcn_cooperative_atomic_load_8x16B(global v4i* gaddr)
 }
 
 // CHECK-LABEL: define dso_local void @test_amdgcn_cooperative_atomic_store_32x4B_truncated(
-// CHECK-SAME: ptr addrspace(1) noundef writeonly captures(none) [[GADDR:%.*]], i64 noundef [[VAL:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr addrspace(1) nofree noundef writeonly captures(none) [[GADDR:%.*]], i64 noundef [[VAL:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[VAL]] to i32
-// CHECK-NEXT:    tail call void @llvm.amdgcn.cooperative.atomic.store.32x4B.p1(ptr addrspace(1) [[GADDR]], i32 [[CONV]], i32 0, metadata [[META4]])
+// CHECK-NEXT:    tail call void @llvm.amdgcn.cooperative.atomic.store.32x4B.p1(ptr addrspace(1) [[GADDR]], i32 [[CONV]], i32 0, metadata [[META7]])
 // CHECK-NEXT:    ret void
 //
 void test_amdgcn_cooperative_atomic_store_32x4B_truncated(global int* gaddr, long val)
@@ -86,10 +86,10 @@ void test_amdgcn_cooperative_atomic_store_32x4B_truncated(global int* gaddr, lon
 }
 
 // CHECK-LABEL: define dso_local void @test_amdgcn_cooperative_atomic_store_32x4B_extended(
-// CHECK-SAME: ptr addrspace(1) noundef writeonly captures(none) [[GADDR:%.*]], i8 noundef signext [[VAL:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr addrspace(1) nofree noundef writeonly captures(none) [[GADDR:%.*]], i8 noundef signext [[VAL:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[VAL]] to i32
-// CHECK-NEXT:    tail call void @llvm.amdgcn.cooperative.atomic.store.32x4B.p1(ptr addrspace(1) [[GADDR]], i32 [[CONV]], i32 0, metadata [[META4]])
+// CHECK-NEXT:    tail call void @llvm.amdgcn.cooperative.atomic.store.32x4B.p1(ptr addrspace(1) [[GADDR]], i32 [[CONV]], i32 0, metadata [[META7]])
 // CHECK-NEXT:    ret void
 //
 void test_amdgcn_cooperative_atomic_store_32x4B_extended(global int* gaddr, char val)
@@ -98,8 +98,8 @@ void test_amdgcn_cooperative_atomic_store_32x4B_extended(global int* gaddr, char
 }
 
 //.
-// CHECK: [[META4]] = !{!"agent"}
-// CHECK: [[META5]] = !{!""}
-// CHECK: [[META6]] = !{!"workgroup"}
-// CHECK: [[META7]] = !{!"singlethread"}
+// CHECK: [[META7]] = !{!"agent"}
+// CHECK: [[META8]] = !{!""}
+// CHECK: [[META9]] = !{!"workgroup"}
+// CHECK: [[META10]] = !{!"singlethread"}
 //.

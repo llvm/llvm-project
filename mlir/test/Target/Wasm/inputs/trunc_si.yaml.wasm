@@ -1,0 +1,45 @@
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:      []
+        ReturnTypes:
+          - I32
+      - Index:           1
+        ParamTypes:      []
+        ReturnTypes:
+          - I64
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0, 0, 1, 1 ]
+  - Type:            EXPORT
+    Exports:
+      - Name:            trunc_si_f32_to_i32
+        Kind:            FUNCTION
+        Index:           0
+      - Name:            trunc_si_f64_to_i32
+        Kind:            FUNCTION
+        Index:           1
+      - Name:            trunc_si_f32_to_i64
+        Kind:            FUNCTION
+        Index:           2
+      - Name:            trunc_si_f64_to_i64
+        Kind:            FUNCTION
+        Index:           3
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:          []
+        Body:            4300002041A80B
+      - Index:           1
+        Locals:          []
+        Body:            440000000000002440AA0B
+      - Index:           2
+        Locals:          []
+        Body:            4300002041AE0B
+      - Index:           3
+        Locals:          []
+        Body:            440000000000002440B00B
+...

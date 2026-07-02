@@ -46,6 +46,7 @@ function (add_sphinx_target builder project)
 
   add_custom_target(${SPHINX_TARGET_NAME}
                     COMMAND ${CMAKE_COMMAND} -E env ${ARG_ENV_VARS}
+                            --modify "PYTHONPATH=path_list_append:${LLVM_MAIN_SRC_DIR}/../utils/docs"
                             ${SPHINX_EXECUTABLE}
                             -b ${builder}
                             -d "${SPHINX_DOC_TREE_DIR}"

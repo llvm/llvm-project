@@ -22,8 +22,8 @@
 // RUN:   -nostdlib %s 2>&1 | FileCheck -check-prefix=NONE %s
 
 // CHECK: "-target-cpu" "gfx908"
-// CHECK-SAME: "-target-feature" "-sramecc"
 // CHECK-SAME: "-target-feature" "+xnack"
+// CHECK-SAME: "-target-feature" "-sramecc"
 
 // NONE-NOT: "-target-cpu"
 // NONE-NOT: "-target-feature"

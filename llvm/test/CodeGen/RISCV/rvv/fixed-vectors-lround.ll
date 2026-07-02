@@ -232,8 +232,8 @@ define <1 x iXLen> @lround_v1f32(<1 x float> %x) nounwind {
 ; RV64-i64-NEXT:    fsrmi a0, 4
 ; RV64-i64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; RV64-i64-NEXT:    vfwcvt.x.f.v v9, v8
-; RV64-i64-NEXT:    fsrm a0
 ; RV64-i64-NEXT:    vmv1r.v v8, v9
+; RV64-i64-NEXT:    fsrm a0
 ; RV64-i64-NEXT:    ret
   %a = call <1 x iXLen> @llvm.lround.v1iXLen.v1f32(<1 x float> %x)
   ret <1 x iXLen> %a
@@ -261,8 +261,8 @@ define <2 x iXLen> @lround_v2f32(<2 x float> %x) nounwind {
 ; RV64-i64-NEXT:    fsrmi a0, 4
 ; RV64-i64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV64-i64-NEXT:    vfwcvt.x.f.v v9, v8
-; RV64-i64-NEXT:    fsrm a0
 ; RV64-i64-NEXT:    vmv1r.v v8, v9
+; RV64-i64-NEXT:    fsrm a0
 ; RV64-i64-NEXT:    ret
   %a = call <2 x iXLen> @llvm.lround.v2iXLen.v2f32(<2 x float> %x)
   ret <2 x iXLen> %a
@@ -390,8 +390,8 @@ define <1 x iXLen> @lround_v1f64(<1 x double> %x) nounwind {
 ; RV32-NEXT:    fsrmi a0, 4
 ; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; RV32-NEXT:    vfncvt.x.f.w v9, v8
-; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    vmv1r.v v8, v9
+; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-i32-LABEL: lround_v1f64:
@@ -399,8 +399,8 @@ define <1 x iXLen> @lround_v1f64(<1 x double> %x) nounwind {
 ; RV64-i32-NEXT:    fsrmi a0, 4
 ; RV64-i32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; RV64-i32-NEXT:    vfncvt.x.f.w v9, v8
-; RV64-i32-NEXT:    fsrm a0
 ; RV64-i32-NEXT:    vmv1r.v v8, v9
+; RV64-i32-NEXT:    fsrm a0
 ; RV64-i32-NEXT:    ret
 ;
 ; RV64-i64-LABEL: lround_v1f64:
@@ -420,8 +420,8 @@ define <2 x iXLen> @lround_v2f64(<2 x double> %x) nounwind {
 ; RV32-NEXT:    fsrmi a0, 4
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV32-NEXT:    vfncvt.x.f.w v9, v8
-; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    vmv1r.v v8, v9
+; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-i32-LABEL: lround_v2f64:
@@ -429,8 +429,8 @@ define <2 x iXLen> @lround_v2f64(<2 x double> %x) nounwind {
 ; RV64-i32-NEXT:    fsrmi a0, 4
 ; RV64-i32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV64-i32-NEXT:    vfncvt.x.f.w v9, v8
-; RV64-i32-NEXT:    fsrm a0
 ; RV64-i32-NEXT:    vmv1r.v v8, v9
+; RV64-i32-NEXT:    fsrm a0
 ; RV64-i32-NEXT:    ret
 ;
 ; RV64-i64-LABEL: lround_v2f64:
@@ -450,8 +450,8 @@ define <4 x iXLen> @lround_v4f64(<4 x double> %x) nounwind {
 ; RV32-NEXT:    fsrmi a0, 4
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32-NEXT:    vfncvt.x.f.w v10, v8
-; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    vmv.v.v v8, v10
+; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-i32-LABEL: lround_v4f64:
@@ -459,8 +459,8 @@ define <4 x iXLen> @lround_v4f64(<4 x double> %x) nounwind {
 ; RV64-i32-NEXT:    fsrmi a0, 4
 ; RV64-i32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64-i32-NEXT:    vfncvt.x.f.w v10, v8
-; RV64-i32-NEXT:    fsrm a0
 ; RV64-i32-NEXT:    vmv.v.v v8, v10
+; RV64-i32-NEXT:    fsrm a0
 ; RV64-i32-NEXT:    ret
 ;
 ; RV64-i64-LABEL: lround_v4f64:
@@ -480,8 +480,8 @@ define <8 x iXLen> @lround_v8f64(<8 x double> %x) nounwind {
 ; RV32-NEXT:    fsrmi a0, 4
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vfncvt.x.f.w v12, v8
-; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    vmv.v.v v8, v12
+; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-i32-LABEL: lround_v8f64:
@@ -489,8 +489,8 @@ define <8 x iXLen> @lround_v8f64(<8 x double> %x) nounwind {
 ; RV64-i32-NEXT:    fsrmi a0, 4
 ; RV64-i32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV64-i32-NEXT:    vfncvt.x.f.w v12, v8
-; RV64-i32-NEXT:    fsrm a0
 ; RV64-i32-NEXT:    vmv.v.v v8, v12
+; RV64-i32-NEXT:    fsrm a0
 ; RV64-i32-NEXT:    ret
 ;
 ; RV64-i64-LABEL: lround_v8f64:
@@ -530,14 +530,15 @@ define <32 x iXLen> @lround_v32bf16(<32 x bfloat> %x) {
 ; RV64-i64-LABEL: lround_v32bf16:
 ; RV64-i64:       # %bb.0:
 ; RV64-i64-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; RV64-i64-NEXT:    vfwcvtbf16.f.f.v v16, v8
+; RV64-i64-NEXT:    vmv4r.v v16, v8
 ; RV64-i64-NEXT:    fsrmi a0, 4
+; RV64-i64-NEXT:    vfwcvtbf16.f.f.v v20, v16
+; RV64-i64-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; RV64-i64-NEXT:    vfwcvt.x.f.v v8, v20
 ; RV64-i64-NEXT:    vsetivli zero, 16, e16, m4, ta, ma
-; RV64-i64-NEXT:    vslidedown.vi v20, v8, 16
-; RV64-i64-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; RV64-i64-NEXT:    vfwcvt.x.f.v v8, v16
-; RV64-i64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; RV64-i64-NEXT:    vfwcvtbf16.f.f.v v24, v20
+; RV64-i64-NEXT:    vslidedown.vi v16, v16, 16
+; RV64-i64-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; RV64-i64-NEXT:    vfwcvtbf16.f.f.v v24, v16
 ; RV64-i64-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; RV64-i64-NEXT:    vfwcvt.x.f.v v16, v24
 ; RV64-i64-NEXT:    fsrm a0

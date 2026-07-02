@@ -1,0 +1,56 @@
+RUN: apinotes-test %S/Inputs/Headers/WhereParametersParser.apinotes | FileCheck %s
+RUN: apinotes-test %S/Inputs/Headers/WhereParametersMissingName.apinotes 2>&1 | FileCheck %s --check-prefix=MISSING-NAME
+RUN: apinotes-test %S/Inputs/Headers/WhereParametersWhereSequence.apinotes 2>&1 | FileCheck %s --check-prefix=WHERE-SEQUENCE
+RUN: apinotes-test %S/Inputs/Headers/WhereParametersScalar.apinotes 2>&1 | FileCheck %s --check-prefix=PARAMETERS-SCALAR
+RUN: apinotes-test %S/Inputs/Headers/WhereParametersMapElement.apinotes 2>&1 | FileCheck %s --check-prefix=PARAMETERS-MAP-ELEMENT
+RUN: apinotes-test %S/Inputs/Headers/WhereParametersUnknownWhereKey.apinotes 2>&1 | FileCheck %s --check-prefix=UNKNOWN-WHERE-KEY
+RUN: apinotes-test %S/Inputs/Headers/WhereParametersMethodWhereSequence.apinotes 2>&1 | FileCheck %s --check-prefix=METHOD-WHERE-SEQUENCE
+
+CHECK:      Name:            WhereParametersParser
+CHECK:      Functions:
+CHECK:      - Name:            makeWidget
+CHECK-NEXT:   Where:
+CHECK-NEXT:     Parameters:
+CHECK-NEXT:       - int
+CHECK:      - Name:            makeWidget
+CHECK-NEXT:   Where:
+CHECK-NEXT:     Parameters:
+CHECK-NEXT:       - double
+CHECK-NEXT:       - 'const char *'
+CHECK:      - Name:            currentWidget
+CHECK-NEXT:   Where:
+CHECK-NEXT:     Parameters:      []
+CHECK:      - Name:            makeWidget
+CHECK-NEXT:   SwiftName:       'makeWidget(_:)'
+CHECK:      - Name:            functionWithParameterNotes
+CHECK-NEXT:   Parameters:
+CHECK-NEXT:     - Position:        0
+CHECK-NEXT:       Type:            int
+CHECK:      Tags:
+CHECK:      - Name:            Widget
+CHECK:      Methods:
+CHECK:      - Name:            setValue
+CHECK-NEXT:   Where:
+CHECK-NEXT:     Parameters:
+CHECK-NEXT:       - int
+CHECK:      - Name:            setValue
+CHECK-NEXT:   Where:
+CHECK-NEXT:     Parameters:
+CHECK-NEXT:       - double
+CHECK-NEXT:       - 'const char *'
+CHECK:      - Name:            reset
+CHECK-NEXT:   Where:
+CHECK-NEXT:     Parameters:      []
+CHECK:      - Name:            setValue
+CHECK-NEXT:   SwiftName:       'setValue(_:)'
+CHECK:      - Name:            methodWithParameterNotes
+CHECK-NEXT:   Parameters:
+CHECK-NEXT:     - Position:        0
+CHECK-NEXT:       Type:            int
+
+MISSING-NAME: missing required key 'Name'
+WHERE-SEQUENCE: not a mapping
+PARAMETERS-SCALAR: not a sequence
+PARAMETERS-MAP-ELEMENT: unexpected scalar
+UNKNOWN-WHERE-KEY: unknown key 'ResultType'
+METHOD-WHERE-SEQUENCE: not a mapping

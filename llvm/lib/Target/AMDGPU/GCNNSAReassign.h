@@ -12,7 +12,7 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 
 namespace llvm {
-class GCNNSAReassignPass : public PassInfoMixin<GCNNSAReassignPass> {
+class GCNNSAReassignPass : public OptionalPassInfoMixin<GCNNSAReassignPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

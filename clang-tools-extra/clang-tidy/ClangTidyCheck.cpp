@@ -65,7 +65,7 @@ ClangTidyCheck::OptionsView::get(StringRef LocalName) const {
 static ClangTidyOptions::OptionMap::const_iterator
 findPriorityOption(const ClangTidyOptions::OptionMap &Options,
                    StringRef NamePrefix, StringRef LocalName,
-                   ClangTidyContext *Context) {
+                   const ClangTidyContext *Context) {
   llvm::StringSet<> *Collector = Context->getOptionsCollector();
   if (Collector) {
     Collector->insert((NamePrefix + LocalName).str());

@@ -1444,7 +1444,7 @@ public:
     assert(Offset + I.DataSize <= ConstantData.size() &&
            "invalid offset for given constant data");
     int64_t ImmVal =
-        DataExtractor(ConstantData, true, 8).getSigned(&Offset, I.DataSize);
+        DataExtractor(ConstantData, true).getSigned(&Offset, I.DataSize);
 
     // Compute the new opcode.
     unsigned NewOpcode = 0;
@@ -2786,6 +2786,11 @@ public:
   void createTrap(MCInst &Inst) const override {
     Inst.clear();
     Inst.setOpcode(X86::TRAP);
+  }
+
+  void createBreakpoint(MCInst &Inst) const override {
+    Inst.clear();
+    Inst.setOpcode(X86::INT3);
   }
 
   void createCondBranch(MCInst &Inst, const MCSymbol *Target, unsigned CC,

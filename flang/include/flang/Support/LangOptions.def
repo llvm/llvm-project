@@ -42,6 +42,9 @@ LANGOPT(ReciprocalMath, 1, false)
 LANGOPT(OpenMPVersion, 31, 0)
 /// Generate code only for OpenMP target device
 LANGOPT(OpenMPIsTargetDevice, 1, false)
+/// Indicate we are compiling offloading device-side code, not for the
+/// host/auxiliary device.
+LANGOPT(OffloadDevice, 1, false)
 /// Generate OpenMP target code only for GPUs
 LANGOPT(OpenMPIsGPU, 1, false)
 /// Generate OpenMP target code only for GPUs
@@ -60,6 +63,10 @@ LANGOPT(OpenMPNoThreadState, 1, 0)
 LANGOPT(OpenMPNoNestedParallelism, 1, 0)
 /// Use SIMD only OpenMP support.
 LANGOPT(OpenMPSimd, 1, false)
+/// -fno-realloc-lhs: disable reallocation of allocatable LHS on assignment.
+/// When set, polymorphic allocatable LHS still requires reallocation (F2003+);
+/// a warning is emitted in that case.
+LANGOPT(NoReallocateLHS, 1, false)
 /// Enable fast MOD operations for REAL
 LANGOPT(FastRealMod, 1, false)
 LANGOPT(VScaleMin, 32, 0)  ///< Minimum vscale range value

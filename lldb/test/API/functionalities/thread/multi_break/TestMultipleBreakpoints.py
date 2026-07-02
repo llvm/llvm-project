@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportThreads()
 class MultipleBreakpointTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().
@@ -16,20 +17,7 @@ class MultipleBreakpointTestCase(TestBase):
         # Find the line number for our breakpoint.
         self.breakpoint = line_number("main.cpp", "// Set breakpoint here")
 
-    @expectedFailureAll(
-        oslist=["linux"],
-        bugnumber="llvm.org/pr15824 thread states not properly maintained",
-    )
-    @expectedFailureAll(
-        oslist=lldbplatformutil.getDarwinOSTriples(),
-        bugnumber="llvm.org/pr15824 thread states not properly maintained and <rdar://problem/28557237>",
-    )
-    @expectedFailureAll(
-        oslist=["freebsd"],
-        bugnumber="llvm.org/pr18190 thread states not properly maintained",
-    )
     @skipIfWindows  # This is flakey on Windows: llvm.org/pr24668, llvm.org/pr38373
-    @expectedFailureNetBSD
     def test(self):
         """Test simultaneous breakpoints in multiple threads."""
         self.build()

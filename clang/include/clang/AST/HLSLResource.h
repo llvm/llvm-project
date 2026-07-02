@@ -109,6 +109,21 @@ inline uint32_t getResourceDimensions(llvm::dxil::ResourceDimension Dim) {
   llvm_unreachable("Unhandled llvm::dxil::ResourceDimension enum.");
 }
 
+// Returns true if the second field of the record is a counter resource handle
+inline bool hasCounterHandle(const CXXRecordDecl *RD) {
+  if (RD->field_empty())
+    return false;
+  auto It = std::next(RD->field_begin());
+  if (It == RD->field_end())
+    return false;
+  const FieldDecl *SecondField = *It;
+  if (const auto *ResTy =
+          SecondField->getType()->getAs<HLSLAttributedResourceType>()) {
+    return ResTy->getAttrs().IsCounter;
+  }
+  return false;
+}
+
 // Helper class for building a name of a global resource variable that
 // gets created for a resource embedded in a struct or class. This will
 // also be used from CodeGen to build a name that matches the resource
@@ -128,6 +143,7 @@ public:
   void pushName(llvm::StringRef N) { pushName(N, FieldDelim); }
   void pushBaseName(llvm::StringRef N);
   void pushArrayIndex(uint64_t Index);
+  void pushBaseNameHierarchy(CXXRecordDecl *DerivedRD, CXXRecordDecl *BaseRD);
 
   void pop() {
     assert(!Offsets.empty() && "no name to pop");
@@ -137,6 +153,8 @@ public:
   IdentifierInfo *getNameAsIdentifier(ASTContext &AST) const {
     return &AST.Idents.get(Name);
   }
+
+  llvm::StringRef getName() const { return Name; }
 
 private:
   void pushName(llvm::StringRef N, llvm::StringRef Delim);

@@ -158,7 +158,8 @@ class LValue {
     BitField,     // This is a bitfield l-value, use getBitfield*.
     ExtVectorElt, // This is an extended vector subset, use getExtVectorComp
     GlobalReg,    // This is a register l-value, use getGlobalReg()
-    MatrixElt     // This is a matrix element, use getVector*
+    MatrixElt,    // This is a matrix element, use getVector*
+    MatrixRow     // This is a matrix vector subset, use getVector*
   } lvType;
   clang::QualType type;
   clang::Qualifiers quals;
@@ -172,6 +173,9 @@ class LValue {
   mlir::Type elementType;
   LValueBaseInfo baseInfo;
   const CIRGenBitFieldInfo *bitFieldInfo{nullptr};
+  // This flag shows if a nontemporal load/stores should be used when accessing
+  // this lvalue.
+  bool nontemporal;
 
   void initialize(clang::QualType type, clang::Qualifiers quals,
                   clang::CharUnits alignment, LValueBaseInfo baseInfo) {
@@ -186,6 +190,7 @@ class LValue {
     assert(this->alignment == alignment.getQuantity() &&
            "Alignment exceeds allowed max!");
     this->baseInfo = baseInfo;
+    this->nontemporal = false;
   }
 
 public:
@@ -194,9 +199,13 @@ public:
   bool isBitField() const { return lvType == BitField; }
   bool isExtVectorElt() const { return lvType == ExtVectorElt; }
   bool isGlobalReg() const { return lvType == GlobalReg; }
+  bool isMatrixRow() const { return lvType == MatrixRow; }
   bool isVolatile() const { return quals.hasVolatile(); }
 
   bool isVolatileQualified() const { return quals.hasVolatile(); }
+
+  bool isNontemporal() const { return nontemporal; }
+  void setNontemporal(bool v) { nontemporal = v; }
 
   unsigned getVRQualifiers() const {
     return quals.getCVRQualifiers() & ~clang::Qualifiers::Const;

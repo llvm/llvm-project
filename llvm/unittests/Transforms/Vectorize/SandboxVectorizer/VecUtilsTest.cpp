@@ -545,6 +545,20 @@ bb1:
   SmallVector<sandboxir::Instruction *> CBA({IC, IB, IA});
   EXPECT_EQ(sandboxir::VecUtils::getLowest(CBA), IC);
 
+  {
+    // Check getHighest(ArrayRef<Instruction *>)
+    SmallVector<sandboxir::Instruction *> A({IA});
+    EXPECT_EQ(sandboxir::VecUtils::getHighest(A), IA);
+    SmallVector<sandboxir::Instruction *> ABC({IA, IB, IC});
+    EXPECT_EQ(sandboxir::VecUtils::getHighest(ABC), IA);
+    SmallVector<sandboxir::Instruction *> ACB({IA, IC, IB});
+    EXPECT_EQ(sandboxir::VecUtils::getHighest(ACB), IA);
+    SmallVector<sandboxir::Instruction *> CAB({IC, IA, IB});
+    EXPECT_EQ(sandboxir::VecUtils::getHighest(CAB), IA);
+    SmallVector<sandboxir::Instruction *> CBA({IC, IB, IA});
+    EXPECT_EQ(sandboxir::VecUtils::getHighest(CBA), IA);
+  }
+
   // Check getLowest(ArrayRef<Value *>)
   SmallVector<sandboxir::Value *> C1Only({C1});
   EXPECT_EQ(sandboxir::VecUtils::getLowest(C1Only, &BB), nullptr);

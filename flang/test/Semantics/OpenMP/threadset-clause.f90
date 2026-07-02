@@ -2,7 +2,7 @@
 
 subroutine f00(x)
   integer :: x(10)
-!ERROR: THREADSET clause is not allowed on directive TASK in OpenMP v4.5, try -fopenmp-version=60
+!ERROR: THREADSET clause is not allowed on TASK directive in OpenMP v4.5, try -fopenmp-version=60
 !$omp task threadset(omp_pool)
   x = x + 1
 !$omp end task

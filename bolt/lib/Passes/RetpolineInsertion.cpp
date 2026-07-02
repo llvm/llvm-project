@@ -23,6 +23,7 @@
 
 #include "bolt/Passes/RetpolineInsertion.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "bolt-retpoline"
@@ -271,8 +272,10 @@ Error RetpolineInsertion::runOnFunctions(BinaryContext &BC) {
   if (!opts::InsertRetpolines)
     return Error::success();
 
-  assert(BC.isX86() &&
-         "retpoline insertion not supported for target architecture");
+  if (!BC.isX86()) {
+    BC.errs() << "BOLT-ERROR: " << getName() << " is specific to X86\n";
+    exit(1);
+  }
 
   assert(BC.HasRelocations && "retpoline mode not supported in non-reloc");
 

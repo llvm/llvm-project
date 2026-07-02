@@ -63,7 +63,7 @@ inline StringRef toStringRef(ArrayRef<char> Input) {
   return StringRef(Input.begin(), Input.size());
 }
 
-/// Construct a string ref from an array ref of unsigned chars.
+/// Construct an array ref of bytes from a string ref.
 template <class CharT = uint8_t>
 inline ArrayRef<CharT> arrayRefFromStringRef(StringRef Input) {
   static_assert(std::is_same<CharT, char>::value ||
@@ -398,6 +398,12 @@ LLVM_ABI void printHTMLEscaped(StringRef String, raw_ostream &Out);
 
 /// printLowerCase - Print each character as lowercase if it is uppercase.
 LLVM_ABI void printLowerCase(StringRef String, raw_ostream &Out);
+
+/// Print each character of \p String percent-encoded for use as a URL
+/// query-component value (RFC 3986): unreserved characters (ALPHA, DIGIT,
+/// '-' '_' '.' '~') are written directly; every other byte becomes an
+/// uppercase %XX escape. Operates on raw bytes, so UTF-8 round-trips.
+LLVM_ABI void printPercentEncoded(StringRef String, raw_ostream &Out);
 
 /// Converts a string from camel-case to snake-case by replacing all uppercase
 /// letters with '_' followed by the letter in lowercase, except if the

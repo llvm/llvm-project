@@ -724,8 +724,9 @@ static char *getBinaryPath() {
       char *C = strCopy(FindBuf, DirPath, NameMax);
       C = strCopy(C, d->d_name, NameMax - (C - FindBuf));
       *C = '\0';
-      uint32_t Ret = __readlink(FindBuf, TargetPath, sizeof(TargetPath));
-      assert(Ret != -1 && Ret != BufSize, "readlink error");
+      uint64_t Ret = __readlink(FindBuf, TargetPath, sizeof(TargetPath));
+      assert(static_cast<int64_t>(Ret) >= 0 && Ret < sizeof(TargetPath),
+             "readlink error");
       TargetPath[Ret] = '\0';
       __close(FDdir);
       return TargetPath;
@@ -1500,8 +1501,8 @@ int openProfile() {
     Ptr = strCopy(Ptr, ".fdata", BufSize - (Ptr - Buf + 1));
   }
   *Ptr++ = '\0';
-  uint64_t FD = __open(Buf, O_WRONLY | O_TRUNC | O_CREAT,
-                       /*mode=*/0666);
+  uint64_t FD = __open(Buf, O_WRONLY | O_TRUNC | O_CREAT | O_CLOEXEC,
+                       /*mode=*/0600);
   if (static_cast<int64_t>(FD) < 0) {
     report("Error while trying to open profile file for writing: ");
     report(Buf);
@@ -1658,8 +1659,6 @@ extern "C" void __bolt_instr_indirect_tailcall();
 
 /// Initialization code
 extern "C" void __attribute((force_align_arg_pointer)) __bolt_instr_setup() {
-  __bolt_ind_call_counter_func_pointer = __bolt_instr_indirect_call;
-  __bolt_ind_tailcall_counter_func_pointer = __bolt_instr_indirect_tailcall;
   TextBaseAddress = getTextBaseAddress();
 
   const uint64_t CountersStart =
@@ -1693,6 +1692,12 @@ extern "C" void __attribute((force_align_arg_pointer)) __bolt_instr_setup() {
   if (__bolt_instr_num_ind_calls > 0)
     GlobalIndCallCounters =
         new (*GlobalAlloc, 0) IndirectCallHashTable[__bolt_instr_num_ind_calls];
+
+  // Set these up after initializing indirect call counters. Otherwise,
+  // background threads spawned through global constructors might try to access
+  // uninitialized counters.
+  __bolt_ind_call_counter_func_pointer = __bolt_instr_indirect_call;
+  __bolt_ind_tailcall_counter_func_pointer = __bolt_instr_indirect_tailcall;
 
   if (__bolt_instr_sleep_time != 0) {
     // Separate instrumented process to the own process group

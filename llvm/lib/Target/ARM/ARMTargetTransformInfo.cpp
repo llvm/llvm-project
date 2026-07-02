@@ -92,73 +92,6 @@ static Value *simplifyNeonVld1(const IntrinsicInst &II, unsigned MemAlign,
                                    Align(Alignment));
 }
 
-bool ARMTTIImpl::areInlineCompatible(const Function *Caller,
-                                     const Function *Callee) const {
-  const TargetMachine &TM = getTLI()->getTargetMachine();
-  const FeatureBitset &CallerBits =
-      TM.getSubtargetImpl(*Caller)->getFeatureBits();
-  const FeatureBitset &CalleeBits =
-      TM.getSubtargetImpl(*Callee)->getFeatureBits();
-
-  // To inline a callee, all features not in the allowed list must match exactly.
-  bool MatchExact = (CallerBits & ~InlineFeaturesAllowed) ==
-                    (CalleeBits & ~InlineFeaturesAllowed);
-  // For features in the allowed list, the callee's features must be a subset of
-  // the callers'.
-  bool MatchSubset = ((CallerBits & CalleeBits) & InlineFeaturesAllowed) ==
-                     (CalleeBits & InlineFeaturesAllowed);
-
-  LLVM_DEBUG({
-    if (!MatchExact || !MatchSubset) {
-      dbgs() << "=== Inline compatibility debug ===\n";
-      dbgs() << "Caller: " << Caller->getName() << "\n";
-      dbgs() << "Callee: " << Callee->getName() << "\n";
-
-      // Bit diffs
-      FeatureBitset MissingInCaller = CalleeBits & ~CallerBits; // callee-only
-      FeatureBitset ExtraInCaller = CallerBits & ~CalleeBits;   // caller-only
-
-      // Counts
-      dbgs() << "Only-in-caller bit count: " << ExtraInCaller.count() << "\n";
-      dbgs() << "Only-in-callee bit count: " << MissingInCaller.count() << "\n";
-
-      dbgs() << "Only-in-caller feature indices [";
-      {
-        bool First = true;
-        for (size_t I = 0, E = ExtraInCaller.size(); I < E; ++I) {
-          if (ExtraInCaller.test(I)) {
-            if (!First)
-              dbgs() << ", ";
-            dbgs() << I;
-            First = false;
-          }
-        }
-      }
-      dbgs() << "]\n";
-
-      dbgs() << "Only-in-callee feature indices [";
-      {
-        bool First = true;
-        for (size_t I = 0, E = MissingInCaller.size(); I < E; ++I) {
-          if (MissingInCaller.test(I)) {
-            if (!First)
-              dbgs() << ", ";
-            dbgs() << I;
-            First = false;
-          }
-        }
-      }
-      dbgs() << "]\n";
-
-      // Indices map to features as found in
-      // llvm-project/(your_build)/lib/Target/ARM/ARMGenSubtargetInfo.inc
-      dbgs() << "MatchExact=" << (MatchExact ? "true" : "false")
-             << " MatchSubset=" << (MatchSubset ? "true" : "false") << "\n";
-    }
-  });
-  return MatchExact && MatchSubset;
-}
-
 TTI::AddressingModeKind
 ARMTTIImpl::getPreferredAddressingMode(const Loop *L,
                                        ScalarEvolution *SE) const {
@@ -1647,6 +1580,11 @@ InstructionCost ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                             TTI::TargetCostKind CostKind,
                                             TTI::OperandValueInfo OpInfo,
                                             const Instruction *I) const {
+  // FIXME: Load latency isn't handled here
+  if (Opcode == Instruction::Load && CostKind == TTI::TCK_Latency)
+    return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
+                                  CostKind, OpInfo, I);
+
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return 1;
@@ -2616,14 +2554,14 @@ static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
   return true;
 }
 
-bool ARMTTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) const {
+bool ARMTTIImpl::preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const {
   if (!EnableTailPredication) {
-    LLVM_DEBUG(dbgs() << "Tail-predication not enabled.\n");
+    LLVM_DEBUG(dbgs() << "Tail-folding not enabled.\n");
     return false;
   }
 
-  // Creating a predicated vector loop is the first step for generating a
-  // tail-predicated hardware loop, for which we need the MVE masked
+  // Creating a tail-folded vector loop is the first step for generating a
+  // tail-folded hardware loop, for which we need the MVE masked
   // load/stores instructions:
   if (!ST->hasMVEIntegerOps())
     return false;
@@ -2633,17 +2571,18 @@ bool ARMTTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) const {
 
   // For now, restrict this to single block loops.
   if (L->getNumBlocks() > 1) {
-    LLVM_DEBUG(dbgs() << "preferPredicateOverEpilogue: not a single block "
+    LLVM_DEBUG(dbgs() << "preferTailFoldingOverEpilogue: not a single block "
                          "loop.\n");
     return false;
   }
 
-  assert(L->isInnermost() && "preferPredicateOverEpilogue: inner-loop expected");
+  assert(L->isInnermost() &&
+         "preferTailFoldingOverEpilogue: inner-loop expected");
 
   LoopInfo *LI = LVL->getLoopInfo();
   HardwareLoopInfo HWLoopInfo(L);
   if (!HWLoopInfo.canAnalyze(*LI)) {
-    LLVM_DEBUG(dbgs() << "preferPredicateOverEpilogue: hardware-loop is not "
+    LLVM_DEBUG(dbgs() << "preferTailFoldingOverEpilogue: hardware-loop is not "
                          "analyzable.\n");
     return false;
   }
@@ -2654,14 +2593,14 @@ bool ARMTTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) const {
   // This checks if we have the low-overhead branch architecture
   // extension, and if we will create a hardware-loop:
   if (!isHardwareLoopProfitable(L, *SE, *AC, TFI->TLI, HWLoopInfo)) {
-    LLVM_DEBUG(dbgs() << "preferPredicateOverEpilogue: hardware-loop is not "
+    LLVM_DEBUG(dbgs() << "preferTailFoldingOverEpilogue: hardware-loop is not "
                          "profitable.\n");
     return false;
   }
 
   DominatorTree *DT = LVL->getDominatorTree();
   if (!HWLoopInfo.isHardwareLoopCandidate(*SE, *LI, *DT)) {
-    LLVM_DEBUG(dbgs() << "preferPredicateOverEpilogue: hardware-loop is not "
+    LLVM_DEBUG(dbgs() << "preferTailFoldingOverEpilogue: hardware-loop is not "
                          "a candidate.\n");
     return false;
   }

@@ -53,7 +53,7 @@ public:
         errs() << "\nCurrent properties: ";
         MFProps.print(errs());
         errs() << '\n';
-        report_fatal_error("MachineFunctionProperties check failed");
+        reportFatalUsageError("MachineFunctionProperties check failed");
       }
     }
 #endif // NDEBUG
@@ -189,7 +189,7 @@ private:
 };
 
 class FunctionToMachineFunctionPassAdaptor
-    : public PassInfoMixin<FunctionToMachineFunctionPassAdaptor> {
+    : public RequiredPassInfoMixin<FunctionToMachineFunctionPassAdaptor> {
 public:
   using PassConceptT =
       detail::PassConcept<MachineFunction, MachineFunctionAnalysisManager>;
@@ -203,8 +203,6 @@ public:
   LLVM_ABI void
   printPipeline(raw_ostream &OS,
                 function_ref<StringRef(StringRef)> MapClassName2PassName);
-
-  static bool isRequired() { return true; }
 
 private:
   std::unique_ptr<PassConceptT> Pass;

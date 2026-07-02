@@ -8,8 +8,8 @@ unsigned char cxxstaticcast_0(unsigned int x) {
 }
 
 // CIR: cir.func{{.*}} @_Z15cxxstaticcast_0j
-// CIR:    %[[XPTR:[0-9]+]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["x", init] {alignment = 4 : i64}
-// CIR:    %[[RV:[0-9]+]] = cir.alloca !u8i, !cir.ptr<!u8i>, ["__retval"] {alignment = 1 : i64}
+// CIR:    %[[XPTR:[0-9]+]] = cir.alloca "x" align(4) init : !cir.ptr<!u32i>
+// CIR:    %[[RV:[0-9]+]] = cir.alloca "__retval" align(1) : !cir.ptr<!u8i>
 // CIR:    cir.store %arg0, %[[XPTR]] : !u32i, !cir.ptr<!u32i>
 // CIR:    %[[XVAL:[0-9]+]] = cir.load{{.*}} %[[XPTR]] : !cir.ptr<!u32i>, !u32i
 // CIR:    %[[CASTED:[0-9]+]] = cir.cast integral %[[XVAL]] : !u32i -> !u8i
@@ -90,7 +90,7 @@ bool cptr(void *d) {
 }
 
 // CIR: cir.func{{.*}} @_Z4cptrPv(%arg0: !cir.ptr<!void>
-// CIR:   %[[DPTR:[0-9]+]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["d", init] {alignment = 8 : i64}
+// CIR:   %[[DPTR:[0-9]+]] = cir.alloca "d" align(8) init : !cir.ptr<!cir.ptr<!void>>
 
 // CIR:   %[[DVAL:[0-9]+]] = cir.load{{.*}} %[[DPTR]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // CIR:   %{{[0-9]+}} = cir.cast ptr_to_bool %[[DVAL]] : !cir.ptr<!void> -> !cir.bool
@@ -164,3 +164,22 @@ void null_cast(long) {
 // CIR:    cir.store{{.*}} %{{.*}}, %[[NULLPTR]] : !s32i, !cir.ptr<!s32i>
 // CIR:    %[[NULLPTR_A:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!rec_A>
 // CIR:    %[[A_X:.*]] = cir.get_member %[[NULLPTR_A]][0] {name = "x"} : !cir.ptr<!rec_A> -> !cir.ptr<!s32i>
+
+struct B {
+  int *p;
+  operator int *() const { return p; }
+};
+
+int test_unser_defined_cast_with_aligned_load(B x) {
+  return *x;
+}
+
+// CIR: cir.func{{.*}} @_Z41test_unser_defined_cast_with_aligned_load1B
+// CIR:   cir.store %{{.*}}, %[[B_PTR:.*]] : !rec_B, !cir.ptr<!rec_B>
+// CIR:   %[[CAST:.*]] = cir.call @_ZNK1BcvPiEv(%[[B_PTR]])
+// CIR:   %[[LOAD:.*]] = cir.load{{.*}} %[[CAST]]
+
+// LLVM: define{{.*}} i32 @_Z41test_unser_defined_cast_with_aligned_load1B
+// LLVM:   store %struct.B %{{.*}}, ptr %[[B_PTR:.*]], align 8
+// LLVM:   %[[CAST:.*]] = call {{.*}} ptr @_ZNK1BcvPiEv(ptr {{.*}} %[[B_PTR]])
+// LLVM:   %[[LOAD:.*]] = load i32, ptr %[[CAST]]

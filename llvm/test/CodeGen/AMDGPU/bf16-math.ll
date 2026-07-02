@@ -408,10 +408,9 @@ define amdgpu_ps float @test_clamp_bf16_hi16(<2 x bfloat> %src) {
 ; TRUE16:       ; %bb.0:
 ; TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
-; TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; TRUE16-NEXT:    v_pk_max_num_bf16 v1, v0, v0 op_sel_hi:[0,0] clamp
-; TRUE16-NEXT:    v_mov_b16_e32 v0.l, 0
-; TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; TRUE16-NEXT:    v_pk_max_num_bf16 v0, v0, v0 op_sel_hi:[0,0] clamp
+; TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; FAKE16-LABEL: test_clamp_bf16_hi16:
@@ -493,10 +492,7 @@ define amdgpu_ps bfloat @test_clamp_bf16_folding(bfloat %src) {
 ; FAKE16-LABEL: test_clamp_bf16_folding:
 ; FAKE16:       ; %bb.0:
 ; FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; FAKE16-NEXT:    v_exp_bf16_e32 v0, v0
-; FAKE16-NEXT:    v_nop
-; FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
-; FAKE16-NEXT:    v_pk_max_num_bf16 v0, v0, v0 clamp
+; FAKE16-NEXT:    v_exp_bf16_e64 v0, v0 clamp
 ; FAKE16-NEXT:    ; return to shader part epilog
   %exp = call bfloat @llvm.exp2.bf16(bfloat %src)
   %max = call bfloat @llvm.maxnum.bf16(bfloat %exp, bfloat 0.0)

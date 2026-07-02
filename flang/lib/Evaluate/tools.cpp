@@ -689,6 +689,32 @@ Expr<LogicalResult> PromoteAndRelate(
       AsSameKindExprs(std::move(x), std::move(y)));
 }
 
+std::optional<Expr<SomeType>> GetEnumerationOrdinal(Expr<SomeDerived> &expr) {
+  if (auto type{expr.GetType()}) {
+    if (const auto *derived{GetDerivedTypeSpec(*type)}) {
+      if (derived->IsEnumerationType()) {
+        if (const auto *scope{derived->GetScope()}) {
+          auto iter{scope->find(semantics::SourceName{
+              semantics::DerivedTypeDetails::ordinalComponentName,
+              sizeof(semantics::DerivedTypeDetails::ordinalComponentName) -
+                  1})};
+          if (iter != scope->end()) {
+            const semantics::Symbol &ordSym{*iter->second};
+            if (auto *constant{UnwrapConstantValue<SomeDerived>(expr)}) {
+              if (auto sc{constant->GetScalarValue()}) {
+                return sc->Find(ordSym);
+              }
+            } else if (auto *sc{UnwrapExpr<StructureConstructor>(expr)}) {
+              return sc->Find(ordSym);
+            }
+          }
+        }
+      }
+    }
+  }
+  return std::nullopt;
+}
+
 std::optional<Expr<LogicalResult>> Relate(parser::ContextualMessages &messages,
     RelationalOperator opr, Expr<SomeType> &&x, Expr<SomeType> &&y) {
   return common::visit(
@@ -754,6 +780,58 @@ std::optional<Expr<LogicalResult>> Relate(parser::ContextualMessages &messages,
                   }
                 },
                 std::move(cx.u), std::move(cy.u));
+          },
+          [&](Expr<SomeDerived> &&dx,
+              Expr<SomeDerived> &&dy) -> std::optional<Expr<LogicalResult>> {
+            // Enumeration type comparison: extract __ordinal and delegate
+            // to integer comparison
+            auto xType{dx.GetType()};
+            auto yType{dy.GetType()};
+            if (xType && yType) {
+              const auto *xDerived{GetDerivedTypeSpec(*xType)};
+              const auto *yDerived{GetDerivedTypeSpec(*yType)};
+              if (xDerived && yDerived && xDerived->IsEnumerationType() &&
+                  yDerived->IsEnumerationType() &&
+                  &xDerived->typeSymbol() == &yDerived->typeSymbol()) {
+                auto xOrd{GetEnumerationOrdinal(dx)};
+                auto yOrd{GetEnumerationOrdinal(dy)};
+                if (xOrd && yOrd) {
+                  return Relate(
+                      messages, opr, std::move(*xOrd), std::move(*yOrd));
+                }
+                // Non-constant operands: wrap in INT() to convert to
+                // integer comparison. Build FunctionRef<Int4> for each
+                // operand representing INT(enumExpr).
+                auto makeIntCall =
+                    [&](Expr<SomeDerived> &&operand) -> Expr<SomeType> {
+                  using IntType = Type<TypeCategory::Integer, 4>;
+                  DynamicType enumType{*xDerived};
+                  DynamicType intResultType{TypeCategory::Integer, 4};
+                  characteristics::DummyDataObject ddo{
+                      characteristics::TypeAndShape{enumType}};
+                  ddo.intent = common::Intent::In;
+                  characteristics::Procedure::Attrs attrs{
+                      characteristics::Procedure::Attr::Pure,
+                      characteristics::Procedure::Attr::Elemental};
+                  characteristics::DummyArguments dummies;
+                  dummies.emplace_back("a"s, std::move(ddo));
+                  SpecificIntrinsic intSpec{"int"s,
+                      characteristics::Procedure{
+                          characteristics::FunctionResult{intResultType},
+                          std::move(dummies), attrs}};
+                  ActualArguments intArgs;
+                  intArgs.emplace_back(AsGenericExpr(std::move(operand)));
+                  return AsGenericExpr(
+                      Expr<SomeInteger>(Expr<IntType>(FunctionRef<IntType>{
+                          ProcedureDesignator{std::move(intSpec)},
+                          std::move(intArgs)})));
+                };
+                return Relate(messages, opr, makeIntCall(std::move(dx)),
+                    makeIntCall(std::move(dy)));
+              }
+            }
+            DIE("invalid types for relational operator");
+            return std::optional<Expr<LogicalResult>>{};
           },
           // Default case
           [&](auto &&, auto &&) {
@@ -1129,6 +1207,40 @@ template semantics::UnorderedSymbolSet CollectCudaSymbols(
     const Expr<SomeInteger> &);
 template semantics::UnorderedSymbolSet CollectCudaSymbols(
     const Expr<SubscriptInteger> &);
+
+std::vector<SymbolVector> GetSymbolVectors(const Expr<SomeType> &expr) {
+  SymbolVector symbols{GetSymbolVector(expr)};
+  std::reverse(symbols.begin(), symbols.end());
+
+  std::vector<SymbolVector> symbolVectors;
+
+  SymbolVector crtSymbols;
+  for (const Symbol &sym : symbols) {
+    crtSymbols.push_back(sym);
+    if (!sym.owner().IsDerivedType()) {
+      symbolVectors.push_back(crtSymbols);
+      crtSymbols.clear();
+    }
+  }
+  return symbolVectors;
+}
+
+int GetNbOfUniqueCUDADeviceSymbols(const Expr<SomeType> &expr) {
+  std::vector<SymbolVector> symbolVectors{evaluate::GetSymbolVectors(expr)};
+  semantics::UnorderedSymbolSet symbols;
+  semantics::UnorderedSymbolSet cudaSymbols{CollectCudaSymbols(expr)};
+  for (const auto &symbolVector : symbolVectors) {
+    for (const auto &sym : symbolVector) {
+      if (cudaSymbols.find(sym) != cudaSymbols.end()) {
+        if (IsCUDADeviceSymbol(*sym)) {
+          symbols.insert(sym);
+          break;
+        }
+      }
+    }
+  }
+  return symbols.size();
+}
 
 bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
   semantics::UnorderedSymbolSet hostSymbols;
@@ -2148,6 +2260,9 @@ static bool IsPureProcedureImpl(
     }
     return true; // statement function was not found to be impure
   }
+  if (symbol.attrs().test(Attr::SIMPLE)) {
+    return true; // SIMPLE implies PURE; F2023 15.8
+  }
   return symbol.attrs().test(Attr::PURE) ||
       (symbol.attrs().test(Attr::ELEMENTAL) &&
           !symbol.attrs().test(Attr::IMPURE));
@@ -2161,6 +2276,18 @@ bool IsPureProcedure(const Symbol &original) {
 bool IsPureProcedure(const Scope &scope) {
   const Symbol *symbol{scope.GetSymbol()};
   return symbol && IsPureProcedure(*symbol);
+}
+
+bool IsSimpleProcedure(const Symbol &original) {
+  // An ENTRY is SIMPLE if its containing subprogram is
+  return DEREF(GetMainEntry(&original.GetUltimate()))
+      .attrs()
+      .test(Attr::SIMPLE);
+}
+
+bool IsSimpleProcedure(const Scope &scope) {
+  const Symbol *symbol{scope.GetSymbol()};
+  return symbol && IsSimpleProcedure(*symbol);
 }
 
 bool IsExplicitlyImpureProcedure(const Symbol &original) {
@@ -2482,7 +2609,7 @@ bool IsBuiltinDerivedType(const DerivedTypeSpec *derived, const char *name) {
 bool IsBuiltinCPtr(const Symbol &symbol) {
   if (const DeclTypeSpec *declType = symbol.GetType()) {
     if (const DerivedTypeSpec *derived = declType->AsDerived()) {
-      return IsIsoCType(derived);
+      return IsIsoCType(derived) || IsBuiltinDerivedType(derived, "c_devptr");
     }
   }
   return false;

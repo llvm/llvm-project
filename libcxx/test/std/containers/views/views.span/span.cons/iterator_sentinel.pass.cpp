@@ -5,20 +5,26 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===---------------------------------------------------------------------===//
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// REQUIRES: std-at-least-c++20
 
 // <span>
 
-// template <class It, class End>
-// constexpr explicit(Extent != dynamic_extent) span(It first, End last);
-// Requires: [first, last) shall be a valid range.
-//   If Extent is not equal to dynamic_extent, then last - first shall be equal to Extent.
-// Throws: When and what last - first throws.
+// template<class It, class End>
+//   constexpr explicit(extent != dynamic_extent) span(It first, End last);
+//
+// Preconditions:
+//   - [first, last) is a valid range.
+//
+// Hardened preconditions:
+//   - If extent is not equal to dynamic_extent, then (last - first) == extent is true.
+//
+// Throws:
+//   - When and what last - first throws.
 
 #include <array>
 #include <span>
 #include <cassert>
-#include <utility>
 
 #include "assert_macros.h"
 #include "test_iterators.h"
@@ -66,12 +72,12 @@ class throw_operator_minus {
   It it_;
 
 public:
-  typedef std::contiguous_iterator_tag iterator_category;
-  typedef typename std::iterator_traits<It>::value_type value_type;
-  typedef typename std::iterator_traits<It>::difference_type difference_type;
-  typedef It pointer;
-  typedef typename std::iterator_traits<It>::reference reference;
-  typedef std::remove_reference_t<reference> element_type;
+  using iterator_category = std::contiguous_iterator_tag;
+  using value_type        = std::iterator_traits<It>::value_type;
+  using difference_type   = std::iterator_traits<It>::difference_type;
+  using pointer           = It;
+  using reference         = std::iterator_traits<It>::reference;
+  using element_type      = std::remove_reference_t<reference>;
 
   throw_operator_minus() : it_() {}
   explicit throw_operator_minus(It it) : it_(it) {}

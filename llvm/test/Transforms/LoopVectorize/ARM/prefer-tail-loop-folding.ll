@@ -37,18 +37,18 @@
 ; RUN:   FileCheck %s -check-prefixes=CHECK,PREFER-FOLDING
 
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp \
-; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue \
+; RUN:   -tail-folding-policy=dont-fold-tail \
 ; RUN:   -tail-predication=enabled -passes=loop-vectorize \
 ; RUN:   -enable-arm-maskedgatscat=false \
 ; RUN:   -enable-arm-maskedldst=true -S < %s | \
 ; RUN:   FileCheck %s -check-prefixes=CHECK,NO-FOLDING
 
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-eabihf -mattr=+mve.fp \
-; RUN:   -prefer-predicate-over-epilogue=predicate-dont-vectorize \
+; RUN:   -tail-folding-policy=must-fold-tail \
 ; RUN:   -tail-predication=enabled -passes=loop-vectorize \
 ; RUN:   -enable-arm-maskedgatscat=false \
 ; RUN:   -enable-arm-maskedldst=true -S < %s | \
-; RUN:   FileCheck %s -check-prefixes=CHECK
+; RUN: FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 

@@ -556,7 +556,7 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
   if (FrameAlignment > StackAlignment) {
     // Re-align the base pointer according to the max requested alignment.
     IRB.SetInsertPoint(BasePointer->getNextNode());
-    BasePointer = IRB.CreateIntrinsic(
+    BasePointer = IRB.CreateIntrinsicWithoutFolding(
         StackPtrTy, Intrinsic::ptrmask,
         {BasePointer, ConstantInt::get(AddrTy, ~(FrameAlignment.value() - 1))});
   }

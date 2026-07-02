@@ -35,7 +35,7 @@ int f6() {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z2f6v() -> (!s32i{{.*}})
-// CIR:         %[[#b:]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
+// CIR:         %[[#b:]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s32i>
 // CIR:         %[[#a:]] = cir.const #cir.int<2> : !s32i
 // CIR-NEXT:    %[[#c:]] = cir.const #false
 // CIR-NEXT:    %{{.+}} = cir.call @_Z2f5iPib(%[[#a]], %[[#b:]], %[[#c]]) : (!s32i {{.*}}, !cir.ptr<!s32i> {{.*}}, !cir.bool {{.*}}) -> (!s32i{{.*}})
@@ -94,7 +94,7 @@ void f12() {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z3f12v()
-// CIR:         %[[#slot:]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["agg.tmp0"]
+// CIR:         %[[#slot:]] = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<!rec_S>
 // CIR-NEXT:    %[[#ret:]] = cir.call @_Z3f10v() : () -> !rec_S
 // CIR-NEXT:    cir.store align(4) %[[#ret]], %[[#slot]] : !rec_S, !cir.ptr<!rec_S>
 
@@ -129,5 +129,26 @@ void f16() {
 // LLVM-LABEL: define{{.+}} void @_Z3f16v(){{.*}} {
 // LLVM-NEXT:    %{{.+}} = call{{.*}} i32 @_Z3f15v()
 // LLVM:       }
+
+template<typename Func>
+inline decltype(auto) TakesFunc(const Func &f) {
+  return f();
+}
+
+int Passed();
+
+void use_TakesFunc() {
+  TakesFunc(Passed);
+}
+
+// CIR-LABEL: _Z9TakesFuncIFivEEDcRKT_
+// CIR-NEXT: %[[FUNC_ALLOCA:.*]] = cir.alloca "f" {{.*}} init const : !cir.ptr<!cir.ptr<!cir.func<() -> !s32i>>>
+// CIR: %[[FUNC_LOAD:.*]] = cir.load %[[FUNC_ALLOCA]] : !cir.ptr<!cir.ptr<!cir.func<() -> !s32i>>>, !cir.ptr<!cir.func<() -> !s32i>>
+// CIR-NEXT: %[[CALL:.*]] = cir.call %[[FUNC_LOAD]]() : (!cir.ptr<!cir.func<() -> !s32i>>) -> (!s32i {llvm.noundef})
+
+// LLVM-LABEL: _Z9TakesFuncIFivEEDcRKT_
+// LLVM-NEXT: %[[FUNC_ALLOCA:.*]] = alloca ptr
+// LLVM: %[[FUNC_LOAD:.*]] = load ptr, ptr %[[FUNC_ALLOCA]]
+// LLVM-NEXT: %[[CALL:.*]] = call noundef i32 %[[FUNC_LOAD]]()
 
 // LLVM: attributes #[[LLVM_ATTR_0]] = { nounwind }

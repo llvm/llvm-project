@@ -524,6 +524,10 @@ enum RMWOperations {
   RMW_FMINIMUMNUM = 22,
 };
 
+enum RMWOperationFlags {
+  RMW_ELEMENTWISE_FLAG = 1 << 5,
+};
+
 /// OverflowingBinaryOperatorOptionalFlags - Flags for serializing
 /// OverflowingBinaryOperator's SubclassOptionalData contents.
 enum OverflowingBinaryOperatorOptionalFlags {
@@ -816,6 +820,7 @@ enum AttributeKindCodes {
   ATTR_KIND_DENORMAL_FPENV = 106,
   ATTR_KIND_NOOUTLINE = 107,
   ATTR_KIND_FLATTEN = 108,
+  ATTR_KIND_NOIPA = 109,
 };
 
 enum ComdatSelectionKindCodes {

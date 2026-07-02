@@ -2,8 +2,8 @@
 
 void acc_update(int parmVar, int *ptrParmVar) {
   // CHECK: cir.func{{.*}} @acc_update(%[[ARG:.*]]: !s32i{{.*}}, %[[PTRARG:.*]]: !cir.ptr<!s32i>{{.*}}) {{.*}}{
-  // CHECK-NEXT: %[[PARM:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["parmVar", init]
-  // CHECK-NEXT: %[[PTRPARM:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["ptrParmVar", init]
+  // CHECK-NEXT: %[[PARM:.*]] = cir.alloca "parmVar" {{.*}} init : !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[PTRPARM:.*]] = cir.alloca "ptrParmVar" {{.*}} init : !cir.ptr<!cir.ptr<!s32i>>
   // CHECK-NEXT: cir.store %[[ARG]], %[[PARM]] : !s32i, !cir.ptr<!s32i>
   // CHECK-NEXT: cir.store %[[PTRARG]], %[[PTRPARM]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 
@@ -100,43 +100,43 @@ void acc_update(int parmVar, int *ptrParmVar) {
 #pragma acc update self(parmVar) wait(parmVar)
   // CHECK-NEXT: %[[GDP1:.*]] = acc.getdeviceptr varPtr(%[[PARM]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {dataClause = #acc<data_clause acc_update_self>, name = "parmVar", structured = false}
   // CHECK-NEXT: %[[PARM_LOAD:.*]] = cir.load{{.*}} %[[PARM]]
-  // CHECK-NEXT: %[[PARM_CAST:.*]] = builtin.unrealized_conversion_cast %[[PARM_LOAD]]
+  // CHECK-NEXT: %[[PARM_CAST:.*]] = cir.builtin_int_cast %[[PARM_LOAD]]
   // CHECK-NEXT: acc.update wait({%[[PARM_CAST]] : si32}) dataOperands(%[[GDP1]] : !cir.ptr<!s32i>)
   // CHECK-NEXT: acc.update_host accPtr(%[[GDP1]] : !cir.ptr<!s32i>) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) {dataClause = #acc<data_clause acc_update_self>, name = "parmVar", structured = false}
 
 #pragma acc update self(parmVar) wait(parmVar) device_type(nvidia)
   // CHECK-NEXT: %[[GDP1:.*]] = acc.getdeviceptr varPtr(%[[PARM]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {dataClause = #acc<data_clause acc_update_self>, name = "parmVar", structured = false}
   // CHECK-NEXT: %[[PARM_LOAD:.*]] = cir.load{{.*}} %[[PARM]]
-  // CHECK-NEXT: %[[PARM_CAST:.*]] = builtin.unrealized_conversion_cast %[[PARM_LOAD]]
+  // CHECK-NEXT: %[[PARM_CAST:.*]] = cir.builtin_int_cast %[[PARM_LOAD]]
   // CHECK-NEXT: acc.update wait({%[[PARM_CAST]] : si32}) dataOperands(%[[GDP1]] : !cir.ptr<!s32i>)
   // CHECK-NEXT: acc.update_host accPtr(%[[GDP1]] : !cir.ptr<!s32i>) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) {dataClause = #acc<data_clause acc_update_self>, name = "parmVar", structured = false}
 
 #pragma acc update self(parmVar) device_type(radeon) wait(parmVar)
   // CHECK-NEXT: %[[GDP1:.*]] = acc.getdeviceptr varPtr(%[[PARM]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {dataClause = #acc<data_clause acc_update_self>, name = "parmVar", structured = false}
   // CHECK-NEXT: %[[PARM_LOAD:.*]] = cir.load{{.*}} %[[PARM]]
-  // CHECK-NEXT: %[[PARM_CAST:.*]] = builtin.unrealized_conversion_cast %[[PARM_LOAD]]
+  // CHECK-NEXT: %[[PARM_CAST:.*]] = cir.builtin_int_cast %[[PARM_LOAD]]
   // CHECK-NEXT: acc.update wait({%[[PARM_CAST]] : si32} [#acc.device_type<radeon>]) dataOperands(%[[GDP1]] : !cir.ptr<!s32i>)
   // CHECK-NEXT: acc.update_host accPtr(%[[GDP1]] : !cir.ptr<!s32i>) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) {dataClause = #acc<data_clause acc_update_self>, name = "parmVar", structured = false}
 
 #pragma acc update self(parmVar) device_type(radeon) wait(parmVar, 1, 2)
   // CHECK-NEXT: %[[GDP1:.*]] = acc.getdeviceptr varPtr(%[[PARM]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {dataClause = #acc<data_clause acc_update_self>, name = "parmVar", structured = false}
   // CHECK-NEXT: %[[PARM_LOAD:.*]] = cir.load{{.*}} %[[PARM]]
-  // CHECK-NEXT: %[[PARM_CAST:.*]] = builtin.unrealized_conversion_cast %[[PARM_LOAD]]
+  // CHECK-NEXT: %[[PARM_CAST:.*]] = cir.builtin_int_cast %[[PARM_LOAD]]
   // CHECK-NEXT: %[[ONE_CONST:.*]] = cir.const #cir.int<1>
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_CONST]]
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE_CONST]]
   // CHECK-NEXT: %[[TWO_CONST:.*]] = cir.const #cir.int<2>
-  // CHECK-NEXT: %[[TWO_CAST:.*]] = builtin.unrealized_conversion_cast %[[TWO_CONST]]
+  // CHECK-NEXT: %[[TWO_CAST:.*]] = cir.builtin_int_cast %[[TWO_CONST]]
   // CHECK-NEXT: acc.update wait({%[[PARM_CAST]] : si32, %[[ONE_CAST]] : si32, %[[TWO_CAST]] : si32} [#acc.device_type<radeon>]) dataOperands(%[[GDP1]] : !cir.ptr<!s32i>)
   // CHECK-NEXT: acc.update_host accPtr(%[[GDP1]] : !cir.ptr<!s32i>) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) {dataClause = #acc<data_clause acc_update_self>, name = "parmVar", structured = false}
 
 #pragma acc update self(parmVar) device_type(radeon) wait(devnum:parmVar: 1, 2)
   // CHECK-NEXT: %[[GDP1:.*]] = acc.getdeviceptr varPtr(%[[PARM]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {dataClause = #acc<data_clause acc_update_self>, name = "parmVar", structured = false}
   // CHECK-NEXT: %[[PARM_LOAD:.*]] = cir.load{{.*}} %[[PARM]]
-  // CHECK-NEXT: %[[PARM_CAST:.*]] = builtin.unrealized_conversion_cast %[[PARM_LOAD]]
+  // CHECK-NEXT: %[[PARM_CAST:.*]] = cir.builtin_int_cast %[[PARM_LOAD]]
   // CHECK-NEXT: %[[ONE_CONST:.*]] = cir.const #cir.int<1>
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_CONST]]
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE_CONST]]
   // CHECK-NEXT: %[[TWO_CONST:.*]] = cir.const #cir.int<2>
-  // CHECK-NEXT: %[[TWO_CAST:.*]] = builtin.unrealized_conversion_cast %[[TWO_CONST]]
+  // CHECK-NEXT: %[[TWO_CAST:.*]] = cir.builtin_int_cast %[[TWO_CONST]]
   // CHECK-NEXT: acc.update wait({devnum: %[[PARM_CAST]] : si32, %[[ONE_CAST]] : si32, %[[TWO_CAST]] : si32} [#acc.device_type<radeon>]) dataOperands(%[[GDP1]] : !cir.ptr<!s32i>)
   // CHECK-NEXT: acc.update_host accPtr(%[[GDP1]] : !cir.ptr<!s32i>) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) {dataClause = #acc<data_clause acc_update_self>, name = "parmVar", structured = false}
 
@@ -157,21 +157,21 @@ void acc_update(int parmVar, int *ptrParmVar) {
 
 #pragma acc update self(parmVar) async(parmVar)
   // CHECK-NEXT: %[[PARM_LOAD:.*]] = cir.load{{.*}} %[[PARM]]
-  // CHECK-NEXT: %[[PARM_CAST:.*]] = builtin.unrealized_conversion_cast %[[PARM_LOAD]]
+  // CHECK-NEXT: %[[PARM_CAST:.*]] = cir.builtin_int_cast %[[PARM_LOAD]]
   // CHECK-NEXT: %[[GDP1:.*]] = acc.getdeviceptr varPtr(%[[PARM]] : !cir.ptr<!s32i>) async(%[[PARM_CAST]] : si32) -> !cir.ptr<!s32i> {dataClause = #acc<data_clause acc_update_self>, name = "parmVar", structured = false}
   // CHECK-NEXT: acc.update async(%[[PARM_CAST]] : si32) dataOperands(%[[GDP1]] : !cir.ptr<!s32i>)
   // CHECK-NEXT: acc.update_host accPtr(%[[GDP1]] : !cir.ptr<!s32i>) async(%[[PARM_CAST]] : si32) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) {dataClause = #acc<data_clause acc_update_self>, name = "parmVar", structured = false}
 
 #pragma acc update self(parmVar) async(parmVar) device_type(nvidia)
   // CHECK-NEXT: %[[PARM_LOAD:.*]] = cir.load{{.*}} %[[PARM]]
-  // CHECK-NEXT: %[[PARM_CAST:.*]] = builtin.unrealized_conversion_cast %[[PARM_LOAD]]
+  // CHECK-NEXT: %[[PARM_CAST:.*]] = cir.builtin_int_cast %[[PARM_LOAD]]
   // CHECK-NEXT: %[[GDP1:.*]] = acc.getdeviceptr varPtr(%[[PARM]] : !cir.ptr<!s32i>) async(%[[PARM_CAST]] : si32) -> !cir.ptr<!s32i> {dataClause = #acc<data_clause acc_update_self>, name = "parmVar", structured = false}
   // CHECK-NEXT: acc.update async(%[[PARM_CAST]] : si32) dataOperands(%[[GDP1]] : !cir.ptr<!s32i>)
   // CHECK-NEXT: acc.update_host accPtr(%[[GDP1]] : !cir.ptr<!s32i>) async(%[[PARM_CAST]] : si32) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) {dataClause = #acc<data_clause acc_update_self>, name = "parmVar", structured = false}
 
 #pragma acc update self(parmVar) device_type(radeon) async(parmVar)
   // CHECK-NEXT: %[[PARM_LOAD:.*]] = cir.load{{.*}} %[[PARM]]
-  // CHECK-NEXT: %[[PARM_CAST:.*]] = builtin.unrealized_conversion_cast %[[PARM_LOAD]]
+  // CHECK-NEXT: %[[PARM_CAST:.*]] = cir.builtin_int_cast %[[PARM_LOAD]]
   // CHECK-NEXT: %[[GDP1:.*]] = acc.getdeviceptr varPtr(%[[PARM]] : !cir.ptr<!s32i>) async(%[[PARM_CAST]] : si32 [#acc.device_type<radeon>]) -> !cir.ptr<!s32i> {dataClause = #acc<data_clause acc_update_self>, name = "parmVar", structured = false}
   // CHECK-NEXT: acc.update async(%[[PARM_CAST]] : si32 [#acc.device_type<radeon>]) dataOperands(%[[GDP1]] : !cir.ptr<!s32i>)
   // CHECK-NEXT: acc.update_host accPtr(%[[GDP1]] : !cir.ptr<!s32i>) async(%[[PARM_CAST]] : si32 [#acc.device_type<radeon>]) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) {dataClause = #acc<data_clause acc_update_self>, name = "parmVar", structured = false}

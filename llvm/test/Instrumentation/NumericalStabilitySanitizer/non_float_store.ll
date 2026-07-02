@@ -9,7 +9,7 @@ define void @store_non_float(ptr %dst) sanitize_numerical_stability {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 42, ptr [[DST:%.*]], align 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__nsan_get_shadow_ptr_for_float_store(ptr [[DST]], i64 1)
-; CHECK-NEXT:    store double 0x36F5000000000000, ptr [[TMP0]], align 1
+; CHECK-NEXT:    store double f0x36F5000000000000, ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -22,11 +22,39 @@ define void @store_non_float_vector(ptr %dst) sanitize_numerical_stability {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store <4 x i32> splat (i32 42), ptr [[DST:%.*]], align 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__nsan_get_shadow_ptr_for_float_store(ptr [[DST]], i64 4)
-; CHECK-NEXT:    store <4 x double> splat (double 0x36F5000000000000), ptr [[TMP0]], align 1
+; CHECK-NEXT:    store <4 x double> splat (double f0x36F5000000000000), ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
   store <4 x i32> splat (i32 42), ptr %dst, align 1
+  ret void
+}
+
+; An element width other than 32/64/80 bits (here i16) has no FT type to
+; bitcast to, so the shadow is reset to unknown instead of crashing.
+define void @store_non_float_unsupported_size(ptr %dst) sanitize_numerical_stability {
+; CHECK-LABEL: @store_non_float_unsupported_size(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i16 42, ptr [[DST:%.*]], align 1
+; CHECK-NEXT:    call void @__nsan_set_value_unknown(ptr [[DST]], i64 2)
+; CHECK-NEXT:    ret void
+;
+entry:
+  store i16 42, ptr %dst, align 1
+  ret void
+}
+
+; Same for a vector with an unsupported element width (i16): no crash,
+; the shadow is reset to unknown.
+define void @store_non_float_vector_unsupported_size(ptr %dst) sanitize_numerical_stability {
+; CHECK-LABEL: @store_non_float_vector_unsupported_size(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store <4 x i16> splat (i16 42), ptr [[DST:%.*]], align 1
+; CHECK-NEXT:    call void @__nsan_set_value_unknown(ptr [[DST]], i64 8)
+; CHECK-NEXT:    ret void
+;
+entry:
+  store <4 x i16> splat (i16 42), ptr %dst, align 1
   ret void
 }
 

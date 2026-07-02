@@ -22,10 +22,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-LLVM_ABI extern cl::opt<bool> ShouldPreserveAllAttributes;
-} // namespace llvm
-
 static void RunTest(
     StringRef Head, StringRef Tail,
     std::vector<std::pair<StringRef, llvm::function_ref<void(Instruction *)>>>
@@ -125,16 +121,6 @@ TEST(AssumeQueryAPI, hasAttributeInAssume) {
                                      Attribute::AttrKind::Alignment, 64));
         ASSERT_TRUE(hasTheRightValue(Assume, I->getOperand(1),
                                      Attribute::AttrKind::Alignment, 64));
-      }));
-  Tests.push_back(std::make_pair(
-      "call void @func_many(ptr align 8 noundef %P1) cold\n", [](Instruction *I) {
-        ShouldPreserveAllAttributes.setValue(true);
-        auto *Assume = buildAssumeFromInst(I);
-        Assume->insertBefore(I->getIterator());
-        ASSERT_TRUE(hasMatchesExactlyAttributes(
-            Assume, nullptr,
-            "(align|nounwind|norecurse|noundef|willreturn|cold)"));
-        ShouldPreserveAllAttributes.setValue(false);
       }));
   Tests.push_back(
       std::make_pair("call void @llvm.assume(i1 true)\n", [](Instruction *I) {
@@ -309,19 +295,6 @@ TEST(AssumeQueryAPI, fillMapFromAssume) {
         ASSERT_TRUE(MapHasRightValue(
             Map, Assume, {I->getOperand(0), Attribute::Alignment}, {64, 64}));
       }));
-  Tests.push_back(std::make_pair(
-      "call void @func_many(ptr align 8 %P1) cold\n", [](Instruction *I) {
-        ShouldPreserveAllAttributes.setValue(true);
-        auto *Assume = buildAssumeFromInst(I);
-        Assume->insertBefore(I->getIterator());
-
-        RetainedKnowledgeMap Map;
-        fillMapFromAssume(*Assume, Map);
-
-        ASSERT_TRUE(FindExactlyAttributes(
-            Map, nullptr, "(nounwind|norecurse|willreturn|cold)"));
-        ShouldPreserveAllAttributes.setValue(false);
-      }));
   Tests.push_back(
       std::make_pair("call void @llvm.assume(i1 true)\n", [](Instruction *I) {
         RetainedKnowledgeMap Map;
@@ -402,104 +375,6 @@ TEST(AssumeQueryAPI, fillMapFromAssume) {
         ASSERT_TRUE(Map.empty());
       }));
   RunTest(Head, Tail, Tests);
-}
-
-static void RunRandTest(uint64_t Seed, int Size, int MinCount, int MaxCount,
-                        unsigned MaxValue) {
-  LLVMContext C;
-  SMDiagnostic Err;
-
-  std::mt19937 Rng(Seed);
-  std::uniform_int_distribution<int> DistCount(MinCount, MaxCount);
-  std::uniform_int_distribution<unsigned> DistValue(0, MaxValue);
-  std::uniform_int_distribution<unsigned> DistAttr(0,
-                                                   Attribute::EndAttrKinds - 1);
-
-  std::unique_ptr<Module> Mod = std::make_unique<Module>("AssumeQueryAPI", C);
-  if (!Mod)
-    Err.print("AssumeQueryAPI", errs());
-
-  std::vector<Type *> TypeArgs;
-  for (int i = 0; i < (Size * 2); i++)
-    TypeArgs.push_back(PointerType::getUnqual(C));
-  FunctionType *FuncType =
-      FunctionType::get(Type::getVoidTy(C), TypeArgs, false);
-
-  Function *F =
-      Function::Create(FuncType, GlobalValue::ExternalLinkage, "test", &*Mod);
-  BasicBlock *BB = BasicBlock::Create(C);
-  BB->insertInto(F);
-  Instruction *Ret = ReturnInst::Create(C);
-  Ret->insertInto(BB, BB->begin());
-  Function *FnAssume =
-      Intrinsic::getOrInsertDeclaration(Mod.get(), Intrinsic::assume);
-
-  std::vector<Argument *> ShuffledArgs;
-  BitVector HasArg;
-  for (auto &Arg : F->args()) {
-    ShuffledArgs.push_back(&Arg);
-    HasArg.push_back(false);
-  }
-
-  std::shuffle(ShuffledArgs.begin(), ShuffledArgs.end(), Rng);
-
-  std::vector<OperandBundleDef> OpBundle;
-  OpBundle.reserve(Size);
-  std::vector<Value *> Args;
-  Args.reserve(2);
-  for (int i = 0; i < Size; i++) {
-    int count = DistCount(Rng);
-    int value = DistValue(Rng);
-    int attr = DistAttr(Rng);
-    std::string str;
-    raw_string_ostream ss(str);
-    ss << Attribute::getNameFromAttrKind(
-        static_cast<Attribute::AttrKind>(attr));
-    Args.clear();
-
-    if (count > 0) {
-      Args.push_back(ShuffledArgs[i]);
-      HasArg[i] = true;
-    }
-    if (count > 1)
-      Args.push_back(ConstantInt::get(Type::getInt32Ty(C), value));
-
-    OpBundle.push_back(OperandBundleDef{str.c_str(), std::move(Args)});
-  }
-
-  auto *Assume = cast<AssumeInst>(CallInst::Create(
-      FnAssume, ArrayRef<Value *>({ConstantInt::getTrue(C)}), OpBundle));
-  Assume->insertBefore(F->begin()->begin());
-  RetainedKnowledgeMap Map;
-  fillMapFromAssume(*Assume, Map);
-  for (int i = 0; i < (Size * 2); i++) {
-    if (!HasArg[i])
-      continue;
-    RetainedKnowledge K =
-        getKnowledgeFromUseInAssume(&*ShuffledArgs[i]->use_begin());
-    auto LookupIt = Map.find(RetainedKnowledgeKey{K.WasOn, K.AttrKind});
-    ASSERT_TRUE(LookupIt != Map.end());
-    MinMax MM = LookupIt->second[Assume];
-    ASSERT_TRUE(MM.Min == MM.Max);
-    ASSERT_TRUE(MM.Min == K.ArgValue);
-  }
-}
-
-TEST(AssumeQueryAPI, getKnowledgeFromUseInAssume) {
-  // // For Fuzzing
-  // std::random_device dev;
-  // std::mt19937 Rng(dev());
-  // while (true) {
-  //   unsigned Seed = Rng();
-  //   dbgs() << Seed << "\n";
-  //   RunRandTest(Seed, 100000, 0, 2, 100);
-  // }
-  RunRandTest(23456, 4, 0, 2, 100);
-  RunRandTest(560987, 25, -3, 2, 100);
-
-  // Large bundles can lead to special cases. this is why this test is soo
-  // large.
-  RunRandTest(9876789, 100000, -0, 7, 100);
 }
 
 TEST(AssumeQueryAPI, AssumptionCache) {

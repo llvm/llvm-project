@@ -11,6 +11,7 @@ import os
 import shlex
 from subprocess import CalledProcessError, check_output, STDOUT
 import sys
+from typing import List, Optional
 
 from dex.debugger.DebuggerBase import DebuggerBase, watch_is_active
 from dex.debugger.DAP import DAP
@@ -318,6 +319,14 @@ class LLDB(DebuggerBase):
             program_state=ProgramState(state_frames),
         )
 
+    def get_stack_frames(self, step_index: int) -> StepIR:
+        raise NotImplementedError("--use-script debugging not supported in lldb yet.")
+
+    def collect_watches(
+        self, step: StepIR, frame_idx: int, watches: List[str], scope_watches: List[str]
+    ):
+        raise NotImplementedError("--use-script debugging not supported in lldb yet.")
+
     @property
     def is_running(self):
         # We're not running in async mode so this is always False.
@@ -473,7 +482,7 @@ class LLDBDAP(DAP):
 
     @staticmethod
     def _evaluate_result_value(
-        expression: str, result_string: str, type_string
+        expression: str, result_string: str, type_string: Optional[str]
     ) -> ValueIR:
         could_evaluate = not any(
             s in result_string
@@ -503,6 +512,7 @@ class LLDBDAP(DAP):
                 "couldn't read from memory",
                 "Cannot access memory at address",
                 "invalid address (fault address:",
+                "error: parent is NULL",
             ]
         )
 

@@ -37,6 +37,7 @@
 // CHECK-SAME: {{^}}, apple-s7
 // CHECK-SAME: {{^}}, apple-s8
 // CHECK-SAME: {{^}}, apple-s9
+// CHECK-SAME: {{^}}, armagicpu
 // CHECK-SAME: {{^}}, c1-nano
 // CHECK-SAME: {{^}}, c1-premium
 // CHECK-SAME: {{^}}, c1-pro
@@ -85,6 +86,7 @@
 // CHECK-SAME: {{^}}, gb10
 // CHECK-SAME: {{^}}, generic
 // CHECK-SAME: {{^}}, grace
+// CHECK-SAME: {{^}}, hip12
 // CHECK-SAME: {{^}}, kryo
 // CHECK-SAME: {{^}}, neoverse-512tvb
 // CHECK-SAME: {{^}}, neoverse-e1
@@ -106,4 +108,3 @@
 // CHECK-SAME: {{^}}, thunderxt88
 // CHECK-SAME: {{^}}, tsv110
 // CHECK-SAME: {{$}}
-

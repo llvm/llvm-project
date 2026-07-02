@@ -91,7 +91,7 @@ class TestAllowJIT(TestBase):
         self.expect(
             "expr --allow-jit false --top-level -- int i;",
             error=True,
-            substrs=["Can't disable JIT compilation for top-level expressions."],
+            substrs=["Can't disable JIT compilation for top-level expressions"],
         )
 
         self.build()

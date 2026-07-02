@@ -740,12 +740,16 @@ public:
     return false;
   }
 
-  /// Get a hash that can be used for caching object file releated information.
+  /// Get a hash that can be used for caching object file related information.
   ///
   /// Data for object files can be cached between runs of debug sessions and
-  /// a module can end up using a main file and a symbol file, both of which
-  /// can be object files. So we need a unique hash that identifies an object
-  /// file when storing cached data.
+  /// a Module can end up using a ObjectFile and a SymbolFile, both of which
+  /// can be ObjectFiles in reality. We need a unique hash that identifies
+  /// an ObjectFile when storing cached data.
+  ///
+  /// The hash value returned does not change when the same binary is
+  /// rebuilt with changes; it does not incorporate a mod date or UUID
+  /// like DataFileCache's CacheSignature does.
   uint32_t GetCacheHash();
 
   static lldb::DataBufferSP MapFileData(const FileSpec &file, uint64_t Size,
@@ -771,7 +775,10 @@ protected:
   lldb::ProcessWP m_process_wp;
   /// Set if the object file only exists in memory.
   const lldb::addr_t m_memory_addr;
+
   std::unique_ptr<lldb_private::SectionList> m_sections_up;
+  std::recursive_mutex m_sections_mutex;
+
   std::unique_ptr<lldb_private::Symtab> m_symtab_up;
   /// We need a llvm::once_flag that we can use to avoid locking the module
   /// lock and deadlocking LLDB. See comments in ObjectFile::GetSymtab() for
