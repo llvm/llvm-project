@@ -807,6 +807,16 @@ void HexagonToolChain::addClangTargetOptions(const ArgList &DriverArgs,
     CC1Args.push_back("-fno-use-init-array");
 
   static const std::pair<options::ID, const char *> FixedRegs[] = {
+      {options::OPT_ffixed_r6, "+reserved-r6"},
+      {options::OPT_ffixed_r7, "+reserved-r7"},
+      {options::OPT_ffixed_r8, "+reserved-r8"},
+      {options::OPT_ffixed_r9, "+reserved-r9"},
+      {options::OPT_ffixed_r10, "+reserved-r10"},
+      {options::OPT_ffixed_r11, "+reserved-r11"},
+      {options::OPT_ffixed_r12, "+reserved-r12"},
+      {options::OPT_ffixed_r13, "+reserved-r13"},
+      {options::OPT_ffixed_r14, "+reserved-r14"},
+      {options::OPT_ffixed_r15, "+reserved-r15"},
       {options::OPT_ffixed_r16, "+reserved-r16"},
       {options::OPT_ffixed_r17, "+reserved-r17"},
       {options::OPT_ffixed_r18, "+reserved-r18"},
