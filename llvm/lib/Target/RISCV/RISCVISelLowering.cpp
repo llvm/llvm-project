@@ -11853,12 +11853,12 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
   case Intrinsic::riscv_pmerge: {
     EVT VT = Op.getValueType();
-    auto buildMerge = [&](SDValue Rs1, SDValue Rs2, SDValue Mask, EVT ResultVT) {
+    auto buildMerge = [&](SDValue Rs1, SDValue Rs2, SDValue Mask,
+                          EVT ResultVT) {
       MVT IntVT = MVT::getIntegerVT(ResultVT.getSizeInBits());
-      SDValue Res = DAG.getNode(RISCVISD::MERGE, DL, IntVT,
-                                DAG.getBitcast(IntVT, Mask),
-                                DAG.getBitcast(IntVT, Rs1),
-                                DAG.getBitcast(IntVT, Rs2));
+      SDValue Res =
+          DAG.getNode(RISCVISD::MERGE, DL, IntVT, DAG.getBitcast(IntVT, Mask),
+                      DAG.getBitcast(IntVT, Rs1), DAG.getBitcast(IntVT, Rs2));
       return DAG.getBitcast(ResultVT, Res);
     };
 
@@ -11867,7 +11867,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     // the merge result is identical.
     if (!Subtarget.is64Bit() &&
         (VT == MVT::v8i8 || VT == MVT::v4i16 || VT == MVT::v2i32)) {
-      EVT WorkVT = VT == MVT::v2i32 ? (EVT)MVT::v4i16 : VT;
+      EVT WorkVT = VT == MVT::v2i32 ? EVT(MVT::v4i16) : VT;
       SDValue Rs1 = DAG.getBitcast(WorkVT, Op.getOperand(1));
       SDValue Rs2 = DAG.getBitcast(WorkVT, Op.getOperand(2));
       SDValue Mask = DAG.getBitcast(WorkVT, Op.getOperand(3));
@@ -11877,8 +11877,7 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       auto [MaskLo, MaskHi] = DAG.SplitVector(Mask, DL, HalfVT, HalfVT);
       SDValue ResLo = buildMerge(Rs1Lo, Rs2Lo, MaskLo, HalfVT);
       SDValue ResHi = buildMerge(Rs1Hi, Rs2Hi, MaskHi, HalfVT);
-      SDValue Res =
-          DAG.getNode(ISD::CONCAT_VECTORS, DL, WorkVT, ResLo, ResHi);
+      SDValue Res = DAG.getNode(ISD::CONCAT_VECTORS, DL, WorkVT, ResLo, ResHi);
       return DAG.getBitcast(VT, Res);
     }
 

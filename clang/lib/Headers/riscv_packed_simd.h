@@ -110,8 +110,8 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
   }
 
 #define __packed_merge_builtin(name, ty, mask_ty, builtin)                     \
-  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(                      \
-      ty __rs1, ty __rs2, mask_ty __rd) {                                      \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1, ty __rs2,   \
+                                                         mask_ty __rd) {       \
     return (ty)builtin(__rs1, __rs2, __rd);                                    \
   }
 
