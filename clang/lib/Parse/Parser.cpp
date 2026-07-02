@@ -1308,12 +1308,14 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
           << 1 /* deleted */;
       BodyKind = Sema::FnBodyKind::Delete;
       DeletedMessage = ParseCXXDeletedFunctionMessage();
+      D.SetRangeEnd(DeletedMessage? PrevTokLocation: PP.getLocForEndOfToken(KWLoc).getLocWithOffset(-1));
     } else if (TryConsumeToken(tok::kw_default, KWLoc)) {
       Diag(KWLoc, getLangOpts().CPlusPlus11
                       ? diag::warn_cxx98_compat_defaulted_deleted_function
                       : diag::ext_defaulted_deleted_function)
           << 0 /* defaulted */;
       BodyKind = Sema::FnBodyKind::Default;
+      D.SetRangeEnd(PP.getLocForEndOfToken(KWLoc).getLocWithOffset(-1));
     } else {
       llvm_unreachable("function definition after = not 'delete' or 'default'");
     }
