@@ -339,10 +339,18 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
     return direct(T);
   }
 
+  if (T->isFP128Ty()) {
+    // Prefix with `llvm` since MSVC doesn't specify `_Float128`
+    Out << "__llvm_q__";
+    // On windows f128 is passed indirectly, and Clang/LLVM
+    // returns using sret for compatibility with GCC.
+    return pointerIndirection(T);
+  }
+
   if (T->isFloatingPointTy()) {
     report_fatal_error(
-        "Only half, bfloat16, float, and double are supported for ARM64EC "
-        "thunks");
+        "Only half, bfloat16, float, double, and fp128 are supported "
+        "for ARM64EC thunks");
   }
 
   auto &DL = M->getDataLayout();
@@ -357,7 +365,8 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
     uint64_t ElementSizePerBytes = DL.getTypeSizeInBits(ElementTy) / 8;
     uint64_t TotalSizeBytes = ElementCnt * ElementSizePerBytes;
     if (ElementTy->isHalfTy() || ElementTy->isBFloatTy() ||
-        ElementTy->isFloatTy() || ElementTy->isDoubleTy()) {
+        ElementTy->isFloatTy() || ElementTy->isDoubleTy() ||
+        ElementTy->isFP128Ty()) {
       if (ElementTy->isHalfTy())
         // Prefix with `llvm` since MSVC doesn't specify `_Float16`
         Out << "__llvm_H__";
@@ -368,6 +377,9 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
         Out << "F";
       else if (ElementTy->isDoubleTy())
         Out << "D";
+      else if (ElementTy->isFP128Ty())
+        // Prefix with `llvm` since MSVC doesn't specify `_Float128`
+        Out << "__llvm_Q__";
       Out << TotalSizeBytes;
       if (Alignment.value() >= 16 && !Ret)
         Out << "a" << Alignment.value();
@@ -381,8 +393,8 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
       }
     } else if (ElementTy->isFloatingPointTy()) {
       report_fatal_error(
-          "Only half, bfloat16, float, and double are supported for ARM64EC "
-          "thunks");
+          "Only half, bfloat16, float, double, and fp128 are supported "
+          "for ARM64EC thunks");
     }
   }
 
