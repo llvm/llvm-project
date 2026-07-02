@@ -261,6 +261,68 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setTruncStoreAction(MVT::f32, MVT::f16, Expand);
   }
 
+  // Only active when -mfloat16 is passed and hard float is enabled.
+  // This block intentionally overrides some actions set above
+  // because when f16 is a first-class type we handle load/store
+  // directly rather than through extending loads.
+  if (Subtarget.hasFloat16() && Subtarget.hasHardFloat()) {
+    // Make f16 a legal type.
+    addRegisterClass(MVT::f16, &PPC::VHFRCRegClass);
+
+    // PowerPC has no native f16 arithmetic instructions. All arithmetic,
+    // comparisons, rounding, transcendentals, and min/max must be promoted
+    // to f32 for computation. On P8 this means libcalls (__extendhfsf2 /
+    // __truncsfhf2); on P9 this means xscvhpdp/xsaddsp.../xscvdphp sequences.
+    static const unsigned F16PromoteOps[] = {
+        ISD::FMINNUM,    ISD::FMAXNUM,  ISD::FMAXIMUMNUM, ISD::FMINIMUMNUM,
+        ISD::FMAXIMUM,   ISD::FMINIMUM, ISD::FADD,        ISD::FSUB,
+        ISD::FMUL,       ISD::FMA,      ISD::FDIV,        ISD::FSQRT,
+        ISD::FREM,       ISD::FPOW,     ISD::FLOG,        ISD::FLOG2,
+        ISD::FLOG10,     ISD::FEXP,     ISD::FEXP2,       ISD::FEXP10,
+        ISD::FCEIL,      ISD::FFLOOR,   ISD::FTRUNC,      ISD::FRINT,
+        ISD::FNEARBYINT, ISD::FROUND,   ISD::FROUNDEVEN,  ISD::FCANONICALIZE,
+        ISD::FSIN,       ISD::FCOS,     ISD::SETCC,       ISD::SELECT_CC,
+        ISD::SELECT};
+
+    // Promote all the arithmetic operations defined above to f32.
+    setOperationAction(F16PromoteOps, MVT::f16, Promote);
+
+    setOperationAction(ISD::LOAD, MVT::f16, Legal);
+    setOperationAction(ISD::STORE, MVT::f16, Legal);
+
+    // Legal handling for bit manipulation.
+    setOperationAction(ISD::FABS, MVT::f16, Legal);
+    setOperationAction(ISD::FNEG, MVT::f16, Legal);
+    setOperationAction(ISD::FCOPYSIGN, MVT::f16, Legal);
+
+    // Expand constant FP.
+    setOperationAction(ISD::ConstantFP, MVT::f16, Expand);
+
+    // Expand extending loads and truncating stores.
+    for (MVT VT : {MVT::f32, MVT::f64}) {
+      setLoadExtAction(ISD::EXTLOAD, VT, MVT::f16, Expand);
+      setTruncStoreAction(VT, MVT::f16, Expand);
+    }
+
+    if (Subtarget.hasP9Vector()) {
+      // P9+: Hardware support for conversions.
+      setOperationAction(ISD::FP_EXTEND, MVT::f32, Legal);
+      setOperationAction(ISD::FP_EXTEND, MVT::f64, Legal);
+      setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Legal);
+      setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Legal);
+      setOperationAction(ISD::FP_ROUND, MVT::f16, Legal);
+      setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, Legal);
+    } else {
+      // P8: Conversions via libcalls
+      setOperationAction(ISD::FP_EXTEND, MVT::f32, Expand);
+      setOperationAction(ISD::FP_EXTEND, MVT::f64, Expand);
+      setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Expand);
+      setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Expand);
+      setOperationAction(ISD::FP_ROUND, MVT::f16, Expand);
+      setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, Expand);
+    }
+  }
+
   setTruncStoreAction(MVT::f64, MVT::f32, Expand);
 
   // PowerPC has pre-inc load and store's.
@@ -1692,6 +1754,12 @@ bool PPCTargetLowering::useSoftFloat() const {
 
 bool PPCTargetLowering::hasSPE() const {
   return Subtarget.hasSPE();
+}
+
+/// Tell the ABI lowering infrastructure to use FPRs for _Float16 parameters
+/// and return values rather than GPRs. Active only when -mfloat16 is enabled.
+bool PPCTargetLowering::useFPRegsForHalfType() const {
+  return Subtarget.hasFloat16() && Subtarget.hasHardFloat();
 }
 
 bool PPCTargetLowering::preferIncOfAddToSubOfNot(EVT VT) const {
@@ -4683,6 +4751,7 @@ SDValue PPCTargetLowering::LowerFormalArguments_64SVR4(
         ArgOffset += 8;
       break;
 
+    case MVT::f16:
     case MVT::f32:
     case MVT::f64:
       // These can be scalar arguments or elements of a float array type
@@ -6588,6 +6657,7 @@ SDValue PPCTargetLowering::LowerCall_64SVR4(
       if (!IsFastCall)
         ArgOffset += PtrByteSize;
       break;
+    case MVT::f16:
     case MVT::f32:
     case MVT::f64: {
       // These can be scalar arguments or elements of a float array type
@@ -6934,6 +7004,7 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
 
     return false;
   }
+  case MVT::f16:
   case MVT::f32:
   case MVT::f64: {
     // Parameter save area (PSA) is reserved even if the float passes in fpr.
@@ -7077,10 +7148,9 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
 }
 
 // So far, this function is only used by LowerFormalArguments_AIX()
-static const TargetRegisterClass *getRegClassForSVT(MVT::SimpleValueType SVT,
-                                                    bool IsPPC64,
-                                                    bool HasP8Vector,
-                                                    bool HasVSX) {
+static const TargetRegisterClass *
+getRegClassForSVT(MVT::SimpleValueType SVT, bool IsPPC64, bool HasP8Vector,
+                  bool HasVSX) {
   assert((IsPPC64 || SVT != MVT::i64) &&
          "i64 should have been split for 32-bit codegen.");
 
@@ -7091,6 +7161,10 @@ static const TargetRegisterClass *getRegClassForSVT(MVT::SimpleValueType SVT,
   case MVT::i32:
   case MVT::i64:
     return IsPPC64 ? &PPC::G8RCRegClass : &PPC::GPRCRegClass;
+  case MVT::f16:
+    if (HasP8Vector)
+      return &PPC::VHFRCRegClass;
+    llvm_unreachable("f16 requires Power8 or later");
   case MVT::f32:
     return HasP8Vector ? &PPC::VSSRCRegClass : &PPC::F4RCRegClass;
   case MVT::f64:
@@ -7235,8 +7309,9 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
       continue;
 
     if (SaveParams && VA.isRegLoc() && !Flags.isByVal() && !VA.needsCustom()) {
-      const TargetRegisterClass *RegClass = getRegClassForSVT(
-          LocVT.SimpleTy, IsPPC64, Subtarget.hasP8Vector(), Subtarget.hasVSX());
+      const TargetRegisterClass *RegClass =
+          getRegClassForSVT(LocVT.SimpleTy, IsPPC64, Subtarget.hasP8Vector(),
+                            Subtarget.hasVSX());
       // On PPC64, debugger assumes extended 8-byte values are stored from GPR.
       MVT SaveVT = RegClass == &PPC::G8RCRegClass ? MVT::i64 : LocVT;
       const Register VReg = MF.addLiveIn(VA.getLocReg(), RegClass);
@@ -7351,6 +7426,9 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
         switch (VA.getValVT().SimpleTy) {
         default:
           report_fatal_error("Unhandled value type for argument.");
+        case MVT::f16:
+          FuncInfo->appendParameterType(PPCFunctionInfo::ShortFloatingPoint);
+          break;
         case MVT::f32:
           FuncInfo->appendParameterType(PPCFunctionInfo::ShortFloatingPoint);
           break;
@@ -7458,10 +7536,10 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
 
     if (VA.isRegLoc() && !VA.needsCustom()) {
       MVT::SimpleValueType SVT = ValVT.SimpleTy;
-      Register VReg =
-          MF.addLiveIn(VA.getLocReg(),
-                       getRegClassForSVT(SVT, IsPPC64, Subtarget.hasP8Vector(),
-                                         Subtarget.hasVSX()));
+      Register VReg = MF.addLiveIn(
+          VA.getLocReg(),
+          getRegClassForSVT(SVT, IsPPC64, Subtarget.hasP8Vector(),
+                            Subtarget.hasVSX()));
       SDValue ArgValue = DAG.getCopyFromReg(Chain, dl, VReg, LocVT);
       if (ValVT.isScalarInteger() &&
           (ValVT.getFixedSizeInBits() < LocVT.getFixedSizeInBits())) {

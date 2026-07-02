@@ -71,6 +71,10 @@ def FeatureModernAIXAs
                        "AIX system assembler is modern enough to support new mnes">;
 def FeatureHardFloat : SubtargetFeature<"hard-float", "HasHardFloat", "true",
                               "Enable floating-point instructions">;
+def FeatureFloat16 :
+  SubtargetFeature<"float16",
+                   "HasFloat16", "true",
+                   "Enable half-precision floating point support (experimental)">;
 
 // Specifies that we are in 64-bit mode or that we should use 64-bit registers
 // in 32-bit mode when possible. Requires Feature64Bit to be enabled.
@@ -411,6 +415,7 @@ def HasOnlySwappingMemOps : Predicate<"!Subtarget->hasP9Vector()">;
 def NoP10Vector : Predicate<"!Subtarget->hasP10Vector()">;
 def HasP10Vector : Predicate<"Subtarget->hasP10Vector()">;
 def HasFutureVector : Predicate<"Subtarget->hasFutureVector()">;
+def HasFloat16 : Predicate<"Subtarget->hasFloat16()">;
 
 // Predicates used to differenciate between different ISAs.
 def IsISA2_06 : Predicate<"Subtarget->isISA2_06()">;
