@@ -638,6 +638,8 @@ bool RegisterInfoPOSIX_arm64::IsPOEReg(unsigned reg) const {
 
 uint32_t RegisterInfoPOSIX_arm64::GetRegNumSVEZ0() const { return sve_z0; }
 
+uint32_t RegisterInfoPOSIX_arm64::GetRegNumSVEP0() const { return sve_p0; }
+
 uint32_t RegisterInfoPOSIX_arm64::GetRegNumSVEFFR() const { return sve_ffr; }
 
 uint32_t RegisterInfoPOSIX_arm64::GetRegNumFPCR() const { return fpu_fpcr; }

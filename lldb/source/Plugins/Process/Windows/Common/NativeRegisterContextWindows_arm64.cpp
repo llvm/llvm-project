@@ -20,86 +20,10 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 
+#include <optional>
+
 using namespace lldb;
 using namespace lldb_private;
-
-#define REG_CONTEXT_SIZE sizeof(::CONTEXT)
-
-namespace {
-static const uint32_t g_gpr_regnums_arm64[] = {
-    gpr_x0_arm64,       gpr_x1_arm64,   gpr_x2_arm64,  gpr_x3_arm64,
-    gpr_x4_arm64,       gpr_x5_arm64,   gpr_x6_arm64,  gpr_x7_arm64,
-    gpr_x8_arm64,       gpr_x9_arm64,   gpr_x10_arm64, gpr_x11_arm64,
-    gpr_x12_arm64,      gpr_x13_arm64,  gpr_x14_arm64, gpr_x15_arm64,
-    gpr_x16_arm64,      gpr_x17_arm64,  gpr_x18_arm64, gpr_x19_arm64,
-    gpr_x20_arm64,      gpr_x21_arm64,  gpr_x22_arm64, gpr_x23_arm64,
-    gpr_x24_arm64,      gpr_x25_arm64,  gpr_x26_arm64, gpr_x27_arm64,
-    gpr_x28_arm64,      gpr_fp_arm64,   gpr_lr_arm64,  gpr_sp_arm64,
-    gpr_pc_arm64,       gpr_cpsr_arm64, gpr_w0_arm64,  gpr_w1_arm64,
-    gpr_w2_arm64,       gpr_w3_arm64,   gpr_w4_arm64,  gpr_w5_arm64,
-    gpr_w6_arm64,       gpr_w7_arm64,   gpr_w8_arm64,  gpr_w9_arm64,
-    gpr_w10_arm64,      gpr_w11_arm64,  gpr_w12_arm64, gpr_w13_arm64,
-    gpr_w14_arm64,      gpr_w15_arm64,  gpr_w16_arm64, gpr_w17_arm64,
-    gpr_w18_arm64,      gpr_w19_arm64,  gpr_w20_arm64, gpr_w21_arm64,
-    gpr_w22_arm64,      gpr_w23_arm64,  gpr_w24_arm64, gpr_w25_arm64,
-    gpr_w26_arm64,      gpr_w27_arm64,  gpr_w28_arm64,
-    LLDB_INVALID_REGNUM // Register set must be terminated with this flag
-};
-static_assert(((sizeof g_gpr_regnums_arm64 / sizeof g_gpr_regnums_arm64[0]) -
-               1) == k_num_gpr_registers_arm64,
-              "g_gpr_regnums_arm64 has wrong number of register infos");
-
-static const uint32_t g_fpr_regnums_arm64[] = {
-    fpu_v0_arm64,       fpu_v1_arm64,   fpu_v2_arm64,  fpu_v3_arm64,
-    fpu_v4_arm64,       fpu_v5_arm64,   fpu_v6_arm64,  fpu_v7_arm64,
-    fpu_v8_arm64,       fpu_v9_arm64,   fpu_v10_arm64, fpu_v11_arm64,
-    fpu_v12_arm64,      fpu_v13_arm64,  fpu_v14_arm64, fpu_v15_arm64,
-    fpu_v16_arm64,      fpu_v17_arm64,  fpu_v18_arm64, fpu_v19_arm64,
-    fpu_v20_arm64,      fpu_v21_arm64,  fpu_v22_arm64, fpu_v23_arm64,
-    fpu_v24_arm64,      fpu_v25_arm64,  fpu_v26_arm64, fpu_v27_arm64,
-    fpu_v28_arm64,      fpu_v29_arm64,  fpu_v30_arm64, fpu_v31_arm64,
-    fpu_s0_arm64,       fpu_s1_arm64,   fpu_s2_arm64,  fpu_s3_arm64,
-    fpu_s4_arm64,       fpu_s5_arm64,   fpu_s6_arm64,  fpu_s7_arm64,
-    fpu_s8_arm64,       fpu_s9_arm64,   fpu_s10_arm64, fpu_s11_arm64,
-    fpu_s12_arm64,      fpu_s13_arm64,  fpu_s14_arm64, fpu_s15_arm64,
-    fpu_s16_arm64,      fpu_s17_arm64,  fpu_s18_arm64, fpu_s19_arm64,
-    fpu_s20_arm64,      fpu_s21_arm64,  fpu_s22_arm64, fpu_s23_arm64,
-    fpu_s24_arm64,      fpu_s25_arm64,  fpu_s26_arm64, fpu_s27_arm64,
-    fpu_s28_arm64,      fpu_s29_arm64,  fpu_s30_arm64, fpu_s31_arm64,
-
-    fpu_d0_arm64,       fpu_d1_arm64,   fpu_d2_arm64,  fpu_d3_arm64,
-    fpu_d4_arm64,       fpu_d5_arm64,   fpu_d6_arm64,  fpu_d7_arm64,
-    fpu_d8_arm64,       fpu_d9_arm64,   fpu_d10_arm64, fpu_d11_arm64,
-    fpu_d12_arm64,      fpu_d13_arm64,  fpu_d14_arm64, fpu_d15_arm64,
-    fpu_d16_arm64,      fpu_d17_arm64,  fpu_d18_arm64, fpu_d19_arm64,
-    fpu_d20_arm64,      fpu_d21_arm64,  fpu_d22_arm64, fpu_d23_arm64,
-    fpu_d24_arm64,      fpu_d25_arm64,  fpu_d26_arm64, fpu_d27_arm64,
-    fpu_d28_arm64,      fpu_d29_arm64,  fpu_d30_arm64, fpu_d31_arm64,
-    fpu_fpsr_arm64,     fpu_fpcr_arm64,
-    LLDB_INVALID_REGNUM // Register set must be terminated with this flag
-};
-static_assert(((sizeof g_fpr_regnums_arm64 / sizeof g_fpr_regnums_arm64[0]) -
-               1) == k_num_fpr_registers_arm64,
-              "g_fpu_regnums_arm64 has wrong number of register infos");
-
-static const RegisterSet g_reg_sets_arm64[] = {
-    {"General Purpose Registers", "gpr", std::size(g_gpr_regnums_arm64) - 1,
-     g_gpr_regnums_arm64},
-    {"Floating Point Registers", "fpr", std::size(g_fpr_regnums_arm64) - 1,
-     g_fpr_regnums_arm64},
-};
-
-enum { k_num_register_sets = 2 };
-
-} // namespace
-
-static RegisterInfoInterface *
-CreateRegisterInfoInterface(const ArchSpec &target_arch) {
-  assert((HostInfo::GetArchitecture().GetAddressByteSize() == 8) &&
-         "Register setting path assumes this is a 64-bit host");
-  return new RegisterInfoPOSIX_arm64(
-      target_arch, RegisterInfoPOSIX_arm64::eRegsetMaskDefault);
-}
 
 static Status GetThreadContextLength(DWORD context_flags,
                                      DWORD &context_length) {
@@ -124,9 +48,14 @@ static Status GetThreadContextLength(DWORD context_flags,
   return error;
 }
 
-static Status GetThreadContextHelper(lldb::thread_t thread_handle,
-                                     DWORD context_flags, PCONTEXT &context,
-                                     DataBufferHeap *context_buffer) {
+static Status GetThreadContextHelper(
+    lldb::thread_t thread_handle, DWORD context_flags, PCONTEXT &context,
+    DataBufferHeap *context_buffer
+#if defined(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE)
+    ,
+    std::optional<DWORD64> xstate_features_mask = std::nullopt
+#endif
+) {
   Log *log = GetLog(WindowsLog::Registers);
   Status error;
   DWORD context_length = 0;
@@ -154,6 +83,16 @@ static Status GetThreadContextHelper(lldb::thread_t thread_handle,
     return error;
   }
 
+#if defined(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE)
+  if (xstate_features_mask.has_value()) {
+    if (!SetXStateFeaturesMask(context, *xstate_features_mask)) {
+      error = Status(GetLastError(), eErrorTypeWin32);
+      LLDB_LOG(log, "SetXStateFeaturesMask failed with error {0}", error);
+      return error;
+    }
+  }
+#endif
+
   if (!::GetThreadContext(thread_handle, context)) {
     error = Status(GetLastError(), eErrorTypeWin32);
     LLDB_LOG(log, "GetThreadContext failed with error {0}", error);
@@ -179,38 +118,67 @@ std::unique_ptr<NativeRegisterContextWindows>
 NativeRegisterContextWindows::CreateHostNativeRegisterContextWindows(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread) {
   // Register context for a native 64-bit application.
-  return std::make_unique<NativeRegisterContextWindows_arm64>(target_arch,
-                                                              native_thread);
+
+  // Configure register sets supported by this AArch64 target.
+  Flags opt_regsets;
+
+#if defined(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE)
+  if (IsProcessorFeaturePresent(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE))
+    opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskSVE);
+#endif
+
+  auto register_info_up =
+      std::make_unique<RegisterInfoPOSIX_arm64>(target_arch, opt_regsets);
+
+  return std::make_unique<NativeRegisterContextWindows_arm64>(
+      target_arch, native_thread, std::move(register_info_up));
 }
 
 NativeRegisterContextWindows_arm64::NativeRegisterContextWindows_arm64(
-    const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
-    : NativeRegisterContextRegisterInfo(
-          native_thread, CreateRegisterInfoInterface(target_arch)),
-      m_context(nullptr), m_context_buffer(nullptr) {
+    const ArchSpec &target_arch, NativeThreadProtocol &native_thread,
+    std::unique_ptr<RegisterInfoPOSIX_arm64> register_info_up)
+    : NativeRegisterContextRegisterInfo(native_thread,
+                                        register_info_up.release()),
+      m_context(nullptr), m_context_buffer(nullptr)
+#if defined(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE)
+      ,
+      m_sve_header(nullptr), m_sve_header_is_valid(false),
+      m_sve_z_buffer(nullptr), m_sve_z_buffer_is_valid(false)
+#endif
+{
+  assert((HostInfo::GetArchitecture().GetAddressByteSize() == 8) &&
+         "Register setting path assumes this is a 64-bit host");
+
   // Currently, there is no API to query the maximum supported hardware
   // breakpoints and watchpoints on Windows. The values set below are based
   // on tests conducted on Windows 11 with Snapdragon Elite X hardware.
   m_max_hwp_supported = 1;
+
+#if defined(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE)
+  if (GetRegisterInfo().IsSVEPresent())
+    m_sve_state = SVEState::Unknown;
+  else
+    m_sve_state = SVEState::Disabled;
+#endif
 }
 
 bool NativeRegisterContextWindows_arm64::IsGPR(uint32_t reg_index) const {
-  return (reg_index >= k_first_gpr_arm64 && reg_index <= k_last_gpr_arm64);
+  return GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg_index) ==
+         RegisterInfoPOSIX_arm64::GPRegSet;
 }
 
 bool NativeRegisterContextWindows_arm64::IsFPR(uint32_t reg_index) const {
-  return (reg_index >= k_first_fpr_arm64 && reg_index <= k_last_fpr_arm64);
+  return GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg_index) ==
+         RegisterInfoPOSIX_arm64::FPRegSet;
 }
 
 uint32_t NativeRegisterContextWindows_arm64::GetRegisterSetCount() const {
-  return k_num_register_sets;
+  return GetRegisterInfo().GetRegisterSetCount();
 }
 
 const RegisterSet *
 NativeRegisterContextWindows_arm64::GetRegisterSet(uint32_t set_index) const {
-  if (set_index >= k_num_register_sets)
-    return nullptr;
-  return &g_reg_sets_arm64[set_index];
+  return GetRegisterInfo().GetRegisterSet(set_index);
 }
 
 Status NativeRegisterContextWindows_arm64::GPRRead(const uint32_t reg,
@@ -308,7 +276,14 @@ Status NativeRegisterContextWindows_arm64::GPRRead(const uint32_t reg,
 Status
 NativeRegisterContextWindows_arm64::GPRWrite(const uint32_t reg,
                                              const RegisterValue &reg_value) {
-  auto cleanup = llvm::make_scope_exit([&]() { m_context = nullptr; });
+  auto cleanup = llvm::make_scope_exit([&]() {
+    m_context = nullptr;
+#if defined(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE)
+    m_sve_header = nullptr;
+    m_sve_header_is_valid = false;
+    m_sve_z_buffer_is_valid = false;
+#endif
+  });
 
   PCONTEXT context = nullptr;
   DataBufferHeap context_buffer;
@@ -533,7 +508,14 @@ Status NativeRegisterContextWindows_arm64::FPRRead(const uint32_t reg,
 Status
 NativeRegisterContextWindows_arm64::FPRWrite(const uint32_t reg,
                                              const RegisterValue &reg_value) {
-  auto cleanup = llvm::make_scope_exit([&]() { m_context = nullptr; });
+  auto cleanup = llvm::make_scope_exit([&]() {
+    m_context = nullptr;
+#if defined(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE)
+    m_sve_header = nullptr;
+    m_sve_header_is_valid = false;
+    m_sve_z_buffer_is_valid = false;
+#endif
+  });
 
   PCONTEXT context = nullptr;
   DataBufferHeap context_buffer;
@@ -689,6 +671,11 @@ NativeRegisterContextWindows_arm64::ReadRegister(const RegisterInfo *reg_info,
   if (IsFPR(reg))
     return FPRRead(reg, reg_value);
 
+#if defined(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE)
+  if (IsSVE(reg))
+    return SVERead(reg, reg_value);
+#endif
+
   return Status::FromErrorString("unimplemented");
 }
 
@@ -718,6 +705,11 @@ Status NativeRegisterContextWindows_arm64::WriteRegister(
   if (IsFPR(reg))
     return FPRWrite(reg, reg_value);
 
+#if defined(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE)
+  if (IsSVE(reg))
+    return SVEWrite(reg, reg_value);
+#endif
+
   return Status::FromErrorString("unimplemented");
 }
 
@@ -743,7 +735,14 @@ Status NativeRegisterContextWindows_arm64::ReadAllRegisterValues(
 
 Status NativeRegisterContextWindows_arm64::WriteAllRegisterValues(
     const lldb::DataBufferSP &data_sp) {
-  auto cleanup = llvm::make_scope_exit([&]() { m_context = nullptr; });
+  auto cleanup = llvm::make_scope_exit([&]() {
+    m_context = nullptr;
+#if defined(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE)
+    m_sve_header = nullptr;
+    m_sve_header_is_valid = false;
+    m_sve_z_buffer_is_valid = false;
+#endif
+  });
 
   Log *log = GetLog(WindowsLog::Registers);
   Status error;
@@ -755,6 +754,16 @@ Status NativeRegisterContextWindows_arm64::WriteAllRegisterValues(
   }
 
   DWORD context_flags = CONTEXT_ALL;
+
+#if defined(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE)
+  std::optional<DWORD64> xstate_features_mask = std::nullopt;
+
+  if (GetRegisterInfo().IsSVEPresent()) {
+    context_flags |= CONTEXT_XSTATE;
+    xstate_features_mask = XSTATE_MASK_ARM64_SVE;
+  }
+#endif
+
   DWORD context_length = 0;
 
   error = GetThreadContextLength(context_flags, context_length);
@@ -772,7 +781,12 @@ Status NativeRegisterContextWindows_arm64::WriteAllRegisterValues(
   PCONTEXT context = nullptr;
   DataBufferHeap context_buffer;
   error = GetThreadContextHelper(GetThreadHandle(), context_flags, context,
-                                 &context_buffer);
+                                 &context_buffer
+#if defined(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE)
+                                 ,
+                                 xstate_features_mask
+#endif
+  );
   if (error.Fail())
     return error;
 
@@ -796,7 +810,14 @@ llvm::Error NativeRegisterContextWindows_arm64::ReadHardwareDebugInfo() {
 
 llvm::Error
 NativeRegisterContextWindows_arm64::WriteHardwareDebugRegs(DREGType hwbType) {
-  auto cleanup = llvm::make_scope_exit([&]() { m_context = nullptr; });
+  auto cleanup = llvm::make_scope_exit([&]() {
+    m_context = nullptr;
+#if defined(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE)
+    m_sve_header = nullptr;
+    m_sve_header_is_valid = false;
+    m_sve_z_buffer_is_valid = false;
+#endif
+  });
 
   PCONTEXT context = nullptr;
   DataBufferHeap context_buffer;
@@ -821,27 +842,418 @@ NativeRegisterContextWindows_arm64::WriteHardwareDebugRegs(DREGType hwbType) {
 void NativeRegisterContextWindows_arm64::InvalidateAllRegisters() {
   m_context = nullptr;
   m_context_buffer.reset();
+#if defined(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE)
+  m_sve_header = nullptr;
+  m_sve_header_is_valid = false;
+  m_sve_z_buffer.reset();
+  m_sve_z_buffer_is_valid = false;
+
+  // Update SVE registers in case there is any change in the configuration.
+  ConfigureRegisterContext();
+#endif
 }
 
 Status NativeRegisterContextWindows_arm64::CacheAllRegisterValues() {
   Status error;
   DWORD context_flags = CONTEXT_ALL;
 
-  if (m_context && (m_context->ContextFlags & context_flags) == context_flags)
-    return error;
+#if defined(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE)
+  std::optional<DWORD64> xstate_features_mask = std::nullopt;
+  const bool sve_present = GetRegisterInfo().IsSVEPresent();
 
+  if (sve_present) {
+    context_flags |= CONTEXT_XSTATE;
+    xstate_features_mask = XSTATE_MASK_ARM64_SVE;
+  }
+#endif
+
+  if (m_context && (m_context->ContextFlags & context_flags) == context_flags)
+#if defined(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE)
+  {
+    if (!sve_present)
+#endif
+      return error;
+
+#if defined(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE)
+    if (m_sve_header_is_valid && m_sve_z_buffer_is_valid)
+      return error;
+  }
+
+  m_sve_header = nullptr;
+  m_sve_header_is_valid = false;
+  m_sve_z_buffer_is_valid = false;
+#endif
   m_context = nullptr;
+
+  auto cleanup = llvm::make_scope_exit([&]() {
+    if (error.Fail()) {
+      m_context = nullptr;
+#if defined(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE)
+      m_sve_header = nullptr;
+      m_sve_header_is_valid = false;
+      m_sve_z_buffer_is_valid = false;
+      if (sve_present)
+        m_sve_state = SVEState::Unknown;
+      else
+        m_sve_state = SVEState::Disabled;
+#endif
+    }
+  });
 
   if (!m_context_buffer)
     m_context_buffer = std::make_shared<DataBufferHeap>();
 
   error = GetThreadContextHelper(GetThreadHandle(), context_flags, m_context,
-                                 m_context_buffer.get());
-
+                                 m_context_buffer.get()
+#if defined(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE)
+                                     ,
+                                 xstate_features_mask
+#endif
+  );
   if (error.Fail())
-    m_context = nullptr;
+    return error;
+
+#if defined(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE)
+  if (sve_present) {
+    error = ReadSVEHeader();
+    if (error.Fail())
+      return error;
+
+    error = CacheSVEZRegisters();
+    if (error.Fail())
+      return error;
+  } else {
+    m_sve_state = SVEState::Disabled;
+  }
+#endif
 
   return error;
 }
+
+RegisterInfoPOSIX_arm64 &
+NativeRegisterContextWindows_arm64::GetRegisterInfo() const {
+  return static_cast<RegisterInfoPOSIX_arm64 &>(*m_register_info_interface_up);
+}
+
+#if defined(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE)
+bool NativeRegisterContextWindows_arm64::IsSVE(uint32_t reg_index) const {
+  return GetRegisterInfo().IsSVEReg(reg_index);
+}
+
+void NativeRegisterContextWindows_arm64::ConfigureRegisterContext() {
+  // ConfigureRegisterContext gets called from InvalidateAllRegisters
+  // on every stop and configures the SVE vector length.
+
+  Log *log = GetLog(WindowsLog::Registers);
+
+  // If m_sve_state is found to be set to SVEState::Disabled on the first stop,
+  // then ConfigureRegisterContext is deemed non-operational for the lifetime of
+  // the current process.
+  if (!m_sve_header_is_valid && m_sve_state != SVEState::Disabled) {
+    Status error = CacheAllRegisterValues();
+    if (error.Fail())
+      LLDB_LOG(log, "failed to cache all register values: {0}", error);
+
+    if (!m_sve_header_is_valid)
+      LLDB_LOG(log, "failed to read SVE header: {0}", error);
+
+    if (m_sve_header_is_valid && m_sve_state == SVEState::Full) {
+      uint32_t vq = RegisterInfoPOSIX_arm64::eVectorQuadwordAArch64SVE;
+
+      if (sve::vl_valid(m_sve_header->VectorLength))
+        vq = sve::vq_from_vl(m_sve_header->VectorLength);
+
+      GetRegisterInfo().ConfigureVectorLengthSVE(vq);
+    }
+  }
+}
+
+Status NativeRegisterContextWindows_arm64::ReadSVEHeader() {
+  Log *log = GetLog(WindowsLog::Registers);
+  Status error;
+
+  if (m_sve_header_is_valid)
+    return error;
+
+  if (m_sve_state == SVEState::Disabled) {
+    error = Status::FromErrorString("SVE is either unsupported or disabled");
+    LLDB_LOG(log, "{0}", error);
+    return error;
+  }
+
+  if (!m_context) {
+    error = Status::FromErrorString("register context is not cached");
+    LLDB_LOG(log, "{0}", error);
+    return error;
+  }
+
+  DWORD64 feature_mask = 0;
+  DWORD sve_feature_area_length = 0;
+
+  if (!GetXStateFeaturesMask(m_context, &feature_mask)) {
+    error = Status(GetLastError(), eErrorTypeWin32);
+    LLDB_LOG(log, "GetXStateFeaturesMask failed with error {0}", error);
+    return error;
+  }
+
+  // If the SVE bit is unset, then SVE is in a processor-specific INITIALIZED
+  // state and the contents of the SVE feature area retrieved by
+  // LocateXStateFeature are documented as undefined. We deliberately do not
+  // synthesize values in this case since the values implied by the INITIALIZED
+  // state for SVE aren't documented. Queries pertaining to SVE registers become
+  // serviceable on the first stop where the SVE feature-mask bit is reported to
+  // be set.
+  if ((feature_mask & XSTATE_MASK_ARM64_SVE) == 0) {
+    error = Status::FromErrorString(
+        "SVE is in a processor-specific INITIALIZED state and the contents of "
+        "the SVE feature area are undefined");
+    LLDB_LOG(log, "{0}", error);
+    return error;
+  }
+
+  m_sve_header = static_cast<XSAVE_ARM64_SVE_HEADER *>(LocateXStateFeature(
+      m_context, XSTATE_ARM64_SVE, &sve_feature_area_length));
+
+  if (!m_sve_header) {
+    error = Status::FromErrorString("failed to locate SVE feature area");
+    LLDB_LOG(log, "{0}", error);
+    return error;
+  }
+
+  if (sve_feature_area_length < sizeof(XSAVE_ARM64_SVE_HEADER)) {
+    error = Status::FromErrorString("SVE feature area too small");
+    LLDB_LOG(log, "expected at least {0} bytes, got {1}",
+             sizeof(XSAVE_ARM64_SVE_HEADER), sve_feature_area_length);
+    return error;
+  }
+
+  m_sve_header_is_valid = true;
+  m_sve_state = SVEState::Full;
+
+  return error;
+}
+
+Status NativeRegisterContextWindows_arm64::SVERead(const uint32_t reg,
+                                                   RegisterValue &reg_value) {
+  Log *log = GetLog(WindowsLog::Registers);
+
+  Status error = CacheAllRegisterValues();
+  if (error.Fail())
+    return error;
+
+  if (!m_sve_header_is_valid) {
+    error = Status::FromErrorString("SVE header is unavailable");
+    LLDB_LOG(log, "{0}", error);
+    return error;
+  }
+
+  if (GetRegisterInfo().IsSVERegVG(reg)) {
+    reg_value.SetUInt64(GetSVERegVG());
+    return error;
+  }
+
+  if (GetRegisterInfo().IsSVEZReg(reg)) {
+    // For VL == sizeof(ARM64_NT_NEON128), Z[i] has no architectural high bits
+    // beyond V[i]. So, route through FPRRead to avoid touching the SVE feature
+    // area.
+    if (m_sve_header->VectorLength == sizeof(ARM64_NT_NEON128))
+      return FPRRead(reg - GetRegisterInfo().GetRegNumSVEZ0() +
+                         k_first_fpr_arm64,
+                     reg_value);
+
+    if (!m_sve_z_buffer_is_valid || !m_sve_z_buffer) {
+      error = Status::FromErrorString("SVE Z register cache is unavailable");
+      LLDB_LOG(log, "{0}", error);
+      return error;
+    }
+
+    const uint32_t vl = m_sve_header->VectorLength;
+    const uint32_t offset = (reg - GetRegisterInfo().GetRegNumSVEZ0()) * vl;
+
+    reg_value.SetBytes(m_sve_z_buffer->GetBytes() + offset, vl,
+                       endian::InlHostByteOrder());
+    return error;
+  }
+
+  if (GetRegisterInfo().IsSVEPReg(reg) ||
+      reg == GetRegisterInfo().GetRegNumSVEFFR()) {
+    const uint32_t pl = m_sve_header->VectorLength / 8;
+    const uint8_t *src = reinterpret_cast<const uint8_t *>(m_sve_header) +
+                         m_sve_header->PredicateRegisterOffset;
+    const uint32_t offset = (reg - GetRegisterInfo().GetRegNumSVEP0()) * pl;
+    reg_value.SetBytes(src + offset, pl, endian::InlHostByteOrder());
+    return error;
+  }
+
+  return Status::FromErrorString("unsupported SVE register");
+}
+
+Status NativeRegisterContextWindows_arm64::CacheSVEZRegisters() {
+  Log *log = GetLog(WindowsLog::Registers);
+
+  Status error;
+
+  if (m_sve_z_buffer_is_valid)
+    return error;
+
+  if (!m_context) {
+    error = Status::FromErrorString("register context is not cached");
+    LLDB_LOG(log, "{0}", error);
+    return error;
+  }
+
+  if (!m_sve_header_is_valid)
+    error = ReadSVEHeader();
+
+  if (error.Fail())
+    return error;
+
+  const uint32_t vl = m_sve_header->VectorLength;
+
+  if (vl < k_z_low_bits_size) {
+    error = Status::FromErrorString("invalid SVE vector length");
+    LLDB_LOG(log, "{0}", error);
+    return error;
+  }
+
+  const uint32_t num_z_regs =
+      GetRegisterInfo().GetRegNumSVEP0() - GetRegisterInfo().GetRegNumSVEZ0();
+
+  if (m_sve_z_buffer)
+    m_sve_z_buffer->SetByteSize(vl * num_z_regs);
+  else
+    m_sve_z_buffer = std::make_shared<DataBufferHeap>(vl * num_z_regs, 0);
+
+  // The lower 128 bits (16 bytes) are stored in the NEON V registers within the
+  // standard CONTEXT structure (m_context->V[n].B). The upper bits
+  // (VectorLength - 16 bytes) are stored contiguously in a packed array within
+  // the XState SVE feature area, starting at VectorRegisterOffset. Each
+  // register's high bits are stored back-to-back with no padding, so register
+  // n's high bits begin at VectorRegisterOffset + (n * z_high_bits_size). To
+  // reconstruct each full Z register, we interleave these two sources. For each
+  // register, we copy the 16-byte V register value into the output buffer first
+  // and then append the corresponding high bits from the XState area, yielding
+  // a contiguous VectorLength-byte representation.
+  const uint32_t z_high_bits_size = vl - k_z_low_bits_size;
+  uint8_t *dst = m_sve_z_buffer->GetBytes();
+  const uint8_t *src = reinterpret_cast<const uint8_t *>(m_sve_header) +
+                       m_sve_header->VectorRegisterOffset;
+
+  for (uint32_t reg = 0; reg < num_z_regs; ++reg) {
+    // Copy lower 128 bits from V register.
+    memcpy(dst, m_context->V[reg].B, k_z_low_bits_size);
+    dst += k_z_low_bits_size;
+    // Copy high bits from packed SVE extended state.
+    memcpy(dst, src, z_high_bits_size);
+    dst += z_high_bits_size;
+    src += z_high_bits_size;
+  }
+
+  m_sve_z_buffer_is_valid = true;
+
+  return error;
+}
+
+Status
+NativeRegisterContextWindows_arm64::SVEWrite(const uint32_t reg,
+                                             const RegisterValue &reg_value) {
+  Log *log = GetLog(WindowsLog::Registers);
+  Status error;
+
+  if (GetRegisterInfo().IsSVERegVG(reg)) {
+    // The vector length is constant and is determined at the time the process
+    // is created.
+    return error;
+  }
+
+  auto cleanup = llvm::make_scope_exit([&]() {
+    m_context = nullptr;
+    m_sve_header = nullptr;
+    m_sve_header_is_valid = false;
+    m_sve_z_buffer_is_valid = false;
+  });
+
+  error = CacheAllRegisterValues();
+  if (error.Fail())
+    return error;
+
+  if (!m_context) {
+    error = Status::FromErrorString("register context is not cached");
+    LLDB_LOG(log, "{0}", error);
+    return error;
+  }
+
+  if (!m_sve_header_is_valid) {
+    error = Status::FromErrorString("failed to read SVE header");
+    LLDB_LOG(log, "{0}", error);
+    return error;
+  }
+
+  if (GetRegisterInfo().IsSVEZReg(reg)) {
+    // For VL == sizeof(ARM64_NT_NEON128), Z[i] has no architectural high bits
+    // beyond V[i]. So, route through FPRWrite to avoid touching the SVE feature
+    // area.
+    if (m_sve_header->VectorLength == sizeof(ARM64_NT_NEON128))
+      return FPRWrite(reg - GetRegisterInfo().GetRegNumSVEZ0() +
+                          k_first_fpr_arm64,
+                      reg_value);
+
+    const uint32_t vl = m_sve_header->VectorLength;
+
+    if (vl < k_z_low_bits_size) {
+      error = Status::FromErrorString("invalid SVE vector length");
+      LLDB_LOG(log, "{0}", error);
+      return error;
+    }
+
+    const uint32_t z_index = reg - GetRegisterInfo().GetRegNumSVEZ0();
+    const uint32_t z_high_bits_size = vl - k_z_low_bits_size;
+
+    const uint8_t *src =
+        reinterpret_cast<const uint8_t *>(reg_value.GetBytes());
+
+    if (!src) {
+      error = Status::FromErrorString("invalid SVE Z register value");
+      LLDB_LOG(log, "{0}", error);
+      return error;
+    }
+
+    uint8_t *dst = reinterpret_cast<uint8_t *>(m_sve_header) +
+                   m_sve_header->VectorRegisterOffset +
+                   (z_index * z_high_bits_size);
+
+    // Copy lower 128 bits to V register.
+    memcpy(m_context->V[z_index].B, src, k_z_low_bits_size);
+
+    // Copy high bits to packed SVE extended state.
+    memcpy(dst, src + k_z_low_bits_size, z_high_bits_size);
+
+    return SetThreadContextHelper(GetThreadHandle(), m_context);
+  }
+
+  if (GetRegisterInfo().IsSVEPReg(reg) ||
+      reg == GetRegisterInfo().GetRegNumSVEFFR()) {
+    const uint32_t pl = m_sve_header->VectorLength / 8;
+    const uint32_t offset = (reg - GetRegisterInfo().GetRegNumSVEP0()) * pl;
+
+    const uint8_t *src =
+        reinterpret_cast<const uint8_t *>(reg_value.GetBytes());
+
+    if (!src) {
+      error = Status::FromErrorString("invalid SVE predicate register value");
+      LLDB_LOG(log, "{0}", error);
+      return error;
+    }
+
+    uint8_t *dst = reinterpret_cast<uint8_t *>(m_sve_header) +
+                   m_sve_header->PredicateRegisterOffset + offset;
+    memcpy(dst, src, pl);
+
+    return SetThreadContextHelper(GetThreadHandle(), m_context);
+  }
+
+  return Status::FromErrorString("unsupported SVE register");
+}
+#endif
 
 #endif // defined(__aarch64__) || defined(_M_ARM64)

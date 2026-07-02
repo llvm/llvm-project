@@ -18,6 +18,10 @@
 
 #include "lldb/Host/windows/windows.h"
 
+#if defined(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE)
+#include "Plugins/Process/Utility/LinuxPTraceDefines_arm64sve.h"
+#endif
+
 namespace lldb_private {
 
 class NativeThreadWindows;
@@ -26,8 +30,9 @@ class NativeRegisterContextWindows_arm64
     : public NativeRegisterContextWindows,
       public NativeRegisterContextDBReg_arm64 {
 public:
-  NativeRegisterContextWindows_arm64(const ArchSpec &target_arch,
-                                     NativeThreadProtocol &native_thread);
+  NativeRegisterContextWindows_arm64(
+      const ArchSpec &target_arch, NativeThreadProtocol &native_thread,
+      std::unique_ptr<RegisterInfoPOSIX_arm64> register_info_up);
 
   uint32_t GetRegisterSetCount() const override;
 
@@ -54,9 +59,25 @@ protected:
 
   Status FPRWrite(const uint32_t reg, const RegisterValue &reg_value);
 
+#if defined(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE)
+  Status SVERead(const uint32_t reg, RegisterValue &reg_value);
+
+  Status SVEWrite(const uint32_t reg, const RegisterValue &reg_value);
+#endif
+
 private:
   PCONTEXT m_context;
   std::shared_ptr<DataBufferHeap> m_context_buffer;
+
+#if defined(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE)
+  XSAVE_ARM64_SVE_HEADER *m_sve_header;
+  bool m_sve_header_is_valid;
+  SVEState m_sve_state;
+  std::shared_ptr<DataBufferHeap> m_sve_z_buffer;
+  bool m_sve_z_buffer_is_valid;
+
+  static constexpr uint32_t k_z_low_bits_size = sizeof(ARM64_NT_NEON128);
+#endif
 
   bool IsGPR(uint32_t reg_index) const;
 
@@ -67,6 +88,20 @@ private:
   llvm::Error WriteHardwareDebugRegs(DREGType hwbType) override;
 
   Status CacheAllRegisterValues();
+
+  RegisterInfoPOSIX_arm64 &GetRegisterInfo() const;
+
+#if defined(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE)
+  bool IsSVE(uint32_t reg_index) const;
+
+  uint32_t GetSVERegVG() const { return m_sve_header->VectorLength / 8; }
+
+  void ConfigureRegisterContext();
+
+  Status ReadSVEHeader();
+
+  Status CacheSVEZRegisters();
+#endif
 };
 
 } // namespace lldb_private
