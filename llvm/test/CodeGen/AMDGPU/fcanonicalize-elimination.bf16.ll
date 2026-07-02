@@ -63,3 +63,31 @@ define half @test_canonicalize_amdgcn_tanh_f16(half %a) {
   %canonicalized = call half @llvm.canonicalize.f16(half %tanh)
   ret half %canonicalized
 }
+
+; A v2bf16 value bitcast to v2f16 may not be canonical as v2f16 (different
+; exponent width), so the v2f16 canonicalize must not be eliminated.
+define amdgpu_kernel void @test_no_eliminate_canonicalize_bitcast_bf16_to_f16(ptr addrspace(1) %in, ptr addrspace(1) %out) {
+; GCN-LABEL: test_no_eliminate_canonicalize_bitcast_bf16_to_f16:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0 nv
+; GCN-NEXT:    v_mov_b32_e32 v1, 0
+; GCN-NEXT:    s_wait_kmcnt 0x0
+; GCN-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GCN-NEXT:    s_wait_kmcnt 0x0
+; GCN-NEXT:    v_pk_mul_bf16 v0, 1.0, s0 op_sel_hi:[0,1]
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GCN-NEXT:    v_pk_max_num_f16 v0, v0, v0
+; GCN-NEXT:    global_store_b32 v1, v0, s[2:3]
+; GCN-NEXT:    s_endpgm
+  %x = load <2 x bfloat>, ptr addrspace(1) %in, align 4
+  %c = call <2 x bfloat> @llvm.canonicalize.v2bf16(<2 x bfloat> %x)
+  %h = bitcast <2 x bfloat> %c to <2 x half>
+  %lo = extractelement <2 x half> %h, i32 0
+  %hi = extractelement <2 x half> %h, i32 1
+  %v0 = insertelement <2 x half> poison, half %lo, i32 0
+  %v1 = insertelement <2 x half> %v0, half %hi, i32 1
+  %canon = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %v1)
+  store <2 x half> %canon, ptr addrspace(1) %out, align 4
+  ret void
+}
