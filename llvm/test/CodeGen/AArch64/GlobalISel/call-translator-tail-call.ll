@@ -354,7 +354,6 @@ define void @test_bad_call_conv() {
   ret void
 }
 
-; Shouldn't tail call when the caller has byval arguments.
 define void @test_byval(ptr byval(i8) %ptr) {
   ; DARWIN-LABEL: name: test_byval
   ; DARWIN: bb.1 (%ir-block.0):
