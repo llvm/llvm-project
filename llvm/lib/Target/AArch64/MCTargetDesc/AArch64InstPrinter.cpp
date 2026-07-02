@@ -1571,41 +1571,6 @@ void AArch64InstPrinter::printPrefetchOp(const MCInst *MI, unsigned OpNum,
   markup(O, Markup::Immediate) << '#' << formatImm(prfop);
 }
 
-void AArch64InstPrinter::printPSBHintOp(const MCInst *MI, unsigned OpNum,
-                                        const MCSubtargetInfo &STI,
-                                        raw_ostream &O) {
-  unsigned psbhintop = MI->getOperand(OpNum).getImm();
-  auto PSB = AArch64PSBHint::lookupPSBByEncoding(psbhintop);
-  if (PSB)
-    O << AArch64PSBHint::getPSBStr(PSB->Name);
-  else
-    markup(O, Markup::Immediate) << '#' << formatImm(psbhintop);
-}
-
-void AArch64InstPrinter::printBTIHintOp(const MCInst *MI, unsigned OpNum,
-                                        const MCSubtargetInfo &STI,
-                                        raw_ostream &O) {
-  unsigned btihintop = MI->getOperand(OpNum).getImm() ^ 32;
-  auto BTI = AArch64BTIHint::lookupBTIByEncoding(btihintop);
-  if (BTI)
-    O << AArch64BTIHint::getBTIStr(BTI->Name);
-  else
-    markup(O, Markup::Immediate) << '#' << formatImm(btihintop);
-}
-
-void AArch64InstPrinter::printCMHPriorityHintOp(const MCInst *MI,
-                                                unsigned OpNum,
-                                                const MCSubtargetInfo &STI,
-                                                raw_ostream &O) {
-  unsigned priorityhint_op = MI->getOperand(OpNum).getImm();
-  auto PHint =
-      AArch64CMHPriorityHint::lookupCMHPriorityHintByEncoding(priorityhint_op);
-  if (PHint)
-    O << AArch64CMHPriorityHint::getCMHPriorityHintStr(PHint->Name);
-  else
-    markup(O, Markup::Immediate) << '#' << formatImm(priorityhint_op);
-}
-
 void AArch64InstPrinter::printTIndexHintOp(const MCInst *MI, unsigned OpNum,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
@@ -1966,9 +1931,6 @@ void AArch64InstPrinter::printBarrierOption(const MCInst *MI, unsigned OpNo,
   if (Opcode == AArch64::ISB) {
     auto ISB = AArch64ISB::lookupISBByEncoding(Val);
     Name = ISB ? AArch64ISB::getISBStr(ISB->Name) : "";
-  } else if (Opcode == AArch64::TSB) {
-    auto TSB = AArch64TSB::lookupTSBByEncoding(Val);
-    Name = TSB ? AArch64TSB::getTSBStr(TSB->Name) : "";
   } else {
     auto DB = AArch64DB::lookupDBByEncoding(Val);
     Name = DB ? AArch64DB::getDBStr(DB->Name) : "";
@@ -2260,15 +2222,4 @@ void AArch64InstPrinter::printSyspXzrPair(const MCInst *MI, unsigned OpNum,
   assert(Reg == AArch64::XZR &&
          "MC representation of SyspXzrPair should be XZR");
   O << getRegisterName(Reg) << ", " << getRegisterName(Reg);
-}
-
-void AArch64InstPrinter::printPHintOp(const MCInst *MI, unsigned OpNum,
-                                      const MCSubtargetInfo &STI,
-                                      raw_ostream &O) {
-  unsigned Op = MI->getOperand(OpNum).getImm();
-  auto PH = AArch64PHint::lookupPHintByEncoding(Op);
-  if (PH)
-    O << AArch64PHint::getPHintStr(PH->Name);
-  else
-    markup(O, Markup::Immediate) << '#' << formatImm(Op);
 }
