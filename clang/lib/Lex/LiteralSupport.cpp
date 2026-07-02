@@ -2436,28 +2436,25 @@ bool StringLiteralParser::CopyStringFragment(
     const Token &Tok, const char *TokBegin, StringRef Fragment,
     llvm::TextEncodingConverter *Converter) {
 
-  if (CharByteWidth == 1 && Converter) {
-    const llvm::UTF8 *FragmentBegin =
-        reinterpret_cast<const llvm::UTF8 *>(Fragment.begin());
-    assert(llvm::isLegalUTF8String(
-        &FragmentBegin, reinterpret_cast<const llvm::UTF8 *>(Fragment.end())));
-    SmallString<64> CpConv;
-    auto EC = Converter->convert(Fragment, CpConv);
-    if (!EC) {
-      memcpy(ResultPtr, CpConv.data(), CpConv.size());
-      ResultPtr += CpConv.size();
-    } else { // there was a conversion error
-      if (Diags)
-        Diags->Report(Tok.getLocation(),
-                      diag::err_exec_charset_conversion_failed)
-            << EC.message();
+  const llvm::UTF8 *ErrorPtrTmp;
+  if (ConvertUTF8toWide(CharByteWidth, Fragment, ResultPtr, ErrorPtrTmp)) {
+    if (Converter) {
+      assert(isOrdinary() && "Only ordinary literals are supported");
+      SmallString<64> CpConv;
+      char *Cp = ResultPtr - Fragment.size();
+      auto EC = Converter->convert(Fragment, CpConv);
+      if (!EC) {
+        memcpy(Cp, CpConv.data(), CpConv.size());
+        ResultPtr = Cp + CpConv.size();
+      } else { // there was a conversion error
+        if (Diags)
+          Diags->Report(Tok.getLocation(),
+                        diag::err_exec_charset_conversion_failed)
+              << EC.message();
+      }
     }
     return false;
   }
-
-  const llvm::UTF8 *ErrorPtrTmp;
-  if (ConvertUTF8toWide(CharByteWidth, Fragment, ResultPtr, ErrorPtrTmp))
-    return false;
 
   // If we see bad encoding for unprefixed string literals, warn and
   // simply copy the byte values, for compatibility with gcc and older
