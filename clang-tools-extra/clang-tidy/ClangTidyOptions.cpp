@@ -243,6 +243,7 @@ template <> struct MappingTraits<ClangTidyOptions> {
     IO.mapOptional("UseColor", Options.UseColor);
     IO.mapOptional("SystemHeaders", Options.SystemHeaders);
     IO.mapOptional("CustomChecks", Options.CustomChecks);
+    IO.mapOptional("LineFilter", Options.LineFilter);
   }
 };
 
@@ -303,6 +304,7 @@ ClangTidyOptions &ClangTidyOptions::mergeWith(const ClangTidyOptions &Other,
   overrideValue(FormatStyle, Other.FormatStyle);
   overrideValue(User, Other.User);
   overrideValue(UseColor, Other.UseColor);
+  overrideValue(LineFilter, Other.LineFilter);
   mergeVectors(ExtraArgs, Other.ExtraArgs);
   mergeVectors(ExtraArgsBefore, Other.ExtraArgsBefore);
   mergeVectors(RemovedArgs, Other.RemovedArgs);

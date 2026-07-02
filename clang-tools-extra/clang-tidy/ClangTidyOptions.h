@@ -70,6 +70,9 @@ struct ClangTidyOptions {
   /// Checks filter.
   std::optional<std::string> Checks;
 
+  /// Line filter.
+  std::optional<std::vector<FileFilter>> LineFilter;
+
   /// WarningsAsErrors filter.
   std::optional<std::string> WarningsAsErrors;
 

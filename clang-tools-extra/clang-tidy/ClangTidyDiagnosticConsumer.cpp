@@ -482,9 +482,14 @@ void ClangTidyDiagnosticConsumer::HandleDiagnostic(
 
 bool ClangTidyDiagnosticConsumer::passesLineFilter(StringRef FileName,
                                                    unsigned LineNumber) const {
-  if (Context.getGlobalOptions().LineFilter.empty())
+  const std::vector<FileFilter> *Filters =
+      &Context.getGlobalOptions().LineFilter;
+  if (Filters->empty() && Context.getOptions().LineFilter)
+    Filters = &*Context.getOptions().LineFilter;
+
+  if (Filters->empty())
     return true;
-  for (const FileFilter &Filter : Context.getGlobalOptions().LineFilter) {
+  for (const FileFilter &Filter : *Filters) {
     if (FileName.ends_with(Filter.Name)) {
       if (Filter.LineRanges.empty())
         return true;
