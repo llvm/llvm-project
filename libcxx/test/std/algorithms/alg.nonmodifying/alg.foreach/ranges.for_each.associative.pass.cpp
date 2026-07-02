@@ -252,20 +252,13 @@ TEST_CONSTEXPR_CXX26 void test_invoke_map_like() {
 }
 
 TEST_CONSTEXPR_CXX26 bool test() {
-  if (!TEST_IS_CONSTANT_EVALUATED) {
-    // FIXME: remove when multiset is made constexpr
-    test_node_container<std::multiset<int> >([](int i) { return i; });
-  }
   test_node_container<std::set<int> >([](int i) { return i; });
+  test_node_container<std::multiset<int> >([](int i) { return i; });
   test_node_container<std::map<int, int> >([](int i) { return std::make_pair(i, i); });
   test_node_container<std::multimap<int, int> >([](int i) { return std::make_pair(i, i); });
 
-  if (!TEST_IS_CONSTANT_EVALUATED) {
-    // FIXME: remove when multiset is made constexpr
-    test_invoke_set_like<std::multiset>();
-  }
-
   test_invoke_set_like<std::set>();
+  test_invoke_set_like<std::multiset>();
   test_invoke_map_like<std::map>();
   test_invoke_map_like<std::multimap>();
 

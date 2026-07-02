@@ -12,7 +12,7 @@
 
 // template <class InputIterator>
 //     multiset(InputIterator first, InputIterator last,
-//         const value_compare& comp, const allocator_type& a);
+//         const value_compare& comp, const allocator_type& a); // constexpr since C++26
 
 #include <set>
 #include <cassert>
@@ -23,7 +23,7 @@
 #include "../../../test_compare.h"
 #include "test_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef int V;
     V ar[] = {1, 1, 1, 2, 2, 2, 3, 3, 3};
@@ -72,5 +72,13 @@ int main(int, char**) {
   }
 #endif
 
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }
