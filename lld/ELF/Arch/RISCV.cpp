@@ -235,14 +235,14 @@ void RISCV::writePltHeader(uint8_t *buf) const {
   //
   // If not using lpad:
   //
-  // 1: auipc t2, %pcrel_hi(.got.plt)
-  // sub t1, t1, t3
-  // l[wd] t3, %pcrel_lo(1b)(t2); t3 = _dl_runtime_resolve
-  // addi t1, t1, -pltHeaderSize-12; t1 = &.plt[i] - &.plt[0]
-  // addi t0, t2, %pcrel_lo(1b)
-  // srli t1, t1, (rv64?1:2); t1 = &.got.plt[i] - &.got.plt[0]
-  // l[wd] t0, Wordsize(t0); t0 = link_map
-  // jr t3
+  // 1:  auipc  t2, %pcrel_hi(.got.plt)
+  //     sub    t1, t1, t3
+  //     l[w|d] t3, %pcrel_lo(1b)(t2)     ; t3 = _dl_runtime_resolve
+  //     addi   t1, t1, -pltHeaderSize-12 ; t1 = &.plt[i] - &.plt[0]
+  //     addi   t0, t2, %pcrel_lo(1b)
+  //     srli   t1, t1, (rv64?1:2)        ; t1 = &.got.plt[i] - &.got.plt[0]
+  //     l[w|d] t0, Wordsize(t0)          ; t0 = link_map
+  //     jr     t3
   bool lpad =
       ctx.arg.andFeatures & GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED;
   uint32_t offset = ctx.in.gotPlt->getVA() - ctx.in.plt->getVA();
@@ -272,10 +272,10 @@ void RISCV::writePlt(uint8_t *buf, const Symbol &sym,
   //
   // If not using lpad:
   //
-  // 1: auipc t3, %pcrel_hi(f@.got.plt)
-  // l[wd] t3, %pcrel_lo(1b)(t3)
-  // jalr t1, t3
-  // nop
+  // 1:  auipc   t3, %pcrel_hi(f@.got.plt)
+  //     l[w|d]  t3, %pcrel_lo(1b)(t3)
+  //     jalr    t1, t3
+  //     nop
   bool lpad =
       ctx.arg.andFeatures & GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED;
   uint32_t auipcOffset = lpad * 4;
