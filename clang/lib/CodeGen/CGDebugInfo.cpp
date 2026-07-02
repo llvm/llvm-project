@@ -671,11 +671,7 @@ llvm::DIFile *CGDebugInfo::createFile(
 }
 
 std::string CGDebugInfo::remapDIPath(StringRef Path) const {
-  SmallString<256> P = Path;
-  for (auto &[From, To] : llvm::reverse(CGM.getCodeGenOpts().DebugPrefixMap))
-    if (llvm::sys::path::replace_path_prefix(P, From, To))
-      break;
-  return P.str().str();
+  return CGM.getCodeGenOpts().remapDebugPathPrefix(Path);
 }
 
 unsigned CGDebugInfo::getLineNumber(SourceLocation Loc) {
