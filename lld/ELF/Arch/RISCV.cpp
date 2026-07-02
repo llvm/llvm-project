@@ -240,7 +240,7 @@ void RISCV::writePltHeader(uint8_t *buf) const {
               itype(ADDI, X_T1, X_T1, -ctx.target->pltHeaderSize - 16));
     write32le(buf + 16, itype(ADDI, X_T0, X_T3, lo12(offset)));
     write32le(buf + 20, itype(SRLI, X_T1, X_T1, ctx.arg.is64 ? 1 : 2));
-    write32le(buf + 24, itype(load, X_T0, X_T0, ctx.arg.is64 ? 8 : 4));
+    write32le(buf + 24, itype(load, X_T0, X_T0, ctx.arg.wordsize));
     write32le(buf + 28, itype(JALR, X_X0, X_T2, 0));
     return;
   }
