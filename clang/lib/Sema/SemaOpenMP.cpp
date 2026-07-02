@@ -13621,6 +13621,8 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetUpdateDirective(
                                           Clauses, AStmt);
 }
 
+/// Check the number of expressions specified in a multidimensional clauses and
+/// return whether an error was encountered.
 template <typename ClauseT>
 static bool checkClauseNumExprs(SemaBase &SemaRef, const ClauseT *Clause,
                                 const OMPXBareClause *BareClause) {
@@ -13666,8 +13668,11 @@ static bool checkClauseNumExprs(SemaBase &SemaRef, const ClauseT *Clause,
   return false;
 }
 
-static bool checkNumExprsInClauses(SemaBase &SemaRef,
-                                   ArrayRef<OMPClause *> Clauses) {
+/// Check the number of expressions specified in clauses that can contain
+/// multidimensional values, e.g., num_teams and thread_limit. The function
+/// returns true on error.
+static bool checkExprsInMultidimClauses(SemaBase &SemaRef,
+                                        ArrayRef<OMPClause *> Clauses) {
   auto BareClauseIt = llvm::find_if(Clauses, llvm::IsaPred<OMPXBareClause>);
   auto ThreadLimitIt =
       llvm::find_if(Clauses, llvm::IsaPred<OMPThreadLimitClause>);
@@ -13706,7 +13711,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTeamsDirective(ArrayRef<OMPClause *> Clauses,
   if (!AStmt)
     return StmtError();
 
-  if (checkNumExprsInClauses(*this, Clauses))
+  if (checkExprsInMultidimClauses(*this, Clauses))
     return StmtError();
 
   // Report affected OpenMP target offloading behavior when in HIP lang-mode.
@@ -14470,7 +14475,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDirective(
 
   setBranchProtectedScope(SemaRef, OMPD_target_teams, AStmt);
 
-  if (checkNumExprsInClauses(*this, Clauses))
+  if (checkExprsInMultidimClauses(*this, Clauses))
     return StmtError();
 
   return OMPTargetTeamsDirective::Create(getASTContext(), StartLoc, EndLoc,
@@ -14483,7 +14488,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDistributeDirective(
   if (!AStmt)
     return StmtError();
 
-  if (checkNumExprsInClauses(*this, Clauses))
+  if (checkExprsInMultidimClauses(*this, Clauses))
     return StmtError();
 
   CapturedStmt *CS =
@@ -14512,7 +14517,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDistributeParallelForDirective(
   if (!AStmt)
     return StmtError();
 
-  if (checkNumExprsInClauses(*this, Clauses))
+  if (checkExprsInMultidimClauses(*this, Clauses))
     return StmtError();
 
   CapturedStmt *CS = setBranchProtectedScope(
@@ -14542,7 +14547,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDistributeParallelForSimdDirective(
   if (!AStmt)
     return StmtError();
 
-  if (checkNumExprsInClauses(*this, Clauses))
+  if (checkExprsInMultidimClauses(*this, Clauses))
     return StmtError();
 
   CapturedStmt *CS = setBranchProtectedScope(
@@ -14575,7 +14580,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDistributeSimdDirective(
   if (!AStmt)
     return StmtError();
 
-  if (checkNumExprsInClauses(*this, Clauses))
+  if (checkExprsInMultidimClauses(*this, Clauses))
     return StmtError();
 
   CapturedStmt *CS = setBranchProtectedScope(
