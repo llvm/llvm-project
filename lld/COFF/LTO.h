@@ -38,6 +38,8 @@ class BitcodeFile;
 class InputFile;
 class COFFLinkerContext;
 
+void thinLTOCreateEmptyIndexFiles(COFFLinkerContext &ctx);
+
 class BitcodeCompiler {
 public:
   BitcodeCompiler(COFFLinkerContext &ctx);

@@ -60,6 +60,7 @@ public:
   }
 
   std::vector<ObjFile *> objFileInstances;
+  std::vector<BitcodeFile *> lazyBitcodeFileInstances;
   std::map<std::string, PDBInputFile *> pdbInputFileInstances;
   std::vector<ImportFile *> importFileInstances;
   std::int64_t consumedInputsSize = 0;
