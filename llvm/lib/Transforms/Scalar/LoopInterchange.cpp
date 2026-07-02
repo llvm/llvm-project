@@ -372,6 +372,21 @@ static bool isLegalToInterChangeLoops(CharMatrix &DepMatrix,
     if (isLexicographicallyPositive(Cur, 0, OuterLoopId) == true)
       continue;
 
+    // For the adjacent loops, if at least one of their direction is '=' or
+    // 'I', interchanging them is legal regardless of the diction of the other.
+    // This check can handle the case like [* =], which will appear in the code
+    // like:
+    //
+    //   for (int repeat = 0; repeat < N; repeat++)
+    //     for (int i = 0; i < N; i++)
+    //       A[i] = ...;
+    //
+    if (OuterLoopId + 1 == InnerLoopId) {
+      auto IsEqualOrIndep = [](char C) { return C == '=' || C == 'I'; };
+      if (IsEqualOrIndep(Cur[OuterLoopId]) || IsEqualOrIndep(Cur[InnerLoopId]))
+        continue;
+    }
+
     // Check if the direction vector is lexicographically positive (or zero)
     // for both before/after exchanged. Ignore the last element because it
     // doesn't affect the legality.
