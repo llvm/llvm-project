@@ -460,6 +460,7 @@
 #include "math/setpayloadsigf16.h"
 #include "math/setpayloadsigl.h"
 #include "math/sin.h"
+#include "math/sinbf16.h"
 #include "math/sincos.h"
 #include "math/sincosf.h"
 #include "math/sinf.h"

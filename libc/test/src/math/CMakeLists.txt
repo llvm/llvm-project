@@ -94,6 +94,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  sinbf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    sinbf16_test.cpp
+  DEPENDS
+    libc.src.math.sinbf16
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   sinf_test
   NEED_MPFR
   SUITE

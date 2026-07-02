@@ -8959,6 +8959,22 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_sinbf16",
+    hdrs = ["src/__support/math/sinbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_cast",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_macros_optimization",
+        ":__support_sincosf_utils",
+        ":hdr_errno_macros",
+        ":hdr_fenv_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_sinf",
     hdrs = ["src/__support/math/sinf.h"],
     deps = [
@@ -12825,6 +12841,13 @@ libc_math_function(
         ":__support_macros_properties_cpu_features",
         ":__support_math_sin",
         ":__support_math_sin_integer_eval",
+    ],
+)
+
+libc_math_function(
+    name = "sinbf16",
+    additional_deps = [
+        ":__support_math_sinbf16",
     ],
 )
 
