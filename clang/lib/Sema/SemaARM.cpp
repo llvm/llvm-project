@@ -578,9 +578,12 @@ static bool checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
   if (BuiltinType == SemaARM::VerifyRuntimeMode) {
     llvm::StringMap<bool> CallerFeatures;
     S.Context.getFunctionFeatureMap(CallerFeatures, FD);
+    const TargetInfo &TI = S.Context.getTargetInfo();
+    bool CallerHasSVE = TI.hasFeatureEnabled(CallerFeatures, "sve");
+    bool CallerHasSME = TI.hasFeatureEnabled(CallerFeatures, "sme");
 
     // Avoid emitting diagnostics for a function that can never compile.
-    if (FnType == SemaARM::ArmStreaming && !CallerFeatures["sme"])
+    if (FnType == SemaARM::ArmStreaming && !CallerHasSME)
       return false;
 
     const auto FindTopLevelPipe = [](const char *S) {
@@ -604,6 +607,11 @@ static bool checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
            "Expected feature string of the form 'SVE-EXPR|SME-EXPR'");
     StringRef NonStreamingBuiltinGuard = StringRef(RequiredFeatures, PipeIdx);
     StringRef StreamingBuiltinGuard = StringRef(RequiredFeatures + PipeIdx + 1);
+
+    if (CallerHasSVE)
+      CallerFeatures["sve"] = true;
+    if (CallerHasSME)
+      CallerFeatures["sme"] = true;
 
     bool SatisfiesSVE = Builtin::evaluateRequiredTargetFeatures(
         NonStreamingBuiltinGuard, CallerFeatures);
@@ -1478,11 +1486,13 @@ void SemaARM::CheckSMEFunctionDefAttributes(const FunctionDecl *FD) {
                FunctionType::ARM_None;
   }
 
-  ASTContext &Context = getASTContext();
-  if (UsesSM || UsesZA) {
+  if (UsesSM || UsesZA || UsesZT0) {
+    ASTContext &Context = getASTContext();
     llvm::StringMap<bool> FeatureMap;
     Context.getFunctionFeatureMap(FeatureMap, FD);
-    if (!FeatureMap.contains("sme")) {
+    const TargetInfo &TI = Context.getTargetInfo();
+
+    if ((UsesSM || UsesZA) && !TI.hasFeatureEnabled(FeatureMap, "sme")) {
       if (UsesSM)
         Diag(FD->getLocation(),
              diag::err_sme_definition_using_sm_in_non_sme_target);
@@ -1490,11 +1500,8 @@ void SemaARM::CheckSMEFunctionDefAttributes(const FunctionDecl *FD) {
         Diag(FD->getLocation(),
              diag::err_sme_definition_using_za_in_non_sme_target);
     }
-  }
-  if (UsesZT0) {
-    llvm::StringMap<bool> FeatureMap;
-    Context.getFunctionFeatureMap(FeatureMap, FD);
-    if (!FeatureMap.contains("sme2")) {
+
+    if (UsesZT0 && !TI.hasFeatureEnabled(FeatureMap, "sme2")) {
       Diag(FD->getLocation(),
            diag::err_sme_definition_using_zt0_in_non_sme2_target);
     }
@@ -1767,11 +1774,15 @@ bool SemaARM::checkSVETypeSupport(QualType Ty, SourceLocation Loc,
   if (!Ty->isSVESizelessBuiltinType())
     return false;
 
-  if (FeatureMap.lookup("sve"))
+  const TargetInfo &TI = getASTContext().getTargetInfo();
+  bool HasSVE = TI.hasFeatureEnabled(FeatureMap, "sve");
+  bool HasSME = TI.hasFeatureEnabled(FeatureMap, "sme");
+
+  if (HasSVE)
     return false;
 
   // No SVE environment available.
-  if (!FeatureMap.lookup("sme"))
+  if (!HasSME)
     return Diag(Loc, diag::err_sve_vector_in_non_sve_target) << Ty;
 
   // SVE environment only available to streaming functions.
