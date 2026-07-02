@@ -38,6 +38,11 @@ void bar(int N) { // expected-note {{declared here}}
 #pragma omp target teams distribute num_teams(dims(): 4) // expected-error {{expected expression}}
   for (int i = 0; i < 10; ++i) {}
 
+  // 3. Incompatible modifiers.
+
+#pragma omp target teams num_teams(dims(1),10:20) // expected-error {{'lower_bound' modifier cannot be specified with 'dims' modifier in 'num_teams' clause}}
+  foo();
+
   // 2. Mismatching number of expressions.
 
 #pragma omp target teams num_teams(dims(2): 4) // expected-error {{unexpected number of expressions in 'num_teams' clause}}

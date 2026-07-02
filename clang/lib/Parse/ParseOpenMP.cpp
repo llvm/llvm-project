@@ -5299,7 +5299,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
 
     // Lower-bound modifier is only accepted in num_teams.
     bool CanParseLowerBoundModifier = (Kind == OMPC_num_teams);
-    if (!Tok.isAnnotation() && PP.getSpelling(Tok) == "dims" &&
+    if (Tok.is(tok::identifier) && Tok.getIdentifierInfo()->isStr("dims") &&
         NextToken().is(tok::l_paren)) {
       SourceLocation TLoc = Tok.getLocation();
       ConsumeToken();

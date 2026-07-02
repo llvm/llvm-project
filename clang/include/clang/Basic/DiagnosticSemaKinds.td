@@ -12793,9 +12793,9 @@ def warn_omp_unterminated_declare_target : Warning<
   InGroup<SourceUsesOpenMP>;
 def err_ompx_bare_no_grid : Error<
   "'ompx_bare' clause requires explicit grid size via 'num_teams' and 'thread_limit' clauses">;
+def err_ompx_more_than_three_expr_not_allowed : Error<"at most three expressions are allowed in '%0' clause in 'target teams ompx_bare' construct">;
 def err_ompx_bare_no_dims : Error<
   "'ompx_bare' clause cannot be specified with 'dims' modifier in 'num_teams' and 'thread_limit' clauses">;
-def err_omp_multi_expr_not_allowed : Error<"only one expression allowed in '%0' clause">;
 def err_omp_max_three_exprs: Error<"maximum three expressions are supported in '%0' clause">;
 def err_omp_transparent_invalid_value : Error<"invalid value for transparent clause,"
   " expected one of: omp_not_impex, omp_import, omp_export, omp_impex">;
@@ -12806,9 +12806,7 @@ def err_omp_num_teams_lower_bound_larger
 def err_omp_modifier_requires_version : Error<
   "'%0' modifier in '%1' clause requires OpenMP %2 or later">;
 def err_omp_unexpected_num_exprs
-    : Error<"unexpected number of expressions in '%0' clause">;
-def err_omp_max_supported_dims
-    : Error<"at most three dimensions are supported in '%0' clause">;
+    : Error<"unexpected number of expressions in '%0' clause (expected %1, have %2)">;
 def err_omp_incompatible_modifiers
     : Error<"'%0' modifier cannot be specified with '%1' modifier in '%2' clause">;
 } // end of OpenMP category

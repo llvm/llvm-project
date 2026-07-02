@@ -31,6 +31,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include <array>
 #include <optional>
 #include <string>
 #include <utility>
@@ -1188,10 +1189,10 @@ public:
     SourceLocation RLoc;
     CXXScopeSpec ReductionOrMapperIdScopeSpec;
     DeclarationNameInfo ReductionOrMapperId;
-    SmallVector<int, 2> ExtraModifierArray = {-1, -1};
-    SmallVector<Expr *, 2> ExtraModifierExprArray = {nullptr, nullptr};
-    SmallVector<SourceLocation, 2> ExtraModifierLocArray = {SourceLocation(),
-                                                            SourceLocation()};
+    std::array<int, 2> ExtraModifierArray = {-1, -1};
+    std::array<Expr *, 2> ExtraModifierExprArray = {nullptr, nullptr};
+    std::array<SourceLocation, 2> ExtraModifierLocArray = {SourceLocation(),
+                                                           SourceLocation()};
     /// Additional modifier for linear, map, depend, lastprivate,
     /// use_device_ptr, or num_teams clause.
     int &ExtraModifier = ExtraModifierArray[0];

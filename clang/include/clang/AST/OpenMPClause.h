@@ -6999,6 +6999,7 @@ class OMPNumTeamsClause final
     : public OMPVarListClause<OMPNumTeamsClause>,
       public OMPClauseWithPreInit,
       private llvm::TrailingObjects<OMPNumTeamsClause, Expr *> {
+  friend class OMPClauseReader;
   friend OMPVarListClause;
   friend TrailingObjects;
 
@@ -7019,6 +7020,15 @@ class OMPNumTeamsClause final
       : OMPVarListClause(llvm::omp::OMPC_num_teams, SourceLocation(),
                          SourceLocation(), SourceLocation(), N),
         OMPClauseWithPreInit(this) {}
+
+  /// Set the modifier.
+  void setModifier(OpenMPNumTeamsClauseModifier M) { Modifier = M; }
+
+  /// Set the expression of the modifier.
+  void setModifierExpr(Expr *E) { *varlist_end() = E; }
+
+  /// Set the location of the modifier.
+  void setModifierLoc(SourceLocation Loc) { ModifierLoc = Loc; }
 
 public:
   /// Creates clause with a list of variables \a VL.
@@ -7056,17 +7066,11 @@ public:
   /// Get the modifier.
   OpenMPNumTeamsClauseModifier getModifier() const { return Modifier; }
 
-  /// Set the modifier.
-  void setModifier(OpenMPNumTeamsClauseModifier M) { Modifier = M; }
-
   /// Get the expression of the modifier.
   const Expr *getModifierExpr() const { return *varlist_end(); }
 
   /// Get the expression of the modifier.
   Expr *getModifierExpr() { return *varlist_end(); }
-
-  /// Set the expression of the modifier.
-  void setModifierExpr(Expr *E) { *varlist_end() = E; }
 
   /// Get the expression of the modifier if it is the dims modifier.
   const Expr *getDimsModifierExpr() const {
@@ -7077,9 +7081,6 @@ public:
 
   /// Get the location of the modifier.
   SourceLocation getModifierLoc() const { return ModifierLoc; }
-
-  /// Set the location of the modifier.
-  void setModifierLoc(SourceLocation Loc) { ModifierLoc = Loc; }
 
   child_range children() {
     return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
@@ -7128,6 +7129,7 @@ class OMPThreadLimitClause final
     : public OMPVarListClause<OMPThreadLimitClause>,
       public OMPClauseWithPreInit,
       private llvm::TrailingObjects<OMPThreadLimitClause, Expr *> {
+  friend class OMPClauseReader;
   friend OMPVarListClause;
   friend TrailingObjects;
 
@@ -7149,6 +7151,15 @@ class OMPThreadLimitClause final
       : OMPVarListClause(llvm::omp::OMPC_thread_limit, SourceLocation(),
                          SourceLocation(), SourceLocation(), N),
         OMPClauseWithPreInit(this) {}
+
+  /// Set the modifier.
+  void setModifier(OpenMPThreadLimitClauseModifier M) { Modifier = M; }
+
+  /// Set the location of the modifier.
+  void setModifierLoc(SourceLocation Loc) { ModifierLoc = Loc; }
+
+  /// Set the expression of the modifier.
+  void setModifierExpr(Expr *E) { *varlist_end() = E; }
 
 public:
   /// Creates clause with a list of variables \a VL.
@@ -7186,17 +7197,11 @@ public:
   /// Get the modifier.
   OpenMPThreadLimitClauseModifier getModifier() const { return Modifier; }
 
-  /// Set the modifier.
-  void setModifier(OpenMPThreadLimitClauseModifier M) { Modifier = M; }
-
   /// Get the expression of the modifier.
   const Expr *getModifierExpr() const { return *varlist_end(); }
 
   /// Get the expression of the modifier.
   Expr *getModifierExpr() { return *varlist_end(); }
-
-  /// Set the expression of the modifier.
-  void setModifierExpr(Expr *E) { *varlist_end() = E; }
 
   /// Get the expression of the modifier if it is the dims modifier.
   const Expr *getDimsModifierExpr() const {
@@ -7207,9 +7212,6 @@ public:
 
   /// Get the location of the modifier.
   SourceLocation getModifierLoc() const { return ModifierLoc; }
-
-  /// Set the location of the modifier.
-  void setModifierLoc(SourceLocation Loc) { ModifierLoc = Loc; }
 
   child_range children() {
     return child_range(reinterpret_cast<Stmt **>(varlist_begin()),

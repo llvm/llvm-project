@@ -13627,22 +13627,35 @@ static bool checkClauseNumExprs(SemaBase &SemaRef, const ClauseT *Clause,
   if (!Clause)
     return false;
 
-  uint64_t MaxExprs = BareClause ? 3 : 1;
+  const uint64_t NumVars = Clause->getVarRefs().size();
+  if (BareClause) {
+    // The ompx_bare clause allows up to three expresions.
+    if (NumVars > 3) {
+      SemaRef.Diag(Clause->getBeginLoc(),
+                   diag::err_ompx_more_than_three_expr_not_allowed)
+          << getOpenMPClauseName(Clause->getClauseKind());
+      return true;
+    }
+    return false;
+  }
+
+  // By default, only one expression accepted.
+  uint64_t MaxExprs = 1;
 
   const Expr *DimsExpr = Clause->getDimsModifierExpr();
   if (DimsExpr) {
-    // Cannot verify the size yet.
+    // Cannot verify the expected size yet.
     if (DimsExpr->isInstantiationDependent())
       return false;
 
+    // The dims modifier determines the exact number of expressions.
     MaxExprs =
         DimsExpr->EvaluateKnownConstInt(SemaRef.getASTContext()).getExtValue();
   }
 
-  size_t NumVars = Clause->getVarRefs().size();
-  if (NumVars > MaxExprs) {
+  if (NumVars != MaxExprs) {
     SemaRef.Diag(Clause->getBeginLoc(), diag::err_omp_unexpected_num_exprs)
-        << getOpenMPClauseName(Clause->getClauseKind());
+        << getOpenMPClauseName(Clause->getClauseKind()) << MaxExprs << NumVars;
     return true;
   }
   if (NumVars > 3) {
@@ -19352,7 +19365,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPVarListClause(OpenMPClauseKind Kind,
     break;
   case OMPC_thread_limit:
     assert(0 <= ExtraModifier && ExtraModifier <= OMPC_THREADLIMIT_unknown &&
-           "Unexpected num_teams modifier.");
+           "Unexpected thread_limit modifier.");
     Res = ActOnOpenMPThreadLimitClause(
         VarList, static_cast<OpenMPThreadLimitClauseModifier>(ExtraModifier),
         ExtraModifierExpr, ExtraModifierLoc, StartLoc, LParenLoc, EndLoc);
@@ -24450,7 +24463,7 @@ ExprResult SemaOpenMP::ActOnOpenMPDimsModifier(OpenMPClauseKind ClauseKind,
     return DimsRes;
 
   Diag(VarListEndLoc, diag::err_omp_unexpected_num_exprs)
-      << getOpenMPClauseName(ClauseKind);
+      << getOpenMPClauseName(ClauseKind) << NumDims << VarList.size();
   return ExprError();
 }
 
