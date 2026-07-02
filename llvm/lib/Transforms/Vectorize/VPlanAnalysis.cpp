@@ -248,8 +248,8 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
             match(VPV, m_ExtractLastPart(m_VPValue())))
           continue;
 
-        if (VFs[J].isScalar() ||
-            isa<VPRegionValue, VPReplicateRecipe, VPDerivedIVRecipe,
+        if (VFs[J].isScalar() || VPV == CanIV ||
+            isa<VPReplicateRecipe, VPDerivedIVRecipe,
                 VPCurrentIterationPHIRecipe, VPScalarIVStepsRecipe>(VPV) ||
             (isa<VPInstruction>(VPV) && vputils::onlyScalarValuesUsed(VPV)) ||
             (isa<VPReductionPHIRecipe>(VPV) &&
