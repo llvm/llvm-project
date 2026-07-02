@@ -10,12 +10,11 @@
 #include "lldb/Host/File.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/MainLoopBase.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Host/Socket.h"
-#include "lldb/Initialization/SystemInitializerCommon.h"
-#include "lldb/Initialization/SystemLifetimeManager.h"
 #include "lldb/Protocol/MCP/Server.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
@@ -25,7 +24,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/WithColor.h"
 #include <chrono>
@@ -187,8 +185,6 @@ llvm::Error connectAndForwardIO(lldb_private::MainLoop &loop, ServerInfo &info,
   return loop.Run().takeError();
 }
 
-llvm::ManagedStatic<lldb_private::SystemLifetimeManager> g_debugger_lifetime;
-
 } // namespace
 
 int main(int argc, char *argv[]) {
@@ -213,11 +209,16 @@ int main(int argc, char *argv[]) {
   assert(result);
 #endif
 
-  if (llvm::Error err = g_debugger_lifetime->Initialize(
-          std::make_unique<lldb_private::SystemInitializerCommon>()))
-    exitWithError(std::move(err));
+  lldb_private::FileSystem::Initialize();
+  lldb_private::HostInfo::Initialize();
+  if (llvm::Error error = lldb_private::Socket::Initialize())
+    exitWithError(std::move(error));
 
-  llvm::scope_exit cleanup([] { g_debugger_lifetime->Terminate(); });
+  llvm::scope_exit cleanup([] {
+    lldb_private::Socket::Terminate();
+    lldb_private::HostInfo::Terminate();
+    lldb_private::FileSystem::Terminate();
+  });
 
   IOObjectSP input_sp = std::make_shared<NativeFile>(
       fileno(stdin), File::eOpenOptionReadOnly, NativeFile::Unowned);

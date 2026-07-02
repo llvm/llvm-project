@@ -1083,7 +1083,7 @@ define <4 x i32> @masked_gather_v4i32(<4 x ptr> %ld, <4 x i1> %masks, <4 x i32> 
 
 define <1 x i128> @masked_gather_v1i128(<1 x ptr> %ld, <1 x i1> %masks, <1 x i128> %passthru) {
 ; CHECK-VSCALE-1-LABEL: 'masked_gather_v1i128'
-; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:6 Lat:11 SizeLat:9 for: %res = call <1 x i128> @llvm.masked.gather.v1i128.v1p0(<1 x ptr> align 16 %ld, <1 x i1> %masks, <1 x i128> %passthru)
+; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:6 Lat:12 SizeLat:9 for: %res = call <1 x i128> @llvm.masked.gather.v1i128.v1p0(<1 x ptr> align 16 %ld, <1 x i1> %masks, <1 x i128> %passthru)
 ; CHECK-VSCALE-1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <1 x i128> %res
 ;
 ; CHECK-VSCALE-2-LABEL: 'masked_gather_v1i128'

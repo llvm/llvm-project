@@ -107,6 +107,17 @@ public:
 
   bool HasPendingLibraryEvents() override;
 
+  void SetClientSupportsLibrariesRead(bool v) {
+    m_client_supports_libraries_read = v;
+  }
+
+  /// Forwards to NativeProcessProtocol's bookkeeping.
+  void SetEnabledExtensions(Extension flags) override {
+    NativeProcessProtocol::SetEnabledExtensions(flags);
+    SetClientSupportsLibrariesRead(
+        bool(flags & (Extension::libraries | Extension::libraries_svr4)));
+  }
+
   /// Forward bytes from the gdb-remote `I` packet into the inferior's
   /// ConPTY-backed stdin via `m_stdio_communication.Write` →
   /// `ConnectionConPTY::Write` → `WriteFile` on the parent-side STDIN
@@ -121,9 +132,11 @@ public:
                                    const ExceptionRecord &record) override;
   void OnCreateThread(const HostThread &thread) override;
   void OnExitThread(lldb::tid_t thread_id, uint32_t exit_code) override;
-  void OnLoadDll(const ModuleSpec &module_spec,
-                 lldb::addr_t module_addr) override;
-  void OnUnloadDll(lldb::addr_t module_addr) override;
+  DllEventAction OnLoadDll(const ModuleSpec &module_spec,
+                           lldb::addr_t module_addr,
+                           lldb::tid_t thread_id) override;
+  DllEventAction OnUnloadDll(lldb::addr_t module_addr,
+                             lldb::tid_t thread_id) override;
   void OnDebugString(lldb::addr_t debug_string_addr, bool is_unicode,
                      uint16_t length_lower_word) override;
 
@@ -163,7 +176,7 @@ private:
 
   /// Set whenever an OS DLL load/unload event has been seen since the last stop
   /// reply.
-  bool m_pending_library_events = true;
+  bool m_pending_library_events = false;
 
   /// Whether we've seen the loader breakpoint that fires once per process at
   /// launch / attach.
@@ -171,6 +184,8 @@ private:
 
   /// Set when Halt() / Interrupt() schedules a DebugBreakProcess injection.
   bool m_pending_halt = false;
+
+  bool m_client_supports_libraries_read = false;
 
   /// PseudoConsole for the lldb-server stdio-forwarding path.
   std::shared_ptr<PseudoConsole> m_pty;
@@ -218,13 +233,15 @@ public:
     m_process.OnExitThread(thread_id, exit_code);
   }
 
-  void OnLoadDll(const lldb_private::ModuleSpec &module_spec,
-                 lldb::addr_t module_addr) override {
-    m_process.OnLoadDll(module_spec, module_addr);
+  DllEventAction OnLoadDll(const lldb_private::ModuleSpec &module_spec,
+                           lldb::addr_t module_addr,
+                           lldb::tid_t thread_id) override {
+    return m_process.OnLoadDll(module_spec, module_addr, thread_id);
   }
 
-  void OnUnloadDll(lldb::addr_t module_addr) override {
-    m_process.OnUnloadDll(module_addr);
+  DllEventAction OnUnloadDll(lldb::addr_t module_addr,
+                             lldb::tid_t thread_id) override {
+    return m_process.OnUnloadDll(module_addr, thread_id);
   }
 
   void OnDebugString(lldb::addr_t debug_string_addr, bool is_unicode,

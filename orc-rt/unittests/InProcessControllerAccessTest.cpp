@@ -110,7 +110,7 @@ private:
 // MockIPEPC into MockOut from inside OnConnect.
 void attachWithMock(Session &S, std::unique_ptr<MockIPEPC> &MockOut) {
   S.attach<InProcessControllerAccess>(
-      BootstrapInfo(S), S,
+      BootstrapInfo(S),
       [&MockOut](InProcessControllerAccess &, BootstrapInfo &,
                  InProcessControllerAccess::Connection *C,
                  InProcessControllerAccess::BootstrapInfoAccess *) -> Error {
@@ -161,7 +161,7 @@ TEST(InProcessControllerAccessTest, OnConnectFailureIsReportedAndDetaches) {
             [&](Error E) { Reported = std::move(E); });
 
   S.attach<InProcessControllerAccess>(
-      BootstrapInfo(S), S,
+      BootstrapInfo(S),
       [](InProcessControllerAccess &, BootstrapInfo &,
          InProcessControllerAccess::Connection *,
          InProcessControllerAccess::BootstrapInfoAccess *) -> Error {
