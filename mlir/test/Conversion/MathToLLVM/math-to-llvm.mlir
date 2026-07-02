@@ -710,3 +710,90 @@ func.func @experimental_constrained_fma_fenv(%a : f64, %b : f64, %c : f64) {
   %2 = math.fma %a, %b, %c fenv<dynamic_rounding_mode = toward_zero, except_mode = unknown> : f64
   return
 }
+
+// -----
+
+// Unary transcendental math ops with the `#arith.fenv` attribute lower to the
+// matching constrained intrinsic, carrying a rounding mode and exception
+// behavior.
+// CHECK-LABEL: func @experimental_constrained_unary
+func.func @experimental_constrained_unary(%a : f64) {
+  // CHECK-NEXT: llvm.intr.experimental.constrained.sqrt %{{.*}} dynamic ignore : f64
+  %0 = math.sqrt %a fenv<> : f64
+  // CHECK-NEXT: llvm.intr.experimental.constrained.exp %{{.*}} tonearest strict : f64
+  %1 = math.exp %a fenv<dynamic_rounding_mode = to_nearest_even, strict_except = true> : f64
+  // CHECK-NEXT: llvm.intr.experimental.constrained.log %{{.*}} towardzero maytrap : f64
+  %2 = math.log %a fenv<dynamic_rounding_mode = toward_zero, except_mode = unknown> : f64
+  // CHECK-NEXT: llvm.intr.experimental.constrained.sin %{{.*}} dynamic ignore : f64
+  %3 = math.sin %a fenv<> : f64
+  // CHECK-NEXT: llvm.intr.experimental.constrained.cos %{{.*}} dynamic ignore : f64
+  %4 = math.cos %a fenv<> : f64
+  // CHECK-NEXT: llvm.intr.experimental.constrained.tanh %{{.*}} dynamic ignore : f64
+  %5 = math.tanh %a fenv<> : f64
+  return
+}
+
+// -----
+
+// Without the `#arith.fenv` attribute, the unconstrained lowering is used.
+// CHECK-LABEL: func @unconstrained_sqrt
+func.func @unconstrained_sqrt(%a : f64) {
+  // CHECK-NEXT: llvm.intr.sqrt(%{{.*}}) : (f64) -> f64
+  // CHECK-NOT: constrained
+  %0 = math.sqrt %a : f64
+  return
+}
+
+// -----
+
+// Rounding math ops (ceil/floor/round/roundeven/trunc) map to constrained
+// intrinsics that only carry the exception behavior (no rounding mode).
+// CHECK-LABEL: func @experimental_constrained_rounding
+func.func @experimental_constrained_rounding(%a : f64) {
+  // CHECK-NEXT: llvm.intr.experimental.constrained.ceil %{{.*}} ignore : f64
+  %0 = math.ceil %a fenv<> : f64
+  // CHECK-NEXT: llvm.intr.experimental.constrained.floor %{{.*}} maytrap : f64
+  %1 = math.floor %a fenv<except_mode = unknown> : f64
+  // CHECK-NEXT: llvm.intr.experimental.constrained.trunc %{{.*}} strict : f64
+  %2 = math.trunc %a fenv<strict_except = true> : f64
+  // CHECK-NEXT: llvm.intr.experimental.constrained.round %{{.*}} ignore : f64
+  %3 = math.round %a fenv<> : f64
+  // CHECK-NEXT: llvm.intr.experimental.constrained.roundeven %{{.*}} ignore : f64
+  %4 = math.roundeven %a fenv<> : f64
+  return
+}
+
+// -----
+
+// Binary math ops with the `#arith.fenv` attribute lower to the matching
+// constrained intrinsic.
+// CHECK-LABEL: func @experimental_constrained_binary
+func.func @experimental_constrained_binary(%a : f64, %b : f64) {
+  // CHECK-NEXT: llvm.intr.experimental.constrained.pow %{{.*}}, %{{.*}} dynamic ignore : f64
+  %0 = math.powf %a, %b fenv<> : f64
+  // CHECK-NEXT: llvm.intr.experimental.constrained.atan2 %{{.*}}, %{{.*}} tonearest ignore : f64
+  %1 = math.atan2 %a, %b fenv<dynamic_rounding_mode = to_nearest_even> : f64
+  return
+}
+
+// -----
+
+// The constrained lowering also applies element-wise to vector operands.
+// CHECK-LABEL: func @experimental_constrained_vector
+func.func @experimental_constrained_vector(%a : vector<4xf32>) {
+  // CHECK: llvm.intr.experimental.constrained.sqrt {{.*}} dynamic ignore : vector<4xf32>
+  %0 = math.sqrt %a fenv<> : vector<4xf32>
+  return
+}
+
+// -----
+
+// Constrained intrinsics do not carry fastmath flags. The fastmath attribute is
+// dropped during the lowering.
+// CHECK-LABEL: func @constrained_unary_with_fastmath
+func.func @constrained_unary_with_fastmath(%a : f64) {
+  // CHECK-NEXT: llvm.intr.experimental.constrained.sqrt %{{.*}} dynamic ignore : f64
+  // CHECK-NOT: fastmath
+  %0 = math.sqrt %a fastmath<fast> fenv<> : f64
+  return
+}

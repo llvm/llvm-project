@@ -67,6 +67,65 @@ class Math_FloatUnaryOp<string mnemonic, list<Trait> traits = []> :
                           attr-dict `:` type($result) }];
 }
 
+// Base class for unary floating point operations that can carry an optional
+// floating-point environment (`#arith.fenv`) attribute.
+class Math_FloatUnaryOpWithFenv<string mnemonic, list<Trait> traits = []> :
+    Math_FloatUnaryOp<mnemonic,
+      !listconcat([DeclareOpInterfaceMethods<FPEnvConstrainedOpInterface>],
+                  traits)> {
+  let arguments = (ins FloatLike:$operand,
+      DefaultValuedAttr<Arith_FastMathAttr,
+                        "::mlir::arith::FastMathFlags::none">:$fastmath,
+      OptionalAttr<Arith_FenvAttr>:$fenv);
+  // With a trailing optional `fenv` attribute following the `fastmath`
+  // attribute, the generated builders no longer provide C++ default arguments,
+  // so the convenience builders that predate the `fenv` attribute must be
+  // provided explicitly.
+  let builders = [
+    OpBuilder<(ins "::mlir::Value":$operand,
+      CArg<"::mlir::arith::FastMathFlags",
+           "::mlir::arith::FastMathFlags::none">:$fastmath), [{
+      build($_builder, $_state, operand,
+            ::mlir::arith::FastMathFlagsAttr::get(
+                $_builder.getContext(), fastmath),
+            ::mlir::arith::FenvAttr{});
+    }]>,
+    OpBuilder<(ins "::mlir::Value":$operand,
+      "::mlir::arith::FastMathFlagsAttr":$fastmath), [{
+      build($_builder, $_state, operand, fastmath, ::mlir::arith::FenvAttr{});
+    }]>,
+    OpBuilder<(ins "::mlir::Type":$result, "::mlir::Value":$operand,
+      CArg<"::mlir::arith::FastMathFlags",
+           "::mlir::arith::FastMathFlags::none">:$fastmath), [{
+      build($_builder, $_state, result, operand,
+            ::mlir::arith::FastMathFlagsAttr::get(
+                $_builder.getContext(), fastmath),
+            ::mlir::arith::FenvAttr{});
+    }]>,
+    OpBuilder<(ins "::mlir::Type":$result, "::mlir::Value":$operand,
+      "::mlir::arith::FastMathFlagsAttr":$fastmath), [{
+      build($_builder, $_state, result, operand, fastmath,
+            ::mlir::arith::FenvAttr{});
+    }]>,
+    OpBuilder<(ins "::mlir::TypeRange":$resultTypes, "::mlir::Value":$operand,
+      CArg<"::mlir::arith::FastMathFlags",
+           "::mlir::arith::FastMathFlags::none">:$fastmath), [{
+      build($_builder, $_state, resultTypes, operand,
+            ::mlir::arith::FastMathFlagsAttr::get(
+                $_builder.getContext(), fastmath),
+            ::mlir::arith::FenvAttr{});
+    }]>,
+    OpBuilder<(ins "::mlir::TypeRange":$resultTypes, "::mlir::Value":$operand,
+      "::mlir::arith::FastMathFlagsAttr":$fastmath), [{
+      build($_builder, $_state, resultTypes, operand, fastmath,
+            ::mlir::arith::FenvAttr{});
+    }]>,
+  ];
+  let assemblyFormat = [{ $operand (`fastmath` `` $fastmath^)?
+                          (`fenv` `` $fenv^)?
+                          attr-dict `:` type($result) }];
+}
+
 // Base class for binary math operations on integer types. Require two
 // operands and one result of the same type. This type can be an integer
 // type, vector or tensor thereof.
@@ -91,6 +150,67 @@ class Math_FloatBinaryOp<string mnemonic, list<Trait> traits = []> :
   let results = (outs FloatLike:$result);
 
   let assemblyFormat = [{ $lhs `,` $rhs (`fastmath` `` $fastmath^)?
+                          attr-dict `:` type($result) }];
+}
+
+// Base class for binary floating point operations that can carry an optional
+// floating-point environment (`#arith.fenv`) attribute.
+class Math_FloatBinaryOpWithFenv<string mnemonic, list<Trait> traits = []> :
+    Math_FloatBinaryOp<mnemonic,
+      !listconcat([DeclareOpInterfaceMethods<FPEnvConstrainedOpInterface>],
+                  traits)> {
+  let arguments = (ins FloatLike:$lhs, FloatLike:$rhs,
+      DefaultValuedAttr<Arith_FastMathAttr,
+                        "::mlir::arith::FastMathFlags::none">:$fastmath,
+      OptionalAttr<Arith_FenvAttr>:$fenv);
+  // With a trailing optional `fenv` attribute following the `fastmath`
+  // attribute, the generated builders no longer provide C++ default arguments,
+  // so the convenience builders that predate the `fenv` attribute must be
+  // provided explicitly.
+  let builders = [
+    OpBuilder<(ins "::mlir::Value":$lhs, "::mlir::Value":$rhs,
+      CArg<"::mlir::arith::FastMathFlags",
+           "::mlir::arith::FastMathFlags::none">:$fastmath), [{
+      build($_builder, $_state, lhs, rhs,
+            ::mlir::arith::FastMathFlagsAttr::get(
+                $_builder.getContext(), fastmath),
+            ::mlir::arith::FenvAttr{});
+    }]>,
+    OpBuilder<(ins "::mlir::Value":$lhs, "::mlir::Value":$rhs,
+      "::mlir::arith::FastMathFlagsAttr":$fastmath), [{
+      build($_builder, $_state, lhs, rhs, fastmath, ::mlir::arith::FenvAttr{});
+    }]>,
+    OpBuilder<(ins "::mlir::Type":$result, "::mlir::Value":$lhs,
+      "::mlir::Value":$rhs,
+      CArg<"::mlir::arith::FastMathFlags",
+           "::mlir::arith::FastMathFlags::none">:$fastmath), [{
+      build($_builder, $_state, result, lhs, rhs,
+            ::mlir::arith::FastMathFlagsAttr::get(
+                $_builder.getContext(), fastmath),
+            ::mlir::arith::FenvAttr{});
+    }]>,
+    OpBuilder<(ins "::mlir::Type":$result, "::mlir::Value":$lhs,
+      "::mlir::Value":$rhs, "::mlir::arith::FastMathFlagsAttr":$fastmath), [{
+      build($_builder, $_state, result, lhs, rhs, fastmath,
+            ::mlir::arith::FenvAttr{});
+    }]>,
+    OpBuilder<(ins "::mlir::TypeRange":$resultTypes, "::mlir::Value":$lhs,
+      "::mlir::Value":$rhs,
+      CArg<"::mlir::arith::FastMathFlags",
+           "::mlir::arith::FastMathFlags::none">:$fastmath), [{
+      build($_builder, $_state, resultTypes, lhs, rhs,
+            ::mlir::arith::FastMathFlagsAttr::get(
+                $_builder.getContext(), fastmath),
+            ::mlir::arith::FenvAttr{});
+    }]>,
+    OpBuilder<(ins "::mlir::TypeRange":$resultTypes, "::mlir::Value":$lhs,
+      "::mlir::Value":$rhs, "::mlir::arith::FastMathFlagsAttr":$fastmath), [{
+      build($_builder, $_state, resultTypes, lhs, rhs, fastmath,
+            ::mlir::arith::FenvAttr{});
+    }]>,
+  ];
+  let assemblyFormat = [{ $lhs `,` $rhs (`fastmath` `` $fastmath^)?
+                          (`fenv` `` $fenv^)?
                           attr-dict `:` type($result) }];
 }
 
@@ -153,10 +273,7 @@ class Math_FloatTernaryOpWithRoundingMode<string mnemonic,
 }
 
 // Base class for floating point ternary operations that can carry an optional
-// floating-point environment (`#arith.fenv`) attribute. It extends
-// `Math_FloatTernaryOpWithRoundingMode` with the `fenv` attribute and the
-// `FPEnvConstrainedOpInterface`, which provides a uniform API for querying the
-// floating-point environment constraints.
+// floating-point environment (`#arith.fenv`) attribute.
 class Math_FloatTernaryOpWithFenv<string mnemonic, list<Trait> traits = []> :
     Math_FloatTernaryOpWithRoundingMode<mnemonic,
       !listconcat([DeclareOpInterfaceMethods<FPEnvConstrainedOpInterface>],
@@ -271,7 +388,7 @@ def Math_AcoshOp : Math_FloatUnaryOp<"acosh">{
 // AsinOp
 //===----------------------------------------------------------------------===//
 
-def Math_AsinOp : Math_FloatUnaryOp<"asin">{
+def Math_AsinOp : Math_FloatUnaryOpWithFenv<"asin">{
   let summary = "arcus sine of the given value";
   let description = [{
     Syntax:
@@ -325,7 +442,7 @@ def Math_AsinhOp : Math_FloatUnaryOp<"asinh">{
 // AtanOp
 //===----------------------------------------------------------------------===//
 
-def Math_AtanOp : Math_FloatUnaryOp<"atan">{
+def Math_AtanOp : Math_FloatUnaryOpWithFenv<"atan">{
   let summary = "arcus tangent of the given value";
   let description = [{
     The `atan` operation computes the arcus tangent of a given value.  It takes
@@ -373,7 +490,7 @@ def Math_AtanhOp : Math_FloatUnaryOp<"atanh">{
 // Atan2Op
 //===----------------------------------------------------------------------===//
 
-def Math_Atan2Op : Math_FloatBinaryOp<"atan2">{
+def Math_Atan2Op : Math_FloatBinaryOpWithFenv<"atan2">{
   let summary = "2-argument arcus tangent of the given values";
   let description = [{
     The `atan2` operation takes two operands and returns one result, all of
@@ -425,7 +542,7 @@ def Math_CbrtOp : Math_FloatUnaryOp<"cbrt"> {
 // CeilOp
 //===----------------------------------------------------------------------===//
 
-def Math_CeilOp : Math_FloatUnaryOp<"ceil"> {
+def Math_CeilOp : Math_FloatUnaryOpWithFenv<"ceil"> {
   let summary = "ceiling of the specified value";
   let description = [{
     The `ceil` operation computes the ceiling of a given value. It takes one
@@ -500,7 +617,7 @@ def Math_CopySignOp : Math_FloatBinaryOp<"copysign"> {
 // CosOp
 //===----------------------------------------------------------------------===//
 
-def Math_CosOp : Math_FloatUnaryOp<"cos"> {
+def Math_CosOp : Math_FloatUnaryOpWithFenv<"cos"> {
   let summary = "cosine of the specified value";
   let description = [{
     The `cos` operation computes the cosine of a given value. It takes one
@@ -521,7 +638,7 @@ def Math_CosOp : Math_FloatUnaryOp<"cos"> {
 // AcosOp
 //===----------------------------------------------------------------------===//
 
-def Math_AcosOp : Math_FloatUnaryOp<"acos"> {
+def Math_AcosOp : Math_FloatUnaryOpWithFenv<"acos"> {
   let summary = "arcus cosine of the specified value";
   let description = [{
     The `acos` operation computes the arcus cosine of a given value. It takes one
@@ -542,7 +659,7 @@ def Math_AcosOp : Math_FloatUnaryOp<"acos"> {
 // CoshOp
 //===----------------------------------------------------------------------===//
 
-def Math_CoshOp : Math_FloatUnaryOp<"cosh"> {
+def Math_CoshOp : Math_FloatUnaryOpWithFenv<"cosh"> {
   let summary = "hyperbolic cosine of the specified value";
   let description = [{
     The `cosh` operation computes the hyperbolic cosine. It takes one operand
@@ -563,7 +680,7 @@ def Math_CoshOp : Math_FloatUnaryOp<"cosh"> {
 // SinOp
 //===----------------------------------------------------------------------===//
 
-def Math_SinOp : Math_FloatUnaryOp<"sin"> {
+def Math_SinOp : Math_FloatUnaryOpWithFenv<"sin"> {
   let summary = "sine of the specified value";
   let description = [{
     The `sin` operation computes the sine of a given value. It takes one
@@ -584,7 +701,7 @@ def Math_SinOp : Math_FloatUnaryOp<"sin"> {
 // SinhOp
 //===----------------------------------------------------------------------===//
 
-def Math_SinhOp : Math_FloatUnaryOp<"sinh"> {
+def Math_SinhOp : Math_FloatUnaryOpWithFenv<"sinh"> {
   let summary = "hyperbolic sine of the specified value";
   let description = [{
     The `sinh` operation computes the hyperbolic sine. It takes one operand
@@ -750,7 +867,7 @@ def Math_ErfcOp : Math_FloatUnaryOp<"erfc"> {
 // ExpOp
 //===----------------------------------------------------------------------===//
 
-def Math_ExpOp : Math_FloatUnaryOp<"exp"> {
+def Math_ExpOp : Math_FloatUnaryOpWithFenv<"exp"> {
   let summary = "base-e exponential of the specified value";
   let description = [{
     The `exp` operation takes one operand of floating point type (i.e., scalar,
@@ -771,7 +888,7 @@ def Math_ExpOp : Math_FloatUnaryOp<"exp"> {
 // Exp2Op
 //===----------------------------------------------------------------------===//
 
-def Math_Exp2Op : Math_FloatUnaryOp<"exp2"> {
+def Math_Exp2Op : Math_FloatUnaryOpWithFenv<"exp2"> {
   let summary = "base-2 exponential of the specified value";
 
   let description = [{
@@ -816,7 +933,7 @@ def Math_ExpM1Op : Math_FloatUnaryOp<"expm1"> {
 // FloorOp
 //===----------------------------------------------------------------------===//
 
-def Math_FloorOp : Math_FloatUnaryOp<"floor"> {
+def Math_FloorOp : Math_FloatUnaryOpWithFenv<"floor"> {
   let summary = "floor of the specified value";
   let description = [{
     The `floor` operation computes the floor of a given value. It takes one
@@ -965,7 +1082,7 @@ def Math_IsNormalOp : Math_FloatClassificationOp<"isnormal"> {
 // LogOp
 //===----------------------------------------------------------------------===//
 
-def Math_LogOp : Math_FloatUnaryOp<"log"> {
+def Math_LogOp : Math_FloatUnaryOpWithFenv<"log"> {
   let summary = "base-e logarithm of the specified value";
 
   let description = [{
@@ -987,7 +1104,7 @@ def Math_LogOp : Math_FloatUnaryOp<"log"> {
 // Log10Op
 //===----------------------------------------------------------------------===//
 
-def Math_Log10Op : Math_FloatUnaryOp<"log10"> {
+def Math_Log10Op : Math_FloatUnaryOpWithFenv<"log10"> {
   let summary = "base-10 logarithm of the specified value";
 
   let description = [{
@@ -1033,7 +1150,7 @@ def Math_Log1pOp : Math_FloatUnaryOp<"log1p"> {
 // Log2Op
 //===----------------------------------------------------------------------===//
 
-def Math_Log2Op : Math_FloatUnaryOp<"log2"> {
+def Math_Log2Op : Math_FloatUnaryOpWithFenv<"log2"> {
   let summary = "base-2 logarithm of the specified value";
 
   let description = [{
@@ -1055,7 +1172,7 @@ def Math_Log2Op : Math_FloatUnaryOp<"log2"> {
 // PowFOp
 //===----------------------------------------------------------------------===//
 
-def Math_PowFOp : Math_FloatBinaryOp<"powf"> {
+def Math_PowFOp : Math_FloatBinaryOpWithFenv<"powf"> {
   let summary = "floating point raised to the power of operation";
   let description = [{
     The `powf` operation takes two operands of floating point type (i.e.,
@@ -1097,7 +1214,7 @@ def Math_RsqrtOp : Math_FloatUnaryOp<"rsqrt"> {
 // SqrtOp
 //===----------------------------------------------------------------------===//
 
-def Math_SqrtOp : Math_FloatUnaryOp<"sqrt"> {
+def Math_SqrtOp : Math_FloatUnaryOpWithFenv<"sqrt"> {
   let summary = "sqrt of the specified value";
   let description = [{
     The `sqrt` operation computes the square root. It takes one operand of
@@ -1118,7 +1235,7 @@ def Math_SqrtOp : Math_FloatUnaryOp<"sqrt"> {
 // TanOp
 //===----------------------------------------------------------------------===//
 
-def Math_TanOp : Math_FloatUnaryOp<"tan"> {
+def Math_TanOp : Math_FloatUnaryOpWithFenv<"tan"> {
   let summary = "tangent of the specified value";
   let description = [{
     The `tan` operation computes the tangent. It takes one operand
@@ -1139,7 +1256,7 @@ def Math_TanOp : Math_FloatUnaryOp<"tan"> {
 // TanhOp
 //===----------------------------------------------------------------------===//
 
-def Math_TanhOp : Math_FloatUnaryOp<"tanh"> {
+def Math_TanhOp : Math_FloatUnaryOpWithFenv<"tanh"> {
   let summary = "hyperbolic tangent of the specified value";
   let description = [{
     The `tanh` operation computes the hyperbolic tangent. It takes one operand
@@ -1160,7 +1277,7 @@ def Math_TanhOp : Math_FloatUnaryOp<"tanh"> {
 // RoundEvenOp
 //===----------------------------------------------------------------------===//
 
-def Math_RoundEvenOp : Math_FloatUnaryOp<"roundeven"> {
+def Math_RoundEvenOp : Math_FloatUnaryOpWithFenv<"roundeven"> {
   let summary = "round of the specified value with halfway cases to even";
   let description = [{
     The `roundeven` operation returns the operand rounded to the nearest integer
@@ -1184,7 +1301,7 @@ def Math_RoundEvenOp : Math_FloatUnaryOp<"roundeven"> {
 // RoundOp
 //===----------------------------------------------------------------------===//
 
-def Math_RoundOp : Math_FloatUnaryOp<"round"> {
+def Math_RoundOp : Math_FloatUnaryOpWithFenv<"round"> {
   let summary = "round of the specified value";
   let description = [{
     The `round` operation returns the operand rounded to the nearest integer
@@ -1208,7 +1325,7 @@ def Math_RoundOp : Math_FloatUnaryOp<"round"> {
 // TruncOp
 //===----------------------------------------------------------------------===//
 
-def Math_TruncOp : Math_FloatUnaryOp<"trunc"> {
+def Math_TruncOp : Math_FloatUnaryOpWithFenv<"trunc"> {
   let summary = "trunc of the specified value";
   let description = [{
     The `trunc` operation returns the operand rounded to the nearest integer

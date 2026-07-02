@@ -159,12 +159,11 @@ public:
     convertedAttr = NamedAttrList{srcOp->getAttrs()};
     MLIRContext *ctx = srcOp->getContext();
 
-    // The floating-point environment may be described either by the deprecated
-    // `roundingmode` attribute or by the `#arith.fenv` attribute. Collect both
-    // (the verifier guarantees they are never set at the same time) and remove
-    // them from the attributes carried over to the target op.
-    auto roundingModeAttr = dyn_cast_if_present<arith::RoundingModeAttr>(
-        convertedAttr.erase(srcOp.getRoundingModeAttrName()));
+    // The floating-point environment is described by the `#arith.fenv`
+    // attribute and, on operations that predate it, may also be described by
+    // the deprecated `roundingmode` attribute. Collect both (the verifier
+    // guarantees they are never set at the same time) and remove them from the
+    // attributes carried over to the target op.
     arith::FenvAttr fenvAttr = srcOp.getFenvAttr();
     convertedAttr.erase(srcOp.getFenvAttrName());
 
@@ -173,10 +172,15 @@ public:
     // mode.
     [[maybe_unused]] arith::RoundingMode roundingMode =
         arith::FenvAttr::getDefaultDynamicRoundingMode();
+    if constexpr (SourceOp::template hasTrait<
+                      arith::ArithRoundingModeInterface::Trait>()) {
+      auto roundingModeAttr = dyn_cast_if_present<arith::RoundingModeAttr>(
+          convertedAttr.erase(srcOp.getRoundingModeAttrName()));
+      if (!fenvAttr && roundingModeAttr)
+        roundingMode = roundingModeAttr.getValue();
+    }
     if (fenvAttr)
       roundingMode = fenvAttr.getDynamicRoundingModeOrDefault();
-    else if (roundingModeAttr)
-      roundingMode = roundingModeAttr.getValue();
 
     if constexpr (TargetOp::template hasTrait<
                       LLVM::RoundingModeOpInterface::Trait>()) {

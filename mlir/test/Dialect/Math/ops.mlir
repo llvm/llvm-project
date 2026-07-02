@@ -317,6 +317,24 @@ func.func @fastmath(%f: f32, %i: i32, %v: vector<4xf32>, %t: tensor<4x4x?xf32>) 
   return
 }
 
+// CHECK-LABEL: func @fenv(
+// CHECK-SAME:      %[[F:.*]]: f32, %[[V:.*]]: vector<4xf32>)
+func.func @fenv(%f: f32, %v: vector<4xf32>) {
+  // CHECK: math.sqrt %[[F]] fenv<> : f32
+  %0 = math.sqrt %f fenv<> : f32
+  // CHECK: math.exp %[[F]] fenv<dynamic_rounding_mode = to_nearest_even, strict_except = true> : f32
+  %1 = math.exp %f fenv<dynamic_rounding_mode = to_nearest_even, strict_except = true> : f32
+  // CHECK: math.sin %[[V]] fastmath<contract> fenv<except_mode = unknown> : vector<4xf32>
+  %2 = math.sin %v fastmath<contract> fenv<except_mode = unknown> : vector<4xf32>
+  // CHECK: math.ceil %[[F]] fenv<> : f32
+  %3 = math.ceil %f fenv<> : f32
+  // CHECK: math.powf %[[F]], %[[F]] fenv<dynamic_rounding_mode = toward_zero> : f32
+  %4 = math.powf %f, %f fenv<dynamic_rounding_mode = toward_zero> : f32
+  // CHECK: math.atan2 %[[F]], %[[F]] fenv<> : f32
+  %5 = math.atan2 %f, %f fenv<> : f32
+  return
+}
+
 // CHECK-LABEL: func @fpclassify(
 // CHECK-SAME:    %[[F:.+]]: f32, %[[D:.+]]: f64,
 // CHECK-SAME:    %[[V:.+]]: vector<4xf32>, %[[T:.+]]: tensor<4x?xf32>

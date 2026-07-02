@@ -59,7 +59,13 @@ struct ConstrainedVectorConvertToLLVMPattern
   LogicalResult
   matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    bool opIsConstrained = op.getRoundingModeAttr() || op.getFenvAttr();
+    bool opIsConstrained = static_cast<bool>(op.getFenvAttr());
+    // Operations that predate the `#arith.fenv` attribute may also carry the
+    // deprecated `roundingmode` attribute.
+    if constexpr (SourceOp::template hasTrait<
+                      arith::ArithRoundingModeInterface::Trait>())
+      opIsConstrained =
+          opIsConstrained || static_cast<bool>(op.getRoundingModeAttr());
     if (IsConstrained != opIsConstrained)
       return failure();
     return VectorConvertToLLVMPattern<
@@ -68,23 +74,62 @@ struct ConstrainedVectorConvertToLLVMPattern
   }
 };
 
+// Convenience alias for the pattern that lowers a math op carrying no
+// floating-point environment constraint to a regular LLVM intrinsic op,
+// converting the fastmath flags.
+template <typename SourceOp, typename TargetOp>
+using ConvertUnconstrainedMathToLLVMPattern =
+    ConstrainedVectorConvertToLLVMPattern<SourceOp, TargetOp,
+                                          /*IsConstrained=*/false, ConvertFastMath,
+                                          /*FailOnUnsupportedFP=*/true>;
+
+// Convenience alias for the pattern that lowers a math op carrying a
+// floating-point environment constraint (the `#arith.fenv` attribute) to the
+// matching `llvm.intr.experimental.constrained.*` intrinsic.
+template <typename SourceOp, typename TargetOp>
+using ConvertConstrainedMathToLLVMPattern =
+    ConstrainedVectorConvertToLLVMPattern<
+        SourceOp, TargetOp, /*IsConstrained=*/true,
+        arith::AttrConverterConstrainedFPToLLVM, /*FailOnUnsupportedFP=*/true>;
+
 using AbsFOpLowering =
     ConvertFMFMathToLLVMPattern<math::AbsFOp, LLVM::FAbsOp,
                                 /*FailOnUnsupportedFP=*/true>;
-using CeilOpLowering = ConvertFMFMathToLLVMPattern<math::CeilOp, LLVM::FCeilOp>;
+using CeilOpLowering =
+    ConvertUnconstrainedMathToLLVMPattern<math::CeilOp, LLVM::FCeilOp>;
+using ConstrainedCeilOpLowering =
+    ConvertConstrainedMathToLLVMPattern<math::CeilOp, LLVM::ConstrainedCeilIntr>;
 using CopySignOpLowering =
     ConvertFMFMathToLLVMPattern<math::CopySignOp, LLVM::CopySignOp>;
-using CosOpLowering = ConvertFMFMathToLLVMPattern<math::CosOp, LLVM::CosOp>;
-using CoshOpLowering = ConvertFMFMathToLLVMPattern<math::CoshOp, LLVM::CoshOp>;
-using AcosOpLowering = ConvertFMFMathToLLVMPattern<math::AcosOp, LLVM::ACosOp>;
+using CosOpLowering =
+    ConvertUnconstrainedMathToLLVMPattern<math::CosOp, LLVM::CosOp>;
+using ConstrainedCosOpLowering =
+    ConvertConstrainedMathToLLVMPattern<math::CosOp, LLVM::ConstrainedCosIntr>;
+using CoshOpLowering =
+    ConvertUnconstrainedMathToLLVMPattern<math::CoshOp, LLVM::CoshOp>;
+using ConstrainedCoshOpLowering =
+    ConvertConstrainedMathToLLVMPattern<math::CoshOp, LLVM::ConstrainedCoshIntr>;
+using AcosOpLowering =
+    ConvertUnconstrainedMathToLLVMPattern<math::AcosOp, LLVM::ACosOp>;
+using ConstrainedAcosOpLowering =
+    ConvertConstrainedMathToLLVMPattern<math::AcosOp, LLVM::ConstrainedACosIntr>;
 using CtPopFOpLowering =
     VectorConvertToLLVMPattern<math::CtPopOp, LLVM::CtPopOp,
                                AttrConvertPassThrough,
                                /*FailOnUnsupportedFP=*/true>;
-using Exp2OpLowering = ConvertFMFMathToLLVMPattern<math::Exp2Op, LLVM::Exp2Op>;
-using ExpOpLowering = ConvertFMFMathToLLVMPattern<math::ExpOp, LLVM::ExpOp>;
+using Exp2OpLowering =
+    ConvertUnconstrainedMathToLLVMPattern<math::Exp2Op, LLVM::Exp2Op>;
+using ConstrainedExp2OpLowering =
+    ConvertConstrainedMathToLLVMPattern<math::Exp2Op, LLVM::ConstrainedExp2Intr>;
+using ExpOpLowering =
+    ConvertUnconstrainedMathToLLVMPattern<math::ExpOp, LLVM::ExpOp>;
+using ConstrainedExpOpLowering =
+    ConvertConstrainedMathToLLVMPattern<math::ExpOp, LLVM::ConstrainedExpIntr>;
 using FloorOpLowering =
-    ConvertFMFMathToLLVMPattern<math::FloorOp, LLVM::FFloorOp>;
+    ConvertUnconstrainedMathToLLVMPattern<math::FloorOp, LLVM::FFloorOp>;
+using ConstrainedFloorOpLowering =
+    ConvertConstrainedMathToLLVMPattern<math::FloorOp,
+                                        LLVM::ConstrainedFloorIntr>;
 using FmaOpLowering =
     ConstrainedVectorConvertToLLVMPattern<math::FmaOp, LLVM::FMAOp,
                                           /*IsConstrained=*/false,
@@ -94,27 +139,72 @@ using ConstrainedFmaOpLowering = ConstrainedVectorConvertToLLVMPattern<
     math::FmaOp, LLVM::ConstrainedFMAIntr, /*IsConstrained=*/true,
     arith::AttrConverterConstrainedFPToLLVM, /*FailOnUnsupportedFP=*/true>;
 using Log10OpLowering =
-    ConvertFMFMathToLLVMPattern<math::Log10Op, LLVM::Log10Op>;
-using Log2OpLowering = ConvertFMFMathToLLVMPattern<math::Log2Op, LLVM::Log2Op>;
-using LogOpLowering = ConvertFMFMathToLLVMPattern<math::LogOp, LLVM::LogOp>;
-using PowFOpLowering = ConvertFMFMathToLLVMPattern<math::PowFOp, LLVM::PowOp>;
+    ConvertUnconstrainedMathToLLVMPattern<math::Log10Op, LLVM::Log10Op>;
+using ConstrainedLog10OpLowering =
+    ConvertConstrainedMathToLLVMPattern<math::Log10Op,
+                                        LLVM::ConstrainedLog10Intr>;
+using Log2OpLowering =
+    ConvertUnconstrainedMathToLLVMPattern<math::Log2Op, LLVM::Log2Op>;
+using ConstrainedLog2OpLowering =
+    ConvertConstrainedMathToLLVMPattern<math::Log2Op, LLVM::ConstrainedLog2Intr>;
+using LogOpLowering =
+    ConvertUnconstrainedMathToLLVMPattern<math::LogOp, LLVM::LogOp>;
+using ConstrainedLogOpLowering =
+    ConvertConstrainedMathToLLVMPattern<math::LogOp, LLVM::ConstrainedLogIntr>;
+using PowFOpLowering =
+    ConvertUnconstrainedMathToLLVMPattern<math::PowFOp, LLVM::PowOp>;
+using ConstrainedPowFOpLowering =
+    ConvertConstrainedMathToLLVMPattern<math::PowFOp, LLVM::ConstrainedPowIntr>;
 using FPowIOpLowering =
     ConvertFMFMathToLLVMPattern<math::FPowIOp, LLVM::PowIOp>;
 using RoundEvenOpLowering =
-    ConvertFMFMathToLLVMPattern<math::RoundEvenOp, LLVM::RoundEvenOp>;
+    ConvertUnconstrainedMathToLLVMPattern<math::RoundEvenOp, LLVM::RoundEvenOp>;
+using ConstrainedRoundEvenOpLowering =
+    ConvertConstrainedMathToLLVMPattern<math::RoundEvenOp,
+                                        LLVM::ConstrainedRoundEvenIntr>;
 using RoundOpLowering =
-    ConvertFMFMathToLLVMPattern<math::RoundOp, LLVM::RoundOp>;
-using SinOpLowering = ConvertFMFMathToLLVMPattern<math::SinOp, LLVM::SinOp>;
-using SinhOpLowering = ConvertFMFMathToLLVMPattern<math::SinhOp, LLVM::SinhOp>;
-using ASinOpLowering = ConvertFMFMathToLLVMPattern<math::AsinOp, LLVM::ASinOp>;
-using SqrtOpLowering = ConvertFMFMathToLLVMPattern<math::SqrtOp, LLVM::SqrtOp>;
+    ConvertUnconstrainedMathToLLVMPattern<math::RoundOp, LLVM::RoundOp>;
+using ConstrainedRoundOpLowering =
+    ConvertConstrainedMathToLLVMPattern<math::RoundOp,
+                                        LLVM::ConstrainedRoundIntr>;
+using SinOpLowering =
+    ConvertUnconstrainedMathToLLVMPattern<math::SinOp, LLVM::SinOp>;
+using ConstrainedSinOpLowering =
+    ConvertConstrainedMathToLLVMPattern<math::SinOp, LLVM::ConstrainedSinIntr>;
+using SinhOpLowering =
+    ConvertUnconstrainedMathToLLVMPattern<math::SinhOp, LLVM::SinhOp>;
+using ConstrainedSinhOpLowering =
+    ConvertConstrainedMathToLLVMPattern<math::SinhOp, LLVM::ConstrainedSinhIntr>;
+using ASinOpLowering =
+    ConvertUnconstrainedMathToLLVMPattern<math::AsinOp, LLVM::ASinOp>;
+using ConstrainedASinOpLowering =
+    ConvertConstrainedMathToLLVMPattern<math::AsinOp, LLVM::ConstrainedASinIntr>;
+using SqrtOpLowering =
+    ConvertUnconstrainedMathToLLVMPattern<math::SqrtOp, LLVM::SqrtOp>;
+using ConstrainedSqrtOpLowering =
+    ConvertConstrainedMathToLLVMPattern<math::SqrtOp, LLVM::ConstrainedSqrtIntr>;
 using FTruncOpLowering =
-    ConvertFMFMathToLLVMPattern<math::TruncOp, LLVM::FTruncOp>;
-using TanOpLowering = ConvertFMFMathToLLVMPattern<math::TanOp, LLVM::TanOp>;
-using TanhOpLowering = ConvertFMFMathToLLVMPattern<math::TanhOp, LLVM::TanhOp>;
-using ATanOpLowering = ConvertFMFMathToLLVMPattern<math::AtanOp, LLVM::ATanOp>;
+    ConvertUnconstrainedMathToLLVMPattern<math::TruncOp, LLVM::FTruncOp>;
+using ConstrainedFTruncOpLowering =
+    ConvertConstrainedMathToLLVMPattern<math::TruncOp,
+                                        LLVM::ConstrainedTruncIntr>;
+using TanOpLowering =
+    ConvertUnconstrainedMathToLLVMPattern<math::TanOp, LLVM::TanOp>;
+using ConstrainedTanOpLowering =
+    ConvertConstrainedMathToLLVMPattern<math::TanOp, LLVM::ConstrainedTanIntr>;
+using TanhOpLowering =
+    ConvertUnconstrainedMathToLLVMPattern<math::TanhOp, LLVM::TanhOp>;
+using ConstrainedTanhOpLowering =
+    ConvertConstrainedMathToLLVMPattern<math::TanhOp, LLVM::ConstrainedTanhIntr>;
+using ATanOpLowering =
+    ConvertUnconstrainedMathToLLVMPattern<math::AtanOp, LLVM::ATanOp>;
+using ConstrainedATanOpLowering =
+    ConvertConstrainedMathToLLVMPattern<math::AtanOp, LLVM::ConstrainedATanIntr>;
 using ATan2OpLowering =
-    ConvertFMFMathToLLVMPattern<math::Atan2Op, LLVM::ATan2Op>;
+    ConvertUnconstrainedMathToLLVMPattern<math::Atan2Op, LLVM::ATan2Op>;
+using ConstrainedATan2OpLowering =
+    ConvertConstrainedMathToLLVMPattern<math::Atan2Op,
+                                        LLVM::ConstrainedATan2Intr>;
 // A `CtLz/CtTz/absi(a)` is converted into `CtLz/CtTz/absi(a, false)`.
 // TODO: Result and operand types match for `absi` as opposed to `ct*z`, so it
 // may be better to separate the patterns.
@@ -468,37 +558,59 @@ void mlir::populateMathToLLVMConversionPatterns(
     AbsFOpLowering,
     AbsIOpLowering,
     CeilOpLowering,
+    ConstrainedCeilOpLowering,
     CopySignOpLowering,
     CosOpLowering,
+    ConstrainedCosOpLowering,
     CoshOpLowering,
+    ConstrainedCoshOpLowering,
     AcosOpLowering,
+    ConstrainedAcosOpLowering,
     CountLeadingZerosOpLowering,
     CountTrailingZerosOpLowering,
     CtPopFOpLowering,
     Exp2OpLowering,
+    ConstrainedExp2OpLowering,
     ExpM1OpLowering,
     ExpOpLowering,
+    ConstrainedExpOpLowering,
     FPowIOpLowering,
     FloorOpLowering,
+    ConstrainedFloorOpLowering,
     FmaOpLowering,
     ConstrainedFmaOpLowering,
     Log10OpLowering,
+    ConstrainedLog10OpLowering,
     Log2OpLowering,
+    ConstrainedLog2OpLowering,
     LogOpLowering,
+    ConstrainedLogOpLowering,
     PowFOpLowering,
+    ConstrainedPowFOpLowering,
     RoundEvenOpLowering,
+    ConstrainedRoundEvenOpLowering,
     RoundOpLowering,
+    ConstrainedRoundOpLowering,
     RsqrtOpLowering,
     SincosOpLowering,
     SinOpLowering,
+    ConstrainedSinOpLowering,
     SinhOpLowering,
+    ConstrainedSinhOpLowering,
     ASinOpLowering,
+    ConstrainedASinOpLowering,
     SqrtOpLowering,
+    ConstrainedSqrtOpLowering,
     FTruncOpLowering,
+    ConstrainedFTruncOpLowering,
     TanOpLowering,
+    ConstrainedTanOpLowering,
     TanhOpLowering,
+    ConstrainedTanhOpLowering,
     ATanOpLowering,
-    ATan2OpLowering
+    ConstrainedATanOpLowering,
+    ATan2OpLowering,
+    ConstrainedATan2OpLowering
   >(converter, benefit);
   // clang-format on
 }
