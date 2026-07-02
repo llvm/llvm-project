@@ -891,9 +891,7 @@ void CudaToolChain::addClangTargetOptions(
           DeviceOffloadingKind == Action::OFK_Cuda) &&
          "Only OpenMP or CUDA offloading kinds are supported for NVIDIA GPUs.");
 
-  CC1Args.append({"-fcuda-is-device", "-mllvm",
-                  "-enable-memcpyopt-without-libcalls",
-                  "-fno-threadsafe-statics"});
+  CC1Args.append({"-fcuda-is-device", "-fno-threadsafe-statics"});
 
   if (DriverArgs.hasFlag(options::OPT_fcuda_short_ptr,
                          options::OPT_fno_cuda_short_ptr, false))
