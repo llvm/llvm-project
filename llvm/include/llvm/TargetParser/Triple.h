@@ -284,14 +284,14 @@ public:
     EABIHF,
     Android,
     Musl,
-    MuslABIN32,
-    MuslABI64,
-    MuslEABI,
-    MuslEABIHF,
-    MuslF32,
-    MuslSF,
-    MuslX32,
-    MuslWALI,
+    MuslABIN32, ///< Musl MIPS32 with the N32 ABI
+    MuslABI64,  ///< Musl MIPS32 with the N64 ABI
+    MuslEABI,   ///< Musl Arm32 EABI
+    MuslEABIHF, ///< Musl Arm32 EABI + HF
+    MuslF32,    ///< Musl LoongArch ILP32F/LP64F
+    MuslSF,     ///< Musl LoongArch ILP32S/LP64S
+    MuslX32,    ///< Musl using 32-bit ABI on x86_64
+    MuslWALI,   ///< Musl on wasm-wali targets
     LLVM,
 
     MSVC,
@@ -1292,6 +1292,10 @@ public:
   /// returns the minimum supported OS version for this triple if one an exists,
   /// or an invalid version tuple if this triple doesn't have one.
   LLVM_ABI VersionTuple getMinimumSupportedOSVersion() const;
+
+  /// Return true if `_Float128` libcalls should lower to e.g. `sqrtf` (`long
+  /// double`) rather than the default `sqrtf128`.
+  bool lowerF128LibmAsLongDouble() const;
 
   /// @}
   /// @name Static helpers for IDs.

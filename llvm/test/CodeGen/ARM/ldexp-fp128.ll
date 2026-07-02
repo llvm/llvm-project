@@ -8,7 +8,7 @@ define fp128 @testExpl(fp128 %val, i32 %a) {
 ; LINUX-NEXT:    sub sp, sp, #8
 ; LINUX-NEXT:    ldr r12, [sp, #16]
 ; LINUX-NEXT:    str r12, [sp]
-; LINUX-NEXT:    bl ldexpl
+; LINUX-NEXT:    bl ldexpf128
 ; LINUX-NEXT:    add sp, sp, #8
 ; LINUX-NEXT:    pop {r11, pc}
   %call = tail call fp128 @ldexpl(fp128 %val, i32 %a)
@@ -24,7 +24,7 @@ define fp128 @test_ldexp_f128_i32(fp128 %val, i32 %a) {
 ; LINUX-NEXT:    sub sp, sp, #8
 ; LINUX-NEXT:    ldr r12, [sp, #16]
 ; LINUX-NEXT:    str r12, [sp]
-; LINUX-NEXT:    bl ldexpl
+; LINUX-NEXT:    bl ldexpf128
 ; LINUX-NEXT:    add sp, sp, #8
 ; LINUX-NEXT:    pop {r11, pc}
   %call = tail call fp128 @llvm.ldexp.f128.i32(fp128 %val, i32 %a)
@@ -44,7 +44,7 @@ define <2 x fp128> @test_ldexp_v2f128_v2i32(<2 x fp128> %val, <2 x i32> %a) {
 ; LINUX-NEXT:    ldm r3, {r0, r1, r2, r3}
 ; LINUX-NEXT:    vldr d8, [sp, #56]
 ; LINUX-NEXT:    vst1.32 {d8[1]}, [sp:32]
-; LINUX-NEXT:    bl ldexpl
+; LINUX-NEXT:    bl ldexpf128
 ; LINUX-NEXT:    ldr r12, [sp, #32]
 ; LINUX-NEXT:    vst1.32 {d8[0]}, [sp:32]
 ; LINUX-NEXT:    ldr lr, [sp, #36]
@@ -56,7 +56,7 @@ define <2 x fp128> @test_ldexp_v2f128_v2i32(<2 x fp128> %val, <2 x i32> %a) {
 ; LINUX-NEXT:    mov r2, r12
 ; LINUX-NEXT:    str r3, [r4, #28]
 ; LINUX-NEXT:    mov r3, lr
-; LINUX-NEXT:    bl ldexpl
+; LINUX-NEXT:    bl ldexpf128
 ; LINUX-NEXT:    stm r4, {r0, r1, r2, r3}
 ; LINUX-NEXT:    add sp, sp, #8
 ; LINUX-NEXT:    vpop {d8}
