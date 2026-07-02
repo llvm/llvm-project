@@ -158,16 +158,14 @@ bool lldb_private::formatters::LibcxxFunctionSummaryProvider(
     return false;
     break;
   case CPPLanguageRuntime::LibCppStdFunctionCallableCase::Lambda:
-    stream.Printf(
-        " Lambda in File %s at Line %u",
-        callable_info.callable_line_entry.GetFile().GetFilename().GetCString(),
-        callable_info.callable_line_entry.line);
+    stream.Format(" Lambda in File {0} at Line {1}",
+                  callable_info.callable_line_entry.GetFile().GetFilename(),
+                  callable_info.callable_line_entry.line);
     break;
   case CPPLanguageRuntime::LibCppStdFunctionCallableCase::CallableObject:
-    stream.Printf(
-        " Function in File %s at Line %u",
-        callable_info.callable_line_entry.GetFile().GetFilename().GetCString(),
-        callable_info.callable_line_entry.line);
+    stream.Format(" Function in File {0} at Line {1}",
+                  callable_info.callable_line_entry.GetFile().GetFilename(),
+                  callable_info.callable_line_entry.line);
     break;
   case CPPLanguageRuntime::LibCppStdFunctionCallableCase::FreeOrMemberFunction:
     stream.Printf(" Function = %s ",
@@ -1008,7 +1006,7 @@ bool lldb_private::formatters::LibcxxSourceLocationSummaryProvider(
     return false;
 
   const char *file = file_sp->GetSummaryAsCString();
-  stream.Printf("%s:%lu:%lu", file ? file : "<unknown>", line, column);
+  stream.Format("{0}:{1}:{2}", file ? file : "<unknown>", line, column);
 
   if (const char *function = function_sp->GetSummaryAsCString())
     stream.Printf(" (%s)", function);

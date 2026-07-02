@@ -261,6 +261,10 @@ def int_dx_interlocked_add :
     DefaultAttrsIntrinsic<[llvm_anyint_ty],
                           [llvm_anyptr_ty, LLVMMatchType<0>],
                           [IntrArgMemOnly]>;
+def int_dx_interlocked_or :
+    DefaultAttrsIntrinsic<[llvm_anyint_ty],
+                          [llvm_anyptr_ty, LLVMMatchType<0>],
+                          [IntrArgMemOnly]>;
 def int_dx_wave_reduce_max : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem, IntrTriviallyScalarizable]>;
 def int_dx_wave_reduce_umax : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem, IntrTriviallyScalarizable]>;
 def int_dx_wave_reduce_min : DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>], [IntrConvergent, IntrNoMem, IntrTriviallyScalarizable]>;

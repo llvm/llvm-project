@@ -2800,8 +2800,8 @@ Process::ReadModuleFromMemory(const FileSpec &file_spec,
   // only print a progress update if we're reading from a
   // live session which might go over gdb remote serial protocol.
   if (IsLiveDebugSession())
-    progress_up = std::make_unique<Progress>(
-        "Reading binary from memory", file_spec.GetFilename().GetString());
+    progress_up = std::make_unique<Progress>("Reading binary from memory",
+                                             file_spec.GetFilename().str());
 
   if (ObjectFile *_ = module_sp->GetMemoryObjectFile(
           shared_from_this(), header_addr, error, size_to_read))
@@ -4372,7 +4372,7 @@ thread_result_t Process::RunPrivateStateThread(bool is_override) {
   // They must see parent frames, not provider-augmented frames.
   std::optional<PolicyStack::Guard> policy_guard;
   if (is_override)
-    policy_guard.emplace(Policy::PrivateState());
+    policy_guard = PolicyStack::Get().PushPrivateState();
 
   bool control_only = true;
 
@@ -5427,7 +5427,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
     // GetStackFrameList returns parent frames during event processing.
     std::optional<PolicyStack::Guard> policy_guard;
     if (backup_private_state_thread)
-      policy_guard.emplace(Policy::PrivateState());
+      policy_guard = PolicyStack::Get().PushPrivateState();
 
     while (true) {
       // We usually want to resume the process if we get to the top of the
@@ -5499,10 +5499,10 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
             Halt(clear_thread_plans, use_run_lock);
           }
 
-          diagnostic_manager.Printf(
-              lldb::eSeverityError,
-              "didn't get running event after initial resume, got %s instead.",
-              StateAsCString(stop_state));
+          diagnostic_manager.Printf(lldb::eSeverityError,
+                                    "didn't get running event after initial "
+                                    "resume, got %s instead.",
+                                    StateAsCString(stop_state));
           return_value = eExpressionSetupError;
           break;
         }
