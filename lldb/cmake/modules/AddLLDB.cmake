@@ -472,11 +472,12 @@ endfunction()
 # liblldb statically absorbs lldbHost, lldbUtility, and every plugin. A tool
 # that links the shared liblldb while also linking those archives statically
 # carries a second copy of their object code. On ELF, if the tool re-exports
-# the archive symbols through its own .dynsym, the dynamic linker can bind
-# liblldb's internal references to the tool's copy instead of its own, breaking
-# shared state such as the HostInfo singletons. --exclude-libs,ALL keeps the
-# archive symbols out of the tool's .dynsym. Only ELF is affected: Mach-O uses
-# two-level namespaces and PE/COFF does not export symbols by default.
+# the archive symbols through its own .dynsym, the dynamic linker can bind the
+# shared liblldb's internal references to the tool's copy instead of its own,
+# breaking shared state such as the HostInfo singletons. --exclude-libs,ALL
+# keeps the archive symbols out of the tool's .dynsym. Only ELF is affected:
+# Mach-O uses two-level namespaces and PE/COFF does not export symbols by
+# default.
 function(lldb_prevent_liblldb_symbol_interposition name)
   if(UNIX AND NOT APPLE)
     target_link_options(${name} PRIVATE "LINKER:--exclude-libs,ALL")
