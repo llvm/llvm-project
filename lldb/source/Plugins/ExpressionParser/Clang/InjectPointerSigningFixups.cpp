@@ -166,8 +166,8 @@ struct PerGlobalUtils {
           }
       } else {
         auto *OriginalLoad = getPtrLoadFor(F, *PtrForInsts->getType());
-        auto *Cast = new BitCastInst(OriginalLoad, &T, "",
-                                     &*std::next(OriginalLoad->getIterator()));
+        auto *Cast = CastInst::CreateBitOrPointerCast(
+            OriginalLoad, &T, "", &*std::next(OriginalLoad->getIterator()));
         LI = LoadsForCaller.insert(std::make_pair(Key, Cast)).first;
       }
     }
