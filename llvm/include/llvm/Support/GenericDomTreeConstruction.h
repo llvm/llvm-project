@@ -189,13 +189,16 @@ template <typename DomTreeT> struct SemiNCAInfo {
   // relative to IsPostDom -- using reverse edges for dominators and forward
   // edges for postdominators.
   //
-  // If SuccOrder is specified then in this order the DFS traverses the children
+  // If UseSuccOrder is set then the DFS traverses children in SuccOrder;
   // otherwise the order is implied by the results of getChildren().
-  template <bool IsReverse = false, typename DescendCondition>
+  template <bool IsReverse = false, bool UseSuccOrder = false,
+            typename DescendCondition>
   unsigned runDFS(NodePtr V, unsigned LastNum, DescendCondition Condition,
                   unsigned AttachToNum,
                   const NodeOrderMap *SuccOrder = nullptr) {
     assert(V);
+    assert((!UseSuccOrder || SuccOrder) &&
+           "Ordered DFS requires a successor order");
     SmallVector<std::pair<NodePtr, unsigned>, 64> WorkList = {{V, AttachToNum}};
     getNodeInfo(V).Parent = AttachToNum;
 
@@ -213,11 +216,12 @@ template <typename DomTreeT> struct SemiNCAInfo {
 
       constexpr bool Direction = IsReverse != IsPostDom; // XOR.
       auto Successors = getChildren<Direction>(BB, BatchUpdates);
-      if (SuccOrder && Successors.size() > 1)
-        llvm::sort(
-            Successors.begin(), Successors.end(), [=](NodePtr A, NodePtr B) {
-              return SuccOrder->find(A)->second < SuccOrder->find(B)->second;
-            });
+      if constexpr (UseSuccOrder)
+        if (Successors.size() > 1)
+          llvm::sort(
+              Successors.begin(), Successors.end(), [=](NodePtr A, NodePtr B) {
+                return SuccOrder->find(A)->second < SuccOrder->find(B)->second;
+              });
 
       for (const NodePtr Succ : Successors) {
         if (!Condition(BB, Succ))
@@ -456,7 +460,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
           assert(SuccOrder);
 
           const unsigned NewNum =
-              SNCA.runDFS<true>(I, Num, AlwaysDescend, Num, &*SuccOrder);
+              SNCA.runDFS<true, true>(I, Num, AlwaysDescend, Num, &*SuccOrder);
           const NodePtr FurthestAway = SNCA.NumToNode[NewNum];
           LLVM_DEBUG(dbgs() << "\t\t\tFound a new furthest away node "
                             << "(non-trivial root): "
