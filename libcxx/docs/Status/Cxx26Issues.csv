@@ -336,7 +336,7 @@
 "`LWG4549 <https://wg21.link/LWG4549>`__","``vprint_nonunicode_buffered`` ignores its stream parameter","2026-03 (Croydon)","","","`#189878 <https://github.com/llvm/llvm-project/issues/189878>`__",""
 "`LWG4550 <https://wg21.link/LWG4550>`__","Need new feature test macros for ``<stdckdint.h>`` and ``<stdbit.h>``","2026-03 (Croydon)","","","`#189879 <https://github.com/llvm/llvm-project/issues/189879>`__",""
 "`LWG4552 <https://wg21.link/LWG4552>`__","``compare_exchange_weak`` writes a value on spurious failure, not memory contents","2026-03 (Croydon)","","","`#189880 <https://github.com/llvm/llvm-project/issues/189880>`__",""
-"`LWG4553 <https://wg21.link/LWG4553>`__","Wording for FR-025-246 25.7.18.2 Add a ``reserve_hint`` function to ``concat_view``","2026-03 (Croydon)","","","`#189881 <https://github.com/llvm/llvm-project/issues/189881>`__",""
+"`LWG4553 <https://wg21.link/LWG4553>`__","Wording for FR-025-246 25.7.18.2 Add a ``reserve_hint`` function to ``concat_view``","2026-03 (Croydon)","|Complete|","23","`#189881 <https://github.com/llvm/llvm-project/issues/189881>`__",""
 "`LWG4554 <https://wg21.link/LWG4554>`__","Remove undefined behaviour from ``hive`` for invalid limits","2026-03 (Croydon)","","","`#189882 <https://github.com/llvm/llvm-project/issues/189882>`__",""
 "`LWG4555 <https://wg21.link/LWG4555>`__","Remove ``is_consteval_only``","2026-03 (Croydon)","","","`#189883 <https://github.com/llvm/llvm-project/issues/189883>`__",""
 "`LWG4556 <https://wg21.link/LWG4556>`__","Unclear properties of reflection strings","2026-03 (Croydon)","","","`#189884 <https://github.com/llvm/llvm-project/issues/189884>`__",""

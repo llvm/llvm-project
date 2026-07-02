@@ -32,6 +32,7 @@
 #include <__ranges/concepts.h>
 #include <__ranges/movable_box.h>
 #include <__ranges/range_adaptor.h>
+#include <__ranges/reserve_hint.h>
 #include <__ranges/size.h>
 #include <__ranges/view_interface.h>
 #include <__tuple/tuple_transform.h>
@@ -175,6 +176,28 @@ public:
     return std::apply(
         [](auto... __sizes) { return (make_unsigned_t<common_type_t<decltype(__sizes)...>>(__sizes) + ...); },
         std::__tuple_transform(ranges::size, __views_));
+  }
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto reserve_hint()
+    requires(approximately_sized_range<_Views> && ...)
+  {
+    return std::apply(
+        [](auto... __sizes) static {
+          using _CT = make_unsigned_t<common_type_t<decltype(__sizes)...>>;
+          return (_CT(__sizes) + ...);
+        },
+        std::__tuple_transform(ranges::reserve_hint, __views_));
+  }
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto reserve_hint() const
+    requires(approximately_sized_range<const _Views> && ...)
+  {
+    return std::apply(
+        [](auto... __sizes) static {
+          using _CT = make_unsigned_t<common_type_t<decltype(__sizes)...>>;
+          return (_CT(__sizes) + ...);
+        },
+        std::__tuple_transform(ranges::reserve_hint, __views_));
   }
 };
 

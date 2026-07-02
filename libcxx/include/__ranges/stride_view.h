@@ -30,6 +30,7 @@
 #include <__ranges/concepts.h>
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/range_adaptor.h>
+#include <__ranges/reserve_hint.h>
 #include <__ranges/view_interface.h>
 #include <__type_traits/make_unsigned.h>
 
@@ -129,6 +130,24 @@ public:
   {
     return std::__to_unsigned_like(ranges::__div_ceil(ranges::distance(__base_), __stride_));
   }
+
+#  if _LIBCPP_STD_VER >= 26
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto reserve_hint()
+    requires approximately_sized_range<_View>
+  {
+    auto __s = static_cast<range_difference_t<decltype((__base_))>>(ranges::reserve_hint(__base_));
+    return std::__to_unsigned_like(ranges::__div_ceil(__s, __stride_));
+  }
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto reserve_hint() const
+    requires approximately_sized_range<const _View>
+  {
+    auto __s = static_cast<range_difference_t<decltype((__base_))>>(ranges::reserve_hint(__base_));
+    return std::__to_unsigned_like(ranges::__div_ceil(__s, __stride_));
+  }
+
+#  endif //_LIBCPP_STD_VER >= 26
 }; // class stride_view
 
 template <class _Range>

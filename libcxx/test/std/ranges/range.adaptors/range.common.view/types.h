@@ -11,6 +11,7 @@
 
 #include <ranges>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 
 struct DefaultConstructibleView : std::ranges::view_base {
@@ -122,5 +123,36 @@ static_assert(!HasOnlyConstBegin<std::ranges::common_view<NonSimpleNonCommonView
 static_assert(HasConstAndNonConstBegin<std::ranges::common_view<NonSimpleNonCommonView>>);
 static_assert(HasConstBegin<const std::ranges::common_view<NonSimpleNonCommonView>>);
 static_assert(HasOnlyConstBegin<const std::ranges::common_view<NonSimpleNonCommonView>>);
+
+#if TEST_STD_VER >= 26
+
+struct ApproximatelySizedView : std::ranges::view_base {
+  int* begin_;
+  int* end_;
+  unsigned int hint_;
+  constexpr explicit ApproximatelySizedView(int* b, int* e, unsigned int hint) : begin_(b), end_(e), hint_(hint) {}
+  constexpr auto begin() const { return forward_iterator<int*>(begin_); }
+  constexpr auto end() const { return sentinel_wrapper<forward_iterator<int*>>(forward_iterator<int*>(end_)); }
+  constexpr unsigned int reserve_hint() const { return hint_; }
+};
+static_assert(!std::ranges::common_range<ApproximatelySizedView>);
+static_assert(std::ranges::approximately_sized_range<ApproximatelySizedView>);
+static_assert(std::ranges::approximately_sized_range<const ApproximatelySizedView>);
+
+struct NonConstApproximatelySizedView : std::ranges::view_base {
+  int* begin_;
+  int* end_;
+  unsigned int hint_;
+  constexpr explicit NonConstApproximatelySizedView(int* b, int* e, unsigned int hint)
+      : begin_(b), end_(e), hint_(hint) {}
+  constexpr auto begin() const { return forward_iterator<int*>(begin_); }
+  constexpr auto end() const { return sentinel_wrapper<forward_iterator<int*>>(forward_iterator<int*>(end_)); }
+  constexpr unsigned int reserve_hint() { return hint_; }
+};
+static_assert(!std::ranges::common_range<NonConstApproximatelySizedView>);
+static_assert(std::ranges::approximately_sized_range<NonConstApproximatelySizedView>);
+static_assert(!std::ranges::approximately_sized_range<const NonConstApproximatelySizedView>);
+
+#endif // TEST_STD_VER >= 26
 
 #endif // TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_COMMON_VIEW_TYPES_H

@@ -22,6 +22,7 @@
 #include <__ranges/data.h>
 #include <__ranges/empty.h>
 #include <__ranges/enable_borrowed_range.h>
+#include <__ranges/reserve_hint.h>
 #include <__ranges/size.h>
 #include <__ranges/view_interface.h>
 #include <__type_traits/is_object.h>
@@ -73,6 +74,15 @@ public:
   {
     return ranges::data(*__range_);
   }
+
+#  if _LIBCPP_STD_VER >= 26
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto reserve_hint() const
+    requires approximately_sized_range<_Range>
+  {
+    return ranges::reserve_hint(*__range_);
+  }
+
+#  endif //_LIBCPP_STD_VER >= 26
 };
 
 template <class _Range>

@@ -32,11 +32,13 @@
 #include <__ranges/iota_view.h>
 #include <__ranges/range_adaptor.h>
 #include <__ranges/repeat_view.h>
+#include <__ranges/reserve_hint.h>
 #include <__ranges/size.h>
 #include <__ranges/subrange.h>
 #include <__ranges/view_interface.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/is_nothrow_constructible.h>
+#include <__type_traits/make_unsigned.h>
 #include <__type_traits/maybe_const.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/auto_cast.h>
@@ -155,6 +157,26 @@ public:
     auto __n = ranges::size(__base_);
     return ranges::min(__n, static_cast<decltype(__n)>(__count_));
   }
+
+#  if _LIBCPP_STD_VER >= 26
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto reserve_hint() {
+    if constexpr (approximately_sized_range<_View>) {
+      auto __n = static_cast<range_difference_t<_View>>(ranges::reserve_hint(__base_));
+      return std::__to_unsigned_like(ranges::min(__n, __count_));
+    }
+    return std::__to_unsigned_like(__count_);
+  }
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto reserve_hint() const {
+    if constexpr (approximately_sized_range<const _View>) {
+      auto __n = static_cast<range_difference_t<const _View>>(ranges::reserve_hint(__base_));
+      return std::__to_unsigned_like(ranges::min(__n, __count_));
+    }
+    return std::__to_unsigned_like(__count_);
+  }
+
+#  endif //_LIBCPP_STD_VER >= 26
 };
 
 template <view _View>

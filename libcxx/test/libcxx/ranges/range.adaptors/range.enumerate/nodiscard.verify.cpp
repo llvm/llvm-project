@@ -14,6 +14,8 @@
 #include <utility>
 #include <vector>
 
+#include "test_macros.h"
+
 void test() {
   std::vector<int> range;
   std::ranges::enumerate_view ev{range};
@@ -32,6 +34,12 @@ void test() {
   ev.size();
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::as_const(ev).size();
+#if TEST_STD_VER >= 26
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  ev.reserve_hint();
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::as_const(ev).reserve_hint();
+#endif
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   ev.base();
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}

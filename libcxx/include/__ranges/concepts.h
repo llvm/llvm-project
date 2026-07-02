@@ -25,6 +25,7 @@
 #include <__ranges/data.h>
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/enable_view.h>
+#include <__ranges/reserve_hint.h>
 #include <__ranges/size.h>
 #include <__type_traits/add_pointer.h>
 #include <__type_traits/common_reference.h>
@@ -80,9 +81,23 @@ using range_rvalue_reference_t = iter_rvalue_reference_t<iterator_t<_Rp>>;
 template <range _Rp>
 using range_common_reference_t = iter_common_reference_t<iterator_t<_Rp>>;
 
+#  if _LIBCPP_STD_VER >= 26
+
+// [range.approximately.sized]
+template <class _Tp>
+concept approximately_sized_range = range<_Tp> && requires(_Tp& __t) { ranges::reserve_hint(__t); };
+
+// [range.sized]
+template <class _Tp>
+concept sized_range = approximately_sized_range<_Tp> && requires(_Tp& __t) { ranges::size(__t); };
+
+#  else // _LIBCPP_STD_VER < 26
+
 // [range.sized]
 template <class _Tp>
 concept sized_range = range<_Tp> && requires(_Tp& __t) { ranges::size(__t); };
+
+#  endif
 
 template <sized_range _Rp>
 using range_size_t = decltype(ranges::size(std::declval<_Rp&>()));

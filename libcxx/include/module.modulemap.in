@@ -1943,6 +1943,7 @@ module std {
     module ref_view                       { header "__ranges/ref_view.h" }
     module rend                           { header "__ranges/rend.h" }
     module repeat_view                    { header "__ranges/repeat_view.h" }
+    module reserve_hint                   { header "__ranges/reserve_hint.h" }
     module reverse_view                   { header "__ranges/reverse_view.h" }
     module single_view                    { header "__ranges/single_view.h" }
     module size                           { header "__ranges/size.h" }

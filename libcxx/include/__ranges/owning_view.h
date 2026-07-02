@@ -18,6 +18,7 @@
 #include <__ranges/data.h>
 #include <__ranges/empty.h>
 #include <__ranges/enable_borrowed_range.h>
+#include <__ranges/reserve_hint.h>
 #include <__ranges/size.h>
 #include <__ranges/view_interface.h>
 #include <__type_traits/remove_cvref.h>
@@ -99,6 +100,22 @@ public:
   {
     return ranges::data(__r_);
   }
+
+#  if _LIBCPP_STD_VER >= 26
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto reserve_hint()
+    requires approximately_sized_range<_Rp>
+  {
+    return ranges::reserve_hint(__r_);
+  }
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto reserve_hint() const
+    requires approximately_sized_range<const _Rp>
+  {
+    return ranges::reserve_hint(__r_);
+  }
+
+#  endif //_LIBCPP_STD_VER >= 26
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(owning_view);
 

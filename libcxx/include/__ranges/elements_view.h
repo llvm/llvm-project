@@ -24,6 +24,7 @@
 #include <__ranges/concepts.h>
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/range_adaptor.h>
+#include <__ranges/reserve_hint.h>
 #include <__ranges/size.h>
 #include <__ranges/view_interface.h>
 #include <__tuple/tuple_element.h>
@@ -132,6 +133,22 @@ public:
   {
     return ranges::size(__base_);
   }
+
+#  if _LIBCPP_STD_VER >= 26
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto reserve_hint()
+    requires approximately_sized_range<_View>
+  {
+    return ranges::reserve_hint(__base_);
+  }
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto reserve_hint() const
+    requires approximately_sized_range<const _View>
+  {
+    return ranges::reserve_hint(__base_);
+  }
+
+#  endif //_LIBCPP_STD_VER >= 26
 
 private:
   _LIBCPP_NO_UNIQUE_ADDRESS _View __base_ = _View();

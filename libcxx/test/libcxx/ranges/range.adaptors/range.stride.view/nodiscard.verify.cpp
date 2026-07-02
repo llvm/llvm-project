@@ -13,6 +13,8 @@
 #include <ranges>
 #include <utility>
 
+#include "test_macros.h"
+
 void test() {
   int range[] = {1, 2, 3};
   auto sv     = std::ranges::stride_view(range, 2);
@@ -27,6 +29,10 @@ void test() {
   sv.end();
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   sv.size();
+#if TEST_STD_VER >= 26
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  sv.reserve_hint();
+#endif
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   sv.stride();
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}

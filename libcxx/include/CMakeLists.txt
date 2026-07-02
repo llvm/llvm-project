@@ -755,6 +755,7 @@ set(files
   __ranges/ref_view.h
   __ranges/rend.h
   __ranges/repeat_view.h
+  __ranges/reserve_hint.h
   __ranges/reverse_view.h
   __ranges/single_view.h
   __ranges/size.h
