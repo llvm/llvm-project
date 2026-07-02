@@ -334,7 +334,7 @@ struct PreheaderFlushFlags {
 };
 
 class SIInsertWaitcnts {
-  DenseMap<const Value *, MachineBasicBlock *> SLoadAddresses;
+  SmallVector<MachineInstr *, 8> SLoadAddresses;
   DenseMap<MachineBasicBlock *, PreheaderFlushFlags> PreheadersToFlush;
   MachineLoopInfo &MLI;
   MachinePostDominatorTree &PDT;
@@ -2358,15 +2358,27 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
       // 2) If a destination operand that was used by a recent export/store ins,
       // add s_waitcnt on exp_cnt to guarantee the WAR order.
 
+      if (any_of(MI.memoperands(), [](const MachineMemOperand *Memop) {
+            return Memop->isStore();
+          })) {
+        for (auto It = SLoadAddresses.begin(); It != SLoadAddresses.end();) {
+          MachineInstr *SLoad = *It;
+          if (!MI.mayAlias(AA, *SLoad, true)) {
+            ++It;
+            continue;
+          }
+
+          Wait.add(SmemAccessCounter, 0);
+
+          if (PDT.dominates(MI.getParent(), SLoad->getParent()))
+            It = SLoadAddresses.erase(It);
+          else
+            ++It;
+        }
+      }
+
       for (const MachineMemOperand *Memop : MI.memoperands()) {
         const Value *Ptr = Memop->getValue();
-        if (Memop->isStore()) {
-          if (auto It = SLoadAddresses.find(Ptr); It != SLoadAddresses.end()) {
-            Wait.add(SmemAccessCounter, 0);
-            if (PDT.dominates(MI.getParent(), It->second))
-              SLoadAddresses.erase(It);
-          }
-        }
         unsigned AS = Memop->getAddrSpace();
         if (AS != AMDGPUAS::LOCAL_ADDRESS && AS != AMDGPUAS::FLAT_ADDRESS)
           continue;
@@ -3025,8 +3037,8 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
         // No need to handle invariant loads when avoiding WAR conflicts, as
         // there cannot be a vector store to the same memory location.
         if (!Memop->isInvariant()) {
-          const Value *Ptr = Memop->getValue();
-          SLoadAddresses.insert(std::pair(Ptr, Inst.getParent()));
+          SLoadAddresses.push_back(&Inst);
+          break;
         }
       }
     }
