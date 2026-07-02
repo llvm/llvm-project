@@ -22,6 +22,7 @@
 #include <__type_traits/conditional.h>
 #include <__type_traits/extent.h>
 #include <__type_traits/integer_traits.h>
+#include <__type_traits/make_32_64_or_128_bit.h>
 #include <__type_traits/remove_const.h>
 #include <cstdint>
 #include <string>
@@ -65,7 +66,11 @@ consteval __arg_t __determine_arg_t() {
 #  endif
 
 // Signed integers
+//
+// A _BitInt wider than 128 bits has no packed storage slot; it is routed to the
+// handle path (see __formatter_bitint) by excluding it here.
 template <class, __signed_integer _Tp>
+  requires(!__is_wide_bitint_v<_Tp>)
 consteval __arg_t __determine_arg_t() {
   if constexpr (sizeof(_Tp) <= sizeof(int))
     return __arg_t::__int;
@@ -81,6 +86,7 @@ consteval __arg_t __determine_arg_t() {
 
 // Unsigned integers
 template <class, __unsigned_integer _Tp>
+  requires(!__is_wide_bitint_v<_Tp>)
 consteval __arg_t __determine_arg_t() {
   if constexpr (sizeof(_Tp) <= sizeof(unsigned))
     return __arg_t::__unsigned;

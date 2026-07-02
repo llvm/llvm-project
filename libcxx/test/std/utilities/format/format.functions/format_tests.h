@@ -1065,6 +1065,11 @@ void format_test_signed_integer(TestFunction check, ExceptionTest check_exceptio
 #ifndef TEST_HAS_NO_INT128
   format_test_integer<__int128_t, CharT>(check, check_exception);
 #endif
+#if defined(__BITINT_MAXWIDTH__) && __BITINT_MAXWIDTH__ >= 256
+  // A _BitInt wider than 128 bits formats through the handle path; run the full
+  // grammar against it and pin the 256-bit extrema below.
+  format_test_integer<signed _BitInt(256), CharT>(check, check_exception);
+#endif
   // *** check the minima and maxima ***
   check(SV("-0b10000000"), SV("{:#b}"), std::numeric_limits<std::int8_t>::min());
   check(SV("-0200"), SV("{:#o}"), std::numeric_limits<std::int8_t>::min());
@@ -1129,6 +1134,42 @@ void format_test_signed_integer(TestFunction check, ExceptionTest check_exceptio
   check(SV("170141183460469231731687303715884105727"), SV("{:#}"), std::numeric_limits<__int128_t>::max());
   check(SV("0x7fffffffffffffffffffffffffffffff"), SV("{:#x}"), std::numeric_limits<__int128_t>::max());
 #endif
+
+#if defined(__BITINT_MAXWIDTH__) && __BITINT_MAXWIDTH__ >= 256
+  using S = signed _BitInt(256);
+  // min = -2^255
+  check(
+      SV("-0b1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+         "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+         "00000000000000000000000000000000000000000"),
+      SV("{:#b}"),
+      std::numeric_limits<S>::min());
+  check(SV("-010000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+        SV("{:#o}"),
+        std::numeric_limits<S>::min());
+  check(SV("-57896044618658097711785492504343953926634992332820282019728792003956564819968"),
+        SV("{:#}"),
+        std::numeric_limits<S>::min());
+  check(SV("-0x8000000000000000000000000000000000000000000000000000000000000000"),
+        SV("{:#x}"),
+        std::numeric_limits<S>::min());
+  // max = 2^255-1
+  check(
+      SV("0b11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111"
+         "1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111"
+         "111111111111111111111111111111111111111"),
+      SV("{:#b}"),
+      std::numeric_limits<S>::max());
+  check(SV("07777777777777777777777777777777777777777777777777777777777777777777777777777777777777"),
+        SV("{:#o}"),
+        std::numeric_limits<S>::max());
+  check(SV("57896044618658097711785492504343953926634992332820282019728792003956564819967"),
+        SV("{:#}"),
+        std::numeric_limits<S>::max());
+  check(SV("0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+        SV("{:#x}"),
+        std::numeric_limits<S>::max());
+#endif
 }
 
 template <class CharT, class TestFunction, class ExceptionTest>
@@ -1140,6 +1181,9 @@ void format_test_unsigned_integer(TestFunction check, ExceptionTest check_except
   format_test_integer<unsigned long long, CharT>(check, check_exception);
 #ifndef TEST_HAS_NO_INT128
   format_test_integer<__uint128_t, CharT>(check, check_exception);
+#endif
+#if defined(__BITINT_MAXWIDTH__) && __BITINT_MAXWIDTH__ >= 256
+  format_test_integer<unsigned _BitInt(256), CharT>(check, check_exception);
 #endif
   // *** test the maxima ***
   check(SV("0b11111111"), SV("{:#b}"), std::numeric_limits<std::uint8_t>::max());
@@ -1172,6 +1216,26 @@ void format_test_unsigned_integer(TestFunction check, ExceptionTest check_except
   check(SV("03777777777777777777777777777777777777777777"), SV("{:#o}"), std::numeric_limits<__uint128_t>::max());
   check(SV("340282366920938463463374607431768211455"), SV("{:#}"), std::numeric_limits<__uint128_t>::max());
   check(SV("0xffffffffffffffffffffffffffffffff"), SV("{:#x}"), std::numeric_limits<__uint128_t>::max());
+#endif
+
+#if defined(__BITINT_MAXWIDTH__) && __BITINT_MAXWIDTH__ >= 256
+  using U = unsigned _BitInt(256);
+  // max = 2^256-1
+  check(
+      SV("0b11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111"
+         "1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111"
+         "1111111111111111111111111111111111111111"),
+      SV("{:#b}"),
+      std::numeric_limits<U>::max());
+  check(SV("017777777777777777777777777777777777777777777777777777777777777777777777777777777777777"),
+        SV("{:#o}"),
+        std::numeric_limits<U>::max());
+  check(SV("115792089237316195423570985008687907853269984665640564039457584007913129639935"),
+        SV("{:#}"),
+        std::numeric_limits<U>::max());
+  check(SV("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+        SV("{:#x}"),
+        std::numeric_limits<U>::max());
 #endif
 }
 

@@ -111,6 +111,10 @@ void test_P0645() {
 #ifndef TEST_HAS_NO_INT128
   assert_is_formattable<__int128_t, CharT>();
 #endif
+#if defined(__BITINT_MAXWIDTH__) && __BITINT_MAXWIDTH__ >= 256
+  // A _BitInt wider than 128 bits is formattable through the handle path.
+  assert_is_formattable<signed _BitInt(256), CharT>();
+#endif
 
   assert_is_formattable<unsigned char, CharT>();
   assert_is_formattable<unsigned short, CharT>();
@@ -119,6 +123,9 @@ void test_P0645() {
   assert_is_formattable<unsigned long long, CharT>();
 #ifndef TEST_HAS_NO_INT128
   assert_is_formattable<__uint128_t, CharT>();
+#endif
+#if defined(__BITINT_MAXWIDTH__) && __BITINT_MAXWIDTH__ >= 256
+  assert_is_formattable<unsigned _BitInt(256), CharT>();
 #endif
 
   // floating-point types are tested in concept.formattable.float.compile.pass.cpp
