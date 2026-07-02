@@ -3457,6 +3457,34 @@ public:
     return Insts;
   }
 
+  InstructionListType materializeConstant(BinaryContext &BC, const MCInst &Inst,
+                                          StringRef ConstantData,
+                                          uint64_t Offset) const override {
+    // Size in bytes that Inst loads from memory.
+    uint8_t DataSize = 0;
+    switch (Inst.getOpcode()) {
+    case AArch64::LDRWl:
+      DataSize = 4;
+      break;
+    case AArch64::LDRXl:
+      DataSize = 8;
+      break;
+    default:
+      return InstructionListType{};
+    }
+
+    if (ConstantData.size() - Offset < DataSize)
+      return InstructionListType{};
+
+    DataExtractor DE(ConstantData, BC.AsmInfo->isLittleEndian(),
+                     BC.AsmInfo->getCodePointerSize());
+    const uint64_t Imm = DE.getUnsigned(&Offset, DataSize);
+
+    const MCPhysReg Dest = Inst.getOperand(0).getReg();
+
+    return createLoadImmediate(Dest, Imm);
+  }
+
   std::optional<Relocation>
   createRelocation(const MCFixup &Fixup,
                    const MCAsmBackend &MAB) const override {
