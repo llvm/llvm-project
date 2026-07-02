@@ -1757,7 +1757,7 @@ static void hoistConditionalLoadsStores(
   Value *MaskFalse = nullptr;
   Value *MaskTrue = nullptr;
   if (Invert.has_value()) {
-    IRBuilder<> Builder(Sel ? Sel : SpeculatedConditionalLoadsStores.back());
+    IRBuilder<> Builder(SpeculatedConditionalLoadsStores.back());
     Mask = Builder.CreateBitCast(
         *Invert ? Builder.CreateXor(Cond, ConstantInt::getTrue(Context)) : Cond,
         VCondTy);
@@ -3294,31 +3294,34 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(CondBrInst *BI,
                                 isSafeCheapLoadStore(&I, TTI) &&
                                 SpeculatedConditionalLoadsStores.size() <
                                     HoistLoadsStoresWithCondFaultingThreshold;
+    // A store with a prior store at the same address is cheap to speculate
+    // so don't count it toward the cap.
+    bool IsMatchedStore = false;
+    if (!IsSafeCheapLoadStore && HoistCondStores && !SpeculatedStoreValue)
+      if (auto *SI = dyn_cast<StoreInst>(&I))
+        if (Value *V = isSafeToSpeculateStore(&I, BB, ThenBB, EndBB)) {
+          SpeculatedStoreValue = V;
+          SpeculatedStore = SI;
+          IsMatchedStore = true;
+        }
     // Not count load/store into cost if target supports conditional faulting
     // b/c it's cheap to speculate it.
     if (IsSafeCheapLoadStore)
       SpeculatedConditionalLoadsStores.push_back(&I);
-    else
+    else if (!IsMatchedStore)
       ++SpeculatedInstructions;
 
     if (SpeculatedInstructions > 1)
       return false;
 
     // Don't hoist the instruction if it's unsafe or expensive.
-    if (!IsSafeCheapLoadStore &&
-        !isSafeToSpeculativelyExecute(&I, BI, Options.AC) &&
-        !(HoistCondStores && !SpeculatedStoreValue &&
-          (SpeculatedStoreValue =
-               isSafeToSpeculateStore(&I, BB, ThenBB, EndBB))))
+    if (!IsSafeCheapLoadStore && !IsMatchedStore &&
+        !isSafeToSpeculativelyExecute(&I, BI, Options.AC))
       return false;
     if (!IsSafeCheapLoadStore && !SpeculatedStoreValue &&
         computeSpeculationCost(&I, TTI) >
             PHINodeFoldingThreshold * TargetTransformInfo::TCC_Basic)
       return false;
-
-    // Store the store speculation candidate.
-    if (!SpeculatedStore && SpeculatedStoreValue)
-      SpeculatedStore = cast<StoreInst>(&I);
 
     // Do not hoist the instruction if any of its operands are defined but not
     // used in BB. The transformation will prevent the operand from
@@ -3356,9 +3359,41 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(CondBrInst *BI,
   LLVM_DEBUG(dbgs() << "SPECULATIVELY EXECUTING BB" << *ThenBB << "\n";);
 
   Instruction *Sel = nullptr;
+
+  // Metadata can be dependent on the condition we are hoisting above.
+  // Strip all UB-implying metadata on the instruction. Drop the debug loc
+  // to avoid making it appear as if the condition is a constant, which would
+  // be misleading while debugging.
+  // Similarly strip attributes that maybe dependent on condition we are
+  // hoisting above.
+  for (auto &I : make_early_inc_range(*ThenBB)) {
+    if (!SpeculatedStoreValue || &I != SpeculatedStore) {
+      I.dropLocation();
+    }
+    I.dropUBImplyingAttrsAndMetadata();
+
+    // Drop ephemeral values.
+    if (EphTracker.contains(&I)) {
+      I.replaceAllUsesWith(PoisonValue::get(I.getType()));
+      I.eraseFromParent();
+    }
+  }
+
+  // Hoist the instructions.
+  // Drop DbgVariableRecords attached to these instructions.
+  for (auto &It : *ThenBB)
+    for (DbgRecord &DR : make_early_inc_range(It.getDbgRecordRange()))
+      // Drop all records except assign-kind DbgVariableRecords (dbg.assign
+      // equivalent).
+      if (DbgVariableRecord *DVR = dyn_cast<DbgVariableRecord>(&DR);
+          !DVR || !DVR->isDbgAssign())
+        It.dropOneDbgRecord(&DR);
+  BB->splice(BI->getIterator(), ThenBB, ThenBB->begin(),
+             std::prev(ThenBB->end()));
+
   // Insert a select of the value of the speculated store.
   if (SpeculatedStoreValue) {
-    IRBuilder<NoFolder> Builder(BI);
+    IRBuilder<NoFolder> Builder(SpeculatedStore);
     Value *OrigV = SpeculatedStore->getValueOperand();
     Value *TrueV = SpeculatedStore->getValueOperand();
     Value *FalseV = SpeculatedStoreValue;
@@ -3400,37 +3435,6 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(CondBrInst *BI,
       if (llvm::is_contained(DbgAssign->location_ops(), OrigV))
         DbgAssign->replaceVariableLocationOp(OrigV, S);
   }
-
-  // Metadata can be dependent on the condition we are hoisting above.
-  // Strip all UB-implying metadata on the instruction. Drop the debug loc
-  // to avoid making it appear as if the condition is a constant, which would
-  // be misleading while debugging.
-  // Similarly strip attributes that maybe dependent on condition we are
-  // hoisting above.
-  for (auto &I : make_early_inc_range(*ThenBB)) {
-    if (!SpeculatedStoreValue || &I != SpeculatedStore) {
-      I.dropLocation();
-    }
-    I.dropUBImplyingAttrsAndMetadata();
-
-    // Drop ephemeral values.
-    if (EphTracker.contains(&I)) {
-      I.replaceAllUsesWith(PoisonValue::get(I.getType()));
-      I.eraseFromParent();
-    }
-  }
-
-  // Hoist the instructions.
-  // Drop DbgVariableRecords attached to these instructions.
-  for (auto &It : *ThenBB)
-    for (DbgRecord &DR : make_early_inc_range(It.getDbgRecordRange()))
-      // Drop all records except assign-kind DbgVariableRecords (dbg.assign
-      // equivalent).
-      if (DbgVariableRecord *DVR = dyn_cast<DbgVariableRecord>(&DR);
-          !DVR || !DVR->isDbgAssign())
-        It.dropOneDbgRecord(&DR);
-  BB->splice(BI->getIterator(), ThenBB, ThenBB->begin(),
-             std::prev(ThenBB->end()));
 
   if (!SpeculatedConditionalLoadsStores.empty())
     hoistConditionalLoadsStores(BI, SpeculatedConditionalLoadsStores, Invert,

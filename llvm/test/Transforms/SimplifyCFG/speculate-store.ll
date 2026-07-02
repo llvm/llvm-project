@@ -27,6 +27,54 @@ ret.end:
   ret void
 }
 
+define void @ifconvertstore_with_op(ptr %A, i32 %B, i32 %C) {
+; CHECK-LABEL: @ifconvertstore_with_op(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i32 [[B:%.*]], ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[C:%.*]], 0
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[B]], 4
+; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[CMP]], i32 [[OR]], i32 [[B]]
+; CHECK-NEXT:    store i32 [[SPEC_STORE_SELECT]], ptr [[A]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  store i32 %B, ptr %A
+  %cmp = icmp sgt i32 %C, 0
+  br i1 %cmp, label %if.then, label %ret.end
+
+if.then:
+  %or = or i32 %B, 4
+  store i32 %or, ptr %A
+  br label %ret.end
+
+ret.end:
+  ret void
+}
+
+define void @ifconvertstore_with_op_swapped(ptr %A, i32 %B, i32 %C) {
+; CHECK-LABEL: @ifconvertstore_with_op_swapped(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i32 [[B:%.*]], ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[C:%.*]], 0
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[B]], 4
+; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[CMP]], i32 [[B]], i32 [[OR]]
+; CHECK-NEXT:    store i32 [[SPEC_STORE_SELECT]], ptr [[A]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  store i32 %B, ptr %A
+  %cmp = icmp sgt i32 %C, 0
+  br i1 %cmp, label %ret.end, label %if.then
+
+if.then:
+  %or = or i32 %B, 4
+  store i32 %or, ptr %A
+  br label %ret.end
+
+ret.end:
+  ret void
+}
+
 ; Store to a different location.
 
 define void @noifconvertstore1(ptr %A1, ptr %A2, i32 %B, i32 %C, i32 %D) {

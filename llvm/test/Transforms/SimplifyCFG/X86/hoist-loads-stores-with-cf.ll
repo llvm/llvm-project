@@ -417,7 +417,7 @@ define i16 @debug_metadata_diassign(i1 %cond, i16 %a, ptr %p) {
 ; LOADONLY-NEXT:    br label [[IF_FALSE]]
 ; LOADONLY:       if.false:
 ; LOADONLY-NEXT:    [[RET:%.*]] = phi i16 [ 2, [[BB0:%.*]] ], [ 3, [[IF_TRUE]] ]
-; LOADONLY-NEXT:      #dbg_assign(i16 [[RET]], [[META8:![0-9]+]], !DIExpression(), [[DIASSIGNID7]], ptr [[P]], !DIExpression(), [[META11:![0-9]+]])
+; LOADONLY-NEXT:      #dbg_assign(i16 [[RET]], [[META8:![0-9]+]], !DIExpression(), [[DIASSIGNID7]], ptr [[P]], !DIExpression(), [[META13:![0-9]+]])
 ; LOADONLY-NEXT:    ret i16 [[RET]]
 ;
 ; NONEONLY-LABEL: @debug_metadata_diassign(
@@ -428,7 +428,7 @@ define i16 @debug_metadata_diassign(i1 %cond, i16 %a, ptr %p) {
 ; NONEONLY-NEXT:    br label [[IF_FALSE]]
 ; NONEONLY:       if.false:
 ; NONEONLY-NEXT:    [[RET:%.*]] = phi i16 [ 2, [[BB0:%.*]] ], [ 3, [[IF_TRUE]] ]
-; NONEONLY-NEXT:      #dbg_assign(i16 [[RET]], [[META8:![0-9]+]], !DIExpression(), [[DIASSIGNID7]], ptr [[P]], !DIExpression(), [[META11:![0-9]+]])
+; NONEONLY-NEXT:      #dbg_assign(i16 [[RET]], [[META8:![0-9]+]], !DIExpression(), [[DIASSIGNID7]], ptr [[P]], !DIExpression(), [[META13:![0-9]+]])
 ; NONEONLY-NEXT:    ret i16 [[RET]]
 ;
 bb0:
@@ -450,8 +450,8 @@ define i32 @hoist_cond_stores(i1 %cond, ptr %p) {
 ; LOADSTORE-NEXT:  entry:
 ; LOADSTORE-NEXT:    store i1 false, ptr [[P:%.*]], align 2
 ; LOADSTORE-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND:%.*]] to <1 x i1>
-; LOADSTORE-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[COND]], i1 false, i1 false
 ; LOADSTORE-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> zeroinitializer, ptr align 8 [[P]], <1 x i1> [[TMP0]])
+; LOADSTORE-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[COND]], i1 false, i1 false
 ; LOADSTORE-NEXT:    store i1 [[SPEC_STORE_SELECT]], ptr [[P]], align 2
 ; LOADSTORE-NEXT:    ret i32 0
 ;
@@ -459,8 +459,8 @@ define i32 @hoist_cond_stores(i1 %cond, ptr %p) {
 ; STOREONLY-NEXT:  entry:
 ; STOREONLY-NEXT:    store i1 false, ptr [[P:%.*]], align 2
 ; STOREONLY-NEXT:    [[TMP0:%.*]] = bitcast i1 [[COND:%.*]] to <1 x i1>
-; STOREONLY-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[COND]], i1 false, i1 false
 ; STOREONLY-NEXT:    call void @llvm.masked.store.v1i32.p0(<1 x i32> zeroinitializer, ptr align 8 [[P]], <1 x i1> [[TMP0]])
+; STOREONLY-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[COND]], i1 false, i1 false
 ; STOREONLY-NEXT:    store i1 [[SPEC_STORE_SELECT]], ptr [[P]], align 2
 ; STOREONLY-NEXT:    ret i32 0
 ;
@@ -881,7 +881,7 @@ define void @not_likely_to_execute(ptr %p, ptr %q, i32 %a) {
 ; LOADONLY-LABEL: @not_likely_to_execute(
 ; LOADONLY-NEXT:  entry:
 ; LOADONLY-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[A:%.*]], 0
-; LOADONLY-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]], !prof [[PROF12:![0-9]+]]
+; LOADONLY-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]], !prof [[PROF14:![0-9]+]]
 ; LOADONLY:       if.end:
 ; LOADONLY-NEXT:    ret void
 ; LOADONLY:       if.then:
@@ -892,7 +892,7 @@ define void @not_likely_to_execute(ptr %p, ptr %q, i32 %a) {
 ; NONEONLY-LABEL: @not_likely_to_execute(
 ; NONEONLY-NEXT:  entry:
 ; NONEONLY-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[A:%.*]], 0
-; NONEONLY-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]], !prof [[PROF12:![0-9]+]]
+; NONEONLY-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]], !prof [[PROF14:![0-9]+]]
 ; NONEONLY:       if.end:
 ; NONEONLY-NEXT:    ret void
 ; NONEONLY:       if.then:

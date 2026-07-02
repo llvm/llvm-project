@@ -227,64 +227,61 @@ define void @testing(ptr %var_i32, ptr %var2_i32) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    ldr w8, [x0]
 ; CHECK-SD-NEXT:    cmp w8, #4095
-; CHECK-SD-NEXT:    b.ne .LBB20_6
+; CHECK-SD-NEXT:    b.ne .LBB20_5
 ; CHECK-SD-NEXT:  // %bb.1: // %test2
 ; CHECK-SD-NEXT:    ldr w9, [x1]
 ; CHECK-SD-NEXT:    add w10, w8, #1
 ; CHECK-SD-NEXT:    str w10, [x0]
 ; CHECK-SD-NEXT:    cmp w9, #3567, lsl #12 // =14610432
-; CHECK-SD-NEXT:    b.lo .LBB20_6
+; CHECK-SD-NEXT:    b.lo .LBB20_5
 ; CHECK-SD-NEXT:  // %bb.2: // %test3
 ; CHECK-SD-NEXT:    add w10, w8, #2
 ; CHECK-SD-NEXT:    cmp w8, #123
 ; CHECK-SD-NEXT:    str w10, [x0]
-; CHECK-SD-NEXT:    b.lt .LBB20_6
+; CHECK-SD-NEXT:    b.lt .LBB20_5
 ; CHECK-SD-NEXT:  // %bb.3: // %test4
 ; CHECK-SD-NEXT:    add w10, w8, #3
 ; CHECK-SD-NEXT:    cmp w9, #321
 ; CHECK-SD-NEXT:    str w10, [x0]
-; CHECK-SD-NEXT:    b.gt .LBB20_6
+; CHECK-SD-NEXT:    b.gt .LBB20_5
 ; CHECK-SD-NEXT:  // %bb.4: // %test5
 ; CHECK-SD-NEXT:    add w10, w8, #4
-; CHECK-SD-NEXT:    cmn w9, #443
-; CHECK-SD-NEXT:    str w10, [x0]
-; CHECK-SD-NEXT:    b.ge .LBB20_6
-; CHECK-SD-NEXT:  // %bb.5: // %test6
 ; CHECK-SD-NEXT:    add w8, w8, #5
+; CHECK-SD-NEXT:    cmn w9, #444
+; CHECK-SD-NEXT:    csel w8, w10, w8, gt
 ; CHECK-SD-NEXT:    str w8, [x0]
-; CHECK-SD-NEXT:  .LBB20_6: // %common.ret
+; CHECK-SD-NEXT:  .LBB20_5: // %common.ret
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: testing:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr w8, [x0]
 ; CHECK-GI-NEXT:    cmp w8, #4095
-; CHECK-GI-NEXT:    b.ne .LBB20_6
+; CHECK-GI-NEXT:    b.ne .LBB20_5
 ; CHECK-GI-NEXT:  // %bb.1: // %test2
 ; CHECK-GI-NEXT:    ldr w9, [x1]
 ; CHECK-GI-NEXT:    add w10, w8, #1
 ; CHECK-GI-NEXT:    str w10, [x0]
 ; CHECK-GI-NEXT:    cmp w9, #3567, lsl #12 // =14610432
-; CHECK-GI-NEXT:    b.lo .LBB20_6
+; CHECK-GI-NEXT:    b.lo .LBB20_5
 ; CHECK-GI-NEXT:  // %bb.2: // %test3
 ; CHECK-GI-NEXT:    add w10, w8, #2
 ; CHECK-GI-NEXT:    cmp w8, #123
 ; CHECK-GI-NEXT:    str w10, [x0]
-; CHECK-GI-NEXT:    b.lt .LBB20_6
+; CHECK-GI-NEXT:    b.lt .LBB20_5
 ; CHECK-GI-NEXT:  // %bb.3: // %test4
 ; CHECK-GI-NEXT:    add w10, w8, #3
 ; CHECK-GI-NEXT:    cmp w9, #321
 ; CHECK-GI-NEXT:    str w10, [x0]
-; CHECK-GI-NEXT:    b.gt .LBB20_6
+; CHECK-GI-NEXT:    b.gt .LBB20_5
 ; CHECK-GI-NEXT:  // %bb.4: // %test5
 ; CHECK-GI-NEXT:    add w10, w8, #4
-; CHECK-GI-NEXT:    cmn w9, #444
-; CHECK-GI-NEXT:    str w10, [x0]
-; CHECK-GI-NEXT:    b.gt .LBB20_6
-; CHECK-GI-NEXT:  // %bb.5: // %test6
 ; CHECK-GI-NEXT:    add w8, w8, #5
+; CHECK-GI-NEXT:    cmn w9, #444
+; CHECK-GI-NEXT:    csel w8, w10, w8, gt
+; CHECK-GI-NEXT:    str w10, [x0]
 ; CHECK-GI-NEXT:    str w8, [x0]
-; CHECK-GI-NEXT:  .LBB20_6: // %common.ret
+; CHECK-GI-NEXT:  .LBB20_5: // %common.ret
 ; CHECK-GI-NEXT:    ret
   %val = load i32, ptr %var_i32
   %val2 = load i32, ptr %var2_i32
