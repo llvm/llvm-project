@@ -226,6 +226,14 @@ Language Selection and Mode Options
 
    Working draft for C++2c with GNU extensions
 
+  | ``c++2d``
+
+   Working draft for C++2d
+
+  | ``gnu++2d``
+
+   Working draft for C++2d with GNU extensions
+
  The default C++ language standard is ``gnu++17``.
 
  Supported values for the OpenCL language are:

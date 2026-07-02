@@ -902,6 +902,8 @@ unsigned DiagnosticIDs::getCXXCompatDiagId(const LangOptions &LangOpts,
   assert(CompatDiagId < std::size(Diags) && "Invalid compat diag id");
 
   unsigned StdVer = [&] {
+    if (LangOpts.CPlusPlus29)
+      return 2029;
     if (LangOpts.CPlusPlus26)
       return 2026;
     if (LangOpts.CPlusPlus23)

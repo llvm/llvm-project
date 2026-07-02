@@ -244,6 +244,7 @@ multiclass CXX17Compat<string message, bit ext_warn = true> : CXXCompat<message,
 multiclass CXX20Compat<string message, bit ext_warn = true> : CXXCompat<message, 20, ext_warn>;
 multiclass CXX23Compat<string message, bit ext_warn = true> : CXXCompat<message, 23, ext_warn>;
 multiclass CXX26Compat<string message, bit ext_warn = true> : CXXCompat<message, 26, ext_warn, "2c">;
+multiclass CXX29Compat<string message, bit ext_warn = true> : CXXCompat<message, 29, ext_warn, "2d">;
 
 // Definitions for Diagnostics.
 include "DiagnosticASTKinds.td"

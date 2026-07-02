@@ -150,6 +150,8 @@ static llvm::ManagedStatic<IndexErrorCategory> Category;
 static std::string getLangDescription(const LangOptions &LO) {
   if (!LO.CPlusPlus)
     return "non-C++";
+  if (LO.CPlusPlus29)
+    return "C++29";
   if (LO.CPlusPlus26)
     return "C++26";
   if (LO.CPlusPlus23)

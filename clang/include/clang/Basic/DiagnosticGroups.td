@@ -412,6 +412,9 @@ def CXXPre26CompatPedantic :
   DiagGroup<"pre-c++26-compat-pedantic", [CXXPre26Compat]>;
 def : DiagGroup<"pre-c++2c-compat", [CXXPre26Compat]>;
 def : DiagGroup<"pre-c++2c-compat-pedantic", [CXXPre26CompatPedantic]>;
+def CXXPre29Compat : DiagGroup<"pre-c++2d-compat">;
+def CXXPre29CompatPedantic :
+  DiagGroup<"pre-c++2d-compat-pedantic", [CXXPre29Compat]>;
 
 def CXX98CompatBindToTemporaryCopy :
   DiagGroup<"c++98-compat-bind-to-temporary-copy">;
@@ -1579,6 +1582,10 @@ def CXX23 : DiagGroup<"c++23-extensions", [CXX23AttrsOnLambda]>;
 // A warning group for warnings about using C++26 features as extensions in
 // earlier C++ versions.
 def CXX26 : DiagGroup<"c++26-extensions">;
+
+// A warning group for warnings about using C++29 features as extensions in
+// earlier C++ versions.
+def CXX29 : DiagGroup<"c++2d-extensions">;
 
 def : DiagGroup<"c++0x-extensions", [CXX11]>;
 def : DiagGroup<"c++1y-extensions", [CXX14]>;

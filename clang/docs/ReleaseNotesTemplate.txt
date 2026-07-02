@@ -62,6 +62,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### C++ Language Changes
 
+#### C++2d Feature Support
+
 #### C++2c Feature Support
 
 #### C++23 Feature Support
