@@ -36,8 +36,13 @@
 namespace clang {
 namespace serialization {
 
+using MultiOnDiskHashTableVisitor = void (*)(void *, void *);
+void visitMultiOnDiskHashTables(void *const *Begin, void *const *End,
+                                void *Context,
+                                MultiOnDiskHashTableVisitor Visitor);
+
 /// A collection of on-disk hash tables, merged when relevant for performance.
-template<typename Info> class MultiOnDiskHashTable {
+template <typename Info> class MultiOnDiskHashTable {
 public:
   /// A handle to a file, used when overriding tables.
   using file_type = typename Info::file_type;
@@ -140,6 +145,43 @@ private:
     PendingOverrides.clear();
   }
 
+  static void mergeTable(void *OpaqueTable, void *OpaqueMerged) {
+    auto *ODT =
+        llvm::cast<OnDiskTable *>(Table::getFromOpaqueValue(OpaqueTable));
+    auto *Merged = static_cast<MergedTable *>(OpaqueMerged);
+    auto &HT = ODT->Table;
+    Info &InfoObj = HT.getInfoObj();
+
+    for (auto I = HT.data_begin(), E = HT.data_end(); I != E; ++I) {
+      auto *LocalPtr = I.getItem();
+
+      // FIXME: Don't rely on the OnDiskHashTable format here.
+      auto L = InfoObj.ReadKeyDataLength(LocalPtr);
+      const internal_key_type &Key = InfoObj.ReadKey(LocalPtr, L.first);
+      data_type_builder ValueBuilder(Merged->Data[Key]);
+      InfoObj.ReadDataInto(Key, LocalPtr + L.first, L.second, ValueBuilder);
+    }
+
+    Merged->Files.push_back(ODT->File);
+    delete ODT;
+  }
+
+  static void readAllFromTable(void *OpaqueTable, void *OpaqueResultBuilder) {
+    auto *ODT =
+        llvm::cast<OnDiskTable *>(Table::getFromOpaqueValue(OpaqueTable));
+    auto *ResultBuilder = static_cast<data_type_builder *>(OpaqueResultBuilder);
+    auto &HT = ODT->Table;
+    Info &InfoObj = HT.getInfoObj();
+    for (auto I = HT.data_begin(), E = HT.data_end(); I != E; ++I) {
+      auto *LocalPtr = I.getItem();
+
+      // FIXME: Don't rely on the OnDiskHashTable format here.
+      auto L = InfoObj.ReadKeyDataLength(LocalPtr);
+      const internal_key_type &Key = InfoObj.ReadKey(LocalPtr, L.first);
+      InfoObj.ReadDataInto(Key, LocalPtr + L.first, L.second, *ResultBuilder);
+    }
+  }
+
   void condense() {
     MergedTable *Merged = getMergedTable();
     if (!Merged)
@@ -147,24 +189,8 @@ private:
 
     // Read in all the tables and merge them together.
     // FIXME: Be smarter about which tables we merge.
-    for (auto *ODT : tables()) {
-      auto &HT = ODT->Table;
-      Info &InfoObj = HT.getInfoObj();
-
-      for (auto I = HT.data_begin(), E = HT.data_end(); I != E; ++I) {
-        auto *LocalPtr = I.getItem();
-
-        // FIXME: Don't rely on the OnDiskHashTable format here.
-        auto L = InfoObj.ReadKeyDataLength(LocalPtr);
-        const internal_key_type &Key = InfoObj.ReadKey(LocalPtr, L.first);
-        data_type_builder ValueBuilder(Merged->Data[Key]);
-        InfoObj.ReadDataInto(Key, LocalPtr + L.first, L.second,
-                             ValueBuilder);
-      }
-
-      Merged->Files.push_back(ODT->File);
-      delete ODT;
-    }
+    visitMultiOnDiskHashTables(tables().begin().getCurrent(), Tables.end(),
+                               Merged, mergeTable);
 
     Tables.clear();
     Tables.push_back(Table(Merged).getOpaqueValue());
@@ -269,18 +295,8 @@ public:
         Info::MergeDataInto(KV.second, ResultBuilder);
     }
 
-    for (auto *ODT : tables()) {
-      auto &HT = ODT->Table;
-      Info &InfoObj = HT.getInfoObj();
-      for (auto I = HT.data_begin(), E = HT.data_end(); I != E; ++I) {
-        auto *LocalPtr = I.getItem();
-
-        // FIXME: Don't rely on the OnDiskHashTable format here.
-        auto L = InfoObj.ReadKeyDataLength(LocalPtr);
-        const internal_key_type &Key = InfoObj.ReadKey(LocalPtr, L.first);
-        InfoObj.ReadDataInto(Key, LocalPtr + L.first, L.second, ResultBuilder);
-      }
-    }
+    visitMultiOnDiskHashTables(tables().begin().getCurrent(), Tables.end(),
+                               &ResultBuilder, readAllFromTable);
 
     return Result;
   }

@@ -147,6 +147,13 @@ using namespace clang::serialization;
 using namespace clang::serialization::reader;
 using llvm::BitstreamCursor;
 
+void clang::serialization::visitMultiOnDiskHashTables(
+    void *const *Begin, void *const *End, void *Context,
+    MultiOnDiskHashTableVisitor Visitor) {
+  for (; Begin != End; ++Begin)
+    Visitor(*Begin, Context);
+}
+
 //===----------------------------------------------------------------------===//
 // ChainedASTReaderListener implementation
 //===----------------------------------------------------------------------===//
