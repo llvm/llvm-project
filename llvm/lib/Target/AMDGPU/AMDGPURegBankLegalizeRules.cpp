@@ -1762,6 +1762,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForIOpcs({returnaddress}).Any({{UniP0}, {{SgprP0}, {}}});
 
+  addRulesForIOpcs({frameaddress}).Any({{UniP5}, {{SgprP5}, {}}});
+
   // Note: amdgcn.icmp with i1 inputs is legalized to ballot in the legalizer,
   // so no S1 rules are needed here.
   addRulesForIOpcs({amdgcn_icmp})

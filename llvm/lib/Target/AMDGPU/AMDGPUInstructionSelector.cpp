@@ -1249,6 +1249,8 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
     return selectGroupStaticSize(I);
   case Intrinsic::returnaddress:
     return selectReturnAddress(I);
+  case Intrinsic::frameaddress:
+    return selectFrameAddress(I);
   case Intrinsic::amdgcn_smfmac_f32_16x16x32_f16:
   case Intrinsic::amdgcn_smfmac_f32_32x32x16_f16:
   case Intrinsic::amdgcn_smfmac_f32_16x16x32_bf16:
@@ -1865,6 +1867,40 @@ bool AMDGPUInstructionSelector::selectReturnAddress(MachineInstr &I) const {
                                              AMDGPU::SReg_64RegClass, DL);
   BuildMI(*MBB, &I, DL, TII.get(AMDGPU::COPY), DstReg)
     .addReg(LiveIn);
+  I.eraseFromParent();
+  return true;
+}
+
+bool AMDGPUInstructionSelector::selectFrameAddress(MachineInstr &I) const {
+  MachineBasicBlock *MBB = I.getParent();
+  MachineFunction &MF = *MBB->getParent();
+  const DebugLoc &DL = I.getDebugLoc();
+
+  MachineOperand &Dst = I.getOperand(0);
+  Register DstReg = Dst.getReg();
+  unsigned Depth = I.getOperand(2).getImm();
+
+  const TargetRegisterClass *RC =
+      TRI.getConstrainedRegClassForOperand(Dst, *MRI);
+  if (!RBI.constrainGenericRegister(DstReg, *RC, *MRI))
+    return false;
+
+  // Check for kernel and shader functions
+  if (Depth != 0 || MF.getInfo<SIMachineFunctionInfo>()->isEntryFunction()) {
+    BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_MOV_B32), DstReg).addImm(0);
+    I.eraseFromParent();
+    return true;
+  }
+
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  // There is a call to @llvm.frameaddress in this function
+  MFI.setFrameAddressIsTaken(true);
+
+  // Get the frame address reg and mark it as an implicit live-in
+  Register FrameAddrReg = TRI.getFrameRegister(MF);
+  Register LiveIn = getFunctionLiveInPhysReg(MF, TII, FrameAddrReg,
+                                             AMDGPU::SReg_32RegClass, DL);
+  BuildMI(*MBB, &I, DL, TII.get(AMDGPU::COPY), DstReg).addReg(LiveIn);
   I.eraseFromParent();
   return true;
 }

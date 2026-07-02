@@ -7552,6 +7552,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerBRCOND(Op, DAG);
   case ISD::RETURNADDR:
     return LowerRETURNADDR(Op, DAG);
+  case ISD::FRAMEADDR:
+    return LowerFRAMEADDR(Op, DAG);
   case ISD::SPONENTRY:
     return LowerSPONENTRY(Op, DAG);
   case ISD::LOAD: {
@@ -8605,6 +8607,31 @@ SDValue SITargetLowering::LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const {
   // Get the return address reg and mark it as an implicit live-in
   Register Reg = MF.addLiveIn(TRI->getReturnAddressReg(MF),
                               getRegClassFor(VT, Op.getNode()->isDivergent()));
+
+  return DAG.getCopyFromReg(DAG.getEntryNode(), DL, Reg, VT);
+}
+
+SDValue SITargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
+  MVT VT = Op.getSimpleValueType();
+  SDLoc DL(Op);
+  // Checking the depth
+  if (Op.getConstantOperandVal(0) != 0)
+    return DAG.getConstant(0, DL, VT);
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+  // Check for kernel and shader functions
+  if (Info->isEntryFunction())
+    return DAG.getConstant(0, DL, VT);
+
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  // There is a call to @llvm.frameaddress in this function
+  MFI.setFrameAddressIsTaken(true);
+
+  const SIRegisterInfo *TRI = getSubtarget()->getRegisterInfo();
+  // Get the frame address reg and mark it as an implicit live-in
+  Register Reg =
+      MF.addLiveIn(TRI->getFrameRegister(MF), &AMDGPU::SReg_32RegClass);
 
   return DAG.getCopyFromReg(DAG.getEntryNode(), DL, Reg, VT);
 }
