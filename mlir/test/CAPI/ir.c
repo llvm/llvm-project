@@ -13,6 +13,7 @@
 #include "mlir-c/IR.h"
 #include "mlir-c/AffineExpr.h"
 #include "mlir-c/AffineMap.h"
+#include "mlir-c/Analysis.h"
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/Diagnostics.h"
@@ -2900,6 +2901,212 @@ int testDominanceInfo(MlirContext ctx) {
   return 0;
 }
 
+// Prints the names of the operations in a slice buffer, for FileCheck.
+static void printSlice(MlirOperation *slice, intptr_t n) {
+  for (intptr_t i = 0; i < n; ++i) {
+    MlirStringRef name = mlirIdentifierStr(mlirOperationGetName(slice[i]));
+    fprintf(stderr, "slice: %.*s\n", (int)name.length, name.data);
+  }
+}
+
+// Slice filter that treats `arith.subi` as a frontier (stops propagation
+// through it, and excludes it from the slice).
+static bool sliceFilterExcludeSubi(MlirOperation op, void *userData) {
+  (void)userData;
+  MlirStringRef name = mlirIdentifierStr(mlirOperationGetName(op));
+  return !mlirStringRefEqual(name,
+                             mlirStringRefCreateFromCString("arith.subi"));
+}
+
+// Slice filter that treats `arith.muli` as a frontier.
+static bool sliceFilterExcludeMuli(MlirOperation op, void *userData) {
+  (void)userData;
+  MlirStringRef name = mlirIdentifierStr(mlirOperationGetName(op));
+  return !mlirStringRefEqual(name,
+                             mlirStringRefCreateFromCString("arith.muli"));
+}
+
+int testForwardSlice(MlirContext ctx) {
+  fprintf(stderr, "@testForwardSlice\n");
+  // CHECK-LABEL: @testForwardSlice
+
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("arith"));
+
+  const char *moduleStr = "func.func @f(%arg0: i32) -> i32 {\n"
+                          "  %0 = arith.addi %arg0, %arg0 : i32\n"
+                          "  %1 = arith.muli %0, %arg0 : i32\n"
+                          "  %2 = arith.subi %1, %0 : i32\n"
+                          "  return %2 : i32\n"
+                          "}\n";
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleStr));
+
+  MlirBlock moduleBody = mlirModuleGetBody(module);
+  MlirOperation funcOp = mlirBlockGetFirstOperation(moduleBody);
+  MlirRegion funcRegion = mlirOperationGetRegion(funcOp, 0);
+  MlirBlock funcBody = mlirRegionGetFirstBlock(funcRegion);
+  MlirOperation addOp = mlirBlockGetFirstOperation(funcBody);
+
+  // The forward slice of the addi is its transitive users: the muli, the subi
+  // and the return (the addi itself is not included). Query the size first,
+  // then fill a buffer.
+  assert(mlirGetForwardSlice(addOp, NULL, NULL, 0, NULL) == 3);
+  MlirOperation slice[3];
+  intptr_t count = mlirGetForwardSlice(addOp, NULL, NULL, 3, slice);
+  assert(count == 3);
+  fprintf(stderr, "unfiltered forward slice:\n");
+  // CHECK: unfiltered forward slice:
+  printSlice(slice, count);
+  // CHECK-DAG: slice: arith.muli
+  // CHECK-DAG: slice: arith.subi
+  // CHECK-DAG: slice: func.return
+
+  // With a filter that excludes the subi, propagation stops there: only the
+  // muli remains. The return is only reachable through the (excluded) subi, so
+  // it drops out of the slice as well.
+  intptr_t filteredCount =
+      mlirGetForwardSlice(addOp, sliceFilterExcludeSubi, NULL, 3, slice);
+  assert(filteredCount == 1);
+  fprintf(stderr, "filtered forward slice:\n");
+  // CHECK: filtered forward slice:
+  printSlice(slice, filteredCount);
+  // CHECK-NEXT: slice: arith.muli
+  // CHECK-NOT: slice:
+
+  mlirModuleDestroy(module);
+
+  // CHECK: testForwardSlice: PASSED
+  fprintf(stderr, "testForwardSlice: PASSED\n");
+  return 0;
+}
+
+int testBackwardSlice(MlirContext ctx) {
+  fprintf(stderr, "@testBackwardSlice\n");
+  // CHECK-LABEL: @testBackwardSlice
+
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("arith"));
+
+  const char *moduleStr = "func.func @f(%arg0: i32) -> i32 {\n"
+                          "  %0 = arith.addi %arg0, %arg0 : i32\n"
+                          "  %1 = arith.muli %0, %arg0 : i32\n"
+                          "  %2 = arith.subi %1, %0 : i32\n"
+                          "  return %2 : i32\n"
+                          "}\n";
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleStr));
+
+  MlirBlock moduleBody = mlirModuleGetBody(module);
+  MlirOperation funcOp = mlirBlockGetFirstOperation(moduleBody);
+  MlirRegion funcRegion = mlirOperationGetRegion(funcOp, 0);
+  MlirBlock funcBody = mlirRegionGetFirstBlock(funcRegion);
+  MlirOperation addOp = mlirBlockGetFirstOperation(funcBody);
+  MlirOperation mulOp = mlirOperationGetNextInBlock(addOp);
+  MlirOperation subOp = mlirOperationGetNextInBlock(mulOp);
+
+  // The backward slice of the subi is its transitive definitions: the muli and
+  // the addi (the subi itself is not included; block arguments have no defining
+  // op and are skipped).
+  MlirOperation slice[2];
+  intptr_t count = mlirGetBackwardSlice(subOp, NULL, NULL, 2, slice);
+  assert(count == 2);
+  fprintf(stderr, "unfiltered backward slice:\n");
+  // CHECK: unfiltered backward slice:
+  printSlice(slice, count);
+  // CHECK-DAG: slice: arith.addi
+  // CHECK-DAG: slice: arith.muli
+
+  // With a filter that excludes the muli, propagation stops there. The addi is
+  // still reached directly through the subi's other operand, so it remains.
+  intptr_t filteredCount =
+      mlirGetBackwardSlice(subOp, sliceFilterExcludeMuli, NULL, 2, slice);
+  assert(filteredCount == 1);
+  fprintf(stderr, "filtered backward slice:\n");
+  // CHECK: filtered backward slice:
+  printSlice(slice, filteredCount);
+  // CHECK-NEXT: slice: arith.addi
+  // CHECK-NOT: slice:
+
+  mlirModuleDestroy(module);
+
+  // CHECK: testBackwardSlice: PASSED
+  fprintf(stderr, "testBackwardSlice: PASSED\n");
+  return 0;
+}
+
+int testTopologicalSort(MlirContext ctx) {
+  fprintf(stderr, "@testTopologicalSort\n");
+  // CHECK-LABEL: @testTopologicalSort
+
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("arith"));
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("cf"));
+
+  // Blocks sorted by dominance: the entry block dominates all others and must
+  // come first; the merge block ^bb3 comes last.
+  const char *cfgStr = "func.func @g(%cond: i1) -> i32 {\n"
+                       "  %c0 = arith.constant 0 : i32\n"
+                       "  %c1 = arith.constant 1 : i32\n"
+                       "  cf.cond_br %cond, ^bb1, ^bb2\n"
+                       "^bb1:\n"
+                       "  cf.br ^bb3(%c0 : i32)\n"
+                       "^bb2:\n"
+                       "  cf.br ^bb3(%c1 : i32)\n"
+                       "^bb3(%result: i32):\n"
+                       "  return %result : i32\n"
+                       "}\n";
+  MlirModule cfgModule =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(cfgStr));
+  MlirBlock cfgModuleBody = mlirModuleGetBody(cfgModule);
+  MlirOperation gFuncOp = mlirBlockGetFirstOperation(cfgModuleBody);
+  MlirRegion gRegion = mlirOperationGetRegion(gFuncOp, 0);
+  MlirBlock entry = mlirRegionGetFirstBlock(gRegion);
+  MlirBlock bb3 = mlirBlockGetNextInRegion(
+      mlirBlockGetNextInRegion(mlirBlockGetNextInRegion(entry)));
+
+  MlirBlock blocks[4];
+  intptr_t numBlocks = mlirRegionGetBlocksSortedByDominance(gRegion, 4, blocks);
+  assert(numBlocks == 4);
+  // The entry block dominates everything (reported first); the merge block is
+  // dominated by the entry (reported last).
+  assert(mlirBlockEqual(blocks[0], entry));
+  assert(mlirBlockEqual(blocks[3], bb3));
+
+  mlirModuleDestroy(cfgModule);
+
+  // Topological sort of a set of operations passed in reverse program order.
+  const char *chainStr = "func.func @f(%arg0: i32) -> i32 {\n"
+                         "  %0 = arith.addi %arg0, %arg0 : i32\n"
+                         "  %1 = arith.muli %0, %arg0 : i32\n"
+                         "  %2 = arith.subi %1, %0 : i32\n"
+                         "  return %2 : i32\n"
+                         "}\n";
+  MlirModule chainModule =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(chainStr));
+  MlirBlock chainModuleBody = mlirModuleGetBody(chainModule);
+  MlirOperation fFuncOp = mlirBlockGetFirstOperation(chainModuleBody);
+  MlirRegion fRegion = mlirOperationGetRegion(fFuncOp, 0);
+  MlirBlock fBody = mlirRegionGetFirstBlock(fRegion);
+  MlirOperation addOp = mlirBlockGetFirstOperation(fBody);
+  MlirOperation mulOp = mlirOperationGetNextInBlock(addOp);
+  MlirOperation subOp = mlirOperationGetNextInBlock(mulOp);
+
+  // Pass them reversed; the sort must restore defs-before-uses order.
+  MlirOperation unsorted[3] = {subOp, mulOp, addOp};
+  MlirOperation sorted[3];
+  mlirTopologicalSort(3, unsorted, sorted);
+  fprintf(stderr, "topo sort:\n");
+  // CHECK: topo sort:
+  printSlice(sorted, 3);
+  // CHECK-NEXT: slice: arith.addi
+  // CHECK-NEXT: slice: arith.muli
+  // CHECK-NEXT: slice: arith.subi
+
+  mlirModuleDestroy(chainModule);
+
+  // CHECK: testTopologicalSort: PASSED
+  fprintf(stderr, "testTopologicalSort: PASSED\n");
+  return 0;
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   registerAllUpstreamDialects(ctx);
@@ -2955,6 +3162,12 @@ int main(void) {
     return 19;
   if (testDominanceInfo(ctx))
     return 20;
+  if (testForwardSlice(ctx))
+    return 21;
+  if (testBackwardSlice(ctx))
+    return 22;
+  if (testTopologicalSort(ctx))
+    return 23;
 
   // CHECK: DESTROY MAIN CONTEXT
   // CHECK: reportResourceDelete: resource_i64_blob
