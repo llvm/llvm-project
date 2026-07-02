@@ -10,6 +10,7 @@
 #include "BinaryHolder.h"
 #include "DebugMap.h"
 #include "LinkUtils.h"
+#include "PseudoProbe.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/NonRelocatableStringpool.h"
 #include "llvm/MC/MCAssembler.h"
@@ -339,12 +340,13 @@ static void transferSegmentAndSections(
   }
 }
 
-// Write the __DWARF segment load command to the output file.
-static bool createDwarfSegment(const MCAssembler &Asm, uint64_t VMAddr,
-                               uint64_t FileOffset, uint64_t FileSize,
-                               unsigned NumSections, MachObjectWriter &Writer,
-                               bool AllowSectionHeaderOffsetOverflow) {
-  Writer.writeSegmentLoadCommand("__DWARF", NumSections, VMAddr,
+// Write the load command for the \p SegName segment and its sections.
+static bool createSegment(const MCAssembler &Asm, StringRef SegName,
+                          uint64_t VMAddr, uint64_t FileOffset,
+                          uint64_t FileSize, unsigned NumSections,
+                          MachObjectWriter &Writer,
+                          bool AllowSectionHeaderOffsetOverflow) {
+  Writer.writeSegmentLoadCommand(SegName, NumSections, VMAddr,
                                  alignTo(FileSize, 0x1000), FileOffset,
                                  FileSize, /* MaxProt */ 7,
                                  /* InitProt =*/3);
@@ -352,6 +354,9 @@ static bool createDwarfSegment(const MCAssembler &Asm, uint64_t VMAddr,
   for (unsigned int i = 0, n = Writer.getSectionOrder().size(); i != n; ++i) {
     auto *Sec = static_cast<MCSectionMachO *>(Writer.getSectionOrder()[i]);
     if (!Asm.getSectionFileSize(*Sec))
+      continue;
+    // Only emit sections that belong to this segment.
+    if (Sec->getSegmentName() != SegName)
       continue;
 
     Align Alignment = Sec->getAlign();
@@ -529,26 +534,40 @@ bool generateDsymCompanion(
     LoadCommandSize += segmentLoadCommandSize(Is64Bit, Segment.nsects);
   });
 
-  // We will add our own brand new __DWARF segment if we have debug
-  // info.
+  // We will add our own brand new __DWARF segment if we have debug info, and a
+  // separate __LLVM segment for the merged pseudo-probe sections, so that
+  // non-debug probe data is not placed in __DWARF.
   unsigned NumDwarfSections = 0;
   uint64_t DwarfSegmentSize = 0;
+  unsigned NumProbeSections = 0;
+  uint64_t ProbeSegmentSize = 0;
 
   for (unsigned int i = 0, n = Writer.getSectionOrder().size(); i != n; ++i) {
-    MCSection *Sec = Writer.getSectionOrder()[i];
+    auto *Sec = static_cast<MCSectionMachO *>(Writer.getSectionOrder()[i]);
     if (Sec->begin() == Sec->end())
       continue;
 
     if (uint64_t Size = MCAsm.getSectionFileSize(*Sec)) {
-      DwarfSegmentSize = alignTo(DwarfSegmentSize, Sec->getAlign());
-      DwarfSegmentSize += Size;
-      ++NumDwarfSections;
+      if (Sec->getSegmentName() == PseudoProbeSegmentName) {
+        ProbeSegmentSize = alignTo(ProbeSegmentSize, Sec->getAlign());
+        ProbeSegmentSize += Size;
+        ++NumProbeSections;
+      } else {
+        DwarfSegmentSize = alignTo(DwarfSegmentSize, Sec->getAlign());
+        DwarfSegmentSize += Size;
+        ++NumDwarfSections;
+      }
     }
   }
 
   if (NumDwarfSections) {
     ++NumLoadCommands;
     LoadCommandSize += segmentLoadCommandSize(Is64Bit, NumDwarfSections);
+  }
+
+  if (NumProbeSections) {
+    ++NumLoadCommands;
+    LoadCommandSize += segmentLoadCommandSize(Is64Bit, NumProbeSections);
   }
 
   SmallString<0> NewSymtab;
@@ -609,6 +628,11 @@ bool generateDsymCompanion(
   uint64_t DwarfSegmentStart =
       alignTo(PseudoProbeStart + PseudoProbeSize, 0x1000);
 
+  // The merged pseudo-probe sections go in their own segment, laid out in the
+  // file right after the __DWARF segment.
+  uint64_t ProbeSegmentStart =
+      alignTo(DwarfSegmentStart + DwarfSegmentSize, 0x1000);
+
   // Write the load commands for the segments and sections we 'import' from
   // the original binary.
   uint64_t EndAddress = 0;
@@ -642,10 +666,17 @@ bool generateDsymCompanion(
            "output file streaming");
   }
 
-  // Write the load command for the __DWARF segment.
-  if (!createDwarfSegment(MCAsm, DwarfVMAddr, DwarfSegmentStart,
-                          DwarfSegmentSize, NumDwarfSections, Writer,
-                          AllowSectionHeaderOffsetOverflow))
+  uint64_t ProbeVMAddr = alignTo(DwarfVMAddr + DwarfSegmentSize, 0x1000);
+
+  if (!createSegment(MCAsm, "__DWARF", DwarfVMAddr, DwarfSegmentStart,
+                     DwarfSegmentSize, NumDwarfSections, Writer,
+                     AllowSectionHeaderOffsetOverflow))
+    return false;
+
+  if (NumProbeSections &&
+      !createSegment(MCAsm, PseudoProbeSegmentName, ProbeVMAddr,
+                     ProbeSegmentStart, ProbeSegmentSize, NumProbeSections,
+                     Writer, AllowSectionHeaderOffsetOverflow))
     return false;
 
   assert(OutFile.tell() == LoadCommandSize + HeaderSize);
@@ -696,9 +727,27 @@ bool generateDsymCompanion(
 
   // Emit the Dwarf sections contents.
   for (const MCSection &Sec : MCAsm) {
+    if (static_cast<const MCSectionMachO &>(Sec).getSegmentName() ==
+        PseudoProbeSegmentName)
+      continue;
     uint64_t Pos = OutFile.tell();
     OutFile.write_zeros(alignTo(Pos, Sec.getAlign()) - Pos);
     MCAsm.writeSectionData(OutFile, &Sec);
+  }
+
+  if (NumProbeSections) {
+    assert(NumProbeSections <= 2 &&
+           "expected at most the __probes and __probe_descs sections");
+    OutFile.write_zeros(ProbeSegmentStart - OutFile.tell());
+    assert(OutFile.tell() == ProbeSegmentStart);
+    for (const MCSection &Sec : MCAsm) {
+      if (static_cast<const MCSectionMachO &>(Sec).getSegmentName() !=
+          PseudoProbeSegmentName)
+        continue;
+      uint64_t Pos = OutFile.tell();
+      OutFile.write_zeros(alignTo(Pos, Sec.getAlign()) - Pos);
+      MCAsm.writeSectionData(OutFile, &Sec);
+    }
   }
 
   // Apply relocations to the contents of the DWARF segment.

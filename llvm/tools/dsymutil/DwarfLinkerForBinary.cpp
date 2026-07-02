@@ -10,6 +10,7 @@
 #include "BinaryHolder.h"
 #include "DebugMap.h"
 #include "MachOUtils.h"
+#include "PseudoProbe.h"
 #include "SwiftModule.h"
 #include "dsymutil.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -970,6 +971,20 @@ bool DwarfLinkerForBinary::linkImpl(
   // link debug info for loaded object files.
   if (Error E = GeneralLinker->link())
     return error(toString(std::move(E)));
+
+  // Transfer pseudo-probe metadata into the dSYM. The linker drops the __LLVM
+  // probe sections from the final image, so collect them from the debug-map
+  // object files.
+  if (!Options.NoOutput) {
+    PseudoProbeCollector ProbeCollector(*Streamer->getAsmPrinter().OutStreamer);
+    for (const auto &Obj : Map.objects()) {
+      auto ErrOrObj = loadObject(*Obj, Map.getTriple());
+      if (!ErrOrObj)
+        continue;
+      if (const auto *MO = dyn_cast<object::MachOObjectFile>(&*ErrOrObj))
+        ProbeCollector.collectFromObject(*MO);
+    }
+  }
 
   StringRef ArchName = Map.getTriple().getArchName();
   if (Error E = emitRemarks(Options, Map.getBinaryPath(), ArchName, RL))
