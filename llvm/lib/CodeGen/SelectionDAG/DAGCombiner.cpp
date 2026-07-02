@@ -1412,11 +1412,11 @@ SDValue DAGCombiner::reassociateReduction(unsigned RedOpc, unsigned Opc,
   auto FoldReductionChain = [&](SDValue Red0, SDValue Chain) -> SDValue {
     SDValue X, Y, Z, RedY;
     if (!sd_match(Red0, m_OneUse(m_UnaryOp(RedOpc, m_Value(X)))) ||
-        !sd_match(Chain,
-                  m_OneUse(m_c_BinOp(
-                      Opc,
-                      m_Value(RedY, m_OneUse(m_UnaryOp(RedOpc, m_Value(Y)))),
-                      m_Value(Z, m_Unless(m_UnaryOp(RedOpc, m_Value())))))) ||
+        !sd_match(
+            Chain,
+            m_OneUse(m_c_BinOp(
+                Opc, m_Value(RedY, m_OneUse(m_UnaryOp(RedOpc, m_Value(Y)))),
+                m_Value(Z, m_Unless(m_UnaryOp(RedOpc, m_Value())))))) ||
         X.getValueType() != Y.getValueType() ||
         !hasOperation(Opc, X.getValueType()) ||
         !TLI.shouldReassociateReduction(RedOpc, VT))
