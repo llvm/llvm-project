@@ -792,6 +792,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fix a problem where a substitution failure when evaluating a type requirement
   could directly make the program ill-formed.
 - Typo correction now corrects the name qualifier for invalid template names.
+- Member specializations can now be declared in class scope.
 - Fix a problem where pack index expressions where incorrectly being regarded as equivalent.
 - Correctly diagnose narrowing in pack index expressions. (#GH205650)
 - Fixed a bug where captured variables in non-mutable lambdas were incorrectly treated as mutable
