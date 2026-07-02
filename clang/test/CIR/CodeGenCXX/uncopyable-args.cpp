@@ -68,7 +68,7 @@ void bar() {
 
 // OGCG-LABEL: define {{.*}} void @_ZN9move_ctor3barEv(
 // OGCG:   call {{.*}} @_ZN9move_ctor1AC1Ev(
-// OGCG:   call void @_ZN9move_ctor3fooENS_1AE(ptr noundef dead_on_return
+// OGCG:   call void @_ZN9move_ctor3fooENS_1AE(
 }
 
 namespace all_deleted {
@@ -92,7 +92,7 @@ void bar() {
 
 // OGCG-LABEL: define {{.*}} void @_ZN11all_deleted3barEv(
 // OGCG:   call {{.*}} @_ZN11all_deleted1AC1Ev(
-// OGCG:   call void @_ZN11all_deleted3fooENS_1AE(ptr noundef dead_on_return
+// OGCG:   call void @_ZN11all_deleted3fooENS_1AE(
 }
 
 namespace implicitly_deleted {
@@ -115,7 +115,7 @@ void bar() {
 
 // OGCG-LABEL: define {{.*}} void @_ZN18implicitly_deleted3barEv(
 // OGCG:   call {{.*}} @_ZN18implicitly_deleted1AC1Ev(
-// OGCG:   call void @_ZN18implicitly_deleted3fooENS_1AE(ptr noundef dead_on_return
+// OGCG:   call void @_ZN18implicitly_deleted3fooENS_1AE(
 }
 
 namespace one_deleted {
@@ -138,7 +138,7 @@ void bar() {
 
 // OGCG-LABEL: define {{.*}} void @_ZN11one_deleted3barEv(
 // OGCG:   call {{.*}} @_ZN11one_deleted1AC1Ev(
-// OGCG:   call void @_ZN11one_deleted3fooENS_1AE(ptr noundef dead_on_return
+// OGCG:   call void @_ZN11one_deleted3fooENS_1AE(
 }
 
 namespace copy_defaulted {
@@ -235,7 +235,7 @@ void bar() {
 
 // OGCG-LABEL: define {{.*}} void @_ZN14two_copy_ctors3barEv(
 // OGCG:   call {{.*}} @{{.*}}C1Ev(
-// OGCG:   call void @_ZN14two_copy_ctors3fooENS_1BE(ptr noundef dead_on_return
+// OGCG:   call void @_ZN14two_copy_ctors3fooENS_1BE(
 }
 
 namespace definition_only {

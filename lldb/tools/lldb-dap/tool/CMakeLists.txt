@@ -19,6 +19,8 @@ add_dependencies(lldb-dap
   ${tablegen_deps}
 )
 
+lldb_prevent_liblldb_symbol_interposition(lldb-dap)
+
 if(APPLE)
   configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/lldb-dap-Info.plist.in

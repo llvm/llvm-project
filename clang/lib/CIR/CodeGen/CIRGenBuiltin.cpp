@@ -562,9 +562,8 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_ceilf16:
   case Builtin::BI__builtin_ceill:
   case Builtin::BI__builtin_ceilf128:
-    return emitUnaryMaybeConstrainedFPBuiltin<cir::CeilOp>(cgf, *e);
   case Builtin::BI__builtin_elementwise_ceil:
-    return RValue::getIgnored();
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::CeilOp>(cgf, *e);
   case Builtin::BIcopysign:
   case Builtin::BIcopysignf:
   case Builtin::BIcopysignl:

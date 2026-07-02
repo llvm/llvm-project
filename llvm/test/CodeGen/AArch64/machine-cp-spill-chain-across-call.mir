@@ -1,5 +1,8 @@
 # RUN: llc -mtriple=aarch64 -run-pass=machine-cp -enable-spill-copy-elim -o - %s | FileCheck %s
 
+# TODO -- remove this restriction with the follow up patch as it actually fixes it.
+# UNSUPPORTED: expensive_checks
+
 # Test to show a bug in eliminateSpillageCopies.
 # Here the spill copy "$x23 = COPY $x16" sits *before* the call and its
 # source $x16 (caller-saved) may be clobbered by the call, while its

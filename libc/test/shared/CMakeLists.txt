@@ -828,6 +828,7 @@ add_fp_unittest(
     shared_builtins_test.cpp
   DEPENDS
     libc.src.__support.builtins.adddf3
+    libc.src.__support.builtins.addsf3
     libc.src.__support.builtins.addtf3
     libc.src.__support.builtins.divdf3
     libc.src.__support.builtins.divtf3
