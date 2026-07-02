@@ -4947,13 +4947,11 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
 
     // extract_subvector = build_vector(extract_element, extract_element, ...)
     SmallVector<Register> ExtractedElements;
-    for (uint64_t i = 0; i < SubvectorTy.getNumElements(); i++)
-    {
-      dbgs() << Vector << "\n" << ExtractionPointImm << "\n";
+    for (uint64_t i = 0; i < SubvectorTy.getNumElements(); i++) {
       ExtractedElements.push_back(
           MIRBuilder
-              .buildExtractVectorElement(VectorTy.getScalarType(), Vector,
-                                         ExtractionPointImm + i)
+              .buildExtractVectorElementConstant(VectorTy.getScalarType(),
+                                                 Vector, ExtractionPointImm + i)
               .getReg(0));
     }
 
