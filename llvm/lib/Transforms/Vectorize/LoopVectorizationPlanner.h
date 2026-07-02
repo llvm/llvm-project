@@ -1004,6 +1004,11 @@ private:
                         const unsigned MaxTripCount, bool HasTail,
                         bool IsEpilogue = false) const;
 
+  /// Returns the estimated loop-body cost for \p VF and a known trip count.
+  InstructionCost getCostForKnownTripCount(const VectorizationFactor &VF,
+                                           unsigned TripCount,
+                                           bool HasTail) const;
+
   /// Determines if we have the infrastructure to vectorize the loop and its
   /// epilogue, assuming the main loop is vectorized by \p MainPlan.
   bool isCandidateForEpilogueVectorization(VPlan &MainPlan) const;

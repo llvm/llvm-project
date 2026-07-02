@@ -742,25 +742,8 @@ bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
   if (!MaxTripCount)
     return LowerCostWithoutTC;
 
-  auto GetCostForTC = [MaxTripCount, HasTail](unsigned VF,
-                                              InstructionCost VectorCost,
-                                              InstructionCost ScalarCost) {
-    // If the trip count is a known (possibly small) constant, the trip count
-    // will be rounded up to an integer number of iterations under
-    // FoldTailByMasking. The total cost in that case will be
-    // VecCost*ceil(TripCount/VF). When not folding the tail, the total
-    // cost will be VecCost*floor(TC/VF) + ScalarCost*(TC%VF). There will be
-    // some extra overheads, but for the purpose of comparing the costs of
-    // different VFs we can use this to compare the total loop-body cost
-    // expected after vectorization.
-    if (HasTail)
-      return VectorCost * (MaxTripCount / VF) +
-             ScalarCost * (MaxTripCount % VF);
-    return VectorCost * divideCeil(MaxTripCount, VF);
-  };
-
-  auto RTCostA = GetCostForTC(EstimatedWidthA, CostA, A.ScalarCost);
-  auto RTCostB = GetCostForTC(EstimatedWidthB, CostB, B.ScalarCost);
+  auto RTCostA = getCostForKnownTripCount(A, MaxTripCount, HasTail);
+  auto RTCostB = getCostForKnownTripCount(B, MaxTripCount, HasTail);
   bool LowerCostWithTC = CmpFn(RTCostA, RTCostB);
   LLVM_DEBUG(if (LowerCostWithTC != LowerCostWithoutTC) {
     dbgs() << "LV: VF " << (LowerCostWithTC ? A.Width : B.Width)
@@ -780,6 +763,27 @@ bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
   const unsigned MaxTripCount = PSE.getSmallConstantMaxTripCount();
   return LoopVectorizationPlanner::isMoreProfitable(A, B, MaxTripCount, HasTail,
                                                     IsEpilogue);
+}
+
+InstructionCost LoopVectorizationPlanner::getCostForKnownTripCount(
+    const VectorizationFactor &VF, unsigned TripCount, bool HasTail) const {
+  unsigned EstimatedWidth = VF.Width.getKnownMinValue();
+  if (std::optional<unsigned> VScale = Config.getVScaleForTuning())
+    if (VF.Width.isScalable())
+      EstimatedWidth *= *VScale;
+
+  // If the trip count is a known (possibly small) constant, the trip count
+  // will be rounded up to an integer number of iterations under
+  // FoldTailByMasking. The total cost in that case will be
+  // VecCost*ceil(TripCount/VF). When not folding the tail, the total
+  // cost will be VecCost*floor(TC/VF) + ScalarCost*(TC%VF). There will be
+  // some extra overheads, but for the purpose of comparing the costs of
+  // different VFs we can use this to compare the total loop-body cost
+  // expected after vectorization.
+  if (HasTail)
+    return VF.Cost * (TripCount / EstimatedWidth) +
+           VF.ScalarCost * (TripCount % EstimatedWidth);
+  return VF.Cost * divideCeil(TripCount, EstimatedWidth);
 }
 
 // TODO: we could return a pair of values that specify the max VF and

@@ -3030,13 +3030,13 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       MaxPowerOf2RuntimeVF = std::nullopt; // Stick with tail-folding for now.
   }
 
-  auto NoScalarEpilogueNeeded = [this, &UserIC](unsigned MaxVF) {
+  auto NoScalarEpilogueNeeded = [this](unsigned MaxVF, unsigned EffectiveIC) {
     // Return false if the loop is neither a single-latch-exit loop nor an
     // early-exit loop as tail-folding is not supported in that case.
     if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch() &&
         !Legal->hasUncountableEarlyExit())
       return false;
-    unsigned MaxVFtimesIC = UserIC ? MaxVF * UserIC : MaxVF;
+    unsigned MaxVFtimesIC = MaxVF * EffectiveIC;
     ScalarEvolution *SE = PSE.getSE();
     // Calling getSymbolicMaxBackedgeTakenCount enables support for loops
     // with uncountable exits. For countable loops, the symbolic maximum must
@@ -3053,10 +3053,11 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     return Rem->isZero();
   };
 
+  unsigned EffectiveIC = UserIC > 0 ? UserIC : 1;
   if (MaxPowerOf2RuntimeVF > 0u) {
     assert((UserVF.isNonZero() || isPowerOf2_32(*MaxPowerOf2RuntimeVF)) &&
            "MaxFixedVF must be a power of 2");
-    if (NoScalarEpilogueNeeded(*MaxPowerOf2RuntimeVF)) {
+    if (NoScalarEpilogueNeeded(*MaxPowerOf2RuntimeVF, EffectiveIC)) {
       // Accept MaxFixedVF if we do not have a tail.
       LLVM_DEBUG(dbgs() << "LV: No tail will remain for any chosen VF.\n");
       return MaxFactors;
@@ -3072,11 +3073,34 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       // the trip count but the scalable factor does not, use the fixed-width
       // factor in preference to allow the generation of a non-predicated loop.
       if (EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop &&
-          NoScalarEpilogueNeeded(MaxFactors.FixedVF.getFixedValue())) {
+          NoScalarEpilogueNeeded(MaxFactors.FixedVF.getFixedValue(),
+                                 EffectiveIC)) {
         LLVM_DEBUG(dbgs() << "LV: Picking a fixed-width so that no tail will "
                              "remain for any chosen VF.\n");
         MaxFactors.ScalableVF = ElementCount::getScalable(0);
         return MaxFactors;
+      }
+      // Allow cases where the ExactTC == VF + 1. VF can be any power of
+      // 2 between 2 and MaxVF.
+      //
+      // This produces 1 vector iteration, and 1 scalar iteration with
+      // no remainder. Later passes will eliminate the loop and leave
+      // straight-line code as the both iteration counts are statically known.
+      ElementCount ExactTC = getSmallConstantTripCount(PSE.getSE(), TheLoop);
+      if (EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop &&
+          ExactTC.getFixedValue() > 1) {
+        unsigned TC = ExactTC.getFixedValue();
+        unsigned MaxFixedVF = MaxFactors.FixedVF.getFixedValue();
+        if ((TC - 1) % EffectiveIC == 0) {
+          unsigned VF = (TC - 1) / EffectiveIC;
+          if (VF >= 2 && VF <= MaxFixedVF && isPowerOf2_32(VF)) {
+            LLVM_DEBUG(dbgs() << "LV: Picking VF=" << VF
+                              << " with 1 scalar iteration remaining.\n");
+            MaxFactors.FixedVF = ElementCount::getFixed(VF);
+            MaxFactors.ScalableVF = ElementCount::getScalable(0);
+            return MaxFactors;
+          }
+        }
       }
     }
 
@@ -5790,14 +5814,78 @@ LoopVectorizationPlanner::computeBestVF() {
     return {VectorizationFactor::Disabled(), nullptr};
   // If there is a single VPlan with a single VF, return it directly.
   VPlan &FirstPlan = *VPlans[0];
+  auto IsUnprofitableOneScalarTail =
+      [&](const VectorizationFactor &CurrentFactor, bool HasTail,
+          bool ForceVectorization, const ElementCount &ExactTC,
+          const VectorizationFactor &ScalarFactor,
+          const InstructionCost &ScalarCost, unsigned int UserIC) {
+        if (ForceVectorization || !HasTail || !ExactTC.isFixed() ||
+            CurrentFactor.Width.isScalable())
+          return false;
+
+        unsigned TC = ExactTC.getFixedValue();
+        if (TC == 0 || TC > TTI.getMinTripCountTailFoldingThreshold())
+          return false;
+
+        unsigned EstimatedWidth = estimateElementCount(
+            CurrentFactor.Width, Config.getVScaleForTuning());
+        if (TC != (EstimatedWidth * UserIC) + 1)
+          return false;
+
+        InstructionCost VectorCost =
+            getCostForKnownTripCount(CurrentFactor, TC, HasTail);
+        InstructionCost ScalarCostForTC =
+            getCostForKnownTripCount(ScalarFactor, TC, /*HasTail=*/false);
+        // Be conservative for the one-scalar-tail shape. It introduces extra
+        // control flow and a scalar epilogue for a single element, so require
+        // the vectorized form to save at least one scalar iteration.
+        InstructionCost AdjustedVectorCost = VectorCost + ScalarCost;
+        if (!AdjustedVectorCost.isValid() ||
+            AdjustedVectorCost < ScalarCostForTC)
+          return false;
+
+        LLVM_DEBUG(dbgs() << "LV: Rejecting VF " << CurrentFactor.Width
+                          << " for one-scalar-tail low trip count: vector cost "
+                          << AdjustedVectorCost << " >= scalar cost "
+                          << ScalarCostForTC << ".\n");
+        return true;
+      };
 
   ElementCount UserVF = Hints.getWidth();
+  unsigned int UserIC = Hints.getInterleave() != 0 ? Hints.getInterleave() : 1;
   if (VPlans.size() == 1) {
     // For outer loops, the plan has a single vector VF determined by the
     // heuristic.
     assert((FirstPlan.hasScalarVFOnly() || hasPlanWithVF(UserVF) ||
             FirstPlan.isOuterLoop()) &&
            "must have a single scalar VF, UserVF or an outer loop");
+    bool ForceVectorization =
+        Hints.getForce() == LoopVectorizeHints::FK_Enabled;
+    if (!FirstPlan.hasScalarVFOnly() && !FirstPlan.isOuterLoop() &&
+        hasPlanWithVF(UserVF) && UserVF.isVector() && !ForceVectorization) {
+      ElementCount ExactTC = getSmallConstantTripCount(PSE.getSE(), OrigLoop);
+      if (FirstPlan.hasScalarTail() && ExactTC.isFixed() && UserVF.isFixed()) {
+        unsigned TC = ExactTC.getFixedValue();
+        unsigned EstimatedWidth =
+            estimateElementCount(UserVF, Config.getVScaleForTuning());
+        if (TC != 0 && TC <= TTI.getMinTripCountTailFoldingThreshold() &&
+            TC == EstimatedWidth + 1) {
+          ElementCount ScalarVF = ElementCount::getFixed(1);
+          InstructionCost ScalarCost = CM.expectedCost(ScalarVF);
+          LLVM_DEBUG(dbgs()
+                     << "LV: Scalar loop costs: " << ScalarCost << ".\n");
+
+          InstructionCost Cost = cost(FirstPlan, UserVF, /*RU=*/nullptr);
+          VectorizationFactor UserFactor(UserVF, Cost, ScalarCost);
+          VectorizationFactor ScalarFactor(ScalarVF, ScalarCost, ScalarCost);
+          if (IsUnprofitableOneScalarTail(UserFactor, FirstPlan.hasScalarTail(),
+                                          ForceVectorization, ExactTC,
+                                          ScalarFactor, ScalarCost, UserIC)) {
+            return {ScalarFactor, &FirstPlan};
+          }
+        }
+      }
+    }
     return {VectorizationFactor(FirstPlan.getSingleVF(), 0, 0), &FirstPlan};
   }
 
@@ -5840,6 +5928,7 @@ LoopVectorizationPlanner::computeBestVF() {
   }
 
   VPlan *PlanForBestVF = &FirstPlan;
+  ElementCount ExactTC = getSmallConstantTripCount(PSE.getSE(), OrigLoop);
 
   for (auto &P : VPlans) {
     ArrayRef<ElementCount> VFs(P->vectorFactors().begin(),
@@ -5875,6 +5964,11 @@ LoopVectorizationPlanner::computeBestVF() {
       InstructionCost Cost =
           cost(*P, VF, ConsiderRegPressure ? &RUs[I] : nullptr);
       VectorizationFactor CurrentFactor(VF, Cost, ScalarCost);
+
+      if (IsUnprofitableOneScalarTail(CurrentFactor, P->hasScalarTail(),
+                                      ForceVectorization, ExactTC, ScalarFactor,
+                                      ScalarCost, UserIC))
+        continue;
 
       if (isMoreProfitable(CurrentFactor, BestFactor, P->hasScalarTail())) {
         BestFactor = CurrentFactor;
