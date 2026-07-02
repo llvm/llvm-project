@@ -1,5 +1,6 @@
 // Test the strict sequence of events when building a single scanning pcm.
 
+// UNSUPPORTED: system-windows
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
