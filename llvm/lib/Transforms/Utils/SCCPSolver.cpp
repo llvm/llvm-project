@@ -16,6 +16,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/ValueLattice.h"
 #include "llvm/Analysis/ValueLatticeUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -57,6 +58,14 @@ bool SCCPSolver::isConstant(const ValueLatticeElement &LV) {
          (LV.isConstantRange() && LV.getConstantRange().isSingleElement());
 }
 
+bool SCCPSolver::isReplaceableConstant(const ValueLatticeElement &LV) {
+  if (!isConstant(LV))
+    return false;
+  if (LV.mayHaveDifferentProvenance())
+    return false;
+  return true;
+}
+
 bool SCCPSolver::isOverdefined(const ValueLatticeElement &LV) {
   return !LV.isUnknownOrUndef() && !SCCPSolver::isConstant(LV);
 }
@@ -81,6 +90,24 @@ bool SCCPSolver::tryToReplaceWithConstant(Value *V) {
     LLVM_DEBUG(dbgs() << "  Can\'t treat the result of call " << *CB
                       << " as a constant\n");
     return false;
+  }
+
+  // For pointer constants derived from PredicateInfo, the constant may have
+  // different provenance. Take this into account during constant pointer
+  // propagation.
+  if (V->getType()->isPointerTy()) {
+    const auto &LV = getLatticeValueFor(V);
+    if (LV.mayHaveDifferentProvenance()) {
+      const DataLayout &DL = getDataLayout();
+      bool Changed = V->replaceUsesWithIf(Const, [&](Use &U) {
+        bool CanReplace = canReplacePointersInUseIfEqual(U, Const, DL);
+        if (CanReplace)
+          LLVM_DEBUG(dbgs() << "  Constant pointer: " << *Const << " = " << *V
+                            << '\n');
+        return CanReplace;
+      });
+      return Changed;
+    }
   }
 
   LLVM_DEBUG(dbgs() << "  Constant: " << *Const << " = " << *V << '\n');
@@ -377,16 +404,15 @@ bool SCCPSolver::simplifyInstsInBlock(BasicBlock &BB,
     if (Inst.getType()->isVoidTy())
       continue;
     if (tryToReplaceWithConstant(&Inst)) {
-      if (wouldInstructionBeTriviallyDead(&Inst)) {
+      if (isInstructionTriviallyDead(&Inst)) {
         // Propagate !implicit.ref before erasing the call.
         if (auto *CB = dyn_cast<CallBase>(&Inst))
           propagateImplicitRefFromCall(CB);
 
         Inst.eraseFromParent();
+        ++InstRemovedStat;
       }
-
       MadeChanges = true;
-      ++InstRemovedStat;
     } else if (replaceSignedInst(*this, InsertedValues, Inst)) {
       MadeChanges = true;
       ++InstReplacedStat;
@@ -843,6 +869,8 @@ private:
   void visitInstruction(Instruction &I);
 
 public:
+  const DataLayout &getDataLayout() const { return DL; }
+
   void addPredicateInfo(Function &F, DominatorTree &DT, AssumptionCache &AC) {
     FnPredicateInfo.insert({&F, std::make_unique<PredicateInfo>(
                                     F, DT, AC, PredicateInfoAllocator)});
@@ -1146,7 +1174,7 @@ bool SCCPInstVisitor::isStructLatticeConstant(Function *F, StructType *STy) {
   for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
     const auto &It = TrackedMultipleRetVals.find(std::make_pair(F, i));
     assert(It != TrackedMultipleRetVals.end());
-    if (!SCCPSolver::isConstant(It->second))
+    if (!SCCPSolver::isReplaceableConstant(It->second))
       return false;
   }
   return true;
@@ -1860,9 +1888,14 @@ void SCCPInstVisitor::visitGetElementPtrInst(GetElementPtrInst &I) {
     return (void)markOverdefined(&I);
   }
 
-  if (Constant *C = ConstantFoldInstOperands(&I, Operands, DL))
+  if (Constant *C = ConstantFoldInstOperands(&I, Operands, DL)) {
     mergeInValue(ValueState[&I], &I, ValueLatticeElement::get(C));
-  else
+    // The pointer operand's lattice has found to be a constant, however, the
+    // returned pointer of the GEP may not be freely substituted, as it may have
+    // been derived from a pointer with potentially different provenance.
+    if (PtrState.mayHaveDifferentProvenance())
+      ValueState[&I].setMayHaveDifferentProvenance(true);
+  } else
     markOverdefined(&I);
 }
 
@@ -2105,6 +2138,8 @@ void SCCPInstVisitor::handlePredicate(Instruction *I, Value *CopyOf,
     // For non-integer values or integer constant expressions, only
     // propagate equal constants or not-constants.
     addAdditionalUser(OtherOp, I);
+    if (CopyOf->getType()->isPointerTy())
+      CondVal.setMayHaveDifferentProvenance(true);
     mergeInValue(IV, I, CondVal);
     return;
   } else if (Pred == CmpInst::ICMP_NE && CondVal.isConstant()) {
@@ -2346,6 +2381,10 @@ SCCPSolver::SCCPSolver(
     : Visitor(new SCCPInstVisitor(DL, std::move(GetTLI), Ctx)) {}
 
 SCCPSolver::~SCCPSolver() = default;
+
+const DataLayout &SCCPSolver::getDataLayout() const {
+  return Visitor->getDataLayout();
+}
 
 void SCCPSolver::addPredicateInfo(Function &F, DominatorTree &DT,
                                   AssumptionCache &AC) {
