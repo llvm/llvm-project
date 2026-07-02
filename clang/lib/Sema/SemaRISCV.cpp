@@ -677,6 +677,7 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
     return SemaRef.BuiltinConstantArgRange(TheCall, SEWOffset, 0, 3) ||
            CheckLMUL(TheCall, LMULOffset);
   };
+
   switch (BuiltinID) {
   case RISCVVector::BI__builtin_rvv_vsetvli:
     return CheckVSetVL(1, 2);

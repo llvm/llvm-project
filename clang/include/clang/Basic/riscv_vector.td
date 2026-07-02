@@ -2162,3 +2162,28 @@ let UnMaskedPolicyScheme = HasPassthruOperand in {
     defm vpairo : RVVOutBuiltinSet<"vpairo", "csil", [["vv", "Uv", "UvUvUv"]]>;
   }
 }
+
+//===----------------------------------------------------------------------===//
+// Zvvm - Integrated Matrix Extension configuration builtins.
+//===----------------------------------------------------------------------===//
+
+let HeaderCode =
+[{
+#define __riscv_ime_vlen() __builtin_rvv_ime_vlen()
+#define __riscv_ime_lambda() __builtin_rvv_ime_lambda()
+}] in
+def ime_config_macro: RVVHeader;
+
+let HasBuiltinAlias = false, HasVL = false, HasMasked = false,
+    UnMaskedPolicyScheme = NonePolicy, MaskedPolicyScheme = NonePolicy,
+    Log2LMUL = [0], RequiredFeatures = ["zvvmm"],
+    ManualCodegen = [{
+      return emitRVVIMEBuiltin(this, E, ReturnValue, ResultType, ID, Ops,
+                               PolicyAttrs, IsMasked);
+    }] in
+{
+  let IRName = "ime_vlen" in
+  def ime_vlen : RVVBuiltin<"", "z", "i">;
+  let IRName = "ime_lambda" in
+  def ime_lambda : RVVBuiltin<"", "z", "i">;
+}

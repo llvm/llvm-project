@@ -11601,6 +11601,91 @@ static SDValue lowerGetVectorLength(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::TRUNCATE, DL, N->getValueType(0), Res);
 }
 
+static unsigned getIMELambdaShift(const RISCVSubtarget &Subtarget) {
+  return Subtarget.getXLen() - 4;
+}
+
+// Decode the selected vtype.lambda field.  The IME vtype encoding uses zero to
+// mean "no selected lambda"; otherwise the encoded value is one plus log2 of
+// the selected lambda:
+//
+//   encoded 0 -> lambda 0
+//   encoded n -> lambda 1 << (n - 1), for n in [1, 7]
+static SDValue
+decodeSelectedIMELambdaFromVType(SDValue VType, const SDLoc &DL,
+                                 SelectionDAG &DAG,
+                                 const RISCVSubtarget &Subtarget) {
+  MVT XLenVT = Subtarget.getXLenVT();
+  SDValue Encoded =
+      DAG.getNode(ISD::SRL, DL, XLenVT, VType,
+                  DAG.getConstant(getIMELambdaShift(Subtarget), DL, XLenVT));
+  Encoded = DAG.getNode(ISD::AND, DL, XLenVT, Encoded,
+                        DAG.getConstant(7, DL, XLenVT));
+
+  SDValue Zero = DAG.getConstant(0, DL, XLenVT);
+  SDValue IsZero = DAG.getSetCC(DL, XLenVT, Encoded, Zero, ISD::SETEQ);
+  SDValue ShiftAmt = DAG.getNode(ISD::SUB, DL, XLenVT, Encoded,
+                                 DAG.getConstant(1, DL, XLenVT));
+  ShiftAmt = DAG.getSelect(DL, XLenVT, IsZero, Zero, ShiftAmt);
+
+  SDValue Lambda = DAG.getNode(ISD::SHL, DL, XLenVT,
+                               DAG.getConstant(1, DL, XLenVT), ShiftAmt);
+  return DAG.getSelect(DL, XLenVT, IsZero, Zero, Lambda);
+}
+
+// Read the architectural vtype CSR. This is selected as:
+//
+//   csrr rd, vtype
+//
+// and is used for the IME __riscv_ime_lambda() selected-lambda query.
+static SDValue readIMEVType(SDValue Chain, const SDLoc &DL, SelectionDAG &DAG,
+                            const RISCVSubtarget &Subtarget) {
+  MVT XLenVT = Subtarget.getXLenVT();
+  SDValue SysRegNo = DAG.getTargetConstant(RISCVSysReg::vtype, DL, XLenVT);
+  return DAG.getNode(RISCVISD::READ_CSR, DL, DAG.getVTList(XLenVT, MVT::Other),
+                     Chain, SysRegNo);
+}
+
+// Lower the implementation VLEN query.  The IME C API returns VLEN in bits.  If
+// the subtarget has an exact VLEN, fold the query to a constant; otherwise read
+// vlenb and convert bytes to bits:
+//
+//   li   rd, VLEN       # fixed VLEN
+//   csrr rd, vlenb      # dynamic VLEN
+//   slli rd, rd, 3
+static SDValue lowerIMEVLen(SDValue Op, SelectionDAG &DAG,
+                            const RISCVSubtarget &Subtarget) {
+  MVT XLenVT = Subtarget.getXLenVT();
+  SDLoc DL(Op);
+
+  SDValue VLen;
+  if (std::optional<unsigned> KnownVLen = Subtarget.getRealVLen()) {
+    VLen = DAG.getConstant(*KnownVLen, DL, XLenVT);
+  } else {
+    SDValue VLenB = DAG.getNode(RISCVISD::READ_VLENB, DL, XLenVT);
+    VLen = DAG.getNode(ISD::SHL, DL, XLenVT, VLenB,
+                       DAG.getConstant(3, DL, XLenVT));
+  }
+
+  return VLen;
+}
+
+// Lower the selected vtype.lambda query.
+//
+//   csrr rd, vtype
+//   rd = decode(vtype.lambda[2:0])
+//
+static SDValue lowerIMESelectedLambda(SDValue Op, SelectionDAG &DAG,
+                                      const RISCVSubtarget &Subtarget) {
+  SDLoc DL(Op);
+  SDValue Chain = Op.getOperand(0);
+
+  SDValue VType = readIMEVType(Chain, DL, DAG, Subtarget);
+  Chain = VType.getValue(1);
+  SDValue Lambda = decodeSelectedIMELambdaFromVType(VType, DL, DAG, Subtarget);
+  return DAG.getMergeValues({Lambda, Chain}, DL);
+}
+
 static SDValue lowerCttzElts(SDValue Op, SelectionDAG &DAG,
                              const RISCVSubtarget &Subtarget) {
   SDValue Op0 = Op.getOperand(0);
@@ -11853,6 +11938,8 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
   case Intrinsic::experimental_get_vector_length:
     return lowerGetVectorLength(Op.getNode(), DAG, Subtarget);
+  case Intrinsic::riscv_ime_vlen:
+    return lowerIMEVLen(Op, DAG, Subtarget);
   case Intrinsic::riscv_vmv_x_s: {
     SDValue Res = DAG.getNode(RISCVISD::VMV_X_S, DL, XLenVT, Op.getOperand(1));
     return DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), Res);
@@ -12157,6 +12244,9 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::riscv_sseg7_load_mask:
   case Intrinsic::riscv_sseg8_load_mask:
     return lowerFixedVectorSegLoadIntrinsics(IntNo, Op, Subtarget, DAG);
+
+  case Intrinsic::riscv_ime_lambda:
+    return lowerIMESelectedLambda(Op, DAG, Subtarget);
 
   case Intrinsic::riscv_sf_vc_v_x_se:
     return getVCIXISDNodeWCHAIN(Op, DAG, RISCVISD::SF_VC_V_X_SE);

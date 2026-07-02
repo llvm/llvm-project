@@ -2097,6 +2097,23 @@ let TargetPrefix = "riscv" in {
   defm vfncvt_sat_f_f_q_alt : RISCVConversionRoundingMode;
 } // TargetPrefix = "riscv"
 
+//===----------------------------------------------------------------------===//
+// Zvvm - Integrated Matrix Extension
+//
+// These intrinsics expose IME configuration queries and vtype.lambda control.
+// They use llvm_anyint_ty for consistency with RVV configuration intrinsics,
+// but the only supported type is XLen.
+let TargetPrefix = "riscv" in {
+  // Return architectural VLEN in bits. This may fold to a constant when exact
+  // VLEN is known.
+  def int_riscv_ime_vlen : Intrinsic<[llvm_anyint_ty], [], [IntrNoMem]>;
+
+  // Return the currently selected vtype.lambda value. This reads architectural
+  // vtype state but does not modify vtype, vl, or vector registers.
+  def int_riscv_ime_lambda
+      : Intrinsic<[llvm_anyint_ty], [], [IntrReadMem, IntrInaccessibleMemOnly]>;
+} // TargetPrefix = "riscv"
+
 // Vendor extensions
 //===----------------------------------------------------------------------===//
 include "llvm/IR/IntrinsicsRISCVXTHead.td"

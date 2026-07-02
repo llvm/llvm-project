@@ -309,6 +309,26 @@ emitRVVVsetvliBuiltin(CodeGenFunction *CGF, const CallExpr *E,
 }
 
 static LLVM_ATTRIBUTE_NOINLINE Value *
+emitRVVIMEBuiltin(CodeGenFunction *CGF, const CallExpr *E,
+                  ReturnValueSlot ReturnValue, llvm::Type *ResultType,
+                  Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+                  int PolicyAttrs, bool IsMasked) {
+  auto &Builder = CGF->Builder;
+  auto &CGM = CGF->CGM;
+
+  switch (ID) {
+  case Intrinsic::riscv_ime_vlen:
+  case Intrinsic::riscv_ime_lambda: {
+    assert(Ops.empty() && "unexpected IME query operands");
+    llvm::Function *F = CGM.getIntrinsic(ID, {ResultType});
+    return Builder.CreateCall(F);
+  }
+  default:
+    llvm_unreachable("unexpected IME builtin");
+  }
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *
 emitRVVVSEMaskBuiltin(CodeGenFunction *CGF, const CallExpr *E,
                       ReturnValueSlot ReturnValue, llvm::Type *ResultType,
                       Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,

@@ -82,7 +82,7 @@ def : SysReg<"vxsat", 0x009>;
 def SysRegVXRM : SysReg<"vxrm", 0x00A>;
 def : SysReg<"vcsr", 0x00F>;
 def SysRegVL : SysReg<"vl", 0xC20>;
-def : SysReg<"vtype", 0xC21>;
+def SysRegVTYPE : SysReg<"vtype", 0xC21>;
 def SysRegVLENB: SysReg<"vlenb", 0xC22>;
 
 //===----------------------------------------------------------------------===//
