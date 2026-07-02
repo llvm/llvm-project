@@ -72,7 +72,8 @@ ParseResult call_interface_impl::parseFunctionSignature(
     return call_interface_impl::parseFunctionResultList(parser, resultTypes,
                                                         resultAttrs);
   if (mustParseEmptyResult)
-    return failure();
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected '->' followed by function result list");
   return success();
 }
 
