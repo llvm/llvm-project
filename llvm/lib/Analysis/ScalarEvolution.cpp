@@ -13934,6 +13934,10 @@ ScalarEvolution::ExitLimit ScalarEvolution::howManyGreaterThans(
     IsSigned ? APIntOps::smax(getSignedRangeMin(RHS), Limit)
              : APIntOps::umax(getUnsignedRangeMin(RHS), Limit);
 
+  // Clamp stride to positive value to avoid division by zero in max backedge count. 
+  APInt OneAPInt(BitWidth, 1, IsSigned);
+  MinStride = APIntOps::smax(OneAPInt, MinStride);
+
   const SCEV *ConstantMaxBECount =
       isa<SCEVConstant>(BECount)
           ? BECount

@@ -39,3 +39,44 @@ bb2:                                              ; preds = %bb2, %bb
 bb6:                                              ; preds = %bb2
   ret void
 }
+
+; Test for PR202343 - max backedge count for '>' conditions.
+; Previously the max backedge count would be computed as (-2 /u 0),
+; causing division by zero and an assertion failure in SCEV.
+; The fix ensures the stride is clamped to a valid value,
+; allowing SCEV to return a constant max backedge count.
+
+define i32 @pr202343(i16 %0, i32 %add4) {
+; CHECK-LABEL: 'pr202343'
+; CHECK-NEXT:  Classifying expressions for: @pr202343
+; CHECK-NEXT:    %reass.add = shl i16 %0, 1
+; CHECK-NEXT:    --> (2 * %0) U: [0,-1) S: [-32768,32767)
+; CHECK-NEXT:    %1 = sext i16 %reass.add to i32
+; CHECK-NEXT:    --> (sext i16 (2 * %0) to i32) U: [0,-1) S: [-32768,32767)
+; CHECK-NEXT:    %not.neg = add i32 %1, -671326420
+; CHECK-NEXT:    --> (-671326420 + (sext i16 (2 * %0) to i32))<nsw> U: [0,-1) S: [-671359188,-671293653)
+; CHECK-NEXT:    %f.0 = phi i32 [ 1, %entry ], [ %sub5, %loop ]
+; CHECK-NEXT:    --> {1,+,(-671326420 + (sext i16 (2 * %0) to i32))<nsw>}<nuw><nsw><%loop> U: [1,0) S: [-2147483648,2) Exits: (1 + ((-671326420 + (sext i16 (2 * %0) to i32))<nsw> * ((1 + (-1 * ((-671326418 + (sext i16 (2 * %0) to i32))<nsw> umin %add4))) /u (671326420 + (-1 * (sext i16 (2 * %0) to i32))<nsw>)<nsw>)))<nuw><nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %sub5 = add nuw nsw i32 %not.neg, %f.0
+; CHECK-NEXT:    --> {(-671326419 + (sext i16 (2 * %0) to i32))<nsw>,+,(-671326420 + (sext i16 (2 * %0) to i32))<nsw>}<nuw><nsw><%loop> U: [-2147483648,-671293652) S: [-2147483648,-671293652) Exits: (-671326419 + (sext i16 (2 * %0) to i32) + ((-671326420 + (sext i16 (2 * %0) to i32))<nsw> * ((1 + (-1 * ((-671326418 + (sext i16 (2 * %0) to i32))<nsw> umin %add4))) /u (671326420 + (-1 * (sext i16 (2 * %0) to i32))<nsw>)<nsw>))) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @pr202343
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((1 + (-1 * ((-671326418 + (sext i16 (2 * %0) to i32))<nsw> umin %add4))) /u (671326420 + (-1 * (sext i16 (2 * %0) to i32))<nsw>)<nsw>)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((1 + (-1 * ((-671326418 + (sext i16 (2 * %0) to i32))<nsw> umin %add4))) /u (671326420 + (-1 * (sext i16 (2 * %0) to i32))<nsw>)<nsw>)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %reass.add = shl i16 %0, 1
+  %1 = sext i16 %reass.add to i32
+  %not.neg = add i32 %1, -671326420
+  br label %loop
+
+loop:
+  %f.0 = phi i32 [ 1, %entry ], [ %sub5, %loop ]
+  %sub5 = add nuw nsw i32 %not.neg, %f.0
+  %cmp.not = icmp ugt i32 %add4, %sub5
+  br i1 %cmp.not, label %exit, label %loop
+
+exit:
+  ret i32 0
+}
