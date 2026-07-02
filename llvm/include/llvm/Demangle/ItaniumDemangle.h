@@ -2817,6 +2817,7 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
     AbstractManglingParser *Parser;
     decltype(TemplateParams) OldParams;
     decltype(OuterTemplateParams) OldOuterParams;
+    bool Restore = true;
 
   public:
     SaveTemplateParams(AbstractManglingParser *TheParser) : Parser(TheParser) {
@@ -2826,9 +2827,12 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
       Parser->OuterTemplateParams.clear();
     }
     ~SaveTemplateParams() {
+      if (!Restore)
+        return;
       Parser->TemplateParams = std::move(OldParams);
       Parser->OuterTemplateParams = std::move(OldOuterParams);
     }
+    void keepCurrentScope() { Restore = false; }
   };
 
   // Set of unresolved forward <template-param> references. These can occur in a
@@ -3135,7 +3139,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseLocalName(NameState *State) {
   }
 
   // The template parameters of the inner name are unrelated to those of the
-  // enclosing context.
+  // enclosing context, unless the name ends with a template argument list.
   SaveTemplateParams SaveTemplateParamsScope(this);
 
   if (consumeIf('d')) {
@@ -3145,6 +3149,8 @@ Node *AbstractManglingParser<Derived, Alloc>::parseLocalName(NameState *State) {
     Node *N = getDerived().parseName(State);
     if (N == nullptr)
       return nullptr;
+    if (State && State->EndsWithTemplateArgs)
+      SaveTemplateParamsScope.keepCurrentScope();
     return make<LocalName>(Encoding, N);
   }
 
@@ -3152,6 +3158,8 @@ Node *AbstractManglingParser<Derived, Alloc>::parseLocalName(NameState *State) {
   if (Entity == nullptr)
     return nullptr;
   First = parse_discriminator(First, Last);
+  if (State && State->EndsWithTemplateArgs)
+    SaveTemplateParamsScope.keepCurrentScope();
   return make<LocalName>(Encoding, Entity);
 }
 
