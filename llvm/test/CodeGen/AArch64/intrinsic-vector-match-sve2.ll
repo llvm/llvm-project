@@ -23,8 +23,7 @@ define <vscale x 16 x i1> @match_nxv16i8_v2i8(<vscale x 16 x i8> %op1, <2 x i8> 
 ; CHECK-NEXT:    mov z1.b, w8
 ; CHECK-NEXT:    cmpeq p3.b, p1/z, z0.b, z2.b
 ; CHECK-NEXT:    cmpeq p2.b, p1/z, z0.b, z1.b
-; CHECK-NEXT:    sel p1.b, p3, p3.b, p2.b
-; CHECK-NEXT:    and p0.b, p1/z, p1.b, p0.b
+; CHECK-NEXT:    orr p0.b, p0/z, p3.b, p2.b
 ; CHECK-NEXT:    ret
   %r = tail call <vscale x 16 x i1> @llvm.experimental.vector.match(<vscale x 16 x i8> %op1, <2 x i8> %op2, <vscale x 16 x i1> %mask)
   ret <vscale x 16 x i1> %r
@@ -55,8 +54,7 @@ define <vscale x 16 x i1> @match_nxv16i8_v4i8(<vscale x 16 x i8> %op1, <4 x i8> 
 ; CHECK-NEXT:    mov p2.b, p3/m, p3.b
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
 ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
-; CHECK-NEXT:    mov p1.b, p2/m, p2.b
-; CHECK-NEXT:    and p0.b, p1/z, p1.b, p0.b
+; CHECK-NEXT:    orr p0.b, p0/z, p2.b, p1.b
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -336,8 +334,7 @@ define <vscale x 16 x i1> @match_nxv16i8_v32i8(<vscale x 16 x i8> %op1, <32 x i8
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p3.b
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
 ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
-; CHECK-NEXT:    mov p1.b, p2/m, p2.b
-; CHECK-NEXT:    and p0.b, p1/z, p1.b, p0.b
+; CHECK-NEXT:    orr p0.b, p0/z, p2.b, p1.b
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -473,8 +470,7 @@ define <vscale x 4 x i1> @match_nxv4xi32_v4i32(<vscale x 4 x i32> %op1, <4 x i32
 ; CHECK-NEXT:    mov p2.b, p3/m, p3.b
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
 ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
-; CHECK-NEXT:    mov p1.b, p2/m, p2.b
-; CHECK-NEXT:    and p0.b, p1/z, p1.b, p0.b
+; CHECK-NEXT:    orr p0.b, p0/z, p2.b, p1.b
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -491,8 +487,7 @@ define <vscale x 2 x i1> @match_nxv2xi64_v2i64(<vscale x 2 x i64> %op1, <2 x i64
 ; CHECK-NEXT:    mov z1.d, d1
 ; CHECK-NEXT:    cmpeq p2.d, p1/z, z0.d, z2.d
 ; CHECK-NEXT:    cmpeq p3.d, p1/z, z0.d, z1.d
-; CHECK-NEXT:    sel p1.b, p3, p3.b, p2.b
-; CHECK-NEXT:    and p0.b, p1/z, p1.b, p0.b
+; CHECK-NEXT:    orr p0.b, p0/z, p3.b, p2.b
 ; CHECK-NEXT:    ret
   %r = tail call <vscale x 2 x i1> @llvm.experimental.vector.match(<vscale x 2 x i64> %op1, <2 x i64> %op2, <vscale x 2 x i1> %mask)
   ret <vscale x 2 x i1> %r

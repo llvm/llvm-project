@@ -945,6 +945,11 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> ArgsArr,
           "invalid or unsupported --compress-sections format: %s",
           A->getValue());
     }
+    if (Type != DebugCompressionType::None) {
+      if (const char *Reason =
+              compression::getReasonIfUnsupported(compression::formatFor(Type)))
+        return createStringError(errc::invalid_argument, Reason);
+    }
 
     auto &P = Config.compressSections.emplace_back();
     P.second = Type;

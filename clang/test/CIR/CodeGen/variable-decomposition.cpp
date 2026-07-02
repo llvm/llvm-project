@@ -20,8 +20,8 @@ float function() {
 // LLVM-DAG: @[[FUNC_CONST:.*]] = private constant %struct.some_struct { i32 1, float 2.000000e+00 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z8functionv() -> (!cir.float {llvm.noundef})
-// CIR:  %[[RETVAL:.+]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["__retval"]
-// CIR:  %[[STRUCT:.+]] = cir.alloca !rec_some_struct, !cir.ptr<!rec_some_struct>, ["", init]
+// CIR:  %[[RETVAL:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.float>
+// CIR:  %[[STRUCT:.+]] = cir.alloca "" {{.*}} init : !cir.ptr<!rec_some_struct>
 // CIR:  %[[CONST:.+]] = cir.get_global @[[FUNC_CONST]] : !cir.ptr<!rec_some_struct>
 // CIR:  cir.copy %[[CONST]] to %[[STRUCT]]
 // CIR:  %[[MEMBER_A:.+]] = cir.get_member %[[STRUCT]][0] {name = "a"} : !cir.ptr<!rec_some_struct> -> !cir.ptr<!s32i>
@@ -37,7 +37,7 @@ float function() {
 // LLVM-LABEL: define dso_local noundef float @_Z8functionv()
 // LLVM:  %[[RETVAL:.+]] = alloca float, i64 1
 // LLVM:  %[[STRUCT:.+]] = alloca %struct.some_struct, i64 1
-// LLVM:  call void @llvm.memcpy{{.*}}(ptr %[[STRUCT]], ptr @[[FUNC_CONST]], i64 8, i1 false)
+// LLVM:  call void @llvm.memcpy{{.*}}(ptr align 4 %[[STRUCT]], ptr align 4 @[[FUNC_CONST]], i64 8, i1 false)
 // LLVM:  %[[GEP_A:.+]] = getelementptr inbounds nuw %struct.some_struct, ptr %[[STRUCT]], i32 0, i32 0
 // LLVM:  %[[LOAD_A:.+]] = load i32, ptr %[[GEP_A]]
 // LLVM:  %[[CAST_A:.+]] = sitofp i32 %[[LOAD_A]] to float

@@ -199,6 +199,12 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     }
   }
 
+  SmallVector<std::string, 4> TuneFeatures;
+  if (!riscv::getRISCVTuneCPU(D, Args, &TuneFeatures))
+    return;
+  for (const std::string &TF : TuneFeatures)
+    Features.push_back(Args.MakeArgString(TF));
+
   // Now add any that the user explicitly requested on the command line,
   // which may override the defaults.
   handleTargetFeaturesGroup(D, Triple, Args, Features,
@@ -389,4 +395,41 @@ std::string riscv::getRISCVTargetCPU(const llvm::opt::ArgList &Args,
     return CPU;
 
   return Triple.isRISCV64() ? "generic-rv64" : "generic-rv32";
+}
+
+std::optional<StringRef>
+riscv::getRISCVTuneCPU(const Driver &D, const llvm::opt::ArgList &Args,
+                       SmallVectorImpl<std::string> *TuneFeatures) {
+  const Arg *MTuneArg = Args.getLastArg(options::OPT_mtune_EQ);
+  if (!MTuneArg)
+    return "";
+
+  StringRef MTune = MTuneArg->getValue();
+  // Split the CPU name part from the tune features string.
+  auto [TuneCPU, TFString] = MTune.split(':');
+  if (!Args.hasFlag(options::OPT_mexperimental_mtune_syntax,
+                    options::OPT_mno_experimental_mtune_syntax, false)) {
+    if (!TFString.empty()) {
+      // Only print this diagnostics if it's used for retrieving tune features
+      // to avoid printing the same error message multiple times.
+      if (TuneFeatures)
+        D.Diag(diag::err_drv_invalid_riscv_mtune_string)
+            << 0 << MTune
+            << "require '-mexperimental-mtune-syntax' to use with tune feature "
+               "string";
+      return std::nullopt;
+    }
+    return MTune;
+  }
+
+  if (!TuneFeatures || TFString.empty())
+    return TuneCPU;
+  if (auto E = llvm::RISCV::parseTuneFeatureString(TuneCPU, TFString,
+                                                   *TuneFeatures)) {
+    D.Diag(diag::err_drv_invalid_riscv_mtune_string)
+        << 1 << TFString << llvm::toString(std::move(E));
+    return std::nullopt;
+  }
+
+  return TuneCPU;
 }

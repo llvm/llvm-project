@@ -198,7 +198,8 @@ def _llvm_configure_impl(repository_ctx):
         executable = False,
     )
 
-    return repository_ctx.repo_metadata(reproducible = True)
+    if hasattr(repository_ctx, "repo_metadata"):
+        return repository_ctx.repo_metadata(reproducible = True)
 
 llvm_configure = repository_rule(
     implementation = _llvm_configure_impl,

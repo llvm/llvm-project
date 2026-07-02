@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -45,7 +46,6 @@
 #include <optional>
 #include <set>
 #include <string>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -1401,7 +1401,7 @@ using ModuleToSummariesForIndexTy =
     std::map<std::string, GVSummaryMapTy, std::less<>>;
 
 /// A set of global value summary pointers.
-using GVSummaryPtrSet = std::unordered_set<GlobalValueSummary *>;
+using GVSummaryPtrSet = SmallPtrSet<GlobalValueSummary *, 0>;
 
 /// Map of a type GUID to type id string and summary (multimap used
 /// in case of GUID conflicts).

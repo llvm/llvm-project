@@ -449,3 +449,78 @@ struct StaticDepOutOfClassInit {
 
 template <class T>
 const T StaticDepOutOfClassInit<T>::X = 0;
+
+double overloadConflict(double *overloadConflictPtr) {
+  return *overloadConflictPtr;
+}
+
+double overloadConflict(const double *overloadConflictPtr) {
+  return *overloadConflictPtr;
+}
+
+double topLevelConstPointerOverload(double *topLevelConstPtr) {
+  return *topLevelConstPtr;
+}
+
+double topLevelConstPointerOverload(const double *const topLevelConstPtr) {
+  return *topLevelConstPtr;
+}
+
+void arrayOverloadConflict(double arrayOut[2],
+                           double arrayConflictParam[2]) {
+  arrayOut[0] = arrayConflictParam[0];
+}
+
+void arrayOverloadConflict(double arrayOut[2],
+                           const double arrayConflictParam[2]) {
+  arrayOut[0] = arrayConflictParam[0];
+}
+
+int returnTypeConflict(int *returnTypePtr) { return *returnTypePtr; }
+
+long returnTypeConflict(const int *returnTypePtr) { return *returnTypePtr; }
+
+namespace UsingOverloadConflict {
+int usingConflict(const int *usingConflictPtr) { return *usingConflictPtr; }
+} // namespace UsingOverloadConflict
+
+using UsingOverloadConflict::usingConflict;
+int usingConflict(int *usingConflictPtr) { return *usingConflictPtr; }
+
+template <int>
+int templateOverloadConflict(int *templateConflictPtr) {
+  return *templateConflictPtr;
+}
+
+template <int>
+int templateOverloadConflict(const int *templateConflictPtr) {
+  return *templateConflictPtr;
+}
+
+struct ConstructorOverloadConflict {
+  ConstructorOverloadConflict(int *ctorConflictPtr) {
+    (void)*ctorConflictPtr;
+  }
+  ConstructorOverloadConflict(const int *ctorConflictPtr) {}
+};
+
+struct MemberOverloadConflict {
+  void withConflictingOverload(int *memberConflictPtr) {
+    (void)*memberConflictPtr;
+  }
+  void withConflictingOverload(const int *memberConflictPtr) {}
+};
+
+struct OperatorCallConflict {
+  int operator()(int *operatorCallPtr) { return *operatorCallPtr; }
+  int operator()(const int *operatorCallPtr) { return *operatorCallPtr; }
+};
+
+struct QualifiedMemberOverload {
+  // CHECK-MESSAGES: :[[@LINE+1]]:32: warning: pointer parameter 'qualifiedMemberPtr' can be pointer to const
+  void withConstQualifier(int *qualifiedMemberPtr) const {
+    // CHECK-FIXES: void withConstQualifier(const int *qualifiedMemberPtr) const {
+    (void)*qualifiedMemberPtr;
+  }
+  void withConstQualifier(const int *qualifiedMemberPtr) {}
+};

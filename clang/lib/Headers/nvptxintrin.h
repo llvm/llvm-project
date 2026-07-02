@@ -182,12 +182,12 @@ __gpu_match_all_u64(uint64_t __lane_mask, uint64_t __x) {
 #endif
 
 // Returns true if the flat pointer points to CUDA 'shared' memory.
-_DEFAULT_FN_ATTRS static __inline__ bool __gpu_is_ptr_local(void *ptr) {
+_DEFAULT_FN_ATTRS static __inline__ bool __gpu_is_ptr_local(const void *ptr) {
   return __nvvm_isspacep_shared(ptr);
 }
 
 // Returns true if the flat pointer points to CUDA 'local' memory.
-_DEFAULT_FN_ATTRS static __inline__ bool __gpu_is_ptr_private(void *ptr) {
+_DEFAULT_FN_ATTRS static __inline__ bool __gpu_is_ptr_private(const void *ptr) {
   return __nvvm_isspacep_local(ptr);
 }
 

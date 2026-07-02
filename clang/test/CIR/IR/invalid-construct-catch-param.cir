@@ -11,7 +11,7 @@ cir.global "private" constant external @_ZTI1E : !cir.ptr<!u8i>
 
 cir.func @copy_fn_missing() {
   cir.scope {
-    %p = cir.alloca !rec_E, !cir.ptr<!rec_E>, ["e"] {alignment = 1 : i64}
+    %p = cir.alloca "e" align(1) : !cir.ptr<!rec_E>
     cir.try {
       cir.yield
     } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
@@ -45,7 +45,7 @@ cir.func private @plain_copy_fn(!cir.ptr<!rec_E>, !cir.ptr<!rec_E>)
 
 cir.func @copy_fn_missing_thunk_attr() {
   cir.scope {
-    %p = cir.alloca !rec_E, !cir.ptr<!rec_E>, ["e"] {alignment = 1 : i64}
+    %p = cir.alloca "e" align(1) : !cir.ptr<!rec_E>
     cir.try {
       cir.yield
     } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
@@ -80,7 +80,7 @@ cir.func private @bad_copy_fn_arity(!cir.ptr<!rec_E>)
 
 cir.func @copy_fn_wrong_arity() {
   cir.scope {
-    %p = cir.alloca !rec_E, !cir.ptr<!rec_E>, ["e"] {alignment = 1 : i64}
+    %p = cir.alloca "e" align(1) : !cir.ptr<!rec_E>
     cir.try {
       cir.yield
     } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
@@ -117,7 +117,7 @@ cir.func private @bad_copy_fn_ret(
 
 cir.func @copy_fn_non_void_return() {
   cir.scope {
-    %p = cir.alloca !rec_E, !cir.ptr<!rec_E>, ["e"] {alignment = 1 : i64}
+    %p = cir.alloca "e" align(1) : !cir.ptr<!rec_E>
     cir.try {
       cir.yield
     } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
@@ -155,7 +155,7 @@ cir.func private @bad_copy_fn_first_arg(
 
 cir.func @copy_fn_first_arg_mismatch() {
   cir.scope {
-    %p = cir.alloca !rec_E, !cir.ptr<!rec_E>, ["e"] {alignment = 1 : i64}
+    %p = cir.alloca "e" align(1) : !cir.ptr<!rec_E>
     cir.try {
       cir.yield
     } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
@@ -193,7 +193,7 @@ cir.func private @bad_copy_fn_second_arg(
 
 cir.func @copy_fn_second_arg_mismatch() {
   cir.scope {
-    %p = cir.alloca !rec_E, !cir.ptr<!rec_E>, ["e"] {alignment = 1 : i64}
+    %p = cir.alloca "e" align(1) : !cir.ptr<!rec_E>
     cir.try {
       cir.yield
     } catch [type #cir.global_view<@_ZTI1E> : !cir.ptr<!u8i>]
@@ -233,7 +233,7 @@ cir.func linkonce_odr hidden @__clang_cir_catch_copy__ZTS1E(
 // `cir.begin_catch`.
 cir.func @construct_not_followed_by_begin_catch() {
   cir.scope {
-    %p = cir.alloca !rec_E, !cir.ptr<!rec_E>, ["e"] {alignment = 1 : i64}
+    %p = cir.alloca "e" align(1) : !cir.ptr<!rec_E>
     // expected-error @below {{catch handler region must start with 'cir.begin_catch'}}
     cir.try {
       cir.yield

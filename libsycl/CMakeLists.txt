@@ -2,6 +2,13 @@
 # Setup Project
 #===============================================================================
 cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
 
 set(LLVM_SUBPROJECT_TITLE "libsycl")
 
@@ -61,6 +68,7 @@ endif()
 set(LIBSYCL_INCLUDE_DIR include)
 set(LIBSYCL_BUILD_INCLUDE_DIR ${LLVM_BINARY_DIR}/${LIBSYCL_INCLUDE_DIR})
 set(LIBSYCL_SOURCE_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(LIBSYCL_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBSYCL_LIBRARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBSYCL_LIBRARY_DIR})
@@ -133,6 +141,9 @@ add_custom_target(libsycl-runtime-libraries
   DEPENDS ${LIBSYCL_RT_LIBS}
 )
 
+# Shared object-library target name used by libsycl and unit tests.
+set(LIBSYCL_OBJ_TARGET sycl_object)
+
 add_subdirectory(src)
 add_subdirectory(tools)
 
@@ -145,3 +156,13 @@ add_custom_target(libsycl-toolchain ALL
           sycl-ls
   COMMENT "Building libsycl toolchain..."
 )
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
+
+if(LLVM_INCLUDE_TESTS)
+  add_subdirectory(unittests)
+
+  if(TARGET check-sycl AND TARGET check-sycl-unittests)
+    add_dependencies(check-sycl check-sycl-unittests)
+  endif()
+endif()

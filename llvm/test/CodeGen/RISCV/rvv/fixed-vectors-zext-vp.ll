@@ -137,13 +137,12 @@ define <4 x i64> @vzext_v4i64_v4i32_unmasked(<4 x i32> %va, i32 zeroext %evl) {
 define <32 x i64> @vzext_v32i64_v32i32(<32 x i32> %va, <32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vzext_v32i64_v32i32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
+; CHECK-NEXT:    vslidedown.vi v0, v8, 16
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v24, v8
-; CHECK-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 16
-; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; CHECK-NEXT:    vzext.vf2 v16, v8
-; CHECK-NEXT:    vmv8r.v v8, v24
+; CHECK-NEXT:    vzext.vf2 v16, v0
+; CHECK-NEXT:    vmv.v.v v8, v24
 ; CHECK-NEXT:    ret
   %v = call <32 x i64> @llvm.vp.zext.v32i64.v32i32(<32 x i32> %va, <32 x i1> %m, i32 %evl)
   ret <32 x i64> %v
@@ -152,13 +151,12 @@ define <32 x i64> @vzext_v32i64_v32i32(<32 x i32> %va, <32 x i1> %m, i32 zeroext
 define <32 x i64> @vzext_v32i64_v32i32_unmasked(<32 x i32> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vzext_v32i64_v32i32_unmasked:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
+; CHECK-NEXT:    vslidedown.vi v0, v8, 16
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v24, v8
-; CHECK-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 16
-; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; CHECK-NEXT:    vzext.vf2 v16, v8
-; CHECK-NEXT:    vmv8r.v v8, v24
+; CHECK-NEXT:    vzext.vf2 v16, v0
+; CHECK-NEXT:    vmv.v.v v8, v24
 ; CHECK-NEXT:    ret
   %v = call <32 x i64> @llvm.vp.zext.v32i64.v32i32(<32 x i32> %va, <32 x i1> splat (i1 true), i32 %evl)
   ret <32 x i64> %v

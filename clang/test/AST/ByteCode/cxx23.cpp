@@ -268,8 +268,11 @@ namespace ExplicitLambdaInstancePointer {
   };
   constexpr auto b = [](this K) { return 1; }; // all20-error {{explicit object parameters are incompatible with C++ standards before C++2b}} \
                                                // all-error {{unknown type name 'K'}}
-  constexpr int (*fp)(K) = b; // all-error {{unknown type name 'K'}}
-  static_assert(fp(1) == 1, ""); // expected-error {{not an integral constant expression}}
+  constexpr int (*fp)(K) = b; // all-error {{unknown type name 'K'}} \
+                              // expected-error {{must be initialized by a constant expression}} \
+                              // expected-note {{declared here}}
+  static_assert(fp(1) == 1, ""); // expected-error {{not an integral constant expression}} \
+                                 // expected-note {{initializer of 'fp' is not a constant expression}}
 }
 
 namespace TwosComplementShifts {
@@ -317,7 +320,6 @@ namespace AnonUnionDtor {
   void bar() { foo(); }
 }
 
-/// FIXME: The two interpreters disagree about there to diagnose the non-constexpr destructor call.
 namespace NonLiteralDtorInParam {
   class NonLiteral { // all20-note {{is not an aggregate and has no constexpr constructors other than copy or move constructors}}
   public:
@@ -659,4 +661,10 @@ namespace BrokenShuffleVector {
   constexpr __m128 kf1{1.0f, 2.0f, 3.0f, 4.0f};
   constexpr __m128 v_mm_cvtps_pd = _mm_cvtps_pd(kf1); // all-error {{must be initialized by a constant expression}}
 }
+
+namespace BrokenExplicitInstanceParam {
+  auto b = [](this C) { return 1; }; // all-error {{unknown type name 'C'}}
+  static_assert( (&decltype(b)::operator())(1) == 1); // expected-error {{not an integral constant expression}}
+}
+
 #endif

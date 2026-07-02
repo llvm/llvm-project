@@ -9,8 +9,10 @@
 #ifndef LLVM_CLANG_BASIC_OFFLOADARCH_H
 #define LLVM_CLANG_BASIC_OFFLOADARCH_H
 
+#include "llvm/ADT/StringRef.h"
+#include <tuple>
+
 namespace llvm {
-class StringRef;
 class Triple;
 } // namespace llvm
 
@@ -109,15 +111,18 @@ enum class OffloadArch {
   GFX1151,
   GFX1152,
   GFX1153,
+  GFX1154,
+  GFX11_7_GENERIC,
   GFX1170,
   GFX1171,
   GFX1172,
   GFX12_GENERIC,
   GFX1200,
   GFX1201,
+  GFX12_5_GENERIC,
   GFX1250,
   GFX1251,
-  GFX12_5_GENERIC,
+  GFX13_GENERIC,
   GFX1310,
   AMDGCNSPIRV,
   Generic, // A processor model named 'generic' if the target backend defines a
@@ -162,6 +167,34 @@ OffloadArch StringToOffloadArch(llvm::StringRef S);
 
 llvm::Triple OffloadArchToTriple(const llvm::Triple &DefaultToolchainTriple,
                                  OffloadArch ID);
+
+/// Represents a bound architecture for offload / multiple architecture
+/// compilation.
+struct BoundArch {
+  llvm::StringRef ArchName;
+
+  /// The parsed offload architecture enum.
+  /// Will be OffloadArch::Unknown if ArchName not recognized.
+  OffloadArch Arch = OffloadArch::Unused;
+
+  BoundArch() = default;
+  explicit BoundArch(llvm::StringRef Name)
+      : ArchName(Name),
+        Arch(Name.empty() ? OffloadArch::Unknown : StringToOffloadArch(Name)) {}
+
+  BoundArch(llvm::StringRef Name, OffloadArch A) : ArchName(Name), Arch(A) {}
+
+  bool empty() const { return ArchName.empty(); }
+  explicit operator bool() const { return Arch != OffloadArch::Unused; }
+
+  bool operator==(const BoundArch &Other) const {
+    return Arch == Other.Arch && ArchName == Other.ArchName;
+  }
+
+  bool operator<(const BoundArch &Other) const {
+    return std::tie(Arch, ArchName) < std::tie(Other.Arch, Other.ArchName);
+  }
+};
 
 } // namespace clang
 

@@ -1044,9 +1044,6 @@ void clang::TextNodeDumper::dumpTemplateSpecializationKind(
   case TSK_ImplicitInstantiation:
     OS << " implicit_instantiation";
     break;
-  case TSK_FriendDeclaration:
-    OS << " friend_declaration";
-    break;
   case TSK_ExplicitSpecialization:
     OS << " explicit_specialization";
     break;
@@ -2607,6 +2604,9 @@ void TextNodeDumper::VisitPragmaCommentDecl(const PragmaCommentDecl *D) {
     break;
   case PCK_User:
     OS << "user";
+    break;
+  case PCK_Copyright:
+    OS << "copyright";
     break;
   }
   StringRef Arg = D->getArg();

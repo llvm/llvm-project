@@ -11,6 +11,7 @@
 
 #include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Value.h"
@@ -255,20 +256,26 @@ std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
     Fortran::lower::AbstractConverter &converter, const omp::Object &object,
     Fortran::lower::StatementContext &stmtCtx, mlir::Location loc);
 
-/// Non-constant user condition expression and source for runtime lowering.
-struct DynamicUserCondition {
-  const parser::ScalarExpr *expr;
-  parser::CharBlock source;
-};
+/// Walk the already-emitted MLIR parent operations starting from \p op and
+/// collect the implied OpenMP construct traits in outermost-to-innermost
+/// order. Used by metadirective lowering and declare-variant call resolution
+/// to build the `ConstructTraits` of an `OMPContext`.
+void collectEnclosingConstructTraits(
+    mlir::Operation *op,
+    llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits);
 
-/// Populate \p vmi from a parsed OpenMP context selector. Constant user
-/// conditions are folded into user_condition_true/false traits. A non-constant
-/// user condition is recorded as user_condition_unknown and returned for later
-/// lowering as a runtime condition.
-std::optional<DynamicUserCondition>
-makeVariantMatchInfo(llvm::omp::VariantMatchInfo &vmi,
-                     const parser::modifier::OmpContextSelector &ctxSel,
-                     semantics::SemanticsContext &semaCtx, mlir::Location loc);
+/// `OMPContext` flavour used by Flang's OpenMP variant matching. Adds an
+/// ISA-trait override based on the module's target-features attribute.
+class FlangOMPContext final : public llvm::omp::OMPContext {
+public:
+  FlangOMPContext(mlir::ModuleOp module,
+                  llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits);
+  bool matchesISATrait(llvm::StringRef rawString) const override;
+
+private:
+  static bool isDeviceCompilation(mlir::ModuleOp module);
+  mlir::LLVM::TargetFeaturesAttr targetFeatures;
+};
 
 } // namespace omp
 } // namespace lower

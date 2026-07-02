@@ -725,12 +725,17 @@ public:
   };
 
   /// IndirectBranch - The first time an indirect goto is seen we create a block
-  /// reserved for the indirect branch. Unlike before,the actual 'indirectbr'
-  /// is emitted at the end of the function, once all block destinations have
-  /// been resolved.
+  /// reserved for the indirect branch.  The actual `cir.indirect_br` is emitted
+  /// at the end of the function, once every label destination is known.
   mlir::Block *indirectGotoBlock = nullptr;
 
-  void resolveBlockAddresses();
+  /// Labels whose address is taken in this function (via `&&label`, as either
+  /// an operation or a constant initializer).  The indirect branch block is
+  /// created lazily on the first `goto *expr`; these targets are resolved to
+  /// their LabelOps and wired as `cir.indirect_br` successors in
+  /// finishIndirectBranch.
+  llvm::SmallVector<cir::BlockAddrInfoAttr> indirectGotoTargets;
+
   void finishIndirectBranch();
 
   /// Perform the usual unary conversions on the specified expression and
@@ -1705,16 +1710,21 @@ public:
 
   void instantiateIndirectGotoBlock();
 
-  /// Emit a simple LLVM intrinsic that takes N scalar arguments and whose
-  /// return type matches the type of the first argument. The intrinsic name is
-  /// used verbatim; any overload mangling (e.g. `.f32`, `.p1`) must be baked
-  /// into \p intrinName by the caller.
+  /// Emit a simple LLVM intrinsic that takes N scalar arguments.  The intrinsic
+  /// name is used verbatim; any overload mangling (e.g. `.f32`, `.p1`) must be
+  /// baked into \p intrinName by the caller.  The result type defaults to the
+  /// type of the first argument; pass \p resultType for intrinsics whose result
+  /// differs from the operand, such as a vector reduction that returns the
+  /// element type.  Unlike classic CodeGen, CIR has no intrinsic registry to
+  /// derive the result type from the operand, so it must be supplied here.
   template <unsigned N>
   [[maybe_unused]] RValue
   emitBuiltinWithOneOverloadedType(const CallExpr *e,
-                                   llvm::StringRef intrinName) {
+                                   llvm::StringRef intrinName,
+                                   mlir::Type resultType = {}) {
     static_assert(N, "expect non-empty argument");
-    mlir::Type cirTy = convertType(e->getArg(0)->getType());
+    mlir::Type cirTy =
+        resultType ? resultType : convertType(e->getArg(0)->getType());
     SmallVector<mlir::Value, N> args;
     for (unsigned i = 0; i < N; ++i)
       args.push_back(emitScalarExpr(e->getArg(i)));
@@ -1753,6 +1763,9 @@ public:
   RValue emitCallExpr(const clang::CallExpr *e,
                       ReturnValueSlot returnValue = ReturnValueSlot());
   LValue emitCallExprLValue(const clang::CallExpr *e);
+
+  LValue emitCXXBindTemporaryLValue(const CXXBindTemporaryExpr *e);
+  LValue emitCXXConstructLValue(const CXXConstructExpr *e);
   CIRGenCallee emitCallee(const clang::Expr *e);
 
   template <typename T>
@@ -2092,7 +2105,8 @@ public:
   /// l-value.
   mlir::Value emitLoadOfScalar(LValue lvalue, SourceLocation loc);
   mlir::Value emitLoadOfScalar(Address addr, bool isVolatile, QualType ty,
-                               SourceLocation loc, LValueBaseInfo baseInfo);
+                               SourceLocation loc, LValueBaseInfo baseInfo,
+                               bool isNontemporal = false);
 
   /// Emit code to compute a designator that specifies the location
   /// of the expression.
@@ -2302,6 +2316,7 @@ public:
       builder.restoreInsertionPoint(outermostConditional->getInsertPoint());
       builder.createStore(
           value.getLoc(), value, addr, /*isVolatile=*/false,
+          /*isNontemporal=*/false,
           mlir::IntegerAttr::get(
               mlir::IntegerType::get(value.getContext(), 64),
               (uint64_t)addr.getAlignment().getAsAlign().value()));
@@ -2555,10 +2570,6 @@ public:
   void emitOMPDeclareReduction(const OMPDeclareReductionDecl &d);
   void emitOMPDeclareMapper(const OMPDeclareMapperDecl &d);
   void emitOMPRequiresDecl(const OMPRequiresDecl &d);
-
-private:
-  template <typename Op>
-  void emitOpenMPClauses(Op &op, ArrayRef<const OMPClause *> clauses);
 
   //===--------------------------------------------------------------------===//
   //                         OpenACC Emission

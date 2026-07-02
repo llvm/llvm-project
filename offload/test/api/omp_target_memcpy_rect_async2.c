@@ -5,9 +5,9 @@
 
 #define NUM_DIMS 3
 
-int main() {
+int run_test(int hostDev) {
   int d = omp_get_default_device();
-  int id = omp_get_initial_device();
+  int id = hostDev;
   int a[128], b[64], c[128], e[16], q[128], i;
   void *p;
 
@@ -86,4 +86,8 @@ int main() {
 
   omp_target_free(p, d);
   return 0;
+}
+
+int main() {
+  return run_test(omp_get_initial_device()) && run_test(omp_initial_device);
 }

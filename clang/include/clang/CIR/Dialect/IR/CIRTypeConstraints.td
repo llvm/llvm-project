@@ -82,6 +82,10 @@ class CIR_UIntOfWidths<list<int> widths>
     : CIR_ConfinedType<CIR_AnyUIntType, [CIR_IntOfWidthsPred<widths>],
         "unsigned integer type of widths " # !interleave(widths, "/")>;
 
+def CIR_UIntMultipleOf16
+    : CIR_ConfinedType<CIR_AnyUIntType, [CPred<"$_self.getWidth() % 16 == 0">],
+        "unsigned integer type with a width that is a multiple of 16 bits">;
+
 class CIR_UInt<int width>
     : CIR_ConfinedType<CIR_AnyUIntType, [CIR_HasWidthPred<width>],
         width # "-bit unsigned integer">,

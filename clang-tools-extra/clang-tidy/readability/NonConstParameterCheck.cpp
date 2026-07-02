@@ -23,6 +23,34 @@ AST_MATCHER_P(VarDecl, hasOwnInitializer, ast_matchers::internal::Matcher<Expr>,
 }
 } // namespace
 
+static bool wouldConflictWithExistingDecl(const FunctionDecl &Function,
+                                          unsigned ParamIndex) {
+  ASTContext &Context = Function.getASTContext();
+  const auto *Proto = Function.getType()->getAs<FunctionProtoType>();
+  if (!Proto)
+    return false;
+
+  // Simulate applying the fix-it to compare against existing overloads.
+  SmallVector<QualType> ParamTypes(Proto->getParamTypes());
+  ParamTypes[ParamIndex] = Context.getPointerType(
+      ParamTypes[ParamIndex]->getPointeeType().withConst());
+
+  return llvm::any_of(
+      Function.getParent()->lookup(Function.getDeclName()), [&](const Decl *D) {
+        if (const auto *Using = dyn_cast<UsingShadowDecl>(D))
+          D = Using->getTargetDecl();
+        const FunctionDecl *Overload = D->getAsFunction();
+        if (!Overload ||
+            Overload->getCanonicalDecl() == Function.getCanonicalDecl())
+          return false;
+
+        const QualType ConstParamFunctionType = Context.getFunctionType(
+            Overload->getReturnType(), ParamTypes, Proto->getExtProtoInfo());
+        return Context.hasSameFunctionTypeIgnoringExceptionSpec(
+            ConstParamFunctionType, Overload->getType());
+      });
+}
+
 void NonConstParameterCheck::registerMatchers(MatchFinder *Finder) {
   // Add parameters to Parameters.
   Finder->addMatcher(parmVarDecl().bind("Parm"), this);
@@ -185,6 +213,9 @@ void NonConstParameterCheck::diagnoseNonConstParameters() {
     if (!Function)
       continue;
     const unsigned Index = Par->getFunctionScopeIndex();
+    if (wouldConflictWithExistingDecl(*Function, Index))
+      continue;
+
     for (FunctionDecl *FnDecl : Function->redecls()) {
       if (FnDecl->getNumParams() <= Index)
         continue;

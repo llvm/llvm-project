@@ -143,18 +143,60 @@ set(ASAN_DYNAMIC_CFLAGS ${ASAN_CFLAGS})
 append_list_if(COMPILER_RT_HAS_FTLS_MODEL_INITIAL_EXEC
   -ftls-model=initial-exec ASAN_DYNAMIC_CFLAGS)
 
-# asan_new_delete.cpp throws std::bad_alloc, so the translation units that
-# build it need -fexceptions and access to <new> (drop -nostdinc++). Only
-# the C++ slices (RTAsan_cxx in the static build and RTAsan_dynamic_cxx in
-# the dynamic build) opt into these flags — the rest of the runtime keeps
-# -fno-exceptions / -nostdinc++.
+# We need to detect if the C++ library we are linking against supports exceptions.
+# If we are building libcxx in the same runtimes build, we can check LIBCXX_ENABLE_EXCEPTIONS.
+# Otherwise, we default to ON if the compiler supports it.
+if(DEFINED LIBCXX_ENABLE_EXCEPTIONS)
+  set(ASAN_ENABLE_EXCEPTIONS_DEFAULT ${LIBCXX_ENABLE_EXCEPTIONS})
+elseif(DEFINED LIBCXXABI_ENABLE_EXCEPTIONS)
+  set(ASAN_ENABLE_EXCEPTIONS_DEFAULT ${LIBCXXABI_ENABLE_EXCEPTIONS})
+else()
+  set(ASAN_ENABLE_EXCEPTIONS_DEFAULT ON)
+endif()
+
+option(COMPILER_RT_ASAN_ENABLE_EXCEPTIONS
+  "Enable exceptions in ASan C++ runtime" ${ASAN_ENABLE_EXCEPTIONS_DEFAULT})
+
+# Flags for the C++ slice (asan_new_delete.cpp). When exceptions are enabled
+# it throws std::bad_alloc, so the TU needs -fexceptions and access to <new>.
+
+# COMPILER_RT_CXX_LIBRARY=none opts out of CXX library support. Reject its
+# combination with enabled exception handling at configure time rather than
+# silently leaking host C++ headers into the build.
+if(COMPILER_RT_ASAN_ENABLE_EXCEPTIONS AND
+   COMPILER_RT_CXX_LIBRARY STREQUAL "none")
+  message(FATAL_ERROR
+    "COMPILER_RT_ASAN_ENABLE_EXCEPTIONS=ON requires a C++ standard "
+    "library (for <new> and std::bad_alloc), but "
+    "COMPILER_RT_CXX_LIBRARY=none. Set "
+    "-DCOMPILER_RT_ASAN_ENABLE_EXCEPTIONS=OFF or pick a different "
+    "COMPILER_RT_CXX_LIBRARY.")
+endif()
+
+# Two paths for resolving <new>:
+#   * in-tree libc++ available (e.g. runtimes build, cross toolchain): keep
+#     -nostdinc++ so host headers stay out, route <new> through the prepared
+#     libc++ via COMPILER_RT_CXX_CFLAGS, and add cxx-headers to DEPS so the
+#     header tree is staged first.
+#   * Otherwise (standalone build using the host toolchain): drop
+#     -nostdinc++ for this TU only so the host C++ headers can supply <new>.
 set(ASAN_CXX_CFLAGS ${ASAN_CFLAGS})
-list(REMOVE_ITEM ASAN_CXX_CFLAGS -fno-exceptions -nostdinc++)
-append_list_if(COMPILER_RT_HAS_FEXCEPTIONS_FLAG -fexceptions ASAN_CXX_CFLAGS)
 set(ASAN_DYNAMIC_CXX_CFLAGS ${ASAN_DYNAMIC_CFLAGS})
-list(REMOVE_ITEM ASAN_DYNAMIC_CXX_CFLAGS -fno-exceptions -nostdinc++)
-append_list_if(COMPILER_RT_HAS_FEXCEPTIONS_FLAG -fexceptions
-  ASAN_DYNAMIC_CXX_CFLAGS)
+set(ASAN_CXX_DEPS "")
+if(COMPILER_RT_ASAN_ENABLE_EXCEPTIONS AND COMPILER_RT_HAS_FEXCEPTIONS_FLAG)
+  list(REMOVE_ITEM ASAN_CXX_CFLAGS -fno-exceptions)
+  list(APPEND ASAN_CXX_CFLAGS -fexceptions)
+  list(REMOVE_ITEM ASAN_DYNAMIC_CXX_CFLAGS -fno-exceptions)
+  list(APPEND ASAN_DYNAMIC_CXX_CFLAGS -fexceptions)
+  if(TARGET cxx-headers OR HAVE_LIBCXX)
+    list(APPEND ASAN_CXX_CFLAGS ${COMPILER_RT_CXX_CFLAGS})
+    list(APPEND ASAN_DYNAMIC_CXX_CFLAGS ${COMPILER_RT_CXX_CFLAGS})
+    set(ASAN_CXX_DEPS cxx-headers)
+  else()
+    list(REMOVE_ITEM ASAN_CXX_CFLAGS -nostdinc++)
+    list(REMOVE_ITEM ASAN_DYNAMIC_CXX_CFLAGS -nostdinc++)
+  endif()
+endif()
 
 # LLVM turns /OPT:ICF back on when LLVM_ENABLE_PDBs is set
 # we _REALLY_ need to turn it back off for ASAN, because the way
@@ -190,7 +232,8 @@ add_compiler_rt_object_libraries(RTAsan_dynamic_cxx
   SOURCES ${ASAN_CXX_SOURCES}
   ADDITIONAL_HEADERS ${ASAN_HEADERS}
   CFLAGS ${ASAN_DYNAMIC_CXX_CFLAGS}
-  DEFS ${ASAN_DYNAMIC_DEFINITIONS})
+  DEFS ${ASAN_DYNAMIC_DEFINITIONS}
+  DEPS ${ASAN_CXX_DEPS})
 
 if(NOT APPLE)
   add_compiler_rt_object_libraries(RTAsan
@@ -204,7 +247,8 @@ if(NOT APPLE)
     SOURCES ${ASAN_CXX_SOURCES}
     ADDITIONAL_HEADERS ${ASAN_HEADERS}
     CFLAGS ${ASAN_CXX_CFLAGS}
-    DEFS ${ASAN_COMMON_DEFINITIONS})
+    DEFS ${ASAN_COMMON_DEFINITIONS}
+    DEPS ${ASAN_CXX_DEPS})
   add_compiler_rt_object_libraries(RTAsan_static
     ARCHS ${ASAN_SUPPORTED_ARCH}
     SOURCES ${ASAN_STATIC_SOURCES}

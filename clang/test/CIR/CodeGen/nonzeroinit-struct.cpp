@@ -55,17 +55,17 @@ Trivial t;
 // LLVM-DAG: @t = global %struct.Trivial { i32 0, double 0.000000e+00, i64 -1 }, align 8
 
 Trivial t_init{1,2.2, &Other::x};
-// CIR-BEFORE-DAG: cir.global external @t_init = #cir.const_record<{#cir.int<1> : !s32i, #cir.fp<2.200000e+00> : !cir.double, #cir.data_member<0> : !cir.data_member<!s32i in !rec_Other>}> : !rec_Trivial {alignment = 8 : i64}
+// CIR-BEFORE-DAG: cir.global external @t_init = #cir.const_record<{#cir.int<1> : !s32i, #cir.fp<2.200000e+00> : !cir.double, #cir.data_member<[0]> : !cir.data_member<!s32i in !rec_Other>}> : !rec_Trivial {alignment = 8 : i64}
 // CIR-AFTER-DAG: cir.global external @t_init = #cir.const_record<{#cir.int<1> : !s32i, #cir.fp<2.200000e+00> : !cir.double, #cir.int<0> : !s64i}> : !rec_Trivial {alignment = 8 : i64}
 // LLVM-DAG: @t_init = global %struct.Trivial { i32 1, double 2.200000e+00, i64 0 }, align 8
 
 extern "C" void local() {
   // CIR-LABEL: @local(
   // LLVM-LABEL: @local(
-  // CIR: cir.alloca !rec_WithMemPtr, !cir.ptr<!rec_WithMemPtr>, ["localMpt"] {alignment = 8 : i64}
-  // CIR: cir.alloca !rec_Trivial, !cir.ptr<!rec_Trivial>, ["localT"] {alignment = 8 : i64}
-  // CIR: %[[MPT_INIT:.*]] = cir.alloca !rec_WithMemPtr, !cir.ptr<!rec_WithMemPtr>, ["localMpt_init", init] {alignment = 8 : i64}
-  // CIR: %[[T_INIT:.*]] = cir.alloca !rec_Trivial, !cir.ptr<!rec_Trivial>, ["localT_init", init] {alignment = 8 : i64}
+  // CIR: cir.alloca "localMpt" align(8) : !cir.ptr<!rec_WithMemPtr>
+  // CIR: cir.alloca "localT" align(8) : !cir.ptr<!rec_Trivial>
+  // CIR: %[[MPT_INIT:.*]] = cir.alloca "localMpt_init" align(8) init : !cir.ptr<!rec_WithMemPtr>
+  // CIR: %[[T_INIT:.*]] = cir.alloca "localT_init" align(8) init : !cir.ptr<!rec_Trivial>
 
   // LLVM: alloca %struct.WithMemPtr
   // LLVM: alloca %struct.Trivial
@@ -84,7 +84,7 @@ extern "C" void local() {
   // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr {{.*}}%[[MPT_INIT]], ptr {{.*}}@__const.local.localMpt_init, i64 32, i1 false)
 
   Trivial localT_init{1,2.2, &Other::x};
-  // CIR-BEFORE: %[[T_INIT_VAL:.*]] = cir.const #cir.const_record<{#cir.int<1> : !s32i, #cir.fp<2.200000e+00> : !cir.double, #cir.data_member<0> : !cir.data_member<!s32i in !rec_Other>}> : !rec_Trivial
+  // CIR-BEFORE: %[[T_INIT_VAL:.*]] = cir.const #cir.const_record<{#cir.int<1> : !s32i, #cir.fp<2.200000e+00> : !cir.double, #cir.data_member<[0]> : !cir.data_member<!s32i in !rec_Other>}> : !rec_Trivial
   // CIR-BEFORE: cir.store align(8) %[[T_INIT_VAL]], %[[T_INIT]] : !rec_Trivial, !cir.ptr<!rec_Trivial>
 
   // CIR-AFTER: %[[T_INIT_VAL:.*]] = cir.get_global @__const.local.localT_init : !cir.ptr<!rec_Trivial>

@@ -90,6 +90,27 @@ bool SCCPSolver::tryToReplaceWithConstant(Value *V) {
   return true;
 }
 
+/// Helper for propagting !implicit.ref metadata from callee to caller before
+/// erasing a call instruction. This ensures that references to global objects
+/// (e.g., copyright strings) are preserved even when calls are optimized away.
+static void propagateImplicitRefFromCall(CallBase *CB) {
+  Function *Callee = CB->getCalledFunction();
+  if (!Callee)
+    return;
+
+  if (!Callee->hasMetadata(LLVMContext::MD_implicit_ref))
+    return;
+
+  Function *Caller = CB->getParent()->getParent();
+  if (!Caller)
+    return;
+
+  SmallVector<MDNode *> MDs;
+  Callee->getMetadata(LLVMContext::MD_implicit_ref, MDs);
+  for (MDNode *MD : MDs)
+    Caller->addMetadata(LLVMContext::MD_implicit_ref, *MD);
+}
+
 /// Helper for getting ranges from \p Solver. Instructions inserted during
 /// simplification are unavailable in the solver, so we return a full range for
 /// them.
@@ -356,8 +377,13 @@ bool SCCPSolver::simplifyInstsInBlock(BasicBlock &BB,
     if (Inst.getType()->isVoidTy())
       continue;
     if (tryToReplaceWithConstant(&Inst)) {
-      if (wouldInstructionBeTriviallyDead(&Inst))
+      if (wouldInstructionBeTriviallyDead(&Inst)) {
+        // Propagate !implicit.ref before erasing the call.
+        if (auto *CB = dyn_cast<CallBase>(&Inst))
+          propagateImplicitRefFromCall(CB);
+
         Inst.eraseFromParent();
+      }
 
       MadeChanges = true;
       ++InstRemovedStat;
@@ -1835,7 +1861,7 @@ void SCCPInstVisitor::visitGetElementPtrInst(GetElementPtrInst &I) {
   }
 
   if (Constant *C = ConstantFoldInstOperands(&I, Operands, DL))
-    markConstant(&I, C);
+    mergeInValue(ValueState[&I], &I, ValueLatticeElement::get(C));
   else
     markOverdefined(&I);
 }
@@ -1978,8 +2004,10 @@ void SCCPInstVisitor::handleCallOverdefined(CallBase &CB) {
 
     // If we can constant fold this, mark the result of the call as a
     // constant.
-    if (Constant *C = ConstantFoldCall(&CB, F, Operands, &GetTLI(*F)))
-      return (void)markConstant(&CB, C);
+    if (Constant *C = ConstantFoldCall(&CB, F, Operands, &GetTLI(*F))) {
+      mergeInValue(ValueState[&CB], &CB, ValueLatticeElement::get(C));
+      return;
+    }
   }
 
   // Fall back to metadata.

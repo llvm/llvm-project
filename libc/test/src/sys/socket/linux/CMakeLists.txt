@@ -42,6 +42,7 @@ add_libc_unittest(
     libc.hdr.netinet_in_macros
     libc.hdr.sys_socket_macros
     libc.hdr.types.struct_sockaddr_in
+    libc.hdr.types.struct_sockaddr_in6
     libc.hdr.types.struct_sockaddr_un
     libc.src.arpa.inet.htonl
     libc.src.errno.errno
@@ -211,19 +212,21 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
-  sendmmsg_test
+  sendrecvmmsg_test
   SUITE
     libc_sys_socket_unittests
   SRCS
-    sendmmsg_test.cpp
+    sendrecvmmsg_test.cpp
   DEPENDS
     libc.hdr.sys_socket_macros
+    libc.hdr.types.struct_iovec
     libc.hdr.types.struct_mmsghdr
+    libc.hdr.types.struct_timespec
     libc.src.errno.errno
     libc.src.string.strlen
     libc.src.sys.socket.socketpair
     libc.src.sys.socket.sendmmsg
-    libc.src.sys.socket.recvmsg
+    libc.src.sys.socket.recvmmsg
     libc.src.unistd.close
     libc.src.__support.CPP.scope
     libc.test.UnitTest.ErrnoCheckingTest

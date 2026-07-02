@@ -1264,7 +1264,9 @@ cir::LangAddressSpace cir::toCIRLangAddressSpace(clang::LangAS langAS) {
   case LangAS::opencl_generic:
     return LangAddressSpace::OffloadGeneric;
   case LangAS::opencl_global_device:
+    return LangAddressSpace::OffloadGlobalDevice;
   case LangAS::opencl_global_host:
+    return LangAddressSpace::OffloadGlobalHost;
   case LangAS::sycl_global:
   case LangAS::sycl_global_device:
   case LangAS::sycl_global_host:

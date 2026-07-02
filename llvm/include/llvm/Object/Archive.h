@@ -170,7 +170,7 @@ public:
 //   char ar_fmag[2];  /* contains backtick (X'79'), followed by new line
 //   (X'15') */
 // };
-class ZOSArchiveMemberHeader : public ArchiveMemberHeader {
+class LLVM_ABI ZOSArchiveMemberHeader : public ArchiveMemberHeader {
 public:
   ZOSArchiveMemberHeader(Archive const *Parent, const char *RawHeaderPtr,
                          uint64_t Size, Error *Err);
@@ -490,7 +490,7 @@ public:
     char Magic[sizeof(ZOSArchiveMagic) - 1]; ///< ZOS archive magic string.
   };
 
-  ZOSArchive(MemoryBufferRef Source, Error &Err);
+  LLVM_ABI ZOSArchive(MemoryBufferRef Source, Error &Err);
 
 private:
   std::string SymbolTableBuf; // __.SYMDEF strings converted to ASCII.

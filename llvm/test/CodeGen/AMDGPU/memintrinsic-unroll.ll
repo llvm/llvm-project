@@ -5391,7 +5391,7 @@ define void @memmove_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s4, exec_lo
-; CHECK-NEXT:    v_cmpx_ge_u64_e64 v[2:3], v[0:1]
+; CHECK-NEXT:    v_cmpx_ge_u64_e32 v[2:3], v[0:1]
 ; CHECK-NEXT:    s_xor_b32 s6, exec_lo, s4
 ; CHECK-NEXT:    s_cbranch_execz .LBB5_3
 ; CHECK-NEXT:  ; %bb.1: ; %memmove_fwd_loop.preheader
@@ -5552,7 +5552,7 @@ define void @memmove_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0
 ; ALIGNED-NEXT:    buffer_store_dword v57, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    buffer_store_dword v58, off, s[0:3], s32 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    s_mov_b32 s4, exec_lo
-; ALIGNED-NEXT:    v_cmpx_ge_u64_e64 v[2:3], v[0:1]
+; ALIGNED-NEXT:    v_cmpx_ge_u64_e32 v[2:3], v[0:1]
 ; ALIGNED-NEXT:    s_xor_b32 s6, exec_lo, s4
 ; ALIGNED-NEXT:    s_cbranch_execz .LBB5_3
 ; ALIGNED-NEXT:  ; %bb.1: ; %memmove_fwd_loop.preheader
@@ -6846,7 +6846,7 @@ define void @memmove_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0
 ; UNROLL3:       ; %bb.0: ; %entry
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; UNROLL3-NEXT:    s_mov_b32 s4, exec_lo
-; UNROLL3-NEXT:    v_cmpx_ge_u64_e64 v[2:3], v[0:1]
+; UNROLL3-NEXT:    v_cmpx_ge_u64_e32 v[2:3], v[0:1]
 ; UNROLL3-NEXT:    s_xor_b32 s6, exec_lo, s4
 ; UNROLL3-NEXT:    s_cbranch_execz .LBB5_4
 ; UNROLL3-NEXT:  ; %bb.1: ; %memmove_fwd_loop.preheader
@@ -6936,7 +6936,7 @@ define void @memmove_p1_p1_sz2048(ptr addrspace(1) align 1 %dst, ptr addrspace(1
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s4, exec_lo
-; CHECK-NEXT:    v_cmpx_ge_u64_e64 v[2:3], v[0:1]
+; CHECK-NEXT:    v_cmpx_ge_u64_e32 v[2:3], v[0:1]
 ; CHECK-NEXT:    s_xor_b32 s6, exec_lo, s4
 ; CHECK-NEXT:    s_cbranch_execz .LBB6_3
 ; CHECK-NEXT:  ; %bb.1: ; %memmove_fwd_loop.preheader
@@ -7087,7 +7087,7 @@ define void @memmove_p1_p1_sz2048(ptr addrspace(1) align 1 %dst, ptr addrspace(1
 ; ALIGNED-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    buffer_store_dword v57, off, s[0:3], s32 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    s_mov_b32 s4, exec_lo
-; ALIGNED-NEXT:    v_cmpx_ge_u64_e64 v[2:3], v[0:1]
+; ALIGNED-NEXT:    v_cmpx_ge_u64_e32 v[2:3], v[0:1]
 ; ALIGNED-NEXT:    s_xor_b32 s6, exec_lo, s4
 ; ALIGNED-NEXT:    s_cbranch_execz .LBB6_3
 ; ALIGNED-NEXT:  ; %bb.1: ; %memmove_fwd_loop.preheader
@@ -8362,7 +8362,7 @@ define void @memmove_p1_p1_sz2048(ptr addrspace(1) align 1 %dst, ptr addrspace(1
 ; UNROLL3:       ; %bb.0: ; %entry
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; UNROLL3-NEXT:    s_mov_b32 s4, exec_lo
-; UNROLL3-NEXT:    v_cmpx_ge_u64_e64 v[2:3], v[0:1]
+; UNROLL3-NEXT:    v_cmpx_ge_u64_e32 v[2:3], v[0:1]
 ; UNROLL3-NEXT:    s_xor_b32 s6, exec_lo, s4
 ; UNROLL3-NEXT:    s_cbranch_execz .LBB6_4
 ; UNROLL3-NEXT:  ; %bb.1: ; %memmove_fwd_loop.preheader
@@ -8451,7 +8451,7 @@ define void @memmove_p0_p4_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(4
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s4, exec_lo
-; CHECK-NEXT:    v_cmpx_ge_u64_e64 v[2:3], v[0:1]
+; CHECK-NEXT:    v_cmpx_ge_u64_e32 v[2:3], v[0:1]
 ; CHECK-NEXT:    s_xor_b32 s6, exec_lo, s4
 ; CHECK-NEXT:    s_cbranch_execz .LBB7_3
 ; CHECK-NEXT:  ; %bb.1: ; %memmove_fwd_loop.preheader
@@ -8595,7 +8595,7 @@ define void @memmove_p0_p4_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(4
 ; ALIGNED:       ; %bb.0: ; %entry
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; ALIGNED-NEXT:    s_mov_b32 s4, exec_lo
-; ALIGNED-NEXT:    v_cmpx_ge_u64_e64 v[2:3], v[0:1]
+; ALIGNED-NEXT:    v_cmpx_ge_u64_e32 v[2:3], v[0:1]
 ; ALIGNED-NEXT:    s_xor_b32 s6, exec_lo, s4
 ; ALIGNED-NEXT:    s_cbranch_execz .LBB7_3
 ; ALIGNED-NEXT:  ; %bb.1: ; %memmove_fwd_loop.preheader
@@ -9604,7 +9604,7 @@ define void @memmove_p0_p4_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(4
 ; UNROLL3:       ; %bb.0: ; %entry
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; UNROLL3-NEXT:    s_mov_b32 s4, exec_lo
-; UNROLL3-NEXT:    v_cmpx_ge_u64_e64 v[2:3], v[0:1]
+; UNROLL3-NEXT:    v_cmpx_ge_u64_e32 v[2:3], v[0:1]
 ; UNROLL3-NEXT:    s_xor_b32 s6, exec_lo, s4
 ; UNROLL3-NEXT:    s_cbranch_execz .LBB7_4
 ; UNROLL3-NEXT:  ; %bb.1: ; %memmove_fwd_loop.preheader
@@ -9694,7 +9694,7 @@ define void @memmove_p5_p5_sz2048(ptr addrspace(5) align 1 %dst, ptr addrspace(5
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s4, exec_lo
-; CHECK-NEXT:    v_cmpx_ge_u32_e64 v1, v0
+; CHECK-NEXT:    v_cmpx_ge_u32_e32 v1, v0
 ; CHECK-NEXT:    s_xor_b32 s6, exec_lo, s4
 ; CHECK-NEXT:    s_cbranch_execz .LBB8_3
 ; CHECK-NEXT:  ; %bb.1: ; %memmove_fwd_loop.preheader
@@ -10161,7 +10161,7 @@ define void @memmove_p5_p5_sz2048(ptr addrspace(5) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    buffer_store_dword v126, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    buffer_store_dword v127, off, s[0:3], s32 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    s_mov_b32 s4, exec_lo
-; ALIGNED-NEXT:    v_cmpx_ge_u32_e64 v1, v0
+; ALIGNED-NEXT:    v_cmpx_ge_u32_e32 v1, v0
 ; ALIGNED-NEXT:    s_xor_b32 s6, exec_lo, s4
 ; ALIGNED-NEXT:    s_cbranch_execz .LBB8_3
 ; ALIGNED-NEXT:  ; %bb.1: ; %memmove_fwd_loop.preheader
@@ -12324,7 +12324,7 @@ define void @memmove_p5_p5_sz2048(ptr addrspace(5) align 1 %dst, ptr addrspace(5
 ; UNROLL3:       ; %bb.0: ; %entry
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; UNROLL3-NEXT:    s_mov_b32 s4, exec_lo
-; UNROLL3-NEXT:    v_cmpx_ge_u32_e64 v1, v0
+; UNROLL3-NEXT:    v_cmpx_ge_u32_e32 v1, v0
 ; UNROLL3-NEXT:    s_xor_b32 s6, exec_lo, s4
 ; UNROLL3-NEXT:    s_cbranch_execz .LBB8_4
 ; UNROLL3-NEXT:  ; %bb.1: ; %memmove_fwd_loop.preheader
@@ -12497,7 +12497,7 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[0:1]
 ; CHECK-NEXT:    s_mov_b32 s4, exec_lo
 ; CHECK-NEXT:    v_cndmask_b32_e32 v3, -1, v0, vcc_lo
-; CHECK-NEXT:    v_cmpx_ge_u32_e64 v2, v3
+; CHECK-NEXT:    v_cmpx_ge_u32_e32 v2, v3
 ; CHECK-NEXT:    s_xor_b32 s6, exec_lo, s4
 ; CHECK-NEXT:    s_cbranch_execz .LBB9_3
 ; CHECK-NEXT:  ; %bb.1: ; %memmove_fwd_loop.preheader
@@ -12773,7 +12773,7 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    s_mov_b32 s4, exec_lo
 ; ALIGNED-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[87:88]
 ; ALIGNED-NEXT:    v_cndmask_b32_e32 v3, -1, v87, vcc_lo
-; ALIGNED-NEXT:    v_cmpx_ge_u32_e64 v2, v3
+; ALIGNED-NEXT:    v_cmpx_ge_u32_e32 v2, v3
 ; ALIGNED-NEXT:    s_xor_b32 s6, exec_lo, s4
 ; ALIGNED-NEXT:    s_cbranch_execz .LBB9_3
 ; ALIGNED-NEXT:  ; %bb.1: ; %memmove_fwd_loop.preheader
@@ -15843,7 +15843,7 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; UNROLL3-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[0:1]
 ; UNROLL3-NEXT:    s_mov_b32 s4, exec_lo
 ; UNROLL3-NEXT:    v_cndmask_b32_e32 v3, -1, v0, vcc_lo
-; UNROLL3-NEXT:    v_cmpx_ge_u32_e64 v2, v3
+; UNROLL3-NEXT:    v_cmpx_ge_u32_e32 v2, v3
 ; UNROLL3-NEXT:    s_xor_b32 s6, exec_lo, s4
 ; UNROLL3-NEXT:    s_cbranch_execz .LBB9_4
 ; UNROLL3-NEXT:  ; %bb.1: ; %memmove_fwd_loop.preheader

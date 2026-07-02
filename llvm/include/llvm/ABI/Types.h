@@ -244,7 +244,7 @@ struct FieldInfo {
         BitFieldWidth(BitFieldWidth), IsBitField(IsBitField),
         IsUnnamedBitfield(IsUnnamedBitField) {}
 
-  bool isEmpty() const;
+  LLVM_ABI bool isEmpty() const;
 };
 
 enum class StructPacking { Default, Packed, ExplicitPacking };
@@ -308,7 +308,7 @@ public:
     return VirtualBaseClasses;
   }
 
-  bool isEmpty() const;
+  LLVM_ABI bool isEmpty() const;
 
   static bool classof(const Type *T) {
     return T->getKind() == TypeKind::Record;

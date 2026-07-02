@@ -25,7 +25,7 @@ void f1(void) {
 }
 
 // CIR-LABEL: @f1
-// CIR:         %[[SLOT:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init] {alignment = 4 : i64}
+// CIR:         %[[SLOT:.+]] = cir.alloca "x" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT:    %[[INIT:.+]] = cir.const #cir.int<42> : !s32i
 // CIR-NEXT:    cir.store align(4) %[[INIT]], %[[SLOT]] : !s32i, !cir.ptr<!s32i>
 // CIR:       }
@@ -46,7 +46,7 @@ void f2(void) {
 }
 
 // CIR-LABEL: @f2
-// CIR:         %[[SLOT:.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x"] {alignment = 4 : i64}
+// CIR:         %[[SLOT:.+]] = cir.alloca "x" align(4) : !cir.ptr<!s32i>
 // CIR-NEXT:    %[[INIT:.+]] = cir.const #cir.int<42> : !s32i
 // CIR-NEXT:    cir.store align(4) %[[INIT]], %[[SLOT]] : !s32i, !cir.ptr<!s32i>
 // CIR:       }
@@ -335,7 +335,7 @@ void c11_atomic_cmpxchg_strong(_Atomic(int) *ptr, int *expected, int desired, in
   // CIR-LABEL: @c11_atomic_cmpxchg_strong
   // LLVM-LABEL: @c11_atomic_cmpxchg_strong
   // OGCG-LABEL: @c11_atomic_cmpxchg_strong
-  // CIR: %[[FAILURE:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["failure", init]
+  // CIR: %[[FAILURE:.*]] = cir.alloca "failure" {{.*}} init : !cir.ptr<!s32i>
 
   __c11_atomic_compare_exchange_strong(ptr, expected, desired,
                                        __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
@@ -417,7 +417,7 @@ void c11_atomic_cmpxchg_weak(_Atomic(int) *ptr, int *expected, int desired, int 
   // CIR-LABEL: @c11_atomic_cmpxchg_weak
   // LLVM-LABEL: @c11_atomic_cmpxchg_weak
   // OGCG-LABEL: @c11_atomic_cmpxchg_weak
-  // CIR: %[[FAILURE:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["failure", init]
+  // CIR: %[[FAILURE:.*]] = cir.alloca "failure" {{.*}} init : !cir.ptr<!s32i>
 
   __c11_atomic_compare_exchange_weak(ptr, expected, desired,
                                      __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
@@ -499,7 +499,7 @@ void atomic_cmpxchg(int *ptr, int *expected, int *desired, int failure) {
   // CIR-LABEL: @atomic_cmpxchg
   // LLVM-LABEL: @atomic_cmpxchg
   // OGCG-LABEL: @atomic_cmpxchg
-  // CIR: %[[FAILURE:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["failure", init]
+  // CIR: %[[FAILURE:.*]] = cir.alloca "failure" {{.*}} init : !cir.ptr<!s32i>
 
   __atomic_compare_exchange(ptr, expected, desired, /*weak=*/0, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
   // CIR:         %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
@@ -680,7 +680,7 @@ void atomic_cmpxchg_n(int *ptr, int *expected, int desired, int failure) {
   // CIR-LABEL: @atomic_cmpxchg_n
   // LLVM-LABEL: @atomic_cmpxchg_n
   // OGCG-LABEL: @atomic_cmpxchg_n
-  // CIR: %[[FAILURE:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["failure", init]
+  // CIR: %[[FAILURE:.*]] = cir.alloca "failure" {{.*}} init : !cir.ptr<!s32i>
 
   __atomic_compare_exchange_n(ptr, expected, desired, /*weak=*/0, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
   // CIR:         %[[OLD:.+]], %[[SUCCESS:.+]] = cir.atomic.cmpxchg success(seq_cst) failure(acquire) syncscope(system) %{{.+}}, %{{.+}}, %{{.+}} align(4) : (!cir.ptr<!s32i>, !s32i, !s32i) -> (!s32i, !cir.bool)
@@ -1003,8 +1003,8 @@ float *atomic_fetch_ptr_to_ptr(float **ptr, int value) {
   // OGCG-LABEL: @atomic_fetch_ptr_to_ptr
 
   return __atomic_fetch_add(ptr, value, __ATOMIC_SEQ_CST);
-  // CIR: %[[PTR:.*]] = cir.alloca !cir.ptr<!cir.ptr<!cir.float>>, !cir.ptr<!cir.ptr<!cir.ptr<!cir.float>>>, ["ptr", init]
-  // CIR: %[[ATOMIC_TEMP:.*]] = cir.alloca !cir.ptr<!cir.float>, !cir.ptr<!cir.ptr<!cir.float>>, ["atomic-temp"] {alignment = 8 : i64}
+  // CIR: %[[PTR:.*]] = cir.alloca "ptr" {{.*}} init : !cir.ptr<!cir.ptr<!cir.ptr<!cir.float>>>
+  // CIR: %[[ATOMIC_TEMP:.*]] = cir.alloca "atomic-temp" align(8) : !cir.ptr<!cir.ptr<!cir.float>>
   // CIR: %[[PTR_LOAD:.*]] = cir.load align(8) %[[PTR]] : !cir.ptr<!cir.ptr<!cir.ptr<!cir.float>>>, !cir.ptr<!cir.ptr<!cir.float>>
   // CIR: %[[PTR_CAST:.*]] = cir.cast bitcast %[[PTR_LOAD]] : !cir.ptr<!cir.ptr<!cir.float>> -> !cir.ptr<!s64i>
   // CIR: %[[RESULT:.*]] = cir.atomic.fetch add seq_cst syncscope(system) fetch_first %[[PTR_CAST]], %{{.*}} : (!cir.ptr<!s64i>, !s64i) -> !s64i
@@ -1023,8 +1023,8 @@ float *atomic_fetch_ptr_to_ptr2(float **ptr, int value) {
   // LLVM-LABEL: @atomic_fetch_ptr_to_ptr2
   // OGCG-LABEL: @atomic_fetch_ptr_to_ptr2
   return __atomic_add_fetch(ptr, value, __ATOMIC_SEQ_CST);
-  // CIR: %[[PTR:.*]] = cir.alloca !cir.ptr<!cir.ptr<!cir.float>>, !cir.ptr<!cir.ptr<!cir.ptr<!cir.float>>>, ["ptr", init]
-  // CIR: %[[ATOMIC_TEMP:.*]] = cir.alloca !cir.ptr<!cir.float>, !cir.ptr<!cir.ptr<!cir.float>>, ["atomic-temp"] {alignment = 8 : i64}
+  // CIR: %[[PTR:.*]] = cir.alloca "ptr" {{.*}} init : !cir.ptr<!cir.ptr<!cir.ptr<!cir.float>>>
+  // CIR: %[[ATOMIC_TEMP:.*]] = cir.alloca "atomic-temp" align(8) : !cir.ptr<!cir.ptr<!cir.float>>
   // CIR: %[[PTR_LOAD:.*]] = cir.load align(8) %[[PTR]] : !cir.ptr<!cir.ptr<!cir.ptr<!cir.float>>>, !cir.ptr<!cir.ptr<!cir.float>>
   // CIR: %[[PTR_CAST:.*]] = cir.cast bitcast %[[PTR_LOAD]] : !cir.ptr<!cir.ptr<!cir.float>> -> !cir.ptr<!s64i>
   // CIR: %[[RESULT:.*]] = cir.atomic.fetch add seq_cst syncscope(system) %[[PTR_CAST]], %{{.*}} : (!cir.ptr<!s64i>, !s64i) -> !s64i
@@ -3328,8 +3328,8 @@ void atomic_cmpxchg_maybe_weak(int *ptr, int *expected, int *desired, int failur
   // CIR-LABEL: @atomic_cmpxchg_maybe_weak
   // LLVM-LABEL: @atomic_cmpxchg_maybe_weak
   // OGCG-LABEL: @atomic_cmpxchg_maybe_weak
-  // CIR: %[[FAILURE:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["failure", init]
-  // CIR: %[[WEAK:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["weak", init]
+  // CIR: %[[FAILURE:.*]] = cir.alloca "failure" {{.*}} init : !cir.ptr<!s32i>
+  // CIR: %[[WEAK:.*]] = cir.alloca "weak" {{.*}} init : !cir.ptr<!s32i>
 
   __atomic_compare_exchange(ptr, expected, desired, weak, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
   // CIR:         %[[WEAK_LOAD:.*]] = cir.load{{.*}}%[[WEAK]]
@@ -3506,8 +3506,8 @@ void atomic_cmpxchg_n_maybe_weak(int *ptr, int *expected, int desired, int failu
   // CIR-LABEL: @atomic_cmpxchg_n_maybe_weak
   // LLVM-LABEL: @atomic_cmpxchg_n_maybe_weak
   // OGCG-LABEL: @atomic_cmpxchg_n_maybe_weak
-  // CIR: %[[FAILURE:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["failure", init]
-  // CIR: %[[WEAK:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["weak", init]
+  // CIR: %[[FAILURE:.*]] = cir.alloca "failure" {{.*}} init : !cir.ptr<!s32i>
+  // CIR: %[[WEAK:.*]] = cir.alloca "weak" {{.*}} init : !cir.ptr<!s32i>
 
   __atomic_compare_exchange_n(ptr, expected, desired, weak, __ATOMIC_SEQ_CST, __ATOMIC_ACQUIRE);
   // CIR:         %[[WEAK_LOAD:.*]] = cir.load{{.*}}%[[WEAK]]

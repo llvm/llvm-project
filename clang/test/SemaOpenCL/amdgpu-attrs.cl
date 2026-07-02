@@ -51,6 +51,9 @@ __attribute__((amdgpu_waves_per_eu(0, 4))) kernel void kernel_waves_per_eu_0_4()
 __attribute__((amdgpu_flat_work_group_size(64, 32))) kernel void kernel_flat_work_group_size_64_32() {} // expected-error {{'amdgpu_flat_work_group_size' attribute argument is invalid: min must not be greater than max}}
 __attribute__((amdgpu_waves_per_eu(4, 2))) kernel void kernel_waves_per_eu_4_2() {} // expected-error {{'amdgpu_waves_per_eu' attribute argument is invalid: min must not be greater than max}}
 
+__attribute__((reqd_work_group_size(32, 2, 1), amdgpu_flat_work_group_size(16, 128))) kernel void kernel_reqd_work_group_size_32_2_1_flat_work_group_size_16_128() {} // expected-error {{'amdgpu_flat_work_group_size' attribute must match 'reqd_work_group_size' product}}
+__attribute__((amdgpu_flat_work_group_size(16, 128), reqd_work_group_size(32, 2, 1))) kernel void kernel_flat_work_group_size_16_128_reqd_work_group_size_32_2_1() {} // expected-error {{'amdgpu_flat_work_group_size' attribute must match 'reqd_work_group_size' product}}
+
 __attribute__((amdgpu_waves_per_eu(2, 4, 8))) kernel void kernel_waves_per_eu_2_4_8() {} // expected-error {{'amdgpu_waves_per_eu' attribute takes no more than 2 arguments}}
 
 __attribute__((amdgpu_flat_work_group_size(0, 0))) kernel void kernel_flat_work_group_size_0_0() {}

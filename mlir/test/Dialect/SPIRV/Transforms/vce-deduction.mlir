@@ -427,10 +427,10 @@ spirv.module Logical GLSL450 attributes {
   }
 }
 
-// CHECK: requires #spirv.vce<v1.0, [Linkage, Shader, Matrix], [SPV_AMD_weak_linkage]>
+// CHECK: requires #spirv.vce<v1.0, [WeakLinkageAMD, Shader, Linkage, Matrix], [SPV_AMD_weak_linkage]>
 spirv.module Logical GLSL450 attributes {
   spirv.target_env = #spirv.target_env<
-    #spirv.vce<v1.5, [Shader, Linkage], [SPV_AMD_weak_linkage]>,
+    #spirv.vce<v1.5, [Shader, WeakLinkageAMD], [SPV_AMD_weak_linkage]>,
     #spirv.resource_limits<>>
 } {
   spirv.GlobalVariable @weak_var {

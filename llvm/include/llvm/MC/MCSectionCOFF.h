@@ -68,13 +68,13 @@ private:
 public:
   /// Decides whether a '.section' directive should be printed before the
   /// section name
-  bool shouldOmitSectionDirective(StringRef Name) const;
+  LLVM_ABI bool shouldOmitSectionDirective(StringRef Name) const;
 
   unsigned getCharacteristics() const { return Characteristics; }
   MCSymbol *getCOMDATSymbol() const { return COMDATSymbol; }
   int getSelection() const { return Selection; }
 
-  void setSelection(int Selection) const;
+  LLVM_ABI void setSelection(int Selection) const;
 
   bool isUnique() const { return UniqueID != NonUniqueID; }
   unsigned getUniqueID() const { return UniqueID; }

@@ -6,11 +6,11 @@
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
 
 // CIR-LABEL: cir.func no_inline no_proto dso_local @main() -> !s32i {{.*}}{
-// CIR: [[RETVAL:%.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
-// CIR: [[J:%.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["j"] {alignment = 4 : i64}
+// CIR: [[RETVAL:%.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+// CIR: [[J:%.*]] = cir.alloca "j" align(4) : !cir.ptr<!s32i>
 // CIR:   omp.parallel {
 // CIR:     cir.scope {
-// CIR:       [[I:%.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
+// CIR:       [[I:%.*]] = cir.alloca "i" align(4) init : !cir.ptr<!s32i>
 // CIR:       [[ZERO1:%.*]] = cir.const #cir.int<0> : !s32i
 // CIR:       cir.store align(4) [[ZERO1]], [[I]] : !s32i, !cir.ptr<!s32i>
 // CIR:       cir.for : cond {
@@ -39,38 +39,34 @@
 // CIR: }
 
 // LLVM-LABEL: define dso_local i32 @main()
-// LLVM: %[[STRUCTARG:.*]] = alloca { ptr, ptr }, align 8
-// LLVM: %[[VAR1:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[VAR2:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[VAR3:.*]] = alloca i32, i64 1, align 4
+// LLVM: %[[STRUCTARG:.*]] = alloca { ptr }, align 8
+// LLVM: %[[RETVAL:.*]] = alloca i32, i64 1, align 4
+// LLVM: %[[J:.*]] = alloca i32, i64 1, align 4
 // LLVM: br label %[[ENTRY:.*]]
 
 // LLVM: [[ENTRY]]:
 // LLVM: br label %[[OMP_PARALLEL:.*]]
 
 // LLVM: [[OMP_PARALLEL]]:
-// LLVM: %[[GEP1:.*]] = getelementptr { ptr, ptr }, ptr %[[STRUCTARG]], i32 0, i32 0
-// LLVM: store ptr %[[VAR1]], ptr %[[GEP1]], align 8
-// LLVM: %[[GEP2:.*]] = getelementptr { ptr, ptr }, ptr %[[STRUCTARG]], i32 0, i32 1
-// LLVM: store ptr %[[VAR3]], ptr %[[GEP2]], align 8
+// LLVM: %[[GEP1:.*]] = getelementptr { ptr }, ptr %[[STRUCTARG]], i32 0, i32 0
+// LLVM: store ptr %[[J]], ptr %[[GEP1]], align 8
 // LLVM: call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @1, i32 1, ptr @main..omp_par, ptr %[[STRUCTARG]])
 // LLVM: br label %[[OMP_PAR_EXIT:.*]]
 
 // LLVM: [[OMP_PAR_EXIT]]:
-// LLVM: store i32 0, ptr %[[VAR2]], align 4
-// LLVM: %[[LOAD:.*]] = load i32, ptr %[[VAR2]], align 4
+// LLVM: store i32 0, ptr %[[RETVAL]], align 4
+// LLVM: %[[LOAD:.*]] = load i32, ptr %[[RETVAL]], align 4
 // LLVM: ret i32 %[[LOAD]]
 
 // LLVM-LABEL: define internal void @main..omp_par(ptr noalias %{{.*}}, ptr noalias %{{.*}}, ptr %{{.*}})
 // LLVM: [[PAR_ENTRY:.*]]:
-// LLVM: %[[GEP_A:.*]] = getelementptr { ptr, ptr }, ptr %{{.*}}, i32 0, i32 0
-// LLVM: %[[LOAD_A:.*]] = load ptr, ptr %[[GEP_A]], align 8
-// LLVM: %[[GEP_B:.*]] = getelementptr { ptr, ptr }, ptr %{{.*}}, i32 0, i32 1
-// LLVM: %[[LOAD_B:.*]] = load ptr, ptr %[[GEP_B]], align 8
+// LLVM: %[[GEP_J:.*]] = getelementptr { ptr }, ptr %{{.*}}, i32 0, i32 0
+// LLVM: %[[LOAD_J:.*]] = load ptr, ptr %[[GEP_J]], align 8
 // LLVM: %[[TID_LOCAL:.*]] = alloca i32, align 4
 // LLVM: %[[TID_VAL:.*]] = load i32, ptr %{{.*}}, align 4
 // LLVM: store i32 %[[TID_VAL]], ptr %[[TID_LOCAL]], align 4
 // LLVM: %{{.*}} = load i32, ptr %[[TID_LOCAL]], align 4
+// LLVM: %[[I:.*]] = alloca i32, i64 1, align 4
 // LLVM: br label %[[AFTER_ALLOCA:.*]]
 
 // LLVM: [[AFTER_ALLOCA]]:
@@ -83,11 +79,11 @@
 // LLVM: br label %[[PAR_REGION2:.*]]
 
 // LLVM: [[PAR_REGION2]]:
-// LLVM: store i32 0, ptr %[[LOAD_A]], align 4
+// LLVM: store i32 0, ptr %[[I]], align 4
 // LLVM: br label %[[PAR_REGION3:.*]]
 
 // LLVM: [[PAR_REGION3]]:
-// LLVM: %[[I_LOAD:.*]] = load i32, ptr %[[LOAD_A]], align 4
+// LLVM: %[[I_LOAD:.*]] = load i32, ptr %[[I]], align 4
 // LLVM: %[[CMP:.*]] = icmp slt i32 %[[I_LOAD]], 10000
 // LLVM: br i1 %[[CMP]], label %[[PAR_REGION4:.*]], label %[[PAR_REGION6:.*]]
 
@@ -107,13 +103,13 @@
 // LLVM: br label %[[EXIT_STUB:.*]]
 
 // LLVM: [[PAR_REGION4]]:
-// LLVM: store i32 0, ptr %[[LOAD_B]], align 4
+// LLVM: store i32 0, ptr %[[LOAD_J]], align 4
 // LLVM: br label %[[PAR_REGION5:.*]]
 
 // LLVM: [[PAR_REGION5]]:
-// LLVM: %[[I_LOAD2:.*]] = load i32, ptr %[[LOAD_A]], align 4
+// LLVM: %[[I_LOAD2:.*]] = load i32, ptr %[[I]], align 4
 // LLVM: %[[ADD:.*]] = add nsw i32 %[[I_LOAD2]], 1
-// LLVM: store i32 %[[ADD]], ptr %[[LOAD_A]], align 4
+// LLVM: store i32 %[[ADD]], ptr %[[I]], align 4
 // LLVM: br label %[[PAR_REGION3]]
 
 // LLVM: [[EXIT_STUB]]:

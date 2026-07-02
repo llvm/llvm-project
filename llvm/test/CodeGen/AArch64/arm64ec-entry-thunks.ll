@@ -85,10 +85,53 @@ define i64 @simple_integers(i8, i16, i32, i64) nounwind {
   ret i64 0
 }
 
-; NOTE: Only half, float, and double are supported.
-define double @simple_floats(half, float, double) nounwind {
-; CHECK-LABEL:    .def    $ientry_thunk$cdecl$d$__llvm_h__fd;
-; CHECK:          .section        .wowthk$aa,"xr",discard,$ientry_thunk$cdecl$d$__llvm_h__fd
+; NOTE: Only half, bfloat16, float, double, and fp128 are supported.
+define double @simple_floats(half, float, double, fp128) nounwind {
+; CHECK-LABEL:    .def    $ientry_thunk$cdecl$d$__llvm_h__fd__llvm_q__;
+; CHECK:          .section        .wowthk$aa,"xr",discard,$ientry_thunk$cdecl$d$__llvm_h__fd__llvm_q__
+; CHECK:          // %bb.0:
+; CHECK-NEXT:     stp     q6, q7, [sp, #-176]!            // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_px    q6, 176
+; CHECK-NEXT:     stp     q8, q9, [sp, #32]               // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q8, 32
+; CHECK-NEXT:     stp     q10, q11, [sp, #64]             // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q10, 64
+; CHECK-NEXT:     stp     q12, q13, [sp, #96]             // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q12, 96
+; CHECK-NEXT:     stp     q14, q15, [sp, #128]            // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q14, 128
+; CHECK-NEXT:     stp     x29, x30, [sp, #160]            // 16-byte Folded Spill
+; CHECK-NEXT:     .seh_save_fplr  160
+; CHECK-NEXT:     add     x29, sp, #160
+; CHECK-NEXT:     .seh_add_fp     160
+; CHECK-NEXT:     .seh_endprologue
+; CHECK-NEXT:     ldr     q3, [x3]
+; CHECK-NEXT:     blr     x9
+; CHECK-NEXT:     adrp    x8, __os_arm64x_dispatch_ret
+; CHECK-NEXT:     ldr     x0, [x8, :lo12:__os_arm64x_dispatch_ret]
+; CHECK-NEXT:     .seh_startepilogue
+; CHECK-NEXT:     ldp     x29, x30, [sp, #160]            // 16-byte Folded Reload
+; CHECK-NEXT:     .seh_save_fplr  160
+; CHECK-NEXT:     ldp     q14, q15, [sp, #128]            // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q14, 128
+; CHECK-NEXT:     ldp     q12, q13, [sp, #96]             // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q12, 96
+; CHECK-NEXT:     ldp     q10, q11, [sp, #64]             // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q10, 64
+; CHECK-NEXT:     ldp     q8, q9, [sp, #32]               // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q8, 32
+; CHECK-NEXT:     ldp     q6, q7, [sp], #176              // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_px    q6, 176
+; CHECK-NEXT:     .seh_endepilogue
+; CHECK-NEXT:     br      x0
+; CHECK-NEXT:     .seh_endfunclet
+; CHECK-NEXT:     .seh_endproc
+  ret double 0.0
+}
+
+define half @return_half() nounwind {
+; CHECK-LABEL:    .def    $ientry_thunk$cdecl$__llvm_h__$v;
+; CHECK:          .section        .wowthk$aa,"xr",discard,$ientry_thunk$cdecl$__llvm_h__$v
 ; CHECK:          // %bb.0:
 ; CHECK-NEXT:     stp     q6, q7, [sp, #-176]!            // 32-byte Folded Spill
 ; CHECK-NEXT:     .seh_save_any_reg_px    q6, 176
@@ -125,7 +168,202 @@ define double @simple_floats(half, float, double) nounwind {
 ; CHECK-NEXT:     br      x0
 ; CHECK-NEXT:     .seh_endfunclet
 ; CHECK-NEXT:     .seh_endproc
-  ret double 0.0
+  ret half 3.14
+}
+
+define fp128 @return_fp128() nounwind {
+; CHECK-LABEL:    .def    $ientry_thunk$cdecl$__llvm_q__$v;
+; CHECK:          .section        .wowthk$aa,"xr",discard,$ientry_thunk$cdecl$__llvm_q__$v
+; CHECK:          // %bb.0:
+; CHECK-NEXT:     stp     q6, q7, [sp, #-192]!            // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_px    q6, 192
+; CHECK-NEXT:     stp     q8, q9, [sp, #32]               // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q8, 32
+; CHECK-NEXT:     stp     q10, q11, [sp, #64]             // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q10, 64
+; CHECK-NEXT:     stp     q12, q13, [sp, #96]             // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q12, 96
+; CHECK-NEXT:     stp     q14, q15, [sp, #128]            // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q14, 128
+; CHECK-NEXT:     str     x19, [sp, #160]                 // 8-byte Spill
+; CHECK-NEXT:     .seh_save_reg   x19, 160
+; CHECK-NEXT:     stp     x29, x30, [sp, #168]            // 16-byte Folded Spill
+; CHECK-NEXT:     .seh_save_fplr  168
+; CHECK-NEXT:     add     x29, sp, #168
+; CHECK-NEXT:     .seh_add_fp     168
+; CHECK-NEXT:     .seh_endprologue
+; CHECK-NEXT:     mov     x19, x0
+; CHECK-NEXT:     blr     x9
+; CHECK-NEXT:     adrp    x8, __os_arm64x_dispatch_ret
+; CHECK-NEXT:     str     q0, [x19]
+; CHECK-NEXT:     ldr     x0, [x8, :lo12:__os_arm64x_dispatch_ret]
+; CHECK-NEXT:     mov     x8, x19
+; CHECK-NEXT:     .seh_startepilogue
+; CHECK-NEXT:     ldp     x29, x30, [sp, #168]            // 16-byte Folded Reload
+; CHECK-NEXT:     .seh_save_fplr  168
+; CHECK-NEXT:     ldr     x19, [sp, #160]                 // 8-byte Reload
+; CHECK-NEXT:     .seh_save_reg   x19, 160
+; CHECK-NEXT:     ldp     q14, q15, [sp, #128]            // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q14, 128
+; CHECK-NEXT:     ldp     q12, q13, [sp, #96]             // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q12, 96
+; CHECK-NEXT:     ldp     q10, q11, [sp, #64]             // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q10, 64
+; CHECK-NEXT:     ldp     q8, q9, [sp, #32]               // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q8, 32
+; CHECK-NEXT:     ldp     q6, q7, [sp], #192              // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_px    q6, 192
+; CHECK-NEXT:     .seh_endepilogue
+; CHECK-NEXT:     br      x0
+; CHECK-NEXT:     .seh_endfunclet
+; CHECK-NEXT:     .seh_endproc
+  ret fp128 3.14
+}
+
+define bfloat @simple_bfloat(bfloat %0, bfloat %1) nounwind {
+; CHECK-LABEL:    .def    $ientry_thunk$cdecl$__llvm_bf16__$__llvm_bf16____llvm_bf16__;
+; CHECK:          .section        .wowthk$aa,"xr",discard,$ientry_thunk$cdecl$__llvm_bf16__$__llvm_bf16____llvm_bf16__
+; CHECK:          // %bb.0:
+; CHECK-NEXT:     stp     q6, q7, [sp, #-176]!            // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_px    q6, 176
+; CHECK-NEXT:     stp     q8, q9, [sp, #32]               // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q8, 32
+; CHECK-NEXT:     stp     q10, q11, [sp, #64]             // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q10, 64
+; CHECK-NEXT:     stp     q12, q13, [sp, #96]             // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q12, 96
+; CHECK-NEXT:     stp     q14, q15, [sp, #128]            // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q14, 128
+; CHECK-NEXT:     stp     x29, x30, [sp, #160]            // 16-byte Folded Spill
+; CHECK-NEXT:     .seh_save_fplr  160
+; CHECK-NEXT:     add     x29, sp, #160
+; CHECK-NEXT:     .seh_add_fp     160
+; CHECK-NEXT:     .seh_endprologue
+; CHECK-NEXT:     blr     x9
+; CHECK-NEXT:     adrp    x8, __os_arm64x_dispatch_ret
+; CHECK-NEXT:     ldr     x0, [x8, :lo12:__os_arm64x_dispatch_ret]
+; CHECK-NEXT:     .seh_startepilogue
+; CHECK-NEXT:     ldp     x29, x30, [sp, #160]            // 16-byte Folded Reload
+; CHECK-NEXT:     .seh_save_fplr  160
+; CHECK-NEXT:     ldp     q14, q15, [sp, #128]            // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q14, 128
+; CHECK-NEXT:     ldp     q12, q13, [sp, #96]             // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q12, 96
+; CHECK-NEXT:     ldp     q10, q11, [sp, #64]             // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q10, 64
+; CHECK-NEXT:     ldp     q8, q9, [sp, #32]               // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q8, 32
+; CHECK-NEXT:     ldp     q6, q7, [sp], #176              // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_px    q6, 176
+; CHECK-NEXT:     .seh_endepilogue
+; CHECK-NEXT:     br      x0
+; CHECK-NEXT:     .seh_endfunclet
+; CHECK-NEXT:     .seh_endproc
+  ret bfloat %0
+}
+
+define [2 x bfloat] @bfloat_array([2 x bfloat] %0) {
+; CHECK-LABEL:    .def    $ientry_thunk$cdecl$__llvm_BF16__4$__llvm_BF16__4
+; CHECK:          .section        .wowthk$aa,"xr",discard,$ientry_thunk$cdecl$__llvm_BF16__4$__llvm_BF16__4
+; CHECK:          // %bb.0:
+; CHECK-NEXT:     sub     sp, sp, #192
+; CHECK-NEXT:     .seh_stackalloc 192
+; CHECK-NEXT:     stp     q6, q7, [sp, #16]               // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q6, 16
+; CHECK-NEXT:     stp     q8, q9, [sp, #48]               // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q8, 48
+; CHECK-NEXT:     stp     q10, q11, [sp, #80]             // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q10, 80
+; CHECK-NEXT:     stp     q12, q13, [sp, #112]            // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q12, 112
+; CHECK-NEXT:     stp     q14, q15, [sp, #144]            // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q14, 144
+; CHECK-NEXT:     stp     x29, x30, [sp, #176]            // 16-byte Folded Spill
+; CHECK-NEXT:     .seh_save_fplr  176
+; CHECK-NEXT:     add     x29, sp, #176
+; CHECK-NEXT:     .seh_add_fp     176
+; CHECK-NEXT:     .seh_endprologue
+; CHECK-NEXT:     str w0, [sp, #12]
+; CHECK-NEXT:     ldr h1, [sp, #14]
+; CHECK-NEXT:     ldr h0, [sp, #12]
+; CHECK-NEXT:     blr x9
+; CHECK-NEXT:     adrp x9, __os_arm64x_dispatch_ret
+; CHECK-NEXT:     str h0, [sp, #8]
+; CHECK-NEXT:     str h1, [sp, #10]
+; CHECK-NEXT:     ldr w8, [sp, #8]
+; CHECK-NEXT:     ldr x0, [x9, :lo12:__os_arm64x_dispatch_ret]
+; CHECK-NEXT:     .seh_startepilogue
+; CHECK-NEXT:     ldp     x29, x30, [sp, #176]            // 16-byte Folded Reload
+; CHECK-NEXT:     .seh_save_fplr  176
+; CHECK-NEXT:     ldp     q14, q15, [sp, #144]            // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q14, 144
+; CHECK-NEXT:     ldp     q12, q13, [sp, #112]            // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q12, 112
+; CHECK-NEXT:     ldp     q10, q11, [sp, #80]             // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q10, 80
+; CHECK-NEXT:     ldp     q8, q9, [sp, #48]               // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q8, 48
+; CHECK-NEXT:     ldp     q6, q7, [sp, #16]               // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q6, 16
+; CHECK-NEXT:     add     sp, sp, #192
+; CHECK-NEXT:     .seh_stackalloc 192
+; CHECK-NEXT:     .seh_endepilogue
+; CHECK-NEXT:     br      x0
+; CHECK-NEXT:     .seh_endfunclet
+; CHECK-NEXT:     .seh_endproc
+  ret [2 x bfloat] %0
+}
+
+define bfloat @bfloat_many(bfloat, bfloat, bfloat, bfloat, bfloat, bfloat, bfloat, bfloat, bfloat %8) {
+; CHECK-LABEL:    .def $ientry_thunk$cdecl$__llvm_bf16__$__llvm_bf16____llvm_bf16____llvm_bf16____llvm_bf16____llvm_bf16____llvm_bf16____llvm_bf16____llvm_bf16____llvm_bf16__;
+; CHECK:          .section        .wowthk$aa,"xr",discard,$ientry_thunk$cdecl$__llvm_bf16__$__llvm_bf16____llvm_bf16____llvm_bf16____llvm_bf16____llvm_bf16____llvm_bf16____llvm_bf16____llvm_bf16____llvm_bf16__
+; CHECK:          // %bb.0:
+; CHECK-NEXT:     sub     sp, sp, #192
+; CHECK-NEXT:     .seh_stackalloc 192
+; CHECK-NEXT:     stp     q6, q7, [sp, #16]               // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q6, 16
+; CHECK-NEXT:     stp     q8, q9, [sp, #48]               // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q8, 48
+; CHECK-NEXT:     stp     q10, q11, [sp, #80]             // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q10, 80
+; CHECK-NEXT:     stp     q12, q13, [sp, #112]            // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q12, 112
+; CHECK-NEXT:     stp     q14, q15, [sp, #144]            // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q14, 144
+; CHECK-NEXT:     stp     x29, x30, [sp, #176]            // 16-byte Folded Spill
+; CHECK-NEXT:     .seh_save_fplr  176
+; CHECK-NEXT:     add     x29, sp, #176
+; CHECK-NEXT:     .seh_add_fp     176
+; CHECK-NEXT:     .seh_endprologue
+; CHECK-NEXT:     ldr h4, [x4, #32]
+; CHECK-NEXT:     ldr h5, [x4, #40]
+; CHECK-NEXT:     ldr h6, [x4, #48]
+; CHECK-NEXT:     ldr h7, [x4, #56]
+; CHECK-NEXT:     ldr h8, [x4, #64]
+; CHECK-NEXT:     str h8, [sp]
+; CHECK-NEXT:     blr     x9
+; CHECK-NEXT:     adrp    x8, __os_arm64x_dispatch_ret
+; CHECK-NEXT:     ldr     x0, [x8, :lo12:__os_arm64x_dispatch_ret]
+; CHECK-NEXT:     .seh_startepilogue
+; CHECK-NEXT:     ldp     x29, x30, [sp, #176]            // 16-byte Folded Reload
+; CHECK-NEXT:     .seh_save_fplr  176
+; CHECK-NEXT:     ldp     q14, q15, [sp, #144]            // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q14, 144
+; CHECK-NEXT:     ldp     q12, q13, [sp, #112]             // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q12, 112
+; CHECK-NEXT:     ldp     q10, q11, [sp, #80]             // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q10, 80
+; CHECK-NEXT:     ldp     q8, q9, [sp, #48]               // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q8, 48
+; CHECK-NEXT:     ldp     q6, q7, [sp, #16]              // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q6, 16
+; CHECK-NEXT:     add sp, sp, #192
+; CHECK-NEXT:     .seh_stackalloc 192
+; CHECK-NEXT:     .seh_endepilogue
+; CHECK-NEXT:     br      x0
+; CHECK-NEXT:     .seh_endfunclet
+; CHECK-NEXT:     .seh_endproc
+  ret bfloat %8
 }
 
 define void @has_varargs(...) nounwind {
@@ -602,7 +840,22 @@ start:
 ; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$i8$i8i8i8i8
 ; CHECK-NEXT:     .word   1
 ; CHECK-NEXT:     .symidx "#simple_floats"
-; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$d$__llvm_h__fd
+; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$d$__llvm_h__fd__llvm_q__
+; CHECK-NEXT:     .word   1
+; CHECK-NEXT:     .symidx "#return_half"
+; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$__llvm_h__$v
+; CHECK-NEXT:     .word   1
+; CHECK-NEXT:     .symidx "#return_fp128"
+; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$__llvm_q__$v
+; CHECK-NEXT:     .word   1
+; CHECK-NEXT:     .symidx "#simple_bfloat"
+; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$__llvm_bf16__$__llvm_bf16____llvm_bf16__
+; CHECK-NEXT:     .word   1
+; CHECK-NEXT:     .symidx "#bfloat_array"
+; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$__llvm_BF16__4$__llvm_BF16__4
+; CHECK-NEXT:     .word   1
+; CHECK-NEXT:     .symidx "#bfloat_many"
+; CHECK-LABEL:    .symidx $ientry_thunk$cdecl$__llvm_bf16__$__llvm_bf16____llvm_bf16____llvm_bf16____llvm_bf16____llvm_bf16____llvm_bf16____llvm_bf16____llvm_bf16____llvm_bf16__
 ; CHECK-NEXT:     .word   1
 ; CHECK-NEXT:     .symidx "#has_varargs"
 ; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$v$varargs

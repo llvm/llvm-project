@@ -27,7 +27,8 @@ define void @test(ptr %arg3, double %load.2.i, double %load.i, double %fadd10.i.
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x double> [[TMP9]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x double> [[TMP10]], <4 x double> [[TMP11]], <4 x i32> <i32 0, i32 4, i32 5, i32 3>
 ; CHECK-NEXT:    [[TMP13:%.*]] = fmul <4 x double> [[TMP0]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = call double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[TMP13]])
+; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <4 x double> [[TMP13]], <4 x double> poison, <4 x i32> <i32 3, i32 0, i32 2, i32 1>
+; CHECK-NEXT:    [[TMP14:%.*]] = call double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[TMP18]])
 ; CHECK-NEXT:    [[TMP15]] = fadd <2 x double> [[TMP7]], <double 0.000000e+00, double -0.000000e+00>
 ; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <2 x double> [[TMP5]], double [[TMP14]], i32 1
 ; CHECK-NEXT:    [[TMP17]] = fadd <2 x double> [[TMP16]], zeroinitializer

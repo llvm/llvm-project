@@ -273,9 +273,7 @@ public:
 #undef HANDLEBINOP
 
   mlir::Value VisitCXXRewrittenBinaryOperator(CXXRewrittenBinaryOperator *e) {
-    cgf.cgm.errorNYI(e->getExprLoc(),
-                     "ComplexExprEmitter VisitCXXRewrittenBinaryOperator");
-    return {};
+    return Visit(e->getSemanticForm());
   }
 
   // Compound assignments.

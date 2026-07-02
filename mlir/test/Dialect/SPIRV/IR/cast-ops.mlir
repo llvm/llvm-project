@@ -571,3 +571,13 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     spirv.Return
   }
 }
+
+// -----
+
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses], []> {
+  spirv.func @covert_u_to_ptr_invalid_operand(%arg0 : si32) "None" {
+    // expected-error @+1 {{operand must be a scalar type of unsigned integer}}
+    %0 = spirv.ConvertUToPtr %arg0 : si32 to !spirv.ptr<i32, Generic>
+    spirv.Return
+  }
+}

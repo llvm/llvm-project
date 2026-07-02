@@ -140,7 +140,7 @@ void Child::MotherKey() {}
 Child::Child() {}
 
 // CIR: cir.func {{.*}} @_ZN5ChildC2Ev(%[[THIS_ARG:.*]]: !cir.ptr<!rec_Child>
-// CIR:   %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
+// CIR:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
 // CIR:   %[[MOTHER_BASE:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_Child> nonnull [0] -> !cir.ptr<!rec_Mother>

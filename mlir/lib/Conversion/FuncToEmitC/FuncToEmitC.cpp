@@ -16,11 +16,121 @@
 #include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/LogicalResult.h"
 
 using namespace mlir;
 
 namespace {
+
+//===----------------------------------------------------------------------===//
+// Multi-return struct helpers
+//===----------------------------------------------------------------------===//
+
+// Looks up or creates an `emitc.class` named after `types` in the nearest
+// enclosing symbol table of `op`, suitable for packing those types as plain
+// struct fields (field0, field1, ...). If the class already exists it is
+// verified to have exactly the right fields and no methods. Returns the
+// corresponding !emitc.opaque<"struct ..."> type on success.
+static FailureOr<emitc::OpaqueType>
+getOrCreateMultiReturnType(ConversionPatternRewriter &rewriter, Location loc,
+                           Operation *op, TypeRange types) {
+  // Build the struct name from the types, e.g. "return_i32_i32". Each type is
+  // printed and non-alphanumeric characters are replaced with '_'.
+  std::string structName = "return";
+  for (Type type : types) {
+    std::string typeName;
+    llvm::raw_string_ostream os(typeName);
+    type.print(os);
+    std::replace_if(
+        typeName.begin(), typeName.end(),
+        [](char c) { return !llvm::isAlnum(c); }, '_');
+    structName += "_" + typeName;
+  }
+
+  // Find the enclosing symbol table and the direct child op within it that
+  // contains `op`; the class will be inserted immediately before that child.
+  Operation *symbolTableOp = SymbolTable::getNearestSymbolTable(op);
+  Operation *insertBefore = op;
+  while (insertBefore->getParentOp() != symbolTableOp)
+    insertBefore = insertBefore->getParentOp();
+
+  if (Operation *sym = SymbolTable::lookupSymbolIn(symbolTableOp, structName)) {
+    auto classOp = dyn_cast<emitc::ClassOp>(sym);
+    if (!classOp)
+      return emitError(loc) << "symbol '" << structName
+                            << "' exists but is not an emitc.class";
+
+    if (classOp.getClassType() != emitc::ClassType::struct_)
+      return emitError(loc)
+             << "existing class '" << structName << "' is not a struct";
+
+    SmallVector<emitc::FieldOp> fields;
+    for (Operation &bodyOp : classOp.getBody().front()) {
+      if (isa<emitc::FuncOp>(bodyOp))
+        return emitError(loc) << "existing class '" << structName
+                              << "' has methods; expected a plain struct";
+      if (auto fieldOp = dyn_cast<emitc::FieldOp>(bodyOp))
+        fields.push_back(fieldOp);
+    }
+    if (fields.size() != types.size())
+      return emitError(loc) << "existing class '" << structName
+                            << "' has wrong number of fields";
+    for (auto [i, fieldOp] : llvm::enumerate(fields)) {
+      if (fieldOp.getSymName() != "field" + std::to_string(i))
+        return emitError(loc) << "existing class '" << structName
+                              << "': unexpected field name at index " << i;
+      if (fieldOp.getTypeAttr().getValue() != types[i])
+        return emitError(loc) << "existing class '" << structName
+                              << "': wrong type for field " << i;
+    }
+  } else {
+    // Create the ClassOp before `insertBefore`, then restore the insertion
+    // point.
+    auto savedIP = rewriter.saveInsertionPoint();
+    rewriter.setInsertionPoint(insertBefore);
+
+    emitc::ClassOp classOp = emitc::ClassOp::create(rewriter, loc, structName,
+                                                    /*final_specifier=*/false,
+                                                    emitc::ClassType::struct_);
+    rewriter.createBlock(&classOp.getBody());
+    rewriter.setInsertionPointToStart(&classOp.getBody().front());
+
+    for (auto [i, type] : llvm::enumerate(types)) {
+      auto fieldName = rewriter.getStringAttr("field" + std::to_string(i));
+      emitc::FieldOp::create(rewriter, loc, fieldName, TypeAttr::get(type),
+                             nullptr);
+    }
+
+    rewriter.restoreInsertionPoint(savedIP);
+  }
+  return emitc::OpaqueType::get(rewriter.getContext(), "struct " + structName);
+}
+
+// Packs multiple SSA values into an emitc.class struct variable and loads the
+// result as a single SSA value of the opaque struct type.
+static Value packValuesIntoStruct(ConversionPatternRewriter &rewriter,
+                                  Location loc, ValueRange values,
+                                  emitc::OpaqueType structType) {
+  MLIRContext *ctx = rewriter.getContext();
+  auto noInit = emitc::OpaqueAttr::get(ctx, "");
+  Value structLv =
+      emitc::VariableOp::create(rewriter, loc,
+                                emitc::LValueType::get(structType), noInit)
+          .getResult();
+  for (auto [i, val] : llvm::enumerate(values)) {
+    Value fieldLv =
+        emitc::MemberOp::create(
+            rewriter, loc, emitc::LValueType::get(val.getType()),
+            rewriter.getStringAttr("field" + std::to_string(i)), structLv)
+            .getResult();
+    emitc::AssignOp::create(rewriter, loc, fieldLv, val);
+  }
+  return emitc::LoadOp::create(rewriter, loc, structType, structLv).getResult();
+}
 
 /// Implement the interface to convert Func to EmitC.
 struct FuncToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
@@ -31,8 +141,9 @@ struct FuncToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
   /// and mark dialect legal for the conversion target.
   void populateConvertToEmitCConversionPatterns(
       ConversionTarget &target, TypeConverter &typeConverter,
-      RewritePatternSet &patterns) const final {
-    populateFuncToEmitCPatterns(typeConverter, patterns);
+      RewritePatternSet &patterns, std::optional<bool> lowerToCpp) const final {
+    populateFuncToEmitCPatterns(typeConverter, patterns,
+                                lowerToCpp.value_or(true));
   }
 };
 } // namespace
@@ -50,45 +161,93 @@ void mlir::registerConvertFuncToEmitCInterface(DialectRegistry &registry) {
 namespace {
 class CallOpConversion final : public OpConversionPattern<func::CallOp> {
 public:
-  using OpConversionPattern<func::CallOp>::OpConversionPattern;
+  CallOpConversion(const TypeConverter &typeConverter, MLIRContext *ctx,
+                   bool lowerToCpp)
+      : OpConversionPattern<func::CallOp>(typeConverter, ctx),
+        lowerToCpp(lowerToCpp) {}
 
   LogicalResult
   matchAndRewrite(func::CallOp callOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // Multiple results func cannot be converted to `emitc.func`.
-    if (callOp.getNumResults() > 1)
+    // Do not convert multiple-return functions if lowering target is Cpp.
+    // The translator will emit the return values as an std::tuple.
+    if (callOp.getNumResults() > 1 && lowerToCpp)
       return rewriter.notifyMatchFailure(
           callOp, "only functions with zero or one result can be converted");
 
-    if (callOp.getNumResults() == 1) {
-      Type resultType =
-          getTypeConverter()->convertType(callOp.getResult(0).getType());
+    SmallVector<Type> convertedResultTypes;
+    for (Type t : callOp.getResultTypes()) {
+      Type resultType = getTypeConverter()->convertType(t);
       if (!resultType)
         return rewriter.notifyMatchFailure(callOp,
                                            "result type conversion failed");
       if (isa<emitc::ArrayType>(resultType))
         return rewriter.notifyMatchFailure(
             callOp, "function calls returning arrays are not supported");
+      convertedResultTypes.push_back(resultType);
     }
 
-    rewriter.replaceOpWithNewOp<emitc::CallOp>(callOp, callOp.getResultTypes(),
-                                               adaptor.getOperands(),
-                                               callOp->getAttrs());
+    if (callOp.getNumResults() <= 1) {
+      rewriter.replaceOpWithNewOp<emitc::CallOp>(callOp, convertedResultTypes,
+                                                 adaptor.getOperands(),
+                                                 callOp->getAttrs());
+      return success();
+    }
 
+    // Multi-result call: determine the struct type.
+    Location loc = callOp.getLoc();
+
+    auto structType =
+        getOrCreateMultiReturnType(rewriter, loc, callOp, convertedResultTypes);
+    if (failed(structType))
+      return rewriter.notifyMatchFailure(callOp,
+                                         "incompatible multi-return struct");
+
+    // Emit a call returning the packed struct.
+    Value structVal =
+        emitc::CallOp::create(rewriter, loc, callOp.getCalleeAttr(),
+                              TypeRange{*structType}, adaptor.getOperands())
+            .getResult(0);
+
+    // Unpack struct fields to replace the original multiple results.
+    SmallVector<Value> results;
+    for (auto [i, result] : llvm::enumerate(callOp.getResults())) {
+      if (result.use_empty()) {
+        results.push_back(Value()); // No replacement needed.
+        continue;
+      }
+      Type fieldType = convertedResultTypes[i];
+      StringAttr fieldName =
+          rewriter.getStringAttr("field" + std::to_string(i));
+      Value fieldValue = emitc::MemberOp::create(rewriter, loc, fieldType,
+                                                 fieldName, structVal)
+                             .getResult();
+      results.push_back(fieldValue);
+    }
+
+    rewriter.replaceOp(callOp, results);
     return success();
   }
+
+private:
+  bool lowerToCpp;
 };
 
 class FuncOpConversion final : public OpConversionPattern<func::FuncOp> {
 public:
-  using OpConversionPattern<func::FuncOp>::OpConversionPattern;
+  FuncOpConversion(const TypeConverter &typeConverter, MLIRContext *ctx,
+                   bool lowerToCpp)
+      : OpConversionPattern<func::FuncOp>(typeConverter, ctx),
+        lowerToCpp(lowerToCpp) {}
 
   LogicalResult
   matchAndRewrite(func::FuncOp funcOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     FunctionType fnType = funcOp.getFunctionType();
 
-    if (fnType.getNumResults() > 1)
+    // Do not convert multiple-return functions if lowering target is Cpp.
+    // The translator will emit the return values as an std::tuple.
+    if (fnType.getNumResults() > 1 && lowerToCpp)
       return rewriter.notifyMatchFailure(
           funcOp, "only functions with zero or one result can be converted");
 
@@ -102,15 +261,28 @@ public:
       signatureConverter.addInputs(argType.index(), convertedType);
     }
 
-    Type resultType;
-    if (fnType.getNumResults() == 1) {
-      resultType = getTypeConverter()->convertType(fnType.getResult(0));
+    SmallVector<Type> convertedResultTypes;
+    for (Type t : fnType.getResults()) {
+      Type resultType = getTypeConverter()->convertType(t);
       if (!resultType)
         return rewriter.notifyMatchFailure(funcOp,
                                            "result type conversion failed");
       if (isa<emitc::ArrayType>(resultType))
         return rewriter.notifyMatchFailure(
             funcOp, "functions returning arrays are not supported");
+      convertedResultTypes.push_back(resultType);
+    }
+
+    Type resultType;
+    if (fnType.getNumResults() == 1) {
+      resultType = convertedResultTypes[0];
+    } else if (fnType.getNumResults() > 1) {
+      auto structTypeOrErr = getOrCreateMultiReturnType(
+          rewriter, funcOp.getLoc(), funcOp, convertedResultTypes);
+      if (failed(structTypeOrErr))
+        return rewriter.notifyMatchFailure(funcOp,
+                                           "incompatible multi-return struct");
+      resultType = *structTypeOrErr;
     }
 
     // Create the converted `emitc.func` op.
@@ -151,28 +323,57 @@ public:
 
     return success();
   }
+
+private:
+  bool lowerToCpp;
 };
 
 class ReturnOpConversion final : public OpConversionPattern<func::ReturnOp> {
 public:
-  using OpConversionPattern<func::ReturnOp>::OpConversionPattern;
+  ReturnOpConversion(const TypeConverter &typeConverter, MLIRContext *ctx,
+                     bool lowerToCpp)
+      : OpConversionPattern<func::ReturnOp>(typeConverter, ctx),
+        lowerToCpp(lowerToCpp) {}
 
   LogicalResult
   matchAndRewrite(func::ReturnOp returnOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (returnOp.getNumOperands() > 1)
+    // Do not convert multiple-return functions if lowering target is Cpp.
+    // The translator will emit the return values as an std::tuple.
+    if (returnOp.getNumOperands() > 1 && lowerToCpp)
       return rewriter.notifyMatchFailure(
           returnOp, "only zero or one operand is supported");
-    if (returnOp.getNumOperands() == 1 &&
-        isa<emitc::ArrayType>(adaptor.getOperands()[0].getType()))
+
+    if (llvm::any_of(adaptor.getOperands(), [](Value operand) {
+          return isa<emitc::ArrayType>(operand.getType());
+        }))
       return rewriter.notifyMatchFailure(returnOp,
                                          "returning arrays is not supported");
 
-    rewriter.replaceOpWithNewOp<emitc::ReturnOp>(
-        returnOp,
-        returnOp.getNumOperands() ? adaptor.getOperands()[0] : nullptr);
+    if (returnOp.getNumOperands() <= 1) {
+      rewriter.replaceOpWithNewOp<emitc::ReturnOp>(
+          returnOp,
+          returnOp.getNumOperands() ? adaptor.getOperands()[0] : nullptr);
+      return success();
+    }
+
+    // Multi-operand return: pack values into a struct.
+    Location loc = returnOp.getLoc();
+
+    auto structType = getOrCreateMultiReturnType(
+        rewriter, loc, returnOp, adaptor.getOperands().getTypes());
+    if (failed(structType))
+      return rewriter.notifyMatchFailure(returnOp,
+                                         "incompatible multi-return struct");
+
+    Value structVal =
+        packValuesIntoStruct(rewriter, loc, adaptor.getOperands(), *structType);
+    rewriter.replaceOpWithNewOp<emitc::ReturnOp>(returnOp, structVal);
     return success();
   }
+
+private:
+  bool lowerToCpp;
 };
 } // namespace
 
@@ -181,9 +382,10 @@ public:
 //===----------------------------------------------------------------------===//
 
 void mlir::populateFuncToEmitCPatterns(const TypeConverter &typeConverter,
-                                       RewritePatternSet &patterns) {
+                                       RewritePatternSet &patterns,
+                                       bool lowerToCpp) {
   MLIRContext *ctx = patterns.getContext();
 
   patterns.add<CallOpConversion, FuncOpConversion, ReturnOpConversion>(
-      typeConverter, ctx);
+      typeConverter, ctx, lowerToCpp);
 }

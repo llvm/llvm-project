@@ -11,7 +11,6 @@
 
 #include "Plugins/Language/CPlusPlus/CxxStringTypes.h"
 #include "Plugins/Language/CPlusPlus/Generic.h"
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
@@ -575,5 +574,38 @@ bool lldb_private::formatters::LibStdcppStrongOrderingSummaryProvider(
   default:
     return false;
   }
+  return true;
+}
+
+bool lldb_private::formatters::LibStdcppSourceLocationSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  ValueObjectSP impl_sp = valobj.GetChildMemberWithName("_M_impl");
+  if (!impl_sp)
+    return false;
+
+  ValueObjectSP file_sp = impl_sp->GetChildMemberWithName("_M_file_name");
+  ValueObjectSP function_sp =
+      impl_sp->GetChildMemberWithName("_M_function_name");
+  ValueObjectSP line_sp = impl_sp->GetChildMemberWithName("_M_line");
+  ValueObjectSP column_sp = impl_sp->GetChildMemberWithName("_M_column");
+
+  if (!file_sp || !function_sp || !line_sp || !column_sp)
+    return false;
+
+  bool success = false;
+  uint64_t line = line_sp->GetValueAsUnsigned(0, &success);
+  if (!success)
+    return false;
+
+  uint64_t column = column_sp->GetValueAsUnsigned(0, &success);
+  if (!success)
+    return false;
+
+  const char *file = file_sp->GetSummaryAsCString();
+  stream.Format("{0}:{1}:{2}", file ? file : "<unknown>", line, column);
+
+  if (const char *function = function_sp->GetSummaryAsCString())
+    stream.Printf(" (%s)", function);
+
   return true;
 }

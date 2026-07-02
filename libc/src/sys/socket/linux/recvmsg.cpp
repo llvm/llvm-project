@@ -28,13 +28,13 @@ LLVM_LIBC_FUNCTION(ssize_t, recvmsg, (int sockfd, msghdr *msg, int flags)) {
   }
 
   // Unpoison the msghdr, as well as all its components.
-  MSAN_UNPOISON(msg, sizeof(msghdr));
-  MSAN_UNPOISON(msg->msg_name, msg->msg_namelen);
+  LIBC_MSAN_UNPOISON(msg, sizeof(msghdr));
+  LIBC_MSAN_UNPOISON(msg->msg_name, msg->msg_namelen);
 
   for (size_t i = 0; i < msg->msg_iovlen; ++i) {
-    MSAN_UNPOISON(msg->msg_iov[i].iov_base, msg->msg_iov[i].iov_len);
+    LIBC_MSAN_UNPOISON(msg->msg_iov[i].iov_base, msg->msg_iov[i].iov_len);
   }
-  MSAN_UNPOISON(msg->msg_control, msg->msg_controllen);
+  LIBC_MSAN_UNPOISON(msg->msg_control, msg->msg_controllen);
 
   return result.value();
 }

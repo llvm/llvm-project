@@ -25,7 +25,7 @@ namespace cas {
 class CASID;
 
 /// Context for CAS identifiers.
-class CASContext {
+class LLVM_ABI CASContext {
   virtual void anchor();
 
 public:
@@ -57,7 +57,7 @@ protected:
 /// compared by hash, in which case the result of \a getHash() is compared.
 class CASID {
 public:
-  void dump() const;
+  LLVM_ABI void dump() const;
 
   friend raw_ostream &operator<<(raw_ostream &OS, const CASID &ID) {
     ID.print(OS);

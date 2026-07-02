@@ -14,6 +14,7 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/CFG.h"
@@ -29,12 +30,11 @@
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
 #include <stack>
-#include <unordered_set>
 
 using namespace llvm;
 using namespace SPIRV;
 
-using BlockSet = std::unordered_set<BasicBlock *>;
+using BlockSet = SmallPtrSet<BasicBlock *, 0>;
 using Edge = std::pair<BasicBlock *, BasicBlock *>;
 
 // Helper function to do a partial order visit from the block |Start|, calling
@@ -63,7 +63,7 @@ getRegionForHeader(const ConvergenceRegion *Node, BasicBlock *BB) {
 // Returns the single BasicBlock exiting the convergence region `CR`,
 // nullptr if no such exit exists.
 static BasicBlock *getExitFor(const ConvergenceRegion *CR) {
-  std::unordered_set<BasicBlock *> ExitTargets;
+  SmallPtrSet<BasicBlock *, 0> ExitTargets;
   for (BasicBlock *Exit : CR->Exits) {
     for (BasicBlock *Successor : successors(Exit)) {
       if (CR->Blocks.count(Successor) == 0)
@@ -427,7 +427,7 @@ class SPIRVStructurizer : public FunctionPass {
     // clang-format on
     std::vector<Edge>
     createAliasBlocksForComplexEdges(std::vector<Edge> Edges) {
-      std::unordered_set<BasicBlock *> Seen;
+      SmallPtrSet<BasicBlock *, 0> Seen;
       std::vector<Edge> Output;
       Output.reserve(Edges.size());
 
@@ -450,13 +450,6 @@ class SPIRVStructurizer : public FunctionPass {
       return Output;
     }
 
-    AllocaInst *CreateVariable(Function &F, Type *Type,
-                               BasicBlock::iterator Position) {
-      const DataLayout &DL = F.getDataLayout();
-      return new AllocaInst(Type, DL.getAllocaAddrSpace(), nullptr, "reg",
-                            Position);
-    }
-
     // Given a construct defined by |Header|, and a list of exiting edges
     // |Edges|, creates a new single exit node, fixing up those edges.
     BasicBlock *createSingleExitNode(BasicBlock *Header,
@@ -465,14 +458,14 @@ class SPIRVStructurizer : public FunctionPass {
       std::vector<Edge> FixedEdges = createAliasBlocksForComplexEdges(Edges);
 
       std::vector<BasicBlock *> Dsts;
-      std::unordered_map<BasicBlock *, ConstantInt *> DstToIndex;
+      DenseMap<BasicBlock *, ConstantInt *> DstToIndex;
       auto NewExit = BasicBlock::Create(F.getContext(),
                                         Header->getName() + ".new.exit", &F);
       IRBuilder<> ExitBuilder(NewExit);
       for (auto &[Src, Dst] : FixedEdges) {
         if (DstToIndex.count(Dst) != 0)
           continue;
-        DstToIndex.emplace(Dst, ExitBuilder.getInt32(DstToIndex.size()));
+        DstToIndex.try_emplace(Dst, ExitBuilder.getInt32(DstToIndex.size()));
         Dsts.push_back(Dst);
       }
 
@@ -484,8 +477,7 @@ class SPIRVStructurizer : public FunctionPass {
         return NewExit;
       }
 
-      AllocaInst *Variable = CreateVariable(F, ExitBuilder.getInt32Ty(),
-                                            F.begin()->getFirstInsertionPt());
+      AllocaInst *Variable = createVariable(F, ExitBuilder.getInt32Ty());
       for (auto &[Src, Dst] : FixedEdges) {
         IRBuilder<> B2(Src);
         B2.SetInsertPoint(Src->getFirstInsertionPt());
@@ -511,33 +503,6 @@ class SPIRVStructurizer : public FunctionPass {
       return NewExit;
     }
   };
-
-  /// Create a value in BB set to the value associated with the branch the block
-  /// terminator will take.
-  Value *createExitVariable(
-      BasicBlock *BB,
-      const DenseMap<BasicBlock *, ConstantInt *> &TargetToValue) {
-    auto *T = BB->getTerminator();
-    if (isa<ReturnInst>(T))
-      return nullptr;
-    if (auto *BI = dyn_cast<UncondBrInst>(T))
-      return TargetToValue.lookup(BI->getSuccessor());
-
-    IRBuilder<> Builder(BB);
-    Builder.SetInsertPoint(T);
-
-    if (auto *BI = dyn_cast<CondBrInst>(T)) {
-      Value *LHS = TargetToValue.lookup(BI->getSuccessor(0));
-      Value *RHS = TargetToValue.lookup(BI->getSuccessor(1));
-
-      if (LHS == nullptr || RHS == nullptr)
-        return LHS == nullptr ? RHS : LHS;
-      return Builder.CreateSelect(BI->getCondition(), LHS, RHS);
-    }
-
-    // TODO: add support for switch cases.
-    llvm_unreachable("Unhandled terminator type.");
-  }
 
   // Creates a new basic block in F with a single OpUnreachable instruction.
   BasicBlock *CreateUnreachable(Function &F) {
@@ -652,14 +617,14 @@ class SPIRVStructurizer : public FunctionPass {
     Instruction *InsertionPoint = *MergeInstructions.begin();
 
     PartialOrderingVisitor Visitor(F);
-    std::sort(MergeInstructions.begin(), MergeInstructions.end(),
-              [&Visitor](Instruction *Left, Instruction *Right) {
-                if (Left == Right)
-                  return false;
-                BasicBlock *RightMerge = getDesignatedMergeBlock(Right);
-                BasicBlock *LeftMerge = getDesignatedMergeBlock(Left);
-                return !Visitor.compare(RightMerge, LeftMerge);
-              });
+    llvm::sort(MergeInstructions,
+               [&Visitor](Instruction *Left, Instruction *Right) {
+                 if (Left == Right)
+                   return false;
+                 BasicBlock *RightMerge = getDesignatedMergeBlock(Right);
+                 BasicBlock *LeftMerge = getDesignatedMergeBlock(Left);
+                 return !Visitor.compare(RightMerge, LeftMerge);
+               });
 
     for (Instruction *I : MergeInstructions) {
       I->moveBefore(InsertionPoint->getIterator());

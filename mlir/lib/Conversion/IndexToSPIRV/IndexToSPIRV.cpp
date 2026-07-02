@@ -30,10 +30,14 @@ using ConvertIndexDivS = spirv::ElementwiseOpPattern<DivSOp, spirv::SDivOp>;
 using ConvertIndexDivU = spirv::ElementwiseOpPattern<DivUOp, spirv::UDivOp>;
 using ConvertIndexRemS = spirv::ElementwiseOpPattern<RemSOp, spirv::SRemOp>;
 using ConvertIndexRemU = spirv::ElementwiseOpPattern<RemUOp, spirv::UModOp>;
-using ConvertIndexMaxS = spirv::ElementwiseOpPattern<MaxSOp, spirv::GLSMaxOp>;
-using ConvertIndexMaxU = spirv::ElementwiseOpPattern<MaxUOp, spirv::GLUMaxOp>;
-using ConvertIndexMinS = spirv::ElementwiseOpPattern<MinSOp, spirv::GLSMinOp>;
-using ConvertIndexMinU = spirv::ElementwiseOpPattern<MinUOp, spirv::GLUMinOp>;
+using ConvertIndexMaxSGL = spirv::ElementwiseOpPattern<MaxSOp, spirv::GLSMaxOp>;
+using ConvertIndexMaxUGL = spirv::ElementwiseOpPattern<MaxUOp, spirv::GLUMaxOp>;
+using ConvertIndexMinSGL = spirv::ElementwiseOpPattern<MinSOp, spirv::GLSMinOp>;
+using ConvertIndexMinUGL = spirv::ElementwiseOpPattern<MinUOp, spirv::GLUMinOp>;
+using ConvertIndexMaxSCL = spirv::ElementwiseOpPattern<MaxSOp, spirv::CLSMaxOp>;
+using ConvertIndexMaxUCL = spirv::ElementwiseOpPattern<MaxUOp, spirv::CLUMaxOp>;
+using ConvertIndexMinSCL = spirv::ElementwiseOpPattern<MinSOp, spirv::CLSMinOp>;
+using ConvertIndexMinUCL = spirv::ElementwiseOpPattern<MinUOp, spirv::CLUMinOp>;
 
 using ConvertIndexShl =
     spirv::ElementwiseOpPattern<ShlOp, spirv::ShiftLeftLogicalOp>;
@@ -350,10 +354,6 @@ void index::populateIndexToSPIRVPatterns(
     ConvertIndexDivU,
     ConvertIndexRemS,
     ConvertIndexRemU,
-    ConvertIndexMaxS,
-    ConvertIndexMaxU,
-    ConvertIndexMinS,
-    ConvertIndexMinU,
     ConvertIndexShl,
     ConvertIndexShrS,
     ConvertIndexShrU,
@@ -370,6 +370,15 @@ void index::populateIndexToSPIRVPatterns(
     ConvertIndexCmpPattern,
     ConvertIndexSizeOf
   >(typeConverter, patterns.getContext());
+  // clang-format on
+
+  // GLSL min/max patterns.
+  patterns.add<ConvertIndexMaxSGL, ConvertIndexMaxUGL, ConvertIndexMinSGL,
+               ConvertIndexMinUGL>(typeConverter, patterns.getContext());
+
+  // OpenCL min/max patterns.
+  patterns.add<ConvertIndexMaxSCL, ConvertIndexMaxUCL, ConvertIndexMinSCL,
+               ConvertIndexMinUCL>(typeConverter, patterns.getContext());
 }
 
 //===----------------------------------------------------------------------===//
@@ -394,7 +403,7 @@ struct ConvertIndexToSPIRVPass
     Operation *op = getOperation();
     spirv::TargetEnvAttr targetAttr = spirv::lookupTargetEnvOrDefault(op);
     std::unique_ptr<SPIRVConversionTarget> target =
-      SPIRVConversionTarget::get(targetAttr);
+        SPIRVConversionTarget::get(targetAttr);
 
     SPIRVConversionOptions options;
     options.use64bitIndex = this->use64bitIndex;
@@ -404,8 +413,6 @@ struct ConvertIndexToSPIRVPass
     // in patterns for other dialects.
     target->addLegalOp<UnrealizedConversionCastOp>();
 
-    // Allow the spirv operations we are converting to
-    target->addLegalDialect<spirv::SPIRVDialect>();
     // Fail hard when there are any remaining 'index' ops.
     target->addIllegalDialect<index::IndexDialect>();
 

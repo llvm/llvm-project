@@ -76,3 +76,21 @@ func.func @sparse_unpack(%sp : tensor<100x100xf64, #COO>,
                                  -> (tensor<2xindex>, tensor<6x2xi32>), tensor<6xf64>, (index, index), index
   return %rd, %rp, %ri : tensor<6xf64>, tensor<2xindex>, tensor<6x2xi32>
 }
+
+// Tests that the codegen does not crash when the sparse encoding has more
+// levels than dimensions (e.g. a blocked map using floordiv/mod).
+// See https://github.com/llvm/llvm-project/issues/203225
+
+#BSR = #sparse_tensor.encoding<{
+  map = (d0, d1) -> (d0 floordiv 2 : dense, d1 floordiv 2 : compressed, d0 mod 2 : dense, d1 mod 2 : dense)
+}>
+
+// Just check that codegen succeeds (no out-of-bounds crash); the exact
+// lowering is not the point of this regression test.
+// CHECK-LABEL:   func.func @sparse_pack_blocked
+func.func @sparse_pack_blocked(%values: tensor<?xf64>, %pos: tensor<?xindex>, %coordinates: tensor<?xindex>)
+                    -> tensor<2x4xf64, #BSR> {
+  %0 = sparse_tensor.assemble (%pos, %coordinates), %values
+     : (tensor<?xindex>, tensor<?xindex>), tensor<?xf64> to tensor<2x4xf64, #BSR>
+  return %0 : tensor<2x4xf64, #BSR>
+}

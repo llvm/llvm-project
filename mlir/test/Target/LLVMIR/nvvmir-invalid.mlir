@@ -219,7 +219,7 @@ llvm.func @nvvm_cvt_f32x2_to_f4x2_invalid_type(%a : f32, %b : f32) {
 // -----
 
 llvm.func @nvvm_cvt_f8x2_to_f16x2_invalid_type(%src : vector<2xi8>) {
-  // expected-error @below {{Only 'f8E4M3FN' and 'f8E5M2' types are supported for conversions from f8x2 to f16x2.}}
+  // expected-error @below {{op attribute 'srcType' failed to satisfy constraint: type attribute of f8E4M3FN type or f8E5M2 type}}
   %res = nvvm.convert.f8x2.to.f16x2 %src : vector<2xi8> (f8E4M3) -> vector<2xf16>
   llvm.return
 }
@@ -227,24 +227,88 @@ llvm.func @nvvm_cvt_f8x2_to_f16x2_invalid_type(%src : vector<2xi8>) {
 // -----
 
 llvm.func @nvvm_cvt_f8x2_to_bf16x2_invalid_type(%src : vector<2xi8>) {
-  // expected-error @below {{Only 'f8E8M0FNU' type is supported for conversions from f8x2 to bf16x2.}}
-  %res = nvvm.convert.f8x2.to.bf16x2 %src : vector<2xi8> (f8E4M3FN) -> vector<2xbf16>
+  // expected-error @below {{op attribute 'srcType' failed to satisfy constraint: type attribute of f8E8M0FNU type or f8E4M3FN type or f8E5M2 type}}
+  %res = nvvm.convert.f8x2.to.bf16x2 %src : vector<2xi8> (f8E4M3) -> vector<2xbf16>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_cvt_f8x2_to_bf16x2_ue8m0_invalid_sat(%src : vector<2xi8>) {
+  // expected-error @below {{Only NONE saturation mode is supported for conversions from 'f8E8M0FNU' type}}
+  %res = nvvm.convert.f8x2.to.bf16x2 %src {sat = #nvvm.sat_mode<satfinite>} : vector<2xi8> (f8E8M0FNU) -> vector<2xbf16>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_cvt_f8x2_to_bf16x2_ue8m0_invalid_scale(%src : vector<2xi8>, %sf : i16) {
+  // expected-error @below {{scaleFactor not supported for conversions from 'f8E8M0FNU' type}}
+  %res = nvvm.convert.f8x2.to.bf16x2 %src, %sf : vector<2xi8> (f8E8M0FNU) -> vector<2xbf16>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_cvt_f8x2_to_bf16x2_ue8m0_invalid_relu(%src : vector<2xi8>) {
+  // expected-error @below {{relu not supported for conversions from 'f8E8M0FNU' type}}
+  %res = nvvm.convert.f8x2.to.bf16x2 %src {relu = true} : vector<2xi8> (f8E8M0FNU) -> vector<2xbf16>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_cvt_f8x2_to_bf16x2_invalid_sat(%src : vector<2xi8>) {
+  // expected-error @below {{op attribute 'sat' failed to satisfy constraint: Describes the saturation mode whose value is one of {none, satfinite}}}
+  %res = nvvm.convert.f8x2.to.bf16x2 %src {sat = #nvvm.sat_mode<sat>} : vector<2xi8> (f8E4M3FN) -> vector<2xbf16>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_cvt_f6x2_to_bf16x2_invalid_sat(%src : vector<2xi8>) {
+  // expected-error @below {{op attribute 'sat' failed to satisfy constraint: Describes the saturation mode whose value is one of {none, satfinite}}}
+  %res = nvvm.convert.f6x2.to.bf16x2 %src {sat = #nvvm.sat_mode<sat>} : vector<2xi8> (f6E2M3FN) -> vector<2xbf16>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_cvt_f4x2_to_bf16x2_invalid_sat(%src : i8) {
+  // expected-error @below {{op attribute 'sat' failed to satisfy constraint: Describes the saturation mode whose value is one of {none, satfinite}}}
+  %res = nvvm.convert.f4x2.to.bf16x2 %src {sat = #nvvm.sat_mode<sat>} : i8 (f4E2M1FN) -> vector<2xbf16>
   llvm.return
 }
 
 // -----
 
 llvm.func @nvvm_cvt_f6x2_to_f16x2_invalid_type(%src : vector<2xi8>) {
-  // expected-error @below {{Only 'f6E2M3FN' and 'f6E3M2FN' types are supported for conversions from f6x2 to f16x2.}}
+  // expected-error @below {{op attribute 'srcType' failed to satisfy constraint: type attribute of f6E2M3FN type or f6E3M2FN type}}
   %res = nvvm.convert.f6x2.to.f16x2 %src : vector<2xi8> (f8E4M3FN) -> vector<2xf16>
   llvm.return
 }
 
 // -----
 
+llvm.func @nvvm_cvt_f6x2_to_bf16x2_invalid_type(%src : vector<2xi8>) {
+  // expected-error @below {{op attribute 'srcType' failed to satisfy constraint: type attribute of f6E2M3FN type or f6E3M2FN type}}
+  %res = nvvm.convert.f6x2.to.bf16x2 %src : vector<2xi8> (f8E4M3FN) -> vector<2xbf16>
+  llvm.return
+}
+
+// -----
+
 llvm.func @nvvm_cvt_f4x2_to_f16x2_invalid_type(%src : i8) {
-  // expected-error @below {{Only 'f4E2M1FN' type is supported for conversions from f4x2 to f16x2.}}
+  // expected-error @below {{op attribute 'srcType' failed to satisfy constraint: type attribute of f4E2M1FN type}}
   %res = nvvm.convert.f4x2.to.f16x2 %src : i8 (f6E2M3FN) -> vector<2xf16>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_cvt_f4x2_to_bf16x2_invalid_type(%src : i8) {
+  // expected-error @below {{op attribute 'srcType' failed to satisfy constraint: type attribute of f4E2M1FN type}}
+  %res = nvvm.convert.f4x2.to.bf16x2 %src : i8 (f6E2M3FN) -> vector<2xbf16>
   llvm.return
 }
 

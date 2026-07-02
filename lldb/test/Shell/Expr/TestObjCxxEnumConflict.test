@@ -50,5 +50,5 @@ expression -l objective-c -- (MyInt)5
 
 # CHECK: error: reference to 'MyInt' is ambiguous 
 # CHECK: error: reference to 'MyInt' is ambiguous 
-# CHECK: note: note: candidate found by name lookup is 'MyInt' 
-# CHECK: note: note: candidate found by name lookup is 'MyInt' 
+# CHECK: note: candidate found by name lookup is 'MyInt'
+# CHECK: note: candidate found by name lookup is 'MyInt'

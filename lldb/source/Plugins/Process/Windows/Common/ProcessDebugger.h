@@ -14,6 +14,9 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/Mutex.h"
 
 #include "ForwardDecl.h"
@@ -56,9 +59,11 @@ public:
                                            const ExceptionRecord &record);
   virtual void OnCreateThread(const HostThread &thread);
   virtual void OnExitThread(lldb::tid_t thread_id, uint32_t exit_code);
-  virtual void OnLoadDll(const ModuleSpec &module_spec,
-                         lldb::addr_t module_addr);
-  virtual void OnUnloadDll(lldb::addr_t module_addr);
+  virtual DllEventAction OnLoadDll(const ModuleSpec &module_spec,
+                                   lldb::addr_t module_addr,
+                                   lldb::tid_t thread_id);
+  virtual DllEventAction OnUnloadDll(lldb::addr_t module_addr,
+                                     lldb::tid_t thread_id);
   virtual void OnDebugString(lldb::addr_t debug_string_addr, bool is_unicode,
                              uint16_t length_lower_word);
   virtual void OnDebuggerError(const Status &error, uint32_t type);
@@ -81,6 +86,15 @@ protected:
 
   Status ReadMemory(lldb::addr_t addr, void *buf, size_t size,
                     size_t &bytes_read);
+
+  /// Read an OUTPUT_DEBUG_STRING_INFO payload from the inferior.
+  /// `length_lower_word` is the OS-supplied low 16 bits of the string length;
+  /// the helper walks 64 KiB chunks (up to 1 MiB) until it finds the NUL
+  /// terminator, then strips it. Shared between ProcessWindows (in-process)
+  /// and NativeProcessWindows (lldb-server).
+  llvm::Error ReadDebugString(lldb::addr_t debug_string_addr, bool is_unicode,
+                              uint16_t length_lower_word,
+                              llvm::SmallVectorImpl<char> &output);
 
   Status WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
                      size_t &bytes_written);

@@ -2576,11 +2576,11 @@ public:
   }
 
   /// Returns the scope of subprogram's retainedNodes.
-  static const DILocalScope *getRetainedNodeScope(const MDNode *N);
-  static DILocalScope *getRetainedNodeScope(MDNode *N);
+  LLVM_ABI static const DILocalScope *getRetainedNodeScope(const MDNode *N);
+  LLVM_ABI static DILocalScope *getRetainedNodeScope(MDNode *N);
   // For use in Verifier.
-  static const DIScope *getRawRetainedNodeScope(const MDNode *N);
-  static DIScope *getRawRetainedNodeScope(MDNode *N);
+  LLVM_ABI static const DIScope *getRawRetainedNodeScope(const MDNode *N);
+  LLVM_ABI static DIScope *getRawRetainedNodeScope(MDNode *N);
 
   /// For each retained node, applies one of the given functions depending
   /// on the type of a node.
@@ -2620,7 +2620,7 @@ public:
   /// when a subprogram refers to types that are local to another subprogram,
   /// it is more complicated for debugger to properly discover local types
   /// of a current scope for expression evaluation.
-  void cleanupRetainedNodes();
+  LLVM_ABI void cleanupRetainedNodes();
 
   /// Calls SP->cleanupRetainedNodes() for a range of DISubprograms.
   template <typename RangeT>

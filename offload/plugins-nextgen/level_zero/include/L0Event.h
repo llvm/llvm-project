@@ -26,16 +26,19 @@ class L0QueueTy;
 
 class L0EventTy {
   ze_event_handle_t ZeEvent = nullptr;
+  bool CounterBased = false;
   L0QueueTy *Queue = nullptr;
 
 public:
-  L0EventTy(ze_event_handle_t ZeEvent) : ZeEvent(ZeEvent) {}
+  L0EventTy(ze_event_handle_t ZeEvent, bool CounterBased)
+      : ZeEvent(ZeEvent), CounterBased(CounterBased) {}
   ze_event_handle_t getZeEvent() const { return ZeEvent; }
   L0QueueTy *getQueue() const { return Queue; }
 
   Error reset() {
     Queue = nullptr;
-    CALL_ZE_RET_ERROR(zeEventHostReset, ZeEvent);
+    if (!CounterBased)
+      CALL_ZE_RET_ERROR(zeEventHostReset, ZeEvent);
     return Plugin::success();
   }
 
@@ -71,6 +74,9 @@ class EventPoolTy {
   /// Additional event pool flags common to this pool.
   uint32_t Flags = 0;
 
+  /// Whether counter-based events are being used (don't need reset).
+  bool UseCounterBasedEvents = false;
+
   /// Protection.
   std::unique_ptr<std::mutex> Mtx;
 
@@ -89,9 +95,11 @@ class EventPoolTy {
 
 public:
   /// Initialize context, flags, and mutex.
-  Error init(ze_context_handle_t ContextIn, uint32_t FlagsIn) {
+  Error init(ze_context_handle_t ContextIn, bool UseCounterBased,
+             uint32_t FlagsIn) {
     Context = ContextIn;
     Flags = FlagsIn;
+    UseCounterBasedEvents = UseCounterBased;
     Mtx.reset(new std::mutex);
     return Plugin::success();
   }

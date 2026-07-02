@@ -24,10 +24,12 @@
 #  pragma GCC system_header
 #endif
 
+#if _LIBCPP_STD_VER >= 20
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // common_reference
-#if _LIBCPP_STD_VER >= 20
+
 // Let COND_RES(X, Y) be:
 template <class _Xp, class _Yp>
 using __cond_res _LIBCPP_NODEBUG = decltype(false ? std::declval<_Xp (&)()>()() : std::declval<_Yp (&)()>()());
@@ -195,8 +197,8 @@ _LIBCPP_DIAGNOSTIC_POP
 template <class...>
 struct _LIBCPP_NO_SPECIALIZATIONS common_reference {};
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___TYPE_TRAITS_COMMON_REFERENCE_H

@@ -1,0 +1,7 @@
+---
+Name: WhereParametersUnknownWhereKey
+Functions:
+- Name: makeWidget
+  Where:
+    ResultType: int
+  SwiftName: makeWidget(_:)

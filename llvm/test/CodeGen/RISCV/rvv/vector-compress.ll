@@ -350,10 +350,11 @@ define <vscale x 4 x i32> @test_compress_nvx8f64_knownbits(<vscale x 4 x i16> %v
 ; CHECK-LABEL: test_compress_nvx8f64_knownbits:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vzext.vf2 v12, v8
+; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vand.vi v8, v10, 3
+; CHECK-NEXT:    vzext.vf2 v10, v12
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, tu, ma
-; CHECK-NEXT:    vcompress.vm v8, v12, v0
+; CHECK-NEXT:    vcompress.vm v8, v10, v0
 ; CHECK-NEXT:    ret
   %xvec = zext <vscale x 4 x i16> %vec to <vscale x 4 x i32>
   %xpassthru = and <vscale x 4 x i32> %passthru, splat (i32 3)
@@ -366,10 +367,11 @@ define <vscale x 4 x i32> @test_compress_nv8xf64_numsignbits(<vscale x 4 x i16> 
 ; CHECK-LABEL: test_compress_nv8xf64_numsignbits:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vsext.vf2 v12, v8
+; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vand.vi v8, v10, 3
+; CHECK-NEXT:    vsext.vf2 v10, v12
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, tu, ma
-; CHECK-NEXT:    vcompress.vm v8, v12, v0
+; CHECK-NEXT:    vcompress.vm v8, v10, v0
 ; CHECK-NEXT:    ret
   %xvec = sext <vscale x 4 x i16> %vec to <vscale x 4 x i32>
   %xpassthru = and <vscale x 4 x i32> %passthru, splat (i32 3)

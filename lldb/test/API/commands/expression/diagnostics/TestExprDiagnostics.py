@@ -140,7 +140,7 @@ class ExprDiagnosticsTestCase(TestBase):
             """
     1 | foo(1, 2)
       | ^~~
-note: candidate function not viable: requires single argument 'x', but 2 arguments were provided
+candidate function not viable: requires single argument 'x', but 2 arguments were provided
 """,
             value.GetError().GetCString(),
         )

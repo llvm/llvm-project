@@ -22,6 +22,7 @@
 #include "L0Program.h"
 #include "L0Queue.h"
 #include "PluginInterface.h"
+#include <limits>
 
 namespace llvm::omp::target::plugin {
 
@@ -104,8 +105,8 @@ class L0DeviceTy final : public GenericDeviceTy {
   std::string zeId;
 
   /// Command queue group ordinals for each device.
-  static constexpr uint32_t MaxOrdinal =
-      std::numeric_limits<decltype(MaxOrdinal)>::max();
+  static constexpr uint32_t MaxOrdinal = std::numeric_limits<uint32_t>::max();
+
   std::pair<uint32_t, uint32_t> ComputeOrdinal{MaxOrdinal, 0};
 
   /// Command queue index for each device.
@@ -361,7 +362,7 @@ public:
     auto CmdListOrErr = createImmCmdList(InOrder);
     if (!CmdListOrErr)
       return CmdListOrErr.takeError();
-    return new L0CmdListManagerTy(*CmdListOrErr);
+    return new L0CmdListManagerTy(*CmdListOrErr, l0Context);
   }
 
   Error releaseCmdListManager(L0CmdListManagerTy *CmndListMngr) {
@@ -484,8 +485,8 @@ public:
   loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
                  int32_t ImageId) override;
   Error unloadBinaryImpl(DeviceImageTy *Image) override;
-  Expected<void *> allocate(size_t Size, void *HstPtr,
-                            TargetAllocTy Kind) override;
+  Expected<void *> allocate(size_t Size, void *HstPtr, TargetAllocTy Kind,
+                            size_t Alignment) override;
   Error free(void *TgtPtr, TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) override;
 
   /// This plugin does nothing to lock buffers. Do not return an error, just
@@ -522,10 +523,7 @@ public:
   hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override;
 
   Error enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
-                            AsyncInfoWrapperTy &AsyncInfo) override {
-    return Plugin::error(ErrorCode::UNIMPLEMENTED,
-                         "enqueueHostCallImpl not implemented yet");
-  }
+                            AsyncInfoWrapperTy &AsyncInfo) override;
 
   Expected<bool> isEventCompleteImpl(void *EventPtr,
                                      AsyncInfoWrapperTy &) override;

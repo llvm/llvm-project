@@ -1,5 +1,30 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics | FileCheck %s
 
+// CHECK-LABEL: module {
+// CHECK: llvm.module_flags [
+// CHECK-SAME: #rocdl.buffer_oob_mode_flag<any>,
+// CHECK-SAME: #rocdl.tbuffer_oob_mode_flag<strict>
+module {
+  llvm.module_flags [
+    #rocdl.buffer_oob_mode_flag<any>,
+    #rocdl.tbuffer_oob_mode_flag<strict>
+  ]
+}
+
+// -----
+
+// CHECK-LABEL: module {
+// CHECK: llvm.module_flags [
+// CHECK-SAME: #llvm.mlir.module_flag<max, "amdgpu.buffer.oob.mode", #rocdl.buffer_oob_mode<relaxed>>
+module {
+  llvm.module_flags [
+    #llvm.mlir.module_flag<max, "amdgpu.buffer.oob.mode",
+                           #rocdl.buffer_oob_mode<relaxed>>
+  ]
+}
+
+// -----
+
 func.func @rocdl_special_regs() -> i32 {
   // CHECK-LABEL: rocdl_special_regs
   // CHECK: rocdl.workitem.id.x : i32
@@ -1800,6 +1825,23 @@ llvm.func @rocdl_dot_fp8_family(%i32: i32, %f32: f32) -> f32 {
 
 // expected-error@below {{attribute attached to unexpected op}}
 func.func private @expected_llvm_func() attributes { rocdl.kernel }
+
+// -----
+
+gpu.module @module_oob_modes {
+  llvm.module_flags [
+    #rocdl.buffer_oob_mode_flag<relaxed>,
+    #rocdl.tbuffer_oob_mode_flag<strict>
+  ]
+}
+
+// -----
+
+module {
+  // expected-error@+2 {{expected one of [any, relaxed, strict] for ROCDL buffer out-of-bounds mode}}
+  // expected-error@+1 {{failed to parse ROCDL_BufferOOBModeModuleFlagAttr parameter 'value'}}
+  llvm.module_flags [#rocdl.buffer_oob_mode_flag<invalid>]
+}
 
 // -----
 

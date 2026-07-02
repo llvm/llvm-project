@@ -599,6 +599,8 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
                         (kSmallX86_64ShadowOffsetAlignMask << Mapping.Scale));
     else if (IsBPF)
       Mapping.Offset = kDynamicShadowSentinel;
+    else if (IsWasm)
+      Mapping.Offset = kWebAssemblyShadowOffset;
     else
       Mapping.Offset = kDefaultShadowOffset64;
   }

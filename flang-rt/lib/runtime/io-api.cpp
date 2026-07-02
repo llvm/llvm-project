@@ -244,6 +244,11 @@ RT_API_ATTRS Cookie BeginUnformattedIO(
       iostat = unit->SetDirection(DIR);
     }
     if (iostat == IostatOk) {
+      if (unit->IsAfterEndfile() && DIR == Direction::Output) {
+        iostat = IostatWriteAfterEndfile;
+      }
+    }
+    if (iostat == IostatOk) {
       IoStatementState &io{
           unit->BeginIoStatement<ExternalUnformattedIoStatementState<DIR>>(
               terminator, *unit, sourceFile, sourceLine)};

@@ -73,9 +73,9 @@ def C_SD_RV32 : CStore_rri<0b111, "c.sd", GPRPairCRV32, uimm8_lsb000>,
 
 let Predicates = [HasStdExtZclsd, IsRV32] in {
 def : InstAlias<"c.ld $rd, (${rs1})",
-                (C_LD_RV32 GPRPairCRV32:$rd, GPRCMem:$rs1, 0), 0>;
+                (C_LD_RV32 GPRPairCRV32:$rd, BasePtrC:$rs1, 0), 0>;
 def : InstAlias<"c.sd $rs2, (${rs1})",
-                (C_SD_RV32 GPRPairCRV32:$rs2, GPRCMem:$rs1, 0), 0>;
+                (C_SD_RV32 GPRPairCRV32:$rs2, BasePtrC:$rs1, 0), 0>;
 def : InstAlias<"c.ldsp $rd, (${rs1})",
                 (C_LDSP_RV32 GPRPairNoX0RV32:$rd, SPMem:$rs1, 0), 0>;
 def : InstAlias<"c.sdsp $rs2, (${rs1})",
@@ -91,8 +91,8 @@ def : CompressPat<(LD_RV32 GPRPairNoX0RV32:$rd, SPMem:$rs1, uimm9_lsb000:$imm),
                   (C_LDSP_RV32 GPRPairNoX0RV32:$rd, SPMem:$rs1, uimm9_lsb000:$imm)>;
 def : CompressPat<(SD_RV32 GPRPairRV32:$rs2, SPMem:$rs1, uimm9_lsb000:$imm),
                   (C_SDSP_RV32 GPRPairRV32:$rs2, SPMem:$rs1, uimm9_lsb000:$imm)>;
-def : CompressPat<(LD_RV32 GPRPairCRV32:$rd, GPRCMem:$rs1, uimm8_lsb000:$imm),
-                  (C_LD_RV32 GPRPairCRV32:$rd, GPRCMem:$rs1, uimm8_lsb000:$imm)>;
-def : CompressPat<(SD_RV32 GPRPairCRV32:$rs2, GPRCMem:$rs1, uimm8_lsb000:$imm),
-                  (C_SD_RV32 GPRPairCRV32:$rs2, GPRCMem:$rs1, uimm8_lsb000:$imm)>;
+def : CompressPat<(LD_RV32 GPRPairCRV32:$rd, BasePtrC:$rs1, uimm8_lsb000:$imm),
+                  (C_LD_RV32 GPRPairCRV32:$rd, BasePtrC:$rs1, uimm8_lsb000:$imm)>;
+def : CompressPat<(SD_RV32 GPRPairCRV32:$rs2, BasePtrC:$rs1, uimm8_lsb000:$imm),
+                  (C_SD_RV32 GPRPairCRV32:$rs2, BasePtrC:$rs1, uimm8_lsb000:$imm)>;
 } // Predicates = [HasStdExtZclsd, IsRV32]

@@ -13,8 +13,8 @@ int test() {
 }
 
 //      CIR: cir.func {{.*}} @_Z4testv()
-//      CIR:   %[[TEMP_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["ref.tmp0", init]
-// CIR-NEXT:   %[[X:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["x", init, const]
+//      CIR:   %[[TEMP_SLOT:.*]] = cir.alloca "ref.tmp0" {{.*}} init : !cir.ptr<!s32i>
+// CIR-NEXT:   %[[X:.*]] = cir.alloca "x" {{.*}} init const : !cir.ptr<!cir.ptr<!s32i>>
 // CIR-NEXT:   %[[TEMP_VALUE:.*]] = cir.call @_Z8make_intv() : () -> (!s32i {llvm.noundef})
 // CIR-NEXT:   cir.store{{.*}} %[[TEMP_VALUE]], %[[TEMP_SLOT]]
 // CIR-NEXT:   cir.store{{.*}} %[[TEMP_SLOT]], %[[X]]
@@ -44,10 +44,10 @@ int test_scoped() {
 }
 
 //      CIR: cir.func {{.*}} @_Z11test_scopedv()
-//      CIR:   %[[X:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
+//      CIR:   %[[X:.*]] = cir.alloca "x" {{.*}} init : !cir.ptr<!s32i>
 //      CIR:   cir.scope {
-// CIR-NEXT:     %[[TEMP_SLOT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["ref.tmp0", init]
-// CIR-NEXT:     %[[Y_ADDR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["y", init, const]
+// CIR-NEXT:     %[[TEMP_SLOT:.*]] = cir.alloca "ref.tmp0" {{.*}} init : !cir.ptr<!s32i>
+// CIR-NEXT:     %[[Y_ADDR:.*]] = cir.alloca "y" {{.*}} init const : !cir.ptr<!cir.ptr<!s32i>>
 // CIR-NEXT:     %[[TEMP_VALUE:.*]] = cir.call @_Z8make_intv() : () -> (!s32i {llvm.noundef})
 // CIR-NEXT:     cir.store{{.*}} %[[TEMP_VALUE]], %[[TEMP_SLOT]] : !s32i, !cir.ptr<!s32i>
 // CIR-NEXT:     cir.store{{.*}} %[[TEMP_SLOT]], %[[Y_ADDR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>

@@ -334,8 +334,8 @@ Error L0DeviceTy::queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
 }
 
 Expected<void *> L0DeviceTy::allocate(size_t Size, void *HstPtr,
-                                      TargetAllocTy Kind) {
-  return dataAlloc(Size, /*Align=*/0, Kind,
+                                      TargetAllocTy Kind, size_t Alignment) {
+  return dataAlloc(Size, Alignment, Kind,
                    /*Offset=*/0, /*UserAlloc=*/HstPtr == nullptr,
                    /*DevMalloc=*/false);
 }
@@ -385,6 +385,15 @@ Error L0DeviceTy::dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
                           << " bytes from device to host (tgt:" << TgtPtr
                           << ") -> (hst:" << HstPtr << ").";
   return Plugin::success();
+}
+
+Error L0DeviceTy::enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
+                                      AsyncInfoWrapperTy &AsyncInfoWrapper) {
+  __tgt_async_info *AsyncInfo = AsyncInfoWrapper;
+  auto QueueOrErr = getOrCreateQueue(AsyncInfo);
+  if (!QueueOrErr)
+    return QueueOrErr.takeError();
+  return (*QueueOrErr)->hostCall(Callback, UserData);
 }
 
 Error L0DeviceTy::dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstDev,
@@ -714,11 +723,14 @@ Error L0DeviceTy::makeMemoryResident(void *Mem, size_t Size) {
 Expected<ze_command_list_handle_t>
 L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder) {
   ze_command_queue_flags_t Flags = InOrder ? ZE_COMMAND_QUEUE_FLAG_IN_ORDER : 0;
+  if (getPlugin().getOptions().Flags.UseCopyOffloadHint)
+    Flags |= ZE_COMMAND_QUEUE_FLAG_COPY_OFFLOAD_HINT;
+
   ze_command_queue_desc_t Desc{ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC,
                                nullptr,
                                Ordinal,
                                Index,
-                               Flags | ZE_COMMAND_QUEUE_FLAG_COPY_OFFLOAD_HINT,
+                               Flags,
                                ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
                                ZE_COMMAND_QUEUE_PRIORITY_NORMAL};
   ze_command_list_handle_t CmdList = nullptr;
@@ -876,8 +888,9 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
   llvm::sort(Funcs,
              [](const auto &X, const auto &Y) { return X.second < Y.second; });
 
-  auto BufferOrErr = allocate(Funcs.size() * sizeof(void *),
-                              /*HostPtr=*/nullptr, TARGET_ALLOC_DEVICE);
+  auto BufferOrErr =
+      allocate(Funcs.size() * sizeof(void *),
+               /*HostPtr=*/nullptr, TARGET_ALLOC_DEVICE, /*Alignment=*/0);
   if (!BufferOrErr)
     return HandleErr(BufferOrErr.takeError());
 

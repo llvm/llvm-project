@@ -9,11 +9,11 @@
 #include "lldb/Initialization/SystemInitializerCommon.h"
 
 #include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
+#include "lldb/Core/Diagnostics.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Target/Statistics.h"
-#include "lldb/Utility/Diagnostics.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Timer.h"
 #include "lldb/Version/Version.h"

@@ -80,8 +80,7 @@ public:
 
   /// Deallocate the given source+block combination.
   /// Returns \c true if anything has been deallocatd, \c false otherwise.
-  bool deallocate(const Expr *Source, const Block *BlockToDelete,
-                  InterpState &S);
+  bool deallocate(const Expr *Source, const Block *BlockToDelete);
 
   /// Checks whether the allocation done at the given source is an array
   /// allocation.

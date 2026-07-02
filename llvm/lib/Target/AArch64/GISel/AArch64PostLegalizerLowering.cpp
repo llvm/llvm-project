@@ -578,12 +578,6 @@ void applyVAshrLshrImm(MachineInstr &MI, MachineRegisterInfo &MRI,
   MI.eraseFromParent();
 }
 
-bool isLegalCmpImmed(const APInt &C) {
-  // Works for negative immediates too, as it can be written as an ADDS
-  // instruction with a negated immediate.
-  return isLegalArithImmed(C.abs().getZExtValue());
-}
-
 /// Determine whether an integer G_ICMP against 1 or -1 can compare
 /// against 0 instead.
 ///
@@ -656,7 +650,7 @@ tryAdjustICmpImmAndPred(Register LHS, Register RHS, CmpInst::Predicate P,
   if (shouldBeAdjustedToZero(LHS, C, P, MRI))
     return {{0, P}};
 
-  if (isLegalCmpImmed(C))
+  if (AArch64_AM::isLegalCmpImmed(C))
     return std::nullopt;
 
   uint64_t OriginalC = C.getZExtValue();
@@ -722,7 +716,7 @@ tryAdjustICmpImmAndPred(Register LHS, Register RHS, CmpInst::Predicate P,
   // Check if the new constant is valid, and return the updated constant and
   // predicate if it is.
   uint64_t NewC = C.getZExtValue();
-  if (isLegalCmpImmed(C))
+  if (AArch64_AM::isLegalCmpImmed(C))
     return {{NewC, P}};
 
   auto NumberOfInstrToLoadImm = [=](uint64_t Imm) {
@@ -992,7 +986,7 @@ bool trySwapICmpOperands(MachineInstr &MI, MachineRegisterInfo &MRI) {
   // immediate, because we know we can fold that.
   Register RHS = MI.getOperand(3).getReg();
   auto RHSCst = getIConstantVRegValWithLookThrough(RHS, MRI);
-  if (RHSCst && isLegalCmpImmed(RHSCst->Value))
+  if (RHSCst && AArch64_AM::isLegalCmpImmed(RHSCst->Value))
     return false;
 
   Register LHS = MI.getOperand(2).getReg();
@@ -1017,7 +1011,7 @@ void applySwapICmpOperands(MachineInstr &MI, GISelChangeObserver &Observer) {
   auto Pred = static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
   Register LHS = MI.getOperand(2).getReg();
   Register RHS = MI.getOperand(3).getReg();
-  Observer.changedInstr(MI);
+  Observer.changingInstr(MI);
   MI.getOperand(1).setPredicate(CmpInst::getSwappedPredicate(Pred));
   MI.getOperand(2).setReg(RHS);
   MI.getOperand(3).setReg(LHS);

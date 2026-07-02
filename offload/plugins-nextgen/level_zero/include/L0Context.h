@@ -141,6 +141,12 @@ public:
   ze_result_t(ZE_APICALL *zexKernelGetArgumentSize)(
       ze_kernel_handle_t hKernel, uint32_t argIndex,
       uint32_t *pArgSize) = nullptr;
+
+  /// Level Zero extension function pointer for host function callbacks.
+  ze_result_t(ZE_APICALL *zeCommandListAppendHostFunction)(
+      ze_command_list_handle_t hCommandList, void *pfnHostFunction,
+      void *pUserData, void *pReserved, ze_event_handle_t hSignalEvent,
+      uint32_t numWaitEvents, ze_event_handle_t *phWaitEvents) = nullptr;
 };
 
 } // namespace llvm::omp::target::plugin

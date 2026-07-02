@@ -1,8 +1,8 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -S -passes=amdgpu-lower-kernel-attributes,instcombine,infer-alignment %s | FileCheck -enable-var-scope %s
 
-; CHECK-LABEL: @invalid_reqd_work_group_size(
+; CHECK-LABEL: @no_reqd_work_group_size(
 ; CHECK: load i16,
-define amdgpu_kernel void @invalid_reqd_work_group_size(ptr addrspace(1) %out) #0 !reqd_work_group_size !1 {
+define amdgpu_kernel void @no_reqd_work_group_size(ptr addrspace(1) %out) #0 {
   %dispatch.ptr = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
   %gep.group.size.x = getelementptr inbounds i8, ptr addrspace(4) %dispatch.ptr, i64 4
   %group.size.x = load i16, ptr addrspace(4) %gep.group.size.x, align 4
@@ -246,7 +246,7 @@ define i32 @func_group_size_x(ptr addrspace(1) %out) #0 !reqd_work_group_size !0
 
 ; CHECK-LABEL: @__ockl_get_local_size_reqd_size(
 ; CHECK: %group.size = phi i16 [ %tmp24, %bb17 ], [ %tmp16, %bb9 ], [ %tmp8, %bb1 ], [ 1, %bb ]
-define i64 @__ockl_get_local_size_reqd_size(i32 %arg) #1 !reqd_work_group_size !0 {
+define i64 @__ockl_get_local_size_reqd_size(i32 %arg) #4 !reqd_work_group_size !0 {
 bb:
   %tmp = tail call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #2
   switch i32 %arg, label %bb25 [
@@ -444,13 +444,13 @@ declare i32 @llvm.umin.i32(i32, i32) #1
 declare i32 @llvm.smin.i32(i32, i32) #1
 declare i32 @llvm.umax.i32(i32, i32) #1
 
-attributes #0 = { nounwind "uniform-work-group-size" }
+attributes #0 = { nounwind "amdgpu-flat-work-group-size"="256,256" "uniform-work-group-size" }
 attributes #1 = { nounwind readnone speculatable }
 attributes #2 = { nounwind "uniform-work-group-size" }
 attributes #3 = { nounwind }
+attributes #4 = { nounwind readnone speculatable "amdgpu-flat-work-group-size"="256,256" }
 
 !0 = !{i32 8, i32 16, i32 2}
-!1 = !{i32 8, i32 16}
 !2 = !{i64 8, i64 16, i64 2}
 !3 = !{i16 8, i16 16, i16 2}
 

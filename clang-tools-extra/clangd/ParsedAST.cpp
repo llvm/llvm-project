@@ -142,7 +142,8 @@ public:
   // Attach preprocessor hooks such that preamble events will be injected at
   // the appropriate time.
   // Events will be delivered to the *currently registered* PP callbacks.
-  static void attach(std::vector<Inclusion> Includes, CompilerInstance &Clang,
+  static void attach(std::vector<Inclusion> Includes,
+                     const MainFileMacros Macros, CompilerInstance &Clang,
                      const PreambleBounds &PB) {
     auto &PP = Clang.getPreprocessor();
     auto *ExistingCallbacks = PP.getPPCallbacks();
@@ -150,8 +151,8 @@ public:
     if (!ExistingCallbacks)
       return;
     PP.addPPCallbacks(std::unique_ptr<PPCallbacks>(new ReplayPreamble(
-        std::move(Includes), ExistingCallbacks, Clang.getSourceManager(), PP,
-        Clang.getLangOpts(), PB)));
+        std::move(Includes), std::move(Macros), ExistingCallbacks,
+        Clang.getSourceManager(), PP, Clang.getLangOpts(), PB)));
     // We're relying on the fact that addPPCallbacks keeps the old PPCallbacks
     // around, creating a chaining wrapper. Guard against other implementations.
     assert(PP.getPPCallbacks() != ExistingCallbacks &&
@@ -159,10 +160,12 @@ public:
   }
 
 private:
-  ReplayPreamble(std::vector<Inclusion> Includes, PPCallbacks *Delegate,
-                 const SourceManager &SM, Preprocessor &PP,
-                 const LangOptions &LangOpts, const PreambleBounds &PB)
-      : Includes(std::move(Includes)), Delegate(Delegate), SM(SM), PP(PP) {
+  ReplayPreamble(std::vector<Inclusion> Includes, MainFileMacros Macros,
+                 PPCallbacks *Delegate, const SourceManager &SM,
+                 Preprocessor &PP, const LangOptions &LangOpts,
+                 const PreambleBounds &PB)
+      : Includes(std::move(Includes)), Macros(std::move(Macros)),
+        Delegate(Delegate), SM(SM), PP(PP) {
     // Only tokenize the preamble section of the main file, as we are not
     // interested in the rest of the tokens.
     MainFileTokens = syntax::tokenize(
@@ -193,6 +196,24 @@ private:
   }
 
   void replay() {
+    // Replay macro definitions from the preamble region of the main file,
+    // so that clang-tidy checks can observe them.
+    for (const auto &[SID, Refs] : Macros.MacroRefs) {
+      for (const auto &Ref : Refs) {
+        if (!Ref.IsDefinition)
+          continue;
+        auto Loc = SM.getComposedLoc(SM.getMainFileID(), Ref.StartOffset);
+        Token Tok;
+        if (Lexer::getRawToken(Loc, Tok, SM, PP.getLangOpts(), false))
+          continue;
+        if (auto *II = PP.getIdentifierInfo(Tok.getRawIdentifier())) {
+          Tok.setIdentifierInfo(II);
+          Tok.setKind(tok::identifier);
+          if (auto *MD = PP.getLocalMacroDirective(II))
+            Delegate->MacroDefined(Tok, MD);
+        }
+      }
+    }
     for (const auto &Inc : Includes) {
       OptionalFileEntryRef File;
       if (Inc.Resolved != "")
@@ -250,6 +271,7 @@ private:
   }
 
   const std::vector<Inclusion> Includes;
+  const MainFileMacros Macros;
   PPCallbacks *Delegate;
   const SourceManager &SM;
   Preprocessor &PP;
@@ -667,8 +689,8 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     Includes = Preamble->Includes;
     Includes.MainFileIncludes = Patch->preambleIncludes();
     // Replay the preamble includes so that clang-tidy checks can see them.
-    ReplayPreamble::attach(Patch->preambleIncludes(), *Clang,
-                           Patch->modifiedBounds());
+    ReplayPreamble::attach(Patch->preambleIncludes(), Patch->mainFileMacros(),
+                           *Clang, Patch->modifiedBounds());
     PI = *Preamble->Pragmas;
   }
   // Important: collectIncludeStructure is registered *after* ReplayPreamble!

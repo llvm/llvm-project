@@ -19,6 +19,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/OnDiskHashTable.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
@@ -488,6 +489,111 @@ TEST_F(SampleProfTest, none_suffix_elision_text) {
   Expected["foo.bar"] = uint64_t(20303);
   Expected["foo.llvm.2465"] = uint64_t(20305);
   testSuffixElisionPolicy(SampleProfileFormat::SPF_Text, "none", Expected);
+}
+
+TEST_F(SampleProfTest, FuncOffsetHashTable) {
+  std::vector<std::pair<uint64_t, uint64_t>> TestData = {
+      {0x1111111122222222ULL, 100},
+      {0x3333333344444444ULL, 250},
+      {0x5555555566666666ULL, 1000},
+  };
+
+  SmallVector<char, 128> Buffer;
+  raw_svector_ostream OS(Buffer);
+
+  FuncOffsetHashTableWriterInfo WriterInfo;
+  OnDiskChainedHashTableGenerator<FuncOffsetHashTableWriterInfo> Generator;
+
+  for (const auto &[Name, Offset] : TestData)
+    Generator.insert(Name, Offset);
+
+  // Add padding to avoid bucket offset 0.
+  OS.write("PAD ", 4);
+  uint32_t BucketTableOffset = Generator.Emit(OS, WriterInfo);
+
+  const unsigned char *Start =
+      reinterpret_cast<const unsigned char *>(Buffer.data());
+
+  const unsigned char *Buckets = Start + BucketTableOffset;
+  const unsigned char *Payload = Start + 4;
+
+  auto Table =
+      std::unique_ptr<OnDiskIterableChainedHashTable<FuncOffsetHashTableInfo>>(
+          OnDiskIterableChainedHashTable<FuncOffsetHashTableInfo>::Create(
+              Buckets, Payload, Start));
+
+  ASSERT_TRUE(Table);
+
+  for (const auto &[Name, Offset] : TestData) {
+    auto Iter = Table->find(Name);
+    ASSERT_TRUE(Iter != Table->end());
+    ASSERT_EQ(*Iter, Offset);
+  }
+
+  auto Iter = Table->find(0x9999999999999999ULL);
+  ASSERT_TRUE(Iter == Table->end());
+}
+
+TEST_F(SampleProfTest, SampleProfileFuncOffsetTableInMemory) {
+  SampleProfileFuncOffsetTable Table(InMemoryMode, 2);
+
+  // Test empty table
+  EXPECT_EQ(Table.lookup(0x1111ULL), std::nullopt);
+
+  // Test insert and lookup
+  Table.insert(0x11112222ULL, 100);
+  Table.insert(0x33334444ULL, 200);
+
+  EXPECT_EQ(Table.lookup(0x11112222ULL), 100);
+  EXPECT_EQ(Table.lookup(0x33334444ULL), 200);
+  EXPECT_EQ(Table.lookup(0x55556666ULL), std::nullopt);
+
+  // Test clear
+  Table.clear();
+  EXPECT_EQ(Table.lookup(0x11112222ULL), std::nullopt);
+}
+
+TEST_F(SampleProfTest, SampleProfileFuncOffsetTableOnDisk) {
+  std::vector<std::pair<uint64_t, uint64_t>> TestData = {
+      {0x1111111122222222ULL, 100},
+      {0x3333333344444444ULL, 250},
+      {0x5555555566666666ULL, 1000},
+  };
+
+  SmallVector<char, 128> Buffer;
+  raw_svector_ostream OS(Buffer);
+
+  FuncOffsetHashTableWriterInfo WriterInfo;
+  OnDiskChainedHashTableGenerator<FuncOffsetHashTableWriterInfo> Generator;
+
+  for (const auto &[Name, Offset] : TestData)
+    Generator.insert(Name, Offset);
+
+  // Add padding to avoid bucket offset 0.
+  OS.write("PAD ", 4);
+  uint32_t BucketTableOffset = Generator.Emit(OS, WriterInfo);
+
+  const unsigned char *Start =
+      reinterpret_cast<const unsigned char *>(Buffer.data());
+
+  const unsigned char *Buckets = Start + BucketTableOffset;
+  const unsigned char *Payload = Start + 4;
+
+  SampleProfileFuncOffsetTable Table(OnDiskMode, Buckets, Payload, Start);
+
+  // Test lookup
+  for (const auto &[Name, Offset] : TestData) {
+    auto LookupResult = Table.lookup(Name);
+    ASSERT_TRUE(LookupResult.has_value());
+    EXPECT_EQ(*LookupResult, Offset);
+  }
+
+  // Test non-existent key
+  EXPECT_EQ(Table.lookup(0x9999999999999999ULL), std::nullopt);
+
+  // Test clear
+  Table.clear();
+  EXPECT_EQ(Table.lookup(0x1111111122222222ULL), std::nullopt);
 }
 
 } // end anonymous namespace

@@ -1,17 +1,12 @@
 ! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenmp -fopenmp-version=52
 !
-! OpenMP Version 5.2
-!
-! 2.10.2 single Construct
-! Copyprivate and Nowait clauses are allowed in both clause and end clause
-
 subroutine omp_single
     integer, save :: i
     integer       :: j
     i = 10; j = 11
 
     !ERROR: COPYPRIVATE variable 'i' is not PRIVATE or THREADPRIVATE in outer context
-    !ERROR: NOWAIT clause must not be used with COPYPRIVATE clause on the SINGLE directive
+    !ERROR: NOWAIT clause must not be used with COPYPRIVATE clause on SINGLE directive
     !$omp single copyprivate(i) nowait
         print *, "omp single", i
     !$omp end single
@@ -23,7 +18,7 @@ subroutine omp_single
     !$omp end parallel
 
     !$omp parallel
-        !ERROR: NOWAIT clause must not be used with COPYPRIVATE clause on the SINGLE directive
+        !ERROR: NOWAIT clause must not be used with COPYPRIVATE clause on SINGLE directive
         !$omp single nowait
             print *, "omp single", i
         !ERROR: COPYPRIVATE variable 'i' is not PRIVATE or THREADPRIVATE in outer context
@@ -32,19 +27,19 @@ subroutine omp_single
         !ERROR: COPYPRIVATE variable 'i' is not PRIVATE or THREADPRIVATE in outer context
         !$omp single copyprivate(i)
             print *, "omp single", i
-        !ERROR: NOWAIT clause must not be used with COPYPRIVATE clause on the SINGLE directive
+        !ERROR: NOWAIT clause must not be used with COPYPRIVATE clause on SINGLE directive
         !$omp end single nowait
 
         !ERROR: COPYPRIVATE variable 'j' may not appear on a PRIVATE or FIRSTPRIVATE clause on a SINGLE construct
         !$omp single private(j) copyprivate(j)
             print *, "omp single", j
         !ERROR: COPYPRIVATE variable 'j' may not appear on a PRIVATE or FIRSTPRIVATE clause on a SINGLE construct
-        !WARNING: The COPYPRIVATE clause with 'j' is already used on the SINGLE directive [-Wopenmp-usage]
+        !ERROR: 'j' appears more than once in a COPYPRIVATE clause
         !$omp end single copyprivate(j)
 
         !$omp single nowait
             print *, "omp single", j
-        !ERROR: At most one NOWAIT clause can appear on the SINGLE directive
+        !ERROR: At most one NOWAIT clause can appear on SINGLE directive
         !$omp end single nowait
     !$omp end parallel
 

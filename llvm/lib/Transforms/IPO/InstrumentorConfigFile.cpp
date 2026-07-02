@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -112,6 +113,20 @@ void writeConfigToJSON(InstrumentationConfig &IConf, StringRef OutputFile,
   J.objectEnd();
 }
 
+template <typename Map>
+static StringRef closestOption(const Map &Options, StringRef Missing) {
+  uint32_t MaxEdit = 5;
+  StringRef Closest;
+  for (const auto &Key : Options.keys()) {
+    auto EditDist = Missing.edit_distance_insensitive(Key, true, MaxEdit);
+    if (EditDist < MaxEdit) {
+      Closest = Key;
+      MaxEdit = EditDist;
+    }
+  }
+  return Closest;
+}
+
 bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
                         LLVMContext &Ctx, vfs::FileSystem &FS) {
   if (InputFile.empty())
@@ -165,7 +180,7 @@ bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
               BO->setString(IConf.SS.save(*V));
             } else {
               Ctx.diagnose(DiagnosticInfoInstrumentation(
-                  Twine("configuration key '") + ObjIt.first.str() +
+                  Twine("configuration key '") + StringRef(ObjIt.first) +
                       Twine("' expects a string, value ignored"),
                   DS_Warning));
             }
@@ -175,17 +190,19 @@ bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
               BO->setBool(*V);
             else {
               Ctx.diagnose(DiagnosticInfoInstrumentation(
-                  Twine("configuration key '") + ObjIt.first.str() +
+                  Twine("configuration key '") + StringRef(ObjIt.first) +
                       Twine("' expects a boolean, value ignored"),
                   DS_Warning));
             }
             break;
           }
         } else if (!StringRef(ObjIt.first).ends_with(".description")) {
-          Ctx.diagnose(DiagnosticInfoInstrumentation(
-              Twine("configuration key '") + ObjIt.first.str() +
-                  Twine("' not found and ignored"),
-              DS_Warning));
+          std::string Diag = "configuration key '" + ObjIt.first.str() +
+                             "' not found and ignored";
+          StringRef Closest = closestOption(BCOMap, ObjIt.first);
+          if (!Closest.empty())
+            Diag += "; did you mean '" + Closest.str() + "'?";
+          Ctx.diagnose(DiagnosticInfoInstrumentation(Diag, DS_Warning));
         }
       }
       continue;
@@ -202,16 +219,24 @@ bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
       }
       auto *IO = IChoiceMap.lookup(ObjIt.first);
       if (!IO) {
-        Ctx.diagnose(DiagnosticInfoInstrumentation(
-            Twine("malformed JSON configuration, expected an object matching "
-                  "an instrumentor choice, got ") +
-                ObjIt.first.str(),
-            DS_Warning));
+        std::string Diag =
+            "malformed JSON configuration, expected an object matching "
+            "an instrumentor choice, got '" +
+            ObjIt.first.str() + "'";
+        StringRef Closest = closestOption(IChoiceMap, ObjIt.first);
+        if (!Closest.empty())
+          Diag += "; did you mean '" + Closest.str() + "'?";
+        Ctx.diagnose(DiagnosticInfoInstrumentation(Diag, DS_Warning));
         continue;
       }
       SeenIOs.insert(IO);
       StringMap<bool> ValueMap, ReplaceMap;
       StringRef FilterStr;
+      StringSet<> IOOpts;
+      IOOpts.insert("enabled");
+      IOOpts.insert("filter");
+      for (auto &IRArg : IO->IRTArgs)
+        IOOpts.insert(IRArg.Name);
       for (auto &InnerObjIt : *InnerObj) {
         auto Name = StringRef(InnerObjIt.first);
         if (Name == "filter") {
@@ -221,6 +246,15 @@ bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
           ReplaceMap[Name] = InnerObjIt.second.getAsBoolean().value_or(false);
         } else {
           ValueMap[Name] = InnerObjIt.second.getAsBoolean().value_or(false);
+        }
+        if (!IOOpts.contains(Name)) {
+          std::string Diag = "unrecognized JSON property '" + Name.str() +
+                             "' in configuration for '" + IO->getName().str() +
+                             "'";
+          StringRef Closest = closestOption(IOOpts, Name);
+          if (!Closest.empty())
+            Diag += "; did you mean '" + Closest.str() + "'?";
+          Ctx.diagnose(DiagnosticInfoInstrumentation(Diag, DS_Warning));
         }
       }
       IO->Enabled = ValueMap["enabled"];
