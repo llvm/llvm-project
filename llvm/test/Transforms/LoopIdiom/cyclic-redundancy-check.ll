@@ -10,7 +10,12 @@
 ; CHECK: @.crctable.5 = private constant [256 x i16] [i16 0, i16 4129, i16 8258, i16 12387, i16 16516, i16 20645, i16 24774, i16 28903, i16 -32504, i16 -28375, i16 -24246, i16 -20117, i16 -15988, i16 -11859, i16 -7730, i16 -3601, i16 4657, i16 528, i16 12915, i16 8786, i16 21173, i16 17044, i16 29431, i16 25302, i16 -27847, i16 -31976, i16 -19589, i16 -23718, i16 -11331, i16 -15460, i16 -3073, i16 -7202, i16 9314, i16 13379, i16 1056, i16 5121, i16 25830, i16 29895, i16 17572, i16 21637, i16 -23190, i16 -19125, i16 -31448, i16 -27383, i16 -6674, i16 -2609, i16 -14932, i16 -10867, i16 13907, i16 9842, i16 5649, i16 1584, i16 30423, i16 26358, i16 22165, i16 18100, i16 -18597, i16 -22662, i16 -26855, i16 -30920, i16 -2081, i16 -6146, i16 -10339, i16 -14404, i16 18628, i16 22757, i16 26758, i16 30887, i16 2112, i16 6241, i16 10242, i16 14371, i16 -13876, i16 -9747, i16 -5746, i16 -1617, i16 -30392, i16 -26263, i16 -22262, i16 -18133, i16 23285, i16 19156, i16 31415, i16 27286, i16 6769, i16 2640, i16 14899, i16 10770, i16 -9219, i16 -13348, i16 -1089, i16 -5218, i16 -25735, i16 -29864, i16 -17605, i16 -21734, i16 27814, i16 31879, i16 19684, i16 23749, i16 11298, i16 15363, i16 3168, i16 7233, i16 -4690, i16 -625, i16 -12820, i16 -8755, i16 -21206, i16 -17141, i16 -29336, i16 -25271, i16 32407, i16 28342, i16 24277, i16 20212, i16 15891, i16 11826, i16 7761, i16 3696, i16 -97, i16 -4162, i16 -8227, i16 -12292, i16 -16613, i16 -20678, i16 -24743, i16 -28808, i16 -28280, i16 -32343, i16 -20022, i16 -24085, i16 -12020, i16 -16083, i16 -3762, i16 -7825, i16 4224, i16 161, i16 12482, i16 8419, i16 20484, i16 16421, i16 28742, i16 24679, i16 -31815, i16 -27752, i16 -23557, i16 -19494, i16 -15555, i16 -11492, i16 -7297, i16 -3234, i16 689, i16 4752, i16 8947, i16 13010, i16 16949, i16 21012, i16 25207, i16 29270, i16 -18966, i16 -23093, i16 -27224, i16 -31351, i16 -2706, i16 -6833, i16 -10964, i16 -15091, i16 13538, i16 9411, i16 5280, i16 1153, i16 29798, i16 25671, i16 21540, i16 17413, i16 -22565, i16 -18438, i16 -30823, i16 -26696, i16 -6305, i16 -2178, i16 -14563, i16 -10436, i16 9939, i16 14066, i16 1681, i16 5808, i16 26199, i16 30326, i16 17941, i16 22068, i16 -9908, i16 -13971, i16 -1778, i16 -5841, i16 -26168, i16 -30231, i16 -18038, i16 -22101, i16 22596, i16 18533, i16 30726, i16 26663, i16 6336, i16 2273, i16 14466, i16 10403, i16 -13443, i16 -9380, i16 -5313, i16 -1250, i16 -29703, i16 -25640, i16 -21573, i16 -17510, i16 19061, i16 23124, i16 27191, i16 31254, i16 2801, i16 6864, i16 10931, i16 14994, i16 -722, i16 -4849, i16 -8852, i16 -12979, i16 -16982, i16 -21109, i16 -25112, i16 -29239, i16 31782, i16 27655, i16 23652, i16 19525, i16 15522, i16 11395, i16 7392, i16 3265, i16 -4321, i16 -194, i16 -12451, i16 -8324, i16 -20581, i16 -16454, i16 -28711, i16 -24584, i16 28183, i16 32310, i16 20053, i16 24180, i16 11923, i16 16050, i16 3793, i16 7920]
 ; CHECK: @.crctable.6 = private constant [256 x i16] [i16 0, i16 4129, i16 8258, i16 12387, i16 16516, i16 20645, i16 24774, i16 28903, i16 -32504, i16 -28375, i16 -24246, i16 -20117, i16 -15988, i16 -11859, i16 -7730, i16 -3601, i16 4657, i16 528, i16 12915, i16 8786, i16 21173, i16 17044, i16 29431, i16 25302, i16 -27847, i16 -31976, i16 -19589, i16 -23718, i16 -11331, i16 -15460, i16 -3073, i16 -7202, i16 9314, i16 13379, i16 1056, i16 5121, i16 25830, i16 29895, i16 17572, i16 21637, i16 -23190, i16 -19125, i16 -31448, i16 -27383, i16 -6674, i16 -2609, i16 -14932, i16 -10867, i16 13907, i16 9842, i16 5649, i16 1584, i16 30423, i16 26358, i16 22165, i16 18100, i16 -18597, i16 -22662, i16 -26855, i16 -30920, i16 -2081, i16 -6146, i16 -10339, i16 -14404, i16 18628, i16 22757, i16 26758, i16 30887, i16 2112, i16 6241, i16 10242, i16 14371, i16 -13876, i16 -9747, i16 -5746, i16 -1617, i16 -30392, i16 -26263, i16 -22262, i16 -18133, i16 23285, i16 19156, i16 31415, i16 27286, i16 6769, i16 2640, i16 14899, i16 10770, i16 -9219, i16 -13348, i16 -1089, i16 -5218, i16 -25735, i16 -29864, i16 -17605, i16 -21734, i16 27814, i16 31879, i16 19684, i16 23749, i16 11298, i16 15363, i16 3168, i16 7233, i16 -4690, i16 -625, i16 -12820, i16 -8755, i16 -21206, i16 -17141, i16 -29336, i16 -25271, i16 32407, i16 28342, i16 24277, i16 20212, i16 15891, i16 11826, i16 7761, i16 3696, i16 -97, i16 -4162, i16 -8227, i16 -12292, i16 -16613, i16 -20678, i16 -24743, i16 -28808, i16 -28280, i16 -32343, i16 -20022, i16 -24085, i16 -12020, i16 -16083, i16 -3762, i16 -7825, i16 4224, i16 161, i16 12482, i16 8419, i16 20484, i16 16421, i16 28742, i16 24679, i16 -31815, i16 -27752, i16 -23557, i16 -19494, i16 -15555, i16 -11492, i16 -7297, i16 -3234, i16 689, i16 4752, i16 8947, i16 13010, i16 16949, i16 21012, i16 25207, i16 29270, i16 -18966, i16 -23093, i16 -27224, i16 -31351, i16 -2706, i16 -6833, i16 -10964, i16 -15091, i16 13538, i16 9411, i16 5280, i16 1153, i16 29798, i16 25671, i16 21540, i16 17413, i16 -22565, i16 -18438, i16 -30823, i16 -26696, i16 -6305, i16 -2178, i16 -14563, i16 -10436, i16 9939, i16 14066, i16 1681, i16 5808, i16 26199, i16 30326, i16 17941, i16 22068, i16 -9908, i16 -13971, i16 -1778, i16 -5841, i16 -26168, i16 -30231, i16 -18038, i16 -22101, i16 22596, i16 18533, i16 30726, i16 26663, i16 6336, i16 2273, i16 14466, i16 10403, i16 -13443, i16 -9380, i16 -5313, i16 -1250, i16 -29703, i16 -25640, i16 -21573, i16 -17510, i16 19061, i16 23124, i16 27191, i16 31254, i16 2801, i16 6864, i16 10931, i16 14994, i16 -722, i16 -4849, i16 -8852, i16 -12979, i16 -16982, i16 -21109, i16 -25112, i16 -29239, i16 31782, i16 27655, i16 23652, i16 19525, i16 15522, i16 11395, i16 7392, i16 3265, i16 -4321, i16 -194, i16 -12451, i16 -8324, i16 -20581, i16 -16454, i16 -28711, i16 -24584, i16 28183, i16 32310, i16 20053, i16 24180, i16 11923, i16 16050, i16 3793, i16 7920]
 ; CHECK: @.crctable.7 = private constant [256 x i8] c"\00\1D:'tiNS\E8\F5\D2\CF\9C\81\A6\BB\CD\D0\F7\EA\B9\A4\83\9E%8\1F\02QLkv\87\9A\BD\A0\F3\EE\C9\D4orUH\1B\06!<JWpm>#\04\19\A2\BF\98\85\D6\CB\EC\F1\13\0E)4gz]@\FB\E6\C1\DC\8F\92\B5\A8\DE\C3\E4\F9\AA\B7\90\8D6+\0C\11B_xe\94\89\AE\B3\E0\FD\DA\C7|aF[\08\152/YDc~-0\17\0A\B1\AC\8B\96\C5\D8\FF\E2&
-; CHECK: @.crctable.8 = private constant [256 x i32] [i32 0, i32 4489, i32 8978, i32 12955, i32 17956, i32 22445, i32 25910, i32 29887, i32 35912, i32 40385, i32 44890, i32 48851, i32 51820, i32 56293, i32 59774, i32 63735, i32 4225, i32 264, i32 13203, i32 8730, i32 22181, i32 18220, i32 30135, i32 25662, i32 40137, i32 36160, i32 49115, i32 44626, i32 56045, i32 52068, i32 63999, i32 59510, i32 8450, i32 12427, i32 528, i32 5017, i32 26406, i32 30383, i32 17460, i32 21949, i32 44362, i32 48323, i32 36440, i32 40913, i32 60270, i32 64231, i32 51324, i32 55797, i32 12675, i32 8202, i32 4753, i32 792, i32 30631, i32 26158, i32 21685, i32 17724, i32 48587, i32 44098, i32 40665, i32 36688, i32 64495, i32 60006, i32 55549, i32 51572, i32 16900, i32 21389, i32 24854, i32 28831, i32 1056, i32 5545, i32 10034, i32 14011, i32 52812, i32 57285, i32 60766, i32 64727, i32 34920, i32 39393, i32 43898, i32 47859, i32 21125, i32 17164, i32 29079, i32 24606, i32 5281, i32 1320, i32 14259, i32 9786, i32 57037, i32 53060, i32 64991, i32 60502, i32 39145, i32 35168, i32 48123, i32 43634, i32 25350, i32 29327, i32 16404, i32 20893, i32 9506, i32 13483, i32 1584, i32 6073, i32 61262, i32 65223, i32 52316, i32 56789, i32 43370, i32 47331, i32 35448, i32 39921, i32 29575, i32 25102, i32 20629, i32 16668, i32 13731, i32 9258, i32 5809, i32 1848, i32 65487, i32 60998, i32 56541, i32 52564, i32 47595, i32 43106, i32 39673, i32 35696, i32 33800, i32 38273, i32 42778, i32 46739, i32 49708, i32 54181, i32 57662, i32 61623, i32 2112, i32 6601, i32 11090, i32 15067, i32 20068, i32 24557, i32 28022, i32 31999, i32 38025, i32 34048, i32 47003, i32 42514, i32 53933, i32 49956, i32 61887, i32 57398, i32 6337, i32 2376, i32 15315, i32 10842, i32 24293, i32 20332, i32 32247, i32 27774, i32 42250, i32 46211, i32 34328, i32 38801, i32 58158, i32 62119, i32 49212, i32 53685, i32 10562, i32 14539, i32 2640, i32 7129, i32 28518, i32 32495, i32 19572, i32 24061, i32 46475, i32 41986, i32 38553, i32 34576, i32 62383, i32 57894, i32 53437, i32 49460, i32 14787, i32 10314, i32 6865, i32 2904, i32 32743, i32 28270, i32 23797, i32 19836, i32 50700, i32 55173, i32 58654, i32 62615, i32 32808, i32 37281, i32 41786, i32 45747, i32 19012, i32 23501, i32 26966, i32 30943, i32 3168, i32 7657, i32 12146, i32 16123, i32 54925, i32 50948, i32 62879, i32 58390, i32 37033, i32 33056, i32 46011, i32 41522, i32 23237, i32 19276, i32 31191, i32 26718, i32 7393, i32 3432, i32 16371, i32 11898, i32 59150, i32 63111, i32 50204, i32 54677, i32 41258, i32 45219, i32 33336, i32 37809, i32 27462, i32 31439, i32 18516, i32 23005, i32 11618, i32 15595, i32 3696, i32 8185, i32 63375, i32 58886, i32 54429, i32 50452, i32 45483, i32 40994, i32 37561, i32 33584, i32 31687, i32 27214, i32 22741, i32 18780, i32 15843, i32 11370, i32 7921, i32 3960]
+; CHECK: @.crctable.8 = private constant [256 x i16] [i16 0, i16 4129, i16 8258, i16 12387, i16 16516, i16 20645, i16 24774, i16 28903, i16 -32504, i16 -28375, i16 -24246, i16 -20117, i16 -15988, i16 -11859, i16 -7730, i16 -3601, i16 4657, i16 528, i16 12915, i16 8786, i16 21173, i16 17044, i16 29431, i16 25302, i16 -27847, i16 -31976, i16 -19589, i16 -23718, i16 -11331, i16 -15460, i16 -3073, i16 -7202, i16 9314, i16 13379, i16 1056, i16 5121, i16 25830, i16 29895, i16 17572, i16 21637, i16 -23190, i16 -19125, i16 -31448, i16 -27383, i16 -6674, i16 -2609, i16 -14932, i16 -10867, i16 13907, i16 9842, i16 5649, i16 1584, i16 30423, i16 26358, i16 22165, i16 18100, i16 -18597, i16 -22662, i16 -26855, i16 -30920, i16 -2081, i16 -6146, i16 -10339, i16 -14404, i16 18628, i16 22757, i16 26758, i16 30887, i16 2112, i16 6241, i16 10242, i16 14371, i16 -13876, i16 -9747, i16 -5746, i16 -1617, i16 -30392, i16 -26263, i16 -22262, i16 -18133, i16 23285, i16 19156, i16 31415, i16 27286, i16 6769, i16 2640, i16 14899, i16 10770, i16 -9219, i16 -13348, i16 -1089, i16 -5218, i16 -25735, i16 -29864, i16 -17605, i16 -21734, i16 27814, i16 31879, i16 19684, i16 23749, i16 11298, i16 15363, i16 3168, i16 7233, i16 -4690, i16 -625, i16 -12820, i16 -8755, i16 -21206, i16 -17141, i16 -29336, i16 -25271, i16 32407, i16 28342, i16 24277, i16 20212, i16 15891, i16 11826, i16 7761, i16 3696, i16 -97, i16 -4162, i16 -8227, i16 -12292, i16 -16613, i16 -20678, i16 -24743, i16 -28808, i16 -28280, i16 -32343, i16 -20022, i16 -24085, i16 -12020, i16 -16083, i16 -3762, i16 -7825, i16 4224, i16 161, i16 12482, i16 8419, i16 20484, i16 16421, i16 28742, i16 24679, i16 -31815, i16 -27752, i16 -23557, i16 -19494, i16 -15555, i16 -11492, i16 -7297, i16 -3234, i16 689, i16 4752, i16 8947, i16 13010, i16 16949, i16 21012, i16 25207, i16 29270, i16 -18966, i16 -23093, i16 -27224, i16 -31351, i16 -2706, i16 -6833, i16 -10964, i16 -15091, i16 13538, i16 9411, i16 5280, i16 1153, i16 29798, i16 25671, i16 21540, i16 17413, i16 -22565, i16 -18438, i16 -30823, i16 -26696, i16 -6305, i16 -2178, i16 -14563, i16 -10436, i16 9939, i16 14066, i16 1681, i16 5808, i16 26199, i16 30326, i16 17941, i16 22068, i16 -9908, i16 -13971, i16 -1778, i16 -5841, i16 -26168, i16 -30231, i16 -18038, i16 -22101, i16 22596, i16 18533, i16 30726, i16 26663, i16 6336, i16 2273, i16 14466, i16 10403, i16 -13443, i16 -9380, i16 -5313, i16 -1250, i16 -29703, i16 -25640, i16 -21573, i16 -17510, i16 19061, i16 23124, i16 27191, i16 31254, i16 2801, i16 6864, i16 10931, i16 14994, i16 -722, i16 -4849, i16 -8852, i16 -12979, i16 -16982, i16 -21109, i16 -25112, i16 -29239, i16 31782, i16 27655, i16 23652, i16 19525, i16 15522, i16 11395, i16 7392, i16 3265, i16 -4321, i16 -194, i16 -12451, i16 -8324, i16 -20581, i16 -16454, i16 -28711, i16 -24584, i16 28183, i16 32310, i16 20053, i16 24180, i16 11923, i16 16050, i16 3793, i16 7920]
+; CHECK: @.crctable.9 = private constant [256 x i16] [i16 0, i16 4129, i16 8258, i16 12387, i16 16516, i16 20645, i16 24774, i16 28903, i16 -32504, i16 -28375, i16 -24246, i16 -20117, i16 -15988, i16 -11859, i16 -7730, i16 -3601, i16 4657, i16 528, i16 12915, i16 8786, i16 21173, i16 17044, i16 29431, i16 25302, i16 -27847, i16 -31976, i16 -19589, i16 -23718, i16 -11331, i16 -15460, i16 -3073, i16 -7202, i16 9314, i16 13379, i16 1056, i16 5121, i16 25830, i16 29895, i16 17572, i16 21637, i16 -23190, i16 -19125, i16 -31448, i16 -27383, i16 -6674, i16 -2609, i16 -14932, i16 -10867, i16 13907, i16 9842, i16 5649, i16 1584, i16 30423, i16 26358, i16 22165, i16 18100, i16 -18597, i16 -22662, i16 -26855, i16 -30920, i16 -2081, i16 -6146, i16 -10339, i16 -14404, i16 18628, i16 22757, i16 26758, i16 30887, i16 2112, i16 6241, i16 10242, i16 14371, i16 -13876, i16 -9747, i16 -5746, i16 -1617, i16 -30392, i16 -26263, i16 -22262, i16 -18133, i16 23285, i16 19156, i16 31415, i16 27286, i16 6769, i16 2640, i16 14899, i16 10770, i16 -9219, i16 -13348, i16 -1089, i16 -5218, i16 -25735, i16 -29864, i16 -17605, i16 -21734, i16 27814, i16 31879, i16 19684, i16 23749, i16 11298, i16 15363, i16 3168, i16 7233, i16 -4690, i16 -625, i16 -12820, i16 -8755, i16 -21206, i16 -17141, i16 -29336, i16 -25271, i16 32407, i16 28342, i16 24277, i16 20212, i16 15891, i16 11826, i16 7761, i16 3696, i16 -97, i16 -4162, i16 -8227, i16 -12292, i16 -16613, i16 -20678, i16 -24743, i16 -28808, i16 -28280, i16 -32343, i16 -20022, i16 -24085, i16 -12020, i16 -16083, i16 -3762, i16 -7825, i16 4224, i16 161, i16 12482, i16 8419, i16 20484, i16 16421, i16 28742, i16 24679, i16 -31815, i16 -27752, i16 -23557, i16 -19494, i16 -15555, i16 -11492, i16 -7297, i16 -3234, i16 689, i16 4752, i16 8947, i16 13010, i16 16949, i16 21012, i16 25207, i16 29270, i16 -18966, i16 -23093, i16 -27224, i16 -31351, i16 -2706, i16 -6833, i16 -10964, i16 -15091, i16 13538, i16 9411, i16 5280, i16 1153, i16 29798, i16 25671, i16 21540, i16 17413, i16 -22565, i16 -18438, i16 -30823, i16 -26696, i16 -6305, i16 -2178, i16 -14563, i16 -10436, i16 9939, i16 14066, i16 1681, i16 5808, i16 26199, i16 30326, i16 17941, i16 22068, i16 -9908, i16 -13971, i16 -1778, i16 -5841, i16 -26168, i16 -30231, i16 -18038, i16 -22101, i16 22596, i16 18533, i16 30726, i16 26663, i16 6336, i16 2273, i16 14466, i16 10403, i16 -13443, i16 -9380, i16 -5313, i16 -1250, i16 -29703, i16 -25640, i16 -21573, i16 -17510, i16 19061, i16 23124, i16 27191, i16 31254, i16 2801, i16 6864, i16 10931, i16 14994, i16 -722, i16 -4849, i16 -8852, i16 -12979, i16 -16982, i16 -21109, i16 -25112, i16 -29239, i16 31782, i16 27655, i16 23652, i16 19525, i16 15522, i16 11395, i16 7392, i16 3265, i16 -4321, i16 -194, i16 -12451, i16 -8324, i16 -20581, i16 -16454, i16 -28711, i16 -24584, i16 28183, i16 32310, i16 20053, i16 24180, i16 11923, i16 16050, i16 3793, i16 7920]
+; CHECK: @.crctable.10 = private constant [256 x i8] c"\00\1D:'tiNS\E8\F5\D2\CF\9C\81\A6\BB\CD\D0\F7\EA\B9\A4\83\9E%8\1F\02QLkv\87\9A\BD\A0\F3\EE\C9\D4orUH\1B\06!<JWpm>#\04\19\A2\BF\98\85\D6\CB\EC\F1\13\0E)4gz]@\FB\E6\C1\DC\8F\92\B5\A8\DE\C3\E4\F9\AA\B7\90\8D6+\0C\11B_xe\94\89\AE\B3\E0\FD\DA\C7|aF[\08\152/YDc~-0\17\0A\B1\AC\8B\96\C5\D8\FF\E2&
+; CHECK: @.crctable.11 = private constant [256 x i8] c"\00\1D:'tiNS\E8\F5\D2\CF\9C\81\A6\BB\CD\D0\F7\EA\B9\A4\83\9E%8\1F\02QLkv\87\9A\BD\A0\F3\EE\C9\D4orUH\1B\06!<JWpm>#\04\19\A2\BF\98\85\D6\CB\EC\F1\13\0E)4gz]@\FB\E6\C1\DC\8F\92\B5\A8\DE\C3\E4\F9\AA\B7\90\8D6+\0C\11B_xe\94\89\AE\B3\E0\FD\DA\C7|aF[\08\152/YDc~-0\17\0A\B1\AC\8B\96\C5\D8\FF\E2&
+; CHECK: @.crctable.12 = private constant [256 x i32] [i32 0, i32 4489, i32 8978, i32 12955, i32 17956, i32 22445, i32 25910, i32 29887, i32 35912, i32 40385, i32 44890, i32 48851, i32 51820, i32 56293, i32 59774, i32 63735, i32 4225, i32 264, i32 13203, i32 8730, i32 22181, i32 18220, i32 30135, i32 25662, i32 40137, i32 36160, i32 49115, i32 44626, i32 56045, i32 52068, i32 63999, i32 59510, i32 8450, i32 12427, i32 528, i32 5017, i32 26406, i32 30383, i32 17460, i32 21949, i32 44362, i32 48323, i32 36440, i32 40913, i32 60270, i32 64231, i32 51324, i32 55797, i32 12675, i32 8202, i32 4753, i32 792, i32 30631, i32 26158, i32 21685, i32 17724, i32 48587, i32 44098, i32 40665, i32 36688, i32 64495, i32 60006, i32 55549, i32 51572, i32 16900, i32 21389, i32 24854, i32 28831, i32 1056, i32 5545, i32 10034, i32 14011, i32 52812, i32 57285, i32 60766, i32 64727, i32 34920, i32 39393, i32 43898, i32 47859, i32 21125, i32 17164, i32 29079, i32 24606, i32 5281, i32 1320, i32 14259, i32 9786, i32 57037, i32 53060, i32 64991, i32 60502, i32 39145, i32 35168, i32 48123, i32 43634, i32 25350, i32 29327, i32 16404, i32 20893, i32 9506, i32 13483, i32 1584, i32 6073, i32 61262, i32 65223, i32 52316, i32 56789, i32 43370, i32 47331, i32 35448, i32 39921, i32 29575, i32 25102, i32 20629, i32 16668, i32 13731, i32 9258, i32 5809, i32 1848, i32 65487, i32 60998, i32 56541, i32 52564, i32 47595, i32 43106, i32 39673, i32 35696, i32 33800, i32 38273, i32 42778, i32 46739, i32 49708, i32 54181, i32 57662, i32 61623, i32 2112, i32 6601, i32 11090, i32 15067, i32 20068, i32 24557, i32 28022, i32 31999, i32 38025, i32 34048, i32 47003, i32 42514, i32 53933, i32 49956, i32 61887, i32 57398, i32 6337, i32 2376, i32 15315, i32 10842, i32 24293, i32 20332, i32 32247, i32 27774, i32 42250, i32 46211, i32 34328, i32 38801, i32 58158, i32 62119, i32 49212, i32 53685, i32 10562, i32 14539, i32 2640, i32 7129, i32 28518, i32 32495, i32 19572, i32 24061, i32 46475, i32 41986, i32 38553, i32 34576, i32 62383, i32 57894, i32 53437, i32 49460, i32 14787, i32 10314, i32 6865, i32 2904, i32 32743, i32 28270, i32 23797, i32 19836, i32 50700, i32 55173, i32 58654, i32 62615, i32 32808, i32 37281, i32 41786, i32 45747, i32 19012, i32 23501, i32 26966, i32 30943, i32 3168, i32 7657, i32 12146, i32 16123, i32 54925, i32 50948, i32 62879, i32 58390, i32 37033, i32 33056, i32 46011, i32 41522, i32 23237, i32 19276, i32 31191, i32 26718, i32 7393, i32 3432, i32 16371, i32 11898, i32 59150, i32 63111, i32 50204, i32 54677, i32 41258, i32 45219, i32 33336, i32 37809, i32 27462, i32 31439, i32 18516, i32 23005, i32 11618, i32 15595, i32 3696, i32 8185, i32 63375, i32 58886, i32 54429, i32 50452, i32 45483, i32 40994, i32 37561, i32 33584, i32 31687, i32 27214, i32 22741, i32 18780, i32 15843, i32 11370, i32 7921, i32 3960]
+; CHECK: @.crctable.13 = private constant [256 x i8] c"\00\10 07'\17\07\19\099).>\0E\1E2\22\12\02\05\15%5+
 ;.
 define i16 @crc16.le.tc8(i8 %msg, i16 %checksum) {
 ; CHECK-LABEL: define i16 @crc16.le.tc8(
@@ -394,6 +399,192 @@ exit:                                              ; preds = %outer.loop
   ret i8 %crc.outer
 }
 
+define i16 @crc16.be.tc16(i16 %msg, i16 %checksum) {
+; CHECK-LABEL: define i16 @crc16.be.tc16(
+; CHECK-SAME: i16 [[MSG:%.*]], i16 [[CHECKSUM:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[CRC2:%.*]] = phi i16 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT3:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_BITS:%.*]] = shl i8 [[IV]], 3
+; CHECK-NEXT:    [[IV_INDEXER:%.*]] = zext i8 [[IV_BITS]] to i16
+; CHECK-NEXT:    [[DATA_INDEXER:%.*]] = shl i16 [[MSG]], [[IV_INDEXER]]
+; CHECK-NEXT:    [[CRC_DATA_INDEXER:%.*]] = xor i16 [[DATA_INDEXER]], [[CRC2]]
+; CHECK-NEXT:    [[INDEXER_HI:%.*]] = lshr i16 [[CRC_DATA_INDEXER]], 8
+; CHECK-NEXT:    [[INDEXER_HI_LO_BYTE:%.*]] = trunc i16 [[INDEXER_HI]] to i8
+; CHECK-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_HI_LO_BYTE]] to i64
+; CHECK-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i16, ptr @.crctable.8, i64 [[INDEXER_EXT]]
+; CHECK-NEXT:    [[TBL_LD:%.*]] = load i16, ptr [[TBL_PTRADD]], align 2
+; CHECK-NEXT:    [[CRC_BE_SHIFT:%.*]] = shl i16 [[CRC2]], 8
+; CHECK-NEXT:    [[CRC_NEXT3]] = xor i16 [[CRC_BE_SHIFT]], [[TBL_LD]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
+; CHECK-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i8 [[IV]], 1
+; CHECK-NEXT:    br i1 [[EXIT_COND1]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT3]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %checksum, %entry ], [ %crc.next, %loop ]
+  %data = phi i16 [ %msg, %entry ], [ %data.next, %loop ]
+  %xor.crc.data = xor i16 %crc, %data
+  %data.next = shl i16 %data, 1
+  %check.sb = icmp sge i16 %xor.crc.data, 0
+  %crc.shl = shl i16 %crc, 1
+  %crc.xor = xor i16 %crc.shl, 4129
+  %crc.next = select i1 %check.sb, i16 %crc.shl, i16 %crc.xor
+  %iv.next = add nuw nsw i8 %iv, 1
+  %exit.cond = icmp samesign ult i8 %iv, 15
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
+}
+
+define i16 @crc16.be.tc8.misalign(i8 %msg, i16 %checksum) {
+; CHECK-LABEL: define i16 @crc16.be.tc8.misalign(
+; CHECK-SAME: i8 [[MSG:%.*]], i16 [[CHECKSUM:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[CRC2:%.*]] = phi i16 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[CRC_NEXT3:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_BITS:%.*]] = shl i8 [[IV]], 3
+; CHECK-NEXT:    [[DATA_INDEXER:%.*]] = shl i8 [[MSG]], [[IV_BITS]]
+; CHECK-NEXT:    [[CRC_INDEXER_CAST:%.*]] = trunc i16 [[CRC2]] to i8
+; CHECK-NEXT:    [[CRC_DATA_INDEXER:%.*]] = xor i8 [[DATA_INDEXER]], [[CRC_INDEXER_CAST]]
+; CHECK-NEXT:    [[INDEXER_HI:%.*]] = lshr i8 [[CRC_DATA_INDEXER]], 8
+; CHECK-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_HI]] to i64
+; CHECK-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i16, ptr @.crctable.9, i64 [[INDEXER_EXT]]
+; CHECK-NEXT:    [[TBL_LD:%.*]] = load i16, ptr [[TBL_PTRADD]], align 2
+; CHECK-NEXT:    [[CRC_BE_SHIFT:%.*]] = shl i16 [[CRC2]], 8
+; CHECK-NEXT:    [[CRC_NEXT3]] = xor i16 [[CRC_BE_SHIFT]], [[TBL_LD]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
+; CHECK-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i8 [[IV]], 0
+; CHECK-NEXT:    br i1 [[EXIT_COND1]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT3]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %checksum, %entry ], [ %crc.next, %loop ]
+  %data = phi i8 [ %msg, %entry ], [ %data.next, %loop ]
+  %crc.trunc = trunc i16 %crc to i8
+  %xor.data.crc = xor i8 %data, %crc.trunc
+  %data.next = shl i8 %data, 1
+  %check.sb = icmp sge i8 %xor.data.crc, 0
+  %crc.shl = shl i16 %crc, 1
+  %xor = xor i16 %crc.shl, 4129
+  %crc.next = select i1 %check.sb, i16 %crc.shl, i16 %xor
+  %iv.next = add nuw nsw i8 %iv, 1
+  %exit.cond = icmp samesign ult i8 %iv, 7
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
+}
+
+define i8 @crc8.be.tc16.misalign(i16 %msg, i8 %checksum) {
+; CHECK-LABEL: define i8 @crc8.be.tc16.misalign(
+; CHECK-SAME: i16 [[MSG:%.*]], i8 [[CHECKSUM:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[CRC2:%.*]] = phi i8 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[TBL_LD:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_BITS:%.*]] = shl i8 [[IV]], 3
+; CHECK-NEXT:    [[IV_INDEXER:%.*]] = zext i8 [[IV_BITS]] to i16
+; CHECK-NEXT:    [[DATA_INDEXER:%.*]] = shl i16 [[MSG]], [[IV_INDEXER]]
+; CHECK-NEXT:    [[CRC_INDEXER_CAST:%.*]] = zext i8 [[CRC2]] to i16
+; CHECK-NEXT:    [[CRC_DATA_INDEXER:%.*]] = xor i16 [[DATA_INDEXER]], [[CRC_INDEXER_CAST]]
+; CHECK-NEXT:    [[INDEXER_HI_LO_BYTE:%.*]] = trunc i16 [[CRC_DATA_INDEXER]] to i8
+; CHECK-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_HI_LO_BYTE]] to i64
+; CHECK-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i8, ptr @.crctable.10, i64 [[INDEXER_EXT]]
+; CHECK-NEXT:    [[TBL_LD]] = load i8, ptr [[TBL_PTRADD]], align 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
+; CHECK-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i8 [[IV]], 1
+; CHECK-NEXT:    br i1 [[EXIT_COND1]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i8 [ [[TBL_LD]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i8 [[CRC_NEXT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i8 [ %checksum, %entry ], [ %crc.next, %loop ]
+  %data = phi i16 [ %msg, %entry ], [ %data.next, %loop ]
+  %data.trunc = trunc i16 %data to i8
+  %xor.crc.data = xor i8 %crc, %data.trunc
+  %data.next = shl i16 %data, 1
+  %check.sb = icmp sge i8 %xor.crc.data, 0
+  %crc.shl = shl i8 %crc, 1
+  %crc.xor = xor i8 %crc.shl, 29
+  %crc.next = select i1 %check.sb, i8 %crc.shl, i8 %crc.xor
+  %iv.next = add nuw nsw i8 %iv, 1
+  %exit.cond = icmp samesign ult i8 %iv, 15
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i8 %crc.next
+}
+
+define i8 @crc8.be.tc8.data16.misalign(i16 %msg, i8 %checksum) {
+; CHECK-LABEL: define i8 @crc8.be.tc8.data16.misalign(
+; CHECK-SAME: i16 [[MSG:%.*]], i8 [[CHECKSUM:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[CRC2:%.*]] = phi i8 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[TBL_LD:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_BITS:%.*]] = shl i8 [[IV]], 3
+; CHECK-NEXT:    [[IV_INDEXER:%.*]] = zext i8 [[IV_BITS]] to i16
+; CHECK-NEXT:    [[DATA_INDEXER:%.*]] = shl i16 [[MSG]], [[IV_INDEXER]]
+; CHECK-NEXT:    [[CRC_INDEXER_CAST:%.*]] = zext i8 [[CRC2]] to i16
+; CHECK-NEXT:    [[CRC_DATA_INDEXER:%.*]] = xor i16 [[DATA_INDEXER]], [[CRC_INDEXER_CAST]]
+; CHECK-NEXT:    [[INDEXER_HI_LO_BYTE:%.*]] = trunc i16 [[CRC_DATA_INDEXER]] to i8
+; CHECK-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_HI_LO_BYTE]] to i64
+; CHECK-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i8, ptr @.crctable.11, i64 [[INDEXER_EXT]]
+; CHECK-NEXT:    [[TBL_LD]] = load i8, ptr [[TBL_PTRADD]], align 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
+; CHECK-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i8 [[IV]], 0
+; CHECK-NEXT:    br i1 [[EXIT_COND1]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i8 [ [[TBL_LD]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i8 [[CRC_NEXT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i8 [ %checksum, %entry ], [ %crc.next, %loop ]
+  %data = phi i16 [ %msg, %entry ], [ %data.next, %loop ]
+  %data.trunc = trunc i16 %data to i8
+  %xor.crc.data = xor i8 %crc, %data.trunc
+  %data.next = shl i16 %data, 1
+  %check.sb = icmp sge i8 %xor.crc.data, 0
+  %crc.shl = shl i8 %crc, 1
+  %crc.xor = xor i8 %crc.shl, 29
+  %crc.next = select i1 %check.sb, i8 %crc.shl, i8 %crc.xor
+  %iv.next = add nuw nsw i8 %iv, 1
+  %exit.cond = icmp samesign ult i8 %iv, 7
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i8 %crc.next
+}
+
 define i32 @crc32.le.tc8.data32(i32 %checksum, i32 %msg) {
 ; CHECK-LABEL: define i32 @crc32.le.tc8.data32(
 ; CHECK-SAME: i32 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) {
@@ -408,7 +599,7 @@ define i32 @crc32.le.tc8.data32(i32 %checksum, i32 %msg) {
 ; CHECK-NEXT:    [[CRC_DATA_INDEXER:%.*]] = xor i32 [[DATA_INDEXER]], [[CRC2]]
 ; CHECK-NEXT:    [[INDEXER_LO:%.*]] = trunc i32 [[CRC_DATA_INDEXER]] to i8
 ; CHECK-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_LO]] to i64
-; CHECK-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i32, ptr @.crctable.8, i64 [[INDEXER_EXT]]
+; CHECK-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i32, ptr @.crctable.12, i64 [[INDEXER_EXT]]
 ; CHECK-NEXT:    [[TBL_LD:%.*]] = load i32, ptr [[TBL_PTRADD]], align 4
 ; CHECK-NEXT:    [[CRC_LE_SHIFT:%.*]] = lshr i32 [[CRC2]], 8
 ; CHECK-NEXT:    [[CRC_NEXT3]] = xor i32 [[CRC_LE_SHIFT]], [[TBL_LD]]
@@ -439,6 +630,53 @@ loop:                                              ; preds = %loop, %entry
 
 exit:                                              ; preds = %loop
   ret i32 %crc.next
+}
+
+define i8 @crc8.le.tc8.data32(i8 %checksum, i32 %msg) {
+; CHECK-LABEL: define i8 @crc8.le.tc8.data32(
+; CHECK-SAME: i8 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[CRC2:%.*]] = phi i8 [ [[CHECKSUM]], %[[ENTRY]] ], [ [[TBL_LD:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_BITS:%.*]] = shl i8 [[IV]], 3
+; CHECK-NEXT:    [[IV_INDEXER:%.*]] = zext i8 [[IV_BITS]] to i32
+; CHECK-NEXT:    [[DATA_INDEXER:%.*]] = lshr i32 [[MSG]], [[IV_INDEXER]]
+; CHECK-NEXT:    [[CRC_INDEXER_CAST:%.*]] = zext i8 [[CRC2]] to i32
+; CHECK-NEXT:    [[CRC_DATA_INDEXER:%.*]] = xor i32 [[DATA_INDEXER]], [[CRC_INDEXER_CAST]]
+; CHECK-NEXT:    [[INDEXER_LO:%.*]] = trunc i32 [[CRC_DATA_INDEXER]] to i8
+; CHECK-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_LO]] to i64
+; CHECK-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i8, ptr @.crctable.13, i64 [[INDEXER_EXT]]
+; CHECK-NEXT:    [[TBL_LD]] = load i8, ptr [[TBL_PTRADD]], align 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
+; CHECK-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i8 [[IV]], 0
+; CHECK-NEXT:    br i1 [[EXIT_COND1]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i8 [ [[TBL_LD]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i8 [[CRC_NEXT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %crc = phi i8 [ %checksum, %entry ], [ %crc.next, %loop ]
+  %data = phi i32 [ %msg, %entry ], [ %data.next, %loop ]
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %data.trunc = trunc i32 %data to i8
+  %xor.crc.data = xor i8 %crc, %data.trunc
+  %sb.crc.data = and i8 %xor.crc.data, 1
+  %check.sb = icmp eq i8 %sb.crc.data, 0
+  %crc.lshr = lshr i8 %crc, 1
+  %crc.xor = xor i8 %crc.lshr, 59
+  %crc.next = select i1 %check.sb, i8 %crc.lshr, i8 %crc.xor
+  %iv.next = add nuw nsw i8 %iv, 1
+  %data.next = lshr i32 %data, 1
+  %exit.cond = icmp samesign ult i8 %iv, 7
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i8 %crc.next
 }
 
 define i32 @crc.disabled.optsize(i32 %checksum, i32 %msg) optsize {
