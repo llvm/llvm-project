@@ -1424,13 +1424,19 @@ void AsmPrinter::emitCFIInstruction(const MachineInstr &MI) {
     return;
 
   // If there is no "real" instruction following this CFI instruction, skip
-  // emitting it; it would be beyond the end of the function's FDE range.
+  // emitting it; it would be beyond the end of this block's FDE range. With
+  // basic-block-sections / function splitting a single function is emitted as
+  // several FDEs (one per section), so the relevant boundary is the end of the
+  // current section. isEndSection() is only populated when sections are
+  // assigned, so also fall back to the function's last block for the ordinary
+  // non-sectioned path.
   auto *MBB = MI.getParent();
   auto I = std::next(MI.getIterator());
   while (I != MBB->end() && I->isTransient())
     ++I;
   if (I == MBB->instr_end() &&
-      MBB->getReverseIterator() == MBB->getParent()->rbegin())
+      (MBB->isEndSection() ||
+       MBB->getReverseIterator() == MBB->getParent()->rbegin()))
     return;
 
   const std::vector<MCCFIInstruction> &Instrs = MF->getFrameInstructions();
