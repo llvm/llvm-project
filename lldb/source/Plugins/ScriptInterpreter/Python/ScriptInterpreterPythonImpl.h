@@ -305,16 +305,29 @@ public:
   public:
     enum OnEntry {
       AcquireLock = 0x0001,
-      InitSession = 0x0002,
-      InitGlobals = 0x0004,
-      NoSTDIN = 0x0008
+      InitStdio = 0x0002,
+      /// Set lldb.debugger. Mutually exclusive with `InitGlobals`.
+      InitDebugger = 0x0004,
+      /// Set lldb.{debugger,target,process,thread,frame}. Mutually exclusive
+      /// with `InitDebugger`.
+      InitGlobals = 0x0008,
+      NoSTDIN = 0x0010,
+
+      InitSession = InitStdio | InitDebugger,
+
+      InitSessionMask = InitStdio | InitDebugger | InitGlobals,
     };
 
     enum OnLeave {
       FreeLock = 0x0001,
       FreeAcquiredLock = 0x0002, // do not free the lock if we already held it
                                  // when calling constructor
-      TearDownSession = 0x0004
+      TearDownGlobals = 0x0004,
+      TearDownStdio = 0x0008,
+
+      TearDownSession = TearDownGlobals | TearDownStdio,
+
+      TearDownSessionMask = TearDownGlobals | TearDownStdio,
     };
 
     Locker(ScriptInterpreterPythonImpl *py_interpreter,
@@ -335,7 +348,7 @@ public:
 
     bool DoTearDownSession();
 
-    bool m_teardown_session;
+    uint16_t m_on_leave;
     ScriptInterpreterPythonImpl *m_python_interpreter;
     PyGILState_STATE m_GILState;
   };
@@ -368,7 +381,7 @@ public:
   bool EnterSession(uint16_t on_entry_flags, lldb::FileSP in, lldb::FileSP out,
                     lldb::FileSP err);
 
-  void LeaveSession();
+  void LeaveSession(uint16_t leave_flags);
 
   uint32_t IsExecutingPython() {
     std::lock_guard<std::mutex> guard(m_mutex);
@@ -457,7 +470,7 @@ public:
         ScriptInterpreterPythonImpl::Locker locker(
             m_python,
             ScriptInterpreterPythonImpl::Locker::AcquireLock |
-                ScriptInterpreterPythonImpl::Locker::InitSession |
+                ScriptInterpreterPythonImpl::Locker::InitStdio |
                 ScriptInterpreterPythonImpl::Locker::InitGlobals,
             ScriptInterpreterPythonImpl::Locker::FreeAcquiredLock |
                 ScriptInterpreterPythonImpl::Locker::TearDownSession);

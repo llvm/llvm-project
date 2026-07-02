@@ -322,14 +322,13 @@ void ScriptInterpreterPython::Terminate() {
 ScriptInterpreterPythonImpl::Locker::Locker(
     ScriptInterpreterPythonImpl *py_interpreter, uint16_t on_entry,
     uint16_t on_leave, FileSP in, FileSP out, FileSP err)
-    : ScriptInterpreterLocker(),
-      m_teardown_session((on_leave & TearDownSession) == TearDownSession),
+    : ScriptInterpreterLocker(), m_on_leave(on_leave),
       m_python_interpreter(py_interpreter) {
   DoAcquireLock();
-  if ((on_entry & InitSession) == InitSession) {
+  if (on_entry & InitSessionMask) {
     if (!DoInitSession(on_entry, in, out, err)) {
       // Don't teardown the session if we didn't init it.
-      m_teardown_session = false;
+      m_on_leave &= ~TearDownSessionMask;
     }
   }
 }
@@ -370,12 +369,12 @@ bool ScriptInterpreterPythonImpl::Locker::DoFreeLock() {
 bool ScriptInterpreterPythonImpl::Locker::DoTearDownSession() {
   if (!m_python_interpreter)
     return false;
-  m_python_interpreter->LeaveSession();
+  m_python_interpreter->LeaveSession(m_on_leave);
   return true;
 }
 
 ScriptInterpreterPythonImpl::Locker::~Locker() {
-  if (m_teardown_session)
+  if (m_on_leave & TearDownSessionMask)
     DoTearDownSession();
   DoFreeLock();
 }
@@ -550,21 +549,23 @@ ScriptInterpreterPythonImpl::CreateInstance(Debugger &debugger) {
   return std::make_shared<ScriptInterpreterPythonImpl>(debugger);
 }
 
-void ScriptInterpreterPythonImpl::LeaveSession() {
+void ScriptInterpreterPythonImpl::LeaveSession(uint16_t leave_flags) {
   Log *log = GetLog(LLDBLog::Script);
   if (log)
     log->PutCString("ScriptInterpreterPythonImpl::LeaveSession()");
 
-  // Unset the LLDB global variables.
-  RunSimpleString("lldb.debugger = None; lldb.target = None; lldb.process "
-                  "= None; lldb.thread = None; lldb.frame = None");
+  if (leave_flags & Locker::TearDownGlobals) {
+    // Unset the LLDB global variables.
+    RunSimpleString("lldb.debugger = None; lldb.target = None; lldb.process "
+                    "= None; lldb.thread = None; lldb.frame = None");
+  }
 
   // checking that we have a valid thread state - since we use our own
   // threading and locking in some (rare) cases during cleanup Python may end
   // up believing we have no thread state and PyImport_AddModule will crash if
   // that is the case - since that seems to only happen when destroying the
   // SBDebugger, we can make do without clearing up stdout and stderr
-  if (PyThreadState_GetDict()) {
+  if ((leave_flags & Locker::TearDownStdio) && PyThreadState_GetDict()) {
     PythonDictionary &sys_module_dict = GetSysModuleDictionary();
     if (sys_module_dict.IsValid()) {
       if (m_saved_stdin.IsValid()) {
@@ -639,6 +640,10 @@ bool ScriptInterpreterPythonImpl::EnterSession(uint16_t on_entry_flags,
 
   StreamString run_string;
 
+  assert((on_entry_flags & (Locker::InitGlobals | Locker::InitDebugger)) !=
+             (Locker::InitGlobals | Locker::InitDebugger) &&
+         "InitGlobals and InitDebugger are mutually exclusive");
+
   if (on_entry_flags & Locker::InitGlobals) {
     run_string.Printf("run_one_line (%s, 'lldb.debugger_unique_id = %" PRIu64,
                       m_dictionary_name.c_str(), m_debugger.GetID());
@@ -650,9 +655,10 @@ bool ScriptInterpreterPythonImpl::EnterSession(uint16_t on_entry_flags,
     run_string.PutCString("; lldb.thread = lldb.process.GetSelectedThread ()");
     run_string.PutCString("; lldb.frame = lldb.thread.GetSelectedFrame ()");
     run_string.PutCString("')");
-  } else {
-    // If we aren't initing the globals, we should still always set the
-    // debugger (since that is always unique.)
+  } else if (on_entry_flags & Locker::InitDebugger) {
+    // In non-interactive mode (e.g. type summaries), initialize the debugger
+    // only if requested. This should not be used in new extensions and is kept
+    // for backwards compatibility.
     run_string.Printf("run_one_line (%s, 'lldb.debugger_unique_id = %" PRIu64,
                       m_dictionary_name.c_str(), m_debugger.GetID());
     run_string.Printf(
@@ -661,11 +667,13 @@ bool ScriptInterpreterPythonImpl::EnterSession(uint16_t on_entry_flags,
     run_string.PutCString("')");
   }
 
-  RunSimpleString(run_string.GetData());
-  run_string.Clear();
+  if (!run_string.Empty()) {
+    RunSimpleString(run_string.GetData());
+    run_string.Clear();
+  }
 
   PythonDictionary &sys_module_dict = GetSysModuleDictionary();
-  if (sys_module_dict.IsValid()) {
+  if ((on_entry_flags & Locker::InitStdio) && sys_module_dict.IsValid()) {
     lldb::FileSP top_in_sp;
     lldb::LockableStreamFileSP top_out_sp, top_err_sp;
     if (!in_sp || !out_sp || !err_sp || !*in_sp || !*out_sp || !*err_sp)
@@ -835,8 +843,9 @@ bool ScriptInterpreterPythonImpl::ExecuteOneLine(
       // happen.
       Locker locker(
           this,
-          Locker::AcquireLock | Locker::InitSession |
-              (options.GetSetLLDBGlobals() ? Locker::InitGlobals : 0) |
+          Locker::AcquireLock | Locker::InitStdio |
+              (options.GetSetLLDBGlobals() ? Locker::InitGlobals
+                                           : Locker::InitDebugger) |
               ((result && result->GetInteractive()) ? 0 : Locker::NoSTDIN),
           Locker::FreeAcquiredLock | Locker::TearDownSession,
           io_redirect.GetInputFile(), io_redirect.GetOutputFile(),
@@ -962,8 +971,9 @@ bool ScriptInterpreterPythonImpl::ExecuteOneLineWithReturn(
   ScriptInterpreterIORedirect &io_redirect = **io_redirect_or_error;
 
   Locker locker(this,
-                Locker::AcquireLock | Locker::InitSession |
-                    (options.GetSetLLDBGlobals() ? Locker::InitGlobals : 0) |
+                Locker::AcquireLock | Locker::InitStdio |
+                    (options.GetSetLLDBGlobals() ? Locker::InitGlobals
+                                                 : Locker::InitDebugger) |
                     Locker::NoSTDIN,
                 Locker::FreeAcquiredLock | Locker::TearDownSession,
                 io_redirect.GetInputFile(), io_redirect.GetOutputFile(),
@@ -1086,8 +1096,9 @@ Status ScriptInterpreterPythonImpl::ExecuteMultipleLines(
   ScriptInterpreterIORedirect &io_redirect = **io_redirect_or_error;
 
   Locker locker(this,
-                Locker::AcquireLock | Locker::InitSession |
-                    (options.GetSetLLDBGlobals() ? Locker::InitGlobals : 0) |
+                Locker::AcquireLock | Locker::InitStdio |
+                    (options.GetSetLLDBGlobals() ? Locker::InitGlobals
+                                                 : Locker::InitDebugger) |
                     Locker::NoSTDIN,
                 Locker::FreeAcquiredLock | Locker::TearDownSession,
                 io_redirect.GetInputFile(), io_redirect.GetOutputFile(),
