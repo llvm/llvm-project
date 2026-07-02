@@ -23002,6 +23002,43 @@ static SDValue foldADCToCINC(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(AArch64ISD::CSINC, DL, VT, LHS, LHS, CC, Cond);
 }
 
+static SDValue performAddSubCarryCombine(SDNode *N, SelectionDAG &DAG) {
+  SDValue RHS = N->getOperand(1);
+  if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS)) {
+    int64_t Imm = C->getSExtValue();
+
+    // -1 is exempt because 0 gets the zero reg
+    if (Imm == -1 || (Imm < 0 and C->hasOneUse())) {
+      unsigned Opcode;
+      switch (N->getOpcode()) {
+      case AArch64ISD::ADC:
+        Opcode = AArch64ISD::SBC;
+        break;
+      case AArch64ISD::SBC:
+        Opcode = AArch64ISD::ADC;
+        break;
+      case AArch64ISD::ADCS:
+        Opcode = AArch64ISD::SBCS;
+        break;
+      case AArch64ISD::SBCS:
+        Opcode = AArch64ISD::ADCS;
+        break;
+      default:
+        llvm_unreachable("Unexpected opcode");
+      }
+
+      // The with-carry-in form matches bitwise not instead of the negation.
+      // Effectively, the inverse interpretation of the carry flag already
+      // accounts for part of the negation.
+      SDLoc DL(N);
+      RHS = DAG.getConstant(~Imm, DL, RHS.getValueType());
+      return DAG.getNode(Opcode, DL, N->getVTList(), N->getOperand(0), RHS,
+                         N->getOperand(2));
+    }
+  }
+  return SDValue();
+}
+
 static SDValue performBuildVectorCombine(SDNode *N,
                                          TargetLowering::DAGCombinerInfo &DCI,
                                          SelectionDAG &DAG) {
@@ -30285,17 +30322,25 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case AArch64ISD::ADC:
     if (auto R = foldOverflowCheck(N, DAG, /* IsAdd */ true))
       return R;
+    if (auto R = performAddSubCarryCombine(N, DAG))
+      return R;
     return foldADCToCINC(N, DAG);
   case AArch64ISD::SBC:
-    return foldOverflowCheck(N, DAG, /* IsAdd */ false);
+    if (auto R = foldOverflowCheck(N, DAG, /* IsAdd */ false))
+      return R;
+    return performAddSubCarryCombine(N, DAG);
   case AArch64ISD::ADCS:
     if (auto R = foldOverflowCheck(N, DAG, /* IsAdd */ true))
       return R;
-    return performFlagSettingCombine(N, DCI, AArch64ISD::ADC);
+    if (auto R = performFlagSettingCombine(N, DCI, AArch64ISD::ADC))
+      return R;
+    return performAddSubCarryCombine(N, DAG);
   case AArch64ISD::SBCS:
     if (auto R = foldOverflowCheck(N, DAG, /* IsAdd */ false))
       return R;
-    return performFlagSettingCombine(N, DCI, AArch64ISD::SBC);
+    if (auto R = performFlagSettingCombine(N, DCI, AArch64ISD::SBC))
+      return R;
+    return performAddSubCarryCombine(N, DAG);
   case AArch64ISD::ADDS:
     return performFlagSettingCombine(N, DCI, ISD::ADD);
   case AArch64ISD::SUBS:
