@@ -60,7 +60,6 @@ static bool canEmitGPUFusedDistSchedule(const CodeGenModule &CGM,
   // need more analysis for maximum profit.
   return CGM.getLangOpts().OpenMPIsTargetDevice && CGM.getTriple().isGPU() &&
          isOpenMPLoopBoundSharingDirective(DKind) &&
-         S.hasClausesOfKind<OMPReductionClause>() &&
          !S.getSingleClause<OMPDistScheduleClause>() &&
          !S.getSingleClause<OMPScheduleClause>() &&
          !S.getSingleClause<OMPOrderedClause>();
