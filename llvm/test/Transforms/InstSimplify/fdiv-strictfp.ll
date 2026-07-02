@@ -84,6 +84,33 @@ define <2 x float> @fmul_fdiv_common_operand_commute_vec(<2 x float> %x, <2 x fl
   ret <2 x float> %d
 }
 
+define float @fmul_fdiv_unity(float %x) #0 {
+; CHECK-LABEL: @fmul_fdiv_unity(
+; CHECK-NEXT:    ret float [[X:%.*]]
+;
+  %fdiv = call float @llvm.experimental.constrained.fdiv.f32(float %x, float 1.0, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  ret float %fdiv
+}
+
+define float @fmul_fdiv_unity_signaling(float %x) #1 {
+; CHECK-LABEL: @fmul_fdiv_unity_signaling(
+; CHECK-NEXT:    [[FDIV:%.*]] = call float @llvm.experimental.constrained.fdiv.f32(float [[X:%.*]], float 1.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+; CHECK-NEXT:    ret float [[FDIV]]
+;
+  %fdiv = call float @llvm.experimental.constrained.fdiv.f32(float %x, float 1.0, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  ret float %fdiv
+}
+
+define float @fmul_fdiv_unity_signaling_nnan(float %x) #1 {
+; CHECK-LABEL: @fmul_fdiv_unity_signaling_nnan(
+; CHECK-NEXT:    ret float [[X:%.*]]
+;
+  %fdiv = call nnan float @llvm.experimental.constrained.fdiv.f32(float %x, float 1.0, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+  ret float %fdiv
+}
+
+
+
 declare double @llvm.experimental.constrained.fmul.f64(double, double, metadata, metadata) #0
 declare <2 x float> @llvm.experimental.constrained.fmul.v2f32(<2 x float>, <2 x float>, metadata, metadata) #0
 
@@ -94,4 +121,5 @@ declare <2 x float> @llvm.experimental.constrained.fdiv.v2f32(<2 x float>, <2 x 
 declare float @llvm.experimental.constrained.frem.f32(float, float, metadata, metadata) #0
 
 attributes #0 = { strictfp }
+attributes #1 = { signaling_nans strictfp }
 
