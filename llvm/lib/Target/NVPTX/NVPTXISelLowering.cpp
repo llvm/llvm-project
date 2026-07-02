@@ -1686,10 +1686,14 @@ SDValue NVPTXTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
                   {Chain, DAG.getZExtOrTrunc(Size, DL, LocalVT),
                    DAG.getTargetConstant(Align, DL, MVT::i32)});
 
-  SDValue ASC = DAG.getAddrSpaceCast(
-      DL, Op.getValueType(), Alloc, ADDRESS_SPACE_LOCAL, ADDRESS_SPACE_GENERIC);
+  // Keep the result in the alloca's address space: return the local pointer as
+  // is when that is requested (escapes are cast by the caller), else cast it.
+  SDValue Ptr = Alloc;
+  if (Op.getValueType() != LocalVT)
+    Ptr = DAG.getAddrSpaceCast(DL, Op.getValueType(), Alloc,
+                               ADDRESS_SPACE_LOCAL, ADDRESS_SPACE_GENERIC);
 
-  return DAG.getMergeValues({ASC, SDValue(Alloc.getNode(), 1)}, DL);
+  return DAG.getMergeValues({Ptr, SDValue(Alloc.getNode(), 1)}, DL);
 }
 
 SDValue NVPTXTargetLowering::LowerSTACKRESTORE(SDValue Op,

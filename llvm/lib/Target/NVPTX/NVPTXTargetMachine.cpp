@@ -372,6 +372,9 @@ void NVPTXPassConfig::addIRPasses() {
   if (getOptLevel() != CodeGenOptLevel::None) {
     addAddressSpaceInferencePasses();
     addStraightLineScalarOptimizationPasses();
+  } else {
+    // Required for correct stack lowering
+    addPass(createNVPTXLowerAllocaPass());
   }
 
   addPass(createAtomicExpandLegacyPass());
