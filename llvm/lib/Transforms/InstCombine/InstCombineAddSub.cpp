@@ -2484,6 +2484,21 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
           X, ConstantFoldBinaryInstruction(Instruction::Xor, C1, C2));
   }
 
+  // (C - (X | C)) --> (X & ~C)
+  {
+    const APInt *C1, *C2;
+    Value *X;
+    if (!I.hasNoSignedWrap() && !I.hasNoUnsignedWrap() &&
+        match(&I, m_Sub(m_APInt(C1), m_c_Or(m_Value(X), m_APInt(C2)))) &&
+        *C1 == *C2) {
+      APInt NotC = ~(*C1);
+      if (NotC.isZero() || NotC.isSignMask()) {
+        return BinaryOperator::CreateAnd(X,
+                                         ConstantInt::get(I.getType(), NotC));
+      }
+    }
+  }
+
   // Reassociate sub/add sequences to create more add instructions and
   // reduce dependency chains:
   // ((X - Y) + Z) - Op1 --> (X + Z) - (Y + Op1)
