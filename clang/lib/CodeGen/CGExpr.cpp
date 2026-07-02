@@ -45,6 +45,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
@@ -3048,7 +3049,78 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
   }
 
   assert(Src.isScalar() && "Can't emit an agg store with this method");
-  EmitStoreOfScalar(Src.getScalarVal(), Dst, isInit);
+  llvm::Value *SV = Src.getScalarVal();
+  if (Dst.isSimple() && !AMDGPUPinnedLocals.empty())
+    SV = emitAMDGPUPinnedValue(SV, Dst.getPointer(*this));
+  EmitStoreOfScalar(SV, Dst, isInit);
+}
+
+llvm::Value *CodeGenFunction::emitAMDGPUPinnedValue(llvm::Value *V,
+                                                    llvm::Value *Addr) {
+  auto It = AMDGPUPinnedLocals.find(Addr);
+  if (It == AMDGPUPinnedLocals.end())
+    return V;
+  bool IsAGPR = It->second.first;
+  unsigned Reg = It->second.second;
+  llvm::Type *Ty = V->getType();
+  unsigned Bits = CGM.getDataLayout().getTypeSizeInBits(Ty);
+  if (Bits == 0 || (Bits % 32) != 0)
+    return V; // only whole-dword values are pinnable
+  unsigned Lanes = Bits / 32;
+
+  llvm::Intrinsic::ID IID =
+      IsAGPR ? llvm::Intrinsic::amdgcn_pin_agpr : llvm::Intrinsic::amdgcn_pin_vgpr;
+  auto *F32 = llvm::Type::getFloatTy(getLLVMContext());
+
+  // Pin a value whose type is exactly W dwords (W in {1,4,8,16}).
+  auto pinExact = [&](llvm::Value *Chunk, unsigned RegNo) -> llvm::Value * {
+    llvm::Function *Fn = CGM.getIntrinsic(IID, {Chunk->getType()});
+    return Builder.CreateCall(
+        Fn, {Chunk, llvm::ConstantInt::get(Int32Ty, RegNo)});
+  };
+
+  // Single supported-width value: bitcast to <Lanes x float> and pin directly.
+  auto pinWidth = [&](llvm::Value *In, unsigned RegNo,
+                      unsigned W) -> llvm::Value * {
+    llvm::Type *VecTy =
+        W == 1 ? (llvm::Type *)F32 : llvm::FixedVectorType::get(F32, W);
+    llvm::Value *C = Builder.CreateBitCast(In, VecTy);
+    C = pinExact(C, RegNo);
+    return C;
+  };
+
+  // Value fits a single pin (<=16 dwords: 1/4/8/16)?
+  auto roundWidth = [](unsigned L) -> unsigned {
+    if (L == 1) return 1;
+    if (L <= 4) return 4;
+    if (L <= 8) return 8;
+    return 16;
+  };
+
+  if (Lanes <= 16 && (Lanes == 1 || Lanes == 4 || Lanes == 8 || Lanes == 16)) {
+    llvm::Value *Pinned = pinWidth(V, Reg, Lanes);
+    return Builder.CreateBitCast(Pinned, Ty);
+  }
+
+  // Wide value: chunk into 16-dword pieces (register-resident via
+  // llvm.vector.{extract,insert}), pinning each to consecutive registers.
+  auto *VecF = llvm::FixedVectorType::get(F32, Lanes);
+  llvm::Value *Vec = Builder.CreateBitCast(V, VecF);
+  auto *V16 = llvm::FixedVectorType::get(F32, 16);
+  unsigned Off = 0;
+  while (Off < Lanes) {
+    unsigned W = Lanes - Off >= 16 ? 16 : roundWidth(Lanes - Off);
+    if (Off + W > Lanes)
+      break; // leave a tiny non-power tail unpinned
+    llvm::Value *Idx = llvm::ConstantInt::get(Int64Ty, Off);
+    llvm::Type *SubTy =
+        W == 16 ? (llvm::Type *)V16 : llvm::FixedVectorType::get(F32, W);
+    llvm::Value *Sub = Builder.CreateExtractVector(SubTy, Vec, Idx);
+    Sub = pinExact(Sub, Reg + Off);
+    Vec = Builder.CreateInsertVector(VecF, Vec, Sub, Idx);
+    Off += W;
+  }
+  return Builder.CreateBitCast(Vec, Ty);
 }
 
 void CodeGenFunction::EmitStoreThroughBitfieldLValue(RValue Src, LValue Dst,

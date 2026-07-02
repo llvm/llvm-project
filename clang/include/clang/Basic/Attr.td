@@ -2525,6 +2525,20 @@ def AMDGPUNumVGPR : InheritableAttr {
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
 }
 
+def AMDGPUPinVGPR : InheritableAttr {
+  let Spellings = [Clang<"amdgpu_pin_vgpr", 0>];
+  let Args = [ExprArgument<"Reg">];
+  let Documentation = [Undocumented];
+  let Subjects = SubjectList<[Var]>;
+}
+
+def AMDGPUPinAGPR : InheritableAttr {
+  let Spellings = [Clang<"amdgpu_pin_agpr", 0>];
+  let Args = [ExprArgument<"Reg">];
+  let Documentation = [Undocumented];
+  let Subjects = SubjectList<[Var]>;
+}
+
 def AMDGPUMaxNumWorkGroups : InheritableAttr {
   let Spellings = [Clang<"amdgpu_max_num_work_groups", 0>];
   let Args = [ExprArgument<"MaxNumWorkGroupsX">, ExprArgument<"MaxNumWorkGroupsY", 1>, ExprArgument<"MaxNumWorkGroupsZ", 1>];
