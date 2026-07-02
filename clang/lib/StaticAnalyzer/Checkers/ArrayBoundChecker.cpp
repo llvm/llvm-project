@@ -172,13 +172,13 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
   std::string RN = bounds::getRegionName(Space, Reg);
 
   switch (Res.getKind()) {
-  case bounds::CheckResult::Kind::CorruptedState:
-    // The current state is corrupted (due to bad modeling of casts we assumed
-    // that an unsigned value is negative), so we should sink the execution
-    // path.
-    C.addSink();
+  case bounds::CheckResult::Kind::Invalid: {
+    bounds::SizeUnit SU =
+        bounds::SizeUnit::forSVal(Location, C.getASTContext());
+    bounds::Messages Msgs = Res.getNonTaintMsgs(RN, SU);
+    reportOOB(C, Res.getState(), Msgs, Res.getInteresting());
     return;
-
+  }
   case bounds::CheckResult::Kind::Valid: {
     const NoteTag *Tag = nullptr;
     if (Res.hasAssumption()) {
@@ -206,13 +206,12 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
               /*IsTaintBug=*/true);
     return;
   }
-  case bounds::CheckResult::Kind::Invalid: {
-    bounds::SizeUnit SU =
-        bounds::SizeUnit::forSVal(Location, C.getASTContext());
-    bounds::Messages Msgs = Res.getNonTaintMsgs(RN, SU);
-    reportOOB(C, Res.getState(), Msgs, Res.getInteresting());
+  case bounds::CheckResult::Kind::CorruptedState:
+    // The current state is corrupted (due to bad modeling of casts we assumed
+    // that an unsigned value is negative), so we should sink the execution
+    // path.
+    C.addSink();
     return;
-  }
   }
 
   llvm_unreachable("all CheckResult values are covered in switch");
