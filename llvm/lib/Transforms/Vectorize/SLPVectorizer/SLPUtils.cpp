@@ -9,16 +9,16 @@
 #include "SLPUtils.h"
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/raw_ostream.h"
+
+#include <type_traits>
 
 using namespace llvm;
-using namespace llvm::PatternMatch;
 
 namespace llvm::slpvectorizer {
 
@@ -129,8 +129,8 @@ std::optional<unsigned> getExtractIndex(const Instruction *E) {
     auto *CI = dyn_cast<ConstantInt>(E->getOperand(1));
     if (!CI)
       return std::nullopt;
-    // Check if the index is out of bound  - we can get the source vector from
-    // operand 0
+    // Check if the index is out of bound. We can get the source vector from
+    // operand 0.
     unsigned Idx = CI->getZExtValue();
     auto *EE = cast<ExtractElementInst>(E);
     const unsigned VF = getNumElements(EE->getVectorOperandType());
@@ -148,5 +148,35 @@ bool allSameType(ArrayRef<Value *> VL) {
   Type *Ty = VL.consume_front()->getType();
   return all_of(VL, [&](Value *V) { return V->getType() == Ty; });
 }
+
+template <typename T>
+std::optional<unsigned> getInsertExtractIndex(const Value *Inst,
+                                              unsigned Offset) {
+  static_assert(std::is_same_v<T, InsertElementInst> ||
+                    std::is_same_v<T, ExtractElementInst>,
+                "unsupported T");
+  int Index = Offset;
+  if (const auto *IE = dyn_cast<T>(Inst)) {
+    const auto *VT = dyn_cast<FixedVectorType>(IE->getType());
+    if (!VT)
+      return std::nullopt;
+    const auto *CI = dyn_cast<ConstantInt>(IE->getOperand(2));
+    if (!CI)
+      return std::nullopt;
+    if (CI->getValue().uge(VT->getNumElements()))
+      return std::nullopt;
+    Index *= VT->getNumElements();
+    Index += CI->getZExtValue();
+    return Index;
+  }
+  return std::nullopt;
+}
+
+// Only these two specializations are used; instantiate them here so the
+// definition can stay out of the header.
+template std::optional<unsigned>
+getInsertExtractIndex<InsertElementInst>(const Value *, unsigned);
+template std::optional<unsigned>
+getInsertExtractIndex<ExtractElementInst>(const Value *, unsigned);
 
 } // namespace llvm::slpvectorizer

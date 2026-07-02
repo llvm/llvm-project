@@ -17,13 +17,8 @@
 #define LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPUTILS_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/Value.h"
 
 #include <optional>
-#include <type_traits>
 
 namespace llvm {
 class Instruction;
@@ -55,8 +50,7 @@ unsigned getPartNumElems(unsigned Size, unsigned NumParts);
 /// \p PartNumElems and current register (part) \p Part.
 unsigned getNumElems(unsigned Size, unsigned PartNumElems, unsigned Part);
 
-/// \returns true if all of the instructions in \p VL are in the same block
-/// or false otherwise.
+/// \returns True if all of the instructions in \p VL are in the same block.
 bool allSameBlock(ArrayRef<Value *> VL);
 
 /// \returns True if all of the values in \p VL are constants (but not
@@ -67,7 +61,7 @@ bool allConstant(ArrayRef<Value *> VL);
 /// are UndefValue.
 bool isSplat(ArrayRef<Value *> VL);
 
-/// \returns true if all of the values in \p VL use the same opcode.
+/// \returns True if all of the values in \p VL use the same opcode.
 /// For comparison instructions, also checks if predicates match.
 /// PoisonValues are considered matching. Interchangeable instructions are
 /// not considered.
@@ -76,33 +70,15 @@ bool allSameOpcode(ArrayRef<Value *> VL);
 /// \returns True if Extract{Value,Element} instruction extracts element Idx.
 std::optional<unsigned> getExtractIndex(const Instruction *E);
 
-/// \returns true iff every value in \p VL has the same Type as the first.
+/// \returns True iff every value in \p VL has the same Type as the first.
 bool allSameType(ArrayRef<Value *> VL);
 
 /// \returns inserting or extracting index of InsertElement / ExtractElement
-/// instruction, using \p Offset as base offset for index.
+/// instruction, using \p Offset as base offset for index. Only instantiated
+/// for InsertElementInst and ExtractElementInst (see SLPUtils.cpp).
 template <typename T>
 std::optional<unsigned> getInsertExtractIndex(const Value *Inst,
-                                              unsigned Offset) {
-  static_assert(std::is_same_v<T, InsertElementInst> ||
-                    std::is_same_v<T, ExtractElementInst>,
-                "unsupported T");
-  int Index = Offset;
-  if (const auto *IE = dyn_cast<T>(Inst)) {
-    const auto *VT = dyn_cast<FixedVectorType>(IE->getType());
-    if (!VT)
-      return std::nullopt;
-    const auto *CI = dyn_cast<ConstantInt>(IE->getOperand(2));
-    if (!CI)
-      return std::nullopt;
-    if (CI->getValue().uge(VT->getNumElements()))
-      return std::nullopt;
-    Index *= VT->getNumElements();
-    Index += CI->getZExtValue();
-    return Index;
-  }
-  return std::nullopt;
-}
+                                              unsigned Offset);
 
 } // namespace llvm::slpvectorizer
 
