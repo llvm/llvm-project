@@ -655,6 +655,11 @@ Changes in existing checks
   positives on functions returning specializations of class templates marked
   ``[[nodiscard]]``.
 
+- Improved :doc:`modernize-use-override
+  <clang-tidy/checks/modernize/use-override>` check by adding the
+  `AllowVirtualAndOverride` option to allow keeping ``virtual`` on methods
+  that are also marked ``override``.
+
 - Improved :doc:`modernize-use-ranges
   <clang-tidy/checks/modernize/use-ranges>` check:
 
