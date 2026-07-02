@@ -175,7 +175,7 @@ define void @f3(i1 %c) {
 ; CHECK-NEXT:    %loop.iv = phi i16 [ 0, %entry ], [ %loop.iv.inc, %loop ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,128) S: [0,128) Exits: 127 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv = phi i16 [ %start, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {%start,+,%step}<nuw><%loop> U: [0,-892) S: [0,-892) Exits: ((127 * %step)<nuw> + %start) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%start,+,%step}<%loop> U: [0,-892) S: [0,-892) Exits: ((127 * %step)<nuw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.zext = zext i16 %iv to i64
 ; CHECK-NEXT:    --> {(zext i16 %start to i64),+,(zext i16 %step to i64)}<nuw><%loop> U: [0,64644) S: [0,64644) Exits: ((zext i16 %start to i64) + (127 * (zext i16 %step to i64))<nuw><nsw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i16 %iv, %step
@@ -358,9 +358,9 @@ define void @f7(i1 %c) {
 ; CHECK-NEXT:    %iv.next = add i32 %iv, %step
 ; CHECK-NEXT:    --> {(%step + %start),+,%step}<nw><%loop> U: [-256,256) S: [-256,256) Exits: ((128 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.trunc.plus.one = add i16 %iv.trunc, 1
-; CHECK-NEXT:    --> {(1 + (trunc i32 %start to i16))<nuw><nsw>,+,(trunc i32 %step to i16)}<%loop> U: [1,129) S: [1,129) Exits: (1 + (trunc i32 %start to i16) + (127 * (trunc i32 %step to i16))<nsw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(1 + (trunc i32 %start to i16))<nuw><nsw>,+,(trunc i32 %step to i16)}<nsw><%loop> U: [1,129) S: [1,129) Exits: (1 + (trunc i32 %start to i16) + (127 * (trunc i32 %step to i16))<nsw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.trunc.plus.two = add i16 %iv.trunc, 2
-; CHECK-NEXT:    --> {(2 + (trunc i32 %start to i16))<nuw><nsw>,+,(trunc i32 %step to i16)}<%loop> U: [2,130) S: [2,130) Exits: (2 + (trunc i32 %start to i16) + (127 * (trunc i32 %step to i16))<nsw>) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(2 + (trunc i32 %start to i16))<nuw><nsw>,+,(trunc i32 %step to i16)}<nsw><%loop> U: [2,130) S: [2,130) Exits: (2 + (trunc i32 %start to i16) + (127 * (trunc i32 %step to i16))<nsw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %loop.iv.inc = add i16 %loop.iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,129) S: [1,129) Exits: 128 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @f7

@@ -4,6 +4,8 @@ merge_yaml_files:
 header: custom.h
 standards:
   - acme
+public_includes:
+  - acme/anvil.h
 
 functions:
   - name: runner

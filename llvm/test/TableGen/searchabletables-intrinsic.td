@@ -1,5 +1,4 @@
 // RUN: llvm-tblgen -gen-searchable-tables -I %p/../../include -DTEST_INTRINSICS_SUPPRESS_DEFS %s | FileCheck %s
-// XFAIL: vg_leak
 
 include "llvm/TableGen/SearchableTable.td"
 include "llvm/Target/Target.td"

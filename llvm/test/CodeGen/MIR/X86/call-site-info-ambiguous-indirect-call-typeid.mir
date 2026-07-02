@@ -16,8 +16,8 @@
   }
   
   !0 = !{!1, !2}
-  !1 = !{i64 0, !"callee_type0.generalized"}
-  !2 = !{i64 0, !"callee_type2.generalized"}
+  !1 = !{!"callee_type0.generalized"}
+  !2 = !{!"callee_type2.generalized"}
 ...
 ---
 name:            ambiguous_caller

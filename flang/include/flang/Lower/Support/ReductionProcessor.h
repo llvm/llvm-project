@@ -96,6 +96,16 @@ public:
                                       const fir::KindMapping &kindMap,
                                       mlir::Type ty, bool isByRef);
 
+  /// Returns the module-unique name of the omp.declare_reduction op that
+  /// materializes a user-defined reduction (named or operator). The name is
+  /// derived from the reduction symbol's ultimate name, qualified with its
+  /// owning scope via AbstractConverter::mangleName, so that reductions with
+  /// the same spelling in different modules do not collide. The directive and
+  /// clause lowering must both use this to agree on the op's symbol name.
+  static std::string
+  getScopedUserReductionName(AbstractConverter &converter,
+                             const semantics::Symbol &reductionSymbol);
+
   /// This function returns the identity value of the operator \p
   /// reductionOpName. For example:
   ///    0 + x = x,

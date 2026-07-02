@@ -1,5 +1,4 @@
 // RUN: llvm-tblgen %s | FileCheck %s
-// XFAIL: vg_leak
 
 // CHECK-LABEL: def FALSE {
 //       CHECK:   int Value = 0;

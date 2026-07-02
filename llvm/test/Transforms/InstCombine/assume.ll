@@ -86,6 +86,8 @@ define void @align_with_offset_less_than_align(ptr %ptr) {
 ; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[INT]], 3
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[ADD]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[AND]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    call void @use_i64(i64 [[AND]])
 ; CHECK-NEXT:    ret void
 ;
@@ -104,8 +106,9 @@ define void @align_with_offset_greater_than_align(ptr %ptr) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[INT]], 6
-; CHECK-NEXT:    [[AND:%.*]] = and i64 [[ADD]], 6
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 2) ]
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[ADD]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[AND]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    call void @use_i64(i64 [[AND]])
 ; CHECK-NEXT:    ret void
 ;
@@ -199,6 +202,16 @@ define void @align_on_gep_keeping_alignment(ptr %ptr, i64 %offset) {
   ret void
 }
 
+define void @align_on_gep_keeping_alignment_variable_offset(ptr %ptr, i64 %offset, i64 %offset2) {
+; CHECK-LABEL: @align_on_gep_keeping_alignment_variable_offset(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 8, i64 [[OFFSET2:%.*]]) ]
+; CHECK-NEXT:    ret void
+;
+  %ptr2 = getelementptr [8 x i8], ptr %ptr, i64 %offset
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr2, i64 8, i64 %offset2) ]
+  ret void
+}
+
 define void @align_on_gep_not_keeping_alignment(ptr %ptr, i64 %offset) {
 ; CHECK-LABEL: @align_on_gep_not_keeping_alignment(
 ; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr [4 x i8], ptr [[PTR:%.*]], i64 [[OFFSET:%.*]]
@@ -239,6 +252,22 @@ define void @non_power_of_two_align(ptr %ptr) {
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 3) ]
+  ret void
+}
+
+define void @non_power_of_two_align_variable_offset(ptr %ptr, i64 %i) {
+; CHECK-LABEL: @non_power_of_two_align_variable_offset(
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 3, i64 %i) ]
+  ret void
+}
+
+define void @align_1_variable_offset(ptr %ptr, i64 %i) {
+; CHECK-LABEL: @align_1_variable_offset(
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 1, i64 %i) ]
   ret void
 }
 

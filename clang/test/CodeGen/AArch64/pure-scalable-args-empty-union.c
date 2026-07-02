@@ -19,7 +19,7 @@ void f0(S0 *p) {
   use0(*p);
 }
 // CHECK-C:   declare void @use0(<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>)
-// CHECK-CXX: declare void @use0(ptr noundef dead_on_return)
+// CHECK-CXX: declare void @use0(ptr noundef align 16 dead_on_return)
 
 #ifdef __cplusplus
 

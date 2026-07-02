@@ -22,7 +22,7 @@ using namespace llvm;
 #define DEBUG_TYPE "bpf-selectiondag-info"
 
 static cl::opt<unsigned> BPFMaxStoresPerMemFunc(
-    "bpf-max-stores-per-memfunc", cl::Hidden, cl::init(128),
+    "bpf-max-stores-per-memfunc", cl::Hidden, cl::init(192),
     cl::desc("Set the maximum number of stores for inlined BPF memory "
              "intrinsics"));
 

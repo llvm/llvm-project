@@ -627,7 +627,6 @@ public:
 
 protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
-    CommandObject::CommandMap::iterator pos;
     CommandObject *cmd_obj;
 
     if (args.empty()) {
@@ -702,8 +701,6 @@ public:
 
 protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
-    CommandObject::CommandMap::iterator pos;
-
     if (args.empty()) {
       result.AppendErrorWithFormat("must call '%s' with one or more valid user "
                                    "defined regular expression command names",

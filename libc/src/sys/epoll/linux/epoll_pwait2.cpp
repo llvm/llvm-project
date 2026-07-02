@@ -37,7 +37,7 @@ LLVM_LIBC_FUNCTION(int, epoll_pwait2,
     return -1;
   }
 
-  MSAN_UNPOISON(events, ret * sizeof(struct epoll_event));
+  LIBC_MSAN_UNPOISON(events, ret * sizeof(struct epoll_event));
 
   return ret;
 }

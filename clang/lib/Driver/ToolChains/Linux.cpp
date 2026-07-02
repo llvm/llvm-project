@@ -484,10 +484,10 @@ static void setPAuthABIInTriple(const Driver &D, const ArgList &Args,
 }
 
 std::string Linux::ComputeEffectiveClangTriple(const llvm::opt::ArgList &Args,
-                                               llvm::StringRef BoundArch,
+                                               BoundArch BA,
                                                types::ID InputType) const {
   std::string TripleString =
-      Generic_ELF::ComputeEffectiveClangTriple(Args, BoundArch, InputType);
+      Generic_ELF::ComputeEffectiveClangTriple(Args, BA, InputType);
   if (getTriple().isAArch64()) {
     llvm::Triple Triple(TripleString);
     setPAuthABIInTriple(getDriver(), Args, Triple);
@@ -552,12 +552,12 @@ static void handlePAuthABI(const Driver &D, const ArgList &DriverArgs,
 
 void Linux::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                                   llvm::opt::ArgStringList &CC1Args,
-                                  StringRef BoundArch,
+                                  BoundArch BA,
                                   Action::OffloadKind DeviceOffloadKind) const {
   llvm::Triple Triple(ComputeEffectiveClangTriple(DriverArgs));
   if (Triple.isAArch64() && Triple.getEnvironment() == llvm::Triple::PAuthTest)
     handlePAuthABI(getDriver(), DriverArgs, CC1Args);
-  Generic_ELF::addClangTargetOptions(DriverArgs, CC1Args, BoundArch,
+  Generic_ELF::addClangTargetOptions(DriverArgs, CC1Args, BA,
                                      DeviceOffloadKind);
 }
 
@@ -609,6 +609,14 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
     if (Arch == llvm::Triple::ppc &&
         Triple.getSubArch() == llvm::Triple::PPCSubArch_spe)
       ArchName = "powerpc-sf";
+    if (Triple.isRISCV()) {
+      StringRef ABIName = tools::riscv::getRISCVABI(Args, Triple);
+      if (ABIName == "ilp32" || ABIName == "lp64") {
+        ArchName += "-sf";
+      } else if (ABIName == "ilp32f" || ABIName == "lp64f") {
+        ArchName += "-sp";
+      }
+    }
 
     return "/lib/ld-musl-" + ArchName + ".so.1";
   }
@@ -958,7 +966,7 @@ bool Linux::IsMathErrnoDefault() const {
 }
 
 SanitizerMask
-Linux::getSupportedSanitizers(StringRef BoundArch,
+Linux::getSupportedSanitizers(BoundArch BA,
                               Action::OffloadKind DeviceOffloadKind) const {
   const bool IsX86 = getTriple().getArch() == llvm::Triple::x86;
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
@@ -977,8 +985,7 @@ Linux::getSupportedSanitizers(StringRef BoundArch,
   const bool IsSystemZ = getTriple().getArch() == llvm::Triple::systemz;
   const bool IsHexagon = getTriple().getArch() == llvm::Triple::hexagon;
   const bool IsAndroid = getTriple().isAndroid();
-  SanitizerMask Res =
-      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
+  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
@@ -1006,6 +1013,8 @@ Linux::getSupportedSanitizers(StringRef BoundArch,
   if (IsX86_64 || IsAArch64 || IsRISCV64) {
     Res |= SanitizerKind::HWAddress;
   }
+  if (IsHexagon)
+    Res |= SanitizerKind::ShadowCallStack;
   if (IsX86_64 || IsAArch64) {
     Res |= SanitizerKind::KernelHWAddress;
   }

@@ -25,7 +25,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
     %map_parent = omp.map.info var_ptr(%s : !llvm.ptr, !llvm.struct<"S", (i32, i32)>)
         map_clauses(tofrom) capture(ByRef) mapper(@mapper) members(%map_field0 : [0] : !llvm.ptr) -> !llvm.ptr
         {name = "s"}
-    omp.target map_entries(%map_parent -> %arg0, %map_field0 -> %arg1 : !llvm.ptr, !llvm.ptr) {
+    omp.target kernel_type(generic) map_entries(%map_parent -> %arg0, %map_field0 -> %arg1 : !llvm.ptr, !llvm.ptr) {
       omp.terminator
     }
     llvm.return

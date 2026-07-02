@@ -505,11 +505,11 @@ define void @diff_check_via_i32_ptrarith(ptr %origin, ptr %dst, ptr %base, i32 %
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[OP]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP_PH:.*]], [[EXIT:label %.*]]
 ; CHECK:       [[LOOP_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[RHS]] to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[D]], [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[LHS]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[RHS]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[D]], [[TMP3]]
+; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP14]], -1
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP4]] to i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nuw nsw i64 [[TMP5]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP6]], 4

@@ -46,14 +46,14 @@ define void @hoist_invariant_load(ptr %invariant_ptr, i64 %num_elements, ptr %ar
 ; CHECK-NEXT:    [[TMP13:%.*]] = load <5 x double>, ptr [[TMP9]], align 8, !alias.scope [[META3]], !noalias [[META0]]
 ; CHECK-NEXT:    [[STRIDED_VEC5:%.*]] = shufflevector <5 x double> [[TMP13]], <5 x double> poison, <2 x i32> <i32 0, i32 4>
 ; CHECK-NEXT:    [[TMP14:%.*]] = fadd <2 x double> [[BROADCAST_SPLAT]], [[STRIDED_VEC]]
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x double> [[TMP14]], i64 0
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x double> [[TMP14]], i64 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = fadd <2 x double> [[BROADCAST_SPLAT]], [[STRIDED_VEC5]]
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <2 x double> [[TMP17]], i64 0
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x double> [[TMP17]], i64 1
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x double> [[TMP14]], i64 0
 ; CHECK-NEXT:    store double [[TMP15]], ptr [[TMP5]], align 8, !alias.scope [[META3]], !noalias [[META0]]
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x double> [[TMP14]], i64 1
 ; CHECK-NEXT:    store double [[TMP16]], ptr [[TMP7]], align 8, !alias.scope [[META3]], !noalias [[META0]]
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <2 x double> [[TMP17]], i64 0
 ; CHECK-NEXT:    store double [[TMP18]], ptr [[TMP9]], align 8, !alias.scope [[META3]], !noalias [[META0]]
+; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x double> [[TMP17]], i64 1
 ; CHECK-NEXT:    store double [[TMP19]], ptr [[TMP11]], align 8, !alias.scope [[META3]], !noalias [[META0]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[I2]], 4
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

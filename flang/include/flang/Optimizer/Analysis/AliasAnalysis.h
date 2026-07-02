@@ -359,6 +359,16 @@ struct AliasAnalysis {
   /// POINTER object or a raw fir::PointerType.
   static bool isPointerReference(mlir::Type ty);
 
+  /// Return true if the function containing \p v has more than one
+  /// fir.dummy_scope op (e.g. the function body has been inlined into).
+  /// Scope-aware disambiguation in alias(lhs, rhs) is only meaningful in
+  /// that case; skipping it for functions with just one scope avoids the
+  /// getDeclarationScope/DominanceInfo overhead in getSource.
+  /// Both true and false results are cached in multiScopeCache so the
+  /// function walk is paid at most once per funcOp per AliasAnalysis
+  /// instance.
+  bool functionHasMultipleScopes(mlir::Value v);
+
 private:
   /// Build an intermediate Source rooted at the declare captured by the
   /// snapshot. Reuses getSource(declValue) for the SourceKind / origin
@@ -431,6 +441,11 @@ private:
       domInfoCache;
   llvm::DenseMap<mlir::Operation *, llvm::SmallVector<mlir::Operation *, 16>>
       sortedScopeCache;
+  /// Per-function cache: true iff the function contains more than one
+  /// fir.dummy_scope op (i.e. has been inlined into). Populated by
+  /// functionHasMultipleScopes(); both true and false are cached so that
+  /// repeated queries are O(1) without re-walking the function body.
+  llvm::DenseMap<mlir::Operation *, bool> multiScopeCache;
 };
 
 inline bool operator==(const AliasAnalysis::Source::SourceOrigin &lhs,

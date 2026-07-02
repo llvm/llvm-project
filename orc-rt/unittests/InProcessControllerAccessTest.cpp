@@ -23,8 +23,6 @@
 
 using namespace orc_rt;
 
-using TaskQueue = std::deque<move_only_function<void()>>;
-
 namespace {
 
 // A minimal stand-in for llvm::orc::InProcessEPC. Registers itself on the
@@ -112,7 +110,7 @@ private:
 // MockIPEPC into MockOut from inside OnConnect.
 void attachWithMock(Session &S, std::unique_ptr<MockIPEPC> &MockOut) {
   S.attach<InProcessControllerAccess>(
-      BootstrapInfo(S), S,
+      BootstrapInfo(S),
       [&MockOut](InProcessControllerAccess &, BootstrapInfo &,
                  InProcessControllerAccess::Connection *C,
                  InProcessControllerAccess::BootstrapInfoAccess *) -> Error {
@@ -163,7 +161,7 @@ TEST(InProcessControllerAccessTest, OnConnectFailureIsReportedAndDetaches) {
             [&](Error E) { Reported = std::move(E); });
 
   S.attach<InProcessControllerAccess>(
-      BootstrapInfo(S), S,
+      BootstrapInfo(S),
       [](InProcessControllerAccess &, BootstrapInfo &,
          InProcessControllerAccess::Connection *,
          InProcessControllerAccess::BootstrapInfoAccess *) -> Error {
@@ -293,7 +291,7 @@ TEST(InProcessControllerAccessTest, CallFromControllerSuccess) {
   // invocation; draining the queue runs the wrapper, which echoes its
   // arguments back. Verify the mock receives the echoed bytes via
   // ReturnWrapperResult.
-  TaskQueue Tasks;
+  QueueingRunner<>::WorkQueue Tasks;
   Session S(mockExecutorProcessInfo(), QueueingRunner(Tasks), noErrors);
 
   std::unique_ptr<MockIPEPC> Mock;
@@ -313,7 +311,7 @@ TEST(InProcessControllerAccessTest, CallFromControllerSuccess) {
   // dispatched.
   ASSERT_FALSE(Result);
 
-  QueueingRunner<TaskQueue>::runFIFOUntilEmpty(Tasks);
+  QueueingRunner<>::runFIFOUntilEmpty(Tasks);
 
   ASSERT_TRUE(Result);
   EXPECT_EQ(*Result, "world");

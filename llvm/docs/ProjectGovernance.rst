@@ -63,9 +63,9 @@ Elections and Composition
 
 To be a *voting contributor* an individual must be a member of the LLVM GitHub
 Organization, and either have a public email address on their GitHub profile or
-have made a commit to the LLVM project using a non-private email address. The
-email address on the GitHub public profile or retrieved via commit metadata
-will be used for all election-related communication.
+have made a commit to the LLVM project using a public email address. The email
+address on the GitHub public profile or retrieved via commit metadata will be
+used for all election-related communication.
 
 Each *area team* will have an odd number of members with a minimum of three (3)
 members and a maximum of nine (9) elected by the *voting contributors*.
@@ -218,6 +218,15 @@ Area Teams
   * Petr Hosek
   * David Blaikie
 
+Next Election Cycle
+-------------------
+
+* **January 11, 2027:** Nominations begin.
+* **January 25, 2027:** Nominations close and voting begins.
+* **February 8, 2027:** Voting closes.
+* **February 10, 2027:** Election results announced no later than this date.
+* **March 1, 2027:** New area team terms begin.
+* **March 1-5, 2027:** Area teams meet to elect chairs and secretaries.
 
 Meetings and Contact Information
 ================================
