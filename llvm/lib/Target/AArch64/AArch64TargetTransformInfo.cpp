@@ -2147,13 +2147,10 @@ static std::optional<Instruction *> instCombineXorSVECmpNE(InstCombiner &IC,
   if (!match(II.getOperand(2), m_Zero()) || !II.hasOneUse())
     return std::nullopt;
 
-  auto *User = dyn_cast<Instruction>(*II.user_begin());
-  if (!User ||
-      (!match(User, m_Xor(m_Specific(&II), m_Specific(II.getOperand(0)))) &&
-       !match(User, m_Xor(m_Specific(II.getOperand(0)), m_Specific(&II)))))
+  auto *User = cast<Instruction>(*II.user_begin());
+  if (!match(User, m_c_Xor(m_Specific(&II), m_Specific(II.getOperand(0)))))
     return std::nullopt;
 
-  IC.Builder.SetInsertPoint(User);
   Intrinsic::ID IID;
   switch ((II.getIntrinsicID())) {
   case Intrinsic::aarch64_sve_cmpne:
@@ -2166,12 +2163,13 @@ static std::optional<Instruction *> instCombineXorSVECmpNE(InstCombiner &IC,
     return std::nullopt;
   }
 
+  IC.Builder.SetInsertPoint(User);
   Value *CMPEQ = IC.Builder.CreateIntrinsic(
       IID, II.getOperand(1)->getType(),
       {II.getOperand(0), II.getOperand(1), II.getOperand(2)});
-  CMPEQ->takeName(User);
   IC.replaceInstUsesWith(*User, CMPEQ);
-  return IC.eraseInstFromFunction(*User);
+  IC.eraseInstFromFunction(*User);
+  return &II;
 }
 
 static std::optional<Instruction *> instCombineSVECmpNE(InstCombiner &IC,
