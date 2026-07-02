@@ -832,7 +832,7 @@ llvm:ir:
     - any-glob-to-any-file:
       - llvm/lib/IR/**
       - llvm/include/llvm/IR/**
-      - llvm/docs/LangRef.rst
+      - llvm/docs/LangRef.md
       - llvm/unittests/IR/**
 
 llvm:SandboxIR:
