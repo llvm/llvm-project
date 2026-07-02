@@ -32,6 +32,16 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.dlfcn.dlopen
     libc.src.dlfcn.dlsym
 
+    # err.h entrypoints
+    libc.src.err.err
+    libc.src.err.verr
+    libc.src.err.errx
+    libc.src.err.verrx
+    libc.src.err.warn
+    libc.src.err.vwarn
+    libc.src.err.warnx
+    libc.src.err.vwarnx
+
     # errno.h entrypoints
     libc.src.errno.errno
 
