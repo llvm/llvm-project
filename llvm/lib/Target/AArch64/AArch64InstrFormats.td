@@ -2140,10 +2140,12 @@ class MSRpstateImm0_1
   let DecoderNamespace = "Fallback";
 }
 
-// SYS and SYSL generic system instructions.
+// SYS, SYSL and SYSP generic system instructions.
 def SysCRAsmOperand : AsmOperandClass {
   let Name = "SysCR";
+  let RenderMethod = "addSysCROperands";
   let ParserMethod = "tryParseSysCROperand";
+  let DiagnosticType = "InvalidSysCR0_15";
 }
 
 def sys_cr_op : Operand<i32>, TImmLeaf<i32, [{
@@ -13342,8 +13344,11 @@ class RtSystemI128<bit L, dag oops, dag iops, string asm, string operands, list<
   let Inst{22}    = 0b1; // override BaseSystemI
 }
 
-class BaseSYSPEncoding<bit L, string asm, string operands, dag outputs, dag inputs>
-  : RtSystemI128<L, outputs, inputs, asm, operands> {
+class SystemPXtI<bit L, string asm> :
+  RtSystemI128<L, (outs),
+  (ins imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2,
+       SyspPairOperand:$Rt),
+  asm, "\t$op1, $Cn, $Cm, $op2, $Rt"> {
   bits<3> op1;
   bits<4> Cn;
   bits<4> Cm;
@@ -13354,9 +13359,6 @@ class BaseSYSPEncoding<bit L, string asm, string operands, dag outputs, dag inpu
   let Inst{11-8}  = Cm;
   let Inst{7-5}   = op2;
 }
-class SystemPXtI<bit L, string asm> :
-  BaseSYSPEncoding<L, asm, "\t$op1, $Cn, $Cm, $op2, $Rt", (outs),
-  (ins imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2, XSeqPairClassOperand:$Rt)>;
 
 //----------------------------------------------------------------------------
 // 2023 Armv9.5 Extensions
