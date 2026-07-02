@@ -261,6 +261,66 @@ define <vscale x 16 x i1> @not_cmpne_wrong_xor_operand(<vscale x 16 x i8> %vec_a
   ret <vscale x 16 x i1> %not
 }
 
+define <vscale x 16 x i8> @zext_cmpne_i8(<vscale x 16 x i8> %vec) #0 {
+; CHECK-LABEL: define <vscale x 16 x i8> @zext_cmpne_i8(
+; CHECK-SAME: <vscale x 16 x i8> [[VEC:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ZEXT:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> [[VEC]], <vscale x 16 x i8> splat (i8 1))
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[ZEXT]]
+;
+  %cmp = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> %vec, <vscale x 16 x i8> zeroinitializer)
+  %zext = zext <vscale x 16 x i1> %cmp to <vscale x 16 x i8>
+  ret <vscale x 16 x i8> %zext
+}
+
+define <vscale x 4 x i32> @zext_cmpne_wide_i32(<vscale x 4 x i32> %vec) #0 {
+; CHECK-LABEL: define <vscale x 4 x i32> @zext_cmpne_wide_i32(
+; CHECK-SAME: <vscale x 4 x i32> [[VEC:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ZEXT:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.umin.u.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[VEC]], <vscale x 4 x i32> splat (i32 1))
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[ZEXT]]
+;
+  %cmp = call <vscale x 4 x i1> @llvm.aarch64.sve.cmpne.wide.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %vec, <vscale x 2 x i64> zeroinitializer)
+  %zext = zext <vscale x 4 x i1> %cmp to <vscale x 4 x i32>
+  ret <vscale x 4 x i32> %zext
+}
+
+define <vscale x 16 x i8> @zext_cmpne_non_ptrue(<vscale x 16 x i8> %vec, <vscale x 16 x i1> %pg) #0 {
+; CHECK-LABEL: define <vscale x 16 x i8> @zext_cmpne_non_ptrue(
+; CHECK-SAME: <vscale x 16 x i8> [[VEC:%.*]], <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[CMP:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[VEC]], <vscale x 16 x i8> zeroinitializer)
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <vscale x 16 x i1> [[CMP]] to <vscale x 16 x i8>
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[ZEXT]]
+;
+  %cmp = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %vec, <vscale x 16 x i8> zeroinitializer)
+  %zext = zext <vscale x 16 x i1> %cmp to <vscale x 16 x i8>
+  ret <vscale x 16 x i8> %zext
+}
+
+define <vscale x 16 x i8> @zext_cmpne_nonzero_rhs(<vscale x 16 x i8> %vec) #0 {
+; CHECK-LABEL: define <vscale x 16 x i8> @zext_cmpne_nonzero_rhs(
+; CHECK-SAME: <vscale x 16 x i8> [[VEC:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[CMP:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> [[VEC]], <vscale x 16 x i8> splat (i8 1))
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <vscale x 16 x i1> [[CMP]] to <vscale x 16 x i8>
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[ZEXT]]
+;
+  %cmp = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> %vec, <vscale x 16 x i8> splat (i8 1))
+  %zext = zext <vscale x 16 x i1> %cmp to <vscale x 16 x i8>
+  ret <vscale x 16 x i8> %zext
+}
+
+define <vscale x 16 x i8> @zext_cmpne_multiple_uses(<vscale x 16 x i8> %vec) #0 {
+; CHECK-LABEL: define <vscale x 16 x i8> @zext_cmpne_multiple_uses(
+; CHECK-SAME: <vscale x 16 x i8> [[VEC:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[CMP:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> [[VEC]], <vscale x 16 x i8> zeroinitializer)
+; CHECK-NEXT:    call void (...) @llvm.fake.use(<vscale x 16 x i1> [[CMP]])
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <vscale x 16 x i1> [[CMP]] to <vscale x 16 x i8>
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[ZEXT]]
+;
+  %cmp = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> %vec, <vscale x 16 x i8> zeroinitializer)
+  call void (...) @llvm.fake.use(<vscale x 16 x i1> %cmp)
+  %zext = zext <vscale x 16 x i1> %cmp to <vscale x 16 x i8>
+  ret <vscale x 16 x i8> %zext
+}
+
 ; Cases that cannot be converted
 
 define <vscale x 2 x i1> @dupq_neg1() #0 {
