@@ -4571,8 +4571,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   // Process the reductions if required.
   if (failed(createReductionsAndCleanup(
           wsloopOp, builder, moduleTranslation, allocaIP, reductionDecls,
-          privateReductionVariables, isByRef, wsloopOp.getNowait(),
-          /*isTeamsReduction=*/false)))
+          privateReductionVariables, isByRef, wsloopOp.getNowait())))
     return failure();
 
   return cleanupPrivateVars(wsloopOp, builder, moduleTranslation,

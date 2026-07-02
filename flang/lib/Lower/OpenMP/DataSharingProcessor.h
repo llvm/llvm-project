@@ -97,6 +97,7 @@ private:
   llvm::SetVector<const semantics::Symbol *> explicitlyPrivatizedSymbols;
   llvm::SetVector<const semantics::Symbol *> defaultSymbols;
   llvm::SetVector<const semantics::Symbol *> allPrivatizedSymbols;
+  llvm::SetVector<const semantics::Symbol *> conditionalLastPrivatizedSymbols;
 
   lower::AbstractConverter &converter;
   semantics::SemanticsContext &semaCtx;
@@ -198,6 +199,11 @@ public:
   void privatizeSymbol(const semantics::Symbol *symToPrivatize,
                        mlir::omp::PrivateClauseOps *clauseOps,
                        std::optional<llvm::omp::Directive> dir = std::nullopt);
+
+  const llvm::SetVector<const semantics::Symbol *> &
+  getConditionalLastprivateSymbols() const {
+    return conditionalLastPrivatizedSymbols;
+  }
 };
 
 } // namespace omp
