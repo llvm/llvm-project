@@ -5329,8 +5329,50 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     return TTI.getCastInstrCost(Opcode, VectorTy, SrcVecTy, CCH,
                                 Config.CostKind, I);
   }
-  case Instruction::Call:
+  case Instruction::Call: {
+    // Check if this is a histogram update operation (intrinsic like uadd.sat,
+    // umax, umin used as histogram bucket update).
+    auto Info = Legal->getHistogramInfo(I);
+    if (Info && VF.isVector()) {
+      const HistogramInfo *HGram = Info.value();
+      // Assume that a non-constant update value (or a constant != 1) requires
+      // a multiply, and add that into the cost.
+      InstructionCost MulCost = TTI::TCC_Free;
+      ConstantInt *RHS = dyn_cast<ConstantInt>(I->getOperand(1));
+      if (!RHS || RHS->getZExtValue() != 1)
+        MulCost = TTI.getArithmeticInstrCost(Instruction::Mul, VectorTy,
+                                             Config.CostKind);
+
+      // Find the cost of the histogram operation itself.
+      Type *PtrTy = VectorType::get(HGram->Load->getPointerOperandType(), VF);
+      Type *ScalarTy = I->getType();
+      Type *MaskTy = VectorType::get(Type::getInt1Ty(I->getContext()), VF);
+      auto *II = cast<IntrinsicInst>(I);
+      Intrinsic::ID HistID;
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::uadd_sat:
+        HistID = Intrinsic::experimental_vector_histogram_uadd_sat;
+        break;
+      case Intrinsic::umax:
+        HistID = Intrinsic::experimental_vector_histogram_umax;
+        break;
+      case Intrinsic::umin:
+        HistID = Intrinsic::experimental_vector_histogram_umin;
+        break;
+      default:
+        llvm_unreachable("Unsupported histogram intrinsic");
+      }
+      IntrinsicCostAttributes ICA(HistID, Type::getVoidTy(I->getContext()),
+                                  {PtrTy, ScalarTy, MaskTy});
+
+      // Add the costs together with the update operation cost.
+      IntrinsicCostAttributes UpdateICA(II->getIntrinsicID(), VectorTy,
+                                        {VectorTy, VectorTy});
+      return TTI.getIntrinsicInstrCost(ICA, Config.CostKind) + MulCost +
+             TTI.getIntrinsicInstrCost(UpdateICA, Config.CostKind);
+    }
     return getVectorCallCost(cast<CallInst>(I), VF);
+  }
   case Instruction::ExtractValue:
     return TTI.getInstructionCost(I, Config.CostKind);
   case Instruction::Alloca:
@@ -6341,10 +6383,8 @@ VPHistogramRecipe *VPRecipeBuilder::widenIfHistogram(VPInstruction *VPI) {
     return nullptr;
 
   const HistogramInfo *HI = *HistInfo;
-  // FIXME: Support other operations.
-  unsigned Opcode = HI->Update->getOpcode();
-  assert((Opcode == Instruction::Add || Opcode == Instruction::Sub) &&
-         "Histogram update operation must be an Add or Sub");
+  auto UpdateKind = VPHistogramRecipe::getUpdateKindForInstruction(HI->Update);
+  assert(UpdateKind && "Unsupported histogram update operation");
 
   SmallVector<VPValue *, 3> HGramOps;
   // Bucket address.
@@ -6357,7 +6397,7 @@ VPHistogramRecipe *VPRecipeBuilder::widenIfHistogram(VPInstruction *VPI) {
   if (CM.isMaskRequired(HI->Store))
     HGramOps.push_back(VPI->getMask());
 
-  return new VPHistogramRecipe(Opcode, HGramOps, cast<VPIRMetadata>(*VPI),
+  return new VPHistogramRecipe(*UpdateKind, HGramOps, cast<VPIRMetadata>(*VPI),
                                VPI->getDebugLoc());
 }
 

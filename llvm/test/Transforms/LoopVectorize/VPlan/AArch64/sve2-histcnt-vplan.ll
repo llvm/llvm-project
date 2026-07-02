@@ -153,6 +153,75 @@ for.exit:
   ret void
 }
 
+;; Check that uadd.sat histogram gets a "saturated inc:" label in VPlan.
+; CHECK: VPlan 'Initial VPlan for VF={vscale x 2,vscale x 4},UF>=1' {
+; CHECK-NEXT: Live-in [[VF3:.*]] = VF
+; CHECK-NEXT: Live-in [[VFxUF3:.*]] = VF * UF
+; CHECK-NEXT: Live-in [[VTC3:.*]] = vector-trip-count
+; CHECK-NEXT: Live-in [[OTC3:.*]] = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<entry>:
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT: vector.ph:
+; CHECK-NEXT: Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT:   [[IV3:.*]] = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:   vector.body:
+; CHECK-NEXT:     [[STEPS3:vp.*]] = SCALAR-STEPS [[IV3]], ir<1>, [[VF3]]
+; CHECK-NEXT:     CLONE [[GEP_IDX3:.*]] = getelementptr inbounds ir<%indices>, [[STEPS3]]
+; CHECK-NEXT:     [[VECP_IDX3:vp.*]] = vector-pointer inbounds [[GEP_IDX3]]
+; CHECK-NEXT:     WIDEN [[IDX3:.*]] = load [[VECP_IDX3]]
+; CHECK-NEXT:     WIDEN-CAST [[EXT_IDX3:.*]] = zext [[IDX3]] to i64
+; CHECK-NEXT:     WIDEN-GEP [[GEP_BUCKET3:.*]] = getelementptr inbounds ir<%buckets>, [[EXT_IDX3]]
+; CHECK-NEXT:     WIDEN-HISTOGRAM buckets: [[GEP_BUCKET3]], saturated inc: ir<1>
+; CHECK-NEXT:     EMIT [[IV_NEXT3:.*]] = add nuw [[IV3]], [[VFxUF3]]
+; CHECK-NEXT:     EMIT branch-on-count [[IV_NEXT3]], [[VTC3]]
+; CHECK-NEXT:   No successors
+; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT: middle.block:
+; CHECK-NEXT:   EMIT [[TC_CHECK3:.*]] = icmp eq [[OTC3]], [[VTC3]]
+; CHECK-NEXT:   EMIT branch-on-cond [[TC_CHECK3]]
+; CHECK-NEXT: Successor(s): ir-bb<for.exit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<for.exit>:
+; CHECK-NEXT: No successors
+; CHECK-EMPTY:
+; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME3:%.+]]> = phi [ [[VTC3]], middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT: Successor(s): ir-bb<for.body>
+; CHECK-EMPTY:
+; CHECK-NEXT: ir-bb<for.body>:
+; CHECK-NEXT:   IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ] (extra operand: vp<[[RESUME3]]> from scalar.ph)
+; CHECK:        IR   %exitcond = icmp eq i64 %iv.next, %N
+; CHECK-NEXT: No successors
+; CHECK-NEXT: }
+
+define void @simple_histogram_uadd_sat(ptr noalias %buckets, ptr readonly %indices, i64 %N) {
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.indices = getelementptr inbounds i32, ptr %indices, i64 %iv
+  %l.idx = load i32, ptr %gep.indices, align 4
+  %idxprom1 = zext i32 %l.idx to i64
+  %gep.bucket = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
+  %l.bucket = load i32, ptr %gep.bucket, align 4
+  %inc = call i32 @llvm.uadd.sat.i32(i32 %l.bucket, i32 1)
+  store i32 %inc, ptr %gep.bucket, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %N
+  br i1 %exitcond, label %for.exit, label %for.body
+
+for.exit:
+  ret void
+}
+
 !0 = !{!1}
 !1 = distinct !{!1, !2}
 !2 = distinct !{!2}

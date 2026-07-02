@@ -2390,17 +2390,57 @@ void VPHistogramRecipe::execute(VPTransformState &State) {
     Mask =
         Builder.CreateVectorSplat(VTy->getElementCount(), Builder.getInt1(1));
 
-  // If this is a subtract, we want to invert the increment amount. We may
-  // add a separate intrinsic in future, but for now we'll try this.
-  if (Opcode == Instruction::Sub)
+  // If this is a subtract, we want to invert the increment amount and use
+  // the histogram_add intrinsic.
+  if (shouldNegateIncrement())
     IncAmt = Builder.CreateNeg(IncAmt);
-  else
-    assert(Opcode == Instruction::Add && "only add or sub supported for now");
 
   Instruction *HistogramInst = State.Builder.CreateIntrinsicWithoutFolding(
-      Intrinsic::experimental_vector_histogram_add, {VTy, IncAmt->getType()},
+      getHistogramIntrinsicID(), {VTy, IncAmt->getType()},
       {Address, IncAmt, Mask});
   applyMetadata(*HistogramInst);
+}
+
+Intrinsic::ID VPHistogramRecipe::getHistogramIntrinsicID() const {
+  switch (UpdateKind) {
+  case HistogramUpdateKind::Add:
+  case HistogramUpdateKind::Sub:
+    return Intrinsic::experimental_vector_histogram_add;
+  case HistogramUpdateKind::UAddSat:
+    return Intrinsic::experimental_vector_histogram_uadd_sat;
+  case HistogramUpdateKind::UMax:
+    return Intrinsic::experimental_vector_histogram_umax;
+  case HistogramUpdateKind::UMin:
+    return Intrinsic::experimental_vector_histogram_umin;
+  }
+  llvm_unreachable("Unknown HistogramUpdateKind");
+}
+
+std::optional<VPHistogramRecipe::HistogramUpdateKind>
+VPHistogramRecipe::getUpdateKindForInstruction(Instruction *I) {
+  if (auto *BO = dyn_cast<BinaryOperator>(I)) {
+    switch (BO->getOpcode()) {
+    case Instruction::Add:
+      return HistogramUpdateKind::Add;
+    case Instruction::Sub:
+      return HistogramUpdateKind::Sub;
+    default:
+      return std::nullopt;
+    }
+  }
+  if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::uadd_sat:
+      return HistogramUpdateKind::UAddSat;
+    case Intrinsic::umax:
+      return HistogramUpdateKind::UMax;
+    case Intrinsic::umin:
+      return HistogramUpdateKind::UMin;
+    default:
+      return std::nullopt;
+    }
+  }
+  return std::nullopt;
 }
 
 InstructionCost VPHistogramRecipe::computeCost(ElementCount VF,
@@ -2416,23 +2456,53 @@ InstructionCost VPHistogramRecipe::computeCost(ElementCount VF,
   Type *IncTy = IncAmt->getScalarType();
   VectorType *VTy = VectorType::get(IncTy, VF);
 
-  // Assume that a non-constant update value (or a constant != 1) requires
-  // a multiply, and add that into the cost.
-  InstructionCost MulCost =
-      Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, VTy, Ctx.CostKind);
-  if (match(IncAmt, m_One()))
-    MulCost = TTI::TCC_Free;
+  // For umin/umax, there's no multiplication — the increment value is compared
+  // directly. For add/sub/uadd.sat, assume that a non-constant update value
+  // (or a constant != 1) requires a multiply.
+  InstructionCost MulCost = TTI::TCC_Free;
+  if (!match(IncAmt, m_One()) && UpdateKind != HistogramUpdateKind::UMax &&
+      UpdateKind != HistogramUpdateKind::UMin)
+    MulCost =
+        Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, VTy, Ctx.CostKind);
 
   // Find the cost of the histogram operation itself.
   Type *PtrTy = VectorType::get(AddressTy, VF);
   Type *MaskTy = VectorType::get(Type::getInt1Ty(Ctx.LLVMCtx), VF);
-  IntrinsicCostAttributes ICA(Intrinsic::experimental_vector_histogram_add,
+  IntrinsicCostAttributes ICA(getHistogramIntrinsicID(),
                               Type::getVoidTy(Ctx.LLVMCtx),
                               {PtrTy, IncTy, MaskTy});
 
-  // Add the costs together with the add/sub operation.
+  // Compute the cost of the update operation.
+  InstructionCost UpdateCost;
+  switch (UpdateKind) {
+  case HistogramUpdateKind::Add:
+    UpdateCost =
+        Ctx.TTI.getArithmeticInstrCost(Instruction::Add, VTy, Ctx.CostKind);
+    break;
+  case HistogramUpdateKind::Sub:
+    UpdateCost =
+        Ctx.TTI.getArithmeticInstrCost(Instruction::Sub, VTy, Ctx.CostKind);
+    break;
+  case HistogramUpdateKind::UAddSat: {
+    IntrinsicCostAttributes UpdateICA(Intrinsic::uadd_sat, VTy, {VTy, VTy});
+    UpdateCost = Ctx.TTI.getIntrinsicInstrCost(UpdateICA, Ctx.CostKind);
+    break;
+  }
+  case HistogramUpdateKind::UMax: {
+    IntrinsicCostAttributes UpdateICA(Intrinsic::umax, VTy, {VTy, VTy});
+    UpdateCost = Ctx.TTI.getIntrinsicInstrCost(UpdateICA, Ctx.CostKind);
+    break;
+  }
+  case HistogramUpdateKind::UMin: {
+    IntrinsicCostAttributes UpdateICA(Intrinsic::umin, VTy, {VTy, VTy});
+    UpdateCost = Ctx.TTI.getIntrinsicInstrCost(UpdateICA, Ctx.CostKind);
+    break;
+  }
+  }
+
+  // Add the costs together with the update operation.
   return Ctx.TTI.getIntrinsicInstrCost(ICA, Ctx.CostKind) + MulCost +
-         Ctx.TTI.getArithmeticInstrCost(Opcode, VTy, Ctx.CostKind);
+         UpdateCost;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2441,11 +2511,22 @@ void VPHistogramRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << Indent << "WIDEN-HISTOGRAM buckets: ";
   getOperand(0)->printAsOperand(O, SlotTracker);
 
-  if (Opcode == Instruction::Sub)
-    O << ", dec: ";
-  else {
-    assert(Opcode == Instruction::Add);
+  switch (UpdateKind) {
+  case HistogramUpdateKind::Add:
     O << ", inc: ";
+    break;
+  case HistogramUpdateKind::Sub:
+    O << ", dec: ";
+    break;
+  case HistogramUpdateKind::UAddSat:
+    O << ", saturated inc: ";
+    break;
+  case HistogramUpdateKind::UMax:
+    O << ", max: ";
+    break;
+  case HistogramUpdateKind::UMin:
+    O << ", min: ";
+    break;
   }
   getOperand(1)->printAsOperand(O, SlotTracker);
 
