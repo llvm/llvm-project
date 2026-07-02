@@ -64,6 +64,9 @@ struct ExplicitUnconstrainedCtor {
 int main(int, char**) {
     typedef UnconstrainedCtor A;
     typedef ExplicitUnconstrainedCtor ExplicitA;
+
+// Remove this guard when compiler versions older than clang 23 are no longer supported.
+#if defined(TEST_CLANG_VER) && TEST_CLANG_VER >= 2300
     {
         static_assert(std::is_copy_constructible<std::tuple<A>>::value, "");
         static_assert(std::is_move_constructible<std::tuple<A>>::value, "");
@@ -92,6 +95,8 @@ int main(int, char**) {
             std::tuple<ExplicitA> &&
         >::value, "");
     }
+#endif // defined(TEST_CLANG_VER) && TEST_CLANG_VER >= 2300
+
     {
         std::tuple<A&&> t(std::forward_as_tuple(A{}));
         ((void)t);
