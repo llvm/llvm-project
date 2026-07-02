@@ -34,6 +34,10 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
        "foo::bar"},
       {"int foo::bar::func01(int a, double b)", "int", "foo::bar", "func01",
        "(int a, double b)", "", "foo::bar::func01"},
+      {"class std::_Func_base<bool, int> * std::_Func_class<bool, "
+       "int>::_Getimpl(void) const",
+       "class std::_Func_base<bool, int> *", "std::_Func_class<bool, int>",
+       "_Getimpl", "(void)", "const", "std::_Func_class<bool, int>::_Getimpl"},
 
       // Operators
       {"std::basic_ostream<char, std::char_traits<char> >& "
