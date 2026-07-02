@@ -13,7 +13,7 @@
 // CHECK: call spir_func align 8 addrspace(9) ptr addrspace(4) @__kmpc_alloc_shared(i64 4)
 
 // Verify the reduction runtime function is called.
-// CHECK: call spir_func addrspace(9) i32 @__kmpc_nvptx_teams_reduce_nowait_v2(
+// CHECK: call spir_func addrspace(9) i32 @__kmpc_gpu_xteam_reduce_nowait(
 
 // Verify __kmpc_free_shared is called.
 // CHECK: call spir_func addrspace(9) void @__kmpc_free_shared(ptr addrspace(4)

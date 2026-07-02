@@ -4123,7 +4123,7 @@ bool AArch64InstructionSelector::selectUnmergeValues(MachineInstr &I,
   // directly. Otherwise, we need to do a bit of setup with some subregister
   // inserts.
   if (NarrowTy.getSizeInBits() * NumElts == 128) {
-    InsertRegs = SmallVector<Register, 4>(NumInsertRegs, SrcReg);
+    InsertRegs.assign(NumInsertRegs, SrcReg);
   } else {
     // No. We have to perform subregister inserts. For each insert, create an
     // implicit def and a subregister insert, and save the register we create.
@@ -7950,7 +7950,7 @@ void AArch64InstructionSelector::renderFixedPointXForm(MachineInstrBuilder &MIB,
   // should be able to reuse the Renderers already calculated by
   // selectCVTFixedPointVecBase.
   InstructionSelector::ComplexRendererFns Renderer =
-      selectCVTFixedPointVecBase(MI.getOperand(2), /*isReciprocal*/ false);
+      selectCVTFixedPointVecBase(MI.getOperand(OpIdx), /*isReciprocal*/ false);
   assert((Renderer && Renderer->size() == 1) &&
          "Expected selectCVTFixedPointVec to provide a function\n");
   (Renderer->front())(MIB);
@@ -7959,7 +7959,7 @@ void AArch64InstructionSelector::renderFixedPointXForm(MachineInstrBuilder &MIB,
 void AArch64InstructionSelector::renderFixedPointRecipXForm(
     MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
   InstructionSelector::ComplexRendererFns Renderer =
-      selectCVTFixedPointVecBase(MI.getOperand(2), /*isReciprocal*/ true);
+      selectCVTFixedPointVecBase(MI.getOperand(OpIdx), /*isReciprocal*/ true);
   assert((Renderer && Renderer->size() == 1) &&
          "Expected selectCVTFixedPosRecipOperandVec to provide a function\n");
   (Renderer->front())(MIB);

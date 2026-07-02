@@ -18,8 +18,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 static bool IsStoppedInDarwinSanitizer(Thread &thread, Module &module) {
-  return module.GetFileSpec().GetFilename().GetStringRef().starts_with(
-      "libclang_rt.");
+  return module.GetFileSpec().GetFilename().starts_with("libclang_rt.");
 }
 
 InstrumentationRuntimeStopInfo::InstrumentationRuntimeStopInfo(

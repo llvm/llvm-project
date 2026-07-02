@@ -30,7 +30,7 @@ func.func @_QPfoo() {
 // CHECK: %[[LOCAL_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}my_local"}
 // CHECK: %[[LOCAL_MAP:.*]] = omp.map.info var_ptr(%[[LOCAL_DECL]]#1 : {{.*}})
 
-// CHECK: omp.target host_eval({{.*}}) map_entries({{.*}}, %[[LOCAL_MAP]] -> %[[LOCAL_MAP_ARG:.*]] : {{.*}}) {
+// CHECK: omp.target kernel_type(spmd) host_eval({{.*}}) map_entries({{.*}}, %[[LOCAL_MAP]] -> %[[LOCAL_MAP_ARG:.*]] : {{.*}}) {
 // CHECK:   %[[LOCAL_DEV_DECL:.*]]:2 = hlfir.declare %[[LOCAL_MAP_ARG]] {uniq_name = "_QFfooEmy_local"}
 
 // CHECK:   omp.teams {
@@ -42,8 +42,8 @@ func.func @_QPfoo() {
 // CHECK:             hlfir.assign %{{.*}} to %[[LOCAL_LOOP_DECL]]#0
 // CHECK:             omp.yield
 // CHECK:           }
-// CHECK:         }
-// CHECK:       }
-// CHECK:     }
-// CHECK:   }
-// CHECK: }
+// CHECK:         } {omp.composite}
+// CHECK:       } {omp.composite}
+// CHECK:     } {omp.composite}
+// CHECK:   } {omp.combined}
+// CHECK: } {omp.combined}

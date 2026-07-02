@@ -92,6 +92,10 @@ public:
   /// Release device image managers and corresponding resources.
   void releaseResources();
 
+  /// \return true if and only if at least one registered device image is
+  /// compatible with the given device.
+  bool hasCompatibleImage(const DeviceImpl &Device);
+
 protected:
   ProgramAndKernelManager() = default;
   ~ProgramAndKernelManager() = default;

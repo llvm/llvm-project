@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdpal < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx600 < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=tonga < %s | FileCheck -check-prefix=GCN %s
 
 ; amdpal evaluation shader: check for 0x2cca (SPI_SHADER_PGM_RSRC1_ES) in pal metadata

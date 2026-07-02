@@ -49,10 +49,9 @@ private:
 
 Session::ControllerAccess::~ControllerAccess() = default;
 
-Session::Session(ExecutorProcessInfo EPI,
-                 std::unique_ptr<TaskDispatcher> Dispatcher,
+Session::Session(ExecutorProcessInfo EPI, RunWrapperCall RunCall,
                  ErrorReporterFn ReportError)
-    : EPI(std::move(EPI)), Dispatcher(std::move(Dispatcher)),
+    : EPI(std::move(EPI)), RunCall(std::move(RunCall)),
       ReportError(std::move(ReportError)),
       Notifiers(createService<NotificationService>()) {}
 
@@ -64,8 +63,8 @@ Session::~Session() {
   });
 }
 
-void Session::attach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) {
-  assert(CA && "attach called with null CA object");
+void Session::doAttach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) {
+  assert(CA && "doAttach called with null CA object");
 
   {
     std::scoped_lock<std::mutex> Lock(M);
@@ -83,7 +82,7 @@ void Session::attach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) {
 
   {
     std::scoped_lock<std::mutex> Lock(M);
-    assert(TargetState >= State::Attached);
+    assert(TargetState >= State::Attached || CurrentState >= State::Detached);
 
     // There are three possibilities that we have to deal with here:
     // 1. Connection succeeded and we're done.
@@ -93,8 +92,8 @@ void Session::attach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) {
     //
     // 2. Connect failed.
     //
-    //    In this case connect must have called handleDisconnect, which should
-    //    have initiated the detach. We just need to bail out.
+    //    In this case connect must have called notifyDisconnected, which
+    //    should have initiated the detach. We just need to bail out.
     //
     // 3. Connection succeeded but a detach or shutdown was requested
     //    concurrently. In this case we need to start the detach process.
@@ -108,7 +107,7 @@ void Session::attach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) {
     }
 
     // The target state is Detached or higher. Check the current state. If it's
-    // also Detached or higher then handleDisconnect must already have been
+    // also Detached or higher then notifyDisconnected must already have been
     // called (in turn calling proceedToDetach, which updated the current
     // state). In this case we're in option (2) and we just need to bail out.
     if (CurrentState >= State::Detached)
@@ -350,8 +349,6 @@ void Session::shutdownServices(std::vector<Service *> ToNotify) {
 }
 
 void Session::completeShutdown() {
-  Dispatcher->shutdown();
-
   {
     std::scoped_lock<std::mutex> Lock(M);
     assert(CurrentState == State::Shutdown);
@@ -359,6 +356,13 @@ void Session::completeShutdown() {
     TargetState = State::None;
   }
   CV.notify_all();
+}
+
+void Session::sendWrapperResult(uint64_t CallId,
+                                WrapperFunctionBuffer ResultBytes) {
+  if (auto TmpCA = std::atomic_load(&CA))
+    TmpCA->sendWrapperResult(CallId, std::move(ResultBytes));
+  ManagedCodeTaskGroup->releaseToken();
 }
 
 void Session::wrapperReturn(orc_rt_SessionRef S, uint64_t CallId,

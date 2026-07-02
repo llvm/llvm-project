@@ -9491,6 +9491,32 @@ TEST(APFloatTest, getExactLog2) {
   }
 }
 
+TEST(APFloatTest, isPowerOf2) {
+  const fltSemantics &Semantics = APFloat::IEEEdouble();
+
+  EXPECT_TRUE(APFloat(Semantics, "1.0").isPowerOf2(0));
+  EXPECT_TRUE(APFloat(Semantics, "8.0").isPowerOf2(3));
+  EXPECT_TRUE(APFloat(Semantics, "0.25").isPowerOf2(-2));
+
+  EXPECT_FALSE(APFloat(Semantics, "3.0").isPowerOf2(1));
+  EXPECT_FALSE(APFloat(Semantics, "-8.0").isPowerOf2(3));
+  EXPECT_FALSE(APFloat(Semantics, "-8.0").isPowerOf2(INT_MIN));
+  EXPECT_FALSE(APFloat::getZero(Semantics, false).isPowerOf2(0));
+  EXPECT_FALSE(APFloat::getInf(Semantics).isPowerOf2(0));
+  EXPECT_FALSE(APFloat::getNaN(Semantics, false).isPowerOf2(0));
+
+  EXPECT_TRUE(APFloat(Semantics, "-1.0").isNegPowerOf2(0));
+  EXPECT_TRUE(APFloat(Semantics, "-8.0").isNegPowerOf2(3));
+  EXPECT_TRUE(APFloat(Semantics, "-0.25").isNegPowerOf2(-2));
+
+  EXPECT_FALSE(APFloat(Semantics, "-3.0").isNegPowerOf2(1));
+  EXPECT_FALSE(APFloat(Semantics, "8.0").isNegPowerOf2(3));
+  EXPECT_FALSE(APFloat(Semantics, "8.0").isNegPowerOf2(INT_MIN));
+  EXPECT_FALSE(APFloat::getZero(Semantics, false).isNegPowerOf2(0));
+  EXPECT_FALSE(APFloat::getInf(Semantics).isNegPowerOf2(0));
+  EXPECT_FALSE(APFloat::getNaN(Semantics, false).isNegPowerOf2(0));
+}
+
 TEST(APFloatTest, Float8E8M0FNUGetZero) {
 #ifdef GTEST_HAS_DEATH_TEST
 #ifndef NDEBUG

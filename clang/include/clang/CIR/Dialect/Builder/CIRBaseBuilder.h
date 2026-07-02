@@ -229,11 +229,13 @@ public:
   }
 
   cir::LoadOp createLoad(mlir::Location loc, mlir::Value ptr,
-                         bool isVolatile = false, uint64_t alignment = 0) {
+                         bool isVolatile = false, uint64_t alignment = 0,
+                         bool isNontemporal = false) {
     mlir::IntegerAttr alignmentAttr = getAlignmentAttr(alignment);
     return cir::LoadOp::create(*this, loc, ptr, /*isDeref=*/false, isVolatile,
-                               alignmentAttr, cir::SyncScopeKindAttr{},
-                               cir::MemOrderAttr{});
+                               isNontemporal, alignmentAttr,
+                               cir::SyncScopeKindAttr{}, cir::MemOrderAttr{},
+                               /*invariant=*/false);
   }
 
   mlir::Value createAlignedLoad(mlir::Location loc, mlir::Value ptr,
@@ -375,20 +377,21 @@ public:
   cir::CopyOp createCopy(mlir::Value dst, mlir::Value src,
                          bool isVolatile = false,
                          bool skipTailPadding = false) {
-    return cir::CopyOp::create(*this, dst.getLoc(), dst, src, isVolatile,
-                               skipTailPadding);
+    return cir::CopyOp::create(*this, dst.getLoc(), dst, src,
+                               /*dst_alignment=*/{}, /*src_alignment=*/{},
+                               isVolatile, skipTailPadding);
   }
 
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, mlir::Value dst,
-                           bool isVolatile = false,
+                           bool isVolatile = false, bool isNontemporal = false,
                            mlir::IntegerAttr align = {},
                            cir::SyncScopeKindAttr scope = {},
                            cir::MemOrderAttr order = {}) {
     if (mlir::cast<cir::PointerType>(dst.getType()).getPointee() !=
         val.getType())
       dst = createPtrBitcast(dst, val.getType());
-    return cir::StoreOp::create(*this, loc, val, dst, isVolatile, align, scope,
-                                order);
+    return cir::StoreOp::create(*this, loc, val, dst, isVolatile, isNontemporal,
+                                align, scope, order);
   }
 
   /// Emit a load from an boolean flag variable.
@@ -426,8 +429,10 @@ public:
     mlir::IntegerAttr alignmentAttr = getAlignmentAttr(alignment);
     auto addr = createAlloca(loc, getPointerTo(type), {}, alignmentAttr);
     return cir::LoadOp::create(*this, loc, addr, /*isDeref=*/false,
-                               /*isVolatile=*/false, alignmentAttr,
-                               /*sync_scope=*/{}, /*mem_order=*/{});
+                               /*isVolatile=*/false, /*nontemporal=*/false,
+                               alignmentAttr,
+                               /*sync_scope=*/{}, /*mem_order=*/{},
+                               /*invariant=*/false);
   }
 
   cir::PtrStrideOp createPtrStride(mlir::Location loc, mlir::Value base,
@@ -528,6 +533,15 @@ public:
 
   mlir::Value createIntCast(mlir::Value src, mlir::Type newTy) {
     return createCast(cir::CastKind::integral, src, newTy);
+  }
+
+  mlir::Value createBuiltinIntCast(mlir::Location loc, mlir::Value src,
+                                   mlir::Type newTy) {
+    return cir::BuiltinIntCastOp::create(*this, loc, newTy, src);
+  }
+
+  mlir::Value createBuiltinIntCast(mlir::Value src, mlir::Type newTy) {
+    return createBuiltinIntCast(src.getLoc(), src, newTy);
   }
 
   mlir::Value createIntToPtr(mlir::Value src, mlir::Type newTy) {

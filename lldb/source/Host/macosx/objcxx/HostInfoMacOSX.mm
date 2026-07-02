@@ -32,6 +32,8 @@
 // C++ Includes
 #include <optional>
 #include <string>
+#include <utility>
+#include <vector>
 
 // C inclues
 #include <cstdlib>
@@ -47,13 +49,6 @@
 #include <Foundation/Foundation.h>
 #include <Security/Security.h>
 #include <mach-o/dyld.h>
-#if defined(MAC_OS_X_VERSION_MIN_REQUIRED) && \
-    MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_VERSION_12_0
-#if __has_include(<mach-o/dyld_introspection.h>)
-#include <mach-o/dyld_introspection.h>
-#define SDK_HAS_NEW_DYLD_INTROSPECTION_SPIS
-#endif
-#endif
 #include <objc/objc-auto.h>
 
 // These are needed when compiling on systems
@@ -196,7 +191,7 @@ bool HostInfoMacOSX::ComputeSupportExeDirectory(FileSpec &file_spec) {
   }
 
   file_spec.SetDirectory(raw_path);
-  return (bool)file_spec.GetDirectory();
+  return !file_spec.GetDirectory().empty();
 }
 
 bool HostInfoMacOSX::ComputeHeaderDirectory(FileSpec &file_spec) {
@@ -687,6 +682,71 @@ const char *dyld_image_get_file_path(dyld_image_t image);
 }
 
 namespace {
+/// Function pointers for dyld SPIs that may be absent from the SDK LLDB is
+/// built against but present in libdyld at runtime. Resolving them with dlsym
+/// rather than linking against them keeps a single binary working across SDKs
+/// and OS versions; a null pointer means the running dyld doesn't vend that
+/// SPI and the caller must fall back.
+struct LazyDyldSPIs {
+  // Process snapshot introspection SPIs, available on macOS 12 and newer.
+  dyld_process_t (*process_create_for_current_task)(void) = nullptr;
+  void (*process_dispose)(dyld_process_t process) = nullptr;
+  dyld_process_snapshot_t (*process_snapshot_create_for_process)(
+      dyld_process_t process, kern_return_t *error) = nullptr;
+  void (*process_snapshot_dispose)(dyld_process_snapshot_t snapshot) = nullptr;
+  dyld_shared_cache_t (*process_snapshot_get_shared_cache)(
+      dyld_process_snapshot_t snapshot) = nullptr;
+
+  // Shared cache image segment SPIs, available on macOS 26.4 and newer.
+  void (*image_retain_4HWTrace)(void *image) = nullptr;
+  void (*image_release_4HWTrace)(void *image) = nullptr;
+  dispatch_data_t (*image_segment_data_4HWTrace)(
+      void *image, const char *segment_name) = nullptr;
+
+  bool HasProcessSnapshotSPIs() const {
+    return process_create_for_current_task && process_dispose &&
+           process_snapshot_create_for_process && process_snapshot_dispose &&
+           process_snapshot_get_shared_cache;
+  }
+
+  bool Has4HWTraceSPIs() const {
+    return image_retain_4HWTrace && image_release_4HWTrace &&
+           image_segment_data_4HWTrace;
+  }
+};
+
+const LazyDyldSPIs &GetLazyDyldSPIs() {
+  static LazyDyldSPIs g_spis;
+  static std::once_flag g_once_flag;
+  std::call_once(g_once_flag, []() {
+    auto lookup = [](const char *name) { return dlsym(RTLD_DEFAULT, name); };
+    g_spis.process_create_for_current_task =
+        (decltype(g_spis.process_create_for_current_task))lookup(
+            "dyld_process_create_for_current_task");
+    g_spis.process_dispose =
+        (decltype(g_spis.process_dispose))lookup("dyld_process_dispose");
+    g_spis.process_snapshot_create_for_process =
+        (decltype(g_spis.process_snapshot_create_for_process))lookup(
+            "dyld_process_snapshot_create_for_process");
+    g_spis.process_snapshot_dispose =
+        (decltype(g_spis.process_snapshot_dispose))lookup(
+            "dyld_process_snapshot_dispose");
+    g_spis.process_snapshot_get_shared_cache =
+        (decltype(g_spis.process_snapshot_get_shared_cache))lookup(
+            "dyld_process_snapshot_get_shared_cache");
+    g_spis.image_retain_4HWTrace =
+        (decltype(g_spis.image_retain_4HWTrace))lookup(
+            "dyld_image_retain_4HWTrace");
+    g_spis.image_release_4HWTrace =
+        (decltype(g_spis.image_release_4HWTrace))lookup(
+            "dyld_image_release_4HWTrace");
+    g_spis.image_segment_data_4HWTrace =
+        (decltype(g_spis.image_segment_data_4HWTrace))lookup(
+            "dyld_image_segment_data_4HWTrace");
+  });
+  return g_spis;
+}
+
 class SharedCacheInfo {
 public:
   SharedCacheImageInfo GetByFilename(UUID sc_uuid, ConstString filename) {
@@ -721,7 +781,6 @@ public:
 
 private:
   bool CreateSharedCacheInfoWithInstrospectionSPIs();
-  void CreateSharedCacheInfoLLDBsVirtualMemory();
   bool CreateHostSharedCacheImageList();
 
   // These three ivars have an initial key of a shared cache UUID.
@@ -734,26 +793,11 @@ private:
   UUID m_host_uuid;
 
   llvm::sys::RWMutex m_mutex;
-
-  // macOS 26.4 and newer
-  void (*m_dyld_image_retain_4HWTrace)(void *image);
-  void (*m_dyld_image_release_4HWTrace)(void *image);
-  dispatch_data_t (*m_dyld_image_segment_data_4HWTrace)(
-      void *image, const char *segmentName);
 };
 
 } // namespace
 
 SharedCacheInfo::SharedCacheInfo(SymbolSharedCacheUse sc_mode) {
-  // macOS 26.4 and newer
-  m_dyld_image_retain_4HWTrace =
-      (void (*)(void *))dlsym(RTLD_DEFAULT, "dyld_image_retain_4HWTrace");
-  m_dyld_image_release_4HWTrace =
-      (void (*)(void *))dlsym(RTLD_DEFAULT, "dyld_image_release_4HWTrace");
-  m_dyld_image_segment_data_4HWTrace =
-      (dispatch_data_t(*)(void *image, const char *segmentName))dlsym(
-          RTLD_DEFAULT, "dyld_image_segment_data_4HWTrace");
-
   uuid_t dsc_uuid;
   _dyld_get_shared_cache_uuid(dsc_uuid);
   m_host_uuid = UUID(dsc_uuid);
@@ -770,14 +814,9 @@ SharedCacheInfo::SharedCacheInfo(SymbolSharedCacheUse sc_mode) {
   if (use_libdyld_spi && CreateHostSharedCacheImageList())
     return;
 
-  // Scan lldb's shared cache memory if we're built against the
-  // internal SDK and have those headers.
-  if (CreateSharedCacheInfoWithInstrospectionSPIs())
-    return;
-
-  // Scan lldb's shared cache memory if we're built against the public
-  // SDK.
-  CreateSharedCacheInfoLLDBsVirtualMemory();
+  // Otherwise scan lldb's own shared cache, preferring the process snapshot
+  // SPIs when the running dyld vends them.
+  CreateSharedCacheInfoWithInstrospectionSPIs();
 }
 
 struct segment {
@@ -796,15 +835,8 @@ static DataExtractorSP map_shared_cache_binary_segments(void *image) {
   static std::mutex g_mutex;
   std::lock_guard<std::mutex> guard(g_mutex);
 
-  static dispatch_data_t (*g_dyld_image_segment_data_4HWTrace)(
-      void *image, const char *segmentName);
-  static std::once_flag g_once_flag;
-  std::call_once(g_once_flag, [&]() {
-    g_dyld_image_segment_data_4HWTrace =
-        (dispatch_data_t(*)(void *, const char *))dlsym(
-            RTLD_DEFAULT, "dyld_image_segment_data_4HWTrace");
-  });
-  if (!g_dyld_image_segment_data_4HWTrace)
+  const LazyDyldSPIs &dyld = GetLazyDyldSPIs();
+  if (!dyld.image_segment_data_4HWTrace)
     return {};
 
   __block std::vector<segment> segments;
@@ -818,7 +850,7 @@ static DataExtractorSP map_shared_cache_binary_segments(void *image) {
         seg.vmsize = vmSize;
 
         dispatch_data_t data_from_libdyld =
-            g_dyld_image_segment_data_4HWTrace(image_copy, segmentName);
+            dyld.image_segment_data_4HWTrace(image_copy, segmentName);
         (void)dispatch_data_create_map(data_from_libdyld, &seg.data, &seg.size);
 
         if (seg.size > 0 && seg.data != 0)
@@ -872,8 +904,8 @@ static DataExtractorSP map_shared_cache_binary_segments(void *image) {
 bool SharedCacheInfo::CreateSharedCacheImageList(UUID sc_uuid,
                                                  std::string filepath) {
   llvm::sys::ScopedWriter guard(m_mutex);
-  if (!m_dyld_image_retain_4HWTrace || !m_dyld_image_release_4HWTrace ||
-      !m_dyld_image_segment_data_4HWTrace)
+  const LazyDyldSPIs &dyld = GetLazyDyldSPIs();
+  if (!dyld.Has4HWTraceSPIs())
     return false;
 
   if (filepath.empty())
@@ -917,7 +949,7 @@ bool SharedCacheInfo::CreateSharedCacheImageList(UUID sc_uuid,
       LLDB_LOGF_VERBOSE(log, "sc file %s image %p", installname.GetCString(),
                         (void *)image);
 
-      m_dyld_image_retain_4HWTrace(image);
+      dyld.image_retain_4HWTrace(image);
       m_file_infos[sc_uuid].push_back(SharedCacheImageInfo(
           installname, image_uuid, map_shared_cache_binary_segments, image));
     });
@@ -955,29 +987,33 @@ bool SharedCacheInfo::CreateHostSharedCacheImageList() {
   return false;
 }
 
-// Index the binaries in lldb's own shared cache memory, using
-// libdyld SPI present on macOS 12 and newer, when building against
-// the internal SDK, and add an entry to the m_caches map.
+// Index the binaries in lldb's own shared cache memory, using the process
+// snapshot libdyld SPIs present on macOS 12 and newer. The SPIs are resolved
+// at runtime, so this works regardless of which SDK lldb was built against;
+// it returns false when the running dyld doesn't vend them.
 bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
   llvm::sys::ScopedWriter guard(m_mutex);
-#if defined(SDK_HAS_NEW_DYLD_INTROSPECTION_SPIS)
-  dyld_process_t dyld_process = dyld_process_create_for_current_task();
+  const LazyDyldSPIs &dyld = GetLazyDyldSPIs();
+  if (!dyld.HasProcessSnapshotSPIs())
+    return false;
+
+  dyld_process_t dyld_process = dyld.process_create_for_current_task();
   if (!dyld_process)
     return false;
 
   llvm::scope_exit cleanup_process_on_exit(
-      [&]() { dyld_process_dispose(dyld_process); });
+      [&]() { dyld.process_dispose(dyld_process); });
 
   dyld_process_snapshot_t snapshot =
-      dyld_process_snapshot_create_for_process(dyld_process, nullptr);
+      dyld.process_snapshot_create_for_process(dyld_process, nullptr);
   if (!snapshot)
     return false;
 
   llvm::scope_exit cleanup_snapshot_on_exit(
-      [&]() { dyld_process_snapshot_dispose(snapshot); });
+      [&]() { dyld.process_snapshot_dispose(snapshot); });
 
   dyld_shared_cache_t shared_cache =
-      dyld_process_snapshot_get_shared_cache(snapshot);
+      dyld.process_snapshot_get_shared_cache(snapshot);
   if (!shared_cache)
     return false;
 
@@ -989,6 +1025,10 @@ bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
     __block uint64_t maxVmAddr = 0;
     uuid_t uuidStore;
     __block uuid_t *uuid = &uuidStore;
+    // A shared cache image's segments can occupy non-adjacent regions of the
+    // cache. Keep track of the segment's start and end so we can build a
+    // VirtualDataExtractor that prevents reads between segments.
+    __block std::vector<std::pair<uint64_t, uint64_t>> segments;
 
     dyld_image_for_each_segment_info(
         image,
@@ -996,12 +1036,22 @@ bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
           minVmAddr = std::min(minVmAddr, vmAddr);
           maxVmAddr = std::max(maxVmAddr, vmAddr + vmSize);
           dyld_image_copy_uuid(image, uuid);
+          if (vmSize > 0)
+            segments.emplace_back(vmAddr, vmSize);
         });
     assert(minVmAddr != UINT_MAX);
     assert(maxVmAddr != 0);
     lldb::DataBufferSP data_sp = std::make_shared<DataBufferUnowned>(
         (uint8_t *)minVmAddr, maxVmAddr - minVmAddr);
-    lldb::DataExtractorSP extractor_sp = std::make_shared<DataExtractor>(data_sp);
+    // Data is read in place from lldb's own shared cache, so each segment's
+    // virtual offset (image base at 0) equals its physical offset in the
+    // buffer.
+    VirtualDataExtractor::LookupTable table;
+    for (const std::pair<uint64_t, uint64_t> &seg : segments)
+      table.Append(VirtualDataExtractor::LookupTable::Entry(
+          seg.first - minVmAddr, seg.second, seg.first - minVmAddr));
+    lldb::DataExtractorSP extractor_sp =
+        std::make_shared<VirtualDataExtractor>(data_sp, table);
     // Copy the filename into the const string pool to
     // ensure lifetime.
     ConstString installname(dyld_image_get_installname(image));
@@ -1018,43 +1068,6 @@ bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
     m_uuid_map[m_host_uuid][entry->GetUUID()] = i;
   }
   return true;
-#endif
-  return false;
-}
-
-// Index the binaries in lldb's own shared cache memory using
-// libdyld SPI available on macOS 10.13 or newer, add an entry to
-// m_caches.
-void SharedCacheInfo::CreateSharedCacheInfoLLDBsVirtualMemory() {
-  llvm::sys::ScopedWriter guard(m_mutex);
-  size_t shared_cache_size;
-  uint8_t *shared_cache_start =
-      _dyld_get_shared_cache_range(&shared_cache_size);
-
-  // In macOS 26, a shared cache has around 3500 files.
-  m_file_infos[m_host_uuid].reserve(4000);
-
-  dyld_shared_cache_iterate_text(
-      m_host_uuid.GetBytes().data(),
-      ^(const dyld_shared_cache_dylib_text_info *info) {
-        lldb::DataBufferSP buffer_sp = std::make_shared<DataBufferUnowned>(
-            shared_cache_start + info->textSegmentOffset,
-            shared_cache_size - info->textSegmentOffset);
-        lldb::DataExtractorSP extractor_sp =
-            std::make_shared<DataExtractor>(buffer_sp);
-        ConstString filepath(info->path);
-        m_file_infos[m_host_uuid].push_back(SharedCacheImageInfo(
-            filepath, UUID(info->dylibUuid, 16), extractor_sp));
-      });
-
-  // std::vector of SharedCacheImageInfos has been fully populated, we can
-  // take pointers to the objects now.
-  size_t file_info_size = m_file_infos[m_host_uuid].size();
-  for (size_t i = 0; i < file_info_size; i++) {
-    SharedCacheImageInfo *entry = &m_file_infos[m_host_uuid][i];
-    m_filename_map[m_host_uuid][entry->GetFilename()] = i;
-    m_uuid_map[m_host_uuid][entry->GetUUID()] = i;
-  }
 }
 
 SharedCacheInfo &GetSharedCacheSingleton(SymbolSharedCacheUse sc_mode) {

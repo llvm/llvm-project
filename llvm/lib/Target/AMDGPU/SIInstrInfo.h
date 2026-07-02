@@ -306,17 +306,6 @@ public:
                    bool KillSrc, bool RenamableDest = false,
                    bool RenamableSrc = false) const override;
 
-  const TargetRegisterClass *getPreferredSelectRegClass(
-                               unsigned Size) const;
-
-  Register insertNE(MachineBasicBlock *MBB,
-                    MachineBasicBlock::iterator I, const DebugLoc &DL,
-                    Register SrcReg, int Value) const;
-
-  Register insertEQ(MachineBasicBlock *MBB,
-                    MachineBasicBlock::iterator I, const DebugLoc &DL,
-                    Register SrcReg, int Value)  const;
-
 private:
   void storeRegToStackSlotImpl(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MI, Register SrcReg,
@@ -442,11 +431,6 @@ public:
                     MachineBasicBlock::iterator I, const DebugLoc &DL,
                     Register DstReg, ArrayRef<MachineOperand> Cond,
                     Register TrueReg, Register FalseReg) const override;
-
-  void insertVectorSelect(MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator I, const DebugLoc &DL,
-                          Register DstReg, ArrayRef<MachineOperand> Cond,
-                          Register TrueReg, Register FalseReg) const;
 
   bool analyzeCompare(const MachineInstr &MI, Register &SrcReg,
                       Register &SrcReg2, int64_t &CmpMask,
@@ -1574,8 +1558,6 @@ public:
 
   void insertNoops(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                    unsigned Quantity) const override;
-
-  void insertReturn(MachineBasicBlock &MBB) const;
 
   /// Build instructions that simulate the behavior of a `s_trap 2` instructions
   /// for hardware (namely, gfx11) that runs in PRIV=1 mode. There, s_trap is

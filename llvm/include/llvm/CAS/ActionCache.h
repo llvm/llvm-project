@@ -34,7 +34,7 @@ public:
   StringRef getKey() const { return Key; }
 
   LLVM_ABI CacheKey(const CASID &ID);
-  LLVM_ABI_FOR_TEST CacheKey(const ObjectProxy &Proxy);
+  LLVM_ABI CacheKey(const ObjectProxy &Proxy);
   LLVM_ABI CacheKey(const ObjectStore &CAS, const ObjectRef &Ref);
 
 private:

@@ -3,7 +3,6 @@
 // RUN: not llvm-tblgen -DERROR2 %s 2>&1 | FileCheck --check-prefix=ERROR2 %s
 // RUN: not llvm-tblgen -DERROR3 %s 2>&1 | FileCheck --check-prefix=ERROR3 %s
 // RUN: not llvm-tblgen -DERROR4 %s 2>&1 | FileCheck --check-prefix=ERROR4 %s
-// XFAIL: vg_leak
 
 def test {
   bit test0 = !match("123 abc ABC", "[0-9 a-z A-Z]+");

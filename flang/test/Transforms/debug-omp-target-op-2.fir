@@ -25,7 +25,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
     %24 = omp.map.info var_ptr(%15 : !fir.ref<!fir.array<?x?xi32>>, i32) map_clauses(tofrom) capture(ByRef) bounds(%19, %23) -> !fir.ref<!fir.array<?x?xi32>> {name = "b"}
     %25 = omp.map.info var_ptr(%1 : !fir.ref<i32>, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !fir.ref<i32> {name = ""}
     %26 = omp.map.info var_ptr(%0 : !fir.ref<i32>, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !fir.ref<i32> {name = ""}
-    omp.target map_entries(%24 -> %arg3, %25 -> %arg4, %26 -> %arg5 : !fir.ref<!fir.array<?x?xi32>>, !fir.ref<i32>, !fir.ref<i32>) {
+    omp.target kernel_type(generic) map_entries(%24 -> %arg3, %25 -> %arg4, %26 -> %arg5 : !fir.ref<!fir.array<?x?xi32>>, !fir.ref<i32>, !fir.ref<i32>) {
       %27 = fir.load %arg5 : !fir.ref<i32>
       %28 = fir.load %arg4 : !fir.ref<i32>
       %29 = fir.convert %27 : (i32) -> index

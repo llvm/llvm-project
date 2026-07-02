@@ -88,7 +88,7 @@ StructuredData::ObjectSP Breakpoint::SerializeToStructuredData() {
 
   if (!m_name_list.empty()) {
     StructuredData::ArraySP names_array_sp(new StructuredData::Array());
-    for (auto name : m_name_list) {
+    for (auto name : m_name_list.keys()) {
       names_array_sp->AddItem(std::make_shared<StructuredData::String>(name));
     }
     breakpoint_contents_sp->AddItem(Breakpoint::GetKey(OptionNames::Names),
@@ -1003,9 +1003,9 @@ void Breakpoint::GetDescriptionForType(Stream *s, lldb::DescriptionLevel level,
         s->Printf("Names:");
         s->EOL();
         s->IndentMore();
-        for (const std::string &name : m_name_list) {
+        for (llvm::StringRef name : m_name_list.keys()) {
           s->Indent();
-          s->Printf("%s\n", name.c_str());
+          s->Format("{0}\n", name);
         }
         s->IndentLess();
       }
@@ -1064,7 +1064,8 @@ void Breakpoint::GetResolverDescription(Stream *s) {
     m_resolver_sp->GetDescription(s);
 }
 
-bool Breakpoint::GetMatchingFileLine(ConstString filename, uint32_t line_number,
+bool Breakpoint::GetMatchingFileLine(llvm::StringRef filename,
+                                     uint32_t line_number,
                                      BreakpointLocationCollection &loc_coll) {
   // TODO: To be correct, this method needs to fill the breakpoint location
   // collection

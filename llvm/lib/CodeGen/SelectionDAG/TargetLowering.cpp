@@ -2463,6 +2463,34 @@ bool TargetLowering::SimplifyDemandedBits(
     Known = TLO.DAG.computeKnownBits(Op, DemandedElts, Depth);
     break;
   }
+  case ISD::PDEP: {
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+
+    unsigned DemandedBitsLZ = OriginalDemandedBits.countl_zero();
+    APInt LoMask = APInt::getLowBitsSet(BitWidth, BitWidth - DemandedBitsLZ);
+
+    // If the demanded bits has leading zeroes, we don't demand those from the
+    // mask.
+    if (SimplifyDemandedBits(Op1, LoMask, Known, TLO, Depth + 1))
+      return true;
+
+    // The number of possible 1s in the mask determines the number of LSBs of
+    // operand 0 used. Undemanded bits from the mask don't matter so filter
+    // them before counting.
+    KnownBits Known2;
+    uint64_t Count = (~Known.Zero & LoMask).popcount();
+    APInt DemandedMask(APInt::getLowBitsSet(BitWidth, Count));
+    if (SimplifyDemandedBits(Op0, DemandedMask, Known2, TLO, Depth + 1))
+      return true;
+
+    // Zeroes are retained from the mask, but not ones.
+    Known.One.clearAllBits();
+    // The result will have at least as many trailing zeros as the non-mask
+    // operand since bits can only map to the same or higher bit position.
+    Known.Zero.setLowBits(Known2.countMinTrailingZeros());
+    break;
+  }
   case ISD::SIGN_EXTEND_INREG: {
     SDValue Op0 = Op.getOperand(0);
     EVT ExVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
@@ -9098,7 +9126,7 @@ SDValue TargetLowering::expandPDEP(SDNode *Node, SelectionDAG &DAG) const {
   // Each pass handles half the shift amount of the previous pass.
   SDValue X = Val;
   for (int S = (int)LogBW - 1; S >= 0; --S) {
-    SDValue ShiftSv = DAG.getShiftAmountConstant(1u << S, VT, DL);
+    SDValue ShiftSv = DAG.getShiftAmountConstant(1ull << S, VT, DL);
     SDValue T = DAG.getNode(ISD::SHL, DL, VT, X, ShiftSv);
     SDValue UnshiftedBits =
         DAG.getNode(ISD::AND, DL, VT, X, DAG.getNOT(DL, MvArray[S], VT));
@@ -10094,6 +10122,22 @@ SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,
   return SDValue();
 }
 
+static SDValue isSpecificZeroAfterMaybeRounding(SelectionDAG &DAG,
+                                                const TargetLowering &TLI,
+                                                const SDLoc &DL, SDValue Val,
+                                                FPClassTest FPClass) {
+  EVT VT = Val.getValueType();
+  EVT CCVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+  EVT IntVT = VT.changeTypeToInteger();
+  EVT FloatVT = VT.changeElementType(*DAG.getContext(), MVT::f32);
+  SDValue TestZero = DAG.getTargetConstant(FPClass, DL, MVT::i32);
+  if (!TLI.isTypeLegal(IntVT) &&
+      !TLI.isOperationLegalOrCustom(ISD::IS_FPCLASS, VT))
+    Val = DAG.getNode(ISD::FP_ROUND, DL, FloatVT, Val,
+                      DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
+  return DAG.getNode(ISD::IS_FPCLASS, DL, CCVT, Val, TestZero);
+}
+
 SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
                                                 SelectionDAG &DAG) const {
   if (SDValue Expanded = expandVectorNaryOpBySplitting(N, DAG))
@@ -10145,17 +10189,11 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
   // fminimum/fmaximum requires -0.0 less than +0.0
   if (!MinMaxMustRespectOrderedZero && !N->getFlags().hasNoSignedZeros() &&
       !DAG.isKnownNeverLogicalZero(RHS) && !DAG.isKnownNeverLogicalZero(LHS)) {
-    SDValue IsZero = DAG.getSetCC(DL, CCVT, MinMax,
-                                  DAG.getConstantFP(0.0, DL, VT), ISD::SETOEQ);
-    SDValue TestZero =
-        DAG.getTargetConstant(IsMax ? fcPosZero : fcNegZero, DL, MVT::i32);
-    SDValue LCmp = DAG.getSelect(
-        DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, CCVT, LHS, TestZero), LHS,
-        MinMax, Flags);
-    SDValue RCmp = DAG.getSelect(
-        DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, CCVT, RHS, TestZero), RHS,
-        LCmp, Flags);
-    MinMax = DAG.getSelect(DL, VT, IsZero, RCmp, MinMax, Flags);
+    SDValue IsEqual = DAG.getSetCC(DL, CCVT, LHS, RHS, ISD::SETOEQ);
+    SDValue IsSpecificZero = isSpecificZeroAfterMaybeRounding(
+        DAG, *this, DL, LHS, IsMax ? fcPosZero : fcNegZero);
+    SDValue RetZero = DAG.getSelect(DL, VT, IsSpecificZero, LHS, RHS, Flags);
+    MinMax = DAG.getSelect(DL, VT, IsEqual, RetZero, MinMax, Flags);
   }
 
   return MinMax;
@@ -10235,22 +10273,13 @@ SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
       DAG.isKnownNeverLogicalZero(RHS)) {
     return MinMax;
   }
-  SDValue TestZero =
-      DAG.getTargetConstant(IsMax ? fcPosZero : fcNegZero, DL, MVT::i32);
   SDValue IsZero = DAG.getSetCC(DL, CCVT, MinMax,
                                 DAG.getConstantFP(0.0, DL, VT), ISD::SETEQ);
-  EVT IntVT = VT.changeTypeToInteger();
-  EVT FloatVT = VT.changeElementType(*DAG.getContext(), MVT::f32);
-  SDValue LHSTrunc = LHS;
-  if (!isTypeLegal(IntVT) && !isOperationLegalOrCustom(ISD::IS_FPCLASS, VT)) {
-    LHSTrunc = DAG.getNode(ISD::FP_ROUND, DL, FloatVT, LHS,
-                           DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
-  }
+  SDValue IsSpecificZero = isSpecificZeroAfterMaybeRounding(
+      DAG, *this, DL, LHS, IsMax ? fcPosZero : fcNegZero);
   // It's OK to select from LHS and MinMax, with only one ISD::IS_FPCLASS, as
   // we preferred RHS when generate MinMax, if the operands are equal.
-  SDValue RetZero = DAG.getSelect(
-      DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, CCVT, LHSTrunc, TestZero), LHS,
-      MinMax, Flags);
+  SDValue RetZero = DAG.getSelect(DL, VT, IsSpecificZero, LHS, MinMax, Flags);
   return DAG.getSelect(DL, VT, IsZero, RetZero, MinMax, Flags);
 }
 

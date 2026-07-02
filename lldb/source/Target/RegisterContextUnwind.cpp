@@ -60,6 +60,20 @@ static bool CallFrameAddressIsValid(ABISP abi_sp, lldb::addr_t cfa) {
   return cfa != 0 && cfa != 1;
 }
 
+/// Identify a clang outlined function by symbol name.
+///
+/// The unwind information in outlined functions from clang can be
+/// incorrect, and because of when the outlining happens in the compilation,
+/// it may not be possible to fix.  We will need to ignore any
+/// instruction-emulation or compiler-sourced unwind plans for these
+/// functions, and fall back to an ABI default unwindplan.
+static bool IsClangOutlinedFunction(const SymbolContext &sym_ctx) {
+  llvm::StringRef name = GetSymbolOrFunctionName(sym_ctx).GetStringRef();
+  if (name.starts_with("OUTLINED_FUNCTION_"))
+    return true;
+  return false;
+}
+
 #define UNWIND_LOG_IMPL(LOG_FN, log, ...)                                      \
   LOG_FN(log, "{0}th{1}/fr{2} {3}",                                            \
          llvm::indent(std::min(m_frame_number, 100U)), m_thread.GetIndexID(),  \
@@ -866,6 +880,28 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
       pc_module_sp->GetObjectFile() == nullptr) {
     m_frame_type = eNormalFrame;
     return arch_default_unwind_plan_sp;
+  }
+
+  // Function outlining is a clang feature where common blocks of instructions
+  // from separate functions can be put in a separate utility function, and
+  // the original functions call into the utility function to execute them,
+  // resulting in fewer bytes used for the code section overall.
+  //
+  // The call to the OUTLINED_FUNCTION may not be a normal ABI call (e.g.
+  // on RISCV it might be called `jal t0, OUTLINED_FUNCTION_<nn>` putting the
+  // return address in a temporary register instead of $ra).  The unwind
+  // instructions in eh_frame/debug_frame are not correct today for an
+  // OUTLINED_FUNCTION, even when a normal ABI call is made.
+  // CFI may be absent or incorrect; instruction emulation may be incorrect
+  // because it assumes a normal ABI call was made.
+  if (m_sym_ctx_valid && arch_default_unwind_plan_sp) {
+    if (IsClangOutlinedFunction(m_sym_ctx)) {
+      UNWIND_LOG(log,
+                 "Overriding full unwind plan, using architectural default for "
+                 "function {0}",
+                 GetSymbolOrFunctionName(m_sym_ctx));
+      return arch_default_unwind_plan_sp;
+    }
   }
 
   FuncUnwindersSP func_unwinders_sp;

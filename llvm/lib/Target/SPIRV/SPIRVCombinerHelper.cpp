@@ -150,7 +150,7 @@ bool SPIRVCombinerHelper::matchSelectToFaceForward(MachineInstr &MI) const {
                mi_match(FalseReg, MRI,
                         m_GFMul(m_GFCstOrSplat(MulConstant),
                                 m_SpecificReg(TrueReg)))) {
-      if (!MulConstant || !MulConstant->Value.isExactlyValue(-1.0))
+      if (!MulConstant || !MulConstant->Value.isMinusOne())
         return false;
     } else if (!AreNegatedConstantsOrSplats(TrueReg, FalseReg))
       return false;

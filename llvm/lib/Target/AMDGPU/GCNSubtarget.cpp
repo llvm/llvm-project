@@ -144,6 +144,9 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
     FlatOffsetBitWidth = 13;
 
   LocalMemorySize = AMDGPU::IsaInfo::getLocalMemorySize(*this);
+  // LDS Allocation Granularity calculated in bytes from dwords
+  LDSAllocationGranularity =
+      AMDGPU::getLdsDwGranularity(*this) * sizeof(uint32_t);
 
   HasFminFmaxLegacy = getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;
   HasSMulHi = getGeneration() >= AMDGPUSubtarget::GFX9;
@@ -156,8 +159,6 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
 
   assert(llvm::isPowerOf2_32(InstCacheLineSize) &&
          "InstCacheLineSize must be a power of 2");
-
-  TargetID.setTargetIDFromFeaturesString(FS);
 
   LLVM_DEBUG(dbgs() << "xnack setting for subtarget: "
                     << TargetID.getXnackSetting() << '\n');
@@ -182,7 +183,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     : // clang-format off
     AMDGPUGenSubtargetInfo(TT, GPU, /*TuneCPU*/ GPU, FS),
     AMDGPUSubtarget(TT),
-    TargetID(*this),
+    TargetID(AMDGPU::createAMDGPUTargetID(*this, FS)),
     InstrItins(getInstrItineraryForCPU(GPU)),
     BufferOOBRelaxed(BufferOOBRelaxed),
     TBufferOOBRelaxed(TBufferOOBRelaxed),
@@ -203,7 +204,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
   Legalizer = std::make_unique<AMDGPULegalizerInfo>(*this, TM);
   RegBankInfo = std::make_unique<AMDGPURegisterBankInfo>(*this);
   InstSelector =
-      std::make_unique<AMDGPUInstructionSelector>(*this, *RegBankInfo, TM);
+      std::make_unique<AMDGPUInstructionSelector>(*this, *RegBankInfo);
 }
 
 const SelectionDAGTargetInfo *GCNSubtarget::getSelectionDAGInfo() const {
@@ -473,7 +474,7 @@ GCNSubtarget::computeOccupancy(const Function &F, unsigned LDSSize,
   unsigned VGPROcc = getOccupancyWithNumVGPRs(NumVGPRs, DynamicVGPRBlockSize);
 
   // Maximum occupancy may be further limited by high SGPR/VGPR usage.
-  MaxOcc = std::min(MaxOcc, std::min(SGPROcc, VGPROcc));
+  MaxOcc = std::min({MaxOcc, SGPROcc, VGPROcc});
   return {std::min(MinOcc, MaxOcc), MaxOcc};
 }
 
@@ -634,7 +635,7 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
     // Clamp values to be inbounds of our limits, and ensure min <= max.
 
     MaxNumAGPRs = std::min(std::max(MinNumAGPRs, MaxNumAGPRs), MaxVectorRegs);
-    MinNumAGPRs = std::min(std::min(MinNumAGPRs, TotalNumAGPRs), MaxNumAGPRs);
+    MinNumAGPRs = std::min({MinNumAGPRs, TotalNumAGPRs, MaxNumAGPRs});
 
     MaxNumVGPRs = std::min(MaxVectorRegs - MinNumAGPRs, NumArchVGPRs);
     MaxNumAGPRs = std::min(MaxVectorRegs - MaxNumVGPRs, MaxNumAGPRs);

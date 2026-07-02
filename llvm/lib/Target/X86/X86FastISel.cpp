@@ -3750,15 +3750,9 @@ Register X86FastISel::X86MaterializeInt(const ConstantInt *CI, MVT VT) {
   case MVT::i8:  Opc = X86::MOV8ri;  break;
   case MVT::i16: Opc = X86::MOV16ri; break;
   case MVT::i32: Opc = X86::MOV32ri; break;
-  case MVT::i64: {
-    if (isUInt<32>(Imm))
-      Opc = X86::MOV32ri64;
-    else if (isInt<32>(Imm))
-      Opc = X86::MOV64ri32;
-    else
-      Opc = X86::MOV64ri;
+  case MVT::i64:
+    Opc = X86::getMOVriOpcode(/*Use64BitReg=*/true, Imm);
     break;
-  }
   }
   return fastEmitInst_i(Opc, TLI.getRegClassFor(VT), Imm);
 }

@@ -17,6 +17,7 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Value.h"
@@ -582,10 +583,10 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     return success();
   }
 
-  if (mlir::isa<cir::ConstArrayAttr, cir::ConstVectorAttr,
-                cir::ConstComplexAttr, cir::ConstRecordAttr,
-                cir::GlobalViewAttr, cir::PoisonAttr, cir::TypeInfoAttr,
-                cir::VTableAttr>(attrType))
+  if (mlir::isa<cir::BlockAddrInfoAttr, cir::ConstArrayAttr,
+                cir::ConstVectorAttr, cir::ConstComplexAttr,
+                cir::ConstRecordAttr, cir::GlobalViewAttr, cir::PoisonAttr,
+                cir::TypeInfoAttr, cir::VTableAttr>(attrType))
     return success();
 
   assert(isa<TypedAttr>(attrType) && "What else could we be looking at here?");
@@ -966,6 +967,51 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
       break;
     }
   }
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
+// BuiltinIntCastOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::BuiltinIntCastOp::verify() {
+  mlir::Type srcType = getSrc().getType();
+  mlir::Type resType = getType();
+
+  auto srcCirInt = mlir::dyn_cast<cir::IntType>(srcType);
+  auto resCirInt = mlir::dyn_cast<cir::IntType>(resType);
+
+  // One side must be a CIR integer the other must be a builtin
+  // integer or index type.
+  if (static_cast<bool>(srcCirInt) == static_cast<bool>(resCirInt))
+    return emitOpError()
+           << "requires exactly one '!cir.int' operand or result; the other "
+              "must be a builtin integer or 'index' type";
+
+  mlir::Type builtinType = srcCirInt ? resType : srcType;
+  if (!mlir::isa<mlir::IntegerType, mlir::IndexType>(builtinType))
+    return emitOpError() << "requires a builtin integer or 'index' type on the "
+                            "non-CIR side";
+
+  // The cast preserves bit width. 'index' has no fixed width, so only check
+  // when the builtin side is a fixed-width integer.
+  if (auto builtinInt = mlir::dyn_cast<mlir::IntegerType>(builtinType)) {
+    cir::IntType cirInt = srcCirInt ? srcCirInt : resCirInt;
+    if (cirInt.getWidth() != builtinInt.getWidth())
+      return emitOpError()
+             << "requires the CIR and builtin integer types to have the same "
+                "width; use 'cir.cast' for width conversions";
+  }
+
+  return success();
+}
+
+OpFoldResult cir::BuiltinIntCastOp::fold(FoldAdaptor adaptor) {
+  // Fold: builtin_int_cast(builtin_int_cast(x)) -> x
+  // Inner source type must match the cast's result type.
+  if (auto inner = getSrc().getDefiningOp<cir::BuiltinIntCastOp>())
+    if (inner.getSrc().getType() == getType())
+      return inner.getSrc();
   return {};
 }
 
@@ -2144,8 +2190,7 @@ static ParseResult parseGlobalOpTypeAndInitialValue(OpAsmParser &parser,
 
       assert(mlir::isa<mlir::TypedAttr>(initialValueAttr) &&
              "Non-typed attrs shouldn't appear here.");
-      auto typedAttr = mlir::cast<mlir::TypedAttr>(initialValueAttr);
-      opTy = typedAttr.getType();
+      opTy = mlir::cast<mlir::TypedAttr>(initialValueAttr).getType();
     }
 
     // Parse destructor, example:
@@ -3425,15 +3470,21 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
 
   SmallVector<mlir::Attribute, 16> elements(vecSize);
   bool isIntAttr = vecSize && mlir::isa<cir::IntAttr>(lhsVecElhs[0]);
+  bool isUnsignedInt =
+      isIntAttr && mlir::cast<cir::IntType>(inputElemTy).isUnsigned();
   for (uint64_t i = 0; i < vecSize; i++) {
     mlir::Attribute lhsAttr = lhsVecElhs[i];
     mlir::Attribute rhsAttr = rhsVecElhs[i];
-    int cmpResult = 0;
+    bool cmpResult = false;
     switch (opKind) {
     case cir::CmpOpKind::lt: {
       if (isIntAttr) {
-        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() <
-                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+        if (isUnsignedInt)
+          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getUInt() <
+                      mlir::cast<cir::IntAttr>(rhsAttr).getUInt();
+        else
+          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() <
+                      mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
       } else {
         cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() <
                     mlir::cast<cir::FPAttr>(rhsAttr).getValue();
@@ -3442,8 +3493,12 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
     }
     case cir::CmpOpKind::le: {
       if (isIntAttr) {
-        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() <=
-                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+        if (isUnsignedInt)
+          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getUInt() <=
+                      mlir::cast<cir::IntAttr>(rhsAttr).getUInt();
+        else
+          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() <=
+                      mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
       } else {
         cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() <=
                     mlir::cast<cir::FPAttr>(rhsAttr).getValue();
@@ -3452,8 +3507,12 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
     }
     case cir::CmpOpKind::gt: {
       if (isIntAttr) {
-        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() >
-                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+        if (isUnsignedInt)
+          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getUInt() >
+                      mlir::cast<cir::IntAttr>(rhsAttr).getUInt();
+        else
+          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() >
+                      mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
       } else {
         cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() >
                     mlir::cast<cir::FPAttr>(rhsAttr).getValue();
@@ -3462,8 +3521,12 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
     }
     case cir::CmpOpKind::ge: {
       if (isIntAttr) {
-        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() >=
-                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+        if (isUnsignedInt)
+          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getUInt() >=
+                      mlir::cast<cir::IntAttr>(rhsAttr).getUInt();
+        else
+          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() >=
+                      mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
       } else {
         cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() >=
                     mlir::cast<cir::FPAttr>(rhsAttr).getValue();
@@ -3506,7 +3569,11 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
     }
     }
 
-    elements[i] = cir::IntAttr::get(getType().getElementType(), cmpResult);
+    // A true result is all bits set (-1 in two's complement), and a false
+    // result is all bits clear. For a 1-bit element type these are the same
+    // bit pattern as 1 and 0, respectively.
+    elements[i] =
+        cir::IntAttr::get(getType().getElementType(), cmpResult ? -1LL : 0LL);
   }
 
   return cir::ConstVectorAttr::get(

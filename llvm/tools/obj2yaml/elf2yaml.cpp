@@ -1024,7 +1024,7 @@ ELFDumper<ELFT>::dumpAddrsigSection(const Elf_Shdr *Shdr) {
 
   ArrayRef<uint8_t> Content = *ContentOrErr;
   DataExtractor::Cursor Cur(0);
-  DataExtractor Data(Content, Obj.isLE(), /*AddressSize=*/0);
+  DataExtractor Data(Content, Obj.isLE());
   std::vector<ELFYAML::YAMLFlowString> Symbols;
   while (Cur && Cur.tell() < Content.size()) {
     uint64_t SymNdx = Data.getULEB128(Cur);
@@ -1134,7 +1134,7 @@ ELFDumper<ELFT>::dumpCallGraphProfileSection(const Elf_Shdr *Shdr) {
 
   std::vector<ELFYAML::CallGraphEntryWeight> Entries(Content.size() /
                                                      SizeOfEntry);
-  DataExtractor Data(Content, Obj.isLE(), /*AddressSize=*/0);
+  DataExtractor Data(Content, Obj.isLE());
   DataExtractor::Cursor Cur(0);
   auto ReadEntry = [&](ELFYAML::CallGraphEntryWeight &E) {
     E.Weight = Data.getU64(Cur);
@@ -1358,7 +1358,7 @@ ELFDumper<ELFT>::dumpHashSection(const Elf_Shdr *Shdr) {
   }
 
   DataExtractor::Cursor Cur(0);
-  DataExtractor Data(Content, Obj.isLE(), /*AddressSize=*/0);
+  DataExtractor Data(Content, Obj.isLE());
   uint64_t NBucket = Data.getU32(Cur);
   uint64_t NChain = Data.getU32(Cur);
   if (Content.size() != (2 + NBucket + NChain) * 4) {

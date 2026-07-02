@@ -122,7 +122,7 @@
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu --no-gpu-bundle-output \
 // RUN: 2>&1 | FileCheck -check-prefixes=OBJ,OBJ-UBUN %s
 
-// OBJ: {{"*.clang.*"}} {{.*}} "-emit-llvm-bc"
+// OBJ: {{"*.clang.*"}} {{.*}} "-emit-obj"
 // OBJ-NOT: {{"*.llvm-link"}}
 // OBJ-NOT: {{".*opt"}}
 // OBJ-NOT: {{".*llc"}}

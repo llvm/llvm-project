@@ -59,13 +59,13 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr explicit reverse_view(_View __view) : __base_(std::move(__view)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
     requires copy_constructible<_View>
   {
     return __base_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
 
   _LIBCPP_HIDE_FROM_ABI constexpr reverse_iterator<iterator_t<_View>> begin() {
     if constexpr (_UseCache)
@@ -78,35 +78,35 @@ public:
     return __tmp;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr reverse_iterator<iterator_t<_View>> begin()
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr reverse_iterator<iterator_t<_View>> begin()
     requires common_range<_View>
   {
     return std::make_reverse_iterator(ranges::end(__base_));
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
     requires common_range<const _View>
   {
     return std::make_reverse_iterator(ranges::end(__base_));
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr reverse_iterator<iterator_t<_View>> end() {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr reverse_iterator<iterator_t<_View>> end() {
     return std::make_reverse_iterator(ranges::begin(__base_));
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
     requires common_range<const _View>
   {
     return std::make_reverse_iterator(ranges::begin(__base_));
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto size()
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size()
     requires sized_range<_View>
   {
     return ranges::size(__base_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
     requires sized_range<const _View>
   {
     return ranges::size(__base_);

@@ -3831,6 +3831,103 @@ similar but the latter uses generic addressing (see `Generic Addressing
 For more information, refer `PTX ISA
 <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-st-bulk>`__.
 
+'``llvm.nvvm.st.async``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.st.async.i32(ptr addrspace(7) %dest_addr, i32 %value, ptr addrspace(7) %mbarrier_addr)
+  declare void @llvm.nvvm.st.async.i64(ptr addrspace(7) %dest_addr, i64 %value, ptr addrspace(7) %mbarrier_addr)
+  declare void @llvm.nvvm.st.async.i128(ptr addrspace(7) %dest_addr, i128 %value, ptr addrspace(7) %mbarrier_addr)
+  
+Overview:
+"""""""""
+
+The '``llvm.nvvm.st.async``' intrinsic initiates a weak 
+asynchronous store operation to shared memory that stores the value specified 
+by the `%value` operand to the destination address specified by the 
+`%dest_addr` operand. The `%value` operand must be an ``i32``, ``i64`` or 
+``i128``, lowering to the ``.b32``, ``.b64`` and ``.b128`` variants 
+of the ``st.async`` PTX instruction respectively.
+
+The store operation is treated as a weak memory operation. The effects of this 
+operation become visible to other threads only when synchronization is 
+established by other means.
+
+The operation is performed asynchronously and the completion is signalled using 
+the mbarrier object specified by the `%mbarrier_addr` operand. Upon completion, 
+a `complete-tx <https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-mbarrier-complete-tx-operation>`__ operation is performed on the mbarrier object, with the 
+`completeCount` argument equal to the amount of data stored in bytes.
+
+For more information, refer `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-st-async>`__.
+
+'``llvm.nvvm.st.async.{sys,gpu}``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+  
+  ; sys scope
+  declare void @llvm.nvvm.st.async.sys.i8(ptr addrspace(1) %dest_addr, i8 %value, i1 immarg %is_multimem)
+  declare void @llvm.nvvm.st.async.sys.i16(ptr addrspace(1) %dest_addr, i16 %value, i1 immarg %is_multimem)
+  declare void @llvm.nvvm.st.async.sys.i32(ptr addrspace(1) %dest_addr, i32 %value, i1 immarg %is_multimem)
+  declare void @llvm.nvvm.st.async.sys.i64(ptr addrspace(1) %dest_addr, i64 %value, i1 immarg %is_multimem)
+   
+  ; gpu scope
+  declare void @llvm.nvvm.st.async.gpu.i8(ptr addrspace(1) %dest_addr, i8 %value, i1 immarg %is_multimem)
+  declare void @llvm.nvvm.st.async.gpu.i16(ptr addrspace(1) %dest_addr, i16 %value, i1 immarg %is_multimem)
+  declare void @llvm.nvvm.st.async.gpu.i32(ptr addrspace(1) %dest_addr, i32 %value, i1 immarg %is_multimem)
+  declare void @llvm.nvvm.st.async.gpu.i64(ptr addrspace(1) %dest_addr, i64 %value, i1 immarg %is_multimem)
+   
+Overview:
+"""""""""
+
+The '``llvm.nvvm.st.async.sys``' and 
+'``llvm.nvvm.st.async.gpu``' intrinsics initiate an 
+asynchronous release store to global memory that stores the value specified by 
+the `%value` operand to the destination address specified by the `%dest_addr` 
+operand.
+
+The `%is_multimem` immediate argument selects the variant of the store. When it 
+is `0`, a regular ``st.async`` is emitted. When it is `1`, a
+``multimem.st.async`` is emitted and the `%dest_addr` operand must be a 
+multimem address.
+
+The store carries ``.release`` semantics — prior stores from the current thread 
+are made visible to other threads in the scope.
+
+The scope of this operation can be ``sys`` or ``gpu``.
+
+These intrinsics lower to the `.b8`, `.b16`, `.b32`, and `.b64` variants of the
+``st.async`` instruction.
+
+For more information, refer `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-st-async>`__.
+
+'``llvm.nvvm.st.async.mmio.sys``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.st.async.mmio.sys.i8(ptr addrspace(1) %dest_addr, i8 %value)
+  declare void @llvm.nvvm.st.async.mmio.sys.i16(ptr addrspace(1) %dest_addr, i16 %value)
+  declare void @llvm.nvvm.st.async.mmio.sys.i32(ptr addrspace(1) %dest_addr, i32 %value)
+  declare void @llvm.nvvm.st.async.mmio.sys.i64(ptr addrspace(1) %dest_addr, i64 %value)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.st.async.mmio.sys``' intrinsic performs an `MMIO <https://docs.nvidia.com/cuda/parallel-thread-execution/#mmio-operation>`__ 
+store to global memory with ``.release`` semantics at the ``sys`` scope.
+
+For more information, refer `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-st-async>`__.
 
 clusterlaunchcontrol Intrinsics
 -------------------------------

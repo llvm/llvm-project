@@ -24,13 +24,13 @@ use omp_lib
     array = (/1, 2, 3, 4, 5, 6, 7, 8, 9, 10/)
     !$omp flush acquire
 
-    !ERROR: PRIVATE clause is not allowed on the FLUSH directive
+    !ERROR: PRIVATE clause is not allowed on FLUSH directive
     !$omp flush private(array)
-    !ERROR: NUM_THREADS clause is not allowed on the FLUSH directive
+    !ERROR: NUM_THREADS clause is not allowed on FLUSH directive
     !$omp flush num_threads(4)
 
     ! Mix allowed and not allowed clauses.
-    !ERROR: NUM_THREADS clause is not allowed on the FLUSH directive
+    !ERROR: NUM_THREADS clause is not allowed on FLUSH directive
     !$omp flush num_threads(4) acquire
   end if
   !$omp end parallel
