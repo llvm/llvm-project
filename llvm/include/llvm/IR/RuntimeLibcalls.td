@@ -1236,7 +1236,6 @@ defm __log2_finite : LibmLibcallImpls<"LOG2_FINITE", "__log2<typesuffix>_finite"
 defm __log_finite : LibmLibcallImpls<"LOG_FINITE", "__log<typesuffix>_finite">;
 defm __pow_finite : LibmLibcallImpls<"POW_FINITE", "__pow<typesuffix>_finite">;
 
-
 /* Standard complex.h routines */
 
 // Present since C99
