@@ -13,6 +13,8 @@
 //   constexpr OutputIterator      // constexpr after C++17
 //   fill_n(Iter first, Size n, const T& value);
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <algorithm>
 #include <array>
 #include <cassert>

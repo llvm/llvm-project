@@ -63,7 +63,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
 copy_n(_InputIterator __first, _Size __n, _OutputIterator __result) {
   using _IntegralSize       = decltype(std::__convert_to_integral(__n));
   _IntegralSize __converted = __n;
-  if (__converted < 0)
+  if (__converted <= 0)
     return __result;
 
   *__result = *__first;
