@@ -10,10 +10,7 @@
 
 // <string>
 
-// basic_string(basic_string&&)
-//        noexcept(is_nothrow_move_constructible<allocator_type>::value); // constexpr since C++20
-
-// This tests a conforming extension
+// basic_string(basic_string&& str) noexcept; // constexpr since C++20
 
 #include <string>
 #include <cassert>
@@ -32,11 +29,11 @@ int main(int, char**) {
   }
   {
     typedef std::basic_string<char, std::char_traits<char>, limited_allocator<char, 10>> C;
-#if TEST_STD_VER <= 14
-    static_assert(!std::is_nothrow_move_constructible<C>::value, "");
-#else
     static_assert(std::is_nothrow_move_constructible<C>::value, "");
-#endif
+  }
+  {
+    using C = std::basic_string<char, std::char_traits<char>, noexcept_false_ctor_allocator<char>>;
+    static_assert(std::is_nothrow_move_constructible<C>::value, "");
   }
 
   return 0;
