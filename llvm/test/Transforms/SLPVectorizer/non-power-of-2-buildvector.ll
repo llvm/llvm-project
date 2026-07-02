@@ -6,29 +6,9 @@ define <15 x half> @func(ptr %buffer) {
 ; CHECK-SAME: ptr [[BUFFER:%.*]]) {
 ; CHECK-NEXT:  [[_ENTRY:.*:]]
 ; CHECK-NEXT:    [[DATA:%.*]] = load <15 x half>, ptr [[BUFFER]], align 32
-; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <15 x half> [[DATA]], <15 x half> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt <8 x half> [[TMP0]], zeroinitializer
-; CHECK-NEXT:    [[TMP19:%.*]] = fmul fast <8 x half> [[TMP0]], splat (half 1.000210e-02)
-; CHECK-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[TMP1]], <8 x half> [[TMP19]], <8 x half> [[TMP0]]
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x half> [[TMP3]], <8 x half> poison, <15 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOT14_VEC_INSERT18211:%.*]] = shufflevector <15 x half> [[DATA]], <15 x half> [[TMP4]], <15 x i32> <i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14>
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <15 x half> [[DATA]], i64 8
-; CHECK-NEXT:    [[TMP6:%.*]] = fcmp olt half [[TMP5]], 0.000000e+00
-; CHECK-NEXT:    [[TMP7:%.*]] = fmul fast half [[TMP5]], 1.000210e-02
-; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[TMP6]], half [[TMP7]], half [[TMP5]]
-; CHECK-NEXT:    [[DOT16_VEC_INSERT1823:%.*]] = insertelement <15 x half> [[DOT14_VEC_INSERT18211]], half [[TMP8]], i64 8
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <15 x half> [[DATA]], <15 x half> poison, <2 x i32> <i32 9, i32 10>
-; CHECK-NEXT:    [[TMP10:%.*]] = fcmp olt <2 x half> [[TMP9]], zeroinitializer
-; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast <2 x half> [[TMP9]], splat (half 1.000210e-02)
-; CHECK-NEXT:    [[TMP12:%.*]] = select <2 x i1> [[TMP10]], <2 x half> [[TMP11]], <2 x half> [[TMP9]]
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x half> [[TMP12]], <2 x half> poison, <15 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[DOT20_VEC_INSERT18273:%.*]] = shufflevector <15 x half> [[DOT16_VEC_INSERT1823]], <15 x half> [[TMP13]], <15 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 15, i32 16, i32 11, i32 12, i32 13, i32 14>
-; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <15 x half> [[DATA]], <15 x half> poison, <4 x i32> <i32 11, i32 12, i32 13, i32 14>
-; CHECK-NEXT:    [[TMP15:%.*]] = fcmp olt <4 x half> [[TMP14]], zeroinitializer
-; CHECK-NEXT:    [[TMP16:%.*]] = fmul fast <4 x half> [[TMP14]], splat (half 1.000210e-02)
-; CHECK-NEXT:    [[TMP17:%.*]] = select <4 x i1> [[TMP15]], <4 x half> [[TMP16]], <4 x half> [[TMP14]]
-; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <4 x half> [[TMP17]], <4 x half> poison, <15 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <15 x half> [[DOT20_VEC_INSERT18273]], <15 x half> [[TMP18]], <15 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 15, i32 16, i32 17, i32 18>
+; CHECK-NEXT:    [[TMP0:%.*]] = fcmp olt <15 x half> [[DATA]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast <15 x half> [[DATA]], splat (half 1.000210e-02)
+; CHECK-NEXT:    [[TMP2:%.*]] = select <15 x i1> [[TMP0]], <15 x half> [[TMP1]], <15 x half> [[DATA]]
 ; CHECK-NEXT:    ret <15 x half> [[TMP2]]
 ;
 .entry:

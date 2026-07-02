@@ -28787,7 +28787,10 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   unsigned Sz = R.getVectorElementSize(I0);
   unsigned MinVF = R.getMinVF(Sz);
   unsigned MaxVF = std::max<unsigned>(
-      getFloorFullVectorNumberOfElements(*TTI, ScalarTy, VL.size()), MinVF);
+      isAllowedNonPowerOf2VF(VL.size())
+          ? VL.size()
+          : getFloorFullVectorNumberOfElements(*TTI, ScalarTy, VL.size()),
+      MinVF);
   MaxVF = std::min(R.getMaximumVF(Sz, S.getOpcode()), MaxVF);
   if (MaxVF < 2) {
     R.getORE()->emit([&]() {
@@ -28814,7 +28817,8 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
     for (unsigned I = NextInst; I < MaxInst; ++I) {
       unsigned ActualVF = std::min(MaxInst - I, VF);
 
-      if (!hasFullVectorsOrPowerOf2(*TTI, ScalarTy, ActualVF))
+      if (!hasFullVectorsOrPowerOf2(*TTI, ScalarTy, ActualVF) &&
+          !isAllowedNonPowerOf2VF(ActualVF))
         continue;
 
       if (MaxVFOnly && ActualVF < MaxVF)
