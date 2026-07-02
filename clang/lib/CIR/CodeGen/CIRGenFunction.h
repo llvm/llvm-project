@@ -724,7 +724,7 @@ public:
     bool emittedAsOffload = false;
 
     /// True if lifetime op should be used.
-    bool useLifetimeOp = false;
+    bool useLifetimeMarkers = false;
 
     mlir::Value nrvoFlag{};
 
@@ -798,7 +798,6 @@ public:
   }
 
   void pushStackRestore(CleanupKind kind, Address spMem);
-  void pushLifetimeEnd(Address addr);
 
   /// Set the address of a local variable.
   void setAddrOfLocalVar(const clang::VarDecl *vd, Address addr) {
@@ -2803,10 +2802,10 @@ public:
 private:
   QualType getVarArgType(const Expr *arg);
 
-  bool shouldEmitLifetimeOp = false;
+  bool shouldEmitLifetimeMarkers = false;
   /// Set when the current function has a goto/switch that may bypass a local's
   /// init; lifetime markers are then suppressed. See functionMightHaveBypass.
-  std::optional<bool> fnHasBypassStmt;
+  bool fnHasBypassStmt = false;
 
   class InlinedInheritingConstructorScope {
   public:
