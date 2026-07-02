@@ -67,42 +67,37 @@ int main(int, char**) {
 
 // Remove this guard when compiler versions older than clang 23 are no longer supported.
 #if defined(TEST_CLANG_VER) && TEST_CLANG_VER >= 2300
-    {
-        static_assert(std::is_copy_constructible<std::tuple<A>>::value, "");
-        static_assert(std::is_move_constructible<std::tuple<A>>::value, "");
-        static_assert(std::is_copy_constructible<std::tuple<ExplicitA>>::value, "");
-        static_assert(std::is_move_constructible<std::tuple<ExplicitA>>::value, "");
-    }
-    {
-        static_assert(std::is_constructible<
-            std::tuple<A>,
-            std::allocator_arg_t, std::allocator<int>,
-            std::tuple<A> const&
-        >::value, "");
-        static_assert(std::is_constructible<
-            std::tuple<A>,
-            std::allocator_arg_t, std::allocator<int>,
-            std::tuple<A> &&
-        >::value, "");
-        static_assert(std::is_constructible<
-            std::tuple<ExplicitA>,
-            std::allocator_arg_t, std::allocator<int>,
-            std::tuple<ExplicitA> const&
-        >::value, "");
-        static_assert(std::is_constructible<
-            std::tuple<ExplicitA>,
-            std::allocator_arg_t, std::allocator<int>,
-            std::tuple<ExplicitA> &&
-        >::value, "");
-    }
+  {
+    static_assert(std::is_copy_constructible<std::tuple<A>>::value, "");
+    static_assert(std::is_move_constructible<std::tuple<A>>::value, "");
+    static_assert(std::is_copy_constructible<std::tuple<ExplicitA>>::value, "");
+    static_assert(std::is_move_constructible<std::tuple<ExplicitA>>::value, "");
+  }
+  {
+    static_assert(
+        std::is_constructible< std::tuple<A>, std::allocator_arg_t, std::allocator<int>, std::tuple<A> const& >::value,
+        "");
+    static_assert(
+        std::is_constructible< std::tuple<A>, std::allocator_arg_t, std::allocator<int>, std::tuple<A>&& >::value, "");
+    static_assert(std::is_constructible< std::tuple<ExplicitA>,
+                                         std::allocator_arg_t,
+                                         std::allocator<int>,
+                                         std::tuple<ExplicitA> const& >::value,
+                  "");
+    static_assert(std::is_constructible< std::tuple<ExplicitA>,
+                                         std::allocator_arg_t,
+                                         std::allocator<int>,
+                                         std::tuple<ExplicitA>&& >::value,
+                  "");
+  }
 #endif // defined(TEST_CLANG_VER) && TEST_CLANG_VER >= 2300
 
-    {
-        std::tuple<A&&> t(std::forward_as_tuple(A{}));
-        ((void)t);
-        std::tuple<ExplicitA&&> t2(std::forward_as_tuple(ExplicitA{}));
-        ((void)t2);
-    }
+  {
+    std::tuple<A&&> t(std::forward_as_tuple(A{}));
+    ((void)t);
+    std::tuple<ExplicitA&&> t2(std::forward_as_tuple(ExplicitA{}));
+    ((void)t2);
+  }
 
   return 0;
 }
