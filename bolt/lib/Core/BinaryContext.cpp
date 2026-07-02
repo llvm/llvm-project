@@ -1553,7 +1553,7 @@ void BinaryContext::foldFunction(BinaryFunction &ChildBF,
   ChildBF.getSymbols().clear();
 
   // Reset function mapping for local symbols.
-  for (uint64_t RelOffset : ChildBF.getInternalRefDataRelocations()) {
+  for (auto [RelOffset, _] : ChildBF.getInternalRefDataRelocations()) {
     const Relocation *Rel = getRelocationAt(RelOffset);
     if (!Rel || !Rel->Symbol)
       continue;

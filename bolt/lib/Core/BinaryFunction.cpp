@@ -2105,7 +2105,7 @@ bool BinaryFunction::validateInternalRefDataRelocations() {
   if (opts::StrictMode)
     return true;
 
-  DenseSet<uint64_t> UnclaimedRelocations(InternalRefDataRelocations);
+  DenseMap<uint64_t, uint64_t> UnclaimedRelocations(InternalRefDataRelocations);
   for (const JumpTable *JT : llvm::make_second_range(JumpTables)) {
     uint64_t EntryAddress = JT->getAddress();
     while (EntryAddress < JT->getAddress() + JT->getSize()) {
@@ -2123,7 +2123,7 @@ bool BinaryFunction::validateInternalRefDataRelocations() {
             << " remain against function " << *this;
   if (opts::Verbosity) {
     BC.errs() << ":\n";
-    for (uint64_t RelocationAddress : UnclaimedRelocations) {
+    for (auto [RelocationAddress, _] : UnclaimedRelocations) {
       const Relocation *Relocation = BC.getRelocationAt(RelocationAddress);
       BC.errs() << "  ";
       if (Relocation)
@@ -3270,6 +3270,7 @@ bool BinaryFunction::requiresAddressMap() const {
     return false;
 
   return opts::UpdateDebugSections || isMultiEntry() ||
+         !getInternalRefDataRelocations().empty() ||
          requiresAddressTranslation();
 }
 

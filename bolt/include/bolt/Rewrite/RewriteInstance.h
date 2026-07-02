@@ -241,8 +241,12 @@ private:
   uint64_t getNewFunctionAddress(uint64_t OldAddress);
 
   /// Return address of a function or moved data in the new binary
-  /// corresponding to \p OldAddress address in the original binary.
-  uint64_t getNewFunctionOrDataAddress(uint64_t OldAddress);
+  /// corresponding to \p OldAddress address in the original binary. If \p
+  /// RelocationOffset is non-zero, this function will also translate an
+  /// internal label targeted by that relocation. This supports indirect goto
+  /// where data relocation reference non-entry basic blocks.
+  uint64_t getNewFunctionOrDataAddress(uint64_t OldAddress,
+                                       uint64_t RelocationOffset = 0);
 
   /// Return value for the symbol \p Name in the output.
   uint64_t getNewValueForSymbol(const StringRef Name);

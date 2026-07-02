@@ -4,6 +4,12 @@ RUN: llvm-bolt %t -o %t.null --relocs=1 --print-cfg --print-only=main \
 RUN:   --strict \
 RUN:   2>&1 | FileCheck %s
 
+## Check indirect goto works in pie
+RUN: %clang %cflags -fPIE -pie %S/../Inputs/indirect_goto.c -o %t.pie -Wl,-q
+RUN: llvm-bolt %t.pie -o %t.pie.null --relocs=1 --print-cfg --print-only=main \
+RUN:   --strict \
+RUN:   2>&1 | FileCheck %s
+
 ## Check that all possible destinations are included as successors.
 CHECK:  jmpq    *%rax # UNKNOWN CONTROL FLOW
 CHECK:  Successors: .Ltmp0, .Ltmp1, .Ltmp2
