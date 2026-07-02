@@ -203,8 +203,8 @@ public:
                          EVT VT) const override;
 
   CondMergingParams
-  getJumpConditionMergingParams(Instruction::BinaryOps Opc, const Value *Lhs,
-                                const Value *Rhs) const override;
+  getJumpConditionMergingParams(Instruction::BinaryOps Opc, const Value *LHS,
+                                const Value *RHS) const override;
 
   bool shouldFormOverflowOp(unsigned Opcode, EVT VT,
                             bool MathUsed) const override {
