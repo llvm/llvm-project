@@ -9,6 +9,7 @@
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/SmallBitVector.h"
 
 using namespace clang;
@@ -1509,6 +1510,9 @@ public:
                             const FunctionDecl *Caller,
                             const FunctionDecl *Callee, const CallArgList &Args,
                             QualType ReturnType) const override;
+
+  void checkFunctionABI(CodeGenModule &CGM,
+                        const FunctionDecl *FD) const override;
 };
 } // namespace
 
@@ -1569,6 +1573,65 @@ static bool checkAVXParam(DiagnosticsEngine &Diag, ASTContext &Ctx,
                                 "avx", IsArgument);
 
   return false;
+}
+
+void X86_64TargetCodeGenInfo::checkFunctionABI(CodeGenModule &CGM,
+                                               const FunctionDecl *FD) const {
+  auto GetReturnTypeLoc = [](const FunctionDecl *FD) {
+    if (const TypeSourceInfo *TSI = FD->getTypeSourceInfo()) {
+      TypeLoc TL = TSI->getTypeLoc();
+
+      if (auto FTL = TL.IgnoreParens().getAs<FunctionTypeLoc>()) {
+        SourceLocation Loc = FTL.getReturnLoc().getBeginLoc();
+        if (Loc.isValid())
+          return Loc;
+      }
+    }
+
+    SourceLocation Loc = FD->getLocation();
+    if (Loc.isValid())
+      return Loc;
+
+    return FD->getBeginLoc();
+  };
+
+  auto Check = [&](QualType Ty, SourceLocation Loc, bool IsReturn) {
+    if (!Ty->isVectorType())
+      return false;
+    if (CGM.getContext().getTypeSize(Ty) <= 128)
+      return false;
+
+    StringRef Feature =
+        CGM.getContext().getTypeSize(Ty) > 256 ? "avx512f" : "avx";
+
+    llvm::StringMap<bool> FeatureMap;
+    CGM.getContext().getFunctionFeatureMap(FeatureMap, FD);
+    if (!FeatureMap.lookup(Feature)) {
+      CGM.getDiags().Report(Loc, diag::warn_avx_calling_convention)
+          << !IsReturn << Ty << Feature;
+      return true;
+    }
+
+    return false;
+  };
+
+  // psABI warnings & errors for function definitions that are only visible
+  // in this translation unit are handled at call site by checkFunctionCallABI.
+  if (!FD->isExternallyVisible())
+    return;
+
+  // First check the return type and emit diagnostic if required.
+  Check(FD->getReturnType(), GetReturnTypeLoc(FD), true);
+
+  // Go through the parameters and emit a warning for the first vector found
+  // without the matching function AVX level attribute.
+  for (const ParmVarDecl *P : FD->parameters()) {
+    SourceLocation Loc = P->getLocation();
+    if (Loc.isInvalid())
+      Loc = P->getBeginLoc();
+    if (Check(P->getType(), Loc, false))
+      return;
+  }
 }
 
 void X86_64TargetCodeGenInfo::checkFunctionCallABI(CodeGenModule &CGM,
