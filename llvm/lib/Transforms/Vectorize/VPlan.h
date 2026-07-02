@@ -1331,14 +1331,6 @@ public:
     /// backedge value). Has the wide induction recipe as operand.
     ExitingIVValue,
     MaskedCond,
-
-    // The opcodes below are used for VPInstructionWithType.
-    // NOTE: VPInstructionWithType classes are also used for:
-    // 1. All CastInst variants - see createVPInstructionsForVPBB, and other
-    //    cases where createScalarCast, createScalarZExtOrTrunc and
-    //    createScalarSExtOrTrunc are invoked.
-    // 2. Scalar load instructions - see createVPInstructionsForVPBB.
-
     /// Scale the first operand (vector step) by the second operand
     /// (scalar-step).  Casts both operands to the result type if needed.
     WideIVStep,
@@ -3332,7 +3324,7 @@ public:
         VPIRMetadata(Metadata), IsSingleScalar(IsSingleScalar),
         IsPredicated(Mask) {
     assert((!IsSingleScalar || !I->isCast()) &&
-           "single-scalar casts should use VPInstructionWithType");
+           "Single-scalar casts should use VPInstruction");
     setUnderlyingValue(I);
     if (Mask)
       addOperand(Mask);
