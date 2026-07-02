@@ -4001,6 +4001,12 @@ OpFoldResult LLVM::ShlOp::fold(FoldAdaptor adaptor) {
   if (!lhs)
     return {};
 
+  // Bail out if APInt bitwidths don't match the result type.
+  unsigned width = getType().getIntOrFloatBitWidth();
+  if (lhs.getValue().getBitWidth() != width ||
+      rhs.getValue().getBitWidth() != width)
+    return {};
+
   return IntegerAttr::get(getType(), lhs.getValue().shl(rhs.getValue()));
 }
 
@@ -4015,6 +4021,12 @@ OpFoldResult LLVM::OrOp::fold(FoldAdaptor adaptor) {
 
   auto rhs = dyn_cast_or_null<IntegerAttr>(adaptor.getRhs());
   if (!rhs)
+    return {};
+
+  // Same bitwidth guard as ShlOp::fold.
+  unsigned width = getType().getIntOrFloatBitWidth();
+  if (lhs.getValue().getBitWidth() != width ||
+      rhs.getValue().getBitWidth() != width)
     return {};
 
   return IntegerAttr::get(getType(), lhs.getValue() | rhs.getValue());
