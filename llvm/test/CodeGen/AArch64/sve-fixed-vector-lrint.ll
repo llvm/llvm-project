@@ -1018,19 +1018,10 @@ define <4 x iXLen> @lrint_v4f64(<4 x double> %x) nounwind {
 ; CHECK-i32-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-i32-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-i32-NEXT:    ptrue p0.d, vl4
-; CHECK-i32-NEXT:    movprfx z1, z0
-; CHECK-i32-NEXT:    frintx z1.d, p0/m, z0.d
-; CHECK-i32-NEXT:    mov z0.d, z1.d[1]
-; CHECK-i32-NEXT:    fcvtzs w8, d1
-; CHECK-i32-NEXT:    mov z2.d, z1.d[2]
-; CHECK-i32-NEXT:    mov z1.d, z1.d[3]
-; CHECK-i32-NEXT:    fcvtzs w9, d0
-; CHECK-i32-NEXT:    fmov s0, w8
-; CHECK-i32-NEXT:    fcvtzs w8, d2
-; CHECK-i32-NEXT:    mov v0.s[1], w9
-; CHECK-i32-NEXT:    mov v0.s[2], w8
-; CHECK-i32-NEXT:    fcvtzs w8, d1
-; CHECK-i32-NEXT:    mov v0.s[3], w8
+; CHECK-i32-NEXT:    frintx z0.d, p0/m, z0.d
+; CHECK-i32-NEXT:    fcvtzs z0.d, p0/m, z0.d
+; CHECK-i32-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-i32-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-i32-NEXT:    ret
 ;
 ; CHECK-i64-LABEL: lrint_v4f64:
@@ -1064,34 +1055,17 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) nounwind {
 ; CHECK-i32-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-i32-NEXT:    // kill: def $q3 killed $q3 def $z3
 ; CHECK-i32-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-i32-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-i32-NEXT:    splice z2.d, p0, z2.d, z3.d
+; CHECK-i32-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; CHECK-i32-NEXT:    ptrue p0.d, vl4
-; CHECK-i32-NEXT:    movprfx z3, z0
-; CHECK-i32-NEXT:    frintx z3.d, p0/m, z0.d
+; CHECK-i32-NEXT:    frintx z0.d, p0/m, z0.d
 ; CHECK-i32-NEXT:    frintx z2.d, p0/m, z2.d
-; CHECK-i32-NEXT:    mov z0.d, z3.d[1]
-; CHECK-i32-NEXT:    mov z1.d, z2.d[1]
-; CHECK-i32-NEXT:    fcvtzs w8, d3
-; CHECK-i32-NEXT:    fcvtzs w9, d2
-; CHECK-i32-NEXT:    mov z4.d, z3.d[2]
-; CHECK-i32-NEXT:    mov z5.d, z2.d[2]
-; CHECK-i32-NEXT:    mov z3.d, z3.d[3]
-; CHECK-i32-NEXT:    mov z2.d, z2.d[3]
-; CHECK-i32-NEXT:    fcvtzs w10, d0
-; CHECK-i32-NEXT:    fcvtzs w11, d1
-; CHECK-i32-NEXT:    fmov s0, w8
-; CHECK-i32-NEXT:    fcvtzs w8, d4
-; CHECK-i32-NEXT:    fmov s1, w9
-; CHECK-i32-NEXT:    fcvtzs w9, d5
-; CHECK-i32-NEXT:    mov v0.s[1], w10
-; CHECK-i32-NEXT:    mov v1.s[1], w11
-; CHECK-i32-NEXT:    mov v0.s[2], w8
-; CHECK-i32-NEXT:    fcvtzs w8, d3
-; CHECK-i32-NEXT:    mov v1.s[2], w9
-; CHECK-i32-NEXT:    fcvtzs w9, d2
-; CHECK-i32-NEXT:    mov v0.s[3], w8
-; CHECK-i32-NEXT:    mov v1.s[3], w9
+; CHECK-i32-NEXT:    fcvtzs z0.d, p0/m, z0.d
+; CHECK-i32-NEXT:    fcvtzs z2.d, p0/m, z2.d
+; CHECK-i32-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-i32-NEXT:    uzp1 z1.s, z2.s, z2.s
+; CHECK-i32-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-i32-NEXT:    // kill: def $q1 killed $q1 killed $z1
 ; CHECK-i32-NEXT:    ret
 ;
 ; CHECK-i64-LABEL: lrint_v8f64:
@@ -1133,70 +1107,36 @@ declare <8 x iXLen> @llvm.lrint.v8iXLen.v8f64(<8 x double>)
 define <16 x iXLen> @lrint_v16f64(<16 x double> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v16f64:
 ; CHECK-i32:       // %bb.0:
-; CHECK-i32-NEXT:    ptrue p1.d, vl2
-; CHECK-i32-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-i32-NEXT:    ptrue p0.d, vl2
 ; CHECK-i32-NEXT:    // kill: def $q6 killed $q6 def $z6
 ; CHECK-i32-NEXT:    // kill: def $q4 killed $q4 def $z4
 ; CHECK-i32-NEXT:    // kill: def $q2 killed $q2 def $z2
-; CHECK-i32-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-i32-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-i32-NEXT:    // kill: def $q7 killed $q7 def $z7
 ; CHECK-i32-NEXT:    // kill: def $q5 killed $q5 def $z5
 ; CHECK-i32-NEXT:    // kill: def $q3 killed $q3 def $z3
+; CHECK-i32-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-i32-NEXT:    splice z0.d, p0, z0.d, z1.d
+; CHECK-i32-NEXT:    splice z6.d, p0, z6.d, z7.d
+; CHECK-i32-NEXT:    splice z4.d, p0, z4.d, z5.d
+; CHECK-i32-NEXT:    splice z2.d, p0, z2.d, z3.d
 ; CHECK-i32-NEXT:    ptrue p0.d, vl4
-; CHECK-i32-NEXT:    splice z0.d, p1, z0.d, z1.d
-; CHECK-i32-NEXT:    splice z2.d, p1, z2.d, z3.d
-; CHECK-i32-NEXT:    splice z4.d, p1, z4.d, z5.d
-; CHECK-i32-NEXT:    splice z6.d, p1, z6.d, z7.d
-; CHECK-i32-NEXT:    movprfx z5, z0
-; CHECK-i32-NEXT:    frintx z5.d, p0/m, z0.d
-; CHECK-i32-NEXT:    movprfx z7, z2
-; CHECK-i32-NEXT:    frintx z7.d, p0/m, z2.d
+; CHECK-i32-NEXT:    frintx z0.d, p0/m, z0.d
 ; CHECK-i32-NEXT:    frintx z4.d, p0/m, z4.d
 ; CHECK-i32-NEXT:    frintx z6.d, p0/m, z6.d
-; CHECK-i32-NEXT:    fcvtzs w8, d5
-; CHECK-i32-NEXT:    mov z0.d, z5.d[1]
-; CHECK-i32-NEXT:    mov z1.d, z7.d[1]
-; CHECK-i32-NEXT:    fcvtzs w9, d7
-; CHECK-i32-NEXT:    mov z3.d, z4.d[1]
-; CHECK-i32-NEXT:    fcvtzs w10, d4
-; CHECK-i32-NEXT:    mov z16.d, z6.d[1]
-; CHECK-i32-NEXT:    fcvtzs w12, d6
-; CHECK-i32-NEXT:    mov z2.d, z5.d[2]
-; CHECK-i32-NEXT:    fcvtzs w11, d0
-; CHECK-i32-NEXT:    fcvtzs w13, d1
-; CHECK-i32-NEXT:    mov z17.d, z7.d[2]
-; CHECK-i32-NEXT:    fcvtzs w14, d3
-; CHECK-i32-NEXT:    fmov s0, w8
-; CHECK-i32-NEXT:    mov z18.d, z4.d[2]
-; CHECK-i32-NEXT:    fcvtzs w8, d16
-; CHECK-i32-NEXT:    mov z19.d, z6.d[2]
-; CHECK-i32-NEXT:    fcvtzs w15, d2
-; CHECK-i32-NEXT:    fmov s1, w9
-; CHECK-i32-NEXT:    fmov s2, w10
-; CHECK-i32-NEXT:    fmov s3, w12
-; CHECK-i32-NEXT:    fcvtzs w9, d17
-; CHECK-i32-NEXT:    fcvtzs w10, d18
-; CHECK-i32-NEXT:    mov v0.s[1], w11
-; CHECK-i32-NEXT:    fcvtzs w11, d19
-; CHECK-i32-NEXT:    mov z5.d, z5.d[3]
-; CHECK-i32-NEXT:    mov z7.d, z7.d[3]
-; CHECK-i32-NEXT:    mov v1.s[1], w13
-; CHECK-i32-NEXT:    mov v2.s[1], w14
-; CHECK-i32-NEXT:    mov v3.s[1], w8
-; CHECK-i32-NEXT:    mov z4.d, z4.d[3]
-; CHECK-i32-NEXT:    mov z6.d, z6.d[3]
-; CHECK-i32-NEXT:    mov v0.s[2], w15
-; CHECK-i32-NEXT:    fcvtzs w8, d5
-; CHECK-i32-NEXT:    mov v1.s[2], w9
-; CHECK-i32-NEXT:    fcvtzs w9, d7
-; CHECK-i32-NEXT:    mov v2.s[2], w10
-; CHECK-i32-NEXT:    fcvtzs w10, d4
-; CHECK-i32-NEXT:    mov v3.s[2], w11
-; CHECK-i32-NEXT:    fcvtzs w11, d6
-; CHECK-i32-NEXT:    mov v0.s[3], w8
-; CHECK-i32-NEXT:    mov v1.s[3], w9
-; CHECK-i32-NEXT:    mov v2.s[3], w10
-; CHECK-i32-NEXT:    mov v3.s[3], w11
+; CHECK-i32-NEXT:    frintx z2.d, p0/m, z2.d
+; CHECK-i32-NEXT:    fcvtzs z0.d, p0/m, z0.d
+; CHECK-i32-NEXT:    fcvtzs z4.d, p0/m, z4.d
+; CHECK-i32-NEXT:    fcvtzs z6.d, p0/m, z6.d
+; CHECK-i32-NEXT:    fcvtzs z2.d, p0/m, z2.d
+; CHECK-i32-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-i32-NEXT:    uzp1 z3.s, z6.s, z6.s
+; CHECK-i32-NEXT:    uzp1 z1.s, z2.s, z2.s
+; CHECK-i32-NEXT:    uzp1 z2.s, z4.s, z4.s
+; CHECK-i32-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-i32-NEXT:    // kill: def $q3 killed $q3 killed $z3
+; CHECK-i32-NEXT:    // kill: def $q1 killed $q1 killed $z1
+; CHECK-i32-NEXT:    // kill: def $q2 killed $q2 killed $z2
 ; CHECK-i32-NEXT:    ret
 ;
 ; CHECK-i64-LABEL: lrint_v16f64:
@@ -1264,130 +1204,61 @@ declare <16 x iXLen> @llvm.lrint.v16iXLen.v16f64(<16 x double>)
 define <32 x iXLen> @lrint_v32f64(<32 x double> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v32f64:
 ; CHECK-i32:       // %bb.0:
-; CHECK-i32-NEXT:    ptrue p1.d, vl2
-; CHECK-i32-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-i32-NEXT:    ldp q16, q17, [sp, #96]
+; CHECK-i32-NEXT:    ptrue p0.d, vl2
+; CHECK-i32-NEXT:    // kill: def $q3 killed $q3 def $z3
 ; CHECK-i32-NEXT:    // kill: def $q2 killed $q2 def $z2
 ; CHECK-i32-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-i32-NEXT:    // kill: def $q3 killed $q3 def $z3
+; CHECK-i32-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-i32-NEXT:    ldp q20, q19, [sp]
+; CHECK-i32-NEXT:    // kill: def $q6 killed $q6 def $z6
 ; CHECK-i32-NEXT:    // kill: def $q4 killed $q4 def $z4
 ; CHECK-i32-NEXT:    // kill: def $q7 killed $q7 def $z7
-; CHECK-i32-NEXT:    // kill: def $q6 killed $q6 def $z6
 ; CHECK-i32-NEXT:    // kill: def $q5 killed $q5 def $z5
+; CHECK-i32-NEXT:    splice z2.d, p0, z2.d, z3.d
+; CHECK-i32-NEXT:    splice z0.d, p0, z0.d, z1.d
+; CHECK-i32-NEXT:    splice z6.d, p0, z6.d, z7.d
+; CHECK-i32-NEXT:    splice z16.d, p0, z16.d, z17.d
+; CHECK-i32-NEXT:    ldp q18, q17, [sp, #64]
+; CHECK-i32-NEXT:    ldp q3, q1, [sp, #32]
+; CHECK-i32-NEXT:    splice z20.d, p0, z20.d, z19.d
+; CHECK-i32-NEXT:    splice z4.d, p0, z4.d, z5.d
+; CHECK-i32-NEXT:    splice z18.d, p0, z18.d, z17.d
+; CHECK-i32-NEXT:    splice z3.d, p0, z3.d, z1.d
 ; CHECK-i32-NEXT:    ptrue p0.d, vl4
-; CHECK-i32-NEXT:    splice z0.d, p1, z0.d, z1.d
-; CHECK-i32-NEXT:    splice z2.d, p1, z2.d, z3.d
-; CHECK-i32-NEXT:    splice z4.d, p1, z4.d, z5.d
-; CHECK-i32-NEXT:    ldp q1, q3, [sp]
-; CHECK-i32-NEXT:    splice z6.d, p1, z6.d, z7.d
 ; CHECK-i32-NEXT:    frintx z0.d, p0/m, z0.d
-; CHECK-i32-NEXT:    movprfx z18, z2
-; CHECK-i32-NEXT:    frintx z18.d, p0/m, z2.d
-; CHECK-i32-NEXT:    splice z1.d, p1, z1.d, z3.d
-; CHECK-i32-NEXT:    ldp q5, q3, [sp, #96]
+; CHECK-i32-NEXT:    frintx z2.d, p0/m, z2.d
 ; CHECK-i32-NEXT:    frintx z4.d, p0/m, z4.d
-; CHECK-i32-NEXT:    ldp q2, q7, [sp, #64]
-; CHECK-i32-NEXT:    movprfx z16, z6
-; CHECK-i32-NEXT:    frintx z16.d, p0/m, z6.d
-; CHECK-i32-NEXT:    mov z19.d, z0.d[1]
-; CHECK-i32-NEXT:    fcvtzs w8, d0
-; CHECK-i32-NEXT:    splice z5.d, p1, z5.d, z3.d
-; CHECK-i32-NEXT:    splice z2.d, p1, z2.d, z7.d
-; CHECK-i32-NEXT:    ldp q3, q7, [sp, #32]
-; CHECK-i32-NEXT:    mov z20.d, z18.d[1]
-; CHECK-i32-NEXT:    fcvtzs w9, d18
-; CHECK-i32-NEXT:    movprfx z17, z1
-; CHECK-i32-NEXT:    frintx z17.d, p0/m, z1.d
-; CHECK-i32-NEXT:    mov z1.d, z0.d[2]
-; CHECK-i32-NEXT:    fcvtzs w10, d19
-; CHECK-i32-NEXT:    mov z6.d, z18.d[2]
-; CHECK-i32-NEXT:    splice z3.d, p1, z3.d, z7.d
-; CHECK-i32-NEXT:    mov z7.d, z0.d[3]
-; CHECK-i32-NEXT:    fmov s0, w8
-; CHECK-i32-NEXT:    fcvtzs w11, d20
-; CHECK-i32-NEXT:    mov z20.d, z18.d[3]
-; CHECK-i32-NEXT:    mov z18.d, z4.d[1]
-; CHECK-i32-NEXT:    fcvtzs w12, d4
-; CHECK-i32-NEXT:    mov z21.d, z4.d[2]
-; CHECK-i32-NEXT:    fcvtzs w13, d1
-; CHECK-i32-NEXT:    fmov s1, w9
-; CHECK-i32-NEXT:    mov v0.s[1], w10
-; CHECK-i32-NEXT:    movprfx z19, z2
-; CHECK-i32-NEXT:    frintx z19.d, p0/m, z2.d
-; CHECK-i32-NEXT:    fcvtzs w15, d18
-; CHECK-i32-NEXT:    movprfx z18, z3
-; CHECK-i32-NEXT:    frintx z18.d, p0/m, z3.d
-; CHECK-i32-NEXT:    mov z3.d, z4.d[3]
-; CHECK-i32-NEXT:    fcvtzs w16, d16
-; CHECK-i32-NEXT:    mov z4.d, z16.d[1]
-; CHECK-i32-NEXT:    fcvtzs w14, d6
-; CHECK-i32-NEXT:    mov v1.s[1], w11
-; CHECK-i32-NEXT:    fcvtzs w11, d21
-; CHECK-i32-NEXT:    movprfx z21, z5
-; CHECK-i32-NEXT:    frintx z21.d, p0/m, z5.d
-; CHECK-i32-NEXT:    fcvtzs w8, d7
-; CHECK-i32-NEXT:    fmov s2, w12
-; CHECK-i32-NEXT:    mov z7.d, z17.d[1]
-; CHECK-i32-NEXT:    mov z6.d, z16.d[2]
-; CHECK-i32-NEXT:    mov v0.s[2], w13
-; CHECK-i32-NEXT:    fcvtzs w12, d4
-; CHECK-i32-NEXT:    fcvtzs w13, d17
-; CHECK-i32-NEXT:    fcvtzs w10, d3
-; CHECK-i32-NEXT:    fmov s3, w16
-; CHECK-i32-NEXT:    mov v2.s[1], w15
-; CHECK-i32-NEXT:    mov z4.d, z18.d[1]
-; CHECK-i32-NEXT:    fcvtzs w15, d7
-; CHECK-i32-NEXT:    mov z5.d, z19.d[1]
-; CHECK-i32-NEXT:    fcvtzs w17, d18
-; CHECK-i32-NEXT:    fcvtzs w0, d19
-; CHECK-i32-NEXT:    mov z7.d, z21.d[1]
-; CHECK-i32-NEXT:    fcvtzs w2, d21
-; CHECK-i32-NEXT:    fcvtzs w9, d20
-; CHECK-i32-NEXT:    mov v1.s[2], w14
-; CHECK-i32-NEXT:    mov z20.d, z17.d[2]
-; CHECK-i32-NEXT:    fcvtzs w14, d6
-; CHECK-i32-NEXT:    mov z6.d, z18.d[2]
-; CHECK-i32-NEXT:    fcvtzs w18, d4
-; CHECK-i32-NEXT:    fmov s4, w13
-; CHECK-i32-NEXT:    fcvtzs w13, d5
-; CHECK-i32-NEXT:    mov v3.s[1], w12
-; CHECK-i32-NEXT:    fcvtzs w12, d7
-; CHECK-i32-NEXT:    fcvtzs w16, d20
-; CHECK-i32-NEXT:    mov z20.d, z19.d[2]
-; CHECK-i32-NEXT:    mov z22.d, z21.d[2]
-; CHECK-i32-NEXT:    fcvtzs w1, d6
-; CHECK-i32-NEXT:    fmov s5, w17
-; CHECK-i32-NEXT:    fmov s6, w0
-; CHECK-i32-NEXT:    fmov s7, w2
-; CHECK-i32-NEXT:    mov v4.s[1], w15
-; CHECK-i32-NEXT:    mov z16.d, z16.d[3]
-; CHECK-i32-NEXT:    fcvtzs w15, d20
-; CHECK-i32-NEXT:    mov z17.d, z17.d[3]
-; CHECK-i32-NEXT:    mov z18.d, z18.d[3]
-; CHECK-i32-NEXT:    mov v5.s[1], w18
-; CHECK-i32-NEXT:    mov v6.s[1], w13
-; CHECK-i32-NEXT:    fcvtzs w13, d22
-; CHECK-i32-NEXT:    mov v7.s[1], w12
-; CHECK-i32-NEXT:    mov z19.d, z19.d[3]
-; CHECK-i32-NEXT:    mov z20.d, z21.d[3]
-; CHECK-i32-NEXT:    mov v2.s[2], w11
-; CHECK-i32-NEXT:    mov v3.s[2], w14
-; CHECK-i32-NEXT:    fcvtzs w11, d16
-; CHECK-i32-NEXT:    mov v4.s[2], w16
-; CHECK-i32-NEXT:    fcvtzs w12, d17
-; CHECK-i32-NEXT:    fcvtzs w14, d18
-; CHECK-i32-NEXT:    mov v5.s[2], w1
-; CHECK-i32-NEXT:    mov v6.s[2], w15
-; CHECK-i32-NEXT:    fcvtzs w15, d19
-; CHECK-i32-NEXT:    mov v7.s[2], w13
-; CHECK-i32-NEXT:    fcvtzs w13, d20
-; CHECK-i32-NEXT:    mov v0.s[3], w8
-; CHECK-i32-NEXT:    mov v1.s[3], w9
-; CHECK-i32-NEXT:    mov v2.s[3], w10
-; CHECK-i32-NEXT:    mov v3.s[3], w11
-; CHECK-i32-NEXT:    mov v4.s[3], w12
-; CHECK-i32-NEXT:    mov v5.s[3], w14
-; CHECK-i32-NEXT:    mov v6.s[3], w15
-; CHECK-i32-NEXT:    mov v7.s[3], w13
+; CHECK-i32-NEXT:    frintx z6.d, p0/m, z6.d
+; CHECK-i32-NEXT:    frintx z20.d, p0/m, z20.d
+; CHECK-i32-NEXT:    frintx z18.d, p0/m, z18.d
+; CHECK-i32-NEXT:    frintx z3.d, p0/m, z3.d
+; CHECK-i32-NEXT:    frintx z16.d, p0/m, z16.d
+; CHECK-i32-NEXT:    fcvtzs z0.d, p0/m, z0.d
+; CHECK-i32-NEXT:    fcvtzs z2.d, p0/m, z2.d
+; CHECK-i32-NEXT:    fcvtzs z4.d, p0/m, z4.d
+; CHECK-i32-NEXT:    fcvtzs z6.d, p0/m, z6.d
+; CHECK-i32-NEXT:    fcvtzs z20.d, p0/m, z20.d
+; CHECK-i32-NEXT:    fcvtzs z18.d, p0/m, z18.d
+; CHECK-i32-NEXT:    movprfx z5, z3
+; CHECK-i32-NEXT:    fcvtzs z5.d, p0/m, z3.d
+; CHECK-i32-NEXT:    fcvtzs z16.d, p0/m, z16.d
+; CHECK-i32-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-i32-NEXT:    uzp1 z1.s, z2.s, z2.s
+; CHECK-i32-NEXT:    uzp1 z2.s, z4.s, z4.s
+; CHECK-i32-NEXT:    uzp1 z3.s, z6.s, z6.s
+; CHECK-i32-NEXT:    uzp1 z4.s, z20.s, z20.s
+; CHECK-i32-NEXT:    uzp1 z6.s, z18.s, z18.s
+; CHECK-i32-NEXT:    uzp1 z5.s, z5.s, z5.s
+; CHECK-i32-NEXT:    uzp1 z7.s, z16.s, z16.s
+; CHECK-i32-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-i32-NEXT:    // kill: def $q1 killed $q1 killed $z1
+; CHECK-i32-NEXT:    // kill: def $q2 killed $q2 killed $z2
+; CHECK-i32-NEXT:    // kill: def $q3 killed $q3 killed $z3
+; CHECK-i32-NEXT:    // kill: def $q4 killed $q4 killed $z4
+; CHECK-i32-NEXT:    // kill: def $q6 killed $q6 killed $z6
+; CHECK-i32-NEXT:    // kill: def $q5 killed $q5 killed $z5
+; CHECK-i32-NEXT:    // kill: def $q7 killed $q7 killed $z7
 ; CHECK-i32-NEXT:    ret
 ;
 ; CHECK-i64-LABEL: lrint_v32f64:
