@@ -49,43 +49,43 @@ using namespace llvm;
 
 #define DEBUG_TYPE "correlated-value-propagation"
 
-STATISTIC(NumPhis,      "Number of phis propagated");
+STATISTIC(NumPhis, "Number of phis propagated");
 STATISTIC(NumPhiCommon, "Number of phis deleted via common incoming value");
-STATISTIC(NumSelects,   "Number of selects propagated");
-STATISTIC(NumCmps,      "Number of comparisons propagated");
-STATISTIC(NumReturns,   "Number of return values propagated");
+STATISTIC(NumSelects, "Number of selects propagated");
+STATISTIC(NumCmps, "Number of comparisons propagated");
+STATISTIC(NumReturns, "Number of return values propagated");
 STATISTIC(NumDeadCases, "Number of switch cases removed");
 STATISTIC(NumSDivSRemsNarrowed,
           "Number of sdivs/srems whose width was decreased");
-STATISTIC(NumSDivs,     "Number of sdiv converted to udiv");
+STATISTIC(NumSDivs, "Number of sdiv converted to udiv");
 STATISTIC(NumUDivURemsNarrowed,
           "Number of udivs/urems whose width was decreased");
 STATISTIC(NumAShrsConverted, "Number of ashr converted to lshr");
 STATISTIC(NumAShrsRemoved, "Number of ashr removed");
-STATISTIC(NumSRems,     "Number of srem converted to urem");
-STATISTIC(NumSExt,      "Number of sext converted to zext");
-STATISTIC(NumSIToFP,    "Number of sitofp converted to uitofp");
-STATISTIC(NumSICmps,    "Number of signed icmp preds simplified to unsigned");
-STATISTIC(NumAnd,       "Number of ands removed");
-STATISTIC(NumNW,        "Number of no-wrap deductions");
-STATISTIC(NumNSW,       "Number of no-signed-wrap deductions");
-STATISTIC(NumNUW,       "Number of no-unsigned-wrap deductions");
-STATISTIC(NumAddNW,     "Number of no-wrap deductions for add");
-STATISTIC(NumAddNSW,    "Number of no-signed-wrap deductions for add");
-STATISTIC(NumAddNUW,    "Number of no-unsigned-wrap deductions for add");
-STATISTIC(NumSubNW,     "Number of no-wrap deductions for sub");
-STATISTIC(NumSubNSW,    "Number of no-signed-wrap deductions for sub");
-STATISTIC(NumSubNUW,    "Number of no-unsigned-wrap deductions for sub");
-STATISTIC(NumMulNW,     "Number of no-wrap deductions for mul");
-STATISTIC(NumMulNSW,    "Number of no-signed-wrap deductions for mul");
-STATISTIC(NumMulNUW,    "Number of no-unsigned-wrap deductions for mul");
-STATISTIC(NumShlNW,     "Number of no-wrap deductions for shl");
-STATISTIC(NumShlNSW,    "Number of no-signed-wrap deductions for shl");
-STATISTIC(NumShlNUW,    "Number of no-unsigned-wrap deductions for shl");
-STATISTIC(NumAbs,       "Number of llvm.abs intrinsics removed");
+STATISTIC(NumSRems, "Number of srem converted to urem");
+STATISTIC(NumSExt, "Number of sext converted to zext");
+STATISTIC(NumSIToFP, "Number of sitofp converted to uitofp");
+STATISTIC(NumSICmps, "Number of signed icmp preds simplified to unsigned");
+STATISTIC(NumAnd, "Number of ands removed");
+STATISTIC(NumNW, "Number of no-wrap deductions");
+STATISTIC(NumNSW, "Number of no-signed-wrap deductions");
+STATISTIC(NumNUW, "Number of no-unsigned-wrap deductions");
+STATISTIC(NumAddNW, "Number of no-wrap deductions for add");
+STATISTIC(NumAddNSW, "Number of no-signed-wrap deductions for add");
+STATISTIC(NumAddNUW, "Number of no-unsigned-wrap deductions for add");
+STATISTIC(NumSubNW, "Number of no-wrap deductions for sub");
+STATISTIC(NumSubNSW, "Number of no-signed-wrap deductions for sub");
+STATISTIC(NumSubNUW, "Number of no-unsigned-wrap deductions for sub");
+STATISTIC(NumMulNW, "Number of no-wrap deductions for mul");
+STATISTIC(NumMulNSW, "Number of no-signed-wrap deductions for mul");
+STATISTIC(NumMulNUW, "Number of no-unsigned-wrap deductions for mul");
+STATISTIC(NumShlNW, "Number of no-wrap deductions for shl");
+STATISTIC(NumShlNSW, "Number of no-signed-wrap deductions for shl");
+STATISTIC(NumShlNUW, "Number of no-unsigned-wrap deductions for shl");
+STATISTIC(NumAbs, "Number of llvm.abs intrinsics removed");
 STATISTIC(NumOverflows, "Number of overflow checks removed");
 STATISTIC(NumSaturating,
-    "Number of saturating arithmetics converted to normal arithmetics");
+          "Number of saturating arithmetics converted to normal arithmetics");
 STATISTIC(NumNonNull, "Number of function pointer arguments marked non-null");
 STATISTIC(NumCmpIntr, "Number of llvm.[us]cmp intrinsics removed");
 STATISTIC(NumMinMax, "Number of llvm.[us]{min,max} intrinsics removed");
@@ -94,6 +94,8 @@ STATISTIC(NumSMinMax,
 STATISTIC(NumUDivURemsNarrowedExpanded,
           "Number of bound udiv's/urem's expanded");
 STATISTIC(NumNNeg, "Number of zext/uitofp non-negative deductions");
+STATISTIC(NumCallArgReplacedWithParam,
+          "Number of call args replaced with known-equal function params");
 
 static Constant *getConstantAt(Value *V, Instruction *At, LazyValueInfo *LVI) {
   if (Constant *C = LVI->getConstant(V, At))
@@ -261,7 +263,8 @@ static bool processPHI(PHINode *P, LazyValueInfo *LVI, DominatorTree *DT,
   BasicBlock *BB = P->getParent();
   for (unsigned i = 0, e = P->getNumIncomingValues(); i < e; ++i) {
     Value *Incoming = P->getIncomingValue(i);
-    if (isa<Constant>(Incoming)) continue;
+    if (isa<Constant>(Incoming))
+      continue;
 
     Value *V = getValueOnEdge(LVI, Incoming, P->getIncomingBlock(i), BB, P);
     if (V) {
@@ -372,7 +375,7 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
 
   // Analyse each switch case in turn.
   bool Changed = false;
-  DenseMap<BasicBlock*, int> SuccessorsCount;
+  DenseMap<BasicBlock *, int> SuccessorsCount;
   for (auto *Succ : successors(BB))
     SuccessorsCount[Succ]++;
 
@@ -409,8 +412,8 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
         CI = SI.removeCase(CI);
         CE = SI->case_end();
 
-        // The condition can be modified by removePredecessor's PHI simplification
-        // logic.
+        // The condition can be modified by removePredecessor's PHI
+        // simplification logic.
         Cond = SI->getCondition();
 
         ++NumDeadCases;
@@ -646,9 +649,9 @@ static bool processOverflowIntrinsic(WithOverflowInst *WO, LazyValueInfo *LVI) {
   setDeducedOverflowingFlags(NewOp, Opcode, NSW, NUW);
 
   StructType *ST = cast<StructType>(WO->getType());
-  Constant *Struct = ConstantStruct::get(ST,
-      { PoisonValue::get(ST->getElementType(0)),
-        ConstantInt::getFalse(ST->getElementType(1)) });
+  Constant *Struct =
+      ConstantStruct::get(ST, {PoisonValue::get(ST->getElementType(0)),
+                               ConstantInt::getFalse(ST->getElementType(1))});
   Value *NewI = B.CreateInsertValue(Struct, NewOp, 0);
   WO->replaceAllUsesWith(NewI);
   WO->eraseFromParent();
@@ -716,13 +719,16 @@ static bool processCallSite(CallBase &CB, LazyValueInfo *LVI) {
   // we may have a conditional fact with which LVI can fold.
   if (auto DeoptBundle = CB.getOperandBundle(LLVMContext::OB_deopt)) {
     for (const Use &ConstU : DeoptBundle->Inputs) {
-      Use &U = const_cast<Use&>(ConstU);
+      Use &U = const_cast<Use &>(ConstU);
       Value *V = U.get();
-      if (V->getType()->isVectorTy()) continue;
-      if (isa<Constant>(V)) continue;
+      if (V->getType()->isVectorTy())
+        continue;
+      if (isa<Constant>(V))
+        continue;
 
       Constant *C = LVI->getConstant(V, &CB);
-      if (!C) continue;
+      if (!C)
+        continue;
       U.set(C);
       Changed = true;
     }
@@ -748,17 +754,39 @@ static bool processCallSite(CallBase &CB, LazyValueInfo *LVI) {
 
   assert(ArgNo == CB.arg_size() && "Call arguments not processed correctly.");
 
-  if (ArgNos.empty())
-    return Changed;
+  if (!ArgNos.empty()) {
+    NumNonNull += ArgNos.size();
+    AttributeList AS = CB.getAttributes();
+    LLVMContext &Ctx = CB.getContext();
+    AS = AS.addParamAttribute(Ctx, ArgNos,
+                              Attribute::get(Ctx, Attribute::NonNull));
+    CB.setAttributes(AS);
+    Changed = true;
+  }
 
-  NumNonNull += ArgNos.size();
-  AttributeList AS = CB.getAttributes();
-  LLVMContext &Ctx = CB.getContext();
-  AS = AS.addParamAttribute(Ctx, ArgNos,
-                            Attribute::get(Ctx, Attribute::NonNull));
-  CB.setAttributes(AS);
+  // If a call argument is a constant C, and a function parameter is known to
+  // equal C at this call site, replace C with the parameter. This lets the
+  // backend reuse the already-loaded register instead of materializing C again.
+  // Example: if (a == 0) foo(0) → if (a == 0) foo(a), saving "xor edi, edi".
+  Function *F = CB.getParent()->getParent();
+  for (unsigned I = 0, E = CB.arg_size(); I != E; ++I) {
+    auto *CI = dyn_cast<ConstantInt>(CB.getArgOperand(I));
+    if (!CI)
+      continue;
+    for (Argument &Param : F->args()) {
+      if (Param.getType() != CI->getType())
+        continue;
+      Constant *Known = LVI->getConstant(&Param, &CB);
+      if (Known != CI)
+        continue;
+      CB.setArgOperand(I, &Param);
+      ++NumCallArgReplacedWithParam;
+      Changed = true;
+      break;
+    }
+  }
 
-  return true;
+  return Changed;
 }
 
 enum class Domain { NonNegative, NonPositive, Unknown };
@@ -1341,13 +1369,15 @@ static bool runImpl(Function &F, LazyValueInfo *LVI, DominatorTree *DT,
       // simplify the writing of unit tests, but also helps to enable IPO by
       // constant folding the return values of callees.
       auto *RetVal = RI->getReturnValue();
-      if (!RetVal) break; // handle "ret void"
+      if (!RetVal)
+        break; // handle "ret void"
       if (RetRange && !RetRange->isFullSet())
         RetRange =
             RetRange->unionWith(LVI->getConstantRange(RetVal, RI,
                                                       /*UndefAllowed=*/false));
 
-      if (isa<Constant>(RetVal)) break; // nothing to do
+      if (isa<Constant>(RetVal))
+        break; // nothing to do
       if (auto *C = getConstantAt(RetVal, RI, LVI)) {
         ++NumReturns;
         RI->replaceUsesOfWith(RetVal, C);
