@@ -3514,6 +3514,13 @@ void ScopeHandler::AcquireIntrinsicProcedureFlags(Symbol &symbol) {
     SetExplicitAttr(symbol, Attr::ELEMENTAL);
     SetExplicitAttr(symbol, Attr::PURE);
     break;
+  case evaluate::IntrinsicClass::simpleElementalSubroutine:
+    SetExplicitAttr(symbol, Attr::ELEMENTAL);
+    SetExplicitAttr(symbol, Attr::SIMPLE);
+    break;
+  case evaluate::IntrinsicClass::simpleSubroutine:
+    SetExplicitAttr(symbol, Attr::SIMPLE);
+    break;
   case evaluate::IntrinsicClass::impureSubroutine:
     break;
   default:
