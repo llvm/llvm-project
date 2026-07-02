@@ -1,0 +1,9 @@
+/// \mainpage flang-tools
+///
+/// \section main_intro Introduction
+/// Welcome to flang tools.
+///
+/// This documentation describes the **internal** software that makes
+/// up flang tools, not the **external** use of flang tools. For
+/// usage instructions, please see the programmer's guide or reference
+/// manual.
