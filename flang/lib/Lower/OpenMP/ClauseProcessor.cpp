@@ -657,6 +657,16 @@ bool ClauseProcessor::processInitializer(
                         exprResult.getType()))
                   if (ompPrivVar.getType() == refType)
                     exprResult = fir::LoadOp::create(builder, loc, exprResult);
+                // The initializer expression may have a different but
+                // convertible scalar type than the reduction. For example a
+                // LOGICAL initializer (e.g. omp_priv = .false.) lowers to an
+                // i1 while the reduction type is !fir.logical<4>. Convert so
+                // the init region yields the reduction type, as the
+                // omp.declare_reduction verifier requires.
+                if (exprResult.getType() != type &&
+                    fir::isa_trivial(exprResult.getType()) &&
+                    fir::isa_trivial(type))
+                  exprResult = builder.createConvert(loc, type, exprResult);
                 return exprResult;
               }},
           initExpr.u);

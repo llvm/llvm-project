@@ -1861,7 +1861,7 @@ void SCCPInstVisitor::visitGetElementPtrInst(GetElementPtrInst &I) {
   }
 
   if (Constant *C = ConstantFoldInstOperands(&I, Operands, DL))
-    markConstant(&I, C);
+    mergeInValue(ValueState[&I], &I, ValueLatticeElement::get(C));
   else
     markOverdefined(&I);
 }
@@ -2004,8 +2004,10 @@ void SCCPInstVisitor::handleCallOverdefined(CallBase &CB) {
 
     // If we can constant fold this, mark the result of the call as a
     // constant.
-    if (Constant *C = ConstantFoldCall(&CB, F, Operands, &GetTLI(*F)))
-      return (void)markConstant(&CB, C);
+    if (Constant *C = ConstantFoldCall(&CB, F, Operands, &GetTLI(*F))) {
+      mergeInValue(ValueState[&CB], &CB, ValueLatticeElement::get(C));
+      return;
+    }
   }
 
   // Fall back to metadata.
