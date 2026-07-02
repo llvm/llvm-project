@@ -3904,6 +3904,79 @@ directives:
     //   since-cxx17-note@#cwg92-p {{use 'noexcept(false)' instead}}
     // cxx98-14-error@#cwg92-p {{target exception specification is not superset of source}}
 
+
+Testing Modules (Serialization/Deserialization) When implementing a new C++ syntax
+----------------------------------------------------------------------------------
+
+When implementing C++ functionality, it must work correctly with modules before
+claiming the feature is fully supported. This may require adding test coverage for
+serialization and deserialization of C++ modules using the feature.
+
+To test serialization, the feature can be tested in a module interface unit.
+(For ease of description, contracts are used as the example here.)
+
+.. code-block:: c++
+
+  export module m;
+  void func(int x) pre(x > 0) {}
+  void func(int x, int y) pre(x > 0) pre(x > 0) {}
+  int func(int x, int y, int z) pre(x > 0) pre(y > 0) pre(z > 0) post(r: r > 0) { return 1; }
+
+To test deserialization, the serialized module can be imported to validate the behavior
+of the feature in the module interface.
+
+.. code-block:: c++
+
+  import m;
+  int test() {
+    func(1);
+    func(1, 2);
+    int x = func(1, 2, 3);
+    return x;
+  }
+
+These tests should be put into ``clang/test/Modules`` directory. The ``split-file`` tool
+can be used to split a single test file into multiple logical files To serialize a module
+interface unit to a BMI (built module interface), we the ``-emit-reduced-module-interface``
+option can be used. To deserialize the corresponding module interface unit, the
+``-fmodule-file=<module-name>=<bmi-file-path>`` option can be used.
+
+Put the above things together, we have
+
+.. code-block:: c++
+
+  // RUN: rm -rf %t
+  // RUN: mkdir -p %t
+  // RUN: split-file %s %t
+  //
+  // RUN: %clang_cc1 -std=c++26 %t/m.cppm -emit-reduced-module-interface -o %t/m.pcm
+  // RUN: %clang_cc1 -std=c++26 %t/use.cc -fmodule-file=m=%t/m.pcm -verify -syntax-only
+
+  //--- m.cppm
+  export module m;
+  void func(int x) pre(x > 0) {}
+  void func(int x, int y) pre(x > 0) pre(x > 0) {} // test we can serialize multiple pre conditions.
+  int func(int x, int y, int z) pre(x > 0) pre(y > 0) pre(z > 0) post(r: r > 0) { return 1; }
+
+  //--- use.cc
+  // expected-no-diagnostics
+  import m;
+  int test() {
+    func(1);
+    func(1, 2);
+    int x = func(1, 2, 3);
+    return x;
+  }
+
+The tests for serialization and deserialization are expected to ensure that the data contained
+by the AST node is properly saved and reconstituted. Serialization tests do not need to
+exhaustively test all possible ways the AST node can be used in source, they only need to
+validate that the internal state of the AST node can be round-tripped through serialization.
+
+For example, for contracts, if we choose to implement it as a member of ``FunctionDecl``,
+and if the data structure of contracts is not affected by whether the FunctionDecl is a
+CXXMethodDecl or not we don't have to test the contracts in the case of member functions.
+
 Feature Test Macros
 ===================
 Clang implements several ways to test whether a feature is supported or not.
