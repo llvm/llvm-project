@@ -283,6 +283,8 @@ Makes programs 10x faster by doing Special New Thing.
 
 * The `.seh_startchained` and `.seh_endchained` assembly instructions have been removed and replaced
   with a new `.seh_splitchained` instruction.
+* `fp128` is now returned on the stack, meaning the type is now ABI-compatible
+  with GCC.
 
 ### Changes to the X86 Backend
 
