@@ -337,6 +337,8 @@ public:
   LegalityAnalysis(AAResults &AA, ScalarEvolution &SE, const DataLayout &DL,
                    Context &Ctx, InstrMaps &IMaps)
       : Sched(AA, Ctx), SE(SE), DL(DL), IMaps(IMaps) {}
+  SchedDirection getDirection() const { return Sched.getDirection(); }
+  void setDirection(SchedDirection NewDir) { Sched.setDirection(NewDir); }
   /// A LegalityResult factory.
   template <typename ResultT, typename... ArgsT>
   ResultT &createLegalityResult(ArgsT &&...Args) {

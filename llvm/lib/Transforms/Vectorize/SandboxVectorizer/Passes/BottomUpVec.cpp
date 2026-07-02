@@ -13,7 +13,9 @@
 #include "llvm/SandboxIR/Module.h"
 #include "llvm/SandboxIR/Region.h"
 #include "llvm/SandboxIR/Utils.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Debug.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Scheduler.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
 
 namespace llvm {
@@ -285,9 +287,56 @@ Action *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl,
       DebugBndlCnt++ >= StopBundle && StopBundle != StopBundleDisabled;
   LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "canVectorize() Bundle:\n";
              VecUtils::dump(Bndl));
-  const auto &LegalityRes = StopForDebug ? Legality.getForcedPackForDebugging()
-                                         : Legality.canVectorize(Bndl);
+  const auto &LegalityRes =
+      StopForDebug
+          ? Legality.getForcedPackForDebugging()
+          : Legality.canVectorize(Bndl,
+                                  /*SkipScheduling=*/Legality.getDirection() ==
+                                      SchedDirection::TopDown);
   LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "Legality: " << LegalityRes << "\n");
+
+  if (Legality.getDirection() == SchedDirection::TopDown) {
+    auto ActionPtr = std::make_unique<Action>(&LegalityRes, Bndl,
+                                              ArrayRef<Value *>(), Depth);
+    Action *Action = ActionPtr.get();
+    if (LegalityRes.getSubclassID() == LegalityResultID::Widen)
+      IMaps->registerVector(Bndl, Action);
+
+    // Pre-order push so defs are before uses.
+    Actions.push_back(std::move(ActionPtr));
+    switch (LegalityRes.getSubclassID()) {
+    case LegalityResultID::Widen: {
+      // Walk down the def-use chain. Each lane in \p Bndl may feed several
+      // users, so we form every compatible user bundle and recurse into each
+      // one. A user bundle is compatible only if all of its users share the
+      // same opcode and type, live in the same block, are distinct and not
+      // already vectorized, and consume their corresponding element of \p Bndl
+      // at the same operand index, so that the widened vector lines up as a
+      // single vector operand.
+      //
+      // Recursing right after forming each bundle marks its instructions as
+      // vectorized (pre-order registration), which prevents sibling bundles
+      // from claiming the same instruction and guarantees termination.
+      Value *V0 = Bndl[0];
+      for (User *U0 : V0->users()) {
+        SmallVector<Value *, 4> NextUserBndl =
+            VecUtils::getNextUserBundle(Bndl, U0, V0, *IMaps);
+        if (NextUserBndl.size() == Bndl.size())
+          vectorizeRec(NextUserBndl, Bndl, Depth + 1, Legality);
+      }
+      break;
+    }
+    case LegalityResultID::DiamondReuse:
+    case LegalityResultID::DiamondReuseMultiInput:
+    case LegalityResultID::DiamondReuseWithShuffle:
+    case LegalityResultID::Pack:
+      llvm_unreachable("Not implemented.");
+    }
+
+    return Action;
+  }
+
+  // Bottom up direction
   auto ActionPtr =
       std::make_unique<Action>(&LegalityRes, Bndl, UserBndl, Depth);
   SmallVector<Action *> Operands;
@@ -362,17 +411,31 @@ void BottomUpVec::emitUnpacksForExternalUses(const ArrayRef<Value *> Bndl,
   }
 
   for (auto [Lane, Elm] : VecUtils::enumerateLanes(Bndl)) {
+    // Collect the distinct external users first. We can't redirect uses while
+    // iterating Elm's use list, as that would invalidate the iterator.
+    SmallVector<User *, 4> ExternalUsers;
+    SmallPtrSet<User *, 4> Seen;
     for (User *U : Elm->users()) {
-      // Skip users that we just vectorized.
+      // Skip users that we just vectorized. Note: we must only redirect the
+      // external (non-vectorized) uses to an unpack and leave the vectorized
+      // users untouched. A blanket replaceAllUsesWith() would also rewrite the
+      // operands of users we are going to vectorize but have not emitted yet
+      // (in the top-down direction a user bundle is emitted after its operand
+      // bundle), which would corrupt those operands.
       if (IMaps->isVectorized(U))
         continue;
-      auto *LastUnpackV = VecUtils::unpack(Vec, Elm->getType(), Lane, WhereIt);
-      Elm->replaceAllUsesWith(LastUnpackV);
+      if (Seen.insert(U).second)
+        ExternalUsers.push_back(U);
     }
+    if (ExternalUsers.empty())
+      continue;
+    auto *UnpackV = VecUtils::unpack(Vec, Elm->getType(), Lane, WhereIt);
+    for (User *U : ExternalUsers)
+      U->replaceUsesOfWith(Elm, UnpackV);
   }
 }
 
-Value *BottomUpVec::emitVectors() {
+Value *BottomUpVec::emitVectors(LegalityAnalysis &Legality) {
   Value *NewVec = nullptr;
   for (const auto &ActionPtr : Actions) {
     ArrayRef<Value *> Bndl = ActionPtr->Bndl;
@@ -387,22 +450,44 @@ Value *BottomUpVec::emitVectors() {
     case LegalityResultID::Widen: {
       auto *I = cast<Instruction>(Bndl[0]);
       SmallVector<Value *, 2> VecOperands;
-      switch (I->getOpcode()) {
-      case Instruction::Opcode::Load:
-        VecOperands.push_back(cast<LoadInst>(I)->getPointerOperand());
-        break;
-      case Instruction::Opcode::Store: {
-        VecOperands.push_back(ActionPtr->Operands[0]->Vec);
-        VecOperands.push_back(cast<StoreInst>(I)->getPointerOperand());
-        break;
-      }
-      default:
-        // Visit all operands.
-        for (Action *OpA : ActionPtr->Operands) {
-          auto *VecOp = OpA->Vec;
-          VecOperands.push_back(VecOp);
+      if (Legality.getDirection() == SchedDirection::BottomUp) {
+        switch (I->getOpcode()) {
+        case Instruction::Opcode::Load:
+          VecOperands.push_back(cast<LoadInst>(I)->getPointerOperand());
+          break;
+        case Instruction::Opcode::Store:
+          VecOperands.push_back(ActionPtr->Operands[0]->Vec);
+          VecOperands.push_back(cast<StoreInst>(I)->getPointerOperand());
+          break;
+        default:
+          for (Action *OpA : ActionPtr->Operands)
+            VecOperands.push_back(OpA->Vec);
+          break;
         }
-        break;
+      } else {
+        switch (I->getOpcode()) {
+        case Instruction::Opcode::Load:
+          VecOperands.push_back(cast<LoadInst>(I)->getPointerOperand());
+          break;
+        case Instruction::Opcode::Store: {
+          auto OpBndl = getOperand(Bndl, 0);
+          if (Action *OpA = IMaps->getVectorForOrig(OpBndl[0]))
+            VecOperands.push_back(OpA->Vec);
+          else
+            VecOperands.push_back(createPack(OpBndl, UserBB));
+          VecOperands.push_back(cast<StoreInst>(I)->getPointerOperand());
+          break;
+        }
+        default:
+          for (unsigned OpIdx = 0; OpIdx < I->getNumOperands(); ++OpIdx) {
+            SmallVector<Value *, 4> OpBndl = getOperand(Bndl, OpIdx);
+            if (Action *OpA = IMaps->getVectorForOrig(OpBndl[0]))
+              VecOperands.push_back(OpA->Vec);
+            else
+              VecOperands.push_back(createPack(OpBndl, UserBB));
+          }
+          break;
+        }
       }
       NewVec = createVectorInstr(ActionPtr->Bndl, VecOperands);
       // Collect any potentially dead scalar instructions, including the
@@ -526,9 +611,11 @@ bool BottomUpVec::tryVectorize(ArrayRef<Value *> Bndl,
   Actions.clear();
   DebugBndlCnt = 0;
   vectorizeRec(Bndl, {}, /*Depth=*/0, Legality);
-  LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "BottomUpVec: Vectorization Actions:\n";
+  LLVM_DEBUG(dbgs() << DEBUG_PREFIX
+                    << schedDirectionToStr(Legality.getDirection())
+                    << "Vec: Vectorization Actions:\n";
              Actions.dump());
-  emitVectors();
+  emitVectors(Legality);
   tryEraseDeadInstrs();
   return Change;
 }
@@ -541,6 +628,7 @@ bool BottomUpVec::runOnRegion(Region &Rgn, const Analyses &A) {
   LegalityAnalysis Legality(A.getAA(), A.getScalarEvolution(),
                             F.getParent()->getDataLayout(), F.getContext(),
                             *IMaps);
+  Legality.setDirection(Dir);
 
   // TODO: Refactor to remove the unnecessary copy to SeedSliceVals.
   SmallVector<Value *> SeedSliceVals(SeedSlice.begin(), SeedSlice.end());
