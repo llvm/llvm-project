@@ -4194,7 +4194,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   }
 
   Value *X, *Y;
-  const APInt *CV;
+  const APInt *CV, *ShiftC;
   if (match(&I, m_c_Or(m_OneUse(m_Xor(m_Value(X), m_APInt(CV))), m_Value(Y))) &&
       !CV->isAllOnes() && MaskedValueIsZero(Y, *CV, &I)) {
     // (X ^ C) | Y -> (X | Y) ^ C iff Y & C == 0
@@ -4209,6 +4209,27 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
                                m_Deferred(X)))) {
     Value *IncrementY = Builder.CreateAdd(Y, ConstantInt::get(Ty, 1));
     return BinaryOperator::CreateMul(X, IncrementY);
+  }
+
+  // (iN X s>> (N-1)) | Y --> (X s< 0) ? -1 : Y -- with optional sext
+  if (match(&I, m_c_Or(m_OneUse(m_SExtOrSelf(
+                           m_AShr(m_Value(X), m_APIntAllowPoison(ShiftC)))),
+                       m_Value(Y))) &&
+      *ShiftC == X->getType()->getScalarSizeInBits() - 1) {
+    Value *IsNeg = Builder.CreateIsNeg(X, "isneg");
+    return createSelectInstWithUnknownProfile(
+        IsNeg, ConstantInt::getAllOnesValue(Ty), Y);
+  }
+
+  // If there's a 'not' of the shifted value, swap the select operands:
+  // ~(iN X s>> (N-1)) | Y --> (X s< 0) ? Y : -1 -- with optional sext
+  if (match(&I, m_c_Or(m_OneUse(m_SExtOrSelf(m_Not(
+                           m_AShr(m_Value(X), m_APIntAllowPoison(ShiftC))))),
+                       m_Value(Y))) &&
+      *ShiftC == X->getType()->getScalarSizeInBits() - 1) {
+    Value *IsNeg = Builder.CreateIsNeg(X, "isneg");
+    return createSelectInstWithUnknownProfile(IsNeg, Y,
+                                              ConstantInt::getAllOnesValue(Ty));
   }
 
   // Canonicalization to achieve lowering to Bit Manipulation Instructions (BMI)

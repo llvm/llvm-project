@@ -3,8 +3,7 @@
 
 define i32 @test_or_ashr(i32 %x) {
 ; CHECK-LABEL: @test_or_ashr(
-; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[X:%.*]], 31
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHR]], [[X]]
+; CHECK-NEXT:    [[OR:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 -1)
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %shr = ashr i32 %x, 31
@@ -26,8 +25,7 @@ define i32 @test_or_ashr_not(i32 %x) {
 define i32 @test_or_ashr_not_multiuse(i32 %x) {
 ; CHECK-LABEL: @test_or_ashr_not_multiuse(
 ; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[X:%.*]], 31
-; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[SHR]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X]], [[NOT]]
+; CHECK-NEXT:    [[OR:%.*]] = call i32 @llvm.smin.i32(i32 [[X]], i32 -1)
 ; CHECK-NEXT:    call void @use(i32 [[SHR]])
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
@@ -40,8 +38,7 @@ define i32 @test_or_ashr_not_multiuse(i32 %x) {
 
 define <2 x i32> @test_or_ashr_vec_poison(<2 x i32> %x) {
 ; CHECK-LABEL: @test_or_ashr_vec_poison(
-; CHECK-NEXT:    [[SHR:%.*]] = ashr <2 x i32> [[X:%.*]], <i32 31, i32 poison>
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[SHR]], [[X]]
+; CHECK-NEXT:    [[OR:%.*]] = call <2 x i32> @llvm.smax.v2i32(<2 x i32> [[X:%.*]], <2 x i32> splat (i32 -1))
 ; CHECK-NEXT:    ret <2 x i32> [[OR]]
 ;
   %shr = ashr <2 x i32> %x, <i32 31, i32 poison>
