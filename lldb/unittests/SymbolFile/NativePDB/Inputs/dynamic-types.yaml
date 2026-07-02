@@ -1,0 +1,315 @@
+---
+MSF:
+  SuperBlock:
+    BlockSize:       4096
+    FreeBlockMap:    2
+    NumBlocks:       18
+    NumDirectoryBytes: 116
+    Unknown1:        0
+    BlockMapAddr:    3
+  NumDirectoryBlocks: 1
+  DirectoryBlocks: [ 17 ]
+  NumStreams:      0
+  FileSize:        73728
+TpiStream:
+  Version:         VC80
+  Records:
+    - Kind:            LF_ARGLIST
+      ArgList:
+        ArgIndices:      [ 1539, 35 ]
+    - Kind:            LF_PROCEDURE
+      Procedure:
+        ReturnType:      3
+        CallConv:        NearC
+        Options:         [ None ]
+        ParameterCount:  2
+        ArgumentList:    4096
+    - Kind:            LF_ARGLIST
+      ArgList:
+        ArgIndices:      [  ]
+    - Kind:            LF_PROCEDURE
+      Procedure:
+        ReturnType:      116
+        CallConv:        NearC
+        Options:         [ None ]
+        ParameterCount:  0
+        ArgumentList:    4098
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     0
+        Options:         [ None, ForwardReference, HasUniqueName ]
+        FieldList:       0
+        Name:            UsingBase
+        UniqueName:      '.?AUUsingBase@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            0
+    - Kind:            LF_VTSHAPE
+      VFTableShape:
+        Slots:
+          - Near16
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     0
+        Options:         [ None, ForwardReference, HasUniqueName ]
+        FieldList:       0
+        Name:            Base
+        UniqueName:      '.?AUBase@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            0
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_BCLASS
+          BaseClass:
+            Attrs:           3
+            Type:            4102
+            Offset:          0
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     1
+        Options:         [ None, HasConstructorOrDestructor, HasUniqueName ]
+        FieldList:       4103
+        Name:            UsingBase
+        UniqueName:      '.?AUUsingBase@@'
+        DerivationList:  0
+        VTableShape:     4101
+        Size:            8
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    4101
+        Attrs:           65548
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    4102
+        Attrs:           66572
+    - Kind:            LF_MFUNCTION
+      MemberFunction:
+        ReturnType:      3
+        ClassType:       4102
+        ThisType:        4106
+        CallConv:        NearC
+        Options:         [ None ]
+        ParameterCount:  0
+        ArgumentList:    4098
+        ThisPointerAdjustment: 0
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_VFUNCTAB
+          VFPtr:
+            Type:            4105
+        - Kind:            LF_ONEMETHOD
+          OneMethod:
+            Type:            4107
+            Attrs:           19
+            VFTableOffset:   0
+            Name:            '~Base'
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     2
+        Options:         [ None, HasConstructorOrDestructor, HasUniqueName ]
+        FieldList:       4108
+        Name:            Base
+        UniqueName:      '.?AUBase@@'
+        DerivationList:  0
+        VTableShape:     4101
+        Size:            8
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     0
+        Options:         [ None, ForwardReference, HasUniqueName ]
+        FieldList:       0
+        Name:            UsingVBase
+        UniqueName:      '.?AUUsingVBase@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            0
+    - Kind:            LF_MODIFIER
+      Modifier:
+        ModifiedType:    116
+        Modifiers:       [ None, Const ]
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    4111
+        Attrs:           65548
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     0
+        Options:         [ None, ForwardReference, HasUniqueName ]
+        FieldList:       0
+        Name:            VBase
+        UniqueName:      '.?AUVBase@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            0
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_VBCLASS
+          VirtualBaseClass:
+            Attrs:           3
+            BaseType:        4113
+            VBPtrType:       4112
+            VBPtrOffset:     0
+            VTableIndex:     1
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     1
+        Options:         [ None, HasConstructorOrDestructor, HasUniqueName ]
+        FieldList:       4114
+        Name:            UsingVBase
+        UniqueName:      '.?AUUsingVBase@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            8
+    - Kind:            LF_FIELDLIST
+      FieldList:       []
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     0
+        Options:         [ None, HasUniqueName ]
+        FieldList:       4116
+        Name:            VBase
+        UniqueName:      '.?AUVBase@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            1
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     0
+        Options:         [ None, ForwardReference, HasUniqueName ]
+        FieldList:       0
+        Name:            UsingUsingVBase
+        UniqueName:      '.?AUUsingUsingVBase@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            0
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_BCLASS
+          BaseClass:
+            Attrs:           3
+            Type:            4110
+            Offset:          0
+        - Kind:            LF_IVBCLASS
+          VirtualBaseClass:
+            Attrs:           3
+            BaseType:        4113
+            VBPtrType:       4112
+            VBPtrOffset:     0
+            VTableIndex:     1
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     2
+        Options:         [ None, HasConstructorOrDestructor, HasUniqueName ]
+        FieldList:       4119
+        Name:            UsingUsingVBase
+        UniqueName:      '.?AUUsingUsingVBase@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            8
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     0
+        Options:         [ None, ForwardReference, HasUniqueName ]
+        FieldList:       0
+        Name:            NotDynamic
+        UniqueName:      '.?AUNotDynamic@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            0
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_BCLASS
+          BaseClass:
+            Attrs:           3
+            Type:            4113
+            Offset:          0
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     1
+        Options:         [ None, HasUniqueName ]
+        FieldList:       4122
+        Name:            NotDynamic
+        UniqueName:      '.?AUNotDynamic@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            1
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    4100
+        Attrs:           66572
+    - Kind:            LF_MFUNCTION
+      MemberFunction:
+        ReturnType:      3
+        ClassType:       4100
+        ThisType:        4124
+        CallConv:        NearC
+        Options:         [ None, Constructor ]
+        ParameterCount:  0
+        ArgumentList:    4098
+        ThisPointerAdjustment: 0
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    4100
+        Attrs:           65548
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    4110
+        Attrs:           66572
+    - Kind:            LF_MFUNCTION
+      MemberFunction:
+        ReturnType:      3
+        ClassType:       4110
+        ThisType:        4127
+        CallConv:        NearC
+        Options:         [ None, Constructor ]
+        ParameterCount:  0
+        ArgumentList:    4098
+        ThisPointerAdjustment: 0
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    4110
+        Attrs:           65548
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    4118
+        Attrs:           66572
+    - Kind:            LF_MFUNCTION
+      MemberFunction:
+        ReturnType:      3
+        ClassType:       4118
+        ThisType:        4130
+        CallConv:        NearC
+        Options:         [ None, Constructor ]
+        ParameterCount:  0
+        ArgumentList:    4098
+        ThisPointerAdjustment: 0
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    4118
+        Attrs:           65548
+    - Kind:            LF_MFUNCTION
+      MemberFunction:
+        ReturnType:      3
+        ClassType:       4100
+        ThisType:        4124
+        CallConv:        NearC
+        Options:         [ None ]
+        ParameterCount:  0
+        ArgumentList:    4098
+        ThisPointerAdjustment: 0
+    - Kind:            LF_MFUNCTION
+      MemberFunction:
+        ReturnType:      3
+        ClassType:       4102
+        ThisType:        4106
+        CallConv:        NearC
+        Options:         [ None, Constructor ]
+        ParameterCount:  0
+        ArgumentList:    4098
+        ThisPointerAdjustment: 0
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    4102
+        Attrs:           65548
+...
