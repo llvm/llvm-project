@@ -2752,17 +2752,19 @@ template <Intrinsic::ID... IntrIDs> struct IntrinsicIDs_match {
   }
 };
 
-template <Intrinsic::ID IntrID, typename... Ts, size_t... Is>
-inline auto m_IntrinsicImpl(std::index_sequence<Is...>, const Ts &...Ops) {
-  return m_CombineAnd(IntrinsicID_match(IntrID), m_Argument<Is>(Ops)...);
-}
+struct IntrinsicMatchImpl {
+  template <Intrinsic::ID IntrID, typename... Ts, size_t... Is>
+  static auto impl(std::index_sequence<Is...>, const Ts &...Ops) {
+    return m_CombineAnd(IntrinsicID_match(IntrID), m_Argument<Is>(Ops)...);
+  }
+};
 
 /// Match intrinsic calls like this:
 /// m_Intrinsic<Intrinsic::fabs>(m_Value(X))
 template <Intrinsic::ID IntrID, typename... Ts>
 inline auto m_Intrinsic(const Ts &...Ops) {
-  return m_IntrinsicImpl<IntrID>(std::make_index_sequence<sizeof...(Ts)>{},
-                                 Ops...);
+  return IntrinsicMatchImpl::impl<IntrID>(
+      std::make_index_sequence<sizeof...(Ts)>{}, Ops...);
 }
 
 /// Match intrinsic calls with any of the given IDs like this:
