@@ -194,8 +194,10 @@ Related flags:
 `-ignore_ooms`
 : True by default. If an OOM happens during fuzzing in one of the child processes,
   the reproducer is saved on disk, and fuzzing continues.
+
 `-ignore_timeouts`
 : True by default, same as `-ignore_ooms`, but for timeouts.
+
 `-ignore_crashes`
 : False by default, same as `-ignore_ooms`, but for all other crashes.
 
@@ -248,88 +250,115 @@ The most important command line options are:
 
 `-help`
 : Print help message (`-help=1`).
+
 `-seed`
 : Random seed. If 0 (the default), the seed is generated.
+
 `-runs`
 : Number of individual test runs, -1 (the default) to run indefinitely.
+
 `-max_len`
 : Maximum length of a test input. If 0 (the default), libFuzzer tries to guess
   a good value based on the corpus (and reports it).
+
 `-len_control`
 : Try generating small inputs first, then try larger inputs over time.
   Specifies the rate at which the length limit is increased (smaller == faster).
   Default is 100. If 0, immediately try inputs with size up to max_len.
+
 `-timeout`
 : Timeout in seconds, default 1200. If an input takes longer than this timeout,
   the process is treated as a failure case.
+
 `-rss_limit_mb`
 : Memory usage limit in Mb, default 2048. Use 0 to disable the limit.
   If an input requires more than this amount of RSS memory to execute,
   the process is treated as a failure case.
   The limit is checked in a separate thread every second.
   If running w/o ASAN/MSAN, you may use 'ulimit -v' instead.
+
 `-malloc_limit_mb`
 : If non-zero, the fuzzer will exit if the target tries to allocate this
   number of Mb with one malloc call.
   If zero (default) same limit as rss_limit_mb is applied.
+
 `-timeout_exitcode`
 : Exit code (default 77) used if libFuzzer reports a timeout.
+
 `-error_exitcode`
 : Exit code (default 77) used if libFuzzer itself (not a sanitizer) reports a bug (leak, OOM, etc).
+
 `-max_total_time`
 : If positive, indicates the maximum total time in seconds to run the fuzzer.
   If 0 (the default), run indefinitely.
+
 `-merge`
 : If set to 1, any corpus inputs from the 2nd, 3rd etc. corpus directories
   that trigger new code coverage will be merged into the first corpus
   directory.  Defaults to 0. This flag can be used to minimize a corpus.
+
 `-merge_control_file`
 : Specify a control file used for the merge process.
   If a merge process gets killed it tries to leave this file in a state
   suitable for resuming the merge. By default a temporary file will be used.
+
 `-minimize_crash`
 : If 1, minimizes the provided crash input.
   Use with -runs=N or -max_total_time=N to limit the number of attempts.
+
 `-reload`
 : If set to 1 (the default), the corpus directory is re-read periodically to
   check for new inputs; this allows detection of new inputs that were discovered
   by other fuzzing processes.
+
 `-jobs`
 : Number of fuzzing jobs to run to completion. Default value is 0, which runs a
   single fuzzing process until completion.  If the value is >= 1, then this
   number of jobs performing fuzzing are run, in a collection of parallel
   separate worker processes; each such worker process has its
   `stdout`/`stderr` redirected to `fuzz-<JOB>.log`.
+
 `-workers`
 : Number of simultaneous worker processes to run the fuzzing jobs to completion
   in. If 0 (the default), `min(jobs, NumberOfCpuCores()/2)` is used.
+
 `-dict`
 : Provide a dictionary of input keywords; see [Dictionaries](#dictionaries).
+
 `-use_counters`
 : Use [coverage counters] to generate approximate counts of how often code
   blocks are hit; defaults to 1.
+
 `-reduce_inputs`
 : Try to reduce the size of inputs while preserving their full feature sets;
   defaults to 1.
+
 `-use_value_profile`
 : Use [value profile] to guide corpus expansion; defaults to 0.
+
 `-only_ascii`
 : If 1, generate only ASCII (`isprint`+`isspace`) inputs. Defaults to 0.
+
 `-artifact_prefix`
 : Provide a prefix to use when saving fuzzing artifacts (crash, timeout, or
   slow inputs) as `$(artifact_prefix)file`.  Defaults to empty.
+
 `-exact_artifact_path`
 : Ignored if empty (the default).  If non-empty, write the single artifact on
   failure (crash, timeout) as `$(exact_artifact_path)`. This overrides
   `-artifact_prefix` and will not use checksum in the file name. Do not use
   the same path for several parallel processes.
+
 `-print_pcs`
 : If 1, print out newly covered PCs. Defaults to 0.
+
 `-print_final_stats`
 : If 1, print statistics at exit.  Defaults to 0.
+
 `-detect_leaks`
 : If 1 (default) and if LeakSanitizer is enabled
   try to detect memory leaks during fuzzing (i.e. not only at shut down).
+
 `-close_fd_mask`
 : Indicate output streams to close at startup. Be careful, this will
   remove diagnostic output from target code (e.g. messages on assert failure).
@@ -371,21 +400,27 @@ possible event codes are:
 `READ`
 : The fuzzer has read in all of the provided input samples from the corpus
   directories.
+
 `INITED`
 : The fuzzer has completed initialization, which includes running each of
   the initial input samples through the code under test.
+
 `NEW`
 : The fuzzer has created a test input that covers new areas of the code
   under test.  This input will be saved to the primary corpus directory.
+
 `REDUCE`
 : The fuzzer has found a better (smaller) input that triggers previously
   discovered features (set `-reduce_inputs=0` to disable).
+
 `pulse`
 : The fuzzer has generated 2{sup}`n` inputs (generated periodically to reassure
   the user that the fuzzer is still working).
+
 `DONE`
 : The fuzzer has completed operation because it has reached the specified
   iteration limit (`-runs`) or time limit (`-max_total_time`).
+
 `RELOAD`
 : The fuzzer is performing a periodic reload of inputs from the corpus
   directory; this allows it to discover any inputs discovered by other
@@ -395,17 +430,22 @@ Each output line also reports the following statistics (when non-zero):
 
 `cov:`
 : Total number of code blocks or edges covered by executing the current corpus.
+
 `ft:`
 : libFuzzer uses different signals to evaluate the code coverage:
   edge coverage, edge counters, value profiles, indirect caller/callee pairs, etc.
   These signals combined are called *features* (`ft:`).
+
 `corp:`
 : Number of entries in the current in-memory test corpus and its size in bytes.
+
 `lim:`
 : Current limit on the length of new entries in the corpus. Increases over time
   until the max length (`-max_len`) is reached.
+
 `exec/s:`
 : Number of fuzzer iterations per second.
+
 `rss:`
 : Current memory consumption.
 
@@ -415,6 +455,7 @@ about the mutation operation that produced the new input:
 `L:`
 : Size of the new/reduced input in bytes and the size of the largest input
   in current in-memory test corpus.
+  
 `MS: <n> <operations>`
 : Count and list of the mutation operations used to generate the input.
 
