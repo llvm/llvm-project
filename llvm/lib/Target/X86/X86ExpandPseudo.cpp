@@ -771,8 +771,8 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
     unsigned Count = !!MI.getOperand(MemOpNo + X86::AddrSegmentReg).getReg();
     if (X86II::needSIB(Base, Index, /*In64BitMode=*/true))
       ++Count;
-    if (X86MCRegisterClasses[X86::GR32RegClassID].contains(Base) ||
-        X86MCRegisterClasses[X86::GR32RegClassID].contains(Index))
+    if (getX86MCRegisterClass(X86::GR32RegClassID).contains(Base) ||
+        getX86MCRegisterClass(X86::GR32RegClassID).contains(Index))
       ++Count;
     if (Count < 2)
       return false;

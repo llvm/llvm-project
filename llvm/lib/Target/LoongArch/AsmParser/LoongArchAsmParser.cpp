@@ -240,8 +240,8 @@ public:
   void setReg(MCRegister PhysReg) { Reg.RegNum = PhysReg; }
   bool isGPR() const {
     return Kind == KindTy::Register &&
-           LoongArchMCRegisterClasses[LoongArch::GPRRegClassID].contains(
-               Reg.RegNum);
+           getLoongArchMCRegisterClass(LoongArch::GPRRegClassID)
+               .contains(Reg.RegNum);
   }
 
   static bool evaluateConstantImm(const MCExpr *Expr, int64_t &Imm,
@@ -683,8 +683,8 @@ bool LoongArchAsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
   if (!tryParseRegister(Reg, StartLoc, EndLoc).isSuccess())
     return Error(getLoc(), "invalid register name");
 
-  if (!LoongArchMCRegisterClasses[LoongArch::GPRRegClassID].contains(Reg) &&
-      !LoongArchMCRegisterClasses[LoongArch::FPR32RegClassID].contains(Reg))
+  if (!getLoongArchMCRegisterClass(LoongArch::GPRRegClassID).contains(Reg) &&
+      !getLoongArchMCRegisterClass(LoongArch::FPR32RegClassID).contains(Reg))
     return Error(getLoc(), "invalid register name");
 
   return false;
@@ -1757,7 +1757,7 @@ LoongArchAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
   MCRegister Reg = Op.getReg();
   // As the parser couldn't differentiate an FPR32 from an FPR64, coerce the
   // register from FPR32 to FPR64 if necessary.
-  if (LoongArchMCRegisterClasses[LoongArch::FPR32RegClassID].contains(Reg) &&
+  if (getLoongArchMCRegisterClass(LoongArch::FPR32RegClassID).contains(Reg) &&
       Kind == MCK_FPR64) {
     Op.setReg(convertFPR32ToFPR64(Reg));
     return Match_Success;
@@ -1795,12 +1795,10 @@ bool LoongArchAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     assert(MissingFeatures.any() && "Unknown missing features!");
     bool FirstFeature = true;
     std::string Msg = "instruction requires the following:";
-    for (unsigned i = 0, e = MissingFeatures.size(); i != e; ++i) {
-      if (MissingFeatures[i]) {
-        Msg += FirstFeature ? " " : ", ";
-        Msg += getSubtargetFeatureName(i);
-        FirstFeature = false;
-      }
+    for (unsigned Feature : MissingFeatures) {
+      Msg += FirstFeature ? " " : ", ";
+      Msg += getSubtargetFeatureName(Feature);
+      FirstFeature = false;
     }
     return Error(IDLoc, Msg);
   }
