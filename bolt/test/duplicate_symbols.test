@@ -1,0 +1,44 @@
+## Verify that BOLT can correctly process binaries with duplicate symbols.
+
+# REQUIRES: system-linux
+
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %s -o %t.o
+
+## Shared library with the duplicate symbol "foo", which requires a version script.
+# RUN: echo "VERS_1 { global: foo; }; VERS_2 { global: foo; } VERS_1;" > %t.map
+# RUN: ld.lld %t.o -o %t.so -shared --version-script %t.map
+# RUN: llvm-bolt %t.so -o %t.so.bolt 2>&1 | FileCheck %s --check-prefix=CHECK-SHARED
+
+# CHECK-SHARED-NOT: bad input binary, global symbol "foo" is not unique
+
+## Main executable with the duplicate symbol "foo",
+## linked from a static object/archive without needing a version script.
+# RUN: ld.lld %t.o -o %t.exe
+# RUN: not llvm-bolt %t.exe -o %t.exe.bolt 2>&1 | FileCheck %s  --check-prefix=CHECK-STATIC
+
+# CHECK-STATIC: BOLT-ERROR: bad input binary, global symbol "foo" is not unique
+
+.text
+.globl _start
+.type _start, @function
+_start:
+  call foo_v1
+  call foo_v2
+  ret
+.size _start, .-_start
+
+.globl foo_v1
+.type foo_v1, @function
+foo_v1:
+  nop
+  nop
+.size foo_v1, .-foo_v1
+
+.globl foo_v2
+.type foo_v2, @function
+foo_v2:
+  ret
+.size foo_v2, .-foo_v2
+
+.symver foo_v1, foo@VERS_1
+.symver foo_v2, foo@@VERS_2
