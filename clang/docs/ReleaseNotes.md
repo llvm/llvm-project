@@ -757,6 +757,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   crash when using it with `-fms-extensions` on other platforms. (#GH184318)
 - Fixed a compiler crash due to an unresolved overloaded function type when
   calling `__builtin_bit_cast`. (#GH200112)
+- Fixed an assertion failure when passing a wide string literal to `__builtin_nan` and related builtins. (#GH205306)
 - Clang now SFINAE friendly when the ``__reference_meows_from_temporary`` builtins
   should SFINAE friendly when the 1st type is not a reference type. (#GH206524)
 

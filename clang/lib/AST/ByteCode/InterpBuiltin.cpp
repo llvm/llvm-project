@@ -441,11 +441,19 @@ static bool interp__builtin_nan(InterpState &S, CodePtr OpPC,
     if (!Arg.isElementInitialized(I))
       return false;
 
-    if (Arg.elem<int8_t>(I) == 0) {
+    char C;
+    if (Arg.getFieldDesc()->getPrimType() == PT_Sint8)
+      C = Arg.elem<int8_t>(I);
+    else if (Arg.getFieldDesc()->getPrimType() == PT_Uint8)
+      C = Arg.elem<uint8_t>(I);
+    else
+      return false;
+
+    if (C == 0) {
       FoundZero = true;
       break;
     }
-    Str += Arg.elem<char>(I);
+    Str += C;
   }
 
   // If we didn't find a NUL byte, diagnose as a one-past-the-end read.

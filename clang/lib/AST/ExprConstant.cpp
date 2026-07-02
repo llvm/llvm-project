@@ -20064,7 +20064,11 @@ static bool TryEvaluateBuiltinNaN(const ASTContext &Context,
                                   bool SNaN,
                                   llvm::APFloat &Result) {
   const StringLiteral *S = dyn_cast<StringLiteral>(Arg->IgnoreParenCasts());
-  if (!S) return false;
+  if (!S)
+    return false;
+
+  if (!S->isOrdinary() && !S->isUTF8())
+    return false;
 
   const llvm::fltSemantics &Sem = Context.getFloatTypeSemantics(ResultTy);
 
