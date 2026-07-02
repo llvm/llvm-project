@@ -987,9 +987,15 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
       EmitStmt(Else);
     }
     {
+      llvm::BasicBlock *ElseExitBlock = Builder.GetInsertBlock();
       // There is no need to emit line number for an unconditional branch.
       auto NL = ApplyDebugLocation::CreateEmpty(*this);
       EmitBranch(ContBlock);
+
+      // If nested control flow in the else body left behind a synthetic
+      // continuation, fold it into this if's continuation when possible.
+      if (ElseExitBlock && ElseExitBlock != ElseBlock)
+        SimplifyForwardingBlocks(ElseExitBlock);
     }
   } else if (HasSkip) {
     EmitBlock(ElseBlock);
