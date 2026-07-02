@@ -101,6 +101,7 @@ def TensorMapInterleaveKind : I32EnumAttr<"TensorMapInterleaveKind",
   let cppNamespace = "::mlir::nvgpu";
 }
 
+
 def RcpApprox : I32EnumAttrCase<"APPROX", 0, "approx">;
 def RcpRN     : I32EnumAttrCase<"RN", 1, "rn">;
 def RcpRZ     : I32EnumAttrCase<"RZ", 2, "rz">;
