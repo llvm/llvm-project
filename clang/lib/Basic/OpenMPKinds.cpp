@@ -224,6 +224,15 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
       return OMPC_NUMTEAMS_unknown;
     return Type;
   }
+  case OMPC_thread_limit: {
+    unsigned Type = llvm::StringSwitch<unsigned>(Str)
+#define OPENMP_THREADLIMIT_MODIFIER(Name) .Case(#Name, OMPC_THREADLIMIT_##Name)
+#include "clang/Basic/OpenMPKinds.def"
+                        .Default(OMPC_THREADLIMIT_unknown);
+    if (LangOpts.OpenMP < 61)
+      return OMPC_THREADLIMIT_unknown;
+    return Type;
+  }
   case OMPC_allocate:
     return llvm::StringSwitch<OpenMPAllocateClauseModifier>(Str)
 #define OPENMP_ALLOCATE_MODIFIER(Name) .Case(#Name, OMPC_ALLOCATE_##Name)
@@ -294,7 +303,6 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
   case OMPC_relaxed:
   case OMPC_threads:
   case OMPC_simd:
-  case OMPC_thread_limit:
   case OMPC_priority:
   case OMPC_nogroup:
   case OMPC_hint:
@@ -606,6 +614,16 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
 #include "clang/Basic/OpenMPKinds.def"
     }
     llvm_unreachable("Invalid OpenMP 'num_teams' clause modifier");
+  case OMPC_thread_limit:
+    switch (Type) {
+    case OMPC_THREADLIMIT_unknown:
+      return "unknown";
+#define OPENMP_THREADLIMIT_MODIFIER(Name)                                      \
+  case OMPC_THREADLIMIT_##Name:                                                \
+    return #Name;
+#include "clang/Basic/OpenMPKinds.def"
+    }
+    llvm_unreachable("Invalid OpenMP 'thread_limit' clause modifier");
   case OMPC_allocate:
     switch (Type) {
     case OMPC_ALLOCATE_unknown:
@@ -683,7 +701,6 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_relaxed:
   case OMPC_threads:
   case OMPC_simd:
-  case OMPC_thread_limit:
   case OMPC_priority:
   case OMPC_nogroup:
   case OMPC_hint:

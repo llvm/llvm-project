@@ -1978,18 +1978,24 @@ OMPNumTeamsClause *OMPNumTeamsClause::CreateEmpty(const ASTContext &C,
 OMPThreadLimitClause *OMPThreadLimitClause::Create(
     const ASTContext &C, OpenMPDirectiveKind CaptureRegion,
     SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation EndLoc,
-    ArrayRef<Expr *> VL, Stmt *PreInit) {
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size()));
+    ArrayRef<Expr *> VL, OpenMPThreadLimitClauseModifier Modifier,
+    Expr *ModifierExpr, SourceLocation ModifierLoc, Stmt *PreInit) {
+  // Reserve space for an extra modifier expression.
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size() + 1));
   OMPThreadLimitClause *Clause =
       new (Mem) OMPThreadLimitClause(C, StartLoc, LParenLoc, EndLoc, VL.size());
   Clause->setVarRefs(VL);
+  Clause->setModifier(Modifier);
+  Clause->setModifierExpr(ModifierExpr);
+  Clause->setModifierLoc(ModifierLoc);
   Clause->setPreInitStmt(PreInit, CaptureRegion);
   return Clause;
 }
 
 OMPThreadLimitClause *OMPThreadLimitClause::CreateEmpty(const ASTContext &C,
                                                         unsigned N) {
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N));
+  // Reserve space for an extra modifier expression.
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N + 1));
   return new (Mem) OMPThreadLimitClause(N);
 }
 
@@ -2373,9 +2379,13 @@ void OMPClausePrinter::VisitOMPDeviceClause(OMPDeviceClause *Node) {
 void OMPClausePrinter::VisitOMPNumTeamsClause(OMPNumTeamsClause *Node) {
   if (!Node->varlist_empty()) {
     OS << "num_teams";
-    if (const Expr *LowerBound = Node->getModifierExpr()) {
+    if (Node->getModifier() != OMPC_NUMTEAMS_unknown) {
       OS << "(";
-      LowerBound->printPretty(OS, nullptr, Policy, 0);
+      if (Node->getModifier() == OMPC_NUMTEAMS_dims)
+        OS << "dims(";
+      Node->getModifierExpr()->printPretty(OS, nullptr, Policy, 0);
+      if (Node->getModifier() == OMPC_NUMTEAMS_dims)
+        OS << ")";
       VisitOMPClauseList(Node, ':');
     } else {
       VisitOMPClauseList(Node, '(');
@@ -2387,7 +2397,14 @@ void OMPClausePrinter::VisitOMPNumTeamsClause(OMPNumTeamsClause *Node) {
 void OMPClausePrinter::VisitOMPThreadLimitClause(OMPThreadLimitClause *Node) {
   if (!Node->varlist_empty()) {
     OS << "thread_limit";
-    VisitOMPClauseList(Node, '(');
+    if (Node->getModifier() == OMPC_THREADLIMIT_dims) {
+      OS << "(dims(";
+      Node->getModifierExpr()->printPretty(OS, nullptr, Policy, 0);
+      OS << ")";
+      VisitOMPClauseList(Node, ':');
+    } else {
+      VisitOMPClauseList(Node, '(');
+    }
     OS << ")";
   }
 }
