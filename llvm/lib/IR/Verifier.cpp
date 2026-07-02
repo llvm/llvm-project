@@ -4057,10 +4057,6 @@ void Verifier::visitCallBase(CallBase &Call) {
     }
   }
 
-  // Verify that callee and callsite agree on whether to use pointer auth.
-  Check(!(Call.getCalledFunction() && FoundPtrauthBundle),
-        "Direct call cannot have a ptrauth bundle", Call);
-
   // Verify that each inlinable callsite of a debug-info-bearing function in a
   // debug-info-bearing function has a debug location attached to it. Failure to
   // do so causes assertion failures when the inliner sets up inline scope info

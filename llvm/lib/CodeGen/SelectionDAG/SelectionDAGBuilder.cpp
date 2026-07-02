@@ -10014,8 +10014,10 @@ void SelectionDAGBuilder::LowerCallSiteWithPtrAuthBundle(
       return LowerCallTo(CB, getValue(CalleeCPA->getPointer()), CB.isTailCall(),
                          CB.isMustTailCall(), EHPadBB);
 
-  // Functions should never be ptrauth-called directly.
-  assert(!isa<Function>(CalleeV) && "invalid direct ptrauth call");
+  // Direct call to a known Function: the bundle is a no-op, drop it.
+  if (isa<Function>(CalleeV))
+    return LowerCallTo(CB, getValue(CalleeV), CB.isTailCall(),
+                       CB.isMustTailCall(), EHPadBB);
 
   // Otherwise, do an authenticated indirect call.
   TargetLowering::PtrAuthInfo PAI = {Key->getZExtValue(),

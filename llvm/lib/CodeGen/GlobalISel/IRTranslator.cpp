@@ -2798,11 +2798,10 @@ bool IRTranslator::translateCallBase(const CallBase &CB,
     }
   }
 
+  // Skip PAI for direct calls: the bundle is a no-op on a known Function.
   std::optional<CallLowering::PtrAuthInfo> PAI;
-  if (auto Bundle = CB.getOperandBundle(LLVMContext::OB_ptrauth)) {
-    // Functions should never be ptrauth-called directly.
-    assert(!CB.getCalledFunction() && "invalid direct ptrauth call");
-
+  if (auto Bundle = CB.getOperandBundle(LLVMContext::OB_ptrauth);
+      Bundle && !CB.getCalledFunction()) {
     const Value *Key = Bundle->Inputs[0];
     const Value *Discriminator = Bundle->Inputs[1];
 

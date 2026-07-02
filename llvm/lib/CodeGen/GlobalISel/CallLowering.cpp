@@ -165,9 +165,10 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   const Value *CalleeV = CB.getCalledOperand()->stripPointerCasts();
 
   // If IRTranslator chose to drop the ptrauth info, we can turn this into
-  // a direct call.
+  // a direct call. The callee is either a ConstantPtrAuth or a Function.
   if (!PAI && CB.countOperandBundlesOfType(LLVMContext::OB_ptrauth)) {
-    CalleeV = cast<ConstantPtrAuth>(CalleeV)->getPointer();
+    if (const auto *CPA = dyn_cast<ConstantPtrAuth>(CalleeV))
+      CalleeV = CPA->getPointer();
     assert(isa<Function>(CalleeV));
   }
 
