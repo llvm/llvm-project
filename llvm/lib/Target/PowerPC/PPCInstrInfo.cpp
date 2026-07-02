@@ -1735,6 +1735,37 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
         .addImm(28)
         .addImm(31);
     return;
+  } else if (PPC::CRRCRegClass.contains(DestReg) &&
+             (PPC::G8RCRegClass.contains(SrcReg) ||
+              PPC::GPRCRegClass.contains(SrcReg))) {
+    bool Is64Bit = PPC::G8RCRegClass.contains(SrcReg);
+    unsigned MvCode = Is64Bit ? PPC::MTOCRF8 : PPC::MTOCRF;
+    unsigned ShCode = Is64Bit ? PPC::RLWINM8 : PPC::RLWINM;
+    unsigned CRNum = TRI->getEncodingValue(DestReg);
+    if (CRNum == 7) {
+      BuildMI(MBB, I, DL, get(MvCode), DestReg)
+          .addReg(SrcReg, getKillRegState(KillSrc));
+      return;
+    }
+    Register TmpReg = SrcReg;
+    RegState SrcKill = getKillRegState(KillSrc);
+    if (!KillSrc) {
+      RegScavenger RS;
+      RS.enterBasicBlockEnd(MBB);
+      RS.backward(std::next(I));
+      TmpReg = RS.scavengeRegisterBackwards(
+          Is64Bit ? PPC::G8RCRegClass : PPC::GPRCRegClass, I,
+          /* RestoreAfter */ false, 0, /* AllowSpill */ false);
+      assert(TmpReg && "No register left to scavenge!");
+      SrcKill = RegState::NoFlags;
+    }
+    BuildMI(MBB, I, DL, get(ShCode), TmpReg)
+        .addReg(SrcReg, SrcKill)
+        .addImm(32 - CRNum * 4 - 4)
+        .addImm(0)
+        .addImm(31);
+    BuildMI(MBB, I, DL, get(MvCode), DestReg).addReg(TmpReg, RegState::Kill);
+    return;
   } else if (PPC::G8RCRegClass.contains(SrcReg) &&
              PPC::VSFRCRegClass.contains(DestReg)) {
     assert(Subtarget.hasDirectMove() &&
