@@ -134,13 +134,13 @@ include "Common/RegClassByHwModeCommon.td"
 // ASMMATCHER: if (Operand.isReg()) {
 
 // ASMMATCHER: static const MatchEntry MatchTable0[] = {
-// ASMMATCHER: /* also_my_load_1 */, MyTarget::MY_LOAD, Convert__RegByHwMode_XRegs_EvenIfRequired1_0__RegByHwMode_MyPtrRC1_1, AMFBS_None, { MCK_RegByHwMode_XRegs_EvenIfRequired, MCK_RegByHwMode_MyPtrRC }, },
-// ASMMATCHER: /* also_my_load_2 */, MyTarget::MY_LOAD, Convert__RegByHwMode_XRegs_EvenIfRequired1_0__RegByHwMode_MyPtrRC1_1, AMFBS_None, { MCK_RegByHwMode_XRegs_EvenIfRequired, MCK_RegByHwMode_MyPtrRC }, },
-// ASMMATCHER: /* always_all */, MyTarget::ALWAYS_ALL, Convert__Reg1_0, AMFBS_None, { MCK_XRegs }, },
-// ASMMATCHER: /* always_even */, MyTarget::ALWAYS_EVEN, Convert__Reg1_0, AMFBS_None, { MCK_XRegs_Even }, },
-// ASMMATCHER: /* custom_decode */, MyTarget::CUSTOM_DECODE, Convert__RegByHwMode_YRegs_EvenIfRequired1_0, AMFBS_None, { MCK_RegByHwMode_YRegs_EvenIfRequired }, },
-// ASMMATCHER: /* even_if_mode */, MyTarget::EVEN_IF_MODE, Convert__RegByHwMode_XRegs_EvenIfRequired1_0, AMFBS_None, { MCK_RegByHwMode_XRegs_EvenIfRequired }, },
-// ASMMATCHER: /* my_mov */, MyTarget::MY_MOV, Convert__RegByHwMode_YRegs_EvenIfRequired1_0__RegByHwMode_XRegs_EvenIfRequired1_1, AMFBS_None, { MCK_RegByHwMode_YRegs_EvenIfRequired, MCK_RegByHwMode_XRegs_EvenIfRequired }, },
+// ASMMATCHER: /* also_my_load_1 */, MyTarget::MY_LOAD, Convert__RegByHwMode_XRegs_EvenIfRequired1_0__RegByHwMode_MyPtrRC1_1, AMFBS_None, [[LOAD_CLASSES:[0-9]+]] /* { MCK_RegByHwMode_XRegs_EvenIfRequired, MCK_RegByHwMode_MyPtrRC } */, },
+// ASMMATCHER: /* also_my_load_2 */, MyTarget::MY_LOAD, Convert__RegByHwMode_XRegs_EvenIfRequired1_0__RegByHwMode_MyPtrRC1_1, AMFBS_None, [[LOAD_CLASSES]] /* { MCK_RegByHwMode_XRegs_EvenIfRequired, MCK_RegByHwMode_MyPtrRC } */, },
+// ASMMATCHER: /* always_all */, MyTarget::ALWAYS_ALL, Convert__Reg1_0, AMFBS_None, {{[0-9]+}} /* { MCK_XRegs } */, },
+// ASMMATCHER: /* always_even */, MyTarget::ALWAYS_EVEN, Convert__Reg1_0, AMFBS_None, {{[0-9]+}} /* { MCK_XRegs_Even } */, },
+// ASMMATCHER: /* custom_decode */, MyTarget::CUSTOM_DECODE, Convert__RegByHwMode_YRegs_EvenIfRequired1_0, AMFBS_None, {{[0-9]+}} /* { MCK_RegByHwMode_YRegs_EvenIfRequired } */, },
+// ASMMATCHER: /* even_if_mode */, MyTarget::EVEN_IF_MODE, Convert__RegByHwMode_XRegs_EvenIfRequired1_0, AMFBS_None, {{[0-9]+}} /* { MCK_RegByHwMode_XRegs_EvenIfRequired } */, },
+// ASMMATCHER: /* my_mov */, MyTarget::MY_MOV, Convert__RegByHwMode_YRegs_EvenIfRequired1_0__RegByHwMode_XRegs_EvenIfRequired1_1, AMFBS_None, {{[0-9]+}} /* { MCK_RegByHwMode_YRegs_EvenIfRequired, MCK_RegByHwMode_XRegs_EvenIfRequired } */, },
 
 
 
