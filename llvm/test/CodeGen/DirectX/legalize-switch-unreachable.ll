@@ -75,22 +75,31 @@ case1:
   ret i32 20
 }
 
-; Test that a switch with a reachable default keeps its default destination.
-; The two-way switch is folded into a conditional branch.
+; Test that a switch with a reachable default and three or more successors is
+; not folded and keeps its default destination.
 
 define i32 @test_reachable_default(i32 %val) {
 ; CHECK-LABEL: define i32 @test_reachable_default(
 ; CHECK:       entry:
-; CHECK-NEXT:    %cond = icmp eq i32 %val, 0
-; CHECK-NEXT:    br i1 %cond, label %case0, label %default
+; CHECK-NEXT:    switch i32 %val, label %default [
+; CHECK-NEXT:      i32 0, label %case0
+; CHECK-NEXT:      i32 1, label %case1
+; CHECK-NEXT:      i32 2, label %case2
+; CHECK-NEXT:    ]
 ; CHECK:       default:
 ; CHECK-NEXT:    ret i32 -1
 ; CHECK:       case0:
 ; CHECK-NEXT:    ret i32 10
+; CHECK:       case1:
+; CHECK-NEXT:    ret i32 20
+; CHECK:       case2:
+; CHECK-NEXT:    ret i32 30
 ;
 entry:
   switch i32 %val, label %default [
     i32 0, label %case0
+    i32 1, label %case1
+    i32 2, label %case2
   ]
 
 default:
@@ -98,6 +107,50 @@ default:
 
 case0:
   ret i32 10
+
+case1:
+  ret i32 20
+
+case2:
+  ret i32 30
+}
+
+; Test that a switch with an unreachable default, no common successor and three
+; or more remaining successors has its default redirected to the first case
+; block and is not folded into a conditional branch.
+
+define i32 @test_no_common_successor_unfolded(i32 %val) {
+; CHECK-LABEL: define i32 @test_no_common_successor_unfolded(
+; CHECK:       entry:
+; CHECK-NEXT:    switch i32 %val, label %case0 [
+; CHECK-NEXT:      i32 2, label %case2
+; CHECK-NEXT:      i32 1, label %case1
+; CHECK-NEXT:    ]
+; CHECK:       case0:
+; CHECK-NEXT:    ret i32 10
+; CHECK:       case1:
+; CHECK-NEXT:    ret i32 20
+; CHECK:       case2:
+; CHECK-NEXT:    ret i32 30
+;
+entry:
+  switch i32 %val, label %default [
+    i32 0, label %case0
+    i32 1, label %case1
+    i32 2, label %case2
+  ]
+
+default:
+  unreachable
+
+case0:
+  ret i32 10
+
+case1:
+  ret i32 20
+
+case2:
+  ret i32 30
 }
 
 ; Test with conditional branches in case blocks (no common successor) and
