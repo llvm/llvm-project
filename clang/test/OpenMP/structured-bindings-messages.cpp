@@ -136,6 +136,17 @@ void test_pair() {
   }
 }
 
+void test_pair_map() {
+  auto [a, b] = std::make_pair(1, 2);
+  // expected-note@-1{{'a' declared here}}
+  // expected-error@+1{{mapping of tuple-like structured binding is not yet supported}}
+#pragma omp target map(a)
+  {
+    // expected-error@+1{{capturing tuple-like structured binding 'a' is not yet supported in OpenMP}}
+    use(a);
+  }
+}
+
 void test_tuple() {
   std::tuple<int, int, int> t = {1, 2, 3};
   auto [x, y, z] = t;
@@ -172,7 +183,7 @@ Point make_point() { return {1, 2}; }
 
 void test_function_call() {
   auto [a, b] = make_point();
-  // expected-error@+1{{mapping of structured binding initialized from function call is not supported}}
+  // expected-error@+1{{mapping of structured binding initialized from function call is not yet supported}}
 #pragma omp target map(a)
   {
     a++;
@@ -181,7 +192,7 @@ void test_function_call() {
 
 void test_brace_init() {
   auto [a, b] = Point{1, 2};
-  // expected-error@+1{{mapping of structured binding initialized from initializer list is not supported}}
+// expected-error@+1{{mapping of structured binding initialized from initializer list is not yet supported}}
 #pragma omp target map(a)
   {
     a++;
@@ -191,9 +202,38 @@ void test_brace_init() {
 void test_move() {
   Point p{1, 2};
   auto [a, b] = std::move(p);
-  // expected-error@+1{{mapping of structured binding initialized from move expression is not supported}}
+  // expected-error@+1{{mapping of structured binding initialized from move expression is not yet supported}}
 #pragma omp target map(a)
   { 
+    a++;
+  }
+}
+
+void test_constructor_with_function_call() {
+  auto [a, b] = Point(make_point());
+  // expected-error@+1{{mapping of structured binding initialized from function call is not yet supported}}
+#pragma omp target map(a)
+  {
+    a++;
+  }
+}
+
+void test_constructor_with_move_arg() {
+  Point p{1, 2};
+  auto [a, b] = Point(std::move(p));
+  // expected-error@+1{{mapping of structured binding initialized from move expression is not yet supported}}
+#pragma omp target map(a)
+  {
+    a++;
+  }
+}
+
+void test_constructor_with_member() {
+  struct Container { Point p; } c{{1, 2}};
+  auto [a, b] = Point(c.p);
+  // expected-error@+1{{mapping of structured binding initialized from temporary object is not yet supported}}
+#pragma omp target map(a)
+  {
     a++;
   }
 }
