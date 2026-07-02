@@ -544,6 +544,28 @@ module attributes {
 
 // -----
 
+// Check memref.copy lowering to spirv.CopyMemory.
+
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Kernel, Addresses], []>, #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: func @copy
+func.func @copy() {
+  // CHECK: %[[SRC:.+]] = spirv.Variable : !spirv.ptr<!spirv.array<4 x f32>, Function>
+  // CHECK: %[[DST:.+]] = spirv.Variable : !spirv.ptr<!spirv.array<4 x f32>, Function>
+  // CHECK: spirv.CopyMemory "Function" %[[DST]], "Function" %[[SRC]]{{.*}} : !spirv.array<4 x f32>
+  %0 = memref.alloca() : memref<4xf32, #spirv.storage_class<Function>>
+  %1 = memref.alloca() : memref<4xf32, #spirv.storage_class<Function>>
+  memref.copy %0, %1 : memref<4xf32, #spirv.storage_class<Function>> to memref<4xf32, #spirv.storage_class<Function>>
+  return
+}
+
+} // end module
+
+// -----
+
 // Check Image Support.
 
 // CHECK: #[[$COLMAJMAP:.*]] = affine_map<(d0, d1) -> (d1, d0)>
