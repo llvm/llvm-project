@@ -145,21 +145,9 @@ class ExprPointeeResolve {
       // explicit cast will be checked in `findPointeeToNonConst`
       const CastKind kind = ICE->getCastKind();
       if (kind == CK_LValueToRValue || kind == CK_DerivedToBase ||
-          kind == CK_UncheckedDerivedToBase)
+          kind == CK_UncheckedDerivedToBase || kind == CK_NoOp ||
+          kind == CK_BitCast)
         return resolveExpr(ICE->getSubExpr());
-      if (kind == CK_NoOp) {
-        // Binding `T *` to `T *const &` only adds top-level qualifiers to the
-        // pointer object, so this `CK_NoOp` still refers to the same pointer.
-        const auto GetLocallyUnqualifiedCanonicalType = [](QualType Type) {
-          return Type.getLocalUnqualifiedType().getCanonicalType();
-        };
-        const QualType CastType =
-            GetLocallyUnqualifiedCanonicalType(ICE->getType());
-        const QualType SubExprType =
-            GetLocallyUnqualifiedCanonicalType(ICE->getSubExpr()->getType());
-        if (CastType == SubExprType)
-          return resolveExpr(ICE->getSubExpr());
-      }
       return false;
     }
 
@@ -809,13 +797,17 @@ ExprMutationAnalyzer::Analyzer::findPointeeToNonConst(const Expr *Exp) {
                                    NonConstPointerOrNonConstRefOrDependentType);
   const auto CallLikeMatcher =
       anyOf(ArgOfNonConstParameter, ArgOfInstantiationDependent);
-  const auto PassAsNonConstArg =
-      expr(anyOf(cxxUnresolvedConstructExpr(ArgOfInstantiationDependent),
-                 cxxNewExpr(hasAnyPlacementArg(
-                     ignoringParenImpCasts(canResolveToExprPointee(Exp)))),
-                 cxxConstructExpr(CallLikeMatcher), callExpr(CallLikeMatcher),
-                 parenListExpr(has(canResolveToExprPointee(Exp))),
-                 initListExpr(hasAnyInit(canResolveToExprPointee(Exp)))));
+  const auto PassAsNonConstArg = expr(
+      anyOf(cxxUnresolvedConstructExpr(ArgOfInstantiationDependent),
+            cxxNewExpr(hasAnyPlacementArg(
+                ignoringParenImpCasts(canResolveToExprPointee(Exp)))),
+            cxxConstructExpr(CallLikeMatcher), callExpr(CallLikeMatcher),
+            parenListExpr(has(
+                expr(canResolveToExprPointee(Exp),
+                     hasType(NonConstPointerOrNonConstRefOrDependentType)))),
+            initListExpr(hasAnyInit(
+                expr(canResolveToExprPointee(Exp),
+                     hasType(NonConstPointerOrNonConstRefOrDependentType))))));
   // cast
   const auto CastToNonConst = explicitCastExpr(
       hasSourceExpression(canResolveToExprPointee(Exp)),
@@ -825,8 +817,9 @@ ExprMutationAnalyzer::Analyzer::findPointeeToNonConst(const Expr *Exp) {
   // FIXME: false positive if the pointee does not change in lambda
   const auto CaptureNoConst = lambdaExpr(hasCaptureInit(Exp));
 
-  const auto ReturnNoConst =
-      returnStmt(hasReturnValue(canResolveToExprPointee(Exp)));
+  const auto ReturnNoConst = returnStmt(
+      hasReturnValue(canResolveToExprPointee(Exp)),
+      forFunction(returns(NonConstPointerOrNonConstRefOrDependentType)));
 
   const auto Matches = match(
       stmt(anyOf(forEachDescendant(
