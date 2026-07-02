@@ -958,7 +958,7 @@ static bool legalizeSpvConstComposite(LegalizerHelper &Helper, MachineInstr &MI,
   if (MI.getNumOperands() == 2) {
     // The "null" case: no values are attached.
     LLT EltTy = DstTy.getElementType();
-    auto Zero = MIRBuilder.buildConstant(EltTy, 0);
+    auto Zero = MIRBuilder.buildFConstant(EltTy, 0);
     SPIRVTypeInst SpvDstTy = GR->getSPIRVTypeForVReg(DstReg);
     SPIRVTypeInst SpvEltTy = GR->getScalarOrVectorComponentType(SpvDstTy);
     GR->assignSPIRVTypeToVReg(SpvEltTy, Zero.getReg(0), MIRBuilder.getMF());
