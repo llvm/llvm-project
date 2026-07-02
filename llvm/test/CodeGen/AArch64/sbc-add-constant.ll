@@ -38,6 +38,121 @@ define i32 @g_i32(i32 %a, i32 %b) nounwind {
   ret i32 %r2
 }
 
+define i64 @g_i64_add1(i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: g_i64_add1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    subs x9, x0, x1
+; CHECK-NEXT:    sbc x0, x9, x8
+; CHECK-NEXT:    ret
+  %ov  = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %a, i64 %b)
+  %val = extractvalue { i64, i1 } %ov, 0
+  %bit = extractvalue { i64, i1 } %ov, 1
+  %ext = sext i1 %bit to i64
+  %r   = add i64 %val, %ext
+  %r2  = add i64 %r, 1
+  ret i64 %r2
+}
+
+define i32 @g_i32_add1(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: g_i32_add1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
+; CHECK-NEXT:    subs w9, w0, w1
+; CHECK-NEXT:    sbc w0, w9, w8
+; CHECK-NEXT:    ret
+  %ov  = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 %b)
+  %val = extractvalue { i32, i1 } %ov, 0
+  %bit = extractvalue { i32, i1 } %ov, 1
+  %ext = sext i1 %bit to i32
+  %r   = add i32 %val, %ext
+  %r2  = add i32 %r, 1
+  ret i32 %r2
+}
+
+; Fold should fire for negative constant addend with single use
+define i64 @g_i64_neg10(i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: g_i64_neg10:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #10 // =0xa
+; CHECK-NEXT:    subs x9, x0, x1
+; CHECK-NEXT:    sbc x0, x9, x8
+; CHECK-NEXT:    ret
+  %ov  = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %a, i64 %b)
+  %val = extractvalue { i64, i1 } %ov, 0
+  %bit = extractvalue { i64, i1 } %ov, 1
+  %ext = sext i1 %bit to i64
+  %r   = add i64 %val, %ext
+  %r2  = add i64 %r, -10
+  ret i64 %r2
+}
+
+define i128 @sub_i128(i128 %a) {
+; CHECK-LABEL: sub_i128:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    subs x0, x0, #10
+; CHECK-NEXT:    adc x1, x1, x8
+; CHECK-NEXT:    ret
+  %r = sub i128 %a, 10
+  ret i128 %r
+}
+
+; Fold should fire for negative constant addend with single use
+define i32 @g_i32_neg10(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: g_i32_neg10:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #10 // =0xa
+; CHECK-NEXT:    subs w9, w0, w1
+; CHECK-NEXT:    sbc w0, w9, w8
+; CHECK-NEXT:    ret
+  %ov  = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 %b)
+  %val = extractvalue { i32, i1 } %ov, 0
+  %bit = extractvalue { i32, i1 } %ov, 1
+  %ext = sext i1 %bit to i32
+  %r   = add i32 %val, %ext
+  %r2  = add i32 %r, -10
+  ret i32 %r2
+}
+
+; Multiple uses of negative SBC/ADC immediate should not flip to ADC/SBC
+define i64 @g_neg_const_multi_use(i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: g_neg_const_multi_use:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #-10 // =0xfffffffffffffff6
+; CHECK-NEXT:    subs x9, x0, x1
+; CHECK-NEXT:    // fake_use: $x8
+; CHECK-NEXT:    sbc x0, x9, x8
+; CHECK-NEXT:    ret
+  %ov  = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %a, i64 %b)
+  %val = extractvalue { i64, i1 } %ov, 0
+  %bit = extractvalue { i64, i1 } %ov, 1
+  %ext = sext i1 %bit to i64
+  %r   = add i64 %val, %ext
+  call void (...) @llvm.fake.use(i64 -10)
+  %r2  = add i64 %r, 10
+  ret i64 %r2
+}
+
+; Multiple uses of negative SBC/ADC immediate should not flip to ADC/SBC
+define i32 @g_neg_const_multi_use_i32(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: g_neg_const_multi_use_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #-10 // =0xfffffff6
+; CHECK-NEXT:    subs w9, w0, w1
+; CHECK-NEXT:    // fake_use: $w8
+; CHECK-NEXT:    sbc w0, w9, w8
+; CHECK-NEXT:    ret
+  %ov  = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 %b)
+  %val = extractvalue { i32, i1 } %ov, 0
+  %bit = extractvalue { i32, i1 } %ov, 1
+  %ext = sext i1 %bit to i32
+  %r   = add i32 %val, %ext
+  call void (...) @llvm.fake.use(i32 -10)
+  %r2  = add i32 %r, 10
+  ret i32 %r2
+}
+
 ; Fold should fire for non-constant addend too
 define i64 @g_nonconstant(i64 %a, i64 %b, i64 %c) nounwind {
 ; CHECK-LABEL: g_nonconstant:
@@ -143,3 +258,5 @@ define i32 @g_multi_use_i32(i32 %a, i32 %b, ptr %out) nounwind {
   %r   = add i32 %sbc, 10
   ret i32 %r
 }
+
+declare void @llvm.fake.use(...)
