@@ -319,12 +319,35 @@ bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
     });
   };
   removeTemporaryLayoutAttrs(rootOp);
-  rootOp->walk([&](func::FuncOp func) {
-    processFunc(func.getBody(), func.getSymName());
-  });
-  rootOp->walk([&](gpu::GPUFuncOp func) {
-    processFunc(func.getBody(), func.getName());
-  });
+
+  // Count layout attributes attached under `rootOp`. Recovery only adds
+  // attributes, so this count is used to detect a fixed point.
+  auto countTemporaryLayouts = [&]() {
+    unsigned count = 0;
+    rootOp->walk([&](Operation *nestOp) {
+      for (const NamedAttribute &namedAttr : nestOp->getDiscardableAttrs())
+        if (isa<xegpu::DistributeLayoutAttr>(namedAttr.getValue()))
+          ++count;
+    });
+    return count;
+  };
+
+  // A single backward sweep cannot resolve loop-carried values whose layout is
+  // only known from block-argument uses that are themselves annotated later in
+  // the sweep. Repeat until the layout count stops changing; recovery only adds
+  // attributes, so this terminates.
+  unsigned prevCount = 0;
+  unsigned curCount = countTemporaryLayouts();
+  do {
+    prevCount = curCount;
+    rootOp->walk([&](func::FuncOp func) {
+      processFunc(func.getBody(), func.getSymName());
+    });
+    rootOp->walk([&](gpu::GPUFuncOp func) {
+      processFunc(func.getBody(), func.getName());
+    });
+    curCount = countTemporaryLayouts();
+  } while (curCount != prevCount);
 
   return true;
 }
