@@ -874,6 +874,7 @@ public:
   enum InstWidening {
     CM_Unknown,
     CM_Widen,         // For consecutive accesses with stride +1.
+    CM_Widen_Bounded, // For bounded (i % 2^N) loads in read-only loops.
     CM_Widen_Reverse, // For consecutive accesses with stride -1.
     CM_Interleave,
     CM_GatherScatter,
@@ -1047,8 +1048,8 @@ public:
   getDivRemSpeculationCost(Instruction *I, ElementCount VF);
 
   /// If \p I is a memory instruction with a consecutive pointer that can be
-  /// widened, returns the widening kind (CM_Widen or CM_Widen_Reverse) and
-  /// std::nullopt otherwise.
+  /// widened, returns the widening kind (CM_Widen, CM_Widen_Reverse,
+  /// CM_Widen_Bounded) and std::nullopt otherwise.
   std::optional<InstWidening> memoryInstructionCanBeWidened(Instruction *I,
                                                             ElementCount VF);
 
@@ -2416,8 +2417,10 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
   }
   case Instruction::Load:
   case Instruction::Store: {
-    bool IsConsecutive = Legal->isConsecutivePtr(getLoadStoreType(I),
-                                                 getLoadStorePointerOperand(I));
+    bool IsConsecutive =
+        Legal->getBoundedLoadBound(I).has_value() ||
+        Legal->isConsecutivePtr(getLoadStoreType(I),
+                                getLoadStorePointerOperand(I)) != 0;
     return !(IsConsecutive && Config.isLegalMaskedLoadOrStore(I, VF)) &&
            !Config.isLegalGatherOrScatter(I, VF);
   }
@@ -2657,20 +2660,27 @@ LoopVectorizationCostModel::memoryInstructionCanBeWidened(Instruction *I,
   auto *Ptr = getLoadStorePointerOperand(I);
   auto *ScalarTy = getLoadStoreType(I);
 
-  // In order to be widened, the pointer should be consecutive, first of all.
-  int Stride = Legal->isConsecutivePtr(ScalarTy, Ptr);
-  if (!Stride)
-    return std::nullopt;
-
-  // If the instruction is a store located in a predicated block, it will be
-  // scalarized.
-  if (isScalarWithPredication(I, VF))
-    return std::nullopt;
-
   // If the instruction's allocated size doesn't equal it's type size, it
   // requires padding and will be scalarized.
   auto &DL = I->getDataLayout();
   if (hasIrregularType(ScalarTy, DL))
+    return std::nullopt;
+
+  // If the instruction is located in a predicated block, it will be scalarized.
+  if (isScalarWithPredication(I, VF))
+    return std::nullopt;
+
+  // Widen a bounded (i % 2^N) load in a read-only loop as a consecutive
+  // vector load when VF divides the bound.
+  if (std::optional<uint64_t> Bound = Legal->getBoundedLoadBound(I);
+      Bound && VF.isFixed()) {
+    if (VF.getFixedValue() <= *Bound && *Bound % VF.getFixedValue() == 0)
+      return CM_Widen_Bounded;
+    return std::nullopt;
+  }
+
+  int Stride = Legal->isConsecutivePtr(ScalarTy, Ptr);
+  if (!Stride)
     return std::nullopt;
 
   return Stride == 1 ? CM_Widen : CM_Widen_Reverse;
@@ -2767,6 +2777,7 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
       return true;
 
     return (WideningDecision == CM_Widen ||
+            WideningDecision == CM_Widen_Bounded ||
             WideningDecision == CM_Widen_Reverse ||
             WideningDecision == CM_Interleave);
   };
@@ -4284,7 +4295,8 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
 
 InstructionCost LoopVectorizationCostModel::getConsecutiveMemOpCost(
     Instruction *I, ElementCount VF, InstWidening Kind) {
-  assert((Kind == CM_Widen || Kind == CM_Widen_Reverse) &&
+  assert((Kind == CM_Widen || Kind == CM_Widen_Reverse ||
+          Kind == CM_Widen_Bounded) &&
          "Expected a consecutive widening decision");
   Type *ValTy = getLoadStoreType(I);
   auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
@@ -4856,7 +4868,8 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
       // instead changed here when we know this is the case.
       InstWidening Decision = getWideningDecision(I, VF);
       if (!isPredicatedInst(I) &&
-          (Decision == CM_Widen || Decision == CM_Widen_Reverse ||
+          (Decision == CM_Widen || Decision == CM_Widen_Bounded ||
+           Decision == CM_Widen_Reverse ||
            (!isUniformMemOp(*I, VF) && Decision == CM_Scalarize))) {
         // Scalarize a widened load of address or update the cost of a scalar
         // load of an address.
@@ -5267,6 +5280,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
         return TTI::CastContextHint::Interleave;
       case LoopVectorizationCostModel::CM_Scalarize:
       case LoopVectorizationCostModel::CM_Widen:
+      case LoopVectorizationCostModel::CM_Widen_Bounded:
         return isPredicatedInst(I) ? TTI::CastContextHint::Masked
                                    : TTI::CastContextHint::Normal;
       case LoopVectorizationCostModel::CM_Widen_Reverse:
@@ -6182,6 +6196,8 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
   // reverse consecutive.
   LoopVectorizationCostModel::InstWidening Decision =
       CM.getWideningDecision(I, Range.Start);
+  assert(Decision != LoopVectorizationCostModel::CM_Widen_Bounded &&
+         "bounded loads must be widened in makeMemOpWideningDecisions");
   bool Reverse = Decision == LoopVectorizationCostModel::CM_Widen_Reverse;
   bool Consecutive =
       Reverse || Decision == LoopVectorizationCostModel::CM_Widen;
