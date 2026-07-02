@@ -1322,6 +1322,14 @@ std::string ToolChain::GetLinkerPath(bool *LinkerIsLLD) const {
         *LinkerIsLLD = UseLinker == "lld";
       return LinkerPath;
     }
+
+    // If ld.<name> was not found, try the name directly (e.g. lld-link).
+    LinkerPath = GetProgramPath(UseLinker.str().c_str());
+    if (llvm::sys::fs::can_execute(LinkerPath)) {
+      if (LinkerIsLLD)
+        *LinkerIsLLD = UseLinker.starts_with("lld");
+      return LinkerPath;
+    }
   }
 
   if (A)

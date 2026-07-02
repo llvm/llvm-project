@@ -490,6 +490,9 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     linkPath = TC.GetProgramPath(Linker.str().c_str());
   }
 
+  if (auto LTO = TC.getLTOMode(Args); LTO != LTOK_None)
+    addLTOOptions(TC, Args, CmdArgs, Output, Inputs, LTO == LTOK_Thin);
+
   auto LinkCmd = std::make_unique<Command>(
       JA, *this, ResponseFileSupport::AtFileUTF16(),
       Args.MakeArgString(linkPath), CmdArgs, Inputs, Output);
