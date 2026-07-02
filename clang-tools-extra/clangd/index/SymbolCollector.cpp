@@ -11,6 +11,7 @@
 #include "CodeComplete.h"
 #include "CodeCompletionStrings.h"
 #include "ExpectedTypes.h"
+#include "FindSymbols.h"
 #include "SourceCode.h"
 #include "URI.h"
 #include "clang-include-cleaner/Analysis.h"
@@ -1088,6 +1089,8 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND, SymbolID ID,
   if (ND.getAvailability() == AR_Deprecated)
     S.Flags |= Symbol::Deprecated;
 
+  S.Tags = computeSymbolTags(ND);
+
   // Add completion info.
   // FIXME: we may want to choose a different redecl, or combine from several.
   assert(ASTCtx && PP && "ASTContext and Preprocessor must be set.");
@@ -1178,7 +1181,7 @@ void SymbolCollector::addDefinition(const NamedDecl &ND, const Symbol &DeclSym,
       S.Flags |= Symbol::HasDocComment;
     S.Documentation = Documentation;
   }
-
+  S.Tags |= computeSymbolTags(ND);
   Symbols.insert(S);
 }
 
