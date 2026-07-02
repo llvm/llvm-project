@@ -304,8 +304,45 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     }
   }
 
+  // XCVsimd packs 2 x i16 / 4 x i8 into a GPR (RV32 only); make those types
+  // legal so element-wise IR ops select the cv.*.h / cv.*.b SIMD instructions.
+  if (Subtarget.hasVendorXCVsimd() && !Subtarget.hasStdExtP()) {
+    addRegisterClass(MVT::v2i16, &RISCV::GPRRegClass);
+    addRegisterClass(MVT::v4i8, &RISCV::GPRRegClass);
+  }
+
   // Compute derived properties from the register classes.
   computeRegisterProperties(STI.getRegisterInfo());
+
+  if (Subtarget.hasVendorXCVsimd() && !Subtarget.hasStdExtP()) {
+    static const MVT XCVVecVTs[] = {MVT::v2i16, MVT::v4i8};
+
+    // Start by expanding every operation on the packed types, then make legal
+    // only the ones that map to a single SIMD instruction. Anything left
+    // expanded scalarizes, so generic vector_size code is still handled
+    // correctly instead of failing to select.
+    for (unsigned Op = 0; Op < ISD::BUILTIN_OP_END; ++Op)
+      setOperationAction(Op, XCVVecVTs, Expand);
+
+    for (MVT VT : XCVVecVTs) {
+      for (MVT OtherVT : MVT::integer_fixedlen_vector_valuetypes()) {
+        setTruncStoreAction(VT, OtherVT, Expand);
+        setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, VT,
+                         OtherVT, Expand);
+      }
+    }
+
+    // The packed types live in a GPR, so they load/store as a plain word and
+    // bitcast to/from i32 for free (selected by no-op patterns). Under-aligned
+    // accesses are split by allowsMisalignedMemoryAccesses.
+    setOperationAction({ISD::LOAD, ISD::STORE}, XCVVecVTs, Legal);
+    setOperationAction(ISD::BITCAST, XCVVecVTs, Legal);
+
+    // Element-wise ops with a one-to-one cv.* SIMD instruction.
+    setOperationAction({ISD::ADD, ISD::SUB, ISD::AND, ISD::OR, ISD::XOR,
+                        ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX, ISD::ABS},
+                       XCVVecVTs, Legal);
+  }
 
   setStackPointerRegisterToSaveRestore(RISCV::X2);
 
@@ -26801,7 +26838,13 @@ bool RISCVTargetLowering::isMulAddWithConstProfitable(SDValue AddNode,
 bool RISCVTargetLowering::allowsMisalignedMemoryAccesses(
     EVT VT, unsigned AddrSpace, Align Alignment, MachineMemOperand::Flags Flags,
     unsigned *Fast) const {
-  if (!VT.isVector() || Subtarget.hasStdExtP()) {
+  // XCVsimd packs v2i16/v4i8 into a single GPR, so their accesses are plain
+  // word loads/stores and follow the scalar (not vector) misalignment rules:
+  // an under-aligned access must split into element accesses rather than stay
+  // a single (mis)aligned lw/sw.
+  bool IsXCVPacked =
+      Subtarget.hasVendorXCVsimd() && (VT == MVT::v2i16 || VT == MVT::v4i8);
+  if (!VT.isVector() || Subtarget.hasStdExtP() || IsXCVPacked) {
     if (Fast)
       *Fast = Subtarget.enableUnalignedScalarMem();
     return Subtarget.enableUnalignedScalarMem();

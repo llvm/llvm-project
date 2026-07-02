@@ -405,6 +405,15 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
   unsigned XLen = Subtarget.getXLen();
   MVT XLenVT = Subtarget.getXLenVT();
 
+  // XCVsimd packs 2 x i16 / 4 x i8 into a single GPR. Pass and return them
+  // as XLenVT (a bitcast), so they follow the scalar-integer path instead of
+  // the vector path (which assumes RVV containers).
+  if (Subtarget.hasVendorXCVsimd() && !Subtarget.hasStdExtP() &&
+      (LocVT == MVT::v2i16 || LocVT == MVT::v4i8)) {
+    LocVT = XLenVT;
+    LocInfo = CCValAssign::BCvt;
+  }
+
   if (ArgFlags.isNest()) {
     // Static chain parameter must not be passed in normal argument registers,
     // so we assign t2/t3 for it as done in GCC's
