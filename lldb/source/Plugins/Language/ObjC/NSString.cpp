@@ -100,6 +100,10 @@ bool lldb_private::formatters::NSStringSummaryProvider(
   bool has_null = (info_bits & 8) == 8;
 
   size_t explicit_length = 0;
+  // Even though the explicit length flag is set, we might only want to print
+  // the string until the first null terminator. `has_source_size` indicates if
+  // the string printer should use the size we gave it.
+  bool has_source_size = false;
   if (!has_null && has_explicit_length && !is_path_store) {
     lldb::addr_t explicit_length_offset = 2 * ptr_size;
     if (is_mutable && !is_inline)
@@ -117,6 +121,7 @@ bool lldb_private::formatters::NSStringSummaryProvider(
       explicit_length_offset = valobj_addr + explicit_length_offset;
       explicit_length = process_sp->ReadUnsignedIntegerFromMemory(
           explicit_length_offset, 4, 0, error);
+      has_source_size = true;
     }
   }
 
@@ -150,7 +155,7 @@ bool lldb_private::formatters::NSStringSummaryProvider(
       options.SetStream(&stream);
       options.SetQuote('"');
       options.SetSourceSize(explicit_length);
-      options.SetHasSourceSize(has_explicit_length);
+      options.SetHasSourceSize(has_source_size);
       options.SetZeroTermination(StringPrinter::ZeroTermination::Ignore);
       options.SetIgnoreMaxLength(summary_options.GetCapping() ==
                                  TypeSummaryCapping::eTypeSummaryUncapped);
@@ -161,7 +166,7 @@ bool lldb_private::formatters::NSStringSummaryProvider(
       options.SetTargetSP(valobj.GetTargetSP());
       options.SetStream(&stream);
       options.SetSourceSize(explicit_length);
-      options.SetHasSourceSize(has_explicit_length);
+      options.SetHasSourceSize(has_source_size);
       options.SetZeroTermination(StringPrinter::ZeroTermination::Ignore);
       options.SetIgnoreMaxLength(summary_options.GetCapping() ==
                                  TypeSummaryCapping::eTypeSummaryUncapped);
@@ -177,7 +182,7 @@ bool lldb_private::formatters::NSStringSummaryProvider(
     options.SetStream(&stream);
     options.SetQuote('"');
     options.SetSourceSize(explicit_length);
-    options.SetHasSourceSize(has_explicit_length);
+    options.SetHasSourceSize(has_source_size);
     options.SetIgnoreMaxLength(summary_options.GetCapping() ==
                                TypeSummaryCapping::eTypeSummaryUncapped);
     return StringPrinter::ReadStringAndDumpToStream<
@@ -199,8 +204,8 @@ bool lldb_private::formatters::NSStringSummaryProvider(
     options.SetStream(&stream);
     options.SetQuote('"');
     options.SetSourceSize(explicit_length);
-    options.SetHasSourceSize(has_explicit_length);
-    if (has_explicit_length)
+    options.SetHasSourceSize(has_source_size);
+    if (has_source_size)
       options.SetZeroTermination(StringPrinter::ZeroTermination::Ignore);
     else
       options.SetZeroTermination(StringPrinter::ZeroTermination::ZeroTerminate);
@@ -227,8 +232,8 @@ bool lldb_private::formatters::NSStringSummaryProvider(
     options.SetStream(&stream);
     options.SetQuote('"');
     options.SetSourceSize(explicit_length);
-    options.SetHasSourceSize(has_explicit_length);
-    if (has_explicit_length)
+    options.SetHasSourceSize(has_source_size);
+    if (has_source_size)
       options.SetZeroTermination(StringPrinter::ZeroTermination::Ignore);
     else
       options.SetZeroTermination(StringPrinter::ZeroTermination::ZeroTerminate);
@@ -245,20 +250,21 @@ bool lldb_private::formatters::NSStringSummaryProvider(
       explicit_length =
           process_sp->ReadUnsignedIntegerFromMemory(location, 1, 0, error);
       has_explicit_length = !(error.Fail() || explicit_length == 0);
+      has_source_size = has_explicit_length;
       location++;
     }
     options.SetLocation(Address(location));
     options.SetTargetSP(valobj.GetTargetSP());
     options.SetStream(&stream);
     options.SetSourceSize(explicit_length);
-    options.SetHasSourceSize(has_explicit_length);
-    if (has_explicit_length)
+    options.SetHasSourceSize(has_source_size);
+    if (has_source_size)
       options.SetZeroTermination(StringPrinter::ZeroTermination::Ignore);
     else
       options.SetZeroTermination(StringPrinter::ZeroTermination::ZeroTerminate);
     options.SetIgnoreMaxLength(summary_options.GetCapping() ==
                                TypeSummaryCapping::eTypeSummaryUncapped);
-    if (has_explicit_length)
+    if (has_source_size)
       return StringPrinter::ReadStringAndDumpToStream<
           StringPrinter::StringElementType::UTF8>(options);
     else
