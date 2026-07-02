@@ -13,7 +13,7 @@
 
 #include <benchmark/benchmark.h>
 
-static void bm_write(benchmark::State& state) {
+static void bm_ofstream_write(benchmark::State& state) {
   std::vector<char> buffer;
   buffer.resize(16384);
 
@@ -22,6 +22,24 @@ static void bm_write(benchmark::State& state) {
   for (auto _ : state)
     stream.write(buffer.data(), buffer.size());
 }
-BENCHMARK(bm_write)->Name("std::ofstream::write(char*, size)");
+BENCHMARK(bm_ofstream_write)->Name("std::ofstream::write(char*, size)");
+
+static void bm_ifstream_read(benchmark::State& state) {
+  std::vector<char> buffer;
+  buffer.resize(16384);
+
+  std::ofstream gen_testfile("testfile");
+  gen_testfile.write(buffer.data(), buffer.size());
+
+  std::ifstream stream("testfile");
+  assert(stream);
+
+  for (auto _ : state) {
+    stream.read(buffer.data(), buffer.size());
+    benchmark::DoNotOptimize(buffer);
+    stream.seekg(0);
+  }
+}
+BENCHMARK(bm_ifstream_read)->Name("std::ifstream::read(char*, size)");
 
 BENCHMARK_MAIN();
