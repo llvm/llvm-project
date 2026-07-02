@@ -1845,7 +1845,7 @@ foreach is_convergent = [0, 1] in {
       NVPTXInst<(outs),
                 (ins ADDR_base:$addr, CallOperand:$rets, CallOperand:$params, 
                      i32imm:$proto),
-                "call${rets:RetList} $addr, (${params:ParamList}), prototype_$proto;">;
+                "call${rets:RetList} $addr, (${params:ParamList}), $$L__prototype_$proto;">;
 
     def CALL_UNI # convergent_suffix :
       NVPTXInst<(outs),

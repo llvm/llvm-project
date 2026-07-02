@@ -325,7 +325,7 @@ void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
   const auto PtrVT = TLI->getPointerTy(DL);
   Type *RetTy = CB.getFunctionType()->getReturnType();
 
-  O << "prototype_" << UniqueCallSite << " : .callprototype ";
+  O << "$L__prototype_" << UniqueCallSite << " : .callprototype ";
 
   if (RetTy->isVoidTy() || RetTy->isEmptyTy()) {
     O << "()";
