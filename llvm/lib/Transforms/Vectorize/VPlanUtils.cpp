@@ -905,7 +905,7 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
       Opcode = Instruction::SExt;
       break;
     default:
-      llvm_unreachable("not a cast SCEV");
+      llvm_unreachable("Unhandled cast SCEV");
     }
     return Builder.createScalarCast(Opcode, Op, S->getType(), DL);
   }
