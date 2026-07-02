@@ -547,23 +547,25 @@ bool ReorderBasicBlocks::modifyFunctionLayout(BinaryFunction &BF,
 }
 
 Error FixupBranches::runOnFunctions(BinaryContext &BC) {
-  std::unique_ptr<BinaryFunctionCallGraph> CG;
-  std::unique_ptr<RegAnalysis> RA;
-  std::unique_ptr<DataflowInfoManager> DIM;
+  auto forEachFunction = [&](auto &&Apply) {
+    for (auto &It : BC.getBinaryFunctions()) {
+      BinaryFunction &Function = It.second;
+      if (!BC.shouldEmit(Function) || !Function.isSimple())
+        continue;
+      Apply(Function);
+    }
+  };
 
   if (opts::LivenessAnalysis) {
-    CG = std::make_unique<BinaryFunctionCallGraph>(buildCallGraph(BC));
-    RA = std::make_unique<RegAnalysis>(BC, &BC.getBinaryFunctions(), CG.get());
-  }
-  for (auto &It : BC.getBinaryFunctions()) {
-    BinaryFunction &Function = It.second;
-    if (!BC.shouldEmit(Function) || !Function.isSimple())
-      continue;
-
-    if (opts::LivenessAnalysis)
-      DIM = std::make_unique<DataflowInfoManager>(Function, RA.get(), nullptr);
-    Function.fixBranches(DIM.get());
-  }
+    BinaryFunctionCallGraph CG = buildCallGraph(BC);
+    RegAnalysis RA(BC, &BC.getBinaryFunctions(), &CG);
+    forEachFunction([&](BinaryFunction &BF) {
+      DataflowInfoManager DIM(BF, &RA, nullptr);
+      BranchLivenessInfo Info = BC.MIB->createBranchLivenessInfo(BF, DIM);
+      BF.fixBranches(&Info);
+    });
+  } else
+    forEachFunction([&](BinaryFunction &BF) { BF.fixBranches(nullptr); });
   return Error::success();
 }
 

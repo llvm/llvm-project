@@ -2191,28 +2191,38 @@ public:
     }
   }
 
-  bool isReversibleBranch(const MCInst &Inst,
-                          DataflowInfoManager *DIM = nullptr) const override {
+  BranchLivenessInfo
+  createBranchLivenessInfo(BinaryFunction &BF,
+                           DataflowInfoManager &DIM) const override {
+    BranchLivenessInfo Info;
+    LivenessAnalysis &LA = DIM.getLivenessAnalysis();
+    for (BinaryBasicBlock &BB : BF)
+      for (MCInst &Inst : BB)
+        if (isCompAndBranch(Inst))
+          Info.FlagsLiveIn[&Inst] = LA.getLiveIn(Inst).test(getFlagsReg());
+    return Info;
+  }
+
+  bool
+  isReversibleBranch(const MCInst &Inst,
+                     const BranchLivenessInfo *BLI = nullptr) const override {
     if (isCompAndBranch(Inst)) {
-      bool MayClobberFlags =
-          DIM ? DIM->getLivenessAnalysis().getLiveIn(Inst).test(getFlagsReg())
-              : true;
+      bool MustPreserveFlags = BLI ? BLI->mustPreserveFlags(Inst) : true;
       unsigned InvertedOpcode = getInvertedBranchOpcode(Inst.getOpcode());
       if (needsImmDec(InvertedOpcode) && Inst.getOperand(1).getImm() == 0 &&
-          MayClobberFlags)
+          MustPreserveFlags)
         return false;
       if (needsImmInc(InvertedOpcode) && Inst.getOperand(1).getImm() == 63 &&
-          MayClobberFlags)
+          MustPreserveFlags)
         return false;
     }
     return MCPlusBuilder::isReversibleBranch(Inst);
   }
 
-  void
-  reverseBranchCondition(BinaryBasicBlock *Parent, MCInst &Inst,
-                         const MCSymbol *TBB, MCContext *Ctx,
-                         DataflowInfoManager *DIM = nullptr) const override {
-    assert(isReversibleBranch(Inst, DIM) && "Irreversible branch");
+  void reverseBranchCondition(
+      BinaryBasicBlock *Parent, MCInst &Inst, const MCSymbol *TBB,
+      MCContext *Ctx, const BranchLivenessInfo *BLI = nullptr) const override {
+    assert(isReversibleBranch(Inst, BLI) && "Irreversible branch");
 
     if (isTB(Inst) || isCB(Inst) || isCompAndBranch(Inst)) {
       bool ImmediateOutOfBounds = false;

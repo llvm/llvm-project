@@ -14,7 +14,7 @@
 namespace llvm {
 namespace bolt {
 
-class DataflowInfoManager;
+struct BranchLivenessInfo;
 
 /// LongJmp is veneer-insertion pass originally written for AArch64 that
 /// compensates for its short-range branches, typically done during linking. We
@@ -76,7 +76,7 @@ class LongJmpPass : public BinaryFunctionPass {
   /// Relax all internal function branches including those between fragments.
   /// Assume that fragments are placed in different sections but are within
   /// 128MB of each other.
-  void relaxLocalBranches(BinaryFunction &BF, DataflowInfoManager *DIM);
+  void relaxLocalBranches(BinaryFunction &BF, const BranchLivenessInfo *BLI);
 
   ///                 -- Layout estimation methods --
   /// Try to do layout before running the emitter, by looking at BinaryFunctions

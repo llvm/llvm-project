@@ -345,10 +345,12 @@ TEST_P(MCPlusBuilderTester, AArch64_ReverseCompAndBranch_Underflows) {
   BinaryFunctionCallGraph CG(buildCallGraph(*BC.get()));
   RegAnalysis RA(*BC.get(), &BC->getBinaryFunctions(), &CG);
   DataflowInfoManager DIM(*BF, &RA, nullptr);
+  BranchLivenessInfo BranchLiveness =
+      BC->MIB->createBranchLivenessInfo(*BF, DIM);
 
-  ASSERT_TRUE(BC->MIB->isReversibleBranch(*I, &DIM));
+  ASSERT_TRUE(BC->MIB->isReversibleBranch(*I, &BranchLiveness));
   BC->MIB->reverseBranchCondition(EntryBB, *I, TargetBB->getLabel(),
-                                  BC->Ctx.get(), &DIM);
+                                  BC->Ctx.get(), &BranchLiveness);
   I = EntryBB->begin();
   ASSERT_EQ(I->getOpcode(), AArch64::SUBSXri);
   ASSERT_EQ(I->getOperand(0).getReg(), AArch64::XZR);
@@ -384,10 +386,12 @@ TEST_P(MCPlusBuilderTester, AArch64_ReverseCompAndBranch_Overflows) {
   BinaryFunctionCallGraph CG(buildCallGraph(*BC.get()));
   RegAnalysis RA(*BC.get(), &BC->getBinaryFunctions(), &CG);
   DataflowInfoManager DIM(*BF, &RA, nullptr);
+  BranchLivenessInfo BranchLiveness =
+      BC->MIB->createBranchLivenessInfo(*BF, DIM);
 
-  ASSERT_TRUE(BC->MIB->isReversibleBranch(*I, &DIM));
+  ASSERT_TRUE(BC->MIB->isReversibleBranch(*I, &BranchLiveness));
   BC->MIB->reverseBranchCondition(EntryBB, *I, TargetBB->getLabel(),
-                                  BC->Ctx.get(), &DIM);
+                                  BC->Ctx.get(), &BranchLiveness);
   I = EntryBB->begin();
   ASSERT_EQ(I->getOpcode(), AArch64::SUBSWri);
   ASSERT_EQ(I->getOperand(0).getReg(), AArch64::WZR);
@@ -434,8 +438,10 @@ TEST_P(MCPlusBuilderTester, AArch64_IsReversibleBranch_LiveCondFlags) {
   BinaryFunctionCallGraph CG(buildCallGraph(*BC.get()));
   RegAnalysis RA(*BC.get(), &BC->getBinaryFunctions(), &CG);
   DataflowInfoManager DIM(*BF, &RA, nullptr);
+  BranchLivenessInfo BranchLiveness =
+      BC->MIB->createBranchLivenessInfo(*BF, DIM);
 
-  ASSERT_FALSE(BC->MIB->isReversibleBranch(*I, &DIM));
+  ASSERT_FALSE(BC->MIB->isReversibleBranch(*I, &BranchLiveness));
 }
 
 TEST_P(MCPlusBuilderTester, AArch64_CmpJE) {

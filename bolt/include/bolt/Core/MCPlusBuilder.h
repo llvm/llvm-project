@@ -18,6 +18,7 @@
 #include "bolt/Core/Relocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -72,6 +73,15 @@ enum BTIKind {
   C, /// Accepting calls, and jumps using x16/x17.
   J, /// Accepting jumps.
   JC /// Accepting both.
+};
+
+struct BranchLivenessInfo {
+  DenseMap<const MCInst *, bool> FlagsLiveIn;
+
+  bool mustPreserveFlags(const MCInst &Inst) const {
+    auto It = FlagsLiveIn.find(&Inst);
+    return It == FlagsLiveIn.end() || It->second;
+  }
 };
 
 class MCPlusBuilder {
@@ -475,9 +485,16 @@ public:
     return false;
   }
 
+  /// Return liveness info required for branch transformations.
+  virtual BranchLivenessInfo
+  createBranchLivenessInfo(BinaryFunction &BF, DataflowInfoManager &DIM) const {
+    return BranchLivenessInfo();
+  }
+
   /// Check whether this conditional branch can be reversed
-  virtual bool isReversibleBranch(const MCInst &Inst,
-                                  DataflowInfoManager *DIM = nullptr) const {
+  virtual bool
+  isReversibleBranch(const MCInst &Inst,
+                     const BranchLivenessInfo *BLI = nullptr) const {
     assert(!isUnsupportedInstruction(Inst) && isConditionalBranch(Inst) &&
            "Instruction is not known conditional branch");
 
@@ -2147,7 +2164,7 @@ public:
   virtual void
   reverseBranchCondition(BinaryBasicBlock *Parent, MCInst &Inst,
                          const MCSymbol *TBB, MCContext *Ctx,
-                         DataflowInfoManager *DIM = nullptr) const {
+                         const BranchLivenessInfo *BLI = nullptr) const {
     llvm_unreachable("not implemented");
   }
 
