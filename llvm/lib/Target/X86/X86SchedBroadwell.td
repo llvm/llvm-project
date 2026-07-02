@@ -212,24 +212,15 @@ defm : BWWriteResPair<WriteBEXTR, [BWPort06,BWPort15], 2, [1,1], 2>;
 defm : BWWriteResPair<WriteBLS,   [BWPort15], 1>;
 defm : BWWriteResPair<WriteBZHI,  [BWPort15], 1>;
 
-// TODO: Why isn't the BWDivider used consistently?
-defm : X86WriteRes<WriteDiv8,     [BWPort0, BWDivider], 25, [1, 10], 1>;
-defm : X86WriteRes<WriteDiv16,    [BWPort0,BWPort1,BWPort5,BWPort6,BWPort01,BWPort0156], 80, [7,7,3,3,1,11], 32>;
-defm : X86WriteRes<WriteDiv32,    [BWPort0,BWPort1,BWPort5,BWPort6,BWPort01,BWPort0156], 80, [7,7,3,3,1,11], 32>;
-defm : X86WriteRes<WriteDiv64,    [BWPort0,BWPort1,BWPort5,BWPort6,BWPort01,BWPort0156], 80, [7,7,3,3,1,11], 32>;
-defm : X86WriteRes<WriteDiv8Ld,   [BWPort0,BWPort1,BWPort5,BWPort23,BWPort0156], 34, [2,2,2,1,1], 8>;
-defm : X86WriteRes<WriteDiv16Ld,  [BWPort0,BWPort1,BWPort5,BWPort23,BWPort0156], 34, [2,2,2,1,1], 8>;
-defm : X86WriteRes<WriteDiv32Ld,  [BWPort0,BWPort1,BWPort5,BWPort23,BWPort0156], 34, [2,2,2,1,1], 8>;
-defm : X86WriteRes<WriteDiv64Ld,  [BWPort0,BWPort1,BWPort5,BWPort23,BWPort0156], 34, [2,2,2,1,1], 8>;
+defm : BWWriteResPair<WriteDiv8,  [BWPort0, BWPort1, BWPort5, BWPort06, BWPort0156, BWDivider], 24, [2, 2, 2, 1, 2, 9],   9>;
+defm : BWWriteResPair<WriteDiv16, [BWPort0, BWPort1, BWPort5, BWPort06, BWPort15, BWPort0156, BWDivider], 25, [2, 2, 2, 2, 1, 2, 9],  11>;
+defm : BWWriteResPair<WriteDiv32, [BWPort0, BWPort1, BWPort5, BWPort06, BWPort15, BWPort0156, BWDivider], 28, [2, 2, 2, 2, 1, 1, 9],  10>;
+defm : BWWriteResPair<WriteDiv64, [BWPort0, BWPort1, BWPort5, BWPort06, BWPort015, BWPort0156, BWDivider], 92, [2, 3, 3, 12, 7, 5, 21], 36>;
 
-defm : X86WriteRes<WriteIDiv8,    [BWPort0, BWDivider], 25, [1,10], 1>;
-defm : X86WriteRes<WriteIDiv16,   [BWPort0, BWDivider], 25, [1,10], 1>;
-defm : X86WriteRes<WriteIDiv32,   [BWPort0, BWDivider], 25, [1,10], 1>;
-defm : X86WriteRes<WriteIDiv64,   [BWPort0, BWDivider], 25, [1,10], 1>;
-defm : X86WriteRes<WriteIDiv8Ld,  [BWPort0,BWPort1,BWPort5,BWPort23,BWPort0156], 35, [2,2,2,1,1], 8>;
-defm : X86WriteRes<WriteIDiv16Ld, [BWPort0,BWPort1,BWPort5,BWPort23,BWPort0156], 35, [2,2,2,1,1], 8>;
-defm : X86WriteRes<WriteIDiv32Ld, [BWPort0,BWPort1,BWPort5,BWPort23,BWPort0156], 35, [2,2,2,1,1], 8>;
-defm : X86WriteRes<WriteIDiv64Ld, [BWPort0,BWPort1,BWPort5,BWPort23,BWPort0156], 35, [2,2,2,1,1], 8>;
+defm : BWWriteResPair<WriteIDiv8,  [BWPort0, BWPort1, BWPort5, BWPort0156, BWDivider], 24, [2, 2, 2, 3, 6],  9>;
+defm : BWWriteResPair<WriteIDiv16, [BWPort0, BWPort1, BWPort5, BWPort06, BWPort15, BWPort0156, BWDivider], 26, [2, 2, 2, 1, 1, 2, 6], 10>;
+defm : BWWriteResPair<WriteIDiv32, [BWPort0, BWPort1, BWPort5, BWPort06, BWPort15, BWPort0156, BWDivider], 28, [2, 2, 2, 1, 1, 1, 6],  9>;
+defm : BWWriteResPair<WriteIDiv64, [BWPort0, BWPort1, BWPort5, BWPort01, BWPort06, BWPort15, BWPort015, BWPort0156, BWDivider], 100, [2, 3, 5, 7, 26, 2, 11, 1, 24], 59>;
 
 // Floating point. This covers both scalar and vector operations.
 defm : X86WriteRes<WriteFLD0,          [BWPort01], 1, [1], 1>;
