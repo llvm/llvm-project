@@ -5621,13 +5621,16 @@ bool PackOp::requirePaddingValueStrict(ArrayRef<int64_t> inputShape,
                              invertPermutationVector(outerDimsPerm));
   }
   for (auto [pos, tileSize] : llvm::zip_equal(innerDimsPos, innerTiles)) {
-    if (ShapedType::isDynamic(inputShape[pos]) ||
-        ShapedType::isDynamic(outputTileSizes[pos]))
-      return true;
     std::optional<int64_t> constantTile = getConstantIntValue(tileSize);
     if (!constantTile)
       return true;
     assert(*constantTile != 0 && "static tile size can't be zero");
+    // No padding is needed for unit tile size.
+    if (*constantTile == 1)
+      continue;
+    if (ShapedType::isDynamic(inputShape[pos]) ||
+        ShapedType::isDynamic(outputTileSizes[pos]))
+      return true;
     if (inputShape[pos] % (*constantTile) != 0)
       return true;
   }
@@ -5900,22 +5903,6 @@ static bool haveSameTiles(PackOp packOp, UnPackOp unPackOp) {
   return true;
 }
 
-/// Returns true if the pack op does not need a padding value.
-static bool paddingIsNotNeeded(PackOp op) {
-  auto srcType = op.getSourceType();
-  auto innerDimsPos = op.getInnerDimsPos();
-  auto innerTiles = op.getStaticInnerTiles();
-  if (ShapedType::isDynamicShape(innerTiles))
-    return false;
-  for (auto [pos, tileSize] : llvm::zip_equal(innerDimsPos, innerTiles)) {
-    if (srcType.isDynamicDim(pos) && tileSize != 1)
-      return false;
-  }
-  return !PackOp::requirePaddingValue(
-      srcType.getShape(), op.getInnerDimsPos(), op.getDestType().getShape(),
-      op.getOuterDimsPerm(), op.getMixedTiles());
-}
-
 /// Returns true if the `srcShape` or `destShape` is different from the one in
 /// `packOp` and populates each with the inferred static shape.
 static bool inferStaticShape(PackOp packOp, SmallVectorImpl<int64_t> &srcShape,
@@ -5969,7 +5956,13 @@ LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
   }
 
   // Fold optional PaddingValue operand away if padding is not needed.
-  if (packOp.getPaddingValue() && paddingIsNotNeeded(packOp)) {
+  // Reject the dynamic tile size here.
+  if (packOp.getPaddingValue() &&
+      !ShapedType::isDynamicShape(packOp.getStaticInnerTiles()) &&
+      !requirePaddingValueStrict(
+          packOp.getSourceType().getShape(), packOp.getInnerDimsPos(),
+          packOp.getDestType().getShape(), packOp.getOuterDimsPerm(),
+          packOp.getMixedTiles())) {
     rewriter.startOpModification(packOp);
     packOp.getPaddingValueMutable().clear();
     rewriter.finalizeOpModification(packOp);
