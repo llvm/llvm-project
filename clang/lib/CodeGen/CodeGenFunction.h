@@ -427,6 +427,16 @@ public:
     return !LabelMap.empty();
   }
 
+  /// Return true if this basic block is the destination for a source label.
+  bool isLabelTarget(const llvm::BasicBlock *BB) const {
+    if (!BB)
+      return false;
+    for (const auto &LabelAndDest : LabelMap)
+      if (LabelAndDest.second.getBlock() == BB)
+        return true;
+    return false;
+  }
+
   /// AllocaInsertPoint - This is an instruction in the entry block before which
   /// we prefer to insert allocas.
   llvm::AssertingVH<llvm::Instruction> AllocaInsertPt;

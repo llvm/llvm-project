@@ -993,8 +993,10 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
       EmitBranch(ContBlock);
 
       // If nested control flow in the else body left behind a synthetic
-      // continuation, fold it into this if's continuation when possible.
-      if (ElseExitBlock && ElseExitBlock != ElseBlock)
+      // continuation, fold it into this if's continuation when possible. Do not
+      // fold source-label targets, as they may still be referenced.
+      if (ElseExitBlock && ElseExitBlock != ElseBlock &&
+          !isLabelTarget(ElseExitBlock))
         SimplifyForwardingBlocks(ElseExitBlock);
     }
   } else if (HasSkip) {
