@@ -650,7 +650,7 @@ TSAN_INTERCEPTOR(void, siglongjmp_symname, uptr *env, int val) {
   REAL(siglongjmp_symname)(env, val);
 }
 
-#if SANITIZER_NETBSD
+#if SANITIZER_NETBSD || SANITIZER_APPLE
 TSAN_INTERCEPTOR(void, _longjmp, uptr *env, int val) {
   {
     SCOPED_INTERCEPTOR_RAW(_longjmp, env, val);
