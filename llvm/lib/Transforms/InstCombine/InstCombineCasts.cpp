@@ -2507,8 +2507,72 @@ static Instruction *foldFPtoI(Instruction &FI, InstCombiner &IC) {
   return nullptr;
 }
 
+/// fpto{u/s}i (fdiv ({u/s}itofp X), C) --> {u/s}div X, C
+///
+/// Given N = integer width, p = FP mantissa width, this is safe if:
+/// Unsigned: C > 0 and N <= p.
+/// Signed: C != 0, N - 1 <= p, and not (X == INT_MIN and C == -1).
+/// Then {u/s}itofp is exact and the rounded quotient never crosses an integer,
+/// i.e. floor(rne_p(X/C)) == floor(X/C).
+///
+/// See #205305 for detailed reasoning.
+static Instruction *foldFPToIOfFDiv(Instruction &FI, InstCombinerImpl &IC,
+                                    bool IsSigned) {
+  auto *FDiv = dyn_cast<BinaryOperator>(FI.getOperand(0));
+  if (!FDiv || FDiv->getOpcode() != Instruction::FDiv || !FDiv->hasOneUse())
+    return nullptr;
+
+  auto *IToFP = dyn_cast<CastInst>(FDiv->getOperand(0));
+  if (!IToFP || !IToFP->hasOneUse())
+    return nullptr;
+  if (IsSigned ? !isa<SIToFPInst>(IToFP) : !isa<UIToFPInst>(IToFP))
+    return nullptr;
+  Value *X = IToFP->getOperand(0);
+  Type *IntTy = X->getType();
+  if (!IntTy->isIntOrIntVectorTy())
+    return nullptr;
+
+  if (FI.getType() != IntTy)
+    return nullptr;
+
+  Type *FPTy = FDiv->getType();
+  unsigned IntWidth = IntTy->getScalarSizeInBits();
+  int MantissaWidth = FPTy->getScalarType()->getFPMantissaWidth();
+  if (MantissaWidth < (int)IntWidth - IsSigned)
+    return nullptr;
+
+  auto *CFP = dyn_cast<ConstantFP>(FDiv->getOperand(1));
+  if (!CFP)
+    return nullptr;
+
+  APFloat APF = CFP->getValueAPF();
+  if (!APF.isInteger())
+    return nullptr;
+
+  APSInt Divisor(IntWidth, !IsSigned);
+  bool IsExact = false;
+  APF.convertToInteger(Divisor, APFloat::rmTowardZero, &IsExact);
+  if (!IsExact)
+    return nullptr;
+
+  if (Divisor.isZero())
+    return nullptr;
+
+  // sdiv INT_MIN, -1 is UB, not poison, so this isn't valid if X == INT_MIN.
+  // fdiv X, -1 gets transformed to fneg anyways, so we do not handle C == -1.
+  if (IsSigned && Divisor.isAllOnes())
+    return nullptr;
+
+  Constant *C = ConstantInt::get(IntTy, Divisor);
+  return IsSigned ? BinaryOperator::CreateSDiv(X, C)
+                  : BinaryOperator::CreateUDiv(X, C);
+}
+
 Instruction *InstCombinerImpl::visitFPToUI(FPToUIInst &FI) {
   if (Instruction *I = foldItoFPtoI(FI))
+    return I;
+
+  if (Instruction *I = foldFPToIOfFDiv(FI, *this, /*IsSigned=*/false))
     return I;
 
   if (Instruction *I = foldFPtoI(FI, *this))
@@ -2519,6 +2583,9 @@ Instruction *InstCombinerImpl::visitFPToUI(FPToUIInst &FI) {
 
 Instruction *InstCombinerImpl::visitFPToSI(FPToSIInst &FI) {
   if (Instruction *I = foldItoFPtoI(FI))
+    return I;
+
+  if (Instruction *I = foldFPToIOfFDiv(FI, *this, /*IsSigned=*/true))
     return I;
 
   if (Instruction *I = foldFPtoI(FI, *this))
