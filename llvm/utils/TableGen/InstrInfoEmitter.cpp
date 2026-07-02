@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Basic/SequenceToOffsetTable.h"
 #include "Common/CodeGenDAGPatterns.h"
 #include "Common/CodeGenInstruction.h"
 #include "Common/CodeGenRegisters.h"
@@ -37,6 +36,7 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
+#include <limits>
 #include <map>
 #include <string>
 #include <utility>
@@ -835,8 +835,8 @@ void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
        << "      RequiredFeatures;\n"
        << "  if (MissingFeatures.any()) {\n"
        << "    std::ostringstream Msg;\n"
-       << "    Msg << \"Attempting to emit \" << &" << Target.getName()
-       << "InstrNameData[" << Target.getName() << "InstrNameIndices[Opcode]]\n"
+       << "    Msg << \"Attempting to emit \" << get" << Target.getName()
+       << "InstrNameTable().getName(Opcode).str()\n"
        << "        << \" instruction but the \";\n"
        << "    for (unsigned i = 0, e = MissingFeatures.size(); i != e; ++i)\n"
        << "      if (MissingFeatures.test(i))\n"
@@ -1006,12 +1006,8 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
 
     OS << "extern const " << TargetName << "InstrTable " << TargetName
        << "Descs = {\n  {\n";
-    SequenceToOffsetTable<StringRef> InstrNames;
     unsigned Num = NumberedInstructions.size();
     for (const CodeGenInstruction *Inst : reverse(NumberedInstructions)) {
-      // Keep a list of the instruction names.
-      InstrNames.add(Inst->getName());
-
       auto OverrideEntry = TargetSpecializedPseudoInsts.find(Inst);
       if (OverrideEntry != TargetSpecializedPseudoInsts.end())
         Inst = OverrideEntry->second;
@@ -1046,19 +1042,71 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
 
     // Emit the array of instruction names.
     Timer.startTimer("Emit instruction names");
-    InstrNames.layout();
-    InstrNames.emitStringLiteralDef(OS, Twine("extern const char ") +
-                                            TargetName + "InstrNameData[]");
-    OS << "extern const unsigned " << TargetName << "InstrNameIndices[] = {";
-    Num = 0;
-    for (const CodeGenInstruction *Inst : NumberedInstructions) {
-      // Newline every eight entries.
-      if (Num % 8 == 0)
+    constexpr unsigned InstrNameBlockSize = 128;
+    std::string CompressedInstrNames;
+    std::vector<uint32_t> InstrNameBlockOffsets;
+
+    for (unsigned Start = 0; Start < NumberedInstructions.size();
+         Start += InstrNameBlockSize) {
+      unsigned End = std::min<unsigned>(Start + InstrNameBlockSize,
+                                        NumberedInstructions.size());
+      InstrNameBlockOffsets.push_back(CompressedInstrNames.size());
+
+      unsigned BlockDataSize = 0;
+      for (unsigned I = Start; I != End; ++I) {
+        size_t NameSize = NumberedInstructions[I]->getName().size();
+        if (NameSize > std::numeric_limits<uint8_t>::max())
+          PrintFatalError(NumberedInstructions[I]->TheDef,
+                          "instruction name is too long");
+        BlockDataSize += NameSize + 1;
+      }
+      if (BlockDataSize > std::numeric_limits<uint16_t>::max())
+        PrintFatalError("instruction name block is too large");
+      CompressedInstrNames.push_back(BlockDataSize);
+      CompressedInstrNames.push_back(BlockDataSize >> 8);
+
+      StringRef PreviousName;
+      for (unsigned I = Start; I != End; ++I) {
+        StringRef Name = NumberedInstructions[I]->getName();
+        unsigned PrefixLength = 0;
+        while (PrefixLength != PreviousName.size() &&
+               PrefixLength != Name.size() &&
+               PreviousName[PrefixLength] == Name[PrefixLength])
+          ++PrefixLength;
+
+        CompressedInstrNames.push_back(PrefixLength);
+        CompressedInstrNames.push_back(Name.size() - PrefixLength);
+        CompressedInstrNames.append(Name.drop_front(PrefixLength));
+        PreviousName = Name;
+      }
+    }
+
+    OS << "static constexpr uint8_t " << TargetName << "InstrNameData[] = {";
+    for (auto [I, Byte] : enumerate(CompressedInstrNames)) {
+      if (I % 16 == 0)
         OS << "\n    ";
-      OS << InstrNames.get(Inst->getName()) << "U, ";
-      ++Num;
+      OS << unsigned(uint8_t(Byte)) << ", ";
     }
     OS << "\n};\n\n";
+    OS << "static constexpr uint32_t " << TargetName
+       << "InstrNameBlockOffsets[] = {";
+    for (auto [I, Offset] : enumerate(InstrNameBlockOffsets)) {
+      if (I % 8 == 0)
+        OS << "\n    ";
+      OS << Offset << "U, ";
+    }
+    OS << "\n};\n\n";
+    OS << "static std::atomic<const uint16_t *> " << TargetName
+       << "InstrNameBlocks[" << InstrNameBlockOffsets.size() << "] = {};\n\n";
+    OS << "static constexpr MCInstrNameTable " << TargetName << "InstrNames(\n"
+       << "    " << TargetName << "InstrNameData, " << TargetName
+       << "InstrNameBlockOffsets, " << TargetName << "InstrNameBlocks, "
+       << NumberedInstructions.size() << ");\n\n";
+    OS << "const MCInstrNameTable &get" << TargetName << "InstrNameTable() {\n"
+       << "  static_assert(MCInstrNameTable::BlockSize == "
+       << InstrNameBlockSize << ");\n"
+       << "  return " << TargetName << "InstrNames;\n"
+       << "}\n\n";
 
     if (HasDeprecationFeatures) {
       OS << "extern const uint8_t " << TargetName
@@ -1135,7 +1183,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
     OS << "static inline void Init" << TargetName
        << "MCInstrInfo(MCInstrInfo *II) {\n";
     OS << "  II->InitMCInstrInfo(" << TargetName << "Descs.Insts, "
-       << TargetName << "InstrNameIndices, " << TargetName << "InstrNameData, ";
+       << "&get" << TargetName << "InstrNameTable(), ";
     if (HasDeprecationFeatures)
       OS << TargetName << "InstrDeprecationFeatures, ";
     else
@@ -1209,8 +1257,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
     NamespaceEmitter LlvmNS(OS, "llvm");
     OS << "extern const " << TargetName << "InstrTable " << TargetName
        << "Descs;\n";
-    OS << "extern const unsigned " << TargetName << "InstrNameIndices[];\n";
-    OS << "extern const char " << TargetName << "InstrNameData[];\n";
+    OS << "const MCInstrNameTable &get" << TargetName << "InstrNameTable();\n";
 
     if (HasDeprecationFeatures)
       OS << "extern const uint8_t " << TargetName
@@ -1232,8 +1279,8 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
             "RegInfo)]";
 
     OS << ") {\n"
-       << "  InitMCInstrInfo(" << TargetName << "Descs.Insts, " << TargetName
-       << "InstrNameIndices, " << TargetName << "InstrNameData, ";
+       << "  InitMCInstrInfo(" << TargetName << "Descs.Insts, "
+       << "&get" << TargetName << "InstrNameTable(), ";
     if (HasDeprecationFeatures)
       OS << TargetName << "InstrDeprecationFeatures, ";
     else

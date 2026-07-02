@@ -64,7 +64,7 @@ include "Common/RegClassByHwModeCommon.td"
 // INSTRINFO-NEXT: };
 
 // INSTRINFO: static inline void InitMyTargetMCInstrInfo(
-// INSTRINFO-NEXT: II->InitMCInstrInfo(MyTargetDescs.Insts, MyTargetInstrNameIndices, MyTargetInstrNameData, nullptr, nullptr, {{[0-9]+}}, &MyTargetRegClassByHwModeTables[0][0], 3);
+// INSTRINFO-NEXT:   II->InitMCInstrInfo(MyTargetDescs.Insts, &getMyTargetInstrNameTable(), nullptr, nullptr, {{[0-9]+}}, &MyTargetRegClassByHwModeTables[0][0], 3);
 
 // INSTRINFO: #ifdef GET_INSTRINFO_HEADER
 // INSTRINFO-NEXT: #undef GET_INSTRINFO_HEADER

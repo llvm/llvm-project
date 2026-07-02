@@ -38,8 +38,9 @@
 // ALLCASES: /* [[PATCHABLE_TYPED_EVENT_CALL_OP_ENTRY]] */ { -1, 0, MCOI::OPERAND_UNKNOWN, 0 }, { MyTarget::XRegsRegClassID, 0, MCOI::OPERAND_REGISTER, 0 }, { -1, 0, MCOI::OPERAND_UNKNOWN, 0 },
 
 
-// CHECK: const char MyTargetInstrNameData[] = {
-// CHECK: /* {{[0-9]+}} */ "LOAD_STACK_GUARD\000"
+// CHECK: static constexpr uint8_t MyTargetInstrNameData[] = {
+// CHECK: static constexpr uint32_t MyTargetInstrNameBlockOffsets[] = {
+// CHECK: const MCInstrNameTable &getMyTargetInstrNameTable() {
 
 include "llvm/Target/Target.td"
 
