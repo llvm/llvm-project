@@ -19,8 +19,6 @@ int b() {
   return a;
 }
 
-// The pack indexing type `element<int>` must be lowered to `i32` without
-// crashing in CodeGen.
 // CHECK: @_ZW1a1a = external global i32
 // CHECK: define {{.*}}i32 @_Z1bv()
 // CHECK: load i32, ptr @_ZW1a1a
