@@ -13,7 +13,6 @@
 #include <__algorithm/find_if.h>
 #include <__config>
 #include <__functional/identity.h>
-#include <__type_traits/invoke.h>
 #include <__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
