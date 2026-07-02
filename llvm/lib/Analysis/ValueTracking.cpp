@@ -5872,40 +5872,13 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
     KnownBits IntKnown =
         computeKnownBits(Op->getOperand(0), DemandedElts, Q, Depth + 1);
+    const fltSemantics &FltSem =
+        Op->getType()->getScalarType()->getFltSemantics();
+    KnownFPClass Known2 = Op->getOpcode() == Instruction::SIToFP
+                              ? KnownFPClass::sitofp(IntKnown, FltSem)
+                              : KnownFPClass::uitofp(IntKnown, FltSem);
 
-    // If the integer is non-zero, the result cannot be +0.0
-    if (IntKnown.isNonZero())
-      Known.knownNot(fcPosZero);
-
-    if (Op->getOpcode() == Instruction::SIToFP) {
-      // If the signed integer is known non-negative, the result is
-      // non-negative. If the signed integer is known negative, the result is
-      // negative.
-      if (IntKnown.isNonNegative()) {
-        Known.signBitMustBeZero();
-      } else if (IntKnown.isNegative()) {
-        Known.signBitMustBeOne();
-      }
-    }
-
-    // Guard kept for ilogb()
-    if (InterestedClasses & fcInf) {
-      // Get width of largest magnitude integer known.
-      // This still works for a signed minimum value because the largest FP
-      // value is scaled by some fraction close to 2.0 (1.0 + 0.xxxx).
-      int IntSize = IntKnown.getBitWidth();
-      if (Op->getOpcode() == Instruction::UIToFP)
-        IntSize -= IntKnown.countMinLeadingZeros();
-      else if (Op->getOpcode() == Instruction::SIToFP)
-        IntSize -= IntKnown.countMinSignBits();
-
-      // If the exponent of the largest finite FP value can hold the largest
-      // integer, the result of the cast must be finite.
-      Type *FPTy = Op->getType()->getScalarType();
-      if (ilogb(APFloat::getLargest(FPTy->getFltSemantics())) >= IntSize)
-        Known.knownNot(fcInf);
-    }
-
+    Known = Known.unionWith(Known2);
     break;
   }
   case Instruction::ExtractElement: {

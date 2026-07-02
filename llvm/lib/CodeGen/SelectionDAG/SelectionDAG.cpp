@@ -6220,6 +6220,35 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
     Known = computeKnownFPClass(Op.getOperand(0), InterestedClasses, Depth + 1);
     break;
   }
+  case ISD::SINT_TO_FP:
+  case ISD::UINT_TO_FP: {
+    // Cannot produce nan
+    Known.knownNot(fcNan);
+
+    // Integers cannot be subnormal
+    Known.knownNot(fcSubnormal);
+
+    // sitofp and uitofp turn into +0.0 for zero.
+    Known.knownNot(fcNegZero);
+
+    // UIToFP is always non-negative regardless of known bits.
+    if (Opcode == ISD::UINT_TO_FP)
+      Known.signBitMustBeZero();
+
+    // Only compute known bits if we can learn something useful from them.
+    if (!(InterestedClasses & (fcPosZero | fcNormal | fcInf)))
+      break;
+
+    KnownBits IntKnown =
+        computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    const fltSemantics &FltSem = VT.getFltSemantics();
+    KnownFPClass Known2 = Opcode == ISD::SINT_TO_FP
+                              ? KnownFPClass::sitofp(IntKnown, FltSem)
+                              : KnownFPClass::uitofp(IntKnown, FltSem);
+
+    Known = Known.unionWith(Known2);
+    break;
+  }
   case ISD::BITCAST: {
     // FIXME: It should not be necessary to check for an elementwise bitcast.
     // If a bitcast is not elementwise between vector / scalar types,
