@@ -2361,4 +2361,15 @@ define i32 @shl1_range_zero_two_fail(i32 range(i32 0, 3) %x) {
   ret i32 %shl
 }
 
+; The constant 2 is not representable as a non-negative signed i2, so nsw
+; must not be added on the replacement add (PR207089 regression).
+define i2 @shl1_i2(i2 range(i2 0, 2) %x) {
+; CHECK-LABEL: @shl1_i2(
+; CHECK-NEXT:    [[SHL:%.*]] = add nuw i2 [[X:%.*]], 1
+; CHECK-NEXT:    ret i2 [[SHL]]
+;
+  %shl = shl i2 1, %x
+  ret i2 %shl
+}
+
 declare i16 @llvm.umax.i16(i16, i16)

@@ -1667,3 +1667,14 @@ define i32 @lshr_two_range_zero_two_fail(i32 range(i32 0, 3) %x) {
   %shr = lshr i32 2, %x
   ret i32 %shr
 }
+
+; The constant 2 is not representable as a non-negative signed i2, so nsw
+; must not be added on the replacement sub (PR207089 regression).
+define i2 @lshr_two_i2(i2 range(i2 0, 2) %x) {
+; CHECK-LABEL: @lshr_two_i2(
+; CHECK-NEXT:    [[SHR:%.*]] = sub nuw i2 -2, [[X:%.*]]
+; CHECK-NEXT:    ret i2 [[SHR]]
+;
+  %shr = lshr i2 2, %x
+  ret i2 %shr
+}
