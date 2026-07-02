@@ -314,6 +314,13 @@ public:
 #include "clang/CIR/Dialect/IR/CIRLowering.inc"
 #undef GET_CIR_ATTR_TO_VALUE_VISITOR_DECLS
 
+  // Build the packed { <init>, [zeros x T] zeroinitializer } value for a
+  // splittable trailing-zeros array (see shouldSplitTrailingZeros).  Called
+  // from the ConstArrayAttr visitor, so it composes at any nesting level (a
+  // record member or array element that is a splittable array splits too, and
+  // the enclosing record/array type follows the produced value).
+  mlir::Value buildTrailingZeroSplit(cir::ConstArrayAttr attr);
+
 private:
   mlir::Operation *parentOp;
   mlir::ConversionPatternRewriter &rewriter;
@@ -524,10 +531,124 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::BlockAddrInfoAttr blockAddrInfo) {
   return blockAddressOp;
 }
 
+// Module attribute holding, for each global whose trailing-zero array
+// initializer is lowered to a packed { init, zeroinitializer } struct, the
+// global's original array type.  A cir.global_view's indices stay relative to
+// that array, but the source global may already be lowered to the struct when
+// the view is processed (and discardable attrs on the lowered global do not
+// survive the dialect conversion), so the basis is captured on the module
+// before conversion and removed after.  See collectGlobalAnnotations for the
+// same capture-before-lowering pattern.
+static constexpr llvm::StringLiteral tzSplitBasisAttr = "cir.tz_split_basis";
+
+// Return the original array type for a trailing-zero-split global, or a null
+// type when the symbol is not such a global.
+static mlir::Type lookupSplitArrayBasis(mlir::ModuleOp module,
+                                        llvm::StringRef symName) {
+  auto dict = module->getAttrOfType<mlir::DictionaryAttr>(tzSplitBasisAttr);
+  if (!dict)
+    return {};
+  if (auto basis = dict.getAs<mlir::TypeAttr>(symName))
+    return basis.getValue();
+  return {};
+}
+
+// A const array with a long run of trailing zeros and an immediate scalar
+// (int/float) element is lowered as a packed { <init>, zeroinitializer } struct
+// instead of a fully materialized array (see buildTrailingZeroSplit), mirroring
+// classic CodeGen.  The >= 8 trailing-zero gate matches EmitArrayConstant's
+// TrailingZeroes >= 8 split threshold (CGExprConstant.cpp).  Aggregate-element
+// (e.g. multidimensional), pointer, bool, and string-literal arrays are
+// excluded.
+static bool shouldSplitTrailingZeros(cir::ConstArrayAttr attr) {
+  auto elts = mlir::dyn_cast<mlir::ArrayAttr>(attr.getElts());
+  if (!elts || elts.empty() || attr.getTrailingZerosNum() < 8)
+    return false;
+  mlir::Type eltTy =
+      mlir::cast<cir::ArrayType>(attr.getType()).getElementType();
+  return mlir::isa<cir::IntType, cir::FPTypeInterface>(eltTy);
+}
+
+// Whether a constant initializer contains a trailing-zero array that will be
+// split into a packed struct (at any nesting level).  Such a global's lowered
+// type diverges from its declared type, so a cir.global_view into it must walk
+// the declared type (recorded in tzSplitBasisAttr) rather than the rewritten
+// one.
+static bool initContainsSplittableArray(mlir::Attribute attr) {
+  if (auto arr = mlir::dyn_cast<cir::ConstArrayAttr>(attr)) {
+    if (shouldSplitTrailingZeros(arr))
+      return true;
+    if (auto elts = mlir::dyn_cast<mlir::ArrayAttr>(arr.getElts()))
+      return llvm::any_of(elts, initContainsSplittableArray);
+    return false;
+  }
+  if (auto rec = mlir::dyn_cast<cir::ConstRecordAttr>(attr))
+    return llvm::any_of(rec.getMembers(), initContainsSplittableArray);
+  return false;
+}
+
+// Build the packed { <init>, [zeros x T] zeroinitializer } split for a
+// splittable trailing-zeros array (see shouldSplitTrailingZeros).  Mirrors
+// classic CodeGen's EmitArrayConstant (CGExprConstant.cpp): eight or more
+// leading nonzero elements use a single dense init array field
+// (CommonElementType && NonzeroLength >= 8), otherwise individual scalar
+// fields.
+mlir::Value CIRAttrToValue::buildTrailingZeroSplit(cir::ConstArrayAttr attr) {
+  mlir::Location loc = parentOp->getLoc();
+  auto elts = mlir::cast<mlir::ArrayAttr>(attr.getElts());
+  auto arrayTy = mlir::cast<cir::ArrayType>(attr.getType());
+  mlir::Type cirEltTy = arrayTy.getElementType();
+  mlir::Type eltTy = converter->convertType(cirEltTy);
+  unsigned numInit = elts.size();
+  unsigned numZeros = attr.getTrailingZerosNum();
+  auto zeroArrTy = mlir::LLVM::LLVMArrayType::get(eltTy, numZeros);
+  mlir::Value zeroTail = mlir::LLVM::ZeroOp::create(rewriter, loc, zeroArrTy);
+
+  if (numInit >= 8) {
+    auto initArrTy = mlir::LLVM::LLVMArrayType::get(eltTy, numInit);
+    auto initAttr =
+        cir::ConstArrayAttr::get(cir::ArrayType::get(cirEltTy, numInit), elts);
+    // Falls through to individual fields if a non-dense element (e.g. poison)
+    // prevents a single dense constant.
+    if (std::optional<mlir::Attribute> dense =
+            lowerConstArrayAttr(initAttr, converter)) {
+      auto structTy = mlir::LLVM::LLVMStructType::getLiteral(
+          rewriter.getContext(), {initArrTy, zeroArrTy}, /*isPacked=*/true);
+      mlir::Value s = mlir::LLVM::UndefOp::create(rewriter, loc, structTy);
+      mlir::Value initVal =
+          mlir::LLVM::ConstantOp::create(rewriter, loc, initArrTy, *dense);
+      s = mlir::LLVM::InsertValueOp::create(rewriter, loc, s, initVal,
+                                            llvm::ArrayRef<int64_t>{0});
+      return mlir::LLVM::InsertValueOp::create(rewriter, loc, s, zeroTail,
+                                               llvm::ArrayRef<int64_t>{1});
+    }
+  }
+
+  SmallVector<mlir::Type> fieldTys(numInit, eltTy);
+  fieldTys.push_back(zeroArrTy);
+  auto structTy = mlir::LLVM::LLVMStructType::getLiteral(
+      rewriter.getContext(), fieldTys, /*isPacked=*/true);
+  mlir::Value s = mlir::LLVM::UndefOp::create(rewriter, loc, structTy);
+  for (auto [idx, elt] : llvm::enumerate(elts)) {
+    mlir::Value v = lowerCirAttrAsValue(parentOp, elt, rewriter, converter,
+                                        /*blockInfoAddr=*/nullptr);
+    s = mlir::LLVM::InsertValueOp::create(rewriter, loc, s, v, idx);
+  }
+  return mlir::LLVM::InsertValueOp::create(rewriter, loc, s, zeroTail, numInit);
+}
+
 // ConstArrayAttr visitor
 mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
-  mlir::Type llvmTy = converter->convertType(attr.getType());
   mlir::Location loc = parentOp->getLoc();
+
+  // A long trailing-zero tail lowers to a compact { init, zeroinitializer }
+  // split, mirroring classic CodeGen.  Checked before the dense form (which
+  // would materialize the whole zero tail) and applied at any nesting level, so
+  // an array nested in a record splits too.
+  if (shouldSplitTrailingZeros(attr))
+    return buildTrailingZeroSplit(attr);
+
+  mlir::Type llvmTy = converter->convertType(attr.getType());
   mlir::Value result;
 
   // When the array can be represented as a single dense constant, emit one
@@ -535,6 +656,46 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
   if (std::optional<mlir::Attribute> denseAttr =
           lowerConstArrayAttr(attr, converter))
     return mlir::LLVM::ConstantOp::create(rewriter, loc, llvmTy, *denseAttr);
+
+  // An aggregate-element array whose elements contain a trailing-zero array
+  // (e.g. an array of records with a split member) produces element values
+  // whose type diverges from the declared element type.  Element types are then
+  // non-uniform, so emit a packed struct with one field per element (trailing
+  // zeros padded with the declared element type), matching classic CodeGen's
+  // mixed-type array constant.  The common case below keeps the original array
+  // form and op order.
+  if (auto arrayAttr = mlir::dyn_cast<mlir::ArrayAttr>(attr.getElts());
+      arrayAttr && llvm::any_of(arrayAttr, initContainsSplittableArray)) {
+    auto arrayTy = mlir::cast<cir::ArrayType>(attr.getType());
+    mlir::Type declaredEltTy = converter->convertType(arrayTy.getElementType());
+    llvm::SmallVector<mlir::Value> elems;
+    llvm::SmallVector<mlir::Type> fieldTys;
+    elems.reserve(arrayAttr.size());
+    fieldTys.reserve(arrayTy.getSize());
+    for (mlir::Attribute elt : arrayAttr) {
+      mlir::Value init = visit(elt);
+      elems.push_back(init);
+      fieldTys.push_back(init.getType());
+    }
+    fieldTys.resize(arrayTy.getSize(), declaredEltTy);
+    // When every produced element type matches, classic keeps an [N x T]
+    // array; only a genuinely heterogeneous mix (e.g. a split element beside
+    // declared-typed zero elements) becomes a packed struct.
+    mlir::Type aggTy =
+        llvm::all_equal(fieldTys)
+            ? mlir::Type(mlir::LLVM::LLVMArrayType::get(fieldTys.front(),
+                                                        arrayTy.getSize()))
+            : mlir::Type(mlir::LLVM::LLVMStructType::getLiteral(
+                  rewriter.getContext(), fieldTys, /*isPacked=*/true));
+    result =
+        attr.hasTrailingZeros()
+            ? mlir::Value(mlir::LLVM::ZeroOp::create(rewriter, loc, aggTy))
+            : mlir::Value(mlir::LLVM::UndefOp::create(rewriter, loc, aggTy));
+    for (auto [idx, init] : llvm::enumerate(elems))
+      result =
+          mlir::LLVM::InsertValueOp::create(rewriter, loc, result, init, idx);
+    return result;
+  }
 
   if (attr.hasTrailingZeros()) {
     mlir::Type arrayTy = attr.getType();
@@ -649,14 +810,42 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstRecordAttr constRecord) {
   llvmTy = adjustGlobalTypeForFlexibleArrayInit(llvmTy, constRecord, *converter,
                                                 dataLayout);
   const mlir::Location loc = parentOp->getLoc();
-  mlir::Value result = mlir::LLVM::UndefOp::create(rewriter, loc, llvmTy);
 
-  // Iteratively lower each constant element of the record.
-  for (auto [idx, elt] : llvm::enumerate(constRecord.getMembers())) {
+  // A trailing-zero array member splits into a packed struct, so its produced
+  // type diverges from the declared member type and the record's type must
+  // follow (matching classic CodeGen, which emits an anonymous struct when a
+  // member's constant layout differs).  When no member diverges, keep the
+  // declared (possibly identified) struct type and lower in place, leaving the
+  // common case byte- and op-order-identical to before.
+  if (!llvm::any_of(constRecord.getMembers(), initContainsSplittableArray)) {
+    mlir::Value result = mlir::LLVM::UndefOp::create(rewriter, loc, llvmTy);
+    for (auto [idx, elt] : llvm::enumerate(constRecord.getMembers())) {
+      mlir::Value init = visit(elt);
+      result =
+          mlir::LLVM::InsertValueOp::create(rewriter, loc, result, init, idx);
+    }
+    return result;
+  }
+
+  // A member diverges: lower all members, then build a literal struct from the
+  // produced types (preserving the declared packedness).
+  llvm::SmallVector<mlir::Value> members;
+  llvm::SmallVector<mlir::Type> memberTypes;
+  members.reserve(constRecord.getMembers().size());
+  memberTypes.reserve(constRecord.getMembers().size());
+  for (mlir::Attribute elt : constRecord.getMembers()) {
     mlir::Value init = visit(elt);
+    members.push_back(init);
+    memberTypes.push_back(init.getType());
+  }
+
+  auto structTy = mlir::LLVM::LLVMStructType::getLiteral(
+      rewriter.getContext(), memberTypes,
+      mlir::cast<mlir::LLVM::LLVMStructType>(llvmTy).isPacked());
+  mlir::Value result = mlir::LLVM::UndefOp::create(rewriter, loc, structTy);
+  for (auto [idx, init] : llvm::enumerate(members))
     result =
         mlir::LLVM::InsertValueOp::create(rewriter, loc, result, init, idx);
-  }
 
   return result;
 }
@@ -699,6 +888,12 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::GlobalViewAttr globalAttr) {
       mlir::SymbolTable::lookupSymbolIn(moduleOp, globalAttr.getSymbol());
   if (auto llvmSymbol = dyn_cast<mlir::LLVM::GlobalOp>(sourceSymbol)) {
     sourceType = llvmSymbol.getType();
+    // If this global's trailing-zero array initializer was split into a packed
+    // struct, the view's indices are still relative to the original array.
+    // Walk that array (byte-identical layout) so the GEP stays in bounds.
+    if (mlir::Type basis =
+            lookupSplitArrayBasis(moduleOp, llvmSymbol.getSymName()))
+      sourceType = basis;
     symName = llvmSymbol.getSymName();
     sourceAddrSpace = llvmSymbol.getAddrSpace();
   } else if (auto cirSymbol = dyn_cast<cir::GlobalOp>(sourceSymbol)) {
@@ -2579,12 +2774,31 @@ CIRToLLVMGlobalOpLowering::matchAndRewriteRegionInitializedGlobal(
   // to the appropriate value.
   const mlir::Location loc = op.getLoc();
   setupRegionInitializedLLVMGlobalOp(op, rewriter);
+  auto newGlobalOp = mlir::cast<mlir::LLVM::GlobalOp>(
+      rewriter.getInsertionBlock()->getParentOp());
 
-  // Pass blockInfoAddr so that block address initializers (either as the whole
-  // initializer or nested inside an aggregate) can be resolved by the
-  // BlockAddrInfoAttr visitor.
+  // Pass blockInfoAddr so block address initializers (whole or nested in an
+  // aggregate) can be resolved by the BlockAddrInfoAttr visitor.  A trailing-
+  // zero array (top-level or nested) is split into a packed
+  // { init, zeroinitializer } inside the visitor; the global's type follows the
+  // produced value (see below).
   CIRAttrToValue valueConverter(op, rewriter, typeConverter, &blockInfoAddr);
   mlir::Value value = valueConverter.visit(init);
+
+  // A split initializer has a different type than the symType-derived global
+  // type, so the global's IR type follows the initializer; references are
+  // type-agnostic (addressof -> !llvm.ptr).
+  if (value.getType() != newGlobalOp.getGlobalType()) {
+    mlir::Type originalType = newGlobalOp.getGlobalType();
+    // The split replaces the naturally-aligned array type with a packed struct
+    // (ABI alignment 1).  Pin the global's alignment to the original array's so
+    // the split never under-aligns, even if the source global omitted an
+    // explicit alignment.
+    if (!newGlobalOp.getAlignment())
+      newGlobalOp.setAlignment(dataLayout.getTypeABIAlignment(originalType));
+    newGlobalOp.setGlobalType(value.getType());
+  }
+
   mlir::LLVM::ReturnOp::create(rewriter, loc, value);
   return mlir::success();
 }
@@ -2647,6 +2861,16 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   }
 
   if (init.has_value()) {
+    // A trailing-zero array initializer (top-level or nested in a record or
+    // array) lowers to a packed { init, zeroinitializer } split in the
+    // region-initialized path, mirroring classic CodeGen.  Route such globals
+    // straight there so the bulk fast-paths below never materialize the whole
+    // zero tail.  The split changes the global's IR type to a struct, but
+    // references address it by byte offset, so this stays parity-correct (see
+    // matchAndRewriteRegionInitializedGlobal and the GlobalViewAttr visitor).
+    if (initContainsSplittableArray(init.value()))
+      return matchAndRewriteRegionInitializedGlobal(op, init.value(), rewriter);
+
     if (mlir::isa<cir::FPAttr, cir::IntAttr, cir::BoolAttr>(init.value())) {
       GlobalInitAttrRewriter initRewriter(llvmType, rewriter);
       init = initRewriter.visit(init.value());
@@ -2660,11 +2884,11 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
       }
     } else if (auto constArr =
                    mlir::dyn_cast<cir::ConstArrayAttr>(init.value())) {
-      // Bulk-emit llvm.mlir.global when lowerConstArrayAttr can build the
-      // whole initializer as one aggregate attribute (no insertvalue
-      // region). Leaf type must match what lowerConstArrayAttr handles
-      // (pointers, integers, bools, floats, and string literals with
-      // trailing_zeros).
+      // Bulk-emit llvm.mlir.global when lowerConstArrayAttr can build the whole
+      // initializer as one aggregate attribute (no insertvalue region). Leaf
+      // type must match what lowerConstArrayAttr handles (pointers, integers,
+      // bools, floats, and string literals with trailing_zeros).  Splittable
+      // trailing-zero arrays were already routed to the region path above.
       if (isBulkLowerableConstArrayBaseElement(
               getConstArrayBaseElementType(constArr.getType()))) {
         mlir::ModuleOp modOp = op->getParentOfType<mlir::ModuleOp>();
@@ -2685,7 +2909,9 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
       // lowered to a constant attribute. The LLVM dialect global translation
       // turns an ArrayAttr (one element per struct field) into an
       // llvm::ConstantStruct, so the whole initializer becomes a single
-      // attribute on the global instead of an insertvalue region.
+      // attribute on the global instead of an insertvalue region. A record
+      // containing a splittable trailing-zero array was already routed to the
+      // region path above.
       mlir::ModuleOp modOp = op->getParentOfType<mlir::ModuleOp>();
       if (std::optional<mlir::Attribute> bulkInit =
               lowerConstRecordAttr(constRecord, typeConverter, modOp)) {
@@ -3886,6 +4112,25 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   // the annotations attribute is filtered out during FuncOp/GlobalOp lowering.
   collectGlobalAnnotations(module);
 
+  // Record the original array type of every global whose trailing-zero array
+  // initializer will be split into a packed struct, so a cir.global_view can
+  // walk those (array-relative) indices even after the source global's type is
+  // rewritten and (potentially) lowered before the view.
+  {
+    llvm::SmallVector<mlir::NamedAttribute> basis;
+    for (auto globalOp : module.getOps<cir::GlobalOp>()) {
+      std::optional<mlir::Attribute> init = globalOp.getInitialValue();
+      if (init && initContainsSplittableArray(*init))
+        basis.emplace_back(
+            mlir::StringAttr::get(&getContext(), globalOp.getSymName()),
+            mlir::TypeAttr::get(
+                convertTypeForMemory(converter, dl, globalOp.getSymType())));
+    }
+    if (!basis.empty())
+      module->setAttr(tzSplitBasisAttr,
+                      mlir::DictionaryAttr::get(&getContext(), basis));
+  }
+
   mlir::ConversionTarget target(getContext());
   target.addLegalOp<mlir::ModuleOp>();
   target.addLegalDialect<mlir::LLVM::LLVMDialect>();
@@ -3901,6 +4146,10 @@ void ConvertCIRToLLVMPass::runOnOperation() {
 
   if (failed(applyPartialConversion(ops, target, std::move(patterns))))
     signalPassFailure();
+
+  // The trailing-zero split basis is lowering-internal bookkeeping; drop it so
+  // it never reaches the emitted module.
+  module->removeAttr(tzSplitBasisAttr);
 
   // Emit the llvm.global_ctors array.
   buildCtorDtorList(module, cir::CIRDialect::getGlobalCtorsAttrName(),

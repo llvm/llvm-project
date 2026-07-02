@@ -1,0 +1,97 @@
+// RUN: cir-opt %s --cir-to-llvm -o - | FileCheck %s
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!rec_S = !cir.struct<"S" {!cir.array<!s32i x 111>}>
+!rec_P = !cir.struct<"P" {!s32i, !s32i}>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // Fewer than eight nonzero elements: individual scalar fields followed by a
+  // zeroinitializer array, in a packed struct.
+  cir.global constant external @top_lt8 =
+      #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i,
+                        #cir.int<3> : !s32i], trailing_zeros>
+          : !cir.array<!s32i x 111> {alignment = 16 : i64}
+  // CHECK-LABEL: llvm.mlir.global external constant @top_lt8()
+  // CHECK-SAME:    alignment = 16
+  // CHECK-SAME:    !llvm.struct<packed (i32, i32, i32, array<108 x i32>)>
+  // CHECK:         llvm.mlir.zero : !llvm.array<108 x i32>
+  // CHECK:         llvm.return
+
+  // Eight or more nonzero elements: a single dense init array field.
+  cir.global constant external @top_ge8 =
+      #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i,
+                        #cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i,
+                        #cir.int<7> : !s32i, #cir.int<8> : !s32i, #cir.int<9> : !s32i],
+                       trailing_zeros> : !cir.array<!s32i x 111> {alignment = 16 : i64}
+  // CHECK-LABEL: llvm.mlir.global external constant @top_ge8()
+  // CHECK-SAME:    !llvm.struct<packed (array<9 x i32>, array<102 x i32>)>
+  // CHECK:         llvm.mlir.constant(dense<[1, 2, 3, 4, 5, 6, 7, 8, 9]> : tensor<9xi32>)
+
+  // Poison among the nonzero elements (>= 8): the dense init can't be formed,
+  // so fall back to individual fields (exercises the poison-safe path).
+  cir.global constant external @top_poison =
+      #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i,
+                        #cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i,
+                        #cir.int<7> : !s32i, #cir.poison : !s32i],
+                       trailing_zeros> : !cir.array<!s32i x 111> {alignment = 16 : i64}
+  // CHECK-LABEL: llvm.mlir.global external constant @top_poison()
+  // CHECK-SAME:    !llvm.struct<packed (i32, i32, i32, i32, i32, i32, i32, i32, array<103 x i32>)>
+  // CHECK:         llvm.mlir.poison : i32
+
+  // Record-nested array: splits too (composes through the record).  The record
+  // type follows the produced value -- an outer struct wrapping the packed
+  // { init, zeroinitializer } split, matching classic CodeGen.
+  cir.global constant external @rec =
+      #cir.const_record<{#cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i,
+                                           #cir.int<3> : !s32i], trailing_zeros>
+          : !cir.array<!s32i x 111>}> : !rec_S {alignment = 4 : i64}
+  // CHECK-LABEL: llvm.mlir.global external constant @rec()
+  // CHECK-SAME:    !llvm.struct<(struct<packed (i32, i32, i32, array<108 x i32>)>)>
+
+  // Below the threshold (fewer than eight trailing zeros): not split.
+  cir.global constant external @no_split =
+      #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i],
+                       trailing_zeros> : !cir.array<!s32i x 8> {alignment = 16 : i64}
+  // CHECK-LABEL: llvm.mlir.global external constant @no_split(dense<[1, 2, 3, 0, 0, 0, 0, 0]> : tensor<8xi32>)
+
+  // String literal with trailing zeros: stays a compact dense constant.
+  cir.global constant external @str =
+      #cir.const_array<"abc" : !cir.array<!s8i x 3>, trailing_zeros>
+          : !cir.array<!s8i x 111> {alignment = 16 : i64}
+  // CHECK-LABEL: llvm.mlir.global external constant @str(
+  // CHECK-SAME:    dense<
+
+  // Multidimensional (aggregate element): falls back to full materialization.
+  cir.global constant external @multidim =
+      #cir.const_array<[#cir.const_array<[#cir.int<1> : !s32i], trailing_zeros>
+          : !cir.array<!s32i x 4>], trailing_zeros>
+          : !cir.array<!cir.array<!s32i x 4> x 16> {alignment = 16 : i64}
+  // CHECK-LABEL: llvm.mlir.global external constant @multidim(
+  // CHECK-SAME:    dense<
+
+  // No explicit alignment on the source global: the split must not under-align
+  // (the packed struct would otherwise get ABI alignment 1).  It keeps the
+  // array's natural ABI alignment.
+  cir.global constant external @noalign =
+      #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i,
+                        #cir.int<3> : !s32i], trailing_zeros>
+          : !cir.array<!s32i x 111>
+  // CHECK-LABEL: llvm.mlir.global external constant @noalign()
+  // CHECK-SAME:    alignment = 4
+
+  // A non-split record keeps its identified struct type.
+  cir.global constant external @plain =
+      #cir.const_record<{#cir.int<1> : !s32i, #cir.int<2> : !s32i}> : !rec_P
+  // CHECK-LABEL: llvm.mlir.global external constant @plain
+  // CHECK-SAME:    !llvm.struct<"struct.P", (i32, i32)>
+
+  // A view into a split global: its indices stay relative to the original
+  // array, so the GEP walks that array (not the packed struct) and stays in
+  // bounds.  @top_lt8 is split and defined before this view -- i.e. lowered
+  // first -- which is the case that fails if the view walks the rewritten type.
+  cir.global external @view_into =
+      #cir.global_view<@top_lt8, [50 : i32]> : !cir.ptr<!s32i>
+  // CHECK-LABEL: llvm.mlir.global external @view_into()
+  // CHECK:         llvm.getelementptr {{.*}}[0, 50] {{.*}}!llvm.array<111 x i32>
+}
