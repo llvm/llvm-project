@@ -36,6 +36,7 @@ set(ANALYSIS_TEST_SOURCES
   IR2VecTest.cpp
   IRSimilarityIdentifierTest.cpp
   IVDescriptorsTest.cpp
+  KnownBitsAnalysisTest.cpp
   LastRunTrackingAnalysisTest.cpp
   LazyCallGraphTest.cpp
   LoadsTest.cpp
