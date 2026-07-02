@@ -10253,3 +10253,48 @@ The attribute is also supported with blocks and in Objective-C.
   }
   }];
 }
+
+def ConstPureDocs :  Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``const`` or ``pure`` attributes can be applied to the declaration of a function to signal that calls to the function with the same argument values may be elided under some circumstances.
+The ``const`` attribute imposes greater restrictions than the related ``pure`` attribute; applying both attributes to a declaration will be diagnosed and the ``const`` attribute takes precedence.
+
+The ``pure`` attribute informs the optimizer that the function cannot write to memory, does not support unwinding, will return (has no infinite loops, does not call a ``noreturn`` function, etc), and that any pointer or reference parameters will not be written to.
+
+The ``const`` attribute is similar except that the function cannot read or write to memory and that any pointer or reference parameters will not be read from or written to.
+
+Neither attribute should be used on a function which has side effects or uses external data to compute the returned value.
+Therefore, both attributes are diagnosed when applied to a function with a non-``void`` return type.
+
+Because of the prohibition against reading memory, the ``const`` attribute generally should not be used on a function which accepts a pointer or reference argument.
+The ``pure`` attribute allows (non-volatile) memory to be read; calls will only be elided if the optimizer can prove the memory accessed cannot be changed between successive calls to the function.
+
+An important difference between the Clang and GCC implementations of these attributes is that Clang does not allow unwinding while GCC does.
+In Clang, a function marked with ``const`` or ``pure`` is implicitly ``noexcept`` in C++.
+
+The following example demonstrates how the ``const`` attribute can be used:
+
+.. code-block:: c++
+
+  __attribute__((const)) int add_one(int x) { return x + 1; }
+
+  int main(void) {
+    int x = add_one(1);
+    int y = add_one(1); // Call can be elided
+  }
+
+The ``pure`` attribute can be used similarly:
+
+.. code-block:: c++
+
+  __attribute__((pure)) int get_char(const char *buffer, int idx) { return buffer[idx]; }
+
+  int main(void) {
+    const char *str = "testing";
+    int x = get_char(str, 0);
+    int y = get_char(str, 0); // Call can be elided
+  }
+
+  }];
+}

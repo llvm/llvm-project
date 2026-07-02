@@ -25,7 +25,6 @@ CHECK-NEXT:	CUDALaunchBounds
 CHECK-NEXT:	CUDAShared
 CHECK-NEXT:	Capability
 CHECK-NEXT:	Common
-CHECK-NEXT:	Const
 CHECK-NEXT:	ConsumableAutoCast
 CHECK-NEXT:	ConsumableSetOnRead
 CHECK-NEXT:	FormatArg
@@ -73,7 +72,6 @@ CHECK-NEXT:	Pascal
 CHECK-NEXT:	PointerFieldProtection
 CHECK-NEXT:	PtGuardedBy
 CHECK-NEXT:	PtGuardedVar
-CHECK-NEXT:	Pure
 CHECK-NEXT:	ReentrantCapability
 CHECK-NEXT:	ReqdWorkGroupSize
 CHECK-NEXT:	RequiresCapability
@@ -89,4 +87,4 @@ CHECK-NEXT:	Visibility
 CHECK-NEXT:	WeakImport
 CHECK-NEXT:	WeakRef
 CHECK-NEXT:	WorkGroupSizeHint
-CHECK-NEXT: Total: 83
+CHECK-NEXT: Total: 81
