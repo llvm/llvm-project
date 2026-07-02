@@ -3,8 +3,8 @@
 // RUN: %clang --target=aarch64-none-elf -march=armv8.2a+ras -### -c %s 2>&1 | FileCheck --check-prefix=CHECK-RAS %s
 // RUN: %clang --target=aarch64-none-elf -march=armv8-a+ras -### -c %s 2>&1 | FileCheck --check-prefix=CHECK-RAS %s
 // RUN: %clang --target=aarch64-none-elf -mcpu=generic+ras -### -c %s 2>&1 | FileCheck --check-prefix=CHECK-RAS %s
-// RUN: %clang --target=aarch64-none-elf -mcpu=cortex-a75 -### -c %s 2>&1 | FileCheck --check-prefix=CHECK-RAS %s
-// RUN: %clang --target=aarch64-none-elf -mcpu=cortex-a55 -### -c %s 2>&1 | FileCheck --check-prefix=CHECK-RAS %s
+// RUN: %clang --target=aarch64-none-elf -mcpu=cortex-a75 -### -c %s 2>&1 | FileCheck --check-prefix=CHECK-ABSENT %s
+// RUN: %clang --target=aarch64-none-elf -mcpu=cortex-a55 -### -c %s 2>&1 | FileCheck --check-prefix=CHECK-ABSENT %s
 // CHECK-RAS: "-target-feature" "+ras"
 
 // RUN: %clang --target=aarch64-none-elf -march=armv8a+noras -### -c %s 2>&1 | FileCheck --check-prefix=CHECK-ABSENT %s

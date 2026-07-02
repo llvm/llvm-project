@@ -82,7 +82,7 @@
 // SVE-MCPU-FEATURES-NOT: "-target-feature" "+sve-bitperm"
 // SVE-MCPU-FEATURES-NOT: "-target-feature" "+sve2-bitperm"
 // SVE-MCPU-FEATURES-NOT: "-target-feature" "+sve2"
-// SVE-MCPU-FEATURES: "-target-feature" "+sve"
+// SVE-MCPU-FEATURES-NOT: "-target-feature" "+sve"
 
 // RUN: %clang --target=aarch64-linux-gnu -mcpu=neoverse-n2+nosve+sve2 %s -### 2>&1 | FileCheck %s --check-prefix=SVE-MCPU-FEATURES-CONFLICT
 // SVE-MCPU-FEATURES-CONFLICT-NOT: "-target-feature" "+sve2-bitperm"

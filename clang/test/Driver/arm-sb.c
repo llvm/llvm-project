@@ -1,6 +1,6 @@
 // RUN: %clang -### -target arm-none-none-eabi -march=armv8a+sb %s 2>&1 | FileCheck %s
 // RUN: %clang -### -target aarch64-none-elf -march=armv8a+sb %s 2>&1 | FileCheck %s
-// RUN: %clang -### -target aarch64-none-elf -mcpu=cortex-a510 %s 2>&1 | FileCheck %s
+// RUN: %clang -### -target aarch64-none-elf -mcpu=cortex-a510 %s 2>&1 | FileCheck %s --check-prefix=ABSENT
 // CHECK: "-target-feature" "+sb"
 // CHECK-NOT: "-target-feature" "-sb"
 

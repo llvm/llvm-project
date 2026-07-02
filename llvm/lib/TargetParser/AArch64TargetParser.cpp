@@ -345,20 +345,19 @@ void AArch64::ExtensionSet::disable(ArchExtKind E) {
       disable(Dep.Later);
 }
 
-static void setEnableIfMandatory(AArch64::ExtensionSet &Exts,
-                                 AArch64::ExtensionInfo E) {
-  if (Exts.BaseArch->DefaultExts.test(E.ID))
-    Exts.Enabled.set(E.ID);
-}
-
 void AArch64::ExtensionSet::addCPUDefaults(const CpuInfo &CPU) {
   LLVM_DEBUG(llvm::dbgs() << "addCPUDefaults(" << StrTab[CPU.Name] << ")\n");
   BaseArch = &ArchInfos[CPU.ArchIdx];
 
+  // Enabling the default extensions for the base-architecture is used for the
+  // explicit +no<feature>. Does not call enable() because we do not want to set
+  // Touched to avoid marking redundant features in the cc1 command-line.
   for (const auto &E : Extensions)
+    if (BaseArch->DefaultExts.test(E.ID))
+      Enabled.set(E.ID);
+  for (const auto &E : Extensions) {
     if (CPU.DefaultExtensions.test(E.ID))
       enable(E.ID);
-    setEnableIfMandatory(*this, E);
   }
 }
 

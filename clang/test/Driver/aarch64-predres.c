@@ -1,5 +1,5 @@
 // RUN: %clang -### --target=aarch64-none-elf -march=armv8a+predres     %s 2>&1 | FileCheck %s
-// RUN: %clang -### --target=aarch64-none-elf -mcpu=cortex-a520         %s 2>&1 | FileCheck %s
+// RUN: %clang -### --target=aarch64-none-elf -mcpu=cortex-a520         %s 2>&1 | FileCheck %s --check-prefix=ABSENT
 // CHECK: "-target-feature" "+predres"
 // CHECK-NOT: "-target-feature" "-predres"
 
