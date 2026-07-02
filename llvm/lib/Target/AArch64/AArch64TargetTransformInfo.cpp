@@ -2620,8 +2620,7 @@ instCombineSVEPairwiseAddLong(InstCombiner &IC, IntrinsicInst &II) {
 
   IC.replaceInstUsesWith(*User, PairwiseAddLong);
   IC.eraseInstFromFunction(*User);
-  IC.eraseInstFromFunction(II);
-  return nullptr;
+  return &II; // II is now trivially dead and will get erased.
 }
 
 static std::optional<Instruction *> instCombineSVEVectorAdd(InstCombiner &IC,
