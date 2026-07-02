@@ -3894,7 +3894,7 @@ void RISCVAsmParser::emitPseudoExtend(MCInst &Inst, bool SignExtend,
 
 void RISCVAsmParser::emitVMSGE(MCInst &Inst, unsigned Opcode, SMLoc IDLoc,
                                MCStreamer &Out) {
-  if (Inst.getNumOperands() == 3) {
+  if (Inst.getNumOperands() == 4 && !Inst.getOperand(3).getReg()) {
     // unmasked va >= x
     //
     //  pseudoinstruction: vmsge{u}.vx vd, va, x
@@ -3917,6 +3917,7 @@ void RISCVAsmParser::emitVMSGE(MCInst &Inst, unsigned Opcode, SMLoc IDLoc,
     //  expansion: vmslt{u}.vx vd, va, x, v0.t; vmxor.mm vd, vd, v0
     assert(Inst.getOperand(0).getReg() != RISCV::V0 &&
            "The destination register should not be V0.");
+    assert(Inst.getOperand(3).getReg() == RISCV::V0 && "Expected a mask");
     emitToStreamer(Out, MCInstBuilder(Opcode)
                             .addOperand(Inst.getOperand(0))
                             .addOperand(Inst.getOperand(1))
@@ -3934,8 +3935,6 @@ void RISCVAsmParser::emitVMSGE(MCInst &Inst, unsigned Opcode, SMLoc IDLoc,
     //
     //  pseudoinstruction: vmsge{u}.vx vd, va, x, v0.t, vt
     //  expansion: vmslt{u}.vx vt, va, x;  vmandn.mm vd, vd, vt
-    assert(Inst.getOperand(0).getReg() == RISCV::V0 &&
-           "The destination register should be V0.");
     assert(Inst.getOperand(1).getReg() != RISCV::V0 &&
            "The temporary vector register should not be V0.");
     emitToStreamer(Out, MCInstBuilder(Opcode)
@@ -4127,6 +4126,17 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
       SMLoc Loc = Operands.back()->getStartLoc();
       return Error(Loc, "the temporary vector register cannot be the same as "
                         "the destination register");
+    }
+  }
+
+  if (Opcode == RISCV::PseudoVMSGEU_VX_M || Opcode == RISCV::PseudoVMSGE_VX_M) {
+    MCRegister DestReg = Inst.getOperand(0).getReg();
+    MCRegister MaskReg = Inst.getOperand(3).getReg();
+    if (MaskReg == RISCV::V0 && DestReg == RISCV::V0) {
+      SMLoc Loc = Operands.back()->getStartLoc();
+      return Error(Loc, "the destination vector register cannot overlap the "
+                        "mask register unless a temporary register is "
+                        "provided");
     }
   }
 
@@ -4439,12 +4449,10 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   case RISCV::PseudoZEXT_W:
     emitPseudoExtend(Inst, /*SignExtend=*/false, /*Width=*/32, IDLoc, Out);
     return false;
-  case RISCV::PseudoVMSGEU_VX:
   case RISCV::PseudoVMSGEU_VX_M:
   case RISCV::PseudoVMSGEU_VX_M_T:
     emitVMSGE(Inst, RISCV::VMSLTU_VX, IDLoc, Out);
     return false;
-  case RISCV::PseudoVMSGE_VX:
   case RISCV::PseudoVMSGE_VX_M:
   case RISCV::PseudoVMSGE_VX_M_T:
     emitVMSGE(Inst, RISCV::VMSLT_VX, IDLoc, Out);
