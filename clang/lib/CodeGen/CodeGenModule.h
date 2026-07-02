@@ -520,6 +520,8 @@ private:
   llvm::StringMap<llvm::GlobalVariable *> CFConstantStringMap;
 
   llvm::DenseMap<llvm::Constant *, llvm::GlobalVariable *> ConstantStringMap;
+  llvm::DenseMap<llvm::Constant *, llvm::GlobalVariable *>
+      StaticInitListBackingArrayMap;
   llvm::DenseMap<const UnnamedGlobalConstantDecl *, llvm::GlobalVariable *>
       UnnamedGlobalConstantDeclMap;
   llvm::DenseMap<const Decl*, llvm::Constant *> StaticLocalDeclMap;
@@ -1046,6 +1048,10 @@ public:
   llvm::Constant *GetAddrOfGlobal(GlobalDecl GD,
                                   ForDefinition_t IsForDefinition
                                     = NotForDefinition);
+
+  /// Creates a private constant global for an initializer_list backing array.
+  ConstantAddress EmitStaticInitListBackingArray(llvm::Constant *Init,
+                                                 CharUnits Align);
 
   /// Will return a global variable of the given type. If a variable with a
   /// different type already exists then a new  variable with the right type

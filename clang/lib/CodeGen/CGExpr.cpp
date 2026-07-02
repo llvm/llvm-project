@@ -514,6 +514,40 @@ static RawAddress createReferenceTemporary(CodeGenFunction &CGF,
   llvm_unreachable("unknown storage duration");
 }
 
+/// Emits a constant initializer_list backing array as a private global when the
+/// temporary can be shared for the full expression without observable effects.
+std::optional<RawAddress> CodeGenFunction::tryEmitStaticInitListBackingArray(
+    const MaterializeTemporaryExpr *MTE) {
+  if (!MTE->isBackingArrayForInitializerList())
+    return std::nullopt;
+
+  switch (MTE->getStorageDuration()) {
+  case SD_FullExpression:
+  case SD_Automatic:
+    break;
+  case SD_Thread:
+  case SD_Static:
+    return std::nullopt;
+  case SD_Dynamic:
+    llvm_unreachable("temporary cannot have dynamic storage duration");
+  }
+
+  const Expr *Init = MTE->getSubExpr();
+  QualType Ty = Init->getType();
+  if (!Ty->isArrayType() ||
+      !Ty.isConstantStorage(getContext(), /*ExcludeCtor=*/true,
+                            /*ExcludeDtor=*/false))
+    return std::nullopt;
+
+  llvm::Constant *Constant =
+      ConstantEmitter(*this).tryEmitAbstractForMemory(Init, Ty);
+  if (!Constant)
+    return std::nullopt;
+
+  CharUnits Align = getContext().getTypeAlignInChars(Ty);
+  return CGM.EmitStaticInitListBackingArray(Constant, Align);
+}
+
 /// Helper method to check if the underlying ABI is AAPCS
 static bool isAAPCS(const TargetInfo &TargetInfo) {
   return TargetInfo.getABI().starts_with("aapcs");
@@ -584,6 +618,10 @@ EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
       return EmitOpaqueValueLValue(opaque);
     }
   }
+
+  if (std::optional<RawAddress> StaticArray =
+          tryEmitStaticInitListBackingArray(M))
+    return MakeAddrLValue(*StaticArray, M->getType(), AlignmentSource::Decl);
 
   // Create and initialize the reference temporary.
   RawAddress Alloca = Address::invalid();

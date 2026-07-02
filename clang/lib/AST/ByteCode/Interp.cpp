@@ -2819,6 +2819,316 @@ bool arePotentiallyOverlappingStringLiterals(const Pointer &LHS,
   return Shorter == Longer.take_front(Shorter.size());
 }
 
+/// Whether Ptr designates an object that is the backing array of a
+/// std::initializer_list.
+static bool isInitializerListBackingArray(const Pointer &Ptr) {
+  if (Ptr.isZero() || !Ptr.isBlockPointer() || Ptr.block()->isDynamic())
+    return false;
+
+  const auto *MTE =
+      dyn_cast_or_null<MaterializeTemporaryExpr>(Ptr.getDeclDesc()->asExpr());
+  return MTE && MTE->isBackingArrayForInitializerList();
+}
+
+namespace {
+/// Pairs an enclosing-array Pointer with the element-relative location of
+/// the original pointer within it.
+struct ArraySubobjectInfo {
+  Pointer Array;
+  ArraySubobjectLocation Loc;
+};
+} // namespace
+
+/// Returns the enclosing array and element-relative location if Ptr
+/// designates an element of an initializer_list backing array,
+/// one-past-the-end of it, or a subobject of an element. Returns
+/// std::nullopt otherwise.
+static std::optional<ArraySubobjectInfo>
+getArraySubobjectLocation(const ASTContext &Ctx, const Pointer &Ptr) {
+  if (Ptr.isZero() || !Ptr.isBlockPointer())
+    return std::nullopt;
+
+  Pointer Array = Ptr.getDeclPtr();
+  if (!isInitializerListBackingArray(Array))
+    return std::nullopt;
+
+  const auto *ArrayType =
+      Ctx.getAsConstantArrayType(Array.getFieldDesc()->getType());
+  if (!ArrayType)
+    return std::nullopt;
+
+  APValue PtrValue = Ptr.toAPValue(Ctx);
+  if (!PtrValue.isLValue() || !PtrValue.hasLValuePath())
+    return std::nullopt;
+
+  ArrayRef<APValue::LValuePathEntry> Path = PtrValue.getLValuePath();
+  if (Path.empty())
+    return std::nullopt;
+
+  uint64_t Index = Path.front().getAsArrayIndex();
+  bool IsValidOnePastEnd = Path.size() == 1;
+  std::optional<ArraySubobjectLocation> Loc = computeArraySubobjectLocation(
+      Ctx, ArrayType, Index, PtrValue.getLValueOffset(), IsValidOnePastEnd);
+  if (!Loc)
+    return std::nullopt;
+  return ArraySubobjectInfo{std::move(Array), *Loc};
+}
+
+/// Returns the enclosing array block for a pointer into an array subobject.
+static std::optional<Pointer> getContainingArray(const Pointer &Ptr) {
+  if (Ptr.isZero() || !Ptr.isBlockPointer())
+    return std::nullopt;
+
+  PtrView P = Ptr.view();
+  while (!P.isRoot()) {
+    if (P.isArrayElement()) {
+      PtrView Expanded = P.expand();
+      return Pointer(Expanded.getArray());
+    }
+    P = P.getBase();
+  }
+
+  return std::nullopt;
+}
+
+/// Returns true for array objects whose addresses are potentially non-unique
+/// and whose contents are represented by interpreter storage/APValue.
+static bool isPotentiallyNonUniqueAPValueArray(const Pointer &Array) {
+  if (isInitializerListBackingArray(Array))
+    return true;
+  if (const auto *VD = Array.getDeclDesc()->asValueDecl())
+    return isa<TemplateParamObjectDecl>(VD);
+  return false;
+}
+
+/// Returns the enclosing potentially non-unique APValue-backed array and the
+/// element-relative location designated by Ptr.
+static std::optional<ArraySubobjectInfo>
+getNonUniqueAPValueArraySubobjectLocation(const ASTContext &Ctx,
+                                          const Pointer &Ptr) {
+  if (std::optional<ArraySubobjectInfo> InitListInfo =
+          getArraySubobjectLocation(Ctx, Ptr))
+    return InitListInfo;
+
+  if (!Ptr.isZero() && Ptr.isBlockPointer() && Ptr.isArrayRoot() &&
+      isPotentiallyNonUniqueAPValueArray(Ptr)) {
+    const auto *ArrayType =
+        Ctx.getAsConstantArrayType(Ptr.getFieldDesc()->getType());
+    if (!ArrayType)
+      return std::nullopt;
+    return ArraySubobjectInfo{Ptr,
+                              ArraySubobjectLocation{0, CharUnits::Zero()}};
+  }
+
+  std::optional<Pointer> Array = getContainingArray(Ptr);
+  if (!Array || !isPotentiallyNonUniqueAPValueArray(*Array))
+    return std::nullopt;
+
+  const auto *ArrayType =
+      Ctx.getAsConstantArrayType(Array->getFieldDesc()->getType());
+  if (!ArrayType)
+    return std::nullopt;
+
+  APValue PtrValue = Ptr.toAPValue(Ctx);
+  APValue ArrayValue = Array->toAPValue(Ctx);
+  if (!PtrValue.isLValue() || !PtrValue.hasLValuePath() ||
+      !ArrayValue.isLValue() || !ArrayValue.hasLValuePath())
+    return std::nullopt;
+
+  ArrayRef<APValue::LValuePathEntry> Path = PtrValue.getLValuePath();
+  ArrayRef<APValue::LValuePathEntry> ArrayPath = ArrayValue.getLValuePath();
+  if (Path.size() <= ArrayPath.size())
+    return std::nullopt;
+  for (unsigned I = 0, N = ArrayPath.size(); I != N; ++I) {
+    if (Path[I] != ArrayPath[I])
+      return std::nullopt;
+  }
+  Path = Path.drop_front(ArrayPath.size());
+
+  uint64_t Index = Path.front().getAsArrayIndex();
+  bool IsValidOnePastEnd = Path.size() == 1;
+  std::optional<ArraySubobjectLocation> Loc = computeArraySubobjectLocation(
+      Ctx, ArrayType, Index,
+      PtrValue.getLValueOffset() - ArrayValue.getLValueOffset(),
+      IsValidOnePastEnd);
+  if (!Loc)
+    return std::nullopt;
+
+  return ArraySubobjectInfo{std::move(*Array), *Loc};
+}
+
+namespace {
+/// Pairs a string literal array with the element-relative location of a pointer
+/// into it and the literal used to materialize character APValues.
+struct StringArraySubobjectInfo {
+  Pointer Array;
+  ArraySubobjectLocation Loc;
+  const StringLiteral *Literal;
+};
+} // namespace
+
+/// Returns the string literal array and element-relative location designated by
+/// Ptr.
+static std::optional<StringArraySubobjectInfo>
+getStringArraySubobjectLocation(const ASTContext &Ctx, const Pointer &Ptr) {
+  if (!Ptr.pointsToStringLiteral())
+    return std::nullopt;
+
+  Pointer Array = Ptr.getDeclPtr();
+  const auto *ArrayType =
+      Ctx.getAsConstantArrayType(Array.getFieldDesc()->getType());
+  if (!ArrayType)
+    return std::nullopt;
+
+  APValue PtrValue = Ptr.toAPValue(Ctx);
+  if (!PtrValue.isLValue() || !PtrValue.hasLValuePath())
+    return std::nullopt;
+
+  ArrayRef<APValue::LValuePathEntry> Path = PtrValue.getLValuePath();
+  if (Path.empty())
+    return std::nullopt;
+
+  uint64_t Index = Path.front().getAsArrayIndex();
+  bool IsValidOnePastEnd = Path.size() == 1;
+  std::optional<ArraySubobjectLocation> Loc = computeArraySubobjectLocation(
+      Ctx, ArrayType, Index, PtrValue.getLValueOffset(), IsValidOnePastEnd);
+  if (!Loc)
+    return std::nullopt;
+
+  return StringArraySubobjectInfo{
+      std::move(Array), *Loc, cast<StringLiteral>(Ptr.getDeclDesc()->asExpr())};
+}
+
+/// Extracts one character from a string literal as an integer APValue payload.
+static APSInt extractStringLiteralCharacter(const ASTContext &Ctx,
+                                            const StringLiteral *Literal,
+                                            uint64_t Index) {
+  const ConstantArrayType *ArrayType =
+      Ctx.getAsConstantArrayType(Literal->getType());
+  assert(ArrayType && "string literal isn't an array");
+  QualType CharType = ArrayType->getElementType();
+  assert(CharType->isIntegerType() && "unexpected character type");
+  APSInt Value(Ctx.getTypeSize(CharType), CharType->isUnsignedIntegerType());
+  if (Index < Literal->getLength())
+    Value = Literal->getCodeUnit(Index);
+  return Value;
+}
+
+/// Compares two array views for a possible storage overlap after accounting
+/// for their pointer offsets.
+template <typename GetLHSElement, typename GetRHSElement>
+static bool arePotentiallyOverlappingArrays(
+    const ASTContext &Ctx, QualType LHSElementType,
+    ArraySubobjectLocation LHSLoc, int64_t LHSSize, GetLHSElement GetLHSElt,
+    QualType RHSElementType, ArraySubobjectLocation RHSLoc, int64_t RHSSize,
+    GetRHSElement GetRHSElt) {
+  if (LHSLoc.OffsetInElement != RHSLoc.OffsetInElement)
+    return false;
+
+  if (!Ctx.hasSameUnqualifiedType(LHSElementType, RHSElementType))
+    return false;
+
+  int64_t LHSOffset = LHSLoc.Index;
+  int64_t RHSOffset = RHSLoc.Index;
+  int64_t OverlapBegin = std::max(-LHSOffset, -RHSOffset);
+  int64_t OverlapEnd = std::min(LHSSize - LHSOffset, RHSSize - RHSOffset);
+  if (OverlapBegin >= OverlapEnd)
+    return false;
+
+  for (int64_t I = OverlapBegin; I != OverlapEnd; ++I) {
+    std::optional<APValue> LHSElt = GetLHSElt(I + LHSOffset);
+    std::optional<APValue> RHSElt = GetRHSElt(I + RHSOffset);
+    // Missing element data: be conservative and assume the arrays may share
+    // storage.
+    if (!LHSElt || !RHSElt)
+      return true;
+    if (!AreAPValuesPotentiallyMergeable(*LHSElt, *RHSElt, Ctx))
+      return false;
+  }
+
+  return true;
+}
+
+/// Returns true if a string literal and a potentially non-unique constant
+/// array could share storage at the designated addresses.
+static bool mayOverlapStringLiteralAndConstantArray(InterpState &S,
+                                                    const Pointer &StringPtr,
+                                                    const Pointer &ArrayPtr) {
+  const ASTContext &Ctx = S.getASTContext();
+  std::optional<StringArraySubobjectInfo> StringInfo =
+      getStringArraySubobjectLocation(Ctx, StringPtr);
+  std::optional<ArraySubobjectInfo> ArrayInfo =
+      getNonUniqueAPValueArraySubobjectLocation(Ctx, ArrayPtr);
+  if (!StringInfo || !ArrayInfo)
+    return false;
+
+  const auto *StringArrayType =
+      Ctx.getAsConstantArrayType(StringInfo->Array.getFieldDesc()->getType());
+  const auto *ArrayType =
+      Ctx.getAsConstantArrayType(ArrayInfo->Array.getFieldDesc()->getType());
+  if (!StringArrayType || !ArrayType)
+    return false;
+
+  return arePotentiallyOverlappingArrays(
+      Ctx, StringArrayType->getElementType(), StringInfo->Loc,
+      StringInfo->Array.getNumElems(),
+      [&](int64_t Index) -> std::optional<APValue> {
+        return APValue(
+            extractStringLiteralCharacter(Ctx, StringInfo->Literal, Index));
+      },
+      ArrayType->getElementType(), ArrayInfo->Loc,
+      ArrayInfo->Array.getNumElems(),
+      [&](int64_t Index) {
+        Pointer Elt = ArrayInfo->Array.atIndex(Index).narrow();
+        return Elt.toRValue(S.getContext(), ArrayType->getElementType());
+      });
+}
+
+/// Returns true if two APValue-backed potentially non-unique arrays could share
+/// storage at the designated addresses.
+static bool arePotentiallyOverlappingAPValueArrays(InterpState &S,
+                                                   const Pointer &LHS,
+                                                   const Pointer &RHS) {
+  const ASTContext &Ctx = S.getASTContext();
+  std::optional<ArraySubobjectInfo> LHSInfo =
+      getNonUniqueAPValueArraySubobjectLocation(Ctx, LHS);
+  std::optional<ArraySubobjectInfo> RHSInfo =
+      getNonUniqueAPValueArraySubobjectLocation(Ctx, RHS);
+  if (!LHSInfo || !RHSInfo)
+    return false;
+
+  const auto *LHSArrayType =
+      Ctx.getAsConstantArrayType(LHSInfo->Array.getFieldDesc()->getType());
+  const auto *RHSArrayType =
+      Ctx.getAsConstantArrayType(RHSInfo->Array.getFieldDesc()->getType());
+  if (!LHSArrayType || !RHSArrayType)
+    return false;
+
+  return arePotentiallyOverlappingArrays(
+      Ctx, LHSArrayType->getElementType(), LHSInfo->Loc,
+      LHSInfo->Array.getNumElems(),
+      [&](int64_t Index) {
+        Pointer Elt = LHSInfo->Array.atIndex(Index).narrow();
+        return Elt.toRValue(S.getContext(), LHSArrayType->getElementType());
+      },
+      RHSArrayType->getElementType(), RHSInfo->Loc,
+      RHSInfo->Array.getNumElems(),
+      [&](int64_t Index) {
+        Pointer Elt = RHSInfo->Array.atIndex(Index).narrow();
+        return Elt.toRValue(S.getContext(), RHSArrayType->getElementType());
+      });
+}
+
+/// Returns true if two pointers designate potentially non-unique objects whose
+/// overlapping elements could be merged into the same storage.
+bool arePotentiallyOverlappingNonUniqueObjects(InterpState &S,
+                                               const Pointer &LHS,
+                                               const Pointer &RHS) {
+  return arePotentiallyOverlappingAPValueArrays(S, LHS, RHS) ||
+         mayOverlapStringLiteralAndConstantArray(S, LHS, RHS) ||
+         mayOverlapStringLiteralAndConstantArray(S, RHS, LHS);
+}
+
 static void copyPrimitiveMemory(InterpState &S, const Pointer &Ptr,
                                 PrimType T) {
   if (T == PT_IntAPS) {

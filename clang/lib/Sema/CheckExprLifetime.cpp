@@ -285,17 +285,11 @@ static bool isContainerOfOwner(const RecordDecl *Container) {
          isGslOwnerType(TAs[0].getAsType());
 }
 
-// Returns true if the given Record is `std::initializer_list<pointer>`.
-static bool isStdInitializerListOfPointer(const RecordDecl *RD) {
-  if (const auto *CTSD =
-          dyn_cast_if_present<ClassTemplateSpecializationDecl>(RD)) {
-    const auto &TAs = CTSD->getTemplateArgs();
-    return lifetimes::isInStlNamespace(RD) && RD->getIdentifier() &&
-           RD->getName() == "initializer_list" && TAs.size() > 0 &&
-           TAs[0].getKind() == TemplateArgument::Type &&
-           lifetimes::isPointerLikeType(TAs[0].getAsType());
-  }
-  return false;
+// Returns true if the given type is `std::initializer_list<pointer>`.
+static bool isStdInitializerListOfPointer(QualType T, const ASTContext &Ctx) {
+  QualType ElementType;
+  return T.getNonReferenceType()->isStdInitializerListType(Ctx, &ElementType) &&
+         lifetimes::isPointerLikeType(ElementType);
 }
 
 // Returns true if the given constructor is a copy-like constructor, such as
@@ -351,7 +345,8 @@ shouldTrackFirstArgumentForConstructor(const CXXConstructExpr *Ctor) {
   // array. We perform analysis on it to determine if there are any dangling
   // temporaries in the backing array.
   // E.g. std::vector<string_view> abc = {string()};
-  if (isStdInitializerListOfPointer(RHSRD))
+  if (isStdInitializerListOfPointer(RHSArgType,
+                                    Ctor->getConstructor()->getASTContext()))
     return true;
 
   // RHS must be an owner.

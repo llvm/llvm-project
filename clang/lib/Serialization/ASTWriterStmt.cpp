@@ -2332,6 +2332,7 @@ void ASTStmtWriter::VisitFunctionParmPackExpr(FunctionParmPackExpr *E) {
 
 void ASTStmtWriter::VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *E) {
   VisitExpr(E);
+  Record.push_back(E->isBackingArrayForInitializerList());
   Record.push_back(static_cast<bool>(E->getLifetimeExtendedTemporaryDecl()));
   if (E->getLifetimeExtendedTemporaryDecl())
     Record.AddDeclRef(E->getLifetimeExtendedTemporaryDecl());

@@ -8706,6 +8706,7 @@ ExprResult InitializationSequence::Perform(Sema &S,
       MaterializeTemporaryExpr *MTE = S.CreateMaterializeTemporaryExpr(
           CurInit.get()->getType(), CurInit.get(),
           /*BoundToLvalueReference=*/false);
+      MTE->setBackingArrayForInitializerList();
 
       // Wrap it in a construction of a std::initializer_list<T>.
       CurInit = new (S.Context) CXXStdInitializerListExpr(Step->Type, MTE);

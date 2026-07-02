@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++98 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,cxx98
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++14 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11,since-cxx14
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11,since-cxx14
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx20
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++23 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx20,since-cxx23
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx20,since-cxx23,since-cxx26
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++98 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98,cxx98-20 %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++11 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,cxx98-20 %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++14 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx14,cxx98-20 %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx14,cxx98-20 %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx20,cxx98-20 %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++23 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx20,since-cxx23 %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx20,since-cxx23,since-cxx26 %s
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -19,22 +19,37 @@
 
 namespace std {
 #if __cplusplus >= 201103L
-using size_t = decltype(sizeof(0));
-template <typename T>
-struct initializer_list {
-  const T *p;
-  size_t n;
+  using size_t = decltype(sizeof(int));
 
-  #if __cplusplus >= 201402L
-  constexpr
-  #endif
-  initializer_list(const T *p, size_t n);
+  template <class E> class initializer_list {
+    const E *begin_;
+    size_t size_;
 
-  #if __cplusplus >= 201402L
-  constexpr
-  #endif
-  const T* begin() const { return p; };
-};
+  public:
+#if __cplusplus >= 201402L
+    constexpr
+#endif
+    initializer_list() : begin_(nullptr), size_(0) {}
+#if __cplusplus >= 201402L
+    constexpr
+#endif
+    initializer_list(const E *begin, size_t size)
+        : begin_(begin), size_(size) {}
+#if __cplusplus >= 201402L
+    constexpr
+#endif
+    const E *begin() const { return begin_; }
+#if __cplusplus >= 201402L
+    constexpr
+#endif
+    size_t size() const { return size_; }
+  };
+
+  struct string_view {
+    const char *begin_;
+    constexpr string_view(const char *begin) : begin_(begin) {}
+    constexpr const char *begin() const { return begin_; }
+  };
 #endif
 
 #if __cplusplus >= 202002L
@@ -193,7 +208,7 @@ static_assert(!__is_layout_compatible(StructWithAnonUnion, StructWithAnonUnion3)
 #endif
 } // namespace cwg2759
 
-namespace cwg2765 { // cwg2765: partial
+namespace cwg2765 { // cwg2765: 23
 static_assert(+"foo" == "foo", "");
 // expected-error@-1 {{static assertion expression is not an integral constant expression}}
 //   expected-note@-2 {{comparison of addresses of potentially overlapping literals has unspecified value}}
@@ -211,19 +226,107 @@ static_assert((const char*)"foo" != "oo", "");
 
 #if __cplusplus >= 201103L
 constexpr const char *f() { return "foo"; }
-constexpr bool b2 = f() == f(); 
+
+constexpr bool b2 = f() == f();
 // since-cxx11-error@-1 {{constexpr variable 'b2' must be initialized by a constant expression}}
 //   since-cxx11-note@-2 {{comparison of addresses of potentially overlapping literals has unspecified value}}
 constexpr const char *p = f();
-constexpr bool b3 = p == p; 
-#endif
+constexpr bool b3 = p == p;
+static_assert(b3, "");
+
+constexpr bool b4 = &"xfoo"[1] == &"foo\0y"[0];
+// since-cxx11-error@-1 {{constexpr variable 'b4' must be initialized by a constant expression}}
+//   since-cxx11-note@-2 {{comparison of addresses of potentially overlapping literals has unspecified value}}
+static_assert("foo" != &"bar"[0], "");
+static_assert((const char *)"foo" != "oo", "");
+
+template <class T>
+constexpr bool f10(T s, T t) {
+  return s.begin() == t.begin(); // #cwg2765-f10-compare
+}
+constexpr bool b10a = f10<std::string_view>("abc", "abc");
+// since-cxx11-error@-1 {{constexpr variable 'b10a' must be initialized by a constant expression}}
+//   since-cxx11-note@#cwg2765-f10-compare {{comparison of addresses of potentially overlapping literals has unspecified value}}
+//   since-cxx11-note@-3 {{in call to 'f10<std::string_view>({&"abc"[0]}, {&"abc"[0]})'}}
+constexpr bool b10b = f10<std::string_view>("abc", "def");
+static_assert(!b10b, "");
+
+constexpr const char *a11 = "abc";
+constexpr const char *b11 = "abc";
+constexpr bool f11() { return a11 == b11; } // #cwg2765-f11-compare
+// cxx98-20-error@-1 {{constexpr function never produces a constant expression}}
+//   cxx98-20-note@#cwg2765-f11-compare {{comparison of addresses of potentially overlapping literals has unspecified value}}
+static_assert(f11() || !f11(), "");
+// since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
+//   since-cxx11-note@#cwg2765-f11-compare {{comparison of addresses of potentially overlapping literals has unspecified value}}
+//   since-cxx11-note@-3 {{in call to 'f11()'}}
 
 #if __cplusplus >= 201402L
-constexpr std::initializer_list<int *> il1 = { (int *)nullptr };
-constexpr std::initializer_list<unsigned long> il2 = { 0 };
-constexpr bool b7 = il1.begin() == (void *)il2.begin();
-// FIXME-error@-1 {{constexpr variable 'b7' must be initialized by a constant expression}}
-//   FIXME-note@-2 {{address of a constexpr-unknown object cannot be used for comparison}}
+constexpr bool f(std::initializer_list<int> a, std::initializer_list<int> b) {
+  return a.begin() != b.begin(); // #cwg2765-init-list-compare
+}
+static_assert(f({1}, {1}), "");
+// since-cxx14-error@-1 {{static assertion expression is not an integral constant expression}}
+//   since-cxx14-note@#cwg2765-init-list-compare {{comparison of addresses of potentially non-unique objects has unspecified value}}
+//   since-cxx14-note@-3 {{in call to 'f({&{1}[0], 1}, {&{1}[0], 1})'}}
+
+constexpr bool f9(const int *p) {
+  std::initializer_list<int> il = {1, 2, 3};
+  return p ? (p == il.begin()) : f9(il.begin()); // #cwg2765-f9-compare
+}
+constexpr bool b9 = f9(nullptr);
+// since-cxx14-error@-1 {{constexpr variable 'b9' must be initialized by a constant expression}}
+//   since-cxx14-note@#cwg2765-f9-compare {{comparison of addresses of potentially non-unique objects has unspecified value}}
+//   since-cxx14-note@#cwg2765-f9-compare {{in call to 'f9(&{1, 2, 3}[0])'}}
+//   since-cxx14-note@-4 {{in call to 'f9(nullptr)'}}
+
+constexpr bool b10c = f10<std::initializer_list<int>>({1, 2, 3}, {1, 2, 3});
+// since-cxx14-error@-1 {{constexpr variable 'b10c' must be initialized by a constant expression}}
+//   since-cxx14-note@#cwg2765-f10-compare {{comparison of addresses of potentially non-unique objects has unspecified value}}
+//   since-cxx14-note@-3 {{in call to 'f10<std::initializer_list<int>>({&{1, 2, 3}[0], 3}, {&{1, 2, 3}[0], 3})'}}
+constexpr bool b10d = f10<std::initializer_list<int>>({1, 2, 3}, {4, 5, 6});
+static_assert(!b10d, "");
+
+constexpr bool ne(std::initializer_list<int> a,
+                  std::initializer_list<int> b) {
+  return a.begin() != b.begin() + 1; // #cwg2765-annex-c-compare
+}
+constexpr bool annex_c = ne({2, 3}, {1, 2, 3});
+// since-cxx14-error@-1 {{constexpr variable 'annex_c' must be initialized by a constant expression}}
+//   since-cxx14-note@#cwg2765-annex-c-compare {{comparison of addresses of potentially non-unique objects has unspecified value}}
+//   since-cxx14-note@-3 {{in call to 'ne({&{2, 3}[0], 2}, {&{1, 2, 3}[0], 3})'}}
+
+int a_order[10];
+constexpr int inc(int &i) { return (i += 1); }
+constexpr int twox(int &i) { return (i *= 2); }
+constexpr int f_order(int i) { return inc(i) + twox(i); }
+constexpr bool g_order() { return &a_order[f_order(1)] == &a_order[6]; }
+constexpr bool b_order = g_order();
+static_assert(b_order, "");
+
+// Aggregate carrying a std::initializer_list member: the backing array's
+// extending declaration is the enclosing aggregate, not the
+// initializer_list. The precise marker on MaterializeTemporaryExpr must
+// still recognise the backing array.
+struct WithIL { std::initializer_list<int> il; };
+constexpr WithIL agg_a{{1}}, agg_b{{1}};
+constexpr bool agg_same = agg_a.il.begin() == agg_b.il.begin();
+// since-cxx14-error@-1 {{constexpr variable 'agg_same' must be initialized by a constant expression}}
+//   since-cxx14-note@-2 {{comparison of addresses of potentially non-unique objects has unspecified value}}
+
+constexpr WithIL agg_c{{1}}, agg_d{{2}};
+constexpr bool agg_different = agg_c.il.begin() == agg_d.il.begin();
+static_assert(!agg_different, "");
+
+// Rvalue reference to array bound to a braced-init-list: the materialized
+// array is not a std::initializer_list backing array, so address
+// comparisons across two such temporaries are well-defined.
+constexpr bool rvref_arr_same(const int (&&a)[3], const int (&&b)[3]) {
+  return &a[0] == &b[0];
+}
+constexpr bool rvref_ok = rvref_arr_same({1, 2, 3}, {1, 2, 3});
+static_assert(!rvref_ok, "");
+#endif
 #endif
 } // namespace cwg2765
 

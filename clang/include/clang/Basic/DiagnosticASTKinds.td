@@ -99,6 +99,8 @@ def note_constexpr_pointer_constant_comparison : Note<
   "at runtime">;
 def note_constexpr_literal_comparison : Note<
   "comparison of addresses of potentially overlapping literals has unspecified value">;
+def note_constexpr_non_unique_object_comparison : Note<
+  "comparison of addresses of potentially non-unique objects has unspecified value">;
 def note_constexpr_literal_arith : Note<
   "arithmetic on addresses of potentially overlapping literals has unspecified value">;
 def note_constexpr_repeated_literal_eval : Note<

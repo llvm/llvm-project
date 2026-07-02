@@ -8577,6 +8577,8 @@ ASTNodeImporter::VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *E) {
   auto *ToMTE = new (Importer.getToContext()) MaterializeTemporaryExpr(
       ToType, ToTemporaryExpr, E->isBoundToLvalueReference(),
       ToMaterializedDecl);
+  ToMTE->setBackingArrayForInitializerList(
+      E->isBackingArrayForInitializerList());
 
   return ToMTE;
 }
