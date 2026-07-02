@@ -8,6 +8,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
+@skipIfWasm  # no unwinder support for tail-call frames
 class TestArtificialFrameThreadStepOut1(TestBase):
     # If your test case doesn't stress debug info, then
     # set this to true.  That way it won't be run once for
