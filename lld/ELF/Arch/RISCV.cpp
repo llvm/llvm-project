@@ -258,7 +258,7 @@ void RISCV::writePltHeader(uint8_t *buf) const {
   write32le(buf + 16, itype(ADDI, X_T0, auipcReg, lo12(offset)));
   write32le(buf + 20, itype(SRLI, X_T1, X_T1, ctx.arg.is64 ? 1 : 2));
   write32le(buf + 24, itype(load, X_T0, X_T0, ctx.arg.wordsize));
-  write32le(buf + 28, itype(JALR, lpad ? X_X0 : 0, workReg, 0));
+  write32le(buf + 28, itype(JALR, X_X0, workReg, 0));
 }
 
 void RISCV::writePlt(uint8_t *buf, const Symbol &sym,
@@ -288,7 +288,7 @@ void RISCV::writePlt(uint8_t *buf, const Symbol &sym,
             itype(ctx.arg.is64 ? LD : LW, rd, rd, lo12(offset)));
   write32le(buf + 8 + auipcOffset, itype(JALR, X_T1, rd, 0));
   if (!lpad)
-    write32le(buf + 12, itype(ADDI, 0, 0, 0));
+    write32le(buf + 12, itype(ADDI, X_X0, X_X0, 0));
 }
 
 RelType RISCV::getDynRel(RelType type) const {
