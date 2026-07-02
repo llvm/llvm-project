@@ -2203,18 +2203,20 @@ void AffineForOp::build(OpBuilder &builder, OperationState &result, int64_t lb,
                bodyBuilder);
 }
 
+LogicalResult AffineForOp::verify() {
+  auto *body = getBody();
+  if (body->getNumArguments() == 0 || !getInductionVar().getType().isIndex())
+    return emitOpError("expected body to have an index argument for the "
+                       "induction variable");
+
+  return success();
+}
+
 LogicalResult AffineForOp::verifyRegions() {
   // Step must be a strictly positive integer.
   if (getStepAsInt() <= 0)
     return emitOpError("expected step to be a positive integer, got ")
            << getStepAsInt();
-
-  // Check that the body defines as single block argument for the induction
-  // variable.
-  auto *body = getBody();
-  if (body->getNumArguments() == 0 || !body->getArgument(0).getType().isIndex())
-    return emitOpError("expected body to have a single index argument for the "
-                       "induction variable");
 
   // Verify that the bound operands are valid dimension/symbols.
   /// Lower bound.
