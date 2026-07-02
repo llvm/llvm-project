@@ -1784,12 +1784,7 @@ void computeCalleeSaveRegisterPairs(const AArch64FrameLowering &AFL,
 
     bool NeedsWinCFI = AFL.needsWinCFI(MF);
     int Scale = TRI->getSpillSize(*RPI.RC);
-    // A paired LDP/STP can only encode a signed 7-bit scaled offset ([-64,
-    // 63]). When the callee-save area is large (e.g. preserve_all spills 30+
-    // registers), the highest pairs fall outside that range. Only pair if the
-    // resulting offset is encodable; otherwise leave the register unpaired and
-    // let it be spilled with a single STR/LDR, which has a much wider 12-bit
-    // immediate.
+    // True when the pair's ldp/stp offset fits the signed 7-bit scaled imm.
     auto PairFitsImmRange = [&]() {
       int PairOffset =
           IsWindows ? ByteOffset : ByteOffset + StackFillDir * 2 * Scale;
@@ -2650,11 +2645,9 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
     bool IsZPR = AArch64::ZPRRegClass.contains(Reg);
     bool IsPPR = !IsZPR && AArch64::PPRRegClass.contains(Reg);
 
-    // A register and its super-register can both appear in SavedRegs (e.g. for
-    // preserve_all, AAPCS contributes D8-D15 while the extended convention
-    // contributes the enclosing Q8-Q31). Only the widest register is actually
-    // spilled, skip such sub-registers here to avoid double-counting the
-    // overlap.
+    // A register and its super-register can both appear in SavedRegs.
+    // Only the widest register is actually spilled, so skip such sub-registers
+    // here to avoid double-counting the overlap.
     bool SavedSuper = false;
     for (MCPhysReg SuperReg : TRI->superregs(MCRegister(Reg)))
       if (SavedRegs.test(SuperReg)) {
