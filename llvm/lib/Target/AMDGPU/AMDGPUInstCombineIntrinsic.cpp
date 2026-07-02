@@ -404,17 +404,21 @@ bool GCNTTIImpl::canSimplifyLegacyMulToMul(const Instruction &I,
   // The legacy behaviour is that multiplying +/-0.0 by anything, even NaN or
   // infinity, gives +0.0. If we can prove we don't have one of the special
   // cases then we can use a normal multiply instead.
-  // TODO: Create and use isKnownFiniteNonZero instead of just matching
-  // constants here.
-  if (match(Op0, PatternMatch::m_FiniteNonZero()) ||
-      match(Op1, PatternMatch::m_FiniteNonZero())) {
-    // One operand is not zero or infinity or NaN.
-    return true;
-  }
-
   SimplifyQuery SQ = IC.getSimplifyQuery().getWithInstruction(&I);
-  if (isKnownNeverInfOrNaN(Op0, SQ) && isKnownNeverInfOrNaN(Op1, SQ)) {
-    // Neither operand is infinity or NaN.
+  KnownFPClass Known0 = computeKnownFPClass(Op0, fcZero | fcInf | fcNan, SQ);
+  KnownFPClass Known1 = computeKnownFPClass(Op1, fcZero | fcInf | fcNan, SQ);
+  if (I.hasNoSignedZeros()) {
+    if ((Known0.isKnownNeverZero() && Known0.isKnownNeverInfOrNaN()) ||
+        (Known1.isKnownNeverZero() && Known1.isKnownNeverInfOrNaN())) {
+      // One operand is not zero or infinity or NaN.
+      return true;
+    }
+    if (Known0.isKnownNeverInfOrNaN() && Known1.isKnownNeverInfOrNaN()) {
+      // Neither operand is infinity or NaN.
+      return true;
+    }
+  } else if (Known0.isKnownNeverZero() && Known1.isKnownNeverZero()) {
+    // Without nsz, neither operand is zero.
     return true;
   }
   return false;
