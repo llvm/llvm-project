@@ -63,9 +63,9 @@ static cl::opt<unsigned> MinFunctionSize(
     cl::desc("Don't specialize functions that have less than this number of "
              "instructions"));
 
-static cl::opt<unsigned> MaxCodeSizeGrowth(
-    "funcspec-max-codesize-growth", cl::init(3), cl::Hidden, cl::desc(
-    "Maximum codesize growth allowed per function"));
+static cl::opt<unsigned>
+    MaxCodeSizeGrowth("funcspec-max-codesize-growth", cl::init(4), cl::Hidden,
+                      cl::desc("Maximum codesize growth allowed per function"));
 
 static cl::opt<unsigned> MinCodeSizeSavings(
     "funcspec-min-codesize-savings", cl::init(20), cl::Hidden,
