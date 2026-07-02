@@ -496,6 +496,22 @@ std::vector<FileCoverageSummary> CoverageReport::prepareFileReports(
   }
   Pool.wait();
 
+  // Subtract excluded lines (from inline markers like LCOV_EXCL_LINE) from
+  // each file's line coverage totals. The ExcludedLines map is populated by
+  // the caller scanning source files before invoking this function.
+  for (unsigned I = 0; I < Files.size(); ++I) {
+    const auto *Excluded = Options.getExcludedLinesForFile(Files[I]);
+    if (!Excluded)
+      continue;
+    auto FileCoverage = Coverage.getCoverageForFile(Files[I]);
+    for (const auto &LCS : getLineCoverageStats(FileCoverage)) {
+      if (!LCS.isMapped())
+        continue;
+      if (Excluded->count(LCS.getLine()))
+        FileReports[I].LineCoverage.subtractLine(LCS.getExecutionCount() > 0);
+    }
+  }
+
   for (const auto &FileReport : FileReports)
     Totals += FileReport;
 

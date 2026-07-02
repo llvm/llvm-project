@@ -10,7 +10,12 @@
 #define LLVM_COV_COVERAGEVIEWOPTIONS_H
 
 #include "RenderingSupport.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/LineIterator.h"
+#include "llvm/Support/Regex.h"
+#include <memory>
 #include <vector>
 
 namespace llvm {
@@ -60,6 +65,59 @@ struct CoverageViewOptions {
   std::string CompilationDirectory;
   float HighCovWatermark;
   float LowCovWatermark;
+
+  /// Per-file sets of line numbers excluded from coverage via inline markers.
+  /// Populated during the pre-scan phase (before multi-threaded reporting).
+  StringMap<DenseSet<unsigned>> ExcludedLines;
+
+  /// Regexes for inline exclusion markers.
+  std::shared_ptr<Regex> ExcludeLineRE;
+  std::shared_ptr<Regex> ExcludeRegionStartRE;
+  std::shared_ptr<Regex> ExcludeRegionStopRE;
+
+  /// Get excluded lines for a file, or nullptr if none.
+  const DenseSet<unsigned> *getExcludedLinesForFile(StringRef Filename) const {
+    auto It = ExcludedLines.find(Filename);
+    if (It == ExcludedLines.end())
+      return nullptr;
+    return &It->second;
+  }
+
+  /// Scan a source buffer for exclusion markers and populate ExcludedLines.
+  /// Must be called before multi-threaded reporting (prepareFileReports).
+  void scanForExclusionMarkers(StringRef Filename, const MemoryBuffer &Buffer) {
+    if (!ExcludeLineRE && !ExcludeRegionStartRE)
+      return;
+
+    DenseSet<unsigned> Excluded;
+    bool InExcludedRegion = false;
+    unsigned LineNo = 0;
+
+    for (line_iterator LI(Buffer, /*SkipBlanks=*/false); !LI.is_at_eof();
+         ++LI) {
+      ++LineNo;
+      StringRef Line = *LI;
+
+      if (InExcludedRegion) {
+        Excluded.insert(LineNo);
+        if (ExcludeRegionStopRE && ExcludeRegionStopRE->match(Line))
+          InExcludedRegion = false;
+        continue;
+      }
+
+      if (ExcludeRegionStartRE && ExcludeRegionStartRE->match(Line)) {
+        InExcludedRegion = true;
+        Excluded.insert(LineNo);
+        continue;
+      }
+
+      if (ExcludeLineRE && ExcludeLineRE->match(Line))
+        Excluded.insert(LineNo);
+    }
+
+    if (!Excluded.empty())
+      ExcludedLines[Filename] = std::move(Excluded);
+  }
 
   /// Change the output's stream color if the colors are enabled.
   ColoredRawOstream colored_ostream(raw_ostream &OS,
