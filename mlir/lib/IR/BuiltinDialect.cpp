@@ -201,6 +201,11 @@ UnrealizedConversionCastOp::fold(FoldAdaptor adaptor,
   ResultRange results = getOutputs();
 
   if (operands.getType() == results.getType()) {
+    // Skip if any operand is this op's own result (self-referential cycle).
+    if (llvm::any_of(operands, [this](Value v) {
+          return v.getDefiningOp() == getOperation();
+        }))
+      return failure();
     foldResults.append(operands.begin(), operands.end());
     return success();
   }
