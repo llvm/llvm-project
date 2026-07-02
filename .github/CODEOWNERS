@@ -122,6 +122,9 @@
 /mlir/lib/Dialect/Vector/Transforms/VectorEmulateNarrowType.cpp @banach-space @dcaballe @MaheshRavishankar @nicolasvasilache
 /mlir/**/*EmulateNarrowType* @dcaballe
 
+# Polygeist dialect in MLIR
+/mlir/**/*Polygeist* @wsmoses @ftynse @ivanradanov @chelini
+
 # Presburger library in MLIR
 /mlir/**/*Presburger* @Groverkss @Superty
 
