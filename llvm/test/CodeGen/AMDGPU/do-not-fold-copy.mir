@@ -49,16 +49,16 @@ body:             |
 
   bb.2:
     SI_END_CF %4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-    %9:vgpr_32 = COPY %7
-    %10:sreg_64_xexec = IMPLICIT_DEF
-    %11:vgpr_32 = V_SET_INACTIVE_B32 0, %9, 0, 0, killed %10, implicit $exec
+    %8:vgpr_32 = COPY %7
+    %9:sreg_64_xexec = IMPLICIT_DEF
+    %10:vgpr_32 = V_SET_INACTIVE_B32 0, %8, 0, 0, killed %9, implicit $exec
     S_ENDPGM 0
 ...
 
 # An SGPR->VGPR copy with no implicit $exec read, inserted in a divergent loop
-# to latch a per-lane value, is read after the loop. SIFoldOperands currently
-# folds the scalar source into that exit use, dropping the per-lane snapshot;
-# this is wrong because the value escapes the loop. FIXME: should not fold.
+# to latch a per-lane value, is read after the loop. SIFoldOperands must not
+# fold the scalar source into that exit use: it escapes the loop, so the fold
+# would drop the per-lane snapshot.
 ---
 name:            do_not_fold_sgpr_to_vgpr_copy_escaping_loop
 tracksRegLiveness: true
@@ -79,6 +79,7 @@ body:             |
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:sreg_64 = PHI [[S_MOV_B64_]], %bb.0, %5, %bb.1
   ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:sreg_32 = PHI [[S_MOV_B32_]], %bb.0, %7, %bb.1
   ; CHECK-NEXT:   [[S_XOR_B32_:%[0-9]+]]:sreg_32 = S_XOR_B32 [[COPY]], [[PHI1]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[S_XOR_B32_]]
   ; CHECK-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[PHI1]], 1, implicit-def dead $scc
   ; CHECK-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 [[COPY1]], [[S_ADD_I32_]], implicit $exec
   ; CHECK-NEXT:   [[SI_IF_BREAK:%[0-9]+]]:sreg_64 = SI_IF_BREAK [[V_CMP_EQ_U32_e64_]], [[PHI]], implicit-def dead $scc
@@ -87,7 +88,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   SI_END_CF [[SI_IF_BREAK]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-  ; CHECK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[S_XOR_B32_]], 1, 0, implicit $exec
+  ; CHECK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY2]], 1, 0, implicit $exec
   ; CHECK-NEXT:   $vgpr0 = COPY [[V_ADD_U32_e64_]]
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
   bb.0:
@@ -119,9 +120,8 @@ body:             |
     SI_RETURN implicit $vgpr0
 ...
 
-# Same latch, but the loop-exit use is itself a COPY. The scalar source is
-# currently propagated through that exit copy too (separate fold path).
-# FIXME: should not fold.
+# Same latch, but the loop-exit use is itself a COPY. The scalar source must
+# not be propagated through that exit copy either (separate fold path).
 ---
 name:            do_not_fold_sgpr_to_vgpr_copy_escaping_loop_via_copy_use
 tracksRegLiveness: true
@@ -142,6 +142,7 @@ body:             |
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:sreg_64 = PHI [[S_MOV_B64_]], %bb.0, %5, %bb.1
   ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:sreg_32 = PHI [[S_MOV_B32_]], %bb.0, %7, %bb.1
   ; CHECK-NEXT:   [[S_XOR_B32_:%[0-9]+]]:sreg_32 = S_XOR_B32 [[COPY]], [[PHI1]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[S_XOR_B32_]]
   ; CHECK-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[PHI1]], 1, implicit-def dead $scc
   ; CHECK-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 [[COPY1]], [[S_ADD_I32_]], implicit $exec
   ; CHECK-NEXT:   [[SI_IF_BREAK:%[0-9]+]]:sreg_64 = SI_IF_BREAK [[V_CMP_EQ_U32_e64_]], [[PHI]], implicit-def dead $scc
@@ -150,7 +151,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   SI_END_CF [[SI_IF_BREAK]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-  ; CHECK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[S_XOR_B32_]], 1, 0, implicit $exec
+  ; CHECK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY2]], 1, 0, implicit $exec
   ; CHECK-NEXT:   $vgpr0 = COPY [[V_ADD_U32_e64_]]
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
   bb.0:
