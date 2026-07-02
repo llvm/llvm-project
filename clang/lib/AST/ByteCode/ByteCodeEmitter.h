@@ -82,6 +82,14 @@ protected:
   llvm::SmallVector<SmallVector<Local, 8>, 2> Descriptors;
   std::optional<SourceInfo> LocOverride = std::nullopt;
 
+  unsigned currentCodeSize() const { return Code.size(); }
+
+  void registerExceptionHandler(unsigned From, unsigned To, unsigned Target,
+                                UnsignedOrNone DeclOffset, const Type *T) {
+    ExceptionTable.push_back(
+        ExceptionTableEntry{From, To, Target, DeclOffset, T});
+  }
+
 private:
   /// Current compilation context.
   Context &Ctx;
@@ -97,6 +105,7 @@ private:
   llvm::DenseMap<LabelTy, llvm::SmallVector<unsigned, 5>> LabelRelocs;
   /// Program code.
   llvm::SmallVector<std::byte> Code;
+  llvm::SmallVector<ExceptionTableEntry> ExceptionTable;
   /// Opcode to expression mapping.
   SourceMap SrcMap;
 

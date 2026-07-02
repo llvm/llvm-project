@@ -17,6 +17,7 @@
 #include <climits>
 #include <cstddef>
 #include <cstdint>
+#include <variant>
 
 namespace clang {
 namespace interp {
@@ -48,6 +49,14 @@ enum PrimType : uint8_t {
   PT_Ptr = 13,
   PT_MemberPtr = 14,
 };
+
+// Alias for using any one of our primitive types.
+using AnyPrimType =
+    std::variant<Char<true>, Char<false>, Integral<16, true>,
+                 Integral<16, false>, Integral<32, true>, Integral<32, false>,
+                 Integral<64, true>, Integral<64, false>, IntegralAP<true>,
+                 IntegralAP<false>, Boolean, FixedPoint, Floating, Pointer,
+                 MemberPointer>;
 
 constexpr bool isIntegerOrBoolType(PrimType T) { return T <= PT_Bool; }
 constexpr bool isIntegerType(PrimType T) { return T <= PT_IntAPS; }

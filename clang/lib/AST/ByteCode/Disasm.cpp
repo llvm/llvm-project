@@ -165,6 +165,14 @@ LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS,
   OS << "rvo:        " << hasRVO() << "\n";
   OS << "this arg:   " << hasThisPointer() << "\n";
 
+  // Print exception table.
+  if (!ExceptionTable.empty()) {
+    for (auto &EE : ExceptionTable) {
+      OS << EE.CodeStart << ".." << EE.CodeEnd << " -> " << EE.Target << " ("
+         << EE.CatchType << ")\n";
+    }
+  }
+
   struct OpText {
     size_t Addr;
     std::string Op;

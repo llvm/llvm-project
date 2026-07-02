@@ -33,6 +33,9 @@ Context::Context(ASTContext &Ctx) : Ctx(Ctx), P(new Program(*this)) {
   this->LongLongWidth = Ctx.getTargetInfo().getLongLongWidth();
   assert(Ctx.getTargetInfo().getCharWidth() == 8 &&
          "We're assuming 8 bit chars");
+
+  this->ExceptionsEnabled =
+      Ctx.getLangOpts().CPlusPlus26 && Ctx.getLangOpts().CXXExceptions;
 }
 
 Context::~Context() = default;

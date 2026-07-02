@@ -462,6 +462,9 @@ private:
 
   bool refersToUnion(const Expr *E);
 
+  bool emitFunctionReturn(const FunctionDecl *FD, OptPrimType ReturnType,
+                          bool CanThrow = false);
+
 protected:
   /// Variable to storage mapping.
   llvm::DenseMap<const ValueDecl *, Scope::Local> Locals;

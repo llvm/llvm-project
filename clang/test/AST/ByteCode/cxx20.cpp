@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -verify=both,expected -fcxx-exceptions %s -DNEW_INTERP -fexperimental-new-constant-interpreter
-// RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -verify=both,ref      -fcxx-exceptions %s
+// RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -verify=both,expected %s -DNEW_INTERP -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -verify=both,ref      %s
 
 
 int x;
@@ -673,7 +673,7 @@ namespace ConstexprArrayInitLoopExprDestructors
   struct Highlander {
       int *p = 0;
       constexpr Highlander() {}
-      constexpr void set(int *p) { this->p = p; ++*p; if (*p != 1) throw "there can be only one"; }
+      constexpr void set(int *p) { this->p = p; ++*p; if (*p != 1) __builtin_abort(); }
       constexpr ~Highlander() { --*p; }
   };
 
@@ -776,7 +776,7 @@ namespace FailingDestructor {
 
     constexpr ~D() {
       if (!can_destroy)
-        throw "oh no";
+        __builtin_abort();
     }
   };
   template<D d>
@@ -1062,7 +1062,7 @@ namespace OnePastEndDtor {
 namespace Virtual {
   struct NonZeroOffset { int padding = 123; };
 
-  constexpr void assert(bool b) { if (!b) throw 0; }
+  constexpr void assert(bool b) { if (!b) __builtin_abort(); }
 
   // Ensure that we pick the right final overrider during construction.
   struct A {
@@ -1191,9 +1191,8 @@ namespace DiscardedTrivialCXXConstructExpr {
     int x;
   };
 
-  constexpr int foo(int x) { // ref-error {{never produces a constant expression}}
-    throw S(3); // both-note {{not valid in a constant expression}} \
-                // ref-note {{not valid in a constant expression}}
+  constexpr int foo(int x) { // both-error {{never produces a constant expression}}
+    __builtin_abort(); // both-note 2{{not valid in a constant expression}}
     return 1;
   }
 

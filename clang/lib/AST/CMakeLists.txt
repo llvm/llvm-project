@@ -75,6 +75,7 @@ add_clang_library(clangAST
   ByteCode/Descriptor.cpp
   ByteCode/Disasm.cpp
   ByteCode/EvalEmitter.cpp
+  ByteCode/Exceptions.cpp
   ByteCode/Function.cpp
   ByteCode/InterpBuiltin.cpp
   ByteCode/InterpBuiltinBitCast.cpp

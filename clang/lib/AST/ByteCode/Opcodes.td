@@ -142,6 +142,7 @@ class Opcode {
   string Name = "";
   bit CanReturn = 0;
   bit ChangesPC = 0;
+  bit BothPCs = 0;
   bit HasCustomLink = 0;
   bit HasCustomEval = 0;
   bit HasGroup = 0;
@@ -227,22 +228,60 @@ def RetValue : Opcode {
 def NoRet : Opcode {}
 
 
-def Call : Opcode {
-  let Args = [ArgFunction, ArgUint32];
+/// Exceptions
+def AfterRet : Opcode {
+  let CanReturn = 1;
 }
 
+def Throw : Opcode {
+  let ChangesPC = 1;
+}
+def ReThrow : Opcode {
+  let ChangesPC = 1;
+}
+def SaveException : SuccessOpcode {
+  let Types = [AllTypeClass];
+  let Args = [ArgTypePtr, ArgBool];
+  let HasGroup = 1;
+}
+
+def GetExceptionValue : SuccessOpcode {
+  let Types = [AllTypeClass];
+  let HasGroup = 1;
+}
+def GetPtrExceptionValue : SuccessOpcode;
+
+def AllocException : SuccessOpcode {
+  let Args = [ArgDesc];
+}
+
+def ThrowTrap : SuccessOpcode;
+
+
+/// Calls
+def Call : Opcode {
+  let Args = [ArgFunction, ArgUint32];
+  let ChangesPC = 1;
+  let BothPCs = 1;
+}
 def CallVirt : Opcode {
   let Args = [ArgFunction, ArgUint32];
+  let BothPCs = 1;
+  let ChangesPC = 1;
 }
 
 def CallBI : Opcode { let Args = [ArgCallExpr, ArgUint32]; }
 
 def CallPtr : Opcode {
   let Args = [ArgUint32, ArgCallExpr];
+  let ChangesPC = 1;
+  let BothPCs = 1;
 }
 
 def CallVar : Opcode {
   let Args = [ArgFunction, ArgUint32];
+  let BothPCs = 1;
+  let ChangesPC = 1;
 }
 
 def OffsetOf : Opcode {

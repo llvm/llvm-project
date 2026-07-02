@@ -19,9 +19,11 @@
 #include "Function.h"
 #include "InterpFrame.h"
 #include "InterpStack.h"
+#include "Pointer.h"
 #include "State.h"
 
 namespace clang {
+class CXXThrowExpr;
 namespace interp {
 class Context;
 class SourceMapper;
@@ -37,6 +39,18 @@ struct StdAllocatorCaller {
 enum class EvaluationKind : uint8_t {
   None,
   Dtor, /// We're checking for constant destruction of a global variable.
+};
+
+struct ThrowValue {
+  const Type *Ty;
+  const CXXThrowExpr *ThrowSite;
+  // Pointer Ptr;
+  PtrView Ptr;
+  OptPrimType T;
+  bool Caught;
+  explicit ThrowValue(const Type *Ty, const CXXThrowExpr *ThrowSite,
+                      Pointer Ptr, OptPrimType T, bool Caught = false)
+      : Ty(Ty), ThrowSite(ThrowSite), Ptr(Ptr.view()), T(T), Caught(Caught) {}
 };
 
 /// Interpreter context.
@@ -177,6 +191,7 @@ private:
   mutable std::optional<llvm::BumpPtrAllocator> Allocator;
 
 public:
+  size_t ThrowTrapStackSize = 0;
   /// Reference to the module containing all bytecode.
   Program &P;
   /// Temporary stack.
@@ -200,6 +215,7 @@ public:
   const unsigned EvalID;
 
   EvaluationKind EvalKind = EvaluationKind::None;
+  std::unique_ptr<ThrowValue> ThrownValue;
 
   /// Things needed to do speculative execution.
   SmallVectorImpl<PartialDiagnosticAt> *PrevDiags = nullptr;
@@ -238,6 +254,8 @@ private:
   InterpState &Ctx;
   std::optional<bool> OldCC;
 };
+
+// static_assert(sizeof(InterpState) == 1);
 
 } // namespace interp
 } // namespace clang

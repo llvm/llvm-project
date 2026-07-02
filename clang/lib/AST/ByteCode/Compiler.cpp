@@ -37,6 +37,17 @@ static std::optional<bool> getBoolValue(const Expr *E) {
   return std::nullopt;
 }
 
+[[maybe_unused]] static bool blockEndsInReturn(const Stmt *S) {
+  if (isa<ReturnStmt>(S))
+    return true;
+
+  if (const auto *CS = dyn_cast<CompoundStmt>(S); CS && !CS->body_empty()) {
+    return isa<ReturnStmt>(CS->body_back());
+  }
+
+  return false;
+}
+
 /// Scope used to handle temporaries in toplevel variable declarations.
 template <class Emitter> class DeclScope final : public LocalScope<Emitter> {
 public:
@@ -3471,10 +3482,135 @@ bool Compiler<Emitter>::VisitPredefinedExpr(const PredefinedExpr *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitCXXThrowExpr(const CXXThrowExpr *E) {
-  if (E->getSubExpr() && !this->discard(E->getSubExpr()))
+  const Expr *SubExpr = E->getSubExpr();
+  if (!Ctx.ExceptionsEnabled) {
+    if (SubExpr && !this->discard(SubExpr))
+      return false;
+    return this->emitInvalid(E);
+  }
+
+  if (!SubExpr)
+    return this->emitReThrow(E);
+
+  QualType ExceptionType = SubExpr->getType();
+  OptPrimType ExceptionT = classify(SubExpr);
+
+  const Descriptor *Desc;
+  if (ExceptionT)
+    Desc = P.createDescriptor(SubExpr, *ExceptionT);
+  else
+    Desc = P.createDescriptor(SubExpr, ExceptionType.getTypePtr(), std::nullopt,
+                              /*IsConst=*/false);
+
+  if (!this->emitAllocException(Desc, E))
     return false;
 
-  return this->emitInvalid(E);
+  if (ExceptionT) {
+    if (!this->visit(SubExpr))
+      return false;
+    if (!this->emitInit(*ExceptionT, E))
+      return false;
+  } else {
+    if (!this->visitInitializer(SubExpr))
+      return false;
+  }
+
+  OptPrimType T = classify(E->getSubExpr()->getType());
+  if (!this->emitSaveException(T.value_or(PT_Ptr), ExceptionType.getTypePtr(),
+                               (bool)T, E))
+    return false;
+
+  this->VarScope->destroyLocals();
+
+  return this->emitThrow(E);
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::visitCXXTryStmt(const CXXTryStmt *S) {
+  if (!Ctx.ExceptionsEnabled) {
+    // Ignore all handlers.
+    return this->visitStmt(S->getTryBlock());
+  }
+
+  unsigned NumHandlers = S->getNumHandlers();
+
+  // When an exception is thrown in the middle of a try{} block, we use this
+  // throw trap to pop all values from the stack that have been added during
+  // the try block before the throw.
+  if (!this->emitThrowTrap(S))
+    return false;
+
+  // For the try block, we record the bytecode offset before and
+  // after it. When an exception is thrown, we check if the offset
+  // at that point is between the start/end of the appropriate catch
+  // handler for this try block. If we find such a handler, we jump to it.
+  unsigned TryBlockStart = this->currentCodeSize();
+  {
+    const auto *TryBlock = cast<CompoundStmt>(S->getTryBlock());
+    if (!this->visitStmt(TryBlock))
+      return false;
+  }
+  unsigned TryBlockEnd = this->currentCodeSize();
+
+  // Jump after handlers if nothing was thrown.
+  LabelTy EndLabel = this->getLabel();
+  this->jump(EndLabel, S);
+
+  // Register and emit all handlers.
+  for (unsigned I = 0; I != NumHandlers; ++I) {
+    const CXXCatchStmt *Handler = S->getHandler(I);
+    const Stmt *HandlerBlock = Handler->getHandlerBlock();
+    const VarDecl *ExceptionDecl = Handler->getExceptionDecl();
+    QualType CatchType = Handler->getCaughtType();
+    UnsignedOrNone ExceptionDeclOffset = std::nullopt;
+
+    unsigned HandlerOffset = this->currentCodeSize();
+    if (ExceptionDecl) {
+      if (OptPrimType T = classify(CatchType)) {
+        unsigned LocalOffset = allocateLocalPrimitive(ExceptionDecl, *T,
+                                                      /*IsConst=*/true);
+        if (CatchType->isReferenceType()) {
+          if (!this->emitGetPtrExceptionValue(S))
+            return false;
+        } else {
+          if (!this->emitGetExceptionValue(*T, S))
+            return false;
+        }
+        if (!this->emitSetLocal(*T, LocalOffset, S))
+          return false;
+      } else {
+        UnsignedOrNone LocalOffset = allocateLocal(ExceptionDecl, CatchType);
+        if (!LocalOffset)
+          return false;
+
+        if (!this->emitGetPtrLocal(*LocalOffset, Handler))
+          return false;
+        if (!this->emitGetPtrExceptionValue(Handler))
+          return false;
+        if (!this->emitMemcpy(Handler))
+          return false;
+        if (!this->emitPopPtr(Handler))
+          return false;
+      }
+    } else {
+      // This is a catch-all handler.
+    }
+    const Type *CatchTypePtr = CatchType.getTypePtrOrNull();
+
+    this->registerExceptionHandler(TryBlockStart, TryBlockEnd, HandlerOffset,
+                                   ExceptionDeclOffset, CatchTypePtr);
+    if (!this->visitStmt(HandlerBlock))
+      return false;
+
+    if (blockEndsInReturn(HandlerBlock))
+      continue;
+    this->jump(EndLabel, S);
+  }
+
+  this->fallthrough(EndLabel);
+  this->emitLabel(EndLabel);
+
+  return true;
 }
 
 template <class Emitter>
@@ -6878,12 +7014,6 @@ bool Compiler<Emitter>::visitAttributedStmt(const AttributedStmt *S) {
 }
 
 template <class Emitter>
-bool Compiler<Emitter>::visitCXXTryStmt(const CXXTryStmt *S) {
-  // Ignore all handlers.
-  return this->visitStmt(S->getTryBlock());
-}
-
-template <class Emitter>
 bool Compiler<Emitter>::emitLambdaStaticInvokerBody(const CXXMethodDecl *MD) {
   assert(MD->isLambdaStaticInvoker());
   assert(MD->hasBody());
@@ -6943,11 +7073,9 @@ bool Compiler<Emitter>::emitLambdaStaticInvokerBody(const CXXMethodDecl *MD) {
     return false;
 
   this->emitCleanup();
-  if (ReturnType)
-    return this->emitRet(*ReturnType, MD);
 
-  // Nothing to do, since we emitted the RVO pointer above.
-  return this->emitRetVoid(MD);
+  bool CanThrow = MD->getType()->getAs<FunctionProtoType>()->canThrow();
+  return this->emitFunctionReturn(MD, ReturnType, CanThrow);
 }
 
 template <class Emitter>
@@ -7153,11 +7281,21 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
         return false;
     }
 
-    if (!visitStmt(Body))
-      return false;
+    if (isa<CompoundStmt>(Body)) {
+      if (!visitStmt(Body))
+        return false;
+    } else {
+      // direct try {} body.
+      LocalScope<Emitter> Scope(this);
+      if (!visitStmt(Body))
+        return false;
+      if (!Scope.destroyLocals())
+        return false;
+    }
   }
 
-  return this->emitRetVoid(SourceInfo{});
+  bool CanThrow = Ctor->getType()->getAs<FunctionProtoType>()->canThrow();
+  return this->emitFunctionReturn(Ctor, ReturnType, CanThrow);
 }
 
 template <class Emitter>
@@ -7207,7 +7345,11 @@ bool Compiler<Emitter>::compileDestructor(const CXXDestructorDecl *Dtor) {
     return false;
 
   // FIXME: Virtual bases.
-  return this->emitPopPtr(Dtor) && this->emitRetVoid(Dtor);
+  if (!this->emitPopPtr(Dtor))
+    return false;
+
+  bool CanThrow = Dtor->getType()->getAs<FunctionProtoType>()->canThrow();
+  return this->emitFunctionReturn(Dtor, ReturnType, CanThrow);
 }
 
 template <class Emitter>
@@ -7250,14 +7392,32 @@ bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
   }
 
   // Regular functions.
-  if (const auto *Body = F->getBody())
-    if (!visitStmt(Body))
-      return false;
+  if (const auto *Body = F->getBody()) {
+    if (isa<CompoundStmt>(Body)) {
+      if (!visitStmt(Body))
+        return false;
+    } else {
+      // direct try {} body.
+      LocalScope<Emitter> Scope(this);
+      if (!visitStmt(Body))
+        return false;
+      if (!Scope.destroyLocals())
+        return false;
+    }
+  }
 
   // Emit a guard return to protect against a code path missing one.
-  if (F->getReturnType()->isVoidType())
-    return this->emitRetVoid(SourceInfo{});
-  return this->emitNoRet(SourceInfo{});
+  if (F->getReturnType()->isVoidType()) {
+    if (!this->emitRetVoid(SourceInfo{}))
+      return false;
+  } else if (!this->emitNoRet(SourceInfo{})) {
+    return false;
+  }
+
+  bool CanThrow = F->getType()->getAs<FunctionProtoType>()->canThrow();
+  if (Ctx.ExceptionsEnabled && CanThrow)
+    return this->emitAfterRet(SourceInfo{});
+  return true;
 }
 
 static uint32_t getBitWidth(const Expr *E) {
@@ -8382,6 +8542,24 @@ bool Compiler<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
     return this->emitPop(*ToT, E);
 
   return true;
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::emitFunctionReturn(const FunctionDecl *FD,
+                                           OptPrimType ReturnType,
+                                           bool CanThrow) {
+  bool NeedsAfterRet = Ctx.ExceptionsEnabled && CanThrow;
+
+  if (!NeedsAfterRet) {
+    if (ReturnType)
+      return this->emitRet(*ReturnType, FD);
+
+    return this->emitRetVoid(FD);
+  }
+
+  if (ReturnType)
+    return this->emitRet(*ReturnType, FD) && this->emitAfterRet(FD);
+  return this->emitRetVoid(FD) && this->emitAfterRet(FD);
 }
 
 /// Replicate a scalar value into every scalar element of an aggregate.
