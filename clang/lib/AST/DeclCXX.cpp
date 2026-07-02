@@ -3770,6 +3770,12 @@ DecompositionDecl::OriginalVarResult DecompositionDecl::getOriginalVar() const {
   if (!Init)
     return Result;
 
+  // Helper to determine diagnostic kind from a CallExpr based on value
+  // category.
+  auto getDiagKindFromCall = [](const CallExpr *Call) {
+    return Call->isXValue() ? OriginalVarResult::MoveExpr
+                            : OriginalVarResult::CallExpr;
+  };
   const Expr *Stripped = Init->IgnoreParenImpCasts();
   if (const auto *DRE = dyn_cast<DeclRefExpr>(Stripped)) {
     Result.Var = dyn_cast<VarDecl>(DRE->getDecl());
@@ -3777,33 +3783,43 @@ DecompositionDecl::OriginalVarResult DecompositionDecl::getOriginalVar() const {
   }
   if (const auto *CE = dyn_cast<CXXConstructExpr>(Stripped)) {
     if (CE->getNumArgs() == 1) {
-      const Expr *Arg = CE->getArg(0)->IgnoreParenImpCasts();
-      if (const auto *ArgDRE = dyn_cast<DeclRefExpr>(Arg)) {
+      const Expr *ArgStripped = CE->getArg(0)->IgnoreParenImpCasts();
+      if (const auto *ArgDRE = dyn_cast<DeclRefExpr>(ArgStripped)) {
         Result.Var = dyn_cast<VarDecl>(ArgDRE->getDecl());
         return Result;
       }
-      if (isa<CallExpr>(Arg))
-        Result.DiagKind = 3;
+      if (const auto *Call = dyn_cast<CallExpr>(ArgStripped))
+        Result.DiagKind = getDiagKindFromCall(Call);
       else
-        Result.DiagKind = 2;
+        Result.DiagKind = OriginalVarResult::Temporary;
       return Result;
     }
   }
-  if (isa<CallExpr>(Stripped)) {
-    Result.DiagKind = 0;
+  Result.DiagKind = OriginalVarResult::Temporary;
+  if (const auto *Call = dyn_cast<CallExpr>(Stripped)) {
+    Result.DiagKind = getDiagKindFromCall(Call);
   } else if (isa<InitListExpr>(Stripped) ||
              isa<CXXStdInitializerListExpr>(Stripped)) {
-    Result.DiagKind = 1;
+    Result.DiagKind = OriginalVarResult::InitListExpr;
   } else if (const auto *FCE = dyn_cast<CXXFunctionalCastExpr>(Stripped)) {
-    if (isa<InitListExpr>(FCE->getSubExpr()->IgnoreParenImpCasts()))
-      Result.DiagKind = 1;
-    else
-      Result.DiagKind = 3;
+    const Expr *SubExpr = FCE->getSubExpr()->IgnoreParenImpCasts();
+    if (isa<InitListExpr>(SubExpr)) {
+      Result.DiagKind = OriginalVarResult::InitListExpr;
+    } else if (const auto *Call = dyn_cast<CallExpr>(SubExpr)) {
+      Result.DiagKind = getDiagKindFromCall(Call);
+    } else if (const auto *CE = dyn_cast<CXXConstructExpr>(SubExpr)) {
+      if (CE->getNumArgs() == 1) {
+        if (const auto *ArgCall =
+                dyn_cast<CallExpr>(CE->getArg(0)->IgnoreParenImpCasts()))
+          Result.DiagKind = getDiagKindFromCall(ArgCall);
+      }
+    }
   } else if (isa<MaterializeTemporaryExpr>(Init) ||
              isa<CXXBindTemporaryExpr>(Init))
-    Result.DiagKind = 2;
+    Result.DiagKind = OriginalVarResult::Temporary;
   else
-    Result.DiagKind = 3;
+    Result.DiagKind = OriginalVarResult::MoveExpr;
+
   return Result;
 }
 

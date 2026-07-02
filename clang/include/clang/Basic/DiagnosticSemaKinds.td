@@ -12685,8 +12685,11 @@ def note_omp_flush_order_clause_here : Note<
 def err_omp_non_lvalue_in_map_or_motion_clauses: Error<
   "expected addressable lvalue in '%0' clause">;
 def err_omp_unsupported_structured_binding_init : Error<
-  "mapping of structured binding initialized from %select{function call|"
-  "initializer list|temporary object|move expression}0 is not supported">;
+  "mapping of %select{structured binding initialized from function call|"
+  "structured binding initialized from initializer list|"
+  "structured binding initialized from temporary object|"
+  "structured binding initialized from move expression|"
+  "tuple-like structured binding}0 is not yet supported">;
 def err_omp_bindings_from_same_decomposition_with_different_dsa : Error<
   "bindings from the same structured binding declaration cannot have "
   "different data-sharing attributes">;

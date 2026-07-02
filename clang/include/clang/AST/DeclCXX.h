@@ -4318,10 +4318,14 @@ public:
   /// Result of attempting to extract the original variable from a
   /// DecompositionDecl.
   struct OriginalVarResult {
+    enum DiagnosticKind {
+      CallExpr = 0,     // Function call.
+      InitListExpr = 1, // Initializer list.
+      Temporary = 2,    // Temporary object.
+      MoveExpr = 3      // Move expression.
+    };
     const VarDecl *Var = nullptr;
-    /// Diagnostic kind for err_omp_unsupported_structured_binding_init when
-    /// Var is nullptr. Only meaningful when Var is nullptr.
-    unsigned DiagKind = 3;
+    unsigned DiagKind = MoveExpr;
   };
 
   /// If this decomposition was initialized from a variable (e.g., auto [a,b] =

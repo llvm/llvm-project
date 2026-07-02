@@ -4007,6 +4007,39 @@ static bool checkDecompositionCaptureConflict(
   return false;
 }
 
+/// Helper to check all clauses in a directive for structured binding
+/// capture conflicts. Returns true if an error was found.
+static bool
+checkClausesForDecompositionConflicts(Sema &SemaRef, OpenMPDirectiveKind DKind,
+                                      ArrayRef<OMPClause *> Clauses) {
+  llvm::SmallDenseMap<const DecompositionDecl *,
+                      std::pair<bool, SourceLocation>, 4>
+      SeenDecompositions;
+  bool HasError = false;
+  for (OMPClause *C : Clauses) {
+    OpenMPClauseKind CK = C->getClauseKind();
+    if (CK != OMPC_map && CK != OMPC_firstprivate && CK != OMPC_private)
+      continue;
+    ArrayRef<Expr *> Varlist;
+    if (auto *MPC = dyn_cast<OMPMapClause>(C))
+      Varlist = MPC->varlist();
+    else if (auto *FPC = dyn_cast<OMPFirstprivateClause>(C))
+      Varlist = FPC->varlist();
+    else if (auto *PC = dyn_cast<OMPPrivateClause>(C))
+      Varlist = PC->varlist();
+
+    for (Expr *VE : Varlist) {
+      if (auto *DRE = dyn_cast<DeclRefExpr>(VE->IgnoreParenImpCasts())) {
+        if (checkDecompositionCaptureConflict(
+                SemaRef, DKind, SeenDecompositions, DRE->getDecl(),
+                VE->getExprLoc(), CK))
+          HasError = true;
+      }
+    }
+  }
+  return HasError;
+}
+
 static OpenMPMapClauseKind
 getMapClauseKindFromModifier(OpenMPDefaultmapClauseModifier M,
                              bool IsAggregateOrDeclareTarget,
@@ -4188,6 +4221,12 @@ public:
         if (!Stack->isImplicitDefaultFirstprivateFD(VD))
           return;
       VD = VD->getCanonicalDecl();
+      // Skip BindingDecls and DecompositionDecls - they should be handled
+      // through explicit mapping of the original variable or as member
+      // expressions. When bindings are captured, the original variable
+      // is what needs to be mapped, not the decomposition itself.
+      if (isa<BindingDecl>(VD) || isa<DecompositionDecl>(VD))
+        return;
       // Skip internally declared variables.
       if (VD->hasLocalStorage() && CS && !CS->capturesVariable(VD) &&
           !Stack->isImplicitDefaultFirstprivateFD(VD) &&
@@ -4307,11 +4346,26 @@ public:
 
         // For DecompositionDecls, check if the original variable has been
         // mapped.
-        if (!AlreadyMapped && isa<DecompositionDecl>(VD)) {
-          if (const auto *DD = cast<DecompositionDecl>(VD)) {
-            // Don't diagnose here. Just check if we can extract the original
-            // var. Diagnostics happen when processing explicit map clauses.
-            if (const VarDecl *OrigVar = DD->getOriginalVar().Var) {
+        const auto *DD = dyn_cast<DecompositionDecl>(VD);
+        if (!AlreadyMapped && DD) {
+          // Don't diagnose here. Just check if we can extract the original
+          // var. Diagnostics happen when processing explicit map clauses.
+          if (const VarDecl *OrigVar = DD->getOriginalVar().Var) {
+            AlreadyMapped = Stack->checkMappableExprComponentListsForDecl(
+                OrigVar, /*CurrentRegionOnly=*/true,
+                [this](auto StackComponents, auto) {
+                  if (SemaRef.LangOpts.OpenMP >= 50)
+                    return !StackComponents.empty();
+                  return StackComponents.size() == 1;
+                });
+          }
+        }
+        // For BindingDecls, check if the original variable (from the
+        // DecompositionDecl) has been mapped.
+        const auto *BD = dyn_cast<BindingDecl>(VD);
+        if (!AlreadyMapped && BD) {
+          if (const auto *DD = dyn_cast<DecompositionDecl>(BD->getDecomposedDecl())) {
+           if (const VarDecl *OrigVar = DD->getOriginalVar().Var) {
               AlreadyMapped = Stack->checkMappableExprComponentListsForDecl(
                   OrigVar, /*CurrentRegionOnly=*/true,
                   [this](auto StackComponents, auto) {
@@ -13538,32 +13592,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetDirective(ArrayRef<OMPClause *> Clauses,
     return StmtError();
 
   // Check for conflicting capture kinds on structured bindings.
-  llvm::SmallDenseMap<const DecompositionDecl *,
-                      std::pair<bool, SourceLocation>, 4>
-      SeenDecompositions;
-  bool HasError = false;
-  for (OMPClause *C : Clauses) {
-    OpenMPClauseKind CK = C->getClauseKind();
-    if (CK != OMPC_map && CK != OMPC_firstprivate && CK != OMPC_private)
-      continue;
-    ArrayRef<Expr *> Varlist;
-    if (auto *MPC = dyn_cast<OMPMapClause>(C))
-      Varlist = MPC->varlist();
-    else if (auto *FPC = dyn_cast<OMPFirstprivateClause>(C))
-      Varlist = FPC->varlist();
-    else if (auto *PC = dyn_cast<OMPPrivateClause>(C))
-      Varlist = PC->varlist();
-
-    for (Expr *VE : Varlist) {
-      if (auto *DRE = dyn_cast<DeclRefExpr>(VE->IgnoreParenImpCasts())) {
-        if (checkDecompositionCaptureConflict(
-                SemaRef, OMPD_target, SeenDecompositions, DRE->getDecl(),
-                VE->getExprLoc(), CK))
-          HasError = true;
-      }
-    }
-  }
-  if (HasError)
+  if (checkClausesForDecompositionConflicts(SemaRef, OMPD_target, Clauses))
     return StmtError();
 
   CapturedStmt *CS = setBranchProtectedScope(SemaRef, OMPD_target, AStmt);
@@ -13615,6 +13644,11 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetParallelDirective(
     ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
     SourceLocation EndLoc) {
   if (!AStmt)
+    return StmtError();
+
+  // Check for conflicting capture kinds on structured bindings.
+  if (checkClausesForDecompositionConflicts(SemaRef, OMPD_target_parallel,
+                                            Clauses))
     return StmtError();
 
   setBranchProtectedScope(SemaRef, OMPD_target_parallel, AStmt);
@@ -13813,7 +13847,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTeamsDirective(ArrayRef<OMPClause *> Clauses,
       !checkNumExprsInClause<OMPThreadLimitClause>(
           *this, Clauses, /*MaxNum=*/1, diag::err_omp_multi_expr_not_allowed))
     return StmtError();
-
+ 
   // Report affected OpenMP target offloading behavior when in HIP lang-mode.
   if (getLangOpts().HIP && (DSAStack->getParentDirective() == OMPD_target))
     Diag(StartLoc, diag::warn_hip_omp_target_directives);
@@ -14602,6 +14636,12 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDirective(
           *this, Clauses, ClauseMaxNumExprs, ThreadLimitDiag)) {
     return StmtError();
   }
+
+  // Check for conflicting capture kinds on structured bindings.
+  if (checkClausesForDecompositionConflicts(SemaRef, OMPD_target_teams,
+                                            Clauses))
+    return StmtError();
+
   return OMPTargetTeamsDirective::Create(getASTContext(), StartLoc, EndLoc,
                                          Clauses, AStmt);
 }
@@ -23892,14 +23932,24 @@ static void checkMappableExpressionList(
     if (!NoDiagnose) {
       if (const auto *DRE = dyn_cast<DeclRefExpr>(SimpleExpr)) {
         const DecompositionDecl *DD = nullptr;
-        if (const auto *BD = dyn_cast<BindingDecl>(DRE->getDecl())) {
-          DD = cast<DecompositionDecl>(BD->getDecomposedDecl());
+        const BindingDecl *BD = nullptr;
+        if (const auto *B = dyn_cast<BindingDecl>(DRE->getDecl())) {
+          BD = B;
+          DD = cast<DecompositionDecl>(B->getDecomposedDecl());
         } else if (const auto *D =
                        dyn_cast<DecompositionDecl>(DRE->getDecl())) {
           DD = D;
         }
-        if (DD && !getOriginalVarOrDiagnose(SemaRef, DD, ELoc))
-          continue;
+        if (DD) {
+          if (BD && BD->getHoldingVar()) {
+            SemaRef.Diag(ELoc,
+                         diag::err_omp_unsupported_structured_binding_init)
+                << 4;
+            continue;
+          }
+          if (!getOriginalVarOrDiagnose(SemaRef, DD, ELoc))
+            continue;
+        }
       }
     }
     OMPClauseMappableExprCommon::MappableExprComponentList CurComponents;
