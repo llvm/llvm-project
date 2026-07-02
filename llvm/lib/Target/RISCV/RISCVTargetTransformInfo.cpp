@@ -1117,6 +1117,9 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(VTy);
     // Need to make sure type has't been scalarized
     if (LT.second.isVector()) {
+      if (CostKind == TTI::TCK_CodeSize)
+        return LT.first * TTI::TCC_Basic;
+
       auto *SubVecTy =
           VectorType::get(VTy->getElementType(),
                           VTy->getElementCount().divideCoefficientBy(Factor));
