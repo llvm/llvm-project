@@ -97,20 +97,6 @@ struct Messages {
   std::string Full;
 };
 
-enum class BadOffsetKind { Negative, Overflowing, Indeterminate };
-
-constexpr llvm::StringLiteral Adjectives[] = {"a negative", "an overflowing",
-                                              "a negative or overflowing"};
-inline StringRef asAdjective(BadOffsetKind Problem) {
-  return Adjectives[static_cast<int>(Problem)];
-}
-
-constexpr llvm::StringLiteral Prepositions[] = {"preceding", "after the end of",
-                                                "around"};
-inline StringRef asPreposition(BadOffsetKind Problem) {
-  return Prepositions[static_cast<int>(Problem)];
-}
-
 struct CheckFlags {
   unsigned CheckUnderflow : 1;
   unsigned OffsetObviouslyNonnegative : 1;
@@ -123,47 +109,29 @@ public:
 
 private:
   Kind K = Kind::Valid;
-  bool AssumedNonNegative = false;
-  bool AssumedUpperBound = false;
+  // Changed to true if we see that underflow was not ruled out by the previous
+  // knowledge about the offset.
+  bool UnderflowFeasible = false;
+  // The offset from the beginning of the accessed region in CharUnits.
   const NonLoc Offset;
-  std::optional<NonLoc> Extent;
+  // The extent of the accessed region in CharUnits; or `nullopt` if the extent
+  // is irrelevant because overflow was ruled out by previous knowledge about
+  // the offset and extent.
+  std::optional<NonLoc> Extent = std::nullopt;
   ProgramStateRef State = nullptr;
 
-  CheckResult(NonLoc Offs, std::optional<NonLoc> E) : Offset(Offs), Extent(E) {}
-
-  void recordNonNegativeAssumption() { AssumedNonNegative = true; }
-
-  void recordUpperBoundAssumption() { AssumedUpperBound = true; }
-
-  void finalize(Kind K_, ProgramStateRef S) {
-    K = K_;
-    State = S;
-  }
+  CheckResult(NonLoc Offs) : Offset(Offs) {}
 
 public:
   friend CheckResult checkBounds(ProgramStateRef State, SValBuilder &SVB,
                                  NonLoc Offset, std::optional<NonLoc> Extent,
                                  CheckFlags Flags);
 
-  bool assumedNonNegative() const { return AssumedNonNegative; }
-
-  bool hasAssumption() const { return AssumedNonNegative || AssumedUpperBound; }
+  bool hasAssumption() const { return UnderflowFeasible || Extent; }
 
   ProgramStateRef getState() const { return State; }
 
   Kind getKind() const { return K; }
-
-  std::optional<BadOffsetKind> getBadOffsetKind() const {
-    switch (K) {
-    case Kind::Underflow:
-      return BadOffsetKind::Negative;
-    case Kind::Overflow:
-      return assumedNonNegative() ? BadOffsetKind::Indeterminate
-                                  : BadOffsetKind::Overflowing;
-    default:
-      return std::nullopt;
-    }
-  }
 
   Messages getTaintMsgs(std::string RegName, const char *OffsetName);
 
@@ -172,7 +140,34 @@ public:
   std::string getAssumptionMsg(PathSensitiveBugReport &BR, StringRef RegName,
                                SizeUnit SU) const;
 
+  using InterestingVec = SmallVector<NonLoc, 2>;
+  InterestingVec getInteresting() const {
+    InterestingVec Res = {Offset};
+    if (Extent)
+      Res.push_back(*Extent);
+    return Res;
+  }
+
 private:
+  void recordUnderflowFeasible() { UnderflowFeasible = true; }
+  void recordRelevantExtent(NonLoc E) { Extent = E; }
+  void discardExtentInformation() { Extent = std::nullopt; }
+
+  void finalize(Kind K_, ProgramStateRef S) {
+    K = K_;
+    State = S;
+  }
+
+  const char *offsetAdjective() const {
+    return UnderflowFeasible
+               ? (Extent ? "a negative or overflowing" : "a negative")
+               : (Extent ? "an overflowing" : "a valid");
+  }
+  const char *offsetPreposition() const {
+    return UnderflowFeasible ? (Extent ? "around" : "preceding")
+                             : (Extent ? "after the end of" : "in");
+  }
+
   /// Return true if information about the symbol behind `SV` can constrain
   /// some symbol which is interesting within the bug report `BR`.
   /// In particular, this returns true when `SV` is interesting within `BR`;

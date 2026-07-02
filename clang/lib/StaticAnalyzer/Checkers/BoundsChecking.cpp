@@ -218,14 +218,8 @@ bool bounds::SizeUnit::tryConvertValuesFromBytes(
 
 Messages bounds::CheckResult::getNonTaintMsgs(std::string RegName,
                                               SizeUnit SU) {
-  // BadOffsetKind will be removed in a follow-up change.
-  BadOffsetKind Problem = *getBadOffsetKind();
-
   std::optional<int64_t> OffsetN = getConcreteValue(Offset);
   std::optional<int64_t> ExtentN = getConcreteValue(Extent);
-
-  if (Problem == BadOffsetKind::Negative)
-    ExtentN = std::nullopt;
 
   if (!SU.tryConvertValuesFromBytes(OffsetN, ExtentN))
     SU = SizeUnit::bytes();
@@ -243,11 +237,11 @@ Messages bounds::CheckResult::getNonTaintMsgs(std::string RegName,
   }
   Out << RegName << " at ";
   if (OffsetN) {
-    if (Problem == BadOffsetKind::Negative)
+    if (UnderflowFeasible && !Extent)
       Out << "negative ";
     Out << SU.getOffsetName() << " " << *OffsetN;
   } else {
-    Out << asAdjective(Problem) << " " << SU.getOffsetName();
+    Out << offsetAdjective() << " " << SU.getOffsetName();
   }
   if (ExtentN) {
     Out << ", while it holds only ";
@@ -262,8 +256,8 @@ Messages bounds::CheckResult::getNonTaintMsgs(std::string RegName,
       Out << "s";
   }
 
-  return {formatv("Out of bound access to memory {0} {1}",
-                  asPreposition(Problem), RegName),
+  return {formatv("Out of bound access to memory {0} {1}", offsetPreposition(),
+                  RegName),
           std::string(Buf)};
 }
 
@@ -273,15 +267,15 @@ Messages bounds::CheckResult::getTaintMsgs(std::string RegName,
                   RegName, OffsetName),
           formatv("Access of {0} with a tainted {1} that may be {2}too large",
                   RegName, OffsetName,
-                  assumedNonNegative() ? "negative or " : "")};
+                  UnderflowFeasible ? "negative or " : "")};
 }
 
 std::string bounds::CheckResult::getAssumptionMsg(PathSensitiveBugReport &BR,
                                                   StringRef RegName,
                                                   SizeUnit SU) const {
-  bool ShouldReportNonNegative = AssumedNonNegative;
+  bool ShouldReportNonNegative = UnderflowFeasible;
   if (!providesInformationAboutInteresting(Offset, BR)) {
-    if (AssumedUpperBound && providesInformationAboutInteresting(*Extent, BR)) {
+    if (Extent && providesInformationAboutInteresting(*Extent, BR)) {
       // Even if the byte offset isn't interesting (e.g. it's a constant value),
       // the assumption can still be interesting if it provides information
       // about an interesting symbolic upper bound.
@@ -293,9 +287,7 @@ std::string bounds::CheckResult::getAssumptionMsg(PathSensitiveBugReport &BR,
   }
 
   std::optional<int64_t> OffsetN = getConcreteValue(Offset);
-  // The extent must be ignored if we did not assume it as an upper bound:
-  std::optional<int64_t> ExtentN =
-      AssumedUpperBound ? getConcreteValue(Extent) : std::nullopt;
+  std::optional<int64_t> ExtentN = getConcreteValue(Extent);
 
   if (!SU.tryConvertValuesFromBytes(OffsetN, ExtentN))
     SU = SizeUnit::bytes();
@@ -307,7 +299,7 @@ std::string bounds::CheckResult::getAssumptionMsg(PathSensitiveBugReport &BR,
     Out << "index ";
     if (OffsetN)
       Out << "'" << OffsetN << "' ";
-  } else if (AssumedUpperBound) {
+  } else if (Extent) {
     Out << "byte offset ";
     if (OffsetN)
       Out << "'" << OffsetN << "' ";
@@ -319,7 +311,7 @@ std::string bounds::CheckResult::getAssumptionMsg(PathSensitiveBugReport &BR,
   if (ShouldReportNonNegative) {
     Out << " non-negative";
   }
-  if (AssumedUpperBound) {
+  if (Extent) {
     if (ShouldReportNonNegative)
       Out << " and";
     Out << " less than ";
@@ -352,7 +344,7 @@ bool bounds::CheckResult::providesInformationAboutInteresting(
 CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB,
                                 NonLoc Offset, std::optional<NonLoc> Extent,
                                 CheckFlags Flags) {
-  CheckResult Res(Offset, Extent);
+  CheckResult Res(Offset);
 
   // CHECK LOWER BOUND
   if (Flags.CheckUnderflow) {
@@ -360,6 +352,7 @@ CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB,
         compareValueToThreshold(State, Offset, SVB.makeZeroArrayIndex(), SVB);
 
     if (PrecedesLowerBound) {
+      Res.recordUnderflowFeasible();
       // The analyzer thinks that the offset may be invalid (negative)...
       if (Flags.OffsetObviouslyNonnegative) {
         // ...but the offset is obviously non-negative (clear array subscript
@@ -394,7 +387,6 @@ CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB,
         }
         // ...but it can be valid as well, so the checker will (optimistically)
         // assume that it's valid and mention this in the note tag.
-        Res.recordNonNegativeAssumption();
       }
     }
 
@@ -411,24 +403,32 @@ CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB,
         compareValueToThreshold(State, Offset, *Extent, SVB);
 
     if (ExceedsUpperBound) {
+      Res.recordRelevantExtent(*Extent);
+
       // The offset may be invalid (>= Size)...
       if (!WithinUpperBound) {
-        // ...and it cannot be within bounds, so report an error, unless we can
-        // definitely determine that this is an idiomatic `&array[size]`
-        // expression that calculates the past-the-end pointer.
+        // ...and it cannot be within bounds.
+
         if (Flags.AcceptPastTheEnd) {
           auto [EqualsToThreshold, NotEqualToThreshold] =
               compareValueToThreshold(State, Offset, *Extent, SVB,
                                       /*CheckEquality=*/true);
           if (EqualsToThreshold && !NotEqualToThreshold) {
+            // This is an idiomatic `&array[size]` past-the-end pointer
+            // expression, which is valid and well-defined. We discard the
+            // extent information because otherwise we would get an
+            // inappropriate note tag about "assuming offset < extent".
+            Res.discardExtentInformation();
             Res.finalize(CheckResult::Kind::Valid, State);
             return Res;
           }
         }
 
+        // Straightforward overflow, report an error.
         Res.finalize(CheckResult::Kind::Overflow, ExceedsUpperBound);
         return Res;
       }
+
       // ...and it can be valid as well...
       if (taint::isTainted(State, Offset)) {
         // ...but it's tainted, so report an error.
@@ -437,7 +437,6 @@ CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB,
       }
       // ...and it isn't tainted, so the checker will (optimistically) assume
       // that the offset is in bounds and mention this in the note tag.
-      Res.recordUpperBoundAssumption();
     }
 
     // Actually update the state. The "if" only fails in the extremely unlikely

@@ -202,21 +202,15 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
         OffsetName = "index";
 
     bounds::Messages Msgs = Res.getTaintMsgs(RN, OffsetName);
-    SmallVector<NonLoc, 2> Interesting = {ByteOffset};
-    if (Extent)
-      Interesting.push_back(*Extent);
-    reportOOB(C, Res.getState(), Msgs, Interesting, /*IsTaintBug=*/true);
+    reportOOB(C, Res.getState(), Msgs, Res.getInteresting(),
+              /*IsTaintBug=*/true);
     return;
   }
   default: {
     bounds::SizeUnit SU =
         bounds::SizeUnit::forSVal(Location, C.getASTContext());
-    bounds::BadOffsetKind BOK = *Res.getBadOffsetKind();
     bounds::Messages Msgs = Res.getNonTaintMsgs(RN, SU);
-    SmallVector<NonLoc, 2> Interesting = {ByteOffset};
-    if (Extent && BOK != bounds::BadOffsetKind::Negative)
-      Interesting.push_back(*Extent);
-    reportOOB(C, Res.getState(), Msgs, Interesting);
+    reportOOB(C, Res.getState(), Msgs, Res.getInteresting());
     return;
   }
   }
