@@ -4586,6 +4586,15 @@ CFGBlock *CFGBuilder::VisitSwitchStmt(SwitchStmt *Terminator) {
       return nullptr;
   }
 
+  bool HasDefaultCase = false;
+  for (const SwitchCase *SC = Terminator->getSwitchCaseList(); SC;
+       SC = SC->getNextSwitchCase()) {
+    if (isa<DefaultStmt>(SC)) {
+      HasDefaultCase = true;
+      break;
+    }
+  }
+
   // If we have no "default:" case, the default transition is to the code
   // following the switch body.  Moreover, take into account if all the
   // cases of a switch are covered (e.g., switching on an enum value).
@@ -4597,7 +4606,7 @@ CFGBlock *CFGBuilder::VisitSwitchStmt(SwitchStmt *Terminator) {
   bool SwitchAlwaysHasSuccessor = false;
   SwitchAlwaysHasSuccessor |= switchExclusivelyCovered;
   SwitchAlwaysHasSuccessor |=
-      !BuildOpts.AssumeReachableDefaultInSwitchStatements &&
+      !HasDefaultCase && !BuildOpts.AssumeReachableDefaultInSwitchStatements &&
       Terminator->isAllEnumCasesCovered() && Terminator->getSwitchCaseList();
   addSuccessor(SwitchTerminatedBlock, DefaultCaseBlock,
                !SwitchAlwaysHasSuccessor);
@@ -5614,12 +5623,12 @@ bool CFGBlock::FilterEdge(const CFGBlock::FilterOptions &F,
 
   if (To && From && F.IgnoreDefaultsWithCoveredEnums) {
     // If the 'To' has no label or is labeled but the label isn't a
-    // CaseStmt then filter this edge.
+    // CaseStmt or DefaultStmt then filter this edge.
     if (const SwitchStmt *S =
         dyn_cast_or_null<SwitchStmt>(From->getTerminatorStmt())) {
       if (S->isAllEnumCasesCovered()) {
         const Stmt *L = To->getLabel();
-        if (!L || !isa<CaseStmt>(L))
+        if (!L || (!isa<CaseStmt>(L) && !isa<DefaultStmt>(L)))
           return true;
       }
     }
