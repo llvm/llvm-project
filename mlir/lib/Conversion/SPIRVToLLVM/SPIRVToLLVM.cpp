@@ -921,6 +921,29 @@ public:
   }
 };
 
+/// Converts the GLSL clamp ops (FClamp, SClamp, UClamp) into a nested
+/// min/max sequence, following the op semantics `min(max(x, minVal), maxVal)`.
+template <typename SPIRVOp, typename LLVMMinOp, typename LLVMMaxOp>
+class ClampPattern : public SPIRVToLLVMConversion<SPIRVOp> {
+public:
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto dstType = this->getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    Value max = LLVMMaxOp::create(rewriter, loc, dstType, adaptor.getX(),
+                                  adaptor.getY());
+    rewriter.template replaceOpWithNewOp<LLVMMinOp>(op, dstType, max,
+                                                    adaptor.getZ());
+    return success();
+  }
+};
+
 /// Converts `spirv.Load` and `spirv.Store` to LLVM dialect.
 template <typename SPIRVOp>
 class LoadStorePattern : public SPIRVToLLVMConversion<SPIRVOp> {
@@ -1897,6 +1920,9 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::GLFAbsOp, LLVM::FAbsOp>,
       DirectConversionPattern<spirv::GLFloorOp, LLVM::FFloorOp>,
       DirectConversionPattern<spirv::GLFmaOp, LLVM::FMAOp>,
+      ClampPattern<spirv::GLFClampOp, LLVM::MinNumOp, LLVM::MaxNumOp>,
+      ClampPattern<spirv::GLSClampOp, LLVM::SMinOp, LLVM::SMaxOp>,
+      ClampPattern<spirv::GLUClampOp, LLVM::UMinOp, LLVM::UMaxOp>,
       DirectConversionPattern<spirv::GLFMaxOp, LLVM::MaxNumOp>,
       DirectConversionPattern<spirv::GLFMinOp, LLVM::MinNumOp>,
       DirectConversionPattern<spirv::GLLogOp, LLVM::LogOp>,
