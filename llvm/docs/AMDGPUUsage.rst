@@ -2261,6 +2261,39 @@ and
 
   !0 = !{}
 
+.. _amdgpu_expected_active_lanes:
+
+'``amdgpu.expected.active.lanes``' Metadata
+-------------------------------------------------
+
+A profiling-derived hint describing how many lanes of the wavefront are
+expected to be active. The metadata has a single ``i32`` constant operand
+giving the expected number of active lanes as an absolute count (the same
+value is used for both wave32 and wave64 targets). This structure is
+enforced by the verifier.
+
+The AMDGPU atomic optimizer uses the hint as follows. When the
+``-amdgpu-atomic-optimizer-strategy=DPP`` strategy is active, the value
+operand is divergent, and the atomic is in the LDS (``addrspace(3)``) address
+space, the optimizer normally replaces the per-lane atomics with a single
+wavefront-wide DPP scan. That scan has a fixed overhead that is only
+worthwhile when enough lanes participate. If the expected active lane count
+is small, the optimizer skips the DPP scan and instead lets each lane issue
+its own atomic.
+
+The metadata is ignored for non-LDS atomics and when the DPP strategy is not
+in use. Without this metadata the optimizer unconditionally applies the DPP
+scan to every eligible LDS atomic.
+
+.. code-block:: llvm
+
+  ; Few expected active lanes (<= 5): DPP is skipped and each lane issues its
+  ; own ds_add_rtn_u32.
+  %old0 = atomicrmw add ptr addrspace(3) @lds, i32 %val acq_rel, !amdgpu.expected.active.lanes !{i32 4}
+
+  ; Many expected active lanes (> 5): the DPP scan is applied.
+  %old1 = atomicrmw add ptr addrspace(3) @lds, i32 %val acq_rel, !amdgpu.expected.active.lanes !{i32 32}
+
 
 LLVM IR Attributes
 ==================
