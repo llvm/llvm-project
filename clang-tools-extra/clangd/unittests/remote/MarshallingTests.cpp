@@ -449,6 +449,39 @@ TEST(RemoteMarshallingTest, URIToRelativePathTranslation) {
   llvm::consumeError(RelativePath.takeError());
 }
 
+TEST(RemoteMarshallingTest, CrossPlatformPathsRoundTrip) {
+  llvm::BumpPtrAllocator Arena;
+  llvm::UniqueStringSaver Strings(Arena);
+
+  // Simulate a Windows-built index
+  Marshaller ProtobufMarshaller("C:/remote/project/",
+                                testPath("local/project/"));
+
+  clangd::Ref Ref;
+  Ref.Kind = clangd::RefKind::Declaration;
+  clangd::SymbolLocation Location;
+  Location.Start.setLine(1);
+  Location.Start.setColumn(2);
+  Location.End.setLine(3);
+  Location.End.setColumn(4);
+  // Construct the URI as a Windows machine would have serialized it into the
+  // index: file:///C:/remote/project/lib/File.cpp.
+  Location.FileURI = 
+      Strings.save("file:///C:/remote/project/lib/File.cpp").begin();
+  Ref.Location = Location;
+
+  auto Serialized = ProtobufMarshaller.toProtobuf(Ref);
+  ASSERT_TRUE(bool(Serialized));
+  // Wire path should be relative with forward slashes.
+  EXPECT_EQ(Serialized->location().file_path(), "lib/File.cpp");
+
+  auto Deserialized = ProtobufMarshaller.fromProtobuf(*Serialized);
+  ASSERT_TRUE(bool(Deserialized));
+  // Deserialized URI should be under the local root.
+  EXPECT_STREQ(Deserialized->Location.FileURI,
+               testPathURI("local/project/lib/File.cpp", Strings));
+}
+
 } // namespace
 } // namespace remote
 } // namespace clangd
