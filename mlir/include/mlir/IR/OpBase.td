@@ -633,14 +633,25 @@ class RangedTypesMatchWith<string summary, string lhsArg, string rhsArg,
                            string transform>
   : TypesMatchWith<summary, lhsArg, rhsArg, transform, "llvm::equal">;
 
+// Predicate to verify that a named argument or result's type satisfies a given
+// predicate.
+class NamedTypeSatisfiesPred<string name, Pred pred> :
+    SubstLeaves<"$_self", "$" # name # ".getType()", pred>;
+
+// Predicate to verify that a named argument or result's type matches a given
+// type constraint.
+class TypeIsPred<string name, Type type> :
+    NamedTypeSatisfiesPred<name, type.predicate>;
+class TypeIs<string name, Type type> : PredOpTrait<
+  "'" # name # "' is " # type.summary, TypeIsPred<name, type>>;
+
 // Checks that each inputArg has the same type as the corresponding entry
 // in allowedTypes
 class InputMatchesTypes<list<string> inputArgs, list<Type> allowedTypes> :
     PredOpTrait<"operands {" # !interleave(inputArgs, ", ") # "} match expected types",
                 !foldl(TruePred, !range(!size(inputArgs)), acc, i,
                        And<[acc,
-                           SubstLeaves<"$_self", "$" # inputArgs[i] # ".getType()",
-                                      allowedTypes[i].predicate>
+                            TypeIsPred<inputArgs[i], allowedTypes[i]>
                        ]>)> {
     assert !eq(!size(inputArgs), !size(allowedTypes)),
            "inputArgs and allowedTypes lists must have the same length";
@@ -661,8 +672,7 @@ class InputAddressIsCombinationOf<list<string> inputArgs,
                 Or<!foreach(combination, allowedCombinations,
                            !foldl(TruePred, !range(!size(inputArgs)), acc, i,
                                   And<[acc,
-                                      SubstLeaves<"$_self", "$" # inputArgs[i] # ".getType()",
-                                                 combination[i].predicate>
+                                       TypeIsPred<inputArgs[i], combination[i]>
                                   ]>))>> {
     assert !gt(!size(allowedCombinations), 0),
            "allowedCombinations must not be empty";
@@ -688,15 +698,8 @@ class TCopVTEtIs<int idx, Type type> : And<[
 
 // Predicate to verify that a named argument or result's element type matches a
 // given type.
-class TypeIsPred<string name, Type type> :
-   SubstLeaves<"$_self", "$" # name # ".getType()", type.predicate>;
-class TypeIs<string name, Type type> : PredOpTrait<
-  "'" # name # "' is " # type.summary, TypeIsPred<name, type>>;
-
-// Predicate to verify that a named argument or result's element type matches a
-// given type.
 class ElementTypeIsPred<string name, Type type> : And<[
-   SubstLeaves<"$_self", "$" # name # ".getType()", IsShapedTypePred>,
+   NamedTypeSatisfiesPred<name, IsShapedTypePred>,
    SubstLeaves<"$_self", "getElementTypeOrSelf($" # name # ")",
      type.predicate>]>;
 class ElementTypeIs<string name, Type type> : PredOpTrait<
