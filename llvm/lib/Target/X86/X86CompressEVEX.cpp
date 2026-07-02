@@ -398,8 +398,8 @@ static bool tryCompressVPMOVPattern(MachineInstr &MI, MachineBasicBlock &MBB,
     auto MIB =
         BuildMI(MBB, *BlendMI, BlendMI->getDebugLoc(), TII->get(BlendOpc))
             .addReg(Dst.getReg(), getRegState(Dst))
-            .addReg(Src.getReg(), getRegState(Src))
             .addReg(Passthru.getReg(), getRegState(Passthru))
+            .addReg(Src.getReg(), getRegState(Src))
             .addReg(MaskVec.getReg(), getRegState(MaskVec));
     NewMI = MIB;
     ToErase.push_back(BlendMI);
