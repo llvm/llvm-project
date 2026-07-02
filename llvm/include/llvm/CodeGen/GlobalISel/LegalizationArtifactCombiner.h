@@ -292,29 +292,40 @@ public:
       if (!DstTy.isScalar() || !MergeSrcTy.isScalar())
         return false;
 
+      // G_TRUNC/G_MERGE_VALUES operate on the raw bit pattern - if the merge
+      // feeds us float sources, reinterpret them to integer of the same size
+      // so we never emit a G_TRUNC or G_MERGE_VALUES with a floating-point
+      // source operand.
+      const LLT WorkTy =
+          MergeSrcTy.isFloat() ? LLT::integer(MergeSrcSize) : MergeSrcTy;
+      auto AsInt = [&](Register R) {
+        if (MergeSrcTy != WorkTy)
+          return Builder.buildBitcast(WorkTy, R).getReg(0);
+        return R;
+      };
+
       if (DstSize < MergeSrcSize) {
         // When the merge source is larger than the destination, we can just
         // truncate the merge source directly
-        if (isInstUnsupported({TargetOpcode::G_TRUNC, {DstTy, MergeSrcTy}}))
+        if (isInstUnsupported({TargetOpcode::G_TRUNC, {DstTy, WorkTy}}))
           return false;
 
         LLVM_DEBUG(dbgs() << "Combining G_TRUNC(G_MERGE_VALUES) to G_TRUNC: "
                           << MI);
 
-        Builder.buildTrunc(DstReg, MergeSrcReg);
+        Builder.buildTrunc(DstReg, AsInt(MergeSrcReg));
         UpdatedDefs.push_back(DstReg);
       } else if (DstSize == MergeSrcSize) {
         // If the sizes match we can simply try to replace the register
         LLVM_DEBUG(
             dbgs() << "Replacing G_TRUNC(G_MERGE_VALUES) with merge input: "
                    << MI);
-        replaceRegOrBuildCopy(DstReg, MergeSrcReg, MRI, Builder, UpdatedDefs,
-                              Observer);
+        replaceRegOrBuildCopy(DstReg, AsInt(MergeSrcReg), MRI, Builder,
+                              UpdatedDefs, Observer);
       } else if (DstSize % MergeSrcSize == 0) {
         // If the trunc size is a multiple of the merge source size we can use
         // a smaller merge instead
-        if (isInstUnsupported(
-                {TargetOpcode::G_MERGE_VALUES, {DstTy, MergeSrcTy}}))
+        if (isInstUnsupported({TargetOpcode::G_MERGE_VALUES, {DstTy, WorkTy}}))
           return false;
 
         LLVM_DEBUG(
@@ -326,7 +337,7 @@ public:
                "trunc(merge) should require less inputs than merge");
         SmallVector<Register, 8> SrcRegs(NumSrcs);
         for (unsigned i = 0; i < NumSrcs; ++i)
-          SrcRegs[i] = SrcMerge->getSourceReg(i);
+          SrcRegs[i] = AsInt(SrcMerge->getSourceReg(i));
 
         Builder.buildMergeValues(DstReg, SrcRegs);
         UpdatedDefs.push_back(DstReg);
