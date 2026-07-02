@@ -359,6 +359,7 @@ enum FPClassTest : unsigned {
   fcFinite = fcPosFinite | fcNegFinite,
   fcPositive = fcPosFinite | fcPosInf,
   fcNegative = fcNegFinite | fcNegInf,
+  fcNumber = fcPositive | fcNegative,
 
   fcAllFlags = fcNan | fcInf | fcFinite,
 };
