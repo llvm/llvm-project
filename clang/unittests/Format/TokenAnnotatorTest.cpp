@@ -1000,6 +1000,7 @@ TEST_F(TokenAnnotatorTest, UnderstandsCasts) {
   Tokens = annotate("auto x = y.in(foo) - w;");
   ASSERT_EQ(Tokens.size(), 13u) << Tokens;
   EXPECT_TOKEN(Tokens[8], tok::r_paren, TT_Unknown); // NOT TT_CastRParen
+  EXPECT_TOKEN(Tokens[9], tok::minus, TT_BinaryOperator);
 
   auto Style = getLLVMStyle();
   Style.TypeNames.push_back("Foo");
