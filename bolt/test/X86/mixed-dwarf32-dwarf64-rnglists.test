@@ -1,0 +1,241 @@
+# REQUIRES: system-linux
+
+# RUN: rm -rf %t
+# RUN: split-file %s %t
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %t/dwarf32.s \
+# RUN:   -o %t/dwarf32.o
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %t/dwarf64.s \
+# RUN:   -o %t/dwarf64.o
+# RUN: %clang %cflags -Wl,-q -Wl,-e,main %t/dwarf32.o %t/dwarf64.o -o %t.exe
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections \
+# RUN:   --always-convert-to-ranges
+# RUN: llvm-dwarfdump --show-form --verbose --debug-info --debug-addr \
+# RUN:   --debug-rnglists %t.bolt | FileCheck %s
+# RUN: llvm-dwarfdump --verify %t.bolt
+
+## Check that mixed-format binaries keep per-CU DWARF32/DWARF64 encoding for
+## regenerated .debug_rnglists and .debug_addr contributions.
+
+# CHECK-LABEL: .debug_info contents:
+# CHECK: Compile Unit:{{.*}} format = DWARF32, version = 0x0005
+# CHECK: DW_AT_name [DW_FORM_strp]{{.*}}"dwarf32.s"
+# CHECK: DW_AT_low_pc [DW_FORM_addrx]
+# CHECK-NEXT: DW_AT_ranges [DW_FORM_rnglistx]
+# CHECK-SAME: rangelist =
+# CHECK-NEXT: [
+# CHECK-SAME: [[MAIN_BEGIN:0x[0-9a-f]+]]
+# CHECK-SAME: [[MAIN_END:0x[0-9a-f]+]]
+# CHECK: DW_AT_rnglists_base [DW_FORM_sec_offset] (0x{{[0-9a-f]+}})
+# CHECK: DW_TAG_subprogram
+# CHECK: DW_AT_name [DW_FORM_strp]{{.*}}"main"
+# CHECK: DW_AT_ranges [DW_FORM_rnglistx]
+# CHECK-SAME: rangelist =
+# CHECK-NEXT: [
+# CHECK-SAME: [[MAIN_BEGIN]]
+# CHECK-SAME: [[MAIN_END]]
+# CHECK: Compile Unit:{{.*}} format = DWARF64, version = 0x0005
+# CHECK: DW_AT_name [DW_FORM_strp]{{.*}}"dwarf64.s"
+# CHECK: DW_AT_low_pc [DW_FORM_addrx]
+# CHECK-NEXT: DW_AT_ranges [DW_FORM_rnglistx]
+# CHECK-SAME: rangelist =
+# CHECK-NEXT: [
+# CHECK-SAME: [[BAR_BEGIN:0x[0-9a-f]+]]
+# CHECK-SAME: [[BAR_END:0x[0-9a-f]+]]
+# CHECK: DW_AT_rnglists_base [DW_FORM_sec_offset] (0x{{[0-9a-f]+}})
+# CHECK: DW_TAG_subprogram
+# CHECK: DW_AT_name [DW_FORM_strp]{{.*}}"bar"
+# CHECK: DW_AT_ranges [DW_FORM_rnglistx]
+# CHECK-SAME: rangelist =
+# CHECK-NEXT: [
+# CHECK-SAME: [[BAR_BEGIN]]
+# CHECK-SAME: [[BAR_END]]
+
+# CHECK-LABEL: .debug_addr contents:
+# CHECK: Address table header: length = 0x{{[0-9a-f]+}}, format = DWARF32
+# CHECK: Addrs: [
+# CHECK-NEXT: [[MAIN_BEGIN]]
+# CHECK-NEXT: 0x0000000000000000
+# CHECK: Address table header: length = 0x{{[0-9a-f]+}}, format = DWARF64
+# CHECK: Addrs: [
+# CHECK-NEXT: [[BAR_BEGIN]]
+# CHECK-NEXT: 0x0000000000000000
+
+# CHECK-LABEL: .debug_rnglists contents:
+# CHECK: range list header: length = 0x{{[0-9a-f]+}}, format = DWARF32
+# CHECK: 0x{{[0-9a-f]+}} => 0x{{[0-9a-f]+}}
+# CHECK: [DW_RLE_startx_length]:
+# CHECK: range list header: length = 0x{{[0-9a-f]+}}, format = DWARF64
+# CHECK: 0x{{[0-9a-f]+}} => 0x{{[0-9a-f]+}}
+# CHECK: [DW_RLE_startx_length]:
+
+#--- dwarf32.s
+  .text
+  .globl main
+  .type main,@function
+main:
+.Lfunc32_begin:
+  .file 0 "." "dwarf32.s"
+  .loc 0 1 0
+  callq bar
+  .loc 0 2 0
+  retq
+.Lfunc32_end:
+  .size main, .Lfunc32_end-main
+
+  .section .debug_abbrev,"",@progbits
+.Labbrev32:
+  .byte 1                         # Abbrev code
+  .byte 0x11                      # DW_TAG_compile_unit
+  .byte 1                         # DW_CHILDREN_yes
+  .byte 0x03                      # DW_AT_name
+  .byte 0x0e                      # DW_FORM_strp
+  .byte 0x10                      # DW_AT_stmt_list
+  .byte 0x17                      # DW_FORM_sec_offset
+  .byte 0x11                      # DW_AT_low_pc
+  .byte 0x1b                      # DW_FORM_addrx
+  .byte 0x12                      # DW_AT_high_pc
+  .byte 0x06                      # DW_FORM_data4
+  .byte 0x73                      # DW_AT_addr_base
+  .byte 0x17                      # DW_FORM_sec_offset
+  .byte 0
+  .byte 0
+  .byte 2                         # Abbrev code
+  .byte 0x2e                      # DW_TAG_subprogram
+  .byte 0                         # DW_CHILDREN_no
+  .byte 0x03                      # DW_AT_name
+  .byte 0x0e                      # DW_FORM_strp
+  .byte 0x11                      # DW_AT_low_pc
+  .byte 0x1b                      # DW_FORM_addrx
+  .byte 0x12                      # DW_AT_high_pc
+  .byte 0x06                      # DW_FORM_data4
+  .byte 0x3f                      # DW_AT_external
+  .byte 0x19                      # DW_FORM_flag_present
+  .byte 0
+  .byte 0
+  .byte 0
+
+  .section .debug_info,"",@progbits
+  .long .Lcu32_end-.Lcu32_start   # DWARF32 unit length
+.Lcu32_start:
+  .short 5                        # Version
+  .byte 1                         # DW_UT_compile
+  .byte 8                         # Address size
+  .long .Labbrev32                # Abbrev offset
+  .byte 1                         # DW_TAG_compile_unit
+  .long .Lstr_dwarf32             # DW_AT_name
+  .long .Lline_table_start32      # DW_AT_stmt_list
+  .byte 0                         # DW_AT_low_pc
+  .long .Lfunc32_end-.Lfunc32_begin # DW_AT_high_pc
+  .long .Laddr_table_base32       # DW_AT_addr_base
+  .byte 2                         # DW_TAG_subprogram
+  .long .Lstr_main                # DW_AT_name
+  .byte 0                         # DW_AT_low_pc
+  .long .Lfunc32_end-.Lfunc32_begin # DW_AT_high_pc
+  .byte 0                         # End children
+.Lcu32_end:
+
+  .section .debug_addr,"",@progbits
+  .long .Ldebug_addr32_end-.Ldebug_addr32_start
+.Ldebug_addr32_start:
+  .short 5                        # Version
+  .byte 8                         # Address size
+  .byte 0                         # Segment selector size
+.Laddr_table_base32:
+  .quad .Lfunc32_begin
+.Ldebug_addr32_end:
+
+  .section .debug_str,"MS",@progbits,1
+.Lstr_dwarf32:
+  .asciz "dwarf32.s"
+.Lstr_main:
+  .asciz "main"
+
+  .section .debug_line,"",@progbits
+.Lline_table_start32:
+
+#--- dwarf64.s
+  .text
+  .globl bar
+  .type bar,@function
+bar:
+.Lfunc64_begin:
+  .file 0 "." "dwarf64.s"
+  .loc 0 1 0
+  movl $42, %eax
+  .loc 0 2 0
+  retq
+.Lfunc64_end:
+  .size bar, .Lfunc64_end-bar
+
+  .section .debug_abbrev,"",@progbits
+.Labbrev64:
+  .byte 1                         # Abbrev code
+  .byte 0x11                      # DW_TAG_compile_unit
+  .byte 1                         # DW_CHILDREN_yes
+  .byte 0x03                      # DW_AT_name
+  .byte 0x0e                      # DW_FORM_strp
+  .byte 0x10                      # DW_AT_stmt_list
+  .byte 0x17                      # DW_FORM_sec_offset
+  .byte 0x11                      # DW_AT_low_pc
+  .byte 0x1b                      # DW_FORM_addrx
+  .byte 0x12                      # DW_AT_high_pc
+  .byte 0x06                      # DW_FORM_data4
+  .byte 0x73                      # DW_AT_addr_base
+  .byte 0x17                      # DW_FORM_sec_offset
+  .byte 0
+  .byte 0
+  .byte 2                         # Abbrev code
+  .byte 0x2e                      # DW_TAG_subprogram
+  .byte 0                         # DW_CHILDREN_no
+  .byte 0x03                      # DW_AT_name
+  .byte 0x0e                      # DW_FORM_strp
+  .byte 0x11                      # DW_AT_low_pc
+  .byte 0x1b                      # DW_FORM_addrx
+  .byte 0x12                      # DW_AT_high_pc
+  .byte 0x06                      # DW_FORM_data4
+  .byte 0x3f                      # DW_AT_external
+  .byte 0x19                      # DW_FORM_flag_present
+  .byte 0
+  .byte 0
+  .byte 0
+
+  .section .debug_info,"",@progbits
+  .long 0xffffffff                # DWARF64 marker
+  .quad .Lcu64_end-.Lcu64_start   # DWARF64 unit length
+.Lcu64_start:
+  .short 5                        # Version
+  .byte 1                         # DW_UT_compile
+  .byte 8                         # Address size
+  .quad .Labbrev64                # Abbrev offset
+  .byte 1                         # DW_TAG_compile_unit
+  .quad .Lstr_dwarf64             # DW_AT_name
+  .quad .Lline_table_start64      # DW_AT_stmt_list
+  .byte 0                         # DW_AT_low_pc
+  .long .Lfunc64_end-.Lfunc64_begin # DW_AT_high_pc
+  .quad .Laddr_table_base64       # DW_AT_addr_base
+  .byte 2                         # DW_TAG_subprogram
+  .quad .Lstr_bar                 # DW_AT_name
+  .byte 0                         # DW_AT_low_pc
+  .long .Lfunc64_end-.Lfunc64_begin # DW_AT_high_pc
+  .byte 0                         # End children
+.Lcu64_end:
+
+  .section .debug_addr,"",@progbits
+  .long 0xffffffff                # DWARF64 marker
+  .quad .Ldebug_addr64_end-.Ldebug_addr64_start
+.Ldebug_addr64_start:
+  .short 5                        # Version
+  .byte 8                         # Address size
+  .byte 0                         # Segment selector size
+.Laddr_table_base64:
+  .quad .Lfunc64_begin
+.Ldebug_addr64_end:
+
+  .section .debug_str,"MS",@progbits,1
+.Lstr_dwarf64:
+  .asciz "dwarf64.s"
+.Lstr_bar:
+  .asciz "bar"
+
+  .section .debug_line,"",@progbits
+.Lline_table_start64:
