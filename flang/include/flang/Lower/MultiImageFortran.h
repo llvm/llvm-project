@@ -76,6 +76,11 @@ mlir::Value genAllocateCoarray(
         std::nullopt,
     mlir::Value errMsg = {}, bool hasStat = false);
 
+void genAllocateNonAllocatableSaveCoarray(AbstractConverter &converter,
+                                          mlir::Location loc,
+                                          const semantics::Symbol &sym,
+                                          mlir::Value addr);
+
 //===----------------------------------------------------------------------===//
 // COARRAY expressions
 //===----------------------------------------------------------------------===//

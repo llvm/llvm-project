@@ -185,6 +185,7 @@ func.func @_QQmain() {
 // PASSES-NEXT:  LowerNontemporalPass
 // PASSES-NEXT: FIRToLLVMLowering
 // PASSES-NEXT: ReconcileUnrealizedCasts
+// PASSES-NEXT: EmitMIFGlobalCtors
 // PASSES-NEXT: 'llvm.func' Pipeline
 // PASSES-NEXT:  StackToSharedPass
 // PASSES-NEXT: PrepareForOMPOffloadPrivatizationPass

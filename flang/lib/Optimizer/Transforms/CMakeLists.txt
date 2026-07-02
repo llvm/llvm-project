@@ -28,6 +28,7 @@ add_flang_library(FIRTransforms
   ControlFlowConverter.cpp
   ConvertComplexPow.cpp
   DebugTypeGenerator.cpp
+  EmitMIFGlobalCtors.cpp
   ExternalNameConversion.cpp
   FIRToSCF.cpp
   FIRToMemRef.cpp

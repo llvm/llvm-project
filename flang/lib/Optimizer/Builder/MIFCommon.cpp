@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/MIFCommon.h"
+#include "flang/Lower/MultiImageFortran.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/MIF/MIFOps.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
@@ -60,4 +61,26 @@ std::string mif::getFullUniqName(mlir::Value addr) {
     return getFullUniqName(c.getRef());
   }
   return "";
+}
+
+mlir::func::FuncOp mif::getOrCreateInitFunc(mlir::OpBuilder &builder,
+                                            mlir::ModuleOp mod,
+                                            llvm::StringRef name) {
+
+  if (auto func = mod.lookupSymbol<mlir::func::FuncOp>(name))
+    return func;
+
+  auto funcType = builder.getFunctionType({}, {});
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToEnd(mod.getBody());
+
+  mlir::Location loc = mod.getLoc();
+  auto func = mlir::func::FuncOp::create(builder, loc, name, funcType);
+  func.setPublic();
+
+  func.addEntryBlock();
+  builder.setInsertionPointToEnd(&func.getBody().front());
+  mlir::func::ReturnOp::create(builder, loc);
+
+  return func;
 }

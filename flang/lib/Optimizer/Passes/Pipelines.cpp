@@ -10,6 +10,7 @@
 /// common to flang and the test tools.
 
 #include "flang/Optimizer/Passes/Pipelines.h"
+#include "flang/Optimizer/Builder/MIFCommon.h"
 #include "flang/Optimizer/OpenACC/Passes.h"
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
@@ -460,6 +461,7 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
   }
 
   fir::addFIRToLLVMPass(pm, config);
+  pm.addPass(fir::createEmitMIFGlobalCtors());
 
   // Convert applicable OpenMP stack allocations to shared memory allocations
   // for GPU targets. This pass must run after any alloca-generating passes to

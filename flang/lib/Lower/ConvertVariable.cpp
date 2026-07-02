@@ -2637,11 +2637,12 @@ void Fortran::lower::mapSymbolAttributes(
     assert(!Fortran::semantics::IsAllocatable(sym) &&
            "must be a non-ALLOCATABLE coarray");
     if (Fortran::semantics::IsSaved(sym) &&
-        sym.owner().kind() != Fortran::semantics::Scope::Kind::MainProgram)
-      TODO(loc,
-           "coarray: non-ALLOCATABLE SAVE coarray outside the main program");
-    ;
-    Fortran::lower::genAllocateCoarray(converter, loc, sym, addr);
+        (sym.owner().kind() != Fortran::semantics::Scope::Kind::MainProgram ||
+         var.isModuleOrSubmoduleVariable()))
+      Fortran::lower::genAllocateNonAllocatableSaveCoarray(converter, loc, sym,
+                                                           addr);
+    else
+      Fortran::lower::genAllocateCoarray(converter, loc, sym, addr);
     ::genDeclareSymbol(converter, symMap, sym, addr, len, extents, lbounds,
                        replace);
     return;
