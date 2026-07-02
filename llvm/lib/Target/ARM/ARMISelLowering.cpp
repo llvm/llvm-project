@@ -3771,10 +3771,29 @@ SDValue ARMTargetLowering::LowerGlobalAddressWindows(SDValue Op,
 SDValue
 ARMTargetLowering::LowerEH_SJLJ_SETJMP(SDValue Op, SelectionDAG &DAG) const {
   SDLoc dl(Op);
+  SDValue Chain = Op.getOperand(0);
+  SDValue Buf = Op.getOperand(1);
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+
+  // Store FP into buf[0].
+  const ARMBaseRegisterInfo &ARI =
+      *static_cast<const ARMBaseRegisterInfo *>(Subtarget->getRegisterInfo());
+  Register FrameReg = ARI.getFrameRegister(MF);
+  SDValue FP = DAG.getCopyFromReg(Chain, dl, FrameReg, PtrVT);
+  Chain = DAG.getStore(FP.getValue(1), dl, FP, Buf, MachinePointerInfo());
+
+  // Store SP into buf[2] (offset 8).
+  SDValue SP = DAG.getCopyFromReg(Chain, dl, ARM::SP, PtrVT);
+  SDValue SPAddr =
+      DAG.getNode(ISD::ADD, dl, PtrVT, Buf, DAG.getConstant(8, dl, PtrVT));
+  Chain = DAG.getStore(SP.getValue(1), dl, SP, SPAddr, MachinePointerInfo());
+
+  // Delegate to ARMISD::EH_SJLJ_SETJMP for IP store + return value.
   SDValue Val = DAG.getConstant(0, dl, MVT::i32);
   return DAG.getNode(ARMISD::EH_SJLJ_SETJMP, dl,
-                     DAG.getVTList(MVT::i32, MVT::Other), Op.getOperand(0),
-                     Op.getOperand(1), Val);
+                     DAG.getVTList(MVT::i32, MVT::Other), Chain, Buf, Val);
 }
 
 SDValue

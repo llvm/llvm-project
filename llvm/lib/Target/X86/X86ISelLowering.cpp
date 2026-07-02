@@ -38070,6 +38070,41 @@ X86TargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
   bool UseImmLabel = (MF->getTarget().getCodeModel() == CodeModel::Small) &&
                      !isPositionIndependent();
 
+  const X86RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
+
+  // Store FP to buf[0] and SP to buf[2] before the IP store.
+  // These come first so the IP store can be the last user of the address
+  // operands (preserving kill flags there). Kill flags are stripped here.
+  unsigned RegStoreOpc = (PVT == MVT::i64) ? X86::MOV64mr : X86::MOV32mr;
+
+  bool HasFP = Subtarget.getFrameLowering()->hasFP(*MF);
+  if (HasFP) {
+    MIB = BuildMI(*thisMBB, MI, MIMD, TII->get(RegStoreOpc));
+    for (unsigned i = 0; i < X86::AddrNumOperands; ++i) {
+      const MachineOperand &MO = MI.getOperand(MemOpndSlot + i);
+      if (MO.isReg())
+        MIB.addReg(MO.getReg()); // strip kill flags
+      else
+        MIB.add(MO);
+    }
+    MIB.addReg(RegInfo->getFrameRegister(*MF));
+    MIB.setMemRefs(MMOs);
+  }
+
+  const int64_t SPOffset = 2 * PVT.getStoreSize();
+  MIB = BuildMI(*thisMBB, MI, MIMD, TII->get(RegStoreOpc));
+  for (unsigned i = 0; i < X86::AddrNumOperands; ++i) {
+    const MachineOperand &MO = MI.getOperand(MemOpndSlot + i);
+    if (i == X86::AddrDisp)
+      MIB.addDisp(MO, SPOffset);
+    else if (MO.isReg())
+      MIB.addReg(MO.getReg()); // strip kill flags
+    else
+      MIB.add(MO);
+  }
+  MIB.addReg(RegInfo->getStackRegister());
+  MIB.setMemRefs(MMOs);
+
   // Prepare IP either in reg or imm.
   if (!UseImmLabel) {
     PtrStoreOpc = (PVT == MVT::i64) ? X86::MOV64mr : X86::MOV32mr;
@@ -38093,7 +38128,7 @@ X86TargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
     }
   } else
     PtrStoreOpc = (PVT == MVT::i64) ? X86::MOV64mi32 : X86::MOV32mi;
-  // Store IP
+  // Store IP (last user of address operands — kill flags preserved).
   MIB = BuildMI(*thisMBB, MI, MIMD, TII->get(PtrStoreOpc));
   for (unsigned i = 0; i < X86::AddrNumOperands; ++i) {
     if (i == X86::AddrDisp)
@@ -38115,7 +38150,6 @@ X86TargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
   MIB = BuildMI(*thisMBB, MI, MIMD, TII->get(X86::EH_SjLj_Setup))
           .addMBB(restoreMBB);
 
-  const X86RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
   MIB.addRegMask(RegInfo->getNoPreservedMask());
   thisMBB->addSuccessor(mainMBB);
   thisMBB->addSuccessor(restoreMBB);

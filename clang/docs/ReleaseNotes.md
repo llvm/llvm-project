@@ -753,6 +753,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 - Fix a crash when passing an unresolved overload set to `__builtin_classify_type`. (#GH175589)
 - Fixed a crash when calling `__builtin_allow_sanitize_check` with no arguments. (#GH183927)
+- Fixed a `__builtin_setjmp` miscompilation on Windows x64. (#GH186843)
 - `__annotation` is now diagnosed as unsupported on non-Windows/UEFI targets, fixing a
   crash when using it with `-fms-extensions` on other platforms. (#GH184318)
 - Fixed a compiler crash due to an unresolved overloaded function type when

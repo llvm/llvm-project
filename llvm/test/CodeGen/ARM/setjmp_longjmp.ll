@@ -12,8 +12,6 @@ declare i32 @__gxx_personality_sj0(...)
 declare ptr @__cxa_begin_catch(ptr)
 declare void @__cxa_end_catch()
 declare i32 @llvm.eh.typeid.for(ptr)
-declare ptr @llvm.frameaddress(i32)
-declare ptr @llvm.stacksave()
 @_ZTIPKc = external constant ptr
 
 ; CHECK-LABEL: foobar
@@ -43,8 +41,6 @@ declare ptr @llvm.stacksave()
 define void @foobar() {
 entry:
   %buf = alloca [5 x ptr], align 4
-  ; Note: This is simplified, in reality you have to store the framepointer +
-  ; stackpointer in the buffer as well for this to be legal!
   %setjmpres = call i32 @llvm.eh.sjlj.setjmp(ptr %buf)
   %tobool = icmp ne i32 %setjmpres, 0
   br i1 %tobool, label %if.then, label %if.else
@@ -94,13 +90,8 @@ catch:
   %3 = extractvalue { ptr, i32 } %0, 0
   %4 = tail call ptr @__cxa_begin_catch(ptr %3) #3
   store volatile i32 0, ptr @g, align 4
-  %5 = tail call ptr @llvm.frameaddress(i32 0)
-  store ptr %5, ptr %buf, align 16
-  %6 = tail call ptr @llvm.stacksave()
-  %7 = getelementptr [5 x ptr], ptr %buf, i64 0, i64 2
-  store ptr %6, ptr %7, align 16
-  %8 = call i32 @llvm.eh.sjlj.setjmp(ptr %buf)
-  %tobool = icmp eq i32 %8, 0
+  %5 = call i32 @llvm.eh.sjlj.setjmp(ptr %buf)
+  %tobool = icmp eq i32 %5, 0
   br i1 %tobool, label %if.else, label %if.then
 
 if.then:

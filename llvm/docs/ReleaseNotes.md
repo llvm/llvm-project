@@ -213,6 +213,8 @@ Makes programs 10x faster by doing Special New Thing.
 * The `r14` register can now be used as an alias for the link register `lr`
   in inline assembly. Clang always canonicalizes the name to `lr`, but other
   frontends may not.
+* The backend now stores the frame pointer and stack pointer into the jump buffer
+  when lowering `@llvm.eh.sjlj.setjmp`. This was previously handled by the frontend.
 * `subs pc, lr, #imm` can now be predicated in Thumb2.
 
 ### Changes to the AVR Backend
@@ -235,6 +237,9 @@ Makes programs 10x faster by doing Special New Thing.
   Toolkit versions (11/12/13).
 
 ### Changes to the PowerPC Backend
+
+* The backend now stores the frame pointer and stack pointer into the jump buffer
+  when lowering `@llvm.eh.sjlj.setjmp`. This was previously handled by the frontend.
 
 ### Changes to the RISC-V Backend
 
@@ -268,6 +273,13 @@ Makes programs 10x faster by doing Special New Thing.
 * `-mtune=generic` now uses the scheduling model from SpacemiT X60 instead of an empty scheduling model.
 * The Xqcilo pseudos now emit sequences that can be relaxed.
 
+### Changes to the SystemZ Backend
+
+### Changes to the VE Backend
+
+* The backend now stores the frame pointer and stack pointer into the jump buffer
+  when lowering `@llvm.eh.sjlj.setjmp`. This was previously handled by the frontend.
+
 ### Changes to the WebAssembly Backend
 
 * WebAssembly reference types are now represented in LLVM IR as the target
@@ -289,6 +301,8 @@ Makes programs 10x faster by doing Special New Thing.
 * `.att_syntax` directive is now emitted for assembly files when AT&T syntax is
   in use. This matches the behaviour of Intel syntax and aids with
   compatibility when changing the default Clang syntax to the Intel syntax.
+* The backend now stores the frame pointer and stack pointer into the jump buffer
+  when lowering `@llvm.eh.sjlj.setjmp`. This was previously handled by the frontend.
 
 * EGPR (R16-R31) now requires V3 unwind info on Windows x64. Using EGPR
   without V3 unwind produces a fatal error.

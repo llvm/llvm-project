@@ -10,34 +10,25 @@ target triple = "powerpc64le-unknown-linux-gnu"
 ; CHECK: li 3, 1
 ; CHECK: cmplwi	 3, 0
 
-define void @h() nounwind {
+define void @h() #0 {
   %1 = load ptr, ptr @ptr, align 8
-  %2 = tail call ptr @llvm.frameaddress(i32 0)
-  store ptr %2, ptr %1, align 8
-  %3 = tail call ptr @llvm.stacksave()
-  %4 = getelementptr inbounds ptr, ptr %1, i64 2
-  store ptr %3, ptr %4, align 8
-  %5 = tail call i32 @llvm.eh.sjlj.setjmp(ptr %1)
-  %6 = icmp eq i32 %5, 0
-  br i1 %6, label %8, label %7
+  %2 = tail call i32 @llvm.eh.sjlj.setjmp(ptr %1)
+  %3 = icmp eq i32 %2, 0
+  br i1 %3, label %5, label %4
 
-; <label>:8:                                      ; preds = %0
+4:                                                ; preds = %0
   tail call void @g()
-  br label %9
+  br label %6
 
-; <label>:9:                                      ; preds = %0
+5:                                                ; preds = %0
   tail call void @f()
-  br label %9
+  br label %6
 
-; <label>:10:                                     ; preds = %8, %7
+6:                                                ; preds = %5, %4
   ret void
 }
 
-; Function Attrs: nounwind readnone
-declare ptr @llvm.frameaddress(i32)
-
-; Function Attrs: nounwind
-declare ptr @llvm.stacksave()
+attributes #0 = { nounwind "frame-pointer"="all" }
 
 ; Function Attrs: nounwind
 declare i32 @llvm.eh.sjlj.setjmp(ptr)

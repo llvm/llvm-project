@@ -2179,15 +2179,35 @@ VETargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
   Register LabelReg =
       prepareMBB(*MBB, MachineBasicBlock::iterator(MI), RestoreMBB, DL);
 
-  // Store BP in buf[3] iff this function is using BP.
+  // Store FP (SX9) to buf[0].
   const VEFrameLowering *TFI = Subtarget->getFrameLowering();
-  if (TFI->hasBP(*MF)) {
+  if (TFI->hasFP(*MF)) {
     MachineInstrBuilder MIB = BuildMI(*MBB, MI, DL, TII->get(VE::STrii));
     MIB.addReg(BufReg);
     MIB.addImm(0);
-    MIB.addImm(24);
-    MIB.addReg(VE::SX17);
+    MIB.addImm(0);
+    MIB.addReg(VE::SX9);
     MIB.setMemRefs(MMOs);
+  }
+
+  // Store SP (SX11) to buf[2].
+  {
+    BuildMI(*MBB, MI, DL, TII->get(VE::STrii))
+        .addReg(BufReg)
+        .addImm(0)
+        .addImm(16)
+        .addReg(VE::SX11)
+        .setMemRefs(MMOs);
+  }
+
+  // Store BP in buf[3] iff this function is using BP.
+  if (TFI->hasBP(*MF)) {
+    BuildMI(*MBB, MI, DL, TII->get(VE::STrii))
+        .addReg(BufReg)
+        .addImm(0)
+        .addImm(24)
+        .addReg(VE::SX17)
+        .setMemRefs(MMOs);
   }
 
   // Store IP in buf[1].
@@ -2197,8 +2217,6 @@ VETargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
   MIB.addImm(8);
   MIB.addReg(LabelReg, getKillRegState(true));
   MIB.setMemRefs(MMOs);
-
-  // SP/FP are already stored in jmpbuf before `llvm.eh.sjlj.setjmp`.
 
   // Insert setup.
   MIB =

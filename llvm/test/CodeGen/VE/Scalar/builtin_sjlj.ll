@@ -7,7 +7,7 @@
 @buf = common global [1 x %struct.__jmp_buf_tag] zeroinitializer, align 8
 
 ; Function Attrs: noinline nounwind optnone
-define signext i32 @t_setjmp() {
+define signext i32 @t_setjmp() "frame-pointer"="all" {
 ; CHECK-LABEL: t_setjmp:
 ; CHECK:       .LBB{{[0-9]+}}_5:
 ; CHECK-NEXT:    st %s18, 48(, %s9) # 8-byte Folded Spill
@@ -29,11 +29,11 @@ define signext i32 @t_setjmp() {
 ; CHECK-NEXT:    lea %s0, buf@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s0, buf@hi(, %s0)
-; CHECK-NEXT:    st %s9, (, %s0)
-; CHECK-NEXT:    st %s11, 16(, %s0)
 ; CHECK-NEXT:    lea %s1, .LBB{{[0-9]+}}_3@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
 ; CHECK-NEXT:    lea.sl %s1, .LBB{{[0-9]+}}_3@hi(, %s1)
+; CHECK-NEXT:    st %s9, (, %s0)
+; CHECK-NEXT:    st %s11, 16(, %s0)
 ; CHECK-NEXT:    st %s1, 8(, %s0)
 ; CHECK-NEXT:    # EH_SJlJ_SETUP .LBB{{[0-9]+}}_3
 ; CHECK-NEXT:  # %bb.1:
@@ -104,11 +104,11 @@ define signext i32 @t_setjmp() {
 ; PIC-NEXT:    and %s0, %s0, (32)0
 ; PIC-NEXT:    lea.sl %s0, buf@got_hi(, %s0)
 ; PIC-NEXT:    ld %s0, (%s0, %s15)
-; PIC-NEXT:    st %s9, (, %s0)
-; PIC-NEXT:    st %s11, 16(, %s0)
 ; PIC-NEXT:    lea %s1, .LBB0_3@gotoff_lo
 ; PIC-NEXT:    and %s1, %s1, (32)0
 ; PIC-NEXT:    lea.sl %s1, .LBB0_3@gotoff_hi(%s1, %s15)
+; PIC-NEXT:    st %s9, (, %s0)
+; PIC-NEXT:    st %s11, 16(, %s0)
 ; PIC-NEXT:    st %s1, 8(, %s0)
 ; PIC-NEXT:    # EH_SJlJ_SETUP .LBB0_3
 ; PIC-NEXT:  # %bb.1:
@@ -140,19 +140,9 @@ define signext i32 @t_setjmp() {
 ; PIC-NEXT:    ld %s10, 8(, %s11)
 ; PIC-NEXT:    ld %s9, (, %s11)
 ; PIC-NEXT:    b.l.t (, %s10)
-  %1 = call ptr @llvm.frameaddress(i32 0)
-  store ptr %1, ptr @buf, align 8
-  %2 = call ptr @llvm.stacksave()
-  store ptr %2, ptr getelementptr inbounds (ptr, ptr @buf, i64 2), align 8
-  %3 = call i32 @llvm.eh.sjlj.setjmp(ptr @buf)
-  ret i32 %3
+  %1 = call i32 @llvm.eh.sjlj.setjmp(ptr @buf)
+  ret i32 %1
 }
-
-; Function Attrs: nounwind readnone
-declare ptr @llvm.frameaddress(i32)
-
-; Function Attrs: nounwind
-declare ptr @llvm.stacksave()
 
 ; Function Attrs: nounwind
 declare i32 @llvm.eh.sjlj.setjmp(ptr)
@@ -210,4 +200,3 @@ define void @t_longjmp() {
 
 ; Function Attrs: noreturn nounwind
 declare void @llvm.eh.sjlj.longjmp(ptr)
-

@@ -37,6 +37,8 @@ define i32 @t_setjmp(i64 %n, ptr byval(%Foo) nocapture readnone align 8 %f) {
 ; CHECK-NEXT:    lea %s0, .LBB{{[0-9]+}}_3@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s0, .LBB{{[0-9]+}}_3@hi(, %s0)
+; CHECK-NEXT:    st %s9, (, %s1)
+; CHECK-NEXT:    st %s11, 16(, %s1)
 ; CHECK-NEXT:    st %s17, 24(, %s1)
 ; CHECK-NEXT:    st %s1, 296(, %s17) # 8-byte Folded Spill
 ; CHECK-NEXT:    st %s0, 8(, %s1)

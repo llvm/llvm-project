@@ -3364,6 +3364,55 @@ Query for this feature with `__has_builtin(__builtin_readcyclecounter)`. Note
 that even if present, its use may depend on run-time privilege or other OS
 controlled state.
 
+### `__builtin_setjmp` and `__builtin_longjmp`
+
+`__builtin_setjmp` and `__builtin_longjmp` are used to implement non-local control flow.
+
+**Syntax**:
+
+```c
+__builtin_setjmp(void* jmpbuf)
+__builtin_longjmp(void* jmpbuf, 1)
+```
+
+**Example of Use**:
+
+```c
+#include "stdio.h"
+
+void* buf[5];
+
+void foo() {
+  __builtin_longjmp(buf, 1);
+}
+
+int main() {
+  if (!__builtin_setjmp(buf)) {
+    printf("Hello before longjmp\n");
+    foo();
+    return 1;
+  }
+  printf("Hello after longjmp\n");
+  return 0;
+}
+```
+
+**Description**:
+
+`__builtin_setjmp` saves register state that gets restored when
+`__builtin_longjmp` is called from the same function or any function
+transitively called from it. `__builtin_setjmp` returns 0 when called directly
+and returns 1 after jumping from a `__builtin_longjmp`. Calling
+`__builtin_longjmp` after the function that called `__builtin_setjmp` has
+returned is undefined behavior. The second argument to `__builtin_longjmp`
+should always be 1.
+
+The semantics of `__builtin_setjmp` and `__builtin_longjmp` are identical to
+the libc provided `setjmp` and `longjmp` functions but they are not
+compatible and should not be intermingled. The builtins can be faster on some
+targets because they are legible to the compiler and therefore do not need to
+store all registers for correctness.
+
 ### `__builtin_readsteadycounter`
 
 `__builtin_readsteadycounter` is used to access the fixed frequency counter

@@ -35,12 +35,8 @@ define signext i32 @main() #0 {
 entry:
   %retval = alloca i32, align 4
   store i32 0, ptr %retval
-  %0 = call ptr @llvm.frameaddress(i32 0)
-  store ptr %0, ptr @env_sigill
-  %1 = call ptr @llvm.stacksave()
-  store ptr %1, ptr getelementptr (ptr, ptr @env_sigill, i32 2)
-  %2 = call i32 @llvm.eh.sjlj.setjmp(ptr @env_sigill)
-  %tobool = icmp ne i32 %2, 0
+  %0 = call i32 @llvm.eh.sjlj.setjmp(ptr @env_sigill)
+  %tobool = icmp ne i32 %0, 0
   br i1 %tobool, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
@@ -56,8 +52,8 @@ if.end:                                           ; preds = %if.else
   br label %return
 
 return:                                           ; preds = %if.end, %if.then
-  %3 = load i32, ptr %retval
-  ret i32 %3
+  %1 = load i32, ptr %retval
+  ret i32 %1
 
 
 ; CHECK-LABEL: main:
@@ -69,8 +65,8 @@ return:                                           ; preds = %if.end, %if.then
 ; CHECK-DAG: stxvd2x
 
 ; CHECK-DAG: addis [[REG:[0-9]+]], 2, env_sigill@toc@ha
-; CHECK-DAG: std 31, env_sigill@toc@l([[REG]])
 ; CHECK-DAG: addi [[REGA:[0-9]+]], [[REG]], env_sigill@toc@l
+; CHECK-DAG: std 31, 0([[REGA]])
 ; CHECK-DAG: std [[REGA]], [[OFF:[0-9]+]](31)                  # 8-byte Folded Spill
 ; CHECK-DAG: std 1, 16([[REGA]])
 ; CHECK-DAG: std 2, 24([[REGA]])
@@ -107,12 +103,8 @@ entry:
   call void @bar(ptr %a)
   %retval = alloca i32, align 4
   store i32 0, ptr %retval
-  %0 = call ptr @llvm.frameaddress(i32 0)
-  store ptr %0, ptr @env_sigill
-  %1 = call ptr @llvm.stacksave()
-  store ptr %1, ptr getelementptr (ptr, ptr @env_sigill, i32 2)
-  %2 = call i32 @llvm.eh.sjlj.setjmp(ptr @env_sigill)
-  %tobool = icmp ne i32 %2, 0
+  %0 = call i32 @llvm.eh.sjlj.setjmp(ptr @env_sigill)
+  %tobool = icmp ne i32 %0, 0
   br i1 %tobool, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
@@ -128,18 +120,17 @@ if.end:                                           ; preds = %if.else
   br label %return
 
 return:                                           ; preds = %if.end, %if.then
-  %3 = load i32, ptr %retval
-  ret i32 %3
+  %1 = load i32, ptr %retval
+  ret i32 %1
 
 ; CHECK-LABEL: main2:
 
 ; CHECK: addis [[REG:[0-9]+]], 2, env_sigill@toc@ha
-; CHECK-DAG: std 31, env_sigill@toc@l([[REG]])
 ; CHECK-DAG: addi [[REGB:[0-9]+]], [[REG]], env_sigill@toc@l
+; CHECK-DAG: std 31, 0([[REGB]])
 ; CHECK-DAG: std [[REGB]], [[OFF:[0-9]+]](31)                  # 8-byte Folded Spill
 ; CHECK-DAG: std 1, 16([[REGB]])
 ; CHECK-DAG: std 2, 24([[REGB]])
-; CHECK-DAG: std 30, 32([[REGB]])
 ; CHECK: bcl 20, 31,
 
 ; CHECK: blr
@@ -164,10 +155,6 @@ return:
 }
 
 declare void @bar(ptr) #3
-
-declare ptr @llvm.frameaddress(i32) #2
-
-declare ptr @llvm.stacksave() #3
 
 declare i32 @llvm.eh.sjlj.setjmp(ptr) #3
 

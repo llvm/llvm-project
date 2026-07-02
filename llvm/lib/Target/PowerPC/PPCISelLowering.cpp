@@ -13631,24 +13631,52 @@ PPCTargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
   // Note that the structure of the jmp_buf used here is not compatible
   // with that used by libc, and is not designed to be. Specifically, it
   // stores only those 'reserved' registers that LLVM does not otherwise
-  // understand how to spill. Also, by convention, by the time this
-  // intrinsic is called, Clang has already stored the frame address in the
-  // first slot of the buffer and stack address in the third. Following the
-  // X86 target code, we'll store the jump address in the second slot. We also
-  // need to save the TOC pointer (R2) to handle jumps between shared
-  // libraries, and that will be stored in the fourth slot. The thread
-  // identifier (R13) is not affected.
+  // understand how to spill.
+  // Buffer layout:
+  //   buf[0] = Frame Pointer
+  //   buf[1] = IP (return address / LR)
+  //   buf[2] = Stack Pointer
+  //   buf[3] = TOC pointer (R2, 64-bit ELF only)
+  //   buf[4] = Base Pointer
 
   // thisMBB:
+  const int64_t FPOffset = 0;
   const int64_t LabelOffset = 1 * PVT.getStoreSize();
-  const int64_t TOCOffset   = 3 * PVT.getStoreSize();
-  const int64_t BPOffset    = 4 * PVT.getStoreSize();
+  const int64_t SPOffset = 2 * PVT.getStoreSize();
+  const int64_t TOCOffset = 3 * PVT.getStoreSize();
+  const int64_t BPOffset = 4 * PVT.getStoreSize();
 
   // Prepare IP either in reg.
   const TargetRegisterClass *PtrRC = getRegClassFor(PVT);
   Register LabelReg = MRI.createVirtualRegister(PtrRC);
   Register BufReg = MI.getOperand(1).getReg();
 
+  MCRegister SP = Subtarget.getStackPointerRegister();
+
+  // Store FP to buf[0] if we have a frame pointer.
+  // Note: hasFP() is unreliable here because it depends on getStackSize()
+  // which isn't known yet during ISel. Use needsFP() instead.
+  auto *TFI =
+      static_cast<const PPCFrameLowering *>(Subtarget.getFrameLowering());
+  if (TFI->needsFP(*MF)) {
+    unsigned FP = (PVT == MVT::i64) ? PPC::X31 : PPC::R31;
+    MIB = BuildMI(*thisMBB, MI, DL,
+                  TII->get(Subtarget.isPPC64() ? PPC::STD : PPC::STW))
+              .addReg(FP)
+              .addImm(FPOffset)
+              .addReg(BufReg)
+              .cloneMemRefs(MI);
+  }
+
+  // Store SP to buf[2].
+  MIB = BuildMI(*thisMBB, MI, DL,
+                TII->get(Subtarget.isPPC64() ? PPC::STD : PPC::STW))
+            .addReg(SP)
+            .addImm(SPOffset)
+            .addReg(BufReg)
+            .cloneMemRefs(MI);
+
+  // Store TOC (R2) for 64-bit ELF.
   if (Subtarget.is64BitELFABI()) {
     setUsesTOCBasePtr(*MBB->getParent());
     MIB = BuildMI(*thisMBB, MI, DL, TII->get(PPC::STD))

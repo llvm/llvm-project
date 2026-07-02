@@ -84,6 +84,10 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the RISC-V Backend
 
+### Changes to the SystemZ Backend
+
+### Changes to the VE Backend
+
 ### Changes to the WebAssembly Backend
 
 ### Changes to the Windows Target
