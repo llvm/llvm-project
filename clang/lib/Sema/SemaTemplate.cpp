@@ -6467,6 +6467,11 @@ bool UnnamedLocalNoLinkageFinder::VisitPipeType(const PipeType* T) {
   return false;
 }
 
+bool UnnamedLocalNoLinkageFinder::VisitWebAssemblyTableType(
+    const WebAssemblyTableType *T) {
+  return Visit(T->getElementType());
+}
+
 bool UnnamedLocalNoLinkageFinder::VisitBitIntType(const BitIntType *T) {
   return false;
 }

@@ -586,6 +586,15 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     break;
   }
 
+  case Type::WebAssemblyTable: {
+    // A WebAssembly table lowers to a zero-length array of its (reference type)
+    // element, matching the classic codegen lowering.
+    const auto *wtt = cast<WebAssemblyTableType>(ty);
+    mlir::Type elemTy = convertTypeForMem(wtt->getElementType());
+    resultType = cir::ArrayType::get(elemTy, 0);
+    break;
+  }
+
   case Type::ExtVector:
   case Type::Vector: {
     const VectorType *vec = cast<VectorType>(ty);

@@ -1289,6 +1289,10 @@ public:
   QualType RebuildPipeType(QualType ValueType, SourceLocation KWLoc,
                            bool isReadPipe);
 
+  /// Build a new WebAssembly table type given its element type.
+  QualType RebuildWebAssemblyTableType(QualType ElementType,
+                                       SourceLocation KWLoc);
+
   /// Build a bit-precise int given its value type.
   QualType RebuildBitIntType(bool IsUnsigned, unsigned NumBits,
                              SourceLocation Loc);
@@ -7418,6 +7422,28 @@ QualType TreeTransform<Derived>::TransformPipeType(TypeLocBuilder &TLB,
   }
 
   PipeTypeLoc NewTL = TLB.push<PipeTypeLoc>(Result);
+  NewTL.setKWLoc(TL.getKWLoc());
+
+  return Result;
+}
+
+template <typename Derived>
+QualType TreeTransform<Derived>::TransformWebAssemblyTableType(
+    TypeLocBuilder &TLB, WebAssemblyTableTypeLoc TL) {
+  QualType ElementType = getDerived().TransformType(TLB, TL.getValueLoc());
+  if (ElementType.isNull())
+    return QualType();
+
+  QualType Result = TL.getType();
+  if (getDerived().AlwaysRebuild() ||
+      ElementType != TL.getValueLoc().getType()) {
+    Result =
+        getDerived().RebuildWebAssemblyTableType(ElementType, TL.getKWLoc());
+    if (Result.isNull())
+      return QualType();
+  }
+
+  WebAssemblyTableTypeLoc NewTL = TLB.push<WebAssemblyTableTypeLoc>(Result);
   NewTL.setKWLoc(TL.getKWLoc());
 
   return Result;
@@ -17867,6 +17893,13 @@ QualType TreeTransform<Derived>::RebuildPipeType(QualType ValueType,
                                                  bool isReadPipe) {
   return isReadPipe ? SemaRef.BuildReadPipeType(ValueType, KWLoc)
                     : SemaRef.BuildWritePipeType(ValueType, KWLoc);
+}
+
+template <typename Derived>
+QualType
+TreeTransform<Derived>::RebuildWebAssemblyTableType(QualType ElementType,
+                                                    SourceLocation KWLoc) {
+  return SemaRef.Context.getWebAssemblyTableType(ElementType);
 }
 
 template <typename Derived>

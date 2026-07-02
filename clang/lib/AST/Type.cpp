@@ -2653,13 +2653,7 @@ bool Type::isWebAssemblyExternrefType() const {
 }
 
 bool Type::isWebAssemblyTableType() const {
-  if (const auto *ATy = dyn_cast<ArrayType>(this))
-    return ATy->getElementType().isWebAssemblyReferenceType();
-
-  if (const auto *PTy = dyn_cast<PointerType>(this))
-    return PTy->getPointeeType().isWebAssemblyReferenceType();
-
-  return false;
+  return isa<WebAssemblyTableType>(CanonicalType);
 }
 
 bool Type::isSizelessType() const { return isSizelessBuiltinType(); }
@@ -5015,6 +5009,8 @@ static CachedProperties computeCachedProperties(const Type *T) {
     return Cache::get(cast<AtomicType>(T)->getValueType());
   case Type::Pipe:
     return Cache::get(cast<PipeType>(T)->getElementType());
+  case Type::WebAssemblyTable:
+    return Cache::get(cast<WebAssemblyTableType>(T)->getElementType());
   case Type::HLSLAttributedResource:
     return Cache::get(cast<HLSLAttributedResourceType>(T)->getWrappedType());
   case Type::HLSLInlineSpirv:
@@ -5116,6 +5112,9 @@ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
     return computeTypeLinkageInfo(cast<AtomicType>(T)->getValueType());
   case Type::Pipe:
     return computeTypeLinkageInfo(cast<PipeType>(T)->getElementType());
+  case Type::WebAssemblyTable:
+    return computeTypeLinkageInfo(
+        cast<WebAssemblyTableType>(T)->getElementType());
   case Type::OverflowBehavior:
     return computeTypeLinkageInfo(
         cast<OverflowBehaviorType>(T)->getUnderlyingType());
@@ -5308,6 +5307,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   case Type::ObjCInterface:
   case Type::Atomic:
   case Type::Pipe:
+  case Type::WebAssemblyTable:
   case Type::BitInt:
   case Type::DependentBitInt:
   case Type::ArrayParameter:

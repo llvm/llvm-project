@@ -4219,6 +4219,8 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
     break;
   case clang::Type::SubstBuiltinTemplatePack:
     break;
+  case clang::Type::WebAssemblyTable:
+    break;
   }
   // We don't know hot to display this type...
   return lldb::eTypeClassOther;
@@ -5082,6 +5084,8 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type) {
     break;
   case clang::Type::SubstBuiltinTemplatePack:
     break;
+  case clang::Type::WebAssemblyTable:
+    break;
   }
 
   return lldb::eEncodingInvalid;
@@ -5251,6 +5255,8 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
   case clang::Type::HLSLInlineSpirv:
     break;
   case clang::Type::SubstBuiltinTemplatePack:
+    break;
+  case clang::Type::WebAssemblyTable:
     break;
   }
   // We don't know hot to display this type...

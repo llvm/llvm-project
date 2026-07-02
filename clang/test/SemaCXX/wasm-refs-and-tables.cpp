@@ -19,7 +19,7 @@ __externref_t func(__externref_t ref)  throw(__externref_t) { // expected-error 
 #endif
 
 void *ret_void_ptr() {
-  throw table;              // expected-error {{cannot throw a WebAssembly reference type}}
+  throw table;              // expected-error {{cannot throw a WebAssembly table}}
   throw r1;                 // expected-error {{cannot throw a WebAssembly reference type}}
   try {}
   catch (__externref_t T) { // expected-error {{cannot catch a WebAssembly reference type}}

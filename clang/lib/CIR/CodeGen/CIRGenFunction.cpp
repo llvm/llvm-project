@@ -86,6 +86,7 @@ cir::TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
     case Type::ObjCObject:
     case Type::ObjCInterface:
     case Type::ArrayParameter:
+    case Type::WebAssemblyTable:
       return cir::TEK_Aggregate;
 
     // We operate on atomic values according to their underlying type.
@@ -1763,6 +1764,10 @@ void CIRGenFunction::emitVariablyModifiedType(QualType type) {
 
     case Type::Pipe:
       type = cast<clang::PipeType>(ty)->getElementType();
+      break;
+
+    case Type::WebAssemblyTable:
+      type = cast<clang::WebAssemblyTableType>(ty)->getElementType();
       break;
     }
   } while (type->isVariablyModifiedType());
