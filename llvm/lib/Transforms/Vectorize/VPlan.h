@@ -713,6 +713,7 @@ public:
     char HasNSW : 1;
 
     WrapFlagsTy(bool HasNUW, bool HasNSW) : HasNUW(HasNUW), HasNSW(HasNSW) {}
+    WrapFlagsTy() : HasNUW(false), HasNSW(false) {}
   };
 
   struct TruncFlagsTy {
@@ -1035,18 +1036,14 @@ public:
     }
   }
 
-  bool hasNoWrapFlags() const {
+  WrapFlagsTy getNoWrapFlagsOrNone() const {
     switch (OpType) {
     case OperationType::OverflowingBinOp:
     case OperationType::Trunc:
-      return true;
+      return {hasNoUnsignedWrap(), hasNoSignedWrap()};
     default:
-      return false;
+      return {};
     }
-  }
-
-  WrapFlagsTy getNoWrapFlags() const {
-    return {hasNoUnsignedWrap(), hasNoSignedWrap()};
   }
 
   bool isDisjoint() const {
@@ -4118,7 +4115,7 @@ protected:
 class VPWidenCanonicalIVRecipe : public VPRecipeWithIRFlags {
 public:
   VPWidenCanonicalIVRecipe(VPRegionValue *CanonicalIV,
-                           const VPIRFlags::WrapFlagsTy &Flags = {false, false})
+                           const VPIRFlags::WrapFlagsTy &Flags = {})
       : VPRecipeWithIRFlags(VPRecipeBase::VPWidenCanonicalIVSC, CanonicalIV,
                             CanonicalIV->getType(), Flags) {}
 
@@ -4126,7 +4123,7 @@ public:
 
   VPWidenCanonicalIVRecipe *clone() override {
     auto *WideCanIV =
-        new VPWidenCanonicalIVRecipe(getCanonicalIV(), getNoWrapFlags());
+        new VPWidenCanonicalIVRecipe(getCanonicalIV(), getNoWrapFlagsOrNone());
     if (VPValue *Step = getStepValue())
       WideCanIV->addPerPartStep(Step);
     return WideCanIV;
