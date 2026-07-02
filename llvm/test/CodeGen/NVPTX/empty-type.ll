@@ -33,7 +33,7 @@ define void @only_empty(%empty %z) {
 }
 
 ; A zero-sized argument between two real ones is dropped; the parameters that
-; remain keep their original argument-numbered names in the callee.
+; remain are renumbered contiguously (the trailing i32 becomes middle_param_1).
 define i32 @middle(i32 %a, %empty %z, i32 %b) {
 ; CHECK-LABEL: middle(
 ; CHECK:       {
@@ -41,7 +41,7 @@ define i32 @middle(i32 %a, %empty %z, i32 %b) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [middle_param_0];
-; CHECK-NEXT:    ld.param.b32 %r2, [middle_param_2];
+; CHECK-NEXT:    ld.param.b32 %r2, [middle_param_1];
 ; CHECK-NEXT:    add.s32 %r3, %r1, %r2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
@@ -56,7 +56,7 @@ define i32 @zero_array(%zero_array %z, i32 %n) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [zero_array_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [zero_array_param_0];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   ret i32 %n
@@ -69,7 +69,7 @@ define i32 @nested(%nested %z, i32 %n) {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [nested_param_1];
+; CHECK-NEXT:    ld.param.b32 %r1, [nested_param_0];
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   ret i32 %n
@@ -83,9 +83,9 @@ define ptx_kernel void @kernel(%empty %z, ptr %p, i32 %n) {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [kernel_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [kernel_param_0];
 ; CHECK-NEXT:    cvta.to.global.u64 %rd2, %rd1;
-; CHECK-NEXT:    ld.param.b32 %r1, [kernel_param_2];
+; CHECK-NEXT:    ld.param.b32 %r1, [kernel_param_1];
 ; CHECK-NEXT:    st.global.b32 [%rd2], %r1;
 ; CHECK-NEXT:    ret;
   store i32 %n, ptr %p

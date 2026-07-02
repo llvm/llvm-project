@@ -3965,17 +3965,17 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
   // See similar issue in LowerCall.
 
   auto AllIns = ArrayRef(Ins);
-  for (const auto &Arg : F.args()) {
-    const auto ArgIns = AllIns.take_while(
-        [&](auto I) { return I.OrigArgIndex == Arg.getArgNo(); });
+  const auto NonEmptyArgs = make_filter_range(
+      F.args(), [](const Argument &A) { return !A.getType()->isEmptyTy(); });
+  for (const auto &[ParamI, Arg] : enumerate(NonEmptyArgs)) {
+    const unsigned ArgNo = Arg.getArgNo();
+    const auto ArgIns =
+        AllIns.take_while([&](auto I) { return I.OrigArgIndex == ArgNo; });
     AllIns = AllIns.drop_front(ArgIns.size());
 
     Type *Ty = Arg.getType();
-
-    if (ArgIns.empty()) {
-      assert(Ty->isEmptyTy() && "Only empty types produce no parameter values");
-      continue;
-    }
+    assert(!ArgIns.empty() &&
+           "Non-empty argument produced no parameter values");
 
     if (Arg.use_empty()) {
       // argument is dead
@@ -3986,7 +3986,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
       continue;
     }
 
-    SDValue ArgSymbol = getParamSymbol(DAG, Arg.getArgNo(), PtrVT);
+    SDValue ArgSymbol = getParamSymbol(DAG, ParamI, PtrVT);
 
     // In the following cases, assign a node order of "i+1"
     // to newly created nodes. The SDNodes for params have to
