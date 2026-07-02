@@ -1119,7 +1119,10 @@ class DAPTestSession(Session):
         return event
 
     def continue_to_exception_breakpoint(
-        self, *, expected_description: str, expected_text: Optional[str] = None
+        self,
+        *,
+        expected_description: Optional[str] = None,
+        expected_text: Optional[str] = None,
     ):
         continue_response = self.do_continue()
         return self.verify_stopped_on_exception(
