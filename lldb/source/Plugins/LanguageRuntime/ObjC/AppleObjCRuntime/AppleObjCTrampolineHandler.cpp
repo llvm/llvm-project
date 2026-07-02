@@ -977,6 +977,10 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
       ObjCLanguageRuntime *objc_runtime =
           ObjCLanguageRuntime::Get(*thread.GetProcess());
       assert(objc_runtime != nullptr);
+      // We have the address in the ISA pointer of our object, but it might
+      // be a masked value, so we need to get the Pointer ISA:
+      isa_addr = objc_runtime->GetPointerISA(isa_addr);
+
       LLDB_LOG(log, "Resolving call for class - {0} and selector - {1}",
                isa_addr, sel_addr);
       impl_addr = objc_runtime->LookupInMethodCache(isa_addr, sel_addr);

@@ -102,6 +102,11 @@ Makes programs 10x faster by doing Special New Thing.
   outlining. Add the `noinline` and `nooutline` attributes as well in cases
   where inlining and outlining should additionally be disabled.
 
+* Added support for ``callgraph`` metadata. The `!callgraph` metadata
+  associates a function definition with its type identifier and is used for call
+  graph section generation. See the [callgraph Metadata](https://llvm.org/docs/LangRef.html#callgraph-metadata)
+  section of the LangRef for details.
+
 ### Changes to LLVM infrastructure
 
 * Removed ``Constant::isZeroValue``. It was functionally identical to
@@ -300,6 +305,11 @@ Makes programs 10x faster by doing Special New Thing.
   two-register push in Windows x64 V3 unwind info. The directive takes two
   register operands: ``.seh_push2regs %r12, %r13``.
 
+* The `fp128` type is now returned via sret instead of XMM0 for some calling
+  conventions to match GCC. The C and Win64 calling conventions now use
+  sret, other calling conventions do not need to be compatible with
+  GCC and still return via XMM0.
+
 ### Changes to the OCaml bindings
 
 ### Changes to the Python bindings
@@ -375,6 +385,7 @@ Makes programs 10x faster by doing Special New Thing.
 * Add `-mtune` option to `opt`.
 * Fixed `llvm-ar` to correctly handle the `N` count modifier on Windows for archive members whose names differ only
   in case (e.g. `FOO.OBJ` and `foo.obj`). Previously, `-N 2` would fail with "not found" even when two matching members existed.
+* `llvm-readobj` and `llvm-readelf` now support the `--call-graph-section` option to dump the contents of the experimental [call graph section](CallGraphSection.md).
 
 ### Changes to LLDB
 

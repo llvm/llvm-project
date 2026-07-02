@@ -216,6 +216,13 @@ functions:
     return_type: int
     arguments:
       - type: void
+  - name: realpath
+    standards:
+      - posix
+    return_type: char *
+    arguments:
+      - type: const char *__restrict
+      - type: char *__restrict
   - name: srand
     standards:
       - stdc
