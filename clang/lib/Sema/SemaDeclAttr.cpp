@@ -7719,6 +7719,12 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_AMDGPUNumVGPR:
     S.AMDGPU().handleAMDGPUNumVGPRAttr(D, AL);
     break;
+  case ParsedAttr::AT_AMDGPUPinVGPR:
+    S.AMDGPU().handleAMDGPUPinVGPRAttr(D, AL);
+    break;
+  case ParsedAttr::AT_AMDGPUPinAGPR:
+    S.AMDGPU().handleAMDGPUPinAGPRAttr(D, AL);
+    break;
   case ParsedAttr::AT_AMDGPUMaxNumWorkGroups:
     S.AMDGPU().handleAMDGPUMaxNumWorkGroupsAttr(D, AL);
     break;

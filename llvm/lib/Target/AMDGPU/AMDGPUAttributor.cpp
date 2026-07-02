@@ -1360,6 +1360,18 @@ struct AAAMDGPUMinAGPRAlloc
 
         return true;
       }
+      // llvm.amdgcn.pin.agpr is an explicit request to keep a value in an AGPR.
+      // Force a nonzero AGPR requirement (the top of the pinned tuple) so the
+      // function is not inferred as needing no AGPRs, which would lower the MFMA
+      // accumulator to the VGPR form and defeat the pin.
+      case Intrinsic::amdgcn_pin_agpr: {
+        unsigned RegNo =
+            cast<ConstantInt>(CB.getArgOperand(1))->getZExtValue();
+        unsigned NumRegs = divideCeil(
+            CB.getArgOperand(0)->getType()->getPrimitiveSizeInBits(), 32);
+        Maximum.takeAssumedMaximum(std::min(RegNo + NumRegs, 256u));
+        return true;
+      }
       // Trap-like intrinsics such as llvm.trap and llvm.debugtrap do not have
       // the nocallback attribute, so the AMDGPU attributor can conservatively
       // drop all implicitly-known inputs and AGPR allocation information. Make

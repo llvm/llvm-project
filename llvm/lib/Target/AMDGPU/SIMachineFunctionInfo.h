@@ -1179,6 +1179,10 @@ public:
     return WavesPerEU;
   }
 
+  /// Override the waves-per-EU bounds (used e.g. to let register-pinning drive
+  /// the occupancy target / VGPR budget).
+  void setWavesPerEU(unsigned Min, unsigned Max) { WavesPerEU = {Min, Max}; }
+
   /// \returns Default/requested minimum number of waves per execution unit.
   unsigned getMinWavesPerEU() const {
     return WavesPerEU.first;

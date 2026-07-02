@@ -2546,6 +2546,21 @@ def int_amdgcn_readfirstlane :
   Intrinsic<[llvm_any_ty], [LLVMMatchType<0>],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree, IntrNoCreateUndefOrPoison]>;
 
+// Register-pinning hint. Requests that the value operand be kept in the physical
+// VGPR (int_amdgcn_pin_vgpr) or AGPR (int_amdgcn_pin_agpr) tuple starting at the
+// number given by the second (immediate) operand. Overloaded on the value type:
+// a 32/64/128-bit value pins to 1/2/4 consecutive registers starting at that
+// number. This is a soft register-allocation hint: the allocator prefers those
+// registers when feasible and falls back under pressure. Value passed unchanged.
+def int_amdgcn_pin_vgpr :
+  Intrinsic<[llvm_any_ty], [LLVMMatchType<0>, llvm_i32_ty],
+            [IntrNoMem, IntrWillReturn, IntrNoCallback, IntrNoFree,
+             ImmArg<ArgIndex<1>>]>;
+def int_amdgcn_pin_agpr :
+  Intrinsic<[llvm_any_ty], [LLVMMatchType<0>, llvm_i32_ty],
+            [IntrNoMem, IntrWillReturn, IntrNoCallback, IntrNoFree,
+             ImmArg<ArgIndex<1>>]>;
+
 // The lane argument must be uniform across the currently active threads of the
 // current wave. Otherwise, the result is undefined.
 def int_amdgcn_readlane :

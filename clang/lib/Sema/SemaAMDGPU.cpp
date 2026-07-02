@@ -729,6 +729,44 @@ void SemaAMDGPU::handleAMDGPUNumVGPRAttr(Decl *D, const ParsedAttr &AL) {
                  AMDGPUNumVGPRAttr(getASTContext(), AL, NumVGPR));
 }
 
+// Validate a pin register operand. Value-dependent expressions (e.g. template
+// parameters) are accepted as-is and re-checked at instantiation; otherwise the
+// expression must be a non-negative integer constant.
+static Expr *checkPinRegArg(Sema &S, const AttributeCommonInfo &CI, Expr *E) {
+  if (E->isValueDependent())
+    return E;
+  llvm::APSInt Val;
+  ExprResult R = S.VerifyIntegerConstantExpression(E, &Val);
+  if (R.isInvalid())
+    return nullptr;
+  if (Val.isNegative()) {
+    S.Diag(E->getExprLoc(), diag::err_attribute_requires_positive_integer)
+        << CI << /*non-negative*/ 1;
+    return nullptr;
+  }
+  return R.get();
+}
+
+void SemaAMDGPU::addAMDGPUPinVGPRAttr(Decl *D, const AttributeCommonInfo &CI,
+                                      Expr *RegExpr) {
+  if (Expr *E = checkPinRegArg(SemaRef, CI, RegExpr))
+    D->addAttr(::new (getASTContext()) AMDGPUPinVGPRAttr(getASTContext(), CI, E));
+}
+
+void SemaAMDGPU::addAMDGPUPinAGPRAttr(Decl *D, const AttributeCommonInfo &CI,
+                                      Expr *RegExpr) {
+  if (Expr *E = checkPinRegArg(SemaRef, CI, RegExpr))
+    D->addAttr(::new (getASTContext()) AMDGPUPinAGPRAttr(getASTContext(), CI, E));
+}
+
+void SemaAMDGPU::handleAMDGPUPinVGPRAttr(Decl *D, const ParsedAttr &AL) {
+  addAMDGPUPinVGPRAttr(D, AL, AL.getArgAsExpr(0));
+}
+
+void SemaAMDGPU::handleAMDGPUPinAGPRAttr(Decl *D, const ParsedAttr &AL) {
+  addAMDGPUPinAGPRAttr(D, AL, AL.getArgAsExpr(0));
+}
+
 static bool
 checkAMDGPUMaxNumWorkGroupsArguments(Sema &S, Expr *XExpr, Expr *YExpr,
                                      Expr *ZExpr,

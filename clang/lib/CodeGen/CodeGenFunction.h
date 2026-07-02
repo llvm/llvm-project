@@ -1550,6 +1550,17 @@ private:
   /// decls.
   DeclMapTy LocalDeclMap;
 
+  /// Local variables carrying an amdgpu_pin_{vgpr,agpr} attribute, keyed by the
+  /// variable's storage pointer. Maps to (isAGPR, startRegNo). Every value
+  /// stored to such a variable is wrapped with llvm.amdgcn.pin.* so it is
+  /// register-pinned. \sa emitAMDGPUPinnedValue
+  llvm::DenseMap<llvm::Value *, std::pair<bool, unsigned>> AMDGPUPinnedLocals;
+
+  /// If \p Addr is a pinned local's storage, return \p V wrapped with the
+  /// appropriate llvm.amdgcn.pin.* intrinsic(s) (chunked for wide values);
+  /// otherwise return \p V unchanged.
+  llvm::Value *emitAMDGPUPinnedValue(llvm::Value *V, llvm::Value *Addr);
+
   // Keep track of the cleanups for callee-destructed parameters pushed to the
   // cleanup stack so that they can be deactivated later.
   llvm::DenseMap<const ParmVarDecl *, EHScopeStack::stable_iterator>
