@@ -397,11 +397,11 @@ static bool FileAtPathContainsArchAndUUID(const FileSpec &file_fspec,
 static bool LookForDsymNextToExecutablePath(const ModuleSpec &mod_spec,
                                             const FileSpec &exec_fspec,
                                             FileSpec &dsym_fspec) {
-  ConstString filename = exec_fspec.GetFilename();
+  llvm::StringRef filename = exec_fspec.GetFilename();
   FileSpec dsym_directory = exec_fspec;
   dsym_directory.RemoveLastPathComponent();
 
-  std::string dsym_filename = filename.GetString();
+  std::string dsym_filename = filename.str();
   dsym_filename += ".dSYM";
   dsym_directory.AppendPathComponent(dsym_filename);
   dsym_directory.AppendPathComponent("Contents");
@@ -413,7 +413,7 @@ static bool LookForDsymNextToExecutablePath(const ModuleSpec &mod_spec,
     // See if the binary name exists in the dSYM DWARF
     // subdir.
     dsym_fspec = dsym_directory;
-    dsym_fspec.AppendPathComponent(filename.AsCString(nullptr));
+    dsym_fspec.AppendPathComponent(filename);
     if (FileSystem::Instance().Exists(dsym_fspec) &&
         FileAtPathContainsArchAndUUID(dsym_fspec, mod_spec.GetArchitecturePtr(),
                                       mod_spec.GetUUIDPtr())) {
@@ -424,7 +424,7 @@ static bool LookForDsymNextToExecutablePath(const ModuleSpec &mod_spec,
     // CF.framework.dSYM/Contents/Resources/DWARF/CF
     // We need to drop the last suffix after '.' to match
     // 'CF' in the DWARF subdir.
-    std::string binary_name = filename.GetString();
+    std::string binary_name = filename.str();
     auto last_dot = binary_name.find_last_of('.');
     if (last_dot != std::string::npos) {
       binary_name.erase(last_dot);
@@ -442,7 +442,7 @@ static bool LookForDsymNextToExecutablePath(const ModuleSpec &mod_spec,
   // See if we have a .dSYM.yaa next to this executable path.
   FileSpec dsym_yaa_fspec = exec_fspec;
   dsym_yaa_fspec.RemoveLastPathComponent();
-  std::string dsym_yaa_filename = filename.GetString();
+  std::string dsym_yaa_filename = filename.str();
   dsym_yaa_filename += ".dSYM.yaa";
   dsym_yaa_fspec.AppendPathComponent(dsym_yaa_filename);
 
@@ -502,10 +502,10 @@ static bool LocateDSYMInVincinityOfExecutable(const ModuleSpec &module_spec,
       for (int i = 0; i < 4; i++) {
         // Does this part of the path have a "." character - could it be a
         // bundle's top level directory?
-        const char *fn = parent_dirs.GetFilename().AsCString(nullptr);
-        if (fn == nullptr)
+        llvm::StringRef fn = parent_dirs.GetFilename();
+        if (fn.empty())
           break;
-        if (::strchr(fn, '.') != nullptr) {
+        if (fn.contains('.')) {
           if (::LookForDsymNextToExecutablePath(module_spec, parent_dirs,
                                                 dsym_fspec)) {
             LLDB_LOGF(log, "dSYM with matching UUID & arch found at %s",
@@ -772,12 +772,13 @@ std::optional<FileSpec> SymbolLocatorDebugSymbols::LocateExecutableSymbolFile(
 
   LLDB_SCOPED_TIMERF(
       "LocateExecutableSymbolFileDsym (file = %s, arch = %s, uuid = %p)",
-      exec_fspec ? exec_fspec->GetFilename().AsCString("<NULL>") : "<NULL>",
+      exec_fspec ? exec_fspec->GetFilename().nonEmptyOr("<NULL>").str().c_str()
+                 : "<NULL>",
       arch ? arch->GetArchitectureName() : "<NULL>", (const void *)uuid);
 
   Progress progress(
       "Locating external symbol file",
-      module_spec.GetFileSpec().GetFilename().AsCString("<Unknown>"));
+      module_spec.GetFileSpec().GetFilename().nonEmptyOr("<Unknown>").str());
 
   FileSpec symbol_fspec;
   ModuleSpec dsym_module_spec;
@@ -1067,13 +1068,12 @@ bool SymbolLocatorDebugSymbols::DownloadObjectAndSymbolFile(
   // Log and report progress.
   std::string lookup_desc;
   if (uuid_ptr && file_spec_ptr)
-    lookup_desc =
-        llvm::formatv("{0} ({1})", file_spec_ptr->GetFilename().GetString(),
-                      uuid_ptr->GetAsString());
+    lookup_desc = llvm::formatv("{0} ({1})", file_spec_ptr->GetFilename(),
+                                uuid_ptr->GetAsString());
   else if (uuid_ptr)
     lookup_desc = uuid_ptr->GetAsString();
   else if (file_spec_ptr)
-    lookup_desc = file_spec_ptr->GetFilename().GetString();
+    lookup_desc = file_spec_ptr->GetFilename().str();
 
   Log *log = GetLog(LLDBLog::Host);
   LLDB_LOG(log, "Calling {0} for {1} to find dSYM: {2}", dsymForUUID_exe_path,

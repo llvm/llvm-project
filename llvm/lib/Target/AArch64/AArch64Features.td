@@ -582,6 +582,9 @@ def FeatureSME_TMOP: ExtensionWithMArch<"sme-tmop", "SME_TMOP", "FEAT_SME_TMOP",
 def FeatureSSVE_FEXPA : ExtensionWithMArch<"ssve-fexpa", "SSVE_FEXPA", "FEAT_SSVE_FEXPA",
   "Enable SVE FEXPA instruction in Streaming SVE mode", [FeatureSME2]>;
 
+def FeatureHINTE: ExtensionWithMArch<"hinte", "HINTE", "FEAT_HINTE",
+  "Enable extended A64 hint instruction space">;
+
 //===----------------------------------------------------------------------===//
 //  Armv9.7 Architecture Extensions
 //===----------------------------------------------------------------------===//
@@ -1090,9 +1093,9 @@ def HasV9_5aOps : Architecture64<9, 5, "a", "v9.5a",
   [HasV9_4aOps, FeatureCPA],
   !listconcat(HasV9_4aOps.DefaultExts, [FeatureCPA,  FeatureLUT, FeatureFAMINMAX])>;
 def HasV9_6aOps : Architecture64<9, 6, "a", "v9.6a",
-  [HasV9_5aOps, FeatureCMPBR, FeatureLSUI, FeatureOCCMO],
+  [HasV9_5aOps, FeatureCMPBR, FeatureLSUI, FeatureOCCMO, FeatureHINTE],
   !listconcat(HasV9_5aOps.DefaultExts, [FeatureCMPBR,
-    FeatureLSUI, FeatureOCCMO])>;
+    FeatureLSUI, FeatureOCCMO, FeatureHINTE])>;
 def HasV9_7aOps : Architecture64<9, 7, "a", "v9.7a",
   [HasV9_6aOps, FeatureSVE2p3, FeatureFPRCVT, FeatureF16F32DOT],
   !listconcat(HasV9_6aOps.DefaultExts, [FeatureSVE2p3, FeatureFPRCVT,

@@ -15,4 +15,4 @@ czero.eqz t1, t2, t3, t4 # CHECK: :[[@LINE]]:23: error: invalid operand for inst
 czero.nez t1, t2, t3, 4 # CHECK: :[[@LINE]]:23: error: invalid operand for instruction
 
 # Too few operands
-czero.eqz t1, t2 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
+czero.eqz t1, t2 # CHECK: :[[@LINE]]:17: error: too few operands for instruction

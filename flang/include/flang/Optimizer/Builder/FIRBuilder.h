@@ -493,7 +493,8 @@ public:
   /// Array entities are boxed with a shape and possibly a shift. Character
   /// entities are boxed with a LEN parameter.
   mlir::Value createBox(mlir::Location loc, const fir::ExtendedValue &exv,
-                        bool isPolymorphic = false, bool isAssumedType = false);
+                        bool isPolymorphic = false, bool isAssumedType = false,
+                        unsigned corank = 0);
 
   mlir::Value createBox(mlir::Location loc, mlir::Type boxType,
                         mlir::Value addr, mlir::Value shape, mlir::Value slice,
@@ -919,7 +920,8 @@ mlir::Value genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
 /// Create a fir.box from a fir::ExtendedValue and wrap it in a fir::BoxValue
 /// to keep all the lower bound and explicit parameter information.
 fir::BoxValue createBoxValue(fir::FirOpBuilder &builder, mlir::Location loc,
-                             const fir::ExtendedValue &exv);
+                             const fir::ExtendedValue &exv,
+                             unsigned corank = 0);
 
 /// Generate Null BoxProc for procedure pointer null initialization.
 mlir::Value createNullBoxProc(fir::FirOpBuilder &builder, mlir::Location loc,
