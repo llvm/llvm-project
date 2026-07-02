@@ -3602,9 +3602,8 @@ bool Compiler<Emitter>::visitCXXTryStmt(const CXXTryStmt *S) {
     if (!this->visitStmt(HandlerBlock))
       return false;
 
-    // FIXME: Re-enable this.
-    // if (blockEndsInReturn(TryBlock))
-    // continue;
+    if (blockEndsInReturn(HandlerBlock))
+      continue;
     this->jump(EndLabel, S);
   }
 
