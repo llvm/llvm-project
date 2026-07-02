@@ -61,6 +61,9 @@ class TestDAP_launch_extra_launch_commands(DAPTestCaseBase):
         session.verify_commands("launchCommands", output, launchCommands)
         session.verify_commands("postRunCommands", output, postRunCommands)
 
+        # Check that we got module events from target.
+        session.wait_for_module_event(after=ctx.init_response)
+
         # Verify the "stopCommands" ran on the first breakpoint hit.
         # Wait until the last stopCommand's output arrives to avoid racing it.
         output = session.collect_console(after=first_stop, until=stopCommands[-1])
