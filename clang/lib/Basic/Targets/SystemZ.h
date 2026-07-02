@@ -103,6 +103,7 @@ public:
     HasFastHalfType = false;
 
     HasStrictFP = true;
+    HasSignalingNaNs = true;
   }
 
   unsigned getMinGlobalAlign(uint64_t Size, bool HasNonWeakDef) const override;

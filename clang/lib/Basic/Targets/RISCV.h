@@ -49,6 +49,7 @@ public:
     MCountName = "_mcount";
     HasFloat16 = true;
     HasStrictFP = true;
+    HasSignalingNaNs = true;
   }
 
   bool setCPU(StringRef Name) override {

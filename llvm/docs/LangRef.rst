@@ -2630,6 +2630,17 @@ For example:
 ``sanitize_alloc_token``
     This attribute indicates that implicit allocation token instrumentation
     is enabled for this function.
+``signaling_nans``
+    If a function has this attribute, a signaling NaN (sNaN) is assumed to be
+    treated according to IEEE 754 rules. That is, arithmetic operations never
+    return an sNaN, and the ``Invalid``  exception  is raised if an operand of
+    such an operation is an sNaN and strictfp is also enabled. If this attribute
+    is absent, an sNaN is assumed to be treated identically to a quiet NaN: it
+    can be produced by an operation (so that the transformation `x + 0 -> x`
+    becomes valid), and an operation on such a NaN does not raise the "Invalid"
+    exception. This attribute cannot be set if the target architecture does not
+    support IEEE 754 compatible sNaN handling. This attribute requires that the
+    ``strictfp`` attribute also be set.
 ``speculative_load_hardening``
     This attribute indicates that
     `Speculative Load Hardening <https://llvm.org/docs/SpeculativeLoadHardening.html>`_
@@ -4184,6 +4195,17 @@ specification on some architectures:
 - Older MIPS versions use the opposite polarity for the quiet/signaling bit, and
   LLVM does not correctly represent this. See `issue #60796
   <https://github.com/llvm/llvm-project/issues/60796>`_.
+
+The behavior of signaling NaNs in runtime is determined by the underlying
+hardware capabilities and the specified function attributes. If the target
+hardware implements IEEE 754 and the function has the "signaling-nans"
+attribute, signaling NaNs are handled according to the specification. They
+undergo conversion to quiet NaNs in arithmetic operations, which raise the
+``Invalid`` exception. If the attribute is absent, signaling NaNs are handled in
+the same way as quiet NaNs. The attribute may be absent even on supporting
+hardware, as it can enable additional optimization opportunities. If the
+hardware does not support signaling NaNs, the "signaling-nans" attribute
+cannot be applied.
 
 .. _floatsem:
 

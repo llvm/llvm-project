@@ -1574,6 +1574,7 @@ describes the various floating point semantic modes and the corresponding option
   "fallow-approximate-fns", "{on, off}"
   "fassociative-math", "{on, off}"
   "fcomplex-arithmetic", "{basic, improved, full, promoted}"
+  "fsignaling-nans", "{on, off}"
 
 This table describes the option settings that correspond to the three
 floating point semantic models: precise (the default), strict, and fast.
@@ -1595,6 +1596,7 @@ floating point semantic models: precise (the default), strict, and fast.
   "allow_approximate_fns", "off", "off", "on", "on"
   "allow_reassociation", "off", "off", "on", "on"
   "complex_arithmetic", "full", "full", "promoted", "basic"
+  "fsignaling-nans", "off", "on", "off", "off"
 
 The ``-ffp-model`` option does not modify the ``fdenormal-fp-math``
 setting, but it does have an impact on whether ``crtfastmath.o`` is
@@ -1647,6 +1649,8 @@ for more details.
    * ``-fno-rounding-math``
 
    * ``-ffp-contract=fast``
+
+   * ``-fno-signaling-nans``
 
    Note: ``-ffast-math`` causes ``crtfastmath.o`` to be linked with code unless
    ``-shared`` or ``-mno-daz-ftz`` is present. See
@@ -1876,6 +1880,35 @@ for more details.
 
    - The option ``-fno-rounding-math`` allows the compiler to assume that the rounding mode is set to ``FE_TONEAREST``.  This is the default.
    - The option ``-frounding-math`` forces the compiler to honor the dynamically-set rounding mode.  This prevents optimizations which might affect results if the rounding mode changes or is different from the default; for example, it prevents floating-point operations from being reordered across most calls and prevents constant-folding when the result is not exactly representable.
+
+.. option:: -f[no-]signaling-nans
+
+   Informs the compiler whether signaling NaNs behave according to IEEE 754.
+
+   IEEE 754 defines signaling NaNs (sNaNs) as a subset of Not-a-Numbers (NaNs),
+   that possess the following properties:
+
+   * Floating-point operations in which an sNaN is an operand, raise the
+     ``Invalid`` exception.
+   * Floating-point operations do not produce sNaNs; only a quiet NaN can be a
+     result.
+
+   Some target architectures do not support sNaNs. On such a target, the
+   behavior of an sNaN is same as that of a quiet NaN: it can appear as a
+   result, and the "Invalid" exception is not raised when it is an operand in
+   an operation.
+
+   The option ``-fsignaling-nans`` specifies IEEE 754 compliant behavior for
+   signaling NaNs. It has no effect if the target architecture does not
+   implement IEEE 754 signaling NaN behavior. This option causes the
+   preprocessor macro ``__SUPPORT_SNAN__`` to be defined.
+
+   The option ``-fno-signaling-nans`` specifies that signaling NaNs are treated
+   in the same way as quiet NaNs. This is the only option allowed if the target
+   architecture does not implement signaling NaNs according to IEEE-754. On the
+   supporting architectures, it can enable additional optimization opportunities.
+
+   If more than one option is specified, the last one takes effect.
 
 .. option:: -ffp-model=<value>
 

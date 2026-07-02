@@ -66,7 +66,6 @@
 ! RUN:     -fprofile-correction                                             \
 ! RUN:     -fprofile-values                                                 \
 ! RUN:     -fschedule-insns                                                 \
-! RUN:     -fsignaling-nans                                                 \
 ! RUN:     -fstrength-reduce                                                \
 ! RUN:     -ftracer                                                         \
 ! RUN:     -funroll-all-loops                                               \
@@ -120,7 +119,6 @@
 ! CHECK-WARNING-DAG: optimization flag '-fprofile-correction' is not supported
 ! CHECK-WARNING-DAG: optimization flag '-fprofile-values' is not supported
 ! CHECK-WARNING-DAG: optimization flag '-fschedule-insns' is not supported
-! CHECK-WARNING-DAG: optimization flag '-fsignaling-nans' is not supported
 ! CHECK-WARNING-DAG: optimization flag '-fstrength-reduce' is not supported
 ! CHECK-WARNING-DAG: optimization flag '-ftracer' is not supported
 ! CHECK-WARNING-DAG: optimization flag '-funroll-all-loops' is not supported

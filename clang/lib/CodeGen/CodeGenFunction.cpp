@@ -1004,6 +1004,16 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   if (D && D->hasAttr<HybridPatchableAttr>())
     Fn->addFnAttr(llvm::Attribute::HybridPatchable);
 
+  if (D && getContext().getTargetInfo().hasSignalingNaNs()) {
+    if (CGM.getCodeGenOpts().SignalingNans) {
+      Fn->addFnAttr(llvm::Attribute::SignalingNans);
+    } else if (!CGM.getCodeGenOpts().NoSignalingNans) {
+      // Both options are absent, - calculate default setting.
+      if (D->hasAttr<StrictFPAttr>())
+        Fn->addFnAttr(llvm::Attribute::SignalingNans);
+    }
+  }
+
   if (D) {
     // Function attributes take precedence over command line flags.
     if (auto *A = D->getAttr<FunctionReturnThunksAttr>()) {

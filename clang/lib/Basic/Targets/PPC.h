@@ -84,6 +84,7 @@ public:
     LongDoubleWidth = LongDoubleAlign = 128;
     LongDoubleFormat = &llvm::APFloat::PPCDoubleDouble();
     HasStrictFP = true;
+    HasSignalingNaNs = true;
     HasIbm128 = true;
     HasUnalignedAccess = true;
   }

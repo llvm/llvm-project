@@ -143,11 +143,11 @@
 // RUN: %clang -### -fno-fast-math -ffast-math -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,FAST,NINF,NNAN,FINITE-ONLY,REASSOC,NSZ,ARCP,AFN,CONTRACT-FAST,NO-ERRNO,NOROUNDING %s
 // RUN: %clang -### -funsafe-math-optimizations -ffinite-math-only \
-// RUN:     -fno-math-errno -ffp-contract=fast -fno-rounding-math -c %s 2>&1 \
+// RUN:     -fno-math-errno -ffp-contract=fast -fno-rounding-math -fno-signaling-nans -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,FAST,NINF,NNAN,FINITE-ONLY,NSZ,ARCP,AFN,CONTRACT-FAST,NO-ERRNO,NOROUNDING %s
 // RUN: %clang -### -fno-honor-infinities -fno-honor-nans -fno-math-errno \
 // RUN:     -fassociative-math -freciprocal-math -fno-signed-zeros -fapprox-func \
-// RUN:     -fno-trapping-math -ffp-contract=fast -fno-rounding-math -c %s 2>&1 \
+// RUN:     -fno-trapping-math -ffp-contract=fast -fno-rounding-math -fno-signaling-nans -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,FAST,NINF,NNAN,FINITE-ONLY,NSZ,ARCP,AFN,CONTRACT-FAST,NO-ERRNO,NOROUNDING %s
 //
 // RUN: %clang -### -ffast-math -fno-fast-math -c %s 2>&1 \
