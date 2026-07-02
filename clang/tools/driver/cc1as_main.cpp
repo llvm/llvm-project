@@ -545,6 +545,8 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   if (!Opts.MainFileName.empty())
     Ctx.setMainFileName(StringRef(Opts.MainFileName));
   Ctx.setDwarfFormat(Opts.Dwarf64 ? dwarf::DWARF64 : dwarf::DWARF32);
+  if (Opts.Dwarf64 && Opts.GenDwarfForAssembly)
+    MOFI->setELFDwarf64Sections();
   Ctx.setDwarfVersion(Opts.DwarfVersion);
   if (Opts.GenDwarfForAssembly)
     Ctx.setGenDwarfRootFile(Opts.InputFile,

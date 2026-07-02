@@ -846,6 +846,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     case SHT_CREL:
     case SHT_NULL:
       break;
+    case SHT_DWARF64:
     case SHT_PROGBITS:
     case SHT_NOTE:
     case SHT_NOBITS:

@@ -29,6 +29,9 @@
 # ASM: .section    .section9,"",@llvm_cfi_jump_table,1
 .section    .section9,"",@llvm_cfi_jump_table,1
 .byte 1
+# ASM: .section    .section10,"",@dwarf64
+.section    .section10,"",@dwarf64
+.byte 1
 
 # CHECK:        Name: .section1
 # CHECK-NEXT:   Type: SHT_LLVM_BB_ADDR_MAP
@@ -49,3 +52,5 @@
 # CHECK:        Name: .section9
 # CHECK-NEXT:   Type: SHT_LLVM_CFI_JUMP_TABLE
 # CHECK:        EntrySize: 1
+# CHECK:        Name: .section10
+# CHECK-NEXT:   Type: SHT_DWARF64

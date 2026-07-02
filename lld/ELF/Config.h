@@ -420,6 +420,7 @@ struct Config {
   bool undefinedVersion;
   bool unique;
   bool useAndroidRelrTags = false;
+  bool dwarf32BeforeDwarf64;
   bool warnBackrefs;
   llvm::SmallVector<llvm::GlobPattern, 0> warnBackrefsExclude;
   bool warnCommon;

@@ -1,0 +1,91 @@
+# REQUIRES: x86
+
+# RUN: yaml2obj %s --docnum=1 -o %t.d64.o
+# RUN: yaml2obj %s --docnum=2 -o %t.d32.o
+# RUN: ld.lld -shared %t.d64.o %t.d32.o -o %t.default
+# RUN: llvm-readelf --hex-dump=.debug_info %t.default | FileCheck %s --check-prefix=DEFAULT
+# RUN: llvm-readobj --sections %t.default | FileCheck %s --check-prefix=MIXED-TYPE
+
+# DEFAULT:      Hex dump of section '.debug_info':
+# DEFAULT-NEXT: 0x00000000 64363441 64333242
+
+# MIXED-TYPE:      Name: .debug_info
+# MIXED-TYPE-NEXT: Type: SHT_PROGBITS
+
+# RUN: ld.lld -shared --dwarf32-before-dwarf64 %t.d64.o %t.d32.o -o %t.sorted
+# RUN: llvm-readelf --hex-dump=.debug_info %t.sorted | FileCheck %s --check-prefix=SORTED
+
+# SORTED:      Hex dump of section '.debug_info':
+# SORTED-NEXT: 0x00000000 64333242 64363441
+
+# RUN: ld.lld -shared --dwarf32-before-dwarf64 %t.d64.o -o %t.all64
+# RUN: llvm-readobj --sections %t.all64 | FileCheck %s --check-prefix=ALL64
+
+# ALL64:      Name: .debug_info
+# ALL64-NEXT: Type: SHT_DWARF64
+
+# RUN: echo 'SECTIONS { .debug_info 0 : { %t.d64.o(.debug_info) %t.d32.o(.debug_info) } }' > %t.script
+# RUN: ld.lld --dwarf32-before-dwarf64 -T %t.script %t.d64.o %t.d32.o -o %t.script.out
+# RUN: llvm-readelf --hex-dump=.debug_info %t.script.out | FileCheck %s --check-prefix=SORTED
+
+# RUN: yaml2obj %s --docnum=3 -o %t.d64str.o
+# RUN: yaml2obj %s --docnum=4 -o %t.d32str.o
+# RUN: ld.lld -shared --dwarf32-before-dwarf64 %t.d64str.o %t.d32str.o -o %t.str
+# RUN: llvm-readelf --hex-dump=.debug_str %t.str | FileCheck %s --check-prefix=STR
+
+# STR:      Hex dump of section '.debug_str':
+# STR-NEXT: 0x00000000 64333200 64363400
+
+# RUN: not ld.lld -r --dwarf32-before-dwarf64 %t.d64.o %t.d32.o -o %t.reloc 2>&1 | FileCheck %s --check-prefix=RELOCATABLE
+
+# RELOCATABLE: error: --dwarf32-before-dwarf64 is not supported with -r
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .debug_info
+    Type:    SHT_DWARF64
+    Content: "64363441"
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .debug_info
+    Type:    SHT_PROGBITS
+    Content: "64333242"
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:         .debug_str
+    Type:         SHT_DWARF64
+    Flags:        [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign: 1
+    EntSize:      1
+    Content:      "64363400"
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:         .debug_str
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign: 1
+    EntSize:      1
+    Content:      "64333200"

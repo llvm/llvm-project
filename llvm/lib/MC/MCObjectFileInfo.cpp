@@ -63,6 +63,26 @@ static bool useCompactUnwind(const Triple &T) {
   return false;
 }
 
+void MCObjectFileInfo::setELFDwarf64Sections() {
+  if (Ctx->getObjectFileType() != MCContext::IsELF)
+    return;
+
+  for (MCSection *Sec :
+       {DwarfAbbrevSection, DwarfInfoSection, DwarfLineSection,
+        DwarfLineStrSection, DwarfFrameSection, DwarfPubNamesSection,
+        DwarfPubTypesSection, DwarfGnuPubNamesSection,
+        DwarfGnuPubTypesSection, DwarfStrSection, DwarfLocSection,
+        DwarfARangesSection, DwarfRangesSection, DwarfMacinfoSection,
+        DwarfMacroSection, DwarfDebugNamesSection, DwarfStrOffSection,
+        DwarfAddrSection, DwarfRnglistsSection, DwarfLoclistsSection,
+        DwarfInfoDWOSection, DwarfTypesDWOSection, DwarfAbbrevDWOSection,
+        DwarfStrDWOSection, DwarfLineDWOSection, DwarfLocDWOSection,
+        DwarfStrOffDWOSection, DwarfRnglistsDWOSection,
+        DwarfMacinfoDWOSection, DwarfMacroDWOSection,
+        DwarfLoclistsDWOSection, DwarfCUIndexSection, DwarfTUIndexSection})
+    static_cast<MCSectionELF *>(Sec)->setType(ELF::SHT_DWARF64);
+}
+
 void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
   EHFrameSection = Ctx->getMachOSection(
       "__TEXT", "__eh_frame",
@@ -1220,9 +1240,12 @@ void MCObjectFileInfo::initMCObjectFileInfo(MCContext &MCCtx, bool PIC,
 MCSection *MCObjectFileInfo::getDwarfComdatSection(const char *Name,
                                                    uint64_t Hash) const {
   switch (Ctx->getTargetTriple().getObjectFormat()) {
-  case Triple::ELF:
-    return Ctx->getELFSection(Name, ELF::SHT_PROGBITS, ELF::SHF_GROUP, 0,
-                              utostr(Hash), /*IsComdat=*/true);
+  case Triple::ELF: {
+    unsigned Type =
+        static_cast<const MCSectionELF *>(DwarfInfoSection)->getType();
+    return Ctx->getELFSection(Name, Type, ELF::SHF_GROUP, 0, utostr(Hash),
+                              /*IsComdat=*/true);
+  }
   case Triple::Wasm:
     return Ctx->getWasmSection(Name, SectionKind::getMetadata(), 0,
                                utostr(Hash), MCSection::NonUniqueID);
