@@ -12,6 +12,7 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/ELFAttributes.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/RISCVAttributeParser.h"
@@ -27,6 +28,28 @@ using namespace lld;
 using namespace lld::elf;
 
 namespace {
+
+struct RISCVRelaxExtension {
+  bool rvc = false;   // C or Zca: enables c.j / c.jal relaxation.
+};
+
+class RISCVRelaxExtensionParser {
+  // Maps ISA string (after "$x" prefix) to its computed capabilities.
+  StringMap<RISCVRelaxExtension> cache;
+
+  RISCVRelaxExtension get(Ctx &ctx, const InputSection &sec,
+                          const Relocation &relaxReloc);
+
+public:
+  // Returns the relaxation capability of relocs[i], or std::nullopt if it is
+  // not relaxable (not followed by R_RISCV_RELAX). When relaxable, the
+  // capability describes the extensions available in the code region as
+  // recorded by that R_RISCV_RELAX's ISA mapping symbol.
+  std::optional<RISCVRelaxExtension> relaxable(Ctx &ctx,
+                                               const InputSection &sec,
+                                               ArrayRef<Relocation> relocs,
+                                               size_t i);
+};
 
 class RISCV final : public TargetInfo {
 public:
@@ -64,6 +87,7 @@ public:
   InputSection *baseSec = nullptr;
   // r_offset and r_addend pairs.
   SmallVector<std::pair<uint64_t, uint64_t>, 0> synthesizedAligns;
+  mutable RISCVRelaxExtensionParser relaxExtParser;
 };
 
 } // end anonymous namespace
@@ -162,6 +186,42 @@ static uint32_t getEFlags(Ctx &ctx, InputFile *f) {
   if (ctx.arg.is64)
     return cast<ObjFile<ELF64LE>>(f)->getObj().getHeader().e_flags;
   return cast<ObjFile<ELF32LE>>(f)->getObj().getHeader().e_flags;
+}
+
+RISCVRelaxExtension
+RISCVRelaxExtensionParser::get(Ctx &ctx, const InputSection &sec,
+                               const Relocation &relaxReloc) {
+  const Symbol *sym = relaxReloc.sym;
+  bool rvc = static_cast<bool>(getEFlags(ctx, sec.file) & EF_RISCV_RVC);
+  if (sym && sym->getName().size() > 2 && sym->getName().starts_with("$x")) {
+    StringRef isaStr = sym->getName().drop_front(2);
+    auto [it, inserted] = cache.try_emplace(isaStr);
+    if (inserted) {
+      if (auto maybeInfo = RISCVISAInfo::parseNormalizedArchString(isaStr)) {
+        it->second = {/*rvc=*/(*maybeInfo)->hasExtension("c") ||
+                      (*maybeInfo)->hasExtension("zca")};
+      } else {
+        // Warn once per unique unparseable ISA string; the EF_RISCV_RVC
+        // fallback below then handles subsequent lookups.
+        Warn(ctx) << sec.file << ": R_RISCV_RELAX ISA mapping symbol '"
+                  << sym->getName() << "' has an unparseable ISA string: "
+                  << llvm::toString(maybeInfo.takeError())
+                  << "; falling back to EF_RISCV_RVC";
+        it->second = {/*rvc=*/rvc};
+      }
+    }
+    return it->second;
+  }
+  // Fall back to the file-level EF_RISCV_RVC flag.
+  return {/*rvc=*/rvc};
+}
+
+std::optional<RISCVRelaxExtension>
+RISCVRelaxExtensionParser::relaxable(Ctx &ctx, const InputSection &sec,
+                                     ArrayRef<Relocation> relocs, size_t i) {
+  if (i + 1 == relocs.size() || relocs[i + 1].type != R_RISCV_RELAX)
+    return std::nullopt;
+  return get(ctx, sec, relocs[i + 1]);
 }
 
 uint32_t RISCV::calcEFlags() const {
@@ -892,8 +952,9 @@ void elf::initSymbolAnchors(Ctx &ctx) {
 
 // Relax R_RISCV_CALL/R_RISCV_CALL_PLT auipc+jalr to c.j, c.jal, or jal.
 static void relaxCall(Ctx &ctx, const InputSection &sec, size_t i, uint64_t loc,
-                      Relocation &r, uint32_t &remove) {
-  const bool rvc = getEFlags(ctx, sec.file) & EF_RISCV_RVC;
+                      Relocation &r, uint32_t &remove,
+                      const RISCVRelaxExtension &cap) {
+  const bool rvc = cap.rvc;
   const Symbol &sym = *r.sym;
   const uint64_t insnPair = read64le(sec.content().data() + r.offset);
   const uint32_t rd = extractBits(insnPair, 32 + 11, 32 + 7);
@@ -993,7 +1054,8 @@ static void relaxHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
   }
 }
 
-static bool relax(Ctx &ctx, int pass, InputSection &sec) {
+static bool relax(Ctx &ctx, int pass, InputSection &sec,
+                  RISCVRelaxExtensionParser &relaxExtParser) {
   const uint64_t secAddr = sec.getVA();
   const MutableArrayRef<Relocation> relocs = sec.relocs();
   auto &aux = *sec.relaxAux;
@@ -1030,27 +1092,28 @@ static bool relax(Ctx &ctx, int pass, InputSection &sec) {
       // Prevent oscillation between states by disallowing the increment of
       // `remove` after a few passes. The previous `remove` value is
       // `cur-delta`.
-      if (relaxable(relocs, i)) {
+      if (std::optional<RISCVRelaxExtension> cap =
+              relaxExtParser.relaxable(ctx, sec, relocs, i)) {
         remove = pass < 4 ? 6 : cur - delta;
-        relaxCall(ctx, sec, i, loc, r, remove);
+        relaxCall(ctx, sec, i, loc, r, remove, *cap);
       }
       break;
     case R_RISCV_TPREL_HI20:
     case R_RISCV_TPREL_ADD:
     case R_RISCV_TPREL_LO12_I:
     case R_RISCV_TPREL_LO12_S:
-      if (relaxable(relocs, i))
+      if (relaxExtParser.relaxable(ctx, sec, relocs, i))
         relaxTlsLe(ctx, sec, i, loc, r, remove);
       break;
     case R_RISCV_HI20:
     case R_RISCV_LO12_I:
     case R_RISCV_LO12_S:
-      if (relaxable(relocs, i))
+      if (relaxExtParser.relaxable(ctx, sec, relocs, i))
         relaxHi20Lo12(ctx, sec, i, loc, r, remove);
       break;
     case R_RISCV_TLSDESC_HI20:
       // For TLSDESC=>LE, we can use the short form if hi20 is zero.
-      tlsdescRelax = relaxable(relocs, i);
+      tlsdescRelax = relaxExtParser.relaxable(ctx, sec, relocs, i).has_value();
       toLeShortForm = tlsdescRelax && r.expr == R_TPREL &&
                       !hi20(r.sym->getVA(ctx, r.addend));
       [[fallthrough]];
@@ -1113,7 +1176,7 @@ bool RISCV::relaxOnce(int pass) const {
       continue;
     for (InputSection *sec : getInputSections(*osec, storage))
       if (sec->relaxAux)
-        changed |= relax(ctx, pass, *sec);
+        changed |= relax(ctx, pass, *sec, relaxExtParser);
   }
   return changed;
 }

@@ -33,7 +33,7 @@
 # CHECK-NEXT: <_start>:
 # CHECK-NEXT:   c: 00000097             auipc   ra, 0x0
 # CHECK-NEXT:           000000000000000c:  R_RISCV_CALL_PLT     foo
-# CHECK-NEXT:           000000000000000c:  R_RISCV_RELAX        *ABS*
+# CHECK-NEXT:           000000000000000c:  R_RISCV_RELAX        {{\$xrv.*}}
 # CHECK-NEXT:  10: 000080e7             jalr    ra, 0x0(ra) <_start>
 # CHECK-NEXT:  14: 0001                 c.nop
 # CHECK-NEXT:           0000000000000014:  R_RISCV_ALIGN        *ABS*+0x6
@@ -54,7 +54,7 @@
 # CHECK-NEXT: <c0>:
 # CHECK-NEXT:  2c: 00000097             auipc   ra, 0x0
 # CHECK-NEXT:           000000000000002c:  R_RISCV_CALL_PLT     foo
-# CHECK-NEXT:           000000000000002c:  R_RISCV_RELAX        *ABS*
+# CHECK-NEXT:           000000000000002c:  R_RISCV_RELAX        {{\$xrv.*}}
 # CHECK-NEXT:  30: 000080e7             jalr    ra, 0x0(ra) <c0>
 # CHECK-NEXT:  34: 0001                 c.nop
 # CHECK-NEXT:           0000000000000034:  R_RISCV_ALIGN        *ABS*+0x2
@@ -83,7 +83,7 @@
 # CHECK2:      <_start>:
 # CHECK2-NEXT:   0: 00000097             auipc   ra, 0x0
 # CHECK2-NEXT:           0000000000000000:  R_RISCV_CALL_PLT     foo
-# CHECK2-NEXT:           0000000000000000:  R_RISCV_RELAX        *ABS*
+# CHECK2-NEXT:           0000000000000000:  R_RISCV_RELAX        {{\$xrv.*}}
 # CHECK2-NEXT:   4: 000080e7             jalr    ra, 0x0(ra) <_start>
 # CHECK2-NEXT:   8: 0001                 c.nop
 # CHECK2-NEXT:           0000000000000008:  R_RISCV_ALIGN        *ABS*+0x6
