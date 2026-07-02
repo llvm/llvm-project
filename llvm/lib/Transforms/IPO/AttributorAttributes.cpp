@@ -106,9 +106,16 @@ static cl::opt<int> MaxPotentialValuesIterations(
     cl::desc(
         "Maximum number of iterations we keep dismantling potential values."),
     cl::init(64));
+static cl::opt<unsigned> MaxAccessesPerAAPointerInfo(
+    "attributor-max-pi-accesses", cl::Hidden,
+    cl::desc("Maximum number of accesses in a single AAPointerInfo instance "
+             "before going pessimistic (0 = unlimited)"),
+    cl::init(0));
 
 STATISTIC(NumAAs, "Number of abstract attributes created");
 STATISTIC(NumIndirectCallsPromoted, "Number of indirect calls promoted");
+STATISTIC(NumAAPointerInfoAccessesCapped,
+          "Number of AAPointerInfo instances capped to pessimistic");
 
 // Some helper macros to deal with statistics tracking.
 //
@@ -924,6 +931,12 @@ ChangeStatus AA::PointerInfo::State::addAccess(
     Attributor &A, const AAPointerInfo::RangeList &Ranges, Instruction &I,
     std::optional<Value *> Content, AAPointerInfo::AccessKind Kind, Type *Ty,
     Instruction *RemoteI) {
+  if (MaxAccessesPerAAPointerInfo > 0 &&
+      AccessList.size() >= MaxAccessesPerAAPointerInfo) {
+    ++NumAAPointerInfoAccessesCapped;
+    return indicatePessimisticFixpoint();
+  }
+
   RemoteI = RemoteI ? RemoteI : &I;
 
   // Check if we have an access for this instruction, if not, simply add it.
