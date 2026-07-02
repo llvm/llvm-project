@@ -1434,7 +1434,7 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
   Value *NewOp = NewLoad;
   // Check if zero extend needed.
   if (LOps.ZextType)
-    NewOp = Builder.CreateZExt(NewOp, LOps.ZextType);
+    NewOp = Builder.CreateZExtOrTrunc(NewOp, LOps.ZextType);
 
   // Check if shift needed. We need to shift with the amount of load1
   // shift if not zero.
