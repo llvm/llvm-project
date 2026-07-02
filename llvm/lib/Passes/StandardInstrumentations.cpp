@@ -20,11 +20,15 @@
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/MIRPrinter.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineVerifier.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManager.h"
@@ -159,6 +163,39 @@ static cl::opt<std::string>
                 cl::desc("exe called with module IR after each pass that "
                          "changes it"));
 
+bool loopContainsPrintSourceLoc(const Loop &L) {
+  const Function *F = L.getHeader()->getParent();
+  if (!isFunctionInPrintList(F->getName()))
+    return false;
+
+  if (isSourceLocFilterEmpty())
+    return true;
+
+  for (const BasicBlock *BB : L.blocks())
+    for (const Instruction &I : *BB)
+      if (isSourceLocInPrintList(I.getDebugLoc()))
+        return true;
+  return false;
+}
+
+bool shouldGenerateData(const Function &F) {
+  return !F.isDeclaration() && shouldPrintFunction(F);
+}
+
+bool shouldGenerateData(const MachineFunction &MF) {
+  if (!isFunctionInPrintList(MF.getName()))
+    return false;
+
+  if (isSourceLocFilterEmpty())
+    return true;
+
+  for (const MachineBasicBlock &MBB : MF)
+    for (const MachineInstr &MI : MBB)
+      if (isSourceLocInPrintList(MI.getDebugLoc()))
+        return true;
+  return false;
+}
+
 /// Extract Module out of \p IR unit. May return nullptr if \p IR does not match
 /// certain global filters. Will never return nullptr if \p Force is true.
 const Module *unwrapModule(Any IR, bool Force = false) {
@@ -166,7 +203,7 @@ const Module *unwrapModule(Any IR, bool Force = false) {
     return M;
 
   if (const auto *F = unwrapIR<Function>(IR)) {
-    if (!Force && !isFunctionInPrintList(F->getName()))
+    if (!Force && !shouldGenerateData(*F))
       return nullptr;
 
     return F->getParent();
@@ -175,7 +212,7 @@ const Module *unwrapModule(Any IR, bool Force = false) {
   if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR)) {
     for (const LazyCallGraph::Node &N : *C) {
       const Function &F = N.getFunction();
-      if (Force || (!F.isDeclaration() && isFunctionInPrintList(F.getName()))) {
+      if (Force || (!F.isDeclaration() && shouldGenerateData(F))) {
         return F.getParent();
       }
     }
@@ -185,13 +222,13 @@ const Module *unwrapModule(Any IR, bool Force = false) {
 
   if (const auto *L = unwrapIR<Loop>(IR)) {
     const Function *F = L->getHeader()->getParent();
-    if (!Force && !isFunctionInPrintList(F->getName()))
+    if (!Force && !loopContainsPrintSourceLoc(*L))
       return nullptr;
     return F->getParent();
   }
 
   if (const auto *MF = unwrapIR<MachineFunction>(IR)) {
-    if (!Force && !isFunctionInPrintList(MF->getName()))
+    if (!Force && !shouldGenerateData(*MF))
       return nullptr;
     return MF->getFunction().getParent();
   }
@@ -200,13 +237,14 @@ const Module *unwrapModule(Any IR, bool Force = false) {
 }
 
 void printIR(raw_ostream &OS, const Function *F) {
-  if (!isFunctionInPrintList(F->getName()))
+  if (!shouldPrintFunction(*F))
     return;
   OS << *F;
 }
 
 void printIR(raw_ostream &OS, const Module *M) {
-  if (isFunctionInPrintList("*") || forcePrintModuleIR()) {
+  if ((isFunctionInPrintList("*") && isSourceLocFilterEmpty()) ||
+      forcePrintModuleIR()) {
     M->print(OS, nullptr);
   } else {
     for (const auto &F : M->functions()) {
@@ -218,21 +256,20 @@ void printIR(raw_ostream &OS, const Module *M) {
 void printIR(raw_ostream &OS, const LazyCallGraph::SCC *C) {
   for (const LazyCallGraph::Node &N : *C) {
     const Function &F = N.getFunction();
-    if (!F.isDeclaration() && isFunctionInPrintList(F.getName())) {
+    if (!F.isDeclaration() && shouldGenerateData(F)) {
       F.print(OS);
     }
   }
 }
 
 void printIR(raw_ostream &OS, const Loop *L) {
-  const Function *F = L->getHeader()->getParent();
-  if (!isFunctionInPrintList(F->getName()))
+  if (!loopContainsPrintSourceLoc(*L))
     return;
   printLoop(const_cast<Loop &>(*L), OS);
 }
 
 void printIR(raw_ostream &OS, const MachineFunction *MF) {
-  if (!isFunctionInPrintList(MF->getName()))
+  if (!shouldGenerateData(*MF))
     return;
   MF->print(OS);
 }
@@ -259,18 +296,15 @@ std::string getIRName(Any IR) {
 
 bool moduleContainsFilterPrintFunc(const Module &M) {
   return any_of(M.functions(),
-                [](const Function &F) {
-                  return isFunctionInPrintList(F.getName());
-                }) ||
-         isFunctionInPrintList("*");
+                [](const Function &F) { return shouldPrintFunction(F); }) ||
+         (isFunctionInPrintList("*") && isSourceLocFilterEmpty());
 }
 
 bool sccContainsFilterPrintFunc(const LazyCallGraph::SCC &C) {
-  return any_of(C,
-                [](const LazyCallGraph::Node &N) {
-                  return isFunctionInPrintList(N.getName());
-                }) ||
-         isFunctionInPrintList("*");
+  return any_of(C, [](const LazyCallGraph::Node &N) {
+    const Function &F = N.getFunction();
+    return !F.isDeclaration() && shouldGenerateData(F);
+  });
 }
 
 bool shouldPrintIR(Any IR) {
@@ -278,16 +312,16 @@ bool shouldPrintIR(Any IR) {
     return moduleContainsFilterPrintFunc(*M);
 
   if (const auto *F = unwrapIR<Function>(IR))
-    return isFunctionInPrintList(F->getName());
+    return shouldPrintFunction(*F);
 
   if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR))
     return sccContainsFilterPrintFunc(*C);
 
   if (const auto *L = unwrapIR<Loop>(IR))
-    return isFunctionInPrintList(L->getHeader()->getParent()->getName());
+    return loopContainsPrintSourceLoc(*L);
 
   if (const auto *MF = unwrapIR<MachineFunction>(IR))
-    return isFunctionInPrintList(MF->getName());
+    return shouldGenerateData(*MF);
   llvm_unreachable("Unknown wrapped IR type");
 }
 
@@ -365,9 +399,7 @@ const Module *getModuleForComparison(Any IR) {
   return nullptr;
 }
 
-bool isInterestingFunction(const Function &F) {
-  return isFunctionInPrintList(F.getName());
-}
+bool isInterestingFunction(const Function &F) { return shouldGenerateData(F); }
 
 // Return true when this is a pass on IR for which printing
 // of changes is desired.
@@ -714,14 +746,6 @@ template <typename T> void IRComparer<T>::analyzeIR(Any IR, IRDataT<T> &Data) {
   }
 
   llvm_unreachable("Unknown IR unit");
-}
-
-static bool shouldGenerateData(const Function &F) {
-  return !F.isDeclaration() && isFunctionInPrintList(F.getName());
-}
-
-static bool shouldGenerateData(const MachineFunction &MF) {
-  return isFunctionInPrintList(MF.getName());
 }
 
 template <typename T>

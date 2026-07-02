@@ -32,14 +32,14 @@ PrintModulePass::PrintModulePass(raw_ostream &OS, const std::string &Banner,
       EmitSummaryIndex(EmitSummaryIndex) {}
 
 PreservedAnalyses PrintModulePass::run(Module &M, ModuleAnalysisManager &AM) {
-  if (llvm::isFunctionInPrintList("*")) {
+  if (llvm::isFunctionInPrintList("*") && isSourceLocFilterEmpty()) {
     if (!Banner.empty())
       OS << Banner << "\n";
     M.print(OS, nullptr, ShouldPreserveUseListOrder);
   } else {
     bool BannerPrinted = false;
     for (const auto &F : M.functions()) {
-      if (llvm::isFunctionInPrintList(F.getName())) {
+      if (shouldPrintFunction(F)) {
         if (!BannerPrinted && !Banner.empty()) {
           OS << Banner << "\n";
           BannerPrinted = true;
@@ -67,7 +67,7 @@ PrintFunctionPass::PrintFunctionPass(raw_ostream &OS, const std::string &Banner)
 
 PreservedAnalyses PrintFunctionPass::run(Function &F,
                                          FunctionAnalysisManager &) {
-  if (isFunctionInPrintList(F.getName())) {
+  if (shouldPrintFunction(F)) {
     if (forcePrintModuleIR())
       OS << Banner << " (function: " << F.getName() << ")\n" << *F.getParent();
     else

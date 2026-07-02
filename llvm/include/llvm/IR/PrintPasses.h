@@ -15,6 +15,9 @@
 
 namespace llvm {
 
+class DebugLoc;
+class Function;
+
 enum class ChangePrinter {
   None,
   Verbose,
@@ -60,6 +63,15 @@ LLVM_ABI bool isFilterPassesEmpty();
 
 // Returns true if we should print the function.
 LLVM_ABI bool isFunctionInPrintList(StringRef FunctionName);
+
+// Returns true if -filter-print-source-locs is empty or contains the source
+// location.
+LLVM_ABI bool isSourceLocInPrintList(const DebugLoc &Loc);
+LLVM_ABI bool isSourceLocFilterEmpty();
+
+// Returns true if the function passes the function-name and source-location
+// print filters.
+LLVM_ABI bool shouldPrintFunction(const Function &F);
 
 // Ensure temporary files exist, creating or re-using them.  \p FD contains
 // file descriptors (-1 indicates that the file should be created) and
