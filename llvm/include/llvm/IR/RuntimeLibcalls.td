@@ -515,25 +515,25 @@ def MIPS16_RET_SC : RuntimeLibcall;
 def MIPS16_RET_SF : RuntimeLibcall;
 
 // Produce libcall impls for all float types. If provided, `rtbasename` should
-// contain an `X` that will be replaced with the `f`/`l`/`fX` suffix (if not
-// provided, it is appended to the def name).
+// contain a `<typesuffix>` that will be replaced with the `f`/`l`/`fX` suffix.
+// If not provided, it is appended to the def name.
 multiclass LibmLibcallImpls<string libcall_basename = !toupper(NAME),
-                            string rtbasename = !strconcat(NAME, "X")> {
+                            string rtbasename = !strconcat(NAME, "<typesuffix>")> {
   def NAME#"f"
       : RuntimeLibcallImpl<!cast<RuntimeLibcall>(libcall_basename#"_F32"),
-                           !subst("X", "f", rtbasename)>;
+                           !subst("<typesuffix>", "f", rtbasename)>;
   def NAME#""
       : RuntimeLibcallImpl<!cast<RuntimeLibcall>(libcall_basename#"_F64"),
-                           !subst("X", "", rtbasename)>;
+                           !subst("<typesuffix>", "", rtbasename)>;
   def NAME#"l_f128"
       : RuntimeLibcallImpl<!cast<RuntimeLibcall>(libcall_basename#"_F128"),
-                           !subst("X", "l", rtbasename)>;
+                           !subst("<typesuffix>", "l", rtbasename)>;
   def NAME#"l_ppcf128"
       : RuntimeLibcallImpl<!cast<RuntimeLibcall>(libcall_basename#"_PPCF128"),
-                           !subst("X", "l", rtbasename)>;
+                           !subst("<typesuffix>", "l", rtbasename)>;
   def NAME#"l_f80"
       : RuntimeLibcallImpl<!cast<RuntimeLibcall>(libcall_basename#"_F80"),
-                           !subst("X", "l", rtbasename)>;
+                           !subst("<typesuffix>", "l", rtbasename)>;
 }
 
 // AArch64 calls
@@ -1229,12 +1229,12 @@ defm trunc : LibmLibcallImpls;
 /* math.h extensions */
 
 // Extensions for -ffinite-math-only
-defm __exp2_finite : LibmLibcallImpls<"EXP2_FINITE", "__exp2X_finite">;
-defm __exp_finite : LibmLibcallImpls<"EXP_FINITE", "__expX_finite">;
-defm __log10_finite : LibmLibcallImpls<"LOG10_FINITE", "__log10X_finite">;
-defm __log2_finite : LibmLibcallImpls<"LOG2_FINITE", "__log2X_finite">;
-defm __log_finite : LibmLibcallImpls<"LOG_FINITE", "__logX_finite">;
-defm __pow_finite : LibmLibcallImpls<"POW_FINITE", "__powX_finite">;
+defm __exp2_finite : LibmLibcallImpls<"EXP2_FINITE", "__exp2<typesuffix>_finite">;
+defm __exp_finite : LibmLibcallImpls<"EXP_FINITE", "__exp<typesuffix>_finite">;
+defm __log10_finite : LibmLibcallImpls<"LOG10_FINITE", "__log10<typesuffix>_finite">;
+defm __log2_finite : LibmLibcallImpls<"LOG2_FINITE", "__log2<typesuffix>_finite">;
+defm __log_finite : LibmLibcallImpls<"LOG_FINITE", "__log<typesuffix>_finite">;
+defm __pow_finite : LibmLibcallImpls<"POW_FINITE", "__pow<typesuffix>_finite">;
 
 
 /* Standard complex.h routines */
