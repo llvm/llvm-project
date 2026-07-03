@@ -1720,7 +1720,8 @@ static void checkConfigMacro(Preprocessor &PP, StringRef ConfigMacro,
     PP.Diag(CurrentDefinition->getDefinitionLoc(),
             diag::note_module_def_undef_here)
       << false;
-  } else if (!CurrentDefinition->isIdenticalTo(*CmdLineDefinition, PP,
+  } else if (!CurrentDefinition->isIdenticalTo(*CmdLineDefinition, SourceMgr,
+                                               PP.getLangOpts(),
                                                /*Syntactically=*/true)) {
     // The macro definitions differ.
     PP.Diag(ImportLoc, diag::warn_module_config_macro_undef)

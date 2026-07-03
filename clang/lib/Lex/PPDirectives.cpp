@@ -3352,8 +3352,8 @@ void Preprocessor::HandleDefineDirective(
   // When skipping just warn about macros that do not match.
   if (SkippingUntilPCHThroughHeader) {
     const MacroInfo *OtherMI = getMacroInfo(MacroNameTok.getIdentifierInfo());
-    if (!OtherMI || !MI->isIdenticalTo(*OtherMI, *this,
-                             /*Syntactic=*/LangOpts.MicrosoftExt))
+    if (!OtherMI || !MI->isIdenticalTo(*OtherMI, SourceMgr, LangOpts,
+                                       /*Syntactic=*/LangOpts.MicrosoftExt))
       Diag(MI->getDefinitionLoc(), diag::warn_pp_macro_def_mismatch_with_pch)
           << MacroNameTok.getIdentifierInfo();
     // Issue the diagnostic but allow the change if msvc extensions are enabled
@@ -3380,7 +3380,7 @@ void Preprocessor::HandleDefineDirective(
       // Warn if it changes the tokens.
       if ((!getDiagnostics().getSuppressSystemWarnings() ||
            !SourceMgr.isInSystemHeader(DefineTok.getLocation())) &&
-          !MI->isIdenticalTo(*OtherMI, *this,
+          !MI->isIdenticalTo(*OtherMI, SourceMgr, LangOpts,
                              /*Syntactic=*/LangOpts.MicrosoftExt)) {
         Diag(MI->getDefinitionLoc(), diag::warn_pp_objc_macro_redef_ignored);
       }
@@ -3404,7 +3404,8 @@ void Preprocessor::HandleDefineDirective(
       // Macros must be identical.  This means all tokens and whitespace
       // separation must be the same.  C99 6.10.3p2.
       else if (!OtherMI->isAllowRedefinitionsWithoutWarning() &&
-               !MI->isIdenticalTo(*OtherMI, *this, /*Syntactic=*/LangOpts.MicrosoftExt)) {
+               !MI->isIdenticalTo(*OtherMI, SourceMgr, LangOpts,
+                                  /*Syntactic=*/LangOpts.MicrosoftExt)) {
         Diag(MI->getDefinitionLoc(), diag::ext_pp_macro_redef)
           << MacroNameTok.getIdentifierInfo();
         Diag(OtherMI->getDefinitionLoc(), diag::note_previous_definition);
