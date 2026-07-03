@@ -16,7 +16,6 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
-#include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -49,6 +48,14 @@ struct clang::CIRGen::CGCoroData {
   // body must be skipped. If the promise type does not define an exception
   // handler, this is null.
   Address resumeEHVar = Address::invalid();
+
+  // This alloca must have a single use that represents the coroutine suspend
+  // destination. A cir.await operation uses this destination when the
+  // coroutine is suspended.
+  //
+  // Currently the suspend destination always corresponds to the return block.
+  // In the future it may also represent the GRO path.
+  cir::AllocaOp suspendPoint = nullptr;
 };
 
 // Defining these here allows to keep CGCoroData private to this file.
@@ -351,6 +358,13 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
   cir::CallOp coroId = emitCoroIDBuiltinCall(openCurlyLoc, nullPtrCst);
   createCoroData(*this, curCoro, coroId);
 
+  uint64_t alignment = cgm.getDataLayout().getAlignment(sInt32Ty, true).value();
+
+  auto allocaOp = cir::AllocaOp::create(
+      builder, openCurlyLoc, builder.getPointerTo(sInt32Ty),
+      "__coroutine_suspend_point", builder.getI64IntegerAttr(alignment));
+  curCoro.data->suspendPoint = allocaOp;
+  allocaOp.setCoroutineSuspendPoint(true);
   // Backend is allowed to elide memory allocations, to help it, emit
   // auto mem = coro.alloc() ? 0 : ... allocation code ...;
   cir::CallOp coroAlloc = emitCoroAllocBuiltinCall(openCurlyLoc);
@@ -511,6 +525,13 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
       }
     }
   }
+
+  assert(!cir::MissingFeatures::coroutineGroManager());
+
+  cir::StoreOp::create(builder, openCurlyLoc,
+                       builder.getSInt32(1, openCurlyLoc),
+                       curCoro.data->suspendPoint, false, {} /*alignment*/,
+                       {} /*sync_scope*/, {} /*mem_order*/);
 
   emitCoroEndBuiltinCall(
       openCurlyLoc, builder.getNullPtr(builder.getVoidPtrTy(), openCurlyLoc));
