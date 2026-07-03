@@ -1869,8 +1869,8 @@ defvar DefaultLibmExp10 = [
 
 
 defvar WindowsMathRemovals = [
-  ldexpf, ldexpl_f80, ldexpl_f128, ldexpl_ppcf128,
-  frexpf, frexpl_f80, frexpl_f128, frexpl_ppcf128
+  ldexpf, ldexpl_f80, ldexpl_ppcf128,
+  frexpf, frexpl_f80, frexpl_ppcf128
 ];
 
 defvar MostPowI = !listremove(PowiLibcallImpls, [__powitf2_f128, __powitf2_ppc128]);
@@ -1890,9 +1890,6 @@ defvar LibmHasLdexpF32 = LibcallImpls<(add ldexpf), isNotOSWindowsOrIsCygwinMinG
 
 defvar LibmHasFrexpF80 = LibcallImpls<(add frexpl_f80), isNotOSWindowsOrIsCygwinMinGW>;
 defvar LibmHasLdexpF80 = LibcallImpls<(add ldexpl_f80), isNotOSWindowsOrIsCygwinMinGW>;
-
-defvar LibmHasFrexpF128 = LibcallImpls<(add frexpl_f128), isNotOSWindowsOrIsCygwinMinGW>;
-defvar LibmHasLdexpF128 = LibcallImpls<(add ldexpl_f128), isNotOSWindowsOrIsCygwinMinGW>;
 
 defvar has__stack_chk_fail = LibcallImpls<(add __stack_chk_fail), hasStackChkFail>;
 defvar has__stack_chk_guard =
@@ -2008,7 +2005,6 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
   (add WinDefaultLibcallImpls,
        LibcallImpls<(add __powisf2, __powidf2), isNotOSMSVCRT>,
        LibmHasFrexpF32, LibmHasLdexpF32,
-       LibmHasFrexpF128, LibmHasLdexpF128,
        AArch64LibcallImpls,
        LibcallImpls<(add Int128RTLibcalls), isAArch64_ILP64>,
        LibcallImpls<(add bzero), isOSDarwin>,
@@ -2502,7 +2498,6 @@ def ARMSystemLibrary
                                         AEABIOverrides),
            LibcallImpls<(add __powisf2, __powidf2), isNotOSMSVCRT>,
            LibmHasFrexpF32, LibmHasLdexpF32,
-           LibmHasFrexpF128, LibmHasLdexpF128,
            WindowARMDivRemCalls,
            WindowARMFPIntCasts,
            SecurityCheckCookieIfWinMSVC,
@@ -3211,10 +3206,6 @@ def isWin64NotCygMing : RuntimeLibcallPredicate<
 // Some darwins have an optimized __bzero/bzero function.
 def darwinHas__bzero : RuntimeLibcallPredicate<"TT.isMacOSX() && !TT.isMacOSXVersionLT(10, 6)">;
 
-// FIXME: This is has ldexpl/frexpl plus use f128 for long double.
-def hasExpFrexplLdexplF128
-  : RuntimeLibcallPredicate<[{(!TT.isOSWindows() || TT.isOSCygMing()) && !TT.isGNUEnvironment()}]>;
-
 // Use the f128 variants of math functions on x86
 defvar X86_F128_Libcalls = LibcallImpls<(add LibmF128Libcalls, LibmF128FiniteLibcalls), isGNUEnvironment>;
 
@@ -3231,7 +3222,6 @@ defvar X86CommonLibcalls =
        LibcallImpls<(add __bzero), darwinHas__bzero>,
        LibmHasFrexpF32, LibmHasLdexpF32,
        LibmHasFrexpF80, LibmHasLdexpF80,
-       LibcallImpls<(add frexpl_f128, ldexpl_f128, exp10l_f128), hasExpFrexplLdexplF128>,
        DefaultRuntimeLibcallImpls_f80,
        LibmHasExp10F32, LibmHasExp10F64, LibmHasExp10F80,
        LibcallImpls<(add MostPowI), isNotOSMSVCRT>,
