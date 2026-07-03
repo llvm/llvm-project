@@ -15,6 +15,7 @@
 #include "Target.h"
 #include "lld/Common/Filesystem.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
@@ -117,7 +118,17 @@ ARM::ARM(Ctx &ctx) : TargetInfo(ctx) {
   defaultMaxPageSize = 65536;
 }
 
+static bool inputFileHasCode(const InputFile *f) {
+  for (const auto *sec : f->getSections())
+    if (sec && sec->flags & SHF_EXECINSTR)
+      return true;
+  return false;
+}
+
 uint32_t ARM::calcEFlags() const {
+  if (ctx.objectFiles.empty())
+    return 0;
+
   // The ABIFloatType is used by loaders to detect the floating point calling
   // convention.
   uint32_t abiFloatType = 0;
@@ -126,14 +137,60 @@ uint32_t ARM::calcEFlags() const {
   // with BE-8 code.
   uint32_t armBE8 = 0;
 
-  if (ctx.arg.armVFPArgs == ARMVFPArgKind::Base ||
-      ctx.arg.armVFPArgs == ARMVFPArgKind::Default)
+  if (!ctx.arg.isLE && ctx.arg.armBe8)
+    armBE8 = EF_ARM_BE8;
+
+  // Check the float ABI flags/attributes of all input object files.
+  // We use the Tag_ABI_VFP_args build attributes because relocatable object
+  // files do not have float ABI flags set in their ELF headers.
+  uint32_t target = 0; // 0: unset, 1: soft-float/softfp, 2: hard-float
+  const InputFile *targetFile = nullptr;
+  for (const InputFile *f : ctx.objectFiles) {
+    if (!inputFileHasCode(f))
+      continue;
+
+    uint32_t val = 0;
+    uint32_t fpArch = 0;
+    if (const auto *elfFile = dyn_cast<ELFFileBase>(f)) {
+      if (elfFile->armVFPArgs)
+        val = *elfFile->armVFPArgs;
+      if (elfFile->armFPArch)
+        fpArch = *elfFile->armFPArch;
+    }
+
+    if (val == ARMBuildAttrs::CompatibleFPAAPCS) // 3: compatible with all
+      continue;
+
+    // If the file has no VFP usage and no explicit VFP calling convention,
+    // it is neutral/compatible with everything. We skip it.
+    if (fpArch == 0 && val == 0)
+      continue;
+
+    uint32_t fFloat = 1;                   // Default to soft-float/softfp (1)
+    if (val == ARMBuildAttrs::HardFPAAPCS) // 1: AAPCS VFP (hard float)
+      fFloat = 2;                          // Hard float (2)
+
+    if (target == 0) {
+      target = fFloat;
+      targetFile = f;
+    } else if (fFloat != target) {
+      Err(ctx) << f
+               << ": cannot link object files with different floating-point "
+                  "ABI from "
+               << targetFile;
+    }
+  }
+
+  if (ctx.arg.armVFPArgs == ARMVFPArgKind::Base)
     abiFloatType = EF_ARM_ABI_FLOAT_SOFT;
   else if (ctx.arg.armVFPArgs == ARMVFPArgKind::VFP)
     abiFloatType = EF_ARM_ABI_FLOAT_HARD;
-
-  if (!ctx.arg.isLE && ctx.arg.armBe8)
-    armBE8 = EF_ARM_BE8;
+  else if (ctx.arg.armVFPArgs == ARMVFPArgKind::Default) {
+    if (target == 2)
+      abiFloatType = EF_ARM_ABI_FLOAT_HARD;
+    else
+      abiFloatType = EF_ARM_ABI_FLOAT_SOFT;
+  }
 
   // We don't currently use any features incompatible with EF_ARM_EABI_VER5,
   // but we don't have any firm guarantees of conformance. Linux AArch64
