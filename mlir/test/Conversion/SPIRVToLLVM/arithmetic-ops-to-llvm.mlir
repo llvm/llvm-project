@@ -233,3 +233,18 @@ spirv.func @srem_vector(%arg0: vector<4xi32>, %arg1: vector<4xi32>) "None" {
   %0 = spirv.SRem %arg0, %arg1 : vector<4xi32>
   spirv.Return
 }
+
+//===----------------------------------------------------------------------===//
+// spirv.VectorTimesScalar
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @vector_times_scalar
+spirv.func @vector_times_scalar(%vector: vector<4xf32>, %scalar: f32) "None" {
+  // CHECK: %[[UNDEF:.*]] = llvm.mlir.poison : vector<4xf32>
+  // CHECK: llvm.insertelement %{{.*}}, %[[UNDEF]]
+  // CHECK-COUNT-2: llvm.insertelement
+  // CHECK: %[[BCAST:.*]] = llvm.insertelement
+  // CHECK: llvm.fmul %{{.*}}, %[[BCAST]] : vector<4xf32>
+  %0 = spirv.VectorTimesScalar %vector, %scalar : (vector<4xf32>, f32) -> vector<4xf32>
+  spirv.Return
+}
