@@ -3324,6 +3324,12 @@ public:
   /// Default to be the minimum interleave factor: 2.
   virtual unsigned getMaxSupportedInterleaveFactor() const { return 2; }
 
+  /// Return true if target supports interleave intrinsics.
+  virtual bool isInterleaveIntrinsicSupported(unsigned /*Factor*/,
+                                              EVT VT) const {
+    return VT.isScalableVector();
+  }
+
   /// Lower an interleaved load to target specific intrinsics. Return
   /// true on success.
   ///

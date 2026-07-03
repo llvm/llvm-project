@@ -437,6 +437,10 @@ public:
 
   unsigned getMaxSupportedInterleaveFactor() const override { return 8; }
 
+  bool isInterleaveIntrinsicSupported(unsigned Factor, EVT VT) const override {
+    return VT.isScalableVector() || Factor > 2;
+  }
+
   bool fallBackToDAGISel(const Instruction &Inst) const override;
 
   bool lowerInterleavedLoad(Instruction *Load, Value *Mask,

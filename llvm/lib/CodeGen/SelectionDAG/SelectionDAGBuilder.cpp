@@ -13049,32 +13049,42 @@ void SelectionDAGBuilder::visitVectorReverse(const CallInst &I) {
 void SelectionDAGBuilder::visitVectorDeinterleave(const CallInst &I,
                                                   unsigned Factor) {
   auto DL = getCurSDLoc();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDValue InVec = getValue(I.getOperand(0));
+  EVT InVT = InVec.getValueType();
 
   SmallVector<EVT, 4> ValueVTs;
-  ComputeValueVTs(DAG.getTargetLoweringInfo(), DAG.getDataLayout(), I.getType(),
-                  ValueVTs);
+  ComputeValueVTs(TLI, DAG.getDataLayout(), I.getType(), ValueVTs);
 
   EVT OutVT = ValueVTs[0];
   unsigned OutNumElts = OutVT.getVectorMinNumElements();
 
-  SmallVector<SDValue, 4> SubVecs(Factor);
-  for (unsigned i = 0; i != Factor; ++i) {
-    assert(ValueVTs[i] == OutVT && "Expected VTs to be the same");
-    SubVecs[i] = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, OutVT, InVec,
-                             DAG.getVectorIdxConstant(OutNumElts * i, DL));
+  // Use VECTOR_SHUFFLE for fixed-length vectors that the target does not lower
+  // natively.
+  if (!TLI.isInterleaveIntrinsicSupported(Factor, InVT)) {
+    unsigned WideNumElts = InVT.getVectorNumElements();
+
+    SmallVector<SDValue, 8> Results;
+    Results.reserve(Factor);
+    for (unsigned I = 0; I != Factor; ++I) {
+      SmallVector<int, 16> Mask(WideNumElts, -1);
+      for (unsigned J = 0; J != OutNumElts; ++J)
+        Mask[J] = I + J * Factor;
+      SDValue Shuffle =
+          DAG.getVectorShuffle(InVT, DL, InVec, DAG.getUNDEF(InVT), Mask);
+      Results.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, OutVT, Shuffle,
+                                    DAG.getVectorIdxConstant(0, DL)));
+    }
+
+    setValue(&I, DAG.getMergeValues(Results, DL));
+    return;
   }
 
-  // Use VECTOR_SHUFFLE for fixed-length vectors with factor of 2 to benefit
-  // from existing legalisation and combines.
-  if (OutVT.isFixedLengthVector() && Factor == 2) {
-    SDValue Even = DAG.getVectorShuffle(OutVT, DL, SubVecs[0], SubVecs[1],
-                                        createStrideMask(0, 2, OutNumElts));
-    SDValue Odd = DAG.getVectorShuffle(OutVT, DL, SubVecs[0], SubVecs[1],
-                                       createStrideMask(1, 2, OutNumElts));
-    SDValue Res = DAG.getMergeValues({Even, Odd}, getCurSDLoc());
-    setValue(&I, Res);
-    return;
+  SmallVector<SDValue, 4> SubVecs(Factor);
+  for (unsigned I = 0; I != Factor; ++I) {
+    assert(ValueVTs[I] == OutVT && "Expected VTs to be the same");
+    SubVecs[I] = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, OutVT, InVec,
+                             DAG.getVectorIdxConstant(OutNumElts * I, DL));
   }
 
   SDValue Res = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL,
@@ -13096,13 +13106,13 @@ void SelectionDAGBuilder::visitVectorInterleave(const CallInst &I,
            "Expected VTs to be the same");
   }
 
-  // Use VECTOR_SHUFFLE for fixed-length vectors with factor of 2 to benefit
-  // from existing legalisation and combines.
-  if (OutVT.isFixedLengthVector() && Factor == 2) {
+  // Use VECTOR_SHUFFLE for fixed-length vectors that the target does not lower
+  // natively.
+  if (!TLI.isInterleaveIntrinsicSupported(Factor, OutVT)) {
     unsigned NumElts = InVT.getVectorMinNumElements();
     SDValue V = DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, InVecs);
     setValue(&I, DAG.getVectorShuffle(OutVT, DL, V, DAG.getUNDEF(OutVT),
-                                      createInterleaveMask(NumElts, 2)));
+                                      createInterleaveMask(NumElts, Factor)));
     return;
   }
 
