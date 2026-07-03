@@ -4390,7 +4390,12 @@ define amdgpu_kernel void @test_umin_ult_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX1250-NEXT:    s_load_b64 s[6:7], s[4:5], 0x10 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_min_u64 v[0:1], s[2:3], s[6:7]
+; GFX1250-NEXT:    v_cmp_lt_u64_e64 s4, s[2:3], s[6:7]
+; GFX1250-NEXT:    s_and_b32 s4, s4, exec_lo
+; GFX1250-NEXT:    s_cselect_b32 s2, s2, s6
+; GFX1250-NEXT:    s_cselect_b32 s3, s3, s7
+; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
+; GFX1250-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1250-NEXT:    s_endpgm
   %tmp = icmp ult i64 %a, %b
@@ -4515,7 +4520,12 @@ define amdgpu_kernel void @test_umin_ule_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX1250-NEXT:    s_load_b64 s[6:7], s[4:5], 0x10 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_min_u64 v[0:1], s[2:3], s[6:7]
+; GFX1250-NEXT:    v_cmp_le_u64_e64 s4, s[2:3], s[6:7]
+; GFX1250-NEXT:    s_and_b32 s4, s4, exec_lo
+; GFX1250-NEXT:    s_cselect_b32 s2, s2, s6
+; GFX1250-NEXT:    s_cselect_b32 s3, s3, s7
+; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
+; GFX1250-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1250-NEXT:    s_endpgm
   %tmp = icmp ule i64 %a, %b
@@ -4640,7 +4650,12 @@ define amdgpu_kernel void @test_imin_slt_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX1250-NEXT:    s_load_b64 s[6:7], s[4:5], 0x10 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_min_i64 v[0:1], s[2:3], s[6:7]
+; GFX1250-NEXT:    v_cmp_lt_i64_e64 s4, s[2:3], s[6:7]
+; GFX1250-NEXT:    s_and_b32 s4, s4, exec_lo
+; GFX1250-NEXT:    s_cselect_b32 s2, s2, s6
+; GFX1250-NEXT:    s_cselect_b32 s3, s3, s7
+; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
+; GFX1250-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1250-NEXT:    s_endpgm
   %tmp = icmp slt i64 %a, %b
@@ -4765,7 +4780,12 @@ define amdgpu_kernel void @test_imin_sle_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX1250-NEXT:    s_load_b64 s[6:7], s[4:5], 0x10 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_min_i64 v[0:1], s[2:3], s[6:7]
+; GFX1250-NEXT:    v_cmp_le_i64_e64 s4, s[2:3], s[6:7]
+; GFX1250-NEXT:    s_and_b32 s4, s4, exec_lo
+; GFX1250-NEXT:    s_cselect_b32 s2, s2, s6
+; GFX1250-NEXT:    s_cselect_b32 s3, s3, s7
+; GFX1250-NEXT:    v_mov_b32_e32 v0, s2
+; GFX1250-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX1250-NEXT:    s_endpgm
   %tmp = icmp sle i64 %a, %b

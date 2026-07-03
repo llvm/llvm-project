@@ -1042,6 +1042,18 @@ public:
   bool requiresWaitOnWorkgroupReleaseFence() const {
     return getGeneration() >= GFX10 || isTgSplitEnabled();
   }
+
+  // \returns true if ISel should select the native i64 min/max instructions
+  // (V_MIN/MAX_{I|U}64).
+  bool useMinMaxI64Insts() const {
+    return hasMinMaxI64Insts() && !hasSlowMaxMinMulI64Insts();
+  }
+
+  // \returns true if ISel should select the native i64 mul instruction
+  // V_MUL_U64.
+  bool useVMulU64Inst() const {
+    return hasVMulU64Inst() && !hasSlowMaxMinMulI64Insts();
+  }
 };
 
 class GCNUserSGPRUsageInfo {
