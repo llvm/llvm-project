@@ -1369,8 +1369,8 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     break;
   case Intrinsic::umul_with_overflow:
   case Intrinsic::smul_with_overflow:
-    Result = expandMulWithOverflow(
-        Orig, /*Signed=*/IntrinsicId == Intrinsic::smul_with_overflow);
+    Result = expandMulWithOverflow(Orig, /*Signed=*/IntrinsicId ==
+                                             Intrinsic::smul_with_overflow);
     break;
   case Intrinsic::vector_reduce_add:
   case Intrinsic::vector_reduce_fadd:
