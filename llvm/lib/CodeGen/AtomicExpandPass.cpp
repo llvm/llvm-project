@@ -145,6 +145,8 @@ private:
                                 const Twine &AtomicOpName = "cmpxchg",
                                 Instruction *DiagnosticInst = nullptr);
 
+  bool expandStoreRMWToRMW(StoreRMWInst *ARI);
+
   bool expandAtomicRMWToCmpXchg(AtomicRMWInst *AI,
                                 CreateCmpXchgInstFun CreateCmpXchg);
 
@@ -229,6 +231,11 @@ static unsigned getAtomicOpSize(AtomicRMWInst *RMWI) {
 static unsigned getAtomicOpSize(AtomicCmpXchgInst *CASI) {
   const DataLayout &DL = CASI->getDataLayout();
   return DL.getTypeStoreSize(CASI->getCompareOperand()->getType());
+}
+
+static unsigned getAtomicOpSize(StoreRMWInst *ARI) {
+  const DataLayout &DL = ARI->getDataLayout();
+  return DL.getTypeStoreSize(ARI->getValOperand()->getType());
 }
 
 /// Copy metadata that's safe to preserve when widening atomics.
@@ -335,6 +342,29 @@ bool AtomicExpandImpl::tryInsertFencesForAtomic(AtomicInst *AtomicI,
 }
 
 bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
+  // Check for atomic reduction instructions
+  if (auto *ARI = dyn_cast<StoreRMWInst>(I)) {
+    // Unsupported size (e.g. unaligned, or wider than target supports): route
+    // through the storermw -> atomicrmw conversion, which then takes the
+    // atomicrmw libcall path and emits the standard diagnostic on targets that
+    // do not provide atomic libcalls (e.g. NVPTX).
+    if (!atomicSizeSupported(TLI, ARI))
+      return expandStoreRMWToRMW(ARI);
+
+    // Ask the target how to handle this storermw.
+    auto Kind = TLI->shouldExpandStoreRMWInIR(ARI);
+    if (Kind == TargetLoweringBase::AtomicExpansionKind::None) {
+      // Target handles it natively; may still need fence splitting (e.g. NVPTX
+      // lowers seq_cst storermw to fence.sc + red.monotonic).
+      return tryInsertFencesForAtomic(
+          ARI, isReleaseOrStronger(ARI->getOrdering()),
+          TLI->atomicOperationOrderAfterFenceSplit(ARI));
+    }
+
+    // Target requested expansion -> atomicrmw with discarded result.
+    return expandStoreRMWToRMW(ARI);
+  }
+
   if (auto *LI = dyn_cast<LoadInst>(I)) {
     if (!LI->isAtomic())
       return false;
@@ -1942,6 +1972,75 @@ void AtomicExpandImpl::expandAtomicCASToLibcall(AtomicCmpXchgInst *I,
       Libcalls);
   if (!Expanded)
     handleUnsupportedAtomicSize(I, AtomicOpName, DiagnosticInst);
+}
+
+/// Expand a `storermw` to an `atomicrmw` (with the result discarded) and then
+/// fully process that newly-created `atomicrmw` *inline* before returning.
+///
+/// We must process the new `atomicrmw` here rather than relying on the outer
+/// instruction loop in `processAtomicInstr` to revisit it. The outer loop
+/// uses `make_early_inc_range`, which pre-advances its iterator — instructions
+/// inserted at an earlier position are not visited again in the same pass run.
+/// Without inline processing:
+///   - unaligned (or oversized) atomicrmw would skip the
+///     `atomicSizeSupported` → `expandAtomicRMWToLibcall` route, reach
+///     instruction selection, and crash on the natural-alignment assertion
+///     in `insertRMWLLSCLoop`;
+///   - `tryInsertFencesForAtomic` / `shouldCastAtomicRMWIInIR` / idempotent
+///     simplification would all be skipped.
+/// So this function mirrors the `if (auto *RMWI = dyn_cast<AtomicRMWInst>(I))`
+/// branch of `processAtomicInstr`, applied to the newly created atomicrmw.
+bool AtomicExpandImpl::expandStoreRMWToRMW(StoreRMWInst *ARI) {
+  assert(ARI && "StoreRMWInst cannot be null");
+
+  // Extract all information from the StoreRMWInst
+  AtomicRMWInst::BinOp Op = ARI->getOperation();
+  Value *Ptr = ARI->getPointerOperand();
+  Value *Val = ARI->getValOperand();
+  Align Alignment = ARI->getAlign();
+  AtomicOrdering Ordering = ARI->getOrdering();
+  SyncScope::ID SSID = ARI->getSyncScopeID();
+  bool IsVolatile = ARI->isVolatile();
+
+  // Create the atomicrmw instruction (result discarded — storermw has none).
+  ReplacementIRBuilder Builder(ARI, *DL);
+  AtomicRMWInst *NewRMW =
+      Builder.CreateAtomicRMW(Op, Ptr, Val, Alignment, Ordering, SSID);
+  NewRMW->setVolatile(IsVolatile);
+  NewRMW->setElementwise(ARI->isElementwise());
+
+  // Remove the original storermw instruction.
+  ARI->eraseFromParent();
+
+  // Now fully process the newly created atomicrmw inline. See doc comment.
+
+  // 1. Unsupported size (e.g. unaligned, or wider than target supports) →
+  //    route to libcall. This must happen here because the outer loop will
+  //    not revisit this atomicrmw.
+  if (!atomicSizeSupported(TLI, NewRMW)) {
+    expandAtomicRMWToLibcall(NewRMW);
+    return true;
+  }
+
+  // 2. Cast to integer if the target requests it (e.g. FP xchg on targets
+  //    that lack FP atomic xchg).
+  if (TLI->shouldCastAtomicRMWIInIR(NewRMW) ==
+      TargetLoweringBase::AtomicExpansionKind::CastToInteger) {
+    NewRMW = convertAtomicXchgToIntegerType(NewRMW);
+  }
+
+  // 3. Insert any fences the target needs around this atomic op.
+  tryInsertFencesForAtomic(NewRMW,
+                           isReleaseOrStronger(NewRMW->getOrdering()) ||
+                               isAcquireOrStronger(NewRMW->getOrdering()),
+                           TLI->atomicOperationOrderAfterFenceSplit(NewRMW));
+
+  // 4. Try idempotent simplification first, then full RMW expansion
+  //    (CmpXchg loop, LL/SC loop, partword widening, or target-specific).
+  (void)((isIdempotentRMW(NewRMW) && simplifyIdempotentRMW(NewRMW)) ||
+         tryExpandAtomicRMW(NewRMW));
+
+  return true;
 }
 
 static ArrayRef<RTLIB::Libcall> GetRMWLibcall(AtomicRMWInst::BinOp Op) {

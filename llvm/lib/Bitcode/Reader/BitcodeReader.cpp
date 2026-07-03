@@ -6700,6 +6700,65 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       InstructionList.push_back(I);
       break;
     }
+    case bitc::FUNC_CODE_INST_STORERMW: {
+      // STORERMW: [ptrty, ptr, valty, val, op, vol, ordering, ssid, align?]
+      const size_t NumRecords = Record.size();
+      unsigned OpNum = 0;
+
+      Value *Ptr = nullptr;
+      unsigned PtrTypeID;
+      if (getValueTypePair(Record, OpNum, NextValueNo, Ptr, PtrTypeID, CurBB))
+        return error("Invalid storermw record");
+
+      if (!isa<PointerType>(Ptr->getType()))
+        return error("Invalid storermw record");
+
+      Value *Val = nullptr;
+      unsigned ValTypeID = InvalidTypeID;
+      if (getValueTypePair(Record, OpNum, NextValueNo, Val, ValTypeID, CurBB))
+        return error("Invalid storermw record");
+
+      if (!(NumRecords == (OpNum + 4) || NumRecords == (OpNum + 5)))
+        return error("Invalid storermw record");
+
+      bool IsElementwise = false;
+      const AtomicRMWInst::BinOp Operation =
+          getDecodedRMWOperation(Record[OpNum], IsElementwise);
+      if (Operation < AtomicRMWInst::FIRST_BINOP ||
+          Operation > AtomicRMWInst::LAST_BINOP)
+        return error("Invalid storermw record");
+
+      const bool IsVol = Record[OpNum + 1];
+
+      const AtomicOrdering Ordering = getDecodedOrdering(Record[OpNum + 2]);
+      if (Ordering == AtomicOrdering::NotAtomic ||
+          Ordering == AtomicOrdering::Unordered ||
+          Ordering == AtomicOrdering::Acquire ||
+          Ordering == AtomicOrdering::AcquireRelease)
+        return error("Invalid storermw record: must use store ordering (at "
+                     "least monotonic)");
+
+      const SyncScope::ID SSID = getDecodedSyncScopeID(Record[OpNum + 3]);
+
+      MaybeAlign Alignment;
+
+      if (NumRecords == (OpNum + 5)) {
+        if (Error Err = parseAlignmentValue(Record[OpNum + 4], Alignment))
+          return Err;
+      }
+
+      if (!Alignment)
+        Alignment =
+            Align(TheModule->getDataLayout().getTypeStoreSize(Val->getType()));
+
+      I = new StoreRMWInst(Operation, Ptr, Val, *Alignment, Ordering, SSID,
+                           IsElementwise);
+      ResTypeID = InvalidTypeID; // Returns void
+      cast<StoreRMWInst>(I)->setVolatile(IsVol);
+
+      InstructionList.push_back(I);
+      break;
+    }
     case bitc::FUNC_CODE_INST_FENCE: { // FENCE:[ordering, ssid]
       if (2 != Record.size())
         return error("Invalid fence record");

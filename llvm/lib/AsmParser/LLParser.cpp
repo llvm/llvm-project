@@ -7819,6 +7819,8 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
     return parseCmpXchg(Inst, PFS);
   case lltok::kw_atomicrmw:
     return parseAtomicRMW(Inst, PFS);
+  case lltok::kw_storermw:
+    return parseStoreRMW(Inst, PFS);
   case lltok::kw_fence:
     return parseFence(Inst, PFS);
   case lltok::kw_getelementptr:
@@ -9222,6 +9224,171 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
                                           Ordering, SSID, IsElementwise);
   RMWI->setVolatile(IsVolatile);
   Inst = RMWI;
+  return AteExtraComma ? InstExtraComma : InstNormal;
+}
+
+/// parseStoreRMW
+///   ::= 'storermw' 'volatile'? 'elementwise'? BinOp TypeAndValue ','
+///       TypeAndValue 'singlethread'? AtomicOrdering
+int LLParser::parseStoreRMW(Instruction *&Inst, PerFunctionState &PFS) {
+  Value *Ptr, *Val;
+  LocTy PtrLoc, ValLoc;
+  bool AteExtraComma = false;
+  AtomicOrdering Ordering = AtomicOrdering::NotAtomic;
+  SyncScope::ID SSID = SyncScope::System;
+  bool isVolatile = false;
+  bool IsElementwise = false;
+  bool IsFP = false;
+  AtomicRMWInst::BinOp Operation;
+  MaybeAlign Alignment;
+
+  if (EatIfPresent(lltok::kw_volatile))
+    isVolatile = true;
+  if (EatIfPresent(lltok::kw_elementwise))
+    IsElementwise = true;
+
+  switch (Lex.getKind()) {
+  default:
+    return tokError("expected binary operation in storermw");
+  case lltok::kw_xchg:
+    return tokError("xchg operation not valid for storermw (use atomicrmw)");
+  case lltok::kw_add:
+    Operation = AtomicRMWInst::Add;
+    break;
+  case lltok::kw_sub:
+    Operation = AtomicRMWInst::Sub;
+    break;
+  case lltok::kw_and:
+    Operation = AtomicRMWInst::And;
+    break;
+  case lltok::kw_nand:
+    Operation = AtomicRMWInst::Nand;
+    break;
+  case lltok::kw_or:
+    Operation = AtomicRMWInst::Or;
+    break;
+  case lltok::kw_xor:
+    Operation = AtomicRMWInst::Xor;
+    break;
+  case lltok::kw_max:
+    Operation = AtomicRMWInst::Max;
+    break;
+  case lltok::kw_min:
+    Operation = AtomicRMWInst::Min;
+    break;
+  case lltok::kw_umax:
+    Operation = AtomicRMWInst::UMax;
+    break;
+  case lltok::kw_umin:
+    Operation = AtomicRMWInst::UMin;
+    break;
+  case lltok::kw_uinc_wrap:
+    Operation = AtomicRMWInst::UIncWrap;
+    break;
+  case lltok::kw_udec_wrap:
+    Operation = AtomicRMWInst::UDecWrap;
+    break;
+  case lltok::kw_usub_cond:
+    Operation = AtomicRMWInst::USubCond;
+    break;
+  case lltok::kw_usub_sat:
+    Operation = AtomicRMWInst::USubSat;
+    break;
+  case lltok::kw_fadd:
+    Operation = AtomicRMWInst::FAdd;
+    IsFP = true;
+    break;
+  case lltok::kw_fsub:
+    Operation = AtomicRMWInst::FSub;
+    IsFP = true;
+    break;
+  case lltok::kw_fmax:
+    Operation = AtomicRMWInst::FMax;
+    IsFP = true;
+    break;
+  case lltok::kw_fmin:
+    Operation = AtomicRMWInst::FMin;
+    IsFP = true;
+    break;
+  case lltok::kw_fmaximum:
+    Operation = AtomicRMWInst::FMaximum;
+    IsFP = true;
+    break;
+  case lltok::kw_fminimum:
+    Operation = AtomicRMWInst::FMinimum;
+    IsFP = true;
+    break;
+  case lltok::kw_fmaximumnum:
+    Operation = AtomicRMWInst::FMaximumNum;
+    IsFP = true;
+    break;
+  case lltok::kw_fminimumnum:
+    Operation = AtomicRMWInst::FMinimumNum;
+    IsFP = true;
+    break;
+  }
+  Lex.Lex(); // Eat the operation.
+
+  if (parseTypeAndValue(Ptr, PtrLoc, PFS) ||
+      parseToken(lltok::comma, "expected ',' after storermw address") ||
+      parseTypeAndValue(Val, ValLoc, PFS) ||
+      parseScopeAndOrdering(true /*Always atomic*/, SSID, Ordering) ||
+      parseOptionalCommaAlign(Alignment, AteExtraComma))
+    return true;
+
+  // Validate ordering - storermw only allows store-compatible orderings
+  if (Ordering == AtomicOrdering::Acquire ||
+      Ordering == AtomicOrdering::AcquireRelease)
+    return tokError(
+        "storermw cannot have acquire semantics (only store orderings: "
+        "monotonic, release, seq_cst)");
+  if (Ordering == AtomicOrdering::NotAtomic ||
+      Ordering == AtomicOrdering::Unordered)
+    return tokError("storermw must be at least monotonic");
+
+  if (!Ptr->getType()->isPointerTy())
+    return error(PtrLoc, "storermw operand must be a pointer");
+  if (Val->getType()->isScalableTy())
+    return error(ValLoc, "storermw operand may not be scalable");
+
+  // For elementwise ops, the value must be a fixed vector type whose element
+  // type is legal for the corresponding scalar storermw operation. So assign
+  // ScalarTy the element type for elementwise ops so we can check this.
+  Type *ScalarTy = Val->getType();
+  if (IsElementwise) {
+    auto *VecTy = dyn_cast<FixedVectorType>(Val->getType());
+    if (!VecTy)
+      return error(ValLoc,
+                   "storermw elementwise operand must be a fixed vector type");
+    ScalarTy = VecTy->getElementType();
+  }
+
+  if (IsFP) {
+    if (!Val->getType()->isFPOrFPVectorTy()) {
+      return error(ValLoc, "storermw " +
+                               AtomicRMWInst::getOperationName(Operation) +
+                               " operand must be a floating point type");
+    }
+  } else {
+    if (!ScalarTy->isIntegerTy()) {
+      return error(ValLoc, "storermw " +
+                               AtomicRMWInst::getOperationName(Operation) +
+                               " operand must be an integer");
+    }
+  }
+
+  unsigned Size =
+      PFS.getFunction().getDataLayout().getTypeStoreSizeInBits(Val->getType());
+  if (Size < 8 || (Size & (Size - 1)))
+    return error(ValLoc, "storermw operand must be power-of-two byte-sized"
+                         " integer");
+  const Align DefaultAlignment(
+      PFS.getFunction().getDataLayout().getTypeStoreSize(Val->getType()));
+  StoreRMWInst *ARI = new StoreRMWInst(Operation, Ptr, Val,
+                                       Alignment.value_or(DefaultAlignment),
+                                       Ordering, SSID, IsElementwise);
+  ARI->setVolatile(isVolatile);
+  Inst = ARI;
   return AteExtraComma ? InstExtraComma : InstNormal;
 }
 

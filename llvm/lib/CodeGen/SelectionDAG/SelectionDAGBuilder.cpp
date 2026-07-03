@@ -5331,6 +5331,99 @@ void SelectionDAGBuilder::visitAtomicRMW(const AtomicRMWInst &I) {
   DAG.setRoot(OutChain);
 }
 
+void SelectionDAGBuilder::visitStoreRMW(const StoreRMWInst &I) {
+  SDLoc dl = getCurSDLoc();
+  ISD::NodeType NT;
+  switch (I.getOperation()) {
+  default:
+    llvm_unreachable("Unknown storermw operation");
+  case AtomicRMWInst::Add:
+    NT = ISD::ATOMIC_STORE_ADD;
+    break;
+  case AtomicRMWInst::Sub:
+    NT = ISD::ATOMIC_STORE_SUB;
+    break;
+  case AtomicRMWInst::And:
+    NT = ISD::ATOMIC_STORE_AND;
+    break;
+  case AtomicRMWInst::Nand:
+    NT = ISD::ATOMIC_STORE_NAND;
+    break;
+  case AtomicRMWInst::Or:
+    NT = ISD::ATOMIC_STORE_OR;
+    break;
+  case AtomicRMWInst::Xor:
+    NT = ISD::ATOMIC_STORE_XOR;
+    break;
+  case AtomicRMWInst::Max:
+    NT = ISD::ATOMIC_STORE_MAX;
+    break;
+  case AtomicRMWInst::Min:
+    NT = ISD::ATOMIC_STORE_MIN;
+    break;
+  case AtomicRMWInst::UMax:
+    NT = ISD::ATOMIC_STORE_UMAX;
+    break;
+  case AtomicRMWInst::UMin:
+    NT = ISD::ATOMIC_STORE_UMIN;
+    break;
+  case AtomicRMWInst::FAdd:
+    NT = ISD::ATOMIC_STORE_FADD;
+    break;
+  case AtomicRMWInst::FSub:
+    NT = ISD::ATOMIC_STORE_FSUB;
+    break;
+  case AtomicRMWInst::FMax:
+    NT = ISD::ATOMIC_STORE_FMAX;
+    break;
+  case AtomicRMWInst::FMin:
+    NT = ISD::ATOMIC_STORE_FMIN;
+    break;
+  case AtomicRMWInst::FMaximum:
+    NT = ISD::ATOMIC_STORE_FMAXIMUM;
+    break;
+  case AtomicRMWInst::FMinimum:
+    NT = ISD::ATOMIC_STORE_FMINIMUM;
+    break;
+  case AtomicRMWInst::FMaximumNum:
+    NT = ISD::ATOMIC_STORE_FMAXIMUMNUM;
+    break;
+  case AtomicRMWInst::FMinimumNum:
+    NT = ISD::ATOMIC_STORE_FMINIMUMNUM;
+    break;
+  case AtomicRMWInst::UIncWrap:
+    NT = ISD::ATOMIC_STORE_UINC_WRAP;
+    break;
+  case AtomicRMWInst::UDecWrap:
+    NT = ISD::ATOMIC_STORE_UDEC_WRAP;
+    break;
+  case AtomicRMWInst::USubCond:
+    NT = ISD::ATOMIC_STORE_USUB_COND;
+    break;
+  case AtomicRMWInst::USubSat:
+    NT = ISD::ATOMIC_STORE_USUB_SAT;
+    break;
+  }
+  AtomicOrdering Ordering = I.getOrdering();
+  SyncScope::ID SSID = I.getSyncScopeID();
+
+  SDValue InChain = getRoot();
+
+  auto MemVT = getValue(I.getValOperand()).getSimpleValueType();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  auto Flags = TLI.getAtomicMemOperandFlags(I, DAG.getDataLayout());
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+      MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
+      I.getAlign(), AAMDNodes(), nullptr, SSID, Ordering);
+
+  SDValue L =
+      DAG.getAtomic(NT, dl, MemVT, InChain, getValue(I.getPointerOperand()),
+                    getValue(I.getValOperand()), MMO);
+  DAG.setRoot(L);
+}
+
 void SelectionDAGBuilder::visitFence(const FenceInst &I) {
   SDLoc dl = getCurSDLoc();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();

@@ -3872,7 +3872,7 @@ to infer ``captures``:
  * ptrtoint: Captures address and provenance.
  * call/invoke: Depends on ``captures`` on arguments. The callee is never
    captured.
- * store, atomicrmw, cmpxchg: Capture the address and provenance of the value
+ * store, atomicrmw, storermw, cmpxchg: Capture the address and provenance of the value
    operand. Do not capture the pointer operand (unless volatile).
  * Other (including insertvalue and insertelement): Conservatively assume
    address and provenance are captured.
@@ -4006,13 +4006,12 @@ exactly one write into a load that may see multiple writes.)
 Atomic Memory Ordering Constraints
 ----------------------------------
 
-Atomic instructions (:ref:`cmpxchg <i_cmpxchg>`,
-:ref:`atomicrmw <i_atomicrmw>`, :ref:`fence <i_fence>`,
-:ref:`atomic load <i_load>`, and :ref:`atomic store <i_store>`) take
-ordering parameters that determine which other atomic instructions on
-the same address they *synchronize with*. These semantics implement
-the Java or C++ memory models; if these descriptions aren't precise
-enough, check those specs (see spec references in the
+Atomic instructions (:ref:`cmpxchg <i_cmpxchg>`, :ref:`atomicrmw <i_atomicrmw>`,
+:ref:`storermw <i_storermw>`, :ref:`fence <i_fence>`, :ref:`atomic load <i_load>`,
+and :ref:`atomic store <i_store>`) take ordering parameters that determine which
+other atomic instructions on the same address they *synchronize with*.
+These semantics implement the Java or C++ memory models; if these descriptions
+aren't precise enough, check those specs (see spec references in the
 :doc:`atomics guide <Atomics>`). :ref:`fence <i_fence>` instructions
 treat these orderings somewhat differently since they don't take an
 address. See that instruction's documentation for details.
@@ -4033,11 +4032,12 @@ For a simpler introduction to the ordering constraints, see the
     address. All modification orders must be compatible with the
     happens-before order. There is no guarantee that the modification
     orders can be combined to a global total order for the whole program
-    (and this often will not be possible). If the read in an atomic
-    read-modify-write operation M (:ref:`cmpxchg <i_cmpxchg>` and
-    :ref:`atomicrmw <i_atomicrmw>`) reads from a ``monotonic`` (or
-    stronger) write W, W must be immediately before M in the address's
-    modification order. If one atomic read happens before another atomic
+    (and this often will not be possible).
+    If the read in an atomic read-modify-write operation M (:ref:`cmpxchg <i_cmpxchg>`,
+    :ref:`atomicrmw <i_atomicrmw>`, and :ref:`storermw <i_storermw>`) reads from a
+    ``monotonic`` (or stronger) write W, W must be immediately before M in the address's
+    modification order.
+    If one atomic read happens before another atomic
     read of the same address and both are at least ``monotonic``, the
     later read must not see an earlier value in the address's
     modification order. This disallows reordering of ``monotonic`` (or
@@ -9031,9 +9031,8 @@ inlined call.
 
 The ``noalias.addrspace`` metadata is used to identify memory
 operations which cannot access objects allocated in a range of address
-spaces. It is attached to memory instructions, including
-:ref:`atomicrmw <i_atomicrmw>`, :ref:`cmpxchg <i_cmpxchg>`, and
-:ref:`call <i_call>` instructions.
+spaces.
+It is attached to memory instructions, including :ref:`atomicrmw <i_atomicrmw>`, :ref:`cmpxchg <i_cmpxchg>`, :ref:`storermw <i_storermw>`, and :ref:`call <i_call>` instructions.
 
 This follows the same form as :ref:`range metadata <range-metadata>`,
 except the field entries must be of type `i32`. The interpretation is
@@ -9071,8 +9070,8 @@ Refer to :doc:`MemoryModelRelaxationAnnotations` for more information on how thi
 affects the memory model of a given target.
 
 It is attached to memory instructions such as:
-:ref:`atomicrmw <i_atomicrmw>`, :ref:`cmpxchg <i_cmpxchg>`, :ref:`load <i_load>`,
-:ref:`store <i_store>`, :ref:`fence <i_fence>` and
+:ref:`atomicrmw <i_atomicrmw>`, :ref:`storermw <i_storermw>`, :ref:`cmpxchg <i_cmpxchg>`,
+:ref:`load <i_load>`, :ref:`store <i_store>`, :ref:`fence <i_fence>` and
 :ref:`call <i_call>` instructions that read or write memory.
 
 The metadata is structured as pairs of strings: a prefix, and suffix that form a MMRA "tag".
@@ -12351,10 +12350,11 @@ Semantics:
 
 A fence A which has (at least) ``release`` ordering semantics
 *synchronizes with* a fence B with (at least) ``acquire`` ordering
-semantics if and only if there exist atomic operations X and Y, both
-operating on some atomic object M, such that A is sequenced before X, X
-modifies M (either directly or through some side effect of a sequence
-headed by X), Y is sequenced before B, and Y observes M. This provides a
+semantics if and only if there exist atomic operations X and Y, where Y
+is not an :ref:`storermw <i_storermw>` operation, both operating on some atomic object M,
+such that A is sequenced before X, X modifies M (either directly or through
+some side effect of a sequence headed by X), Y is sequenced before B,
+and Y observes M. This provides a
 *happens-before* dependency between A and B. Rather than an explicit
 ``fence``, one (but not both) of the atomic operations X or Y might
 provide a ``release`` or ``acquire`` (resp.) ordering constraint and
@@ -12491,7 +12491,7 @@ Syntax:
 Overview:
 """""""""
 
-The '``atomicrmw``' instruction is used to atomically modify memory.
+The '``atomicrmw``' instruction is used to atomically modify memory, returning the value at the memory location before the modification.
 
 Arguments:
 """"""""""
@@ -12589,6 +12589,117 @@ Example:
 .. code-block:: llvm
 
       %old = atomicrmw add ptr %ptr, i32 1 acquire                        ; yields i32
+
+.. _i_storermw:
+
+'``storermw``' Instruction
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      storermw [volatile] [elementwise] <operation> ptr <pointer>, <ty> <value> [syncscope("<target-scope>")] <ordering>[, align <alignment>]
+
+Overview:
+"""""""""
+
+The '``storermw``' instruction is used to atomically modify memory without returning the value at the memory location before the modification.
+Unlike :ref:`atomicrmw <i_atomicrmw>`, ``storermw`` has store-only synchronization semantics: it acts as a release operation when ordered ``release`` or ``seq_cst``, but never as an acquire operation.
+It therefore does not synchronize-with a preceding release operation the way an acquire load, acquire :ref:`atomicrmw <i_atomicrmw>`, or acquire :ref:`fence <i_fence>` following an atomic load would.
+This semantic difference, combined with not returning a value, enables more efficient code generation on targets with native support for store-only atomic operations (e.g., PTX ``red`` instructions, ARM LSE store-atomics).
+
+Arguments:
+""""""""""
+
+There are three arguments to the '``storermw``' instruction: an operation to apply, an address whose value to modify, and an argument to the operation.
+The operation must be one of the following keywords:
+
+-  add
+-  sub
+-  and
+-  nand
+-  or
+-  xor
+-  max
+-  min
+-  umax
+-  umin
+-  fadd
+-  fsub
+-  fmax
+-  fmin
+-  fmaximum
+-  fminimum
+-  fmaximumnum
+-  fminimumnum
+-  uinc_wrap
+-  udec_wrap
+-  usub_cond
+-  usub_sat
+
+For all of these operations, the type of '<value>' must be a type whose bit width is a power of two greater than or equal to eight.
+For add/sub/and/nand/or/xor/max/min/umax/umin/uinc_wrap/udec_wrap/usub_cond/usub_sat, this must be an integer type, or, if the ``elementwise`` modifier is present, a fixed vector of integer type.
+For fadd/fsub/fmax/fmin/fmaximum/fminimum/fmaximumnum/fminimumnum, this must be a floating-point or fixed vector of floating-point type.
+The type of the '<pointer>' operand must be a pointer to the type of '<value>'.
+If the ``storermw`` is marked as ``volatile``, then the optimizer is not allowed to modify the number or order of execution of this ``storermw`` with other :ref:`volatile operations <volatile>`.
+
+Note: if the alignment is not greater or equal to the size of the `<value>` type, the atomic operation is likely to require a lock and have poor performance.
+
+The alignment is only optional when parsing textual IR; for in-memory IR, it is always present.
+If unspecified, the alignment is assumed to be equal to the size of the '<value>' type.
+Note that this default alignment assumption is different from the alignment used for the load/store instructions when align isn't specified.
+
+A ``storermw`` instruction can also take an optional ":ref:`syncscope <syncscope>`" argument.
+
+With the ``elementwise`` modifier, ``<value>`` must be a fixed vector type, and the instruction has per-element vector atomic semantics.
+That is, it performs the specified operation atomically to individual vector elements in an unspecified order.
+Without the ``elementwise`` modifier, vector ``storermw`` modifies the entire vector atomically.
+
+The ordering must be one of: ``monotonic``, ``release``, or ``seq_cst``.
+The orderings ``acquire`` and ``acq_rel`` are not valid for ``storermw`` because it has no acquire semantics.
+``unordered`` is not valid either: a ``storermw`` is a read-modify-write and, like ``atomicrmw``, requires at least ``monotonic`` to give the atomic read-modify-write edge a well-defined position in the location's modification order.
+
+Semantics:
+""""""""""
+
+The contents of memory at the location specified by the '``<pointer>``' operand are atomically read, modified, and written back.
+Unlike :ref:`atomicrmw <i_atomicrmw>`, the original value at the location is not returned, and the operation has no acquire semantics.
+The modification is specified by the operation argument:
+
+-  add: ``*ptr = *ptr + val``
+-  sub: ``*ptr = *ptr - val``
+-  and: ``*ptr = *ptr & val``
+-  nand: ``*ptr = ~(*ptr & val)``
+-  or: ``*ptr = *ptr | val``
+-  xor: ``*ptr = *ptr ^ val``
+-  max: ``*ptr = *ptr > val ? *ptr : val`` (using a signed comparison)
+-  min: ``*ptr = *ptr < val ? *ptr : val`` (using a signed comparison)
+-  umax: ``*ptr = *ptr > val ? *ptr : val`` (using an unsigned comparison)
+-  umin: ``*ptr = *ptr < val ? *ptr : val`` (using an unsigned comparison)
+-  fadd: ``*ptr = *ptr + val`` (using floating point arithmetic)
+-  fsub: ``*ptr = *ptr - val`` (using floating point arithmetic)
+-  fmax: ``*ptr = maxnum(*ptr, val)`` (match the `llvm.maxnum.*` intrinsic)
+-  fmin: ``*ptr = minnum(*ptr, val)`` (match the `llvm.minnum.*` intrinsic)
+-  fmaximum: ``*ptr = maximum(*ptr, val)`` (match the `llvm.maximum.*` intrinsic)
+-  fminimum: ``*ptr = minimum(*ptr, val)`` (match the `llvm.minimum.*` intrinsic)
+-  fmaximumnum: ``*ptr = maximumnum(*ptr, val)`` (match the `llvm.maximumnum.*` intrinsic)
+-  fminimumnum: ``*ptr = minimumnum(*ptr, val)`` (match the `llvm.minimumnum.*` intrinsic)
+-  uinc_wrap: ``*ptr = (*ptr u>= val) ? 0 : (*ptr + 1)`` (increment value with wraparound to zero when incremented above input value)
+-  udec_wrap: ``*ptr = ((*ptr == 0) || (*ptr u> val)) ? val : (*ptr - 1)`` (decrement with wraparound to input value when decremented below zero).
+-  usub_cond: ``*ptr = (*ptr u>= val) ? *ptr - val : *ptr`` (subtract only if no unsigned overflow).
+-  usub_sat: ``*ptr = (*ptr u>= val) ? *ptr - val : 0`` (subtract with unsigned clamping to zero).
+
+Example:
+""""""""
+
+.. code-block:: llvm
+
+      storermw add ptr %ptr, i32 1 monotonic, align 4
+      storermw volatile fadd ptr %fptr, float 2.0 release, align 4
+      storermw umax ptr addrspace(1) %gptr, i32 %val seq_cst, align 4
+      storermw elementwise add ptr %vptr, <4 x i32> %vval seq_cst, align 16
 
 .. _i_getelementptr:
 

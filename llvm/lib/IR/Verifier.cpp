@@ -437,6 +437,7 @@ private:
   void visitDbgLabelIntrinsic(StringRef Kind, DbgLabelInst &DLI);
   void visitAtomicCmpXchgInst(AtomicCmpXchgInst &CXI);
   void visitAtomicRMWInst(AtomicRMWInst &RMWI);
+  void visitStoreRMWInst(StoreRMWInst &ARI);
   void visitFenceInst(FenceInst &FI);
   void visitAllocaInst(AllocaInst &AI);
   void visitExtractValueInst(ExtractValueInst &EVI);
@@ -4692,6 +4693,59 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
   Check(AtomicRMWInst::FIRST_BINOP <= Op && Op <= AtomicRMWInst::LAST_BINOP,
         "Invalid binary operation!", &RMWI);
   visitInstruction(RMWI);
+}
+
+void Verifier::visitStoreRMWInst(StoreRMWInst &ARI) {
+  AtomicOrdering Ordering = ARI.getOrdering();
+
+  // Verify store-only orderings (cannot have acquire semantics, must be at
+  // least monotonic).
+  Check(Ordering != AtomicOrdering::Acquire &&
+            Ordering != AtomicOrdering::AcquireRelease,
+        "storermw instructions cannot have acquire semantics "
+        "(only store orderings: monotonic, release, seq_cst).",
+        &ARI);
+
+  Check(Ordering != AtomicOrdering::NotAtomic &&
+            Ordering != AtomicOrdering::Unordered,
+        "storermw instructions must be at least monotonic.", &ARI);
+
+  auto Op = ARI.getOperation();
+  Type *ElTy = ARI.getValOperand()->getType();
+  Type *ScalarTy = ElTy;
+  if (ARI.isElementwise()) {
+    auto *VecTy = dyn_cast<FixedVectorType>(ElTy);
+    Check(VecTy, "storermw elementwise operand must have fixed vector type!",
+          &ARI, ElTy);
+    if (VecTy)
+      ScalarTy = VecTy->getElementType();
+  }
+
+  // Verify operation is valid (only xchg not allowed - requires return value)
+  Check(Op != AtomicRMWInst::Xchg,
+        "xchg operation not valid for storermw (use atomicrmw instead).", &ARI);
+  // Note: nand, uinc_wrap, udec_wrap, usub_cond, usub_sat are now allowed
+  // They will expand to atomicrmw on targets that don't support them natively
+
+  // Verify operand types
+  if (AtomicRMWInst::isFPOperation(Op)) {
+    Check(ElTy->isFPOrFPVectorTy() && !isa<ScalableVectorType>(ElTy),
+          "storermw " + AtomicRMWInst::getOperationName(Op) +
+              " operand must have floating-point or fixed vector of "
+              "floating-point "
+              "type!",
+          &ARI, ElTy);
+  } else {
+    Check(ScalarTy->isIntegerTy(),
+          "storermw " + AtomicRMWInst::getOperationName(Op) +
+              " operand must have integer type!",
+          &ARI, ElTy);
+  }
+
+  checkAtomicMemAccessSize(ElTy, &ARI);
+  Check(AtomicRMWInst::FIRST_BINOP <= Op && Op <= AtomicRMWInst::LAST_BINOP,
+        "Invalid binary operation!", &ARI);
+  visitInstruction(ARI);
 }
 
 void Verifier::visitFenceInst(FenceInst &FI) {

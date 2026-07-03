@@ -959,8 +959,42 @@ static void AddNodeIDCustom(FoldingSetNodeID &ID, const SDNode *N) {
   case ISD::ATOMIC_LOAD_MAX:
   case ISD::ATOMIC_LOAD_UMIN:
   case ISD::ATOMIC_LOAD_UMAX:
+  case ISD::ATOMIC_LOAD_FADD:
+  case ISD::ATOMIC_LOAD_FSUB:
+  case ISD::ATOMIC_LOAD_FMAX:
+  case ISD::ATOMIC_LOAD_FMIN:
+  case ISD::ATOMIC_LOAD_FMAXIMUM:
+  case ISD::ATOMIC_LOAD_FMINIMUM:
+  case ISD::ATOMIC_LOAD_FMAXIMUMNUM:
+  case ISD::ATOMIC_LOAD_FMINIMUMNUM:
+  case ISD::ATOMIC_LOAD_UINC_WRAP:
+  case ISD::ATOMIC_LOAD_UDEC_WRAP:
+  case ISD::ATOMIC_LOAD_USUB_COND:
+  case ISD::ATOMIC_LOAD_USUB_SAT:
   case ISD::ATOMIC_LOAD:
-  case ISD::ATOMIC_STORE: {
+  case ISD::ATOMIC_STORE:
+  case ISD::ATOMIC_STORE_ADD:
+  case ISD::ATOMIC_STORE_SUB:
+  case ISD::ATOMIC_STORE_AND:
+  case ISD::ATOMIC_STORE_NAND:
+  case ISD::ATOMIC_STORE_OR:
+  case ISD::ATOMIC_STORE_XOR:
+  case ISD::ATOMIC_STORE_MIN:
+  case ISD::ATOMIC_STORE_MAX:
+  case ISD::ATOMIC_STORE_UMIN:
+  case ISD::ATOMIC_STORE_UMAX:
+  case ISD::ATOMIC_STORE_FADD:
+  case ISD::ATOMIC_STORE_FSUB:
+  case ISD::ATOMIC_STORE_FMIN:
+  case ISD::ATOMIC_STORE_FMAX:
+  case ISD::ATOMIC_STORE_FMINIMUM:
+  case ISD::ATOMIC_STORE_FMAXIMUM:
+  case ISD::ATOMIC_STORE_FMINIMUMNUM:
+  case ISD::ATOMIC_STORE_FMAXIMUMNUM:
+  case ISD::ATOMIC_STORE_UINC_WRAP:
+  case ISD::ATOMIC_STORE_UDEC_WRAP:
+  case ISD::ATOMIC_STORE_USUB_COND:
+  case ISD::ATOMIC_STORE_USUB_SAT: {
     const AtomicSDNode *AT = cast<AtomicSDNode>(N);
     ID.AddInteger(AT->getMemoryVT().getRawBits());
     ID.AddInteger(AT->getRawSubclassData());
@@ -10361,27 +10395,61 @@ SDValue SelectionDAG::getAtomicCmpSwap(unsigned Opcode, const SDLoc &dl,
 SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
                                 SDValue Chain, SDValue Ptr, SDValue Val,
                                 MachineMemOperand *MMO) {
-  assert((Opcode == ISD::ATOMIC_LOAD_ADD || Opcode == ISD::ATOMIC_LOAD_SUB ||
-          Opcode == ISD::ATOMIC_LOAD_AND || Opcode == ISD::ATOMIC_LOAD_CLR ||
-          Opcode == ISD::ATOMIC_LOAD_OR || Opcode == ISD::ATOMIC_LOAD_XOR ||
-          Opcode == ISD::ATOMIC_LOAD_NAND || Opcode == ISD::ATOMIC_LOAD_MIN ||
-          Opcode == ISD::ATOMIC_LOAD_MAX || Opcode == ISD::ATOMIC_LOAD_UMIN ||
-          Opcode == ISD::ATOMIC_LOAD_UMAX || Opcode == ISD::ATOMIC_LOAD_FADD ||
-          Opcode == ISD::ATOMIC_LOAD_FSUB || Opcode == ISD::ATOMIC_LOAD_FMAX ||
-          Opcode == ISD::ATOMIC_LOAD_FMIN ||
-          Opcode == ISD::ATOMIC_LOAD_FMINIMUM ||
-          Opcode == ISD::ATOMIC_LOAD_FMAXIMUM ||
-          Opcode == ISD::ATOMIC_LOAD_UINC_WRAP ||
-          Opcode == ISD::ATOMIC_LOAD_UDEC_WRAP ||
-          Opcode == ISD::ATOMIC_LOAD_USUB_COND ||
-          Opcode == ISD::ATOMIC_LOAD_USUB_SAT || Opcode == ISD::ATOMIC_SWAP ||
-          Opcode == ISD::ATOMIC_STORE) &&
-         "Invalid Atomic Op");
+  assert(
+      (Opcode == ISD::ATOMIC_LOAD_ADD || Opcode == ISD::ATOMIC_LOAD_SUB ||
+       Opcode == ISD::ATOMIC_LOAD_AND || Opcode == ISD::ATOMIC_LOAD_CLR ||
+       Opcode == ISD::ATOMIC_LOAD_OR || Opcode == ISD::ATOMIC_LOAD_XOR ||
+       Opcode == ISD::ATOMIC_LOAD_NAND || Opcode == ISD::ATOMIC_LOAD_MIN ||
+       Opcode == ISD::ATOMIC_LOAD_MAX || Opcode == ISD::ATOMIC_LOAD_UMIN ||
+       Opcode == ISD::ATOMIC_LOAD_UMAX || Opcode == ISD::ATOMIC_LOAD_FADD ||
+       Opcode == ISD::ATOMIC_LOAD_FSUB || Opcode == ISD::ATOMIC_LOAD_FMAX ||
+       Opcode == ISD::ATOMIC_LOAD_FMIN || Opcode == ISD::ATOMIC_LOAD_FMINIMUM ||
+       Opcode == ISD::ATOMIC_LOAD_FMAXIMUM ||
+       Opcode == ISD::ATOMIC_LOAD_UINC_WRAP ||
+       Opcode == ISD::ATOMIC_LOAD_UDEC_WRAP ||
+       Opcode == ISD::ATOMIC_LOAD_USUB_COND ||
+       Opcode == ISD::ATOMIC_LOAD_USUB_SAT || Opcode == ISD::ATOMIC_SWAP ||
+       Opcode == ISD::ATOMIC_STORE || Opcode == ISD::ATOMIC_STORE_ADD ||
+       Opcode == ISD::ATOMIC_STORE_SUB || Opcode == ISD::ATOMIC_STORE_AND ||
+       Opcode == ISD::ATOMIC_STORE_NAND || Opcode == ISD::ATOMIC_STORE_OR ||
+       Opcode == ISD::ATOMIC_STORE_XOR || Opcode == ISD::ATOMIC_STORE_MIN ||
+       Opcode == ISD::ATOMIC_STORE_MAX || Opcode == ISD::ATOMIC_STORE_UMIN ||
+       Opcode == ISD::ATOMIC_STORE_UMAX || Opcode == ISD::ATOMIC_STORE_FADD ||
+       Opcode == ISD::ATOMIC_STORE_FSUB || Opcode == ISD::ATOMIC_STORE_FMIN ||
+       Opcode == ISD::ATOMIC_STORE_FMAX ||
+       Opcode == ISD::ATOMIC_STORE_FMINIMUM ||
+       Opcode == ISD::ATOMIC_STORE_FMAXIMUM ||
+       Opcode == ISD::ATOMIC_STORE_FMINIMUMNUM ||
+       Opcode == ISD::ATOMIC_STORE_FMAXIMUMNUM ||
+       Opcode == ISD::ATOMIC_STORE_UINC_WRAP ||
+       Opcode == ISD::ATOMIC_STORE_UDEC_WRAP ||
+       Opcode == ISD::ATOMIC_STORE_USUB_COND ||
+       Opcode == ISD::ATOMIC_STORE_USUB_SAT) &&
+      "Invalid Atomic Op");
 
   EVT VT = Val.getValueType();
 
-  SDVTList VTs = Opcode == ISD::ATOMIC_STORE ? getVTList(MVT::Other) :
-                                               getVTList(VT, MVT::Other);
+  // ATOMIC_STORE and ATOMIC_STORE_* (storermw) return only a chain; all
+  // other atomic RMW ops return the old value plus a chain.
+  bool IsStoreOnly =
+      Opcode == ISD::ATOMIC_STORE || Opcode == ISD::ATOMIC_STORE_ADD ||
+      Opcode == ISD::ATOMIC_STORE_SUB || Opcode == ISD::ATOMIC_STORE_AND ||
+      Opcode == ISD::ATOMIC_STORE_NAND || Opcode == ISD::ATOMIC_STORE_OR ||
+      Opcode == ISD::ATOMIC_STORE_XOR || Opcode == ISD::ATOMIC_STORE_MIN ||
+      Opcode == ISD::ATOMIC_STORE_MAX || Opcode == ISD::ATOMIC_STORE_UMIN ||
+      Opcode == ISD::ATOMIC_STORE_UMAX || Opcode == ISD::ATOMIC_STORE_FADD ||
+      Opcode == ISD::ATOMIC_STORE_FSUB || Opcode == ISD::ATOMIC_STORE_FMIN ||
+      Opcode == ISD::ATOMIC_STORE_FMAX ||
+      Opcode == ISD::ATOMIC_STORE_FMINIMUM ||
+      Opcode == ISD::ATOMIC_STORE_FMAXIMUM ||
+      Opcode == ISD::ATOMIC_STORE_FMINIMUMNUM ||
+      Opcode == ISD::ATOMIC_STORE_FMAXIMUMNUM ||
+      Opcode == ISD::ATOMIC_STORE_UINC_WRAP ||
+      Opcode == ISD::ATOMIC_STORE_UDEC_WRAP ||
+      Opcode == ISD::ATOMIC_STORE_USUB_COND ||
+      Opcode == ISD::ATOMIC_STORE_USUB_SAT;
+  SDVTList VTs =
+      IsStoreOnly ? getVTList(MVT::Other) : getVTList(VT, MVT::Other);
   SDValue Ops[] = {Chain, Ptr, Val};
   return getAtomic(Opcode, dl, MemVT, VTs, Ops, MMO);
 }

@@ -860,6 +860,8 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
   case Store:         return "store";
   case AtomicCmpXchg: return "cmpxchg";
   case AtomicRMW:     return "atomicrmw";
+  case StoreRMW:
+    return "storermw";
   case Fence:         return "fence";
   case GetElementPtr: return "getelementptr";
 
@@ -983,6 +985,14 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
             IgnoreAlignment) &&
            RMWI->getOrdering() == cast<AtomicRMWInst>(I2)->getOrdering() &&
            RMWI->getSyncScopeID() == cast<AtomicRMWInst>(I2)->getSyncScopeID();
+  if (const StoreRMWInst *ARI = dyn_cast<StoreRMWInst>(I1))
+    return ARI->getOperation() == cast<StoreRMWInst>(I2)->getOperation() &&
+           ARI->isElementwise() == cast<StoreRMWInst>(I2)->isElementwise() &&
+           ARI->isVolatile() == cast<StoreRMWInst>(I2)->isVolatile() &&
+           (ARI->getAlign() == cast<StoreRMWInst>(I2)->getAlign() ||
+            IgnoreAlignment) &&
+           ARI->getOrdering() == cast<StoreRMWInst>(I2)->getOrdering() &&
+           ARI->getSyncScopeID() == cast<StoreRMWInst>(I2)->getSyncScopeID();
   if (const ShuffleVectorInst *SVI = dyn_cast<ShuffleVectorInst>(I1))
     return SVI->getShuffleMask() ==
            cast<ShuffleVectorInst>(I2)->getShuffleMask();
@@ -1109,6 +1119,10 @@ MemoryEffects Instruction::getMemoryEffects() const {
     return GetEffects(ModRefInfo::ModRef, RMW->getOrdering(),
                       RMW->isVolatile());
   }
+  case Instruction::StoreRMW: {
+    auto *AR = cast<StoreRMWInst>(this);
+    return GetEffects(ModRefInfo::Mod, AR->getOrdering(), AR->isVolatile());
+  }
   case Instruction::AtomicCmpXchg: {
     auto *CX = cast<AtomicCmpXchgInst>(this);
     return GetEffects(ModRefInfo::ModRef, CX->getSuccessOrdering(),
@@ -1149,6 +1163,7 @@ bool Instruction::mayWriteToMemory() const {
   case Instruction::VAArg:
   case Instruction::AtomicCmpXchg:
   case Instruction::AtomicRMW:
+  case Instruction::StoreRMW:
   case Instruction::CatchPad:
   case Instruction::CatchRet:
     return true;
@@ -1167,6 +1182,7 @@ bool Instruction::isAtomic() const {
     return false;
   case Instruction::AtomicCmpXchg:
   case Instruction::AtomicRMW:
+  case Instruction::StoreRMW:
   case Instruction::Fence:
     return true;
   case Instruction::Load:
@@ -1206,6 +1222,8 @@ bool Instruction::isVolatile() const {
     return false;
   case Instruction::AtomicRMW:
     return cast<AtomicRMWInst>(this)->isVolatile();
+  case Instruction::StoreRMW:
+    return cast<StoreRMWInst>(this)->isVolatile();
   case Instruction::Store:
     return cast<StoreInst>(this)->isVolatile();
   case Instruction::Load:
@@ -1244,6 +1262,7 @@ bool Instruction::maySynchronize() const {
     return FI->getSyncScopeID() != SyncScope::SingleThread;
   }
   case Instruction::AtomicRMW:
+  case Instruction::StoreRMW:
   case Instruction::AtomicCmpXchg:
     return true;
   case Instruction::Store:
@@ -1261,6 +1280,8 @@ Type *Instruction::getAccessType() const {
   switch (getOpcode()) {
   case Instruction::Store:
     return cast<StoreInst>(this)->getValueOperand()->getType();
+  case Instruction::StoreRMW:
+    return cast<StoreRMWInst>(this)->getValOperand()->getType();
   case Instruction::Load:
   case Instruction::AtomicRMW:
     return getType();

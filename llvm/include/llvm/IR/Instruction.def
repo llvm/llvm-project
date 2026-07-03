@@ -220,7 +220,8 @@ HANDLE_OTHER_INST(66, ExtractValue, ExtractValueInst)// extract from aggregate
 HANDLE_OTHER_INST(67, InsertValue, InsertValueInst)  // insert into aggregate
 HANDLE_OTHER_INST(68, LandingPad, LandingPadInst)  // Landing pad instruction.
 HANDLE_OTHER_INST(69, Freeze, FreezeInst) // Freeze instruction.
-  LAST_OTHER_INST(69)
+HANDLE_OTHER_INST(70, StoreRMW, StoreRMWInst) // Atomic reduction (store-only)
+  LAST_OTHER_INST(70)
 
 #undef  FIRST_TERM_INST
 #undef HANDLE_TERM_INST

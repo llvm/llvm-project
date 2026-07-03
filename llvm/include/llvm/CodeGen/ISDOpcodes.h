@@ -1435,6 +1435,33 @@ enum NodeType {
   ATOMIC_LOAD_USUB_COND,
   ATOMIC_LOAD_USUB_SAT,
 
+  /// OUTCHAIN = ATOMIC_STORE_[OpName](INCHAIN, ptr, val)
+  /// These correspond to the storermw instruction. Like ATOMIC_STORE, they
+  /// return only a chain (no value). Unlike ATOMIC_LOAD_*, the old memory
+  /// value is discarded.
+  ATOMIC_STORE_ADD,
+  ATOMIC_STORE_SUB,
+  ATOMIC_STORE_AND,
+  ATOMIC_STORE_NAND,
+  ATOMIC_STORE_OR,
+  ATOMIC_STORE_XOR,
+  ATOMIC_STORE_MIN,
+  ATOMIC_STORE_MAX,
+  ATOMIC_STORE_UMIN,
+  ATOMIC_STORE_UMAX,
+  ATOMIC_STORE_FADD,
+  ATOMIC_STORE_FSUB,
+  ATOMIC_STORE_FMIN,
+  ATOMIC_STORE_FMAX,
+  ATOMIC_STORE_FMINIMUM,
+  ATOMIC_STORE_FMAXIMUM,
+  ATOMIC_STORE_FMINIMUMNUM,
+  ATOMIC_STORE_FMAXIMUMNUM,
+  ATOMIC_STORE_UINC_WRAP,
+  ATOMIC_STORE_UDEC_WRAP,
+  ATOMIC_STORE_USUB_COND,
+  ATOMIC_STORE_USUB_SAT,
+
   /// Masked load and store - consecutive vector load and store operations
   /// with additional mask operand that prevents memory accesses to the
   /// masked-off lanes.

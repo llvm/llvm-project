@@ -951,6 +951,163 @@ struct OperandTraits<AtomicRMWInst>
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(AtomicRMWInst, Value)
 
 //===----------------------------------------------------------------------===//
+//                            StoreRMWInst Class
+//===----------------------------------------------------------------------===//
+
+/// An instruction that atomically applies a binary operation to memory without
+/// returning the old value. Unlike atomicrmw, this instruction has store-only
+/// semantics and does not participate in acquire synchronization patterns.
+/// This enables more efficient code generation on targets with native support
+/// for store-only atomic operations (e.g., PTX 'red', ARM LSE store-atomics).
+class StoreRMWInst : public Instruction {
+protected:
+  friend class Instruction;
+
+  LLVM_ABI StoreRMWInst *cloneImpl() const;
+
+public:
+  /// Reuse the BinOp enumeration from AtomicRMWInst since the operations
+  /// are identical, just with different return semantics.
+  using BinOp = AtomicRMWInst::BinOp;
+
+private:
+  template <unsigned Offset>
+  using AtomicOrderingBitfieldElement =
+      typename Bitfield::Element<AtomicOrdering, Offset, 3,
+                                 AtomicOrdering::LAST>;
+
+  template <unsigned Offset>
+  using BinOpBitfieldElement =
+      typename Bitfield::Element<BinOp, Offset, 5, BinOp::LAST_BINOP>;
+
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{2};
+
+public:
+  LLVM_ABI StoreRMWInst(BinOp Operation, Value *Ptr, Value *Val,
+                        Align Alignment, AtomicOrdering Ordering,
+                        SyncScope::ID SSID, bool Elementwise = false,
+                        InsertPosition InsertBefore = nullptr);
+
+  // allocate space for exactly two operands
+  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
+
+  using VolatileField = BoolBitfieldElementT<0>;
+  using AtomicOrderingField =
+      AtomicOrderingBitfieldElementT<VolatileField::NextBit>;
+  using OperationField = BinOpBitfieldElement<AtomicOrderingField::NextBit>;
+  using AlignmentField = AlignmentBitfieldElementT<OperationField::NextBit>;
+  using ElementwiseField = BoolBitfieldElementT<AlignmentField::NextBit>;
+  static_assert(Bitfield::areContiguous<VolatileField, AtomicOrderingField,
+                                        OperationField, AlignmentField,
+                                        ElementwiseField>(),
+                "Bitfields must be contiguous");
+
+  BinOp getOperation() const { return getSubclassData<OperationField>(); }
+
+  static StringRef getOperationName(BinOp Op) {
+    return AtomicRMWInst::getOperationName(Op);
+  }
+
+  static bool isFPOperation(BinOp Op) {
+    return AtomicRMWInst::isFPOperation(Op);
+  }
+
+  void setOperation(BinOp Operation) {
+    setSubclassData<OperationField>(Operation);
+  }
+
+  /// Return the alignment of the memory that is being modified.
+  Align getAlign() const {
+    return Align(1ULL << getSubclassData<AlignmentField>());
+  }
+
+  void setAlignment(Align Align) {
+    setSubclassData<AlignmentField>(Log2(Align));
+  }
+
+  /// Return true if this is an atomic reduction on a volatile memory location.
+  bool isVolatile() const { return getSubclassData<VolatileField>(); }
+
+  /// Specify whether this is a volatile atomic reduction or not.
+  void setVolatile(bool V) { setSubclassData<VolatileField>(V); }
+
+  /// Return true if this storermw has elementwise vector semantics.
+  bool isElementwise() const { return getSubclassData<ElementwiseField>(); }
+
+  /// Specify whether this storermw has elementwise vector semantics.
+  void setElementwise(bool V) { setSubclassData<ElementwiseField>(V); }
+
+  /// Transparently provide more efficient getOperand methods.
+  DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
+
+  /// Returns the ordering constraint of this atomic reduction instruction.
+  AtomicOrdering getOrdering() const {
+    return getSubclassData<AtomicOrderingField>();
+  }
+
+  /// Sets the ordering constraint of this atomic reduction instruction.
+  /// Only store-compatible orderings are valid: unordered, monotonic,
+  /// release, and seq_cst.
+  void setOrdering(AtomicOrdering Ordering) {
+    assert(Ordering != AtomicOrdering::NotAtomic &&
+           "storermw instructions must be atomic.");
+    assert(Ordering != AtomicOrdering::Acquire &&
+           Ordering != AtomicOrdering::AcquireRelease &&
+           "storermw instructions cannot have acquire semantics.");
+    setSubclassData<AtomicOrderingField>(Ordering);
+  }
+
+  /// Returns the synchronization scope ID of this atomic reduction instruction.
+  SyncScope::ID getSyncScopeID() const { return SSID; }
+
+  /// Sets the synchronization scope ID of this atomic reduction instruction.
+  void setSyncScopeID(SyncScope::ID SSID) { this->SSID = SSID; }
+
+  Value *getPointerOperand() { return getOperand(0); }
+  const Value *getPointerOperand() const { return getOperand(0); }
+  static unsigned getPointerOperandIndex() { return 0U; }
+
+  Value *getValOperand() { return getOperand(1); }
+  const Value *getValOperand() const { return getOperand(1); }
+
+  /// Returns the address space of the pointer operand.
+  unsigned getPointerAddressSpace() const {
+    return getPointerOperand()->getType()->getPointerAddressSpace();
+  }
+
+  bool isFloatingPointOperation() const {
+    return isFPOperation(getOperation());
+  }
+
+  // Methods for support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const Instruction *I) {
+    return I->getOpcode() == Instruction::StoreRMW;
+  }
+  static bool classof(const Value *V) {
+    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+  }
+
+private:
+  void Init(BinOp Operation, Value *Ptr, Value *Val, Align Align,
+            AtomicOrdering Ordering, SyncScope::ID SSID, bool Elementwise);
+
+  template <typename Bitfield>
+  void setSubclassData(typename Bitfield::Type Value) {
+    Instruction::setSubclassData<Bitfield>(Value);
+  }
+
+  /// The synchronization scope ID of this atomic reduction instruction.
+  SyncScope::ID SSID;
+};
+
+template <>
+struct OperandTraits<StoreRMWInst>
+    : public FixedNumOperandTraits<StoreRMWInst, 2> {};
+
+DEFINE_TRANSPARENT_OPERAND_ACCESSORS(StoreRMWInst, Value)
+
+//===----------------------------------------------------------------------===//
 //                             GetElementPtrInst Class
 //===----------------------------------------------------------------------===//
 
@@ -5369,6 +5526,8 @@ inline std::optional<SyncScope::ID> getAtomicSyncScopeID(const Instruction *I) {
     return AI->getSyncScopeID();
   if (auto *AI = dyn_cast<AtomicRMWInst>(I))
     return AI->getSyncScopeID();
+  if (auto *AI = dyn_cast<StoreRMWInst>(I))
+    return AI->getSyncScopeID();
   llvm_unreachable("unhandled atomic operation");
 }
 
@@ -5384,6 +5543,8 @@ inline void setAtomicSyncScopeID(Instruction *I, SyncScope::ID SSID) {
   else if (auto *AI = dyn_cast<AtomicCmpXchgInst>(I))
     AI->setSyncScopeID(SSID);
   else if (auto *AI = dyn_cast<AtomicRMWInst>(I))
+    AI->setSyncScopeID(SSID);
+  else if (auto *AI = dyn_cast<StoreRMWInst>(I))
     AI->setSyncScopeID(SSID);
   else
     llvm_unreachable("unhandled atomic operation");
