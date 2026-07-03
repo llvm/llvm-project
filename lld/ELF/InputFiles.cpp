@@ -770,6 +770,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
   StringRef shstrtab = CHECK2(obj.getSectionStringTable(objSections), this);
   uint64_t size = objSections.size();
   SmallVector<ArrayRef<Elf_Word>, 0> selectedGroups;
+  ArrayRef<uint32_t> keptGroups = this->keptGroups;
   size_t keptIdx = 0;
   AArch64BuildAttrSubsections aarch64BAsubSections;
   bool hasAArch64BuildAttributes = false;
