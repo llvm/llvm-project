@@ -496,9 +496,13 @@ bool SemaProfiles::checkInitProfileStaticRuntimeInit(
   // precedence over the standalone warning.
   static constexpr StringRef Profile = "std::init";
   static constexpr StringRef Rule = "static_runtime_init";
-  if (CheckConstInit())
-    return false;
+  // Gate on enforcement before evaluating the initializer: this call site
+  // sits ahead of -Wglobal-constructors' isIgnored guard, so evaluating
+  // first would charge every global with a non-constant initializer for the
+  // constant-initializer evaluation even with profiles disabled.
   if (!shouldEmitProfileViolation(Profile, Rule, Var->getLocation(), Var))
+    return false;
+  if (CheckConstInit())
     return false;
   Diag(Var->getLocation(), diag::err_init_static_runtime_init)
       << Profile << Var->getDeclName();
