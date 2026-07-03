@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import ctypes
 import errno
 import io
+import re
 import threading
 import socket
 import traceback
@@ -80,9 +81,56 @@ def hex_decode_bytes(hex_bytes):
     return out
 
 
+def parse_memory_read_packet(packet):
+    """
+    Parse a memory-read packet ("m<addr>,<len>" or "x<addr>,<len>") into its
+    (addr, length) integers, or return None if it isn't a memory read.
+    """
+    if not packet or packet[0] not in ("m", "x"):
+        return None
+    try:
+        addr, length = [int(x, 16) for x in packet[1:].split(",")]
+    except ValueError:
+        return None
+    return addr, length
+
+
 class PacketDirection(Enum):
     RECV = "recv"
     SEND = "send"
+
+
+# A line in a "log enable gdb-remote packets" file, e.g.
+#   <  22> send packet: $x100000,40#ad
+#   <   6> read packet: $OK#9a
+# The leading "<...>" size column is optional; the body is the framed packet
+# between "$" and the "#" checksum.
+_PACKET_LOG_RE = re.compile(
+    r"(?P<direction>send|read) packet: \$(?P<body>.*)#[0-9a-fA-F]{2}"
+)
+
+
+def parse_packet_log(lines):
+    """
+    Parse the lines of a "log enable gdb-remote packets" file into a list of
+    (PacketDirection, body) tuples, where body is the packet contents.
+
+    "send packet:" lines (client -> stub) map to PacketDirection.SEND and
+    "read packet:" lines (stub -> client) map to PacketDirection.RECV, matching
+    the perspective of the client whose log this is.
+    """
+    out = []
+    for line in lines:
+        m = _PACKET_LOG_RE.search(line)
+        if not m:
+            continue
+        direction = (
+            PacketDirection.SEND
+            if m.group("direction") == "send"
+            else PacketDirection.RECV
+        )
+        out.append((direction, m.group("body")))
+    return out
 
 
 class PacketLog:
@@ -173,10 +221,10 @@ class MockGDBServerResponder:
             register, value = packet[1:].split("=")
             return self.writeRegister(int(register, 16), value)
         if packet[0] == "m":
-            addr, length = [int(x, 16) for x in packet[1:].split(",")]
+            addr, length = parse_memory_read_packet(packet)
             return self.readMemory(addr, length)
         if packet[0] == "x":
-            addr, length = [int(x, 16) for x in packet[1:].split(",")]
+            addr, length = parse_memory_read_packet(packet)
             return self.x(addr, length)
         if packet[0] == "M":
             location, encoded_data = packet[1:].split(":")
