@@ -10,9 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Address.h"
 #include "CIRGenCleanup.h"
 #include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
+#include "EHScopeStack.h"
 #include "mlir/IR/Location.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Attrs.inc"
@@ -27,6 +29,17 @@
 
 using namespace clang;
 using namespace clang::CIRGen;
+
+struct CallLifetimeEnd final : EHScopeStack::Cleanup {
+  // The raw alloca pointer (in the alloca address space). Mirrors classic
+  // CodeGen's CallLifetimeEnd, which stores the llvm::Value pointer rather
+  // than an Address.
+  mlir::Value addr;
+  CallLifetimeEnd(mlir::Value addr) : addr(addr) {}
+  void emit(CIRGenFunction &cgf, Flags flags) override {
+    cgf.emitLifetimeEndOp(addr.getLoc(), addr);
+  }
+};
 
 CIRGenFunction::AutoVarEmission
 CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
@@ -129,6 +142,15 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
                                  /*arraySize=*/nullptr, /*alloca=*/nullptr, ip);
       declare(address.getPointer(), &d, ty, getLoc(d.getSourceRange()),
               alignment);
+      // A goto/switch that bypasses the init splits the lifetime across IR
+      // regions and miscompiles under stack coloring (PR28267). Lacking
+      // classic's per-decl bypass analysis, drop markers for the whole
+      // function if any such statement is present.
+      assert(!cir::MissingFeatures::lifetimeMarkersBypass());
+      if (shouldEmitLifetimeMarkers && haveInsertPoint() && !fnHasBypassStmt) {
+        emission.useLifetimeMarkers = emitLifetimeStartOp(
+            loc, address.getUnderlyingAllocaOp().getResult());
+      }
     }
   } else {
     // Non-constant size type
@@ -167,6 +189,12 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
 
   emission.addr = address;
   setAddrOfLocalVar(&d, address);
+
+  // The lifetime marker must reference the original alloca, so peel any
+  // address-space cast back to it.
+  if (emission.useLifetimeMarkers)
+    ehStack.pushCleanup<CallLifetimeEnd>(
+        NormalEHLifetimeMarker, address.getUnderlyingAllocaOp().getResult());
 
   return emission;
 }
@@ -1316,4 +1344,27 @@ void CIRGenFunction::maybeEmitDeferredVarDeclInit(const VarDecl *vd) {
       if (auto *hd = b->getHoldingVar())
         emitVarDecl(*hd);
   }
+}
+
+bool CIRGenFunction::emitLifetimeStartOp(mlir::Location loc, mlir::Value addr) {
+  if (!shouldEmitLifetimeMarkers)
+    return false;
+
+  assert(mlir::cast<cir::PointerType>(addr.getType()).getAddrSpace() ==
+             cir::normalizeDefaultAddressSpace(getCIRAllocaAddressSpace()) &&
+         "Pointer should be in alloca address space");
+
+  cir::LifetimeStartOp::create(builder, loc, addr);
+  return true;
+}
+
+void CIRGenFunction::emitLifetimeEndOp(mlir::Location loc, mlir::Value addr) {
+  if (!shouldEmitLifetimeMarkers)
+    return;
+
+  assert(mlir::cast<cir::PointerType>(addr.getType()).getAddrSpace() ==
+             cir::normalizeDefaultAddressSpace(getCIRAllocaAddressSpace()) &&
+         "Pointer should be in alloca address space");
+
+  cir::LifetimeEndOp::create(builder, loc, addr);
 }
