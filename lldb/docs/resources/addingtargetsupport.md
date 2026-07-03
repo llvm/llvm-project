@@ -9,6 +9,7 @@ refer to as a "target" within this document.
 The terms `Target` and `Platform` are used throughout LLDB, often
 referring to a subset of what this document calls a "target".
 Unfortunately there is no more specific word to use here.
+:::
 
 This document provides some hints on implementation, but because every target
 is unique, we expect developers to learn about implementation from existing
@@ -30,9 +31,9 @@ target.
 This RFC follows the normal rules of the LLVM community decision making process.
 
 We require an RFC for target support upstreaming because:
-* We want ensure there is some level of public discussion on the topic.
+* We want to ensure there is some level of public discussion on the topic.
   It is important that details, even those obvious to the community at the time,
-  are written down so that future readers may learn from it.
+  are written down so that future readers may learn from them.
 * These discussions form the basis for future proposals and the assessment
   of those proposals. Every proposal will be different in some way, and by
   contrasting current proposals with the previous proposals we can do a better
@@ -56,11 +57,11 @@ code upstream. These are examples and RFC authors are free to add their own,
 leave some out, or explain why they do not apply to their proposal.
 
 If you do use these points, they need to come with an answer and evidence to
-justify the answer. Rather than simply "yes this applies to my target".
+justify the answer, rather than simply "yes this applies to my target".
 In other words, your proposal must stand alone without requiring readers to read
 this document as well.
 
-The first set covers your motivation for your being upstream rather
+The first set covers your motivation for your target being upstream, rather
 than on a fork:
 
 * Will it help you distribute an LLDB that includes this target support?
@@ -77,7 +78,7 @@ than on a fork:
 * What other costs (or benefits) do you incur staying on a fork?
   For example, your company might already have a fork.
 
-The next set are about whether you, your community, or the LLDB community, can
+The next set is about whether you, your community, or the LLDB community, can
 adequately maintain the code upstream:
 
 * Who will be the maintainers for this target? Ideally there will be more than
@@ -85,9 +86,9 @@ adequately maintain the code upstream:
   in a few different ways.
 * How often will it be tested, where, by whom and who will be responsible for
   it?
-* Who will address problems with it? Will it always be the named maintainers,
-  is it so common that anyone in upstream LLDB can deal with it, or perhaps
-  only employees of a specific company will be required to work on it.
+* Who will address problems with it? Will it always be the named maintainers?
+  Is it so common that anyone in upstream LLDB can deal with it, or will 
+  only employees of a specific company work on it.
 * When it breaks, how easy will it be for the upstream LLDB community to continue
   their work without disruption?
 * If upstream contributors want to reproduce issues on your target, how can
@@ -101,12 +102,12 @@ The factors above are part of a cost benefit analysis that the LLDB community
 will do, prioritising the health of the community and the project. This means
 that there is no set level or type of commitment required for a new target.
 
-Each case will have unqiue aspects, so you need to tell the community how much
+Each case will have unique aspects, so you need to tell the community how much
 impact your target will have on LLDB. Below are some questions you can start
 with, along with stereotypical "big" and "small" answers.
 
-Note that these are intentionally not maximums and minimums. Some target's
-impact will be bigger than "big" or smaller than "small".
+Note that these are intentionally not maximums and minimums. The impact
+of some targets will be bigger than "big" or smaller than "small".
 
 * How many users will use LLDB with this target?
   * Big: millions of developers worldwide.
@@ -125,8 +126,7 @@ impact will be bigger than "big" or smaller than "small".
   * Small: per release of a downstream community or individual developer's tools.
 * Who will maintain it?
   * Big: there are several listed maintainers for this target, who are
-    employed by a company with significant investments in the target, to work
-    on the target.
+    employed by a company with significant investments in the target.
   * Small: there is a single maintainer listed for this target.
 * When it breaks, who will be affected?
   * Big: every single developer and user of LLDB.
@@ -153,7 +153,7 @@ Apple targets have possibly the most extensive support in LLDB.
 * Many employees contribute upstream and are maintainers for these targets.
 * Target-specific problems are either solved by the upstream community with
   maintainer input, or by the maintainers themselves.
-* Its specific features either do not impact other targets, or, when they
+* Apple-specific features either do not impact other targets, or, when they
   do, they are designed and maintained in collaboration with the community.
 * Many people unrelated to Apple itself use Apple hardware, which is
   available at retail. So it is fairly easy to find someone who can reproduce
@@ -163,7 +163,7 @@ Apple targets have possibly the most extensive support in LLDB.
 
 ### FreeBSD
 
-FreeBSD is an example of quite self contained support, managed by the project's
+FreeBSD is an example of quite self-contained support, managed by the project's
 community.
 
 * FreeBSD is open source and available to anyone to build, modify, run on
@@ -182,25 +182,25 @@ community.
 
 Linux is an example where the Linux community as a whole does not do all the
 work of Linux support. Some architectures have a wide contributor base and
-others have company specific contributors.
+others have company-specific contributors as well.
 
-* Linux is open source, freely available, to be installed on hardware,
+* Linux is open source, freely available, and can be installed on hardware,
   virtualised, emulated, and so on. Most problems can be reproduced in more than
   one way.
 * Many architectures are tested by the architecture vendor, others
-  on community provided hardware.
+  are tested on community-provided hardware.
 * LLDB is a commonly available Linux package, so further testing happens during
-  various Linux distribution's release cycles.
+  various Linux distributions' release cycles.
 * Support for a new architecture is quite easy to isolate, so problems do not
   impact other Linux architectures, or other operating systems.
-* Linux is very popular, therefore it's choice of standards informs many core
+* Linux is very popular, therefore its choice of standards informs many core
   features of LLDB.
 * It has more than one listed maintainer and many contributors.
   Issues are resolved by the community.
 
 ### MSP430
 
-MSP430 is handled as a bare metal (no operating system) target in LLDB. So it
+MSP430 is handled as a bare-metal (no operating system) target in LLDB. So it
 is the most minimal example.
 
 * LLVM already has MSP430 support, so changes to enable it in LLDB were minimal.
@@ -215,8 +215,8 @@ is the most minimal example.
 
 ## Components Of Target Support
 
-This is a very high level view, we recommend you combine this with reading the
-changes done for recently added targets, as each target is going to be slightly
+This is a very high-level view. We recommend you combine this with reading the
+changes made for recently added targets, as each target is going to be slightly
 different.
 
 Assuming that:
@@ -248,10 +248,11 @@ inexact):
 * Register definitions and register context (a context is a collection of
   registers). For example `NativeRegisterContextLinux_arm64`.
 * Unwinding support for backtracing. LLDB needs to be taught about any
-  architecture specific directives.
+  architecture-specific directives.
 * Instruction emulation. For example `EmulateInstructionARM64`. Most targets
-  need to emulate a small amount of instructions for unwinding. If you lack
-  hardware single step, you will need to emulate many times more than that.
+  need to emulate a small number of instructions for unwinding. If your target
+  does not have hardware single-step, you will need to emulate many times more
+  than that.
 
 The order of implementation will vary in each case. Each component does not
 need to be fully implemented for you to start work on the next.
