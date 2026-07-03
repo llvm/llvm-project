@@ -157,7 +157,8 @@ public:
   virtual void mangleCXXVTable(const CXXRecordDecl *RD, raw_ostream &) = 0;
   virtual void mangleCXXRTTI(QualType T, raw_ostream &) = 0;
   virtual void mangleCXXRTTIName(QualType T, raw_ostream &,
-                                 bool NormalizeIntegers = false) = 0;
+                                 bool NormalizeIntegers = false,
+                                 bool ShortenRTTINames = false) = 0;
   virtual void mangleStringLiteral(const StringLiteral *SL, raw_ostream &) = 0;
   virtual void mangleMSGuidDecl(const MSGuidDecl *GD, raw_ostream &) const;
 

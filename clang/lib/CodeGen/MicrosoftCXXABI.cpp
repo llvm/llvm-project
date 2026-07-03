@@ -4057,7 +4057,9 @@ llvm::Constant *MicrosoftCXXABI::getAddrOfRTTIDescriptor(QualType Type) {
   SmallString<256> TypeInfoString;
   {
     llvm::raw_svector_ostream Out(TypeInfoString);
-    getMangleContext().mangleCXXRTTIName(Type, Out);
+    getMangleContext().mangleCXXRTTIName(Type, Out,
+                                         /*NormalizeIntegers=*/false,
+                                         /*ShortenRTTINames=*/true);
   }
 
   // Declare and initialize the TypeDescriptor.
