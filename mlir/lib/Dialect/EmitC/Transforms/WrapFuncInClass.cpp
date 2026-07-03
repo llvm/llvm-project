@@ -93,16 +93,24 @@ public:
       FieldOp fieldop = FieldOp::create(rewriter, funcOp->getLoc(), fieldName,
                                         typeAttr, nullptr);
 
+      NamedAttrList attrs(funcOp.getArgAttrDict(idx));
+      attrs.set("was_arg", rewriter.getUnitAttr());
       if (argAttrs && idx < argAttrs->size()) {
-        fieldop->setDiscardableAttrs(funcOp.getArgAttrDict(idx));
+        fieldop->setDiscardableAttrs(attrs);
       }
     }
 
     auto globalsIt = globalsToMove.find(funcOp);
     if (globalsIt != globalsToMove.end()) {
       for (auto global : globalsIt->second) {
-        FieldOp::create(rewriter, funcOp->getLoc(), global.getSymNameAttr(),
-                        global.getTypeAttr(), global.getInitialValueAttr());
+        FieldOp fieldop =
+            FieldOp::create(rewriter, funcOp->getLoc(), global.getSymNameAttr(),
+                            global.getTypeAttr(), global.getInitialValueAttr());
+
+        NamedAttrList attrs;
+        attrs.append(global->getDiscardableAttrs());
+        attrs.set("was_global", rewriter.getUnitAttr());
+        fieldop->setDiscardableAttrs(attrs);
       }
     }
 
