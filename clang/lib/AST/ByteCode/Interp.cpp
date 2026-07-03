@@ -256,7 +256,7 @@ void cleanupAfterFunctionCall(InterpState &S, const Function *Func) {
   for (const Function::ParamDescriptor &PDesc : Func->args_reverse())
     TYPE_SWITCH(PDesc.T, S.Stk.discard<T>());
 
-  if (Func->hasThisPointer() && !Func->isThisPointerExplicit())
+  if (Func->hasImplicitThisPointer())
     S.Stk.discard<Pointer>();
   if (Func->hasRVO())
     S.Stk.discard<Pointer>();
@@ -2331,7 +2331,7 @@ bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
 
   // We need to do this explicitly here since we don't have the necessary
   // information to do it automatically.
-  if (F->isThisPointerExplicit())
+  if (F->hasExplicitThisPointer())
     VarArgSize -= align(primSize(PT_Ptr));
 
   if (F->isVirtual())
