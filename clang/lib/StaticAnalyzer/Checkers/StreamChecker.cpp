@@ -21,6 +21,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/InvalidationCause.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
@@ -860,7 +861,8 @@ escapeByStartIndexAndCount(ProgramStateRef State, const CallEvent &Call,
   return State->invalidateRegions(
       EscapingVals, Call.getCFGElementRef(), BlockCount, SF,
       /*CausesPointerEscape=*/false,
-      /*InvalidatedSymbols=*/nullptr, &Call, &ITraits);
+      /*InvalidatedSymbols=*/nullptr, &Call, &ITraits,
+      Call.tryCreateInvalidationCause<PartiallyModeledCall>());
 }
 
 static ProgramStateRef escapeArgs(ProgramStateRef State, CheckerContext &C,
@@ -868,10 +870,11 @@ static ProgramStateRef escapeArgs(ProgramStateRef State, CheckerContext &C,
                                   ArrayRef<unsigned int> EscapingArgs) {
   auto GetArgSVal = [&Call](int Idx) { return Call.getArgSVal(Idx); };
   auto EscapingVals = to_vector(map_range(EscapingArgs, GetArgSVal));
-  State = State->invalidateRegions(EscapingVals, Call.getCFGElementRef(),
-                                   C.blockCount(), C.getStackFrame(),
-                                   /*CausesPointerEscape=*/false,
-                                   /*InvalidatedSymbols=*/nullptr);
+  State = State->invalidateRegions(
+      EscapingVals, Call.getCFGElementRef(), C.blockCount(), C.getStackFrame(),
+      /*CausesPointerEscape=*/false,
+      /*InvalidatedSymbols=*/nullptr, /*Call=*/nullptr, /*ITraits=*/nullptr,
+      Call.tryCreateInvalidationCause<PartiallyModeledCall>());
   return State;
 }
 

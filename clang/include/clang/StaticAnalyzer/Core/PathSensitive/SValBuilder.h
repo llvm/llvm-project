@@ -48,6 +48,7 @@ namespace ento {
 
 class CallEvent;
 class ConditionTruthVal;
+class InvalidationCause;
 class ProgramStateManager;
 class StoreRef;
 class SValBuilder {
@@ -206,6 +207,16 @@ public:
   DefinedOrUnknownSVal conjureSymbolVal(const CallEvent &call,
                                         unsigned visitCount,
                                         const void *symbolTag = nullptr);
+
+  /// Manufacture a value bound to a region during an invalidation event. The
+  /// resulting symbol is a SymbolInvalidationArtifact carrying \p Cause and,
+  /// when \p PreviousSym is non-null, the symbol that was bound to the region
+  /// before the invalidation.
+  DefinedOrUnknownSVal
+  conjureInvalidationArtifactVal(const void *symbolTag, ConstCFGElementRef elem,
+                                 const StackFrame *SF, QualType type,
+                                 unsigned count, const InvalidationCause *Cause,
+                                 SymbolRef PreviousSym = nullptr);
 
   /// Conjure a symbol representing heap allocated memory region.
   DefinedSVal getConjuredHeapSymbolVal(ConstCFGElementRef elem,

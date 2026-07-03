@@ -40,6 +40,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicTypeInfo.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/InvalidationCause.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
@@ -295,10 +296,14 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
   // Invalidate designated regions using the batch invalidation API.
   // NOTE: Even if RegionsToInvalidate is empty, we may still invalidate
   //  global variables.
+  const auto *CE = dyn_cast_or_null<CallExpr>(getOriginExpr());
+  const InvalidationCause *Cause = State->getStateManager()
+                                       .getSymbolManager()
+                                       .acquireCause<ConservativeEvalCall>(CE);
   return State->invalidateRegions(ValuesToInvalidate, getCFGElementRef(),
                                   BlockCount, getStackFrame(),
                                   /*CausedByPointerEscape*/ true,
-                                  /*Symbols=*/nullptr, this, &ETraits);
+                                  /*Symbols=*/nullptr, this, &ETraits, Cause);
 }
 
 ProgramPoint CallEvent::getProgramPoint(bool IsPreVisit,

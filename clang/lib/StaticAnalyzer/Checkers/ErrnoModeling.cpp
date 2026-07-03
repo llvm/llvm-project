@@ -24,6 +24,7 @@
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/InvalidationCause.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "llvm/ADT/STLExtras.h"
@@ -253,12 +254,16 @@ ProgramStateRef setErrnoForStdFailure(ProgramStateRef State, CheckerContext &C,
 
 ProgramStateRef setErrnoStdMustBeChecked(ProgramStateRef State,
                                          CheckerContext &C,
-                                         ConstCFGElementRef Elem) {
+                                         const CallEvent &Call) {
   const MemRegion *ErrnoR = State->get<ErrnoRegion>();
   if (!ErrnoR)
     return State;
-  State = State->invalidateRegions(ErrnoR, Elem, C.blockCount(),
-                                   C.getStackFrame(), false);
+  State = State->invalidateRegions(
+      ErrnoR, Call.getCFGElementRef(), C.blockCount(), C.getStackFrame(),
+      /*CausesPointerEscape=*/false,
+      /*InvalidatedSymbols=*/nullptr, /*Call=*/nullptr,
+      /*ITraits=*/nullptr,
+      Call.tryCreateInvalidationCause<PartiallyModeledCall>());
   if (!State)
     return nullptr;
   return setErrnoState(State, MustBeChecked);

@@ -26,6 +26,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/InvalidationCause.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
@@ -529,8 +530,14 @@ bool SmartPtrModeling::handleOstreamOperator(const CallEvent &Call,
   const MemRegion *StreamThisRegion = StreamVal.getAsRegion();
   if (!StreamThisRegion)
     return false;
+
+  const auto *Cause = Call.tryCreateInvalidationCause<PartiallyModeledCall>();
   State = State->invalidateRegions({StreamThisRegion}, Call.getCFGElementRef(),
-                                   C.blockCount(), C.getStackFrame(), false);
+                                   C.blockCount(), C.getStackFrame(),
+                                   /*CausesPointerEscape=*/false,
+                                   /*InvalidatedSymbols=*/nullptr,
+                                   /*Call=*/nullptr,
+                                   /*ITraits=*/nullptr, Cause);
   State = State->BindExpr(Call.getOriginExpr(), C.getStackFrame(), StreamVal);
   C.addTransition(State);
   return true;

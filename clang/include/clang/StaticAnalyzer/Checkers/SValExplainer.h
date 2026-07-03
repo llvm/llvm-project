@@ -126,6 +126,16 @@ public:
            printCFGElementRef(S->getCFGElementRef()) + "'";
   }
 
+  std::string
+  VisitSymbolInvalidationArtifact(const SymbolInvalidationArtifact *S) {
+    std::string CauseStr;
+    llvm::raw_string_ostream OS(CauseStr);
+    S->getCause()->dumpToStream(OS);
+    return "invalidation artifact (" + CauseStr + ") of type '" +
+           S->getType().getAsString() + "' at CFG element '" +
+           printCFGElementRef(S->getCFGElementRef()) + "'";
+  }
+
   std::string VisitSymbolDerived(const SymbolDerived *S) {
     return "value derived from (" + Visit(S->getParentSymbol()) +
            ") for " + Visit(S->getRegion());

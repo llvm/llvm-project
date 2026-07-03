@@ -568,7 +568,8 @@ public:
                                            ConstCFGElementRef Elem,
                                            unsigned Count, const StackFrame *SF,
                                            RegionBindingsRef B,
-                                           InvalidatedRegions *Invalidated);
+                                           InvalidatedRegions *Invalidated,
+                                           const InvalidationCause *Cause);
 
   StoreRef invalidateRegions(Store store, ArrayRef<SVal> Values,
                              ConstCFGElementRef Elem, unsigned Count,
@@ -576,7 +577,8 @@ public:
                              InvalidatedSymbols &IS,
                              RegionAndSymbolInvalidationTraits &ITraits,
                              InvalidatedRegions *Invalidated,
-                             InvalidatedRegions *InvalidatedTopLevel) override;
+                             InvalidatedRegions *InvalidatedTopLevel,
+                             const InvalidationCause *Cause) override;
 
   bool scanReachableSymbols(Store S, const MemRegion *R,
                             ScanReachableSymbols &Callbacks) override;
@@ -1153,6 +1155,8 @@ class InvalidateRegionsWorker : public ClusterAnalysis<InvalidateRegionsWorker>
   RegionAndSymbolInvalidationTraits &ITraits;
   StoreManager::InvalidatedRegions *Regions;
   GlobalsFilterKind GlobalsFilter;
+  const InvalidationCause *Cause;
+
 public:
   InvalidateRegionsWorker(RegionStoreManager &rm, ProgramStateManager &stateMgr,
                           RegionBindingsRef b, ConstCFGElementRef elem,
@@ -1160,10 +1164,10 @@ public:
                           InvalidatedSymbols &is,
                           RegionAndSymbolInvalidationTraits &ITraitsIn,
                           StoreManager::InvalidatedRegions *r,
-                          GlobalsFilterKind GFK)
+                          GlobalsFilterKind GFK, const InvalidationCause *Cause)
       : ClusterAnalysis<InvalidateRegionsWorker>(rm, stateMgr, b), Elem(elem),
         Count(count), SF(SF), IS(is), ITraits(ITraitsIn), Regions(r),
-        GlobalsFilter(GFK) {}
+        GlobalsFilter(GFK), Cause(Cause) {}
 
   void VisitCluster(const MemRegion *baseR, const ClusterBindings *C);
   void VisitBinding(SVal V);
@@ -1219,6 +1223,19 @@ void InvalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
   bool PreserveRegionsContents =
       ITraits.hasTrait(baseR,
                        RegionAndSymbolInvalidationTraits::TK_PreserveContents);
+
+  // Capture the symbol that was bound to baseR (if any) before we remove the
+  // cluster, so the SymbolInvalidationArtifact we produce below can record
+  // what the region used to hold. We look at both Default and Direct bindings;
+  // each conjure site below picks the one matching the kind it produces.
+  SymbolRef PrevDefaultSym = nullptr;
+  SymbolRef PrevDirectSym = nullptr;
+  if (Cause && C) {
+    if (std::optional<SVal> V = B.getDefaultBinding(baseR))
+      PrevDefaultSym = V->getAsSymbol();
+    if (std::optional<SVal> V = B.getDirectBinding(baseR))
+      PrevDirectSym = V->getAsSymbol();
+  }
 
   if (C) {
     for (SVal Val : llvm::make_second_range(*C))
@@ -1296,7 +1313,9 @@ void InvalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
     // Invalidate the region by setting its default value to
     // conjured symbol. The type of the symbol is irrelevant.
     DefinedOrUnknownSVal V =
-        svalBuilder.conjureSymbolVal(baseR, Elem, SF, Ctx.IntTy, Count);
+        Cause ? svalBuilder.conjureInvalidationArtifactVal(
+                    baseR, Elem, SF, Ctx.IntTy, Count, Cause, PrevDefaultSym)
+              : svalBuilder.conjureSymbolVal(baseR, Elem, SF, Ctx.IntTy, Count);
     B = B.addBinding(baseR, BindingKey::Default, V);
     return;
   }
@@ -1318,7 +1337,9 @@ void InvalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
     // Invalidate the region by setting its default value to
     // conjured symbol. The type of the symbol is irrelevant.
     DefinedOrUnknownSVal V =
-        svalBuilder.conjureSymbolVal(baseR, Elem, SF, Ctx.IntTy, Count);
+        Cause ? svalBuilder.conjureInvalidationArtifactVal(
+                    baseR, Elem, SF, Ctx.IntTy, Count, Cause, PrevDefaultSym)
+              : svalBuilder.conjureSymbolVal(baseR, Elem, SF, Ctx.IntTy, Count);
     B = B.addBinding(baseR, BindingKey::Default, V);
     return;
   }
@@ -1385,14 +1406,20 @@ void InvalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
     }
   conjure_default:
       // Set the default value of the array to conjured symbol.
-      DefinedOrUnknownSVal V = svalBuilder.conjureSymbolVal(
-          baseR, Elem, SF, AT->getElementType(), Count);
+      DefinedOrUnknownSVal V =
+          Cause ? svalBuilder.conjureInvalidationArtifactVal(
+                      baseR, Elem, SF, AT->getElementType(), Count, Cause,
+                      PrevDefaultSym)
+                : svalBuilder.conjureSymbolVal(baseR, Elem, SF,
+                                               AT->getElementType(), Count);
       B = B.addBinding(baseR, BindingKey::Default, V);
       return;
   }
 
   DefinedOrUnknownSVal V =
-      svalBuilder.conjureSymbolVal(baseR, Elem, SF, T, Count);
+      Cause ? svalBuilder.conjureInvalidationArtifactVal(
+                  baseR, Elem, SF, T, Count, Cause, PrevDirectSym)
+            : svalBuilder.conjureSymbolVal(baseR, Elem, SF, T, Count);
   assert(SymbolManager::canSymbolicate(T) || V.isUnknown());
   B = B.addBinding(baseR, BindingKey::Direct, V);
 }
@@ -1422,14 +1449,24 @@ bool InvalidateRegionsWorker::includeEntireMemorySpace(const MemRegion *Base) {
 
 RegionBindingsRef RegionStoreManager::invalidateGlobalRegion(
     MemRegion::Kind K, ConstCFGElementRef Elem, unsigned Count,
-    const StackFrame *SF, RegionBindingsRef B,
-    InvalidatedRegions *Invalidated) {
+    const StackFrame *SF, RegionBindingsRef B, InvalidatedRegions *Invalidated,
+    const InvalidationCause *Cause) {
   // Bind the globals memory space to a new symbol that we will use to derive
   // the bindings for all globals.
   const GlobalsSpaceRegion *GS = MRMgr.getGlobalsRegion(K);
-  SVal V = svalBuilder.conjureSymbolVal(
-      /* symbolTag = */ (const void *)GS, Elem, SF,
-      /* type does not matter */ Ctx.IntTy, Count);
+
+  SymbolRef PrevSym = nullptr;
+  if (Cause)
+    if (std::optional<SVal> V = B.getDefaultBinding(GS))
+      PrevSym = V->getAsSymbol();
+
+  SVal V = Cause
+               ? svalBuilder.conjureInvalidationArtifactVal(
+                     /*symbolTag=*/(const void *)GS, Elem, SF,
+                     /*type does not matter*/ Ctx.IntTy, Count, Cause, PrevSym)
+               : svalBuilder.conjureSymbolVal(
+                     /*symbolTag=*/(const void *)GS, Elem, SF,
+                     /*type does not matter*/ Ctx.IntTy, Count);
 
   B = B.removeBinding(GS)
        .addBinding(BindingKey::Make(GS, BindingKey::Default), V);
@@ -1467,7 +1504,8 @@ StoreRef RegionStoreManager::invalidateRegions(
     Store store, ArrayRef<SVal> Values, ConstCFGElementRef Elem, unsigned Count,
     const StackFrame *SF, const CallEvent *Call, InvalidatedSymbols &IS,
     RegionAndSymbolInvalidationTraits &ITraits,
-    InvalidatedRegions *TopLevelRegions, InvalidatedRegions *Invalidated) {
+    InvalidatedRegions *TopLevelRegions, InvalidatedRegions *Invalidated,
+    const InvalidationCause *Cause) {
   GlobalsFilterKind GlobalsFilter;
   if (Call) {
     if (Call->isInSystemHeader())
@@ -1480,7 +1518,7 @@ StoreRef RegionStoreManager::invalidateRegions(
 
   RegionBindingsRef B = getRegionBindings(store);
   InvalidateRegionsWorker W(*this, StateMgr, B, Elem, Count, SF, IS, ITraits,
-                            Invalidated, GlobalsFilter);
+                            Invalidated, GlobalsFilter, Cause);
 
   // Scan the bindings and generate the clusters.
   W.GenerateClusters();
@@ -1500,11 +1538,11 @@ StoreRef RegionStoreManager::invalidateRegions(
   switch (GlobalsFilter) {
   case GFK_All:
     B = invalidateGlobalRegion(MemRegion::GlobalInternalSpaceRegionKind, Elem,
-                               Count, SF, B, Invalidated);
+                               Count, SF, B, Invalidated, Cause);
     [[fallthrough]];
   case GFK_SystemOnly:
     B = invalidateGlobalRegion(MemRegion::GlobalSystemSpaceRegionKind, Elem,
-                               Count, SF, B, Invalidated);
+                               Count, SF, B, Invalidated, Cause);
     [[fallthrough]];
   case GFK_None:
     break;
