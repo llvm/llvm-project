@@ -1102,17 +1102,14 @@ public:
   bool checkProfileViolation(StringRef ProfileName, StringRef RuleName,
                              SourceLocation Loc, unsigned DiagID);
 
-  /// std::init / uninit_with_initializer (R4): diagnose an entity that is both
+  /// std::init / uninit_with_initializer (R4): diagnose \p D if it is both
   /// marked [[uninit]] and has an initializer. Shared by the variable
   /// (\c CheckCompleteVariableDeclaration) and non-static data member
   /// (\c ActOnFinishCXXInClassMemberInitializer) paths. \p Init is the
   /// (possibly null) initializer; a RecoveryExpr placeholder for a failed
   /// initialization does not count as a user-written initializer.
-  void checkInitProfileUninitWithInitializer(SourceLocation Loc,
-                                             DeclarationName Name,
-                                             QualType DeclType,
-                                             const Expr *Init, bool HasMarker,
-                                             const Decl *D);
+  void checkInitProfileUninitWithInitializer(const ValueDecl *D,
+                                             const Expr *Init);
 
   /// True if default-initialization of \p T would leave at least one scalar
   /// subobject with an indeterminate value. Shared by the std::init rules

@@ -14945,19 +14945,17 @@ bool Sema::defaultInitLeavesScalarIndeterminate(QualType T,
                                                   HonorUninitMarkers, Visited);
 }
 
-void Sema::checkInitProfileUninitWithInitializer(SourceLocation Loc,
-                                                 DeclarationName Name,
-                                                 QualType DeclType,
-                                                 const Expr *Init,
-                                                 bool HasMarker,
-                                                 const Decl *D) {
+void Sema::checkInitProfileUninitWithInitializer(const ValueDecl *D,
+                                                 const Expr *Init) {
   // [[uninit]] documents that the entity is intentionally left
   // uninitialized, so it contradicts an explicit initializer. A RecoveryExpr
   // is a placeholder for an initialization that already failed (e.g.
   // default-init of a const scalar), not an initializer the user wrote, so it
   // must not trigger this rule.
-  if (!HasMarker || !Init || isa<RecoveryExpr>(Init->IgnoreParens()))
+  if (!D->hasAttr<UninitAttr>() || !Init ||
+      isa<RecoveryExpr>(Init->IgnoreParens()))
     return;
+  SourceLocation Loc = D->getLocation();
   static constexpr StringRef Profile = "std::init";
   static constexpr StringRef Rule = "uninit_with_initializer";
   // Gate the (possibly recursive) type walk below on enforcement.
@@ -14971,9 +14969,10 @@ void Sema::checkInitProfileUninitWithInitializer(SourceLocation Loc,
   // -- contradicts the marker.
   if (const auto *CCE = dyn_cast<CXXConstructExpr>(Init->IgnoreImplicit()))
     if (CCE->getConstructor()->isDefaultConstructor() &&
-        defaultInitLeavesScalarIndeterminate(DeclType))
+        defaultInitLeavesScalarIndeterminate(D->getType()))
       return;
-  Diag(Loc, diag::err_init_uninit_with_initializer) << Profile << Name;
+  Diag(Loc, diag::err_init_uninit_with_initializer)
+      << Profile << D->getDeclName();
 }
 
 void Sema::diagnoseInitUninitMarkerPlacement(const Decl *D) {
@@ -15272,9 +15271,7 @@ void Sema::checkRefToUninitRead(SourceLocation Loc, const Expr *Glvalue,
 void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
   if (var->isInvalidDecl()) return;
 
-  checkInitProfileUninitWithInitializer(
-      var->getLocation(), var->getDeclName(), var->getType(), var->getInit(),
-      var->hasAttr<UninitAttr>(), var);
+  checkInitProfileUninitWithInitializer(var, var->getInit());
 
   // std::init / ref_to_uninit (paper §5): a pointer or reference variable must
   // be bound consistently with its [[ref_to_uninit]] marking. A dependent type

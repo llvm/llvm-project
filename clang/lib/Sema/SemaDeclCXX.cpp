@@ -4231,11 +4231,7 @@ void Sema::ActOnFinishCXXInClassMemberInitializer(Decl *D,
   // the field and its lexical parents. This does not depend on a parse-time
   // suppress scope still being active (the late-parsed NSDMI finishes parsing
   // before this finalization runs).
-  checkInitProfileUninitWithInitializer(FD->getLocation(), FD->getDeclName(),
-                                        FD->getType(),
-                                        FD->getInClassInitializer(),
-                                        FD->hasAttr<UninitAttr>(),
-                                        FD);
+  checkInitProfileUninitWithInitializer(FD, FD->getInClassInitializer());
 
   // std::init / ref_to_uninit (paper §5): a pointer or reference data member
   // with a default member initializer must be bound consistently with its
