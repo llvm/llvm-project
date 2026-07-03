@@ -31,6 +31,7 @@
 #include "lldb/Utility/ErrorMessages.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Policy.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 
@@ -173,6 +174,9 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
 
     if (exe_ctx.GetProcessPtr())
       exe_ctx.GetProcessPtr()->SetRunningUserExpression(true);
+
+    PolicyStack::Guard expr_policy_guard =
+        PolicyStack::Get().PushPublicStateRunningExpression();
 
     lldb::ExpressionResults execution_result =
         exe_ctx.GetProcessRef().RunThreadPlan(exe_ctx, call_plan_sp, options,

@@ -63,6 +63,7 @@ struct Policy {
   /// @{
   static Policy CreatePublicState();
   static Policy CreatePrivateState();
+  static Policy CreatePrivateStateRunningExpression();
   static Policy CreatePublicStateRunningExpression();
   /// @}
 
@@ -122,6 +123,11 @@ public:
 
   [[nodiscard]] Guard PushPrivateState() {
     Push(Policy::CreatePrivateState());
+    return Guard();
+  }
+
+  [[nodiscard]] Guard PushPrivateStateRunningExpression() {
+    Push(Policy::CreatePrivateStateRunningExpression());
     return Guard();
   }
 
