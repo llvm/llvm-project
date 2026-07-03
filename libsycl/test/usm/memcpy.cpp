@@ -1,5 +1,5 @@
 // REQUIRES: any-device
-// RUN: %clangxx %sycl_options %s -o %t.out
+// RUN: %clangxx -fsycl %s -o %t.out
 // RUN: %t.out
 
 #include <sycl/sycl.hpp>
@@ -71,10 +71,10 @@ void runTestsForMemCpyFunc(MemCpyFuncT MemCpyFunc) {
 
   // These cases only do a single memcpy, so they would end up using just the
   // overload without dependencies regardless of what MemCpyFunc is.
-  // TODO Pass a default-constructed event as a dependency in these cases
+  // TODO: Pass a default-constructed event as a dependency in these cases
   // instead when those are implemented.
   if constexpr (!ExplicitDeps) {
-    // TODO Remove try-catch once host-to-host copies are supported.
+    // TODO: Remove try-catch once host-to-host copies are supported.
     try {
       RunTest(HostAllocF, HostAllocF);
       assert(false);

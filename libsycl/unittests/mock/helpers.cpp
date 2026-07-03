@@ -264,6 +264,19 @@ void mock::MockLiboffload::initDefault() {
         return OL_SUCCESS;
       });
 
+  ON_CALL(*this, olCreateEvent)
+      .WillByDefault([this](ol_queue_handle_t Queue, ol_event_flags_t Flags,
+                            ol_event_handle_t *Event) -> ol_result_t {
+        if (!Queue)
+          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
+        if (!Event)
+          return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
+        std::ignore = Flags;
+        *Event = mock::createDummyHandleWithData<ol_event_handle_t>(
+            reinterpret_cast<unsigned char *>(&Queue), sizeof(Queue));
+        return OL_SUCCESS;
+      });
+
   ON_CALL(*this, olLaunchKernel)
       .WillByDefault([this](ol_queue_handle_t Queue, ol_device_handle_t Device,
                             ol_symbol_handle_t Kernel,
@@ -286,6 +299,7 @@ void mock::MockLiboffload::initDefault() {
         }
         return OL_SUCCESS;
       });
+
   ON_CALL(*this, olMemcpy)
       .WillByDefault([this](ol_queue_handle_t Queue, void *DstPtr,
                             ol_device_handle_t DstDevice, const void *SrcPtr,
@@ -297,16 +311,17 @@ void mock::MockLiboffload::initDefault() {
           return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
         return OL_SUCCESS;
       });
-  ON_CALL(*this, olCreateEvent)
-      .WillByDefault([this](ol_queue_handle_t Queue, ol_event_flags_t Flags,
-                            ol_event_handle_t *Event) -> ol_result_t {
-        if (!Queue)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
-        if (!Event)
+
+  ON_CALL(*this, olGetMemInfo)
+      .WillByDefault([this](const void *Ptr, ol_mem_info_t PropName,
+                            size_t PropSize, void *PropValue) -> ol_result_t {
+        if (!Ptr)
           return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
-        std::ignore = Flags;
-        *Event = mock::createDummyHandleWithData<ol_event_handle_t>(
-            reinterpret_cast<unsigned char *>(&Queue), sizeof(Queue));
+        // Other properties are not used by the runtime yet
+        EXPECT_EQ(PropName, OL_MEM_INFO_DEVICE);
+        if (PropSize < sizeof(ol_device_handle_t))
+          return makeEmptyStrError(OL_ERRC_INVALID_SIZE);
+        assignAs(PropValue, DefaultDevice);
         return OL_SUCCESS;
       });
 

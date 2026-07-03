@@ -36,7 +36,7 @@ TEST(Queue, Memcpy) {
         bool IsHostPtr = Ptr == SrcPtr ? IsSrcHostPtr : IsDstHostPtr;
         if (IsHostPtr)
           return mock::getMockLiboffload().makeEmptyStrError(OL_ERRC_NOT_FOUND);
-        *(reinterpret_cast<ol_device_handle_t *>(PropValue)) = OLDev;
+        *(static_cast<ol_device_handle_t *>(PropValue)) = OLDev;
         return OL_SUCCESS;
       });
   EXPECT_CALL(Mock.get(), olMemcpy(_, DstPtr, _, SrcPtr, _, NumBytes))

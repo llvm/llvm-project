@@ -137,7 +137,7 @@ void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
 
 // Returns the {DeviceHandle, IsHostDevice} pair associated with the ptr.
 static std::pair<ol_device_handle_t, bool> getAllocDevice(const void *ptr) {
-  // TODO consider caching this information to avoid querying it every time.
+  // TODO: consider caching this information to avoid querying it every time.
   ol_device_handle_t Device{};
   [[maybe_unused]] ol_result_t Result =
       callNoCheck(olGetMemInfo, ptr, OL_MEM_INFO_DEVICE,
