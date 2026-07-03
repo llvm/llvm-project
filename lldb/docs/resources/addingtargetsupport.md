@@ -89,8 +89,8 @@ adequately maintain the code upstream:
 * Who will address problems with it? Will it always be the named maintainers?
   Is it so common that anyone in upstream LLDB can deal with it, or will 
   only employees of a specific company work on it.
-* When it breaks, how easy will it be for the upstream LLDB community to continue
-  their work without disruption?
+* When it breaks, how easy will it be for the upstream LLDB community to
+  continue their work without disruption?
 * If upstream contributors want to reproduce issues on your target, how can
   they access it? Can it be emulated or virtualized? Does it require them to
   sign a license? Do you offer access for open source projects? (and does that
@@ -123,7 +123,8 @@ of some targets will be bigger than "big" or smaller than "small".
     memory and registers.
 * How often is it tested?
   * Big: per-commit testing of LLDB, following the upstream llvm-project.
-  * Small: per release of a downstream community or individual developer's tools.
+  * Small: per release of a downstream community or individual developer's
+    tools.
 * Who will maintain it?
   * Big: there are several listed maintainers for this target, who are
     employed by a company with significant investments in the target.
