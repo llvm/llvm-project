@@ -72,6 +72,12 @@ def int_aarch64_break : Intrinsic<[], [llvm_i32_ty],
 def int_aarch64_hlt : Intrinsic<[], [llvm_i32_ty],
     [IntrNoMem, IntrHasSideEffects, IntrNoReturn, IntrCold, ImmArg<ArgIndex<0>>]>;
 
+def int_aarch64_hvc : Intrinsic<[], [llvm_i32_ty],
+    [IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
+
+def int_aarch64_svc : Intrinsic<[], [llvm_i32_ty],
+    [IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
+
 def int_aarch64_prefetch : Intrinsic<[],
     [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
     [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn, ReadOnly<ArgIndex<0>>,

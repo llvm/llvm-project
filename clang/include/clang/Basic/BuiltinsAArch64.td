@@ -253,6 +253,7 @@ let Attributes = [NoThrow, RequireDeclaration], Languages = "ALL_MS_LANGUAGES", 
 	def _InterlockedCompareExchange64_nf       : AArch64NoPrefixTargetLibBuiltin<"long long int (long long int volatile *, long long int, long long int)">;
 	def _InterlockedCompareExchange64_rel      : AArch64NoPrefixTargetLibBuiltin<"long long int (long long int volatile *, long long int, long long int)">;
 	def _InterlockedCompareExchangePointer_acq : AArch64NoPrefixTargetLibBuiltin<"void * (void * volatile *, void *, void *)">;
+	def _InterlockedCompareExchangePointer_nf  : AArch64NoPrefixTargetLibBuiltin<"void * (void * volatile *, void *, void *)">;
 	def _InterlockedCompareExchangePointer_rel : AArch64NoPrefixTargetLibBuiltin<"void * (void * volatile *, void *, void *)">;
 }
 
@@ -408,4 +409,6 @@ let Attributes = [NoThrow, RequireDeclaration], Languages = "ALL_MS_LANGUAGES", 
 
 let Attributes = [NoThrow, RequireDeclaration], Languages = "ALL_MS_LANGUAGES", Header = "intrin.h" in {
 	def __hlt : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned int, ...)">;
+	def __hvc : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned int, ...)">;
+	def __svc : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned int, ...)">;
 }

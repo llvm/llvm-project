@@ -14,6 +14,18 @@ void check__hlt() {
   __hlt(65536); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 }
 
+void check__hvc(unsigned int x) {
+  __hvc(-1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __hvc(65536); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __hvc(x); // expected-error {{argument to '__hvc' must be a constant integer}}
+}
+
+void check__svc(unsigned int x) {
+  __svc(-1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __svc(65536); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __svc(x); // expected-error {{argument to '__svc' must be a constant integer}}
+}
+
 void check__getReg(void) {
   __getReg(-1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
   __getReg(32); // expected-error-re {{argument value {{.*}} is outside the valid range}}

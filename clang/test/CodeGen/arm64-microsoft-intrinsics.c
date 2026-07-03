@@ -147,6 +147,26 @@ void check__hlt() {
 // CHECK-MSVC: call void @llvm.aarch64.hlt(i32 0)
 // CHECK-LINUX: error: call to undeclared function '__hlt'
 
+void check__hvc() {
+  __hvc(0);
+  __hvc(1);
+}
+
+// CHECK-MSVC-LABEL: define {{.*}} void @check__hvc()
+// CHECK-MSVC: call void @llvm.aarch64.hvc(i32 0)
+// CHECK-MSVC: call void @llvm.aarch64.hvc(i32 1)
+// CHECK-LINUX: error: call to undeclared function '__hvc'
+
+void check__svc() {
+  __svc(0);
+  __svc(1);
+}
+
+// CHECK-MSVC-LABEL: define {{.*}} void @check__svc()
+// CHECK-MSVC: call void @llvm.aarch64.svc(i32 0)
+// CHECK-MSVC: call void @llvm.aarch64.svc(i32 1)
+// CHECK-LINUX: error: call to undeclared function '__svc'
+
 unsigned __int64 check__getReg(void) {
   unsigned volatile __int64 reg;
   reg = __getReg(18);

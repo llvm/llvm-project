@@ -106,6 +106,7 @@ translateAarch64ToMsvcIntrin(unsigned BuiltinID) {
   case clang::AArch64::BI_InterlockedCompareExchange16_nf:
   case clang::AArch64::BI_InterlockedCompareExchange_nf:
   case clang::AArch64::BI_InterlockedCompareExchange64_nf:
+  case clang::AArch64::BI_InterlockedCompareExchangePointer_nf:
     return MSVCIntrin::_InterlockedCompareExchange_nf;
   case clang::AArch64::BI_InterlockedCompareExchange128:
     return MSVCIntrin::_InterlockedCompareExchange128;
@@ -5260,6 +5261,18 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
 
     // Return 0 for convenience, even though MSVC returns some other undefined
     // value.
+    return ConstantInt::get(Builder.getInt32Ty(), 0);
+  }
+
+  if (BuiltinID == AArch64::BI__hvc) {
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_hvc);
+    Builder.CreateCall(F, {EmitScalarExpr(E->getArg(0))});
+    return ConstantInt::get(Builder.getInt32Ty(), 0);
+  }
+
+  if (BuiltinID == AArch64::BI__svc) {
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_svc);
+    Builder.CreateCall(F, {EmitScalarExpr(E->getArg(0))});
     return ConstantInt::get(Builder.getInt32Ty(), 0);
   }
 
