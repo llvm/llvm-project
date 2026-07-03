@@ -28,6 +28,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Types.h"
+#include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/IRBuilder.h"
@@ -792,8 +793,7 @@ void MmaOp::print(OpAsmPrinter &p) {
   p.printOptionalAttrDict(this->getOperation()->getAttrs(), ignoreAttrNames);
 
   // Print the types of the operands and result.
-  p << " : "
-    << "(";
+  p << " : " << "(";
   llvm::interleaveComma(SmallVector<Type, 3>{frags[0].regs[0].getType(),
                                              frags[1].regs[0].getType(),
                                              frags[2].regs[0].getType()},
@@ -2801,9 +2801,7 @@ std::string NVVM::WgmmaMmaAsyncOp::getPtx() {
   ss << "},";
   // Need to map read/write registers correctly.
   regCnt = (regCnt * 2);
-  ss << " $" << (regCnt) << ","
-     << " $" << (regCnt + 1) << ","
-     << " p";
+  ss << " $" << (regCnt) << "," << " $" << (regCnt + 1) << "," << " p";
   if (getTypeD() != WGMMATypes::s32) {
     ss << ", $" << (regCnt + 3) << ",  $" << (regCnt + 4);
   }
@@ -3426,38 +3424,70 @@ void SubFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 // getIntrinsicID/getIntrinsicIDAndArgs methods
 //===----------------------------------------------------------------------===//
 
+/// Maps the (aligned, hasCount) pair to the `@llvm.nvvm.barrier.cta.sync.*`
+/// intrinsic ID.
+static llvm::Intrinsic::ID getBarrierSyncIntrinsic(bool aligned,
+                                                   bool hasCount) {
+  if (hasCount) {
+    return aligned ? llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_count
+                   : llvm::Intrinsic::nvvm_barrier_cta_sync_count;
+  }
+  return aligned ? llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all
+                 : llvm::Intrinsic::nvvm_barrier_cta_sync_all;
+}
+
+/// Maps the (aligned, kind) pair to the `@llvm.nvvm.barrier.cta.red.*`
+/// intrinsic ID.
+static llvm::Intrinsic::ID
+getBarrierReductionIntrinsic(bool aligned, NVVM::BarrierReduction kind) {
+  switch (kind) {
+  case NVVM::BarrierReduction::AND:
+    return aligned ? llvm::Intrinsic::nvvm_barrier_cta_red_and_aligned_all
+                   : llvm::Intrinsic::nvvm_barrier_cta_red_and_all;
+  case NVVM::BarrierReduction::OR:
+    return aligned ? llvm::Intrinsic::nvvm_barrier_cta_red_or_aligned_all
+                   : llvm::Intrinsic::nvvm_barrier_cta_red_or_all;
+  case NVVM::BarrierReduction::POPC:
+    return aligned ? llvm::Intrinsic::nvvm_barrier_cta_red_popc_aligned_all
+                   : llvm::Intrinsic::nvvm_barrier_cta_red_popc_all;
+  }
+  llvm_unreachable("unknown BarrierReduction kind");
+}
+
 mlir::NVVM::IDArgPair NVVM::BarrierOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::BarrierOp>(op);
   llvm::Value *barrierId = thisOp.getBarrierId()
                                ? mt.lookupValue(thisOp.getBarrierId())
                                : builder.getInt32(0);
-  llvm::Intrinsic::ID id;
+  bool hasCount = static_cast<bool>(thisOp.getNumberOfThreads());
+  llvm::Intrinsic::ID id =
+      getBarrierSyncIntrinsic(thisOp.getAligned(), hasCount);
   llvm::SmallVector<llvm::Value *> args = {barrierId};
-  if (thisOp.getNumberOfThreads()) {
-    id = llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_count;
+  if (hasCount)
     args.push_back(mt.lookupValue(thisOp.getNumberOfThreads()));
-  } else {
-    id = llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all;
-  }
   return {id, std::move(args)};
+}
+
+mlir::NVVM::IDArgPair NVVM::BarrierArriveOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::BarrierArriveOp>(op);
+  llvm::Value *barrierId = thisOp.getBarrierId()
+                               ? mt.lookupValue(thisOp.getBarrierId())
+                               : builder.getInt32(0);
+  llvm::Value *numThreads = mt.lookupValue(thisOp.getNumberOfThreads());
+  llvm::Intrinsic::ID id =
+      thisOp.getAligned()
+          ? llvm::Intrinsic::nvvm_barrier_cta_arrive_aligned_count
+          : llvm::Intrinsic::nvvm_barrier_cta_arrive_count;
+  return {id, {barrierId, numThreads}};
 }
 
 mlir::NVVM::IDArgPair NVVM::BarrierReductionOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::BarrierReductionOp>(op);
-  llvm::Intrinsic::ID id;
-  switch (thisOp.getReductionOp()) {
-  case NVVM::BarrierReduction::AND:
-    id = llvm::Intrinsic::nvvm_barrier_cta_red_and_aligned_all;
-    break;
-  case NVVM::BarrierReduction::OR:
-    id = llvm::Intrinsic::nvvm_barrier_cta_red_or_aligned_all;
-    break;
-  case NVVM::BarrierReduction::POPC:
-    id = llvm::Intrinsic::nvvm_barrier_cta_red_popc_aligned_all;
-    break;
-  }
+  llvm::Intrinsic::ID id = getBarrierReductionIntrinsic(
+      thisOp.getAligned(), thisOp.getReductionOp());
   llvm::Value *barrierId = thisOp.getBarrierId()
                                ? mt.lookupValue(thisOp.getBarrierId())
                                : builder.getInt32(0);
@@ -6301,6 +6331,15 @@ LogicalResult Tcgen05LdRedOp::verify() {
 // NVVMDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
 
+namespace {
+struct NVVMInlinerInterface final : DialectInlinerInterface {
+  using DialectInlinerInterface::DialectInlinerInterface;
+  bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
+    return true;
+  }
+};
+} // namespace
+
 // TODO: This should be the llvm.nvvm dialect once this is supported.
 void NVVMDialect::initialize() {
   addOperations<
@@ -6315,6 +6354,7 @@ void NVVMDialect::initialize() {
   // Support unknown operations because not all NVVM operations are
   // registered.
   allowUnknownOperations();
+  addInterfaces<NVVMInlinerInterface>();
   declarePromisedInterface<ConvertToLLVMPatternInterface, NVVMDialect>();
   declarePromisedInterface<gpu::TargetAttrInterface, NVVMTargetAttr>();
 }
@@ -6356,9 +6396,9 @@ LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
     if (!op->hasAttr(NVVMDialect::getReqntidAttrName()) ||
         !op->hasAttr(NVVMDialect::getClusterDimAttrName())) {
       return op->emitError()
-             << "'" << attrName << "' attribute must be used along with "
-             << "'" << NVVMDialect::getReqntidAttrName() << "' and "
-             << "'" << NVVMDialect::getClusterDimAttrName() << "'";
+             << "'" << attrName << "' attribute must be used along with " << "'"
+             << NVVMDialect::getReqntidAttrName() << "' and " << "'"
+             << NVVMDialect::getClusterDimAttrName() << "'";
     }
   }
 

@@ -119,7 +119,7 @@ subroutine defaultmap_scalar_implicit_mapper()
 ! CHECK-LABEL: func.func @_QPdefaultmap_scalar_implicit_mapper
 ! CHECK: %[[BASE_MAP:.*]] = omp.map.info {{.*}} map_clauses(implicit, tofrom) capture(ByRef) {{.*}} mapper(@{{.*}}) -> {{.*}} {name = ""}
 ! CHECK: %[[DESC_MAP:.*]] = omp.map.info {{.*}} map_clauses(always, implicit, to) capture(ByRef) members(%[[BASE_MAP]] : [0] : {{.*}}) -> {{.*}} {name = "obj"}
-! CHECK: omp.target map_entries(%[[DESC_MAP]] -> {{.*}}, %[[BASE_MAP]] -> {{.*}})
+! CHECK: omp.target kernel_type(generic) map_entries(%[[DESC_MAP]] -> {{.*}}, %[[BASE_MAP]] -> {{.*}})
     allocate(obj)
     !$omp target defaultmap(tofrom: scalar)
         obj%k = 40

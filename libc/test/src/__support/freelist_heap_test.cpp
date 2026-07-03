@@ -1,9 +1,14 @@
-//===-- Unittests for freelist_heap ---------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Unittests for freelist_heap.
+///
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/span.h"
@@ -23,7 +28,7 @@ _end:
 __llvm_libc_heap_limit:
 )");
 
-using LIBC_NAMESPACE::Block;
+using LIBC_NAMESPACE::BlockRef;
 using LIBC_NAMESPACE::freelist_heap;
 using LIBC_NAMESPACE::FreeListHeap;
 using LIBC_NAMESPACE::FreeListHeapBuffer;
@@ -124,12 +129,12 @@ TEST_FOR_EACH_ALLOCATOR(ReturnedPointersAreAligned, 2048) {
   void *ptr1 = allocator.allocate(1);
 
   uintptr_t ptr1_start = reinterpret_cast<uintptr_t>(ptr1);
-  EXPECT_EQ(ptr1_start % Block::MIN_ALIGN, static_cast<size_t>(0));
+  EXPECT_EQ(ptr1_start % BlockRef::MIN_ALIGN, static_cast<size_t>(0));
 
   void *ptr2 = allocator.allocate(1);
   uintptr_t ptr2_start = reinterpret_cast<uintptr_t>(ptr2);
 
-  EXPECT_EQ(ptr2_start % Block::MIN_ALIGN, static_cast<size_t>(0));
+  EXPECT_EQ(ptr2_start % BlockRef::MIN_ALIGN, static_cast<size_t>(0));
 }
 
 TEST_FOR_EACH_ALLOCATOR(CanRealloc, 2048) {

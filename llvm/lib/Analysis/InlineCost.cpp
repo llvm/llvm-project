@@ -928,7 +928,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
 
     // Make sure we have a nonzero entry count.
     auto EntryCount = F.getEntryCount();
-    if (!EntryCount || !EntryCount->getCount())
+    if (!EntryCount || *EntryCount == 0)
       return false;
 
     BlockFrequencyInfo *CalleeBFI = &(GetBFI(F));
@@ -1017,10 +1017,9 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
 
     // Compute the cycle savings per call.
     auto EntryProfileCount = F.getEntryCount();
-    assert(EntryProfileCount && EntryProfileCount->getCount());
-    auto EntryCount = EntryProfileCount->getCount();
-    CycleSavings += EntryCount / 2;
-    CycleSavings = CycleSavings.udiv(EntryCount);
+    assert(EntryProfileCount && *EntryProfileCount);
+    CycleSavings += *EntryProfileCount / 2;
+    CycleSavings = CycleSavings.udiv(*EntryProfileCount);
 
     // Compute the total savings for the call site.
     auto *CallerBB = CandidateCall.getParent();
@@ -3246,7 +3245,7 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
     return InlineResult::failure("optnone attribute");
 
   // Don't inline functions which can be interposed at link-time.
-  if (Callee->isInterposable())
+  if (Callee->isInterposable(/*CheckNoIPA=*/false))
     return InlineResult::failure("interposable");
 
   // Don't inline functions marked noinline.

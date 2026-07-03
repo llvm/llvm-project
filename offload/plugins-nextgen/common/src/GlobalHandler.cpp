@@ -30,6 +30,19 @@ using namespace plugin;
 using namespace error;
 using namespace llvm::offload::debug;
 
+// Windows/MSVC doesn't support weak symbols properly, so provide a stub
+// implementation that will be used if compiler-rt is not linked.
+#ifdef _WIN32
+extern "C" int __llvm_write_custom_profile(
+    const char *Target, const __llvm_profile_data *DataBegin,
+    const __llvm_profile_data *DataEnd, const char *CountersBegin,
+    const char *CountersEnd, const char *NamesBegin, const char *NamesEnd,
+    const uint64_t *VersionOverride) {
+  // Return error code indicating profiling is not available
+  return -1;
+}
+#endif
+
 Expected<std::unique_ptr<ObjectFile>>
 GenericGlobalHandlerTy::getELFObjectFile(DeviceImageTy &Image) {
   assert(utils::elf::isELF(Image.getMemoryBuffer().getBuffer()) &&
@@ -262,11 +275,15 @@ void GPUProfGlobals::dump() const {
 }
 
 Error GPUProfGlobals::write() const {
+#ifndef _WIN32
+  // On Windows __llvm_write_custom_profile is a strong stub (see above), so its
+  // address is never null and this check triggers -Wpointer-bool-conversion.
   if (!__llvm_write_custom_profile)
     return Plugin::error(ErrorCode::INVALID_BINARY,
                          "could not find symbol __llvm_write_custom_profile. "
                          "The compiler-rt profiling library must be linked for "
                          "GPU PGO to work.");
+#endif
 
   // Lay out as [Data][Counters][Names] to match the raw profile format order.
   // TODO: Move this interface to compiler-rt.
@@ -295,7 +312,9 @@ Error GPUProfGlobals::write() const {
       reinterpret_cast<const __llvm_profile_data *>(DataBegin),
       reinterpret_cast<const __llvm_profile_data *>(DataBegin +
                                                     DataSection.size()),
-      CountersBegin, CountersBegin + CountersSection.size(), NamesBegin,
+      CountersBegin, CountersBegin + CountersSection.size(),
+      /*UniformCountersBegin=*/nullptr,
+      /*UniformCountersEnd=*/nullptr, NamesBegin,
       NamesBegin + NamesSection.size(), &Version);
   if (Result != 0)
     return Plugin::error(ErrorCode::HOST_IO,

@@ -645,10 +645,10 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   //
   unsigned MaxNumSGPRs = ST.getMaxNumSGPRs(MF);
   unsigned TotalNumSGPRs = AMDGPU::SGPR_32RegClass.getNumRegs();
-  for (const TargetRegisterClass *RC : regclasses()) {
-    if (RC->isBaseClass() && isSGPRClass(RC)) {
-      unsigned NumRegs = divideCeil(getRegSizeInBits(*RC), 32);
-      for (MCPhysReg Reg : *RC) {
+  for (const TargetRegisterClass &RC : regclasses()) {
+    if (RC.isBaseClass() && isSGPRClass(&RC)) {
+      unsigned NumRegs = divideCeil(getRegSizeInBits(RC), 32);
+      for (MCPhysReg Reg : RC) {
         unsigned Index = getHWRegIndex(Reg);
         if (Index + NumRegs > MaxNumSGPRs && Index < TotalNumSGPRs &&
             Reg != AMDGPU::VCC_LO && Reg != AMDGPU::VCC_HI &&
@@ -701,10 +701,10 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   //
   auto [MaxNumVGPRs, MaxNumAGPRs] = ST.getMaxNumVectorRegs(MF.getFunction());
 
-  for (const TargetRegisterClass *RC : regclasses()) {
-    if (RC->isBaseClass() && isVGPRClass(RC)) {
-      unsigned NumRegs = divideCeil(getRegSizeInBits(*RC), 32);
-      for (MCPhysReg Reg : *RC) {
+  for (const TargetRegisterClass &RC : regclasses()) {
+    if (RC.isBaseClass() && isVGPRClass(&RC)) {
+      unsigned NumRegs = divideCeil(getRegSizeInBits(RC), 32);
+      for (MCPhysReg Reg : RC) {
         unsigned Index = getHWRegIndex(Reg);
         if (Index + NumRegs > MaxNumVGPRs)
           Reserved.set(Reg);
@@ -715,10 +715,10 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // Reserve all the AGPRs if there are no instructions to use it.
   if (!ST.hasMAIInsts())
     MaxNumAGPRs = 0;
-  for (const TargetRegisterClass *RC : regclasses()) {
-    if (RC->isBaseClass() && isAGPRClass(RC)) {
-      unsigned NumRegs = divideCeil(getRegSizeInBits(*RC), 32);
-      for (MCPhysReg Reg : *RC) {
+  for (const TargetRegisterClass &RC : regclasses()) {
+    if (RC.isBaseClass() && isAGPRClass(&RC)) {
+      unsigned NumRegs = divideCeil(getRegSizeInBits(RC), 32);
+      for (MCPhysReg Reg : RC) {
         unsigned Index = getHWRegIndex(Reg);
         if (Index + NumRegs > MaxNumAGPRs)
           Reserved.set(Reg);
@@ -1939,7 +1939,8 @@ void SIRegisterInfo::buildSpillLoadStore(
     }
 
     Register FinalValueReg = ValueReg;
-    if (LoadStoreOp == AMDGPU::SCRATCH_LOAD_USHORT_SADDR) {
+    if (LoadStoreOp == AMDGPU::SCRATCH_LOAD_USHORT_SADDR ||
+        LoadStoreOp == AMDGPU::SCRATCH_LOAD_USHORT_ST) {
       // If we are loading 16-bit value with SRAMECC endabled we need a temp
       // 32-bit VGPR to load and extract 16-bits into the final register.
       ValueReg =
@@ -2569,7 +2570,9 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_S96_SAVE:
     case AMDGPU::SI_SPILL_S64_SAVE:
     case AMDGPU::SI_SPILL_S32_SAVE: {
-      return spillSGPR(MI, Index, RS, nullptr, nullptr, false, false, NeedsCFI);
+      return spillSGPR(MI, Index, RS, nullptr, nullptr,
+                       FrameInfo.getStackID(Index) == TargetStackID::SGPRSpill,
+                       false, NeedsCFI);
     }
 
     // SGPR register restore
@@ -2587,7 +2590,9 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_S96_RESTORE:
     case AMDGPU::SI_SPILL_S64_RESTORE:
     case AMDGPU::SI_SPILL_S32_RESTORE: {
-      return restoreSGPR(MI, Index, RS);
+      return restoreSGPR(MI, Index, RS, nullptr, nullptr,
+                         FrameInfo.getStackID(Index) ==
+                             TargetStackID::SGPRSpill);
     }
 
     // VGPR register spill
@@ -3573,10 +3578,6 @@ unsigned SIRegisterInfo::getHWRegIndex(MCRegister Reg) const {
   return getEncodingValue(Reg) & AMDGPU::HWEncoding::REG_IDX_MASK;
 }
 
-unsigned AMDGPU::getRegBitWidth(const TargetRegisterClass &RC) {
-  return getRegBitWidth(RC.getID());
-}
-
 static const TargetRegisterClass *
 getAnyVGPRClassForBitWidth(unsigned BitWidth) {
   if (BitWidth == 64)
@@ -3985,7 +3986,7 @@ MCRegister SIRegisterInfo::findUnusedRegister(
 bool SIRegisterInfo::isUniformReg(const MachineRegisterInfo &MRI,
                                   const RegisterBankInfo &RBI,
                                   Register Reg) const {
-  auto *RB = RBI.getRegBank(Reg, MRI, *MRI.getTargetRegisterInfo());
+  auto *RB = RBI.getRegBank(Reg, MRI, *this);
   if (!RB)
     return false;
 
@@ -4252,10 +4253,10 @@ MachineInstr *SIRegisterInfo::findReachingDef(Register Reg, unsigned SubReg,
 MCPhysReg SIRegisterInfo::get32BitRegister(MCPhysReg Reg) const {
   assert(getRegSizeInBits(*getPhysRegBaseClass(Reg)) <= 32);
 
-  for (const TargetRegisterClass &RC : { AMDGPU::VGPR_32RegClass,
-                                         AMDGPU::SReg_32RegClass,
-                                         AMDGPU::AGPR_32RegClass } ) {
-    if (MCPhysReg Super = getMatchingSuperReg(Reg, AMDGPU::lo16, &RC))
+  for (const TargetRegisterClass *RC :
+       {&AMDGPU::VGPR_32RegClass, &AMDGPU::SReg_32RegClass,
+        &AMDGPU::AGPR_32RegClass}) {
+    if (MCPhysReg Super = getMatchingSuperReg(Reg, AMDGPU::lo16, RC))
       return Super;
   }
   if (MCPhysReg Super = getMatchingSuperReg(Reg, AMDGPU::hi16,

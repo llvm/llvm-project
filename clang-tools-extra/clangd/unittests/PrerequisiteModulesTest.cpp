@@ -15,6 +15,7 @@
 #include "CodeComplete.h"
 #include "Compiler.h"
 #include "ModulesBuilder.h"
+#include "Preamble.h"
 #include "ProjectModules.h"
 #include "TestTU.h"
 #include "support/Path.h"
@@ -1611,6 +1612,61 @@ struct TypeFromHeader {};
   EXPECT_THAT(Result.Completions,
               testing::UnorderedElementsAre(named("TypeFromModule"),
                                             named("TypeFromHeader")));
+}
+
+TEST_F(PrerequisiteModulesTests,
+       SkipPreambleBuildInvalidatedByNewModuleImport) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+
+  CDB.addFile("Dep.cppm", R"cpp(
+export module Dep;
+)cpp");
+
+  CDB.addFile("Consumer.cpp", R"cpp(
+import Dep;
+void use() {}
+)cpp");
+
+  ModulesBuilder Builder(CDB);
+
+  auto Inputs = getInputs("Consumer.cpp", CDB);
+  Inputs.ModulesManager = &Builder;
+  Inputs.Opts.SkipPreambleBuild = true;
+
+  auto CI = buildCompilerInvocation(Inputs, DiagConsumer);
+  ASSERT_TRUE(CI);
+
+  auto Preamble = buildPreamble(getFullPath("Consumer.cpp"), *CI, Inputs,
+                                /*StoreInMemory=*/true,
+                                /*PreambleCallback=*/nullptr);
+  ASSERT_TRUE(Preamble);
+  EXPECT_EQ(Preamble->Preamble.getBounds().Size, 0u);
+  ASSERT_TRUE(Preamble->RequiredModules);
+
+  CDB.addFile("NewDep.cppm", R"cpp(
+export module NewDep;
+)cpp");
+
+  // Add a new import.
+  Inputs.Contents = R"cpp(
+import Dep;
+import NewDep;
+void use() {}
+)cpp";
+
+  {
+    std::error_code EC;
+    llvm::raw_fd_ostream OS(getFullPath("Consumer.cpp"), EC,
+                            llvm::sys::fs::OF_None);
+    ASSERT_FALSE(EC);
+    OS << Inputs.Contents;
+  }
+
+  auto NewCI = buildCompilerInvocation(Inputs, DiagConsumer);
+  ASSERT_TRUE(NewCI);
+
+  EXPECT_FALSE(isPreambleCompatible(*Preamble, Inputs,
+                                    getFullPath("Consumer.cpp"), *NewCI));
 }
 
 } // namespace

@@ -40,7 +40,7 @@ void f() {
 // CIR: #bfi_z = #cir.bitfield_info<name = "z", storage_type = !u8i, size = 8, offset = 0, is_signed = true>
 
 // CIR:   cir.func {{.*}} @f
-// CIR:    [[ALLOC:%.*]] = cir.alloca !rec_demo, !cir.ptr<!rec_demo>, ["d"] {alignment = 4 : i64}
+// CIR:    [[ALLOC:%.*]] = cir.alloca "d" align(4) : !cir.ptr<!rec_demo>
 // CIR:    [[ONE:%.*]] = cir.const #cir.int<1> : !s32i
 // CIR:    [[X:%.*]] = cir.get_member [[ALLOC]][0] {name = "x"} : !cir.ptr<!rec_demo> -> !cir.ptr<!s32i>
 // CIR:    cir.store align(4) [[ONE]], [[X]] : !s32i, !cir.ptr<!s32i>

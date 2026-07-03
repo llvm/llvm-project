@@ -33,15 +33,10 @@ public:
     return &HostTC.getTriple();
   }
 
-  llvm::opt::DerivedArgList *
-  TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
-                Action::OffloadKind DeviceOffloadKind) const override;
-
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                        llvm::opt::ArgStringList &CC1Args,
+                        llvm::opt::ArgStringList &CC1Args, BoundArch BA,
                         Action::OffloadKind DeviceOffloadKind) const override;
-  void addClangWarningOptions(llvm::opt::ArgStringList &CC1Args) const override;
   CXXStdlibType GetCXXStdlibType(const llvm::opt::ArgList &Args) const override;
   void AddClangCXXStdlibIncludeArgs(
       const llvm::opt::ArgList &Args,
@@ -57,8 +52,11 @@ public:
                      const llvm::opt::ArgList &Args) const override;
 
   llvm::SmallVector<BitCodeLibraryInfo, 12>
-  getDeviceLibs(const llvm::opt::ArgList &Args,
+  getDeviceLibs(const llvm::opt::ArgList &Args, BoundArch BA,
                 const Action::OffloadKind DeviceOffloadKind) const override;
+
+  /// OpenMP uses LTO by default to link device bitcode.
+  LTOKind getDefaultLTOMode() const override { return LTOK_Full; }
 
   const ToolChain &HostTC;
 };

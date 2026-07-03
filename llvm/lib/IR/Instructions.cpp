@@ -71,9 +71,12 @@ AllocaInst::getAllocationSize(const DataLayout &DL) const {
     auto *C = dyn_cast<ConstantInt>(getArraySize());
     if (!C)
       return std::nullopt;
+    std::optional<uint64_t> NumElements = C->getValue().tryZExtValue();
+    if (!NumElements)
+      return std::nullopt;
     assert(!Size.isScalable() && "Array elements cannot have a scalable size");
     auto CheckedProd =
-        checkedMulUnsigned(Size.getKnownMinValue(), C->getZExtValue());
+        checkedMulUnsigned(Size.getKnownMinValue(), *NumElements);
     if (!CheckedProd)
       return std::nullopt;
     return TypeSize::getFixed(*CheckedProd);
@@ -3033,6 +3036,10 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
       // FIXME: this state can be merged with (1), but the following assert
       // is useful to check the correcteness of the sequence due to semantic
       // change of bitcast.
+      // addrspacecast can only fold through a bitcast if the result remains a
+      // pointer. A pointer-to-byte bitcast must stay as a separate bitcast.
+      if (!DstTy->isPtrOrPtrVectorTy())
+        return 0;
       assert(
         SrcTy->isPtrOrPtrVectorTy() &&
         MidTy->isPtrOrPtrVectorTy() &&
@@ -3044,6 +3051,10 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
       return firstOp;
     case 14:
       // bitcast, addrspacecast -> addrspacecast
+      // addrspacecast can only fold through a bitcast if the source was already
+      // a pointer. A byte-to-pointer bitcast must stay as a separate bitcast.
+      if (!SrcTy->isPtrOrPtrVectorTy())
+        return 0;
       return Instruction::AddrSpaceCast;
     case 15:
       // FIXME: this state can be merged with (1), but the following assert

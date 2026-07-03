@@ -11,10 +11,15 @@
 
 #include "orc-rt/Error.h"
 #include "orc-rt/ExecutorProcessInfo.h"
-#include "orc-rt/TaskDispatcher.h"
+#include "orc-rt/WrapperFunction.h"
 #include "orc-rt/move_only_function.h"
 
+#include "orc-rt-c/CoreTypes.h"
+#include "orc-rt-c/WrapperFunction.h"
+
+#include <cassert>
 #include <cstddef>
+#include <cstdint>
 #include <future>
 
 inline void noErrors(orc_rt::Error Err) { orc_rt::cantFail(std::move(Err)); }
@@ -23,13 +28,13 @@ inline orc_rt::ExecutorProcessInfo mockExecutorProcessInfo() noexcept {
   return orc_rt::ExecutorProcessInfo("arm64-apple-darwin", 16384);
 }
 
-class NoDispatcher : public orc_rt::TaskDispatcher {
-public:
-  void dispatch(std::unique_ptr<orc_rt::Task> T) override {
-    assert(false && "strictly no dispatching!");
-  }
-  void shutdown() override {}
-};
+/// RunWrapperCall callback for tests that should never dispatch a wrapper
+/// call. Asserts on invocation.
+inline void noDispatch(orc_rt_SessionRef, uint64_t,
+                       orc_rt_WrapperFunctionReturn, orc_rt_WrapperFunction,
+                       orc_rt::WrapperFunctionBuffer) {
+  assert(false && "strictly no dispatching!");
+}
 
 template <size_t Idx = 0> class OpCounter {
 public:

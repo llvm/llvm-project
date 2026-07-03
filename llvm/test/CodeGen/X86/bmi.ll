@@ -2079,4 +2079,147 @@ define i32 @blsi32_not(i32 %x) nounwind {
   %not = xor i32 %and, -1
   ret i32 %not
 }
+define i8 @blsi8(i8 %x) {
+; X86-LABEL: blsi8:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    blsil %eax, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: blsi8:
+; X64:       # %bb.0:
+; X64-NEXT:    blsil %edi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: blsi8:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    blsil %edi, %eax # encoding: [0xc4,0xe2,0x78,0xf3,0xdf]
+; EGPR-NEXT:    # kill: def $al killed $al killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %neg = sub i8 0, %x
+  %and = and i8 %x, %neg
+  ret i8 %and
+}
 
+define i16 @blsi16(i16 %x) {
+; X86-LABEL: blsi16:
+; X86:       # %bb.0:
+; X86-NEXT:    blsil {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: blsi16:
+; X64:       # %bb.0:
+; X64-NEXT:    blsil %edi, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: blsi16:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    blsil %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0xf3,0xdf]
+; EGPR-NEXT:    # kill: def $ax killed $ax killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %neg = sub i16 0, %x
+  %and = and i16 %x, %neg
+  ret i16 %and
+}
+
+define i8 @blsi8_trunc(i32 %x) {
+; X86-LABEL: blsi8_trunc:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    blsil %eax, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: blsi8_trunc:
+; X64:       # %bb.0:
+; X64-NEXT:    blsil %edi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: blsi8_trunc:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    blsil %edi, %eax # encoding: [0xc4,0xe2,0x78,0xf3,0xdf]
+; EGPR-NEXT:    # kill: def $al killed $al killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %t = trunc i32 %x to i8
+  %neg = sub i8 0, %t
+  %and = and i8 %t, %neg
+  ret i8 %and
+}
+
+define i16 @blsi16_trunc(i32 %x) {
+; X86-LABEL: blsi16_trunc:
+; X86:       # %bb.0:
+; X86-NEXT:    blsil {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: blsi16_trunc:
+; X64:       # %bb.0:
+; X64-NEXT:    blsil %edi, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: blsi16_trunc:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    blsil %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0xf3,0xdf]
+; EGPR-NEXT:    # kill: def $ax killed $ax killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %t = trunc i32 %x to i16
+  %neg = sub i16 0, %t
+  %and = and i16 %t, %neg
+  ret i16 %and
+}
+
+define i8 @blsmsk8(i8 %x) nounwind {
+; X86-LABEL: blsmsk8:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    blsmskl %eax, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: blsmsk8:
+; X64:       # %bb.0:
+; X64-NEXT:    blsmskl %edi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: blsmsk8:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    blsmskl %edi, %eax # encoding: [0xc4,0xe2,0x78,0xf3,0xd7]
+; EGPR-NEXT:    # kill: def $al killed $al killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %y = add i8 %x, -1
+  %z = xor i8 %x, %y
+  ret i8 %z
+}
+
+define i8 @blsmsk8_trunc(i32 %x) nounwind {
+; X86-LABEL: blsmsk8_trunc:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    blsmskl %eax, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: blsmsk8_trunc:
+; X64:       # %bb.0:
+; X64-NEXT:    blsmskl %edi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: blsmsk8_trunc:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    blsmskl %edi, %eax # encoding: [0xc4,0xe2,0x78,0xf3,0xd7]
+; EGPR-NEXT:    # kill: def $al killed $al killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %t = trunc i32 %x to i8
+  %y = add i8 %t, -1
+  %z = xor i8 %t, %y
+  ret i8 %z
+}

@@ -35,7 +35,7 @@ which includes :ref:`C <c>`, :ref:`Objective-C <objc>`, :ref:`C++ <cxx>`, and
 language-specific information, please see the corresponding language
 specific section:
 
--  :ref:`C Language <c>`: K&R C, ANSI C89, ISO C90, C94 (C89+AMD1), C99 (+TC1,
+-  :ref:`C Language <c>`: K&R C, ANSI C89, ISO C90, C95 (C90+AMD1), C99 (+TC1,
    TC2, TC3), C11, C17, C23, and C2y.
 -  :ref:`Objective-C Language <objc>`: ObjC 1, ObjC 2, ObjC 2.1, plus
    variants depending on base language.
@@ -940,6 +940,8 @@ Clang options that don't fit neatly into other categories.
   * ``no-compact-unwind`` - Only emit DWARF unwind when compact unwind encodings
     aren't available. This is the default for arm64.
   * ``always`` - Always emit DWARF unwind regardless.
+  * ``dwarf-only`` - Always emit DWARF unwind, and force compact unwind to defer
+    to DWARF.
   * ``default`` - Use the platform-specific default (``always`` for all
     non-arm64-platforms).
 
@@ -4030,7 +4032,7 @@ Differences between various standard modes
 ------------------------------------------
 
 clang supports the ``-std`` option, which changes what language mode clang uses.
-The supported modes for C are c89, gnu89, c94, c99, gnu99, c11, gnu11, c17,
+The supported modes for C are c89, gnu89, iso9899:199409 (for C95), c99, gnu99, c11, gnu11, c17,
 gnu17, c23, gnu23, c2y, gnu2y, and various aliases for those modes. If no ``-std``
 option is specified, clang defaults to gnu17 mode. Many C99 and C11 features
 are supported in earlier modes as a conforming extension, with a warning. Use

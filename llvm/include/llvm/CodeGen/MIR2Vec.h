@@ -211,16 +211,14 @@ class MIRVocabulary {
 
 public:
   /// Static method for extracting base opcode names (public for testing)
-  LLVM_ABI_FOR_TEST static std::string
-  extractBaseOpcodeName(StringRef InstrName);
+  LLVM_ABI static std::string extractBaseOpcodeName(StringRef InstrName);
 
   /// Get indices from opcode or operand names. These are public for testing.
   /// String based lookups are inefficient and should be avoided in general.
-  LLVM_ABI_FOR_TEST unsigned
-  getCanonicalIndexForBaseName(StringRef BaseName) const;
-  LLVM_ABI_FOR_TEST unsigned
+  LLVM_ABI unsigned getCanonicalIndexForBaseName(StringRef BaseName) const;
+  LLVM_ABI unsigned
   getCanonicalIndexForOperandName(StringRef OperandName) const;
-  LLVM_ABI_FOR_TEST unsigned
+  LLVM_ABI unsigned
   getCanonicalIndexForRegisterClass(StringRef RegName,
                                     bool IsPhysical = true) const;
 
@@ -266,7 +264,7 @@ public:
   MIRVocabulary() = delete;
 
   /// Factory method to create MIRVocabulary from vocabulary map
-  LLVM_ABI_FOR_TEST static Expected<MIRVocabulary>
+  LLVM_ABI static Expected<MIRVocabulary>
   create(VocabMap &&OpcMap, VocabMap &&CommonOperandsMap, VocabMap &&PhyRegMap,
          VocabMap &&VirtRegMap, const TargetInstrInfo &TII,
          const TargetRegisterInfo &TRI, const MachineRegisterInfo &MRI);

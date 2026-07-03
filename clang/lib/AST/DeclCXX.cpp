@@ -109,9 +109,10 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       ImplicitCopyAssignmentHasConstParam(true),
       HasDeclaredCopyConstructorWithConstParam(false),
       HasDeclaredCopyAssignmentWithConstParam(false),
-      IsAnyDestructorNoReturn(false), IsHLSLIntangible(false), IsPFPType(false),
-      IsLambda(false), IsParsingBaseSpecifiers(false),
-      ComputedVisibleConversions(false), HasODRHash(false), Definition(D) {}
+      IsAnyDestructorNoReturn(false), IsHLSLIntangible(false),
+      IsHLSLBuiltinRecord(false), IsPFPType(false), IsLambda(false),
+      IsParsingBaseSpecifiers(false), ComputedVisibleConversions(false),
+      HasODRHash(false), Definition(D) {}
 
 CXXBaseSpecifier *CXXRecordDecl::DefinitionData::getBasesSlowCase() const {
   return Bases.get(Definition->getASTContext().getExternalSource());
@@ -3130,6 +3131,16 @@ bool CXXConstructorDecl::isSpecializationCopyingObject() const {
   // Is it the same as our class type?
   CanQualType ClassTy = Context.getCanonicalTagType(getParent());
   return ParamType == ClassTy;
+}
+
+ArrayRef<CXXDefaultArgExpr *>
+CXXConstructorDecl::getCtorClosureDefaultArgs() const {
+  return getASTContext().getCtorClosureDefaultArgs(getCanonicalDecl());
+}
+
+void CXXConstructorDecl::setCtorClosureDefaultArgs(
+    ArrayRef<CXXDefaultArgExpr *> Args) {
+  getASTContext().setCtorClosureDefaultArgs(getCanonicalDecl(), Args);
 }
 
 void CXXDestructorDecl::anchor() {}
