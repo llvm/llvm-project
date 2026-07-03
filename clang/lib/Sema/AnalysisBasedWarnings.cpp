@@ -3527,7 +3527,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     // disables them for all later functions. Run only that analysis, only for
     // an enforced profile, and only on a valid decl (so the CFG is buildable).
     // Other analyses keep the early-out.
-    if (S.anyProfileEnforced(CFGUninitProfiles) && !D->isInvalidDecl() &&
+    if (hasEnforcedCFGUninitProfile() && !D->isInvalidDecl() &&
         !Diags.hasFatalErrorOccurred())
       runUninitProfileAnalysisAfterError(S, D);
     return;
@@ -3651,7 +3651,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     Analyzer.run(AC);
   }
 
-  if (S.anyProfileEnforced(CFGUninitProfiles) ||
+  if (hasEnforcedCFGUninitProfile() ||
       !Diags.isIgnored(diag::warn_uninit_var, D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_sometimes_uninit_var, D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_maybe_uninit_var, D->getBeginLoc()) ||
