@@ -1468,15 +1468,17 @@ const char *Prescanner::FixedFormContinuationLine(bool atNewline) {
   for (int i{4}; i > 0 && nextLine_[i] == ' '; --i) {
     ++trailingSpaces;
   }
-  const char *afterCComment{SkipCComment(SkipWhiteSpace(nextLine_))};
-  bool CCommentAndSpaces{!HasTabInLabelField(nextLine_) && afterCComment &&
+  const char *afterWhiteSpace{SkipWhiteSpace(nextLine_)};
+  const char *afterCComment{
+      IsCComment(afterWhiteSpace) ? SkipCComment(afterWhiteSpace) : nullptr};
+  bool cCommentAndSpaces{afterCComment && !HasTabInLabelField(nextLine_) &&
       afterCComment - nextLine_ + trailingSpaces == 5};
   bool canBeNonDirectiveContinuation{
       ((col1 == ' ' ||
            ((col1 == 'D' || col1 == 'd') &&
                features_.IsEnabled(LanguageFeature::OldDebugLines))) &&
           trailingSpaces == 4) ||
-      CCommentAndSpaces};
+      cCommentAndSpaces};
   if (InCompilerDirective() && !(InConditionalLine() && !preprocessingOnly_)) {
     // !$ under -E is not continued, but deferred to later compilation
     if (IsFixedFormCommentChar(col1) &&

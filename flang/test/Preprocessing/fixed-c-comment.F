@@ -56,6 +56,11 @@ C comment */
 ! CHECK-NOT: C comment
       i = 8 /* C comment after statement */
 
+! CHECK: i = 9
+! CHECK-NOT: 8
+      i = 9
+* */ 88
+
 ! CHECK: print
 ! CHECK-NOT: C comment
 	print *, "TAB"
