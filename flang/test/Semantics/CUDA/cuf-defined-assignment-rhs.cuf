@@ -1,0 +1,34 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+
+module m
+  type box
+    integer :: n
+  end type
+
+  interface assignment(=)
+    module procedure assign_host
+    module procedure assign_device
+  end interface
+
+contains
+  subroutine assign_host(lhs, rhs)
+    type(box), intent(inout) :: lhs
+    real, intent(in) :: rhs(:)
+  end subroutine
+
+  subroutine assign_device(lhs, rhs)
+    type(box), intent(inout) :: lhs
+    real, device, intent(in) :: rhs(:)
+  end subroutine
+end module
+
+subroutine test
+  use m
+  type(box) :: lhs
+  real :: host(4)
+  real, device, allocatable :: dev(:)
+  allocate(dev(4))
+
+  lhs = host
+  lhs = dev
+end subroutine

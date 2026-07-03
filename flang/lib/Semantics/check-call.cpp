@@ -27,6 +27,37 @@ namespace characteristics = Fortran::evaluate::characteristics;
 
 namespace Fortran::semantics {
 
+template <typename A> static bool IsParenthesizedVariable(const A &) {
+  return false;
+}
+
+template <typename T>
+static bool IsParenthesizedVariable(const evaluate::Expr<T> &expr) {
+  if (const auto *parens{
+          evaluate::UnwrapExpr<evaluate::Parentheses<T>>(expr)}) {
+    return evaluate::IsVariable(parens->left());
+  }
+  return false;
+}
+
+template <evaluate::TypeCategory CAT>
+static bool IsParenthesizedVariable(
+    const evaluate::Expr<evaluate::SomeKind<CAT>> &expr) {
+  return common::visit(
+      [](const auto &x) { return IsParenthesizedVariable(x); }, expr.u);
+}
+
+static bool IsParenthesizedVariable(
+    const evaluate::Expr<evaluate::SomeType> &expr) {
+  return common::visit(
+      [](const auto &x) { return IsParenthesizedVariable(x); }, expr.u);
+}
+
+static bool IsVariableOrParenthesizedVariable(
+    const evaluate::Expr<evaluate::SomeType> &expr) {
+  return evaluate::IsVariable(expr) || IsParenthesizedVariable(expr);
+}
+
 void CheckImplicitInterfaceArgKeywords(
     const evaluate::ActualArgument &arg, parser::ContextualMessages &messages) {
   auto restorer{
@@ -1132,7 +1163,9 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       !FindOpenACCConstructContaining(scope)) {
     std::optional<common::CUDADataAttr> actualDataAttr, dummyDataAttr;
     // For a%b%c, the last symbol with a CUDA data attribute wins
-    if (actualIsVariable) {
+    // Parentheses here mean expression/copy semantics, but CUDA address space
+    // attributes remain stable when a variable is materialized as a copy.
+    if (IsVariableOrParenthesizedVariable(actual)) {
       for (const Symbol &s : evaluate::GetSymbolVector(actual)) {
         if (const auto *object{s.detailsIf<ObjectEntityDetails>()}) {
           if (auto cudaAttr{object->cudaDataAttr()}) {
