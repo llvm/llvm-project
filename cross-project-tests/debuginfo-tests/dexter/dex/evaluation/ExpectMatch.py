@@ -12,7 +12,7 @@ from enum import Enum, IntEnum
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from dex.dextIR import ValueIR
-from dex.test_script.Nodes import Expect, Address
+from dex.test_script.Nodes import Expect, Address, Float
 
 
 def get_expected_value_set(
@@ -49,6 +49,10 @@ def get_expected_value_set(
         for sub_expect, sub_expected in expected.items():
             next_prepend = prepend_tuple + (str(sub_expect),)
             result.update(get_expected_value_set(sub_expected, next_prepend))
+    elif isinstance(expected, Float):
+        # Float nodes may themselves contain lists of values; we treat each of those as individual expected values.
+        for expected_float in expected.get_expected_values():
+            result[prepend_tuple + (expected_float,)] += 1
     else:
         result[prepend_tuple + (str(expected),)] += 1
     return result
@@ -141,6 +145,13 @@ class DebuggerExpectMatch:
             return actual_result, MatchResult.FALSE
         if isinstance(self.expected, Address):
             return self._get_address_actual_result(self.expected, actual_result)
+
+        if isinstance(self.expected, Float):
+            matched_expected = self.expected.matches(actual_result)
+            if matched_expected is None:
+                return actual_result, MatchResult.FALSE
+            self.expected = matched_expected
+            return actual_result, MatchResult.TRUE
 
         match_result = MatchResult.from_bools(str(self.expected) == actual_result)
         return actual_result, match_result
