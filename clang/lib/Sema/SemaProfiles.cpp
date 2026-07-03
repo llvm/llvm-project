@@ -800,12 +800,20 @@ static UninitStorage glvalueDenotesUninitStorage(ASTContext &Ctx,
   if (const auto *ME = dyn_cast<MemberExpr>(E)) {
     // a->m reaches m through the pointer a (object *a); a.m through the
     // glvalue a. When m does not itself denote uninit storage, the subobject is
-    // uninit exactly when its base is.
+    // uninit exactly when its base is. The base recursion leaves read mode:
+    // the ForRead drop exists because a *directly named* [[uninit]] object and
+    // a current-object member are flow-tracked (by the CFG uninit_read pass
+    // and the ctor-body pass, which credit assignments), but neither pass
+    // tracks a subobject reached through a member access -- and member-wise
+    // delayed initialization of an [[uninit]] object is itself banned (paper
+    // §5.4; only whole-object construct_at re-initializes, which is uniformly
+    // unmodeled) -- so below the top level the marker counts even for a read.
     if (DeclDenotesUninit(ME->getMemberDecl()))
       return UninitStorage::Uninitialized;
-    return ME->isArrow()
-               ? pointerRefersToUninitStorage(Ctx, ME->getBase(), ForRead)
-               : glvalueDenotesUninitStorage(Ctx, ME->getBase(), ForRead);
+    return ME->isArrow() ? pointerRefersToUninitStorage(Ctx, ME->getBase(),
+                                                        /*ForRead=*/false)
+                         : glvalueDenotesUninitStorage(Ctx, ME->getBase(),
+                                                       /*ForRead=*/false);
   }
   // A call to a [[ref_to_uninit]]-returning reference function: the referent
   // it returns is uninitialized.
@@ -892,6 +900,27 @@ void SemaProfiles::checkInitProfileRefToUninitBinding(SourceLocation Loc,
                        T->isReferenceType(), Src, D);
 }
 
+// The read-through diagnostic distinguishes indirection through a
+// [[ref_to_uninit]] pointer/reference from a subobject read of a named
+// [[uninit]] object, which involves no [[ref_to_uninit]] entity. Approximate
+// but sufficient for phrasing: walk up the dot member chain; the read is the
+// latter form iff the chain reaches an [[uninit]]-marked member (e.g. the
+// class-type member in this->agg.f) or bottoms out at a named [[uninit]]
+// declaration. An arrow access reaches its object through a pointer, so the
+// pointer wording applies from there on.
+static bool isMemberChainOfUninitObject(const Expr *E) {
+  E = E->IgnoreParenImpCasts();
+  while (const auto *ME = dyn_cast<MemberExpr>(E)) {
+    if (ME->getMemberDecl()->hasAttr<UninitAttr>())
+      return true;
+    if (ME->isArrow())
+      return false;
+    E = ME->getBase()->IgnoreParenImpCasts();
+  }
+  const auto *DRE = dyn_cast<DeclRefExpr>(E);
+  return DRE && DRE->getDecl()->hasAttr<UninitAttr>();
+}
+
 void SemaProfiles::checkInitProfileReadThrough(SourceLocation Loc,
                                                const Expr *Glvalue,
                                                QualType ValueType) {
@@ -909,7 +938,8 @@ void SemaProfiles::checkInitProfileReadThrough(SourceLocation Loc,
   if (glvalueDenotesUninitStorage(getASTContext(), Glvalue, /*ForRead=*/true) !=
       UninitStorage::Uninitialized)
     return;
-  Diag(Loc, diag::err_init_uninit_read_through) << "std::init";
+  Diag(Loc, diag::err_init_uninit_read_through)
+      << "std::init" << (isMemberChainOfUninitObject(Glvalue) ? 1 : 0);
 }
 
 

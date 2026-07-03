@@ -1074,18 +1074,25 @@ recognizers symmetric.
   (``Sema::DefaultLvalueConversion`` calling ``SemaProfiles::checkInitProfileReadThrough``),
   which by-value reads -- copy-initialization, by-value arguments, returns, and
   operator/condition operands -- all funnel through.  It reuses the recognizer
-  in a read-only mode (a ``ForRead`` flag that drops the directly-named
-  ``[[uninit]]`` arm, leaving a direct read of such a named object to the
-  flow-based ``uninit_read`` pass while still recognizing indirection through a
-  ``[[ref_to_uninit]]`` pointer/reference), reports the shared rule
+  in a read-only mode (a ``ForRead`` flag), reports the shared rule
   ``uninit_read`` via ``err_init_uninit_read_through``, and exempts ``std::byte``
-  (paper §4.5).  Being Decl-less, it defers on a dependent context and fires
-  once, at instantiation.  An address-of (``&*p``), a reference binding, a
-  discarded-value expression (``(void)*p``), and a write (``*p = 5``) apply no
-  lvalue-to-rvalue conversion and so are not reads.  Out of scope, as remaining
-  limitations: class-type read-through (copy construction from ``*p``) and
-  compound-assignment reads (``*p += 1``, which build no lvalue-to-rvalue node),
-  consistent with the scalar slice and the deferred-writes stance.
+  (paper §4.5).  Read-only mode drops the ``[[uninit]]`` marker only for the
+  *top-level* named entity -- a directly named ``[[uninit]]`` object and a
+  current-object member are flow-tracked (by the CFG ``uninit_read`` pass and
+  the ctor-body pass, which credit assignments), so their direct reads are left
+  to those passes.  A *subobject* read of a named ``[[uninit]]`` object
+  (``s.x``, ``o.agg.f``) is recognized and diagnosed here: neither flow pass
+  tracks it, and member-wise delayed initialization of an ``[[uninit]]`` object
+  is itself banned (paper §5.4; only whole-object ``construct_at``
+  re-initializes, which is uniformly unmodeled), so no assignment could have
+  given the member a value.  Being Decl-less, it defers on a dependent context
+  and fires once, at instantiation.  An address-of (``&*p``), a reference
+  binding, a discarded-value expression (``(void)*p``), and a write (``*p = 5``
+  or ``s.x = 1``) apply no lvalue-to-rvalue conversion and so are not reads.
+  Out of scope, as remaining limitations: class-type read-through (copy
+  construction from ``*p``) and compound-assignment reads (``*p += 1``, which
+  build no lvalue-to-rvalue node), consistent with the scalar slice and the
+  deferred-writes stance.
 - Known gaps: recognition is purely of the source's syntactic form, so a
   binding whose underlying operand is unrecognized -- pointer arithmetic, an
   integer-to-pointer cast, a call through a function pointer (no

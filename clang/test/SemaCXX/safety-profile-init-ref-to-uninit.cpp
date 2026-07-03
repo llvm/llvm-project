@@ -724,6 +724,82 @@ void test_read_negatives(int *p [[ref_to_uninit]], int &r [[ref_to_uninit]],
   (void)ap; (void)q; (void)r2;
 }
 
+// A subobject read of a named [[uninit]] object loads an uninitialized value,
+// exactly like a read through a [[ref_to_uninit]] pointer: member-wise delayed
+// initialization of an [[uninit]] object is banned (paper §5.4), so no
+// assignment could have given the member a value. Only the *whole-object*
+// direct read of a named [[uninit]] entity is left to the flow-based
+// uninit_read pass (which credits assignments).
+struct Pair { int x; int y; };
+struct PairHolder { Pair p; };
+
+void test_member_read_of_uninit_object() {
+  Pair s [[uninit]];
+  int y1 = s.x;    // expected-error {{read of a member of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
+  take_value(s.y); // expected-error {{read of a member of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
+  PairHolder o [[uninit]];
+  int y2 = o.p.x;  // expected-error {{read of a member of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
+  // The arrow spelling reaches the member through a pointer, so the
+  // diagnostic's phrasing approximation picks the pointer wording; the read is
+  // diagnosed all the same.
+  int y3 = (&s)->x; // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  (void)y1; (void)y2; (void)y3;
+}
+
+// Writes, discarded values, and address-taking apply no lvalue-to-rvalue
+// conversion and are not reads; taking the member's address is the binding
+// checks' territory (unchanged behavior, retested as a regression guard).
+void test_member_read_negatives() {
+  Pair s [[uninit]];
+  s.x = 1;                         // OK: write, not a read (writes are a deferred slice)
+  (void)s.x;                       // OK: discarded value
+  int *p = &s.x;                   // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int *q [[ref_to_uninit]] = &s.x; // OK: binding checked by ref_to_uninit
+  (void)p; (void)q;
+}
+
+void test_member_read_suppress() {
+  Pair s [[uninit]];
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init, rule: "uninit_read")]] { take_value(s.x); } // OK
+}
+
+// std::byte members stay exempt (paper §4.5).
+struct WithByte { std::byte b; int i; };
+void test_member_read_byte_exempt() {
+  WithByte s [[uninit]];
+  std::byte b = s.b; // OK
+  (void)b;
+}
+
+// The §5.2 trust pattern is preserved: a scalar [[uninit]] *member* of the
+// current object may be assigned in the constructor body (flow-checked by the
+// ctor-body pass), so a member-function read of it is not flagged here.
+struct BodyInit {
+  int m [[uninit]];
+  BodyInit() { m = 1; }
+  int get() { return m; } // OK: trusted, assigned in the constructor body
+};
+
+// But a subobject of an [[uninit]] *class-type member* has no legal
+// assignment path (member-wise delayed initialization is banned, and
+// construct_at flow is uniformly unmodeled), so its read is flagged even on
+// the current object.
+struct HasAggMember {
+  Pair agg [[uninit]];
+  int get() { return agg.x; } // expected-error {{read of a member of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
+};
+
+// Like every Decl-less read check, the member read defers on a template
+// pattern and fires once, at instantiation.
+template <typename T>
+void template_member_read_bad() {
+  Pair s [[uninit]];
+  int y = s.x; // expected-error {{read of a member of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
+  (void)y;
+}
+template void template_member_read_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_member_read_bad<int>' requested here}}
+
 // A read through a [[ref_to_uninit]] parameter inside a template body defers on
 // the pattern (a dependent context) and fires once, at instantiation -- whether
 // the read's operand is non-dependent (template_read_nondependent_bad) or
