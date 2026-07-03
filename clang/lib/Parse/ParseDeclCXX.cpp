@@ -5314,7 +5314,7 @@ bool Parser::TryParseProfilesAttribute(IdentifierInfo *AttrName,
     return true;
   };
 
-  void *CustomData;
+  void *CustomData = nullptr;
   if (AttrName->isStr("enforce")) {
     SmallVector<ParsedProfileDesignator, 2> Parsed;
     if (ParseProfileDesignatorList(Parsed))

@@ -2275,6 +2275,11 @@ private:
                           IdentifierInfo *ScopeName, SourceLocation ScopeLoc,
                           ParsedAttr::Form Form);
 
+  /// Handle a `profiles::` scoped attribute (P3589R2), which needs custom
+  /// argument parsing. Returns false if the attribute is not one of the
+  /// profile attributes and the caller should parse it normally. Returns true
+  /// if the attribute was consumed -- either parsed successfully (an attribute
+  /// was added to \p Attrs) or diagnosed and skipped (no attribute added).
   bool TryParseProfilesAttribute(IdentifierInfo *AttrName,
                                  SourceLocation AttrNameLoc,
                                  ParsedAttributes &Attrs,
