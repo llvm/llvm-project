@@ -8876,6 +8876,40 @@ static Instruction *foldFCmpFSubIntoFCmp(FCmpInst &I, Instruction *LHSI,
   return nullptr;
 }
 
+/// Fold: fcmp (fmul X, C1), C2 --> fcmp X, C2/C1
+static Instruction *foldFCmpFmulIntoFCmp(FCmpInst &I, Instruction *LHSI,
+                                         Constant *RHSC) {
+  FCmpInst::Predicate Pred = I.getPredicate();
+
+  if ((Pred != FCmpInst::FCMP_OGE) && (Pred != FCmpInst::FCMP_OGT) &&
+      (Pred != FCmpInst::FCMP_OLE) && (Pred != FCmpInst::FCMP_OLT) &&
+      (Pred != FCmpInst::FCMP_ONE) && (Pred != FCmpInst::FCMP_OEQ) &&
+      (Pred != FCmpInst::FCMP_UGE) && (Pred != FCmpInst::FCMP_UGT) &&
+      (Pred != FCmpInst::FCMP_ULE) && (Pred != FCmpInst::FCMP_ULT) &&
+      (Pred != FCmpInst::FCMP_UNE) && (Pred != FCmpInst::FCMP_UEQ))
+    return nullptr;
+
+  ConstantFP *C;
+  if (!match(LHSI->getOperand(1), m_ConstantFP(C)) || C->isZero())
+    return nullptr;
+
+  Type *FPTy = LHSI->getType()->getScalarType();
+  if (FPTy->isHalfTy() ||
+      I.getFunction()->getDenormalMode(FPTy->getFltSemantics()) !=
+          DenormalMode::getIEEE())
+    return nullptr;
+
+  if (C->isNegative())
+    Pred = I.getSwappedPredicate();
+
+  Constant *NewRHSC = ConstantFoldBinaryOpOperands(Instruction::FDiv, RHSC, C,
+                                                   I.getDataLayout());
+  if (!NewRHSC)
+    return nullptr;
+
+  return new FCmpInst(Pred, LHSI->getOperand(0), NewRHSC, "", &I);
+}
+
 /// Fold: fabs(uitofp(a) - uitofp(b)) pred C --> a == b
 /// where 'pred' is olt, ult, ogt, ugt, oge or uge and C is a positive, Non-NaN
 /// float when the uitofp casts are exact and C is in the valid range.
@@ -9235,6 +9269,10 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
     case Instruction::SIToFP:
     case Instruction::UIToFP:
       if (Instruction *NV = foldFCmpIntToFPConst(I, LHSI, RHSC))
+        return NV;
+      break;
+    case Instruction::FMul:
+      if (Instruction *NV = foldFCmpFmulIntoFCmp(I, LHSI, RHSC))
         return NV;
       break;
     case Instruction::FDiv:

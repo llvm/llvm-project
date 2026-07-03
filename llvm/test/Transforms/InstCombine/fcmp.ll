@@ -2835,3 +2835,282 @@ define <2 x i1> @fabs_uitofp_sub_vec_bf16_no_fold(<2 x i16> %x, <2 x i16> %y) {
   %cmp = fcmp olt <2 x bfloat> %abs, splat (bfloat 0xR3F80)
   ret <2 x i1> %cmp
 }
+
+define i1 @fcmp_oeq_fmul_pos_const(float %x) {
+; CHECK-LABEL: @fcmp_oeq_fmul_pos_const(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[X:%.*]], 3.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = fmul float %x, 2.0
+  %cmp = fcmp oeq float %mul, 6.0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_one_fmul_pos_const(float %x) {
+; CHECK-LABEL: @fcmp_one_fmul_pos_const(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one float [[X:%.*]], 3.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = fmul float %x, 2.0
+  %cmp = fcmp one float %mul, 6.0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_ueq_fmul_pos_const(float %x) {
+; CHECK-LABEL: @fcmp_ueq_fmul_pos_const(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq float [[X:%.*]], 3.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = fmul float %x, 2.0
+  %cmp = fcmp ueq float %mul, 6.0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_une_fmul_pos_const(float %x) {
+; CHECK-LABEL: @fcmp_une_fmul_pos_const(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float [[X:%.*]], 3.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = fmul float %x, 2.0
+  %cmp = fcmp une float %mul, 6.0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_ogt_fmul_pos_const(float %x) {
+; CHECK-LABEL: @fcmp_ogt_fmul_pos_const(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[X:%.*]], 3.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = fmul float %x, 2.0
+  %cmp = fcmp ogt float %mul, 6.0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_oge_fmul_pos_const(float %x) {
+; CHECK-LABEL: @fcmp_oge_fmul_pos_const(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[X:%.*]], 3.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = fmul float %x, 2.0
+  %cmp = fcmp oge float %mul, 6.0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_olt_fmul_pos_const(float %x) {
+; CHECK-LABEL: @fcmp_olt_fmul_pos_const(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[X:%.*]], 3.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = fmul float %x, 2.0
+  %cmp = fcmp olt float %mul, 6.0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_ole_fmul_pos_const(float %x) {
+; CHECK-LABEL: @fcmp_ole_fmul_pos_const(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole float [[X:%.*]], 3.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = fmul float %x, 2.0
+  %cmp = fcmp ole float %mul, 6.0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_ogt_fmul_neg_const(float %x) {
+; CHECK-LABEL: @fcmp_ogt_fmul_neg_const(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[X:%.*]], -3.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = fmul float %x, -2.0
+  %cmp = fcmp ogt float %mul, 6.0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_oge_fmul_neg_const(float %x) {
+; CHECK-LABEL: @fcmp_oge_fmul_neg_const(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole float [[X:%.*]], -3.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = fmul float %x, -2.0
+  %cmp = fcmp oge float %mul, 6.0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_olt_fmul_neg_const(float %x) {
+; CHECK-LABEL: @fcmp_olt_fmul_neg_const(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[X:%.*]], -3.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = fmul float %x, -2.0
+  %cmp = fcmp olt float %mul, 6.0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_ole_fmul_neg_const(float %x) {
+; CHECK-LABEL: @fcmp_ole_fmul_neg_const(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[X:%.*]], -3.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = fmul float %x, -2.0
+  %cmp = fcmp ole float %mul, 6.0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_ugt_fmul_pos_const(float %x) {
+; CHECK-LABEL: @fcmp_ugt_fmul_pos_const(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt float [[X:%.*]], 3.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = fmul float %x, 2.0
+  %cmp = fcmp ugt float %mul, 6.0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_uge_fmul_pos_const(float %x) {
+; CHECK-LABEL: @fcmp_uge_fmul_pos_const(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge float [[X:%.*]], 3.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = fmul float %x, 2.0
+  %cmp = fcmp uge float %mul, 6.0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_ult_fmul_pos_const(float %x) {
+; CHECK-LABEL: @fcmp_ult_fmul_pos_const(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult float [[X:%.*]], 3.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = fmul float %x, 2.0
+  %cmp = fcmp ult float %mul, 6.0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_ule_fmul_pos_const(float %x) {
+; CHECK-LABEL: @fcmp_ule_fmul_pos_const(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ule float [[X:%.*]], 3.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = fmul float %x, 2.0
+  %cmp = fcmp ule float %mul, 6.0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_ugt_fmul_neg_const(float %x) {
+; CHECK-LABEL: @fcmp_ugt_fmul_neg_const(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult float [[X:%.*]], -3.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = fmul float %x, -2.0
+  %cmp = fcmp ugt float %mul, 6.0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_uge_fmul_neg_const(float %x) {
+; CHECK-LABEL: @fcmp_uge_fmul_neg_const(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ule float [[X:%.*]], -3.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = fmul float %x, -2.0
+  %cmp = fcmp uge float %mul, 6.0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_ult_fmul_neg_const(float %x) {
+; CHECK-LABEL: @fcmp_ult_fmul_neg_const(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt float [[X:%.*]], -3.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = fmul float %x, -2.0
+  %cmp = fcmp ult float %mul, 6.0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_ule_fmul_neg_const(float %x) {
+; CHECK-LABEL: @fcmp_ule_fmul_neg_const(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge float [[X:%.*]], -3.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = fmul float %x, -2.0
+  %cmp = fcmp ule float %mul, 6.0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_ogt_fmul_pos_const_extra_use(float %x) {
+; CHECK-LABEL: @fcmp_ogt_fmul_pos_const_extra_use(
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X:%.*]], 2.000000e+00
+; CHECK-NEXT:    call void @use(float [[MUL]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[X]], 3.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = fmul float %x, 2.0
+  call void @use(float %mul)
+  %cmp = fcmp ogt float %mul, 6.0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_ogt_fmul_zero_const(float %x) {
+; CHECK-LABEL: @fcmp_ogt_fmul_zero_const(
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[MUL]], 6.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = fmul float %x, 0.0
+  %cmp = fcmp ogt float %mul, 6.0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_ord_fmul_pos_const(float %x) {
+; CHECK-LABEL: @fcmp_ord_fmul_pos_const(
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X:%.*]], 2.000000e+00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[MUL]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = fmul float %x, 2.0
+  %cmp = fcmp ord float %mul, 6.0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_uno_fmul_pos_const(float %x) {
+; CHECK-LABEL: @fcmp_uno_fmul_pos_const(
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X:%.*]], 2.000000e+00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[MUL]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = fmul float %x, 2.0
+  %cmp = fcmp uno float %mul, 6.0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_ogt_fmul_no_const(float %x, float %y) {
+; CHECK-LABEL: @fcmp_ogt_fmul_no_const(
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[MUL]], 6.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = fmul float %x, %y
+  %cmp = fcmp ogt float %mul, 6.0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_oeq_fmul_pos_const_daz(float %x) denormal_fpenv(ieee|preservesign) {
+; CHECK-LABEL: @fcmp_oeq_fmul_pos_const_daz(
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X:%.*]], 2.000000e+00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[MUL]], 6.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = fmul float %x, 2.0
+  %cmp = fcmp oeq float %mul, 6.0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_oeq_fmul_half_const(half %x) {
+; CHECK-LABEL: @fcmp_oeq_fmul_half_const(
+; CHECK-NEXT:    [[MUL:%.*]] = fmul half [[X:%.*]], 3.000000e+00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq half [[MUL]], 1.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %mul = fmul half %x, 0xH4200
+  %cmp = fcmp oeq half %mul, 0xH3C00
+  ret i1 %cmp
+}
