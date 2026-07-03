@@ -20,6 +20,18 @@ using namespace llvm;
 
 namespace {
 
+/// Expands FORM_TRANSPOSED_REG_TUPLE_{X2|X4}_PSEUDO instructions into a
+/// copy sequences. Note: This expansion occurs immediately before greedy
+/// regalloc and after the pre-RA scheduler.
+///
+/// Example:
+///
+///   %v2:zpr2 = FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO %v0.zsub0, %v1.zsub0
+///
+/// Expands to:
+///
+///   undef %v2.zsub0:zpr2 = COPY_INTO_TRANSPOSED_TUPLE %v0.zsub0, 2
+///   %v2.zsub1:zpr2 = COPY_INTO_TRANSPOSED_TUPLE %v1.zsub0, 2
 static bool expandFormTransposedRegTuple(MachineBasicBlock &MBB,
                                          MachineInstr &MI, LiveIntervals &LIS) {
   const TargetInstrInfo *TII =
