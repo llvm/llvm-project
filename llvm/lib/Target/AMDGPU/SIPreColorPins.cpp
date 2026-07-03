@@ -7,32 +7,19 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// Lowers the PIN_{VGPR,AGPR}_B* pseudos produced from
-/// llvm.amdgcn.pin.{vgpr,agpr} into a hard register assignment ("pre-coloring").
+/// Lowers the PIN_{VGPR,AGPR}_B* pseudos (from llvm.amdgcn.pin.{vgpr,agpr})
+/// into a hard physical-register assignment ("pre-coloring"): the pinned
+/// value's def and uses are rewritten to reference the requested VGPR/AGPR
+/// tuple directly, so the allocator treats it as fixed interference and cannot
+/// override it (unlike a soft hint). The whole tie-connected component is
+/// rewritten together, so a pin on an MFMA accumulator input also pins its tied
+/// output.
 ///
-/// The value being pinned is rewritten so that its def and all its uses
-/// reference the requested physical VGPR/AGPR tuple directly. Because the value
-/// is then a physical register in the MIR, the register allocator treats it as
-/// fixed interference and can never place it elsewhere or let another value
-/// clobber it -- unlike the soft allocation hint, this cannot be overridden by
-/// competing coalescer copy-hints (e.g. an MFMA accumulator chain).
-///
-/// Tied operands (e.g. the in-place MFMA accumulator, whose vdst is tied to
-/// src2) require care: both ends of a tie must share the same register. The
-/// pass therefore rewrites the whole *tie-connected component* of virtual
-/// registers, so a pin placed on the accumulator input also pins the tied
-/// output. Subregister references are rewritten to the corresponding physical
-/// subregister.
-///
-/// When hard pinning is not safe (a def in the component is a PHI, REG_SEQUENCE
-/// or IMPLICIT_DEF, the physical (sub)register is not a legal member of some
-/// rewritten operand's register class, or the tuple conflicts with an already
-/// hard-pinned value) the pass falls back to the soft behaviour: a COPY plus a
-/// register-allocation hint. This guarantees the pass never regresses
-/// correctness.
-///
-/// Runs pre-RA while the function is still in SSA form (before PHIElimination /
-/// TwoAddressInstruction), so each value has a single reaching def.
+/// When hard pinning is unsafe (a PHI/REG_SEQUENCE/IMPLICIT_DEF def, a physreg
+/// illegal for some operand's class, or a tuple conflicting with an existing
+/// hard pin) the pass falls back to a COPY plus a soft allocation hint, so it
+/// never regresses correctness. Runs pre-RA in SSA form (before PHIElimination
+/// / TwoAddressInstruction), so each value has a single reaching def.
 //
 //===----------------------------------------------------------------------===//
 
@@ -63,15 +50,6 @@ static cl::opt<bool> PinAgprVgprC(
     "amdgpu-pin-agpr-vgpr-c", cl::init(true), cl::Hidden,
     cl::desc("Convert an AGPR-input MFMA to vgprcd to keep its accumulator in "
              "VGPR (else keep the native all-AGPR form)"));
-
-// Experimental (default off): if nonzero, an AGPR-input pin caps occupancy so
-// the vgprcd accumulator plus this many VGPRs of headroom stay resident, in
-// place of __launch_bounds__. Driving occupancy here can perturb hard-pinned
-// physreg live ranges at low occupancy, so __launch_bounds__ is preferred.
-static cl::opt<unsigned> PinAccVGPRMargin(
-    "amdgpu-pin-acc-vgpr-margin", cl::init(0), cl::Hidden,
-    cl::desc("If nonzero, VGPRs reserved above a vgprcd accumulator so an "
-             "AGPR-input pin can drive occupancy (experimental)"));
 
 namespace {
 
@@ -109,9 +87,9 @@ static bool isPinPseudo(const SIInstrInfo *TII, const MachineInstr &MI) {
   return N.starts_with("PIN_VGPR_B") || N.starts_with("PIN_AGPR_B");
 }
 
-// Physical register tuple a pin targets, or 0 if it is not a legal member of the
-// destination register class (e.g. a misaligned start on a target that requires
-// aligned tuples).
+// Physical register tuple a pin targets, or 0 if it is not a legal member of
+// the destination register class (e.g. a misaligned start on a target that
+// requires aligned tuples).
 static MCRegister getPinPhysReg(const SIRegisterInfo *TRI,
                                 const TargetRegisterClass *RC, unsigned RegNo) {
   unsigned First =
@@ -139,35 +117,31 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
   if (Pins.empty())
     return false;
 
-  // Regunits already claimed by a hard pin. A later pin whose tuple overlaps any
-  // claimed unit falls back to soft, so two distinct simultaneously-live values
-  // can never be forced into the same physical register. (Legitimate reuse of a
-  // register by a single value -- e.g. an accumulation chain -- is absorbed by
-  // the tie-connected component of the first pin, after which the value is
-  // already physical and later pins on it are no-ops.)
+  // Regunits already claimed by a hard pin. A later pin overlapping any claimed
+  // unit falls back to soft, so two distinct live values never share a physreg.
+  // Reuse by a single value (e.g. an accumulation chain) is instead absorbed
+  // into the first pin's tie-connected component, making later pins on it
+  // no-ops.
   DenseSet<MCRegUnit> Claimed;
   bool NeedRecomputeLiveIns = false;
-  unsigned ReqVGPRs = 0, ReqAGPRs = 0; // highest register a pin needs, +1
-  // Accumulator tiles routed to VGPR by the vgprcd conversion; their footprint
-  // optionally drives the occupancy cap (see PinAccVGPRMargin).
-  DenseSet<Register> AccTiles;
-
+  unsigned ReqVGPRs =
+      0; // highest VGPR a pin needs, +1 (drives the occupancy cap)
   for (MachineInstr *Pin : Pins) {
+    assert(Pin->getNumExplicitOperands() == 3 &&
+           "pin pseudo must be (dst, src, regno)");
     Register Dst = Pin->getOperand(0).getReg();
     Register Src = Pin->getOperand(1).getReg();
     unsigned RegNo = Pin->getOperand(2).getImm();
     const TargetRegisterClass *RC = MRI.getRegClass(Dst);
     MCRegister PR = getPinPhysReg(TRI, RC, RegNo);
 
-    // Record how many registers this pin needs so the pin itself can drive the
-    // occupancy target (the register budget must cover the pinned range).
     unsigned NumRegs = TRI->getRegSizeInBits(*RC) / 32;
     bool WantAGPR = TRI->isAGPRClass(RC);
 
-    // Targets without an AGPR file (e.g. RDNA) cannot honor an AGPR pin. Degrade
-    // to a soft no-op -- forward the source to the uses and drop the pin -- so the
-    // value stays in its natural VGPR location instead of failing register
-    // allocation with "no registers from class available".
+    // Targets without an AGPR file (e.g. RDNA) cannot honor an AGPR pin.
+    // Degrade to a soft no-op -- forward the source to the uses and drop the
+    // pin -- so the value stays in its natural VGPR location instead of failing
+    // register allocation with "no registers from class available".
     if (WantAGPR && !ST.hasMAIInsts()) {
       for (MachineOperand &MO :
            llvm::make_early_inc_range(MRI.use_operands(Dst)))
@@ -177,22 +151,22 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
       Pin->eraseFromParent();
       continue;
     }
-    if (WantAGPR)
-      ReqAGPRs = std::max(ReqAGPRs, RegNo + NumRegs);
-    else
+    // Only VGPR pins drive the occupancy cap (see below); AGPRs are a separate
+    // file that does not affect the VGPR budget.
+    if (!WantAGPR)
       ReqVGPRs = std::max(ReqVGPRs, RegNo + NumRegs);
 
-    // Constrain the pinned value's register file (and connected vregs) to VGPR
-    // or AGPR. This is a class narrowing, not a physreg pin, so it also works
-    // for loop-carried PHI values; it no-ops when the file is incompatible.
+    // Narrow the pinned value's register file to VGPR or AGPR (a class
+    // narrowing, not a physreg pin, so it also works for loop-carried PHIs and
+    // no-ops when the file is incompatible).
     {
-      // Gather the copy/REG_SEQUENCE/tie-connected component of `Seeds` and
-      // constrain each member to the requested file. MFMA src2<->vdst edges are
-      // followed only when `FollowAcc`; otherwise an MFMA *using* a member as
-      // src0/src1 is recorded in `Inputs` as a leaf, so an input pin does not
-      // drag the loop-carried accumulator into the AGPR file. `Recompute`
-      // re-derives classes from defs first (needed after an opcode conversion,
-      // since constrainRegClass cannot cross the disjoint AGPR/VGPR files).
+      // Constrain the copy/REG_SEQUENCE/PHI/tie-connected component of `Seeds`.
+      // MFMA src2<->vdst edges are followed only when `FollowAcc`; otherwise an
+      // MFMA using a member as src0/src1 is recorded in `Inputs` as a leaf, so
+      // an input pin does not drag the loop-carried accumulator into the AGPR
+      // file. `Recompute` re-derives classes from defs first (needed after an
+      // opcode conversion, since constrainRegClass cannot cross the AGPR/VGPR
+      // files).
       auto constrainComponent = [&](ArrayRef<Register> Seeds, bool AGPRFile,
                                     bool FollowAcc, bool Recompute,
                                     SmallPtrSetImpl<MachineInstr *> &Inputs) {
@@ -207,11 +181,9 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
         for (unsigned I = 0; I < WL.size(); ++I) {
           for (MachineOperand &MO : MRI.reg_operands(WL[I])) {
             MachineInstr *MI = MO.getParent();
-            // Copy / REG_SEQUENCE / PHI all just move the value between vregs;
-            // pull every register operand into the component. PHI matters for
-            // the loop-carried accumulator: without it the carried value stays
-            // in its original file (AGPR) while the vgprcd MFMA computes in VGPR,
-            // forcing an agpr<->vgpr copy every iteration.
+            // Copy/REG_SEQUENCE/PHI just move the value between vregs; pull in
+            // every register operand. PHI keeps a loop-carried accumulator in
+            // one file (else it needs an agpr<->vgpr copy each iteration).
             if (MI->isCopy() || MI->isRegSequence() || MI->isPHI()) {
               for (MachineOperand &O : MI->operands())
                 if (O.isReg())
@@ -243,8 +215,9 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
         }
         for (Register R : WL) {
           // A constant accumulator init (e.g. clear()==0) placed in an AGPR by
-          // V_ACCVGPR_WRITE can't be constrained to VGPR; rewrite it to V_MOV so
-          // the constant is born in VGPR instead of copied from AGPR each launch.
+          // V_ACCVGPR_WRITE can't be constrained to VGPR; rewrite it to V_MOV
+          // so the constant is born in VGPR instead of copied from AGPR each
+          // launch.
           if (!AGPRFile)
             for (MachineInstr &Def :
                  make_early_inc_range(MRI.def_instructions(R))) {
@@ -270,11 +243,11 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
       constrainComponent(Seeds, /*AGPRFile=*/WantAGPR, /*FollowAcc=*/!WantAGPR,
                          /*Recompute=*/false, InputMFMAs);
 
-      // ISel picks the all-AGPR MFMA form when the function needs AGPRs. To keep
-      // the accumulator in VGPR, convert each consuming MFMA to vgprcd and
-      // constrain its accumulator (vdst/srcC chain) to VGPR, re-deriving classes
-      // from the converted defs. The chain stays coalesced in VGPR (no chunked
-      // pins, no agpr<->vgpr shuffle).
+      // ISel picks the all-AGPR MFMA form when the function needs AGPRs. To
+      // keep the accumulator in VGPR, convert each consuming MFMA to vgprcd and
+      // constrain its accumulator (vdst/srcC chain) to VGPR, re-deriving
+      // classes from the converted defs. The chain stays coalesced in VGPR (no
+      // chunked pins, no agpr<->vgpr shuffle).
       if (WantAGPR && PinAgprVgprC && !InputMFMAs.empty()) {
         SmallVector<Register, 8> AccSeeds;
         for (MachineInstr *MI : InputMFMAs) {
@@ -282,14 +255,10 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
           if (VOp == -1)
             continue; // already vgprcd form
           MI->setDesc(TII->get(VOp));
-          if (MI->getOperand(0).isReg()) {
+          if (MI->getOperand(0).isReg())
             AccSeeds.push_back(MI->getOperand(0).getReg());
-            // Each converted MFMA's vdst is one accumulator tile now living in
-            // VGPR; track distinct tiles for the occupancy cap below.
-            AccTiles.insert(MI->getOperand(0).getReg());
-          }
-          int S2 = AMDGPU::getNamedOperandIdx(MI->getOpcode(),
-                                              AMDGPU::OpName::src2);
+          int S2 =
+              AMDGPU::getNamedOperandIdx(MI->getOpcode(), AMDGPU::OpName::src2);
           if (S2 >= 0 && MI->getOperand(S2).isReg())
             AccSeeds.push_back(MI->getOperand(S2).getReg());
         }
@@ -304,8 +273,9 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
     // A sub-register source means the value is a slice of a shared register
     // (e.g. one ds_read2 loads two pinned fragments into one wide reg). Pinning
     // it -- hard or soft -- would move overlapping physreg sub-slices and
-    // miscompile. The shared reg is already in the right file (above), so the pin
-    // is redundant: forward the source (sub)register to the uses and drop it.
+    // miscompile. The shared reg is already in the right file (above), so the
+    // pin is redundant: forward the source (sub)register to the uses and drop
+    // it.
     if (Pin->getOperand(1).getSubReg()) {
       unsigned SubIdx = Pin->getOperand(1).getSubReg();
       for (MachineOperand &MO :
@@ -320,9 +290,10 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
     bool Hard = EnableHardPin && PR && Src.isVirtual() && Dst.isVirtual();
 
     // Deterministic AGPR placement for a load tuple: when the pinned value is a
-    // REG_SEQUENCE of (folded) AGPR loads, rewrite each element's def to a fixed
-    // physical AGPR sub-register. Otherwise the MFMA A/B operands are AV and the
-    // allocator moves them back to VGPR under low pressure (non-deterministic).
+    // REG_SEQUENCE of (folded) AGPR loads, rewrite each element's def to a
+    // fixed physical AGPR sub-register. Otherwise the MFMA A/B operands are AV
+    // and the allocator moves them back to VGPR under low pressure
+    // (non-deterministic).
     if (Hard && WantAGPR) {
       MachineInstr *RS = MRI.getVRegDef(Src);
       MachineBasicBlock *PinMBB = Pin->getParent();
@@ -358,7 +329,8 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
         for (MachineOperand &MO : MRI.reg_operands(Dst)) {
           if (MO.getParent() == Pin)
             continue;
-          MCRegister T = MO.getSubReg() ? TRI->getSubReg(PR, MO.getSubReg()) : PR;
+          MCRegister T =
+              MO.getSubReg() ? TRI->getSubReg(PR, MO.getSubReg()) : PR;
           if (!LegalHere(MO, T)) {
             Ok = false;
             break;
@@ -395,7 +367,8 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
           if (MO.getParent() != Pin)
             Ops.push_back(&MO);
         for (MachineOperand *MO : Ops) {
-          MCRegister T = MO->getSubReg() ? TRI->getSubReg(PR, MO->getSubReg()) : PR;
+          MCRegister T =
+              MO->getSubReg() ? TRI->getSubReg(PR, MO->getSubReg()) : PR;
           MO->setReg(T);
           MO->setSubReg(0);
           MO->setIsRenamable(false);
@@ -432,8 +405,8 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
           // MFMA form is 3-address, so an accumulation chain is connected by
           // src2->vdst def-use rather than ties; pin the whole chain as a unit.
           if (TII->isMAI(*MI)) {
-            int Src2 =
-                AMDGPU::getNamedOperandIdx(MI->getOpcode(), AMDGPU::OpName::src2);
+            int Src2 = AMDGPU::getNamedOperandIdx(MI->getOpcode(),
+                                                  AMDGPU::OpName::src2);
             if (Src2 >= 0) {
               const MachineOperand &V2 = MI->getOperand(Src2);
               const MachineOperand &VD = MI->getOperand(0);
@@ -469,8 +442,9 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
             Hard = false;
             break;
           }
-          const TargetRegisterClass *OpRC = MO.getParent()->getRegClassConstraint(
-              MO.getOperandNo(), TII, TRI);
+          const TargetRegisterClass *OpRC =
+              MO.getParent()->getRegClassConstraint(MO.getOperandNo(), TII,
+                                                    TRI);
           if (OpRC && !OpRC->contains(Tgt)) {
             Hard = false;
             break;
@@ -507,8 +481,8 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
       }
     }
 
-    // Partition operands. Non-tied *subregister uses* (e.g. the per-lane reads a
-    // wide accumulator feeds into stores) are not rewritten to physical
+    // Partition operands. Non-tied *subregister uses* (e.g. the per-lane reads
+    // a wide accumulator feeds into stores) are not rewritten to physical
     // subregisters -- that yields fragile physical-subreg live ranges. Instead
     // they read a virtual copy-out of the whole tuple.
     SmallVector<MachineOperand *, 16> DirectOps, SubUses;
@@ -591,30 +565,22 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
     fullyRecomputeLiveIns(MBBs);
   }
 
-  // Cap occupancy so a wide VGPR-resident value fits the per-wave budget without
-  // the user setting __launch_bounds__. Only VGPR footprints drive this: AGPRs
-  // are a separate file, so feeding an AGPR count into the VGPR occupancy formula
-  // would wrongly raise occupancy and spill the VGPR accumulator. `AccVGPRs` is
-  // the footprint of the vgprcd accumulator tiles plus PinAccVGPRMargin.
+  // Cap occupancy so a wide VGPR-resident pinned value fits the per-wave budget
+  // without the user setting __launch_bounds__. Only VGPR footprints drive
+  // this: AGPRs are a separate file, so feeding an AGPR count into the VGPR
+  // occupancy formula would wrongly raise occupancy and spill the VGPR
+  // accumulator.
   auto *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  unsigned AccVGPRs = 0;
-  if (PinAccVGPRMargin) {
-    for (Register R : AccTiles)
-      if (R.isVirtual())
-        AccVGPRs += TRI->getRegSizeInBits(*MRI.getRegClass(R)) / 32;
-    if (AccVGPRs)
-      AccVGPRs += PinAccVGPRMargin;
-  }
-  unsigned Req = std::max(ReqVGPRs, AccVGPRs);
-  if (Req) {
+  if (unsigned Req = ReqVGPRs) {
     // Occupancy achievable while reserving `Req` registers per wave; cap the
     // waves-per-EU (and hence the RA's VGPR budget) so the pinned range fits.
     unsigned Occ = ST.getOccupancyWithNumVGPRs(Req);
     auto WPE = MFI->getWavesPerEU();
     unsigned NewMax = WPE.second ? std::min(WPE.second, Occ) : Occ;
     // Only cap the *max* occupancy; keep the min low (1 unless the function
-    // already required more). Forcing min==max over-constrains the allocator and
-    // breaks physreg liveness for hard-pinned loop-body tuples at low occupancy.
+    // already required more). Forcing min==max over-constrains the allocator
+    // and breaks physreg liveness for hard-pinned loop-body tuples at low
+    // occupancy.
     unsigned NewMin = std::min(WPE.first ? WPE.first : 1u, NewMax);
     MFI->setWavesPerEU(NewMin, NewMax);
     MFI->limitOccupancy(NewMax);

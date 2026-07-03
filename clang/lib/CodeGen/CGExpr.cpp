@@ -3060,51 +3060,50 @@ llvm::Value *CodeGenFunction::emitAMDGPUPinnedValue(llvm::Value *V,
   auto It = AMDGPUPinnedLocals.find(Addr);
   if (It == AMDGPUPinnedLocals.end())
     return V;
+  // The pin intrinsics are AMDGCN-only; ignore the attribute on other targets
+  // rather than emit invalid IR.
+  if (!getTarget().getTriple().isAMDGCN())
+    return V;
   bool IsAGPR = It->second.first;
   unsigned Reg = It->second.second;
   llvm::Type *Ty = V->getType();
   unsigned Bits = CGM.getDataLayout().getTypeSizeInBits(Ty);
   if (Bits == 0 || (Bits % 32) != 0)
-    return V; // only whole-dword values are pinnable
+    return V; // Only whole-dword values are pinnable.
   unsigned Lanes = Bits / 32;
 
-  llvm::Intrinsic::ID IID =
-      IsAGPR ? llvm::Intrinsic::amdgcn_pin_agpr : llvm::Intrinsic::amdgcn_pin_vgpr;
+  llvm::Intrinsic::ID IID = IsAGPR ? llvm::Intrinsic::amdgcn_pin_agpr
+                                   : llvm::Intrinsic::amdgcn_pin_vgpr;
 
-  // Pin patterns exist for i32-based widths of 1/2/4/8/16 dwords (i32, v2i32,
-  // v4i32, v8i32, v16i32); a float base would need v1f32/v2f32, which have none
-  // and crash isel. Decompose any dword count into these widths (e.g. 12 -> 8+4).
-  llvm::Type *I32 = Int32Ty;
-  auto *VecI = llvm::FixedVectorType::get(I32, Lanes);
-  llvm::Value *Vec = Builder.CreateBitCast(V, VecI);
+  // Patterns exist only for i32 widths 1/2/4/8/16 (float bases would need
+  // v1f32/v2f32, which have no pattern and crash isel), so bitcast to <N x i32>
+  // and decompose into those widths (e.g. 12 -> 8 + 4).
+  auto *VecTy = llvm::FixedVectorType::get(Int32Ty, Lanes);
+  llvm::Value *Vec = Builder.CreateBitCast(V, VecTy);
 
-  auto pin = [&](llvm::Value *Chunk, unsigned RegNo) -> llvm::Value * {
+  auto Pin = [&](llvm::Value *Chunk, unsigned RegNo) -> llvm::Value * {
     llvm::Function *Fn = CGM.getIntrinsic(IID, {Chunk->getType()});
     return Builder.CreateCall(Fn,
                               {Chunk, llvm::ConstantInt::get(Int32Ty, RegNo)});
   };
-  auto floorWidth = [](unsigned L) -> unsigned {
-    if (L >= 16) return 16;
-    if (L >= 8) return 8;
-    if (L >= 4) return 4;
-    if (L >= 2) return 2;
+  auto FloorWidth = [](unsigned L) -> unsigned {
+    for (unsigned W : {16u, 8u, 4u, 2u})
+      if (L >= W)
+        return W;
     return 1;
   };
 
-  unsigned Off = 0;
-  while (Off < Lanes) {
-    unsigned W = floorWidth(Lanes - Off);
+  for (unsigned Off = 0; Off < Lanes;) {
+    unsigned W = FloorWidth(Lanes - Off);
     if (W == 1) {
       llvm::Value *Idx = llvm::ConstantInt::get(Int32Ty, Off);
       llvm::Value *Elt = Builder.CreateExtractElement(Vec, Idx);
-      Elt = pin(Elt, Reg + Off);
-      Vec = Builder.CreateInsertElement(Vec, Elt, Idx);
+      Vec = Builder.CreateInsertElement(Vec, Pin(Elt, Reg + Off), Idx);
     } else {
       llvm::Value *Idx = llvm::ConstantInt::get(Int64Ty, Off);
       llvm::Value *Sub = Builder.CreateExtractVector(
-          llvm::FixedVectorType::get(I32, W), Vec, Idx);
-      Sub = pin(Sub, Reg + Off);
-      Vec = Builder.CreateInsertVector(VecI, Vec, Sub, Idx);
+          llvm::FixedVectorType::get(Int32Ty, W), Vec, Idx);
+      Vec = Builder.CreateInsertVector(VecTy, Vec, Pin(Sub, Reg + Off), Idx);
     }
     Off += W;
   }

@@ -2546,12 +2546,11 @@ def int_amdgcn_readfirstlane :
   Intrinsic<[llvm_any_ty], [LLVMMatchType<0>],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree, IntrNoCreateUndefOrPoison]>;
 
-// Register-pinning hint. Requests that the value operand be kept in the physical
-// VGPR (int_amdgcn_pin_vgpr) or AGPR (int_amdgcn_pin_agpr) tuple starting at the
-// number given by the second (immediate) operand. Overloaded on the value type:
-// a 32/64/128-bit value pins to 1/2/4 consecutive registers starting at that
-// number. This is a soft register-allocation hint: the allocator prefers those
-// registers when feasible and falls back under pressure. Value passed unchanged.
+// Register-pinning hint. Requests that the (unchanged) value operand be kept in
+// the physical VGPR (int_amdgcn_pin_vgpr) or AGPR (int_amdgcn_pin_agpr) tuple
+// starting at the number given by the immediate second operand. The allocator
+// prefers that placement when feasible and falls back under pressure; on a
+// target with no AGPR file an AGPR pin is a no-op.
 def int_amdgcn_pin_vgpr :
   Intrinsic<[llvm_any_ty], [LLVMMatchType<0>, llvm_i32_ty],
             [IntrNoMem, IntrWillReturn, IntrNoCallback, IntrNoFree,

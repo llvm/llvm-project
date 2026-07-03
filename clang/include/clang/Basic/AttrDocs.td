@@ -3496,6 +3496,25 @@ An error will be given if:
   }];
 }
 
+def AMDGPUPinRegDocs : Documentation {
+  let Category = DocCatAMDGPUAttributes;
+  let Content = [{
+The ``amdgpu_pin_vgpr(N)`` and ``amdgpu_pin_agpr(N)`` attributes request that an
+automatic local variable be placed in the physical VGPR (respectively AGPR) tuple
+starting at register number ``N``. Every store to the variable is lowered through
+the ``llvm.amdgcn.pin.{vgpr,agpr}`` intrinsics, and a value wider than one 32-bit
+register occupies consecutive registers ``N``, ``N+1``, ... .
+
+This is a placement request, not a guarantee: when the requested registers are
+unavailable (for example they conflict with another pinned value that is
+simultaneously live) the allocator falls back to its normal choice, and an AGPR
+pin is ignored on targets that have no AGPR file. The attribute is only
+meaningful on automatic (block-scope, non-static) local variables and is ignored
+elsewhere. It is intended for hand-tuned kernels (e.g. controlling MFMA/WMMA
+operand placement) and requires an AMDGPU target.
+  }];
+}
+
 def AMDGPUWavesPerEUDocs : Documentation {
   let Category = DocCatAMDGPUAttributes;
   let Content = [{

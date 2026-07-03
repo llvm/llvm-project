@@ -23,3 +23,14 @@ __attribute__((device)) void bad(int n) { // expected-note {{declared here}}
 // The attribute only applies to variables.
 // expected-warning@+1 {{'amdgpu_pin_agpr' attribute only applies to variables}}
 __attribute__((device)) __attribute__((amdgpu_pin_agpr(0))) void func(void) {}
+
+// Only automatic locals are pinnable; the attribute is ignored on globals and
+// static locals (CodeGen pins stores to an automatic variable's storage).
+// expected-warning@+1 {{'amdgpu_pin_vgpr' attribute ignored}}
+__attribute__((device)) __attribute__((amdgpu_pin_vgpr(0))) float2 g_pinned;
+
+__attribute__((device)) void bad_storage(void) {
+  // expected-warning@+1 {{'amdgpu_pin_agpr' attribute ignored}}
+  static __attribute__((amdgpu_pin_agpr(0))) float2 s;
+  (void)s;
+}
