@@ -717,7 +717,7 @@ def NVGPU_TruncfOp : NVGPU_Op<"truncf", [Pure]> {
   let hasVerifier = 1;
 }
 
-def NVGPU_ConvertFPExtOp : NVGPU_Op<"convert.fpext", [Pure]> {
+def NVGPU_ExtfOp : NVGPU_Op<"extf", [Pure]> {
   let summary = "Extend floating-point to wider floating-point";
   let description = [{
     Extend a floating-point value to a wider floating-point type.
@@ -732,10 +732,10 @@ def NVGPU_ConvertFPExtOp : NVGPU_Op<"convert.fpext", [Pure]> {
 
     Example:
     ```mlir
-    %r = nvgpu.convert.fpext %in : vector<8xf8E4M3FN> to vector<8xf16>
-    %r = nvgpu.convert.fpext %in : vector<8xf6E3M2FN> to vector<8xf16>
-    %r = nvgpu.convert.fpext %in : vector<4xf8E5M2> to vector<4xf32>
-    %r = nvgpu.convert.fpext %in : f8E4M3FN to f32
+    %r = nvgpu.extf %in : vector<8xf8E4M3FN> to vector<8xf16>
+    %r = nvgpu.extf %in : vector<8xf6E3M2FN> to vector<8xf16>
+    %r = nvgpu.extf %in : vector<4xf8E5M2> to vector<4xf32>
+    %r = nvgpu.extf %in : f8E4M3FN to f32
     ```
   }];
   let arguments = (ins FloatLike:$in,

@@ -794,10 +794,10 @@ LogicalResult TruncfOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// NVGPU_ConvertFPExtOp
+// NVGPU_ExtfOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult ConvertFPExtOp::verify() {
+LogicalResult ExtfOp::verify() {
   Type inType = getIn().getType();
   Type outType = getType();
   Type srcType = getElementTypeOrSelf(inType);

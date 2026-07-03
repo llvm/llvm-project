@@ -2048,10 +2048,10 @@ static LogicalResult lowerTruncf(nvgpu::TruncfOp op,
 }
 
 //===----------------------------------------------------------------------===//
-// NVGPUConvertFPExtOp Lowering
+// NVGPUExtfOp Lowering
 //===----------------------------------------------------------------------===//
 
-/// Conversion op identifier for nvgpu.convert.fpext lowering dispatch table.
+/// Conversion op identifier for nvgpu.extf lowering dispatch table.
 enum class FPExtConvOp {
   F8x2_TO_F16x2,
   F8x2_TO_BF16x2,
@@ -2121,8 +2121,8 @@ static Value createExtConversion(ImplicitLocOpBuilder &b, MLIRContext *ctx,
   llvm_unreachable("unhandled FPExtConvOp");
 }
 
-static LogicalResult lowerFPExt(nvgpu::ConvertFPExtOp op,
-                                nvgpu::ConvertFPExtOp::Adaptor adaptor,
+static LogicalResult lowerExtf(nvgpu::ExtfOp op,
+                               nvgpu::ExtfOp::Adaptor adaptor,
                                 ConversionPatternRewriter &rewriter,
                                 const LLVMTypeConverter *typeConverter) {
   MLIRContext *ctx = op.getContext();
@@ -2271,17 +2271,17 @@ struct NVGPUTruncfOpLowering : public ConvertOpToLLVMPattern<nvgpu::TruncfOp> {
   }
 };
 
-struct NVGPUConvertFPExtOpLowering
-    : public ConvertOpToLLVMPattern<nvgpu::ConvertFPExtOp> {
-  using ConvertOpToLLVMPattern<nvgpu::ConvertFPExtOp>::ConvertOpToLLVMPattern;
+struct NVGPUExtfOpLowering
+    : public ConvertOpToLLVMPattern<nvgpu::ExtfOp> {
+  using ConvertOpToLLVMPattern<nvgpu::ExtfOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(nvgpu::ConvertFPExtOp op, OpAdaptor adaptor,
+  matchAndRewrite(nvgpu::ExtfOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     if (isa<RankedTensorType>(op.getIn().getType()))
       return rewriter.notifyMatchFailure(
           op, "tensor inputs not handled; type converter should lower first");
-    return lowerFPExt(op, adaptor, rewriter, getTypeConverter());
+    return lowerExtf(op, adaptor, rewriter, getTypeConverter());
   }
 };
 
@@ -2297,7 +2297,7 @@ static int64_t computePaddedElems(int64_t numElems, int srcBW, int dstBW,
   return ceilDiv(padded, step) * step;
 }
 
-/// Canonicalization pattern for nvgpu.truncf / nvgpu.convert.fpext:
+/// Canonicalization pattern for nvgpu.truncf / nvgpu.extf:
 /// handles scalar inputs, non-32-bit-aligned vectors, and multi-rank vectors.
 /// Runs as an OpRewritePattern on MLIR types before LLVM type conversion.
 template <typename CvtOp, bool IsTrunc>
@@ -2382,8 +2382,8 @@ struct NVGPUFPCanonicalizePattern : public OpRewritePattern<CvtOp> {
 
 using NVGPUTruncfCanonicalizePattern =
     NVGPUFPCanonicalizePattern<nvgpu::TruncfOp, true>;
-using NVGPUConvertFPExtCanonicalizePattern =
-    NVGPUFPCanonicalizePattern<nvgpu::ConvertFPExtOp, false>;
+using NVGPUExtfCanonicalizePattern =
+    NVGPUFPCanonicalizePattern<nvgpu::ExtfOp, false>;
 } // namespace
 
 void mlir::nvgpu::populateCommonGPUTypeAndAttributeConversions(
@@ -2429,11 +2429,11 @@ void mlir::populateNVGPUToNVVMConversionPatterns(
       NVGPUWarpgroupMmaStoreOpLowering,         // nvgpu.warpgroup.mma.store
       NVGPUWarpgroupMmaInitAccumulatorOpLowering, // nvgpu.warpgroup.mma.init.accumulator
       NVGPUTruncfOpLowering,                      // nvgpu.truncf
-      NVGPUConvertFPExtOpLowering,                // nvgpu.convert.fpext
+      NVGPUExtfOpLowering,                        // nvgpu.extf
       MmaSyncOptoNVVM, MmaLdMatrixOpToNVVM, NVGPUAsyncCopyLowering,
       NVGPUAsyncCreateGroupLowering, NVGPUAsyncWaitLowering,
       NVGPUMmaSparseSyncLowering, NVGPURcpOpLowering>(converter);
 
   patterns.add<NVGPUTruncfCanonicalizePattern,
-               NVGPUConvertFPExtCanonicalizePattern>(patterns.getContext());
+               NVGPUExtfCanonicalizePattern>(patterns.getContext());
 }
