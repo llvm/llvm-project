@@ -43,162 +43,9 @@ class RegScavenger;
 class VirtRegMap;
 class LiveIntervals;
 class LiveInterval;
-class TargetRegisterClass {
-public:
-  using iterator = const MCPhysReg *;
-  using const_iterator = const MCPhysReg *;
 
-  // Instance variables filled by tablegen, do not use!
-  const MCRegisterClass *MC;
-  const uint32_t *SubClassMask;
-  const uint16_t *SuperRegIndices;
-  const LaneBitmask LaneMask;
-  /// Classes with a higher priority value are assigned first by register
-  /// allocators using a greedy heuristic. The value is in the range [0,31].
-  const uint8_t AllocationPriority;
-
-  // Change allocation priority heuristic used by greedy.
-  const bool GlobalPriority;
-
-  /// Configurable target specific flags.
-  const uint8_t TSFlags;
-  const uint8_t SpillStackID;
-  /// Whether the class supports two (or more) disjunct subregister indices.
-  const bool HasDisjunctSubRegs;
-  /// Whether a combination of subregisters can cover every register in the
-  /// class. See also the CoveredBySubRegs description in Target.td.
-  const bool CoveredBySubRegs;
-  const unsigned *SuperClasses;
-  const uint16_t SuperClassesSize;
-
-  /// Return the register class ID number.
-  unsigned getID() const { return MC->getID(); }
-
-  /// begin/end - Return all of the registers in this class.
-  ///
-  iterator       begin() const { return MC->begin(); }
-  iterator         end() const { return MC->end(); }
-
-  /// Return the number of registers in this class.
-  unsigned getNumRegs() const { return MC->getNumRegs(); }
-
-  ArrayRef<MCPhysReg> getRegisters() const {
-    return ArrayRef(begin(), getNumRegs());
-  }
-
-  /// Return the specified register in the class.
-  MCRegister getRegister(unsigned i) const {
-    return MC->getRegister(i);
-  }
-
-  /// Return true if the specified register is included in this register class.
-  /// This does not include virtual registers.
-  bool contains(Register Reg) const {
-    /// FIXME: Historically this function has returned false when given vregs
-    ///        but it should probably only receive physical registers
-    if (!Reg.isPhysical())
-      return false;
-    return MC->contains(Reg.asMCReg());
-  }
-
-  /// Return true if both registers are in this class.
-  bool contains(Register Reg1, Register Reg2) const {
-    /// FIXME: Historically this function has returned false when given a vregs
-    ///        but it should probably only receive physical registers
-    if (!Reg1.isPhysical() || !Reg2.isPhysical())
-      return false;
-    return MC->contains(Reg1.asMCReg(), Reg2.asMCReg());
-  }
-
-  /// Return the cost of copying a value between two registers in this class. If
-  /// this is the maximum value, the register may be impossible to copy.
-  uint8_t getCopyCost() const { return MC->getCopyCost(); }
-
-  /// \return true if register class is very expensive to copy e.g. status flag
-  /// register classes.
-  bool expensiveOrImpossibleToCopy() const {
-    return MC->getCopyCost() == std::numeric_limits<uint8_t>::max();
-  }
-
-  /// Return true if this register class may be used to create virtual
-  /// registers.
-  bool isAllocatable() const { return MC->isAllocatable(); }
-
-  /// Return true if this register class has a defined BaseClassOrder.
-  bool isBaseClass() const { return MC->isBaseClass(); }
-
-  /// Return true if the specified TargetRegisterClass
-  /// is a proper sub-class of this TargetRegisterClass.
-  bool hasSubClass(const TargetRegisterClass *RC) const {
-    return RC != this && hasSubClassEq(RC);
-  }
-
-  /// Returns true if RC is a sub-class of or equal to this class.
-  bool hasSubClassEq(const TargetRegisterClass *RC) const {
-    unsigned ID = RC->getID();
-    return (SubClassMask[ID / 32] >> (ID % 32)) & 1;
-  }
-
-  /// Return true if the specified TargetRegisterClass is a
-  /// proper super-class of this TargetRegisterClass.
-  bool hasSuperClass(const TargetRegisterClass *RC) const {
-    return RC->hasSubClass(this);
-  }
-
-  /// Returns true if RC is a super-class of or equal to this class.
-  bool hasSuperClassEq(const TargetRegisterClass *RC) const {
-    return RC->hasSubClassEq(this);
-  }
-
-  /// Returns a bit vector of subclasses, including this one.
-  /// The vector is indexed by class IDs.
-  ///
-  /// To use it, consider the returned array as a chunk of memory that
-  /// contains an array of bits of size NumRegClasses. Each 32-bit chunk
-  /// contains a bitset of the ID of the subclasses in big-endian style.
-
-  /// I.e., the representation of the memory from left to right at the
-  /// bit level looks like:
-  /// [31 30 ... 1 0] [ 63 62 ... 33 32] ...
-  ///                     [ XXX NumRegClasses NumRegClasses - 1 ... ]
-  /// Where the number represents the class ID and XXX bits that
-  /// should be ignored.
-  ///
-  /// See the implementation of hasSubClassEq for an example of how it
-  /// can be used.
-  const uint32_t *getSubClassMask() const {
-    return SubClassMask;
-  }
-
-  /// Returns a 0-terminated list of sub-register indices that project some
-  /// super-register class into this register class. The list has an entry for
-  /// each Idx such that:
-  ///
-  ///   There exists SuperRC where:
-  ///     For all Reg in SuperRC:
-  ///       this->contains(Reg:Idx)
-  const uint16_t *getSuperRegIndices() const {
-    return SuperRegIndices;
-  }
-
-  /// Returns a list of super-classes.  The
-  /// classes are ordered by ID which is also a topological ordering from large
-  /// to small classes.  The list does NOT include the current class.
-  ArrayRef<unsigned> superclasses() const {
-    return ArrayRef(SuperClasses, SuperClassesSize);
-  }
-
-  /// Return true if this TargetRegisterClass is a subset
-  /// class of at least one other TargetRegisterClass.
-  bool isASubClass() const { return SuperClasses != nullptr; }
-
-  /// Returns the combination of all lane masks of register in this class.
-  /// The lane masks of the registers are the combination of all lane masks
-  /// of their subregisters. Returns 1 if there are no subregisters.
-  LaneBitmask getLaneMask() const {
-    return LaneMask;
-  }
-};
+// TODO: Remove.
+using TargetRegisterClass = MCRegisterClass;
 
 /// Extra information, not in MCRegisterDesc, about registers.
 /// These are used by codegen, not by MC.
@@ -224,7 +71,6 @@ struct RegClassWeight {
 ///
 class LLVM_ABI TargetRegisterInfo : public MCRegisterInfo {
 public:
-  using regclass_iterator = const TargetRegisterClass * const *;
   using vt_iterator = const MVT::SimpleValueType *;
   struct RegClassInfo {
     unsigned RegSize, SpillSize, SpillAlignment;
@@ -248,7 +94,6 @@ private:
   // Pointer to array of lane masks, one per sub-reg index.
   const LaneBitmask *SubRegIndexLaneMasks;
 
-  regclass_iterator RegClassBegin, RegClassEnd;   // List of regclasses
   LaneBitmask CoveringLanes;
   const RegClassInfo *const RCInfos;
   const MVT::SimpleValueType *const RCVTLists;
@@ -256,7 +101,6 @@ private:
 
 protected:
   TargetRegisterInfo(const TargetRegisterInfoDesc *ID,
-                     ArrayRef<const TargetRegisterClass *> RegisterClasses,
                      const char *SubRegIndexStrings,
                      ArrayRef<uint32_t> SubRegIndexNameOffsets,
                      const SubRegCoveredBits *SubRegIdxRanges,
@@ -647,13 +491,6 @@ public:
   /// remove pseudo-registers that should be ignored).
   virtual void adjustStackMapLiveOutMask(uint32_t *Mask) const {}
 
-  /// Return a super-register of register \p Reg such that its sub-register of
-  /// index \p SubIdx is \p Reg.
-  MCRegister getMatchingSuperReg(MCRegister Reg, unsigned SubIdx,
-                                 const TargetRegisterClass *RC) const {
-    return MCRegisterInfo::getMatchingSuperReg(Reg, SubIdx, RC->MC);
-  }
-
   /// Return a subclass of the register class \p A so that each register in it
   /// has a sub-register of sub-register index \p Idx which is in the register
   /// class \p B.
@@ -866,27 +703,10 @@ protected:
   }
 
 public:
-  /// Register class iterators
-  regclass_iterator regclass_begin() const { return RegClassBegin; }
-  regclass_iterator regclass_end() const { return RegClassEnd; }
-  iterator_range<regclass_iterator> regclasses() const {
-    return make_range(regclass_begin(), regclass_end());
-  }
-
-  unsigned getNumRegClasses() const {
-    return (unsigned)(regclass_end()-regclass_begin());
-  }
-
   /// Returns the register class associated with the enumeration value.
   /// See class MCOperandInfo.
   const TargetRegisterClass *getRegClass(unsigned i) const {
-    assert(i < getNumRegClasses() && "Register Class ID out of range");
-    return RegClassBegin[i];
-  }
-
-  /// Returns the name of the register class.
-  const char *getRegClassName(const TargetRegisterClass *Class) const {
-    return MCRegisterInfo::getRegClassName(Class->MC);
+    return &MCRegisterInfo::getRegClass(i);
   }
 
   /// Find the largest common subclass of A and B.
