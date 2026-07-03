@@ -1021,9 +1021,13 @@ recognizers symmetric.
   (``Sema::ActOnFinishCXXInClassMemberInitializer``), constructor
   member-initializers (``Sema::BuildMemberInitializer``), aggregate/list field
   initialization (``InitListChecker``), pointer assignment
-  (``Sema::CreateBuiltinBinOp``), call arguments -- including arguments
-  supplied by a parameter's default argument
-  (``Sema::GatherArgumentsForCall``), and return statements
+  (``Sema::CreateBuiltinBinOp``), call arguments at parameter
+  copy-initialization (``Sema::PerformCopyInitialization``, the funnel for
+  every call form with a declared callee -- plain calls, constructor calls,
+  overloaded operators, and calls to objects of class type such as functors
+  and lambdas), arguments supplied by a parameter's default argument
+  (``Sema::GatherArgumentsForCall``, which reuses the pre-built expression
+  rather than re-running copy-initialization), and return statements
   (``Sema::BuildReturnStmt``).  Every site defers on a template pattern and
   fires once, at instantiation.  The variable, data-member, and constructor
   member-initializer sites pass the instantiated ``Decl`` (deferred by the

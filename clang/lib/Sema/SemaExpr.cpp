@@ -6282,16 +6282,15 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
     }
 
     // std::init / ref_to_uninit (paper §5): a pointer or reference argument
-    // must match the [[ref_to_uninit]] marking of its parameter. The
-    // recognizers don't see through the CXXDefaultArgExpr wrapper, so check
-    // the underlying default-argument expression.
-    if (Param && getLangOpts().Profiles) {
-      const Expr *Src = Arg;
-      if (const auto *DAE = dyn_cast<CXXDefaultArgExpr>(Src))
-        Src = DAE->getExpr();
-      Profiles().checkInitProfileRefToUninitBinding(Arg->getExprLoc(), Param,
-                                                    Param->getType(), Src);
-    }
+    // must match the [[ref_to_uninit]] marking of its parameter. A real
+    // argument is checked once, by the shared hook in
+    // PerformCopyInitialization; a default argument does not re-run
+    // copy-initialization here, so check its underlying expression (the
+    // recognizers don't see through the CXXDefaultArgExpr wrapper).
+    if (Param && getLangOpts().Profiles)
+      if (const auto *DAE = dyn_cast<CXXDefaultArgExpr>(Arg))
+        Profiles().checkInitProfileRefToUninitBinding(
+            Arg->getExprLoc(), Param, Param->getType(), DAE->getExpr());
 
     // Check for array bounds violations for each argument to the call. This
     // check only triggers warnings when the argument isn't a more complex Expr

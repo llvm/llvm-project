@@ -267,6 +267,61 @@ void test_default_arguments() {
   [[profiles::suppress(std::init)]] { def_ptr_bad(); } // OK: suppressed
 }
 
+// Call arguments are checked at parameter copy-initialization, which also
+// covers call forms that never reach GatherArgumentsForCall: calls to objects
+// of class type (functors, lambdas) and overloaded operators (member and
+// non-member).
+struct MarkedFunctor {
+  void operator()(int *p [[ref_to_uninit]]);
+};
+struct UnmarkedFunctor {
+  void operator()(int *p);
+};
+
+void test_functor_arguments() {
+  MarkedFunctor mf;
+  mf(&g_uninit); // OK
+  mf(&g_init);   // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  UnmarkedFunctor uf;
+  uf(&g_init);   // OK
+  uf(&g_uninit); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init)]] { uf(&g_uninit); } // OK: suppressed
+}
+
+void test_lambda_arguments() {
+  auto l = [](int *p [[ref_to_uninit]]) {};
+  l(&g_uninit); // OK
+  l(&g_init);   // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+}
+
+struct OpTag {};
+OpTag operator+(OpTag, int *p [[ref_to_uninit]]);
+
+struct Assignable {
+  Assignable &operator=(int *p [[ref_to_uninit]]);
+};
+
+void test_operator_arguments() {
+  OpTag t;
+  (void)(t + &g_uninit); // OK
+  (void)(t + &g_init);   // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+
+  Assignable a;
+  a = &g_uninit; // OK
+  a = &g_init;   // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+}
+
+// A functor-call argument inside a template body defers on the pattern and
+// fires once, at instantiation, like every other Decl-less binding site.
+template <typename T>
+void template_functor_bad() {
+  MarkedFunctor mf;
+  mf(&g_init); // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+}
+template void template_functor_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_functor_bad<int>' requested here}}
+
 // Pass-through sources reach the recognizer at the call-argument site too. A
 // braced scalar pointer argument additionally warns (braces around scalar
 // initializer), so the braced cases here use references; the pointer recognizer
