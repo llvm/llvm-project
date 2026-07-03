@@ -979,6 +979,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(VTABLES_TO_EMIT);
   RECORD(RISCV_VECTOR_INTRINSICS_PRAGMA);
   RECORD(ENFORCED_PROFILES);
+  RECORD(PROFILES_TU_HAS_NONEMPTY_DECL);
 
   // SourceManager Block.
   BLOCK(SOURCE_MANAGER_BLOCK);
@@ -5322,6 +5323,26 @@ void ASTWriter::WriteRISCVIntrinsicPragmas(Sema &SemaRef) {
 void ASTWriter::WriteEnforcedProfiles(Sema &SemaRef) {
   if (WritingModule)
     return;
+
+  // Record whether the TU contains a non-empty top-level declaration, so an
+  // including compile's [[profiles::enforce]] placement check (P3589R2
+  // [decl.attr.enforce]p1) can consult the bit instead of deserializing this
+  // PCH's declarations. OR in the flag restored from a base PCH so chains
+  // propagate it; the walk itself covers only the decls parsed here.
+  bool HasNonEmptyDecl = SemaRef.Profiles().TUPrecededByNonEmptyDecl;
+  if (!HasNonEmptyDecl)
+    for (const auto *D :
+         SemaRef.getASTContext().getTranslationUnitDecl()->noload_decls())
+      if (!D->isImplicit() && D->getLocation().isValid() &&
+          !isa<EmptyDecl>(D)) {
+        HasNonEmptyDecl = true;
+        break;
+      }
+  if (HasNonEmptyDecl) {
+    RecordData::value_type Record[] = {1};
+    Stream.EmitRecord(PROFILES_TU_HAS_NONEMPTY_DECL, Record);
+  }
+
   if (SemaRef.Profiles().EnforcedProfiles.empty())
     return;
 

@@ -751,6 +751,11 @@ enum ASTRecordTypes {
 
   /// Record code for enforced profile designators (P3589R2).
   ENFORCED_PROFILES = 79,
+
+  /// Record code for whether the TU contains a non-empty top-level
+  /// declaration, consulted by the [[profiles::enforce]] placement check
+  /// (P3589R2 [decl.attr.enforce]p1) so it need not deserialize the PCH.
+  PROFILES_TU_HAS_NONEMPTY_DECL = 80,
 };
 
 /// Record types used within a source manager block.

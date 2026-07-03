@@ -40,6 +40,13 @@ public:
   };
   SmallVector<ProfileEnforcement, 4> EnforcedProfiles;
 
+  /// True if an included AST file (PCH) contributed a non-empty top-level
+  /// declaration to this TU. The [[profiles::enforce]] placement check
+  /// (P3589R2 [decl.attr.enforce]p1) consults this instead of deserializing
+  /// the PCH's declarations; ASTWriter ORs it forward so chained PCHs
+  /// propagate the bit.
+  bool TUPrecededByNonEmptyDecl = false;
+
   struct ProfileSuppressEntry {
     StringRef ProfileName;
     StringRef RuleName;

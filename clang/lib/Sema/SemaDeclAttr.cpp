@@ -5464,9 +5464,18 @@ static void handleProfilesEnforceAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 
   // P3589R2 [decl.attr.enforce]p1: enforce on empty-declaration shall precede
-  // any non-empty-declaration.
+  // any non-empty-declaration. Declarations in an included PCH precede the
+  // main file but must not be deserialized just for this check: the PCH
+  // records whether it contains any (PROFILES_TU_HAS_NONEMPTY_DECL), and the
+  // walk below covers only the parsed declarations (noload_decls).
   auto *TU = cast<TranslationUnitDecl>(D->getDeclContext());
-  for (const auto *Prev : TU->decls()) {
+  if (S.Profiles().TUPrecededByNonEmptyDecl) {
+    // The preceding declaration lives in the PCH; without deserializing it
+    // there is no Decl to point a note at.
+    S.Diag(AL.getLoc(), diag::err_profiles_enforce_after_decl);
+    return;
+  }
+  for (const auto *Prev : TU->noload_decls()) {
     if (Prev->isImplicit() || !Prev->getLocation().isValid())
       continue;
     if (!isa<EmptyDecl>(Prev)) {

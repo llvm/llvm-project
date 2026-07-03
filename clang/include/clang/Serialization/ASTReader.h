@@ -1011,6 +1011,10 @@ private:
   /// Enforced profile designators from PCH (P3589R2).
   SmallVector<profiles::EnforcedProfile, 0> SerializedEnforcedProfiles;
 
+  /// Whether an included AST file recorded a non-empty top-level declaration
+  /// (PROFILES_TU_HAS_NONEMPTY_DECL, P3589R2 enforce placement).
+  bool SerializedTUHasNonEmptyDecl = false;
+
   /// The pragma clang optimize location (if the pragma state is "off").
   SourceLocation OptimizeOffPragmaLocation;
 

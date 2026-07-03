@@ -4378,6 +4378,10 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       SerializedEnforcedProfiles.push_back(readEnforcedProfile(Record, Blob));
       break;
 
+    case PROFILES_TU_HAS_NONEMPTY_DECL:
+      SerializedTUHasNonEmptyDecl = true;
+      break;
+
     case DECLS_WITH_EFFECTS_TO_VERIFY:
       for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)
         DeclsWithEffectsToVerify.push_back(ReadDeclID(F, Record, I));
@@ -9298,6 +9302,8 @@ void ASTReader::UpdateSema() {
     SemaObj->Profiles().addProfileEnforcement(EP.ProfileName, EP.Designator,
                                    SourceLocation());
   SerializedEnforcedProfiles.clear();
+  if (SerializedTUHasNonEmptyDecl)
+    SemaObj->Profiles().TUPrecededByNonEmptyDecl = true;
 
   // For non-modular AST files, restore visiblity of modules.
   for (auto &Import : PendingImportedModulesSema) {
