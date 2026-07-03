@@ -4461,7 +4461,34 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
           }
         }
 
-        CurDAG->setNodeMemRefs(Res, FilteredMemRefs);
+        if (Res->memoperands_empty()) {
+          // If the node is new, just copy the MMOs.
+          CurDAG->setNodeMemRefs(Res, FilteredMemRefs);
+        } else {
+          // If the node is reused, most likely the existing MMOs are exactly
+          // the same as the new ones, in which case there is nothing to do.
+          bool AllEqual =
+              Res->memoperands().size() == FilteredMemRefs.size() &&
+              all_of(zip_equal(Res->memoperands(), FilteredMemRefs),
+                     [](const std::tuple<const MachineMemOperand *,
+                                         const MachineMemOperand *> &Pair) {
+                       return *std::get<0>(Pair) == *std::get<1>(Pair);
+                     });
+          if (!AllEqual) {
+            // If the MMOs differ, we have to retain both lists to be
+            // conservative. Deduplicate the MMOs.
+            SmallVector<MachineMemOperand *> NewMemRefs;
+            append_range(NewMemRefs, Res->memoperands());
+            for (MachineMemOperand *NewMMO : FilteredMemRefs) {
+              if (any_of(NewMemRefs, [NewMMO](MachineMemOperand *MMO) {
+                    return *MMO == *NewMMO;
+                  }))
+                continue;
+              NewMemRefs.push_back(NewMMO);
+            }
+            CurDAG->setNodeMemRefs(Res, NewMemRefs);
+          }
+        }
       }
 
       LLVM_DEBUG({
