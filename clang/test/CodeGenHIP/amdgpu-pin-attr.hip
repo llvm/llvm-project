@@ -22,6 +22,18 @@ __attribute__((device)) void pin_vgpr(float2 *out, float2 in) {
   *out = x;
 }
 
+// A value wider than the largest pin width is decomposed into i32 chunks of
+// 16/8/4/2/1 dwords at consecutive register numbers (12 dwords -> 8 + 4).
+typedef float float12 __attribute__((ext_vector_type(12)));
+// CHECK-LABEL: define{{.*}}pin_wide
+// CHECK: call <8 x i32> @llvm.amdgcn.pin.vgpr.v8i32(<8 x i32> %{{[0-9]+}}, i32 0)
+// CHECK: call <4 x i32> @llvm.amdgcn.pin.vgpr.v4i32(<4 x i32> %{{[0-9]+}}, i32 8)
+__attribute__((device)) void pin_wide(float12 *out, float12 in) {
+  __attribute__((amdgpu_pin_vgpr(0))) float12 x;
+  x = in;
+  *out = x;
+}
+
 // A constant-expression argument (here via a template parameter) is accepted and
 // evaluated at instantiation.
 template <int N>
