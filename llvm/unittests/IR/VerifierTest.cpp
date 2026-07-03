@@ -543,12 +543,9 @@ TEST(VerifierTest, ElementwiseLoadNonAtomic) {
   Type *I32Ty = Type::getInt32Ty(C);
   Type *VecTy = FixedVectorType::get(I32Ty, 4);
 
-  new LoadInst(VecTy, Ptr, "",
-               LoadStoreInstProperties{/*IsVolatile=*/false, Align(4),
-                                       AtomicOrdering::NotAtomic,
-                                       SyncScope::System,
-                                       /*IsElementwise=*/true},
-               Entry);
+  new LoadInst(VecTy, Ptr, "", /*isVolatile=*/false, Align(4),
+               AtomicOrdering::NotAtomic, SyncScope::System,
+               /*IsElementwise=*/true, Entry);
   ReturnInst::Create(C, Entry);
 
   std::string Error;
@@ -570,8 +567,8 @@ TEST(VerifierTest, ElementwiseLoadScalar) {
   Type *I32Ty = Type::getInt32Ty(C);
 
   new LoadInst(I32Ty, Ptr, "", /*isVolatile=*/false, Align(4),
-               AtomicOrdering::Monotonic, SyncScope::System, Entry,
-               /*IsElementwise=*/true);
+               AtomicOrdering::Monotonic, SyncScope::System,
+               /*IsElementwise=*/true, Entry);
   ReturnInst::Create(C, Entry);
 
   std::string Error;
@@ -594,8 +591,8 @@ TEST(VerifierTest, ElementwiseLoadOddSizedVector) {
   Type *VecTy = FixedVectorType::get(I32Ty, 5);
 
   new LoadInst(VecTy, Ptr, "", /*isVolatile=*/false, Align(4),
-               AtomicOrdering::Monotonic, SyncScope::System, Entry,
-               /*IsElementwise=*/true);
+               AtomicOrdering::Monotonic, SyncScope::System,
+               /*IsElementwise=*/true, Entry);
   ReturnInst::Create(C, Entry);
 
   std::string Error;

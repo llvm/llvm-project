@@ -11732,11 +11732,9 @@ modify the number or order of execution of this `load` with other
 If the `load` is marked as `atomic`, it takes an extra {ref}`ordering <ordering>` and optional `syncscope("<target-scope>")` argument. The
 `release` and `acq_rel` orderings are not valid on `load` instructions.
 Atomic loads produce {ref}`defined <memmodel>` results when they may see
-multiple atomic stores. Atomic loads support scalar integer, pointer, and
-floating-point types whose bit width is a power of two greater than or equal
-to eight. Atomic loads also support vector types whose total bit width is a
-power of two greater than or equal to eight. That is, the entire vector is
-loaded atomically.
+multiple atomic stores. The type of the pointee must be an integer, pointer,
+floating-point, or vector type whose bit width is a power of two greater than or
+equal to eight.
 
 If the `elementwise` modifier is present, the loaded type must be a fixed
 vector type whose total bit width is a power of two greater than or equal to
@@ -11744,7 +11742,7 @@ eight, and whose element type is supported by scalar atomic loads. The load has
 per-element atomic load semantics: it behaves as if it were expanded into
 one scalar atomic load per element, and the element loads are not ordered with
 respect to each other. Without `elementwise`, vector atomic loads keep
-whole-value atomic semantics.
+whole-value atomic semantics. That is, the entire vector is loaded atomically.
 
 `align` must be explicitly specified on atomic loads, and is otherwise
 optional on non-atomic loads. Note: if the alignment is not greater than or equal

@@ -6485,7 +6485,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       if (!Align)
         return error("Alignment missing from atomic load");
       I = new LoadInst(Ty, Op, "", Record[OpNum + 1], *Align, Ordering, SSID,
-                       /*InsertBefore=*/nullptr, IsElementwise);
+                       IsElementwise,
+                       /*InsertBefore=*/nullptr);
       InstructionList.push_back(I);
       break;
     }

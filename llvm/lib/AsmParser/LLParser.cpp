@@ -9021,7 +9021,8 @@ int LLParser::parseLoad(Instruction *&Inst, PerFunctionState &PFS) {
   if (!Alignment)
     Alignment = M->getDataLayout().getABITypeAlign(Ty);
   Inst = new LoadInst(Ty, Val, "", isVolatile, *Alignment, Ordering, SSID,
-                      /*InsertBefore=*/nullptr, IsElementwise);
+                      IsElementwise,
+                      /*InsertBefore=*/nullptr);
   return AteExtraComma ? InstExtraComma : InstNormal;
 }
 
