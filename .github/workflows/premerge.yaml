@@ -248,3 +248,41 @@ jobs:
 
           # The libcxx tests fail, so we are skipping the runtime targets.
           ninja -C build ${project_check_targets}
+
+  premerge-check-macos-self-hosted-runners:
+    name: Build and Test macOS
+    runs-on: [self-hosted, macos, apple-runners]
+    if: >-
+        github.repository_owner == 'llvm' &&
+        (github.event_name != 'pull_request' || github.event.action != 'closed')
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Install Ninja
+        run: |
+          brew install ninja
+      - name: Build and Test
+        run: |
+          source <(git diff --name-only HEAD~1...HEAD | python3 .ci/compute_projects.py)
+
+          if [[ "${projects_to_build}" == "" ]]; then
+            echo "No projects to build"
+            exit 0
+          fi
+
+          echo "Building projects: ${projects_to_build}"
+          echo "Running project checks targets: ${project_check_targets}"
+
+          xcrun cmake -G Ninja \
+                -B build \
+                -S llvm \
+                -DLLVM_ENABLE_PROJECTS="${projects_to_build}" \
+                -DLLVM_DISABLE_ASSEMBLY_FILES=ON \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DLLDB_INCLUDE_TESTS=OFF \
+                -DLLVM_ENABLE_ASSERTIONS=ON \
+
+          ninja -C build ${project_check_targets}
