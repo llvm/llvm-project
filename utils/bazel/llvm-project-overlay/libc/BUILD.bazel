@@ -146,7 +146,6 @@ LLVM_LIBC_HEADERS = [
     ),
     libc_header_info(
         "link",
-        has_def_template = True,
     ),
     libc_header_info(
         "math",
@@ -202,7 +201,6 @@ LLVM_LIBC_HEADERS = [
     libc_header_info("stdio"),
     libc_header_info(
         "string",
-        has_def_template = True,
     ),
     libc_header_info("strings"),
     libc_header_info("sys/auxv"),
@@ -710,6 +708,11 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "types_struct_stat",
+    hdrs = ["hdr/types/struct_stat.h"],
+)
+
+libc_support_library(
     name = "types_struct_timespec",
     hdrs = ["hdr/types/struct_timespec.h"],
 )
@@ -1126,6 +1129,7 @@ libc_support_library(
         ":__support_cpp_string_view",
         ":__support_integer_to_string",
         ":__support_macros_config",
+        ":__support_macros_null_check",
         ":func_free",
         ":func_malloc",
         ":func_realloc",
@@ -1867,6 +1871,21 @@ libc_support_library(
 libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_socketpair",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/socketpair.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_statx",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/statx.h"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -2819,6 +2838,37 @@ libc_support_library(
         ":__support_common",
         ":__support_macros_config",
         ":__support_osutil_syscall",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_stat_kernel_statx_types",
+    hdrs = ["src/__support/OSUtil/linux/stat/kernel_statx_types.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_macros_config",
+        ":hdr_stdint_proxy",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_stat_stat_via_statx",
+    hdrs = ["src/__support/OSUtil/linux/stat/stat_via_statx.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_linux_stat_kernel_statx_types",
+        ":__support_osutil_linux_syscall_wrappers_statx",
+        ":hdr_stdint_proxy",
+        ":types_struct_stat",
     ],
 )
 
@@ -6908,6 +6958,28 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_expbf16",
+    hdrs = ["src/__support/math/expbf16.h"],
+    deps = [
+        ":__support_cpp_array",
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_cast",
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_rounding_mode",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_types",
+        ":hdr_errno_macros",
+        ":hdr_fenv_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_expxf16_utils",
     hdrs = ["src/__support/math/expxf16_utils.h"],
     deps = [
@@ -9125,6 +9197,23 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_tanbf16",
+    hdrs = ["src/__support/math/tanbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_cast",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_types",
+        ":__support_sincosf_utils",
+        ":hdr_errno_macros",
+        ":hdr_fenv_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_tanf",
     hdrs = ["src/__support/math/tanf.h"],
     deps = [
@@ -10548,6 +10637,13 @@ libc_math_function(
     additional_deps = [
         ":__support_math_expf16",
         ":__support_math_expxf16_utils",
+    ],
+)
+
+libc_math_function(
+    name = "expbf16",
+    additional_deps = [
+        ":__support_math_expbf16",
     ],
 )
 
@@ -12832,6 +12928,13 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "tanbf16",
+    additional_deps = [
+        ":__support_math_tanbf16",
+    ],
+)
+
+libc_math_function(
     name = "tanf",
     additional_deps = [":__support_math_tanf"],
 )
@@ -14427,6 +14530,23 @@ libc_function(
 #     ],
 # )
 
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_ioctl",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/ioctl.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_cpp_type_traits",
+        ":__support_error_or",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+    ],
+)
+
 libc_function(
     name = "isatty",
     srcs = ["src/unistd/linux/isatty.cpp"],
@@ -14435,6 +14555,7 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_ioctl",
         ":__support_osutil_syscall",
         ":errno",
         ":hdr_unistd_macros",

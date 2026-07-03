@@ -161,8 +161,8 @@ public:
   static inline _LIBCPP_CONSTEXPR const result_type tempering_c               = __c;
   static inline _LIBCPP_CONSTEXPR const size_t tempering_l                    = __l;
   static inline _LIBCPP_CONSTEXPR const result_type initialization_multiplier = __f;
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type min() { return _Min; }
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type max() { return _Max; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type min() { return _Min; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type max() { return _Max; }
   static inline _LIBCPP_CONSTEXPR const result_type default_seed = 5489u;
 
   // constructors and seeding functions
@@ -206,7 +206,7 @@ public:
   }
 
   // generating functions
-  _LIBCPP_HIDE_FROM_ABI result_type operator()() {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()() {
     const size_t __j         = (__i_ + 1) % __n;
     const result_type __mask = __r == _Dt ? result_type(~0) : (result_type(1) << __r) - result_type(1);
     const result_type __yp   = (__x_[__i_] & ~__mask) | (__x_[__j] & __mask);
@@ -221,7 +221,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI void discard(unsigned long long __z) {
     for (; __z; --__z)
-      operator()();
+      (void)operator()();
   }
 
   template <class _UInt,

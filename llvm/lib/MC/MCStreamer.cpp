@@ -1523,7 +1523,7 @@ void MCStreamer::emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr,
 void MCStreamer::emitValueToAlignment(Align, int64_t, uint8_t, unsigned) {}
 void MCStreamer::emitPrefAlign(Align A, const MCSymbol &End, bool EmitNops,
                                uint8_t Fill, const MCSubtargetInfo &STI) {}
-void MCStreamer::emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
+void MCStreamer::emitCodeAlignment(Align Alignment, const MCSubtargetInfo &STI,
                                    unsigned MaxBytesToEmit) {}
 void MCStreamer::emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                                    SMLoc Loc) {}

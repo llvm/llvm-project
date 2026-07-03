@@ -15,6 +15,7 @@
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Common/visit.h"
+#include "flang/Evaluate/characteristics.h"
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/message.h"
@@ -40,7 +41,6 @@ namespace Fortran::semantics {
 using namespace Fortran::semantics::omp;
 
 void OmpStructureChecker::Enter(const parser::OmpClause::When &x) {
-  CheckAllowedClause(llvm::omp::Clause::OMPC_when);
   OmpVerifyModifiers(
       x.v, llvm::omp::OMPC_when, GetContext().clauseSource, context_);
 }
@@ -585,23 +585,10 @@ void OmpStructureChecker::Leave(const parser::OmpDirectiveSpecification &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpMetadirectiveDirective &x) {
   EnterDirectiveNest(MetadirectiveNest);
-  PushContextAndClauseSets(
-      x.v.source, llvm::omp::Directive::OMPD_metadirective);
 }
 
 void OmpStructureChecker::Leave(const parser::OmpMetadirectiveDirective &) {
   ExitDirectiveNest(MetadirectiveNest);
-  dirContext_.pop_back();
-}
-
-void OmpStructureChecker::Enter(
-    const parser::OmpDelimitedMetadirectiveDirective &x) {
-  PushContextAndClauseSets(x.source, llvm::omp::Directive::OMPD_metadirective);
-}
-
-void OmpStructureChecker::Leave(
-    const parser::OmpDelimitedMetadirectiveDirective &) {
-  dirContext_.pop_back();
 }
 
 static const parser::traits::OmpContextSelectorSpecification *
@@ -658,10 +645,49 @@ void OmpStructureChecker::CheckDeclareVariantUserConditions(
   }
 }
 
+// OpenMP 6.0, 9.6 (declare_variant), Fortran restriction: "The characteristic
+// of the function variant must be compatible with the characteristic of the
+// base function after the implementation defined transformation for its OpenMP
+// context."
+static void CheckDeclareVariantInterface(SemanticsContext &context,
+    const Symbol &base, const Symbol &variant, parser::CharBlock source) {
+  auto &foldingContext{context.foldingContext()};
+  auto baseChars{
+      evaluate::characteristics::Procedure::Characterize(base, foldingContext)};
+  auto variantChars{evaluate::characteristics::Procedure::Characterize(
+      variant, foldingContext)};
+  // If either procedure cannot be characterized, Characterize has already
+  // emitted diagnostics; do not add more.
+  if (!baseChars || !variantChars) {
+    return;
+  }
+
+  std::string whyNot;
+  if (!baseChars->IsCompatibleWith(
+          *variantChars, /*ignoreImplicitVsExplicit=*/false, &whyNot)) {
+    context.Say(source,
+        "The variant procedure '%s' is not compatible with the base procedure '%s': %s"_err_en_US,
+        variant.name(), base.name(), whyNot);
+  }
+}
+
 void OmpStructureChecker::CheckOmpDeclareVariantDirective(
     const parser::OmpDeclareVariantDirective &x) {
   const parser::OmpDirectiveSpecification &spec{x.v};
   const parser::OmpArgumentList &args{spec.Arguments()};
+
+  bool hasArgModifiers{false};
+  for (const parser::OmpClause &clause : x.v.Clauses().v) {
+    if (clause.Id() == llvm::omp::Clause::OMPC_adjust_args) {
+      hasArgModifiers = true;
+      context_.Say(clause.source,
+          "ADJUST_ARGS clause on the DECLARE VARIANT directive is not yet implemented"_err_en_US);
+    } else if (clause.Id() == llvm::omp::Clause::OMPC_append_args) {
+      hasArgModifiers = true;
+      context_.Say(clause.source,
+          "APPEND_ARGS clause on the DECLARE VARIANT directive is not yet implemented"_err_en_US);
+    }
+  }
 
   if (args.v.size() != 1) {
     context_.Say(args.source,
@@ -701,7 +727,7 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
             CheckProcedureSymbol(base, arg.source);
             CheckProcedureSymbol(variant, arg.source);
           },
-          [&](const parser::OmpLocator &y) {
+          [&](const parser::OmpObject &y) {
             variant = GetArgumentSymbol(arg);
             CheckProcedureSymbol(variant, arg.source);
             const Scope &containingScope{context_.FindScope(x.source)};
@@ -724,6 +750,11 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
       context_.Say(arg.source,
           "Variant '%s' was already specified for '%s' in another DECLARE VARIANT directive"_err_en_US,
           variant->name(), base->name());
+    } else if (!hasArgModifiers) {
+      // adjust_args/append_args perform the "transformation for its OpenMP
+      // context", so the variant interface intentionally differs from the
+      // base; skip the same-interface check until they are supported.
+      CheckDeclareVariantInterface(context_, *base, *variant, arg.source);
     }
   }
 
@@ -742,13 +773,7 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
 }
 
 void OmpStructureChecker::Enter(const parser::OmpDeclareVariantDirective &x) {
-  const parser::OmpDirectiveName &dirName{x.v.DirName()};
-  PushContextAndClauseSets(dirName.source, dirName.v);
   CheckOmpDeclareVariantDirective(x);
-}
-
-void OmpStructureChecker::Leave(const parser::OmpDeclareVariantDirective &) {
-  dirContext_.pop_back();
 }
 
 } // namespace Fortran::semantics

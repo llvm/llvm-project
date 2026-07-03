@@ -582,3 +582,43 @@ define i64 @sext_ucmp_multiuse(i32 %x, i32 %y) {
   %ext = sext i8 %cmp to i64
   ret i64 %ext
 }
+
+declare void @use32(i32 %value)
+
+define i8 @trunc_ucmp(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @trunc_ucmp(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i8 [[TMP1]]
+;
+  %cmp = call i32 @llvm.ucmp(i32 %x, i32 %y)
+  %tr = trunc i32 %cmp to i8
+  ret i8 %tr
+}
+
+define <4 x i8> @trunc_ucmp_vec(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: define <4 x i8> @trunc_ucmp_vec(
+; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i8> @llvm.ucmp.v4i8.v4i32(<4 x i32> [[X]], <4 x i32> [[Y]])
+; CHECK-NEXT:    ret <4 x i8> [[TMP1]]
+;
+  %cmp = call <4 x i32> @llvm.ucmp(<4 x i32> %x, <4 x i32> %y)
+  %tr = trunc <4 x i32> %cmp to <4 x i8>
+  ret <4 x i8> %tr
+}
+
+; Don't fold when ucmp has multiple uses: would leave the wide ucmp alive
+; and add a second narrower ucmp.
+define i8 @trunc_ucmp_multiuse(i32 %x, i32 %y) {
+; CHECK-LABEL: define i8 @trunc_ucmp_multiuse(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = call i32 @llvm.ucmp.i32.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    call void @use32(i32 [[CMP]])
+; CHECK-NEXT:    [[TR:%.*]] = trunc i32 [[CMP]] to i8
+; CHECK-NEXT:    ret i8 [[TR]]
+;
+  %cmp = call i32 @llvm.ucmp(i32 %x, i32 %y)
+  call void @use32(i32 %cmp)
+  %tr = trunc i32 %cmp to i8
+  ret i8 %tr
+}

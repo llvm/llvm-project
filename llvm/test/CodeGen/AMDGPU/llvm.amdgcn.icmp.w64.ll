@@ -3,9 +3,9 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=GCN,VI,SDAG-VI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9,SDAG-GFX9 %s
 
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 -mattr="+wavefrontsize64" < %s | FileCheck -check-prefixes=GCN,GFX11,GISEL-GFX11 %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=GCN,VI,GISEL-VI %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9,GISEL-GFX9 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1100 -mattr="+wavefrontsize64" < %s | FileCheck -check-prefixes=GCN,GFX11,GISEL-GFX11 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=GCN,VI,GISEL-VI %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9,GISEL-GFX9 %s
 
 declare i64 @llvm.amdgcn.icmp.i32(i32, i32, i32) #0
 declare i64 @llvm.amdgcn.icmp.i64(i64, i64, i32) #0

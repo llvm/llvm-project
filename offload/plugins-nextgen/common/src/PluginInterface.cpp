@@ -110,7 +110,7 @@ Expected<KernelLaunchEnvironmentTy *>
 GenericKernelTy::getKernelLaunchEnvironment(
     GenericDeviceTy &GenericDevice, const KernelArgsTy &KernelArgs,
     const DynBlockMemConfTy &DynBlockMemConf,
-    AsyncInfoWrapperTy &AsyncInfoWrapper) const {
+    AsyncInfoWrapperTy &AsyncInfoWrapper, uint32_t NumBlocks0) const {
   // Ctor/Dtor have no arguments, replaying uses the original kernel launch
   // environment. Older versions of the compiler do not generate a kernel
   // launch environment.
@@ -119,14 +119,20 @@ GenericKernelTy::getKernelLaunchEnvironment(
       KernelArgs.Version < OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR)
     return nullptr;
 
-  if ((!KernelEnvironment.Configuration.ReductionDataSize ||
-       !KernelEnvironment.Configuration.ReductionBufferLength) &&
-      KernelArgs.DynCGroupMem == 0)
+  const auto &RedCfg = KernelEnvironment.Configuration;
+  const bool NeedsReductionBuffer = RedCfg.ReductionDataSize != 0;
+  if (NeedsReductionBuffer && KernelArgs.Version < OMP_KERNEL_ARG_VERSION)
+    return Plugin::error(ErrorCode::INVALID_BINARY,
+                         "kernel was built against an older OpenMP "
+                         "kernel-launch-environment ABI (v%u); current "
+                         "runtime requires v%u for cross-team reductions",
+                         KernelArgs.Version, OMP_KERNEL_ARG_VERSION);
+  if (!NeedsReductionBuffer && !KernelArgs.DynCGroupMem)
     return reinterpret_cast<KernelLaunchEnvironmentTy *>(~0);
 
-  auto AllocOrErr = GenericDevice.dataAlloc(sizeof(KernelLaunchEnvironmentTy),
-                                            /*HostPtr=*/nullptr,
-                                            TargetAllocTy::TARGET_ALLOC_DEVICE);
+  auto AllocOrErr = GenericDevice.dataAlloc(
+      sizeof(KernelLaunchEnvironmentTy),
+      /*HostPtr=*/nullptr, TargetAllocTy::TARGET_ALLOC_DEVICE, /*Alignment=*/0);
   if (!AllocOrErr)
     return AllocOrErr.takeError();
 
@@ -143,12 +149,12 @@ GenericKernelTy::getKernelLaunchEnvironment(
   LocalKLE.DynCGroupMemFb = DynBlockMemConf.Fallback;
   LocalKLE.ReductionBuffer = nullptr;
 
-  if (KernelEnvironment.Configuration.ReductionDataSize &&
-      KernelEnvironment.Configuration.ReductionBufferLength) {
+  if (NeedsReductionBuffer) {
+    // Use number of teams many buffer elements.
     auto AllocOrErr = GenericDevice.dataAlloc(
-        KernelEnvironment.Configuration.ReductionDataSize *
-            KernelEnvironment.Configuration.ReductionBufferLength,
-        /*HostPtr=*/nullptr, TargetAllocTy::TARGET_ALLOC_DEVICE);
+        uint64_t(RedCfg.ReductionDataSize) * NumBlocks0,
+        /*HostPtr=*/nullptr, TargetAllocTy::TARGET_ALLOC_DEVICE,
+        /*Alignment=*/0);
     if (!AllocOrErr)
       return AllocOrErr.takeError();
     LocalKLE.ReductionBuffer = *AllocOrErr;
@@ -226,7 +232,8 @@ GenericKernelTy::prepareBlockMemory(GenericDeviceTy &GenericDevice,
       // Get global memory as fallback.
       auto AllocOrErr = GenericDevice.dataAlloc(
           NumBlocks * DynBlockMemSize,
-          /*HostPtr=*/nullptr, TargetAllocTy::TARGET_ALLOC_DEVICE);
+          /*HostPtr=*/nullptr, TargetAllocTy::TARGET_ALLOC_DEVICE,
+          /*Alignment=*/0);
       if (!AllocOrErr)
         return AllocOrErr.takeError();
       DynFallbackPtr = *AllocOrErr;
@@ -284,20 +291,21 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
     AsyncInfoWrapper.freeAllocationAfterSynchronization(
         DynBlockMemConf.FallbackPtr);
 
-  auto KernelLaunchEnvOrErr = getKernelLaunchEnvironment(
-      GenericDevice, KernelArgs, DynBlockMemConf, AsyncInfoWrapper);
+  auto KernelLaunchEnvOrErr =
+      getKernelLaunchEnvironment(GenericDevice, KernelArgs, DynBlockMemConf,
+                                 AsyncInfoWrapper, EffectiveNumBlocks[0]);
   if (!KernelLaunchEnvOrErr)
     return KernelLaunchEnvOrErr.takeError();
 
   KernelLaunchParamsTy LaunchParams;
 
-  // Kernel languages (.IsCUDA) don't use indirection, whereas dispatching with
-  // an array of kernel argument pointers (.IsPtrArgs) uses KernelArgs.ArgPtrs
-  // and KernelArgs.ArgSizes directly.
+  // Kernel languages do not use the OpenMP indirection and argument parsing.
   if (KernelArgs.Flags.IsCUDA) {
     LaunchParams =
         *reinterpret_cast<KernelLaunchParamsTy *>(KernelArgs.ArgPtrs);
-  } else if (!KernelArgs.Flags.IsPtrArgs) {
+  } else if (KernelArgs.Flags.IsPtrArgs) {
+    LaunchParams = KernelLaunchParamsTy{KernelArgs.NumArgs, KernelArgs.ArgPtrs};
+  } else {
     LaunchParams =
         prepareArgs(GenericDevice, ArgPtrs, ArgOffsets, KernelArgs.NumArgs,
                     Args, Ptrs, *KernelLaunchEnvOrErr, KernelArgs.Version);
@@ -371,7 +379,7 @@ GenericKernelTy::prepareArgs(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   for (uint32_t I = 0; I < NumArgs; ++I)
     Ptrs[I] = &Args[I];
 
-  return KernelLaunchParamsTy{sizeof(void *) * NumArgs, &Args[0], &Ptrs[0]};
+  return KernelLaunchParamsTy{NumArgs, &Ptrs[0]};
 }
 
 uint32_t
@@ -602,9 +610,6 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
 }
 
 Error GenericDeviceTy::unloadBinary(DeviceImageTy *Image) {
-  if (auto Err = callGlobalDestructors(Plugin, *Image))
-    return Err;
-
   GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
   auto ProfOrErr = Handler.readProfilingGlobals(*this, *Image);
   if (!ProfOrErr)
@@ -625,6 +630,18 @@ Error GenericDeviceTy::unloadBinary(DeviceImageTy *Image) {
 }
 
 Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
+  // Run the global destructors first in case they required the RPC server.
+  for (auto &I : LoadedImages) {
+    if (auto Err = callGlobalDestructors(Plugin, *I))
+      return Err;
+  }
+
+  if (RPCServer) {
+    if (auto Err = RPCServer->deinitDevice(*this))
+      return Err;
+    RPCServer = nullptr;
+  }
+
   for (auto &I : LoadedImages)
     if (auto Err = unloadBinary(I))
       return Err;
@@ -642,10 +659,6 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
     delete RecordReplay;
     RecordReplay = nullptr;
   }
-
-  if (RPCServer)
-    if (auto Err = RPCServer->deinitDevice(*this))
-      return Err;
 
 #ifdef OMPT_SUPPORT
   if (ompt::Initialized) {
@@ -979,9 +992,11 @@ Error GenericDeviceTy::getDeviceMemorySize(uint64_t &DSize) {
 }
 
 Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
-                                            TargetAllocTy Kind) {
+                                            TargetAllocTy Kind,
+                                            size_t Alignment) {
   void *Alloc = nullptr;
 
+  // TODO Check alignment.
   if (RecordReplay && RecordReplay->isRecordingOrReplaying())
     return RecordReplay->allocate(Size);
 
@@ -989,7 +1004,7 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
   case TARGET_ALLOC_DEFAULT:
   case TARGET_ALLOC_DEVICE:
     if (MemoryManager) {
-      auto AllocOrErr = MemoryManager->allocate(Size, HostPtr);
+      auto AllocOrErr = MemoryManager->allocate(Size, HostPtr, Alignment);
       if (!AllocOrErr)
         return AllocOrErr.takeError();
       Alloc = *AllocOrErr;
@@ -1001,7 +1016,7 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
     [[fallthrough]];
   case TARGET_ALLOC_HOST:
   case TARGET_ALLOC_SHARED: {
-    auto AllocOrErr = allocate(Size, HostPtr, Kind);
+    auto AllocOrErr = allocate(Size, HostPtr, Kind, Alignment);
     if (!AllocOrErr)
       return AllocOrErr.takeError();
     Alloc = *AllocOrErr;
@@ -1538,8 +1553,8 @@ int32_t GenericPluginTy::load_binary(int32_t DeviceId,
 
 void *GenericPluginTy::data_alloc(int32_t DeviceId, int64_t Size, void *HostPtr,
                                   int32_t Kind) {
-  auto AllocOrErr =
-      getDevice(DeviceId).dataAlloc(Size, HostPtr, (TargetAllocTy)Kind);
+  auto AllocOrErr = getDevice(DeviceId).dataAlloc(
+      Size, HostPtr, (TargetAllocTy)Kind, /*Alignment=*/0);
   if (!AllocOrErr) {
     auto Err = AllocOrErr.takeError();
     REPORT() << "Failure to allocate device memory: "

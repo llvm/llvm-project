@@ -10,6 +10,7 @@
 
 #include <bit>
 #include <cassert>
+#include <climits>
 #include <cstddef>
 #include <cstdint>
 #include <utility>
@@ -26,10 +27,7 @@ static_assert(!has_byteswap<float>);
 static_assert(!has_byteswap<char[2]>);
 static_assert(!has_byteswap<std::byte>);
 
-// _BitInt(N) candidacy is controlled by the `integral` constraint; the
-// padding-bit rejection (per [bit.byteswap]/Mandates) is a static_assert
-// inside the function body, not a SFINAE check. See byteswap.verify.cpp
-// for diagnostic verification of the rejected widths.
+// _BitInt(N) widths with padding bits are rejected; see byteswap.verify.cpp.
 
 template <class T>
 constexpr void test_num(T in, T expected) {
@@ -98,29 +96,27 @@ constexpr bool test() {
   test_implementation_defined_size<long long>();
   test_implementation_defined_size<unsigned long long>();
 
-#if TEST_HAS_EXTENSION(bit_int)
-  // _BitInt(N) where digits + is_signed == sizeof * CHAR_BIT (no padding
-  // bits) is accepted; other widths are rejected by the static_assert
-  // inside the function body (see byteswap.verify.cpp).
+#if TEST_HAS_BITINT
+  // Widths below have no padding bits.
 
   // sizeof == 1
   test_num<unsigned _BitInt(8)>(0xAB, 0xAB);
   test_num<signed _BitInt(8)>(0x12, 0x12);
 
-  // sizeof == 2: __builtin_bswap16 fallback or __builtin_bswapg
+  // sizeof == 2
   test_num<unsigned _BitInt(16)>(0xCDEF, 0xEFCD);
   test_num<signed _BitInt(16)>(0x1234, 0x3412);
 
-  // sizeof == 4: __builtin_bswap32 fallback or __builtin_bswapg
+  // sizeof == 4
   test_num<unsigned _BitInt(32)>(0x01234567U, 0x67452301U);
   test_num<signed _BitInt(32)>(0x01234567, 0x67452301);
 
-  // sizeof == 8: __builtin_bswap64 fallback or __builtin_bswapg
+  // sizeof == 8
   test_num<unsigned _BitInt(64)>(0x0123456789ABCDEFULL, 0xEFCDAB8967452301ULL);
   test_num<signed _BitInt(64)>(0x0123456789ABCDEFLL, static_cast<signed _BitInt(64)>(0xEFCDAB8967452301ULL));
 
-#  if __BITINT_MAXWIDTH__ >= 128
-  // sizeof == 16: __builtin_bswap128 fallback or __builtin_bswapg.
+#  if __BITINT_MAXWIDTH__ >= 128 && (TEST_HAS_BUILTIN(__builtin_bswapg) || !defined(TEST_HAS_NO_INT128))
+  // sizeof == 16
   unsigned _BitInt(128) v128 =
       (static_cast<unsigned _BitInt(128)>(0x0123456789ABCDEFULL) << 64) |
       static_cast<unsigned _BitInt(128)>(0x13579BDF02468ACEULL);
@@ -131,9 +127,8 @@ constexpr bool test() {
   test_num<signed _BitInt(128)>(static_cast<signed _BitInt(128)>(v128), static_cast<signed _BitInt(128)>(v128_swapped));
 #  endif
 
-#  if __has_builtin(__builtin_bswapg) && __BITINT_MAXWIDTH__ >= 256
-  // sizeof > 16: only the __builtin_bswapg path supports widths beyond what
-  // __builtin_bswap16/32/64/128 cover.
+#  if TEST_HAS_BUILTIN(__builtin_bswapg) && __BITINT_MAXWIDTH__ >= 256
+  // sizeof > 16
   unsigned _BitInt(256) v256 =
       (static_cast<unsigned _BitInt(256)>(0xDEADBEEFCAFEBABEULL) << 128) |
       (static_cast<unsigned _BitInt(256)>(0x1234567890ABCDEFULL) << 64) |
@@ -142,13 +137,12 @@ constexpr bool test() {
   ASSERT_SAME_TYPE(decltype(std::byteswap(v256)), unsigned _BitInt(256));
   ASSERT_NOEXCEPT(std::byteswap(v256));
 
-  // Spot check: low byte of input must end up as the high byte of the output.
+  // Low byte of the input must become the high byte of the output.
   unsigned _BitInt(256) lo_only = 0xAB;
   auto lo_swapped               = std::byteswap(lo_only);
   assert(static_cast<unsigned char>(lo_swapped >> ((sizeof(lo_swapped) - 1) * CHAR_BIT)) == 0xAB);
 
-  // Mid-value test: a distinct byte at every position so an off-by-one in the
-  // generated code surfaces directly.
+  // A distinct byte at every position catches an off-by-one in the swap.
   unsigned _BitInt(256) ramp = 0;
   for (int i = 0; i < 32; ++i)
     ramp |= static_cast<unsigned _BitInt(256)>(i) << (i * CHAR_BIT);

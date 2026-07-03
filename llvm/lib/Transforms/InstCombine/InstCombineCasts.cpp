@@ -1289,6 +1289,16 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
     }
   }
 
+  // trunc(scmp(x, y)) -> scmp(x, y) with a narrower result type.
+  // trunc(ucmp(x, y)) -> ucmp(x, y) with a narrower result type.
+  // scmp/ucmp produce only -1, 0, or 1, so any result type with at least 2
+  // bits can represent every possible value and the truncation is lossless.
+  if (DestWidth >= 2)
+    if (auto *CI = dyn_cast<CmpIntrinsic>(Src); CI && CI->hasOneUse())
+      return replaceInstUsesWith(
+          Trunc, Builder.CreateIntrinsic(DestTy, CI->getIntrinsicID(),
+                                         {CI->getLHS(), CI->getRHS()}));
+
   if (DestWidth == 1 &&
       (Trunc.hasNoUnsignedWrap() || Trunc.hasNoSignedWrap()) &&
       isKnownNonZero(Src, SQ.getWithInstruction(&Trunc)))
@@ -1665,13 +1675,8 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
   if (auto *Cmp = dyn_cast<ICmpInst>(Src))
     return transformZExtICmp(Cmp, Zext);
 
-  // zext(trunc(X) & C) -> (X & zext(C)).
   Constant *C;
   Value *X;
-  if (match(Src, m_OneUse(m_And(m_Trunc(m_Value(X)), m_Constant(C)))) &&
-      X->getType() == DestTy)
-    return BinaryOperator::CreateAnd(X, Builder.CreateZExt(C, DestTy));
-
   // zext((trunc(X) & C) ^ C) -> ((X & zext(C)) ^ zext(C)).
   Value *And;
   if (match(Src, m_OneUse(m_Xor(m_Value(And), m_Constant(C)))) &&
@@ -1690,6 +1695,15 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
       X->getType() == DestTy) {
     Value *ZextC = Builder.CreateZExt(C, DestTy);
     return BinaryOperator::CreateAnd(X, ZextC);
+  }
+
+  Value *Y;
+  if (match(Src,
+            m_OneUse(m_c_BitwiseLogic(m_NUWTrunc(m_Value(X)), m_Value(Y)))) &&
+      X->getType() == DestTy) {
+    Value *ZextY = Builder.CreateZExt(Y, DestTy);
+    return BinaryOperator::Create(cast<BinaryOperator>(Src)->getOpcode(), X,
+                                  ZextY);
   }
 
   if (match(Src, m_VScale())) {
@@ -2018,12 +2032,18 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
   // sext(ucmp(x, y)) -> ucmp(x, y) with a wider result type.
   // scmp/ucmp return only -1, 0, or 1, which sign-extend correctly to any
   // wider integer type, so we can sink the extension into the intrinsic.
-  if (auto *II = dyn_cast<IntrinsicInst>(Src)) {
-    Intrinsic::ID IID = II->getIntrinsicID();
-    if ((IID == Intrinsic::scmp || IID == Intrinsic::ucmp) && II->hasOneUse())
-      return replaceInstUsesWith(
-          Sext, Builder.CreateIntrinsic(
-                    DestTy, IID, {II->getArgOperand(0), II->getArgOperand(1)}));
+  if (auto *CI = dyn_cast<CmpIntrinsic>(Src); CI && CI->hasOneUse())
+    return replaceInstUsesWith(
+        Sext, Builder.CreateIntrinsic(DestTy, CI->getIntrinsicID(),
+                                      {CI->getLHS(), CI->getRHS()}));
+
+  Value *Y;
+  if (match(Src,
+            m_OneUse(m_c_BitwiseLogic(m_NSWTrunc(m_Value(X)), m_Value(Y)))) &&
+      X->getType() == DestTy) {
+    Value *SextY = Builder.CreateSExt(Y, DestTy);
+    return BinaryOperator::Create(cast<BinaryOperator>(Src)->getOpcode(), X,
+                                  SextY);
   }
 
   return nullptr;
@@ -3392,7 +3412,7 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
     // bitcast <N x i8> (shuf X, undef, <N, N-1,...0>) -> bswap (bitcast X)
     // bitcast <N x i1> (shuf X, undef, <N, N-1,...0>) -> bitreverse (bitcast X)
     if (DestTy->isIntegerTy() && ShufElts.getKnownMinValue() % 2 == 0 &&
-        Shuf->hasOneUse() && Shuf->isReverse()) {
+        Shuf->hasOneUse() && Shuf->isReverse() && match(ShufOp1, m_Poison())) {
       unsigned IntrinsicNum = 0;
       if (DL.isLegalInteger(DestTy->getScalarSizeInBits()) &&
           SrcTy->getScalarSizeInBits() == 8) {
@@ -3402,7 +3422,6 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
       }
       if (IntrinsicNum != 0) {
         assert(ShufOp0->getType() == SrcTy && "Unexpected shuffle mask");
-        assert(match(ShufOp1, m_Undef()) && "Unexpected shuffle op");
         Function *BswapOrBitreverse = Intrinsic::getOrInsertDeclaration(
             CI.getModule(), IntrinsicNum, DestTy);
         Value *ScalarX = Builder.CreateBitCast(ShufOp0, DestTy);

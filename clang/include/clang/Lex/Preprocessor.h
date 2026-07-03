@@ -30,6 +30,7 @@
 #include "clang/Lex/ModuleMap.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/PPEmbedParameters.h"
+#include "clang/Lex/TextEncoding.h"
 #include "clang/Lex/Token.h"
 #include "clang/Lex/TokenLexer.h"
 #include "clang/Support/Compiler.h"
@@ -198,6 +199,7 @@ class Preprocessor {
   std::unique_ptr<ScratchBuffer> ScratchBuf;
   HeaderSearch      &HeaderInfo;
   ModuleLoader      &TheModuleLoader;
+  TextEncoding TE;
 
   /// External source of macros.
   ExternalPreprocessorSource *ExternalSource;
@@ -1264,6 +1266,7 @@ public:
   SelectorTable &getSelectorTable() { return Selectors; }
   Builtin::Context &getBuiltinInfo() { return *BuiltinInfo; }
   llvm::BumpPtrAllocator &getPreprocessorAllocator() { return BP; }
+  TextEncoding &getTextEncoding() { return TE; }
 
   void setExternalSource(ExternalPreprocessorSource *Source) {
     ExternalSource = Source;
@@ -2819,11 +2822,7 @@ private:
   // Caching stuff.
   void CachingLex(Token &Result);
 
-  bool InCachingLexMode() const {
-    // If the Lexer pointers are 0 and IncludeMacroStack is empty, it means
-    // that we are past EOF, not that we are in CachingLex mode.
-    return !CurPPLexer && !CurTokenLexer && !IncludeMacroStack.empty();
-  }
+  bool InCachingLexMode() const { return CurLexerCallback == CLK_CachingLexer; }
 
   void EnterCachingLexMode();
   void EnterCachingLexModeUnchecked();

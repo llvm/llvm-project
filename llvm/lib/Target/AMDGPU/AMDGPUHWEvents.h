@@ -9,120 +9,179 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUHWEVENTS_H
 #define LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUHWEVENTS_H
 
-#include "llvm/ADT/Sequence.h"
-#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/bit.h"
+#include "llvm/ADT/iterator.h"
+#include "llvm/Support/Compiler.h"
+#include "llvm/Support/MathExtras.h"
+#include <cassert>
+#include <cstdint>
+#include <iterator>
 
 namespace llvm {
 class GCNSubtarget;
 class MachineInstr;
 class raw_ostream;
+class SIInstrInfo;
 
 namespace AMDGPU {
 
-/// TODO: This should be a bitmask from the start instead of having this enum
-///       + \ref HWEventSet below.
-enum class HWEvent : unsigned char {
-#define AMDGPU_HW_EVENT(X) X,
-#define AMDGPU_FIRST_HW_EVENT(X) FIRST_WAIT_EVENT = X,
-#define AMDGPU_LAST_HW_EVENT(X) NUM_WAIT_EVENTS = X,
-#include "AMDGPUHWEvents.def"
-};
-
-} // namespace AMDGPU
-
-template <> struct enum_iteration_traits<AMDGPU::HWEvent> {
-  static constexpr bool is_iterable = true; // NOLINT
-};
-
-namespace AMDGPU {
-
-static constexpr StringLiteral toString(HWEvent Event) {
-  switch (Event) {
-#define AMDGPU_HW_EVENT(EVENT)                                                 \
-  case HWEvent::EVENT:                                                         \
-    return #EVENT;
-#include "AMDGPUHWEvents.def"
-  }
-
-  return "";
-}
-
-/// Return an iterator over all events between FIRST_WAIT_EVENT
-/// and \c MaxEvent (exclusive, default value yields an enumeration over
-/// all counters).
-// NOLINTNEXTLINE
-inline iota_range<HWEvent>
-hw_events(HWEvent MaxEvent = HWEvent::NUM_WAIT_EVENTS) {
-  return enum_seq(HWEvent::FIRST_WAIT_EVENT, MaxEvent);
-}
-
-class HWEventSet {
-  unsigned Mask = 0;
-
+/// Bit mask of hardware events.
+///
+/// This is useful to manipulate events as hardware events rarely come alone.
+/// This class implements all the usual operators one would need to manipulate a
+/// bit mask, and also supports printing to a \ref raw_ostream and iterating
+/// over all the set bits of the event mask.
+///
+/// This class behaves like a constexpr set of flags. None of the methods should
+/// be able to mutate the data unless they are assignment operators. Examples:
+/// \verbatim
+///   A |= B;   // Add flags (union).
+///   A -= B;   // Remove flags (substraction).
+///   A &= B;   // Intersection.
+///   A ^= B;   // Bitwise XOR.
+///   (bool)A;  // Check whether any bits are set; A.any() also works.
+///   !A;       // Check if no bits are set; A.none() also works.
+///   A.size(); // Check how many bits are set.
+/// \endverbatim
+///
+/// This type also provides certain stronger guarantees than a simple integer:
+///   - Default constructor initializes the mask to zero.
+///   - Constructor ensures undefined bits cannot be set.
+class HWEvents {
 public:
-  HWEventSet() = default;
-  constexpr HWEventSet(HWEvent Event) {
-    static_assert(static_cast<unsigned>(HWEvent::NUM_WAIT_EVENTS) <=
-                      sizeof(Mask) * 8,
-                  "Not enough bits in Mask for all the events");
-    Mask |= 1 << static_cast<unsigned>(Event);
-  }
-  constexpr HWEventSet(std::initializer_list<HWEvent> Events) {
-    for (auto &E : Events) {
-      Mask |= 1 << static_cast<unsigned>(E);
+  using value_type = uint32_t;
+
+  enum : value_type {
+    NONE = 0,
+#define AMDGPU_HW_EVENT(X, V) X = (1 << V),
+#define AMDGPU_LAST_HW_EVENT(X) HWEVENT_LAST_EVENT = X,
+#include "AMDGPUHWEvents.def"
+
+    ALL = ((HWEVENT_LAST_EVENT << 1) - 1)
+  };
+
+  /// Iterates over the set bits of an HWEvent.
+  /// NOLINTNEXTLINE
+  class const_iterator
+      : public iterator_facade_base<const_iterator, std::forward_iterator_tag,
+                                    HWEvents> {
+    // The "end" iterator is also the default-constructed iterator.
+    // We naturally move towards the "end" by clearing the set bits from least
+    // to most significant.
+    HWEvents::value_type Cur = 0;
+
+  public:
+    const_iterator() = default;
+    const_iterator(HWEvents H) : Cur(H.value()) {}
+
+    bool operator==(const const_iterator &Other) const {
+      return Cur == Other.Cur;
     }
+
+    HWEvents operator*() const {
+      // Return only rightmost (least significant) bit set.
+      return Cur ? (Cur & (1 << countr_zero(Cur))) : 0;
+    }
+
+    const_iterator &operator++() {
+      // Keep all bits except the least significant bit set.
+      Cur &= maskTrailingZeros<HWEvents::value_type>(countr_zero(Cur) + 1);
+      return *this;
+    }
+  };
+
+  constexpr HWEvents() = default;
+  constexpr HWEvents(value_type V) : Data(V) {
+    assert((V & ALL) == V && "Bits set out of bounds!");
   }
-  void insert(const HWEvent &Event) {
-    Mask |= 1 << static_cast<unsigned>(Event);
+
+  constexpr unsigned size() const { return popcount(Data); }
+  constexpr bool any() const { return Data != 0; }
+  constexpr bool none() const { return Data == 0; }
+  constexpr value_type value() const { return Data; }
+
+  explicit constexpr operator bool() const { return any(); }
+
+  constexpr bool contains(HWEvents Other) const {
+    return (~Data & Other.Data) == 0;
   }
-  void remove(const HWEvent &Event) {
-    Mask &= ~(1 << static_cast<unsigned>(Event));
+
+  const_iterator begin() const { return *this; }
+  const_iterator end() const { return {}; }
+
+  constexpr HWEvents operator|(HWEvents Other) const {
+    return Data | Other.Data;
   }
-  void remove(const HWEventSet &Other) { Mask &= ~Other.Mask; }
-  bool contains(const HWEvent &Event) const {
-    return Mask & (1 << static_cast<unsigned>(Event));
+  constexpr HWEvents operator&(HWEvents Other) const {
+    return Data & Other.Data;
   }
-  /// \returns true if this set contains all elements of \p Other.
-  bool contains(const HWEventSet &Other) const {
-    return (~Mask & Other.Mask) == 0;
+  constexpr HWEvents operator^(HWEvents Other) const {
+    return Data ^ Other.Data;
   }
-  /// \returns the intersection of this and \p Other.
-  HWEventSet operator&(const HWEventSet &Other) const {
-    auto Copy = *this;
-    Copy.Mask &= Other.Mask;
-    return Copy;
+
+  constexpr HWEvents operator-(HWEvents Other) const {
+    return Data & ~Other.Data;
   }
-  /// \returns the union of this and \p Other.
-  HWEventSet operator|(const HWEventSet &Other) const {
-    auto Copy = *this;
-    Copy.Mask |= Other.Mask;
-    return Copy;
-  }
-  /// This set becomes the union of this and \p Other.
-  HWEventSet &operator|=(const HWEventSet &Other) {
-    Mask |= Other.Mask;
+
+  constexpr HWEvents operator~() const { return Data ^ ALL; }
+
+  constexpr bool operator==(HWEvents Other) const { return Data == Other.Data; }
+  constexpr bool operator!=(HWEvents Other) const { return Data != Other.Data; }
+
+  constexpr HWEvents &operator|=(HWEvents Other) {
+    Data |= Other.Data;
     return *this;
   }
-  /// This set becomes the intersection of this and \p Other.
-  HWEventSet &operator&=(const HWEventSet &Other) {
-    Mask &= Other.Mask;
+  constexpr HWEvents &operator&=(HWEvents Other) {
+    Data &= Other.Data;
     return *this;
   }
-  bool operator==(const HWEventSet &Other) const { return Mask == Other.Mask; }
-  bool operator!=(const HWEventSet &Other) const { return !(*this == Other); }
-  bool empty() const { return Mask == 0; }
-  /// \returns true if the set contains more than one element.
-  bool twoOrMore() const { return Mask & (Mask - 1); }
-  operator bool() const { return !empty(); }
-  void print(raw_ostream &OS) const;
+  constexpr HWEvents &operator^=(HWEvents Other) {
+    Data ^= Other.Data;
+    return *this;
+  }
+
+  constexpr HWEvents operator-=(HWEvents Other) {
+    Data &= ~Other.Data;
+    return *this;
+  }
+
+  /// Overload both bitwise AND operators w/ the value_type to avoid an implicit
+  /// conversion to HWEvent in this common pattern used to clear an event bit:
+  /// `Events & ~HWEvent::EVENT_TO_CLEAR`.
+  /// If we had the implicit conversion to HWEvent, we'd assert because
+  /// `~HWEvent::EVENT_TO_CLEAR` has bits set outside of `HWEvent::ALL`.
+  constexpr HWEvents operator&(value_type Other) const { return Data & Other; }
+  constexpr HWEvents &operator&=(value_type Other) {
+    Data &= Other;
+    return *this;
+  }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
+#endif
+
+private:
+  value_type Data = NONE;
 };
 
-/// \returns all HWEvents triggered by \p Inst
-HWEventSet getEventsFor(const MachineInstr &Inst, const GCNSubtarget &ST,
-                        bool IsExpertMode);
+/// \param Inst A VMEM instruction (as per `SIInstrInfo::isVMEM`).
+/// \returns the simplified set of events triggered by the VMEM instruction \p
+/// Inst. The returned mask is not exhaustive, but is guaranteed to be a subset
+/// of the mask that'd be returned by \ref getEventsFor.
+///
+/// Useful to quickly categorize VMEM instructions without having to fetch all
+/// events.
+HWEvents getSimplifiedVMEMEventsFor(const MachineInstr &Inst,
+                                    const SIInstrInfo &TII);
+
+/// \returns A bitmask of HWEvent triggered by \p Inst
+HWEvents getEventsFor(const MachineInstr &Inst, const GCNSubtarget &ST,
+                      bool IsExpertMode);
 
 } // namespace AMDGPU
+
+raw_ostream &operator<<(raw_ostream &OS, AMDGPU::HWEvents E);
 } // namespace llvm
 
 #endif

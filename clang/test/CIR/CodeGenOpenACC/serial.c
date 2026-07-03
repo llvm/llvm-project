@@ -115,7 +115,7 @@ void acc_serial(int cond) {
 #pragma acc serial async(cond)
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: acc.serial async(%[[CONV_CAST]] : si32) {
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
@@ -129,9 +129,9 @@ void acc_serial(int cond) {
 #pragma acc serial async(3) device_type(nvidia, radeon) async(cond)
   {}
   // CHECK-NEXT: %[[THREE_LITERAL:.*]] = cir.const #cir.int<3> : !s32i
-  // CHECK-NEXT: %[[THREE_CAST:.*]] = builtin.unrealized_conversion_cast %[[THREE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[THREE_CAST:.*]] = cir.builtin_int_cast %[[THREE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: acc.serial async(%[[THREE_CAST]] : si32, %[[CONV_CAST]] : si32 [#acc.device_type<nvidia>], %[[CONV_CAST]] : si32 [#acc.device_type<radeon>]) {
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
@@ -139,7 +139,7 @@ void acc_serial(int cond) {
 #pragma acc serial async device_type(nvidia, radeon) async(cond)
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: acc.serial async([#acc.device_type<none>], %[[CONV_CAST]] : si32 [#acc.device_type<nvidia>], %[[CONV_CAST]] : si32 [#acc.device_type<radeon>]) {
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
@@ -147,7 +147,7 @@ void acc_serial(int cond) {
 #pragma acc serial async(3) device_type(nvidia, radeon) async
   {}
   // CHECK-NEXT: %[[THREE_LITERAL:.*]] = cir.const #cir.int<3> : !s32i
-  // CHECK-NEXT: %[[THREE_CAST:.*]] = builtin.unrealized_conversion_cast %[[THREE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[THREE_CAST:.*]] = cir.builtin_int_cast %[[THREE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.serial async([#acc.device_type<nvidia>, #acc.device_type<radeon>], %[[THREE_CAST]] : si32) {
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
@@ -167,7 +167,7 @@ void acc_serial(int cond) {
 #pragma acc serial wait(1) device_type(nvidia) wait
   {}
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.serial wait([#acc.device_type<nvidia>], {%[[ONE_CAST]] : si32}) {
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
@@ -175,7 +175,7 @@ void acc_serial(int cond) {
 #pragma acc serial wait device_type(nvidia) wait(1)
   {}
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.serial wait([#acc.device_type<none>], {%[[ONE_CAST]] : si32} [#acc.device_type<nvidia>]) {
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
@@ -183,9 +183,9 @@ void acc_serial(int cond) {
 #pragma acc serial wait(1) device_type(nvidia) wait(1)
   {}
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE_LITERAL2:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_CAST2:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL2]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST2:.*]] = cir.builtin_int_cast %[[ONE_LITERAL2]] : !s32i -> si32
   // CHECK-NEXT: acc.serial wait({%[[ONE_CAST]] : si32}, {%[[ONE_CAST2]] : si32} [#acc.device_type<nvidia>]) {
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
@@ -193,9 +193,9 @@ void acc_serial(int cond) {
 #pragma acc serial wait(devnum: cond : 1)
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.serial wait({devnum: %[[CONV_CAST]] : si32, %[[ONE_CAST]] : si32}) {
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
@@ -203,13 +203,13 @@ void acc_serial(int cond) {
 #pragma acc serial wait(devnum: cond : 1) device_type(nvidia) wait(devnum: cond : 1)
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST2:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST2:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_CAST2:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST2:.*]] = cir.builtin_int_cast %[[ONE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.serial wait({devnum: %[[CONV_CAST]] : si32, %[[ONE_CAST]] : si32}, {devnum: %[[CONV_CAST2]] : si32, %[[ONE_CAST2]] : si32} [#acc.device_type<nvidia>]) {
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
@@ -217,11 +217,11 @@ void acc_serial(int cond) {
 #pragma acc serial wait(devnum: cond : 1, 2)
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: %[[TWO_LITERAL:.*]] = cir.const #cir.int<2> : !s32i
-  // CHECK-NEXT: %[[TWO_CAST:.*]] = builtin.unrealized_conversion_cast %[[TWO_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[TWO_CAST:.*]] = cir.builtin_int_cast %[[TWO_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.serial wait({devnum: %[[CONV_CAST]] : si32, %[[ONE_CAST]] : si32, %[[TWO_CAST]] : si32}) {
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
@@ -229,17 +229,17 @@ void acc_serial(int cond) {
 #pragma acc serial wait(devnum: cond : 1, 2) device_type(nvidia, radeon) wait(devnum: cond : 1, 2)
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: %[[TWO_LITERAL:.*]] = cir.const #cir.int<2> : !s32i
-  // CHECK-NEXT: %[[TWO_CAST:.*]] = builtin.unrealized_conversion_cast %[[TWO_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[TWO_CAST:.*]] = cir.builtin_int_cast %[[TWO_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST2:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST2:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_CAST2:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST2:.*]] = cir.builtin_int_cast %[[ONE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: %[[TWO_LITERAL:.*]] = cir.const #cir.int<2> : !s32i
-  // CHECK-NEXT: %[[TWO_CAST2:.*]] = builtin.unrealized_conversion_cast %[[TWO_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[TWO_CAST2:.*]] = cir.builtin_int_cast %[[TWO_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.serial wait({devnum: %[[CONV_CAST]] : si32, %[[ONE_CAST]] : si32, %[[TWO_CAST]] : si32}, {devnum: %[[CONV_CAST2]] : si32, %[[ONE_CAST2]] : si32, %[[TWO_CAST2]] : si32} [#acc.device_type<nvidia>], {devnum: %[[CONV_CAST2]] : si32, %[[ONE_CAST2]] : si32, %[[TWO_CAST2]] : si32} [#acc.device_type<radeon>]) {
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
@@ -247,9 +247,9 @@ void acc_serial(int cond) {
 #pragma acc serial wait(cond,  1)
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.serial wait({%[[CONV_CAST]] : si32, %[[ONE_CAST]] : si32}) {
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
@@ -257,9 +257,9 @@ void acc_serial(int cond) {
 #pragma acc serial wait(queues: cond,  1) device_type(radeon)
   {}
   // CHECK-NEXT: %[[COND_LOAD:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[COND_LOAD]] : !s32i to si32
+  // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE_LITERAL:.*]] = cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: %[[ONE_CAST:.*]] = builtin.unrealized_conversion_cast %[[ONE_LITERAL]] : !s32i to si32
+  // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.serial wait({%[[CONV_CAST]] : si32, %[[ONE_CAST]] : si32}) {
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc

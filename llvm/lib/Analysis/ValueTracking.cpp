@@ -1075,7 +1075,7 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
     if (Elem.Index != AssumptionCache::ExprResultIdx) {
       if (auto OBU = I->getOperandBundleAt(Elem.Index);
           getBundleAttrFromOBU(OBU) == BundleAttr::Align) {
-        auto [Ptr, _, Alignment, Offset] = getAssumeAlignInfo(OBU);
+        auto [Ptr, _, _2, Alignment, Offset] = getAssumeAlignInfo(OBU);
         if (Ptr == V && Alignment && Offset && isPowerOf2_64(*Alignment) &&
             isValidAssumeForContext(I, Q)) {
           Known.Zero |= (*Alignment - 1) & ~*Offset;
@@ -2088,6 +2088,16 @@ static void computeKnownBitsFromOperator(const Operator *I,
         computeKnownBits(I->getOperand(0), DemandedElts, Known, Q, Depth + 1);
         computeKnownBits(I->getOperand(1), DemandedElts, Known2, Q, Depth + 1);
         Known = KnownBits::clmul(Known, Known2);
+        break;
+      case Intrinsic::pext:
+        computeKnownBits(I->getOperand(0), DemandedElts, Known, Q, Depth + 1);
+        computeKnownBits(I->getOperand(1), DemandedElts, Known2, Q, Depth + 1);
+        Known = KnownBits::pext(Known, Known2);
+        break;
+      case Intrinsic::pdep:
+        computeKnownBits(I->getOperand(0), DemandedElts, Known, Q, Depth + 1);
+        computeKnownBits(I->getOperand(1), DemandedElts, Known2, Q, Depth + 1);
+        Known = KnownBits::pdep(Known, Known2);
         break;
       case Intrinsic::uadd_sat:
         computeKnownBits(I->getOperand(0), DemandedElts, Known, Q, Depth + 1);
@@ -8178,6 +8188,8 @@ bool llvm::intrinsicPropagatesPoison(Intrinsic::ID IID) {
   case Intrinsic::llrint:
   case Intrinsic::fshl:
   case Intrinsic::fshr:
+  case Intrinsic::frexp:
+  case Intrinsic::get_active_lane_mask:
     return true;
   default:
     return false;

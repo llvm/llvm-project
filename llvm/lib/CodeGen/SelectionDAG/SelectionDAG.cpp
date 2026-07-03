@@ -3955,19 +3955,13 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::PDEP: {
     Known = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    // Zeros are retained from the mask operand. But not ones.
-    Known.One.clearAllBits();
-    // The result will have at least as many trailing zeros as the non-mask
-    // operand since bits can only map to the same or higher bit position.
-    Known.Zero.setLowBits(Known2.countMinTrailingZeros());
+    Known = KnownBits::pdep(Known2, Known);
     break;
   }
   case ISD::PEXT: {
     Known = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    // The result has as many leading zeros as the number of zeroes in the mask.
-    unsigned Count = Known.Zero.popcount();
-    Known.Zero = APInt::getHighBitsSet(BitWidth, Count);
-    Known.One.clearAllBits();
+    Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known = KnownBits::pext(Known2, Known);
     break;
   }
   case ISD::CLMUL: {
@@ -6940,8 +6934,12 @@ static SDValue FoldBUILD_VECTOR(const SDLoc &DL, EVT VT,
          "Incorrect element count in BUILD_VECTOR!");
 
   // BUILD_VECTOR of UNDEFs is UNDEF.
-  if (llvm::all_of(Ops, [](SDValue Op) { return Op.isUndef(); }))
-    return DAG.getUNDEF(VT);
+  bool AllPoison = true;
+  if (llvm::all_of(Ops, [&AllPoison](SDValue Op) {
+        AllPoison &= Op.getOpcode() == ISD::POISON;
+        return Op.isUndef();
+      }))
+    return AllPoison ? DAG.getPOISON(VT) : DAG.getUNDEF(VT);
 
   // BUILD_VECTOR of seq extract/insert from the same vector + type is Identity.
   SDValue IdentitySrc;
@@ -6982,8 +6980,12 @@ static SDValue foldCONCAT_VECTORS(const SDLoc &DL, EVT VT,
     return Ops[0];
 
   // Concat of UNDEFs is UNDEF.
-  if (llvm::all_of(Ops, [](SDValue Op) { return Op.isUndef(); }))
-    return DAG.getUNDEF(VT);
+  bool AllPoison = true;
+  if (llvm::all_of(Ops, [&AllPoison](SDValue Op) {
+        AllPoison &= Op.getOpcode() == ISD::POISON;
+        return Op.isUndef();
+      }))
+    return AllPoison ? DAG.getPOISON(VT) : DAG.getUNDEF(VT);
 
   // Scan the operands and look for extract operations from a single source
   // that correspond to insertion at the same location via this concatenation:
@@ -7022,7 +7024,9 @@ static SDValue foldCONCAT_VECTORS(const SDLoc &DL, EVT VT,
   SmallVector<SDValue, 16> Elts;
   for (SDValue Op : Ops) {
     EVT OpVT = Op.getValueType();
-    if (Op.isUndef())
+    if (Op.getOpcode() == ISD::POISON)
+      Elts.append(OpVT.getVectorNumElements(), DAG.getPOISON(SVT));
+    else if (Op.getOpcode() == ISD::UNDEF)
       Elts.append(OpVT.getVectorNumElements(), DAG.getUNDEF(SVT));
     else if (Op.getOpcode() == ISD::BUILD_VECTOR)
       Elts.append(Op->op_begin(), Op->op_end());
@@ -7041,7 +7045,9 @@ static SDValue foldCONCAT_VECTORS(const SDLoc &DL, EVT VT,
 
   if (SVT.bitsGT(VT.getScalarType())) {
     for (SDValue &Op : Elts) {
-      if (Op.isUndef())
+      if (Op.getOpcode() == ISD::POISON)
+        Op = DAG.getPOISON(SVT);
+      else if (Op.getOpcode() == ISD::UNDEF)
         Op = DAG.getUNDEF(SVT);
       else
         Op = DAG.getTargetLoweringInfo().isZExtFree(Op.getValueType(), SVT)
@@ -7532,9 +7538,9 @@ static std::optional<APInt> FoldValue(unsigned Opcode, const APInt &C1,
   case ISD::CLMULH:
     return APIntOps::clmulh(C1, C2);
   case ISD::PEXT:
-    return APIntOps::compressBits(C1, C2);
+    return APIntOps::pext(C1, C2);
   case ISD::PDEP:
-    return APIntOps::expandBits(C1, C2);
+    return APIntOps::pdep(C1, C2);
   }
   return std::nullopt;
 }
@@ -11695,7 +11701,7 @@ SDValue SelectionDAG::simplifyFPBinop(unsigned Opcode, SDValue X, SDValue Y,
   // X * 1.0 --> X
   // X / 1.0 --> X
   if (Opcode == ISD::FMUL || Opcode == ISD::FDIV)
-    if (YC->getValueAPF().isExactlyValue(1.0))
+    if (YC->getValueAPF().isOne())
       return X;
 
   // X * 0.0 --> 0.0
@@ -13712,9 +13718,9 @@ bool SelectionDAG::isIdentityElement(unsigned Opcode, SDNodeFlags Flags,
       return OperandNo == 1 && ConstFP->isZero() &&
              (Flags.hasNoSignedZeros() || !ConstFP->isNegative());
     case ISD::FMUL:
-      return ConstFP->isExactlyValue(1.0);
+      return ConstFP->isOne();
     case ISD::FDIV:
-      return OperandNo == 1 && ConstFP->isExactlyValue(1.0);
+      return OperandNo == 1 && ConstFP->isOne();
     case ISD::FMINNUM:
     case ISD::FMAXNUM: {
       // Neutral element for fminnum is NaN, Inf or FLT_MAX, depending on FMF.
@@ -13869,7 +13875,7 @@ bool llvm::isOneOrOneSplat(SDValue N, bool AllowUndefs) {
 
 bool llvm::isOneOrOneSplatFP(SDValue N, bool AllowUndefs) {
   ConstantFPSDNode *C = isConstOrConstSplatFP(N, AllowUndefs);
-  return C && C->isExactlyValue(1.0);
+  return C && C->isOne();
 }
 
 bool llvm::isAllOnesOrAllOnesSplat(SDValue N, bool AllowUndefs) {
@@ -14504,7 +14510,7 @@ SDValue SelectionDAG::WidenVector(const SDValue &N, const SDLoc &DL) {
   EVT VT = N.getValueType();
   EVT WideVT = EVT::getVectorVT(*getContext(), VT.getVectorElementType(),
                                 NextPowerOf2(VT.getVectorNumElements()));
-  return getInsertSubvector(DL, getUNDEF(WideVT), N, 0);
+  return getInsertSubvector(DL, getPOISON(WideVT), N, 0);
 }
 
 void SelectionDAG::ExtractVectorElements(SDValue Op,
