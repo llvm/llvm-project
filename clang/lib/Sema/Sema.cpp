@@ -3223,6 +3223,12 @@ bool Sema::checkProfileViolation(StringRef ProfileName, StringRef RuleName,
   return true;
 }
 
+void Sema::ProfileSuppressScope::push(StringRef ProfileName,
+                                      StringRef RuleName) {
+  S.ProfileSuppressStack.push_back({ProfileName, RuleName});
+  ++Count;
+}
+
 Sema::ProfileSuppressScope::ProfileSuppressScope(
     Sema &S, const ParsedAttributesView &Attrs)
     : S(S) {
@@ -3232,19 +3238,14 @@ Sema::ProfileSuppressScope::ProfileSuppressScope(
     if (AL.getKind() != ParsedAttr::AT_ProfilesSuppress)
       continue;
     const auto &Args = AL.getProfileSuppressArgs();
-    if (!Args.Name.empty()) {
-      S.ProfileSuppressStack.push_back({Args.Name, Args.Rule});
-      ++Count;
-    }
+    if (!Args.Name.empty())
+      push(Args.Name, Args.Rule);
   }
 }
 
 void Sema::ProfileSuppressScope::addFromDecl(const Decl *D) {
-  for (const auto *A : D->specific_attrs<ProfilesSuppressAttr>()) {
-    S.ProfileSuppressStack.push_back(
-        {A->getProfileName(), A->getRule()});
-    ++Count;
-  }
+  for (const auto *A : D->specific_attrs<ProfilesSuppressAttr>())
+    push(A->getProfileName(), A->getRule());
 }
 
 Sema::ProfileSuppressScope::ProfileSuppressScope(Sema &S, const Decl *D,
@@ -3266,13 +3267,9 @@ Sema::ProfileSuppressScope::ProfileSuppressScope(Sema &S,
     : S(S) {
   if (!S.getLangOpts().Profiles)
     return;
-  for (const auto *A : Attrs) {
-    if (const auto *PSA = dyn_cast<ProfilesSuppressAttr>(A)) {
-      S.ProfileSuppressStack.push_back(
-          {PSA->getProfileName(), PSA->getRule()});
-      ++Count;
-    }
-  }
+  for (const auto *A : Attrs)
+    if (const auto *PSA = dyn_cast<ProfilesSuppressAttr>(A))
+      push(PSA->getProfileName(), PSA->getRule());
 }
 
 Sema::ProfileSuppressScope::~ProfileSuppressScope() {

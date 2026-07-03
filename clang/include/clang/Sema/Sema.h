@@ -1210,6 +1210,7 @@ public:
     Sema &S;
     unsigned Count = 0;
 
+    void push(StringRef ProfileName, StringRef RuleName);
     void addFromDecl(const Decl *D);
 
   public:
