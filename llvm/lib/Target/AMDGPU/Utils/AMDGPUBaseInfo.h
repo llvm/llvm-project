@@ -75,6 +75,9 @@ bool isHsaAbi(const MCSubtargetInfo &STI);
 /// \returns Code object version from the IR module flag.
 unsigned getAMDHSACodeObjectVersion(const Module &M);
 
+/// \returns ABI occupancy override in waves per EU from the IR module flag.
+unsigned getAMDGPUABIWavesPerEU(const Module &M);
+
 /// \returns Code object version from ELF's e_ident[EI_ABIVERSION].
 unsigned getAMDHSACodeObjectVersion(unsigned ABIVersion);
 

@@ -478,6 +478,16 @@ GCNSubtarget::computeOccupancy(const Function &F, unsigned LDSSize,
   return {std::min(MinOcc, MaxOcc), MaxOcc};
 }
 
+std::pair<uint64_t, uint64_t> GCNSubtarget::getEffectiveNumGPRsForWavesPerEU(
+    unsigned MaxWaves, uint64_t NumSGPRs, uint64_t NumVGPRs,
+    unsigned DynamicVGPRBlockSize) const {
+  // These are occupancy-reporting counts, not literal register usage. Clamp to
+  // at least one register because zero does not constrain occupancy.
+  return {std::max({NumSGPRs, uint64_t(1), uint64_t(getMinNumSGPRs(MaxWaves))}),
+          std::max({NumVGPRs, uint64_t(1),
+                    uint64_t(getMinNumVGPRs(MaxWaves, DynamicVGPRBlockSize))})};
+}
+
 unsigned GCNSubtarget::getBaseMaxNumSGPRs(
     const Function &F, std::pair<unsigned, unsigned> WavesPerEU,
     unsigned PreloadedSGPRs, unsigned ReservedNumSGPRs) const {
@@ -528,7 +538,7 @@ unsigned GCNSubtarget::getBaseMaxNumSGPRs(
 unsigned GCNSubtarget::getMaxNumSGPRs(const MachineFunction &MF) const {
   const Function &F = MF.getFunction();
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
-  return getBaseMaxNumSGPRs(F, MFI.getWavesPerEU(), MFI.getNumPreloadedSGPRs(),
+  return getBaseMaxNumSGPRs(F, getWavesPerEU(F), MFI.getNumPreloadedSGPRs(),
                             getReservedNumSGPRs(MF));
 }
 

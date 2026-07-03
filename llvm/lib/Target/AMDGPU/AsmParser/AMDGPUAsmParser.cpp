@@ -6930,6 +6930,12 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPUInfo() {
         return true;
       FI.PrivateSegmentSize = static_cast<uint32_t>(Val);
       HasScalarAttrs = true;
+    } else if (Dir == "occupancy") {
+      int64_t Val;
+      if (getParser().parseAbsoluteExpression(Val))
+        return true;
+      FI.Occupancy = static_cast<uint32_t>(Val);
+      HasScalarAttrs = true;
     } else if (Dir == "use") {
       StringRef ResName;
       if (getParser().parseIdentifier(ResName))
