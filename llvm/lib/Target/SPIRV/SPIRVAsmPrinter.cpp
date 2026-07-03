@@ -955,7 +955,7 @@ bool SPIRVAsmPrinter::doInitialization(Module &M) {
   if (!M.getModuleInlineAsm().empty()) {
     M.getContext().emitError(
         "SPIR-V does not support module-level inline assembly");
-    M.removeModuleInlineAsm();
+    M.setModuleInlineAsm("");
   }
 
   // Register the NSDI handler before calling the base class so that
