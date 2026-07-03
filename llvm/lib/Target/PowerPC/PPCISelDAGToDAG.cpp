@@ -85,8 +85,6 @@ STATISTIC(NumLogicOpsOnComparison,
           "Number of logical ops on i1 values calculated in GPR.");
 STATISTIC(OmittedForNonExtendUses,
           "Number of compares not eliminated as they have non-extending uses.");
-STATISTIC(NumP9Setb,
-          "Number of compares lowered to setb.");
 
 // FIXME: Remove this once the bug has been fixed!
 cl::opt<bool> ANDIGlueBug("expose-ppc-andi-glue-bug",
@@ -4694,13 +4692,15 @@ void PPCDAGToDAGISel::transferMemOperands(SDNode *N, SDNode *Result) {
   CurDAG->setNodeMemRefs(cast<MachineSDNode>(Result), {MemOp});
 }
 
-static bool mayUseP9Setb(SDNode *N, const ISD::CondCode &CC, SelectionDAG *DAG,
-                         bool &NeedSwapOps, bool &IsUnCmp) {
-
+static bool mayUseP9SetbForFloat(SDNode *N, const ISD::CondCode &CC,
+                                 bool &NeedSwapOps) {
   assert(N->getOpcode() == ISD::SELECT_CC && "Expecting a SELECT_CC here.");
 
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
+  if (!LHS.getValueType().isFloatingPoint())
+    return false;
+
   SDValue TrueRes = N->getOperand(2);
   SDValue FalseRes = N->getOperand(3);
   ConstantSDNode *TrueConst = dyn_cast<ConstantSDNode>(TrueRes);
@@ -4762,12 +4762,6 @@ static bool mayUseP9Setb(SDNode *N, const ISD::CondCode &CC, SelectionDAG *DAG,
       return false;
   }
 
-  // Canonicalize unsigned case
-  if (InnerCC == ISD::SETULT || InnerCC == ISD::SETUGT) {
-    IsUnCmp = true;
-    InnerCC = (InnerCC == ISD::SETULT) ? ISD::SETLT : ISD::SETGT;
-  }
-
   bool InnerSwapped = false;
   if (LHS == InnerRHS && RHS == InnerLHS)
     InnerSwapped = true;
@@ -4785,17 +4779,12 @@ static bool mayUseP9Setb(SDNode *N, const ISD::CondCode &CC, SelectionDAG *DAG,
     NeedSwapOps = (InnerCC == ISD::SETGT) ? InnerSwapped : !InnerSwapped;
     break;
 
-  // (select_cc lhs, rhs, -1, (zext (setcc [lr]hs, [lr]hs, setne)), setu?lt)
-  // (select_cc lhs, rhs, -1, (zext (setcc lhs, rhs, setgt)), setu?lt)
-  // (select_cc lhs, rhs, -1, (zext (setcc rhs, lhs, setlt)), setu?lt)
-  // (select_cc lhs, rhs, 1, (sext (setcc [lr]hs, [lr]hs, setne)), setu?lt)
-  // (select_cc lhs, rhs, 1, (sext (setcc lhs, rhs, setgt)), setu?lt)
-  // (select_cc lhs, rhs, 1, (sext (setcc rhs, lhs, setlt)), setu?lt)
-  case ISD::SETULT:
-    if (!IsUnCmp && InnerCC != ISD::SETNE)
-      return false;
-    IsUnCmp = true;
-    [[fallthrough]];
+  // (select_cc lhs, rhs, -1, (zext (setcc [lr]hs, [lr]hs, setne)), setlt)
+  // (select_cc lhs, rhs, -1, (zext (setcc lhs, rhs, setgt)), setlt)
+  // (select_cc lhs, rhs, -1, (zext (setcc rhs, lhs, setlt)), setlt)
+  // (select_cc lhs, rhs, 1, (sext (setcc [lr]hs, [lr]hs, setne)), setlt)
+  // (select_cc lhs, rhs, 1, (sext (setcc lhs, rhs, setgt)), setlt)
+  // (select_cc lhs, rhs, 1, (sext (setcc rhs, lhs, setlt)), setlt)
   case ISD::SETLT:
     if (InnerCC == ISD::SETNE || (InnerCC == ISD::SETGT && !InnerSwapped) ||
         (InnerCC == ISD::SETLT && InnerSwapped))
@@ -4804,17 +4793,12 @@ static bool mayUseP9Setb(SDNode *N, const ISD::CondCode &CC, SelectionDAG *DAG,
       return false;
     break;
 
-  // (select_cc lhs, rhs, 1, (sext (setcc [lr]hs, [lr]hs, setne)), setu?gt)
-  // (select_cc lhs, rhs, 1, (sext (setcc lhs, rhs, setlt)), setu?gt)
-  // (select_cc lhs, rhs, 1, (sext (setcc rhs, lhs, setgt)), setu?gt)
-  // (select_cc lhs, rhs, -1, (zext (setcc [lr]hs, [lr]hs, setne)), setu?gt)
-  // (select_cc lhs, rhs, -1, (zext (setcc lhs, rhs, setlt)), setu?gt)
-  // (select_cc lhs, rhs, -1, (zext (setcc rhs, lhs, setgt)), setu?gt)
-  case ISD::SETUGT:
-    if (!IsUnCmp && InnerCC != ISD::SETNE)
-      return false;
-    IsUnCmp = true;
-    [[fallthrough]];
+  // (select_cc lhs, rhs, 1, (sext (setcc [lr]hs, [lr]hs, setne)), setgt)
+  // (select_cc lhs, rhs, 1, (sext (setcc lhs, rhs, setlt)), setgt)
+  // (select_cc lhs, rhs, 1, (sext (setcc rhs, lhs, setgt)), setgt)
+  // (select_cc lhs, rhs, -1, (zext (setcc [lr]hs, [lr]hs, setne)), setgt)
+  // (select_cc lhs, rhs, -1, (zext (setcc lhs, rhs, setlt)), setgt)
+  // (select_cc lhs, rhs, -1, (zext (setcc rhs, lhs, setgt)), setgt)
   case ISD::SETGT:
     if (InnerCC == ISD::SETNE || (InnerCC == ISD::SETLT && !InnerSwapped) ||
         (InnerCC == ISD::SETGT && InnerSwapped))
@@ -4826,9 +4810,6 @@ static bool mayUseP9Setb(SDNode *N, const ISD::CondCode &CC, SelectionDAG *DAG,
   default:
     return false;
   }
-
-  LLVM_DEBUG(dbgs() << "Found a node that can be lowered to a SETB: ");
-  LLVM_DEBUG(N->dump());
 
   return true;
 }
@@ -5275,6 +5256,17 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
 
   switch (N->getOpcode()) {
   default: break;
+
+  case ISD::UCMP:
+  case ISD::SCMP: {
+    bool IsUnsigned = N->getOpcode() == ISD::UCMP;
+    ISD::CondCode CC = IsUnsigned ? ISD::SETUGT : ISD::SETGT;
+    SDValue CRVal = SelectCC(N->getOperand(0), N->getOperand(1), CC, dl);
+    unsigned SetBOpc =
+        N->getSimpleValueType(0) == MVT::i64 ? PPC::SETB8 : PPC::SETB;
+    CurDAG->SelectNodeTo(N, SetBOpc, N->getValueType(0), CRVal);
+    return;
+  }
 
   case ISD::Constant:
     if (N->getValueType(0) == MVT::i64) {
@@ -5866,10 +5858,9 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     if (Subtarget->useCRBits() && N->getOperand(0).getValueType() == MVT::i1)
       break;
 
-    if (Subtarget->isISA3_0() && Subtarget->isPPC64()) {
+    if (Subtarget->isISA3_0()) {
       bool NeedSwapOps = false;
-      bool IsUnCmp = false;
-      if (mayUseP9Setb(N, CC, CurDAG, NeedSwapOps, IsUnCmp)) {
+      if (mayUseP9SetbForFloat(N, CC, NeedSwapOps)) {
         SDValue LHS = N->getOperand(0);
         SDValue RHS = N->getOperand(1);
         if (NeedSwapOps)
@@ -5880,13 +5871,11 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
         // doesn't need to materialize the whole literal and just use xoris to
         // check it first, it leads the following comparison result can't
         // exactly represent GT/LT relationship. So to avoid this we specify
-        // SETGT/SETUGT here instead of SETEQ.
-        SDValue GenCC =
-            SelectCC(LHS, RHS, IsUnCmp ? ISD::SETUGT : ISD::SETGT, dl);
+        // SETGT here instead of SETEQ.
+        SDValue GenCC = SelectCC(LHS, RHS, ISD::SETGT, dl);
         CurDAG->SelectNodeTo(
             N, N->getSimpleValueType(0) == MVT::i64 ? PPC::SETB8 : PPC::SETB,
             N->getValueType(0), GenCC);
-        NumP9Setb++;
         return;
       }
     }
