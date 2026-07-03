@@ -1,6 +1,6 @@
 #
 # Configuration file for running the libunwind tests against the shared library
-# using HDC on OHOS.
+# using HDC or QEMU on OHOS.
 #
 
 lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
@@ -45,7 +45,11 @@ import os, site
 site.addsitedir(os.path.join('@LIBUNWIND_LIBCXX_PATH@', 'utils'))
 import libcxx.test.params, libcxx.test.config
 
-config.available_features.add('ohos-hdc')
+executor_kind = lit_config.params.get('executor_kind', 'ohos-hdc')
+if executor_kind not in ('ohos-hdc', 'ohos-qemu'):
+    lit_config.fatal(f'unsupported OHOS executor_kind: {executor_kind}')
+
+config.available_features.add(executor_kind)
 
 libcxx.test.config.configure(
     libcxx.test.params.DEFAULT_PARAMETERS,

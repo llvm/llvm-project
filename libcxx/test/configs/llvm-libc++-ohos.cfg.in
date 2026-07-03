@@ -1,5 +1,5 @@
 # This testing configuration handles running the test suite against LLVM's
-# libc++ using HDC on OHOS.
+# libc++ using HDC or QEMU on OHOS.
 
 lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 
@@ -23,14 +23,20 @@ import os, site
 site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
 import libcxx.test.params, libcxx.test.config
 
+executor_kind = lit_config.params.get('executor_kind', 'ohos-hdc')
+if executor_kind not in ('ohos-hdc', 'ohos-qemu'):
+    lit_config.fatal(f'unsupported OHOS executor_kind: {executor_kind}')
+
 config.available_features.add('LIBCXX-OHOS-FIXME')
-config.available_features.add('ohos-hdc')
-config.available_features.add('executor-has-no-stdin')
-config.available_features.add('executor-merges-stderr-into-stdout')
-config.available_features.add('executor-runs-as-root')
+config.available_features.add(executor_kind)
 config.available_features.add('platform-has-nonportable-locales')
 config.available_features.add('platform-has-unreliable-new-delete-interposition')
 config.available_features.add('pthread-join-self-deadlocks')
+
+if executor_kind == 'ohos-hdc':
+    config.available_features.add('executor-has-no-stdin')
+    config.available_features.add('executor-merges-stderr-into-stdout')
+    config.available_features.add('executor-runs-as-root')
 
 libcxx.test.config.configure(
     libcxx.test.params.DEFAULT_PARAMETERS,

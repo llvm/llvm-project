@@ -28,6 +28,16 @@ ${PROGNAME} [options] <BUILDER>
 --build-dir <DIR>   The directory to use for building the library. By default,
                     this is '<llvm-root>/build/<builder>'.
 
+--ohos-qemu <PATH>  Run OHOS tests under qemu-aarch64 instead of HDC. This also
+                    accepts OHOS_QEMU or QEMU from the environment.
+
+--ohos-qemu-sysroot <DIR>
+                    Sysroot passed to qemu-aarch64 with -L. Defaults to
+                    OHOS_QEMU_SYSROOT, QEMU_SYSROOT, then OHOS_SYSROOT.
+
+--ohos-hdc <PATH>   HDC binary to use when OHOS tests run on a device. This sets
+                    HDC for the OHOS HDC executor.
+
 Environment variables
 CC                  The C compiler to use, this value is used by CMake. This
                     variable is mandatory.
@@ -82,6 +92,19 @@ while [[ $# -gt 0 ]]; do
             ;;
         --build-dir)
             BUILD_DIR="${2}"
+            shift; shift
+            ;;
+        --ohos-qemu)
+            OHOS_QEMU="${2}"
+            shift; shift
+            ;;
+        --ohos-qemu-sysroot)
+            OHOS_QEMU_SYSROOT="${2}"
+            shift; shift
+            ;;
+        --ohos-hdc)
+            HDC="${2}"
+            export HDC
             shift; shift
             ;;
         *)
@@ -193,8 +216,18 @@ function setup-ohos-hdc-env() {
 
     OHOS_TARGET_TRIPLE="${OHOS_TARGET_TRIPLE:=aarch64-linux-ohos}"
     OHOS_LIBCXX_ABI_NAMESPACE="${OHOS_LIBCXX_ABI_NAMESPACE:=__h}"
-    OHOS_EXECUTOR="${MONOREPO_ROOT}/libcxx/utils/ci/vendor/ohos/hdc_run.py"
-    OHOS_LIT_PARAMS="executor=${OHOS_EXECUTOR};target_triple=${OHOS_TARGET_TRIPLE}"
+    OHOS_QEMU="${OHOS_QEMU:-${QEMU:-}}"
+
+    if [[ -n "${OHOS_QEMU}" ]]; then
+        OHOS_QEMU_SYSROOT="${OHOS_QEMU_SYSROOT:-${QEMU_SYSROOT:-${OHOS_SYSROOT}}}"
+        OHOS_EXECUTOR="${MONOREPO_ROOT}/libcxx/utils/ci/vendor/ohos/qemu_run.py --qemu ${OHOS_QEMU} --sysroot ${OHOS_QEMU_SYSROOT}"
+        OHOS_EXECUTOR_KIND="ohos-qemu"
+    else
+        OHOS_EXECUTOR="${MONOREPO_ROOT}/libcxx/utils/ci/vendor/ohos/hdc_run.py"
+        OHOS_EXECUTOR_KIND="ohos-hdc"
+    fi
+
+    OHOS_LIT_PARAMS="executor=${OHOS_EXECUTOR};target_triple=${OHOS_TARGET_TRIPLE};executor_kind=${OHOS_EXECUTOR_KIND}"
 }
 
 function generate-cmake-ohos-hdc() {
@@ -863,14 +896,14 @@ android-ndk-*)
     step "Running the libc++abi tests"
     ninja -vC "${BUILD_DIR}" check-cxxabi
 ;;
-ohos-hdc-aarch64-full)
+ohos-aarch64-full|ohos-hdc-aarch64-full)
     clean
 
     generate-cmake-ohos-hdc
 
     check-runtimes
 ;;
-ohos-hdc-aarch64-smoke)
+ohos-aarch64-smoke|ohos-hdc-aarch64-smoke)
     clean
 
     generate-cmake-ohos-hdc
