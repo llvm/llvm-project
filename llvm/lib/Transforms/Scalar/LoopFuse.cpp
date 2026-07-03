@@ -173,8 +173,8 @@ struct FusionCandidate {
       if (BB->hasAddressTaken()) {
         invalidate();
         ++AddressTakenBB;
-        reportInvalidCandidate("AddressTakenBB",
-                               "Basic block has address taken");
+        reportInvalidCandidate(AddressTakenBB.getName(),
+                               AddressTakenBB.getDesc());
         return;
       }
 
@@ -182,15 +182,15 @@ struct FusionCandidate {
         if (I.mayThrow()) {
           invalidate();
           ++MayThrowException;
-          reportInvalidCandidate("MayThrowException",
-                                 "Loop may throw an exception");
+          reportInvalidCandidate(MayThrowException.getName(),
+                                 MayThrowException.getDesc());
           return;
         }
         if (I.isVolatile()) {
           invalidate();
           ++ContainsVolatileAccess;
-          reportInvalidCandidate("ContainsVolatileAccess",
-                                 "Loop contains a volatile access");
+          reportInvalidCandidate(ContainsVolatileAccess.getName(),
+                                 ContainsVolatileAccess.getDesc());
           return;
         }
         // Atomic accesses impose ordering/synchronization constraints that the
@@ -199,8 +199,8 @@ struct FusionCandidate {
         if (I.isAtomic()) {
           invalidate();
           ++ContainsAtomicAccess;
-          reportInvalidCandidate("ContainsAtomicAccess",
-                                 "Loop contains an atomic access");
+          reportInvalidCandidate(ContainsAtomicAccess.getName(),
+                                 ContainsAtomicAccess.getDesc());
           return;
         }
         if (I.mayWriteToMemory())
@@ -306,22 +306,22 @@ struct FusionCandidate {
       LLVM_DEBUG(dbgs() << "Loop " << L->getName()
                         << " trip count not computable!\n");
       ++UnknownTripCount;
-      return reportInvalidCandidate("UnknownTripCount",
-                                    "Loop has unknown trip count");
+      return reportInvalidCandidate(UnknownTripCount.getName(),
+                                    UnknownTripCount.getDesc());
     }
 
     if (!L->isLoopSimplifyForm()) {
       LLVM_DEBUG(dbgs() << "Loop " << L->getName()
                         << " is not in simplified form!\n");
       ++NotSimplifiedForm;
-      return reportInvalidCandidate("NotSimplifiedForm",
-                                    "Loop is not in simplified form");
+      return reportInvalidCandidate(NotSimplifiedForm.getName(),
+                                    NotSimplifiedForm.getDesc());
     }
 
     if (!L->isRotatedForm()) {
       LLVM_DEBUG(dbgs() << "Loop " << L->getName() << " is not rotated!\n");
       ++NotRotated;
-      return reportInvalidCandidate("NotRotated", "Candidate is not rotated");
+      return reportInvalidCandidate(NotRotated.getName(), NotRotated.getDesc());
     }
 
     return true;
@@ -775,8 +775,8 @@ private:
                                "case. Not fusing.\n");
           ++NonEqualTripCount;
           reportLoopFusion<OptimizationRemarkMissed>(
-              FC0, FC1, "NonEqualTripCount",
-              "Loop trip counts are not the same");
+              FC0, FC1, NonEqualTripCount.getName(),
+              NonEqualTripCount.getDesc());
           continue;
         }
 
@@ -786,8 +786,8 @@ private:
                                "another one is not. Not fusing.\n");
           ++OnlySecondCandidateIsGuarded;
           reportLoopFusion<OptimizationRemarkMissed>(
-              FC0, FC1, "OnlySecondCandidateIsGuarded",
-              "The second candidate is guarded while the first one is not");
+              FC0, FC1, OnlySecondCandidateIsGuarded.getName(),
+              OnlySecondCandidateIsGuarded.getDesc());
           continue;
         }
 
@@ -801,8 +801,8 @@ private:
                                  "guards. Not Fusing.\n");
             ++NonIdenticalGuards;
             reportLoopFusion<OptimizationRemarkMissed>(
-                FC0, FC1, "NonIdenticalGuards",
-                "Candidates have different guards");
+                FC0, FC1, NonIdenticalGuards.getName(),
+                NonIdenticalGuards.getDesc());
             continue;
           }
         }
@@ -817,9 +817,8 @@ private:
                                  "instructions in exit block. Not fusing.\n");
             ++NonEmptyExitBlock;
             reportLoopFusion<OptimizationRemarkMissed>(
-                FC0, FC1, "NonEmptyExitBlock",
-                "Candidate has a non-empty exit block with "
-                "instructions that cannot be moved");
+                FC0, FC1, NonEmptyExitBlock.getName(),
+                NonEmptyExitBlock.getDesc());
             continue;
           }
 
@@ -831,9 +830,8 @@ private:
                                  "instructions in guard block. Not fusing.\n");
             ++NonEmptyGuardBlock;
             reportLoopFusion<OptimizationRemarkMissed>(
-                FC0, FC1, "NonEmptyGuardBlock",
-                "Candidate has a non-empty guard block with "
-                "instructions that cannot be moved");
+                FC0, FC1, NonEmptyGuardBlock.getName(),
+                NonEmptyGuardBlock.getDesc());
             continue;
           }
         }
@@ -844,7 +842,7 @@ private:
           LLVM_DEBUG(dbgs() << "Memory dependencies do not allow fusion!\n");
           ++InvalidDependencies;
           reportLoopFusion<OptimizationRemarkMissed>(
-              FC0, FC1, "InvalidDependencies", "Dependencies prevent fusion");
+              FC0, FC1, InvalidDependencies.getName(), InvalidDependencies.getDesc());
           continue;
         }
 
@@ -869,9 +867,8 @@ private:
                               << "Not Fusing.\n");
             ++NonEmptyPreheader;
             reportLoopFusion<OptimizationRemarkMissed>(
-                FC0, FC1, "NonEmptyPreheader",
-                "Loop has a non-empty preheader with instructions that "
-                "cannot be moved");
+                FC0, FC1, InvalidDependencies.getName(),
+                InvalidDependencies.getDesc());
             continue;
           }
         }
@@ -882,7 +879,7 @@ private:
         if (!BeneficialToFuse) {
           ++FusionNotBeneficial;
           reportLoopFusion<OptimizationRemarkMissed>(
-              FC0, FC1, "FusionNotBeneficial", "Fusion is not beneficial");
+              FC0, FC1, FusionNotBeneficial.getName(), FusionNotBeneficial.getDesc());
           continue;
         }
         // All analysis has completed and has determined that fusion is legal
@@ -908,7 +905,7 @@ private:
         // possible to identify them after fusion is complete.
         ++FuseCounter;
         reportLoopFusion<OptimizationRemark>((Peel ? FC0Copy : FC0), FC1,
-                                             "FuseCounter", "Loops fused");
+                                             FuseCounter.getName(), FuseCounter.getDesc());
 
         FusionCandidate FusedCand(performFusion((Peel ? FC0Copy : FC0), FC1),
                                   DT, &PDT, ORE, FC0Copy.PP);
@@ -1826,6 +1823,9 @@ PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
   if (Changed)
     PDT.recalculate(F);
 
+  LLVM_DEBUG(dbgs() << "Test stat name: " << FuseCounter.getName() << "\n");
+  LLVM_DEBUG(dbgs() << "Test stat desc: " << FuseCounter.getDesc() << "\n");
+  
   LoopFuser LF(LI, DT, DI, SE, PDT, ORE, AC, TTI);
   Changed |= LF.fuseLoops(F);
   if (!Changed)
