@@ -2643,16 +2643,17 @@ void CStringChecker::evalStrchrCommon(CheckerContext &C, const CallEvent &Call,
                                       StringRef FnName,
                                       bool CanReturnNull) const {
   CurrentFunctionDescription = FnName;
-  ProgramStateRef State = C.getState();
-  const StackFrame *SF = C.getStackFrame();
-  SValBuilder &SVB = C.getSValBuilder();
-  ASTContext &Ctx = C.getASTContext();
   const Expr *CE = Call.getOriginExpr();
   assert(CE);
 
   // These functions always return a pointer.
   if (!CE->getType()->isPointerType())
     return;
+
+  ProgramStateRef State = C.getState();
+  const StackFrame *SF = C.getStackFrame();
+  SValBuilder &SVB = C.getSValBuilder();
+  ASTContext &Ctx = C.getASTContext();
 
   // The first argument must be non-null for all functions in this family.
   SourceArgExpr Src = {{Call.getArgExpr(0), 0}};
