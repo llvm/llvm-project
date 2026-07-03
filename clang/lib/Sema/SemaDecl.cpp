@@ -15252,6 +15252,19 @@ bool Sema::refersToUninitializedMemory(const Expr *E, bool IsReference) const {
          UninitStorage::Uninitialized;
 }
 
+// The Decl-less ref_to_uninit check sites (call argument, default argument,
+// assignment, return, read-through) can't rely on the D->isTemplated()
+// deferral in shouldEmitProfileViolation, but their Build* routines are
+// re-run at instantiation, so defer on a template pattern here instead:
+// firing on the pattern double-diagnoses and wrongly fires in discarded
+// if-constexpr branches / never-instantiated templates. Sites that do pass a
+// Decl are unaffected. (This must stay out of shouldEmitProfileViolation:
+// its other Decl-less caller, the reinterpret_cast check, is *not* re-run at
+// instantiation, so deferring there would lose the diagnostic entirely.)
+static bool deferUninitCheckOnTemplatePattern(Sema &S, const Decl *D) {
+  return !D && S.CurContext && S.CurContext->isDependentContext();
+}
+
 void Sema::checkRefToUninitInit(SourceLocation Loc, bool TargetIsRefToUninit,
                                 bool IsReference, const Expr *Src,
                                 const Decl *D) {
@@ -15259,13 +15272,7 @@ void Sema::checkRefToUninitInit(SourceLocation Loc, bool TargetIsRefToUninit,
   // not a source the user wrote, so it must not drive this rule.
   if (!Src || isa<RecoveryExpr>(Src->IgnoreParens()))
     return;
-  // The call-argument, default-argument, assignment, and return sites pass no
-  // Decl, so the D->isTemplated() deferral in shouldEmitProfileViolation can't
-  // fire. Defer on a template pattern here instead: the binding is re-checked
-  // on the instantiated expression, so firing on the pattern double-diagnoses
-  // and wrongly fires in discarded if-constexpr branches / never-instantiated
-  // templates. The variable and data-member sites pass D and are unaffected.
-  if (!D && CurContext && CurContext->isDependentContext())
+  if (deferUninitCheckOnTemplatePattern(*this, D))
     return;
   static constexpr StringRef Profile = "std::init";
   static constexpr StringRef Rule = "ref_to_uninit";
@@ -15290,12 +15297,7 @@ void Sema::checkRefToUninitRead(SourceLocation Loc, const Expr *Glvalue,
   // a read the user wrote, so it must not drive this rule.
   if (!Glvalue || isa<RecoveryExpr>(Glvalue->IgnoreParens()))
     return;
-  // This read site passes no Decl, so the D->isTemplated() deferral in
-  // shouldEmitProfileViolation can't fire. Defer on a template pattern here:
-  // the read is re-checked on the instantiated expression, so firing on the
-  // pattern double-diagnoses and wrongly fires in discarded if-constexpr
-  // branches / never-instantiated templates (mirrors checkRefToUninitInit).
-  if (CurContext && CurContext->isDependentContext())
+  if (deferUninitCheckOnTemplatePattern(*this, /*D=*/nullptr))
     return;
   // Paper §4.5: reading an uninitialized std::byte is permitted.
   if (Context.getBaseElementType(ValueType)->isStdByteType())
