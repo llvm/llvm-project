@@ -15,6 +15,7 @@ add_subdirectory(Interfaces)
 add_lldb_library(lldbInterpreter NO_PLUGIN_DEPENDENCIES
   CommandAlias.cpp
   CommandHistory.cpp
+  CommandHistoryWithContext.cpp
   CommandInterpreter.cpp
   CommandObject.cpp
   CommandOptionValidators.cpp

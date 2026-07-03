@@ -78,9 +78,12 @@
 #include "lldb/Interpreter/Property.h"
 #include "lldb/Utility/Args.h"
 
+#include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/StackFrame.h"
 #include "lldb/Target/StopInfo.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Target/TargetList.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/UnixSignals.h"
@@ -88,6 +91,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -127,6 +131,20 @@ llvm::StringRef CommandInterpreter::GetStaticBroadcasterClass() {
   return class_name;
 }
 
+/// Return the path of the JSON file used to persist the context-annotated
+/// command history. It lives next to the other persistent LLDB caches, in the
+/// "lldb" subdirectory of the user's cache directory (e.g. ~/.cache/lldb on
+/// Linux or ~/Library/Caches/lldb on macOS). An empty FileSpec is returned if
+/// the cache directory cannot be determined, disabling persistence.
+static FileSpec GetCommandHistoryFilePath() {
+  llvm::SmallString<128> path;
+  if (!llvm::sys::path::cache_directory(path))
+    return FileSpec();
+  llvm::sys::path::append(path, "lldb");
+  llvm::sys::path::append(path, "command-history.json");
+  return FileSpec(path);
+}
+
 CommandInterpreter::CommandInterpreter(Debugger &debugger,
                                        bool synchronous_execution)
     : Broadcaster(debugger.GetBroadcasterManager(),
@@ -135,6 +153,7 @@ CommandInterpreter::CommandInterpreter(Debugger &debugger,
       IOHandlerDelegate(IOHandlerDelegate::Completion::LLDBCommand),
       m_debugger(debugger), m_synchronous_execution(true),
       m_skip_lldbinit_files(false), m_skip_app_init_files(false),
+      m_command_history_with_context(GetCommandHistoryFilePath()),
       m_comment_char('#'), m_batch_command_mode(false),
       m_truncation_warning(eNoOmission), m_max_depth_warning(eNoOmission),
       m_command_source_depth(0) {
@@ -144,6 +163,9 @@ CommandInterpreter::CommandInterpreter(Debugger &debugger,
   SetSynchronous(synchronous_execution);
   CheckInWithManager();
   m_collection_sp->Initialize(g_interpreter_properties_def);
+  // Restore the context-annotated command history from previous sessions so
+  // that autosuggestions can draw on it immediately.
+  m_command_history_with_context.Load();
 }
 
 bool CommandInterpreter::GetExpandRegexAliases() const {
@@ -2269,8 +2291,11 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
       }
     }
 
-    if (add_to_history)
+    if (add_to_history) {
       m_command_history.AppendString(original_command_string);
+      m_command_history_with_context.AppendCommand(original_command_string,
+                                                   GetCurrentCommandContext());
+    }
 
     const std::size_t actual_cmd_name_len = cmd_obj->GetCommandName().size();
     if (actual_cmd_name_len < command_string.length())
@@ -2390,17 +2415,46 @@ void CommandInterpreter::HandleCompletion(CompletionRequest &request) {
   HandleCompletionMatches(request);
 }
 
+CommandExecutionContext CommandInterpreter::GetCurrentCommandContext() {
+  CommandExecutionContext context;
+
+  // Record LLDB's current working directory.
+  llvm::SmallString<256> cwd;
+  if (!llvm::sys::fs::current_path(cwd))
+    context.working_directory = std::string(cwd);
+
+  ExecutionContext exe_ctx(GetExecutionContext());
+
+  // Record the basename of the target's executable.
+  if (Target *target = exe_ctx.GetTargetPtr()) {
+    if (Module *exe_module = target->GetExecutableModulePointer())
+      context.target_name =
+          exe_module->GetFileSpec().GetFilename().str();
+  }
+
+  // Record the current stop location: source file and line, plus the base name
+  // of the function we are stopped in.
+  if (StackFrame *frame = exe_ctx.GetFramePtr()) {
+    SymbolContext sc = frame->GetSymbolContext(
+        eSymbolContextFunction | eSymbolContextLineEntry | eSymbolContextSymbol);
+    context.function_name =
+        sc.GetFunctionName(Mangled::ePreferDemangledWithoutArguments)
+            .GetString();
+    if (sc.line_entry.IsValid()) {
+      context.file = sc.line_entry.GetFile().GetFilename().str();
+      context.line = sc.line_entry.line;
+    }
+  }
+
+  return context;
+}
+
 std::optional<std::string>
 CommandInterpreter::GetAutoSuggestionForCommand(llvm::StringRef line) {
   if (line.empty())
     return std::nullopt;
-  const size_t s = m_command_history.GetSize();
-  for (int i = s - 1; i >= 0; --i) {
-    llvm::StringRef entry = m_command_history.GetStringAtIndex(i);
-    if (entry.consume_front(line))
-      return entry.str();
-  }
-  return std::nullopt;
+  return m_command_history_with_context.FindSuggestion(
+      line, GetCurrentCommandContext());
 }
 
 void CommandInterpreter::UpdatePrompt(llvm::StringRef new_prompt) {
