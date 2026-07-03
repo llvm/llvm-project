@@ -19,6 +19,7 @@
 #include "Utils.h"
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/expression.h"
+#include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Lower/Bridge.h"
@@ -34,6 +35,7 @@
 #include "flang/Lower/Support/ReductionProcessor.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -5673,6 +5675,98 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                 queue.begin(), critName);
 }
 
+// Copy the character value `str` into fresh stack memory with an appended NUL
+// and return a pointer to its first character. Fortran characters are not
+// NUL-terminated, so the terminator is needed for C runtime entry points (such
+// as `__kmpc_error`) that expect a NUL-terminated string.
+static mlir::Value genNullTerminatedString(fir::FirOpBuilder &builder,
+                                           mlir::Location loc,
+                                           const fir::ExtendedValue &str) {
+  fir::factory::CharacterExprHelper helper(builder, loc);
+  const mlir::Value addr = fir::getBase(str);
+  const mlir::Value len = fir::getLen(str);
+  const auto charTy =
+      mlir::cast<fir::CharacterType>(fir::unwrapRefType(addr.getType()));
+  mlir::MLIRContext *ctx = builder.getContext();
+  const mlir::Type idxTy = builder.getIndexType();
+  const mlir::Value idxLen = builder.createConvert(loc, idxTy, len);
+  const mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+  const mlir::Value lenPlusOne =
+      mlir::arith::AddIOp::create(builder, loc, idxLen, one);
+
+  // Allocate `len + 1` characters and copy the message into them, leaving room
+  // for the terminating NUL.
+  const fir::CharBoxValue temp = helper.createCharacterTemp(charTy, lenPlusOne);
+  helper.createCopy(temp, fir::CharBoxValue{addr, len}, len);
+
+  // Address the buffer as an array of single characters so the terminating NUL
+  // can be stored at index `len`.
+  const auto singleTy = fir::CharacterType::get(
+      ctx, charTy.getFKind(), fir::CharacterType::singleton());
+  const mlir::Type singleRefTy = builder.getRefType(singleTy);
+  const mlir::Type seqRefTy = builder.getRefType(fir::SequenceType::get(
+      {fir::SequenceType::getUnknownExtent()}, singleTy));
+  const mlir::Value seq =
+      builder.createConvert(loc, seqRefTy, temp.getBuffer());
+  const mlir::Value nulAddr =
+      fir::CoordinateOp::create(builder, loc, singleRefTy, seq, idxLen);
+  const mlir::Value zero =
+      builder.createIntegerConstant(loc, builder.getI8Type(), 0);
+  const mlir::Value nul =
+      helper.createSingletonFromCode(zero, charTy.getFKind());
+  fir::StoreOp::create(builder, loc, nul, nulAddr);
+
+  // Pass a pointer to the first character of the buffer.
+  return builder.createConvert(loc, singleRefTy, temp.getBuffer());
+}
+
+// Lower an `!$omp error` directive. The `at(compilation)` form is handled
+// entirely in semantics, so only the `at(execution)` form reaches lowering,
+// where it becomes an `omp.error` operation.
+static void genErrorDirective(lower::AbstractConverter &converter,
+                              semantics::SemanticsContext &semaCtx,
+                              const parser::OmpErrorDirective &errDir) {
+  const semantics::omp::OmpErrorArgs args{
+      semantics::omp::GetErrorDirectiveArgs(errDir)};
+
+  if (args.at != parser::OmpAtClause::ActionTime::Execution ||
+      semaCtx.langOptions().OpenMPSimd)
+    return;
+
+  std::optional<std::string> message;
+  MaybeExpr messageExpr;
+  if (args.message) {
+    if (auto expr = semantics::omp::GetEvaluateExpr(*args.message)) {
+      if (auto val = evaluate::GetScalarConstantValue<evaluate::Ascii>(*expr))
+        message = *val;
+      else
+        messageExpr = expr;
+    }
+  }
+
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  const mlir::Location loc = converter.getCurrentLocation();
+  const mlir::omp::ClauseSeverity sev =
+      args.severity == parser::OmpSeverityClause::SevLevel::Warning
+          ? mlir::omp::ClauseSeverity::warning
+          : mlir::omp::ClauseSeverity::fatal;
+
+  // A compile-time-constant message is stored directly on the operation as an
+  // attribute. A non-constant message is lowered to a null-terminated string in
+  // memory and passed as the `message_expr` operand.
+  mlir::StringAttr msgAttr;
+  mlir::Value msgExprVal;
+  if (message) {
+    msgAttr = builder.getStringAttr(*message);
+  } else if (messageExpr) {
+    lower::StatementContext stmtCtx;
+    fir::ExtendedValue str = converter.genExprAddr(loc, *messageExpr, stmtCtx);
+    msgExprVal = genNullTerminatedString(builder, loc, str);
+  }
+
+  mlir::omp::ErrorOp::create(builder, loc, sev, msgAttr, msgExprVal);
+}
+
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
@@ -5681,10 +5775,8 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                     [&](const parser::OmpNothingDirective &) {
                       // nothing-directive is a no-op (OpenMP 5.2 [8.4])
                     },
-                    [&](const parser::OmpErrorDirective &) {
-                      if (!semaCtx.langOptions().OpenMPSimd)
-                        TODO(converter.getCurrentLocation(),
-                             "OmpErrorDirective");
+                    [&](const parser::OmpErrorDirective &errDir) {
+                      genErrorDirective(converter, semaCtx, errDir);
                     },
                 },
                 dir.u);

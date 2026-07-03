@@ -2626,11 +2626,53 @@ void OmpStructureChecker::Enter(const parser::OpenMPDispatchConstruct &x) {
   }
 }
 
+void OmpStructureChecker::Enter(const parser::OmpErrorDirective &x) {
+  const OmpErrorArgs args{GetErrorDirectiveArgs(x)};
+
+  // The AT(execution) form (non-default) is handled at run time.
+  if (args.at != parser::OmpAtClause::ActionTime::Compilation) {
+    return;
+  }
+
+  std::optional<std::string> message;
+  if (args.message) {
+    if (auto expr{GetEvaluateExpr(*args.message)}) {
+      if (auto val{evaluate::GetScalarConstantValue<evaluate::Ascii>(*expr)}) {
+        message = *val;
+      }
+    }
+  }
+
+  if (args.severity == parser::OmpSeverityClause::SevLevel::Warning) {
+    context_.Say(x.v.source, "%s"_warn_en_US, message.value_or("WARNING"));
+  } else {
+    context_.Say(x.v.source, "%s"_err_en_US, message.value_or("ERROR"));
+  }
+}
+
 void OmpStructureChecker::Enter(const parser::OmpClause::At &x) {
   if (GetDirectiveNest(DeclarativeNest) > 0) {
     if (x.v.v == parser::OmpAtClause::ActionTime::Execution) {
       context_.Say(GetContext().clauseSource,
           "The ERROR directive with AT(EXECUTION) cannot appear in the specification part"_err_en_US);
+    }
+  }
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::Message &x) {
+  if (const auto expr{GetEvaluateExpr(x.v.v)}) {
+    const std::optional<evaluate::DynamicType> type{expr->GetType()};
+    if (!type || type->category() != evaluate::TypeCategory::Character) {
+      context_.Say(GetContext().clauseSource,
+          "The MESSAGE clause expression must be of type CHARACTER"_err_en_US);
+    } else if (expr->Rank() != 0) {
+      context_.Say(GetContext().clauseSource,
+          "The MESSAGE clause expression must be scalar"_err_en_US);
+    } else if (type->kind() !=
+        context_.defaultKinds().GetDefaultKind(
+            evaluate::TypeCategory::Character)) {
+      context_.Say(GetContext().clauseSource,
+          "The MESSAGE clause expression must be of default character kind"_err_en_US);
     }
   }
 }

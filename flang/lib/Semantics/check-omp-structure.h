@@ -138,6 +138,8 @@ public:
   void Enter(const parser::OmpDirectiveSpecification &);
   void Leave(const parser::OmpDirectiveSpecification &);
 
+  void Enter(const parser::OmpErrorDirective &);
+
   void Enter(const parser::OmpMetadirectiveDirective &);
   void Leave(const parser::OmpMetadirectiveDirective &);
 
@@ -187,6 +189,7 @@ public:
   void Enter(const parser::OmpClause::Linear &x);
   void Enter(const parser::OmpClause::Looprange &x);
   void Enter(const parser::OmpClause::Map &x);
+  void Enter(const parser::OmpClause::Message &x);
   void Enter(const parser::OmpClause::NumTeams &x);
   void Enter(const parser::OmpClause::NumThreads &x);
   void Enter(const parser::OmpClause::OmpxBare &x);

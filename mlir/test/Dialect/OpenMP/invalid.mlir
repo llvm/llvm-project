@@ -4812,3 +4812,10 @@ func.func @free_shared_mem_invalid_alignment2(%n: i32, %ptr : !llvm.ptr) -> () {
   omp.free_shared_mem [%n x i64 : (i32) align(3)] %ptr : !llvm.ptr
   return
 }
+
+// -----
+func.func @omp_error_message_and_message_expr(%msg : !llvm.ptr) -> () {
+  // expected-error @below {{the message must be provided either as a constant `message` attribute or as a `message_expr` operand, but not both}}
+  omp.error severity(warning) message("a warning") message_expr(%msg : !llvm.ptr)
+  return
+}
