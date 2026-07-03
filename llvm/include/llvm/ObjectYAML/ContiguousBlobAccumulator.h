@@ -16,6 +16,7 @@
 #define LLVM_OBJECTYAML_CONTIGUOUSBLOBACCUMULATOR_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
@@ -41,7 +42,7 @@ class ContiguousBlobAccumulator {
   raw_svector_ostream OS;
   Error ReachedLimitErr = Error::success();
 
-  bool checkLimit(uint64_t Size);
+  LLVM_ABI bool checkLimit(uint64_t Size);
 
 public:
   ContiguousBlobAccumulator(uint64_t BaseOffset, uint64_t SizeLimit)
@@ -58,7 +59,7 @@ public:
   }
 
   /// \returns The new offset.
-  uint64_t padToAlignment(unsigned Align);
+  LLVM_ABI uint64_t padToAlignment(unsigned Align);
 
   raw_ostream *getRawOS(uint64_t Size) {
     if (checkLimit(Size))
@@ -66,7 +67,7 @@ public:
     return nullptr;
   }
 
-  void writeAsBinary(const BinaryRef &Bin, uint64_t N = UINT64_MAX);
+  LLVM_ABI void writeAsBinary(const BinaryRef &Bin, uint64_t N = UINT64_MAX);
 
   void writeZeros(uint64_t Num) {
     if (checkLimit(Num))
@@ -83,16 +84,16 @@ public:
       OS.write(C);
   }
 
-  unsigned writeULEB128(uint64_t Val);
+  LLVM_ABI unsigned writeULEB128(uint64_t Val);
 
-  unsigned writeSLEB128(int64_t Val);
+  LLVM_ABI unsigned writeSLEB128(int64_t Val);
 
   template <typename T> void write(T Val, llvm::endianness E) {
     if (checkLimit(sizeof(T)))
       support::endian::write<T>(OS, Val, E);
   }
 
-  void updateDataAt(uint64_t Pos, void *Data, size_t Size);
+  LLVM_ABI void updateDataAt(uint64_t Pos, void *Data, size_t Size);
 };
 
 } // end namespace yaml
