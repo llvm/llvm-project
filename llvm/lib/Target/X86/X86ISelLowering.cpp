@@ -2830,6 +2830,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::SDIV,
                        ISD::UREM,
                        ISD::SREM,
+                       ISD::MASKED_UDIV,
+                       ISD::MASKED_SDIV,
+                       ISD::MASKED_UREM,
+                       ISD::MASKED_SREM,
                        ISD::XOR,
                        ISD::MSCATTER,
                        ISD::MGATHER,
@@ -50458,6 +50462,11 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
   SDValue Dividend = N->getOperand(0);
   SDValue Divisor = N->getOperand(1);
   unsigned Opc = N->getOpcode();
+
+  // Disabled lanes are poison and fdiv never traps, so ignore the mask.
+  if (Opc == ISD::MASKED_UDIV || Opc == ISD::MASKED_SDIV ||
+      Opc == ISD::MASKED_UREM || Opc == ISD::MASKED_SREM)
+    Opc = ISD::getUnmaskedBinOpOpcode(Opc);
   bool IsRem = Opc == ISD::UREM || Opc == ISD::SREM;
   bool IsSigned = Opc == ISD::SDIV || Opc == ISD::SREM;
 
@@ -50479,8 +50488,15 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
     // for latency and code size before AVX2.
     if (!IsSigned && VT.getScalarSizeInBits() == 32 && !Subtarget.hasAVX2())
       return SDValue();
+
     MVT FPSclVT = VT.getScalarSizeInBits() <= 16 ? MVT::f32 : MVT::f64;
     EVT FPVT = VT.changeVectorElementType(*DAG.getContext(), FPSclVT);
+
+    // Nothing will split an illegal FP type after type legalization.
+    if (!DCI.isBeforeLegalize() &&
+        !DAG.getTargetLoweringInfo().isTypeLegal(FPVT))
+      return SDValue();
+
     unsigned ToFP = IsSigned ? ISD::SINT_TO_FP : ISD::UINT_TO_FP;
     unsigned FromFP = IsSigned ? ISD::FP_TO_SINT : ISD::FP_TO_UINT;
     SDValue X = DAG.getNode(ToFP, DL, FPVT, Dividend);
@@ -50497,7 +50513,7 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
   // i64: the quotient doesn't fit f64 exactly, so build it from two
   // rounded-down reciprocal multiplies, one of the dividend and one of its
   // remainder. {rd/ru-sae} rounding is 512-bit only, so v8i64 on AVX512DQ.
-  if (VT == MVT::v8i64 && Subtarget.hasDQI()) {
+  if (VT == MVT::v8i64 && Subtarget.hasDQI() && Subtarget.useAVX512Regs()) {
     MVT FPVT = MVT::v8f64;
     SDValue RD = DAG.getTargetConstant(X86::STATIC_ROUNDING::TO_NEG_INF, DL,
                                        MVT::i32); // {rd-sae}
@@ -63045,7 +63061,11 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::UDIV:
   case ISD::SDIV:
   case ISD::UREM:
-  case ISD::SREM:           return combineIntDivRem(N, DAG, DCI, Subtarget);
+  case ISD::SREM:
+  case ISD::MASKED_UDIV:
+  case ISD::MASKED_SDIV:
+  case ISD::MASKED_UREM:
+  case ISD::MASKED_SREM:    return combineIntDivRem(N, DAG, DCI, Subtarget);
   case ISD::SHL:            return combineShiftLeft(N, DAG, Subtarget);
   case ISD::SRA:            return combineShiftRightArithmetic(N, DAG, Subtarget);
   case ISD::SRL:            return combineShiftRightLogical(N, DAG, DCI, Subtarget);
