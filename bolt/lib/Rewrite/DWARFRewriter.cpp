@@ -168,12 +168,16 @@ translateInputToOutputLocationList(const BinaryFunction &BF,
           Entry.Expr == OutputLL.back().Expr) {
         OutputLL.back().HighPC =
             std::max(OutputLL.back().HighPC, OutRanges.front().HighPC);
+        // Extending the range: keep the merged entry's ViewBegin and take the
+        // ViewEnd of the absorbed range so the view pair still brackets it.
+        OutputLL.back().View.ViewEnd = Entry.View.ViewEnd;
         OutRanges.erase(OutRanges.begin());
       }
     }
     llvm::transform(OutRanges, std::back_inserter(OutputLL),
                     [&Entry](const DebugAddressRange &R) {
-                      return DebugLocationEntry{R.LowPC, R.HighPC, Entry.Expr};
+                      return DebugLocationEntry{R.LowPC, R.HighPC, Entry.Expr,
+                                                Entry.View};
                     });
   }
 
@@ -188,10 +192,13 @@ translateInputToOutputLocationList(const BinaryFunction &BF,
   for (const DebugLocationEntry &Entry : OutputLL) {
     if (Entry.LowPC <= PrevHighPC && *PrevExpr == Entry.Expr) {
       MergedLL.back().HighPC = std::max(Entry.HighPC, MergedLL.back().HighPC);
+      // Same as above: absorbing a range only advances the merged ViewEnd.
+      MergedLL.back().View.ViewEnd = Entry.View.ViewEnd;
     } else {
       const uint64_t Begin = std::max(Entry.LowPC, PrevHighPC);
       const uint64_t End = std::max(Begin, Entry.HighPC);
-      MergedLL.emplace_back(DebugLocationEntry{Begin, End, Entry.Expr});
+      MergedLL.emplace_back(
+          DebugLocationEntry{Begin, End, Entry.Expr, Entry.View});
     }
     PrevHighPC = MergedLL.back().HighPC;
     PrevExpr = &MergedLL.back().Expr;
@@ -561,6 +568,74 @@ static void emitDWOBuilder(const std::string &DWOName,
                          StrOffstsWriter, StrWriter, TempRangesSectionWriter);
 }
 
+static StringRef getLoclistsSectionData(const DWARFUnit &Unit) {
+  const DWARFObject &Obj = Unit.getContext().getDWARFObj();
+  if (Unit.isDWOUnit())
+    return Obj.getLoclistsDWOSection().Data;
+  return Obj.getLoclistsSection().Data;
+}
+
+static std::optional<uint64_t>
+resolveInputLoclistSectionOffset(DWARFUnit &Unit, const DIEValue &LocAttrInfo) {
+  if (!LocAttrInfo)
+    return std::nullopt;
+
+  if (LocAttrInfo.getForm() == dwarf::DW_FORM_loclistx) {
+    if (Unit.getVersion() < 5)
+      return std::nullopt;
+    return Unit.getLoclistOffset(LocAttrInfo.getDIELocList().getValue());
+  }
+
+  if (doesFormBelongToClass(LocAttrInfo.getForm(),
+                            DWARFFormValue::FC_SectionOffset,
+                            Unit.getVersion()) ||
+      doesFormBelongToClass(LocAttrInfo.getForm(), DWARFFormValue::FC_Constant,
+                            Unit.getVersion()))
+    return LocAttrInfo.getDIEInteger().getValue();
+
+  return std::nullopt;
+}
+
+static SmallVector<DebugLocationViewPair, 4>
+parseLocViewList(StringRef Sec, uint64_t ViewOff, uint64_t ListOff,
+                 bool IsLittleEndian) {
+  SmallVector<DebugLocationViewPair, 4> Views;
+  if (ViewOff >= ListOff || ListOff > Sec.size())
+    return Views;
+
+  DataExtractor Data(Sec, IsLittleEndian);
+  DataExtractor::Cursor C(ViewOff);
+  while (C && C.tell() < ListOff) {
+    const uint64_t VB = Data.getULEB128(C);
+    if (!C || C.tell() > ListOff)
+      break;
+    const uint64_t VE = Data.getULEB128(C);
+    if (!C || C.tell() > ListOff)
+      break;
+    Views.emplace_back(DebugLocationViewPair{VB, VE});
+  }
+  return Views;
+}
+
+static SmallVector<DebugLocationViewPair, 4>
+parseInputLocViews(DWARFUnit &Unit, const DIEValue &LocViewsAttr,
+                   const DIEValue &LocAttrInfo) {
+  if (!LocViewsAttr || !LocAttrInfo || Unit.getVersion() < 5)
+    return {};
+
+  const std::optional<uint64_t> ListOff =
+      resolveInputLoclistSectionOffset(Unit, LocAttrInfo);
+  if (!ListOff)
+    return {};
+
+  const uint64_t ViewOff = LocViewsAttr.getDIEInteger().getValue();
+  if (*ListOff <= ViewOff)
+    return {};
+
+  return parseLocViewList(getLoclistsSectionData(Unit), ViewOff, *ListOff,
+                          Unit.getContext().isLittleEndian());
+}
+
 static SmallVector<SmallVector<DWARFUnit *>> partitionCUs(DWARFContext &DwCtx,
                                                           const size_t Size) {
   SmallVector<DWARFUnit *, 0> AllCUs;
@@ -727,16 +802,19 @@ void DWARFRewriter::mergePerBucketLocs(DIEBuilder &PartDIEBlder,
     Accum.LocListCUOrder.push_back(CUOffset);
     uint64_t LoclistsBase = 0;
     uint64_t LegacyLocBase = 0;
+    uint64_t GlobalCUOffset = 0;
+    DebugLoclistWriter *LocListWriter = nullptr;
 
     auto LocIt = LocListWritersByCU.find(CUOffset);
     if (LocIt != LocListWritersByCU.end()) {
       DebugLocWriter *LocWriter = LocIt->second.get();
-      auto *LocListWriter = dyn_cast<DebugLoclistWriter>(LocWriter);
+      LocListWriter = dyn_cast<DebugLoclistWriter>(LocWriter);
       const uint64_t BufferSize = LocWriter->getLocBufferSize();
 
       if (LocListWriter && LocListWriter->getDwarfVersion() >= 5 &&
           !LocListWriter->isSplitDwarf() && BufferSize != 0) {
-        LoclistsBase = Accum.LoclistsOffset;
+        GlobalCUOffset = Accum.LoclistsOffset;
+        LoclistsBase = GlobalCUOffset;
         Accum.LoclistsOffset += BufferSize;
       } else if (!LocListWriter) {
         LegacyLocBase = Accum.LegacyLocOffset;
@@ -765,6 +843,9 @@ void DWARFRewriter::mergePerBucketLocs(DIEBuilder &PartDIEBlder,
     }
     if (LegacyLocBase)
       LocIt->second->applyBase(PartDIEBlder, LegacyLocBase);
+
+    if (LocListWriter)
+      LocListWriter->applyViewOffsets(PartDIEBlder, GlobalCUOffset);
   }
 }
 
@@ -1344,6 +1425,13 @@ void DWARFRewriter::updateUnitDebugInfo(
       // Handle any tag that can have DW_AT_location attribute.
       DIEValue LocAttrInfo = Die->findAttribute(dwarf::DW_AT_location);
       DIEValue LowPCAttrInfo = Die->findAttribute(dwarf::DW_AT_low_pc);
+
+      DIEValue LocViewsAttr = Die->findAttribute(dwarf::DW_AT_GNU_locviews);
+      const bool HasGNULocViews = static_cast<bool>(LocViewsAttr);
+      SmallVector<DebugLocationViewPair, 4> InputViews;
+      if (HasGNULocViews)
+        InputViews = parseInputLocViews(Unit, LocViewsAttr, LocAttrInfo);
+
       if (LocAttrInfo) {
         if (doesFormBelongToClass(LocAttrInfo.getForm(),
                                   DWARFFormValue::FC_Constant,
@@ -1433,6 +1521,13 @@ void DWARFRewriter::updateUnitDebugInfo(
                    << " in CU at 0x" << Twine::utohexstr(Unit.getOffset())
                    << '\n';
           } else {
+            // Attach each parsed view pair to its bounded loclist entry so the
+            // view travels with the entry through translation/merge/sort and
+            // stays 1:1 with the emitted range.
+            if (HasGNULocViews)
+              for (size_t I = 0; I < InputLL.size() && I < InputViews.size();
+                   ++I)
+                InputLL[I].View = InputViews[I];
             const uint64_t Address = InputLL.front().LowPC;
             DebugLocationsVector OutputLL;
             if (const BinaryFunction *Function =
@@ -1450,7 +1545,8 @@ void DWARFRewriter::updateUnitDebugInfo(
               // information.
               OutputLL = InputLL;
             }
-            DebugLocWriter.addList(DIEBldr, *Die, LocAttrInfo, OutputLL);
+            DebugLocWriter.addList(DIEBldr, *Die, LocAttrInfo, OutputLL,
+                                   HasGNULocViews);
           }
         } else {
           assert((doesFormBelongToClass(LocAttrInfo.getForm(),

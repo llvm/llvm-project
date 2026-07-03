@@ -14,6 +14,7 @@
 #ifndef BOLT_CORE_DEBUG_DATA_H
 #define BOLT_CORE_DEBUG_DATA_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -104,12 +105,25 @@ inline raw_ostream &operator<<(raw_ostream &OS,
 /// DebugAddressRangesVector - represents a set of absolute address ranges.
 using DebugAddressRangesVector = SmallVector<DebugAddressRange, 2>;
 
+/// A single GNU location view pair (DW_AT_GNU_locviews), describing the
+/// begin/end view numbers associated with a location list entry. GCC emits
+/// these as a sequence of ULEB128 pairs immediately preceding the matching
+/// loclist in .debug_loclists.
+struct DebugLocationViewPair {
+  uint64_t ViewBegin;
+  uint64_t ViewEnd;
+};
+
 /// Address range with location used by .debug_loc section.
 /// More compact than DWARFLocationEntry and uses absolute addresses.
 struct DebugLocationEntry {
   uint64_t LowPC;
   uint64_t HighPC;
   SmallVector<uint8_t, 4> Expr;
+  /// GNU location view pair (DW_AT_GNU_locviews) tied to this entry. Only
+  /// meaningful when the DIE has DW_AT_GNU_locviews; it travels with the entry
+  /// through translation/merge/sort so it stays 1:1 with the emitted range.
+  DebugLocationViewPair View{0, 0};
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS,
@@ -161,9 +175,9 @@ class DebugRangesSectionWriter {
 public:
   DebugRangesSectionWriter();
 
-  DebugRangesSectionWriter(RangesWriterKind K) : Kind(K){};
+  DebugRangesSectionWriter(RangesWriterKind K) : Kind(K) {};
 
-  virtual ~DebugRangesSectionWriter(){};
+  virtual ~DebugRangesSectionWriter() {};
 
   /// Add ranges with caching.
   virtual uint64_t
@@ -234,7 +248,7 @@ public:
     RangesBuffer = std::make_unique<DebugBufferVector>();
     RangesStream = std::make_unique<raw_svector_ostream>(*RangesBuffer);
   };
-  virtual ~DebugRangeListsSectionWriter(){};
+  virtual ~DebugRangeListsSectionWriter() {};
 
   void setAddressWriter(DebugAddrWriter *AddrW) { AddrWriter = AddrW; }
 
@@ -318,7 +332,7 @@ public:
   DebugAddrWriter() = delete;
   DebugAddrWriter(BinaryContext *BC_) : DebugAddrWriter(BC_, UCHAR_MAX) {};
   DebugAddrWriter(BinaryContext *BC_, uint8_t AddressByteSize);
-  virtual ~DebugAddrWriter(){};
+  virtual ~DebugAddrWriter() {};
   /// Given an address returns an index in .debug_addr.
   /// Adds Address to map.
   uint32_t getIndexFromAddress(uint64_t Address, DWARFUnit &CU);
@@ -553,11 +567,12 @@ protected:
 
 public:
   DebugLocWriter() { init(); };
-  virtual ~DebugLocWriter(){};
+  virtual ~DebugLocWriter() {};
 
   /// Writes out location lists and stores internal patches.
   virtual void addList(DIEBuilder &DIEBldr, DIE &Die, DIEValue &AttrInfo,
-                       DebugLocationsVector &LocList);
+                       DebugLocationsVector &LocList,
+                       bool HasGNULocViews = false);
 
   /// Writes out locations in to a local buffer, and adds Debug Info patches.
   virtual void finalize(DIEBuilder &DIEBldr, DIE &Die);
@@ -627,12 +642,19 @@ public:
   }
 
   /// Stores location lists internally to be written out during finalize phase.
-  virtual void addList(DIEBuilder &DIEBldr, DIE &Die, DIEValue &AttrInfo,
-                       DebugLocationsVector &LocList) override;
+  void addList(DIEBuilder &DIEBldr, DIE &Die, DIEValue &AttrInfo,
+               DebugLocationsVector &LocList,
+               bool HasGNULocViews = false) override;
 
   /// Writes out locations in to a local buffer and applies debug info patches.
   void finalize(DIEBuilder &DIEBldr, DIE &Die) override;
 
+  /// Updates DW_AT_GNU_locviews using the CU's final offset in .debug_loclists.
+  /// \p GlobalCUOffset is the absolute offset of this CU contribution
+  /// (including its unit header) in the merged section. View bytes are
+  /// addressed relative to the CU body that follows the header and loclist
+  /// offset table.
+  void applyViewOffsets(DIEBuilder &Bldr, uint64_t GlobalCUOffset);
   /// Returns CU ID.
   /// For Skeleton CU it is a CU Offset.
   /// For DWO CU it is a DWO ID.
@@ -653,6 +675,16 @@ public:
 private:
   /// Writes out locations in to a local buffer and applies debug info patches.
   void finalizeDWARF5(DIEBuilder &DIEBldr, DIE &Die);
+
+  struct LocViewPatch {
+    DIE *Die;
+    uint64_t LocalViewOffset;
+  };
+
+  void writeDWARF5LocList(DIEBuilder &DIEBldr, DIE &Die, DIEValue &AttrInfo,
+                          DebugLocationsVector &LocList, bool HasGNULocViews);
+
+  std::vector<LocViewPatch> LocViewPatches;
 
   DebugAddrWriter &AddrWriter;
   DWARFUnit &CU;
