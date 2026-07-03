@@ -179,6 +179,10 @@ defm FmaMixBF16Insts : AMDGPUSubtargetFeature<"fma-mix-bf16-insts",
   "Has v_fma_mix_f32_bf16, v_fma_mixlo_bf16, v_fma_mixhi_bf16 instructions"
 >;
 
+defm FmaLegacy32Insts : AMDGPUSubtargetFeature<"fma-legacy32-insts",
+  "Has single-precision legacy FMA instructions"
+>;
+
 defm IEEEMinimumMaximumInsts : AMDGPUSubtargetFeature<"ieee-minimum-maximum-insts",
   "Has v_minimum/maximum_f16/f32/f64, v_minimummaximum/maximumminimum_f16/f32 and"
   "v_pk_minimum/maximum_f16 instructions"
@@ -567,7 +571,9 @@ defm GFX13Insts : AMDGPUSubtargetFeature<"gfx13-insts",
 
 defm GFX10_3Insts : AMDGPUSubtargetFeature<"gfx10-3-insts",
   "Additional instructions for GFX10.3",
-  /*GenPredicate=*/0
+  /*GenPredicate=*/0,
+  /*GenAssemblerPredicate=*/1,
+  [FeatureFmaLegacy32Insts]
 >;
 
 defm GFX11_7Insts : AMDGPUSubtargetFeature<"gfx11-7-insts",
@@ -2845,11 +2851,8 @@ def NotHasMAIInsts : Predicate<"!Subtarget->hasMAIInsts()">,
 def NotHasFP8E5M3Insts : Predicate<"!Subtarget->hasFP8E5M3Insts()">,
   AssemblerPredicate<(all_of (not FeatureFP8E5M3Insts))>;
 
-def HasFmaLegacy32 : Predicate<"Subtarget->hasGFX10_3Insts()">,
-  AssemblerPredicate<(any_of FeatureGFX10_3Insts)>;
-
-def HasFmacLegacy32 : Predicate<"Subtarget->hasGFX10_3Insts() && Subtarget->getGeneration() < AMDGPUSubtarget::GFX12">,
-  AssemblerPredicate<(all_of FeatureGFX10_3Insts, (not FeatureGFX12Insts))>;
+def HasFmacLegacy32 : Predicate<"Subtarget->hasFmaLegacy32Insts() && Subtarget->getGeneration() < AMDGPUSubtarget::GFX12">,
+  AssemblerPredicate<(all_of FeatureFmaLegacy32Insts, (not FeatureGFX12Insts))>;
 
 def HasAtomicDsCondSubClampInsts :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12">,
