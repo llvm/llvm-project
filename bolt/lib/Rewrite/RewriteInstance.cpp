@@ -5891,12 +5891,11 @@ RewriteInstance::patchELFAllocatableRelaSections(ELFObjectFile<ELFT> *File) {
 
   {
     for (const uint64_t Address : DynamicRelocationOrder) {
-      ErrorOr<BinarySection &> SectionOrError = BC->getSectionForAddress(Address);
+      ErrorOr<BinarySection &> SectionOrError =
+          BC->getSectionForAddress(Address);
       if (!SectionOrError) {
-        BC->errs()
-          << "Cannot find section for dynamic relocation at 0x"
-          << Twine::utohexstr(Address)
-          << "\n";
+        BC->errs() << "Cannot find section for dynamic relocation at 0x"
+                   << Twine::utohexstr(Address) << "\n";
         exit(1);
       }
 
@@ -5906,7 +5905,8 @@ RewriteInstance::patchELFAllocatableRelaSections(ELFObjectFile<ELFT> *File) {
       if (!SectionAddress)
         SectionAddress = SectionInputAddress;
 
-      const Relocation &Rel = *Section.getDynamicRelocationAt(Address - SectionInputAddress);
+      const Relocation &Rel =
+          *Section.getDynamicRelocationAt(Address - SectionInputAddress);
 
       {
         const bool IsRelative = Rel.isRelative();
