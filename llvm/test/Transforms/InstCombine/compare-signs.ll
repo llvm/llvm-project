@@ -142,11 +142,7 @@ define i32 @test3i(i32 %a, i32 %b) nounwind readnone {
 
 define i1 @test4a(i32 %a) {
 ; CHECK-LABEL: @test4a(
-; CHECK-NEXT:    [[L:%.*]] = ashr i32 [[A1:%.*]], 31
-; CHECK-NEXT:    [[NA:%.*]] = sub i32 0, [[A1]]
-; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[NA]], 31
-; CHECK-NEXT:    [[A:%.*]] = or i32 [[L]], [[R]]
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[A]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[A:%.*]], 1
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %l = ashr i32 %a, 31
@@ -159,11 +155,7 @@ define i1 @test4a(i32 %a) {
 
 define i1 @test4a_commuted(i32 %a) {
 ; CHECK-LABEL: @test4a_commuted(
-; CHECK-NEXT:    [[L:%.*]] = ashr i32 [[A:%.*]], 31
-; CHECK-NEXT:    [[NA:%.*]] = sub i32 0, [[A]]
-; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[NA]], 31
-; CHECK-NEXT:    [[SIGNUM:%.*]] = or i32 [[R]], [[L]]
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[SIGNUM]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[SIGNUM:%.*]], 1
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %l = ashr i32 %a, 31
@@ -176,11 +168,7 @@ define i1 @test4a_commuted(i32 %a) {
 
 define <2 x i1> @test4a_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @test4a_vec(
-; CHECK-NEXT:    [[L:%.*]] = ashr <2 x i32> [[A1:%.*]], splat (i32 31)
-; CHECK-NEXT:    [[NA:%.*]] = sub <2 x i32> zeroinitializer, [[A1]]
-; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i32> [[NA]], splat (i32 31)
-; CHECK-NEXT:    [[A:%.*]] = or <2 x i32> [[L]], [[R]]
-; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i32> [[A]], splat (i32 1)
+; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i32> [[A:%.*]], splat (i32 1)
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %l = ashr <2 x i32> %a, <i32 31, i32 31>
@@ -193,11 +181,7 @@ define <2 x i1> @test4a_vec(<2 x i32> %a) {
 
 define i1 @test4b(i64 %a) {
 ; CHECK-LABEL: @test4b(
-; CHECK-NEXT:    [[L:%.*]] = ashr i64 [[A1:%.*]], 63
-; CHECK-NEXT:    [[NA:%.*]] = sub i64 0, [[A1]]
-; CHECK-NEXT:    [[R:%.*]] = lshr i64 [[NA]], 63
-; CHECK-NEXT:    [[A:%.*]] = or i64 [[L]], [[R]]
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[A]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[A:%.*]], 1
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %l = ashr i64 %a, 63
@@ -210,12 +194,7 @@ define i1 @test4b(i64 %a) {
 
 define i1 @test4c(i64 %a) {
 ; CHECK-LABEL: @test4c(
-; CHECK-NEXT:    [[L:%.*]] = ashr i64 [[A:%.*]], 63
-; CHECK-NEXT:    [[NA:%.*]] = sub i64 0, [[A]]
-; CHECK-NEXT:    [[R:%.*]] = lshr i64 [[NA]], 63
-; CHECK-NEXT:    [[SIGNUM:%.*]] = or i64 [[L]], [[R]]
-; CHECK-NEXT:    [[SIGNUM_TRUNC:%.*]] = trunc nsw i64 [[SIGNUM]] to i32
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[SIGNUM_TRUNC]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[A:%.*]], 1
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %l = ashr i64 %a, 63
@@ -229,12 +208,7 @@ define i1 @test4c(i64 %a) {
 
 define <2 x i1> @test4c_vec(<2 x i64> %a) {
 ; CHECK-LABEL: @test4c_vec(
-; CHECK-NEXT:    [[L:%.*]] = ashr <2 x i64> [[A:%.*]], splat (i64 63)
-; CHECK-NEXT:    [[NA:%.*]] = sub <2 x i64> zeroinitializer, [[A]]
-; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i64> [[NA]], splat (i64 63)
-; CHECK-NEXT:    [[SIGNUM:%.*]] = or <2 x i64> [[L]], [[R]]
-; CHECK-NEXT:    [[SIGNUM_TRUNC:%.*]] = trunc nsw <2 x i64> [[SIGNUM]] to <2 x i32>
-; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i32> [[SIGNUM_TRUNC]], splat (i32 1)
+; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i64> [[A:%.*]], splat (i64 1)
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %l = ashr <2 x i64> %a, <i64 63, i64 63>
