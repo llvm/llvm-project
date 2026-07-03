@@ -18,31 +18,6 @@
 // NAMESPACE-ELEMENT-NOT-OBJECT-NEXT: reading NestedBuildNamespace from field 'namespace'
 // NAMESPACE-ELEMENT-NOT-OBJECT-NEXT: failed to read BuildNamespace from index '0': expected JSON object
 
-// RUN: not clang-ssaf-format --type lu %S/Inputs/namespace-element-missing-kind.json 2>&1 \
-// RUN:   | FileCheck %s --match-full-lines --check-prefix=NAMESPACE-ELEMENT-MISSING-KIND
-// RUN: not clang-ssaf-format --type lu --encoding %S/Inputs/namespace-element-missing-kind.json 2>&1 \
-// RUN:   | FileCheck %s --match-full-lines --check-prefix=NAMESPACE-ELEMENT-MISSING-KIND
-// NAMESPACE-ELEMENT-MISSING-KIND:      clang-ssaf-format: error: reading LUSummary from file '{{.*}}namespace-element-missing-kind.json'
-// NAMESPACE-ELEMENT-MISSING-KIND-NEXT: reading IdTable from field 'id_table'
-// NAMESPACE-ELEMENT-MISSING-KIND-NEXT: reading EntityIdTable entry from index '0'
-// NAMESPACE-ELEMENT-MISSING-KIND-NEXT: reading EntityName from field 'name'
-// NAMESPACE-ELEMENT-MISSING-KIND-NEXT: reading NestedBuildNamespace from field 'namespace'
-// NAMESPACE-ELEMENT-MISSING-KIND-NEXT: reading BuildNamespace from index '0'
-// NAMESPACE-ELEMENT-MISSING-KIND-NEXT: failed to read BuildNamespaceKind from field 'kind': expected JSON string
-
-// RUN: not clang-ssaf-format --type lu %S/Inputs/namespace-element-invalid-kind.json 2>&1 \
-// RUN:   | FileCheck %s --match-full-lines --check-prefix=NAMESPACE-ELEMENT-INVALID-KIND
-// RUN: not clang-ssaf-format --type lu --encoding %S/Inputs/namespace-element-invalid-kind.json 2>&1 \
-// RUN:   | FileCheck %s --match-full-lines --check-prefix=NAMESPACE-ELEMENT-INVALID-KIND
-// NAMESPACE-ELEMENT-INVALID-KIND:      clang-ssaf-format: error: reading LUSummary from file '{{.*}}namespace-element-invalid-kind.json'
-// NAMESPACE-ELEMENT-INVALID-KIND-NEXT: reading IdTable from field 'id_table'
-// NAMESPACE-ELEMENT-INVALID-KIND-NEXT: reading EntityIdTable entry from index '0'
-// NAMESPACE-ELEMENT-INVALID-KIND-NEXT: reading EntityName from field 'name'
-// NAMESPACE-ELEMENT-INVALID-KIND-NEXT: reading NestedBuildNamespace from field 'namespace'
-// NAMESPACE-ELEMENT-INVALID-KIND-NEXT: reading BuildNamespace from index '0'
-// NAMESPACE-ELEMENT-INVALID-KIND-NEXT: reading BuildNamespaceKind from field 'kind'
-// NAMESPACE-ELEMENT-INVALID-KIND-NEXT: invalid BuildNamespaceKind value 'invalid_kind' for field 'kind'
-
 // RUN: not clang-ssaf-format --type lu %S/Inputs/namespace-element-missing-name.json 2>&1 \
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=NAMESPACE-ELEMENT-MISSING-NAME
 // RUN: not clang-ssaf-format --type lu --encoding %S/Inputs/namespace-element-missing-name.json 2>&1 \

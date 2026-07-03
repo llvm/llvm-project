@@ -141,9 +141,7 @@ TUSummaryRunner::TUSummaryRunner(llvm::Triple TargetTriple,
                                  std::unique_ptr<SerializationFormat> Format,
                                  const SSAFOptions &Opts)
     : MultiplexConsumer(std::vector<std::unique_ptr<ASTConsumer>>{}),
-      Summary(std::move(TargetTriple),
-              BuildNamespace(BuildNamespaceKind::CompilationUnit,
-                             Opts.CompilationUnitId)),
+      Summary(std::move(TargetTriple), BuildNamespace(Opts.CompilationUnitId)),
       Opts(Opts), Format(std::move(Format)) {
   assert(this->Format);
   assert(!Opts.CompilationUnitId.empty());

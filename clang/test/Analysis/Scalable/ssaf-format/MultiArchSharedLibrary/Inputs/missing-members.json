@@ -1,7 +1,6 @@
 {
   "namespace": [
     {
-      "kind": "LinkUnit",
       "name": "libfoo"
     }
   ],

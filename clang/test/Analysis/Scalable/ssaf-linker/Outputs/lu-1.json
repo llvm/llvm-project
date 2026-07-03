@@ -227,7 +227,6 @@
       "name": {
         "namespace": [
           {
-            "kind": "LinkUnit",
             "name": "lu-1"
           }
         ],
@@ -240,11 +239,9 @@
       "name": {
         "namespace": [
           {
-            "kind": "CompilationUnit",
             "name": "tu1.cpp"
           },
           {
-            "kind": "LinkUnit",
             "name": "lu-1"
           }
         ],
@@ -257,11 +254,9 @@
       "name": {
         "namespace": [
           {
-            "kind": "CompilationUnit",
             "name": "tu1.cpp"
           },
           {
-            "kind": "LinkUnit",
             "name": "lu-1"
           }
         ],
@@ -274,7 +269,6 @@
       "name": {
         "namespace": [
           {
-            "kind": "LinkUnit",
             "name": "lu-1"
           }
         ],
@@ -287,11 +281,9 @@
       "name": {
         "namespace": [
           {
-            "kind": "CompilationUnit",
             "name": "tu1.cpp"
           },
           {
-            "kind": "LinkUnit",
             "name": "lu-1"
           }
         ],
@@ -304,11 +296,9 @@
       "name": {
         "namespace": [
           {
-            "kind": "CompilationUnit",
             "name": "tu1.cpp"
           },
           {
-            "kind": "LinkUnit",
             "name": "lu-1"
           }
         ],
@@ -357,7 +347,6 @@
   ],
   "lu_namespace": [
     {
-      "kind": "LinkUnit",
       "name": "lu-1"
     }
   ],

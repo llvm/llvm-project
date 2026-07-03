@@ -70,18 +70,6 @@ JSONFormat::readMultiArchStaticLibraryFromObject(const Object &RootObject) {
         .build();
   }
 
-  if (getKind(*ExpectedNamespace) !=
-      BuildNamespaceKind::MultiArchStaticLibrary) {
-    return ErrorBuilder::create(
-               std::errc::invalid_argument,
-               ErrorMessages::MismatchedSummaryType,
-               buildNamespaceKindToJSON(
-                   BuildNamespaceKind::MultiArchStaticLibrary),
-               "namespace.kind",
-               buildNamespaceKindToJSON(getKind(*ExpectedNamespace)))
-        .build();
-  }
-
   const Array *MembersArray = RootObject.getArray("members");
   if (!MembersArray) {
     return ErrorBuilder::create(std::errc::invalid_argument,

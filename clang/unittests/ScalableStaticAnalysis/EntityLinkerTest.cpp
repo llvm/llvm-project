@@ -71,10 +71,10 @@ protected:
   }
 
   std::unique_ptr<TUSummaryEncoding> createTUSummaryEncoding(
-      BuildNamespaceKind Kind, llvm::StringRef Name,
+      llvm::StringRef Name,
       llvm::Triple TargetTriple = llvm::Triple("arm64-apple-macosx")) {
     return std::make_unique<TUSummaryEncoding>(std::move(TargetTriple),
-                                               BuildNamespace(Kind, Name));
+                                               BuildNamespace(Name));
   }
 
   size_t addSummaryData(TUSummaryEncoding &TU, EntityId EId,
@@ -194,8 +194,7 @@ MATCHER_P(SummaryDataHasSize, ExpectedSize,
 // ============================================================================
 
 TEST_F(EntityLinkerTest, CreatesEmptyLinker) {
-  NestedBuildNamespace LUNamespace(
-      {BuildNamespace(BuildNamespaceKind::LinkUnit, "LU")});
+  NestedBuildNamespace LUNamespace({BuildNamespace("LU")});
 
   EntityLinker Linker(llvm::Triple("arm64-apple-macosx"), LUNamespace);
 
@@ -206,13 +205,11 @@ TEST_F(EntityLinkerTest, CreatesEmptyLinker) {
 }
 
 TEST_F(EntityLinkerTest, LinksEmptyTranslationUnit) {
-  NestedBuildNamespace LUNamespace(
-      {BuildNamespace(BuildNamespaceKind::LinkUnit, "LU")});
+  NestedBuildNamespace LUNamespace({BuildNamespace("LU")});
 
   EntityLinker Linker(llvm::Triple("arm64-apple-macosx"), LUNamespace);
 
-  auto TUEmpty =
-      createTUSummaryEncoding(BuildNamespaceKind::CompilationUnit, "TUEmpty");
+  auto TUEmpty = createTUSummaryEncoding("TUEmpty");
 
   EXPECT_THAT_ERROR(Linker.link(std::move(TUEmpty)), llvm::Succeeded());
 
@@ -223,12 +220,11 @@ TEST_F(EntityLinkerTest, LinksEmptyTranslationUnit) {
 }
 
 TEST_F(EntityLinkerTest, LinksOneTranslationUnit) {
-  NestedBuildNamespace LUNamespace(
-      {BuildNamespace(BuildNamespaceKind::LinkUnit, "LU")});
+  NestedBuildNamespace LUNamespace({BuildNamespace("LU")});
 
   EntityLinker Linker(llvm::Triple("arm64-apple-macosx"), LUNamespace);
 
-  auto TU = createTUSummaryEncoding(BuildNamespaceKind::CompilationUnit, "TU");
+  auto TU = createTUSummaryEncoding("TU");
 
   const auto TU_A_Id = addEntity(*TU, "A", NoneLinkage);
   const auto TU_A_S1_Data = addSummaryData(*TU, TU_A_Id, "S1");
@@ -323,13 +319,11 @@ TEST_F(EntityLinkerTest, LinksOneTranslationUnit) {
 }
 
 TEST_F(EntityLinkerTest, LinksTwoTranslationUnits) {
-  NestedBuildNamespace LUNamespace(
-      {BuildNamespace(BuildNamespaceKind::LinkUnit, "LU")});
+  NestedBuildNamespace LUNamespace({BuildNamespace("LU")});
 
   EntityLinker Linker(llvm::Triple("arm64-apple-macosx"), LUNamespace);
 
-  auto TU1 =
-      createTUSummaryEncoding(BuildNamespaceKind::CompilationUnit, "TU1");
+  auto TU1 = createTUSummaryEncoding("TU1");
 
   // None linkage entities in TU1
   const auto TU1_X_Id = addEntity(*TU1, "X", NoneLinkage);
@@ -368,8 +362,7 @@ TEST_F(EntityLinkerTest, LinksTwoTranslationUnits) {
 
   ASSERT_THAT_ERROR(Linker.link(std::move(TU1)), llvm::Succeeded());
 
-  auto TU2 =
-      createTUSummaryEncoding(BuildNamespaceKind::CompilationUnit, "TU2");
+  auto TU2 = createTUSummaryEncoding("TU2");
 
   // None linkage entities in TU2 - includes duplicates and uniques
   const auto TU2_X_Id = addEntity(*TU2, "X", NoneLinkage);
@@ -617,36 +610,33 @@ TEST_F(EntityLinkerTest, LinksTwoTranslationUnits) {
 }
 
 TEST_F(EntityLinkerTest, RejectsDuplicateTUSummary) {
-  NestedBuildNamespace LUNamespace(
-      {BuildNamespace(BuildNamespaceKind::LinkUnit, "LU")});
+  NestedBuildNamespace LUNamespace({BuildNamespace("LU")});
 
   EntityLinker Linker(llvm::Triple("arm64-apple-macosx"), LUNamespace);
 
-  auto TU1 = createTUSummaryEncoding(BuildNamespaceKind::CompilationUnit, "TU");
+  auto TU1 = createTUSummaryEncoding("TU");
 
   ASSERT_THAT_ERROR(Linker.link(std::move(TU1)), llvm::Succeeded());
 
-  auto TU2 = createTUSummaryEncoding(BuildNamespaceKind::CompilationUnit, "TU");
+  auto TU2 = createTUSummaryEncoding("TU");
 
-  ASSERT_THAT_ERROR(Linker.link(std::move(TU2)),
-                    llvm::FailedWithMessage(
-                        HasSubstr("failed to link TU summary: duplicate "
-                                  "BuildNamespace(CompilationUnit, TU)")));
+  ASSERT_THAT_ERROR(
+      Linker.link(std::move(TU2)),
+      llvm::FailedWithMessage(HasSubstr("failed to link TU summary: duplicate "
+                                        "BuildNamespace(TU)")));
 }
 
 // Reproduces a crash when linking internal-linkage entities
 // (e.g. "static inline" functions) that share the same USR across TUs.
 TEST_F(EntityLinkerTest, InternalLinkageWithEmptyNamespaceAcrossTUs) {
-  constexpr auto LinkUnit = BuildNamespaceKind::LinkUnit;
-  constexpr auto CompilationUnit = BuildNamespaceKind::CompilationUnit;
   EntityLinker Linker(llvm::Triple("arm64-apple-macosx"),
-                      NestedBuildNamespace{BuildNamespace(LinkUnit, "LU")});
+                      NestedBuildNamespace{BuildNamespace("LU")});
 
-  auto TU1 = createTUSummaryEncoding(CompilationUnit, "TU1");
+  auto TU1 = createTUSummaryEncoding("TU1");
   addEntity(*TU1, "some_static_inline", InternalLinkage);
   ASSERT_THAT_ERROR(Linker.link(std::move(TU1)), llvm::Succeeded());
 
-  auto TU2 = createTUSummaryEncoding(CompilationUnit, "TU2");
+  auto TU2 = createTUSummaryEncoding("TU2");
   addEntity(*TU2, "some_static_inline", InternalLinkage);
   ASSERT_THAT_ERROR(Linker.link(std::move(TU2)), llvm::Succeeded());
 
@@ -654,8 +644,8 @@ TEST_F(EntityLinkerTest, InternalLinkageWithEmptyNamespaceAcrossTUs) {
   const auto Output = std::move(Linker).takeOutput();
   const auto &IdTable = getIdTable(Output);
 
-  NestedBuildNamespace TU1NS{{{CompilationUnit, "TU1"}, {LinkUnit, "LU"}}};
-  NestedBuildNamespace TU2NS{{{CompilationUnit, "TU2"}, {LinkUnit, "LU"}}};
+  NestedBuildNamespace TU1NS{{BuildNamespace("TU1"), BuildNamespace("LU")}};
+  NestedBuildNamespace TU2NS{{BuildNamespace("TU2"), BuildNamespace("LU")}};
   EntityName ExpectedTU1Name("some_static_inline", "", TU1NS);
   EntityName ExpectedTU2Name("some_static_inline", "", TU2NS);
 

@@ -8,14 +8,12 @@
           "linkage_table": [],
           "target_triple": "arm64-apple-macosx",
           "tu_namespace": {
-            "kind": "CompilationUnit",
             "name": "a.cpp"
           },
           "type": "TUSummary"
         }
       ],
       "namespace": {
-        "kind": "StaticLibrary",
         "name": "libfoo"
       },
       "target_triple": "arm64-apple-macosx",
@@ -29,14 +27,12 @@
           "linkage_table": [],
           "target_triple": "x86_64-apple-macosx",
           "tu_namespace": {
-            "kind": "CompilationUnit",
             "name": "a.cpp"
           },
           "type": "TUSummary"
         }
       ],
       "namespace": {
-        "kind": "StaticLibrary",
         "name": "libfoo"
       },
       "target_triple": "x86_64-apple-macosx",
@@ -44,7 +40,6 @@
     }
   ],
   "namespace": {
-    "kind": "MultiArchStaticLibrary",
     "name": "libfoo"
   },
   "type": "MultiArchStaticLibrary"

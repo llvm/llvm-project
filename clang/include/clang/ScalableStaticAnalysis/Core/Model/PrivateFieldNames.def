@@ -17,7 +17,6 @@
 #define FIELD(CLASS, FIELD_NAME)
 #endif
 
-FIELD(BuildNamespace, Kind)
 FIELD(BuildNamespace, Name)
 FIELD(EntityId, Index)
 FIELD(EntityIdTable, Entities)

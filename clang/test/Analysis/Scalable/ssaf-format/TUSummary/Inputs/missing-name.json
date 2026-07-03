@@ -1,7 +1,5 @@
 {
-  "tu_namespace": {
-    "kind": "CompilationUnit"
-  },
+  "tu_namespace": {},
   "id_table": [],
   "linkage_table": [],
   "data": [],

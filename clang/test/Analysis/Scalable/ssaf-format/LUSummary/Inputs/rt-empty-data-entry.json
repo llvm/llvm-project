@@ -9,7 +9,6 @@
   "linkage_table": [],
   "lu_namespace": [
     {
-      "kind": "CompilationUnit",
       "name": "test.cpp"
     }
   ],

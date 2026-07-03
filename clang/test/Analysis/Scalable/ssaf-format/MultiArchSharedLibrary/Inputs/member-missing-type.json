@@ -6,7 +6,6 @@
       "linkage_table": [],
       "lu_namespace": [
         {
-          "kind": "LinkUnit",
           "name": "libfoo"
         }
       ],
@@ -15,7 +14,6 @@
   ],
   "namespace": [
     {
-      "kind": "LinkUnit",
       "name": "libfoo"
     }
   ],

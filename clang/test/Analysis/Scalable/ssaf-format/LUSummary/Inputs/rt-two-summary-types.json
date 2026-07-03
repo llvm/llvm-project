@@ -138,7 +138,6 @@
       "name": {
         "namespace": [
           {
-            "kind": "CompilationUnit",
             "name": "test.cpp"
           }
         ],
@@ -151,7 +150,6 @@
       "name": {
         "namespace": [
           {
-            "kind": "CompilationUnit",
             "name": "test.cpp"
           }
         ],
@@ -164,7 +162,6 @@
       "name": {
         "namespace": [
           {
-            "kind": "CompilationUnit",
             "name": "test.cpp"
           }
         ],
@@ -177,7 +174,6 @@
       "name": {
         "namespace": [
           {
-            "kind": "CompilationUnit",
             "name": "test.cpp"
           }
         ],
@@ -190,7 +186,6 @@
       "name": {
         "namespace": [
           {
-            "kind": "CompilationUnit",
             "name": "test.cpp"
           }
         ],
@@ -233,7 +228,6 @@
   ],
   "lu_namespace": [
     {
-      "kind": "CompilationUnit",
       "name": "test.cpp"
     }
   ],

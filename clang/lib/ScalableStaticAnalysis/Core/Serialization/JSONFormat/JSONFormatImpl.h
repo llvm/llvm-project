@@ -108,9 +108,6 @@ inline constexpr const char
     *FailedToSerializeEntitySummaryMismatchedSummaryName =
         "JSONFormat - EntitySummary data for '{0}' reports mismatched '{1}'";
 
-inline constexpr const char *InvalidBuildNamespaceKind =
-    "invalid BuildNamespaceKind value '{0}' for field 'kind'";
-
 inline constexpr const char *InvalidEntityLinkageType =
     "invalid EntityLinkageType value '{0}' for field 'type'";
 
@@ -199,16 +196,6 @@ llvm::StringRef summaryNameToJSON(const SummaryName &SN);
 
 AnalysisName analysisNameFromJSON(llvm::StringRef AnalysisNameStr);
 llvm::StringRef analysisNameToJSON(const AnalysisName &AN);
-
-//----------------------------------------------------------------------------
-// BuildNamespaceKind helpers
-//----------------------------------------------------------------------------
-
-llvm::Expected<BuildNamespaceKind>
-buildNamespaceKindFromJSON(llvm::StringRef BuildNamespaceKindStr);
-
-// Provided for consistency with respect to rest of the codebase.
-llvm::StringRef buildNamespaceKindToJSON(BuildNamespaceKind BNK);
 
 //----------------------------------------------------------------------------
 // EntityLinkageType helpers

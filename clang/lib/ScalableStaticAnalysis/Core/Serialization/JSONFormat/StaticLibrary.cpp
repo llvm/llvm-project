@@ -86,16 +86,6 @@ JSONFormat::readStaticLibraryFromObject(const Object &RootObject) {
         .build();
   }
 
-  if (getKind(*ExpectedNamespace) != BuildNamespaceKind::StaticLibrary) {
-    return ErrorBuilder::create(
-               std::errc::invalid_argument,
-               ErrorMessages::MismatchedSummaryType,
-               buildNamespaceKindToJSON(BuildNamespaceKind::StaticLibrary),
-               "namespace.kind",
-               buildNamespaceKindToJSON(getKind(*ExpectedNamespace)))
-        .build();
-  }
-
   StaticLibrary S(std::move(T), std::move(*ExpectedNamespace));
 
   const Array *MembersArray = RootObject.getArray("members");

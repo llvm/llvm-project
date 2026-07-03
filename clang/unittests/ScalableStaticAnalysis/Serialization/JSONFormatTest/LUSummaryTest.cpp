@@ -40,7 +40,7 @@ SummaryOps LUSummaryOps{
       return Result ? llvm::Error::success() : Result.takeError();
     },
     [](llvm::StringRef FilePath) -> llvm::Error {
-      BuildNamespace BN(BuildNamespaceKind::CompilationUnit, "test.cpp");
+      BuildNamespace BN("test.cpp");
       NestedBuildNamespace NBN(std::move(BN));
       LUSummary S(llvm::Triple("arm64-apple-macosx"), std::move(NBN));
       return JSONFormat().writeLUSummary(S, FilePath);
@@ -61,7 +61,7 @@ SummaryOps LUSummaryEncodingOps{
       return Result ? llvm::Error::success() : Result.takeError();
     },
     [](llvm::StringRef FilePath) -> llvm::Error {
-      BuildNamespace BN(BuildNamespaceKind::CompilationUnit, "test.cpp");
+      BuildNamespace BN("test.cpp");
       NestedBuildNamespace NBN(std::move(BN));
       LUSummaryEncoding E(llvm::Triple("arm64-apple-macosx"), std::move(NBN));
       return JSONFormat().writeLUSummaryEncoding(E, FilePath);
@@ -302,12 +302,11 @@ TEST_F(JSONFormatLUSummaryTest, ReadEntitySummaryMismatchedSummaryName) {
 // ============================================================================
 
 TEST_F(JSONFormatLUSummaryTest, WriteEntitySummaryMissingData) {
-  NestedBuildNamespace NBN(
-      BuildNamespace(BuildNamespaceKind::LinkUnit, "test.exe"));
+  NestedBuildNamespace NBN(BuildNamespace("test.exe"));
   LUSummary Summary(llvm::Triple("arm64-apple-macosx"), std::move(NBN));
 
   NestedBuildNamespace Namespace =
-      NestedBuildNamespace::makeCompilationUnit("test.cpp");
+      NestedBuildNamespace(BuildNamespace("test.cpp"));
   EntityId EI = getIdTable(Summary).getId(
       EntityName{"c:@F@foo", "", std::move(Namespace)});
 
@@ -321,12 +320,11 @@ TEST_F(JSONFormatLUSummaryTest, WriteEntitySummaryMissingData) {
 }
 
 TEST_F(JSONFormatLUSummaryTest, WriteEntitySummaryMismatchedSummaryName) {
-  NestedBuildNamespace NBN(
-      BuildNamespace(BuildNamespaceKind::LinkUnit, "test.exe"));
+  NestedBuildNamespace NBN(BuildNamespace("test.exe"));
   LUSummary Summary(llvm::Triple("arm64-apple-macosx"), std::move(NBN));
 
   NestedBuildNamespace Namespace =
-      NestedBuildNamespace::makeCompilationUnit("test.cpp");
+      NestedBuildNamespace(BuildNamespace("test.cpp"));
   EntityId EI = getIdTable(Summary).getId(
       EntityName{"c:@F@foo", "", std::move(Namespace)});
 
@@ -419,12 +417,11 @@ TEST_P(LUSummaryTest, WriteStreamOpenFailure) {
 // ============================================================================
 
 TEST_F(JSONFormatLUSummaryTest, WriteEntitySummaryNoFormatInfo) {
-  NestedBuildNamespace NBN(
-      BuildNamespace(BuildNamespaceKind::LinkUnit, "test.exe"));
+  NestedBuildNamespace NBN(BuildNamespace("test.exe"));
   LUSummary Summary(llvm::Triple("arm64-apple-macosx"), std::move(NBN));
 
   NestedBuildNamespace Namespace =
-      NestedBuildNamespace::makeCompilationUnit("test.cpp");
+      NestedBuildNamespace(BuildNamespace("test.cpp"));
   EntityId EI = getIdTable(Summary).getId(
       EntityName{"c:@F@foo", "", std::move(Namespace)});
 
