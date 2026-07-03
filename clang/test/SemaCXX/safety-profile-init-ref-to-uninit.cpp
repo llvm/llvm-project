@@ -296,6 +296,33 @@ void test_lambda_arguments() {
   l(&g_init);   // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
 }
 
+// An init-capture is a binding: a capture cannot carry [[ref_to_uninit]], so
+// capturing a pointer or reference to uninitialized memory is always the
+// unmarked-direction violation.
+void test_init_captures() {
+  auto c1 = [p = &g_init] { (void)p; };   // OK
+  auto c2 = [p = &g_uninit] { (void)p; }; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int *rtu [[ref_to_uninit]] = &g_uninit;
+  auto c3 = [&r = *rtu] { (void)r; }; // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  auto c4 = [q = rtu] { (void)q; };   // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  auto c5 = [v = g_init] { (void)v; }; // OK: a by-value int copy is not a binding
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init)]] {
+    auto c6 = [p = &g_uninit] { (void)p; }; // OK: suppressed
+    (void)c6;
+  }
+  (void)c1; (void)c2; (void)c3; (void)c4; (void)c5;
+}
+
+// An init-capture inside a template body defers on the pattern and fires
+// once, at instantiation.
+template <typename T>
+void template_init_capture_bad() {
+  auto c = [p = &g_uninit] { (void)p; }; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  (void)c;
+}
+template void template_init_capture_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_init_capture_bad<int>' requested here}}
+
 struct OpTag {};
 OpTag operator+(OpTag, int *p [[ref_to_uninit]]);
 

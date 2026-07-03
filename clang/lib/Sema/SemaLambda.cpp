@@ -911,6 +911,16 @@ VarDecl *Sema::createLambdaInitCaptureVarDecl(
   NewVD->setInitStyle(static_cast<VarDecl::InitializationStyle>(InitStyle));
   NewVD->markUsed(Context);
   NewVD->setInit(Init);
+
+  // std::init / ref_to_uninit (paper §5): an init-capture binds like a
+  // variable initialization but never reaches AddInitializerToDecl /
+  // CheckCompleteVariableDeclaration, so check the binding here. A capture
+  // cannot carry [[ref_to_uninit]], so only the unmarked-target direction can
+  // fire. Passing NewVD defers on a templated pattern; TreeTransform re-runs
+  // this path at instantiation.
+  Profiles().checkInitProfileRefToUninitBinding(Loc, NewVD, NewVD->getType(),
+                                                Init, NewVD);
+
   if (NewVD->isParameterPack())
     getCurLambda()->LocalPacks.push_back(NewVD);
   return NewVD;
