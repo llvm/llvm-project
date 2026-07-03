@@ -1301,6 +1301,16 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     }
   }
 
+  if (args.hasFlag(clang::options::OPT_fopenmp_assume_teams_oversubscription,
+                   clang::options::OPT_fno_openmp_assume_teams_oversubscription,
+                   /*Default=*/false))
+    res.getLangOpts().OpenMPTeamSubscription = true;
+  if (args.hasFlag(
+          clang::options::OPT_fopenmp_assume_threads_oversubscription,
+          clang::options::OPT_fno_openmp_assume_threads_oversubscription,
+          /*Default=*/false))
+    res.getLangOpts().OpenMPThreadSubscription = true;
+
   if (args.hasArg(clang::options::OPT_fopenmp_force_usm)) {
     res.getLangOpts().OpenMPForceUSM = 1;
   }
@@ -1317,23 +1327,11 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
             << res.getLangOpts().OMPHostIRFile;
     }
 
-    if (args.hasFlag(
-            clang::options::OPT_fopenmp_assume_teams_oversubscription,
-            clang::options::OPT_fno_openmp_assume_teams_oversubscription,
-            /*Default=*/false))
-      res.getLangOpts().OpenMPTeamSubscription = true;
-
     if (args.hasArg(clang::options::OPT_fopenmp_assume_no_thread_state))
       res.getLangOpts().OpenMPNoThreadState = 1;
 
     if (args.hasArg(clang::options::OPT_fopenmp_assume_no_nested_parallelism))
       res.getLangOpts().OpenMPNoNestedParallelism = 1;
-
-    if (args.hasFlag(
-            clang::options::OPT_fopenmp_assume_threads_oversubscription,
-            clang::options::OPT_fno_openmp_assume_threads_oversubscription,
-            /*Default=*/false))
-      res.getLangOpts().OpenMPThreadSubscription = true;
 
     if ((args.hasArg(clang::options::OPT_fopenmp_target_debug) ||
          args.hasArg(clang::options::OPT_fopenmp_target_debug_EQ))) {

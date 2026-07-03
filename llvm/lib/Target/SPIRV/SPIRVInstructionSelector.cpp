@@ -177,8 +177,8 @@ private:
   bool selectAtomicRMW(Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
                        unsigned NewOpcode, unsigned NegateOpcode = 0) const;
 
-  bool selectInterlockedAdd(Register ResVReg, SPIRVTypeInst ResType,
-                            MachineInstr &I) const;
+  bool selectInterlockedOp(Register ResVReg, SPIRVTypeInst ResType,
+                           MachineInstr &I, unsigned Opcode) const;
 
   bool selectAtomicCmpXchg(Register ResVReg, SPIRVTypeInst ResType,
                            MachineInstr &I) const;
@@ -2445,9 +2445,10 @@ bool SPIRVInstructionSelector::selectAtomicRMW(Register ResVReg,
   return true;
 }
 
-bool SPIRVInstructionSelector::selectInterlockedAdd(Register ResVReg,
-                                                    SPIRVTypeInst ResType,
-                                                    MachineInstr &I) const {
+bool SPIRVInstructionSelector::selectInterlockedOp(Register ResVReg,
+                                                   SPIRVTypeInst ResType,
+                                                   MachineInstr &I,
+                                                   unsigned Opcode) const {
   Register Ptr = I.getOperand(2).getReg();
   Register Value = I.getOperand(3).getReg();
 
@@ -2463,7 +2464,7 @@ bool SPIRVInstructionSelector::selectInterlockedAdd(Register ResVReg,
   uint32_t MemSem = static_cast<uint32_t>(getMemSemanticsForStorageClass(SC));
   Register MemSemReg = buildI32Constant(MemSem, I);
 
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpAtomicIAdd))
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
       .addUse(Ptr)
@@ -5365,7 +5366,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectWaveReduceOp(ResVReg, ResType, I,
                               SPIRV::OpGroupNonUniformBitwiseAnd);
   case Intrinsic::spv_interlocked_add:
-    return selectInterlockedAdd(ResVReg, ResType, I);
+    return selectInterlockedOp(ResVReg, ResType, I, SPIRV::OpAtomicIAdd);
+  case Intrinsic::spv_interlocked_or:
+    return selectInterlockedOp(ResVReg, ResType, I, SPIRV::OpAtomicOr);
   case Intrinsic::spv_wave_reduce_umax:
     return selectWaveReduceMax(ResVReg, ResType, I, /*IsUnsigned*/ true);
   case Intrinsic::spv_wave_reduce_max:
