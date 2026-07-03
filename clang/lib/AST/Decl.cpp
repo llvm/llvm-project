@@ -3116,7 +3116,7 @@ bool FunctionDecl::isVariadic() const {
 FunctionDecl::DefaultedOrDeletedFunctionInfo *
 FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
     ASTContext &Context, ArrayRef<DeclAccessPair> Lookups,
-    StringLiteral *DeletedMessage) {
+    StringLiteral *DeletedMessage, uint64_t FPFeatures) {
   static constexpr size_t Alignment =
       std::max({alignof(DefaultedOrDeletedFunctionInfo),
                 alignof(DeclAccessPair), alignof(StringLiteral *)});
@@ -3127,6 +3127,7 @@ FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
       new (Context.Allocate(Size, Alignment)) DefaultedOrDeletedFunctionInfo;
   Info->NumLookups = Lookups.size();
   Info->HasDeletedMessage = DeletedMessage != nullptr;
+  Info->FPFeatures = FPFeatures;
 
   llvm::uninitialized_copy(Lookups, Info->getTrailingObjects<DeclAccessPair>());
   if (DeletedMessage)
