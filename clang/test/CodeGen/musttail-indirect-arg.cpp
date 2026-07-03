@@ -177,7 +177,9 @@ struct Big P18(struct Big a) {
 // COMMON: @llvm.mem{{(cpy|move)}}{{.*}}(ptr {{[^,]*}} %a, ptr {{[^,]*}} @gw, i64 32
 // COMMON: musttail call {{.*}} @_Z3C183Big({{.*}}, ptr {{[^,]*}} %a)
 
-// P19: deref of a global pointer as the source.
+// P19: deref of a global pointer. The address computation reads mutable
+// state, so the bytes are captured at argument position (no forwarding);
+// the temp still routes through the incoming parameter.
 extern struct Big *gp;
 struct Big C19(struct Big a);
 struct Big P19(struct Big a) {
@@ -204,3 +206,19 @@ struct Big P20(struct Big a) {
 // COMMON-NOT: %agg.tmp
 // COMMON: @llvm.mem{{(cpy|move)}}{{.*}}(ptr {{[^,]*}} %a, ptr {{[^,]*}} getelementptr inbounds {{(nuw )?}}(i8, ptr @gd, i64 8), i64 32
 // COMMON: musttail call {{.*}} @_Z3C203Big({{.*}}, ptr {{[^,]*}} %a)
+
+// P21: impure source with a side-effecting second argument. The source bytes
+// are read at argument position, before bump() runs, so the argument's
+// evaluation is not interleaved with the other argument's ([expr.call]/8).
+extern int bump();
+struct Big C21(struct Big x, int y);
+struct Big P21(struct Big a, int b) {
+  [[clang::musttail]] return C21(*gp, bump());
+}
+// COMMON-LABEL: define {{.*}} @_Z3P213Bigi(
+// COMMON: [[SRC:%[0-9a-z.]+]] = load ptr, ptr @gp
+// COMMON-NOT: @_Z4bumpv
+// COMMON: [[VAL:%[0-9a-z.]+]] = load {{.*}}, ptr [[SRC]]
+// COMMON: call {{.*}} @_Z4bumpv()
+// COMMON: store {{.*}} [[VAL]], ptr %a
+// COMMON: musttail call {{.*}} @_Z3C213Bigi({{.*}}, ptr {{[^,]*}} %a,

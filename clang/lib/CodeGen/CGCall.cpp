@@ -5173,6 +5173,26 @@ void CodeGenFunction::EmitWritebacks(const CallArgList &args) {
     emitWriteback(*this, I);
 }
 
+/// Whether emitting this glvalue neither has side effects nor reads mutable
+/// state, so deferring its byte read to the call boundary is equivalent to
+/// initializing the argument last, a sequencing C++17 [expr.call]/8 allows.
+/// A dereference or call in the address computation would instead split the
+/// argument's evaluation around the other arguments'.
+static bool isPureForwardableLValue(const Expr *E) {
+  E = E->IgnoreParens();
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
+    return isa<VarDecl>(DRE->getDecl());
+  if (const auto *ME = dyn_cast<MemberExpr>(E))
+    return !ME->isArrow() && isa<FieldDecl>(ME->getMemberDecl()) &&
+           isPureForwardableLValue(ME->getBase());
+  if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E))
+    if (ICE->getCastKind() == CK_DerivedToBase ||
+        ICE->getCastKind() == CK_UncheckedDerivedToBase ||
+        ICE->getCastKind() == CK_NoOp)
+      return isPureForwardableLValue(ICE->getSubExpr());
+  return false;
+}
+
 void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
                                   QualType type) {
   std::optional<DisableDebugLocationUpdates> Dis;
@@ -5256,11 +5276,12 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
   // Under musttail, hand a trivially-copyable record source's LValue to
   // EmitCall rather than materializing an agg.tmp. EmitCall's Indirect path
   // copies it into the matching incoming parameter, which survives the tail
-  // call. Any same-type glvalue works as the source; casts are not stripped,
-  // so a derived-to-base source keeps its adjusted address. On the device
-  // side CUDA surface/texture types are excluded: they classify as Direct
-  // and forwarding would load raw record bytes instead of the handle that
-  // EmitAggregateCopy materializes.
+  // call. The byte read is deferred to the call boundary, so the source is
+  // restricted to pure lvalue chains (see isPureForwardableLValue); casts
+  // are not stripped, so a derived-to-base source keeps its adjusted
+  // address. On the device side CUDA surface/texture types are excluded:
+  // they classify as Direct and forwarding would load raw record bytes
+  // instead of the handle that EmitAggregateCopy materializes.
   if (HasAggregateEvalKind && MustTailCall && type->isRecordType() &&
       type.isTriviallyCopyableType(getContext()) &&
       !(getLangOpts().CUDAIsDevice &&
@@ -5271,7 +5292,7 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
       if (Ctor->isCopyOrMoveConstructor() && Ctor->isTrivial() &&
           CCE->getNumArgs() == 1) {
         const Expr *Source = CCE->getArg(0);
-        if (Source->isGLValue() &&
+        if (Source->isGLValue() && isPureForwardableLValue(Source) &&
             Source->getType().getAddressSpace() != LangAS::hlsl_constant &&
             getContext().hasSameUnqualifiedType(Source->getType(), type)) {
           LValue L = EmitLValue(Source);
