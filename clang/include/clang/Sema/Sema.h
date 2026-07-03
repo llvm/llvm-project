@@ -1086,6 +1086,12 @@ public:
 
   ProfilesSuppressAttr *makeProfilesSuppressAttr(const ParsedAttr &AL);
 
+  /// Create an implicit ProfilesSuppressAttr carrying just a profile and rule
+  /// name (no justification or arguments), for propagating an active
+  /// suppression onto a declaration.
+  ProfilesSuppressAttr *makeImplicitProfilesSuppressAttr(StringRef ProfileName,
+                                                         StringRef RuleName);
+
   bool isProfileSuppressed(StringRef ProfileName,
                            StringRef RuleName = "") const;
   bool isProfileSuppressed(StringRef ProfileName, StringRef RuleName,

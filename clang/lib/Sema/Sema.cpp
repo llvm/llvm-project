@@ -3018,6 +3018,19 @@ bool Sema::addProfileEnforcement(StringRef Name, StringRef Designator,
   return true;
 }
 
+// Unzip profile arguments into the parallel key/value/kind arrays that the
+// semantic attributes store (Attr.td cannot hold structured arguments).
+static void unzipProfileArguments(ArrayRef<profiles::ProfileArgument> Arguments,
+                                  SmallVectorImpl<StringRef> &Keys,
+                                  SmallVectorImpl<StringRef> &Values,
+                                  SmallVectorImpl<unsigned> &Kinds) {
+  for (const auto &Arg : Arguments) {
+    Keys.push_back(Arg.Key);
+    Values.push_back(Arg.Value);
+    Kinds.push_back(static_cast<unsigned>(Arg.Kind));
+  }
+}
+
 static void appendProfileArgumentData(
     ArrayRef<profiles::ProfileArgument> Arguments,
     SmallVectorImpl<unsigned> *ArgumentCounts,
@@ -3029,11 +3042,8 @@ static void appendProfileArgumentData(
 
   assert(ArgumentKeys && ArgumentValues && ArgumentKinds);
   ArgumentCounts->push_back(Arguments.size());
-  for (const auto &Arg : Arguments) {
-    ArgumentKeys->push_back(Arg.Key);
-    ArgumentValues->push_back(Arg.Value);
-    ArgumentKinds->push_back(static_cast<unsigned>(Arg.Kind));
-  }
+  unzipProfileArguments(Arguments, *ArgumentKeys, *ArgumentValues,
+                        *ArgumentKinds);
 }
 
 bool Sema::processProfilesEnforceAttr(
@@ -3087,11 +3097,8 @@ ProfilesSuppressAttr *Sema::makeProfilesSuppressAttr(const ParsedAttr &AL) {
   SmallVector<StringRef, 4> RawArgumentKeys;
   SmallVector<StringRef, 4> RawArgumentValues;
   SmallVector<unsigned, 4> RawArgumentKinds;
-  for (const auto &Arg : Args.Arguments) {
-    RawArgumentKeys.push_back(Arg.Key);
-    RawArgumentValues.push_back(Arg.Value);
-    RawArgumentKinds.push_back(static_cast<unsigned>(Arg.Kind));
-  }
+  unzipProfileArguments(Args.Arguments, RawArgumentKeys, RawArgumentValues,
+                        RawArgumentKinds);
 
   return ::new (Context) ProfilesSuppressAttr(
       Context, AL, Args.Name, Args.Justification, Args.Rule,
@@ -3099,6 +3106,17 @@ ProfilesSuppressAttr *Sema::makeProfilesSuppressAttr(const ParsedAttr &AL) {
       RawArgumentKeys.size(), RawArgumentValues.data(),
       RawArgumentValues.size(), RawArgumentKinds.data(),
       RawArgumentKinds.size());
+}
+
+ProfilesSuppressAttr *
+Sema::makeImplicitProfilesSuppressAttr(StringRef ProfileName,
+                                       StringRef RuleName) {
+  return ProfilesSuppressAttr::CreateImplicit(
+      Context, ProfileName, /*Justification=*/"", RuleName,
+      /*RawArguments=*/nullptr, /*RawArgumentsSize=*/0,
+      /*RawArgumentKeys=*/nullptr, /*RawArgumentKeysSize=*/0,
+      /*RawArgumentValues=*/nullptr, /*RawArgumentValuesSize=*/0,
+      /*RawArgumentKinds=*/nullptr, /*RawArgumentKindsSize=*/0);
 }
 
 static bool profileSuppressMatches(StringRef EntryProfile, StringRef EntryRule,
