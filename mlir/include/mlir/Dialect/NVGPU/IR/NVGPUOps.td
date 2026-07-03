@@ -677,37 +677,38 @@ def NVGPU_RcpOp : NVGPU_Op<"rcp", [Pure,
 
 def AnyI32Like : TypeOrValueSemanticsContainer<I32, "scalar i32 or vector of i32">;
 
-// nvgpu.convert.fptrunc only supports the satfinite and none saturation modes.
-def NVGPU_SaturationModeSatfiniteOrNone :
-  ConfinedAttr<SaturationModeAttr, [EnumAttrIsOneOf<SaturationModeAttr,
-                [SaturationModeNone, SaturationModeFinite]>]>;
-
-def NVGPU_ConvertFPTruncOp : NVGPU_Op<"convert.fptrunc", [Pure]> {
+def NVGPU_TruncfOp : NVGPU_Op<"truncf", [Pure]> {
   let summary = "Truncate floating-point to narrower floating-point";
   let description = [{
     Truncate a floating-point value to a smaller floating-point type.
     Destination must be strictly narrower than source.
 
     Supported paths:
-      f64 -> f32, f16, bf16
-      f32 -> f16, bf16, f8, f6, f4
-      f16 -> f8, f6, f4
-      bf16 -> f8, f6, f4
+      f16  -> f8 (f8E4M3FN, f8E5M2, f8E8M0FNU), f6 (f6E2M3FN, f6E3M2FN), 
+              f4 (f4E2M1FN)
+      bf16 -> f8 (f8E4M3FN, f8E5M2, f8E8M0FNU), f6 (f6E2M3FN, f6E3M2FN), 
+              f4 (f4E2M1FN)
+      f32  -> f16, bf16, f8 (f8E4M3FN, f8E5M2, f8E8M0FNU),
+              f6 (f6E2M3FN, f6E3M2FN), f4 (f4E2M1FN)
+      f64  -> f32, f16, bf16
 
     The `random_bits` operand enables stochastic rounding (RS mode) for
     f32->f16/bf16 conversions; when provided, `rnd` must be RS.
 
     Example:
     ```mlir
-    %r = nvgpu.convert.fptrunc %in : vector<8xf32> to vector<8xf8E4M3FN>
-    %r = nvgpu.convert.fptrunc %in : vector<8xf32> to vector<8xf6E2M3FN>
-    %r = nvgpu.convert.fptrunc %in : f32 to f16
-    %r = nvgpu.convert.fptrunc %in : vector<2x4xf16> to vector<2x4xf8E5M2>
+    %r = nvgpu.truncf %in : vector<8xf32> to vector<8xf8E4M3FN>
+    %r = nvgpu.truncf %in : vector<8xf32> to vector<8xf6E2M3FN>
+    %r = nvgpu.truncf %in : f32 to f16
+    %r = nvgpu.truncf %in : vector<2x4xf16> to vector<2x4xf8E5M2>
     ```
   }];
   let arguments = (ins FloatLike:$in,
                        DefaultValuedAttr<FPRoundingModeAttr, "NVVM::FPRoundingMode::RN">:$rnd,
-                       DefaultValuedAttr<NVGPU_SaturationModeSatfiniteOrNone, "NVVM::SaturationMode::SATFINITE">:$sat,
+                       DefaultValuedAttr<ConfinedAttr<SaturationModeAttr, 
+                         [EnumAttrIsOneOf<SaturationModeAttr, 
+                           [SaturationModeNone, SaturationModeFinite]>]>, 
+                         "NVVM::SaturationMode::SATFINITE">:$sat,
                        DefaultValuedAttr<BoolAttr, "false">:$relu,
                        Optional<I32>:$random_bits
                        );
@@ -723,9 +724,9 @@ def NVGPU_ConvertFPExtOp : NVGPU_Op<"convert.fpext", [Pure]> {
     Destination must be strictly wider than source.
 
     Supported paths:
-      f8 -> f16, bf16
-      f6 -> f16, bf16
-      f4 -> f16, bf16
+      f4 (f4E2M1FN) -> f16, bf16
+      f6 (f6E2M3FN, f6E3M2FN) -> f16, bf16
+      f8 (f8E4M3FN, f8E5M2, f8E8M0FNU) -> f16, bf16
       f16 -> f32
       bf16 -> f32
 

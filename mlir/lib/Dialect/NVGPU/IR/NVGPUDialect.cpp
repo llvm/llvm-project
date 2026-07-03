@@ -701,7 +701,7 @@ LogicalResult RcpOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// NVGPU_ConvertFPTruncOp
+// NVGPU_TruncfOp
 //===----------------------------------------------------------------------===//
 
 static bool isShapedContainerType(Type t) {
@@ -737,7 +737,7 @@ static LogicalResult verifyConversionShapes(Operation *op, Type inType,
   return success();
 }
 
-LogicalResult ConvertFPTruncOp::verify() {
+LogicalResult TruncfOp::verify() {
   Type inType = getIn().getType();
   Type outType = getType();
   Type srcType = getElementTypeOrSelf(inType);
@@ -806,9 +806,8 @@ LogicalResult ConvertFPExtOp::verify() {
   int dstBitWidth = dstType.getIntOrFloatBitWidth();
   auto rnd = getRnd();
 
-  if (auto result = verifyConversionShapes(getOperation(), inType, outType);
-      failed(result))
-    return result;
+  if (failed(verifyConversionShapes(getOperation(), inType, outType)))
+    return failure();
 
   if (srcBitWidth >= dstBitWidth)
     return emitOpError("result type ")

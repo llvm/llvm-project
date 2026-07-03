@@ -1713,13 +1713,14 @@ struct NVGPURcpOpLowering : public ConvertOpToLLVMPattern<nvgpu::RcpOp> {
 };
 
 //===----------------------------------------------------------------------===//
-// NVGPUConvertFPTruncOp Lowering
+// NVGPUTruncfOp Lowering
 //===----------------------------------------------------------------------===//
 
 enum class FPKind { F32, BF16, F16, F8, F6, F4 };
 
+/// Get the effective bit width of a floating-point type.
+/// f6 types are 6-bit but NVVM Ops expect 8-bit (i8) containers.
 static int getEffectiveBitWidth(int bitWidth) {
-  // f6 types are 6-bit but NVVM Ops expect 8-bit (i8) containers.
   return bitWidth == 6 ? 8 : bitWidth;
 }
 
@@ -1746,15 +1747,16 @@ static std::optional<FPKind> classifyFPType(Type t) {
     return FPKind::F6;
   if (isConvertibleF4Type(t))
     return FPKind::F4;
+
   return std::nullopt;
 }
 
 /// Number of source-side i32 register slots consumed by each NVVM convert Op.
-static int getNumSrcI32PerConv(FPKind src) {
+static int getNumSrcI32PerConvert(FPKind src) {
   return src == FPKind::F32 ? 2 : 1;
 }
 
-/// Conversion op identifier for nvgpu.convert.fptrunc lowering dispatch table.
+/// Conversion op identifier for nvgpu.truncf lowering dispatch table.
 enum class FPTruncConvOp {
   F32x2_TO_F16x2,
   F32x2_TO_BF16x2,
@@ -1792,13 +1794,16 @@ static constexpr FPTruncTableEntry kFPTruncTable[] = {
     {FPKind::BF16, FPKind::F4, FPTruncConvOp::BF16x2_TO_F4x2},
 };
 
-static std::optional<FPTruncTableEntry> lookupTruncConvOp(Type srcElemType,
-                                                          Type dstElemType) {
-  auto srcKind = classifyFPType(srcElemType);
-  auto dstKind = classifyFPType(dstElemType);
+/// Find the conversion table entry whose source/destination `FPKind`s match the
+/// given element types.
+template <typename TableEntry, size_t N>
+static std::optional<TableEntry>
+lookupConvOp(const TableEntry (&table)[N], Type srcElemType, Type dstElemType) {
+  std::optional<FPKind> srcKind = classifyFPType(srcElemType);
+  std::optional<FPKind> dstKind = classifyFPType(dstElemType);
   if (!srcKind || !dstKind)
     return std::nullopt;
-  for (const auto &entry : kFPTruncTable) {
+  for (const TableEntry &entry : table) {
     if (entry.src == *srcKind && entry.dst == *dstKind)
       return entry;
   }
@@ -1862,8 +1867,8 @@ static Value createTruncConversion(
   IntegerType i8Ty = b.getI8Type();
   IntegerType i16Ty = b.getI16Type();
   IntegerType i32Ty = b.getI32Type();
-  auto dstTyAttr = TypeAttr::get(dstElemType);
-  auto actualDstTyAttr = TypeAttr::get(actualDstFloatType);
+  TypeAttr dstTyAttr = TypeAttr::get(dstElemType);
+  TypeAttr actualDstTyAttr = TypeAttr::get(actualDstFloatType);
 
   switch (convOp) {
   case FPTruncConvOp::F32x2_TO_F16x2: {
@@ -1916,10 +1921,10 @@ static Value createTruncConversion(
   llvm_unreachable("unhandled FPTruncConvOp");
 }
 
-static LogicalResult lowerFPTrunc(nvgpu::ConvertFPTruncOp op,
-                                  nvgpu::ConvertFPTruncOp::Adaptor adaptor,
-                                  ConversionPatternRewriter &rewriter,
-                                  const LLVMTypeConverter *typeConverter) {
+static LogicalResult lowerTruncf(nvgpu::TruncfOp op,
+                                 nvgpu::TruncfOp::Adaptor adaptor,
+                                 ConversionPatternRewriter &rewriter,
+                                 const LLVMTypeConverter *typeConverter) {
   MLIRContext *ctx = op.getContext();
   ImplicitLocOpBuilder b(op->getLoc(), rewriter);
   IntegerType i32Ty = b.getI32Type();
@@ -1944,7 +1949,7 @@ static LogicalResult lowerFPTrunc(nvgpu::ConvertFPTruncOp op,
   Value randomBits = adaptor.getRandomBits();
   Type actualDstFloatType = dstElemType;
 
-  // STEP 1: bitcast input vector to i32 register vector.
+  // STEP 1: bitcast input vector to i32 vector type.
   // f64 -> f32/f16/bf16 lowers to a single direct LLVM fptrunc
   // f64 -> f8/f6/f4 first truncates to f32 and then reuses the narrow
   //        conversion path below.
@@ -1975,12 +1980,12 @@ static LogicalResult lowerFPTrunc(nvgpu::ConvertFPTruncOp op,
       b.create<LLVM::UndefOp>(VectorType::get(dstI32Elems, i32Ty));
 
   // STEP 2: look up the conversion op from the (srcType, dstType) table.
-  auto convEntry = lookupTruncConvOp(srcElemType, dstElemType);
+  auto convEntry = lookupConvOp(kFPTruncTable, srcElemType, dstElemType);
   if (!convEntry)
     return rewriter.notifyMatchFailure(
         op, "unsupported type combination for truncation");
   FPTruncConvOp convOp = convEntry->convOp;
-  int numSrcI32PerConv = getNumSrcI32PerConv(convEntry->src);
+  int numSrcI32PerConv = getNumSrcI32PerConvert(convEntry->src);
 
   // STEP 3: pack conversion results into destination i32 vector.
   const int srcStep = srcBW / effectiveDstBW;
@@ -2070,19 +2075,6 @@ static constexpr FPExtTableEntry kFPExtTable[] = {
     {FPKind::F4, FPKind::F16, FPExtConvOp::F4x2_TO_F16x2},
     {FPKind::F4, FPKind::BF16, FPExtConvOp::F4x2_TO_BF16x2},
 };
-
-static std::optional<FPExtTableEntry> lookupExtConvOp(Type srcElemType,
-                                                      Type dstElemType) {
-  auto srcKind = classifyFPType(srcElemType);
-  auto dstKind = classifyFPType(dstElemType);
-  if (!srcKind || !dstKind)
-    return std::nullopt;
-  for (const auto &entry : kFPExtTable) {
-    if (entry.src == *srcKind && entry.dst == *dstKind)
-      return entry;
-  }
-  return std::nullopt;
-}
 
 /// Create a typed NVVM extension conversion.
 /// For f8/f6: src is vector<2xi8>.  For f4: src is i8.
@@ -2199,7 +2191,7 @@ static LogicalResult lowerFPExt(nvgpu::ConvertFPExtOp op,
       b.create<LLVM::UndefOp>(VectorType::get(dstI32Elems, i32Ty));
 
   // STEP 2: look up the conversion op from the (srcType, dstType) table.
-  auto convEntry = lookupExtConvOp(srcElemType, intermediateDstElem);
+  auto convEntry = lookupConvOp(kFPExtTable, srcElemType, intermediateDstElem);
   if (!convEntry)
     return rewriter.notifyMatchFailure(
         op, "unsupported type combination for extension");
@@ -2266,17 +2258,16 @@ static LogicalResult lowerFPExt(nvgpu::ConvertFPExtOp op,
   return success();
 }
 
-struct NVGPUConvertFPTruncOpLowering
-    : public ConvertOpToLLVMPattern<nvgpu::ConvertFPTruncOp> {
-  using ConvertOpToLLVMPattern<nvgpu::ConvertFPTruncOp>::ConvertOpToLLVMPattern;
+struct NVGPUTruncfOpLowering : public ConvertOpToLLVMPattern<nvgpu::TruncfOp> {
+  using ConvertOpToLLVMPattern<nvgpu::TruncfOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(nvgpu::ConvertFPTruncOp op, OpAdaptor adaptor,
+  matchAndRewrite(nvgpu::TruncfOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     if (isa<RankedTensorType>(op.getIn().getType()))
       return rewriter.notifyMatchFailure(
           op, "tensor inputs not handled; type converter should lower first");
-    return lowerFPTrunc(op, adaptor, rewriter, getTypeConverter());
+    return lowerTruncf(op, adaptor, rewriter, getTypeConverter());
   }
 };
 
@@ -2306,7 +2297,7 @@ static int64_t computePaddedElems(int64_t numElems, int srcBW, int dstBW,
   return ceilDiv(padded, step) * step;
 }
 
-/// Canonicalization pattern for nvgpu.convert.fptrunc / nvgpu.convert.fpext:
+/// Canonicalization pattern for nvgpu.truncf / nvgpu.convert.fpext:
 /// handles scalar inputs, non-32-bit-aligned vectors, and multi-rank vectors.
 /// Runs as an OpRewritePattern on MLIR types before LLVM type conversion.
 template <typename CvtOp, bool IsTrunc>
@@ -2345,7 +2336,6 @@ struct NVGPUFPCanonicalizePattern : public OpRewritePattern<CvtOp> {
     if (isScalar)
       input = vector::BroadcastOp::create(b, VectorType::get({1}, srcElemTy),
                                           input);
-
     if (isMultiRank)
       input = vector::ShapeCastOp::create(
           b, VectorType::get({numElems}, srcElemTy), input);
@@ -2361,33 +2351,37 @@ struct NVGPUFPCanonicalizePattern : public OpRewritePattern<CvtOp> {
     auto cvtDstTy =
         VectorType::get({needsPad ? paddedElems : numElems}, dstElemTy);
     Value cvt;
-    if constexpr (IsTrunc)
+    if constexpr (IsTrunc) {
       cvt = CvtOp::create(b, cvtDstTy, input, op.getRndAttr(), op.getSatAttr(),
                           op.getReluAttr(), op.getRandomBits());
-    else
+    } else {
       cvt =
           CvtOp::create(b, cvtDstTy, input, op.getRndAttr(), op.getReluAttr());
+    }
     Value result = cvt;
 
-    if (needsPad)
+    if (needsPad) {
       result = vector::ExtractStridedSliceOp::create(
           b, result, SmallVector<int64_t>{0}, SmallVector<int64_t>{numElems},
           SmallVector<int64_t>{1});
+    }
 
-    if (isMultiRank)
+    if (isMultiRank) {
       result =
           vector::ShapeCastOp::create(b, cast<VectorType>(outType), result);
+    }
 
-    if (isScalar)
+    if (isScalar) {
       result = vector::ExtractOp::create(b, result, SmallVector<int64_t>{0});
+    }
 
     rewriter.replaceOp(op, result);
     return success();
   }
 };
 
-using NVGPUConvertFPTruncCanonicalizePattern =
-    NVGPUFPCanonicalizePattern<nvgpu::ConvertFPTruncOp, true>;
+using NVGPUTruncfCanonicalizePattern =
+    NVGPUFPCanonicalizePattern<nvgpu::TruncfOp, true>;
 using NVGPUConvertFPExtCanonicalizePattern =
     NVGPUFPCanonicalizePattern<nvgpu::ConvertFPExtOp, false>;
 } // namespace
@@ -2434,12 +2428,12 @@ void mlir::populateNVGPUToNVVMConversionPatterns(
       NVGPUWarpgroupMmaOpLowering,              // nvgpu.warpgroup.mma
       NVGPUWarpgroupMmaStoreOpLowering,         // nvgpu.warpgroup.mma.store
       NVGPUWarpgroupMmaInitAccumulatorOpLowering, // nvgpu.warpgroup.mma.init.accumulator
-      NVGPUConvertFPTruncOpLowering,              // nvgpu.convert.fptrunc
+      NVGPUTruncfOpLowering,                      // nvgpu.truncf
       NVGPUConvertFPExtOpLowering,                // nvgpu.convert.fpext
       MmaSyncOptoNVVM, MmaLdMatrixOpToNVVM, NVGPUAsyncCopyLowering,
       NVGPUAsyncCreateGroupLowering, NVGPUAsyncWaitLowering,
       NVGPUMmaSparseSyncLowering, NVGPURcpOpLowering>(converter);
 
-  patterns.add<NVGPUConvertFPTruncCanonicalizePattern,
+  patterns.add<NVGPUTruncfCanonicalizePattern,
                NVGPUConvertFPExtCanonicalizePattern>(patterns.getContext());
 }
