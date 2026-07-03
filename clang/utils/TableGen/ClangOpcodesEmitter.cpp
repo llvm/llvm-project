@@ -320,6 +320,11 @@ void ClangOpcodesEmitter::EmitGroup(raw_ostream &OS, StringRef N,
   const auto *Types = R->getValueAsListInit("Types");
   const auto &Args = R->getValueAsListOfDefs("Args");
 
+  if (Types->empty()) {
+    PrintFatalError("HasGroup only makes sense for opcodes with types");
+    return;
+  }
+
   Twine EmitFuncName = "emit" + N;
 
   // Emit the prototype of the group emitter in the header.

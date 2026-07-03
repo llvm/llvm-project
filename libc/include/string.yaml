@@ -1,5 +1,7 @@
 header: string.h
-header_template: string.h.def
+public_includes:
+  # Needed for compatibility with glibc which provides these symbols by default.
+  - strings.h
 standards:
   - stdc
 macros:

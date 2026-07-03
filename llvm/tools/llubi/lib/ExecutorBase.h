@@ -64,6 +64,9 @@ struct Frame {
   // Reserved for in-flight subroutines.
   Function *ResolvedCallee = nullptr;
   SmallVector<AnyValue> CalleeArgs;
+  // Temporary memory objects created via pointer arguments with byval.
+  // They belong to the caller.
+  SmallVector<IntrusiveRefCntPtr<MemoryObject>> CalleeByValArgs;
   AnyValue CalleeRetVal;
 
   Frame(Function &F, CallBase *CallSite, Frame *LastFrame,

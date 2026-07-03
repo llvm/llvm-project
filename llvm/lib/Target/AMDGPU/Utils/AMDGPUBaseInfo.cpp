@@ -420,9 +420,9 @@ struct VOPTrue16Info {
 };
 
 struct VOPDXYInfo {
-  uint16_t VOPDOp;
-  uint16_t Subtarget;
-  bool VOPD3;
+  uint16_t VOPDXYKey;
+  bool IsX;
+  bool IsY;
 };
 
 #define GET_FP4FP8DstByteSelTable_DECL
@@ -465,10 +465,8 @@ struct FP4FP8DstByteSelInfo {
 #define GET_VOPDComponentTable_IMPL
 #define GET_VOPDPairs_DECL
 #define GET_VOPDPairs_IMPL
-#define GET_VOPDXTable_DECL
-#define GET_VOPDXTable_IMPL
-#define GET_VOPDYTable_DECL
-#define GET_VOPDYTable_IMPL
+#define GET_VOPDXYTable_DECL
+#define GET_VOPDXYTable_IMPL
 #define GET_VOPTrue16Table_DECL
 #define GET_VOPTrue16Table_IMPL
 #define GET_True16D16Table_IMPL
@@ -693,28 +691,6 @@ unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
   llvm_unreachable("Subtarget generation does not support VOPD!");
 }
 
-static constexpr unsigned getVOPDXYKey(unsigned VOPDOp, unsigned Subtarget,
-                                       bool VOPD3) {
-  return (VOPDOp << 5) | (Subtarget << 1) | (VOPD3 ? 1u : 0u);
-}
-
-// TODO: Ideally, the table should be emitted by the TableGen backend, however
-// this is currently not supported, so the direct lookup table is generated
-// manually here.
-constexpr unsigned VOPDXYKeyBits = 11;
-static constexpr std::array<CanBeVOPD, 1 << VOPDXYKeyBits> buildVOPDXYLookup() {
-  std::array<CanBeVOPD, 1 << VOPDXYKeyBits> Table{};
-  for (auto &E : Table)
-    E = {false, false};
-  for (const auto &E : VOPDXTable)
-    Table[getVOPDXYKey(E.VOPDOp, E.Subtarget, E.VOPD3)].X = true;
-  for (const auto &E : VOPDYTable)
-    Table[getVOPDXYKey(E.VOPDOp, E.Subtarget, E.VOPD3)].Y = true;
-  return Table;
-}
-
-constexpr auto VOPDXYLookup = buildVOPDXYLookup();
-
 CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3) {
   bool IsConvertibleToBitOp = VOPD3 ? getBitOp2(Opc) : 0;
   Opc = IsConvertibleToBitOp ? (unsigned)AMDGPU::V_BITOP3_B32_e64 : Opc;
@@ -723,7 +699,12 @@ CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3) {
   const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
   if (!Info)
     return {false, false};
-  return VOPDXYLookup[getVOPDXYKey(Info->VOPDOp, EncodingFamily, VOPD3)];
+  unsigned Key =
+      (Info->VOPDOp << 5) | (EncodingFamily << 1) | (VOPD3 ? 1u : 0u);
+  const VOPDXYInfo *XYInfo = getVOPDXYInfo(Key);
+  if (!XYInfo)
+    return {false, false};
+  return {XYInfo->IsX, XYInfo->IsY};
 }
 
 unsigned getVOPDOpcode(unsigned Opc, bool VOPD3) {
@@ -1097,20 +1078,15 @@ VOPD::InstInfo getVOPDInstInfo(unsigned VOPDOpcode,
   return VOPD::InstInfo(OpXInfo, OpYInfo);
 }
 
-namespace IsaInfo {
-
-AMDGPUTargetID::AMDGPUTargetID(const MCSubtargetInfo &STI,
-                               StringRef FeatureString)
-    : Arch(parseArchAMDGCN(STI.getCPU())),
-      TargetTripleString(
-          STI.getTargetTriple().normalize(Triple::CanonicalForm::FOUR_IDENT)),
-      XnackSetting(STI.getFeatureBits().test(FeatureSupportsXNACK)
-                       ? TargetIDSetting::Any
-                       : TargetIDSetting::Unsupported),
-      SramEccSetting(STI.getFeatureBits().test(FeatureSupportsSRAMECC)
-                         ? TargetIDSetting::Any
-                         : TargetIDSetting::Unsupported),
-      IsAMDHSA(STI.getTargetTriple().getOS() == Triple::AMDHSA) {
+TargetID createAMDGPUTargetID(const MCSubtargetInfo &STI,
+                              StringRef FeatureString) {
+  TargetID TargetID(parseArchAMDGCN(STI.getCPU()), STI.getTargetTriple(),
+                    STI.getFeatureBits().test(FeatureSupportsXNACK)
+                        ? TargetIDSetting::Any
+                        : TargetIDSetting::Unsupported,
+                    STI.getFeatureBits().test(FeatureSupportsSRAMECC)
+                        ? TargetIDSetting::Any
+                        : TargetIDSetting::Unsupported);
 
   // Check if xnack or sramecc is explicitly enabled or disabled.  In the
   // absence of the target features we assume we must generate code that can run
@@ -1134,12 +1110,12 @@ AMDGPUTargetID::AMDGPUTargetID(const MCSubtargetInfo &STI,
   // Targets without on/off mode support keep their initial setting (Any).
 
   bool XnackSupported = STI.getFeatureBits().test(FeatureXNACKOnOffModes);
-  bool SramEccSupported = isSramEccSupported();
+  bool SramEccSupported = TargetID.isSramEccSupported();
 
   if (XnackRequested) {
     if (XnackSupported) {
-      XnackSetting =
-          *XnackRequested ? TargetIDSetting::On : TargetIDSetting::Off;
+      TargetID.setXnackSetting(*XnackRequested ? TargetIDSetting::On
+                                               : TargetIDSetting::Off);
     } else {
       // If a specific xnack setting was requested and this GPU does not support
       // xnack emit a warning. Setting will remain set to "Unsupported".
@@ -1155,8 +1131,8 @@ AMDGPUTargetID::AMDGPUTargetID(const MCSubtargetInfo &STI,
 
   if (SramEccRequested) {
     if (SramEccSupported) {
-      SramEccSetting =
-          *SramEccRequested ? TargetIDSetting::On : TargetIDSetting::Off;
+      TargetID.setSramEccSetting(*SramEccRequested ? TargetIDSetting::On
+                                                   : TargetIDSetting::Off);
     } else {
       // If a specific sramecc setting was requested and this GPU does not
       // support sramecc emit a warning. Setting will remain set to
@@ -1170,111 +1146,11 @@ AMDGPUTargetID::AMDGPUTargetID(const MCSubtargetInfo &STI,
       }
     }
   }
+
+  return TargetID;
 }
 
-AMDGPUTargetID::AMDGPUTargetID(GPUKind Arch, StringRef TargetTripleString,
-                               TargetIDSetting XnackSetting,
-                               TargetIDSetting SramEccSetting, bool IsAMDHSA)
-    : Arch(Arch), TargetTripleString(TargetTripleString),
-      XnackSetting(XnackSetting), SramEccSetting(SramEccSetting),
-      IsAMDHSA(IsAMDHSA) {}
-
-static TargetIDSetting
-getTargetIDSettingFromFeatureString(StringRef FeatureString) {
-  if (FeatureString.ends_with("-"))
-    return TargetIDSetting::Off;
-  if (FeatureString.ends_with("+"))
-    return TargetIDSetting::On;
-
-  llvm_unreachable("Malformed feature string");
-}
-
-void AMDGPUTargetID::setTargetIDFromTargetIDStream(StringRef TargetID) {
-  SmallVector<StringRef, 3> TargetIDSplit;
-  TargetID.split(TargetIDSplit, ':');
-
-  for (const auto &FeatureString : TargetIDSplit) {
-    if (FeatureString.starts_with("xnack"))
-      XnackSetting = getTargetIDSettingFromFeatureString(FeatureString);
-    if (FeatureString.starts_with("sramecc"))
-      SramEccSetting = getTargetIDSettingFromFeatureString(FeatureString);
-  }
-}
-
-std::optional<AMDGPUTargetID>
-AMDGPUTargetID::parseTargetIDString(StringRef TargetIDDirective) {
-  // Split on '-' to get arch-vendor-os-environment-processor:features
-  // There is a single dash separator after the 4-component triple
-  SmallVector<StringRef, 5> Parts;
-  TargetIDDirective.split(Parts, '-', /*MaxSplit=*/4);
-  if (Parts.size() < 4)
-    return std::nullopt;
-
-  Triple TT(Parts[0], Parts[1], Parts[2], Parts[3]);
-  if (!TT.isAMDGCN())
-    return std::nullopt;
-
-  SmallVector<StringRef, 3> FeatureSplit;
-  Parts[4].split(FeatureSplit, ':');
-  if (FeatureSplit.empty())
-    return std::nullopt;
-
-  StringRef CPUName = FeatureSplit[0];
-
-  // Determine xnack/sramecc support based on the architecture attributes
-  GPUKind Arch = parseArchAMDGCN(CPUName);
-  unsigned ArchAttr = getArchAttrAMDGCN(Arch);
-
-  TargetIDSetting XnackSetting = (ArchAttr & FEATURE_XNACK)
-                                     ? TargetIDSetting::Any
-                                     : TargetIDSetting::Unsupported;
-  TargetIDSetting SramEccSetting = (ArchAttr & FEATURE_SRAMECC)
-                                       ? TargetIDSetting::Any
-                                       : TargetIDSetting::Unsupported;
-
-  for (StringRef FeatureString :
-       ArrayRef<StringRef>(FeatureSplit).drop_front(1)) {
-    if (FeatureString.starts_with("xnack"))
-      XnackSetting = getTargetIDSettingFromFeatureString(FeatureString);
-    else if (FeatureString.starts_with("sramecc"))
-      SramEccSetting = getTargetIDSettingFromFeatureString(FeatureString);
-  }
-
-  return AMDGPUTargetID(Arch, TT.normalize(Triple::CanonicalForm::FOUR_IDENT),
-                        XnackSetting, SramEccSetting,
-                        TT.getOS() == Triple::AMDHSA);
-}
-
-void AMDGPUTargetID::print(raw_ostream &StreamRep) const {
-  StreamRep << TargetTripleString << '-' << getArchNameAMDGCN(Arch);
-
-  if (IsAMDHSA) {
-    // sramecc.
-    if (getSramEccSetting() == TargetIDSetting::Off)
-      StreamRep << ":sramecc-";
-    else if (getSramEccSetting() == TargetIDSetting::On)
-      StreamRep << ":sramecc+";
-
-    // xnack.
-    if (getXnackSetting() == TargetIDSetting::Off)
-      StreamRep << ":xnack-";
-    else if (getXnackSetting() == TargetIDSetting::On)
-      StreamRep << ":xnack+";
-  }
-}
-
-std::string AMDGPUTargetID::toString() const {
-  std::string Str;
-  raw_string_ostream OS(Str);
-  OS << *this;
-  return Str;
-}
-
-bool AMDGPUTargetID::operator==(const AMDGPUTargetID &Other) const {
-  return Arch == Other.Arch && XnackSetting == Other.XnackSetting &&
-         SramEccSetting == Other.SramEccSetting && IsAMDHSA == Other.IsAMDHSA &&
-         TargetTripleString == Other.TargetTripleString;
-}
+namespace IsaInfo {
 
 unsigned getInstCacheLineSize(const MCSubtargetInfo &STI) {
   if (STI.getFeatureBits().test(FeatureInstCacheLineSize128))
@@ -1859,6 +1735,11 @@ getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size) {
     return std::nullopt;
   }
   return Vals;
+}
+
+SmallVector<unsigned> getMaxNumWorkGroups(const Function &F) {
+  return getIntegerVecAttribute(F, "amdgpu-max-num-workgroups", 3,
+                                std::numeric_limits<uint32_t>::max());
 }
 
 bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val) {
@@ -2811,7 +2692,8 @@ int32_t getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR,
 }
 
 bool isSGPR(MCRegister Reg, const MCRegisterInfo *TRI) {
-  const MCRegisterClass SGPRClass = TRI->getRegClass(AMDGPU::SReg_32RegClassID);
+  const MCRegisterClass &SGPRClass =
+      TRI->getRegClass(AMDGPU::SReg_32RegClassID);
   const MCRegister FirstSubReg = TRI->getSubReg(Reg, AMDGPU::sub0);
   return SGPRClass.contains(FirstSubReg != 0 ? FirstSubReg : Reg) ||
          Reg == AMDGPU::SCC;
@@ -3963,19 +3845,18 @@ ClusterDimsAttr ClusterDimsAttr::get(const Function &F) {
 
 } // namespace AMDGPU
 
-raw_ostream &operator<<(raw_ostream &OS,
-                        const AMDGPU::IsaInfo::TargetIDSetting S) {
+raw_ostream &operator<<(raw_ostream &OS, const AMDGPU::TargetIDSetting S) {
   switch (S) {
-  case (AMDGPU::IsaInfo::TargetIDSetting::Unsupported):
+  case (AMDGPU::TargetIDSetting::Unsupported):
     OS << "Unsupported";
     break;
-  case (AMDGPU::IsaInfo::TargetIDSetting::Any):
+  case (AMDGPU::TargetIDSetting::Any):
     OS << "Any";
     break;
-  case (AMDGPU::IsaInfo::TargetIDSetting::Off):
+  case (AMDGPU::TargetIDSetting::Off):
     OS << "Off";
     break;
-  case (AMDGPU::IsaInfo::TargetIDSetting::On):
+  case (AMDGPU::TargetIDSetting::On):
     OS << "On";
     break;
   }

@@ -17,4 +17,4 @@ References
 
 This check corresponds to the CERT C++ Coding Standard rule
 `MEM57-CPP. Avoid using default operator new for over-aligned types
-<https://wiki.sei.cmu.edu/confluence/display/cplusplus/MEM57-CPP.+Avoid+using+default+operator+new+for+over-aligned+types>`_.
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/memory-management-mem/mem57-cpp/>`_.

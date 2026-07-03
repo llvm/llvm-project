@@ -998,6 +998,8 @@ UnwindTagContext(TagDecl *DC, api_notes::APINotesManager &APINotes) {
 void Sema::ProcessAPINotes(Decl *D) {
   if (!D)
     return;
+  if (!APINotes.hasAPINotes())
+    return;
   auto Readers = APINotes.findAPINotes(D->getLocation());
   if (Readers.empty())
     return;

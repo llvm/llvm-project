@@ -871,10 +871,10 @@ void divassignf(_Complex float *a, _Complex float b) {
 // FULL-NEXT:    [[MUL_R:%.*]] = fsub float [[MUL_AC]], [[MUL_BD]]
 // FULL-NEXT:    [[MUL_I:%.*]] = fadd float [[MUL_AD]], [[MUL_BC]]
 // FULL-NEXT:    [[ISNAN_CMP:%.*]] = fcmp uno float [[MUL_R]], [[MUL_R]]
-// FULL-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF2:![0-9]+]]
+// FULL-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF1:![0-9]+]]
 // FULL:       complex_mul_imag_nan:
 // FULL-NEXT:    [[ISNAN_CMP1:%.*]] = fcmp uno float [[MUL_I]], [[MUL_I]]
-// FULL-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
+// FULL-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF1]]
 // FULL:       complex_mul_libcall:
 // FULL-NEXT:    [[CALL:%.*]] = call <2 x float> @__mulsc3(float noundef [[A_SROA_0_0_VEC_EXTRACT]], float noundef [[A_SROA_0_4_VEC_EXTRACT]], float noundef [[B_SROA_0_0_VEC_EXTRACT]], float noundef [[B_SROA_0_4_VEC_EXTRACT]]) #[[ATTR2]]
 // FULL-NEXT:    [[COERCE_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[CALL]], i32 0
@@ -1025,10 +1025,10 @@ void divassignf(_Complex float *a, _Complex float b) {
 // FULL_FAST-NEXT:    [[MUL_R:%.*]] = fsub reassoc nnan ninf nsz arcp afn float [[MUL_AC]], [[MUL_BD]]
 // FULL_FAST-NEXT:    [[MUL_I:%.*]] = fadd reassoc nnan ninf nsz arcp afn float [[MUL_AD]], [[MUL_BC]]
 // FULL_FAST-NEXT:    [[ISNAN_CMP:%.*]] = fcmp reassoc nnan ninf nsz arcp afn uno float [[MUL_R]], [[MUL_R]]
-// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF2:![0-9]+]]
+// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF1:![0-9]+]]
 // FULL_FAST:       complex_mul_imag_nan:
 // FULL_FAST-NEXT:    [[ISNAN_CMP1:%.*]] = fcmp reassoc nnan ninf nsz arcp afn uno float [[MUL_I]], [[MUL_I]]
-// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
+// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF1]]
 // FULL_FAST:       complex_mul_libcall:
 // FULL_FAST-NEXT:    [[CALL:%.*]] = call reassoc nnan ninf nsz arcp afn nofpclass(nan inf) <2 x float> @__mulsc3(float noundef nofpclass(nan inf) [[A_SROA_0_0_VEC_EXTRACT]], float noundef nofpclass(nan inf) [[A_SROA_0_4_VEC_EXTRACT]], float noundef nofpclass(nan inf) [[B_SROA_0_0_VEC_EXTRACT]], float noundef nofpclass(nan inf) [[B_SROA_0_4_VEC_EXTRACT]]) #[[ATTR2]]
 // FULL_FAST-NEXT:    [[COERCE_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[CALL]], i32 0
@@ -1142,10 +1142,10 @@ _Complex float mulf(_Complex float a, _Complex float b) {
 // FULL-NEXT:    [[MUL_R:%.*]] = fsub float [[MUL_AC]], [[MUL_BD]]
 // FULL-NEXT:    [[MUL_I:%.*]] = fadd float [[MUL_AD]], [[MUL_BC]]
 // FULL-NEXT:    [[ISNAN_CMP:%.*]] = fcmp uno float [[MUL_R]], [[MUL_R]]
-// FULL-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF2]]
+// FULL-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF1]]
 // FULL:       complex_mul_imag_nan:
 // FULL-NEXT:    [[ISNAN_CMP1:%.*]] = fcmp uno float [[MUL_I]], [[MUL_I]]
-// FULL-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
+// FULL-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF1]]
 // FULL:       complex_mul_libcall:
 // FULL-NEXT:    [[CALL:%.*]] = call <2 x float> @__mulsc3(float noundef [[DOTREAL]], float noundef [[DOTIMAG]], float noundef [[B_SROA_0_0_VEC_EXTRACT]], float noundef [[B_SROA_0_4_VEC_EXTRACT]]) #[[ATTR2]]
 // FULL-NEXT:    [[COERCE_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[CALL]], i32 0
@@ -1322,10 +1322,10 @@ _Complex float mulf(_Complex float a, _Complex float b) {
 // FULL_FAST-NEXT:    [[MUL_R:%.*]] = fsub reassoc nnan ninf nsz arcp afn float [[MUL_AC]], [[MUL_BD]]
 // FULL_FAST-NEXT:    [[MUL_I:%.*]] = fadd reassoc nnan ninf nsz arcp afn float [[MUL_AD]], [[MUL_BC]]
 // FULL_FAST-NEXT:    [[ISNAN_CMP:%.*]] = fcmp reassoc nnan ninf nsz arcp afn uno float [[MUL_R]], [[MUL_R]]
-// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF2]]
+// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF1]]
 // FULL_FAST:       complex_mul_imag_nan:
 // FULL_FAST-NEXT:    [[ISNAN_CMP1:%.*]] = fcmp reassoc nnan ninf nsz arcp afn uno float [[MUL_I]], [[MUL_I]]
-// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
+// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF1]]
 // FULL_FAST:       complex_mul_libcall:
 // FULL_FAST-NEXT:    [[CALL:%.*]] = call reassoc nnan ninf nsz arcp afn nofpclass(nan inf) <2 x float> @__mulsc3(float noundef nofpclass(nan inf) [[DOTREAL]], float noundef nofpclass(nan inf) [[DOTIMAG]], float noundef nofpclass(nan inf) [[B_SROA_0_0_VEC_EXTRACT]], float noundef nofpclass(nan inf) [[B_SROA_0_4_VEC_EXTRACT]]) #[[ATTR2]]
 // FULL_FAST-NEXT:    [[COERCE_SROA_0_0_VEC_EXTRACT:%.*]] = extractelement <2 x float> [[CALL]], i32 0
@@ -1520,7 +1520,7 @@ void mulassignf(_Complex float *a, _Complex float b) {
 // PRMTD-NEXT:    ret { double, double } [[DOTFCA_1_INSERT]]
 //
 // X86WINPRMTD-LABEL: define dso_local void @divd(
-// X86WINPRMTD-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr noundef dead_on_return [[A:%.*]], ptr noundef dead_on_return [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr noundef align 8 dead_on_return [[A:%.*]], ptr noundef align 8 dead_on_return [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD-NEXT:  entry:
 // X86WINPRMTD-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
 // X86WINPRMTD-NEXT:    [[A_REAL:%.*]] = load double, ptr [[A_REALP]], align 8
@@ -1744,7 +1744,7 @@ void mulassignf(_Complex float *a, _Complex float b) {
 // PRMTD_FAST-NEXT:    ret { double, double } [[DOTFCA_1_INSERT]]
 //
 // X86WINPRMTD_STRICT-LABEL: define dso_local void @divd(
-// X86WINPRMTD_STRICT-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr noundef dead_on_return [[A:%.*]], ptr noundef dead_on_return [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD_STRICT-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr noundef align 8 dead_on_return [[A:%.*]], ptr noundef align 8 dead_on_return [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD_STRICT-NEXT:  entry:
 // X86WINPRMTD_STRICT-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
 // X86WINPRMTD_STRICT-NEXT:    [[A_REAL:%.*]] = load double, ptr [[A_REALP]], align 8
@@ -1938,7 +1938,7 @@ _Complex double divd(_Complex double a, _Complex double b) {
 // PRMTD-NEXT:    ret void
 //
 // X86WINPRMTD-LABEL: define dso_local void @divassignd(
-// X86WINPRMTD-SAME: ptr noundef [[A:%.*]], ptr noundef dead_on_return [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD-SAME: ptr noundef [[A:%.*]], ptr noundef align 8 dead_on_return [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD-NEXT:  entry:
 // X86WINPRMTD-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 0
 // X86WINPRMTD-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
@@ -2180,7 +2180,7 @@ _Complex double divd(_Complex double a, _Complex double b) {
 // PRMTD_FAST-NEXT:    ret void
 //
 // X86WINPRMTD_STRICT-LABEL: define dso_local void @divassignd(
-// X86WINPRMTD_STRICT-SAME: ptr noundef [[A:%.*]], ptr noundef dead_on_return [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD_STRICT-SAME: ptr noundef [[A:%.*]], ptr noundef align 8 dead_on_return [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD_STRICT-NEXT:  entry:
 // X86WINPRMTD_STRICT-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 0
 // X86WINPRMTD_STRICT-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
@@ -2269,10 +2269,10 @@ void divassignd(_Complex double *a, _Complex double b) {
 // FULL-NEXT:    [[MUL_R:%.*]] = fsub double [[MUL_AC]], [[MUL_BD]]
 // FULL-NEXT:    [[MUL_I:%.*]] = fadd double [[MUL_AD]], [[MUL_BC]]
 // FULL-NEXT:    [[ISNAN_CMP:%.*]] = fcmp uno double [[MUL_R]], [[MUL_R]]
-// FULL-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF2]]
+// FULL-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF1]]
 // FULL:       complex_mul_imag_nan:
 // FULL-NEXT:    [[ISNAN_CMP1:%.*]] = fcmp uno double [[MUL_I]], [[MUL_I]]
-// FULL-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
+// FULL-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF1]]
 // FULL:       complex_mul_libcall:
 // FULL-NEXT:    [[CALL:%.*]] = call { double, double } @__muldc3(double noundef [[A_COERCE0]], double noundef [[A_COERCE1]], double noundef [[B_COERCE0]], double noundef [[B_COERCE1]]) #[[ATTR2]]
 // FULL-NEXT:    [[TMP0:%.*]] = extractvalue { double, double } [[CALL]], 0
@@ -2325,7 +2325,7 @@ void divassignd(_Complex double *a, _Complex double b) {
 // PRMTD-NEXT:    ret { double, double } [[DOTFCA_1_INSERT]]
 //
 // X86WINPRMTD-LABEL: define dso_local void @muld(
-// X86WINPRMTD-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr noundef dead_on_return [[A:%.*]], ptr noundef dead_on_return [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr noundef align 8 dead_on_return [[A:%.*]], ptr noundef align 8 dead_on_return [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD-NEXT:  entry:
 // X86WINPRMTD-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
 // X86WINPRMTD-NEXT:    [[A_REAL:%.*]] = load double, ptr [[A_REALP]], align 8
@@ -2414,10 +2414,10 @@ void divassignd(_Complex double *a, _Complex double b) {
 // FULL_FAST-NEXT:    [[MUL_R:%.*]] = fsub reassoc nnan ninf nsz arcp afn double [[MUL_AC]], [[MUL_BD]]
 // FULL_FAST-NEXT:    [[MUL_I:%.*]] = fadd reassoc nnan ninf nsz arcp afn double [[MUL_AD]], [[MUL_BC]]
 // FULL_FAST-NEXT:    [[ISNAN_CMP:%.*]] = fcmp reassoc nnan ninf nsz arcp afn uno double [[MUL_R]], [[MUL_R]]
-// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF2]]
+// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF1]]
 // FULL_FAST:       complex_mul_imag_nan:
 // FULL_FAST-NEXT:    [[ISNAN_CMP1:%.*]] = fcmp reassoc nnan ninf nsz arcp afn uno double [[MUL_I]], [[MUL_I]]
-// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
+// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF1]]
 // FULL_FAST:       complex_mul_libcall:
 // FULL_FAST-NEXT:    [[CALL:%.*]] = call reassoc nnan ninf nsz arcp afn nofpclass(nan inf) { double, double } @__muldc3(double noundef nofpclass(nan inf) [[A_COERCE0]], double noundef nofpclass(nan inf) [[A_COERCE1]], double noundef nofpclass(nan inf) [[B_COERCE0]], double noundef nofpclass(nan inf) [[B_COERCE1]]) #[[ATTR2]]
 // FULL_FAST-NEXT:    [[TMP0:%.*]] = extractvalue { double, double } [[CALL]], 0
@@ -2457,7 +2457,7 @@ void divassignd(_Complex double *a, _Complex double b) {
 // PRMTD_FAST-NEXT:    ret { double, double } [[DOTFCA_1_INSERT]]
 //
 // X86WINPRMTD_STRICT-LABEL: define dso_local void @muld(
-// X86WINPRMTD_STRICT-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr noundef dead_on_return [[A:%.*]], ptr noundef dead_on_return [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD_STRICT-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr noundef align 8 dead_on_return [[A:%.*]], ptr noundef align 8 dead_on_return [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD_STRICT-NEXT:  entry:
 // X86WINPRMTD_STRICT-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
 // X86WINPRMTD_STRICT-NEXT:    [[A_REAL:%.*]] = load double, ptr [[A_REALP]], align 8
@@ -2518,10 +2518,10 @@ _Complex double muld(_Complex double a, _Complex double b) {
 // FULL-NEXT:    [[MUL_R:%.*]] = fsub double [[MUL_AC]], [[MUL_BD]]
 // FULL-NEXT:    [[MUL_I:%.*]] = fadd double [[MUL_AD]], [[MUL_BC]]
 // FULL-NEXT:    [[ISNAN_CMP:%.*]] = fcmp uno double [[MUL_R]], [[MUL_R]]
-// FULL-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF2]]
+// FULL-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF1]]
 // FULL:       complex_mul_imag_nan:
 // FULL-NEXT:    [[ISNAN_CMP1:%.*]] = fcmp uno double [[MUL_I]], [[MUL_I]]
-// FULL-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
+// FULL-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF1]]
 // FULL:       complex_mul_libcall:
 // FULL-NEXT:    [[CALL:%.*]] = call { double, double } @__muldc3(double noundef [[DOTREAL]], double noundef [[DOTIMAG]], double noundef [[B_COERCE0]], double noundef [[B_COERCE1]]) #[[ATTR2]]
 // FULL-NEXT:    [[TMP0:%.*]] = extractvalue { double, double } [[CALL]], 0
@@ -2594,7 +2594,7 @@ _Complex double muld(_Complex double a, _Complex double b) {
 // PRMTD-NEXT:    ret void
 //
 // X86WINPRMTD-LABEL: define dso_local void @mulassignd(
-// X86WINPRMTD-SAME: ptr noundef [[A:%.*]], ptr noundef dead_on_return [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD-SAME: ptr noundef [[A:%.*]], ptr noundef align 8 dead_on_return [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD-NEXT:  entry:
 // X86WINPRMTD-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 0
 // X86WINPRMTD-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
@@ -2687,10 +2687,10 @@ _Complex double muld(_Complex double a, _Complex double b) {
 // FULL_FAST-NEXT:    [[MUL_R:%.*]] = fsub reassoc nnan ninf nsz arcp afn double [[MUL_AC]], [[MUL_BD]]
 // FULL_FAST-NEXT:    [[MUL_I:%.*]] = fadd reassoc nnan ninf nsz arcp afn double [[MUL_AD]], [[MUL_BC]]
 // FULL_FAST-NEXT:    [[ISNAN_CMP:%.*]] = fcmp reassoc nnan ninf nsz arcp afn uno double [[MUL_R]], [[MUL_R]]
-// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF2]]
+// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF1]]
 // FULL_FAST:       complex_mul_imag_nan:
 // FULL_FAST-NEXT:    [[ISNAN_CMP1:%.*]] = fcmp reassoc nnan ninf nsz arcp afn uno double [[MUL_I]], [[MUL_I]]
-// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
+// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF1]]
 // FULL_FAST:       complex_mul_libcall:
 // FULL_FAST-NEXT:    [[CALL:%.*]] = call reassoc nnan ninf nsz arcp afn nofpclass(nan inf) { double, double } @__muldc3(double noundef nofpclass(nan inf) [[DOTREAL]], double noundef nofpclass(nan inf) [[DOTIMAG]], double noundef nofpclass(nan inf) [[B_COERCE0]], double noundef nofpclass(nan inf) [[B_COERCE1]]) #[[ATTR2]]
 // FULL_FAST-NEXT:    [[TMP0:%.*]] = extractvalue { double, double } [[CALL]], 0
@@ -2744,7 +2744,7 @@ _Complex double muld(_Complex double a, _Complex double b) {
 // PRMTD_FAST-NEXT:    ret void
 //
 // X86WINPRMTD_STRICT-LABEL: define dso_local void @mulassignd(
-// X86WINPRMTD_STRICT-SAME: ptr noundef [[A:%.*]], ptr noundef dead_on_return [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD_STRICT-SAME: ptr noundef [[A:%.*]], ptr noundef align 8 dead_on_return [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD_STRICT-NEXT:  entry:
 // X86WINPRMTD_STRICT-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 0
 // X86WINPRMTD_STRICT-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
@@ -2922,7 +2922,7 @@ void mulassignd(_Complex double *a, _Complex double b) {
 // PRMTD-NEXT:    ret { x86_fp80, x86_fp80 } [[DOTFCA_1_INSERT]]
 //
 // X86WINPRMTD-LABEL: define dso_local void @divld(
-// X86WINPRMTD-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr noundef dead_on_return [[A:%.*]], ptr noundef dead_on_return [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr noundef align 8 dead_on_return [[A:%.*]], ptr noundef align 8 dead_on_return [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD-NEXT:  entry:
 // X86WINPRMTD-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
 // X86WINPRMTD-NEXT:    [[A_REAL:%.*]] = load double, ptr [[A_REALP]], align 8
@@ -3190,7 +3190,7 @@ void mulassignd(_Complex double *a, _Complex double b) {
 // PRMTD_FAST-NEXT:    ret { x86_fp80, x86_fp80 } [[DOTFCA_1_INSERT]]
 //
 // X86WINPRMTD_STRICT-LABEL: define dso_local void @divld(
-// X86WINPRMTD_STRICT-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr noundef dead_on_return [[A:%.*]], ptr noundef dead_on_return [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD_STRICT-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr noundef align 8 dead_on_return [[A:%.*]], ptr noundef align 8 dead_on_return [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD_STRICT-NEXT:  entry:
 // X86WINPRMTD_STRICT-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
 // X86WINPRMTD_STRICT-NEXT:    [[A_REAL:%.*]] = load double, ptr [[A_REALP]], align 8
@@ -3432,7 +3432,7 @@ _Complex long double divld(_Complex long double a, _Complex long double b) {
 // PRMTD-NEXT:    ret void
 //
 // X86WINPRMTD-LABEL: define dso_local void @divassignld(
-// X86WINPRMTD-SAME: ptr noundef [[A:%.*]], ptr noundef dead_on_return [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD-SAME: ptr noundef [[A:%.*]], ptr noundef align 8 dead_on_return [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD-NEXT:  entry:
 // X86WINPRMTD-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 0
 // X86WINPRMTD-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
@@ -3702,7 +3702,7 @@ _Complex long double divld(_Complex long double a, _Complex long double b) {
 // PRMTD_FAST-NEXT:    ret void
 //
 // X86WINPRMTD_STRICT-LABEL: define dso_local void @divassignld(
-// X86WINPRMTD_STRICT-SAME: ptr noundef [[A:%.*]], ptr noundef dead_on_return [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD_STRICT-SAME: ptr noundef [[A:%.*]], ptr noundef align 8 dead_on_return [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD_STRICT-NEXT:  entry:
 // X86WINPRMTD_STRICT-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 0
 // X86WINPRMTD_STRICT-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
@@ -3815,10 +3815,10 @@ void divassignld(_Complex long double *a, _Complex long double b) {
 // FULL-NEXT:    [[MUL_R:%.*]] = fsub x86_fp80 [[MUL_AC]], [[MUL_BD]]
 // FULL-NEXT:    [[MUL_I:%.*]] = fadd x86_fp80 [[MUL_AD]], [[MUL_BC]]
 // FULL-NEXT:    [[ISNAN_CMP:%.*]] = fcmp uno x86_fp80 [[MUL_R]], [[MUL_R]]
-// FULL-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF2]]
+// FULL-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF1]]
 // FULL:       complex_mul_imag_nan:
 // FULL-NEXT:    [[ISNAN_CMP1:%.*]] = fcmp uno x86_fp80 [[MUL_I]], [[MUL_I]]
-// FULL-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
+// FULL-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF1]]
 // FULL:       complex_mul_libcall:
 // FULL-NEXT:    [[CALL:%.*]] = call { x86_fp80, x86_fp80 } @__mulxc3(x86_fp80 noundef [[A_REAL]], x86_fp80 noundef [[A_IMAG]], x86_fp80 noundef [[B_REAL]], x86_fp80 noundef [[B_IMAG]]) #[[ATTR2]]
 // FULL-NEXT:    [[TMP0:%.*]] = extractvalue { x86_fp80, x86_fp80 } [[CALL]], 0
@@ -3895,7 +3895,7 @@ void divassignld(_Complex long double *a, _Complex long double b) {
 // PRMTD-NEXT:    ret { x86_fp80, x86_fp80 } [[DOTFCA_1_INSERT]]
 //
 // X86WINPRMTD-LABEL: define dso_local void @mulld(
-// X86WINPRMTD-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr noundef dead_on_return [[A:%.*]], ptr noundef dead_on_return [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr noundef align 8 dead_on_return [[A:%.*]], ptr noundef align 8 dead_on_return [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD-NEXT:  entry:
 // X86WINPRMTD-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
 // X86WINPRMTD-NEXT:    [[A_REAL:%.*]] = load double, ptr [[A_REALP]], align 8
@@ -4000,10 +4000,10 @@ void divassignld(_Complex long double *a, _Complex long double b) {
 // FULL_FAST-NEXT:    [[MUL_R:%.*]] = fsub reassoc nnan ninf nsz arcp afn x86_fp80 [[MUL_AC]], [[MUL_BD]]
 // FULL_FAST-NEXT:    [[MUL_I:%.*]] = fadd reassoc nnan ninf nsz arcp afn x86_fp80 [[MUL_AD]], [[MUL_BC]]
 // FULL_FAST-NEXT:    [[ISNAN_CMP:%.*]] = fcmp reassoc nnan ninf nsz arcp afn uno x86_fp80 [[MUL_R]], [[MUL_R]]
-// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF2]]
+// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF1]]
 // FULL_FAST:       complex_mul_imag_nan:
 // FULL_FAST-NEXT:    [[ISNAN_CMP1:%.*]] = fcmp reassoc nnan ninf nsz arcp afn uno x86_fp80 [[MUL_I]], [[MUL_I]]
-// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
+// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF1]]
 // FULL_FAST:       complex_mul_libcall:
 // FULL_FAST-NEXT:    [[CALL:%.*]] = call reassoc nnan ninf nsz arcp afn nofpclass(nan inf) { x86_fp80, x86_fp80 } @__mulxc3(x86_fp80 noundef nofpclass(nan inf) [[A_REAL]], x86_fp80 noundef nofpclass(nan inf) [[A_IMAG]], x86_fp80 noundef nofpclass(nan inf) [[B_REAL]], x86_fp80 noundef nofpclass(nan inf) [[B_IMAG]]) #[[ATTR2]]
 // FULL_FAST-NEXT:    [[TMP0:%.*]] = extractvalue { x86_fp80, x86_fp80 } [[CALL]], 0
@@ -4059,7 +4059,7 @@ void divassignld(_Complex long double *a, _Complex long double b) {
 // PRMTD_FAST-NEXT:    ret { x86_fp80, x86_fp80 } [[DOTFCA_1_INSERT]]
 //
 // X86WINPRMTD_STRICT-LABEL: define dso_local void @mulld(
-// X86WINPRMTD_STRICT-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr noundef dead_on_return [[A:%.*]], ptr noundef dead_on_return [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD_STRICT-SAME: ptr dead_on_unwind noalias writable sret({ double, double }) align 8 [[AGG_RESULT:%.*]], ptr noundef align 8 dead_on_return [[A:%.*]], ptr noundef align 8 dead_on_return [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD_STRICT-NEXT:  entry:
 // X86WINPRMTD_STRICT-NEXT:    [[A_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[A]], i32 0, i32 0
 // X86WINPRMTD_STRICT-NEXT:    [[A_REAL:%.*]] = load double, ptr [[A_REALP]], align 8
@@ -4132,10 +4132,10 @@ _Complex long double mulld(_Complex long double a, _Complex long double b) {
 // FULL-NEXT:    [[MUL_R:%.*]] = fsub x86_fp80 [[MUL_AC]], [[MUL_BD]]
 // FULL-NEXT:    [[MUL_I:%.*]] = fadd x86_fp80 [[MUL_AD]], [[MUL_BC]]
 // FULL-NEXT:    [[ISNAN_CMP:%.*]] = fcmp uno x86_fp80 [[MUL_R]], [[MUL_R]]
-// FULL-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF2]]
+// FULL-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF1]]
 // FULL:       complex_mul_imag_nan:
 // FULL-NEXT:    [[ISNAN_CMP1:%.*]] = fcmp uno x86_fp80 [[MUL_I]], [[MUL_I]]
-// FULL-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
+// FULL-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF1]]
 // FULL:       complex_mul_libcall:
 // FULL-NEXT:    [[CALL:%.*]] = call { x86_fp80, x86_fp80 } @__mulxc3(x86_fp80 noundef [[DOTREAL]], x86_fp80 noundef [[DOTIMAG]], x86_fp80 noundef [[B_REAL]], x86_fp80 noundef [[B_IMAG]]) #[[ATTR2]]
 // FULL-NEXT:    [[TMP0:%.*]] = extractvalue { x86_fp80, x86_fp80 } [[CALL]], 0
@@ -4220,7 +4220,7 @@ _Complex long double mulld(_Complex long double a, _Complex long double b) {
 // PRMTD-NEXT:    ret void
 //
 // X86WINPRMTD-LABEL: define dso_local void @mulassignld(
-// X86WINPRMTD-SAME: ptr noundef [[A:%.*]], ptr noundef dead_on_return [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD-SAME: ptr noundef [[A:%.*]], ptr noundef align 8 dead_on_return [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD-NEXT:  entry:
 // X86WINPRMTD-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 0
 // X86WINPRMTD-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
@@ -4321,10 +4321,10 @@ _Complex long double mulld(_Complex long double a, _Complex long double b) {
 // FULL_FAST-NEXT:    [[MUL_R:%.*]] = fsub reassoc nnan ninf nsz arcp afn x86_fp80 [[MUL_AC]], [[MUL_BD]]
 // FULL_FAST-NEXT:    [[MUL_I:%.*]] = fadd reassoc nnan ninf nsz arcp afn x86_fp80 [[MUL_AD]], [[MUL_BC]]
 // FULL_FAST-NEXT:    [[ISNAN_CMP:%.*]] = fcmp reassoc nnan ninf nsz arcp afn uno x86_fp80 [[MUL_R]], [[MUL_R]]
-// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF2]]
+// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP]], label [[COMPLEX_MUL_IMAG_NAN:%.*]], label [[COMPLEX_MUL_CONT:%.*]], !prof [[PROF1]]
 // FULL_FAST:       complex_mul_imag_nan:
 // FULL_FAST-NEXT:    [[ISNAN_CMP1:%.*]] = fcmp reassoc nnan ninf nsz arcp afn uno x86_fp80 [[MUL_I]], [[MUL_I]]
-// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF2]]
+// FULL_FAST-NEXT:    br i1 [[ISNAN_CMP1]], label [[COMPLEX_MUL_LIBCALL:%.*]], label [[COMPLEX_MUL_CONT]], !prof [[PROF1]]
 // FULL_FAST:       complex_mul_libcall:
 // FULL_FAST-NEXT:    [[CALL:%.*]] = call reassoc nnan ninf nsz arcp afn nofpclass(nan inf) { x86_fp80, x86_fp80 } @__mulxc3(x86_fp80 noundef nofpclass(nan inf) [[DOTREAL]], x86_fp80 noundef nofpclass(nan inf) [[DOTIMAG]], x86_fp80 noundef nofpclass(nan inf) [[B_REAL]], x86_fp80 noundef nofpclass(nan inf) [[B_IMAG]]) #[[ATTR2]]
 // FULL_FAST-NEXT:    [[TMP0:%.*]] = extractvalue { x86_fp80, x86_fp80 } [[CALL]], 0
@@ -4386,7 +4386,7 @@ _Complex long double mulld(_Complex long double a, _Complex long double b) {
 // PRMTD_FAST-NEXT:    ret void
 //
 // X86WINPRMTD_STRICT-LABEL: define dso_local void @mulassignld(
-// X86WINPRMTD_STRICT-SAME: ptr noundef [[A:%.*]], ptr noundef dead_on_return [[B:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD_STRICT-SAME: ptr noundef [[A:%.*]], ptr noundef align 8 dead_on_return [[B:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD_STRICT-NEXT:  entry:
 // X86WINPRMTD_STRICT-NEXT:    [[B_REALP:%.*]] = getelementptr inbounds nuw { double, double }, ptr [[B]], i32 0, i32 0
 // X86WINPRMTD_STRICT-NEXT:    [[B_REAL:%.*]] = load double, ptr [[B_REALP]], align 8
@@ -4644,7 +4644,7 @@ void mulassignld(_Complex long double *a, _Complex long double b) {
 // PRMTD-NEXT:    ret <2 x float> [[RETVAL_SROA_0_4_VEC_INSERT]]
 //
 // X86WINPRMTD-LABEL: define dso_local i64 @f1(
-// X86WINPRMTD-SAME: i64 noundef [[A_COERCE:%.*]], ptr noundef dead_on_return [[B:%.*]], i64 noundef [[C_COERCE:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD-SAME: i64 noundef [[A_COERCE:%.*]], ptr noundef align 8 dead_on_return [[B:%.*]], i64 noundef [[C_COERCE:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD-NEXT:  entry:
 // X86WINPRMTD-NEXT:    [[A_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[A_COERCE]] to i32
 // X86WINPRMTD-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_SROA_0_0_EXTRACT_TRUNC]] to float
@@ -5052,7 +5052,7 @@ void mulassignld(_Complex long double *a, _Complex long double b) {
 // PRMTD_FAST-NEXT:    ret <2 x float> [[RETVAL_SROA_0_4_VEC_INSERT]]
 //
 // X86WINPRMTD_STRICT-LABEL: define dso_local i64 @f1(
-// X86WINPRMTD_STRICT-SAME: i64 noundef [[A_COERCE:%.*]], ptr noundef dead_on_return [[B:%.*]], i64 noundef [[C_COERCE:%.*]]) #[[ATTR0]] {
+// X86WINPRMTD_STRICT-SAME: i64 noundef [[A_COERCE:%.*]], ptr noundef align 8 dead_on_return [[B:%.*]], i64 noundef [[C_COERCE:%.*]]) #[[ATTR0]] {
 // X86WINPRMTD_STRICT-NEXT:  entry:
 // X86WINPRMTD_STRICT-NEXT:    [[A_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[A_COERCE]] to i32
 // X86WINPRMTD_STRICT-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_SROA_0_0_EXTRACT_TRUNC]] to float
@@ -5198,7 +5198,7 @@ _Complex float f1(_Complex float a, _Complex long double b, _Complex float c) {
   return (_Complex float)(b / c) / a;
 }
 //.
-// FULL: [[PROF2]] = !{!"branch_weights", i32 1, i32 1048575}
+// FULL: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
 //.
-// FULL_FAST: [[PROF2]] = !{!"branch_weights", i32 1, i32 1048575}
+// FULL_FAST: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
 //.

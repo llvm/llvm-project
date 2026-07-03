@@ -61,6 +61,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadSpec.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBAssert.h"
@@ -137,7 +138,7 @@ private:
       return {};
 
     remote_file = platform->GetRemoteWorkingDirectory();
-    remote_file.AppendPathComponent(local_file.GetFilename().GetCString());
+    remote_file.AppendPathComponent(local_file.GetFilename());
 
     return remote_file;
   }
@@ -268,7 +269,7 @@ void Target::Dump(Stream *s, lldb::DescriptionLevel description_level) {
   } else {
     Module *exe_module = GetExecutableModulePointer();
     if (exe_module)
-      s->PutCString(exe_module->GetFileSpec().GetFilename().GetCString());
+      s->PutCString(exe_module->GetFileSpec().GetFilename());
     else
       s->PutCString("No executable module.");
   }
@@ -888,7 +889,7 @@ BreakpointName *Target::FindBreakpointName(ConstString name, bool can_create,
   if (!error.Success())
     return nullptr;
 
-  BreakpointNameList::iterator iter = m_breakpoint_names.find(name);
+  BreakpointNameMap::iterator iter = m_breakpoint_names.find(name);
   if (iter != m_breakpoint_names.end()) {
     return iter->second.get();
   }
@@ -900,12 +901,13 @@ BreakpointName *Target::FindBreakpointName(ConstString name, bool can_create,
   }
 
   return m_breakpoint_names
-      .insert(std::make_pair(name, std::make_unique<BreakpointName>(name)))
+      .insert(std::make_pair(
+          name, std::make_unique<BreakpointName>(name.GetStringRef().str())))
       .first->second.get();
 }
 
 void Target::DeleteBreakpointName(ConstString name) {
-  BreakpointNameList::iterator iter = m_breakpoint_names.find(name);
+  BreakpointNameMap::iterator iter = m_breakpoint_names.find(name);
 
   if (iter != m_breakpoint_names.end()) {
     const char *name_cstr = name.AsCString(nullptr);
@@ -916,8 +918,8 @@ void Target::DeleteBreakpointName(ConstString name) {
 }
 
 void Target::RemoveNameFromBreakpoint(lldb::BreakpointSP &bp_sp,
-                                      ConstString name) {
-  bp_sp->RemoveName(name.AsCString(nullptr));
+                                      llvm::StringRef name) {
+  bp_sp->RemoveName(name);
 }
 
 void Target::ConfigureBreakpointName(
@@ -930,8 +932,7 @@ void Target::ConfigureBreakpointName(
 
 void Target::ApplyNameToBreakpoints(BreakpointName &bp_name) {
   llvm::Expected<std::vector<BreakpointSP>> expected_vector =
-      m_breakpoint_list.FindBreakpointsByName(
-          bp_name.GetName().AsCString(nullptr));
+      m_breakpoint_list.FindBreakpointsByName(bp_name.GetName());
 
   if (!expected_vector) {
     LLDB_LOG(GetLog(LLDBLog::Breakpoints), "invalid breakpoint name: {}",
@@ -945,25 +946,33 @@ void Target::ApplyNameToBreakpoints(BreakpointName &bp_name) {
 
 void Target::GetBreakpointNames(std::vector<std::string> &names) {
   names.clear();
-  for (const auto& bp_name_entry : m_breakpoint_names) {
-    names.push_back(bp_name_entry.first.GetString());
+  for (const auto &bp_name_entry : m_breakpoint_names) {
+    names.push_back(bp_name_entry.first().str());
   }
   llvm::sort(names);
 }
 
-llvm::Expected<lldb::user_id_t>
-Target::AddBreakpointResolverOverride(llvm::StringRef class_name,
-                                      StructuredData::DictionarySP args_data_sp,
-                                      llvm::StringRef description) {
+llvm::Expected<lldb::user_id_t> Target::AddBreakpointResolverOverride(
+    llvm::StringRef class_name, uint64_t type_mask,
+    StructuredData::DictionarySP args_data_sp, llvm::StringRef description) {
   if (class_name.empty())
-    return LLDB_INVALID_INDEX64;
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "empty class name");
+
+  if (!BreakpointResolver::TypeMaskIsValid(type_mask))
+    return llvm::createStringErrorV(
+        llvm::inconvertibleErrorCode(),
+        "invalid breakpoint type mask: {0}, should be composed of the "
+        "elements of the BreakpointResolverType enum.",
+        type_mask);
 
   StructuredDataImpl impl;
   impl.SetObjectSP(args_data_sp);
 
   BreakpointResolverOverrideUP new_override_up(
       new ScriptedBreakpointResolverOverride(*this, std::string(description),
-                                             std::string(class_name), impl));
+                                             type_mask, std::string(class_name),
+                                             impl));
   llvm::Error error = new_override_up->Validate();
   if (error)
     return error;
@@ -971,8 +980,14 @@ Target::AddBreakpointResolverOverride(llvm::StringRef class_name,
   return AddBreakpointResolverOverride(std::move(new_override_up));
 }
 
+std::string Target::BreakpointResolverOverride::DescribeTypeMask() {
+  return BreakpointResolver::DescribeMask(m_type_mask);
+}
+
 void Target::DescribeBreakpointOverrides(Stream &stream,
-                                         std::vector<lldb::user_id_t> &idxs) {
+                                         std::vector<lldb::user_id_t> &idxs,
+                                         uint32_t output_width,
+                                         bool use_color) {
   if (m_breakpoint_overrides.size() == 0) {
     stream << "No overrides.\n";
     return;
@@ -984,12 +999,18 @@ void Target::DescribeBreakpointOverrides(Stream &stream,
     auto idx_pos = llvm::find(idxs, elem.first);
     if (empty || idx_pos != idxs.end()) {
       if (print_first) {
-        // FIXME: Is there some good way to flow the description?
-        stream << "ID    Description\n";
-        stream << "----  -----------\n";
+
+        ansi::OutputWordWrappedLines(stream, "ID    Mask    Description\n",
+                                     output_width, use_color);
+        ansi::OutputWordWrappedLines(stream, "----  ------  -----------\n",
+                                     output_width, use_color);
         print_first = false;
       }
-      stream.Format("{0,4}  {1}\n", elem.first, elem.second->GetDescription());
+      auto content = llvm::formatv("{0,4}  {1,6}  {2}\n", elem.first,
+                                   elem.second->DescribeTypeMask(),
+                                   elem.second->GetDescription())
+                         .str();
+      ansi::OutputWordWrappedLines(stream, content, output_width, use_color);
       if (!empty)
         idxs.erase(idx_pos);
     }
@@ -998,6 +1019,18 @@ void Target::DescribeBreakpointOverrides(Stream &stream,
 
 bool Target::ProcessIsValid() {
   return (m_process_sp && m_process_sp->IsAlive());
+}
+
+lldb::BreakpointResolverSP
+Target::CheckBreakpointOverrides(lldb::BreakpointResolverSP original_sp) {
+  for (auto const &elem : m_breakpoint_overrides) {
+    if (!original_sp->ResolverTyInMask(elem.second->GetTypeMask()))
+      continue;
+    if (lldb::BreakpointResolverSP overriden_sp =
+            elem.second->CheckForOverride(*this, original_sp))
+      return overriden_sp;
+  }
+  return {};
 }
 
 static bool CheckIfWatchpointsSupported(Target *target, Status &error) {
@@ -2469,7 +2502,8 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
         ModuleSpec transformed_spec(module_spec);
         ConstString transformed_dir;
         if (m_image_search_paths.RemapPath(
-                module_spec.GetFileSpec().GetDirectory(), transformed_dir)) {
+                ConstString(module_spec.GetFileSpec().GetDirectory()),
+                transformed_dir)) {
           transformed_spec.GetFileSpec().SetDirectory(transformed_dir);
           transformed_spec.GetFileSpec().SetFilename(
                 module_spec.GetFileSpec().GetFilename());
@@ -2555,8 +2589,8 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
         // in the target's module list. Only do this if there is SOMETHING else
         // in the module spec...
         if (module_spec.GetUUID().IsValid() &&
-            !module_spec.GetFileSpec().GetFilename().IsEmpty() &&
-            !module_spec.GetFileSpec().GetDirectory().IsEmpty()) {
+            !module_spec.GetFileSpec().GetFilename().empty() &&
+            !module_spec.GetFileSpec().GetDirectory().empty()) {
           ModuleSpec module_spec_copy(module_spec.GetFileSpec());
           module_spec_copy.GetUUID().Clear();
 
@@ -3052,7 +3086,7 @@ llvm::Expected<lldb_private::Address> Target::GetEntryPointAddress() {
 
   return llvm::createStringError(
       "Could not find entry point address for primary executable module \"" +
-      exe_module->GetFileSpec().GetFilename().GetStringRef() + "\"");
+      exe_module->GetFileSpec().GetFilename() + "\"");
 }
 
 lldb::addr_t Target::GetCallableLoadAddress(lldb::addr_t load_addr,

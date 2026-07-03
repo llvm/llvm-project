@@ -122,6 +122,7 @@ MODULE_PASS("memprof-module", ModuleMemProfilerPass())
 MODULE_PASS("mergefunc", MergeFunctionsPass())
 MODULE_PASS("metarenamer", MetaRenamerPass())
 MODULE_PASS("mir-debugify", NewPMDebugifyPass(applyMIRDebugify))
+MODULE_PASS("mir-check-debugify", CheckDebugMachineModulePass())
 MODULE_PASS("mir-strip-debug", StripDebugMachineModulePass())
 MODULE_PASS("module-inline", ModuleInlinerPass())
 MODULE_PASS("name-anon-globals", NameAnonGlobalPass())
@@ -493,7 +494,6 @@ FUNCTION_PASS("mem2reg", PromotePass())
 FUNCTION_PASS("memcpyopt", MemCpyOptPass())
 FUNCTION_PASS("memprof", MemProfilerPass())
 FUNCTION_PASS("mergeicmps", MergeICmpsPass())
-FUNCTION_PASS("mergereturn", UnifyFunctionExitNodesPass())
 FUNCTION_PASS("move-auto-init", MoveAutoInitPass())
 FUNCTION_PASS("nary-reassociate", NaryReassociatePass())
 FUNCTION_PASS("newgvn", NewGVNPass())
@@ -725,7 +725,7 @@ FUNCTION_PASS_WITH_PARAMS(
 FUNCTION_PASS_WITH_PARAMS(
     "sroa", "SROAPass",
     [](SROAOptions PreserveCFG) { return SROAPass(PreserveCFG); },
-    parseSROAOptions, "preserve-cfg;modify-cfg")
+    parseSROAOptions, "preserve-cfg;modify-cfg;aggregate-to-vector")
 FUNCTION_PASS_WITH_PARAMS(
     "structurizecfg", "StructurizeCFG",
     [](bool SkipUniformRegions) {
