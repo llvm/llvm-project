@@ -3974,7 +3974,12 @@ bool OmpStructureChecker::CheckReductionOperator(
     // for that. We mangle those names to store the user details.
     if (const auto *definedOp{std::get_if<parser::DefinedOpName>(&dOpr.u)}) {
       std::string mangled{MangleDefinedOperator(definedOp->v.symbol->name())};
-      const Scope &scope{definedOp->v.symbol->owner()};
+      // Look up the user-defined reduction in the scope where the clause
+      // appears (FindUserReduction searches enclosing scopes for host
+      // association), not in the scope where the operator itself is declared:
+      // the DECLARE REDUCTION may be local to a procedure that host-associates
+      // the operator from an enclosing module or program unit.
+      const Scope &scope{context_.FindScope(source)};
       if (FindUserReduction(scope, mangled)) {
         return true;
       }
