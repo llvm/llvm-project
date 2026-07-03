@@ -1,23 +1,31 @@
-// RUN: %check_clang_tidy %s readability-identifier-naming %t -- \
-// RUN:   -config='{CheckOptions: { \
-// RUN:     readability-identifier-naming.FunctionCase: camelBack, \
-// RUN:     readability-identifier-naming.ParameterCase: camelBack, \
-// RUN:     readability-identifier-naming.VariableCase: camelBack \
-// RUN:   }}'
+// RUN: rm -rf %t
+// RUN: mkdir -p %t/subdir
+// RUN: cp %S/Inputs/identifier-naming-macro-argument/.clang-tidy %t/.clang-tidy
+// RUN: cp %S/Inputs/identifier-naming-macro-argument/subdir/.clang-tidy %t/subdir/.clang-tidy
+// RUN: cp %s %t/subdir/test.cpp
+// RUN: clang-tidy %t/subdir/test.cpp \
+// RUN:   --checks=-*,readability-identifier-naming 2>&1 | FileCheck %s \
+// RUN:   -check-prefix=CHECK-MESSAGES
 
 #define WRAP(E) E
 
-WRAP(int foo(int v) { return v; })
+int goodFunction(int goodParam) {
+  int goodVariable = goodParam;
+  return goodVariable;
+}
 
-void testLambdaInMacroArgument() {
-  WRAP([](int var) {
-    return var;
+int wrappedExpression = WRAP(1);
+
+WRAP(int wrappedFunction(int wrappedParam) { return wrappedParam; })
+
+void callWrappedLambda() {
+  WRAP([](int wrappedParam) {
+    return wrappedParam;
   }(1));
 }
 
-int badFunction(int BadParam) {
-  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: invalid case style for parameter 'BadParam' [readability-identifier-naming]
-  // CHECK-FIXES: int badFunction(int badParam) {
+int BadFunction(int BadParam) {
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: invalid case style for function 'BadFunction'
+// CHECK-MESSAGES: :[[@LINE-2]]:21: warning: invalid case style for parameter 'BadParam'
   return BadParam;
-  // CHECK-FIXES: return badParam;
 }
