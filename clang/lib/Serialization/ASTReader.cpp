@@ -3661,6 +3661,16 @@ ASTReader::ReadControlBlock(ModuleFile &F,
   }
 }
 
+/// Decode an enforced-profile blob record (P3589R2), the inverse of the
+/// ASTWriter encoding: Record[0] is the profile name length and the blob is
+/// the concatenated name + designator. Shared by the ENFORCED_PROFILES (PCH)
+/// and SUBMODULE_ENFORCED_PROFILES cases.
+static profiles::EnforcedProfile readEnforcedProfile(ArrayRef<uint64_t> Record,
+                                                     StringRef Blob) {
+  unsigned NameLen = Record[0];
+  return {Blob.substr(0, NameLen).str(), Blob.substr(NameLen).str()};
+}
+
 llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
                                     unsigned ClientLoadCapabilities) {
   BitstreamCursor &Stream = F.Stream;
@@ -4363,13 +4373,9 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       FPPragmaOptions.swap(Record);
       break;
 
-    case ENFORCED_PROFILES: {
-      unsigned NameLen = Record[0];
-      std::string Name = Blob.substr(0, NameLen).str();
-      std::string Desig = Blob.substr(NameLen).str();
-      SerializedEnforcedProfiles.push_back({std::move(Name), std::move(Desig)});
+    case ENFORCED_PROFILES:
+      SerializedEnforcedProfiles.push_back(readEnforcedProfile(Record, Blob));
       break;
-    }
 
     case DECLS_WITH_EFFECTS_TO_VERIFY:
       for (unsigned I = 0, N = Record.size(); I != N; /*in loop*/)
@@ -6577,14 +6583,10 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       ModMap.addLinkAsDependency(CurrentModule);
       break;
 
-    case SUBMODULE_ENFORCED_PROFILES: {
-      unsigned NameLen = Record[0];
-      std::string Name = Blob.substr(0, NameLen).str();
-      std::string Desig = Blob.substr(NameLen).str();
+    case SUBMODULE_ENFORCED_PROFILES:
       CurrentModule->EnforcedProfileDesignators.push_back(
-          {std::move(Name), std::move(Desig)});
+          readEnforcedProfile(Record, Blob));
       break;
-    }
     }
   }
 }

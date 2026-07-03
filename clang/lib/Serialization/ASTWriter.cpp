@@ -2991,6 +2991,28 @@ static unsigned getNumberOfModules(Module *Mod) {
   return ChildModules + 1;
 }
 
+/// Create the abbrev for an enforced-profile blob record (P3589R2): the
+/// profile name length as VBR followed by the concatenated name + designator
+/// blob. Decoded by readEnforcedProfile in ASTReader.cpp. Shared by the
+/// ENFORCED_PROFILES (PCH) and SUBMODULE_ENFORCED_PROFILES records.
+static unsigned createEnforcedProfileAbbrev(llvm::BitstreamWriter &Stream,
+                                            unsigned RecordCode) {
+  auto Abbrev = std::make_shared<llvm::BitCodeAbbrev>();
+  Abbrev->Add(llvm::BitCodeAbbrevOp(RecordCode));
+  Abbrev->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::VBR,
+                                    6)); // Profile name length
+  Abbrev->Add(
+      llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Blob)); // Name + Designator
+  return Stream.EmitAbbrev(std::move(Abbrev));
+}
+
+static void emitEnforcedProfile(llvm::BitstreamWriter &Stream,
+                                unsigned AbbrevID, unsigned RecordCode,
+                                const profiles::EnforcedProfile &EP) {
+  uint64_t Record[] = {RecordCode, EP.ProfileName.size()};
+  Stream.EmitRecordWithBlob(AbbrevID, Record, EP.ProfileName + EP.Designator);
+}
+
 void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
   // Enter the submodule description block.
   Stream.EnterSubblock(SUBMODULE_BLOCK_ID, /*bits for abbreviations*/5);
@@ -3086,11 +3108,8 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));    // Macro name
   unsigned ExportAsAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
 
-  Abbrev = std::make_shared<BitCodeAbbrev>();
-  Abbrev->Add(BitCodeAbbrevOp(SUBMODULE_ENFORCED_PROFILES));
-  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Profile name length
-  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));    // Name + Designator
-  unsigned EnforcedProfilesAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+  unsigned EnforcedProfilesAbbrev =
+      createEnforcedProfileAbbrev(Stream, SUBMODULE_ENFORCED_PROFILES);
 
   // Write the submodule metadata block.
   RecordData::value_type Record[] = {
@@ -3264,12 +3283,9 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
     }
 
     // Emit enforced profile designators (P3589R2).
-    for (const auto &EP : Mod->EnforcedProfileDesignators) {
-      RecordData::value_type Record[] = {SUBMODULE_ENFORCED_PROFILES,
-                                         EP.ProfileName.size()};
-      Stream.EmitRecordWithBlob(EnforcedProfilesAbbrev, Record,
-                                EP.ProfileName + EP.Designator);
-    }
+    for (const auto &EP : Mod->EnforcedProfileDesignators)
+      emitEnforcedProfile(Stream, EnforcedProfilesAbbrev,
+                          SUBMODULE_ENFORCED_PROFILES, EP);
 
     // Queue up the submodules of this module.
     for (auto *M : Mod->submodules())
@@ -5308,18 +5324,9 @@ void ASTWriter::WriteEnforcedProfiles(Sema &SemaRef) {
   if (SemaRef.EnforcedProfiles.empty())
     return;
 
-  auto Abbrev = std::make_shared<llvm::BitCodeAbbrev>();
-  Abbrev->Add(llvm::BitCodeAbbrevOp(ENFORCED_PROFILES));
-  Abbrev->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::VBR, 6));
-  Abbrev->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Blob));
-  unsigned AbbrevID = Stream.EmitAbbrev(std::move(Abbrev));
-
-  for (const auto &EP : SemaRef.EnforcedProfiles) {
-    RecordData::value_type Record[] = {ENFORCED_PROFILES,
-                                       EP.ProfileName.size()};
-    Stream.EmitRecordWithBlob(AbbrevID, Record,
-                              EP.ProfileName + EP.CanonicalDesignator);
-  }
+  unsigned AbbrevID = createEnforcedProfileAbbrev(Stream, ENFORCED_PROFILES);
+  for (const auto &EP : SemaRef.EnforcedProfiles)
+    emitEnforcedProfile(Stream, AbbrevID, ENFORCED_PROFILES, EP);
 }
 
 //===----------------------------------------------------------------------===//
