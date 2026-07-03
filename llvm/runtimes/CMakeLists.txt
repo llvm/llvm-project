@@ -327,7 +327,10 @@ function(runtime_default_target)
 
   if(LLVM_INCLUDE_TESTS)
     set_property(GLOBAL APPEND PROPERTY LLVM_ALL_LIT_TESTSUITES "@${LLVM_BINARY_DIR}/runtimes/runtimes-bins/lit.tests")
-    list(APPEND test_targets runtimes-test-depends check-runtimes check-builtins)
+    list(APPEND test_targets runtimes-test-depends check-runtimes)
+    if(NOT "compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS)
+      list(APPEND test_targets check-builtins)
+    endif()
     list(APPEND ARG_CMAKE_ARGS "-DCOMPILER_RT_TEST_EXTERNAL_BUILTINS=ON")
   endif()
 
