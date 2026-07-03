@@ -129,7 +129,7 @@ public:
                                  CheckFlags Flags);
 
 protected:
-  CheckInfo(NonLoc Offs) : Offset(Offs) {}
+  explicit CheckInfo(NonLoc Offs) : Offset(Offs) {}
 
   void recordUnderflowFeasible() { UnderflowFeasible = true; }
   void recordRelevantExtent(NonLoc E) { Extent = E; }
@@ -145,7 +145,7 @@ private:
   ProgramStateRef State = nullptr;
 
   CheckResult(CheckInfo CI, Kind K_, ProgramStateRef S)
-      : CheckInfo(CI), K(K_), State(S) {}
+    : CheckInfo(CI), K(K_), State(S) {}
 
 public:
   friend CheckResult checkBounds(ProgramStateRef State, SValBuilder &SVB,
@@ -197,6 +197,7 @@ protected:
     return UnderflowFeasible ? (Extent ? "around" : "preceding")
                              : (Extent ? "after the end of" : "in");
   }
+
 };
 
 CheckResult checkBounds(ProgramStateRef State, SValBuilder &SVB, NonLoc Offset,
