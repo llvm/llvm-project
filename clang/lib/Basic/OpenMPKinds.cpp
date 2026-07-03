@@ -835,7 +835,7 @@ bool clang::isOpenMPCanonicalLoopNestTransformationDirective(
     OpenMPDirectiveKind DKind) {
   return DKind == OMPD_tile || DKind == OMPD_unroll || DKind == OMPD_reverse ||
          DKind == OMPD_split || DKind == OMPD_interchange ||
-         DKind == OMPD_stripe;
+         DKind == OMPD_stripe || DKind == OMPD_flatten;
 }
 
 bool clang::isOpenMPCanonicalLoopSequenceTransformationDirective(
