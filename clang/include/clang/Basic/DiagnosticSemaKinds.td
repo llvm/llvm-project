@@ -14166,7 +14166,7 @@ def err_ref_to_uninit_attr_invalid_type : Error<
   "functions returning them">;
 def err_init_union_marker : ProfileRuleError<
   "'[[uninit]]' cannot be applied to %select{a variable of union type|"
-  "a union member}1 under profile '%0'">;
+  "a union member|a data member of union type}1 under profile '%0'">;
 def err_init_uninit_pointer_marker : ProfileRuleError<
   "'[[uninit]]' cannot be applied to a pointer under profile '%0'; "
   "initialize the pointer (for example to 'nullptr')">;

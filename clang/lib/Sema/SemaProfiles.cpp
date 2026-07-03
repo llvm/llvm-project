@@ -464,10 +464,11 @@ void SemaProfiles::checkInitProfileStaticMarker(const VarDecl *Var) {
       (Var->getStorageDuration() == SD_Static ||
        Var->getStorageDuration() == SD_Thread) &&
       Var->hasAttr<UninitAttr>() &&
-      // A union or pointer object marked [[uninit]] is already rejected by
-      // union_marker / pointer_marker (regardless of storage duration), and
-      // they retain the marker; do not pile a second diagnostic on top.
-      !Var->getType()->isUnionType() && !Var->getType()->isPointerType() &&
+      // A union or pointer object -- or an array of them -- marked [[uninit]]
+      // is already rejected by union_marker / pointer_marker (regardless of
+      // storage duration, and keyed on the same base element type), and they
+      // retain the marker; do not pile a second diagnostic on top.
+      !BaseTy->isUnionType() && !BaseTy->isPointerType() &&
       shouldEmitProfileViolation(Profile, "static_marker", Var->getLocation(),
                                  Var) &&
       (!Var->getInit() ||
@@ -560,14 +561,22 @@ void SemaProfiles::checkInitProfileMarkerPlacement(const Decl *D) {
   // so the parse-time handler skips template members and the rule is re-run on
   // the instantiated entity (VisitFieldDecl / VisitVarDecl), once the
   // substituted type is known to be a pointer or union.
-  bool UnionVar = isa<VarDecl>(D) && cast<VarDecl>(D)->getType()->isUnionType();
+  //
+  // Both rules key on the base element type: an array of unions or pointers
+  // leaves the same uninitialized elements as a single one, and the marker
+  // would otherwise slip past uninit_decl (which trusts marked declarations)
+  // entirely. The union rule also covers a union-typed data member of a
+  // non-union class -- delayed initialization by assigning its member is just
+  // as erroneous there (paper §5.6).
+  QualType BaseTy =
+      getASTContext().getBaseElementType(cast<ValueDecl>(D)->getType());
   bool UnionMember =
       isa<FieldDecl>(D) && cast<FieldDecl>(D)->getParent()->isUnion();
-  if ((UnionVar || UnionMember) &&
+  if ((BaseTy->isUnionType() || UnionMember) &&
       shouldEmitProfileViolation("std::init", "union_marker", Loc, D))
     Diag(Loc, diag::err_init_union_marker)
-        << "std::init" << (UnionMember ? 1 : 0);
-  else if (cast<ValueDecl>(D)->getType()->isPointerType() &&
+        << "std::init" << (UnionMember ? 1 : isa<FieldDecl>(D) ? 2 : 0);
+  else if (BaseTy->isPointerType() &&
            shouldEmitProfileViolation("std::init", "pointer_marker", Loc, D))
     Diag(Loc, diag::err_init_uninit_pointer_marker) << "std::init";
 }

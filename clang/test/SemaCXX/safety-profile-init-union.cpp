@@ -24,6 +24,24 @@ union MarkedMember {
   float y;
 };
 
+// The marker checks key on the base element type: an array of unions is
+// banned exactly like a single union object (paper section 5.6).
+[[uninit]] U g_union_arr[2]; // expected-error {{'[[uninit]]' cannot be applied to a variable of union type under profile 'std::init'}}
+
+void test_union_array_var() {
+  [[uninit]] U a[2];    // expected-error {{'[[uninit]]' cannot be applied to a variable of union type under profile 'std::init'}}
+  [[uninit]] U b[2][3]; // expected-error {{'[[uninit]]' cannot be applied to a variable of union type under profile 'std::init'}}
+  (void)a; (void)b;
+}
+
+// A union-typed data member of a non-union class cannot carry the marker
+// either: delayed initialization by assigning one of its members would be
+// just as erroneous there (paper section 5.6).
+struct HasMarkedUnionMember {
+  U u [[uninit]];      // expected-error {{'[[uninit]]' cannot be applied to a data member of union type under profile 'std::init'}}
+  [[uninit]] U arr[2]; // expected-error {{'[[uninit]]' cannot be applied to a data member of union type under profile 'std::init'}}
+};
+
 // A marker on a union member of a non-enforced profile is silently accepted;
 // exercised by the no-profiles run above.
 
@@ -69,6 +87,11 @@ void template_union_marker() {
   (void)x;
 }
 template void template_union_marker<U>(); // expected-note {{in instantiation of function template specialization 'template_union_marker<U>' requested here}}
+// expected-error@#template-union-marker {{'[[uninit]]' cannot be applied to a variable of union type under profile 'std::init'}}
+
+// A dependent local that substitutes to an *array of* unions fires the same
+// way (base element type) at instantiation.
+template void template_union_marker<U[2]>(); // expected-note {{in instantiation of function template specialization 'template_union_marker<U[2]>' requested here}}
 // expected-error@#template-union-marker {{'[[uninit]]' cannot be applied to a variable of union type under profile 'std::init'}}
 
 // An uninstantiated pattern never reaches phase 7, so the marker is silent.

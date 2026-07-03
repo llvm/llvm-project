@@ -982,6 +982,11 @@ assignment when compiled without the profile.
   profile.  Being Decl-aware it defers on a templated pattern and fires once on
   the instantiation (a dependent member or local that substitutes to a union),
   consistent with the other ``std::init`` rules.
+- The rule keys on the *base element type*, so an array of unions
+  (``[[uninit]] U a[2];``) is banned exactly like a single union object.  A
+  union-typed data member of a non-union class is banned as well -- delayed
+  initialization by assigning one of its members is just as erroneous there --
+  in addition to the members *of* a union shown above.
 - The banned marker is retained on the declaration after it is diagnosed, so
   the ``uninit_decl`` / ``ctor_uninit_member`` rules treat the entity as
   acknowledged and do not emit a second, contradictory diagnostic.
@@ -1126,6 +1131,10 @@ A pointer must instead be initialized (e.g. to ``nullptr``).
   enforcement -- a pointer may legitimately carry the marker without the profile
   -- and the marker is retained after the diagnostic so ``uninit_decl`` does not
   also fire.
+- The check keys on the base element type, so an array of pointers
+  (``[[uninit]] int *a[2];``) is banned exactly like a single pointer -- the
+  marker cannot smuggle uninitialized pointers past ``uninit_decl``
+  element-wise.
 - A pointer parameter is rejected earlier and unconditionally (the marker is
   meaningless on a parameter); a pointer-to-member is not a pointer type and is
   out of scope.

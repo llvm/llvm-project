@@ -45,6 +45,25 @@ struct PtrMember {
   int* p [[uninit]]; // expected-error {{'[[uninit]]' cannot be applied to a pointer under profile 'std::init'; initialize the pointer (for example to 'nullptr')}}
 };
 
+// The marker checks key on the base element type: an array of pointers is
+// banned exactly like a single pointer (paper section 4.1) -- the marker must
+// not smuggle uninitialized pointers past uninit_decl element-wise.
+void test_pointer_array() {
+  [[uninit]] int* a[2];    // expected-error {{'[[uninit]]' cannot be applied to a pointer under profile 'std::init'; initialize the pointer (for example to 'nullptr')}}
+  [[uninit]] int* b[2][3]; // expected-error {{'[[uninit]]' cannot be applied to a pointer under profile 'std::init'; initialize the pointer (for example to 'nullptr')}}
+  (void)a; (void)b;
+}
+
+struct PtrArrayMember {
+  [[uninit]] int* a[2]; // expected-error {{'[[uninit]]' cannot be applied to a pointer under profile 'std::init'; initialize the pointer (for example to 'nullptr')}}
+};
+
+void test_pointer_array_marker_suppressed() {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init, rule: "pointer_marker")]] [[uninit]] int* a[2];
+  (void)a;
+}
+
 void test_pointer_marker_suppressed() {
   // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
   [[profiles::suppress(std::init)]] int* p [[uninit]];

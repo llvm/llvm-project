@@ -96,6 +96,11 @@ union U { int x; float y; };
 static int *g_ptr_marked [[uninit]];   // expected-error {{'[[uninit]]' cannot be applied to a pointer under profile 'std::init'; initialize the pointer (for example to 'nullptr')}}
 static U g_union_marked [[uninit]];    // expected-error {{'[[uninit]]' cannot be applied to a variable of union type under profile 'std::init'}}
 
+// Arrays of pointers / unions key on the base element type: still owned by
+// pointer_marker / union_marker, not static_marker (one diagnostic each).
+[[uninit]] static int *g_ptr_arr_marked[2]; // expected-error {{'[[uninit]]' cannot be applied to a pointer under profile 'std::init'; initialize the pointer (for example to 'nullptr')}}
+[[uninit]] static U g_union_arr_marked[2];  // expected-error {{'[[uninit]]' cannot be applied to a variable of union type under profile 'std::init'}}
+
 // Unmarked statics / thread-locals are fine (zero-initialized, nothing to mark).
 int g_unmarked;
 static int g_static_unmarked;
