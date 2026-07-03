@@ -118,3 +118,56 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+// CHECK-LABEL: func.func @generic
+// CHECK-SAME:     %[[ARG0:[a-zA-Z0-9_]*]]: tensor<1x2x1xi32>
+// CHECK-SAME:     %[[ARG1:[a-zA-Z0-9_]*]]: tensor<32x2x2xi32>
+// CHECK-NEXT:     %[[RES:.*]] = linalg.generic
+// CHECK:          return %[[RES]]
+#map1 = affine_map<(d0, d1, d2) -> (0, d1, 0)>
+#map2 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+
+func.func @generic(%arg0: tensor<1x2x1xi32>, %arg1: tensor<32x2x2xi32>) -> tensor<32x2x2xi32> {
+    %13 = linalg.generic {indexing_maps = [#map1, #map2], iterator_types = ["parallel", "parallel", "parallel"]} ins(%arg0 : tensor<1x2x1xi32>) outs(%arg1 : tensor<32x2x2xi32>) {
+      ^bb0(%in: i32, %out: i32):
+        linalg.yield %in : i32
+    } -> tensor<32x2x2xi32>
+    return %13 : tensor<32x2x2xi32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match interface{LinalgOp} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %flattened = transform.structured.flatten_elementwise %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL: func.func @generic
+// CHECK-SAME:     %[[ARG0:[a-zA-Z0-9_]*]]: tensor<2x1xi32>
+// CHECK-SAME:     %[[ARG1:[a-zA-Z0-9_]*]]: tensor<32x2x2xi32>
+// CHECK-NEXT:     %[[RES:.*]] = linalg.generic
+// CHECK:          return %[[RES]]
+#map1 = affine_map<(d0, d1, d2) -> (d1, 0)>
+#map2 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+
+func.func @generic(%arg0: tensor<2x1xi32>, %arg1: tensor<32x2x2xi32>) -> tensor<32x2x2xi32> {
+    %13 = linalg.generic {indexing_maps = [#map1, #map2], iterator_types = ["parallel", "parallel", "parallel"]} ins(%arg0 : tensor<2x1xi32>) outs(%arg1 : tensor<32x2x2xi32>) {
+      ^bb0(%in: i32, %out: i32):
+        linalg.yield %in : i32
+    } -> tensor<32x2x2xi32>
+    return %13 : tensor<32x2x2xi32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match interface{LinalgOp} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %flattened = transform.structured.flatten_elementwise %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}

@@ -4298,6 +4298,14 @@ DiagnosedSilenceableFailure transform::FlattenElementwiseLinalgOp::applyToOne(
     return DiagnosedSilenceableFailure::success();
   }
 
+  // Bail out on linalgs with broadcasting semantics
+  if (!llvm::all_of(target.getIndexingMapsArray(), [](AffineMap m) {
+        return m.isProjectedPermutation(/*allowZeroInResults=*/false);
+      })) {
+    results.push_back(target);
+    return DiagnosedSilenceableFailure::success();
+  }
+
   // Attempt to flatten all dims to one.
   ReassociationIndices reassociation(target.getNumLoops());
   std::iota(reassociation.begin(), reassociation.end(), 0);
