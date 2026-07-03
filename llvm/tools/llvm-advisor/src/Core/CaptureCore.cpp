@@ -9,6 +9,7 @@
 #include "Core/CaptureCore.h"
 #include "Analysis/AnalyzerBase.h"
 #include "Analysis/Clang/ClangAnalyzerUtils.h"
+#include "Analysis/RemarksAnalysisUtils.h"
 #include "Capability/CapabilityExecutor.h"
 #include "Capability/CapabilityPlanner.h"
 #include "Capability/CapabilityScheduler.h"
@@ -274,6 +275,34 @@ Expected<SnapshotRecord>
 CaptureCore::importRemarks(ArrayRef<std::string> RemarkPaths,
                            StringRef SourceRoot,
                            ArrayRef<std::string> Capabilities) {
+  if (RemarkPaths.empty())
+    return createStringError(inconvertibleErrorCode(),
+                             "no remark files provided");
+
+  // Pre-flight: validate each file is parseable before creating a snapshot.
+  // This surfaces version-mismatch / corruption errors to the user instead of
+  // silently producing an empty snapshot.
+  for (const std::string &Path : RemarkPaths) {
+    if (!sys::fs::exists(Path))
+      return createStringError(inconvertibleErrorCode(),
+                               Twine("remark file does not exist: ") + Path);
+    int64_t Seen = 0;
+    if (Error E = foreachRemark(Path, [&](const remarks::Remark &) -> Error {
+          ++Seen;
+          return Error::success();
+        }))
+      return joinErrors(
+          createStringError(inconvertibleErrorCode(),
+                            Twine("failed to parse remark file '") + Path +
+                                "': "),
+          std::move(E));
+    if (Seen == 0)
+      return createStringError(
+          inconvertibleErrorCode(),
+          Twine("remark file '") + Path +
+              "' contains no remarks (empty or unrecognized format)");
+  }
+
   uint64_t Now = std::chrono::duration_cast<std::chrono::seconds>(
                      std::chrono::system_clock::now().time_since_epoch())
                      .count();
