@@ -4488,6 +4488,15 @@ DeclResult Sema::ActOnVarTemplateSpecialization(
             SC, CTAI.CanonicalConverted);
     Partial->setTemplateArgsAsWritten(TemplateArgs);
 
+    // A partial specialization of an invalid primary template (e.g. one whose
+    // default template arguments could not be substituted after an earlier
+    // fatal error) cannot itself be instantiated. Mark it invalid so it is
+    // consistently skipped alongside the primary during instantiation, rather
+    // than being left as a valid specialization of a primary that no longer
+    // exists in the instantiation.
+    if (VarTemplate->isInvalidDecl())
+      Partial->setInvalidDecl();
+
     if (!PrevPartial)
       VarTemplate->AddPartialSpecialization(Partial, InsertPos);
     Specialization = Partial;
