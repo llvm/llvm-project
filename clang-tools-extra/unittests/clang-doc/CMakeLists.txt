@@ -26,6 +26,7 @@ add_extra_unittest(ClangDocTests
   ClangDocTest.cpp
   GeneratorTest.cpp
   HTMLGeneratorTest.cpp
+  MarkdownParserTest.cpp
   MDGeneratorTest.cpp
   MergeTest.cpp
   SerializeTest.cpp
@@ -49,5 +50,6 @@ clang_target_link_libraries(ClangDocTests
 target_link_libraries(ClangDocTests
   PRIVATE
   clangDoc
+  clangDocSupport
   LLVMTestingSupport
   )
