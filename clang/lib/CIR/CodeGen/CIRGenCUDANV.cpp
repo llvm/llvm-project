@@ -292,8 +292,6 @@ void CIRGenNVCUDARuntime::emitDeviceStubBodyNew(CIRGenFunction &cgf,
       cast<cir::FuncType>(launchTy), launchKernelName);
   const CIRGenFunctionInfo &callInfo =
       cgm.getTypes().arrangeFunctionDeclaration(cudaLaunchKernelFD);
-  // The emitted call targets the runtime launcher rather than the function
-  // named in the source call, so no AST call expression is attached.
   cgf.emitCall(callInfo, CIRGenCallee::forDirect(cudaKernelLauncherFn),
                ReturnValueSlot(), launchArgs);
 

@@ -121,7 +121,7 @@ CIRGenFunction::emitCXXMemberPointerCallExpr(const CXXMemberCallExpr *ce,
   assert(!cir::MissingFeatures::opCallMustTail());
   return emitCall(cgm.getTypes().arrangeCXXMethodCall(argsList, fpt, required,
                                                       /*PrefixSize=*/0),
-                  callee, returnValue, argsList, nullptr, loc, ce);
+                  callee, returnValue, argsList, nullptr, loc);
 }
 
 RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
@@ -323,7 +323,7 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorCall(
   assert((ce || currSrcLoc) && "expected source location");
   mlir::Location loc = ce ? getLoc(ce->getExprLoc()) : *currSrcLoc;
   assert(!cir::MissingFeatures::opCallMustTail());
-  return emitCall(fnInfo, callee, returnValue, args, nullptr, loc, ce);
+  return emitCall(fnInfo, callee, returnValue, args, nullptr, loc);
 }
 
 static void emitNullBaseClassInitialization(CIRGenFunction &cgf,

@@ -37,7 +37,6 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getSourceLanguageAttrName() { return "cir.lang"; }
     static llvm::StringRef getTripleAttrName() { return "cir.triple"; }
     static llvm::StringRef getOptInfoAttrName() { return "cir.opt_info"; }
-    static llvm::StringRef getAstAttrName() { return "ast"; }
     static llvm::StringRef getCalleeAttrName() { return "callee"; }
     static llvm::StringRef getNoThrowAttrName() { return "nothrow"; }
     static llvm::StringRef getNoReturnAttrName() { return "noreturn"; }

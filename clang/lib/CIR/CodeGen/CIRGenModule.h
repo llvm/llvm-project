@@ -802,6 +802,10 @@ public:
   void setCXXSpecialMemberAttr(cir::FuncOp funcOp,
                                const clang::FunctionDecl *funcDecl);
 
+  /// Record the source level identity of the function (plain name, std
+  /// namespace membership) so passes can reason about it without the AST.
+  void setFuncInfoAttr(cir::FuncOp funcOp, const clang::FunctionDecl *funcDecl);
+
   cir::FuncOp createRuntimeFunction(cir::FuncType ty, llvm::StringRef name,
                                     mlir::NamedAttrList extraAttrs = {},
                                     bool isLocal = false,

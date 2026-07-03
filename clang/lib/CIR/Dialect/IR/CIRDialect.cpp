@@ -1228,8 +1228,7 @@ printCallCommon(mlir::Operation *op, mlir::FlatSymbolRefAttr calleeSym,
       CIRDialect::getSideEffectAttrName(),
       CIRDialect::getOperandSegmentSizesAttrName(),
       llvm::StringRef("res_attrs"),
-      llvm::StringRef("arg_attrs"),
-      CIRDialect::getAstAttrName()};
+      llvm::StringRef("arg_attrs")};
   printer.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
   printer << " : ";
   if (calleeSym || !argAttrs) {
@@ -2560,6 +2559,23 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
       return failure();
   }
 
+  // Parse FuncInfo attribute
+  if (parser.parseOptionalKeyword("func_info").succeeded()) {
+    if (parser.parseLess().failed())
+      return failure();
+
+    mlir::Attribute attr;
+    if (parser.parseAttribute(attr).failed())
+      return failure();
+    if (!mlir::isa<cir::FuncInfoAttr>(attr))
+      return parser.emitError(parser.getCurrentLocation(),
+                              "expected a function information attribute");
+    state.addAttribute(getFuncInfoAttrName(state.name), attr);
+
+    if (parser.parseGreater().failed())
+      return failure();
+  }
+
   if (parseGlobalDtorCtor("global_ctor", [&](std::optional<int> priority) {
         mlir::IntegerAttr globalCtorPriorityAttr =
             builder.getI32IntegerAttr(priority.value_or(65535));
@@ -2754,6 +2770,12 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   if (auto specialMemberAttr = getCxxSpecialMember()) {
     p << " special_member<";
     p.printAttribute(*specialMemberAttr);
+    p << '>';
+  }
+
+  if (cir::FuncInfoAttr funcInfo = getFuncInfoAttr()) {
+    p << " func_info<";
+    p.printAttribute(funcInfo);
     p << '>';
   }
 
