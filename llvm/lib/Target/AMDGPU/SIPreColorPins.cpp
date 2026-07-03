@@ -298,6 +298,27 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
       MachineInstr *RS = MRI.getVRegDef(Src);
       MachineBasicBlock *PinMBB = Pin->getParent();
       bool Ok = RS && RS->isRegSequence() && RS->getParent() == PinMBB;
+      // A scaled MFMA (mfma_scale_*, f8f6f4) consuming a wide AGPR tuple hits a
+      // machine-scheduler liveness error under the direct physical rewrite; leave
+      // those to the soft path (which still places the inputs in AGPRs). Walk the
+      // pinned value's uses (through copy/reg_sequence/subreg ops) for one.
+      if (Ok) {
+        SmallVector<Register, 8> WL{Dst};
+        DenseSet<Register> WSeen{Dst};
+        for (unsigned I = 0; I < WL.size() && Ok; ++I)
+          for (MachineInstr &U : MRI.use_nodbg_instructions(WL[I])) {
+            if (TII->getName(U.getOpcode()).contains("F8F6F4")) {
+              Ok = false;
+              break;
+            }
+            if (U.isCopy() || U.isRegSequence() || U.isPHI() ||
+                U.getOpcode() == TargetOpcode::INSERT_SUBREG ||
+                U.getOpcode() == TargetOpcode::EXTRACT_SUBREG)
+              for (const MachineOperand &D : U.defs())
+                if (D.getReg().isVirtual() && WSeen.insert(D.getReg()).second)
+                  WL.push_back(D.getReg());
+          }
+      }
       for (MCRegUnit U : TRI->regunits(PR))
         if (Ok && Claimed.contains(U))
           Ok = false;
@@ -313,11 +334,7 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
         for (unsigned I = 1; I + 1 < RS->getNumOperands(); I += 2) {
           const MachineOperand &Reg = RS->getOperand(I);
           const MachineOperand &Sub = RS->getOperand(I + 1);
-          MachineInstr *ElemDef =
-              Reg.isReg() && Reg.getReg().isVirtual()
-                  ? MRI.getVRegDef(Reg.getReg())
-                  : nullptr;
-          if (!ElemDef || !ElemDef->mayLoad() || Reg.getSubReg() ||
+          if (!Reg.isReg() || !Reg.getReg().isVirtual() || Reg.getSubReg() ||
               !Sub.isImm() || !TRI->getSubReg(PR, Sub.getImm())) {
             Ok = false;
             break;
