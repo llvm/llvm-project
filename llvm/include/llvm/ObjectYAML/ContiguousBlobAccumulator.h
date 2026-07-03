@@ -15,12 +15,8 @@
 #ifndef LLVM_OBJECTYAML_CONTIGUOUSBLOBACCUMULATOR_H
 #define LLVM_OBJECTYAML_CONTIGUOUSBLOBACCUMULATOR_H
 
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/raw_ostream.h"
-#include <cstdint>
 
 namespace llvm {
 namespace yaml {

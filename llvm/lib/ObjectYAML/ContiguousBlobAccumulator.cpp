@@ -16,9 +16,6 @@
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/MathExtras.h"
-#include <cassert>
-#include <cstring>
 
 using namespace llvm;
 using namespace llvm::yaml;
