@@ -3578,10 +3578,6 @@ unsigned SIRegisterInfo::getHWRegIndex(MCRegister Reg) const {
   return getEncodingValue(Reg) & AMDGPU::HWEncoding::REG_IDX_MASK;
 }
 
-unsigned AMDGPU::getRegBitWidth(const TargetRegisterClass &RC) {
-  return getRegBitWidth(RC.getID());
-}
-
 static const TargetRegisterClass *
 getAnyVGPRClassForBitWidth(unsigned BitWidth) {
   if (BitWidth == 64)
@@ -4257,10 +4253,10 @@ MachineInstr *SIRegisterInfo::findReachingDef(Register Reg, unsigned SubReg,
 MCPhysReg SIRegisterInfo::get32BitRegister(MCPhysReg Reg) const {
   assert(getRegSizeInBits(*getPhysRegBaseClass(Reg)) <= 32);
 
-  for (const TargetRegisterClass &RC : { AMDGPU::VGPR_32RegClass,
-                                         AMDGPU::SReg_32RegClass,
-                                         AMDGPU::AGPR_32RegClass } ) {
-    if (MCPhysReg Super = getMatchingSuperReg(Reg, AMDGPU::lo16, &RC))
+  for (const TargetRegisterClass *RC :
+       {&AMDGPU::VGPR_32RegClass, &AMDGPU::SReg_32RegClass,
+        &AMDGPU::AGPR_32RegClass}) {
+    if (MCPhysReg Super = getMatchingSuperReg(Reg, AMDGPU::lo16, RC))
       return Super;
   }
   if (MCPhysReg Super = getMatchingSuperReg(Reg, AMDGPU::hi16,
