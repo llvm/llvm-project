@@ -533,7 +533,7 @@ define amdgpu_kernel void @test_spill_cost_reset(
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.epilogue:
-  ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM [[COPY]](p4), 0, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset550, align 16, addrspace 4)
+  ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM [[COPY]](p4), 0, 0 :: (invariant load (s64) from %ir.out.kernarg.offset550, align 16, addrspace 4)
   ; CHECK-NEXT:   [[V_MOV_B32_e32_13:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   GLOBAL_STORE_DWORD_SADDR [[V_MOV_B32_e32_13]], [[V_MFMA_F32_16X16X32_F16_vgprcd_e64_2]].sub0, [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (store (s32) into %ir.out.load, addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
