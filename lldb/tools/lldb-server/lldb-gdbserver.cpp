@@ -11,7 +11,9 @@
 #include <cstdio>
 #include <cstring>
 
-#ifndef _WIN32
+#ifdef _WIN32
+#include "lldb/Host/windows/windows.h"
+#else
 #include <csignal>
 #include <unistd.h>
 #endif
@@ -423,6 +425,11 @@ int main_gdbserver(int argc, char *argv[]) {
       return EXIT_FAILURE;
     }
     unnamed_pipe = (pipe_t)Arg;
+#ifdef _WIN32
+    // Prevent the inferior we later launch from inheriting this pipe's write
+    // handle.
+    ::SetHandleInformation((HANDLE)unnamed_pipe, HANDLE_FLAG_INHERIT, 0);
+#endif
   }
   if (Args.hasArg(OPT_fd)) {
     int64_t fd;
