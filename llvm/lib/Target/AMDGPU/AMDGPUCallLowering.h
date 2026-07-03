@@ -26,9 +26,8 @@ class AMDGPUCallLowering final : public CallLowering {
   void lowerParameterPtr(Register DstReg, MachineIRBuilder &B,
                          uint64_t Offset) const;
 
-  bool lowerParameter(MachineIRBuilder &B, ArgInfo &AI,
-                      const CCValAssign &ArgLoc, Align Alignment,
-                      unsigned InputArgIndex) const;
+  bool lowerParameter(MachineIRBuilder &B, ArgInfo &AI, uint64_t Offset,
+                      Align Alignment, unsigned InputArgIndex) const;
 
   bool canLowerReturn(MachineFunction &MF, CallingConv::ID CallConv,
                       SmallVectorImpl<BaseArgInfo> &Outs,

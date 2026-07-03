@@ -132,6 +132,46 @@ define amdgpu_kernel void @preload_v1i32_inreg(<1 x i32> inreg %x, ptr addrspace
   ret void
 }
 
+define amdgpu_kernel void @preload_v3i16_inreg(<3 x i16> inreg %x, ptr addrspace(1) %out) #0 {
+  ; GFX90A-LABEL: name: preload_v3i16_inreg
+  ; GFX90A: bb.1 (%ir-block.0):
+  ; GFX90A-NEXT:   liveins: $sgpr4_sgpr5, $sgpr6_sgpr7
+  ; GFX90A-NEXT: {{  $}}
+  ; GFX90A-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
+  ; GFX90A-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $sgpr6_sgpr7
+  ; GFX90A-NEXT:   [[TRUNC:%[0-9]+]]:_(s48) = G_TRUNC [[COPY1]](s64)
+  ; GFX90A-NEXT:   [[BITCAST:%[0-9]+]]:_(<3 x s16>) = G_BITCAST [[TRUNC]](s48)
+  ; GFX90A-NEXT:   [[COPY2:%[0-9]+]]:_(<3 x s16>) = COPY [[BITCAST]](<3 x s16>)
+  ; GFX90A-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
+  ; GFX90A-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; GFX90A-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = nuw nusw inbounds G_PTR_ADD [[INT]], [[C]](s64)
+  ; GFX90A-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (p1) from %ir.out.kernarg.offset, addrspace 4)
+  ; GFX90A-NEXT:   G_STORE [[COPY2]](<3 x s16>), [[LOAD]](p1) :: (store (<3 x s16>) into %ir.out.load, align 8, addrspace 1)
+  ; GFX90A-NEXT:   S_ENDPGM 0
+  store <3 x i16> %x, ptr addrspace(1) %out, align 8
+  ret void
+}
+
+define amdgpu_kernel void @preload_v8i1_inreg(<8 x i1> inreg %x, ptr addrspace(1) %out) #0 {
+  ; GFX90A-LABEL: name: preload_v8i1_inreg
+  ; GFX90A: bb.1 (%ir-block.0):
+  ; GFX90A-NEXT:   liveins: $sgpr6, $sgpr4_sgpr5
+  ; GFX90A-NEXT: {{  $}}
+  ; GFX90A-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
+  ; GFX90A-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX90A-NEXT:   [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY1]](s32)
+  ; GFX90A-NEXT:   [[BITCAST:%[0-9]+]]:_(<8 x s1>) = G_BITCAST [[TRUNC]](s8)
+  ; GFX90A-NEXT:   [[COPY2:%[0-9]+]]:_(<8 x s1>) = COPY [[BITCAST]](<8 x s1>)
+  ; GFX90A-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
+  ; GFX90A-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
+  ; GFX90A-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p4) = nuw nusw inbounds G_PTR_ADD [[INT]], [[C]](s64)
+  ; GFX90A-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (p1) from %ir.out.kernarg.offset, addrspace 4)
+  ; GFX90A-NEXT:   G_STORE [[COPY2]](<8 x s1>), [[LOAD]](p1) :: (store (<8 x s1>) into %ir.out.load, addrspace 1)
+  ; GFX90A-NEXT:   S_ENDPGM 0
+  store <8 x i1> %x, ptr addrspace(1) %out, align 1
+  ret void
+}
+
 define amdgpu_kernel void @preload_skip_empty_struct_inreg({} inreg %empty, i32 inreg %x, ptr addrspace(1) %out) #0 {
   ; GFX90A-LABEL: name: preload_skip_empty_struct_inreg
   ; GFX90A: bb.1 (%ir-block.0):
@@ -150,4 +190,4 @@ define amdgpu_kernel void @preload_skip_empty_struct_inreg({} inreg %empty, i32 
   ret void
 }
 
-attributes #0 = { "amdgpu-agpr-alloc"="0" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" "target-cpu"="gfx90a" }
+attributes #0 = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
