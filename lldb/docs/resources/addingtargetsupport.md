@@ -2,7 +2,7 @@
 
 LLDB supports many combinations of architecture, operating system and other
 system components. In this document we describe the considerations and
-requirements for porting LLDB to a combination of those things. Which we will
+requirements for porting LLDB to a combination of those things which we will
 refer to as a "target" within this document.
 
 :::{note}
@@ -21,9 +21,11 @@ implementation.
 
 ## Upstreaming Proposal Process
 
-You must send an RFC to the LLDB Discourse forum before upstreaming
-new target support. This RFC must be accepted in some form by the community
-before any changes can be merged upstream that are specific to your target.
+You must send an RFC to the
+[LLDB Discourse forum](https://discourse.llvm.org/c/subprojects/lldb/8) before
+upstreaming new target support. This RFC must be accepted in some form by the
+community before any changes can be merged upstream that are specific to your
+target.
 
 This RFC follows the normal rules of the LLVM community decision making process.
 
@@ -33,7 +35,8 @@ We require an RFC for target support upstreaming because:
   are written down so that future readers may learn from it.
 * These discussions form the basis for future proposals and the assessment
   of those proposals. Every proposal will be different in some way, and by
-  contrast with the past we can do the best job assessing them.
+  contrasting current proposals with the previous proposals we can do a better
+  job assessing them.
 
 RFCs are not required to be:
 * In a set format. Make a logical argument in whatever way you think fit.
@@ -57,7 +60,7 @@ justify the answer. Rather than simply "yes this applies to my target".
 In other words, your proposal must stand alone without requiring readers to read
 this document as well.
 
-The first set cover your motivation for your being upstream rather
+The first set covers your motivation for your being upstream rather
 than on a fork:
 
 * Will it help you distribute an LLDB that includes this target support?
@@ -85,7 +88,7 @@ adequately maintain the code upstream:
 * Who will address problems with it? Will it always be the named maintainers,
   is it so common that anyone in upstream LLDB can deal with it, or perhaps
   only employees of a specific company will be required to work on it.
-* When it breaks how easy will it be for the upstream LLDB community to continue
+* When it breaks, how easy will it be for the upstream LLDB community to continue
   their work without disruption?
 * If upstream contributors want to reproduce issues on your target, how can
   they access it? Can it be emulated or virtualized? Does it require them to
@@ -148,11 +151,11 @@ Apple targets have possibly the most extensive support in LLDB.
 * Changes from LLVM's main branch are continuously tested. Results are
   accessible publicly, and reported to all LLDB contributors.
 * Many employees contribute upstream and are maintainers for these targets.
-* Target specific problems are either solved by the upstream community with
+* Target-specific problems are either solved by the upstream community with
   maintainer input, or by the maintainers themselves.
-* Its specific features either do not impact other targets, or when they
+* Its specific features either do not impact other targets, or, when they
   do, they are designed and maintained in collaboration with the community.
-* Many people unrelated to Apple itself use Apple hardware, and hardware is
+* Many people unrelated to Apple itself use Apple hardware, which is
   available at retail. So it is fairly easy to find someone who can reproduce
   an issue.
 * LLDB gets a lot of secondary testing downstream, and exposure to Apple's
@@ -184,14 +187,14 @@ others have company specific contributors.
 * Linux is open source, freely available, to be installed on hardware,
   virtualised, emulated, and so on. Most problems can be reproduced in more than
   one way.
-* Continuous testing for many supported architectures, often supported by the
-  architecture vendor.
-* Remaining architectures are tested per release, or every other release.
-  Depends on the update schedule of the Linux distributions.
+* Many architectures are tested by the architecture vendor, others
+  on community provided hardware.
+* LLDB is a commonly available Linux package, so further testing happens during
+  various Linux distribution's release cycles.
 * Support for a new architecture is quite easy to isolate, so problems do not
   impact other Linux architectures, or other operating systems.
-* Linux's popularity and therefore it's choice of standards means it informs
-  many core features of LLDB.
+* Linux is very popular, therefore it's choice of standards informs many core
+  features of LLDB.
 * It has more than one listed maintainer and many contributors.
   Issues are resolved by the community.
 
@@ -200,7 +203,7 @@ others have company specific contributors.
 MSP430 is handled as a bare metal (no operating system) target in LLDB. So it
 is the most minimal example.
 
-* LLVM already has MSP430 support, changes to enable it in LLDB were minimal.
+* LLVM already has MSP430 support, so changes to enable it in LLDB were minimal.
 * It does not use `lldb-server`, and `lldb` only required minor adjustments to
   be compatible with the commonly used debug server.
 * An ABI plugin was added, which is isolated to MSP430 only.
@@ -210,7 +213,7 @@ is the most minimal example.
 * We rely on users to report issues with it, and would likely guide them to fix
   them themselves.
 
-## Components Of For Target Support
+## Components Of Target Support
 
 This is a very high level view, we recommend you combine this with reading the
 changes done for recently added targets, as each target is going to be slightly
@@ -244,11 +247,11 @@ inexact):
 * Architecture plugin. For example `ArchitectureAArch64`.
 * Register definitions and register context (a context is a collection of
   registers). For example `NativeRegisterContextLinux_arm64`.
-* Instruction emulation. Most targets need a small amount for unwind purposes,
-  but if you lack hardware single step you will need a lot more. For example
-  `EmulateInstructionARM64`.
-* Unwind support. LLDB needs to be taught about any architecture specific
-  directives.
+* Unwinding support for backtracing. LLDB needs to be taught about any
+  architecture specific directives.
+* Instruction emulation. For example `EmulateInstructionARM64`. Most targets
+  need to emulate a small amount of instructions for unwinding. If you lack
+  hardware single step, you will need to emulate many times more than that.
 
 The order of implementation will vary in each case. Each component does not
 need to be fully implemented for you to start work on the next.
