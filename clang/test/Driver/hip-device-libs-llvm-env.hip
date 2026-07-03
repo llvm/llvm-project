@@ -5,6 +5,13 @@
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck --check-prefix=LLVMENV %s
 
+// Verify no error when device libs cannot be found with llvm environment
+// RUN: %clang -### --target=x86_64-linux-gnu -nogpuinc \
+// RUN:   --offload-targets=amdgcn-amd-amdhsa-llvm --offload-arch=gfx90a \
+// RUN:   -resource-dir=%S/Inputs/nonexistent_rocm \
+// RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck --check-prefix=LLVMENV %s
+
 // LLVMENV-NOT: -mlink-builtin-bitcode
 // LLVMENV-NOT: oclc
 // LLVMENV-NOT: ocml
