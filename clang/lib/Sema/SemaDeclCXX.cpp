@@ -4685,10 +4685,14 @@ Sema::BuildMemberInitializer(ValueDecl *Member, Expr *Init,
     // Pass the enclosing constructor as the Decl so a class-template pattern
     // defers (via D->isTemplated()) and fires once at instantiation, where
     // BuildMemberInitializer re-runs with the instantiated constructor as
-    // CurContext, matching ctor_uninit_member.
+    // CurContext, matching ctor_uninit_member. A member of an anonymous
+    // struct/union arrives as an IndirectFieldDecl, which never carries the
+    // marker; the [[ref_to_uninit]] attribute lives on the underlying field.
+    const ValueDecl *MarkerTarget =
+        IndirectMember ? IndirectMember->getAnonField() : Member;
     if (auto *Ctor = dyn_cast<CXXConstructorDecl>(CurContext))
       Profiles().checkInitProfileRefToUninitBinding(
-          IdLoc, Member, Member->getType(), Init, Ctor);
+          IdLoc, MarkerTarget, MarkerTarget->getType(), Init, Ctor);
   }
 
   if (DirectMember) {

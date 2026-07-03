@@ -648,6 +648,38 @@ struct CtorMemberRefOK {
   CtorMemberRefOK() : r(g_init), s(g_uninit) {} // OK
 };
 
+// A member of an anonymous struct/union reaches the member-initializer site as
+// an IndirectFieldDecl; the [[ref_to_uninit]] marking lives on the underlying
+// field and is read from there.
+struct CtorAnonStructMarkedOK {
+  struct {
+    int *p [[ref_to_uninit]];
+  };
+  CtorAnonStructMarkedOK() : p(&g_uninit) {} // OK: marked target, uninit source
+};
+
+struct CtorAnonStructMarkedBad {
+  struct {
+    int *p [[ref_to_uninit]];
+  };
+  CtorAnonStructMarkedBad() : p(&g_init) {} // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+};
+
+struct CtorAnonStructUnmarkedBad {
+  struct {
+    int *p;
+  };
+  CtorAnonStructUnmarkedBad() : p(&g_uninit) {} // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+};
+
+struct CtorAnonUnionMarkedOK {
+  union {
+    int *p [[ref_to_uninit]];
+    long *q;
+  };
+  CtorAnonUnionMarkedOK() : p(&g_uninit) {} // OK: marked target, uninit source
+};
+
 // A braced member-initializer is looked through to its single element, exactly
 // like the variable-init site.
 struct CtorBracedPtr {
