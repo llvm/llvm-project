@@ -146,6 +146,7 @@ private:
   bool lowerSplitTo32Select(MachineInstr &MI);
   bool lowerSplitTo32SExtInReg(MachineInstr &MI);
   bool lowerSplitBitCount64To32(MachineInstr &MI);
+  bool lowerBitReplicateToVALU(MachineInstr &MI);
   bool lowerUnpackMinMax(MachineInstr &MI);
   bool lowerUnpackAExt(MachineInstr &MI);
   bool lowerSBufToBuf(MachineInstr &MI, WaterfallInfo &WFI);

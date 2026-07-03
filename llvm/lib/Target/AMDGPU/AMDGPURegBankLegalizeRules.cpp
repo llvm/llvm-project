@@ -1762,6 +1762,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForIOpcs({returnaddress}).Any({{UniP0}, {{SgprP0}, {}}});
 
+  addRulesForIOpcs({amdgcn_s_bitreplicate}, Standard)
+      .Uni(S64, {{Sgpr64}, {IntrId, Sgpr32}})
+      .Div(S64, {{Vgpr64}, {IntrId, Vgpr32}, BitReplicateToVALU});
+
   // Note: amdgcn.icmp with i1 inputs is legalized to ballot in the legalizer,
   // so no S1 rules are needed here.
   addRulesForIOpcs({amdgcn_icmp})

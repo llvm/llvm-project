@@ -1411,6 +1411,80 @@ bool RegBankLegalizeHelper::lowerGetRounding(MachineInstr &MI) {
   return true;
 }
 
+bool RegBankLegalizeHelper::lowerBitReplicateToVALU(MachineInstr &MI) {
+  // Lower divergent s_bitreplicate (bit i -> bits 2i, 2i+1) to VALU by
+  // splitting into two 16-bit halves and spreading bits via:
+  //   lo = v_perm_b32(0, src, 0x0C010C00)   // [00][B1][00][B0]
+  //   hi = v_perm_b32(0, src, 0x0C030C02)   // [00][B3][00][B2]
+  //   M4 = (x | (x << 4)) & 0x0F0F0F0F      // 4-bit spread
+  //   M2 = (M4 | (M4 << 2)) & 0x33333333    // 2-bit spread
+  //   M1 = (M2 | (M2 << 1)) & 0x55555555    // 1-bit spread
+  //   R  = M1 | (M1 << 1)                   // duplicate each bit
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(2).getReg();
+
+  // v_perm_b32 splits the input into 16-bit halves and spreads each half's
+  // bytes with zero-byte gaps in one instruction. Selector byte values:
+  // 0x00-0x03 = src byte N, 0x0C = zero byte
+  // e.g. 0x134C3A92 -> Hi: [0013][004C], Lo: [003A][0092]
+  auto Zero = B.buildConstant(VgprRB_S32, 0);
+  auto LoSel = B.buildConstant(VgprRB_S32, 0x0C010C00);
+  auto HiSel = B.buildConstant(VgprRB_S32, 0x0C030C02);
+  Register LoByteSpread = B.buildIntrinsic(Intrinsic::amdgcn_perm, {VgprRB_S32})
+                              .addUse(Zero.getReg(0))
+                              .addUse(Src)
+                              .addUse(LoSel.getReg(0))
+                              .getReg(0);
+  Register HiByteSpread = B.buildIntrinsic(Intrinsic::amdgcn_perm, {VgprRB_S32})
+                              .addUse(Zero.getReg(0))
+                              .addUse(Src)
+                              .addUse(HiSel.getReg(0))
+                              .getReg(0);
+
+  // Spread masks: each keeps the low N bits of every 2N-bit group, clearing
+  // the garbage left by the shift+OR.
+  auto Mask4 =
+      B.buildConstant(VgprRB_S32, 0x0F0F0F0F); // 0000_1111: low 4 bits per byte
+  auto Mask2 = B.buildConstant(
+      VgprRB_S32, 0x33333333); // 0011_0011: low 2 bits per 4-bit group
+  auto Mask1 =
+      B.buildConstant(VgprRB_S32, 0x55555555); // 0101_0101: every other bit
+
+  auto Spread = [&](Register In) -> Register {
+    // 4-bit spread: separate each byte into its two 4-bit halves.
+    // e.g. [003A][0092] -> [03][0A][09][02]
+    auto S4 = B.buildShl(VgprRB_S32, In, B.buildConstant(VgprRB_S32, 4));
+    auto Or4 = B.buildOr(VgprRB_S32, In, S4);
+    auto M4 = B.buildAnd(VgprRB_S32, Or4, Mask4);
+
+    // 2-bit spread: separate each 4-bit group into two 2-bit pairs.
+    // e.g. [03][0A][09][02] -> [0000][0011][0010][0010][0010][0001][0000][0010]
+    auto S2 = B.buildShl(VgprRB_S32, M4, B.buildConstant(VgprRB_S32, 2));
+    auto Or2 = B.buildOr(VgprRB_S32, M4, S2);
+    auto M2 = B.buildAnd(VgprRB_S32, Or2, Mask2);
+
+    // 1-bit spread: separate each 2-bit pair into individual bits.
+    // e.g. -> [00][00][01][01][01][00][01][00][01][00][00][01][00][00][01][00]
+    auto S1 = B.buildShl(VgprRB_S32, M2, B.buildConstant(VgprRB_S32, 1));
+    auto Or1 = B.buildOr(VgprRB_S32, M2, S1);
+    auto M1 = B.buildAnd(VgprRB_S32, Or1, Mask1);
+
+    // Duplicate: double each isolated bit.
+    // e.g. -> [00][00][11][11][11][00][11][00][11][00][00][11][00][00][11][00]
+    auto Dup = B.buildShl(VgprRB_S32, M1, B.buildConstant(VgprRB_S32, 1));
+    auto Result = B.buildOr(VgprRB_S32, M1, Dup);
+
+    // e.g. -> return 0x0FCCC30C.
+    return Result.getReg(0);
+  };
+
+  Register LoResult = Spread(LoByteSpread);
+  Register HiResult = Spread(HiByteSpread);
+  B.buildMergeLikeInstr(Dst, {LoResult, HiResult});
+  MI.eraseFromParent();
+  return true;
+}
+
 bool RegBankLegalizeHelper::lower(MachineInstr &MI,
                                   const RegBankLLTMapping &Mapping,
                                   WaterfallInfo &WFI) {
@@ -1791,6 +1865,8 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     return lowerSetRounding(MI);
   case LowerGetRounding:
     return lowerGetRounding(MI);
+  case BitReplicateToVALU:
+    return lowerBitReplicateToVALU(MI);
   }
 
   return true;
