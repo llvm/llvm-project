@@ -10,6 +10,7 @@ void test() {
 // CHECK:      define {{.*}}test{{.*}}
 // CHECK-NEXT: entry:
 // CHECK:      {{.*}} = alloca %struct.TrivialStruct, align 1
+// CHECK:      {{.*}} = alloca %struct.TrivialStruct, align 1
 // CHECK:      call void {{.*}}explicit_object_function{{.*}}
 // CHECK-NEXT: ret void
 // CHECK-NEXT: }
@@ -37,6 +38,7 @@ void test_lambda() {
 //CHECK: define internal noundef i32 @"_ZZ11test_lambdavENH3$_0clIS_EEiT_"() #0 align 2 {
 //CHECK: entry:
 //CHECK:   %This = alloca %class.anon, align 1
+//CHECK:   %agg.tmp = alloca %class.anon, align 1
 //CHECK:   %call = call noundef i32 @"_ZZ11test_lambdavENH3$_0clIS_EEiT_"()
 //CHECK:   ret i32 %call
 //CHECK: }

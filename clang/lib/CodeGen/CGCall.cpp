@@ -5253,36 +5253,33 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     }
   }
 
-  // C++ analog of the CK_LValueToRValue case above: a trivial copy/move
-  // constructor from a variable forwards the source LValue instead of
-  // materializing an agg.tmp. EmitCall makes the real copy at the
-  // Indirect/byval boundary. Under musttail this also keeps the value in
-  // storage that survives the tail call. Types whose copy is not a plain
-  // memcpy in EmitAggregateCopy are excluded, since forwarding would bypass
-  // that special copy: CUDA surface/texture (lowered to a handle) and, under
-  // ObjC GC, records with object members (need a write barrier).
-  if (HasAggregateEvalKind && type->isRecordType() &&
+  // Under musttail, hand a trivially-copyable record source's LValue to
+  // EmitCall rather than materializing an agg.tmp. EmitCall's Indirect path
+  // routes it via the matching incoming parameter, which survives the tail
+  // call. Limited to params and locals: globals and captures don't have the
+  // dangle issue and the existing path may be more efficient for them.
+  // On the device side CUDA surface/texture types are excluded: they
+  // classify as Direct and forwarding would load raw record bytes instead
+  // of the handle that EmitAggregateCopy materializes.
+  if (HasAggregateEvalKind && MustTailCall && type->isRecordType() &&
       type.isTriviallyCopyableType(getContext()) &&
-      !type->isCUDADeviceBuiltinSurfaceType() &&
-      !type->isCUDADeviceBuiltinTextureType() &&
-      !(getLangOpts().getGC() != LangOptions::NonGC &&
-        type->getAsRecordDecl()->hasObjectMember())) {
+      !(getLangOpts().CUDAIsDevice &&
+        (type->isCUDADeviceBuiltinSurfaceType() ||
+         type->isCUDADeviceBuiltinTextureType()))) {
     if (const auto *CCE = dyn_cast<CXXConstructExpr>(E)) {
-      const CXXConstructorDecl *Ctor = CCE->getConstructor();
-      if (Ctor->isCopyOrMoveConstructor() && Ctor->isTrivial() &&
-          CCE->getNumArgs() == 1) {
+      if (CCE->getConstructor()->isCopyOrMoveConstructor() &&
+          CCE->getConstructor()->isTrivial() && CCE->getNumArgs() == 1) {
         const Expr *Source = CCE->getArg(0)->IgnoreParenImpCasts();
-        // Same-type guard: a stripped derived-to-base cast would forward a
-        // derived lvalue into a base-typed slot and slice at a wrong offset.
-        // Exclude hlsl_constant sources, as the CK_LValueToRValue path does.
-        if (const auto *DRE = dyn_cast<DeclRefExpr>(Source);
-            DRE && isa<VarDecl>(DRE->getDecl()) &&
-            Source->getType().getAddressSpace() != LangAS::hlsl_constant &&
-            getContext().hasSameUnqualifiedType(Source->getType(), type)) {
-          LValue L = EmitLValue(DRE);
-          if (L.isSimple()) {
-            args.addUncopiedAggregate(L, type);
-            return;
+        if (const auto *DRE = dyn_cast<DeclRefExpr>(Source)) {
+          if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+            if (VD->hasLocalStorage() ||
+                (isa<ParmVarDecl>(VD) &&
+                 VD->getDeclContext() == dyn_cast<DeclContext>(CurCodeDecl))) {
+              LValue L = EmitLValue(DRE);
+              assert(L.isSimple());
+              args.addUncopiedAggregate(L, type);
+              return;
+            }
           }
         }
       }
