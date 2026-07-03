@@ -364,9 +364,40 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       op.emitWarning("hint clause discarded");
   };
   auto checkInReduction = [&todo](auto op, LogicalResult &result) {
-    if (!op.getInReductionVars().empty() || op.getInReductionByref() ||
-        op.getInReductionSyms())
+    if (isa<omp::TargetOp, omp::TaskOp, omp::TaskloopContextOp>(
+            op.getOperation())) {
+      if (auto byrefAttr = op.getInReductionByref()) {
+        for (bool isByRef : *byrefAttr) {
+          if (isByRef) {
+            result = todo("in_reduction with byref modifier");
+            return;
+          }
+        }
+      }
+      if (isa<omp::TargetOp>(op.getOperation())) {
+        if (auto inReductionSyms = op.getInReductionSyms()) {
+          for (auto sym :
+               (*inReductionSyms).template getAsRange<SymbolRefAttr>()) {
+            auto decl =
+                SymbolTable::lookupNearestSymbolFrom<omp::DeclareReductionOp>(
+                    op, sym);
+            assert(decl &&
+                   "symbol resolution should be guaranteed by the op verifier");
+            if (decl.getInitializerRegion().front().getNumArguments() != 1) {
+              result = todo("in_reduction with two-argument initializer");
+              return;
+            }
+            if (!decl.getCleanupRegion().empty()) {
+              result = todo("in_reduction with cleanup region");
+              return;
+            }
+          }
+        }
+      }
+    } else if (!op.getInReductionVars().empty() || op.getInReductionByref() ||
+               op.getInReductionSyms()) {
       result = todo("in_reduction");
+    }
   };
   auto checkNowait = [&todo](auto op, LogicalResult &result) {
     if (op.getNowait())
@@ -423,14 +454,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
           return;
         }
   };
-  auto checkInReductionByref = [&todo](auto op, LogicalResult &result) {
-    if (auto byrefAttr = op.getInReductionByref())
-      for (bool isByRef : *byrefAttr)
-        if (isByRef) {
-          result = todo("in_reduction with byref modifier");
-          return;
-        }
-  };
   auto checkNumTeams = [&todo](auto op, LogicalResult &result) {
     if (op.hasNumTeamsMultiDim())
       result = todo("num_teams with multi-dimensional values");
@@ -482,7 +505,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       })
       .Case([&](omp::TaskOp op) {
         checkAllocate(op, result);
-        checkInReductionByref(op, result);
+        checkInReduction(op, result);
       })
       .Case([&](omp::TaskgroupOp op) {
         checkAllocate(op, result);
@@ -494,7 +517,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       })
       .Case([&](omp::TaskloopContextOp op) {
         checkAllocate(op, result);
-        checkInReductionByref(op, result);
+        checkInReduction(op, result);
         checkReduction(op, result);
         checkReductionByref(op, result);
       })
@@ -8492,6 +8515,52 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   bool isOffloadEntry =
       isTargetDevice || !ompBuilder->Config.TargetTriples.empty();
 
+  // Resolve in_reduction clauses on omp.target for the host. From the target
+  // device's perspective an in_reduction list item behaves as a regular
+  // map(tofrom) variable, so no special handling is needed there; only the
+  // host redirects the mapped value to the per-task reduction-private storage
+  // returned by __kmpc_task_reduction_get_th_data (emitted inside the
+  // to-be-outlined target task body). This applies to both offloading and
+  // non-offloading host modules.
+  //
+  // The target body has no dedicated in_reduction block argument: each
+  // in_reduction variable is accessed through its map_entries block argument.
+  // So each in_reduction variable must also be captured by a matching
+  // map_entries entry referring to the same value; without one the outlined
+  // body would reference a value defined in the host function. Record, for each
+  // in_reduction variable, the position of that map entry so the corresponding
+  // map block argument can be redirected inside the body. The mapped pointer is
+  // also used as the `orig` argument of the runtime lookup.
+  SmallVector<llvm::Value *> inRedOrigPtrs;
+  SmallVector<unsigned> inRedMapArgIdx;
+  if (!targetOp.getInReductionVars().empty() && !isTargetDevice) {
+    llvm::SmallDenseMap<Value, unsigned> mapVarPtrToArgIdx;
+    llvm::SmallDenseSet<Value> duplicateMapVarPtrs;
+    for (auto [idx, mapV] : llvm::enumerate(targetOp.getMapVars())) {
+      auto mapInfo = mapV.getDefiningOp<omp::MapInfoOp>();
+      auto [it, inserted] =
+          mapVarPtrToArgIdx.try_emplace(mapInfo.getVarPtr(), idx);
+      if (!inserted)
+        duplicateMapVarPtrs.insert(mapInfo.getVarPtr());
+    }
+    inRedOrigPtrs.reserve(targetOp.getInReductionVars().size());
+    inRedMapArgIdx.reserve(targetOp.getInReductionVars().size());
+    for (Value v : targetOp.getInReductionVars()) {
+      if (duplicateMapVarPtrs.contains(v))
+        return targetOp.emitError()
+               << "in_reduction variable on omp.target has multiple matching "
+                  "map_entries entries for the same var_ptr; the redirect "
+                  "target is ambiguous";
+      auto it = mapVarPtrToArgIdx.find(v);
+      if (it == mapVarPtrToArgIdx.end())
+        return targetOp.emitError()
+               << "not yet implemented: in_reduction variable on omp.target "
+                  "must also be captured by a matching map_entries entry";
+      inRedMapArgIdx.push_back(it->second);
+      inRedOrigPtrs.push_back(moduleTranslation.lookupValue(v));
+    }
+  }
+
   // For some private variables, the MapsForPrivatizedVariablesPass
   // creates MapInfoOp instances. Go through the private variables and
   // the mapped variables so that during codegeneration we are able
@@ -8567,8 +8636,15 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
         attr.isStringAttribute())
       llvmOutlinedFn->addFnAttr(attr);
 
-    for (auto [arg, mapOp] : llvm::zip_equal(mapBlockArgs, mapVars)) {
-      auto mapInfoOp = cast<omp::MapInfoOp>(mapOp.getDefiningOp());
+    for (auto [idx, arg] : llvm::enumerate(mapBlockArgs)) {
+      // in_reduction list items on omp.target are accessed through their
+      // map_entries block argument, which is redirected below to the per-task
+      // reduction-private storage returned by the runtime. Skip the default
+      // host-value mapping for those block arguments so the write-once
+      // mapValue mapping is free to be set to the private pointer.
+      if (llvm::is_contained(inRedMapArgIdx, idx))
+        continue;
+      auto mapInfoOp = cast<omp::MapInfoOp>(mapVars[idx].getDefiningOp());
       llvm::Value *mapOpValue =
           moduleTranslation.lookupValue(mapInfoOp.getVarPtr());
       moduleTranslation.mapValue(arg, mapOpValue);
@@ -8603,6 +8679,47 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
             privateVarsInfo.llvmVars, privateVarsInfo.privatizers,
             targetOp.getPrivateNeedsBarrier(), &mappedPrivateVars)))
       return llvm::make_error<PreviouslyReportedError>();
+
+    // The target body accesses each in_reduction variable through its
+    // map_entries block argument. Redirect that block argument to the per-task
+    // private storage returned by __kmpc_task_reduction_get_th_data so the body
+    // accumulates into the reduction-private copy rather than the mapped
+    // original. The lookup must run inside the target task body so the gtid
+    // corresponds to the executing thread. The descriptor argument is NULL: the
+    // runtime walks enclosing taskgroups to locate the matching task_reduction
+    // registration for `origPtr`. Mirrors the in_reduction handling on
+    // omp.taskloop.context.
+    if (!inRedOrigPtrs.empty()) {
+      // Compute the executing thread's gtid once for the whole target body and
+      // reuse it for every in_reduction lookup, so a target with several
+      // in_reduction items does not emit a redundant __kmpc_global_thread_num
+      // per item. Align OpenMPIRBuilder's internal IRBuilder with `builder` so
+      // the gtid call lands inside the target body (mirrors the in_reduction
+      // handling on omp.taskloop.context).
+      llvm::OpenMPIRBuilder::LocationDescription bodyLoc(builder);
+      uint32_t srcLocStrSize;
+      llvm::Constant *srcLocStr =
+          ompBuilder->getOrCreateSrcLocStr(bodyLoc, srcLocStrSize);
+      llvm::Value *bodyIdent =
+          ompBuilder->getOrCreateIdent(srcLocStr, srcLocStrSize);
+      ompBuilder->updateToLocation(bodyLoc);
+      llvm::Value *bodyGtid = ompBuilder->getOrCreateThreadID(bodyIdent);
+
+      // The per-item runtime lookup (__kmpc_task_reduction_get_th_data plus the
+      // address-space normalization required by the runtime entry point) is
+      // emitted by OpenMPIRBuilder::createTargetInReductionLookup. Here we only
+      // perform the MLIR-specific work: pick the map block argument that stands
+      // in for each in_reduction list item and rebind it to the per-task
+      // reduction-private storage returned by the runtime.
+      for (auto [mapArgIdx, origPtr] :
+           llvm::zip_equal(inRedMapArgIdx, inRedOrigPtrs)) {
+        BlockArgument mapBlockArg = mapBlockArgs[mapArgIdx];
+        llvm::Value *priv = ompBuilder->createTargetInReductionLookup(
+            builder, bodyGtid, origPtr,
+            moduleTranslation.convertType(mapBlockArg.getType()));
+        moduleTranslation.mapValue(mapBlockArg, priv);
+      }
+    }
 
     LLVM::ModuleTranslation::SaveStack<OpenMPAllocStackFrame> frame(
         moduleTranslation, allocaIP, deallocBlocks);

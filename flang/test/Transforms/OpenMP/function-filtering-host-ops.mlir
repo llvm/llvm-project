@@ -456,13 +456,18 @@ module attributes {omp.is_target_device = true} {
     omp.target_data device(%int : i32) if(%bool) map_entries(%m0 : !fir.ref<i32>) {
       omp.terminator
     }
-    // CHECK-NEXT: omp.target kernel_type(generic) allocate({{[^)]*}}) thread_limit({{[^)]*}}) in_reduction({{[^)]*}}) private({{[^)]*}}) {
+    // The `in_reduction` list item is force-mapped, so it is also captured by a
+    // matching `map_entries` entry referring to the same variable.
+    // CHECK: %[[MAP:.*]] = omp.map.info var_ptr(%[[REF]] : !fir.ref<i32>, i32)
+    // CHECK-NEXT: omp.target kernel_type(generic) allocate({{[^)]*}}) in_reduction({{[^)]*}}) thread_limit({{[^)]*}}) map_entries(%[[MAP]] -> {{[^)]*}}) private({{[^)]*}}) {
+    %m1 = omp.map.info var_ptr(%ref : !fir.ref<i32>, i32) map_clauses(implicit, tofrom) capture(ByRef) -> !fir.ref<i32>
     omp.target kernel_type(generic)
                allocate(%ref : !fir.ref<i32> -> %ref : !fir.ref<i32>)
                depend(taskdependin -> %ref : !fir.ref<i32>)
                device(%int : i32) if(%bool) thread_limit(%int : i32)
-               in_reduction(@reduction %ref -> %arg0 : !fir.ref<i32>)
-               private(@privatizer %ref -> %arg1 : !fir.ref<i32>) {
+               in_reduction(@reduction %ref : !fir.ref<i32>)
+               map_entries(%m1 -> %arg1 : !fir.ref<i32>)
+               private(@privatizer %ref -> %arg2 : !fir.ref<i32>) {
       omp.terminator
     }
     // CHECK-NOT: omp.target_enter_data
