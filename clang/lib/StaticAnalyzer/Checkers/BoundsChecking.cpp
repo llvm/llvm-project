@@ -217,7 +217,7 @@ bool bounds::SizeUnit::tryConvertValuesFromBytes(
 }
 
 Messages bounds::CheckResult::getNonTaintMsgs(std::string RegName,
-                                              SizeUnit SU) {
+                                              SizeUnit SU) const {
   std::optional<int64_t> OffsetN = getConcreteValue(Offset);
   std::optional<int64_t> ExtentN = getConcreteValue(Extent);
 
@@ -262,7 +262,7 @@ Messages bounds::CheckResult::getNonTaintMsgs(std::string RegName,
 }
 
 Messages bounds::CheckResult::getTaintMsgs(std::string RegName,
-                                           const char *OffsetName) {
+                                           const char *OffsetName) const {
   return {formatv("Potential out of bound access to {0} with tainted {1}",
                   RegName, OffsetName),
           formatv("Access of {0} with a tainted {1} that may be {2}too large",

@@ -156,9 +156,9 @@ public:
 
   Kind getKind() const { return K; }
 
-  Messages getTaintMsgs(std::string RegName, const char *OffsetName);
+  Messages getTaintMsgs(std::string RegName, const char *OffsetName) const;
 
-  Messages getNonTaintMsgs(std::string RegName, SizeUnit SU);
+  Messages getNonTaintMsgs(std::string RegName, SizeUnit SU) const;
 
   std::string getAssumptionMsg(PathSensitiveBugReport &BR, StringRef RegName,
                                SizeUnit SU) const;
