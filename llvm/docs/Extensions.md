@@ -682,6 +682,12 @@ This indicates that `ball` calls `foo`, `bar` and `baz` directly;
 `ball` indirectly calls functions whose types are `4524972987496481828`,
 `3498816979441845844` and `8646233951371320954`.
 
+#### `SHT_LLVM_ELF` Section (ELF binary embedding)
+
+This section is used to embed an ELF binary. The expectation is that the name of
+the section, the nature of the embedded ELF and how it will be processed, will
+be determined by the use case, e.g. ELF dynamic debugging.
+
 ### CodeView-Dependent
 
 #### `.cv_file` Directive
