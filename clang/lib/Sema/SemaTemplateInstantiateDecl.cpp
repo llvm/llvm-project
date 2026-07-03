@@ -25,6 +25,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaProfiles.h"
 #include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
@@ -1837,7 +1838,7 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
   // the instantiated variable now that its type is known (the parse-time
   // handler deferred on the template pattern).
   if (!Var->isInvalidDecl())
-    SemaRef.diagnoseInitUninitMarkerPlacement(Var);
+    SemaRef.Profiles().diagnoseInitUninitMarkerPlacement(Var);
 
   return Var;
 }
@@ -1927,7 +1928,7 @@ Decl *TemplateDeclInstantiator::VisitFieldDecl(FieldDecl *D) {
   // on the (dependent) template member; re-check now that the substituted type
   // is known.
   if (!Field->isInvalidDecl())
-    SemaRef.diagnoseInitUninitMarkerPlacement(Field);
+    SemaRef.Profiles().diagnoseInitUninitMarkerPlacement(Field);
 
   return Field;
 }
@@ -5943,7 +5944,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     // PushDeclContext because we don't have a scope.
     Sema::ContextRAII savedContext(*this, Function);
 
-    ProfileSuppressScope ProfileSuppressGuard(
+    SemaProfiles::ProfileSuppressScope ProfileSuppressGuard(
         *this, PatternDecl, /*WalkLexicalParents=*/true);
 
     FPFeaturesStateRAII SavedFPFeatures(*this);
@@ -6241,7 +6242,7 @@ void Sema::InstantiateVariableInitializer(
     Var->setImplicitlyInline();
 
   ContextRAII SwitchContext(*this, Var->getDeclContext());
-  ProfileSuppressScope ProfileSuppressGuard(
+  SemaProfiles::ProfileSuppressScope ProfileSuppressGuard(
       *this, OldVar, /*WalkLexicalParents=*/true);
 
   EnterExpressionEvaluationContext Evaluated(

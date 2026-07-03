@@ -49,7 +49,6 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/PragmaKinds.h"
-#include "clang/Basic/Profiles.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/StackExhaustionHandler.h"
@@ -128,7 +127,6 @@ class ASTWriter;
 class CXXBasePath;
 class CXXBasePaths;
 class CXXFieldCollector;
-class AnalysisDeclContext;
 class CodeCompleteConsumer;
 enum class ComparisonCategoryType : unsigned char;
 class ConstraintSatisfaction;
@@ -159,7 +157,6 @@ enum class OverloadCandidateParamOrder : char;
 enum OverloadCandidateRewriteKind : unsigned;
 class OverloadCandidateSet;
 class Preprocessor;
-class ProfilesSuppressAttr;
 class SemaAMDGPU;
 class SemaARM;
 class SemaAVR;
@@ -179,6 +176,7 @@ class SemaOpenACC;
 class SemaOpenCL;
 class SemaOpenMP;
 class SemaPPC;
+class SemaProfiles;
 class SemaPseudoObject;
 class SemaRISCV;
 class SemaSPIRV;
@@ -1037,196 +1035,6 @@ public:
   void ActOnEndOfTranslationUnit();
   void ActOnEndOfTranslationUnitFragment(TUFragmentKind Kind);
 
-  // C++ Profiles framework (P3589R2)
-
-  struct ProfileEnforcement : profiles::EnforcedProfile {
-    SourceLocation EnforceLoc;
-  };
-  SmallVector<ProfileEnforcement, 4> EnforcedProfiles;
-
-  struct ProfileSuppressEntry {
-    StringRef ProfileName;
-    StringRef RuleName;
-  };
-  SmallVector<ProfileSuppressEntry, 4> ProfileSuppressStack;
-
-  /// True while a class/constructor finalization profile callback runs.
-  /// Finalization can fire as a side effect of instantiating an unrelated
-  /// entity whose ProfileSuppressScope is still on ProfileSuppressStack, so
-  /// during finalization that transient stack is ignored and suppression is
-  /// resolved only from the finalized declaration and its lexical parents
-  /// (token-based dominion, P3589R2 s2.4p3).
-  bool InProfileFinalizationCheck = false;
-
-  bool isProfileEnforced(StringRef ProfileName) const;
-
-  /// True if any entry of \p Entries names an enforced profile. \p Entries is
-  /// any profile opt-in table whose elements expose a \c Name member; shared by
-  /// the post-parse dispatch gates (the CFG analysis pass guard and the
-  /// finalization dispatcher).
-  template <typename Table> bool anyProfileEnforced(const Table &Entries) const {
-    return llvm::any_of(
-        Entries, [&](const auto &E) { return isProfileEnforced(E.Name); });
-  }
-
-  const ProfileEnforcement *getProfileEnforcement(StringRef ProfileName) const;
-  bool addProfileEnforcement(StringRef Name, StringRef Designator,
-                             SourceLocation Loc);
-  bool processProfilesEnforceAttr(const ParsedAttr &AL, Module *Mod,
-                                  SmallVectorImpl<StringRef> *NewNames,
-                                  SmallVectorImpl<StringRef> *NewDesignators,
-                                  SmallVectorImpl<unsigned> *NewArgumentCounts =
-                                      nullptr,
-                                  SmallVectorImpl<StringRef> *NewArgumentKeys =
-                                      nullptr,
-                                  SmallVectorImpl<StringRef> *NewArgumentValues =
-                                      nullptr,
-                                  SmallVectorImpl<unsigned> *NewArgumentKinds =
-                                      nullptr);
-
-  ProfilesSuppressAttr *makeProfilesSuppressAttr(const ParsedAttr &AL);
-
-  /// Create an implicit ProfilesSuppressAttr carrying just a profile and rule
-  /// name (no justification or arguments), for propagating an active
-  /// suppression onto a declaration.
-  ProfilesSuppressAttr *makeImplicitProfilesSuppressAttr(StringRef ProfileName,
-                                                         StringRef RuleName);
-
-  bool isProfileSuppressed(StringRef ProfileName,
-                           StringRef RuleName = "") const;
-  bool isProfileSuppressed(StringRef ProfileName, StringRef RuleName,
-                           const Decl *D) const;
-  bool isProfileSuppressed(StringRef ProfileName, StringRef RuleName,
-                           const Stmt *S, AnalysisDeclContext &AC) const;
-  bool shouldEmitProfileViolation(StringRef ProfileName, StringRef RuleName,
-                                  SourceLocation Loc);
-  bool shouldEmitProfileViolation(StringRef ProfileName, StringRef RuleName,
-                                  SourceLocation Loc, const Decl *D);
-  bool shouldEmitProfileViolation(StringRef ProfileName, StringRef RuleName,
-                                  const Stmt *UseStmt,
-                                  AnalysisDeclContext &AC) const;
-  bool checkProfileViolation(StringRef ProfileName, StringRef RuleName,
-                             SourceLocation Loc, unsigned DiagID);
-
-  /// std::init / uninit_decl (R2, paper §4.2): diagnose an automatic variable
-  /// definition that leaves the object (or a scalar subobject) indeterminate
-  /// without an acknowledging [[uninit]] marker. Called from
-  /// \c ActOnUninitializedDecl after default-initialization is attempted.
-  void checkInitProfileUninitDecl(const VarDecl *Var);
-
-  /// std::init / static_marker (paper §3, §4.2): diagnose [[uninit]] on a
-  /// static or thread-storage variable, which is zero-initialized by language
-  /// rule and therefore an initialized object. Called from
-  /// \c ActOnUninitializedDecl.
-  void checkInitProfileStaticMarker(const VarDecl *Var);
-
-  /// std::init / static_runtime_init (paper §3): diagnose a non-local static
-  /// whose initialization needs a runtime constructor. \p CheckConstInit
-  /// lazily evaluates whether the initializer is constant (trivial
-  /// default-init counts as constant here). Returns true if the diagnostic
-  /// was emitted, in which case the caller skips -Wglobal-constructors.
-  bool
-  checkInitProfileStaticRuntimeInit(const VarDecl *Var,
-                                    llvm::function_ref<bool()> CheckConstInit);
-
-  /// std::init / uninit_with_initializer (R4): diagnose \p D if it is both
-  /// marked [[uninit]] and has an initializer. Shared by the variable
-  /// (\c CheckCompleteVariableDeclaration) and non-static data member
-  /// (\c ActOnFinishCXXInClassMemberInitializer) paths. \p Init is the
-  /// (possibly null) initializer; a RecoveryExpr placeholder for a failed
-  /// initialization does not count as a user-written initializer.
-  void checkInitProfileUninitWithInitializer(const ValueDecl *D,
-                                             const Expr *Init);
-
-  /// True if default-initialization of \p T would leave at least one scalar
-  /// subobject with an indeterminate value. Shared by the std::init rules
-  /// uninit_decl (at the variable declaration), ctor_uninit_member (for a
-  /// class-typed member), and uninit_with_initializer. A class with a
-  /// user-provided default constructor is trusted (that constructor is checked
-  /// at its own definition). Dependent and incomplete types are treated as
-  /// determinate.
-  ///
-  /// When \p HonorUninitMarkers is true, a data member marked [[uninit]]
-  /// is treated as acknowledged and skipped, so a type whose only indeterminate
-  /// scalars are all marked is reported as determinate. uninit_decl and
-  /// ctor_uninit_member pass true (the marker excuses the member, paper §6.2);
-  /// uninit_with_initializer passes false because it needs the factual answer
-  /// (whether the default-initialization is genuinely a no-op).
-  bool defaultInitLeavesScalarIndeterminate(QualType T,
-                                            bool HonorUninitMarkers = false);
-
-  /// If \p E (stripped of parens and implicit casts) directly names a
-  /// declaration -- a DeclRefExpr or a MemberExpr -- return that declaration;
-  /// otherwise null. The std::init checks read [[ref_to_uninit]] /
-  /// [[uninit]] markers only off a directly named entity.
-  static const ValueDecl *getDirectlyNamedDecl(const Expr *E);
-
-  /// std::init / ref_to_uninit (paper §5): true only if \p E is affirmatively
-  /// recognized as referring to (for a pointer source) or, when \p IsReference,
-  /// denoting (for a glvalue source) uninitialized storage. Recognized purely
-  /// locally from the expression's syntactic form -- the address of, or a
-  /// subobject of, a [[uninit]] entity; a value of a [[ref_to_uninit]]
-  /// pointer/reference or array; a dereference of such a pointer; a cast of such
-  /// a pointer to another pointer type, or of such a glvalue to another
-  /// reference; a call to a [[ref_to_uninit]]-returning function; or a
-  /// new-expression whose default-initialization leaves the allocated object
-  /// indeterminate (e.g. new int). A trusted-initialized source and an
-  /// unrecognized (unknown) source both return false (no flow analysis).
-  bool refersToUninitializedMemory(const Expr *E, bool IsReference) const;
-
-  /// std::init / ref_to_uninit (paper §5): check that the initialization of a
-  /// pointer or reference is consistent with its [[ref_to_uninit]] marking --
-  /// a marked target must refer to uninitialized memory, and an unmarked
-  /// target must not. Shared by the variable, data-member, assignment,
-  /// argument, and return check sites; gated by shouldEmitProfileViolation.
-  void checkRefToUninitInit(SourceLocation Loc, bool TargetIsRefToUninit,
-                            bool IsReference, const Expr *Src,
-                            const Decl *D = nullptr);
-
-  /// std::init / ref_to_uninit (paper §5): check that binding \p Src to
-  /// \p Target (a variable, data member, parameter, or function) is
-  /// consistent with the target's [[ref_to_uninit]] marking. \p T is the
-  /// bound type -- the target's type, or the return type when \p Target is a
-  /// function. No-op unless \p T is a non-dependent pointer or reference (a
-  /// dependent type defers to instantiation, where the check site re-runs
-  /// with the concrete type). \p D, when available, is the declaration used
-  /// for suppression lookup and template-pattern deferral.
-  void checkRefToUninitBinding(SourceLocation Loc, const ValueDecl *Target,
-                               QualType T, const Expr *Src,
-                               const Decl *D = nullptr);
-
-  /// std::init / uninit_read (paper §4.5): diagnose a read *through* a
-  /// [[ref_to_uninit]] pointer or reference, whose result is itself
-  /// uninitialized. Called from Sema::DefaultLvalueConversion at the single
-  /// lvalue-to-rvalue chokepoint, with \p Glvalue the operand being loaded and
-  /// \p ValueType its value type. Reuses the ref_to_uninit recognizer in
-  /// read-only mode, so a direct read of a named [[uninit]] object is left to
-  /// the flow-based uninit_read pass. A std::byte read is exempt (paper §4.5).
-  void checkRefToUninitRead(SourceLocation Loc, const Expr *Glvalue,
-                            QualType ValueType);
-
-  /// std::init / pointer_marker + union_marker (paper §4.1, §5.6): diagnose
-  /// [[uninit]] placed on a pointer, a union variable, or a union member.
-  /// \p D must already carry the UninitAttr (the marker location is taken from
-  /// it). Decl-aware via shouldEmitProfileViolation, so it defers on a
-  /// templated pattern and is re-checked on the instantiated entity.
-  void diagnoseInitUninitMarkerPlacement(const Decl *D);
-
-  class ProfileSuppressScope {
-    Sema &S;
-    unsigned Count = 0;
-
-    void push(StringRef ProfileName, StringRef RuleName);
-    void addFromDecl(const Decl *D);
-
-  public:
-    ProfileSuppressScope(Sema &S, const ParsedAttributesView &Attrs);
-    ProfileSuppressScope(Sema &S, const Decl *D,
-                         bool WalkLexicalParents = false);
-    ProfileSuppressScope(Sema &S, ArrayRef<const Attr *> Attrs);
-    ~ProfileSuppressScope();
-  };
-
   /// Determines the active Scope associated with the given declaration
   /// context.
   ///
@@ -1725,6 +1533,12 @@ public:
     return *PPCPtr;
   }
 
+  /// C++ Profiles framework (P3589R2); see SemaProfiles.h.
+  SemaProfiles &Profiles() const {
+    assert(ProfilesPtr);
+    return *ProfilesPtr;
+  }
+
   SemaPseudoObject &PseudoObject() {
     assert(PseudoObjectPtr);
     return *PseudoObjectPtr;
@@ -1816,6 +1630,7 @@ private:
   std::unique_ptr<SemaOpenCL> OpenCLPtr;
   std::unique_ptr<SemaOpenMP> OpenMPPtr;
   std::unique_ptr<SemaPPC> PPCPtr;
+  std::unique_ptr<SemaProfiles> ProfilesPtr;
   std::unique_ptr<SemaPseudoObject> PseudoObjectPtr;
   std::unique_ptr<SemaRISCV> RISCVPtr;
   std::unique_ptr<SemaSPIRV> SPIRVPtr;
@@ -6166,22 +5981,6 @@ public:
   ///        parse a class definition.
   /// \param Record The completed class.
   void CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record);
-
-  /// Dispatch class-finalization profile callbacks for a completed class.
-  /// Called from \c CheckCompletedCXXClass so parser, template instantiation,
-  /// and lambda finalization paths all reach the same hook.  Dependent,
-  /// invalid, and lambda classes are filtered out.
-  void checkProfileViolationsAtClassFinalization(CXXRecordDecl *RD);
-
-  /// Dispatch constructor-finalization profile callbacks once a constructor's
-  /// member-initializer list is complete. Called from \c ActOnMemInitializers
-  /// and \c ActOnDefaultCtorInitializers, which also serve template
-  /// instantiations (via \c InstantiateMemInitializers), so every
-  /// user-defined constructor is covered at the point its \c inits() is fully
-  /// populated -- unlike class finalization, which runs before any
-  /// constructor body is parsed. Dependent, invalid, and delegating
-  /// constructors are filtered out.
-  void checkProfileViolationsAtConstructorFinalization(CXXConstructorDecl *Ctor);
 
   /// Check that the C++ class annoated with "trivial_abi" satisfies all the
   /// conditions that are needed for the attribute to have an effect.

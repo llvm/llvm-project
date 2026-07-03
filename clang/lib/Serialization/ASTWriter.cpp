@@ -68,6 +68,7 @@
 #include "clang/Sema/IdentifierResolver.h"
 #include "clang/Sema/ObjCMethodList.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/SemaProfiles.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/Weak.h"
@@ -5321,11 +5322,11 @@ void ASTWriter::WriteRISCVIntrinsicPragmas(Sema &SemaRef) {
 void ASTWriter::WriteEnforcedProfiles(Sema &SemaRef) {
   if (WritingModule)
     return;
-  if (SemaRef.EnforcedProfiles.empty())
+  if (SemaRef.Profiles().EnforcedProfiles.empty())
     return;
 
   unsigned AbbrevID = createEnforcedProfileAbbrev(Stream, ENFORCED_PROFILES);
-  for (const auto &EP : SemaRef.EnforcedProfiles)
+  for (const auto &EP : SemaRef.Profiles().EnforcedProfiles)
     emitEnforcedProfile(Stream, AbbrevID, ENFORCED_PROFILES, EP);
 }
 

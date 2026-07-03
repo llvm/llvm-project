@@ -16,6 +16,7 @@
 #include "clang/Sema/DelayedDiagnostic.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaProfiles.h"
 #include <optional>
 
 using namespace clang;
@@ -74,7 +75,7 @@ static Attr *handleSuppressAttr(Sema &S, Stmt *St, const ParsedAttr &A,
 static Attr *handleProfilesSuppressStmtAttr(Sema &S, Stmt *St,
                                             const ParsedAttr &A,
                                             SourceRange Range) {
-  return S.makeProfilesSuppressAttr(A);
+  return S.Profiles().makeProfilesSuppressAttr(A);
 }
 
 static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,

@@ -30,6 +30,7 @@
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaProfiles.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -1604,7 +1605,7 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
           // stack. (A reference field is routed to CheckReferenceType above.)
           if (!Result.isInvalid() &&
               Entity.getKind() == InitializedEntity::EK_Member)
-            SemaRef.checkRefToUninitBinding(expr->getExprLoc(),
+            SemaRef.Profiles().checkRefToUninitBinding(expr->getExprLoc(),
                                             Entity.getDecl(), ElemType, expr);
 
           UpdateStructuredListElement(StructuredList, StructuredIndex,
@@ -1915,8 +1916,8 @@ void InitListChecker::CheckReferenceType(const InitializedEntity &Entity,
   // checkRefToUninitInit and suppression from the parse-time stack.
   if (!VerifyOnly && !Result.isInvalid() &&
       Entity.getKind() == InitializedEntity::EK_Member && Entity.getParent())
-    SemaRef.checkRefToUninitBinding(Src->getExprLoc(), Entity.getDecl(),
-                                    DeclType, Src);
+    SemaRef.Profiles().checkRefToUninitBinding(Src->getExprLoc(),
+                                               Entity.getDecl(), DeclType, Src);
 
   UpdateStructuredListElement(StructuredList, StructuredIndex, expr);
   ++Index;

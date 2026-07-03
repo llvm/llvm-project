@@ -44,6 +44,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaProfiles.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/Template.h"
@@ -4231,12 +4232,14 @@ void Sema::ActOnFinishCXXInClassMemberInitializer(Decl *D,
   // the field and its lexical parents. This does not depend on a parse-time
   // suppress scope still being active (the late-parsed NSDMI finishes parsing
   // before this finalization runs).
-  checkInitProfileUninitWithInitializer(FD, FD->getInClassInitializer());
+  Profiles().checkInitProfileUninitWithInitializer(
+      FD, FD->getInClassInitializer());
 
   // std::init / ref_to_uninit (paper §5): a pointer or reference data member
   // with a default member initializer must be bound consistently with its
   // [[ref_to_uninit]] marking.
-  checkRefToUninitBinding(FD->getLocation(), FD, FD->getType(),
+  Profiles().checkRefToUninitBinding(FD->getLocation(), FD, FD->getType(),
+                                     
                           FD->getInClassInitializer(), FD);
 }
 
@@ -4685,7 +4688,8 @@ Sema::BuildMemberInitializer(ValueDecl *Member, Expr *Init,
     // BuildMemberInitializer re-runs with the instantiated constructor as
     // CurContext, matching ctor_uninit_member.
     if (auto *Ctor = dyn_cast<CXXConstructorDecl>(CurContext))
-      checkRefToUninitBinding(IdLoc, Member, Member->getType(), Init, Ctor);
+      Profiles().checkRefToUninitBinding(IdLoc, Member, Member->getType(),
+                                         Init, Ctor);
   }
 
   if (DirectMember) {
@@ -5942,7 +5946,7 @@ void Sema::ActOnMemInitializers(Decl *ConstructorDecl,
 
   DiagnoseUninitializedFields(*this, Constructor);
 
-  checkProfileViolationsAtConstructorFinalization(Constructor);
+  Profiles().checkProfileViolationsAtConstructorFinalization(Constructor);
 }
 
 void Sema::MarkBaseAndMemberDestructorsReferenced(SourceLocation Location,
@@ -6009,7 +6013,7 @@ void Sema::ActOnDefaultCtorInitializers(Decl *CDtorDecl) {
     }
     SetCtorInitializers(Constructor, /*AnyErrors=*/false);
     DiagnoseUninitializedFields(*this, Constructor);
-    checkProfileViolationsAtConstructorFinalization(Constructor);
+    Profiles().checkProfileViolationsAtConstructorFinalization(Constructor);
   }
 }
 
@@ -7046,151 +7050,6 @@ ReportOverrides(Sema &S, unsigned DiagID, const CXXMethodDecl *MD,
   return IssuedDiagnostic;
 }
 
-namespace {
-// Row for the unified finalization dispatch shared by class-finalization
-// (pattern 3) and constructor-finalization (pattern 4): a profile name plus a
-// callback invoked once per finalized, non-dependent, non-invalid Node (a
-// CXXRecordDecl or a CXXConstructorDecl). Adding a new profile is a single row
-// in the matching table below plus a ProfileRuleError diagnostic in
-// DiagnosticSemaKinds.td and a callback that consults
-// Sema::shouldEmitProfileViolation before emitting.
-template <class Node> struct FinalizationProfile {
-  StringRef Name;
-  void (*Callback)(Sema &, Node *);
-};
-
-void runTestClassFinalCallback(Sema &S, CXXRecordDecl *RD) {
-  if (!S.shouldEmitProfileViolation("test::class_final", /*Rule=*/"",
-                                    RD->getLocation(), RD))
-    return;
-  S.Diag(RD->getLocation(), diag::err_profile_class_final_test)
-      << "test::class_final" << RD;
-}
-
-void runTestCtorFinalCallback(Sema &S, CXXConstructorDecl *Ctor) {
-  if (!S.shouldEmitProfileViolation("test::ctor_final", /*Rule=*/"",
-                                    Ctor->getLocation(), Ctor))
-    return;
-  S.Diag(Ctor->getLocation(), diag::err_profile_ctor_final_test)
-      << "test::ctor_final" << Ctor->getParent();
-}
-
-void runStdInitCtorUninitMemberCallback(Sema &S, CXXConstructorDecl *Ctor) {
-  // Paper §6.1: a user-provided constructor must initialize every member via
-  // its member-initializer list or an NSDMI, unless the member is marked
-  // [[uninit]] (whose body initialization is the deferred R7 check).
-  // A plain assignment in the constructor body does not count.
-  if (!Ctor->isUserProvided())
-    return;
-
-  // A union's members are mutually exclusive; a constructor initializes at most
-  // one, so the "every member" rule does not apply (paper §6.5). Whether the
-  // active member is set is a constructor-body flow question, deferred.
-  if (Ctor->getParent()->isUnion())
-    return;
-
-  // Members and direct bases given a written initializer by this constructor.
-  llvm::SmallPtrSet<const FieldDecl *, 8> Written;
-  llvm::SmallPtrSet<const Type *, 4> WrittenBases;
-  for (const CXXCtorInitializer *Init : Ctor->inits()) {
-    if (!Init->isWritten())
-      continue;
-    if (Init->isAnyMemberInitializer()) {
-      if (const FieldDecl *F = Init->getAnyMember())
-        Written.insert(F);
-    } else if (Init->isBaseInitializer()) {
-      if (const Type *T = Init->getBaseClass())
-        WrittenBases.insert(
-            S.Context.getCanonicalType(QualType(T, 0)).getTypePtr());
-    }
-  }
-
-  for (const FieldDecl *F : Ctor->getParent()->fields()) {
-    // Anonymous aggregate members and unnamed bit-fields are skipped; a named
-    // bit-field is checked like any other member. Reference and const members
-    // already have dedicated diagnostics when left uninitialized.
-    if (F->isUnnamedBitField() || !F->getDeclName() ||
-        F->getType()->isReferenceType() || F->getType().isConstQualified())
-      continue;
-    if (F->hasAttr<UninitAttr>() || F->hasInClassInitializer() ||
-        Written.count(F))
-      continue;
-    if (!S.defaultInitLeavesScalarIndeterminate(F->getType(),
-                                                /*HonorUninitMarkers=*/true))
-      continue;
-    if (!S.shouldEmitProfileViolation("std::init", "ctor_uninit_member",
-                                      Ctor->getLocation(), Ctor))
-      continue;
-    S.Diag(Ctor->getLocation(), diag::err_init_ctor_uninit_member)
-        << "std::init" << F->getDeclName();
-    S.Diag(F->getLocation(), diag::note_init_uninit_member_here)
-        << F->getDeclName();
-  }
-
-  // The guarantee is over the complete object (paper §5.1, §7.1), so a
-  // direct base-class subobject left indeterminate is as much a violation as a
-  // member. A base cannot carry an [[uninit]] marker (the attribute's subjects
-  // are Var/Field), so an indeterminate base must always be initialized -- there
-  // is no marker escape. Virtual bases are the most-derived constructor's
-  // responsibility, not a local property of this constructor, so they are
-  // deferred. A written base-initializer initializes the base; an implicit
-  // (non-written) one is default-init, handled by the indeterminate check.
-  for (const CXXBaseSpecifier &Base : Ctor->getParent()->bases()) {
-    if (Base.isVirtual())
-      continue;
-    if (WrittenBases.count(
-            S.Context.getCanonicalType(Base.getType()).getTypePtr()))
-      continue;
-    if (!S.defaultInitLeavesScalarIndeterminate(Base.getType(),
-                                                /*HonorUninitMarkers=*/true))
-      continue;
-    if (!S.shouldEmitProfileViolation("std::init", "ctor_uninit_member",
-                                      Ctor->getLocation(), Ctor))
-      continue;
-    S.Diag(Ctor->getLocation(), diag::err_init_ctor_uninit_base)
-        << "std::init" << Base.getType();
-    S.Diag(Base.getBeginLoc(), diag::note_init_uninit_base_here)
-        << Base.getType();
-  }
-}
-
-// Class-finalization opt-in table (pattern 3).
-constexpr FinalizationProfile<CXXRecordDecl> ClassFinalizationProfiles[] = {
-    {"test::class_final", &runTestClassFinalCallback},
-};
-
-// Constructor-finalization opt-in table (pattern 4).
-constexpr FinalizationProfile<CXXConstructorDecl>
-    ConstructorFinalizationProfiles[] = {
-        {"test::ctor_final", &runTestCtorFinalCallback},
-        {"std::init", &runStdInitCtorUninitMemberCallback},
-};
-
-// Run the enforced finalization-profile callbacks in Table for D. Merges the
-// former per-node dispatchers; the per-node filter (dependent, lambda,
-// delegating, ...) stays at each call site. Each callback passes D to the
-// Decl-aware Sema::shouldEmitProfileViolation, which honors [[profiles::suppress]]
-// on D or a lexical parent, so the dispatcher needs no suppress scope of its
-// own. The table is taken by reference-to-array, not ArrayRef: deducing Node
-// from a C array against an ArrayRef<FinalizationProfile<Node>> parameter is not
-// possible (no array-to-ArrayRef conversion happens during template argument
-// deduction).
-template <class Node, std::size_t N>
-void dispatchFinalizationProfiles(Sema &S, Node *D,
-                                  const FinalizationProfile<Node> (&Table)[N]) {
-  if (!S.anyProfileEnforced(Table))
-    return;
-  // Finalization can run nested in an unrelated instantiation whose
-  // [[profiles::suppress]] scope is still on the parse-time stack; the callbacks
-  // must resolve suppression only from D and its lexical parents, not that
-  // transient stack (P3589R2 s2.4p3).
-  llvm::SaveAndRestore<bool> InFinalization(S.InProfileFinalizationCheck, true);
-  for (const auto &E : Table)
-    if (S.isProfileEnforced(E.Name))
-      E.Callback(S, D);
-}
-} // namespace
-
 void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
   if (!Record)
     return;
@@ -7611,27 +7470,7 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
   CheckMismatchedTypeAwareAllocators(OO_New, OO_Delete);
   CheckMismatchedTypeAwareAllocators(OO_Array_New, OO_Array_Delete);
 
-  checkProfileViolationsAtClassFinalization(Record);
-}
-
-void Sema::checkProfileViolationsAtClassFinalization(CXXRecordDecl *RD) {
-  if (!getLangOpts().Profiles || !RD)
-    return;
-  if (RD->isInvalidDecl() || RD->isDependentType() || RD->isLambda())
-    return;
-  dispatchFinalizationProfiles(*this, RD, ClassFinalizationProfiles);
-}
-
-void Sema::checkProfileViolationsAtConstructorFinalization(
-    CXXConstructorDecl *Ctor) {
-  if (!getLangOpts().Profiles || !Ctor)
-    return;
-  // A dependent constructor pattern re-fires on instantiation; a delegating
-  // constructor leaves member initialization to its target.
-  if (Ctor->isInvalidDecl() || Ctor->isDependentContext() ||
-      Ctor->isDelegatingConstructor())
-    return;
-  dispatchFinalizationProfiles(*this, Ctor, ConstructorFinalizationProfiles);
+  Profiles().checkProfileViolationsAtClassFinalization(Record);
 }
 
 /// Look up the special member function that would be called by a special

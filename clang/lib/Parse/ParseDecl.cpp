@@ -27,6 +27,7 @@
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaProfiles.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaObjC.h"
@@ -2136,7 +2137,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
   ParsedAttributes LocalAttrs(AttrFactory);
   LocalAttrs.takeAllPrependingFrom(Attrs);
 
-  Sema::ProfileSuppressScope ProfileSuppressGuard(Actions, LocalAttrs);
+  SemaProfiles::ProfileSuppressScope ProfileSuppressGuard(Actions, LocalAttrs);
 
   ParsingDeclarator D(*this, DS, LocalAttrs, Context);
   if (TemplateInfo.TemplateParams)
@@ -2585,7 +2586,7 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
   SemaCUDA::CUDATargetContextRAII X(Actions.CUDA(),
                                     SemaCUDA::CTCK_InitGlobalVar, ThisDecl);
 
-  Sema::ProfileSuppressScope ProfileSuppressForInit(Actions, ThisDecl);
+  SemaProfiles::ProfileSuppressScope ProfileSuppressForInit(Actions, ThisDecl);
 
   switch (TheInitKind) {
   // Parse declarator '=' initializer.

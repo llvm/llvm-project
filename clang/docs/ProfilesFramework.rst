@@ -28,8 +28,8 @@ violation.
 The framework is profile-agnostic.  It handles attribute parsing, enforcement
 tracking, suppression scoping, module integration, and serialization.
 Individual profiles only need to call a single API at the appropriate semantic
-check sites (``Sema::checkProfileViolation`` for parse-time checks, or
-``Sema::shouldEmitProfileViolation`` from a per-pass dispatch table for
+check sites (``SemaProfiles::checkProfileViolation`` for parse-time checks, or
+``SemaProfiles::shouldEmitProfileViolation`` from a per-pass dispatch table for
 post-parse analyses).  Everything else -- suppression, template instantiation,
 SFINAE exclusion, module propagation, and PCH/BMI serialization -- is handled
 by the framework automatically.
@@ -65,7 +65,7 @@ flag, which sets ``LangOpts.ProfilesTestProfiles``.  This flag is ``-cc1``-only
 (not exposed by the driver) and is intended solely for running the test suite.
 Under ``-fprofiles`` alone, ``[[profiles::enforce(test::...)]]`` is still
 recognized (it is not ``warn_attribute_ignored``) and its designator is still
-recorded and exported across modules, but ``Sema::isProfileEnforced`` reports
+recorded and exported across modules, but ``SemaProfiles::isProfileEnforced`` reports
 any ``test::``-prefixed profile as not enforced, so no ``test::`` rule ever
 fires.  Real profiles such as ``std::init`` are unaffected by this flag.
 
@@ -160,7 +160,7 @@ Used when the rule can be checked at a single, well-defined parse-time site
 in Sema (typically inside a ``Sema::Build*`` or ``Sema::Act*`` routine).
 ``test::type_cast`` is the in-tree example.
 
-At each such site, call ``Sema::checkProfileViolation``:
+At each such site, call ``SemaProfiles::checkProfileViolation``:
 
 .. code-block:: c++
 
@@ -225,7 +225,7 @@ framework intentionally does not learn the profile name).
    normally run only when their corresponding warning flag is enabled.  To
    run the pass for an enforced profile even when the underlying warning is
    silenced, OR an ``S.anyProfileEnforced(Table)`` check (the shared
-   ``Sema::anyProfileEnforced`` gate, also used by the finalization dispatch)
+   ``SemaProfiles::anyProfileEnforced`` gate, also used by the finalization dispatch)
    into the existing pass guard.  The in-tree example's pass guard becomes
    ``hasEnforcedCFGUninitProfile() || !Diags.isIgnored(...)`` (a small
    accessor over ``S.anyProfileEnforced(CFGUninitProfiles)``).
@@ -233,7 +233,7 @@ framework intentionally does not learn the profile name).
 3. **Walk the table in the analysis's diagnostic reporter.**
    For each use site the analysis would have warned about, iterate the
    table and call
-   ``Sema::shouldEmitProfileViolation(name, rule, Stmt*, AnalysisDeclContext&)``,
+   ``SemaProfiles::shouldEmitProfileViolation(name, rule, Stmt*, AnalysisDeclContext&)``,
    which walks parent statements and lexical declaration contexts to honor
    ``[[profiles::suppress]]`` on enclosing AST nodes (the post-parse
    counterpart to ``ProfileSuppressStack``).  Emit the entry's diagnostic
@@ -276,7 +276,7 @@ the class definition is complete -- for example, "every non-private field of
 this class must satisfy property X" or "this class's field set must look
 like Y."  ``test::class_final`` is the in-tree example.
 
-The dispatch point is ``Sema::checkProfileViolationsAtClassFinalization``,
+The dispatch point is ``SemaProfiles::checkProfileViolationsAtClassFinalization``,
 called from the end of ``Sema::CheckCompletedCXXClass`` in
 ``clang/lib/Sema/SemaDeclCXX.cpp``.  ``CheckCompletedCXXClass`` is the
 single function reached from every class-completion path -- the parser
@@ -297,7 +297,7 @@ are not meant to see:
 This pattern needs two pieces, both colocated with the dispatcher.
 
 1. **Add the profile to the class-finalization opt-in table.**
-   ``ClassFinalizationProfiles`` in ``clang/lib/Sema/SemaDeclCXX.cpp`` is a
+   ``ClassFinalizationProfiles`` in ``clang/lib/Sema/SemaProfiles.cpp`` is a
    small per-pass table of profile name plus callback.  One row per profile:
 
    .. code-block:: c++
@@ -329,7 +329,7 @@ This pattern needs two pieces, both colocated with the dispatcher.
    resolved only from the declaration and its lexical parents.
 
 2. **Emit diagnostics from the callback via**
-   ``Sema::shouldEmitProfileViolation``.  Each callback decides where on
+   ``SemaProfiles::shouldEmitProfileViolation``.  Each callback decides where on
    the class to point and which diagnostic to use, possibly with notes:
 
    .. code-block:: c++
@@ -366,7 +366,7 @@ constructor's complete member-initializer list -- for example, "every member
 must be initialized by this constructor."  ``test::ctor_final`` is the in-tree
 example, and the ``std::init`` ``ctor_uninit_member`` rule is the real one.
 
-The dispatch point is ``Sema::checkProfileViolationsAtConstructorFinalization``,
+The dispatch point is ``SemaProfiles::checkProfileViolationsAtConstructorFinalization``,
 called right after ``DiagnoseUninitializedFields`` in
 ``Sema::ActOnMemInitializers`` and ``Sema::ActOnDefaultCtorInitializers`` in
 ``clang/lib/Sema/SemaDeclCXX.cpp``.  Those two functions are the funnel for
@@ -390,7 +390,7 @@ The two pieces mirror pattern 3 and share its machinery: a per-pass opt-in
 table ``ConstructorFinalizationProfiles`` of the same
 ``FinalizationProfile<Node>`` row (here
 ``FinalizationProfile<CXXConstructorDecl>``), and a callback that emits via
-``Sema::shouldEmitProfileViolation``.  The same shared
+``SemaProfiles::shouldEmitProfileViolation``.  The same shared
 ``dispatchFinalizationProfiles`` dispatcher invokes each callback, which
 passes the ``CXXConstructorDecl`` to the decl-aware
 ``shouldEmitProfileViolation`` overload; that overload walks the declaration
@@ -526,7 +526,7 @@ Serialization
 The framework serializes enforcement state automatically.  Profile implementers
 do not need to add any serialization code.
 
-- **PCH**: ``Sema::EnforcedProfiles`` is written as ``ENFORCED_PROFILES``
+- **PCH**: ``SemaProfiles::EnforcedProfiles`` is written as ``ENFORCED_PROFILES``
   records in the AST bitstream and restored when the PCH is loaded.
 - **Module BMI**: ``Module::EnforcedProfileDesignators`` is written as
   ``SUBMODULE_ENFORCED_PROFILES`` records within each submodule block.
@@ -575,7 +575,7 @@ By convention:
 - Real test profiles live under the ``test::`` namespace.  Today there are
   four: ``test::type_cast``, ``test::uninit_read``, ``test::class_final``,
   and ``test::ctor_final``.  Because the ``test::`` prefix is what
-  ``Sema::isProfileEnforced`` keys on to gate them behind
+  ``SemaProfiles::isProfileEnforced`` keys on to gate them behind
   ``-fprofiles-test-profiles``, any new test-only profile must also live
   under ``test::``.
 - The names ``test::other``, ``test::bounds``, ``test::new_profile``, and
@@ -626,7 +626,7 @@ CFG-based uninitialized-variables analysis.
   runs even when ``-Wuninitialized`` is silenced, and
   ``UninitValsDiagReporter::diagnoseUnitializedVar`` walks it *before* the
   default warning path -- when an entry's
-  ``Sema::shouldEmitProfileViolation`` returns true the entry's diagnostic
+  ``SemaProfiles::shouldEmitProfileViolation`` returns true the entry's diagnostic
   fires and the default warning is skipped entirely.
 
 The Stmt-tree suppression walker is what makes ``[[profiles::suppress]]``
@@ -647,7 +647,7 @@ class-finalization dispatch in ``Sema::CheckCompletedCXXClass``.
 - **Diagnostic**: ``err_profile_class_final_test`` ("test profile fired on
   completion of class %1 under profile '%0'").
 - **Opt-in table**: ``ClassFinalizationProfiles`` in
-  ``clang/lib/Sema/SemaDeclCXX.cpp``.
+  ``clang/lib/Sema/SemaProfiles.cpp``.
 
 Because dependent classes are filtered out by the dispatcher, the
 diagnostic fires on class template *instantiations* rather than on the
@@ -669,7 +669,7 @@ member-initializer list is complete.
 - **Diagnostic**: ``err_profile_ctor_final_test`` ("test profile fired on
   finalization of a constructor for class %1 under profile '%0'").
 - **Opt-in table**: ``ConstructorFinalizationProfiles`` in
-  ``clang/lib/Sema/SemaDeclCXX.cpp``.
+  ``clang/lib/Sema/SemaProfiles.cpp``.
 
 The diagnostic fires once per user-defined constructor -- written or implicit
 member-initializer list, inline or out-of-line -- and on constructor template
@@ -846,7 +846,7 @@ variable is instead rejected by ``static_marker`` (R9)).
   with no initializer (so braced or value initialization such as
   ``S s = {1};`` and ``S s{};`` is unaffected -- omitted aggregate members
   are value-initialized).
-- The aggregate case uses ``Sema::defaultInitLeavesScalarIndeterminate``
+- The aggregate case uses ``SemaProfiles::defaultInitLeavesScalarIndeterminate``
   with ``HonorUninitMarkers=true``, which recurses through bases and members,
   trusts user-provided default constructors, and skips data members marked
   ``[[uninit]]`` (acknowledged uninitialized, paper §5.3). So a type
@@ -875,7 +875,7 @@ R4. ``uninit_with_initializer`` -- pattern 1
 contradiction (the marker means "no initialization here").
 
 - Diagnostic: ``err_init_uninit_with_initializer``.
-- Check site: ``Sema::checkInitProfileUninitWithInitializer``, shared by
+- Check site: ``SemaProfiles::checkInitProfileUninitWithInitializer``, shared by
   ``Sema::CheckCompleteVariableDeclaration`` (variables) and
   ``Sema::ActOnFinishCXXInClassMemberInitializer`` (data members with a
   default member initializer).
@@ -955,7 +955,7 @@ assignment when compiled without the profile.
    [[profiles::suppress(std::init)]] U e [[uninit]];  // OK
 
 - Diagnostic: ``err_init_union_marker``.
-- Check site: the shared helper ``Sema::diagnoseInitUninitMarkerPlacement``,
+- Check site: the shared helper ``SemaProfiles::diagnoseInitUninitMarkerPlacement``,
   called from the ``Uninit`` handler in ``clang/lib/Sema/SemaDeclAttr.cpp`` and
   re-run on the instantiated entity from ``VisitFieldDecl`` / ``VisitVarDecl``
   in ``clang/lib/Sema/SemaTemplateInstantiateDecl.cpp``.  Unlike the reference /
@@ -969,7 +969,7 @@ assignment when compiled without the profile.
   acknowledged and do not emit a second, contradictory diagnostic.
 
 An *unmarked* union left uninitialized is itself the error (paper §5.6):
-``Sema::defaultInitLeavesScalarIndeterminate`` reports a union as indeterminate
+``SemaProfiles::defaultInitLeavesScalarIndeterminate`` reports a union as indeterminate
 unless it has no members, a user-provided default constructor, or a default
 member initializer.  A uninitialized union variable is therefore diagnosed by
 ``uninit_decl`` (with the union-specific ``err_init_uninit_union``) and an
@@ -1006,13 +1006,13 @@ recognizers symmetric.
 - Diagnostics: ``err_init_ref_to_uninit_requires_uninit`` (marked target,
   initialized source) and ``err_init_uninit_requires_ref_to_uninit`` (unmarked
   target, uninitialized source).
-- Recognizer + shared check: ``Sema::refersToUninitializedMemory`` and
-  ``Sema::checkRefToUninitInit`` in ``clang/lib/Sema/SemaDecl.cpp``.
+- Recognizer + shared check: ``SemaProfiles::refersToUninitializedMemory`` and
+  ``SemaProfiles::checkRefToUninitInit`` in ``clang/lib/Sema/SemaProfiles.cpp``.
 - A ``new`` expression is recognised only when it default-initializes its
   object (none init style, no written initializer); ``new T(...)`` and
   ``new T{...}`` are value- or list-initialized and excluded.  Whether the
   allocated type leaves a scalar indeterminate reuses
-  ``Sema::defaultInitLeavesScalarIndeterminate`` (R2), so a ``T`` with a
+  ``SemaProfiles::defaultInitLeavesScalarIndeterminate`` (R2), so a ``T`` with a
   user-provided default constructor is trusted and the ``std::byte`` exemption
   is inherited.  ``getAllocatedType`` yields the element type, so array
   ``new`` (``new int[n]``) is handled uniformly.
@@ -1044,7 +1044,7 @@ recognizers symmetric.
 - Read-through enforcement (paper §4.5): a scalar *read* through a
   ``[[ref_to_uninit]]`` pointer or reference loads an uninitialized value and is
   diagnosed at the single lvalue-to-rvalue chokepoint
-  (``Sema::DefaultLvalueConversion`` calling ``Sema::checkRefToUninitRead``),
+  (``Sema::DefaultLvalueConversion`` calling ``SemaProfiles::checkRefToUninitRead``),
   which by-value reads -- copy-initialization, by-value arguments, returns, and
   operator/condition operands -- all funnel through.  It reuses the recognizer
   in a read-only mode (a ``ForRead`` flag that drops the directly-named
@@ -1098,7 +1098,7 @@ A pointer must instead be initialized (e.g. to ``nullptr``).
    [[profiles::suppress(std::init, rule: "pointer_marker")]] int *x [[uninit]];  // OK
 
 - Diagnostic: ``err_init_uninit_pointer_marker``.
-- Check site: ``Sema::diagnoseInitUninitMarkerPlacement``, alongside
+- Check site: ``SemaProfiles::diagnoseInitUninitMarkerPlacement``, alongside
   ``union_marker`` (see R6 for the shared parse-time handler and the
   re-check on the instantiated field / variable).  Like that rule it is gated on
   enforcement -- a pointer may legitimately carry the marker without the profile

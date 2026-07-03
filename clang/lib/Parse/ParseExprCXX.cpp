@@ -24,6 +24,7 @@
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaProfiles.h"
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1484,7 +1485,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
 
   StmtResult Stmt;
   {
-    Sema::ProfileSuppressScope ProfileSuppressGuard(
+    SemaProfiles::ProfileSuppressScope ProfileSuppressGuard(
         Actions, Actions.getCurLambda()->CallOperator);
     Stmt = ParseCompoundStatementBody();
   }

@@ -28,6 +28,7 @@
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaProfiles.h"
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -207,7 +208,7 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
       getCurScope(), InlineLoc, NamespaceLoc, IdentLoc, Ident,
       T.getOpenLocation(), attrs, ImplicitUsingDirectiveDecl, false);
 
-  Sema::ProfileSuppressScope ProfileSuppressGuard(Actions, NamespcDecl);
+  SemaProfiles::ProfileSuppressScope ProfileSuppressGuard(Actions, NamespcDecl);
 
   PrettyDeclStackTraceEntry CrashInfo(Actions.Context, NamespcDecl,
                                       NamespaceLoc, "parsing namespace");
@@ -258,7 +259,7 @@ void Parser::ParseInnerNamespace(const InnerNamespaceInfoList &InnerNSs,
   assert(!ImplicitUsingDirectiveDecl &&
          "nested namespace definition cannot define anonymous namespace");
 
-  Sema::ProfileSuppressScope ProfileSuppressGuard(Actions, NamespcDecl);
+  SemaProfiles::ProfileSuppressScope ProfileSuppressGuard(Actions, NamespcDecl);
 
   ParseInnerNamespace(InnerNSs, ++index, InlineLoc, attrs, Tracker);
 
@@ -3275,7 +3276,7 @@ ExprResult Parser::ParseCXXMemberInitializer(Decl *D, bool IsFunction,
           : Sema::ExpressionEvaluationContext::PotentiallyEvaluated,
       D);
 
-  Sema::ProfileSuppressScope ProfileSuppressGuard(Actions, D,
+  SemaProfiles::ProfileSuppressScope ProfileSuppressGuard(Actions, D,
                                                   /*WalkLexicalParents=*/true);
 
   // CWG2760
@@ -3665,7 +3666,7 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
                                             IsFinalSpelledSealed, IsAbstract,
                                             T.getOpenLocation());
 
-  Sema::ProfileSuppressScope ProfileSuppressGuard(Actions, TagDecl);
+  SemaProfiles::ProfileSuppressScope ProfileSuppressGuard(Actions, TagDecl);
 
   // C++ 11p3: Members of a class defined with the keyword class are private
   // by default. Members of a class defined with the keywords struct or union

@@ -24,6 +24,7 @@
 #include "clang/Sema/SemaARM.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaProfiles.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaSYCL.h"
 #include "clang/Sema/Template.h"
@@ -1506,9 +1507,10 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
   // that generic lambda instantiation (which walks lexical Decl parents, not
   // the enclosing stmt tree) can recover them.
   if (getLangOpts().Profiles)
-    for (const auto &E : ProfileSuppressStack)
+    for (const auto &E : Profiles().ProfileSuppressStack)
       Method->addAttr(
-          makeImplicitProfilesSuppressAttr(E.ProfileName, E.RuleName));
+          Profiles().makeImplicitProfilesSuppressAttr(E.ProfileName,
+                                                      E.RuleName));
 
   if (Context.getTargetInfo().getTriple().isAArch64())
     ARM().CheckSMEFunctionDefAttributes(Method);

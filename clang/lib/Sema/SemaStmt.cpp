@@ -33,6 +33,7 @@
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaProfiles.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
@@ -4120,7 +4121,7 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
   // must match the function's [[ref_to_uninit]] return marking.
   if (RetValExp && getLangOpts().Profiles)
     if (const FunctionDecl *FD = getCurFunctionDecl())
-      checkRefToUninitBinding(RetValExp->getExprLoc(), FD, FnRetType,
+      Profiles().checkRefToUninitBinding(RetValExp->getExprLoc(), FD, FnRetType,
                               RetValExp);
 
   const VarDecl *NRVOCandidate = getCopyElisionCandidate(NRInfo, FnRetType);

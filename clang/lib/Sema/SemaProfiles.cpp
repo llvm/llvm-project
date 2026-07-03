@@ -1,0 +1,1027 @@
+//===----- SemaProfiles.cpp --- C++ profiles framework --------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+/// \file
+/// This file implements semantic analysis for the C++ profiles framework
+/// (P3589R2) and the built-in std::init initialization profile (P4222R1.1):
+/// profile enforcement and suppression state, the shared violation gate, and
+/// the parse-time std::init rule checks. The CFG-based std::init checks live
+/// in AnalysisBasedWarnings.cpp.
+///
+//===----------------------------------------------------------------------===//
+
+#include "clang/Sema/SemaProfiles.h"
+#include "clang/AST/Attr.h"
+#include "clang/AST/DeclCXX.h"
+#include "clang/AST/ExprCXX.h"
+#include "clang/AST/ParentMap.h"
+#include "clang/Analysis/AnalysisDeclContext.h"
+#include "clang/Basic/Module.h"
+#include "clang/Sema/Attr.h"
+#include "clang/Sema/ParsedAttr.h"
+#include "clang/Sema/Sema.h"
+#include "llvm/Support/SaveAndRestore.h"
+
+using namespace clang;
+
+SemaProfiles::SemaProfiles(Sema &S) : SemaBase(S) {}
+
+
+bool SemaProfiles::isProfileEnforced(StringRef ProfileName) const {
+  if (!getLangOpts().Profiles)
+    return false;
+  // The built-in test:: profiles only exercise the framework; keep them inert
+  // unless the test suite opts in via -fprofiles-test-profiles.
+  if (!getLangOpts().ProfilesTestProfiles && ProfileName.starts_with("test::"))
+    return false;
+  return getProfileEnforcement(ProfileName) != nullptr;
+}
+
+const SemaProfiles::ProfileEnforcement *
+SemaProfiles::getProfileEnforcement(StringRef ProfileName) const {
+  for (const auto &E : EnforcedProfiles)
+    if (E.ProfileName == ProfileName)
+      return &E;
+  return nullptr;
+}
+
+bool SemaProfiles::addProfileEnforcement(StringRef Name, StringRef Designator,
+                                 SourceLocation Loc) {
+  if (const auto *Existing = getProfileEnforcement(Name)) {
+    if (Existing->Designator != Designator) {
+      Diag(Loc, diag::err_profiles_enforce_mismatch) << Name;
+      Diag(Existing->EnforceLoc, diag::note_previous_attribute);
+      return false;
+    }
+    return true;
+  }
+  EnforcedProfiles.push_back({{Name.str(), Designator.str()}, Loc});
+  return true;
+}
+
+// Unzip profile arguments into the parallel key/value/kind arrays that the
+// semantic attributes store (Attr.td cannot hold structured arguments).
+static void unzipProfileArguments(ArrayRef<profiles::ProfileArgument> Arguments,
+                                  SmallVectorImpl<StringRef> &Keys,
+                                  SmallVectorImpl<StringRef> &Values,
+                                  SmallVectorImpl<unsigned> &Kinds) {
+  for (const auto &Arg : Arguments) {
+    Keys.push_back(Arg.Key);
+    Values.push_back(Arg.Value);
+    Kinds.push_back(static_cast<unsigned>(Arg.Kind));
+  }
+}
+
+static void appendProfileArgumentData(
+    ArrayRef<profiles::ProfileArgument> Arguments,
+    SmallVectorImpl<unsigned> *ArgumentCounts,
+    SmallVectorImpl<StringRef> *ArgumentKeys,
+    SmallVectorImpl<StringRef> *ArgumentValues,
+    SmallVectorImpl<unsigned> *ArgumentKinds) {
+  if (!ArgumentCounts)
+    return;
+
+  assert(ArgumentKeys && ArgumentValues && ArgumentKinds);
+  ArgumentCounts->push_back(Arguments.size());
+  unzipProfileArguments(Arguments, *ArgumentKeys, *ArgumentValues,
+                        *ArgumentKinds);
+}
+
+bool SemaProfiles::processProfilesEnforceAttr(
+    const ParsedAttr &AL, Module *Mod, SmallVectorImpl<StringRef> *NewNames,
+    SmallVectorImpl<StringRef> *NewDesignators,
+    SmallVectorImpl<unsigned> *NewArgumentCounts,
+    SmallVectorImpl<StringRef> *NewArgumentKeys,
+    SmallVectorImpl<StringRef> *NewArgumentValues,
+    SmallVectorImpl<unsigned> *NewArgumentKinds) {
+  const auto &Args = AL.getProfileEnforceArgs();
+  if (Args.Designators.empty()) {
+    Diag(AL.getLoc(), diag::err_attribute_too_few_arguments) << AL << 1;
+    return false;
+  }
+
+  for (const auto &D : Args.Designators) {
+    StringRef Name = D.Name;
+    StringRef Spelling = D.Spelling;
+
+    bool IsNew = !isProfileEnforced(Name);
+    if (!addProfileEnforcement(Name, Spelling, AL.getLoc()))
+      continue;
+
+    if (Mod && !llvm::any_of(Mod->EnforcedProfileDesignators,
+                             [&](const Module::EnforcedProfile &EP) {
+                               return EP.ProfileName == Name;
+                             }))
+      Mod->EnforcedProfileDesignators.push_back({Name.str(), Spelling.str()});
+
+    if (IsNew) {
+      if (NewNames)
+        NewNames->push_back(Name);
+      if (NewDesignators)
+        NewDesignators->push_back(Spelling);
+      appendProfileArgumentData(D.Arguments, NewArgumentCounts,
+                                NewArgumentKeys, NewArgumentValues,
+                                NewArgumentKinds);
+    }
+  }
+  return true;
+}
+
+ProfilesSuppressAttr *
+SemaProfiles::makeProfilesSuppressAttr(const ParsedAttr &AL) {
+  const auto &Args = AL.getProfileSuppressArgs();
+  if (Args.Name.empty())
+    return nullptr;
+
+  SmallVector<StringRef, 4> RawArgs;
+  for (const auto &Arg : Args.RawArguments)
+    RawArgs.push_back(Arg);
+  SmallVector<StringRef, 4> RawArgumentKeys;
+  SmallVector<StringRef, 4> RawArgumentValues;
+  SmallVector<unsigned, 4> RawArgumentKinds;
+  unzipProfileArguments(Args.Arguments, RawArgumentKeys, RawArgumentValues,
+                        RawArgumentKinds);
+
+  return ::new (getASTContext()) ProfilesSuppressAttr(
+      getASTContext(), AL, Args.Name, Args.Justification, Args.Rule,
+      RawArgs.data(), RawArgs.size(), RawArgumentKeys.data(),
+      RawArgumentKeys.size(), RawArgumentValues.data(),
+      RawArgumentValues.size(), RawArgumentKinds.data(),
+      RawArgumentKinds.size());
+}
+
+ProfilesSuppressAttr *
+SemaProfiles::makeImplicitProfilesSuppressAttr(StringRef ProfileName,
+                                       StringRef RuleName) {
+  return ProfilesSuppressAttr::CreateImplicit(
+      getASTContext(), ProfileName, /*Justification=*/"", RuleName,
+      /*RawArguments=*/nullptr, /*RawArgumentsSize=*/0,
+      /*RawArgumentKeys=*/nullptr, /*RawArgumentKeysSize=*/0,
+      /*RawArgumentValues=*/nullptr, /*RawArgumentValuesSize=*/0,
+      /*RawArgumentKinds=*/nullptr, /*RawArgumentKindsSize=*/0);
+}
+
+static bool profileSuppressMatches(StringRef EntryProfile, StringRef EntryRule,
+                                   StringRef Profile, StringRef Rule) {
+  return EntryProfile == Profile &&
+         (EntryRule.empty() || EntryRule == Rule);
+}
+
+bool SemaProfiles::isProfileSuppressed(StringRef ProfileName,
+                                StringRef RuleName) const {
+  for (const auto &E : ProfileSuppressStack)
+    if (profileSuppressMatches(E.ProfileName, E.RuleName, ProfileName,
+                               RuleName))
+      return true;
+  return false;
+}
+
+bool SemaProfiles::isProfileSuppressed(StringRef ProfileName,
+                                       StringRef RuleName,
+                                       const Decl *D) const {
+  for (; D;) {
+    for (const auto *PSA : D->specific_attrs<ProfilesSuppressAttr>())
+      if (profileSuppressMatches(PSA->getProfileName(), PSA->getRule(),
+                                 ProfileName, RuleName))
+        return true;
+    const DeclContext *DC = D->getLexicalDeclContext();
+    D = DC ? dyn_cast<Decl>(DC) : nullptr;
+  }
+  return false;
+}
+
+bool SemaProfiles::isProfileSuppressed(StringRef ProfileName,
+                                       StringRef RuleName, const Stmt *S,
+                                       AnalysisDeclContext &AC) const {
+  ParentMap &PM = AC.getParentMap();
+  for (const Stmt *Cur = S; Cur; Cur = PM.getParent(Cur)) {
+    if (const auto *AS = dyn_cast<AttributedStmt>(Cur))
+      for (const Attr *A : AS->getAttrs())
+        if (const auto *PSA = dyn_cast<ProfilesSuppressAttr>(A))
+          if (profileSuppressMatches(PSA->getProfileName(), PSA->getRule(),
+                                     ProfileName, RuleName))
+            return true;
+    // [[profiles::suppress]] on a local variable attaches to the VarDecl,
+    // not the enclosing DeclStmt. Walk the declared decls so the post-parse
+    // walker matches the parse-time ProfileSuppressForInit RAII behavior.
+    if (const auto *DS = dyn_cast<DeclStmt>(Cur))
+      for (const Decl *D : DS->decls())
+        for (const auto *PSA : D->specific_attrs<ProfilesSuppressAttr>())
+          if (profileSuppressMatches(PSA->getProfileName(), PSA->getRule(),
+                                     ProfileName, RuleName))
+            return true;
+  }
+  return isProfileSuppressed(ProfileName, RuleName, AC.getDecl());
+}
+
+bool SemaProfiles::shouldEmitProfileViolation(StringRef ProfileName,
+                                              StringRef RuleName,
+                                              SourceLocation Loc) {
+  return shouldEmitProfileViolation(ProfileName, RuleName, Loc, /*D=*/nullptr);
+}
+
+bool SemaProfiles::shouldEmitProfileViolation(StringRef ProfileName,
+                                              StringRef RuleName,
+                                              SourceLocation Loc,
+                                              const Decl *D) {
+  if (!isProfileEnforced(ProfileName))
+    return false;
+  // Honor [[profiles::suppress]] from the parse-time stack and, when a Decl is
+  // available, from the declaration and its lexical parents. The latter does
+  // not depend on a parse-time scope still being active, so finalization checks
+  // that run after the parse scope is torn down still respect suppression.
+  //
+  // Finalization callbacks skip the parse-time stack: they can fire while an
+  // unrelated entity's instantiation ProfileSuppressScope is still active, and
+  // that scope does not lexically enclose the finalized declaration (token-
+  // based dominion, P3589R2 s2.4p3). Their decl-aware walk already covers a
+  // suppression on the declaration or a lexical parent.
+  if ((!InProfileFinalizationCheck &&
+       isProfileSuppressed(ProfileName, RuleName)) ||
+      isProfileSuppressed(ProfileName, RuleName, D))
+    return false;
+  // P3589R2 Section 1.1: "its static semantic effects are as-if applied only
+  // after translation phase 7. It is not possible for a profile to change the
+  // outcome of overload resolution or template instantiation, nor is it
+  // possible to 'SFINAE out' failure of a program to satisfy a profile
+  // requirement."
+  //
+  // A templated entity is not yet a phase-7 entity, so a profile rule must fire
+  // only on its instantiation -- where D is the instantiated, non-templated
+  // declaration -- not on the template pattern. Checking the pattern too would
+  // diagnose never-instantiated templates and double-fire (once when the
+  // pattern is parsed and again at each instantiation).
+  //
+  // Decl-less expression check sites whose Build* routine is re-run at
+  // instantiation (the ref_to_uninit binding checks: call argument, pointer
+  // assignment, return) instead defer in a dependent context from their own
+  // wrapper, checkRefToUninitInit, since no Decl is available here. The
+  // [[uninit]] marker checks pass D (via diagnoseInitUninitMarkerPlacement) and
+  // are re-run on the instantiated field / variable, so they defer here too.
+  // The reinterpret_cast check still passes D == nullptr and is not re-checked
+  // at instantiation, so it keeps running once at parse time (a separate gap).
+  if (D && D->isTemplated())
+    return false;
+  if (SemaRef.isUnevaluatedContext())
+    return false;
+  if (SemaRef.currentEvaluationContext().isDiscardedStatementContext())
+    return false;
+  return true;
+}
+
+bool SemaProfiles::shouldEmitProfileViolation(StringRef ProfileName,
+                                              StringRef RuleName,
+                                              const Stmt *UseStmt,
+                                              AnalysisDeclContext &AC) const {
+  if (!isProfileEnforced(ProfileName))
+    return false;
+  if (isProfileSuppressed(ProfileName, RuleName, UseStmt, AC))
+    return false;
+  return true;
+}
+
+bool SemaProfiles::checkProfileViolation(StringRef ProfileName,
+                                         StringRef RuleName, SourceLocation Loc,
+                                         unsigned DiagID) {
+  if (!shouldEmitProfileViolation(ProfileName, RuleName, Loc))
+    return false;
+  Diag(Loc, DiagID) << ProfileName;
+  return true;
+}
+
+void SemaProfiles::ProfileSuppressScope::push(StringRef ProfileName,
+                                      StringRef RuleName) {
+  S.Profiles().ProfileSuppressStack.push_back({ProfileName, RuleName});
+  ++Count;
+}
+
+SemaProfiles::ProfileSuppressScope::ProfileSuppressScope(
+    Sema &S, const ParsedAttributesView &Attrs)
+    : S(S) {
+  if (!S.getLangOpts().Profiles)
+    return;
+  for (const auto &AL : Attrs) {
+    if (AL.getKind() != ParsedAttr::AT_ProfilesSuppress)
+      continue;
+    const auto &Args = AL.getProfileSuppressArgs();
+    if (!Args.Name.empty())
+      push(Args.Name, Args.Rule);
+  }
+}
+
+void SemaProfiles::ProfileSuppressScope::addFromDecl(const Decl *D) {
+  for (const auto *A : D->specific_attrs<ProfilesSuppressAttr>())
+    push(A->getProfileName(), A->getRule());
+}
+
+SemaProfiles::ProfileSuppressScope::ProfileSuppressScope(Sema &S, const Decl *D,
+                                                  bool WalkLexicalParents)
+    : S(S) {
+  if (!S.getLangOpts().Profiles || !D)
+    return;
+  addFromDecl(D);
+  if (WalkLexicalParents) {
+    for (const DeclContext *DC = D->getLexicalDeclContext(); DC;
+         DC = DC->getLexicalParent())
+      if (const auto *Parent = dyn_cast<Decl>(DC))
+        addFromDecl(Parent);
+  }
+}
+
+SemaProfiles::ProfileSuppressScope::ProfileSuppressScope(Sema &S,
+                                                  ArrayRef<const Attr *> Attrs)
+    : S(S) {
+  if (!S.getLangOpts().Profiles)
+    return;
+  for (const auto *A : Attrs)
+    if (const auto *PSA = dyn_cast<ProfilesSuppressAttr>(A))
+      push(PSA->getProfileName(), PSA->getRule());
+}
+
+SemaProfiles::ProfileSuppressScope::~ProfileSuppressScope() {
+  assert(S.Profiles().ProfileSuppressStack.size() >= Count);
+  S.Profiles().ProfileSuppressStack.pop_back_n(Count);
+}
+
+static bool defaultInitLeavesScalarIndeterminateImpl(
+    ASTContext &Ctx, QualType T, bool HonorUninitMarkers,
+    llvm::SmallPtrSetImpl<const CXXRecordDecl *> &Visited) {
+  if (T->isDependentType() || T->isIncompleteType())
+    return false;
+  if (const ArrayType *AT = Ctx.getAsArrayType(T))
+    return defaultInitLeavesScalarIndeterminateImpl(
+        Ctx, AT->getElementType(), HonorUninitMarkers, Visited);
+  if (T->isReferenceType())
+    return false;
+  const auto *RD = T->getAsCXXRecordDecl();
+  if (!RD)
+    // Scalars, pointers, and enums are left indeterminate by default-init,
+    // except std::byte, which the profile permits to be uninitialized
+    // (paper §4), so a std::byte subobject does not make a record
+    // indeterminate.
+    return T->isScalarType() && !T->isStdByteType();
+  if (RD->isInvalidDecl())
+    return false;
+  // A union's members are mutually exclusive, so the per-member walk below does
+  // not apply. Default-initialization leaves it without an initialized member
+  // (paper §6.5) unless it has no members, has a user-provided default
+  // constructor (trusted), or a default member initializer initializes one.
+  if (RD->isUnion()) {
+    if (RD->field_empty() || RD->hasUserProvidedDefaultConstructor())
+      return false;
+    for (const FieldDecl *F : RD->fields())
+      if (F->hasInClassInitializer())
+        return false;
+    return true;
+  }
+  // Break cycles from ill-formed self-containing types (e.g. struct S {S x;}).
+  if (!Visited.insert(RD->getCanonicalDecl()).second)
+    return false;
+  // Trust a user-provided default constructor: ctor_uninit_member checks at its
+  // definition.
+  if (RD->hasUserProvidedDefaultConstructor())
+    return false;
+  for (const CXXBaseSpecifier &Base : RD->bases())
+    if (defaultInitLeavesScalarIndeterminateImpl(Ctx, Base.getType(),
+                                                 HonorUninitMarkers, Visited))
+      return true;
+  for (const FieldDecl *F : RD->fields()) {
+    if (F->isUnnamedBitField() || F->hasInClassInitializer())
+      continue;
+    // A member the type's author marked [[uninit]] is acknowledged as
+    // intentionally uninitialized, so it does not leave an unacknowledged
+    // scalar indeterminate (paper §6.2).
+    if (HonorUninitMarkers && F->hasAttr<UninitAttr>())
+      continue;
+    if (defaultInitLeavesScalarIndeterminateImpl(Ctx, F->getType(),
+                                                 HonorUninitMarkers, Visited))
+      return true;
+  }
+  return false;
+}
+
+bool SemaProfiles::defaultInitLeavesScalarIndeterminate(QualType T,
+                                                bool HonorUninitMarkers) {
+  llvm::SmallPtrSet<const CXXRecordDecl *, 8> Visited;
+  return defaultInitLeavesScalarIndeterminateImpl(getASTContext(), T,
+                                                  HonorUninitMarkers, Visited);
+}
+
+void SemaProfiles::checkInitProfileUninitDecl(const VarDecl *Var) {
+  // std::init / uninit_decl: a definition without any initializer (after
+  // attempted default-initialization) must either carry [[uninit]] or
+  // be initialized by a language rule. Static / thread storage duration is
+  // excluded -- those are zero-initialized; runtime-init concerns are R3's.
+  static constexpr StringRef Profile = "std::init";
+  static constexpr StringRef Rule = "uninit_decl";
+  // The enforcement check gates the (possibly recursive) type walk below so
+  // it runs only under the profile, not on every default-initialized
+  // variable.
+  QualType BaseTy = getASTContext().getBaseElementType(Var->getType());
+  if (!Var->isInvalidDecl() && Var->getStorageDuration() == SD_Automatic &&
+      !Var->hasAttr<UninitAttr>() &&
+      // std::byte may be left uninitialized (paper §4), so it -- and arrays
+      // of it -- are exempt from this rule.
+      !BaseTy->isStdByteType() &&
+      shouldEmitProfileViolation(Profile, Rule, Var->getLocation(), Var) &&
+      // A definition with no initializer (scalar / pointer / enum, or an
+      // array of them), or a class/aggregate type -- possibly the element
+      // type of an array -- whose default-init leaves a scalar subobject
+      // indeterminate (its synthesized constructor call provides an
+      // initializer, so the !getInit() test alone misses it).
+      (!Var->getInit() ||
+       (BaseTy->isRecordType() &&
+        defaultInitLeavesScalarIndeterminate(Var->getType(),
+                                             /*HonorUninitMarkers=*/true)))) {
+    // A union variable cannot carry [[uninit]] (union_marker bans it),
+    // so it must be initialized; use a message that does not suggest the
+    // marker as a remedy.
+    bool IsUnion = BaseTy->isUnionType();
+    Diag(Var->getLocation(),
+         IsUnion ? diag::err_init_uninit_union : diag::err_init_uninit_decl)
+        << Profile << Var->getDeclName();
+  }
+}
+
+void SemaProfiles::checkInitProfileStaticMarker(const VarDecl *Var) {
+  // std::init / static_marker: a variable with static or thread storage
+  // duration is zero-initialized by language rule (paper §3), so it is an
+  // initialized object; marking it [[uninit]] contradicts paper §4.2 ("an
+  // initialized object marked [[uninit]] is an error"). The case with a real
+  // initializer -- explicit, or a constructor that actually runs -- is
+  // already caught by uninit_with_initializer (R4, in
+  // CheckCompleteVariableDeclaration); this covers the zero-initialized,
+  // no-real-initializer case R4 treats as a consistent no-op. The factual
+  // (HonorUninitMarkers=false) walk matches R4: a static object whose only
+  // indeterminate scalars are themselves marked is still zero-initialized.
+  static constexpr StringRef Profile = "std::init";
+  QualType BaseTy = getASTContext().getBaseElementType(Var->getType());
+  if (!Var->isInvalidDecl() &&
+      (Var->getStorageDuration() == SD_Static ||
+       Var->getStorageDuration() == SD_Thread) &&
+      Var->hasAttr<UninitAttr>() &&
+      // A union or pointer object marked [[uninit]] is already rejected by
+      // union_marker / pointer_marker (regardless of storage duration), and
+      // they retain the marker; do not pile a second diagnostic on top.
+      !Var->getType()->isUnionType() && !Var->getType()->isPointerType() &&
+      shouldEmitProfileViolation(Profile, "static_marker", Var->getLocation(),
+                                 Var) &&
+      (!Var->getInit() ||
+       (BaseTy->isRecordType() &&
+        defaultInitLeavesScalarIndeterminate(Var->getType(),
+                                             /*HonorUninitMarkers=*/false)))) {
+    bool IsThread = Var->getStorageDuration() == SD_Thread;
+    Diag(Var->getLocation(), diag::err_init_uninit_static_marker)
+        << Profile << Var->getDeclName() << IsThread;
+  }
+}
+
+bool SemaProfiles::checkInitProfileStaticRuntimeInit(
+    const VarDecl *Var, llvm::function_ref<bool()> CheckConstInit) {
+  // Thread-locals have thread (not static) storage duration; paper §3 scopes
+  // this rule to non-local *static* objects (uninit_decl likewise excludes
+  // thread storage).
+  if (Var->getTLSKind() != VarDecl::TLS_None)
+    return false;
+  // std::init / static_runtime_init: paper says non-local statics must be
+  // initialized at compile or link time. CheckConstInit() permits trivial
+  // default initialization (not a constant initializer but needs no global
+  // constructor), so a zero-initialized aggregate such as
+  // `struct S { int x; }; S g;` is not a violation. Runs before
+  // -Wglobal-constructors so the profile error (when enforced) takes
+  // precedence over the standalone warning.
+  static constexpr StringRef Profile = "std::init";
+  static constexpr StringRef Rule = "static_runtime_init";
+  if (CheckConstInit())
+    return false;
+  if (!shouldEmitProfileViolation(Profile, Rule, Var->getLocation(), Var))
+    return false;
+  Diag(Var->getLocation(), diag::err_init_static_runtime_init)
+      << Profile << Var->getDeclName();
+  return true;
+}
+
+void SemaProfiles::checkInitProfileUninitWithInitializer(const ValueDecl *D,
+                                                 const Expr *Init) {
+  // [[uninit]] documents that the entity is intentionally left
+  // uninitialized, so it contradicts an explicit initializer. A RecoveryExpr
+  // is a placeholder for an initialization that already failed (e.g.
+  // default-init of a const scalar), not an initializer the user wrote, so it
+  // must not trigger this rule.
+  if (!D->hasAttr<UninitAttr>() || !Init ||
+      isa<RecoveryExpr>(Init->IgnoreParens()))
+    return;
+  SourceLocation Loc = D->getLocation();
+  static constexpr StringRef Profile = "std::init";
+  static constexpr StringRef Rule = "uninit_with_initializer";
+  // Gate the (possibly recursive) type walk below on enforcement.
+  if (!shouldEmitProfileViolation(Profile, Rule, Loc, D))
+    return;
+  // A synthesized default-initialization that leaves the object indeterminate
+  // (a trivial or aggregate type, no user-written initializer) is consistent
+  // with the marker: the object really is left uninitialized, to be
+  // initialized later (e.g. via construct_at), mirroring the scalar case. Only
+  // a real initializer -- an explicit one, or a constructor that actually runs
+  // -- contradicts the marker.
+  if (const auto *CCE = dyn_cast<CXXConstructExpr>(Init->IgnoreImplicit()))
+    if (CCE->getConstructor()->isDefaultConstructor() &&
+        defaultInitLeavesScalarIndeterminate(D->getType()))
+      return;
+  Diag(Loc, diag::err_init_uninit_with_initializer)
+      << Profile << D->getDeclName();
+}
+
+void SemaProfiles::diagnoseInitUninitMarkerPlacement(const Decl *D) {
+  const auto *UA = D->getAttr<UninitAttr>();
+  if (!UA)
+    return;
+  SourceLocation Loc = UA->getLocation();
+
+  // std::init / union_marker (paper §5.6): the marker is banned on a union
+  // object or a union member, because delayed initialization by assigning a
+  // member would be an erroneous assignment when compiled without the profile.
+  // std::init / pointer_marker (paper §4.1): "a reference cannot be
+  // uninitialized. The initialization profile requires the same for pointers."
+  // A pointer must instead be initialized (e.g. to nullptr). Both are profile
+  // policy (not a meaningless subject), so they are gated on enforcement; the
+  // marker is left in place so uninit_decl / ctor_uninit_member treat the
+  // entity as acknowledged rather than re-diagnosing it.
+  //
+  // Passing \p D makes shouldEmitProfileViolation defer on a templated pattern
+  // (paper / P3589R2: a rule fires on the instantiation, not the template),
+  // so the parse-time handler skips template members and the rule is re-run on
+  // the instantiated entity (VisitFieldDecl / VisitVarDecl), once the
+  // substituted type is known to be a pointer or union.
+  bool UnionVar = isa<VarDecl>(D) && cast<VarDecl>(D)->getType()->isUnionType();
+  bool UnionMember =
+      isa<FieldDecl>(D) && cast<FieldDecl>(D)->getParent()->isUnion();
+  if ((UnionVar || UnionMember) &&
+      shouldEmitProfileViolation("std::init", "union_marker", Loc, D))
+    Diag(Loc, diag::err_init_union_marker)
+        << "std::init" << (UnionMember ? 1 : 0);
+  else if (cast<ValueDecl>(D)->getType()->isPointerType() &&
+           shouldEmitProfileViolation("std::init", "pointer_marker", Loc, D))
+    Diag(Loc, diag::err_init_uninit_pointer_marker) << "std::init";
+}
+
+// std::init / ref_to_uninit (paper §5). Two mutually-recursive local
+// recognizers over the syntactic form of a source expression -- no flow
+// analysis and no type-system tracking. Uninitialized storage is only ever
+// introduced by an explicit [[uninit]] / [[ref_to_uninit]] marker.
+//
+// The classification is tri-state: a recognized form is Initialized or
+// Uninitialized, while an unrecognized one (pointer arithmetic, an
+// integer-to-pointer cast, a call through a function pointer) is Unknown rather
+// than assumed Initialized. Callers wanting a plain "is it uninitialized?"
+// answer (SemaProfiles::refersToUninitializedMemory, the read-through check)
+// treat
+// Unknown as not uninitialized.
+//
+// \p ForRead selects read-through mode (SemaProfiles::checkRefToUninitRead): a
+// directly named [[uninit]] object is then not treated as uninitialized,
+// because a read of such a named object is the flow-based uninit_read pass's
+// responsibility; only indirection through a [[ref_to_uninit]]
+// pointer/reference still counts.
+enum class UninitStorage { Initialized, Uninitialized, Unknown };
+
+// Combine the arms of a conditional: Uninitialized dominates (either arm may be
+// taken), then Unknown, else Initialized.
+static UninitStorage combineArms(UninitStorage A, UninitStorage B) {
+  if (A == UninitStorage::Uninitialized || B == UninitStorage::Uninitialized)
+    return UninitStorage::Uninitialized;
+  if (A == UninitStorage::Unknown || B == UninitStorage::Unknown)
+    return UninitStorage::Unknown;
+  return UninitStorage::Initialized;
+}
+
+static UninitStorage glvalueDenotesUninitStorage(ASTContext &Ctx, const Expr *E,
+                                                 bool ForRead = false);
+
+const ValueDecl *SemaProfiles::getDirectlyNamedDecl(const Expr *E) {
+  E = E->IgnoreParenImpCasts();
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
+    return DRE->getDecl();
+  if (const auto *ME = dyn_cast<MemberExpr>(E))
+    return ME->getMemberDecl();
+  return nullptr;
+}
+
+// Pass-through forms shared by the pointer and glvalue recognizers, which are
+// transparent to their operand: a single-element braced initializer { e }
+// binds from e (modeling
+// MismatchingNewDeleteDetector::getNewExprFromInitListOrExpr); a conditional
+// is uninit if either arm is, so a value that may be uninit forces a marked
+// target; a comma yields its right operand. \p EmptyListState classifies an
+// empty braced list: {} value-initializes a pointer to null (Initialized),
+// while a glvalue has no empty-list form (Unknown); a multi-element list is
+// Unknown for both. Returns std::nullopt when E is not a pass-through form.
+template <typename RecurseFn>
+static std::optional<UninitStorage>
+classifyUninitPassThrough(const Expr *E, UninitStorage EmptyListState,
+                          RecurseFn Recurse) {
+  if (const auto *ILE = dyn_cast<InitListExpr>(E)) {
+    if (ILE->getNumInits() == 1)
+      return Recurse(ILE->getInit(0));
+    return ILE->getNumInits() == 0 ? EmptyListState : UninitStorage::Unknown;
+  }
+  if (const auto *CO = dyn_cast<ConditionalOperator>(E))
+    return combineArms(Recurse(CO->getTrueExpr()),
+                       Recurse(CO->getFalseExpr()));
+  if (const auto *BO = dyn_cast<BinaryOperator>(E); BO && BO->isCommaOp())
+    return Recurse(BO->getRHS());
+  return std::nullopt;
+}
+
+// A call to a [[ref_to_uninit]]-returning function yields uninitialized
+// storage (the pointed-to memory, or the returned referent). An unmarked
+// direct callee is trusted Initialized (paper §4.3); a call with no direct
+// callee (through a function pointer) is Unknown. Shared by both recognizers.
+static UninitStorage classifyRefToUninitCallee(const CallExpr *CE) {
+  if (const FunctionDecl *FD = CE->getDirectCallee())
+    return FD->hasAttr<RefToUninitAttr>() ? UninitStorage::Uninitialized
+                                          : UninitStorage::Initialized;
+  return UninitStorage::Unknown;
+}
+
+// \p E is a pointer prvalue. Classifies whether it points to uninitialized
+// storage.
+static UninitStorage pointerRefersToUninitStorage(ASTContext &Ctx,
+                                                  const Expr *E,
+                                                  bool ForRead = false) {
+  if (!E)
+    return UninitStorage::Unknown;
+  E = E->IgnoreParenImpCasts();
+
+  if (auto PassThrough = classifyUninitPassThrough(
+          E, /*EmptyListState=*/UninitStorage::Initialized,
+          [&](const Expr *Sub) {
+            return pointerRefersToUninitStorage(Ctx, Sub, ForRead);
+          }))
+    return *PassThrough;
+
+  // Array-to-pointer decay has been stripped above, leaving the array glvalue.
+  if (E->getType()->isArrayType())
+    return glvalueDenotesUninitStorage(Ctx, E, ForRead);
+
+  // &G, where G denotes uninitialized storage.
+  if (const auto *UO = dyn_cast<UnaryOperator>(E))
+    if (UO->getOpcode() == UO_AddrOf)
+      return glvalueDenotesUninitStorage(Ctx, UO->getSubExpr(), ForRead);
+
+  // A value of a [[ref_to_uninit]] pointer is Uninitialized; an unmarked
+  // named pointer is a trusted Initialized pointer (paper §4.3).
+  if (const ValueDecl *VD = SemaProfiles::getDirectlyNamedDecl(E))
+    return VD->hasAttr<RefToUninitAttr>() ? UninitStorage::Uninitialized
+                                          : UninitStorage::Initialized;
+  if (const auto *CE = dyn_cast<CallExpr>(E))
+    return classifyRefToUninitCallee(CE);
+
+  // A default-initialized new-expression (none init style: no initializer
+  // written) whose allocated type's default-initialization leaves a scalar
+  // subobject indeterminate produces uninitialized free-store memory (paper
+  // §1.2/§4.3), like a [[ref_to_uninit]] allocator. The style gates this
+  // rather
+  // than hasInitializer(), which is also true for new Agg -- default-
+  // initializing a class synthesizes a (possibly trivial) constructor call.
+  // new T(...) / new T{} are value- or list-initialized; a user-provided
+  // default constructor is trusted by defaultInitLeavesScalarIndeterminate.
+  if (const auto *NE = dyn_cast<CXXNewExpr>(E)) {
+    if (NE->getInitializationStyle() != CXXNewInitializationStyle::None)
+      return UninitStorage::Initialized;
+    llvm::SmallPtrSet<const CXXRecordDecl *, 8> Visited;
+    return defaultInitLeavesScalarIndeterminateImpl(Ctx, NE->getAllocatedType(),
+                                                    /*HonorUninitMarkers=*/true,
+                                                    Visited)
+               ? UninitStorage::Uninitialized
+               : UninitStorage::Initialized;
+  }
+
+  // Paper §4.3: a [[ref_to_uninit]] pointer cast to another pointer type is
+  // itself [[ref_to_uninit]]. Implicit casts were already stripped above, so
+  // this only looks through an explicit pointer-to-pointer cast; a pointer
+  // manufactured from an integer (operand not a pointer) is Unknown.
+  if (const auto *CE = dyn_cast<ExplicitCastExpr>(E))
+    if (CE->getSubExpr()->getType()->isPointerType())
+      return pointerRefersToUninitStorage(Ctx, CE->getSubExpr(), ForRead);
+
+  return UninitStorage::Unknown;
+}
+
+// \p E is a glvalue. Classifies whether it denotes uninitialized storage.
+static UninitStorage glvalueDenotesUninitStorage(ASTContext &Ctx,
+                                                 const Expr *E, bool ForRead) {
+  if (!E)
+    return UninitStorage::Unknown;
+  E = E->IgnoreParenImpCasts();
+
+  if (auto PassThrough = classifyUninitPassThrough(
+          E, /*EmptyListState=*/UninitStorage::Unknown,
+          [&](const Expr *Sub) {
+            return glvalueDenotesUninitStorage(Ctx, Sub, ForRead);
+          }))
+    return *PassThrough;
+
+  // A named entity denotes uninitialized storage if it is [[uninit]], or
+  // if it is a reference marked [[ref_to_uninit]] (the glvalue is its referent,
+  // which is uninitialized). A [[ref_to_uninit]] *pointer* named here denotes
+  // the pointer object itself -- which is initialized -- so it does not count.
+  // In read mode the [[uninit]] arm is dropped: a direct read of a named
+  // [[uninit]] object is left to the flow-based uninit_read pass, so only a
+  // [[ref_to_uninit]] reference (or indirection, handled below) still counts.
+  auto DeclDenotesUninit = [&](const ValueDecl *VD) {
+    return (!ForRead && VD->hasAttr<UninitAttr>()) ||
+           (VD->getType()->isReferenceType() && VD->hasAttr<RefToUninitAttr>());
+  };
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
+    return DeclDenotesUninit(DRE->getDecl()) ? UninitStorage::Uninitialized
+                                             : UninitStorage::Initialized;
+  if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+    // a->m reaches m through the pointer a (object *a); a.m through the
+    // glvalue a. When m does not itself denote uninit storage, the subobject is
+    // uninit exactly when its base is.
+    if (DeclDenotesUninit(ME->getMemberDecl()))
+      return UninitStorage::Uninitialized;
+    return ME->isArrow()
+               ? pointerRefersToUninitStorage(Ctx, ME->getBase(), ForRead)
+               : glvalueDenotesUninitStorage(Ctx, ME->getBase(), ForRead);
+  }
+  // A call to a [[ref_to_uninit]]-returning reference function: the referent
+  // it returns is uninitialized.
+  if (const auto *CE = dyn_cast<CallExpr>(E))
+    return classifyRefToUninitCallee(CE);
+  if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
+    return pointerRefersToUninitStorage(Ctx, ASE->getBase(), ForRead);
+
+  // *p, where p points to uninitialized storage.
+  if (const auto *UO = dyn_cast<UnaryOperator>(E))
+    if (UO->getOpcode() == UO_Deref)
+      return pointerRefersToUninitStorage(Ctx, UO->getSubExpr(), ForRead);
+
+  // A reference cast (an explicit cast yielding a glvalue) denotes the same
+  // storage as its operand; propagate. Symmetric to the pointer-cast arm.
+  if (const auto *CE = dyn_cast<ExplicitCastExpr>(E))
+    if (CE->getSubExpr()->isGLValue())
+      return glvalueDenotesUninitStorage(Ctx, CE->getSubExpr(), ForRead);
+
+  return UninitStorage::Unknown;
+}
+
+// Dispatches a binding source to the pointer or glvalue recognizer.
+static UninitStorage classifyUninitSource(ASTContext &Ctx, const Expr *E,
+                                          bool IsReference) {
+  return IsReference ? glvalueDenotesUninitStorage(Ctx, E)
+                     : pointerRefersToUninitStorage(Ctx, E);
+}
+
+bool SemaProfiles::refersToUninitializedMemory(const Expr *E,
+                                               bool IsReference) const {
+  return classifyUninitSource(getASTContext(), E, IsReference) ==
+         UninitStorage::Uninitialized;
+}
+
+// The Decl-less ref_to_uninit check sites (call argument, default argument,
+// assignment, return, read-through) can't rely on the D->isTemplated()
+// deferral in shouldEmitProfileViolation, but their Build* routines are
+// re-run at instantiation, so defer on a template pattern here instead:
+// firing on the pattern double-diagnoses and wrongly fires in discarded
+// if-constexpr branches / never-instantiated templates. Sites that do pass a
+// Decl are unaffected. (This must stay out of shouldEmitProfileViolation:
+// its other Decl-less caller, the reinterpret_cast check, is *not* re-run at
+// instantiation, so deferring there would lose the diagnostic entirely.)
+static bool deferUninitCheckOnTemplatePattern(Sema &S, const Decl *D) {
+  return !D && S.CurContext && S.CurContext->isDependentContext();
+}
+
+void SemaProfiles::checkRefToUninitInit(SourceLocation Loc,
+                                        bool TargetIsRefToUninit,
+                                        bool IsReference, const Expr *Src,
+                                        const Decl *D) {
+  // A RecoveryExpr is a placeholder for an initialization that already failed,
+  // not a source the user wrote, so it must not drive this rule.
+  if (!Src || isa<RecoveryExpr>(Src->IgnoreParens()))
+    return;
+  if (deferUninitCheckOnTemplatePattern(SemaRef, D))
+    return;
+  static constexpr StringRef Profile = "std::init";
+  static constexpr StringRef Rule = "ref_to_uninit";
+  if (!shouldEmitProfileViolation(Profile, Rule, Loc, D))
+    return;
+  UninitStorage SrcState =
+      classifyUninitSource(getASTContext(), Src, IsReference);
+  unsigned IsRef = IsReference ? 1 : 0;
+  // A marked target is a violation only against an affirmatively Initialized
+  // source: an Unknown one (pointer arithmetic, an integer-to-pointer cast, a
+  // call through a function pointer) cannot be proven initialized, so rejecting
+  // it would be a false positive. An unmarked target is diagnosed only against
+  // an affirmatively Uninitialized source (Unknown stays a missed diagnostic).
+  if (TargetIsRefToUninit && SrcState == UninitStorage::Initialized)
+    Diag(Loc, diag::err_init_ref_to_uninit_requires_uninit) << Profile << IsRef;
+  else if (!TargetIsRefToUninit && SrcState == UninitStorage::Uninitialized)
+    Diag(Loc, diag::err_init_uninit_requires_ref_to_uninit) << Profile << IsRef;
+}
+
+void SemaProfiles::checkRefToUninitBinding(SourceLocation Loc,
+                                           const ValueDecl *Target, QualType T,
+                                           const Expr *Src, const Decl *D) {
+  if (!getLangOpts().Profiles || T.isNull() || T->isDependentType() ||
+      (!T->isPointerType() && !T->isReferenceType()))
+    return;
+  checkRefToUninitInit(Loc, Target->hasAttr<RefToUninitAttr>(),
+                       T->isReferenceType(), Src, D);
+}
+
+void SemaProfiles::checkRefToUninitRead(SourceLocation Loc, const Expr *Glvalue,
+                                QualType ValueType) {
+  // A RecoveryExpr is a placeholder for an expression that already failed, not
+  // a read the user wrote, so it must not drive this rule.
+  if (!Glvalue || isa<RecoveryExpr>(Glvalue->IgnoreParens()))
+    return;
+  if (deferUninitCheckOnTemplatePattern(SemaRef, /*D=*/nullptr))
+    return;
+  // Paper §4.5: reading an uninitialized std::byte is permitted.
+  if (getASTContext().getBaseElementType(ValueType)->isStdByteType())
+    return;
+  if (!shouldEmitProfileViolation("std::init", "uninit_read", Loc))
+    return;
+  if (glvalueDenotesUninitStorage(getASTContext(), Glvalue, /*ForRead=*/true) !=
+      UninitStorage::Uninitialized)
+    return;
+  Diag(Loc, diag::err_init_uninit_read_through) << "std::init";
+}
+
+
+namespace {
+// Row for the unified finalization dispatch shared by class-finalization
+// (pattern 3) and constructor-finalization (pattern 4): a profile name plus a
+// callback invoked once per finalized, non-dependent, non-invalid Node (a
+// CXXRecordDecl or a CXXConstructorDecl). Adding a new profile is a single row
+// in the matching table below plus a ProfileRuleError diagnostic in
+// DiagnosticSemaKinds.td and a callback that consults
+// SemaProfiles::shouldEmitProfileViolation before emitting.
+template <class Node> struct FinalizationProfile {
+  StringRef Name;
+  void (*Callback)(Sema &, Node *);
+};
+
+void runTestClassFinalCallback(Sema &S, CXXRecordDecl *RD) {
+  if (!S.Profiles().shouldEmitProfileViolation("test::class_final", /*Rule=*/"",
+                                    RD->getLocation(), RD))
+    return;
+  S.Diag(RD->getLocation(), diag::err_profile_class_final_test)
+      << "test::class_final" << RD;
+}
+
+void runTestCtorFinalCallback(Sema &S, CXXConstructorDecl *Ctor) {
+  if (!S.Profiles().shouldEmitProfileViolation("test::ctor_final", /*Rule=*/"",
+                                    Ctor->getLocation(), Ctor))
+    return;
+  S.Diag(Ctor->getLocation(), diag::err_profile_ctor_final_test)
+      << "test::ctor_final" << Ctor->getParent();
+}
+
+void runStdInitCtorUninitMemberCallback(Sema &S, CXXConstructorDecl *Ctor) {
+  // Paper §6.1: a user-provided constructor must initialize every member via
+  // its member-initializer list or an NSDMI, unless the member is marked
+  // [[uninit]] (whose body initialization is the deferred R7 check).
+  // A plain assignment in the constructor body does not count.
+  if (!Ctor->isUserProvided())
+    return;
+
+  // A union's members are mutually exclusive; a constructor initializes at most
+  // one, so the "every member" rule does not apply (paper §6.5). Whether the
+  // active member is set is a constructor-body flow question, deferred.
+  if (Ctor->getParent()->isUnion())
+    return;
+
+  // Members and direct bases given a written initializer by this constructor.
+  llvm::SmallPtrSet<const FieldDecl *, 8> Written;
+  llvm::SmallPtrSet<const Type *, 4> WrittenBases;
+  for (const CXXCtorInitializer *Init : Ctor->inits()) {
+    if (!Init->isWritten())
+      continue;
+    if (Init->isAnyMemberInitializer()) {
+      if (const FieldDecl *F = Init->getAnyMember())
+        Written.insert(F);
+    } else if (Init->isBaseInitializer()) {
+      if (const Type *T = Init->getBaseClass())
+        WrittenBases.insert(
+            S.Context.getCanonicalType(QualType(T, 0)).getTypePtr());
+    }
+  }
+
+  for (const FieldDecl *F : Ctor->getParent()->fields()) {
+    // Anonymous aggregate members and unnamed bit-fields are skipped; a named
+    // bit-field is checked like any other member. Reference and const members
+    // already have dedicated diagnostics when left uninitialized.
+    if (F->isUnnamedBitField() || !F->getDeclName() ||
+        F->getType()->isReferenceType() || F->getType().isConstQualified())
+      continue;
+    if (F->hasAttr<UninitAttr>() || F->hasInClassInitializer() ||
+        Written.count(F))
+      continue;
+    if (!S.Profiles().defaultInitLeavesScalarIndeterminate(F->getType(),
+                                                /*HonorUninitMarkers=*/true))
+      continue;
+    if (!S.Profiles().shouldEmitProfileViolation(
+            "std::init", "ctor_uninit_member", Ctor->getLocation(), Ctor))
+      continue;
+    S.Diag(Ctor->getLocation(), diag::err_init_ctor_uninit_member)
+        << "std::init" << F->getDeclName();
+    S.Diag(F->getLocation(), diag::note_init_uninit_member_here)
+        << F->getDeclName();
+  }
+
+  // The guarantee is over the complete object (paper §5.1, §7.1), so a
+  // direct base-class subobject left indeterminate is as much a violation as a
+  // member. A base cannot carry an [[uninit]] marker (the attribute's subjects
+  // are Var/Field), so an indeterminate base must always be initialized --
+  // there
+  // is no marker escape. Virtual bases are the most-derived constructor's
+  // responsibility, not a local property of this constructor, so they are
+  // deferred. A written base-initializer initializes the base; an implicit
+  // (non-written) one is default-init, handled by the indeterminate check.
+  for (const CXXBaseSpecifier &Base : Ctor->getParent()->bases()) {
+    if (Base.isVirtual())
+      continue;
+    if (WrittenBases.count(
+            S.Context.getCanonicalType(Base.getType()).getTypePtr()))
+      continue;
+    if (!S.Profiles().defaultInitLeavesScalarIndeterminate(Base.getType(),
+                                                /*HonorUninitMarkers=*/true))
+      continue;
+    if (!S.Profiles().shouldEmitProfileViolation(
+            "std::init", "ctor_uninit_member", Ctor->getLocation(), Ctor))
+      continue;
+    S.Diag(Ctor->getLocation(), diag::err_init_ctor_uninit_base)
+        << "std::init" << Base.getType();
+    S.Diag(Base.getBeginLoc(), diag::note_init_uninit_base_here)
+        << Base.getType();
+  }
+}
+
+// Class-finalization opt-in table (pattern 3).
+constexpr FinalizationProfile<CXXRecordDecl> ClassFinalizationProfiles[] = {
+    {"test::class_final", &runTestClassFinalCallback},
+};
+
+// Constructor-finalization opt-in table (pattern 4).
+constexpr FinalizationProfile<CXXConstructorDecl>
+    ConstructorFinalizationProfiles[] = {
+        {"test::ctor_final", &runTestCtorFinalCallback},
+        {"std::init", &runStdInitCtorUninitMemberCallback},
+};
+
+// Run the enforced finalization-profile callbacks in Table for D. Merges the
+// former per-node dispatchers; the per-node filter (dependent, lambda,
+// delegating, ...) stays at each call site. Each callback passes D to the
+// Decl-aware SemaProfiles::shouldEmitProfileViolation, which honors
+// [[profiles::suppress]]
+// on D or a lexical parent, so the dispatcher needs no suppress scope of its
+// own. The table is taken by reference-to-array, not ArrayRef: deducing Node
+// from a C array against an ArrayRef<FinalizationProfile<Node>> parameter is
+// not
+// possible (no array-to-ArrayRef conversion happens during template argument
+// deduction).
+template <class Node, std::size_t N>
+void dispatchFinalizationProfiles(Sema &S, Node *D,
+                                  const FinalizationProfile<Node> (&Table)[N]) {
+  if (!S.Profiles().anyProfileEnforced(Table))
+    return;
+  // Finalization can run nested in an unrelated instantiation whose
+  // [[profiles::suppress]] scope is still on the parse-time stack; the
+  // callbacks
+  // must resolve suppression only from D and its lexical parents, not that
+  // transient stack (P3589R2 s2.4p3).
+  llvm::SaveAndRestore<bool> InFinalization(
+      S.Profiles().InProfileFinalizationCheck, true);
+  for (const auto &E : Table)
+    if (S.Profiles().isProfileEnforced(E.Name))
+      E.Callback(S, D);
+}
+} // namespace
+
+void SemaProfiles::checkProfileViolationsAtClassFinalization(
+    CXXRecordDecl *RD) {
+  if (!getLangOpts().Profiles || !RD)
+    return;
+  if (RD->isInvalidDecl() || RD->isDependentType() || RD->isLambda())
+    return;
+  dispatchFinalizationProfiles(SemaRef, RD, ClassFinalizationProfiles);
+}
+
+void SemaProfiles::checkProfileViolationsAtConstructorFinalization(
+    CXXConstructorDecl *Ctor) {
+  if (!getLangOpts().Profiles || !Ctor)
+    return;
+  // A dependent constructor pattern re-fires on instantiation; a delegating
+  // constructor leaves member initialization to its target.
+  if (Ctor->isInvalidDecl() || Ctor->isDependentContext() ||
+      Ctor->isDelegatingConstructor())
+    return;
+  dispatchFinalizationProfiles(SemaRef, Ctor, ConstructorFinalizationProfiles);
+}
+

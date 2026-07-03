@@ -18,6 +18,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaProfiles.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 
@@ -469,7 +470,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
     for (const auto &AL : Attrs)
       if (AL.getKind() == ParsedAttr::AT_ProfilesEnforce &&
           AL.diagnoseLangOpts(*this))
-        processProfilesEnforceAttr(AL, ExportMod, nullptr, nullptr);
+        Profiles().processProfilesEnforceAttr(AL, ExportMod, nullptr, nullptr);
   }
 
   // We are in the module purview, but before any other (non import)
@@ -485,7 +486,8 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
   // implementation unit.
   if (Interface) {
     for (const auto &EP : Interface->EnforcedProfileDesignators)
-      addProfileEnforcement(EP.ProfileName, EP.Designator, ModuleLoc);
+      Profiles().addProfileEnforcement(EP.ProfileName, EP.Designator,
+                                       ModuleLoc);
   } else if (getLangOpts().Profiles &&
              MDK == ModuleDeclKind::PartitionImplementation) {
     // A partition implementation unit is a module implementation unit of M, so
@@ -499,7 +501,8 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
     if (Module *Primary = PP.getHeaderSearchInfo().getModuleMap().findModule(
             Mod->getPrimaryModuleInterfaceName()))
       for (const auto &EP : Primary->EnforcedProfileDesignators)
-        addProfileEnforcement(EP.ProfileName, EP.Designator, ModuleLoc);
+        Profiles().addProfileEnforcement(EP.ProfileName, EP.Designator,
+                                       ModuleLoc);
   }
 
   // We already potentially made an implicit import (in the case of a module

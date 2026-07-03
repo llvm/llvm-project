@@ -29,6 +29,7 @@
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/SemaProfiles.h"
 #include "clang/Sema/SemaConcept.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
@@ -3842,7 +3843,7 @@ bool Sema::InstantiateInClassInitializer(
   ActOnStartCXXInClassMemberInitializer();
   CXXThisScopeRAII ThisScope(*this, Instantiation->getParent(), Qualifiers());
 
-  ProfileSuppressScope ProfileSuppressGuard(
+  SemaProfiles::ProfileSuppressScope ProfileSuppressGuard(
       *this, Pattern, /*WalkLexicalParents=*/true);
 
   ExprResult NewInit = SubstInitializer(OldInit, TemplateArgs,

@@ -22,6 +22,7 @@
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaProfiles.h"
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenACC.h"
@@ -75,7 +76,7 @@ StmtResult Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
   if (getLangOpts().HLSL)
     MaybeParseMicrosoftAttributes(GNUOrMSAttrs);
 
-  Sema::ProfileSuppressScope ProfileSuppressGuard(Actions, CXX11Attrs);
+  SemaProfiles::ProfileSuppressScope ProfileSuppressGuard(Actions, CXX11Attrs);
 
   StmtResult Res = ParseStatementOrDeclarationAfterAttributes(
       Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs, GNUOrMSAttrs,

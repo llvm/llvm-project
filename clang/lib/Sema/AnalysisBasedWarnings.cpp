@@ -48,6 +48,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaProfiles.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
@@ -1940,7 +1941,8 @@ static void checkInitProfileCtorBody(Sema &S, const CXXConstructorDecl *Ctor,
                                                    Bx->getBeginLoc());
     });
     for (const Expr *R : Offending[I]) {
-      if (!S.shouldEmitProfileViolation("std::init", "uninit_read", R, AC))
+      if (!S.Profiles().shouldEmitProfileViolation("std::init", "uninit_read",
+                                                   R, AC))
         continue;
       S.Diag(R->getBeginLoc(), diag::err_init_member_read_before_init)
           << "std::init" << Members[I]->getDeclName();
@@ -2027,7 +2029,8 @@ private:
         if (E.ExemptStdByte &&
             S.Context.getBaseElementType(vd->getType())->isStdByteType())
           continue;
-        if (!S.shouldEmitProfileViolation(E.Name, E.Rule, U.getUser(), AC))
+        if (!S.Profiles().shouldEmitProfileViolation(E.Name, E.Rule,
+                                                     U.getUser(), AC))
           continue;
         S.Diag(U.getUser()->getBeginLoc(), E.DiagID)
             << E.Name << vd->getDeclName();
@@ -3046,7 +3049,7 @@ void sema::AnalysisBasedWarnings::clearOverrides() {
 }
 
 bool sema::AnalysisBasedWarnings::hasEnforcedCFGUninitProfile() const {
-  return S.anyProfileEnforced(CFGUninitProfiles);
+  return S.Profiles().anyProfileEnforced(CFGUninitProfiles);
 }
 
 static void flushDiagnostics(Sema &S, const sema::FunctionScopeInfo *fscope) {
@@ -3152,7 +3155,7 @@ static void addNonLinearizedAlwaysAddClasses(AnalysisDeclContext &AC) {
 // and the post-error rerun so both paths stay in step.
 static void runCtorBodyInitCheckIfEnforced(Sema &S, const Decl *D,
                                            AnalysisDeclContext &AC) {
-  if (!S.isProfileEnforced("std::init"))
+  if (!S.Profiles().isProfileEnforced("std::init"))
     return;
   if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(D))
     checkInitProfileCtorBody(S, Ctor, AC);
