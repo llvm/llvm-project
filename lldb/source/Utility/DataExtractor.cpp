@@ -400,17 +400,21 @@ uint64_t DataExtractor::GetU64_unchecked(offset_t *offset_ptr) const {
 void *DataExtractor::GetU16(offset_t *offset_ptr, void *void_dst,
                             uint32_t count) const {
   const size_t src_size = sizeof(uint16_t) * count;
-  const uint16_t *src =
-      static_cast<const uint16_t *>(GetData(offset_ptr, src_size));
+  // GetData() returns a pointer to an arbitrary byte offset within the
+  // underlying buffer, so it carries no guarantee of being aligned for a
+  // uint16_t. Both the source and the caller-supplied destination are
+  // therefore treated as raw bytes: reading or writing a uint16_t through a
+  // typed pointer that is not 2-byte aligned is undefined behavior (and is
+  // flagged by UBSan's alignment check). Access each element through a byte
+  // pointer and copy it with memcpy, which imposes no alignment requirement.
+  const uint8_t *src =
+      static_cast<const uint8_t *>(GetData(offset_ptr, src_size));
   if (src) {
     if (m_byte_order != endian::InlHostByteOrder()) {
-      uint16_t *dst_pos = static_cast<uint16_t *>(void_dst);
-      uint16_t *dst_end = dst_pos + count;
-      const uint16_t *src_pos = src;
-      while (dst_pos < dst_end) {
-        *dst_pos = ReadSwapInt16(src_pos);
-        ++dst_pos;
-        ++src_pos;
+      uint8_t *dst_pos = static_cast<uint8_t *>(void_dst);
+      for (uint32_t i = 0; i < count; ++i) {
+        uint16_t value = ReadSwapInt16(src, i * sizeof(uint16_t));
+        memcpy(dst_pos + i * sizeof(uint16_t), &value, sizeof(value));
       }
     } else {
       memcpy(void_dst, src, src_size);
@@ -449,17 +453,21 @@ uint32_t DataExtractor::GetU32(offset_t *offset_ptr) const {
 void *DataExtractor::GetU32(offset_t *offset_ptr, void *void_dst,
                             uint32_t count) const {
   const size_t src_size = sizeof(uint32_t) * count;
-  const uint32_t *src =
-      static_cast<const uint32_t *>(GetData(offset_ptr, src_size));
+  // GetData() returns a pointer to an arbitrary byte offset within the
+  // underlying buffer, so it carries no guarantee of being aligned for a
+  // uint32_t. Both the source and the caller-supplied destination are
+  // therefore treated as raw bytes: reading or writing a uint32_t through a
+  // typed pointer that is not 4-byte aligned is undefined behavior (and is
+  // flagged by UBSan's alignment check). Access each element through a byte
+  // pointer and copy it with memcpy, which imposes no alignment requirement.
+  const uint8_t *src =
+      static_cast<const uint8_t *>(GetData(offset_ptr, src_size));
   if (src) {
     if (m_byte_order != endian::InlHostByteOrder()) {
-      uint32_t *dst_pos = static_cast<uint32_t *>(void_dst);
-      uint32_t *dst_end = dst_pos + count;
-      const uint32_t *src_pos = src;
-      while (dst_pos < dst_end) {
-        *dst_pos = ReadSwapInt32(src_pos);
-        ++dst_pos;
-        ++src_pos;
+      uint8_t *dst_pos = static_cast<uint8_t *>(void_dst);
+      for (uint32_t i = 0; i < count; ++i) {
+        uint32_t value = ReadSwapInt32(src, i * sizeof(uint32_t));
+        memcpy(dst_pos + i * sizeof(uint32_t), &value, sizeof(value));
       }
     } else {
       memcpy(void_dst, src, src_size);
@@ -497,17 +505,21 @@ uint64_t DataExtractor::GetU64(offset_t *offset_ptr) const {
 void *DataExtractor::GetU64(offset_t *offset_ptr, void *void_dst,
                             uint32_t count) const {
   const size_t src_size = sizeof(uint64_t) * count;
-  const uint64_t *src =
-      static_cast<const uint64_t *>(GetData(offset_ptr, src_size));
+  // GetData() returns a pointer to an arbitrary byte offset within the
+  // underlying buffer, so it carries no guarantee of being aligned for a
+  // uint64_t. Both the source and the caller-supplied destination are
+  // therefore treated as raw bytes: reading or writing a uint64_t through a
+  // typed pointer that is not 8-byte aligned is undefined behavior (and is
+  // flagged by UBSan's alignment check). Access each element through a byte
+  // pointer and copy it with memcpy, which imposes no alignment requirement.
+  const uint8_t *src =
+      static_cast<const uint8_t *>(GetData(offset_ptr, src_size));
   if (src) {
     if (m_byte_order != endian::InlHostByteOrder()) {
-      uint64_t *dst_pos = static_cast<uint64_t *>(void_dst);
-      uint64_t *dst_end = dst_pos + count;
-      const uint64_t *src_pos = src;
-      while (dst_pos < dst_end) {
-        *dst_pos = ReadSwapInt64(src_pos);
-        ++dst_pos;
-        ++src_pos;
+      uint8_t *dst_pos = static_cast<uint8_t *>(void_dst);
+      for (uint32_t i = 0; i < count; ++i) {
+        uint64_t value = ReadSwapInt64(src, i * sizeof(uint64_t));
+        memcpy(dst_pos + i * sizeof(uint64_t), &value, sizeof(value));
       }
     } else {
       memcpy(void_dst, src, src_size);
