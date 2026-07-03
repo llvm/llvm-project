@@ -905,6 +905,18 @@ ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
     ExprResult Res = PerformMoveOrCopyInitialization(Entity, NRInfo, Ex);
     if (Res.isInvalid())
       return ExprError();
+
+    // std::init / ref_to_uninit (paper §5): a thrown pointer copy-initializes
+    // the exception object, which cannot carry [[ref_to_uninit]], so throwing
+    // a pointer to uninitialized memory is always the unmarked-direction
+    // violation. (Reads like `throw *p` funnel through the read-through check
+    // instead.) Dependent operands are outside this block; the Decl-less
+    // wrapper defers on a template pattern.
+    if (ExceptionObjectTy->isPointerType())
+      Profiles().checkInitProfileRefToUninit(Ex->getExprLoc(),
+                                             /*TargetIsRefToUninit=*/false,
+                                             /*IsReference=*/false, Ex);
+
     Ex = Res.get();
   }
 

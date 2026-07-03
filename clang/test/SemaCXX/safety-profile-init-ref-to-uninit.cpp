@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify=expected -fprofiles -std=c++23 %s
-// RUN: %clang_cc1 -fsyntax-only -verify=no-profiles -std=c++23 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected -fprofiles -fcxx-exceptions -std=c++23 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=no-profiles -fcxx-exceptions -std=c++23 %s
 
 // std::init / ref_to_uninit (paper §5): a [[ref_to_uninit]] pointer or
 // reference must be bound to uninitialized memory, and an unmarked pointer or
@@ -962,6 +962,27 @@ void template_aggregate_never() {
   AggPtr a{&g_uninit};
   (void)a;
 }
+
+// A thrown pointer copy-initializes the exception object, which cannot carry
+// [[ref_to_uninit]], so it must not point to uninitialized memory. A read
+// like `throw *p` is the read-through check's territory instead.
+void throw_ptr_ok() { throw &g_init; } // OK
+void throw_ptr_bad() { throw &g_uninit; } // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+void throw_marked_ptr_bad(int *p [[ref_to_uninit]]) { throw p; } // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+void throw_ptr_suppressed() {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init)]] { throw &g_uninit; } // OK: suppressed
+}
+
+// A dependent thrown operand is rebuilt at instantiation, where the check
+// fires. A fully non-dependent throw inside a template is not rebuilt by
+// TreeTransform, so -- like the reinterpret_cast site -- the pattern defers
+// and the case goes undiagnosed; a known limitation.
+template <typename T>
+void template_throw_bad() {
+  throw (T *)&g_uninit; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}
+template void template_throw_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_throw_bad<int>' requested here}}
 
 // C++20 parenthesized aggregate initialization performs the same per-field
 // bindings as the braced form and is checked identically.
