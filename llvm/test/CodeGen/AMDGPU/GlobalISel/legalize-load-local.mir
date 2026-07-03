@@ -17627,8 +17627,11 @@ body: |
     ; GFX11-TRUE16-NEXT: {{  $}}
     ; GFX11-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
     ; GFX11-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p3) :: (load (s16), align 4, addrspace 3)
-    ; GFX11-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s16)
-    ; GFX11-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
+    ; GFX11-TRUE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX11-TRUE16-NEXT: [[MV:%[0-9]+]]:_(s32) = G_MERGE_VALUES [[LOAD]](s16), [[DEF]](s16)
+    ; GFX11-TRUE16-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX11-TRUE16-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MV]](s32), [[DEF1]](s32)
+    ; GFX11-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[MV1]](s64)
     ;
     ; GFX11-FAKE16-LABEL: name: test_extload_local_s64_from_2_align4
     ; GFX11-FAKE16: liveins: $vgpr0
@@ -17643,8 +17646,11 @@ body: |
     ; GFX11-UNALIGNED-TRUE16-NEXT: {{  $}}
     ; GFX11-UNALIGNED-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
     ; GFX11-UNALIGNED-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p3) :: (load (s16), align 4, addrspace 3)
-    ; GFX11-UNALIGNED-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s16)
-    ; GFX11-UNALIGNED-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
+    ; GFX11-UNALIGNED-TRUE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX11-UNALIGNED-TRUE16-NEXT: [[MV:%[0-9]+]]:_(s32) = G_MERGE_VALUES [[LOAD]](s16), [[DEF]](s16)
+    ; GFX11-UNALIGNED-TRUE16-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX11-UNALIGNED-TRUE16-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MV]](s32), [[DEF1]](s32)
+    ; GFX11-UNALIGNED-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[MV1]](s64)
     ;
     ; GFX11-UNALIGNED-FAKE16-LABEL: name: test_extload_local_s64_from_2_align4
     ; GFX11-UNALIGNED-FAKE16: liveins: $vgpr0
@@ -17659,8 +17665,11 @@ body: |
     ; GFX12-TRUE16-NEXT: {{  $}}
     ; GFX12-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
     ; GFX12-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p3) :: (load (s16), align 4, addrspace 3)
-    ; GFX12-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s16)
-    ; GFX12-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
+    ; GFX12-TRUE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX12-TRUE16-NEXT: [[MV:%[0-9]+]]:_(s32) = G_MERGE_VALUES [[LOAD]](s16), [[DEF]](s16)
+    ; GFX12-TRUE16-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX12-TRUE16-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MV]](s32), [[DEF1]](s32)
+    ; GFX12-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[MV1]](s64)
     ;
     ; GFX12-FAKE16-LABEL: name: test_extload_local_s64_from_2_align4
     ; GFX12-FAKE16: liveins: $vgpr0
@@ -17675,8 +17684,11 @@ body: |
     ; GFX12-UNALIGNED-TRUE16-NEXT: {{  $}}
     ; GFX12-UNALIGNED-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
     ; GFX12-UNALIGNED-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p3) :: (load (s16), align 4, addrspace 3)
-    ; GFX12-UNALIGNED-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s16)
-    ; GFX12-UNALIGNED-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
+    ; GFX12-UNALIGNED-TRUE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX12-UNALIGNED-TRUE16-NEXT: [[MV:%[0-9]+]]:_(s32) = G_MERGE_VALUES [[LOAD]](s16), [[DEF]](s16)
+    ; GFX12-UNALIGNED-TRUE16-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX12-UNALIGNED-TRUE16-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MV]](s32), [[DEF1]](s32)
+    ; GFX12-UNALIGNED-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[MV1]](s64)
     ;
     ; GFX12-UNALIGNED-FAKE16-LABEL: name: test_extload_local_s64_from_2_align4
     ; GFX12-UNALIGNED-FAKE16: liveins: $vgpr0
@@ -18013,8 +18025,11 @@ body: |
     ; GFX11-TRUE16-NEXT: {{  $}}
     ; GFX11-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
     ; GFX11-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p3) :: (load (s16), align 4, addrspace 3)
-    ; GFX11-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s16)
-    ; GFX11-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
+    ; GFX11-TRUE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX11-TRUE16-NEXT: [[MV:%[0-9]+]]:_(s32) = G_MERGE_VALUES [[LOAD]](s16), [[DEF]](s16)
+    ; GFX11-TRUE16-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX11-TRUE16-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MV]](s32), [[DEF1]](s32)
+    ; GFX11-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[MV1]](s64)
     ;
     ; GFX11-FAKE16-LABEL: name: test_extload_local_s64_from_2_align2
     ; GFX11-FAKE16: liveins: $vgpr0
@@ -18029,8 +18044,11 @@ body: |
     ; GFX11-UNALIGNED-TRUE16-NEXT: {{  $}}
     ; GFX11-UNALIGNED-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
     ; GFX11-UNALIGNED-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p3) :: (load (s16), align 4, addrspace 3)
-    ; GFX11-UNALIGNED-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s16)
-    ; GFX11-UNALIGNED-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
+    ; GFX11-UNALIGNED-TRUE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX11-UNALIGNED-TRUE16-NEXT: [[MV:%[0-9]+]]:_(s32) = G_MERGE_VALUES [[LOAD]](s16), [[DEF]](s16)
+    ; GFX11-UNALIGNED-TRUE16-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX11-UNALIGNED-TRUE16-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MV]](s32), [[DEF1]](s32)
+    ; GFX11-UNALIGNED-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[MV1]](s64)
     ;
     ; GFX11-UNALIGNED-FAKE16-LABEL: name: test_extload_local_s64_from_2_align2
     ; GFX11-UNALIGNED-FAKE16: liveins: $vgpr0
@@ -18045,8 +18063,11 @@ body: |
     ; GFX12-TRUE16-NEXT: {{  $}}
     ; GFX12-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
     ; GFX12-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p3) :: (load (s16), align 4, addrspace 3)
-    ; GFX12-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s16)
-    ; GFX12-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
+    ; GFX12-TRUE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX12-TRUE16-NEXT: [[MV:%[0-9]+]]:_(s32) = G_MERGE_VALUES [[LOAD]](s16), [[DEF]](s16)
+    ; GFX12-TRUE16-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX12-TRUE16-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MV]](s32), [[DEF1]](s32)
+    ; GFX12-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[MV1]](s64)
     ;
     ; GFX12-FAKE16-LABEL: name: test_extload_local_s64_from_2_align2
     ; GFX12-FAKE16: liveins: $vgpr0
@@ -18061,8 +18082,11 @@ body: |
     ; GFX12-UNALIGNED-TRUE16-NEXT: {{  $}}
     ; GFX12-UNALIGNED-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
     ; GFX12-UNALIGNED-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p3) :: (load (s16), align 4, addrspace 3)
-    ; GFX12-UNALIGNED-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s16)
-    ; GFX12-UNALIGNED-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
+    ; GFX12-UNALIGNED-TRUE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX12-UNALIGNED-TRUE16-NEXT: [[MV:%[0-9]+]]:_(s32) = G_MERGE_VALUES [[LOAD]](s16), [[DEF]](s16)
+    ; GFX12-UNALIGNED-TRUE16-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX12-UNALIGNED-TRUE16-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MV]](s32), [[DEF1]](s32)
+    ; GFX12-UNALIGNED-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[MV1]](s64)
     ;
     ; GFX12-UNALIGNED-FAKE16-LABEL: name: test_extload_local_s64_from_2_align2
     ; GFX12-UNALIGNED-FAKE16: liveins: $vgpr0

@@ -1206,12 +1206,19 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .fewerElementsIf(elementTypeIsLegal(0), LegalizeMutations::scalarize(0))
     .alwaysLegal();
 
-  getActionDefinitionsBuilder({G_SEXT, G_ZEXT, G_ANYEXT})
-    .legalFor({{S64, S32}, {S32, S16}, {S64, S16},
-               {S32, S1}, {S64, S1}, {S16, S1}})
-    .scalarize(0)
-    .clampScalar(0, S32, S64)
-    .widenScalarToNextPow2(1, 32);
+  getActionDefinitionsBuilder({G_SEXT, G_ZEXT})
+      .legalFor(
+          {{S64, S32}, {S32, S16}, {S64, S16}, {S32, S1}, {S64, S1}, {S16, S1}})
+      .scalarize(0)
+      .clampScalar(0, S32, S64)
+      .widenScalarToNextPow2(1, 32);
+
+  getActionDefinitionsBuilder(G_ANYEXT)
+      .legalFor({{S64, S32}, {S32, S16}, {S32, S1}, {S64, S1}, {S16, S1}})
+      .narrowScalarFor({{S64, S16}}, changeTo(0, S32))
+      .scalarize(0)
+      .clampScalar(0, S32, S64)
+      .widenScalarToNextPow2(1, 32);
 
   // TODO: Split s1->s64 during regbankselect for VALU.
   auto &IToFP = getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
