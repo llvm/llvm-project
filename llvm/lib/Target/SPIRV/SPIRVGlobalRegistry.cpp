@@ -1998,6 +1998,10 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
 SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
     const Type *BaseType, MachineIRBuilder &MIRBuilder,
     SPIRV::StorageClass::StorageClass SC) {
+  if (BaseType->isFunctionTy() &&
+      !cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget())
+           .canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers))
+    BaseType = Type::getInt8Ty(MIRBuilder.getContext());
   // TODO: Need to check if EmitIr should always be true.
   SPIRVTypeInst SpirvBaseType = getOrCreateSPIRVType(
       BaseType, MIRBuilder, SPIRV::AccessQualifier::ReadWrite,
@@ -2026,7 +2030,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
   assert(!storageClassRequiresExplictLayout(SC));
   SPIRVTypeInst R = getOrCreateSPIRVPointerType(LLVMType, MIRBuilder, SC);
   assert(
-      getPointeeType(R) == BaseType &&
+      (getPointeeType(R) == BaseType || LLVMType->isFunctionTy()) &&
       "The base type was not correctly laid out for the given storage class.");
   return R;
 }
