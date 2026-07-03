@@ -620,6 +620,23 @@
 // CHECK371-NOT: "+reserved-r{{([6-9]|1[0-9]|2[0-8])}}"
 
 // -----------------------------------------------------------------------------
+// Reserving a caller-saved register (r6-r15) warns; a callee-saved one
+// (r16-r28) does not. The warning can be silenced with -Wno-....
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r6 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-WARN-R6 %s
+// CHECK-WARN-R6: warning: reserving the caller-saved register 'ffixed-r6'
+// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r15 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-WARN-R15 %s
+// CHECK-WARN-R15: warning: reserving the caller-saved register 'ffixed-r15'
+// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r16 %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-NOWARN %s
+// RUN: %clang -### --target=hexagon-unknown-elf -ffixed-r6 \
+// RUN:        -Wno-hexagon-reserved-caller-saved %s 2>&1 \
+// RUN:        | FileCheck --check-prefix=CHECK-NOWARN %s
+// CHECK-NOWARN-NOT: warning: reserving the caller-saved register
+
+// -----------------------------------------------------------------------------
 // mcabac
 // -----------------------------------------------------------------------------
 // RUN: %clang -### --target=hexagon-unknown-elf -mcabac %s 2>&1 \

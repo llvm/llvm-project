@@ -7042,9 +7042,9 @@ def mno_hexagon_hvx_ieee_fp : Flag<["-"], "mno-hvx-ieee-fp">,
   Group<m_hexagon_Features_Group>,
   HelpText<"Disable Hexagon HVX IEEE floating-point">;
 foreach i = {6-7} in
-    def ffixed_r#i : Flag<["-"], "ffixed-r"#i>, Group<f_Group>,
+    def ffixed_r#i : Flag<["-"], "ffixed-r"#i>, Group<m_Group>,
     HelpText<"Reserve register r"#i#" (Hexagon only)">;
-def ffixed_r19: Flag<["-"], "ffixed-r19">, Group<f_Group>,
+def ffixed_r19: Flag<["-"], "ffixed-r19">, Group<m_Group>,
   HelpText<"Reserve register r19 (Hexagon/x86_64 only; x86_64 requires APX EGPR)">;
 } // let Flags = [TargetSpecific]
 def mmemops : Flag<["-"], "mmemops">, Group<m_hexagon_Features_Group>,
