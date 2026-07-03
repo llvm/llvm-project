@@ -40,9 +40,9 @@ SWIFTFLAGS ?= $(SWIFT_DEBUG_INFO_FLAG) -Onone -Xfrontend -serialize-debugging-op
 ifeq "$(MAKE_PDB)" "YES"
 SWIFT_LINK_FLAGS = $(SWIFTFLAGS) -Xlinker /debug
 else
-# On Darwin, `-g` automatically runs `dsymutil`. Removed so it can be enabled explicitly
-# as neeeded.
-SWIFT_LINK_FLAGS = $(patsubst -g,,$(SWIFTFLAGS))
+# On Darwin, debug-info flags (`-g`, `-gdwarf-types`) automatically run
+# `dsymutil` at link time. Removed so it can be enabled explicitly as needed.
+SWIFT_LINK_FLAGS = $(patsubst -gdwarf-types,,$(patsubst -g,,$(SWIFTFLAGS)))
 endif
 
 SWIFTFLAGS += $(SWIFTFLAGS_EXTRAS)
