@@ -1365,10 +1365,6 @@ def ZZ_q  : RegisterOperand<ZPR2, "printTypedVectorList<0,'q'>"> {
   let ParserMatchClass = ZPRVectorList<128, 2>;
 }
 
-def ZZZ_Any  : RegisterOperand<ZPR3, "printTypedVectorList<0,0>"> {
-  let ParserMatchClass = ZPRVectorList<0, 3>;
-}
-
 def ZZZ_b  : RegisterOperand<ZPR3, "printTypedVectorList<0,'b'>"> {
   let ParserMatchClass = ZPRVectorList<8, 3>;
 }
@@ -1427,6 +1423,13 @@ class ZPRVectorListMul<int ElementWidth, int NumRegs, string RegClassSuffix = ""
                                  # NumRegs # ", 0, "
                                  # ElementWidth #  ", "
                                  # "AArch64::ZPR" # RegClassSuffix # "RegClassID" # ">";
+}
+
+let EncoderMethod = "EncodeRegMul_MinMax<1, 0, 7>",
+    DecoderMethod = "DecodeSimpleRegisterClass<AArch64::ZPR3RegClassID, 0, 8>" in {
+  def ZZZ_Any_3b  : RegisterOperand<ZPR3, "printTypedVectorList<0,0>"> {
+    let ParserMatchClass = ZPRVectorListMul<0, 3, "_3b">;
+  }
 }
 
 let EncoderMethod = "EncodeRegMul_MinMax<2, 0, 30>",
