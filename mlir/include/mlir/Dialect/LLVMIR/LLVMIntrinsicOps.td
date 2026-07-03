@@ -635,6 +635,16 @@ def LLVM_ConstrainedTruncIntr     : LLVM_ConstrainedUnaryIntrNoRM<"trunc">;
 def LLVM_ConstrainedPowIntr   : LLVM_ConstrainedBinaryIntrRM<"pow">;
 def LLVM_ConstrainedATan2Intr : LLVM_ConstrainedBinaryIntrRM<"atan2">;
 
+def LLVM_ConstrainedPowIIntr
+    : LLVM_ConstrainedIntr<"powi", /*numArgs=*/2,
+        /*overloadedResult=*/1, /*overloadedOperands=*/[],
+        /*hasRoundingMode=*/1> {
+  let assemblyFormat = [{
+    $arg_0 `,` $arg_1 $roundingmode $fpExceptionBehavior attr-dict `:`
+    functional-type(operands, results)
+  }];
+}
+
 def LLVM_ConstrainedUIToFP
     : LLVM_ConstrainedIntr<"uitofp", /*numArgs=*/1,
         /*overloadedResult=*/1, /*overloadedOperands=*/[0],
