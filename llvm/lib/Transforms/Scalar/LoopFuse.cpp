@@ -1822,9 +1822,6 @@ PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
   }
   if (Changed)
     PDT.recalculate(F);
-
-  LLVM_DEBUG(dbgs() << "Test stat name: " << FuseCounter.getName() << "\n");
-  LLVM_DEBUG(dbgs() << "Test stat desc: " << FuseCounter.getDesc() << "\n");
   
   LoopFuser LF(LI, DT, DI, SE, PDT, ORE, AC, TTI);
   Changed |= LF.fuseLoops(F);
