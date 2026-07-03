@@ -2939,6 +2939,17 @@ define void @test68(ptr %a, ptr %b) {
   ret void
 }
 
+; CHECK-LABEL: define void @test69_release_retain(
+; CHECK-NOT:     call void @llvm.objc.release
+; CHECK-NOT:     call ptr @llvm.objc.retain
+; CHECK:         ret void
+
+define void @test69_release_retain(ptr %a) {
+  call void @llvm.objc.release(ptr %a), !clang.imprecise_release !0
+  call ptr @llvm.objc.retain(ptr %a)
+  ret void
+}
+
 !llvm.module.flags = !{!1}
 !llvm.dbg.cu = !{!3}
 

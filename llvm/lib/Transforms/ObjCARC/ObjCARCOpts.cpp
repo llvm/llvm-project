@@ -154,8 +154,6 @@ static const Value *FindSingleUseIdentifiedObject(const Value *Arg) {
 
 // TODO: The pointer returned from objc_loadWeakRetained is retained.
 
-// TODO: Delete release+retain pairs (rare).
-
 STATISTIC(NumNoops,       "Number of no-op objc calls eliminated");
 STATISTIC(NumPartialNoops, "Number of partially no-op objc calls eliminated");
 STATISTIC(NumAutoreleases,"Number of autoreleases converted to releases");
@@ -2473,6 +2471,42 @@ bool ObjCARCOpt::run(Function &F, AAResults &AA) {
   if (UsedInThisFunction & ((1 << unsigned(ARCInstKind::AutoreleasepoolPush)) |
                             (1 << unsigned(ARCInstKind::AutoreleasepoolPop))))
     OptimizeAutoreleasePools(F);
+
+  // Late peephole: Delete release+retain pairs.
+  // We do this late so it doesn't disrupt the adjacent pair heuristic in
+  // OptimizeSequences.
+  if (UsedInThisFunction & (1 << unsigned(ARCInstKind::Retain))) {
+    if (UsedInThisFunction & (1 << unsigned(ARCInstKind::Release))) {
+      for (BasicBlock &BB : F) {
+        // Live, not-yet-erased instructions seen so far (debug/pseudo
+        // excluded), most recent on top. A stack instead of a single
+        // PrevInst pointer lets a whole cascade collapse in one pass:
+        // popping a cancelled pair re-exposes whatever came before it.
+        SmallVector<Instruction *, 8> Worklist;
+        for (Instruction &Inst : llvm::make_early_inc_range(BB)) {
+          if (Inst.isDebugOrPseudoInst())
+            continue;
+
+          ARCInstKind Class = GetBasicARCInstKind(&Inst);
+          if (Class == ARCInstKind::Retain && !Worklist.empty() &&
+              GetBasicARCInstKind(Worklist.back()) == ARCInstKind::Release) {
+            Instruction *Prev = Worklist.back();
+            if (GetArgRCIdentityRoot(&Inst) == GetArgRCIdentityRoot(Prev)) {
+              Worklist.pop_back();
+              Changed = true;
+              ++NumRRs;
+              LLVM_DEBUG(dbgs() << "Erasing release+retain pair: " << *Prev
+                                << " and " << Inst << "\n");
+              EraseInstruction(&Inst);
+              EraseInstruction(Prev);
+              continue;
+            }
+          }
+          Worklist.push_back(&Inst);
+        }
+      }
+    }
+  }
 
   // Gather statistics after optimization.
 #ifndef NDEBUG
