@@ -72,11 +72,26 @@ LIBC_INLINE double acosh(double x) {
   DoubleDouble v_dd = fputil::exact_add(x_sq.hi, -1.0);
   v_dd.lo += x_sq.lo;
 
-  // sqrt(x^2 - 1) as a double-double via one Newton step.
+  // To compute s_hi + s_lo ~ sqrt(v_dd.hi + v_dd.lo):
+  // - First we use fast sqrt instruction to get:
+  //     s_hi ~ sqrt(v_dd.hi)
+  // - Then use Taylor expansion of f(x) = sqrt(x):
+  //     sqrt(v_dd.hi + v_dd.lo) ~ sqrt(v_dd.hi) + v_dd.lo / (2*sqrt(v_dd.hi))
+  // - Subtract by s_hi to find the correction term:
+  //     sqrt(v_dd.hi + v_dd.lo) - s_hi
+  //       ~ (sqrt(v_dd.hi) - s_hi) + v_dd.lo / (2 * s_hi)
+  // - Instead of finding the rounding error sqrt(v_dd.hi) - s_hi directly,
+  //   use the squared residual d = v_dd.hi - s_hi^2, which can be computed
+  //   accurately in double-double. Using the same Taylor approximation:
+  //     sqrt(v_dd.hi) - s_hi = sqrt(s_hi^2 + d) - s_hi
+  //                          ~ d / (2 * s_hi)
+  //   so the full correction is:
+  //     s_lo = (d + v_dd.lo) / (2 * s_hi)
+  //          = ((v_dd.hi - s_sq.hi) + (v_dd.lo - s_sq.lo)) * s_inv
   double s_hi = fputil::sqrt<double>(v_dd.hi);
   double s_inv = 0.5 / s_hi;
   DoubleDouble s_sq = fputil::exact_mult(s_hi, s_hi);
-  double s_lo = ((v_dd.hi - s_sq.hi) - s_sq.lo + v_dd.lo) * s_inv;
+  double s_lo = ((v_dd.hi - s_sq.hi) + (v_dd.lo - s_sq.lo)) * s_inv;
 
   // y = x + sqrt(x^2 - 1) as a double-double. Fast2Sum applies since
   // sqrt(x^2 - 1) < x for all x > 1.
