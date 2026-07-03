@@ -1180,6 +1180,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // SSE41 can use PHMINPOS to perform v16i8/v8i16 minmax reductions.
     // Fallback to ReplaceNodeResults for vXi64 reductions on 32-bit targets.
     for (auto VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64, MVT::i64}) {
+      setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
       setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
       setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
       setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
@@ -1571,6 +1572,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_AND,   VT, Custom);
       setOperationAction(ISD::VECREDUCE_OR,    VT, Custom);
       setOperationAction(ISD::VECREDUCE_XOR,   VT, Custom);
+      setOperationAction(ISD::VECREDUCE_ADD,   VT, Custom);
       setOperationAction(ISD::VECREDUCE_SMAX,  VT, Custom);
       setOperationAction(ISD::VECREDUCE_SMIN,  VT, Custom);
       setOperationAction(ISD::VECREDUCE_UMAX,  VT, Custom);
@@ -2047,6 +2049,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_AND,    VT, Custom);
       setOperationAction(ISD::VECREDUCE_OR,     VT, Custom);
       setOperationAction(ISD::VECREDUCE_XOR,    VT, Custom);
+      setOperationAction(ISD::VECREDUCE_ADD,    VT, Custom);
       setOperationAction(ISD::VECREDUCE_SMAX,   VT, Custom);
       setOperationAction(ISD::VECREDUCE_SMIN,   VT, Custom);
       setOperationAction(ISD::VECREDUCE_UMAX,   VT, Custom);
@@ -2813,6 +2816,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::ANY_EXTEND_VECTOR_INREG,
                        ISD::SIGN_EXTEND_VECTOR_INREG,
                        ISD::ZERO_EXTEND_VECTOR_INREG,
+                       ISD::VECREDUCE_ADD,
                        ISD::SINT_TO_FP,
                        ISD::UINT_TO_FP,
                        ISD::FP_TO_SINT,
@@ -10231,7 +10235,12 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
     return Sh;
 
   // For SSE 4.1, use insertps to put the high elements into the low element.
-  if (Subtarget.hasSSE41() && EltVT != MVT::f16) {
+  if (Subtarget.hasSSE41() && EltVT != MVT::f16 &&
+      (VT.isFloatingPoint() || any_of(Values, [VT](SDValue Value) {
+         return Value.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
+                Value.getOperand(0).getValueType() != VT ||
+                !isNullConstant(Value.getOperand(1));
+       }))) {
     SDValue Result;
     if (!Op.getOperand(0).isUndef())
       Result = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, VT, Op.getOperand(0));
@@ -29895,6 +29904,170 @@ static SDValue LowerVECREDUCE(SDValue Op, const X86Subtarget &Subtarget,
   return DAG.getExtractVectorElt(DL, ExtractVT, Src, 0);
 }
 
+// Lower types larger than vXi8 that only have 8 active bits using PSADBW.
+static SDValue LowerVECREDUCE_PSADBW(SDValue Op, const SDLoc &DL,
+                                     const X86Subtarget &Subtarget,
+                                     SelectionDAG &DAG) {
+  assert(Op.getOpcode() == ISD::VECREDUCE_ADD &&
+         "Only ADD reductions supported");
+
+  SDValue Src = Op.getOperand(0);
+  MVT SrcVT = Src.getSimpleValueType();
+  MVT ExtractVT = Op.getSimpleValueType();
+
+  if (SrcVT.getScalarType().bitsLT(MVT::i16) ||
+      ISD::isBuildVectorOfConstantSDNodes(Src.getNode()) ||
+      DAG.computeKnownBits(Src).countMaxActiveBits() > 8)
+    return SDValue();
+
+  // Attempt to freely truncate closer to v8i8 if we can.
+  if (Src.getOpcode() == ISD::ZERO_EXTEND &&
+      Src.getOperand(0).getValueSizeInBits() >= 128 &&
+      Src.getOperand(0).getScalarValueSizeInBits() >= 8) {
+    Src = Src.getOperand(0);
+    SrcVT = Src.getSimpleValueType();
+  }
+
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(SrcVT))
+    return SDValue();
+
+  auto GetPackVT = [](MVT VecVT) {
+    MVT PackSVT = MVT::getIntegerVT(VecVT.getScalarSizeInBits() / 2);
+    return MVT::getVectorVT(PackSVT, VecVT.getVectorElementCount() * 2);
+  };
+
+  // Attempt to truncate if the active elements don't already fit into the
+  // lowest 64-bits of the vector.
+  unsigned NumSrcElts = SrcVT.getVectorNumElements();
+  APInt HiElts =
+      APInt::getHighBitsSet(NumSrcElts, 64 / SrcVT.getScalarSizeInBits());
+  if (NumSrcElts > 2 && SrcVT.getScalarSizeInBits() > 8 &&
+      !DAG.isIdentityElement(ISD::ADD, Op->getFlags(), Src, HiElts, 1)) {
+    if (Subtarget.hasAVX512() &&
+        (Subtarget.hasBWI() || SrcVT.getScalarSizeInBits() > 16)) {
+      MVT TruncVT = MVT::getVectorVT(MVT::i8, std::max(NumSrcElts, 16u));
+      if (SDValue NewSrc = getAVX512TruncNode(DL, TruncVT, Src, Subtarget, DAG,
+                                              /*ZeroUppers=*/true)) {
+        Src = NewSrc;
+        SrcVT = Src.getSimpleValueType();
+      }
+    }
+    if (SrcVT == MVT::v8i32 || SrcVT == MVT::v16i16) {
+      SDValue Lo, Hi;
+      std::tie(Lo, Hi) = splitVector(Src, DAG, DL);
+      SrcVT = GetPackVT(Lo.getSimpleValueType());
+      Src = DAG.getNode(X86ISD::PACKUS, DL, SrcVT, Lo, Hi);
+    }
+    if (SrcVT == MVT::v4i32 || SrcVT == MVT::v8i16) {
+      Src = DAG.getNode(X86ISD::PACKUS, DL, MVT::v16i8,
+                        DAG.getBitcast(MVT::v8i16, Src),
+                        getZeroVector(MVT::v8i16, Subtarget, DAG, DL));
+      SrcVT = MVT::v16i8;
+    }
+  }
+
+  // Don't bother if we're still a vXi64 type.
+  if (SrcVT.getScalarType().bitsGT(MVT::i32))
+    return SDValue();
+
+  // Use PSADBW to reduce the v8i8 subvectors, then perform a vXi64 reduction.
+  auto PSADBWBuilder = [&Subtarget](SelectionDAG &DAG, const SDLoc &DL,
+                                    ArrayRef<SDValue> Ops) {
+    MVT OpVT = Ops[0].getSimpleValueType();
+    MVT VT = MVT::getVectorVT(MVT::i64, OpVT.getSizeInBits() / 64);
+    SDValue Zero = getZeroVector(OpVT, Subtarget, DAG, DL);
+    return DAG.getNode(X86ISD::PSADBW, DL, VT, Ops[0], Zero);
+  };
+
+  MVT ByteVT = MVT::getVectorVT(MVT::i8, SrcVT.getSizeInBits() / 8);
+  MVT SadVT = MVT::getVectorVT(MVT::i64, SrcVT.getSizeInBits() / 64);
+  Src = DAG.getBitcast(ByteVT, Src);
+  Src = SplitOpsAndApply(DAG, Subtarget, DL, SadVT, {Src}, PSADBWBuilder);
+  Src = DAG.getNode(ISD::VECREDUCE_ADD, DL, MVT::i64, Src);
+  return DAG.getZExtOrTrunc(Src, DL, ExtractVT);
+}
+
+static SDValue LowerVECREDUCE_HADD(SDValue Op, const SDLoc &DL,
+                                   const X86Subtarget &Subtarget,
+                                   SelectionDAG &DAG) {
+  assert(Op.getOpcode() == ISD::VECREDUCE_ADD &&
+         "Only ADD reductions supported");
+
+  // Only use HADD opcodes if they aren't microcoded or minimizes codesize.
+  if (!shouldUseHorizontalOp(/*IsSingleSource=*/true, DAG, Subtarget))
+    return SDValue();
+
+  SDValue Src = Op.getOperand(0);
+  MVT SrcVT = Src.getSimpleValueType();
+  MVT SrcSVT = SrcVT.getScalarType();
+  MVT ExtractVT = Op.getSimpleValueType();
+  unsigned NumSrcElts = SrcVT.getVectorNumElements();
+
+  if (SrcVT.getSizeInBits() < 128 || !isPowerOf2_32(NumSrcElts) ||
+      !((SrcSVT == MVT::i16 || SrcSVT == MVT::i32) && Subtarget.hasSSSE3()))
+    return SDValue();
+
+  while (SrcVT.getSizeInBits() > 128) {
+    SDValue Lo, Hi;
+    std::tie(Lo, Hi) = splitVector(Src, DAG, DL);
+    SrcVT = Lo.getSimpleValueType();
+    Src = DAG.getNode(ISD::ADD, DL, SrcVT, Lo, Hi);
+    NumSrcElts /= 2;
+  }
+  assert(SrcVT.is128BitVector() && "128-bit reduction expected");
+
+  // Perform horizontal sums until the whole sum is in element 0.
+  unsigned ReductionSteps = Log2_32(NumSrcElts);
+  for (unsigned I = 0; I != ReductionSteps; ++I) {
+    unsigned NumRdxElts = NumSrcElts >> I;
+    APInt HiElts = APInt::getBitsSet(NumSrcElts, NumRdxElts / 2, NumRdxElts);
+    if (DAG.isIdentityElement(ISD::ADD, Op->getFlags(), Src, HiElts, 0)) {
+      APInt LoElts = APInt::getLowBitsSet(NumSrcElts, NumRdxElts / 2);
+      Src = peekThroughDemandedElts(Src, LoElts, DAG);
+    } else {
+      Src = DAG.getNode(X86ISD::HADD, DL, SrcVT, Src, Src);
+    }
+  }
+
+  return DAG.getExtractVectorElt(DL, ExtractVT, Src, 0);
+}
+
+static SDValue LowerVECREDUCE_ADD(SDValue Op, const X86Subtarget &Subtarget,
+                                  SelectionDAG &DAG) {
+  SDValue Src = Op.getOperand(0);
+  EVT SrcVT = Src.getValueType();
+  EVT ExtractVT = Op.getValueType();
+  SDLoc DL(Op);
+
+  if (SrcVT.getSizeInBits() < 128 ||
+      !isPowerOf2_32(SrcVT.getVectorNumElements()))
+    return LowerVECREDUCE(Op, Subtarget, DAG, /*AllowScalarization=*/true);
+
+  // v16i8 add reduction - sum lo/hi halves then use PSADBW.
+  if (SrcVT.getScalarType() == MVT::i8) {
+    if (SrcVT == MVT::v16i8) {
+      SDValue Hi = DAG.getVectorShuffle(
+          MVT::v16i8, DL, Src, Src,
+          {8, 9, 10, 11, 12, 13, 14, 15, 8, 9, 10, 11, 12, 13, 14, 15});
+      Src = DAG.getNode(ISD::ADD, DL, MVT::v16i8, Src, Hi);
+      Src = DAG.getNode(X86ISD::PSADBW, DL, MVT::v2i64, Src,
+                        getZeroVector(MVT::v16i8, Subtarget, DAG, DL));
+      Src = DAG.getBitcast(MVT::v16i8, Src);
+      return DAG.getExtractVectorElt(DL, ExtractVT, Src, 0);
+    }
+    // Use TargetLowering::expandVecReduce to split down to MVT::v16i8.
+    return SDValue();
+  }
+
+  if (SDValue Rdx = LowerVECREDUCE_PSADBW(Op, DL, Subtarget, DAG))
+    return Rdx;
+
+  if (SDValue Rdx = LowerVECREDUCE_HADD(Op, DL, Subtarget, DAG))
+    return Rdx;
+
+  return LowerVECREDUCE(Op, Subtarget, DAG, /*AllowScalarization=*/true);
+}
+
 static SDValue lowerAddSub(SDValue Op, SelectionDAG &DAG,
                            const X86Subtarget &Subtarget) {
   MVT VT = Op.getSimpleValueType();
@@ -34765,6 +34938,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::VECREDUCE_AND:
   case ISD::VECREDUCE_OR:
   case ISD::VECREDUCE_XOR:      return LowerVECREDUCE(Op, Subtarget, DAG, true);
+  case ISD::VECREDUCE_ADD:      return LowerVECREDUCE_ADD(Op, Subtarget, DAG);
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
   case ISD::FMINIMUMNUM:
@@ -35565,6 +35739,12 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue Res = DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, Lo, Hi);
       Results.push_back(Res);
     }
+    return;
+  }
+  case ISD::VECREDUCE_ADD: {
+    assert(N->getValueType(0) == MVT::i64 && "Unexpected vector reduction");
+    if (SDValue Res = LowerVECREDUCE_ADD(SDValue(N, 0), Subtarget, DAG))
+      Results.push_back(Res);
     return;
   }
   case ISD::VECREDUCE_SMAX:
@@ -47489,24 +47669,25 @@ static SDValue combinePredicateReduction(SDNode *Extract, SelectionDAG &DAG,
   return DAG.getNegative(Zext, DL, ExtractVT);
 }
 
-static SDValue combineVPDPBUSDPattern(SDNode *Extract, SelectionDAG &DAG,
+static SDValue combineVPDPBUSDPattern(SDNode *N, const SDLoc &DL,
+                                      SelectionDAG &DAG,
                                       const X86Subtarget &Subtarget) {
   if (!Subtarget.hasVNNI() && !Subtarget.hasAVXVNNI())
     return SDValue();
 
-  EVT ExtractVT = Extract->getValueType(0);
-  // Verify the type we're extracting is i32, as the output element type of
+  if (N->getOpcode() != ISD::VECREDUCE_ADD)
+    return SDValue();
+
+  EVT ExtractVT = N->getValueType(0);
+  // Verify the type we're reducing to is i32, as the output element type of
   // vpdpbusd is i32.
   if (ExtractVT != MVT::i32)
     return SDValue();
 
-  EVT VT = Extract->getOperand(0).getValueType();
+  SDValue Root = N->getOperand(0);
+  EVT VT = Root.getValueType();
   if (!isPowerOf2_32(VT.getVectorNumElements()))
     return SDValue();
-
-  // Match shuffle + add pyramid.
-  ISD::NodeType BinOp;
-  SDValue Root = DAG.matchBinOpReduction(Extract, BinOp, {ISD::ADD});
 
   // We can't combine to vpdpbusd for zext, because each of the 4 multiplies
   // done by vpdpbusd compute a signed 16-bit product that will be sign extended
@@ -47519,7 +47700,7 @@ static SDValue combineVPDPBUSDPattern(SDNode *Extract, SelectionDAG &DAG,
   //   Root = Root.getOperand(0);
 
   // If there was a match, we want Root to be a mul.
-  if (!Root || Root.getOpcode() != ISD::MUL)
+  if (Root.getOpcode() != ISD::MUL)
     return SDValue();
 
   // Check whether we have an extend and mul pattern
@@ -47528,7 +47709,6 @@ static SDValue combineVPDPBUSDPattern(SDNode *Extract, SelectionDAG &DAG,
     return SDValue();
 
   // Create the dot product instruction.
-  SDLoc DL(Extract);
   unsigned StageBias;
   SDValue DP = createVPDPBUSD(DAG, LHS, RHS, StageBias, DL, Subtarget);
 
@@ -47555,12 +47735,11 @@ static SDValue combineVPDPBUSDPattern(SDNode *Extract, SelectionDAG &DAG,
   EVT ResVT =
       EVT::getVectorVT(*DAG.getContext(), ExtractVT,
                        DpVT.getSizeInBits() / ExtractVT.getSizeInBits());
-  DP = DAG.getBitcast(ResVT, DP);
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ExtractVT, DP,
-                     Extract->getOperand(1));
+  return DAG.getExtractVectorElt(DL, ExtractVT, DAG.getBitcast(ResVT, DP), 0);
 }
 
-static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
+static SDValue combineBasicSADPattern(SDNode *N, const SDLoc &DL,
+                                      SelectionDAG &DAG,
                                       const X86Subtarget &Subtarget) {
   using namespace SDPatternMatch;
 
@@ -47568,19 +47747,17 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
   if (!Subtarget.hasSSE2())
     return SDValue();
 
-  EVT ExtractVT = Extract->getValueType(0);
+  if (N->getOpcode() != ISD::VECREDUCE_ADD)
+    return SDValue();
+
+  EVT ExtractVT = N->getValueType(0);
   if (ExtractVT != MVT::i8 && ExtractVT != MVT::i16 && ExtractVT != MVT::i32 &&
       ExtractVT != MVT::i64)
     return SDValue();
 
-  EVT VT = Extract->getOperand(0).getValueType();
+  SDValue Root = N->getOperand(0);
+  EVT VT = Root.getValueType();
   if (!isPowerOf2_32(VT.getVectorNumElements()))
-    return SDValue();
-
-  // Match shuffle + add pyramid.
-  ISD::NodeType BinOp;
-  SDValue Root = DAG.matchBinOpReduction(Extract, BinOp, {ISD::ADD});
-  if (!Root)
     return SDValue();
 
   // The operand is expected to be zero extended from i8.
@@ -47614,7 +47791,6 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
     return SDValue();
 
   // Create the SAD instruction.
-  SDLoc DL(Extract);
   SDValue SAD = createPSADBW(DAG, Src0, Src1, DL, Subtarget);
 
   // If the original vector was wider than 8 elements, sum over the results
@@ -47624,9 +47800,9 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
   if (Stages > 3) {
     unsigned SadElems = SadVT.getVectorNumElements();
 
-    for(unsigned i = Stages - 3; i > 0; --i) {
+    for (unsigned i = Stages - 3; i > 0; --i) {
       SmallVector<int, 16> Mask(SadElems, -1);
-      for(unsigned j = 0, MaskEnd = 1 << (i - 1); j < MaskEnd; ++j)
+      for (unsigned j = 0, MaskEnd = 1 << (i - 1); j < MaskEnd; ++j)
         Mask[j] = MaskEnd + j;
 
       SDValue Shuffle =
@@ -47639,9 +47815,7 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
   // Return the lowest ExtractSizeInBits bits.
   EVT ResVT = EVT::getVectorVT(*DAG.getContext(), ExtractVT,
                                SadVT.getSizeInBits() / ExtractSizeInBits);
-  SAD = DAG.getBitcast(ResVT, SAD);
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ExtractVT, SAD,
-                     Extract->getOperand(1));
+  return DAG.getExtractVectorElt(DL, ExtractVT, DAG.getBitcast(ResVT, SAD), 0);
 }
 
 // If this extract is from a loaded vector value and will be used as an
@@ -48007,7 +48181,7 @@ static SDValue combineArithReduction(SDNode *ExtElt, SelectionDAG &DAG,
 
   ISD::NodeType Opc;
   SDValue Rdx = DAG.matchBinOpReduction(ExtElt, Opc,
-                                        {ISD::ADD, ISD::MUL, ISD::FADD}, true);
+                                        {ISD::MUL, ISD::FADD}, true);
   if (!Rdx)
     return SDValue();
 
@@ -48022,7 +48196,6 @@ static SDValue combineArithReduction(SDNode *ExtElt, SelectionDAG &DAG,
 
   SDLoc DL(ExtElt);
   unsigned NumElts = VecVT.getVectorNumElements();
-  unsigned EltSizeInBits = VecVT.getScalarSizeInBits();
 
   // Extend v4i8/v8i8 vector to v16i8, with undef upper 64-bits.
   auto WidenToV16I8 = [&](SDValue V, bool ZeroExtend) {
@@ -48076,106 +48249,27 @@ static SDValue combineArithReduction(SDNode *ExtElt, SelectionDAG &DAG,
     return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Rdx, Index);
   }
 
-  // vXi8 add reduction - sub 128-bit vector.
-  if (VecVT == MVT::v4i8 || VecVT == MVT::v8i8) {
-    Rdx = WidenToV16I8(Rdx, true);
-    Rdx = DAG.getNode(X86ISD::PSADBW, DL, MVT::v2i64, Rdx,
-                      DAG.getConstant(0, DL, MVT::v16i8));
-    Rdx = DAG.getBitcast(MVT::v16i8, Rdx);
-    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Rdx, Index);
-  }
-
   // Must be a >=128-bit vector with pow2 elements.
   if ((VecVT.getSizeInBits() % 128) != 0 || !isPowerOf2_32(NumElts))
     return SDValue();
 
-  // vXi8 add reduction - sum lo/hi halves then use PSADBW.
-  if (VT == MVT::i8) {
-    while (Rdx.getValueSizeInBits() > 128) {
-      SDValue Lo, Hi;
-      std::tie(Lo, Hi) = splitVector(Rdx, DAG, DL);
-      VecVT = Lo.getValueType();
-      Rdx = DAG.getNode(ISD::ADD, DL, VecVT, Lo, Hi);
-    }
-    assert(VecVT == MVT::v16i8 && "v16i8 reduction expected");
-
-    SDValue Hi = DAG.getVectorShuffle(
-        MVT::v16i8, DL, Rdx, Rdx,
-        {8, 9, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1});
-    Rdx = DAG.getNode(ISD::ADD, DL, MVT::v16i8, Rdx, Hi);
-    Rdx = DAG.getNode(X86ISD::PSADBW, DL, MVT::v2i64, Rdx,
-                      getZeroVector(MVT::v16i8, Subtarget, DAG, DL));
-    Rdx = DAG.getBitcast(MVT::v16i8, Rdx);
-    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Rdx, Index);
-  }
-
-  // See if we can use vXi8 PSADBW add reduction for larger zext types.
-  // If the source vector values are 0-255, then we can use PSADBW to
-  // sum+zext v8i8 subvectors to vXi64, then perform the reduction.
-  // TODO: See if its worth avoiding vXi16/i32 truncations?
-  if (Opc == ISD::ADD && NumElts >= 4 && EltSizeInBits >= 16 &&
-      EltSizeInBits <= 64 && DAG.computeKnownBits(Rdx).getMaxValue().ule(255) &&
-      (EltSizeInBits == 16 || Rdx.getOpcode() == ISD::ZERO_EXTEND ||
-       Subtarget.hasAVX512())) {
-    if (Rdx.getValueType() == MVT::v8i16) {
-      Rdx = DAG.getNode(X86ISD::PACKUS, DL, MVT::v16i8, Rdx,
-                        DAG.getUNDEF(MVT::v8i16));
-    } else {
-      EVT ByteVT = VecVT.changeVectorElementType(*DAG.getContext(), MVT::i8);
-      Rdx = DAG.getNode(ISD::TRUNCATE, DL, ByteVT, Rdx);
-      if (ByteVT.getSizeInBits() < 128)
-        Rdx = WidenToV16I8(Rdx, true);
-    }
-
-    // Build the PSADBW, split as 128/256/512 bits for SSE/AVX2/AVX512BW.
-    auto PSADBWBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
-                            ArrayRef<SDValue> Ops) {
-      MVT VT = MVT::getVectorVT(MVT::i64, Ops[0].getValueSizeInBits() / 64);
-      SDValue Zero = DAG.getConstant(0, DL, Ops[0].getValueType());
-      return DAG.getNode(X86ISD::PSADBW, DL, VT, Ops[0], Zero);
-    };
-    MVT SadVT = MVT::getVectorVT(MVT::i64, Rdx.getValueSizeInBits() / 64);
-    Rdx = SplitOpsAndApply(DAG, Subtarget, DL, SadVT, {Rdx}, PSADBWBuilder);
-
-    // TODO: We could truncate to vXi16/vXi32 before performing the reduction.
-    while (Rdx.getValueSizeInBits() > 128) {
-      SDValue Lo, Hi;
-      std::tie(Lo, Hi) = splitVector(Rdx, DAG, DL);
-      VecVT = Lo.getValueType();
-      Rdx = DAG.getNode(ISD::ADD, DL, VecVT, Lo, Hi);
-    }
-    assert(Rdx.getValueType() == MVT::v2i64 && "v2i64 reduction expected");
-
-    if (NumElts > 8) {
-      SDValue RdxHi = DAG.getVectorShuffle(MVT::v2i64, DL, Rdx, Rdx, {1, -1});
-      Rdx = DAG.getNode(ISD::ADD, DL, MVT::v2i64, Rdx, RdxHi);
-    }
-
-    VecVT = MVT::getVectorVT(VT.getSimpleVT(), 128 / VT.getSizeInBits());
-    Rdx = DAG.getBitcast(VecVT, Rdx);
-    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Rdx, Index);
-  }
-
-  // Only use (F)HADD opcodes if they aren't microcoded or minimizes codesize.
+  // Only use FHADD opcodes if they aren't microcoded or minimizes codesize.
   if (!shouldUseHorizontalOp(true, DAG, Subtarget))
     return SDValue();
 
-  unsigned HorizOpcode = Opc == ISD::ADD ? X86ISD::HADD : X86ISD::FHADD;
+  unsigned HorizOpcode = X86ISD::FHADD;
 
   // 256-bit horizontal instructions operate on 128-bit chunks rather than
   // across the whole vector, so we need an extract + hop preliminary stage.
   // This is the only step where the operands of the hop are not the same value.
   // TODO: We could extend this to handle 512-bit or even longer vectors.
-  if (((VecVT == MVT::v16i16 || VecVT == MVT::v8i32) && Subtarget.hasSSSE3()) ||
-      ((VecVT == MVT::v8f32 || VecVT == MVT::v4f64) && Subtarget.hasSSE3())) {
-    unsigned NumElts = VecVT.getVectorNumElements();
-    SDValue Hi = extract128BitVector(Rdx, NumElts / 2, DAG, DL);
-    SDValue Lo = extract128BitVector(Rdx, 0, DAG, DL);
-    Rdx = DAG.getNode(HorizOpcode, DL, Lo.getValueType(), Hi, Lo);
-    VecVT = Rdx.getValueType();
+  if (((VecVT == MVT::v8f32 || VecVT == MVT::v4f64) && Subtarget.hasSSE3())) {
+    SDValue Lo, Hi;
+    std::tie(Lo, Hi) = splitVector(Rdx, DAG, DL);
+    VecVT = Lo.getValueType();
+    Rdx = DAG.getNode(HorizOpcode, DL, VecVT, Hi, Lo);
   }
-  if (!((VecVT == MVT::v8i16 || VecVT == MVT::v4i32) && Subtarget.hasSSSE3()) &&
-      !((VecVT == MVT::v4f32 || VecVT == MVT::v2f64) && Subtarget.hasSSE3()))
+  if (!((VecVT == MVT::v4f32 || VecVT == MVT::v2f64) && Subtarget.hasSSE3()))
     return SDValue();
 
   // extract (add (shuf X), X), 0 --> extract (hadd X, X), 0
@@ -48288,20 +48382,11 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(X86ISD::MMX_MOVD2W, dl, MVT::i32,
                        InputVector.getOperand(0));
 
-  // Check whether this extract is the root of a sum of absolute differences
-  // pattern. This has to be done here because we really want it to happen
-  // pre-legalization,
-  if (SDValue SAD = combineBasicSADPattern(N, DAG, Subtarget))
-    return SAD;
-
-  if (SDValue VPDPBUSD = combineVPDPBUSDPattern(N, DAG, Subtarget))
-    return VPDPBUSD;
-
   // Attempt to replace an all_of/any_of horizontal reduction with a MOVMSK.
   if (SDValue Cmp = combinePredicateReduction(N, DAG, Subtarget))
     return Cmp;
 
-  // Attempt to optimize ADD/FADD/MUL reductions with HADD, promotion etc..
+  // Attempt to optimize FADD/MUL reductions with HADD, promotion etc..
   if (SDValue V = combineArithReduction(N, DAG, Subtarget))
     return V;
 
@@ -48384,6 +48469,42 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
       SDValue NewExt =
           DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, TruncSVT, TruncSrc, EltIdx);
       return DAG.getAnyExtOrTrunc(NewExt, dl, VT);
+    }
+  }
+
+  return SDValue();
+}
+
+static SDValue combineVECREDUCE_ADD(SDNode *N, SelectionDAG &DAG,
+                                    const X86Subtarget &Subtarget) {
+  SDValue Src = N->getOperand(0);
+  EVT SrcVT = Src.getValueType();
+  unsigned SrcEltBits = SrcVT.getScalarSizeInBits();
+  SDLoc DL(N);
+
+  if (SDValue SAD = combineBasicSADPattern(N, DL, DAG, Subtarget))
+    return SAD;
+
+  if (SDValue VPDPBUSD = combineVPDPBUSDPattern(N, DL, DAG, Subtarget))
+    return VPDPBUSD;
+
+  // Attempt to truncate extended vectors to the smallest pow2 element size that
+  // won't affect the result.
+  // TODO: This should be in DAGCombine if we can find a good way to generically
+  // determine acceptable truncation types.
+  if (Src.getOpcode() == ISD::ZERO_EXTEND ||
+      Src.getOpcode() == ISD::ZERO_EXTEND_VECTOR_INREG) {
+    // Active bits can increase by 1 bit for each of the (NumSrcElts - 1) adds.
+    unsigned NumSrcElts = SrcVT.getVectorNumElements();
+    unsigned SrcActiveBits = DAG.computeKnownBits(Src).countMaxActiveBits();
+    unsigned RdxActiveBits = SrcActiveBits + (NumSrcElts - 1);
+    unsigned TruncatedBitWidth = PowerOf2Ceil(std::max(RdxActiveBits, 8u));
+    if (TruncatedBitWidth < SrcEltBits) {
+      EVT TruncSVT = EVT::getIntegerVT(*DAG.getContext(), TruncatedBitWidth);
+      EVT TruncVT = SrcVT.changeElementType(*DAG.getContext(), TruncSVT);
+      Src = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, Src);
+      Src = DAG.getNode(ISD::VECREDUCE_ADD, DL, TruncSVT, Src);
+      return DAG.getZExtOrTrunc(Src, DL, N->getValueType(0));
     }
   }
 
@@ -63350,6 +63471,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::VFMULC:      return combineFMulcFCMulc(N, DAG, Subtarget);
   case ISD::FNEG:           return combineFneg(N, DAG, DCI, Subtarget);
   case ISD::TRUNCATE:       return combineTruncate(N, DAG, Subtarget);
+  case ISD::VECREDUCE_ADD:  return combineVECREDUCE_ADD(N, DAG, Subtarget);
   case X86ISD::VTRUNC:      return combineVTRUNC(N, DAG, DCI);
   case X86ISD::VTRUNCS:
   case X86ISD::VTRUNCUS:    return combineVTRUNCSAT(N, DAG, DCI, Subtarget);

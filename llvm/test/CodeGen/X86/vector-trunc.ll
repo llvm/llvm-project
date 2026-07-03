@@ -1946,11 +1946,11 @@ define i16 @PR66194(i8 %q) {
 ; SSE2-SSSE3-NEXT:    pinsrw $7, %ecx, %xmm0
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm1, %xmm1
 ; SSE2-SSSE3-NEXT:    psubw %xmm1, %xmm0
-; SSE2-SSSE3-NEXT:    packuswb %xmm0, %xmm0
 ; SSE2-SSSE3-NEXT:    pxor %xmm1, %xmm1
-; SSE2-SSSE3-NEXT:    psadbw %xmm0, %xmm1
-; SSE2-SSSE3-NEXT:    movd %xmm1, %eax
-; SSE2-SSSE3-NEXT:    # kill: def $ax killed $ax killed $eax
+; SSE2-SSSE3-NEXT:    packuswb %xmm1, %xmm0
+; SSE2-SSSE3-NEXT:    psadbw %xmm1, %xmm0
+; SSE2-SSSE3-NEXT:    movq %xmm0, %rax
+; SSE2-SSSE3-NEXT:    # kill: def $ax killed $ax killed $rax
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: PR66194:
@@ -1970,11 +1970,11 @@ define i16 @PR66194(i8 %q) {
 ; SSE41-NEXT:    pinsrb $14, %ecx, %xmm0
 ; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
 ; SSE41-NEXT:    psubw %xmm1, %xmm0
-; SSE41-NEXT:    packuswb %xmm0, %xmm0
 ; SSE41-NEXT:    pxor %xmm1, %xmm1
-; SSE41-NEXT:    psadbw %xmm0, %xmm1
-; SSE41-NEXT:    movd %xmm1, %eax
-; SSE41-NEXT:    # kill: def $ax killed $ax killed $eax
+; SSE41-NEXT:    packuswb %xmm1, %xmm0
+; SSE41-NEXT:    psadbw %xmm1, %xmm0
+; SSE41-NEXT:    movq %xmm0, %rax
+; SSE41-NEXT:    # kill: def $ax killed $ax killed $rax
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: PR66194:
@@ -1991,69 +1991,141 @@ define i16 @PR66194(i8 %q) {
 ; AVX1-NEXT:    vpinsrb $10, %eax, %xmm0, %xmm0
 ; AVX1-NEXT:    vpinsrb $12, %eax, %xmm0, %xmm0
 ; AVX1-NEXT:    vpinsrb $14, %ecx, %xmm0, %xmm0
-; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpsubw %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1,1,1,1,1,1,1,1]
+; AVX1-NEXT:    vpackuswb %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; AVX1-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; AVX1-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpsrld $16, %xmm0, %xmm1
-; AVX1-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vmovd %xmm0, %eax
-; AVX1-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovq %xmm0, %rax
+; AVX1-NEXT:    # kill: def $ax killed $ax killed $rax
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: PR66194:
 ; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    xorl %ecx, %ecx
 ; AVX2-NEXT:    testb %dil, %dil
 ; AVX2-NEXT:    setne %al
 ; AVX2-NEXT:    sete %cl
 ; AVX2-NEXT:    vmovd %eax, %xmm0
-; AVX2-NEXT:    vpinsrw $1, %ecx, %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrw $3, %eax, %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrw $4, %ecx, %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrw $5, %eax, %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrw $7, %ecx, %xmm0, %xmm0
-; AVX2-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrb $2, %ecx, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrb $4, %eax, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrb $8, %ecx, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrb $10, %eax, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrb $12, %eax, %xmm0, %xmm0
+; AVX2-NEXT:    vpinsrb $14, %ecx, %xmm0, %xmm0
+; AVX2-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [1,1,1,1,1,1,1,1]
+; AVX2-NEXT:    vpackuswb %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; AVX2-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; AVX2-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpsrld $16, %xmm0, %xmm1
-; AVX2-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vmovq %xmm0, %rax
+; AVX2-NEXT:    # kill: def $ax killed $ax killed $rax
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: PR66194:
-; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    xorl %eax, %eax
-; AVX512-NEXT:    xorl %ecx, %ecx
-; AVX512-NEXT:    testb %dil, %dil
-; AVX512-NEXT:    setne %al
-; AVX512-NEXT:    sete %cl
-; AVX512-NEXT:    vmovd %eax, %xmm0
-; AVX512-NEXT:    vpinsrw $1, %ecx, %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrw $2, %eax, %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrw $3, %eax, %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrw $4, %ecx, %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrw $5, %eax, %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrw $7, %ecx, %xmm0, %xmm0
-; AVX512-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; AVX512-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; AVX512-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpsrld $16, %xmm0, %xmm1
-; AVX512-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
-; AVX512-NEXT:    retq
+; AVX512F-LABEL: PR66194:
+; AVX512F:       # %bb.0: # %entry
+; AVX512F-NEXT:    xorl %eax, %eax
+; AVX512F-NEXT:    testb %dil, %dil
+; AVX512F-NEXT:    setne %al
+; AVX512F-NEXT:    sete %cl
+; AVX512F-NEXT:    vmovd %eax, %xmm0
+; AVX512F-NEXT:    vpinsrb $2, %ecx, %xmm0, %xmm0
+; AVX512F-NEXT:    vpinsrb $4, %eax, %xmm0, %xmm0
+; AVX512F-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
+; AVX512F-NEXT:    vpinsrb $8, %ecx, %xmm0, %xmm0
+; AVX512F-NEXT:    vpinsrb $10, %eax, %xmm0, %xmm0
+; AVX512F-NEXT:    vpinsrb $12, %eax, %xmm0, %xmm0
+; AVX512F-NEXT:    vpinsrb $14, %ecx, %xmm0, %xmm0
+; AVX512F-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [1,1,1,1,1,1,1,1]
+; AVX512F-NEXT:    vpackuswb %xmm0, %xmm1, %xmm0
+; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512F-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX512F-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vmovq %xmm0, %rax
+; AVX512F-NEXT:    # kill: def $ax killed $ax killed $rax
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: PR66194:
+; AVX512VL:       # %bb.0: # %entry
+; AVX512VL-NEXT:    xorl %eax, %eax
+; AVX512VL-NEXT:    testb %dil, %dil
+; AVX512VL-NEXT:    setne %al
+; AVX512VL-NEXT:    sete %cl
+; AVX512VL-NEXT:    vmovd %eax, %xmm0
+; AVX512VL-NEXT:    vpinsrb $2, %ecx, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpinsrb $4, %eax, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpinsrb $6, %eax, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpinsrb $8, %ecx, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpinsrb $10, %eax, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpinsrb $12, %eax, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpinsrb $14, %ecx, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1,1,1,1,1,1,1,1]
+; AVX512VL-NEXT:    vpackuswb %xmm0, %xmm1, %xmm0
+; AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VL-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX512VL-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovq %xmm0, %rax
+; AVX512VL-NEXT:    # kill: def $ax killed $ax killed $rax
+; AVX512VL-NEXT:    retq
+;
+; AVX512BW-LABEL: PR66194:
+; AVX512BW:       # %bb.0: # %entry
+; AVX512BW-NEXT:    xorl %eax, %eax
+; AVX512BW-NEXT:    xorl %ecx, %ecx
+; AVX512BW-NEXT:    testb %dil, %dil
+; AVX512BW-NEXT:    setne %al
+; AVX512BW-NEXT:    sete %cl
+; AVX512BW-NEXT:    vpbroadcastw {{.*#+}} xmm0 = [1,1,1,1,1,1,1,1]
+; AVX512BW-NEXT:    vmovd %eax, %xmm1
+; AVX512BW-NEXT:    vpinsrw $1, %ecx, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpinsrw $2, %eax, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpinsrw $3, %eax, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpinsrw $4, %ecx, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpinsrw $5, %eax, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpinsrw $6, %eax, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpinsrw $7, %ecx, %xmm1, %xmm1
+; AVX512BW-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512BW-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX512BW-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vmovq %xmm0, %rax
+; AVX512BW-NEXT:    # kill: def $ax killed $ax killed $rax
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+;
+; AVX512BWVL-LABEL: PR66194:
+; AVX512BWVL:       # %bb.0: # %entry
+; AVX512BWVL-NEXT:    xorl %eax, %eax
+; AVX512BWVL-NEXT:    xorl %ecx, %ecx
+; AVX512BWVL-NEXT:    testb %dil, %dil
+; AVX512BWVL-NEXT:    setne %al
+; AVX512BWVL-NEXT:    sete %cl
+; AVX512BWVL-NEXT:    vpbroadcastw {{.*#+}} xmm0 = [1,1,1,1,1,1,1,1]
+; AVX512BWVL-NEXT:    vmovd %eax, %xmm1
+; AVX512BWVL-NEXT:    vpinsrw $1, %ecx, %xmm1, %xmm1
+; AVX512BWVL-NEXT:    vpinsrw $2, %eax, %xmm1, %xmm1
+; AVX512BWVL-NEXT:    vpinsrw $3, %eax, %xmm1, %xmm1
+; AVX512BWVL-NEXT:    vpinsrw $4, %ecx, %xmm1, %xmm1
+; AVX512BWVL-NEXT:    vpinsrw $5, %eax, %xmm1, %xmm1
+; AVX512BWVL-NEXT:    vpinsrw $6, %eax, %xmm1, %xmm1
+; AVX512BWVL-NEXT:    vpinsrw $7, %ecx, %xmm1, %xmm1
+; AVX512BWVL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512BWVL-NEXT:    vpmovwb %ymm0, %xmm0
+; AVX512BWVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512BWVL-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; AVX512BWVL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX512BWVL-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; AVX512BWVL-NEXT:    vmovq %xmm0, %rax
+; AVX512BWVL-NEXT:    # kill: def $ax killed $ax killed $rax
+; AVX512BWVL-NEXT:    vzeroupper
+; AVX512BWVL-NEXT:    retq
 entry:
   %cmp12.i.13 = icmp ne i8 %q, 0
   %cond.i15.13 = zext i1 %cmp12.i.13 to i16
