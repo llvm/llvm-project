@@ -49,6 +49,7 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/PragmaKinds.h"
+#include "clang/Basic/Profiles.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/StackExhaustionHandler.h"
@@ -1038,9 +1039,7 @@ public:
 
   // C++ Profiles framework (P3589R2)
 
-  struct ProfileEnforcement {
-    std::string ProfileName;
-    std::string CanonicalDesignator;
+  struct ProfileEnforcement : profiles::EnforcedProfile {
     SourceLocation EnforceLoc;
   };
   SmallVector<ProfileEnforcement, 4> EnforcedProfiles;

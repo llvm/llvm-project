@@ -3007,14 +3007,14 @@ Sema::getProfileEnforcement(StringRef ProfileName) const {
 bool Sema::addProfileEnforcement(StringRef Name, StringRef Designator,
                                  SourceLocation Loc) {
   if (const auto *Existing = getProfileEnforcement(Name)) {
-    if (Existing->CanonicalDesignator != Designator) {
+    if (Existing->Designator != Designator) {
       Diag(Loc, diag::err_profiles_enforce_mismatch) << Name;
       Diag(Existing->EnforceLoc, diag::note_previous_attribute);
       return false;
     }
     return true;
   }
-  EnforcedProfiles.push_back({Name.str(), Designator.str(), Loc});
+  EnforcedProfiles.push_back({{Name.str(), Designator.str()}, Loc});
   return true;
 }
 

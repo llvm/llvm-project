@@ -17,6 +17,7 @@
 
 #include "clang/Basic/DirectoryEntry.h"
 #include "clang/Basic/FileEntry.h"
+#include "clang/Basic/Profiles.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
@@ -458,10 +459,7 @@ public:
   llvm::SmallSetVector<Module *, 2> Imports;
 
   /// Profile enforcements on this module's declaration (P3589R2).
-  struct EnforcedProfile {
-    std::string ProfileName;
-    std::string Designator;
-  };
+  using EnforcedProfile = profiles::EnforcedProfile;
   SmallVector<EnforcedProfile, 0> EnforcedProfileDesignators;
 
   /// The set of top-level modules that affected the compilation of this module,

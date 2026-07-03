@@ -18,6 +18,7 @@
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/OpenCLOptions.h"
+#include "clang/Basic/Profiles.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/StackExhaustionHandler.h"
 #include "clang/Basic/Version.h"
@@ -1008,11 +1009,7 @@ private:
   SmallVector<uint64_t, 1> FPPragmaOptions;
 
   /// Enforced profile designators from PCH (P3589R2).
-  struct EnforcedProfileEntry {
-    std::string ProfileName;
-    std::string Designator;
-  };
-  SmallVector<EnforcedProfileEntry, 0> SerializedEnforcedProfiles;
+  SmallVector<profiles::EnforcedProfile, 0> SerializedEnforcedProfiles;
 
   /// The pragma clang optimize location (if the pragma state is "off").
   SourceLocation OptimizeOffPragmaLocation;

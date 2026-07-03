@@ -29,6 +29,16 @@ struct ProfileArgument {
   bool isNamed() const { return Kind == ProfileArgumentKind::Named; }
 };
 
+/// A profile enforced by [[profiles::enforce]]: the profile name plus the
+/// canonical spelling of the designator that enforced it (P3589R2 [decl.attr
+/// .enforce]p3 compares repeated enforcements by their spelling). Shared by
+/// Sema's enforcement list, Module's exported enforcement set, and the
+/// serialized PCH record.
+struct EnforcedProfile {
+  std::string ProfileName;
+  std::string Designator;
+};
+
 inline std::string getCanonicalProfileArgumentSpelling(
     const ProfileArgument &Argument) {
   if (!Argument.isNamed())
