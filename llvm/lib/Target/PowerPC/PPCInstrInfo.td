@@ -5136,8 +5136,7 @@ def RLWNMbm_rec : PPCAsmPseudo<"rlwnm. $rA, $rS, $n, $b",
                            (ins g8rc:$rA, g8rc:$rS, u5imm:$n, i32imm:$b)>;
 def PPCLdFixedAddr :
   PPCPostRAExpPseudo<(outs gprc:$rT), (ins i32imm:$imm),
-                     [(set i32:$rT, (int_ppc_fixed_addr_ld timm:$imm))],
-                     "#FA_LOAD">;
+                     [(set i32:$rT, (int_ppc_fixed_addr_ld timm:$imm))]>;
 
 // These generic branch instruction forms are used for the assembler parser only.
 // Defs and Uses are conservative, since we don't know the BO value.

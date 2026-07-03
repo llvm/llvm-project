@@ -370,23 +370,22 @@ def STQCX : XForm_1_memOp<31, 182, (outs), (ins g8prc:$RST, (memrr $RA, $RB):$ad
 
 def SPLIT_QUADWORD : PPCCustomInserterPseudo<(outs g8rc:$lo, g8rc:$hi),
                                              (ins g8prc:$src)>;
-class AtomicRMW128<string asmstr>
+class AtomicRMW128
   : PPCPostRAExpPseudo<(outs g8prc:$RTp, g8prc:$scratch),
-                       (ins memrr:$ptr, g8rc:$incr_lo, g8rc:$incr_hi),
-                       [], asmstr>;
+                       (ins memrr:$ptr, g8rc:$incr_lo, g8rc:$incr_hi)>;
 // We have to keep values in MI's uses during LL/SC looping as they are,
 // so set both $RTp and $scratch earlyclobber.
 let mayStore = 1, mayLoad = 1,
     Defs = [CR0],
     Constraints = "@earlyclobber $scratch,@earlyclobber $RTp" in {
 // Atomic pseudo instructions expanded post-ra.
-def ATOMIC_SWAP_I128      : AtomicRMW128<"#ATOMIC_SWAP_I128">;
-def ATOMIC_LOAD_ADD_I128  : AtomicRMW128<"#ATOMIC_LOAD_ADD_I128">;
-def ATOMIC_LOAD_SUB_I128  : AtomicRMW128<"#ATOMIC_LOAD_SUB_I128">;
-def ATOMIC_LOAD_AND_I128  : AtomicRMW128<"#ATOMIC_LOAD_AND_I128">;
-def ATOMIC_LOAD_XOR_I128  : AtomicRMW128<"#ATOMIC_LOAD_XOR_I128">;
-def ATOMIC_LOAD_OR_I128   : AtomicRMW128<"#ATOMIC_LOAD_OR_I128">;
-def ATOMIC_LOAD_NAND_I128 : AtomicRMW128<"#ATOMIC_LOAD_NAND_I128">;
+def ATOMIC_SWAP_I128      : AtomicRMW128;
+def ATOMIC_LOAD_ADD_I128  : AtomicRMW128;
+def ATOMIC_LOAD_SUB_I128  : AtomicRMW128;
+def ATOMIC_LOAD_AND_I128  : AtomicRMW128;
+def ATOMIC_LOAD_XOR_I128  : AtomicRMW128;
+def ATOMIC_LOAD_OR_I128   : AtomicRMW128;
+def ATOMIC_LOAD_NAND_I128 : AtomicRMW128;
 
 def ATOMIC_CMP_SWAP_I128 : PPCPostRAExpPseudo<
                               (outs g8prc:$RTp, g8prc:$scratch),
