@@ -15519,13 +15519,8 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
       // unmarked pointer (paper §4.3) and must not be bound to uninitialized
       // memory.
       if (getLangOpts().Profiles && LHS.get()->getType()->isPointerType()) {
-        const Expr *L = LHS.get()->IgnoreParenImpCasts();
-        bool TargetIsRefToUninit = false;
-        if (const auto *DRE = dyn_cast<DeclRefExpr>(L))
-          TargetIsRefToUninit = DRE->getDecl()->hasAttr<RefToUninitAttr>();
-        else if (const auto *ME = dyn_cast<MemberExpr>(L))
-          TargetIsRefToUninit = ME->getMemberDecl()->hasAttr<RefToUninitAttr>();
-        checkRefToUninitInit(OpLoc, TargetIsRefToUninit,
+        const ValueDecl *VD = getDirectlyNamedDecl(LHS.get());
+        checkRefToUninitInit(OpLoc, VD && VD->hasAttr<RefToUninitAttr>(),
                              /*IsReference=*/false, RHS.get());
       }
 

@@ -1149,6 +1149,12 @@ public:
   bool defaultInitLeavesScalarIndeterminate(QualType T,
                                             bool HonorUninitMarkers = false);
 
+  /// If \p E (stripped of parens and implicit casts) directly names a
+  /// declaration -- a DeclRefExpr or a MemberExpr -- return that declaration;
+  /// otherwise null. The std::init checks read [[ref_to_uninit]] /
+  /// [[uninit]] markers only off a directly named entity.
+  static const ValueDecl *getDirectlyNamedDecl(const Expr *E);
+
   /// std::init / ref_to_uninit (paper §5): true only if \p E is affirmatively
   /// recognized as referring to (for a pointer source) or, when \p IsReference,
   /// denoting (for a glvalue source) uninitialized storage. Recognized purely
