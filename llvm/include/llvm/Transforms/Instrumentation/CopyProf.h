@@ -15,6 +15,7 @@
 #define LLVM_TRANSFORMS_INSTRUMENTATION_COPYPROF_H
 
 #include "llvm/IR/PassManager.h"
+
 namespace llvm {
 
 // Early-stage pass that instruments special member functions to call into the
@@ -22,7 +23,7 @@ namespace llvm {
 class CopyProfPass : public PassInfoMixin<CopyProfPass> {
 public:
   CopyProfPass() = default;
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 
   static bool isRequired() { return true; }
 };
@@ -32,7 +33,7 @@ public:
 class ModuleCopyProfPass : public PassInfoMixin<ModuleCopyProfPass> {
 public:
   ModuleCopyProfPass() = default;
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
   static bool isRequired() { return true; }
 };
@@ -42,7 +43,7 @@ public:
 class CopyProfStoresPass : public PassInfoMixin<CopyProfStoresPass> {
 public:
   CopyProfStoresPass() = default;
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 
   static bool isRequired() { return true; }
 };
