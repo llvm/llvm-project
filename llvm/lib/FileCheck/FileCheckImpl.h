@@ -743,8 +743,8 @@ public:
   LLVM_ABI_FOR_TEST void printVariableDefs(const SourceMgr &SM,
                                            FileCheckDiagList *Diags) const;
   /// Prints a list of all variables that this pattern attempts to capture.
-  void printVariables(const SourceMgr &SM, StringRef Buffer,
-                      FileCheckDiagList *Diags) const;
+  void printVariableDefAttempts(const SourceMgr &SM, StringRef Buffer,
+                                FileCheckDiagList *Diags) const;
 
   Check::FileCheckType getCheckTy() const { return CheckTy; }
 
