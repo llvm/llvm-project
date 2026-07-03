@@ -283,11 +283,9 @@ define i64 @ucmp_64_64(i64 %x, i64 %y) nounwind {
 define i32 @ucmp_32_32_zero(i32 %x) nounwind {
 ; CHECK-LABEL: ucmp_32_32_zero:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    mov r1, #0
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    movwhi r1, #1
-; CHECK-NEXT:    mvnlo r1, #0
-; CHECK-NEXT:    mov r0, r1
+; CHECK-NEXT:    movwhi r0, #1
+; CHECK-NEXT:    mvnlo r0, #0
 ; CHECK-NEXT:    bx lr
 ;
 ; THUMB-LABEL: ucmp_32_32_zero:
@@ -306,11 +304,9 @@ define i32 @ucmp_32_32_zero(i32 %x) nounwind {
 define i8 @ucmp_8_32_zero(i32 %x) nounwind {
 ; CHECK-LABEL: ucmp_8_32_zero:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    mov r1, #0
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    movwhi r1, #1
-; CHECK-NEXT:    mvnlo r1, #0
-; CHECK-NEXT:    mov r0, r1
+; CHECK-NEXT:    movwhi r0, #1
+; CHECK-NEXT:    mvnlo r0, #0
 ; CHECK-NEXT:    bx lr
 ;
 ; THUMB-LABEL: ucmp_8_32_zero:

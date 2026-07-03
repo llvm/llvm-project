@@ -359,11 +359,9 @@ define i64 @scmp_64_64(i64 %x, i64 %y) nounwind {
 define i32 @scmp_32_32_zero(i32 %x) nounwind {
 ; CHECK-LABEL: scmp_32_32_zero:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    mov r1, #0
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    movwgt r1, #1
-; CHECK-NEXT:    mvnlt r1, #0
-; CHECK-NEXT:    mov r0, r1
+; CHECK-NEXT:    movwgt r0, #1
+; CHECK-NEXT:    mvnlt r0, #0
 ; CHECK-NEXT:    bx lr
 ;
 ; THUMB-LABEL: scmp_32_32_zero:
@@ -380,11 +378,9 @@ define i32 @scmp_32_32_zero(i32 %x) nounwind {
 define i8 @scmp_8_32_zero(i32 %x) nounwind {
 ; CHECK-LABEL: scmp_8_32_zero:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    mov r1, #0
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    movwgt r1, #1
-; CHECK-NEXT:    mvnlt r1, #0
-; CHECK-NEXT:    mov r0, r1
+; CHECK-NEXT:    movwgt r0, #1
+; CHECK-NEXT:    mvnlt r0, #0
 ; CHECK-NEXT:    bx lr
 ;
 ; THUMB-LABEL: scmp_8_32_zero:
