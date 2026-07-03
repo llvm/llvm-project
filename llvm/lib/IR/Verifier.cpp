@@ -119,6 +119,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -3897,9 +3898,8 @@ void Verifier::visitCallBase(CallBase &Call) {
           const ConstantRange &CR =
               Call.getParamAttr(i, Attribute::Range).getValueAsConstantRange();
           Check(CR.contains(CI->getValue()),
-                "immarg value " + Twine(CI->getValue().getSExtValue()) +
-                    " out of range [" + Twine(CR.getLower().getSExtValue()) +
-                    ", " + Twine(CR.getUpper().getSExtValue()) + ")",
+                formatv("immarg value {} for arg {} out of range {}",
+                        CI->getValue(), i, CR),
                 Call);
         }
       }
@@ -6288,14 +6288,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(isa<Function>(Call.getArgOperand(1)->stripPointerCasts()),
           "llvm.init_trampoline parameter #2 must resolve to a function.",
           Call);
-    break;
-  case Intrinsic::prefetch:
-    Check(cast<ConstantInt>(Call.getArgOperand(1))->getZExtValue() < 2,
-          "rw argument to llvm.prefetch must be 0-1", Call);
-    Check(cast<ConstantInt>(Call.getArgOperand(2))->getZExtValue() < 4,
-          "locality argument to llvm.prefetch must be 0-3", Call);
-    Check(cast<ConstantInt>(Call.getArgOperand(3))->getZExtValue() < 2,
-          "cache type argument to llvm.prefetch must be 0-1", Call);
     break;
   case Intrinsic::reloc_none: {
     Check(isa<MDString>(
