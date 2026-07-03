@@ -1,9 +1,8 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux -fexperimental-call-graph-section -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s
 
-// Check that we do not generate callee_type metadata for indirect calls
-// to functions with internal linkage (e.g., types in anonymous namespaces),
-// as their callgraph metadata identifiers are distinct MDNodes instead of 
-// generalized strings, which would fail the LLVM Verifier.
+// Check that we safely and correctly generate callee_type and callgraph metadata
+// for indirect calls and function definitions with internal linkage (e.g., types in anonymous namespaces),
+// using generalized MDString type identifiers.
 
 namespace {
 class a;
@@ -29,9 +28,13 @@ void test() {
   f();
 }
 
-// CHECK-LABEL: define {{.*}} void @{{.*}}1a1dEv
+// CHECK-LABEL: define internal void @_ZN12_GLOBAL__N_11a1dEv(
+// CHECK-SAME: ptr noundef nonnull align 8 dereferenceable(8) %this) {{.*}} !callgraph [[F_TCLS1:![0-9]+]] {
 // CHECK:   %[[VFN:.*]] = getelementptr inbounds ptr, ptr %{{.*}}, i{{[0-9]+}} 0
 // CHECK:   %[[FP:.*]] = load ptr, ptr %[[VFN]], align {{[0-9]+}}
-// CHECK:   call void %[[FP]]({{.*}})
-// CHECK-NOT: !callee_type
+// CHECK:   call void %[[FP]]({{.*}}), !callee_type [[F_TCLS2_CT:![0-9]+]]
 // CHECK:   ret void
+
+// CHECK: [[F_TCLS1]] = !{!"_ZTSFvvE.generalized", i1 true}
+// CHECK: [[F_TCLS2_CT]] = !{[[F_TCLS2:![0-9]+]]}
+// CHECK: [[F_TCLS2]] = !{!"_ZTSFvN12_GLOBAL__N_11aEE.generalized"}

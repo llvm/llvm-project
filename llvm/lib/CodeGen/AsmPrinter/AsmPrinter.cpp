@@ -1757,7 +1757,7 @@ static ConstantInt *extractNumericCGTypeId(const Function &F) {
   SmallVector<MDNode *, 2> Types;
   F.getMetadata(LLVMContext::MD_callgraph, Types);
   for (const auto &Type : Types) {
-    if (Type->getNumOperands() == 1 && isa<MDString>(Type->getOperand(0))) {
+    if (Type->getNumOperands() >= 1 && isa<MDString>(Type->getOperand(0))) {
       MDString *MDGeneralizedTypeId = cast<MDString>(Type->getOperand(0));
       if (MDGeneralizedTypeId->getString().ends_with(".generalized")) {
         uint64_t TypeIdVal = llvm::MD5Hash(MDGeneralizedTypeId->getString());
@@ -1794,6 +1794,20 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
   const auto &DirectCallees = FuncCGInfo.DirectCallees;
   const auto &IndirectCalleeTypeIDs = FuncCGInfo.IndirectCalleeTypeIDs;
 
+  // Extract IsOriginallyLocal from the second operand of callgraph metadata.
+  bool IsOriginallyLocal = false;
+  SmallVector<MDNode *, 2> Types;
+  F.getMetadata(LLVMContext::MD_callgraph, Types);
+  for (const auto &Type : Types) {
+    if (Type->getNumOperands() >= 2 &&
+        isa<ConstantAsMetadata>(Type->getOperand(1))) {
+      auto *LocalConst = cast<ConstantInt>(
+          cast<ConstantAsMetadata>(Type->getOperand(1))->getValue());
+      IsOriginallyLocal = LocalConst->getZExtValue() != 0;
+      break;
+    }
+  }
+
   using namespace callgraph;
   Flags CGFlags = Flags::None;
   if (IsIndirectTarget)
@@ -1802,6 +1816,8 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
     CGFlags |= Flags::HasDirectCallees;
   if (IndirectCalleeTypeIDs.size() > 0)
     CGFlags |= Flags::HasIndirectCallees;
+  if (IsOriginallyLocal)
+    CGFlags |= Flags::IsOriginallyLocal;
 
   // Emit function's call graph information.
   // 1) CallGraphSectionFormatVersion
@@ -1810,16 +1826,23 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
   //       target.
   //    b. LSB bit 1 is set to 1 if there are direct callees.
   //    c. LSB bit 2 is set to 1 if there are indirect callees.
-  //    d. Rest of the 5 bits in Flags are reserved for any future use.
-  // 3) Function entry PC.
-  // 4) FunctionTypeID if the function is indirect target and its type id
+  //    d. LSB bit 3 is set to 1 if the function is originally local/internal
+  //    linkage. e. Rest of the 4 bits in Flags are reserved for any future use.
+  // 3) Module ID Hash (Int64)
+  // 4) Function entry PC.
+  // 5) FunctionTypeID if the function is indirect target and its type id
   //    is known, otherwise it is set to 0.
-  // 5) Number of unique direct callees, if at least one exists.
   // 6) For each unique direct callee, the callee's PC.
   // 7) Number of unique indirect target type IDs, if at least one exists.
   // 8) Each unique indirect target type id.
   OutStreamer->emitInt8(CallGraphSectionFormatVersion::V_0);
   OutStreamer->emitInt8(static_cast<uint8_t>(CGFlags));
+
+  // Emit Module ID Hash
+  std::string ModuleId = F.getParent()->getModuleIdentifier();
+  uint64_t ModuleIdHash = llvm::MD5Hash(ModuleId);
+  OutStreamer->emitInt64(ModuleIdHash);
+
   OutStreamer->emitSymbolValue(getSymbol(&F), TM.getProgramPointerSize());
   const auto *TypeId = extractNumericCGTypeId(F);
   if (IsIndirectTarget && TypeId)

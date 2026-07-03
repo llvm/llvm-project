@@ -32,6 +32,6 @@ entry:
 ;; Make sure following type IDs are in call graph section
 ;; 0x5eecb3e2444f731f, 0x814b8e305486bc59, 0xf897fd777ade6814
 ; CHECK: Hex dump of section '.llvm.callgraph':
-; CHECK-NEXT: 0x00000000 00050000 00000000 00000000 00000324
-; CHECK-NEXT: 0x00000010 44f731f5 eecb3e54 86bc5981 4b8e307a
-; CHECK-NEXT: 0x00000020 de6814f8 97fd77
+; CHECK-NEXT: 0x00000000 000549d1 0e59ee5f f4520000 00000000 ..I..Y._.R......
+; CHECK-NEXT: 0x00000010 00000000 00000324 44f731f5 eecb3e54 .......$D.1...>T
+; CHECK-NEXT: 0x00000020 86bc5981 4b8e307a de6814f8 97fd77   ..Y.K.0z.h....w

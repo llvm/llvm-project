@@ -698,6 +698,7 @@ private:
   MetadataTypeMap MetadataIdMap;
   MetadataTypeMap VirtualMetadataIdMap;
   MetadataTypeMap GeneralizedMetadataIdMap;
+  MetadataTypeMap CallGraphSectionMetadataIdMap;
 
   // Helps squashing blocks of TopLevelStmtDecl into a single llvm::Function
   // when used with -fincremental-extensions.
@@ -1730,10 +1731,12 @@ public:
   /// calls via a member function pointer.
   llvm::Metadata *CreateMetadataIdentifierForVirtualMemPtrType(QualType T);
 
-  /// Create a metadata identifier for the generalization of the given type.
-  /// This may either be an MDString (for external identifiers) or a distinct
-  /// unnamed MDNode (for internal identifiers).
   llvm::Metadata *CreateMetadataIdentifierGeneralized(QualType T);
+
+  /// Create a metadata identifier for the Call Graph Section.
+  /// This is a generalized type identifier that is guaranteed to be an
+  /// MDString.
+  llvm::Metadata *getCallGraphSectionTypeId(QualType T);
 
   /// Create and attach type metadata to the given function.
   void createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
@@ -2165,7 +2168,8 @@ private:
                                     llvm::AttrBuilder &FuncAttrs);
 
   llvm::Metadata *CreateMetadataIdentifierImpl(QualType T, MetadataTypeMap &Map,
-                                               StringRef Suffix);
+                                               StringRef Suffix,
+                                               bool ForceString = false);
 
   /// Emit deactivation symbols for any PFP fields whose offset is taken with
   /// offsetof.

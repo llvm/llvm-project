@@ -27,8 +27,8 @@ declare !callgraph !2 i32 @bar(i8 signext)
 !2 = !{!"_ZTSFicE.generalized"}
 !3 = !{!"_ZTSFiiE.generalized"}
 
-; CHECK:      Hex dump of section '.llvm.callgraph':
-; CHECK-NEXT: 0x00000000 00050000 00008e19 0b7f3326 e3000154
-; CHECK-NEXT: 0x00000010 86bc5981 4b8e3000 05000000 00a150b8
-;; Verify that the type id 0x308e4b8159bc8654 is in section.
-; CHECK-NEXT: 0x00000020 3e0cfe3c b2015486 bc59814b 8e30
+; CHECK: Hex dump of section '.llvm.callgraph':
+; CHECK-NEXT: 0x00000000 000549d1 0e59ee5f f4520000 00008e19 ..I..Y._.R......
+; CHECK-NEXT: 0x00000010 0b7f3326 e3000154 86bc5981 4b8e3000 ..3&...T..Y.K.0.
+; CHECK-NEXT: 0x00000020 0549d10e 59ee5ff4 52000000 00a150b8 .I..Y._.R.....P.
+; CHECK-NEXT: 0x00000030 3e0cfe3c b2015486 bc59814b 8e30     >..<..T..Y.K.0
