@@ -92,6 +92,9 @@ Potentially breaking changes
   including the correct header. To ease the transition ``_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23`` can be defined, which
   includes the removed headers again. This macro will be removed in LLVM 24.
 
+- The output of ``ostream << std::thread::id`` and ``std::format("...", std::thread:id)`` changes on some platforms from
+  hexadecimal to decimal. This is done to have consistent formatting across all platforms libc++ supports.
+
 Announcements About Future Releases
 -----------------------------------
 

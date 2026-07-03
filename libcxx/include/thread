@@ -131,6 +131,7 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 
 #  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 23
 #    include <atomic>
+#    include <sstream>
 #  endif
 
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
