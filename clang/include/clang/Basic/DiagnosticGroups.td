@@ -718,6 +718,16 @@ Detects misuse of [[clang::noescape]] annotation where the parameter escapes (fo
   }];
 }
 
+def LifetimeSafetyCaptureByViolation
+    : DiagGroup<"lifetime-safety-capture-by-violation"> {
+  code Documentation = [{
+Detects a parameter whose '[[clang::lifetime_capture_by]]' attributes name
+neither 'unknown' nor an entity that the function body captures the parameter
+by: the enclosing object (a store into a field of 'this', or a capture by 'this'
+in a call), or global storage. Captures by other parameters are not verified.
+  }];
+}
+
 def LifetimeSafetyAnnotationPlacement
     : DiagGroup<"lifetime-safety-annotation-placement",
                 [LifetimeSafetyInapplicableLifetimebound,
@@ -730,7 +740,8 @@ Validates that lifetime annotations are placed on appropriate types and in appro
 def LifetimeSafetyAnnotationVerification
     : DiagGroup<"lifetime-safety-annotation-verification",
                 [LifetimeSafetyNoescape,
-                 LifetimeSafetyLifetimeboundViolation]> {
+                 LifetimeSafetyLifetimeboundViolation,
+                 LifetimeSafetyCaptureByViolation]> {
   code Documentation = [{
 Verifies that function implementations adhere to their lifetime annotation contracts through dataflow analysis.
   }];
