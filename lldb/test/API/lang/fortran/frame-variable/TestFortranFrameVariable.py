@@ -23,3 +23,5 @@ class FortranTestFrameVariable(TestBase):
         self.expect("frame variable num_real", substrs=["(REAL) num_real = 2.718"])
 
         self.expect("frame variable num_logical", substrs=["(LOGICAL) num_logical = true"])
+
+        self.expect("frame variable num_complex", substrs=["(COMPLEX) num_complex = (1.3, 2.6)"])

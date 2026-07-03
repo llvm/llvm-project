@@ -24,10 +24,10 @@ class FortranTestComplex(TestBase):
         self.assertSuccess(complex_four.GetError(), "Failed to fetch complex_four.")
         self.assertEqual(complex_four.GetTypeName(), "COMPLEX")
         self.assertEqual(complex_four.GetByteSize(), 8)
-        self.assertEqual(complex_four.GetValue(), "2 + 3i")
+        self.assertEqual(complex_four.GetValue(), "(2, 3)")
 
         complex_eight = frame.FindVariable("complex_eight")
         self.assertSuccess(complex_eight.GetError(), "Failed to fetch complex_eight.")
         self.assertEqual(complex_eight.GetTypeName(), "COMPLEX(KIND=8)")
         self.assertEqual(complex_eight.GetByteSize(), 16)
-        self.assertEqual(complex_eight.GetValue(), "1 + 4i")
+        self.assertEqual(complex_eight.GetValue(), "(1, 4)")

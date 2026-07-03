@@ -78,6 +78,33 @@ static bool IsLanguageSupported(LanguageType language) {
   return false;
 }
 
+static bool DumpComplex(Stream &s, const lldb_private::DataExtractor &data,
+                        lldb::offset_t &offset, size_t data_byte_size) {
+  if (sizeof(float) * 2 == data_byte_size) {
+    float f32_1 = data.GetFloat(&offset);
+    float f32_2 = data.GetFloat(&offset);
+
+    s.Printf("(%g, %g)", f32_1, f32_2);
+    return true;
+  } else if (sizeof(double) * 2 == data_byte_size) {
+    double d64_1 = data.GetDouble(&offset);
+    double d64_2 = data.GetDouble(&offset);
+
+    s.Printf("(%lg, %lg)", d64_1, d64_2);
+    return true;
+  } else if (sizeof(long double) * 2 == data_byte_size) {
+    long double ld64_1 = data.GetLongDouble(&offset);
+    long double ld64_2 = data.GetLongDouble(&offset);
+    s.Printf("(%Lg, %Lg)", ld64_1, ld64_2);
+    return true;
+  } else {
+    s.Printf("error: unsupported byte size (%" PRIu64
+             ") for complex float format",
+             (uint64_t)data_byte_size);
+    return false;
+  }
+}
+
 char TypeSystemFortran::ID;
 
 TypeSystemFortran::~TypeSystemFortran() = default;
@@ -383,7 +410,6 @@ bool TypeSystemFortran::DumpTypeValue(
   case FortranType::KIND_INTEGER:
   case FortranType::KIND_REAL:
   case FortranType::KIND_LOGICAL:
-
     format_data.SetData(data, 0, data.GetByteSize());
     format_data.SetAddressByteSize(data.GetAddressByteSize());
     format_data.SetByteOrder(m_byte_order);
@@ -392,13 +418,11 @@ bool TypeSystemFortran::DumpTypeValue(
                              LLDB_INVALID_ADDRESS, bitfield_bit_size,
                              bitfield_bit_offset, exe_scope);
   case FortranType::KIND_COMPLEX:
+    // For Complex we print the value exactly how Fortran prints it
     format_data.SetData(data, 0, data.GetByteSize());
     format_data.SetAddressByteSize(data.GetAddressByteSize());
     format_data.SetByteOrder(m_byte_order);
-    return DumpDataExtractor(format_data, &s, data_offset, format,
-                             data_byte_size, 1 /*item_count*/, UINT32_MAX,
-                             LLDB_INVALID_ADDRESS, bitfield_bit_size,
-                             bitfield_bit_offset, exe_scope);
+    return DumpComplex(s, data, data_offset, data_byte_size);
   default:
     Host::SystemLog(lldb::eSeverityError,
                     "Error: DumpTypeValue not handled yet.\n");
