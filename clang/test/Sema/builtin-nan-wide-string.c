@@ -53,3 +53,23 @@ CONSTEXPR long double ld3 = __builtin_nanl(U"");
 // c-error@-1 {{incompatible pointer types passing 'unsigned int[1]' to parameter of type 'const char *'}}
 // c-error@-2 {{initializer element is not a compile-time constant}}
 // cxx-error@-3 {{cannot initialize a parameter of type 'const char *' with an lvalue of type 'const char32_t[1]'}}
+
+CONSTEXPR float f4 = __builtin_nanf(u8"");
+// c-error@-1 {{argument to '__builtin_nanf' must be an ordinary string literal}}
+// c-error@-2 {{initializer element is not a compile-time constant}}
+// cxx-error@-3 {{argument to '__builtin_nanf' must be an ordinary string literal}}
+
+CONSTEXPR double d4 = __builtin_nan(u8"");
+// c-error@-1 {{argument to '__builtin_nan' must be an ordinary string literal}}
+// c-error@-2 {{initializer element is not a compile-time constant}}
+// cxx-error@-3 {{argument to '__builtin_nan' must be an ordinary string literal}}
+
+CONSTEXPR long double ld4 = __builtin_nanl(u8"");
+// c-error@-1 {{argument to '__builtin_nanl' must be an ordinary string literal}}
+// c-error@-2 {{initializer element is not a compile-time constant}}
+// cxx-error@-3 {{argument to '__builtin_nanl' must be an ordinary string literal}}
+
+char hello = __builtin_nanf(L"");
+// c-error@-1 {{incompatible pointer types passing 'int[1]' to parameter of type 'const char *'}}
+// c-error@-2 {{initializer element is not a compile-time constant}}
+// cxx-error@-3 {{cannot initialize a parameter of type 'const char *' with an lvalue of type 'const wchar_t[1]'}}
