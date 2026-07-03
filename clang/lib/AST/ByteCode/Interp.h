@@ -1537,20 +1537,19 @@ bool GE(InterpState &S, CodePtr OpPC) {
 //===----------------------------------------------------------------------===//
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool Dup(InterpState &S, CodePtr OpPC) {
+bool Dup(InterpState &S) {
   S.Stk.push<T>(S.Stk.peek<T>());
   return true;
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool Pop(InterpState &S, CodePtr OpPC) {
+bool Pop(InterpState &S) {
   S.Stk.discard<T>();
   return true;
 }
 
 /// [Value1, Value2] -> [Value2, Value1]
-template <PrimType TopName, PrimType BottomName>
-bool Flip(InterpState &S, CodePtr OpPC) {
+template <PrimType TopName, PrimType BottomName> bool Flip(InterpState &S) {
   using TopT = typename PrimConv<TopName>::T;
   using BottomT = typename PrimConv<BottomName>::T;
 
@@ -1568,7 +1567,7 @@ bool Flip(InterpState &S, CodePtr OpPC) {
 //===----------------------------------------------------------------------===//
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool Const(InterpState &S, CodePtr OpPC, const T &Arg) {
+bool Const(InterpState &S, const T &Arg) {
   if constexpr (needsAlloc<T>()) {
     T Result = S.allocAP<T>(Arg.bitWidth());
     Result.copy(Arg.toAPSInt());
@@ -1596,7 +1595,7 @@ bool Const(InterpState &S, CodePtr OpPC, const T &Arg) {
   return true;
 }
 
-inline bool ConstFloat(InterpState &S, CodePtr OpPC, const Floating &F) {
+inline bool ConstFloat(InterpState &S, const Floating &F) {
   Floating Result = S.allocFloat(F.getSemantics());
   Result.copy(F.getAPFloat());
   S.Stk.push<Floating>(Result);
@@ -2120,21 +2119,21 @@ inline bool GetPtrThisBase(InterpState &S, CodePtr OpPC, uint32_t Off) {
   return true;
 }
 
-inline bool FinishInitPop(InterpState &S, CodePtr OpPC) {
+inline bool FinishInitPop(InterpState &S) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (Ptr.canBeInitialized())
     Ptr.initialize();
   return true;
 }
 
-inline bool FinishInit(InterpState &S, CodePtr OpPC) {
+inline bool FinishInit(InterpState &S) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (Ptr.canBeInitialized())
     Ptr.initialize();
   return true;
 }
 
-inline bool FinishInitActivate(InterpState &S, CodePtr OpPC) {
+inline bool FinishInitActivate(InterpState &S) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (Ptr.canBeInitialized()) {
     Ptr.initialize();
@@ -2143,7 +2142,7 @@ inline bool FinishInitActivate(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
-inline bool FinishInitActivatePop(InterpState &S, CodePtr OpPC) {
+inline bool FinishInitActivatePop(InterpState &S) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (Ptr.canBeInitialized()) {
     Ptr.initialize();
@@ -2152,7 +2151,7 @@ inline bool FinishInitActivatePop(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
-bool FinishInitGlobal(InterpState &S, CodePtr OpPC);
+bool FinishInitGlobal(InterpState &S);
 
 inline bool Dump(InterpState &S, CodePtr OpPC) {
   S.Stk.dump();
@@ -2261,14 +2260,14 @@ bool StorePop(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
-static inline bool Activate(InterpState &S, CodePtr OpPC) {
+static inline bool Activate(InterpState &S) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (Ptr.canBeInitialized())
     Ptr.activate();
   return true;
 }
 
-static inline bool ActivateThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
+static inline bool ActivateThisField(InterpState &S, uint32_t I) {
   if (S.checkingPotentialConstantExpression())
     return false;
   if (!S.Current->hasThisPointer())
@@ -3139,12 +3138,12 @@ static inline bool PtrPtrCast(InterpState &S, CodePtr OpPC, bool SrcIsVoidPtr) {
 //===----------------------------------------------------------------------===//
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool Zero(InterpState &S, CodePtr OpPC) {
+bool Zero(InterpState &S) {
   S.Stk.push<T>(T::zero());
   return true;
 }
 
-static inline bool ZeroIntAP(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
+static inline bool ZeroIntAP(InterpState &S, uint32_t BitWidth) {
   auto Result = S.allocAP<IntegralAP<false>>(BitWidth);
   if (!Result.singleWord())
     std::memset(Result.Memory, 0, Result.numWords() * sizeof(uint64_t));
@@ -3152,7 +3151,7 @@ static inline bool ZeroIntAP(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
   return true;
 }
 
-static inline bool ZeroIntAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
+static inline bool ZeroIntAPS(InterpState &S, uint32_t BitWidth) {
   auto Result = S.allocAP<IntegralAP<true>>(BitWidth);
   if (!Result.singleWord())
     std::memset(Result.Memory, 0, Result.numWords() * sizeof(uint64_t));
@@ -3161,7 +3160,7 @@ static inline bool ZeroIntAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-inline bool Null(InterpState &S, CodePtr OpPC, uint64_t Value, const Type *Ty) {
+inline bool Null(InterpState &S, uint64_t Value, const Type *Ty) {
   // FIXME(perf): This is a somewhat often-used function and the value of a
   // null pointer is almost always 0.
   S.Stk.push<T>(Value, Ty);
@@ -3433,13 +3432,13 @@ PRESERVE_NONE inline bool NoRet(InterpState &S, CodePtr OpPC) {
 // NarrowPtr, ExpandPtr
 //===----------------------------------------------------------------------===//
 
-inline bool NarrowPtr(InterpState &S, CodePtr OpPC) {
+inline bool NarrowPtr(InterpState &S) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   S.Stk.push<Pointer>(Ptr.narrow());
   return true;
 }
 
-inline bool ExpandPtr(InterpState &S, CodePtr OpPC) {
+inline bool ExpandPtr(InterpState &S) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (Ptr.isBlockPointer())
     S.Stk.push<Pointer>(Ptr.expand());
@@ -3654,7 +3653,7 @@ inline bool Unsupported(InterpState &S, CodePtr OpPC) {
   return false;
 }
 
-inline bool PushIgnoreDiags(InterpState &S, CodePtr OpPC) {
+inline bool PushIgnoreDiags(InterpState &S) {
   ++S.DiagIgnoreDepth;
   if (S.DiagIgnoreDepth != 1)
     return true;
@@ -3666,7 +3665,7 @@ inline bool PushIgnoreDiags(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
-inline bool PopIgnoreDiags(InterpState &S, CodePtr OpPC) {
+inline bool PopIgnoreDiags(InterpState &S) {
   assert(S.DiagIgnoreDepth != 0);
   --S.DiagIgnoreDepth;
   if (S.DiagIgnoreDepth == 0) {
@@ -3677,20 +3676,20 @@ inline bool PopIgnoreDiags(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
-inline bool StartSpeculation(InterpState &S, CodePtr OpPC) {
+inline bool StartSpeculation(InterpState &S) {
 #ifndef NDEBUG
   ++S.SpeculationDepth;
 #endif
   return true;
 }
 
-inline bool StartInit(InterpState &S, CodePtr OpPC) {
+inline bool StartInit(InterpState &S) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   S.InitializingPtrs.push_back(Ptr.view());
   return true;
 }
 
-inline bool EndInit(InterpState &S, CodePtr OpPC) {
+inline bool EndInit(InterpState &S) {
   S.InitializingPtrs.pop_back();
   return true;
 }
@@ -3706,22 +3705,22 @@ PRESERVE_NONE inline bool EndSpeculation(InterpState &S) {
   return true;
 }
 
-inline bool PushCC(InterpState &S, CodePtr OpPC, bool Value) {
+inline bool PushCC(InterpState &S, bool Value) {
   S.ConstantContextOverride = Value;
   return true;
 }
-inline bool PopCC(InterpState &S, CodePtr OpPC) {
+inline bool PopCC(InterpState &S) {
   S.ConstantContextOverride = std::nullopt;
   return true;
 }
 
-inline bool PushMSVCCE(InterpState &S, CodePtr OpPC) {
+inline bool PushMSVCCE(InterpState &S) {
   // This is a per-frame property.
   ++S.Current->MSVCConstexprAllowed;
   return true;
 }
 
-inline bool PopMSVCCE(InterpState &S, CodePtr OpPC) {
+inline bool PopMSVCCE(InterpState &S) {
   assert(S.Current->MSVCConstexprAllowed >= 1);
   // This is a per-frame property.
   --S.Current->MSVCConstexprAllowed;

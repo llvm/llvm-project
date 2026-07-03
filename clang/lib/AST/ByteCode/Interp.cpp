@@ -2891,7 +2891,7 @@ static void finishGlobalRecurse(InterpState &S, const Pointer &Ptr) {
   }
 }
 
-bool FinishInitGlobal(InterpState &S, CodePtr OpPC) {
+bool FinishInitGlobal(InterpState &S) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
   finishGlobalRecurse(S, Ptr);
@@ -3175,10 +3175,10 @@ PRESERVE_NONE static bool BCP(InterpState &S, CodePtr OpPC, int32_t Offset,
   assert(DepthBefore >= 1);
 #endif
 
-  auto SpeculativeInterp = [&S, OpPC]() -> bool {
+  auto SpeculativeInterp = [&S]() -> bool {
     // Ignore diagnostics during speculative execution.
-    PushIgnoreDiags(S, OpPC);
-    auto _ = llvm::scope_exit([&]() { PopIgnoreDiags(S, OpPC); });
+    PushIgnoreDiags(S);
+    auto _ = llvm::scope_exit([&]() { PopIgnoreDiags(S); });
 
 #if USE_TAILCALLS
     auto Op = S.PC.read<Opcode>();
