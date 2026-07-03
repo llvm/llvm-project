@@ -659,6 +659,7 @@ static bool runPartialConversion(MlirContext ctx, const char *moduleString,
 
   MlirRewritePatternSet patterns = mlirRewritePatternSetCreate(ctx);
   MlirFrozenRewritePatternSet frozen = mlirFreezeRewritePattern(patterns);
+  mlirRewritePatternSetDestroy(patterns);
   MlirConversionConfig config = mlirConversionConfigCreate();
 
   MlirLogicalResult result =

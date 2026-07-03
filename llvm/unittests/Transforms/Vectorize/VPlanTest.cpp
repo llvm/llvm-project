@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "../lib/Transforms/Vectorize/VPlan.h"
+#include "../lib/Transforms/Vectorize/LoopVectorizationPlanner.h"
 #include "../lib/Transforms/Vectorize/VPlanCFG.h"
 #include "../lib/Transforms/Vectorize/VPlanHelpers.h"
 #include "../lib/Transforms/Vectorize/VPlanUtils.h"
@@ -1490,8 +1491,7 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   {
     VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
     VPValue *Op2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
-    InductionDescriptor IndDesc;
-    VPScalarIVStepsRecipe Recipe(IndDesc, Op1, Op2, Op2);
+    VPScalarIVStepsRecipe Recipe(Op1, Op2, Op2, Instruction::BinaryOpsEnd);
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1860,8 +1860,8 @@ TEST_F(VPUtilsTest, IsUniformAcrossVFsAndUFsForSingleScalarOpcodes) {
   VPlan &Plan = getPlan();
 
   // isSingleScalar opcode without operands.
-  std::unique_ptr<VPInstruction> VScale(new VPInstructionWithType(
-      VPInstruction::VScale, {}, IntegerType::get(C, 32)));
+  std::unique_ptr<VPInstruction> VScale(
+      VPBuilder().createVScale(IntegerType::get(C, 32)));
   EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(VScale.get()));
 
   // isSingleScalar opcode with a uniform operand.
@@ -1938,8 +1938,7 @@ TEST_F(VPRecipeTest, UFVScaleUserBeforeMaterialization) {
   VPBlockUtils::connectBlocks(Plan.getEntry(), LoopRegion);
   VPBlockUtils::connectBlocks(LoopRegion, Plan.getScalarHeader());
 
-  auto *VScale = new VPInstructionWithType(VPInstruction::VScale, {}, IVTy);
-  Plan.getVectorPreheader()->appendRecipe(VScale);
+  auto *VScale = VPBuilder(Plan.getVectorPreheader()).createVScale(IVTy);
 
   auto *Step = new VPInstruction(Instruction::Mul, {VScale, UF},
                                  VPIRFlags::getDefaultFlags(Instruction::Mul));
