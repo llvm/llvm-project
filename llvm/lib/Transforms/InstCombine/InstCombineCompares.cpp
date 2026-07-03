@@ -1463,9 +1463,11 @@ Instruction *InstCombinerImpl::foldICmpTruncConstant(ICmpInst &Cmp,
   }
 
   if (C.isOne() && C.getBitWidth() > 1) {
-    // icmp slt trunc(signum(V)) 1 --> icmp slt V, 1
+    // icmp slt trunc(scmp(V, 0)) 1 --> icmp slt V, 1
     Value *V = nullptr;
-    if (Pred == ICmpInst::ICMP_SLT && match(X, m_Signum(m_Value(V))))
+    if (Pred == ICmpInst::ICMP_SLT &&
+        match(X, m_Intrinsic<Intrinsic::scmp>(m_Value(V), m_ZeroInt())) &&
+        V->getType()->getScalarSizeInBits() > 1)
       return new ICmpInst(ICmpInst::ICMP_SLT, V,
                           ConstantInt::get(V->getType(), 1));
   }
@@ -2084,14 +2086,6 @@ Instruction *InstCombinerImpl::foldICmpOrConstant(ICmpInst &Cmp,
                                                   BinaryOperator *Or,
                                                   const APInt &C) {
   ICmpInst::Predicate Pred = Cmp.getPredicate();
-  if (C.isOne()) {
-    // icmp slt signum(V) 1 --> icmp slt V, 1
-    Value *V = nullptr;
-    if (Pred == ICmpInst::ICMP_SLT && match(Or, m_Signum(m_Value(V))))
-      return new ICmpInst(ICmpInst::ICMP_SLT, V,
-                          ConstantInt::get(V->getType(), 1));
-  }
-
   Value *OrOp0 = Or->getOperand(0), *OrOp1 = Or->getOperand(1);
 
   // (icmp eq/ne (or disjoint x, C0), C1)
