@@ -37,7 +37,6 @@ define void @acc_regalloc(ptr %arg, ptr %arg1, ptr %arg2) local_unnamed_addr {
 ; CHECK-NEXT:    xxlxor vs12, vs12, vs12
 ; CHECK-NEXT:    lxv vs4, -16(r5)
 ; CHECK-NEXT:    xxlor vs10, v4, v4
-; CHECK-NEXT:    xxlor vs8, v4, v4
 ; CHECK-NEXT:    xxlor vs8, v2, v2
 ; CHECK-NEXT:    mulld r6, r6, r3
 ; CHECK-NEXT:    xvmaddadp vs7, vs0, v1
@@ -58,13 +57,14 @@ define void @acc_regalloc(ptr %arg, ptr %arg1, ptr %arg2) local_unnamed_addr {
 ; CHECK-NEXT:    xvmuldp vs5, v7, v2
 ; CHECK-NEXT:    xxlor vs4, v2, v2
 ; CHECK-NEXT:    xxlor vs1, v3, v3
+; CHECK-NEXT:    vmr v3, v5
 ; CHECK-NEXT:    xxlor vs11, v5, v5
-; CHECK-NEXT:    xxlor vs9, v5, v5
 ; CHECK-NEXT:    xxlor vs15, vs13, vs13
 ; CHECK-NEXT:    xxmtacc acc1
+; CHECK-NEXT:    xxlor vs9, v3, v3
 ; CHECK-NEXT:    xxmtacc acc0
-; CHECK-NEXT:    xxmtacc acc2
 ; CHECK-NEXT:    xxmtacc acc3
+; CHECK-NEXT:    xxmtacc acc2
 ; CHECK-NEXT:    xvf64gerpp acc0, vsp34, vs0
 ; CHECK-NEXT:    xvf64gerpp acc1, vsp34, vs0
 ; CHECK-NEXT:    xvf64gerpp acc2, vsp34, vs0
@@ -130,7 +130,6 @@ define void @acc_regalloc(ptr %arg, ptr %arg1, ptr %arg2) local_unnamed_addr {
 ; TRACKLIVE-NEXT:    xxlxor vs12, vs12, vs12
 ; TRACKLIVE-NEXT:    lxv vs4, -16(r5)
 ; TRACKLIVE-NEXT:    xxlor vs10, v4, v4
-; TRACKLIVE-NEXT:    xxlor vs8, v4, v4
 ; TRACKLIVE-NEXT:    xxlor vs8, v2, v2
 ; TRACKLIVE-NEXT:    mulld r6, r6, r3
 ; TRACKLIVE-NEXT:    xvmaddadp vs7, vs0, v1
@@ -151,13 +150,14 @@ define void @acc_regalloc(ptr %arg, ptr %arg1, ptr %arg2) local_unnamed_addr {
 ; TRACKLIVE-NEXT:    xvmuldp vs5, v7, v2
 ; TRACKLIVE-NEXT:    xxlor vs4, v2, v2
 ; TRACKLIVE-NEXT:    xxlor vs1, v3, v3
+; TRACKLIVE-NEXT:    vmr v3, v5
 ; TRACKLIVE-NEXT:    xxlor vs11, v5, v5
-; TRACKLIVE-NEXT:    xxlor vs9, v5, v5
 ; TRACKLIVE-NEXT:    xxlor vs15, vs13, vs13
 ; TRACKLIVE-NEXT:    xxmtacc acc1
+; TRACKLIVE-NEXT:    xxlor vs9, v3, v3
 ; TRACKLIVE-NEXT:    xxmtacc acc0
-; TRACKLIVE-NEXT:    xxmtacc acc2
 ; TRACKLIVE-NEXT:    xxmtacc acc3
+; TRACKLIVE-NEXT:    xxmtacc acc2
 ; TRACKLIVE-NEXT:    xvf64gerpp acc0, vsp34, vs0
 ; TRACKLIVE-NEXT:    xvf64gerpp acc1, vsp34, vs0
 ; TRACKLIVE-NEXT:    xvf64gerpp acc2, vsp34, vs0

@@ -99,7 +99,7 @@ define void @vector_interleave_store_nxv16i64_nxv8i64(<vscale x 8 x i64> %a, <vs
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, mu
 ; CHECK-NEXT:    vid.v v6
 ; CHECK-NEXT:    vand.vi v4, v6, 1
-; CHECK-NEXT:    vmv8r.v v24, v8
+; CHECK-NEXT:    vmv4r.v v24, v8
 ; CHECK-NEXT:    vmv4r.v v28, v16
 ; CHECK-NEXT:    vmv4r.v v16, v12
 ; CHECK-NEXT:    vmsne.vi v0, v4, 0

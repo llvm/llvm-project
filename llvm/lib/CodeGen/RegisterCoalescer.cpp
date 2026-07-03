@@ -2220,6 +2220,52 @@ bool RegisterCoalescer::joinCopy(
       if (removePartialRedundancy(CP, *CopyMI))
         return true;
 
+    // Narrow a full `%dst = COPY %src` whose destination has lanes that are
+    // dead at the copy (overwritten before use): the dead-lane def causes false
+    // interference, so narrow to the surviving lanes and let the overwriting
+    // defs coalesce.
+    if (!CP.isPartial() && !CP.isPhys()) {
+      Register CopySrcReg = CopyMI->getOperand(1).getReg();
+      Register CopyDstReg = CopyMI->getOperand(0).getReg();
+      LiveInterval &SrcLI = LIS->getInterval(CopySrcReg);
+      LiveInterval &DstLI = LIS->getInterval(CopyDstReg);
+      if (SrcLI.hasSubRanges() && DstLI.hasSubRanges()) {
+        SlotIndex CopyIdx = LIS->getInstructionIndex(*CopyMI).getRegSlot();
+        // Lanes the source provides a value for.
+        LaneBitmask SrcLanes = LaneBitmask::getNone();
+        for (auto &SR : SrcLI.subranges())
+          SrcLanes |= SR.LaneMask;
+        // Drop those whose destination def is dead (overwritten before use).
+        LaneBitmask SurvivingLanes = SrcLanes;
+        for (auto &SR : DstLI.subranges())
+          if (SR.Query(CopyIdx).isDeadDef())
+            SurvivingLanes &= ~SR.LaneMask;
+
+        if (SurvivingLanes.any() && SurvivingLanes != SrcLanes) {
+          const TargetRegisterClass *SrcRC = MRI->getRegClass(CopySrcReg);
+          const TargetRegisterClass *DstRC = MRI->getRegClass(CopyDstReg);
+          SmallVector<unsigned, 4> SubRegIdxs;
+          if (TRI->getCoveringSubRegIndexes(SrcRC, SurvivingLanes,
+                                            SubRegIdxs) &&
+              SubRegIdxs.size() == 1 &&
+              TRI->getSubClassWithSubReg(DstRC, SubRegIdxs[0])) {
+            unsigned SubIdx = SubRegIdxs[0];
+            LLVM_DEBUG(dbgs() << "\tNarrowing COPY to "
+                              << TRI->getSubRegIndexName(SubIdx) << '\n');
+            CopyMI->getOperand(0).setSubReg(SubIdx);
+            CopyMI->getOperand(0).setIsUndef(true);
+            CopyMI->getOperand(1).setSubReg(SubIdx);
+            LIS->removeInterval(CopyDstReg);
+            LIS->createAndComputeVirtRegInterval(CopyDstReg);
+            LIS->removeInterval(CopySrcReg);
+            LIS->createAndComputeVirtRegInterval(CopySrcReg);
+            Again = true;
+            return false;
+          }
+        }
+      }
+    }
+
     // Otherwise, we are unable to join the intervals.
     LLVM_DEBUG(dbgs() << "\tInterference!\n");
     Again = true; // May be possible to coalesce later.
