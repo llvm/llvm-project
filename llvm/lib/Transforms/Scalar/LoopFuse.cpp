@@ -842,7 +842,8 @@ private:
           LLVM_DEBUG(dbgs() << "Memory dependencies do not allow fusion!\n");
           ++InvalidDependencies;
           reportLoopFusion<OptimizationRemarkMissed>(
-              FC0, FC1, InvalidDependencies.getName(), InvalidDependencies.getDesc());
+              FC0, FC1, InvalidDependencies.getName(),
+              InvalidDependencies.getDesc());
           continue;
         }
 
@@ -879,7 +880,8 @@ private:
         if (!BeneficialToFuse) {
           ++FusionNotBeneficial;
           reportLoopFusion<OptimizationRemarkMissed>(
-              FC0, FC1, FusionNotBeneficial.getName(), FusionNotBeneficial.getDesc());
+              FC0, FC1, FusionNotBeneficial.getName(),
+              FusionNotBeneficial.getDesc());
           continue;
         }
         // All analysis has completed and has determined that fusion is legal
@@ -905,7 +907,8 @@ private:
         // possible to identify them after fusion is complete.
         ++FuseCounter;
         reportLoopFusion<OptimizationRemark>((Peel ? FC0Copy : FC0), FC1,
-                                             FuseCounter.getName(), FuseCounter.getDesc());
+                                             FuseCounter.getName(),
+                                             FuseCounter.getDesc());
 
         FusionCandidate FusedCand(performFusion((Peel ? FC0Copy : FC0), FC1),
                                   DT, &PDT, ORE, FC0Copy.PP);
