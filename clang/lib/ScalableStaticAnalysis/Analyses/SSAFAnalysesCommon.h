@@ -104,15 +104,19 @@ template <typename ExtractorFnT>
 void extractAndAddSummaries(TUSummaryExtractor &Extractor,
                             TUSummaryBuilder &Builder, ASTContext &Ctx,
                             ExtractorFnT ExtractFn,
-                            const char *ExtractorName = "") {
+                            llvm::StringRef ExtractorName = "") {
   llvm::DenseMap<const NamedDecl *, std::vector<const NamedDecl *>>
       Contributors;
   findContributors(Ctx, Contributors);
   for (const auto &[Cano, Decls] : Contributors) {
+    assert(!Decls.empty() && !Decls[0]->isImplicit() &&
+           "guaranteed by 'findContributors'");
+    const NamedDecl *Rep = Cano->isImplicit() ? Decls[0] : Cano;
+
     // Templates are skipped, but their instantiations are handled. The idea
     // is that we can conclude facts about a template through all of its
     // instantiations.
-    if (Cano->isTemplated())
+    if (Rep->isTemplated())
       continue;
 
     auto Summary = ExtractFn(Decls);
@@ -120,13 +124,13 @@ void extractAndAddSummaries(TUSummaryExtractor &Extractor,
     if (Summary->empty())
       continue;
 
-    if (auto Id = Extractor.addEntity(Cano)) {
+    if (auto Id = Extractor.addEntity(Rep)) {
       if (!Builder.addSummary(*Id, std::move(Summary)).second)
         logWarningFromError(makeErrAtNode(
-            Ctx, Cano, "dropping duplicate %s summary for entity %s",
-            ExtractorName, Cano->getNameAsString().c_str()));
+            Ctx, Rep, "dropping duplicate %s summary for entity %s",
+            ExtractorName.str().c_str(), Rep->getNameAsString().c_str()));
     } else
-      logWarningFromError(makeEntityNameErr(Ctx, Cano));
+      logWarningFromError(makeEntityNameErr(Ctx, Rep));
   }
 }
 
