@@ -556,6 +556,13 @@ defm GFX1250Insts : AMDGPUSubtargetFeature<"gfx1250-insts",
   /*GenPredicate=*/0
 >;
 
+defm CoExecFriendlyISelMode : AMDGPUSubtargetFeature<"coexec-friendly-isel",
+  "Avoid selecting native 64-bit integer min/max VALU instructions "
+  "(repeat-rate-32) during ISel; expand them to v_cmp + v_cndmask sequences "
+  "for the CoExec scheduler",
+  /*GenPredicate=*/0
+>;
+
 defm GFX13Insts : AMDGPUSubtargetFeature<"gfx13-insts",
   "Additional instructions for GFX13+",
   /*GenPredicate=*/0,
