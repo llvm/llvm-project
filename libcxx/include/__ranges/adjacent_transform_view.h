@@ -365,7 +365,7 @@ template <size_t _Np>
 struct __fn : __range_adaptor_closure<__fn<_Np>> {
   template <class _Range, class _Fn>
     requires(_Np == 0 && forward_range<_Range &&>)
-  _LIBCPP_HIDE_FROM_ABI static constexpr auto
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto
   operator()(_Range&&, _Fn&& __fn) noexcept(noexcept(views::zip_transform(std::forward<_Fn>(__fn))))
       -> decltype(views::zip_transform(std::forward<_Fn>(__fn))) {
     return views::zip_transform(std::forward<_Fn>(__fn));
