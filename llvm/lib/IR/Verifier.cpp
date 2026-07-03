@@ -4683,9 +4683,9 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
               "type!",
           &RMWI, ElTy);
   } else {
-    Check(ScalarTy->isIntegerTy(),
+    Check(ElTy->isIntOrIntVectorTy() && !isa<ScalableVectorType>(ElTy),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
-              " operand must have integer type!",
+              " operand must have integer or fixed vector of integer type!",
           &RMWI, ElTy);
   }
   checkAtomicMemAccessSize(ElTy, &RMWI);

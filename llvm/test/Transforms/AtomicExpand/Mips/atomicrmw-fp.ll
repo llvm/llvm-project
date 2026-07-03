@@ -49,3 +49,26 @@ define float @test_atomicrmw_fsub_f32(ptr %ptr, float %value) {
   ret float %res
 }
 
+define <2 x i16> @test_atomicrmw_add_v2i16(ptr %ptr, <2 x i16> %value) {
+; CHECK-LABEL: @test_atomicrmw_add_v2i16(
+; CHECK-NEXT:    fence seq_cst
+; CHECK-NEXT:    [[TMP6:%.*]] = load atomic i32, ptr [[PTR:%.*]] monotonic, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[TMP6]] to <2 x i16>
+; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; CHECK:       atomicrmw.start:
+; CHECK-NEXT:    [[LOADED:%.*]] = phi <2 x i16> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; CHECK-NEXT:    [[NEW:%.*]] = add <2 x i16> [[LOADED]], [[VALUE:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i16> [[NEW]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i16> [[LOADED]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] monotonic monotonic, align 4
+; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; CHECK-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; CHECK-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x i16>
+; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; CHECK:       atomicrmw.end:
+; CHECK-NEXT:    fence seq_cst
+; CHECK-NEXT:    ret <2 x i16> [[TMP5]]
+;
+  %res = atomicrmw add ptr %ptr, <2 x i16> %value seq_cst
+  ret <2 x i16> %res
+}
