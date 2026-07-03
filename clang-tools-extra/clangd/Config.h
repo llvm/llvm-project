@@ -144,6 +144,8 @@ struct Config {
     OpenDelimiter,
     /// empty pair of delimiters "()" or "<>".
     Delimiters,
+    /// only the name of the variable
+    NamePlaceholders,
     /// full name of both type and variable.
     FullPlaceholders,
   };

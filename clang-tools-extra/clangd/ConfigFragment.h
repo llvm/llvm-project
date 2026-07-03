@@ -339,6 +339,7 @@ struct Fragment {
     ///   None: Nothing at all
     ///   OpenDelimiter: only opening delimiter "(" or "<"
     ///   Delimiters: empty pair of delimiters "()" or "<>"
+    ///   NamePlaceholders: name of the parameters only
     ///   FullPlaceholders: full name of both type and parameter
     std::optional<Located<std::string>> ArgumentLists;
     /// Add #include directives when accepting code completions. Config

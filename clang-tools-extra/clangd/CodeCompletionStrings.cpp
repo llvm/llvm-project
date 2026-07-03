@@ -165,7 +165,7 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
                   std::string *Snippet,
                   CodeCompletionResult::ResultKind ResultKind,
                   CXCursorKind CursorKind, bool IncludeFunctionArguments,
-                  std::string *RequiredQualifiers) {
+                  std::string *RequiredQualifiers, bool TersePlaceholder) {
   // Placeholder with this index will be $0 to mark final cursor position.
   // Usually we do not add $0, so the cursor is placed at end of completed text.
   unsigned CursorSnippetArg = std::numeric_limits<unsigned>::max();
@@ -263,7 +263,7 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
       appendOptionalChunk(*Chunk.Optional, Signature);
       break;
     case CodeCompletionString::CK_Placeholder:
-      *Signature += Chunk.Text;
+      *Signature += Chunk.Placeholder.Full;
       ++SnippetArg;
       if (SnippetArg == CursorSnippetArg) {
         // We'd like to make $0 a placeholder too, but vscode does not support
@@ -271,7 +271,13 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
         *Snippet += "$0";
       } else {
         *Snippet += "${" + std::to_string(SnippetArg) + ':';
-        appendEscapeSnippet(Chunk.Text, Snippet);
+        if (TersePlaceholder) {
+          std::string Full(Chunk.Placeholder.Full);
+          appendEscapeSnippet(Full.substr(Chunk.Placeholder.TerseStart,
+                                          Chunk.Placeholder.TerseLen),
+                              Snippet);
+        } else
+          appendEscapeSnippet(Chunk.Placeholder.Full, Snippet);
         *Snippet += '}';
       }
       break;
