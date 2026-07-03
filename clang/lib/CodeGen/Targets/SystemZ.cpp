@@ -598,6 +598,19 @@ public:
     SwiftInfo =
         std::make_unique<SwiftABIInfo>(CGT, /*SwiftErrorInRegister=*/false);
   }
+
+  void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
+                           CodeGen::CodeGenModule &M) const override {
+    if (dyn_cast_or_null<FunctionDecl>(D)) {
+      if (auto *Fn = dyn_cast<llvm::Function>(GV)) {
+        auto ZOSPPA1Name = M.getLangOpts().getZOSPPA1Name();
+        if (ZOSPPA1Name == clang::LangOptions::ZOSPPA1NameKind::Emit)
+          Fn->addFnAttr("zos-ppa1-name", "all");
+        else if (ZOSPPA1Name == clang::LangOptions::ZOSPPA1NameKind::NoEmit)
+          Fn->addFnAttr("zos-ppa1-name", "none");
+      }
+    }
+  }
 };
 
 } // namespace

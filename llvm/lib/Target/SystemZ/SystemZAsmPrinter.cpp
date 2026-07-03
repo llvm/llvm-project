@@ -1866,7 +1866,17 @@ void SystemZAsmPrinter::calculatePPA1() {
   determinePrologueStackUpdateSym(MF, EndOfPrologSym, StackUpdateSym);
 
   // Save the calculated values.
-  if (MF->getFunction().hasName())
+  // Whether to emit the function name is decided by optimization level,
+  // unless it is explicitly required via -m[no-]zos-ppa1-name options.
+  bool IncludeFunctionName = !MF->getFunction().hasMinSize();
+  if (MF->getFunction().hasFnAttribute("zos-ppa1-name")) {
+    auto ZOSPPA1Name =
+        MF->getFunction().getFnAttribute("zos-ppa1-name").getValueAsString();
+    assert((ZOSPPA1Name == "all" || ZOSPPA1Name == "none") &&
+           "Invalid value for attribute zos-ppa1-name.");
+    IncludeFunctionName = ZOSPPA1Name == "all";
+  }
+  if (MF->getFunction().hasName() && IncludeFunctionName)
     Info.Name = MF->getFunction().getName();
   Info.PPA1 = OutContext.createTempSymbol(Twine("PPA1_").concat(N), true);
   Info.EPMarker = OutContext.createTempSymbol(Twine("EPM_").concat(N), true);
