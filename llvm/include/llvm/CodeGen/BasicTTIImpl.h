@@ -880,6 +880,10 @@ public:
     return getST()->enableWritePrefetching();
   }
 
+  bool enableTgtMemIntrinsicPrefetching() const override {
+    return getST()->enableTgtMemIntrinsicPrefetching();
+  }
+
   bool shouldPrefetchAddressSpace(unsigned AS) const override {
     return getST()->shouldPrefetchAddressSpace(AS);
   }

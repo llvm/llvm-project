@@ -406,6 +406,8 @@ bool MCSubtargetInfo::enableWritePrefetching() const {
   return false;
 }
 
+bool MCSubtargetInfo::enableTgtMemIntrinsicPrefetching() const { return false; }
+
 unsigned MCSubtargetInfo::getMinPrefetchStride(unsigned NumMemAccesses,
                                                unsigned NumStridedMemAccesses,
                                                unsigned NumPrefetches,
