@@ -4511,13 +4511,13 @@ TEST(Hover, ParseDocumentation) {
     llvm::StringRef ExpectedRenderPlainText;
   } Cases[] = {{
                    " \n foo\nbar",
-                   "foo\nbar",
+                   "foo bar",
                    "foo\nbar",
                    "foo bar",
                },
                {
                    "foo\nbar \n  ",
-                   "foo\nbar",
+                   "foo bar",
                    "foo\nbar",
                    "foo bar",
                },
@@ -4529,7 +4529,7 @@ TEST(Hover, ParseDocumentation) {
                },
                {
                    "foo    \nbar",
-                   "foo    \nbar",
+                   "foo  \nbar",
                    "foo    \nbar",
                    "foo\nbar",
                },
@@ -4541,25 +4541,25 @@ TEST(Hover, ParseDocumentation) {
                },
                {
                    "foo\n\n\n\tbar",
-                   "foo\n\n\tbar",
+                   "foo\n\nbar",
                    "foo\n\n\tbar",
                    "foo\n\nbar",
                },
                {
                    "foo\n\n\n    bar",
-                   "foo\n\n    bar",
+                   "foo\n\nbar",
                    "foo\n\n    bar",
                    "foo\n\nbar",
                },
                {
                    "foo\n\n\n   bar",
-                   "foo\n\n   bar",
+                   "foo\n\nbar",
                    "foo\n\n   bar",
                    "foo\n\nbar",
                },
                {
                    "foo\n\n\n bar",
-                   "foo\n\n bar",
+                   "foo\n\nbar",
                    "foo\n\n bar",
                    "foo\n\nbar",
                },
@@ -4571,25 +4571,25 @@ TEST(Hover, ParseDocumentation) {
                },
                {
                    "foo\n\n\n\n\tbar",
-                   "foo\n\n\tbar",
+                   "foo\n\nbar",
                    "foo\n\n\tbar",
                    "foo\n\nbar",
                },
                {
                    "foo\n\n\n\n    bar",
-                   "foo\n\n    bar",
+                   "foo\n\nbar",
                    "foo\n\n    bar",
                    "foo\n\nbar",
                },
                {
                    "foo\n\n\n\n   bar",
-                   "foo\n\n   bar",
+                   "foo\n\nbar",
                    "foo\n\n   bar",
                    "foo\n\nbar",
                },
                {
                    "foo\n\n\n\n bar",
-                   "foo\n\n bar",
+                   "foo\n\nbar",
                    "foo\n\n bar",
                    "foo\n\nbar",
                },
@@ -4601,7 +4601,7 @@ TEST(Hover, ParseDocumentation) {
                },
                {
                    "foo. \nbar",
-                   "foo.   \nbar",
+                   "foo.  \nbar",
                    "foo.   \nbar",
                    "foo.\nbar",
                },
@@ -4613,7 +4613,7 @@ TEST(Hover, ParseDocumentation) {
                },
                {
                    "foo\nbar",
-                   "foo\nbar",
+                   "foo bar",
                    "foo\nbar",
                    "foo bar",
                },
@@ -4631,7 +4631,7 @@ TEST(Hover, ParseDocumentation) {
                },
                {
                    "`not\nparsed`",
-                   "\\`not\nparsed\\`",
+                   "\\`not parsed\\`",
                    "`not\nparsed`",
                    "`not parsed`",
                },

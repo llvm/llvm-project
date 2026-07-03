@@ -19,7 +19,7 @@ from dex.debugger.DebuggerControllers.DebuggerControllerBase import (
 )
 from dex.debugger.DebuggerBase import DebuggerBase
 from dex.debugger.DAP import DAP
-from dex.evaluation.StateMatch import StateMatchContext, get_active_where_matches
+from dex.evaluation.StateMatch import StateMatchContext, get_state_match
 from dex.test_script.Nodes import Where
 from dex.test_script.Script import DexterScript, Scope
 from dex.tools import Context
@@ -86,8 +86,25 @@ class ScriptDebuggerController(DebuggerControllerBase):
 
         self.step_collection.clear_steps()
 
+        def check_condition(step: StepIR, frame_idx: int, condition: str):
+            """Evaluates the given condition at the given frame index. Requires the debugger session to be alive and the
+            debuggee must be stopped."""
+            cond_value = self.debugger.evaluate_expression(condition, frame_idx)
+            step.frames[frame_idx].watches[condition] = cond_value
+            if (
+                cond_value.could_evaluate
+                and cond_value.value.lower() != "true"
+                and cond_value.value.lower() == "false"
+            ):
+                self.context.logger.warning(
+                    f"Condition '{condition}' evaluated to non-bool value '{cond_value.value}'"
+                )
+            # FIXME: This is a language-specific test (albeit it covers all languages Dexter is currently used with). If
+            #        this assumption is broken, the warning above should be triggered.
+            return cond_value.could_evaluate and cond_value.value.lower() == "true"
+
         script: DexterScript = self.script
-        state_match_context = StateMatchContext()
+        state_match_context = StateMatchContext(check_condition=check_condition)
         self._init_bps()
 
         self.debugger.launch(cmdline)
@@ -133,13 +150,11 @@ class ScriptDebuggerController(DebuggerControllerBase):
                 key=lambda where: str(where),
             )
 
-            active_where_matches = get_active_where_matches(
-                script, step_info, state_match_context
-            )
+            state_match = get_state_match(script, step_info, state_match_context)
 
             watches = defaultdict(list)
             scope_watches = defaultdict(list)
-            for where, where_match in active_where_matches.items():
+            for where, where_match in state_match.where_match_results.items():
                 watches[where_match.frame_idx].extend(
                     watch
                     for expect in where_match.active_expects
@@ -158,7 +173,7 @@ class ScriptDebuggerController(DebuggerControllerBase):
 
             active_thens = [
                 then
-                for where_match in active_where_matches.values()
+                for where_match in state_match.where_match_results.values()
                 for then in where_match.active_thens
             ]
             should_step_out = any(then.command == "step_out" for then in active_thens)
@@ -175,10 +190,10 @@ class ScriptDebuggerController(DebuggerControllerBase):
                 next_action = DebuggerAction.STEP_OUT
             elif any(
                 where_match.frame_idx == 0
-                for where_match in active_where_matches.values()
+                for where_match in state_match.where_match_results.values()
             ):
                 next_action = DebuggerAction.STEP_OVER
-            elif active_where_matches:
+            elif state_match.where_match_results:
                 next_action = DebuggerAction.STEP_OUT
             elif all(
                 where in state_match_context.expired_wheres
@@ -192,7 +207,7 @@ class ScriptDebuggerController(DebuggerControllerBase):
             bp_to_delete = []
             pending_wheres = set(
                 where
-                for where_match in active_where_matches.values()
+                for where_match in state_match.where_match_results.values()
                 for where in where_match.pending_wheres
             )
 
@@ -222,7 +237,7 @@ class ScriptDebuggerController(DebuggerControllerBase):
 
             # If we have --trace enabled, report a short overview of this step.
             self.context.logger.note(
-                f"Stopped at {step_info.current_function} {step_info.current_location.short_str()}, {len(active_where_matches)} !wheres on the stack, next_action={next_action}"
+                f"Stopped at {step_info.current_function} {step_info.current_location.short_str()}, {len(state_match.where_match_results)} !wheres on the stack, next_action={next_action}"
             )
 
             if next_action == DebuggerAction.EXIT:
