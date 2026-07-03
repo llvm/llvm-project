@@ -20,6 +20,7 @@
 #include "flang/Support/Fortran-features.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cinttypes>
+#include <functional>
 #include <optional>
 #include <set>
 #include <unordered_map>
@@ -93,11 +94,21 @@ public:
   // source location of any logical abbreviation (.T./.F./.N./.A./.O.) it
   // encounters, so that a parse failure on that same source line can suggest
   // enabling the -flogical-abbreviations option.
+  // CharBlock's own relational operators compare contents, not positions, so
+  // the set is ordered by position in the cooked character stream: distinct
+  // occurrences of the same spelling stay distinct, while backtracking
+  // re-attempts at the same position collapse into one entry.
+  struct CharBlockByPosition {
+    bool operator()(const CharBlock &x, const CharBlock &y) const {
+      return std::less<const char *>{}(x.begin(), y.begin());
+    }
+  };
   void NoteDisabledLogicalAbbreviation(CharBlock at) {
     disabledLogicalAbbreviations_.insert(at);
   }
-  // Recorded in increasing source order (std::set ordered by CharBlock).
-  const std::set<CharBlock> &disabledLogicalAbbreviations() const {
+  // Recorded in increasing source order.
+  const std::set<CharBlock, CharBlockByPosition> &
+  disabledLogicalAbbreviations() const {
     return disabledLogicalAbbreviations_;
   }
 
@@ -113,7 +124,7 @@ private:
   int nonlabelDoConstructNestingDepth_{0};
 
   std::set<CharBlock> oldStructureComponents_;
-  std::set<CharBlock> disabledLogicalAbbreviations_;
+  std::set<CharBlock, CharBlockByPosition> disabledLogicalAbbreviations_;
 
   common::LanguageFeatureControl features_;
 };

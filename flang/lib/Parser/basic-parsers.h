@@ -855,17 +855,24 @@ public:
           // Every such abbreviation begins with '.', so only attempt the
           // speculative parse (which copies the parse state) when the next
           // non-blank character could start one.
-          const char *at{state.GetLocation()};
-          const char *p{at};
-          const char *limit{at + state.BytesRemaining()};
+          const char *p{state.GetLocation()};
+          const char *limit{p + state.BytesRemaining()};
           while (p < limit && *p == ' ') {
             ++p;
           }
           if (p < limit && *p == '.') {
             ParseState fork{state};
             if (parser_.Parse(fork)) {
-              ustate->NoteDisabledLogicalAbbreviation(
-                  CharBlock{at, std::max(fork.GetLocation(), at + 1)});
+              // Anchor the recorded span at the first non-blank character so
+              // that re-attempts at the same occurrence from different
+              // productions record the same position, and trim any trailing
+              // blanks the token parser consumed so the span covers exactly
+              // the abbreviation.
+              const char *end{std::max(fork.GetLocation(), p + 1)};
+              while (end > p + 1 && end[-1] == ' ') {
+                --end;
+              }
+              ustate->NoteDisabledLogicalAbbreviation(CharBlock{p, end});
             }
           }
         }

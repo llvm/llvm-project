@@ -302,14 +302,14 @@ void Parsing::Parse(llvm::raw_ostream &out) {
 
 // When the LogicalAbbreviations feature is disabled, the parser records the
 // location of every logical abbreviation (.T./.F./.N./.A./.O.) it sees.  For
-// each distinct such spelling that lies on a source line where the parse
-// failed, suggest the -flogical-abbreviations option.  Tying each suggestion to
-// a failing source line keeps it from appearing for a spelling that parses
+// each such occurrence that lies on a source line where the parse failed,
+// suggest the -flogical-abbreviations option.  Tying each suggestion to
+// a failing source line keeps it from appearing for an occurrence that parses
 // successfully as a defined operator (those fail later in semantics, not here)
 // or on a line that failed for an unrelated reason.
 void Parsing::SuggestLogicalAbbreviations(
     const UserState &userState, Messages &messages) {
-  const std::set<CharBlock> &abbreviations{
+  const std::set<CharBlock, UserState::CharBlockByPosition> &abbreviations{
       userState.disabledLogicalAbbreviations()};
   if (abbreviations.empty()) {
     return;
@@ -328,9 +328,9 @@ void Parsing::SuggestLogicalAbbreviations(
   if (errorLines.empty()) {
     return;
   }
-  // Iterating the std::set visits each distinct abbreviation once, in
-  // increasing source order, so a note is emitted for every distinct .T./.F.
-  // usage on a failing line and the notes appear in a stable order.
+  // The set is keyed by source position, so iterating it visits each
+  // occurrence once, in increasing source order: a note is emitted for every
+  // .T./.F. usage on a failing line, even when spellings repeat.
   for (const CharBlock &abbreviation : abbreviations) {
     if (auto pos{allCooked_.GetSourcePositionRange(abbreviation)}) {
       if (errorLines.count({&*pos->first.sourceFile, pos->first.line}) > 0) {
