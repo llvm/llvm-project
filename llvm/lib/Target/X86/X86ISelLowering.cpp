@@ -40210,19 +40210,16 @@ static bool matchUnaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
   unsigned NumMaskElts = Mask.size();
   unsigned MaskEltSize = MaskVT.getScalarSizeInBits();
 
-  // Match against a VZEXT_MOVL vXi32 and vXi16 zero-extending instruction.
-  if (Mask[0] == 0 &&
-      (MaskEltSize == 32 || (MaskEltSize == 16 && Subtarget.hasFP16()))) {
-    if ((isUndefOrZero(Mask[1]) && isUndefInRange(Mask, 2, NumMaskElts - 2)) ||
-        (V1.getOpcode() == ISD::SCALAR_TO_VECTOR &&
-         isUndefOrZeroInRange(Mask, 1, NumMaskElts - 1))) {
-      Shuffle = X86ISD::VZEXT_MOVL;
-      if (MaskEltSize == 16)
-        SrcVT = DstVT = MaskVT.changeVectorElementType(MVT::f16);
-      else
-        SrcVT = DstVT = !Subtarget.hasSSE2() ? MVT::v4f32 : MaskVT;
-      return true;
-    }
+  // Match against a foldable vXi32/vXi16 VZEXT_MOVL zero-extending instruction.
+  if ((MaskEltSize == 32 || (MaskEltSize == 16 && Subtarget.hasFP16())) &&
+      (V1.getOpcode() == ISD::SCALAR_TO_VECTOR || isa<MemSDNode>(V1)) &&
+      Mask[0] == 0 && isUndefOrZeroInRange(Mask, 1, NumMaskElts - 1)) {
+    Shuffle = X86ISD::VZEXT_MOVL;
+    if (MaskEltSize == 16)
+      SrcVT = DstVT = MaskVT.changeVectorElementType(MVT::f16);
+    else
+      SrcVT = DstVT = !Subtarget.hasSSE2() ? MVT::v4f32 : MaskVT;
+    return true;
   }
 
   // Match against a ANY/SIGN/ZERO_EXTEND_VECTOR_INREG instruction.
@@ -40277,8 +40274,7 @@ static bool matchUnaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
   // Match against a VZEXT_MOVL instruction, SSE1 only supports 32-bits (MOVSS).
   if (((MaskEltSize == 32) || (MaskEltSize == 64 && Subtarget.hasSSE2()) ||
        (MaskEltSize == 16 && Subtarget.hasFP16())) &&
-      isUndefOrEqual(Mask[0], 0) &&
-      isUndefOrZeroInRange(Mask, 1, NumMaskElts - 1)) {
+      Mask[0] == 0 && isUndefOrZeroInRange(Mask, 1, NumMaskElts - 1)) {
     Shuffle = X86ISD::VZEXT_MOVL;
     if (MaskEltSize == 16)
       SrcVT = DstVT = MaskVT.changeVectorElementType(MVT::f16);

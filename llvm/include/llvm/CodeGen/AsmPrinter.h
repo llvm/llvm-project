@@ -930,6 +930,19 @@ public:
                                 const MCSubtargetInfo *EndInfo,
                                 const MachineInstr *MI);
 
+  /// Emit necessary directives to allow use of instructions that are permitted
+  /// by target features enabled by STI, but are not permitted by target
+  /// features enabled by the global subtarget (TM.getSubTargetInfo()).
+  /// Returns whether anything was emitted.
+  virtual bool emitTargetFeaturePush(const MCSubtargetInfo &STI) {
+    return false;
+  }
+
+  /// Emit necessary directives to restore target feature state.
+  /// The \p DidPush argument is the result of the prior emitTargetFeaturePush()
+  /// call.
+  virtual void emitTargetFeaturePop(const MCSubtargetInfo &STI, bool DidPush) {}
+
   /// This emits visibility information about symbol, if this is supported by
   /// the target.
   void emitVisibility(MCSymbol *Sym, unsigned Visibility,
