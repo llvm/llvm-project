@@ -1,7 +1,8 @@
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
 // RUN: %clang -std=gnu11 -O2 -glldb %s -o %t
-// RUN: %dexter --fail-lt 1.0 -w %dexter_lldb_args --binary %t -- %s
+// RUN: %dexter -w --use-script %dexter_lldb_args --binary %t -- %s \
+// RUN:   | FileCheck %s
 //
 //// Check that the once-escaped variable 'param' can still be read after
 //// we perform inlining + mem2reg. See D89810 and D85555.
@@ -14,13 +15,21 @@ static void use(int* p) {
 
 __attribute__((__noinline__))
 void fun(int param) {
-  volatile int step1 = 0;  // DexLabel('s1')
+  volatile int step1 = 0; // !dex_label s1
   use(&param);
-  volatile int step2 = 0;  // DexLabel('s2')
+  volatile int step2 = 0; // !dex_label s2
 }
 
 int main() {
   fun(5);
 }
 
-// DexExpectWatchValue('param', '5', from_line=ref('s1'), to_line=ref('s2'))
+// CHECK-DAG: seen_values: 1
+// CHECK-DAG: correct_step_coverage: 100.0%
+
+/*
+---
+!where {lines: !range [!label s1, !label s2]}:
+  !value param: 5
+...
+*/

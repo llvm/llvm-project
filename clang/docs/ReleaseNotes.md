@@ -759,6 +759,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   calling `__builtin_bit_cast`. (#GH200112)
 - Clang now SFINAE friendly when the ``__reference_meows_from_temporary`` builtins
   should SFINAE friendly when the 1st type is not a reference type. (#GH206524)
+- Fixed `__builtin_offsetof` incorrectly sign-extending unsigned array indices
+  with the high bit set (e.g. `uint8_t` values >= 128), which produced wrong
+  offset values in constant expressions. (#GH199319)
 
 
 #### Bug Fixes to Attribute Support
@@ -907,6 +910,20 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 #### X86 Support
 
 - `march=znver6` is now supported.
+- Support ISA of `AVX512BMM`.
+  - Support intrinsic of `_mm512_bmacor16x16x16`.
+  - Support intrinsic of `_mm512_bmacxor16x16x16`.
+  - Support intrinsic of `_mm512_mask_bitrev_epi8`.
+  - Support intrinsic of `_mm512_maskz_bitrev_epi8`.
+  - Support intrinsic of `_mm512_bitrev_epi8`.
+  - Support intrinsic of `_mm256_bmacor16x16x16`.
+  - Support intrinsic of `_mm256_bmacxor16x16x16`.
+  - Support intrinsic of `_mm_mask_bitrev_epi8`.
+  - Support intrinsic of `_mm256_mask_bitrev_epi8`.
+  - Support intrinsic of `_mm_maskz_bitrev_epi8`.
+  - Support intrinsic of `_mm256_maskz_bitrev_epi8`.
+  - Support intrinsic of `_mm_bitrev_epi8`.
+  - Support intrinsic of `_mm256_bitrev_epi8`.
 
 #### Arm and AArch64 Support
 
