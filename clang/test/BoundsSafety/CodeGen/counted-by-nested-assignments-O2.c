@@ -91,7 +91,8 @@ void bar(int *__counted_by(count) x, int count) {
 }
 
 //.
-// CHECK: [[TBAA1]] = !{[[META2:![0-9]+]], [[META2]], i64 0}
+// CHECK: [[ERRNO_TBAA:![0-9]+]] = !{[[META_ERRNO:![0-9]+]], [[META2:![0-9]+]], i64 0}
+// CHECK: [[META_ERRNO]] = !{!"__libc_errno", [[META2]], i64 0}
 // CHECK: [[META2]] = !{!"int", [[META3:![0-9]+]], i64 0}
 // CHECK: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
 // CHECK: [[META4]] = !{!"Simple C/C++ TBAA"}
@@ -100,10 +101,13 @@ void bar(int *__counted_by(count) x, int count) {
 // CHECK: [[META7]] = !{!"bounds-safety-missed-optimization-nsw", !"Check can not be removed because the arithmetic operation might wrap in the signed sense. Optimize the check by adding conditions to check for overflow before doing the operation"}
 // CHECK: [[META8]] = !{!"bounds-safety-generic", [[META9:![0-9]+]]}
 // CHECK: [[META9]] = !{!"bounds-safety-missed-optimization-nuw", !"Check can not be removed because the arithmetic operation might wrap in the unsigned sense. Optimize the check by adding conditions to check for overflow before doing the operation"}
+// CHECK: [[TBAA1]] = !{[[META2]], [[META2]], i64 0}
 // CHECK: [[META11]] = !{[[META9]]}
 //.
-// WITHOUT: [[TBAA1]] = !{[[META2:![0-9]+]], [[META2]], i64 0}
+// WITHOUT: [[ERRNO_TBAA:![0-9]+]] = !{[[META_ERRNO:![0-9]+]], [[META2:![0-9]+]], i64 0}
+// WITHOUT: [[META_ERRNO]] = !{!"__libc_errno", [[META2]], i64 0}
 // WITHOUT: [[META2]] = !{!"int", [[META3:![0-9]+]], i64 0}
 // WITHOUT: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
 // WITHOUT: [[META4]] = !{!"Simple C/C++ TBAA"}
+// WITHOUT: [[TBAA1]] = !{[[META2]], [[META2]], i64 0}
 //.

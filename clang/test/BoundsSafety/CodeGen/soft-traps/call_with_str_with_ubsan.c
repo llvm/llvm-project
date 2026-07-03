@@ -66,7 +66,7 @@
 // OPT: @trap.reason.2 = private unnamed_addr constant [41 x i8] c"indexing below lower bound in 'ptr[tmp]'\00", align 4
 //.
 // UNOPT-LABEL: define dso_local i32 @read(
-// UNOPT-SAME: ptr noundef dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]], i32 noundef [[OTHER:%.*]]) #[[ATTR0:[0-9]+]] {
+// UNOPT-SAME: ptr noundef align 8 dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]], i32 noundef [[OTHER:%.*]]) #[[ATTR0:[0-9]+]] {
 // UNOPT-NEXT:  [[ENTRY:.*:]]
 // UNOPT-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // UNOPT-NEXT:    [[IDX_ADDR:%.*]] = alloca i32, align 4
@@ -121,7 +121,7 @@
 // UNOPT-NEXT:    ret i32 [[TMP11]]
 //
 // UNOPT-TF-LABEL: define dso_local i32 @read(
-// UNOPT-TF-SAME: ptr noundef dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]], i32 noundef [[OTHER:%.*]]) #[[ATTR0:[0-9]+]] {
+// UNOPT-TF-SAME: ptr noundef align 8 dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]], i32 noundef [[OTHER:%.*]]) #[[ATTR0:[0-9]+]] {
 // UNOPT-TF-NEXT:  [[ENTRY:.*:]]
 // UNOPT-TF-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // UNOPT-TF-NEXT:    [[IDX_ADDR:%.*]] = alloca i32, align 4
@@ -176,7 +176,7 @@
 // UNOPT-TF-NEXT:    ret i32 [[TMP11]]
 //
 // UNOPT-TFR-LABEL: define dso_local i32 @read(
-// UNOPT-TFR-SAME: ptr noundef dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]], i32 noundef [[OTHER:%.*]]) #[[ATTR0:[0-9]+]] {
+// UNOPT-TFR-SAME: ptr noundef align 8 dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]], i32 noundef [[OTHER:%.*]]) #[[ATTR0:[0-9]+]] {
 // UNOPT-TFR-NEXT:  [[ENTRY:.*:]]
 // UNOPT-TFR-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // UNOPT-TFR-NEXT:    [[IDX_ADDR:%.*]] = alloca i32, align 4
@@ -231,7 +231,7 @@
 // UNOPT-TFR-NEXT:    ret i32 [[TMP11]]
 //
 // OPT-LABEL: define dso_local i32 @read(
-// OPT-SAME: ptr nofree noundef readonly captures(none) dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]], i32 noundef [[OTHER:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// OPT-SAME: ptr nofree noundef readonly align 8 captures(none) dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]], i32 noundef [[OTHER:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // OPT-NEXT:  [[ENTRY:.*:]]
 // OPT-NEXT:    [[TMP0:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[IDX]], i32 [[OTHER]]), !nosanitize [[META5:![0-9]+]]
 // OPT-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i1 } [[TMP0]], 1, !nosanitize [[META5]]
@@ -754,7 +754,8 @@ int read_cb(int*__counted_by(count) ptr, int count, int other) {
 // UNOPT-TFR: [[META5]] = !{!"bounds-safety-generic"}
 //.
 // OPT: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
-// OPT: [[INT_TBAA1]] = !{[[META2:![0-9]+]], [[META2]], i64 0}
+// OPT: [[ERRNO_TBAA:![0-9]+]] = !{[[META_ERRNO:![0-9]+]], [[META2:![0-9]+]], i64 0}
+// OPT: [[META_ERRNO]] = !{!"__libc_errno", [[META2]], i64 0}
 // OPT: [[META2]] = !{!"int", [[META3:![0-9]+]], i64 0}
 // OPT: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
 // OPT: [[META4]] = !{!"Simple C/C++ TBAA"}
@@ -765,5 +766,6 @@ int read_cb(int*__counted_by(count) ptr, int count, int other) {
 // OPT: [[META9]] = !{!"any pointer", [[META3]], i64 0}
 // OPT: [[META10]] = !{!"bounds-safety-check-ptr-le-upper-bound"}
 // OPT: [[META11]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
+// OPT: [[INT_TBAA1]] = !{[[META2]], [[META2]], i64 0}
 // OPT: [[META12]] = !{!"bounds-safety-generic"}
 //.

@@ -96,7 +96,7 @@ _Bool *f1(struct s1 *p) {
 }
 
 // NOPQ-LABEL: define dso_local i1 @f2(
-// NOPQ-SAME: ptr noundef dead_on_return [[P:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
+// NOPQ-SAME: ptr noundef align 8 dead_on_return [[P:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // NOPQ-NEXT:  [[ENTRY:.*:]]
 // NOPQ-NEXT:    [[P_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // NOPQ-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
@@ -130,7 +130,7 @@ _Bool *f1(struct s1 *p) {
 // NOPQ-NEXT:    ret i1 [[LOADEDV]]
 //
 // OPQ-LABEL: define dso_local i1 @f2(
-// OPQ-SAME: ptr noundef dead_on_return [[P:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
+// OPQ-SAME: ptr noundef align 8 dead_on_return [[P:%.*]], i32 noundef [[I:%.*]]) #[[ATTR0]] {
 // OPQ-NEXT:  [[ENTRY:.*:]]
 // OPQ-NEXT:    [[P_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // OPQ-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4

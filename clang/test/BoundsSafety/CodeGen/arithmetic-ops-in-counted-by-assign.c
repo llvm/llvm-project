@@ -8,7 +8,7 @@
 #include <stddef.h>
 
 // CHECK-LABEL: define dso_local void @count_size_mul(
-// CHECK-SAME: ptr noundef dead_on_return [[PTR:%.*]], i64 noundef [[C:%.*]], i64 noundef [[S:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr noundef align 8 dead_on_return [[PTR:%.*]], i64 noundef [[C:%.*]], i64 noundef [[S:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*]]:
 // CHECK-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[C_ADDR:%.*]] = alloca i64, align 8
@@ -118,7 +118,7 @@ void count_size_mul(void *__bidi_indexable ptr, size_t c, size_t s) {
 }
 
 // CHECK-LABEL: define dso_local void @iptr_count_size_mul(
-// CHECK-SAME: ptr noundef dead_on_return [[PTR:%.*]], i64 noundef [[C:%.*]], i64 noundef [[S:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr noundef align 8 dead_on_return [[PTR:%.*]], i64 noundef [[C:%.*]], i64 noundef [[S:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*]]:
 // CHECK-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[C_ADDR:%.*]] = alloca i64, align 8

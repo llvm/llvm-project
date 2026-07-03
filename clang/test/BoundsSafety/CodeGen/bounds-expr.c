@@ -39,7 +39,7 @@ struct subobject_array *__unsafe_indexable upper = __builtin_get_pointer_upper_b
 
 
 // CHECK-LABEL: define dso_local void @getLowerBound(
-// CHECK-SAME: ptr dead_on_unwind noalias writable sret(%"__bounds_safety::wide_ptr.bidi_indexable") align 8 [[AGG_RESULT:%.*]], ptr noundef dead_on_return [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable sret(%"__bounds_safety::wide_ptr.bidi_indexable") align 8 [[AGG_RESULT:%.*]], ptr noundef align 8 dead_on_return [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[PTR]], ptr [[PTR_INDIRECT_ADDR]], align 8
@@ -56,7 +56,7 @@ int *__bidi_indexable getLowerBound(int *__bidi_indexable ptr) {
 
 
 // CHECK-LABEL: define dso_local void @getUpperBound(
-// CHECK-SAME: ptr dead_on_unwind noalias writable sret(%"__bounds_safety::wide_ptr.bidi_indexable") align 8 [[AGG_RESULT:%.*]], ptr noundef dead_on_return [[PTR:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable sret(%"__bounds_safety::wide_ptr.bidi_indexable") align 8 [[AGG_RESULT:%.*]], ptr noundef align 8 dead_on_return [[PTR:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[PTR_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[PTR]], ptr [[PTR_INDIRECT_ADDR]], align 8

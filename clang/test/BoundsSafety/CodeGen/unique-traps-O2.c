@@ -15,7 +15,7 @@
 
 // This should have 3 traps
 // CHECK-LABEL: define i32 @i_want_to_be_inlined(
-// CHECK-SAME: ptr nofree noundef readonly captures(none) dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr nofree noundef readonly align 8 captures(none) dead_on_return [[PTR:%.*]], i32 noundef [[IDX:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[PTR]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_PTR_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 8
@@ -53,7 +53,7 @@ __attribute__((always_inline)) int i_want_to_be_inlined(
 
 // This should have 6 traps
 // CHECK-LABEL: define i32 @consume(
-// CHECK-SAME: ptr nofree noundef readonly captures(none) dead_on_return [[PTR:%.*]], ptr nofree noundef readonly captures(none) dead_on_return [[PTR2:%.*]], i32 noundef [[IDX:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+// CHECK-SAME: ptr nofree noundef readonly align 8 captures(none) dead_on_return [[PTR:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[PTR2:%.*]], i32 noundef [[IDX:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[BYVAL_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[PTR2]], align 8
 // CHECK-NEXT:    [[BYVAL_TEMP_SROA_4_0_PTR2_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR2]], i64 8
@@ -123,7 +123,8 @@ int consume(int* __bidi_indexable ptr, int* __bidi_indexable ptr2, int idx) {
 // CHECK: attributes #[[ATTR3]] = { nomerge noreturn nounwind }
 //.
 // CHECK: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
-// CHECK: [[TBAA1]] = !{[[META2:![0-9]+]], [[META2]], i64 0}
+// CHECK: [[ERRNO_TBAA:![0-9]+]] = !{[[META_ERRNO:![0-9]+]], [[META2:![0-9]+]], i64 0}
+// CHECK: [[META_ERRNO]] = !{!"__libc_errno", [[META2]], i64 0}
 // CHECK: [[META2]] = !{!"int", [[META3:![0-9]+]], i64 0}
 // CHECK: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
 // CHECK: [[META4]] = !{!"Simple C/C++ TBAA"}
@@ -133,4 +134,5 @@ int consume(int* __bidi_indexable ptr, int* __bidi_indexable ptr2, int idx) {
 // CHECK: [[META8]] = !{!"bounds-safety-check-ptr-le-upper-bound"}
 // CHECK: [[PROF9]] = !{!"branch_weights", i32 1, i32 1048575}
 // CHECK: [[META10]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
+// CHECK: [[TBAA1]] = !{[[META2]], [[META2]], i64 0}
 //.

@@ -9,7 +9,7 @@ int glen;
 int *__counted_by(glen) gptr;
 
 // CHECK-LABEL: define dso_local void @test(
-// CHECK-SAME: ptr noundef dead_on_return [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr noundef align 8 dead_on_return [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*]]:
 // CHECK-NEXT:    [[ARG_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[AGG_TEMP:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable", align 8

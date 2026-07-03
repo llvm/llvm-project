@@ -31,11 +31,25 @@ int read_from_global_array_can_remove_checks() {
   return res;
 }
 
-// CHECK-LABEL: define dso_local noundef i32 @read_from_global_array_trap_last_iter(
+// CHECK-LABEL: define dso_local i32 @read_from_global_array_trap_last_iter(
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR2:[0-9]+]] {
-// CHECK-NEXT:  [[TRAP:.*:]]
+// CHECK-NEXT:  [[CONT3_3:.*:]]
+// CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr getelementptr (i8, ptr @a, i64 20), getelementptr inbounds nuw (i8, ptr @a, i64 16), {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[DOTNOT]], label %[[TRAP:.*]], label %[[CONT3_4:.*]], {{!prof ![0-9]+}}, {{!annotation ![0-9]+}}
+// CHECK:       [[TRAP]]:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) {{#[0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
+// CHECK:       [[CONT3_4]]:
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @a, i64 12), align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @a, i64 8), align 8, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @a, i64 4), align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr @a, align 16, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    [[ADD_1:%.*]] = add nsw i32 [[TMP2]], [[TMP3]]
+// CHECK-NEXT:    [[ADD_2:%.*]] = add nsw i32 [[TMP1]], [[ADD_1]]
+// CHECK-NEXT:    [[ADD_3:%.*]] = add nsw i32 [[TMP0]], [[ADD_2]]
+// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @a, i64 16), align 16, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    [[ADD_4:%.*]] = add nsw i32 [[TMP4]], [[ADD_3]]
+// CHECK-NEXT:    ret i32 [[ADD_4]]
 //
 int read_from_global_array_trap_last_iter() {
     int res = 0;
@@ -46,7 +60,7 @@ int read_from_global_array_trap_last_iter() {
 }
 
 // CHECK-LABEL: define dso_local i32 @read_from_global_array_cannot_rename(
-// CHECK-SAME: i32 noundef [[N:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
+// CHECK-SAME: i32 noundef [[N:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*]]:
 // CHECK-NEXT:    [[CMP9_NOT:%.*]] = icmp eq i32 [[N]], 0
 // CHECK-NEXT:    br i1 [[CMP9_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY:.*]]

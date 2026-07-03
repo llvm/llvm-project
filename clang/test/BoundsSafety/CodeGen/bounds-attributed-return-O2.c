@@ -7,7 +7,7 @@
 #include <ptrcheck.h>
 
 // CHECK-LABEL: define dso_local ptr @cb_in_from_bidi(
-// CHECK-SAME: i32 noundef [[COUNT:%.*]], ptr nofree noundef readonly captures(none) dead_on_return [[P:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: i32 noundef [[COUNT:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[P:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
@@ -203,7 +203,7 @@ int *__counted_by_or_null(count) cbn_in_from_single(int count, int *__single p) 
 }
 
 // CHECK-LABEL: define dso_local ptr @sb_in_from_bidi(
-// CHECK-SAME: i32 noundef [[SIZE:%.*]], ptr nofree noundef readonly captures(none) dead_on_return [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: i32 noundef [[SIZE:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[P]], align 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_2_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
@@ -250,7 +250,7 @@ void *__sized_by(size) sb_in_from_single(int size, int *__single p) {
 }
 
 // CHECK-LABEL: define dso_local ptr @eb_in_from_bidi(
-// CHECK-SAME: ptr nofree noundef readnone captures(address) [[END:%.*]], ptr nofree noundef readonly captures(none) dead_on_return [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef readnone captures(address) [[END:%.*]], ptr nofree noundef readonly align 8 captures(none) dead_on_return [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[AGG_TEMP_SROA_1_0_P_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 // CHECK-NEXT:    [[AGG_TEMP_SROA_1_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_1_0_P_SROA_IDX]], align 8
@@ -294,7 +294,8 @@ int *__ended_by(end) eb_in_from_single(int *__single end, int *__single p) {
 }
 
 //.
-// CHECK: [[TBAA1]] = !{[[META2:![0-9]+]], [[META2]], i64 0}
+// CHECK: [[ERRNO_TBAA:![0-9]+]] = !{[[META_ERRNO:![0-9]+]], [[META2:![0-9]+]], i64 0}
+// CHECK: [[META_ERRNO]] = !{!"__libc_errno", [[META2]], i64 0}
 // CHECK: [[META2]] = !{!"int", [[META3:![0-9]+]], i64 0}
 // CHECK: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
 // CHECK: [[META4]] = !{!"Simple C/C++ TBAA"}
@@ -305,5 +306,6 @@ int *__ended_by(end) eb_in_from_single(int *__single end, int *__single p) {
 // CHECK: [[META9]] = !{!"bounds-safety-generic", [[META10:![0-9]+]]}
 // CHECK: [[META10]] = !{!"bounds-safety-missed-optimization-nsw", !"Check can not be removed because the arithmetic operation might wrap in the signed sense. Optimize the check by adding conditions to check for overflow before doing the operation"}
 // CHECK: [[META13]] = !{!"bounds-safety-check-ptr-neq-null"}
+// CHECK: [[TBAA1]] = !{[[META2]], [[META2]], i64 0}
 // CHECK: [[TBAA16]] = !{[[META8]], [[META8]], i64 0}
 //.
