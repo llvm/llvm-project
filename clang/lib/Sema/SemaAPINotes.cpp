@@ -1105,9 +1105,8 @@ void Sema::ProcessAPINotes(Decl *D) {
     // Global functions.
     if (auto FD = dyn_cast<FunctionDecl>(D)) {
       if (FD->getDeclName().isIdentifier()) {
-        std::optional<SmallVector<SmallVector<std::string, 4>, 2>>
-            ParameterSelectorCandidates =
-                getAPINotesParameterSelectorCandidates(*this, FD);
+        auto ParameterSelectorCandidates =
+            getAPINotesParameterSelectorCandidates(*this, FD);
         for (auto Reader : Readers) {
           auto Info =
               Reader->lookupGlobalFunction(FD->getName(), APINotesContext);
