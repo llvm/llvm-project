@@ -1721,6 +1721,36 @@ static VPInstruction *findFindIVSelect(VPValue *BackedgeVal) {
       }));
 }
 
+/// Recover the wide induction underlying the value \p IVOp that a FindIV select
+/// stores. \p IVOp is either the induction itself (then \p Offset is left null)
+/// or an affine increment add(induction, loop-invariant), such as the iv-1
+/// stored by a down-counting argmin loop (then \p Offset is set to the value to
+/// add to the reconstructed index). Returns the base induction, or nullptr if
+/// \p IVOp is not a (possibly offset) wide induction.
+static VPWidenIntOrFpInductionRecipe *getFindIVBaseInduction(VPValue *IVOp,
+                                                             VPValue *&Offset) {
+  Offset = nullptr;
+  // A narrowed store keeps the wide IV; any offset is reapplied after the
+  // index is reconstructed.
+  match(IVOp, m_TruncOrSelf(m_VPValue(IVOp)));
+  if (auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(IVOp))
+    return WideIV;
+
+  // Otherwise accept add(IV, loop-invariant), e.g. iv-1 as add(iv, -1).
+  VPValue *LHS, *RHS;
+  if (!match(IVOp, m_Add(m_VPValue(LHS), m_VPValue(RHS))))
+    return nullptr;
+  auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(LHS);
+  if (!WideIV) {
+    std::swap(LHS, RHS);
+    WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(LHS);
+  }
+  if (!WideIV || !RHS->isDefinedOutsideLoopRegions())
+    return nullptr;
+  Offset = RHS;
+  return WideIV;
+}
+
 bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   auto GetMinOrMaxCompareValue =
       [](VPReductionPHIRecipe *RedPhiR) -> VPValue * {
@@ -2035,20 +2065,17 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
 /// \p FindIVSelect, \p FindIVCmp, and \p FindIVRdxResult, which are replaced
 /// and removed.
 /// Returns true if the pattern was handled successfully, false otherwise.
-static bool handleFirstArgMinOrMax(
-    VPlan &Plan, VPReductionPHIRecipe *MinOrMaxPhiR,
-    VPReductionPHIRecipe *FindLastIVPhiR, VPWidenIntOrFpInductionRecipe *WideIV,
-    VPInstruction *MinOrMaxResult, VPInstruction *FindIVSelect,
-    VPRecipeBase *FindIVCmp, VPInstruction *FindIVRdxResult) {
+static bool
+handleFirstArgMinOrMax(VPlan &Plan, VPReductionPHIRecipe *MinOrMaxPhiR,
+                       VPReductionPHIRecipe *FindLastIVPhiR,
+                       VPWidenIntOrFpInductionRecipe *WideIV,
+                       VPValue *IndexOffset, VPInstruction *MinOrMaxResult,
+                       VPInstruction *FindIVSelect, VPRecipeBase *FindIVCmp,
+                       VPInstruction *FindIVRdxResult) {
   assert(!FindLastIVPhiR->isInLoop() && !FindLastIVPhiR->isOrdered() &&
          "inloop and ordered reductions not supported");
   assert(FindLastIVPhiR->getVFScaleFactor() == 1 &&
          "FindIV reduction must not be scaled");
-
-  // TODO: support for FP in handleFirstArgMinOrMax
-  if (RecurrenceDescriptor::isFloatingPointRecurrenceKind(
-          MinOrMaxPhiR->getRecurrenceKind()))
-    return false;
 
   Type *Ty = Plan.getVectorLoopRegion()->getCanonicalIVType();
   // TODO: Support non (i.e., narrower than) canonical IV types.
@@ -2069,9 +2096,24 @@ static bool handleFirstArgMinOrMax(
   assert(
       match(FindIVSelectR, m_Select(m_VPValue(), m_VPValue(), m_VPValue())) &&
       "backedge value must be a select");
-  if (FindIVSelectR->getOperand(1) != WideIV &&
-      FindIVSelectR->getOperand(2) != WideIV)
-    return false;
+  // Identify the select arm that stores the index; the other arm is the
+  // reduction phi. Without an offset the stored arm is WideIV itself (the
+  // exact-match requirement bails cleanly on any other expression); with an
+  // offset it is add(WideIV, offset), so match against the phi instead.
+  unsigned StoredIdx;
+  if (IndexOffset) {
+    if (FindIVSelectR->getOperand(1) == FindLastIVPhiR)
+      StoredIdx = 2;
+    else if (FindIVSelectR->getOperand(2) == FindLastIVPhiR)
+      StoredIdx = 1;
+    else
+      return false;
+  } else {
+    if (FindIVSelectR->getOperand(1) != WideIV &&
+        FindIVSelectR->getOperand(2) != WideIV)
+      return false;
+    StoredIdx = FindIVSelectR->getOperand(1) == WideIV ? 1 : 2;
+  }
 
   // If the original wide IV is not canonical, create a new one. The canonical
   // wide IV is guaranteed to not wrap for all lanes that are active in the
@@ -2087,8 +2129,7 @@ static bool handleFirstArgMinOrMax(
     WidenCanIV->insertBefore(WideIV);
 
     // Update the select to use the wide canonical IV.
-    FindIVSelectR->setOperand(FindIVSelectR->getOperand(1) == WideIV ? 1 : 2,
-                              WidenCanIV);
+    FindIVSelectR->setOperand(StoredIdx, WidenCanIV);
   }
   FindLastIVPhiR->setOperand(0, Plan.getPoison(Ty));
 
@@ -2142,10 +2183,20 @@ static bool handleFirstArgMinOrMax(
   //  vp<%final.idx> = select vp<%always.false>, ir<10>,
   //                          vp<%scaled.idx>
 
+  // The min/max value comparisons below must use fcmp for FP recurrences; the
+  // index/IV comparisons stay integer. NaN-free semantics (required to reach
+  // here) make the ordered equality exact.
+  bool IsFPMinMax = RecurrenceDescriptor::isFPMinMaxRecurrenceKind(
+      MinOrMaxPhiR->getRecurrenceKind());
+  auto CreateValueEqCmp = [&](VPBuilder &B, VPValue *A, VPValue *C) {
+    return IsFPMinMax ? B.createFCmp(CmpInst::FCMP_OEQ, A, C)
+                      : B.createICmp(CmpInst::ICMP_EQ, A, C);
+  };
+
   VPBuilder Builder(FindIVRdxResult);
   VPValue *MinOrMaxExiting = MinOrMaxResult->getOperand(0);
   auto *FinalMinOrMaxCmp =
-      Builder.createICmp(CmpInst::ICMP_EQ, MinOrMaxExiting, MinOrMaxResult);
+      CreateValueEqCmp(Builder, MinOrMaxExiting, MinOrMaxResult);
   VPValue *LastIVExiting = FindIVRdxResult->getOperand(0);
   VPValue *MaxIV =
       Plan.getConstantInt(APInt::getMaxValue(Ty->getIntegerBitWidth()));
@@ -2167,11 +2218,19 @@ static bool handleFirstArgMinOrMax(
     FinalCanIV = DerivedIVRecipe;
   }
 
+  // Apply the additive offset of a stored IV increment (e.g. iv-1) so the
+  // reconstructed index matches the value the scalar loop stored.
+  if (IndexOffset)
+    FinalCanIV = Builder.createNaryOp(
+        Instruction::Add, {FinalCanIV, IndexOffset},
+        VPIRFlags(VPIRFlags::WrapFlagsTy(/*HasNUW=*/false, /*HasNSW=*/false)),
+        FindIVRdxResult->getDebugLoc());
+
   // If the final min/max value matches its start value, the condition in the
   // loop was always false, i.e. no induction value has been selected. If that's
   // the case, set the result of the IV reduction to its start value.
-  VPValue *AlwaysFalse = Builder.createICmp(CmpInst::ICMP_EQ, MinOrMaxResult,
-                                            MinOrMaxPhiR->getStartValue());
+  VPValue *AlwaysFalse =
+      CreateValueEqCmp(Builder, MinOrMaxResult, MinOrMaxPhiR->getStartValue());
   VPValue *FinalIV = Builder.createSelect(
       AlwaysFalse, FindIVSelect->getOperand(2), FinalCanIV);
   FindIVSelect->replaceAllUsesWith(FinalIV);
@@ -2205,6 +2264,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     // 3) the select operation of the vector.latch block. This select uses the
     // original MinOrMaxPhiR if the mask is zero.
     RecurKind RdxKind = MinOrMaxPhiR->getRecurrenceKind();
+    bool IsFPMinMax = RecurrenceDescriptor::isFPMinMaxRecurrenceKind(RdxKind);
     assert(
         RecurrenceDescriptor::isMinMaxRecurrenceKind(RdxKind) &&
         "only min/max recurrences support users outside the reduction chain");
@@ -2231,10 +2291,13 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
         return false;
     }
 
-    // Check that MinOrMaxOp is a VPWidenIntrinsicRecipe or
-    // VPReplicateRecipe with an intrinsic that matches the reduction kind.
+    // The value reduction's backedge op is either a min/max intrinsic (the
+    // canonical form) or, for a select-based FP min/max, a select whose
+    // condition is the reduction compare and whose arms are the value operands.
     Intrinsic::ID ExpectedIntrinsicID = getMinMaxReductionIntrinsicOp(RdxKind);
-    if (!match(MinOrMaxOp, m_Intrinsic(ExpectedIntrinsicID)))
+    bool IsSelectOp =
+        match(MinOrMaxOp, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
+    if (!match(MinOrMaxOp, m_Intrinsic(ExpectedIntrinsicID)) && !IsSelectOp)
       return false;
 
     // Tailfolded MinOrMaxOp should only feed into the predicated
@@ -2248,11 +2311,16 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     // MinOrMaxOp must combine MinOrMaxPhiR directly with the new element;
     // reject multi-step min/max chains (e.g. max(l, max(k, phi))), which
     // this transform does not handle.
-    VPValue *MinOrMaxOpValue;
-    if (MinOrMaxOp->getOperand(0) == MinOrMaxPhiR)
-      MinOrMaxOpValue = MinOrMaxOp->getOperand(1);
-    else if (MinOrMaxOp->getOperand(1) == MinOrMaxPhiR)
-      MinOrMaxOpValue = MinOrMaxOp->getOperand(0);
+    // A select carries its condition in operand 0, so its value operands are 1
+    // and 2; an intrinsic's are 0 and 1.
+    unsigned FirstValOp = IsSelectOp ? 1 : 0;
+    VPValue *FirstVal = MinOrMaxOp->getOperand(FirstValOp);
+    VPValue *SecondVal = MinOrMaxOp->getOperand(FirstValOp + 1);
+    VPValue *MinOrMaxOpValue = nullptr;
+    if (FirstVal == MinOrMaxPhiR)
+      MinOrMaxOpValue = SecondVal;
+    else if (SecondVal == MinOrMaxPhiR)
+      MinOrMaxOpValue = FirstVal;
     else
       return false;
 
@@ -2261,7 +2329,12 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     CmpPredicate Pred;
     auto *Cmp = dyn_cast_or_null<VPRecipeWithIRFlags>(findUserOf(
         MinOrMaxPhiR, m_Cmp(Pred, m_VPValue(CmpOpA), m_VPValue(CmpOpB))));
-    if (!Cmp || Cmp->getNumUsers() != 1 ||
+    // The shared compare normally feeds only the FindIV select. A down-counting
+    // (FindFirst) FP argmin lowered via the AnyOf path adds an extra Or user,
+    // which is tolerated: the FindIV select is located explicitly below and the
+    // AnyOf scaffolding is torn down once the reductions are combined. Integer
+    // argmin keeps the strict single-user requirement.
+    if (!Cmp || (!IsFPMinMax && Cmp->getNumUsers() != 1) ||
         (CmpOpA != MinOrMaxOpValue && CmpOpB != MinOrMaxOpValue))
       return false;
 
@@ -2281,12 +2354,25 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     assert(MinOrMaxResult &&
            "MinOrMaxResult must be a user of MinOrMaxBackedgeR");
 
-    // Cmp must be used by the select of a FindLastIV chain.
-    VPValue *Sel = dyn_cast<VPSingleDefRecipe>(Cmp->getSingleUser());
-    VPValue *IVOp, *FindIV;
-    if (!Sel || (Sel->getNumUsers() != (HeaderMask ? 1 : 2)) ||
-        !match(Sel,
-               m_Select(m_Specific(Cmp), m_VPValue(IVOp), m_VPValue(FindIV))))
+    // Locate the FindIV select among the compare's users. There is exactly one
+    // select; a down-counting FP AnyOf reduction additionally uses the compare
+    // in an Or, which is tolerated (and cleaned up) below.
+    VPSingleDefRecipe *Sel = nullptr;
+    VPValue *IVOp = nullptr, *FindIV = nullptr;
+    for (VPUser *U : Cmp->users()) {
+      auto *R = dyn_cast<VPSingleDefRecipe>(U);
+      // Skip the value reduction's own select (select-based min/max); only the
+      // index select should be captured here.
+      if (R == MinOrMaxOp)
+        continue;
+      if (R && match(R, m_Select(m_Specific(Cmp), m_VPValue(IVOp),
+                                 m_VPValue(FindIV)))) {
+        if (Sel)
+          return false;
+        Sel = R;
+      }
+    }
+    if (!Sel || Sel->getNumUsers() != (HeaderMask ? 1 : 2))
       return false;
 
     if (!isa<VPReductionPHIRecipe>(FindIV)) {
@@ -2302,21 +2388,38 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     assert(!FindIVPhiR->isInLoop() && !FindIVPhiR->isOrdered() &&
            "cannot handle inloop/ordered reductions yet");
 
-    // Check if FindIVPhiR is a FindLast pattern by checking the MinMaxKind
-    // on its ComputeReductionResult. SMax/UMax indicates FindLast.
+    // A scalar-only VPlan (VF=1) lowers the stored index as a scalar recipe
+    // rather than a widened induction. Such a plan needs no cross-lane
+    // combining, so skip this reduction; bailing would drop the scalar VPlan
+    // and trip a planner assertion once vector plans are built.
+    if (auto *R = IVOp->getDefiningRecipe())
+      if (isa<VPReplicateRecipe, VPScalarIVStepsRecipe>(R))
+        continue;
+
+    // Classify the index reduction: SMax/UMax is FindLast (up-counting),
+    // SMin/UMin is FindFirst (down-counting). Support is scoped to integer
+    // FindLast (upstream) and FP FindFirst.
+    // TODO: FP up-counting (FindLast) and integer down-counting (FindFirst).
     VPInstruction *FindIVResult =
         findUserOf<VPInstruction::ComputeReductionResult>(
             FindIVPhiR->getBackedgeValue());
     assert(FindIVResult &&
            "must be able to retrieve the FindIVResult VPInstruction");
     RecurKind FindIVMinMaxKind = FindIVResult->getRecurKind();
-    if (FindIVMinMaxKind != RecurKind::SMax &&
-        FindIVMinMaxKind != RecurKind::UMax)
+    bool IsFindLast = !IsFPMinMax && (FindIVMinMaxKind == RecurKind::SMax ||
+                                      FindIVMinMaxKind == RecurKind::UMax);
+    bool IsFindFirst = IsFPMinMax && (FindIVMinMaxKind == RecurKind::SMin ||
+                                      FindIVMinMaxKind == RecurKind::UMin);
+    if (!IsFindLast && !IsFindFirst)
       return false;
 
-    // TODO: Support cases where IVOp is the IV increment.
-    if (!match(IVOp, m_TruncOrSelf(m_VPValue(IVOp))) ||
-        !isa<VPWidenIntOrFpInductionRecipe>(IVOp))
+    // The stored index is the induction WideIV, or (for a down-counting loop
+    // storing the IV increment, e.g. iv-1) add(WideIV, invariant). Recover the
+    // base induction and any additive offset to reapply when the final index is
+    // reconstructed. Offsets are only accepted for FindFirst.
+    VPValue *IndexOffset = nullptr;
+    auto *WideIV = getFindIVBaseInduction(IVOp, IndexOffset);
+    if (!WideIV || (IndexOffset && !IsFindFirst))
       return false;
 
     // Check if the predicate is compatible with the reduction kind.
@@ -2331,20 +2434,24 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
       case RecurKind::SMin:
         return Pred == CmpInst::ICMP_SGE || Pred == CmpInst::ICMP_SGT;
       case RecurKind::FMax:
+        return Pred == CmpInst::FCMP_OLE || Pred == CmpInst::FCMP_OLT ||
+               Pred == CmpInst::FCMP_ULE || Pred == CmpInst::FCMP_ULT;
       case RecurKind::FMaximumNum:
         return Pred == CmpInst::FCMP_OLE || Pred == CmpInst::FCMP_OLT;
       case RecurKind::FMin:
+        return Pred == CmpInst::FCMP_OGE || Pred == CmpInst::FCMP_OGT ||
+               Pred == CmpInst::FCMP_UGE || Pred == CmpInst::FCMP_UGT;
       case RecurKind::FMinimumNum:
         return Pred == CmpInst::FCMP_OGE || Pred == CmpInst::FCMP_OGT;
-      // minnum and maxnum need special handling due to expected sNaN behaviour
-      // minimum and maximum return NaN if either input is a NAN
+      // minnum and maxnum need special handling due to expected sNaN
+      // behavior. minimum and maximum return NaN if either input is a NaN.
       case RecurKind::FMinNum:
       case RecurKind::FMaxNum:
       case RecurKind::FMinimum:
       case RecurKind::FMaximum:
         return false;
       default:
-        llvm_unreachable("unhandled recurrence kind");
+        return false;
       }
     }();
     if (!IsValidKindPred) {
@@ -2366,11 +2473,43 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
         return false;
     }
 
-    auto *FindIVSelect = findFindIVSelect(FindIVPhiR->getBackedgeValue());
-    auto *FindIVCmp = FindIVSelect->getOperand(0)->getDefiningRecipe();
-    auto *FindIVRdxResult = cast<VPInstruction>(FindIVCmp->getOperand(0));
+    VPInstruction *FindIVSelect = nullptr;
+    VPRecipeBase *FindIVCmp = nullptr;
+    VPInstruction *FindIVRdxResult = nullptr;
+    if (IsFindFirst) {
+      // For down-counting loops sinking is disabled for the multi-use argmin,
+      // so the min/max index reduction result feeds the middle-block select
+      // directly, for either lowering:
+      //   sentinel: select(icmp ne <rdx>, Sentinel), <rdx>, Start
+      //   AnyOf:    select(freeze(<or-reduce>),      <rdx>, Start
+      FindIVRdxResult = FindIVResult;
+      for (VPUser *U : FindIVRdxResult->users()) {
+        auto *R = dyn_cast<VPInstruction>(U);
+        if (R && R->getOpcode() == Instruction::Select &&
+            R->getOperand(1) == FindIVRdxResult) {
+          FindIVSelect = R;
+          break;
+        }
+      }
+      if (!FindIVSelect)
+        return false;
+      FindIVCmp = FindIVSelect->getOperand(0)->getDefiningRecipe();
+      if (!FindIVCmp)
+        return false;
+    } else {
+      FindIVSelect = findFindIVSelect(FindIVPhiR->getBackedgeValue());
+      FindIVCmp = FindIVSelect->getOperand(0)->getDefiningRecipe();
+      FindIVRdxResult = cast<VPInstruction>(FindIVCmp->getOperand(0));
+    }
     assert(FindIVSelect->getParent() == MinOrMaxResult->getParent() &&
            "both results must be computed in the same block");
+
+    // For the AnyOf lowering FindIVCmp is a freeze of an Or reduction. Capture
+    // that Or reduction result now so its scaffolding can be erased after the
+    // final index is rebuilt below.
+    auto *FindIVCmpI = dyn_cast<VPInstruction>(FindIVCmp);
+    bool IsAnyOf = FindIVCmpI && FindIVCmpI->getOpcode() == Instruction::Freeze;
+    VPValue *OrReduceVal = IsAnyOf ? FindIVCmpI->getOperand(0) : nullptr;
     // Reducing to a scalar min or max value is placed right before reducing to
     // its scalar iteration, in order to generate instructions that use both
     // their operands.
@@ -2379,13 +2518,36 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
 
     bool IsStrictPredicate = CmpInst::isStrictPredicate(Pred);
     if (IsStrictPredicate) {
-      if (!handleFirstArgMinOrMax(Plan, MinOrMaxPhiR, FindIVPhiR,
-                                  cast<VPWidenIntOrFpInductionRecipe>(IVOp),
-                                  MinOrMaxResult, FindIVSelect, FindIVCmp,
-                                  FindIVRdxResult))
+      if (!handleFirstArgMinOrMax(Plan, MinOrMaxPhiR, FindIVPhiR, WideIV,
+                                  IndexOffset, MinOrMaxResult, FindIVSelect,
+                                  FindIVCmp, FindIVRdxResult))
         return false;
+      // handleFirstArgMinOrMax erased the freeze; for the AnyOf lowering the Or
+      // reduction (result, in-loop Or, and reduction phi) is now dead. Erase
+      // it, breaking the phi<->Or cycle first.
+      if (IsAnyOf) {
+        auto *OrReduce = cast<VPInstruction>(OrReduceVal);
+        auto *OrR = cast<VPSingleDefRecipe>(
+            OrReduce->getOperand(0)->getDefiningRecipe());
+        VPReductionPHIRecipe *AnyOfPhi = nullptr;
+        for (VPValue *Op : OrR->operands())
+          if (auto *P = dyn_cast_or_null<VPReductionPHIRecipe>(
+                  Op->getDefiningRecipe()))
+            AnyOfPhi = P;
+        assert(AnyOfPhi && "AnyOf Or must have a reduction phi operand");
+        OrReduce->eraseFromParent();
+        AnyOfPhi->setOperand(1, AnyOfPhi->getOperand(0));
+        OrR->eraseFromParent();
+        AnyOfPhi->eraseFromParent();
+      }
       continue;
     }
+
+    // The non-strict lowering below expects the sentinel form; the AnyOf
+    // lowering has no sentinel operand, so bail (only the strict-predicate
+    // argmin/argmax is handled above).
+    if (IsAnyOf)
+      return false;
 
     // The reduction using MinOrMaxPhiR needs adjusting to compute the correct
     // result:
