@@ -230,9 +230,6 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
                                VPBasicBlock *FirstBB, VPBasicBlock *LastBB,
                                std::optional<SinkStoreInfo> SinkInfo = {}) {
   bool CheckReads = SinkInfo.has_value();
-  if (!MemLoc.AATags.Scope)
-    return false;
-
   for (VPBasicBlock *VPBB :
        VPBlockUtils::blocksInSingleSuccessorChainBetween(FirstBB, LastBB)) {
     for (VPRecipeBase &R : *VPBB) {
@@ -1578,11 +1575,17 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
 
   const APInt *APC;
   if (CanCreateNewRecipe && match(Def, m_c_Mul(m_VPValue(A), m_APInt(APC))) &&
-      APC->isPowerOf2())
+      APC->isPowerOf2()) {
+    auto *MulR = cast<VPRecipeWithIRFlags>(Def);
+    unsigned ShiftAmt = APC->exactLogBase2();
+    VPIRFlags::WrapFlagsTy NW(MulR->hasNoUnsignedWrap(),
+                              MulR->hasNoSignedWrap() &&
+                                  ShiftAmt != APC->getBitWidth() - 1);
     return Def->replaceAllUsesWith(Builder.createNaryOp(
         Instruction::Shl,
-        {A, Plan->getConstantInt(APC->getBitWidth(), APC->exactLogBase2())},
-        *cast<VPRecipeWithIRFlags>(Def), Def->getDebugLoc()));
+        {A, Plan->getConstantInt(APC->getBitWidth(), ShiftAmt)}, NW,
+        Def->getDebugLoc()));
+  }
 
   if (CanCreateNewRecipe && match(Def, m_UDiv(m_VPValue(A), m_APInt(APC))) &&
       APC->isPowerOf2())
@@ -6545,6 +6548,9 @@ struct VPPartialReductionChain {
   /// is `1 - AccumulatorOpIdx`.
   unsigned AccumulatorOpIdx;
   unsigned ScaleFactor;
+  /// Optional blend to represent predication for the block that updates the
+  /// reduction.
+  VPBlendRecipe *Blend = nullptr;
 };
 
 static VPSingleDefRecipe *
@@ -6732,14 +6738,28 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
     ExtendedOp = NegRecipe;
   }
 
-  // Check if WidenRecipe is the final result of the reduction. If so look
-  // through selects for predicated reductions.
+  // Check if WidenRecipe is the final result of the reduction. If so, look
+  // through the Select recipe introduced by tail-folding, otherwise look
+  // through any Blend recipe introduced by predication for the block.
+  VPValue *ExitSearch =
+      Chain.Blend ? cast<VPValue>(Chain.Blend) : cast<VPValue>(WidenRecipe);
+
   VPValue *Cond = nullptr;
   VPValue *ExitValue = cast_or_null<VPInstruction>(
-      findUserOf(WidenRecipe, m_Select(m_VPValue(Cond), m_Specific(WidenRecipe),
-                                       m_Specific(RdxPhi))));
+      findUserOf(ExitSearch, m_Select(m_VPValue(Cond), m_Specific(ExitSearch),
+                                      m_Specific(RdxPhi))));
+
+  if (Chain.Blend) {
+    VPValue *BlendCond = Chain.Blend->getMask(0);
+    Cond = ExitValue ? VPBuilder(WidenRecipe)
+                           .createLogicalAnd(Cond, BlendCond,
+                                             WidenRecipe->getDebugLoc())
+                     : BlendCond;
+  }
+
   bool IsLastInChain = RdxPhi->getBackedgeValue() == WidenRecipe ||
-                       RdxPhi->getBackedgeValue() == ExitValue;
+                       RdxPhi->getBackedgeValue() == ExitValue ||
+                       RdxPhi->getBackedgeValue() == Chain.Blend;
   assert((!ExitValue || IsLastInChain) &&
          "if we found ExitValue, it must match RdxPhi's backedge value");
 
@@ -6754,8 +6774,10 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
       RdxUnordered{/*VFScaleFactor=*/Chain.ScaleFactor});
   PartialRed->insertBefore(WidenRecipe);
 
-  if (Cond)
+  if (ExitValue)
     ExitValue->replaceAllUsesWith(PartialRed);
+  if (Chain.Blend)
+    Chain.Blend->replaceAllUsesWith(PartialRed);
   WidenRecipe->replaceAllUsesWith(PartialRed);
 
   // For cost-model purposes, fold this into a VPExpression.
@@ -6975,6 +6997,14 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR) {
   // Work backwards from the ExitValue examining each reduction operation.
   VPValue *CurrentValue = ExitValue;
   while (CurrentValue != RedPhiR) {
+    VPBlendRecipe *Blend = dyn_cast<VPBlendRecipe>(CurrentValue);
+    if (Blend) {
+      assert(!Blend->isNormalized() && "Expect Blend not to be normalized.");
+      CurrentValue = Blend->getIncomingValue(0);
+      if (Blend->getNumIncomingValues() != 2 || !CurrentValue->hasOneUse())
+        return std::nullopt;
+    }
+
     auto *UpdateR = dyn_cast<VPWidenRecipe>(CurrentValue);
     if (!UpdateR || !Instruction::isBinaryOp(UpdateR->getOpcode()))
       return std::nullopt;
@@ -6993,6 +7023,12 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR) {
       std::swap(Op, PrevValue);
     }
 
+    // Look for VPBlend(reduce(PrevValue, Op), PrevValue), where
+    // reduce is equal to CurrentValue. This can be lowered as
+    // a conditional reduction by hoisting the select to the inputs.
+    if (Blend && Blend->getIncomingValue(1) != PrevValue)
+      return std::nullopt;
+
     Type *ExtSrcType = ExtendedOp->ExtendA.SrcType;
     TypeSize ExtSrcSize = ExtSrcType->getPrimitiveSizeInBits();
     if (!PHISize.hasKnownScalarFactor(ExtSrcSize))
@@ -7001,7 +7037,8 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR) {
     VPPartialReductionChain Link(
         {UpdateR, *ExtendedOp, RK,
          PrevValue == UpdateR->getOperand(0) ? 0U : 1U,
-         static_cast<unsigned>(PHISize.getKnownScalarFactor(ExtSrcSize))});
+         static_cast<unsigned>(PHISize.getKnownScalarFactor(ExtSrcSize)),
+         Blend});
     Chain.push_back(Link);
     CurrentValue = PrevValue;
   }
@@ -7034,13 +7071,16 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
   if (ChainsByPhi.empty())
     return;
 
-  // Build set of partial reduction operations for extend user validation and
-  // a map of reduction bin ops to their scale factors for scale validation.
+  // Build set of partial reduction operations and blends for user validation
+  // and a map of reduction bin ops to their scale factors for scale validation.
   SmallPtrSet<VPRecipeBase *, 4> PartialReductionOps;
+  SmallPtrSet<VPBlendRecipe *, 4> PartialReductionBlends;
   DenseMap<VPSingleDefRecipe *, unsigned> ScaledReductionMap;
   for (const auto &[_, Chains] : ChainsByPhi)
     for (const VPPartialReductionChain &Chain : Chains) {
       PartialReductionOps.insert(Chain.ExtendedOp.ExtendsUser);
+      if (Chain.Blend)
+        PartialReductionBlends.insert(Chain.Blend);
       ScaledReductionMap[Chain.ReductionBinOp] = Chain.ScaleFactor;
     }
 
@@ -7093,6 +7133,10 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
         if (auto *PhiR = dyn_cast<VPReductionPHIRecipe>(U))
           return PhiR == RedPhiR;
         auto *R = cast<VPSingleDefRecipe>(U);
+
+        if (auto *Blend = dyn_cast<VPBlendRecipe>(R))
+          return Blend == Chain.Blend || PartialReductionBlends.contains(Blend);
+
         return Chain.ScaleFactor == ScaledReductionMap.lookup_or(R, 0) ||
                match(R, m_ComputeReductionResult(
                             m_Specific(Chain.ReductionBinOp))) ||
