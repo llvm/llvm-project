@@ -20,6 +20,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include <memory>
+#include <utility>
 
 namespace fir {
 
@@ -351,9 +352,24 @@ struct AliasAnalysis {
   /// snapshots are not collected, and getSource performs only the
   /// SourceKind/origin classification without that bookkeeping side
   /// effect.
+  ///
+  /// When source caching is enabled (see enableSourceCache()), the result is
+  /// memoized keyed on (value, flags), and recursive sub-queries share the
+  /// same cache. The cache is a frozen snapshot: it is only valid while the IR
+  /// reachable from the queried values is not mutated in a way that would
+  /// change the source. Callers must scope caching no wider than such a region
+  /// (see mlir::AliasAnalysis::QueryCacheScope).
   fir::AliasAnalysis::Source getSource(mlir::Value,
                                        bool getLastInstantiationPoint = false,
                                        bool collectScopedOrigins = true);
+
+  /// Enable/disable memoization of getSource() results. These are invoked by
+  /// the mlir::AliasAnalysis aggregator (via mlir::AliasAnalysis::
+  /// QueryCacheScope) and are not meant to be called directly by passes.
+  /// enableSourceCache() turns on the frozen snapshot cache; disableSourceCache
+  /// clears it and turns it off.
+  void enableSourceCache();
+  void disableSourceCache();
 
   /// Return true, if `ty` is a reference type to a boxed
   /// POINTER object or a raw fir::PointerType.
@@ -370,6 +386,16 @@ struct AliasAnalysis {
   bool functionHasMultipleScopes(mlir::Value v);
 
 private:
+  /// Compute the memory source of a value. This is the uncached
+  /// implementation of getSource(); getSource() is a thin wrapper that
+  /// memoizes the result when source caching is enabled.
+  fir::AliasAnalysis::Source getSourceImpl(mlir::Value v,
+                                           bool getLastInstantiationPoint,
+                                           bool collectScopedOrigins);
+
+  /// Clear the getSource() memoization cache.
+  void clearSourceCache() { getSourceCache.clear(); }
+
   /// Build an intermediate Source rooted at the declare captured by the
   /// snapshot. Reuses getSource(declValue) for the SourceKind / origin
   /// classification (with collectScopedOrigins=false), then overrides
@@ -446,6 +472,18 @@ private:
   /// functionHasMultipleScopes(); both true and false are cached so that
   /// repeated queries are O(1) without re-walking the function body.
   llvm::DenseMap<mlir::Operation *, bool> multiScopeCache;
+
+  /// Opt-in memoization of getSource() results, keyed on the queried value
+  /// and the two boolean flags (getLastInstantiationPoint,
+  /// collectScopedOrigins) packed into the unsigned. Only consulted/populated
+  /// while \c sourceCacheEnabled is set. This is a frozen snapshot cache: it
+  /// has no automatic invalidation, so it is only enabled (via
+  /// enableSourceCache(), driven by mlir::AliasAnalysis::QueryCacheScope) for
+  /// the duration of a region in which the relevant IR is not mutated.
+  llvm::DenseMap<std::pair<mlir::Value, unsigned>, Source> getSourceCache;
+
+  /// Whether getSource() should consult/populate getSourceCache.
+  bool sourceCacheEnabled = false;
 };
 
 inline bool operator==(const AliasAnalysis::Source::SourceOrigin &lhs,

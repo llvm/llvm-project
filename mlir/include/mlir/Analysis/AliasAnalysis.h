@@ -15,6 +15,7 @@
 #define MLIR_ANALYSIS_ALIASANALYSIS_H_
 
 #include "mlir/IR/Operation.h"
+#include "llvm/ADT/STLForwardCompat.h"
 
 namespace mlir {
 
@@ -187,7 +188,21 @@ struct AliasAnalysisTraits {
 
     /// Return the modify-reference behavior of `op` on `location`.
     virtual ModRefResult getModRef(Operation *op, Value location) = 0;
+
+    /// Enable opt-in caching of alias query results on this implementation.
+    /// Implementations that do not support caching ignore this request.
+    virtual void enableQueryCaching() = 0;
+
+    /// Disable and clear any query caching on this implementation.
+    /// Implementations that do not support caching ignore this request.
+    virtual void disableQueryCaching() = 0;
   };
+
+  /// Detection trait: true if `ImplT` provides `enableSourceCache()` /
+  /// `disableSourceCache()`. Mirrors the `has_is_invalidated` idiom used by
+  /// the pass analysis manager.
+  template <typename T>
+  using has_query_caching_t = decltype(std::declval<T &>().enableSourceCache());
 
   /// This class represents the `Model` of an alias analysis implementation
   /// `ImplT`. A model is instantiated for each alias analysis implementation
@@ -207,6 +222,17 @@ struct AliasAnalysisTraits {
     /// Return the modify-reference behavior of `op` on `location`.
     ModRefResult getModRef(Operation *op, Value location) final {
       return impl.getModRef(op, location);
+    }
+
+    /// Forward query-caching control to the implementation when it provides
+    /// the cache hooks; for implementations without them these are no-ops.
+    void enableQueryCaching() final {
+      if constexpr (llvm::is_detected<has_query_caching_t, ImplT>::value)
+        impl.enableSourceCache();
+    }
+    void disableQueryCaching() final {
+      if constexpr (llvm::is_detected<has_query_caching_t, ImplT>::value)
+        impl.disableSourceCache();
     }
 
   private:
@@ -279,7 +305,41 @@ public:
   /// Return the modify-reference behavior of `op` on `location`.
   ModRefResult getModRef(Operation *op, Value location);
 
+  //===--------------------------------------------------------------------===//
+  // Query Caching
+  //===--------------------------------------------------------------------===//
+
+  /// RAII scope that enables opt-in query caching on all registered
+  /// implementations that support it for the duration of the scope, and
+  /// disables (and clears) it on destruction.
+  ///
+  /// This is the only entry point to query caching: enabling and disabling
+  /// are private so that caching is always paired with a guaranteed teardown.
+  /// A frozen (snapshot) cache is only valid while the IR is not mutated in a
+  /// way that affects the cached queries, so callers must keep the scope no
+  /// wider than such a no-mutation (or move-only) region.
+  class QueryCacheScope {
+  public:
+    explicit QueryCacheScope(AliasAnalysis &aa) : aa(aa) {
+      aa.enableQueryCaching();
+    }
+    ~QueryCacheScope() { aa.disableQueryCaching(); }
+
+    QueryCacheScope(const QueryCacheScope &) = delete;
+    QueryCacheScope &operator=(const QueryCacheScope &) = delete;
+    QueryCacheScope(QueryCacheScope &&) = delete;
+    QueryCacheScope &operator=(QueryCacheScope &&) = delete;
+
+  private:
+    AliasAnalysis &aa;
+  };
+
 private:
+  /// Enable/disable query caching on every registered implementation that
+  /// supports it. Private: use QueryCacheScope to guarantee teardown.
+  void enableQueryCaching();
+  void disableQueryCaching();
+
   /// A set of internal alias analysis implementations.
   SmallVector<std::unique_ptr<Concept>, 4> aliasImpls;
 };
