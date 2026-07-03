@@ -218,6 +218,10 @@ bool llvm::DeleteDeadPHIs(BasicBlock *BB, const TargetLibraryInfo *TLI,
   // or RAUW'd undef, so use an array of WeakTrackingVH for the PHIs to delete.
   SmallVector<WeakTrackingVH, 8> PHIs(llvm::make_pointer_range(BB->phis()));
 
+  SmallPtrSet<PHINode *, 32> LocalKnownNonDeadPHIs;
+  if (!KnownNonDeadPHIs)
+    KnownNonDeadPHIs = &LocalKnownNonDeadPHIs;
+
   bool Changed = false;
   for (const auto &PHI : PHIs) {
     if (PHINode *PN = dyn_cast_or_null<PHINode>(PHI.operator Value *())) {
