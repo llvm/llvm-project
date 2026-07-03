@@ -83,16 +83,17 @@ class BuildMetadataExtractor:
                continue
             submodule_url = f"{commit_base_url}/{submodule_name}"
             commit_url = f"{submodule_url}/commit/{pin_sha}"
-            table += f'| {submodule_name} | ({commit_url}) |\n'
+            short_sha = pin_sha[:12]
+            table += f'| {submodule_name} | [{short_sha}]({commit_url}) |\n'
 
         return table
 
     def generate_manifest_artifact_logs_table(self):
         """Creates a table for Rock Manifest, Artifacts, and Build Logs."""
         table = '| Description | URL |\n|-------------|-----|\n'
-        #table += f'| Rock Manifest | ({self.rock_manifest_url}) |\\n'
-        table += f'| Artifacts | ({self.artifacts_url}) |\\n'
-        table += f'| Build Logs | ({self.build_logs_url}) |\\n'
+        #table += f'| Rock Manifest | [Rock Manifest]({self.rock_manifest_url}) |\n'
+        table += f'| Artifacts | [Artifacts]({self.artifacts_url}) |\n'
+        table += f'| Build Logs | [Build Logs]({self.build_logs_url}) |\n'
 
         return table
 
@@ -117,7 +118,7 @@ class BuildMetadataExtractor:
         for job in failure_jobs:
             job_name = job['name']
             job_url = job['html_url']
-            failure_table += f'| {job_name} | ({job_url}) |\\n'
+            failure_table += f'| {job_name} | [job]({job_url}) |\n'
         return failure_table
 
     def save_results_to_file(self,submodule_table, manifest_artifacts_table, failure_table):

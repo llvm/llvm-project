@@ -92,43 +92,8 @@ jobs:
           TZ: 'America/Chicago'
           JSON_RESULT_FILE: results.json
           RUN_ID: ${{ env.RUN_ID }}
-        run: |
-          # Default notification content setup
-          START_DATE=$(date +"%Y-%m-%d")
-          # Initialize STATUS based on job results
-          if [ "${{ needs.windows_build_and_test.result }}" = "success" ] && [ "${{ needs.linux_build_and_test.result }}" = "success" ]; then
-            STATUS="success"
-          else
-            STATUS="failure"
-          fi
-
-          # Determine the icon based on the STATUS
-          ICON="❌"
-          [ "$STATUS" = "success" ] && ICON="✅"
-
-
-          # Try to read the JSON file
-          if [[ -f "$JSON_RESULT_FILE" ]]; then
-            echo "Reading results from $JSON_RESULT_FILE..."
-            SUBMODULE_TABLE=$(jq -r '.submodule_table' < "$JSON_RESULT_FILE")
-            MANIFEST_ARTIFACTS_TABLE=$(jq -r '.manifest_artifacts_table' < "$JSON_RESULT_FILE")
-            FAILURE_TABLE=$(jq -r '.failure_table' < "$JSON_RESULT_FILE")
-
-            # Construct JSON content without EOF
-            NOTIFICATION_CONTENT="{\"title\":\"$START_DATE - $ICON Build $STATUS\", \"text\":\"**Repository:** ${{ github.repository }} \\n\\n**Branch:** ${{ github.ref_name }} \\n\\n**Status:** $STATUS \\n\\n🔗 [Build Link](https://github.com/${{ github.repository }}/actions/runs/$RUN_ID) \\n\\n**Manifest, Artifacts, and Logs:** \\n\\n$MANIFEST_ARTIFACTS_TABLE\\n\\n**Details:** \\n\\n$SUBMODULE_TABLE\\n\\n"
-
-            if [[ "$FAILURE_TABLE" != "No failures found" ]]; then
-              NOTIFICATION_CONTENT+="**Failure Jobs:** \\n\\n$FAILURE_TABLE \\n\\n"
-            fi
-
-            NOTIFICATION_CONTENT+="\"}"
-          else
-            echo "Error reading JSON file $JSON_RESULT_FILE! Falling back to short notification content."
-            NOTIFICATION_CONTENT="{\"title\":\"$START_DATE - $ICON Build $STATUS\", \"text\":\"**Repository:** ${{ github.repository }} \\n\\n**Branch:** ${{ github.ref_name }} \\n\\n**Status:** $STATUS \\n\\n🔗 [Build Link](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) \\n\\n**Details:** Unable to fetch detailed results. Please check logs.\\n\\n\"}"
-          fi
-
-          echo "Notification JSON Content:"
-          echo "$NOTIFICATION_CONTENT"
-
-          curl -H "Content-Type: application/json" -d "$NOTIFICATION_CONTENT" ${{ secrets.AMD_STAGING_NIGHTLY_TEAMS_WEBHOOK_URL }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          TEAMS_WEBHOOK_URL: ${{ secrets.AMD_STAGING_NIGHTLY_TEAMS_WEBHOOK_URL }}
+        run: python3 .github/workflows/teams_webhook_sender.py
 
