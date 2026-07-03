@@ -11,12 +11,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "AVR.h"
+#include "AVRMachineFunctionInfo.h"
+#include "AVRRegisterInfo.h"
 #include "AVRTargetMachine.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"
 
+#include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "avr-isel"
@@ -36,9 +44,14 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
+  void PostprocessISelDAG() override;
+
   bool SelectAddr(SDNode *Op, SDValue N, SDValue &Base, SDValue &Disp);
 
+  bool selectAlignedFrameLoad(SDNode *N);
+  bool selectAlignedFrameStore(SDNode *N);
   bool selectIndexedLoad(SDNode *N);
+
   unsigned selectIndexedProgMemLoad(const LoadSDNode *LD, MVT VT, int Bank);
 
   bool SelectInlineAsmMemoryOperand(const SDValue &Op,
@@ -49,6 +62,8 @@ public:
 #include "AVRGenDAGISel.inc"
 
 private:
+  bool isPostProcessDone;
+
   void Select(SDNode *N) override;
   bool trySelect(SDNode *N);
 
@@ -74,7 +89,72 @@ INITIALIZE_PASS(AVRDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
 bool AVRDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   Subtarget = &MF.getSubtarget<AVRSubtarget>();
+  isPostProcessDone = false;
+
+  AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
+
+  // If our function has aligned allocas (e.g. `alloca i16, align 16`), we will
+  // need an aligned stack register to address them.
+  //
+  // Since we don't know this information upfront, assume we *will* need aligned
+  // stack register and aligned stack space - if this proves false,
+  // post-processing below will undo these two:
+  AFI->AlignedStackReg =
+      MF.getRegInfo().createVirtualRegister(&AVR::DLDREGSRegClass);
+
+  AFI->AlignedStackObjectIdx =
+      MF.getFrameInfo().CreateStackObject(1, Align(1), false);
+
   return SelectionDAGISel::runOnMachineFunction(MF);
+}
+
+void AVRDAGToDAGISel::PostprocessISelDAG() {
+  if (isPostProcessDone) {
+    // Sometimes post-processing gets run multiple times on a single function -
+    // because our algorithm is not idempotent (we generate FRMSP instruction
+    // and reset function's alignment), it can only run once per function.
+    //
+    // This flags gets toggled on at the end of this function and it gets reset
+    // during `runOnMachineFunction()`.
+    return;
+  }
+
+  MachineFrameInfo &MFI = MF->getFrameInfo();
+  AVRMachineFunctionInfo *AFI = MF->getInfo<AVRMachineFunctionInfo>();
+
+  uint64_t Offset = 0;
+  uint64_t Alignment = 1;
+
+  // Move all aligned objects into their own stack, `AvrAlign`.
+  for (int FI = 0, MaxFI = MFI.getObjectIndexEnd(); FI != MaxFI; ++FI) {
+    if (MFI.getObjectAlign(FI).value() > 1) {
+      Offset = alignTo(Offset, MFI.getObjectAlign(FI));
+
+      MFI.setStackID(FI, TargetStackID::AvrAlign);
+
+      // Usually offsets are assigned by the prologue/epilogue inserter, but PEI
+      // doesn't touch objects that lay outside the default stack - so, seizing
+      // the day, let's assign the offset ourselves.
+      MFI.setObjectOffset(FI, Offset);
+
+      Offset += MFI.getObjectSize(FI);
+      Alignment = std::max(Alignment, MFI.getObjectAlign(FI).value());
+    }
+  }
+
+  // If we had any aligned objects, allocate the aligned stack register.
+  if (Offset > 0) {
+    BuildMI(&MF->front(), DebugLoc(), TII->get(AVR::FRMSP))
+        .addReg(AFI->AlignedStackReg, RegState::Define)
+        .addImm(Alignment);
+
+    MFI.setObjectSize(AFI->AlignedStackObjectIdx, Offset + Alignment - 1);
+    MFI.setMaxAlign(Align(1));
+  } else {
+    MFI.RemoveStackObject(AFI->AlignedStackObjectIdx);
+  }
+
+  isPostProcessDone = true;
 }
 
 bool AVRDAGToDAGISel::SelectAddr(SDNode *Op, SDValue N, SDValue &Base,
@@ -137,6 +217,154 @@ bool AVRDAGToDAGISel::SelectAddr(SDNode *Op, SDValue N, SDValue &Base,
   }
 
   return false;
+}
+
+bool AVRDAGToDAGISel::selectAlignedFrameLoad(SDNode *N) {
+  LoadSDNode *LD = cast<LoadSDNode>(N);
+  const SDValue LDB = LD->getBasePtr();
+
+  // ---
+
+  int InIndex;
+  int InOffset;
+
+  switch (LDB->getOpcode()) {
+  case ISD::FrameIndex:
+    InIndex = cast<FrameIndexSDNode>(LDB)->getIndex();
+    InOffset = 0;
+    break;
+
+  case ISD::ADD:
+  case ISD::OR:
+    if (LDB->getOperand(0)->getOpcode() == ISD::FrameIndex &&
+        LDB->getOperand(1)->getOpcode() == ISD::Constant) {
+      InIndex = cast<FrameIndexSDNode>(LDB->getOperand(0))->getIndex();
+      InOffset = cast<ConstantSDNode>(LDB->getOperand(1))->getZExtValue();
+    } else {
+      return false;
+    }
+    break;
+
+  default:
+    return false;
+  }
+
+  // ---
+
+  uint64_t Alignment = MF->getFrameInfo().getObjectAlign(InIndex).value();
+
+  if (Alignment == 1) {
+    return false;
+  }
+
+  // ---
+
+  unsigned Opcode;
+
+  switch (LD->getMemoryVT().getSimpleVT().SimpleTy) {
+  case MVT::i8:
+    Opcode = AVR::LDRdPtr;
+    break;
+  case MVT::i16:
+    Opcode = AVR::LDWRdPtr;
+    break;
+  default:
+    return false;
+  }
+
+  // ---
+
+  MVT PointerTy = getTargetLowering()->getPointerTy(CurDAG->getDataLayout());
+  Register StackReg = MF->getInfo<AVRMachineFunctionInfo>()->AlignedStackReg;
+
+  SDValue Index = CurDAG->getTargetFrameIndex(InIndex, PointerTy);
+  SDValue Offset = CurDAG->getTargetConstant(InOffset, SDLoc(N), MVT::i16);
+
+  SDNode *ResNode =
+      CurDAG->getMachineNode(AVR::FRMIDX, SDLoc(N), PointerTy, Index, Offset,
+                             CurDAG->getRegister(StackReg, PointerTy));
+
+  CurDAG->SelectNodeTo(N, Opcode, LD->getMemoryVT().getSimpleVT(), MVT::Other,
+                       SDValue(ResNode, 0), LD->getChain());
+
+  return true;
+}
+
+bool AVRDAGToDAGISel::selectAlignedFrameStore(SDNode *N) {
+  StoreSDNode *ST = cast<StoreSDNode>(N);
+  const SDValue STB = ST->getBasePtr();
+
+  // ---
+
+  int InIndex;
+  int InOffset;
+
+  switch (STB->getOpcode()) {
+  case ISD::FrameIndex:
+    InIndex = cast<FrameIndexSDNode>(STB)->getIndex();
+    InOffset = 0;
+    break;
+
+  case ISD::ADD:
+  case ISD::OR:
+    if (STB->getOperand(0)->getOpcode() == ISD::FrameIndex &&
+        STB->getOperand(1)->getOpcode() == ISD::Constant) {
+      InIndex = cast<FrameIndexSDNode>(STB->getOperand(0))->getIndex();
+      InOffset = cast<ConstantSDNode>(STB->getOperand(1))->getZExtValue();
+    } else {
+      return false;
+    }
+    break;
+
+  default:
+    return false;
+  }
+
+  // ---
+
+  uint64_t Alignment = MF->getFrameInfo().getObjectAlign(InIndex).value();
+
+  if (Alignment == 1) {
+    return false;
+  }
+
+  // ---
+
+  unsigned Opcode;
+
+  switch (ST->getMemoryVT().getSimpleVT().SimpleTy) {
+  case MVT::i8:
+    Opcode = AVR::STPtrRr;
+    break;
+  case MVT::i16:
+    Opcode = AVR::STWPtrRr;
+    break;
+  default:
+    return false;
+  }
+
+  // ---
+
+  MVT PointerTy = getTargetLowering()->getPointerTy(CurDAG->getDataLayout());
+  Register StackReg = MF->getInfo<AVRMachineFunctionInfo>()->AlignedStackReg;
+
+  SDValue Index = CurDAG->getTargetFrameIndex(InIndex, PointerTy);
+  SDValue Offset = CurDAG->getTargetConstant(InOffset, SDLoc(N), MVT::i16);
+
+  SDNode *AddrNode =
+      CurDAG->getMachineNode(AVR::FRMIDX, SDLoc(N), PointerTy, Index, Offset,
+                             CurDAG->getRegister(StackReg, PointerTy));
+
+  SDNode *ResNode = CurDAG->getMachineNode(
+      Opcode, SDLoc(N), MVT::Other,
+      {SDValue(AddrNode, 0), ST->getValue(), ST->getChain()});
+
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(ResNode), {ST->getMemOperand()});
+
+  ReplaceUses(SDValue(N, 0), SDValue(ResNode, 0));
+  CurDAG->RemoveDeadNode(N);
+
+  return true;
 }
 
 bool AVRDAGToDAGISel::selectIndexedLoad(SDNode *N) {
@@ -324,21 +552,35 @@ bool AVRDAGToDAGISel::SelectInlineAsmMemoryOperand(
   return false;
 }
 
+// Convert the frameindex into a temp instruction that will hold the effective
+// address of the final stack slot.
 template <> bool AVRDAGToDAGISel::select<ISD::FrameIndex>(SDNode *N) {
   auto DL = CurDAG->getDataLayout();
+  auto PointerTy = getTargetLowering()->getPointerTy(DL);
 
-  // Convert the frameindex into a temp instruction that will hold the
-  // effective address of the final stack slot.
   int FI = cast<FrameIndexSDNode>(N)->getIndex();
-  SDValue TFI =
-      CurDAG->getTargetFrameIndex(FI, getTargetLowering()->getPointerTy(DL));
+  SDValue TFI = CurDAG->getTargetFrameIndex(FI, PointerTy);
+  SDValue Offset = CurDAG->getTargetConstant(0, SDLoc(N), MVT::i16);
+  uint64_t Alignment = MF->getFrameInfo().getObjectAlign(FI).value();
 
-  CurDAG->SelectNodeTo(N, AVR::FRMIDX, getTargetLowering()->getPointerTy(DL),
-                       TFI, CurDAG->getTargetConstant(0, SDLoc(N), MVT::i16));
+  if (Alignment == 1) {
+    CurDAG->SelectNodeTo(N, AVR::FRMIDX, PointerTy, TFI, Offset,
+                         CurDAG->getRegister(AVR::R29R28, PointerTy));
+  } else {
+    auto StackReg = MF->getInfo<AVRMachineFunctionInfo>()->AlignedStackReg;
+
+    CurDAG->SelectNodeTo(N, AVR::FRMIDX, PointerTy, TFI, Offset,
+                         CurDAG->getRegister(StackReg, PointerTy));
+  }
+
   return true;
 }
 
 template <> bool AVRDAGToDAGISel::select<ISD::STORE>(SDNode *N) {
+  if (selectAlignedFrameStore(N)) {
+    return true;
+  }
+
   // Use the STD{W}SPQRr pseudo instruction when passing arguments through
   // the stack on function calls for further expansion during the PEI phase.
   const StoreSDNode *ST = cast<StoreSDNode>(N);
@@ -378,8 +620,7 @@ template <> bool AVRDAGToDAGISel::select<ISD::STORE>(SDNode *N) {
 template <> bool AVRDAGToDAGISel::select<ISD::LOAD>(SDNode *N) {
   const LoadSDNode *LD = cast<LoadSDNode>(N);
   if (!AVR::isProgramMemoryAccess(LD)) {
-    // Check if the opcode can be converted into an indexed load.
-    return selectIndexedLoad(N);
+    return selectAlignedFrameLoad(N) || selectIndexedLoad(N);
   }
 
   if (!Subtarget->hasLPM())

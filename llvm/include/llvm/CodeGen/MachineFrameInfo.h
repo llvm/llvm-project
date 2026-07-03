@@ -627,6 +627,9 @@ public:
   /// which is greater than the default stack alignment provided by the target.
   Align getMaxAlign() const { return MaxAlignment; }
 
+  /// Overwrite the alignment in bytes that this function must be aligned to.
+  void setMaxAlign(Align Alignment) { MaxAlignment = Alignment; }
+
   /// Make sure the function is at least Align bytes aligned.
   LLVM_ABI void ensureMaxAlignment(Align Alignment);
 

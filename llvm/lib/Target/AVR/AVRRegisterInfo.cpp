@@ -149,79 +149,55 @@ bool AVRRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   const MachineFunction &MF = *MBB.getParent();
   const AVRTargetMachine &TM = (const AVRTargetMachine &)MF.getTarget();
   const TargetInstrInfo &TII = *TM.getSubtargetImpl()->getInstrInfo();
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetFrameLowering *TFI = TM.getSubtargetImpl()->getFrameLowering();
   const AVRSubtarget &STI = MF.getSubtarget<AVRSubtarget>();
-  int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
-  int Offset = MFI.getObjectOffset(FrameIndex);
 
-  // Add one to the offset because SP points to an empty slot.
-  Offset += MFI.getStackSize() - TFI->getOffsetOfLocalArea() + 1;
-  // Fold incoming offset.
-  Offset += MI.getOperand(FIOperandNum + 1).getImm();
+  int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
+  int FrameOffset = MI.getOperand(FIOperandNum + 1).getImm();
+  Register FrameReg;
+
+  int Offset =
+      TFI->getFrameIndexReference(MF, FrameIndex, FrameReg).getFixed() +
+      FrameOffset;
 
   // This is actually "load effective address" of the stack slot
   // instruction. We have only two-address instructions, thus we need to
   // expand it into move + add.
   if (MI.getOpcode() == AVR::FRMIDX) {
     Register DstReg = MI.getOperand(0).getReg();
-    assert(DstReg != AVR::R29R28 && "Dest reg cannot be the frame pointer");
 
-    // Copy the frame pointer.
-    if (STI.hasMOVW()) {
-      BuildMI(MBB, MI, dl, TII.get(AVR::MOVWRdRr), DstReg).addReg(AVR::R29R28);
-    } else {
-      Register DstLoReg, DstHiReg;
-      splitReg(DstReg, DstLoReg, DstHiReg);
-      BuildMI(MBB, MI, dl, TII.get(AVR::MOVRdRr), DstLoReg).addReg(AVR::R28);
-      BuildMI(MBB, MI, dl, TII.get(AVR::MOVRdRr), DstHiReg).addReg(AVR::R29);
+    FrameReg = MI.getOperand(FIOperandNum + 2).getReg();
+
+    if (DstReg != FrameReg) {
+      TII.copyPhysReg(MBB, MI, dl, DstReg, FrameReg, false, false, false);
     }
 
-    assert(Offset > 0 && "Invalid offset");
+    if (Offset > 0) {
+      // Skip over the FRMIDX instruction.
+      II++;
 
-    // We need to materialize the offset via an add instruction.
-    unsigned Opcode;
+      // Generally, to load a frame address two add instructions are emitted
+      // that could get folded into a single one:
+      //  movw    r31:r30, r29:r28
+      //  adiw    r31:r30, 29
+      //  adiw    r31:r30, 16
+      // to:
+      //  movw    r31:r30, r29:r28
+      //  adiw    r31:r30, 45
+      if (II != MBB.end())
+        foldFrameOffset(II, Offset, DstReg);
 
-    II++; // Skip over the FRMIDX instruction.
-
-    // Generally, to load a frame address two add instructions are emitted that
-    // could get folded into a single one:
-    //  movw    r31:r30, r29:r28
-    //  adiw    r31:r30, 29
-    //  adiw    r31:r30, 16
-    // to:
-    //  movw    r31:r30, r29:r28
-    //  adiw    r31:r30, 45
-    if (II != MBB.end())
-      foldFrameOffset(II, Offset, DstReg);
-
-    // Select the best opcode based on DstReg and the offset size.
-    switch (DstReg) {
-    case AVR::R25R24:
-    case AVR::R27R26:
-    case AVR::R31R30: {
-      if (isUInt<6>(Offset) && STI.hasADDSUBIW()) {
-        Opcode = AVR::ADIWRdK;
-        break;
-      }
-      [[fallthrough]];
-    }
-    default: {
-      // This opcode will get expanded into a pair of subi/sbci.
-      Opcode = AVR::SUBIWRdK;
-      Offset = -Offset;
-      break;
-    }
+      BuildMI(MBB, II, dl, TII.get(AVR::ADIWRdKP), DstReg)
+          .addReg(DstReg, RegState::Kill)
+          .addImm(Offset)
+          .setOperandDead(3); // implicit-def $sreg
     }
 
-    MachineInstr *New = BuildMI(MBB, II, dl, TII.get(Opcode), DstReg)
-                            .addReg(DstReg, RegState::Kill)
-                            .addImm(Offset);
-    New->getOperand(3).setIsDead();
+    // Remove FRMIDX.
+    MI.eraseFromParent();
 
-    MI.eraseFromParent(); // remove FRMIDX
-
-    return false;
+    // Since we removed an instruction, we return true.
+    return true;
   }
 
   // On most AVRs, we can use an offset up to 62 for load/store with
@@ -256,6 +232,7 @@ bool AVRRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     MachineInstr *New = BuildMI(MBB, II, dl, TII.get(AddOpc), AVR::R29R28)
                             .addReg(AVR::R29R28, RegState::Kill)
                             .addImm(AddOffset);
+
     New->getOperand(3).setIsDead();
 
     // Restore SREG.
@@ -272,9 +249,12 @@ bool AVRRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     Offset = MaxOffset;
   }
 
-  MI.getOperand(FIOperandNum).ChangeToRegister(AVR::R29R28, false);
   assert(isUInt<6>(Offset) && "Offset is out of range");
+
+  MI.getOperand(FIOperandNum).ChangeToRegister(AVR::R29R28, false);
   MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
+
+  // Since we didn't remove an instruction, we return false.
   return false;
 }
 
