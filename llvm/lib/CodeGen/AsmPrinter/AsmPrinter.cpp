@@ -110,7 +110,6 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/SectionKind.h"
-#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/ELFTypes.h"
 #include "llvm/Pass.h"
 #include "llvm/Remarks/RemarkStreamer.h"
@@ -128,6 +127,7 @@
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
 #include <cinttypes>
@@ -610,29 +610,13 @@ bool AsmPrinter::doInitialization(Module &M) {
   BeginGCAssembly(M);
 
   // Emit module-level inline asm if it exists.
-  if (M.hasModuleInlineAsm()) {
+  if (!M.getModuleInlineAsm().empty()) {
     OutStreamer->AddComment("Start of file scope inline assembly");
     OutStreamer->addBlankLine();
-    for (const Module::GlobalAsmFragment &Frag : M.getModuleInlineAsm()) {
-      if (!Frag.Props.TargetFeatures.empty() || !Frag.Props.TargetCPU.empty()) {
-        std::unique_ptr<MCSubtargetInfo> AsmSTI(
-            TM.getTarget().createMCSubtargetInfo(TM.getTargetTriple(),
-                                                 Frag.Props.TargetCPU,
-                                                 Frag.Props.TargetFeatures));
-        bool DidPush = emitTargetFeaturePush(*AsmSTI);
-        emitInlineAsm(
-            Frag.Asm, *AsmSTI, TM.Options.MCOptions, nullptr,
-            InlineAsm::AsmDialect(TM.getMCAsmInfo().getAssemblerDialect()));
-        emitTargetFeaturePop(*AsmSTI, DidPush);
-      } else {
-        // If the module asm does not explicitly specify target features,
-        // fall back to default subtargetinfo.
-        emitInlineAsm(
-            Frag.Asm + "\n", TM.getMCSubtargetInfo(), TM.Options.MCOptions,
-            nullptr,
-            InlineAsm::AsmDialect(TM.getMCAsmInfo().getAssemblerDialect()));
-      }
-    }
+    emitInlineAsm(
+        M.getModuleInlineAsm() + "\n", TM.getMCSubtargetInfo(),
+        TM.Options.MCOptions, nullptr,
+        InlineAsm::AsmDialect(TM.getMCAsmInfo().getAssemblerDialect()));
     OutStreamer->AddComment("End of file scope inline assembly");
     OutStreamer->addBlankLine();
   }

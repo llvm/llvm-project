@@ -1150,15 +1150,12 @@ void ModuleImport::convertTargetTriple() {
 }
 
 void ModuleImport::convertModuleLevelAsm() {
+  llvm::StringRef asmStr = llvmModule->getModuleInlineAsm();
   llvm::SmallVector<mlir::Attribute> asmArrayAttr;
 
-  for (const llvm::Module::GlobalAsmFragment &Frag :
-       llvmModule->getModuleInlineAsm()) {
-    // TODO: Preserve module asm properties.
-    for (llvm::StringRef line : llvm::split(Frag.Asm, '\n'))
-      if (!line.empty())
-        asmArrayAttr.push_back(builder.getStringAttr(line));
-  }
+  for (llvm::StringRef line : llvm::split(asmStr, '\n'))
+    if (!line.empty())
+      asmArrayAttr.push_back(builder.getStringAttr(line));
 
   mlirModule->setAttr(LLVM::LLVMDialect::getModuleLevelAsmAttrName(),
                       builder.getArrayAttr(asmArrayAttr));
