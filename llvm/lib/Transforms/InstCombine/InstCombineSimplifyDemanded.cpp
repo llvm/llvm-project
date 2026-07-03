@@ -2736,12 +2736,22 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         SimplifyDemandedFPClass(I, 1, RHSDemandedMask, KnownRHS, SQ, Depth + 1))
       return I;
 
+    bool ResultNotNan = (DemandedMask & fcNan) == fcNone;
+    bool ResultNotInf = (DemandedMask & fcInf) == fcNone;
+
+    // Replacing 0/x with a zero is only valid when the divisor can't be
+    // (logical) zero, since 0/0 is NaN -- unless NaN results aren't demanded. A
+    // subnormal divisor can flush to zero under a flushing denormal mode.
+    bool DivisorNonZeroOrNanOK =
+        ResultNotNan || KnownRHS.isKnownNeverLogicalZero(Mode);
+
     // nsz [+-]0 / x -> 0
     if (FMF.noSignedZeros() && KnownLHS.isKnownAlways(fcZero) &&
-        KnownRHS.isKnownNeverNaN())
+        KnownRHS.isKnownNeverNaN() && DivisorNonZeroOrNanOK)
       return ConstantFP::getZero(VTy);
 
-    if (KnownLHS.isKnownAlways(fcPosZero) && KnownRHS.isKnownNeverNaN()) {
+    if (KnownLHS.isKnownAlways(fcPosZero) && KnownRHS.isKnownNeverNaN() &&
+        DivisorNonZeroOrNanOK) {
       IRBuilderBase::InsertPointGuard Guard(Builder);
       Builder.SetInsertPoint(I);
 
@@ -2751,9 +2761,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       Copysign->takeName(I);
       return Copysign;
     }
-
-    bool ResultNotNan = (DemandedMask & fcNan) == fcNone;
-    bool ResultNotInf = (DemandedMask & fcInf) == fcNone;
 
     if (!ResultNotInf &&
         ((ResultNotNan || (KnownLHS.isKnownNeverNaN() &&
