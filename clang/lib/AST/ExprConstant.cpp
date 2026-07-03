@@ -16001,6 +16001,8 @@ GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
       return GCCTypeClass::None;
 
     case BuiltinType::Dependent:

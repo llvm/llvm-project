@@ -1141,6 +1141,15 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
     return SingletonId;                                                        \
   }
 #include "clang/Basic/AMDGPUTypes.def"
+#define SPIRV_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)                  \
+  case BuiltinType::Id: {                                                      \
+    if (!SingletonId)                                                          \
+      SingletonId =                                                            \
+          DBuilder.createForwardDecl(llvm::dwarf::DW_TAG_structure_type,       \
+                                     MangledName, TheCU, TheCU->getFile(), 0); \
+    return SingletonId;                                                        \
+  }
+#include "clang/Basic/SPIRVTypes.def"
   case BuiltinType::UChar:
   case BuiltinType::Char_U:
     Encoding = llvm::dwarf::DW_ATE_unsigned_char;

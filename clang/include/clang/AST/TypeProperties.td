@@ -873,6 +873,10 @@ let Class = BuiltinType in {
       case BuiltinType::ID: return ctx.SINGLETON_ID;
 #include "clang/Basic/HLSLIntangibleTypes.def"
 
+#define SPIRV_TYPE(NAME, ID, SINGLETON_ID) \
+      case BuiltinType::ID: return ctx.SINGLETON_ID;
+#include "clang/Basic/SPIRVTypes.def"
+
 #define BUILTIN_TYPE(ID, SINGLETON_ID) \
       case BuiltinType::ID: return ctx.SINGLETON_ID;
 #include "clang/AST/BuiltinTypes.def"
