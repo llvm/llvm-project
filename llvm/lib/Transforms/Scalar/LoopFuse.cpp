@@ -76,6 +76,7 @@ STATISTIC(AddressTakenBB, "Basic block has address taken");
 STATISTIC(MayThrowException, "Loop may throw an exception");
 STATISTIC(ContainsVolatileAccess, "Loop contains a volatile access");
 STATISTIC(ContainsAtomicAccess, "Loop contains an atomic access");
+STATISTIC(ContainsConvergentOp, "Loop contains a convergent operation");
 STATISTIC(NotSimplifiedForm, "Loop is not in simplified form");
 STATISTIC(InvalidDependencies, "Dependencies prevent fusion");
 STATISTIC(UnknownTripCount, "Loop has unknown trip count");
@@ -201,6 +202,16 @@ struct FusionCandidate {
           ++ContainsAtomicAccess;
           reportInvalidCandidate("ContainsAtomicAccess",
                                  "Loop contains an atomic access");
+          return;
+        }
+        // A convergent operation requires the set of threads executing it to be
+        // unchanged; fusion moves it into a different loop, so reject the
+        // candidate. See LangRef on the 'convergent' attribute.
+        if (const auto *CB = dyn_cast<CallBase>(&I); CB && CB->isConvergent()) {
+          invalidate();
+          ++ContainsConvergentOp;
+          reportInvalidCandidate("ContainsConvergentOp",
+                                 "Loop contains a convergent operation");
           return;
         }
         if (I.mayWriteToMemory())
