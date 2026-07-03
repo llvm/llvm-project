@@ -792,8 +792,8 @@ private:
       "11\0CP50220\0csCP50220\0";
 
   struct __offset_table {
-    constexpr static unsigned long long __num_aliases =
-        std::count(__aliases_string, __aliases_string + sizeof(__aliases_string), '\0') + 1;
+    constexpr static unsigned long long __num_aliases = 884;
+    // +2 for id::unknown, id::other sentinels
     unsigned short __table[__num_aliases];
   };
 
