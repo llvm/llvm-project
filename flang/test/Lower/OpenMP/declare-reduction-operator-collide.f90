@@ -71,8 +71,8 @@ end program
 ! Two distinct module-scoped ops (mod_add vs mod_mul owner qualifier), each bound
 ! by its own clause (the addop loop is emitted first, then the mulop loop).
 ! loose captures (R1) keyed on the owning module name; the two qualifiers differ.
-! CHECK-DAG: omp.declare_reduction @[[REDADD:_QQ[A-Za-z0-9_.]*mod_add[A-Za-z0-9_.]*op\.remote\.]] : !fir.ref
-! CHECK-DAG: omp.declare_reduction @[[REDMUL:_QQ[A-Za-z0-9_.]*mod_mul[A-Za-z0-9_.]*op\.remote\.]] : !fir.ref
+! CHECK-DAG: omp.declare_reduction @[[REDADD:_QQ[A-Za-z0-9_.]*mod_add[A-Za-z0-9_.]*op\.remote\.[A-Za-z0-9_.]*]] : !fir.ref
+! CHECK-DAG: omp.declare_reduction @[[REDMUL:_QQ[A-Za-z0-9_.]*mod_mul[A-Za-z0-9_.]*op\.remote\.[A-Za-z0-9_.]*]] : !fir.ref
 ! CHECK: omp.wsloop
 ! CHECK-SAME: reduction(byref @[[REDADD]]
 ! CHECK: omp.wsloop

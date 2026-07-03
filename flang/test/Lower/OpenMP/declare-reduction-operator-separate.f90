@@ -49,7 +49,7 @@ contains
 end module
 
 !--- plain.use.f90
-! CHECK: omp.declare_reduction @[[RED1:_QQ[A-Za-z0-9_.]*op\.plus\.]] : !fir.ref
+! CHECK: omp.declare_reduction @[[RED1:_QQ[A-Za-z0-9_.]*op\.plus\.[A-Za-z0-9_.]*]] : !fir.ref
 ! CHECK: omp.wsloop
 ! CHECK-SAME: reduction(byref @[[RED1]]
 ! CHECK-NOT: not yet implemented
@@ -83,7 +83,7 @@ contains
 end module
 
 !--- rename.use.f90
-! CHECK: omp.declare_reduction @[[RED2:_QQ[A-Za-z0-9_.]*op\.remote\.]] : !fir.ref
+! CHECK: omp.declare_reduction @[[RED2:_QQ[A-Za-z0-9_.]*op\.remote\.[A-Za-z0-9_.]*]] : !fir.ref
 ! CHECK: omp.wsloop
 ! CHECK-SAME: reduction(byref @[[RED2]]
 ! CHECK-NOT: not yet implemented
@@ -139,8 +139,8 @@ end module
 !--- collide.use.f90
 ! The two ops are distinguished by their source module (addmod vs mulmod) in the
 ! mangled name, so pinning one op to each module proves they are distinct.
-! CHECK-DAG: omp.declare_reduction @{{_QQ[A-Za-z0-9_.]*addmod[A-Za-z0-9_.]*op\.remote\.}} : !fir.ref
-! CHECK-DAG: omp.declare_reduction @{{_QQ[A-Za-z0-9_.]*mulmod[A-Za-z0-9_.]*op\.remote\.}} : !fir.ref
+! CHECK-DAG: omp.declare_reduction @{{_QQ[A-Za-z0-9_.]*addmod[A-Za-z0-9_.]*op\.remote\.[A-Za-z0-9_.]*}} : !fir.ref
+! CHECK-DAG: omp.declare_reduction @{{_QQ[A-Za-z0-9_.]*mulmod[A-Za-z0-9_.]*op\.remote\.[A-Za-z0-9_.]*}} : !fir.ref
 ! CHECK-NOT: not yet implemented
 program main
   use red_ty, only: t

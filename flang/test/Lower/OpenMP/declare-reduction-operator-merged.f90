@@ -5,8 +5,9 @@
 ! merged generic; each reduction clause is disambiguated by the variable's type
 ! back to its own source module's reduction op (named from the source spelling
 ! op.remote., not the use-site rename op.local.). Each source declare is
-! single-type. Lowering counterpart of the semantics test
-! Semantics/OpenMP/declare-reduction-use-only-merged.f90.
+! single-type; the multi-type-in-one-declare case (Form A) is covered by
+! declare-reduction-operator-multiple-types.f90. Lowering counterpart of the
+! semantics test Semantics/OpenMP/declare-reduction-use-only-merged.f90.
 ! https://github.com/llvm/llvm-project/issues/207255
 
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
@@ -67,8 +68,8 @@ end program
 ! t_real loop. Because the CHECK-DAG names require op.remote., an op wrongly keyed
 ! on the use-site rename op.local. would fail these checks.
 ! loose captures (R1) keyed on the owning module name; the two qualifiers differ.
-! CHECK-DAG: omp.declare_reduction @[[REDINT:_QQ[A-Za-z0-9_.]*m_int[A-Za-z0-9_.]*op\.remote\.]] : !fir.ref
-! CHECK-DAG: omp.declare_reduction @[[REDREAL:_QQ[A-Za-z0-9_.]*m_real[A-Za-z0-9_.]*op\.remote\.]] : !fir.ref
+! CHECK-DAG: omp.declare_reduction @[[REDINT:_QQ[A-Za-z0-9_.]*m_int[A-Za-z0-9_.]*op\.remote\.[A-Za-z0-9_.]*]] : !fir.ref
+! CHECK-DAG: omp.declare_reduction @[[REDREAL:_QQ[A-Za-z0-9_.]*m_real[A-Za-z0-9_.]*op\.remote\.[A-Za-z0-9_.]*]] : !fir.ref
 ! CHECK: omp.wsloop
 ! CHECK-SAME: reduction(byref @[[REDINT]]
 ! CHECK: omp.wsloop

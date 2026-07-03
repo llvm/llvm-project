@@ -39,7 +39,7 @@ end program
 ! rename op.local. must never appear as an op name.
 ! loose capture (R1): the exact mangled qualifier is pinned after building.
 ! CHECK-NOT: op.local.
-! CHECK: omp.declare_reduction @[[RED:_QQ[A-Za-z0-9_.]*op\.remote\.]] : !fir.ref
+! CHECK: omp.declare_reduction @[[RED:_QQ[A-Za-z0-9_.]*op\.remote\.[A-Za-z0-9_.]*]] : !fir.ref
 ! CHECK: omp.wsloop
 ! CHECK-SAME: reduction(byref @[[RED]]
 ! CHECK-NOT: op.local.

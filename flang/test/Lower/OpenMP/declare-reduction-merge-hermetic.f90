@@ -1,19 +1,16 @@
 ! A user-defined operator reduction re-exported through a HERMETIC facade (which
 ! embeds a private copy of the defining module) and reached both directly and
-! through that facade must compile without a spurious ambiguity error: the direct
-! and embedded copies are the same reduction. This guards the reduction ambiguity
-! check, whose distinctness is by defining-module name and reduction name rather
-! than by symbol pointer (a hermetic embed gives the same reduction two distinct
-! ultimate symbols). The lowering of the merged reduction is covered by the
-! multi-type user-defined reduction lowering support.
+! through that facade must resolve to a single reduction, not be reported as
+! ambiguous: the direct and embedded copies are the same reduction. This guards
+! the reduction ambiguity check, whose distinctness is by defining-module name
+! and reduction name rather than by symbol pointer (a hermetic embed gives the
+! same reduction two distinct ultimate symbols).
 ! https://github.com/llvm/llvm-project/issues/207255
 
 ! RUN: rm -rf %t && split-file %s %t && cd %t
 ! RUN: %flang_fc1 -fsyntax-only -fopenmp hm_base.f90
 ! RUN: %flang_fc1 -fsyntax-only -fhermetic-module-files -fopenmp hm_facade.f90
-! Reaching the reduction through both the base and the hermetic facade must not be
-! diagnosed as ambiguous (the two copies are the same reduction).
-! RUN: %flang_fc1 -fsyntax-only -fopenmp hm_use.f90
+! RUN: %flang_fc1 -emit-hlfir -fopenmp hm_use.f90 -o - | FileCheck hm_use.f90
 
 !--- hm_base.f90
 module hm_base
@@ -36,6 +33,13 @@ module hm_facade
 end module
 
 !--- hm_use.f90
+! Reaching the reduction through both the base and the hermetic facade binds ONE
+! reduction with the user combiner (muli), not a spurious ambiguity error.
+! CHECK: omp.declare_reduction @[[RED:_QQMhm_baseop\.myop\._i32]] : i32
+! CHECK: arith.muli
+! CHECK-NOT: not yet implemented
+! CHECK: omp.wsloop
+! CHECK-SAME: reduction(@[[RED]]
 program main
   use hm_base
   use hm_facade

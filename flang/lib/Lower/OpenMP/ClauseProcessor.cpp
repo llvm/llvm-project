@@ -537,7 +537,8 @@ bool ClauseProcessor::processInclusive(
 
 bool ClauseProcessor::processInitializer(
     lower::SymMap &symMap, ReductionProcessor::GenInitValueCBTy &genInitValueCB,
-    const parser::OmpStylizedInstance *parserInitInstance) const {
+    const parser::OmpStylizedInstance *parserInitInstance,
+    unsigned instanceIdx) const {
   if (auto *clause = findUniqueClause<omp::clause::Initializer>()) {
     // Extract the typed assignment from the parser-level instance, if
     // the initializer is an assignment statement (as opposed to a call).
@@ -552,13 +553,21 @@ bool ClauseProcessor::processInitializer(
             assign = &*wrapper->v;
       }
     }
-    genInitValueCB = [&, clause, assign](fir::FirOpBuilder &builder,
-                                         mlir::Location loc, mlir::Type type,
-                                         mlir::Value moldArg,
-                                         mlir::Value privArg) {
+    // A multi-type declare reduction carries one initializer instance per
+    // listed type (parallel to the combiner instances and typeNameList); select
+    // the one for the type being lowered (index instanceIdx). Single-type is
+    // index 0 of one. Capture instanceIdx by value: the callback runs later
+    // (during createDeclareReductionHelper), after this parameter's lifetime
+    // ends.
+    assert(instanceIdx < clause->v.size() &&
+           "initializer instance index out of range");
+    genInitValueCB = [&, clause, assign,
+                      instanceIdx](fir::FirOpBuilder &builder,
+                                   mlir::Location loc, mlir::Type type,
+                                   mlir::Value moldArg, mlir::Value privArg) {
       lower::SymMapScope scope(symMap);
       mlir::Value ompPrivVar;
-      const StylizedInstance &inst = clause->v.front();
+      const StylizedInstance &inst = clause->v[instanceIdx];
 
       for (const Object &object :
            std::get<StylizedInstance::Variables>(inst.t)) {

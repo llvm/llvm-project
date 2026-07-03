@@ -221,14 +221,27 @@ ReductionProcessor::getReductionName(ReductionIdentifier redId,
 }
 
 std::string ReductionProcessor::getScopedUserReductionName(
-    AbstractConverter &converter, const semantics::Symbol &reductionSymbol) {
+    AbstractConverter &converter, const semantics::Symbol &reductionSymbol,
+    mlir::Type reductionType, bool isByRef) {
   // Qualify the reduction symbol's ultimate name with its owning scope so that
   // user-defined reductions with the same spelling in different modules get
   // distinct op names. Use the (name, scope) mangleName overload: the
   // (symbol) overload does not handle UserReductionDetails.
   const semantics::Symbol &ultimate = reductionSymbol.GetUltimate();
   std::string name = ultimate.name().ToString();
-  return converter.mangleName(name, ultimate.owner());
+  std::string scopedName = converter.mangleName(name, ultimate.owner());
+  // Append the type and by-ref suffix, as the intrinsic reductions do, so a
+  // declare reduction listing several types produces one op per type and every
+  // name ends in a type-grammar token. Suffix unconditionally, even for one
+  // type: otherwise a multi-type myred's per-type op "myred_i32" would collide
+  // with a single-type reduction named "myred_i32", and the by-name dedup would
+  // bind one reduction's clause to the other's combiner (a silent miscompile).
+  // The by-ref token also gives an allocatable/pointer trivial reduction (a
+  // boxed by-ref operand of a by-value declared type) a name the directive
+  // never emitted, so it reaches a clean TODO instead of binding a by-value op
+  // to a box (handled by llvm-project#186765).
+  return getReductionName(scopedName, converter.getFirOpBuilder().getKindMap(),
+                          reductionType, isByRef);
 }
 
 mlir::Value
@@ -711,25 +724,17 @@ bool ReductionProcessor::processReductionArguments(
         redOperatorList.front();
 
     if (!std::holds_alternative<omp::clause::DefinedOperator>(redOperator.u)) {
-      if (const auto *reductionIntrinsic =
-              std::get_if<omp::clause::ProcedureDesignator>(&redOperator.u)) {
-        if (!ReductionProcessor::supportedIntrinsicProcReduction(
-                *reductionIntrinsic)) {
-          // If not an intrinsic is has to be a custom reduction op, and should
-          // be available in the module. The op is named using the scope in
-          // which the user-defined reduction was declared, so qualify the
-          // lookup name the same way the declaration and use sides do.
-          semantics::Symbol *sym = reductionIntrinsic->v.sym();
-          mlir::ModuleOp module = builder.getModule();
-          std::string declName = getRealName(sym).ToString();
-          declName = converter.mangleName(declName, sym->GetUltimate().owner());
-          auto decl = module.lookupSymbol<OpType>(declName);
-          if (!decl)
-            return false;
-        }
-      } else {
-        return false;
-      }
+      // A named (procedure-designator) reduction, the only other alternative.
+      // Defer validation to the per-variable loop below: a named reduction's op
+      // is named per the variable's type (getScopedUserReductionName appends
+      // the type suffix), so its existence and type can only be checked once
+      // the variable type is known. The loop resolves the symbol, confirms its
+      // ultimate has UserReductionDetails, looks the op up by the type-specific
+      // name, and emits a clean TODO if missing or type-mismatched.
+      assert(std::holds_alternative<omp::clause::ProcedureDesignator>(
+                 redOperator.u) &&
+             "ReductionIdentifier variant has only DefinedOperator and "
+             "ProcedureDesignator");
     }
   }
 
@@ -858,6 +863,32 @@ bool ReductionProcessor::processReductionArguments(
                                  omp::clause::ReductionOperatorList>) {
       const Fortran::lower::omp::clause::ReductionOperator &redOperator =
           redOperatorList.front();
+      // Name user-defined reduction ops from the canonical element type, not
+      // the raw lowered variable type. An allocatable/pointer variable lowers
+      // to a boxed reference (!fir.ref<!fir.box<!fir.heap<!fir.char<1>>>>), but
+      // the directive names its op from the declared element type
+      // (!fir.char<1>); getReductionName unwraps only one reference level, so
+      // without stripping the ref/box/heap/pointer wrappers the by-ref suffix
+      // diverges and a valid allocatable-character reduction is wrongly
+      // rejected. Keep any array fir::SequenceType. Only naming and the type
+      // check use namingType; redType stays intact for op binding.
+      mlir::Type namingType =
+          fir::unwrapPassByRefType(fir::unwrapRefType(redType));
+      // An allocatable/pointer reduction of a trivial element type is a case
+      // the directive does not materialize: it emits the scalar by-value op,
+      // and binding the boxed by-ref operand to it is invalid IR. In the
+      // default mode the by-ref name suffix diverges (boxed clause by-ref,
+      // scalar op by-value), the lookup misses, and it is a clean TODO. Under
+      // -mmlir
+      // --force-byref-reduction both sides are forced by-ref, the names match,
+      // and the element-only type check (i32 == i32) would bind the box to the
+      // scalar op. Guard on the inherent triviality of the element type, not
+      // doReductionByRef (which the flag forces), so it is a clean TODO in
+      // every mode; boxed character and derived reductions (genuinely by-ref)
+      // still bind. Deferred to flang PR #186765.
+      const bool isBoxedTrivialReduction =
+          mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(redType)) &&
+          fir::isa_trivial(namingType);
       if (const auto &redDefinedOp =
               std::get_if<omp::clause::DefinedOperator>(&redOperator.u)) {
         if (const auto *definedOpName =
@@ -872,10 +903,12 @@ bool ReductionProcessor::processReductionArguments(
           // owner). Reductions in different source modules have distinct owner
           // scopes, so a same-spelling/same-type operator reduction imported
           // from two modules yields two distinct ops, each clause binding its
-          // own combiner instead of colliding onto one. Single-declaration,
-          // single-type only; anything else, or an operator with no reduction
-          // for the variable's type, is a clean TODO rather than a crash or a
-          // wrong binding.
+          // own combiner instead of colliding onto one. The variable's type
+          // selects the matching per-type op name (getScopedUserReductionName
+          // appends the type), so a multiple-declaration/multiple-type operator
+          // is handled (one op per type). An operator with no reduction for the
+          // variable's type, or a variable with no type, is a clean TODO rather
+          // than a crash or a wrong binding.
           const semantics::Symbol *opSym = definedOpName->v.sym();
           const semantics::DeclTypeSpec *varType =
               reductionSymbols[idx]->GetUltimate().GetType();
@@ -893,25 +926,26 @@ bool ReductionProcessor::processReductionArguments(
           const semantics::UserReductionDetails *userDetails =
               ultimate ? ultimate->detailsIf<semantics::UserReductionDetails>()
                        : nullptr;
-          if (!varType || !resolvedSym || !userDetails ||
-              userDetails->GetDeclList().size() != 1 ||
-              userDetails->GetTypeList().size() != 1) {
+          if (!varType || !resolvedSym || !userDetails) {
             TODO(currentLocation,
                  "OpenMP user-defined operator reduction is not yet supported "
-                 "for imported, renamed, or multiple-declaration/type "
-                 "reductions");
+                 "when the variable has no type or no matching reduction is "
+                 "visible for its type");
           }
           std::string opName = ReductionProcessor::getScopedUserReductionName(
-              converter, *resolvedSym);
+              converter, *resolvedSym, namingType, isByRef);
           mlir::ModuleOp module = builder.getModule();
           auto existingDecl = module.lookupSymbol<OpType>(opName);
           // The MLIR verifier does not type-check these ops (they have no
           // atomic region), so this is the only guard against binding a
-          // mismatched declaration. Compare unwrapped types: the clause redType
-          // is always a reference type, while the op stores the unwrapped type
-          // for by-value reductions.
-          if (!existingDecl || fir::unwrapRefType(existingDecl.getType()) !=
-                                   fir::unwrapRefType(redType)) {
+          // mismatched declaration. Compare unwrapped element types: namingType
+          // is the canonical reduction element type (allocatable/pointer
+          // storage wrappers stripped), matching the type the op was named and
+          // created from on the directive side.
+          if (!existingDecl ||
+              fir::unwrapRefType(existingDecl.getType()) !=
+                  fir::unwrapRefType(namingType) ||
+              isBoxedTrivialReduction) {
             TODO(currentLocation,
                  "OpenMP user-defined operator reduction declaration was not "
                  "materialized for this type");
@@ -955,17 +989,47 @@ bool ReductionProcessor::processReductionArguments(
                          &redOperator.u)) {
         if (!ReductionProcessor::supportedIntrinsicProcReduction(
                 *reductionIntrinsic)) {
-          // Custom reductions we can just add to the symbols without
-          // generating the declare reduction op.
+          // A user-defined named reduction (declare reduction(myred: ...)). The
+          // clause references the (possibly USE-associated) reduction symbol;
+          // bind its pre-materialized omp.declare_reduction op instead of
+          // generating a new one.
           semantics::Symbol *sym = reductionIntrinsic->v.sym();
-          // Qualify the name with the scope in which the user-defined
-          // reduction was declared so that reductions with the same name in
-          // different scopes refer to distinct omp.declare_reduction ops.
-          std::string reductionName = getRealName(sym).ToString();
-          reductionName =
-              converter.mangleName(reductionName, sym->GetUltimate().owner());
-          reductionDeclSymbols.push_back(
-              mlir::SymbolRefAttr::get(builder.getContext(), reductionName));
+          if (!sym->GetUltimate()
+                   .detailsIf<semantics::UserReductionDetails>()) {
+            // Not a supported intrinsic proc (checked just above) and not a
+            // user-defined reduction: a clean TODO, never a wrong binding. (A
+            // named reduction reusing an intrinsic spelling such as `max` is
+            // handled by the supportedIntrinsicProcReduction branch, not here.)
+            TODO(currentLocation, "Lowering unrecognised reduction type");
+          }
+          // Name the op from the resolved symbol's scoped ultimate (name,
+          // owner) plus the per-type suffix, byte-identical to the
+          // directive/materializer side, via getScopedUserReductionName.
+          // Reductions of the same spelling in different scopes refer to
+          // distinct ops, and a named reduction listing several types binds the
+          // op for the variable's type instead of colliding on the first type's
+          // op. namingType is the canonical element type (storage wrappers
+          // stripped) so the by-ref suffix matches the directive.
+          std::string reductionName =
+              ReductionProcessor::getScopedUserReductionName(
+                  converter, *sym, namingType, isByRef);
+          mlir::ModuleOp module = builder.getModule();
+          auto existingDecl = module.lookupSymbol<OpType>(reductionName);
+          // The MLIR verifier does not type-check these ops, so this is the
+          // only guard against binding a missing or mismatched declaration
+          // (e.g. a named declare reduction that does not list the variable's
+          // type). Compare unwrapped element types against namingType, the type
+          // the op was named and created from.
+          if (!existingDecl ||
+              fir::unwrapRefType(existingDecl.getType()) !=
+                  fir::unwrapRefType(namingType) ||
+              isBoxedTrivialReduction) {
+            TODO(currentLocation,
+                 "OpenMP user-defined named reduction declaration was not "
+                 "materialized for the variable's type");
+          }
+          reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
+              builder.getContext(), existingDecl.getSymName()));
           ++idx;
           continue;
         }
@@ -993,21 +1057,25 @@ bool ReductionProcessor::processReductionArguments(
           // implicit intrinsic reduction still applies, so fall through to it.
           if (userDetails && varType && userDetails->SupportsType(*varType)) {
             // The user declaration takes precedence over the intrinsic for this
-            // type. Only a locally-declared, single-declaration, single-type
-            // reduction is currently supported.
-            if (&ultimate != redSym || userDetails->GetDeclList().size() != 1 ||
-                userDetails->GetTypeList().size() != 1) {
-              TODO(currentLocation,
-                   "OpenMP user-defined reduction shadowing an intrinsic "
-                   "reduction is not yet supported for imported, renamed, or "
-                   "multiple-declaration/type reductions.");
-            }
+            // type. A declaration listing several types (or several merged
+            // declarations) is handled the same way as the operator and named
+            // paths: the directive emits one op per type and the variable's
+            // type selects the matching per-type name below. A USE-associated
+            // shadowing reduction is found by FindSymbol as a use wrapper;
+            // naming from its ultimate (name, owner) below binds the source
+            // module's op, which materializeOpenMPDeclareReductions emits,
+            // exactly as the named path does. A renamed shadowing intrinsic
+            // does not reach here: the renamed name resolves to the intrinsic
+            // rather than the user reduction, so semantics rejects the clause
+            // with a type-incompatibility error before lowering.
             std::string opName = ReductionProcessor::getScopedUserReductionName(
-                converter, ultimate);
+                converter, ultimate, namingType, isByRef);
             mlir::ModuleOp module = builder.getModule();
             auto existingDecl = module.lookupSymbol<OpType>(opName);
-            if (!existingDecl || fir::unwrapRefType(existingDecl.getType()) !=
-                                     fir::unwrapRefType(redType)) {
+            if (!existingDecl ||
+                fir::unwrapRefType(existingDecl.getType()) !=
+                    fir::unwrapRefType(namingType) ||
+                isBoxedTrivialReduction) {
               TODO(currentLocation,
                    "OpenMP user-defined reduction declaration was not "
                    "materialized for this type");

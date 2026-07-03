@@ -40,7 +40,7 @@ end program
 ! "_QQ...op.plus.", not the bare use-site spelling), and the wsloop clause binds
 ! that same op.
 ! loose captures (R1): the exact mangled qualifier is pinned after building.
-! CHECK: omp.declare_reduction @[[RED:_QQ[A-Za-z0-9_.]*op\.plus\.]] : !fir.ref
+! CHECK: omp.declare_reduction @[[RED:_QQ[A-Za-z0-9_.]*op\.plus\.[A-Za-z0-9_.]*]] : !fir.ref
 ! CHECK-NOT: omp.declare_reduction @op.plus.
 ! CHECK: omp.wsloop
 ! CHECK-SAME: reduction(byref @[[RED]]
