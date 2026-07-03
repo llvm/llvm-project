@@ -387,7 +387,7 @@ m_BranchOnCount(const Op0_t &Op0, const Op1_t &Op1) {
   return m_VPInstruction<VPInstruction::BranchOnCount>(Op0, Op1);
 }
 
-inline auto m_BrTerminator() {
+inline auto m_Branch() {
   return m_CombineOr(m_BranchOnCond(), m_BranchOnCount(), m_BranchOnTwoConds());
 }
 
