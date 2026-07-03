@@ -1000,6 +1000,40 @@ static void stripAPINotesParameterNullability(QualType &ParamType) {
   }
 }
 
+struct APINotesParameterSelector {
+  SmallVector<std::string, 4> Parameters;
+
+  SmallVector<StringRef, 4> getParameterRefs() const {
+    SmallVector<StringRef, 4> Refs;
+    Refs.reserve(Parameters.size());
+    for (const std::string &Parameter : Parameters)
+      Refs.push_back(Parameter);
+    return Refs;
+  }
+
+  bool operator==(const APINotesParameterSelector &Other) const {
+    return Parameters == Other.Parameters;
+  }
+};
+
+struct APINotesParameterSelectorCandidates {
+  APINotesParameterSelector Source;
+  std::optional<APINotesParameterSelector> Desugared;
+};
+
+static PrintingPolicy
+getAPINotesParameterSelectorPrintingPolicy(const ASTContext &Context) {
+  PrintingPolicy Policy(Context.getLangOpts());
+  Policy.PrintAsCanonical = false;
+  Policy.FullyQualifiedName = false;
+  Policy.SuppressScope = false;
+  Policy.UsePreferredNames = false;
+  Policy.MSVCFormatting = false;
+  Policy.SplitTemplateClosers = false;
+  Policy.IncludeNewlines = false;
+  return Policy;
+}
+
 // Print the APINotes selector spelling for one parameter. The source-spelled
 // selector is tried first. The desugared spelling is only a permissive
 // fallback.
@@ -1018,60 +1052,58 @@ static std::string getAPINotesParameterSelectorSpelling(
   return ParamType.getAsString(Policy);
 }
 
-static std::optional<SmallVector<SmallVector<std::string, 4>, 2>>
+static std::optional<APINotesParameterSelectorCandidates>
 getAPINotesParameterSelectorCandidates(const Sema &S, const FunctionDecl *FD) {
   const auto *FPT = FD->getType()->getAs<FunctionProtoType>();
   if (!FPT)
     return std::nullopt;
 
-  SmallVector<std::string, 4> SourceParameters;
-  SmallVector<std::string, 4> DesugaredParameters;
-  SourceParameters.reserve(FPT->getNumParams());
-  DesugaredParameters.reserve(FPT->getNumParams());
+  APINotesParameterSelectorCandidates Candidates;
+  APINotesParameterSelector Desugared;
+  Candidates.Source.Parameters.reserve(FPT->getNumParams());
+  Desugared.Parameters.reserve(FPT->getNumParams());
 
-  const PrintingPolicy &Policy = S.Context.getPrintingPolicy();
+  const PrintingPolicy Policy =
+      getAPINotesParameterSelectorPrintingPolicy(S.Context);
   for (QualType ParamType : FPT->param_types()) {
-    SourceParameters.push_back(getAPINotesParameterSelectorSpelling(
-        ParamType, S.Context, Policy, /*Desugar=*/false));
-    DesugaredParameters.push_back(getAPINotesParameterSelectorSpelling(
+    Candidates.Source.Parameters.push_back(
+        getAPINotesParameterSelectorSpelling(ParamType, S.Context, Policy,
+                                             /*Desugar=*/false));
+    Desugared.Parameters.push_back(getAPINotesParameterSelectorSpelling(
         ParamType, S.Context, Policy, /*Desugar=*/true));
   }
 
-  SmallVector<SmallVector<std::string, 4>, 2> Candidates;
-  Candidates.push_back(std::move(SourceParameters));
-  if (Candidates.front() != DesugaredParameters)
-    Candidates.push_back(std::move(DesugaredParameters));
+  if (!(Candidates.Source == Desugared))
+    Candidates.Desugared = std::move(Desugared);
 
   return Candidates;
-}
-
-static SmallVector<StringRef, 4>
-getAPINotesParameterSelectorRefs(ArrayRef<std::string> Strings) {
-  SmallVector<StringRef, 4> Refs;
-  Refs.reserve(Strings.size());
-  for (const std::string &String : Strings)
-    Refs.push_back(String);
-  return Refs;
 }
 
 // Apply the first exact selector entry found. This preserves source-spelling
 // precedence over the desugared fallback and avoids applying multiple exact
 // entries for the same declaration.
-template <typename SpecificDecl, typename LookupExactFn>
+template <typename SpecificInfo, typename SpecificDecl>
 static void processExactAPINotes(
     Sema &S, SpecificDecl *D,
-    ArrayRef<SmallVector<std::string, 4>> ParameterSelectorCandidates,
-    LookupExactFn LookupExact) {
-  for (ArrayRef<std::string> ParameterStrings : ParameterSelectorCandidates) {
-    SmallVector<StringRef, 4> Parameters =
-        getAPINotesParameterSelectorRefs(ParameterStrings);
+    const APINotesParameterSelectorCandidates &ParameterSelectorCandidates,
+    llvm::function_ref<api_notes::APINotesReader::VersionedInfo<SpecificInfo>(
+        ArrayRef<StringRef>)>
+        LookupExact) {
+  auto ProcessSelector = [&](const APINotesParameterSelector &Selector) {
+    SmallVector<StringRef, 4> Parameters = Selector.getParameterRefs();
     auto Info = LookupExact(Parameters);
     if (Info.size() == 0)
-      continue;
+      return false;
 
     ProcessVersionedAPINotes(S, D, Info);
+    return true;
+  };
+
+  if (ProcessSelector(ParameterSelectorCandidates.Source))
     return;
-  }
+
+  if (ParameterSelectorCandidates.Desugared)
+    ProcessSelector(*ParameterSelectorCandidates.Desugared);
 }
 
 /// Process API notes that are associated with this declaration, mapping them
@@ -1113,12 +1145,12 @@ void Sema::ProcessAPINotes(Decl *D) {
           ProcessVersionedAPINotes(*this, FD, Info);
 
           if (ParameterSelectorCandidates)
-            processExactAPINotes(*this, FD, *ParameterSelectorCandidates,
-                                 [&](ArrayRef<StringRef> Parameters) {
-                                   return Reader->lookupGlobalFunction(
-                                       FD->getName(), Parameters,
-                                       APINotesContext);
-                                 });
+            processExactAPINotes<api_notes::GlobalFunctionInfo>(
+                *this, FD, *ParameterSelectorCandidates,
+                [&](ArrayRef<StringRef> Parameters) {
+                  return Reader->lookupGlobalFunction(FD->getName(), Parameters,
+                                                      APINotesContext);
+                });
         }
       }
 
@@ -1302,9 +1334,8 @@ void Sema::ProcessAPINotes(Decl *D) {
       if (!isa<CXXConstructorDecl>(CXXMethod) &&
           !isa<CXXDestructorDecl>(CXXMethod) &&
           !isa<CXXConversionDecl>(CXXMethod)) {
-        std::optional<SmallVector<SmallVector<std::string, 4>, 2>>
-            ParameterSelectorCandidates =
-                getAPINotesParameterSelectorCandidates(*this, CXXMethod);
+        auto ParameterSelectorCandidates =
+            getAPINotesParameterSelectorCandidates(*this, CXXMethod);
         for (auto Reader : Readers) {
           if (auto Context = UnwindTagContext(TagContext, APINotes)) {
             std::string MethodName;
@@ -1319,12 +1350,12 @@ void Sema::ProcessAPINotes(Decl *D) {
             ProcessVersionedAPINotes(*this, CXXMethod, Info);
 
             if (ParameterSelectorCandidates)
-              processExactAPINotes(*this, CXXMethod,
-                                   *ParameterSelectorCandidates,
-                                   [&](ArrayRef<StringRef> Parameters) {
-                                     return Reader->lookupCXXMethod(
-                                         Context->id, MethodName, Parameters);
-                                   });
+              processExactAPINotes<api_notes::CXXMethodInfo>(
+                  *this, CXXMethod, *ParameterSelectorCandidates,
+                  [&](ArrayRef<StringRef> Parameters) {
+                    return Reader->lookupCXXMethod(Context->id, MethodName,
+                                                   Parameters);
+                  });
           }
         }
       }

@@ -6,6 +6,7 @@
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter mismatchGlobal -x c++ | FileCheck --check-prefix=CHECK-GLOBAL-MISMATCH %s
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter aliasGlobal -x c++ | FileCheck --check-prefix=CHECK-GLOBAL-ALIAS %s
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter aliasPrecedenceGlobal -x c++ | FileCheck --check-prefix=CHECK-GLOBAL-ALIAS-PRECEDENCE %s
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter multiAliasGlobal -x c++ | FileCheck --check-prefix=CHECK-GLOBAL-MULTI-ALIAS %s
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter nullableGlobal -x c++ | FileCheck --check-prefix=CHECK-GLOBAL-NULLABILITY %s
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter rawIntGlobal -x c++ | FileCheck --check-prefix=CHECK-GLOBAL-RAW-INT %s
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter constValueGlobal -x c++ | FileCheck --check-prefix=CHECK-GLOBAL-CONST %s
@@ -18,6 +19,7 @@
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter SelectorWidget::mismatch -x c++ | FileCheck --check-prefix=CHECK-METHOD-MISMATCH %s
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter SelectorWidget::alias -x c++ | FileCheck --check-prefix=CHECK-METHOD-ALIAS %s
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter SelectorWidget::aliasPrecedence -x c++ | FileCheck --check-prefix=CHECK-METHOD-ALIAS-PRECEDENCE %s
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter SelectorWidget::multiAlias -x c++ | FileCheck --check-prefix=CHECK-METHOD-MULTI-ALIAS %s
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter SelectorWidget::nullable -x c++ | FileCheck --check-prefix=CHECK-METHOD-NULLABILITY %s
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter SelectorWidget::rawInt -x c++ | FileCheck --check-prefix=CHECK-METHOD-RAW-INT %s
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache/WhereParametersSema -fdisable-module-hash -fapinotes-modules -I %S/Inputs/Headers %s -ast-dump -ast-dump-filter SelectorWidget::constValue -x c++ | FileCheck --check-prefix=CHECK-METHOD-CONST %s
@@ -55,6 +57,9 @@
 // CHECK-GLOBAL-ALIAS-PRECEDENCE: FunctionDecl {{.+}} aliasPrecedenceGlobal 'void (AliasInt)'
 // CHECK-GLOBAL-ALIAS-PRECEDENCE-NOT: fallbackAliasPrecedenceGlobal
 // CHECK-GLOBAL-ALIAS-PRECEDENCE: SwiftNameAttr {{.+}} "aliasPrecedenceGlobal(_:)"
+
+// CHECK-GLOBAL-MULTI-ALIAS: FunctionDecl {{.+}} multiAliasGlobal 'void (DeepAliasInt)'
+// CHECK-GLOBAL-MULTI-ALIAS: SwiftNameAttr {{.+}} "multiAliasGlobal(_:)"
 
 // CHECK-GLOBAL-NULLABILITY: FunctionDecl {{.+}} nullableGlobal 'void (char * _Nonnull)'
 // CHECK-GLOBAL-NULLABILITY: SwiftNameAttr {{.+}} "nullableGlobal(_:)"
@@ -110,6 +115,9 @@
 // CHECK-METHOD-ALIAS-PRECEDENCE: CXXMethodDecl {{.+}} aliasPrecedence 'void (AliasInt)'
 // CHECK-METHOD-ALIAS-PRECEDENCE-NOT: fallbackAliasPrecedence
 // CHECK-METHOD-ALIAS-PRECEDENCE: SwiftNameAttr {{.+}} "aliasPrecedence(_:)"
+
+// CHECK-METHOD-MULTI-ALIAS: CXXMethodDecl {{.+}} multiAlias 'void (DeepAliasInt)'
+// CHECK-METHOD-MULTI-ALIAS: SwiftNameAttr {{.+}} "multiAlias(_:)"
 
 // CHECK-METHOD-NULLABILITY: CXXMethodDecl {{.+}} nullable 'void (char * _Nonnull)'
 // CHECK-METHOD-NULLABILITY: SwiftNameAttr {{.+}} "nullable(_:)"

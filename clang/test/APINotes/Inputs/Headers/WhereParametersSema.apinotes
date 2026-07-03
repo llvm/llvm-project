@@ -44,6 +44,11 @@ Functions:
     Parameters:
     - AliasInt
   SwiftName: aliasPrecedenceGlobal(_:)
+- Name: multiAliasGlobal
+  Where:
+    Parameters:
+    - int
+  SwiftName: multiAliasGlobal(_:)
 - Name: nullableGlobal
   Where:
     Parameters:
@@ -129,6 +134,11 @@ Tags:
       Parameters:
       - AliasInt
     SwiftName: aliasPrecedence(_:)
+  - Name: multiAlias
+    Where:
+      Parameters:
+      - int
+    SwiftName: multiAlias(_:)
   - Name: nullable
     Where:
       Parameters:
