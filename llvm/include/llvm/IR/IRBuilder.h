@@ -971,8 +971,26 @@ public:
   /// that instruction to the intrinsic. It is guaranteed not to fold.
   LLVM_ABI CallInst *CreateIntrinsicWithoutFolding(
       Intrinsic::ID ID, ArrayRef<Type *> OverloadTypes, ArrayRef<Value *> Args,
-      FMFSource FMFSource = {}, const Twine &Name = "",
+      FMFSource FMFSource, const Twine &Name = "",
       ArrayRef<OperandBundleDef> OpBundles = {});
+
+  /// Create a call to intrinsic \p ID with \p Args, mangled using
+  /// \p OverloadTypes. It is guaranteed not to fold.
+  LLVM_ABI CallInst *CreateIntrinsicWithoutFolding(
+      Intrinsic::ID ID, ArrayRef<Type *> OverloadTypes, ArrayRef<Value *> Args,
+      const Twine &Name, ArrayRef<OperandBundleDef> OpBundles = {}) {
+    return CreateIntrinsicWithoutFolding(ID, OverloadTypes, Args, {}, Name,
+                                         OpBundles);
+  }
+
+  /// Create a call to intrinsic \p ID with \p Args, mangled using
+  /// \p OverloadTypes. It is guaranteed not to fold.
+  LLVM_ABI CallInst *
+  CreateIntrinsicWithoutFolding(Intrinsic::ID ID,
+                                ArrayRef<Type *> OverloadTypes,
+                                ArrayRef<Value *> Args) {
+    return CreateIntrinsicWithoutFolding(ID, OverloadTypes, Args, FMFSource{});
+  }
 
   /// Create a call to intrinsic \p ID with \p RetTy and \p Args. If
   /// \p FMFSource is provided, copy fast-math-flags from that instruction to
@@ -1139,15 +1157,14 @@ public:
   /// Create a call to llvm.stacksave
   CallInst *CreateStackSave(const Twine &Name = "") {
     const DataLayout &DL = BB->getDataLayout();
-    return CreateIntrinsicWithoutFolding(Intrinsic::stacksave,
-                                         {DL.getAllocaPtrType(Context)}, {},
-                                         nullptr, Name);
+    return CreateIntrinsicWithoutFolding(
+        Intrinsic::stacksave, {DL.getAllocaPtrType(Context)}, {}, Name);
   }
 
   /// Create a call to llvm.stackrestore
   CallInst *CreateStackRestore(Value *Ptr, const Twine &Name = "") {
-    return CreateIntrinsicWithoutFolding(
-        Intrinsic::stackrestore, {Ptr->getType()}, {Ptr}, nullptr, Name);
+    return CreateIntrinsicWithoutFolding(Intrinsic::stackrestore,
+                                         {Ptr->getType()}, {Ptr}, Name);
   }
 
   /// Create a call to llvm.experimental_cttz_elts
@@ -1895,7 +1912,7 @@ public:
     const DataLayout &DL = BB->getDataLayout();
     PointerType *PtrTy = DL.getAllocaPtrType(Context);
     auto *Output = CreateIntrinsicWithoutFolding(Intrinsic::structured_alloca,
-                                                 {PtrTy}, {}, {}, Name);
+                                                 {PtrTy}, {}, Name);
     Output->addRetAttr(
         Attribute::get(getContext(), Attribute::ElementType, BaseType));
     return Output;

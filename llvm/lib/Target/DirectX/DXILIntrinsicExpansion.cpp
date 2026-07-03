@@ -445,7 +445,7 @@ static Value *expandExpIntrinsic(CallInst *Orig) {
                        : ConstantFP::get(EltTy, numbers::log2ef);
   Value *NewX = Builder.CreateFMul(Log2eConst, X);
   CallInst *Exp2Call = Builder.CreateIntrinsicWithoutFolding(
-      Ty, Intrinsic::exp2, {NewX}, nullptr, "dx.exp2");
+      Ty, Intrinsic::exp2, {NewX}, "dx.exp2");
   Exp2Call->setTailCall(Orig->isTailCall());
   Exp2Call->setAttributes(Orig->getAttributes());
   return Exp2Call;
@@ -571,7 +571,7 @@ static Value *expandLogIntrinsic(CallInst *Orig,
                              ConstantFP::get(EltTy, LogConstVal))
                        : ConstantFP::get(EltTy, LogConstVal);
   CallInst *Log2Call = Builder.CreateIntrinsicWithoutFolding(
-      Ty, Intrinsic::log2, {X}, nullptr, "elt.log2");
+      Ty, Intrinsic::log2, {X}, "elt.log2");
   Log2Call->setTailCall(Orig->isTailCall());
   Log2Call->setAttributes(Orig->getAttributes());
   return Builder.CreateFMul(Ln2Const, Log2Call);
@@ -626,8 +626,8 @@ static Value *expandAtan2Intrinsic(CallInst *Orig) {
 
   Value *Tan = Builder.CreateFDiv(Y, X);
 
-  CallInst *Atan = Builder.CreateIntrinsicWithoutFolding(
-      Ty, Intrinsic::atan, {Tan}, nullptr, "Elt.Atan");
+  CallInst *Atan = Builder.CreateIntrinsicWithoutFolding(Ty, Intrinsic::atan,
+                                                         {Tan}, "Elt.Atan");
   Atan->setTailCall(Orig->isTailCall());
   Atan->setAttributes(Orig->getAttributes());
 
@@ -736,7 +736,7 @@ static Value *expandPowIntrinsic(CallInst *Orig, Intrinsic::ID IntrinsicId) {
       Builder.CreateIntrinsic(Ty, Intrinsic::log2, {X}, nullptr, "elt.log2");
   auto *Mul = Builder.CreateFMul(Log2Call, Y);
   CallInst *Exp2Call = Builder.CreateIntrinsicWithoutFolding(
-      Ty, Intrinsic::exp2, {Mul}, nullptr, "elt.exp2");
+      Ty, Intrinsic::exp2, {Mul}, "elt.exp2");
   Exp2Call->setTailCall(Orig->isTailCall());
   Exp2Call->setAttributes(Orig->getAttributes());
   return Exp2Call;
