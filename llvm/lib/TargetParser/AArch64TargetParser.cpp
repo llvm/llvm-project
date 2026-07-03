@@ -353,9 +353,11 @@ void AArch64::ExtensionSet::addCPUDefaults(const CpuInfo &CPU) {
     if (CPU.DefaultExtensions.test(E.ID))
       enable(E.ID);
 
-  // Enabling the default extensions for the base-architecture is used for the
-  // explicit +no<feature>. Does not call enable() because we do not want to set
-  // Touched to avoid marking redundant features in the cc1 command-line.
+  // Workaround: mark extensions implied by the base architecture as Enabled
+  // so that an explicit "+nofeat" is not silently ignored. We set Enabled
+  // directly instead of calling enable() to keep them out of Touched, 
+  // preserving the previous output as much as possible and avoiding a flood
+  // of redundant "+feat" entries.
   for (const auto &E : Extensions)
     if (BaseArch->DefaultExts.test(E.ID))
       Enabled.set(E.ID);
