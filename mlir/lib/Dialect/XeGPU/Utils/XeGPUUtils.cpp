@@ -924,6 +924,21 @@ xegpu::precomputeLoopBlockArgTypes(Operation *topLevelOp,
         recordTypes(init, {arg, res, yieldVal});
       return;
     }
+    if (auto ifOp = dyn_cast<scf::IfOp>(op)) {
+      // scf.if results expand 1:N during blocking. Record each result with the
+      // then/else yield operands that feed it so they convert to the same
+      // distributed type by Value identity, using the yield operand's layout.
+      scf::YieldOp thenYield = ifOp.thenYield();
+      scf::YieldOp elseYield = ifOp.elseBlock() ? ifOp.elseYield() : nullptr;
+      for (auto [idx, res] : llvm::enumerate(ifOp.getResults())) {
+        Value thenVal = thenYield.getOperand(idx);
+        SmallVector<Value> dests{res, thenVal};
+        if (elseYield)
+          dests.push_back(elseYield.getOperand(idx));
+        recordTypes(thenVal, dests);
+      }
+      return;
+    }
   });
   return loopArgTypes;
 }
