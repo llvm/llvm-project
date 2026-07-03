@@ -848,7 +848,7 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
   case scUnknown:
     return Builder.getPlan().getOrAddLiveIn(cast<SCEVUnknown>(S)->getValue());
   case scVScale:
-    return Builder.createNaryOp(VPInstruction::VScale, {}, S->getType());
+    return Builder.createVScale(S->getType(), DL);
   case scAddExpr:
   case scMulExpr: {
     auto *NAry = cast<SCEVNAryExpr>(S);
