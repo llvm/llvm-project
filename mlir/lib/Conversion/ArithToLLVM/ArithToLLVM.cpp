@@ -8,6 +8,7 @@
 
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 
+#include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
@@ -710,11 +711,13 @@ struct ArithToLLVMConversionPass
     LLVMConversionTarget target(getContext());
     RewritePatternSet patterns(&getContext());
 
-    LowerToLLVMOptions options(&getContext());
+    const auto &dataLayoutAnalysis = getAnalysis<DataLayoutAnalysis>();
+    LowerToLLVMOptions options(&getContext(),
+                               dataLayoutAnalysis.getAtOrAbove(getOperation()));
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
       options.overrideIndexBitwidth(indexBitwidth);
 
-    LLVMTypeConverter converter(&getContext(), options);
+    LLVMTypeConverter converter(&getContext(), options, &dataLayoutAnalysis);
     arith::populateCeilFloorDivExpandOpsPatterns(patterns);
     arith::populateArithToLLVMConversionPatterns(converter, patterns);
 
