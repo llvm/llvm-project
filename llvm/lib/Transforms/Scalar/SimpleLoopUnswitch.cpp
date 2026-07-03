@@ -549,6 +549,19 @@ static Loop *getTopMostExitingLoop(const BasicBlock *ExitBB,
   return TopMost;
 }
 
+/// Check if a loop contains convergent or token operations.
+static bool loopContainsConvergentOrTokenOp(const Loop &L) {
+  for (const auto *BB : L.blocks())
+    for (const auto &I : *BB) {
+      if (I.getType()->isTokenTy() && I.isUsedOutsideOfBlock(BB))
+        return true;
+      if (const auto *CB = dyn_cast<CallBase>(&I))
+        if (CB->isConvergent())
+          return true;
+    }
+  return false;
+}
+
 /// Unswitch a trivial branch if the condition is loop invariant.
 ///
 /// This routine should only be called when loop code leading to the branch has
@@ -603,9 +616,14 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
   }
 
   bool ModifiedBranch = false;
+  // we can't redirect the branch to the exit block if the loop latch has side
+  // effects or if the loop exit PHIs are not loop invariant. We also can't
+  // redirect the branch to the exit block if the loop contains convergent or
+  // token operations, as this would violate the semantics of those operations.
   if (LatchIdx && areLoopExitPHIsLoopInvariant(L, *LoopLatch, *ULExit) &&
       !llvm::any_of(*LoopLatch,
-                    [](Instruction &I) { return I.mayHaveSideEffects(); })) {
+                    [](Instruction &I) { return I.mayHaveSideEffects(); }) &&
+      !loopContainsConvergentOrTokenOp(L)) {
 
     // We need to prove the loop is finite, otherwise this change will convert
     // it to a finite loop. This conservative check is good enough as we are
@@ -3386,16 +3404,8 @@ static bool collectUnswitchCandidatesWithInjections(
 static bool isSafeForNoNTrivialUnswitching(Loop &L, LoopInfo &LI) {
   if (!L.isSafeToClone())
     return false;
-  for (auto *BB : L.blocks())
-    for (auto &I : *BB) {
-      if (I.getType()->isTokenTy() && I.isUsedOutsideOfBlock(BB))
-        return false;
-      if (auto *CB = dyn_cast<CallBase>(&I)) {
-        assert(!CB->cannotDuplicate() && "Checked by L.isSafeToClone().");
-        if (CB->isConvergent())
-          return false;
-      }
-    }
+  if (loopContainsConvergentOrTokenOp(L))
+    return false;
 
   // Check if there are irreducible CFG cycles in this loop. If so, we cannot
   // easily unswitch non-trivial edges out of the loop. Doing so might turn the
