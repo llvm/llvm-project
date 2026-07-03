@@ -6,20 +6,20 @@
 define void @combine_loads_v16i8_v32i8(ptr %a) {
 ; VBITS_GE_128-LABEL: combine_loads_v16i8_v32i8:
 ; VBITS_GE_128:       // %bb.0:
-; VBITS_GE_128-NEXT:    ldp q0, q1, [x0]
-; VBITS_GE_128-NEXT:    ext v2.16b, v0.16b, v1.16b, #1
-; VBITS_GE_128-NEXT:    ext v0.16b, v0.16b, v1.16b, #2
-; VBITS_GE_128-NEXT:    stp q2, q0, [x0]
+; VBITS_GE_128-NEXT:    ldp q1, q0, [x0]
+; VBITS_GE_128-NEXT:    ext v2.16b, v1.16b, v0.16b, #2
+; VBITS_GE_128-NEXT:    ext v0.16b, v1.16b, v0.16b, #1
+; VBITS_GE_128-NEXT:    stp q0, q2, [x0]
 ; VBITS_GE_128-NEXT:    ret
 ;
 ; VBITS_GE_256-LABEL: combine_loads_v16i8_v32i8:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    ldp q0, q1, [x0]
-; VBITS_GE_256-NEXT:    ptrue p0.b, vl16
-; VBITS_GE_256-NEXT:    ext v2.16b, v0.16b, v1.16b, #2
-; VBITS_GE_256-NEXT:    ext v0.16b, v0.16b, v1.16b, #1
-; VBITS_GE_256-NEXT:    splice z0.b, p0, z0.b, z2.b
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
+; VBITS_GE_256-NEXT:    adrp x8, .LCPI0_0
+; VBITS_GE_256-NEXT:    add x8, x8, :lo12:.LCPI0_0
+; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x8]
+; VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    tbl z0.b, { z1.b }, z0.b
 ; VBITS_GE_256-NEXT:    st1b { z0.b }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
@@ -93,19 +93,19 @@ define void @combine_loads_v16i8_v32i8_diff_shuffle_order(ptr %a) {
 ; VBITS_GE_128-LABEL: combine_loads_v16i8_v32i8_diff_shuffle_order:
 ; VBITS_GE_128:       // %bb.0:
 ; VBITS_GE_128-NEXT:    ldp q0, q1, [x0]
-; VBITS_GE_128-NEXT:    ext v2.16b, v1.16b, v0.16b, #1
-; VBITS_GE_128-NEXT:    ext v0.16b, v1.16b, v0.16b, #2
-; VBITS_GE_128-NEXT:    stp q2, q0, [x0]
+; VBITS_GE_128-NEXT:    ext v2.16b, v1.16b, v0.16b, #2
+; VBITS_GE_128-NEXT:    ext v0.16b, v1.16b, v0.16b, #1
+; VBITS_GE_128-NEXT:    stp q0, q2, [x0]
 ; VBITS_GE_128-NEXT:    ret
 ;
 ; VBITS_GE_256-LABEL: combine_loads_v16i8_v32i8_diff_shuffle_order:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    ldp q0, q1, [x0]
-; VBITS_GE_256-NEXT:    ptrue p0.b, vl16
-; VBITS_GE_256-NEXT:    ext v2.16b, v1.16b, v0.16b, #2
-; VBITS_GE_256-NEXT:    ext v0.16b, v1.16b, v0.16b, #1
-; VBITS_GE_256-NEXT:    splice z0.b, p0, z0.b, z2.b
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
+; VBITS_GE_256-NEXT:    adrp x8, .LCPI2_0
+; VBITS_GE_256-NEXT:    add x8, x8, :lo12:.LCPI2_0
+; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x8]
+; VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    tbl z0.b, { z1.b }, z0.b
 ; VBITS_GE_256-NEXT:    st1b { z0.b }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
@@ -132,33 +132,32 @@ define void @combine_loads_v16i8_v32i8_diff_shuffle_order(ptr %a) {
 define void @combine_loads_v8i16_v16i16(ptr %a) {
 ; VBITS_GE_128-LABEL: combine_loads_v8i16_v16i16:
 ; VBITS_GE_128:       // %bb.0:
-; VBITS_GE_128-NEXT:    ldp q0, q1, [x0]
-; VBITS_GE_128-NEXT:    ext v2.16b, v0.16b, v1.16b, #2
-; VBITS_GE_128-NEXT:    ext v0.16b, v0.16b, v1.16b, #4
-; VBITS_GE_128-NEXT:    stp q2, q0, [x0]
+; VBITS_GE_128-NEXT:    ldp q1, q0, [x0]
+; VBITS_GE_128-NEXT:    ext v2.16b, v1.16b, v0.16b, #4
+; VBITS_GE_128-NEXT:    ext v0.16b, v1.16b, v0.16b, #2
+; VBITS_GE_128-NEXT:    stp q0, q2, [x0]
 ; VBITS_GE_128-NEXT:    ret
 ;
 ; VBITS_GE_256-LABEL: combine_loads_v8i16_v16i16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    ldp q0, q1, [x0]
-; VBITS_GE_256-NEXT:    ptrue p0.h, vl8
-; VBITS_GE_256-NEXT:    ext v2.16b, v0.16b, v1.16b, #4
-; VBITS_GE_256-NEXT:    ext v0.16b, v0.16b, v1.16b, #2
-; VBITS_GE_256-NEXT:    splice z0.h, p0, z0.h, z2.h
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    adrp x8, .LCPI3_0
+; VBITS_GE_256-NEXT:    add x8, x8, :lo12:.LCPI3_0
+; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x8]
+; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    tbl z0.h, { z1.h }, z0.h
 ; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; BE_VBITS_GE_256-LABEL: combine_loads_v8i16_v16i16:
 ; BE_VBITS_GE_256:       // %bb.0:
-; BE_VBITS_GE_256-NEXT:    add x8, x0, #16
-; BE_VBITS_GE_256-NEXT:    ld1 { v0.8h }, [x0]
-; BE_VBITS_GE_256-NEXT:    ptrue p0.h, vl8
-; BE_VBITS_GE_256-NEXT:    ld1 { v1.8h }, [x8]
-; BE_VBITS_GE_256-NEXT:    ext v2.16b, v0.16b, v1.16b, #4
-; BE_VBITS_GE_256-NEXT:    ext v0.16b, v0.16b, v1.16b, #2
-; BE_VBITS_GE_256-NEXT:    splice z0.h, p0, z0.h, z2.h
 ; BE_VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; BE_VBITS_GE_256-NEXT:    adrp x8, .LCPI3_0
+; BE_VBITS_GE_256-NEXT:    add x8, x8, :lo12:.LCPI3_0
+; BE_VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; BE_VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x8]
+; BE_VBITS_GE_256-NEXT:    revb z0.h, p0/m, z0.h
+; BE_VBITS_GE_256-NEXT:    tbl z0.h, { z0.h }, z1.h
 ; BE_VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x0]
 ; BE_VBITS_GE_256-NEXT:    ret
     %gep = getelementptr <8 x i16>, ptr %a, i64 1

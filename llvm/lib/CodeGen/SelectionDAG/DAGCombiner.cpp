@@ -27007,6 +27007,92 @@ static SDValue combineConcatVectorOfShuffleAndItsOperands(
   return DAG.getVectorShuffle(VT, dl, ShufOps[0], ShufOps[1], Mask);
 }
 
+// concat(shuffle(mask0, loadA, loadB), shuffle(mask1, loadA, loadB))
+// -> shuffle(concat(mask0, mask1), loadAB, poison)
+// only if loadA and loadB can be proven consecutive.
+static SDValue combineConcatVectorOfShuffles(SDNode *N, SelectionDAG &DAG,
+                                             const TargetLowering &TLI) {
+  SDValue A, B;
+  if (!sd_match(N,
+                m_Node(ISD::CONCAT_VECTORS, m_Shuffle(m_Value(A), m_Value(B)),
+                       m_Shuffle(m_Deferred(A), m_Deferred(B)))))
+    return SDValue();
+  auto *L00 = dyn_cast<LoadSDNode>(A.getNode());
+  auto *L01 = dyn_cast<LoadSDNode>(B.getNode());
+  if (!L00 || !L01)
+    return SDValue();
+
+  // Check if the address spaces of both loads are the same.
+  if (L00->getAddressSpace() != L01->getAddressSpace())
+    return SDValue();
+
+  // Check if the wide load would be faster than the two separate loads.
+  EVT WideVT = EVT::getVectorVT(*DAG.getContext(),
+                                L00->getMemoryVT().getVectorElementType(),
+                                L00->getMemoryVT().getVectorNumElements() * 2);
+  unsigned Fast = 0;
+  Align NewAlign = L00->getAlign();
+  if (!TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), WideVT,
+                              L00->getAddressSpace(), NewAlign,
+                              L00->getMemOperand()->getFlags(), &Fast) ||
+      !Fast)
+    return SDValue();
+
+  // Check if the loads are consecutive.
+  LoadSDNode *Base = nullptr;
+  LoadSDNode *Next = nullptr;
+  if (DAG.areNonVolatileConsecutiveLoads(
+          L01, L00, L01->getMemoryVT().getStoreSize(), /*Dist=*/1)) {
+    Base = L00;
+    Next = L01;
+  } else if (DAG.areNonVolatileConsecutiveLoads(
+                 L00, L01, L00->getMemoryVT().getStoreSize(), /*Dist=*/1)) {
+    Base = L01;
+    Next = L00;
+  } else {
+    return SDValue(); // not adjacent
+  }
+
+  // Check if this is big endian target. If yes, we need to reverse the wide
+  // load order using bswap, which requires a scalar size that is a multiple
+  // of 16 bits.
+  bool NeedBSwap = DAG.getDataLayout().isBigEndian();
+  if (NeedBSwap && L00->getMemoryVT().getScalarSizeInBits() % 16 != 0)
+    return SDValue();
+
+  // Create a wide load of twice the size of the original load.
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineMemOperand *WideMMO = MF.getMachineMemOperand(
+      Base->getMemOperand(), /*Offset=*/0, WideVT.getStoreSize());
+  SDValue WideLoad = DAG.getLoad(WideVT, SDLoc(N), Base->getChain(),
+                                 Base->getBasePtr(), WideMMO);
+  if (NeedBSwap) {
+    WideLoad = DAG.getNode(ISD::BSWAP, SDLoc(N), WideVT, WideLoad);
+  }
+
+  // Create a shuffle of the wide load.
+  SmallVector<int, 32> Mask;
+  Mask.reserve(WideVT.getVectorNumElements());
+  auto *SV0 = cast<ShuffleVectorSDNode>(N->getOperand(0).getNode());
+  auto *SV1 = cast<ShuffleVectorSDNode>(N->getOperand(1).getNode());
+  ArrayRef<int> M0 = SV0->getMask();
+  ArrayRef<int> M1 = SV1->getMask();
+  if (Base == L00) {
+    llvm::append_range(Mask, M0);
+    llvm::append_range(Mask, M1);
+  } else {
+    int Sz = L00->getMemoryVT().getVectorNumElements();
+    for (unsigned I = 0; I < Sz; ++I)
+      Mask.push_back(M0[I] < Sz ? M0[I] + Sz : M0[I] - Sz);
+    for (unsigned I = 0; I < Sz; ++I)
+      Mask.push_back(M1[I] < Sz ? M1[I] + Sz : M1[I] - Sz);
+  }
+  // Create a new shuffle with the new mask.
+  SDValue NewShuffle = DAG.getVectorShuffle(WideVT, SDLoc(N), WideLoad,
+                                            DAG.getPOISON(WideVT), Mask);
+  return NewShuffle;
+}
+
 static SDValue combineConcatVectorOfSplats(SDNode *N, SelectionDAG &DAG,
                                            const TargetLowering &TLI,
                                            bool LegalTypes,
@@ -27178,6 +27264,9 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
 
   if (SDValue V = combineConcatVectorOfShuffleAndItsOperands(
           N, DAG, TLI, LegalTypes, LegalOperations))
+    return V;
+
+  if (SDValue V = combineConcatVectorOfShuffles(N, DAG, TLI))
     return V;
 
   // Type legalization of vectors and DAG canonicalization of SHUFFLE_VECTOR
