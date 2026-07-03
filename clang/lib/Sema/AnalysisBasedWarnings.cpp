@@ -3118,16 +3118,12 @@ void sema::AnalysisBasedWarnings::issueWarningsForRegisteredVarDecl(
       S, AC, std::make_pair(SecondRange.begin(), SecondRange.end()));
 }
 
-// Pattern-2 profiles (the CFGUninitProfiles table) ride the uninitialized-
-// variables analysis, which IssueWarnings otherwise skips once the TU has an
-// uncompilable error. Re-run just that analysis for a single function so an
-// early TU error does not silently disable the profile for every later
-// function. Diagnostics are restricted to the profile via the ProfileOnly
-// reporter, and the CFG build options mirror the non-linearized configuration
-// of the main pass so the analysis sees the same CFG.
-static void runUninitProfileAnalysisAfterError(Sema &S, const Decl *D) {
-  AnalysisDeclContext AC(/*Mgr=*/nullptr, D);
-
+// Base CFG build options shared by the main per-function analysis pass
+// (IssueWarnings) and the post-error profile rerun below, so both see the
+// same CFG shape.
+static void configureBaseCFGBuildOptions(AnalysisDeclContext &AC) {
+  // Don't generate EH edges for CallExprs as we'd like to avoid the n^2
+  // explosion for destructors that can result and the compile time hit.
   AC.getCFGBuildOptions().PruneTriviallyFalseEdges = true;
   AC.getCFGBuildOptions().AddEHEdges = false;
   AC.getCFGBuildOptions().AddInitializers = true;
@@ -3136,6 +3132,11 @@ static void runUninitProfileAnalysisAfterError(Sema &S, const Decl *D) {
   AC.getCFGBuildOptions().AddTemporaryDtors = true;
   AC.getCFGBuildOptions().AddCXXNewAllocator = false;
   AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
+}
+
+// The always-add statement classes of the main pass's non-linearized CFG
+// configuration; shared with the post-error profile rerun.
+static void addNonLinearizedAlwaysAddClasses(AnalysisDeclContext &AC) {
   AC.getCFGBuildOptions()
       .setAlwaysAdd(Stmt::BinaryOperatorClass)
       .setAlwaysAdd(Stmt::CompoundAssignOperatorClass)
@@ -3144,6 +3145,30 @@ static void runUninitProfileAnalysisAfterError(Sema &S, const Decl *D) {
       .setAlwaysAdd(Stmt::DeclRefExprClass)
       .setAlwaysAdd(Stmt::ImplicitCastExprClass)
       .setAlwaysAdd(Stmt::UnaryOperatorClass);
+}
+
+// std::init: diagnose a read of a [[uninit]] scalar member before it is
+// assigned in the constructor body. Shared by the normal per-function pass
+// and the post-error rerun so both paths stay in step.
+static void runCtorBodyInitCheckIfEnforced(Sema &S, const Decl *D,
+                                           AnalysisDeclContext &AC) {
+  if (!S.isProfileEnforced("std::init"))
+    return;
+  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(D))
+    checkInitProfileCtorBody(S, Ctor, AC);
+}
+
+// Pattern-2 profiles (the CFGUninitProfiles table) ride the uninitialized-
+// variables analysis, which IssueWarnings otherwise skips once the TU has an
+// uncompilable error. Re-run just that analysis for a single function so an
+// early TU error does not silently disable the profile for every later
+// function. Diagnostics are restricted to the profile via the ProfileOnly
+// reporter.
+static void runUninitProfileAnalysisAfterError(Sema &S, const Decl *D) {
+  AnalysisDeclContext AC(/*Mgr=*/nullptr, D);
+
+  configureBaseCFGBuildOptions(AC);
+  addNonLinearizedAlwaysAddClasses(AC);
 
   if (CFG *cfg = AC.getCFG()) {
     UninitValsDiagReporter reporter(S, AC, /*ProfileOnly=*/true);
@@ -3152,9 +3177,7 @@ static void runUninitProfileAnalysisAfterError(Sema &S, const Decl *D) {
                                       stats);
     // Keep the constructor-body read-before-init check alive after a TU error,
     // for parity with the normal path.
-    if (S.isProfileEnforced("std::init"))
-      if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(D))
-        checkInitProfileCtorBody(S, Ctor, AC);
+    runCtorBodyInitCheckIfEnforced(S, D, AC);
   }
 }
 
@@ -3539,16 +3562,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   // Construct the analysis context with the specified CFG build options.
   AnalysisDeclContext AC(/* AnalysisDeclContextManager */ nullptr, D);
 
-  // Don't generate EH edges for CallExprs as we'd like to avoid the n^2
-  // explosion for destructors that can result and the compile time hit.
-  AC.getCFGBuildOptions().PruneTriviallyFalseEdges = true;
-  AC.getCFGBuildOptions().AddEHEdges = false;
-  AC.getCFGBuildOptions().AddInitializers = true;
-  AC.getCFGBuildOptions().AddImplicitDtors = true;
-  AC.getCFGBuildOptions().AddParameterLifetimes = true;
-  AC.getCFGBuildOptions().AddTemporaryDtors = true;
-  AC.getCFGBuildOptions().AddCXXNewAllocator = false;
-  AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
+  configureBaseCFGBuildOptions(AC);
 
   bool IsLifetimeSafetyDiagnosticEnabled =
       !Diags.isIgnored(diag::warn_lifetime_safety_use_after_scope,
@@ -3579,14 +3593,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     // Unreachable code analysis and thread safety require a linearized CFG.
     AC.getCFGBuildOptions().setAllAlwaysAdd();
   } else {
-    AC.getCFGBuildOptions()
-      .setAlwaysAdd(Stmt::BinaryOperatorClass)
-      .setAlwaysAdd(Stmt::CompoundAssignOperatorClass)
-      .setAlwaysAdd(Stmt::BlockExprClass)
-      .setAlwaysAdd(Stmt::CStyleCastExprClass)
-      .setAlwaysAdd(Stmt::DeclRefExprClass)
-      .setAlwaysAdd(Stmt::ImplicitCastExprClass)
-      .setAlwaysAdd(Stmt::UnaryOperatorClass);
+    addNonLinearizedAlwaysAddClasses(AC);
   }
   if (EnableLifetimeSafetyAnalysis)
     AC.getCFGBuildOptions().AddLifetime = true;
@@ -3680,9 +3687,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
 
   // std::init: diagnose a read of a [[uninit]] scalar member before it is
   // assigned in the constructor body, reusing the CFG built above.
-  if (S.isProfileEnforced("std::init"))
-    if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(D))
-      checkInitProfileCtorBody(S, Ctor, AC);
+  runCtorBodyInitCheckIfEnforced(S, D, AC);
 
   // TODO: Enable lifetime safety analysis for other languages once it is
   // stable.

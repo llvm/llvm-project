@@ -227,7 +227,8 @@ framework intentionally does not learn the profile name).
    silenced, OR an ``S.anyProfileEnforced(Table)`` check (the shared
    ``Sema::anyProfileEnforced`` gate, also used by the finalization dispatch)
    into the existing pass guard.  The in-tree example's pass guard becomes
-   ``S.anyProfileEnforced(CFGUninitProfiles) || !Diags.isIgnored(...)``.
+   ``hasEnforcedCFGUninitProfile() || !Diags.isIgnored(...)`` (a small
+   accessor over ``S.anyProfileEnforced(CFGUninitProfiles)``).
 
 3. **Walk the table in the analysis's diagnostic reporter.**
    For each use site the analysis would have warned about, iterate the
@@ -621,7 +622,7 @@ CFG-based uninitialized-variables analysis.
   declaration.
 - **Opt-in table**: ``CFGUninitProfiles`` in
   ``clang/lib/Sema/AnalysisBasedWarnings.cpp``.  The ``IssueWarnings`` pass
-  guard consults it via ``S.anyProfileEnforced(CFGUninitProfiles)`` so the analysis
+  guard consults it via ``hasEnforcedCFGUninitProfile()`` so the analysis
   runs even when ``-Wuninitialized`` is silenced, and
   ``UninitValsDiagReporter::diagnoseUnitializedVar`` walks it *before* the
   default warning path -- when an entry's
