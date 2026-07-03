@@ -854,8 +854,7 @@ public:
           // parse failure at this spot can suggest -flogical-abbreviations.
           // Every such abbreviation begins with '.', so only attempt the
           // speculative parse (which copies the parse state) when the next
-          // non-blank character could start one; this keeps the common case --
-          // a primary or operator that is not an abbreviation -- cheap.
+          // non-blank character could start one.
           const char *at{state.GetLocation()};
           const char *p{at};
           const char *limit{at + state.BytesRemaining()};
