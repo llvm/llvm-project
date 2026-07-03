@@ -527,6 +527,52 @@ and enforces a profile whose designator conflicts with a locally repeated
 Importing a module that enforces a profile does **not** enforce that profile in
 the importing translation unit.  Enforcement is always explicit and local.
 
+Redeclaration Compatibility
+---------------------------
+
+P3589R2 [decl.attr.enforce]p5: a declaration and its redeclarations must
+appear in the dominions of mutually compatible profiles.  The rule is
+**symmetric** -- when a redeclaration is merged with a previous declaration
+from another module unit, every profile whose dominion covered the previous
+declaration must have a compatible counterpart covering the redeclaration,
+and vice versa.  In particular, a profile-enforcing translation unit that
+redeclares an entity from a module (or header unit) compiled *without* a
+compatible profile is ill-formed; the paper's escape hatch for such headers
+is ``[[profiles::exempt]]`` (not yet implemented, see `Intentional
+Omissions`_).  The check
+(``SemaProfiles::checkRedeclarationProfileCompatibility``) runs from
+``Sema::CheckRedeclarationInModule``, the funnel for function, variable, tag,
+alias, and class-template redeclarations; it is a framework rule -- a plain
+error, not suppressible with ``[[profiles::suppress]]``, and diagnose-only
+(the redeclaration still merges).
+
+Two profiles are *compatible* if they have the same name -- designator
+arguments configure a profile without changing its identity -- or if both are
+standard (``std::``-prefixed) profiles, which P3589R2 proclaims mutually
+compatible.  No further implementation-proclaimed compatibility is modeled.
+
+The previous declaration's dominion is approximated by its top-level module's
+exported ``EnforcedProfileDesignators``, which is exact for declarations in
+the module purview -- including purview ``extern "C"``/``extern "C++"``
+declarations (implicit global module), the common redeclarable case, since
+module-attached entities cannot be redeclared in other translation units at
+all.  Two cases have an *unknown* dominion and are skipped rather than
+guessed at (a missed diagnostic, never a wrong one):
+
+- A declaration in an **explicit global module fragment**: it precedes the
+  module-declaration, so the exported enforcements do not cover it, and its
+  TU's empty-declaration enforces are not serialized into the BMI.
+- A previous declaration from the **same module family** (an implementation
+  or partition unit merging with its own interface): the exported set
+  under-approximates the interface TU's full dominion, and the interface's
+  enforcements are inherited into the current unit anyway, so checking would
+  false-positive on locally added profiles.
+
+A textual or PCH previous declaration is not checked at all: it shares the
+current TU's dominion (the placement rule makes a TU's dominion uniform, and
+a PCH's enforcements are restored into the including TU).  Implicit template
+instantiations are exempt, matching the module-ownership check.
+
 Serialization
 -------------
 
@@ -548,11 +594,6 @@ The following parts of P3589R2 are deliberately not implemented:
   requires bookkeeping that connects the original spelling of an ``#include``
   to the source locations of constructs in the included file, and the feature
   is not needed to exercise or validate the rest of the framework.
-- The redeclaration consistency rule from P3589R2 section 2.2 paragraph 5
-  (every redeclaration of a declaration in the dominion of a profile must
-  itself appear in the dominion of a compatible profile). Profile attributes
-  on redeclarations are parsed and recorded, but no cross-redeclaration
-  compatibility check is performed.
 
 
 Built-in Profiles

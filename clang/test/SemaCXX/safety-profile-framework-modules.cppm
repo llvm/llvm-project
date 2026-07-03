@@ -30,6 +30,19 @@
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/import_require_no_args.cpp -fmodule-file=TestMod=%t/mod_enforced.pcm -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/unknown_attr_mod.cppm -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/unknown_attr_import.cpp -fmodule-file=TestMod=%t/mod_enforced.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fprofiles-test-profiles -emit-module-interface %t/redecl_mod.cppm -o %t/redecl_mod.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fprofiles-test-profiles -fsyntax-only %t/redecl_same.cpp -fmodule-file=RedeclMod=%t/redecl_mod.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fprofiles-test-profiles -fsyntax-only %t/redecl_none.cpp -fmodule-file=RedeclMod=%t/redecl_mod.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fprofiles-test-profiles -fsyntax-only %t/redecl_other.cpp -fmodule-file=RedeclMod=%t/redecl_mod.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fprofiles-test-profiles -emit-module-interface %t/redecl_plain_mod.cppm -o %t/redecl_plain_mod.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fprofiles-test-profiles -fsyntax-only %t/redecl_reverse.cpp -fmodule-file=RedeclPlainMod=%t/redecl_plain_mod.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fprofiles-test-profiles -emit-module-interface %t/redecl_std_mod.cppm -o %t/redecl_std_mod.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fprofiles-test-profiles -fsyntax-only %t/redecl_std_compat.cpp -fmodule-file=RedeclStdMod=%t/redecl_std_mod.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fprofiles-test-profiles -emit-module-interface %t/redecl_vendor_mod.cppm -o %t/redecl_vendor_mod.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fprofiles-test-profiles -fsyntax-only %t/redecl_vendor_args.cpp -fmodule-file=RedeclVendorMod=%t/redecl_vendor_mod.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fprofiles-test-profiles -emit-module-interface %t/redecl_gmf_mod.cppm -o %t/redecl_gmf_mod.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fprofiles-test-profiles -fsyntax-only %t/redecl_gmf_skip.cpp -fmodule-file=RedeclGmfMod=%t/redecl_gmf_mod.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fprofiles-test-profiles -fsyntax-only %t/redecl_impl_extra.cpp -fmodule-file=RedeclMod=%t/redecl_mod.pcm -verify
 
 // ===================================================================
 // Module with enforced profiles
@@ -288,3 +301,109 @@ export void f();
 //--- unknown_attr_import.cpp
 import TestMod [[vendor::unknown]]; // expected-warning {{unknown attribute 'vendor::unknown' ignored}}
 import TestMod [[deprecated]]; // expected-error {{'deprecated' attribute cannot be applied to a module import}}
+
+// ===================================================================
+// Redeclaration profile compatibility (P3589R2 [decl.attr.enforce]p5):
+// a declaration and its redeclarations must appear in the dominions of
+// mutually compatible profiles. Compatibility is by profile name (the
+// arguments configure a profile without changing its identity), and all
+// std:: profiles are compatible with each other. The redeclarable
+// fixtures are extern "C++" purview declarations -- entities attached to
+// a named module cannot be redeclared in other TUs at all -- which sit
+// inside the module declaration's dominion.
+// ===================================================================
+//--- redecl_mod.cppm
+// expected-no-diagnostics
+export module RedeclMod [[profiles::enforce(test::type_cast)]];
+extern "C++" {
+void redecl_api(int);
+struct RedeclTag;
+}
+
+//--- redecl_plain_mod.cppm
+// expected-no-diagnostics
+export module RedeclPlainMod;
+extern "C++" void plain_api(int);
+
+//--- redecl_std_mod.cppm
+// expected-no-diagnostics
+export module RedeclStdMod [[profiles::enforce(std::init)]];
+extern "C++" void std_api(int);
+
+//--- redecl_vendor_mod.cppm
+// expected-no-diagnostics
+export module RedeclVendorMod [[profiles::enforce(vendor(fortify: 3))]];
+extern "C++" void vendor_api(int);
+
+//--- redecl_same.cpp
+// Redeclaring under the same profile satisfies both directions at once.
+// expected-no-diagnostics
+[[profiles::enforce(test::type_cast)]];
+import RedeclMod;
+void redecl_api(int);
+struct RedeclTag;
+
+//--- redecl_none.cpp
+// Forward direction: the module's profile has no compatible counterpart here.
+// Both function and tag redeclarations funnel through the check.
+import RedeclMod;
+void redecl_api(int); // expected-error {{redeclaration of 'redecl_api' is not in the dominion of a profile compatible with 'test::type_cast', which module 'RedeclMod' enforces where 'redecl_api' was previously declared}}
+struct RedeclTag;     // expected-error {{redeclaration of 'RedeclTag' is not in the dominion of a profile compatible with 'test::type_cast', which module 'RedeclMod' enforces where 'RedeclTag' was previously declared}}
+// expected-note@redecl_mod.cppm:* {{previous declaration is here}}
+// expected-note@redecl_mod.cppm:* {{previous declaration is here}}
+
+//--- redecl_other.cpp
+// An incompatible (non-std) profile on each side violates both directions.
+[[profiles::enforce(test::other)]];
+import RedeclMod;
+void redecl_api(int); // expected-error {{redeclaration of 'redecl_api' is not in the dominion of a profile compatible with 'test::type_cast', which module 'RedeclMod' enforces where 'redecl_api' was previously declared}} \
+                      // expected-error {{'redecl_api' was previously declared in module 'RedeclMod', outside the dominion of a profile compatible with 'test::other', which this translation unit enforces}}
+// expected-note@redecl_mod.cppm:* {{previous declaration is here}}
+
+//--- redecl_reverse.cpp
+// Reverse direction: this TU enforces a profile; the previous declaration's
+// TU enforced nothing compatible.
+[[profiles::enforce(test::type_cast)]];
+import RedeclPlainMod;
+void plain_api(int); // expected-error {{'plain_api' was previously declared in module 'RedeclPlainMod', outside the dominion of a profile compatible with 'test::type_cast', which this translation unit enforces}}
+// expected-note@redecl_plain_mod.cppm:* {{previous declaration is here}}
+
+//--- redecl_std_compat.cpp
+// All standard profiles are compatible with each other, in both directions.
+// expected-no-diagnostics
+[[profiles::enforce(std::other_profile)]];
+import RedeclStdMod;
+void std_api(int);
+
+//--- redecl_vendor_args.cpp
+// Compatibility is by profile name: different arguments configure the same
+// profile.
+// expected-no-diagnostics
+[[profiles::enforce(vendor(fortify: 2))]];
+import RedeclVendorMod;
+void vendor_api(int);
+
+//--- redecl_gmf_mod.cppm
+// expected-no-diagnostics
+module;
+void redecl_gmf_api(int);
+export module RedeclGmfMod [[profiles::enforce(test::type_cast)]];
+export inline void use_gmf() { redecl_gmf_api(1); }
+
+//--- redecl_gmf_skip.cpp
+// A declaration in the module's *explicit* global module fragment precedes
+// the module declaration, so the exported enforcement does not cover it, and
+// its TU's empty-declaration enforces are not serialized: its dominion is
+// unknown and the check skips it (a missed diagnostic, never a wrong one).
+// expected-no-diagnostics
+import RedeclGmfMod;
+void redecl_gmf_api(int);
+
+//--- redecl_impl_extra.cpp
+// An implementation unit may add TU-local enforcement; entities of its own
+// module family are skipped (the exported set under-approximates the
+// interface TU's dominion, and the interface's enforcement is inherited
+// here anyway).
+// expected-no-diagnostics
+module RedeclMod [[profiles::enforce(test::other)]];
+extern "C++" void redecl_api(int);

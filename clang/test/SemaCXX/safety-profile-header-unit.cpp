@@ -24,6 +24,11 @@
 // plain -fprofiles.
 // RUN: %clang_cc1 -std=c++20 -fprofiles -emit-header-unit -xc++-user-header %t/enforced.h -o %t/enforced-noflag.pcm
 // RUN: %clang_cc1 -std=c++20 -fprofiles -Wno-experimental-header-units -fsyntax-only %t/import_ok.cpp -fmodule-file=%t/enforced-noflag.pcm -verify
+//
+// Redeclaration profile compatibility (P3589R2 [decl.attr.enforce]p5)
+// across a header unit, in both directions.
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fprofiles-test-profiles -Wno-experimental-header-units -fsyntax-only %t/redecl_forward.cpp -fmodule-file=%t/enforced.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fprofiles-test-profiles -Wno-experimental-header-units -fsyntax-only %t/redecl_reverse.cpp -fmodule-file=%t/plain.pcm -verify
 
 //--- enforced.h
 [[profiles::enforce(test::type_cast)]];
@@ -61,3 +66,18 @@ import "args.h" [[profiles::require(vendor(fortify: 3))]];
 //--- import_args_fail.cpp
 // Require compares canonical designator spellings, arguments included.
 import "args.h" [[profiles::require(vendor(fortify: 2))]]; // expected-error {{required profile 'vendor(fortify : 2)' is not enforced by imported module}}
+
+//--- redecl_forward.cpp
+// The header unit's TU enforced a profile; the redeclaring TU must enforce a
+// compatible one.
+import "enforced.h";
+void hu_api(int); // expected-error {{redeclaration of 'hu_api' is not in the dominion of a profile compatible with 'test::type_cast'}}
+// expected-note@enforced.h:* {{previous declaration is here}}
+
+//--- redecl_reverse.cpp
+// And symmetrically: this TU enforces a profile; the header unit's TU did not
+// enforce a compatible one.
+[[profiles::enforce(test::type_cast)]];
+import "plain.h";
+void plain_api(int); // expected-error {{'plain_api' was previously declared in module}}
+// expected-note@plain.h:* {{previous declaration is here}}

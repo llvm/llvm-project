@@ -14132,6 +14132,12 @@ def err_profiles_require_not_on_import : Error<
   "'profiles::require' attribute only allowed on module-import-declarations">;
 def err_profiles_require_not_enforced : Error<
   "required profile '%0' is not enforced by imported module">;
+def err_profiles_redecl_incompatible : Error<
+  "%select{redeclaration of %1 is not in the dominion of a profile "
+  "compatible with '%2', which module '%3' enforces where %1 was "
+  "previously declared|%1 was previously declared in module '%3', outside "
+  "the dominion of a profile compatible with '%2', which this translation "
+  "unit enforces}0">;
 def err_profiles_suppress_justification_not_string : Error<
   "'justification' argument of 'profiles::suppress' must be a string literal">;
 def err_profile_type_cast_reinterpret : ProfileRuleError<

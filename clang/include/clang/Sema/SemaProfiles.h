@@ -108,6 +108,17 @@ public:
   bool checkProfileViolation(StringRef ProfileName, StringRef RuleName,
                              SourceLocation Loc, unsigned DiagID);
 
+  /// P3589R2 [decl.attr.enforce]p5: a declaration and its redeclarations must
+  /// appear in the dominions of mutually compatible profiles. Called from
+  /// \c Sema::CheckRedeclarationInModule when \p New redeclares \p Old. Only
+  /// a previous declaration from another module unit (a named module or a
+  /// header unit) can carry a different dominion; that TU's dominion is
+  /// approximated by the module's exported designator set. Profiles are
+  /// compatible by name, with all std:: profiles mutually compatible.
+  /// Diagnose-only: the redeclaration is not invalidated.
+  void checkRedeclarationProfileCompatibility(const NamedDecl *New,
+                                              const NamedDecl *Old);
+
   /// Dispatch class-finalization profile callbacks for a completed class.
   /// Called from \c Sema::CheckCompletedCXXClass so parser, template
   /// instantiation, and lambda finalization paths all reach the same hook.

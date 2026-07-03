@@ -135,6 +135,85 @@ bool SemaProfiles::processProfilesEnforceAttr(
   return true;
 }
 
+// P3589R2 [decl.attr.enforce]p5: profiles are compatible if they are the same
+// -- by name; arguments configure a profile without changing its identity --
+// or proclaimed compatible by the implementation. "All standard profiles are
+// compatible with each other" is the one proclamation modeled here.
+static bool areProfilesCompatible(StringRef A, StringRef B) {
+  return A == B || (A.starts_with("std::") && B.starts_with("std::"));
+}
+
+void SemaProfiles::checkRedeclarationProfileCompatibility(
+    const NamedDecl *New, const NamedDecl *Old) {
+  if (!getLangOpts().Profiles)
+    return;
+  // Only a previous declaration from another module unit (a named module or a
+  // header unit) can carry a different profile dominion. A textual or PCH
+  // previous declaration shares this TU's dominion: the placement rule makes
+  // a TU's dominion uniform over its declarations, and a PCH's enforcements
+  // are restored into this TU (ENFORCED_PROFILES).
+  if (!Old->isFromASTFile())
+    return;
+  Module *M = Old->getOwningModule();
+  if (!M)
+    return;
+  // A declaration in an explicit global-module-fragment precedes the module
+  // declaration, so the module's exported enforcements do not cover it, and
+  // its TU's empty-declaration enforcements are not serialized into the BMI.
+  // Its dominion is unknown: skip rather than guess (a missed diagnostic,
+  // never a wrong one). An *implicit* global-module-fragment declaration (a
+  // purview extern "C"/"C++" declaration, the common redeclarable case) sits
+  // inside the module declaration's dominion and is checked.
+  if (M->isExplicitGlobalModule())
+    return;
+  Module *Top = M->getTopLevelModule();
+  // Within the same module family (an implementation or partition unit seeing
+  // its interface) the exported set under-approximates the interface TU's
+  // full dominion, and the interface's enforcements are inherited into this
+  // unit anyway; skip rather than false-positive on locally added profiles.
+  if (Module *Current = SemaRef.getCurrentModule())
+    if (Current->getTopLevelModule()->getPrimaryModuleInterfaceName() ==
+        Top->getPrimaryModuleInterfaceName())
+      return;
+
+  // A gated-off test:: profile is inert in this compilation, on either side.
+  auto IsActive = [&](StringRef Name) {
+    return getLangOpts().ProfilesTestProfiles || !Name.starts_with("test::");
+  };
+  // First active profile in Enforced with no compatible counterpart in
+  // Covering; empty if fully covered.
+  auto FindUncovered = [&](const auto &Enforced,
+                           const auto &Covering) -> StringRef {
+    for (const auto &EP : Enforced) {
+      StringRef Name = EP.ProfileName;
+      if (!IsActive(Name))
+        continue;
+      if (llvm::none_of(Covering, [&](const auto &Other) {
+            return areProfilesCompatible(Name, Other.ProfileName);
+          }))
+        return Name;
+    }
+    return {};
+  };
+
+  // The rule is symmetric: every profile whose dominion covers one
+  // declaration must have a compatible counterpart covering the other.
+  // Report the first violation in each direction.
+  StringRef MissingHere =
+      FindUncovered(Top->EnforcedProfileDesignators, EnforcedProfiles);
+  StringRef MissingThere =
+      FindUncovered(EnforcedProfiles, Top->EnforcedProfileDesignators);
+  if (MissingHere.empty() && MissingThere.empty())
+    return;
+  if (!MissingHere.empty())
+    Diag(New->getLocation(), diag::err_profiles_redecl_incompatible)
+        << /*PreviouslyEnforced=*/0 << New << MissingHere << Top->Name;
+  if (!MissingThere.empty())
+    Diag(New->getLocation(), diag::err_profiles_redecl_incompatible)
+        << /*PreviouslyEnforced=*/1 << New << MissingThere << Top->Name;
+  Diag(Old->getLocation(), diag::note_previous_declaration);
+}
+
 ProfilesSuppressAttr *
 SemaProfiles::makeProfilesSuppressAttr(const ParsedAttr &AL) {
   const auto &Args = AL.getProfileSuppressArgs();

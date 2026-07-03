@@ -1800,6 +1800,14 @@ bool Sema::CheckRedeclarationInModule(NamedDecl *New, NamedDecl *Old) {
   if (CheckRedeclarationExported(New, Old))
     return true;
 
+  // P3589R2 [decl.attr.enforce]p5: a redeclaration must be covered by
+  // profiles compatible with those covering the previous declaration (and
+  // vice versa). Implicit instantiations are not written declarations, so
+  // they are exempt, matching the module-ownership check. Diagnose-only:
+  // merging proceeds either way.
+  if (!isImplicitInstantiation(New) && !isImplicitInstantiation(Old))
+    Profiles().checkRedeclarationProfileCompatibility(New, Old);
+
   return false;
 }
 
