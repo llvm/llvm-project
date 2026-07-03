@@ -2,6 +2,7 @@
 
 import os
 import socket
+import stat
 from pathlib import Path
 import lldbgdbserverutils
 
@@ -72,8 +73,13 @@ class SBPlatformAPICase(TestBase):
 
         destination = self.getBuildArtifact("destination-file")
         # Make the file read only.
-        Path(destination).touch(mode=0o400)
-        self.addTearDownHook(lambda: os.remove(destination))
+        Path(destination).touch(mode=stat.S_IREAD, exist_ok=True)
+
+        def remove_destination_file():
+            os.chmod(destination, stat.S_IWRITE)
+            os.remove(destination)
+
+        self.addTearDownHook(remove_destination_file)
 
         get_error = platform.Get(
             lldb.SBFileSpec(remote_path, False), lldb.SBFileSpec(destination, True)
