@@ -2548,9 +2548,7 @@ public:
   void replaceRawLinkageName(MDString *LinkageName) {
     replaceOperandWith(3, LinkageName);
   }
-  void replaceRetainedNodes(MDNodeArray N) {
-    replaceOperandWith(7, N.get());
-  }
+  void replaceRetainedNodes(MDNodeArray N) { replaceOperandWith(7, N.get()); }
 
   template <typename IterT> void retainNodes(IterT NodesBegin, IterT NodesEnd) {
     auto RetainedNodes = getRetainedNodes();
