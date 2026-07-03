@@ -5,9 +5,9 @@
 
 // C++ side of the musttail Indirect-arg fix. The call argument is typically
 // a CXXConstructExpr invoking the trivial copy constructor; EmitCallArg
-// detects the trivial-copy-from-DeclRefExpr case under musttail and hands
-// the source LValue to EmitCall so the general path engages. Non-trivial
-// copy or move constructors keep the existing agg.tmp path.
+// hands the same-type glvalue source's LValue to EmitCall so the general
+// path engages. Non-trivial copy or move constructors keep the existing
+// agg.tmp path.
 
 struct Big {
   unsigned long long a, b, c, d;
@@ -161,3 +161,46 @@ struct Big P17(struct Big a, struct Big b, struct Big c) {
 // COMMON: @llvm.mem{{(cpy|move)}}{{.*}}(ptr {{[^,]*}} %b, ptr {{[^,]*}} %a,
 // COMMON: store {{.*}} [[SAVED]], ptr %c,
 // COMMON: musttail call {{.*}} @_Z3C173BigS_S_({{.*}}, ptr {{[^,]*}} %a, ptr {{[^,]*}} %b, ptr {{[^,]*}} %c)
+
+// P18: member of a global as the source. Forwarded with no agg.tmp; the copy
+// lands directly in the incoming %a.
+struct Wrap {
+  struct Big inner;
+};
+extern Wrap gw;
+struct Big C18(struct Big a);
+struct Big P18(struct Big a) {
+  [[clang::musttail]] return C18(gw.inner);
+}
+// COMMON-LABEL: define {{.*}} @_Z3P183Big(
+// COMMON-NOT: %agg.tmp
+// COMMON: @llvm.mem{{(cpy|move)}}{{.*}}(ptr {{[^,]*}} %a, ptr {{[^,]*}} @gw, i64 32
+// COMMON: musttail call {{.*}} @_Z3C183Big({{.*}}, ptr {{[^,]*}} %a)
+
+// P19: deref of a global pointer as the source.
+extern struct Big *gp;
+struct Big C19(struct Big a);
+struct Big P19(struct Big a) {
+  [[clang::musttail]] return C19(*gp);
+}
+// COMMON-LABEL: define {{.*}} @_Z3P193Big(
+// COMMON-NOT: %agg.tmp
+// COMMON: [[SRC:%[0-9a-z.]+]] = load ptr, ptr @gp
+// COMMON: @llvm.mem{{(cpy|move)}}{{.*}}(ptr {{[^,]*}} %a, ptr {{[^,]*}} [[SRC]], i64 32
+// COMMON: musttail call {{.*}} @_Z3C193Big({{.*}}, ptr {{[^,]*}} %a)
+
+// P20: derived-to-base source. The base subobject sits at offset 8 in Der;
+// the forwarded address must carry that adjustment.
+struct Pad {
+  unsigned long long p;
+};
+struct Der : Pad, Big {};
+extern Der gd;
+struct Big C20(struct Big a);
+struct Big P20(struct Big a) {
+  [[clang::musttail]] return C20(gd);
+}
+// COMMON-LABEL: define {{.*}} @_Z3P203Big(
+// COMMON-NOT: %agg.tmp
+// COMMON: @llvm.mem{{(cpy|move)}}{{.*}}(ptr {{[^,]*}} %a, ptr {{[^,]*}} getelementptr inbounds {{(nuw )?}}(i8, ptr @gd, i64 8), i64 32
+// COMMON: musttail call {{.*}} @_Z3C203Big({{.*}}, ptr {{[^,]*}} %a)

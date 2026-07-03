@@ -34,6 +34,17 @@ __attribute__((device)) int foo(int x, int y) {
   return suld_2d_zero(surf, x, y);
 }
 
+__attribute__((device)) int musttail_callee(surface<void, 2> s, int x);
+
+// A surface passed to a musttail call must keep the handle materialization;
+// the argument is not forwarded as a raw lvalue.
+// DEVICE-LABEL: @_Z15musttail_caller7surfaceIvLi2EEi(
+// DEVICE: call i64 @llvm.nvvm.texsurf.handle.internal.p1(ptr addrspace(1) @surf)
+// DEVICE: musttail call noundef i32 @_Z15musttail_callee7surfaceIvLi2EEi(i64
+__attribute__((device)) int musttail_caller(surface<void, 2> s, int x) {
+  [[clang::musttail]] return musttail_callee(surf, x);
+}
+
 // HOST: define internal void @[[PREFIX:__cuda]]_register_globals
 // Texture references need registering with correct arguments.
 // HOST: call void @[[PREFIX]]RegisterSurface(ptr %0, ptr @surf, ptr @0, ptr @0, i32 2, i32 0)
