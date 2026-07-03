@@ -811,18 +811,19 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   }
 
   static BooleanKind getMaskLane(const AnyValue &Mask, size_t I) {
-    if (Mask.isAggregate())
-      return Mask.asAggregate()[I].asBoolean();
-    return Mask.asBoolean();
+    assert(Mask.isAggregate());
+    return Mask.asAggregate()[I].asBoolean();
   }
 
   AnyValue callExperimentalVectorHistogramIntrinsic(CallBase &CB,
                                                     ArrayRef<AnyValue> Args,
                                                     Intrinsic::ID IID) {
-    struct Bucket {
+    struct LaneUpdate {
       MemoryObject *MO;
       uint64_t Offset;
       uint64_t Count;
+      AnyValue Old;
+      AnyValue New;
     };
 
     const auto &Ptrs = Args[0].asAggregate();
@@ -831,7 +832,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     Type *ElemTy = CB.getArgOperand(1)->getType();
     const uint64_t AccessSize = Ctx.getEffectiveTypeStoreSize(ElemTy);
 
-    SmallVector<Bucket, 8> Buckets;
+    SmallVector<LaneUpdate, 8> Lanes;
     for (size_t I = 0, E = Ptrs.size(); I != E; ++I) {
       switch (getMaskLane(Mask, I)) {
       case BooleanKind::False:
@@ -856,19 +857,19 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
       if (!MO)
         return AnyValue();
 
-      auto *It =
-          find_if(Buckets, [&, MO = MO, Offset = Offset](const Bucket &B) {
-            return B.MO == MO && B.Offset == Offset;
-          });
-      if (It == Buckets.end())
-        Buckets.push_back({MO, Offset, 1});
-      else
-        ++It->Count;
+      Lanes.push_back({MO, Offset, 0, AnyValue(), AnyValue()});
     }
 
-    for (const auto &[MO, Offset, Count] : Buckets) {
-      AnyValue Old = Ctx.load(*MO, Offset, ElemTy);
-      AnyValue New;
+    for (LaneUpdate &Lane : Lanes) {
+      Lane.Count = count_if(Lanes, [&](const LaneUpdate &Other) {
+        return Other.MO == Lane.MO && Other.Offset == Lane.Offset;
+      });
+      Lane.Old = Ctx.load(*Lane.MO, Lane.Offset, ElemTy);
+    }
+
+    for (LaneUpdate &Lane : Lanes) {
+      const AnyValue &Old = Lane.Old;
+      AnyValue &New = Lane.New;
 
       if (Old.isPoison() || Update.isPoison()) {
         New = AnyValue::poison();
@@ -878,13 +879,13 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
 
         switch (IID) {
         case Intrinsic::experimental_vector_histogram_add:
-          New = OldInt + UpdateInt * APInt(UpdateInt.getBitWidth(), Count,
+          New = OldInt + UpdateInt * APInt(UpdateInt.getBitWidth(), Lane.Count,
                                            /*isSigned=*/false,
                                            /*implicitTrunc=*/true);
           break;
         case Intrinsic::experimental_vector_histogram_uadd_sat: {
           APInt Acc = OldInt;
-          for (uint64_t I = 0; I != Count; ++I)
+          for (uint64_t I = 0; I != Lane.Count; ++I)
             Acc = Acc.uadd_sat(UpdateInt);
           New = Acc;
           break;
@@ -899,9 +900,10 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
           llvm_unreachable("Unexpected histogram intrinsic ID");
         }
       }
-
-      Ctx.store(*MO, Offset, New, ElemTy);
     }
+
+    for (const LaneUpdate &Lane : Lanes)
+      Ctx.store(*Lane.MO, Lane.Offset, Lane.New, ElemTy);
 
     return AnyValue();
   }
@@ -1732,7 +1734,7 @@ public:
       const auto &Vec = Args[0].asAggregate();
       const unsigned RetBW = RetTy->getIntegerBitWidth();
 
-      if (APInt::getMaxValue(RetBW).ult(Vec.size()))
+      if (!isUIntN(RetBW, Vec.size()))
         return AnyValue::poison();
 
       uint64_t Count = 0;
@@ -1759,16 +1761,31 @@ public:
       const uint64_t VF = VFC->getZExtValue();
       const bool Scalable = ScalableC->isOne();
 
-      const uint64_t MaxLanes =
-          Scalable ? Ctx.getEVL(ElementCount::getScalable(VF)) : VF;
+      const uint64_t MaxLanes = Ctx.getEVL(ElementCount::get(VF, Scalable));
 
       uint64_t Res = 0;
       if (!Cnt.isZero()) {
-        APInt Max(Cnt.getBitWidth(), MaxLanes);
-        Res = Cnt.ugt(Max) ? MaxLanes : Cnt.getZExtValue();
+        if (Cnt.getActiveBits() <= 64 && Cnt.getZExtValue() <= MaxLanes) {
+          Res = Cnt.getZExtValue();
+        } else {
+          auto ceilUDiv = [](const APInt &N, const APInt &D) {
+            APInt Q = N.udiv(D);
+            if (!N.urem(D).isZero())
+              ++Q;
+            return Q;
+          };
+
+          APInt Max(Cnt.getBitWidth(), MaxLanes);
+          APInt NumIters = ceilUDiv(Cnt, Max);
+          uint64_t Lower = ceilUDiv(Cnt, NumIters).getZExtValue();
+          uint64_t Range = MaxLanes - Lower + 1;
+          Res = Lower + Ctx.getRandomUInt64() % Range;
+        }
       }
 
-      return APInt(32, Res);
+      if (isIntN(32, Res))
+        return APInt(32, Res);
+      return AnyValue::poison();
     }
 
     case Intrinsic::experimental_vector_extract_last_active: {
@@ -1853,8 +1870,7 @@ public:
         if (SawPoison)
           Res.push_back(AnyValue::poison());
         else
-          Res.push_back(Found ? AnyValue::boolean(true)
-                              : AnyValue::boolean(false));
+          Res.push_back(AnyValue::boolean(Found));
       }
 
       return std::move(Res);

@@ -63,6 +63,16 @@ define void @main() {
   %min0 = load i32, ptr %b0, align 4
   %min1 = load i32, ptr %b1, align 4
 
+  %overlap = alloca [8 x i8], align 1
+  store i64 0, ptr %overlap, align 1
+  %overlap_p0 = getelementptr inbounds [8 x i8], ptr %overlap, i64 0, i64 0
+  %overlap_p2 = getelementptr inbounds i8, ptr %overlap_p0, i64 2
+  %overlap_ptrs0 = insertelement <2 x ptr> poison, ptr %overlap_p0, i32 0
+  %overlap_ptrs1 = insertelement <2 x ptr> %overlap_ptrs0, ptr %overlap_p2, i32 1
+  call void @llvm.experimental.vector.histogram.add.v2p0.i32(<2 x ptr> %overlap_ptrs1, i32 65536, <2 x i1> <i1 true, i1 true>)
+  %overlap0 = load i32, ptr %overlap_p0, align 1
+  %overlap2 = load i32, ptr %overlap_p2, align 1
+
   ret void
 }
 ; CHECK: Entering function: main
@@ -71,8 +81,8 @@ define void @main() {
 ; CHECK-NEXT:   %cttz_poison = call i8 @llvm.experimental.cttz.elts.i8.v4i1(<4 x i1> zeroinitializer, i1 true) => poison
 ; CHECK-NEXT:   %evl_zero = call i32 @llvm.experimental.get.vector.length.i32(i32 0, i32 4, i1 false) => i32 0
 ; CHECK-NEXT:   %evl_short = call i32 @llvm.experimental.get.vector.length.i32(i32 3, i32 4, i1 false) => i32 3
-; CHECK-NEXT:   %evl_full = call i32 @llvm.experimental.get.vector.length.i32(i32 9, i32 4, i1 false) => i32 4
-; CHECK-NEXT:   %evl_scalable = call i32 @llvm.experimental.get.vector.length.i32(i32 20, i32 4, i1 true) => i32 16
+; CHECK-NEXT:   %evl_full = call i32 @llvm.experimental.get.vector.length.i32(i32 9, i32 4, i1 false) => i32 3
+; CHECK-NEXT:   %evl_scalable = call i32 @llvm.experimental.get.vector.length.i32(i32 20, i32 4, i1 true) => i32 13
 ; CHECK-NEXT:   %evl_poison = call i32 @llvm.experimental.get.vector.length.i64(i64 poison, i32 4, i1 false) => poison
 ; CHECK-NEXT:   %last = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> <i32 10, i32 20, i32 30, i32 40>, <4 x i1> <i1 true, i1 false, i1 true, i1 false>, i32 99) => i32 30
 ; CHECK-NEXT:   %last_passthru = call i32 @llvm.experimental.vector.extract.last.active.v4i32(<4 x i32> <i32 10, i32 20, i32 30, i32 40>, <4 x i1> zeroinitializer, i32 99) => i32 99
@@ -118,5 +128,14 @@ define void @main() {
 ; CHECK-NEXT:   call void @llvm.experimental.vector.histogram.umin.v4p0.i32(<4 x ptr> %ptrs_add3, i32 20, <4 x i1> <i1 true, i1 true, i1 true, i1 false>)
 ; CHECK-NEXT:   %min0 = load i32, ptr %b0, align 4 => i32 7
 ; CHECK-NEXT:   %min1 = load i32, ptr %b1, align 4 => i32 20
+; CHECK-NEXT:   %overlap = alloca [8 x i8], align 1 => ptr 0x29 [overlap]
+; CHECK-NEXT:   store i64 0, ptr %overlap, align 1
+; CHECK-NEXT:   %overlap_p0 = getelementptr inbounds [8 x i8], ptr %overlap, i64 0, i64 0 => ptr 0x29 [overlap]
+; CHECK-NEXT:   %overlap_p2 = getelementptr inbounds i8, ptr %overlap_p0, i64 2 => ptr 0x2B [overlap + 2]
+; CHECK-NEXT:   %overlap_ptrs0 = insertelement <2 x ptr> poison, ptr %overlap_p0, i32 0 => { ptr 0x29 [overlap], poison }
+; CHECK-NEXT:   %overlap_ptrs1 = insertelement <2 x ptr> %overlap_ptrs0, ptr %overlap_p2, i32 1 => { ptr 0x29 [overlap], ptr 0x2B [overlap + 2] }
+; CHECK-NEXT:   call void @llvm.experimental.vector.histogram.add.v2p0.i32(<2 x ptr> %overlap_ptrs1, i32 65536, <2 x i1> splat (i1 true))
+; CHECK-NEXT:   %overlap0 = load i32, ptr %overlap_p0, align 1 => i32 0
+; CHECK-NEXT:   %overlap2 = load i32, ptr %overlap_p2, align 1 => i32 65536
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main
