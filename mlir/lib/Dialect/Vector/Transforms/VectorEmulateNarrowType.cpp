@@ -98,10 +98,16 @@ static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
     if (auto extractOp = dyn_cast<vector::ExtractOp>(maskOp)) {
       maskOp = extractOp.getSource().getDefiningOp();
       extractOps.push_back(extractOp);
+    } else {
+      // Unsupported mask-defining op (e.g. a block argument, which has no
+      // defining op, or an op we cannot trace through). Bail out rather than
+      // looping forever or dereferencing a null op below.
+      break;
     }
   }
 
-  if (!isa<arith::ConstantOp, vector::CreateMaskOp, vector::ConstantMaskOp>(
+  if (!maskOp ||
+      !isa<arith::ConstantOp, vector::CreateMaskOp, vector::ConstantMaskOp>(
           maskOp))
     return failure();
 

@@ -109,3 +109,31 @@ func.func @vector_maskedstore_2d_i8_negative(%arg0: index, %arg1: index, %arg2: 
 //  CHECK-LABEL: func @vector_maskedstore_2d_i8_negative
 //        CHECK: memref.alloc() : memref<3x8xi8>
 //    CHECK-NOT: i32
+
+// -----
+
+// The mask is a block argument, so its defining op cannot be traced back to a
+// supported mask-creation op. This must gracefully bail out instead of crashing
+// (see llvm/llvm-project#206928).
+
+func.func @vector_maskedstore_i8_block_arg_mask_negative(%arg0: memref<?xi8>, %mask: vector<8xi1>, %value: vector<8xi8>) {
+  %c0 = arith.constant 0 : index
+  vector.maskedstore %arg0[%c0], %mask, %value : memref<?xi8>, vector<8xi1>, vector<8xi8>
+  return
+}
+
+//  CHECK-LABEL: func @vector_maskedstore_i8_block_arg_mask_negative
+//        CHECK: vector.maskedstore
+
+// -----
+
+// As above, but for `vector.maskedload`.
+
+func.func @vector_maskedload_i8_block_arg_mask_negative(%arg0: memref<?xi8>, %mask: vector<8xi1>, %passthru: vector<8xi8>) -> vector<8xi8> {
+  %c0 = arith.constant 0 : index
+  %0 = vector.maskedload %arg0[%c0], %mask, %passthru : memref<?xi8>, vector<8xi1>, vector<8xi8> into vector<8xi8>
+  return %0 : vector<8xi8>
+}
+
+//  CHECK-LABEL: func @vector_maskedload_i8_block_arg_mask_negative
+//        CHECK: vector.maskedload
