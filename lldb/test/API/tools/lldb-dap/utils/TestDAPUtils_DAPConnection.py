@@ -17,8 +17,8 @@ class EchoClient:
 
 class TestDAPUtils_DAPConnection(DAPTestCaseBase):
     def test_round_trip(self):
-        received_messages = self.get_sample_dap_log()
-        transport = self.create_transport(received_messages)
+        expected_messages = self.get_sample_dap_log()
+        transport = self.create_transport(expected_messages)
         connection = DAPConnection("conn0", transport)
 
         client = EchoClient()
@@ -28,10 +28,11 @@ class TestDAPUtils_DAPConnection(DAPTestCaseBase):
             on_reverse_request=client.on_message,
         )
         connection.start(handler)
-        expected_messages = client.seen_messages
-        self.assertEqual(len(received_messages), len(expected_messages))
-        for actual, expected in zip(received_messages, expected_messages):
-            self.assertEqual(actual, expected)
+
+        received_messages = client.seen_messages
+        self.assertEqual(len(expected_messages), len(received_messages))
+        for received, expected in zip(received_messages, expected_messages):
+            self.assertEqual(received, expected)
 
     def test_encode_message_framing(self):
         payload = {"type": "request", "seq": 1, "command": "initialize"}
@@ -77,6 +78,6 @@ class TestDAPUtils_DAPConnection(DAPTestCaseBase):
 
     def get_sample_dap_log(self) -> List[dict]:
         message_log = self.getSourcePath("sample_dap_log.json")
-        with open(message_log, "r") as file:
+        with open(message_log, "r", encoding="utf-8") as file:
             raw_events = json.loads(file.read())
         return raw_events

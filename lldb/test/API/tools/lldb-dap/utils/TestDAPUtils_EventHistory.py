@@ -59,7 +59,7 @@ class TestDAPUtils_EventHistory(DAPTestCaseBase):
         self.assertIn("older than last event", str(ctx.exception))
 
     def test_wait_for_X_event_on_history_closed(self):
-        """Tests `wait_for_first_event`, `wait_for_event` and `wait_for_any_event` when the history is closed.
+        """Tests `wait_for_earliest_event`, `wait_for_event` and `wait_for_any_event` when the history is closed.
 
         It should return a DAPError (HistoryClosed) instead of waiting for new events if the
         history is closed and the requested event does not already exist in the history.
@@ -245,7 +245,7 @@ class TestDAPUtils_EventHistory(DAPTestCaseBase):
 
     def populate_history(self, history: EventHistory):
         message_log = self.getSourcePath("sample_dap_log.json")
-        with open(message_log, "r") as file:
+        with open(message_log, "r", encoding="utf-8") as file:
             raw_events = json.loads(file.read())
 
         for raw_event in raw_events:
