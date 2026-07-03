@@ -17666,7 +17666,8 @@ static SDValue combineZextSetccWithZero(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
-// Combine XOR patterns with SELECT_CC_I4/I8, for Example:
+// Turn xor (a != 0), (b != 0) into xor (a == 0), (b == 0)
+// We can lower the former without introducing more xors
 static SDValue combineXorOfSetCC(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI) {
   SelectionDAG &DAG = DCI.DAG;
@@ -17704,6 +17705,7 @@ static SDValue combineXorOfSetCC(SDNode *N,
   return SDValue();
 }
 
+// Combine XOR patterns with SELECT_CC_I4/I8, for Example:
 // 1. XOR(SELECT_CC_I4(cond, 1, 0, cc), 1) -> SELECT_CC_I4(cond, 0, 1, cc)
 // 2. XOR(ZEXT(SELECT_CC_I4(cond, 1, 0, cc)), 1) -> SELECT_CC_I4/I8(cond, 0,
 // 1, cc))
