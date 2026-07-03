@@ -1370,6 +1370,53 @@ FalseView binary_conditional_folded_false(FalseView fb) {
   return FalseView(local) ?: fb;  // no-warning (result is always fb)
 }
 
+// Unary plus on a pointer is the identity, so the result carries the operand's
+// loans.
+namespace unary_plus {
+void use(int *p);
+
+void borrow_of_local() {
+  int *p;
+  {
+    int local = 0;
+    p = +&local; // expected-warning {{local variable 'local' does not live long enough}}
+  }              // expected-note {{local variable 'local' is destroyed here}}
+  use(p);        // expected-note {{later used here}}
+}
+
+int *return_borrow_of_local() {
+  int local = 0;
+  return +&local; // expected-warning {{stack memory associated with local variable 'local' is returned}}
+                  // expected-note@-1 {{returned here}}
+}
+
+// A pointer glvalue operand forwards its loan too.
+void forward_pointer_value() {
+  int *p;
+  {
+    int local = 0;
+    int *q = &local; // expected-warning {{local variable 'local' does not live long enough}}
+    p = +q;          // expected-note {{local variable 'q' aliases the storage of local variable 'local'}}
+  }                  // expected-note {{local variable 'local' is destroyed here}}
+  use(p);            // expected-note {{later used here}}
+}
+
+// Negative: a long-lived borrow stays silent.
+void ok() {
+  static int s;
+  int *p = +&s;
+  use(p); // no-warning
+}
+
+// Multi-level: the deeper origin flows through unary plus too.
+int **return_multilevel() {
+  int a = 1;
+  int *b = &a;   // expected-warning {{stack memory associated with local variable 'a' is returned}}
+  int **c = +&b; // expected-warning {{stack memory associated with local variable 'b' is returned}}
+  return c;      // expected-note 2 {{returned here}}
+}
+} // namespace unary_plus
+
 // FIXME: Diagnostic output does not handle ParenExpr correctly, causing alias
 // information to be missed (local variable 'p' aliases the storage of local variable 'b').
 void simpleparen() {

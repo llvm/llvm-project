@@ -2083,8 +2083,9 @@ LogicalResult spirv::SpecConstantOperationOp::verifyRegions() {
     return emitOpError("invalid enclosed op");
 
   for (auto operand : enclosedOp.getOperands())
-    if (!isa<spirv::ConstantOp, spirv::ReferenceOfOp,
-             spirv::SpecConstantOperationOp>(operand.getDefiningOp()))
+    if (!isa_and_present<spirv::ConstantOp, spirv::ReferenceOfOp,
+                         spirv::SpecConstantOperationOp>(
+            operand.getDefiningOp()))
       return emitOpError(
           "invalid operand, must be defined by a constant operation");
 
