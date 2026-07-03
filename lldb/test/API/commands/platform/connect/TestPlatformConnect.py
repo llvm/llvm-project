@@ -1,4 +1,3 @@
-import socket
 import gdbremote_testcase
 import lldbgdbserverutils
 from lldbsuite.test.decorators import *
@@ -26,29 +25,11 @@ class TestPlatformProcessConnect(TestBase):
     def test_platform_process_connect(self):
         self.build()
 
-        hostname = socket.getaddrinfo("localhost", 0, proto=socket.IPPROTO_TCP)[0][4][0]
-        listen_url = "[%s]:0" % hostname
-
-        port_file = self.getBuildArtifact("port")
-        commandline_args = [
-            "platform",
-            "--listen",
-            listen_url,
-            "--socket-file",
-            port_file,
-            "--",
-            self.getBuildArtifact("a.out"),
-            "foo",
-        ]
-        self.spawnSubprocess(lldbgdbserverutils.get_lldb_server_exe(), commandline_args)
-
-        socket_id = lldbutil.wait_for_file_on_target(self, port_file)
-
-        new_platform = lldb.SBPlatform("remote-" + self.getPlatform())
-        self.dbg.SetSelectedPlatform(new_platform)
-
-        connect_url = "connect://[%s]:%s" % (hostname, socket_id)
-        self.runCmd("platform connect %s" % connect_url)
+        lldbutil.connect_to_new_remote_platform(
+            self,
+            lldbgdbserverutils.get_lldb_server_exe(),
+            extra_args=["--", self.getBuildArtifact("a.out"), "foo"],
+        )
 
         lldbutil.run_break_set_by_symbol(self, "main")
         process = self.process()
