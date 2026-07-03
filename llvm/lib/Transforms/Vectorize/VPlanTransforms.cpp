@@ -5344,7 +5344,7 @@ void VPlanTransforms::materializeConstantVectorTripCount(
   // TODO: Compute vector trip counts for loops requiring a scalar epilogue and
   // tail-folded loops.
   ScalarEvolution &SE = *PSE.getSE();
-  auto *TCScev = SE.getSCEV(TC->getLiveInIRValue());
+  const SCEV *TCScev = SE.getSCEV(TC->getLiveInIRValue());
   if (!isa<SCEVConstant>(TCScev))
     return;
   const SCEV *VFxUF = SE.getElementCount(TCScev->getType(), BestVF * BestUF);

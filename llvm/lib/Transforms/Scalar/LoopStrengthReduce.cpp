@@ -5961,9 +5961,8 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
   }
 
   // Emit instructions summing all the operands.
-  const SCEV *FullS = Ops.empty() ?
-                      SE.getConstant(IntTy, 0) :
-                      SE.getAddExpr(Ops);
+  const SCEV *FullS =
+      Ops.empty() ? SE.getConstant(IntTy, 0) : SE.getAddExpr(Ops).getPointer();
   Value *FullV = Rewriter.expandCodeFor(FullS, Ty);
 
   // We're done expanding now, so reset the rewriter.
