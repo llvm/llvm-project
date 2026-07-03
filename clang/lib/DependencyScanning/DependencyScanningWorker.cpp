@@ -9,8 +9,10 @@
 #include "clang/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/DependencyScanning/CompilerInstanceWithContext.h"
 #include "clang/DependencyScanning/DependencyConsumer.h"
 #include "clang/DependencyScanning/DependencyScannerImpl.h"
+#include "clang/DependencyScanning/DependencyScanningUtils.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -42,20 +44,6 @@ DependencyScanningWorker::DependencyScanningWorker(
 
 DependencyScanningWorker::~DependencyScanningWorker() = default;
 
-static bool createAndRunToolInvocation(
-    ArrayRef<std::string> CommandLine, DependencyScanningAction &Action,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
-    std::shared_ptr<clang::PCHContainerOperations> &PCHContainerOps,
-    DiagnosticsEngine &Diags) {
-  auto Invocation = createCompilerInvocation(CommandLine, Diags);
-  if (!Invocation)
-    return false;
-
-  return Action.runInvocation(CommandLine[0], std::move(Invocation),
-                              std::move(FS), PCHContainerOps,
-                              Diags.getClient());
-}
-
 IntrusiveRefCntPtr<llvm::vfs::FileSystem>
 DependencyScanningWorker::makeEffectiveVFS(
     StringRef WorkingDirectory,
@@ -71,6 +59,35 @@ DependencyScanningWorker::makeEffectiveVFS(
   return FS;
 }
 
+bool DependencyScanningWorker::computeDependenciesByNameWithDrain(
+    StringRef CWD, ArrayRef<std::string> CC1CommandLine,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS,
+    DiagnosticConsumer &DiagConsumer, DependencyActionController &Controller,
+    const llvm::DenseSet<ModuleID> &AlreadySeen,
+    llvm::function_ref<std::optional<std::string>()> getNextInput,
+    llvm::function_ref<void(StringRef, std::optional<TranslationUnitDeps>)>
+        deliverResult) {
+  auto FS = makeEffectiveVFS(CWD, OverlayFS);
+  auto DiagEngine = std::make_unique<DiagnosticsEngineWithDiagOpts>(
+      CC1CommandLine, FS, DiagConsumer);
+
+  std::optional<CompilerInstanceWithContext> CIWC =
+      CompilerInstanceWithContext::initializeFromCC1Commandline(
+          *this, CWD, CC1CommandLine, std::move(DiagEngine),
+          std::move(OverlayFS), Controller);
+  if (!CIWC)
+    return false;
+
+  while (std::optional<std::string> NextInput = getNextInput()) {
+    FullDependencyConsumer Consumer(AlreadySeen);
+    if (CIWC->computeDependencies(*NextInput, Consumer, Controller))
+      deliverResult(*NextInput, Consumer.takeTranslationUnitDeps());
+    else
+      deliverResult(*NextInput, std::nullopt);
+  }
+  return true;
+}
+
 bool DependencyScanningWorker::computeDependencies(
     StringRef WorkingDirectory, ArrayRef<ArrayRef<std::string>> CommandLines,
     DependencyConsumer &DepConsumer, DependencyActionController &Controller,
@@ -78,9 +95,10 @@ bool DependencyScanningWorker::computeDependencies(
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS) {
   auto FS = makeEffectiveVFS(WorkingDirectory, std::move(OverlayFS));
 
-  DependencyScanningAction Action(Service, WorkingDirectory, DepConsumer,
-                                  Controller, DepFS);
+  bool Scanned = false;
+  std::shared_ptr<ModuleDepCollector> MDC;
 
+  std::optional<CompilerInstanceWithContext> CIWC;
   const bool Success = llvm::all_of(CommandLines, [&](const auto &Cmd) {
     if (StringRef(Cmd[1]) != "-cc1") {
       // Non-clang command. Just pass through to the dependency consumer.
@@ -90,14 +108,29 @@ bool DependencyScanningWorker::computeDependencies(
     }
 
     auto DiagEngineWithDiagOpts =
-        DiagnosticsEngineWithDiagOpts(Cmd, FS, DiagConsumer);
-    auto &Diags = *DiagEngineWithDiagOpts.DiagEngine;
+        std::make_unique<DiagnosticsEngineWithDiagOpts>(Cmd, FS, DiagConsumer);
+    if (!Scanned) {
+      Scanned = true;
+      auto Result = CompilerInstanceWithContext::initializeFromCC1Commandline(
+          *this, WorkingDirectory, Cmd, std::move(DiagEngineWithDiagOpts),
+          OverlayFS, Controller);
+      if (!Result)
+        return false;
+      CIWC.emplace(std::move(*Result));
+      MDC = CIWC->scanTranslationUnit(DepConsumer, Controller);
+      return MDC != nullptr;
+    }
 
-    // Create an invocation that uses the underlying file system to ensure that
-    // any file system requests that are made by the driver do not go through
-    // the dependency scanning filesystem.
-    return createAndRunToolInvocation(Cmd, Action, FS, PCHContainerOps, Diags);
+    auto Invocation =
+        createCompilerInvocation(Cmd, *DiagEngineWithDiagOpts->DiagEngine);
+
+    if (!Invocation)
+      return false;
+
+    assert(CIWC && "Must have an initialized CIWC");
+    return CIWC->applyAndReport(*MDC, *Invocation, DepConsumer, Controller,
+                                Cmd.front());
   });
 
-  return Success && Action.hasScanned();
+  return Success && Scanned;
 }

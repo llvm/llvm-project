@@ -27,14 +27,11 @@ namespace clang {
 
 class DependencyOutputOptions;
 
-namespace tooling {
-class CompilerInstanceWithContext;
-}
-
 namespace dependencies {
 
 class DependencyConsumer;
 class DependencyScanningWorkerFilesystem;
+class CompilerInstanceWithContext;
 
 /// An individual dependency scanning worker that is able to run on its own
 /// thread.
@@ -63,6 +60,23 @@ public:
       DiagnosticConsumer &DiagConsumer,
       IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS = nullptr);
 
+  /// Drain-style by-name scanning over a single cc1 command line. Builds a
+  /// scanning session local to this call, then pulls module names from
+  /// \p getNextInput and delivers each module's dependencies to
+  /// \p deliverResult (std::nullopt on scan failure) until \p getNextInput
+  /// returns std::nullopt. Diagnostics flow to \p DiagConsumer.
+  /// \returns false if session setup failed, true otherwise.
+  bool computeDependenciesByNameWithDrain(
+      StringRef CWD, ArrayRef<std::string> CC1CommandLine,
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS,
+      DiagnosticConsumer &DiagConsumer,
+      dependencies::DependencyActionController &Controller,
+      const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
+      llvm::function_ref<std::optional<std::string>()> getNextInput,
+      llvm::function_ref<void(StringRef,
+                              std::optional<dependencies::TranslationUnitDeps>)>
+          deliverResult);
+
   /// Creates the effective VFS that will be used for the scan.
   ///
   /// If provided, OverlayFS will be overlaid on top of the Worker's dependency
@@ -88,7 +102,7 @@ private:
   /// The tracing VFS overlaid on top of the base VFS.
   IntrusiveRefCntPtr<llvm::vfs::TracingFileSystem> TracingFS;
 
-  friend tooling::CompilerInstanceWithContext;
+  friend class CompilerInstanceWithContext;
 };
 } // end namespace dependencies
 } // end namespace clang

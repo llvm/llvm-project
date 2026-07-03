@@ -659,16 +659,6 @@ static bool handleModuleResult(StringRef ModuleName,
   return false;
 }
 
-static void handleErrorWithInfoString(StringRef Info, llvm::Error E,
-                                      SharedStream &OS, SharedStream &Errs) {
-  llvm::handleAllErrors(std::move(E), [&Info, &Errs](llvm::StringError &Err) {
-    Errs.applyLocked([&](raw_ostream &OS) {
-      OS << "Error: " << Info << ":\n";
-      OS << Err.getMessage();
-    });
-  });
-}
-
 class P1689Deps {
 public:
   void printDependencies(raw_ostream &OS) {
@@ -1115,24 +1105,30 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
                                  LocalIndex, DependencyOS, Errs))
             HadErrors = true;
         } else {
-          auto CIWithCtx = CompilerInstanceWithContext::initializeOrError(
-              WorkerTool, CWD, Input->CommandLine, Controller);
-          if (llvm::Error Err = CIWithCtx.takeError()) {
-            handleErrorWithInfoString(
-                "Compiler instance with context setup error", std::move(Err),
-                DependencyOS, Errs);
-            HadErrors = true;
-            continue;
-          }
-
-          for (auto N : Names) {
-            auto MaybeModuleDepsGraph =
-                CIWithCtx->computeDependenciesByNameOrError(
-                    N, AlreadySeenModules, Controller);
-            if (handleModuleResult(N, MaybeModuleDepsGraph, *FD, LocalIndex,
-                                   DependencyOS, Errs)) {
+          unsigned NameIdx = 0;
+          auto getNextName = [&]() -> std::optional<std::string> {
+            if (NameIdx < Names.size())
+              return Names[NameIdx++].str();
+            return std::nullopt;
+          };
+          auto deliverResult = [&](StringRef Name,
+                                   std::optional<TranslationUnitDeps> Result) {
+            llvm::Expected<TranslationUnitDeps> MaybeTUDeps =
+                Result ? llvm::Expected<TranslationUnitDeps>(std::move(*Result))
+                       : llvm::Expected<TranslationUnitDeps>(
+                             llvm::make_error<llvm::StringError>(
+                                 S, llvm::inconvertibleErrorCode()));
+            if (handleModuleResult(Name, MaybeTUDeps, *FD, LocalIndex,
+                                   DependencyOS, Errs))
               HadErrors = true;
-            }
+            S.clear();
+          };
+
+          if (!WorkerTool.computeDependenciesByNameWithDrain(
+                  CWD, Input->CommandLine, DiagConsumer, Controller,
+                  AlreadySeenModules, getNextName, deliverResult)) {
+            handleDiagnostics(Filename, S, Errs);
+            HadErrors = true;
           }
         }
       } else {
