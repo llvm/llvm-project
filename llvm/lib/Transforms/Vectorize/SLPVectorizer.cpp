@@ -418,6 +418,34 @@ static void transformScalarShuffleIndiciesToVector(unsigned VecTyNumElements,
   Mask.swap(NewMask);
 }
 
+// Check if all the 0th/1st operands of all the shufflevectors are identical
+// respectively. This corresponds to pattern B from the paper Revec: Program
+// Rejuvenation through Revectorization” by Charith Mendis et al.
+// e.g.
+// %0 = shufflevector <2 x i32> %1, <2 x i32> %2,
+//   <4 x i32> <i32 0, i32 1, i32 1, i32 3>
+// %1 = shufflevector <2 x i32> %1, <2 x i32> %2,
+//   <4 x i32> <i32 1, i32 2, i32 1, i32 0>
+// %2 = shufflevector <2 x i32> %1, <2 x i32> %2,
+//   <4 x i32> <i32 2, i32 3, i32 2, i32 0>
+// %3 = shufflevector <2 x i32> %1, <2 x i32> %2,
+//   <4 x i32> <i32 3, i32 0, i32 2, i32 2>
+// Here, all the shuffles have the same 0th operand and have the same 1st
+// operand.
+static bool isPermuteOfIdenticalShuffleOperands(ArrayRef<Value *> VL) {
+  if (VL.empty())
+    return false;
+  assert(all_of(VL, IsaPred<ShuffleVectorInst>) &&
+         "All the instructions should be shufflevector.");
+  auto *SV0 = cast<ShuffleVectorInst>(VL.front());
+  Value *Op0 = SV0->getOperand(0);
+  Value *Op1 = SV0->getOperand(1);
+  return all_of(VL.drop_front(), [Op0, Op1](Value *V) {
+    auto *SV = cast<ShuffleVectorInst>(V);
+    return SV->getOperand(0) == Op0 && SV->getOperand(1) == Op1;
+  });
+}
+
 /// \returns the number of groups of shufflevector
 /// A group has the following features
 /// 1. All of value in a group are shufflevector.
@@ -483,7 +511,8 @@ static unsigned getShufflevectorNumGroups(ArrayRef<Value *> VL) {
 }
 
 /// \returns a shufflevector mask which is used to vectorize shufflevectors
-/// e.g.,
+/// e.g.
+/// if getShufflevectorNumGroups() returns more than 0 groups,
 /// %5 = shufflevector <8 x i16> %3, <8 x i16> poison,
 ///    <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 /// %6 = shufflevector <8 x i16> %3, <8 x i16> poison,
@@ -494,8 +523,14 @@ static unsigned getShufflevectorNumGroups(ArrayRef<Value *> VL) {
 ///    <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 /// the result is
 /// <0, 1, 2, 3, 12, 13, 14, 15, 16, 17, 18, 19, 28, 29, 30, 31>
+///
+/// If isPermuteOfIdenticalShuffleOperands() returns true, result is
+/// concatenation of all the masks.
 static SmallVector<int> calculateShufflevectorMask(ArrayRef<Value *> VL) {
-  assert(getShufflevectorNumGroups(VL) && "Not supported shufflevector usage.");
+  unsigned ShufflevectorNumGroups = getShufflevectorNumGroups(VL);
+  bool IsIdenticalShuffleOpPermute = isPermuteOfIdenticalShuffleOperands(VL);
+  assert((ShufflevectorNumGroups || IsIdenticalShuffleOpPermute) &&
+         "Not supported shufflevector usage.");
   auto *SV = cast<ShuffleVectorInst>(VL.front());
   unsigned SVNumElements =
       cast<FixedVectorType>(SV->getOperand(0)->getType())->getNumElements();
@@ -503,9 +538,11 @@ static SmallVector<int> calculateShufflevectorMask(ArrayRef<Value *> VL) {
   unsigned AccumulateLength = 0;
   for (Value *V : VL) {
     auto *SV = cast<ShuffleVectorInst>(V);
-    for (int M : SV->getShuffleMask())
-      Mask.push_back(M == PoisonMaskElem ? PoisonMaskElem
-                                         : AccumulateLength + M);
+    for (int M : SV->getShuffleMask()) {
+      unsigned InitialOffset =
+          IsIdenticalShuffleOpPermute ? 0 : AccumulateLength;
+      Mask.push_back(M == PoisonMaskElem ? PoisonMaskElem : InitialOffset + M);
+    }
     AccumulateLength += SVNumElements;
   }
   return Mask;
@@ -11353,7 +11390,8 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
   case Instruction::ShuffleVector: {
     if (!S.isAltShuffle()) {
       // REVEC can support non alternate shuffle.
-      if (SLPReVec && getShufflevectorNumGroups(VL))
+      if (SLPReVec && (getShufflevectorNumGroups(VL) ||
+                       isPermuteOfIdenticalShuffleOperands(VL)))
         return TreeEntry::Vectorize;
       // If this is not an alternate sequence of opcode like add-sub
       // then do not vectorize this instruction.
@@ -13627,14 +13665,17 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
         Operands[1] = Ops.getVL(1);
       }
       TE->setOperands(Operands);
+      if (SLPReVec && !S.isAltShuffle() &&
+          isPermuteOfIdenticalShuffleOperands(VL))
+        return;
       for (unsigned I : seq<unsigned>(VL0->getNumOperands()))
         buildTreeRec(TE->getOperand(I), Depth + 1, {TE, I});
       return;
     }
     default:
       break;
-  }
-  llvm_unreachable("Unexpected vectorization of the instructions.");
+    }
+    llvm_unreachable("Unexpected vectorization of the instructions.");
 }
 
 unsigned BoUpSLP::canMapToVector(Type *T) const {
@@ -18226,36 +18267,49 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           GetScalarCost, [&](InstructionCost) -> InstructionCost {
             // If a group uses mask in order, the shufflevector can be
             // eliminated by instcombine. Then the cost is 0.
-            assert(isa<ShuffleVectorInst>(VL.front()) &&
-                   "Not supported shufflevector usage.");
-            auto *SV = cast<ShuffleVectorInst>(VL.front());
-            unsigned SVNumElements =
-                cast<FixedVectorType>(SV->getOperand(0)->getType())
-                    ->getNumElements();
-            unsigned GroupSize = SVNumElements / SV->getShuffleMask().size();
-            for (size_t I = 0, End = VL.size(); I != End; I += GroupSize) {
-              ArrayRef<Value *> Group = VL.slice(I, GroupSize);
-              int NextIndex = 0;
-              if (!all_of(Group, [&](Value *V) {
-                    assert(isa<ShuffleVectorInst>(V) &&
-                           "Not supported shufflevector usage.");
-                    auto *SV = cast<ShuffleVectorInst>(V);
-                    int Index;
-                    [[maybe_unused]] bool IsExtractSubvectorMask =
-                        SV->isExtractSubvectorMask(Index);
-                    assert(IsExtractSubvectorMask &&
-                           "Not supported shufflevector usage.");
-                    if (NextIndex != Index)
-                      return false;
-                    NextIndex += SV->getShuffleMask().size();
-                    return true;
-                  }))
-                return ::getShuffleCost(
-                    *TTI, TargetTransformInfo::SK_PermuteSingleSrc,
-                    cast<VectorType>(VecTy),
-                    calculateShufflevectorMask(E->Scalars));
+            bool IsIdenticalShuffleOpPermute =
+                isPermuteOfIdenticalShuffleOperands(VL);
+            unsigned ShufflevectorNumGroups =
+                IsIdenticalShuffleOpPermute ? 0 : getShufflevectorNumGroups(VL);
+            InstructionCost Cost = InstructionCost::getInvalid();
+            if (IsIdenticalShuffleOpPermute) {
+              Cost =
+                  ::getShuffleCost(*TTI, TargetTransformInfo::SK_PermuteTwoSrc,
+                                   cast<VectorType>(VecTy),
+                                   calculateShufflevectorMask(E->Scalars));
+            } else if (ShufflevectorNumGroups) {
+              assert(isa<ShuffleVectorInst>(VL.front()) &&
+                     "Not supported shufflevector usage.");
+              auto *SV = cast<ShuffleVectorInst>(VL.front());
+              unsigned SVNumElements =
+                  cast<FixedVectorType>(SV->getOperand(0)->getType())
+                      ->getNumElements();
+              unsigned GroupSize = SVNumElements / SV->getShuffleMask().size();
+              for (size_t I = 0, End = VL.size(); I != End; I += GroupSize) {
+                ArrayRef<Value *> Group = VL.slice(I, GroupSize);
+                int NextIndex = 0;
+                if (!all_of(Group, [&](Value *V) {
+                      assert(isa<ShuffleVectorInst>(V) &&
+                             "Not supported shufflevector usage.");
+                      auto *SV = cast<ShuffleVectorInst>(V);
+                      int Index;
+                      [[maybe_unused]] bool IsExtractSubvectorMask =
+                          SV->isExtractSubvectorMask(Index);
+                      assert(IsExtractSubvectorMask &&
+                             "Not supported shufflevector usage.");
+                      if (NextIndex != Index)
+                        return false;
+                      NextIndex += SV->getShuffleMask().size();
+                      return true;
+                    }))
+                  Cost = ::getShuffleCost(
+                      *TTI, TargetTransformInfo::SK_PermuteSingleSrc,
+                      cast<VectorType>(VecTy),
+                      calculateShufflevectorMask(E->Scalars));
+              }
+              Cost = TTI::TCC_Free;
             }
-            return TTI::TCC_Free;
+            return Cost;
           });
     return GetCostDiff(GetScalarCost, GetVectorCost);
   }
@@ -18326,19 +18380,28 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
   if (!DebugCounter::shouldExecute(VectorizedGraphs))
     return true;
 
-  // If we are revectorizing reduction, it may result in same reduction pattern
-  // with shuffles as leaves of the reduction. Prevent SLP from revectorizing
-  // that shuffle pattern.
-  if (SLPReVec && ForReduction && VectorizableTree.size() == 3 &&
+  if (SLPReVec && ForReduction &&
       VectorizableTree[0]->State == TreeEntry::Vectorize &&
-      VectorizableTree[0]->getOpcode() == Instruction::ShuffleVector &&
-      VectorizableTree[1]->isGather() &&
-      isSplat(VectorizableTree[1]->Scalars) &&
-      VectorizableTree[2]->isGather() &&
-      allConstant(VectorizableTree[2]->Scalars)) {
-    LLVM_DEBUG(dbgs() << "SLP: Rejecting reduction tree with 3 nodes(shuffle "
-                         "as root and remaining are gather nodes).\n");
-    return true;
+      VectorizableTree[0]->getOpcode() == Instruction::ShuffleVector) {
+    // If we are revectorizing reduction, it may result in same reduction
+    // pattern with shuffles as leaves of the reduction. Prevent SLP from
+    // revectorizing that shuffle pattern.
+    if (VectorizableTree.size() == 3 && VectorizableTree[1]->isGather() &&
+        isSplat(VectorizableTree[1]->Scalars) &&
+        VectorizableTree[2]->isGather() &&
+        allConstant(VectorizableTree[2]->Scalars)) {
+      LLVM_DEBUG(dbgs() << "SLP: Rejecting reduction tree with 3 nodes(shuffle "
+                           "as root and remaining are gather nodes).\n");
+      return true;
+    }
+    // Some shuffle patterns(like isPermuteOfIdenticalShuffleOperands) can yeild
+    // trees with only one node.
+    if (VectorizableTree.size() == 1) {
+      LLVM_DEBUG(
+          dbgs()
+          << "SLP: Rejecting reduction tree with 1 node(shuffle as root).\n");
+      return true;
+    }
   }
 
   // Graph is empty - do nothing.
@@ -24315,20 +24378,26 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       return V;
     }
     case Instruction::ShuffleVector: {
-      Value *V;
+      Value *V = nullptr;
       if (SLPReVec && !E->isAltShuffle()) {
         setInsertPointAfterBundle(E);
-        Value *Src = vectorizeOperand(E, 0);
         SmallVector<int> ThisMask(calculateShufflevectorMask(E->Scalars));
-        if (auto *SVSrc = dyn_cast<ShuffleVectorInst>(Src)) {
-          SmallVector<int> NewMask(ThisMask.size());
-          transform(ThisMask, NewMask.begin(), [&SVSrc](int Mask) {
-            return SVSrc->getShuffleMask()[Mask];
-          });
-          V = Builder.CreateShuffleVector(SVSrc->getOperand(0),
-                                          SVSrc->getOperand(1), NewMask);
-        } else {
-          V = Builder.CreateShuffleVector(Src, ThisMask);
+        if (isPermuteOfIdenticalShuffleOperands(E->Scalars)) {
+          auto *VL0 = cast<ShuffleVectorInst>(E->Scalars.front());
+          V = Builder.CreateShuffleVector(VL0->getOperand(0),
+                                          VL0->getOperand(1), ThisMask);
+        } else if (getShufflevectorNumGroups(E->Scalars)) {
+          Value *Src = vectorizeOperand(E, 0);
+          if (auto *SVSrc = dyn_cast<ShuffleVectorInst>(Src)) {
+            SmallVector<int> NewMask(ThisMask.size());
+            transform(ThisMask, NewMask.begin(), [&SVSrc](int Mask) {
+              return SVSrc->getShuffleMask()[Mask];
+            });
+            V = Builder.CreateShuffleVector(SVSrc->getOperand(0),
+                                            SVSrc->getOperand(1), NewMask);
+          } else {
+            V = Builder.CreateShuffleVector(Src, ThisMask);
+          }
         }
         V = PropagateIRFlags(V);
         V = FinalShuffle(V, E);
