@@ -80,8 +80,8 @@ private:
 
   // on_device may reach this pass under different symbol names depending on how
   // it was declared and when the pass runs: its bind(c) name ("on_device"), its
-  // Fortran internal name ("_QPon_device"), or its externally-mangled name after
-  // external-name conversion ("on_device_").
+  // Fortran internal name ("_QPon_device"), or its externally-mangled name
+  // after external-name conversion ("on_device_").
   const llvm::StringMap<genFunctionType> genMappings_ = {
       {"on_device", &genOnDevice},
       {"_QPon_device", &genOnDevice},
