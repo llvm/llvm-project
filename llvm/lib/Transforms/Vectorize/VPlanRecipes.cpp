@@ -1283,8 +1283,7 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
       const auto [Op2VK, Op2VP] = Ctx.getOperandInfo(Op1);
 
       SmallVector<const Value *, 2> Operands;
-      if (SI && all_of(operands(),
-                       [](VPValue *Op) { return Op->getUnderlyingValue(); }))
+      if (SI)
         append_range(Operands, SI->operands());
       return Ctx.TTI.getArithmeticInstrCost(
           IsLogicalOr ? Instruction::Or : Instruction::And, ResultTy,
