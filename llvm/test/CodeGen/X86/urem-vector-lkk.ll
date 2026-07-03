@@ -248,9 +248,9 @@ define <4 x i16> @dont_fold_urem_i16_smax(<4 x i16> %x) {
   ret <4 x i16> %1
 }
 
-; Don't fold i64 urem.
-define <4 x i64> @dont_fold_urem_i64(<4 x i64> %x) {
-; SSE2-LABEL: dont_fold_urem_i64:
+; Fold i64 urem.
+define <4 x i64> @fold_urem_i64(<4 x i64> %x) {
+; SSE2-LABEL: fold_urem_i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm1, %xmm2
 ; SSE2-NEXT:    movq %xmm1, %rcx
@@ -290,7 +290,7 @@ define <4 x i64> @dont_fold_urem_i64(<4 x i64> %x) {
 ; SSE2-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]
 ; SSE2-NEXT:    retq
 ;
-; SSE4-LABEL: dont_fold_urem_i64:
+; SSE4-LABEL: fold_urem_i64:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    movq %xmm1, %rcx
 ; SSE4-NEXT:    movabsq $7218291159277650633, %rdx # imm = 0x642C8590B21642C9
@@ -328,7 +328,7 @@ define <4 x i64> @dont_fold_urem_i64(<4 x i64> %x) {
 ; SSE4-NEXT:    movdqa %xmm2, %xmm1
 ; SSE4-NEXT:    retq
 ;
-; AVX1-LABEL: dont_fold_urem_i64:
+; AVX1-LABEL: fold_urem_i64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX1-NEXT:    vmovq %xmm1, %rcx
@@ -367,7 +367,7 @@ define <4 x i64> @dont_fold_urem_i64(<4 x i64> %x) {
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: dont_fold_urem_i64:
+; AVX2-LABEL: fold_urem_i64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsrlvq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1
 ; AVX2-NEXT:    vpsrlq $32, %ymm1, %ymm2
@@ -405,7 +405,7 @@ define <4 x i64> @dont_fold_urem_i64(<4 x i64> %x) {
 ; AVX2-NEXT:    vpsubq %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
-; AVX512-LABEL: dont_fold_urem_i64:
+; AVX512-LABEL: fold_urem_i64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpsrlvq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1
 ; AVX512-NEXT:    vpsrlq $32, %ymm1, %ymm2
