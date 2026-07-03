@@ -6,6 +6,8 @@
 // evaluation kind, so the argument is a scalar value with no source storage
 // to forward, regardless of value category. Such a call is rejected rather
 // than routed through a caller-frame temp that dangles past the tail call.
+// This is an implementation limit, not a fundamental one: it could be lifted
+// by storing the value through the incoming parameter's own slot.
 
 typedef _BitInt(256) BI;
 BI cee(BI x);
