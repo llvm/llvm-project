@@ -132,6 +132,22 @@ const API = {
   compare: (before, after) => API.get(`/compare/${encodeURIComponent(before)}/${encodeURIComponent(after)}`),
   inspect: (mode, body) => API.post(`/inspect/${encodeURIComponent(mode)}`, body),
   jobs: () => API.get('/jobs'),
+  async importFile(file, sourceRoot) {
+    let url = `${this.base}/import?filename=${encodeURIComponent(file.name)}`;
+    if (sourceRoot) url += `&source_root=${encodeURIComponent(sourceRoot)}`;
+    try {
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: file,
+      });
+      const j = await r.json();
+      if (j.status === 'error') return { ok: false, error: j.error?.message || 'Import failed', data: null };
+      return { ok: true, data: j.data ?? j, error: null };
+    } catch (e) {
+      return { ok: false, error: e.message, data: null };
+    }
+  },
 };
 
 // --- State ---
@@ -149,6 +165,7 @@ const State = {
     detailOpen: false,
     detailContent: null,
     commandPaletteOpen: false,
+    importModalOpen: false,
   },
   get(key) { return this._data[key]; },
   set(key, value) {

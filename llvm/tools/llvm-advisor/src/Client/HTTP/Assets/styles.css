@@ -254,6 +254,9 @@ ul,ol{list-style:none}
 /* Command Palette */
 .cmd-overlay{position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:1000;display:none;align-items:flex-start;justify-content:center;padding-top:20vh}
 .cmd-overlay.open{display:flex}
+.import-overlay{position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:1000;display:none;align-items:flex-start;justify-content:center;padding-top:18vh}
+.import-overlay.open{display:flex}
+.import-panel{width:440px;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:18px;box-shadow:0 16px 48px rgba(0,0,0,.12)}
 .cmd-box{width:480px;background:var(--bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 16px 48px rgba(0,0,0,.12)}
 .cmd-input{width:100%;padding:16px;font-family:var(--mono);font-size:14px;background:transparent;border-bottom:1px solid var(--border)}
 .cmd-results{max-height:300px;overflow-y:auto}
