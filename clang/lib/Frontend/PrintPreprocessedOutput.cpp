@@ -889,6 +889,24 @@ struct UnknownPragmaHandler : public PragmaHandler {
 };
 } // end anonymous namespace
 
+static void WriteMultilineToken(raw_ostream *OS, const char *TokStr,
+                                unsigned Len) {
+  for (; Len; --Len, ++TokStr) {
+    if (*TokStr != '\n' && *TokStr != '\r') {
+      *OS << *TokStr;
+      continue;
+    }
+
+    *OS << '\n';
+
+    // If we have \n\r or \r\n, skip both and emit one newline.
+    if (Len != 1 && (TokStr[1] == '\n' || TokStr[1] == '\r') &&
+        TokStr[0] != TokStr[1]) {
+      ++TokStr;
+      --Len;
+    }
+  }
+}
 
 static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
                                     PrintPPOutputPPCallbacks *Callbacks) {
@@ -1022,7 +1040,10 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
     } else if (Tok.getLength() < std::size(Buffer)) {
       const char *TokPtr = Buffer;
       unsigned Len = PP.getSpelling(Tok, TokPtr);
-      Callbacks->OS->write(TokPtr, Len);
+      if (Tok.is(tok::comment) || Tok.is(tok::unknown))
+        WriteMultilineToken(Callbacks->OS, TokPtr, Len);
+      else
+        Callbacks->OS->write(TokPtr, Len);
 
       // Tokens that can contain embedded newlines need to adjust our current
       // line number.
@@ -1039,7 +1060,10 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
       }
     } else {
       std::string S = PP.getSpelling(Tok);
-      Callbacks->OS->write(S.data(), S.size());
+      if (Tok.is(tok::comment) || Tok.is(tok::unknown))
+        WriteMultilineToken(Callbacks->OS, S.data(), S.size());
+      else
+        Callbacks->OS->write(S.data(), S.size());
 
       // Tokens that can contain embedded newlines need to adjust our current
       // line number.
