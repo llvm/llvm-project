@@ -24,6 +24,8 @@
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
@@ -2121,6 +2123,101 @@ void VPIRMetadata::print(raw_ostream &O, VPSlotTracker &SlotTracker) const {
 }
 #endif
 
+VPIRAttributes::VPIRAttributes(CallInst &CI, const Function &Variant) {
+  LLVMContext &Ctx = CI.getContext();
+  AttributeList ScalarAttrs = CI.getAttributes();
+  AttributeList VariantAttrs = Variant.getAttributes();
+  FunctionType *VariantTy = Variant.getFunctionType();
+
+  static constexpr Attribute::AttrKind Allowed[] = {
+      Attribute::Alignment, Attribute::NonNull, Attribute::NoFPClass,
+      Attribute::Range};
+
+  // Combine attributes from the Variant declaration and the call site, picking
+  // the stricter one.
+  auto CombineAttrs = [&](Attribute CallAttr,
+                          Attribute VariantAttr) -> Attribute {
+    if (!VariantAttr.isValid())
+      return CallAttr;
+    switch (CallAttr.getKindAsEnum()) {
+    case Attribute::Alignment:
+      return Attribute::getWithAlignment(
+          Ctx, std::max(CallAttr.getAlignment().valueOrOne(),
+                        VariantAttr.getAlignment().valueOrOne()));
+    case Attribute::NoFPClass:
+      return Attribute::getWithNoFPClass(Ctx, CallAttr.getNoFPClass() |
+                                                  VariantAttr.getNoFPClass());
+    case Attribute::Range:
+      return Attribute::get(
+          Ctx, Attribute::Range,
+          CallAttr.getRange().intersectWith(VariantAttr.getRange()));
+    default:
+      // Boolean attributes (e.g. nonnull) carry no value to combine.
+      return CallAttr;
+    }
+  };
+
+  // Only keep allowed attributes (which do not trigger UB) and ones that are
+  // compatible with the widened type of Variant.
+  auto Filter = [&](Type *Ty, AttributeSet CallAS, AttributeSet VariantAS) {
+    AttributeMask Incompatible =
+        AttributeFuncs::typeIncompatible(Ty, CallAS, AttributeFuncs::ASK_ALL);
+    AttrBuilder AB(Ctx);
+    for (Attribute::AttrKind K : Allowed) {
+      if (CallAS.hasAttribute(K) && !Incompatible.contains(K))
+        AB.addAttribute(
+            CombineAttrs(CallAS.getAttribute(K), VariantAS.getAttribute(K)));
+    }
+    return AttributeSet::get(Ctx, AB);
+  };
+
+  AttributeSet RetAttrs;
+  if (!Variant.getReturnType()->isVoidTy())
+    RetAttrs = Filter(Variant.getReturnType(), ScalarAttrs.getRetAttrs(),
+                      VariantAttrs.getRetAttrs());
+
+  SmallVector<AttributeSet> ArgAttrs(VariantTy->getNumParams());
+  for (unsigned I = 0, E = std::min<unsigned>(CI.arg_size(),
+                                              VariantTy->getNumParams());
+       I != E; ++I) {
+    AttributeSet PA = ScalarAttrs.getParamAttrs(I);
+    if (!PA.hasAttributes())
+      continue;
+    ArgAttrs[I] =
+        Filter(VariantTy->getParamType(I), PA, VariantAttrs.getParamAttrs(I));
+  }
+
+  CallAttrs = AttributeList::get(Ctx, AttributeSet(), RetAttrs, ArgAttrs);
+}
+
+void VPIRAttributes::applyAttrs(CallInst &V) const {
+  LLVMContext &Ctx = V.getContext();
+
+  AttributeSet RetAttrs = CallAttrs.getRetAttrs();
+  if (RetAttrs.hasAttributes())
+    V.addRetAttrs(AttrBuilder(Ctx, RetAttrs));
+
+  for (unsigned I = 0, E = V.arg_size(); I != E; ++I) {
+    AttributeSet PA = CallAttrs.getParamAttrs(I);
+    if (PA.hasAttributes())
+      V.addParamAttrs(I, AttrBuilder(Ctx, PA));
+  }
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPIRAttributes::printRetAttrs(raw_ostream &O) const {
+  AttributeSet RetAttrs = CallAttrs.getRetAttrs();
+  if (RetAttrs.hasAttributes())
+    O << " " << RetAttrs.getAsString();
+}
+
+void VPIRAttributes::printParamAttrs(raw_ostream &O, unsigned ArgIdx) const {
+  AttributeSet PA = CallAttrs.getParamAttrs(ArgIdx);
+  if (PA.hasAttributes())
+    O << PA.getAsString() << " ";
+}
+#endif
+
 void VPWidenCallRecipe::execute(VPTransformState &State) {
   assert(State.VF.isVector() && "not widening");
   assert(Variant != nullptr && "Can't create vector function.");
@@ -2149,6 +2246,8 @@ void VPWidenCallRecipe::execute(VPTransformState &State) {
   applyFlags(*V);
   applyMetadata(*V);
   V->setCallingConv(Variant->getCallingConv());
+
+  applyAttrs(*V);
 
   if (!V->getType()->isVoidTy())
     State.set(this, V);
@@ -2195,10 +2294,14 @@ void VPWidenCallRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 
   O << "call";
   printFlags(O);
+  printRetAttrs(O);
   O << " @" << CalledFn->getName() << "(";
-  interleaveComma(args(), O, [&O, &SlotTracker](VPValue *Op) {
-    Op->printAsOperand(O, SlotTracker);
-  });
+  interleaveComma(enumerate(args()), O,
+                  [&O, &SlotTracker, this](const auto &IndexedOp) {
+                    auto [Idx, Op] = IndexedOp;
+                    printParamAttrs(O, Idx);
+                    Op->printAsOperand(O, SlotTracker);
+                  });
   O << ")";
 
   O << " (using library function";

@@ -157,7 +157,7 @@ define void @range_arg_propagated(ptr noalias %src, ptr noalias %out) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @vec_fn_int(<2 x i32> [[WIDE_LOAD]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @vec_fn_int(<2 x i32> range(i32 0, 100) [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[OUT]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
@@ -198,7 +198,7 @@ define void @nofpclass_propagated(ptr noalias %src, ptr noalias %out) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @vec_fn_fp(<2 x float> [[WIDE_LOAD]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call nofpclass(nan) <2 x float> @vec_fn_fp(<2 x float> nofpclass(nan) [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[OUT]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <2 x float> [[TMP1]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
@@ -234,7 +234,7 @@ define void @align_uniform_ptr_propagated(ptr noalias %p, ptr noalias %out) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i32> @vec_fn_uniform_ptr(ptr [[P]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i32> @vec_fn_uniform_ptr(ptr align 16 [[P]])
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -271,7 +271,7 @@ define void @nonnull_uniform_ptr_propagated(ptr noalias %p, ptr noalias %out) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i32> @vec_fn_uniform_ptr(ptr [[P]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i32> @vec_fn_uniform_ptr(ptr nonnull [[P]])
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -353,7 +353,7 @@ define void @range_arg_variant_decl_wins(ptr noalias %src, ptr noalias %out) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @vec_fn_int_variant_attrs(<2 x i32> [[WIDE_LOAD]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @vec_fn_int_variant_attrs(<2 x i32> range(i32 0, 50) [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[OUT]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
@@ -391,7 +391,7 @@ define void @align_uniform_ptr_variant_decl_wins(ptr noalias %p, ptr noalias %ou
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i32> @vec_fn_uniform_ptr_variant_attrs(ptr [[P]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i32> @vec_fn_uniform_ptr_variant_attrs(ptr align 32 [[P]])
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -434,7 +434,7 @@ define void @nofpclass_arg_variant_decl_wins(ptr noalias %src, ptr noalias %out)
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @vec_fn_fp_variant_attrs(<2 x float> [[WIDE_LOAD]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @vec_fn_fp_variant_attrs(<2 x float> nofpclass(nan inf) [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[OUT]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <2 x float> [[TMP1]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
@@ -475,7 +475,7 @@ define void @range_ret_propagated(ptr noalias %src, ptr noalias %out) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @vec_fn_int(<2 x i32> [[WIDE_LOAD]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i32 0, 100) <2 x i32> @vec_fn_int(<2 x i32> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[OUT]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
@@ -516,7 +516,7 @@ define void @align_vec_ptr_propagated(ptr noalias %dst, ptr noalias %out) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr ptr, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x ptr>, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @vec_fn_vec_ptr(<2 x ptr> [[WIDE_LOAD]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @vec_fn_vec_ptr(<2 x ptr> align 16 [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[OUT]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2

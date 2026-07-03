@@ -6,6 +6,9 @@ target triple = "arm64-apple-macosx"
 declare double @acos(double)
 declare <2 x double> @vec_acos(<2 x double>)
 
+declare i64 @bar(i64)
+declare range(i64 0, 60) <2 x i64> @vec_bar(<2 x i64> range(i64 0, 50))
+
 define void @wide_call_attrs(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; CHECK-LABEL: VPlan for loop in 'wide_call_attrs'
 ; CHECK:  VPlan ' for UF>=1' {
@@ -28,7 +31,7 @@ define void @wide_call_attrs(ptr noalias %in.ptr, ptr noalias %out.ptr) {
 ; CHECK-NEXT:      CLONE ir<%in.gep> = getelementptr inbounds ir<%in.ptr>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds ir<%in.gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%in> = load vp<[[VP4]]>
-; CHECK-NEXT:      WIDEN-CALL ir<%call> = call  @acos(ir<%in>) (using library function: vec_acos)
+; CHECK-NEXT:      WIDEN-CALL ir<%call> = call  nofpclass(nan) @acos(nofpclass(inf) ir<%in>) (using library function: vec_acos)
 ; CHECK-NEXT:      CLONE ir<%out.gep> = getelementptr inbounds ir<%out.ptr>, ir<%iv>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%out.gep>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP5]]>, ir<%call>
@@ -61,6 +64,72 @@ loop:
   %call = tail call nofpclass(nan) double @acos(double nofpclass(inf) %in) #0
   %out.gep = getelementptr inbounds double, ptr %out.ptr, i64 %iv
   store double %call, ptr %out.gep, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; The call site carries a propagatable (range) and a non-propagatable
+; (noundef) attribute on both the argument and return. Make sure only the valid
+; attributes are printed.
+define void @wide_call_attrs_filtered_and_combined(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+; CHECK-LABEL: VPlan for loop in 'wide_call_attrs_filtered_and_combined'
+; CHECK:  VPlan ' for UF>=1' {
+; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
+; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
+; CHECK-NEXT:  Live-in ir<1000> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      CLONE ir<%in.gep> = getelementptr inbounds ir<%in.ptr>, ir<%iv>
+; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds ir<%in.gep>, ir<1>
+; CHECK-NEXT:      WIDEN ir<%in> = load vp<[[VP4]]>
+; CHECK-NEXT:      WIDEN-CALL ir<%call> = call  range(i64 0, 60) @bar(range(i64 0, 50) ir<%in>) (using library function: vec_bar)
+; CHECK-NEXT:      CLONE ir<%out.gep> = getelementptr inbounds ir<%out.ptr>, ir<%iv>
+; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%out.gep>, ir<1>
+; CHECK-NEXT:      WIDEN store vp<[[VP5]]>, ir<%call>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+; CHECK-NEXT:      CLONE ir<%exitcond> = icmp eq ir<%iv.next>, ir<1000>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<1000>, vp<[[VP2]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<exit>:
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  scalar.ph:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %in.gep = getelementptr inbounds i64, ptr %in.ptr, i64 %iv
+  %in = load i64, ptr %in.gep, align 8
+  %call = tail call range(i64 0, 100) noundef i64 @bar(i64 range(i64 0, 80) noundef %in) #1
+  %out.gep = getelementptr inbounds i64, ptr %out.ptr, i64 %iv
+  store i64 %call, ptr %out.gep, align 8
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, 1000
   br i1 %exitcond, label %exit, label %loop
@@ -136,3 +205,4 @@ exit:
 }
 
 attributes #0 = { "vector-function-abi-variant"="_ZGVnN2v_acos(vec_acos)" }
+attributes #1 = { "vector-function-abi-variant"="_ZGVnN2v_bar(vec_bar)" }
