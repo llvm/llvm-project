@@ -3764,6 +3764,13 @@ bool Compiler<Emitter>::VisitOffsetOfExpr(const OffsetOfExpr *E) {
         continue;
       }
 
+      if (IndexT == PT_IntAP || IndexT == PT_IntAPS) {
+        if (!this->visit(ArrayIndexExpr))
+          return false;
+        if (!this->emitCastNoOverflow(IndexT, E))
+          return false;
+        continue;
+      }
       if (!this->visit(ArrayIndexExpr))
         return false;
       // Cast to Sint64.

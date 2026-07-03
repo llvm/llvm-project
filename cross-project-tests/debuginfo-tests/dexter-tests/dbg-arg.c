@@ -3,8 +3,8 @@
 //
 // This test case checks debug info during register moves for an argument.
 // RUN: %clang -std=gnu11 -m64 -mllvm -fast-isel=false -g %s -o %t
-// RUN: %dexter --fail-lt 1.0 -w \
-// RUN:     --binary %t %dexter_lldb_args -- %s
+// RUN: %dexter -w --use-script \
+// RUN:     --binary %t %dexter_lldb_args -- %s | FileCheck %s
 //
 // Radar 8412415
 
@@ -22,7 +22,7 @@ int bar(int, int);
 
 int foobar(struct _mtx *mutex) {
   int r = 1;
-  int l = 0; // DexLabel('l_assign')
+  int l = 0; // !dex_label l_assign
   int j = 0;
   do {
     if (mutex->waiters) {
@@ -44,17 +44,13 @@ int main() {
   return foobar(&m);
 }
 
+// CHECK-DAG: total_watched_steps: 1
+// CHECK-DAG: irretrievable_steps: 0
 
 /*
-DexExpectProgramState({
-  'frames': [
-    {
-      'location': { 'lineno': ref('l_assign') },
-      'watches': {
-        '*mutex': { 'is_irretrievable': False }
-      }
-    }
-  ]
-})
+---
+!where {lines: !label l_assign}:
+  !value mutex:
+    "*": "{}"
+...
 */
-
