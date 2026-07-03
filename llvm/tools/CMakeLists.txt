@@ -53,6 +53,17 @@ add_llvm_external_project(mlir)
 # accordingly so place them afterwards
 add_llvm_external_project(clang)
 add_llvm_external_project(flang)
+
+# Begin Swift MOD
+if(LLVM_EXTERNAL_SWIFT_SOURCE_DIR AND "swift" IN_LIST LLVM_EXTERNAL_PROJECTS AND APPLE)
+  if(LLVM_EXTERNAL_CMARK_SOURCE_DIR AND "cmark" IN_LIST LLVM_EXTERNAL_PROJECTS)
+    add_llvm_external_project(cmark)
+  endif()
+
+  include(AddLLVMSwiftDriver)
+endif()
+# End Swift MOD
+
 add_llvm_external_project(lldb)
 add_llvm_external_project(bolt)
 
