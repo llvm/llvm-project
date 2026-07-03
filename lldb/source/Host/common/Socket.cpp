@@ -63,6 +63,14 @@ static bool IsInterrupted() {
 #endif
 }
 
+static bool WouldBlock() {
+#if defined(_WIN32)
+  return ::WSAGetLastError() == WSAEWOULDBLOCK;
+#else
+  return false;
+#endif
+}
+
 SharedSocket::SharedSocket(const Socket *socket, Status &error) {
 #ifdef _WIN32
   m_socket = socket->GetNativeSocket();
@@ -330,7 +338,7 @@ Status Socket::Read(void *buf, size_t &num_bytes) {
   int bytes_received = 0;
   do {
     bytes_received = ::recv(m_socket, static_cast<char *>(buf), num_bytes, 0);
-  } while (bytes_received < 0 && IsInterrupted());
+  } while (bytes_received < 0 && (IsInterrupted() || WouldBlock()));
 
   if (bytes_received < 0) {
     SetLastError(error);
