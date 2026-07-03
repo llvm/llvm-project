@@ -15,6 +15,7 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCGOFFAttributes.h"
 #include "llvm/MC/MCGOFFObjectWriter.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/MC/MCValue.h"
@@ -687,6 +688,12 @@ GOFFObjectWriter::GOFFObjectWriter(
     : TargetObjectWriter(std::move(MOTW)), OS(OS) {}
 
 GOFFObjectWriter::~GOFFObjectWriter() = default;
+
+void GOFFObjectWriter::reset() {
+  Relocations.clear();
+  RootSD = nullptr;
+  MCObjectWriter::reset();
+}
 
 void GOFFObjectWriter::recordRelocation(const MCFragment &F,
                                         const MCFixup &Fixup, MCValue Target,

@@ -179,11 +179,11 @@ define void @fp2ui_v2f16_v2i64(ptr %x, ptr %y) {
 define void @fp2si_v2f64_v2i8(ptr %x, ptr %y) {
 ; CHECK-LABEL: fp2si_v2f64_v2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vmfne.vv v0, v8, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfncvt.rtz.x.f.w v9, v8
+; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vnclip.wi v8, v9, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
@@ -200,11 +200,11 @@ define void @fp2si_v2f64_v2i8(ptr %x, ptr %y) {
 define void @fp2ui_v2f64_v2i8(ptr %x, ptr %y) {
 ; CHECK-LABEL: fp2ui_v2f64_v2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vmfne.vv v0, v8, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfncvt.rtz.xu.f.w v9, v8
+; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vnclipu.wi v8, v9, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
@@ -222,11 +222,11 @@ define void @fp2si_v8f64_v8i8(ptr %x, ptr %y) {
 ;
 ; CHECK-LABEL: fp2si_v8f64_v8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vmfne.vv v0, v8, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfncvt.rtz.x.f.w v12, v8
+; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
+; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vnclip.wi v8, v12, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
@@ -244,11 +244,11 @@ define void @fp2ui_v8f64_v8i8(ptr %x, ptr %y) {
 ;
 ; CHECK-LABEL: fp2ui_v8f64_v8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vmfne.vv v0, v8, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfncvt.rtz.xu.f.w v12, v8
+; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
+; CHECK-NEXT:    vmfne.vv v0, v8, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vnclipu.wi v8, v12, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma

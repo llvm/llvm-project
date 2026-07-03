@@ -1564,6 +1564,26 @@ public:
   }
 };
 
+/// Converts `spirv.GL.Fract` to `x - floor(x)`.
+class FractPattern : public SPIRVToLLVMConversion<spirv::GLFractOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::GLFractOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::GLFractOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    Value operand = adaptor.getOperand();
+    Value floored = LLVM::FFloorOp::create(rewriter, loc, dstType, operand);
+    rewriter.replaceOpWithNewOp<LLVM::FSubOp>(op, dstType, operand, floored);
+    return success();
+  }
+};
+
 class VariablePattern : public SPIRVToLLVMConversion<spirv::VariableOp> {
 public:
   using SPIRVToLLVMConversion<spirv::VariableOp>::SPIRVToLLVMConversion;
@@ -1844,6 +1864,12 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       IndirectCastPattern<spirv::FConvertOp, LLVM::FPExtOp, LLVM::FPTruncOp>,
       IndirectCastPattern<spirv::SConvertOp, LLVM::SExtOp, LLVM::TruncOp>,
       IndirectCastPattern<spirv::UConvertOp, LLVM::ZExtOp, LLVM::TruncOp>,
+      DirectConversionPattern<spirv::ConvertPtrToUOp, LLVM::PtrToIntOp>,
+      DirectConversionPattern<spirv::ConvertUToPtrOp, LLVM::IntToPtrOp>,
+      DirectConversionPattern<spirv::PtrCastToGenericOp, LLVM::AddrSpaceCastOp>,
+      DirectConversionPattern<spirv::GenericCastToPtrOp, LLVM::AddrSpaceCastOp>,
+      DirectConversionPattern<spirv::GenericCastToPtrExplicitOp,
+                              LLVM::AddrSpaceCastOp>,
 
       // Comparison ops
       IComparePattern<spirv::IEqualOp, LLVM::ICmpPredicate::eq>,
@@ -1861,6 +1887,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       FComparePattern<spirv::FUnordLessThanEqualOp, LLVM::FCmpPredicate::ule>,
       FComparePattern<spirv::FUnordLessThanOp, LLVM::FCmpPredicate::ult>,
       FComparePattern<spirv::FUnordNotEqualOp, LLVM::FCmpPredicate::une>,
+      FComparePattern<spirv::OrderedOp, LLVM::FCmpPredicate::ord>,
+      FComparePattern<spirv::UnorderedOp, LLVM::FCmpPredicate::uno>,
       IComparePattern<spirv::SGreaterThanOp, LLVM::ICmpPredicate::sgt>,
       IComparePattern<spirv::SGreaterThanEqualOp, LLVM::ICmpPredicate::sge>,
       IComparePattern<spirv::SLessThanEqualOp, LLVM::ICmpPredicate::sle>,
@@ -1904,7 +1932,44 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::GLSqrtOp, LLVM::SqrtOp>,
       DirectConversionPattern<spirv::GLUMaxOp, LLVM::UMaxOp>,
       DirectConversionPattern<spirv::GLUMinOp, LLVM::UMinOp>,
-      InverseSqrtPattern, SAbsPattern, TanPattern, TanhPattern,
+      DirectConversionPattern<spirv::GLTruncOp, LLVM::FTruncOp>,
+      DirectConversionPattern<spirv::GLAsinOp, LLVM::ASinOp>,
+      DirectConversionPattern<spirv::GLAcosOp, LLVM::ACosOp>,
+      DirectConversionPattern<spirv::GLAtanOp, LLVM::ATanOp>,
+      InverseSqrtPattern, SAbsPattern, TanPattern, TanhPattern, FractPattern,
+
+      // OpenCL extended instruction set ops
+      DirectConversionPattern<spirv::CLCeilOp, LLVM::FCeilOp>,
+      DirectConversionPattern<spirv::CLCosOp, LLVM::CosOp>,
+      DirectConversionPattern<spirv::CLExpOp, LLVM::ExpOp>,
+      DirectConversionPattern<spirv::CLExp2Op, LLVM::Exp2Op>,
+      DirectConversionPattern<spirv::CLExp10Op, LLVM::Exp10Op>,
+      DirectConversionPattern<spirv::CLFAbsOp, LLVM::FAbsOp>,
+      DirectConversionPattern<spirv::CLFloorOp, LLVM::FFloorOp>,
+      DirectConversionPattern<spirv::CLFmaOp, LLVM::FMAOp>,
+      DirectConversionPattern<spirv::CLFMaxOp, LLVM::MaxNumOp>,
+      DirectConversionPattern<spirv::CLFMinOp, LLVM::MinNumOp>,
+      DirectConversionPattern<spirv::CLLogOp, LLVM::LogOp>,
+      DirectConversionPattern<spirv::CLLog2Op, LLVM::Log2Op>,
+      DirectConversionPattern<spirv::CLLog10Op, LLVM::Log10Op>,
+      DirectConversionPattern<spirv::CLPowOp, LLVM::PowOp>,
+      DirectConversionPattern<spirv::CLRintOp, LLVM::RintOp>,
+      DirectConversionPattern<spirv::CLRoundOp, LLVM::RoundOp>,
+      DirectConversionPattern<spirv::CLSinOp, LLVM::SinOp>,
+      DirectConversionPattern<spirv::CLSinhOp, LLVM::SinhOp>,
+      DirectConversionPattern<spirv::CLCoshOp, LLVM::CoshOp>,
+      DirectConversionPattern<spirv::CLTanOp, LLVM::TanOp>,
+      DirectConversionPattern<spirv::CLTanhOp, LLVM::TanhOp>,
+      DirectConversionPattern<spirv::CLAsinOp, LLVM::ASinOp>,
+      DirectConversionPattern<spirv::CLAcosOp, LLVM::ACosOp>,
+      DirectConversionPattern<spirv::CLAtanOp, LLVM::ATanOp>,
+      DirectConversionPattern<spirv::CLAtan2Op, LLVM::ATan2Op>,
+      DirectConversionPattern<spirv::CLSqrtOp, LLVM::SqrtOp>,
+      DirectConversionPattern<spirv::CLTruncOp, LLVM::FTruncOp>,
+      DirectConversionPattern<spirv::CLSMaxOp, LLVM::SMaxOp>,
+      DirectConversionPattern<spirv::CLSMinOp, LLVM::SMinOp>,
+      DirectConversionPattern<spirv::CLUMaxOp, LLVM::UMaxOp>,
+      DirectConversionPattern<spirv::CLUMinOp, LLVM::UMinOp>,
 
       // Logical ops
       DirectConversionPattern<spirv::LogicalAndOp, LLVM::AndOp>,

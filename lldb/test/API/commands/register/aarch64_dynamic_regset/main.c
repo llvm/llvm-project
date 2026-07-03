@@ -75,7 +75,7 @@ void set_sve_registers() {
 int main(int argc, char *argv[]) {
   if (argc > 1) {
     // Enable streaming mode SVE and the ZA array storage.
-    asm volatile("smstart");
+    asm volatile("msr  s0_3_c4_c7_3, xzr" /*smstart*/);
   }
 
   // If we have SVE or SME, set the SVE registers.

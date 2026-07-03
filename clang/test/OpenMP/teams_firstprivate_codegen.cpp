@@ -336,7 +336,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK9-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [6 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK9-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [6 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK9-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK9-NEXT:    store i32 4, ptr [[TMP24]], align 4
+// CHECK9-NEXT:    store i32 5, ptr [[TMP24]], align 4
 // CHECK9-NEXT:    [[TMP25:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK9-NEXT:    store i32 6, ptr [[TMP25]], align 4
 // CHECK9-NEXT:    [[TMP26:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -386,7 +386,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK9-NEXT:    [[TMP47:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS2]], i32 0, i32 0
 // CHECK9-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS3]], i32 0, i32 0
 // CHECK9-NEXT:    [[TMP49:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 0
-// CHECK9-NEXT:    store i32 4, ptr [[TMP49]], align 4
+// CHECK9-NEXT:    store i32 5, ptr [[TMP49]], align 4
 // CHECK9-NEXT:    [[TMP50:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 1
 // CHECK9-NEXT:    store i32 2, ptr [[TMP50]], align 4
 // CHECK9-NEXT:    [[TMP51:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 2
@@ -523,7 +523,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK9-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST:%.*]] = phi ptr [ [[TMP1]], [[ENTRY:%.*]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
 // CHECK9-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi ptr [ [[ARRAY_BEGIN]], [[ENTRY]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
 // CHECK9-NEXT:    call void @_ZN2StC1Ev(ptr nonnull align 4 dereferenceable(8) [[AGG_TMP]])
-// CHECK9-NEXT:    call void @_ZN1SIfEC1ERKS0_2St(ptr nonnull align 4 dereferenceable(4) [[OMP_ARRAYCPY_DESTELEMENTPAST]], ptr nonnull align 4 dereferenceable(4) [[OMP_ARRAYCPY_SRCELEMENTPAST]], ptr [[AGG_TMP]])
+// CHECK9-NEXT:    call void @_ZN1SIfEC1ERKS0_2St(ptr nonnull align 4 dereferenceable(4) [[OMP_ARRAYCPY_DESTELEMENTPAST]], ptr nonnull align 4 dereferenceable(4) [[OMP_ARRAYCPY_SRCELEMENTPAST]], ptr align 4 [[AGG_TMP]])
 // CHECK9-NEXT:    call void @_ZN2StD1Ev(ptr nonnull align 4 dead_on_return(8) dereferenceable(8) [[AGG_TMP]]) #[[ATTR4]]
 // CHECK9-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT]] = getelementptr [[STRUCT_S]], ptr [[OMP_ARRAYCPY_DESTELEMENTPAST]], i32 1
 // CHECK9-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT]] = getelementptr [[STRUCT_S]], ptr [[OMP_ARRAYCPY_SRCELEMENTPAST]], i32 1
@@ -531,7 +531,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK9-NEXT:    br i1 [[OMP_ARRAYCPY_DONE]], label [[OMP_ARRAYCPY_DONE3]], label [[OMP_ARRAYCPY_BODY]]
 // CHECK9:       omp.arraycpy.done3:
 // CHECK9-NEXT:    call void @_ZN2StC1Ev(ptr nonnull align 4 dereferenceable(8) [[AGG_TMP5]])
-// CHECK9-NEXT:    call void @_ZN1SIfEC1ERKS0_2St(ptr nonnull align 4 dereferenceable(4) [[VAR4]], ptr nonnull align 4 dereferenceable(4) [[TMP2]], ptr [[AGG_TMP5]])
+// CHECK9-NEXT:    call void @_ZN1SIfEC1ERKS0_2St(ptr nonnull align 4 dereferenceable(4) [[VAR4]], ptr nonnull align 4 dereferenceable(4) [[TMP2]], ptr align 4 [[AGG_TMP5]])
 // CHECK9-NEXT:    call void @_ZN2StD1Ev(ptr nonnull align 4 dead_on_return(8) dereferenceable(8) [[AGG_TMP5]]) #[[ATTR4]]
 // CHECK9-NEXT:    [[TMP4:%.*]] = load i32, ptr [[T_VAR_ADDR]], align 4
 // CHECK9-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[VEC1]], i64 0, i64 0
@@ -564,7 +564,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@_ZN1SIfEC1ERKS0_2St
-// CHECK9-SAME: (ptr nonnull align 4 dereferenceable(4) [[THIS:%.*]], ptr nonnull align 4 dereferenceable(4) [[S:%.*]], ptr [[T:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// CHECK9-SAME: (ptr nonnull align 4 dereferenceable(4) [[THIS:%.*]], ptr nonnull align 4 dereferenceable(4) [[S:%.*]], ptr align 4 [[T:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
@@ -574,7 +574,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK9-NEXT:    store ptr [[T]], ptr [[T_INDIRECT_ADDR]], align 8
 // CHECK9-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK9-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
-// CHECK9-NEXT:    call void @_ZN1SIfEC2ERKS0_2St(ptr nonnull align 4 dereferenceable(4) [[THIS1]], ptr nonnull align 4 dereferenceable(4) [[TMP0]], ptr [[T]])
+// CHECK9-NEXT:    call void @_ZN1SIfEC2ERKS0_2St(ptr nonnull align 4 dereferenceable(4) [[THIS1]], ptr nonnull align 4 dereferenceable(4) [[TMP0]], ptr align 4 [[T]])
 // CHECK9-NEXT:    ret void
 //
 //
@@ -687,7 +687,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK9-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [5 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK9-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [5 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK9-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK9-NEXT:    store i32 4, ptr [[TMP19]], align 4
+// CHECK9-NEXT:    store i32 5, ptr [[TMP19]], align 4
 // CHECK9-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK9-NEXT:    store i32 5, ptr [[TMP20]], align 4
 // CHECK9-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -737,7 +737,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK9-NEXT:    [[TMP42:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS2]], i32 0, i32 0
 // CHECK9-NEXT:    [[TMP43:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS3]], i32 0, i32 0
 // CHECK9-NEXT:    [[TMP44:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 0
-// CHECK9-NEXT:    store i32 4, ptr [[TMP44]], align 4
+// CHECK9-NEXT:    store i32 5, ptr [[TMP44]], align 4
 // CHECK9-NEXT:    [[TMP45:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 1
 // CHECK9-NEXT:    store i32 2, ptr [[TMP45]], align 4
 // CHECK9-NEXT:    [[TMP46:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 2
@@ -830,7 +830,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@_ZN1SIfEC2ERKS0_2St
-// CHECK9-SAME: (ptr nonnull align 4 dereferenceable(4) [[THIS:%.*]], ptr nonnull align 4 dereferenceable(4) [[S:%.*]], ptr [[T:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// CHECK9-SAME: (ptr nonnull align 4 dereferenceable(4) [[THIS:%.*]], ptr nonnull align 4 dereferenceable(4) [[S:%.*]], ptr align 4 [[T:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
@@ -948,7 +948,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK9-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST:%.*]] = phi ptr [ [[TMP1]], [[ENTRY:%.*]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
 // CHECK9-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi ptr [ [[ARRAY_BEGIN]], [[ENTRY]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
 // CHECK9-NEXT:    call void @_ZN2StC1Ev(ptr nonnull align 4 dereferenceable(8) [[AGG_TMP]])
-// CHECK9-NEXT:    call void @_ZN1SIiEC1ERKS0_2St(ptr nonnull align 4 dereferenceable(4) [[OMP_ARRAYCPY_DESTELEMENTPAST]], ptr nonnull align 4 dereferenceable(4) [[OMP_ARRAYCPY_SRCELEMENTPAST]], ptr [[AGG_TMP]])
+// CHECK9-NEXT:    call void @_ZN1SIiEC1ERKS0_2St(ptr nonnull align 4 dereferenceable(4) [[OMP_ARRAYCPY_DESTELEMENTPAST]], ptr nonnull align 4 dereferenceable(4) [[OMP_ARRAYCPY_SRCELEMENTPAST]], ptr align 4 [[AGG_TMP]])
 // CHECK9-NEXT:    call void @_ZN2StD1Ev(ptr nonnull align 4 dead_on_return(8) dereferenceable(8) [[AGG_TMP]]) #[[ATTR4]]
 // CHECK9-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT]] = getelementptr [[STRUCT_S_0]], ptr [[OMP_ARRAYCPY_DESTELEMENTPAST]], i32 1
 // CHECK9-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT]] = getelementptr [[STRUCT_S_0]], ptr [[OMP_ARRAYCPY_SRCELEMENTPAST]], i32 1
@@ -956,7 +956,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK9-NEXT:    br i1 [[OMP_ARRAYCPY_DONE]], label [[OMP_ARRAYCPY_DONE3]], label [[OMP_ARRAYCPY_BODY]]
 // CHECK9:       omp.arraycpy.done3:
 // CHECK9-NEXT:    call void @_ZN2StC1Ev(ptr nonnull align 4 dereferenceable(8) [[AGG_TMP5]])
-// CHECK9-NEXT:    call void @_ZN1SIiEC1ERKS0_2St(ptr nonnull align 4 dereferenceable(4) [[VAR4]], ptr nonnull align 4 dereferenceable(4) [[TMP2]], ptr [[AGG_TMP5]])
+// CHECK9-NEXT:    call void @_ZN1SIiEC1ERKS0_2St(ptr nonnull align 4 dereferenceable(4) [[VAR4]], ptr nonnull align 4 dereferenceable(4) [[TMP2]], ptr align 4 [[AGG_TMP5]])
 // CHECK9-NEXT:    call void @_ZN2StD1Ev(ptr nonnull align 4 dead_on_return(8) dereferenceable(8) [[AGG_TMP5]]) #[[ATTR4]]
 // CHECK9-NEXT:    [[TMP4:%.*]] = load i32, ptr [[T_VAR_ADDR]], align 4
 // CHECK9-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[VEC1]], i64 0, i64 0
@@ -978,7 +978,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@_ZN1SIiEC1ERKS0_2St
-// CHECK9-SAME: (ptr nonnull align 4 dereferenceable(4) [[THIS:%.*]], ptr nonnull align 4 dereferenceable(4) [[S:%.*]], ptr [[T:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// CHECK9-SAME: (ptr nonnull align 4 dereferenceable(4) [[THIS:%.*]], ptr nonnull align 4 dereferenceable(4) [[S:%.*]], ptr align 4 [[T:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
@@ -988,7 +988,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK9-NEXT:    store ptr [[T]], ptr [[T_INDIRECT_ADDR]], align 8
 // CHECK9-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK9-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
-// CHECK9-NEXT:    call void @_ZN1SIiEC2ERKS0_2St(ptr nonnull align 4 dereferenceable(4) [[THIS1]], ptr nonnull align 4 dereferenceable(4) [[TMP0]], ptr [[T]])
+// CHECK9-NEXT:    call void @_ZN1SIiEC2ERKS0_2St(ptr nonnull align 4 dereferenceable(4) [[THIS1]], ptr nonnull align 4 dereferenceable(4) [[TMP0]], ptr align 4 [[T]])
 // CHECK9-NEXT:    ret void
 //
 //
@@ -1058,7 +1058,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 //
 //
 // CHECK9-LABEL: define {{[^@]+}}@_ZN1SIiEC2ERKS0_2St
-// CHECK9-SAME: (ptr nonnull align 4 dereferenceable(4) [[THIS:%.*]], ptr nonnull align 4 dereferenceable(4) [[S:%.*]], ptr [[T:%.*]]) unnamed_addr #[[ATTR1]] comdat {
+// CHECK9-SAME: (ptr nonnull align 4 dereferenceable(4) [[THIS:%.*]], ptr nonnull align 4 dereferenceable(4) [[S:%.*]], ptr align 4 [[T:%.*]]) unnamed_addr #[[ATTR1]] comdat {
 // CHECK9-NEXT:  entry:
 // CHECK9-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK9-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
@@ -1160,7 +1160,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK11-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [6 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK11-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [6 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK11-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK11-NEXT:    store i32 4, ptr [[TMP24]], align 4
+// CHECK11-NEXT:    store i32 5, ptr [[TMP24]], align 4
 // CHECK11-NEXT:    [[TMP25:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK11-NEXT:    store i32 6, ptr [[TMP25]], align 4
 // CHECK11-NEXT:    [[TMP26:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -1210,7 +1210,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK11-NEXT:    [[TMP47:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS2]], i32 0, i32 0
 // CHECK11-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS3]], i32 0, i32 0
 // CHECK11-NEXT:    [[TMP49:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 0
-// CHECK11-NEXT:    store i32 4, ptr [[TMP49]], align 4
+// CHECK11-NEXT:    store i32 5, ptr [[TMP49]], align 4
 // CHECK11-NEXT:    [[TMP50:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 1
 // CHECK11-NEXT:    store i32 2, ptr [[TMP50]], align 4
 // CHECK11-NEXT:    [[TMP51:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 2
@@ -1347,7 +1347,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK11-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST:%.*]] = phi ptr [ [[TMP1]], [[ENTRY:%.*]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
 // CHECK11-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi ptr [ [[ARRAY_BEGIN]], [[ENTRY]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
 // CHECK11-NEXT:    call void @_ZN2StC1Ev(ptr nonnull align 4 dereferenceable(8) [[AGG_TMP]])
-// CHECK11-NEXT:    call void @_ZN1SIfEC1ERKS0_2St(ptr nonnull align 4 dereferenceable(4) [[OMP_ARRAYCPY_DESTELEMENTPAST]], ptr nonnull align 4 dereferenceable(4) [[OMP_ARRAYCPY_SRCELEMENTPAST]], ptr [[AGG_TMP]])
+// CHECK11-NEXT:    call void @_ZN1SIfEC1ERKS0_2St(ptr nonnull align 4 dereferenceable(4) [[OMP_ARRAYCPY_DESTELEMENTPAST]], ptr nonnull align 4 dereferenceable(4) [[OMP_ARRAYCPY_SRCELEMENTPAST]], ptr align 4 [[AGG_TMP]])
 // CHECK11-NEXT:    call void @_ZN2StD1Ev(ptr nonnull align 4 dead_on_return(8) dereferenceable(8) [[AGG_TMP]]) #[[ATTR4]]
 // CHECK11-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT]] = getelementptr [[STRUCT_S]], ptr [[OMP_ARRAYCPY_DESTELEMENTPAST]], i32 1
 // CHECK11-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT]] = getelementptr [[STRUCT_S]], ptr [[OMP_ARRAYCPY_SRCELEMENTPAST]], i32 1
@@ -1355,7 +1355,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK11-NEXT:    br i1 [[OMP_ARRAYCPY_DONE]], label [[OMP_ARRAYCPY_DONE3]], label [[OMP_ARRAYCPY_BODY]]
 // CHECK11:       omp.arraycpy.done3:
 // CHECK11-NEXT:    call void @_ZN2StC1Ev(ptr nonnull align 4 dereferenceable(8) [[AGG_TMP5]])
-// CHECK11-NEXT:    call void @_ZN1SIfEC1ERKS0_2St(ptr nonnull align 4 dereferenceable(4) [[VAR4]], ptr nonnull align 4 dereferenceable(4) [[TMP2]], ptr [[AGG_TMP5]])
+// CHECK11-NEXT:    call void @_ZN1SIfEC1ERKS0_2St(ptr nonnull align 4 dereferenceable(4) [[VAR4]], ptr nonnull align 4 dereferenceable(4) [[TMP2]], ptr align 4 [[AGG_TMP5]])
 // CHECK11-NEXT:    call void @_ZN2StD1Ev(ptr nonnull align 4 dead_on_return(8) dereferenceable(8) [[AGG_TMP5]]) #[[ATTR4]]
 // CHECK11-NEXT:    [[TMP4:%.*]] = load i32, ptr [[T_VAR_ADDR]], align 4
 // CHECK11-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[VEC1]], i32 0, i32 0
@@ -1388,7 +1388,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@_ZN1SIfEC1ERKS0_2St
-// CHECK11-SAME: (ptr nonnull align 4 dereferenceable(4) [[THIS:%.*]], ptr nonnull align 4 dereferenceable(4) [[S:%.*]], ptr [[T:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// CHECK11-SAME: (ptr nonnull align 4 dereferenceable(4) [[THIS:%.*]], ptr nonnull align 4 dereferenceable(4) [[S:%.*]], ptr align 4 [[T:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK11-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 4
@@ -1398,7 +1398,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK11-NEXT:    store ptr [[T]], ptr [[T_INDIRECT_ADDR]], align 4
 // CHECK11-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
 // CHECK11-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 4
-// CHECK11-NEXT:    call void @_ZN1SIfEC2ERKS0_2St(ptr nonnull align 4 dereferenceable(4) [[THIS1]], ptr nonnull align 4 dereferenceable(4) [[TMP0]], ptr [[T]])
+// CHECK11-NEXT:    call void @_ZN1SIfEC2ERKS0_2St(ptr nonnull align 4 dereferenceable(4) [[THIS1]], ptr nonnull align 4 dereferenceable(4) [[TMP0]], ptr align 4 [[T]])
 // CHECK11-NEXT:    ret void
 //
 //
@@ -1511,7 +1511,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK11-NEXT:    [[TMP17:%.*]] = getelementptr inbounds [5 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i32 0, i32 0
 // CHECK11-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [5 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK11-NEXT:    [[TMP19:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK11-NEXT:    store i32 4, ptr [[TMP19]], align 4
+// CHECK11-NEXT:    store i32 5, ptr [[TMP19]], align 4
 // CHECK11-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK11-NEXT:    store i32 5, ptr [[TMP20]], align 4
 // CHECK11-NEXT:    [[TMP21:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -1561,7 +1561,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK11-NEXT:    [[TMP42:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS2]], i32 0, i32 0
 // CHECK11-NEXT:    [[TMP43:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS3]], i32 0, i32 0
 // CHECK11-NEXT:    [[TMP44:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 0
-// CHECK11-NEXT:    store i32 4, ptr [[TMP44]], align 4
+// CHECK11-NEXT:    store i32 5, ptr [[TMP44]], align 4
 // CHECK11-NEXT:    [[TMP45:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 1
 // CHECK11-NEXT:    store i32 2, ptr [[TMP45]], align 4
 // CHECK11-NEXT:    [[TMP46:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS5]], i32 0, i32 2
@@ -1654,7 +1654,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@_ZN1SIfEC2ERKS0_2St
-// CHECK11-SAME: (ptr nonnull align 4 dereferenceable(4) [[THIS:%.*]], ptr nonnull align 4 dereferenceable(4) [[S:%.*]], ptr [[T:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// CHECK11-SAME: (ptr nonnull align 4 dereferenceable(4) [[THIS:%.*]], ptr nonnull align 4 dereferenceable(4) [[S:%.*]], ptr align 4 [[T:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK11-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 4
@@ -1772,7 +1772,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK11-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST:%.*]] = phi ptr [ [[TMP1]], [[ENTRY:%.*]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
 // CHECK11-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi ptr [ [[ARRAY_BEGIN]], [[ENTRY]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
 // CHECK11-NEXT:    call void @_ZN2StC1Ev(ptr nonnull align 4 dereferenceable(8) [[AGG_TMP]])
-// CHECK11-NEXT:    call void @_ZN1SIiEC1ERKS0_2St(ptr nonnull align 4 dereferenceable(4) [[OMP_ARRAYCPY_DESTELEMENTPAST]], ptr nonnull align 4 dereferenceable(4) [[OMP_ARRAYCPY_SRCELEMENTPAST]], ptr [[AGG_TMP]])
+// CHECK11-NEXT:    call void @_ZN1SIiEC1ERKS0_2St(ptr nonnull align 4 dereferenceable(4) [[OMP_ARRAYCPY_DESTELEMENTPAST]], ptr nonnull align 4 dereferenceable(4) [[OMP_ARRAYCPY_SRCELEMENTPAST]], ptr align 4 [[AGG_TMP]])
 // CHECK11-NEXT:    call void @_ZN2StD1Ev(ptr nonnull align 4 dead_on_return(8) dereferenceable(8) [[AGG_TMP]]) #[[ATTR4]]
 // CHECK11-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT]] = getelementptr [[STRUCT_S_0]], ptr [[OMP_ARRAYCPY_DESTELEMENTPAST]], i32 1
 // CHECK11-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT]] = getelementptr [[STRUCT_S_0]], ptr [[OMP_ARRAYCPY_SRCELEMENTPAST]], i32 1
@@ -1780,7 +1780,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK11-NEXT:    br i1 [[OMP_ARRAYCPY_DONE]], label [[OMP_ARRAYCPY_DONE3]], label [[OMP_ARRAYCPY_BODY]]
 // CHECK11:       omp.arraycpy.done3:
 // CHECK11-NEXT:    call void @_ZN2StC1Ev(ptr nonnull align 4 dereferenceable(8) [[AGG_TMP5]])
-// CHECK11-NEXT:    call void @_ZN1SIiEC1ERKS0_2St(ptr nonnull align 4 dereferenceable(4) [[VAR4]], ptr nonnull align 4 dereferenceable(4) [[TMP2]], ptr [[AGG_TMP5]])
+// CHECK11-NEXT:    call void @_ZN1SIiEC1ERKS0_2St(ptr nonnull align 4 dereferenceable(4) [[VAR4]], ptr nonnull align 4 dereferenceable(4) [[TMP2]], ptr align 4 [[AGG_TMP5]])
 // CHECK11-NEXT:    call void @_ZN2StD1Ev(ptr nonnull align 4 dead_on_return(8) dereferenceable(8) [[AGG_TMP5]]) #[[ATTR4]]
 // CHECK11-NEXT:    [[TMP4:%.*]] = load i32, ptr [[T_VAR_ADDR]], align 4
 // CHECK11-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[VEC1]], i32 0, i32 0
@@ -1802,7 +1802,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@_ZN1SIiEC1ERKS0_2St
-// CHECK11-SAME: (ptr nonnull align 4 dereferenceable(4) [[THIS:%.*]], ptr nonnull align 4 dereferenceable(4) [[S:%.*]], ptr [[T:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// CHECK11-SAME: (ptr nonnull align 4 dereferenceable(4) [[THIS:%.*]], ptr nonnull align 4 dereferenceable(4) [[S:%.*]], ptr align 4 [[T:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK11-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 4
@@ -1812,7 +1812,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK11-NEXT:    store ptr [[T]], ptr [[T_INDIRECT_ADDR]], align 4
 // CHECK11-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
 // CHECK11-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 4
-// CHECK11-NEXT:    call void @_ZN1SIiEC2ERKS0_2St(ptr nonnull align 4 dereferenceable(4) [[THIS1]], ptr nonnull align 4 dereferenceable(4) [[TMP0]], ptr [[T]])
+// CHECK11-NEXT:    call void @_ZN1SIiEC2ERKS0_2St(ptr nonnull align 4 dereferenceable(4) [[THIS1]], ptr nonnull align 4 dereferenceable(4) [[TMP0]], ptr align 4 [[T]])
 // CHECK11-NEXT:    ret void
 //
 //
@@ -1882,7 +1882,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 //
 //
 // CHECK11-LABEL: define {{[^@]+}}@_ZN1SIiEC2ERKS0_2St
-// CHECK11-SAME: (ptr nonnull align 4 dereferenceable(4) [[THIS:%.*]], ptr nonnull align 4 dereferenceable(4) [[S:%.*]], ptr [[T:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
+// CHECK11-SAME: (ptr nonnull align 4 dereferenceable(4) [[THIS:%.*]], ptr nonnull align 4 dereferenceable(4) [[S:%.*]], ptr align 4 [[T:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // CHECK11-NEXT:  entry:
 // CHECK11-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 4
 // CHECK11-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 4
@@ -2012,7 +2012,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK17-NEXT:    [[TMP44:%.*]] = getelementptr inbounds [9 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK17-NEXT:    [[TMP45:%.*]] = getelementptr inbounds [9 x i64], ptr [[DOTOFFLOAD_SIZES]], i32 0, i32 0
 // CHECK17-NEXT:    [[TMP46:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK17-NEXT:    store i32 4, ptr [[TMP46]], align 4
+// CHECK17-NEXT:    store i32 5, ptr [[TMP46]], align 4
 // CHECK17-NEXT:    [[TMP47:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK17-NEXT:    store i32 9, ptr [[TMP47]], align 4
 // CHECK17-NEXT:    [[TMP48:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -2257,7 +2257,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK17-NEXT:    [[TMP55:%.*]] = getelementptr inbounds [11 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK17-NEXT:    [[TMP56:%.*]] = getelementptr inbounds [11 x i64], ptr [[DOTOFFLOAD_SIZES]], i32 0, i32 0
 // CHECK17-NEXT:    [[TMP57:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK17-NEXT:    store i32 4, ptr [[TMP57]], align 4
+// CHECK17-NEXT:    store i32 5, ptr [[TMP57]], align 4
 // CHECK17-NEXT:    [[TMP58:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK17-NEXT:    store i32 11, ptr [[TMP58]], align 4
 // CHECK17-NEXT:    [[TMP59:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -2490,7 +2490,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK19-NEXT:    [[TMP42:%.*]] = getelementptr inbounds [9 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK19-NEXT:    [[TMP43:%.*]] = getelementptr inbounds [9 x i64], ptr [[DOTOFFLOAD_SIZES]], i32 0, i32 0
 // CHECK19-NEXT:    [[TMP44:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK19-NEXT:    store i32 4, ptr [[TMP44]], align 4
+// CHECK19-NEXT:    store i32 5, ptr [[TMP44]], align 4
 // CHECK19-NEXT:    [[TMP45:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK19-NEXT:    store i32 9, ptr [[TMP45]], align 4
 // CHECK19-NEXT:    [[TMP46:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -2734,7 +2734,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK19-NEXT:    [[TMP54:%.*]] = getelementptr inbounds [11 x ptr], ptr [[DOTOFFLOAD_PTRS]], i32 0, i32 0
 // CHECK19-NEXT:    [[TMP55:%.*]] = getelementptr inbounds [11 x i64], ptr [[DOTOFFLOAD_SIZES]], i32 0, i32 0
 // CHECK19-NEXT:    [[TMP56:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK19-NEXT:    store i32 4, ptr [[TMP56]], align 4
+// CHECK19-NEXT:    store i32 5, ptr [[TMP56]], align 4
 // CHECK19-NEXT:    [[TMP57:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK19-NEXT:    store i32 11, ptr [[TMP57]], align 4
 // CHECK19-NEXT:    [[TMP58:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2

@@ -169,3 +169,13 @@ module @TestVector attributes {
   bytecode.test = vector<8x8x128xi8>,
   bytecode.test1 = vector<8x[8]xf32>
 } {}
+
+//===----------------------------------------------------------------------===//
+// TokenType
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @TestToken
+module @TestToken attributes {
+  // CHECK: bytecode.test = token
+  bytecode.test = token
+} {}

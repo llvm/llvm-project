@@ -142,10 +142,6 @@ using OffloadingImage = OffloadBinary::OffloadingImage;
 namespace llvm {
 // Provide DenseMapInfo so that OffloadKind can be used in a DenseMap.
 template <> struct DenseMapInfo<OffloadKind> {
-  static inline OffloadKind getEmptyKey() { return OFK_LAST; }
-  static inline OffloadKind getTombstoneKey() {
-    return static_cast<OffloadKind>(OFK_LAST + 1);
-  }
   static unsigned getHashValue(const OffloadKind &Val) { return Val; }
 
   static bool isEqual(const OffloadKind &LHS, const OffloadKind &RHS) {
@@ -538,10 +534,6 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
     Triple.isAMDGPU() ? CmdArgs.push_back(Args.MakeArgString("-mcpu=" + Arch))
                       : CmdArgs.push_back(Args.MakeArgString("-march=" + Arch));
 
-  // AMDGPU is always in LTO mode currently.
-  if (Triple.isAMDGPU())
-    CmdArgs.push_back("-flto");
-
   // Forward all of the `--offload-opt` and `-mllvm` options to the device.
   for (auto &Arg : Args.filtered(OPT_offload_opt_eq_minus, OPT_mllvm))
     CmdArgs.append(
@@ -800,19 +792,6 @@ bundleOpenMP(ArrayRef<OffloadingImage> Images) {
 Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
 bundleSYCL(ArrayRef<OffloadingImage> Images) {
   SmallVector<std::unique_ptr<MemoryBuffer>> Buffers;
-  if (DryRun) {
-    // In dry-run mode there is an empty input which is insufficient for the
-    // testing. Therefore, we return here a stub image.
-    OffloadingImage Image;
-    Image.TheImageKind = IMG_None;
-    Image.TheOffloadKind = OffloadKind::OFK_SYCL;
-    Image.StringData["symbols"] = "stub";
-    Image.Image = MemoryBuffer::getMemBufferCopy("");
-    SmallString<0> SerializedImage = OffloadBinary::write(Image);
-    Buffers.emplace_back(MemoryBuffer::getMemBufferCopy(SerializedImage));
-    return std::move(Buffers);
-  }
-
   for (const OffloadingImage &Image : Images) {
     // clang-sycl-linker packs outputs into one binary blob. Therefore, it is
     // passed to Offload Wrapper as is.

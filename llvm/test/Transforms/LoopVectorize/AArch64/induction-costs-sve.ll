@@ -204,7 +204,7 @@ define void @iv_trunc(i32 %x, ptr %dst, i64 %N) #0 {
 ; DEFAULT-NEXT:  [[ENTRY:.*]]:
 ; DEFAULT-NEXT:    [[MUL_X:%.*]] = add i32 [[X]], 1
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
-; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
+; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; DEFAULT:       [[VECTOR_SCEVCHECK]]:
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = sub i32 -1, [[X]]
@@ -224,22 +224,32 @@ define void @iv_trunc(i32 %x, ptr %dst, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[TMP12:%.*]] = or i1 [[TMP8]], [[TMP11]]
 ; DEFAULT-NEXT:    br i1 [[TMP12]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
-; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 2
+; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
 ; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; DEFAULT:       [[VECTOR_BODY]]:
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP13:%.*]] = trunc i64 [[INDEX]] to i32
 ; DEFAULT-NEXT:    [[TMP14:%.*]] = add i32 [[TMP13]], 1
+; DEFAULT-NEXT:    [[TMP22:%.*]] = add i32 [[TMP13]], 2
+; DEFAULT-NEXT:    [[TMP25:%.*]] = add i32 [[TMP13]], 3
 ; DEFAULT-NEXT:    [[TMP15:%.*]] = mul i32 [[MUL_X]], [[TMP13]]
 ; DEFAULT-NEXT:    [[TMP16:%.*]] = mul i32 [[MUL_X]], [[TMP14]]
+; DEFAULT-NEXT:    [[TMP26:%.*]] = mul i32 [[MUL_X]], [[TMP22]]
+; DEFAULT-NEXT:    [[TMP29:%.*]] = mul i32 [[MUL_X]], [[TMP25]]
 ; DEFAULT-NEXT:    [[TMP17:%.*]] = zext i32 [[TMP15]] to i64
 ; DEFAULT-NEXT:    [[TMP18:%.*]] = zext i32 [[TMP16]] to i64
+; DEFAULT-NEXT:    [[TMP23:%.*]] = zext i32 [[TMP26]] to i64
+; DEFAULT-NEXT:    [[TMP24:%.*]] = zext i32 [[TMP29]] to i64
 ; DEFAULT-NEXT:    [[TMP19:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP17]]
 ; DEFAULT-NEXT:    [[TMP20:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP18]]
+; DEFAULT-NEXT:    [[TMP27:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP23]]
+; DEFAULT-NEXT:    [[TMP28:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP24]]
 ; DEFAULT-NEXT:    store i32 1, ptr [[TMP19]], align 4
 ; DEFAULT-NEXT:    store i32 1, ptr [[TMP20]], align 4
-; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; DEFAULT-NEXT:    store i32 1, ptr [[TMP27]], align 4
+; DEFAULT-NEXT:    store i32 1, ptr [[TMP28]], align 4
+; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; DEFAULT-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; DEFAULT-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
@@ -305,7 +315,7 @@ define void @trunc_ivs_and_store(i32 %x, ptr %dst, i64 %N) #0 {
 ; DEFAULT-NEXT:  [[ENTRY:.*]]:
 ; DEFAULT-NEXT:    [[MUL:%.*]] = mul i32 [[X]], [[X]]
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
-; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
+; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; DEFAULT:       [[VECTOR_SCEVCHECK]]:
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = mul i32 [[X]], [[X]]
@@ -326,7 +336,7 @@ define void @trunc_ivs_and_store(i32 %x, ptr %dst, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[TMP13:%.*]] = or i1 [[TMP9]], [[TMP12]]
 ; DEFAULT-NEXT:    br i1 [[TMP13]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
-; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 2
+; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
 ; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; DEFAULT-NEXT:    [[TMP14:%.*]] = trunc i64 [[N_VEC]] to i32
 ; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -334,16 +344,28 @@ define void @trunc_ivs_and_store(i32 %x, ptr %dst, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[OFFSET_IDX:%.*]] = trunc i64 [[INDEX]] to i32
 ; DEFAULT-NEXT:    [[TMP15:%.*]] = add i32 [[OFFSET_IDX]], 1
+; DEFAULT-NEXT:    [[TMP26:%.*]] = add i32 [[OFFSET_IDX]], 2
+; DEFAULT-NEXT:    [[TMP27:%.*]] = add i32 [[OFFSET_IDX]], 3
 ; DEFAULT-NEXT:    [[TMP17:%.*]] = add i32 [[OFFSET_IDX]], 1
+; DEFAULT-NEXT:    [[TMP30:%.*]] = add i32 [[OFFSET_IDX]], 2
+; DEFAULT-NEXT:    [[TMP31:%.*]] = add i32 [[OFFSET_IDX]], 3
 ; DEFAULT-NEXT:    [[TMP18:%.*]] = mul i32 [[MUL]], [[OFFSET_IDX]]
 ; DEFAULT-NEXT:    [[TMP19:%.*]] = mul i32 [[MUL]], [[TMP17]]
+; DEFAULT-NEXT:    [[TMP34:%.*]] = mul i32 [[MUL]], [[TMP30]]
+; DEFAULT-NEXT:    [[TMP25:%.*]] = mul i32 [[MUL]], [[TMP31]]
 ; DEFAULT-NEXT:    [[TMP20:%.*]] = zext i32 [[TMP18]] to i64
 ; DEFAULT-NEXT:    [[TMP21:%.*]] = zext i32 [[TMP19]] to i64
+; DEFAULT-NEXT:    [[TMP28:%.*]] = zext i32 [[TMP34]] to i64
+; DEFAULT-NEXT:    [[TMP29:%.*]] = zext i32 [[TMP25]] to i64
 ; DEFAULT-NEXT:    [[TMP22:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP20]]
 ; DEFAULT-NEXT:    [[TMP23:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP21]]
+; DEFAULT-NEXT:    [[TMP32:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP28]]
+; DEFAULT-NEXT:    [[TMP33:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP29]]
 ; DEFAULT-NEXT:    store i32 [[OFFSET_IDX]], ptr [[TMP22]], align 4
 ; DEFAULT-NEXT:    store i32 [[TMP15]], ptr [[TMP23]], align 4
-; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; DEFAULT-NEXT:    store i32 [[TMP26]], ptr [[TMP32]], align 4
+; DEFAULT-NEXT:    store i32 [[TMP27]], ptr [[TMP33]], align 4
+; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; DEFAULT-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; DEFAULT-NEXT:    br i1 [[TMP24]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
@@ -415,7 +437,7 @@ define void @ivs_trunc_and_ext(i32 %x, ptr %dst, i64 %N) #0 {
 ; DEFAULT-NEXT:  [[ENTRY:.*]]:
 ; DEFAULT-NEXT:    [[ADD:%.*]] = add i32 [[X]], 1
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
-; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
+; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; DEFAULT:       [[VECTOR_SCEVCHECK]]:
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = sub i32 -1, [[X]]
@@ -435,7 +457,7 @@ define void @ivs_trunc_and_ext(i32 %x, ptr %dst, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[TMP12:%.*]] = or i1 [[TMP8]], [[TMP11]]
 ; DEFAULT-NEXT:    br i1 [[TMP12]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
-; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 2
+; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
 ; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; DEFAULT-NEXT:    [[TMP13:%.*]] = trunc i64 [[N_VEC]] to i32
 ; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -443,16 +465,28 @@ define void @ivs_trunc_and_ext(i32 %x, ptr %dst, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[OFFSET_IDX:%.*]] = trunc i64 [[INDEX]] to i32
 ; DEFAULT-NEXT:    [[TMP14:%.*]] = add i32 [[OFFSET_IDX]], 1
+; DEFAULT-NEXT:    [[TMP25:%.*]] = add i32 [[OFFSET_IDX]], 2
+; DEFAULT-NEXT:    [[TMP26:%.*]] = add i32 [[OFFSET_IDX]], 3
 ; DEFAULT-NEXT:    [[TMP16:%.*]] = add i32 [[OFFSET_IDX]], 1
+; DEFAULT-NEXT:    [[TMP29:%.*]] = add i32 [[OFFSET_IDX]], 2
+; DEFAULT-NEXT:    [[TMP30:%.*]] = add i32 [[OFFSET_IDX]], 3
 ; DEFAULT-NEXT:    [[TMP17:%.*]] = mul i32 [[ADD]], [[OFFSET_IDX]]
 ; DEFAULT-NEXT:    [[TMP18:%.*]] = mul i32 [[ADD]], [[TMP16]]
+; DEFAULT-NEXT:    [[TMP33:%.*]] = mul i32 [[ADD]], [[TMP29]]
+; DEFAULT-NEXT:    [[TMP24:%.*]] = mul i32 [[ADD]], [[TMP30]]
 ; DEFAULT-NEXT:    [[TMP19:%.*]] = zext i32 [[TMP17]] to i64
 ; DEFAULT-NEXT:    [[TMP20:%.*]] = zext i32 [[TMP18]] to i64
+; DEFAULT-NEXT:    [[TMP27:%.*]] = zext i32 [[TMP33]] to i64
+; DEFAULT-NEXT:    [[TMP28:%.*]] = zext i32 [[TMP24]] to i64
 ; DEFAULT-NEXT:    [[TMP21:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP19]]
 ; DEFAULT-NEXT:    [[TMP22:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP20]]
+; DEFAULT-NEXT:    [[TMP31:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP27]]
+; DEFAULT-NEXT:    [[TMP32:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP28]]
 ; DEFAULT-NEXT:    store i32 [[OFFSET_IDX]], ptr [[TMP21]], align 4
 ; DEFAULT-NEXT:    store i32 [[TMP14]], ptr [[TMP22]], align 4
-; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; DEFAULT-NEXT:    store i32 [[TMP25]], ptr [[TMP31]], align 4
+; DEFAULT-NEXT:    store i32 [[TMP26]], ptr [[TMP32]], align 4
+; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; DEFAULT-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; DEFAULT-NEXT:    br i1 [[TMP23]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
@@ -524,7 +558,7 @@ define void @exit_cond_zext_iv(ptr %dst, i64 %N) {
 ; DEFAULT-SAME: ptr [[DST:%.*]], i64 [[N:%.*]]) {
 ; DEFAULT-NEXT:  [[ENTRY:.*]]:
 ; DEFAULT-NEXT:    [[UMAX1:%.*]] = call i64 @llvm.umax.i64(i64 [[N]], i64 1)
-; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[UMAX1]], 2
+; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[UMAX1]], 4
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; DEFAULT:       [[VECTOR_SCEVCHECK]]:
 ; DEFAULT-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N]], i64 1)
@@ -536,18 +570,24 @@ define void @exit_cond_zext_iv(ptr %dst, i64 %N) {
 ; DEFAULT-NEXT:    [[TMP5:%.*]] = or i1 [[TMP3]], [[TMP4]]
 ; DEFAULT-NEXT:    br i1 [[TMP5]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
-; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[UMAX1]], 2
+; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[UMAX1]], 4
 ; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 [[UMAX1]], [[N_MOD_VF]]
 ; DEFAULT-NEXT:    [[TMP6:%.*]] = trunc i64 [[N_VEC]] to i32
 ; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; DEFAULT:       [[VECTOR_BODY]]:
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 1
+; DEFAULT-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], 2
+; DEFAULT-NEXT:    [[TMP14:%.*]] = add i64 [[INDEX]], 3
 ; DEFAULT-NEXT:    [[TMP8:%.*]] = getelementptr { [100 x i32], i32, i32 }, ptr [[DST]], i64 [[INDEX]], i32 2
 ; DEFAULT-NEXT:    [[TMP9:%.*]] = getelementptr { [100 x i32], i32, i32 }, ptr [[DST]], i64 [[TMP7]], i32 2
+; DEFAULT-NEXT:    [[TMP12:%.*]] = getelementptr { [100 x i32], i32, i32 }, ptr [[DST]], i64 [[TMP11]], i32 2
+; DEFAULT-NEXT:    [[TMP13:%.*]] = getelementptr { [100 x i32], i32, i32 }, ptr [[DST]], i64 [[TMP14]], i32 2
 ; DEFAULT-NEXT:    store i32 0, ptr [[TMP8]], align 8
 ; DEFAULT-NEXT:    store i32 0, ptr [[TMP9]], align 8
-; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; DEFAULT-NEXT:    store i32 0, ptr [[TMP12]], align 8
+; DEFAULT-NEXT:    store i32 0, ptr [[TMP13]], align 8
+; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; DEFAULT-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; DEFAULT-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:

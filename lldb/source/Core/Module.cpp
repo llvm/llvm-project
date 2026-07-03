@@ -1041,8 +1041,8 @@ void Module::GetDescription(llvm::raw_ostream &s,
   }
 
   if (level == eDescriptionLevelBrief) {
-    const char *filename = m_file.GetFilename().GetCString();
-    if (filename)
+    llvm::StringRef filename = m_file.GetFilename();
+    if (!filename.empty())
       s << filename;
   } else {
     char path[PATH_MAX];
@@ -1070,8 +1070,8 @@ bool Module::FileHasChanged() const {
 
 void Module::ReportWarningOptimization(
     std::optional<lldb::user_id_t> debugger_id) {
-  ConstString file_name = GetFileSpec().GetFilename();
-  if (file_name.IsEmpty())
+  llvm::StringRef file_name = GetFileSpec().GetFilename();
+  if (file_name.empty())
     return;
 
   StreamString ss;
@@ -1183,7 +1183,7 @@ ObjectFile *Module::GetObjectFile() {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (!m_did_load_objfile.load()) {
       LLDB_SCOPED_TIMERF("Module::GetObjectFile () module = %s",
-                         GetFileSpec().GetFilename().AsCString(""));
+                         GetFileSpec().GetFilename().str().c_str());
       lldb::offset_t data_offset = 0;
       lldb::offset_t file_size = 0;
 
@@ -1221,10 +1221,12 @@ ObjectFile *Module::GetObjectFile() {
 }
 
 SectionList *Module::GetSectionList() {
-  // Populate m_sections_up with sections from objfile.
+  // Guard the lazy build with m_sections_mutex rather than m_mutex:
+  // Module::PreloadSymbols holds m_mutex across the parallel DWARF index, whose
+  // worker threads re-enter GetSectionList, so taking m_mutex here deadlocks.
+  std::lock_guard<std::recursive_mutex> guard(m_sections_mutex);
   if (!m_sections_up) {
-    ObjectFile *obj_file = GetObjectFile();
-    if (obj_file != nullptr)
+    if (ObjectFile *obj_file = GetObjectFile())
       obj_file->CreateSections(*GetUnifiedSectionList());
   }
   return m_sections_up.get();
@@ -1662,4 +1664,12 @@ DataFileCache *Module::GetIndexCache() {
                             .GetLLDBIndexCachePath()
                             .GetPath());
   return g_data_file_cache;
+}
+
+lldb_private::ModuleSpecList Module::GetSeparateDebugInfoFiles() {
+  SymbolFile *symfile = GetSymbolFile(/*can_create=*/true);
+  if (!symfile)
+    return {};
+
+  return symfile->GetSeparateDebugInfoFiles();
 }

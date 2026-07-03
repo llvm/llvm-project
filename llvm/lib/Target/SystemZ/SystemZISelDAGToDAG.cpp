@@ -1648,9 +1648,25 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
     break;
 
   case ISD::AND:
-    if (Node->getOperand(1).getOpcode() != ISD::Constant)
+    if (Node->getOperand(1).getOpcode() != ISD::Constant) {
       if (tryRxSBG(Node, SystemZ::RNSBG))
         return;
+    } else {
+      // Use patterns for zero-extending of vector element extraction.
+      if (Node->getValueType(0) == MVT::i64 &&
+          Node->getOperand(0)->getOpcode() == ISD::ANY_EXTEND) {
+        SDValue Input = Node->getOperand(0)->getOperand(0);
+        uint64_t Mask =
+            cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
+        if (Input->getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+          EVT VecVT = Input->getOperand(0)->getValueType(0);
+          unsigned EltBits = VecVT.getScalarSizeInBits();
+          if (allOnes(EltBits) == Mask)
+            break;
+        }
+      }
+    }
+
     [[fallthrough]];
   case ISD::ROTL:
   case ISD::SHL:

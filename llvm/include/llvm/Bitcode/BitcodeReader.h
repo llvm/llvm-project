@@ -17,7 +17,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitstream/BitCodeEnums.h"
 #include "llvm/IR/GlobalValue.h"
-#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -84,6 +83,14 @@ struct ParserCallbacks {
   std::optional<ValueTypeCallbackTy> ValueType;
   /// The MDType callback is called for every value in metadata.
   std::optional<MDTypeCallbackTy> MDType;
+
+  /// If true, do not auto-upgrade debug intrinsic calls (llvm.dbg.*) to
+  /// non-instruction debug records during bitcode read. This flag allows
+  /// direct manipulation of the old intrinsic-form debug info; beware that
+  /// LLVM does not support using these intrinsics any more. The caller is
+  /// responsible for performing the upgrade manually (e.g. via
+  /// Module::convertToNewDbgValues()).
+  bool SkipDebugIntrinsicUpgrade = false;
 
   ParserCallbacks() = default;
   explicit ParserCallbacks(DataLayoutCallbackFuncTy DataLayout)
@@ -166,8 +173,7 @@ struct ParserCallbacks {
     /// into CombinedIndex.
     LLVM_ABI Error
     readSummary(ModuleSummaryIndex &CombinedIndex, StringRef ModulePath,
-                std::function<bool(StringRef)> IsPrevailing = nullptr,
-                std::function<void(ValueInfo)> OnValueInfo = nullptr);
+                std::function<bool(GlobalValue::GUID)> IsPrevailing = nullptr);
   };
 
   struct BitcodeFileContents {

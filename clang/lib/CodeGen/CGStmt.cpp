@@ -609,7 +609,7 @@ CodeGenFunction::EmitCompoundStmtWithoutScope(const CompoundStmt &S,
       // We can't return an RValue here because there might be cleanups at
       // the end of the StmtExpr.  Because of that, we have to emit the result
       // here into a temporary alloca.
-      RetAlloca = CreateMemTemp(ExprTy);
+      RetAlloca = CreateMemTempWithoutCast(ExprTy);
       EmitAnyExprToMem(E, RetAlloca, Qualifiers(),
                        /*IsInit*/ false);
     }
@@ -885,8 +885,13 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
   LexicalScope ConditionScope(*this, S.getCond()->getSourceRange());
   ApplyDebugLocation DL(*this, S.getCond());
 
-  if (S.getInit())
+  if (S.getInit()) {
     EmitStmt(S.getInit());
+
+    // The init statement may have cleared the insertion point (e.g. it ended in
+    // a 'noreturn' call); the condition emitted below needs a valid one.
+    EnsureInsertPoint();
+  }
 
   if (S.getConditionVariable())
     EmitDecl(*S.getConditionVariable());
@@ -2374,8 +2379,13 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
 
   RunCleanupsScope ConditionScope(*this);
 
-  if (S.getInit())
+  if (S.getInit()) {
     EmitStmt(S.getInit());
+
+    // The init statement may have cleared the insertion point (e.g. it ended in
+    // a 'noreturn' call); the condition emitted below needs a valid one.
+    EnsureInsertPoint();
+  }
 
   if (S.getConditionVariable())
     EmitDecl(*S.getConditionVariable());

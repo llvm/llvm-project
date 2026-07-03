@@ -470,6 +470,23 @@ public:
         Opcode, Op, ResultTy, nullptr, VPIRFlags::getDefaultFlags(Opcode)));
   }
 
+  /// Create a single-scalar recipe with \p Opcode and \p Operands without
+  /// inserting it.
+  static VPSingleDefRecipe *createSingleScalarOp(unsigned Opcode,
+                                                 ArrayRef<VPValue *> Operands,
+                                                 VPValue *Mask,
+                                                 const VPIRFlags &Flags,
+                                                 const VPIRMetadata &Metadata,
+                                                 DebugLoc DL, Instruction *UV) {
+    if (Instruction::isCast(Opcode)) {
+      assert(!Mask && "Cast cannot be predicated");
+      return new VPInstructionWithType(Opcode, Operands, UV->getType(), Flags,
+                                       Metadata, DL, UV->getName(), UV);
+    }
+    return new VPReplicateRecipe(UV, Operands, /*IsSingleScalar=*/true, Mask,
+                                 Flags, Metadata, DL);
+  }
+
   VPScalarIVStepsRecipe *
   createScalarIVSteps(Instruction::BinaryOps InductionOpcode,
                       FPMathOperator *FPBinOp, VPValue *IV, VPValue *Step,
@@ -991,6 +1008,16 @@ private:
   /// epilogue, assuming the main loop is vectorized by \p MainPlan.
   bool isCandidateForEpilogueVectorization(VPlan &MainPlan) const;
 };
+
+/// A helper function that returns true if the given type is irregular. The
+/// type is irregular if its allocated size doesn't equal the store size of an
+/// element of the corresponding vector type.
+inline bool hasIrregularType(Type *Ty, const DataLayout &DL) {
+  // Determine if an array of N elements of type Ty is "bitcast compatible"
+  // with a <N x Ty> vector.
+  // This is only true if there is no padding between the array elements.
+  return DL.getTypeAllocSizeInBits(Ty) != DL.getTypeSizeInBits(Ty);
+}
 
 } // namespace llvm
 

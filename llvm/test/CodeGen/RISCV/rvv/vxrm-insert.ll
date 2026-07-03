@@ -158,10 +158,10 @@ entry:
 define <vscale x 1 x i8> @test5(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vscale x 1 x i8> %2, iXLen %3, i1 %cond) nounwind {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi a1, a1, 1
 ; CHECK-NEXT:    csrwi vxrm, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vaadd.vv v8, v8, v9
+; CHECK-NEXT:    andi a1, a1, 1
 ; CHECK-NEXT:    beqz a1, .LBB4_2
 ; CHECK-NEXT:  # %bb.1: # %condblock
 ; CHECK-NEXT:    vaadd.vv v8, v8, v10
@@ -233,10 +233,10 @@ mergeblock:
 define <vscale x 1 x i8> @test7(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vscale x 1 x i8> %2, iXLen %3, i1 %cond) nounwind {
 ; CHECK-LABEL: test7:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi a1, a1, 1
 ; CHECK-NEXT:    csrwi vxrm, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vaadd.vv v8, v8, v9
+; CHECK-NEXT:    andi a1, a1, 1
 ; CHECK-NEXT:    beqz a1, .LBB6_2
 ; CHECK-NEXT:  # %bb.1: # %trueblock
 ; CHECK-NEXT:    vaadd.vv v8, v8, v10
@@ -460,10 +460,10 @@ for.end:
 define <vscale x 1 x i8> @test12(i1 %c1, <vscale x 1 x i8> %0, <vscale x 1 x i8> %1, iXLen %vl) {
 ; CHECK-LABEL: test12:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    csrwi vxrm, 0
 ; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vaadd.vv v9, v8, v9
+; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    beqz a0, .LBB11_2
 ; CHECK-NEXT:  # %bb.1: # %block1
 ; CHECK-NEXT:    csrwi vxrm, 1
@@ -493,10 +493,10 @@ block2:
 define <vscale x 1 x i8> @test13(i1 %c1, i1 %c2, i1 %c3, <vscale x 1 x i8> %0, <vscale x 1 x i8> %1, iXLen %vl) {
 ; CHECK-LABEL: test13:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    csrwi vxrm, 0
 ; CHECK-NEXT:    vsetvli zero, a3, e8, mf8, ta, ma
 ; CHECK-NEXT:    vaadd.vv v10, v8, v9
+; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    beqz a0, .LBB12_2
 ; CHECK-NEXT:  # %bb.1: # %block1
 ; CHECK-NEXT:    csrwi vxrm, 1

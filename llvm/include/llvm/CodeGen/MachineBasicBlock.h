@@ -85,12 +85,6 @@ template <> struct DenseMapInfo<MBBSectionID> {
   using TypeInfo = DenseMapInfo<MBBSectionID::SectionType>;
   using NumberInfo = DenseMapInfo<unsigned>;
 
-  static inline MBBSectionID getEmptyKey() {
-    return MBBSectionID(NumberInfo::getEmptyKey());
-  }
-  static inline MBBSectionID getTombstoneKey() {
-    return MBBSectionID(NumberInfo::getTombstoneKey());
-  }
   static unsigned getHashValue(const MBBSectionID &SecID) {
     return detail::combineHashValue(TypeInfo::getHashValue(SecID.Type),
                                     NumberInfo::getHashValue(SecID.Number));

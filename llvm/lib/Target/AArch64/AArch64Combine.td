@@ -68,8 +68,17 @@ def simplify_uaddo : GICombineRule<
   (apply [{ applySimplifyUADDO(*${root}, MRI, B, Observer, Helper,
                                ${matchinfo}); }])>;
 
+def emit_bzero : GICombineRule<
+  (defs root:$root),
+  (match (G_MEMSET $dst_addr, $value, $size, $tailcall):$root,
+         [{ return llvm::AArch64GISelUtils::matchEmitBZero(*${root}, MRI,
+                                                           Libcalls,
+                                                           CInfo.EnableMinSize); }]),
+  (apply [{ llvm::AArch64GISelUtils::applyEmitBZero(*${root}, B); }])>;
+
 def AArch64PreLegalizerCombiner: GICombiner<
   "AArch64PreLegalizerCombinerImpl", [all_combines,
+                                      select_zero_true,
                                       combine_shuffle_vector,
                                       icmp_redundant_trunc,
                                       fold_global_offset,
@@ -81,13 +90,17 @@ def AArch64PreLegalizerCombiner: GICombiner<
                                       push_sub_through_sext,
                                       push_add_through_sext,
                                       push_mul_through_sext,
-                                      simplify_uaddo]> {
+                                      simplify_uaddo,
+                                      memcpy_family_combines,
+                                      emit_bzero]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
 def AArch64O0PreLegalizerCombiner: GICombiner<
   "AArch64O0PreLegalizerCombinerImpl", [optnone_combines,
-                                        combine_shuffle_vector]> {
+                                        combine_shuffle_vector,
+                                        memcpy_family_combines,
+                                        emit_bzero]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
@@ -384,7 +397,8 @@ def AArch64PostLegalizerCombiner
                         mul_const, redundant_sext_inreg,
                         form_bitfield_extract, rotate_out_of_range,
                         icmp_to_true_false_known_bits, overflow_combines,
-                        select_combines, fold_merge_to_zext, merge_combines,
+                        select_combines, select_zero_true, select_zero_false, select_not,
+                        fold_merge_to_zext, merge_combines,
                         constant_fold_binops, identity_combines,
                         ptr_add_immed_chain, overlapping_and,
                         split_store_zero_128, undef_combines,

@@ -636,13 +636,12 @@ namespace llvm {
                            const LibcallLoweringInfo &Libcalls) const override;
 
     bool useLoadStackGuardNode(const Module &M) const override;
-    bool useStackGuardXorFP() const override;
+    bool useStackGuardMixFP() const override;
     void
     insertSSPDeclarations(Module &M,
                           const LibcallLoweringInfo &Libcalls) const override;
-    SDValue emitStackGuardXorFP(SelectionDAG &DAG, SDValue Val,
+    SDValue emitStackGuardMixFP(SelectionDAG &DAG, SDValue Val,
                                 const SDLoc &DL) const override;
-
 
     /// Return true if the target stores SafeStack pointer at a fixed offset in
     /// some non-standard address space, and populates the address space and
@@ -892,8 +891,6 @@ namespace llvm {
     shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
     TargetLoweringBase::AtomicExpansionKind
     shouldExpandLogicAtomicRMWInIR(const AtomicRMWInst *AI) const;
-    TargetLoweringBase::AtomicExpansionKind
-    shouldCastAtomicLoadInIR(LoadInst *LI) const override;
     void emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const override;
     void emitCmpArithAtomicRMWIntrinsic(AtomicRMWInst *AI) const override;
 

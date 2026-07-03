@@ -366,6 +366,7 @@ def warn_alias_type_mismatch : Warning<
   "alias and aliasee have different types %0 and %1">,
   InGroup<DiagGroup<"attribute-alias">>;
 
+def err_fe_text_encoding_config : Error<"failed to set fexec-charset to '%0'">;
 def warn_atomic_op_misaligned : Warning<
   "misaligned atomic operation may incur "
   "significant performance penalty"
@@ -409,25 +410,30 @@ def warn_profile_data_misexpect : Warning<
 def warn_ssaf_extract_tu_summary_file_unknown_output_format :
   Warning<"unknown output summary file format '%0' "
   "specified by '--ssaf-tu-summary-file=%1'">,
-  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+  InGroup<ScalableStaticAnalysis>, DefaultError;
 
 def warn_ssaf_extract_tu_summary_file_unknown_format :
   Warning<"failed to parse the value of '--ssaf-tu-summary-file=%0' "
   "the value must follow the '<path>.<format>' pattern">,
-  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+  InGroup<ScalableStaticAnalysis>, DefaultError;
 
 def warn_ssaf_must_enable_summary_extractors :
   Warning<"must enable some summary extractors using the "
         "'--ssaf-extract-summaries=' option">,
-  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+  InGroup<ScalableStaticAnalysis>, DefaultError;
 
 def warn_ssaf_extract_summary_unknown_extractor_name :
   Warning<"no summary extractor%s0 %plural{1:was|:were}0 registered with name: %1">,
-  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+  InGroup<ScalableStaticAnalysis>, DefaultError;
 
 def warn_ssaf_write_tu_summary_failed :
   Warning<"failed to write TU summary to '%0': %1">,
-  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+  InGroup<ScalableStaticAnalysis>, DefaultError;
+
+def warn_ssaf_tu_summary_requires_compilation_unit_id :
+  Warning<"option '--ssaf-tu-summary-file=' requires "
+          "'--ssaf-compilation-unit-id=' to be set">,
+  InGroup<ScalableStaticAnalysis>, DefaultError;
 
 def err_extract_api_ignores_file_not_found :
   Error<"file '%0' specified by '--extract-api-ignores=' not found">, DefaultFatal;
@@ -453,6 +459,9 @@ def warn_hlsl_langstd_minimal :
   Warning<"support for HLSL language version %0 is incomplete, "
           "recommend using %1 instead">,
   InGroup<HLSLDXCCompat>;
+def warn_hlsl_failed_to_embed_source
+    : Warning<"failed to embed source for '%0' into dx.source.contents">,
+      InGroup<HLSLDXCCompat>;
 
 def err_data_layout_mismatch : Error<"backend data layout '%0' does not match "
                                      "expected target description '%1'">;

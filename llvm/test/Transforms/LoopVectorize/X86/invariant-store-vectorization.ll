@@ -49,11 +49,11 @@ define i32 @inv_val_store_to_inv_address_with_reduction(ptr %a, i64 %n, ptr %b) 
 ; CHECK-NEXT:    [[TMP6]] = add <16 x i32> [[VEC_PHI4]], [[WIDE_LOAD7]]
 ; CHECK-NEXT:    [[TMP7]] = add <16 x i32> [[VEC_PHI5]], [[WIDE_LOAD8]]
 ; CHECK-NEXT:    [[TMP8]] = add <16 x i32> [[VEC_PHI6]], [[WIDE_LOAD9]]
-; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[A]], align 4, !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 64
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[A]], align 4, !alias.scope [[META6:![0-9]+]], !noalias [[META0]]
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <16 x i32> [[TMP6]], [[TMP5]]
 ; CHECK-NEXT:    [[BIN_RDX10:%.*]] = add <16 x i32> [[TMP7]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX11:%.*]] = add <16 x i32> [[TMP8]], [[BIN_RDX10]]
@@ -76,11 +76,11 @@ define i32 @inv_val_store_to_inv_address_with_reduction(ptr %a, i64 %n, ptr %b) 
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX14]]
 ; CHECK-NEXT:    [[WIDE_LOAD16:%.*]] = load <8 x i32>, ptr [[TMP12]], align 8, !alias.scope [[META0]]
 ; CHECK-NEXT:    [[TMP13]] = add <8 x i32> [[VEC_PHI15]], [[WIDE_LOAD16]]
-; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[A]], align 4, !alias.scope [[META3]], !noalias [[META0]]
 ; CHECK-NEXT:    [[INDEX_NEXT17]] = add nuw i64 [[INDEX14]], 8
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT17]], [[N_VEC13]]
 ; CHECK-NEXT:    br i1 [[TMP14]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
+; CHECK-NEXT:    store i32 [[NTRUNC]], ptr [[A]], align 4, !alias.scope [[META6]], !noalias [[META0]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP13]])
 ; CHECK-NEXT:    [[CMP_N18:%.*]] = icmp eq i64 [[SMAX2]], [[N_VEC13]]
 ; CHECK-NEXT:    br i1 [[CMP_N18]], label %[[FOR_END]], label %[[VEC_EPILOG_SCALAR_PH]]

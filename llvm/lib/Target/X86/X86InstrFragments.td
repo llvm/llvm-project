@@ -165,6 +165,14 @@ let IsStrictFP = true in {
 // X86 bit-test instructions.
 def X86bt      : SDNode<"X86ISD::BT",       SDTX86CmpTest>;
 
+// X86 non-atomic bit-test-and-modify instructions: res, EFLAGS = op src, bitno.
+// CF is set from the pre-operation bit value; BT on the same operands is
+// therefore redundant after one of these nodes. The atomic (locked) variants
+// live under X86ISD::LBTR/LBTS/LBTC.
+def X86btr : SDNode<"X86ISD::BTR", SDTBinaryArithWithFlags>;
+def X86bts : SDNode<"X86ISD::BTS", SDTBinaryArithWithFlags>;
+def X86btc : SDNode<"X86ISD::BTC", SDTBinaryArithWithFlags>;
+
 // Conditional compare instructions
 def X86ccmp    : SDNode<"X86ISD::CCMP",     SDTX86Ccmp>;
 def X86ctest   : SDNode<"X86ISD::CTEST",    SDTX86Ccmp>;
@@ -415,10 +423,6 @@ def X86bextri : SDNode<"X86ISD::BEXTRI", SDTIntBinOp>;
 
 // Zero High Bits Starting with Specified Bit Position.
 def X86bzhi   : SDNode<"X86ISD::BZHI",   SDTIntBinOp>;
-
-// Parallel extract and deposit.
-def X86pdep   : SDNode<"X86ISD::PDEP",   SDTIntBinOp>;
-def X86pext   : SDNode<"X86ISD::PEXT",   SDTIntBinOp>;
 
 // X86-specific multiply by immediate.
 def X86mul_imm : SDNode<"X86ISD::MUL_IMM", SDTIntBinOp>;
@@ -1048,9 +1052,9 @@ def fpimmneg0 : FPImmLeaf<fAny, [{
 }]>;
 
 def fpimm1 : FPImmLeaf<fAny, [{
-  return Imm.isExactlyValue(+1.0);
+  return Imm.isOne();
 }]>;
 
 def fpimmneg1 : FPImmLeaf<fAny, [{
-  return Imm.isExactlyValue(-1.0);
+  return Imm.isMinusOne();
 }]>;

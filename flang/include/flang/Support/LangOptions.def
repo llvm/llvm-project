@@ -42,6 +42,9 @@ LANGOPT(ReciprocalMath, 1, false)
 LANGOPT(OpenMPVersion, 31, 0)
 /// Generate code only for OpenMP target device
 LANGOPT(OpenMPIsTargetDevice, 1, false)
+/// Indicate we are compiling offloading device-side code, not for the
+/// host/auxiliary device.
+LANGOPT(OffloadDevice, 1, false)
 /// Generate OpenMP target code only for GPUs
 LANGOPT(OpenMPIsGPU, 1, false)
 /// Generate OpenMP target code only for GPUs

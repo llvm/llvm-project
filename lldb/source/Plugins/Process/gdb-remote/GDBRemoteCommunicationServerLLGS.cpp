@@ -226,6 +226,11 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_jAcceleratorPluginInitialize,
       &GDBRemoteCommunicationServerLLGS::Handle_jAcceleratorPluginInitialize);
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::
+          eServerPacketType_jAcceleratorPluginBreakpointHit,
+      &GDBRemoteCommunicationServerLLGS::
+          Handle_jAcceleratorPluginBreakpointHit);
 
   RegisterMemberFunctionHandler(StringExtractorGDBRemote::eServerPacketType_g,
                                 &GDBRemoteCommunicationServerLLGS::Handle_g);
@@ -286,10 +291,18 @@ Status GDBRemoteCommunicationServerLLGS::LaunchProcess() {
   m_process_launch_info.GetFlags().Set(eLaunchFlagDebug);
 
   if (should_forward_stdio) {
-    // Temporarily relax the following for Windows until we can take advantage
-    // of the recently added pty support. This doesn't really affect the use of
-    // lldb-server on Windows.
-#if !defined(_WIN32)
+#if defined(_WIN32)
+    ProcessLaunchInfo::STDIOWindowSize win_size =
+        m_process_launch_info.GetSTDIOWindowSize();
+    if (m_process_launch_info.IsSTDIOWindowSizeExplicit() &&
+        win_size.cols == 0 && win_size.rows == 0) {
+      if (llvm::Error Err = m_process_launch_info.SetUpPipeRedirection())
+        return Status::FromError(std::move(Err));
+    } else {
+      if (llvm::Error Err = m_process_launch_info.SetUpPtyRedirection())
+        return Status::FromError(std::move(Err));
+    }
+#else
     if (llvm::Error Err = m_process_launch_info.SetUpPtyRedirection())
       return Status::FromError(std::move(Err));
 #endif
@@ -1219,6 +1232,33 @@ void GDBRemoteCommunicationServerLLGS::NewSubprocess(
       DebuggedProcess{std::move(child_process), DebuggedProcess::Flag{}});
 }
 
+void GDBRemoteCommunicationServerLLGS::NewProcessOutput(NativeProcessProtocol *,
+                                                        llvm::StringRef data) {
+  if (data.empty())
+    return;
+
+  {
+    std::lock_guard<std::mutex> lock(m_pending_output_mutex);
+    m_pending_output_buffer.append(data.begin(), data.end());
+  }
+  m_mainloop.AddPendingCallback(
+      [this](MainLoopBase &) { FlushPendingProcessOutput(); });
+}
+
+void GDBRemoteCommunicationServerLLGS::FlushPendingProcessOutput() {
+  if (!m_current_process || !StateIsRunningState(m_current_process->GetState()))
+    return;
+
+  std::string out;
+  {
+    std::lock_guard<std::mutex> lock(m_pending_output_mutex);
+    if (m_pending_output_buffer.empty())
+      return;
+    out.swap(m_pending_output_buffer);
+  }
+  SendONotification(out.data(), out.size());
+}
+
 void GDBRemoteCommunicationServerLLGS::DataAvailableCallback() {
   Log *log = GetLog(GDBRLog::Comm);
 
@@ -2026,6 +2066,16 @@ GDBRemoteCommunicationServerLLGS::SendStopReasonForState(
     bool force_synchronous) {
   Log *log = GetLog(LLDBLog::Process);
 
+  {
+    std::string out;
+    {
+      std::lock_guard<std::mutex> lock(m_pending_output_mutex);
+      out.swap(m_pending_output_buffer);
+    }
+    if (!out.empty())
+      SendONotification(out.data(), out.size());
+  }
+
   if (m_disabling_non_stop) {
     // Check if we are waiting for any more processes to stop.  If we are,
     // do not send the OK response yet.
@@ -2532,12 +2582,21 @@ GDBRemoteCommunicationServerLLGS::Handle_I(StringExtractorGDBRemote &packet) {
     // write directly to stdin *this might block if stdin buffer is full*
     // TODO: enqueue this block in circular buffer and send window size to
     // remote host
-    ConnectionStatus status;
     Status error;
+
+#if defined(_WIN32)
+    // On Windows the inferior's stdio is owned by NativeProcessWindows (which
+    // holds the ConPTY). Route stdin through NativeProcessProtocol::WriteStdin
+    // rather than m_stdio_communication, which is unconnected on Windows.
+    if (m_current_process->WriteStdin(tmp, read, error) != read || error.Fail())
+      return SendErrorResponse(0x15);
+#else
+    ConnectionStatus status;
     m_stdio_communication.WriteAll(tmp, read, status, &error);
     if (error.Fail()) {
       return SendErrorResponse(0x15);
     }
+#endif
   }
 
   return SendOKResponse();
@@ -4448,6 +4507,8 @@ std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
             .Case("multiprocess+", Extension::multiprocess)
             .Case("fork-events+", Extension::fork)
             .Case("vfork-events+", Extension::vfork)
+            .Case("qXfer:libraries:read+", Extension::libraries)
+            .Case("qXfer:libraries-svr4:read+", Extension::libraries_svr4)
             .Default({});
 
   // We consume lldb's swbreak/hwbreak feature, but it doesn't change the
@@ -4540,11 +4601,39 @@ GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_jAcceleratorPluginInitialize(
     StringExtractorGDBRemote &) {
   std::vector<AcceleratorActions> accelerator_actions;
-  for (auto &plugin_up : m_accelerator_plugins) {
+  for (std::unique_ptr<lldb_server::LLDBServerAcceleratorPlugin> &plugin_up :
+       m_accelerator_plugins) {
     if (auto actions = plugin_up->GetInitializeActions())
       accelerator_actions.push_back(std::move(*actions));
   }
   StreamGDBRemote response;
   response.PutAsJSONArray(accelerator_actions, /*hex_ascii=*/false);
   return SendPacketNoLock(response.GetString());
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_jAcceleratorPluginBreakpointHit(
+    StringExtractorGDBRemote &packet) {
+  packet.ConsumeFront("jAcceleratorPluginBreakpointHit:");
+  llvm::Expected<AcceleratorBreakpointHitArgs> args =
+      llvm::json::parse<AcceleratorBreakpointHitArgs>(
+          packet.Peek(), "AcceleratorBreakpointHitArgs");
+  if (!args)
+    return SendErrorResponse(args.takeError());
+
+  for (std::unique_ptr<lldb_server::LLDBServerAcceleratorPlugin> &plugin_up :
+       m_accelerator_plugins) {
+    if (plugin_up->GetPluginName() == args->plugin_name) {
+      llvm::Expected<AcceleratorBreakpointHitResponse> bp_response =
+          plugin_up->BreakpointWasHit(*args);
+      if (!bp_response)
+        return SendErrorResponse(bp_response.takeError());
+
+      StreamGDBRemote response;
+      response.PutAsJSON(*bp_response, /*hex_ascii=*/false);
+      return SendPacketNoLock(response.GetString());
+    }
+  }
+  return SendErrorResponse(
+      Status::FromErrorString("unknown accelerator plugin name"));
 }

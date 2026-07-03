@@ -5967,22 +5967,33 @@ TEST_F(FormatTest, HashInMacroDefinition) {
   verifyFormat("#define A(c) uR#c");
   verifyFormat("#define A(c) UR#c");
   verifyFormat("#define A(c) u8R#c");
-  verifyFormat("#define A \\\n  b #c;", getLLVMStyleWithColumns(11));
+
+  auto Style = getLLVMStyleWithColumns(11);
+  verifyFormat("#define A \\\n  b #c;", Style);
   verifyFormat("#define A  \\\n"
                "  {        \\\n"
                "    f(#c); \\\n"
                "  }",
-               getLLVMStyleWithColumns(11));
+               Style);
 
+  Style.ColumnLimit = 22;
   verifyFormat("#define A(X)         \\\n"
                "  void function##X()",
-               getLLVMStyleWithColumns(22));
-
+               Style);
   verifyFormat("#define A(a, b, c)   \\\n"
                "  void a##b##c()",
-               getLLVMStyleWithColumns(22));
+               Style);
+  verifyFormat("#define A void # ## #", Style);
 
-  verifyFormat("#define A void # ## #", getLLVMStyleWithColumns(22));
+  Style.ColumnLimit = 60;
+  Style.AlignEscapedNewlines = FormatStyle::ENAS_DontAlign;
+  verifyFormat(
+      "#define MACRO(Name) \\\n"
+      "  struct LongPrefix##Name##LongSuffix< \\\n"
+      "      VeryLongTemplateArgument> {};",
+      "#define MACRO(Name) \\\n"
+      "  struct LongPrefix##Name##LongSuffix<VeryLongTemplateArgument> {};",
+      Style);
 
   verifyFormat("{\n"
                "  {\n"
@@ -7120,6 +7131,10 @@ TEST_F(FormatTest, LayoutNestedBlocks) {
   verifyFormat("SomeFunction({MACRO({ return output; }), b});");
 
   verifyNoCrash("^{v^{a}}");
+  // Verify no crash on malformed input with unbalanced braces where angle
+  // bracket parsing resets the token stream and a brace is consumed twice
+  // through parseConditional(), leaving Scopes empty.
+  verifyNoCrash("{{ < ? } a} b");
 }
 
 TEST_F(FormatTest, FormatNestedBlocksInMacros) {
@@ -14279,18 +14294,16 @@ TEST_F(FormatTest, HandlesIncludeDirectives) {
   verifyFormat("#define F __has_include_next(<a/b>)");
 
   // Protocol buffer definition or missing "#".
-  verifyFormat("import \"aaaaaaaaaaaaaaaaa/aaaaaaaaaaaaaaa\";",
-               getLLVMStyleWithColumns(30));
+  constexpr StringRef Code("import \"aaaaaaaaaaaaaaaaa/aaaaaaaaaaaaaaa\";");
+  auto Style = getLLVMStyleWithColumns(30);
+  verifyFormat(Code, Style);
+  Style.Language = FormatStyle::LK_Proto;
+  verifyFormat(Code, Style);
 
-  FormatStyle Style = getLLVMStyle();
+  Style.Language = FormatStyle::LK_Cpp;
   Style.AlwaysBreakBeforeMultilineStrings = true;
   Style.ColumnLimit = 0;
   verifyFormat("#import \"abc.h\"", Style);
-
-  // But 'import' might also be a regular C++ namespace.
-  verifyFormat("import::SomeFunction(aaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
-               "                     aaaaaaaaaaaaaaaaaaaaaaaaaaaaa);");
-  verifyFormat("import::Bar foo(val ? 2 : 1);");
 }
 
 //===----------------------------------------------------------------------===//
@@ -14381,6 +14394,7 @@ TEST_F(FormatTest, IncorrectCodeUnbalancedBraces) {
   verifyNoCrash("struct Foo {\n"
                 "  operator foo(bar\n"
                 "};");
+  verifyNoCrash("{ operator } a");
   verifyNoCrash("decltype( {\n"
                 "  {");
 }
@@ -15410,6 +15424,15 @@ TEST_F(FormatTest, PullInlineOnlyFunctionDefinitionsIntoSingleLine) {
                MergeInlineOnly);
   verifyFormat("int f() {\n"
                "}",
+               MergeInlineOnly);
+
+  MergeInlineOnly.NamespaceIndentation = FormatStyle::NI_All;
+  verifyFormat("namespace {\n"
+               "  class Class {\n"
+               "#define MACRO 1\n"
+               "    int f() { return 1; }\n"
+               "  };\n"
+               "} // namespace",
                MergeInlineOnly);
 
   MergeInlineOnly.BreakBeforeBraces = FormatStyle::BS_Whitesmiths;
@@ -22486,6 +22509,12 @@ TEST_F(FormatTest, OneLineFormatOffRegex) {
                  "   MACRO_TEST2( );",
                  Style);
 
+  Style.OneLineFormatOffRegex = "//(< clang-format off| NO_TRANSLATION)$";
+  verifyNoChange(
+      " int i ;  //< clang-format off\n"
+      " msg = sprintf(\"Long string with placeholders.\"); // NO_TRANSLATION",
+      Style);
+
   Style.ColumnLimit = 50;
   Style.OneLineFormatOffRegex = "^LogErrorPrint$";
   verifyFormat(" myproject::LogErrorPrint(logger, \"Don't split me!\");\n"
@@ -22495,11 +22524,31 @@ TEST_F(FormatTest, OneLineFormatOffRegex) {
                " myproject::MyLogErrorPrinter(myLogger, \"Split me!\");",
                Style);
 
-  Style.OneLineFormatOffRegex = "//(< clang-format off| NO_TRANSLATION)$";
-  verifyNoChange(
-      " int i ;  //< clang-format off\n"
-      " msg = sprintf(\"Long string with placeholders.\"); // NO_TRANSLATION",
-      Style);
+  Style.ColumnLimit = 20;
+  Style.OneLineFormatOffRegex = "^pragma$";
+  verifyFormat("void pragmas() {\n"
+               "  // a comment\n"
+               "  // that's too long\n"
+               "  #pragma omp\n"
+               "  _pragma();\n"
+               "}",
+               "void pragmas () {\n"
+               "  // a comment that's\n"
+               "  // too long\n"
+               "  #pragma omp\n"
+               " _pragma();\n"
+               "}",
+               Style);
+
+  Style.OneLineFormatOffRegex = "// FormatOff$";
+  verifyFormat("  // comment too\n"
+               "  // long\n"
+               "  tm t; // FormatOff\n"
+               "int i;",
+               "  // comment too long\n"
+               "  tm t; // FormatOff\n"
+               " int i;",
+               Style);
 }
 
 TEST_F(FormatTest, DoNotCrashOnInvalidInput) {
@@ -22508,6 +22557,8 @@ TEST_F(FormatTest, DoNotCrashOnInvalidInput) {
   verifyNoCrash("        tst     %o5     ! are we doing the gray case?\n"
                 "LY52:                   ! [internal]");
   verifyNoCrash("operator foo *;");
+  verifyNoCrash(
+      "#xxxx??x<xxxxxxx||??x<xxxxxxx and xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
 }
 
 TEST_F(FormatTest, FormatsTableGenCode) {
@@ -24791,9 +24842,7 @@ TEST_F(FormatTest, Cpp20ModulesSupport) {
   Style.AllowShortFunctionsOnASingleLine = FormatStyle::ShortFunctionStyle();
 
   verifyFormat("export import foo;", Style);
-  verifyFormat("export import foo:bar;", Style);
   verifyFormat("export import foo.bar;", Style);
-  verifyFormat("export import foo.bar:baz;", Style);
   verifyFormat("export import :bar;", Style);
   verifyFormat("export module foo:bar;", Style);
   verifyFormat("export module foo;", Style);
@@ -24821,7 +24870,6 @@ TEST_F(FormatTest, Cpp20ModulesSupport) {
 
   verifyFormat("import bar;", Style);
   verifyFormat("import foo.bar;", Style);
-  verifyFormat("import foo:bar;", Style);
   verifyFormat("import :bar;", Style);
   verifyFormat("import /* module partition */ :bar;", Style);
   verifyFormat("import <ctime>;", Style);
@@ -24837,11 +24885,10 @@ TEST_F(FormatTest, Cpp20ModulesSupport) {
                "}",
                Style);
 
-  verifyFormat("module :private;", Style);
+  verifyFormat("module : private;", Style);
   verifyFormat("import <foo/bar.h>;", Style);
   verifyFormat("import foo...bar;", Style);
   verifyFormat("import ..........;", Style);
-  verifyFormat("module foo:private;", Style);
   verifyFormat("import a", Style);
   verifyFormat("module a", Style);
   verifyFormat("export import a", Style);
@@ -24851,8 +24898,34 @@ TEST_F(FormatTest, Cpp20ModulesSupport) {
   verifyFormat("module", Style);
   verifyFormat("export", Style);
 
+  verifyFormat("import <Foo/Bar> /* comment */;", Style);
+  verifyFormat("import <Foo/Bar>; // Trailing comment", Style);
+
+  Style.ColumnLimit = 10;
+  verifyFormat("import Foo.Bar;", Style);
+  verifyFormat("export import Foo.Bar;", Style);
+  verifyFormat("export module Foo.Bar;", Style);
+  verifyFormat("export module Foo.Bar:Baz;", Style);
+  verifyFormat("import <Foo/Bar> /* comment */;", Style);
+  verifyFormat("import <Foo/Bar>; // Trailing comment", Style);
+
+  Style.BreakStringLiterals = true;
+  Style.ColumnLimit = 20;
+  verifyFormat("export module foobar;\n"
+               "char *s = \"s1\"\n"
+               "          \"s2\";",
+               "export module foobar;\n"
+               "char *s = \"s1\" \"s2\";",
+               Style);
+
+  // Somewhat gracefully handle import in pre-C++20 code.
   verifyFormat("import /* not keyword */ = val ? 2 : 1;");
   verifyFormat("_world->import<engine_module>();");
+
+  // But 'import' might also be a regular C++ namespace.
+  verifyFormat("import::SomeFunction(aaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "                     aaaaaaaaaaaaaaaaaaaaaaaaaaaaa);");
+  verifyFormat("import::Bar foo(val ? 2 : 1);");
 }
 
 TEST_F(FormatTest, CoroutineForCoawait) {
@@ -25136,6 +25209,19 @@ TEST_F(FormatTest, EnumTrailingComma) {
                "enum class MyEnum_E {\n"
                "  MY_ENUM = 0U\n"
                "};",
+               Style);
+
+  // Issue https://github.com/llvm/llvm-project/issues/205571
+  verifyFormat("#ifdef FOO\n"
+               "#else\n"
+               "#endif\n"
+               "enum {\n"
+               "  E = 1,\n"
+               "};",
+               "#ifdef FOO\n"
+               "#else\n"
+               "#endif\n"
+               "enum { E = 1 };",
                Style);
 }
 

@@ -491,7 +491,7 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
     // for OpenCL C 2.0 but with no access to target capabilities. Target
     // should be immutable once created and thus these language options need
     // to be defined only once.
-    if (Opts.getOpenCLCompatibleVersion() == 300) {
+    if (Opts.getOpenCLCompatibleVersion() >= 300) {
       const auto &OpenCLFeaturesMap = getSupportedOpenCLOpts();
       Opts.OpenCLGenericAddressSpace = hasFeatureEnabled(
           OpenCLFeaturesMap, "__opencl_c_generic_address_space");
@@ -635,20 +635,20 @@ TargetInfo::getCallingConvKind(bool ClangABICompat4) const {
 bool TargetInfo::callGlobalDeleteInDeletingDtor(
     const LangOptions &LangOpts) const {
   if (getCXXABI() == TargetCXXABI::Microsoft &&
-      LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver21)
+      !LangOpts.isCompatibleWith(LangOptions::ClangABI::Ver21))
     return true;
   return false;
 }
 
 bool TargetInfo::emitVectorDeletingDtors(const LangOptions &LangOpts) const {
   if (getCXXABI() == TargetCXXABI::Microsoft &&
-      LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver21)
+      !LangOpts.isCompatibleWith(LangOptions::ClangABI::Ver21))
     return true;
   return false;
 }
 
 bool TargetInfo::areDefaultedSMFStillPOD(const LangOptions &LangOpts) const {
-  return LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver15;
+  return !LangOpts.isCompatibleWith(LangOptions::ClangABI::Ver15);
 }
 
 void TargetInfo::setDependentOpenCLOpts() {
