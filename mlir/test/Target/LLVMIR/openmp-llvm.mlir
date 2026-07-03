@@ -3661,7 +3661,7 @@ module attributes {omp.is_target_device = false} {
 // -----
 
 module attributes {omp.is_target_device = true} {
-  // CHECK: define void @filter_nohost
+  // CHECK: define hidden void @filter_nohost
   llvm.func @filter_nohost() -> ()
       attributes {
         omp.declare_target =
@@ -3683,7 +3683,7 @@ module attributes {omp.is_target_device = true} {
 // -----
 
 module attributes {omp.is_target_device = true} {
-  // CHECK: define void @filter_nohost
+  // CHECK: define hidden void @filter_nohost
   llvm.func @filter_nohost() -> ()
       attributes {
         omp.declare_target =
@@ -3993,7 +3993,7 @@ llvm.func @omp_groupprivate_device() attributes {
 // CHECK-DAG: @nohost = internal global i32 undef
 // CHECK-DAG: @[[SHARED_ANY:any.*]] = internal addrspace(3) global i32 poison
 // CHECK-DAG: @[[SHARED_NOHOST:nohost.*]] = internal addrspace(3) global i32 poison
-// CHECK: define void @omp_groupprivate_device()
+// CHECK: define hidden void @omp_groupprivate_device()
 // CHECK: store i32 1, ptr addrspace(3) @[[SHARED_ANY]], align 4
 // CHECK: store i32 1, ptr @host, align 4
 // CHECK: store i32 1, ptr addrspace(3) @[[SHARED_NOHOST]], align 4

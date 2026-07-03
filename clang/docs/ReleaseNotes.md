@@ -811,6 +811,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   when used inside decltype in the return type. (#GH180460)
 - Fixed a crash when evaluating uninitialized GCC vector/ext_vector_type vectors in `constexpr`. (#GH180044)
 - Fixed a crash when `explicit(bool)` is used with an incomplete enumeration. (#GH183887)
+- Fix crash-on-invalid caused by qualified forward declarations. (#GH202320)
 - Fixed a crash on `typeid` of incomplete local types during template instantiation. (#GH63242), (#GH176397)
 - Fixed spurious diagnostics produced when checking if constraints are equivalent for redeclarations,
   which could make the program mistakenly ill-formed.

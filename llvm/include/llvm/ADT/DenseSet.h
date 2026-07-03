@@ -20,7 +20,6 @@
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/type_traits.h"
-#include <cstddef>
 #include <initializer_list>
 #include <iterator>
 #include <utility>

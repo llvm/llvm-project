@@ -395,7 +395,7 @@ public:
     VPlan &Plan = *getInsertBlock()->getPlan();
     VPValue *RuntimeEC = Plan.getConstantInt(Ty, EC.getKnownMinValue());
     if (EC.isScalable()) {
-      VPValue *VScale = createNaryOp(VPInstruction::VScale, {}, Ty);
+      VPValue *VScale = createVScale(Ty);
       RuntimeEC = EC.getKnownMinValue() == 1
                       ? VScale
                       : createOverflowingOp(Instruction::Mul,
@@ -435,6 +435,12 @@ public:
                                   const VPIRMetadata &Metadata = {}) {
     return tryInsertInstruction(
         new VPInstructionWithType(Opcode, Op, ResultTy, Flags, Metadata, DL));
+  }
+
+  /// Create a VScale VPInstruction.
+  VPInstruction *createVScale(Type *ResultTy,
+                              DebugLoc DL = DebugLoc::getUnknown()) {
+    return createNaryOp(VPInstruction::VScale, {}, ResultTy, {}, DL);
   }
 
   VPValue *createScalarZExtOrTrunc(VPValue *Op, Type *ResultTy, Type *SrcTy,
