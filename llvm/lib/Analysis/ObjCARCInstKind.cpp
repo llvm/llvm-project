@@ -192,21 +192,17 @@ static bool isInertIntrinsic(unsigned ID) {
   }
 }
 
-// A list of intrinsics that we know do not use objc pointers or decrement
-// ref counts.
-static bool isUseOnlyIntrinsic(unsigned ID) {
-  // We are conservative and even though intrinsics are unlikely to touch
-  // reference counts, we white list them for safety.
-  //
-  // TODO: Expand this into a covered switch. There is a lot more here.
-  switch (ID) {
-  case Intrinsic::memcpy:
-  case Intrinsic::memmove:
-  case Intrinsic::memset:
-    return true;
-  default:
+// Intrinsics that we know do not use objc pointers or decrement ref counts.
+static bool isUseOnlyIntrinsic(const Function *F) {
+  if (F->getIntrinsicID() == Intrinsic::not_intrinsic)
     return false;
-  }
+
+  if (F->hasFnAttribute(Attribute::NoCallback) &&
+      F->hasFnAttribute(Attribute::NoFree) &&
+      F->hasFnAttribute(Attribute::WillReturn))
+    return true;
+
+  return F->onlyAccessesArgMemory();
 }
 
 /// Determine what kind of construct V is.
@@ -229,7 +225,7 @@ ARCInstKind llvm::objcarc::GetARCInstKind(const Value *V) {
         Intrinsic::ID ID = F->getIntrinsicID();
         if (isInertIntrinsic(ID))
           return ARCInstKind::None;
-        if (isUseOnlyIntrinsic(ID))
+        if (isUseOnlyIntrinsic(F))
           return ARCInstKind::User;
       }
 
