@@ -818,6 +818,13 @@ read-then-write of that member.  Details:
   ``this->m``, implicitly as ``m``, or as the equivalent ``(*this).m``; an
   access through any other object (``other.m``) is not the current object's
   member.
+- ``[[uninit]]`` members inherited from a non-virtual base with no
+  user-provided constructor are tracked like the class's own members (nothing
+  can have assigned them before the derived body runs); a written base
+  initializer (``: Base{1}``) counts as assigning that base subtree's tracked
+  members.  A base *with* a user-provided constructor is trusted (paper §5.1)
+  -- its constructor body may have assigned the member, which this local
+  analysis cannot see -- so its members are not tracked.
 - A ``this``-capturing lambda created in the body may run immediately, so a
   member read in its body (or a nested lambda's) counts as a read at the point
   the lambda is created; a body write earns no assignment credit (the lambda

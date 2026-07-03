@@ -296,6 +296,55 @@ struct LambdaReadSuppressed {
   }
 };
 
+// [[uninit]] members inherited from a non-virtual base with no user-provided
+// constructor are tracked like the class's own: nothing can have assigned
+// them before the derived body runs. A base with a user-provided constructor
+// is trusted (paper §5.1) and its members left alone.
+struct BaseRead {
+  int bm [[uninit]]; // expected-note {{member 'bm' declared here}}
+};
+struct DerivedRead : BaseRead {
+  DerivedRead() { int y = bm; (void)y; } // expected-error {{member 'bm' is read before initialization under profile 'std::init'}}
+};
+
+struct BaseAssign {
+  int bm [[uninit]];
+};
+struct DerivedAssign : BaseAssign {
+  DerivedAssign() { bm = 1; int y = bm; (void)y; } // OK
+};
+
+struct BaseWritten {
+  int bm [[uninit]];
+};
+struct DerivedWrittenBaseInit : BaseWritten {
+  DerivedWrittenBaseInit() : BaseWritten{1} { int y = bm; (void)y; } // OK: written base initializer
+};
+
+struct BaseTrusted {
+  int bm [[uninit]];
+  BaseTrusted() {}
+};
+struct DerivedTrustedBase : BaseTrusted {
+  DerivedTrustedBase() { int y = bm; (void)y; } // OK: base ctor trusted (paper §5.1)
+};
+
+struct GrandBase {
+  int gm [[uninit]]; // expected-note {{member 'gm' declared here}}
+};
+struct MidBase : GrandBase {};
+struct DerivedTwoLevels : MidBase {
+  DerivedTwoLevels() { int y = gm; (void)y; } // expected-error {{member 'gm' is read before initialization under profile 'std::init'}}
+};
+
+struct BaseSup {
+  int bm [[uninit]];
+};
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+struct [[profiles::suppress(std::init)]] DerivedSup : BaseSup {
+  DerivedSup() { int y = bm; (void)y; } // OK: suppressed
+};
+
 // A delegating constructor's target initializes the members before the body
 // runs (paper §5.1), so its body is not analyzed.
 struct Delegating {

@@ -1764,20 +1764,53 @@ static void checkInitProfileCtorBody(Sema &S, const CXXConstructorDecl *Ctor,
   // (§4.5), matching R1/R2. Class-type and array members (which would need
   // construct_at flow modeling) and pointers (banned with [[uninit]] by R8) are
   // out of scope here.
+  //
+  // Members inherited from a non-virtual base with NO user-provided
+  // constructor are tracked too: nothing can have assigned them before the
+  // derived body runs, so tracking them is sound. A base with a user-provided
+  // constructor is trusted (paper §5.1) -- its constructor body may have
+  // assigned the member, which this local analysis cannot see -- and its
+  // members are left alone.
+  auto HasUserProvidedCtor = [](const CXXRecordDecl *RD) {
+    return llvm::any_of(RD->ctors(), [](const CXXConstructorDecl *C) {
+      return C->isUserProvided();
+    });
+  };
+  // Visit the candidate fields of RD and of its non-virtual, constructor-less
+  // base classes, recursively.
+  auto ForEachCandidateField = [&](const CXXRecordDecl *RD, auto &&Visit) {
+    SmallVector<const CXXRecordDecl *, 4> RecordStack(1, RD);
+    while (!RecordStack.empty()) {
+      const CXXRecordDecl *Cur = RecordStack.pop_back_val();
+      for (const FieldDecl *F : Cur->fields())
+        Visit(F);
+      for (const CXXBaseSpecifier &BS : Cur->bases()) {
+        if (BS.isVirtual())
+          continue;
+        const CXXRecordDecl *BRD = BS.getType()->getAsCXXRecordDecl();
+        if (BRD && BRD->hasDefinition() &&
+            !HasUserProvidedCtor(BRD->getDefinition()))
+          RecordStack.push_back(BRD->getDefinition());
+      }
+    }
+  };
+
   SmallVector<const FieldDecl *, 4> Members;
   llvm::DenseMap<const FieldDecl *, unsigned> Index;
-  for (const FieldDecl *F : Ctor->getParent()->fields()) {
+  ForEachCandidateField(Ctor->getParent(), [&](const FieldDecl *F) {
     if (!F->hasAttr<UninitAttr>() || !F->getDeclName() ||
         F->hasInClassInitializer())
-      continue;
+      return;
     QualType T = F->getType();
     if (!T->isIntegralOrEnumerationType() && !T->isFloatingType())
-      continue;
+      return;
     if (S.Context.getBaseElementType(T)->isStdByteType())
-      continue;
+      return;
+    if (Index.count(F))
+      return;
     Index[F] = Members.size();
     Members.push_back(F);
-  }
+  });
   if (Members.empty())
     return;
   const unsigned N = Members.size();
@@ -1830,16 +1863,31 @@ static void checkInitProfileCtorBody(Sema &S, const CXXConstructorDecl *Ctor,
       // reads against these writes.)
       if (auto OptInit = Elem.getAs<CFGInitializer>()) {
         const CXXCtorInitializer *CI = OptInit->getInitializer();
-        if (!CI->isWritten() || !CI->isAnyMemberInitializer())
+        if (!CI->isWritten())
           continue;
-        const FieldDecl *F = CI->getAnyMember();
-        if (!F)
-          continue;
-        auto It = Index.find(F);
-        if (It == Index.end())
-          continue;
-        BlockEvents.push_back({Write, It->second, CI->getInit()});
-        Gen[B->getBlockID()].set(It->second);
+        if (CI->isAnyMemberInitializer()) {
+          const FieldDecl *F = CI->getAnyMember();
+          if (!F)
+            continue;
+          auto It = Index.find(F);
+          if (It == Index.end())
+            continue;
+          BlockEvents.push_back({Write, It->second, CI->getInit()});
+          Gen[B->getBlockID()].set(It->second);
+        } else if (CI->isBaseInitializer()) {
+          // A written base initializer (e.g. `: Base{1}`) gives the tracked
+          // members of that constructor-less base subtree their values.
+          const auto *BRD = CI->getBaseClass()->getAsCXXRecordDecl();
+          if (!BRD || !BRD->hasDefinition())
+            continue;
+          ForEachCandidateField(BRD->getDefinition(), [&](const FieldDecl *F) {
+            auto It = Index.find(F);
+            if (It == Index.end())
+              return;
+            BlockEvents.push_back({Write, It->second, CI->getInit()});
+            Gen[B->getBlockID()].set(It->second);
+          });
+        }
         continue;
       }
       auto OptStmt = Elem.getAs<CFGStmt>();
