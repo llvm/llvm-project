@@ -963,6 +963,28 @@ void template_aggregate_never() {
   (void)a;
 }
 
+// C++20 parenthesized aggregate initialization performs the same per-field
+// bindings as the braced form and is checked identically.
+void test_aggregate_paren() {
+  AggPtr a1(&g_uninit);      // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  AggPtr a2(&g_init);        // OK
+  AggPtrMarked m1(&g_init);  // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  AggPtrMarked m2(&g_uninit); // OK
+  AggRef r1(g_uninit);       // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  AggRefMarked r2(g_init);   // expected-error {{reference marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  AggNested n1((AggPtr(&g_uninit))); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init)]] AggPtr s(&g_uninit); // OK: suppressed
+  (void)a1; (void)a2; (void)m1; (void)m2; (void)r1; (void)r2; (void)n1; (void)s;
+}
+
+template <typename T>
+void template_aggregate_paren_bad() {
+  AggPtr a(&g_uninit); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  (void)a;
+}
+template void template_aggregate_paren_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_aggregate_paren_bad<int>' requested here}}
+
 // A plain pointer *variable* with a braced initializer is checked once at its
 // own variable site (EK_Variable); the aggregate field hooks are scoped to a
 // member subobject, so this fires exactly once with no new duplicate.

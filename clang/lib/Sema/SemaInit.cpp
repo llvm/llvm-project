@@ -6139,6 +6139,15 @@ static void TryOrBuildParenListInitialization(
         if (!HandleInitializedEntity(SubEntity, SubKind, E))
           return;
 
+        // std::init / ref_to_uninit (paper §5): a pointer or reference field
+        // initialized from a C++20 parenthesized aggregate list is a member
+        // binding, checked exactly like the braced-list hooks in
+        // CheckSubElementType / CheckReferenceType. Only in the build phase,
+        // so the verify pass does not double-diagnose.
+        if (!VerifyOnly)
+          S.Profiles().checkInitProfileRefToUninitBinding(E->getExprLoc(), FD,
+                                                          FD->getType(), E);
+
         // Unions should have only one initializer expression, so we bail out
         // after processing the first field. If there are more initializers then
         // it will be caught when we later check whether EntityIndexToProcess is
