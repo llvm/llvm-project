@@ -933,7 +933,7 @@ ThreadList::ExpressionExecutionThreadPusher::ExpressionExecutionThreadPusher(
 }
 
 void ThreadList::RegisterThreadSteppingOverBreakpoint(addr_t breakpoint_addr,
-                                                      tid_t tid) {
+                                                      lldb::tid_t tid) {
   std::lock_guard<std::recursive_mutex> guard(GetMutex());
   m_threads_stepping_over_bp[breakpoint_addr].insert(tid);
 
@@ -947,7 +947,7 @@ void ThreadList::RegisterThreadSteppingOverBreakpoint(addr_t breakpoint_addr,
 }
 
 void ThreadList::ThreadFinishedSteppingOverBreakpoint(addr_t breakpoint_addr,
-                                                      tid_t tid) {
+                                                      lldb::tid_t tid) {
   std::lock_guard<std::recursive_mutex> guard(GetMutex());
 
   Log *log = GetLog(LLDBLog::Step);

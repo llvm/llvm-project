@@ -31,6 +31,10 @@
 #include "lldb/ValueObject/ValueObjectRegister.h"
 #include <optional>
 
+#define DECLARE_REGISTER_INFOS_PPC64_STRUCT
+#include "Plugins/Process/Utility/RegisterInfos_ppc64.h"
+#undef DECLARE_REGISTER_INFOS_PPC64_STRUCT
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -210,8 +214,13 @@ static const uint32_t k_num_register_infos = std::size(g_register_infos);
 
 const lldb_private::RegisterInfo *
 ABISysV_ppc::GetRegisterInfoArray(uint32_t &count) {
+#ifdef _AIX
+  count = std::size(g_register_infos_ppc);
+  return g_register_infos_ppc;
+#else
   count = k_num_register_infos;
   return g_register_infos;
+#endif
 }
 
 size_t ABISysV_ppc::GetRedZoneSize() const { return 224; }
@@ -304,6 +313,95 @@ bool ABISysV_ppc::PrepareTrivialCall(Thread &thread, addr_t sp,
   LLDB_LOGF(log, "Writing IP: 0x%" PRIx64, (uint64_t)func_addr);
 
   if (!reg_ctx->WriteRegisterFromUnsigned(pc_reg_info, func_addr))
+    return false;
+
+  return true;
+}
+
+bool ABISysV_ppc::PrepareTrivialCall(Thread &thread, addr_t sp,
+                                     addr_t func_addr, addr_t toc_addr,
+                                     addr_t return_addr,
+                                     llvm::ArrayRef<addr_t> args) const {
+  Log *log = GetLog(LLDBLog::Expressions);
+
+  if (log) {
+    StreamString s;
+    s.Printf("ABISysV_ppc::PrepareTrivialCall (tid = 0x%" PRIx64
+             ", sp = 0x%" PRIx64 ", func_addr = 0x%" PRIx64
+             ", return_addr = 0x%" PRIx64 ", toc_addr = 0x%" PRIx64,
+             thread.GetID(), (uint64_t)sp, (uint64_t)func_addr,
+             (uint64_t)return_addr, (uint64_t)toc_addr);
+
+    for (size_t i = 0; i < args.size(); ++i)
+      s.Printf(", arg%" PRIu64 " = 0x%" PRIx64, static_cast<uint64_t>(i + 1),
+               args[i]);
+    s.PutCString(")");
+    log->PutString(s.GetString());
+  }
+
+  RegisterContext *reg_ctx = thread.GetRegisterContext().get();
+  if (!reg_ctx)
+    return false;
+
+  const RegisterInfo *reg_info = nullptr;
+
+  if (args.size() > 8) // TODO handle more than 8 arguments
+    return false;
+
+  for (size_t i = 0; i < args.size(); ++i) {
+    reg_info = reg_ctx->GetRegisterInfo(eRegisterKindGeneric,
+                                        LLDB_REGNUM_GENERIC_ARG1 + i);
+    LLDB_LOGF(log, "About to write arg%" PRIu64 " (0x%" PRIx64 ") into %s",
+              static_cast<uint64_t>(i + 1), args[i], reg_info->name);
+    if (!reg_ctx->WriteRegisterFromUnsigned(reg_info, args[i]))
+      return false;
+  }
+
+  // First, align the SP
+
+  LLDB_LOGF(log, "16-byte aligning SP: 0x%" PRIx64 " to 0x%" PRIx64,
+            (uint64_t)sp, (uint64_t)(sp & ~0xfull));
+
+  sp &= ~(0xfull); // 16-byte alignment
+
+  sp -= 8;
+
+  Status error;
+  const RegisterInfo *pc_reg_info =
+      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
+  const RegisterInfo *sp_reg_info =
+      reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP);
+  ProcessSP process_sp(thread.GetProcess());
+
+  const RegisterInfo *r2_reg_info = reg_ctx->GetRegisterInfoAtIndex(2);
+
+  RegisterValue reg_value;
+
+  LLDB_LOGF(log,
+            "Pushing the return address onto the stack: 0x%" PRIx64
+            ": 0x%" PRIx64,
+            (uint64_t)sp, (uint64_t)return_addr);
+
+  // Save return address onto the stack
+  if (!process_sp->WritePointerToMemory(sp, return_addr, error))
+    return false;
+
+  // %r1 is set to the actual stack value.
+
+  LLDB_LOGF(log, "Writing SP: 0x%" PRIx64, (uint64_t)sp);
+
+  if (!reg_ctx->WriteRegisterFromUnsigned(sp_reg_info, sp))
+    return false;
+
+  // %pc is set to the address of the called function.
+
+  LLDB_LOGF(log, "Writing IP: 0x%" PRIx64, (uint64_t)func_addr);
+
+  if (!reg_ctx->WriteRegisterFromUnsigned(pc_reg_info, func_addr))
+    return false;
+
+  LLDB_LOGF(log, "Writing R2: 0x%" PRIx64, (uint64_t)toc_addr);
+  if (!reg_ctx->WriteRegisterFromUnsigned(r2_reg_info, toc_addr)) 
     return false;
 
   return true;

@@ -556,7 +556,7 @@ protected:
 private:
   virtual BreakpointLocationsPredictorCreator
   GetSingleStepBreakpointLocationsPredictorCreator() {
-    if (!m_arch.IsMIPS() && !m_arch.GetTriple().isPPC64() &&
+    if (!m_arch.IsMIPS() && !m_arch.GetTriple().isPPC() &&
         !m_arch.GetTriple().isLoongArch()) {
       // Unsupported architecture
       return [](std::unique_ptr<EmulateInstruction> emulator_up) {

@@ -6,6 +6,11 @@ lldb_tablegen(ProcessGDBRemotePropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE ProcessGDBRemoteProperties.td
   TARGET LLDBPluginProcessGDBRemotePropertiesEnumGen)
 
+if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  remove_definitions("-D_XOPEN_SOURCE=700")
+  add_definitions("-D_ALL_SOURCE")
+endif()
+
 lldb_tablegen(ProcessGDBRemoteProperties.json -dump-json
   SOURCE ProcessGDBRemoteProperties.td
   TARGET LLDBPluginProcessGDBRemotePropertiesJsonGen)
@@ -54,6 +59,8 @@ add_lldb_library(lldbPluginProcessGDBRemote PLUGIN
     ${LLDB_PLUGINS}
     ${LIBCOMPRESSION}
   )
+
+target_compile_definitions(lldbPluginProcessGDBRemote PRIVATE "-D_ALL_SOURCE") 
 
 add_dependencies(lldbPluginProcessGDBRemote
   LLDBPluginProcessGDBRemotePropertiesGen

@@ -639,7 +639,7 @@ namespace PR37275 {
 #pragma pack(pop)
 }
 
-#endif // !defined(__MVS__) && !defined(__AIX__)
+#endif // !defined(__MVS__) && !defined(_AIX)
 
 namespace non_pod {
 struct t1 {

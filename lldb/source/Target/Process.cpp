@@ -79,6 +79,10 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 
+#if defined(_AIX)
+#include <sys/ldr.h>
+#endif
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace std::chrono;
@@ -2491,7 +2495,7 @@ Process::ReadUnsignedIntegersFromMemory(llvm::ArrayRef<addr_t> addresses,
     }
 
     DataExtractor data(range.data(), integer_byte_size, byte_order, addr_size);
-    offset_t offset = 0;
+    lldb::offset_t offset = 0;
     result.push_back(data.GetMaxU64(&offset, integer_byte_size));
     assert(offset == integer_byte_size);
   }
@@ -6518,6 +6522,12 @@ Status Process::GetMemoryRegionInfo(lldb::addr_t load_addr,
 
   return error;
 }
+
+#if defined(_AIX)
+Status Process::GetLDXINFO(struct ld_xinfo *info_ptr) {
+  return DoGetLDXINFO(info_ptr);
+}
+#endif
 
 Status Process::GetMemoryRegions(lldb_private::MemoryRegionInfos &region_list) {
   Status error;

@@ -1058,8 +1058,26 @@ protected:
 
     if (m_option_watchpoint.watch_size.GetCurrentValue() != 0)
       size = m_option_watchpoint.watch_size.GetCurrentValue();
-    else
+    else {
+#ifndef _AIX
       size = target->GetArchitecture().GetAddressByteSize();
+#else
+      CompilerType expr_compiler_type = valobj_sp->GetCompilerType();
+      CompilerType pointee_type = expr_compiler_type.GetPointeeType();
+      if (pointee_type.IsValid()) {
+          if (auto pointee_size = pointee_type.GetByteSize(nullptr))
+              size = *pointee_size;
+          else
+              size = target->GetArchitecture().GetAddressByteSize();
+      } else {
+          size = target->GetArchitecture().GetAddressByteSize();
+          result.AppendWarning(
+              "Cannot infer watchpoint size from expression. "
+              "Defaulting to pointer size. \n"
+              "Use -s option to specify size explicitly.");
+      }
+#endif
+    }
 
     // Now it's time to create the watchpoint.
     uint32_t watch_type;
@@ -1087,15 +1105,21 @@ protected:
 
     std::optional<uint64_t> valobj_size =
         llvm::expectedToOptional(valobj_sp->GetByteSize());
+
     // Set the type as a uint8_t array if the size being watched is
     // larger than the ValueObject's size (which is probably the size
     // of a pointer).
-    if (valobj_size && size > *valobj_size) {
+    if (valobj_size && size != *valobj_size) {
       auto type_system = compiler_type.GetTypeSystem();
       if (type_system) {
-        CompilerType clang_uint8_type =
-            type_system->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 8);
-        compiler_type = clang_uint8_type.GetArrayType(size);
+        if (size <= target->GetArchitecture().GetAddressByteSize()) {
+          compiler_type = type_system->GetBuiltinTypeForEncodingAndBitSize(
+          eEncodingUint, 8 * size);
+        } else {
+          CompilerType clang_uint8_type =
+              type_system->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 8);
+          compiler_type = clang_uint8_type.GetArrayType(size);
+        }
       }
     }
 

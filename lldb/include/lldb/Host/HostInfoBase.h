@@ -243,6 +243,9 @@ public:
     return {};
   }
 
+  static bool
+  ComputeSharedLibraryDirectory(FileSpec &file_spec,
+                                SharedLibraryDirectoryHelper *helper);
   /// Return information about module \p image_name if it is loaded in
   /// the current process's address space using shared cache \p uuid.
   /// The shared cache UUID must have been previously indexed.
@@ -275,9 +278,6 @@ public:
   static llvm::StringRef GetDistributionId() { return llvm::StringRef(); }
 
 protected:
-  static bool
-  ComputeSharedLibraryDirectory(FileSpec &file_spec,
-                                SharedLibraryDirectoryHelper *helper);
   static bool ComputeSupportExeDirectory(FileSpec &file_spec);
   static bool ComputeProcessTempFileDirectory(FileSpec &file_spec);
   static bool ComputeGlobalTempFileDirectory(FileSpec &file_spec);
