@@ -422,12 +422,9 @@ foreach Op = Operations in {
                                                       Op.VT, Op.RetReg, Op.Reg>;
 }
 
-// Register-pinning hints. Lowered by EmitInstrWithCustomInserter into a COPY
-// plus a register-allocation hint requesting the numbered VGPR/AGPR tuple.
-// One pseudo per register width; the inserter derives the tuple physreg from the
-// destination register class, so it works for any width/alignment.
-// Expanded by the SIPreColorPins pass (pre-RA, still in SSA form) into either a
-// hard physical-register assignment or a soft COPY + allocation hint.
+// Register-pinning hints, one pseudo per register width. Expanded by the
+// SIPreColorPins pass (pre-RA, in SSA form) into either a hard physical-register
+// assignment or a soft COPY + allocation hint for the numbered VGPR/AGPR tuple.
 class PinPseudo<RegisterClass DstRC, RegisterClass SrcRC> :
   VPseudoInstSI <(outs DstRC:$vdst), (ins SrcRC:$src, i32imm:$regno), []> {
   let hasSideEffects = 0;
@@ -446,7 +443,9 @@ foreach w = [32,64,96,128,160,192,224,256,288,320,352,384,512,1024] in {
   def PIN_AGPR_B#w : PinPseudo<ARC, AVRC>;
 }
 
-// Map each supported value type to the width-appropriate pseudo via its size.
+// Selection patterns for the supported value types. Clang decomposes wider or
+// non-i32 values into these i32-based widths (see emitAMDGPUPinnedValue); an
+// unlisted type reaching ISel is unsupported and reports "cannot select".
 foreach vt = [i32, f32, v2i32, v4i32, v4f32, v8f16,
               v8i32, v8f32, v16i32, v16f32] in {
   def : GCNPat<(vt (int_amdgcn_pin_vgpr vt:$s, (i32 timm:$r))),
