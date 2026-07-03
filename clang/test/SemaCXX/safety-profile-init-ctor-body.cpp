@@ -168,6 +168,49 @@ struct MarkerWithListInit {
   MarkerWithListInit() : m(0) { int y = m; (void)y; }
 };
 
+// Reads inside the written member-initializer list are checked in execution
+// order (declaration order): a member becomes assigned at its own
+// initializer, so an earlier member initializer -- or a base initializer,
+// which runs before all member initializers -- reading it is a
+// read-before-init.
+struct InitListReadBefore {
+  int o;
+  int m [[uninit]]; // expected-note {{member 'm' declared here}}
+  InitListReadBefore() : o(m), m(5) {} // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+};
+
+struct InitListReadAfter {
+  int m [[uninit]];
+  int o;
+  InitListReadAfter() : m(5), o(m) {} // OK: m's initializer runs first
+};
+
+struct InitListReadNoInit {
+  int o;
+  int m [[uninit]]; // expected-note {{member 'm' declared here}}
+  InitListReadNoInit() : o(m) {} // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+};
+
+struct InitListSelfRead {
+  int m [[uninit]]; // expected-note {{member 'm' declared here}}
+  InitListSelfRead() : m(m + 1) {} // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+};
+
+struct InitBase {
+  InitBase(int);
+};
+struct InitListBaseRead : InitBase {
+  int m [[uninit]]; // expected-note {{member 'm' declared here}}
+  InitListBaseRead() : InitBase(m) {} // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+};
+
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+struct [[profiles::suppress(std::init)]] InitListReadSuppressed {
+  int o;
+  int m [[uninit]];
+  InitListReadSuppressed() : o(m) {} // OK: suppressed
+};
+
 // A delegating constructor's target initializes the members before the body
 // runs (paper §5.1), so its body is not analyzed.
 struct Delegating {

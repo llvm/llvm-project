@@ -1782,32 +1782,29 @@ static void checkInitProfileCtorBody(Sema &S, const CXXConstructorDecl *Ctor,
     return;
   const unsigned N = Members.size();
 
-  // Statements lexically in the constructor body. Member-initializer-list
-  // expressions are excluded so the check concerns body reads only; a member
-  // initialized in the written init list instead seeds the entry state below.
+  // Statements the pass may see: the constructor body plus each *written*
+  // member/base initializer expression (the CFG is built with
+  // AddInitializers=true, so those run as CFG elements in execution order --
+  // member-initializer reads such as `X() : o(m) {}` are checked exactly like
+  // body reads). A written initializer's own member becomes assigned at its
+  // CFGInitializer element below, so declaration order decides what an
+  // initializer may read. Not covered: an NSDMI's subexpressions
+  // (CXXDefaultInitExpr is not expanded into the CFG), so a read of a tracked
+  // member inside another member's default initializer stays undetected.
   llvm::SmallPtrSet<const Stmt *, 32> BodyStmts;
-  if (const Stmt *Body = Ctor->getBody()) {
-    SmallVector<const Stmt *, 32> Stack(1, Body);
+  {
+    SmallVector<const Stmt *, 32> Stack;
+    if (const Stmt *Body = Ctor->getBody())
+      Stack.push_back(Body);
+    for (const CXXCtorInitializer *Init : Ctor->inits())
+      if (Init->isWritten())
+        Stack.push_back(Init->getInit());
     while (!Stack.empty()) {
       const Stmt *Cur = Stack.pop_back_val();
       if (!Cur || !BodyStmts.insert(Cur).second)
         continue;
       for (const Stmt *Child : Cur->children())
         Stack.push_back(Child);
-    }
-  }
-
-  // A member given a value by the written member-initializer list is assigned
-  // at body entry, so a later body read is fine and no "marker + list-init"
-  // contradiction is introduced (that is not specified by the paper).
-  llvm::BitVector Seed(N, false);
-  for (const CXXCtorInitializer *Init : Ctor->inits()) {
-    if (!Init->isWritten() || !Init->isAnyMemberInitializer())
-      continue;
-    if (const FieldDecl *F = Init->getAnyMember()) {
-      auto It = Index.find(F);
-      if (It != Index.end())
-        Seed.set(It->second);
     }
   }
 
@@ -1827,6 +1824,24 @@ static void checkInitProfileCtorBody(Sema &S, const CXXConstructorDecl *Ctor,
   for (const CFGBlock *B : *cfg) {
     auto &BlockEvents = Events[B->getBlockID()];
     for (const CFGElement &Elem : *B) {
+      // A written member initializer assigns its member at this point in
+      // execution order, after its init expression's events above it. (The
+      // former entry-state seeding could not order the initializers' own
+      // reads against these writes.)
+      if (auto OptInit = Elem.getAs<CFGInitializer>()) {
+        const CXXCtorInitializer *CI = OptInit->getInitializer();
+        if (!CI->isWritten() || !CI->isAnyMemberInitializer())
+          continue;
+        const FieldDecl *F = CI->getAnyMember();
+        if (!F)
+          continue;
+        auto It = Index.find(F);
+        if (It == Index.end())
+          continue;
+        BlockEvents.push_back({Write, It->second, CI->getInit()});
+        Gen[B->getBlockID()].set(It->second);
+        continue;
+      }
       auto OptStmt = Elem.getAs<CFGStmt>();
       if (!OptStmt)
         continue;
@@ -1873,11 +1888,13 @@ static void checkInitProfileCtorBody(Sema &S, const CXXConstructorDecl *Ctor,
     }
   }
 
-  // Forward "definitely assigned" dataflow: entry state is the seed; a block's
-  // entry is the intersection over its predecessors' exits (a member is
-  // definitely assigned only if assigned on every incoming path); a block's
-  // exit adds the members it assigns. Unprocessed (unreachable) predecessors
-  // keep the all-assigned top, so unreachable code is never flagged.
+  // Forward "definitely assigned" dataflow: nothing is assigned at function
+  // entry (written initializers generate their writes at their CFGInitializer
+  // elements); a block's entry is the intersection over its predecessors'
+  // exits (a member is definitely assigned only if assigned on every incoming
+  // path); a block's exit adds the members it assigns. Unprocessed
+  // (unreachable) predecessors keep the all-assigned top, so unreachable code
+  // is never flagged.
   std::vector<llvm::BitVector> EntryState(NumBlocks, llvm::BitVector(N, true));
   std::vector<llvm::BitVector> ExitState(NumBlocks, llvm::BitVector(N, true));
   const CFGBlock &CFGEntry = cfg->getEntry();
@@ -1886,7 +1903,7 @@ static void checkInitProfileCtorBody(Sema &S, const CXXConstructorDecl *Ctor,
   while (const CFGBlock *B = Worklist.dequeue()) {
     llvm::BitVector In(N, true);
     if (B == &CFGEntry) {
-      In = Seed;
+      In = llvm::BitVector(N, false);
     } else {
       bool First = true;
       for (const CFGBlock *Pred : B->preds()) {

@@ -808,8 +808,12 @@ read-then-write of that member.  Details:
   covers it, and the ``std::byte`` exemption applies.
 - Target members are ``[[uninit]]`` built-in scalar (arithmetic or enum)
   members; a member given a value by the *written* member-initializer list is
-  assigned at body entry (no false positive and no spurious "marker + list-init"
-  contradiction).
+  assigned at its own initializer, in execution (declaration) order, so a later
+  body read is fine (no spurious "marker + list-init" contradiction) while an
+  *earlier* member initializer -- or a base initializer -- that reads it is a
+  read-before-init (``X() : o(m) {}``).  An NSDMI's subexpressions are not
+  expanded into the CFG, so a read of a tracked member inside another member's
+  default initializer stays undetected.
 - A member access on the current object is recognized whether spelled
   ``this->m``, implicitly as ``m``, or as the equivalent ``(*this).m``; an
   access through any other object (``other.m``) is not the current object's
