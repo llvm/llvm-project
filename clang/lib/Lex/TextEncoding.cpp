@@ -8,6 +8,7 @@
 
 #include "clang/Lex/TextEncoding.h"
 #include "clang/Basic/DiagnosticDriver.h"
+#include "llvm/Support/TextEncoding.h"
 
 using namespace clang;
 
