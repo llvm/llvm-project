@@ -6301,6 +6301,40 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   if (SDValue RMINMAX = reassociateOps(Opcode, DL, N0, N1, N->getFlags()))
     return RMINMAX;
 
+  // Fold sign-extension masks using arithmetic shift:
+  //   smax(X, -1) -> or(X,  ashr(X, BW-1))
+  //   smin(X,  0) -> and(X, ashr(X, BW-1))
+  // ashr(X, BW-1) sign-extends the sign bit: 0 for X>=0, -1 for X<0.
+  // OR with X yields X (non-negative) or -1 (negative) = smax(X,-1).
+  // AND with X yields 0 (non-negative) or X (negative)  = smin(X, 0).
+  // Both reduce to two instructions vs. a compare+cmov on x86-64.
+  // Only fold when the target has no native SMAX/SMIN instruction for this
+  // type (isOperationExpand), the type is legal (not needing splitting),
+  // the operand is not a min/max chain (preserving target combine patterns
+  // that fold smax(smin(x,C),D) into a single saturation instruction), and
+  // for smax(X,-1) the operand is not a sign extension (doubling its use
+  // count can cause the target to lower the extension less efficiently).
+  APInt C;
+  if (TLI.isTypeLegal(VT) &&
+      !TLI.shouldAvoidTransformToShift(VT, VT.getScalarSizeInBits() - 1) &&
+      sd_match(N1, m_ConstInt(C))) {
+    if (Opcode == ISD::SMAX && TLI.isOperationExpand(ISD::SMAX, VT) &&
+        N0.getOpcode() != ISD::SMIN && N0.getOpcode() != ISD::SIGN_EXTEND &&
+        C.isAllOnes()) {
+      SDValue ShiftAmt =
+          DAG.getShiftAmountConstant(VT.getScalarSizeInBits() - 1, VT, DL);
+      SDValue Shift = DAG.getNode(ISD::SRA, DL, VT, N0, ShiftAmt);
+      return DAG.getNode(ISD::OR, DL, VT, N0, Shift);
+    }
+    if (Opcode == ISD::SMIN && TLI.isOperationExpand(ISD::SMIN, VT) &&
+        N0.getOpcode() != ISD::SMAX && C.isZero()) {
+      SDValue ShiftAmt =
+          DAG.getShiftAmountConstant(VT.getScalarSizeInBits() - 1, VT, DL);
+      SDValue Shift = DAG.getNode(ISD::SRA, DL, VT, N0, ShiftAmt);
+      return DAG.getNode(ISD::AND, DL, VT, N0, Shift);
+    }
+  }
+
   // If both operands are known to have the same sign (both non-negative or both
   // negative), flip between UMIN/UMAX and SMIN/SMAX.
   // Only do this if:
