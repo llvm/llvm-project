@@ -1392,6 +1392,34 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     break;
   }
 
+  // Packed Absolute Difference Sum
+  case RISCV::BI__builtin_riscv_pabdsumu_u8x4_u32:
+  case RISCV::BI__builtin_riscv_pabdsumu_u8x8_u32:
+  case RISCV::BI__builtin_riscv_pabdsumu_u8x8_u64:
+  case RISCV::BI__builtin_riscv_pabdsumau_u8x4_u32:
+  case RISCV::BI__builtin_riscv_pabdsumau_u8x8_u32:
+  case RISCV::BI__builtin_riscv_pabdsumau_u8x8_u64: {
+    switch (BuiltinID) {
+    default:
+      llvm_unreachable("unexpected builtin ID");
+    case RISCV::BI__builtin_riscv_pabdsumu_u8x4_u32:
+    case RISCV::BI__builtin_riscv_pabdsumu_u8x8_u32:
+    case RISCV::BI__builtin_riscv_pabdsumu_u8x8_u64:
+      ID = Intrinsic::riscv_pabdsumu;
+      break;
+    case RISCV::BI__builtin_riscv_pabdsumau_u8x4_u32:
+    case RISCV::BI__builtin_riscv_pabdsumau_u8x8_u32:
+    case RISCV::BI__builtin_riscv_pabdsumau_u8x8_u64:
+      ID = Intrinsic::riscv_pabdsumau;
+      break;
+    }
+
+    // The two vector sources are the last two arguments; the accumulate form
+    // has an extra accumulator argument first.
+    IntrinsicTypes = {ResultType, Ops.back()->getType()};
+    break;
+  }
+
   // Zk builtins
 
   // Zknh
