@@ -269,7 +269,7 @@ const std::array<SmallVector<SecHdrTableEntry, 8>, NumOfLayout>
                                           {SecLBRProfile, 0, 0, 0, 0},
                                           {SecProfileSymbolList, 0, 0, 0, 0},
                                           {SecFuncMetadata, 0, 0, 0, 0}}),
-    };
+};
 
 /// Trait class for writing the on-disk function offset hash table mapping
 /// function name GUIDs to their offsets in the SecLBRProfile section.
