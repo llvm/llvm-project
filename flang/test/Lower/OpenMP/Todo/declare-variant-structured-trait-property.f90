@@ -9,10 +9,11 @@ subroutine test_clause_property
 end subroutine
 
 subroutine base_clause
+  interface
+    subroutine vsub()
+    end subroutine
+  end interface
   !$omp declare variant (base_clause:vsub) match (construct={simd(simdlen(8))})
-contains
-  subroutine vsub
-  end subroutine
 end subroutine
 #endif
 
@@ -22,9 +23,10 @@ subroutine test_extension_property
 end subroutine
 
 subroutine base_ext
+  interface
+    subroutine vsub()
+    end subroutine
+  end interface
   !$omp declare variant (base_ext:vsub) match (implementation={my_trait(foo(bar))})
-contains
-  subroutine vsub
-  end subroutine
 end subroutine
 #endif

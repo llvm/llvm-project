@@ -672,6 +672,29 @@ static void CheckDeclareVariantInterface(SemanticsContext &context,
   }
 }
 
+// A declare-variant call is rewritten to the variant at every reference to the
+// base, so the variant must be accessible at each of those references. The name
+// of an internal procedure is only visible within its host, so it may only be a
+// variant of a procedure that is internal to the same host; otherwise a
+// reference to the base from elsewhere could not name the variant. OpenMP does
+// not clearly specify this; Flang restricts it to avoid resolving a call to an
+// internal procedure that is not accessible there. Returns true if the pairing
+// is allowed.
+static bool CheckVariantAccessibility(SemanticsContext &context,
+    const Symbol &base, const Symbol &variant, parser::CharBlock source) {
+  if (ClassifyProcedure(variant) != ProcedureDefinitionClass::Internal) {
+    return true;
+  }
+  if (ClassifyProcedure(base) == ProcedureDefinitionClass::Internal &&
+      &base.owner() == &variant.owner()) {
+    return true;
+  }
+  context.Say(source,
+      "The variant procedure '%s' is an internal procedure and is not accessible at every reference to the base procedure '%s'"_err_en_US,
+      variant.name(), base.name());
+  return false;
+}
+
 void OmpStructureChecker::CheckOmpDeclareVariantDirective(
     const parser::OmpDeclareVariantDirective &x) {
   const parser::OmpDirectiveSpecification &spec{x.v};
@@ -749,7 +772,11 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
     return;
   }
 
-  if (base && variant) {
+  auto isProcedure{[](const Symbol *sym) {
+    return sym && (IsProcedure(*sym) || IsFunction(*sym));
+  }};
+
+  if (isProcedure(base) && isProcedure(variant)) {
     base = &base->GetUltimate();
     variant = &variant->GetUltimate();
     if (base == variant) {
@@ -759,7 +786,8 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
       context_.Say(arg.source,
           "Variant '%s' was already specified for '%s' in another DECLARE VARIANT directive"_err_en_US,
           variant->name(), base->name());
-    } else {
+    } else if (CheckVariantAccessibility(
+                   context_, *base, *variant, arg.source)) {
       if (!hasArgModifiers) {
         // adjust_args/append_args perform the "transformation for its OpenMP
         // context", so the variant interface intentionally differs from the

@@ -7,8 +7,9 @@ subroutine test_target_device
 end subroutine
 
 subroutine base
+  interface
+    subroutine vsub()
+    end subroutine
+  end interface
   !$omp declare variant (base:vsub) match (target_device={kind(host)})
-contains
-  subroutine vsub
-  end subroutine
 end subroutine

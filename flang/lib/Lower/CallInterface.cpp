@@ -88,19 +88,22 @@ getOmpDeclareVariantCallee(const Fortran::evaluate::ProcedureDesignator &proc,
 static std::string
 getProcMangledName(const Fortran::evaluate::ProcedureDesignator &proc,
                    Fortran::lower::AbstractConverter &converter) {
-  if (const Fortran::semantics::Symbol *symbol = proc.GetSymbol()) {
-    // A matching OpenMP DECLARE VARIANT call targets the variant procedure.
-    if (const Fortran::semantics::Symbol *variant =
-            getOmpDeclareVariantCallee(proc, converter))
-      return converter.mangleName(*variant);
+  if (const Fortran::semantics::Symbol *symbol = proc.GetSymbol())
     return converter.mangleName(symbol->GetUltimate());
-  }
   assert(proc.GetSpecificIntrinsic() &&
          "expected intrinsic procedure in designator");
   return proc.GetName();
 }
 
 std::string Fortran::lower::CallerInterface::getMangledName() const {
+  // A matching OpenMP DECLARE VARIANT call targets the variant procedure.
+  // This substitution applies only to an actual call to the base procedure.
+  // Other references to the base (e.g. taking its address to pass it as an
+  // actual argument or to associate it with a procedure pointer) go through
+  // getProcMangledName and are intentionally not redirected to the variant.
+  if (const Fortran::semantics::Symbol *variant =
+          getOmpDeclareVariantCallee(procRef.proc(), converter))
+    return converter.mangleName(*variant);
   return getProcMangledName(procRef.proc(), converter);
 }
 
