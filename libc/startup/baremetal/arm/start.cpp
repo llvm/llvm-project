@@ -174,17 +174,27 @@ namespace LIBC_NAMESPACE_DECL {
 #if __ARM_ARCH_PROFILE == 'A' || __ARM_ARCH_PROFILE == 'R'
   // Set up registers to be used in exception handling
   // Copy the current sp value to each of the banked copies of sp.
-  __arm_wsr("CPSR_c", 0x11); // FIQ
-  asm volatile("mov sp, %0" : : "r"(__builtin_frame_address(0)));
-  __arm_wsr("CPSR_c", 0x12); // IRQ
-  asm volatile("mov sp, %0" : : "r"(__builtin_frame_address(0)));
-  __arm_wsr("CPSR_c", 0x17); // ABT
-  asm volatile("mov sp, %0" : : "r"(__builtin_frame_address(0)));
-  __arm_wsr("CPSR_c", 0x1B); // UND
-  asm volatile("mov sp, %0" : : "r"(__builtin_frame_address(0)));
-  __arm_wsr("CPSR_c", 0x1F); // SYS
-  asm volatile("mov sp, %0" : : "r"(__builtin_frame_address(0)));
-  __arm_wsr("CPSR_c", 0x13); // SVC
+  asm volatile("mov r0, sp\n"
+               "mov r1, #0x11\n" // FIQ
+               "msr CPSR_c, r1\n"
+               "mov sp, r0\n"
+               "mov r1, #0x12\n" // IRQ
+               "msr CPSR_c, r1\n"
+               "mov sp, r0\n"
+               "mov r1, #0x17\n" // ABT
+               "msr CPSR_c, r1\n"
+               "mov sp, r0\n"
+               "mov r1, #0x1B\n" // UND
+               "msr CPSR_c, r1\n"
+               "mov sp, r0\n"
+               "mov r1, #0x1F\n" // SYS
+               "msr CPSR_c, r1\n"
+               "mov sp, r0\n"
+               "mov r1, #0x13\n" // return to SVC
+               "msr CPSR_c, r1"
+               :
+               :
+               : "r0", "r1");
 #endif
 
 #if __ARM_ARCH_PROFILE == 'A' && !defined(__ARM_ARCH_ISA_A64) && __ARM_ARCH >= 7
