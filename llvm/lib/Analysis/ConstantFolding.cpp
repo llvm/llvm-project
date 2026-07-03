@@ -1730,23 +1730,9 @@ Constant *llvm::ConstantFoldIntegerCast(Constant *C, Type *DestTy,
 //  Constant Folding for Calls
 //
 
-bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
-  if (Call->isNoBuiltin())
-    return false;
-  if (Call->getFunctionType() != F->getFunctionType())
-    return false;
-
-  // Allow FP calls (both libcalls and intrinsics) to avoid being folded.
-  // This can be useful for GPU targets or in cross-compilation scenarios
-  // when the exact target FP behaviour is required, and the host compiler's
-  // behaviour may be slightly different from the device's run-time behaviour.
-  if (DisableFPCallFolding && (F->getReturnType()->isFloatingPointTy() ||
-                               any_of(F->args(), [](const Argument &Arg) {
-                                 return Arg.getType()->isFloatingPointTy();
-                               })))
-    return false;
-
-  switch (F->getIntrinsicID()) {
+/// Returns true if the intrinsic can be constant folded, given \p IsStrictFP.
+static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
+  switch (ID) {
   // Operations that do not operate floating-point numbers and do not depend on
   // FP environment can be folded even in strictfp functions.
   case Intrinsic::bswap:
@@ -2007,7 +1993,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::nvvm_sqrt_rn_d:
   case Intrinsic::nvvm_sqrt_rn_f:
   case Intrinsic::nvvm_sqrt_rn_ftz_f:
-    return !Call->isStrictFP();
+    return !IsStrictFP;
 
   // NVVM add intrinsics with explicit rounding modes
   case Intrinsic::nvvm_add_rm_d:
@@ -2104,8 +2090,27 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
     return true;
   default:
     return false;
-  case Intrinsic::not_intrinsic: break;
   }
+}
+
+bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
+  if (Call->isNoBuiltin())
+    return false;
+  if (Call->getFunctionType() != F->getFunctionType())
+    return false;
+
+  // Allow FP calls (both libcalls and intrinsics) to avoid being folded.
+  // This can be useful for GPU targets or in cross-compilation scenarios
+  // when the exact target FP behaviour is required, and the host compiler's
+  // behaviour may be slightly different from the device's run-time behaviour.
+  if (DisableFPCallFolding && (F->getReturnType()->isFloatingPointTy() ||
+                               any_of(F->args(), [](const Argument &Arg) {
+                                 return Arg.getType()->isFloatingPointTy();
+                               })))
+    return false;
+
+  if (F->getIntrinsicID() != Intrinsic::not_intrinsic)
+    return canConstantFoldIntrinsic(F->getIntrinsicID(), Call->isStrictFP());
 
   if (!F->hasName() || Call->isStrictFP())
     return false;
@@ -4698,7 +4703,15 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
 } // end anonymous namespace
 
 Constant *llvm::ConstantFoldIntrinsic(Intrinsic::ID ID,
-                                      ArrayRef<Constant *> Ops, Type *Ty) {
+                                      ArrayRef<Constant *> Ops, Type *Ty,
+                                      bool IsStrictFP) {
+  if (DisableFPCallFolding &&
+      (Ty->isFloatingPointTy() || any_of(Ops, [](const Constant *Op) {
+         return Op->getType()->isFloatingPointTy();
+       })))
+    return nullptr;
+  if (!canConstantFoldIntrinsic(ID, IsStrictFP))
+    return nullptr;
   return ConstantFoldScalarCall("", ID, Ty, Ops);
 }
 

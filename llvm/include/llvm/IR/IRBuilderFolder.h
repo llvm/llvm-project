@@ -78,7 +78,8 @@ public:
 
   virtual Value *FoldIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Ops,
                                Type *Ty, FastMathFlags FMF = {},
-                               Function *CtxF = nullptr) const = 0;
+                               Function *CtxF = nullptr,
+                               bool IsStrictFP = true) const = 0;
 
   //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators

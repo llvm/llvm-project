@@ -922,9 +922,9 @@ Value *IRBuilderBase::CreateUnaryIntrinsic(Intrinsic::ID ID, Value *Op,
                                            const Twine &Name) {
   Module *M = BB->getModule();
   Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, Op->getType());
-  if (Value *V =
-          Folder.FoldIntrinsic(ID, Op, Fn->getReturnType(), FMFSource.get(FMF),
-                               GetInsertBlock()->getParent()))
+  if (Value *V = Folder.FoldIntrinsic(
+          ID, Op, Fn->getReturnType(), FMFSource.get(FMF),
+          GetInsertBlock()->getParent(), /*IsStrictFP=*/false))
     return V;
   return createCallHelper(Fn, Op, Name, FMFSource);
 }
@@ -934,9 +934,9 @@ Value *IRBuilderBase::CreateBinaryIntrinsic(Intrinsic::ID ID, Value *LHS,
                                             const Twine &Name) {
   Module *M = BB->getModule();
   Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, {LHS->getType()});
-  if (Value *V = Folder.FoldIntrinsic(ID, {LHS, RHS}, Fn->getReturnType(),
-                                      FMFSource.get(FMF),
-                                      GetInsertBlock()->getParent()))
+  if (Value *V = Folder.FoldIntrinsic(
+          ID, {LHS, RHS}, Fn->getReturnType(), FMFSource.get(FMF),
+          GetInsertBlock()->getParent(), /*IsStrictFP=*/false))
     return V;
   return createCallHelper(Fn, {LHS, RHS}, Name, FMFSource);
 }
@@ -969,7 +969,8 @@ Value *IRBuilderBase::CreateIntrinsic(Intrinsic::ID ID,
                                       function_ref<void(CallInst *)> SetFn) {
   Type *RetTy = Intrinsic::getType(Context, ID, OverloadTypes)->getReturnType();
   if (Value *V = Folder.FoldIntrinsic(ID, Args, RetTy, FMFSource.get(FMF),
-                                      GetInsertBlock()->getParent()))
+                                      GetInsertBlock()->getParent(),
+                                      /*IsStrictFP=*/false))
     return V;
   CallInst *CI = CreateIntrinsicWithoutFolding(ID, OverloadTypes, Args,
                                                FMFSource, Name, OpBundles);
@@ -982,7 +983,8 @@ Value *IRBuilderBase::CreateIntrinsic(Type *RetTy, Intrinsic::ID ID,
                                       FMFSource FMFSource, const Twine &Name,
                                       function_ref<void(CallInst *)> SetFn) {
   if (Value *V = Folder.FoldIntrinsic(ID, Args, RetTy, FMFSource.get(FMF),
-                                      GetInsertBlock()->getParent()))
+                                      GetInsertBlock()->getParent(),
+                                      /*IsStrictFP=*/false))
     return V;
   CallInst *CI =
       CreateIntrinsicWithoutFolding(RetTy, ID, Args, FMFSource, Name);

@@ -169,8 +169,12 @@ LLVM_ABI Constant *ConstantFoldCall(const CallBase *Call, Function *F,
                                     const TargetLibraryInfo *TLI = nullptr,
                                     bool AllowNonDeterministic = true);
 
+/// Attempt to constant fold an intrinsic given its operands \p Ops, and return
+/// type \p Ty. We also need to know whether the strictfp exception behavior is
+/// present, although \p IsStrictFP conservatively defaults to true.
 LLVM_ABI Constant *ConstantFoldIntrinsic(Intrinsic::ID ID,
-                                         ArrayRef<Constant *> Ops, Type *Ty);
+                                         ArrayRef<Constant *> Ops, Type *Ty,
+                                         bool IsStrictFP = true);
 
 /// ConstantFoldLoadThroughBitcast - try to cast constant to destination type
 /// returning null if unsuccessful. Can cast pointer to pointer or pointer to
