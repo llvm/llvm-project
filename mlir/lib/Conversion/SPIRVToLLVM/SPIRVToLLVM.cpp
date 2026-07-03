@@ -1584,6 +1584,35 @@ public:
   }
 };
 
+// Converts spirv.GL.Radians (scale = pi/180) and spirv.GL.Degrees
+// (scale = 180/pi) by multiplying the operand by a compile-time constant.
+template <typename SPIRVOp>
+class ScalePattern : public SPIRVToLLVMConversion<SPIRVOp> {
+public:
+  template <typename... Args>
+  ScalePattern(double scale, Args &&...args)
+      : SPIRVToLLVMConversion<SPIRVOp>(std::forward<Args>(args)...),
+        scale(scale) {}
+
+  LogicalResult
+  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type srcType = op.getType();
+    Type dstType = this->getTypeConverter()->convertType(srcType);
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    Value factor = createFPConstant(loc, srcType, dstType, rewriter, scale);
+    rewriter.replaceOpWithNewOp<LLVM::FMulOp>(op, dstType, adaptor.getOperand(),
+                                              factor);
+    return success();
+  }
+
+private:
+  double scale;
+};
+
 /// Converts `spirv.GL.FSign`/`spirv.GL.SSign` to a sign(x) sequence that maps
 /// the operand to -1/0/1 using two comparisons and two selects. The `isFloat`
 /// flag selects between floating-point and integer comparisons/constants.
@@ -1595,8 +1624,8 @@ public:
   LogicalResult
   matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto srcType = op.getType();
-    auto dstType = this->getTypeConverter()->convertType(srcType);
+    Type srcType = op.getType();
+    Type dstType = this->getTypeConverter()->convertType(srcType);
     if (!dstType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
 
@@ -2110,6 +2139,12 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
 
   patterns.add<GlobalVariablePattern>(clientAPI, patterns.getContext(),
                                       typeConverter);
+  // pi / 180
+  patterns.add<ScalePattern<spirv::GLRadiansOp>>(
+      0.017453292519943295, patterns.getContext(), typeConverter);
+  // 180 / pi
+  patterns.add<ScalePattern<spirv::GLDegreesOp>>(
+      57.29577951308232, patterns.getContext(), typeConverter);
 }
 
 void mlir::populateSPIRVToLLVMFunctionConversionPatterns(
