@@ -7,6 +7,8 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 declare <2 x i32> @llvm.amdgcn.pin.agpr.v2i32(<2 x i32>, i32 immarg)
 declare <2 x i32> @llvm.amdgcn.pin.vgpr.v2i32(<2 x i32>, i32 immarg)
 declare <4 x float> @llvm.amdgcn.mfma.f32.16x16x16f16(<4 x half>, <4 x half>, <4 x float>, i32 immarg, i32 immarg, i32 immarg)
+declare <8 x i32> @llvm.amdgcn.pin.agpr.v8i32(<8 x i32>, i32 immarg)
+declare <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v8i32(<8 x i32>, <8 x i32>, <4 x float>, i32 immarg, i32 immarg, i32 immarg, i32, i32 immarg, i32)
 
 ; An AGPR pin on the A/B inputs makes the loads AGPR-born and the MFMA read AGPR
 ; operands, with no agpr<->vgpr shuffle.
@@ -67,6 +69,28 @@ define amdgpu_kernel void @pin_shared_load(ptr addrspace(1) %p, ptr addrspace(1)
   %af = bitcast <2 x i32> %ap to <4 x half>
   %bf = bitcast <2 x i32> %bp to <4 x half>
   %d = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x16f16(<4 x half> %af, <4 x half> %bf, <4 x float> zeroinitializer, i32 0, i32 0, i32 0)
+  store <4 x float> %d, ptr addrspace(1) %gc
+  ret void
+}
+
+; A wide (8-dword) AGPR pin whose value is a REG_SEQUENCE of subregister slices
+; of wider loads must not crash: the hard-pin load-tuple fast path bails and the
+; pass falls back to soft, still placing the inputs in AGPRs (checked here via
+; the scaled f8f6f4 MFMA, whose fp8/fp4 A/B are eight dwords). verify-machineinstrs
+; in the RUN line guards against malformed liveness.
+; CHECK-LABEL: {{^}}pin_agpr_wide:
+; CHECK: global_load_{{.*}} a[
+; CHECK: v_mfma_f32_16x16x128_f8f6f4 v[{{[0-9:]+}}], a[{{[0-9:]+}}], a[
+define amdgpu_kernel void @pin_agpr_wide(ptr addrspace(1) %pa, ptr addrspace(1) %pb, ptr addrspace(1) %pc) {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %ga = getelementptr <8 x i32>, ptr addrspace(1) %pa, i32 %tid
+  %gb = getelementptr <8 x i32>, ptr addrspace(1) %pb, i32 %tid
+  %gc = getelementptr <4 x float>, ptr addrspace(1) %pc, i32 %tid
+  %a = load <8 x i32>, ptr addrspace(1) %ga
+  %b = load <8 x i32>, ptr addrspace(1) %gb
+  %ap = call <8 x i32> @llvm.amdgcn.pin.agpr.v8i32(<8 x i32> %a, i32 0)
+  %bp = call <8 x i32> @llvm.amdgcn.pin.agpr.v8i32(<8 x i32> %b, i32 8)
+  %d = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v8i32(<8 x i32> %ap, <8 x i32> %bp, <4 x float> zeroinitializer, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
   store <4 x float> %d, ptr addrspace(1) %gc
   ret void
 }

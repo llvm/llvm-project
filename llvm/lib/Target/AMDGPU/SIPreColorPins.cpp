@@ -302,13 +302,22 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
         if (Ok && Claimed.contains(U))
           Ok = false;
 
-      // Collect element (reg, subreg-index) pairs.
+      // Collect element (reg, subreg-index) pairs. Each element must be defined
+      // directly by a memory load: this path retargets those load defs to fixed
+      // physical AGPR sub-registers. If an element is instead a subregister copy
+      // of a wider load (e.g. a dwordx4 load split into dword lanes), retargeting
+      // it produces malformed physreg liveness, so bail and let the general path
+      // fall back to soft.
       SmallVector<std::pair<Register, unsigned>, 16> Elems;
       if (Ok)
         for (unsigned I = 1; I + 1 < RS->getNumOperands(); I += 2) {
           const MachineOperand &Reg = RS->getOperand(I);
           const MachineOperand &Sub = RS->getOperand(I + 1);
-          if (!Reg.isReg() || !Reg.getReg().isVirtual() || Reg.getSubReg() ||
+          MachineInstr *ElemDef =
+              Reg.isReg() && Reg.getReg().isVirtual()
+                  ? MRI.getVRegDef(Reg.getReg())
+                  : nullptr;
+          if (!ElemDef || !ElemDef->mayLoad() || Reg.getSubReg() ||
               !Sub.isImm() || !TRI->getSubReg(PR, Sub.getImm())) {
             Ok = false;
             break;
