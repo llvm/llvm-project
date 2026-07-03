@@ -767,6 +767,20 @@ static Value *phiNodeOperandWithNewAddressSpace(AddrSpaceCastInst *NewI,
   return NewI;
 }
 
+// Inserts an addrspacecast for an instruction operand, placing the cast so
+// that it dominates the user. For PHI users, delegates to
+// phiNodeOperandWithNewAddressSpace.
+static Value *insertAddrSpaceCastForUserOperand(Value *Operand, Type *NewPtrTy,
+                                                Instruction *User) {
+  auto *ASC = new AddrSpaceCastInst(Operand, NewPtrTy);
+  if (LLVM_UNLIKELY(User->getOpcode() == Instruction::PHI))
+    return phiNodeOperandWithNewAddressSpace(ASC, Operand);
+
+  ASC->insertBefore(User->getIterator());
+  ASC->setDebugLoc(User->getDebugLoc());
+  return ASC;
+}
+
 // A helper function for cloneInstructionWithNewAddressSpace. Returns the clone
 // of OperandUse.get() in the new address space. If the clone is not ready yet,
 // returns poison in the new address space as a placeholder.
@@ -791,14 +805,7 @@ static Value *operandWithNewAddressSpaceOrCreatePoison(
     // Insert an addrspacecast on that operand before the user.
     unsigned NewAS = I->second;
     Type *NewPtrTy = getPtrOrVecOfPtrsWithNewAS(Operand->getType(), NewAS);
-    auto *NewI = new AddrSpaceCastInst(Operand, NewPtrTy);
-
-    if (LLVM_UNLIKELY(Inst->getOpcode() == Instruction::PHI))
-      return phiNodeOperandWithNewAddressSpace(NewI, Operand);
-
-    NewI->insertBefore(Inst->getIterator());
-    NewI->setDebugLoc(Inst->getDebugLoc());
-    return NewI;
+    return insertAddrSpaceCastForUserOperand(Operand, NewPtrTy, Inst);
   }
 
   PoisonUsesToFix->push_back(&OperandUse);
@@ -1550,9 +1557,19 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
 
     unsigned OperandNo = PoisonUse->getOperandNo();
     assert(isa<PoisonValue>(NewV->getOperand(OperandNo)));
-    WeakTrackingVH NewOp = ValueWithNewAddrSpace.lookup(PoisonUse->get());
-    assert(NewOp &&
-           "poison replacements in ValueWithNewAddrSpace shouldn't be null");
+    Value *NewOp = ValueWithNewAddrSpace.lookup(PoisonUse->get());
+    if (!NewOp) {
+      // The operand was never rewritten into the new address space (e.g. a flat
+      // address expression in a flat-only cycle that stays in the
+      // uninitialized address space). Only instructions reach here;
+      // operandWithNewAddressSpaceOrCreatePoison() handles Constant operands
+      // earlier. Materialize an explicit addrspacecast, mirroring the
+      // PredicatedAS path in that function.
+      Value *Orig = PoisonUse->get();
+      Type *NewPtrTy = NewV->getOperand(OperandNo)->getType();
+      NewOp = insertAddrSpaceCastForUserOperand(Orig, NewPtrTy,
+                                                cast<Instruction>(NewV));
+    }
     NewV->setOperand(OperandNo, NewOp);
   }
 
