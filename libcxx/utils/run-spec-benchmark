@@ -137,7 +137,8 @@ default:
                                     "--extract", "instructions", "max_rss", "cycles", "peak_memory"],
                                     capture_output=True, text=True, check=True)
 
-    lnt_results = spec_results.stdout + time_results.stdout
+    lines = spec_results.stdout.splitlines() + time_results.stdout.splitlines()
+    lnt_results = "".join(f"{line}\n" for line in lines)
     if args.output:
         pathlib.Path(args.output).write_text(lnt_results)
     else:
