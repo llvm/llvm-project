@@ -1,5 +1,5 @@
 """
-Test lldb data formatter subsystem.
+Test lldb data formatter subsystem for std::vector<bool>.
 """
 
 import lldb
@@ -12,83 +12,54 @@ class StdVBoolDataFormatterTestCase(TestBase):
     SHARED_BUILD_TESTCASE = False
     TEST_WITH_PDB_DEBUG_INFO = True
 
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-        # Find the line number to break at.
-        self.line = line_number("main.cpp", "// Set break point at this line.")
-
     def do_test(self):
-        """Test that that file and class static variables display correctly."""
-        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
-
-        lldbutil.run_break_set_by_file_and_line(
-            self, "main.cpp", self.line, num_expected_locations=-1
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.cpp")
         )
 
-        self.runCmd("run", RUN_SUCCEEDED)
-
-        # The stop reason of the thread should be breakpoint.
-        self.expect(
-            "thread list",
-            STOPPED_DUE_TO_BREAKPOINT,
-            substrs=["stopped", "stop reason = breakpoint"],
+        self.runCmd("settings set target.max-children-count 128")
+        self.addTearDownHook(
+            lambda: self.runCmd("settings set target.max-children-count 24")
         )
 
-        # This is the function to remove the custom formats in order to have a
-        # clean slate for the next test case.
-        def cleanup():
-            self.runCmd("type format clear", check=False)
-            self.runCmd("type summary clear", check=False)
-            self.runCmd("type filter clear", check=False)
-            self.runCmd("type synth clear", check=False)
-            self.runCmd("settings set target.max-children-count 24", check=False)
+        self.expect("frame variable vBoolEmpty", substrs=["size=0"])
+        self.expect("expr -- vBoolEmpty", substrs=["size=0"])
 
-        self.runCmd("settings set target.max-children-count 128", check=False)
-        # Execute the cleanup function during test case tear down.
-        self.addTearDownHook(cleanup)
+        expected_small = [
+            "size=10",
+            "[0] = true",
+            "[1] = false",
+            "[2] = true",
+            "[3] = true",
+            "[4] = false",
+            "[5] = false",
+            "[6] = true",
+            "[7] = false",
+            "[8] = true",
+            "[9] = true",
+        ]
+        self.expect("frame variable vBoolSmall", substrs=expected_small)
+        self.expect("expr -- vBoolSmall", substrs=expected_small)
 
-        self.expect(
-            "frame variable vBool",
-            substrs=[
-                "size=73",
-                "[0] = false",
-                "[1] = true",
-                "[18] = false",
-                "[27] = true",
-                "[36] = false",
-                "[47] = true",
-                "[48] = true",
-                "[49] = true",
-                "[50] = false",
-                "[56] = false",
-                "[65] = true",
-                "[70] = false",
-                "[71] = true",
-                "[72] = true",
-            ],
-        )
-
-        self.expect(
-            "expr -- vBool",
-            substrs=[
-                "size=73",
-                "[0] = false",
-                "[1] = true",
-                "[18] = false",
-                "[27] = true",
-                "[36] = false",
-                "[47] = true",
-                "[48] = true",
-                "[49] = true",
-                "[50] = false",
-                "[56] = false",
-                "[65] = true",
-                "[70] = false",
-                "[71] = true",
-                "[72] = true",
-            ],
-        )
+        expected = [
+            "size=73",
+            "[0] = false",
+            "[1] = true",
+            "[18] = false",
+            "[27] = true",
+            "[36] = false",
+            "[47] = true",
+            "[48] = true",
+            "[49] = true",
+            "[50] = false",
+            "[56] = false",
+            "[65] = true",
+            "[70] = false",
+            "[71] = true",
+            "[72] = true",
+        ]
+        self.expect("frame variable vBool", substrs=expected)
+        self.expect("expr -- vBool", substrs=expected)
 
     @add_test_categories(["libc++"])
     def test_libcxx(self):
