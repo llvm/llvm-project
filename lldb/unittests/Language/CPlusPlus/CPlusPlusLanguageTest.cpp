@@ -34,6 +34,18 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
        "foo::bar"},
       {"int foo::bar::func01(int a, double b)", "int", "foo::bar", "func01",
        "(int a, double b)", "", "foo::bar::func01"},
+      {"foo(struct AStruct)", "", "", "foo", "(struct AStruct)", "", "foo"},
+      {"struct foo(class a)", "", "", "struct foo", "(class a)", "",
+       "struct foo"},
+      {"struct AStruct struct_foo(class class_::_AClass)", "struct AStruct", "",
+       "struct_foo", "(class class_::_AClass)", "", "struct_foo"},
+      {"class_(enum_arg)", "", "", "class_", "(enum_arg)", "", "class_"},
+      {"struct AStruct a::b::c(class AClass)", "struct AStruct", "a::b", "c",
+       "(class AClass)", "", "a::b::c"},
+      {"struct ns::AStruct const & A::f(void) const",
+       "struct ns::AStruct const &", "A", "f", "(void)", "const", "A::f"},
+      {"union AUnion A<enum AEnum>::fn(void)", "union AUnion", "A<enum AEnum>",
+       "fn", "(void)", "", "A<enum AEnum>::fn"},
 
       // Operators
       {"std::basic_ostream<char, std::char_traits<char> >& "
@@ -147,6 +159,12 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
       {"void foo<Bar[10]>()", "void", "", "foo<Bar[10]>", "()", "",
        "foo<Bar[10]>"},
       {"void foo<Bar[]>()", "void", "", "foo<Bar[]>", "()", "", "foo<Bar[]>"},
+      {"class std::_Func_base<bool, int> * std::_Func_class<bool, "
+       "int>::_Getimpl(void) const",
+       "class std::_Func_base<bool, int> *", "std::_Func_class<bool, int>",
+       "_Getimpl", "(void)", "const", "std::_Func_class<bool, int>::_Getimpl"},
+      {"struct AStruct foo<struct AStruct>(void)", "struct AStruct", "",
+       "foo<struct AStruct>", "(void)", "", "foo<struct AStruct>"},
 
       // auto return type
       {"auto std::test_return_auto<int>() const", "auto", "std",
