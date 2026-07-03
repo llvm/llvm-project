@@ -10,9 +10,13 @@
 //  symbolic Offset value to zero and a symbolic Extent value) and composing
 //  descriptions that explain its results.
 //
-//  This is intended as a replacement for `ProgramState::assumeInBound` to
-//  avoid its incorrect logic and compensate for deficiencies of other parts of
-//  the analyzer.
+//  This fulfills a similar role as `ProgramState::assumeInBound`, but uses
+//  more accurate logic and heuristic workarounds to account for the quirks of
+//  signed/unsigned conversions and the lack of cast modeling in the analyzer.
+//
+//  As of now, this logic only supports the needs of `security.ArrayBound`, but
+//  in the future it will be generalized and applied in all checkers that
+//  perform bounds checking (to bring them out of `alpha` stage).
 //
 //===----------------------------------------------------------------------===//
 
