@@ -262,6 +262,7 @@ class SPIRVEmitIntrinsics
   void preprocessCompositeConstants(IRBuilder<> &B);
   Value *lowerUndefOrPoison(Value *Op, IRBuilder<> &B, bool HasPoisonExt);
   void preprocessUndefsAndPoisons(IRBuilder<> &B);
+  void insertCompositeAggregateArms(Instruction *I, IRBuilder<> &B);
   void simplifyNullAddrSpaceCasts();
 
   Type *reconstructType(Value *Op, bool UnknownElemTypeI8,
@@ -1704,6 +1705,48 @@ void SPIRVEmitIntrinsics::simplifyNullAddrSpaceCasts() {
             ConstantPointerNull::get(cast<PointerType>(ASC->getType())));
         ASC->eraseFromParent();
       }
+}
+
+// True for an aggregate value the legalizer splits into a multi-result op
+// (with.overflow -> G_UADDO, frexp/sincos/modf -> G_FFREXP/...). These keep a
+// genuine multi-register result; all other aggregates become a single value-id.
+static bool isMultiRegisterAggregate(Value *V) {
+  if (!V->getType()->isAggregateType())
+    return false;
+  return isa<IntrinsicInst>(V) && !isSpvIntrinsic(V);
+}
+
+// True for an aggregate PHI/select/freeze, which is lowered to a single
+// value-id.
+static bool isAggregateValueIdInstr(const Instruction &I) {
+  return (isa<PHINode>(I) || isa<SelectInst>(I) || isa<FreezeInst>(I)) &&
+         I.getType()->isAggregateType();
+}
+
+// Give each multi-register aggregate arm of an aggregate PHI/select/freeze a
+// single value-id by reassembling it with extractvalue + insertvalue, so the
+// arm matches the result once it is mutated to a value-id.
+void SPIRVEmitIntrinsics::insertCompositeAggregateArms(Instruction *I,
+                                                       IRBuilder<> &B) {
+  auto *Phi = dyn_cast<PHINode>(I);
+  for (Use &U : I->operands()) {
+    Value *Op = U.get();
+    if (!isMultiRegisterAggregate(Op))
+      continue;
+    // A PHI arm materializes in its incoming block, everything else after the
+    // producer.
+    if (Phi)
+      B.SetInsertPoint(Phi->getIncomingBlock(U)->getTerminator());
+    else
+      setInsertPointAfterDef(B, cast<Instruction>(Op));
+    auto *AggrTy = cast<StructType>(Op->getType());
+    Value *Composite = PoisonValue::get(AggrTy);
+    for (unsigned Idx = 0, E = AggrTy->getNumElements(); Idx != E; ++Idx) {
+      Value *Field = B.CreateExtractValue(Op, Idx);
+      Composite = B.CreateInsertValue(Composite, Field, Idx);
+    }
+    U.set(Composite);
+  }
 }
 
 void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
@@ -3611,10 +3654,10 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   // users are lowered to spv_extractv.
   Type *I32Ty = B.getInt32Ty();
   for (Instruction &I : instructions(Func)) {
-    if (!isa<PHINode>(I) && !isa<SelectInst>(I) && !isa<FreezeInst>(I))
+    if (!isAggregateValueIdInstr(I))
       continue;
-    if (!I.getType()->isAggregateType())
-      continue;
+    // Give multi-register arms a value-id first, before the result is mutated.
+    insertCompositeAggregateArms(&I, B);
     AggrConstTypes[&I] = I.getType();
     I.mutateType(I32Ty);
   }
