@@ -124,6 +124,22 @@ void test_byte_read_exempt() {
   std::byte c = b;
   (void)c;
 }
+
+void take_const_ref(const int &);
+void take_const_ptr(const int *);
+
+// A const-reference or const-pointer use of an uninitialized variable is a
+// binding (ref_to_uninit territory, diagnosed at the binding site), not a
+// read: uninit_read must not fire on it.
+void test_const_ref_use_is_not_a_read() {
+  int x [[uninit]];
+  take_const_ref(x); // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}
+
+void test_const_ptr_use_is_not_a_read() {
+  int x [[uninit]];
+  take_const_ptr(&x); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}
 #endif
 
 #ifdef DEMOTE

@@ -123,3 +123,14 @@ void test_decl_suppress_does_not_extend() {
   int y = x; // expected-error {{variable 'x' is read before initialization under profile 'test::uninit_read'}}
   (void)y;
 }
+
+void take_const_ref(const int &);
+void take_const_ptr(const int *);
+
+// A const-reference or const-pointer use of an uninitialized variable is a
+// binding, not a read: the profile must not report it as one.
+void test_const_ref_use_not_diagnosed() {
+  int x;
+  take_const_ref(x);
+  take_const_ptr(&x);
+}

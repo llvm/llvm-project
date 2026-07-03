@@ -2024,6 +2024,10 @@ private:
     // use site and is not suppressed there, emit the profile diagnostic
     // and skip the default warning path entirely.
     for (const auto &U : *vec) {
+      // A const-reference binding or address-taking use is not a read; it is
+      // ref_to_uninit (R7) binding territory, checked at the binding site.
+      if (U.isConstRefOrPtrUse())
+        continue;
       for (const CFGUninitProfileEntry &E : CFGUninitProfiles) {
         // std::byte may be read while uninitialized (paper §4).
         if (E.ExemptStdByte &&
