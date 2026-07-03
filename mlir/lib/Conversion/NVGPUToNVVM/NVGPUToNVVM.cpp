@@ -1751,11 +1751,6 @@ static std::optional<FPKind> classifyFPType(Type t) {
   return std::nullopt;
 }
 
-/// Number of source-side i32 register slots consumed by each NVVM convert Op.
-static int getNumSrcI32PerConvert(FPKind src) {
-  return src == FPKind::F32 ? 2 : 1;
-}
-
 /// Conversion op identifier for nvgpu.truncf lowering dispatch table.
 enum class FPTruncConvOp {
   F32x2_TO_F16x2,
@@ -1985,6 +1980,11 @@ static LogicalResult lowerTruncf(nvgpu::TruncfOp op,
     return rewriter.notifyMatchFailure(
         op, "unsupported type combination for truncation");
   FPTruncConvOp convOp = convEntry->convOp;
+
+  // Number of source-side i32 register slots consumed by each NVVM convert Op.
+  auto getNumSrcI32PerConvert = [](FPKind src) {
+    return src == FPKind::F32 ? 2 : 1;
+  };
   int numSrcI32PerConv = getNumSrcI32PerConvert(convEntry->src);
 
   // STEP 3: pack conversion results into destination i32 vector.
