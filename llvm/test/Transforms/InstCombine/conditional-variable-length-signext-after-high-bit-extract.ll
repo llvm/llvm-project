@@ -1150,3 +1150,24 @@ define i32 @bitwidth_does_not_fit(i3 %arg) {
   %inc = add i32 %shr, 1
   ret i32 %inc
 }
+
+define i16 @shift_count_bitwidth_does_not_fit(i16 %x, i4 %n) {
+; CHECK-LABEL: @shift_count_bitwidth_does_not_fit(
+; CHECK-NEXT:    [[HIGHBITS:%.*]] = lshr i16 [[X:%.*]], 1
+; CHECK-NEXT:    [[SUB1:%.*]] = sub i4 0, [[N:%.*]]
+; CHECK-NEXT:    [[Z1:%.*]] = zext i4 [[SUB1]] to i16
+; CHECK-NEXT:    [[SHL:%.*]] = shl i16 [[HIGHBITS]], [[Z1]]
+; CHECK-NEXT:    [[SUB2:%.*]] = sub i4 0, [[N]]
+; CHECK-NEXT:    [[Z2:%.*]] = zext i4 [[SUB2]] to i16
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr i16 [[SHL]], [[Z2]]
+; CHECK-NEXT:    ret i16 [[ASHR]]
+;
+  %highbits = lshr i16 %x, 1
+  %sub1 = sub i4 0, %n
+  %z1 = zext i4 %sub1 to i16
+  %shl = shl i16 %highbits, %z1
+  %sub2 = sub i4 0, %n
+  %z2 = zext i4 %sub2 to i16
+  %ashr = ashr i16 %shl, %z2
+  ret i16 %ashr
+}
