@@ -1620,6 +1620,12 @@ Currently, only the following parameter attributes are defined:
     otherwise it is undefined behavior. This means ``dereferenceable(<n>)``
     implies ``noundef``.
 
+    The ``dereferenceable`` attribute only implies dereferenceability at the
+    point of the attribute (i.e. on function entry for arguments or at the
+    point of the call for return values). The underlying object may still get
+    freed after that point. Other attributes such as ``nofree`` can be used
+    to exclude frees.
+
 .. _attr_dereferenceable_or_null:
 
 ``dereferenceable_or_null(<n>)``
@@ -3351,18 +3357,33 @@ Module-Level Inline Assembly
 ----------------------------
 
 Modules may contain "module-level inline asm" blocks, which corresponds
-to the GCC "file scope inline asm" blocks. These blocks are internally
-concatenated by LLVM and treated as a single unit, but may be separated
-in the ``.ll`` file if desired. The syntax is very simple:
+to the GCC "file scope inline asm" blocks:
 
 .. code-block:: llvm
 
-    module asm "inline asm code goes here"
-    module asm "more can go here"
+    module asm
+        "inline asm code goes here"
+        "more can go here"
 
-The strings can contain any character by escaping non-printable
+The sequence of string literals is internally concatenated using newlines as
+separators. The strings can contain any character by escaping non-printable
 characters. The escape sequence used is simply "\\xx" where "xx" is the
 two digit hex code for the number.
+
+Additionally, module-level inline assembly can specify an optional list of
+properties:
+
+.. code-block:: llvm
+
+    module asm(target_features: "+foo", target_cpu: "bar")
+        "inline asm code goes here"
+        "more can go here"
+
+Currently, the only supported properties are ``target_features`` and
+``target_cpu``, with the same meaning as the ``"target-features"`` and
+``"target-cpu"`` function attributes.
+
+Consecutive blocks with identical properties will be concatenated into one.
 
 Note that the assembly string *must* be parseable by LLVM's integrated assembler
 (unless it is disabled), even when emitting a ``.s`` file.
@@ -7838,11 +7859,14 @@ it is attached to is completely unpredictable.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The existence of the ``!dereferenceable`` metadata on the instruction
-tells the optimizer that the value loaded is known to be dereferenceable,
-otherwise the behavior is undefined.
+tells the optimizer that the value loaded is known to be dereferenceable
+at the current program point, otherwise the behavior is undefined.
 The number of bytes known to be dereferenceable is specified by the integer
 value in the metadata node. This is analogous to the ''dereferenceable''
 attribute on parameters and return values.
+
+The ``!deferenceable`` metadata can be combined with the ``!nofree`` metadata
+to indicate that the pointer will stay dereferenceable forever.
 
 .. _md_dereferenceable_or_null:
 
@@ -7851,7 +7875,8 @@ attribute on parameters and return values.
 
 The existence of the ``!dereferenceable_or_null`` metadata on the
 instruction tells the optimizer that the value loaded is known to be either
-dereferenceable or null, otherwise the behavior is undefined.
+dereferenceable at the current program point or null, otherwise the behavior is
+undefined.
 The number of bytes known to be dereferenceable is specified by the integer
 value in the metadata node. This is analogous to the ''dereferenceable_or_null''
 attribute on parameters and return values.

@@ -2598,6 +2598,32 @@ instCombineSVEVectorMlaU(InstCombiner &IC, IntrinsicInst &II) {
   return std::nullopt;
 }
 
+static std::optional<Instruction *>
+instCombineSVEPairwiseAddLong(InstCombiner &IC, IntrinsicInst &II) {
+  assert((II.getIntrinsicID() == Intrinsic::aarch64_sve_sadalp ||
+          II.getIntrinsicID() == Intrinsic::aarch64_sve_uadalp) &&
+         "Expected SADALP or UADALP intrinsic");
+
+  // Simplify add(adalp(pg, zeroinitializer, in), wide_acc)
+  //       -> adalp(pg, wide_acc, in)
+  auto *User = dyn_cast_or_null<Instruction>(II.getUniqueUndroppableUser());
+  if (!User || !match(II.getArgOperand(1), m_Zero()))
+    return std::nullopt;
+
+  Value *Acc;
+  if (!match(User, m_c_Add(m_Specific(&II), m_Value(Acc))))
+    return std::nullopt;
+
+  IC.Builder.SetInsertPoint(User);
+  Value *PairwiseAddLong = IC.Builder.CreateIntrinsic(
+      II.getIntrinsicID(), {II.getType()},
+      {II.getArgOperand(0), Acc, II.getArgOperand(2)});
+
+  IC.replaceInstUsesWith(*User, PairwiseAddLong);
+  IC.eraseInstFromFunction(*User);
+  return &II; // II is now trivially dead and will get erased.
+}
+
 static std::optional<Instruction *> instCombineSVEVectorAdd(InstCombiner &IC,
                                                             IntrinsicInst &II) {
   if (auto MLA = instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_mul,
@@ -3165,6 +3191,9 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
         IC, II, true);
   case Intrinsic::aarch64_sve_mla_u:
     return instCombineSVEVectorMlaU(IC, II);
+  case Intrinsic::aarch64_sve_sadalp:
+  case Intrinsic::aarch64_sve_uadalp:
+    return instCombineSVEPairwiseAddLong(IC, II);
   case Intrinsic::aarch64_sve_sub:
     return instCombineSVEVectorSub(IC, II);
   case Intrinsic::aarch64_sve_sub_u:

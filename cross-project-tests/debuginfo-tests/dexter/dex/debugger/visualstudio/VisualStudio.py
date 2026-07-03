@@ -394,16 +394,12 @@ class VisualStudio(
         )
 
     def get_stack_frames(self, step_index: int) -> StepIR:
-        raise NotImplementedError(
-            "--use-script debugging not supported in visual studio yet."
-        )
+        raise NotImplementedError("--use-heuristic required for visual studio.")
 
     def collect_watches(
         self, step: StepIR, frame_idx: int, watches: List[str], scope_watches: List[str]
     ):
-        raise NotImplementedError(
-            "--use-script debugging not supported in visual studio yet."
-        )
+        raise NotImplementedError("--use-heuristic required for visual studio.")
 
     @property
     def is_running(self):
