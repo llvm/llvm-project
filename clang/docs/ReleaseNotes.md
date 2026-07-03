@@ -684,6 +684,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   by the kernel, so setting them is almost always a typo (matching the
   bionic libc `diagnose_if` check).
 
+- Added a clearer diagnostic for uninitialized decomposition declarations. (#GH90107)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
