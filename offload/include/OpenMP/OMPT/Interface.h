@@ -31,6 +31,9 @@
 /// target_task_data representing the target task region.
 typedef ompt_data_t *(*ompt_get_task_data_t)();
 typedef ompt_data_t *(*ompt_get_target_task_data_t)();
+/// Callback from libomp -> libomptarget to retrieve the data
+/// required for ompt_get_target_info entry point.
+typedef void (*ompt_set_target_info_t)(ompt_get_target_info_t);
 
 namespace llvm {
 namespace omp {
@@ -41,6 +44,7 @@ namespace ompt {
 /// target_task_data.
 static ompt_get_task_data_t ompt_get_task_data_fn;
 static ompt_get_target_task_data_t ompt_get_target_task_data_fn;
+static ompt_set_target_info_t ompt_set_target_info_fn;
 
 /// Used to maintain execution state for this thread
 class Interface {
@@ -221,15 +225,20 @@ public:
   void setTargetDataValue(uint64_t DataValue) { TargetData.value = DataValue; }
   void setTargetDataPtr(void *DataPtr) { TargetData.ptr = DataPtr; }
   void setHostOpId(ompt_id_t OpId) { HostOpId = OpId; }
+  void setDeviceNum(uint64_t Id) { DeviceNum = Id; }
 
   /// Getters for target region and target operation correlation ids
   uint64_t getTargetDataValue() { return TargetData.value; }
   void *getTargetDataPtr() { return TargetData.ptr; }
   ompt_id_t getHostOpId() { return HostOpId; }
+  uint64_t getDeviceNum() { return DeviceNum; }
 
 private:
   /// Target operations id
   ompt_id_t HostOpId = 0;
+
+  /// Target device id associated with current target region
+  int32_t DeviceNum = /*omp_invalid_device*/ -2;
 
   /// Target region data
   ompt_data_t TargetData = ompt_data_none;
@@ -246,8 +255,14 @@ private:
   /// Used for marking end of a data operation
   void endTargetDataOperation();
 
+  /// Used for marking begin of a submit operation
+  void beginTargetSubmitOperation();
+
+  /// Used for marking end of a submit operation
+  void endTargetSubmitOperation();
+
   /// Used for marking begin of a target region
-  void beginTargetRegion();
+  void beginTargetRegion(int64_t DeviceId);
 
   /// Used for marking end of a target region
   void endTargetRegion();
