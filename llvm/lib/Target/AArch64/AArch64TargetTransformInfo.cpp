@@ -2142,17 +2142,18 @@ static std::optional<Instruction *> instCombineSVEDupX(InstCombiner &IC,
   return IC.replaceInstUsesWith(II, Splat);
 }
 
+// xor(cmpne(%pg, %lhs, %rhs), %pg)
+// -> cmpeq(%pg, %lhs, %rhs)
 static std::optional<Instruction *> instCombineXorSVECmpNE(InstCombiner &IC,
                                                            IntrinsicInst &II) {
-  if (!match(II.getOperand(2), m_Zero()) || !II.hasOneUse())
+  if (!II.hasOneUse())
     return std::nullopt;
-
   auto *User = cast<Instruction>(*II.user_begin());
   if (!match(User, m_c_Xor(m_Specific(&II), m_Specific(II.getOperand(0)))))
     return std::nullopt;
 
   Intrinsic::ID IID;
-  switch ((II.getIntrinsicID())) {
+  switch (II.getIntrinsicID()) {
   case Intrinsic::aarch64_sve_cmpne:
     IID = Intrinsic::aarch64_sve_cmpeq;
     break;
