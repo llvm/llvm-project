@@ -10,7 +10,7 @@
 //
 // The source of truth is IR metadata attached during PGO use:
 //   - Metadata name: "block.uniformity.profile"
-//   - Payload: i1 (true = uniform, false = divergent)
+//   - Presence means the block is uniform.
 //
 // This is intentionally target-agnostic: any backend that produces
 // uniformity bits in the profile can attach the same metadata and reuse this
@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -64,14 +65,13 @@ public:
 };
 
 class BlockUniformityProfilePrinterPass
-    : public PassInfoMixin<BlockUniformityProfilePrinterPass> {
+    : public RequiredPassInfoMixin<BlockUniformityProfilePrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit BlockUniformityProfilePrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM);
-  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm

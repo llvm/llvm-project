@@ -10,27 +10,16 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Constants.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Metadata.h"
 #include "llvm/Support/raw_ostream.h"
-#include <optional>
 
 using namespace llvm;
 
-static std::optional<bool> getIRBlockUniformity(const BasicBlock &BB) {
-  const Instruction *TI = BB.getTerminator();
-  if (!TI)
-    return std::nullopt;
-
-  MDNode *MD = TI->getMetadata(LLVMContext::MD_block_uniformity_profile);
-  if (!MD)
-    return std::nullopt;
-
-  // Metadata format: !{i1 IsUniform} - structural validity assumed (verifier).
-  // Returns true if uniform (not divergent).
-  return mdconst::extract<ConstantInt>(MD->getOperand(0))->isOne();
+static bool hasIRBlockUniformityProfile(const BasicBlock &BB) {
+  return BB.getTerminator()->getMetadata(
+      LLVMContext::MD_block_uniformity_profile);
 }
 
 void BlockUniformityProfile::compute(const MachineFunction &MF) {
@@ -39,30 +28,18 @@ void BlockUniformityProfile::compute(const MachineFunction &MF) {
   DivergentBlocks.clear();
   DivergentBlocks.resize(NumBlockIDs);
 
-  // First determine whether any uniformity profile exists for this function.
-  for (const MachineBasicBlock &MBB : MF) {
-    const BasicBlock *BB = MBB.getBasicBlock();
-    if (!BB)
-      continue;
-    if (getIRBlockUniformity(*BB).has_value()) {
-      HasProfile = true;
-      break;
-    }
-  }
-
-  if (!HasProfile)
-    return;
-
   // Conservative behavior: if profile exists for the function but we
   // cannot classify a particular (Machine)basic block, treat it as divergent.
   for (const MachineBasicBlock &MBB : MF) {
     const unsigned Num = MBB.getNumber();
-    bool IsDivergent = true;
+    bool IsUniform = false;
     if (const BasicBlock *BB = MBB.getBasicBlock()) {
-      if (auto U = getIRBlockUniformity(*BB))
-        IsDivergent = !*U; // Metadata stores IsUniform, we want IsDivergent
+      IsUniform = hasIRBlockUniformityProfile(*BB);
     }
-    if (Num < DivergentBlocks.size() && IsDivergent)
+    if (IsUniform)
+      HasProfile = true;
+
+    if (Num < DivergentBlocks.size() && !IsUniform)
       DivergentBlocks.set(Num);
   }
 }
@@ -83,8 +60,8 @@ void BlockUniformityProfile::print(raw_ostream &OS,
     OS << "  " << printMBBReference(MBB);
     if (BB->hasName())
       OS << " (%" << BB->getName() << ")";
-    if (auto U = getIRBlockUniformity(*BB)) {
-      OS << ": " << (*U ? "uniform" : "divergent") << '\n';
+    if (hasIRBlockUniformityProfile(*BB)) {
+      OS << ": uniform\n";
       continue;
     }
     OS << ": no PGO annotation (treated divergent for spill placement)\n";
