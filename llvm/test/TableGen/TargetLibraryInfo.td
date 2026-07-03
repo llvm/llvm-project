@@ -1,15 +1,24 @@
 // RUN: llvm-tblgen -gen-target-library-info -I %p/../../include %s | FileCheck %s
 
-include "llvm/Analysis/TargetLibraryInfoImpl.td"
+include "llvm/IR/RuntimeLibcallsImpl.td"
 
-def cosf : TargetLibCall< "cosf", Flt, [Flt]>;
-def sinf : TargetLibCall< "sinf", Flt, [Flt]>;
+def COS_F32 : RuntimeLibcall<Flt, [Flt]>;
+def SIN_F32 : RuntimeLibcall<Flt, [Flt]>;
+def FMAX_F32 : RuntimeLibcall<Floating, [Same, Same]>;
+def PRINTF : RuntimeLibcall<Int, [Ptr, Ellip]>;
+def CABS_F64 : RuntimeLibcall<NoneType, []>;
 
-def fmaxf : TargetLibCall< "fmaxf", Floating, [Same, Same]>;
+def cosf : RuntimeLibcallImpl<COS_F32>;
+def sinf : RuntimeLibcallImpl<SIN_F32>;
+def fmaxf : RuntimeLibcallImpl<FMAX_F32>;
+def printf : RuntimeLibcallImpl<PRINTF>;
+def cabs : RuntimeLibcallImpl<CABS_F64>;
 
-def printf : TargetLibCall< "printf", Int, [Ptr, Ellip]>;
-
-def cabs : TargetLibCall< "cabs", ? /* Checked manually. */>;
+def TLI_cosf : TargetLibCall<cosf>;
+def TLI_sinf : TargetLibCall<sinf>;
+def TLI_fmaxf : TargetLibCall<fmaxf>;
+def TLI_printf : TargetLibCall<printf>;
+def TLI_cabs : TargetLibCall<cabs>;
 
 // CHECK:      #ifdef GET_TARGET_LIBRARY_INFO_ENUM
 // CHECK-NEXT: #undef GET_TARGET_LIBRARY_INFO_ENUM

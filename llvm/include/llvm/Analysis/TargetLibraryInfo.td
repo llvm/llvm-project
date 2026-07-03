@@ -6,161 +6,146 @@
 //
 //===----------------------------------------------------------------------===//
 
-include "llvm/Analysis/TargetLibraryInfoImpl.td"
+include "llvm/IR/RuntimeLibcalls.td"
 
 /// void *operator new(unsigned int);
-def msvc_new_int : TargetLibCall<"??2@YAPAXI@Z", Ptr, [Int]>;
+def TLI_msvc_new_int : TargetLibCall<__2_YAPAXI_Z>;
 
 /// void *operator new(unsigned int, const std::nothrow_t&);
-def msvc_new_int_nothrow
-    : TargetLibCall<"??2@YAPAXIABUnothrow_t@std@@@Z", Ptr, [Int, Ptr]>;
+def TLI_msvc_new_int_nothrow : TargetLibCall<__2_YAPAXIABUnothrow_t_std___Z>;
 
 /// void *operator new(unsigned long long);
-def msvc_new_longlong : TargetLibCall<"??2@YAPEAX_K@Z", Ptr, [LLong]>;
+def TLI_msvc_new_longlong : TargetLibCall<__2_YAPEAX_K_Z>;
 
 /// void *operator new(unsigned long long, const std::nothrow_t&);
-def msvc_new_longlong_nothrow
-    : TargetLibCall<"??2@YAPEAX_KAEBUnothrow_t@std@@@Z", Ptr, [LLong, Ptr]>;
+def TLI_msvc_new_longlong_nothrow
+    : TargetLibCall<__2_YAPEAX_KAEBUnothrow_t_std___Z>;
 
 /// void operator delete(void*);
-def msvc_delete_ptr32 : TargetLibCall<"??3@YAXPAX@Z", Void, [Ptr]>;
+def TLI_msvc_delete_ptr32 : TargetLibCall<__3_YAXPAX_Z>;
 
 /// void operator delete(void*, const std::nothrow_t&);
-def msvc_delete_ptr32_nothrow
-    : TargetLibCall<"??3@YAXPAXABUnothrow_t@std@@@Z", Void, [Ptr, Ptr]>;
+def TLI_msvc_delete_ptr32_nothrow
+    : TargetLibCall<__3_YAXPAXABUnothrow_t_std___Z>;
 
 /// void operator delete(void*, unsigned int);
-def msvc_delete_ptr32_int : TargetLibCall<"??3@YAXPAXI@Z", Void, [Ptr, Int]>;
+def TLI_msvc_delete_ptr32_int : TargetLibCall<__3_YAXPAXI_Z>;
 
 /// void operator delete(void*);
-def msvc_delete_ptr64 : TargetLibCall<"??3@YAXPEAX@Z", Void, [Ptr]>;
+def TLI_msvc_delete_ptr64 : TargetLibCall<__3_YAXPEAX_Z>;
 
 /// void operator delete(void*, const std::nothrow_t&);
-def msvc_delete_ptr64_nothrow
-    : TargetLibCall<"??3@YAXPEAXAEBUnothrow_t@std@@@Z", Void, [Ptr, Ptr]>;
+def TLI_msvc_delete_ptr64_nothrow
+    : TargetLibCall<__3_YAXPEAXAEBUnothrow_t_std___Z>;
 
 /// void operator delete(void*, unsigned long long);
-def msvc_delete_ptr64_longlong
-    : TargetLibCall<"??3@YAXPEAX_K@Z", Void, [Ptr, LLong]>;
+def TLI_msvc_delete_ptr64_longlong : TargetLibCall<__3_YAXPEAX_K_Z>;
 
 /// void *operator new[](unsigned int);
-def msvc_new_array_int : TargetLibCall<"??_U@YAPAXI@Z", Ptr, [Int]>;
+def TLI_msvc_new_array_int : TargetLibCall<___U_YAPAXI_Z>;
 
 /// void *operator new](unsigned int, [const std::nothrow_t&);
-def msvc_new_array_int_nothrow
-    : TargetLibCall<"??_U@YAPAXIABUnothrow_t@std@@@Z", Ptr, [Int, Ptr]>;
+def TLI_msvc_new_array_int_nothrow
+    : TargetLibCall<___U_YAPAXIABUnothrow_t_std___Z>;
 
 /// void *operator new[](unsigned long long);
-def msvc_new_array_longlong : TargetLibCall<"??_U@YAPEAX_K@Z", Ptr, [LLong]>;
+def TLI_msvc_new_array_longlong : TargetLibCall<___U_YAPEAX_K_Z>;
 
 /// void *operator new](unsigned long long, [const std::nothrow_t&);
-def msvc_new_array_longlong_nothrow
-    : TargetLibCall<"??_U@YAPEAX_KAEBUnothrow_t@std@@@Z", Ptr, [LLong, Ptr]>;
+def TLI_msvc_new_array_longlong_nothrow
+    : TargetLibCall<___U_YAPEAX_KAEBUnothrow_t_std___Z>;
 
 /// void operator delete[](void*);
-def msvc_delete_array_ptr32 : TargetLibCall<"??_V@YAXPAX@Z", Void, [Ptr]>;
+def TLI_msvc_delete_array_ptr32 : TargetLibCall<___V_YAXPAX_Z>;
 
 /// void operator delete](void*, [const std::nothrow_t&);
-def msvc_delete_array_ptr32_nothrow
-    : TargetLibCall<"??_V@YAXPAXABUnothrow_t@std@@@Z", Void, [Ptr, Ptr]>;
+def TLI_msvc_delete_array_ptr32_nothrow
+    : TargetLibCall<___V_YAXPAXABUnothrow_t_std___Z>;
 
 /// void operator delete](void*, [unsigned int);
-def msvc_delete_array_ptr32_int
-    : TargetLibCall<"??_V@YAXPAXI@Z", Void, [Ptr, Int]>;
+def TLI_msvc_delete_array_ptr32_int : TargetLibCall<___V_YAXPAXI_Z>;
 
 /// void operator delete[](void*);
-def msvc_delete_array_ptr64 : TargetLibCall<"??_V@YAXPEAX@Z", Void, [Ptr]>;
+def TLI_msvc_delete_array_ptr64 : TargetLibCall<___V_YAXPEAX_Z>;
 
 /// void operator delete](void*, [const std::nothrow_t&);
-def msvc_delete_array_ptr64_nothrow
-    : TargetLibCall<"??_V@YAXPEAXAEBUnothrow_t@std@@@Z", Void, [Ptr, Ptr]>;
+def TLI_msvc_delete_array_ptr64_nothrow
+    : TargetLibCall<___V_YAXPEAXAEBUnothrow_t_std___Z>;
 
 /// void operator delete](void*, [unsigned long long);
-def msvc_delete_array_ptr64_longlong
-    : TargetLibCall<"??_V@YAXPEAX_K@Z", Void, [Ptr, LLong]>;
+def TLI_msvc_delete_array_ptr64_longlong : TargetLibCall<___V_YAXPEAX_K_Z>;
 
 /// int _IO_getc(_IO_FILE * __fp);
-def under_IO_getc : TargetLibCall<"_IO_getc", Int, [Ptr]>;
+def TLI_under_IO_getc : TargetLibCall<_IO_getc>;
 
 /// int _IO_putc(int __c, _IO_FILE * __fp);
-def under_IO_putc : TargetLibCall<"_IO_putc", Int, [Int, Ptr]>;
+def TLI_under_IO_putc : TargetLibCall<_IO_putc>;
 
 /// void operator delete[](void*);
-def ZdaPv : TargetLibCall<"_ZdaPv", Void, [Ptr]>;
+def TLI_ZdaPv : TargetLibCall<_ZdaPv>;
 
 /// void operator delete](void*, [const std::nothrow_t&);
-def ZdaPvRKSt9nothrow_t
-    : TargetLibCall<"_ZdaPvRKSt9nothrow_t", Void, [Ptr, Ptr]>;
+def TLI_ZdaPvRKSt9nothrow_t : TargetLibCall<_ZdaPvRKSt9nothrow_t>;
 
 /// void operator delete](void*, [std::align_val_t);
-def ZdaPvSt11align_val_t
-    : TargetLibCall<"_ZdaPvSt11align_val_t", Void, [Ptr, IntPlus]>;
+def TLI_ZdaPvSt11align_val_t : TargetLibCall<_ZdaPvSt11align_val_t>;
 
 /// void operator delete](void*, [std::align_val_t, const std::nothrow_t&)
-def ZdaPvSt11align_val_tRKSt9nothrow_t
-    : TargetLibCall<"_ZdaPvSt11align_val_tRKSt9nothrow_t",
-                    Void, [Ptr, IntPlus, Ptr]>;
+def TLI_ZdaPvSt11align_val_tRKSt9nothrow_t
+    : TargetLibCall<_ZdaPvSt11align_val_tRKSt9nothrow_t>;
 
 /// void operator delete](void*, [unsigned int);
-def ZdaPvj : TargetLibCall<"_ZdaPvj", Void, [Ptr, Int]>;
+def TLI_ZdaPvj : TargetLibCall<_ZdaPvj>;
 
 /// void operator delete](void*, [unsigned int, std::align_val_t);
-def ZdaPvjSt11align_val_t
-    : TargetLibCall<"_ZdaPvjSt11align_val_t", Void, [Ptr, Int, Int]>;
+def TLI_ZdaPvjSt11align_val_t : TargetLibCall<_ZdaPvjSt11align_val_t>;
 
 /// void operator delete](void*, [unsigned long);
-def ZdaPvm : TargetLibCall<"_ZdaPvm", Void, [Ptr, Long]>;
+def TLI_ZdaPvm : TargetLibCall<_ZdaPvm>;
 
 /// void operator delete](void*, [unsigned long, std::align_val_t);
-def ZdaPvmSt11align_val_t
-    : TargetLibCall<"_ZdaPvmSt11align_val_t", Void, [Ptr, Long, Long]>;
+def TLI_ZdaPvmSt11align_val_t : TargetLibCall<_ZdaPvmSt11align_val_t>;
 
 /// void operator delete(void*);
-def ZdlPv : TargetLibCall<"_ZdlPv", Void, [Ptr]>;
+def TLI_ZdlPv : TargetLibCall<_ZdlPv>;
 
 /// void operator delete(void*, const std::nothrow_t&);
-def ZdlPvRKSt9nothrow_t
-    : TargetLibCall<"_ZdlPvRKSt9nothrow_t", Void, [Ptr, Ptr]>;
+def TLI_ZdlPvRKSt9nothrow_t : TargetLibCall<_ZdlPvRKSt9nothrow_t>;
 
 /// void operator delete(void*, std::align_val_t)
-def ZdlPvSt11align_val_t
-    : TargetLibCall<"_ZdlPvSt11align_val_t", Void, [Ptr, IntPlus]>;
+def TLI_ZdlPvSt11align_val_t : TargetLibCall<_ZdlPvSt11align_val_t>;
 
 /// void operator delete(void*, std::align_val_t, const std::nothrow_t&)
-def ZdlPvSt11align_val_tRKSt9nothrow_t
-    : TargetLibCall<"_ZdlPvSt11align_val_tRKSt9nothrow_t",
-                    Void, [Ptr, IntPlus, Ptr]>;
+def TLI_ZdlPvSt11align_val_tRKSt9nothrow_t
+    : TargetLibCall<_ZdlPvSt11align_val_tRKSt9nothrow_t>;
 
 /// void operator delete(void*, unsigned int);
-def ZdlPvj : TargetLibCall<"_ZdlPvj", Void, [Ptr, Int]>;
+def TLI_ZdlPvj : TargetLibCall<_ZdlPvj>;
 
 /// void operator delete(void*, unsigned int, std::align_val_t)
-def ZdlPvjSt11align_val_t
-    : TargetLibCall<"_ZdlPvjSt11align_val_t", Void, [Ptr, Int, Int]>;
+def TLI_ZdlPvjSt11align_val_t : TargetLibCall<_ZdlPvjSt11align_val_t>;
 
 /// void operator delete(void*, unsigned long);
-def ZdlPvm : TargetLibCall<"_ZdlPvm", Void, [Ptr, Long]>;
+def TLI_ZdlPvm : TargetLibCall<_ZdlPvm>;
 
 /// void operator delete(void*, unsigned long, std::align_val_t)
-def ZdlPvmSt11align_val_t
-    : TargetLibCall<"_ZdlPvmSt11align_val_t", Void, [Ptr, Long, Long]>;
+def TLI_ZdlPvmSt11align_val_t : TargetLibCall<_ZdlPvmSt11align_val_t>;
 
 /// void *operator new[](unsigned int);
-def Znaj : TargetLibCall<"_Znaj", Ptr, [Int]>;
+def TLI_Znaj : TargetLibCall<_Znaj>;
 
 /// void *operator new](unsigned int, [const std::nothrow_t&);
-def ZnajRKSt9nothrow_t : TargetLibCall<"_ZnajRKSt9nothrow_t", Ptr, [Int, Ptr]>;
+def TLI_ZnajRKSt9nothrow_t : TargetLibCall<_ZnajRKSt9nothrow_t>;
 
 /// void *operator new](unsigned int, [std::align_val_t)
-def ZnajSt11align_val_t
-    : TargetLibCall<"_ZnajSt11align_val_t", Ptr, [Int, Int]>;
+def TLI_ZnajSt11align_val_t : TargetLibCall<_ZnajSt11align_val_t>;
 
 /// void *operator new](unsigned int, [std::align_val_t, const std::nothrow_t&)
-def ZnajSt11align_val_tRKSt9nothrow_t
-    : TargetLibCall<"_ZnajSt11align_val_tRKSt9nothrow_t", Ptr, [Int, Int, Ptr]>;
+def TLI_ZnajSt11align_val_tRKSt9nothrow_t
+    : TargetLibCall<_ZnajSt11align_val_tRKSt9nothrow_t>;
 
 /// void *operator new[](unsigned long);
-def Znam : TargetLibCall<"_Znam", Ptr, [Long]>;
+def TLI_Znam : TargetLibCall<_Znam>;
 
 /// void *operator new](unsigned long, [__hot_cold_t)
 /// Currently this and other operator new interfaces that take a __hot_cold_t
@@ -168,85 +153,72 @@ def Znam : TargetLibCall<"_Znam", Ptr, [Long]>;
 /// https://github.com/google/tcmalloc/blob/master/tcmalloc/new_extension.h
 /// and for the definition of the __hot_cold_t parameter see:
 /// https://github.com/google/tcmalloc/blob/master/tcmalloc/malloc_extension.h
-def Znam12__hot_cold_t
-    : TargetLibCall<"_Znam12__hot_cold_t", Ptr, [Long, Bool]>;
+def TLI_Znam12__hot_cold_t : TargetLibCall<_Znam12__hot_cold_t>;
 
 /// void *operator new](unsigned long, [const std::nothrow_t&);
-def ZnamRKSt9nothrow_t : TargetLibCall<"_ZnamRKSt9nothrow_t", Ptr, [Long, Ptr]>;
+def TLI_ZnamRKSt9nothrow_t : TargetLibCall<_ZnamRKSt9nothrow_t>;
 
 /// void *operator new](unsigned long, [const std::nothrow_t&, __hot_cold_t)
-def ZnamRKSt9nothrow_t12__hot_cold_t
-    : TargetLibCall<"_ZnamRKSt9nothrow_t12__hot_cold_t",
-                    Ptr, [Long, Ptr, Bool]>;
+def TLI_ZnamRKSt9nothrow_t12__hot_cold_t
+    : TargetLibCall<_ZnamRKSt9nothrow_t12__hot_cold_t>;
 
 /// void *operator new](unsigned long, [std::align_val_t)
-def ZnamSt11align_val_t
-    : TargetLibCall<"_ZnamSt11align_val_t", Ptr, [Long, Long]>;
+def TLI_ZnamSt11align_val_t : TargetLibCall<_ZnamSt11align_val_t>;
 
 /// void *operator new](unsigned long, [std::align_val_t, __hot_cold_t)
-def ZnamSt11align_val_t12__hot_cold_t
-    : TargetLibCall<"_ZnamSt11align_val_t12__hot_cold_t",
-                    Ptr, [Long, Long, Bool]>;
+def TLI_ZnamSt11align_val_t12__hot_cold_t
+    : TargetLibCall<_ZnamSt11align_val_t12__hot_cold_t>;
 
 /// void *operator new](unsigned long, [std::align_val_t, const std::nothrow_t&)
-def ZnamSt11align_val_tRKSt9nothrow_t
-    : TargetLibCall<"_ZnamSt11align_val_tRKSt9nothrow_t",
-                    Ptr, [Long, Long, Ptr]>;
+def TLI_ZnamSt11align_val_tRKSt9nothrow_t
+    : TargetLibCall<_ZnamSt11align_val_tRKSt9nothrow_t>;
 
 /// void *operator new](unsigned long, [std::align_val_t, const std::nothrow_t&,
 /// __hot_cold_t)
-def ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t
-    : TargetLibCall<"_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t",
-                    Ptr, [Long, Long, Ptr, Bool]>;
+def TLI_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t
+    : TargetLibCall<_ZnamSt11align_val_tRKSt9nothrow_t12__hot_cold_t>;
 
 /// void *operator new(unsigned int);
-def Znwj : TargetLibCall<"_Znwj", Ptr, [Int]>;
+def TLI_Znwj : TargetLibCall<_Znwj>;
 
 /// void *operator new(unsigned int, const std::nothrow_t&);
-def ZnwjRKSt9nothrow_t : TargetLibCall<"_ZnwjRKSt9nothrow_t", Ptr, [Int, Ptr]>;
+def TLI_ZnwjRKSt9nothrow_t : TargetLibCall<_ZnwjRKSt9nothrow_t>;
 
 /// void *operator new(unsigned int, std::align_val_t)
-def ZnwjSt11align_val_t
-    : TargetLibCall<"_ZnwjSt11align_val_t", Ptr, [Int, Int]>;
+def TLI_ZnwjSt11align_val_t : TargetLibCall<_ZnwjSt11align_val_t>;
 
 /// void *operator new(unsigned int, std::align_val_t, const std::nothrow_t&)
-def ZnwjSt11align_val_tRKSt9nothrow_t
-    : TargetLibCall<"_ZnwjSt11align_val_tRKSt9nothrow_t", Ptr, [Int, Int, Ptr]>;
+def TLI_ZnwjSt11align_val_tRKSt9nothrow_t
+    : TargetLibCall<_ZnwjSt11align_val_tRKSt9nothrow_t>;
 
 /// void *operator new(unsigned long);
-def Znwm : TargetLibCall<"_Znwm", Ptr, [Long]>;
+def TLI_Znwm : TargetLibCall<_Znwm>;
 
 /// void *operator new(unsigned long, __hot_cold_t)
-def Znwm12__hot_cold_t
-    : TargetLibCall<"_Znwm12__hot_cold_t", Ptr, [Long, Bool]>;
+def TLI_Znwm12__hot_cold_t : TargetLibCall<_Znwm12__hot_cold_t>;
 
 /// void *operator new(unsigned long, const std::nothrow_t&);
-def ZnwmRKSt9nothrow_t : TargetLibCall<"_ZnwmRKSt9nothrow_t", Ptr, [Long, Ptr]>;
+def TLI_ZnwmRKSt9nothrow_t : TargetLibCall<_ZnwmRKSt9nothrow_t>;
 
 /// void *operator new(unsigned long, const std::nothrow_t&, __hot_cold_t)
-def ZnwmRKSt9nothrow_t12__hot_cold_t
-    : TargetLibCall<"_ZnwmRKSt9nothrow_t12__hot_cold_t",
-                    Ptr, [Long, Ptr, Bool]>;
+def TLI_ZnwmRKSt9nothrow_t12__hot_cold_t
+    : TargetLibCall<_ZnwmRKSt9nothrow_t12__hot_cold_t>;
 
 /// void *operator new(unsigned long, std::align_val_t)
-def ZnwmSt11align_val_t
-    : TargetLibCall<"_ZnwmSt11align_val_t", Ptr, [Long, Long]>;
+def TLI_ZnwmSt11align_val_t : TargetLibCall<_ZnwmSt11align_val_t>;
 
 /// void *operator new(unsigned long, std::align_val_t, __hot_cold_t)
-def ZnwmSt11align_val_t12__hot_cold_t
-    : TargetLibCall<"_ZnwmSt11align_val_t12__hot_cold_t",
-                    Ptr, [Long, Long, Bool]>;
+def TLI_ZnwmSt11align_val_t12__hot_cold_t
+    : TargetLibCall<_ZnwmSt11align_val_t12__hot_cold_t>;
 
 /// void *operator new(unsigned long, std::align_val_t, const std::nothrow_t&)
-def ZnwmSt11align_val_tRKSt9nothrow_t
-    : TargetLibCall<"_ZnwmSt11align_val_tRKSt9nothrow_t",
-                    Ptr, [Long, Long, Ptr]>;
+def TLI_ZnwmSt11align_val_tRKSt9nothrow_t
+    : TargetLibCall<_ZnwmSt11align_val_tRKSt9nothrow_t>;
 
 /// void *operator new(unsigned long, std::align_val_t, const std::nothrow_t&,
 /// __hot_cold_t)
-def ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t
-    : TargetLibCall<"_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t",
-                    Ptr, [Long, Long, Ptr, Bool]>;
+def TLI_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t
+    : TargetLibCall<_ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t>;
 
 /// The following are variants of operator new which return the actual size
 /// reserved by the allocator proposed in P0901R5 (Size feedback in operator
@@ -255,1436 +227,1423 @@ def ZnwmSt11align_val_tRKSt9nothrow_t12__hot_cold_t
 /// https://github.com/google/tcmalloc/blob/master/tcmalloc/malloc_extension.h
 
 /// __sized_ptr_t __size_returning_new(size_t size)
-def size_returning_new
-    : TargetLibCall<"__size_returning_new", ? /* Checked manually. */>;
+def TLI_size_returning_new : TargetLibCall<__size_returning_new>;
 
 /// __sized_ptr_t __size_returning_new_hot_cold(size_t, __hot_cold_t)
-def size_returning_new_hot_cold
-    : TargetLibCall<"__size_returning_new_hot_cold", ? /* Checked manually. */>;
+def TLI_size_returning_new_hot_cold
+    : TargetLibCall<__size_returning_new_hot_cold>;
 
 /// __sized_ptr_t __size_returning_new_aligned(size_t, std::align_val_t)
-def size_returning_new_aligned
-    : TargetLibCall<"__size_returning_new_aligned", ? /* Checked manually. */>;
+def TLI_size_returning_new_aligned
+    : TargetLibCall<__size_returning_new_aligned>;
 
 /// __sized_ptr_t __size_returning_new_aligned(size_t, std::align_val_t,
 /// __hot_cold_t)
-def size_returning_new_aligned_hot_cold
-    : TargetLibCall<"__size_returning_new_aligned_hot_cold",
-                    ? /* Checked manually. */>;
+def TLI_size_returning_new_aligned_hot_cold
+    : TargetLibCall<__size_returning_new_aligned_hot_cold>;
 
 /// double __acos_finite(double x);
-def acos_finite : TargetLibCall<"__acos_finite", Dbl, [Dbl]>;
+def TLI_acos_finite : TargetLibCall<__acos_finite>;
 
 /// float __acosf_finite(float x);
-def acosf_finite : TargetLibCall<"__acosf_finite", Flt, [Flt]>;
+def TLI_acosf_finite : TargetLibCall<__acosf_finite>;
 
 /// double __acosh_finite(double x);
-def acosh_finite : TargetLibCall<"__acosh_finite", Dbl, [Dbl]>;
+def TLI_acosh_finite : TargetLibCall<__acosh_finite>;
 
 /// float __acoshf_finite(float x);
-def acoshf_finite : TargetLibCall<"__acoshf_finite", Flt, [Flt]>;
+def TLI_acoshf_finite : TargetLibCall<__acoshf_finite>;
 
 /// long double __acoshl_finite(long double x);
-def acoshl_finite : TargetLibCall<"__acoshl_finite", LDbl, [LDbl]>;
+def TLI_acoshl_finite : TargetLibCall<__acoshl_finite>;
 
 /// long double __acosl_finite(long double x);
-def acosl_finite : TargetLibCall<"__acosl_finite", LDbl, [LDbl]>;
+def TLI_acosl_finite : TargetLibCall<__acosl_finite>;
 
 /// double __asin_finite(double x);
-def asin_finite : TargetLibCall<"__asin_finite", Dbl, [Dbl]>;
+def TLI_asin_finite : TargetLibCall<__asin_finite>;
 
 /// float __asinf_finite(float x);
-def asinf_finite : TargetLibCall<"__asinf_finite", Flt, [Flt]>;
+def TLI_asinf_finite : TargetLibCall<__asinf_finite>;
 
 /// long double __asinl_finite(long double x);
-def asinl_finite : TargetLibCall<"__asinl_finite", LDbl, [LDbl]>;
+def TLI_asinl_finite : TargetLibCall<__asinl_finite>;
 
 /// double atan2_finite(double y, double x);
-def atan2_finite : TargetLibCall<"__atan2_finite", Dbl, [Dbl, Dbl]>;
+def TLI_atan2_finite : TargetLibCall<__atan2_finite>;
 
 /// float atan2f_finite(float y, float x);
-def atan2f_finite : TargetLibCall<"__atan2f_finite", Flt, [Flt, Flt]>;
+def TLI_atan2f_finite : TargetLibCall<__atan2f_finite>;
 
 /// long double atan2l_finite(long double y, long double x);
-def atan2l_finite : TargetLibCall<"__atan2l_finite", LDbl, [LDbl, LDbl]>;
+def TLI_atan2l_finite : TargetLibCall<__atan2l_finite>;
 
 /// double __atanh_finite(double x);
-def atanh_finite : TargetLibCall<"__atanh_finite", Dbl, [Dbl]>;
+def TLI_atanh_finite : TargetLibCall<__atanh_finite>;
 
 /// float __atanhf_finite(float x);
-def atanhf_finite : TargetLibCall<"__atanhf_finite", Flt, [Flt]>;
+def TLI_atanhf_finite : TargetLibCall<__atanhf_finite>;
 
 /// long double __atanhl_finite(long double x);
-def atanhl_finite : TargetLibCall<"__atanhl_finite", LDbl, [LDbl]>;
+def TLI_atanhl_finite : TargetLibCall<__atanhl_finite>;
 
 /// void __atomic_load(size_t size, void *mptr, void *vptr, int smodel);
-def atomic_load : TargetLibCall<"__atomic_load", Void, [SizeT, Ptr, Ptr, Int]>;
+def TLI_atomic_load : TargetLibCall<__atomic_load>;
 
 /// void __atomic_store(size_t size, void *mptr, void *vptr, int smodel);
-def atomic_store
-    : TargetLibCall<"__atomic_store", Void, [SizeT, Ptr, Ptr, Int]>;
+def TLI_atomic_store : TargetLibCall<__atomic_store>;
 
 /// double __cosh_finite(double x);
-def cosh_finite : TargetLibCall<"__cosh_finite", Dbl, [Dbl]>;
+def TLI_cosh_finite : TargetLibCall<__cosh_finite>;
 
 /// float __coshf_finite(float x);
-def coshf_finite : TargetLibCall<"__coshf_finite", Flt, [Flt]>;
+def TLI_coshf_finite : TargetLibCall<__coshf_finite>;
 
 /// long double __coshl_finite(long double x);
-def coshl_finite : TargetLibCall<"__coshl_finite", LDbl, [LDbl]>;
+def TLI_coshl_finite : TargetLibCall<__coshl_finite>;
 
 /// double __cospi(double x);
-def cospi : TargetLibCall<"__cospi", Dbl, [Dbl]>;
+def TLI_cospi : TargetLibCall<__cospi>;
 
 /// float __cospif(float x);
-def cospif : TargetLibCall<"__cospif", Flt, [Flt]>;
+def TLI_cospif : TargetLibCall<__cospif>;
 
 /// int __cxa_atexit(void (*f)(void *), void *p, void *d);
-def cxa_atexit : TargetLibCall<"__cxa_atexit", Int, [Ptr, Ptr, Ptr]>;
+def TLI_cxa_atexit : TargetLibCall<__cxa_atexit>;
 
 /// int atexit(void (*f)(void));
-def atexit : TargetLibCall<"atexit", Int, [Ptr]>;
+def TLI_atexit : TargetLibCall<atexit>;
 
 /// void abort(void)
-def abort : TargetLibCall<"abort", Void, []>;
+def TLI_abort : TargetLibCall<abort>;
 
 /// void exit(int)
-def exit : TargetLibCall<"exit", Void, [Int]>;
+def TLI_exit : TargetLibCall<exit>;
 
 /// void _Exit(int)
-def Exit : TargetLibCall<"_Exit", Void, [Int]>;
+def TLI_Exit : TargetLibCall<_Exit>;
 
 /// void std::terminate();
-def terminate : TargetLibCall<"_ZSt9terminatev", Void, []>;
+def TLI_terminate : TargetLibCall<_ZSt9terminatev>;
 
 /// void __cxa_throw(void *, void *, void (*)(void *));
-def cxa_throw : TargetLibCall<"__cxa_throw", Void, [Ptr, Ptr, Ptr]>;
+def TLI_cxa_throw : TargetLibCall<__cxa_throw>;
 
 /// void __cxa_guard_abort(guard_t *guard);
 /// guard_t is int64_t in Itanium ABI or int32_t on ARM eabi.
-def cxa_guard_abort : TargetLibCall<"__cxa_guard_abort", Void, [Ptr]>;
+def TLI_cxa_guard_abort : TargetLibCall<__cxa_guard_abort>;
 
 /// int __cxa_guard_acquire(guard_t *guard);
-def cxa_guard_acquire : TargetLibCall<"__cxa_guard_acquire", Int, [Ptr]>;
+def TLI_cxa_guard_acquire : TargetLibCall<__cxa_guard_acquire>;
 
 /// void __cxa_guard_release(guard_t *guard);
-def cxa_guard_release : TargetLibCall<"__cxa_guard_release", Void, [Ptr]>;
+def TLI_cxa_guard_release : TargetLibCall<__cxa_guard_release>;
 
 /// double __exp10_finite(double x);
-def exp10_finite : TargetLibCall<"__exp10_finite", Dbl, [Dbl]>;
+def TLI_exp10_finite : TargetLibCall<__exp10_finite>;
+
 
 /// float __exp10f_finite(float x);
-def exp10f_finite : TargetLibCall<"__exp10f_finite", Flt, [Flt]>;
+def TLI_exp10f_finite : TargetLibCall<__exp10f_finite>;
 
 /// long double __exp10l_finite(long double x);
-def exp10l_finite : TargetLibCall<"__exp10l_finite", LDbl, [LDbl]>;
+def TLI_exp10l_finite : TargetLibCall<__exp10l_finite>;
 
 /// double __exp2_finite(double x);
-def exp2_finite : TargetLibCall<"__exp2_finite", Dbl, [Dbl]>;
+def TLI_exp2_finite : TargetLibCall<__exp2_finite>;
 
 /// float __exp2f_finite(float x);
-def exp2f_finite : TargetLibCall<"__exp2f_finite", Flt, [Flt]>;
+def TLI_exp2f_finite : TargetLibCall<__exp2f_finite>;
 
 /// long double __exp2l_finite(long double x);
-def exp2l_finite : TargetLibCall<"__exp2l_finite", LDbl, [LDbl]>;
+def TLI_exp2l_finite : TargetLibCall<__exp2l_finite_f128>;
 
 /// double __exp_finite(double x);
-def exp_finite : TargetLibCall<"__exp_finite", Dbl, [Dbl]>;
+def TLI_exp_finite : TargetLibCall<__exp_finite>;
 
 /// float __expf_finite(float x);
-def expf_finite : TargetLibCall<"__expf_finite", Flt, [Flt]>;
+def TLI_expf_finite : TargetLibCall<__expf_finite>;
 
 /// long double __expl_finite(long double x);
-def expl_finite : TargetLibCall<"__expl_finite", LDbl, [LDbl]>;
+def TLI_expl_finite : TargetLibCall<__expl_finite_f128>;
 
 /// int __isoc99_scanf (const char *format, ...)
-def dunder_isoc99_scanf : TargetLibCall<"__isoc99_scanf", Int, [Ptr, Ellip]>;
+def TLI_dunder_isoc99_scanf : TargetLibCall<__isoc99_scanf>;
 
 /// int __isoc99_sscanf(const char *s, const char *format, ...)
-def dunder_isoc99_sscanf
-    : TargetLibCall<"__isoc99_sscanf", Int, [Ptr, Ptr, Ellip]>;
+def TLI_dunder_isoc99_sscanf : TargetLibCall<__isoc99_sscanf>;
 
 /// double __log10_finite(double x);
-def log10_finite : TargetLibCall<"__log10_finite", Dbl, [Dbl]>;
+def TLI_log10_finite : TargetLibCall<__log10_finite>;
 
 /// float __log10f_finite(float x);
-def log10f_finite : TargetLibCall<"__log10f_finite", Flt, [Flt]>;
+def TLI_log10f_finite : TargetLibCall<__log10f_finite>;
 
 /// long double __log10l_finite(long double x);
-def log10l_finite : TargetLibCall<"__log10l_finite", LDbl, [LDbl]>;
+def TLI_log10l_finite : TargetLibCall<__log10l_finite_f128>;
 
 /// double __log2_finite(double x);
-def log2_finite : TargetLibCall<"__log2_finite", Dbl, [Dbl]>;
+def TLI_log2_finite : TargetLibCall<__log2_finite>;
 
 /// float __log2f_finite(float x);
-def log2f_finite : TargetLibCall<"__log2f_finite", Flt, [Flt]>;
+def TLI_log2f_finite : TargetLibCall<__log2f_finite>;
 
 /// long double __log2l_finite(long double x);
-def log2l_finite : TargetLibCall<"__log2l_finite", LDbl, [LDbl]>;
+def TLI_log2l_finite : TargetLibCall<__log2l_finite_f128>;
 
 /// double __log_finite(double x);
-def log_finite : TargetLibCall<"__log_finite", Dbl, [Dbl]>;
+def TLI_log_finite : TargetLibCall<__log_finite>;
 
 /// float __logf_finite(float x);
-def logf_finite : TargetLibCall<"__logf_finite", Flt, [Flt]>;
+def TLI_logf_finite : TargetLibCall<__logf_finite>;
 
 /// long double __logl_finite(long double x);
-def logl_finite : TargetLibCall<"__logl_finite", LDbl, [LDbl]>;
+def TLI_logl_finite : TargetLibCall<__logl_finite_f128>;
 
 /// void *__memccpy_chk(void *dst, const void *src, int c, size_t n,
 /// size_t dstsize)
-def memccpy_chk
-    : TargetLibCall<"__memccpy_chk", Ptr, [Ptr, Ptr, Int, SizeT, SizeT]>;
+def TLI_memccpy_chk : TargetLibCall<__memccpy_chk>;
 
 /// void *__memcpy_chk(void *s1, const void *s2, size_t n, size_t s1size);
-def memcpy_chk : TargetLibCall<"__memcpy_chk", Ptr, [Ptr, Ptr, SizeT, SizeT]>;
+def TLI_memcpy_chk : TargetLibCall<__memcpy_chk>;
 
 /// void *__memmove_chk(void *s1, const void *s2, size_t n, size_t s1size);
-def memmove_chk : TargetLibCall<"__memmove_chk", Ptr, [Ptr, Ptr, SizeT, SizeT]>;
+def TLI_memmove_chk : TargetLibCall<__memmove_chk>;
 
 /// void *__mempcpy_chk(void *s1, const void *s2, size_t n, size_t s1size);
-def mempcpy_chk : TargetLibCall<"__mempcpy_chk", Ptr, [Ptr, Ptr, SizeT, SizeT]>;
+def TLI_mempcpy_chk : TargetLibCall<__mempcpy_chk>;
 
 /// void *__memset_chk(void *s, int v, size_t n, size_t s1size);
-def memset_chk : TargetLibCall<"__memset_chk", Ptr, [Ptr, Int, SizeT, SizeT]>;
+def TLI_memset_chk : TargetLibCall<__memset_chk>;
 
 // int __nvvm_reflect(const char *)
-def nvvm_reflect : TargetLibCall<"__nvvm_reflect", Int, [Ptr]>;
+def TLI_nvvm_reflect : TargetLibCall<__nvvm_reflect>;
 
 /// double __pow_finite(double x, double y);
-def pow_finite : TargetLibCall<"__pow_finite", Dbl, [Dbl, Dbl]>;
+def TLI_pow_finite : TargetLibCall<__pow_finite>;
 
 /// float _powf_finite(float x, float y);
-def powf_finite : TargetLibCall<"__powf_finite", Flt, [Flt, Flt]>;
+def TLI_powf_finite : TargetLibCall<__powf_finite>;
 
 /// long double __powl_finite(long double x, long double y);
-def powl_finite : TargetLibCall<"__powl_finite", LDbl, [LDbl, LDbl]>;
+def TLI_powl_finite : TargetLibCall<__powl_finite_f128>;
 
 /// double __sincospi_stret(double x);
-def sincospi_stret
-    : TargetLibCall<"__sincospi_stret", ? /* Checked manually. */>;
+def TLI_sincospi_stret : TargetLibCall<__sincospi_stret>;
 
 /// float __sincospif_stret(float x);
-def sincospif_stret
-    : TargetLibCall<"__sincospif_stret", ? /* Checked manually. */>;
+def TLI_sincospif_stret : TargetLibCall<__sincospif_stret>;
 
 /// double __sinh_finite(double x);
-def sinh_finite : TargetLibCall<"__sinh_finite", Dbl, [Dbl]>;
+def TLI_sinh_finite : TargetLibCall<__sinh_finite>;
 
 /// float _sinhf_finite(float x);
-def sinhf_finite : TargetLibCall<"__sinhf_finite", Flt, [Flt]>;
+def TLI_sinhf_finite : TargetLibCall<__sinhf_finite>;
 
 /// long double __sinhl_finite(long double x);
-def sinhl_finite : TargetLibCall<"__sinhl_finite", LDbl, [LDbl]>;
+def TLI_sinhl_finite : TargetLibCall<__sinhl_finite>;
 
 /// double __sinpi(double x);
-def sinpi : TargetLibCall<"__sinpi", Dbl, [Dbl]>;
+def TLI_sinpi : TargetLibCall<__sinpi>;
 
 /// float __sinpif(float x);
-def sinpif : TargetLibCall<"__sinpif", Flt, [Flt]>;
+def TLI_sinpif : TargetLibCall<__sinpif>;
 
 /// int __small_fprintf(FILE *stream, const char *format, ...);
-def small_fprintf : TargetLibCall<"__small_fprintf", Int, [Ptr, Ptr, Ellip]>;
+def TLI_small_fprintf : TargetLibCall<__small_fprintf>;
 
 /// int __small_printf(const char *format, ...);
-def small_printf : TargetLibCall<"__small_printf", Int, [Ptr, Ellip]>;
+def TLI_small_printf : TargetLibCall<__small_printf>;
 
 /// int __small_sprintf(char *str, const char *format, ...);
-def small_sprintf : TargetLibCall<"__small_sprintf", Int, [Ptr, Ptr, Ellip]>;
+def TLI_small_sprintf : TargetLibCall<__small_sprintf>;
 
 /// int __snprintf_chk(char *s, size_t n, int flags, size_t slen,
 /// const char *format, ...);
-def snprintf_chk : TargetLibCall<"__snprintf_chk",
-                                 Int, [Ptr, SizeT, Int, SizeT, Ptr, Ellip]>;
+def TLI_snprintf_chk : TargetLibCall<__snprintf_chk>;
 
 /// int __sprintf_chk(char *str, int flags, size_t str_len,
 /// const char *format, ...);
-def sprintf_chk
-    : TargetLibCall<"__sprintf_chk", Int, [Ptr, Int, SizeT, Ptr, Ellip]>;
+def TLI_sprintf_chk : TargetLibCall<__sprintf_chk>;
 
 /// double __sqrt_finite(double x);
-def sqrt_finite : TargetLibCall<"__sqrt_finite", Dbl, [Dbl]>;
+def TLI_sqrt_finite : TargetLibCall<__sqrt_finite>;
 
 /// float __sqrt_finite(float x);
-def sqrtf_finite : TargetLibCall<"__sqrtf_finite", Flt, [Flt]>;
+def TLI_sqrtf_finite : TargetLibCall<__sqrtf_finite>;
 
 /// long double __sqrt_finite(long double x);
-def sqrtl_finite : TargetLibCall<"__sqrtl_finite", LDbl, [LDbl]>;
+def TLI_sqrtl_finite : TargetLibCall<__sqrtl_finite>;
 
 /// char *__stpcpy_chk(char *s1, const char *s2, size_t s1size);
-def stpcpy_chk : TargetLibCall<"__stpcpy_chk", Ptr, [Ptr, Ptr, SizeT]>;
+def TLI_stpcpy_chk : TargetLibCall<__stpcpy_chk>;
 
 /// char *__stpncpy_chk(char *s1, const char *s2, size_t n, size_t s1size);
-def stpncpy_chk : TargetLibCall<"__stpncpy_chk", Ptr, [Ptr, Ptr, SizeT, SizeT]>;
+def TLI_stpncpy_chk : TargetLibCall<__stpncpy_chk>;
 
 /// char *__strcat_chk(char *s1, const char *s2, size_t s1size);
-def strcat_chk : TargetLibCall<"__strcat_chk", Ptr, [Ptr, Ptr, SizeT]>;
+def TLI_strcat_chk : TargetLibCall<__strcat_chk>; 
 
 /// char *__strcpy_chk(char *s1, const char *s2, size_t s1size);
-def strcpy_chk : TargetLibCall<"__strcpy_chk", Ptr, [Ptr, Ptr, SizeT]>;
+def TLI_strcpy_chk : TargetLibCall<__strcpy_chk>;
 
 /// char * __strdup(const char *s);
-def dunder_strdup : TargetLibCall<"__strdup", Ptr, [Ptr]>;
+def TLI_dunder_strdup : TargetLibCall<__strdup>;
 
 /// size_t __strlcat_chk(char *dst, const char *src, size_t size,
 /// size_t dstsize);
-def strlcat_chk
-    : TargetLibCall<"__strlcat_chk", SizeT, [Ptr, Ptr, SizeT, SizeT]>;
+def TLI_strlcat_chk : TargetLibCall<__strlcat_chk>;
 
 /// size_t __strlcpy_chk(char *dst, const char *src, size_t size,
 /// size_t dstsize);
-def strlcpy_chk
-    : TargetLibCall<"__strlcpy_chk", SizeT, [Ptr, Ptr, SizeT, SizeT]>;
+def TLI_strlcpy_chk : TargetLibCall<__strlcpy_chk>;
 
 /// size_t __strlen_chk(const char *s1, size_t s1size);
-def strlen_chk : TargetLibCall<"__strlen_chk", SizeT, [Ptr, SizeT]>;
+def TLI_strlen_chk : TargetLibCall<__strlen_chk>;
 
 /// char *strncat_chk(char *s1, const char *s2, size_t n, size_t s1size);
-def strncat_chk : TargetLibCall<"__strncat_chk", Ptr, [Ptr, Ptr, SizeT, SizeT]>;
+def TLI_strncat_chk : TargetLibCall<__strncat_chk>;
 
 /// char *__strncpy_chk(char *s1, const char *s2, size_t n, size_t s1size);
-def strncpy_chk : TargetLibCall<"__strncpy_chk", Ptr, [Ptr, Ptr, SizeT, SizeT]>;
+def TLI_strncpy_chk : TargetLibCall<__strncpy_chk>;
 
 /// char *__strndup(const char *s, size_t n);
-def dunder_strndup : TargetLibCall<"__strndup", Ptr, [Ptr, SizeT]>;
+def TLI_dunder_strndup : TargetLibCall<__strndup>;
 
 /// char * __strtok_r(char *s, const char *delim, char **save_ptr);
-def dunder_strtok_r : TargetLibCall<"__strtok_r", Ptr, [Ptr, Ptr, Ptr]>;
+def TLI_dunder_strtok_r : TargetLibCall<__strtok_r>;
 
 /// int __vsnprintf_chk(char *s, size_t n, int flags, size_t slen,
 /// const char *format, va_list ap);
-def vsnprintf_chk
-    : TargetLibCall<"__vsnprintf_chk", Int, [Ptr, SizeT, Int, SizeT, Ptr, Ptr]>;
+def TLI_vsnprintf_chk : TargetLibCall<__vsnprintf_chk>;
 
 /// int __vsprintf_chk(char *s, int flags, size_t slen, const char *format,
 /// va_list ap);
-def vsprintf_chk
-    : TargetLibCall<"__vsprintf_chk", Int, [Ptr, Int, SizeT, Ptr, Ptr]>;
+def TLI_vsprintf_chk : TargetLibCall<__vsprintf_chk>;
 
 /// int abs(int j);
-def abs : TargetLibCall<"abs", Int, [Int]>;
+def TLI_abs : TargetLibCall<abs>; 
 
 /// int access(const char *path, int amode);
-def access : TargetLibCall<"access", Int, [Ptr, Int]>;
+def TLI_access : TargetLibCall<access>;
 
 /// double acos(double x);
-def acos : TargetLibCall<"acos", Dbl, [Dbl]>;
+def TLI_acos : TargetLibCall<acos>;
 
 /// float acosf(float x);
-def acosf : TargetLibCall<"acosf", Flt, [Flt]>;
+def TLI_acosf : TargetLibCall<acosf>;
 
 /// double acosh(double x);
-def acosh : TargetLibCall<"acosh", Dbl, [Dbl]>;
+def TLI_acosh : TargetLibCall<acosh>;
 
 /// float acoshf(float x);
-def acoshf : TargetLibCall<"acoshf", Flt, [Flt]>;
+def TLI_acoshf : TargetLibCall<acoshf>;
 
 /// long double acoshl(long double x);
-def acoshl : TargetLibCall<"acoshl", LDbl, [LDbl]>;
+def TLI_acoshl : TargetLibCall<acoshl>;
 
 /// long double acosl(long double x);
-def acosl : TargetLibCall<"acosl", LDbl, [LDbl]>;
+def TLI_acosl : TargetLibCall<acosl_f128>;
 
 /// void *aligned_alloc(size_t alignment, size_t size);
-def aligned_alloc : TargetLibCall<"aligned_alloc", Ptr, [SizeT, SizeT]>;
+def TLI_aligned_alloc : TargetLibCall<aligned_alloc>;
 
 /// double asin(double x);
-def asin : TargetLibCall<"asin", Dbl, [Dbl]>;
+def TLI_asin : TargetLibCall<asin>;
 
 /// float asinf(float x);
-def asinf : TargetLibCall<"asinf", Flt, [Flt]>;
+def TLI_asinf : TargetLibCall<asinf>;
 
 /// double asinh(double x);
-def asinh : TargetLibCall<"asinh", Dbl, [Dbl]>;
+def TLI_asinh : TargetLibCall<asinh>;
 
 /// float asinhf(float x);
-def asinhf : TargetLibCall<"asinhf", Flt, [Flt]>;
+def TLI_asinhf : TargetLibCall<asinhf>;
 
 /// long double asinhl(long double x);
-def asinhl : TargetLibCall<"asinhl", LDbl, [LDbl]>;
+def TLI_asinhl : TargetLibCall<asinhl>;
 
 /// long double asinl(long double x);
-def asinl : TargetLibCall<"asinl", LDbl, [LDbl]>;
+def TLI_asinl : TargetLibCall<asinl_f128>;
 
 /// double atan(double x);
-def atan : TargetLibCall<"atan", Dbl, [Dbl]>;
+def TLI_atan : TargetLibCall<atan>;
 
 /// double atan2(double y, double x);
-def atan2 : TargetLibCall<"atan2", Dbl, [Dbl, Dbl]>;
+def TLI_atan2 : TargetLibCall<atan2>;
 
 /// float atan2f(float y, float x);
-def atan2f : TargetLibCall<"atan2f", Flt, [Flt, Flt]>;
+def TLI_atan2f : TargetLibCall<atan2f>;
 
 /// long double atan2l(long double y, long double x);
-def atan2l : TargetLibCall<"atan2l", LDbl, [LDbl, LDbl]>;
+def TLI_atan2l : TargetLibCall<atan2l_f128>;
 
 /// float atanf(float x);
-def atanf : TargetLibCall<"atanf", Flt, [Flt]>;
+def TLI_atanf : TargetLibCall<atanf>;
 
 /// double atanh(double x);
-def atanh : TargetLibCall<"atanh", Dbl, [Dbl]>;
+def TLI_atanh : TargetLibCall<atanh>;
+
 
 /// float atanhf(float x);
-def atanhf : TargetLibCall<"atanhf", Flt, [Flt]>;
+def TLI_atanhf : TargetLibCall<atanhf>;
 
 /// long double atanhl(long double x);
-def atanhl : TargetLibCall<"atanhl", LDbl, [LDbl]>;
+def TLI_atanhl : TargetLibCall<atanhl>;
 
 /// long double atanl(long double x);
-def atanl : TargetLibCall<"atanl", LDbl, [LDbl]>;
+def TLI_atanl : TargetLibCall<atanl_f128>;
 
 /// double atof(const char *str);
-def atof : TargetLibCall<"atof", Dbl, [Ptr]>;
+def TLI_atof : TargetLibCall<atof>;
 
 /// int atoi(const char *str);
-def atoi : TargetLibCall<"atoi", Int, [Ptr]>;
+def TLI_atoi : TargetLibCall<atoi>;
 
 /// long atol(const char *str);
-def atol : TargetLibCall<"atol", Long, [Ptr]>;
+def TLI_atol : TargetLibCall<atol>;
 
 /// long long atoll(const char *nptr);
-def atoll : TargetLibCall<"atoll", LLong, [Ptr]>;
+def TLI_atoll : TargetLibCall<atoll>;
 
 /// int bcmp(const void *s1, const void *s2, size_t n);
-def bcmp : TargetLibCall<"bcmp", Int, [Ptr, Ptr, SizeT]>;
+def TLI_bcmp : TargetLibCall<bcmp>;
 
 /// void bcopy(const void *s1, void *s2, size_t n);
-def bcopy : TargetLibCall<"bcopy", Void, [Ptr, Ptr, SizeT]>;
+def TLI_bcopy : TargetLibCall<bcopy>;
 
 /// void bzero(void *s, size_t n);
-def bzero : TargetLibCall<"bzero", Void, [Ptr, SizeT]>;
+def TLI_bzero : TargetLibCall<bzero>;
 
 /// double cabs(double complex z)
-def cabs : TargetLibCall<"cabs", ? /* Checked manually. */>;
+def TLI_cabs : TargetLibCall<cabs>;
 
 /// float cabs(float complex z)
-def cabsf : TargetLibCall<"cabsf", ? /* Checked manually. */>;
+def TLI_cabsf : TargetLibCall<cabsf>;
 
 /// long double cabs(long double complex z)
-def cabsl : TargetLibCall<"cabsl", ? /* Checked manually. */>;
+def TLI_cabsl : TargetLibCall<cabsl_f128>;
 
 /// void *calloc(size_t count, size_t size);
-def calloc : TargetLibCall<"calloc", Ptr, [SizeT, SizeT]>;
+def TLI_calloc : TargetLibCall<calloc>;
 
 /// double cbrt(double x);
-def cbrt : TargetLibCall<"cbrt", Dbl, [Dbl]>;
+def TLI_cbrt : TargetLibCall<cbrt>;
 
 /// float cbrtf(float x);
-def cbrtf : TargetLibCall<"cbrtf", Flt, [Flt]>;
+def TLI_cbrtf : TargetLibCall<cbrtf>;
 
 /// long double cbrtl(long double x);
-def cbrtl : TargetLibCall<"cbrtl", LDbl, [LDbl]>;
+def TLI_cbrtl : TargetLibCall<cbrtl_f128>;
 
 /// double ceil(double x);
-def ceil : TargetLibCall<"ceil", Dbl, [Dbl]>;
+def TLI_ceil : TargetLibCall<ceil>;
 
 /// float ceilf(float x);
-def ceilf : TargetLibCall<"ceilf", Flt, [Flt]>;
+def TLI_ceilf : TargetLibCall<ceilf>;
 
 /// long double ceill(long double x);
-def ceill : TargetLibCall<"ceill", LDbl, [LDbl]>;
+def TLI_ceill : TargetLibCall<ceill_f128>;
 
 /// int chmod(const char *path, mode_t mode);
-def chmod : TargetLibCall<"chmod", Int, [Ptr, IntX]>;
+def TLI_chmod : TargetLibCall<chmod>;
 
 /// int chown(const char *path, uid_t owner, gid_t group);
-def chown : TargetLibCall<"chown", Int, [Ptr, IntX, IntX]>;
+def TLI_chown : TargetLibCall<chown>;
 
 /// void clearerr(FILE *stream);
-def clearerr : TargetLibCall<"clearerr", Void, [Ptr]>;
+def TLI_clearerr : TargetLibCall<clearerr>;
 
 /// int closedir(DIR *dirp);
-def closedir : TargetLibCall<"closedir", Int, [Ptr]>;
+def TLI_closedir : TargetLibCall<closedir>;
 
 /// double copysign(double x, double y);
-def copysign : TargetLibCall<"copysign", Dbl, [Dbl, Dbl]>;
+def TLI_copysign : TargetLibCall<copysign>;
 
 /// float copysignf(float x, float y);
-def copysignf : TargetLibCall<"copysignf", Flt, [Flt, Flt]>;
+def TLI_copysignf : TargetLibCall<copysignf>;
 
 /// long double copysignl(long double x, long double y);
-def copysignl : TargetLibCall<"copysignl", LDbl, [LDbl, LDbl]>;
+def TLI_copysignl : TargetLibCall<copysignl_f128>;
 
 /// double cos(double x);
-def cos : TargetLibCall<"cos", Dbl, [Dbl]>;
+def TLI_cos : TargetLibCall<cos>;
 
 /// float cosf(float x);
-def cosf : TargetLibCall<"cosf", Flt, [Flt]>;
+def TLI_cosf : TargetLibCall<cosf>;
 
 /// double cosh(double x);
-def cosh : TargetLibCall<"cosh", Dbl, [Dbl]>;
+def TLI_cosh : TargetLibCall<cosh>;
 
 /// float coshf(float x);
-def coshf : TargetLibCall<"coshf", Flt, [Flt]>;
+def TLI_coshf : TargetLibCall<coshf>;
 
 /// long double coshl(long double x);
-def coshl : TargetLibCall<"coshl", LDbl, [LDbl]>;
+def TLI_coshl : TargetLibCall<coshl_f128>;
 
 /// long double cosl(long double x);
-def cosl : TargetLibCall<"cosl", LDbl, [LDbl]>;
+def TLI_cosl : TargetLibCall<cosl_f128>;
 
 /// char *ctermid(char *s);
-def ctermid : TargetLibCall<"ctermid", Ptr, [Ptr]>;
+def TLI_ctermid : TargetLibCall<ctermid>;
 
 /// double erf(double x);
-def erf : TargetLibCall<"erf", Dbl, [Dbl]>;
+def TLI_erf : TargetLibCall<erf>;
+
 
 /// float erff(float x);
-def erff : TargetLibCall<"erff", Flt, [Flt]>;
+def TLI_erff : TargetLibCall<erff>;
 
 /// long double erfl(long double x);
-def erfl : TargetLibCall<"erfl", LDbl, [LDbl]>;
+def TLI_erfl : TargetLibCall<erfl>;
 
 /// double tgamma(double x);
-def tgamma : TargetLibCall<"tgamma", Dbl, [Dbl]>;
+def TLI_tgamma : TargetLibCall<tgamma>;
 
 /// float tgammaf(float x);
-def tgammaf : TargetLibCall<"tgammaf", Flt, [Flt]>;
+def TLI_tgammaf : TargetLibCall<tgammaf>;
 
 /// long double tgammal(long double x);
-def tgammal : TargetLibCall<"tgammal", LDbl, [LDbl]>;
+def TLI_tgammal : TargetLibCall<tgammal_f128>;
 
 /// int execl(const char *path, const char *arg, ...);
-def execl : TargetLibCall<"execl", Int, [Ptr, Ptr, Ellip]>;
+def TLI_execl : TargetLibCall<execl>;
 
 /// int execle(const char *file, const char *arg, ..., char * const envp[]);
-def execle : TargetLibCall<"execle", Int, [Ptr, Ptr, Ellip]>;
+def TLI_execle : TargetLibCall<execle>;
 
 /// int execlp(const char *file, const char *arg, ...);
-def execlp : TargetLibCall<"execlp", Int, [Ptr, Ptr, Ellip]>;
+def TLI_execlp : TargetLibCall<execlp>;
 
 /// int execv(const char *path, char *const argv[]);
-def execv : TargetLibCall<"execv", Int, [Ptr, Ptr]>;
+def TLI_execv : TargetLibCall<execv>;
 
 /// int execvP(const char *file, const char *search_path, char *const argv[]);
-def execvP : TargetLibCall<"execvP", Int, [Ptr, Ptr, Ptr]>;
+def TLI_execvP : TargetLibCall<execvP>;
 
 /// int execve(const char *filename, char *const argv], [char *const envp[]);
-def execve : TargetLibCall<"execve", Int, [Ptr, Ptr, Ptr]>;
+def TLI_execve : TargetLibCall<execve>;
 
 /// int execvp(const char *file, char *const argv[]);
-def execvp : TargetLibCall<"execvp", Int, [Ptr, Ptr]>;
+def TLI_execvp : TargetLibCall<execvp>;
 
 /// int execvpe(const char *file, char *const argv], [char *const envp[]);
-def execvpe : TargetLibCall<"execvpe", Int, [Ptr, Ptr, Ptr]>;
+def TLI_execvpe : TargetLibCall<execvpe>;
 
 /// double exp(double x);
-def exp : TargetLibCall<"exp", Dbl, [Dbl]>;
+def TLI_exp : TargetLibCall<exp>;
 
 /// double exp10(double x);
-def exp10 : TargetLibCall<"exp10", Dbl, [Dbl]>;
+def TLI_exp10 : TargetLibCall<exp10>;
 
 /// float exp10f(float x);
-def exp10f : TargetLibCall<"exp10f", Flt, [Flt]>;
+def TLI_exp10f : TargetLibCall<exp10f>;
 
 /// long double exp10l(long double x);
-def exp10l : TargetLibCall<"exp10l", LDbl, [LDbl]>;
+def TLI_exp10l : TargetLibCall<exp10l_f128>;
 
 /// double exp2(double x);
-def exp2 : TargetLibCall<"exp2", Dbl, [Dbl]>;
+def TLI_exp2 : TargetLibCall<exp2>;
 
 /// float exp2f(float x);
-def exp2f : TargetLibCall<"exp2f", Flt, [Flt]>;
+def TLI_exp2f : TargetLibCall<exp2f>;
 
 /// long double exp2l(long double x);
-def exp2l : TargetLibCall<"exp2l", LDbl, [LDbl]>;
+def TLI_exp2l : TargetLibCall<exp2l_f128>;
 
 /// float expf(float x);
-def expf : TargetLibCall<"expf", Flt, [Flt]>;
+def TLI_expf : TargetLibCall<expf>;
 
 /// long double expl(long double x);
-def expl : TargetLibCall<"expl", LDbl, [LDbl]>;
+def TLI_expl : TargetLibCall<expl_f128>;
 
 /// double expm1(double x);
-def expm1 : TargetLibCall<"expm1", Dbl, [Dbl]>;
+def TLI_expm1 : TargetLibCall<expm1>;
 
 /// float expm1f(float x);
-def expm1f : TargetLibCall<"expm1f", Flt, [Flt]>;
+def TLI_expm1f : TargetLibCall<expm1f>;
 
 /// long double expm1l(long double x);
-def expm1l : TargetLibCall<"expm1l", LDbl, [LDbl]>;
+def TLI_expm1l : TargetLibCall<expm1l>;
 
 /// double fabs(double x);
-def fabs : TargetLibCall<"fabs", Dbl, [Dbl]>;
+def TLI_fabs : TargetLibCall<fabs>;
 
 /// float fabsf(float x);
-def fabsf : TargetLibCall<"fabsf", Flt, [Flt]>;
+def TLI_fabsf : TargetLibCall<fabsf>;
 
 /// long double fabsl(long double x);
-def fabsl : TargetLibCall<"fabsl", LDbl, [LDbl]>;
+def TLI_fabsl : TargetLibCall<fabsl>;
 
 /// int fclose(FILE *stream);
-def fclose : TargetLibCall<"fclose", Int, [Ptr]>;
+def TLI_fclose : TargetLibCall<fclose>;
 
 /// FILE *fdopen(int fildes, const char *mode);
-def fdopen : TargetLibCall<"fdopen", Ptr, [Int, Ptr]>;
+def TLI_fdopen : TargetLibCall<fdopen>;
 
 /// int feof(FILE *stream);
-def feof : TargetLibCall<"feof", Int, [Ptr]>;
+def TLI_feof : TargetLibCall<feof>;
 
 /// int ferror(FILE *stream);
-def ferror : TargetLibCall<"ferror", Int, [Ptr]>;
+def TLI_ferror : TargetLibCall<ferror>;
 
 /// int fflush(FILE *stream);
-def fflush : TargetLibCall<"fflush", Int, [Ptr]>;
+def TLI_fflush : TargetLibCall<fflush>;
 
 /// int ffs(int i);
-def ffs : TargetLibCall<"ffs", Int, [Int]>;
+def TLI_ffs : TargetLibCall<ffs>;
 
 /// int ffsl(long int i);
-def ffsl : TargetLibCall<"ffsl", Int, [Long]>;
+def TLI_ffsl : TargetLibCall<ffsl>;
 
 /// int ffsll(long long int i);
-def ffsll : TargetLibCall<"ffsll", Int, [LLong]>;
+def TLI_ffsll : TargetLibCall<ffsll>;
 
 /// int fgetc(FILE *stream);
-def fgetc : TargetLibCall<"fgetc", Int, [Ptr]>;
+def TLI_fgetc : TargetLibCall<fgetc>;
 
 /// int fgetc_unlocked(FILE *stream);
-def fgetc_unlocked : TargetLibCall<"fgetc_unlocked", Int, [Ptr]>;
+def TLI_fgetc_unlocked : TargetLibCall<fgetc_unlocked>;
 
 /// int fgetpos(FILE *stream, fpos_t *pos);
-def fgetpos : TargetLibCall<"fgetpos", Int, [Ptr, Ptr]>;
+def TLI_fgetpos : TargetLibCall<fgetpos>;
 
 /// char *fgets(char *s, int n, FILE *stream);
-def fgets : TargetLibCall<"fgets", Ptr, [Ptr, Int, Ptr]>;
+def TLI_fgets : TargetLibCall<fgets>;
 
 /// char *fgets_unlocked(char *s, int n, FILE *stream);
-def fgets_unlocked : TargetLibCall<"fgets_unlocked", Ptr, [Ptr, Int, Ptr]>;
+def TLI_fgets_unlocked : TargetLibCall<fgets_unlocked>;
 
 /// int fileno(FILE *stream);
-def fileno : TargetLibCall<"fileno", Int, [Ptr]>;
+def TLI_fileno : TargetLibCall<fileno>;
 
 /// int fiprintf(FILE *stream, const char *format, ...);
-def fiprintf : TargetLibCall<"fiprintf", Int, [Ptr, Ptr, Ellip]>;
+def TLI_fiprintf : TargetLibCall<fiprintf>;
 
 /// void flockfile(FILE *file);
-def flockfile : TargetLibCall<"flockfile", Void, [Ptr]>;
+def TLI_flockfile : TargetLibCall<flockfile>;
 
 /// double floor(double x);
-def floor : TargetLibCall<"floor", Dbl, [Dbl]>;
+def TLI_floor : TargetLibCall<floor>;
 
 /// float floorf(float x);
-def floorf : TargetLibCall<"floorf", Flt, [Flt]>;
+def TLI_floorf : TargetLibCall<floorf>;
 
 /// long double floorl(long double x);
-def floorl : TargetLibCall<"floorl", LDbl, [LDbl]>;
+def TLI_floorl : TargetLibCall<floorl_f128>;
 
 /// int fls(int i);
-def fls : TargetLibCall<"fls", Int, [Int]>;
+def TLI_fls : TargetLibCall<fls>;
 
 /// int flsl(long int i);
-def flsl : TargetLibCall<"flsl", Int, [Long]>;
+def TLI_flsl : TargetLibCall<flsl>;
 
 /// int flsll(long long int i);
-def flsll : TargetLibCall<"flsll", Int, [LLong]>;
+def TLI_flsll : TargetLibCall<flsll>;
 
 // Calls to fmax and fmin library functions expand to the llvm.maxnnum and
 // llvm.minnum intrinsics with the correct parameter types for the arguments
 // (all types must match).
 /// double fmax(double x, double y);
-def fmax : TargetLibCall<"fmax", Floating, [Same, Same]>;
+def TLI_fmax : TargetLibCall<fmax>;
 
 /// float fmaxf(float x, float y);
-def fmaxf : TargetLibCall<"fmaxf", Floating, [Same, Same]>;
+def TLI_fmaxf : TargetLibCall<fmaxf>;
 
 /// long double fmaxl(long double x, long double y);
-def fmaxl : TargetLibCall<"fmaxl", Floating, [Same, Same]>;
+def TLI_fmaxl : TargetLibCall<fmaxl_f128>;
 
 /// double fmin(double x, double y);
-def fmin : TargetLibCall<"fmin", Floating, [Same, Same]>;
+def TLI_fmin : TargetLibCall<fmin>;
 
 /// float fminf(float x, float y);
-def fminf : TargetLibCall<"fminf", Floating, [Same, Same]>;
+def TLI_fminf : TargetLibCall<fminf>;
 
 /// long double fminl(long double x, long double y);
-def fminl : TargetLibCall<"fminl", Floating, [Same, Same]>;
+def TLI_fminl : TargetLibCall<fminl_f128>;
 
 // Calls to fmaximum_num and fminimum_num library functions expand to the
 // llvm.maximumnum and llvm.minimumnum intrinsics with the correct parameter
 // types for the arguments (all types must match).
 /// double fmaximum_num(double x, double y);
-def fmaximum_num : TargetLibCall<"fmaximum_num", Floating, [Same, Same]>;
+def TLI_fmaximum_num : TargetLibCall<fmaximum_num>;
 
 /// float fmaximum_numf(float x, float y);
-def fmaximum_numf : TargetLibCall<"fmaximum_numf", Floating, [Same, Same]>;
+def TLI_fmaximum_numf : TargetLibCall<fmaximum_numf>;
 
 /// long double fmaximum_numl(long double x, long double y);
-def fmaximum_numl : TargetLibCall<"fmaximum_numl", Floating, [Same, Same]>;
+def TLI_fmaximum_numl : TargetLibCall<fmaximum_numl_f128>;
 
 /// double fminimum_num(double x, double y);
-def fminimum_num : TargetLibCall<"fminimum_num", Floating, [Same, Same]>;
+def TLI_fminimum_num : TargetLibCall<fminimum_num>;
 
 /// float fminimum_numf(float x, float y);
-def fminimum_numf : TargetLibCall<"fminimum_numf", Floating, [Same, Same]>;
+def TLI_fminimum_numf : TargetLibCall<fminimum_numf>;
 
 /// long double fminimum_numl(long double x, long double y);
-def fminimum_numl : TargetLibCall<"fminimum_numl", Floating, [Same, Same]>;
+def TLI_fminimum_numl : TargetLibCall<fminimum_numl_f128>;
 
 /// double fmod(double x, double y);
-def fmod : TargetLibCall<"fmod", Dbl, [Dbl, Dbl]>;
+def TLI_fmod : TargetLibCall<fmod>;
 
 /// float fmodf(float x, float y);
-def fmodf : TargetLibCall<"fmodf", Flt, [Flt, Flt]>;
+def TLI_fmodf : TargetLibCall<fmodf>;
 
 /// long double fmodl(long double x, long double y);
-def fmodl : TargetLibCall<"fmodl", LDbl, [LDbl, LDbl]>;
+def TLI_fmodl : TargetLibCall<fmodl_f128>;
 
 /// FILE *fopen(const char *filename, const char *mode);
-def fopen : TargetLibCall<"fopen", Ptr, [Ptr, Ptr]>;
+def TLI_fopen : TargetLibCall<fopen>;
 
 /// FILE *fopen64(const char *filename, const char *opentype)
-def fopen64 : TargetLibCall<"fopen64", Ptr, [Ptr, Ptr]>;
+def TLI_fopen64 : TargetLibCall<fopen64>;
 
 /// int fork();
-def fork : TargetLibCall<"fork", Int, []>;
+def TLI_fork : TargetLibCall<fork>;
 
 /// int fprintf(FILE *stream, const char *format, ...);
-def fprintf : TargetLibCall<"fprintf", Int, [Ptr, Ptr, Ellip]>;
+def TLI_fprintf : TargetLibCall<fprintf>;
 
 /// int fputc(int c, FILE *stream);
-def fputc : TargetLibCall<"fputc", Int, [Int, Ptr]>;
+def TLI_fputc : TargetLibCall<fputc>;
 
 /// int fputc_unlocked(int c, FILE *stream);
-def fputc_unlocked : TargetLibCall<"fputc_unlocked", Int, [Int, Ptr]>;
+def TLI_fputc_unlocked : TargetLibCall<fputc_unlocked>;
 
 /// int fputs(const char *s, FILE *stream);
-def fputs : TargetLibCall<"fputs", Int, [Ptr, Ptr]>;
+def TLI_fputs : TargetLibCall<fputs>;
 
 /// int fputs_unlocked(const char *s, FILE *stream);
-def fputs_unlocked : TargetLibCall<"fputs_unlocked", Int, [Ptr, Ptr]>;
+def TLI_fputs_unlocked : TargetLibCall<fputs_unlocked>;
 
 /// size_t fread(void *ptr, size_t size, size_t nitems, FILE *stream);
-def fread : TargetLibCall<"fread", SizeT, [Ptr, SizeT, SizeT, Ptr]>;
+def TLI_fread : TargetLibCall<fread>;
 
 /// size_t fread_unlocked(void *ptr, size_t size, size_t nitems, FILE *stream);
-def fread_unlocked
-    : TargetLibCall<"fread_unlocked", SizeT, [Ptr, SizeT, SizeT, Ptr]>;
+def TLI_fread_unlocked : TargetLibCall<fread_unlocked>;
 
 /// void free(void *ptr);
-def free : TargetLibCall<"free", Void, [Ptr]>;
+def TLI_free : TargetLibCall<free>;
 
 /// double frexp(double num, int *exp);
-def frexp : TargetLibCall<"frexp", Dbl, [Dbl, Ptr]>;
+def TLI_frexp : TargetLibCall<frexp>;
 
 /// float frexpf(float num, int *exp);
-def frexpf : TargetLibCall<"frexpf", Flt, [Flt, Ptr]>;
+def TLI_frexpf : TargetLibCall<frexpf>;
 
 /// long double frexpl(long double num, int *exp);
-def frexpl : TargetLibCall<"frexpl", LDbl, [LDbl, Ptr]>;
+def TLI_frexpl : TargetLibCall<frexpl_f128>;
 
 /// int fscanf(FILE *stream, const char *format, ... );
-def fscanf : TargetLibCall<"fscanf", Int, [Ptr, Ptr, Ellip]>;
+def TLI_fscanf : TargetLibCall<fscanf>;
 
 /// int fseek(FILE *stream, long offset, int whence);
-def fseek : TargetLibCall<"fseek", Int, [Ptr, Long, Int]>;
+def TLI_fseek : TargetLibCall<fseek>;
 
 /// int fseeko(FILE *stream, off_t offset, int whence);
-def fseeko : TargetLibCall<"fseeko", Int, [Ptr, IntX, Int]>;
+def TLI_fseeko : TargetLibCall<fseeko>;
 
 /// int fseeko64(FILE *stream, off64_t offset, int whence)
-def fseeko64 : TargetLibCall<"fseeko64", Int, [Ptr, Int64, Int]>;
+def TLI_fseeko64 : TargetLibCall<fseeko64>;
 
 /// int fsetpos(FILE *stream, const fpos_t *pos);
-def fsetpos : TargetLibCall<"fsetpos", Int, [Ptr, Ptr]>;
+def TLI_fsetpos : TargetLibCall<fsetpos>;
 
 /// int fstat(int fildes, struct stat *buf);
-def fstat : TargetLibCall<"fstat", Int, [Int, Ptr]>;
+def TLI_fstat : TargetLibCall<fstat>;
 
 /// int fstat64(int filedes, struct stat64 *buf)
-def fstat64 : TargetLibCall<"fstat64", Int, [Int, Ptr]>;
+def TLI_fstat64 : TargetLibCall<fstat64>;
 
 /// int fstatvfs(int fildes, struct statvfs *buf);
-def fstatvfs : TargetLibCall<"fstatvfs", Int, [Int, Ptr]>;
+def TLI_fstatvfs : TargetLibCall<fstatvfs>;
 
 /// int fstatvfs64(int fildes, struct statvfs64 *buf);
-def fstatvfs64 : TargetLibCall<"fstatvfs64", Int, [Int, Ptr]>;
+def TLI_fstatvfs64 : TargetLibCall<fstatvfs64>;
 
 /// long ftell(FILE *stream);
-def ftell : TargetLibCall<"ftell", Long, [Ptr]>;
+def TLI_ftell : TargetLibCall<ftell>;
 
 /// off_t ftello(FILE *stream);
-def ftello : TargetLibCall<"ftello", IntPlus, [Ptr]>;
+def TLI_ftello : TargetLibCall<ftello>;
 
 /// off64_t ftello64(FILE *stream)
-def ftello64 : TargetLibCall<"ftello64", Int64, [Ptr]>;
+def TLI_ftello64 : TargetLibCall<ftello64>;
 
 /// int ftrylockfile(FILE *file);
-def ftrylockfile : TargetLibCall<"ftrylockfile", Int, [Ptr]>;
+def TLI_ftrylockfile : TargetLibCall<ftrylockfile>;
 
 /// void funlockfile(FILE *file);
-def funlockfile : TargetLibCall<"funlockfile", Void, [Ptr]>;
+def TLI_funlockfile : TargetLibCall<funlockfile>;
 
 /// size_t fwrite(const void *ptr, size_t size, size_t nitems, FILE *stream);
-def fwrite : TargetLibCall<"fwrite", SizeT, [Ptr, SizeT, SizeT, Ptr]>;
+def TLI_fwrite : TargetLibCall<fwrite>;
 
 /// size_t fwrite_unlocked(const void *ptr, size_t size, size_t nitems,
 /// FILE *stream);
-def fwrite_unlocked
-    : TargetLibCall<"fwrite_unlocked", SizeT, [Ptr, SizeT, SizeT, Ptr]>;
+def TLI_fwrite_unlocked : TargetLibCall<fwrite_unlocked>;
 
 /// int getc(FILE *stream);
-def getc : TargetLibCall<"getc", Int, [Ptr]>;
+def TLI_getc : TargetLibCall<getc>;
 
 /// int getc_unlocked(FILE *stream);
-def getc_unlocked : TargetLibCall<"getc_unlocked", Int, [Ptr]>;
+def TLI_getc_unlocked : TargetLibCall<getc_unlocked>;
 
 /// int getchar(void);
-def getchar : TargetLibCall<"getchar", Int, []>;
+def TLI_getchar : TargetLibCall<getchar>;
 
 /// int getchar_unlocked(void);
-def getchar_unlocked : TargetLibCall<"getchar_unlocked", Int, []>;
+def TLI_getchar_unlocked : TargetLibCall<getchar_unlocked>;
 
 /// char *getenv(const char *name);
-def getenv : TargetLibCall<"getenv", Ptr, [Ptr]>;
+def TLI_getenv : TargetLibCall<getenv>;
 
 /// int getitimer(int which, struct itimerval *value);
-def getitimer : TargetLibCall<"getitimer", Int, [Int, Ptr]>;
+def TLI_getitimer : TargetLibCall<getitimer>;
 
 /// int getlogin_r(char *name, size_t namesize);
-def getlogin_r : TargetLibCall<"getlogin_r", Int, [Ptr, SizeT]>;
+def TLI_getlogin_r : TargetLibCall<getlogin_r>;
 
 /// struct passwd *getpwnam(const char *name);
-def getpwnam : TargetLibCall<"getpwnam", Ptr, [Ptr]>;
+def TLI_getpwnam : TargetLibCall<getpwnam>;
 
 /// char *gets(char *s);
-def gets : TargetLibCall<"gets", Ptr, [Ptr]>;
+def TLI_gets : TargetLibCall<gets>;
 
 /// int gettimeofday(struct timeval *tp, void *tzp);
-def gettimeofday : TargetLibCall<"gettimeofday", Int, [Ptr, Ptr]>;
+def TLI_gettimeofday : TargetLibCall<gettimeofday>;
 
 /// uint32_t htonl(uint32_t hostlong);
-def htonl : TargetLibCall<"htonl", Int32, [Int32]>;
+def TLI_htonl : TargetLibCall<htonl>;
 
 /// uint16_t htons(uint16_t hostshort);
-def htons : TargetLibCall<"htons", Int16, [Int16]>;
+def TLI_htons : TargetLibCall<htons>;
 
 /// double hypot(double x, double y);
-def hypot : TargetLibCall<"hypot", Dbl, [Dbl, Dbl]>;
+def TLI_hypot : TargetLibCall<hypot>;
 
 /// float hypotf(float x, float y);
-def hypotf : TargetLibCall<"hypotf", Flt, [Flt, Flt]>;
+def TLI_hypotf : TargetLibCall<hypotf>;
 
 /// long double hypotl(long double x, long double y);
-def hypotl : TargetLibCall<"hypotl", LDbl, [LDbl, LDbl]>;
+def TLI_hypotl : TargetLibCall<hypotl>;
 
 /// int iprintf(const char *format, ...);
-def iprintf : TargetLibCall<"iprintf", Int, [Ptr, Ellip]>;
+def TLI_iprintf : TargetLibCall<iprintf>;
 
 /// int isascii(int c);
-def isascii : TargetLibCall<"isascii", Int, [Int]>;
+def TLI_isascii : TargetLibCall<isascii>;
 
 /// int isdigit(int c);
-def isdigit : TargetLibCall<"isdigit", Int, [Int]>;
+def TLI_isdigit : TargetLibCall<isdigit>;
 
 /// long int labs(long int j);
-def labs : TargetLibCall<"labs", Long, [Same]>;
+def TLI_labs : TargetLibCall<labs>;
 
 /// int lchown(const char *path, uid_t owner, gid_t group);
-def lchown : TargetLibCall<"lchown", Int, [Ptr, IntX, IntX]>;
+def TLI_lchown : TargetLibCall<lchown>;
 
 /// double ldexp(double x, int n);
-def ldexp : TargetLibCall<"ldexp", Dbl, [Dbl, Int]>;
+def TLI_ldexp : TargetLibCall<ldexp>;
 
 /// float ldexpf(float x, int n);
-def ldexpf : TargetLibCall<"ldexpf", Flt, [Flt, Int]>;
+def TLI_ldexpf : TargetLibCall<ldexpf>;
 
 /// long double ldexpl(long double x, int n);
-def ldexpl : TargetLibCall<"ldexpl", LDbl, [LDbl, Int]>;
+def TLI_ldexpl : TargetLibCall<ldexpl_f128>;
 
 /// long long int llabs(long long int j);
-def llabs : TargetLibCall<"llabs", LLong, [LLong]>;
+def TLI_llabs : TargetLibCall<llabs>;
 
 /// double log(double x);
-def log : TargetLibCall<"log", Dbl, [Dbl]>;
+def TLI_log : TargetLibCall<log>;
 
 /// double log10(double x);
-def log10 : TargetLibCall<"log10", Dbl, [Dbl]>;
+def TLI_log10 : TargetLibCall<log10>;
 
 /// float log10f(float x);
-def log10f : TargetLibCall<"log10f", Flt, [Flt]>;
+def TLI_log10f : TargetLibCall<log10f>;
 
 /// long double log10l(long double x);
-def log10l : TargetLibCall<"log10l", LDbl, [LDbl]>;
+def TLI_log10l : TargetLibCall<log10l_f128>;
 
 /// double log1p(double x);
-def log1p : TargetLibCall<"log1p", Dbl, [Dbl]>;
+def TLI_log1p : TargetLibCall<log1p>;
 
 /// float log1pf(float x);
-def log1pf : TargetLibCall<"log1pf", Flt, [Flt]>;
+def TLI_log1pf : TargetLibCall<log1pf>;
 
 /// long double log1pl(long double x);
-def log1pl : TargetLibCall<"log1pl", LDbl, [LDbl]>;
+def TLI_log1pl : TargetLibCall<log1pl>;
 
 /// double log2(double x);
-def log2 : TargetLibCall<"log2", Dbl, [Dbl]>;
+def TLI_log2 : TargetLibCall<log2>;
 
 /// float log2f(float x);
-def log2f : TargetLibCall<"log2f", Flt, [Flt]>;
+def TLI_log2f : TargetLibCall<log2f>;
 
 /// double long double log2l(long double x);
-def log2l : TargetLibCall<"log2l", LDbl, [LDbl]>;
+def TLI_log2l : TargetLibCall<log2l_f128>;
 
 /// int ilogb(double x);
-def ilogb : TargetLibCall<"ilogb", Int, [Dbl]>;
+def TLI_ilogb : TargetLibCall<ilogb>;
 
 /// int ilogbf(float x);
-def ilogbf : TargetLibCall<"ilogbf", Int, [Flt]>;
+def TLI_ilogbf : TargetLibCall<ilogbf>;
 
 /// int ilogbl(long double x);
-def ilogbl : TargetLibCall<"ilogbl", Int, [LDbl]>;
+def TLI_ilogbl : TargetLibCall<ilogbl>;
 
 /// double logb(double x);
-def logb : TargetLibCall<"logb", Dbl, [Dbl]>;
+def TLI_logb : TargetLibCall<logb>;
 
 /// float logbf(float x);
-def logbf : TargetLibCall<"logbf", Flt, [Flt]>;
+def TLI_logbf : TargetLibCall<logbf>;
 
 /// long double logbl(long double x);
-def logbl : TargetLibCall<"logbl", LDbl, [LDbl]>;
+def TLI_logbl : TargetLibCall<logbl>;
 
 /// float logf(float x);
-def logf : TargetLibCall<"logf", Flt, [Flt]>;
+def TLI_logf : TargetLibCall<logf>;
 
 /// long double logl(long double x);
-def logl : TargetLibCall<"logl", LDbl, [LDbl]>;
+def TLI_logl : TargetLibCall<logl_f128>;
 
 /// int lstat(const char *path, struct stat *buf);
-def lstat : TargetLibCall<"lstat", Int, [Ptr, Ptr]>;
+def TLI_lstat : TargetLibCall<lstat>;
 
 /// int lstat64(const char *path, struct stat64 *buf);
-def lstat64 : TargetLibCall<"lstat64", Int, [Ptr, Ptr]>;
+def TLI_lstat64 : TargetLibCall<lstat64>;
 
 /// void *malloc(size_t size);
-def malloc : TargetLibCall<"malloc", Ptr, [SizeT]>;
+def TLI_malloc : TargetLibCall<malloc>;
 
 /// void *memalign(size_t boundary, size_t size);
-def memalign : TargetLibCall<"memalign", Ptr, [SizeT, SizeT]>;
+def TLI_memalign : TargetLibCall<memalign>;
 
 /// void *memccpy(void *s1, const void *s2, int c, size_t n);
-def memccpy : TargetLibCall<"memccpy", Ptr, [Ptr, Ptr, Int, SizeT]>;
+def TLI_memccpy : TargetLibCall<memccpy>;
 
 /// void *memchr(const void *s, int c, size_t n);
-def memchr : TargetLibCall<"memchr", Ptr, [Ptr, Int, SizeT]>;
+def TLI_memchr : TargetLibCall<memchr>;
 
 /// int memcmp(const void *s1, const void *s2, size_t n);
-def memcmp : TargetLibCall<"memcmp", Int, [Ptr, Ptr, SizeT]>;
+def TLI_memcmp : TargetLibCall<memcmp>;
 
 /// void *memcpy(void *s1, const void *s2, size_t n);
-def memcpy : TargetLibCall<"memcpy", Ptr, [Ptr, Ptr, SizeT]>;
+def TLI_memcpy : TargetLibCall<memcpy>;
 
 /// void *memmove(void *s1, const void *s2, size_t n);
-def memmove : TargetLibCall<"memmove", Ptr, [Ptr, Ptr, SizeT]>;
+def TLI_memmove : TargetLibCall<memmove>;
 
 /// void *mempcpy(void *s1, const void *s2, size_t n);
-def mempcpy : TargetLibCall<"mempcpy", Ptr, [Ptr, Ptr, SizeT]>;
+def TLI_mempcpy : TargetLibCall<mempcpy>;
 
 /// void *memrchr(const void *s, int c, size_t n);
-def memrchr : TargetLibCall<"memrchr", Ptr, [Ptr, Int, SizeT]>;
+def TLI_memrchr : TargetLibCall<memrchr>;
 
 /// void *memset(void *b, int c, size_t len);
-def memset : TargetLibCall<"memset", Ptr, [Ptr, Int, SizeT]>;
+def TLI_memset : TargetLibCall<memset>;
 
 /// void memset_pattern16(void *b, const void *pattern16, size_t len);
-def memset_pattern16
-    : TargetLibCall<"memset_pattern16", Void, [Ptr, Ptr, SizeT]>;
+def TLI_memset_pattern16 : TargetLibCall<memset_pattern16>;
 
 /// void memset_pattern4(void *b, const void *pattern4, size_t len);
-def memset_pattern4 : TargetLibCall<"memset_pattern4", Void, [Ptr, Ptr, SizeT]>;
+def TLI_memset_pattern4 : TargetLibCall<memset_pattern4>;
 
 /// void memset_pattern8(void *b, const void *pattern8, size_t len);
-def memset_pattern8 : TargetLibCall<"memset_pattern8", Void, [Ptr, Ptr, SizeT]>;
+def TLI_memset_pattern8 : TargetLibCall<memset_pattern8>;
 
 /// int mkdir(const char *path, mode_t mode);
-def mkdir : TargetLibCall<"mkdir", Int, [Ptr, IntX]>;
+def TLI_mkdir : TargetLibCall<mkdir>;
 
 /// time_t mktime(struct tm *timeptr);
-def mktime : TargetLibCall<"mktime", IntPlus, [Ptr]>;
+def TLI_mktime : TargetLibCall<mktime>;
 
 /// double modf(double x, double *iptr);
-def modf : TargetLibCall<"modf", Dbl, [Dbl, Ptr]>;
+def TLI_modf : TargetLibCall<modf>;
 
 /// float modff(float, float *iptr);
-def modff : TargetLibCall<"modff", Flt, [Flt, Ptr]>;
+def TLI_modff : TargetLibCall<modff>;
 
 /// long double modfl(long double value, long double *iptr);
-def modfl : TargetLibCall<"modfl", LDbl, [LDbl, Ptr]>;
+def TLI_modfl : TargetLibCall<modfl_f128>;
 
 /// double nan(const char *arg);
-def nan : TargetLibCall<"nan", Dbl, [Ptr]>;
+def TLI_nan : TargetLibCall<nan>;
 
 /// float nanf(const char *arg);
-def nanf : TargetLibCall<"nanf", Flt, [Ptr]>;
+def TLI_nanf : TargetLibCall<nanf>;
 
 /// long double nanl(const char *arg);
-def nanl : TargetLibCall<"nanl", LDbl, [Ptr]>;
+def TLI_nanl : TargetLibCall<nanl_f128>;
 
 /// double nearbyint(double x);
-def nearbyint : TargetLibCall<"nearbyint", Dbl, [Dbl]>;
+def TLI_nearbyint : TargetLibCall<nearbyint>;
 
 /// float nearbyintf(float x);
-def nearbyintf : TargetLibCall<"nearbyintf", Flt, [Flt]>;
+def TLI_nearbyintf : TargetLibCall<nearbyintf>;
 
 /// long double nearbyintl(long double x);
-def nearbyintl : TargetLibCall<"nearbyintl", LDbl, [LDbl]>;
+def TLI_nearbyintl : TargetLibCall<nearbyintl_f128>;
 
 /// double nextafter(double x, double y);
-def nextafter : TargetLibCall< "nextafter", Dbl, [Dbl, Dbl]>;
+def TLI_nextafter : TargetLibCall<nextafter>;
 
 /// float nextafterf(float x, float y);
-def nextafterf : TargetLibCall< "nextafterf", Flt, [Flt, Flt]>;
+def TLI_nextafterf : TargetLibCall<nextafterf>;
 
 /// long double nextafterl(long double x, long double y);
-def nextafterl : TargetLibCall< "nextafterl", LDbl, [LDbl, LDbl]>;
+def TLI_nextafterl : TargetLibCall<nextafterl>;
 
 /// double nexttoward(double x, long double y);
-def nexttoward : TargetLibCall< "nexttoward", Dbl, [Dbl, LDbl]>;
+def TLI_nexttoward : TargetLibCall<nexttoward>;
 
 /// float nexttowardf(float x, long double y);
-def nexttowardf : TargetLibCall< "nexttowardf", Flt, [Flt, LDbl]>;
+def TLI_nexttowardf : TargetLibCall<nexttowardf>;
 
 /// long double nexttowardl(long double x, long double y);
-def nexttowardl : TargetLibCall< "nexttowardl", LDbl, [LDbl, LDbl]>;
+def TLI_nexttowardl : TargetLibCall<nexttowardl_f128>;
 
 /// uint32_t ntohl(uint32_t netlong);
-def ntohl : TargetLibCall<"ntohl", Int32, [Int32]>;
+def TLI_ntohl : TargetLibCall<ntohl>;
 
 /// uint16_t ntohs(uint16_t netshort);
-def ntohs : TargetLibCall<"ntohs", Int16, [Int16]>;
+def TLI_ntohs : TargetLibCall<ntohs>;
 
 /// int open(const char *path, int oflag, ... );
-def open : TargetLibCall<"open", Int, [Ptr, Int, Ellip]>;
+def TLI_open : TargetLibCall<open>;
 
 /// int open64(const char *filename, int flags, [mode_t mode])
-def open64 : TargetLibCall<"open64", Int, [Ptr, Int, Ellip]>;
+def TLI_open64 : TargetLibCall<open64>;
 
 /// DIR *opendir(const char *dirname);
-def opendir : TargetLibCall<"opendir", Ptr, [Ptr]>;
+def TLI_opendir : TargetLibCall<opendir>;
 
 /// int pclose(FILE *stream);
-def pclose : TargetLibCall<"pclose", Int, [Ptr]>;
+def TLI_pclose : TargetLibCall<pclose>;
 
 /// void perror(const char *s);
-def perror : TargetLibCall<"perror", Void, [Ptr]>;
+def TLI_perror : TargetLibCall<perror>;
 
 /// FILE *popen(const char *command, const char *mode);
-def popen : TargetLibCall<"popen", Ptr, [Ptr, Ptr]>;
+def TLI_popen : TargetLibCall<popen>;
 
 /// int posix_memalign(void **memptr, size_t alignment, size_t size);
-def posix_memalign : TargetLibCall<"posix_memalign", Int, [Ptr, SizeT, SizeT]>;
+def TLI_posix_memalign : TargetLibCall<posix_memalign>;
 
 /// double pow(double x, double y);
-def pow : TargetLibCall<"pow", Dbl, [Dbl, Dbl]>;
+def TLI_pow : TargetLibCall<pow>;
 
 /// float powf(float x, float y);
-def powf : TargetLibCall<"powf", Flt, [Flt, Flt]>;
+def TLI_powf : TargetLibCall<powf>;
 
 /// long double powl(long double x, long double y);
-def powl : TargetLibCall<"powl", LDbl, [LDbl, LDbl]>;
+def TLI_powl : TargetLibCall<powl_f128>;
 
 /// ssize_t pread(int fildes, void *buf, size_t nbyte, off_t offset);
-def pread : TargetLibCall<"pread", SSizeT, [Int, Ptr, SizeT, IntPlus]>;
+def TLI_pread : TargetLibCall<pread>;
 
 /// int printf(const char *format, ...);
-def printf : TargetLibCall<"printf", Int, [Ptr, Ellip]>;
+def TLI_printf : TargetLibCall<printf>;
 
 /// int putc(int c, FILE *stream);
-def putc : TargetLibCall<"putc", Int, [Int, Ptr]>;
+def TLI_putc : TargetLibCall<putc>;
 
 /// int putc_unlocked(int c, FILE *stream);
-def putc_unlocked : TargetLibCall<"putc_unlocked", Int, [Int, Ptr]>;
+def TLI_putc_unlocked : TargetLibCall<putc_unlocked>;
 
 /// int putchar(int c);
-def putchar : TargetLibCall<"putchar", Int, [Int]>;
+def TLI_putchar : TargetLibCall<putchar>;
 
 /// int putchar_unlocked(int c);
-def putchar_unlocked : TargetLibCall<"putchar_unlocked", Int, [Int]>;
+def TLI_putchar_unlocked : TargetLibCall<putchar_unlocked>;
 
 /// int puts(const char *s);
-def puts : TargetLibCall<"puts", Int, [Ptr]>;
+def TLI_puts : TargetLibCall<puts>;
 
 /// void *pvalloc(size_t size);
-def pvalloc : TargetLibCall<"pvalloc", Ptr, [SizeT]>;
+def TLI_pvalloc : TargetLibCall<pvalloc>;
 
 /// ssize_t pwrite(int fildes, const void *buf, size_t nbyte, off_t offset);
-def pwrite : TargetLibCall<"pwrite", SSizeT, [Int, Ptr, SizeT, IntPlus]>;
+def TLI_pwrite : TargetLibCall<pwrite>;
 
 /// void qsort(void *base, size_t nel, size_t width,
 ///            int (*compar)(const void *, const void *));
-def qsort : TargetLibCall<"qsort", Void, [Ptr, SizeT, SizeT, Ptr]>;
+def TLI_qsort : TargetLibCall<qsort>;
 
 /// ssize_t read(int fildes, void *buf, size_t nbyte);
-def read : TargetLibCall<"read", SSizeT, [Int, Ptr, SizeT]>;
+def TLI_read : TargetLibCall<read>;
 
 /// ssize_t readlink(const char *path, char *buf, size_t bufsize);
-def readlink : TargetLibCall<"readlink", SSizeT, [Ptr, Ptr, SizeT]>;
+def TLI_readlink : TargetLibCall<readlink>;
 
 /// void *realloc(void *ptr, size_t size);
-def realloc : TargetLibCall<"realloc", Ptr, [Ptr, SizeT]>;
+def TLI_realloc : TargetLibCall<realloc>;
 
 /// void *reallocf(void *ptr, size_t size);
-def reallocf : TargetLibCall<"reallocf", Ptr, [Ptr, SizeT]>;
+def TLI_reallocf : TargetLibCall<reallocf>;
 
 /// void *reallocarray(void *ptr, size_t nmemb, size_t size);
-def reallocarray : TargetLibCall<"reallocarray", Ptr, [Ptr, SizeT, SizeT]>;
+def TLI_reallocarray : TargetLibCall<reallocarray>;
 
 /// char *realpath(const char *file_name, char *resolved_name);
-def realpath : TargetLibCall<"realpath", Ptr, [Ptr, Ptr]>;
+def TLI_realpath : TargetLibCall<realpath>;
 
 /// double remainder(double x, double y);
-def remainder : TargetLibCall<"remainder", Dbl, [Dbl, Dbl]>;
+def TLI_remainder : TargetLibCall<remainder>;
 
 /// float remainderf(float x, float y);
-def remainderf : TargetLibCall<"remainderf", Flt, [Flt, Flt]>;
+def TLI_remainderf : TargetLibCall<remainderf>;
 
 /// long double remainderl(long double x, long double y);
-def remainderl : TargetLibCall<"remainderl", LDbl, [LDbl, LDbl]>;
+def TLI_remainderl : TargetLibCall<remainderl_f128>;
 
 /// double remquo(double x, double y, int *quo);
-def remquo : TargetLibCall<"remquo", Dbl, [Dbl, Dbl, Ptr]>;
+def TLI_remquo : TargetLibCall<remquo>;
 
 /// float remquof(float x, float y, int *quo);
-def remquof : TargetLibCall<"remquof", Flt, [Flt, Flt, Ptr]>;
+def TLI_remquof : TargetLibCall<remquof>;
 
 /// long double remquol(long double x, long double y, int *quo);
-def remquol : TargetLibCall<"remquol", LDbl, [LDbl, LDbl, Ptr]>;
+def TLI_remquol : TargetLibCall<remquol_f128>;
 
 /// double fdim(double x, double y);
-def fdim : TargetLibCall<"fdim", Dbl, [Dbl, Dbl]>;
+def TLI_fdim : TargetLibCall<fdim>;
 
 /// float fdimf(float x, float y);
-def fdimf : TargetLibCall<"fdimf", Flt, [Flt, Flt]>;
+def TLI_fdimf : TargetLibCall<fdimf>;
 
 /// long double fdiml(long double x, long double y);
-def fdiml : TargetLibCall<"fdiml", LDbl, [LDbl, LDbl]>;
+def TLI_fdiml : TargetLibCall<fdiml_f128>;
 
 /// int remove(const char *path);
-def remove : TargetLibCall<"remove", Int, [Ptr]>;
+def TLI_remove : TargetLibCall<remove>;
 
 /// int rename(const char *old, const char *new);
-def rename : TargetLibCall<"rename", Int, [Ptr, Ptr]>;
+def TLI_rename : TargetLibCall<rename>;
 
 /// void rewind(FILE *stream);
-def rewind : TargetLibCall<"rewind", Void, [Ptr]>;
+def TLI_rewind : TargetLibCall<rewind>;
 
 /// double rint(double x);
-def rint : TargetLibCall<"rint", Dbl, [Dbl]>;
+def TLI_rint : TargetLibCall<rint>; 
 
 /// float rintf(float x);
-def rintf : TargetLibCall<"rintf", Flt, [Flt]>;
+def TLI_rintf : TargetLibCall<rintf>;
 
 /// long double rintl(long double x);
-def rintl : TargetLibCall<"rintl", LDbl, [LDbl]>;
+def TLI_rintl : TargetLibCall<rintl_f128>;
 
 /// int rmdir(const char *path);
-def rmdir : TargetLibCall<"rmdir", Int, [Ptr]>;
+def TLI_rmdir : TargetLibCall<rmdir>;
 
 /// double round(double x);
-def round : TargetLibCall<"round", Dbl, [Dbl]>;
+def TLI_round : TargetLibCall<round>;
 
 /// double roundeven(double x);
-def roundeven : TargetLibCall<"roundeven", Dbl, [Dbl]>;
+def TLI_roundeven : TargetLibCall<roundeven>;
 
 /// float roundevenf(float x);
-def roundevenf : TargetLibCall<"roundevenf", Flt, [Flt]>;
+def TLI_roundevenf : TargetLibCall<roundevenf>;
 
 /// long double roundevenl(long double x);
-def roundevenl : TargetLibCall<"roundevenl", LDbl, [LDbl]>;
+def TLI_roundevenl : TargetLibCall<roundevenl_f128>;
 
 /// float roundf(float x);
-def roundf : TargetLibCall<"roundf", Flt, [Flt]>;
+def TLI_roundf : TargetLibCall<roundf>;
 
 /// long double roundl(long double x);
-def roundl : TargetLibCall<"roundl", LDbl, [LDbl]>;
+def TLI_roundl : TargetLibCall<roundl_f128>;
 
 /// double scalbln(double arg, long exp);
-def scalbln : TargetLibCall<"scalbln", Dbl, [Dbl, Long]>;
+def TLI_scalbln : TargetLibCall<scalbln>;
 
 /// float scalblnf(float arg, long exp);
-def scalblnf : TargetLibCall<"scalblnf", Flt, [Flt, Long]>;
+def TLI_scalblnf : TargetLibCall<scalblnf>;
 
 /// long double scalblnl(long double arg, long exp);
-def scalblnl : TargetLibCall<"scalblnl", LDbl, [LDbl, Long]>;
+def TLI_scalblnl : TargetLibCall<scalblnl_f128>;
 
 /// double scalbn(double arg, int exp);
-def scalbn : TargetLibCall<"scalbn", Dbl, [Dbl, Int]>;
+def TLI_scalbn : TargetLibCall<scalbn>;
 
 /// float scalbnf(float arg, int exp);
-def scalbnf : TargetLibCall<"scalbnf", Flt, [Flt, Int]>;
+def TLI_scalbnf : TargetLibCall<scalbnf>;
 
 /// long double scalbnl(long double arg, int exp);
-def scalbnl : TargetLibCall<"scalbnl", LDbl, [LDbl, Int]>;
+def TLI_scalbnl : TargetLibCall<scalbnl_f128>;
 
 /// int scanf(const char *restrict format, ... );
-def scanf : TargetLibCall<"scanf", Int, [Ptr, Ellip]>;
+def TLI_scanf : TargetLibCall<scanf>;
 
 /// void setbuf(FILE *stream, char *buf);
-def setbuf : TargetLibCall<"setbuf", Void, [Ptr, Ptr]>;
+def TLI_setbuf : TargetLibCall<setbuf>;
 
 /// int setitimer(int which, const struct itimerval *value,
 /// struct itimerval *ovalue);
-def setitimer : TargetLibCall<"setitimer", Int, [Int, Ptr, Ptr]>;
+def TLI_setitimer : TargetLibCall<setitimer>;
 
 /// int setvbuf(FILE *stream, char *buf, int type, size_t size);
-def setvbuf : TargetLibCall<"setvbuf", Int, [Ptr, Ptr, Int, SizeT]>;
+def TLI_setvbuf : TargetLibCall<setvbuf>;
 
 /// double sin(double x);
-def sin : TargetLibCall<"sin", Dbl, [Dbl]>;
+def TLI_sin : TargetLibCall<sin>;
 
 /// float sinf(float x);
-def sinf : TargetLibCall<"sinf", Flt, [Flt]>;
+def TLI_sinf : TargetLibCall<sinf>;
 
 /// double sinh(double x);
-def sinh : TargetLibCall<"sinh", Dbl, [Dbl]>;
+def TLI_sinh : TargetLibCall<sinh>;
 
 /// float sinhf(float x);
-def sinhf : TargetLibCall<"sinhf", Flt, [Flt]>;
+def TLI_sinhf : TargetLibCall<sinhf>;
 
 /// long double sinhl(long double x);
-def sinhl : TargetLibCall<"sinhl", LDbl, [LDbl]>;
+def TLI_sinhl : TargetLibCall<sinhl_f128>;
 
 /// long double sinl(long double x);
-def sinl : TargetLibCall<"sinl", LDbl, [LDbl]>;
+def TLI_sinl : TargetLibCall<sinl_f128>;
 
 /// void sincos(double x, double *sin_out, double *cos_out);
-def sincos : TargetLibCall<"sincos", Void, [Dbl, Ptr, Ptr]>;
+def TLI_sincos : TargetLibCall<sincos>;
 
 /// void sincosf(float x, float *sin_out, float *cos_out);
-def sincosf : TargetLibCall<"sincosf", Void, [Flt, Ptr, Ptr]>;
+def TLI_sincosf : TargetLibCall<sincosf>;
 
 /// void sincosl(long double x, long double *sin_out, long double *cos_out);
-def sincosl : TargetLibCall<"sincosl", Void, [LDbl, Ptr, Ptr]>;
+def TLI_sincosl : TargetLibCall<sincosl_f128>;
 
 /// int siprintf(char *str, const char *format, ...);
-def siprintf : TargetLibCall<"siprintf", Int, [Ptr, Ptr, Ellip]>;
+def TLI_siprintf : TargetLibCall<siprintf>;
 
 /// int snprintf(char *s, size_t n, const char *format, ...);
-def snprintf : TargetLibCall<"snprintf", Int, [Ptr, SizeT, Ptr, Ellip]>;
+def TLI_snprintf : TargetLibCall<snprintf>;
 
 /// int sprintf(char *str, const char *format, ...);
-def sprintf : TargetLibCall<"sprintf", Int, [Ptr, Ptr, Ellip]>;
+def TLI_sprintf : TargetLibCall<sprintf>;
 
 /// double sqrt(double x);
-def sqrt : TargetLibCall<"sqrt", Dbl, [Dbl]>;
+def TLI_sqrt : TargetLibCall<sqrt>;
 
 /// float sqrtf(float x);
-def sqrtf : TargetLibCall<"sqrtf", Flt, [Flt]>;
+def TLI_sqrtf : TargetLibCall<sqrtf>;
 
 /// long double sqrtl(long double x);
-def sqrtl : TargetLibCall<"sqrtl", LDbl, [LDbl]>;
+def TLI_sqrtl : TargetLibCall<sqrtl_f128>;
 
 /// int sscanf(const char *s, const char *format, ... );
-def sscanf : TargetLibCall<"sscanf", Int, [Ptr, Ptr, Ellip]>;
+def TLI_sscanf : TargetLibCall<sscanf>;
 
 /// int stat(const char *path, struct stat *buf);
-def stat : TargetLibCall<"stat", Int, [Ptr, Ptr]>;
+def TLI_stat : TargetLibCall<stat>;
 
 /// int stat64(const char *path, struct stat64 *buf);
-def stat64 : TargetLibCall<"stat64", Int, [Ptr, Ptr]>;
+def TLI_stat64 : TargetLibCall<stat64>;
 
 /// int statvfs(const char *path, struct statvfs *buf);
-def statvfs : TargetLibCall<"statvfs", Int, [Ptr, Ptr]>;
+def TLI_statvfs : TargetLibCall<statvfs>;
 
 /// int statvfs64(const char *path, struct statvfs64 *buf)
-def statvfs64 : TargetLibCall<"statvfs64", Int, [Ptr, Ptr]>;
+def TLI_statvfs64 : TargetLibCall<statvfs64>;
 
 /// char *stpcpy(char *s1, const char *s2);
-def stpcpy : TargetLibCall<"stpcpy", Ptr, [Ptr, Ptr]>;
+def TLI_stpcpy : TargetLibCall<stpcpy>;
 
 /// char *stpncpy(char *s1, const char *s2, size_t n);
-def stpncpy : TargetLibCall<"stpncpy", Ptr, [Ptr, Ptr, SizeT]>;
+def TLI_stpncpy : TargetLibCall<stpncpy>;
 
 /// int strcasecmp(const char *s1, const char *s2);
-def strcasecmp : TargetLibCall<"strcasecmp", Int, [Ptr, Ptr]>;
+def TLI_strcasecmp : TargetLibCall<strcasecmp>;
 
 /// char *strcat(char *s1, const char *s2);
-def strcat : TargetLibCall<"strcat", Ptr, [Ptr, Ptr]>;
+def TLI_strcat : TargetLibCall<strcat>;
 
 /// char *strchr(const char *s, int c);
-def strchr : TargetLibCall<"strchr", Ptr, [Ptr, Int]>;
+def TLI_strchr : TargetLibCall<strchr>;
 
 /// int strcmp(const char *s1, const char *s2);
-def strcmp : TargetLibCall<"strcmp", Int, [Ptr, Ptr]>;
+def TLI_strcmp : TargetLibCall<strcmp>;
 
 /// int strcoll(const char *s1, const char *s2);
-def strcoll : TargetLibCall<"strcoll", Int, [Ptr, Ptr]>;
+def TLI_strcoll : TargetLibCall<strcoll>;
 
 /// char *strcpy(char *s1, const char *s2);
-def strcpy : TargetLibCall<"strcpy", Ptr, [Ptr, Ptr]>;
+def TLI_strcpy : TargetLibCall<strcpy>;
 
 /// size_t strcspn(const char *s1, const char *s2);
-def strcspn : TargetLibCall<"strcspn", SizeT, [Ptr, Ptr]>;
+def TLI_strcspn : TargetLibCall<strcspn>;
 
 /// char *strdup(const char *s1);
-def strdup : TargetLibCall<"strdup", Ptr, [Ptr]>;
+def TLI_strdup : TargetLibCall<strdup>;
 
 /// size_t strlcat(char *dst, const char *src, size_t size);
-def strlcat : TargetLibCall<"strlcat", SizeT, [Ptr, Ptr, SizeT]>;
+def TLI_strlcat : TargetLibCall<strlcat>;
 
 /// size_t strlcpy(char *dst, const char *src, size_t size);
-def strlcpy : TargetLibCall<"strlcpy", SizeT, [Ptr, Ptr, SizeT]>;
+def TLI_strlcpy : TargetLibCall<strlcpy>;
 
 /// size_t strlen(const char *s);
-def strlen : TargetLibCall<"strlen", SizeT, [Ptr]>;
+def TLI_strlen : TargetLibCall<strlen>;
 
 /// int strncasecmp(const char *s1, const char *s2, size_t n);
-def strncasecmp : TargetLibCall<"strncasecmp", Int, [Ptr, Ptr, SizeT]>;
+def TLI_strncasecmp : TargetLibCall<strncasecmp>;
 
 /// char *strncat(char *s1, const char *s2, size_t n);
-def strncat : TargetLibCall<"strncat", Ptr, [Ptr, Ptr, SizeT]>;
+def TLI_strncat : TargetLibCall<strncat>;
 
 /// int strncmp(const char *s1, const char *s2, size_t n);
-def strncmp : TargetLibCall<"strncmp", Int, [Ptr, Ptr, SizeT]>;
+def TLI_strncmp : TargetLibCall<strncmp>;
 
 /// char *strncpy(char *s1, const char *s2, size_t n);
-def strncpy : TargetLibCall<"strncpy", Ptr, [Ptr, Ptr, SizeT]>;
+def TLI_strncpy : TargetLibCall<strncpy>;
 
 /// char *strndup(const char *s1, size_t n);
-def strndup : TargetLibCall<"strndup", Ptr, [Ptr, SizeT]>;
+def TLI_strndup : TargetLibCall<strndup>;
 
 /// size_t strnlen(const char *s, size_t maxlen);
-def strnlen : TargetLibCall<"strnlen", SizeT, [Ptr, SizeT]>;
+def TLI_strnlen : TargetLibCall<strnlen>;
 
 /// char *strpbrk(const char *s1, const char *s2);
-def strpbrk : TargetLibCall<"strpbrk", Ptr, [Ptr, Ptr]>;
+def TLI_strpbrk : TargetLibCall<strpbrk>;
 
 /// char *strrchr(const char *s, int c);
-def strrchr : TargetLibCall<"strrchr", Ptr, [Ptr, Int]>;
+def TLI_strrchr : TargetLibCall<strrchr>;
 
 /// size_t strspn(const char *s1, const char *s2);
-def strspn : TargetLibCall<"strspn", SizeT, [Ptr, Ptr]>;
+def TLI_strspn : TargetLibCall<strspn>;
 
 /// char *strstr(const char *s1, const char *s2);
-def strstr : TargetLibCall<"strstr", Ptr, [Ptr, Ptr]>;
+def TLI_strstr : TargetLibCall<strstr>;
 
 /// double strtod(const char *nptr, char **endptr);
-def strtod : TargetLibCall<"strtod", Dbl, [Ptr, Ptr]>;
+def TLI_strtod : TargetLibCall<strtod>;
 
 /// float strtof(const char *nptr, char **endptr);
-def strtof : TargetLibCall<"strtof", Flt, [Ptr, Ptr]>;
+def TLI_strtof : TargetLibCall<strtof>;
 
 /// char *strtok(char *s1, const char *s2);
-def strtok : TargetLibCall<"strtok", Ptr, [Ptr, Ptr]>;
+def TLI_strtok : TargetLibCall<strtok>;
 
 /// char *strtok_r(char *s, const char *sep, char **lasts);
-def strtok_r : TargetLibCall<"strtok_r", Ptr, [Ptr, Ptr, Ptr]>;
+def TLI_strtok_r : TargetLibCall<strtok_r>;
 
 /// long int strtol(const char *nptr, char **endptr, int base);
-def strtol : TargetLibCall<"strtol", Long, [Ptr, Ptr, Int]>;
+def TLI_strtol : TargetLibCall<strtol>;
 
 /// long double strtold(const char *nptr, char **endptr);
-def strtold : TargetLibCall<"strtold", LDbl, [Ptr, Ptr]>;
+def TLI_strtold : TargetLibCall<strtold>;
 
 /// long long int strtoll(const char *nptr, char **endptr, int base);
-def strtoll : TargetLibCall<"strtoll", LLong, [Ptr, Ptr, Int]>;
+def TLI_strtoll : TargetLibCall<strtoll>;
 
 /// unsigned long int strtoul(const char *nptr, char **endptr, int base);
-def strtoul : TargetLibCall<"strtoul", Long, [Ptr, Ptr, Int]>;
+def TLI_strtoul : TargetLibCall<strtoul>;
 
 /// unsigned long long int strtoull(const char *nptr, char **endptr, int base);
-def strtoull : TargetLibCall<"strtoull", LLong, [Ptr, Ptr, Int]>;
+def TLI_strtoull : TargetLibCall<strtoull>;
 
 /// size_t strxfrm(char *s1, const char *s2, size_t n);
-def strxfrm : TargetLibCall<"strxfrm", SizeT, [Ptr, Ptr, SizeT]>;
+def TLI_strxfrm : TargetLibCall<strxfrm>;
 
 /// int system(const char *command);
-def system : TargetLibCall<"system", Int, [Ptr]>;
+def TLI_system : TargetLibCall<system>;
 
 /// double tan(double x);
-def tan : TargetLibCall<"tan", Dbl, [Dbl]>;
+def TLI_tan : TargetLibCall<tan>;
 
 /// float tanf(float x);
-def tanf : TargetLibCall<"tanf", Flt, [Flt]>;
+def TLI_tanf : TargetLibCall<tanf>;
 
 /// double tanh(double x);
-def tanh : TargetLibCall<"tanh", Dbl, [Dbl]>;
+def TLI_tanh : TargetLibCall<tanh>;
 
 /// float tanhf(float x);
-def tanhf : TargetLibCall<"tanhf", Flt, [Flt]>;
+def TLI_tanhf : TargetLibCall<tanhf>;
 
 /// long double tanhl(long double x);
-def tanhl : TargetLibCall<"tanhl", LDbl, [LDbl]>;
+def TLI_tanhl : TargetLibCall<tanhl_f128>;
 
 /// long double tanl(long double x);
-def tanl : TargetLibCall<"tanl", LDbl, [LDbl]>;
+def TLI_tanl : TargetLibCall<tanl_f128>;
 
 /// clock_t times(struct tms *buffer);
-def times : TargetLibCall<"times", IntPlus, [Ptr]>;
+def TLI_times : TargetLibCall<times>;
 
 /// FILE *tmpfile(void);
-def tmpfile : TargetLibCall<"tmpfile", Ptr, []>;
+def TLI_tmpfile : TargetLibCall<tmpfile>;
 
 /// FILE *tmpfile64(void)
-def tmpfile64 : TargetLibCall<"tmpfile64", Ptr, []>;
+def TLI_tmpfile64 : TargetLibCall<tmpfile64>;
 
 /// int toascii(int c);
-def toascii : TargetLibCall<"toascii", Int, [Int]>;
+def TLI_toascii : TargetLibCall<toascii>;
 
 /// double trunc(double x);
-def trunc : TargetLibCall<"trunc", Dbl, [Dbl]>;
+def TLI_trunc : TargetLibCall<trunc>;
 
 /// float truncf(float x);
-def truncf : TargetLibCall<"truncf", Flt, [Flt]>;
+def TLI_truncf : TargetLibCall<truncf>;
 
 /// long double truncl(long double x);
-def truncl : TargetLibCall<"truncl", LDbl, [LDbl]>;
+def TLI_truncl : TargetLibCall<truncl_f128>;
 
 /// int uname(struct utsname *name);
-def uname : TargetLibCall<"uname", Int, [Ptr]>;
+def TLI_uname : TargetLibCall<uname>;
 
 /// int ungetc(int c, FILE *stream);
-def ungetc : TargetLibCall<"ungetc", Int, [Int, Ptr]>;
+def TLI_ungetc : TargetLibCall<ungetc>;
 
 /// int unlink(const char *path);
-def unlink : TargetLibCall<"unlink", Int, [Ptr]>;
+def TLI_unlink : TargetLibCall<unlink>;
 
 /// int unsetenv(const char *name);
-def unsetenv : TargetLibCall<"unsetenv", Int, [Ptr]>;
+def TLI_unsetenv : TargetLibCall<unsetenv>;
 
 /// int utime(const char *path, const struct utimbuf *times);
-def utime : TargetLibCall<"utime", Int, [Ptr, Ptr]>;
+def TLI_utime : TargetLibCall<utime>;
 
 /// int utimes(const char *path, const struct timeval times[2]);
-def utimes : TargetLibCall<"utimes", Int, [Ptr, Ptr]>;
+def TLI_utimes : TargetLibCall<utimes>;
 
 /// void *valloc(size_t size);
-def valloc : TargetLibCall<"valloc", Ptr, [SizeT]>;
+def TLI_valloc : TargetLibCall<valloc>;
 
 /// void *vec_calloc(size_t count, size_t size);
-def vec_calloc : TargetLibCall<"vec_calloc", Ptr, [SizeT, SizeT]>;
+def TLI_vec_calloc : TargetLibCall<vec_calloc>;
 
 /// void vec_free(void *ptr);
-def vec_free : TargetLibCall<"vec_free", Void, [Ptr]>;
+def TLI_vec_free : TargetLibCall<vec_free>;
 
 /// void *vec_malloc(size_t size);
-def vec_malloc : TargetLibCall<"vec_malloc", Ptr, [SizeT]>;
+def TLI_vec_malloc : TargetLibCall<vec_malloc>;
 
 /// void *vec_realloc(void *ptr, size_t size);
-def vec_realloc : TargetLibCall<"vec_realloc", Ptr, [Ptr, SizeT]>;
+def TLI_vec_realloc : TargetLibCall<vec_realloc>;
 
 /// int vfprintf(FILE *stream, const char *format, va_list ap);
-def vfprintf : TargetLibCall<"vfprintf", Int, [Ptr, Ptr, Ptr]>;
+def TLI_vfprintf : TargetLibCall<vfprintf>;
 
 /// int vfscanf(FILE *stream, const char *format, va_list arg);
-def vfscanf : TargetLibCall<"vfscanf", Int, [Ptr, Ptr, Ptr]>;
+def TLI_vfscanf : TargetLibCall<vfscanf>;
 
 /// int vprintf(const char *restrict format, va_list ap);
-def vprintf : TargetLibCall<"vprintf", Int, [Ptr, Ptr]>;
+def TLI_vprintf : TargetLibCall<vprintf>;
 
 /// int vscanf(const char *format, va_list arg);
-def vscanf : TargetLibCall<"vscanf", Int, [Ptr, Ptr]>;
+def TLI_vscanf : TargetLibCall<vscanf>;
 
 /// int vsnprintf(char *s, size_t n, const char *format, va_list ap);
-def vsnprintf : TargetLibCall<"vsnprintf", Int, [Ptr, SizeT, Ptr, Ptr]>;
+def TLI_vsnprintf : TargetLibCall<vsnprintf>;
 
 /// int vsprintf(char *s, const char *format, va_list ap);
-def vsprintf : TargetLibCall<"vsprintf", Int, [Ptr, Ptr, Ptr]>;
+def TLI_vsprintf : TargetLibCall<vsprintf>;
 
 /// int vsscanf(const char *s, const char *format, va_list arg);
-def vsscanf : TargetLibCall<"vsscanf", Int, [Ptr, Ptr, Ptr]>;
+def TLI_vsscanf : TargetLibCall<vsscanf>;
 
 /// size_t wcslen (const wchar_t* wcs);
-def wcslen : TargetLibCall<"wcslen", SizeT, [Ptr]>;
+def TLI_wcslen : TargetLibCall<wcslen>;
 
 /// ssize_t write(int fildes, const void *buf, size_t nbyte);
-def write : TargetLibCall<"write", SSizeT, [Int, Ptr, SizeT]>;
+def TLI_write : TargetLibCall<write>;

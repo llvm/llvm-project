@@ -40,6 +40,34 @@ def SMEABI_PreserveMost_From_X0 : LibcallCallingConv<[{CallingConv::AArch64_SME_
 def SMEABI_PreserveMost_From_X1 : LibcallCallingConv<[{CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1}]>;
 def SMEABI_PreserveMost_From_X2 : LibcallCallingConv<[{CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2}]>;
 
+// Return type or argument type of library function.
+class FuncArgType {
+  string Name = NAME;
+}
+
+// Recognized types of library function arguments and return types.
+def NoneType : FuncArgType; // dummy
+def Void : FuncArgType;
+def Bool : FuncArgType;     // 8 bits on all targets
+def Int16 : FuncArgType;
+def Int32 : FuncArgType;
+def Int : FuncArgType;
+def IntPlus : FuncArgType;  // Int or bigger.
+def Long : FuncArgType;     // Either 32 or 64 bits.
+def IntX : FuncArgType;     // Any integer type.
+def Int64 : FuncArgType;
+def LLong : FuncArgType;    // 64 bits on all targets.
+def SizeT : FuncArgType;    // size_t.
+def SSizeT : FuncArgType;   // POSIX ssize_t.
+def Flt : FuncArgType;      // IEEE float.
+def Dbl : FuncArgType;      // IEEE double.
+def LDbl : FuncArgType;     // Any floating type (TODO: tighten this up).
+def Floating : FuncArgType; // Any floating type.
+def Ptr : FuncArgType;      // Any pointer type.
+def Struct : FuncArgType;   // Any struct type.
+def Ellip : FuncArgType;    // The ellipsis (...).
+def Same : FuncArgType;     // Same argument type as the previous one.
+
 /// Abstract definition for functionality the compiler may need to
 /// emit a call to. Emits the RTLIB::Libcall enum - This enum defines
 /// all of the runtime library calls the backend can emit. The various
@@ -49,10 +77,11 @@ def SMEABI_PreserveMost_From_X2 : LibcallCallingConv<[{CallingConv::AArch64_SME_
 /// When adding PPCF128 functions here, note that their names generally need
 /// to be overridden for Darwin with the xxx$LDBL128 form.  See
 /// PPCISelLowering.cpp.
-class RuntimeLibcall {
+class RuntimeLibcall<FuncArgType RetType = NoneType,
+                     list<FuncArgType> ArgTypes = []> {
   string Name = NAME;
-
-  // TODO: Record type signature and attributes
+  FuncArgType ReturnType = RetType;
+  list<FuncArgType> ArgumentTypes = ArgTypes;
 }
 
 // Concrete implementation of a libcall, which may have a different
@@ -93,3 +122,9 @@ class SystemRuntimeLibrary<RuntimeLibcallPredicate Pred, dag funcList> {
   RuntimeLibcallPredicate TriplePred = Pred;
   LibcallImpls MemberList = LibcallImpls<funcList>;
 }
+
+/// Definition of library function for TargetLibraryInfo.
+class TargetLibCall<RuntimeLibcallImpl LibcallImpl> {
+  RuntimeLibcallImpl RTLibcallImpl = LibcallImpl;
+}
+
