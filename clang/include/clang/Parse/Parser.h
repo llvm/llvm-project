@@ -2322,6 +2322,15 @@ private:
   bool ParseNonOperatorNonPunctuatorToken(std::string &Spelling,
                                           SourceRange *Range = nullptr);
 
+  /// Diagnose C++11 attributes on a module- or import-declaration, which
+  /// accept none except the profile attribute \p AllowedKind (handled in
+  /// Sema). \p KeywordDiagID / \p AttrDiagID are the declaration's
+  /// keyword-attribute and standard-attribute diagnostics.
+  void ProhibitModuleAttributesExcept(const ParsedAttributesView &Attrs,
+                                      ParsedAttr::Kind AllowedKind,
+                                      unsigned KeywordDiagID,
+                                      unsigned AttrDiagID);
+
   void MaybeParseCXX11Attributes(Declarator &D) {
     if (isAllowedCXX11AttributeSpecifier()) {
       ParsedAttributes Attrs(AttrFactory);
