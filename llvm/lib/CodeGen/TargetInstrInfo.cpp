@@ -1864,7 +1864,8 @@ bool TargetInstrInfo::isFunctionSafeToSplit(const MachineFunction &MF) const {
   // or functions of unknown hotness. Lukewarm functions have no prefix.
   std::optional<StringRef> SectionPrefix = MF.getFunction().getSectionPrefix();
   if (SectionPrefix &&
-      (*SectionPrefix == "unlikely" || *SectionPrefix == "unknown")) {
+      (*SectionPrefix == "unlikely" || *SectionPrefix == "unknown" ||
+       *SectionPrefix == "startup" || *SectionPrefix == "exit")) {
     return false;
   }
 
