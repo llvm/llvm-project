@@ -2086,7 +2086,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     // reduction cycle.
     RecurKind RdxKind = MinOrMaxPhiR->getRecurrenceKind();
     assert(
-        RecurrenceDescriptor::isIntMinMaxRecurrenceKind(RdxKind) &&
+        RecurrenceDescriptor::isMinMaxRecurrenceKind(RdxKind) &&
         "only min/max recurrences support users outside the reduction chain");
 
     auto *MinOrMaxOp =
@@ -2181,6 +2181,20 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
         return Pred == CmpInst::ICMP_SLE || Pred == CmpInst::ICMP_SLT;
       case RecurKind::SMin:
         return Pred == CmpInst::ICMP_SGE || Pred == CmpInst::ICMP_SGT;
+      case RecurKind::FMaximum:
+        return Pred == CmpInst::FCMP_ULE || Pred == CmpInst::FCMP_ULT;
+      case RecurKind::FMax:
+      case RecurKind::FMaximumNum:
+        return Pred == CmpInst::FCMP_OLE || Pred == CmpInst::FCMP_OLT;
+      case RecurKind::FMinimum:
+        return Pred == CmpInst::FCMP_UGE || Pred == CmpInst::FCMP_UGT;
+      case RecurKind::FMin:
+      case RecurKind::FMinimumNum:
+        return Pred == CmpInst::FCMP_OGE || Pred == CmpInst::FCMP_OGT;
+      // minnum and maxnum need special handling due to expected sNaN behaviour
+      case RecurKind::FMinNum:
+      case RecurKind::FMaxNum:
+        return false;
       default:
         llvm_unreachable("unhandled recurrence kind");
       }
@@ -2244,7 +2258,13 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     VPBuilder B(FindIVRdxResult);
     VPValue *MinOrMaxExiting = MinOrMaxResult->getOperand(0);
     auto *FinalMinOrMaxCmp =
-        B.createICmp(CmpInst::ICMP_EQ, MinOrMaxExiting, MinOrMaxResult);
+        (RecurrenceDescriptor::isIntegerRecurrenceKind(RdxKind))
+            ? B.createICmp(CmpInst::ICMP_EQ, MinOrMaxExiting, MinOrMaxResult)
+            : B.createFCmp((RdxKind == RecurKind::FMaximum ||
+                            RdxKind == RecurKind::FMinimum)
+                               ? CmpInst::FCMP_UEQ
+                               : CmpInst::FCMP_OEQ,
+                           MinOrMaxExiting, MinOrMaxResult);
     VPValue *Sentinel = FindIVCmp->getOperand(1);
     VPValue *LastIVExiting = FindIVRdxResult->getOperand(0);
     auto *FinalIVSelect =
