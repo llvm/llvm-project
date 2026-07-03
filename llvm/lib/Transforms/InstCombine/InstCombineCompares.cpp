@@ -8717,6 +8717,95 @@ static Instruction *foldFabsWithFcmpZero(FCmpInst &I, InstCombinerImpl &IC) {
   }
 }
 
+/// Return true if V can never be ordered-less-than-zero (i.e. it is either
+/// NaN or >= 0.0), matching the "abs-via-select" idiom that
+/// computeKnownFPClass cannot see through on its own:
+///   select(fcmp Pred X, 0.0), X, fneg(X)   (and swapped-arm variants)
+/// computeKnownFPClass reasons about the negated arm (fneg(X)) in isolation
+/// and does not connect it back to the condition on X, so it never proves
+/// this pattern non-negative. Recognize it explicitly as a fallback.
+static bool isKnownNonNegativeOrNaNFP(Value *V, const SimplifyQuery &SQ) {
+  if (cannotBeOrderedLessThanZero(V, SQ))
+    return true;
+
+  Value *Cond, *TrueVal, *FalseVal;
+  if (!match(V, m_Select(m_Value(Cond), m_Value(TrueVal), m_Value(FalseVal))))
+    return false;
+
+  for (bool Swap : {false, true}) {
+    Value *PosArm = Swap ? FalseVal : TrueVal;
+    Value *NegArm = Swap ? TrueVal : FalseVal;
+
+    // Condition must compare PosArm against zero.
+    CmpPredicate Pred;
+    if (!match(Cond, m_FCmp(Pred, m_Specific(PosArm), m_AnyZeroFP())))
+      continue;
+    // The other arm must be the negation of PosArm.
+    if (!match(NegArm, m_FNeg(m_Specific(PosArm))))
+      continue;
+
+    // When Swap=false the condition is TRUE when we pick PosArm, so the
+    // effective predicate is Pred. When Swap=true the condition is FALSE
+    // when we pick PosArm, so the effective predicate is the inverse.
+    FCmpInst::Predicate EffPred =
+        Swap ? FCmpInst::getInversePredicate(Pred) : (FCmpInst::Predicate)Pred;
+
+    // EffPred must imply PosArm >= 0 when it holds (OGE/OGT/UGE/UGT on zero).
+    if (EffPred == FCmpInst::FCMP_OGE || EffPred == FCmpInst::FCMP_OGT ||
+        EffPred == FCmpInst::FCMP_UGE || EffPred == FCmpInst::FCMP_UGT)
+      return true;
+  }
+  return false;
+}
+
+/// Fold: fcmp oeq/une (fadd A, B), 0.0 where A and B are both non-negative.
+///   oeq -> (fcmp oeq A, 0.0) and (fcmp oeq B, 0.0)
+///   une -> (fcmp une A, 0.0) or  (fcmp une B, 0.0)
+///
+/// If both addends can never be ordered-less-than-zero (i.e. each is either
+/// NaN or >= 0.0), their sum equals zero iff both are zero:
+///   - If either addend is NaN, the sum is NaN: oeq is false and une is true
+///     on both sides regardless of the other addend, since unordered
+///     predicates (une) are true for NaN and ordered predicates (oeq) are
+///     false for NaN.
+///   - Otherwise both addends are >= 0.0 (allowing -0.0), so their exact,
+///     unrounded sum is >= 0.0 and equals zero iff both addends are zero.
+/// Hence the transformation is sound for oeq and une.
+static Instruction *foldFAbsSumFCmpZero(FCmpInst &I, InstCombinerImpl &IC) {
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  CmpInst::Predicate Pred = I.getPredicate();
+
+  if (Pred != FCmpInst::FCMP_OEQ && Pred != FCmpInst::FCMP_UNE)
+    return nullptr;
+
+  if (!match(Op1, m_AnyZeroFP()))
+    return nullptr;
+
+  // Only fold when the fadd isn't needed for anything else - otherwise we'd
+  // be adding new instructions without being able to remove the fadd.
+  if (!Op0->hasOneUse())
+    return nullptr;
+
+  Value *A, *B;
+  if (!match(Op0, m_FAdd(m_Value(A), m_Value(B))))
+    return nullptr;
+
+  const SimplifyQuery &SQ = IC.getSimplifyQuery().getWithInstruction(&I);
+  if (!isKnownNonNegativeOrNaNFP(A, SQ) || !isKnownNonNegativeOrNaNFP(B, SQ))
+    return nullptr;
+
+  // (A + B) oeq 0 → (A oeq 0) ∧ (B oeq 0)
+  // (A + B) une 0 → (A une 0) ∨ (B une 0)
+  Type *Ty = A->getType();
+  Constant *Zero = ConstantFP::getZero(Ty);
+  Value *CmpA = IC.Builder.CreateFCmp(Pred, A, Zero);
+  Value *CmpB = IC.Builder.CreateFCmp(Pred, B, Zero);
+
+  if (Pred == FCmpInst::FCMP_OEQ)
+    return BinaryOperator::CreateAnd(CmpA, CmpB);
+  return BinaryOperator::CreateOr(CmpA, CmpB);
+}
+
 /// Optimize sqrt(X) compared with zero.
 static Instruction *foldSqrtWithFcmpZero(FCmpInst &I, InstCombinerImpl &IC) {
   Value *X;
@@ -9255,6 +9344,9 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   }
 
   if (Instruction *R = foldFabsWithFcmpZero(I, *this))
+    return R;
+
+  if (Instruction *R = foldFAbsSumFCmpZero(I, *this))
     return R;
 
   if (Instruction *R = foldFCmpFAbsFSubIntToFP(I, *this))
