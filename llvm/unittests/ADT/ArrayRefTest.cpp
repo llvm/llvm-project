@@ -365,6 +365,10 @@ static_assert(
 static_assert(
     std::is_constructible_v<ArrayRef<char *>, iterator_range<char *const *>>,
     "should be able to construct ArrayRef from iterator_range over pointers");
+static_assert(
+    !std::is_constructible_v<ArrayRef<int *>, iterator_range<const int **>>,
+    "cannot strip const off the pointee when constructing ArrayRef over "
+    "pointers");
 
 TEST(ArrayRefTest, ArrayRefFromIteratorRange) {
   int A1[] = {42, -5, 0, 1000000, -1000000, 0};
