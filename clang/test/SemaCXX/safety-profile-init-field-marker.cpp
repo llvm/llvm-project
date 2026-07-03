@@ -64,6 +64,31 @@ struct DependentFieldNeverInstantiated {
   T m [[uninit]];
 };
 
+// A dependent member instantiating to a *reference* type is rejected at
+// instantiation and the marker dropped, mirroring the parse-time rejection of
+// a non-dependent reference member. Like that rejection -- and unlike the
+// profile-gated pointer/union rules -- this fires regardless of -fprofiles.
+template <typename T>
+struct DependentRefField {
+  T m [[uninit]]; // #dependent-ref-field
+};
+template struct DependentRefField<long>; // OK
+template struct DependentRefField<int &>; // expected-note {{in instantiation of template class 'DependentRefField<int &>' requested here}} \
+                                          // no-profiles-note {{in instantiation of template class 'DependentRefField<int &>' requested here}}
+// expected-error@#dependent-ref-field {{'uninit' attribute cannot be applied to a reference}}
+// no-profiles-error@#dependent-ref-field {{'uninit' attribute cannot be applied to a reference}}
+
+int g_ref_target = 0;
+template <typename T>
+void dependent_ref_local() {
+  T v [[uninit]] = g_ref_target; // #dependent-ref-local
+  (void)v;
+}
+template void dependent_ref_local<int &>(); // expected-note {{in instantiation of function template specialization 'dependent_ref_local<int &>' requested here}} \
+                                            // no-profiles-note {{in instantiation of function template specialization 'dependent_ref_local<int &>' requested here}}
+// expected-error@#dependent-ref-local {{'uninit' attribute cannot be applied to a reference}}
+// no-profiles-error@#dependent-ref-local {{'uninit' attribute cannot be applied to a reference}}
+
 // Suppression on the dependent member carries through instantiation.
 template <typename T>
 struct DependentFieldSuppressed {

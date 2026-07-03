@@ -6964,12 +6964,17 @@ static void handleUninitAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     Invalid = Parameter;
   else if (isa<DecompositionDecl>(D))
     Invalid = StructuredBinding;
-  else if (cast<ValueDecl>(D)->getType()->isReferenceType())
-    Invalid = Reference;
 
   if (Invalid) {
     S.Diag(AL.getLoc(), diag::err_uninit_attr_invalid_subject)
         << static_cast<unsigned>(*Invalid);
+    AL.setInvalid();
+    return;
+  }
+
+  // A reference subject is rejected by the shared helper, which defers on a
+  // dependent type to the instantiation re-check in Sema::InstantiateAttrs.
+  if (S.Profiles().diagnoseInvalidUninitMarker(D, AL.getLoc())) {
     AL.setInvalid();
     return;
   }

@@ -885,6 +885,13 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
             New, TmplAttr->getLocation(), /*Diagnose=*/!isSFINAEContext()))
       continue;
 
+    // Likewise for [[uninit]]: the handler deferred the reference-type
+    // rejection on a dependent subject.
+    if (isa<UninitAttr>(TmplAttr) &&
+        Profiles().diagnoseInvalidUninitMarker(New, TmplAttr->getLocation(),
+                                               /*Diagnose=*/!isSFINAEContext()))
+      continue;
+
     // FIXME: This should be generalized to more than just the AlignedAttr.
     const AlignedAttr *Aligned = dyn_cast<AlignedAttr>(TmplAttr);
     if (Aligned && Aligned->isAlignmentDependent()) {

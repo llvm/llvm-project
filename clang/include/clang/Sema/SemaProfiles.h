@@ -246,6 +246,18 @@ public:
   bool diagnoseInvalidRefToUninitMarker(const Decl *D, SourceLocation AttrLoc,
                                         bool Diagnose = true);
 
+  /// [[uninit]] is meaningless on a reference (it must bind when declared).
+  /// Returns true when \p D's type is a reference, diagnosing
+  /// err_uninit_attr_invalid_subject at \p AttrLoc unless \p Diagnose is
+  /// false. A dependent type returns false: validation defers to the
+  /// instantiation re-check in Sema::InstantiateAttrs, which drops the marker
+  /// when the substituted type is a reference (silently in a SFINAE context).
+  /// The parameter / structured-binding rejections stay in the parse-time
+  /// handler -- they do not depend on the type. Not profile policy -- fires
+  /// regardless of -fprofiles.
+  bool diagnoseInvalidUninitMarker(const Decl *D, SourceLocation AttrLoc,
+                                   bool Diagnose = true);
+
   class ProfileSuppressScope {
     Sema &S;
     unsigned Count = 0;

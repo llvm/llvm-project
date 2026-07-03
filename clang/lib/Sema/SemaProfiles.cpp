@@ -572,6 +572,27 @@ void SemaProfiles::checkInitProfileMarkerPlacement(const Decl *D) {
     Diag(Loc, diag::err_init_uninit_pointer_marker) << "std::init";
 }
 
+bool SemaProfiles::diagnoseInvalidUninitMarker(const Decl *D,
+                                               SourceLocation AttrLoc,
+                                               bool Diagnose) {
+  const auto *VD = dyn_cast<ValueDecl>(D);
+  if (!VD)
+    return false;
+  QualType T = VD->getType();
+
+  // A dependent subject is validated at instantiation instead, once the
+  // substituted type is known (Sema::InstantiateAttrs).
+  if (T->isDependentType())
+    return false;
+
+  if (T->isReferenceType()) {
+    if (Diagnose)
+      Diag(AttrLoc, diag::err_uninit_attr_invalid_subject) << /*Reference=*/0u;
+    return true;
+  }
+  return false;
+}
+
 bool SemaProfiles::diagnoseInvalidRefToUninitMarker(const Decl *D,
                                                     SourceLocation AttrLoc,
                                                     bool Diagnose) {
