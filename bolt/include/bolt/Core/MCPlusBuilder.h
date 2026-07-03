@@ -1995,6 +1995,11 @@ public:
     llvm_unreachable("not implemented");
   }
 
+  /// Creates a breakpoint instruction in Inst.
+  virtual void createBreakpoint(MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+  }
+
   /// Creates an instruction to bump the stack pointer just like a call.
   virtual void createStackPointerIncrement(MCInst &Inst, int Size = 8,
                                            bool NoFlagsClobber = false) const {

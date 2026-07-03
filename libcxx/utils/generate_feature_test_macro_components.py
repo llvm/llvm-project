@@ -433,6 +433,11 @@ feature_test_macros = [
             "headers": ["queue"],
         },
         {
+            "name": "__cpp_lib_constexpr_set",
+            "values": {"c++26": 202502},
+            "headers": ["set"],
+        },
+        {
             "name": "__cpp_lib_constexpr_string",
             "values": {"c++20": 201907},
             "headers": ["string"],
@@ -1417,7 +1422,6 @@ feature_test_macros = [
                 "c++26": 202306  # P1885R12 Naming Text Encodings to Demystify Them
             },
             "headers": ["text_encoding"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_three_way_comparison",

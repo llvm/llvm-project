@@ -569,7 +569,7 @@ TEST(VerifierTest, IntrinsicRetInvalidStruct) {
   for (StructType *STy : {NonLiteral, LiteralPacked}) {
     Module M("M", Ctx);
     FunctionType *IntrFTy = FunctionType::get(STy, I32Ty, /*isVarArg=*/false);
-    Function *Intr = Function::Create(IntrFTy, Function::InternalLinkage,
+    Function *Intr = Function::Create(IntrFTy, Function::ExternalLinkage,
                                       "llvm.nvvm.elect.sync", M);
 
     FunctionType *FTy =
@@ -583,7 +583,7 @@ TEST(VerifierTest, IntrinsicRetInvalidStruct) {
 
     std::string Error;
     raw_string_ostream ErrorOS(Error);
-    EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
+    EXPECT_TRUE(verifyModule(M, &ErrorOS));
 
     EXPECT_TRUE(StringRef(Error).starts_with(
         "intrinsic return type expected literal non-packed struct with 2 "

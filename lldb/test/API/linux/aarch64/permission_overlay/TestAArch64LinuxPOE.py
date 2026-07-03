@@ -151,6 +151,17 @@ class AArch64LinuxPOE(TestBase):
                 substrs=[f" {self.EXPECTED_POR_EL0}\n" + self.EXPECTED_POR_EL0_FIELDS],
             )
 
+            # por_el0 is an unusal case where every field uses the same enum.
+            # We should print all the field names in a list, then the enum only
+            # once. Rather than printing the enum 15 times, once for each field.
+            self.expect(
+                "register info por_el0",
+                substrs=[
+                    ", ".join([f"Perm{n}" for n in range(15, -1, -1)])
+                    + ": 0 = No Access"
+                ],
+            )
+
         # Protection keys are listed in /proc/<pid>/smaps, which is not included
         # in core files.
         self.expect("memory region --all", substrs=["protection key:"], matching=False)

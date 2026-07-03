@@ -12,7 +12,7 @@
 #include "mlir/Dialect/LLVMIR/XeVMDialect.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
-#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
+#include "mlir/Dialect/XeGPU/uArch/uArchCommon.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/SmallVectorExtras.h"
@@ -822,8 +822,8 @@ DistributeLayoutAttr LayoutAttr::expandDim(int64_t dim,
   }
 
   // Per-sg view used as the base for lane_layout / lane_data / inst_data:
-  // targetShape[i] / sg_layout[i] when sg_layout is present, else
-  // targetShape itself.
+  // targetShape[i] / sg_layout[i] when sg_layout is present (and not
+  // replicated), else targetShape itself.
   SmallVector<int64_t> perSgShape(targetShape.begin(), targetShape.end());
   if (hasSgLayout && !sgDataReplicated)
     for (int64_t i = 0; i < expCount; ++i)
@@ -933,8 +933,22 @@ DistributeLayoutAttr LayoutAttr::transposeDims(ArrayRef<int64_t> permutation) {
       sgLayout.push_back(static_cast<int32_t>(origSgLayout[idx]));
       sgData.push_back(static_cast<int32_t>(origSgData[idx]));
     }
-    order.push_back(static_cast<int32_t>(origOrder[idx]));
   }
+
+  // `order` is distinct from the size-valued fields above: its *values* are
+  // dimension indices (order[0] is the fastest-varying dim), not per-position
+  // sizes. A transpose relabels dimensions (source dim d becomes result dim
+  // inversePerm[d]) so the dimension values are remapped through the inverse
+  // permutation: newOrder[i] = inversePerm[origOrder[i]].
+  //
+  // The linearization order this describes is invariant under transpose: a
+  // transpose only renames dimensions, so the subgroup ID assigned to a given
+  // block of data must stay the same. Remapping the values through the inverse
+  // permutation is exactly what preserves that order.
+  SmallVector<int64_t> inversePermutation =
+      invertPermutationVector(permutation);
+  for (int64_t dim : origOrder)
+    order.push_back(static_cast<int32_t>(inversePermutation[dim]));
   if (origLaneLayout.empty() && origSgLayout.empty())
     order.clear();
 
@@ -968,13 +982,30 @@ bool LayoutAttr::isTransposeOf(const xegpu::DistributeLayoutAttr &other,
     }
     return true;
   };
+  // `order` is different: its *values* are dimension indices, so a transpose
+  // relabels them through the inverse permutation rather than reindexing by
+  // position. `this` (= dst) is a transpose of `other` (= src) iff
+  // dst.order[i] == inversePerm[src.order[i]] for all i. This matches the
+  // convention produced by `transposeDims`.
+  auto checkOrderTranspose = [](ArrayRef<int64_t> dstOrder,
+                                ArrayRef<int64_t> srcOrder,
+                                ArrayRef<int64_t> perm) {
+    if (dstOrder.size() != srcOrder.size())
+      return false;
+    SmallVector<int64_t> inversePerm = invertPermutationVector(perm);
+    for (auto [d, s] : llvm::zip_equal(dstOrder, srcOrder)) {
+      if (d != inversePerm[s])
+        return false;
+    }
+    return true;
+  };
   if (kind == xegpu::LayoutKind::Subgroup)
     return checkTranspose(getEffectiveSgLayoutAsInt(),
                           other.getEffectiveSgLayoutAsInt(), perm) &&
            checkTranspose(getEffectiveSgDataAsInt(),
                           other.getEffectiveSgDataAsInt(), perm) &&
-           checkTranspose(getEffectiveOrderAsInt(),
-                          other.getEffectiveOrderAsInt(), perm);
+           checkOrderTranspose(getEffectiveOrderAsInt(),
+                               other.getEffectiveOrderAsInt(), perm);
   if (kind == xegpu::LayoutKind::InstData)
     return checkTranspose(getEffectiveInstDataAsInt(),
                           other.getEffectiveInstDataAsInt(), perm);
@@ -983,8 +1014,8 @@ bool LayoutAttr::isTransposeOf(const xegpu::DistributeLayoutAttr &other,
                           other.getEffectiveLaneLayoutAsInt(), perm) &&
            checkTranspose(getEffectiveLaneDataAsInt(),
                           other.getEffectiveLaneDataAsInt(), perm) &&
-           checkTranspose(getEffectiveOrderAsInt(),
-                          other.getEffectiveOrderAsInt(), perm);
+           checkOrderTranspose(getEffectiveOrderAsInt(),
+                               other.getEffectiveOrderAsInt(), perm);
 
   return false;
 }

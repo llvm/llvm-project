@@ -2149,8 +2149,6 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                   ErrnoIrrelevant)
             .ArgConstraint(NotNull(ArgNo(0))));
   } else {
-    const auto ReturnsZeroOrMinusOne =
-        ConstraintSet{ReturnValueCondition(WithinRange, Range(-1, 0))};
     const auto ReturnsZero =
         ConstraintSet{ReturnValueCondition(WithinRange, SingleValue(0))};
     const auto ReturnsMinusOne =
@@ -2161,8 +2159,6 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         ConstraintSet{ReturnValueCondition(WithinRange, Range(0, IntMax))};
     const auto ReturnsNonZero =
         ConstraintSet{ReturnValueCondition(OutOfRange, SingleValue(0))};
-    const auto ReturnsFileDescriptor =
-        ConstraintSet{ReturnValueCondition(WithinRange, Range(-1, IntMax))};
     const auto &ReturnsValidFileDescriptor = ReturnsNonnegative;
 
     auto ValidFileDescriptorOrAtFdcwd = [&](ArgNo ArgN) {

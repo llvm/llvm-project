@@ -12,6 +12,8 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/FileSpec.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Testing/Support/Error.h"
@@ -116,4 +118,29 @@ Slices:
   EXPECT_EQ(Specs.GetSize(), 0u);
 
   ASSERT_THAT_ERROR(TmpFile->discard(), llvm::Succeeded());
+}
+
+// Regression fixture: a universal (fat) Mach-O whose header claims a huge
+// nfat_arch (here 0xAFAFAFAF) but provides no fat_arch entries beyond the
+// header bytes.  Found by lldb-target-fuzzer.
+TEST_F(ObjectContainerUniversalMachOTest, NfatArchTruncatedSlices) {
+  // Hand-crafted fat header: FAT_MAGIC_64 + nfat_arch=0xAFAFAFAF + 2 stray
+  // payload bytes, not enough for even one fat_arch_64 entry (32 bytes).
+  const uint8_t kData[] = {
+      0xCA, 0xFE, 0xBA, 0xBF, // magic:     FAT_MAGIC_64 (big endian)
+      0xAF, 0xAF, 0xAF, 0xAF, // nfat_arch: 0xAFAFAFAF (untrusted, huge)
+      0xAF, 0xAF,             // truncated arch payload
+  };
+  lldb::DataBufferSP Buf =
+      std::make_shared<DataBufferHeap>(kData, sizeof(kData));
+
+  std::unique_ptr<lldb_private::ObjectContainer> Container(
+      ObjectContainerUniversalMachO::CreateInstance(
+          /*module_sp=*/nullptr, Buf, /*data_offset=*/0, /*file=*/nullptr,
+          /*file_offset=*/0, /*length=*/sizeof(kData)));
+  ASSERT_NE(Container.get(), nullptr);
+
+  // m_fat_archs has zero elements, returns false.
+  ArchSpec Arch;
+  EXPECT_FALSE(Container->GetArchitectureAtIndex(0, Arch));
 }

@@ -28,6 +28,7 @@ add_orc_rt_unittest(CoreTests
   IntervalMapTest.cpp
   IntervalSetTest.cpp
   LockedAccessTest.cpp
+  MacroUtilsTest.cpp
   MathTest.cpp
   MemoryAccessSPSCITest.cpp
   MemoryFlagsTest.cpp
@@ -43,6 +44,7 @@ add_orc_rt_unittest(CoreTests
   SPSMemoryFlagsTest.cpp
   SPSWrapperFunctionTest.cpp
   SPSWrapperFunctionBufferTest.cpp
+  StandaloneMachOUnwindInfoRegistrarTest.cpp
   TaskGroupTest.cpp
   ThreadPoolRunnerTest.cpp
   WrapperFunctionBufferTest.cpp

@@ -15,6 +15,7 @@ set(ORC_RT_HEADERS
     orc-rt/IntervalMap.h
     orc-rt/IntervalSet.h
     orc-rt/LockedAccess.h
+    orc-rt/MacroUtils.h
     orc-rt/Math.h
     orc-rt/MemoryFlags.h
     orc-rt/NativeDylibManager.h
@@ -25,6 +26,7 @@ set(ORC_RT_HEADERS
     orc-rt/SimpleNativeMemoryMap.h
     orc-rt/SimplePackedSerialization.h
     orc-rt/SPSAllocAction.h
+    orc-rt/StandaloneMachOUnwindInfoRegistrar.h
     orc-rt/sps-ci/AllSPSCI.h
     orc-rt/sps-ci/CallSPSCI.h
     orc-rt/sps-ci/MemoryAccessSPSCI.h

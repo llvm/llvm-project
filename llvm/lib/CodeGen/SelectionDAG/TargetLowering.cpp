@@ -5988,21 +5988,21 @@ TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *RI,
       std::make_pair(0u, static_cast<const TargetRegisterClass *>(nullptr));
 
   // Figure out which register class contains this reg.
-  for (const TargetRegisterClass *RC : RI->regclasses()) {
+  for (const TargetRegisterClass &RC : RI->regclasses()) {
     // If none of the value types for this register class are valid, we
     // can't use it.  For example, 64-bit reg classes on 32-bit targets.
-    if (!isLegalRC(*RI, *RC))
+    if (!isLegalRC(*RI, RC))
       continue;
 
-    for (const MCPhysReg &PR : *RC) {
+    for (const MCPhysReg &PR : RC) {
       if (RegName.equals_insensitive(RI->getRegAsmName(PR))) {
         std::pair<unsigned, const TargetRegisterClass *> S =
-            std::make_pair(PR, RC);
+            std::make_pair(PR, &RC);
 
         // If this register class has the requested value type, return it,
         // otherwise keep searching and return the first class found
         // if no other is found which explicitly has the requested type.
-        if (RI->isTypeLegalForClass(*RC, VT))
+        if (RI->isTypeLegalForClass(RC, VT))
           return S;
         if (!R.second)
           R = S;
@@ -9126,7 +9126,7 @@ SDValue TargetLowering::expandPDEP(SDNode *Node, SelectionDAG &DAG) const {
   // Each pass handles half the shift amount of the previous pass.
   SDValue X = Val;
   for (int S = (int)LogBW - 1; S >= 0; --S) {
-    SDValue ShiftSv = DAG.getShiftAmountConstant(1u << S, VT, DL);
+    SDValue ShiftSv = DAG.getShiftAmountConstant(1ull << S, VT, DL);
     SDValue T = DAG.getNode(ISD::SHL, DL, VT, X, ShiftSv);
     SDValue UnshiftedBits =
         DAG.getNode(ISD::AND, DL, VT, X, DAG.getNOT(DL, MvArray[S], VT));
@@ -10122,6 +10122,22 @@ SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,
   return SDValue();
 }
 
+static SDValue isSpecificZeroAfterMaybeRounding(SelectionDAG &DAG,
+                                                const TargetLowering &TLI,
+                                                const SDLoc &DL, SDValue Val,
+                                                FPClassTest FPClass) {
+  EVT VT = Val.getValueType();
+  EVT CCVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+  EVT IntVT = VT.changeTypeToInteger();
+  EVT FloatVT = VT.changeElementType(*DAG.getContext(), MVT::f32);
+  SDValue TestZero = DAG.getTargetConstant(FPClass, DL, MVT::i32);
+  if (!TLI.isTypeLegal(IntVT) &&
+      !TLI.isOperationLegalOrCustom(ISD::IS_FPCLASS, VT))
+    Val = DAG.getNode(ISD::FP_ROUND, DL, FloatVT, Val,
+                      DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
+  return DAG.getNode(ISD::IS_FPCLASS, DL, CCVT, Val, TestZero);
+}
+
 SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
                                                 SelectionDAG &DAG) const {
   if (SDValue Expanded = expandVectorNaryOpBySplitting(N, DAG))
@@ -10173,17 +10189,11 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
   // fminimum/fmaximum requires -0.0 less than +0.0
   if (!MinMaxMustRespectOrderedZero && !N->getFlags().hasNoSignedZeros() &&
       !DAG.isKnownNeverLogicalZero(RHS) && !DAG.isKnownNeverLogicalZero(LHS)) {
-    SDValue IsZero = DAG.getSetCC(DL, CCVT, MinMax,
-                                  DAG.getConstantFP(0.0, DL, VT), ISD::SETOEQ);
-    SDValue TestZero =
-        DAG.getTargetConstant(IsMax ? fcPosZero : fcNegZero, DL, MVT::i32);
-    SDValue LCmp = DAG.getSelect(
-        DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, CCVT, LHS, TestZero), LHS,
-        MinMax, Flags);
-    SDValue RCmp = DAG.getSelect(
-        DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, CCVT, RHS, TestZero), RHS,
-        LCmp, Flags);
-    MinMax = DAG.getSelect(DL, VT, IsZero, RCmp, MinMax, Flags);
+    SDValue IsEqual = DAG.getSetCC(DL, CCVT, LHS, RHS, ISD::SETOEQ);
+    SDValue IsSpecificZero = isSpecificZeroAfterMaybeRounding(
+        DAG, *this, DL, LHS, IsMax ? fcPosZero : fcNegZero);
+    SDValue RetZero = DAG.getSelect(DL, VT, IsSpecificZero, LHS, RHS, Flags);
+    MinMax = DAG.getSelect(DL, VT, IsEqual, RetZero, MinMax, Flags);
   }
 
   return MinMax;
@@ -10263,22 +10273,13 @@ SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
       DAG.isKnownNeverLogicalZero(RHS)) {
     return MinMax;
   }
-  SDValue TestZero =
-      DAG.getTargetConstant(IsMax ? fcPosZero : fcNegZero, DL, MVT::i32);
   SDValue IsZero = DAG.getSetCC(DL, CCVT, MinMax,
                                 DAG.getConstantFP(0.0, DL, VT), ISD::SETEQ);
-  EVT IntVT = VT.changeTypeToInteger();
-  EVT FloatVT = VT.changeElementType(*DAG.getContext(), MVT::f32);
-  SDValue LHSTrunc = LHS;
-  if (!isTypeLegal(IntVT) && !isOperationLegalOrCustom(ISD::IS_FPCLASS, VT)) {
-    LHSTrunc = DAG.getNode(ISD::FP_ROUND, DL, FloatVT, LHS,
-                           DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
-  }
+  SDValue IsSpecificZero = isSpecificZeroAfterMaybeRounding(
+      DAG, *this, DL, LHS, IsMax ? fcPosZero : fcNegZero);
   // It's OK to select from LHS and MinMax, with only one ISD::IS_FPCLASS, as
   // we preferred RHS when generate MinMax, if the operands are equal.
-  SDValue RetZero = DAG.getSelect(
-      DL, VT, DAG.getNode(ISD::IS_FPCLASS, DL, CCVT, LHSTrunc, TestZero), LHS,
-      MinMax, Flags);
+  SDValue RetZero = DAG.getSelect(DL, VT, IsSpecificZero, LHS, MinMax, Flags);
   return DAG.getSelect(DL, VT, IsZero, RetZero, MinMax, Flags);
 }
 

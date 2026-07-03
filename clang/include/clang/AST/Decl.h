@@ -1430,18 +1430,19 @@ public:
 
   /// Attempt to evaluate the value of the initializer attached to this
   /// declaration, and produce notes explaining why it cannot be evaluated.
-  /// Returns a pointer to the value if evaluation succeeded, 0 otherwise.
-  APValue *evaluateValue() const;
+  /// Returns a pointer to the value if evaluation succeeded, \c nullptr
+  /// otherwise.
+  const APValue *evaluateValue() const;
 
 private:
-  APValue *evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
-                             bool IsConstantInitialization) const;
+  const APValue *evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
+                                   bool IsConstantInitialization) const;
 
 public:
   /// Return the already-evaluated value of this variable's
-  /// initializer, or NULL if the value is not yet known. Returns pointer
-  /// to untyped APValue if the value could not be evaluated.
-  APValue *getEvaluatedValue() const;
+  /// initializer, or \c nullptr if the value is not yet known or couldn't be
+  /// evaluated.
+  const APValue *getEvaluatedValue() const;
 
   /// Evaluate the destruction of this variable to determine if it constitutes
   /// constant destruction.
@@ -2598,6 +2599,7 @@ public:
 
   /// Determines whether this function is one of the replaceable
   /// global allocation functions:
+  /// \code
   ///    void *operator new(size_t);
   ///    void *operator new(size_t, const std::nothrow_t &) noexcept;
   ///    void *operator new[](size_t);
@@ -2608,6 +2610,7 @@ public:
   ///    void operator delete[](void *) noexcept;
   ///    void operator delete[](void *, std::size_t) noexcept;    [C++1y]
   ///    void operator delete[](void *, const std::nothrow_t &) noexcept;
+  /// \endcode
   /// These functions have special behavior under C++1y [expr.new]:
   ///    An implementation is allowed to omit a call to a replaceable global
   ///    allocation function. [...]
@@ -2631,6 +2634,7 @@ public:
   /// or is a function that may be treated as such during constant evaluation.
   /// This adds support for potentially templated type aware global allocation
   /// functions of the form:
+  /// \code
   ///    void *operator new(type-identity, std::size_t, std::align_val_t)
   ///    void *operator new(type-identity, std::size_t, std::align_val_t,
   ///                       const std::nothrow_t &) noexcept;
@@ -2645,6 +2649,7 @@ public:
   ///                         std::align_val_t) noexcept;
   ///    void operator delete[](type-identity, void*, std::size_t,
   ///                         std::align_val_t, const std::nothrow_t&) noexcept;
+  /// \endcode
   /// Where `type-identity` is a specialization of std::type_identity. If the
   /// declaration is a templated function, it may not include a parameter pack
   /// in the argument list, the type-identity parameter is required to be
