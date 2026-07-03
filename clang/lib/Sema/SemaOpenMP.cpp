@@ -4371,8 +4371,9 @@ public:
         // DecompositionDecl) has been mapped.
         const auto *BD = dyn_cast<BindingDecl>(VD);
         if (!AlreadyMapped && BD) {
-          if (const auto *DD = dyn_cast<DecompositionDecl>(BD->getDecomposedDecl())) {
-           if (const VarDecl *OrigVar = DD->getOriginalVar().Var) {
+          if (const auto *DD =
+                  dyn_cast<DecompositionDecl>(BD->getDecomposedDecl())) {
+            if (const VarDecl *OrigVar = DD->getOriginalVar().Var) {
               AlreadyMapped = Stack->checkMappableExprComponentListsForDecl(
                   OrigVar, /*CurrentRegionOnly=*/true,
                   [this](auto StackComponents, auto) {
@@ -14144,7 +14145,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTeamsDirective(ArrayRef<OMPClause *> Clauses,
 
   if (validateMultidimClauses(*this, Clauses))
     return StmtError();
- 
+
   // Report affected OpenMP target offloading behavior when in HIP lang-mode.
   if (getLangOpts().HIP && (DSAStack->getParentDirective() == OMPD_target))
     Diag(StartLoc, diag::warn_hip_omp_target_directives);
