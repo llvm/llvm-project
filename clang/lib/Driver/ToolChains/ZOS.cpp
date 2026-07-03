@@ -50,7 +50,8 @@ void ZOS::addClangTargetOptions(const ArgList &DriverArgs,
                                 options::OPT_fno_sized_deallocation))
     CC1Args.push_back("-fno-sized-deallocation");
 
-  DriverArgs.AddLastArg(CC1Args, options::OPT_mzos_ppa1_name, options::OPT_mno_zos_ppa1_name);
+  DriverArgs.AddLastArg(CC1Args, options::OPT_mzos_ppa1_name,
+                        options::OPT_mno_zos_ppa1_name);
 }
 
 void zos::Assembler::ConstructJob(Compilation &C, const JobAction &JA,

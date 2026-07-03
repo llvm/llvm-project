@@ -4247,8 +4247,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     Opts.IgnoreXCOFFVisibility = 1;
 
   if (T.isOSzOS()) {
-    if (const Arg *A = Args.getLastArg(OPT_mzos_ppa1_name,
-                                       OPT_mno_zos_ppa1_name)) {
+    if (const Arg *A =
+            Args.getLastArg(OPT_mzos_ppa1_name, OPT_mno_zos_ppa1_name)) {
       if (A->getOption().matches(OPT_mzos_ppa1_name))
         Opts.setZOSPPA1Name(LangOptions::ZOSPPA1NameKind::Emit);
       else
