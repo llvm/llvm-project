@@ -511,14 +511,20 @@ public:
   }
 
   const detail::ProfileEnforceArgs &getProfileEnforceArgs() const {
+    assert(getKind() == AT_ProfilesEnforce &&
+           "not a profiles::enforce attribute");
     return getCustomData<detail::ProfileEnforceArgs>();
   }
 
   const detail::ProfileSuppressArgs &getProfileSuppressArgs() const {
+    assert(getKind() == AT_ProfilesSuppress &&
+           "not a profiles::suppress attribute");
     return getCustomData<detail::ProfileSuppressArgs>();
   }
 
   const detail::ProfileRequireArgs &getProfileRequireArgs() const {
+    assert(getKind() == AT_ProfilesRequire &&
+           "not a profiles::require attribute");
     return getCustomData<detail::ProfileRequireArgs>();
   }
 
@@ -767,6 +773,8 @@ public:
   AttributeFactory &getFactory() const { return Factory; }
 
   template <typename T, typename... Args> T *make(Args &&...args) {
+    // Pool-allocated objects are never destroyed, only deallocated wholesale.
+    static_assert(std::is_trivially_destructible_v<T>);
     void *Mem = Factory.Alloc.Allocate(sizeof(T), alignof(T));
     return ::new (Mem) T(std::forward<Args>(args)...);
   }
@@ -780,6 +788,8 @@ public:
   }
 
   template <typename T> MutableArrayRef<T> allocateArray(unsigned N) {
+    // Pool-allocated objects are never destroyed, only deallocated wholesale.
+    static_assert(std::is_trivially_destructible_v<T>);
     if (N == 0)
       return {};
     auto *Arr =
