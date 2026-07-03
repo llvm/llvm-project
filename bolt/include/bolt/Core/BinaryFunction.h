@@ -681,6 +681,12 @@ private:
     return !ExternallyReferencedOffsets.empty();
   }
 
+  bool isExternallReferenced(const BinaryBasicBlock &BB) const {
+    return isEntryPoint(BB) ||
+           ExternallyReferencedOffsets.find(BB.getOffset()) !=
+               ExternallyReferencedOffsets.end();
+  }
+
   /// Return an entry ID corresponding to a symbol known to belong to
   /// the function.
   ///
