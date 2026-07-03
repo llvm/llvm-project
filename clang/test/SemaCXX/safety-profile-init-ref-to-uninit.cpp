@@ -574,6 +574,26 @@ void test_read_suppress(int *p [[ref_to_uninit]]) {
   [[profiles::suppress(std::init, rule: "uninit_read")]] { take_value(*p); } // OK: rule-targeted suppress
 }
 
+// The suppression dominion of a member declaration includes its initializer
+// tokens (P3589R2 s2.4p3). The read-through check fires from
+// ActOnFinishCXXInClassMemberInitializer during the late parse of an NSDMI,
+// so a suppression on the field (or, via the lexical parent walk, on the
+// class) must cover it; a sibling member's suppression must not leak.
+int *nsdmi_rtu [[ref_to_uninit]] = &g_uninit;
+
+struct NsdmiReadSuppress {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init)]] int x = *nsdmi_rtu; // OK: field suppress
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init, rule: "uninit_read")]] int y = *nsdmi_rtu; // OK: rule-targeted
+  int z = *nsdmi_rtu; // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+};
+
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+struct [[profiles::suppress(std::init)]] NsdmiClassReadSuppress {
+  int x = *nsdmi_rtu; // OK: class-level suppression via the lexical parent walk
+};
+
 // None of these is a read through the marker: a discarded-value expression and
 // an address-of apply no lvalue-to-rvalue conversion, a write targets the
 // glvalue without loading it, a reference binding is not a load, and copying
