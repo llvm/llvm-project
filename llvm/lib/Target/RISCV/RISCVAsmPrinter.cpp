@@ -113,8 +113,7 @@ public:
   void emitEndOfAsmFile(Module &M) override;
 
   void emitFunctionEntryLabel() override;
-  bool emitTargetFeaturePush(const MCSubtargetInfo &STI) override;
-  void emitTargetFeaturePop(const MCSubtargetInfo &STI, bool DidPush) override;
+  bool emitDirectiveOptionArch();
 
   void emitNoteGnuProperty(const Module &M);
 
@@ -524,19 +523,19 @@ bool RISCVAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   return false;
 }
 
-bool RISCVAsmPrinter::emitTargetFeaturePush(const MCSubtargetInfo &STI) {
+bool RISCVAsmPrinter::emitDirectiveOptionArch() {
   RISCVTargetStreamer &RTS = getTargetStreamer();
   SmallVector<RISCVOptionArchArg> NeedEmitStdOptionArgs;
   const MCSubtargetInfo &MCSTI = TM.getMCSubtargetInfo();
   for (const auto &Feature : MCSTI.getAllProcessorFeatures()) {
-    if (STI.hasFeature(Feature.Value) == MCSTI.hasFeature(Feature.Value))
+    if (STI->hasFeature(Feature.Value) == MCSTI.hasFeature(Feature.Value))
       continue;
 
     if (!llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.key()))
       continue;
 
-    auto Delta = STI.hasFeature(Feature.Value) ? RISCVOptionArchArgType::Plus
-                                               : RISCVOptionArchArgType::Minus;
+    auto Delta = STI->hasFeature(Feature.Value) ? RISCVOptionArchArgType::Plus
+                                                : RISCVOptionArchArgType::Minus;
     StringRef ExtName = Feature.key();
     ExtName.consume_front("experimental-");
     NeedEmitStdOptionArgs.emplace_back(Delta, ExtName.str());
@@ -550,16 +549,11 @@ bool RISCVAsmPrinter::emitTargetFeaturePush(const MCSubtargetInfo &STI) {
   return false;
 }
 
-void RISCVAsmPrinter::emitTargetFeaturePop(const MCSubtargetInfo &STI,
-                                           bool DidPush) {
-  if (DidPush)
-    getTargetStreamer().emitDirectiveOptionPop();
-}
-
 bool RISCVAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   STI = &MF.getSubtarget<RISCVSubtarget>();
+  RISCVTargetStreamer &RTS = getTargetStreamer();
 
-  bool EmittedOptionArch = emitTargetFeaturePush(*STI);
+  bool EmittedOptionArch = emitDirectiveOptionArch();
 
   SetupMachineFunction(MF);
   emitFunctionBody();
@@ -567,7 +561,8 @@ bool RISCVAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   // Emit the XRay table
   emitXRayTable();
 
-  emitTargetFeaturePop(*STI, EmittedOptionArch);
+  if (EmittedOptionArch)
+    RTS.emitDirectiveOptionPop();
   return false;
 }
 
