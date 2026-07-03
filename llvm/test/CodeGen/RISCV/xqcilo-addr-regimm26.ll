@@ -2,9 +2,6 @@
 ; Codegen for load/store addresses of the form (base + large constant offset)
 ; under the Qualcomm Xqcilo/Xqcilia extensions.
 ;
-; Plain 26-bit-offset load/store folding into qc.e.lw/qc.e.sw is covered by
-; xqcilo.ll; here we test the cases just outside the 26-bit range and the
-; combination of a qc.e.addi/qc.e.addai base with a folded qc.e.lw/qc.e.sw.
 ; RUN: llc < %s -mtriple=riscv32 -mattr=+xqcilo,+xqcilia -riscv-no-aliases \
 ; RUN:   | FileCheck %s --check-prefix=CHECK
 
@@ -83,9 +80,8 @@ define void @store_simm26_neg(ptr %p, i32 %v) nounwind optsize {
 define i32 @load_band_pos_boundary(ptr %p) nounwind optsize {
 ; CHECK-LABEL: load_band_pos_boundary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, 8192
-; CHECK-NEXT:    c.add a0, a1
-; CHECK-NEXT:    lw a0, 30(a0)
+; CHECK-NEXT:    c.addi a0, 31
+; CHECK-NEXT:    qc.e.lw a0, 33554431(a0)
 ; CHECK-NEXT:    c.jr ra
   %g = getelementptr inbounds nuw i8, ptr %p, i32 33554462
   %v = load i32, ptr %g, align 4
@@ -96,9 +92,8 @@ define i32 @load_band_pos_boundary(ptr %p) nounwind optsize {
 define i32 @load_band_neg_boundary(ptr %p) nounwind optsize {
 ; CHECK-LABEL: load_band_neg_boundary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, 1040384
-; CHECK-NEXT:    c.add a0, a1
-; CHECK-NEXT:    lw a0, -32(a0)
+; CHECK-NEXT:    c.addi a0, -32
+; CHECK-NEXT:    qc.e.lw a0, -33554432(a0)
 ; CHECK-NEXT:    c.jr ra
   %g = getelementptr inbounds nuw i8, ptr %p, i32 -33554464
   %v = load i32, ptr %g, align 4
@@ -108,9 +103,8 @@ define i32 @load_band_neg_boundary(ptr %p) nounwind optsize {
 define void @store_band_pos_boundary(ptr %p, i32 %v) nounwind optsize {
 ; CHECK-LABEL: store_band_pos_boundary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a2, 8192
-; CHECK-NEXT:    c.add a0, a2
-; CHECK-NEXT:    sw a1, 30(a0)
+; CHECK-NEXT:    c.addi a0, 31
+; CHECK-NEXT:    qc.e.sw a1, 33554431(a0)
 ; CHECK-NEXT:    c.jr ra
   %g = getelementptr inbounds nuw i8, ptr %p, i32 33554462
   store i32 %v, ptr %g, align 4
@@ -120,9 +114,8 @@ define void @store_band_pos_boundary(ptr %p, i32 %v) nounwind optsize {
 define void @store_band_neg_boundary(ptr %p, i32 %v) nounwind optsize {
 ; CHECK-LABEL: store_band_neg_boundary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a2, 1040384
-; CHECK-NEXT:    c.add a0, a2
-; CHECK-NEXT:    sw a1, -32(a0)
+; CHECK-NEXT:    c.addi a0, -32
+; CHECK-NEXT:    qc.e.sw a1, -33554432(a0)
 ; CHECK-NEXT:    c.jr ra
   %g = getelementptr inbounds nuw i8, ptr %p, i32 -33554464
   store i32 %v, ptr %g, align 4
@@ -193,9 +186,8 @@ define void @store_pathC_neg(ptr %p, i32 %v) nounwind optsize {
 define i32 @load_pathD_pos(ptr %p) nounwind optsize {
 ; CHECK-LABEL: load_pathD_pos:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, 8192
-; CHECK-NEXT:    c.add a0, a1
-; CHECK-NEXT:    lw a0, 128(a0)
+; CHECK-NEXT:    addi a0, a0, 129
+; CHECK-NEXT:    qc.e.lw a0, 33554431(a0)
 ; CHECK-NEXT:    c.jr ra
   %g = getelementptr inbounds nuw i8, ptr %p, i32 33554560
   %v = load i32, ptr %g, align 4
@@ -205,9 +197,8 @@ define i32 @load_pathD_pos(ptr %p) nounwind optsize {
 define i32 @load_pathD_neg(ptr %p) nounwind optsize {
 ; CHECK-LABEL: load_pathD_neg:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, 1040384
-; CHECK-NEXT:    c.add a0, a1
-; CHECK-NEXT:    lw a0, -128(a0)
+; CHECK-NEXT:    addi a0, a0, -128
+; CHECK-NEXT:    qc.e.lw a0, -33554432(a0)
 ; CHECK-NEXT:    c.jr ra
   %g = getelementptr inbounds nuw i8, ptr %p, i32 -33554560
   %v = load i32, ptr %g, align 4
@@ -217,9 +208,8 @@ define i32 @load_pathD_neg(ptr %p) nounwind optsize {
 define void @store_pathD_pos(ptr %p, i32 %v) nounwind optsize {
 ; CHECK-LABEL: store_pathD_pos:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a2, 8192
-; CHECK-NEXT:    c.add a0, a2
-; CHECK-NEXT:    sw a1, 128(a0)
+; CHECK-NEXT:    addi a0, a0, 129
+; CHECK-NEXT:    qc.e.sw a1, 33554431(a0)
 ; CHECK-NEXT:    c.jr ra
   %g = getelementptr inbounds nuw i8, ptr %p, i32 33554560
   store i32 %v, ptr %g, align 4
@@ -229,9 +219,8 @@ define void @store_pathD_pos(ptr %p, i32 %v) nounwind optsize {
 define void @store_pathD_neg(ptr %p, i32 %v) nounwind optsize {
 ; CHECK-LABEL: store_pathD_neg:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a2, 1040384
-; CHECK-NEXT:    c.add a0, a2
-; CHECK-NEXT:    sw a1, -128(a0)
+; CHECK-NEXT:    addi a0, a0, -128
+; CHECK-NEXT:    qc.e.sw a1, -33554432(a0)
 ; CHECK-NEXT:    c.jr ra
   %g = getelementptr inbounds nuw i8, ptr %p, i32 -33554560
   store i32 %v, ptr %g, align 4
@@ -301,10 +290,9 @@ define void @store_too_large_neg(ptr %p, i32 %v) nounwind optsize {
 define i32 @load_band_reuse2(ptr %p) nounwind optsize {
 ; CHECK-LABEL: load_band_reuse2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, 8192
-; CHECK-NEXT:    c.add a1, a0
-; CHECK-NEXT:    lw a1, 568(a1)
+; CHECK-NEXT:    addi a1, a0, 569
 ; CHECK-NEXT:    c.lw a0, 100(a0)
+; CHECK-NEXT:    qc.e.lw a1, 33554431(a1)
 ; CHECK-NEXT:    c.add a0, a1
 ; CHECK-NEXT:    c.jr ra
   %g0 = getelementptr inbounds nuw i8, ptr %p, i32 33555000
