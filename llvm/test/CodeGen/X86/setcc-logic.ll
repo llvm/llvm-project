@@ -703,12 +703,19 @@ define i1 @or_cmp_eq_i16(i16 zeroext %x, i16 zeroext %y) {
 }
 
 define i1 @or_cmp_ne_i8(i8 zeroext %x, i8 zeroext %y) {
-; CHECK-LABEL: or_cmp_ne_i8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    notb %sil
-; CHECK-NEXT:    testb %sil, %dil
-; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    retq
+; NOBMI-LABEL: or_cmp_ne_i8:
+; NOBMI:       # %bb.0:
+; NOBMI-NEXT:    notb %sil
+; NOBMI-NEXT:    testb %sil, %dil
+; NOBMI-NEXT:    setne %al
+; NOBMI-NEXT:    retq
+;
+; BMI-LABEL: or_cmp_ne_i8:
+; BMI:       # %bb.0:
+; BMI-NEXT:    andnl %edi, %esi, %eax
+; BMI-NEXT:    testb %al, %al
+; BMI-NEXT:    setne %al
+; BMI-NEXT:    retq
   %o = or i8 %x, %y
   %c = icmp ne i8 %y, %o
   ret i1 %c

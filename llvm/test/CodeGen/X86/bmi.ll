@@ -381,7 +381,7 @@ define i1 @andn_cmp_swap_ops(i64 %x, i64 %y) {
   ret i1 %cmp
 }
 
-; Use a 'test' (not an 'and') because 'andn' only works for i32/i64.
+; Use a 'test' for the final i8 compare.
 define i1 @andn_cmp_i8(i8 %x, i8 %y) {
 ; X86-LABEL: andn_cmp_i8:
 ; X86:       # %bb.0:
@@ -393,15 +393,15 @@ define i1 @andn_cmp_i8(i8 %x, i8 %y) {
 ;
 ; X64-LABEL: andn_cmp_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    notb %sil
-; X64-NEXT:    testb %sil, %dil
+; X64-NEXT:    andnl %edi, %esi, %eax
+; X64-NEXT:    testb %al, %al
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    retq
 ;
 ; EGPR-LABEL: andn_cmp_i8:
 ; EGPR:       # %bb.0:
-; EGPR-NEXT:    notb %sil # encoding: [0x40,0xf6,0xd6]
-; EGPR-NEXT:    testb %sil, %dil # encoding: [0x40,0x84,0xf7]
+; EGPR-NEXT:    andnl %edi, %esi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x48,0xf2,0xc7]
+; EGPR-NEXT:    testb %al, %al # encoding: [0x84,0xc0]
 ; EGPR-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; EGPR-NEXT:    retq # encoding: [0xc3]
   %noty = xor i8 %y, -1
@@ -2175,6 +2175,29 @@ define i16 @blsi16_trunc(i32 %x) {
   ret i16 %and
 }
 
+define i8 @andn8(i8 %x, i8 %y) {
+; X86-LABEL: andn8:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    notb %al
+; X86-NEXT:    andb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: andn8:
+; X64:       # %bb.0:
+; X64-NEXT:    andnl %esi, %edi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: andn8:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    andnl %esi, %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x40,0xf2,0xc6]
+; EGPR-NEXT:    # kill: def $al killed $al killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %not = xor i8 %x, 255
+  %and = and i8 %not, %y
+  ret i8 %and
+}
 define i8 @blsmsk8(i8 %x) nounwind {
 ; X86-LABEL: blsmsk8:
 ; X86:       # %bb.0:

@@ -429,10 +429,8 @@ define <8 x i64> @blcic_v8i64(<8 x i64> %a0, <8 x i64> %a1) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpnltuq %zmm1, %zmm0, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
-; AVX512-NEXT:    movl %eax, %ecx
-; AVX512-NEXT:    notb %cl
-; AVX512-NEXT:    incb %al
-; AVX512-NEXT:    andb %cl, %al
+; AVX512-NEXT:    leal 1(%rax), %ecx
+; AVX512-NEXT:    andnl %ecx, %eax, %eax
 ; AVX512-NEXT:    kmovd %eax, %k1
 ; AVX512-NEXT:    vpaddq %zmm1, %zmm0, %zmm1
 ; AVX512-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k1}
@@ -443,10 +441,8 @@ define <8 x i64> @blcic_v8i64(<8 x i64> %a0, <8 x i64> %a1) {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpcmpnltuq %zmm1, %zmm0, %k0
 ; AVX512F-NEXT:    kmovw %k0, %eax
-; AVX512F-NEXT:    movl %eax, %ecx
-; AVX512F-NEXT:    notb %cl
-; AVX512F-NEXT:    addb $1, %al
-; AVX512F-NEXT:    andb %cl, %al
+; AVX512F-NEXT:    leal 1(%rax), %ecx
+; AVX512F-NEXT:    andnl %ecx, %eax, %eax
 ; AVX512F-NEXT:    kmovw %eax, %k1
 ; AVX512F-NEXT:    vpaddq %zmm1, %zmm0, %zmm1
 ; AVX512F-NEXT:    vmovdqa64 %zmm0, %zmm1 {%k1}
