@@ -286,7 +286,7 @@ set(PPC_LINUX_DEFAULT_IEEELONGDOUBLE OFF CACHE BOOL
 set(CLANG_SPAWN_CC1 OFF CACHE BOOL
     "Whether clang should use a new process for the CC1 invocation")
 
-option(CLANG_DEFAULT_PIE_ON_LINUX "Default to -fPIE and -pie on linux-gnu" ON)
+option(CLANG_DEFAULT_PIE "Default to -fPIE and -pie on linux-gnu" ON)
 
 set(CLANG_DEFAULT_LINKER "" CACHE STRING
   "Default linker to use (linker name or absolute path, empty for platform default)")
@@ -506,6 +506,11 @@ option(CLANG_USE_EXPERIMENTAL_CONST_INTERP
 if (DEFINED CLANG_ENABLE_ARCMT)
   set(CLANG_ENABLE_OBJC_REWRITER ${CLANG_ENABLE_ARCMT})
   message(DEPRECATION "'CLANG_ENABLE_ARCMT' is deprecated as ARCMigrate has been removed from Clang. Please use 'CLANG_ENABLE_OBJC_REWRITER' instead to enable or disable the Objective-C rewriter.")
+endif()
+
+if (DEFINED CLANG_DEFAULT_PIE_ON_LINUX)
+  set(CLANG_DEFAULT_PIE ${CLANG_DEFAULT_PIE_ON_LINUX})
+  message(DEPRECATION "'CLANG_DEFAULT_PIE_ON_LINUX' is deprecated and has been renamed to the platform-independent option 'CLANG_DEFAULT_PIE'. Please use 'CLANG_DEFAULT_PIE' instead to enable or disable PIE on Linux.")
 endif()
 
 # This option is a stop-gap, we should commit to removing this as

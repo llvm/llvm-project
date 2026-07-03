@@ -9,7 +9,7 @@
 #define BUG_REPORT_URL "${BUG_REPORT_URL}"
 
 /* Default to -fPIE and -pie on Linux. */
-#cmakedefine01 CLANG_DEFAULT_PIE_ON_LINUX
+#cmakedefine01 CLANG_DEFAULT_PIE
 
 /* Default linker to use. */
 #define CLANG_DEFAULT_LINKER "${CLANG_DEFAULT_LINKER}"
