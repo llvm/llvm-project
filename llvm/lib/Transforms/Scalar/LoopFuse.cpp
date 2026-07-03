@@ -868,8 +868,8 @@ private:
                               << "Not Fusing.\n");
             ++NonEmptyPreheader;
             reportLoopFusion<OptimizationRemarkMissed>(
-                FC0, FC1, InvalidDependencies.getName(),
-                InvalidDependencies.getDesc());
+                FC0, FC1, NonEmptyPreheader.getName(),
+                NonEmptyPreheader.getDesc());
             continue;
           }
         }
