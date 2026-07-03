@@ -27,7 +27,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Iter, class _Sent, class _Proj, class _Pred>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
 __any_of(_Iter __first, _Sent __last, _Pred& __pred, _Proj& __proj) {
-  auto __found = std::__find_if(std::move(__first), __last, std::forward<_Pred>(__pred), std::forward<_Proj>(__proj));
+  auto __found = std::__find_if(std::move(__first), __last, __pred, __proj);
   return __found != __last;
 }
 
