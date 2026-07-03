@@ -8,10 +8,24 @@
 
 #include "RegisterInfoPOSIXDynamic_riscv32.h"
 
+#include "lldb-riscv-register-enums.h"
 #include "lldb/lldb-defines.h"
 #include "llvm/Support/Compiler.h"
 
+#include <iomanip>
+#include <sstream>
 #include <stddef.h>
+
+#define GPR_OFFSET(idx) ((idx) * sizeof(uint32_t))
+#define FPR_OFFSET(idx) ((idx) * sizeof(uint32_t))
+
+#define DECLARE_REGISTER_INFOS_RISCV32_STRUCT
+#include "Plugins/Process/Utility/RegisterInfos_riscv32.h"
+#undef DECLARE_REGISTER_INFOS_RISCV32_STRUCT
+
+static const llvm::StringMap<llvm::ArrayRef<lldb_private::RegisterInfo>>
+    g_register_infos_riscv32_csr_patches = {
+        {"default", llvm::ArrayRef(g_register_infos_riscv32_csr_patch)}};
 
 RegisterInfoPOSIXDynamic_riscv32::RegisterInfoPOSIXDynamic_riscv32(
     const lldb_private::ArchSpec &target_arch)
@@ -83,4 +97,70 @@ const lldb_private::RegisterInfo *
 RegisterInfoPOSIXDynamic_riscv32::GetRegisterInfo(
     llvm::StringRef reg_name) const {
   return m_dyn_reg_infos.GetRegisterInfo(reg_name);
+}
+
+void RegisterInfoPOSIXDynamic_riscv32::GetCSRegInfos(
+    llvm::ArrayRef<llvm::StringRef> features,
+    llvm::SmallVectorImpl<lldb_private::RegisterInfo> &cs_reg_infos) {
+  cs_reg_infos.clear();
+
+  // Sort and deduplicate the feature list to make the resulting CSR metadata
+  // independent of caller ordering.
+  llvm::SmallVector<llvm::StringRef> normalized_features(features.begin(),
+                                                         features.end());
+  llvm::sort(normalized_features);
+  normalized_features.erase(llvm::unique(normalized_features),
+                            normalized_features.end());
+
+  const uint32_t k_num_csr_registers = csr_last_riscv - csr_first_riscv + 1;
+  cs_reg_infos.reserve(k_num_csr_registers);
+
+  // Construct default CS register information.
+  for (uint32_t reg = 0; reg < k_num_csr_registers; ++reg) {
+    lldb_private::RegisterInfo csr{};
+    for (auto &kind : csr.kinds)
+      kind = LLDB_INVALID_REGNUM;
+
+    lldb_private::ConstString name(llvm::formatv("csr_{0:x}", reg).str());
+    csr.name = name.GetCString();
+    csr.alt_name = csr.name;
+    csr.byte_size = 4;
+    csr.byte_offset = 0;
+    csr.encoding = lldb::eEncodingUint;
+    csr.format = lldb::eFormatHex;
+    csr.kinds[lldb::eRegisterKindEHFrame] = riscv_dwarf::dwarf_first_csr + reg;
+    csr.kinds[lldb::eRegisterKindDWARF] = riscv_dwarf::dwarf_first_csr + reg;
+    csr.kinds[lldb::eRegisterKindGeneric] = LLDB_INVALID_REGNUM;
+    csr.kinds[lldb::eRegisterKindProcessPlugin] = LLDB_INVALID_REGNUM;
+    csr.kinds[lldb::eRegisterKindLLDB] = csr_first_riscv + reg;
+    csr.value_regs = nullptr;
+    csr.invalidate_regs = nullptr;
+    csr.flags_type = nullptr;
+
+    cs_reg_infos.push_back(csr);
+  }
+
+  // Patch application is order-dependent; later patches override earlier ones
+  // for the same CSR address.
+  ConfigureCSRegInfos("default", cs_reg_infos);
+
+  for (const auto &feature : normalized_features)
+    ConfigureCSRegInfos(feature, cs_reg_infos);
+}
+
+void RegisterInfoPOSIXDynamic_riscv32::ConfigureCSRegInfos(
+    llvm::StringRef feature,
+    llvm::SmallVectorImpl<lldb_private::RegisterInfo> &cs_reg_infos) {
+  auto it = g_register_infos_riscv32_csr_patches.find(feature);
+  if (it == g_register_infos_riscv32_csr_patches.end())
+    return;
+
+  for (const auto &csr : it->second) {
+    const uint32_t lldb_reg = csr.kinds[lldb::eRegisterKindLLDB];
+    if (lldb_reg < csr_first_riscv || lldb_reg > csr_last_riscv)
+      continue;
+    uint32_t idx = lldb_reg - csr_first_riscv;
+    if (idx < cs_reg_infos.size())
+      cs_reg_infos[idx] = csr;
+  }
 }

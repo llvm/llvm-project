@@ -8,8 +8,14 @@
 
 #include "RegisterContextPOSIXCore_riscv32.h"
 
+#include "Plugins/Process/elf-core/ProcessElfCore.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 
 #define GPR_OFFSET(idx) ((idx) * sizeof(uint32_t))
 #define FPR_OFFSET(idx) ((idx) * sizeof(uint32_t))
@@ -51,8 +57,13 @@ RegisterContextCorePOSIX_riscv32::RegisterContextCorePOSIX_riscv32(
       std::size(g_register_infos_riscv32_gpr);
   constexpr uint32_t k_num_fpr_registers =
       std::size(g_register_infos_riscv32_fpr);
-  constexpr uint32_t k_num_csr_registers =
-      std::size(g_register_infos_riscv32_csr);
+  llvm::SmallVector<std::string> features;
+  GetFeatures(features);
+  llvm::SmallVector<llvm::StringRef> feature_refs(features.begin(),
+                                                  features.end());
+  llvm::SmallVector<lldb_private::RegisterInfo> reg_infos_riscv32_csr;
+  m_reg_infos_up->GetCSRegInfos(feature_refs, reg_infos_riscv32_csr);
+  uint32_t k_num_csr_registers = reg_infos_riscv32_csr.size();
   const ArchSpec &target_arch = m_reg_infos_up->GetTargetArchitecture();
   const llvm::Triple triple = target_arch.GetTriple();
   const lldb::ByteOrder byte_order = target_arch.GetByteOrder();
@@ -113,10 +124,10 @@ RegisterContextCorePOSIX_riscv32::RegisterContextCorePOSIX_riscv32(
         Debugger::ReportWarning(
             llvm::formatv("encountered a duplicate CSR while parsing "
                           "NT_CSREGMAP: {0}; skipping",
-                          g_register_infos_riscv32_csr[csr_addr].name));
+                          reg_infos_riscv32_csr[csr_addr].name));
       } else {
         csregset_regnums.push_back(csr_addr);
-        const RegisterInfo &csr = g_register_infos_riscv32_csr[csr_addr];
+        const RegisterInfo &csr = reg_infos_riscv32_csr[csr_addr];
         registers.push_back(BuildDynamicRegister(csr, csr_set, byte_offset));
         byte_offset += csr.byte_size;
       }
@@ -337,4 +348,42 @@ RegisterContextCorePOSIX_riscv32::BuildDynamicRegister(
       CopyRegisterListToVector(reg_info.invalidate_regs),
       /*value_reg_offset=*/0,
       reg_info.flags_type};
+}
+
+void RegisterContextCorePOSIX_riscv32::GetFeatures(
+    llvm::SmallVectorImpl<std::string> &features) const {
+  Log *log = GetLog(LLDBLog::Process);
+  features.clear();
+
+  if (!m_thread.IsValid())
+    return;
+
+  auto process_sp = m_thread.GetProcess();
+  if (!process_sp)
+    return;
+
+  auto target = process_sp->CalculateTarget();
+  if (!target)
+    return;
+
+  auto module_sp = target->GetExecutableModule();
+  if (!module_sp)
+    return;
+
+  // ObjectFileELF::ParseRISCVAttributes should've already parsed features and
+  // stored them in the module's ArchSpec via ArchSpec::SetSubtargetFeatures.
+  std::vector<std::string> raw_features =
+      module_sp->GetArchitecture().GetSubtargetFeatures().getFeatures();
+
+  if (raw_features.empty()) {
+    LLDB_LOG(log, "no RISC-V subtarget feature found in module ArchSpec");
+    return;
+  }
+
+  features.reserve(raw_features.size());
+  for (const auto &feature : raw_features)
+    features.emplace_back(llvm::SubtargetFeatures::StripFlag(feature));
+
+  features.erase(std::remove(features.begin(), features.end(), ""),
+                 features.end());
 }
