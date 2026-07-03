@@ -1344,10 +1344,10 @@ public:
     WideIVStep,
     // Creates a step vector starting from 0 to VF with a step of 1.
     StepVector,
-    /// Returns the value for vscale.
-    VScale,
+    /// Calls a scalar intrinsic. The intrinsic ID is the last operand.
+    Intrinsic,
 
-    OpsEnd = VScale,
+    OpsEnd = Intrinsic,
   };
 
   /// Returns true if this VPInstruction generates scalar values for all lanes.
@@ -1559,7 +1559,7 @@ public:
     switch (Opc) {
     case VPInstruction::WideIVStep:
     case VPInstruction::StepVector:
-    case VPInstruction::VScale:
+    case VPInstruction::Intrinsic:
     case Instruction::Load:
       return true;
     default:

@@ -78,7 +78,7 @@ TEST_F(VPInstructionTest, insertBefore) {
   VPInstruction *I1 =
       new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
   VPInstruction *I2 =
-      new VPInstructionWithType(VPInstruction::VScale, {}, Int32);
+      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
   VPInstruction *I3 =
       new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
 
@@ -97,7 +97,7 @@ TEST_F(VPInstructionTest, eraseFromParent) {
   VPInstruction *I1 =
       new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
   VPInstruction *I2 =
-      new VPInstructionWithType(VPInstruction::VScale, {}, Int32);
+      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
   VPInstruction *I3 =
       new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
 
@@ -121,7 +121,7 @@ TEST_F(VPInstructionTest, moveAfter) {
   VPInstruction *I1 =
       new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
   VPInstruction *I2 =
-      new VPInstructionWithType(VPInstruction::VScale, {}, Int32);
+      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
   VPInstruction *I3 =
       new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
 
@@ -135,7 +135,7 @@ TEST_F(VPInstructionTest, moveAfter) {
   CHECK_ITERATOR(VPBB1, I2, I1, I3);
 
   VPInstruction *I4 =
-      new VPInstructionWithType(VPInstruction::VScale, {}, Int32);
+      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
   VPInstruction *I5 =
       new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
   VPBasicBlock &VPBB2 = *getPlan().createVPBasicBlock("");
@@ -154,7 +154,7 @@ TEST_F(VPInstructionTest, moveBefore) {
   VPInstruction *I1 =
       new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
   VPInstruction *I2 =
-      new VPInstructionWithType(VPInstruction::VScale, {}, Int32);
+      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
   VPInstruction *I3 =
       new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
 
@@ -168,7 +168,7 @@ TEST_F(VPInstructionTest, moveBefore) {
   CHECK_ITERATOR(VPBB1, I2, I1, I3);
 
   VPInstruction *I4 =
-      new VPInstructionWithType(VPInstruction::VScale, {}, Int32);
+      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
   VPInstruction *I5 =
       new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
   VPBasicBlock &VPBB2 = *getPlan().createVPBasicBlock("");
@@ -1786,7 +1786,7 @@ TEST(VPDoubleValueDefTest, traverseUseLists) {
   LLVMContext C;
   IntegerType *Int32 = IntegerType::get(C, 32);
   VPInstructionWithType Op0(VPInstruction::StepVector, {}, Int32);
-  VPInstructionWithType Op1(VPInstruction::VScale, {}, Int32);
+  VPInstructionWithType Op1(VPInstruction::StepVector, {}, Int32);
   VPDoubleValueDef DoubleValueDef({&Op0, &Op1}, IntegerType::get(C, 32));
 
   // Create a new users of the defined values.
@@ -1859,9 +1859,10 @@ using VPUtilsTest = VPlanTestBase;
 TEST_F(VPUtilsTest, IsUniformAcrossVFsAndUFsForSingleScalarOpcodes) {
   VPlan &Plan = getPlan();
 
-  // isSingleScalar opcode without operands.
+  // isSingleScalar opcode with a uniform (intrinsic ID) operand.
   std::unique_ptr<VPInstruction> VScale(
-      VPBuilder().createVScale(IntegerType::get(C, 32)));
+      VPBuilder(Plan.getEntry()).createVScale(IntegerType::get(C, 32)));
+  VScale->removeFromParent();
   EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(VScale.get()));
 
   // isSingleScalar opcode with a uniform operand.
