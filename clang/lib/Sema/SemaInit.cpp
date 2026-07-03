@@ -1602,13 +1602,10 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
           // aggregate is one, so deferral comes from the dependent-context
           // guard in checkRefToUninitInit and suppression from the parse-time
           // stack. (A reference field is routed to CheckReferenceType above.)
-          if (SemaRef.getLangOpts().Profiles && !Result.isInvalid() &&
-              Entity.getKind() == InitializedEntity::EK_Member &&
-              ElemType->isPointerType())
-            SemaRef.checkRefToUninitInit(
-                expr->getExprLoc(),
-                Entity.getDecl()->hasAttr<RefToUninitAttr>(),
-                /*IsReference=*/false, expr, /*D=*/nullptr);
+          if (!Result.isInvalid() &&
+              Entity.getKind() == InitializedEntity::EK_Member)
+            SemaRef.checkRefToUninitBinding(expr->getExprLoc(),
+                                            Entity.getDecl(), ElemType, expr);
 
           UpdateStructuredListElement(StructuredList, StructuredIndex,
                                       Result.getAs<Expr>());
@@ -1916,12 +1913,10 @@ void InitListChecker::CheckReferenceType(const InitializedEntity &Entity,
   // init list can appear in a template independently of whether the aggregate
   // is one, so deferral comes from the dependent-context guard in
   // checkRefToUninitInit and suppression from the parse-time stack.
-  if (SemaRef.getLangOpts().Profiles && !VerifyOnly && !Result.isInvalid() &&
-      Entity.getKind() == InitializedEntity::EK_Member && Entity.getParent() &&
-      DeclType->isReferenceType())
-    SemaRef.checkRefToUninitInit(Src->getExprLoc(),
-                                 Entity.getDecl()->hasAttr<RefToUninitAttr>(),
-                                 /*IsReference=*/true, Src, /*D=*/nullptr);
+  if (!VerifyOnly && !Result.isInvalid() &&
+      Entity.getKind() == InitializedEntity::EK_Member && Entity.getParent())
+    SemaRef.checkRefToUninitBinding(Src->getExprLoc(), Entity.getDecl(),
+                                    DeclType, Src);
 
   UpdateStructuredListElement(StructuredList, StructuredIndex, expr);
   ++Index;

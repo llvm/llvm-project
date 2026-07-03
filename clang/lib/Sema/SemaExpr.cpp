@@ -6285,15 +6285,10 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
     // recognizers don't see through the CXXDefaultArgExpr wrapper, so check
     // the underlying default-argument expression.
     if (Param && getLangOpts().Profiles) {
-      QualType PT = Param->getType();
-      if (PT->isPointerType() || PT->isReferenceType()) {
-        const Expr *Src = Arg;
-        if (const auto *DAE = dyn_cast<CXXDefaultArgExpr>(Src))
-          Src = DAE->getExpr();
-        checkRefToUninitInit(Arg->getExprLoc(),
-                             Param->hasAttr<RefToUninitAttr>(),
-                             PT->isReferenceType(), Src);
-      }
+      const Expr *Src = Arg;
+      if (const auto *DAE = dyn_cast<CXXDefaultArgExpr>(Src))
+        Src = DAE->getExpr();
+      checkRefToUninitBinding(Arg->getExprLoc(), Param, Param->getType(), Src);
     }
 
     // Check for array bounds violations for each argument to the call. This

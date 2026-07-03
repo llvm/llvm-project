@@ -1177,6 +1177,18 @@ public:
                             bool IsReference, const Expr *Src,
                             const Decl *D = nullptr);
 
+  /// std::init / ref_to_uninit (paper §5): check that binding \p Src to
+  /// \p Target (a variable, data member, parameter, or function) is
+  /// consistent with the target's [[ref_to_uninit]] marking. \p T is the
+  /// bound type -- the target's type, or the return type when \p Target is a
+  /// function. No-op unless \p T is a non-dependent pointer or reference (a
+  /// dependent type defers to instantiation, where the check site re-runs
+  /// with the concrete type). \p D, when available, is the declaration used
+  /// for suppression lookup and template-pattern deferral.
+  void checkRefToUninitBinding(SourceLocation Loc, const ValueDecl *Target,
+                               QualType T, const Expr *Src,
+                               const Decl *D = nullptr);
+
   /// std::init / uninit_read (paper §4.5): diagnose a read *through* a
   /// [[ref_to_uninit]] pointer or reference, whose result is itself
   /// uninitialized. Called from Sema::DefaultLvalueConversion at the single

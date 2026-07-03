@@ -4236,11 +4236,8 @@ void Sema::ActOnFinishCXXInClassMemberInitializer(Decl *D,
   // std::init / ref_to_uninit (paper §5): a pointer or reference data member
   // with a default member initializer must be bound consistently with its
   // [[ref_to_uninit]] marking.
-  if (QualType FT = FD->getType(); !FT->isDependentType() &&
-      (FT->isPointerType() || FT->isReferenceType()))
-    checkRefToUninitInit(FD->getLocation(), FD->hasAttr<RefToUninitAttr>(),
-                         FT->isReferenceType(), FD->getInClassInitializer(),
-                         FD);
+  checkRefToUninitBinding(FD->getLocation(), FD, FD->getType(),
+                          FD->getInClassInitializer(), FD);
 }
 
 /// Find the direct and/or virtual base specifiers that
@@ -4687,13 +4684,8 @@ Sema::BuildMemberInitializer(ValueDecl *Member, Expr *Init,
     // defers (via D->isTemplated()) and fires once at instantiation, where
     // BuildMemberInitializer re-runs with the instantiated constructor as
     // CurContext, matching ctor_uninit_member.
-    if (getLangOpts().Profiles)
-      if (QualType MT = Member->getType();
-          !MT->isDependentType() &&
-          (MT->isPointerType() || MT->isReferenceType()))
-        if (auto *Ctor = dyn_cast<CXXConstructorDecl>(CurContext))
-          checkRefToUninitInit(IdLoc, Member->hasAttr<RefToUninitAttr>(),
-                               MT->isReferenceType(), Init, Ctor);
+    if (auto *Ctor = dyn_cast<CXXConstructorDecl>(CurContext))
+      checkRefToUninitBinding(IdLoc, Member, Member->getType(), Init, Ctor);
   }
 
   if (DirectMember) {

@@ -4118,12 +4118,10 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
   }
   // std::init / ref_to_uninit (paper §5): the returned pointer or reference
   // must match the function's [[ref_to_uninit]] return marking.
-  if (RetValExp && getLangOpts().Profiles && !FnRetType->isDependentType() &&
-      (FnRetType->isPointerType() || FnRetType->isReferenceType()))
+  if (RetValExp && getLangOpts().Profiles)
     if (const FunctionDecl *FD = getCurFunctionDecl())
-      checkRefToUninitInit(RetValExp->getExprLoc(),
-                           FD->hasAttr<RefToUninitAttr>(),
-                           FnRetType->isReferenceType(), RetValExp);
+      checkRefToUninitBinding(RetValExp->getExprLoc(), FD, FnRetType,
+                              RetValExp);
 
   const VarDecl *NRVOCandidate = getCopyElisionCandidate(NRInfo, FnRetType);
 

@@ -15291,6 +15291,16 @@ void Sema::checkRefToUninitInit(SourceLocation Loc, bool TargetIsRefToUninit,
     Diag(Loc, diag::err_init_uninit_requires_ref_to_uninit) << Profile << IsRef;
 }
 
+void Sema::checkRefToUninitBinding(SourceLocation Loc, const ValueDecl *Target,
+                                   QualType T, const Expr *Src,
+                                   const Decl *D) {
+  if (!getLangOpts().Profiles || T.isNull() || T->isDependentType() ||
+      (!T->isPointerType() && !T->isReferenceType()))
+    return;
+  checkRefToUninitInit(Loc, Target->hasAttr<RefToUninitAttr>(),
+                       T->isReferenceType(), Src, D);
+}
+
 void Sema::checkRefToUninitRead(SourceLocation Loc, const Expr *Glvalue,
                                 QualType ValueType) {
   // A RecoveryExpr is a placeholder for an expression that already failed, not
@@ -15315,13 +15325,10 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
 
   checkInitProfileUninitWithInitializer(var, var->getInit());
 
-  // std::init / ref_to_uninit (paper §5): a pointer or reference variable must
-  // be bound consistently with its [[ref_to_uninit]] marking. A dependent type
-  // is deferred to instantiation, where the rule re-runs on the concrete type.
-  if (QualType VT = var->getType(); !VT->isDependentType() &&
-      (VT->isPointerType() || VT->isReferenceType()))
-    checkRefToUninitInit(var->getLocation(), var->hasAttr<RefToUninitAttr>(),
-                         VT->isReferenceType(), var->getInit(), var);
+  // std::init / ref_to_uninit (paper §5): a pointer or reference variable
+  // must be bound consistently with its [[ref_to_uninit]] marking.
+  checkRefToUninitBinding(var->getLocation(), var, var->getType(),
+                          var->getInit(), var);
 
   CUDA().MaybeAddConstantAttr(var);
 
