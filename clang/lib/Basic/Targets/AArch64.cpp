@@ -285,9 +285,7 @@ bool AArch64TargetInfo::isValidCPUName(StringRef Name) const {
   return llvm::AArch64::parseCpu(Name).has_value();
 }
 
-bool AArch64TargetInfo::setCPU(const std::string &Name) {
-  return isValidCPUName(Name);
-}
+bool AArch64TargetInfo::setCPU(StringRef Name) { return isValidCPUName(Name); }
 
 void AArch64TargetInfo::fillValidCPUList(
     SmallVectorImpl<StringRef> &Values) const {
@@ -585,6 +583,18 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasSVE_BFSCALE)
     Builder.defineMacro("__ARM_FEATURE_SVE_BFSCALE", "1");
 
+  if (HasSVE_B16MM)
+    Builder.defineMacro("__ARM_FEATURE_SVE_B16MM", "1");
+
+  if (HasF16MM)
+    Builder.defineMacro("__ARM_FEATURE_F16MM", "1");
+
+  if (HasF16F32DOT)
+    Builder.defineMacro("__ARM_FEATURE_F16F32DOT", "1");
+
+  if (HasF16F32MM)
+    Builder.defineMacro("__ARM_FEATURE_F16F32MM", "1");
+
   if (HasSVE_AES2)
     Builder.defineMacro("__ARM_FEATURE_SVE_AES2", "1");
 
@@ -594,8 +604,14 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasSVE2p2)
     Builder.defineMacro("__ARM_FEATURE_SVE2p2", "1");
 
+  if (HasSVE2p3)
+    Builder.defineMacro("__ARM_FEATURE_SVE2p3", "1");
+
   if (HasSME2p2)
     Builder.defineMacro("__ARM_FEATURE_SME2p2", "1");
+
+  if (HasSME2p3)
+    Builder.defineMacro("__ARM_FEATURE_SME2p3", "1");
 
   if (HasFMV)
     Builder.defineMacro("__HAVE_FUNCTION_MULTI_VERSIONING", "1");
@@ -940,7 +956,13 @@ void AArch64TargetInfo::computeFeatureLookup() {
       .Case("sve-aes2", HasSVE_AES2)
       .Case("ssve-aes", HasSSVE_AES)
       .Case("sve2p2", FPU & SveMode && HasSVE2p2)
-      .Case("sme2p2", HasSME2p2);
+      .Case("sme2p2", HasSME2p2)
+      .Case("sve2p3", FPU & SveMode && HasSVE2p3)
+      .Case("sme2p3", HasSME2p3)
+      .Case("sve-b16mm", HasSVE_B16MM)
+      .Case("f16mm", HasF16MM)
+      .Case("f16f32dot", HasF16F32DOT)
+      .Case("f16f32mm", HasF16F32MM);
 }
 
 bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
@@ -962,9 +984,9 @@ void AArch64TargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
   if (!Enabled)
     return;
 
-  for (const auto *OtherArch : llvm::AArch64::ArchInfos)
-    if (ArchInfo->implies(*OtherArch))
-      Features[OtherArch->getSubArch()] = true;
+  for (const auto &OtherArch : llvm::AArch64::ArchInfos)
+    if (ArchInfo->implies(OtherArch))
+      Features[OtherArch.getSubArch()] = true;
 
   // Set any features implied by the architecture
   std::vector<StringRef> CPUFeats;
@@ -1181,6 +1203,14 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasF8F32MM = true;
     if (Feature == "+sve-f16f32mm")
       HasSVE_F16F32MM = true;
+    if (Feature == "+sve-b16mm")
+      HasSVE_B16MM = true;
+    if (Feature == "+f16mm")
+      HasF16MM = true;
+    if (Feature == "+f16f32dot")
+      HasF16F32DOT = true;
+    if (Feature == "+f16f32mm")
+      HasF16F32MM = true;
     if (Feature == "+sve-bfscale")
       HasSVE_BFSCALE = true;
     if (Feature == "+sve-aes2")
@@ -1189,8 +1219,12 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSSVE_AES = true;
     if (Feature == "+sve2p2")
       HasSVE2p2 = true;
+    if (Feature == "+sve2p3")
+      HasSVE2p3 = true;
     if (Feature == "+sme2p2")
       HasSME2p2 = true;
+    if (Feature == "+sme2p3")
+      HasSME2p3 = true;
 
     // All predecessor archs are added but select the latest one for ArchKind.
     if (Feature == "+v8a" && ArchInfo->Version < llvm::AArch64::ARMV8A.Version)

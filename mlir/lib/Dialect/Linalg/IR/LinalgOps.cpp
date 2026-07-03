@@ -2940,6 +2940,15 @@ SmallVector<utils::IteratorType> SoftmaxOp::getLoopIteratorTypes() {
   return iteratorTypes;
 }
 
+/// The inner tile alignment hint is only used by `linalg.pack` and
+/// `linalg.unpack` operations. Therefore, this is forwarded to the hint-less
+/// overload.
+FailureOr<TilingResult> SoftmaxOp::getTiledImplementation(
+    OpBuilder &builder, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes, ArrayRef<InnerTileAlignment>) {
+  return getTiledImplementation(builder, offsets, sizes);
+}
+
 FailureOr<TilingResult>
 SoftmaxOp::getTiledImplementation(OpBuilder &builder,
                                   ArrayRef<OpFoldResult> offsets,
@@ -3293,6 +3302,15 @@ LogicalResult WinogradFilterTransformOp::getResultTilePosition(
   return success();
 }
 
+/// The inner tile alignment hint is only used by `linalg.pack` and
+/// `linalg.unpack` operations. Therefore, this is forwarded to the hint-less
+/// overload.
+FailureOr<TilingResult> WinogradFilterTransformOp::getTiledImplementation(
+    OpBuilder &builder, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes, ArrayRef<InnerTileAlignment>) {
+  return getTiledImplementation(builder, offsets, sizes);
+}
+
 /// Implement tiling for winograd_filter_transform
 /// The input of winograd_filter_transform is (F, KH, KW, C).
 /// The output of winograd_filter_transform is (alphaH, alphaW, C, F)
@@ -3444,6 +3462,15 @@ LogicalResult WinogradInputTransformOp::getResultTilePosition(
                       sizes[getOutputCDim()]});
 
   return success();
+}
+
+/// The inner tile alignment hint is only used by `linalg.pack` and
+/// `linalg.unpack` operations. Therefore, this is forwarded to the hint-less
+/// overload.
+FailureOr<TilingResult> WinogradInputTransformOp::getTiledImplementation(
+    OpBuilder &builder, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes, ArrayRef<InnerTileAlignment>) {
+  return getTiledImplementation(builder, offsets, sizes);
 }
 
 /// Implement tiling for winograd_input_transform
@@ -3639,6 +3666,15 @@ LogicalResult WinogradOutputTransformOp::getResultTilePosition(
   resultSizes.append(
       {sizes[getValueNDim()], sizeH, sizeW, sizes[getValueFDim()]});
   return success();
+}
+
+/// The inner tile alignment hint is only used by `linalg.pack` and
+/// `linalg.unpack` operations. Therefore, this is forwarded to the hint-less
+/// overload.
+FailureOr<TilingResult> WinogradOutputTransformOp::getTiledImplementation(
+    OpBuilder &builder, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes, ArrayRef<InnerTileAlignment>) {
+  return getTiledImplementation(builder, offsets, sizes);
 }
 
 /// Implement tiling for winograd_output_transform

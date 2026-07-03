@@ -292,16 +292,16 @@ int FileSpec::Compare(const FileSpec &a, const FileSpec &b, bool full) {
 }
 
 bool FileSpec::Equal(const FileSpec &a, const FileSpec &b, bool full) {
-  if (full || (a.GetDirectory() && b.GetDirectory()))
+  if (full || (!a.GetDirectory().empty() && !b.GetDirectory().empty()))
     return a == b;
 
   return a.FileEquals(b);
 }
 
 bool FileSpec::Match(const FileSpec &pattern, const FileSpec &file) {
-  if (pattern.GetDirectory())
+  if (!pattern.GetDirectory().empty())
     return pattern == file;
-  if (pattern.GetFilename())
+  if (!pattern.GetFilename().empty())
     return pattern.FileEquals(file);
   return true;
 }
@@ -339,18 +339,8 @@ llvm::json::Value FileSpec::ToJSON() const {
 
 FileSpec::Style FileSpec::GetPathStyle() const { return m_style; }
 
-void FileSpec::SetDirectory(ConstString directory) {
-  m_directory = directory;
-  PathWasModified();
-}
-
 void FileSpec::SetDirectory(llvm::StringRef directory) {
   m_directory = ConstString(directory);
-  PathWasModified();
-}
-
-void FileSpec::SetFilename(ConstString filename) {
-  m_filename = filename;
   PathWasModified();
 }
 
@@ -407,8 +397,8 @@ llvm::StringRef FileSpec::GetFileNameExtension() const {
   return llvm::sys::path::extension(m_filename.GetStringRef(), m_style);
 }
 
-ConstString FileSpec::GetFileNameStrippingExtension() const {
-  return ConstString(llvm::sys::path::stem(m_filename.GetStringRef(), m_style));
+llvm::StringRef FileSpec::GetFileNameStrippingExtension() const {
+  return llvm::sys::path::stem(m_filename.GetStringRef(), m_style);
 }
 
 // Return the size in bytes that this object takes in memory. This returns the
@@ -542,8 +532,8 @@ void llvm::format_provider<FileSpec>::format(const FileSpec &F,
           Style.equals_insensitive("D")) &&
          "Invalid FileSpec style!");
 
-  StringRef dir = F.GetDirectory().GetStringRef();
-  StringRef file = F.GetFilename().GetStringRef();
+  StringRef dir = F.GetDirectory();
+  StringRef file = F.GetFilename();
 
   if (dir.empty() && file.empty()) {
     Stream << "(empty)";

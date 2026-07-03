@@ -103,6 +103,7 @@ static FailureOr<int> getOperatorPrecedence(Operation *operation) {
       .Case([&](emitc::DereferenceOp op) { return 15; })
       .Case([&](emitc::DivOp op) { return 13; })
       .Case([&](emitc::GetGlobalOp op) { return 18; })
+      .Case([&](emitc::GetFieldOp op) { return 18; })
       .Case([&](emitc::LiteralOp op) { return 18; })
       .Case([&](emitc::LoadOp op) { return 16; })
       .Case([&](emitc::LogicalAndOp op) { return 4; })

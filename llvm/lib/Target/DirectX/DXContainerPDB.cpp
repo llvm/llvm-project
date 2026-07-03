@@ -17,6 +17,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCDXContainerWriter.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/IOSandbox.h"
 
 using namespace llvm;
 
@@ -143,6 +144,8 @@ bool DXContainerPDB::runOnModule(Module &M) {
   write(OS, M.getTargetTriple());
 
   // Write PDB file.
+  // FIXME(sandboxing): Remove this by routing PDB output through the VFS.
+  auto BypassSandbox = sys::sandbox::scopedDisable();
   codeview::GUID IgnoredOutGuid;
   if (Error Err = Builder.commit(DebugFileName, &IgnoredOutGuid))
     reportFatalUsageError(std::move(Err));

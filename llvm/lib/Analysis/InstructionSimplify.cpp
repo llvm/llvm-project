@@ -4545,6 +4545,27 @@ static Value *simplifyWithOpsReplaced(Value *V,
 
         return ConstantInt::get(I->getType(), 0);
       }
+
+      if (auto *MMI = dyn_cast<MinMaxIntrinsic>(II)) {
+        const APInt Identity = MMI->getIdentity();
+
+        Value *Result = nullptr;
+        if (match(NewOps[0], m_SpecificInt(Identity)))
+          Result = NewOps[1];
+        else if (match(NewOps[1], m_SpecificInt(Identity)))
+          Result = NewOps[0];
+
+        if (Result) {
+          if (II->hasPoisonGeneratingAnnotations()) {
+            if (!DropFlags)
+              return nullptr;
+
+            DropFlags->push_back(II);
+          }
+
+          return Result;
+        }
+      }
     }
 
     if (isa<GetElementPtrInst>(I)) {
@@ -6532,8 +6553,9 @@ static Value *simplifyLdexp(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   return nullptr;
 }
 
-Value *llvm::simplifyUnaryIntrinsic(Intrinsic::ID IID, Value *Op0,
-                                    FastMathFlags FMF, const SimplifyQuery &Q) {
+static Value *simplifyUnaryIntrinsic(Intrinsic::ID IID, Value *Op0,
+                                     FastMathFlags FMF,
+                                     const SimplifyQuery &Q) {
   // Idempotent functions return the same result when called repeatedly.
   if (isIdempotent(IID))
     if (auto *II = dyn_cast<IntrinsicInst>(Op0))
@@ -6858,9 +6880,9 @@ static Value *simplifySVEIntReduction(Intrinsic::ID IID, Type *ReturnType,
   return nullptr;
 }
 
-Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
-                                     Value *Op0, Value *Op1, FastMathFlags FMF,
-                                     const SimplifyQuery &Q) {
+static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
+                                      Value *Op0, Value *Op1, FastMathFlags FMF,
+                                      const SimplifyQuery &Q) {
   unsigned BitWidth = ReturnType->getScalarSizeInBits();
   switch (IID) {
   case Intrinsic::get_active_lane_mask: {
@@ -6907,6 +6929,24 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
       return X;
     if (match(Op0, m_AShr(m_Negative(), m_Value())))
       return Constant::getNullValue(ReturnType);
+    break;
+  }
+  case Intrinsic::pdep: {
+    if (match(Op0, m_Zero()))
+      return Constant::getNullValue(ReturnType);
+    if (match(Op1, m_Zero()))
+      return Constant::getNullValue(ReturnType);
+    if (match(Op1, m_AllOnes()))
+      return Op0;
+    break;
+  }
+  case Intrinsic::pext: {
+    if (match(Op0, m_Zero()))
+      return Constant::getNullValue(ReturnType);
+    if (match(Op1, m_Zero()))
+      return Constant::getNullValue(ReturnType);
+    if (match(Op1, m_AllOnes()))
+      return Op0;
     break;
   }
   case Intrinsic::ptrmask: {
@@ -7376,8 +7416,16 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
 
     return nullptr;
   }
-  case Intrinsic::vector_splice_left:
   case Intrinsic::vector_splice_right: {
+    // splice.right(splice.left(poison, x, offset), poison, offset) -> x
+    Value *X, *Offset = Args[2];
+    if (match(Args[0], m_Intrinsic<Intrinsic::vector_splice_left>(
+                           m_Poison(), m_Value(X), m_Specific(Offset))) &&
+        isa<PoisonValue>(Args[1]))
+      return X;
+    [[fallthrough]];
+  }
+  case Intrinsic::vector_splice_left: {
     Value *Offset = Args[2];
     auto *Ty = cast<VectorType>(ReturnType);
     if (Q.isUndefValue(Offset))

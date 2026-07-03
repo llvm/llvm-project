@@ -75,8 +75,8 @@ constexpr auto Weak = NativeDylibManager::WeaklyReferencedSymbol;
 class NativeDylibManagerSPSCITest : public ::testing::Test {
 protected:
   void SetUp() override {
-    S = std::make_unique<Session>(mockExecutorProcessInfo(),
-                                  std::make_unique<NoDispatcher>(), noErrors);
+    S = std::make_unique<Session>(mockExecutorProcessInfo(), noDispatch,
+                                  noErrors);
     NDM = cantFail(NativeDylibManager::Create(*S, CI));
   }
 

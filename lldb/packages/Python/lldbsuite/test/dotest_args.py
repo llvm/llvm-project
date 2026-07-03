@@ -298,6 +298,12 @@ def create_parser():
         action="store_true",
         help="Print the lldb version banner during test setup.",
     )
+    group.add_argument(
+        "--lldb-python-dir",
+        dest="lldb_python_dir",
+        metavar="path",
+        help="Path to the directory that contains the 'lldb' Python module. ",
+    )
 
     # Configuration options
     group = parser.add_argument_group("Remote platform options")

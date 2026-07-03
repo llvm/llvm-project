@@ -228,6 +228,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_step:
   case Intrinsic::dx_radians:
   case Intrinsic::dx_interlocked_add:
+  case Intrinsic::dx_interlocked_or:
   case Intrinsic::usub_sat:
   case Intrinsic::vector_reduce_add:
   case Intrinsic::vector_reduce_fadd:
@@ -443,8 +444,8 @@ static Value *expandExpIntrinsic(CallInst *Orig) {
                              ConstantFP::get(EltTy, numbers::log2ef))
                        : ConstantFP::get(EltTy, numbers::log2ef);
   Value *NewX = Builder.CreateFMul(Log2eConst, X);
-  auto *Exp2Call =
-      Builder.CreateIntrinsic(Ty, Intrinsic::exp2, {NewX}, nullptr, "dx.exp2");
+  CallInst *Exp2Call = Builder.CreateIntrinsicWithoutFolding(
+      Ty, Intrinsic::exp2, {NewX}, nullptr, "dx.exp2");
   Exp2Call->setTailCall(Orig->isTailCall());
   Exp2Call->setAttributes(Orig->getAttributes());
   return Exp2Call;
@@ -569,8 +570,8 @@ static Value *expandLogIntrinsic(CallInst *Orig,
                                  cast<FixedVectorType>(Ty)->getNumElements()),
                              ConstantFP::get(EltTy, LogConstVal))
                        : ConstantFP::get(EltTy, LogConstVal);
-  auto *Log2Call =
-      Builder.CreateIntrinsic(Ty, Intrinsic::log2, {X}, nullptr, "elt.log2");
+  CallInst *Log2Call = Builder.CreateIntrinsicWithoutFolding(
+      Ty, Intrinsic::log2, {X}, nullptr, "elt.log2");
   Log2Call->setTailCall(Orig->isTailCall());
   Log2Call->setAttributes(Orig->getAttributes());
   return Builder.CreateFMul(Ln2Const, Log2Call);
@@ -625,8 +626,8 @@ static Value *expandAtan2Intrinsic(CallInst *Orig) {
 
   Value *Tan = Builder.CreateFDiv(Y, X);
 
-  CallInst *Atan =
-      Builder.CreateIntrinsic(Ty, Intrinsic::atan, {Tan}, nullptr, "Elt.Atan");
+  CallInst *Atan = Builder.CreateIntrinsicWithoutFolding(
+      Ty, Intrinsic::atan, {Tan}, nullptr, "Elt.Atan");
   Atan->setTailCall(Orig->isTailCall());
   Atan->setAttributes(Orig->getAttributes());
 
@@ -731,11 +732,11 @@ static Value *expandPowIntrinsic(CallInst *Orig, Intrinsic::ID IntrinsicId) {
   if (IntrinsicId == Intrinsic::powi)
     Y = Builder.CreateSIToFP(Y, Ty);
 
-  auto *Log2Call =
+  Value *Log2Call =
       Builder.CreateIntrinsic(Ty, Intrinsic::log2, {X}, nullptr, "elt.log2");
   auto *Mul = Builder.CreateFMul(Log2Call, Y);
-  auto *Exp2Call =
-      Builder.CreateIntrinsic(Ty, Intrinsic::exp2, {Mul}, nullptr, "elt.exp2");
+  CallInst *Exp2Call = Builder.CreateIntrinsicWithoutFolding(
+      Ty, Intrinsic::exp2, {Mul}, nullptr, "elt.exp2");
   Exp2Call->setTailCall(Orig->isTailCall());
   Exp2Call->setAttributes(Orig->getAttributes());
   return Exp2Call;
@@ -771,15 +772,16 @@ static Value *expandRadiansIntrinsic(CallInst *Orig) {
   return Builder.CreateFMul(X, PiOver180);
 }
 
-static Value *expandInterlockedAddIntrinsic(CallInst *Orig) {
-  // Lower @llvm.dx.interlocked.add(ptr, val) to `atomicrmw add ptr, val
+static Value *expandInterlockedIntrinsic(CallInst *Orig,
+                                         AtomicRMWInst::BinOp Op) {
+  // Lower @llvm.dx.interlocked.OP(ptr, val) to `atomicrmw OP ptr, val
   // monotonic`. HLSL Interlocked operations imply no fence/barrier, which maps
   // to monotonic ordering. The instruction's result is the old value, matching
   // the intrinsic's return value.
   Value *Ptr = Orig->getArgOperand(0);
   Value *Val = Orig->getArgOperand(1);
   IRBuilder<> Builder(Orig);
-  return Builder.CreateAtomicRMW(AtomicRMWInst::Add, Ptr, Val, MaybeAlign(),
+  return Builder.CreateAtomicRMW(Op, Ptr, Val, MaybeAlign(),
                                  AtomicOrdering::Monotonic);
 }
 
@@ -818,7 +820,7 @@ static bool expandBufferLoadIntrinsic(CallInst *Orig, bool IsRaw) {
       Args.push_back(Builder.CreateAdd(Orig->getOperand(2), Tmp));
     }
 
-    CallInst *Load = Builder.CreateIntrinsic(LoadType, LoadIntrinsic, Args);
+    Value *Load = Builder.CreateIntrinsic(LoadType, LoadIntrinsic, Args);
     Loads.push_back(Load);
 
     // extract the buffer load's result
@@ -1245,7 +1247,10 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     Result = expandRadiansIntrinsic(Orig);
     break;
   case Intrinsic::dx_interlocked_add:
-    Result = expandInterlockedAddIntrinsic(Orig);
+    Result = expandInterlockedIntrinsic(Orig, AtomicRMWInst::Add);
+    break;
+  case Intrinsic::dx_interlocked_or:
+    Result = expandInterlockedIntrinsic(Orig, AtomicRMWInst::Or);
     break;
   case Intrinsic::dx_resource_load_rawbuffer:
     if (expandBufferLoadIntrinsic(Orig, /*IsRaw*/ true))

@@ -604,14 +604,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
 
   // Custom handling for PowerPC ucmp instruction
-  if (isPPC64) {
-    // UCMP involves using carries, which only works in 64-bit
-    setOperationAction(ISD::UCMP, MVT::i32, Promote);
-    setOperationAction(ISD::UCMP, MVT::i64, Custom);
-  } else {
-    setOperationAction(ISD::UCMP, MVT::i32, Custom);
-    setOperationAction(ISD::UCMP, MVT::i64, Expand);
-  }
+  setOperationAction(ISD::UCMP, MVT::i32, Custom);
+  setOperationAction(ISD::UCMP, MVT::i64, isPPC64 ? Custom : Expand);
 
   // NOTE: EH_SJLJ_SETJMP/_LONGJMP supported here is NOT intended to support
   // SjLj exception handling but a light-weight setjmp/longjmp replacement to
@@ -12802,6 +12796,15 @@ SDValue PPCTargetLowering::LowerUCMP(SDValue Op, SelectionDAG &DAG) const {
   EVT OpVT = A.getValueType();
   EVT ResVT = Op.getValueType();
 
+  // On PPC64, i32 carries are affected by the upper 32 bits of the registers.
+  // We must zero-extend to i64 to ensure the carry reflects the 32-bit unsigned
+  // comparison.
+  if (Subtarget.isPPC64() && OpVT != MVT::i64) {
+    A = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, A);
+    B = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, B);
+    OpVT = MVT::i64;
+  }
+
   // First compute diff = A - B.
   SDValue Diff = DAG.getNode(ISD::SUB, DL, OpVT, A, B);
 
@@ -13062,8 +13065,8 @@ void PPCTargetLowering::ReplaceNodeResults(SDNode *N,
 //  Other Lowering Code
 //===----------------------------------------------------------------------===//
 
-static Instruction *callIntrinsic(IRBuilderBase &Builder, Intrinsic::ID Id) {
-  return Builder.CreateIntrinsic(Id, {});
+static CallInst *callIntrinsic(IRBuilderBase &Builder, Intrinsic::ID Id) {
+  return Builder.CreateIntrinsicWithoutFolding(Id, {});
 }
 
 Value *PPCTargetLowering::emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy,
@@ -13156,8 +13159,8 @@ Instruction *PPCTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
     // http://www.rdrop.com/users/paulmck/scalability/paper/N2745r.2011.03.04a.html
     // and http://www.cl.cam.ac.uk/~pes20/cppppc/ for justification.
     if (isa<LoadInst>(Inst))
-      return Builder.CreateIntrinsic(Intrinsic::ppc_cfence, {Inst->getType()},
-                                     {Inst});
+      return Builder.CreateIntrinsicWithoutFolding(Intrinsic::ppc_cfence,
+                                                   {Inst->getType()}, {Inst});
     // FIXME: Can use isync for rmw operation.
     return callIntrinsic(Builder, Intrinsic::ppc_lwsync);
   }
