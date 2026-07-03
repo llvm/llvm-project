@@ -125,6 +125,26 @@ void test_byte_read_exempt() {
   (void)c;
 }
 
+// A self-init reads the uninitialized variable in its own initializer and is
+// reported at the root cause, even with no later use.
+void test_self_init() {
+  int x = x; // expected-error {{variable 'x' is read before initialization under profile 'std::init'}} \
+             // expected-note {{variable 'x' is declared here}}
+  (void)&x;
+}
+
+void test_self_init_suppressed() {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init)]] int x = x; // OK: suppressed
+  (void)&x;
+}
+
+// A std::byte self-init stays exempt (paper section 4).
+void test_self_init_byte_exempt() {
+  std::byte b = b;
+  (void)&b;
+}
+
 void take_const_ref(const int &);
 void take_const_ptr(const int *);
 

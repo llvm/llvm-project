@@ -63,8 +63,11 @@ void test_global() {
   (void)y;
 }
 
+// A self-init reads the uninitialized variable in its own initializer; the
+// profile reports it at the root cause even when there is no later use.
 void test_self_init_no_use() {
-  int x = x;
+  int x = x; // expected-error {{variable 'x' is read before initialization under profile 'test::uninit_read'}} \
+             // expected-note {{variable 'x' is declared here}}
   (void)&x;
 }
 
@@ -101,8 +104,9 @@ void instantiate_template_uninit() {
 }
 
 void test_self_init_with_use() {
-  int x = x; // expected-note {{variable 'x' is declared here}}
-  int y = x; // expected-error {{variable 'x' is read before initialization under profile 'test::uninit_read'}}
+  int x = x; // expected-error {{variable 'x' is read before initialization under profile 'test::uninit_read'}} \
+             // expected-note {{variable 'x' is declared here}}
+  int y = x;
   (void)y;
 }
 

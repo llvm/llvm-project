@@ -2123,6 +2123,25 @@ private:
   // diagnostic is printed, further diagnostics for this variable are skipped.
   void diagnoseUnitializedVar(const VarDecl *vd, bool hasSelfInit,
                               UsesVec *vec) {
+    // A self-init (`int x = x;`) reads the uninitialized variable in its own
+    // initializer, but records no entry in the uses vec, so check it first --
+    // at the root cause, mirroring the default path's self-init preference
+    // below.
+    if (hasSelfInit && vd->getInit()) {
+      const Expr *Init = vd->getInit()->IgnoreParenCasts();
+      for (const CFGUninitProfileEntry &E : CFGUninitProfiles) {
+        if (E.ExemptStdByte &&
+            S.Context.getBaseElementType(vd->getType())->isStdByteType())
+          continue;
+        if (!S.Profiles().shouldEmitProfileViolation(E.Name, E.Rule, Init, AC))
+          continue;
+        S.Diag(Init->getBeginLoc(), E.DiagID) << E.Name << vd->getDeclName();
+        S.Diag(vd->getLocation(), diag::note_var_declared_here)
+            << vd->getDeclName();
+        return;
+      }
+    }
+
     // If a CFG-uninit-analysis-requesting profile is enforced at any real
     // use site and is not suppressed there, emit the profile diagnostic
     // and skip the default warning path entirely.
