@@ -1199,28 +1199,30 @@ template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::insert(const_iterator __position, size_type __n, const_reference __x) {
   pointer __p = this->__layout_.__begin_ptr() + (__position - begin());
-  if (__n > 0) {
-    if (__n <= __layout_.__remaining_capacity()) {
-      size_type __old_n  = __n;
-      pointer __end      = __layout_.__end_ptr();
-      pointer __old_last = __end;
-      if (__n > static_cast<size_type>(__end - __p)) {
-        size_type __cx = __n - (__end - __p);
-        __construct_at_end(__cx, __x);
-        __n -= __cx;
-      }
-      if (__n > 0) {
-        __move_range(__p, __old_last, __p + __old_n);
-        const_pointer __xr = pointer_traits<const_pointer>::pointer_to(__x);
-        if (std::__is_pointer_in_range(std::__to_address(__p), std::__to_address(__end), std::addressof(__x)))
-          __xr += __old_n;
-        std::fill_n(__p, __n, *__xr);
-      }
-    } else {
-      _SplitBuffer __v(__recommend(size() + __n), __p - this->__layout_.__begin_ptr(), this->__layout_.__alloc());
-      __v.__construct_at_end(__n, __x);
-      __p = __layout_.__relocate_with_pivot(__v, __p);
+
+  if (__n <= 0)
+    return __make_iter(__p);
+
+  if (__n <= __layout_.__remaining_capacity()) {
+    size_type __old_n  = __n;
+    pointer __end      = __layout_.__end_ptr();
+    pointer __old_last = __end;
+    if (__n > static_cast<size_type>(__end - __p)) {
+      size_type __cx = __n - (__end - __p);
+      __construct_at_end(__cx, __x);
+      __n -= __cx;
     }
+    if (__n > 0) {
+      __move_range(__p, __old_last, __p + __old_n);
+      const_pointer __xr = pointer_traits<const_pointer>::pointer_to(__x);
+      if (std::__is_pointer_in_range(std::__to_address(__p), std::__to_address(__end), std::addressof(__x)))
+        __xr += __old_n;
+      std::fill_n(__p, __n, *__xr);
+    }
+  } else {
+    _SplitBuffer __v(__recommend(size() + __n), __p - this->__layout_.__begin_ptr(), this->__layout_.__alloc());
+    __v.__construct_at_end(__n, __x);
+    __p = __layout_.__relocate_with_pivot(__v, __p);
   }
   return __make_iter(__p);
 }
@@ -1272,35 +1274,39 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Alloca
 vector<_Tp, _Allocator>::__insert_with_size(
     const_iterator __position, _Iterator __first, _Sentinel __last, difference_type __n) {
   pointer __p = this->__layout_.__begin_ptr() + (__position - begin());
-  if (__n > 0) {
-    if (__n <= static_cast<difference_type>(__layout_.__remaining_capacity())) {
-      pointer __end        = __layout_.__end_ptr();
-      pointer __old_last   = __end;
-      difference_type __dx = __end - __p;
-      if (__n > __dx) {
+
+  if (__n <= 0)
+    return __make_iter(__p);
+
+  if (__n > static_cast<difference_type>(__layout_.__remaining_capacity())) {
+    _SplitBuffer __v(__recommend(size() + __n), __p - this->__layout_.__begin_ptr(), this->__layout_.__alloc());
+    __v.__construct_at_end_with_size(std::move(__first), __n);
+    __p = __layout_.__relocate_with_pivot(__v, __p);
+    return __make_iter(__p);
+  }
+
+  pointer __end        = __layout_.__end_ptr();
+  difference_type __dx = __end - __p;
+
+  if (__n <= __dx) {
+    __move_range(__p, __end, __p + __n);
+    __insert_assign_n_unchecked<_AlgPolicy>(std::move(__first), __n, __p);
+    return __make_iter(__p);
+  }
+
+  pointer __old_last = __end;
 #if _LIBCPP_STD_VER >= 23
-        if constexpr (!forward_iterator<_Iterator>) {
-          __construct_at_end(std::move(__first), std::move(__last), __n);
-          std::rotate(__p, __old_last, __end);
-        } else
+  if constexpr (!forward_iterator<_Iterator>) {
+    __construct_at_end(std::move(__first), std::move(__last), __n);
+    std::rotate(__p, __old_last, __end);
+    return __make_iter(__p);
+  }
 #endif
-        {
-          _Iterator __m = std::next(__first, __dx);
-          __construct_at_end(__m, __last, __n - __dx);
-          if (__dx > 0) {
-            __move_range(__p, __old_last, __p + __n);
-            __insert_assign_n_unchecked<_AlgPolicy>(__first, __dx, __p);
-          }
-        }
-      } else {
-        __move_range(__p, __old_last, __p + __n);
-        __insert_assign_n_unchecked<_AlgPolicy>(std::move(__first), __n, __p);
-      }
-    } else {
-      _SplitBuffer __v(__recommend(size() + __n), __p - this->__layout_.__begin_ptr(), this->__layout_.__alloc());
-      __v.__construct_at_end_with_size(std::move(__first), __n);
-      __p = __layout_.__relocate_with_pivot(__v, __p);
-    }
+  _Iterator __m = std::next(__first, __dx);
+  __construct_at_end(__m, __last, __n - __dx);
+  if (__dx > 0) {
+    __move_range(__p, __old_last, __p + __n);
+    __insert_assign_n_unchecked<_AlgPolicy>(__first, __dx, __p);
   }
   return __make_iter(__p);
 }
