@@ -101,7 +101,7 @@ void BPFMIPreEmitChecking::initialize(MachineFunction &MFParm) {
 // Dead correctly, and it is safe to use such information or our purpose.
 static bool hasLiveDefs(const MachineInstr &MI, const TargetRegisterInfo *TRI) {
   const MCRegisterClass *GPR64RegClass =
-      &BPFMCRegisterClasses[BPF::GPRRegClassID];
+      &getBPFMCRegisterClass(BPF::GPRRegClassID);
   std::vector<unsigned> GPR32LiveDefs;
   std::vector<unsigned> GPR64DeadDefs;
 

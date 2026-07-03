@@ -568,6 +568,9 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
     }
   }
 
+  LLVM_DEBUG(dbgs() << "Found a binop of extractions: " << I << "\n  OldCost: "
+                    << OldCost << " vs NewCost: " << NewCost << "\n");
+
   // Aggressively form a vector op if the cost is equal because the transform
   // may enable further optimization.
   // Codegen can reverse this transform (scalarize) if it was not profitable.
@@ -1514,6 +1517,9 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
       CmpInst::isFPPredicate(Pred) ? Instruction::FCmp : Instruction::ICmp;
   auto *VecTy = dyn_cast<FixedVectorType>(X->getType());
   if (!VecTy)
+    return false;
+
+  if (Index0 >= VecTy->getNumElements() || Index1 >= VecTy->getNumElements())
     return false;
 
   InstructionCost Ext0Cost =
@@ -3248,6 +3254,10 @@ bool VectorCombine::foldShufflesOfLengthChangingShuffles(Instruction &I) {
     ChainLength++;
   }
   if (ChainLength <= 1)
+    return false;
+
+  // Bail out if all leaves were poison.
+  if (!Y)
     return false;
 
   if (llvm::all_of(Mask, [&](int M) {
