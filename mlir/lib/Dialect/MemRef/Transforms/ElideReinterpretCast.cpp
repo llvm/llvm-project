@@ -107,7 +107,8 @@ static std::optional<unsigned> getSingleNonUnitDim(MemRefType type) {
 /// Supports ranked, static-shape, rank-preserving reinterpret_casts from
 /// identity-layout sources. Non-scalar results must have static strides
 /// identical to the source identity strides. Dynamic offsets are supported only
-/// for effectively-1D sources.
+/// for effectively-1D sources. Returns nullopt for unsupported
+/// reinterpret_casts.
 ///
 /// Examples that return info:
 ///
@@ -123,7 +124,8 @@ static std::optional<unsigned> getSingleNonUnitDim(MemRefType type) {
 ///     to memref<1xNxKxf32, strided<[?, M, 1]>>
 ///
 ///   reinterpret_cast memref<1xNxMxf32, identity-layout>
-///     to memref<1xNx1xf32, strided<[N*M, M, K]>>
+///     to memref<1xNx1xf32, strided<[K, M, L]>>
+///       ( identity-layout != [K, M, L] )
 static std::optional<ResultNonUnitDimsAndOffsetsForRC>
 getResultNonUnitDimsAndOffsetsForRC(memref::ReinterpretCastOp rc) {
   MemRefType srcType = dyn_cast<MemRefType>(rc.getSource().getType());
@@ -151,20 +153,23 @@ getResultNonUnitDimsAndOffsetsForRC(memref::ReinterpretCastOp rc) {
 
   assert(resType.hasStaticShape() && "expected static shape");
 
-  bool isScalarCopy =
+  // Track result dimensions that produce varying indices; unit dimensions are
+  // always indexed at 0.
+  for (auto [dim, resultSize] : llvm::enumerate(resType.getShape())) {
+    if (resultSize != 1)
+      dimsAndOffs.nonUnitDimsPos.push_back(static_cast<unsigned>(dim));
+  }
+
+  bool isScalarRes =
       llvm::all_of(resType.getShape(), [](int64_t size) { return size == 1; });
 
-  // For scalar copies, result strides are irrelevant, including dynamic ones.
-  if (!isScalarCopy) {
+  // For non-scalar results, verify that strides do not introduce
+  // non-contiguity that would require extra logic.
+  if (!isScalarRes) {
     SmallVector<int64_t> srcIdentityStrides =
         computeStrides(srcType.getShape());
     ArrayRef<int64_t> rcResultStrides = rc.getStaticStrides();
 
-    assert((srcIdentityStrides.size() == rcResultStrides.size()) &&
-           "Expecting same number of strides for rank-preserving "
-           "reinterpret_casts.");
-    // For non-scalar copies, require static result strides identical to the
-    // identity strides of the reinterpret_cast source.
     if (!llvm::all_of(llvm::zip_equal(srcIdentityStrides, rcResultStrides),
                       [](auto pair) {
                         auto [srcStride, resultStride] = pair;
@@ -172,13 +177,14 @@ getResultNonUnitDimsAndOffsetsForRC(memref::ReinterpretCastOp rc) {
                                srcStride == resultStride;
                       }))
       return std::nullopt;
-    // Track result dimensions that produce varying indices; unit dimensions are
-    // always indexed at 0.
-    for (auto [dim, resultSize] : llvm::enumerate(resType.getShape())) {
-      if (resultSize != 1)
-        dimsAndOffs.nonUnitDimsPos.push_back(static_cast<unsigned>(dim));
-    }
   }
+
+  std::optional<unsigned> srcNonUnitDim = getSingleNonUnitDim(srcType);
+
+  // A source with exactly one non-unit dimension cannot be indexed directly by
+  // multiple non-unit result dimensions.
+  if (srcNonUnitDim && dimsAndOffs.nonUnitDimsPos.size() > 1)
+    return std::nullopt;
 
   ArrayRef<int64_t> rcOffsets = rc.getStaticOffsets();
   // FIXME: Despite what `getStaticOffsets` implies, `reinterpret_cast` takes
@@ -194,8 +200,9 @@ getResultNonUnitDimsAndOffsetsForRC(memref::ReinterpretCastOp rc) {
            "static reinterpret_cast offset must delinearize to in-bounds "
            "reinterpret_cast source indices");
 
-    // Relevant for non-scalar copies: assert that the rectangular
-    // copied slice is in bounds.
+    // Sanity check that the reinterpret_cast doesn't create an out-of-bounds
+    // MemRef. Such cases should probably be rejected by Op verifier.
+    // FIXME: Add run-time verification for cases like this.
     assert(llvm::all_of(llvm::enumerate(resType.getShape()),
                         [&](auto it) {
                           unsigned dim = it.index();
@@ -213,15 +220,10 @@ getResultNonUnitDimsAndOffsetsForRC(memref::ReinterpretCastOp rc) {
   // dimensions by delinearizing the offset into source start indices at runtime
   // before adding loop IVs.
 
-  // With an effectively-1D source, a dynamic linear offset can be used directly
-  // as the index of the unique non-unit source dimension.
-  if (!getSingleNonUnitDim(srcType))
+  // With an effectively-1D source, a dynamic offset can be mapped to the unique
+  // non-unit dim. For other cases, bail out.
+  if (!srcNonUnitDim)
     return std::nullopt;
-
-  // Non-scalar copies require identical strides and no rank-changing,
-  // so there can be at most one non-unit result dimension in this case.
-  assert(dimsAndOffs.nonUnitDimsPos.size() <= 1 &&
-         "effectively-1D source cannot have multiple non-unit result dims");
 
   return dimsAndOffs;
 }

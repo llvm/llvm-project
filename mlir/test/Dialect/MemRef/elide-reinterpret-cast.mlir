@@ -228,10 +228,12 @@ func.func private @copy_1D_into_2D_strided_zero_offset(
   return
 }
 
-// CHECK-LABEL: func.func private @copy_1D_into_2D_strided_nonzero_offset(
+/// Offset 10 delinearizes to [0, 0, 10], therefore is only
+/// added to the trailing source dimension.
+// CHECK-LABEL: func.func private @copy_1D_into_2D_strided_nonzero_offset_delinierized_v1(
 // CHECK-SAME:   %[[SRC:.*]]: memref<1x3x1xf32>
 // CHECK-SAME:   %[[DST:.*]]: memref<1x3x11xf32>
-func.func private @copy_1D_into_2D_strided_nonzero_offset(
+func.func private @copy_1D_into_2D_strided_nonzero_offset_delinierized_v1(
   %src : memref<1x3x1xf32>, %dst : memref<1x3x11xf32>) {
   // CHECK-NOT:  memref.reinterpret_cast
   %rc = memref.reinterpret_cast %dst
@@ -255,10 +257,12 @@ func.func private @copy_1D_into_2D_strided_nonzero_offset(
   return
 }
 
-// CHECK-LABEL: func.func private @copy_1D_into_2D_strided_delinearized_offset(
+/// Offset 12 delinearizes to [0, 1, 1], therefore is split across
+/// both the looped source dimension and the trailing source dimension.
+// CHECK-LABEL: func.func private @copy_1D_into_2D_strided_nonzero_offset_delinearized_v2(
 // CHECK-SAME:   %[[SRC:.*]]: memref<1x3x1xf32>
 // CHECK-SAME:   %[[DST:.*]]: memref<1x4x11xf32>
-func.func private @copy_1D_into_2D_strided_delinearized_offset(
+func.func private @copy_1D_into_2D_strided_nonzero_offset_delinearized_v2(
   %src : memref<1x3x1xf32>, %dst : memref<1x4x11xf32>) {
   // CHECK-NOT:  memref.reinterpret_cast
   %rc = memref.reinterpret_cast %dst
