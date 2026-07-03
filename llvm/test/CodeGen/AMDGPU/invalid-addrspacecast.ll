@@ -42,17 +42,16 @@ define amdgpu_kernel void @use_constant32bit_to_local_addrspacecast(ptr addrspac
 }
 
 define amdgpu_kernel void @use_local_to_42_addrspacecast(ptr addrspace(3) %ptr) {
-; SDAG-LABEL: use_local_to_42_addrspacecast:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-NEXT:    v_mov_b32_e32 v1, 0
-; SDAG-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
-; SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SDAG-NEXT:    s_endpgm
-;
-; GISEL-LABEL: use_local_to_42_addrspacecast:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_endpgm
+; CHECK-LABEL: use_local_to_42_addrspacecast:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; CHECK-NEXT:    s_add_i32 s12, s12, s17
+; CHECK-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    flat_store_dwordx2 v[0:1], v[0:1]
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_endpgm
   %cast = addrspacecast ptr addrspace(3) %ptr to ptr addrspace(42)
   store volatile ptr addrspace(42) %cast, ptr addrspace(1) null
   ret void

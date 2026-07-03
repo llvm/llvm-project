@@ -56,3 +56,45 @@ define float @test4(float %a) {
   ret float %r
 }
 
+define void @plain_undef_store(ptr %p) {
+; ALL-LABEL: plain_undef_store:
+; ALL:       # %bb.0:
+; ALL-NEXT:    retq
+  store i32 undef, ptr %p, align 4
+  ret void
+}
+
+define void @volatile_undef_store(ptr %p) {
+; ALL-LABEL: volatile_undef_store:
+; ALL:       # %bb.0:
+; ALL-NEXT:    movl %eax, (%rdi)
+; ALL-NEXT:    retq
+  store volatile i32 undef, ptr %p, align 4
+  ret void
+}
+
+define void @seq_cst_atomic_undef_store(ptr %p) {
+; ALL-LABEL: seq_cst_atomic_undef_store:
+; ALL:       # %bb.0:
+; ALL-NEXT:    movl %eax, (%rdi)
+; ALL-NEXT:    retq
+  store atomic i32 undef, ptr %p seq_cst, align 4
+  ret void
+}
+
+define void @unordered_atomic_undef_store(ptr %p) {
+; ALL-LABEL: unordered_atomic_undef_store:
+; ALL:       # %bb.0:
+; ALL-NEXT:    retq
+  store atomic i32 undef, ptr %p unordered, align 4
+  ret void
+}
+
+define void @monotonic_atomic_undef_store(ptr %p) {
+; ALL-LABEL: monotonic_atomic_undef_store:
+; ALL:       # %bb.0:
+; ALL-NEXT:    movl %eax, (%rdi)
+; ALL-NEXT:    retq
+  store atomic i32 undef, ptr %p monotonic, align 4
+  ret void
+}
