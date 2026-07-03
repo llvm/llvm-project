@@ -6837,14 +6837,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   // Create partial reduction recipes for scaled reductions and transform
   // recipes to abstract recipes if it is legal and beneficial and clamp the
   // range for better cost estimation.
-  // TODO: Enable following transform when the EVL-version of extended-reduction
-  // and mulacc-reduction are implemented.
-  if (!CM.foldTailWithEVL()) {
-    RUN_VPLAN_PASS(VPlanTransforms::createPartialReductions, *Plan, CostCtx,
-                   Range);
-    RUN_VPLAN_PASS(VPlanTransforms::convertToAbstractRecipes, *Plan, CostCtx,
-                   Range);
-  }
+  RUN_VPLAN_PASS(VPlanTransforms::createPartialReductions, *Plan, CostCtx,
+                 Range);
+  RUN_VPLAN_PASS(VPlanTransforms::convertToAbstractRecipes, *Plan, CostCtx,
+                 Range);
 
   // Interleave memory: for each Interleave Group we marked earlier as relevant
   // for this VPlan, replace the Recipes widening its memory instructions with a

@@ -3152,6 +3152,28 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
                                            Mask ? Mask : Plan->getTrue(), &EVL},
                                           IntrR->getScalarType(), {}, {}, DL);
 
+  // Transforms the VPReductionRecipe inside the VPExpressionRecipe.
+  if (auto *Expr = dyn_cast<VPExpressionRecipe>(&CurRecipe))
+    if (match(Expr->getOperand(Expr->getNumOperands() - 1),
+              m_RemoveMask(HeaderMask, Mask))) {
+      // Decompose first and construct with VPReductionEVLRecipe later.
+      SmallVector<VPSingleDefRecipe *> ExpressionRecipes = Expr->decompose();
+      VPReductionRecipe *Red =
+          cast<VPReductionRecipe>(ExpressionRecipes.pop_back_val());
+
+      // Convert to VPReductionEVLRecipe.
+      auto *NewRed = new VPReductionEVLRecipe(
+          *Red, EVL, Mask ? Mask : Plan->getTrue(), Red->getDebugLoc());
+      NewRed->insertBefore(Expr);
+      ExpressionRecipes.push_back(NewRed);
+      auto *NewExpr =
+          new VPExpressionRecipe(Expr->getExpressionType(), ExpressionRecipes);
+
+      // Replace uses and remove the old non-EVL reduction.
+      Red->replaceAllUsesWith(NewExpr);
+      Red->eraseFromParent();
+      return NewExpr;
+    }
   return nullptr;
 }
 
@@ -4187,7 +4209,7 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
       }
 
       if (auto *Expr = dyn_cast<VPExpressionRecipe>(&R)) {
-        Expr->decompose();
+        (void)Expr->decompose();
         Expr->eraseFromParent();
         continue;
       }
