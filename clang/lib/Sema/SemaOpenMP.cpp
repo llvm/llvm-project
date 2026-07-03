@@ -13655,9 +13655,8 @@ static bool checkMultidimClauses(SemaBase &SemaRef,
                                  ArrayRef<OMPClause *> Clauses,
                                  bool MayHaveBareClause = false) {
   auto BareClauseIt =
-      MayHaveBareClause
-          ? llvm::find_if(Clauses, llvm::IsaPred<OMPXBareClause>)
-          : Clauses.end();
+      MayHaveBareClause ? llvm::find_if(Clauses, llvm::IsaPred<OMPXBareClause>)
+                        : Clauses.end();
   auto ThreadLimitIt =
       llvm::find_if(Clauses, llvm::IsaPred<OMPThreadLimitClause>);
   auto NumTeamsIt = llvm::find_if(Clauses, llvm::IsaPred<OMPNumTeamsClause>);
