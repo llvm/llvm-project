@@ -33,6 +33,7 @@ public:
     KIND_INTEGER,
     KIND_LOGICAL,
     KIND_REAL,
+    KIND_COMPLEX,
     KIND_FUNCTION,
     KIND_UNKNOWN
   };
@@ -206,6 +207,11 @@ CompilerType TypeSystemFortran::CreateType(uint32_t kind, uint64_t bitsize,
       name.SetCString("INTEGER");
     underlying_kind = FortranType::KIND_INTEGER;
     break;
+  case dwarf::DW_ATE_complex_float:
+    if (bitsize == 64)
+      name.SetCString("COMPLEX");
+    underlying_kind = FortranType::KIND_COMPLEX;
+    break;
   default:
     return CompilerType();
   }
@@ -222,6 +228,7 @@ ConstString TypeSystemFortran::GetTypeName(opaque_compiler_type_t type,
   case FortranType::KIND_INTEGER:
   case FortranType::KIND_LOGICAL:
   case FortranType::KIND_REAL:
+  case FortranType::KIND_COMPLEX:
     return fortran_type->GetName();
   default:
     return ConstString("Unsupported");
@@ -242,6 +249,15 @@ CompilerType TypeSystemFortran::GetBasicTypeFromAST(BasicType basic_type) {
   case eBasicTypeBool:
     return GetOrCreateFortranType(FortranType::KIND_LOGICAL, 32,
                                   ConstString("LOGICAL"));
+  case eBasicTypeFloatComplex:
+    return GetOrCreateFortranType(FortranType::KIND_COMPLEX, 64,
+                                  ConstString("COMPLEX"));
+  case eBasicTypeDoubleComplex:
+    return GetOrCreateFortranType(FortranType::KIND_COMPLEX, 128,
+                                  ConstString("COMPLEX(KIND=8)"));
+  case eBasicTypeLongDoubleComplex:
+    return GetOrCreateFortranType(FortranType::KIND_COMPLEX, 256,
+                                  ConstString("COMPLEX(KIND=16)"));
   default:
     return CompilerType();
   }
@@ -280,6 +296,9 @@ TypeSystemFortran::GetTypeInfo(opaque_compiler_type_t type,
     if (type_kind == FortranType::KIND_REAL)
       builtin_type_flags |= eTypeIsFloat;
     break;
+  case FortranType::KIND_COMPLEX:
+    builtin_type_flags |= eTypeIsComplex;
+    break;
   default:
     break;
   }
@@ -300,6 +319,7 @@ Encoding TypeSystemFortran::GetEncoding(opaque_compiler_type_t type) {
     return eEncodingInvalid;
   FortranType *fortran_type = static_cast<FortranType *>(type);
   switch (fortran_type->GetKind()) {
+  case FortranType::KIND_COMPLEX:
   case FortranType::KIND_REAL:
     return eEncodingIEEE754;
   case FortranType::KIND_INTEGER:
@@ -322,6 +342,8 @@ Format TypeSystemFortran::GetFormat(opaque_compiler_type_t type) {
     return eFormatFloat;
   case FortranType::KIND_LOGICAL:
     return eFormatBoolean;
+  case FortranType::KIND_COMPLEX:
+    return eFormatComplex;
   default:
     return eFormatDefault;
   }
@@ -362,6 +384,14 @@ bool TypeSystemFortran::DumpTypeValue(
   case FortranType::KIND_REAL:
   case FortranType::KIND_LOGICAL:
 
+    format_data.SetData(data, 0, data.GetByteSize());
+    format_data.SetAddressByteSize(data.GetAddressByteSize());
+    format_data.SetByteOrder(m_byte_order);
+    return DumpDataExtractor(format_data, &s, data_offset, format,
+                             data_byte_size, 1 /*item_count*/, UINT32_MAX,
+                             LLDB_INVALID_ADDRESS, bitfield_bit_size,
+                             bitfield_bit_offset, exe_scope);
+  case FortranType::KIND_COMPLEX:
     format_data.SetData(data, 0, data.GetByteSize());
     format_data.SetAddressByteSize(data.GetAddressByteSize());
     format_data.SetByteOrder(m_byte_order);
