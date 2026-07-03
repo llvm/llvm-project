@@ -47,6 +47,7 @@
 #include <__ranges/container_compatible_range.h>
 #include <__ranges/from_range.h>
 #include <__split_buffer>
+#include <__string/constexpr_c_functions.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_allocator.h>
@@ -58,7 +59,7 @@
 #include <__type_traits/is_relocatable.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
-#include <__type_traits/remove_const_ref.h>
+#include <__type_traits/is_trivially_copyable.h>
 #include <__type_traits/type_identity.h>
 #include <__utility/declval.h>
 #include <__utility/exception_guard.h>
@@ -1126,6 +1127,18 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 vector<_Tp, _Allocator>::__move_range(pointer __from_s, pointer __from_e, pointer __to) {
   pointer __old_last  = __layout_.__end_ptr();
   difference_type __n = __old_last - __to;
+#ifndef _LIBCPP_CXX03_LANG
+  if constexpr (__allocator_has_trivial_move_construct_v<allocator_type, value_type> &&
+                is_trivially_copyable<value_type>::value) {
+    if (!__libcpp_is_constant_evaluated()) {
+      auto __count = __from_e - __from_s;
+      __annotate_increase(__count - __n);
+      std::__constexpr_memmove(std::__to_address(__to), std::__to_address(__from_s), __element_count(__count));
+      __layout_.__set_bound_using_pointer(__to + __count);
+      return;
+    }
+  }
+#endif
   {
     pointer __i = __from_s + __n;
     _ConstructTransaction __tx(*this, __from_e - __i);
