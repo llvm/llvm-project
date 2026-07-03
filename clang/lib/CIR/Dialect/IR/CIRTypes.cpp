@@ -1174,20 +1174,31 @@ BoolType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
 //  DataMemberType Definitions
 //===----------------------------------------------------------------------===//
 
+static mlir::Type getDataMemberLayoutType(const mlir::DataLayout &dataLayout,
+                                          mlir::MLIRContext *ctx) {
+  // Itanium ABI: a data member pointer is a ptrdiff_t, an integer of the
+  // pointer index width.
+  // TODO: consider data member pointer layout in other ABIs
+  auto voidPtrTy = cir::PointerType::get(cir::VoidType::get(ctx));
+  uint64_t width = dataLayout.getTypeIndexBitwidth(voidPtrTy).value_or(
+      dataLayout.getTypeSizeInBits(voidPtrTy).getFixedValue());
+  return cir::IntType::get(ctx, width, /*is_signed=*/true);
+}
+
 llvm::TypeSize
 DataMemberType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
                                   ::mlir::DataLayoutEntryListRef params) const {
-  // FIXME: consider size differences under different ABIs
   assert(!MissingFeatures::cxxABI());
-  return llvm::TypeSize::getFixed(64);
+  return dataLayout.getTypeSizeInBits(
+      getDataMemberLayoutType(dataLayout, getContext()));
 }
 
 uint64_t
 DataMemberType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
                                 ::mlir::DataLayoutEntryListRef params) const {
-  // FIXME: consider alignment differences under different ABIs
   assert(!MissingFeatures::cxxABI());
-  return 8;
+  return dataLayout.getTypeABIAlignment(
+      getDataMemberLayoutType(dataLayout, getContext()));
 }
 
 //===----------------------------------------------------------------------===//

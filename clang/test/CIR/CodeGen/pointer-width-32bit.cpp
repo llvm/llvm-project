@@ -25,18 +25,30 @@ public:
 
 void A::f() {}
 
-// The module carries a #cir.ptr_spec pointer data-layout entry (size/abi/preferred
-// in bits) that drives both cir.ptr and cir.vptr widths. The 4-byte pointer is
-// immediately followed by 'x' at offset 4 with no padding, and each record is
-// 4-byte aligned.
+// A data member pointer is ptrdiff_t-sized, so 'x' again lands at offset 4.
+struct M {
+  int S::*pm;
+  int x;
+};
+
+M m;
+
+// Each 4-byte pointer is followed by 'x' at offset 4 with no padding; records
+// are 4-byte aligned.
 // CIR-DAG: !rec_S = !cir.struct<"S" {!cir.ptr<!s32i>, !s32i}>
 // CIR-DAG: !rec_A = !cir.struct<class "A" {!cir.vptr, !s32i}>
+// -emit-cir prints after cir-cxxabi-lowering, so M's member pointer is
+// already a 32-bit integer here.
+// CIR-DAG: !rec_M = !cir.struct<"M" {!s32i, !s32i}>
 // CIR-DAG: !cir.ptr<!cir.void> = #cir.ptr_spec<size = 32, abi = 32, preferred = 32, index = 32>
 // CIR: cir.global external @s = #cir.zero : !rec_S {alignment = 4 : i64}
+// CIR: cir.global external @m = #cir.const_record<{#cir.int<-1> : !s32i, #cir.int<0> : !s32i}> : !rec_M {alignment = 4 : i64}
 // CIR: cir.global{{.*}}@_ZTV1A = #cir.vtable<{{.*}}{alignment = 4 : i64}
 
 // LLVM: @s = global %struct.S zeroinitializer, align 4
+// LLVM: @m = global %struct.M { i32 -1, i32 0 }, align 4
 // LLVM: @_ZTV1A = global { [3 x ptr] } {{.*}}, align 4
 
 // OGCG: @s = global %struct.S zeroinitializer, align 4
+// OGCG: @m = global %struct.M { i32 -1, i32 0 }, align 4
 // OGCG: @_ZTV1A = {{.*}}constant { [3 x ptr] } {{.*}}, align 4
