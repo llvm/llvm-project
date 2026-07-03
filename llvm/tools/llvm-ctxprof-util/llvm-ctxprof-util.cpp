@@ -1,4 +1,4 @@
-//===--- PGOCtxProfJSONReader.h - JSON format  ------------------*- C++ -*-===//
+//===--- llvm-ctxprof-util - utilities for ctxprof --------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,25 +8,23 @@
 ///
 /// \file
 ///
-/// JSON format for the contextual profile for testing.
+/// Utilities for manipulating contextual profiles
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/GlobalValue.h"
-#include "llvm/ProfileData/CtxInstrContextNode.h"
+#include "llvm/ProfileData/PGOCtxProfReader.h"
 #include "llvm/ProfileData/PGOCtxProfWriter.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
-static cl::SubCommand FromJSON("fromJSON", "Convert from json");
+static cl::SubCommand FromYAML("fromYAML", "Convert from yaml");
+static cl::SubCommand ToYAML("toYAML", "Convert to yaml");
 
 static cl::opt<std::string> InputFilename(
     "input", cl::value_desc("input"), cl::init("-"),
@@ -39,15 +37,16 @@ static cl::opt<std::string> InputFilename(
         "'Contexts', optional. An array containing arrays of contexts. The "
         "context array at a position 'i' is the set of callees at that "
         "callsite index. Use an empty array to indicate no callees."),
-    cl::sub(FromJSON));
+    cl::sub(FromYAML), cl::sub(ToYAML));
 
 static cl::opt<std::string> OutputFilename("output", cl::value_desc("output"),
                                            cl::init("-"),
                                            cl::desc("Output file"),
-                                           cl::sub(FromJSON));
+                                           cl::sub(FromYAML), cl::sub(ToYAML));
 
+namespace {
 // Save the bitstream profile from the JSON representation.
-Error convertFromJSON() {
+Error convertFromYaml() {
   auto BufOrError =
       MemoryBuffer::getFileOrSTDIN(InputFilename, /*IsText=*/true);
   if (!BufOrError)
@@ -62,14 +61,33 @@ Error convertFromJSON() {
   if (EC)
     return createStringError(EC, "failed to open output");
 
-  return llvm::createCtxProfFromJSON(BufOrError.get()->getBuffer(), Out);
+  return llvm::createCtxProfFromYAML(BufOrError.get()->getBuffer(), Out);
 }
+
+Error convertToYaml() {
+  auto BufOrError = MemoryBuffer::getFileOrSTDIN(InputFilename);
+  if (!BufOrError)
+    return createFileError(InputFilename, BufOrError.getError());
+
+  std::error_code EC;
+  raw_fd_ostream Out(OutputFilename, EC);
+  if (EC)
+    return createStringError(EC, "failed to open output");
+  PGOCtxProfileReader Reader(BufOrError.get()->getBuffer());
+  auto Prof = Reader.loadProfiles();
+  if (!Prof)
+    return Prof.takeError();
+  llvm::convertCtxProfToYaml(Out, *Prof);
+  Out << "\n";
+  return Error::success();
+}
+} // namespace
 
 int main(int argc, const char **argv) {
   cl::ParseCommandLineOptions(argc, argv, "LLVM Contextual Profile Utils\n");
   ExitOnError ExitOnErr("llvm-ctxprof-util: ");
-  if (FromJSON) {
-    if (auto E = convertFromJSON()) {
+  auto HandleErr = [&](Error E) -> int {
+    if (E) {
       handleAllErrors(std::move(E), [&](const ErrorInfoBase &E) {
         E.log(errs());
         errs() << "\n";
@@ -77,7 +95,14 @@ int main(int argc, const char **argv) {
       return 1;
     }
     return 0;
-  }
+  };
+
+  if (FromYAML)
+    return HandleErr(convertFromYaml());
+
+  if (ToYAML)
+    return HandleErr(convertToYaml());
+
   cl::PrintHelpMessage();
   return 1;
 }

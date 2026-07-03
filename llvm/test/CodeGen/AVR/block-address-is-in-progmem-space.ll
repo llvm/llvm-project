@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=atmega328 < %s -march=avr | FileCheck %s
+; RUN: llc -mcpu=atmega328 < %s -mtriple=avr | FileCheck %s
 
 ; This test verifies that the pointer to a basic block
 ; should always be a pointer in address space 1.

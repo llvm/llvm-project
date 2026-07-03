@@ -6,8 +6,8 @@
 ---
 # CHECK-LABEL: name: func
 # CHECK: registers:
-# CHECK:   - { id: 0, class: gpr, preferred-register: '' }
-# CHECK:   - { id: 1, class: fpr, preferred-register: '' }
+# CHECK:   - { id: 0, class: gpr, preferred-register: '', flags: [  ] }
+# CHECK:   - { id: 1, class: fpr, preferred-register: '', flags: [  ] }
 name: func
 body: |
   bb.0:

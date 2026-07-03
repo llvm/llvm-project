@@ -572,13 +572,13 @@ public:
     isl::schedule_node_band Band = RootBand;
     isl::ctx Ctx = Band.ctx();
 
-    // Do not merge permutable band to avoid loosing the permutability property.
+    // Do not merge permutable band to avoid losing the permutability property.
     // Cannot collapse even two permutable loops, they might be permutable
     // individually, but not necassarily across.
     if (unsignedFromIslSize(Band.n_member()) > 1u && Band.permutable())
       return getBase().visitBand(Band);
 
-    // Find collapsable bands.
+    // Find collapsible bands.
     SmallVector<isl::schedule_node_band> Nest;
     int NumTotalLoops = 0;
     isl::schedule_node Body;
@@ -884,10 +884,10 @@ public:
       collectPotentiallyFusableBands(Child, Bands, Child);
     }
 
-    // Direct children that had at least one of its decendants fused.
+    // Direct children that had at least one of its descendants fused.
     SmallDenseSet<isl_schedule_node *, 4> ChangedDirectChildren;
 
-    // Fuse neigboring bands until reaching the end of candidates.
+    // Fuse neighboring bands until reaching the end of candidates.
     int i = 0;
     while (i + 1 < (int)Bands.size()) {
       isl::schedule Fused =
@@ -972,6 +972,9 @@ BandAttr *polly::getBandAttr(isl::schedule_node MarkOrBand) {
 }
 
 isl::schedule polly::hoistExtensionNodes(isl::schedule Sched) {
+  if (Sched.is_null())
+    return {};
+
   // If there is no extension node in the first place, return the original
   // schedule tree.
   if (!containsExtensionNode(Sched))
@@ -1126,6 +1129,8 @@ isl::set polly::getPartialTilePrefixes(isl::set ScheduleRange,
 
 isl::union_set polly::getIsolateOptions(isl::set IsolateDomain,
                                         unsigned OutDimsNum) {
+  if (IsolateDomain.is_null())
+    return {};
   unsigned Dims = unsignedFromIslSize(IsolateDomain.tuple_dim());
   assert(OutDimsNum <= Dims &&
          "The isl::set IsolateDomain is used to describe the range of schedule "

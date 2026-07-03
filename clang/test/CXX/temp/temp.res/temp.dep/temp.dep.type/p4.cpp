@@ -326,52 +326,52 @@ namespace N0 {
       // None of the following should be found in the current instantiation.
 
       new M4; // expected-error{{unknown type name 'M4'}}
-      new B::M4; // expected-error{{no type named 'M4' in 'B<T>'}}
+      new B::M4; // expected-error{{no type named 'M4' in 'N0::B<T>'}}
       new A::M4; // expected-error{{no type named 'M4' in 'N0::A'}}
       new B::A::M4; // expected-error{{no type named 'M4' in 'N0::A'}}
 
       x4; // expected-error{{use of undeclared identifier 'x4'}}
-      B::x4; // expected-error{{no member named 'x4' in 'B<T>'}}
+      B::x4; // expected-error{{no member named 'x4' in 'N0::B<T>'}}
       A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
       B::A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
       f4(); // expected-error{{use of undeclared identifier 'f4'}}
-      B::f4(); // expected-error{{no member named 'f4' in 'B<T>'}}
+      B::f4(); // expected-error{{no member named 'f4' in 'N0::B<T>'}}
       A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
       B::A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
 
-      this->x4; // expected-error{{no member named 'x4' in 'B<T>'}}
-      this->B::x4; // expected-error{{no member named 'x4' in 'B<T>'}}
+      this->x4; // expected-error{{no member named 'x4' in 'N0::B<T>'}}
+      this->B::x4; // expected-error{{no member named 'x4' in 'N0::B<T>'}}
       this->A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
       this->B::A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
-      this->f4(); // expected-error{{no member named 'f4' in 'B<T>'}}
-      this->B::f4(); // expected-error{{no member named 'f4' in 'B<T>'}}
+      this->f4(); // expected-error{{no member named 'f4' in 'N0::B<T>'}}
+      this->B::f4(); // expected-error{{no member named 'f4' in 'N0::B<T>'}}
       this->A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
       this->B::A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
 
-      a->x4; // expected-error{{no member named 'x4' in 'B<T>'}}
-      a->B::x4; // expected-error{{no member named 'x4' in 'B<T>'}}
+      a->x4; // expected-error{{no member named 'x4' in 'N0::B<T>'}}
+      a->B::x4; // expected-error{{no member named 'x4' in 'N0::B<T>'}}
       a->A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
       a->B::A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
-      a->f4(); // expected-error{{no member named 'f4' in 'B<T>'}}
-      a->B::f4(); // expected-error{{no member named 'f4' in 'B<T>'}}
+      a->f4(); // expected-error{{no member named 'f4' in 'N0::B<T>'}}
+      a->B::f4(); // expected-error{{no member named 'f4' in 'N0::B<T>'}}
       a->A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
       a->B::A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
 
-      (*this).x4; // expected-error{{no member named 'x4' in 'B<T>'}}
-      (*this).B::x4; // expected-error{{no member named 'x4' in 'B<T>'}}
+      (*this).x4; // expected-error{{no member named 'x4' in 'N0::B<T>'}}
+      (*this).B::x4; // expected-error{{no member named 'x4' in 'N0::B<T>'}}
       (*this).A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
       (*this).B::A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
-      (*this).f4(); // expected-error{{no member named 'f4' in 'B<T>'}}
-      (*this).B::f4(); // expected-error{{no member named 'f4' in 'B<T>'}}
+      (*this).f4(); // expected-error{{no member named 'f4' in 'N0::B<T>'}}
+      (*this).B::f4(); // expected-error{{no member named 'f4' in 'N0::B<T>'}}
       (*this).A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
       (*this).B::A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
 
-      b.x4; // expected-error{{no member named 'x4' in 'B<T>'}}
-      b.B::x4; // expected-error{{no member named 'x4' in 'B<T>'}}
+      b.x4; // expected-error{{no member named 'x4' in 'N0::B<T>'}}
+      b.B::x4; // expected-error{{no member named 'x4' in 'N0::B<T>'}}
       b.A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
       b.B::A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
-      b.f4(); // expected-error{{no member named 'f4' in 'B<T>'}}
-      b.B::f4(); // expected-error{{no member named 'f4' in 'B<T>'}}
+      b.f4(); // expected-error{{no member named 'f4' in 'N0::B<T>'}}
+      b.B::f4(); // expected-error{{no member named 'f4' in 'N0::B<T>'}}
       b.A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
       b.B::A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
     }
@@ -424,7 +424,7 @@ namespace N2 {
       void not_instantiated(A *a, B *b) {
         b->x; // expected-error{{no member named 'x' in 'N2::A::B'}}
         b->B::x; // expected-error{{no member named 'x' in 'N2::A::B'}}
-        a->B::C::x; // expected-error{{no member named 'x' in 'A<T>'}}
+        a->B::C::x; // expected-error{{no member named 'x' in 'N2::A<T>'}}
       }
     };
 

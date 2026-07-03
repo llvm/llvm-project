@@ -23,6 +23,9 @@ define half @caller(<32 x half> %A) nounwind {
 ; CHECK-NEXT:    fmv.h.x fa2, a2
 ; CHECK-NEXT:    fmv.h.x fa3, a3
 ; CHECK-NEXT:    fmv.h.x fa4, a4
+; CHECK-NEXT:    fmv.h.x fa5, a5
+; CHECK-NEXT:    fmv.h.x fa6, a6
+; CHECK-NEXT:    fmv.h.x fa7, a7
 ; CHECK-NEXT:    flh ft0, 32(sp)
 ; CHECK-NEXT:    flh ft1, 36(sp)
 ; CHECK-NEXT:    flh ft2, 40(sp)
@@ -47,21 +50,18 @@ define half @caller(<32 x half> %A) nounwind {
 ; CHECK-NEXT:    flh fs9, 116(sp)
 ; CHECK-NEXT:    flh fs10, 120(sp)
 ; CHECK-NEXT:    flh fs11, 124(sp)
-; CHECK-NEXT:    fmv.h.x fa5, a5
-; CHECK-NEXT:    fmv.h.x fa6, a6
-; CHECK-NEXT:    fmv.h.x fa7, a7
-; CHECK-NEXT:    fsh fs11, 22(sp)
-; CHECK-NEXT:    fsh fs10, 20(sp)
-; CHECK-NEXT:    fsh fs9, 18(sp)
 ; CHECK-NEXT:    fsh fs8, 16(sp)
-; CHECK-NEXT:    fsh fs7, 14(sp)
-; CHECK-NEXT:    fsh fs6, 12(sp)
-; CHECK-NEXT:    fsh fs5, 10(sp)
+; CHECK-NEXT:    fsh fs9, 18(sp)
+; CHECK-NEXT:    fsh fs10, 20(sp)
+; CHECK-NEXT:    fsh fs11, 22(sp)
 ; CHECK-NEXT:    fsh fs4, 8(sp)
-; CHECK-NEXT:    fsh fs3, 6(sp)
-; CHECK-NEXT:    fsh fs2, 4(sp)
-; CHECK-NEXT:    fsh fs1, 2(sp)
+; CHECK-NEXT:    fsh fs5, 10(sp)
+; CHECK-NEXT:    fsh fs6, 12(sp)
+; CHECK-NEXT:    fsh fs7, 14(sp)
 ; CHECK-NEXT:    fsh fs0, 0(sp)
+; CHECK-NEXT:    fsh fs1, 2(sp)
+; CHECK-NEXT:    fsh fs2, 4(sp)
+; CHECK-NEXT:    fsh fs3, 6(sp)
 ; CHECK-NEXT:    call callee
 ; CHECK-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 32

@@ -5,6 +5,6 @@ int foo(int x);
 
 int bar(int x)
 {
-  // expected-error@+1 {{'musttail' attribute for this call is impossible because external calls can not be tail called on PPC}}
+  // expected-error@+1 {{'musttail' attribute for this call is impossible because external calls cannot be tail called on PPC}}
   [[clang::musttail]] return foo(x);
 }

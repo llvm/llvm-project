@@ -8,7 +8,7 @@
 typedef __fp16 __fp16v2 __attribute__((ext_vector_type(2)));
 
 // CHECK: call half @llvm.nvvm.ex2.approx.f16(half {{.*}})
-// CHECK: call <2 x half> @llvm.nvvm.ex2.approx.f16x2(<2 x half> {{.*}})
+// CHECK: call <2 x half> @llvm.nvvm.ex2.approx.v2f16(<2 x half> {{.*}})
 // CHECK: call half @llvm.nvvm.fma.rn.relu.f16(half {{.*}}, half {{.*}}, half {{.*}})
 // CHECK: call half @llvm.nvvm.fma.rn.ftz.relu.f16(half {{.*}}, half {{.*}}, half {{.*}})
 // CHECK: call <2 x half> @llvm.nvvm.fma.rn.relu.f16x2(<2 x half> {{.*}}, <2 x half> {{.*}}, <2 x half> {{.*}})
@@ -52,8 +52,8 @@ typedef __fp16 __fp16v2 __attribute__((ext_vector_type(2)));
 // CHECK: call <2 x half> @llvm.nvvm.fmax.ftz.xorsign.abs.f16x2(<2 x half> {{.*}}, <2 x half> {{.*}})
 // CHECK: call <2 x half> @llvm.nvvm.fmax.nan.xorsign.abs.f16x2(<2 x half> {{.*}}, <2 x half> {{.*}})
 // CHECK: call <2 x half> @llvm.nvvm.fmax.ftz.nan.xorsign.abs.f16x2(<2 x half> {{.*}}, <2 x half> {{.*}})
-// CHECK: call half @llvm.nvvm.ldg.global.f.f16.p0(ptr {{.*}}, i32 2)
-// CHECK: call <2 x half> @llvm.nvvm.ldg.global.f.v2f16.p0(ptr {{.*}}, i32 4)
+// CHECK: load half, ptr addrspace(1) {{.*}}, align 2, !invariant.load
+// CHECK: load <2 x half>, ptr addrspace(1) {{.*}}, align 4, !invariant.load
 // CHECK: call half @llvm.nvvm.ldu.global.f.f16.p0(ptr {{.*}}, i32 2)
 // CHECK: call <2 x half> @llvm.nvvm.ldu.global.f.v2f16.p0(ptr {{.*}}, i32 4)
 __device__ void nvvm_native_half_types(void *a, void*b, void*c, __fp16* out) {

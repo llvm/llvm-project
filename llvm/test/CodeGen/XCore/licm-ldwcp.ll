@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=xcore -asm-verbose=0 | FileCheck %s
+; RUN: llc < %s -mtriple=xcore -asm-verbose=0 | FileCheck %s
 
 ; MachineLICM should hoist the LDWCP out of the loop.
 

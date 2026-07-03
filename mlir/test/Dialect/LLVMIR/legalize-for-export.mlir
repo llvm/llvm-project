@@ -42,7 +42,6 @@ llvm.func @repeated_successor_openmp(%arg0: i64, %arg1: i64, %arg2: i64, %arg3: 
     // CHECK: ^[[BB2]](%[[ARG:.*]]: i64):
     // CHECK:  llvm.br ^[[BB1]](%[[ARG]] : i64)
     }
-    omp.terminator
   }
   llvm.return
 }

@@ -34,23 +34,23 @@
 bool __atomic_is_lock_free_c(size_t size, void *ptr)
     EXTERNAL_NAME(__atomic_is_lock_free);
 
-void __atomic_load_c(int size, void *src, void *dest,
-                     int model) EXTERNAL_NAME(__atomic_load);
+void __atomic_load_c(size_t size, void *src, void *dest, int model)
+    EXTERNAL_NAME(__atomic_load);
 
 uint8_t __atomic_load_1(uint8_t *src, int model);
 uint16_t __atomic_load_2(uint16_t *src, int model);
 uint32_t __atomic_load_4(uint32_t *src, int model);
 uint64_t __atomic_load_8(uint64_t *src, int model);
 
-void __atomic_store_c(int size, void *dest, const void *src,
-                      int model) EXTERNAL_NAME(__atomic_store);
+void __atomic_store_c(size_t size, void *dest, const void *src, int model)
+    EXTERNAL_NAME(__atomic_store);
 
 void __atomic_store_1(uint8_t *dest, uint8_t val, int model);
 void __atomic_store_2(uint16_t *dest, uint16_t val, int model);
 void __atomic_store_4(uint32_t *dest, uint32_t val, int model);
 void __atomic_store_8(uint64_t *dest, uint64_t val, int model);
 
-void __atomic_exchange_c(int size, void *ptr, const void *val, void *old,
+void __atomic_exchange_c(size_t size, void *ptr, const void *val, void *old,
                          int model) EXTERNAL_NAME(__atomic_exchange);
 
 uint8_t __atomic_exchange_1(uint8_t *dest, uint8_t val, int model);
@@ -58,7 +58,7 @@ uint16_t __atomic_exchange_2(uint16_t *dest, uint16_t val, int model);
 uint32_t __atomic_exchange_4(uint32_t *dest, uint32_t val, int model);
 uint64_t __atomic_exchange_8(uint64_t *dest, uint64_t val, int model);
 
-int __atomic_compare_exchange_c(int size, void *ptr, void *expected,
+int __atomic_compare_exchange_c(size_t size, void *ptr, void *expected,
                                 const void *desired, int success, int failure)
     EXTERNAL_NAME(__atomic_compare_exchange);
 
@@ -144,7 +144,7 @@ typedef uint64_t maxuint_t;
 
 #define LEN(array) (sizeof(array) / sizeof(array[0]))
 
-__attribute__((aligned(16))) static const char data[] = {
+__attribute__((aligned(16))) static char data[] = {
     0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
     0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
     0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27,

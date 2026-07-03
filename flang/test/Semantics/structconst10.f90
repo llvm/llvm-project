@@ -14,12 +14,12 @@ end module m1
 program test
   use m1
   type(a3) v
-  !PORTABILITY: Whole parent component 'a2' in structure constructor should not be anonymous
+  !PORTABILITY: Whole parent component 'a2' in structure constructor should not be anonymous [-Wanonymous-parents]
   v=a3(a2(x1=18,x2=6),x3=6)
-  !PORTABILITY: Whole parent component 'a1' in structure constructor should not be anonymous
+  !PORTABILITY: Whole parent component 'a1' in structure constructor should not be anonymous [-Wanonymous-parents]
   v=a3(a1(x1=18),x2=6,x3=6)
-  !PORTABILITY: Whole parent component 'a2' in structure constructor should not be anonymous
-  !PORTABILITY: Whole parent component 'a1' in structure constructor should not be anonymous
+  !PORTABILITY: Whole parent component 'a2' in structure constructor should not be anonymous [-Wanonymous-parents]
+  !PORTABILITY: Whole parent component 'a1' in structure constructor should not be anonymous [-Wanonymous-parents]
   v=a3(a2(a1(x1=18),x2=6),x3=6)
   v=a3(a2=a2(a1=a1(x1=18),x2=6),x3=6) ! ok
 end

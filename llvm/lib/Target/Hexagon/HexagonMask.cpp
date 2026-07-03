@@ -8,39 +8,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define DEBUG_TYPE "mask"
-
-#include "HexagonMachineFunctionInfo.h"
+#include "Hexagon.h"
 #include "HexagonSubtarget.h"
-#include "HexagonTargetMachine.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 
+#define DEBUG_TYPE "mask"
+
 using namespace llvm;
 
-namespace llvm {
-FunctionPass *createHexagonMask();
-void initializeHexagonMaskPass(PassRegistry &);
-
+namespace {
 class HexagonMask : public MachineFunctionPass {
 public:
   static char ID;
-  HexagonMask() : MachineFunctionPass(ID) {
-    PassRegistry &Registry = *PassRegistry::getPassRegistry();
-    initializeHexagonMaskPass(Registry);
-  }
+  HexagonMask() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "Hexagon replace const ext tfri with mask";
@@ -51,6 +38,7 @@ private:
   const HexagonInstrInfo *HII;
   void replaceConstExtTransferImmWithMask(MachineFunction &MF);
 };
+} // end anonymous namespace
 
 char HexagonMask::ID = 0;
 
@@ -88,7 +76,7 @@ bool HexagonMask::runOnMachineFunction(MachineFunction &MF) {
   HII = HST.getInstrInfo();
   const Function &F = MF.getFunction();
 
-  if (!F.hasFnAttribute(Attribute::OptimizeForSize))
+  if (!F.hasOptSize())
     return false;
   // Mask instruction is available only from v66
   if (!HST.hasV66Ops())
@@ -101,8 +89,6 @@ bool HexagonMask::runOnMachineFunction(MachineFunction &MF) {
 
   return true;
 }
-
-} // namespace llvm
 
 //===----------------------------------------------------------------------===//
 //                         Public Constructor Functions

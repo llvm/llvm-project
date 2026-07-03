@@ -55,7 +55,7 @@ body:             |
 name:            test_icmp_no_canon_bv_neither_const
 body:             |
   bb.1:
-    ; CHECK-LABEL: name: test_icmp_no_canon_bv
+    ; CHECK-LABEL: name: test_icmp_no_canon_bv_neither_const
     ; CHECK: %opaque1:_(s64) = COPY $x0
     ; CHECK-NEXT: %opaque2:_(s64) = COPY $x0
     ; CHECK-NEXT: %const1:_(s64) = G_CONSTANT i64 11

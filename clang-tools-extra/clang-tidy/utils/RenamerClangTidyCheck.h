@@ -1,4 +1,4 @@
-//===--- RenamerClangTidyCheck.h - clang-tidy -------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_RENAMERCLANGTIDYCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_RENAMERCLANGTIDYCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_RENAMERCLANGTIDYCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_RENAMERCLANGTIDYCHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "llvm/ADT/DenseMap.h"
@@ -28,7 +28,7 @@ namespace tidy {
 class RenamerClangTidyCheck : public ClangTidyCheck {
 public:
   RenamerClangTidyCheck(StringRef CheckName, ClangTidyContext *Context);
-  ~RenamerClangTidyCheck();
+  ~RenamerClangTidyCheck() override;
 
   /// Derived classes should not implement any matching logic themselves; this
   /// class will do the matching and call the derived class'
@@ -167,4 +167,4 @@ private:
 } // namespace tidy
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_RENAMERCLANGTIDYCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_RENAMERCLANGTIDYCHECK_H

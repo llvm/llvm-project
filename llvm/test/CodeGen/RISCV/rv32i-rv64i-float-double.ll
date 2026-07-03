@@ -9,8 +9,6 @@
 ; legalisation or DAG combines aren't incorrectly triggered when the F
 ; extension isn't enabled.
 
-; TODO: f32 parameters on RV64 with a soft-float ABI are anyext.
-
 define float @float_test(float %a, float %b) nounwind {
 ; RV32IF-LABEL: float_test:
 ; RV32IF:       # %bb.0:

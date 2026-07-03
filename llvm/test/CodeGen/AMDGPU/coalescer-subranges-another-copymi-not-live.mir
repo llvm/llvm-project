@@ -6,7 +6,6 @@
 # GCN: {{^body}}
 
 --- |
-  target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5"
   target triple = "amdgcn--amdpal"
 
   define amdgpu_cs void @_amdgpu_cs_main(<3 x i32>) #0 {
@@ -128,6 +127,6 @@ body:             |
     %28:vgpr_32 = IMAGE_LOAD_V1_V4 killed %25, killed %27, 2, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from constant-pool, addrspace 4)
     %29:vgpr_32 = nofpexcept V_ADD_F32_e32 0, killed %28, implicit $mode, implicit $exec
     $m0 = S_MOV_B32 -1
-    DS_WRITE_B32 undef %30:vgpr_32, killed %29, 0, 0, implicit $m0, implicit $exec :: (store (s32) into `ptr addrspace(3) undef`, addrspace 3)
+    DS_WRITE_B32 undef %30:vgpr_32, killed %29, 0, 0, implicit $m0, implicit $exec :: (store (s32) into `ptr addrspace(3) poison`, addrspace 3)
     S_ENDPGM 0
 ...

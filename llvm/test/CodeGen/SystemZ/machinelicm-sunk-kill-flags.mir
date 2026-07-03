@@ -25,23 +25,24 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[LARL:%[0-9]+]]:addr64bit = LARL @b
+  ; CHECK-NEXT:   [[LA:%[0-9]+]]:gr64bit = LA killed [[LARL]], 49, $noreg
+  ; CHECK-NEXT:   [[LGHI:%[0-9]+]]:gr64bit = LGHI 7
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:gr64bit = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:gr64bit = IMPLICIT_DEF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[LA:%[0-9]+]]:gr64bit = LA [[LARL]], 49, $noreg
-  ; CHECK-NEXT:   [[LGHI:%[0-9]+]]:gr64bit = LGHI 7
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:gr64bit = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:gr64bit = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64bit = COPY [[LA]]
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0
   ; CHECK-NEXT:   $r2d = COPY [[DEF]]
-  ; CHECK-NEXT:   $r3d = COPY [[LA]]
+  ; CHECK-NEXT:   $r3d = COPY [[COPY]]
   ; CHECK-NEXT:   $r4d = COPY [[LGHI]]
   ; CHECK-NEXT:   CallBRASL &memcpy, $r2d, $r3d, $r4d, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc, implicit-def $r2d
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0
   ; CHECK-NEXT:   $r2d = COPY [[DEF1]]
-  ; CHECK-NEXT:   $r3d = COPY [[LA]]
+  ; CHECK-NEXT:   $r3d = COPY [[COPY]]
   ; CHECK-NEXT:   $r4d = COPY [[LGHI]]
   ; CHECK-NEXT:   CallBRASL &memcpy, $r2d, $r3d, $r4d, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc, implicit-def $r2d
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0
@@ -54,19 +55,20 @@ body:             |
     %2:gr64bit = LGHI 7
     %3:gr64bit = IMPLICIT_DEF
     %5:gr64bit = IMPLICIT_DEF
+    %6:gr64bit = COPY killed %0
 
   bb.1:
     successors: %bb.1(0x80000000)
 
     ADJCALLSTACKDOWN 0, 0
     $r2d = COPY %3
-    $r3d = COPY %0
+    $r3d = COPY %6
     $r4d = COPY %2
     CallBRASL &memcpy, $r2d, $r3d, $r4d, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc, implicit-def $r2d
     ADJCALLSTACKUP 0, 0
     ADJCALLSTACKDOWN 0, 0
     $r2d = COPY %5
-    $r3d = COPY %0
+    $r3d = COPY %6
     $r4d = COPY %2
     CallBRASL &memcpy, $r2d, $r3d, $r4d, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc, implicit-def $r2d
     ADJCALLSTACKUP 0, 0

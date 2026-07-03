@@ -8,31 +8,31 @@ define dso_local void @dotvariable_laa(ptr nocapture readonly nonnull %Base1, pt
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %1 = getelementptr inbounds double, ptr %Dest, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
 ; CHECK-NEXT:      Check 1:
-; CHECK-NEXT:        Comparing group ([[GRP1]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %1 = getelementptr inbounds double, ptr %Dest, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP3:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP2:
 ; CHECK-NEXT:          %.sink.in = getelementptr inbounds double, ptr %spec.select, i64 %indvars.iv
 ; CHECK-NEXT:      Check 2:
-; CHECK-NEXT:        Comparing group ([[GRP1]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %1 = getelementptr inbounds double, ptr %Dest, i64 %indvars.iv
-; CHECK-NEXT:        Against group ([[GRP4:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP3:
 ; CHECK-NEXT:          %.sink.in = getelementptr inbounds double, ptr %spec.select, i64 %indvars.iv
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP1]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %Dest High: (800 + %Dest))
 ; CHECK-NEXT:            Member: {%Dest,+,8}<nuw><%for.body>
-; CHECK-NEXT:        Group [[GRP2]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
-; CHECK-NEXT:        Group [[GRP3]]:
+; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %Base2 High: (800 + %Base2))
 ; CHECK-NEXT:            Member: {%Base2,+,8}<nw><%for.body>
-; CHECK-NEXT:        Group [[GRP4]]:
+; CHECK-NEXT:        Group GRP3:
 ; CHECK-NEXT:          (Low: %Base1 High: (800 + %Base1))
 ; CHECK-NEXT:            Member: {%Base1,+,8}<nw><%for.body>
 ; CHECK-EMPTY:

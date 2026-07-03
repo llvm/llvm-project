@@ -7,9 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Frontend/CompilerInstance.h"
+#include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Options/Options.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include "gtest/gtest.h"
 
@@ -67,18 +72,19 @@ TEST(CompilerInstance, AllowDiagnosticLogWithUnownedDiagnosticConsumer) {
   // 1. Set-up a basic DiagnosticConsumer
   std::string diagnosticOutput;
   llvm::raw_string_ostream diagnosticsOS(diagnosticOutput);
+  clang::DiagnosticOptions diagPrinterOpts;
   auto diagPrinter = std::make_unique<Fortran::frontend::TextDiagnosticPrinter>(
-      diagnosticsOS, new clang::DiagnosticOptions());
+      diagnosticsOS, diagPrinterOpts);
 
   // 2. Create a CompilerInstance (to manage a DiagnosticEngine)
   CompilerInstance compInst;
 
   // 3. Set-up DiagnosticOptions
-  auto diagOpts = new clang::DiagnosticOptions();
+  clang::DiagnosticOptions diagOpts;
   // Tell the diagnostics engine to emit the diagnostic log to STDERR. This
   // ensures that a chained diagnostic consumer is created so that the test can
   // exercise the unowned diagnostic consumer in a chained consumer.
-  diagOpts->DiagnosticLogFile = "-";
+  diagOpts.DiagnosticLogFile = "-";
 
   // 4. Create a DiagnosticEngine with an unowned consumer
   IntrusiveRefCntPtr<clang::DiagnosticsEngine> diags =
@@ -91,5 +97,28 @@ TEST(CompilerInstance, AllowDiagnosticLogWithUnownedDiagnosticConsumer) {
   // 6. Verify that the reported diagnostic wasn't lost and did end up in the
   // output stream
   ASSERT_EQ(diagnosticOutput, "error: expected no crash\n");
+}
+
+TEST(CompilerInstance,
+    OpenAccDefaultNoneScalarsStrictDisableOptionUsesDriverTable) {
+  CompilerInstance compInst;
+  compInst.createDiagnostics();
+
+  auto invocation = std::make_shared<CompilerInvocation>();
+  invocation->getTargetOpts().triple =
+      llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
+
+  llvm::InitializeAllTargets();
+  llvm::InitializeAllTargetMCs();
+
+  compInst.setInvocation(std::move(invocation));
+  ASSERT_TRUE(compInst.setUpTargetMachine());
+  auto &context = compInst.createNewSemanticsContext();
+
+  EXPECT_EQ(context.openAccDefaultNoneScalarsStrictDisableOption(),
+      clang::getDriverOptTable()
+          .getOptionPrefixedName(
+              clang::options::OPT_fno_openacc_default_none_scalars_strict)
+          .str());
 }
 } // namespace

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ;
 ; Check that we are emitting a regular call instead of a tail call for a
 ; noreturn call in a function with a non-empty frame (to save instructions).

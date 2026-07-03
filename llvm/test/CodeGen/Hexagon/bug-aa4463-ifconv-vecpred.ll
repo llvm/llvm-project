@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 < %s
+; RUN: llc -mtriple=hexagon -O2 < %s
 ; REQUIRES: asserts
 
 define inreg <16 x i32> @f0(i32 %a0, ptr nocapture %a1) #0 {

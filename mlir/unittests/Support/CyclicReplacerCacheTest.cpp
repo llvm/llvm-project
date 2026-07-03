@@ -225,7 +225,8 @@ public:
     /// Add a recursive-self-node, i.e. a duplicate of the original node that is
     /// meant to represent an indirection to it.
     std::pair<Node, int64_t> addRecursiveSelfNode(Graph::Node originalId) {
-      return {addNode(originalId, nextRecursionId), nextRecursionId++};
+      auto node = addNode(originalId, nextRecursionId);
+      return {node, nextRecursionId++};
     }
     void addEdge(Node src, Node sink) { connections.addEdge(src, sink); }
 

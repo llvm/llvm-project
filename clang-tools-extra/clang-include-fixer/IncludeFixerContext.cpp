@@ -90,10 +90,10 @@ IncludeFixerContext::IncludeFixerContext(
                       std::make_pair(B.Range.getOffset(), B.Range.getLength());
              });
   QuerySymbolInfos.erase(
-      std::unique(QuerySymbolInfos.begin(), QuerySymbolInfos.end(),
-                  [](const QuerySymbolInfo &A, const QuerySymbolInfo &B) {
-                    return A.Range == B.Range;
-                  }),
+      llvm::unique(QuerySymbolInfos,
+                   [](const QuerySymbolInfo &A, const QuerySymbolInfo &B) {
+                     return A.Range == B.Range;
+                   }),
       QuerySymbolInfos.end());
   for (const auto &Symbol : MatchedSymbols) {
     HeaderInfos.push_back(
@@ -103,11 +103,11 @@ IncludeFixerContext::IncludeFixerContext(
              QuerySymbolInfos.front().ScopedQualifiers, Symbol)});
   }
   // Deduplicate header infos.
-  HeaderInfos.erase(std::unique(HeaderInfos.begin(), HeaderInfos.end(),
-                                [](const HeaderInfo &A, const HeaderInfo &B) {
-                                  return A.Header == B.Header &&
-                                         A.QualifiedName == B.QualifiedName;
-                                }),
+  HeaderInfos.erase(llvm::unique(HeaderInfos,
+                                 [](const HeaderInfo &A, const HeaderInfo &B) {
+                                   return A.Header == B.Header &&
+                                          A.QualifiedName == B.QualifiedName;
+                                 }),
                     HeaderInfos.end());
 }
 

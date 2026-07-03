@@ -21,7 +21,9 @@ define i64 @read_flags() {
 ; WIN64-NEXT:    .seh_endprologue
 ; WIN64-NEXT:    pushfq
 ; WIN64-NEXT:    popq %rax
+; WIN64-NEXT:    .seh_startepilogue
 ; WIN64-NEXT:    popq %rbp
+; WIN64-NEXT:    .seh_endepilogue
 ; WIN64-NEXT:    retq
 ; WIN64-NEXT:    .seh_endproc
 entry:
@@ -45,7 +47,9 @@ define void @write_flags(i64 %arg) {
 ; WIN64-NEXT:    .seh_endprologue
 ; WIN64-NEXT:    pushq %rcx
 ; WIN64-NEXT:    popfq
+; WIN64-NEXT:    .seh_startepilogue
 ; WIN64-NEXT:    popq %rbp
+; WIN64-NEXT:    .seh_endepilogue
 ; WIN64-NEXT:    retq
 ; WIN64-NEXT:    .seh_endproc
 entry:

@@ -1,0 +1,11 @@
+set(TARGET_LIBC_ENTRYPOINTS
+  # errno.h entrypoints
+  libc.src.errno.errno
+)
+
+set(TARGET_LIBM_ENTRYPOINTS "")
+
+set(TARGET_LLVMLIBC_ENTRYPOINTS
+  ${TARGET_LIBC_ENTRYPOINTS}
+  ${TARGET_LIBM_ENTRYPOINTS}
+)

@@ -11,6 +11,7 @@ add_llvm_component_library(LLVMSelectionDAG
   LegalizeVectorOps.cpp
   LegalizeVectorTypes.cpp
   ResourcePriorityQueue.cpp
+  SDNodeInfo.cpp
   ScheduleDAGFast.cpp
   ScheduleDAGRRList.cpp
   ScheduleDAGSDNodes.cpp

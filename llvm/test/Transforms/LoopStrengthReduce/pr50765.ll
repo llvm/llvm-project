@@ -5,7 +5,7 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128-ni:1-p2:32:8:8:32-ni:2"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @test() {
+define void @test(i1 %arg) {
 ; CHECK-LABEL: test
 bb:
   %tmp = load i32, ptr addrspace(3) undef, align 4
@@ -17,7 +17,7 @@ bb1:                                              ; preds = %bb38, %bb
   %tmp4 = add i32 %tmp3, 1
   %tmp5 = call i32 @llvm.smax.i32(i32 %tmp4, i32 74)
   %tmp6 = add nuw nsw i64 %tmp2, 1
-  br i1 undef, label %bb7, label %bb38
+  br i1 %arg, label %bb7, label %bb38
 
 bb7:                                              ; preds = %bb1
   %tmp8 = trunc i64 %tmp6 to i32

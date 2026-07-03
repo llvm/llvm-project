@@ -8,10 +8,11 @@
 
 #include "llvm/DebugInfo/GSYM/FunctionInfo.h"
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
+#include "llvm/DebugInfo/GSYM/GsymCreator.h"
+#include "llvm/DebugInfo/GSYM/GsymDataExtractor.h"
 #include "llvm/DebugInfo/GSYM/GsymReader.h"
-#include "llvm/DebugInfo/GSYM/LineTable.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
-#include "llvm/Support/DataExtractor.h"
+#include "llvm/DebugInfo/GSYM/LineTable.h"
 #include <optional>
 
 using namespace llvm;
@@ -24,6 +25,7 @@ enum InfoType : uint32_t {
   LineTableInfo = 1u,
   InlineInfo = 2u,
   MergedFunctionsInfo = 3u,
+  CallSiteInfo = 4u,
 };
 
 raw_ostream &llvm::gsym::operator<<(raw_ostream &OS, const FunctionInfo &FI) {
@@ -32,10 +34,12 @@ raw_ostream &llvm::gsym::operator<<(raw_ostream &OS, const FunctionInfo &FI) {
     OS << FI.OptLineTable << '\n';
   if (FI.Inline)
     OS << FI.Inline << '\n';
+  if (FI.CallSites)
+    OS << *FI.CallSites << '\n';
   return OS;
 }
 
-llvm::Expected<FunctionInfo> FunctionInfo::decode(DataExtractor &Data,
+llvm::Expected<FunctionInfo> FunctionInfo::decode(GsymDataExtractor &Data,
                                                   uint64_t BaseAddr) {
   FunctionInfo FI;
   uint64_t Offset = 0;
@@ -46,11 +50,12 @@ llvm::Expected<FunctionInfo> FunctionInfo::decode(DataExtractor &Data,
   if (!Data.isValidOffsetForDataOfSize(Offset, 4))
     return createStringError(std::errc::io_error,
         "0x%8.8" PRIx64 ": missing FunctionInfo Name", Offset);
-  FI.Name = Data.getU32(&Offset);
+  FI.Name = Data.getStringOffset(&Offset);
   if (FI.Name == 0)
     return createStringError(std::errc::io_error,
-        "0x%8.8" PRIx64 ": invalid FunctionInfo Name value 0x%8.8x",
-        Offset - 4, FI.Name);
+                             "0x%8.8" PRIx64
+                             ": invalid FunctionInfo Name value 0x%" PRIx64,
+                             Offset - Data.getStringOffsetSize(), FI.Name);
   bool Done = false;
   while (!Done) {
     if (!Data.isValidOffsetForDataOfSize(Offset, 4))
@@ -65,9 +70,7 @@ llvm::Expected<FunctionInfo> FunctionInfo::decode(DataExtractor &Data,
       return createStringError(std::errc::io_error,
           "0x%8.8" PRIx64 ": missing FunctionInfo data for InfoType %u",
           Offset, IT);
-    DataExtractor InfoData(Data.getData().substr(Offset, InfoLength),
-                           Data.isLittleEndian(),
-                           Data.getAddressSize());
+    GsymDataExtractor InfoData(Data, Offset, InfoLength);
     switch (IT) {
       case InfoType::EndOfList:
         Done = true;
@@ -95,6 +98,14 @@ llvm::Expected<FunctionInfo> FunctionInfo::decode(DataExtractor &Data,
           return MI.takeError();
         break;
 
+      case InfoType::CallSiteInfo:
+        if (Expected<llvm::gsym::CallSiteInfoCollection> CI =
+                llvm::gsym::CallSiteInfoCollection::decode(InfoData))
+          FI.CallSites = std::move(CI.get());
+        else
+          return CI.takeError();
+        break;
+
       default:
         return createStringError(std::errc::io_error,
                                  "0x%8.8" PRIx64 ": unsupported InfoType %u",
@@ -105,12 +116,13 @@ llvm::Expected<FunctionInfo> FunctionInfo::decode(DataExtractor &Data,
   return std::move(FI);
 }
 
-uint64_t FunctionInfo::cacheEncoding() {
+uint64_t FunctionInfo::cacheEncoding(GsymCreator &GC) {
   EncodingCache.clear();
   if (!isValid())
     return 0;
   raw_svector_ostream OutStrm(EncodingCache);
   FileWriter FW(OutStrm, llvm::endianness::native);
+  FW.setStringOffsetSize(GC.getStringOffsetSize());
   llvm::Expected<uint64_t> Result = encode(FW);
   if (!Result) {
     EncodingCache.clear();
@@ -143,8 +155,8 @@ llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &Out,
   // Write the size in bytes of this function as a uint32_t. This can be zero
   // if we just have a symbol from a symbol table and that symbol has no size.
   Out.writeU32(size());
-  // Write the name of this function as a uint32_t string table offset.
-  Out.writeU32(Name);
+  // Write the name of this function as a string table offset.
+  Out.writeStringOffset(Name);
 
   if (OptLineTable) {
     Out.writeU32(InfoType::LineTableInfo);
@@ -200,21 +212,39 @@ llvm::Expected<uint64_t> FunctionInfo::encode(FileWriter &Out,
     Out.fixup32(static_cast<uint32_t>(Length), StartOffset - 4);
   }
 
-  // Terminate the data chunks with and end of list with zero size
+  // Write out the call sites if we have any and if they are valid.
+  if (CallSites) {
+    Out.writeU32(InfoType::CallSiteInfo);
+    // Write a uint32_t length as zero for now, we will fix this up after
+    // writing the CallSites out with the number of bytes that were written.
+    Out.writeU32(0);
+    const auto StartOffset = Out.tell();
+    Error Err = CallSites->encode(Out);
+    if (Err)
+      return std::move(Err);
+    const auto Length = Out.tell() - StartOffset;
+    if (Length > UINT32_MAX)
+      return createStringError(std::errc::invalid_argument,
+                               "CallSites length is greater than UINT32_MAX");
+    // Fixup the size of the CallSites data with the correct size.
+    Out.fixup32(static_cast<uint32_t>(Length), StartOffset - 4);
+  }
+
+  // Terminate the data chunks with an end of list with zero size.
   Out.writeU32(InfoType::EndOfList);
   Out.writeU32(0);
   return FuncInfoOffset;
 }
 
-llvm::Expected<LookupResult> FunctionInfo::lookup(DataExtractor &Data,
-                                                  const GsymReader &GR,
-                                                  uint64_t FuncAddr,
-                                                  uint64_t Addr) {
+llvm::Expected<LookupResult>
+FunctionInfo::lookup(GsymDataExtractor &Data, const GsymReader &GR,
+                     uint64_t FuncAddr, uint64_t Addr,
+                     std::optional<GsymDataExtractor> *MergedFuncsData) {
   LookupResult LR;
   LR.LookupAddr = Addr;
   uint64_t Offset = 0;
   LR.FuncRange = {FuncAddr, FuncAddr + Data.getU32(&Offset)};
-  uint32_t NameOffset = Data.getU32(&Offset);
+  gsym_strp_t NameOffset = Data.getStringOffset(&Offset);
   // The "lookup" functions doesn't report errors as accurately as the "decode"
   // function as it is meant to be fast. For more accurage errors we could call
   // "decode".
@@ -230,12 +260,13 @@ llvm::Expected<LookupResult> FunctionInfo::lookup(DataExtractor &Data,
 
   if (NameOffset == 0)
     return createStringError(std::errc::io_error,
-        "0x%8.8" PRIx64 ": invalid FunctionInfo Name value 0x00000000",
-        Offset - 4);
+                             "0x%8.8" PRIx64
+                             ": invalid FunctionInfo Name value 0x0",
+                             Offset - Data.getStringOffsetSize());
   LR.FuncName = GR.getString(NameOffset);
   bool Done = false;
   std::optional<LineEntry> LineEntry;
-  std::optional<DataExtractor> InlineInfoData;
+  std::optional<GsymDataExtractor> InlineInfoData;
   while (!Done) {
     if (!Data.isValidOffsetForDataOfSize(Offset, 8))
       return createStringError(std::errc::io_error,
@@ -246,8 +277,7 @@ llvm::Expected<LookupResult> FunctionInfo::lookup(DataExtractor &Data,
     if (InfoLength != InfoBytes.size())
       return createStringError(std::errc::io_error,
                                "FunctionInfo data is truncated");
-    DataExtractor InfoData(InfoBytes, Data.isLittleEndian(),
-                           Data.getAddressSize());
+    GsymDataExtractor InfoData(Data, Offset, InfoLength);
     switch (IT) {
       case InfoType::EndOfList:
         Done = true;
@@ -260,10 +290,34 @@ llvm::Expected<LookupResult> FunctionInfo::lookup(DataExtractor &Data,
           return ExpectedLE.takeError();
         break;
 
+      case InfoType::MergedFunctionsInfo:
+        // Store the merged functions data for later parsing, if needed.
+        if (MergedFuncsData)
+          *MergedFuncsData = InfoData;
+        break;
+
       case InfoType::InlineInfo:
         // We will parse the inline info after our line table, but only if
         // we have a line entry.
         InlineInfoData = InfoData;
+        break;
+
+      case InfoType::CallSiteInfo:
+        if (auto CSIC = CallSiteInfoCollection::decode(InfoData)) {
+          // Find matching call site based on relative offset
+          for (const auto &CS : CSIC->CallSites) {
+            // Check if the call site matches the lookup address
+            if (CS.ReturnOffset == Addr - FuncAddr) {
+              // Get regex patterns
+              for (gsym_strp_t RegexOffset : CS.MatchRegex) {
+                LR.CallSiteFuncRegex.push_back(GR.getString(RegexOffset));
+              }
+              break;
+            }
+          }
+        } else {
+          return CSIC.takeError();
+        }
         break;
 
       default:

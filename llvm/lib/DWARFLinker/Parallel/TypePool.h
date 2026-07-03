@@ -15,6 +15,7 @@
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/Support/Allocator.h"
 #include <atomic>
+#include <limits>
 
 namespace llvm {
 namespace dwarf_linker {
@@ -61,8 +62,25 @@ public:
   // Keeps declaration die.
   std::atomic<DIE *> DeclarationDie = {nullptr};
 
-  // True if parent type die is declaration.
-  std::atomic<bool> ParentIsDeclaration = {true};
+  // True if the declaration winner's parent is itself a declaration.
+  bool DeclarationParentIsDeclaration = true;
+
+  // Priority of the CU that set Die (lower wins, for deterministic output).
+  // Atomic so it can be read outside the lock for a fast pre-check; the
+  // definitive comparison still happens under the spinlock.
+  std::atomic<uint64_t> DiePriority = {std::numeric_limits<uint64_t>::max()};
+
+  // Priority of the CU that set DeclarationDie (lower wins).
+  uint64_t DeclarationDiePriority = std::numeric_limits<uint64_t>::max();
+
+  // Spinlock for deterministic type DIE allocation.
+  std::atomic_flag Lock = {};
+
+  // Primary key for the comparator: ordinal of this child in its parent's
+  // child list, min-merged across CUs to keep record-like type members in
+  // source order. Sentinel UINT32_MAX sorts after any real observation.
+  // When set, overwrites the default getKey() in TypeComparator.
+  std::atomic<uint32_t> SortKey = {std::numeric_limits<uint32_t>::max()};
 
   /// Children for current type.
   ArrayList<TypeEntry *, 5> Children;
@@ -127,6 +145,9 @@ public:
 
   /// Create or return existing type entry body for the specified \p Entry.
   /// Link that entry as child for the specified \p ParentEntry.
+  /// The returned body's \c SortKey starts at the sentinel; callers that want
+  /// the entry to participate in source-order sorting must min-merge their
+  /// per-CU observation into it.
   /// \returns The existing or created type entry body.
   TypeEntryBody *getOrCreateTypeEntryBody(TypeEntry *Entry,
                                           TypeEntry *ParentEntry) {
@@ -135,7 +156,7 @@ public:
       return DIE;
 
     TypeEntryBody *NewDIE = TypeEntryBody::create(Allocator);
-    if (Entry->getValue().compare_exchange_weak(DIE, NewDIE)) {
+    if (Entry->getValue().compare_exchange_strong(DIE, NewDIE)) {
       ParentEntry->getValue().load()->Children.add(Entry);
       return NewDIE;
     }
@@ -165,6 +186,12 @@ public:
 protected:
   std::function<bool(const TypeEntry *LHS, const TypeEntry *RHS)>
       TypesComparator = [](const TypeEntry *LHS, const TypeEntry *RHS) -> bool {
+    uint32_t LK =
+        LHS->getValue().load()->SortKey.load(std::memory_order_relaxed);
+    uint32_t RK =
+        RHS->getValue().load()->SortKey.load(std::memory_order_relaxed);
+    if (LK != RK)
+      return LK < RK;
     return LHS->getKey() < RHS->getKey();
   };
 

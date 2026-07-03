@@ -34,6 +34,7 @@ void test_vla() {
 
 template <class... Args>
 using common_type_base = __builtin_common_type<common_type_t, type_identity, empty_type, Args...>;
+// expected-note@-1 {{in instantiation of default function argument expression for 'InvalidConversion<void>' required here}}
 
 template <class... Args>
 struct common_type : common_type_base<Args...> {};
@@ -208,3 +209,36 @@ private:
 };
 
 static_assert(__is_same(common_type_base<PrivateTypeMember, PrivateTypeMember, PrivateTypeMember>, empty_type));
+
+class PrivateConstructor {
+private:
+  PrivateConstructor(int);
+};
+
+static_assert(__is_same(common_type_base<int, PrivateConstructor>, empty_type));
+
+// expected-note@+1 {{in instantiation of template type alias 'common_type_base' requested here}}
+template<typename A, typename B, typename Res = common_type_base<A, B>>
+static Res common_type_sfinae();
+// expected-note@-1 {{in instantiation of default argument for 'common_type_sfinae<int, InvalidConversion>' required here}}
+
+// Make sure we don't emit "calling a private constructor" in SFINAE context ...
+static_assert(__is_same(decltype(common_type_sfinae<int, PrivateConstructor>()), empty_type));
+
+// ... but we still emit errors outside of the immediate context.
+template<typename T>
+struct Member {
+  T t; // expected-error {{field has incomplete type 'void'}}
+};
+
+// The conversion from int has a non-SFINAE error.
+class InvalidConversion {
+private:
+  template<typename T = void>
+  InvalidConversion(int, Member<T> = {});
+    // expected-note@-1 {{in instantiation of template class 'Member<void>' requested here}}
+    // expected-note@-2 {{passing argument to parameter here}}
+};
+
+// expected-note@+1 {{while substituting deduced template arguments into function template 'common_type_sfinae'}}
+static_assert(__is_same(decltype(common_type_sfinae<int, InvalidConversion>()), empty_type));

@@ -9,8 +9,8 @@ add_mlir_library(MLIRTestReducer
 
   LINK_COMPONENTS
   Core
-
-  LINK_LIBS PUBLIC
+  )
+mlir_target_link_libraries(MLIRTestReducer PUBLIC
   MLIRIR
   MLIRPass
   MLIRSupport

@@ -44,8 +44,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsARM.h"
-#include "llvm/IR/PatternMatch.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -387,7 +385,7 @@ void MVETailPredication::InsertVCTPIntrinsic(IntrinsicInst *ActiveLaneMask,
   PHINode *Processed = Builder.CreatePHI(Ty, 2);
   Processed->addIncoming(Start, L->getLoopPreheader());
 
-  // Replace @llvm.get.active.mask() with the ARM specific VCTP intrinic, and
+  // Replace @llvm.get.active.mask() with the ARM specific VCTP intrinsic, and
   // thus represent the effect of tail predication.
   Builder.SetInsertPoint(ActiveLaneMask);
   ConstantInt *Factor = ConstantInt::get(cast<IntegerType>(Ty), VectorWidth);
@@ -401,8 +399,7 @@ void MVETailPredication::InsertVCTPIntrinsic(IntrinsicInst *ActiveLaneMask,
   case 8:  VCTPID = Intrinsic::arm_mve_vctp16; break;
   case 16: VCTPID = Intrinsic::arm_mve_vctp8; break;
   }
-  Function *VCTP = Intrinsic::getDeclaration(M, VCTPID);
-  Value *VCTPCall = Builder.CreateCall(VCTP, Processed);
+  Value *VCTPCall = Builder.CreateIntrinsic(VCTPID, Processed);
   ActiveLaneMask->replaceAllUsesWith(VCTPCall);
 
   // Add the incoming value to the new phi.
@@ -438,8 +435,7 @@ bool MVETailPredication::TryConvertActiveLaneMask(Value *TripCount) {
     }
     LLVM_DEBUG(dbgs() << "ARM TP: Safe to insert VCTP. Start is " << *StartSCEV
                       << "\n");
-    SCEVExpander Expander(*SE, L->getHeader()->getDataLayout(),
-                          "start");
+    SCEVExpander Expander(*SE, "start");
     Instruction *Ins = L->getLoopPreheader()->getTerminator();
     Value *Start = Expander.expandCodeFor(StartSCEV, StartSCEV->getType(), Ins);
     LLVM_DEBUG(dbgs() << "ARM TP: Created start value " << *Start << "\n");
@@ -460,5 +456,4 @@ Pass *llvm::createMVETailPredicationPass() {
 
 char MVETailPredication::ID = 0;
 
-INITIALIZE_PASS_BEGIN(MVETailPredication, DEBUG_TYPE, DESC, false, false)
-INITIALIZE_PASS_END(MVETailPredication, DEBUG_TYPE, DESC, false, false)
+INITIALIZE_PASS(MVETailPredication, DEBUG_TYPE, DESC, false, false)

@@ -6,7 +6,7 @@
 # "Replacement PHI node is already replaced."
 
 --- |
-  define void @f1() {
+  define void @f1(i1 %arg) {
   entry:
     %arrayidx = getelementptr inbounds [2 x i16], ptr undef, i16 0, i16 2
     br label %for.cond
@@ -30,10 +30,10 @@
     %5 = phi ptr [ %4, %for.body ], [ %5, %if.then5 ], [ undef, %for.cond2 ]
     %6 = phi ptr [ %3, %for.body ], [ %6, %if.then5 ], [ undef, %for.cond2 ]
     %7 = phi ptr [ %2, %for.body ], [ %6, %if.then5 ], [ undef, %for.cond2 ]
-    br i1 undef, label %for.cond2, label %if.then5
+    br i1 %arg, label %for.cond2, label %if.then5
 
   if.then5:
-    br i1 undef, label %cleanup, label %for.cond2
+    br i1 %arg, label %cleanup, label %for.cond2
 
   cleanup:
     br i1 true, label %for.cond, label %for.body

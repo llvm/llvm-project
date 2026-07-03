@@ -25,7 +25,7 @@ The offload entries table that is created for the host and for each of the devic
 
 Compiler will also produce an entry for each procedure listed in **indirect** clause of **declare target** construct:
 ```C++
-struct __tgt_offload_entry {
+struct llvm::offloading::EntryTy {
   void *addr;       // Pointer to the function
   char *name;       // Name of the function
   size_t size;      // 0 for function
@@ -82,7 +82,7 @@ struct __omp_offloading_fptr_map_ty {
 };
 ```
 
-Where `host_ptr` is `__tgt_offload_entry::addr` in a **host** offload entry, and `tgt_ptr` is `__tgt_offload_entry::addr` in the corresponding **device** offload entry (which may be found using the populated `Device.HostDataToTargetMap`).
+Where `host_ptr` is `llvm::offloading::EntryTy::addr` in a **host** offload entry, and `tgt_ptr` is `llvm::offloading::EntryTy::addr` in the corresponding **device** offload entry (which may be found using the populated `Device.HostDataToTargetMap`).
 
 When all `__omp_offloading_function_ptr_map_ty` entries are collected in a single host array, `libomptarget` sorts the table by `host_ptr` values and passes it to the device plugin for registration, if plugin supports optional `__tgt_rtl_set_function_ptr_map` API.
 

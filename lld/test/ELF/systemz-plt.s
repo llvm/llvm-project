@@ -3,7 +3,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=s390x-unknown-linux %t1.s -o %t1.o
 # RUN: ld.lld -shared %t1.o -soname=t1.so -o %t1.so
-# RUN: llvm-mc -filetype=obj -triple=s390x-unknown-linux %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=s390x-unknown-linux --crel %s -o %t.o
 # RUN: ld.lld %t.o %t1.so -z separate-code -o %t
 # RUN: llvm-readelf -S -s -r -x .got.plt %t | FileCheck %s
 # RUN: llvm-objdump -d %t | FileCheck --check-prefixes=DIS %s
@@ -48,9 +48,9 @@
 # DIS-NEXT: 100102c: d2 07 f0 30 10 08    	mvc	48(8,%r15), 8(%r1)
 # DIS-NEXT: 1001032: e3 10 10 10 00 04    	lg	%r1, 16(%r1)
 # DIS-NEXT: 1001038: 07 f1        	br	%r1
-# DIS-NEXT: 100103a: 07 00        	nopr   %r0
-# DIS-NEXT: 100103c: 07 00        	nopr   %r0
-# DIS-NEXT: 100103e: 07 00        	nopr   %r0
+# DIS-NEXT: 100103a: 07 00        	nopr
+# DIS-NEXT: 100103c: 07 00        	nopr
+# DIS-NEXT: 100103e: 07 00        	nopr
 # DIS-NEXT: 1001040: c0 10 00 00 10 54    	larl	%r1, 0x10030e8
 # DIS-NEXT: 1001046: e3 10 10 00 00 04    	lg	%r1, 0(%r1)
 # DIS-NEXT: 100104c: 07 f1        	br	%r1

@@ -1,4 +1,4 @@
-; RUN: llc -O2 -march=bpfel -mattr=+alu32 < %s | FileCheck %s
+; RUN: llc -O2 -mtriple=bpfel -mattr=+alu32 < %s | FileCheck %s
 ;
 ; unsigned char loadu8(unsigned char *p)
 ; {

@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass hexagon-early-if %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass hexagon-early-if %s -o - | FileCheck %s
 
 # Make sure that early if-conversion handles the *low8 register classes:
 # CHECK: intregslow8 = C2_mux

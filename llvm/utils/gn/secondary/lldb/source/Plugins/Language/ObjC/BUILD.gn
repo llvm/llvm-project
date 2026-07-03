@@ -10,11 +10,11 @@ static_library("ObjC") {
     "//lldb/source/DataFormatters",
     "//lldb/source/Expression",
     "//lldb/source/Host",
-    "//lldb/source/Plugins/Language/ClangCommon",
     "//lldb/source/Plugins/LanguageRuntime/ObjC/AppleObjCRuntime",
     "//lldb/source/Symbol",
     "//lldb/source/Target",
     "//lldb/source/Utility",
+    "//lldb/source/ValueObject",
 
     #"//lldb/source/Plugins/TypeSystem/Clang", # 3-hop dependency cycle.
     "//llvm/lib/Support",

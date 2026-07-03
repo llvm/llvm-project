@@ -46,13 +46,6 @@ public:
   /// Return the address and size of a symbol or std::nullopt if it cannot be
   /// found.
   virtual std::optional<SymbolInfo> lookupSymbolInfo(StringRef Name) const = 0;
-
-  /// Return the address of a symbol or std::nullopt if it cannot be found.
-  std::optional<uint64_t> lookupSymbol(StringRef Name) const {
-    if (const auto Info = lookupSymbolInfo(Name))
-      return Info->Address;
-    return std::nullopt;
-  }
 };
 
 } // namespace bolt

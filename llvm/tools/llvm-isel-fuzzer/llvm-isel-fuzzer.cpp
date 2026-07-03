@@ -91,7 +91,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   }
 
   // Set up the module to build for our target.
-  M->setTargetTriple(TM->getTargetTriple().normalize());
+  M->setTargetTriple(TM->getTargetTriple());
   M->setDataLayout(TM->createDataLayout());
 
   // Build up a PM to do instruction selection.
@@ -115,17 +115,18 @@ static void handleLLVMFatalError(void *, const char *Message, bool) {
 extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
                                                         char ***argv) {
   EnableDebugBuffering = true;
+  StringRef ExecName = *argv[0];
 
   InitializeAllTargets();
   InitializeAllTargetMCs();
   InitializeAllAsmPrinters();
   InitializeAllAsmParsers();
 
-  handleExecNameEncodedBEOpts(*argv[0]);
+  handleExecNameEncodedBEOpts(ExecName);
   parseFuzzerCLOpts(*argc, *argv);
 
   if (TargetTriple.empty()) {
-    errs() << *argv[0] << ": -mtriple must be specified\n";
+    errs() << ExecName << ": -mtriple must be specified\n";
     exit(1);
   }
 
@@ -135,12 +136,14 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
   if (auto Level = CodeGenOpt::parseLevel(OptLevel)) {
     OLvl = *Level;
   } else {
-    errs() << argv[0] << ": invalid optimization level.\n";
+    errs() << ExecName << ": invalid optimization level.\n";
     return 1;
   }
-  ExitOnError ExitOnErr(std::string(*argv[0]) + ": error:");
-  TM = ExitOnErr(codegen::createTargetMachineForTriple(
-      Triple::normalize(TargetTriple), OLvl));
+  ExitOnError ExitOnErr(std::string(ExecName) + ": error:");
+
+  Triple TT(Triple::normalize(TargetTriple));
+
+  TM = ExitOnErr(codegen::createTargetMachineForTriple(TT, OLvl));
   assert(TM && "Could not allocate target machine!");
 
   // Make sure we print the summary and the current unit when LLVM errors out.

@@ -373,10 +373,7 @@ findTestSelectionRanges(StringRef Filename) {
       EndOffset = Offset;
     }
     TestSelectionRange Range = {Offset, EndOffset};
-    auto It = GroupedRanges.insert(std::make_pair(
-        Matches[1].str(), SmallVector<TestSelectionRange, 8>{Range}));
-    if (!It.second)
-      It.first->second.push_back(Range);
+    GroupedRanges[Matches[1].str()].push_back(Range);
   }
   if (GroupedRanges.empty()) {
     llvm::errs() << "error: -selection=test:" << Filename

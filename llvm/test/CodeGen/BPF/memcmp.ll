@@ -1,5 +1,5 @@
-; RUN: llc -march=bpfel < %s | FileCheck %s
-; RUN: llc -march=bpfel -mcpu=v3 < %s | FileCheck %s
+; RUN: opt -passes=expand-memcmp -mtriple=bpfel -S < %s | llc -mtriple=bpfel | FileCheck %s
+; RUN: opt -passes=expand-memcmp -mtriple=bpfel -mcpu=v3 -S < %s | llc -mtriple=bpfel -mcpu=v3 | FileCheck %s
 ;
 ; Source code:
 ;   /* set aligned 4 to minimize the number of loads */

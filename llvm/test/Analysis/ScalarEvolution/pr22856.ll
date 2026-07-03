@@ -3,17 +3,17 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64--linux-gnu"
 
-define void @unbounded() {
+define void @unbounded(i1 %arg) {
 
 block_A:
   %0 = sext i32 undef to i64
-  br i1 undef, label %block_F, label %block_G
+  br i1 %arg, label %block_F, label %block_G
 
 block_C:                ; preds = %block_F
-  br i1 undef, label %block_D, label %block_E
+  br i1 %arg, label %block_D, label %block_E
 
 block_D:                  ; preds = %block_D, %block_C
-  br i1 undef, label %block_E, label %block_D
+  br i1 %arg, label %block_E, label %block_D
 
 block_E:              ; preds = %block_D, %block_C
   %iv2 = phi i64 [ %4, %block_D ], [ %4, %block_C ]

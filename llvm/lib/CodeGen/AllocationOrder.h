@@ -48,7 +48,7 @@ public:
   public:
     Iterator(const AllocationOrder &AO, int Pos) : AO(AO), Pos(Pos) {}
 
-    /// Return true if the curent position is that of a preferred register.
+    /// Return true if the current position is that of a preferred register.
     bool isHint() const { return Pos < 0; }
 
     /// Return the next physical register in the allocation order.
@@ -81,11 +81,11 @@ public:
   /// @param VirtReg      Virtual register to allocate for.
   /// @param VRM          Virtual register map for function.
   /// @param RegClassInfo Information about reserved and allocatable registers.
-  static AllocationOrder create(unsigned VirtReg, const VirtRegMap &VRM,
+  static AllocationOrder create(Register VirtReg, const VirtRegMap &VRM,
                                 const RegisterClassInfo &RegClassInfo,
                                 const LiveRegMatrix *Matrix);
 
-  /// Create an AllocationOrder given the Hits, Order, and HardHits values.
+  /// Create an AllocationOrder given the Hints, Order, and HardHints values.
   /// Use the create method above - the ctor is for unittests.
   AllocationOrder(SmallVector<MCPhysReg, 16> &&Hints, ArrayRef<MCPhysReg> Order,
                   bool HardHints)

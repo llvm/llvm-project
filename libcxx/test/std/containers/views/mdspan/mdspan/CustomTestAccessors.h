@@ -17,9 +17,10 @@
 #ifndef TEST_STD_CONTAINERS_VIEWS_MDSPAN_MDSPAN_CUSTOM_TEST_ACCESSORS_H
 #define TEST_STD_CONTAINERS_VIEWS_MDSPAN_MDSPAN_CUSTOM_TEST_ACCESSORS_H
 
+#include <cassert>
+#include <cstddef>
 #include <mdspan>
 #include <type_traits>
-#include <cassert>
 
 // This contains a bunch of accessors and handles which have different properties
 // regarding constructibility and convertibility in order to test mdspan constraints

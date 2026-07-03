@@ -16,10 +16,9 @@ class Pass;
 
 namespace LLVM {
 
-#define GEN_PASS_DECL_LLVMREQUESTCWRAPPERS
+#define GEN_PASS_DECL_LLVMREQUESTCWRAPPERSPASS
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h.inc"
 
-std::unique_ptr<Pass> createRequestCWrappersPass();
 } // namespace LLVM
 } // namespace mlir
 

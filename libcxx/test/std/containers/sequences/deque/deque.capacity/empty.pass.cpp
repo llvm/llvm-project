@@ -19,9 +19,8 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
+int main(int, char**) {
+  {
     typedef std::deque<int> C;
     C c;
     ASSERT_NOEXCEPT(c.empty());
@@ -32,9 +31,9 @@ int main(int, char**)
     c.clear();
     assert(c.empty());
     LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef std::deque<int, min_allocator<int>> C;
     C c;
     ASSERT_NOEXCEPT(c.empty());
@@ -45,7 +44,7 @@ int main(int, char**)
     c.clear();
     assert(c.empty());
     LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
-    }
+  }
 #endif
 
   return 0;

@@ -5,7 +5,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; Checking for a crash
 
-define void @f(ptr %a) {
+define void @f(ptr %a, i1 %arg) {
 ; CHECK-LABEL: @f(
 entry:
   br label %for.cond
@@ -15,10 +15,10 @@ for.cond:                                         ; preds = %for.inc, %for.cond,
   %add = add nsw i32 %iv, 1
   %idxprom = sext i32 %add to i64
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %idxprom
-  br i1 undef, label %for.cond, label %for.inc
+  br i1 %arg, label %for.cond, label %for.inc
 
 for.inc:                                          ; preds = %for.cond
-  br i1 undef, label %for.cond, label %for.end
+  br i1 %arg, label %for.cond, label %for.end
 
 for.end:                                          ; preds = %for.inc
   ret void

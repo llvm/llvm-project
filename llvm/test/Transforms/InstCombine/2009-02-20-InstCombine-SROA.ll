@@ -215,7 +215,7 @@ define ptr @_Z3fooRSt6vectorIiSaIiEE(ptr %X) {
 ; IC_SROA-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[__FIRST_ADDR_I_I_SROA_0_0]], i32 4
 ; IC_SROA-NEXT:    br label [[BB18_I_I]]
 ; IC_SROA:       bb18.i.i:
-; IC_SROA-NEXT:    [[__FIRST_ADDR_I_I_SROA_0_1:%.*]] = phi ptr [ [[TMP27]], [[BB17_I_I]] ], [ [[__FIRST_ADDR_I_I_SROA_0_0]], [[BB13_I_I]] ]
+; IC_SROA-NEXT:    [[__FIRST_ADDR_I_I_SROA_0_1:%.*]] = phi ptr [ [[__FIRST_ADDR_I_I_SROA_0_0]], [[BB13_I_I]] ], [ [[TMP27]], [[BB17_I_I]] ]
 ; IC_SROA-NEXT:    [[TMP28:%.*]] = load i32, ptr [[__FIRST_ADDR_I_I_SROA_0_1]], align 4
 ; IC_SROA-NEXT:    [[TMP29:%.*]] = icmp eq i32 [[TMP28]], 42
 ; IC_SROA-NEXT:    br i1 [[TMP29]], label [[BB20_I_I:%.*]], label [[BB21_I_I:%.*]]
@@ -225,7 +225,7 @@ define ptr @_Z3fooRSt6vectorIiSaIiEE(ptr %X) {
 ; IC_SROA-NEXT:    [[TMP30:%.*]] = getelementptr i8, ptr [[__FIRST_ADDR_I_I_SROA_0_1]], i32 4
 ; IC_SROA-NEXT:    br label [[BB22_I_I]]
 ; IC_SROA:       bb22.i.i:
-; IC_SROA-NEXT:    [[__FIRST_ADDR_I_I_SROA_0_2:%.*]] = phi ptr [ [[TMP30]], [[BB21_I_I]] ], [ [[__FIRST_ADDR_I_I_SROA_0_0]], [[BB13_I_I]] ]
+; IC_SROA-NEXT:    [[__FIRST_ADDR_I_I_SROA_0_2:%.*]] = phi ptr [ [[__FIRST_ADDR_I_I_SROA_0_0]], [[BB13_I_I]] ], [ [[TMP30]], [[BB21_I_I]] ]
 ; IC_SROA-NEXT:    [[TMP31:%.*]] = load i32, ptr [[__FIRST_ADDR_I_I_SROA_0_2]], align 4
 ; IC_SROA-NEXT:    [[TMP32:%.*]] = icmp eq i32 [[TMP31]], 42
 ; IC_SROA-NEXT:    br i1 [[TMP32]], label [[BB24_I_I:%.*]], label [[BB25_I_I:%.*]]

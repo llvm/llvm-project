@@ -18,10 +18,10 @@ using namespace llvm::XCOFF;
 TEST(XCOFFObjectFileTest, XCOFFObjectType) {
   // Create an arbitrary object of a non-XCOFF type and test that
   // dyn_cast<XCOFFObjectFile> returns null for it.
-  char Buf[sizeof(typename ELF64LE::Ehdr)] = {};
+  char Buf[sizeof(ELF64LE::Ehdr)] = {};
   memcpy(Buf, "\177ELF", 4);
 
-  auto *EHdr = reinterpret_cast<typename ELF64LE::Ehdr *>(Buf);
+  auto *EHdr = reinterpret_cast<ELF64LE::Ehdr *>(Buf);
   EHdr->e_ident[llvm::ELF::EI_CLASS] = llvm::ELF::ELFCLASS64;
   EHdr->e_ident[llvm::ELF::EI_DATA] = llvm::ELF::ELFDATA2LSB;
 

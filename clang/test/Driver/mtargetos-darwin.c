@@ -11,7 +11,7 @@
 // RUN: not %clang -mtargetos=darwin20 -arch arm64 -c %s -o %t.o -### 2>&1 | FileCheck --check-prefix=INVALIDOS %s
 // RUN: not %clang -mtargetos=ios -arch arm64 -c %s -o %t.o -### 2>&1 | FileCheck --check-prefix=NOVERSION %s
 
-// REQUIRES: system-darwin
+// REQUIRES: system-darwin && target={{.*}}-{{darwin|macos}}{{.*}}
 
 // MACOS: "-cc1" "-triple" "arm64-apple-macosx11.0.0"
 // MACOS-NEXT: "-cc1" "-triple" "x86_64-apple-macosx11.0.0"

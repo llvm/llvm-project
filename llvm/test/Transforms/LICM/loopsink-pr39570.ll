@@ -39,8 +39,8 @@
 %32 = type { ptr }
 %33 = type <{ %8, ptr, %10, i32, ptr, ptr, ptr, %27, %28, i16, [2 x i8] }>
 
-define dso_local void @pr39570() local_unnamed_addr align 2 personality ptr @__gxx_personality_v0 !prof !1 {
-  br i1 undef, label %8, label %1, !prof !2
+define dso_local void @pr39570(i1 %arg) local_unnamed_addr align 2 personality ptr @__gxx_personality_v0 !prof !1 {
+  br i1 %arg, label %8, label %1, !prof !2
 
 ; <label>:1:                                      ; preds = %0
   %2 = load ptr, ptr undef, align 4
@@ -52,7 +52,7 @@ define dso_local void @pr39570() local_unnamed_addr align 2 personality ptr @__g
 
 ; <label>:5:                                      ; preds = %3
   %6 = getelementptr inbounds %0, ptr %2, i32 undef, i32 4
-  br i1 undef, label %18, label %7, !prof !3
+  br i1 %arg, label %18, label %7, !prof !3
 
 ; <label>:7:                                      ; preds = %5
   br label %3

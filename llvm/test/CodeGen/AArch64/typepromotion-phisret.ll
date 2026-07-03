@@ -237,25 +237,27 @@ define i16 @promote_arg_return(i16 zeroext %arg1, i16 zeroext %arg2, ptr %res) {
 define i16 @signext_bitcast_phi_select(i16 signext %start, ptr %in) {
 ; CHECK-LABEL: signext_bitcast_phi_select:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    and w9, w0, #0xffff
-; CHECK-NEXT:    cmp w8, w9, sxth
+; CHECK-NEXT:    mov w9, #-1 // =0xffffffff
+; CHECK-NEXT:    mov w10, #32768 // =0x8000
+; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-NEXT:    cmp w9, w0, sxth
 ; CHECK-NEXT:    b.lt .LBB6_3
 ; CHECK-NEXT:  .LBB6_1: // %if.then
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldrh w0, [x1, w9, sxtw #1]
-; CHECK-NEXT:    cmp w0, w9
+; CHECK-NEXT:    sxth x8, w0
+; CHECK-NEXT:    ldrh w8, [x1, x8, lsl #1]
+; CHECK-NEXT:    cmp w8, w0, uxth
 ; CHECK-NEXT:    b.eq .LBB6_4
 ; CHECK-NEXT:  // %bb.2: // %if.else
 ; CHECK-NEXT:    // in Loop: Header=BB6_1 Depth=1
-; CHECK-NEXT:    lsr w10, w9, #15
-; CHECK-NEXT:    eor w10, w10, #0x1
-; CHECK-NEXT:    add w9, w10, w9
-; CHECK-NEXT:    cmp w8, w9, sxth
+; CHECK-NEXT:    bic w8, w10, w0
+; CHECK-NEXT:    add w0, w0, w8, lsr #15
+; CHECK-NEXT:    cmp w9, w0, sxth
 ; CHECK-NEXT:    b.ge .LBB6_1
 ; CHECK-NEXT:  .LBB6_3:
-; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:  .LBB6_4: // %exit
+; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    ret
 entry:
   %const = bitcast i16 -1 to i16

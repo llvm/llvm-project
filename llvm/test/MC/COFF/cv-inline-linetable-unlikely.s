@@ -62,8 +62,10 @@ g:                                      # @g
 	jne	.LBB0_1
 	.cv_loc	0 1 10 17               # t.cpp:10:17
 	movl	$0, unlikely_cond(%rip)
+	.seh_startepilogue
 	.cv_loc	0 1 11 1                # t.cpp:11:1
 	addq	$40, %rsp
+	.seh_endepilogue
 	retq
 
 .LBB0_1:                                # %if.then.i

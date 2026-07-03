@@ -9,10 +9,15 @@
 #ifndef LLVM_LIB_TARGET_HEXAGON_HEXAGONMACHINEFUNCTIONINFO_H
 #define LLVM_LIB_TARGET_HEXAGON_HEXAGONMACHINEFUNCTIONINFO_H
 
+#include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include <map>
 
 namespace llvm {
+
+namespace yaml {
+struct HexagonFunctionInfo;
+} // end namespace yaml
 
 namespace Hexagon {
 
@@ -48,6 +53,8 @@ public:
         const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
       const override;
 
+  void initializeBaseYamlFields(const yaml::HexagonFunctionInfo &YamlMFI);
+
   unsigned getSRetReturnReg() const { return SRetReturnReg; }
   void setSRetReturnReg(unsigned Reg) { SRetReturnReg = Reg; }
 
@@ -70,12 +77,12 @@ public:
     PacketInfo[MI] |= Hexagon::EndPacket;
   }
   bool isStartPacket(const MachineInstr* MI) const {
-    return (PacketInfo.count(MI) &&
-            (PacketInfo.find(MI)->second & Hexagon::StartPacket));
+    auto It = PacketInfo.find(MI);
+    return It != PacketInfo.end() && (It->second & Hexagon::StartPacket);
   }
   bool isEndPacket(const MachineInstr* MI) const {
-    return (PacketInfo.count(MI) &&
-            (PacketInfo.find(MI)->second & Hexagon::EndPacket));
+    auto It = PacketInfo.find(MI);
+    return It != PacketInfo.end() && (It->second & Hexagon::EndPacket);
   }
   void setHasClobberLR(bool v) { HasClobberLR = v;  }
   bool hasClobberLR() const { return HasClobberLR; }
@@ -86,6 +93,28 @@ public:
   void setStackAlignBaseReg(Register R) { StackAlignBaseReg = R; }
   Register getStackAlignBaseReg() const { return StackAlignBaseReg; }
 };
+
+namespace yaml {
+
+/// Hexagon-specific MachineFunction properties for YAML serialization.
+struct HexagonFunctionInfo final : public yaml::MachineFunctionInfo {
+  StringValue StackAlignBaseReg;
+
+  HexagonFunctionInfo() = default;
+  HexagonFunctionInfo(const llvm::HexagonMachineFunctionInfo &MFI,
+                      const TargetRegisterInfo &TRI);
+
+  void mappingImpl(yaml::IO &YamlIO) override;
+  ~HexagonFunctionInfo() override = default;
+};
+
+template <> struct MappingTraits<HexagonFunctionInfo> {
+  static void mapping(IO &YamlIO, HexagonFunctionInfo &MFI) {
+    YamlIO.mapOptional("stackAlignBaseReg", MFI.StackAlignBaseReg);
+  }
+};
+
+} // end namespace yaml
 
 } // end namespace llvm
 

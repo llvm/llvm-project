@@ -50,6 +50,15 @@ public:
 
   static void build(
       ::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState) {}
+
+  static FakeOp create(
+      ::mlir::OpBuilder &odsBuilder, ::mlir::Location location) {
+    ::mlir::OperationState state(location, getOperationName());
+    build(odsBuilder, state);
+    auto res = ::llvm::dyn_cast<FakeOp>(odsBuilder.create(state));
+    assert(res && "builder didn't return the right type");
+    return res;
+  }
 };
 } // namespace dummy
 } // namespace test
@@ -72,13 +81,12 @@ public:
     mlirCtx->loadDialect<test::DummyDialect>();
 
     mlir::Location loc(mlir::UnknownLoc::get(mlirCtx.get()));
-    mlirModule =
-        std::make_unique<mlir::ModuleOp>(mlir::ModuleOp::create(loc, "mod"));
+    mlirModule = mlir::ModuleOp::create(loc, "mod");
 
     mlir::OpBuilder builder(mlirCtx.get());
     builder.setInsertionPointToStart(&mlirModule->getRegion().front());
     // Create a fake op to trip conversion to LLVM.
-    builder.create<test::dummy::FakeOp>(loc);
+    test::dummy::FakeOp::create(builder, loc);
 
     llvmCtx = std::make_unique<llvm::LLVMContext>();
   }
@@ -87,8 +95,9 @@ public:
 TEST(CodeGenAction, GracefullyHandleLLVMConversionFailure) {
   std::string diagnosticOutput;
   llvm::raw_string_ostream diagnosticsOS(diagnosticOutput);
+  clang::DiagnosticOptions diagOpts;
   auto diagPrinter = std::make_unique<Fortran::frontend::TextDiagnosticPrinter>(
-      diagnosticsOS, new clang::DiagnosticOptions());
+      diagnosticsOS, diagOpts);
 
   CompilerInstance ci;
   ci.createDiagnostics(diagPrinter.get(), /*ShouldOwnClient=*/false);

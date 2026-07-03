@@ -16,7 +16,7 @@ define i177 @test1(i177 %X) {
 
 define <2 x i177> @test2(<2 x i177> %X) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[Y:%.*]] = shl <2 x i177> [[X:%.*]], <i177 155, i177 155>
+; CHECK-NEXT:    [[Y:%.*]] = shl <2 x i177> [[X:%.*]], splat (i177 155)
 ; CHECK-NEXT:    ret <2 x i177> [[Y]]
 ;
   %C = shl <2 x i177> <i177 1, i177 1>, <i177 155, i177 155>

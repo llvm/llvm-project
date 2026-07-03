@@ -313,8 +313,8 @@ define i1 @fcmp_defaultenv(double %a, double %b) #0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @bar.i32(i32 [[TMP2]], i32 [[TMP2]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
-  %1 = call i1 @llvm.experimental.constrained.fcmp.i1.f64(double %a, double %b, metadata !"oeq", metadata !"fpexcept.ignore") #0
-  %2 = call i1 @llvm.experimental.constrained.fcmp.i1.f64(double %a, double %b, metadata !"oeq", metadata !"fpexcept.ignore") #0
+  %1 = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"oeq", metadata !"fpexcept.ignore") #0
+  %2 = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"oeq", metadata !"fpexcept.ignore") #0
   %3 = zext i1 %1 to i32
   %4 = zext i1 %2 to i32
   %5 = call i32 @bar.i32(i32 %3, i32 %4) #0
@@ -328,8 +328,8 @@ define i1 @fcmp_maytrap(double %a, double %b) #0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @bar.i32(i32 [[TMP2]], i32 [[TMP2]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
-  %1 = call i1 @llvm.experimental.constrained.fcmp.i1.f64(double %a, double %b, metadata !"oeq", metadata !"fpexcept.maytrap") #0
-  %2 = call i1 @llvm.experimental.constrained.fcmp.i1.f64(double %a, double %b, metadata !"oeq", metadata !"fpexcept.maytrap") #0
+  %1 = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"oeq", metadata !"fpexcept.maytrap") #0
+  %2 = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"oeq", metadata !"fpexcept.maytrap") #0
   %3 = zext i1 %1 to i32
   %4 = zext i1 %2 to i32
   %5 = call i32 @bar.i32(i32 %3, i32 %4) #0
@@ -343,8 +343,8 @@ define i1 @fcmps_defaultenv(double %a, double %b) #0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @bar.i32(i32 [[TMP2]], i32 [[TMP2]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
-  %1 = call i1 @llvm.experimental.constrained.fcmps.i1.f64(double %a, double %b, metadata !"oeq", metadata !"fpexcept.ignore") #0
-  %2 = call i1 @llvm.experimental.constrained.fcmps.i1.f64(double %a, double %b, metadata !"oeq", metadata !"fpexcept.ignore") #0
+  %1 = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"oeq", metadata !"fpexcept.ignore") #0
+  %2 = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"oeq", metadata !"fpexcept.ignore") #0
   %3 = zext i1 %1 to i32
   %4 = zext i1 %2 to i32
   %5 = call i32 @bar.i32(i32 %3, i32 %4) #0
@@ -358,8 +358,8 @@ define i1 @fcmps_maytrap(double %a, double %b) #0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @bar.i32(i32 [[TMP2]], i32 [[TMP2]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
-  %1 = call i1 @llvm.experimental.constrained.fcmps.i1.f64(double %a, double %b, metadata !"oeq", metadata !"fpexcept.maytrap") #0
-  %2 = call i1 @llvm.experimental.constrained.fcmps.i1.f64(double %a, double %b, metadata !"oeq", metadata !"fpexcept.maytrap") #0
+  %1 = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"oeq", metadata !"fpexcept.maytrap") #0
+  %2 = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"oeq", metadata !"fpexcept.maytrap") #0
   %3 = zext i1 %1 to i32
   %4 = zext i1 %2 to i32
   %5 = call i32 @bar.i32(i32 %3, i32 %4) #0
@@ -381,5 +381,5 @@ declare i32 @llvm.experimental.constrained.fptoui.i32.f64(double, metadata)
 declare double @llvm.experimental.constrained.uitofp.f64.i32(i32, metadata, metadata)
 declare i32 @llvm.experimental.constrained.fptosi.i32.f64(double, metadata)
 declare double @llvm.experimental.constrained.sitofp.f64.i32(i32, metadata, metadata)
-declare i1 @llvm.experimental.constrained.fcmp.i1.f64(double, double, metadata, metadata)
-declare i1 @llvm.experimental.constrained.fcmps.i1.f64(double, double, metadata, metadata)
+declare i1 @llvm.experimental.constrained.fcmp.f64(double, double, metadata, metadata)
+declare i1 @llvm.experimental.constrained.fcmps.f64(double, double, metadata, metadata)

@@ -1,10 +1,10 @@
-; RUN: llvm-reduce --delta-passes=attributes --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
+; RUN: llvm-reduce -abort-on-invalid-reduction --delta-passes=attributes --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: FileCheck -check-prefix=RESULT %s < %t
 
-; RUN: llvm-reduce --delta-passes=instructions,attributes --skip-delta-passes=instructions --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
+; RUN: llvm-reduce -abort-on-invalid-reduction --delta-passes=instructions,attributes --skip-delta-passes=instructions --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: FileCheck -check-prefix=RESULT %s < %t
 
-; RUN: not llvm-reduce --skip-delta-passes=foo --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2>&1 | FileCheck %s --check-prefix=ERROR
+; RUN: not llvm-reduce -abort-on-invalid-reduction --skip-delta-passes=foo --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2>&1 | FileCheck %s --check-prefix=ERROR
 
 
 ; CHECK-INTERESTINGNESS: @foo

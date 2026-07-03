@@ -15,13 +15,13 @@ struct SimpleCases : public Base {
 public:
   virtual ~SimpleCases();
   // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: prefer using 'CUSTOM_OVERRIDE' or (rarely) 'CUSTOM_FINAL' instead of 'virtual' [modernize-use-override]
-  // CHECK-FIXES: {{^}}  virtual ~SimpleCases();
+  // CHECK-FIXES: virtual ~SimpleCases();
 
   void a();
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: annotate this function with 'CUSTOM_OVERRIDE' or (rarely) 'CUSTOM_FINAL' [modernize-use-override]
-  // CHECK-FIXES: {{^}}  void a();
+  // CHECK-FIXES: void a();
 
   virtual void b();
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer using 'CUSTOM_OVERRIDE' or (rarely) 'CUSTOM_FINAL' instead of 'virtual' [modernize-use-override]
-  // CHECK-FIXES: {{^}}  virtual void b();
+  // CHECK-FIXES: virtual void b();
 };

@@ -32,10 +32,9 @@ void clang_fuzzer::HandleCXX(const std::string &S,
   llvm::IntrusiveRefCntPtr<FileManager> Files(
       new FileManager(FileSystemOptions()));
   IgnoringDiagConsumer Diags;
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
-  DiagnosticsEngine Diagnostics(
-      IntrusiveRefCntPtr<clang::DiagnosticIDs>(new DiagnosticIDs()), &*DiagOpts,
-      &Diags, false);
+  DiagnosticOptions DiagOpts;
+  DiagnosticsEngine Diagnostics(DiagnosticIDs::create(), DiagOpts, &Diags,
+                                false);
   std::unique_ptr<clang::CompilerInvocation> Invocation(
       tooling::newInvocation(&Diagnostics, CC1Args, /*BinaryName=*/nullptr));
   std::unique_ptr<llvm::MemoryBuffer> Input =
@@ -49,4 +48,3 @@ void clang_fuzzer::HandleCXX(const std::string &S,
   action->runInvocation(std::move(Invocation), Files.get(), PCHContainerOps,
                         &Diags);
 }
-

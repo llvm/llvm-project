@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 -hexagon-expand-condsets=true -hexagon-gen-mux-threshold=4 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 -hexagon-expand-condsets=true -hexagon-gen-mux-threshold=4 < %s | FileCheck %s
 ; CHECK-NOT: mux(p
 
 target triple = "hexagon"

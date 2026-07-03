@@ -11,10 +11,7 @@
 
 #include "COFFLinkerContext.h"
 #include "Symbols.h"
-#include "lld/Common/Memory.h"
 #include "llvm/BinaryFormat/COFF.h"
-#include "llvm/DebugInfo/CodeView/TypeHashing.h"
-#include "llvm/Demangle/Demangle.h"
 
 namespace lld::coff {
 COFFLinkerContext::COFFLinkerContext()

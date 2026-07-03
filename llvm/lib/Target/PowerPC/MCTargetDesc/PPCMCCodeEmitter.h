@@ -30,7 +30,7 @@ class PPCMCCodeEmitter : public MCCodeEmitter {
 public:
   PPCMCCodeEmitter(const MCInstrInfo &mcii, MCContext &ctx)
       : MCII(mcii), CTX(ctx),
-        IsLittleEndian(ctx.getAsmInfo()->isLittleEndian()) {}
+        IsLittleEndian(ctx.getAsmInfo().isLittleEndian()) {}
   PPCMCCodeEmitter(const PPCMCCodeEmitter &) = delete;
   void operator=(const PPCMCCodeEmitter &) = delete;
   ~PPCMCCodeEmitter() override = default;
@@ -47,19 +47,10 @@ public:
   unsigned getAbsCondBrEncoding(const MCInst &MI, unsigned OpNo,
                                 SmallVectorImpl<MCFixup> &Fixups,
                                 const MCSubtargetInfo &STI) const;
-  unsigned getImm16Encoding(const MCInst &MI, unsigned OpNo,
-                            SmallVectorImpl<MCFixup> &Fixups,
-                            const MCSubtargetInfo &STI) const;
-  uint64_t getImm34Encoding(const MCInst &MI, unsigned OpNo,
-                            SmallVectorImpl<MCFixup> &Fixups,
-                            const MCSubtargetInfo &STI,
-                            MCFixupKind Fixup) const;
-  uint64_t getImm34EncodingNoPCRel(const MCInst &MI, unsigned OpNo,
-                                   SmallVectorImpl<MCFixup> &Fixups,
-                                   const MCSubtargetInfo &STI) const;
-  uint64_t getImm34EncodingPCRel(const MCInst &MI, unsigned OpNo,
-                                 SmallVectorImpl<MCFixup> &Fixups,
-                                 const MCSubtargetInfo &STI) const;
+  template <MCFixupKind Fixup>
+  uint64_t getImmEncoding(const MCInst &MI, unsigned OpNo,
+                          SmallVectorImpl<MCFixup> &Fixups,
+                          const MCSubtargetInfo &STI) const;
   unsigned getDispRIEncoding(const MCInst &MI, unsigned OpNo,
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;

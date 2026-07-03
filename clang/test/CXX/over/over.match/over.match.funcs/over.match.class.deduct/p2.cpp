@@ -37,7 +37,7 @@ namespace std {
 namespace p0702r1 {
   template<typename T> struct X { // expected-note {{candidate}} expected-note {{implicit deduction guide}}
     X(std::initializer_list<T>); // expected-note {{candidate template ignored: could not match 'std::initializer_list<T>' against 'Z'}} \
-                                 // expected-note {{implicit deduction guide declared as 'template <typename T> X(std::initializer_list<T>) -> X<T>'}}
+                                 // expected-note {{implicit deduction guide declared as 'template <typename T> X(std::initializer_list<T>) -> p0702r1::X<T>'}}
   };
 
   X xi = {0};

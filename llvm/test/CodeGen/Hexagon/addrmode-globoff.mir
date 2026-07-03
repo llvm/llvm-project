@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass amode-opt %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass amode-opt %s -o - | FileCheck %s
 
 --- |
   @g0 = external global [16 x i16], align 8

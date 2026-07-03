@@ -309,6 +309,11 @@ EligibleRegion getEligiblePoints(llvm::StringRef Code,
                                  llvm::StringRef FullyQualifiedName,
                                  const LangOptions &LangOpts);
 
+/// Returns the fully qualified name of the namespace at \p Pos in the \p Code.
+/// Employs pseudo-parsing to determine the start and end of namespaces.
+std::string getNamespaceAtPosition(llvm::StringRef Code, const Position &Pos,
+                                   const LangOptions &LangOpts);
+
 struct DefinedMacro {
   llvm::StringRef Name;
   const MacroInfo *Info;

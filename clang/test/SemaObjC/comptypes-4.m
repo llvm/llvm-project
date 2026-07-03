@@ -12,7 +12,7 @@ int main(void)
   MyClass *obj_cp;
 
   obj_cp = obj_p;  
-  obj_p = obj_cp;	// expected-warning {{incompatible pointer types assigning to 'MyClass<MyProtocol> *' from 'MyClass *'}}
+  obj_p = obj_cp;	// expected-error {{incompatible pointer types assigning to 'MyClass<MyProtocol> *' from 'MyClass *'}}
 
   if (obj_cp == obj_p)
     foo();

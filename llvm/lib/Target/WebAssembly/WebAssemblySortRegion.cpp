@@ -28,17 +28,17 @@ const SortRegion *SortRegionInfo::getRegionFor(const MachineBasicBlock *MBB) {
   // WE->contains(ML->getHeader()), but not ML->contains(WE->getHeader()).
   if ((ML && !WE) || (ML && WE && WE->contains(ML->getHeader()))) {
     // If the smallest region containing MBB is a loop
-    if (LoopMap.count(ML))
-      return LoopMap[ML].get();
-    LoopMap[ML] = std::make_unique<ConcreteSortRegion<MachineLoop>>(ML);
-    return LoopMap[ML].get();
+    auto [It, Inserted] = LoopMap.try_emplace(ML);
+    if (Inserted)
+      It->second = std::make_unique<ConcreteSortRegion<MachineLoop>>(ML);
+    return It->second.get();
   } else {
     // If the smallest region containing MBB is an exception
-    if (ExceptionMap.count(WE))
-      return ExceptionMap[WE].get();
-    ExceptionMap[WE] =
-        std::make_unique<ConcreteSortRegion<WebAssemblyException>>(WE);
-    return ExceptionMap[WE].get();
+    auto [It, Inserted] = ExceptionMap.try_emplace(WE);
+    if (Inserted)
+      It->second =
+          std::make_unique<ConcreteSortRegion<WebAssemblyException>>(WE);
+    return It->second.get();
   }
 }
 

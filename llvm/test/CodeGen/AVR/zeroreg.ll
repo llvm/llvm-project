@@ -1,4 +1,4 @@
-; RUN: llc -mattr=avr6,sram < %s -march=avr | FileCheck %s
+; RUN: llc -mattr=avr6,sram < %s -mtriple=avr | FileCheck %s
 
 ; This file tests whether the compiler correctly works with the r1 register,
 ; clearing it when needed.

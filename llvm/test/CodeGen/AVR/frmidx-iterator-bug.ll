@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr -mattr=avr6 | FileCheck %s
+; RUN: llc < %s -mtriple=avr -mattr=avr6 | FileCheck %s
 
 %str_slice = type { ptr, i16 }
 %Machine = type { i16, [0 x i8], i16, [0 x i8], [16 x i8], [0 x i8] }

@@ -1,15 +1,16 @@
-// RUN: cp %S/macro.cpp %T/macro.cpp
-// RUN: echo "#define USING using na::nc::X" > %T/macro.h
+// RUN: mkdir -p %t.dir
+// RUN: cp %S/macro.cpp %t.dir/macro.cpp
+// RUN: echo "#define USING using na::nc::X" > %t.dir/macro.h
 //
-// RUN: clang-change-namespace -old_namespace "na::nb" -new_namespace "x::y" --file_pattern "macro.cpp$" --i %T/macro.cpp --
-// RUN: FileCheck -input-file=%T/macro.cpp -check-prefix=CHECK-CC %s
-// RUN: FileCheck -input-file=%T/macro.h -check-prefix=CHECK-HEADER %s
+// RUN: clang-change-namespace -old_namespace "na::nb" -new_namespace "x::y" --file_pattern "macro.cpp$" --i %t.dir/macro.cpp --
+// RUN: FileCheck -input-file=%t.dir/macro.cpp -check-prefix=CHECK-CC %s
+// RUN: FileCheck -input-file=%t.dir/macro.h -check-prefix=CHECK-HEADER %s
 //
-// RUN: cp %S/macro.cpp %T/macro.cpp
-// RUN: echo "#define USING using na::nc::X" > %T/macro.h
-// RUN: clang-change-namespace -old_namespace "na::nb" -new_namespace "x::y" --file_pattern ".*" --i %T/macro.cpp --
-// RUN: FileCheck -input-file=%T/macro.cpp -check-prefix=CHECK-CC %s
-// RUN: FileCheck -input-file=%T/macro.h -check-prefix=CHECK-CHANGED-HEADER %s
+// RUN: cp %S/macro.cpp %t.dir/macro.cpp
+// RUN: echo "#define USING using na::nc::X" > %t.dir/macro.h
+// RUN: clang-change-namespace -old_namespace "na::nb" -new_namespace "x::y" --file_pattern ".*" --i %t.dir/macro.cpp --
+// RUN: FileCheck -input-file=%t.dir/macro.cpp -check-prefix=CHECK-CC %s
+// RUN: FileCheck -input-file=%t.dir/macro.h -check-prefix=CHECK-CHANGED-HEADER %s
 #include "macro.h"
 namespace na { namespace nc { class X{}; } }
 

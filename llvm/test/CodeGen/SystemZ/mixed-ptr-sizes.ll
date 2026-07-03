@@ -103,9 +103,9 @@ declare void @use_foo(ptr)
 
 define void @ptr32_to_ptr(ptr %f, ptr addrspace(1) %i) {
 entry:
-; CHECK-LABEL: ptr32_to_ptr:
-; CHECK:       llgtr 0, 2
-; CHECK-NEXT:  stg   0, 8(1)
+; CHECK-LABEL: ptr32_to_ptr DS 0H
+; CHECK:       llgtr 0,2
+; CHECK-NEXT:  stg   0,8(1)
   %0 = addrspacecast ptr addrspace(1) %i to ptr
   %p64 = getelementptr inbounds %struct.Foo, ptr %f, i64 0, i32 1
   store ptr %0, ptr %p64, align 8
@@ -115,9 +115,9 @@ entry:
 
 define void @ptr_to_ptr32(ptr %f, ptr %i) {
 entry:
-; CHECK-LABEL: ptr_to_ptr32:
-; CHECK:       nilh 2, 32767
-; CHECK-NEXT:  st   2, 0(1)
+; CHECK-LABEL: ptr_to_ptr32 DS 0H
+; CHECK:       nilh 2,32767
+; CHECK-NEXT:  st   2,0(1)
   %0 = addrspacecast ptr %i to ptr addrspace(1)
   %p32 = getelementptr inbounds %struct.Foo, ptr %f, i64 0, i32 0
   store ptr addrspace(1) %0, ptr %p32, align 8
@@ -127,8 +127,8 @@ entry:
 
 define void @ptr32_to_ptr32(ptr %f, ptr addrspace(1) %i) {
 entry:
-; CHECK-LABEL: ptr32_to_ptr32:
-; CHECK:       st 2, 0(1)
+; CHECK-LABEL: ptr32_to_ptr32 DS 0H
+; CHECK:       st 2,0(1)
   %p32 = getelementptr inbounds %struct.Foo, ptr %f, i64 0, i32 0
   store ptr addrspace(1) %i, ptr %p32, align 8
   tail call void @use_foo(ptr %f)
@@ -136,8 +136,8 @@ entry:
 }
 
 define void @ptr_to_ptr(ptr %f, ptr %i) {
-; CHECK-LABEL: ptr_to_ptr:
-; CHECK:       stg 2, 8(1)
+; CHECK-LABEL: ptr_to_ptr DS 0H
+; CHECK:       stg 2,8(1)
   %p64 = getelementptr inbounds %struct.Foo, ptr %f, i64 0, i32 1
   store ptr %i, ptr %p64, align 8
   tail call void @use_foo(ptr %f)
@@ -146,10 +146,10 @@ define void @ptr_to_ptr(ptr %f, ptr %i) {
 
 define void @test_indexing(ptr %f) {
 entry:
-; CHECK-LABEL: test_indexing:
-; CHECK:       l     0, 1032
-; CHECK:       llgtr 0, 0
-; CHECK:       stg   0, 16(1)
+; CHECK-LABEL: test_indexing DS 0H
+; CHECK:       l     0,1032
+; CHECK:       llgtr 0,0
+; CHECK:       stg   0,16(1)
   %0 = load ptr addrspace(1), ptr inttoptr (i64 1032 to ptr), align 8
   %1 = addrspacecast ptr addrspace(1) %0 to ptr
   %cp64 = getelementptr inbounds %struct.Foo, ptr %f, i64 0, i32 2
@@ -160,12 +160,12 @@ entry:
 
 define void @test_indexing_2(ptr %f) {
 entry:
-; CHECK-LABEL: test_indexing_2:
-; CHECK:       lhi   0, 16
-; CHECK-NEXT:  a     0, 1032
-; CHECK-NEXT:  llgtr 2, 0
-; CHECK:       lg    0, 24(2)
-; CHECK:       stg   0, 16(1)
+; CHECK-LABEL: test_indexing_2 DS 0H
+; CHECK:       lhi   0,16
+; CHECK-NEXT:  a     0,1032
+; CHECK-NEXT:  llgtr 2,0
+; CHECK:       lg    0,24(2)
+; CHECK:       stg   0,16(1)
   %0 = load ptr addrspace(1), ptr inttoptr (i64 1032 to ptr), align 8
   %arrayidx = getelementptr inbounds ptr, ptr addrspace(1) %0, i32 2
   %1 = load ptr, ptr addrspace(1) %arrayidx, align 8
@@ -181,14 +181,14 @@ entry:
 
 define ptr @test_misc() {
 entry:
-; CHECK-LABEL: test_misc:
-; CHECK:       lhi   0, 88
-; CHECK-NEXT:  a     0, 1208
-; CHECK-NEXT:  llgtr 1, 0
-; CHECK-NEXT:  lg    1, 0(1)
-; CHECK-NEXT:  lg    1, 8(1)
-; CHECK-NEXT:  lg    1, 904(1)
-; CHECK-NEXT:  lg    3, 1192(1)
+; CHECK-LABEL: test_misc DS 0H
+; CHECK:       lhi   0,88
+; CHECK-NEXT:  a     0,1208
+; CHECK-NEXT:  llgtr 1,0
+; CHECK-NEXT:  lg    1,0(1)
+; CHECK-NEXT:  lg    1,8(1)
+; CHECK-NEXT:  lg    1,904(1)
+; CHECK-NEXT:  lg    3,1192(1)
   %0 = load ptr addrspace(1), ptr inttoptr (i64 1208 to ptr), align 8
   %arrayidx = getelementptr inbounds ptr, ptr addrspace(1) %0, i32 11
   %1 = load ptr, ptr addrspace(1) %arrayidx, align 8
@@ -204,13 +204,13 @@ entry:
 
 define ptr addrspace(1) @test_misc_2() {
 entry:
-; CHECK-LABEL: test_misc_2:
-; CHECK:       lhi   0, 544
-; CHECK:       a     0, 16
-; CHECK:       llgtr 1, 0
-; CHECK:       lhi   0, 24
-; CHECK:       a     0, 0(1)
-; CHECK:       llgtr 1, 0
+; CHECK-LABEL: test_misc_2 DS 0H
+; CHECK:       lhi   0,544
+; CHECK:       a     0,16
+; CHECK:       llgtr 1,0
+; CHECK:       lhi   0,24
+; CHECK:       a     0,0(1)
+; CHECK:       llgtr 1,0
   %0 = load ptr addrspace(1), ptr inttoptr (i64 16 to ptr), align 16
   %arrayidx = getelementptr inbounds ptr addrspace(1), ptr addrspace(1) %0, i32 136
   %1 = load ptr addrspace(1), ptr addrspace(1) %arrayidx, align 4
@@ -221,10 +221,10 @@ entry:
 
 define zeroext i16 @test_misc_3() {
 entry:
-; CHECK-LABEL: test_misc_3:
-; CHECK:       a     0, 548
-; CHECK-NEXT:  llgtr 1, 0
-; CHECK-NEXT:  llgh  3, 0(1)
+; CHECK-LABEL: test_misc_3 DS 0H
+; CHECK:       a     0,548
+; CHECK-NEXT:  llgtr 1,0
+; CHECK-NEXT:  llgh  3,0(1)
 ; CHECK-NEXT:  b     2(7)
   %0 = load ptr addrspace(1), ptr inttoptr (i64 548 to ptr), align 4
   %arrayidx2 = getelementptr inbounds i16, ptr addrspace(1) %0, i32 18
@@ -235,15 +235,15 @@ entry:
 
 define signext i32 @test_misc_4() {
 entry:
-; CHECK-LABEL: test_misc_4:
-; CHECK:       lhi   0, 88
-; CHECK-NEXT:  a     0, 1208
-; CHECK-NEXT:  llgtr 1, 0
-; CHECK-NEXT:  lg    1, 0(1)
-; CHECK-NEXT:  lg    1, 8(1)
-; CHECK-NEXT:  lg    1, 984(1)
-; CHECK-NEXT:  iilf  0, 67240703
-; CHECK-NEXT:  c     0, 80(1)
+; CHECK-LABEL: test_misc_4 DS 0H
+; CHECK:       lhi   0,88
+; CHECK-NEXT:  a     0,1208
+; CHECK-NEXT:  llgtr 1,0
+; CHECK-NEXT:  lg    1,0(1)
+; CHECK-NEXT:  lg    1,8(1)
+; CHECK-NEXT:  lg    1,984(1)
+; CHECK-NEXT:  iilf  0,67240703
+; CHECK-NEXT:  c     0,80(1)
   %0 = load ptr addrspace(1), ptr inttoptr (i64 1208 to ptr), align 8
   %arrayidx = getelementptr inbounds ptr, ptr addrspace(1) %0, i32 11
   %1 = load ptr, ptr addrspace(1) %arrayidx, align 8
@@ -261,12 +261,12 @@ entry:
 
 define void @test_misc_5(ptr %f) {
 entry:
-; CHECK-LABEL: test_misc_5:
-; CHECK:       l     0, 548
-; CHECK-NEXT:  lg  6, 8(5)
-; CHECK-NEXT:  lg  5, 0(5)
-; CHECK-NEXT:  llgtr 0, 0
-; CHECK-NEXT:  stg   0, 16(1)
+; CHECK-LABEL: test_misc_5 DS 0H
+; CHECK:       l     0,548
+; CHECK-NEXT:  lg  6,8(5)
+; CHECK-NEXT:  lg  5,0(5)
+; CHECK-NEXT:  llgtr 0,0
+; CHECK-NEXT:  stg   0,16(1)
   %0 = load ptr addrspace(1), ptr inttoptr (i64 548 to ptr), align 4
   %1 = addrspacecast ptr addrspace(1) %0 to ptr
   %cp64 = getelementptr inbounds %struct.Foo, ptr %f, i64 0, i32 2
@@ -277,14 +277,14 @@ entry:
 
 define signext i32 @get_processor_count() {
 entry:
-; CHECK-LABEL: get_processor_count:
-; CHECK: lhi 0, 660
-; CHECK-NEXT: a 0, 16
-; CHECK-NEXT: llgtr 1, 0
-; CHECK-NEXT: lhi 0, 53
-; CHECK-NEXT: a 0, 0(1)
-; CHECK-NEXT: llgtr 1, 0
-; CHECK-NEXT: lgb 3, 0(1)
+; CHECK-LABEL: get_processor_count DS 0H
+; CHECK: lhi 0,660
+; CHECK-NEXT: a 0,16
+; CHECK-NEXT: llgtr 1,0
+; CHECK-NEXT: lhi 0,53
+; CHECK-NEXT: a 0,0(1)
+; CHECK-NEXT: llgtr 1,0
+; CHECK-NEXT: lgb 3,0(1)
   %0 = load ptr addrspace(1), ptr inttoptr (i64 16 to ptr), align 16
   %arrayidx = getelementptr inbounds ptr addrspace(1), ptr addrspace(1) %0, i32 165
   %1 = load ptr addrspace(1), ptr addrspace(1) %arrayidx, align 4
@@ -296,21 +296,21 @@ entry:
 
 define void @spill_ptr32_args_to_registers(i8 addrspace(1)* %p) {
 entry:
-; CHECK-LABEL: spill_ptr32_args_to_registers:
-; CHECK:         stmg 6, 7, 1872(4)
-; CHECK-NEXT:    aghi 4, -192
-; CHECK-NEXT:    lgr 2, 1
-; CHECK-NEXT:    lg 6, 24(5)
-; CHECK-NEXT:    lg 5, 16(5)
-; CHECK-NEXT:    stg 1, 2216(4)
-; CHECK-NEXT:    stg 1, 2208(4)
-; CHECK-NEXT:    lghi 1, 5
-; CHECK-NEXT:    stg 2, 2200(4)
-; CHECK-NEXT:    lgr 3, 2
-; CHECK-NEXT:    basr 7, 6
-; CHECK-NEXT:    bcr 0, 0
-; CHECK-NEXT:    lg 7, 2072(4)
-; CHECK-NEXT:    aghi 4, 192
+; CHECK-LABEL: spill_ptr32_args_to_registers DS 0H
+; CHECK:         stmg 6,7,1872(4)
+; CHECK-NEXT:    aghi 4,-192
+; CHECK-NEXT:    lgr 2,1
+; CHECK-NEXT:    lg 6,24(5)
+; CHECK-NEXT:    lg 5,16(5)
+; CHECK-NEXT:    stg 1,2216(4)
+; CHECK-NEXT:    stg 1,2208(4)
+; CHECK-NEXT:    lghi 1,5
+; CHECK-NEXT:    stg 2,2200(4)
+; CHECK-NEXT:    lgr 3,2
+; CHECK-NEXT:    basr 7,6
+; CHECK-NEXT:    bcr 0,0
+; CHECK-NEXT:    lg 7,2072(4)
+; CHECK-NEXT:    aghi 4,192
 ; CHECK-NEXT:    b 2(7)
   tail call void (i32, ...) @g(i32 noundef signext 5, ptr addrspace(1) noundef %p, ptr addrspace(1) noundef %p, ptr addrspace(1) noundef %p, ptr addrspace(1) noundef %p, ptr addrspace(1) noundef %p)
   ret void
@@ -327,14 +327,14 @@ declare void @g(i32 signext, ...)
 ; cast to __ptr32, setting the upper 32 bit to zero.
 ;
 define signext i32 @setlength() {
-; CHECK-LABEL: setlength:
-; CHECK: basr    7, 6
-; CHECK: lgr     [[MALLOC:[0-9]+]], 3
-; CHECK: basr    7, 6
-; CHECK: lgr     [[LENGTH:[0-9]+]], 3
-; CHECK: la      [[ADDR:[0-9]+]], 4([[MALLOC]])
-; CHECK: llgtr   [[ADDR]], [[ADDR]]
-; CHECK: stg     [[LENGTH]], 0([[ADDR]])
+; CHECK-LABEL: setlength DS 0H
+; CHECK: basr    7,6
+; CHECK: lgr     [[MALLOC:[0-9]+]],3
+; CHECK: basr    7,6
+; CHECK: lgr     [[LENGTH:[0-9]+]],3
+; CHECK: la      [[ADDR:[0-9]+]],4([[MALLOC]])
+; CHECK: llgtr   [[ADDR]],[[ADDR]]
+; CHECK: stg     [[LENGTH]],0([[ADDR]])
 entry:
   %call = tail call ptr @__malloc31(i64 noundef 8)
   %call1 = tail call signext i32 @foo()
@@ -351,14 +351,14 @@ entry:
 ; the function now returns a __ptr32.
 ;
 define signext i32 @setlength2() {
-; CHECK-LABEL: setlength2:
-; CHECK: basr    7, 6
-; CHECK: lgr     [[MALLOC:[0-9]+]], 3
-; CHECK: basr    7, 6
-; CHECK: lgr     [[LENGTH:[0-9]+]], 3
-; CHECK: ahi     [[MALLOC]], 4
-; CHECK: llgtr   [[ADDR]], [[MALLOC]]
-; CHECK: stg     [[LENGTH]], 0([[ADDR]])
+; CHECK-LABEL: setlength2 DS 0H
+; CHECK: basr    7,6
+; CHECK: lgr     [[MALLOC:[0-9]+]],3
+; CHECK: basr    7,6
+; CHECK: lgr     [[LENGTH:[0-9]+]],3
+; CHECK: ahi     [[MALLOC]],4
+; CHECK: llgtr   [[ADDR]],[[MALLOC]]
+; CHECK: stg     [[LENGTH]],0([[ADDR]])
 entry:
   %call = tail call ptr addrspace(1) @domalloc(i64 noundef 8)
   %call1 = tail call signext i32 @foo()

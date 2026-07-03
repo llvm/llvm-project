@@ -1,8 +1,9 @@
-; RUN: llc -march=hexagon -O3 -verify-machineinstrs -hexagon-initial-cfg-cleanup=0 -hexagon-instsimplify=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O3 -verify-machineinstrs -hexagon-initial-cfg-cleanup=0 -hexagon-instsimplify=0 < %s | FileCheck %s
 ;
 ; Check that this testcase compiles successfully and that a new-value jump
 ; has been created.
-; CHECK: if (cmp.gtu(r{{[0-9]+}}.new,r{{[0-9]+}})) jump
+; CHECK: p{{[0-3]+}} = cmp.gtu(r{{[0-9]+}},r{{[0-9]+}})
+; CHECK-SAME: if (p{{[0-3]+}}.new) jump
 
 target triple = "hexagon"
 

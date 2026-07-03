@@ -15,11 +15,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "BPF.h"
-#include "BPFInstrInfo.h"
 #include "BPFTargetMachine.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Support/Debug.h"
 
@@ -35,9 +32,7 @@ struct BPFMIPreEmitChecking : public MachineFunctionPass {
   MachineFunction *MF;
   const TargetRegisterInfo *TRI;
 
-  BPFMIPreEmitChecking() : MachineFunctionPass(ID) {
-    initializeBPFMIPreEmitCheckingPass(*PassRegistry::getPassRegistry());
-  }
+  BPFMIPreEmitChecking() : MachineFunctionPass(ID) {}
 
 private:
   // Initialize class variables.
@@ -106,7 +101,7 @@ void BPFMIPreEmitChecking::initialize(MachineFunction &MFParm) {
 // Dead correctly, and it is safe to use such information or our purpose.
 static bool hasLiveDefs(const MachineInstr &MI, const TargetRegisterInfo *TRI) {
   const MCRegisterClass *GPR64RegClass =
-      &BPFMCRegisterClasses[BPF::GPRRegClassID];
+      &getBPFMCRegisterClass(BPF::GPRRegClassID);
   std::vector<unsigned> GPR32LiveDefs;
   std::vector<unsigned> GPR64DeadDefs;
 
@@ -164,7 +159,6 @@ void BPFMIPreEmitChecking::processAtomicInsts() {
 
       LLVM_DEBUG(MI.dump());
       if (hasLiveDefs(MI, TRI)) {
-        DebugLoc Empty;
         const DebugLoc &DL = MI.getDebugLoc();
         const Function &F = MF->getFunction();
         F.getContext().diagnose(DiagnosticInfoUnsupported{

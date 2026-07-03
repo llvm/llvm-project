@@ -111,7 +111,7 @@ define <32 x i16> @zero_pmulh_512_commute(<32 x i16> %a0) {
 
 define <8 x i16> @one_pmulh_128(<8 x i16> %a0) {
 ; CHECK-LABEL: @one_pmulh_128(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <8 x i16> [[A0:%.*]], <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <8 x i16> [[A0:%.*]], splat (i16 15)
 ; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
 ;
   %1 = call <8 x i16> @llvm.x86.sse2.pmulh.w(<8 x i16> %a0, <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
@@ -120,7 +120,7 @@ define <8 x i16> @one_pmulh_128(<8 x i16> %a0) {
 
 define <8 x i16> @one_pmulh_128_commute(<8 x i16> %a0) {
 ; CHECK-LABEL: @one_pmulh_128_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <8 x i16> [[A0:%.*]], <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <8 x i16> [[A0:%.*]], splat (i16 15)
 ; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
 ;
   %1 = call <8 x i16> @llvm.x86.sse2.pmulh.w(<8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, <8 x i16> %a0)
@@ -129,7 +129,7 @@ define <8 x i16> @one_pmulh_128_commute(<8 x i16> %a0) {
 
 define <16 x i16> @one_pmulh_256(<16 x i16> %a0) {
 ; CHECK-LABEL: @one_pmulh_256(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <16 x i16> [[A0:%.*]], <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <16 x i16> [[A0:%.*]], splat (i16 15)
 ; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
 ;
   %1 = call <16 x i16> @llvm.x86.avx2.pmulh.w(<16 x i16> %a0, <16 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
@@ -138,7 +138,7 @@ define <16 x i16> @one_pmulh_256(<16 x i16> %a0) {
 
 define <16 x i16> @one_pmulh_256_commute(<16 x i16> %a0) {
 ; CHECK-LABEL: @one_pmulh_256_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <16 x i16> [[A0:%.*]], <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <16 x i16> [[A0:%.*]], splat (i16 15)
 ; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
 ;
   %1 = call <16 x i16> @llvm.x86.avx2.pmulh.w(<16 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, <16 x i16> %a0)
@@ -147,7 +147,7 @@ define <16 x i16> @one_pmulh_256_commute(<16 x i16> %a0) {
 
 define <32 x i16> @one_pmulh_512(<32 x i16> %a0) {
 ; CHECK-LABEL: @one_pmulh_512(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <32 x i16> [[A0:%.*]], <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <32 x i16> [[A0:%.*]], splat (i16 15)
 ; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
 ;
   %1 = call <32 x i16> @llvm.x86.avx512.pmulh.w.512(<32 x i16> %a0, <32 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
@@ -156,7 +156,7 @@ define <32 x i16> @one_pmulh_512(<32 x i16> %a0) {
 
 define <32 x i16> @one_pmulh_512_commute(<32 x i16> %a0) {
 ; CHECK-LABEL: @one_pmulh_512_commute(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <32 x i16> [[A0:%.*]], <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <32 x i16> [[A0:%.*]], splat (i16 15)
 ; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
 ;
   %1 = call <32 x i16> @llvm.x86.avx512.pmulh.w.512(<32 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, <32 x i16> %a0)

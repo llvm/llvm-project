@@ -402,7 +402,7 @@ void StackLayoutModifier::classifyCFIs() {
         break;
       case MCCFIInstruction::OpRestoreState: {
         assert(!CFIStack.empty() && "Corrupt CFI stack");
-        std::pair<int64_t, uint16_t> &Elem = CFIStack.top();
+        std::pair<int64_t, uint16_t> Elem = CFIStack.top();
         CFIStack.pop();
         CfaOffset = Elem.first;
         CfaReg = Elem.second;
@@ -825,14 +825,13 @@ void ShrinkWrapping::computeSaveLocations() {
     if (!CSA.CalleeSaved[I])
       continue;
 
-    std::stable_sort(BestSavePos[I].begin(), BestSavePos[I].end(),
-                     [&](const MCInst *A, const MCInst *B) {
-                       const BinaryBasicBlock *BBA = InsnToBB[A];
-                       const BinaryBasicBlock *BBB = InsnToBB[B];
-                       const uint64_t CountA = BBA->getKnownExecutionCount();
-                       const uint64_t CountB = BBB->getKnownExecutionCount();
-                       return CountB < CountA;
-                     });
+    llvm::stable_sort(BestSavePos[I], [&](const MCInst *A, const MCInst *B) {
+      const BinaryBasicBlock *BBA = InsnToBB[A];
+      const BinaryBasicBlock *BBB = InsnToBB[B];
+      const uint64_t CountA = BBA->getKnownExecutionCount();
+      const uint64_t CountB = BBB->getKnownExecutionCount();
+      return CountB < CountA;
+    });
 
     for (MCInst *Pos : BestSavePos[I]) {
       const BinaryBasicBlock *BB = InsnToBB[Pos];
@@ -1101,9 +1100,8 @@ SmallVector<ProgramPoint, 4> ShrinkWrapping::fixPopsPlacements(
     bool Found = false;
     if (SPT.getStateAt(ProgramPoint::getLastPointAt(*BB))->first ==
         SaveOffset) {
-      BitVector BV = *RI.getStateAt(ProgramPoint::getLastPointAt(*BB));
-      BV &= UsesByReg[CSR];
-      if (!BV.any()) {
+      const BitVector &BV = *RI.getStateAt(ProgramPoint::getLastPointAt(*BB));
+      if (!BV.anyCommon(UsesByReg[CSR])) {
         Found = true;
         PP = BB;
         continue;
@@ -1111,9 +1109,8 @@ SmallVector<ProgramPoint, 4> ShrinkWrapping::fixPopsPlacements(
     }
     for (MCInst &Inst : llvm::reverse(*BB)) {
       if (SPT.getStateBefore(Inst)->first == SaveOffset) {
-        BitVector BV = *RI.getStateAt(Inst);
-        BV &= UsesByReg[CSR];
-        if (!BV.any()) {
+        const BitVector &BV = *RI.getStateAt(Inst);
+        if (!BV.anyCommon(UsesByReg[CSR])) {
           Found = true;
           PP = &Inst;
           break;
@@ -1890,13 +1887,16 @@ Expected<bool> ShrinkWrapping::processInsertions() {
 void ShrinkWrapping::processDeletions() {
   LivenessAnalysis &LA = Info.getLivenessAnalysis();
   for (BinaryBasicBlock &BB : BF) {
-    for (auto II = BB.begin(); II != BB.end(); ++II) {
+    for (auto II = BB.begin(); II != BB.end();) {
       MCInst &Inst = *II;
       auto TodoList = BC.MIB->tryGetAnnotationAs<std::vector<WorklistItem>>(
           Inst, getAnnotationIndex());
-      if (!TodoList)
+      if (!TodoList) {
+        ++II;
         continue;
+      }
       // Process all deletions
+      bool Erased = false;
       for (WorklistItem &Item : *TodoList) {
         if (Item.Action != WorklistItem::Erase &&
             Item.Action != WorklistItem::ChangeToAdjustment)
@@ -1919,9 +1919,12 @@ void ShrinkWrapping::processDeletions() {
           dbgs() << "Erasing: ";
           BC.printInstruction(dbgs(), Inst);
         });
-        II = std::prev(BB.eraseInstruction(II));
+        II = BB.eraseInstruction(II);
+        Erased = true;
         break;
       }
+      if (!Erased)
+        ++II;
     }
   }
 }

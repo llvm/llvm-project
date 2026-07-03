@@ -3,7 +3,7 @@
 target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"
 
-define i32 @daorder(i32 %n) {
+define ptx_kernel i32 @daorder(i32 %n) {
 ; CHECK-LABEL: for function 'daorder'
 entry:
   %tid = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
@@ -43,6 +43,3 @@ declare i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 declare i32 @llvm.nvvm.read.ptx.sreg.tid.y()
 declare i32 @llvm.nvvm.read.ptx.sreg.tid.z()
 declare i32 @llvm.nvvm.read.ptx.sreg.laneid()
-
-!nvvm.annotations = !{!0}
-!0 = !{ptr @daorder, !"kernel", i32 1}

@@ -6,22 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/DeclCXX.h"
-
 #include "Cocoa.h"
 
+#include "Plugins/Language/ObjC/NSString.h"
+#include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
-
-#include "Plugins/Language/ObjC/NSString.h"
-#include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -66,8 +64,8 @@ bool lldb_private::formatters::NSError_SummaryProvider(
   lldb::addr_t domain_location = ptr_value + 3 * ptr_size;
 
   Status error;
-  uint64_t code = process_sp->ReadUnsignedIntegerFromMemory(code_location,
-                                                            ptr_size, 0, error);
+  int64_t code = process_sp->ReadSignedIntegerFromMemory(code_location,
+                                                         ptr_size, 0, error);
   if (error.Fail())
     return false;
 
@@ -77,7 +75,7 @@ bool lldb_private::formatters::NSError_SummaryProvider(
     return false;
 
   if (!domain_str_value) {
-    stream.Printf("domain: nil - code: %" PRIu64, code);
+    stream.Printf("domain: nil - code: %" PRIi64, code);
     return true;
   }
 
@@ -98,11 +96,11 @@ bool lldb_private::formatters::NSError_SummaryProvider(
   StreamString domain_str_summary;
   if (NSStringSummaryProvider(*domain_str_sp, domain_str_summary, options) &&
       !domain_str_summary.Empty()) {
-    stream.Printf("domain: %s - code: %" PRIu64, domain_str_summary.GetData(),
+    stream.Printf("domain: %s - code: %" PRIi64, domain_str_summary.GetData(),
                   code);
     return true;
   } else {
-    stream.Printf("domain: nil - code: %" PRIu64, code);
+    stream.Printf("domain: nil - code: %" PRIi64, code);
     return true;
   }
 }
@@ -158,20 +156,18 @@ public:
         ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget());
     if (!scratch_ts_sp)
       return lldb::ChildCacheState::eRefetch;
-    m_child_sp = CreateValueObjectFromData(
+    m_child_sp = CreateChildValueObjectFromData(
         "_userInfo", isw.GetAsData(process_sp->GetByteOrder()),
         m_backend.GetExecutionContextRef(),
         scratch_ts_sp->GetBasicType(lldb::eBasicTypeObjCID));
     return lldb::ChildCacheState::eRefetch;
   }
 
-  bool MightHaveChildren() override { return true; }
-
-  size_t GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     static ConstString g_userInfo("_userInfo");
     if (name == g_userInfo)
       return 0;
-    return UINT32_MAX;
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
 
 private:

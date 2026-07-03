@@ -1,4 +1,13 @@
-; RUN: opt -passes=loop-interchange -cache-line-size=64 -verify-dom-info -verify-loop-info -verify-loop-lcssa -S %s | FileCheck %s
+; Remove 'S' Scalar Dependencies #119345
+; Scalar dependencies are not handled correctly, so they were removed to avoid
+; miscompiles. The loop nest in this test case used to be interchanged, but it's
+; no longer triggering. XFAIL'ing this test to indicate that this test should
+; interchanged if scalar deps are handled correctly.
+;
+; XFAIL: *
+
+; RUN: opt -passes=loop-interchange -cache-line-size=64 -verify-dom-info -verify-loop-info -verify-loop-lcssa %s -pass-remarks-output=%t -disable-output
+; RUN: FileCheck -input-file %t %s
 
 @b = global [3 x [5 x [8 x i16]]] [[5 x [8 x i16]] zeroinitializer, [5 x [8 x i16]] [[8 x i16] zeroinitializer, [8 x i16] [i16 0, i16 0, i16 0, i16 6, i16 1, i16 6, i16 0, i16 0], [8 x i16] zeroinitializer, [8 x i16] zeroinitializer, [8 x i16] zeroinitializer], [5 x [8 x i16]] zeroinitializer], align 2
 @a = common global i32 0, align 4
@@ -19,47 +28,16 @@
 ;;       a |= b[d][d][c + 5];
 ;;   }
 ;; }
-
+;
+; CHECK:       --- !Passed
+; CHECK-NEXT:  Pass:            loop-interchange
+; CHECK-NEXT:  Name:            Interchanged
+; CHECK-NEXT:  Function:        test1
+; CHECK-NEXT:  Args:
+; CHECK-NEXT:    - String:          Loop interchanged with enclosing loop.
+; CHECK-NEXT:  ...
+;
 define void @test1() {
-;CHECK-LABEL: @test1(
-;CHECK:          entry:
-;CHECK-NEXT:       br label [[FOR_COND1_PREHEADER:%.*]]
-;CHECK:          for.body.preheader:
-;CHECK-NEXT:       br label  [[FOR_BODY:%.*]]
-;CHECK:          for.body:
-;CHECK-NEXT:       [[INDVARS_IV22:%.*]] = phi i64 [ [[INDVARS_IV_NEXT23:%.*]], [[FOR_INC8:%.*]] ], [ 0, [[FOR_BODY_PREHEADER:%.*]] ]
-;CHECK-NEXT:       [[TOBOOL:%.*]] = icmp eq i64 [[INDVARS_IV22:%.*]], 0
-;CHECK-NEXT:       br i1 [[TOBOOL]], label [[FOR_BODY3_SPLIT1:%.*]], label [[FOR_BODY3_SPLIT:%.*]]
-;CHECK:          for.cond1.preheader:
-;CHECK-NEXT:       br label [[FOR_BODY3:%.*]]
-;CHECK:          for.body3:
-;CHECK-NEXT:       [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_COND1_PREHEADER]] ], [ %3, [[FOR_BODY3_SPLIT]] ]
-;CHECK-NEXT:        br label [[FOR_BODY_PREHEADER]]
-;CHECK:          for.body3.split1:
-;CHECK-NEXT:       [[TMP0:%.*]] = add nuw nsw i64 [[INDVARS_IV22]], 5
-;CHECK-NEXT:       [[ARRAYIDX7:%.*]] = getelementptr inbounds [3 x [5 x [8 x i16]]], ptr @b, i64 0, i64 [[INDVARS_IV]], i64 [[INDVARS_IV]], i64 [[TMP0]]
-;CHECK-NEXT:       [[TMP1:%.*]] = load i16, ptr [[ARRAYIDX7]]
-;CHECK-NEXT:       [[CONV:%.*]] = sext i16 [[TMP1]] to i32
-;CHECK-NEXT:       [[TMP2:%.*]] = load i32, ptr @a
-;CHECK-NEXT:       [[TMP_OR:%.*]] = or i32 [[TMP2]], [[CONV]]
-;CHECK-NEXT:       store i32 [[TMP_OR]], ptr @a
-;CHECK-NEXT:       [[INDVARS_IV_NEXT:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 1
-;CHECK-NEXT:       [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], 3
-;CHECK-NEXT:       br label [[FOR_INC8_LOOPEXIT:%.*]]
-;CHECK:          for.body3.split:
-;CHECK-NEXT:       [[TMP3:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 1
-;CHECK-NEXT:       [[TMP4:%.*]] = icmp ne i64 [[TMP3]], 3
-;CHECK-NEXT:       br i1 %4, label [[FOR_BODY3]], label [[FOR_END10:%.*]]
-;CHECK:          for.inc8.loopexit:
-;CHECK-NEXT:       br label [[FOR_INC8]]
-;CHECK:          for.inc8:
-;CHECK-NEXT:       [[INDVARS_IV_NEXT23]] = add nuw nsw i64 [[INDVARS_IV22]], 1
-;CHECK-NEXT:       [[EXITCOND25:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT23]], 3
-;CHECK-NEXT:       br i1 [[EXITCOND25]], label [[FOR_BODY]], label [[FOR_BODY3_SPLIT]]
-;CHECK:         for.end10:
-;CHECK-NEXT:       [[TMP5:%.*]] = load i32, ptr @a
-;CHECK-NEXT:       ret void
-
 entry:
   br label %for.body
 
@@ -100,6 +78,7 @@ for.end10:                                        ; preds = %for.inc8
 ; Triply nested loop
 ; The innermost and the middle loop are interchanged.
 ; C test case:
+;
 ;; a;
 ;; d[][6];
 ;; void test2() {
@@ -116,50 +95,16 @@ for.end10:                                        ; preds = %for.inc8
 ;;     }
 ;;   }
 ;; }
-
-define void @test2() {
-; CHECK-LABEL: @test2(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[OUTERMOST_HEADER:%.*]]
-; CHECK:       outermost.header:
-; CHECK-NEXT:    [[INDVAR_OUTERMOST:%.*]] = phi i32 [ 10, [[ENTRY:%.*]] ], [ [[INDVAR_OUTERMOST_NEXT:%.*]], [[OUTERMOST_LATCH:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @a, align 4
-; CHECK-NEXT:    [[TOBOOL71_I:%.*]] = icmp eq i32 [[TMP0]], 0
-; CHECK-NEXT:    br label [[INNERMOST_PREHEADER:%.*]]
-; CHECK:       middle.header.preheader:
-; CHECK-NEXT:    br label [[MIDDLE_HEADER:%.*]]
-; CHECK:       middle.header:
-; CHECK-NEXT:    [[INDVAR_MIDDLE:%.*]] = phi i64 [ [[INDVAR_MIDDLE_NEXT:%.*]], [[MIDDLE_LATCH:%.*]] ], [ 4, [[MIDDLE_HEADER_PREHEADER:%.*]] ]
-; CHECK-NEXT:    br i1 [[TOBOOL71_I]], label [[INNERMOST_BODY_SPLIT1:%.*]], label [[INNERMOST_BODY_SPLIT:%.*]]
-; CHECK:       innermost.preheader:
-; CHECK-NEXT:    br label [[INNERMOST_BODY:%.*]]
-; CHECK:       innermost.body:
-; CHECK-NEXT:    [[INDVAR_INNERMOST:%.*]] = phi i64 [ [[TMP1:%.*]], [[INNERMOST_BODY_SPLIT]] ], [ 4, [[INNERMOST_PREHEADER]] ]
-; CHECK-NEXT:    br label [[MIDDLE_HEADER_PREHEADER]]
-; CHECK:       innermost.body.split1:
-; CHECK-NEXT:    [[ARRAYIDX9_I:%.*]] = getelementptr inbounds [1 x [6 x i32]], ptr @d, i64 0, i64 [[INDVAR_INNERMOST]], i64 [[INDVAR_MIDDLE]]
-; CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX9_I]], align 4
-; CHECK-NEXT:    [[INDVAR_INNERMOST_NEXT:%.*]] = add nsw i64 [[INDVAR_INNERMOST]], -1
-; CHECK-NEXT:    [[TOBOOL5_I:%.*]] = icmp eq i64 [[INDVAR_INNERMOST_NEXT]], 0
-; CHECK-NEXT:    br label [[MIDDLE_LATCH_LOOPEXIT:%.*]]
-; CHECK:       innermost.body.split:
-; CHECK-NEXT:    [[TMP1]] = add nsw i64 [[INDVAR_INNERMOST]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[TMP2]], label [[OUTERMOST_LATCH]], label [[INNERMOST_BODY]]
-; CHECK:       innermost.loopexit:
-; CHECK-NEXT:    br label [[MIDDLE_LATCH]]
-; CHECK:       middle.latch:
-; CHECK-NEXT:    [[INDVAR_MIDDLE_NEXT]] = add nsw i64 [[INDVAR_MIDDLE]], -1
-; CHECK-NEXT:    [[TOBOOL2_I:%.*]] = icmp eq i64 [[INDVAR_MIDDLE_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL2_I]], label [[INNERMOST_BODY_SPLIT]], label [[MIDDLE_HEADER]]
-; CHECK:       outermost.latch:
-; CHECK-NEXT:    [[INDVAR_OUTERMOST_NEXT]] = add nsw i32 [[INDVAR_OUTERMOST]], -5
-; CHECK-NEXT:    [[TOBOOL_I:%.*]] = icmp eq i32 [[INDVAR_OUTERMOST_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL_I]], label [[OUTERMOST_EXIT:%.*]], label [[OUTERMOST_HEADER]]
-; CHECK:       outermost.exit:
-; CHECK-NEXT:    ret void
 ;
-
+; CHECK:       --- !Passed
+; CHECK-NEXT:  Pass:            loop-interchange
+; CHECK-NEXT:  Name:            Interchanged
+; CHECK-NEXT:  Function:        test2
+; CHECK-NEXT:  Args:
+; CHECK-NEXT:    - String:          Loop interchanged with enclosing loop.
+; CHECK-NEXT:  ...
+;
+define void @test2() {
 entry:
   br label %outermost.header
 

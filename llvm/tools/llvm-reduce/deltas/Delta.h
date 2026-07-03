@@ -24,6 +24,7 @@
 namespace llvm {
 
 class TestRunner;
+struct DeltaPass;
 
 struct Chunk {
   int Begin;
@@ -54,18 +55,7 @@ struct Chunk {
   }
 };
 
-template<>
-struct DenseMapInfo<Chunk> {
-  static inline Chunk getEmptyKey() {
-    return {DenseMapInfo<int>::getEmptyKey(),
-            DenseMapInfo<int>::getEmptyKey()};
-  }
-
-  static inline Chunk getTombstoneKey() {
-    return {DenseMapInfo<int>::getTombstoneKey(),
-            DenseMapInfo<int>::getTombstoneKey()};
-  }
-
+template <> struct DenseMapInfo<Chunk> {
   static unsigned getHashValue(const Chunk Val) {
     std::pair<int, int> PairVal = std::make_pair(Val.Begin, Val.End);
     return DenseMapInfo<std::pair<int, int>>::getHashValue(PairVal);
@@ -75,7 +65,6 @@ struct DenseMapInfo<Chunk> {
     return LHS == RHS;
   }
 };
-
 
 /// Provides opaque interface for querying into ChunksToKeep without having to
 /// actually understand what is going on.
@@ -134,8 +123,7 @@ using ReductionFunc = function_ref<void(Oracle &, ReducerWorkItem &)>;
 ///
 /// Other implementations of the Delta Debugging algorithm can also be found in
 /// the CReduce, Delta, and Lithium projects.
-void runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
-                  StringRef Message);
+void runDeltaPass(TestRunner &Test, const DeltaPass &Pass);
 } // namespace llvm
 
 #endif

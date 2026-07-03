@@ -1,5 +1,4 @@
 ; RUN: opt -passes=instcombine -S < %s | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators -passes=instcombine -S < %s | FileCheck %s
 
 ; This test is defending against a TypeSize message raised in the method
 ; `valueCoversEntireFragment` in Local.cpp because of an implicit cast from
@@ -33,5 +32,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 !1 = !DIFile(filename: "/tmp/test.c", directory: "/tmp/")
 !2 = !{i32 2, !"Debug Info Version", i32 3}
 !3 = !DILocalVariable(scope: !4)
-!4 = distinct !DISubprogram(unit: !0)
+!4 = distinct !DISubprogram(unit: !0, type: !7)
 !5 = !DILocation(scope: !4)
+!6 = !{null}
+!7 = !DISubroutineType(types: !6)

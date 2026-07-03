@@ -1,4 +1,5 @@
-from lit import Test, TestFormat
+from lit import Test
+from lit.formats import TestFormat
 
 
 class ManyTests(TestFormat):

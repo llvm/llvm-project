@@ -1,11 +1,11 @@
 ! Checks that module search directories specified with `-J/-module-dir` and `-I` are handled correctly
 
 !--------------------------
-! FLANG DRIVER (flang-new)
+! FLANG DRIVER (flang)
 !--------------------------
-! RUN: %flang -fsyntax-only -I %S/Inputs -I %S/Inputs/module-dir %s  2>&1 | FileCheck %s --check-prefix=INCLUDED --allow-empty
-! RUN: %flang -fsyntax-only -I %S/Inputs -J %S/Inputs/module-dir %s 2>&1 | FileCheck %s --check-prefix=INCLUDED --allow-empty
-! RUN: %flang -fsyntax-only -I %S/Inputs -module-dir %S/Inputs/module-dir %s  2>&1 | FileCheck %s --check-prefix=INCLUDED --allow-empty
+! RUN: %flang -fsyntax-only -I %S/Inputs/module-dir-one -I %S/Inputs/module-dir %s  2>&1 | FileCheck %s --check-prefix=INCLUDED --allow-empty
+! RUN: %flang -fsyntax-only -I %S/Inputs/module-dir-one -J %S/Inputs/module-dir %s 2>&1 | FileCheck %s --check-prefix=INCLUDED --allow-empty
+! RUN: %flang -fsyntax-only -I %S/Inputs/module-dir-one -module-dir %S/Inputs/module-dir %s  2>&1 | FileCheck %s --check-prefix=INCLUDED --allow-empty
 
 ! RUN: not %flang -fsyntax-only -I %S/Inputs %s  2>&1 | FileCheck %s --check-prefix=MISSING_MOD2
 ! RUN: not %flang -fsyntax-only -J %S/Inputs %s  2>&1 | FileCheck %s --check-prefix=MISSING_MOD2
@@ -16,11 +16,11 @@
 ! RUN: not %flang -fsyntax-only -module-dir %S/Inputs/module-dir %s  2>&1 | FileCheck %s --check-prefix=SINGLEINCLUDE
 
 !-----------------------------------------
-! FRONTEND FLANG DRIVER (flang-new -fc1)
+! FRONTEND FLANG DRIVER (flang -fc1)
 !-----------------------------------------
-! RUN: %flang_fc1 -fsyntax-only -I %S/Inputs -I %S/Inputs/module-dir %s  2>&1 | FileCheck %s --check-prefix=INCLUDED --allow-empty
-! RUN: %flang_fc1 -fsyntax-only -I %S/Inputs -J %S/Inputs/module-dir %s 2>&1 | FileCheck %s --check-prefix=INCLUDED --allow-empty
-! RUN: %flang_fc1 -fsyntax-only -I %S/Inputs -module-dir %S/Inputs/module-dir %s  2>&1 | FileCheck %s --check-prefix=INCLUDED --allow-empty
+! RUN: %flang_fc1 -fsyntax-only -I %S/Inputs/module-dir-one -I %S/Inputs/module-dir %s  2>&1 | FileCheck %s --check-prefix=INCLUDED --allow-empty
+! RUN: %flang_fc1 -fsyntax-only -I %S/Inputs/module-dir-one -J %S/Inputs/module-dir %s 2>&1 | FileCheck %s --check-prefix=INCLUDED --allow-empty
+! RUN: %flang_fc1 -fsyntax-only -I %S/Inputs/module-dir-one -module-dir %S/Inputs/module-dir %s  2>&1 | FileCheck %s --check-prefix=INCLUDED --allow-empty
 
 ! RUN: not %flang_fc1 -fsyntax-only -I %S/Inputs %s  2>&1 | FileCheck %s --check-prefix=MISSING_MOD2
 ! RUN: not %flang_fc1 -fsyntax-only -J %S/Inputs %s  2>&1 | FileCheck %s --check-prefix=MISSING_MOD2
@@ -32,14 +32,14 @@
 
 ! INCLUDED-NOT: error
 
-! MISSING_MOD2-NOT:error: Cannot read module file for module 'basictestmoduleone''
+! MISSING_MOD2-NOT:error: Cannot parse module file for module 'basictestmoduleone''
 ! MISSING_MOD2-NOT:error: Derived type 't1' not found
-! MISSING_MOD2:error: Cannot read module file for module 'basictestmoduletwo'
+! MISSING_MOD2:error: Cannot parse module file for module 'basictestmoduletwo'
 ! MISSING_MOD2:error: Derived type 't2' not found
 
-! SINGLEINCLUDE-NOT:error: Cannot read module file for module 'basictestmoduleone'
+! SINGLEINCLUDE-NOT:error: Cannot parse module file for module 'basictestmoduleone'
 ! SINGLEINCLUDE:error: Derived type 't1' not found
-! SINGLEINCLUDE-NOT:error: Cannot read module file for module 'basictestmoduletwo'
+! SINGLEINCLUDE-NOT:error: Cannot parse module file for module 'basictestmoduletwo'
 ! SINGLEINCLUDE-NOT:error: Derived type 't2' not found
 
 

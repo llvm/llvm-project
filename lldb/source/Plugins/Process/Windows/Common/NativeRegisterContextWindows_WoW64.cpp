@@ -88,8 +88,8 @@ static Status SetWoW64ThreadContextHelper(lldb::thread_t thread_handle,
 
 NativeRegisterContextWindows_WoW64::NativeRegisterContextWindows_WoW64(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
-    : NativeRegisterContextWindows(native_thread,
-                                   CreateRegisterInfoInterface(target_arch)) {}
+    : NativeRegisterContextRegisterInfo(
+          native_thread, CreateRegisterInfoInterface(target_arch)) {}
 
 bool NativeRegisterContextWindows_WoW64::IsGPR(uint32_t reg_index) const {
   return (reg_index >= k_first_gpr_i386 && reg_index < k_first_alias_i386);

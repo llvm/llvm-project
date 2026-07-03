@@ -3,26 +3,73 @@
 
 ; Testcases inspired by PR50296, PR50288.
 
-define void @phi_load_store_distribute(i1 %c, ptr %A, ptr %B, ptr %C) {
+define void @phi_load_store_distribute(i1 %cond, ptr %A, ptr %B, ptr %C) {
 ; CHECK-LABEL: @phi_load_store_distribute(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[IF_END:%.*]] ]
-; CHECK-NEXT:    [[LV:%.*]] = load i16, ptr [[A:%.*]], align 1
+; CHECK:       for.body.lver.check:
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 2
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 2
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 2
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[SCEVGEP1]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[C]], [[SCEVGEP]]
+; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[A]], [[SCEVGEP2]]
+; CHECK-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[B]], [[SCEVGEP]]
+; CHECK-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
+; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT5]]
+; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label [[ENTRY:%.*]], label [[FOR_BODY_PH_LDIST1:%.*]]
+; CHECK:       for.body.ph.lver.orig:
+; CHECK-NEXT:    br label [[FOR_BODY_LVER_ORIG:%.*]]
+; CHECK:       for.body.lver.orig:
+; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[IF_END:%.*]] ]
+; CHECK-NEXT:    [[LV:%.*]] = load i16, ptr [[A]], align 1
 ; CHECK-NEXT:    store i16 [[LV]], ptr [[A]], align 1
-; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_END]]
-; CHECK:       if.then:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[IF_END]]
+; CHECK:       if.then.lver.orig:
 ; CHECK-NEXT:    [[LV2:%.*]] = load i16, ptr [[A]], align 1
 ; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end.lver.orig:
+; CHECK-NEXT:    [[C_SINK_LVER_ORIG:%.*]] = phi ptr [ [[B]], [[IF_THEN]] ], [ [[C]], [[FOR_BODY_LVER_ORIG]] ]
+; CHECK-NEXT:    [[LV3_LVER_ORIG:%.*]] = load i16, ptr [[C_SINK_LVER_ORIG]], align 2
+; CHECK-NEXT:    [[ADD_LVER_ORIG:%.*]] = add i16 [[LV3_LVER_ORIG]], 10
+; CHECK-NEXT:    store i16 [[ADD_LVER_ORIG]], ptr [[C_SINK_LVER_ORIG]], align 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i16 [[IV]], 1
+; CHECK-NEXT:    [[TOBOOL_NOT_LVER_ORIG:%.*]] = icmp eq i16 [[IV_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT_LVER_ORIG]], label [[FOR_END_LOOPEXIT_LOOPEXIT:%.*]], label [[FOR_BODY_LVER_ORIG]]
+; CHECK:       for.body.ph.ldist1:
+; CHECK-NEXT:    br label [[FOR_BODY_LDIST1:%.*]]
+; CHECK:       for.body.ldist1:
+; CHECK-NEXT:    [[IV_LDIST1:%.*]] = phi i16 [ 0, [[FOR_BODY_PH_LDIST1]] ], [ [[IV_NEXT_LDIST1:%.*]], [[IF_END_LDIST1:%.*]] ]
+; CHECK-NEXT:    [[LV_LDIST1:%.*]] = load i16, ptr [[A]], align 1, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
+; CHECK-NEXT:    store i16 [[LV_LDIST1]], ptr [[A]], align 1, !alias.scope [[META0]], !noalias [[META3]]
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN_LDIST1:%.*]], label [[IF_END_LDIST1]]
+; CHECK:       if.then.ldist1:
+; CHECK-NEXT:    [[LV2_LDIST1:%.*]] = load i16, ptr [[A]], align 1, !alias.scope [[META0]], !noalias [[META3]]
+; CHECK-NEXT:    br label [[IF_END_LDIST1]]
+; CHECK:       if.end.ldist1:
+; CHECK-NEXT:    [[IV_NEXT_LDIST1]] = add nuw nsw i16 [[IV_LDIST1]], 1
+; CHECK-NEXT:    [[TOBOOL_NOT_LDIST1:%.*]] = icmp eq i16 [[IV_NEXT_LDIST1]], 1000
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT_LDIST1]], label [[FOR_BODY_PH:%.*]], label [[FOR_BODY_LDIST1]]
+; CHECK:       for.body.ph:
+; CHECK-NEXT:    br label [[FOR_BODY1:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[IV1:%.*]] = phi i16 [ 0, [[FOR_BODY_PH]] ], [ [[IV_NEXT1:%.*]], [[IF_END1:%.*]] ]
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN1:%.*]], label [[IF_END1]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[IF_END1]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[C_SINK:%.*]] = phi ptr [ [[B:%.*]], [[IF_THEN]] ], [ [[C:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[C_SINK:%.*]] = phi ptr [ [[B]], [[IF_THEN1]] ], [ [[C]], [[FOR_BODY1]] ]
 ; CHECK-NEXT:    [[LV3:%.*]] = load i16, ptr [[C_SINK]], align 2
 ; CHECK-NEXT:    [[ADD:%.*]] = add i16 [[LV3]], 10
 ; CHECK-NEXT:    store i16 [[ADD]], ptr [[C_SINK]], align 1
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i16 [[IV]], 1
-; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i16 [[IV_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[FOR_END_LOOPEXIT:%.*]], label [[FOR_BODY]]
+; CHECK-NEXT:    [[IV_NEXT1]] = add nuw nsw i16 [[IV1]], 1
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i16 [[IV_NEXT1]], 1000
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[FOR_END_LOOPEXIT_LOOPEXIT6:%.*]], label [[FOR_BODY1]]
+; CHECK:       for.end.loopexit.loopexit:
+; CHECK-NEXT:    br label [[FOR_END_LOOPEXIT:%.*]]
+; CHECK:       for.end.loopexit.loopexit6:
+; CHECK-NEXT:    br label [[FOR_END_LOOPEXIT]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    ret void
 ;
@@ -33,7 +80,7 @@ for.body:                                         ; preds = %if.end, %entry
   %iv = phi i16 [ 0, %entry ], [ %iv.next, %if.end ]
   %lv = load i16, ptr %A, align 1
   store i16 %lv, ptr %A, align 1
-  br i1 %c, label %if.then, label %if.end
+  br i1 %cond, label %if.then, label %if.end
 
 if.then:                                          ; preds = %for.body
   %lv2 = load i16, ptr %A, align 1
@@ -55,66 +102,21 @@ for.end.loopexit:                                 ; preds = %if.end
 define void @phi_load_distribute(i1 %cond, ptr %A, ptr %B, ptr %C) {
 ; CHECK-LABEL: @phi_load_distribute(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[FOR_BODY_LVER_CHECK:%.*]]
-; CHECK:       for.body.lver.check:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 2
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 2
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 2
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[SCEVGEP1]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[C]], [[SCEVGEP]]
-; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[A]], [[SCEVGEP2]]
-; CHECK-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[B]], [[SCEVGEP]]
-; CHECK-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
-; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT5]]
-; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH_LDIST1:%.*]]
-; CHECK:       for.body.ph.lver.orig:
 ; CHECK-NEXT:    br label [[FOR_BODY_LVER_ORIG:%.*]]
-; CHECK:       for.body.lver.orig:
-; CHECK-NEXT:    [[IV_LVER_ORIG:%.*]] = phi i16 [ 0, [[FOR_BODY_PH_LVER_ORIG]] ], [ [[IV_NEXT_LVER_ORIG:%.*]], [[IF_END_LVER_ORIG:%.*]] ]
-; CHECK-NEXT:    [[LV_LVER_ORIG:%.*]] = load i16, ptr [[A]], align 1
+; CHECK:       for.body:
+; CHECK-NEXT:    [[IV_LVER_ORIG:%.*]] = phi i16 [ 0, [[FOR_BODY_PH_LVER_ORIG:%.*]] ], [ [[IV_NEXT_LVER_ORIG:%.*]], [[IF_END_LVER_ORIG:%.*]] ]
+; CHECK-NEXT:    [[LV_LVER_ORIG:%.*]] = load i16, ptr [[A:%.*]], align 1
 ; CHECK-NEXT:    store i16 [[LV_LVER_ORIG]], ptr [[A]], align 1
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN_LVER_ORIG:%.*]], label [[IF_END_LVER_ORIG]]
-; CHECK:       if.then.lver.orig:
-; CHECK-NEXT:    [[LV2_LVER_ORIG:%.*]] = load i16, ptr [[A]], align 1
-; CHECK-NEXT:    br label [[IF_END_LVER_ORIG]]
-; CHECK:       if.end.lver.orig:
-; CHECK-NEXT:    [[C_SINK_LVER_ORIG:%.*]] = phi ptr [ [[B]], [[IF_THEN_LVER_ORIG]] ], [ [[C]], [[FOR_BODY_LVER_ORIG]] ]
-; CHECK-NEXT:    [[LV3_LVER_ORIG:%.*]] = load i16, ptr [[C_SINK_LVER_ORIG]], align 2
-; CHECK-NEXT:    [[IV_NEXT_LVER_ORIG]] = add nuw nsw i16 [[IV_LVER_ORIG]], 1
-; CHECK-NEXT:    [[TOBOOL_NOT_LVER_ORIG:%.*]] = icmp eq i16 [[IV_NEXT_LVER_ORIG]], 1000
-; CHECK-NEXT:    br i1 [[TOBOOL_NOT_LVER_ORIG]], label [[FOR_END_LOOPEXIT_LOOPEXIT:%.*]], label [[FOR_BODY_LVER_ORIG]]
-; CHECK:       for.body.ph.ldist1:
-; CHECK-NEXT:    br label [[FOR_BODY_LDIST1:%.*]]
-; CHECK:       for.body.ldist1:
-; CHECK-NEXT:    [[IV_LDIST1:%.*]] = phi i16 [ 0, [[FOR_BODY_PH_LDIST1]] ], [ [[IV_NEXT_LDIST1:%.*]], [[IF_END_LDIST1:%.*]] ]
-; CHECK-NEXT:    [[LV_LDIST1:%.*]] = load i16, ptr [[A]], align 1, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
-; CHECK-NEXT:    store i16 [[LV_LDIST1]], ptr [[A]], align 1, !alias.scope [[META0]], !noalias [[META3]]
-; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN_LDIST1:%.*]], label [[IF_END_LDIST1]]
-; CHECK:       if.then.ldist1:
-; CHECK-NEXT:    [[LV2_LDIST1:%.*]] = load i16, ptr [[A]], align 1, !alias.scope [[META0]], !noalias [[META3]]
-; CHECK-NEXT:    br label [[IF_END_LDIST1]]
-; CHECK:       if.end.ldist1:
-; CHECK-NEXT:    [[IV_NEXT_LDIST1]] = add nuw nsw i16 [[IV_LDIST1]], 1
-; CHECK-NEXT:    [[TOBOOL_NOT_LDIST1:%.*]] = icmp eq i16 [[IV_NEXT_LDIST1]], 1000
-; CHECK-NEXT:    br i1 [[TOBOOL_NOT_LDIST1]], label [[FOR_BODY_PH:%.*]], label [[FOR_BODY_LDIST1]]
-; CHECK:       for.body.ph:
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ 0, [[FOR_BODY_PH]] ], [ [[IV_NEXT:%.*]], [[IF_END:%.*]] ]
-; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_END]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    br label [[IF_END]]
+; CHECK-NEXT:    [[LV2:%.*]] = load i16, ptr [[A]], align 1
+; CHECK-NEXT:    br label [[IF_END_LVER_ORIG]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[C_SINK:%.*]] = phi ptr [ [[B]], [[IF_THEN]] ], [ [[C]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[C_SINK:%.*]] = phi ptr [ [[B:%.*]], [[IF_THEN_LVER_ORIG]] ], [ [[C:%.*]], [[FOR_BODY_LVER_ORIG]] ]
 ; CHECK-NEXT:    [[LV3:%.*]] = load i16, ptr [[C_SINK]], align 2
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i16 [[IV]], 1
-; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i16 [[IV_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[FOR_END_LOOPEXIT_LOOPEXIT6:%.*]], label [[FOR_BODY]]
-; CHECK:       for.end.loopexit.loopexit:
-; CHECK-NEXT:    br label [[FOR_END_LOOPEXIT:%.*]]
-; CHECK:       for.end.loopexit.loopexit6:
-; CHECK-NEXT:    br label [[FOR_END_LOOPEXIT]]
+; CHECK-NEXT:    [[IV_NEXT_LVER_ORIG]] = add nuw nsw i16 [[IV_LVER_ORIG]], 1
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i16 [[IV_NEXT_LVER_ORIG]], 1000
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[FOR_END_LOOPEXIT:%.*]], label [[FOR_BODY_LVER_ORIG]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    ret void
 ;

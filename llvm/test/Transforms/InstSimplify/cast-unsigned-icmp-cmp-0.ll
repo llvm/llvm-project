@@ -49,7 +49,7 @@ define i1 @i32_cast_cmp_sgt_int_m1_uitofp_float(i32 %i) {
 
 define <2 x i1> @i32_cast_cmp_sgt_int_m1_uitofp_float_vec(<2 x i32> %i) {
 ; CHECK-LABEL: @i32_cast_cmp_sgt_int_m1_uitofp_float_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %f = uitofp <2 x i32> %i to <2 x float>
   %b = bitcast <2 x float> %f to <2 x i32>
@@ -72,7 +72,7 @@ define i1 @i32_cast_cmp_sgt_int_m1_uitofp_float_vec_mismatch(<2 x i32> %i) {
 
 define <3 x i1> @i32_cast_cmp_sgt_int_m1_uitofp_float_vec_poison(<3 x i32> %i) {
 ; CHECK-LABEL: @i32_cast_cmp_sgt_int_m1_uitofp_float_vec_poison(
-; CHECK-NEXT:    ret <3 x i1> <i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <3 x i1> splat (i1 true)
 ;
   %f = uitofp <3 x i32> %i to <3 x float>
   %b = bitcast <3 x float> %f to <3 x i32>
@@ -122,7 +122,7 @@ define i1 @i32_cast_cmp_sgt_int_m1_uitofp_double(i32 %i) {
 
 define <2 x i1> @i32_cast_cmp_sgt_int_m1_uitofp_double_vec(<2 x i32> %i) {
 ; CHECK-LABEL: @i32_cast_cmp_sgt_int_m1_uitofp_double_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %f = uitofp <2 x i32> %i to <2 x double>
   %b = bitcast <2 x double> %f to <2 x i64>
@@ -132,7 +132,7 @@ define <2 x i1> @i32_cast_cmp_sgt_int_m1_uitofp_double_vec(<2 x i32> %i) {
 
 define <3 x i1> @i32_cast_cmp_sgt_int_m1_uitofp_double_vec_poison(<3 x i32> %i) {
 ; CHECK-LABEL: @i32_cast_cmp_sgt_int_m1_uitofp_double_vec_poison(
-; CHECK-NEXT:    ret <3 x i1> <i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <3 x i1> splat (i1 true)
 ;
   %f = uitofp <3 x i32> %i to <3 x double>
   %b = bitcast <3 x double> %f to <3 x i64>
@@ -182,7 +182,7 @@ define i1 @i32_cast_cmp_sgt_int_m1_uitofp_half(i32 %i) {
 
 define <2 x i1> @i32_cast_cmp_sgt_int_m1_uitofp_half_vec(<2 x i32> %i) {
 ; CHECK-LABEL: @i32_cast_cmp_sgt_int_m1_uitofp_half_vec(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %f = uitofp <2 x i32> %i to <2 x half>
   %b = bitcast <2 x half> %f to <2 x i16>
@@ -192,7 +192,7 @@ define <2 x i1> @i32_cast_cmp_sgt_int_m1_uitofp_half_vec(<2 x i32> %i) {
 
 define <3 x i1> @i32_cast_cmp_sgt_int_m1_uitofp_half_vec_poison(<3 x i32> %i) {
 ; CHECK-LABEL: @i32_cast_cmp_sgt_int_m1_uitofp_half_vec_poison(
-; CHECK-NEXT:    ret <3 x i1> <i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <3 x i1> splat (i1 true)
 ;
   %f = uitofp <3 x i32> %i to <3 x half>
   %b = bitcast <3 x half> %f to <3 x i16>

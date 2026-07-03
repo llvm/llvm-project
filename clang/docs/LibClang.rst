@@ -4,7 +4,7 @@
 Libclang tutorial
 =================
 The C Interface to Clang provides a relatively small API that exposes facilities for parsing source code into an abstract syntax tree (AST), loading already-parsed ASTs, traversing the AST, associating physical source locations with elements within the AST, and other facilities that support Clang-based development tools.
-This C interface to Clang will never provide all of the information representation stored in Clang's C++ AST, nor should it: the intent is to maintain an API that is relatively stable from one release to the next, providing only the basic functionality needed to support development tools.
+This C interface to Clang will never provide all of the information representation stored in Clang's C++ AST, nor should it: the intent is to maintain an API that is :ref:`relatively stable <Stability>` from one release to the next, providing only the basic functionality needed to support development tools.
 The entire C interface of libclang is available in the file `Index.h`_
 
 Essential types overview
@@ -38,6 +38,7 @@ Code example
 
 .. code-block:: cpp
 
+  // main.cpp
   #include <clang-c/Index.h>
   #include <iostream>
 
@@ -56,6 +57,22 @@ Code example
     }
     CXCursor cursor = clang_getTranslationUnitCursor(unit); //Obtain a cursor at the root of the translation unit
   }
+
+.. code-block:: cmake
+
+  # CMakeLists.txt
+  cmake_minimum_required(VERSION 3.20)
+  project(my_clang_tool VERSION 0.1.0)
+
+  # This will find the default system installation of Clang; if you want to
+  # use a different build of clang, pass -DClang_DIR=/foobar/lib/cmake/clang
+  # to the CMake configure command, where /foobar is the build directory where
+  # you built Clang.
+  find_package(Clang CONFIG REQUIRED)
+
+  add_executable(my_clang_tool main.cpp)
+  target_include_directories(my_clang_tool PRIVATE ${CLANG_INCLUDE_DIRS})
+  target_link_libraries(my_clang_tool PRIVATE libclang)
 
 Visiting elements of an AST
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -283,6 +300,7 @@ Complete example code
 
 .. code-block:: cpp
 
+  // main.cpp
   #include <clang-c/Index.h>
   #include <iostream>
 
@@ -356,5 +374,72 @@ Complete example code
     );
   }
 
+.. code-block:: cmake
+
+  # CMakeLists.txt
+  cmake_minimum_required(VERSION 3.20)
+  project(my_clang_tool VERSION 0.1.0)
+
+  # This will find the default system installation of Clang; if you want to
+  # use a different build of clang, pass -DClang_DIR=/foobar/lib/cmake/clang
+  # to the CMake configure command, where /foobar is the build directory where
+  # you built Clang.
+  find_package(Clang CONFIG REQUIRED)
+
+  add_executable(my_clang_tool main.cpp)
+  target_include_directories(my_clang_tool PRIVATE ${CLANG_INCLUDE_DIRS})
+  target_link_libraries(my_clang_tool PRIVATE libclang)
 
 .. _Index.h: https://github.com/llvm/llvm-project/blob/main/clang/include/clang-c/Index.h
+
+.. _Stability:
+
+ABI and API Stability
+---------------------
+
+The C interfaces in libclang are intended to be relatively stable. This allows
+a programmer to use libclang without having to worry as much about Clang
+upgrades breaking existing code. However, the library is not unchanging. For
+example, the library will gain new interfaces over time as needs arise,
+existing APIs may be deprecated for eventual removal, etc. Also, the underlying
+implementation of the facilities by Clang may change behavior as bugs are
+fixed, features get implemented, etc.
+
+The library should be ABI and API stable over time, but ABI- and API-breaking
+changes can happen in the following (non-exhaustive) situations:
+
+* Adding new enumerator to an enumeration (can be ABI-breaking in C++).
+* Removing an explicitly deprecated API after a suitably long deprecation
+  period.
+* Using implementation details, such as names or comments that say something
+  is "private", "reserved", "internal", etc.
+* Bug fixes and changes to Clang's internal implementation happen routinely and
+  will change the behavior of callers.
+* Rarely, bug fixes to libclang itself.
+
+The library has version macros (``CINDEX_VERSION_MAJOR``,
+``CINDEX_VERSION_MINOR``, and ``CINDEX_VERSION``) which can be used to test for
+specific library versions at compile time. The ``CINDEX_VERSION_MAJOR`` macro
+is only incremented if there are major source- or ABI-breaking changes. Except
+for removing an explicitly deprecated API, the changes listed above are not
+considered major source- or ABI-breaking changes. Historically, the value this
+macro expands to has not changed, but may be incremented in the future should
+the need arise. The ``CINDEX_VERSION_MINOR`` macro is incremented as new APIs
+are added. The ``CINDEX_VERSION`` macro expands to a value based on the major
+and minor version macros.
+
+In an effort to allow the library to be modified as new needs arise, the
+following situations are explicitly unsupported:
+
+* Loading different library versions into the same executable and passing
+  objects between the libraries; despite general ABI stability, different
+  versions of the library may use different implementation details that are not
+  compatible across library versions.
+* For the same reason as above, serializing objects from one version of the
+  library and deserializing with a different version is also not supported.
+
+Note: because libclang is a wrapper around the compiler frontend, it is not a
+`security-sensitive component`_ of the LLVM Project. Consider using a sandbox
+or some other mitigation approach if processing untrusted input.
+
+.. _security-sensitive component: https://llvm.org/docs/Security.html#what-is-considered-a-security-issue

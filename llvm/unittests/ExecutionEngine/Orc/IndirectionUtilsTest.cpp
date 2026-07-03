@@ -19,7 +19,7 @@ TEST(IndirectionUtilsTest, MakeStub) {
   LLVMContext Context;
   ModuleBuilder MB(Context, "x86_64-apple-macosx10.10", "");
   StructType *ArgTy = getDummyStructTy(Context);
-  Type *ArgPtrTy = PointerType::getUnqual(ArgTy);
+  Type *ArgPtrTy = PointerType::getUnqual(Context);
   FunctionType *FTy = FunctionType::get(
       Type::getVoidTy(Context), {ArgPtrTy, ArgPtrTy}, false);
   Function *F = MB.createFunctionDecl(FTy, "");

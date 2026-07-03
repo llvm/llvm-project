@@ -33,8 +33,8 @@ define void @dist_vec(ptr nocapture noundef readonly %pA, ptr nocapture noundef 
 ; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds i32, ptr [[PA_ADDR_0271]], i64 4
 ; CHECK-NEXT:    [[ADD_PTR8]] = getelementptr inbounds i32, ptr [[PB_ADDR_0270]], i64 4
 ; CHECK-NEXT:    [[AND_I:%.*]] = and <4 x i32> [[TMP5]], [[TMP4]]
-; CHECK-NEXT:    [[NOT_I:%.*]] = xor <4 x i32> [[TMP4]], <i32 -1, i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    [[NOT_I242:%.*]] = xor <4 x i32> [[TMP5]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[NOT_I:%.*]] = xor <4 x i32> [[TMP4]], splat (i32 -1)
+; CHECK-NEXT:    [[NOT_I242:%.*]] = xor <4 x i32> [[TMP5]], splat (i32 -1)
 ; CHECK-NEXT:    [[AND_I243:%.*]] = and <4 x i32> [[NOT_I242]], [[NOT_I]]
 ; CHECK-NEXT:    [[AND_I245:%.*]] = and <4 x i32> [[TMP4]], [[NOT_I242]]
 ; CHECK-NEXT:    [[AND_I247:%.*]] = and <4 x i32> [[TMP5]], [[NOT_I]]
@@ -634,6 +634,56 @@ while.end71:                                      ; preds = %while.body38, %whil
   store i32 %_cft.2.lcssa, ptr %cFT, align 4
   ret void
 }
+
+; FIXME: This should not be vectorizing (further) with expensive shuffles.
+; The old cost of the or+extract should be 2*1 (or) + 4*2 (extract). The new
+; cost should be 1*1 (or) + 2*2 (extract) + at least 4 (shuffles).
+define i1 @tryMapToRange(ptr %values, ptr %result, <2 x i64> %hi, <2 x i64> %lo) {
+; CHECK-LABEL: @tryMapToRange(
+; CHECK-NEXT:    [[L:%.*]] = load <2 x i64>, ptr [[VALUES:%.*]], align 8
+; CHECK-NEXT:    [[C1:%.*]] = icmp sgt <2 x i64> [[L]], [[HI:%.*]]
+; CHECK-NEXT:    [[S1:%.*]] = sext <2 x i1> [[C1]] to <2 x i64>
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast <2 x i64> [[S1]] to <16 x i8>
+; CHECK-NEXT:    [[A1:%.*]] = and <16 x i8> [[BC1]], <i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>
+; CHECK-NEXT:    [[C2:%.*]] = icmp slt <2 x i64> [[L]], [[LO:%.*]]
+; CHECK-NEXT:    [[S2:%.*]] = sext <2 x i1> [[C2]] to <2 x i64>
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast <2 x i64> [[S2]] to <16 x i8>
+; CHECK-NEXT:    [[A2:%.*]] = and <16 x i8> [[BC2]], <i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>
+; CHECK-NEXT:    [[REASS_SUB:%.*]] = sub <2 x i64> [[L]], [[LO]]
+; CHECK-NEXT:    [[ADD_I_I_I_I_I_I:%.*]] = add <2 x i64> [[REASS_SUB]], splat (i64 1)
+; CHECK-NEXT:    store <2 x i64> [[ADD_I_I_I_I_I_I]], ptr [[RESULT:%.*]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[A1]], <16 x i8> [[A2]], <2 x i32> <i32 8, i32 24>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i8> [[A1]], <16 x i8> [[A2]], <2 x i32> <i32 0, i32 16>
+; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i8> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[O3:%.*]] = extractelement <2 x i8> [[TMP3]], i32 0
+; CHECK-NEXT:    [[O2:%.*]] = extractelement <2 x i8> [[TMP3]], i32 1
+; CHECK-NEXT:    [[O4:%.*]] = or i8 [[O3]], [[O2]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[O4]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %l = load <2 x i64>, ptr %values, align 8
+  %c1 = icmp sgt <2 x i64> %l, %hi
+  %s1 = sext <2 x i1> %c1 to <2 x i64>
+  %bc1 = bitcast <2 x i64> %s1 to <16 x i8>
+  %a1 = and <16 x i8> %bc1, <i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>
+  %e1 = extractelement <16 x i8> %a1, i64 0
+  %e2 = extractelement <16 x i8> %a1, i64 8
+  %c2 = icmp slt <2 x i64> %l, %lo
+  %s2 = sext <2 x i1> %c2 to <2 x i64>
+  %bc2 = bitcast <2 x i64> %s2 to <16 x i8>
+  %a2 = and <16 x i8> %bc2, <i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>
+  %e3 = extractelement <16 x i8> %a2, i64 0
+  %e4 = extractelement <16 x i8> %a2, i64 8
+  %reass.sub = sub <2 x i64> %l, %lo
+  %add.i.i.i.i.i.i = add <2 x i64> %reass.sub, splat (i64 1)
+  store <2 x i64> %add.i.i.i.i.i.i, ptr %result, align 8
+  %o1 = or i8 %e2, %e1
+  %o2 = or i8 %e4, %e3
+  %o3 = or i8 %o1, %o2
+  %c = icmp eq i8 %o3, 0
+  ret i1 %c
+}
+
 
 declare <16 x i8> @llvm.ctpop.v16i8(<16 x i8>) #1
 declare <8 x i16> @llvm.aarch64.neon.uaddlp.v8i16.v16i8(<16 x i8>) #2

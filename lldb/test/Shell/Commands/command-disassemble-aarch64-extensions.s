@@ -61,7 +61,6 @@ fn:
   sm4e z0.s, z0.s, z0.s                 // AEK_SVE2SM4
   addqv   v0.8h, p0, z0.h               // AEK_SVE2P1 / AEK_SME2P1
   rcwswp x0, x1, [x2]                   // AEK_THE
-  tcommit                               // AEK_TME
 lbl:
 .fn_end:
   .size   fn, .fn_end-fn
@@ -81,7 +80,7 @@ lbl:
 # CHECK-NEXT: fcvt   d0, s0
 # CHECK-NEXT: fabs   h1, h2
 # CHECK-NEXT: fmlal  v0.2s, v1.2h, v2.2h
-# CHECK-NEXT: bc.eq 0xc8
+# CHECK-NEXT: bc.eq 0xc4
 # CHECK-NEXT: smmla  v1.4s, v16.16b, v31.16b
 # CHECK-NEXT: ld64b  x0, [x13]
 # CHECK-NEXT: ldaddab w0, w0, [sp]
@@ -116,4 +115,3 @@ lbl:
 # CHECK-NEXT: sm4e   z0.s, z0.s, z0.s
 # CHECK-NEXT: addqv  v0.8h, p0, z0.h
 # CHECK-NEXT: rcwswp x0, x1, [x2]
-# CHECK-NEXT: tcommit

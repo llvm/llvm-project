@@ -7,10 +7,10 @@
 ; CHK-LABEL: foo
 define void @foo(float %f) {
 entry:
-  ; CHK: ld.shared.f32  %{{[a-zA-Z0-9]+}}, [Gbl+8];
+  ; CHK: ld.shared.b32  %{{[a-zA-Z0-9]+}}, [Gbl+8];
   %0 = load float, ptr addrspace(3) getelementptr inbounds ([1024 x %MyStruct], ptr addrspace(3) @Gbl, i32 0, i32 0, i32 2)
   %add = fadd float %0, %f
-  ; CHK: st.shared.f32   [Gbl+8], %{{[a-zA-Z0-9]+}};
+  ; CHK: st.shared.b32   [Gbl+8], %{{[a-zA-Z0-9]+}};
   store float %add, ptr addrspace(3) getelementptr inbounds ([1024 x %MyStruct], ptr addrspace(3) @Gbl, i32 0, i32 0, i32 2)
   ret void
 }

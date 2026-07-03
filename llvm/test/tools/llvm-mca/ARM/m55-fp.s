@@ -21,30 +21,30 @@ vcmpe.f32 s1, #0.0
 vcmpe.f64 d1, #0.0
 vcvt.f32.f64 s1, d2
 vcvt.f64.f32 d1, s1
-vcvt.f16.u16 s1, s2, #8
-vcvt.f16.s16 s1, s2, #8
-vcvt.f16.u32 s1, s2, #8
-vcvt.f16.s32 s1, s2, #8
-vcvt.u16.f16 s1, s2, #8
-vcvt.s16.f16 s1, s2, #8
-vcvt.u32.f16 s1, s2, #8
-vcvt.s32.f16 s1, s2, #8
-vcvt.f32.u16 s1, s2, #8
-vcvt.f32.s16 s1, s2, #8
-vcvt.f32.u32 s1, s2, #8
-vcvt.f32.s32 s1, s2, #8
-vcvt.u16.f32 s1, s2, #8
-vcvt.s16.f32 s1, s2, #8
-vcvt.u32.f32 s1, s2, #8
-vcvt.s32.f32 s1, s2, #8
-vcvt.f64.u16 d1, d2, #8
-vcvt.f64.s16 d1, d2, #8
-vcvt.f64.u32 d1, d2, #8
-vcvt.f64.s32 d1, d2, #8
-vcvt.u16.f64 d1, d2, #8
-vcvt.s16.f64 d1, d2, #8
-vcvt.u32.f64 d1, d2, #8
-vcvt.s32.f64 d1, d2, #8
+vcvt.f16.u16 s1, s1, #8
+vcvt.f16.s16 s1, s1, #8
+vcvt.f16.u32 s1, s1, #8
+vcvt.f16.s32 s1, s1, #8
+vcvt.u16.f16 s1, s1, #8
+vcvt.s16.f16 s1, s1, #8
+vcvt.u32.f16 s1, s1, #8
+vcvt.s32.f16 s1, s1, #8
+vcvt.f32.u16 s1, s1, #8
+vcvt.f32.s16 s1, s1, #8
+vcvt.f32.u32 s1, s1, #8
+vcvt.f32.s32 s1, s1, #8
+vcvt.u16.f32 s1, s1, #8
+vcvt.s16.f32 s1, s1, #8
+vcvt.u32.f32 s1, s1, #8
+vcvt.s32.f32 s1, s1, #8
+vcvt.f64.u16 d1, d1, #8
+vcvt.f64.s16 d1, d1, #8
+vcvt.f64.u32 d1, d1, #8
+vcvt.f64.s32 d1, d1, #8
+vcvt.u16.f64 d1, d1, #8
+vcvt.s16.f64 d1, d1, #8
+vcvt.u32.f64 d1, d1, #8
+vcvt.s32.f64 d1, d1, #8
 vcvt.u32.f16 s1, s2
 vcvt.s32.f16 s1, s2
 vcvt.u32.f32 s1, s2

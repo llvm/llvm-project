@@ -67,6 +67,7 @@ RUN: llvm-dwarfdump --statistics %t-statistics-fib.o | FileCheck %s
 CHECK:      "version": 9,
 CHECK:      "#functions": 3,
 CHECK:      "#functions with location": 3,
+CHECK:      "#out-of-line functions": 3,
 CHECK:      "#inlined functions": 8,
 CHECK:      "#inlined functions with abstract origins": 8,
 CHECK:      "#unique source variables": 9,

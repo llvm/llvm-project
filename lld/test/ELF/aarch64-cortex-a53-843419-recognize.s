@@ -1,5 +1,5 @@
 // REQUIRES: aarch64
-// RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux %s -o %t.o
+// RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t.o
 // RUN: ld.lld -fix-cortex-a53-843419 -z separate-code -verbose %t.o -o %t2 2>&1 | FileCheck -check-prefix CHECK-PRINT %s
 // RUN: llvm-objdump --no-print-imm-hex --triple=aarch64-linux-gnu -d %t2 | FileCheck %s --check-prefixes=CHECK,CHECK-FIX
 // RUN: ld.lld %t.o -z separate-code -o %t3

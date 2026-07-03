@@ -354,7 +354,218 @@ define float @upgrade_amdgcn_global_atomic_fadd_f32_p1_f32(ptr addrspace(1) %ptr
   ret float %result
 }
 
+declare float @llvm.amdgcn.flat.atomic.fmin.f32.p0.f32(ptr nocapture, float) #0
+
+define float @upgrade_amdgcn_flat_atomic_fmin_f32_p0_f32(ptr %ptr, float %data) {
+  ; CHECK: %{{.+}} = atomicrmw fmin ptr %ptr, float %data syncscope("agent") seq_cst, align 4, !noalias.addrspace !0, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  %result = call float @llvm.amdgcn.flat.atomic.fmin.f32.p0.f32(ptr %ptr, float %data)
+  ret float %result
+}
+
+declare float @llvm.amdgcn.global.atomic.fmin.f32.p1.f32(ptr addrspace(1) nocapture, float) #0
+
+define float @upgrade_amdgcn_global_atomic_fmin_f32_p1_f32(ptr addrspace(1) %ptr, float %data) {
+  ; CHECK: %{{.+}} = atomicrmw fmin ptr addrspace(1) %ptr, float %data syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  %result = call float @llvm.amdgcn.global.atomic.fmin.f32.p1.f32(ptr addrspace(1) %ptr, float %data)
+  ret float %result
+}
+
+declare double @llvm.amdgcn.flat.atomic.fmin.f64.p0.f64(ptr nocapture, double) #0
+
+define double @upgrade_amdgcn_flat_atomic_fmin_f64_p0_f64(ptr %ptr, double %data) {
+  ; CHECK: %{{.+}} = atomicrmw fmin ptr %ptr, double %data syncscope("agent") seq_cst, align 8, !noalias.addrspace !0, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  %result = call double @llvm.amdgcn.flat.atomic.fmin.f64.p0.f64(ptr %ptr, double %data)
+  ret double %result
+}
+
+declare double @llvm.amdgcn.global.atomic.fmin.f64.p1.f64(ptr addrspace(1) nocapture, double) #0
+
+define double @upgrade_amdgcn_global_atomic_fmin_f64_p1_f64(ptr addrspace(1) %ptr, double %data) {
+  ; CHECK: %{{.+}} = atomicrmw fmin ptr addrspace(1) %ptr, double %data syncscope("agent") seq_cst, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  %result = call double @llvm.amdgcn.global.atomic.fmin.f64.p1.f64(ptr addrspace(1) %ptr, double %data)
+  ret double %result
+}
+
+declare float @llvm.amdgcn.flat.atomic.fmax.f32.p0.f32(ptr nocapture, float) #0
+
+define float @upgrade_amdgcn_flat_atomic_fmax_f32_p0_f32(ptr %ptr, float %data) {
+  ; CHECK: %{{.+}} = atomicrmw fmax ptr %ptr, float %data syncscope("agent") seq_cst, align 4, !noalias.addrspace !0, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  %result = call float @llvm.amdgcn.flat.atomic.fmax.f32.p0.f32(ptr %ptr, float %data)
+  ret float %result
+}
+
+declare float @llvm.amdgcn.global.atomic.fmax.f32.p1.f32(ptr addrspace(1) nocapture, float) #0
+
+define float @upgrade_amdgcn_global_atomic_fmax_f32_p1_f32(ptr addrspace(1) %ptr, float %data) {
+  ; CHECK: %{{.+}} = atomicrmw fmax ptr addrspace(1) %ptr, float %data syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  %result = call float @llvm.amdgcn.global.atomic.fmax.f32.p1.f32(ptr addrspace(1) %ptr, float %data)
+  ret float %result
+}
+
+declare double @llvm.amdgcn.flat.atomic.fmax.f64.p0.f64(ptr nocapture, double) #0
+
+define double @upgrade_amdgcn_flat_atomic_fmax_f64_p0_f64(ptr %ptr, double %data) {
+  ; CHECK: %{{.+}} = atomicrmw fmax ptr %ptr, double %data syncscope("agent") seq_cst, align 8, !noalias.addrspace !0, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  %result = call double @llvm.amdgcn.flat.atomic.fmax.f64.p0.f64(ptr %ptr, double %data)
+  ret double %result
+}
+
+declare double @llvm.amdgcn.global.atomic.fmax.f64.p1.f64(ptr addrspace(1) nocapture, double) #0
+
+define double @upgrade_amdgcn_global_atomic_fmax_f64_p1_f64(ptr addrspace(1) %ptr, double %data) {
+  ; CHECK: %{{.+}} = atomicrmw fmax ptr addrspace(1) %ptr, double %data syncscope("agent") seq_cst, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  %result = call double @llvm.amdgcn.global.atomic.fmax.f64.p1.f64(ptr addrspace(1) %ptr, double %data)
+  ret double %result
+}
+
 attributes #0 = { argmemonly nounwind willreturn }
+
+define void @atomic_usub_cond(ptr %ptr0, ptr addrspace(1) %ptr1, ptr addrspace(3) %ptr3) {
+  ; CHECK: atomicrmw usub_cond ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4
+    %result0 = call i32 @llvm.amdgcn.atomic.cond.sub.i32.p0(ptr %ptr0, i32 42, i32 0, i32 0, i1 false)
+
+  ; CHECK: atomicrmw usub_cond ptr addrspace(1) %ptr1, i32 43 syncscope("agent") seq_cst, align 4
+    %result1 = call i32 @llvm.amdgcn.atomic.cond.sub.i32.p1(ptr addrspace(1) %ptr1, i32 43, i32 0, i32 0, i1 false)
+
+  ; CHECK: atomicrmw usub_cond ptr addrspace(3) %ptr3, i32 46 syncscope("agent") seq_cst, align 4
+    %result2 = call i32 @llvm.amdgcn.atomic.cond.sub.i32.p3(ptr addrspace(3) %ptr3, i32 46, i32 0, i32 0, i1 false)
+
+  ; CHECK: atomicrmw usub_cond ptr %ptr0, i64 42 syncscope("agent") seq_cst, align 8
+    %result3 = call i64 @llvm.amdgcn.atomic.cond.sub.i64.p0(ptr %ptr0, i64 42, i64 0, i64 0, i1 false)
+
+  ; CHECK: atomicrmw usub_cond ptr addrspace(1) %ptr1, i64 43 syncscope("agent") seq_cst, align 8
+    %result4 = call i64 @llvm.amdgcn.atomic.cond.sub.i64.p1(ptr addrspace(1) %ptr1, i64 43, i64 0, i64 0, i1 false)
+
+  ; CHECK: atomicrmw usub_cond ptr addrspace(3) %ptr3, i64 46 syncscope("agent") seq_cst, align 8
+    %result5 = call i64 @llvm.amdgcn.atomic.cond.sub.i64.p3(ptr addrspace(3) %ptr3, i64 46, i64 0, i64 0, i1 false)
+  ret void
+}
+
+define void @atomic_usub_sat(ptr %ptr0, ptr addrspace(1) %ptr1, ptr addrspace(3) %ptr3) {
+  ; CHECK: atomicrmw usub_sat ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4
+    %result0 = call i32 @llvm.amdgcn.atomic.csub.i32.p0(ptr %ptr0, i32 42, i32 0, i32 0, i1 false)
+
+  ; CHECK: atomicrmw usub_sat ptr addrspace(1) %ptr1, i32 43 syncscope("agent") seq_cst, align 4
+    %result1 = call i32 @llvm.amdgcn.atomic.csub.i32.p1(ptr addrspace(1) %ptr1, i32 43, i32 0, i32 0, i1 false)
+
+  ; CHECK: atomicrmw usub_sat ptr addrspace(3) %ptr3, i32 46 syncscope("agent") seq_cst, align 4
+    %result2 = call i32 @llvm.amdgcn.atomic.csub.i32.p3(ptr addrspace(3) %ptr3, i32 46, i32 0, i32 0, i1 false)
+
+  ; CHECK: atomicrmw usub_sat ptr %ptr0, i64 42 syncscope("agent") seq_cst, align 8
+    %result3 = call i64 @llvm.amdgcn.atomic.csub.i64.p0(ptr %ptr0, i64 42, i64 0, i64 0, i1 false)
+
+  ; CHECK: atomicrmw usub_sat ptr addrspace(1) %ptr1, i64 43 syncscope("agent") seq_cst, align 8
+    %result4 = call i64 @llvm.amdgcn.atomic.csub.i64.p1(ptr addrspace(1) %ptr1, i64 43, i64 0, i64 0, i1 false)
+
+  ; CHECK: atomicrmw usub_sat ptr addrspace(3) %ptr3, i64 46 syncscope("agent") seq_cst, align 8
+    %result5 = call i64 @llvm.amdgcn.atomic.csub.i64.p3(ptr addrspace(3) %ptr3, i64 46, i64 0, i64 0, i1 false)
+  ret void
+}
+
+; Test some invalid ordering handling
+define void @ordering_usub_cond_usub_sat(ptr %ptr0, ptr addrspace(1) %ptr1, ptr addrspace(3) %ptr3) {
+  ; CHECK: atomicrmw volatile usub_cond ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4
+    %result0 = call i32 @llvm.amdgcn.atomic.cond.sub.i32.p0(ptr %ptr0, i32 42, i32 -1, i32 0, i1 true)
+
+  ; CHECK: atomicrmw volatile usub_cond ptr addrspace(1) %ptr1, i32 43 syncscope("agent") seq_cst, align 4
+    %result1 = call i32 @llvm.amdgcn.atomic.cond.sub.i32.p1(ptr addrspace(1) %ptr1, i32 43, i32 0, i32 0, i1 true)
+
+  ; CHECK: atomicrmw usub_cond ptr addrspace(1) %ptr1, i32 43 syncscope("agent") seq_cst, align 4
+    %result2 = call i32 @llvm.amdgcn.atomic.cond.sub.i32.p1(ptr addrspace(1) %ptr1, i32 43, i32 1, i32 0, i1 false)
+
+  ; CHECK: atomicrmw volatile usub_cond ptr addrspace(1) %ptr1, i32 43 syncscope("agent") monotonic, align 4
+    %result3 = call i32 @llvm.amdgcn.atomic.cond.sub.i32.p1(ptr addrspace(1) %ptr1, i32 43, i32 2, i32 0, i1 true)
+
+  ; CHECK: atomicrmw usub_cond ptr addrspace(1) %ptr1, i32 43 syncscope("agent") seq_cst, align 4
+    %result4 = call i32 @llvm.amdgcn.atomic.cond.sub.i32.p1(ptr addrspace(1) %ptr1, i32 43, i32 3, i32 0, i1 false)
+
+  ; CHECK: atomicrmw volatile usub_sat ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4
+    %result5 = call i32 @llvm.amdgcn.atomic.csub.i32.p0(ptr %ptr0, i32 42, i32 0, i32 4, i1 true)
+
+  ; CHECK: atomicrmw usub_sat ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4
+    %result6 = call i32 @llvm.amdgcn.atomic.csub.i32.p0(ptr %ptr0, i32 42, i32 0, i32 5, i1 false)
+
+  ; CHECK: atomicrmw volatile usub_sat ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4
+    %result7 = call i32 @llvm.amdgcn.atomic.csub.i32.p0(ptr %ptr0, i32 42, i32 0, i32 6, i1 true)
+
+  ; CHECK: atomicrmw usub_sat ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4
+    %result8 = call i32 @llvm.amdgcn.atomic.csub.i32.p0(ptr %ptr0, i32 42, i32 0, i32 7, i1 false)
+
+  ; CHECK:= atomicrmw volatile usub_sat ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4
+    %result9 = call i32 @llvm.amdgcn.atomic.csub.i32.p0(ptr %ptr0, i32 42, i32 0, i32 8, i1 true)
+
+  ; CHECK:= atomicrmw volatile usub_sat ptr addrspace(1) %ptr1, i32 43 syncscope("agent") seq_cst, align 4
+    %result10 = call i32 @llvm.amdgcn.atomic.csub.i32.p1(ptr addrspace(1) %ptr1, i32 43, i32 3, i32 0, i1 true)
+
+  ; CHECK: atomicrmw volatile usub_cond ptr %ptr0, i64 42 syncscope("agent") seq_cst, align 8
+    %result11 = call i64 @llvm.amdgcn.atomic.cond.sub.i64.p0(ptr %ptr0, i64 42, i64 -1, i64 0, i1 true)
+
+  ; CHECK: atomicrmw volatile usub_cond ptr addrspace(1) %ptr1, i64 43 syncscope("agent") seq_cst, align 8
+    %result12 = call i64 @llvm.amdgcn.atomic.cond.sub.i64.p1(ptr addrspace(1) %ptr1, i64 43, i64 0, i64 0, i1 true)
+
+  ; CHECK: atomicrmw usub_cond ptr addrspace(1) %ptr1, i64 43 syncscope("agent") seq_cst, align 8
+    %result13 = call i64 @llvm.amdgcn.atomic.cond.sub.i64.p1(ptr addrspace(1) %ptr1, i64 43, i64 1, i64 0, i1 false)
+
+  ; CHECK: atomicrmw volatile usub_cond ptr addrspace(1) %ptr1, i64 43 syncscope("agent") monotonic, align 8
+    %result14 = call i64 @llvm.amdgcn.atomic.cond.sub.i64.p1(ptr addrspace(1) %ptr1, i64 43, i64 2, i64 0, i1 true)
+
+  ; CHECK: atomicrmw usub_cond ptr addrspace(1) %ptr1, i64 43 syncscope("agent") seq_cst, align 8
+    %result15 = call i64 @llvm.amdgcn.atomic.cond.sub.i64.p1(ptr addrspace(1) %ptr1, i64 43, i64 3, i64 0, i1 false)
+
+  ; CHECK: atomicrmw volatile usub_sat ptr %ptr0, i64 42 syncscope("agent") seq_cst, align 8
+    %result16 = call i64 @llvm.amdgcn.atomic.csub.i64.p0(ptr %ptr0, i64 42, i64 0, i64 4, i1 true)
+
+  ; CHECK: atomicrmw usub_sat ptr %ptr0, i64 42 syncscope("agent") seq_cst, align 8
+    %result17 = call i64 @llvm.amdgcn.atomic.csub.i64.p0(ptr %ptr0, i64 42, i64 0, i64 5, i1 false)
+
+  ; CHECK: atomicrmw volatile usub_sat ptr %ptr0, i64 42 syncscope("agent") seq_cst, align 8
+    %result18 = call i64 @llvm.amdgcn.atomic.csub.i64.p0(ptr %ptr0, i64 42, i64 0, i64 6, i1 true)
+
+  ; CHECK: atomicrmw usub_sat ptr %ptr0, i64 42 syncscope("agent") seq_cst, align 8
+    %result19 = call i64 @llvm.amdgcn.atomic.csub.i64.p0(ptr %ptr0, i64 42, i64 0, i64 7, i1 false)
+
+  ; CHECK:= atomicrmw volatile usub_sat ptr %ptr0, i64 42 syncscope("agent") seq_cst, align 8
+    %result20 = call i64 @llvm.amdgcn.atomic.csub.i64.p0(ptr %ptr0, i64 42, i64 0, i64 8, i1 true)
+
+  ; CHECK:= atomicrmw volatile usub_sat ptr addrspace(1) %ptr1, i64 43 syncscope("agent") seq_cst, align 8
+    %result21 = call i64 @llvm.amdgcn.atomic.csub.i64.p1(ptr addrspace(1) %ptr1, i64 43, i64 3, i64 0, i1 true)
+  ret void
+}
+
+define void @immarg_violations_usub_sat(ptr %ptr0, i32 %val32, i1 %val1, i64 %val64) {
+  ; CHECK: atomicrmw usub_sat ptr %ptr0, i32 42 syncscope("agent") seq_cst, align 4
+    %result0 = call i32 @llvm.amdgcn.atomic.csub.i32.p0(ptr %ptr0, i32 42, i32 %val32, i32 0, i1 false)
+
+  ; CHECK: atomicrmw usub_sat ptr %ptr0, i32 42 syncscope("agent") monotonic, align 4
+    %result1 = call i32 @llvm.amdgcn.atomic.csub.i32.p0(ptr %ptr0, i32 42, i32 2, i32 %val32, i1 false)
+
+  ; CHECK: atomicrmw volatile usub_sat ptr %ptr0, i32 42 syncscope("agent") monotonic, align 4
+    %result2 = call i32 @llvm.amdgcn.atomic.csub.i32.p0(ptr %ptr0, i32 42, i32 2, i32 0, i1 %val1)
+
+  ; CHECK: atomicrmw usub_sat ptr %ptr0, i64 42 syncscope("agent") seq_cst, align 8
+    %result3 = call i64 @llvm.amdgcn.atomic.csub.i64.p0(ptr %ptr0, i64 42, i64 %val64, i64 0, i1 false)
+
+  ; CHECK: atomicrmw usub_sat ptr %ptr0, i64 42 syncscope("agent") monotonic, align 8
+    %result4 = call i64 @llvm.amdgcn.atomic.csub.i64.p0(ptr %ptr0, i64 42, i64 2, i64 %val64, i1 false)
+
+  ; CHECK: atomicrmw volatile usub_sat ptr %ptr0, i64 42 syncscope("agent") monotonic, align 8
+    %result5 = call i64 @llvm.amdgcn.atomic.csub.i64.p0(ptr %ptr0, i64 42, i64 2, i64 0, i1 %val1)
+  ret void
+}
+
+declare i32 @llvm.amdgcn.atomic.cond.sub.i32.p1(ptr addrspace(1) nocapture, i32, i32 immarg, i32 immarg, i1 immarg) #0
+declare i32 @llvm.amdgcn.atomic.cond.sub.i32.p3(ptr addrspace(3) nocapture, i32, i32 immarg, i32 immarg, i1 immarg) #0
+declare i32 @llvm.amdgcn.atomic.cond.sub.i32.p0(ptr nocapture, i32, i32 immarg, i32 immarg, i1 immarg) #0
+declare i64 @llvm.amdgcn.atomic.cond.sub.i64.p1(ptr addrspace(1) nocapture, i64, i64 immarg, i64 immarg, i1 immarg) #0
+declare i64 @llvm.amdgcn.atomic.cond.sub.i64.p3(ptr addrspace(3) nocapture, i64, i64 immarg, i64 immarg, i1 immarg) #0
+declare i64 @llvm.amdgcn.atomic.cond.sub.i64.p0(ptr nocapture, i64, i64 immarg, i64 immarg, i1 immarg) #0
+
+declare i32 @llvm.amdgcn.atomic.csub.i32.p1(ptr addrspace(1) nocapture, i32, i32 immarg, i32 immarg, i1 immarg) #0
+declare i32 @llvm.amdgcn.atomic.csub.i32.p3(ptr addrspace(3) nocapture, i32, i32 immarg, i32 immarg, i1 immarg) #0
+declare i32 @llvm.amdgcn.atomic.csub.i32.p0(ptr nocapture, i32, i32 immarg, i32 immarg, i1 immarg) #0
+declare i64 @llvm.amdgcn.atomic.csub.i64.p1(ptr addrspace(1) nocapture, i64, i64 immarg, i64 immarg, i1 immarg) #0
+declare i64 @llvm.amdgcn.atomic.csub.i64.p3(ptr addrspace(3) nocapture, i64, i64 immarg, i64 immarg, i1 immarg) #0
+declare i64 @llvm.amdgcn.atomic.csub.i64.p0(ptr nocapture, i64, i64 immarg, i64 immarg, i1 immarg) #0
 
 ; CHECK: !0 = !{i32 5, i32 6}
 ; CHECK: !1 = !{}

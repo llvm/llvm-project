@@ -148,7 +148,7 @@ define <2 x float> @fdiv_nnan_nsz_ninf_by_zero_v2f32(<2 x float> %x) {
 
 define <2 x float> @fdiv_nnan_nsz_ninf_by_negzero_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: @fdiv_nnan_nsz_ninf_by_negzero_v2f32(
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv nnan nsz <2 x float> [[X:%.*]], <float -0.000000e+00, float -0.000000e+00>
+; CHECK-NEXT:    [[FDIV:%.*]] = fdiv nnan nsz <2 x float> [[X:%.*]], splat (float -0.000000e+00)
 ; CHECK-NEXT:    ret <2 x float> [[FDIV]]
 ;
   %fdiv = fdiv nnan nsz <2 x float> %x, <float -0.0, float -0.0>

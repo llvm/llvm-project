@@ -1,15 +1,15 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -target-feature +altivec -target-feature +power9-vector \
+// RUN: %clang_cc1 -target-feature +power9-vector -target-feature +isa-v207-instructions \
 // RUN:   -triple powerpc64-unknown-unknown -emit-llvm %s \
 // RUN:   -flax-vector-conversions=integer \
 // RUN:   -o - | FileCheck %s -check-prefix=CHECK-BE
 
-// RUN: %clang_cc1 -target-feature +altivec -target-feature +power9-vector \
+// RUN: %clang_cc1 -target-feature +power9-vector -target-feature +isa-v207-instructions \
 // RUN:   -triple powerpc64le-unknown-unknown -emit-llvm %s \
 // RUN:   -flax-vector-conversions=integer \
 // RUN:   -o - | FileCheck %s
 
-// RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +altivec -target-feature +power9-vector \
+// RUN: %clang_cc1 -flax-vector-conversions=none -target-feature +power9-vector -target-feature +isa-v207-instructions \
 // RUN:   -triple powerpc64-unknown-unknown -emit-llvm %s \
 // RUN:   -o - | FileCheck %s -check-prefix=CHECK-BE
 
@@ -853,10 +853,16 @@ vector unsigned char test73(void) {
 vector unsigned short test74(void) {
 // CHECK-BE: @llvm.ppc.vsx.xvcvsphp(<4 x float>
 // CHECK-BE: @llvm.ppc.vsx.xvcvsphp(<4 x float>
-// CHECK-BE: @llvm.ppc.altivec.vperm
+// CHECK-BE: [[REG0:%[0-9]+]] = call <4 x i32> @llvm.ppc.altivec.vperm
+// CHECK-BE-NEXT: [[REG1:%[0-9]+]] = bitcast <4 x i32> [[REG0]] to <4 x float>
+// CHECK-BE-NEXT: [[REG2:%[0-9]+]] = bitcast <4 x float> [[REG1]] to <8 x i16>
+// CHECK-BE-NEXT: ret <8 x i16> [[REG2]]
 // CHECK: @llvm.ppc.vsx.xvcvsphp(<4 x float>
 // CHECK: @llvm.ppc.vsx.xvcvsphp(<4 x float>
-// CHECK: @llvm.ppc.altivec.vperm
+// CHECK: [[REG0:%[0-9]+]] = call <4 x i32> @llvm.ppc.altivec.vperm
+// CHECK-NEXT: [[REG1:%[0-9]+]] = bitcast <4 x i32> [[REG0]] to <4 x float>
+// CHECK-NEXT: [[REG2:%[0-9]+]] = bitcast <4 x float> [[REG1]] to <8 x i16>
+// CHECK-NEXT: ret <8 x i16> [[REG2]]
   return vec_pack_to_short_fp32(vfa, vfb);
 }
 vector unsigned int test75(void) {

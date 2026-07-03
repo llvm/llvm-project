@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -o - -triple=i386-pc-win32 -std=c++11 %s -fcxx-exceptions -fms-extensions | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -o - -triple=i386-pc-win32 -std=c++20 %s -fcxx-exceptions -fms-extensions | FileCheck %s
 
 // CHECK-DAG: @"??_R0?AUY@@@8" = linkonce_odr global %rtti.TypeDescriptor7 { ptr @"??_7type_info@@6B@", ptr null, [8 x i8] c".?AUY@@\00" }, comdat
 // CHECK-DAG: @"_CT??_R0?AUY@@@8??0Y@@QAE@ABU0@@Z8" = linkonce_odr unnamed_addr constant %eh.CatchableType { i32 4, ptr @"??_R0?AUY@@@8", i32 0, i32 -1, i32 0, i32 8, ptr @"??0Y@@QAE@ABU0@@Z" }, section ".xdata", comdat
@@ -14,7 +14,7 @@
 // CHECK-DAG: @"_TI5?AUY@@" = linkonce_odr unnamed_addr constant %eh.ThrowInfo { i32 0, ptr @"??_DY@@QAEXXZ", ptr null, ptr @"_CTA5?AUY@@" }, section ".xdata", comdat
 // CHECK-DAG: @"_CT??_R0?AUDefault@@@8??_ODefault@@QAEXAAU0@@Z1" = linkonce_odr unnamed_addr constant %eh.CatchableType { i32 0, ptr @"??_R0?AUDefault@@@8", i32 0, i32 -1, i32 0, i32 1, ptr @"??_ODefault@@QAEXAAU0@@Z" }, section ".xdata", comdat
 // CHECK-DAG: @"_CT??_R0?AUDeletedCopy@@@81" = linkonce_odr unnamed_addr constant %eh.CatchableType { i32 0, ptr @"??_R0?AUDeletedCopy@@@8", i32 0, i32 -1, i32 0, i32 1, ptr null }, section ".xdata", comdat
-// CHECk-DAG: @"_CT??_R0?AUMoveOnly@@@84" = linkonce_odr unnamed_addr constant %eh.CatchableType { i32 0, ptr @"??_R0?AUMoveOnly@@@8", i32 0, i321-1, i32 0, i32 4, ptr null }, section ".xdata", comda
+// CHECK-DAG: @"_CT??_R0?AUMoveOnly@@@84" = linkonce_odr unnamed_addr constant %eh.CatchableType { i32 0, ptr @"??_R0?AUMoveOnly@@@8", i32 0, i32 -1, i32 0, i32 4, ptr null }, section ".xdata", comdat
 // CHECK-DAG: @"_CT??_R0?AUVariadic@@@8??_OVariadic@@QAEXAAU0@@Z1" = linkonce_odr unnamed_addr constant %eh.CatchableType { i32 0, ptr @"??_R0?AUVariadic@@@8", i32 0, i32 -1, i32 0, i32 1, ptr @"??_OVariadic@@QAEXAAU0@@Z" }, section ".xdata", comdat
 // CHECK-DAG: @"_CT??_R0?AUTemplateWithDefault@@@8??$?_OH@TemplateWithDefault@@QAEXAAU0@@Z1" = linkonce_odr unnamed_addr constant %eh.CatchableType { i32 0, ptr @"??_R0?AUTemplateWithDefault@@@8", i32 0, i32 -1, i32 0, i32 1, ptr @"??$?_OH@TemplateWithDefault@@QAEXAAU0@@Z" }, section ".xdata", comdat
 // CHECK-DAG: @"_CTA2$$T" = linkonce_odr unnamed_addr constant %eh.CatchableTypeArray.2 { i32 2, [2 x ptr] [ptr @"_CT??_R0$$T@84", ptr @"_CT??_R0PAX@84"] }, section ".xdata", comdat
@@ -70,6 +70,32 @@ struct Default {
 void h(Default &d) {
   throw d;
 }
+
+consteval int constEvalFunc() { return 123; }
+struct DefaultConstEval {
+  DefaultConstEval(DefaultConstEval&, int = constEvalFunc());
+};
+// CHECK-LABEL: @"??_ODefaultConstEval@@QAEXAAU0@@Z"
+// CHECK: call x86_thiscallcc {{.*}} @"??0DefaultConstEval@@QAE@AAU0@H@Z"({{.*}} %[[this]], {{.*}} %[[src]], i32 noundef 123)
+
+void h2(DefaultConstEval &d) {
+  throw d;
+}
+
+// This will generate both the default constructor closure and the copy constructor closure -- for the same constructor.
+struct DefaultCtorIsCopyCtor;
+const DefaultCtorIsCopyCtor& foo();
+struct DefaultCtorIsCopyCtor {
+  __declspec(dllexport) DefaultCtorIsCopyCtor(const DefaultCtorIsCopyCtor& = foo(), int = 456) {}
+};
+void h3(DefaultCtorIsCopyCtor &d) {
+  throw d;
+}
+// CHECK-LABEL: @"??_FDefaultCtorIsCopyCtor@@QAEXXZ"
+// CHECK: %[[foo:.*]] = call {{.*}} @"?foo@@YAABUDefaultCtorIsCopyCtor@@XZ"
+// CHECK: call {{.*}} @"??0DefaultCtorIsCopyCtor@@QAE@ABU0@H@Z"({{.*}} %[[foo]], i32 noundef 456)
+// CHECK-LABEL: @"??_ODefaultCtorIsCopyCtor@@QAEXABU0@@Z"
+// CHECK: call {{.*}} @"??0DefaultCtorIsCopyCtor@@QAE@ABU0@H@Z"({{.*}} i32 noundef 456)
 
 struct DeletedCopy {
   DeletedCopy();

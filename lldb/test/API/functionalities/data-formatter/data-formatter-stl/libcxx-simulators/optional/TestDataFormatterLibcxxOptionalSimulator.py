@@ -11,6 +11,7 @@ import functools
 
 
 class LibcxxOptionalDataFormatterSimulatorTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
 
     def _run_test(self, defines):
@@ -47,6 +48,7 @@ for r in range(2):
     name = f"test_r{r}"
     defines = [f"REVISION={r}"]
 
+    @skipIf(compiler="clang", compiler_version=["<", "21"])
     @functools.wraps(LibcxxOptionalDataFormatterSimulatorTestCase._run_test)
     def test_method(self, defines=defines):
         LibcxxOptionalDataFormatterSimulatorTestCase._run_test(self, defines)

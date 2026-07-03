@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=xcore > %t1.s
+; RUN: llc < %s -mtriple=xcore > %t1.s
 ; PR3324
 define double @f1(double %a, double %b, double %c, double %d, double %e, double %f, double %g) nounwind {
 entry:

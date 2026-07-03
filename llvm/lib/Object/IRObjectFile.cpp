@@ -66,7 +66,7 @@ basic_symbol_iterator IRObjectFile::symbol_end() const {
 StringRef IRObjectFile::getTargetTriple() const {
   // Each module must have the same target triple, so we arbitrarily access the
   // first one.
-  return Mods[0]->getTargetTriple();
+  return Mods[0]->getTargetTriple().str();
 }
 
 Expected<MemoryBufferRef>

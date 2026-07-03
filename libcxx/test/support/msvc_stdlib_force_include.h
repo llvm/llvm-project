@@ -102,6 +102,4 @@ const AssertionDialogAvoider assertion_dialog_avoider{};
 #define TEST_SHORT_WCHAR
 #define TEST_ABI_MICROSOFT
 
-#define _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST
-
 #endif // SUPPORT_MSVC_STDLIB_FORCE_INCLUDE_H

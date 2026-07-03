@@ -21,7 +21,7 @@
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/Reassociate.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
-#include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Utils/Mem2Reg.h"
 #include <algorithm>
 #include <cassert>
 #include <cctype>
@@ -791,11 +791,11 @@ Value *BinaryExprAST::codegen() {
       return nullptr;
 
     // Look up the name.
-    Value *Variable = NamedValues[LHSE->getName()];
-    if (!Variable)
+    AllocaInst *Alloca = NamedValues[LHSE->getName()];
+    if (!Alloca)
       return LogErrorV("Unknown variable name");
 
-    Builder->CreateStore(Val, Variable);
+    Builder->CreateStore(Val, Alloca);
     return Val;
   }
 
@@ -1142,6 +1142,8 @@ static void InitializeModuleAndManagers() {
   TheSI->registerCallbacks(*ThePIC, TheMAM.get());
 
   // Add transform passes.
+  // Promote allocas to registers.
+  TheFPM->addPass(PromotePass());
   // Do simple "peephole" optimizations and bit-twiddling optzns.
   TheFPM->addPass(InstCombinePass());
   // Reassociate expressions.
@@ -1205,7 +1207,7 @@ static void HandleTopLevelExpression() {
 
       // Get the symbol's address and cast it to the right type (takes no
       // arguments, returns a double) so we can call it as a native function.
-      double (*FP)() = ExprSymbol.getAddress().toPtr<double (*)()>();
+      double (*FP)() = ExprSymbol.toPtr<double (*)()>();
       fprintf(stderr, "Evaluated to %f\n", FP());
 
       // Delete the anonymous expression module from the JIT.

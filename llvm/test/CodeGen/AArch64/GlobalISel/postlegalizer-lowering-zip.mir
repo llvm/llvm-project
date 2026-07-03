@@ -4,6 +4,7 @@
 # G_ZIP1 or G_ZIP2 where appropriate.
 #
 # RUN: llc -mtriple aarch64 -run-pass=aarch64-postlegalizer-lowering -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple aarch64 -passes=aarch64-postlegalizer-lowering %s -o - | FileCheck %s
 
 ...
 ---
@@ -161,14 +162,13 @@ body:             |
 
     ; This will fail because it expects 3 to be the second element of the
     ; shuffle vector mask.
-    ;
     ; CHECK-LABEL: name: zip2_no_combine_idx_mismatch
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; CHECK-NEXT: [[EXT:%[0-9]+]]:_(<2 x s64>) = G_EXT [[COPY]], [[COPY1]], [[C]](s32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 8
+    ; CHECK-NEXT: [[EXT:%[0-9]+]]:_(<2 x s64>) = G_EXT [[COPY]], [[COPY1]], [[C]](i32)
     ; CHECK-NEXT: $q0 = COPY [[EXT]](<2 x s64>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<2 x s64>) = COPY $q0
@@ -189,7 +189,6 @@ body:             |
 
     ; This will fail because it expects 2 to be the second element of the
     ; shuffle vector mask.
-    ;
     ; CHECK-LABEL: name: zip1_no_combine_idx_mismatch
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}
@@ -214,7 +213,6 @@ body:             |
     liveins: $q0, $q1
 
     ; zip1/zip2 must have 0 or 1 as the first element in the shuffle mask.
-    ;
     ; CHECK-LABEL: name: no_combine_first_elt_of_mask_must_be_zero_or_one
     ; CHECK: liveins: $q0, $q1
     ; CHECK-NEXT: {{  $}}

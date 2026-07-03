@@ -43,7 +43,6 @@ define i8 @test_valid_wrap_optimizable2(ptr %base, i32 %offset) {
 ; CHECK-LABEL: test_valid_wrap_optimizable2:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    mov w8, #-100 ; =0xffffff9c
-; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    ldrb w0, [x8, w1, sxtw]
 ; CHECK-NEXT:    ret
 

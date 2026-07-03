@@ -11,7 +11,7 @@ from lldbsuite.test import lldbutil
 
 class EHFrameBasedUnwind(TestBase):
     @skipUnlessPlatform(["linux"])
-    @skipIf(archs=["aarch64", "arm", "i386", "i686"])
+    @skipIf(archs=["aarch64", "arm$", "i386", "i686"])
     def test(self):
         """Test that we can backtrace correctly from Non ABI  functions on the stack"""
         self.build()

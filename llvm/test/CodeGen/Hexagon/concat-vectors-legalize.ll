@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; CHECK-NOT: setbit(r{{[0-9]+}},#1)
 
 target triple = "hexagon-unknown--elf"

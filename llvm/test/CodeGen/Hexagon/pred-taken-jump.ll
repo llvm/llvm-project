@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Predicated (old) taken jumps weren't supported prior to V60. The purpose
 ; of this  test is to make sure that these instructions are not

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "TCE.h"
-#include "CommonArgs.h"
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;
@@ -44,5 +43,11 @@ TCELEToolChain::TCELEToolChain(const Driver &D, const llvm::Triple& Triple,
                                const ArgList &Args)
   : TCEToolChain(D, Triple, Args) {
 }
+
+TCELE64ToolChain::TCELE64ToolChain(const Driver &D, const llvm::Triple &Triple,
+                                   const ArgList &Args)
+    : TCEToolChain(D, Triple, Args) {}
+
+TCELE64ToolChain::~TCELE64ToolChain() {}
 
 TCELEToolChain::~TCELEToolChain() {}

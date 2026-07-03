@@ -33,7 +33,9 @@
 ; RUN: llvm-lto2 run %t/b.o %t/a.o -enable-memprof-context-disambiguation \
 ; RUN:  -supports-hot-cold-new \
 ; RUN:  -thinlto-distributed-indexes \
+; RUN:  -combined-index-memprof-context \
 ; RUN:  -r=%t/b.o,_Z3fooi,plx \
+; RUN:  -r=%t/b.o,aliasee,plx \
 ; RUN:  -r=%t/b.o,a \
 ; RUN:  -r=%t/b.o,b \
 ; RUN:  -r=%t/b.o,_Znam \
@@ -65,11 +67,15 @@ source_filename = "b.cpp"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
+;; Make sure the distributed summary bitcode writing succeeds when the memprof
+;; metadata is in an aliasee.
+@_Z3fooi = alias void (), ptr @aliasee
+
 @a = external local_unnamed_addr global ptr, align 8
 @b = external local_unnamed_addr global i32, align 4
 
 ; Function Attrs: mustprogress uwtable
-define dso_local void @_Z3fooi(i32 noundef %0) local_unnamed_addr #0 !dbg !9 {
+define dso_local void @aliasee(i32 noundef %0) local_unnamed_addr #0 !dbg !9 {
   br label %2, !dbg !12
 
 2:                                                ; preds = %7, %1

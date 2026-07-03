@@ -10,6 +10,11 @@ set(CLANG_LINKS_TO_CREATE
             hexagon-none-elf-clang
             hexagon-unknown-none-elf-clang++
             hexagon-unknown-none-elf-clang
+            clang++
+            clang-cl
+            clang-cpp
             CACHE STRING "")
 
-set(LLVM_INSTALL_TOOLCHAIN_ONLY ON CACHE BOOL "")
+# Note: FORCE is required to override the OFF setting in hexagon-unknown-linux-musl-clang.cmake
+# which is loaded earlier in the -C chain.
+set(LLVM_INSTALL_TOOLCHAIN_ONLY ON CACHE BOOL "" FORCE)

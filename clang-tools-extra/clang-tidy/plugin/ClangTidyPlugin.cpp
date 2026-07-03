@@ -1,4 +1,4 @@
-//===- ClangTidyPlugin.cpp - clang-tidy as a clang plugin -----------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,13 +8,13 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyDiagnosticConsumer.h"
-#include "../ClangTidyForceLinker.h"
 #include "../ClangTidyModule.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Frontend/MultiplexConsumer.h"
 
 namespace clang::tidy {
+namespace {
 
 /// The core clang tidy plugin action. This just provides the AST consumer and
 /// command line flag parsing for using clang-tidy as a clang plugin.
@@ -40,9 +40,10 @@ public:
     // Create and set diagnostics engine
     auto *DiagConsumer =
         new ClangTidyDiagnosticConsumer(*Context, &Compiler.getDiagnostics());
+    auto DiagOpts = std::make_unique<DiagnosticOptions>();
     auto DiagEngine = std::make_unique<DiagnosticsEngine>(
-        new DiagnosticIDs, new DiagnosticOptions, DiagConsumer);
-    Context->setDiagnosticsEngine(DiagEngine.get());
+        DiagnosticIDs::create(), *DiagOpts, DiagConsumer);
+    Context->setDiagnosticsEngine(std::move(DiagOpts), DiagEngine.get());
 
     // Create the AST consumer.
     ClangTidyASTConsumerFactory Factory(*Context);
@@ -55,13 +56,13 @@ public:
 
   bool ParseArgs(const CompilerInstance &,
                  const std::vector<std::string> &Args) override {
-    ClangTidyGlobalOptions GlobalOptions;
-    ClangTidyOptions DefaultOptions;
+    const ClangTidyGlobalOptions GlobalOptions;
+    const ClangTidyOptions DefaultOptions;
     ClangTidyOptions OverrideOptions;
 
     // Parse the extra command line args.
     // FIXME: This is very limited at the moment.
-    for (StringRef Arg : Args)
+    for (const StringRef Arg : Args)
       if (Arg.starts_with("-checks="))
         OverrideOptions.Checks = std::string(Arg.substr(strlen("-checks=")));
 
@@ -74,10 +75,13 @@ public:
 private:
   std::unique_ptr<ClangTidyContext> Context;
 };
+
+} // namespace
 } // namespace clang::tidy
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the clang-tidy plugin.
+// NOLINTNEXTLINE(misc-use-internal-linkage)
 volatile int ClangTidyPluginAnchorSource = 0;
 
 static clang::FrontendPluginRegistry::Add<clang::tidy::ClangTidyPluginAction>

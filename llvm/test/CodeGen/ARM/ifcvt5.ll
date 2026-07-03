@@ -5,7 +5,7 @@
 
 @x = external global ptr		; <ptr> [#uses=1]
 
-define void @foo(i32 %a) "frame-pointer"="all" {
+define void @foo(i32 %a) "frame-pointer"="none" {
 ; A8-LABEL: foo:
 ; A8:       @ %bb.0: @ %entry
 ; A8-NEXT:    movw r1, :lower16:(L_x$non_lazy_ptr-(LPC0_0+8))

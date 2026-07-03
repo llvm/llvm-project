@@ -63,7 +63,7 @@ entry:
   ret void
 }
 
-define void @_Z3fn1v() uwtable personality ptr @__gxx_personality_v0 {
+define void @_Z3fn1v(i1 %arg) uwtable personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @_Z3fn1v(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @_Znwm()
@@ -93,6 +93,8 @@ define void @_Z3fn1v() uwtable personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[_REF_I_I_I]], align 4
 ; CHECK-NEXT:    [[TOBOOL_I_I_I:%.*]] = icmp eq i32 [[TMP3]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL_I_I_I]], label [[_ZN1BI1DED1EV_EXIT:%.*]], label [[DELETE_NOTNULL_I_I_I:%.*]]
+; CHECK:       if.then.i.i.i:
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[_ZN1BI1DED1EV_EXIT]], label [[DELETE_NOTNULL_I_I_I1:%.*]]
 ; CHECK:       delete.notnull.i.i.i:
 ; CHECK-NEXT:    call void @_ZdlPv()
 ; CHECK-NEXT:    unreachable
@@ -138,7 +140,7 @@ lpad1:                                            ; preds = %_ZN1DC1Ev.exit, %_Z
   br i1 %tobool.i.i.i, label %_ZN1BI1DED1Ev.exit, label %if.then.i.i.i
 
 if.then.i.i.i:                                    ; preds = %lpad1
-  br i1 undef, label %_ZN1BI1DED1Ev.exit, label %delete.notnull.i.i.i
+  br i1 %arg, label %_ZN1BI1DED1Ev.exit, label %delete.notnull.i.i.i
 
 delete.notnull.i.i.i:                             ; preds = %if.then.i.i.i
   call void @_ZdlPv() #9
@@ -191,7 +193,7 @@ entry:
 
 declare void @_ZN1D16deleteKeyPressedEv()
 
-define void @_ZN1BI1DED1Ev(ptr nocapture readonly %this) unnamed_addr uwtable align 2 {
+define void @_ZN1BI1DED1Ev(ptr nocapture readonly %this, i1 %arg) unnamed_addr uwtable align 2 {
 ; CHECK-LABEL: @_ZN1BI1DED1Ev(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[THIS:%.*]], align 8
@@ -199,6 +201,8 @@ define void @_ZN1BI1DED1Ev(ptr nocapture readonly %this) unnamed_addr uwtable al
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[_REF_I_I]], align 4
 ; CHECK-NEXT:    [[TOBOOL_I_I:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL_I_I]], label [[_ZN1BI1DED2EV_EXIT:%.*]], label [[DELETE_NOTNULL_I_I:%.*]]
+; CHECK:       if.then.i.i:
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[_ZN1BI1DED2EV_EXIT]], label [[DELETE_NOTNULL_I_I1:%.*]]
 ; CHECK:       delete.notnull.i.i:
 ; CHECK-NEXT:    call void @_ZdlPv()
 ; CHECK-NEXT:    unreachable
@@ -213,7 +217,7 @@ entry:
   br i1 %tobool.i.i, label %_ZN1BI1DED2Ev.exit, label %if.then.i.i
 
 if.then.i.i:                                      ; preds = %entry
-  br i1 undef, label %_ZN1BI1DED2Ev.exit, label %delete.notnull.i.i
+  br i1 %arg, label %_ZN1BI1DED2Ev.exit, label %delete.notnull.i.i
 
 delete.notnull.i.i:                               ; preds = %if.then.i.i
   call void @_ZdlPv() #9
@@ -225,7 +229,7 @@ _ZN1BI1DED2Ev.exit:                               ; preds = %entry, %if.then.i.i
 
 declare hidden void @__clang_call_terminate()
 
-define void @_ZN1BI1DED2Ev(ptr nocapture readonly %this) unnamed_addr uwtable align 2 {
+define void @_ZN1BI1DED2Ev(ptr nocapture readonly %this, i1 %arg) unnamed_addr uwtable align 2 {
 ; CHECK-LABEL: @_ZN1BI1DED2Ev(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[THIS:%.*]], align 8
@@ -233,6 +237,8 @@ define void @_ZN1BI1DED2Ev(ptr nocapture readonly %this) unnamed_addr uwtable al
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[_REF_I]], align 4
 ; CHECK-NEXT:    [[TOBOOL_I:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL_I]], label [[_ZN1AI1CE5DEREFEV_EXIT:%.*]], label [[DELETE_NOTNULL_I:%.*]]
+; CHECK:       if.then.i:
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[_ZN1AI1CE5DEREFEV_EXIT]], label [[DELETE_NOTNULL_I1:%.*]]
 ; CHECK:       delete.notnull.i:
 ; CHECK-NEXT:    call void @_ZdlPv()
 ; CHECK-NEXT:    unreachable
@@ -247,7 +253,7 @@ entry:
   br i1 %tobool.i, label %_ZN1AI1CE5derefEv.exit, label %if.then.i
 
 if.then.i:                                        ; preds = %entry
-  br i1 undef, label %_ZN1AI1CE5derefEv.exit, label %delete.notnull.i
+  br i1 %arg, label %_ZN1AI1CE5derefEv.exit, label %delete.notnull.i
 
 delete.notnull.i:                                 ; preds = %if.then.i
   call void @_ZdlPv() #9
@@ -257,12 +263,14 @@ _ZN1AI1CE5derefEv.exit:                           ; preds = %entry, %if.then.i
   ret void
 }
 
-define void @_ZN1AI1CE5derefEv(ptr nocapture readonly %this) nounwind uwtable align 2 {
+define void @_ZN1AI1CE5derefEv(ptr nocapture readonly %this, i1 %arg) nounwind uwtable align 2 {
 ; CHECK-LABEL: @_ZN1AI1CE5derefEv(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[THIS:%.*]], align 4
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[DELETE_NOTNULL:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[IF_END]], label [[DELETE_NOTNULL1:%.*]]
 ; CHECK:       delete.notnull:
 ; CHECK-NEXT:    call void @_ZdlPv()
 ; CHECK-NEXT:    unreachable
@@ -275,7 +283,7 @@ entry:
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  br i1 undef, label %if.end, label %delete.notnull
+  br i1 %arg, label %if.end, label %delete.notnull
 
 delete.notnull:                                   ; preds = %if.then
   call void @_ZdlPv() #9

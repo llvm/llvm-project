@@ -26,10 +26,10 @@ entry:
 declare ptr @objc_msgSend(ptr, ptr, ...)
 declare i32 @personality_v0(...)
 
-define void @invoketest() personality ptr @personality_v0 {
+define void @invoketest(i1 %arg) personality ptr @personality_v0 {
 ; CHECK-LABEL: @invoketest(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 undef, label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond.true:
 ; CHECK-NEXT:    [[CALL49:%.*]] = invoke double @objc_msgSend(ptr undef, ptr undef)
 ; CHECK-NEXT:    to label [[COND_TRUE54:%.*]] unwind label [[LPAD:%.*]]
@@ -43,7 +43,7 @@ define void @invoketest() personality ptr @personality_v0 {
 ; CHECK-NEXT:    [[CALL59:%.*]] = invoke double @objc_msgSend(ptr undef, ptr undef)
 ; CHECK-NEXT:    to label [[COND_END60]] unwind label [[LPAD]]
 ; CHECK:       cond.end60:
-; CHECK-NEXT:    br i1 undef, label [[IF_END98:%.*]], label [[IF_THEN63:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[IF_END98:%.*]], label [[IF_THEN63:%.*]]
 ; CHECK:       if.then63:
 ; CHECK-NEXT:    br label [[IF_END98]]
 ; CHECK:       lpad:
@@ -56,7 +56,7 @@ define void @invoketest() personality ptr @personality_v0 {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  br i1 undef, label %cond.true, label %cond.false
+  br i1 %arg, label %cond.true, label %cond.false
 
 cond.true:
   %call49 = invoke double @objc_msgSend(ptr undef, ptr undef)
@@ -77,7 +77,7 @@ cond.false57:
 cond.end60:
   %cond126 = phi double [ %call49, %cond.true54 ], [ %call51, %cond.false57 ]
   %cond61 = phi double [ %call56, %cond.true54 ], [ %call59, %cond.false57 ]
-  br i1 undef, label %if.end98, label %if.then63
+  br i1 %arg, label %if.end98, label %if.then63
 
 if.then63:
   %conv69 = fptrunc double undef to float

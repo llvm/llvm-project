@@ -1,19 +1,19 @@
-; RUN: llc -O0 < %s -march=avr -mcpu avrxmega1 | FileCheck %s -check-prefix=XMEGA
-; RUN: llc -O0 < %s -march=avr -mcpu avrxmega2 | FileCheck %s -check-prefix=XMEGA
-; RUN: llc -O0 < %s -march=avr -mcpu avrxmega3 | FileCheck %s -check-prefix=XMEGA
-; RUN: llc -O0 < %s -march=avr -mcpu avrxmega4 | FileCheck %s -check-prefix=XMEGA
-; RUN: llc -O0 < %s -march=avr -mcpu avrxmega5 | FileCheck %s -check-prefix=XMEGA
-; RUN: llc -O0 < %s -march=avr -mcpu avrxmega6 | FileCheck %s -check-prefix=XMEGA
-; RUN: llc -O0 < %s -march=avr -mcpu avrxmega7 | FileCheck %s -check-prefix=XMEGA
-; RUN: llc -O0 < %s -march=avr -mcpu avr2 | FileCheck %s -check-prefix=AVR
-; RUN: llc -O0 < %s -march=avr -mcpu avr25 | FileCheck %s -check-prefix=AVR
-; RUN: llc -O0 < %s -march=avr -mcpu avr3 | FileCheck %s -check-prefix=AVR
-; RUN: llc -O0 < %s -march=avr -mcpu avr31 | FileCheck %s -check-prefix=AVR
-; RUN: llc -O0 < %s -march=avr -mcpu avr35 | FileCheck %s -check-prefix=AVR
-; RUN: llc -O0 < %s -march=avr -mcpu avr4 | FileCheck %s -check-prefix=AVR
-; RUN: llc -O0 < %s -march=avr -mcpu avr5 | FileCheck %s -check-prefix=AVR
-; RUN: llc -O0 < %s -march=avr -mcpu avr51 | FileCheck %s -check-prefix=AVR
-; RUN: llc -O0 < %s -march=avr -mcpu avr6 | FileCheck %s -check-prefix=AVR
+; RUN: llc -O0 < %s -mtriple=avr -mcpu avrxmega1 | FileCheck %s -check-prefix=XMEGA
+; RUN: llc -O0 < %s -mtriple=avr -mcpu avrxmega2 | FileCheck %s -check-prefix=XMEGA
+; RUN: llc -O0 < %s -mtriple=avr -mcpu avrxmega3 | FileCheck %s -check-prefix=XMEGA
+; RUN: llc -O0 < %s -mtriple=avr -mcpu avrxmega4 | FileCheck %s -check-prefix=XMEGA
+; RUN: llc -O0 < %s -mtriple=avr -mcpu avrxmega5 | FileCheck %s -check-prefix=XMEGA
+; RUN: llc -O0 < %s -mtriple=avr -mcpu avrxmega6 | FileCheck %s -check-prefix=XMEGA
+; RUN: llc -O0 < %s -mtriple=avr -mcpu avrxmega7 | FileCheck %s -check-prefix=XMEGA
+; RUN: llc -O0 < %s -mtriple=avr -mcpu avr2 | FileCheck %s -check-prefix=AVR
+; RUN: llc -O0 < %s -mtriple=avr -mcpu avr25 | FileCheck %s -check-prefix=AVR
+; RUN: llc -O0 < %s -mtriple=avr -mcpu avr3 | FileCheck %s -check-prefix=AVR
+; RUN: llc -O0 < %s -mtriple=avr -mcpu avr31 | FileCheck %s -check-prefix=AVR
+; RUN: llc -O0 < %s -mtriple=avr -mcpu avr35 | FileCheck %s -check-prefix=AVR
+; RUN: llc -O0 < %s -mtriple=avr -mcpu avr4 | FileCheck %s -check-prefix=AVR
+; RUN: llc -O0 < %s -mtriple=avr -mcpu avr5 | FileCheck %s -check-prefix=AVR
+; RUN: llc -O0 < %s -mtriple=avr -mcpu avr51 | FileCheck %s -check-prefix=AVR
+; RUN: llc -O0 < %s -mtriple=avr -mcpu avr6 | FileCheck %s -check-prefix=AVR
 
 define i8 @read8_low_io() {
 ; CHECK-LABEL: read8_low_io

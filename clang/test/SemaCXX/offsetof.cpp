@@ -11,12 +11,12 @@ struct P {
 };
 
 void f() {
-  int i = __builtin_offsetof(P, fieldThatPointsToANonPODType.m); // expected-warning{{offset of on non-POD type 'P'}}
+  int i = __builtin_offsetof(P, fieldThatPointsToANonPODType.m); // expected-warning{{'offsetof' on non-POD type 'P'}}
 }
 
 struct Base { int x; };
 struct Derived : Base { int y; };
-int o = __builtin_offsetof(Derived, x); // expected-warning{{offset of on non-POD type}}
+int o = __builtin_offsetof(Derived, x); // expected-warning{{'offsetof' on non-POD type}}
 
 const int o2 = sizeof(__builtin_offsetof(Derived, x));
 
@@ -51,9 +51,9 @@ struct Derived2 : public Base1, public Base2 {
   int z;
 };
 
-int derived1[__builtin_offsetof(Derived2, x) == 0? 1 : -1]; // expected-warning{{offset of on non-POD type 'Derived2'}}
-int derived2[__builtin_offsetof(Derived2, y)  == 4? 1 : -1]; // expected-warning{{offset of on non-POD type 'Derived2'}}
-int derived3[__builtin_offsetof(Derived2, z)  == 8? 1 : -1]; // expected-warning{{offset of on non-POD type 'Derived2'}}
+int derived1[__builtin_offsetof(Derived2, x) == 0? 1 : -1]; // expected-warning{{'offsetof' on non-POD type 'Derived2'}}
+int derived2[__builtin_offsetof(Derived2, y)  == 4? 1 : -1]; // expected-warning{{'offsetof' on non-POD type 'Derived2'}}
+int derived3[__builtin_offsetof(Derived2, z)  == 8? 1 : -1]; // expected-warning{{'offsetof' on non-POD type 'Derived2'}}
 
 // offsetof referring to anonymous struct in base.
 // PR7769
@@ -66,7 +66,7 @@ struct foo {
 struct bar : public foo  {
 };
 
-int anonstruct[__builtin_offsetof(bar, x) == 0 ? 1 : -1]; // expected-warning{{offset of on non-POD type 'bar'}}
+int anonstruct[__builtin_offsetof(bar, x) == 0 ? 1 : -1]; // expected-warning{{'offsetof' on non-POD type 'bar'}}
 
 
 struct LtoRCheck {
@@ -81,7 +81,7 @@ struct Base {
   int Field;
 };
 struct Derived : virtual Base {
-  void Fun() { (void)__builtin_offsetof(Derived, Field); } // expected-warning {{offset of on non-POD type}} \
+  void Fun() { (void)__builtin_offsetof(Derived, Field); } // expected-warning {{'offsetof' on non-POD type}} \
                                                               expected-error {{invalid application of 'offsetof' to a field of a virtual base}}
 };
 }

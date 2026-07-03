@@ -69,14 +69,14 @@ void f_4(void) {
 }
 
 void f_5(void) {
-  int ta[5];           // expected-note {{'ta' initialized here}}
+  int ta[5];           // expected-note {{'ta' declared without an initial value}}
   int *tp = ta;        // expected-note {{'tp' initialized here}}
   doStuff_pointerToConstInt(tp);  // expected-warning {{1st function call argument is a pointer to uninitialized value}}
                        // expected-note@-1 {{1st function call argument is a pointer to uninitialized value}}
 }
 
 void f_5_1(void) {
-  int ta[5];        // expected-note {{'ta' initialized here}}
+  int ta[5];        // expected-note {{'ta' declared without an initial value}}
   doStuff_pointerToConstInt(ta);  // expected-warning {{1st function call argument is a pointer to uninitialized value}}
                        // expected-note@-1 {{1st function call argument is a pointer to uninitialized value}}
 }
@@ -94,8 +94,8 @@ void f_6_1(void) {
 
 void f_7(void) {
       int z;        // expected-note {{'z' declared without an initial value}}
-      int y=z;      // expected-warning {{Assigned value is garbage or undefined}}
-                    // expected-note@-1 {{Assigned value is garbage or undefined}}
+      int y=z;      // expected-warning {{Assigned value is uninitialized}}
+                    // expected-note@-1 {{Assigned value is uninitialized}}
       doStuff3(y);
 }
 
@@ -106,20 +106,20 @@ void f_8(void) {
 }
 
 void f_9(void) {
-  int a[6];                        // expected-note {{'a' initialized here}}
+  int a[6];                        // expected-note {{'a' declared without an initial value}}
   int const *ptau = a;             // expected-note {{'ptau' initialized here}}
   doStuff_arrayOfConstInt(ptau);    // expected-warning {{1st function call argument is a pointer to uninitialized value}}
                                    // expected-note@-1 {{1st function call argument is a pointer to uninitialized value}}
 }
 
 void f_10(void) {
-  int  a[6];                     // expected-note {{'a' initialized here}}
+  int  a[6];                     // expected-note {{'a' declared without an initial value}}
   doStuff_arrayOfConstInt(a);    // expected-warning {{1st function call argument is a pointer to uninitialized value}}
                                  // expected-note@-1 {{1st function call argument is a pointer to uninitialized value}}
 }
 
 void f_11(void) {
-  int t[10];                    //expected-note {{'t' initialized here}}
+  int t[10];                    //expected-note {{'t' declared without an initial value}}
   doStuff_constStaticSizedArray(t);  // expected-warning {{1st function call argument is a pointer to uninitialized value}}
                                 // expected-note@-1 {{1st function call argument is a pointer to uninitialized value}}
 }
@@ -133,26 +133,26 @@ void f_12(void) {
 // https://bugs.llvm.org/show_bug.cgi?id=35419
 void f11_0(void) {
   int x; // expected-note {{'x' declared without an initial value}}
-  x++; // expected-warning {{The expression is an uninitialized value. The computed value will also be garbage}}
-       // expected-note@-1 {{The expression is an uninitialized value. The computed value will also be garbage}}
+  x++; // expected-warning {{The expression uses uninitialized memory}}
+       // expected-note@-1 {{The expression uses uninitialized memory}}
   clang_analyzer_warnIfReached(); // no-warning
 }
 void f11_1(void) {
   int x; // expected-note {{'x' declared without an initial value}}
-  ++x; // expected-warning {{The expression is an uninitialized value. The computed value will also be garbage}}
-       // expected-note@-1 {{The expression is an uninitialized value. The computed value will also be garbage}}
+  ++x; // expected-warning {{The expression uses uninitialized memory}}
+       // expected-note@-1 {{The expression uses uninitialized memory}}
   clang_analyzer_warnIfReached(); // no-warning
 }
 void f11_2(void) {
   int x; // expected-note {{'x' declared without an initial value}}
-  x--; // expected-warning {{The expression is an uninitialized value. The computed value will also be garbage}}
-       // expected-note@-1 {{The expression is an uninitialized value. The computed value will also be garbage}}
+  x--; // expected-warning {{The expression uses uninitialized memory}}
+       // expected-note@-1 {{The expression uses uninitialized memory}}
   clang_analyzer_warnIfReached(); // no-warning
 }
 void f11_3(void) {
   int x; // expected-note {{'x' declared without an initial value}}
-  --x; // expected-warning {{The expression is an uninitialized value. The computed value will also be garbage}}
-       // expected-note@-1 {{The expression is an uninitialized value. The computed value will also be garbage}}
+  --x; // expected-warning {{The expression uses uninitialized memory}}
+       // expected-note@-1 {{The expression uses uninitialized memory}}
   clang_analyzer_warnIfReached(); // no-warning
 }
 

@@ -76,13 +76,25 @@ h1, h2, h3, h4 {
   margin-bottom: .8em;
 }
 
-h1 {
+h1, h1 a {
   color: {{ theme_headercolor1 }};
+  text-decoration: none!important;
+}
+
+h2 {
+  padding-bottom: .5em;
+  border-bottom: 1px solid #3465a4;
+  text-decoration: none!important;
 }
 
 h2 {
   padding-bottom: .5em;
   border-bottom: 1px solid {{ theme_headercolor2 }};
+}
+
+h2 a, h3 a, h4 a {
+  color: {{ theme_headercolor2 }};
+  text-decoration: none!important;
 }
 
 a.headerlink {
@@ -535,4 +547,35 @@ div.body div.math p {
 
 span.eqno {
     float: right;
+}
+
+/* -- definition list -------------------------------------------------------- */
+
+dl.simple dt {
+  text-align: left
+}
+
+/* -- topics ---------------------------------------------------------------- */
+
+nav.contents,
+aside.topic,
+div.topic {
+    border: 1px solid #ccc;
+    padding: 7px;
+    margin: 10px 0 10px 0;
+}
+
+.document nav p {
+    margin-bottom: 0;
+}
+
+.document nav ul {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+p.topic-title {
+    font-size: 1.1em;
+    font-weight: bold;
+    margin-top: 10px;
 }

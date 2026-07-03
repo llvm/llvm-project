@@ -6,13 +6,13 @@
 
 ; This test checks the fusing of MUL + SUB/ADD to FMSUBADD.
 
-define <2 x double> @mul_subadd_pd128(<2 x double> %A, <2 x double> %B, <2 x double> %C) #0 {
+define <2 x double> @mul_subadd_pd128(<2 x double> %A, <2 x double> %B, <2 x double> %C) {
 ; NOFMA-LABEL: mul_subadd_pd128:
 ; NOFMA:       # %bb.0: # %entry
 ; NOFMA-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
 ; NOFMA-NEXT:    vsubpd %xmm2, %xmm0, %xmm1
 ; NOFMA-NEXT:    vaddpd %xmm2, %xmm0, %xmm0
-; NOFMA-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; NOFMA-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; NOFMA-NEXT:    retq
 ;
 ; FMA3-LABEL: mul_subadd_pd128:
@@ -25,14 +25,14 @@ define <2 x double> @mul_subadd_pd128(<2 x double> %A, <2 x double> %B, <2 x dou
 ; FMA4-NEXT:    vfmsubaddpd {{.*#+}} xmm0 = (xmm0 * xmm1) -/+ xmm2
 ; FMA4-NEXT:    retq
 entry:
-  %AB = fmul <2 x double> %A, %B
-  %Sub = fsub <2 x double> %AB, %C
-  %Add = fadd <2 x double> %AB, %C
+  %AB = fmul contract<2 x double> %A, %B
+  %Sub = fsub  contract<2 x double> %AB, %C
+  %Add = fadd  contract<2 x double> %AB, %C
   %subadd = shufflevector <2 x double> %Add, <2 x double> %Sub, <2 x i32> <i32 0, i32 3>
   ret <2 x double> %subadd
 }
 
-define <4 x float> @mul_subadd_ps128(<4 x float> %A, <4 x float> %B, <4 x float> %C) #0 {
+define <4 x float> @mul_subadd_ps128(<4 x float> %A, <4 x float> %B, <4 x float> %C) {
 ; NOFMA-LABEL: mul_subadd_ps128:
 ; NOFMA:       # %bb.0: # %entry
 ; NOFMA-NEXT:    vmulps %xmm1, %xmm0, %xmm0
@@ -51,14 +51,14 @@ define <4 x float> @mul_subadd_ps128(<4 x float> %A, <4 x float> %B, <4 x float>
 ; FMA4-NEXT:    vfmsubaddps {{.*#+}} xmm0 = (xmm0 * xmm1) -/+ xmm2
 ; FMA4-NEXT:    retq
 entry:
-  %AB = fmul <4 x float> %A, %B
-  %Sub = fsub <4 x float> %AB, %C
-  %Add = fadd <4 x float> %AB, %C
+  %AB = fmul contract <4 x float> %A, %B
+  %Sub = fsub contract <4 x float> %AB, %C
+  %Add = fadd contract <4 x float> %AB, %C
   %subadd = shufflevector <4 x float> %Add, <4 x float> %Sub, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
   ret <4 x float> %subadd
 }
 
-define <4 x double> @mul_subadd_pd256(<4 x double> %A, <4 x double> %B, <4 x double> %C) #0 {
+define <4 x double> @mul_subadd_pd256(<4 x double> %A, <4 x double> %B, <4 x double> %C) {
 ; NOFMA-LABEL: mul_subadd_pd256:
 ; NOFMA:       # %bb.0: # %entry
 ; NOFMA-NEXT:    vmulpd %ymm1, %ymm0, %ymm0
@@ -77,14 +77,14 @@ define <4 x double> @mul_subadd_pd256(<4 x double> %A, <4 x double> %B, <4 x dou
 ; FMA4-NEXT:    vfmsubaddpd {{.*#+}} ymm0 = (ymm0 * ymm1) -/+ ymm2
 ; FMA4-NEXT:    retq
 entry:
-  %AB = fmul <4 x double> %A, %B
-  %Sub = fsub <4 x double> %AB, %C
-  %Add = fadd <4 x double> %AB, %C
+  %AB = fmul contract <4 x double> %A, %B
+  %Sub = fsub contract <4 x double> %AB, %C
+  %Add = fadd contract <4 x double> %AB, %C
   %subadd = shufflevector <4 x double> %Add, <4 x double> %Sub, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
   ret <4 x double> %subadd
 }
 
-define <8 x float> @mul_subadd_ps256(<8 x float> %A, <8 x float> %B, <8 x float> %C) #0 {
+define <8 x float> @mul_subadd_ps256(<8 x float> %A, <8 x float> %B, <8 x float> %C) {
 ; NOFMA-LABEL: mul_subadd_ps256:
 ; NOFMA:       # %bb.0: # %entry
 ; NOFMA-NEXT:    vmulps %ymm1, %ymm0, %ymm0
@@ -103,14 +103,14 @@ define <8 x float> @mul_subadd_ps256(<8 x float> %A, <8 x float> %B, <8 x float>
 ; FMA4-NEXT:    vfmsubaddps {{.*#+}} ymm0 = (ymm0 * ymm1) -/+ ymm2
 ; FMA4-NEXT:    retq
 entry:
-  %AB = fmul <8 x float> %A, %B
-  %Sub = fsub <8 x float> %AB, %C
-  %Add = fadd <8 x float> %AB, %C
+  %AB = fmul contract <8 x float> %A, %B
+  %Sub = fsub contract <8 x float> %AB, %C
+  %Add = fadd contract <8 x float> %AB, %C
   %subadd = shufflevector <8 x float> %Add, <8 x float> %Sub, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
   ret <8 x float> %subadd
 }
 
-define <8 x double> @mul_subadd_pd512(<8 x double> %A, <8 x double> %B, <8 x double> %C) #0 {
+define <8 x double> @mul_subadd_pd512(<8 x double> %A, <8 x double> %B, <8 x double> %C) {
 ; NOFMA-LABEL: mul_subadd_pd512:
 ; NOFMA:       # %bb.0: # %entry
 ; NOFMA-NEXT:    vmulpd %ymm2, %ymm0, %ymm0
@@ -140,14 +140,14 @@ define <8 x double> @mul_subadd_pd512(<8 x double> %A, <8 x double> %B, <8 x dou
 ; FMA4-NEXT:    vfmsubaddpd {{.*#+}} ymm1 = (ymm1 * ymm3) -/+ ymm5
 ; FMA4-NEXT:    retq
 entry:
-  %AB = fmul <8 x double> %A, %B
-  %Sub = fsub <8 x double> %AB, %C
-  %Add = fadd <8 x double> %AB, %C
+  %AB = fmul contract <8 x double> %A, %B
+  %Sub = fsub contract <8 x double> %AB, %C
+  %Add = fadd contract <8 x double> %AB, %C
   %subadd = shufflevector <8 x double> %Add, <8 x double> %Sub, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
   ret <8 x double> %subadd
 }
 
-define <16 x float> @mul_subadd_ps512(<16 x float> %A, <16 x float> %B, <16 x float> %C) #0 {
+define <16 x float> @mul_subadd_ps512(<16 x float> %A, <16 x float> %B, <16 x float> %C) {
 ; NOFMA-LABEL: mul_subadd_ps512:
 ; NOFMA:       # %bb.0: # %entry
 ; NOFMA-NEXT:    vmulps %ymm2, %ymm0, %ymm0
@@ -177,28 +177,26 @@ define <16 x float> @mul_subadd_ps512(<16 x float> %A, <16 x float> %B, <16 x fl
 ; FMA4-NEXT:    vfmsubaddps {{.*#+}} ymm1 = (ymm1 * ymm3) -/+ ymm5
 ; FMA4-NEXT:    retq
 entry:
-  %AB = fmul <16 x float> %A, %B
-  %Sub = fsub <16 x float> %AB, %C
-  %Add = fadd <16 x float> %AB, %C
+  %AB = fmul contract <16 x float> %A, %B
+  %Sub = fsub contract <16 x float> %AB, %C
+  %Add = fadd contract <16 x float> %AB, %C
   %subadd = shufflevector <16 x float> %Add, <16 x float> %Sub, <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23, i32 8, i32 25, i32 10, i32 27, i32 12, i32 29, i32 14, i32 31>
   ret <16 x float> %subadd
 }
 
 ; This should not be matched to fmsubadd because the mul is on the wrong side of the fsub.
-define <2 x double> @mul_subadd_bad_commute(<2 x double> %A, <2 x double> %B, <2 x double> %C) #0 {
+define <2 x double> @mul_subadd_bad_commute(<2 x double> %A, <2 x double> %B, <2 x double> %C) {
 ; CHECK-LABEL: mul_subadd_bad_commute:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vsubpd %xmm0, %xmm2, %xmm1
 ; CHECK-NEXT:    vaddpd %xmm2, %xmm0, %xmm0
-; CHECK-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; CHECK-NEXT:    retq
 entry:
-  %AB = fmul <2 x double> %A, %B
+  %AB = fmul contract <2 x double> %A, %B
   %Sub = fsub <2 x double> %C, %AB
   %Add = fadd <2 x double> %AB, %C
   %subadd = shufflevector <2 x double> %Add, <2 x double> %Sub, <2 x i32> <i32 0, i32 3>
   ret <2 x double> %subadd
 }
-
-attributes #0 = { nounwind "unsafe-fp-math"="true" }

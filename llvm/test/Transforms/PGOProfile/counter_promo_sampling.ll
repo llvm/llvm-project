@@ -6,7 +6,7 @@
 define void @foo(i32 %n, i32 %N) {
 ; SAMPLING-LABEL: @foo
 ; SAMPLING:  %[[VV0:[0-9]+]] = load i16, ptr @__llvm_profile_sampling, align 2
-; SAMPLING:  %[[VV1:[0-9]+]] = icmp ule i16 %[[VV0]], 200
+; SAMPLING:  %[[VV1:[0-9]+]] = icmp ule i16 %[[VV0]], 199
 ; SAMPLING:  br i1 %[[VV1]], label {{.*}}, label {{.*}}, !prof !0
 ; SAMPLING: {{.*}} = load {{.*}} @__profc_foo{{.*}} 3)
 ; SAMPLING-NEXT: add

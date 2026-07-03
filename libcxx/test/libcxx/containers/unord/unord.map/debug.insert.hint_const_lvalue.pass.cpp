@@ -19,21 +19,23 @@
 #include "test_macros.h"
 
 int main(int, char**) {
-    typedef std::unordered_map<double, int> C;
-    typedef C::value_type P;
-    C c;
-    C c2;
-    C::const_iterator e = c2.end();
-    P v(3.5, 3);
+  typedef std::unordered_map<double, int> C;
+  typedef C::value_type P;
+  C c;
+  C c2;
+  C::const_iterator e = c2.end();
+  P v(3.5, 3);
 #if TEST_STD_VER < 11
-    TEST_LIBCPP_ASSERT_FAILURE(
-        c.insert(e, v),
-        "unordered_map::insert(const_iterator, const value_type&) called with an iterator not referring to this unordered_map");
+  TEST_LIBCPP_ASSERT_FAILURE(
+      c.insert(e, v),
+      "unordered_map::insert(const_iterator, const value_type&) called with an iterator not "
+      "referring to this unordered_map");
 #else
-    TEST_LIBCPP_ASSERT_FAILURE(
-        c.insert(e, v),
-        "unordered_map::insert(const_iterator, value_type&&) called with an iterator not referring to this unordered_map");
+  TEST_LIBCPP_ASSERT_FAILURE(
+      c.insert(e, v),
+      "unordered_map::insert(const_iterator, value_type&&) called with an iterator not "
+      "referring to this unordered_map");
 #endif
 
-    return 0;
+  return 0;
 }

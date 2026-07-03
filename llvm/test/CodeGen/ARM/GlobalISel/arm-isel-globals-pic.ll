@@ -41,7 +41,7 @@ define i32 @test_external_global() {
 ; CHECK-NEXT: bx lr
 ; ELF: [[LABEL]]:
 ; ELF: [[TMPLABEL:.L[[:alnum:]_]+]]:
-; ELF: .long external_global(GOT_PREL)-(([[ANCHOR]]+8)-[[TMPLABEL]])
+; ELF: .long external_global(GOT_PREL)-([[ANCHOR]]+8-[[TMPLABEL]])
 ; DARWIN-NOMOVT: [[LABEL]]:
 ; DARWIN-NOMOVT: .long L_external_global$non_lazy_ptr-([[ANCHOR]]+8)
 ; DARWIN-NOMOVT-NOT: .long L_external_global
@@ -88,7 +88,7 @@ define i32 @test_external_constant() {
 ; CHECK-NEXT: bx lr
 ; ELF: [[LABEL]]:
 ; ELF: [[TMPLABEL:.L[[:alnum:]_]+]]:
-; ELF: .long external_constant(GOT_PREL)-(([[ANCHOR]]+8)-[[TMPLABEL]])
+; ELF: .long external_constant(GOT_PREL)-([[ANCHOR]]+8-[[TMPLABEL]])
 ; DARWIN-NOMOVT: [[LABEL]]:
 ; DARWIN-NOMOVT: .long L_external_constant$non_lazy_ptr-([[ANCHOR]]+8)
 ; DARWIN-NOMOVT-NOT: .long L_external_constant

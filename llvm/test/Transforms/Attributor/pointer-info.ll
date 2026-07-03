@@ -8,25 +8,25 @@
 define void @foo(ptr %ptr) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@foo
-; TUNIT-SAME: (ptr nocapture nofree readnone [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
+; TUNIT-SAME: (ptr nofree readnone captures(none) [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[TMP0:%.*]] = alloca [[STRUCT_TEST_A:%.*]], align 8
 ; TUNIT-NEXT:    br label [[CALL_BR:%.*]]
 ; TUNIT:       call.br:
 ; TUNIT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_TEST_A]], ptr [[TMP0]], i64 0, i32 2
-; TUNIT-NEXT:    tail call void @bar(ptr noalias nocapture nofree noundef nonnull readonly byval([[STRUCT_TEST_A]]) align 8 dereferenceable(24) [[TMP0]]) #[[ATTR2:[0-9]+]]
+; TUNIT-NEXT:    tail call void @bar(ptr noalias nofree noundef nonnull readonly byval([[STRUCT_TEST_A]]) align 8 captures(none) dereferenceable(24) [[TMP0]]) #[[ATTR2:[0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@foo
-; CGSCC-SAME: (ptr nocapture nofree writeonly [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
+; CGSCC-SAME: (ptr nofree writeonly captures(none) [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[TMP0:%.*]] = alloca [[STRUCT_TEST_A:%.*]], align 8
 ; CGSCC-NEXT:    br label [[CALL_BR:%.*]]
 ; CGSCC:       call.br:
 ; CGSCC-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_TEST_A]], ptr [[TMP0]], i64 0, i32 2
 ; CGSCC-NEXT:    store ptr [[PTR]], ptr [[TMP1]], align 8
-; CGSCC-NEXT:    tail call void @bar(ptr noalias nocapture nofree noundef nonnull readnone byval([[STRUCT_TEST_A]]) align 8 dereferenceable(24) [[TMP0]]) #[[ATTR2:[0-9]+]]
+; CGSCC-NEXT:    tail call void @bar(ptr noalias nofree noundef nonnull readnone byval([[STRUCT_TEST_A]]) align 8 captures(none) dereferenceable(24) [[TMP0]]) #[[ATTR2:[0-9]+]]
 ; CGSCC-NEXT:    ret void
 ;
 entry:
@@ -43,7 +43,7 @@ call.br:
 define void @bar(ptr noundef byval(%struct.test.a) align 8 %dev) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define {{[^@]+}}@bar
-; CHECK-SAME: (ptr noalias nocapture nofree noundef nonnull writeonly byval([[STRUCT_TEST_A:%.*]]) align 8 dereferenceable(24) [[DEV:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: (ptr noalias nofree noundef nonnull writeonly byval([[STRUCT_TEST_A:%.*]]) align 8 captures(none) dereferenceable(24) [[DEV:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_TEST_B:%.*]], ptr [[DEV]], i64 0, i32 1
 ; CHECK-NEXT:    store i32 1, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    ret void

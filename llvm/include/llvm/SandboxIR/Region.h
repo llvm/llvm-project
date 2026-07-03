@@ -6,13 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_REGION_H
-#define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_REGION_H
+#ifndef LLVM_SANDBOXIR_REGION_H
+#define LLVM_SANDBOXIR_REGION_H
 
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/SandboxIR/BasicBlock.h"
+#include "llvm/SandboxIR/Function.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -50,36 +53,130 @@ namespace llvm::sandboxir {
 //  |    |
 //  |Rgn3| -> Transform1 ->  ... -> TransformN -> Check Cost
 //  +----+
+//
+// The region can also hold an ordered sequence of "auxiliary" instructions.
+// This can be used to pass auxiliary information across region passes, like for
+// example the initial seed slice used by the bottom-up vectorizer.
 
-class Region {
+enum RegionClassID {
+  RegionID,
+  RegionWithScoreID,
+};
+
+class LLVM_ABI Region {
+protected:
   /// All the instructions in the Region. Only new instructions generated during
   /// vectorization are part of the Region.
   SetVector<Instruction *> Insts;
+  /// An auxiliary sequence of Instruction-Index pairs.
+  SmallVector<Instruction *> Aux;
 
   /// MDNode that we'll use to mark instructions as being part of the region.
   MDNode *RegionMDN;
   static constexpr const char *MDKind = "sandboxvec";
   static constexpr const char *RegionStr = "sandboxregion";
+  static constexpr const char *AuxMDKind = "sandboxaux";
 
   Context &Ctx;
 
-  // TODO: Add cost modeling.
-  // TODO: Add a way to encode/decode region info to/from metadata.
+  RegionClassID ID;
+
+  /// ID (for later deregistration) of the "create instruction" callback.
+  Context::CallbackID CreateInstCB;
+  /// ID (for later deregistration) of the "erase instruction" callback.
+  Context::CallbackID EraseInstCB;
+
+  /// Adds \p I to the set. Only to be used when we want to avoid the additional
+  /// functionality provided by the subclass, e.g., to avoid score counting when
+  /// adding instrs to the aux vector.
+  /// NOTE: When an instruction is added to the region we track it cost in the
+  /// scoreboard, which currently resides in the region class. However, when we
+  /// add an instruction to the auxiliary vector it does get tagged as being a
+  /// member of the region (for ownership reasons), but its cost does not get
+  /// counted because the instruction hasn't been added in the "normal" way.
+  void addRaw(Instruction *I) {
+    Insts.insert(I);
+    // TODO: Consider tagging instructions lazily.
+    cast<llvm::Instruction>(I->Val)->setMetadata(MDKind, RegionMDN);
+  }
+  /// Adds I to the set. This is the main API for adding an instruction to the
+  /// region.
+  virtual void add(Instruction *I) { addRaw(I); }
+  /// Removes I from the set.
+  virtual void remove(Instruction *I);
+  friend class Context; // The callbacks need to call add() and remove().
+  friend class RegionInternalsAttorney; // For unit tests.
+
+  /// Set \p I as the \p Idx'th element in the auxiliary vector.
+  /// NOTE: This is for internal use, it does not set the metadata.
+  void setAux(unsigned Idx, Instruction *I);
+  /// Helper for dropping Aux metadata for \p I.
+  void dropAuxMetadata(Instruction *I);
+  /// Remove instruction \p I from Aux and drop metadata.
+  void removeFromAux(Instruction *I);
+
+  Region(Context &Ctx, RegionClassID ID);
+
+  template <typename RegionT, typename RegionFactoryT>
+  static SmallVector<std::unique_ptr<RegionT>>
+  createRegionsFromMD(Function &F, RegionFactoryT Factory) {
+    SmallVector<std::unique_ptr<RegionT>> Regions;
+    DenseMap<MDNode *, RegionT *> MDNToRegion;
+    for (BasicBlock &BB : F) {
+      for (Instruction &Inst : BB) {
+        auto *LLVMI = cast<llvm::Instruction>(Inst.Val);
+        RegionT *R = nullptr;
+        if (auto *MDN = LLVMI->getMetadata(MDKind)) {
+          auto [It, Inserted] = MDNToRegion.try_emplace(MDN);
+          if (Inserted) {
+            Regions.push_back(Factory());
+            R = Regions.back().get();
+            It->second = R;
+          } else {
+            R = It->second;
+          }
+          R->addRaw(&Inst);
+        }
+        if (auto *AuxMDN = LLVMI->getMetadata(AuxMDKind)) {
+          llvm::Constant *IdxC =
+              dyn_cast<ConstantAsMetadata>(AuxMDN->getOperand(0))->getValue();
+          auto Idx = cast<llvm::ConstantInt>(IdxC)->getSExtValue();
+          if (R == nullptr) {
+            errs() << "No region specified for Aux: '" << *LLVMI << "'\n";
+            reportFatalUsageError("No region specified for Aux!");
+          }
+          R->setAux(Idx, &Inst);
+        }
+      }
+    }
+#ifndef NDEBUG
+    // Check that there are no gaps in the Aux vector.
+    for (auto &RPtr : Regions)
+      for (auto *I : RPtr->getAux())
+        assert(I != nullptr && "Gap in Aux!");
+#endif
+    return Regions;
+  }
 
 public:
-  Region(Context &Ctx);
-  ~Region();
+  Region(Context &Ctx) : Region(Ctx, RegionClassID::RegionID) {}
+  virtual ~Region();
+  // Disable copies to avoid unregistering the callback more than once.
+  Region(const Region &) = delete;
+  // Moves are allowed.
+  Region(Region &&) = default;
 
   Context &getContext() const { return Ctx; }
-
-  /// Adds I to the set.
-  void add(Instruction *I);
-  /// Removes I from the set.
-  void remove(Instruction *I);
   /// Returns true if I is in the Region.
   bool contains(Instruction *I) const { return Insts.contains(I); }
   /// Returns true if the Region has no instructions.
   bool empty() const { return Insts.empty(); }
+  /// Set the auxiliary vector.
+  void setAux(ArrayRef<Instruction *> Aux);
+  /// \Returns the auxiliary vector.
+  const SmallVector<Instruction *> &getAux() const { return Aux; }
+  /// Clears all auxiliary data.
+  void clearAux();
 
   using iterator = decltype(Insts.begin());
   iterator begin() { return Insts.begin(); }
@@ -88,12 +185,14 @@ public:
 
   static SmallVector<std::unique_ptr<Region>> createRegionsFromMD(Function &F);
 
+  RegionClassID getSubclassID() const { return ID; }
+
 #ifndef NDEBUG
   /// This is an expensive check, meant for testing.
-  bool operator==(const Region &Other) const;
+  LLVM_ABI bool operator==(const Region &Other) const;
   bool operator!=(const Region &other) const { return !(*this == other); }
 
-  void dump(raw_ostream &OS) const;
+  LLVM_ABI void dump(raw_ostream &OS) const;
   void dump() const;
   friend raw_ostream &operator<<(raw_ostream &OS, const Region &Rgn) {
     Rgn.dump(OS);
@@ -102,6 +201,13 @@ public:
 #endif
 };
 
+/// A helper client-attorney class for unit tests.
+class RegionInternalsAttorney {
+public:
+  static void add(Region &Rgn, Instruction *I) { Rgn.add(I); }
+  static void remove(Region &Rgn, Instruction *I) { Rgn.remove(I); }
+};
+
 } // namespace llvm::sandboxir
 
-#endif // LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_REGION_H
+#endif // LLVM_SANDBOXIR_REGION_H

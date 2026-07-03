@@ -22,7 +22,9 @@ static_library("Scalar") {
     "DFAJumpThreading.cpp",
     "DeadStoreElimination.cpp",
     "DivRemPairs.cpp",
+    "DropUnnecessaryAssumes.cpp",
     "EarlyCSE.cpp",
+    "ExpandMemCmp.cpp",
     "FlattenCFGPass.cpp",
     "Float2Int.cpp",
     "GVN.cpp",
@@ -88,7 +90,6 @@ static_library("Scalar") {
     "SpeculativeExecution.cpp",
     "StraightLineStrengthReduce.cpp",
     "StructurizeCFG.cpp",
-    "TLSVariableHoist.cpp",
     "TailRecursionElimination.cpp",
     "WarnMissedTransforms.cpp",
   ]

@@ -20,7 +20,7 @@ class TestBackticksInAlias(TestBase):
         interp = self.dbg.GetCommandInterpreter()
         result = lldb.SBCommandReturnObject()
         interp.HandleCommand(
-            "command alias _test-argv-cmd expression -Z \`argc\` -- argv", result
+            r"command alias _test-argv-cmd expression -Z \`argc\` -- argv", result
         )
         self.assertCommandReturn(result, "Made the alias")
         interp.HandleCommand("_test-argv-cmd", result)
@@ -28,7 +28,7 @@ class TestBackticksInAlias(TestBase):
 
         # Now try a harder case where we create this using an alias:
         interp.HandleCommand(
-            "command alias _test-argv-parray-cmd parray \`argc\` argv", result
+            r"command alias _test-argv-parray-cmd parray \`argc\` argv", result
         )
         self.assertCommandReturn(result, "Made the alias")
         interp.HandleCommand("_test-argv-parray-cmd", result)

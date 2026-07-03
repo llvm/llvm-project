@@ -10,6 +10,7 @@
 
 #include "llvm/Support/ErrorHandling.h"
 
+#include "lldb/Utility/ErrorMessages.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -22,8 +23,7 @@ class ExpressionCategory : public std::error_category {
     return "LLDBExpressionCategory";
   }
   std::string message(int __ev) const override {
-    return ExpressionResultAsCString(
-        static_cast<lldb::ExpressionResults>(__ev));
+    return toString(static_cast<lldb::ExpressionResults>(__ev));
   };
 };
 ExpressionCategory &expression_category() {
@@ -83,7 +83,6 @@ std::string DiagnosticManager::GetString(char separator) {
     stream << severity;
 
     llvm::StringRef message = diagnostic->GetMessage();
-    std::string searchable_message = message.lower();
     auto severity_pos = message.find(severity);
     stream << message.take_front(severity_pos);
 

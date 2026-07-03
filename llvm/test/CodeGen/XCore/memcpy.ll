@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=xcore | FileCheck %s
+; RUN: llc < %s -mtriple=xcore | FileCheck %s
 
 ; Optimize memcpy to __memcpy_4 if src, dst and size are all 4 byte aligned.
 define void @f1(ptr %dst, ptr %src, i32 %n) nounwind {

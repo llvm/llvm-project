@@ -1,4 +1,4 @@
-; RUN: llc -mv65 -mattr=+hvxv65,hvx-length128b -march=hexagon -O2 < %s | FileCheck %s
+; RUN: llc -mv65 -mattr=+hvxv65,hvx-length128b -mtriple=hexagon -O2 < %s | FileCheck %s
 
 ; CHECK-LABEL: V6_vscattermw_128B
 ; CHECK: vscatter(r{{[0-9]+}},m{{[0-9]+}},v{{[0-9]+}}.w).w = v{{[0-9]+}}

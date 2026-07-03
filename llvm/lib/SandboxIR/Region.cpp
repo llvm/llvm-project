@@ -7,22 +7,75 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/SandboxIR/Region.h"
-#include "llvm/SandboxIR/Function.h"
 
 namespace llvm::sandboxir {
 
-Region::Region(Context &Ctx) : Ctx(Ctx) {
+Region::Region(Context &Ctx, RegionClassID ID) : Ctx(Ctx), ID(ID) {
   LLVMContext &LLVMCtx = Ctx.LLVMCtx;
   auto *RegionStrMD = MDString::get(LLVMCtx, RegionStr);
   RegionMDN = MDNode::getDistinct(LLVMCtx, {RegionStrMD});
+
+  CreateInstCB = Ctx.registerCreateInstrCallback(
+      [this](Instruction *NewInst) { addRaw(NewInst); });
+  EraseInstCB = Ctx.registerEraseInstrCallback([this](Instruction *ErasedInst) {
+    remove(ErasedInst);
+    removeFromAux(ErasedInst);
+  });
 }
 
-Region::~Region() {}
+Region::~Region() {
+  Ctx.unregisterCreateInstrCallback(CreateInstCB);
+  Ctx.unregisterEraseInstrCallback(EraseInstCB);
+}
 
-void Region::add(Instruction *I) {
-  Insts.insert(I);
-  // TODO: Consider tagging instructions lazily.
-  cast<llvm::Instruction>(I->Val)->setMetadata(MDKind, RegionMDN);
+void Region::setAux(ArrayRef<Instruction *> Aux) {
+  this->Aux = SmallVector<Instruction *>(Aux);
+  auto &LLVMCtx = Ctx.LLVMCtx;
+  for (auto [Idx, I] : enumerate(Aux)) {
+    llvm::ConstantInt *IdxC =
+        llvm::ConstantInt::get(llvm::Type::getInt32Ty(LLVMCtx), Idx, false);
+    assert(cast<llvm::Instruction>(I->Val)->getMetadata(AuxMDKind) == nullptr &&
+           "Instruction already in Aux!");
+    cast<llvm::Instruction>(I->Val)->setMetadata(
+        AuxMDKind, MDNode::get(LLVMCtx, ConstantAsMetadata::get(IdxC)));
+    // Aux instrs should always be in a region.
+    addRaw(I);
+  }
+}
+
+void Region::setAux(unsigned Idx, Instruction *I) {
+  assert((Idx >= Aux.size() || Aux[Idx] == nullptr) &&
+         "There is already an Instruction at Idx in Aux!");
+  unsigned ExpectedSz = Idx + 1;
+  if (Aux.size() < ExpectedSz) {
+    auto SzBefore = Aux.size();
+    Aux.resize(ExpectedSz);
+    // Initialize the gap with nullptr.
+    for (unsigned Idx = SzBefore; Idx + 1 < ExpectedSz; ++Idx)
+      Aux[Idx] = nullptr;
+  }
+  Aux[Idx] = I;
+  // Aux instrs should always be in a region.
+  addRaw(I);
+}
+
+void Region::dropAuxMetadata(Instruction *I) {
+  auto *LLVMI = cast<llvm::Instruction>(I->Val);
+  LLVMI->setMetadata(AuxMDKind, nullptr);
+}
+
+void Region::removeFromAux(Instruction *I) {
+  auto It = find(Aux, I);
+  if (It == Aux.end())
+    return;
+  dropAuxMetadata(I);
+  Aux.erase(It);
+}
+
+void Region::clearAux() {
+  for (unsigned Idx : seq<unsigned>(0, Aux.size()))
+    dropAuxMetadata(Aux[Idx]);
+  Aux.clear();
 }
 
 void Region::remove(Instruction *I) {
@@ -42,6 +95,15 @@ bool Region::operator==(const Region &Other) const {
 void Region::dump(raw_ostream &OS) const {
   for (auto *I : Insts)
     OS << *I << "\n";
+  if (!Aux.empty()) {
+    OS << "\nAux:\n";
+    for (auto *I : Aux) {
+      if (I == nullptr)
+        OS << "NULL\n";
+      else
+        OS << *I << "\n";
+    }
+  }
 }
 
 void Region::dump() const {
@@ -51,26 +113,8 @@ void Region::dump() const {
 #endif // NDEBUG
 
 SmallVector<std::unique_ptr<Region>> Region::createRegionsFromMD(Function &F) {
-  SmallVector<std::unique_ptr<Region>> Regions;
-  DenseMap<MDNode *, Region *> MDNToRegion;
-  auto &Ctx = F.getContext();
-  for (BasicBlock &BB : F) {
-    for (Instruction &Inst : BB) {
-      if (auto *MDN = cast<llvm::Instruction>(Inst.Val)->getMetadata(MDKind)) {
-        Region *R = nullptr;
-        auto It = MDNToRegion.find(MDN);
-        if (It == MDNToRegion.end()) {
-          Regions.push_back(std::make_unique<Region>(Ctx));
-          R = Regions.back().get();
-          MDNToRegion[MDN] = R;
-        } else {
-          R = It->second;
-        }
-        R->add(&Inst);
-      }
-    }
-  }
-  return Regions;
+  return Region::createRegionsFromMD<Region>(
+      F, [&F]() { return std::make_unique<Region>(F.getContext()); });
 }
 
 } // namespace llvm::sandboxir

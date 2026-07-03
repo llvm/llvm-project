@@ -13,23 +13,20 @@ using namespace clang;
 
 namespace {
 
-class DeductionGuideVisitor
-    : public ExpectedLocationVisitor<DeductionGuideVisitor> {
+class DeductionGuideVisitor : public ExpectedLocationVisitor {
 public:
-  DeductionGuideVisitor(bool ShouldVisitImplicitCode)
-      : ShouldVisitImplicitCode(ShouldVisitImplicitCode) {}
-  bool VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *D) {
+  DeductionGuideVisitor(bool VisitImplicitCode) {
+    ShouldVisitImplicitCode = VisitImplicitCode;
+    ShouldVisitTemplateInstantiations = false;
+  }
+
+  bool VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *D) override {
     std::string Storage;
     llvm::raw_string_ostream Stream(Storage);
     D->print(Stream);
     Match(Storage, D->getLocation());
     return true;
   }
-
-  bool shouldVisitTemplateInstantiations() const { return false; }
-
-  bool shouldVisitImplicitCode() const { return ShouldVisitImplicitCode; }
-  bool ShouldVisitImplicitCode;
 };
 
 TEST(RecursiveASTVisitor, DeductionGuideNonImplicitMode) {

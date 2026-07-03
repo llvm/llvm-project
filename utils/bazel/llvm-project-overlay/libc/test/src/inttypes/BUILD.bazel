@@ -11,9 +11,27 @@ package(default_visibility = ["//visibility:public"])
 licenses(["notice"])
 
 libc_test(
+    name = "strtoimax_test",
+    srcs = ["strtoimax_test.cpp"],
+    deps = [
+        "//libc:strtoimax",
+        "//libc/test/src/stdlib:strtol_test_helper",
+    ],
+)
+
+libc_test(
+    name = "strtoumax_test",
+    srcs = ["strtoumax_test.cpp"],
+    deps = [
+        "//libc:strtoumax",
+        "//libc/test/src/stdlib:strtol_test_helper",
+    ],
+)
+
+libc_test(
     name = "imaxabs_test",
     srcs = ["imaxabs_test.cpp"],
-    libc_function_deps = [
+    deps = [
         "//libc:imaxabs",
     ],
 )
@@ -21,10 +39,8 @@ libc_test(
 libc_test(
     name = "imaxdiv_test",
     srcs = ["imaxdiv_test.cpp"],
-    libc_function_deps = [
-        "//libc:imaxdiv",
-    ],
     deps = [
+        "//libc:imaxdiv",
         "//libc/test/src/stdlib:div_test_helper",
     ],
 )

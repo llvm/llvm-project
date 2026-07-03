@@ -24,6 +24,7 @@
 #include "BPFInstrInfo.h"
 #include "BPFTargetMachine.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -50,9 +51,7 @@ struct BPFMIPeephole : public MachineFunctionPass {
   MachineFunction *MF;
   MachineRegisterInfo *MRI;
 
-  BPFMIPeephole() : MachineFunctionPass(ID) {
-    initializeBPFMIPeepholePass(*PassRegistry::getPassRegistry());
-  }
+  BPFMIPeephole() : MachineFunctionPass(ID) {}
 
 private:
   // Initialize class variables.
@@ -228,7 +227,8 @@ bool BPFMIPeephole::eliminateZExtSeq() {
         }
 
         BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(BPF::SUBREG_TO_REG), DstReg)
-          .addImm(0).addReg(SubReg).addImm(BPF::sub_32);
+            .addReg(SubReg)
+            .addImm(BPF::sub_32);
 
         SllMI->eraseFromParent();
         MovMI->eraseFromParent();
@@ -279,7 +279,8 @@ bool BPFMIPeephole::eliminateZExt() {
 
       // Build a SUBREG_TO_REG instruction.
       BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(BPF::SUBREG_TO_REG), dst)
-        .addImm(0).addReg(src).addImm(BPF::sub_32);
+          .addReg(src)
+          .addImm(BPF::sub_32);
 
       ToErase = &MI;
       Eliminated = true;
@@ -310,9 +311,7 @@ struct BPFMIPreEmitPeephole : public MachineFunctionPass {
   const BPFInstrInfo *TII;
   bool SupportGotol;
 
-  BPFMIPreEmitPeephole() : MachineFunctionPass(ID) {
-    initializeBPFMIPreEmitPeepholePass(*PassRegistry::getPassRegistry());
-  }
+  BPFMIPreEmitPeephole() : MachineFunctionPass(ID) {}
 
 private:
   // Initialize class variables.
@@ -322,21 +321,26 @@ private:
   bool eliminateRedundantMov();
   bool adjustBranch();
   bool insertMissingCallerSavedSpills();
+  bool removeMayGotoZero();
+  bool addExitAfterUnreachable();
+  bool expandStackArgPseudos();
 
 public:
 
   // Main entry point for this pass.
   bool runOnMachineFunction(MachineFunction &MF) override {
-    if (skipFunction(MF.getFunction()))
-      return false;
-
     initialize(MF);
 
-    bool Changed;
-    Changed = eliminateRedundantMov();
+    bool Changed = expandStackArgPseudos();
+    if (skipFunction(MF.getFunction()))
+      return Changed;
+
+    Changed |= eliminateRedundantMov();
     if (SupportGotol)
-      Changed = adjustBranch() || Changed;
+      Changed |= adjustBranch();
     Changed |= insertMissingCallerSavedSpills();
+    Changed |= removeMayGotoZero();
+    Changed |= addExitAfterUnreachable();
     return Changed;
   }
 };
@@ -679,6 +683,131 @@ bool BPFMIPreEmitPeephole::insertMissingCallerSavedSpills() {
       }
     }
   }
+  return Changed;
+}
+
+bool BPFMIPreEmitPeephole::removeMayGotoZero() {
+  bool Changed = false;
+  MachineBasicBlock *Prev_MBB, *Curr_MBB = nullptr;
+
+  for (MachineBasicBlock &MBB : make_early_inc_range(reverse(*MF))) {
+    Prev_MBB = Curr_MBB;
+    Curr_MBB = &MBB;
+    if (Prev_MBB == nullptr || Curr_MBB->empty())
+      continue;
+
+    MachineInstr &MI = Curr_MBB->back();
+    if (MI.getOpcode() != TargetOpcode::INLINEASM_BR)
+      continue;
+
+    const char *AsmStr = MI.getOperand(0).getSymbolName();
+    SmallVector<StringRef, 4> AsmPieces;
+    SplitString(AsmStr, AsmPieces, ";\n");
+
+    // Do not support multiple insns in one inline asm.
+    if (AsmPieces.size() != 1)
+      continue;
+
+    // The asm insn must be a may_goto insn.
+    SmallVector<StringRef, 4> AsmOpPieces;
+    SplitString(AsmPieces[0], AsmOpPieces, " ");
+    if (AsmOpPieces.size() != 2 || AsmOpPieces[0] != "may_goto")
+      continue;
+    // Enforce the format of 'may_goto <label>'.
+    if (AsmOpPieces[1] != "${0:l}" && AsmOpPieces[1] != "$0")
+      continue;
+
+    // Get the may_goto branch target.
+    MachineOperand &MO = MI.getOperand(InlineAsm::MIOp_FirstOperand + 1);
+    if (!MO.isMBB() || MO.getMBB() != Prev_MBB)
+      continue;
+
+    Changed = true;
+    if (Curr_MBB->begin() == MI) {
+      // Single 'may_goto' insn in the same basic block.
+      Curr_MBB->removeSuccessor(Prev_MBB);
+      for (MachineBasicBlock *Pred : Curr_MBB->predecessors())
+        Pred->replaceSuccessor(Curr_MBB, Prev_MBB);
+      Curr_MBB->eraseFromParent();
+      Curr_MBB = Prev_MBB;
+    } else {
+      // Remove 'may_goto' insn.
+      MI.eraseFromParent();
+    }
+  }
+
+  return Changed;
+}
+
+// If the last insn in a funciton is 'JAL &bpf_unreachable', let us add an
+// 'exit' insn after that insn. This will ensure no fallthrough at the last
+// insn, making kernel verification easier.
+bool BPFMIPreEmitPeephole::addExitAfterUnreachable() {
+  MachineBasicBlock &MBB = MF->back();
+  MachineInstr &MI = MBB.back();
+  if (MI.getOpcode() != BPF::JAL || !MI.getOperand(0).isGlobal() ||
+      MI.getOperand(0).getGlobal()->getName() != BPF_TRAP)
+    return false;
+
+  BuildMI(&MBB, MI.getDebugLoc(), TII->get(BPF::RET));
+  return true;
+}
+
+bool BPFMIPreEmitPeephole::expandStackArgPseudos() {
+  bool Changed = false;
+
+  for (MachineBasicBlock &MBB : *MF) {
+    for (auto It = MBB.begin(), End = MBB.end(); It != End;) {
+      MachineInstr &MI = *It++;
+      DebugLoc DL = MI.getDebugLoc();
+
+      switch (MI.getOpcode()) {
+      default:
+        break;
+
+      case BPF::LOAD_STACK_ARG_PSEUDO: {
+        Register DstReg = MI.getOperand(0).getReg();
+        int16_t Off = MI.getOperand(1).getImm();
+
+        BuildMI(MBB, MI, DL, TII->get(BPF::LDD), DstReg)
+            .addReg(BPF::R11)
+            .addImm(Off);
+        MI.eraseFromParent();
+        Changed = true;
+        break;
+      }
+
+      case BPF::STORE_STACK_ARG_PSEUDO: {
+        int16_t Off = MI.getOperand(0).getImm();
+        const MachineOperand &SrcMO = MI.getOperand(1);
+        Register SrcReg = SrcMO.getReg();
+        bool IsKill = SrcMO.isKill();
+
+        BuildMI(MBB, MI, DL, TII->get(BPF::STD))
+            .addReg(SrcReg, getKillRegState(IsKill))
+            .addReg(BPF::R11)
+            .addImm(Off);
+        MI.eraseFromParent();
+        Changed = true;
+        break;
+      }
+
+      case BPF::STORE_STACK_ARG_IMM_PSEUDO: {
+        int16_t Off = MI.getOperand(0).getImm();
+        int32_t Val = MI.getOperand(1).getImm();
+
+        BuildMI(MBB, MI, DL, TII->get(BPF::STD_imm))
+            .addImm(Val)
+            .addReg(BPF::R11)
+            .addImm(Off);
+        MI.eraseFromParent();
+        Changed = true;
+        break;
+      }
+      }
+    }
+  }
+
   return Changed;
 }
 

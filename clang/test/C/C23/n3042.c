@@ -82,9 +82,10 @@ void test() {
   (nullptr_t)12;        // expected-error {{cannot cast an object of type 'int' to 'nullptr_t'}}
   (float)null_val;      // expected-error {{cannot cast an object of type 'nullptr_t' to 'float'}}
   (float)nullptr;       // expected-error {{cannot cast an object of type 'nullptr_t' to 'float'}}
-  (nullptr_t)0;         // expected-error {{cannot cast an object of type 'int' to 'nullptr_t'}}
-  (nullptr_t)(void *)0; // expected-error {{cannot cast an object of type 'void *' to 'nullptr_t'}}
   (nullptr_t)(int *)12; // expected-error {{cannot cast an object of type 'int *' to 'nullptr_t'}}
+  (nullptr_t)"testing"; // expected-error {{cannot cast an object of type 'char *' to 'nullptr_t'}}
+  (nullptr_t)1.0f;      // expected-error {{cannot cast an object of type 'float' to 'nullptr_t'}}
+  (nullptr_t)'a';       // expected-error {{cannot cast an object of type 'int' to 'nullptr_t'}}
 
   (void)null_val;     // ok
   (void)nullptr;      // ok
@@ -93,6 +94,9 @@ void test() {
   (int *)null_val;    // ok
   (int *)nullptr;     // ok
   (nullptr_t)nullptr; // ok
+  (nullptr_t)0;       // ok
+  (nullptr_t)(void *)0; // ok
+  (nullptr_t)null_val;  // ok
 
   // Can it be converted to bool with the result false (this relies on Clang
   // accepting additional kinds of constant expressions where an ICE is

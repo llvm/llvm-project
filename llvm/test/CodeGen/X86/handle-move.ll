@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=x86_64-- -mcpu=core2 -fast-isel -enable-misched -misched=shuffle -misched-bottomup -verify-machineinstrs < %s
-; RUN: llc -mtriple=x86_64-- -mcpu=core2 -fast-isel -enable-misched -misched=shuffle -misched-topdown -verify-machineinstrs < %s
+; RUN: llc -mtriple=x86_64-- -mcpu=core2 -fast-isel -enable-misched -misched=shuffle -misched-prera-direction=bottomup -verify-machineinstrs < %s
+; RUN: llc -mtriple=x86_64-- -mcpu=core2 -fast-isel -enable-misched -misched=shuffle -misched-prera-direction=topdown -verify-machineinstrs < %s
 ; REQUIRES: asserts
 ;
 ; Test the LiveIntervals::handleMove() function.

@@ -52,8 +52,8 @@ define <2 x i1> @and_cmp_is_trunc_even_with_poison_elts(<2 x i64> %a) {
 ; The ashr turns into an lshr.
 define <2 x i64> @test2(<2 x i64> %a) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[B:%.*]] = lshr <2 x i64> [[A:%.*]], <i64 1, i64 1>
-; CHECK-NEXT:    [[T:%.*]] = and <2 x i64> [[B]], <i64 32767, i64 32767>
+; CHECK-NEXT:    [[B:%.*]] = lshr <2 x i64> [[A:%.*]], splat (i64 1)
+; CHECK-NEXT:    [[T:%.*]] = and <2 x i64> [[B]], splat (i64 32767)
 ; CHECK-NEXT:    ret <2 x i64> [[T]]
 ;
   %b = and <2 x i64> %a, <i64 65535, i64 65535>
@@ -151,7 +151,7 @@ define <2 x i64> @test7(<4 x float> %a, <4 x float> %b) {
 define void @convert(ptr %dst.addr, <2 x i64> %src) {
 ; CHECK-LABEL: @convert(
 ; CHECK-NEXT:    [[VAL:%.*]] = trunc <2 x i64> [[SRC:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[VAL]], <i32 1, i32 1>
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[VAL]], splat (i32 1)
 ; CHECK-NEXT:    store <2 x i32> [[ADD]], ptr [[DST_ADDR:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -163,7 +163,7 @@ define void @convert(ptr %dst.addr, <2 x i64> %src) {
 
 define <2 x i65> @foo(<2 x i64> %t) {
 ; CHECK-LABEL: @foo(
-; CHECK-NEXT:    [[A_MASK:%.*]] = and <2 x i64> [[T:%.*]], <i64 4294967295, i64 4294967295>
+; CHECK-NEXT:    [[A_MASK:%.*]] = and <2 x i64> [[T:%.*]], splat (i64 4294967295)
 ; CHECK-NEXT:    [[B:%.*]] = zext nneg <2 x i64> [[A_MASK]] to <2 x i65>
 ; CHECK-NEXT:    ret <2 x i65> [[B]]
 ;
@@ -175,7 +175,7 @@ define <2 x i65> @foo(<2 x i64> %t) {
 define <2 x i64> @bar(<2 x i65> %t) {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i65> [[T:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[B:%.*]] = and <2 x i64> [[TMP1]], <i64 4294967295, i64 4294967295>
+; CHECK-NEXT:    [[B:%.*]] = and <2 x i64> [[TMP1]], splat (i64 4294967295)
 ; CHECK-NEXT:    ret <2 x i64> [[B]]
 ;
   %a = trunc <2 x i65> %t to <2 x i32>
@@ -196,8 +196,8 @@ define <2 x i64> @bars(<2 x i65> %t) {
 
 define <2 x i64> @quxs(<2 x i64> %t) {
 ; CHECK-LABEL: @quxs(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i64> [[T:%.*]], <i64 32, i64 32>
-; CHECK-NEXT:    [[B:%.*]] = ashr exact <2 x i64> [[TMP1]], <i64 32, i64 32>
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i64> [[T:%.*]], splat (i64 32)
+; CHECK-NEXT:    [[B:%.*]] = ashr exact <2 x i64> [[TMP1]], splat (i64 32)
 ; CHECK-NEXT:    ret <2 x i64> [[B]]
 ;
   %a = trunc <2 x i64> %t to <2 x i32>
@@ -207,8 +207,8 @@ define <2 x i64> @quxs(<2 x i64> %t) {
 
 define <2 x i64> @quxt(<2 x i64> %t) {
 ; CHECK-LABEL: @quxt(
-; CHECK-NEXT:    [[A:%.*]] = shl <2 x i64> [[T:%.*]], <i64 32, i64 32>
-; CHECK-NEXT:    [[B:%.*]] = ashr exact <2 x i64> [[A]], <i64 32, i64 32>
+; CHECK-NEXT:    [[A:%.*]] = shl <2 x i64> [[T:%.*]], splat (i64 32)
+; CHECK-NEXT:    [[B:%.*]] = ashr exact <2 x i64> [[A]], splat (i64 32)
 ; CHECK-NEXT:    ret <2 x i64> [[B]]
 ;
   %a = shl <2 x i64> %t, <i64 32, i64 32>
@@ -278,7 +278,7 @@ define <4 x float> @f(i32 %a) {
 
 define <8 x i32> @pr24458(<8 x float> %n) {
 ; CHECK-LABEL: @pr24458(
-; CHECK-NEXT:    ret <8 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    ret <8 x i32> splat (i32 -1)
 ;
   %notequal_b_load_.i = fcmp une <8 x float> %n, zeroinitializer
   %equal_a_load72_.i = fcmp ueq <8 x float> %n, zeroinitializer
@@ -288,30 +288,30 @@ define <8 x i32> @pr24458(<8 x float> %n) {
   ret <8 x i32> %wrong
 }
 
-; Hoist a trunc to a scalar if we're inserting into an undef vector.
-; trunc (inselt undef, X, Index) --> inselt undef, (trunc X), Index
+; Hoist a trunc to a scalar if we're inserting into a poison vector.
+; trunc (inselt poison, X, Index) --> inselt poison, (trunc X), Index
 
-define <3 x i16> @trunc_inselt_undef(i32 %x) {
-; CHECK-LABEL: @trunc_inselt_undef(
+define <3 x i16> @trunc_inselt_poison(i32 %x, i32 %index) {
+; CHECK-LABEL: @trunc_inselt_poison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i16
-; CHECK-NEXT:    [[TRUNC:%.*]] = insertelement <3 x i16> <i16 undef, i16 poison, i16 undef>, i16 [[TMP1]], i64 1
+; CHECK-NEXT:    [[TRUNC:%.*]] = insertelement <3 x i16> poison, i16 [[TMP1]], i32 [[INDEX:%.*]]
 ; CHECK-NEXT:    ret <3 x i16> [[TRUNC]]
 ;
-  %vec = insertelement <3 x i32> undef, i32 %x, i32 1
+  %vec = insertelement <3 x i32> poison, i32 %x, i32 %index
   %trunc = trunc <3 x i32> %vec to <3 x i16>
   ret <3 x i16> %trunc
 }
 
-; Hoist a trunc to a scalar if we're inserting into an undef vector.
-; trunc (inselt undef, X, Index) --> inselt undef, (trunc X), Index
+; Hoist a trunc to a scalar if we're inserting into a poison vector.
+; trunc (inselt poison, X, Index) --> inselt poison, (trunc X), Index
 
-define <2 x float> @fptrunc_inselt_undef(double %x, i32 %index) {
-; CHECK-LABEL: @fptrunc_inselt_undef(
+define <2 x float> @fptrunc_inselt_poison(double %x, i32 %index) {
+; CHECK-LABEL: @fptrunc_inselt_poison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc double [[X:%.*]] to float
-; CHECK-NEXT:    [[TRUNC:%.*]] = insertelement <2 x float> undef, float [[TMP1]], i32 [[INDEX:%.*]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = insertelement <2 x float> poison, float [[TMP1]], i32 [[INDEX:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[TRUNC]]
 ;
-  %vec = insertelement <2 x double> <double undef, double undef>, double %x, i32 %index
+  %vec = insertelement <2 x double> poison, double %x, i32 %index
   %trunc = fptrunc <2 x double> %vec to <2 x float>
   ret <2 x float> %trunc
 }
@@ -337,11 +337,11 @@ define <3 x i16> @trunc_inselt1(i32 %x) {
 
 define <2 x float> @fptrunc_inselt1(double %x, i32 %index) {
 ; CHECK-LABEL: @fptrunc_inselt1(
-; CHECK-NEXT:    [[VEC:%.*]] = insertelement <2 x double> <double undef, double 3.000000e+00>, double [[X:%.*]], i32 [[INDEX:%.*]]
+; CHECK-NEXT:    [[VEC:%.*]] = insertelement <2 x double> <double poison, double 3.000000e+00>, double [[X:%.*]], i32 [[INDEX:%.*]]
 ; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc <2 x double> [[VEC]] to <2 x float>
 ; CHECK-NEXT:    ret <2 x float> [[TRUNC]]
 ;
-  %vec = insertelement <2 x double> <double undef, double 3.0>, double %x, i32 %index
+  %vec = insertelement <2 x double> <double poison, double 3.0>, double %x, i32 %index
   %trunc = fptrunc <2 x double> %vec to <2 x float>
   ret <2 x float> %trunc
 }

@@ -12,7 +12,6 @@
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 
-using llvm::yaml::MappingTraits;
 using ContextType = clang::find_all_symbols::SymbolInfo::ContextType;
 using clang::find_all_symbols::SymbolInfo;
 using clang::find_all_symbols::SymbolAndSignals;

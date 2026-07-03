@@ -1,84 +1,77 @@
+; RUN: llc -mtriple=spirv-unknown-vulkan-compute -O0 %s -o - --asm-verbose=0 | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan-compute %s -o - -filetype=obj | spirv-val %}
-; RUN: llc -mtriple=spirv-unknown-vulkan-compute -O0 %s -o - --asm-verbose=0 | FileCheck %s --match-full-lines
 
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-G1"
 target triple = "spirv-unknown-vulkan1.3-compute"
 
-; CHECK-DAG:  OpName %[[#fn:]] "fn"
-; CHECK-DAG:  OpName %[[#main:]] "main"
-; CHECK-DAG:  OpName %[[#var_a:]] "a"
-; CHECK-DAG:  OpName %[[#var_b:]] "b"
-
-; CHECK-DAG:  %[[#bool:]] = OpTypeBool
-; CHECK-DAG:  %[[#true:]] = OpConstantTrue %[[#bool]]
-
-; CHECK:  %[[#fn]] = OpFunction %[[#param:]] DontInline %[[#ftype:]]
-define spir_func noundef i32 @fn() #0 {
-entry:
-  %0 = call token @llvm.experimental.convergence.entry()
-  ret i32 1
-}
-
-; CHECK: %[[#main]] = OpFunction %[[#param:]] DontInline %[[#ftype:]]
-
 define internal spir_func void @main() #3 {
+; CHECK-DAG:   OpName %[[#switch_0:]] "reg1"
+; CHECK-DAG:   OpName %[[#switch_1:]] "reg"
 
-; CHECK:     %[[#entry:]] = OpLabel
-; CHECK-DAG:  %[[#var_a]] = OpVariable %[[#type:]] Function
-; CHECK-DAG:  %[[#var_b]] = OpVariable %[[#type:]] Function
-; CHECK:       %[[#tmp:]] = OpLoad %[[#type:]] %[[#var_a]] Aligned 4
-; CHECK:      %[[#cond:]] = OpINotEqual %[[#bool]] %[[#tmp]] %[[#const:]]
-; CHECK:                    OpSelectionMerge %[[#if_end:]] None
-; CHECK:                    OpBranchConditional %[[#true]] %[[#cond1:]] %[[#dead:]]
+; CHECK-DAG:   %[[#int_0:]] = OpConstant %[[#]] 0
+; CHECK-DAG:   %[[#int_1:]] = OpConstant %[[#]] 1
 
-; CHECK:      %[[#cond1]] = OpLabel
-; CHECK:                    OpSelectionMerge %[[#new_exit:]] None
-; CHECK:                    OpBranchConditional %[[#cond]] %[[#new_exit]] %[[#lor_lhs_false:]]
+; CHECK:       %[[#entry:]] = OpLabel
+; CHECK-DAG: %[[#switch_0]] = OpVariable %[[#]] Function
+; CHECK-DAG: %[[#switch_1]] = OpVariable %[[#]] Function
+; CHECK:                      OpSelectionMerge %[[#merge:]] None
+; CHECK:                      OpBranchConditional %[[#]] %[[#new_header:]] %[[#unreachable:]]
 
-; CHECK:       %[[#dead]] = OpLabel
-; CHECK-NEXT:               OpUnreachable
+; CHECK:       %[[#unreachable]] = OpLabel
+; CHECK-NEXT:                      OpUnreachable
 
-; CHECK:  %[[#lor_lhs_false]] = OpLabel
-; CHECK:           %[[#tmp:]] = OpLoad %[[#type:]] %[[#var_b]] Aligned 4
-; CHECK:          %[[#cond:]] = OpINotEqual %[[#bool]] %[[#tmp]] %[[#value:]]
-; CHECK:                        OpBranchConditional %[[#cond]] %[[#new_exit]] %[[#alias_exit:]]
+; CHECK:     %[[#new_header]] = OpLabel
+; CHECK:                        OpSelectionMerge %[[#new_merge:]] None
+; CHECK:                        OpBranchConditional %[[#]] %[[#taint_true_merge:]] %[[#br_false:]]
 
-; CHECK: %[[#alias_exit]] = OpLabel
-; CHECK:                    OpBranch %[[#new_exit]]
+; CHECK:      %[[#br_false]] = OpLabel
+; CHECK-DAG:                   OpStore %[[#switch_1]] %[[#int_0]]
+; CHECK:                       OpSelectionMerge %[[#taint_merge:]] None
+; CHECK:                       OpBranchConditional %[[#]] %[[#taint_merge]] %[[#taint_false:]]
 
-; CHECK:   %[[#new_exit]] = OpLabel
-; CHECK:       %[[#tmp:]] = OpPhi %[[#type:]] %[[#A:]] %[[#cond1]] %[[#A:]] %[[#lor_lhs_false]] %[[#B:]] %[[#alias_exit]]
-; CHECK:      %[[#cond:]] = OpIEqual %[[#bool]] %[[#A]] %[[#tmp]]
-; CHECK:                    OpBranchConditional %[[#cond]] %[[#if_then:]] %[[#if_end]]
+; CHECK:      %[[#taint_false]] = OpLabel
+; CHECK:                          OpStore %[[#switch_1]] %[[#int_1]]
+; CHECK:                          OpBranch %[[#taint_merge]]
 
-; CHECK:    %[[#if_then]] = OpLabel
-; CHECK:                    OpBranch %[[#if_end]]
+; CHECK:      %[[#taint_merge]] = OpLabel
+; CHECK:                          OpStore %[[#switch_0]] %[[#int_0]]
+; CHECK:             %[[#tmp:]] = OpLoad %[[#]] %[[#switch_1]]
+; CHECK:            %[[#cond:]] = OpIEqual %[[#]] %[[#int_0]] %[[#tmp]]
+; CHECK:                          OpBranchConditional %[[#cond]] %[[#taint_false_true:]] %[[#new_merge]]
 
-; CHECK:     %[[#if_end]] = OpLabel
-; CHECK:                    OpReturn
+; CHECK: %[[#taint_false_true]] = OpLabel
+; CHECK:                          OpStore %[[#switch_0]] %[[#int_1]]
+; CHECK:                          OpBranch %[[#new_merge]]
+
+; CHECK: %[[#taint_true_merge]] = OpLabel
+; CHECK:                          OpStore %[[#switch_0]] %[[#int_1]]
+; CHECK:                          OpBranch %[[#new_merge]]
+
+; CHECK:      %[[#new_merge]] = OpLabel
+; CHECK:             %[[#tmp:]] = OpLoad %[[#]] %[[#switch_0]]
+; CHECK:            %[[#cond:]] = OpIEqual %[[#]] %[[#int_0]] %[[#tmp]]
+; CHECK:                          OpBranchConditional %[[#cond]] %[[#merge]] %[[#br_true:]]
+
+; CHECK:    %[[#br_true]] = OpLabel
+; CHECK:                    OpBranch %[[#merge]]
+
+; CHECK:     %[[#merge]] = OpLabel
+; CHECK:                   OpReturn
 
 entry:
   %0 = call token @llvm.experimental.convergence.entry()
-  %a = alloca i32, align 4
-  %b = alloca i32, align 4
-  %val = alloca i32, align 4
-  store i32 0, ptr %val, align 4
-  %1 = load i32, ptr %a, align 4
-  %tobool = icmp ne i32 %1, 0
-  br i1 %tobool, label %if.then, label %lor.lhs.false
+  %var = alloca i32, align 4
+  br i1 true, label %br_true, label %br_false
 
-lor.lhs.false:
-  %2 = load i32, ptr %b, align 4
-  %tobool1 = icmp ne i32 %2, 0
-  br i1 %tobool1, label %if.then, label %if.end
+br_false:
+  store i32 0, ptr %var, align 4
+  br i1 true, label %br_true, label %merge
 
-if.then:
-  %8 = load i32, ptr %val, align 4
-  %inc = add nsw i32 %8, 1
-  store i32 %inc, ptr %val, align 4
-  br label %if.end
+br_true:
+  store i32 0, ptr %var, align 4
+  br label %merge
 
-if.end:
+merge:
   ret void
 }
 

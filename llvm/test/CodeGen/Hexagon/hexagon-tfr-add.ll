@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 -disable-hexagon-amodeopt < %s | FileCheck %s --check-prefix=CHECK-ADDI
+; RUN: llc -mtriple=hexagon -O2 -disable-hexagon-amodeopt < %s | FileCheck %s --check-prefix=CHECK-ADDI
 ; REQUIRES: asserts
 
 target triple = "hexagon"

@@ -17,11 +17,11 @@ include Makefile.rules
 a.out: libone libtwo
 
 libone:
-	$(MAKE) -f $(MAKEFILE_RULES) \
+	"$(MAKE)" -f $(MAKEFILE_RULES) \
 	  DYLIB_ONLY=YES DYLIB_CXX_SOURCES=one.cpp DYLIB_NAME=one \
 	  CFLAGS_EXTRAS="$(ONE_CXXFLAGS)"
 
 libtwo: libone
-	$(MAKE) -f $(MAKEFILE_RULES) \
+	"$(MAKE)" -f $(MAKEFILE_RULES) \
 	  DYLIB_ONLY=YES DYLIB_CXX_SOURCES=two.cpp DYLIB_NAME=two \
 	  CFLAGS_EXTRAS="$(TWO_CXXFLAGS)" LD_EXTRAS="-L. -lone"

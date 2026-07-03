@@ -72,7 +72,7 @@ template<int L, class T, class N> T test_template(T* arr, N num) {
 
 template<int LEN> int test_warn() {
   int ind2 = 0;
-  // expected-warning@+1 {{zero linear step (ind2 should probably be const)}}
+  // expected-warning@+1 {{zero linear step ('ind2' should probably be const)}}
   #pragma omp for simd linear(ind2:LEN)
   for (int i = 0; i < 100; i++) {
     ind2 += LEN;
@@ -228,7 +228,7 @@ int main(int argc, char **argv) {
 #endif
   for (int k = 0; k < argc; ++k) ++k;
 #ifdef OMP52
-  #pragma omp for simd linear(i: step(1), step(2)) // omp52-error {{multiple 'step size' found in linear clause}} 
+  #pragma omp for simd linear(i: step(1), step(2)) // omp52-error {{multiple 'step size' found in linear clause}}
 #else
   #pragma omp for simd linear(i)
 #endif
@@ -236,7 +236,7 @@ int main(int argc, char **argv) {
 #ifdef OMP52
   #pragma omp for simd linear(j: step()) // omp52-error 2 {{expected expression}}
   for (int k = 0; k < argc; ++k) ++k;
-  #pragma omp for simd linear(j: pval) // omp52-error {{use of undeclared identifier 'pval'}} 
+  #pragma omp for simd linear(j: pval) // omp52-error {{use of undeclared identifier 'pval'}}
   for (int k = 0; k < argc; ++k) ++k;
   #pragma omp for simd linear(i: val, step(2 // omp52-error 3 {{expected ')'}}  omp52-note 2 {{to match this '('}}
   for (int k = 0; k < argc; ++k) ++k;

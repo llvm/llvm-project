@@ -236,7 +236,7 @@ public:
     auto ty = getBoxTy().getEleTy();
     if (fir::isa_ref_type(ty))
       return ty;
-    return fir::ReferenceType::get(ty);
+    return fir::ReferenceType::get(ty, fir::isa_volatile_type(getBoxTy()));
   }
 
   /// Get the scalar type related to the described entity
@@ -279,6 +279,8 @@ public:
   bool isUnlimitedPolymorphic() const {
     return fir::isUnlimitedPolymorphicType(getBoxTy());
   }
+
+  unsigned corank() const { return fir::getBoxCorank(getBoxTy()); }
 };
 
 /// An entity described by a fir.box value that cannot be read into

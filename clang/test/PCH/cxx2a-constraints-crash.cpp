@@ -1,7 +1,5 @@
-// RUN: %clang_cc1 -std=c++2a -emit-pch %s -o %t
-// RUN: %clang_cc1 -std=c++2a -include-pch %t -verify %s
-
-// expected-no-diagnostics
+// RUN: %clang_cc1 -std=c++2a -fallow-pch-with-compiler-errors -emit-pch -o %t %s -verify
+// RUN: %clang_cc1 -std=c++2a -fallow-pch-with-compiler-errors -include-pch %t %s -verify
 
 #ifndef HEADER
 #define HEADER
@@ -27,3 +25,12 @@ int main() {
 }
 
 #endif
+
+namespace GH99036 {
+
+template <typename T>
+concept C; // expected-error {{expected '='}}
+
+template <C U> void f();
+
+} // namespace GH99036

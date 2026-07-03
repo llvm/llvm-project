@@ -55,5 +55,5 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
 
   // expected-error@+1{{OpenACC 'firstprivate' clause is not valid on 'loop' directive}}
 #pragma acc loop firstprivate(LocalInt)
-  for(;;);
+  for(int i = 5; i < 10;++i);
 }

@@ -1,14 +1,9 @@
-#RUN: not --crash llc -o - -mtriple=arm64 -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=aarch64 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
 # REQUIRES: aarch64-registered-target
 
 ---
-name:            test_load
-legalized:       true
-regBankSelected: false
-selected:        false
-tracksRegLiveness: true
-liveins:
-body:             |
+name: test_load
+body: |
   bb.0:
 
     ; CHECK: Bad machine code: Generic memory instruction must access a pointer
@@ -25,5 +20,4 @@ body:             |
 
     ; CHECK: Bad machine code: atomic load cannot use release ordering
     %5:_(s32) = G_LOAD %2 :: (load acq_rel (s32))
-
 ...

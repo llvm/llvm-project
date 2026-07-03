@@ -1,4 +1,4 @@
-//===--- ForRangeCopyCheck.cpp - clang-tidy--------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ForRangeCopyCheck.h"
-#include "../utils/DeclRefExprUtils.h"
 #include "../utils/FixItHintUtils.h"
 #include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
@@ -39,7 +38,7 @@ void ForRangeCopyCheck::registerMatchers(MatchFinder *Finder) {
   auto HasReferenceOrPointerTypeOrIsAllowed = hasType(qualType(
       unless(anyOf(hasCanonicalType(anyOf(referenceType(), pointerType())),
                    hasDeclaration(namedDecl(
-                       matchers::matchesAnyListedName(AllowedTypes)))))));
+                       matchers::matchesAnyListedRegexName(AllowedTypes)))))));
   auto IteratorReturnsValueType = cxxOperatorCallExpr(
       hasOverloadedOperatorName("*"),
       callee(
@@ -91,7 +90,7 @@ bool ForRangeCopyCheck::handleConstValueCopy(const VarDecl &LoopVar,
       << utils::fixit::changeVarDeclToReference(LoopVar, Context);
   if (!LoopVar.getType().isConstQualified()) {
     if (std::optional<FixItHint> Fix = utils::fixit::addQualifierToVarDecl(
-            LoopVar, Context, DeclSpec::TQ::TQ_const))
+            LoopVar, Context, Qualifiers::Const))
       Diagnostic << *Fix;
   }
   return true;
@@ -129,7 +128,7 @@ bool ForRangeCopyCheck::handleCopyIsOnlyConstReferenced(
         "making it a const reference");
 
     if (std::optional<FixItHint> Fix = utils::fixit::addQualifierToVarDecl(
-            LoopVar, Context, DeclSpec::TQ::TQ_const))
+            LoopVar, Context, Qualifiers::Const))
       Diag << *Fix << utils::fixit::changeVarDeclToReference(LoopVar, Context);
 
     return true;

@@ -90,7 +90,7 @@ int test7(unsigned long long b) {
 
 // PR3904
 void test8(int i) {
-  // A number in an input constraint can't point to a read-write constraint.
+  // A number in an input constraint cannot point to a read-write constraint.
   asm("" : "+r" (i), "=r"(i) :  "0" (i)); // expected-error{{invalid input constraint '0' in asm}}
 }
 
@@ -191,8 +191,8 @@ void iOutputConstraint(int x){
 struct foo {
   int a;
 };
-register struct foo bar asm("esp"); // expected-error {{bad type for named register variable}}
-register float baz asm("esp"); // expected-error {{bad type for named register variable}}
+register struct foo bar asm("esp"); // expected-error {{unsupported type for named register variable}}
+register float baz asm("esp"); // expected-error {{unsupported type for named register variable}}
 
 register int r0 asm ("edi"); // expected-error {{register 'edi' unsuitable for global register variables on this target}}
 register long long r1 asm ("esp"); // expected-error {{size of register 'esp' does not match variable size}}
@@ -201,6 +201,12 @@ register int r2 asm ("esp");
 double f_output_constraint(void) {
   double result;
   __asm("foo1": "=f" (result)); // expected-error {{invalid output constraint '=f' in asm}}
+  return result;
+}
+
+double f_output_constraint_2(void) {
+  double result;
+  __asm("foo1": "+f" (result)); // expected-error {{invalid output constraint '+f' in asm}}
   return result;
 }
 
@@ -339,6 +345,13 @@ typedef struct _st_size128 {
   int d;
 } st_size128;
 
+typedef union _un_size96 {
+  int a[3];
+  char b[12];
+} un_size96;
+
+typedef int int4 __attribute__((ext_vector_type(4)));
+
 void test19(long long x)
 {
   st_size64 a;
@@ -346,16 +359,48 @@ void test19(long long x)
   st_size16 c;
   st_size32 d;
   st_size128 e;
-  asm ("" : "=rm" (a): "0" (1)); // no-error
+  char f[16];
+  char g[8];
+  un_size96 h;
+  _Complex float i;
+  int4 j;
+  asm ("" : "=rm" (a): "0" (1)); // expected-error {{impossible constraint in asm: cannot store value into a register}}
   asm ("" : "=rm" (d): "0" (1)); // no-error
   asm ("" : "=rm" (c): "0" (x)); // no-error
   // FIXME: This case is actually supported by codegen.
   asm ("" : "=rm" (x): "0" (a)); // expected-error {{unsupported inline asm: input with type 'st_size64' (aka 'struct _st_size64') matching output with type 'long long'}}
   // FIXME: This case is actually supported by codegen.
   asm ("" : "=rm" (a): "0" (d)); // expected-error {{unsupported inline asm: input with type 'st_size32' (aka 'struct _st_size32') matching output with type 'st_size64' (aka 'struct _st_size64')}}
-  asm ("" : "=rm" (b): "0" (1)); // expected-error {{impossible constraint in asm: can't store value into a register}}
-  // FIXME: This case should be supported by codegen, but it fails now.
-  asm ("" : "=rm" (e): "0" (1)); // no-error
+  asm ("" : "=rm" (b): "0" (1)); // expected-error {{impossible constraint in asm: cannot store value into a register}}
+  // No general-purpose register can hold a 128-bit aggregate output.
+  asm ("" : "=rm" (e): "0" (1)); // expected-error {{impossible constraint in asm: cannot store value into a register}}
   // FIXME: This case should be supported by codegen, but it fails now.
   asm ("" : "=rm" (x): "0" (e)); // expected-error {{unsupported inline asm: input with type 'st_size128' (aka 'struct _st_size128') matching output with type 'long long'}}
+  // Likewise for larger array, union, complex, and vector outputs.
+  asm ("" : "=r" (f): "0" (f)); // expected-error {{impossible constraint in asm: cannot store value into a register}}
+  asm ("" : "=rm" (g): "0" (1)); // expected-error {{impossible constraint in asm: cannot store value into a register}}
+  asm ("" : "=rm" (h): "0" (1)); // expected-error {{impossible constraint in asm: cannot store value into a register}}
+  asm ("" : "=rm" (i): "0" (1)); // expected-error {{impossible constraint in asm: cannot store value into a register}}
+  asm ("" : "=rm" (j): "0" (1)); // expected-error {{impossible constraint in asm: cannot store value into a register}}
+}
+
+typedef int int2 __attribute__((ext_vector_type(2)));
+
+// GH118892
+void test20(char x) {
+  double d;
+  float f;
+
+  asm ("fabs" : "=t" (d): "0" (x)); // expected-error {{unsupported inline asm: input with type 'char' matching output with type 'double'}}
+  asm ("fabs" : "=t" (x): "0" (d)); // expected-error {{unsupported inline asm: input with type 'double' matching output with type 'char'}}
+  asm ("fabs" : "=t" (f): "0" (d)); // no-error
+  asm ("fabs" : "=t" (d): "0" (f)); // no-error
+
+  st_size64 a;
+  asm ("fabs" : "=t" (d): "0" (a)); // expected-error {{unsupported inline asm: input with type 'st_size64' (aka 'struct _st_size64') matching output with type 'double'}}
+  asm ("fabs" : "=t" (a): "0" (d)); // expected-error {{unsupported inline asm: input with type 'double' matching output with type 'st_size64' (aka 'struct _st_size64')}}
+
+  int2 v;
+  asm ("fabs" : "=t" (d): "0" (v)); // expected-error {{unsupported inline asm: input with type 'int2' (vector of 2 'int' values) matching output with type 'double'}}
+  asm ("fabs" : "=t" (v): "0" (d)); // expected-error {{unsupported inline asm: input with type 'double' matching output with type 'int2' (vector of 2 'int' values)}}
 }

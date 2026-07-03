@@ -11,17 +11,16 @@
 #include "llvm/ObjCopy/MultiFormatConfig.h"
 #include "llvm/ObjCopy/ObjCopy.h"
 #include "llvm/Object/Error.h"
-#include "llvm/Object/MachO.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
 
-namespace llvm {
-namespace objcopy {
-
+using namespace llvm;
+using namespace llvm::objcopy;
 using namespace llvm::object;
 
 Expected<std::vector<NewArchiveMember>>
-createNewArchiveMembers(const MultiFormatConfig &Config, const Archive &Ar) {
+objcopy::createNewArchiveMembers(const MultiFormatConfig &Config,
+                                 const Archive &Ar) {
   std::vector<NewArchiveMember> NewArchiveMembers;
   Error Err = Error::success();
   for (const Archive::Child &Child : Ar.children(Err)) {
@@ -29,10 +28,21 @@ createNewArchiveMembers(const MultiFormatConfig &Config, const Archive &Ar) {
     if (!ChildNameOrErr)
       return createFileError(Ar.getFileName(), ChildNameOrErr.takeError());
 
+    auto MemberName = [&](StringRef Prefix) {
+      return (Twine(Prefix) + "(" + *ChildNameOrErr + ")").str();
+    };
+
     Expected<std::unique_ptr<Binary>> ChildOrErr = Child.getAsBinary();
     if (!ChildOrErr)
-      return createFileError(Ar.getFileName() + "(" + *ChildNameOrErr + ")",
+      return createFileError(MemberName(Ar.getFileName()),
                              ChildOrErr.takeError());
+
+    const CommonConfig &CC = Config.getCommonConfig();
+    if (CC.Verbose) {
+      StringRef FormatName = getObjectFormatName(*ChildOrErr->get());
+      printCopyMessage(MemberName(Ar.getFileName()), FormatName,
+                       MemberName(CC.OutputFilename), FormatName);
+    }
 
     SmallVector<char, 0> Buffer;
     raw_svector_ostream MemStream(Buffer);
@@ -95,8 +105,8 @@ static Error deepWriteArchive(StringRef ArcName,
   return Error::success();
 }
 
-Error executeObjcopyOnArchive(const MultiFormatConfig &Config,
-                              const object::Archive &Ar) {
+Error objcopy::executeObjcopyOnArchive(const MultiFormatConfig &Config,
+                                       const object::Archive &Ar) {
   Expected<std::vector<NewArchiveMember>> NewArchiveMembersOrErr =
       createNewArchiveMembers(Config, Ar);
   if (!NewArchiveMembersOrErr)
@@ -108,6 +118,3 @@ Error executeObjcopyOnArchive(const MultiFormatConfig &Config,
                           Ar.kind(), CommonConfig.DeterministicArchives,
                           Ar.isThin());
 }
-
-} // end namespace objcopy
-} // end namespace llvm

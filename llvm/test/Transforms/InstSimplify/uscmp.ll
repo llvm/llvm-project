@@ -83,7 +83,7 @@ define i8 @ucmp_undef() {
 
 define <4 x i8> @ucmp_lt_splat() {
 ; CHECK-LABEL: define <4 x i8> @ucmp_lt_splat() {
-; CHECK-NEXT:    ret <4 x i8> <i8 -1, i8 -1, i8 -1, i8 -1>
+; CHECK-NEXT:    ret <4 x i8> splat (i8 -1)
 ;
   %1 = call <4 x i8> @llvm.ucmp(<4 x i32> splat(i32 1), <4 x i32> splat(i32 3))
   ret <4 x i8> %1
@@ -222,7 +222,7 @@ define i8 @ucmp_with_addition2(i32 %x) {
 define <4 x i8> @ucmp_with_addition_vec(<4 x i32> %x) {
 ; CHECK-LABEL: define <4 x i8> @ucmp_with_addition_vec(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    ret <4 x i8> <i8 -1, i8 -1, i8 -1, i8 -1>
+; CHECK-NEXT:    ret <4 x i8> splat (i8 -1)
 ;
   %1 = add nuw <4 x i32> %x, splat(i32 1)
   %2 = call <4 x i8> @llvm.ucmp(<4 x i32> %x, <4 x i32> %1)

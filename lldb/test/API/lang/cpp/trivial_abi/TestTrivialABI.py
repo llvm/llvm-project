@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # return value is unrecoverable from the operand stack at a step-out
 class TestTrivialABI(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -27,7 +28,7 @@ class TestTrivialABI(TestBase):
     # fixed for SysV-x86_64 ABI, but not Windows-x86_64
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr36870")
     @expectedFailureAll(
-        archs=["arm", "aarch64"],
+        archs=["arm$", "aarch64"],
         oslist=["freebsd", "linux"],
         bugnumber="llvm.org/pr44161",
     )

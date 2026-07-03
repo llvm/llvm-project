@@ -1,3 +1,7 @@
+#if defined(__linux__)
+#define _XOPEN_SOURCE 500 /* for CLD_EXITED */
+#endif
+
 #include <assert.h>
 #include <signal.h>
 #include <stdio.h>

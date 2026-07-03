@@ -239,7 +239,6 @@ std::vector<Cluster> clusterize(const CallGraph &Cg) {
 }
 
 std::vector<Cluster> randomClusters(const CallGraph &Cg) {
-  std::vector<NodeId> FuncIds(Cg.numNodes(), 0);
   std::vector<Cluster> Clusters;
   Clusters.reserve(Cg.numNodes());
 

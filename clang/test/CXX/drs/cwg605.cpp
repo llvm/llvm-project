@@ -12,7 +12,7 @@ template <class T>
 static T f(T t) {}
 
 template <>
-int f(int t) {}
+int f(int t) { return 0; }
 
 void g(int a) {
   f(a);

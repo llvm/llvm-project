@@ -436,9 +436,9 @@ define <8 x i64> @elt5_v8i64(i64 %x) {
 ;
 ; X86-AVX512F-LABEL: elt5_v8i64:
 ; X86-AVX512F:       # %bb.0:
-; X86-AVX512F-NEXT:    vmovaps {{.*#+}} ymm0 = [42,0,1,0,2,0,3,0]
+; X86-AVX512F-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [42,1,2,3]
 ; X86-AVX512F-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; X86-AVX512F-NEXT:    vmovss {{.*#+}} xmm2 = [4,0,0,0]
+; X86-AVX512F-NEXT:    vpmovsxbq {{.*#+}} xmm2 = [4,0]
 ; X86-AVX512F-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; X86-AVX512F-NEXT:    vinsertf128 $1, {{\.?LCPI[0-9]+_[0-9]+}}, %ymm1, %ymm1
 ; X86-AVX512F-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
@@ -447,9 +447,8 @@ define <8 x i64> @elt5_v8i64(i64 %x) {
 ; X64-AVX512F-LABEL: elt5_v8i64:
 ; X64-AVX512F:       # %bb.0:
 ; X64-AVX512F-NEXT:    vmovq %rdi, %xmm1
-; X64-AVX512F-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [0,1,2,3,4,8,6,7]
-; X64-AVX512F-NEXT:    vpmovsxbq {{.*#+}} zmm0 = [42,1,2,3,4,0,6,7]
-; X64-AVX512F-NEXT:    vpermt2q %zmm1, %zmm2, %zmm0
+; X64-AVX512F-NEXT:    vpmovsxbq {{.*#+}} zmm0 = [8,9,10,11,12,0,14,15]
+; X64-AVX512F-NEXT:    vpermi2q {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm0
 ; X64-AVX512F-NEXT:    retq
    %ins = insertelement <8 x i64> <i64 42, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, i64 %x, i32 5
    ret <8 x i64> %ins

@@ -6,10 +6,10 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """Help tool."""
 
-import imp
 import textwrap
 
 from dex.tools import ToolBase, get_tool_names, get_tools_directory, tool_main
+from dex.utils.Imports import load_module
 from dex.utils.ReturnCode import ReturnCode
 
 
@@ -39,8 +39,7 @@ class Tool(ToolBase):
         tools_directory = get_tools_directory()
         for tool_name in sorted(self._visible_tool_names):
             internal_name = tool_name.replace("-", "_")
-            module_info = imp.find_module(internal_name, [tools_directory])
-            tool_doc = imp.load_module(internal_name, *module_info).Tool.__doc__
+            tool_doc = load_module(internal_name, tools_directory).Tool.__doc__
             tool_doc = tool_doc.strip() if tool_doc else ""
             tool_doc = textwrap.fill(" ".join(tool_doc.split()), 80)
             s += "<g>{}</>\n{}\n\n".format(tool_name, tool_doc)
@@ -53,6 +52,5 @@ class Tool(ToolBase):
 
         tool_name = self.context.options.tool.replace("-", "_")
         tools_directory = get_tools_directory()
-        module_info = imp.find_module(tool_name, [tools_directory])
-        module = imp.load_module(tool_name, *module_info)
+        module = load_module(tool_name, tools_directory)
         return tool_main(self.context, module.Tool(self.context), ["--help"])

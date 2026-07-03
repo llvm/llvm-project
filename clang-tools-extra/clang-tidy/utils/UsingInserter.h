@@ -1,4 +1,4 @@
-//===---------- UsingInserter.h - clang-tidy ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_USINGINSERTER_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_USINGINSERTER_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_USINGINSERTER_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_USINGINSERTER_H
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/Stmt.h"
@@ -27,14 +27,14 @@ public:
 
   // Creates a \p using declaration fixit. Returns ``std::nullopt`` on error
   // or if the using declaration already exists.
-  std::optional<FixItHint>
-  createUsingDeclaration(ASTContext &Context, const Stmt &Statement,
-                         llvm::StringRef QualifiedName);
+  std::optional<FixItHint> createUsingDeclaration(ASTContext &Context,
+                                                  const Stmt &Statement,
+                                                  StringRef QualifiedName);
 
   // Returns the unqualified version of the name if there is an
   // appropriate using declaration and the qualified name otherwise.
-  llvm::StringRef getShortName(ASTContext &Context, const Stmt &Statement,
-                               llvm::StringRef QualifiedName);
+  StringRef getShortName(ASTContext &Context, const Stmt &Statement,
+                         StringRef QualifiedName);
 
 private:
   using NameInFunction = std::pair<const FunctionDecl *, std::string>;
@@ -43,4 +43,4 @@ private:
 };
 
 } // namespace clang::tidy::utils
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_USINGINSERTER_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_USINGINSERTER_H

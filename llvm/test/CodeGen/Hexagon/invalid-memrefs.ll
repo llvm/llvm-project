@@ -1,4 +1,4 @@
-; RUN: llc -O2 -march=hexagon -hexagon-expand-condsets=0 < %s
+; RUN: llc -O2 -mtriple=hexagon -hexagon-expand-condsets=0 < %s
 ; REQUIRES: asserts
 ; Disable expand-condsets because it will assert on undefined registers.
 

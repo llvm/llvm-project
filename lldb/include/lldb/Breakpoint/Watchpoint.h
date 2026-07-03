@@ -73,7 +73,7 @@ public:
   bool IsHardware() const override;
 
   bool ShouldStop(StoppointCallbackContext *context) override;
-  
+
   bool WatchpointRead() const;
   bool WatchpointWrite() const;
   bool WatchpointModify() const;

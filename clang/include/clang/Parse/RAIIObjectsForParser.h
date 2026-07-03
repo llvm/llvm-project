@@ -14,7 +14,7 @@
 #ifndef LLVM_CLANG_PARSE_RAIIOBJECTSFORPARSER_H
 #define LLVM_CLANG_PARSE_RAIIOBJECTSFORPARSER_H
 
-#include "clang/Parse/ParseDiagnostic.h"
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Sema/DelayedDiagnostic.h"
 #include "clang/Sema/ParsedTemplate.h"
@@ -361,11 +361,11 @@ namespace clang {
   };
 
   class OffsetOfStateRAIIObject {
-    Sema::OffsetOfKind &OffsetOfState;
-    Sema::OffsetOfKind OldValue;
+    OffsetOfKind &OffsetOfState;
+    OffsetOfKind OldValue;
 
   public:
-    OffsetOfStateRAIIObject(Parser &P, Sema::OffsetOfKind Value)
+    OffsetOfStateRAIIObject(Parser &P, OffsetOfKind Value)
         : OffsetOfState(P.OffsetOfState), OldValue(P.OffsetOfState) {
       OffsetOfState = Value;
     }

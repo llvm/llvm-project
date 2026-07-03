@@ -1,10 +1,10 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; We should not generate runtime check for ((int)r1 + (int)r2) as it is known not
 ; to overflow. However (p + q) can, thus checks are needed.
 ;
 ; CHECK:      Invalid Context:
-; CHECK-NEXT:   [r1, r2, q, p] -> { : r2 > r1 and (p <= -2147483649 - q or r2 >= 128 + r1 or p >= 2147483648 - q) }
+; CHECK-NEXT:   [r1, r2, q, p] -> { : r2 > r1 and (r2 >= 128 + r1 or p <= -2147483649 - q or p >= 2147483648 - q) }
 ;
 ;    void wraps(int *A, int p, short q, char r1, char r2) {
 ;      for (char i = r1; i < r2; i++)

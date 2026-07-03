@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-pipeliner -fp-contract=fast < %s
+; RUN: llc -mtriple=hexagon -enable-pipeliner -fp-contract=fast < %s
 ; REQUIRES: asserts
 
 ; Test that the code which reuses existing Phis works when the Phis are used

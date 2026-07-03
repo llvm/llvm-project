@@ -4,7 +4,7 @@
 // Test that we can display tag types.
 // RUN: %clang_cl --target=x86_64-windows-msvc -GS- -Od -Z7 -c /Fo%t.obj -- %s
 // RUN: lld-link -debug:full -nodefaultlib -entry:main %t.obj -out:%t.exe -pdb:%t.pdb
-// RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -s \
+// RUN: %lldb -f %t.exe -s \
 // RUN:     %p/Inputs/tag-types.lldbinit | FileCheck %s
 
 // Test struct
@@ -167,22 +167,16 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: (lldb) type lookup -- Struct
 // CHECK-NEXT: struct Struct {
 // CHECK-NEXT:     bool B;
-// CHECK-NEXT: private:
 // CHECK-NEXT:     char C;
-// CHECK-NEXT: public:
 // CHECK-NEXT:     signed char SC;
-// CHECK-NEXT: protected:
 // CHECK-NEXT:     unsigned char UC;
 // CHECK-NEXT:     char16_t C16;
 // CHECK-NEXT:     char32_t C32;
 // CHECK-NEXT:     wchar_t WC;
 // CHECK-NEXT:     short S;
 // CHECK-NEXT:     unsigned short US;
-// CHECK-NEXT: public:
 // CHECK-NEXT:     int I;
-// CHECK-NEXT: private:
 // CHECK-NEXT:     unsigned int UI;
-// CHECK-NEXT: public:
 // CHECK-NEXT:     long L;
 // CHECK-NEXT:     unsigned long UL;
 // CHECK-NEXT:     long long LL;
@@ -194,17 +188,11 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: (lldb) type lookup -- Class
 // CHECK-NEXT: class Class {
 // CHECK-NEXT:     bool *PB;
-// CHECK-NEXT: public:
 // CHECK-NEXT:     char *PC;
-// CHECK-NEXT: private:
 // CHECK-NEXT:     signed char *PSC;
-// CHECK-NEXT: protected:
 // CHECK-NEXT:     unsigned char *PUC;
-// CHECK-NEXT: private:
 // CHECK-NEXT:     char16_t *PC16;
-// CHECK-NEXT: public:
 // CHECK-NEXT:     char32_t *PC32;
-// CHECK-NEXT: private:
 // CHECK-NEXT:     wchar_t *PWC;
 // CHECK-NEXT:     short *PS;
 // CHECK-NEXT:     unsigned short *PUS;
@@ -241,7 +229,6 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: }
 // CHECK-NEXT: (lldb) type lookup -- Derived
 // CHECK-NEXT: class Derived : public Class {
-// CHECK-NEXT: public:
 // CHECK-NEXT:     Derived();
 // CHECK-NEXT:     Derived &Reference;
 // CHECK-NEXT:     OneMember Member;
@@ -260,7 +247,7 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: class DerivedVirtual1 : virtual public Class {
 // CHECK-NEXT: }
 // CHECK-NEXT: (lldb) type lookup -- DerivedVirtual2
-// CHECK-NEXT: class DerivedVirtual2 : public DerivedVirtual1, virtual public Class, virtual public OneMember {
+// CHECK-NEXT: class DerivedVirtual2 : public DerivedVirtual1, virtual public OneMember {
 // CHECK-NEXT: }
 // CHECK-NEXT: (lldb) type lookup -- EnumInt
 // CHECK-NEXT: enum EnumInt {

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <__utility/is_valid_range.h>
+#include <__memory/valid_range.h>
 #include <cassert>
 
 #include "test_macros.h"

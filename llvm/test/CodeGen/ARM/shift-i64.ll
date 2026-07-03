@@ -52,14 +52,14 @@ define i64 @test_lshr(i64 %val, i64 %amt) {
 define i64 @test_ashr(i64 %val, i64 %amt) {
 ; CHECK-LABEL: test_ashr:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    asr r3, r1, r2
-; CHECK-NEXT:    subs r12, r2, #32
+; CHECK-NEXT:    rsb r3, r2, #32
 ; CHECK-NEXT:    lsr r0, r0, r2
-; CHECK-NEXT:    rsb r2, r2, #32
-; CHECK-NEXT:    asrpl r3, r1, #31
-; CHECK-NEXT:    orr r0, r0, r1, lsl r2
-; CHECK-NEXT:    asrpl r0, r1, r12
-; CHECK-NEXT:    mov r1, r3
+; CHECK-NEXT:    orr r0, r0, r1, lsl r3
+; CHECK-NEXT:    subs r3, r2, #32
+; CHECK-NEXT:    asr r2, r1, r2
+; CHECK-NEXT:    asrpl r2, r1, #31
+; CHECK-NEXT:    asrpl r0, r1, r3
+; CHECK-NEXT:    mov r1, r2
 ; CHECK-NEXT:    mov pc, lr
 ;
 ; EXPAND-LABEL: test_ashr:

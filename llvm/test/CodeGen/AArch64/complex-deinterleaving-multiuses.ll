@@ -46,8 +46,8 @@ entry:
 define <4 x float> @mul_triangle_external_use(<4 x float> %a, <4 x float> %b, ptr %p) {
 ; CHECK-LABEL: mul_triangle_external_use:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
+; CHECK-NEXT:    mov d2, v0.d[1]
+; CHECK-NEXT:    mov d3, v1.d[1]
 ; CHECK-NEXT:    zip2 v4.2s, v0.2s, v2.2s
 ; CHECK-NEXT:    zip1 v5.2s, v1.2s, v3.2s
 ; CHECK-NEXT:    zip1 v0.2s, v0.2s, v2.2s
@@ -94,9 +94,9 @@ entry:
 define <4 x float> @multiple_muls_shuffle_external(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x float> %d, ptr %p1, ptr %p2) {
 ; CHECK-LABEL: multiple_muls_shuffle_external:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v5.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v6.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    ext v4.16b, v2.16b, v2.16b, #8
+; CHECK-NEXT:    mov d5, v0.d[1]
+; CHECK-NEXT:    mov d6, v1.d[1]
+; CHECK-NEXT:    mov d4, v2.d[1]
 ; CHECK-NEXT:    zip2 v7.2s, v0.2s, v5.2s
 ; CHECK-NEXT:    zip1 v16.2s, v1.2s, v6.2s
 ; CHECK-NEXT:    zip2 v1.2s, v1.2s, v6.2s
@@ -168,7 +168,7 @@ define <4 x float> @multiple_muls_shuffle_external_with_loads(ptr %ptr_a, ptr %p
 ; CHECK-NEXT:    fmla v4.2s, v0.2s, v2.2s
 ; CHECK-NEXT:    str d4, [x4]
 ; CHECK-NEXT:    ldr q5, [x2]
-; CHECK-NEXT:    ext v7.16b, v5.16b, v5.16b, #8
+; CHECK-NEXT:    mov d7, v5.d[1]
 ; CHECK-NEXT:    zip1 v0.2s, v5.2s, v7.2s
 ; CHECK-NEXT:    zip2 v1.2s, v5.2s, v7.2s
 ; CHECK-NEXT:    fmul v3.2s, v0.2s, v6.2s
@@ -227,10 +227,10 @@ entry:
 define <4 x float> @multiple_muls_mul_external(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x float> %d, ptr %p1, ptr %p2) {
 ; CHECK-LABEL: multiple_muls_mul_external:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v4.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v5.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    ext v16.16b, v2.16b, v2.16b, #8
-; CHECK-NEXT:    ext v17.16b, v3.16b, v3.16b, #8
+; CHECK-NEXT:    mov d4, v0.d[1]
+; CHECK-NEXT:    mov d5, v1.d[1]
+; CHECK-NEXT:    mov d16, v2.d[1]
+; CHECK-NEXT:    mov d17, v3.d[1]
 ; CHECK-NEXT:    zip2 v6.2s, v0.2s, v4.2s
 ; CHECK-NEXT:    zip2 v7.2s, v1.2s, v5.2s
 ; CHECK-NEXT:    zip1 v19.2s, v2.2s, v16.2s

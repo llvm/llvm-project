@@ -60,16 +60,16 @@ public:
   // \param Size is the size in bytes of the entry
   //
   // \returns a MCExpr that references the newly inserted value
-  const MCExpr *addEntry(const MCExpr *Value, MCContext &Context,
-                         unsigned Size, SMLoc Loc);
+  LLVM_ABI const MCExpr *addEntry(const MCExpr *Value, MCContext &Context,
+                                  unsigned Size, SMLoc Loc);
 
   // Emit the contents of the constant pool using the provided streamer.
-  void emitEntries(MCStreamer &Streamer);
+  LLVM_ABI void emitEntries(MCStreamer &Streamer);
 
   // Return true if the constant pool is empty
-  bool empty();
+  LLVM_ABI bool empty();
 
-  void clearCache();
+  LLVM_ABI void clearCache();
 };
 
 class AssemblerConstantPools {
@@ -91,11 +91,11 @@ class AssemblerConstantPools {
   ConstantPoolMapTy ConstantPools;
 
 public:
-  void emitAll(MCStreamer &Streamer);
-  void emitForCurrentSection(MCStreamer &Streamer);
-  void clearCacheForCurrentSection(MCStreamer &Streamer);
-  const MCExpr *addEntry(MCStreamer &Streamer, const MCExpr *Expr,
-                         unsigned Size, SMLoc Loc);
+  LLVM_ABI void emitAll(MCStreamer &Streamer);
+  LLVM_ABI void emitForCurrentSection(MCStreamer &Streamer);
+  LLVM_ABI void clearCacheForCurrentSection(MCStreamer &Streamer);
+  LLVM_ABI const MCExpr *addEntry(MCStreamer &Streamer, const MCExpr *Expr,
+                                  unsigned Size, SMLoc Loc);
 
 private:
   ConstantPool *getConstantPool(MCSection *Section);

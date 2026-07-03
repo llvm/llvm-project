@@ -65,9 +65,11 @@ SBThreadPlan::SBThreadPlan(lldb::SBThread &sb_thread, const char *class_name) {
   LLDB_INSTRUMENT_VA(this, sb_thread, class_name);
 
   Thread *thread = sb_thread.get();
-  if (thread)
-    m_opaque_wp = std::make_shared<ScriptedThreadPlan>(*thread, class_name,
-                                                       StructuredDataImpl());
+  if (thread) {
+    ScriptedMetadata scripted_metadata(class_name, {});
+    m_opaque_wp =
+        std::make_shared<ScriptedThreadPlan>(*thread, scripted_metadata);
+  }
 }
 
 SBThreadPlan::SBThreadPlan(lldb::SBThread &sb_thread, const char *class_name,
@@ -75,9 +77,16 @@ SBThreadPlan::SBThreadPlan(lldb::SBThread &sb_thread, const char *class_name,
   LLDB_INSTRUMENT_VA(this, sb_thread, class_name, args_data);
 
   Thread *thread = sb_thread.get();
-  if (thread)
-    m_opaque_wp = std::make_shared<ScriptedThreadPlan>(*thread, class_name,
-                                                       *args_data.m_impl_up);
+  if (thread) {
+    StructuredData::ObjectSP args_obj = args_data.m_impl_up->GetObjectSP();
+    StructuredData::DictionarySP args_dict_sp;
+    if (args_obj && args_obj->GetType() == lldb::eStructuredDataTypeDictionary)
+      args_dict_sp =
+          std::static_pointer_cast<StructuredData::Dictionary>(args_obj);
+    ScriptedMetadata scripted_metadata(class_name, args_dict_sp);
+    m_opaque_wp =
+        std::make_shared<ScriptedThreadPlan>(*thread, scripted_metadata);
+  }
 }
 
 // Assignment operator
@@ -326,6 +335,29 @@ SBThreadPlan::QueueThreadPlanForStepOut(uint32_t frame_idx_to_step_to,
 }
 
 SBThreadPlan
+SBThreadPlan::QueueThreadPlanForStepSingleInstruction(bool step_over,
+                                                      SBError &error) {
+  LLDB_INSTRUMENT_VA(this, step_over, error);
+
+  ThreadPlanSP thread_plan_sp(GetSP());
+  if (thread_plan_sp) {
+    Status plan_status;
+    SBThreadPlan plan(
+        thread_plan_sp->GetThread().QueueThreadPlanForStepSingleInstruction(
+            step_over, false, false, plan_status));
+
+    if (plan_status.Fail())
+      error.SetErrorString(plan_status.AsCString());
+    else
+      plan.GetSP()->SetPrivate(true);
+
+    return plan;
+  }
+
+  return SBThreadPlan();
+}
+
+SBThreadPlan
 SBThreadPlan::QueueThreadPlanForRunToAddress(SBAddress sb_address) {
   LLDB_INSTRUMENT_VA(this, sb_address);
 
@@ -374,10 +406,10 @@ SBThreadPlan::QueueThreadPlanForStepScripted(const char *script_class_name,
   ThreadPlanSP thread_plan_sp(GetSP());
   if (thread_plan_sp) {
     Status plan_status;
-    StructuredData::ObjectSP empty_args;
+    ScriptedMetadata scripted_metadata(script_class_name, {});
     SBThreadPlan plan =
         SBThreadPlan(thread_plan_sp->GetThread().QueueThreadPlanForStepScripted(
-            false, script_class_name, empty_args, false, plan_status));
+            false, scripted_metadata, false, plan_status));
 
     if (plan_status.Fail())
       error.SetErrorString(plan_status.AsCString());
@@ -399,9 +431,14 @@ SBThreadPlan::QueueThreadPlanForStepScripted(const char *script_class_name,
   if (thread_plan_sp) {
     Status plan_status;
     StructuredData::ObjectSP args_obj = args_data.m_impl_up->GetObjectSP();
+    StructuredData::DictionarySP args_dict_sp;
+    if (args_obj && args_obj->GetType() == lldb::eStructuredDataTypeDictionary)
+      args_dict_sp =
+          std::static_pointer_cast<StructuredData::Dictionary>(args_obj);
+    ScriptedMetadata scripted_metadata(script_class_name, args_dict_sp);
     SBThreadPlan plan =
         SBThreadPlan(thread_plan_sp->GetThread().QueueThreadPlanForStepScripted(
-            false, script_class_name, args_obj, false, plan_status));
+            false, scripted_metadata, false, plan_status));
 
     if (plan_status.Fail())
       error.SetErrorString(plan_status.AsCString());

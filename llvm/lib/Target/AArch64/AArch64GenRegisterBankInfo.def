@@ -155,12 +155,7 @@ bool AArch64GenRegisterBankInfo::checkPartialMappingIdx(
     return false;
 
   PartialMappingIdx Previous = Order.front();
-  bool First = true;
-  for (const auto &Current : Order) {
-    if (First) {
-      First = false;
-      continue;
-    }
+  for (const auto &Current : Order.drop_front()) {
     if (Previous + 1 != Current)
       return false;
     Previous = Current;
@@ -183,6 +178,8 @@ unsigned AArch64GenRegisterBankInfo::getRegBankBaseIdxOffset(unsigned RBIdx,
     const unsigned MinSize = Size.getKnownMinValue();
     assert((!Size.isScalable() || MinSize >= 128) &&
            "Scalable vector types should have size of at least 128 bits");
+    if (Size.isScalable())
+      return 3;
     if (MinSize <= 16)
       return 0;
     if (MinSize <= 32)

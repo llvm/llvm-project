@@ -20,7 +20,7 @@ define i64 @test_sext_zext(i16 %A) {
 
 define <2 x i64> @test2(<2 x i1> %A) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i1> [[A:%.*]], splat (i1 true)
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i1> [[XOR]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[ZEXT]]
 ;
@@ -67,7 +67,7 @@ define i64 @fold_xor_zext_sandwich(i1 %a) {
 
 define <2 x i64> @fold_xor_zext_sandwich_vec(<2 x i1> %a) {
 ; CHECK-LABEL: @fold_xor_zext_sandwich_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[A:%.*]], splat (i1 true)
 ; CHECK-NEXT:    [[ZEXT2:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[ZEXT2]]
 ;
@@ -194,9 +194,9 @@ define i32 @masked_bit_set(i32 %x, i32 %y) {
 
 define <2 x i32> @masked_bit_clear(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @masked_bit_clear(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[X:%.*]], splat (i32 -1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i32> [[TMP1]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[TMP2]], <i32 1, i32 1>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[TMP2]], splat (i32 1)
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %sh1 = shl <2 x i32> <i32 1, i32 1>, %y
@@ -210,7 +210,7 @@ define <2 x i32> @masked_bit_set_commute(<2 x i32> %px, <2 x i32> %y) {
 ; CHECK-LABEL: @masked_bit_set_commute(
 ; CHECK-NEXT:    [[X:%.*]] = srem <2 x i32> <i32 42, i32 3>, [[PX:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[TMP1]], <i32 1, i32 1>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[TMP1]], splat (i32 1)
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %x = srem <2 x i32> <i32 42, i32 3>, %px ; thwart complexity-based canonicalization
@@ -471,10 +471,10 @@ define i16 @zext_masked_bit_zero_to_smaller_bitwidth(i32 %a, i32 %b) {
 
 define <4 x i16> @zext_masked_bit_zero_to_smaller_bitwidth_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @zext_masked_bit_zero_to_smaller_bitwidth_v4i32(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i32> [[A:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i32> [[A:%.*]], splat (i32 -1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr <4 x i32> [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc <4 x i32> [[TMP2]] to <4 x i16>
-; CHECK-NEXT:    [[Z:%.*]] = and <4 x i16> [[TMP3]], <i16 1, i16 1, i16 1, i16 1>
+; CHECK-NEXT:    [[Z:%.*]] = and <4 x i16> [[TMP3]], splat (i16 1)
 ; CHECK-NEXT:    ret <4 x i16> [[Z]]
 ;
   %shl = shl <4 x i32> <i32 1, i32 1, i32 1, i32 1>, %b
@@ -550,9 +550,9 @@ define i64 @zext_masked_bit_zero_to_larger_bitwidth(i32 %a, i32 %b) {
 
 define <4 x i64> @zext_masked_bit_zero_to_larger_bitwidth_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @zext_masked_bit_zero_to_larger_bitwidth_v4i32(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i32> [[A:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i32> [[A:%.*]], splat (i32 -1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr <4 x i32> [[TMP1]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and <4 x i32> [[TMP2]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = and <4 x i32> [[TMP2]], splat (i32 1)
 ; CHECK-NEXT:    [[Z:%.*]] = zext nneg <4 x i32> [[TMP3]] to <4 x i64>
 ; CHECK-NEXT:    ret <4 x i64> [[Z]]
 ;
@@ -576,7 +576,7 @@ define i32 @notneg_zext_wider(i8 %x) {
 
 define <2 x i8> @notneg_zext_narrower(<2 x i32> %x) {
 ; CHECK-LABEL: @notneg_zext_narrower(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[X:%.*]], splat (i32 -1)
 ; CHECK-NEXT:    [[R:%.*]] = zext <2 x i1> [[CMP]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
@@ -975,4 +975,108 @@ define i32 @zext_nneg_i2(i2 %x) {
 entry:
   %res = zext nneg i2 %x to i32
   ret i32 %res
+}
+
+define i8 @zext_or_trunc_nuw(i8 %x, i4 %y) {
+; CHECK-LABEL: @zext_or_trunc_nuw(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i4 [[OR:%.*]] to i8
+; CHECK-NEXT:    [[ZEXT1:%.*]] = or i8 [[X:%.*]], [[ZEXT]]
+; CHECK-NEXT:    ret i8 [[ZEXT1]]
+;
+  %trunc = trunc nuw i8 %x to i4
+  %or = or i4 %y, %trunc
+  %zext = zext i4 %or to i8
+  ret i8 %zext
+}
+
+define i8 @zext_xor_trunc_nuw(i8 %x, i4 %y) {
+; CHECK-LABEL: @zext_xor_trunc_nuw(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i4 [[XOR:%.*]] to i8
+; CHECK-NEXT:    [[ZEXT1:%.*]] = xor i8 [[X:%.*]], [[ZEXT]]
+; CHECK-NEXT:    ret i8 [[ZEXT1]]
+;
+  %trunc = trunc nuw i8 %x to i4
+  %xor = xor i4 %y, %trunc
+  %zext = zext i4 %xor to i8
+  ret i8 %zext
+}
+
+define i8 @zext_and_trunc_nuw(i8 %x, i4 %y) {
+; CHECK-LABEL: @zext_and_trunc_nuw(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i4 [[AND:%.*]] to i8
+; CHECK-NEXT:    [[ZEXT1:%.*]] = and i8 [[X:%.*]], [[ZEXT]]
+; CHECK-NEXT:    ret i8 [[ZEXT1]]
+;
+  %trunc = trunc nuw i8 %x to i4
+  %and = and i4 %y, %trunc
+  %zext = zext i4 %and to i8
+  ret i8 %zext
+}
+
+define i8 @zext_or_trunc_nuw_multi_use(i8 %x, i1 %y) {
+; CHECK-LABEL: @zext_or_trunc_nuw_multi_use(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    call void @use1(i1 [[TRUNC]])
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[OR:%.*]] to i8
+; CHECK-NEXT:    [[ZEXT1:%.*]] = or i8 [[X]], [[ZEXT]]
+; CHECK-NEXT:    ret i8 [[ZEXT1]]
+;
+  %trunc = trunc nuw i8 %x to i1
+  call void @use1(i1 %trunc)
+  %or = or i1 %y, %trunc
+  %zext = zext i1 %or to i8
+  ret i8 %zext
+}
+
+define i8 @neg_zext_or_trunc_nuw_multi_use(i8 %x, i1 %y) {
+; CHECK-LABEL: @neg_zext_or_trunc_nuw_multi_use(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[Y:%.*]], [[TRUNC]]
+; CHECK-NEXT:    call void @use1(i1 [[OR]])
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[OR]] to i8
+; CHECK-NEXT:    ret i8 [[ZEXT]]
+;
+  %trunc = trunc nuw i8 %x to i1
+  %or = or i1 %y, %trunc
+  call void @use1(i1 %or)
+  %zext = zext i1 %or to i8
+  ret i8 %zext
+}
+
+define i8 @neg_zext_or_trunc_nsw(i8 %x, i4 %y) {
+; CHECK-LABEL: @neg_zext_or_trunc_nsw(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nsw i8 [[X:%.*]] to i4
+; CHECK-NEXT:    [[OR:%.*]] = or i4 [[Y:%.*]], [[TRUNC]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i4 [[OR]] to i8
+; CHECK-NEXT:    ret i8 [[ZEXT]]
+;
+  %trunc = trunc nsw i8 %x to i4
+  %or = or i4 %y, %trunc
+  %zext = zext i4 %or to i8
+  ret i8 %zext
+}
+
+define i32 @neg_zext_or_trunc_nuw_type(i8 %x, i4 %y) {
+; CHECK-LABEL: @neg_zext_or_trunc_nuw_type(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nsw i8 [[X:%.*]] to i4
+; CHECK-NEXT:    [[OR:%.*]] = or i4 [[Y:%.*]], [[TRUNC]]
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i4 [[OR]] to i32
+; CHECK-NEXT:    ret i32 [[ZEXT]]
+;
+  %trunc = trunc nsw i8 %x to i4
+  %or = or i4 %y, %trunc
+  %zext = zext i4 %or to i32
+  ret i32 %zext
+}
+
+define <2 x i8> @zext_or_trunc_nuw_vec(<2 x i8> %x, <2 x i4> %y) {
+; CHECK-LABEL: @zext_or_trunc_nuw_vec(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i4> [[OR:%.*]] to <2 x i8>
+; CHECK-NEXT:    [[ZEXT1:%.*]] = or <2 x i8> [[X:%.*]], [[ZEXT]]
+; CHECK-NEXT:    ret <2 x i8> [[ZEXT1]]
+;
+  %trunc = trunc nuw <2 x i8> %x to <2 x i4>
+  %or = or <2 x i4> %y, %trunc
+  %zext = zext <2 x i4> %or to <2 x i8>
+  ret <2 x i8> %zext
 }

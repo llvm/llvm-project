@@ -8,6 +8,7 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include "llvm/ADT/StringExtras.h"
 
 using namespace clang;
 using namespace clang::CodeGen;

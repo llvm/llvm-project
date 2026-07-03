@@ -387,14 +387,10 @@ define void @reorder_alt_rightsubTree(ptr nocapture %c, ptr noalias nocapture re
 
 define void @vec_shuff_reorder() #0 {
 ; CHECK-LABEL: @vec_shuff_reorder(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr @fa, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr @fb, align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr getelementptr inbounds ([4 x float], ptr @fb, i32 0, i64 2), align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, ptr getelementptr inbounds ([4 x float], ptr @fa, i32 0, i64 2), align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> poison, <2 x float> [[TMP1]], i64 0)
-; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> [[TMP5]], <2 x float> [[TMP3]], i64 2)
-; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> poison, <2 x float> [[TMP2]], i64 0)
-; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> [[TMP7]], <2 x float> [[TMP4]], i64 2)
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr @fb, align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr @fa, align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> [[TMP1]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP9:%.*]] = fadd <4 x float> [[TMP6]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = fsub <4 x float> [[TMP6]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x float> [[TMP9]], <4 x float> [[TMP10]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>

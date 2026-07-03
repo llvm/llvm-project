@@ -1,4 +1,4 @@
-; RUN: llc -O2 -march=hexagon < %s | FileCheck %s
+; RUN: llc -O2 -mtriple=hexagon < %s | FileCheck %s
 
 ; Hexagon's vsplatb/vsplath only consider the lower 8/16 bits of the source
 ; register.  Any extension of the source is not necessary.

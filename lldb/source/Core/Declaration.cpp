@@ -37,7 +37,7 @@ bool Declaration::DumpStopContext(Stream *s, bool show_fullpaths) const {
     if (show_fullpaths)
       *s << m_file;
     else
-      m_file.GetFilename().Dump(s);
+      s->PutCString(m_file.GetFilename());
 
     if (m_line > 0)
       s->Printf(":%u", m_line);
@@ -52,8 +52,6 @@ bool Declaration::DumpStopContext(Stream *s, bool show_fullpaths) const {
   }
   return false;
 }
-
-size_t Declaration::MemorySize() const { return sizeof(Declaration); }
 
 int Declaration::Compare(const Declaration &a, const Declaration &b) {
   int result = FileSpec::Compare(a.m_file, b.m_file, true);
@@ -70,8 +68,9 @@ int Declaration::Compare(const Declaration &a, const Declaration &b) {
   return 0;
 }
 
-bool Declaration::FileAndLineEqual(const Declaration &declaration) const {
-  int file_compare = FileSpec::Compare(this->m_file, declaration.m_file, true);
+bool Declaration::FileAndLineEqual(const Declaration &declaration,
+                                   bool full) const {
+  int file_compare = FileSpec::Compare(this->m_file, declaration.m_file, full);
   return file_compare == 0 && this->m_line == declaration.m_line;
 }
 

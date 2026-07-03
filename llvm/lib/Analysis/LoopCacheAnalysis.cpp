@@ -224,7 +224,7 @@ IndexedReference::hasTemporalReuse(const IndexedReference &Other,
   }
 
   std::unique_ptr<Dependence> D =
-      DI.depends(&StoreOrLoadInst, &Other.StoreOrLoadInst, true);
+      DI.depends(&StoreOrLoadInst, &Other.StoreOrLoadInst);
 
   if (D == nullptr) {
     LLVM_DEBUG(dbgs().indent(2) << "No temporal reuse: no dependence\n");
@@ -328,6 +328,8 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
       const SCEV *TripCount =
           computeTripCount(*AR->getLoop(), *Sizes.back(), SE);
       Type *WiderType = SE.getWiderType(RefCost->getType(), TripCount->getType());
+      // For the multiplication result to fit, request a type twice as wide.
+      WiderType = WiderType->getExtendedType();
       RefCost = SE.getMulExpr(SE.getNoopOrZeroExtend(RefCost, WiderType),
                               SE.getNoopOrZeroExtend(TripCount, WiderType));
     }
@@ -338,34 +340,18 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
   assert(RefCost && "Expecting a valid RefCost");
 
   // Attempt to fold RefCost into a constant.
+  // CacheCostTy is a signed integer, but the tripcount value can be large
+  // and may not fit, so saturate/limit the value to the maximum signed
+  // integer value.
   if (auto ConstantCost = dyn_cast<SCEVConstant>(RefCost))
-    return ConstantCost->getValue()->getZExtValue();
+    return ConstantCost->getValue()->getLimitedValue(
+        std::numeric_limits<int64_t>::max());
 
   LLVM_DEBUG(dbgs().indent(4)
              << "RefCost is not a constant! Setting to RefCost=InvalidCost "
                 "(invalid value).\n");
 
-  return CacheCost::InvalidCost;
-}
-
-bool IndexedReference::tryDelinearizeFixedSize(
-    const SCEV *AccessFn, SmallVectorImpl<const SCEV *> &Subscripts) {
-  SmallVector<int, 4> ArraySizes;
-  if (!tryDelinearizeFixedSizeImpl(&SE, &StoreOrLoadInst, AccessFn, Subscripts,
-                                   ArraySizes))
-    return false;
-
-  // Populate Sizes with scev expressions to be used in calculations later.
-  for (auto Idx : seq<unsigned>(1, Subscripts.size()))
-    Sizes.push_back(
-        SE.getConstant(Subscripts[Idx]->getType(), ArraySizes[Idx - 1]));
-
-  LLVM_DEBUG({
-    dbgs() << "Delinearized subscripts of fixed-size array\n"
-           << "GEP:" << *getLoadStorePointerOperand(&StoreOrLoadInst)
-           << "\n";
-  });
-  return true;
+  return CacheCostTy::getInvalid();
 }
 
 bool IndexedReference::delinearize(const LoopInfo &LI) {
@@ -390,21 +376,20 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
     }
 
     bool IsFixedSize = false;
+    AccessFn = SE.getMinusSCEV(AccessFn, BasePointer);
+
     // Try to delinearize fixed-size arrays.
-    if (tryDelinearizeFixedSize(AccessFn, Subscripts)) {
+    if (delinearizeFixedSizeArray(SE, AccessFn, Subscripts, Sizes, ElemSize)) {
       IsFixedSize = true;
-      // The last element of Sizes is the element size.
-      Sizes.push_back(ElemSize);
       LLVM_DEBUG(dbgs().indent(2) << "In Loop '" << L->getName()
                                   << "', AccessFn: " << *AccessFn << "\n");
     }
-
-    AccessFn = SE.getMinusSCEV(AccessFn, BasePointer);
 
     // Try to delinearize parametric-size arrays.
     if (!IsFixedSize) {
       LLVM_DEBUG(dbgs().indent(2) << "In Loop '" << L->getName()
                                   << "', AccessFn: " << *AccessFn << "\n");
+      Sizes.clear();
       llvm::delinearize(SE, AccessFn, Subscripts, Sizes,
                         SE.getElementSize(&StoreOrLoadInst));
     }
@@ -430,10 +415,9 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
       const SCEV *StepRec = AccessFnAR ? AccessFnAR->getStepRecurrence(SE) : nullptr;
 
       if (StepRec && SE.isKnownNegative(StepRec))
-        AccessFn = SE.getAddRecExpr(AccessFnAR->getStart(),
-                                    SE.getNegativeSCEV(StepRec),
-                                    AccessFnAR->getLoop(),
-                                    AccessFnAR->getNoWrapFlags());
+        AccessFn = SE.getAddRecExpr(
+            AccessFnAR->getStart(), SE.getNegativeSCEV(StepRec),
+            AccessFnAR->getLoop(), SCEV::NoWrapFlags::FlagAnyWrap);
       const SCEV *Div = SE.getUDivExactExpr(AccessFn, ElemSize);
       Subscripts.push_back(Div);
       Sizes.push_back(ElemSize);
@@ -576,9 +560,10 @@ CacheCost::CacheCost(const LoopVectorTy &Loops, const LoopInfo &LI,
   calculateCacheFootprint();
 }
 
-std::unique_ptr<CacheCost>
-CacheCost::getCacheCost(Loop &Root, LoopStandardAnalysisResults &AR,
-                        DependenceInfo &DI, std::optional<unsigned> TRT) {
+static std::unique_ptr<CacheCost>
+getCacheCostImpl(Loop &Root, LoopInfo &LI, ScalarEvolution &SE,
+                 TargetTransformInfo &TTI, AAResults &AA, DependenceInfo &DI,
+                 std::optional<unsigned> TRT) {
   if (!Root.isOutermost()) {
     LLVM_DEBUG(dbgs() << "Expecting the outermost loop in a loop nest\n");
     return nullptr;
@@ -593,7 +578,13 @@ CacheCost::getCacheCost(Loop &Root, LoopStandardAnalysisResults &AR,
     return nullptr;
   }
 
-  return std::make_unique<CacheCost>(Loops, AR.LI, AR.SE, AR.TTI, AR.AA, DI, TRT);
+  return std::make_unique<CacheCost>(Loops, LI, SE, TTI, AA, DI, TRT);
+}
+
+std::unique_ptr<CacheCost>
+CacheCost::getCacheCost(Loop &Root, LoopStandardAnalysisResults &AR,
+                        DependenceInfo &DI, std::optional<unsigned> TRT) {
+  return getCacheCostImpl(Root, AR.LI, AR.SE, AR.TTI, AR.AA, DI, TRT);
 }
 
 void CacheCost::calculateCacheFootprint() {
@@ -695,9 +686,6 @@ bool CacheCost::populateReferenceGroups(ReferenceGroupsTy &RefGroups) const {
 CacheCostTy
 CacheCost::computeLoopCacheCost(const Loop &L,
                                 const ReferenceGroupsTy &RefGroups) const {
-  if (!L.isLoopSimplifyForm())
-    return InvalidCost;
-
   LLVM_DEBUG(dbgs() << "Considering loop '" << L.getName()
                     << "' as innermost loop.\n");
 
@@ -732,14 +720,20 @@ CacheCostTy CacheCost::computeRefGroupCacheCost(const ReferenceGroupTy &RG,
 //===----------------------------------------------------------------------===//
 // LoopCachePrinterPass implementation
 //
-PreservedAnalyses LoopCachePrinterPass::run(Loop &L, LoopAnalysisManager &AM,
-                                            LoopStandardAnalysisResults &AR,
-                                            LPMUpdater &U) {
-  Function *F = L.getHeader()->getParent();
-  DependenceInfo DI(F, &AR.AA, &AR.SE, &AR.LI);
+PreservedAnalyses LoopCachePrinterPass::run(Function &F,
+                                            FunctionAnalysisManager &FAM) {
+  OS << "Printing analysis 'Loop Cache Analysis' for function '" << F.getName()
+     << "':\n";
 
-  if (auto CC = CacheCost::getCacheCost(L, AR, DI))
-    OS << *CC;
+  auto &LI = FAM.getResult<LoopAnalysis>(F);
+  auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(F);
+  auto &TTI = FAM.getResult<TargetIRAnalysis>(F);
+  auto &AA = FAM.getResult<AAManager>(F);
+  auto &DI = FAM.getResult<DependenceAnalysis>(F);
+  for (Loop *L : LI.getTopLevelLoops())
+    if (std::unique_ptr<CacheCost> CC =
+            getCacheCostImpl(*L, LI, SE, TTI, AA, DI, /*TRT=*/std::nullopt))
+      OS << *CC;
 
   return PreservedAnalyses::all();
 }

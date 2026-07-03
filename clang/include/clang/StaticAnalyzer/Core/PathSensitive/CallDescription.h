@@ -35,7 +35,7 @@ public:
     /// Match calls to functions from the C standard library. This also
     /// recognizes builtin variants whose name is derived by adding
     /// "__builtin", "__inline" or similar prefixes or suffixes; but only
-    /// matches functions than are externally visible and are declared either
+    /// matches functions that are externally visible and are declared either
     /// directly within a TU or in the namespace 'std'.
     /// For the exact heuristics, see CheckerContext::isCLibraryFunction().
     CLibrary,
@@ -152,7 +152,7 @@ public:
   /// exists only when that is not available, for example, when _only_
   /// syntactic check is done on a piece of code.
   ///
-  /// Also, StdLibraryFunctionsChecker::Signature is likely a better candicade
+  /// Also, StdLibraryFunctionsChecker::Signature is likely a better candidate
   /// for syntactic only matching if you are writing a new checker. This is
   /// handy if a CallDescriptionMap is already there.
   ///
@@ -233,7 +233,7 @@ public:
   /// exists only when that is not available, for example, when _only_
   /// syntactic check is done on a piece of code.
   ///
-  /// Also, StdLibraryFunctionsChecker::Signature is likely a better candicade
+  /// Also, StdLibraryFunctionsChecker::Signature is likely a better candidate
   /// for syntactic only matching if you are writing a new checker. This is
   /// handy if a CallDescriptionMap is already there.
   ///
@@ -274,7 +274,7 @@ public:
   /// exists only when that is not available, for example, when _only_
   /// syntactic check is done on a piece of code.
   ///
-  /// Also, StdLibraryFunctionsChecker::Signature is likely a better candicade
+  /// Also, StdLibraryFunctionsChecker::Signature is likely a better candidate
   /// for syntactic only matching if you are writing a new checker. This is
   /// handy if a CallDescriptionMap is already there.
   ///

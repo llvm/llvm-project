@@ -15,15 +15,15 @@
 
 #include "XCoreSubtarget.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Target/TargetMachine.h"
 #include <memory>
 #include <optional>
 
 namespace llvm {
 class StringRef;
 
-class XCoreTargetMachine : public LLVMTargetMachine {
+class XCoreTargetMachine : public CodeGenTargetMachineImpl {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   XCoreSubtarget Subtarget;
 

@@ -17,9 +17,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class, class, class>
 struct _LIBCPP_HIDE_FROM_ABI __compare_three_way_result {};
@@ -29,17 +29,18 @@ struct _LIBCPP_HIDE_FROM_ABI __compare_three_way_result<
     _Tp,
     _Up,
     decltype(std::declval<__make_const_lvalue_ref<_Tp>>() <=> std::declval<__make_const_lvalue_ref<_Up>>(), void())> {
-  using type = decltype(std::declval<__make_const_lvalue_ref<_Tp>>() <=> std::declval<__make_const_lvalue_ref<_Up>>());
+  using type _LIBCPP_NODEBUG =
+      decltype(std::declval<__make_const_lvalue_ref<_Tp>>() <=> std::declval<__make_const_lvalue_ref<_Up>>());
 };
 
 template <class _Tp, class _Up = _Tp>
-struct _LIBCPP_TEMPLATE_VIS compare_three_way_result : __compare_three_way_result<_Tp, _Up, void> {};
+struct _LIBCPP_NO_SPECIALIZATIONS compare_three_way_result : __compare_three_way_result<_Tp, _Up, void> {};
 
 template <class _Tp, class _Up = _Tp>
 using compare_three_way_result_t = typename compare_three_way_result<_Tp, _Up>::type;
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___COMPARE_COMPARE_THREE_WAY_RESULT_H

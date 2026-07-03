@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=mipsel-sde-elf -march=mipsel -relocation-model=static -mattr=+noabicalls -mgpopt < %s \
+; RUN: llc -mtriple=mipsel-sde-elf -relocation-model=static -mattr=+noabicalls -mgpopt < %s \
 ; RUN: | FileCheck %s
 
 @i = internal unnamed_addr global i32 0, align 4

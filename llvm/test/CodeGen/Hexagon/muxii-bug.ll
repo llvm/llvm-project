@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Make sure "generate mux" pass does not optimize out the value "1908".
 ; CHECK-LABEL: foo

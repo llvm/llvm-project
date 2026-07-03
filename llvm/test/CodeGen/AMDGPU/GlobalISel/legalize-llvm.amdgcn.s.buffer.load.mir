@@ -2,6 +2,7 @@
 # RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -run-pass=legalizer %s -o - | FileCheck -check-prefixes=GCN,GFX67 %s
 # RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii -run-pass=legalizer %s -o - | FileCheck -check-prefixes=GCN,GFX67 %s
 # RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 -run-pass=legalizer %s -o - | FileCheck -check-prefixes=GCN,GFX12 %s
+# RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1250 -run-pass=legalizer %s -o - | FileCheck -check-prefixes=GCN,GFX12 %s
 
 ---
 name: s_buffer_load_s32

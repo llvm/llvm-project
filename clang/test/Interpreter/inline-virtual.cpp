@@ -1,5 +1,7 @@
 // REQUIRES: host-supports-jit
-// UNSUPPORTED: system-aix
+//
+// This test is flaky with ASan: https://github.com/llvm/llvm-project/issues/135401
+// UNSUPPORTED: asan
 //
 // We disable RTTI to avoid problems on Windows for non-RTTI builds of LLVM
 // where the JIT cannot find ??_7type_info@@6B@.

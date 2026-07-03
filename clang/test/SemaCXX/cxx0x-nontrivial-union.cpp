@@ -51,7 +51,7 @@ namespace disabled_dtor {
   union disable_dtor {
     T val;
     template<typename...U>
-    disable_dtor(U &&...u) : val(forward<U>(u)...) {}
+    disable_dtor(U &&...u) : val(forward<U>(u)...) {} // expected-error {{attempt to use a deleted function}}
     ~disable_dtor() {}
   };
 
@@ -59,10 +59,10 @@ namespace disabled_dtor {
     deleted_dtor(int n, char c) : n(n), c(c) {}
     int n;
     char c;
-    ~deleted_dtor() = delete;
+    ~deleted_dtor() = delete; // expected-note {{'~deleted_dtor' has been explicitly marked deleted here}}
   };
 
-  disable_dtor<deleted_dtor> dd(4, 'x');
+  disable_dtor<deleted_dtor> dd(4, 'x');  // expected-note {{in instantiation of function template specialization 'disabled_dtor::disable_dtor<disabled_dtor::deleted_dtor>::disable_dtor<int, char>' requested here}}
 }
 
 namespace optional {
@@ -136,7 +136,7 @@ namespace pr16061 {
 
   template<typename T> struct Test2 {
     union {
-      struct {  // expected-note-re {{default constructor of 'Test2<pr16061::X>' is implicitly deleted because variant field 'struct (anonymous struct at{{.+}})' has a non-trivial default constructor}}
+      struct {  // expected-note-re {{default constructor of 'Test2<pr16061::X>' is implicitly deleted because variant field 'struct (anonymous at{{.+}})' has a non-trivial default constructor}}
         T x;
       };
     };
@@ -188,3 +188,14 @@ static_assert(U2().b.x == 100, "");
 static_assert(U3().b.x == 100, "");
 
 } // namespace GH48416
+
+namespace GH81774 {
+struct Handle {
+    Handle(int) {}
+};
+// Should be well-formed because NoState has a brace-or-equal-initializer.
+union a {
+        int NoState = 0;
+        Handle CustomState;
+} b;
+} // namespace GH81774

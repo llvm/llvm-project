@@ -596,7 +596,7 @@ public:
 
     *MORE ON NEST_LEVEL*
     The nest level is used in the bar graph that represents the timeline.
-    Its main purpose is for showing how events are nested inside eachother.
+    Its main purpose is for showing how events are nested inside each other.
     For example, say events, A, B, and C are recorded.  If the timeline
     looks like this:
 

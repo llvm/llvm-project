@@ -28,18 +28,18 @@
   ; CHECK-NEXT:    sd ra, 2024(sp) # 8-byte Folded Spill
   ; CHECK-NEXT:    sd s0, 2016(sp) # 8-byte Folded Spill
   ; CHECK-NEXT:    addi s0, sp, 2032
-  ; CHECK-NEXT:    sd a0, 0(sp)
+  ; CHECK-NEXT:    sd a0, 0(sp) # 8-byte Folded Spill
   ; CHECK-NEXT:    lui a0, 2
-  ; CHECK-NEXT:    addiw a0, a0, -2032
+  ; CHECK-NEXT:    addi a0, a0, -2032
   ; CHECK-NEXT:    sub sp, sp, a0
   ; CHECK-NEXT:    srli a0, sp, 12
   ; CHECK-NEXT:    slli sp, a0, 12
-  ; CHECK-NEXT:    ld a0, 0(sp)
-  ; CHECK-NEXT:    sd a1, 0(sp)
+  ; CHECK-NEXT:    ld a0, 0(sp) # 8-byte Folded Reload
+  ; CHECK-NEXT:    sd a1, 0(sp) # 8-byte Folded Spill
   ; CHECK-NEXT:    lui a1, 1
   ; CHECK-NEXT:    add a1, sp, a1
   ; CHECK-NEXT:    sd a0, -8(a1)
-  ; CHECK-NEXT:    ld a1, 0(sp)
+  ; CHECK-NEXT:    ld a1, 0(sp) # 8-byte Folded Reload
   ; CHECK-NEXT:    call foo
   ; CHECK-NEXT:    addi sp, s0, -2032
   ; CHECK-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload

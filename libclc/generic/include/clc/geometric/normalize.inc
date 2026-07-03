@@ -1,1 +1,0 @@
-_CLC_OVERLOAD _CLC_DECL __CLC_FLOATN normalize(__CLC_FLOATN p);

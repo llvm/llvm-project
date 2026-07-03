@@ -89,7 +89,7 @@ define void @foo(ptr %ptr) {
 )IR");
   llvm::Function &LLVMF = *M->getFunction("foo");
   DominatorTree DT(LLVMF);
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   DataLayout DL(M->getDataLayout());
   AssumptionCache AC(LLVMF);
@@ -214,4 +214,36 @@ bb0:
             DL.getTypeSizeInBits(Type::getDoubleTy(C)));
   EXPECT_EQ(sandboxir::Utils::getNumBits(L2), 8u);
   EXPECT_EQ(sandboxir::Utils::getNumBits(L3), 64u);
+}
+
+TEST_F(UtilsTest, GetMemBase) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptrA, float %val, ptr %ptrB) {
+bb:
+  %gepA0 = getelementptr float, ptr %ptrA, i32 0
+  %gepA1 = getelementptr float, ptr %ptrA, i32 1
+  %gepB0 = getelementptr float, ptr %ptrB, i32 0
+  %gepB1 = getelementptr float, ptr %ptrB, i32 1
+  store float %val, ptr %gepA0
+  store float %val, ptr %gepA1
+  store float %val, ptr %gepB0
+  store float %val, ptr %gepB1
+  ret void
+}
+)IR");
+  llvm::Function &Foo = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(&Foo);
+
+  auto It = std::next(F->begin()->begin(), 4);
+  auto *St0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *St1 = cast<sandboxir::StoreInst>(&*It++);
+  auto *St2 = cast<sandboxir::StoreInst>(&*It++);
+  auto *St3 = cast<sandboxir::StoreInst>(&*It++);
+  EXPECT_EQ(sandboxir::Utils::getMemInstructionBase(St0),
+            sandboxir::Utils::getMemInstructionBase(St1));
+  EXPECT_EQ(sandboxir::Utils::getMemInstructionBase(St2),
+            sandboxir::Utils::getMemInstructionBase(St3));
+  EXPECT_NE(sandboxir::Utils::getMemInstructionBase(St0),
+            sandboxir::Utils::getMemInstructionBase(St3));
 }

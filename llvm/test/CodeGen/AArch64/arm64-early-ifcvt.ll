@@ -395,13 +395,13 @@ done:
 
 ; This function from 175.vpr folds an ADDWri into a CSINC.
 ; Remember to clear the kill flag on the ADDWri.
-define i32 @get_ytrack_to_xtracks() nounwind ssp {
+define i32 @get_ytrack_to_xtracks(i1 %arg) nounwind ssp {
 entry:
   br label %for.body
 
 for.body:
   %x0 = load i32, ptr undef, align 4
-  br i1 undef, label %if.then.i146, label %is_sbox.exit155
+  br i1 %arg, label %if.then.i146, label %is_sbox.exit155
 
 if.then.i146:
   %add8.i143 = add nsw i32 0, %x0
@@ -414,10 +414,90 @@ is_sbox.exit155:                                  ; preds = %if.then.i146, %for.
   %idxprom15.i152 = sext i32 %seg_offset.0.i151 to i64
   %arrayidx18.i154 = getelementptr inbounds i32, ptr null, i64 %idxprom15.i152
   %x1 = load i32, ptr %arrayidx18.i154, align 4
-  br i1 undef, label %for.body51, label %for.body
+  br i1 %arg, label %for.body51, label %for.body
 
 for.body51:                                       ; preds = %is_sbox.exit155
   call fastcc void @get_switch_type(i32 %x1, i32 undef, i16 signext undef, i16 signext undef, ptr undef)
   unreachable
 }
 declare fastcc void @get_switch_type(i32, i32, i16 signext, i16 signext, ptr nocapture) nounwind ssp
+
+; CHECK-LABEL: fold_imm1_csinc_32:
+; CHECK:      cmp w0, w1
+; CHECK-NEXT: csinc w0, w2, wzr, ge
+; CHECK-NEXT: ret
+define i32 @fold_imm1_csinc_32(i32 %x, i32 %y, i32 %n) nounwind ssp {
+entry:
+  %cmp = icmp slt i32 %x, %y
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  br label %exit
+
+if.else:
+  br label %exit
+
+exit:
+  %result = phi i32 [ 1, %if.then ], [ %n, %if.else ]
+  ret i32 %result
+}
+
+; CHECK-LABEL: fold_imm1_csinc_64:
+; CHECK:      cmp x0, x1
+; CHECK-NEXT: csinc x0, x2, xzr, ge
+; CHECK-NEXT: ret
+define i64 @fold_imm1_csinc_64(i64 %x, i64 %y, i64 %n) nounwind ssp {
+entry:
+  %cmp = icmp slt i64 %x, %y
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  br label %exit
+
+if.else:
+  br label %exit
+
+exit:
+  %result = phi i64 [ 1, %if.then ], [ %n, %if.else ]
+  ret i64 %result
+}
+
+; CHECK-LABEL: fold_imm1_cset_32:
+; CHECK:      cmp w0, w1
+; CHECK-NEXT: cset w0, lt
+; CHECK-NEXT: ret
+define i32 @fold_imm1_cset_32(i32 %x, i32 %y) nounwind ssp {
+entry:
+  %cmp = icmp slt i32 %x, %y
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  br label %exit
+
+if.else:
+  br label %exit
+
+exit:
+  %result = phi i32 [ 1, %if.then ], [ 0, %if.else ]
+  ret i32 %result
+}
+
+; CHECK-LABEL: fold_imm1_cset_64:
+; CHECK:      cmp x0, x1
+; CHECK-NEXT: cset x0, lt
+; CHECK-NEXT: ret
+define i64 @fold_imm1_cset_64(i64 %x, i64 %y) nounwind ssp {
+entry:
+  %cmp = icmp slt i64 %x, %y
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  br label %exit
+
+if.else:
+  br label %exit
+
+exit:
+  %result = phi i64 [ 1, %if.then ], [ 0, %if.else ]
+  ret i64 %result
+}

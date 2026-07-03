@@ -10,7 +10,7 @@ class TestIOHandlerProcessSTDIO(PExpectTest):
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..
     @skipIfAsan
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
     def test(self):
         self.build()
         self.launch(executable=self.getBuildArtifact("a.out"))
@@ -26,4 +26,3 @@ class TestIOHandlerProcessSTDIO(PExpectTest):
         self.child.expect_exact("stdout: baz")
 
         self.child.sendcontrol("d")
-        self.quit()

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s -enable-misched=false | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s -enable-misched=false | FileCheck %s
 
 ; Test that LICM doesn't hoist an instruction incorrectly
 ; when register aliases are not processed. In this case, LICM hoists

@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 %s -verify -pedantic-errors -ast-dump | FileCheck %s
-// RUN: %clang_cc1 -std=c++14 %s -verify -pedantic-errors -ast-dump | FileCheck %s
-// RUN: %clang_cc1 -std=c++17 %s -verify -pedantic-errors -ast-dump | FileCheck %s
-// RUN: %clang_cc1 -std=c++20 %s -verify -pedantic-errors -ast-dump | FileCheck %s
-// RUN: %clang_cc1 -std=c++23 %s -verify -pedantic-errors -ast-dump | FileCheck %s
-// RUN: %clang_cc1 -std=c++26 %s -verify -pedantic-errors -ast-dump | FileCheck %s
+// RUN: %clang_cc1 -std=c++98 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -ast-dump | FileCheck %s
+// RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -ast-dump | FileCheck %s
+// RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -ast-dump | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -ast-dump | FileCheck %s
+// RUN: %clang_cc1 -std=c++23 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -ast-dump | FileCheck %s
+// RUN: %clang_cc1 -std=c++26 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -ast-dump | FileCheck %s
 
 // expected-no-diagnostics
 // cwg722: 20
@@ -12,9 +12,9 @@
 #if __cplusplus >= 201103L
 namespace std {
   using nullptr_t = decltype(nullptr);
-}
+} // namespace std
 
-void f(std::nullptr_t...);
+void f(std::nullptr_t, ...);
 std::nullptr_t g();
 void h() {
   std::nullptr_t np;

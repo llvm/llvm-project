@@ -25,7 +25,7 @@
 
 # RUN:not ld.lld -e func1 %t.o %t3.o -o /dev/null -z cet-report=something 2>&1 \
 # RUN:   | FileCheck --check-prefix=REPORT_INVALID %s
-# REPORT_INVALID: error: -z cet-report= parameter something is not recognized
+# REPORT_INVALID: error: unknown -z cet-report= value: something
 # REPORT_INVALID-EMPTY:
 
 # RUN: ld.lld -e func1 %t.o %t3.o -o /dev/null  -z force-ibt -z cet-report=warning 2>&1 \
@@ -101,6 +101,9 @@
 # NOPLT-NOT: .plt
 # NOPLT:     .note.gnu.property
 # NOPLT-NOT: .plt
+
+# RUN: not ld.lld %t1.o -z retpolineplt -z force-ibt -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR-IBT-RETPOLINE
+# ERR-IBT-RETPOLINE: error: -z force-ibt may not be used with -z retpolineplt
 
 .section ".note.gnu.property", "a"
 .long 4

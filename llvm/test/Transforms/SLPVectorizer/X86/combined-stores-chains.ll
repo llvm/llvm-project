@@ -12,7 +12,7 @@ define void @foo(ptr %v0, ptr readonly %v1) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[T14]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP1]], <i32 4, i32 4, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, ptr [[T142]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <2 x i64> [[TMP3]], <i64 4, i64 4>
+; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <2 x i64> [[TMP3]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i64>, ptr [[T222]], align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <2 x i64> [[TMP5]], <i64 6, i64 7>
 ; CHECK-NEXT:    store <2 x i64> [[TMP4]], ptr [[T212]], align 8

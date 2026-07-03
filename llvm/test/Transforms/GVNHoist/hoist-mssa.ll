@@ -7,22 +7,22 @@
 
 @optind = external global i32, align 4
 
-define void @getopt() {
+define void @getopt(i1 %arg) {
 bb:
   br label %bb1
 
 bb1:                                              ; preds = %bb
-  br i1 undef, label %bb2, label %bb3
+  br i1 %arg, label %bb2, label %bb3
 
 bb2:                                              ; preds = %bb1
   br label %bb13
 
 bb3:                                              ; preds = %bb1
-  br i1 undef, label %bb4, label %bb9
+  br i1 %arg, label %bb4, label %bb9
 
 bb4:                                              ; preds = %bb3
   %tmp = load i32, ptr @optind, align 4
-  br i1 undef, label %bb5, label %bb7
+  br i1 %arg, label %bb5, label %bb7
 
 bb5:                                              ; preds = %bb4
   %tmp6 = add nsw i32 %tmp, 1

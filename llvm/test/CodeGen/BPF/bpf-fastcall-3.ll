@@ -1,4 +1,4 @@
-; RUN: llc -O2 --march=bpfel %s -o - | FileCheck %s
+; RUN: llc -O2 --mtriple=bpfel %s -o - | FileCheck %s
 
 ; Generated from the following C code:
 ;

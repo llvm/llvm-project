@@ -30,6 +30,9 @@ TEST_CONSTEXPR_CXX17 bool tests() {
     const char* s = "123";
     test(bidirectional_iterator<const char*>(s+1), bidirectional_iterator<const char*>(s+2));
     test(random_access_iterator<const char*>(s+1), random_access_iterator<const char*>(s+2));
+#if TEST_STD_VER >= 20
+    test(cpp20_random_access_iterator<const char*>(s + 1), cpp20_random_access_iterator<const char*>(s + 2));
+#endif
     test(s+1, s+2);
     return true;
 }

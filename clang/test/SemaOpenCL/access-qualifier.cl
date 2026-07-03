@@ -36,7 +36,7 @@ void myRead(read_only image1d_t);
 #if (__OPENCL_C_VERSION__ == 200) || ((__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ == 300) && defined(__opencl_c_read_write_images))
 void myReadWrite(read_write image1d_t);
 #else
-void myReadWrite(read_write image1d_t); // expected-error {{access qualifier 'read_write' can not be used for '__read_write image1d_t' prior to OpenCL C version 2.0 or in version 3.0 and without __opencl_c_read_write_images feature}}
+void myReadWrite(read_write image1d_t); // expected-error {{access qualifier 'read_write' cannot be used for '__read_write image1d_t' prior to OpenCL C version 2.0 or in version 3.0 and without __opencl_c_read_write_images feature}}
 #endif
 
 
@@ -94,9 +94,9 @@ kernel void k11(read_only write_only image1d_t i){} // expected-error{{multiple 
 kernel void k12(read_only read_only image1d_t i){} // expected-warning {{duplicate 'read_only' declaration specifier}}
 
 #if (__OPENCL_C_VERSION__ == 200) || ((__OPENCL_CPP_VERSION__ == 202100 || __OPENCL_C_VERSION__ == 300) && defined(__opencl_c_read_write_images))
-kernel void k13(read_write pipe int i){} // expected-error{{access qualifier 'read_write' can not be used for 'read_only pipe int'}}
+kernel void k13(read_write pipe int i){} // expected-error{{access qualifier 'read_write' cannot be used for 'read_only pipe int'}}
 #else
-kernel void k13(__read_write image1d_t i){} // expected-error{{access qualifier '__read_write' can not be used for '__read_write image1d_t' prior to OpenCL C version 2.0 or in version 3.0 and without __opencl_c_read_write_images feature}}
+kernel void k13(__read_write image1d_t i){} // expected-error{{access qualifier '__read_write' cannot be used for '__read_write image1d_t' prior to OpenCL C version 2.0 or in version 3.0 and without __opencl_c_read_write_images feature}}
 #endif
 
 #if defined(__OPENCL_C_VERSION__) && __OPENCL_C_VERSION__ < 200
@@ -116,7 +116,7 @@ kernel void k14(read_only pipe int p) {
 
 kernel void pipe_ro_twice(read_only read_only pipe int i){} // expected-warning{{duplicate 'read_only' declaration specifier}}
 // Conflicting access qualifiers
-kernel void pipe_ro_twice_tw(read_write read_only read_only pipe int i){} // expected-error{{access qualifier 'read_write' can not be used for 'read_only pipe int'}}
+kernel void pipe_ro_twice_tw(read_write read_only read_only pipe int i){} // expected-error{{access qualifier 'read_write' cannot be used for 'read_only pipe int'}}
 kernel void pipe_ro_wo(read_only write_only pipe int i){} // expected-error{{multiple access qualifiers}}
 
 typedef read_only pipe int ROPipeInt;

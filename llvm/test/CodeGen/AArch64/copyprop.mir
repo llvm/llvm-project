@@ -113,3 +113,16 @@ body: |
     $w9 = ORRWrs $wzr, $wzr, 0
     STRBBui killed renamable $w9, killed renamable $x8, 36
 ...
+---
+# CHECK-LABEL: name: make_sure_w29_and_fp_isnt_removed
+# CHECK: $w29 = ORRWrs $wzr, $w29, 0, implicit $fp, implicit-def $fp
+name:            make_sure_w29_and_fp_isnt_removed
+tracksRegLiveness: true
+frameInfo:
+  maxCallFrameSize: 32
+body: |
+  bb.0:
+    liveins: $x8, $fp
+    $w29 = ORRWrs $wzr, $w29, 0, implicit $fp, implicit-def $fp
+    renamable $q0 = LDRQroX killed renamable $x8, $fp, 0, 1
+...

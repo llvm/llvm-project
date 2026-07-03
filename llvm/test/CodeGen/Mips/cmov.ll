@@ -1,10 +1,10 @@
-; RUN: llc -march=mips     -mcpu=mips32                 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,32-CMOV
-; RUN: llc -march=mips     -mcpu=mips32 -regalloc=basic -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,32-CMOV
-; RUN: llc -march=mips     -mcpu=mips32r2               -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,32-CMOV
-; RUN: llc -march=mips     -mcpu=mips32r6               -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,32-CMP
-; RUN: llc -march=mips64el -mcpu=mips4                  -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,64-CMOV
-; RUN: llc -march=mips64el -mcpu=mips64                 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,64-CMOV
-; RUN: llc -march=mips64el -mcpu=mips64r6               -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,64-CMP
+; RUN: llc -mtriple=mips     -mcpu=mips32                 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,32-CMOV
+; RUN: llc -mtriple=mips     -mcpu=mips32 -regalloc=basic -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,32-CMOV
+; RUN: llc -mtriple=mips     -mcpu=mips32r2               -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,32-CMOV
+; RUN: llc -mtriple=mips     -mcpu=mips32r6               -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,32-CMP
+; RUN: llc -mtriple=mips64el -mcpu=mips4                  -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,64-CMOV
+; RUN: llc -mtriple=mips64el -mcpu=mips64                 -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,64-CMOV
+; RUN: llc -mtriple=mips64el -mcpu=mips64r6               -relocation-model=pic < %s | FileCheck %s -check-prefixes=ALL,64-CMP
 
 @i1 = global [3 x i32] [i32 1, i32 2, i32 3], align 4
 @i3 = common global ptr null, align 4

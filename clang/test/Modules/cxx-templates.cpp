@@ -40,7 +40,10 @@ void g() {
 
   template_param_kinds_1<0>(); // ok, from cxx-templates-a.h
   template_param_kinds_1<int>(); // ok, from cxx-templates-b.h
-  template_param_kinds_2<Tmpl_T_C>(); // ok, from cxx-templates-b.h
+
+  template_param_kinds_2<Tmpl_T_C>(); // expected-error {{no matching function for call}}
+  // expected-note@Inputs/cxx-templates-a.h:11 {{non-type parameter of template template parameter cannot be narrowed from type 'int' to 'char'}}
+  // expected-note@Inputs/cxx-templates-b.h:11 {{candidate}}
 
   template_param_kinds_2<Tmpl_T_I_I>(); // expected-error {{ambiguous}}
   // expected-note@Inputs/cxx-templates-a.h:11 {{candidate}}
@@ -190,7 +193,8 @@ namespace hidden_specializations {
     cls<char*> uk4; // expected-error 1+{{partial specialization of 'cls<T *>' must be imported}} expected-error 1+{{definition of}}
     cls<void>::nested_cls unk1; // expected-error 1+{{explicit specialization of 'nested_cls' must be imported}} expected-error 1+{{definition of}}
     cls<void>::nested_cls_t<int> unk2; // expected-error 1+{{explicit specialization of 'nested_cls_t' must be imported}} expected-error 1+{{definition of}}
-    cls<void>::nested_cls_t<char> unk3; // expected-error 1+{{explicit specialization of 'nested_cls_t' must be imported}} expected-error 1+{{definition of}}
+    // expected-error@+1 1+{{definition of 'nested_cls_t' must be imported}}
+    cls<void>::nested_cls_t<char> unk3; // expected-error 1+{{explicit specialization of 'nested_cls_t' must be imported}}
 
     // For enums, uses that would trigger instantiations of definitions are not
     // allowed.
@@ -238,9 +242,9 @@ namespace Std {
 // CHECK-NAMESPACE-N-NEXT: |-FunctionTemplate {{.*}} 'f'
 // CHECK-NAMESPACE-N-NEXT: `-FunctionTemplate {{.*}} 'f'
 
-// CHECK-DUMP:      ClassTemplateDecl {{.*}} <{{.*[/\\]}}cxx-templates-common.h:1:1, {{.*}}>  col:{{.*}} in cxx_templates_common SomeTemplate
+// CHECK-DUMP:      ClassTemplateDecl {{.*}} <{{.*[/\\]}}cxx-templates-common.h:1:1, {{.*}}>  col:{{.*}} in cxx_templates_common referenced SomeTemplate
 // CHECK-DUMP:        ClassTemplateSpecializationDecl {{.*}} prev {{.*}} SomeTemplate
-// CHECK-DUMP-NEXT:     TemplateArgument type 'char[2]'
+// CHECK-DUMP-NEXT:     TemplateArgument type 'char[{{1|2}}]'
 // CHECK-DUMP:        ClassTemplateSpecializationDecl {{.*}} SomeTemplate definition
 // CHECK-DUMP-NEXT:     DefinitionData
 // CHECK-DUMP-NEXT:       DefaultConstructor
@@ -249,9 +253,9 @@ namespace Std {
 // CHECK-DUMP-NEXT:       CopyAssignment
 // CHECK-DUMP-NEXT:       MoveAssignment
 // CHECK-DUMP-NEXT:       Destructor
-// CHECK-DUMP-NEXT:     TemplateArgument type 'char[2]'
+// CHECK-DUMP-NEXT:     TemplateArgument type 'char[{{1|2}}]'
 // CHECK-DUMP:        ClassTemplateSpecializationDecl {{.*}} prev {{.*}} SomeTemplate
-// CHECK-DUMP-NEXT:     TemplateArgument type 'char[1]'
+// CHECK-DUMP-NEXT:     TemplateArgument type 'char[{{1|2}}]'
 // CHECK-DUMP:        ClassTemplateSpecializationDecl {{.*}} SomeTemplate definition
 // CHECK-DUMP-NEXT:     DefinitionData
 // CHECK-DUMP-NEXT:       DefaultConstructor
@@ -260,4 +264,4 @@ namespace Std {
 // CHECK-DUMP-NEXT:       CopyAssignment
 // CHECK-DUMP-NEXT:       MoveAssignment
 // CHECK-DUMP-NEXT:       Destructor
-// CHECK-DUMP-NEXT:     TemplateArgument type 'char[1]'
+// CHECK-DUMP-NEXT:     TemplateArgument type 'char[{{1|2}}]'

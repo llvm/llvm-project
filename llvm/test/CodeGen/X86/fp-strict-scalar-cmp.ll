@@ -4202,7 +4202,154 @@ define void @foo(float %0, float %1) #0 {
 }
 declare dso_local void @bar()
 
-attributes #0 = { strictfp }
+define float @fcmp_select_ogt(float %f1, float %f2) #0 {
+; SSE-32-LABEL: fcmp_select_ogt:
+; SSE-32:       # %bb.0:
+; SSE-32-NEXT:    pushl %eax
+; SSE-32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE-32-NEXT:    maxss {{[0-9]+}}(%esp), %xmm0
+; SSE-32-NEXT:    movss %xmm0, (%esp)
+; SSE-32-NEXT:    flds (%esp)
+; SSE-32-NEXT:    wait
+; SSE-32-NEXT:    popl %eax
+; SSE-32-NEXT:    retl
+;
+; SSE-64-LABEL: fcmp_select_ogt:
+; SSE-64:       # %bb.0:
+; SSE-64-NEXT:    maxss %xmm1, %xmm0
+; SSE-64-NEXT:    retq
+;
+; AVX-32-LABEL: fcmp_select_ogt:
+; AVX-32:       # %bb.0:
+; AVX-32-NEXT:    pushl %eax
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-32-NEXT:    vmaxss {{[0-9]+}}(%esp), %xmm0, %xmm0
+; AVX-32-NEXT:    vmovss %xmm0, (%esp)
+; AVX-32-NEXT:    flds (%esp)
+; AVX-32-NEXT:    wait
+; AVX-32-NEXT:    popl %eax
+; AVX-32-NEXT:    retl
+;
+; AVX-64-LABEL: fcmp_select_ogt:
+; AVX-64:       # %bb.0:
+; AVX-64-NEXT:    vmaxss %xmm1, %xmm0, %xmm0
+; AVX-64-NEXT:    retq
+;
+; X87-LABEL: fcmp_select_ogt:
+; X87:       # %bb.0:
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-NEXT:    fcom %st(1)
+; X87-NEXT:    wait
+; X87-NEXT:    fnstsw %ax
+; X87-NEXT:    # kill: def $ah killed $ah killed $ax
+; X87-NEXT:    sahf
+; X87-NEXT:    ja .LBB57_2
+; X87-NEXT:  # %bb.1:
+; X87-NEXT:    fstp %st(0)
+; X87-NEXT:    fldz
+; X87-NEXT:    fxch %st(1)
+; X87-NEXT:  .LBB57_2:
+; X87-NEXT:    fstp %st(1)
+; X87-NEXT:    wait
+; X87-NEXT:    retl
+;
+; X87-CMOV-LABEL: fcmp_select_ogt:
+; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
+; X87-CMOV-NEXT:    fcomi %st(1), %st
+; X87-CMOV-NEXT:    fxch %st(1)
+; X87-CMOV-NEXT:    fcmovnbe %st(1), %st
+; X87-CMOV-NEXT:    fstp %st(1)
+; X87-CMOV-NEXT:    wait
+; X87-CMOV-NEXT:    retl
+  %cond = call i1 @llvm.experimental.constrained.fcmps.f32(
+                                               float %f1, float %f2, metadata !"ogt",
+                                               metadata !"fpexcept.strict")
+  %res = select i1 %cond, float %f1, float %f2
+  ret float %res
+}
+
+define double @fcmp_select_ule(double %f1, double %f2) #0 {
+; SSE-32-LABEL: fcmp_select_ule:
+; SSE-32:       # %bb.0:
+; SSE-32-NEXT:    pushl %ebp
+; SSE-32-NEXT:    movl %esp, %ebp
+; SSE-32-NEXT:    andl $-8, %esp
+; SSE-32-NEXT:    subl $8, %esp
+; SSE-32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-32-NEXT:    minsd 8(%ebp), %xmm0
+; SSE-32-NEXT:    movsd %xmm0, (%esp)
+; SSE-32-NEXT:    fldl (%esp)
+; SSE-32-NEXT:    wait
+; SSE-32-NEXT:    movl %ebp, %esp
+; SSE-32-NEXT:    popl %ebp
+; SSE-32-NEXT:    retl
+;
+; SSE-64-LABEL: fcmp_select_ule:
+; SSE-64:       # %bb.0:
+; SSE-64-NEXT:    minsd %xmm0, %xmm1
+; SSE-64-NEXT:    movapd %xmm1, %xmm0
+; SSE-64-NEXT:    retq
+;
+; AVX-32-LABEL: fcmp_select_ule:
+; AVX-32:       # %bb.0:
+; AVX-32-NEXT:    pushl %ebp
+; AVX-32-NEXT:    movl %esp, %ebp
+; AVX-32-NEXT:    andl $-8, %esp
+; AVX-32-NEXT:    subl $8, %esp
+; AVX-32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-32-NEXT:    vminsd 8(%ebp), %xmm0, %xmm0
+; AVX-32-NEXT:    vmovsd %xmm0, (%esp)
+; AVX-32-NEXT:    fldl (%esp)
+; AVX-32-NEXT:    wait
+; AVX-32-NEXT:    movl %ebp, %esp
+; AVX-32-NEXT:    popl %ebp
+; AVX-32-NEXT:    retl
+;
+; AVX-64-LABEL: fcmp_select_ule:
+; AVX-64:       # %bb.0:
+; AVX-64-NEXT:    vminsd %xmm0, %xmm1, %xmm0
+; AVX-64-NEXT:    retq
+;
+; X87-LABEL: fcmp_select_ule:
+; X87:       # %bb.0:
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
+; X87-NEXT:    fldl {{[0-9]+}}(%esp)
+; X87-NEXT:    fcom %st(1)
+; X87-NEXT:    wait
+; X87-NEXT:    fnstsw %ax
+; X87-NEXT:    # kill: def $ah killed $ah killed $ax
+; X87-NEXT:    sahf
+; X87-NEXT:    jbe .LBB58_2
+; X87-NEXT:  # %bb.1:
+; X87-NEXT:    fstp %st(0)
+; X87-NEXT:    fldz
+; X87-NEXT:    fxch %st(1)
+; X87-NEXT:  .LBB58_2:
+; X87-NEXT:    fstp %st(1)
+; X87-NEXT:    wait
+; X87-NEXT:    retl
+;
+; X87-CMOV-LABEL: fcmp_select_ule:
+; X87-CMOV:       # %bb.0:
+; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
+; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
+; X87-CMOV-NEXT:    fcomi %st(1), %st
+; X87-CMOV-NEXT:    fxch %st(1)
+; X87-CMOV-NEXT:    fcmovbe %st(1), %st
+; X87-CMOV-NEXT:    fstp %st(1)
+; X87-CMOV-NEXT:    wait
+; X87-CMOV-NEXT:    retl
+  %cond = call i1 @llvm.experimental.constrained.fcmps.f64(
+                                               double %f1, double %f2, metadata !"ule",
+                                               metadata !"fpexcept.strict")
+  %res = select i1 %cond, double %f1, double %f2
+  ret double %res
+}
+
+attributes #0 = { nounwind strictfp }
 
 declare i1 @llvm.experimental.constrained.fcmp.f32(float, float, metadata, metadata)
 declare i1 @llvm.experimental.constrained.fcmp.f64(double, double, metadata, metadata)

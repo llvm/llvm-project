@@ -14,6 +14,7 @@
 #define LLVM_EXECUTIONENGINE_JITLINK_RISCV_H
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace jitlink {
@@ -220,11 +221,23 @@ enum EdgeKind_riscv : Edge::Kind {
   /// Fixup expression:
   ///   Fixup <- Fixup - Target + Addend
   NegDelta32,
+
+  /// Set ULEB128-encoded value
+  ///
+  /// Fixup expression:
+  ///   Fixup <- Target + Addend
+  R_RISCV_SET_ULEB128,
+
+  /// Subtract from ULEB128-encoded value
+  ///
+  /// Fixup expression:
+  ///   Fixup <- V - Target - Addend
+  R_RISCV_SUB_ULEB128,
 };
 
 /// Returns a string name for the given riscv edge. For debugging purposes
 /// only
-const char *getEdgeKindName(Edge::Kind K);
+LLVM_ABI const char *getEdgeKindName(Edge::Kind K);
 } // namespace riscv
 } // namespace jitlink
 } // namespace llvm

@@ -50,7 +50,7 @@ public:
 
   ~GDBRemoteRegisterContext() override;
 
-  void InvalidateAllRegisters() override;
+  void InvalidateAllRegisters() override { SetAllRegistersUnfetched(); }
 
   size_t GetRegisterCount() override;
 
@@ -94,35 +94,58 @@ protected:
 
   bool PrivateSetRegisterValue(uint32_t reg, uint64_t val);
 
-  void SetAllRegisterValid(bool b);
+  void SetAllRegistersValid() { SetAllRegistersValidState(eLazyBoolYes); }
+  void SetAllRegistersUnfetched() {
+    SetAllRegistersValidState(eLazyBoolCalculate);
+  }
 
   bool GetRegisterIsValid(uint32_t reg) const {
-    assert(reg < m_reg_valid.size());
-    if (reg < m_reg_valid.size())
-      return m_reg_valid[reg];
-    return false;
+    return GetRegisterValidState(reg) == eLazyBoolYes;
+  }
+  bool GetRegisterIsUnavailable(uint32_t reg) const {
+    return GetRegisterValidState(reg) == eLazyBoolNo;
+  }
+  bool GetRegisterIsUnfetched(uint32_t reg) const {
+    return GetRegisterValidState(reg) == eLazyBoolCalculate;
   }
 
-  void SetRegisterIsValid(const RegisterInfo *reg_info, bool valid) {
-    if (reg_info)
-      return SetRegisterIsValid(reg_info->kinds[lldb::eRegisterKindLLDB],
-                                valid);
+  void SetRegisterIsValid(const RegisterInfo *reg_info) {
+    SetRegisterIsValidState(reg_info, eLazyBoolYes);
   }
-
-  void SetRegisterIsValid(uint32_t reg, bool valid) {
-    assert(reg < m_reg_valid.size());
-    if (reg < m_reg_valid.size())
-      m_reg_valid[reg] = valid;
+  void SetRegisterIsUnavailable(const RegisterInfo *reg_info) {
+    SetRegisterIsValidState(reg_info, eLazyBoolNo);
+  }
+  void SetRegisterIsUnfetched(const RegisterInfo *reg_info) {
+    SetRegisterIsValidState(reg_info, eLazyBoolCalculate);
+  }
+  void SetRegisterIsValid(uint32_t reg) {
+    SetRegisterIsValidState(reg, eLazyBoolYes);
+  }
+  void SetRegisterIsUnavailable(uint32_t reg) {
+    SetRegisterIsValidState(reg, eLazyBoolNo);
+  }
+  void SetRegisterIsUnfetched(uint32_t reg) {
+    SetRegisterIsValidState(reg, eLazyBoolCalculate);
   }
 
   GDBRemoteDynamicRegisterInfoSP m_reg_info_sp;
-  std::vector<bool> m_reg_valid;
+
+  /// eLazyBoolYes - we have the bytes for this register locally.
+  /// eLazyBoolCalculate - we have not yet tried to get the bytes.
+  /// eLazyBoolNo - the bytes are unreadable at this stop.
+  std::vector<LazyBool> m_reg_valid;
+
   DataExtractor m_reg_data;
   bool m_read_all_at_once;
   bool m_write_all_at_once;
   bool m_gpacket_cached;
 
 private:
+  LazyBool GetRegisterValidState(uint32_t reg) const;
+  void SetAllRegistersValidState(LazyBool valid);
+  void SetRegisterIsValidState(const RegisterInfo *reg_info, LazyBool valid);
+  void SetRegisterIsValidState(uint32_t reg, LazyBool valid);
+
   // Helper function for ReadRegisterBytes().
   bool GetPrimordialRegister(const RegisterInfo *reg_info,
                              GDBRemoteCommunicationClient &gdb_comm);

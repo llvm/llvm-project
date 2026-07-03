@@ -10,9 +10,9 @@
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBValue.h"
-#include "lldb/Core/ValueObjectList.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObjectList.h"
 #include <vector>
 
 using namespace lldb;

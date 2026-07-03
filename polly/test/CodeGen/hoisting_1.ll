@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -aa-pipeline=tbaa -passes=polly-codegen -polly-allow-differing-element-types -disable-output %s
+; RUN: opt %loadNPMPolly -aa-pipeline=tbaa '-passes=polly<no-default-opts>' -polly-allow-differing-element-types -disable-output %s
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -26,7 +26,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 %struct.bar.11 = type { ptr, ptr, ptr }
 
 ; Function Attrs: nounwind uwtable
-define void @foo(ptr %arg) #0 {
+define void @foo(ptr %arg) {
 bb:
   br label %bb2
 
@@ -48,8 +48,6 @@ bb9:                                              ; preds = %bb8, %bb2
 bb10:                                             ; preds = %bb9
   ret void
 }
-
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.ident = !{!0}
 

@@ -1,4 +1,4 @@
-; RUN: llc  -march=mipsel -mattr=mips16 < %s | FileCheck %s -check-prefix=16
+; RUN: llc  -mtriple=mipsel -mattr=mips16 < %s | FileCheck %s -check-prefix=16
 
 
 define i32 @main() nounwind {

@@ -98,5 +98,5 @@ bool GIMatchTableExecutor::isObviouslySafeToFold(MachineInstr &MI,
     return true;
   }
 
-  return true;
+  return !MI.mayLoad();
 }

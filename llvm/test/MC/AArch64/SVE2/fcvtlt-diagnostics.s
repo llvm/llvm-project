@@ -39,7 +39,7 @@ fcvtlt z0.q, p0/m, z0.d
 // Invalid predicate operation
 
 fcvtlt z0.s, p0/z, z0.h
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction requires: sme2p2 or sve2p2
 // CHECK-NEXT: fcvtlt z0.s, p0/z, z0.h
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

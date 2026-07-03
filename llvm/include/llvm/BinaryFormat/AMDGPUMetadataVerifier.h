@@ -19,6 +19,7 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MsgPackReader.h"
+#include "llvm/Support/Compiler.h"
 
 #include <cstddef>
 #include <optional>
@@ -69,7 +70,7 @@ public:
   /// Verify given HSA metadata.
   ///
   /// \returns True when successful, false when metadata is invalid.
-  bool verify(msgpack::DocNode &HSAMetadataRoot);
+  LLVM_ABI bool verify(msgpack::DocNode &HSAMetadataRoot);
 };
 
 } // end namespace V3

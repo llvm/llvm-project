@@ -99,7 +99,7 @@ public:
     int FD;
     std::error_code EC;
     if (auto EC =
-            openFileForWrite(FinalPath, FD, CD_CreateAlways, OF_None, Mode))
+            openFileForWrite(FinalPath, FD, CD_CreateAlways, OF_Delete, Mode))
       return errorCodeToError(EC);
     raw_fd_ostream OS(FD, /*shouldClose=*/true, /*unbuffered=*/true);
     OS << StringRef((const char *)Buffer.base(), BufferSize);
@@ -186,7 +186,7 @@ FileOutputBuffer::create(StringRef Path, size_t Size, unsigned Flags) {
   case fs::file_type::regular_file:
   case fs::file_type::file_not_found:
   case fs::file_type::status_error:
-    if (Flags & F_no_mmap)
+    if (Flags & F_mmap)
       return createInMemoryBuffer(Path, Size, Mode);
     else
       return createOnDiskBuffer(Path, Size, Mode);

@@ -4,7 +4,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @hoge1() {
+define void @hoge1(i1 %arg) {
 ;
 ; CHECK-LABEL: 'hoge1'
 ; CHECK-NEXT:  Determining loop execution counts for: @hoge1
@@ -21,7 +21,7 @@ define void @hoge1() {
 ; CHECK-NEXT:  Loop %bb2: Unpredictable symbolic max backedge-taken count.
 ;
 bb:
-  br i1 undef, label %bb4, label %bb2
+  br i1 %arg, label %bb4, label %bb2
 
 bb2:                                              ; preds = %bb2, %bb
   br i1 false, label %bb4, label %bb2
@@ -53,7 +53,7 @@ bb18:                                             ; preds = %bb13
   ret void
 }
 
-define void @hoge2() {
+define void @hoge2(i1 %arg) {
 ;
 ; CHECK-LABEL: 'hoge2'
 ; CHECK-NEXT:  Determining loop execution counts for: @hoge2
@@ -69,7 +69,7 @@ define void @hoge2() {
 ; CHECK-NEXT:  Loop %bb2: Unpredictable symbolic max backedge-taken count.
 ;
 bb:
-  br i1 undef, label %bb4, label %bb2
+  br i1 %arg, label %bb4, label %bb2
 
 bb2:                                              ; preds = %bb2, %bb
   br i1 false, label %bb4, label %bb2

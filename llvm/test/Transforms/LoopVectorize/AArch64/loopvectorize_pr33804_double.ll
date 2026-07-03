@@ -19,17 +19,17 @@ define void @cvCalcEMD2(ptr %dst) {
 entry:
   br label %for.body14.i.i
 
-for.body14.i.i:                                   ; preds = %for.body14.i.i, %entry
+for.body14.i.i:
   %i.1424.i.i = phi i32 [ %inc21.i.i, %for.body14.i.i ], [ 0, %entry ]
   %arrayidx15.i.i1427 = getelementptr inbounds %struct.CvNode1D, ptr %dst, i32 %i.1424.i.i
   store double 0xC415AF1D80000000, ptr %arrayidx15.i.i1427, align 4
   %next19.i.i = getelementptr inbounds %struct.CvNode1D, ptr %dst, i32 %i.1424.i.i, i32 1
   store ptr %dst, ptr %next19.i.i, align 4
   %inc21.i.i = add nuw nsw i32 %i.1424.i.i, 1
-  %exitcond438.i.i = icmp eq i32 %inc21.i.i, 0
+  %exitcond438.i.i = icmp eq i32 %inc21.i.i, 1000
   br i1 %exitcond438.i.i, label %for.end22.i.i, label %for.body14.i.i
 
-for.end22.i.i:                                    ; preds = %for.body14.i.i
+for.end22.i.i:
   unreachable
 }
 
@@ -44,7 +44,7 @@ define void @cvCalcEMD2_2(ptr %dst) {
 entry:
   br label %for.body14.i.i
 
-for.body14.i.i:                                   ; preds = %for.body14.i.i, %entry
+for.body14.i.i:
   %i.1424.i.i = phi i32 [ %inc21.i.i, %for.body14.i.i ], [ 0, %entry ]
   %next19.i.i = getelementptr inbounds %struct.CvNode1D2, ptr %dst, i32 %i.1424.i.i, i32 0
   store ptr %dst, ptr %next19.i.i, align 4
@@ -52,10 +52,10 @@ for.body14.i.i:                                   ; preds = %for.body14.i.i, %en
   %val.i.i = getelementptr inbounds %struct.CvNode1D2, ptr %arrayidx15.i.i1427, i32 0, i32 1
   store double 0xC415AF1D80000000, ptr %val.i.i, align 4
   %inc21.i.i = add nuw nsw i32 %i.1424.i.i, 1
-  %exitcond438.i.i = icmp eq i32 %inc21.i.i, 0
+  %exitcond438.i.i = icmp eq i32 %inc21.i.i, 1000
   br i1 %exitcond438.i.i, label %for.end22.i.i, label %for.body14.i.i
 
-for.end22.i.i:                                    ; preds = %for.body14.i.i
+for.end22.i.i:
   unreachable
 }
 
@@ -68,7 +68,7 @@ define void @cvCalcEMD3(ptr %src, ptr %dst) {
 entry:
   br label %for.body14.i.i
 
-for.body14.i.i:                                   ; preds = %for.body14.i.i, %entry
+for.body14.i.i:
   %i.1424.i.i = phi i32 [ %inc21.i.i, %for.body14.i.i ], [ 0, %entry ]
   %arrayidx15.i.i1427 = getelementptr inbounds %struct.CvNode1D, ptr %src, i32 %i.1424.i.i
   %load_d = load double, ptr %arrayidx15.i.i1427, align 4
@@ -79,10 +79,10 @@ for.body14.i.i:                                   ; preds = %for.body14.i.i, %en
   store double %load_d, ptr %dst.ptr, align 4
   store ptr %load_p, ptr %dst.ptr.1, align 4
   %inc21.i.i = add nuw nsw i32 %i.1424.i.i, 1
-  %exitcond438.i.i = icmp eq i32 %inc21.i.i, 0
+  %exitcond438.i.i = icmp eq i32 %inc21.i.i, 1000
   br i1 %exitcond438.i.i, label %for.end22.i.i, label %for.body14.i.i
 
-for.end22.i.i:                                    ; preds = %for.body14.i.i
+for.end22.i.i:
   unreachable
 }
 
@@ -95,7 +95,7 @@ define void @cvCalcEMD3_2(ptr %src, ptr %dst) {
 entry:
   br label %for.body14.i.i
 
-for.body14.i.i:                                   ; preds = %for.body14.i.i, %entry
+for.body14.i.i:
   %i.1424.i.i = phi i32 [ %inc21.i.i, %for.body14.i.i ], [ 0, %entry ]
   %next19.i.i = getelementptr inbounds %struct.CvNode1D2, ptr %src, i32 %i.1424.i.i, i32 0
   %load_p = load ptr, ptr %next19.i.i, align 4
@@ -107,9 +107,9 @@ for.body14.i.i:                                   ; preds = %for.body14.i.i, %en
   store double %load_d, ptr %dst.ptr, align 4
   store ptr %load_p, ptr %dst.ptr.1, align 4
   %inc21.i.i = add nuw nsw i32 %i.1424.i.i, 1
-  %exitcond438.i.i = icmp eq i32 %inc21.i.i, 0
+  %exitcond438.i.i = icmp eq i32 %inc21.i.i, 1000
   br i1 %exitcond438.i.i, label %for.end22.i.i, label %for.body14.i.i
 
-for.end22.i.i:                                    ; preds = %for.body14.i.i
+for.end22.i.i:
   unreachable
 }

@@ -43,12 +43,12 @@ records -- called ``member records`` do not.
 Leaf Records
 ------------
 
-All leaf records begin with the following 4 byte prefix:
+All leaf records begin with the following 4-byte prefix:
 
 .. code-block:: c++
 
   struct RecordHeader {
-    uint16_t RecordLen;  // Record length, not including this 2 byte field.
+    uint16_t RecordLen;  // Record length, not including this 2-byte field.
     uint16_t RecordKind; // Record kind enum.
   };
 
@@ -123,7 +123,7 @@ The ``Size`` field of the Attributes bitmask is a 1-byte value indicating the
 pointer size.  For example, a `void*` would have a size of either 4 or 8 depending
 on the target architecture.  On the other hand, if ``Mode`` indicates that this is
 a pointer to member function or pointer to data member, then the size can be any
-implementation defined number.
+implementation-defined number.
 
 The ``Member Ptr Info`` field of the ``LF_POINTER`` record is only present if the
 attributes indicate that this is a pointer to member.

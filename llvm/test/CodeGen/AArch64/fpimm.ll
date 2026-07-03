@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu                                                  -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-apple-darwin -code-model=large                             -verify-machineinstrs < %s | FileCheck %s --check-prefixes=LARGE
 ; RUN: llc -mtriple=aarch64    -code-model=tiny                              -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -mtriple=aarch64-linux-gnu -global-isel                           -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnu -global-isel                           -verify-machineinstrs < %s | FileCheck %s --check-prefixes=GI
 
 @varf32 = global float 0.0
 @varf64 = global double 0.0
@@ -15,8 +15,9 @@ define void @check_float() {
 ; CHECK-DAG: fmov {{s[0-9]+}}, #8.5
 
   %newval2 = fadd float %val, 128.0
-  store volatile float %newval2, ptr @varf32
 ; CHECK-DAG: movi [[REG:v[0-9s]+]].2s, #67, lsl #24
+; GI-DAG: fmov [[REG:s[0-9s]+]],  #8.5
+  store volatile float %newval2, ptr @varf32
 
 ; CHECK: ret
   ret void
@@ -38,7 +39,7 @@ define void @check_double() {
 ; 64-bit ORR followed by MOVK.
 ; CHECK-DAG: mov  [[XFP0:x[0-9]+]], #1082331758844
 ; CHECK-DAG: movk [[XFP0]], #64764, lsl #16
-; CHECk-DAG: fmov {{d[0-9]+}}, [[XFP0]]
+; CHECK-DAG: fmov {{d[0-9]+}}, [[XFP0]]
   %newval3 = fadd double %val, 0xFCFCFC00FC
   store volatile double %newval3, ptr @varf64
 

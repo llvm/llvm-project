@@ -16,15 +16,18 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: lr_other_block
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   liveins: $w0, $x0, $lr
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr64 = COPY $lr
-  ; CHECK: bb.1:
-  ; CHECK:   $lr = COPY [[COPY]]
-  ; CHECK:   XPACLRI implicit-def $lr, implicit $lr
-  ; CHECK:   [[COPY1:%[0-9]+]]:gpr64 = COPY $lr
-  ; CHECK:   $x0 = COPY [[COPY1]]
-  ; CHECK:   RET_ReallyLR implicit $x0
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $w0, $x0, $lr
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64 = COPY $lr
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   $lr = COPY [[COPY]]
+  ; CHECK-NEXT:   XPACLRI implicit-def $lr, implicit $lr
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr64 = COPY $lr
+  ; CHECK-NEXT:   $x0 = COPY [[COPY1]]
+  ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   ; LR should be added as a livein to the entry block.
 
   bb.0:
@@ -45,15 +48,18 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: already_live_in
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   liveins: $w0, $x0, $lr
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr64 = COPY $lr
-  ; CHECK: bb.1:
-  ; CHECK:   $lr = COPY [[COPY]]
-  ; CHECK:   XPACLRI implicit-def $lr, implicit $lr
-  ; CHECK:   [[COPY1:%[0-9]+]]:gpr64 = COPY $lr
-  ; CHECK:   $x0 = COPY [[COPY1]]
-  ; CHECK:   RET_ReallyLR implicit $x0
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $w0, $x0, $lr
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64 = COPY $lr
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   $lr = COPY [[COPY]]
+  ; CHECK-NEXT:   XPACLRI implicit-def $lr, implicit $lr
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr64 = COPY $lr
+  ; CHECK-NEXT:   $x0 = COPY [[COPY1]]
+  ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   ; We should not have LR listed as a livein twice.
 
   bb.0:
@@ -76,18 +82,21 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: multi_use
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   liveins: $w0, $x0, $lr
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr64 = COPY $lr
-  ; CHECK:   $lr = COPY [[COPY]]
-  ; CHECK:   XPACLRI implicit-def $lr, implicit $lr
-  ; CHECK:   [[COPY1:%[0-9]+]]:gpr64 = COPY $lr
-  ; CHECK: bb.1:
-  ; CHECK:   $x0 = COPY [[COPY1]]
-  ; CHECK:   $lr = COPY [[COPY]]
-  ; CHECK:   XPACLRI implicit-def $lr, implicit $lr
-  ; CHECK:   [[COPY2:%[0-9]+]]:gpr64 = COPY $lr
-  ; CHECK:   RET_ReallyLR implicit [[COPY2]]
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $w0, $x0, $lr
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64 = COPY $lr
+  ; CHECK-NEXT:   $lr = COPY [[COPY]]
+  ; CHECK-NEXT:   XPACLRI implicit-def $lr, implicit $lr
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr64 = COPY $lr
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   $x0 = COPY [[COPY1]]
+  ; CHECK-NEXT:   $lr = COPY [[COPY]]
+  ; CHECK-NEXT:   XPACLRI implicit-def $lr, implicit $lr
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr64 = COPY $lr
+  ; CHECK-NEXT:   RET_ReallyLR implicit [[COPY2]]
   bb.0:
     liveins: $w0, $x0, $lr
     %0:gpr(p0) = G_INTRINSIC intrinsic(@llvm.returnaddress), 0

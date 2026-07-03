@@ -31,7 +31,7 @@ contains
     integer, dimension(4) :: table
     integer :: localVar
     associate (assocVar => localVar)
-      !PORTABILITY: Index variable 'assocvar' should be a scalar object or common block if it is present in the enclosing scope
+      !PORTABILITY: Index variable 'assocvar' should be a scalar object or common block if it is present in the enclosing scope [-Wodd-index-variable-restrictions]
       FORALL (assocVar=1:4) table(assocVar) = 343
     end associate
   end subroutine constructAssoc
@@ -44,7 +44,7 @@ contains
 
   subroutine mismatch()
     integer, dimension(4) :: table
-    !PORTABILITY: Index variable 'typename' should be a scalar object or common block if it is present in the enclosing scope
+    !PORTABILITY: Index variable 'typename' should be a scalar object or common block if it is present in the enclosing scope [-Wodd-index-variable-restrictions]
     !ERROR: Must have INTEGER type, but is REAL(4)
     !ERROR: Must have INTEGER type, but is REAL(4)
     FORALL (typeName=1:4) table(typeName) = 343

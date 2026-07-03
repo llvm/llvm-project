@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; Make sure that the loop in the end has only one basic block.
 
 ; CHECK-LABEL: fred

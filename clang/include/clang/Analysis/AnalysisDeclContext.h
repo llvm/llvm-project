@@ -20,6 +20,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/Analysis/BodyFarm.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/Analysis/CFGStmtMap.h"
 #include "clang/Analysis/CodeInjector.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
@@ -35,14 +36,11 @@ namespace clang {
 class AnalysisDeclContextManager;
 class ASTContext;
 class BlockDecl;
-class BlockInvocationContext;
 class CFGReverseBlockReachabilityAnalysis;
-class CFGStmtMap;
 class ImplicitParamDecl;
-class LocationContext;
-class LocationContextManager;
+class StackFrameManager;
 class ParentMap;
-class StackFrameContext;
+class StackFrame;
 class Stmt;
 class VarDecl;
 
@@ -77,7 +75,7 @@ class AnalysisDeclContext {
   const Decl *const D;
 
   std::unique_ptr<CFG> cfg, completeCFG;
-  std::unique_ptr<CFGStmtMap> cfgStmtMap;
+  std::optional<CFGStmtMap> cfgStmtMap;
 
   CFG::BuildOptions cfgBuildOptions;
   CFG::BuildOptions::ForcedBlkExprs *forcedBlkExprs = nullptr;
@@ -151,7 +149,7 @@ public:
 
   CFG *getCFG();
 
-  CFGStmtMap *getCFGStmtMap();
+  const CFGStmtMap *getCFGStmtMap();
 
   CFGReverseBlockReachabilityAnalysis *getCFGReachablityAnalysis();
 
@@ -177,15 +175,10 @@ public:
   /// AnalysisDeclContext wraps an ObjCMethodDecl or nullptr otherwise.
   const ImplicitParamDecl *getSelfDecl() const;
 
-  /// \copydoc LocationContextManager::getStackFrame()
-  const StackFrameContext *getStackFrame(LocationContext const *ParentLC,
-                                         const Stmt *S, const CFGBlock *Blk,
-                                         unsigned BlockCount, unsigned Index);
-
-  /// \copydoc LocationContextManager::getBlockInvocationContext()
-  const BlockInvocationContext *
-  getBlockInvocationContext(const LocationContext *ParentLC,
-                            const BlockDecl *BD, const void *Data);
+  /// \copydoc StackFrameManager::getStackFrame()
+  const StackFrame *getStackFrame(const StackFrame *ParentSF, const void *Data,
+                                  const Expr *E, const CFGBlock *Blk,
+                                  unsigned BlockCount, unsigned Index);
 
   /// \returns The specified analysis object, lazily running the analysis if
   /// necessary or nullptr if the analysis could not run.
@@ -205,102 +198,26 @@ public:
 private:
   std::unique_ptr<ManagedAnalysis> &getAnalysisImpl(const void *tag);
 
-  LocationContextManager &getLocationContextManager();
+  StackFrameManager &getStackFrameManager();
 };
 
-/// It wraps the AnalysisDeclContext to represent both the call stack with
-/// the help of StackFrameContext and inside the function calls the
-/// BlockInvocationContext. It is needed for context sensitive analysis to
-/// model entering, leaving or inlining function calls.
-class LocationContext : public llvm::FoldingSetNode {
-public:
-  enum ContextKind { StackFrame, Block };
-
-private:
-  ContextKind Kind;
+/// It represents a stack frame of the call stack
+class StackFrame final : public llvm::FoldingSetNode {
+  friend class StackFrameManager;
 
   // AnalysisDeclContext can't be const since some methods may modify its
   // member.
   AnalysisDeclContext *Ctx;
 
-  const LocationContext *Parent;
+  const StackFrame *Parent;
+
   int64_t ID;
 
-protected:
-  LocationContext(ContextKind k, AnalysisDeclContext *ctx,
-                  const LocationContext *parent, int64_t ID)
-      : Kind(k), Ctx(ctx), Parent(parent), ID(ID) {
-    assert(ctx);
-  }
-
-public:
-  virtual ~LocationContext();
-
-  ContextKind getKind() const { return Kind; }
-
-  int64_t getID() const { return ID; }
-
-  LLVM_ATTRIBUTE_RETURNS_NONNULL
-  AnalysisDeclContext *getAnalysisDeclContext() const { return Ctx; }
-
-  /// It might return null.
-  const LocationContext *getParent() const { return Parent; }
-
-  bool isParentOf(const LocationContext *LC) const;
-
-  const Decl *getDecl() const { return Ctx->getDecl(); }
-
-  CFG *getCFG() const { return Ctx->getCFG(); }
-
-  template <typename T> T *getAnalysis() const { return Ctx->getAnalysis<T>(); }
-
-  const ParentMap &getParentMap() const { return Ctx->getParentMap(); }
-
-  /// \copydoc AnalysisDeclContext::getSelfDecl()
-  const ImplicitParamDecl *getSelfDecl() const { return Ctx->getSelfDecl(); }
-
-  const StackFrameContext *getStackFrame() const;
-
-  /// \returns Whether the current LocationContext has no caller context.
-  virtual bool inTopFrame() const;
-
-  virtual void Profile(llvm::FoldingSetNodeID &ID) = 0;
-
-  /// Prints out the call stack.
-  ///
-  /// \param Out The out stream.
-  LLVM_DUMP_METHOD void dumpStack(raw_ostream &Out) const;
-
-  /// Prints out the call stack in \c json format.
-  ///
-  /// \param Out   The out stream.
-  /// \param NL    The newline.
-  /// \param Space The space count for indentation.
-  /// \param IsDot Whether the output format is \c dot.
-  /// \param printMoreInfoPerContext
-  /// A callback to print more information for each context, for example:
-  /// \code
-  ///   [&](const LocationContext *LC) { LC->dump(); }
-  /// \endcode
-  void printJson(
-      raw_ostream &Out, const char *NL = "\n", unsigned int Space = 0,
-      bool IsDot = false,
-      std::function<void(const LocationContext *)> printMoreInfoPerContext =
-          [](const LocationContext *) {}) const;
-
-  LLVM_DUMP_METHOD void dump() const;
-
-  static void ProfileCommon(llvm::FoldingSetNodeID &ID, ContextKind ck,
-                            AnalysisDeclContext *ctx,
-                            const LocationContext *parent, const void *data);
-};
-
-/// It represents a stack frame of the call stack (based on CallEvent).
-class StackFrameContext : public LocationContext {
-  friend class LocationContextManager;
+  // Extra data for BlockInvocations
+  const void *Data;
 
   // The call site where this stack frame is established.
-  const Stmt *CallSite;
+  const Expr *CallSite;
 
   // The parent block of the call site.
   const CFGBlock *Block;
@@ -313,112 +230,119 @@ class StackFrameContext : public LocationContext {
   // The index of the call site in the CFGBlock.
   const unsigned Index;
 
-  StackFrameContext(AnalysisDeclContext *ADC, const LocationContext *ParentLC,
-                    const Stmt *S, const CFGBlock *Block, unsigned BlockCount,
-                    unsigned Index, int64_t ID)
-      : LocationContext(StackFrame, ADC, ParentLC, ID), CallSite(S),
-        Block(Block), BlockCount(BlockCount), Index(Index) {}
-
 public:
-  ~StackFrameContext() override = default;
+  StackFrame(AnalysisDeclContext *ADC, const StackFrame *Parent,
+             const void *Data, const Expr *E, const CFGBlock *Block,
+             unsigned BlockCount, unsigned Index, int64_t ID)
+      : Ctx(ADC), Parent(Parent), ID(ID), Data(Data), CallSite(E), Block(Block),
+        BlockCount(BlockCount), Index(Index) {
+    assert(ADC);
+  }
 
-  const Stmt *getCallSite() const { return CallSite; }
+  ~StackFrame() = default;
+
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
+  AnalysisDeclContext *getAnalysisDeclContext() const { return Ctx; }
+
+  /// It might return null.
+  const StackFrame *getParent() const { return Parent; }
+
+  int64_t getID() const { return ID; }
+
+  bool isParentOf(const StackFrame *SF) const;
+
+  const Decl *getDecl() const { return Ctx->getDecl(); }
+
+  CFG *getCFG() const { return Ctx->getCFG(); }
+
+  template <typename T> T *getAnalysis() const { return Ctx->getAnalysis<T>(); }
+
+  const ParentMap &getParentMap() const { return Ctx->getParentMap(); }
+
+  /// \copydoc AnalysisDeclContext::getSelfDecl()
+  const ImplicitParamDecl *getSelfDecl() const { return Ctx->getSelfDecl(); }
+
+  const void *getData() const { return Data; }
+
+  const Expr *getCallSite() const { return CallSite; }
 
   const CFGBlock *getCallSiteBlock() const { return Block; }
 
-  bool inTopFrame() const override { return getParent() == nullptr; }
+  /// \returns Whether the current StackFrame has no caller context.
+  bool inTopFrame() const { return getParent() == nullptr; }
 
   unsigned getIndex() const { return Index; }
 
   CFGElement getCallSiteCFGElement() const { return (*Block)[Index]; }
 
-  void Profile(llvm::FoldingSetNodeID &ID) override;
+  /// Prints out the call stack in \c json format.
+  ///
+  /// \param Out   The out stream.
+  /// \param NL    The newline.
+  /// \param Space The space count for indentation.
+  /// \param IsDot Whether the output format is \c dot.
+  /// \param printMoreInfoPerStackFrame
+  /// A callback to print more information for each stack frame, for example:
+  /// \code
+  ///   [&](const StackFrame *SF) { SF->dump(); }
+  /// \endcode
+  void printJson(
+      raw_ostream &Out, const char *NL = "\n", unsigned int Space = 0,
+      bool IsDot = false,
+      std::function<void(const StackFrame *)> printMoreInfoPerStackFrame =
+          [](const StackFrame *) {}) const;
+
+  /// Prints out the call stack.
+  ///
+  /// \param Out The out stream.
+  LLVM_DUMP_METHOD void dumpStack(raw_ostream &Out) const;
+
+  LLVM_DUMP_METHOD void dump() const;
+
+  void Profile(llvm::FoldingSetNodeID &ID);
 
   static void Profile(llvm::FoldingSetNodeID &ID, AnalysisDeclContext *ADC,
-                      const LocationContext *ParentLC, const Stmt *S,
+                      const StackFrame *SF, const void *Data, const Expr *E,
                       const CFGBlock *Block, unsigned BlockCount,
                       unsigned Index) {
-    ProfileCommon(ID, StackFrame, ADC, ParentLC, S);
+    ID.AddPointer(ADC);
+    ID.AddPointer(SF);
+    ID.AddPointer(E);
+    ID.AddPointer(Data);
     ID.AddPointer(Block);
     ID.AddInteger(BlockCount);
     ID.AddInteger(Index);
   }
-
-  static bool classof(const LocationContext *LC) {
-    return LC->getKind() == StackFrame;
-  }
 };
 
-/// It represents a block invocation (based on BlockCall).
-class BlockInvocationContext : public LocationContext {
-  friend class LocationContextManager;
+class StackFrameManager {
+  llvm::FoldingSet<StackFrame> Frames;
 
-  const BlockDecl *BD;
-
-  // FIXME: Come up with a more type-safe way to model context-sensitivity.
-  const void *Data;
-
-  BlockInvocationContext(AnalysisDeclContext *ADC,
-                         const LocationContext *ParentLC, const BlockDecl *BD,
-                         const void *Data, int64_t ID)
-      : LocationContext(Block, ADC, ParentLC, ID), BD(BD), Data(Data) {}
-
-public:
-  ~BlockInvocationContext() override = default;
-
-  const BlockDecl *getBlockDecl() const { return BD; }
-
-  const void *getData() const { return Data; }
-
-  void Profile(llvm::FoldingSetNodeID &ID) override;
-
-  static void Profile(llvm::FoldingSetNodeID &ID, AnalysisDeclContext *ADC,
-                      const LocationContext *ParentLC, const BlockDecl *BD,
-                      const void *Data) {
-    ProfileCommon(ID, Block, ADC, ParentLC, BD);
-    ID.AddPointer(Data);
-  }
-
-  static bool classof(const LocationContext *LC) {
-    return LC->getKind() == Block;
-  }
-};
-
-class LocationContextManager {
-  llvm::FoldingSet<LocationContext> Contexts;
-
-  // ID used for generating a new location context.
+  // ID used for generating a new stack frame.
   int64_t NewID = 0;
 
 public:
-  ~LocationContextManager();
+  ~StackFrameManager();
 
   /// Obtain a context of the call stack using its parent context.
   ///
   /// \param ADC        The AnalysisDeclContext.
-  /// \param ParentLC   The parent context of this newly created context.
-  /// \param S          The call.
+  /// \param ParentSF   The parent context of this newly created
+  ///                   context.
+  /// \param Data       Extra data in case this StackFrame is
+  ///                   created for a BlockInvocation.
+  /// \param E          The call expression.
   /// \param Block      The basic block.
-  /// \param BlockCount The current count of entering into \p Blk.
-  /// \param Index      The index of \p Blk.
-  /// \returns The context for \p D with parent context \p ParentLC.
-  const StackFrameContext *getStackFrame(AnalysisDeclContext *ADC,
-                                         const LocationContext *ParentLC,
-                                         const Stmt *S, const CFGBlock *Block,
-                                         unsigned BlockCount, unsigned Index);
+  /// \param BlockCount The current count of entering into \p Block.
+  /// \param StmtIdx    The index of the call expression \p E among the
+  ///                   statements of the CFGBlock \p Block.
+  /// \returns The stack frame context corresponding to the call.
+  const StackFrame *getStackFrame(AnalysisDeclContext *ADC,
+                                  const StackFrame *ParentSF, const void *Data,
+                                  const Expr *E, const CFGBlock *Block,
+                                  unsigned BlockCount, unsigned StmtIdx);
 
-  /// Obtain a context of the block invocation using its parent context.
-  ///
-  /// \param ADC      The AnalysisDeclContext.
-  /// \param ParentLC The parent context of this newly created context.
-  /// \param BD       The BlockDecl.
-  /// \param Data     The raw data to store as part of the context.
-  const BlockInvocationContext *
-  getBlockInvocationContext(AnalysisDeclContext *ADC,
-                            const LocationContext *ParentLC,
-                            const BlockDecl *BD, const void *Data);
-
-  /// Discard all previously created LocationContext objects.
+  /// Discard all previously created StackFrame objects.
   void clear();
 };
 
@@ -427,7 +351,7 @@ class AnalysisDeclContextManager {
       llvm::DenseMap<const Decl *, std::unique_ptr<AnalysisDeclContext>>;
 
   ContextMap Contexts;
-  LocationContextManager LocCtxMgr;
+  StackFrameManager SFMgr;
   CFG::BuildOptions cfgBuildOptions;
 
   // Pointer to an interface that can provide function bodies for
@@ -451,7 +375,7 @@ public:
       bool synthesizeBodies = false, bool addStaticInitBranches = false,
       bool addCXXNewAllocator = true, bool addRichCXXConstructors = true,
       bool markElidedCXXConstructors = true, bool addVirtualBaseBranches = true,
-      CodeInjector *injector = nullptr);
+      std::unique_ptr<CodeInjector> injector = nullptr);
 
   AnalysisDeclContext *getContext(const Decl *D);
 
@@ -467,17 +391,9 @@ public:
   /// Obtain the beginning context of the analysis.
   ///
   /// \returns The top level stack frame for \p D.
-  const StackFrameContext *getStackFrame(const Decl *D) {
-    return LocCtxMgr.getStackFrame(getContext(D), nullptr, nullptr, nullptr, 0,
-                                   0);
-  }
-
-  /// \copydoc LocationContextManager::getStackFrame()
-  const StackFrameContext *getStackFrame(AnalysisDeclContext *ADC,
-                                         const LocationContext *Parent,
-                                         const Stmt *S, const CFGBlock *Block,
-                                         unsigned BlockCount, unsigned Index) {
-    return LocCtxMgr.getStackFrame(ADC, Parent, S, Block, BlockCount, Index);
+  const StackFrame *getTopStackFrame(const Decl *D) {
+    return SFMgr.getStackFrame(getContext(D), nullptr, nullptr, nullptr,
+                               nullptr, 0, 0);
   }
 
   BodyFarm &getBodyFarm();
@@ -488,7 +404,7 @@ public:
 private:
   friend class AnalysisDeclContext;
 
-  LocationContextManager &getLocationContextManager() { return LocCtxMgr; }
+  StackFrameManager &getStackFrameManager() { return SFMgr; }
 };
 
 } // namespace clang

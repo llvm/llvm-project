@@ -225,7 +225,7 @@ define i32 @test_cast_gep_large_indices_as() {
 
 define i32 @test_constant_cast_gep_struct_indices_as() {
 ; CHECK-LABEL: @test_constant_cast_gep_struct_indices_as(
-; CHECK-NEXT:    [[Y:%.*]] = load i32, ptr addrspace(3) getelementptr inbounds (i8, ptr addrspace(3) @constant_fold_global_ptr, i16 16), align 4
+; CHECK-NEXT:    [[Y:%.*]] = load i32, ptr addrspace(3) getelementptr inbounds nuw (i8, ptr addrspace(3) @constant_fold_global_ptr, i16 16), align 4
 ; CHECK-NEXT:    ret i32 [[Y]]
 ;
   %x = getelementptr %struct.foo, ptr addrspace(3) @constant_fold_global_ptr, i18 0, i32 2, i12 2
@@ -266,7 +266,7 @@ define i32 @constant_through_array_as_ptrs() {
 
 define float @canonicalize_addrspacecast(i32 %i) {
 ; CHECK-LABEL: @canonicalize_addrspacecast(
-; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds float, ptr addrspacecast (ptr addrspace(3) @shared_mem to ptr), i32 [[I:%.*]]
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds [4 x i8], ptr addrspacecast (ptr addrspace(3) @shared_mem to ptr), i32 [[I:%.*]]
 ; CHECK-NEXT:    [[V:%.*]] = load float, ptr [[P]], align 4
 ; CHECK-NEXT:    ret float [[V]]
 ;

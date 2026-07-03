@@ -47,7 +47,7 @@ using DiagOrStoredDiag =
 class DiagnosticRenderer {
 protected:
   const LangOptions &LangOpts;
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
+  DiagnosticOptions &DiagOpts;
 
   /// The location of the previous diagnostic if known.
   ///
@@ -68,8 +68,7 @@ protected:
   /// which change the amount of information displayed.
   DiagnosticsEngine::Level LastLevel = DiagnosticsEngine::Ignored;
 
-  DiagnosticRenderer(const LangOptions &LangOpts,
-                     DiagnosticOptions *DiagOpts);
+  DiagnosticRenderer(const LangOptions &LangOpts, DiagnosticOptions &DiagOpts);
 
   virtual ~DiagnosticRenderer();
 
@@ -142,7 +141,7 @@ public:
 class DiagnosticNoteRenderer : public DiagnosticRenderer {
 public:
   DiagnosticNoteRenderer(const LangOptions &LangOpts,
-                         DiagnosticOptions *DiagOpts)
+                         DiagnosticOptions &DiagOpts)
       : DiagnosticRenderer(LangOpts, DiagOpts) {}
 
   ~DiagnosticNoteRenderer() override;

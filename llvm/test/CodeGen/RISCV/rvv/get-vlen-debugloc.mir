@@ -11,9 +11,11 @@
     ret void, !dbg !2
   }
 
-  !0 = distinct !DISubprogram(name: "foo", line: 3, scopeLine: 3)
+  !0 = distinct !DISubprogram(name: "foo", line: 3, scopeLine: 3, type: !4)
   !1 = !DILocation(line: 4, column: 14, scope: !0)
   !2 = !DILocation(line: 5, column: 3, scope: !0)
+  !3 = !{null}
+  !4 = !DISubroutineType(types: !3)
 
 ...
 ---
@@ -26,7 +28,6 @@ body: |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 0
   ; CHECK-NEXT:   $x10 = frame-setup PseudoReadVLENB
   ; CHECK-NEXT:   $x10 = frame-setup SLLI killed $x10, 1
   ; CHECK-NEXT:   $x2 = frame-setup SUB $x2, killed $x10
@@ -36,6 +37,7 @@ body: |
   ; CHECK-NEXT:   $x10 = frame-destroy PseudoReadVLENB
   ; CHECK-NEXT:   $x10 = frame-destroy SLLI killed $x10, 1
   ; CHECK-NEXT:   $x2 = frame-destroy ADD $x2, killed $x10
+  ; CHECK-NEXT:   frame-destroy CFI_INSTRUCTION def_cfa $x2, 0
   ; CHECK-NEXT:   PseudoRET
   bb.0:
   bb.1:

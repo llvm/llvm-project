@@ -15,7 +15,7 @@ void g(register int i, ...) { // expected-warning 0-1{{deprecated}}
 // Don't crash when there is no last parameter.
 void no_params(...) {
   int a;
-  __builtin_va_start(ap, a); // expected-warning {{second argument to 'va_start' is not the last named parameter}}
+  __builtin_va_start(ap, a); // expected-warning {{second argument to 'va_start' is not the last non-variadic parameter}}
 }
 
 // Reject this. The __builtin_va_start would execute in Foo's non-variadic

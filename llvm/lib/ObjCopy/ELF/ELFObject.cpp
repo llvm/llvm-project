@@ -9,24 +9,21 @@
 #include "ELFObject.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCELFExtras.h"
 #include "llvm/MC/MCTargetOptions.h"
-#include "llvm/Object/ELF.h"
-#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/Path.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -491,7 +488,7 @@ Error ELFSectionWriter<ELFT>::visit(const DecompressedSection &Sec) {
                                  "': " + toString(std::move(E)));
 
   uint8_t *Buf = reinterpret_cast<uint8_t *>(Out.getBufferStart()) + Sec.Offset;
-  std::copy(Decompressed.begin(), Decompressed.end(), Buf);
+  llvm::copy(Decompressed, Buf);
 
   return Error::success();
 }
@@ -539,7 +536,7 @@ Error ELFSectionWriter<ELFT>::visit(const CompressedSection &Sec) {
   Elf_Chdr_Impl<ELFT> Chdr = {};
   switch (Sec.CompressionType) {
   case DebugCompressionType::None:
-    std::copy(Sec.OriginalData.begin(), Sec.OriginalData.end(), Buf);
+    llvm::copy(Sec.OriginalData, Buf);
     return Error::success();
   case DebugCompressionType::Zlib:
     Chdr.ch_type = ELF::ELFCOMPRESS_ZLIB;
@@ -553,7 +550,7 @@ Error ELFSectionWriter<ELFT>::visit(const CompressedSection &Sec) {
   memcpy(Buf, &Chdr, sizeof(Chdr));
   Buf += sizeof(Chdr);
 
-  std::copy(Sec.CompressedData.begin(), Sec.CompressedData.end(), Buf);
+  llvm::copy(Sec.CompressedData, Buf);
   return Error::success();
 }
 
@@ -1309,6 +1306,9 @@ Error BasicELFBuilder::initSections() {
 
   return Error::success();
 }
+
+BasicELFBuilder::BasicELFBuilder() : Obj(std::make_unique<Object>()) {}
+BasicELFBuilder::~BasicELFBuilder() = default;
 
 void BinaryELFBuilder::addData(SymbolTableSection *SymTab) {
   auto Data = ArrayRef<uint8_t>(
@@ -2157,35 +2157,51 @@ ELFWriter<ELFT>::ELFWriter(Object &Obj, raw_ostream &Buf, bool WSH,
     : Writer(Obj, Buf), WriteSectionHeaders(WSH && Obj.HadShdrs),
       OnlyKeepDebug(OnlyKeepDebug) {}
 
+Error Object::updateSectionData(SecPtr &Sec, ArrayRef<uint8_t> Data) {
+  if (!Sec->hasContents())
+    return createStringError(
+        errc::invalid_argument,
+        "section '%s' cannot be updated because it does not have contents",
+        Sec->Name.c_str());
+
+  if (Data.size() > Sec->Size && Sec->ParentSegment)
+    return createStringError(errc::invalid_argument,
+                             "cannot fit data of size %zu into section '%s' "
+                             "with size %" PRIu64 " that is part of a segment",
+                             Data.size(), Sec->Name.c_str(), Sec->Size);
+
+  if (!Sec->ParentSegment) {
+    // addSection modifies the container that Sec is stored in, potentially
+    // invalidating the Sec reference. We obtain the raw pointer Sec owns before
+    // calling addSection, so that it can be safely passed into replaceSections.
+    SectionBase *Replaced = Sec.get();
+    SectionBase *Modified = &addSection<OwnedDataSection>(*Sec, Data);
+    // replaceSections deletes the replaced section internally,
+    // so we don't need to do so here.
+    return replaceSections({{Replaced, Modified}});
+  }
+
+  // The segment writer will be in charge of updating these contents.
+  Sec->Size = Data.size();
+  UpdatedSections[Sec.get()] = Data;
+
+  return Error::success();
+}
+
 Error Object::updateSection(StringRef Name, ArrayRef<uint8_t> Data) {
   auto It = llvm::find_if(Sections,
                           [&](const SecPtr &Sec) { return Sec->Name == Name; });
   if (It == Sections.end())
     return createStringError(errc::invalid_argument, "section '%s' not found",
                              Name.str().c_str());
+  return updateSectionData(*It, Data);
+}
 
-  auto *OldSec = It->get();
-  if (!OldSec->hasContents())
-    return createStringError(
-        errc::invalid_argument,
-        "section '%s' cannot be updated because it does not have contents",
-        Name.str().c_str());
-
-  if (Data.size() > OldSec->Size && OldSec->ParentSegment)
-    return createStringError(errc::invalid_argument,
-                             "cannot fit data of size %zu into section '%s' "
-                             "with size %" PRIu64 " that is part of a segment",
-                             Data.size(), Name.str().c_str(), OldSec->Size);
-
-  if (!OldSec->ParentSegment) {
-    *It = std::make_unique<OwnedDataSection>(*OldSec, Data);
-  } else {
-    // The segment writer will be in charge of updating these contents.
-    OldSec->Size = Data.size();
-    UpdatedSections[OldSec] = Data;
-  }
-
-  return Error::success();
+Error Object::updateSectionData(SectionBase &S, ArrayRef<uint8_t> Data) {
+  auto It = llvm::find_if(Sections,
+                          [&](const SecPtr &Sec) { return Sec.get() == &S; });
+  assert(It != Sections.end() && "The section should belong to the object");
+  return updateSectionData(*It, Data);
 }
 
 Error Object::removeSections(
@@ -2219,7 +2235,7 @@ Error Object::removeSections(
   // Now make sure there are no remaining references to the sections that will
   // be removed. Sometimes it is impossible to remove a reference so we emit
   // an error here instead.
-  std::unordered_set<const SectionBase *> RemoveSections;
+  SmallPtrSet<const SectionBase *, 0> RemoveSections;
   RemoveSections.reserve(std::distance(Iter, std::end(Sections)));
   for (auto &RemoveSec : make_range(Iter, std::end(Sections))) {
     for (auto &Segment : Segments)

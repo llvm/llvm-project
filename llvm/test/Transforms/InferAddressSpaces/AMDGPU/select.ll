@@ -74,22 +74,22 @@ define amdgpu_kernel void @store_select_group_flat_null_swap(i1 %c, ptr addrspac
   ret void
 }
 
-; CHECK-LABEL: @store_select_group_flat_undef(
-; CHECK: %select = select i1 %c, ptr addrspace(3) %group.ptr.0, ptr addrspace(3) undef
+; CHECK-LABEL: @store_select_group_flat_poison(
+; CHECK: %select = select i1 %c, ptr addrspace(3) %group.ptr.0, ptr addrspace(3) poison
 ; CHECK: store i32 -1, ptr addrspace(3) %select
-define amdgpu_kernel void @store_select_group_flat_undef(i1 %c, ptr addrspace(3) %group.ptr.0) #0 {
+define amdgpu_kernel void @store_select_group_flat_poison(i1 %c, ptr addrspace(3) %group.ptr.0) #0 {
   %cast0 = addrspacecast ptr addrspace(3) %group.ptr.0 to ptr
-  %select = select i1 %c, ptr %cast0, ptr undef
+  %select = select i1 %c, ptr %cast0, ptr poison
   store i32 -1, ptr %select
   ret void
 }
 
-; CHECK-LABEL: @store_select_group_flat_undef_swap(
-; CHECK: %select = select i1 %c, ptr addrspace(3) undef, ptr addrspace(3) %group.ptr.0
+; CHECK-LABEL: @store_select_group_flat_poison_swap(
+; CHECK: %select = select i1 %c, ptr addrspace(3) poison, ptr addrspace(3) %group.ptr.0
 ; CHECK: store i32 -1, ptr addrspace(3) %select
-define amdgpu_kernel void @store_select_group_flat_undef_swap(i1 %c, ptr addrspace(3) %group.ptr.0) #0 {
+define amdgpu_kernel void @store_select_group_flat_poison_swap(i1 %c, ptr addrspace(3) %group.ptr.0) #0 {
   %cast0 = addrspacecast ptr addrspace(3) %group.ptr.0 to ptr
-  %select = select i1 %c, ptr undef, ptr %cast0
+  %select = select i1 %c, ptr poison, ptr %cast0
   store i32 -1, ptr %select
   ret void
 }
@@ -164,7 +164,7 @@ define amdgpu_kernel void @store_select_group_global_mismatch_flat_constexpr_swa
 ; CHECK: %select = select i1 %c, ptr addrspacecast (ptr addrspace(3) null to ptr), ptr addrspacecast (ptr addrspace(1) null to ptr)
 ; CHECK: store i32 7, ptr %select
 define amdgpu_kernel void @store_select_group_global_mismatch_null_null(i1 %c) #0 {
-  %select = select i1 %c, ptr addrspacecast (ptr addrspace(3) null to ptr), ptr addrspacecast (ptr addrspace(1) null to ptr)
+  %select = select i1 %c, ptr addrspacecast (ptr addrspace(3) zeroinitializer to ptr), ptr addrspacecast (ptr addrspace(1) null to ptr)
   store i32 7, ptr %select
   ret void
 }

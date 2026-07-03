@@ -18,7 +18,7 @@ target triple = "nvptx64"
 ; CHECK: @none_spmd_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr null, ptr null }
 ; CHECK: @will_not_be_spmd_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr null, ptr null }
 ;.
-define weak void @is_spmd() "kernel" {
+define weak ptx_kernel void @is_spmd() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@is_spmd
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr @is_spmd_kernel_environment, ptr null)
@@ -36,7 +36,7 @@ define weak void @is_spmd() "kernel" {
   ret void
 }
 
-define weak void @will_be_spmd() "kernel" {
+define weak ptx_kernel void @will_be_spmd() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@will_be_spmd
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -49,7 +49,7 @@ define weak void @will_be_spmd() "kernel" {
 ; CHECK:       user_code.entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr null) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    call void @is_spmd_helper2()
-; CHECK-NEXT:    call void @__kmpc_parallel_51(ptr null, i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
+; CHECK-NEXT:    call void @__kmpc_parallel_60(ptr null, i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 0, i32 0)
 ; CHECK-NEXT:    call void @__kmpc_target_deinit()
 ; CHECK-NEXT:    ret void
 ;
@@ -65,12 +65,12 @@ common.ret:
 user_code.entry:
   %0 = call i32 @__kmpc_global_thread_num(ptr null)
   call void @is_spmd_helper2()
-  call void @__kmpc_parallel_51(ptr null, i32 %0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper, ptr %captured_vars_addrs, i64 0)
+  call void @__kmpc_parallel_60(ptr null, i32 %0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper, ptr %captured_vars_addrs, i64 0, i32 0)
   call void @__kmpc_target_deinit()
   ret void
 }
 
-define weak void @non_spmd() "kernel" {
+define weak ptx_kernel void @non_spmd() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@non_spmd
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr @none_spmd_kernel_environment, ptr null)
@@ -88,7 +88,7 @@ define weak void @non_spmd() "kernel" {
   ret void
 }
 
-define weak void @will_not_be_spmd() "kernel" {
+define weak ptx_kernel void @will_not_be_spmd() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@will_not_be_spmd
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr @will_not_be_spmd_kernel_environment, ptr null)
@@ -201,20 +201,15 @@ declare void @spmd_compatible() "llvm.assume"="ompx_spmd_amenable"
 declare i8 @__kmpc_is_spmd_exec_mode()
 declare i32 @__kmpc_target_init(ptr, ptr)
 declare void @__kmpc_target_deinit()
-declare void @__kmpc_parallel_51(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64)
+declare void @__kmpc_parallel_60(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64, i32)
 declare i32 @__kmpc_global_thread_num(ptr)
 declare void @foo()
 declare void @bar()
 
 !llvm.module.flags = !{!0, !1}
-!nvvm.annotations = !{!2, !3, !4, !5}
 
 !0 = !{i32 7, !"openmp", i32 50}
 !1 = !{i32 7, !"openmp-device", i32 50}
-!2 = !{ptr @is_spmd, !"kernel", i32 1}
-!3 = !{ptr @will_be_spmd, !"kernel", i32 1}
-!4 = !{ptr @non_spmd, !"kernel", i32 1}
-!5 = !{ptr @will_not_be_spmd, !"kernel", i32 1}
 ;.
 ; CHECK: attributes #[[ATTR0]] = { "kernel" }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { "llvm.assume"="ompx_spmd_amenable" }
@@ -223,8 +218,4 @@ declare void @bar()
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ; CHECK: [[META1:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
-; CHECK: [[META2:![0-9]+]] = !{ptr @is_spmd, !"kernel", i32 1}
-; CHECK: [[META3:![0-9]+]] = !{ptr @will_be_spmd, !"kernel", i32 1}
-; CHECK: [[META4:![0-9]+]] = !{ptr @non_spmd, !"kernel", i32 1}
-; CHECK: [[META5:![0-9]+]] = !{ptr @will_not_be_spmd, !"kernel", i32 1}
 ;.

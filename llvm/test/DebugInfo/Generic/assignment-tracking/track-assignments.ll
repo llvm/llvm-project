@@ -1,7 +1,5 @@
 ; RUN: opt -passes='declare-to-assign,verify' %s -S -o - \
-; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
-; RUN: opt --try-experimental-debuginfo-iterators -passes='declare-to-assign,verify' %s -S -o - \
-; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: | FileCheck %s --implicit-check-not="#dbg_"
 
 ;; This test checks that `trackAssignments` is working correctly by using the
 ;; pass-wrapper `declare-to-assign`. Each function checks some specific
@@ -92,7 +90,7 @@ define dso_local void @_Z8zeroInitv() #0 !dbg !31 {
 entry:
   %Z = alloca [3 x i32], align 4
 ; CHECK:      %Z = alloca [3 x i32], align 4, !DIAssignID ![[ID_0:[0-9]+]]
-; CHECK-NEXT: #dbg_assign(i1 undef, ![[VAR_0:[0-9]+]], !DIExpression(), ![[ID_0]], ptr %Z, !DIExpression(),
+; CHECK-NEXT: #dbg_assign(i1 poison, ![[VAR_0:[0-9]+]], !DIExpression(), ![[ID_0]], ptr %Z, !DIExpression(),
   %0 = bitcast ptr %Z to ptr, !dbg !39
   call void @llvm.lifetime.start.p0(i64 12, ptr %0) #5, !dbg !39
   call void @llvm.dbg.declare(metadata ptr %Z, metadata !35, metadata !DIExpression()), !dbg !40
@@ -110,21 +108,21 @@ entry:
 ;;    void memcpyInit() { int A[4] = {0, 1, 2, 3}; }
 ;;
 ;; Check that we get two dbg.assign intrinsics. The first linked to the alloca
-;; and the second linked to the initialising memcpy, which should have an Undef
+;; and the second linked to the initialising memcpy, which should have a poison
 ;; value component.
 define dso_local void @_Z10memcpyInitv() #0 !dbg !42 {
 ; CHECK-LABEL: define dso_local void @_Z10memcpyInitv
 entry:
   %A = alloca [4 x i32], align 16
 ; CHECK:      %A = alloca [4 x i32], align 16, !DIAssignID ![[ID_2:[0-9]+]]
-; CHECK-NEXT: #dbg_assign(i1 undef, ![[VAR_1:[0-9]+]], !DIExpression(), ![[ID_2]], ptr %A, !DIExpression(),
+; CHECK-NEXT: #dbg_assign(i1 poison, ![[VAR_1:[0-9]+]], !DIExpression(), ![[ID_2]], ptr %A, !DIExpression(),
   %0 = bitcast ptr %A to ptr, !dbg !48
   call void @llvm.lifetime.start.p0(i64 16, ptr %0) #5, !dbg !48
   call void @llvm.dbg.declare(metadata ptr %A, metadata !44, metadata !DIExpression()), !dbg !49
   %1 = bitcast ptr %A to ptr, !dbg !49
   call void @llvm.memcpy.p0.p0.i64(ptr align 16 %1, ptr align 16 @__const._Z10memcpyInitv.A, i64 16, i1 false), !dbg !49
 ; CHECK:       @llvm.memcpy{{.*}}, !DIAssignID ![[ID_3:[0-9]+]]
-; CHECK-NEXT:  #dbg_assign(i1 undef, ![[VAR_1]], !DIExpression(), ![[ID_3]], ptr %1, !DIExpression(),
+; CHECK-NEXT:  #dbg_assign(i1 poison, ![[VAR_1]], !DIExpression(), ![[ID_3]], ptr %1, !DIExpression(),
   %2 = bitcast ptr %A to ptr, !dbg !50
   call void @llvm.lifetime.end.p0(i64 16, ptr %2) #5, !dbg !50
   ret void, !dbg !50
@@ -146,7 +144,7 @@ define dso_local void @_Z8setFieldv() #0 !dbg !51 {
 entry:
   %O = alloca %struct.Outer, align 4
 ; CHECK:      %O = alloca %struct.Outer, align 4, !DIAssignID ![[ID_4:[0-9]+]]
-; CHECK-NEXT: #dbg_assign(i1 undef, ![[VAR_2:[0-9]+]], !DIExpression(), ![[ID_4]], ptr %O, !DIExpression(),
+; CHECK-NEXT: #dbg_assign(i1 poison, ![[VAR_2:[0-9]+]], !DIExpression(), ![[ID_4]], ptr %O, !DIExpression(),
   %0 = bitcast ptr %O to ptr, !dbg !58
   call void @llvm.lifetime.start.p0(i64 16, ptr %0) #5, !dbg !58
   call void @llvm.dbg.declare(metadata ptr %O, metadata !53, metadata !DIExpression()), !dbg !59
@@ -178,7 +176,7 @@ define dso_local void @_Z13unknownOffsetv() #0 !dbg !72 {
 entry:
   %A = alloca [2 x i32], align 4
 ; CHECK:      %A = alloca [2 x i32], align 4, !DIAssignID ![[ID_6:[0-9]+]]
-; CHECK-NEXT: #dbg_assign(i1 undef, ![[VAR_3:[0-9]+]], !DIExpression(), ![[ID_6]], ptr %A, !DIExpression(),
+; CHECK-NEXT: #dbg_assign(i1 poison, ![[VAR_3:[0-9]+]], !DIExpression(), ![[ID_6]], ptr %A, !DIExpression(),
   %0 = bitcast ptr %A to ptr, !dbg !78
   call void @llvm.lifetime.start.p0(i64 8, ptr %0) #5, !dbg !78
   call void @llvm.dbg.declare(metadata ptr %A, metadata !74, metadata !DIExpression()), !dbg !79
@@ -209,8 +207,8 @@ define dso_local i64 @_Z12sharedAllocav() #0 !dbg !85 {
 entry:
   %retval = alloca %struct.Inner, align 4
 ; CHECK:      %retval = alloca %struct.Inner, align 4, !DIAssignID ![[ID_7:[0-9]+]]
-; CHECK-NEXT: #dbg_assign(i1 undef, ![[VAR_4:[0-9]+]], !DIExpression(), ![[ID_7]], ptr %retval, !DIExpression(),
-; CHECK-NEXT: #dbg_assign(i1 undef, ![[VAR_5:[0-9]+]], !DIExpression(), ![[ID_7]], ptr %retval, !DIExpression(),
+; CHECK-NEXT: #dbg_assign(i1 poison, ![[VAR_4:[0-9]+]], !DIExpression(), ![[ID_7]], ptr %retval, !DIExpression(),
+; CHECK-NEXT: #dbg_assign(i1 poison, ![[VAR_5:[0-9]+]], !DIExpression(), ![[ID_7]], ptr %retval, !DIExpression(),
   %0 = load i32, ptr @Cond, align 4, !dbg !94, !tbaa !61
   %tobool = icmp ne i32 %0, 0, !dbg !94
   br i1 %tobool, label %if.then, label %if.else, !dbg !95
@@ -221,8 +219,8 @@ if.then:                                          ; preds = %entry
   %1 = bitcast ptr %retval to ptr, !dbg !97
   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %1, ptr align 4 @InnerA, i64 8, i1 false), !dbg !97, !tbaa.struct !98
 ; CHECK:      call void @llvm.memcpy{{.*}}, !DIAssignID ![[ID_8:[0-9]+]]
-; CHECK-NEXT: #dbg_assign(i1 undef, ![[VAR_4]], !DIExpression(), ![[ID_8]], ptr %1, !DIExpression(),
-; CHECK-NEXT: #dbg_assign(i1 undef, ![[VAR_5]], !DIExpression(), ![[ID_8]], ptr %1, !DIExpression(),
+; CHECK-NEXT: #dbg_assign(i1 poison, ![[VAR_4]], !DIExpression(), ![[ID_8]], ptr %1, !DIExpression(),
+; CHECK-NEXT: #dbg_assign(i1 poison, ![[VAR_5]], !DIExpression(), ![[ID_8]], ptr %1, !DIExpression(),
   br label %return, !dbg !99
 
 if.else:                                          ; preds = %entry
@@ -231,8 +229,8 @@ if.else:                                          ; preds = %entry
   %2 = bitcast ptr %retval to ptr, !dbg !101
   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %2, ptr align 4 @InnerB, i64 8, i1 false), !dbg !101, !tbaa.struct !98
 ; CHECK:      call void @llvm.memcpy{{.*}}, !DIAssignID ![[ID_9:[0-9]+]]
-; CHECK-NEXT: #dbg_assign(i1 undef, ![[VAR_4]], !DIExpression(), ![[ID_9]], ptr %2, !DIExpression(),
-; CHECK-NEXT: #dbg_assign(i1 undef, ![[VAR_5]], !DIExpression(), ![[ID_9]], ptr %2, !DIExpression(),
+; CHECK-NEXT: #dbg_assign(i1 poison, ![[VAR_4]], !DIExpression(), ![[ID_9]], ptr %2, !DIExpression(),
+; CHECK-NEXT: #dbg_assign(i1 poison, ![[VAR_5]], !DIExpression(), ![[ID_9]], ptr %2, !DIExpression(),
   br label %return, !dbg !102
 
 return:                                           ; preds = %if.else, %if.then
@@ -312,10 +310,10 @@ define dso_local noundef i32 @_Z3funi(i32 noundef %X) !dbg !139 {
 entry:
   %Y.addr.i = alloca i32, align 4
 ; CHECK:      %Y.addr.i = alloca i32, align 4, !DIAssignID ![[ID_10:[0-9]+]]
-; CHECK-NEXT: #dbg_assign(i1 undef, ![[VAR_6:[0-9]+]], !DIExpression(), ![[ID_10]], ptr %Y.addr.i, !DIExpression(), ![[DBG_0:[0-9]+]]
+; CHECK-NEXT: #dbg_assign(i1 poison, ![[VAR_6:[0-9]+]], !DIExpression(), ![[ID_10]], ptr %Y.addr.i, !DIExpression(), ![[DBG_0:[0-9]+]]
   %X.addr = alloca i32, align 4
 ; CHECK-NEXT: %X.addr = alloca i32, align 4, !DIAssignID ![[ID_11:[0-9]+]]
-; CHECK-NEXT: #dbg_assign(i1 undef, ![[VAR_7:[0-9]+]], !DIExpression(), ![[ID_11]], ptr %X.addr, !DIExpression(), ![[DBG_1:[0-9]+]]
+; CHECK-NEXT: #dbg_assign(i1 poison, ![[VAR_7:[0-9]+]], !DIExpression(), ![[ID_11]], ptr %X.addr, !DIExpression(), ![[DBG_1:[0-9]+]]
   store i32 %X, ptr %X.addr, align 4
 ; CHECK-NEXT: store i32 %X, ptr %X.addr, align 4, !DIAssignID ![[ID_12:[0-9]+]]
 ; CHECK-NEXT: #dbg_assign(i32 %X, ![[VAR_7]], !DIExpression(), ![[ID_12]], ptr %X.addr, !DIExpression(), ![[DBG_1]]

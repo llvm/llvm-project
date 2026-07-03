@@ -19,10 +19,12 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 
 using namespace llvm;
 
 #define GET_INSTRINFO_MC_DESC
+#define GET_INSTRINFO_NAMED_OPS
 #define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "NVPTXGenInstrInfo.inc"
 
@@ -61,9 +63,9 @@ static MCInstPrinter *createNVPTXMCInstPrinter(const Triple &T,
 }
 
 static MCTargetStreamer *createTargetAsmStreamer(MCStreamer &S,
-                                                 formatted_raw_ostream &,
+                                                 formatted_raw_ostream &OS,
                                                  MCInstPrinter *) {
-  return new NVPTXAsmTargetStreamer(S);
+  return new NVPTXAsmTargetStreamer(S, OS);
 }
 
 static MCTargetStreamer *createNullTargetStreamer(MCStreamer &S) {
@@ -71,7 +73,8 @@ static MCTargetStreamer *createNullTargetStreamer(MCStreamer &S) {
 }
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTargetMC() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeNVPTXTargetMC() {
   for (Target *T : {&getTheNVPTXTarget32(), &getTheNVPTXTarget64()}) {
     // Register the MC asm info.
     RegisterMCAsmInfo<NVPTXMCAsmInfo> X(*T);

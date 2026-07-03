@@ -8,14 +8,14 @@
 ;
 ; <rdar://problem/16492408>
 
-define void @testcase() {
+define void @testcase(i1 %arg) {
 ; CHECK: testcase:
 ; CHECK-NOT: orr xzr, xzr, #0x2
 
 bb1:
   %tmp1 = tail call float @ceilf(float 2.000000e+00)
   %tmp2 = fptoui float %tmp1 to i64
-  br i1 undef, label %bb2, label %bb3
+  br i1 %arg, label %bb2, label %bb3
 
 bb2:
   tail call void @foo()

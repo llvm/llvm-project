@@ -1,6 +1,6 @@
-; RUN: llc < %s -march=sparc | FileCheck %s
-; RUN: llc < %s -march=sparcel | FileCheck %s
-; RUN: llc < %s -march=sparcv9 | FileCheck %s
+; RUN: llc < %s -mtriple=sparc | FileCheck %s
+; RUN: llc < %s -mtriple=sparcel | FileCheck %s
+; RUN: llc < %s -mtriple=sparcv9 | FileCheck %s
 
 ; CHECK:      .Li8:
 ; CHECK-DAG: .size .Li8, 1

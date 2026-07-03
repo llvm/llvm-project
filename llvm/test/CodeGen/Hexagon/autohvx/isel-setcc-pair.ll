@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-initial-cfg-cleanup=0 -hexagon-instsimplify=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-initial-cfg-cleanup=0 -hexagon-instsimplify=0 < %s | FileCheck %s
 
 ; Check that a setcc of a vector pair is handled (without crashing).
 ; CHECK: vcmp

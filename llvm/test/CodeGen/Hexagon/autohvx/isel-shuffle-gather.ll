@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ;
 ; Several shufflevector instructions have masks that are shorter than the
 ; source vectors. They "gather" a subset of the input elements into a single

@@ -10,7 +10,6 @@
 #define LLDB_UTILITY_EVENT_H
 
 #include "lldb/Utility/Broadcaster.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Predicate.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-defines.h"

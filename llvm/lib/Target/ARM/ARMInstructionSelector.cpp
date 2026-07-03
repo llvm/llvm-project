@@ -14,10 +14,10 @@
 #include "ARMSubtarget.h"
 #include "ARMTargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "arm-isel"
@@ -583,16 +583,14 @@ bool ARMInstructionSelector::insertComparison(CmpConstants Helper, InsertInfo I,
           .addUse(LHSReg)
           .addUse(RHSReg)
           .add(predOps(ARMCC::AL));
-  if (!constrainSelectedInstRegOperands(*CmpI, TII, TRI, RBI))
-    return false;
+  constrainSelectedInstRegOperands(*CmpI, TII, TRI, RBI);
 
   // Read the comparison flags (if necessary).
   if (Helper.ReadFlagsOpcode != ARM::INSTRUCTION_LIST_END) {
     auto ReadI = BuildMI(I.MBB, I.InsertBefore, I.DbgLoc,
                          TII.get(Helper.ReadFlagsOpcode))
                      .add(predOps(ARMCC::AL));
-    if (!constrainSelectedInstRegOperands(*ReadI, TII, TRI, RBI))
-      return false;
+    constrainSelectedInstRegOperands(*ReadI, TII, TRI, RBI);
   }
 
   // Select either 1 or the previous result based on the value of the flags.
@@ -602,8 +600,7 @@ bool ARMInstructionSelector::insertComparison(CmpConstants Helper, InsertInfo I,
                    .addUse(PrevRes)
                    .addImm(1)
                    .add(predOps(Cond, ARM::CPSR));
-  if (!constrainSelectedInstRegOperands(*Mov1I, TII, TRI, RBI))
-    return false;
+  constrainSelectedInstRegOperands(*Mov1I, TII, TRI, RBI);
 
   return true;
 }
@@ -701,21 +698,22 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
                            .add(predOps(ARMCC::AL));
         addGOTMemOperand(MIBLoad);
 
-        if (!constrainSelectedInstRegOperands(*MIBLoad, TII, TRI, RBI))
-          return false;
+        constrainSelectedInstRegOperands(*MIBLoad, TII, TRI, RBI);
       } else {
         addGOTMemOperand(MIB);
       }
     }
 
-    return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+    return true;
   }
 
   bool isReadOnly = STI.getTargetLowering()->isReadOnly(GV);
   if (STI.isROPI() && isReadOnly) {
     unsigned Opc = UseMovt ? Opcodes.MOV_ga_pcrel : Opcodes.LDRLIT_ga_pcrel;
     MIB->setDesc(TII.get(Opc));
-    return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+    return true;
   }
   if (STI.isRWPI() && !isReadOnly) {
     auto Offset = MRI.createVirtualRegister(&ARM::GPRRegClass);
@@ -730,8 +728,7 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
                           TII.get(Opcodes.ConstPoolLoad), Offset);
       addOpsForConstantPoolLoad(OffsetMIB, GV, /*IsSBREL*/ true);
     }
-    if (!constrainSelectedInstRegOperands(*OffsetMIB, TII, TRI, RBI))
-      return false;
+    constrainSelectedInstRegOperands(*OffsetMIB, TII, TRI, RBI);
 
     // Add the offset to the SB register.
     MIB->setDesc(TII.get(Opcodes.ADDrr));
@@ -741,7 +738,8 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
         .add(predOps(ARMCC::AL))
         .add(condCodeOp());
 
-    return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+    return true;
   }
 
   if (STI.isTargetELF()) {
@@ -763,7 +761,8 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
     return false;
   }
 
-  return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+  constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+  return true;
 }
 
 bool ARMInstructionSelector::selectSelect(MachineInstrBuilder &MIB,
@@ -780,8 +779,7 @@ bool ARMInstructionSelector::selectSelect(MachineInstrBuilder &MIB,
                   .addUse(CondReg)
                   .addImm(1)
                   .add(predOps(ARMCC::AL));
-  if (!constrainSelectedInstRegOperands(*CmpI, TII, TRI, RBI))
-    return false;
+  constrainSelectedInstRegOperands(*CmpI, TII, TRI, RBI);
 
   // Move a value into the result register based on the result of the
   // comparison.
@@ -796,8 +794,7 @@ bool ARMInstructionSelector::selectSelect(MachineInstrBuilder &MIB,
                    .addUse(TrueReg)
                    .addUse(FalseReg)
                    .add(predOps(ARMCC::EQ, ARM::CPSR));
-  if (!constrainSelectedInstRegOperands(*Mov1I, TII, TRI, RBI))
-    return false;
+  constrainSelectedInstRegOperands(*Mov1I, TII, TRI, RBI);
 
   MIB->eraseFromParent();
   return true;
@@ -809,7 +806,8 @@ bool ARMInstructionSelector::selectShift(unsigned ShiftOpc,
   MIB->setDesc(TII.get(ARM::MOVsr));
   MIB.addImm(ShiftOpc);
   MIB.add(predOps(ARMCC::AL)).add(condCodeOp());
-  return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+  constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+  return true;
 }
 
 void ARMInstructionSelector::renderVFPF32Imm(
@@ -900,8 +898,7 @@ bool ARMInstructionSelector::select(MachineInstr &I) {
                 .addImm(0)
                 .add(predOps(ARMCC::AL))
                 .add(condCodeOp());
-        if (!constrainSelectedInstRegOperands(*SubI, TII, TRI, RBI))
-          return false;
+        constrainSelectedInstRegOperands(*SubI, TII, TRI, RBI);
       }
       break;
     }
@@ -948,8 +945,7 @@ bool ARMInstructionSelector::select(MachineInstr &I) {
               .addDef(IgnoredBits)
               .addUse(SrcReg)
               .add(predOps(ARMCC::AL));
-      if (!constrainSelectedInstRegOperands(*MovI, TII, TRI, RBI))
-        return false;
+      constrainSelectedInstRegOperands(*MovI, TII, TRI, RBI);
 
       MIB->eraseFromParent();
       return true;
@@ -1088,7 +1084,7 @@ bool ARMInstructionSelector::select(MachineInstr &I) {
     return selectGlobal(MIB, MRI);
   case G_STORE:
   case G_LOAD: {
-    const auto &MemOp = **I.memoperands_begin();
+    auto &MemOp = **I.memoperands_begin();
     if (MemOp.isAtomic()) {
       LLVM_DEBUG(dbgs() << "Atomic load/store not supported yet\n");
       return false;
@@ -1102,6 +1098,25 @@ bool ARMInstructionSelector::select(MachineInstr &I) {
 
     assert((ValSize != 64 || STI.hasVFP2Base()) &&
            "Don't know how to load/store 64-bit value without VFP");
+
+    if (auto *LoadMI = dyn_cast<GLoad>(&I)) {
+      Register PtrReg = LoadMI->getPointerReg();
+      MachineInstr *Ptr = MRI.getVRegDef(PtrReg);
+      if (Ptr->getOpcode() == TargetOpcode::G_CONSTANT_POOL) {
+        const MachineOperand &Index = Ptr->getOperand(1);
+        unsigned Opcode = Subtarget->isThumb() ? ARM::tLDRpci : ARM::LDRcp;
+
+        auto Instr = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Opcode))
+                         .addDef(Reg)
+                         .add(Index)
+                         .addImm(0)
+                         .add(predOps(ARMCC::AL))
+                         .addMemOperand(&MemOp);
+        constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI);
+        I.eraseFromParent();
+        return true;
+      }
+    }
 
     const auto NewOpc = selectLoadStoreOpCode(I.getOpcode(), RegBank, ValSize);
     if (NewOpc == G_LOAD || NewOpc == G_STORE)
@@ -1137,16 +1152,14 @@ bool ARMInstructionSelector::select(MachineInstr &I) {
             .addReg(I.getOperand(0).getReg())
             .addImm(1)
             .add(predOps(ARMCC::AL));
-    if (!constrainSelectedInstRegOperands(*Test, TII, TRI, RBI))
-      return false;
+    constrainSelectedInstRegOperands(*Test, TII, TRI, RBI);
 
     // Branch conditionally.
     auto Branch =
         BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcodes.Bcc))
             .add(I.getOperand(1))
             .add(predOps(ARMCC::NE, ARM::CPSR));
-    if (!constrainSelectedInstRegOperands(*Branch, TII, TRI, RBI))
-      return false;
+    constrainSelectedInstRegOperands(*Branch, TII, TRI, RBI);
     I.eraseFromParent();
     return true;
   }
@@ -1165,5 +1178,6 @@ bool ARMInstructionSelector::select(MachineInstr &I) {
     return false;
   }
 
-  return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+  constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+  return true;
 }

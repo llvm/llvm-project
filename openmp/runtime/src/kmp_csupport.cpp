@@ -570,7 +570,7 @@ void __kmpc_fork_teams(ident_t *loc, kmp_int32 argc, kmpc_micro microtask,
 
   this_thr->th.th_teams_microtask = NULL;
   this_thr->th.th_teams_level = 0;
-  *(kmp_int64 *)(&this_thr->th.th_teams_size) = 0L;
+  memset(&this_thr->th.th_teams_size, 0, sizeof(kmp_teams_size_t));
   va_end(ap);
 #if KMP_STATS_ENABLED
   if (previous_state == stats_state_e::SERIAL_REGION) {
@@ -1780,7 +1780,7 @@ void __kmpc_end_critical(ident_t *loc, kmp_int32 global_tid,
   if (ompt_enabled.ompt_callback_mutex_released) {
     ompt_callbacks.ompt_callback(ompt_callback_mutex_released)(
         ompt_mutex_critical, (ompt_wait_id_t)(uintptr_t)lck,
-        OMPT_LOAD_RETURN_ADDRESS(0));
+        OMPT_LOAD_RETURN_ADDRESS(global_tid));
   }
 #endif
 
@@ -4514,6 +4514,20 @@ void omp_free(void *ptr, omp_allocator_handle_t allocator) {
   ___kmpc_free(__kmp_entry_gtid(), ptr, allocator);
 }
 /* end of OpenMP 5.1 Memory Management routines */
+
+void *omp_get_dyn_gprivate_ptr(size_t offset, omp_access_t access_group) {
+  return NULL;
+}
+
+void *omp_get_dyn_gprivate_nofb_ptr(size_t offset, omp_access_t access_group) {
+  return NULL;
+}
+
+size_t omp_get_dyn_gprivate_size(omp_access_t access_group) { return 0; }
+
+omp_memspace_handle_t omp_get_dyn_gprivate_memspace(omp_access_t access_group) {
+  return omp_null_mem_space;
+}
 
 int __kmpc_get_target_offload(void) {
   if (!__kmp_init_serial) {

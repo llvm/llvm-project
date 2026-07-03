@@ -7,54 +7,47 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/CodeGenOptions.h"
-#include <string.h>
 
 namespace clang {
 
 CodeGenOptions::CodeGenOptions() {
-#define CODEGENOPT(Name, Bits, Default) Name = Default;
-#define ENUM_CODEGENOPT(Name, Type, Bits, Default) set##Name(Default);
+#define CODEGENOPT(Name, Bits, Default, Compatibility) Name = Default;
+#define ENUM_CODEGENOPT(Name, Type, Bits, Default, Compatibility)              \
+  set##Name(Default);
 #include "clang/Basic/CodeGenOptions.def"
 
   RelocationModel = llvm::Reloc::PIC_;
-  memcpy(CoverageVersion, "408*", 4);
 }
 
 void CodeGenOptions::resetNonModularOptions(StringRef ModuleFormat) {
-  // First reset all CodeGen options only. The Debug options are handled later.
-#define DEBUGOPT(Name, Bits, Default)
-#define VALUE_DEBUGOPT(Name, Bits, Default)
-#define ENUM_DEBUGOPT(Name, Type, Bits, Default)
-#define CODEGENOPT(Name, Bits, Default) Name = Default;
-#define ENUM_CODEGENOPT(Name, Type, Bits, Default) set##Name(Default);
-// Do not reset AST affecting code generation options.
-#define AFFECTING_VALUE_CODEGENOPT(Name, Bits, Default)
-#include "clang/Basic/CodeGenOptions.def"
+  // FIXME: Replace with C++20 `using enum CodeGenOptions::CompatibilityKind`.
+  using CK = CompatibilityKind;
 
-  // Next reset all debug options that can always be reset, because they never
-  // affect the PCM.
-#define DEBUGOPT(Name, Bits, Default)
-#define VALUE_DEBUGOPT(Name, Bits, Default)
-#define ENUM_DEBUGOPT(Name, Type, Bits, Default)
-#define BENIGN_DEBUGOPT(Name, Bits, Default) Name = Default;
-#define BENIGN_VALUE_DEBUGOPT(Name, Bits, Default) Name = Default;
-#define BENIGN_ENUM_DEBUGOPT(Name, Type, Bits, Default) set##Name(Default);
-#include "clang/Basic/DebugOptions.def"
+  // First reset benign codegen and debug options.
+#define CODEGENOPT(Name, Bits, Default, Compatibility)                         \
+  if constexpr (CK::Compatibility == CK::Benign)                               \
+    Name = Default;
+#define ENUM_CODEGENOPT(Name, Type, Bits, Default, Compatibility)              \
+  if constexpr (CK::Compatibility == CK::Benign)                               \
+    set##Name(Default);
+#include "clang/Basic/CodeGenOptions.def"
 
   // Conditionally reset debug options that only matter when the debug info is
   // emitted into the PCM (-gmodules).
   if (ModuleFormat == "raw" && !DebugTypeExtRefs) {
-#define DEBUGOPT(Name, Bits, Default) Name = Default;
-#define VALUE_DEBUGOPT(Name, Bits, Default) Name = Default;
-#define ENUM_DEBUGOPT(Name, Type, Bits, Default) set##Name(Default);
-#define BENIGN_DEBUGOPT(Name, Bits, Default)
-#define BENIGN_VALUE_DEBUGOPT(Name, Bits, Default)
-#define BENIGN_ENUM_DEBUGOPT(Name, Type, Bits, Default)
+#define DEBUGOPT(Name, Bits, Default, Compatibility)                           \
+  if constexpr (CK::Compatibility != CK::Benign)                               \
+    Name = Default;
+#define VALUE_DEBUGOPT(Name, Bits, Default, Compatibility)                     \
+  if constexpr (CK::Compatibility != CK::Benign)                               \
+    Name = Default;
+#define ENUM_DEBUGOPT(Name, Type, Bits, Default, Compatibility)                \
+  if constexpr (CK::Compatibility != CK::Benign)                               \
+    set##Name(Default);
 #include "clang/Basic/DebugOptions.def"
   }
 
   RelocationModel = llvm::Reloc::PIC_;
-  memcpy(CoverageVersion, "408*", 4);
 }
 
 }  // end namespace clang

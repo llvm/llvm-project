@@ -1,8 +1,8 @@
 ; Test the MSA intrinsics that are encoded with the 3RF instruction format and
 ; take an integer as an operand.
 
-; RUN: llc -march=mips -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s
-; RUN: llc -march=mipsel -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s
+; RUN: llc -mtriple=mips-elf -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel-elf -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s
 
 @llvm_mips_fexp2_w_ARG1 = global <4 x float> <float 0.000000e+00, float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>, align 16
 @llvm_mips_fexp2_w_ARG2 = global <4 x i32> <i32 4, i32 5, i32 6, i32 7>, align 16

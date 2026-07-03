@@ -22,7 +22,7 @@ define <vscale x 8 x bfloat> @bfmla_x(<vscale x 8 x i1> %pg, <vscale x 8 x bfloa
 define <vscale x 8 x bfloat> @bfmla_z(<vscale x 8 x i1> %pg, <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b, <vscale x 8 x bfloat> %c){
 ; CHECK-LABEL: bfmla_z:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z3.h, #0 // =0x0
+; CHECK-NEXT:    movi v3.2d, #0000000000000000
 ; CHECK-NEXT:    sel z0.h, p0, z0.h, z3.h
 ; CHECK-NEXT:    bfmla z0.h, p0/m, z1.h, z2.h
 ; CHECK-NEXT:    ret

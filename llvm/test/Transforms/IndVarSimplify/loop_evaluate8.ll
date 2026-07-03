@@ -6,23 +6,23 @@
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:32:32"
 target triple = "i386-pc-linux-gnu"
 
-define ptr @string_expandtabs() nounwind {
+define ptr @string_expandtabs(i1 %arg) nounwind {
 ; CHECK-LABEL: @string_expandtabs(
 ; CHECK-NOT: select
 entry:
-	br i1 undef, label %bb33, label %bb1
+	br i1 %arg, label %bb33, label %bb1
 
 bb1:		; preds = %entry
-	br i1 undef, label %overflow1, label %bb15
+	br i1 %arg, label %overflow1, label %bb15
 
 bb15:		; preds = %bb1
-	br i1 undef, label %bb33, label %bb17
+	br i1 %arg, label %bb33, label %bb17
 
 bb17:		; preds = %bb15
 	br label %bb30
 
 bb19:		; preds = %bb30
-	br i1 undef, label %bb20, label %bb29
+	br i1 %arg, label %bb20, label %bb29
 
 bb20:		; preds = %bb19
 	%0 = load i32, ptr undef, align 4		; <i32> [#uses=1]
@@ -49,10 +49,10 @@ bb29:		; preds = %bb23, %bb19
 	br label %bb30
 
 bb30:		; preds = %bb29, %bb17
-	br i1 undef, label %bb19, label %bb33
+	br i1 %arg, label %bb19, label %bb33
 
 overflow2:		; preds = %bb21
-	br i1 undef, label %bb32, label %overflow1
+	br i1 %arg, label %bb32, label %overflow1
 
 bb32:		; preds = %overflow2
 	br label %overflow1

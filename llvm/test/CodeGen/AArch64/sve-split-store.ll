@@ -16,9 +16,8 @@ define void @store_promote_4i8(<vscale x 4 x i8> %data, ptr %a) {
 define void @store_split_i16(<vscale x 16 x i16> %data, ptr %a) {
 ; CHECK-LABEL: store_split_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    st1h { z1.h }, p0, [x0, #1, mul vl]
-; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    str z1, [x0, #1, mul vl]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   store <vscale x 16 x i16> %data, ptr %a
   ret void
@@ -27,11 +26,10 @@ define void @store_split_i16(<vscale x 16 x i16> %data, ptr %a) {
 define void @store_split_16i32(<vscale x 16 x i32> %data, ptr %a) {
 ; CHECK-LABEL: store_split_16i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    st1w { z3.s }, p0, [x0, #3, mul vl]
-; CHECK-NEXT:    st1w { z2.s }, p0, [x0, #2, mul vl]
-; CHECK-NEXT:    st1w { z1.s }, p0, [x0, #1, mul vl]
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    str z3, [x0, #3, mul vl]
+; CHECK-NEXT:    str z2, [x0, #2, mul vl]
+; CHECK-NEXT:    str z1, [x0, #1, mul vl]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   store <vscale x 16 x i32> %data, ptr %a
   ret void
@@ -40,15 +38,14 @@ define void @store_split_16i32(<vscale x 16 x i32> %data, ptr %a) {
 define void @store_split_16i64(<vscale x 16 x i64> %data, ptr %a) {
 ; CHECK-LABEL: store_split_16i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    st1d { z7.d }, p0, [x0, #7, mul vl]
-; CHECK-NEXT:    st1d { z6.d }, p0, [x0, #6, mul vl]
-; CHECK-NEXT:    st1d { z5.d }, p0, [x0, #5, mul vl]
-; CHECK-NEXT:    st1d { z4.d }, p0, [x0, #4, mul vl]
-; CHECK-NEXT:    st1d { z3.d }, p0, [x0, #3, mul vl]
-; CHECK-NEXT:    st1d { z2.d }, p0, [x0, #2, mul vl]
-; CHECK-NEXT:    st1d { z1.d }, p0, [x0, #1, mul vl]
-; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    str z7, [x0, #7, mul vl]
+; CHECK-NEXT:    str z6, [x0, #6, mul vl]
+; CHECK-NEXT:    str z5, [x0, #5, mul vl]
+; CHECK-NEXT:    str z4, [x0, #4, mul vl]
+; CHECK-NEXT:    str z3, [x0, #3, mul vl]
+; CHECK-NEXT:    str z2, [x0, #2, mul vl]
+; CHECK-NEXT:    str z1, [x0, #1, mul vl]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   store <vscale x 16 x i64> %data, ptr %a
   ret void

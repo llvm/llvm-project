@@ -109,12 +109,12 @@ define i32 @test2(ptr %p, i32 %v) {
   ret i32 %load2
 }
 
-define i32 @test3(ptr %p, i32 %v) {
+define i32 @test3(ptr %p, i32 %v, i1 %arg) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[P:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[LOAD]], [[V:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
-; CHECK-NEXT:    br i1 undef, label [[TAKEN:%.*]], label [[MERGE:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[TAKEN:%.*]], label [[MERGE:%.*]]
 ; CHECK:       taken:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
@@ -123,16 +123,16 @@ define i32 @test3(ptr %p, i32 %v) {
   %load = load i32, ptr %p
   %c = icmp eq i32 %load, %v
   call void @llvm.assume(i1 %c)
-  br i1 undef, label %taken, label %merge
+  br i1 %arg, label %taken, label %merge
 taken:
   br label %merge
 merge:
   ret i32 %load
 }
 
-define i32 @trivial_constants(ptr %p) {
+define i32 @trivial_constants(ptr %p, i1 %arg) {
 ; CHECK-LABEL: @trivial_constants(
-; CHECK-NEXT:    br i1 undef, label [[TAKEN:%.*]], label [[MERGE:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[TAKEN:%.*]], label [[MERGE:%.*]]
 ; CHECK:       taken:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
@@ -140,17 +140,17 @@ define i32 @trivial_constants(ptr %p) {
 ;
   %c = icmp eq i32 0, 0
   call void @llvm.assume(i1 %c)
-  br i1 undef, label %taken, label %merge
+  br i1 %arg, label %taken, label %merge
 taken:
   br label %merge
 merge:
   ret i32 0
 }
 
-define i32 @conflicting_constants(ptr %p) {
+define i32 @conflicting_constants(ptr %p, i1 %arg) {
 ; CHECK-LABEL: @conflicting_constants(
 ; CHECK-NEXT:    store i8 poison, ptr null
-; CHECK-NEXT:    br i1 undef, label [[TAKEN:%.*]], label [[MERGE:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[TAKEN:%.*]], label [[MERGE:%.*]]
 ; CHECK:       taken:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
@@ -158,7 +158,7 @@ define i32 @conflicting_constants(ptr %p) {
 ;
   %c = icmp eq i32 0, 5
   call void @llvm.assume(i1 %c)
-  br i1 undef, label %taken, label %merge
+  br i1 %arg, label %taken, label %merge
 taken:
   br label %merge
 merge:

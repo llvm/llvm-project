@@ -133,10 +133,10 @@ define void @test5(i32 %n) {
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[A:%.*]] = phi i32 [ [[N]], %[[ENTRY]] ], [ [[SHR:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i32 [[A]], 4
+; CHECK-NEXT:    [[COND:%.*]] = icmp samesign ugt i32 [[A]], 4
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
 ; CHECK-NEXT:    [[SHR]] = lshr i32 [[A]], 1
-; CHECK-NEXT:    [[LOOPCOND:%.*]] = icmp ugt i32 [[SHR]], 8
+; CHECK-NEXT:    [[LOOPCOND:%.*]] = icmp samesign ugt i32 [[SHR]], 8
 ; CHECK-NEXT:    br i1 [[LOOPCOND]], label %[[LOOP]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void

@@ -92,6 +92,10 @@ End-user Options
 
  Generate DWARF debugging info for assembly source files.
 
+.. option:: --hex
+
+ Take raw hexadecimal bytes as input for disassembly. Whitespace is ignored.
+
 .. option:: --large-code-model
 
  Create CFI directives that assume the code might be more than 2 GB.

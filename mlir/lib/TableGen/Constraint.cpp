@@ -26,6 +26,8 @@ Constraint::Constraint(const llvm::Record *record)
     kind = CK_Type;
   } else if (def->isSubClassOf("AttrConstraint")) {
     kind = CK_Attr;
+  } else if (def->isSubClassOf("PropConstraint")) {
+    kind = CK_Prop;
   } else if (def->isSubClassOf("RegionConstraint")) {
     kind = CK_Region;
   } else if (def->isSubClassOf("SuccessorConstraint")) {
@@ -123,33 +125,13 @@ AppliedConstraint::AppliedConstraint(Constraint &&constraint,
     : constraint(constraint), self(std::string(self)),
       entities(std::move(entities)) {}
 
-Constraint DenseMapInfo<Constraint>::getEmptyKey() {
-  return Constraint(RecordDenseMapInfo::getEmptyKey(),
-                    Constraint::CK_Uncategorized);
-}
-
-Constraint DenseMapInfo<Constraint>::getTombstoneKey() {
-  return Constraint(RecordDenseMapInfo::getTombstoneKey(),
-                    Constraint::CK_Uncategorized);
-}
-
 unsigned DenseMapInfo<Constraint>::getHashValue(Constraint constraint) {
-  if (constraint == getEmptyKey())
-    return RecordDenseMapInfo::getHashValue(RecordDenseMapInfo::getEmptyKey());
-  if (constraint == getTombstoneKey()) {
-    return RecordDenseMapInfo::getHashValue(
-        RecordDenseMapInfo::getTombstoneKey());
-  }
   return llvm::hash_combine(constraint.getPredicate(), constraint.getSummary());
 }
 
 bool DenseMapInfo<Constraint>::isEqual(Constraint lhs, Constraint rhs) {
   if (lhs == rhs)
     return true;
-  if (lhs == getEmptyKey() || lhs == getTombstoneKey())
-    return false;
-  if (rhs == getEmptyKey() || rhs == getTombstoneKey())
-    return false;
   return lhs.getPredicate() == rhs.getPredicate() &&
          lhs.getSummary() == rhs.getSummary();
 }

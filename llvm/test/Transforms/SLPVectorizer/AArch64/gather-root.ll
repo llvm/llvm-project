@@ -16,7 +16,7 @@ define void @PR28330(i32 %n) {
 ; DEFAULT-NEXT:    br label [[FOR_BODY:%.*]]
 ; DEFAULT:       for.body:
 ; DEFAULT-NEXT:    [[P17:%.*]] = phi i32 [ [[OP_RDX:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; DEFAULT-NEXT:    [[TMP2:%.*]] = select <8 x i1> [[TMP1]], <8 x i32> <i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720>, <8 x i32> <i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80>
+; DEFAULT-NEXT:    [[TMP2:%.*]] = select <8 x i1> [[TMP1]], <8 x i32> splat (i32 -720), <8 x i32> splat (i32 -80)
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP2]])
 ; DEFAULT-NEXT:    [[OP_RDX]] = add i32 [[TMP3]], [[P17]]
 ; DEFAULT-NEXT:    br label [[FOR_BODY]]
@@ -28,7 +28,7 @@ define void @PR28330(i32 %n) {
 ; GATHER-NEXT:    br label [[FOR_BODY:%.*]]
 ; GATHER:       for.body:
 ; GATHER-NEXT:    [[P17:%.*]] = phi i32 [ [[OP_RDX:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; GATHER-NEXT:    [[TMP2:%.*]] = select <8 x i1> [[TMP1]], <8 x i32> <i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720>, <8 x i32> <i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80>
+; GATHER-NEXT:    [[TMP2:%.*]] = select <8 x i1> [[TMP1]], <8 x i32> splat (i32 -720), <8 x i32> splat (i32 -80)
 ; GATHER-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP2]])
 ; GATHER-NEXT:    [[OP_RDX]] = add i32 [[TMP3]], [[P17]]
 ; GATHER-NEXT:    br label [[FOR_BODY]]
@@ -40,7 +40,7 @@ define void @PR28330(i32 %n) {
 ; MAX-COST-NEXT:    br label [[FOR_BODY:%.*]]
 ; MAX-COST:       for.body:
 ; MAX-COST-NEXT:    [[P17:%.*]] = phi i32 [ [[OP_RDX:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; MAX-COST-NEXT:    [[TMP2:%.*]] = select <8 x i1> [[TMP1]], <8 x i32> <i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720>, <8 x i32> <i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80>
+; MAX-COST-NEXT:    [[TMP2:%.*]] = select <8 x i1> [[TMP1]], <8 x i32> splat (i32 -720), <8 x i32> splat (i32 -80)
 ; MAX-COST-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP2]])
 ; MAX-COST-NEXT:    [[OP_RDX]] = add i32 [[TMP3]], [[P17]]
 ; MAX-COST-NEXT:    br label [[FOR_BODY]]
@@ -93,7 +93,7 @@ define void @PR32038(i32 %n) {
 ; DEFAULT-NEXT:    br label [[FOR_BODY:%.*]]
 ; DEFAULT:       for.body:
 ; DEFAULT-NEXT:    [[P17:%.*]] = phi i32 [ [[OP_RDX:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; DEFAULT-NEXT:    [[TMP2:%.*]] = select <8 x i1> [[TMP1]], <8 x i32> <i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720>, <8 x i32> <i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80>
+; DEFAULT-NEXT:    [[TMP2:%.*]] = select <8 x i1> [[TMP1]], <8 x i32> splat (i32 -720), <8 x i32> splat (i32 -80)
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP2]])
 ; DEFAULT-NEXT:    [[OP_RDX]] = add i32 [[TMP3]], -5
 ; DEFAULT-NEXT:    br label [[FOR_BODY]]
@@ -105,7 +105,7 @@ define void @PR32038(i32 %n) {
 ; GATHER-NEXT:    br label [[FOR_BODY:%.*]]
 ; GATHER:       for.body:
 ; GATHER-NEXT:    [[P17:%.*]] = phi i32 [ [[OP_RDX:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; GATHER-NEXT:    [[TMP2:%.*]] = select <8 x i1> [[TMP1]], <8 x i32> <i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720>, <8 x i32> <i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80>
+; GATHER-NEXT:    [[TMP2:%.*]] = select <8 x i1> [[TMP1]], <8 x i32> splat (i32 -720), <8 x i32> splat (i32 -80)
 ; GATHER-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP2]])
 ; GATHER-NEXT:    [[OP_RDX]] = add i32 [[TMP3]], -5
 ; GATHER-NEXT:    br label [[FOR_BODY]]
@@ -117,7 +117,7 @@ define void @PR32038(i32 %n) {
 ; MAX-COST-NEXT:    br label [[FOR_BODY:%.*]]
 ; MAX-COST:       for.body:
 ; MAX-COST-NEXT:    [[P17:%.*]] = phi i32 [ [[OP_RDX:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
-; MAX-COST-NEXT:    [[TMP2:%.*]] = select <8 x i1> [[TMP1]], <8 x i32> <i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720, i32 -720>, <8 x i32> <i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80, i32 -80>
+; MAX-COST-NEXT:    [[TMP2:%.*]] = select <8 x i1> [[TMP1]], <8 x i32> splat (i32 -720), <8 x i32> splat (i32 -80)
 ; MAX-COST-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP2]])
 ; MAX-COST-NEXT:    [[OP_RDX]] = add i32 [[TMP3]], -5
 ; MAX-COST-NEXT:    br label [[FOR_BODY]]

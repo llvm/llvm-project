@@ -1132,6 +1132,8 @@ StringRef COFFObjectFile::getFileFormatName() const {
     return "COFF-ARM64EC";
   case COFF::IMAGE_FILE_MACHINE_ARM64X:
     return "COFF-ARM64X";
+  case COFF::IMAGE_FILE_MACHINE_R4000:
+    return "COFF-MIPS";
   default:
     return "COFF-<unknown arch>";
   }
@@ -1465,6 +1467,27 @@ StringRef COFFObjectFile::getRelocationTypeName(uint16_t Type) const {
       return "Unknown";
     }
     break;
+  case Triple::mipsel:
+    switch (Type) {
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_MIPS_ABSOLUTE);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_MIPS_REFHALF);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_MIPS_REFWORD);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_MIPS_JMPADDR);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_MIPS_REFHI);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_MIPS_REFLO);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_MIPS_GPREL);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_MIPS_LITERAL);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_MIPS_SECTION);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_MIPS_SECREL);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_MIPS_SECRELLO);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_MIPS_SECRELHI);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_MIPS_JMPADDR16);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_MIPS_REFWORDNB);
+      LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_MIPS_PAIR);
+    default:
+      return "Unknown";
+    }
+    break;
   default:
     return "Unknown";
   }
@@ -1535,6 +1558,26 @@ std::unique_ptr<MemoryBuffer> COFFObjectFile::getHybridObjectView() const {
     }
   }
   return HybridView;
+}
+
+std::optional<MemoryBufferRef> COFFObjectFile::findHybridObjectSection() const {
+  if (getDOSHeader() || getMachine() != COFF::IMAGE_FILE_MACHINE_ARM64)
+    return std::nullopt;
+
+  // Search for the .obj.arm64ec section, which may be used to embed a full
+  // ARM64EC object file into an ARM64 object file.
+  for (SectionRef S : sections()) {
+    Expected<StringRef> Name = S.getName();
+    if (errorToBool(Name.takeError()) || *Name != kArm64ECSectionName)
+      continue;
+
+    Expected<StringRef> ContentsOrErr = S.getContents();
+    if (errorToBool(ContentsOrErr.takeError()) || ContentsOrErr->empty())
+      continue;
+    return MemoryBufferRef(*ContentsOrErr, getFileName());
+  }
+
+  return std::nullopt;
 }
 
 bool ImportDirectoryEntryRef::
@@ -2325,6 +2368,9 @@ ResourceSectionRef::getContents(const coff_resource_data_entry &Entry) {
       break;
     case Triple::aarch64:
       RVAReloc = COFF::IMAGE_REL_ARM64_ADDR32NB;
+      break;
+    case Triple::mipsel:
+      RVAReloc = COFF::IMAGE_REL_MIPS_REFWORDNB;
       break;
     default:
       return createStringError(object_error::parse_failed,

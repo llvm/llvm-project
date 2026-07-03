@@ -14,12 +14,12 @@
 // CHECK-NEXT: CompoundStmt
 // This is for the nested anonymous namespace.
 // CHECK-NEXT: UsingDirectiveDecl
-// CHECK-SAME: ''
+// CHECK-SAME: <col:1, line:24:1>
 // CHECK: FunctionDecl
 // CHECK-SAME: func1
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: UsingDirectiveDecl
-// CHECK-SAME: ''
+// CHECK-SAME: <col:1, line:4:1>
 
 // CHECK: NamespaceDecl
 // CHECK-SAME: test_namespace1
@@ -28,7 +28,7 @@
 // CHECK-SAME: func2
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: UsingDirectiveDecl
-// CHECK-SAME: ''
+// CHECK-SAME: <col:1, line:9:1>
 
 // CHECK-NEXT: NamespaceDecl
 // CHECK-SAME: test_namespace2
@@ -39,7 +39,7 @@
 // CHECK-SAME: func3
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: UsingDirectiveDecl
-// CHECK-SAME: ''
+// CHECK-SAME: <col:1, line:17:1>
 
 void expr() {
   func1();

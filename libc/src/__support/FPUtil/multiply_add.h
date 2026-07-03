@@ -23,13 +23,13 @@ namespace fputil {
 // which uses FMA instructions to speed up if available.
 
 template <typename T>
-LIBC_INLINE cpp::enable_if_t<(sizeof(T) > sizeof(void *)), T>
+LIBC_INLINE constexpr cpp::enable_if_t<(sizeof(T) > sizeof(void *)), T>
 multiply_add(const T &x, const T &y, const T &z) {
   return x * y + z;
 }
 
 template <typename T>
-LIBC_INLINE cpp::enable_if_t<(sizeof(T) <= sizeof(void *)), T>
+LIBC_INLINE constexpr cpp::enable_if_t<(sizeof(T) <= sizeof(void *)), T>
 multiply_add(T x, T y, T z) {
   return x * y + z;
 }
@@ -37,22 +37,40 @@ multiply_add(T x, T y, T z) {
 } // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL
 
-#if defined(LIBC_TARGET_CPU_HAS_FMA)
+#if defined(LIBC_TARGET_CPU_HAS_FMA) && !defined(LIBC_USE_CONSTEXPR)
 
 // FMA instructions are available.
 // We use builtins directly instead of including FMA.h to avoid a circular
 // dependency: multiply_add.h -> FMA.h -> generic/FMA.h -> dyadic_float.h.
+//
+// TODO: for constexpr evaluation of multiply_add using FMA, we will need to
+// use the generic fma implementation from generic/FMA.h.  But currently that
+// implementation will use dyadic_float.h , which in turns including this
+// multiply_add.h .  We will need to break the dependency to enable constexpr
+// for other math functions.
 
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
+#ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
 LIBC_INLINE float multiply_add(float x, float y, float z) {
+#if __has_builtin(__builtin_elementwise_fma)
+  return __builtin_elementwise_fma(x, y, z);
+#else
   return __builtin_fmaf(x, y, z);
+#endif
 }
+#endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT
 
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 LIBC_INLINE double multiply_add(double x, double y, double z) {
+#if __has_builtin(__builtin_elementwise_fma)
+  return __builtin_elementwise_fma(x, y, z);
+#else
   return __builtin_fma(x, y, z);
+#endif
 }
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
 } // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL

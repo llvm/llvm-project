@@ -1,0 +1,133 @@
+# RUN: split-file %s %t
+
+# RUN: %clang --target=arm-none-eabi --multi-lib-config=%t/multilib-without-macro-defines.yaml %s -### -o /dev/null 2>&1 \
+# RUN: | FileCheck %s
+# RUN: %clang --target=arm-none-eabi --multi-lib-config=%t/multilib-with-macro-defines.yaml %s -### -o /dev/null 2>&1 \
+# RUN: | FileCheck %s
+# CHECK-NOT: error:
+
+# RUN: %clang --target=arm-none-eabi --multi-lib-config=%t/missing-flag-name.yaml %s -### -o /dev/null 2>&1 \
+# RUN: | FileCheck %s --check-prefix=CHECK-MISSING-FLAG-NAME
+# CHECK-MISSING-FLAG-NAME: error: custom flag requires a name
+
+# RUN: %clang --target=arm-none-eabi --multi-lib-config=%t/missing-flag-values.yaml %s -### -o /dev/null 2>&1 \
+# RUN: | FileCheck %s --check-prefix=CHECK-MISSING-FLAG-VALUES
+# CHECK-MISSING-FLAG-VALUES: error: custom flag must have at least one value
+
+# RUN: %clang --target=arm-none-eabi --multi-lib-config=%t/missing-flag-value-default.yaml %s -### -o /dev/null 2>&1 \
+# RUN: | FileCheck %s --check-prefix=CHECK-MISSING-FLAG-VALUE-DEFAULT
+# CHECK-MISSING-FLAG-VALUE-DEFAULT: error: custom flag must have a default value
+
+# RUN: %clang --target=arm-none-eabi --multi-lib-config=%t/missing-flag-value-name.yaml %s -### -o /dev/null 2>&1 \
+# RUN: | FileCheck %s --check-prefix=CHECK-MISSING-FLAG-VALUE-NAME
+# CHECK-MISSING-FLAG-VALUE-NAME: error: custom flag value requires a name
+
+# RUN: %clang --target=arm-none-eabi --multi-lib-config=%t/duplicate-flag-value-name.yaml %s -### -o /dev/null 2>&1 \
+# RUN: | FileCheck %s --check-prefix=CHECK-DUPLICATE-FLAG-VALUE-NAME
+# CHECK-DUPLICATE-FLAG-VALUE-NAME:      error: duplicate custom flag value name: "value-name"
+# CHECK-DUPLICATE-FLAG-VALUE-NAME-NEXT: - Name: value-name
+
+#--- multilib-without-macro-defines.yaml
+---
+MultilibVersion: 1.0
+
+Variants:
+- Dir: libc
+  Flags: [-fmultilib-flag=a]
+
+Flags:
+  - Name: flag
+    Values:
+    - Name: a
+    - Name: b
+    Default: a
+
+#--- multilib-with-macro-defines.yaml
+---
+MultilibVersion: 1.0
+
+Variants:
+- Dir: libc
+  Flags: [-fmultilib-flag=a]
+
+Flags:
+  - Name: flag
+    Values:
+    - Name: a
+      MacroDefines: [FEATURE_A]
+    - Name: b
+      MacroDefines: [FEATURE_B]
+    Default: a
+
+#--- missing-flag-name.yaml
+---
+MultilibVersion: 1.0
+
+Variants:
+- Dir: libc
+  Flags: [-fmultilib-flag=a]
+
+Flags:
+  - Values:
+    - Name: a
+    Default: a
+
+#--- missing-flag-values.yaml
+---
+MultilibVersion: 1.0
+
+Variants:
+- Dir: libc
+  Flags: [-fmultilib-flag=a]
+
+Flags:
+  - Name: flag
+    Values:
+    Default: a
+
+#--- missing-flag-value-default.yaml
+---
+MultilibVersion: 1.0
+
+Variants:
+- Dir: libc
+  Flags: [-fmultilib-flag=a]
+
+Flags:
+  - Name: flag
+    Values:
+    - Name: a
+    Default:
+
+#--- missing-flag-value-name.yaml
+---
+MultilibVersion: 1.0
+
+Variants:
+- Dir: libc
+  Flags: [-fmultilib-flag=a]
+
+Flags:
+  - Name: flag
+    Values:
+    - Name:
+    Default: a
+
+#--- duplicate-flag-value-name.yaml
+---
+MultilibVersion: 1.0
+
+Variants:
+- Dir: libc
+  Flags: [-fmultilib-flag=value-name]
+
+Flags:
+  - Name: a
+    Values:
+    - Name: value-name
+    - Name: value-a
+    Default: value-name
+  - Name: b
+    Values:
+    - Name: value-name
+    Default: value-name

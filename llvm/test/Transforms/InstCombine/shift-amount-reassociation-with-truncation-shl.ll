@@ -30,7 +30,7 @@ define i16 @t0(i32 %x, i16 %y) {
 define <2 x i16> @t1_vec_splat(<2 x i32> %x, <2 x i16> %y) {
 ; CHECK-LABEL: @t1_vec_splat(
 ; CHECK-NEXT:    [[X_TR:%.*]] = trunc <2 x i32> [[X:%.*]] to <2 x i16>
-; CHECK-NEXT:    [[T5:%.*]] = shl <2 x i16> [[X_TR]], <i16 8, i16 8>
+; CHECK-NEXT:    [[T5:%.*]] = shl <2 x i16> [[X_TR]], splat (i16 8)
 ; CHECK-NEXT:    ret <2 x i16> [[T5]]
 ;
   %t0 = sub <2 x i16> <i16 32, i16 32>, %y

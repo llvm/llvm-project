@@ -2,7 +2,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:   -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
 ; RUN:   FileCheck %s --check-prefix=CHECK-LE
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
+; RUN: llc -verify-machineinstrs -mcpu=ppc -mtriple=powerpc64-unknown-linux-gnu \
 ; RUN:   -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
 ; RUN:   FileCheck %s --check-prefix=CHECK-BE
 ; RUN: opt --passes='sroa,loop-vectorize,loop-unroll,instcombine' -S \

@@ -1,0 +1,98 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! Check if do concurrent works inside cuf kernel directive
+
+subroutine doconc1
+  integer :: i, n
+  integer, managed :: a(3)
+  a(:) = -1
+  n = 3
+  n = n - 1
+  !$cuf kernel do
+  do concurrent(i=1:n)
+    a(i) = 1
+  end do
+end
+
+! CHECK-LABEL: func.func @_QPdoconc1()
+! CHECK: %[[IMEM:.*]] = fir.alloca i32 {bindc_name = "i"}
+! CHECK: %[[IV:.*]]:2 = hlfir.declare %[[IMEM]] {uniq_name = "_QFdoconc1Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: cuf.kernel<<<*, *>>> (%[[ARG0:[^ ]*]] : index) =
+! CHECK: %[[CONV:.*]] = fir.convert %[[ARG0]] : (index) -> i32
+! CHECK: fir.store %[[CONV]] to %[[IV]]#0 : !fir.ref<i32>
+! CHECK: fir.load %[[IV]]#0 : !fir.ref<i32>
+
+subroutine doconc2
+  integer :: i, j, m, n
+  integer, managed :: a(2, 4)
+  m = 2
+  n = 4
+  a(:,:) = -1
+  !$cuf kernel do
+  do concurrent(i=1:m,j=1:n)
+    a(i,j) = i+j
+  end do
+end
+
+! CHECK-LABEL: func.func @_QPdoconc2()
+! CHECK: %[[JMEM:.*]] = fir.alloca i32 {bindc_name = "j"}
+! CHECK: %[[IMEM:.*]] = fir.alloca i32 {bindc_name = "i"}
+! CHECK: %[[IDECL:.*]]:2 = hlfir.declare %[[IMEM]] {uniq_name = "_QFdoconc2Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %[[JDECL:.*]]:2 = hlfir.declare %[[JMEM]] {uniq_name = "_QFdoconc2Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: cuf.kernel<<<*, *>>> (%[[ARG0:[^ ]*]] : index, %[[ARG1:[^ ]*]] : index) =
+! CHECK: %[[CONVI:.*]] = fir.convert %[[ARG0]] : (index) -> i32
+! CHECK: fir.store %[[CONVI]] to %[[IDECL]]#0 : !fir.ref<i32>
+! CHECK: %[[CONVJ:.*]] = fir.convert %[[ARG1]] : (index) -> i32
+! CHECK: fir.store %[[CONVJ]] to %[[JDECL]]#0 : !fir.ref<i32>
+! CHECK: fir.load %[[IDECL]]#0 : !fir.ref<i32>
+! CHECK: fir.load %[[JDECL]]#0 : !fir.ref<i32>
+
+! Test that do concurrent index variables in a cuf.kernel are allocated with
+! their declared Fortran integer type (i32), not the loop index type (index).
+! Previously the allocation used index, which prevented type conversions such
+! as real(i) from compiling correctly.
+subroutine doconc_real
+  integer :: i, n
+  real, managed :: a(4)
+  n = 4
+  !$cuf kernel do
+  do concurrent(i=1:n)
+    a(i) = real(i)
+  end do
+end
+
+! CHECK-LABEL: func.func @_QPdoconc_real()
+! CHECK: %[[IMEM:.*]] = fir.alloca i32 {bindc_name = "i"}
+! CHECK: %[[IV:.*]]:2 = hlfir.declare %[[IMEM]] {uniq_name = "_QFdoconc_realEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: cuf.kernel<<<*, *>>> (%[[ARG0:[^ ]*]] : index) =
+! CHECK: %[[CONV:.*]] = fir.convert %[[ARG0]] : (index) -> i32
+! CHECK: fir.store %[[CONV]] to %[[IV]]#0 : !fir.ref<i32>
+! CHECK: %[[LOADED:.*]] = fir.load %[[IV]]#0 : !fir.ref<i32>
+! CHECK: fir.convert %[[LOADED]] : (i32) -> f32
+
+! Test that do concurrent with multiple index variables and an explicit loop
+! count (do(2)) generates correct IR.  Previously the PFT navigation loop
+! assumed nested regular do-loops and asserted when it encountered the flat
+! do concurrent structure.
+subroutine doconc_do2
+  integer :: i, j, k, n
+  real, managed :: a(4, 2)
+  k = 2
+  n = 4
+  !$cuf kernel do(2) <<<k, n>>>
+  do concurrent(i=1:k, j=1:n)
+    a(j,i) = 1.0
+  end do
+end
+
+! CHECK-LABEL: func.func @_QPdoconc_do2()
+! j is allocated before i in the alloca block (loop control order).
+! CHECK: %[[JMEM:.*]] = fir.alloca i32 {bindc_name = "j"}
+! CHECK: %[[IMEM:.*]] = fir.alloca i32 {bindc_name = "i"}
+! CHECK: %[[IDECL:.*]]:2 = hlfir.declare %[[IMEM]] {uniq_name = "_QFdoconc_do2Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %[[JDECL:.*]]:2 = hlfir.declare %[[JMEM]] {uniq_name = "_QFdoconc_do2Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: cuf.kernel{{.*}} (%[[ARG0:[^ ]*]] : index, %[[ARG1:[^ ]*]] : index) =
+! CHECK: %[[CONVI:.*]] = fir.convert %[[ARG0]] : (index) -> i32
+! CHECK: fir.store %[[CONVI]] to %[[IDECL]]#0 : !fir.ref<i32>
+! CHECK: %[[CONVJ:.*]] = fir.convert %[[ARG1]] : (index) -> i32
+! CHECK: fir.store %[[CONVJ]] to %[[JDECL]]#0 : !fir.ref<i32>

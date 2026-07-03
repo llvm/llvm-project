@@ -144,7 +144,7 @@ protected:
     llvm::SmallVector<mlir::LLVM::GEPArg> cv = {args...};
     auto llvmPtrTy =
         mlir::LLVM::LLVMPointerType::get(ty.getContext(), /*addressSpace=*/0);
-    return rewriter.create<mlir::LLVM::GEPOp>(loc, llvmPtrTy, ty, base, cv);
+    return mlir::LLVM::GEPOp::create(rewriter, loc, llvmPtrTy, ty, base, cv);
   }
 
   // Find the Block in which the alloca should be inserted.
@@ -173,6 +173,10 @@ protected:
         this->getTypeConverter());
   }
 
+  const mlir::DataLayout &getDataLayout() const {
+    return lowerTy().getDataLayout();
+  }
+
   void attachTBAATag(mlir::LLVM::AliasAnalysisOpInterface op,
                      mlir::Type baseFIRType, mlir::Type accessFIRType,
                      mlir::LLVM::GEPOp gep) const {
@@ -185,9 +189,11 @@ protected:
   unsigned
   getProgramAddressSpace(mlir::ConversionPatternRewriter &rewriter) const;
 
+  unsigned
+  getGlobalAddressSpace(mlir::ConversionPatternRewriter &rewriter) const;
+
   const fir::FIRToLLVMPassOptions &options;
 
-  using ConvertToLLVMPattern::match;
   using ConvertToLLVMPattern::matchAndRewrite;
 };
 
@@ -195,6 +201,8 @@ template <typename SourceOp>
 class FIROpConversion : public ConvertFIRToLLVMPattern {
 public:
   using OpAdaptor = typename SourceOp::Adaptor;
+  using OneToNOpAdaptor = typename SourceOp::template GenericAdaptor<
+      mlir::ArrayRef<mlir::ValueRange>>;
 
   explicit FIROpConversion(const LLVMTypeConverter &typeConverter,
                            const fir::FIRToLLVMPassOptions &options,
@@ -204,14 +212,6 @@ public:
                                 options, benefit) {}
 
   /// Wrappers around the RewritePattern methods that pass the derived op type.
-  void rewrite(mlir::Operation *op, mlir::ArrayRef<mlir::Value> operands,
-               mlir::ConversionPatternRewriter &rewriter) const final {
-    rewrite(mlir::cast<SourceOp>(op),
-            OpAdaptor(operands, mlir::cast<SourceOp>(op)), rewriter);
-  }
-  llvm::LogicalResult match(mlir::Operation *op) const final {
-    return match(mlir::cast<SourceOp>(op));
-  }
   llvm::LogicalResult
   matchAndRewrite(mlir::Operation *op, mlir::ArrayRef<mlir::Value> operands,
                   mlir::ConversionPatternRewriter &rewriter) const final {
@@ -219,28 +219,29 @@ public:
                            OpAdaptor(operands, mlir::cast<SourceOp>(op)),
                            rewriter);
   }
-
-  /// Rewrite and Match methods that operate on the SourceOp type. These must be
+  llvm::LogicalResult
+  matchAndRewrite(mlir::Operation *op,
+                  mlir::ArrayRef<mlir::ValueRange> operands,
+                  mlir::ConversionPatternRewriter &rewriter) const final {
+    auto sourceOp = mlir::cast<SourceOp>(op);
+    return matchAndRewrite(sourceOp, OneToNOpAdaptor(operands, sourceOp),
+                           rewriter);
+  }
+  /// Methods that operate on the SourceOp type. These must be
   /// overridden by the derived pattern class.
-  virtual llvm::LogicalResult match(SourceOp op) const {
-    llvm_unreachable("must override match or matchAndRewrite");
-  }
-  virtual void rewrite(SourceOp op, OpAdaptor adaptor,
-                       mlir::ConversionPatternRewriter &rewriter) const {
-    llvm_unreachable("must override rewrite or matchAndRewrite");
-  }
   virtual llvm::LogicalResult
   matchAndRewrite(SourceOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const {
-    if (mlir::failed(match(op)))
-      return mlir::failure();
-    rewrite(op, adaptor, rewriter);
-    return mlir::success();
+    llvm_unreachable("matchAndRewrite is not implemented");
+  }
+  virtual llvm::LogicalResult
+  matchAndRewrite(SourceOp op, OneToNOpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const {
+    return dispatchTo1To1(*this, op, adaptor, rewriter);
   }
 
 private:
   using ConvertFIRToLLVMPattern::matchAndRewrite;
-  using ConvertToLLVMPattern::match;
 };
 
 /// FIR conversion pattern template

@@ -147,11 +147,15 @@ class DialectAttrOrType<dag d> {
 
 class DialectAttribute<dag d> : DialectAttrOrType<d>, AttributeKind {
   let cParser = "succeeded($_reader.readAttribute<$_resultType>($_var))";
-  let cBuilder = "get<$_resultType>(context, $_args)";
+  let cBuilder = "getChecked<$_resultType>([&]() { return reader.emitError(); }, context, $_args)";
 }
 class DialectType<dag d> : DialectAttrOrType<d>, TypeKind {
   let cParser = "succeeded($_reader.readType<$_resultType>($_var))";
-  let cBuilder = "get<$_resultType>(context, $_args)";
+  let cBuilder = "getChecked<$_resultType>([&]() { return reader.emitError(); }, context, $_args)";
+}
+// Variant of the above, where it never prints. Useful for staging.
+class DialectTypeNoPrint<dag d> : DialectType<d> {
+  let printerPredicate = "false";
 }
 
 class DialectAttributes<string d> {

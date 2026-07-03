@@ -1,7 +1,8 @@
-# RUN: yaml2obj %s -o %T/a.out
-# RUN: %lldb %T/a.out -o "image lookup --verbose --address 0x0000000100003fa1" -o exit | FileCheck %s --check-prefix=NOINLINE
-# RUN: %lldb %T/a.out -o "image lookup --verbose --address 0x0000000100003fa2" -o exit | FileCheck %s --check-prefix=INLINE_1
-# RUN: %lldb %T/a.out -o "image lookup --verbose --address 0x0000000100003fa8" -o exit | FileCheck %s --check-prefix=INLINE_2
+# RUN: mkdir -p %t.dir
+# RUN: yaml2obj %s -o %t.dir/a.out
+# RUN: %lldb %t.dir/a.out -o "image lookup --verbose --address 0x0000000100003fa1" -o exit | FileCheck %s --check-prefix=NOINLINE
+# RUN: %lldb %t.dir/a.out -o "image lookup --verbose --address 0x0000000100003fa2" -o exit | FileCheck %s --check-prefix=INLINE_1
+# RUN: %lldb %t.dir/a.out -o "image lookup --verbose --address 0x0000000100003fa8" -o exit | FileCheck %s --check-prefix=INLINE_2
 
 #      NOINLINE: Summary: a.out`main + 33 at main.cpp:10
 # NOINLINE-NEXT: Module: file =

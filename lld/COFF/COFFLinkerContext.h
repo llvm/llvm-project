@@ -14,6 +14,7 @@
 #include "DebugTypes.h"
 #include "Driver.h"
 #include "InputFiles.h"
+#include "PDB.h"
 #include "SymbolTable.h"
 #include "Writer.h"
 #include "lld/Common/CommonLinkerContext.h"
@@ -32,10 +33,36 @@ public:
   SymbolTable symtab;
   COFFOptTable optTable;
 
+  // A native ARM64 symbol table on ARM64X target.
+  std::optional<SymbolTable> hybridSymtab;
+
+  // Returns the appropriate symbol table for the specified machine type.
+  SymbolTable &getSymtab(llvm::COFF::MachineTypes machine) {
+    if (hybridSymtab && machine == ARM64)
+      return *hybridSymtab;
+    return symtab;
+  }
+
+  // Invoke the specified callback for each symbol table.
+  void forEachSymtab(std::function<void(SymbolTable &symtab)> f) {
+    // If present, process the native symbol table first.
+    if (hybridSymtab)
+      f(*hybridSymtab);
+    f(symtab);
+  }
+
+  // Invoke the specified callback for each active symbol table,
+  // skipping the native symbol table on pure ARM64EC targets.
+  void forEachActiveSymtab(std::function<void(SymbolTable &symtab)> f) {
+    if (symtab.ctx.config.machine == ARM64X)
+      f(*hybridSymtab);
+    f(symtab);
+  }
+
   std::vector<ObjFile *> objFileInstances;
   std::map<std::string, PDBInputFile *> pdbInputFileInstances;
   std::vector<ImportFile *> importFileInstances;
-  std::vector<BitcodeFile *> bitcodeFileInstances;
+  std::int64_t consumedInputsSize = 0;
 
   MergeChunk *mergeChunkInstances[Log2MaxSectionAlignment + 1] = {};
 
@@ -87,7 +114,11 @@ public:
   Timer tpiStreamLayoutTimer;
   Timer diskCommitTimer;
 
+  std::optional<PDBStats> pdbStats;
+
   Configuration config;
+
+  DynamicRelocsChunk *dynamicRelocs = nullptr;
 };
 
 } // namespace lld::coff

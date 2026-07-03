@@ -36,6 +36,7 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Serialization/ModuleCache.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
@@ -59,7 +60,8 @@ namespace clangd {
 struct CapturedASTCtx {
 public:
   CapturedASTCtx(CompilerInstance &Clang)
-      : Invocation(Clang.getInvocationPtr()),
+      : ModCache(Clang.getModuleCachePtr()),
+        Invocation(Clang.getInvocationPtr()),
         Diagnostics(Clang.getDiagnosticsPtr()), Target(Clang.getTargetPtr()),
         AuxTarget(Clang.getAuxTarget()), FileMgr(Clang.getFileManagerPtr()),
         SourceMgr(Clang.getSourceManagerPtr()), PP(Clang.getPreprocessorPtr()),
@@ -79,6 +81,7 @@ public:
   }
 
 private:
+  std::shared_ptr<ModuleCache> ModCache;
   std::shared_ptr<CompilerInvocation> Invocation;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diagnostics;
   IntrusiveRefCntPtr<TargetInfo> Target;
@@ -103,7 +106,7 @@ struct PreambleData {
   // Target options used when building the preamble. Changes in target can cause
   // crashes when deserializing preamble, this enables consumers to use the
   // same target (without reparsing CompileCommand).
-  std::shared_ptr<TargetOptions> TargetOpts = nullptr;
+  std::unique_ptr<TargetOptions> TargetOpts = nullptr;
   PrecompiledPreamble Preamble;
   std::vector<Diag> Diags;
   // Processes like code completions and go-to-definitions will need #include
@@ -238,6 +241,10 @@ private:
   std::vector<PragmaMark> PatchedMarks;
   MainFileMacros PatchedMacros;
 };
+
+PreambleBounds computePreambleBounds(const LangOptions &LangOpts,
+                                     const llvm::MemoryBufferRef &Buffer,
+                                     bool SkipPreambleBuild);
 
 } // namespace clangd
 } // namespace clang

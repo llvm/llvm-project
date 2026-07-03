@@ -14,14 +14,14 @@ void test(int a, int b, int c, int d) {
   clang_analyzer_printState();
   // CHECK:       "disequality_info": [
   // CHECK-NEXT:    {
-  // CHECK-NEXT:      "class": [ "((reg_$0<int a>) + (reg_$1<int b>)) + (reg_$2<int c>)" ],
+  // CHECK-NEXT:      "class": [ "((reg_$0<int a>) + (reg_$2<int b>)) + (reg_$5<int c>)" ],
   // CHECK-NEXT:      "disequal_to": [
-  // CHECK-NEXT:        [ "reg_$3<int d>" ]]
+  // CHECK-NEXT:        [ "reg_$8<int d>" ]]
   // CHECK-NEXT:    },
   // CHECK-NEXT:    {
-  // CHECK-NEXT:      "class": [ "reg_$3<int d>" ],
+  // CHECK-NEXT:      "class": [ "reg_$8<int d>" ],
   // CHECK-NEXT:      "disequal_to": [
-  // CHECK-NEXT:        [ "((reg_$0<int a>) + (reg_$1<int b>)) + (reg_$2<int c>)" ]]
+  // CHECK-NEXT:        [ "((reg_$0<int a>) + (reg_$2<int b>)) + (reg_$5<int c>)" ]]
   // CHECK-NEXT:    }
   // CHECK-NEXT:  ],
 
@@ -32,14 +32,14 @@ void test(int a, int b, int c, int d) {
   clang_analyzer_printState();
   // CHECK:      "disequality_info": [
   // CHECK-NEXT:   {
-  // CHECK-NEXT:     "class": [ "(reg_$0<int a>) + (reg_$2<int c>)" ],
+  // CHECK-NEXT:     "class": [ "(reg_$0<int a>) + (reg_$5<int c>)" ],
   // CHECK-NEXT:     "disequal_to": [
-  // CHECK-NEXT:       [ "reg_$3<int d>" ]]
+  // CHECK-NEXT:       [ "reg_$8<int d>" ]]
   // CHECK-NEXT:   },
   // CHECK-NEXT:   {
-  // CHECK-NEXT:     "class": [ "reg_$3<int d>" ],
+  // CHECK-NEXT:     "class": [ "reg_$8<int d>" ],
   // CHECK-NEXT:     "disequal_to": [
-  // CHECK-NEXT:        [ "(reg_$0<int a>) + (reg_$2<int c>)" ]]
+  // CHECK-NEXT:        [ "(reg_$0<int a>) + (reg_$5<int c>)" ]]
   // CHECK-NEXT:    }
   // CHECK-NEXT:  ],
 
@@ -50,10 +50,10 @@ void test(int a, int b, int c, int d) {
   // CHECK-NEXT:    {
   // CHECK-NEXT:      "class": [ "reg_$0<int a>" ],
   // CHECK-NEXT:      "disequal_to": [
-  // CHECK-NEXT:        [ "reg_$3<int d>" ]]
+  // CHECK-NEXT:        [ "reg_$8<int d>" ]]
   // CHECK-NEXT:    },
   // CHECK-NEXT:    {
-  // CHECK-NEXT:      "class": [ "reg_$3<int d>" ],
+  // CHECK-NEXT:      "class": [ "reg_$8<int d>" ],
   // CHECK-NEXT:      "disequal_to": [
   // CHECK-NEXT:        [ "reg_$0<int a>" ]]
   // CHECK-NEXT:    }

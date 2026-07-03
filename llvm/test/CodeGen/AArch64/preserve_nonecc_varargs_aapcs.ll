@@ -96,7 +96,7 @@ define i32 @caller() nounwind ssp {
 ; CHECK-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    str x30, [sp, #80] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #80] // 8-byte Spill
 ; CHECK-NEXT:    stp x28, x27, [sp, #96] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x26, x25, [sp, #112] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x24, x23, [sp, #128] // 16-byte Folded Spill
@@ -106,7 +106,7 @@ define i32 @caller() nounwind ssp {
 ; CHECK-NEXT:    str w9, [sp]
 ; CHECK-NEXT:    bl callee
 ; CHECK-NEXT:    ldp x20, x19, [sp, #160] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #80] // 8-byte Reload
 ; CHECK-NEXT:    ldp x22, x21, [sp, #144] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x24, x23, [sp, #128] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x26, x25, [sp, #112] // 16-byte Folded Reload

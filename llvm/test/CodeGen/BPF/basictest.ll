@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=bpfel -mcpu=v1 | FileCheck %s
+; RUN: llc < %s -mtriple=bpfel -mcpu=v1 | FileCheck %s
 
 define i32 @test0(i32 %X) {
   %tmp.1 = add i32 %X, 1

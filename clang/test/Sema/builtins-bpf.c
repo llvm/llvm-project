@@ -69,7 +69,7 @@ unsigned invalid11(struct s *arg, int info_kind) {
 }
 
 unsigned valid12(void) {
-  const struct s t;
+  const struct s t = {};
   return __builtin_preserve_type_info(t, 0) +
          __builtin_preserve_type_info(*(struct s *)0, 1);
 }

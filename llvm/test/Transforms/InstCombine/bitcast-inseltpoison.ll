@@ -75,7 +75,7 @@ define <2 x i32> @or_bitcast_int_to_vec(i64 %a) {
 
 define <2 x i64> @is_negative(<4 x i32> %x) {
 ; CHECK-LABEL: @is_negative(
-; CHECK-NEXT:    [[X_LOBIT:%.*]] = ashr <4 x i32> [[X:%.*]], <i32 31, i32 31, i32 31, i32 31>
+; CHECK-NEXT:    [[X_LOBIT:%.*]] = ashr <4 x i32> [[X:%.*]], splat (i32 31)
 ; CHECK-NEXT:    [[NOTNOT:%.*]] = bitcast <4 x i32> [[X_LOBIT]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[NOTNOT]]
 ;
@@ -91,7 +91,7 @@ define <2 x i64> @is_negative(<4 x i32> %x) {
 
 define <4 x i32> @is_negative_bonus_bitcast(<4 x i32> %x) {
 ; CHECK-LABEL: @is_negative_bonus_bitcast(
-; CHECK-NEXT:    [[X_LOBIT:%.*]] = ashr <4 x i32> [[X:%.*]], <i32 31, i32 31, i32 31, i32 31>
+; CHECK-NEXT:    [[X_LOBIT:%.*]] = ashr <4 x i32> [[X:%.*]], splat (i32 31)
 ; CHECK-NEXT:    ret <4 x i32> [[X_LOBIT]]
 ;
   %lobit = ashr <4 x i32> %x, <i32 31, i32 31, i32 31, i32 31>
@@ -107,7 +107,7 @@ define <4 x i32> @is_negative_bonus_bitcast(<4 x i32> %x) {
 define <2 x i8> @canonicalize_bitcast_logic_with_constant(<4 x i4> %x) {
 ; CHECK-LABEL: @canonicalize_bitcast_logic_with_constant(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i4> [[X:%.*]] to <2 x i8>
-; CHECK-NEXT:    [[B:%.*]] = and <2 x i8> [[TMP1]], <i8 -128, i8 -128>
+; CHECK-NEXT:    [[B:%.*]] = and <2 x i8> [[TMP1]], splat (i8 -128)
 ; CHECK-NEXT:    ret <2 x i8> [[B]]
 ;
   %a = and <4 x i4> %x, <i4 0, i4 8, i4 0, i4 8>
@@ -491,10 +491,10 @@ define void @constant_fold_vector_to_double() {
 ; CHECK-NEXT:    store volatile double 1.000000e+00, ptr undef, align 8
 ; CHECK-NEXT:    store volatile double 1.000000e+00, ptr undef, align 8
 ; CHECK-NEXT:    store volatile double 1.000000e+00, ptr undef, align 8
-; CHECK-NEXT:    store volatile double 0xFFFFFFFFFFFFFFFF, ptr undef, align 8
-; CHECK-NEXT:    store volatile double 0x162E000004D2, ptr undef, align 8
+; CHECK-NEXT:    store volatile double -nan(0x7FFFFFFFFFFFF), ptr undef, align 8
+; CHECK-NEXT:    store volatile double f0x0000162E000004D2, ptr undef, align 8
 ; CHECK-NEXT:    store volatile double bitcast (<2 x i32> <i32 1234, i32 ptrtoint (ptr @g to i32)> to double), ptr undef, align 8
-; CHECK-NEXT:    store volatile double 0x400000003F800000, ptr undef, align 8
+; CHECK-NEXT:    store volatile double f0x400000003F800000, ptr undef, align 8
 ; CHECK-NEXT:    store volatile double 0.000000e+00, ptr undef, align 8
 ; CHECK-NEXT:    store volatile double 0.000000e+00, ptr undef, align 8
 ; CHECK-NEXT:    store volatile double 0.000000e+00, ptr undef, align 8
@@ -541,8 +541,8 @@ define void @constant_fold_vector_to_float() {
 
 define void @constant_fold_vector_to_half() {
 ; CHECK-LABEL: @constant_fold_vector_to_half(
-; CHECK-NEXT:    store volatile half 0xH4000, ptr undef, align 2
-; CHECK-NEXT:    store volatile half 0xH4000, ptr undef, align 2
+; CHECK-NEXT:    store volatile half 2.000000e+00, ptr undef, align 2
+; CHECK-NEXT:    store volatile half 2.000000e+00, ptr undef, align 2
 ; CHECK-NEXT:    ret void
 ;
   store volatile half bitcast (<2 x i8> <i8 0, i8 64> to half), ptr undef

@@ -8,6 +8,7 @@
 
 #include "DynamicLoaderWindowsDYLD.h"
 
+#include "MSVCRTCFrameRecognizer.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -36,7 +37,9 @@ void DynamicLoaderWindowsDYLD::Initialize() {
                                 GetPluginDescriptionStatic(), CreateInstance);
 }
 
-void DynamicLoaderWindowsDYLD::Terminate() {}
+void DynamicLoaderWindowsDYLD::Terminate() {
+  PluginManager::UnregisterPlugin(CreateInstance);
+}
 
 llvm::StringRef DynamicLoaderWindowsDYLD::GetPluginDescriptionStatic() {
   return "Dynamic loader plug-in that watches for shared library "
@@ -62,7 +65,6 @@ DynamicLoader *DynamicLoaderWindowsDYLD::CreateInstance(Process *process,
 void DynamicLoaderWindowsDYLD::OnLoadModule(lldb::ModuleSP module_sp,
                                             const ModuleSpec module_spec,
                                             lldb::addr_t module_addr) {
-
   // Resolve the module unless we already have one.
   if (!module_sp) {
     Status error;
@@ -72,7 +74,7 @@ void DynamicLoaderWindowsDYLD::OnLoadModule(lldb::ModuleSP module_sp,
       return;
   }
 
-  m_loaded_modules[module_sp] = module_addr;
+  m_loaded_modules.insert({module_addr, lldb::ModuleWP(module_sp)});
   UpdateLoadedSectionsCommon(module_sp, module_addr, false);
   ModuleList module_list;
   module_list.Append(module_sp);
@@ -80,13 +82,26 @@ void DynamicLoaderWindowsDYLD::OnLoadModule(lldb::ModuleSP module_sp,
 }
 
 void DynamicLoaderWindowsDYLD::OnUnloadModule(lldb::addr_t module_addr) {
-  Address resolved_addr;
-  if (!m_process->GetTarget().ResolveLoadAddress(module_addr, resolved_addr))
+  auto it = m_loaded_modules.find(module_addr);
+  if (it == m_loaded_modules.end())
     return;
 
-  ModuleSP module_sp = resolved_addr.GetModule();
-  if (module_sp) {
-    m_loaded_modules.erase(module_sp);
+  ModuleSP module_sp = it->second.lock();
+  m_loaded_modules.erase(it);
+
+  if (!module_sp)
+    return;
+
+  bool full_unload = true;
+  for (const auto &entry : m_loaded_modules) {
+    ModuleSP other_sp = entry.second.lock();
+    if (other_sp == module_sp) {
+      UpdateLoadedSectionsCommon(module_sp, entry.first, false);
+      full_unload = false;
+    }
+  }
+
+  if (full_unload) {
     UnloadSectionsCommon(module_sp);
     ModuleList module_list;
     module_list.Append(module_sp);
@@ -96,9 +111,11 @@ void DynamicLoaderWindowsDYLD::OnUnloadModule(lldb::addr_t module_addr) {
 
 lldb::addr_t DynamicLoaderWindowsDYLD::GetLoadAddress(ModuleSP executable) {
   // First, see if the load address is already cached.
-  auto it = m_loaded_modules.find(executable);
-  if (it != m_loaded_modules.end() && it->second != LLDB_INVALID_ADDRESS)
-    return it->second;
+  for (const auto &entry : m_loaded_modules) {
+    ModuleSP mod = entry.second.lock();
+    if (mod == executable && entry.first != LLDB_INVALID_ADDRESS)
+      return entry.first;
+  }
 
   lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
 
@@ -110,7 +127,7 @@ lldb::addr_t DynamicLoaderWindowsDYLD::GetLoadAddress(ModuleSP executable) {
       m_process->GetFileLoadAddress(file_spec, is_loaded, load_addr);
   // Servers other than lldb server could respond with a bogus address.
   if (status.Success() && is_loaded && load_addr != LLDB_INVALID_ADDRESS) {
-    m_loaded_modules[executable] = load_addr;
+    m_loaded_modules.insert({load_addr, lldb::ModuleWP(executable)});
     return load_addr;
   }
 
@@ -121,9 +138,11 @@ void DynamicLoaderWindowsDYLD::DidAttach() {
   Log *log = GetLog(LLDBLog::DynamicLoader);
   LLDB_LOGF(log, "DynamicLoaderWindowsDYLD::%s()", __FUNCTION__);
 
+  RegisterMSVCRTCFrameRecognizer(m_process->GetTarget());
+
   ModuleSP executable = GetTargetExecutable();
 
-  if (!executable.get())
+  if (!executable)
     return;
 
   // Try to fetch the load address of the file from the process, since there
@@ -151,8 +170,10 @@ void DynamicLoaderWindowsDYLD::DidLaunch() {
   Log *log = GetLog(LLDBLog::DynamicLoader);
   LLDB_LOGF(log, "DynamicLoaderWindowsDYLD::%s()", __FUNCTION__);
 
+  RegisterMSVCRTCFrameRecognizer(m_process->GetTarget());
+
   ModuleSP executable = GetTargetExecutable();
-  if (!executable.get())
+  if (!executable)
     return;
 
   lldb::addr_t load_addr = GetLoadAddress(executable);
@@ -178,20 +199,21 @@ DynamicLoaderWindowsDYLD::GetStepThroughTrampolinePlan(Thread &thread,
     return ThreadPlanSP();
   }
 
-  uint64_t pc = thread.GetRegisterContext()->GetPC();
+  RegisterContextSP reg_ctx_sp = thread.GetRegisterContext();
+  if (!reg_ctx_sp)
+    return ThreadPlanSP();
+
+  uint64_t pc = reg_ctx_sp->GetPC();
   // Max size of an instruction in x86 is 15 bytes.
   AddressRange range(pc, 2 * 15);
 
   DisassemblerSP disassembler_sp = Disassembler::DisassembleRange(
-      arch, nullptr, nullptr, m_process->GetTarget(), range);
+      arch, nullptr, nullptr, nullptr, nullptr, m_process->GetTarget(), range);
   if (!disassembler_sp) {
     return ThreadPlanSP();
   }
 
-  InstructionList *insn_list = &disassembler_sp->GetInstructionList();
-  if (insn_list == nullptr) {
-    return ThreadPlanSP();
-  }
+  InstructionList &insn_list = disassembler_sp->GetInstructionList();
 
   // First instruction in a x86 Windows trampoline is going to be an indirect
   // jump through the IAT and the next one will be a nop (usually there for
@@ -199,15 +221,19 @@ DynamicLoaderWindowsDYLD::GetStepThroughTrampolinePlan(Thread &thread,
   //     0x70ff4cfc <+956>: jmpl   *0x7100c2a8
   //     0x70ff4d02 <+962>: nop
 
-  auto first_insn = insn_list->GetInstructionAtIndex(0);
-  auto second_insn = insn_list->GetInstructionAtIndex(1);
+  auto first_insn = insn_list.GetInstructionAtIndex(0);
+  auto second_insn = insn_list.GetInstructionAtIndex(1);
 
   ExecutionContext exe_ctx(m_process->GetTarget());
-  if (first_insn == nullptr || second_insn == nullptr ||
-      strcmp(first_insn->GetMnemonic(&exe_ctx), "jmpl") != 0 ||
-      strcmp(second_insn->GetMnemonic(&exe_ctx), "nop") != 0) {
+  if (first_insn == nullptr || second_insn == nullptr)
     return ThreadPlanSP();
-  }
+
+  const char *first_mnemonic = first_insn->GetMnemonic(&exe_ctx);
+  const char *second_mnemonic = second_insn->GetMnemonic(&exe_ctx);
+  if (!first_mnemonic || !second_mnemonic ||
+      strcmp(first_mnemonic, "jmpl") != 0 ||
+      strcmp(second_mnemonic, "nop") != 0)
+    return ThreadPlanSP();
 
   assert(first_insn->DoesBranch() && !second_insn->DoesBranch());
 

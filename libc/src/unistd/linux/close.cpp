@@ -8,22 +8,21 @@
 
 #include "src/unistd/close.h"
 
-#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "src/__support/OSUtil/linux/syscall_wrappers/close.h"
 #include "src/__support/common.h"
-
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
-#include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, close, (int fd)) {
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_close, fd);
-  if (ret < 0) {
-    libc_errno = -ret;
+  auto result = linux_syscalls::close(fd);
+
+  if (!result.has_value()) {
+    libc_errno = result.error();
     return -1;
   }
-  return ret;
+  return result.value();
 }
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -17,6 +17,6 @@
 #include <queue>
 
 void f() {
-    std::priority_queue<int> c;
-    c.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::priority_queue<int> c;
+  c.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }

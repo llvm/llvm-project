@@ -26,7 +26,6 @@
 #include <sstream>
 
 // clang-format off
-#include <sys/types.h>
 #include <sys/sysctl.h>
 // clang-format on
 
@@ -37,9 +36,9 @@ using namespace lldb_private::process_netbsd;
 NativeThreadNetBSD::NativeThreadNetBSD(NativeProcessNetBSD &process,
                                        lldb::tid_t tid)
     : NativeThreadProtocol(process, tid), m_state(StateType::eStateInvalid),
-      m_stop_info(), m_reg_context_up(
-NativeRegisterContextNetBSD::CreateHostNativeRegisterContextNetBSD(process.GetArchitecture(), *this)
-), m_stop_description() {}
+      m_reg_context_up(
+          NativeRegisterContextNetBSD::CreateHostNativeRegisterContextNetBSD(
+              process.GetArchitecture(), *this)) {}
 
 Status NativeThreadNetBSD::Resume() {
   Status ret = NativeProcessNetBSD::PtraceWrapper(PT_RESUME, m_process.GetID(),
@@ -171,12 +170,12 @@ void NativeThreadNetBSD::SetStopped() {
 
 void NativeThreadNetBSD::SetRunning() {
   m_state = StateType::eStateRunning;
-  m_stop_info.reason = StopReason::eStopReasonNone;
+  ClearStopInfo();
 }
 
 void NativeThreadNetBSD::SetStepping() {
   m_state = StateType::eStateStepping;
-  m_stop_info.reason = StopReason::eStopReasonNone;
+  ClearStopInfo();
 }
 
 std::string NativeThreadNetBSD::GetName() {

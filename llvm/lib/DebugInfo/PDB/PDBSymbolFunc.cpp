@@ -8,17 +8,16 @@
 
 #include "llvm/DebugInfo/PDB/PDBSymbolFunc.h"
 
+#include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/PDB/ConcreteSymbolEnumerator.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
-#include "llvm/DebugInfo/PDB/Native/NativeTypeFunctionSig.h"
 #include "llvm/DebugInfo/PDB/PDBSymDumper.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolData.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeFunctionSig.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -35,7 +34,7 @@ public:
       : Session(PDBSession), Func(PDBFunc) {
     // Arguments can appear multiple times if they have live range
     // information, so we only take the first occurrence.
-    std::unordered_set<std::string> SeenNames;
+    StringSet<> SeenNames;
     auto DataChildren = Func.findAllChildren<PDBSymbolData>();
     while (auto Child = DataChildren->getNext()) {
       if (Child->getDataKind() == PDB_DataKind::Param) {

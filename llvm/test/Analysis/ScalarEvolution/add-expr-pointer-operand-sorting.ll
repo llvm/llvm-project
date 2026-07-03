@@ -21,28 +21,26 @@ define i32 @d(i32 %base) {
 ; CHECK-NEXT:  Classifying expressions for: @d
 ; CHECK-NEXT:    %e = alloca [1 x [1 x i8]], align 1
 ; CHECK-NEXT:    --> %e U: full-set S: full-set
-; CHECK-NEXT:    %0 = bitcast ptr %e to ptr
-; CHECK-NEXT:    --> %e U: full-set S: full-set
 ; CHECK-NEXT:    %f.0 = phi i32 [ %base, %entry ], [ %inc, %for.cond ]
 ; CHECK-NEXT:    --> {%base,+,1}<nsw><%for.cond> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Computable }
 ; CHECK-NEXT:    %idxprom = sext i32 %f.0 to i64
 ; CHECK-NEXT:    --> {(sext i32 %base to i64),+,1}<nsw><%for.cond> U: [-2147483648,-9223372036854775808) S: [-2147483648,-9223372036854775808) Exits: <<Unknown>> LoopDispositions: { %for.cond: Computable }
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds [1 x [1 x i8]], ptr %e, i64 0, i64 %idxprom
 ; CHECK-NEXT:    --> {((sext i32 %base to i64) + %e),+,1}<nw><%for.cond> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Computable }
-; CHECK-NEXT:    %1 = load ptr, ptr @c, align 8
-; CHECK-NEXT:    --> %1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
-; CHECK-NEXT:    %sub.ptr.lhs.cast = ptrtoint ptr %1 to i64
-; CHECK-NEXT:    --> (ptrtoint ptr %1 to i64) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
+; CHECK-NEXT:    %load1 = load ptr, ptr @c, align 8
+; CHECK-NEXT:    --> %load1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
+; CHECK-NEXT:    %sub.ptr.lhs.cast = ptrtoint ptr %load1 to i64
+; CHECK-NEXT:    --> (ptrtoint ptr %load1 to i64) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
 ; CHECK-NEXT:    %sub.ptr.sub = sub i64 %sub.ptr.lhs.cast, ptrtoint (ptr @b to i64)
-; CHECK-NEXT:    --> ((-1 * (ptrtoint ptr @b to i64)) + (ptrtoint ptr %1 to i64)) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
+; CHECK-NEXT:    --> ((-1 * (ptrtoint ptr @b to i64)) + (ptrtoint ptr %load1 to i64)) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
 ; CHECK-NEXT:    %sub.ptr.div = sdiv exact i64 %sub.ptr.sub, 4
 ; CHECK-NEXT:    --> %sub.ptr.div U: [-2305843009213693952,2305843009213693952) S: [-2305843009213693952,2305843009213693952) Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
 ; CHECK-NEXT:    %arrayidx1 = getelementptr inbounds [1 x i8], ptr %arrayidx, i64 0, i64 %sub.ptr.div
 ; CHECK-NEXT:    --> ({((sext i32 %base to i64) + %e),+,1}<nw><%for.cond> + %sub.ptr.div) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
-; CHECK-NEXT:    %2 = load i8, ptr %arrayidx1, align 1
-; CHECK-NEXT:    --> %2 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
-; CHECK-NEXT:    %conv = sext i8 %2 to i32
-; CHECK-NEXT:    --> (sext i8 %2 to i32) U: [-128,128) S: [-128,128) Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
+; CHECK-NEXT:    %load2 = load i8, ptr %arrayidx1, align 1
+; CHECK-NEXT:    --> %load2 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
+; CHECK-NEXT:    %conv = sext i8 %load2 to i32
+; CHECK-NEXT:    --> (sext i8 %load2 to i32) U: [-128,128) S: [-128,128) Exits: <<Unknown>> LoopDispositions: { %for.cond: Variant }
 ; CHECK-NEXT:    %inc = add nsw i32 %f.0, 1
 ; CHECK-NEXT:    --> {(1 + %base),+,1}<nw><%for.cond> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.cond: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @d
@@ -52,24 +50,23 @@ define i32 @d(i32 %base) {
 ;
 entry:
   %e = alloca [1 x [1 x i8]], align 1
-  %0 = bitcast ptr %e to ptr
-  call void @llvm.lifetime.start.p0(i64 1, ptr %0) #2
+  call void @llvm.lifetime.start.p0(ptr %e) #2
   br label %for.cond
 
 for.cond:                                         ; preds = %for.cond, %entry
   %f.0 = phi i32 [ %base, %entry ], [ %inc, %for.cond ]
   %idxprom = sext i32 %f.0 to i64
   %arrayidx = getelementptr inbounds [1 x [1 x i8]], ptr %e, i64 0, i64 %idxprom
-  %1 = load ptr, ptr @c, align 8
-  %sub.ptr.lhs.cast = ptrtoint ptr %1 to i64
+  %load1 = load ptr, ptr @c, align 8
+  %sub.ptr.lhs.cast = ptrtoint ptr %load1 to i64
   %sub.ptr.sub = sub i64 %sub.ptr.lhs.cast, ptrtoint (ptr @b to i64)
   %sub.ptr.div = sdiv exact i64 %sub.ptr.sub, 4
   %arrayidx1 = getelementptr inbounds [1 x i8], ptr %arrayidx, i64 0, i64 %sub.ptr.div
-  %2 = load i8, ptr %arrayidx1, align 1
-  %conv = sext i8 %2 to i32
+  %load2 = load i8, ptr %arrayidx1, align 1
+  %conv = sext i8 %load2 to i32
   store i32 %conv, ptr @a, align 4
   %inc = add nsw i32 %f.0, 1
   br label %for.cond
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)

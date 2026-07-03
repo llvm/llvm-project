@@ -35,6 +35,7 @@
 
 #include <algorithm>
 #include <fstream>
+#include <memory>
 #include <optional>
 #include <vector>
 
@@ -221,7 +222,8 @@ std::error_code FileSystem::GetRealPath(const Twine &path,
   return m_fs->getRealPath(path, output);
 }
 
-void FileSystem::Resolve(SmallVectorImpl<char> &path) {
+void FileSystem::Resolve(SmallVectorImpl<char> &path,
+                         bool force_make_absolute) {
   if (path.empty())
     return;
 
@@ -236,14 +238,14 @@ void FileSystem::Resolve(SmallVectorImpl<char> &path) {
   MakeAbsolute(absolute);
 
   path.clear();
-  if (Exists(absolute)) {
+  if (force_make_absolute || Exists(absolute)) {
     path.append(absolute.begin(), absolute.end());
   } else {
     path.append(resolved.begin(), resolved.end());
   }
 }
 
-void FileSystem::Resolve(FileSpec &file_spec) {
+void FileSystem::Resolve(FileSpec &file_spec, bool force_make_absolute) {
   if (!file_spec)
     return;
 
@@ -252,10 +254,10 @@ void FileSystem::Resolve(FileSpec &file_spec) {
   file_spec.GetPath(path);
 
   // Resolve the path.
-  Resolve(path);
+  Resolve(path, force_make_absolute);
 
   // Update the FileSpec with the resolved path.
-  if (file_spec.GetFilename().IsEmpty())
+  if (file_spec.GetFilename().empty())
     file_spec.SetDirectory(path);
   else
     file_spec.SetPath(path);
@@ -288,8 +290,7 @@ FileSystem::CreateWritableDataBuffer(const llvm::Twine &path, uint64_t size,
                                                             is_volatile);
   if (!buffer)
     return {};
-  return std::shared_ptr<WritableDataBufferLLVM>(
-      new WritableDataBufferLLVM(std::move(buffer)));
+  return std::make_shared<WritableDataBufferLLVM>(std::move(buffer));
 }
 
 std::shared_ptr<DataBuffer>
@@ -300,7 +301,7 @@ FileSystem::CreateDataBuffer(const llvm::Twine &path, uint64_t size,
       GetMemoryBuffer<llvm::MemoryBuffer>(path, size, offset, is_volatile);
   if (!buffer)
     return {};
-  return std::shared_ptr<DataBufferLLVM>(new DataBufferLLVM(std::move(buffer)));
+  return std::make_shared<DataBufferLLVM>(std::move(buffer));
 }
 
 std::shared_ptr<WritableDataBuffer>
@@ -317,17 +318,17 @@ FileSystem::CreateDataBuffer(const FileSpec &file_spec, uint64_t size,
 
 bool FileSystem::ResolveExecutableLocation(FileSpec &file_spec) {
   // If the directory is set there's nothing to do.
-  ConstString directory = file_spec.GetDirectory();
-  if (directory)
+  llvm::StringRef directory = file_spec.GetDirectory();
+  if (!directory.empty())
     return false;
 
   // We cannot look for a file if there's no file name.
-  ConstString filename = file_spec.GetFilename();
-  if (!filename)
+  llvm::StringRef filename = file_spec.GetFilename();
+  if (filename.empty())
     return false;
 
   // Search for the file on the host.
-  const std::string filename_str(filename.GetCString());
+  const std::string filename_str(filename);
   llvm::ErrorOr<std::string> error_or_path =
       llvm::sys::findProgramByName(filename_str);
   if (!error_or_path)

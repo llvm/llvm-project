@@ -321,9 +321,13 @@ class SchedWriteRes<list<ProcResourceKind> resources> : SchedWrite,
 // Define values common to ReadAdvance and SchedReadAdvance.
 //
 // SchedModel ties these resources to a processor.
-class ProcReadAdvance<int cycles, list<SchedWrite> writes = []> {
+class ProcReadAdvance<int cycles, list<SchedWrite> writes = [],
+                      list<int> tunables = []> {
+  assert !le(!size(tunables), !size(writes)),
+         "cannot have more `tunables' than `writes'";
   int Cycles = cycles;
   list<SchedWrite> ValidWrites = writes;
+  list<int> CycleTunables = tunables;
   // Allow a processor to mark some scheduling classes as unsupported
   // for stronger verification.
   bit Unsupported = false;
@@ -340,15 +344,17 @@ class ProcReadAdvance<int cycles, list<SchedWrite> writes = []> {
 // indicate operands that are always read this number of Cycles later
 // than a normal register read, allowing the read's parent instruction
 // to issue earlier relative to the writer.
-class ReadAdvance<SchedRead read, int cycles, list<SchedWrite> writes = []>
-  : ProcReadAdvance<cycles, writes> {
+class ReadAdvance<SchedRead read, int cycles, list<SchedWrite> writes = [],
+                  list<int> tunables = []>
+  : ProcReadAdvance<cycles, writes, tunables> {
   SchedRead ReadType = read;
 }
 
 // Directly associate a new SchedRead type with a delay and optional
 // pipeline bypass. For use with InstRW or ItinRW.
-class SchedReadAdvance<int cycles, list<SchedWrite> writes = []> : SchedRead,
-  ProcReadAdvance<cycles, writes>;
+class SchedReadAdvance<int cycles, list<SchedWrite> writes = [],
+                       list<int> tunables = []>
+  : SchedRead, ProcReadAdvance<cycles, writes, tunables>;
 
 // Define SchedRead defaults. Reads seldom need special treatment.
 def ReadDefault : SchedRead;
@@ -371,6 +377,12 @@ class MCSchedPredicate<MCInstPredicate P> : SchedPredicateBase {
   SchedMachineModel SchedModel = ?;
 }
 
+// A scheduling predicate whose logic depends on a SubtargetFeature.
+class FeatureSchedPredicate<SubtargetFeature SF> : SchedPredicateBase {
+  SubtargetFeature Feature = SF;
+  SchedMachineModel SchedModel = ?;
+}
+
 // Define a predicate to determine which SchedVariant applies to a
 // particular MachineInstr. The code snippet is used as an
 // if-statement's expression. Available variables are MI, SchedModel,
@@ -386,6 +398,21 @@ class SchedPredicate<code pred> : SchedPredicateBase {
 // SchedVariant.  It the SchedVariant does not use any other predicate based on
 // MCSchedPredicate, this is the default scheduling case used by llvm-mca.
 def NoSchedPred : MCSchedPredicate<TruePred>;
+
+// Logical combiners for schedule predicates.
+class SchedPredicateCombiner<list<SchedPredicateBase> predicates>
+    : SchedPredicateBase {
+  SchedMachineModel SchedModel = ?;
+  list<SchedPredicateBase> Predicates = predicates;
+}
+class AllOfSchedPreds<list<SchedPredicateBase> predicates>
+    : SchedPredicateCombiner<predicates>;
+class AnyOfSchedPreds<list<SchedPredicateBase> predicates>
+    : SchedPredicateCombiner<predicates>;
+class NotSchedPred<SchedPredicateBase predicate>
+    : SchedPredicateCombiner<[predicate]>;
+class NoneOfSchedPreds<list<SchedPredicateBase> predicates>
+    : NotSchedPred<AnyOfSchedPreds<predicates>>;
 
 // Associate a predicate with a list of SchedReadWrites. By default,
 // the selected SchedReadWrites are still associated with a single

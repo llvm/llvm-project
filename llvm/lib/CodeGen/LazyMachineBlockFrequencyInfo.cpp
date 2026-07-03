@@ -31,10 +31,7 @@ INITIALIZE_PASS_END(LazyMachineBlockFrequencyInfoPass, DEBUG_TYPE,
 char LazyMachineBlockFrequencyInfoPass::ID = 0;
 
 LazyMachineBlockFrequencyInfoPass::LazyMachineBlockFrequencyInfoPass()
-    : MachineFunctionPass(ID) {
-  initializeLazyMachineBlockFrequencyInfoPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID) {}
 
 void LazyMachineBlockFrequencyInfoPass::getAnalysisUsage(
     AnalysisUsage &AU) const {
@@ -74,13 +71,13 @@ LazyMachineBlockFrequencyInfoPass::calculateIfNotAvailable() const {
     if (!MDT) {
       LLVM_DEBUG(dbgs() << "Building DominatorTree on the fly\n");
       OwnedMDT = std::make_unique<MachineDominatorTree>();
-      OwnedMDT->getBase().recalculate(*MF);
+      OwnedMDT->recalculate(*MF);
       MDT = OwnedMDT.get();
     }
 
     // Generate LoopInfo from it.
     OwnedMLI = std::make_unique<MachineLoopInfo>();
-    OwnedMLI->analyze(MDT->getBase());
+    OwnedMLI->analyze(*MDT);
     MLI = OwnedMLI.get();
   }
 

@@ -26,6 +26,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstddef>
 #include <iterator>
@@ -615,7 +616,24 @@ struct TagRecord : APIRecord, RecordContext {
     return classofKind(Record->getKind());
   }
   static bool classofKind(RecordKind K) {
-    return K == RK_Struct || K == RK_Union || K == RK_Enum;
+    switch (K) {
+    case RK_Enum:
+      [[fallthrough]];
+    case RK_Struct:
+      [[fallthrough]];
+    case RK_Union:
+      [[fallthrough]];
+    case RK_CXXClass:
+      [[fallthrough]];
+    case RK_ClassTemplate:
+      [[fallthrough]];
+    case RK_ClassTemplateSpecialization:
+      [[fallthrough]];
+    case RK_ClassTemplatePartialSpecialization:
+      return true;
+    default:
+      return false;
+    }
   }
 
   bool IsEmbeddedInVarDeclarator;
@@ -684,7 +702,22 @@ struct RecordRecord : TagRecord {
     return classofKind(Record->getKind());
   }
   static bool classofKind(RecordKind K) {
-    return K == RK_Struct || K == RK_Union;
+    switch (K) {
+    case RK_Struct:
+      [[fallthrough]];
+    case RK_Union:
+      [[fallthrough]];
+    case RK_CXXClass:
+      [[fallthrough]];
+    case RK_ClassTemplate:
+      [[fallthrough]];
+    case RK_ClassTemplateSpecialization:
+      [[fallthrough]];
+    case RK_ClassTemplatePartialSpecialization:
+      return true;
+    default:
+      return false;
+    }
   }
 
   bool isAnonymousWithNoTypedef() { return Name.empty(); }
@@ -1347,11 +1380,12 @@ private:
 /// This holds information associated with macro definitions.
 struct MacroDefinitionRecord : APIRecord {
   MacroDefinitionRecord(StringRef USR, StringRef Name, SymbolReference Parent,
-                        PresumedLoc Loc, DeclarationFragments Declaration,
+                        PresumedLoc Loc, const DocComment &Comment,
+                        DeclarationFragments Declaration,
                         DeclarationFragments SubHeading,
                         bool IsFromSystemHeader)
       : APIRecord(RK_MacroDefinition, USR, Name, Parent, Loc,
-                  AvailabilityInfo(), LinkageInfo(), {}, Declaration,
+                  AvailabilityInfo(), LinkageInfo(), Comment, Declaration,
                   SubHeading, IsFromSystemHeader) {}
 
   static bool classof(const APIRecord *Record) {
@@ -1466,7 +1500,7 @@ APISet::createRecord(StringRef USR, StringRef Name,
                      CtorArgsContTy &&...CtorArgs) {
   // Ensure USR refers to a String stored in the allocator.
   auto USRString = copyString(USR);
-  auto Result = USRBasedLookupTable.insert({USRString, nullptr});
+  auto Result = USRBasedLookupTable.try_emplace(USRString);
   RecordTy *Record;
 
   // Create the record if it does not already exist

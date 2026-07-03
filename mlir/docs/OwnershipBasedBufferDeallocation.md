@@ -5,9 +5,7 @@
 One-Shot Bufferize does not deallocate any buffers that it allocates. After
 running One-Shot Bufferize, the resulting IR may have a number of `memref.alloc`
 ops, but no `memref.dealloc` ops. Buffer dellocation is delegated to the
-`-ownership-based-buffer-deallocation` pass. This pass supersedes the now
-deprecated `-buffer-deallocation` pass, which does not work well with
-One-Shot Bufferize.
+`-ownership-based-buffer-deallocation` pass.
 
 On a high level, buffers are "owned" by a basic block. Ownership materializes
 as an `i1` SSA value and can be thought of as "responsibility to deallocate". It

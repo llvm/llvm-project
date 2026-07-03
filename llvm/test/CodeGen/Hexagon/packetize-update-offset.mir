@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass hexagon-packetizer %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass hexagon-packetizer %s -o - | FileCheck %s
 
 # Make sure that we don't try to packetize the two stores together. The
 # dependence on $r0 could be broken by updating the offset in the storeiri,

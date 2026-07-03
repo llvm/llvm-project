@@ -14,10 +14,9 @@ using namespace clang;
 namespace {
 
 // Check to ensure that bitfield initializers are visited.
-class BitfieldInitializerVisitor
-    : public ExpectedLocationVisitor<BitfieldInitializerVisitor> {
+class BitfieldInitializerVisitor : public ExpectedLocationVisitor {
 public:
-  bool VisitIntegerLiteral(IntegerLiteral *IL) {
+  bool VisitIntegerLiteral(IntegerLiteral *IL) override {
     Match(std::to_string(IL->getValue().getSExtValue()), IL->getLocation());
     return true;
   }

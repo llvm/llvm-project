@@ -81,6 +81,69 @@ exit:
   ret i64 %res
 }
 
+define i64 @test_udiv(i1 %c) {
+; CHECK-LABEL: @test_udiv(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i64 0
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i64 [9, %entry], [%iv.next, %loop]
+  %iv.next = udiv i64 %iv, 3
+  br i1 %c, label %exit, label %loop
+exit:
+  %res = and i64 %iv, 16
+  ret i64 %res
+}
+
+define i64 @test_udiv_neg(i1 %c) {
+; CHECK-LABEL: @test_udiv_neg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 2, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = udiv i64 9, [[IV]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = and i64 [[IV]], 4
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i64 [2, %entry], [%iv.next, %loop]
+  %iv.next = udiv i64 9, %iv
+  br i1 %c, label %exit, label %loop
+exit:
+  %res = and i64 %iv, 4
+  ret i64 %res
+}
+
+define i64 @test_urem(i1 %c) {
+; CHECK-LABEL: @test_urem(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i64 0
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i64 [3, %entry], [%iv.next, %loop]
+  %iv.next = urem i64 9, %iv
+  br i1 %c, label %exit, label %loop
+exit:
+  %res = and i64 %iv, 4
+  ret i64 %res
+}
+
 define i64 @test_and(i1 %c) {
 ; CHECK-LABEL: @test_and(
 ; CHECK-NEXT:  entry:
@@ -215,7 +278,8 @@ define i64 @test_ashr_wrong_op(i1 %c, i64 %start) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV_ASHR:%.*]] = phi i64 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_ASHR_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[IV_ASHR_NEXT]] = lshr i64 1, [[IV_ASHR]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[IV_ASHR]], 0
+; CHECK-NEXT:    [[IV_ASHR_NEXT]] = zext i1 [[TMP0]] to i64
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[RES:%.*]] = or i64 [[IV_ASHR]], 1023

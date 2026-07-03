@@ -22,10 +22,13 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/VirtualFileSystem.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cstddef>
 
 using namespace clang;
+using ::testing::IsEmpty;
 
 namespace clang {
 class SourceManagerTestHelper {
@@ -40,18 +43,28 @@ namespace {
 class SourceManagerTest : public ::testing::Test {
 protected:
   SourceManagerTest()
-    : FileMgr(FileMgrOpts),
-      DiagID(new DiagnosticIDs()),
-      Diags(DiagID, new DiagnosticOptions, new IgnoringDiagConsumer()),
-      SourceMgr(Diags, FileMgr),
-      TargetOpts(new TargetOptions) {
+      : FileMgr(FileMgrOpts, FS),
+        Diags(DiagnosticIDs::create(), DiagOpts, new IgnoringDiagConsumer()),
+        SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions) {
     TargetOpts->Triple = "x86_64-apple-darwin11.1.0";
-    Target = TargetInfo::CreateTargetInfo(Diags, TargetOpts);
+    Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
+  }
+
+  void AddFile(StringRef Path) {
+    ASSERT_TRUE(FS->addFile(Path, /*ModificationTime=*/0,
+                            llvm::MemoryBuffer::getMemBuffer("x\n")));
+  }
+
+  void AddHardLink(StringRef NewLink, StringRef Target) {
+    ASSERT_TRUE(FS->addHardLink(NewLink, Target));
   }
 
   FileSystemOptions FileMgrOpts;
+  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>(
+          /*UseNormalizedPaths=*/false);
   FileManager FileMgr;
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
+  DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
   LangOptions LangOpts;
@@ -135,13 +148,12 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnit) {
   FileID mainFileID = SourceMgr.createFileID(std::move(Buf));
   SourceMgr.setMainFileID(mainFileID);
 
+  HeaderSearchOptions HSOpts;
+  PreprocessorOptions PPOpts;
   TrivialModuleLoader ModLoader;
-  HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
-                          Diags, LangOpts, &*Target);
-  Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
-                  SourceMgr, HeaderInfo, ModLoader,
-                  /*IILookup =*/nullptr,
-                  /*OwnsHeaderSearch =*/false);
+  HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, &*Target);
+  Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
+                  /*IILookup =*/nullptr, /*OwnsHeaderSearch =*/false);
   PP.Initialize(*Target);
   PP.EnterMainSourceFile();
 
@@ -185,13 +197,12 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnitWithTokenSplit) {
   SourceMgr.setMainFileID(
       SourceMgr.createFileID(llvm::MemoryBuffer::getMemBuffer(main)));
 
+  HeaderSearchOptions HSOpts;
+  PreprocessorOptions PPOpts;
   TrivialModuleLoader ModLoader;
-  HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
-                          Diags, LangOpts, &*Target);
-  Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
-                  SourceMgr, HeaderInfo, ModLoader,
-                  /*IILookup =*/nullptr,
-                  /*OwnsHeaderSearch =*/false);
+  HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, &*Target);
+  Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
+                  /*IILookup=*/nullptr, /*OwnsHeaderSearch=*/false);
   PP.Initialize(*Target);
   PP.EnterMainSourceFile();
   llvm::SmallString<8> Scratch;
@@ -383,6 +394,20 @@ TEST_F(SourceManagerTest, getInvalidBOM) {
             "UTF-32 (LE)");
 }
 
+TEST_F(SourceManagerTest, sourceRangeWorksWithDenseSet) {
+  llvm::DenseSet<SourceRange> Set;
+  SourceRange TestRange = {SourceLocation::getFromRawEncoding(10),
+                           SourceLocation::getFromRawEncoding(11)};
+  ASSERT_THAT(Set, IsEmpty());
+  Set.insert(TestRange);
+  ASSERT_EQ(Set.size(), 1U);
+  ASSERT_TRUE(Set.contains(TestRange));
+  ASSERT_FALSE(Set.contains({SourceLocation::getFromRawEncoding(10),
+                             SourceLocation::getFromRawEncoding(10)}));
+  Set.erase(TestRange);
+  ASSERT_THAT(Set, IsEmpty());
+}
+
 // Regression test - there was an out of bound access for buffers not terminated by zero.
 TEST_F(SourceManagerTest, getLineNumber) {
   const unsigned pageSize = llvm::sys::Process::getPageSizeEstimate();
@@ -403,6 +428,118 @@ TEST_F(SourceManagerTest, getLineNumber) {
   SourceMgr.setMainFileID(mainFileID);
 
   ASSERT_NO_FATAL_FAILURE(SourceMgr.getLineNumber(mainFileID, 1, nullptr));
+}
+
+TEST_F(SourceManagerTest, aliasedFilesKeepRequestedNamesPerFileID) {
+#ifdef _WIN32
+  constexpr StringRef FooPath = "C:\\dir\\foo.h";
+  constexpr StringRef BarPath = "C:\\dir\\bar.h";
+#else
+  constexpr StringRef FooPath = "/dir/foo.h";
+  constexpr StringRef BarPath = "/dir/bar.h";
+#endif
+
+  AddFile(FooPath);
+  AddHardLink(BarPath, FooPath);
+
+  auto FooOrErr = FileMgr.getFileRef(FooPath);
+  auto BarOrErr = FileMgr.getFileRef(BarPath);
+  ASSERT_TRUE(static_cast<bool>(FooOrErr));
+  ASSERT_TRUE(static_cast<bool>(BarOrErr));
+
+  FileEntryRef Foo = *FooOrErr;
+  FileEntryRef Bar = *BarOrErr;
+  EXPECT_FALSE(Foo.isSameRef(Bar));
+  EXPECT_EQ(Foo, Bar);
+
+  SourceMgr.overrideFileContents(Foo, llvm::MemoryBuffer::getMemBuffer("x\n"));
+
+  FileID FooID = SourceMgr.createFileID(Foo, SourceLocation(), SrcMgr::C_User);
+  FileID BarID = SourceMgr.createFileID(Bar, SourceLocation(), SrcMgr::C_User);
+
+  SourceLocation FooLoc = SourceMgr.getLocForStartOfFile(FooID);
+  SourceLocation BarLoc = SourceMgr.getLocForStartOfFile(BarID);
+
+  EXPECT_EQ(FooPath, SourceMgr.getFilename(FooLoc));
+  EXPECT_EQ(BarPath, SourceMgr.getFilename(BarLoc));
+  EXPECT_STREQ(FooPath.data(), SourceMgr.getPresumedLoc(FooLoc).getFilename());
+  EXPECT_STREQ(BarPath.data(), SourceMgr.getPresumedLoc(BarLoc).getFilename());
+}
+
+TEST_F(SourceManagerTest, dotPathSpellingsKeepRequestedNamesPerFileID) {
+#ifdef _WIN32
+  constexpr StringRef FooPath = "C:\\dir\\foo.h";
+  constexpr StringRef DotFooPath = "C:\\.\\dir\\foo.h";
+#else
+  constexpr StringRef FooPath = "/dir/foo.h";
+  constexpr StringRef DotFooPath = "/./dir/foo.h";
+#endif
+
+  AddFile(FooPath);
+  AddHardLink(DotFooPath, FooPath);
+
+  auto FooOrErr = FileMgr.getFileRef(FooPath);
+  auto DotFooOrErr = FileMgr.getFileRef(DotFooPath);
+  ASSERT_TRUE(static_cast<bool>(FooOrErr));
+  ASSERT_TRUE(static_cast<bool>(DotFooOrErr));
+
+  FileEntryRef Foo = *FooOrErr;
+  FileEntryRef DotFoo = *DotFooOrErr;
+  EXPECT_FALSE(Foo.isSameRef(DotFoo));
+  EXPECT_EQ(Foo, DotFoo);
+
+  SourceMgr.overrideFileContents(Foo, llvm::MemoryBuffer::getMemBuffer("x\n"));
+
+  FileID FooID = SourceMgr.createFileID(Foo, SourceLocation(), SrcMgr::C_User);
+  FileID DotFooID =
+      SourceMgr.createFileID(DotFoo, SourceLocation(), SrcMgr::C_User);
+
+  SourceLocation FooLoc = SourceMgr.getLocForStartOfFile(FooID);
+  SourceLocation DotFooLoc = SourceMgr.getLocForStartOfFile(DotFooID);
+
+  EXPECT_EQ(FooPath, SourceMgr.getFilename(FooLoc));
+  EXPECT_EQ(DotFooPath, SourceMgr.getFilename(DotFooLoc));
+  EXPECT_STREQ(FooPath.data(), SourceMgr.getPresumedLoc(FooLoc).getFilename());
+  EXPECT_STREQ(DotFooPath.data(),
+               SourceMgr.getPresumedLoc(DotFooLoc).getFilename());
+  EXPECT_EQ(DotFooPath, *SourceMgr.getNonBuiltinFilenameForID(DotFooID));
+}
+
+TEST_F(SourceManagerTest, dotDotPathSpellingsKeepRequestedNamesPerFileID) {
+#ifdef _WIN32
+  constexpr StringRef BPath = "C:\\a\\b\\..\\c.h";
+  constexpr StringRef XPath = "C:\\a\\x\\..\\c.h";
+#else
+  constexpr StringRef BPath = "/a/b/../c.h";
+  constexpr StringRef XPath = "/a/x/../c.h";
+#endif
+
+  AddFile(BPath);
+  AddHardLink(XPath, BPath);
+
+  auto BOrErr = FileMgr.getFileRef(BPath);
+  auto XOrErr = FileMgr.getFileRef(XPath);
+  ASSERT_TRUE(static_cast<bool>(BOrErr));
+  ASSERT_TRUE(static_cast<bool>(XOrErr));
+
+  FileEntryRef B = *BOrErr;
+  FileEntryRef X = *XOrErr;
+  EXPECT_FALSE(B.isSameRef(X));
+  EXPECT_EQ(B, X);
+
+  SourceMgr.overrideFileContents(B, llvm::MemoryBuffer::getMemBuffer("x\n"));
+
+  FileID BID = SourceMgr.createFileID(B, SourceLocation(), SrcMgr::C_User);
+  FileID XID = SourceMgr.createFileID(X, SourceLocation(), SrcMgr::C_User);
+
+  SourceLocation BLoc = SourceMgr.getLocForStartOfFile(BID);
+  SourceLocation XLoc = SourceMgr.getLocForStartOfFile(XID);
+
+  EXPECT_EQ(BPath, SourceMgr.getFilename(BLoc));
+  EXPECT_EQ(XPath, SourceMgr.getFilename(XLoc));
+  EXPECT_STREQ(BPath.data(), SourceMgr.getPresumedLoc(BLoc).getFilename());
+  EXPECT_STREQ(XPath.data(), SourceMgr.getPresumedLoc(XLoc).getFilename());
+  EXPECT_EQ(XPath, *SourceMgr.getNonBuiltinFilenameForID(XID));
 }
 
 struct FakeExternalSLocEntrySource : ExternalSLocEntrySource {
@@ -461,12 +598,11 @@ TEST_F(SourceManagerTest, loadedSLocEntryIsInTheSameTranslationUnit) {
 TEST_F(SourceManagerTest, ResetsIncludeLocMap) {
   auto ParseFile = [&] {
     TrivialModuleLoader ModLoader;
-    HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
-                            Diags, LangOpts, &*Target);
-    Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
-                    SourceMgr, HeaderInfo, ModLoader,
-                    /*IILookup =*/nullptr,
-                    /*OwnsHeaderSearch =*/false);
+    HeaderSearchOptions HSOpts;
+    PreprocessorOptions PPOpts;
+    HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, &*Target);
+    Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
+                    /*IILookup=*/nullptr, /*OwnsHeaderSearch=*/false);
     PP.Initialize(*Target);
     PP.EnterMainSourceFile();
     PP.LexTokensUntilEOF();
@@ -537,14 +673,13 @@ TEST_F(SourceManagerTest, getMacroArgExpandedLocation) {
       "/test-header.h", HeaderBuf->getBufferSize(), 0);
   SourceMgr.overrideFileContents(headerFile, std::move(HeaderBuf));
 
+  HeaderSearchOptions HSOpts;
+  PreprocessorOptions PPOpts;
   TrivialModuleLoader ModLoader;
-  HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
-                          Diags, LangOpts, &*Target);
+  HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, &*Target);
 
-  Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
-                  SourceMgr, HeaderInfo, ModLoader,
-                  /*IILookup =*/nullptr,
-                  /*OwnsHeaderSearch =*/false);
+  Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
+                  /*IILookup=*/nullptr, /*OwnsHeaderSearch=*/false);
   // Ensure we can get expanded locations in presence of implicit includes.
   // These are different than normal includes since predefines buffer doesn't
   // have a valid insertion location.
@@ -656,13 +791,12 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnitWithMacroInInclude) {
       "/test-header.h", HeaderBuf->getBufferSize(), 0);
   SourceMgr.overrideFileContents(headerFile, std::move(HeaderBuf));
 
+  HeaderSearchOptions HSOpts;
+  PreprocessorOptions PPOpts;
   TrivialModuleLoader ModLoader;
-  HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
-                          Diags, LangOpts, &*Target);
-  Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
-                  SourceMgr, HeaderInfo, ModLoader,
-                  /*IILookup =*/nullptr,
-                  /*OwnsHeaderSearch =*/false);
+  HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, &*Target);
+  Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
+                  /*IILookup=*/nullptr, /*OwnsHeaderSearch=*/false);
   PP.Initialize(*Target);
 
   std::vector<MacroAction> Macros;

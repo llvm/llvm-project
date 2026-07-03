@@ -14,21 +14,15 @@
 #include "XCoreTargetMachine.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsXCore.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "xcore-isel"
@@ -173,47 +167,6 @@ void XCoreDAGToDAGISel::Select(SDNode *N) {
       return;
     }
     break;
-  }
-  case XCoreISD::LADD: {
-    SDValue Ops[] = { N->getOperand(0), N->getOperand(1),
-                        N->getOperand(2) };
-    ReplaceNode(N, CurDAG->getMachineNode(XCore::LADD_l5r, dl, MVT::i32,
-                                          MVT::i32, Ops));
-    return;
-  }
-  case XCoreISD::LSUB: {
-    SDValue Ops[] = { N->getOperand(0), N->getOperand(1),
-                        N->getOperand(2) };
-    ReplaceNode(N, CurDAG->getMachineNode(XCore::LSUB_l5r, dl, MVT::i32,
-                                          MVT::i32, Ops));
-    return;
-  }
-  case XCoreISD::MACCU: {
-    SDValue Ops[] = { N->getOperand(0), N->getOperand(1),
-                      N->getOperand(2), N->getOperand(3) };
-    ReplaceNode(N, CurDAG->getMachineNode(XCore::MACCU_l4r, dl, MVT::i32,
-                                          MVT::i32, Ops));
-    return;
-  }
-  case XCoreISD::MACCS: {
-    SDValue Ops[] = { N->getOperand(0), N->getOperand(1),
-                      N->getOperand(2), N->getOperand(3) };
-    ReplaceNode(N, CurDAG->getMachineNode(XCore::MACCS_l4r, dl, MVT::i32,
-                                          MVT::i32, Ops));
-    return;
-  }
-  case XCoreISD::LMUL: {
-    SDValue Ops[] = { N->getOperand(0), N->getOperand(1),
-                      N->getOperand(2), N->getOperand(3) };
-    ReplaceNode(N, CurDAG->getMachineNode(XCore::LMUL_l6r, dl, MVT::i32,
-                                          MVT::i32, Ops));
-    return;
-  }
-  case XCoreISD::CRC8: {
-    SDValue Ops[] = { N->getOperand(0), N->getOperand(1), N->getOperand(2) };
-    ReplaceNode(N, CurDAG->getMachineNode(XCore::CRC8_l4r, dl, MVT::i32,
-                                          MVT::i32, Ops));
-    return;
   }
   case ISD::BRIND:
     if (tryBRIND(N))

@@ -10,7 +10,7 @@ entry:
 
 sw.epilog:                                        ; preds = %sw.epilog.outer, %for.body
   %i = phi i32 [ undef, %for.body ], [ 0, %entry ]
-  br i1 undef, label %for.body, label %for.end
+  br i1 true, label %for.body, label %for.end
 
 for.body:                                         ; preds = %sw.epilog
   switch i32 %i, label %sw.epilog [

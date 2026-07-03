@@ -4,11 +4,11 @@
 ; Check that cost model is not executed twice for VF=2 when vectorization is
 ; forced for a particular loop.
 
-; CHECK: LV: Found an estimated cost of {{[0-9]+}} for VF 2 For instruction:   %{{[0-9]+}} = load i32
-; CHECK: LV: Found an estimated cost of {{[0-9]+}} for VF 2 For instruction:   store i32
-; CHECK-NOT: LV: Found an estimated cost of {{[0-9]+}} for VF 2 For instruction:   %{{[0-9]+}} = load i32
-; CHECK-NOT: LV: Found an estimated cost of {{[0-9]+}} for VF 2 For instruction:   store i32
-; CHECK: LV: Vector loop of width 2 costs: {{[0-9]+}}.
+; CHECK: Cost of {{.*}} for VF 2: WIDEN {{.*}} = load
+; CHECK: Cost of {{.*}} for VF 2: WIDEN store
+; CHECK-NOT: Cost of {{.*}} for VF 2: WIDEN {{.*}} = load
+; CHECK-NOT: Cost of {{.*}} for VF 2: WIDEN store
+; CHECK: Cost for VF 2: 5 (Estimated cost per lane: 2.
 
 define i32 @foo(ptr %A, i32 %n) {
 entry:

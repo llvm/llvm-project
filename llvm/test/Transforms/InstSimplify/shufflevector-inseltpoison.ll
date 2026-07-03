@@ -11,7 +11,7 @@ define <4 x i32> @const_folding(<4 x i32> %x) {
 
 define <4 x i32> @const_folding1(<4 x i32> %x) {
 ; CHECK-LABEL: @const_folding1(
-; CHECK-NEXT:    ret <4 x i32> <i32 5, i32 5, i32 5, i32 5>
+; CHECK-NEXT:    ret <4 x i32> splat (i32 5)
 ;
   %shuf = shufflevector <4 x i32> <i32 5, i32 4, i32 5, i32 4>, <4 x i32> %x, <4 x i32> zeroinitializer
   ret <4 x i32> %shuf
@@ -260,7 +260,7 @@ define <2 x float> @PR32872(<2 x float> %x) {
 
 define <5 x i8> @splat_inserted_constant(<4 x i8> %x) {
 ; CHECK-LABEL: @splat_inserted_constant(
-; CHECK-NEXT:    ret <5 x i8> <i8 42, i8 42, i8 42, i8 42, i8 42>
+; CHECK-NEXT:    ret <5 x i8> splat (i8 42)
 ;
   %ins3 = insertelement <4 x i8> %x, i8 42, i64 3
   %splat5 = shufflevector <4 x i8> %ins3, <4 x i8> poison, <5 x i32> <i32 3, i32 3, i32 3, i32 3, i32 3>

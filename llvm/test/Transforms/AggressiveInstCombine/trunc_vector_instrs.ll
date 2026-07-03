@@ -19,12 +19,12 @@ define <4 x i16> @shuffle(<2 x i8> %a, <2 x i8> %b) {
 define <2 x i16> @unary_shuffle(<2 x i8> %a) {
 ; CHECK-LABEL: @unary_shuffle(
 ; CHECK-NEXT:    [[ZEXTA:%.*]] = zext <2 x i8> [[A:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i32> [[ZEXTA]], <2 x i32> undef, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <2 x i32> [[ZEXTA]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc <2 x i32> [[SHUF]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[TRUNC]]
 ;
   %zexta = zext <2 x i8> %a to <2 x i32>
-  %shuf = shufflevector <2 x i32> %zexta, <2 x i32> undef, <2 x i32> <i32 1, i32 0>
+  %shuf = shufflevector <2 x i32> %zexta, <2 x i32> poison, <2 x i32> <i32 1, i32 0>
   %trunc = trunc <2 x i32> %shuf to <2 x i16>
   ret <2 x i16> %trunc
 }

@@ -9,9 +9,9 @@
 #ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_GENERIC_H
 #define LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_GENERIC_H
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 namespace lldb_private {
 namespace formatters {
@@ -19,6 +19,14 @@ namespace formatters {
 bool GenericOptionalSummaryProvider(ValueObject &valobj, Stream &stream,
                                     const TypeSummaryOptions &options);
 
+/// Return the ValueObjectSP of the underlying pointer member whose type
+/// is a desugared 'std::shared_ptr::element_type *'.
+lldb::ValueObjectSP GetDesugaredSmartPointerValue(ValueObject &ptr,
+                                                  ValueObject &container);
+
+SyntheticChildrenFrontEnd *
+GenericInitializerListSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                               lldb::ValueObjectSP valobj_sp);
 } // namespace formatters
 } // namespace lldb_private
 

@@ -76,7 +76,8 @@ define void @br_undef() {
 ; WAVE64-NEXT:  .LBB2_1: ; %bb0
 ; WAVE64-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; WAVE64-NEXT:    ; implicit-def: $sgpr4
-; WAVE64-NEXT:    s_and_b32 s4, s4, 1
+; WAVE64-NEXT:    s_mov_b32 s5, 1
+; WAVE64-NEXT:    s_and_b32 s4, s4, s5
 ; WAVE64-NEXT:    s_cmp_lg_u32 s4, 0
 ; WAVE64-NEXT:    s_cbranch_scc1 .LBB2_1
 ; WAVE64-NEXT:  ; %bb.2: ; %.exit5
@@ -88,7 +89,8 @@ define void @br_undef() {
 ; WAVE32-NEXT:  .LBB2_1: ; %bb0
 ; WAVE32-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; WAVE32-NEXT:    ; implicit-def: $sgpr4
-; WAVE32-NEXT:    s_and_b32 s4, s4, 1
+; WAVE32-NEXT:    s_mov_b32 s5, 1
+; WAVE32-NEXT:    s_and_b32 s4, s4, s5
 ; WAVE32-NEXT:    s_cmp_lg_u32 s4, 0
 ; WAVE32-NEXT:    s_cbranch_scc1 .LBB2_1
 ; WAVE32-NEXT:  ; %bb.2: ; %.exit5
@@ -110,7 +112,8 @@ define void @br_poison() {
 ; WAVE64-NEXT:  .LBB3_1: ; %bb0
 ; WAVE64-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; WAVE64-NEXT:    ; implicit-def: $sgpr4
-; WAVE64-NEXT:    s_and_b32 s4, s4, 1
+; WAVE64-NEXT:    s_mov_b32 s5, 1
+; WAVE64-NEXT:    s_and_b32 s4, s4, s5
 ; WAVE64-NEXT:    s_cmp_lg_u32 s4, 0
 ; WAVE64-NEXT:    s_cbranch_scc1 .LBB3_1
 ; WAVE64-NEXT:  ; %bb.2: ; %.exit5
@@ -122,7 +125,8 @@ define void @br_poison() {
 ; WAVE32-NEXT:  .LBB3_1: ; %bb0
 ; WAVE32-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; WAVE32-NEXT:    ; implicit-def: $sgpr4
-; WAVE32-NEXT:    s_and_b32 s4, s4, 1
+; WAVE32-NEXT:    s_mov_b32 s5, 1
+; WAVE32-NEXT:    s_and_b32 s4, s4, s5
 ; WAVE32-NEXT:    s_cmp_lg_u32 s4, 0
 ; WAVE32-NEXT:    s_cbranch_scc1 .LBB3_1
 ; WAVE32-NEXT:  ; %bb.2: ; %.exit5

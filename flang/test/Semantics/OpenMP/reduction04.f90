@@ -6,16 +6,14 @@ program omp_Reduction
   integer, parameter :: k = 10
   common /c/ a, b
 
-  !ERROR: Variable 'k' on the REDUCTION clause is not definable
-  !BECAUSE: 'k' is not a variable
+  !ERROR: 'k' must be a variable list item
   !$omp parallel do reduction(+:k)
   do i = 1, 10
     l = k + 1
   end do
   !$omp end parallel do
 
-  !ERROR: Variable 'c' on the REDUCTION clause is not definable
-  !BECAUSE: 'c' is not a variable
+  !ERROR: Common block names are not allowed in REDUCTION clause
   !$omp parallel do reduction(*:/c/)
   do i = 1, 10
     l = k + 1

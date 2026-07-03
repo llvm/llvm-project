@@ -174,9 +174,9 @@ define <1 x i16> @test_select_f16_i16(half %i105, half %in, <1 x i16> %x, <1 x i
 ; CHECK-LABEL: test_select_f16_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    fcmp s0, s0
-; CHECK-NEXT:    csetm w8, vs
-; CHECK-NEXT:    dup v0.4h, w8
+; CHECK-NEXT:    fcmeq s0, s0, s0
+; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    dup v0.4h, v0.h[0]
 ; CHECK-NEXT:    bsl v0.8b, v2.8b, v3.8b
 ; CHECK-NEXT:    ret
   %i179 = fcmp uno half %i105, zeroinitializer
@@ -206,8 +206,7 @@ define i64 @test_sext_extr_cmp_half(<1 x half> %v1, <1 x half> %v2) {
 ; CHECK-NEXT:    fcvt s1, h1
 ; CHECK-NEXT:    fcvt s0, h0
 ; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    sbfx x0, x8, #0, #1
+; CHECK-NEXT:    csetm x0, eq
 ; CHECK-NEXT:    ret
   %1 = fcmp oeq <1 x half> %v1, %v2
   %2 = extractelement <1 x i1> %1, i32 0
@@ -248,4 +247,20 @@ if.then:
 
 if.end:
   ret i32 1;
+}
+
+define <1 x i64> @test_zext_half(<1 x half> %v1) {
+; CHECK-LABEL: test_zext_half:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $d0
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    fcvtl v0.4s, v0.4h
+; CHECK-NEXT:    fmov d1, x8
+; CHECK-NEXT:    fcmgt v0.4s, v0.4s, #0.0
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    ret
+  %1 = fcmp ogt <1 x half> %v1, zeroinitializer
+  %2 = zext <1 x i1> %1 to <1 x i64>
+  ret <1 x i64> %2
 }

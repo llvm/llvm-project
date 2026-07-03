@@ -741,6 +741,7 @@ sizeof...($TemplateParameter[[Elements]]);
           $Class[[Foo]].$Field_static[[sharedInstance]].$Field[[someProperty]] $Operator[[=]] 1;
           self.$Field[[someProperty]] $Operator[[=]] self.$Field[[someProperty]] $Operator[[+]] self.$Field[[otherMethod]] $Operator[[+]] 1;
           self->$Field[[_someProperty]] $Operator[[=]] $Field[[_someProperty]] $Operator[[+]] 1;
+          return 0;
         }
         @end
       )cpp",
@@ -1092,7 +1093,20 @@ $Bracket[[>]]$Bracket[[>]] $LocalVariable_def[[s6]];
             $Field_dependentName[[waldo]];
           }
         };
-    )cpp"};
+    )cpp",
+      // Pointer-to-member with nested-name-specifiers
+      R"cpp(
+      struct $Class_def[[Outer]] {
+        struct $Class_def[[Inner]] {};
+      };
+      using $Typedef_decl[[Alias]] = void ($Class[[Outer]]::$Class[[Inner]]:: *)();
+    )cpp",
+      // Forwarded typedef
+      R"cpp(
+      using $Primitive_decl[[MyInt]] = int;
+      namespace $Namespace_decl[[N]] { using ::MyInt; }
+      using $Primitive_decl[[X]] = $Namespace[[N]]::$Primitive[[MyInt]];
+      )cpp"};
   for (const auto &TestCase : TestCases)
     // Mask off scope modifiers to keep the tests manageable.
     // They're tested separately.
@@ -1140,6 +1154,25 @@ $Bracket[[>]]$Bracket[[>]] $LocalVariable_def[[s6]];
     @end
   )cpp"}},
                      ~ScopeModifierMask, {"-isystemSystemSDK/"});
+}
+
+TEST(SemanticHighlighting, NoCrash) {
+  // Testcases where we are just testing that computation of the
+  // semantic tokens does not trigger a crash.
+  const char *TestCases[] = {
+      R"cpp(
+      template < template <> class a > using b = a<>;  // error-ok
+      template <class c>
+      using e = b<c::template d>
+    )cpp"};
+  for (const auto &TestCase : TestCases) {
+    TestTU TU;
+    TU.Code = TestCase;
+    TU.ExtraArgs.push_back("-std=c++20");
+    TU.ExtraArgs.push_back("-xobjective-c++");
+    auto AST = TU.build();
+    getSemanticHighlightings(AST, /*IncludeInactiveRegionTokens=*/true);
+  }
 }
 
 TEST(SemanticHighlighting, ScopeModifiers) {

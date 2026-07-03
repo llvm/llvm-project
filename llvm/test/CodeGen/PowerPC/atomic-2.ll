@@ -42,8 +42,8 @@ define i64 @exchange_and_cmp(ptr %mem) nounwind {
 
 define i8 @exchange_and_cmp8(ptr %mem) nounwind {
 ; CHECK-LABEL: exchange_and_cmp8:
-; CHECK-BE: xori
-; CHECK-LE-NOT: xori
+; CHECK-BE: or r{{.*}} r{{.*}} r{{.*}}
+; CHECK-LE-NOT: or r{{.*}} r{{.*}} r{{.*}}
 ; CHECK-P8U: lbarx
   %tmppair = cmpxchg ptr %mem, i8 0, i8 1 monotonic monotonic
   %tmp = extractvalue { i8, i1 } %tmppair, 0

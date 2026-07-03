@@ -7,7 +7,7 @@
 define i32 @load() sanitize_address {
   %buf = alloca [10 x i8], align 1
   ; NOSAFETY: call i64 @__asan_stack_malloc
-  %1 = load i8, ptr %buf, align 1
+  %1 = load volatile i8, ptr %buf, align 1
   ; NOSAFETY: call void @__asan_load1
   ret i32 0
 }
@@ -16,7 +16,7 @@ define i32 @load() sanitize_address {
 define i32 @store() sanitize_address {
   %buf = alloca [10 x i8], align 1
   ; NOSAFETY: call i64 @__asan_stack_malloc
-  store i8 0, ptr %buf
+  store volatile i8 0, ptr %buf
   ; NOSAFETY: call void @__asan_store1
   ret i32 0
 }

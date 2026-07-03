@@ -17,6 +17,7 @@
 
 #include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include <optional>
 
@@ -182,7 +183,7 @@ public:
 
   /// Visit an operation with control-flow semantics and deduce which of its
   /// successors are live.
-  LogicalResult visit(ProgramPoint point) override;
+  LogicalResult visit(ProgramPoint *point) override;
 
 private:
   /// Find and mark symbol callables with potentially unknown callsites as
@@ -199,6 +200,13 @@ private:
   /// Visit the given branch operation with successors and try to determine
   /// which are live from the current block.
   void visitBranchOperation(BranchOpInterface branch);
+
+  /// Visit region branch edges from `predecessorOp` to a list of successors.
+  /// For each edge, mark the successor program point as executable, and record
+  /// the predecessor information in its `PredecessorState`.
+  void visitRegionBranchEdges(RegionBranchOpInterface regionBranchOp,
+                              Operation *predecessorOp,
+                              const SmallVector<RegionSuccessor> &successors);
 
   /// Visit the given region branch operation, which defines regions, and
   /// compute any necessary lattice state. This also resolves the lattice state
@@ -228,6 +236,13 @@ private:
   /// if a callable is outside the scope of the analysis and thus must be
   /// considered an external callable.
   Operation *analysisScope;
+
+  /// Whether the analysis scope has a symbol table. This is used to avoid
+  /// resolving callables outside the analysis scope.
+  /// It is updated when recursing into a region in case where the top-level
+  /// operation does not have a symbol table, but one is encountered in a nested
+  /// region.
+  bool hasSymbolTable = false;
 
   /// A symbol table used for O(1) symbol lookups during simplification.
   SymbolTableCollection symbolTable;

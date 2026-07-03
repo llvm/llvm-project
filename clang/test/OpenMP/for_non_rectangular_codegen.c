@@ -293,21 +293,21 @@ void collapsed(int mp) {
 // SIMD-ONLY0-NEXT:    [[TMP6:%.*]] = load i32, ptr [[I0]], align 4
 // SIMD-ONLY0-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP6]], 1
 // SIMD-ONLY0-NEXT:    store i32 [[INC]], ptr [[I0]], align 4
-// SIMD-ONLY0-NEXT:    br label [[FOR_COND4]], !llvm.loop [[LOOP2:![0-9]+]]
+// SIMD-ONLY0-NEXT:    br label [[FOR_COND4]], !llvm.loop [[LOOP1:![0-9]+]]
 // SIMD-ONLY0:       for.end:
 // SIMD-ONLY0-NEXT:    br label [[FOR_INC7:%.*]]
 // SIMD-ONLY0:       for.inc7:
 // SIMD-ONLY0-NEXT:    [[TMP7:%.*]] = load i32, ptr [[I]], align 4
 // SIMD-ONLY0-NEXT:    [[INC8:%.*]] = add nsw i32 [[TMP7]], 1
 // SIMD-ONLY0-NEXT:    store i32 [[INC8]], ptr [[I]], align 4
-// SIMD-ONLY0-NEXT:    br label [[FOR_COND1]], !llvm.loop [[LOOP4:![0-9]+]]
+// SIMD-ONLY0-NEXT:    br label [[FOR_COND1]], !llvm.loop [[LOOP3:![0-9]+]]
 // SIMD-ONLY0:       for.end9:
 // SIMD-ONLY0-NEXT:    br label [[FOR_INC10:%.*]]
 // SIMD-ONLY0:       for.inc10:
 // SIMD-ONLY0-NEXT:    [[TMP8:%.*]] = load i32, ptr [[J]], align 4
 // SIMD-ONLY0-NEXT:    [[INC11:%.*]] = add nsw i32 [[TMP8]], 1
 // SIMD-ONLY0-NEXT:    store i32 [[INC11]], ptr [[J]], align 4
-// SIMD-ONLY0-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP5:![0-9]+]]
+// SIMD-ONLY0-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP4:![0-9]+]]
 // SIMD-ONLY0:       for.end12:
 // SIMD-ONLY0-NEXT:    ret void
 //

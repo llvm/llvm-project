@@ -1,5 +1,5 @@
 ; Check that invalid type for constraint `c` causes an error message.
-; RUN: not llc -march=mips -target-abi o32 < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=mips -target-abi o32 < %s 2>&1 | FileCheck %s
 
 define i32 @main() #0 {
 entry:
@@ -8,7 +8,7 @@ entry:
   %0 = load float, ptr %jmp, align 4
   call void asm sideeffect "jr $0", "c,~{$1}"(float %0) #1
 
-; CHECK: error: couldn't allocate input reg for constraint 'c'
+; CHECK: error: could not allocate input reg for constraint 'c'
 
   ret i32 0
 }

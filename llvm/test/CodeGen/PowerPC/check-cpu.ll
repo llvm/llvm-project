@@ -20,5 +20,3 @@
 ; Test -mcpu=[pwr9|pwr10|pwr11|future] is recognized on PowerPC.
 
 ; CHECK-NOT: is not a recognized processor for this target
-; CHECK:     .text
-

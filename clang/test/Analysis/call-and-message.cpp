@@ -169,4 +169,20 @@ void record_uninit() {
 // CHECK-SAME: <string>a46bb5c1ee44d4611ffeb13f7f499605</string>
 // CHECK: <key>issue_hash_content_of_line_in_context</key>
 // CHECK-SAME: <string>e0e0d30ea5a7b2e3a71e1931fa0768a5</string>
+
+struct B{
+  int i  :2;
+  int    :30;  // unnamed bit-field
+};
+
+void bitfield_B_init(void) {
+  B b1;
+  b1.i = 1; // b1 is initialized
+  consume(b1);
+}
+
+void bitfield_B_uninit(void) {
+  B b2;
+  consume(b2); // arg-init-warning{{Passed-by-value struct argument contains uninitialized data (e.g., field: 'i') [core.CallAndMessage]}}
+}
 } // namespace uninit_arg

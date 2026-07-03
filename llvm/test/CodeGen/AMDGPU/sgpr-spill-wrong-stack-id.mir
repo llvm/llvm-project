@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -stress-regalloc=3 -run-pass=greedy,virtregrewriter,stack-slot-coloring -o - %s | FileCheck -check-prefixes=SHARE,GCN %s
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -stress-regalloc=3 -run-pass=greedy,virtregrewriter,stack-slot-coloring -no-stack-slot-sharing -o - %s | FileCheck -check-prefixes=NOSHARE,GCN %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -verify-machineinstrs -stress-regalloc=3 -run-pass=greedy,virtregrewriter,stack-slot-coloring -o - %s | FileCheck -check-prefixes=SHARE,GCN %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -verify-machineinstrs -stress-regalloc=3 -run-pass=greedy,virtregrewriter,stack-slot-coloring -no-stack-slot-sharing -o - %s | FileCheck -check-prefixes=NOSHARE,GCN %s
 
 # -run-pass is used to artifically avoid using split register allocation, which would avoid stressing StackSlotColoring.
 
@@ -14,7 +14,7 @@
   define void @sgpr_spill_wrong_stack_id(ptr addrspace(1) nocapture readnone %arg, ptr addrspace(1) noalias %arg1) {
   bb:
     %tmp = load i32, ptr addrspace(1) null, align 4
-    call void @func(i32 undef)
+    call void @func(i32 poison)
     call void @func(i32 %tmp)
     unreachable
   }

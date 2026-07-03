@@ -1,0 +1,15 @@
+functions:
+  longjmp:
+    c-definition: 7.13.2.1
+    in-latest-posix: ''
+  setjmp:
+    c-definition: 7.13.1.1
+    in-latest-posix: ''
+  siglongjmp:
+    in-latest-posix: ''
+  sigsetjmp:
+    in-latest-posix: ''
+macros:
+  __STDC_VERSION_SETJMP_H__:
+    c-definition: 7.13.2
+

@@ -29,7 +29,7 @@ extern struct foo x;
 
 @implementation A
 - (int*)method {
-  int *ip = [Ivar method]; // expected-warning{{incompatible pointer types initializing 'int *' with an expression of type 'float *'}}
+  int *ip = [Ivar method]; // expected-error{{incompatible pointer types initializing 'int *' with an expression of type 'float *'}}
                            // Note that there is no warning in Objective-C++
   return 0;
 }

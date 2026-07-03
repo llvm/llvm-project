@@ -2,7 +2,6 @@
 # Try a mips* triple to confirm that mips* vs mips64* triples no longer have
 # an effect on the disassembler behaviour.
 # RUN: llvm-mc --disassemble %s -triple=mips-unknown-linux -mcpu=mips64r2 | FileCheck %s
-# CHECK: .text
 0x00 0x00 0x00 0x00 # CHECK: nop
 0x00 0x00 0x00 0x09 # CHECK: jr $zero
 0x00 0x00 0x00 0x0c # CHECK: syscall                         

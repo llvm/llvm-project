@@ -30,7 +30,8 @@ class CrossTranslationUnitContext;
 namespace ento {
 
 class PathDiagnosticConsumer;
-typedef std::vector<PathDiagnosticConsumer*> PathDiagnosticConsumers;
+using PathDiagnosticConsumers =
+    std::vector<std::unique_ptr<PathDiagnosticConsumer>>;
 
 #define ANALYSIS_DIAGNOSTICS(NAME, CMDFLAG, DESC, CREATEFN)                    \
   void CREATEFN(PathDiagnosticConsumerOptions Diagopts,                        \

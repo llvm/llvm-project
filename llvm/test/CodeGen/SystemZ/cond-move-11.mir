@@ -1,0 +1,43 @@
+# RUN: llc -o - %s -mtriple=s390x-linux-gnu -mcpu=z15 -start-before=systemz-post-rewrite \
+# RUN:   -stop-after=machine-cp -verify-machineinstrs 2>&1 | FileCheck %s
+
+# The chained SELRMux:es both has two operands with the same register but
+# where one of the operands have been marked as undef (resulting from
+# early-ifcvt). Check that the resulting COPY after machine-cp is from $r0l
+# to $r2l.
+
+# CHECK:      name: fun0
+# CHECK:      $r2l = COPY $r0l
+--- |
+  
+  @Res = global i32 0, align 4
+  @Z = global i32 0, align 4
+  define signext i32 @fun0() { ret i32 0 }
+...
+---
+name:            fun0
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1(0x80000000)
+  
+    renamable $r0l = LRL @Z :: (dereferenceable load (s32) from @Z)
+    renamable $r1l = LHIMux 1
+  
+  bb.1:
+    successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+    liveins: $r0l, $r1l
+  
+    CHIMux renamable $r1l, 0, implicit-def $cc
+    renamable $r2l = SELRMux undef renamable $r0l, renamable $r0l, 14, 6, implicit $cc
+    renamable $r2l = SELRMux undef renamable $r2l, killed renamable $r2l, 14, 6, implicit $cc
+    BRC 14, 8, %bb.1, implicit killed $cc
+    J %bb.2
+  
+  bb.2:
+    liveins: $r2l
+  
+    STRL renamable $r2l, @Res :: (store (s32) into @Res)
+    renamable $r2d = LGFR killed renamable $r2l
+    Return implicit $r2d
+...

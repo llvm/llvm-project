@@ -1,11 +1,12 @@
+// clang-format off
 // RUN: %libomp-compile-and-run | FileCheck %s
 // REQUIRES: ompt
+// clang-format on
 
 #define USE_PRIVATE_TOOL 1
 #include "callback.h"
 
-__attribute__((noinline))
-int foo(int x) {
+__attribute__((noinline)) int foo(int x) {
 #pragma omp parallel num_threads(2)
   {
 #pragma omp atomic
@@ -14,8 +15,7 @@ int foo(int x) {
   return x;
 }
 
-__attribute__((noinline))
-int bar(int x) {
+__attribute__((noinline)) int bar(int x) {
 #pragma omp parallel num_threads(2)
   {
 #pragma omp critical
@@ -31,12 +31,13 @@ int main() {
   y = foo(y);
   return 0;
 
+  // clang-format off
   // CHECK-NOT: {{^}}0: Could not register callback
   // CHECK: 0: NULL_POINTER=[[NULL:.*$]]
 
   // First call to foo
   // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_parallel_begin
-  // CHECK-SAME: {{.*}}codeptr_ra=[[RETURN_ADDRESS:0x[0-f]+]]
+  // CHECK-SAME: {{.*}}codeptr_ra=[[RETURN_ADDRESS:(0x)?[0-f]+]]
 
   // Call to bar
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_parallel_begin
@@ -44,12 +45,11 @@ int main() {
   // Second call to foo
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_parallel_begin
   // CHECK-SAME: {{.*}}codeptr_ra=[[RETURN_ADDRESS]]
-
+  // clang-format on
 }
 
-static void on_ompt_callback_thread_begin(
-    ompt_thread_t thread_type,
-    ompt_data_t *thread_data) {
+static void on_ompt_callback_thread_begin(ompt_thread_t thread_type,
+                                          ompt_data_t *thread_data) {
   if (thread_data->ptr)
     printf("%s\n", "0: thread_data initially not null");
   thread_data->value = ompt_get_unique_id();

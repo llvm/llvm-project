@@ -1,0 +1,6 @@
+// RUN: %python %S/../../docs/tools/dump_format_style.py -o %t.style
+// RUN: diff --strip-trailing-cr %t.style \
+// RUN:   %S/../../docs/ClangFormatStyleOptions.rst
+
+// RUN: %python %S/../../docs/tools/dump_format_help.py -o %t.help
+// RUN: diff --strip-trailing-cr %t.help %S/../../docs/ClangFormat.rst

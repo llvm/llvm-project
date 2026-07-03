@@ -9,20 +9,28 @@
 
 #include "InstructionBreakpoint.h"
 #include "DAP.h"
+#include "lldb/API/SBBreakpoint.h"
+#include "lldb/API/SBTarget.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace lldb_dap {
 
-// Instruction Breakpoint
-InstructionBreakpoint::InstructionBreakpoint(const llvm::json::Object &obj)
-    : Breakpoint(obj), instructionAddressReference(LLDB_INVALID_ADDRESS), id(0),
-      offset(GetSigned(obj, "offset", 0)) {
-  GetString(obj, "instructionReference")
-      .getAsInteger(0, instructionAddressReference);
-  instructionAddressReference += offset;
+InstructionBreakpoint::InstructionBreakpoint(
+    DAP &d, const protocol::InstructionBreakpoint &breakpoint)
+    : Breakpoint(d, breakpoint.condition, breakpoint.hitCondition),
+      m_instruction_address_reference(LLDB_INVALID_ADDRESS) {
+  llvm::StringRef instruction_reference(breakpoint.instructionReference);
+  instruction_reference.getAsInteger(0, m_instruction_address_reference);
+  m_instruction_address_reference += breakpoint.offset.value_or(0);
 }
 
-void InstructionBreakpoint::SetInstructionBreakpoint() {
-  bp = g_dap.target.BreakpointCreateByAddress(instructionAddressReference);
-  id = bp.GetID();
+void InstructionBreakpoint::SetBreakpoint() {
+  lldb::SBMutex lock = m_dap.GetAPIMutex();
+  std::lock_guard<lldb::SBMutex> guard(lock);
+
+  m_bp =
+      m_dap.target.BreakpointCreateByAddress(m_instruction_address_reference);
+  Breakpoint::SetBreakpoint();
 }
+
 } // namespace lldb_dap

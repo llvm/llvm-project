@@ -1,8 +1,5 @@
-; RUN: opt < %s -passes=asan -asan-instrumentation-with-call-threshold=0 \
-; RUN:   -asan-optimize-callbacks -S | FileCheck %s --check-prefixes=LOAD,STORE
-; RUN: opt < %s -passes=asan -asan-instrumentation-with-call-threshold=0 \
-; RUN:   -asan-optimize-callbacks --asan-kernel -S | \
-; RUN:   FileCheck %s --check-prefixes=LOAD-KERNEL,STORE-KERNEL
+; RUN: opt < %s -passes=asan -asan-instrumentation-with-call-threshold=0 -asan-optimize-callbacks -S | FileCheck %s --check-prefixes=LOAD,STORE
+; RUN: opt < %s -passes=asan -asan-instrumentation-with-call-threshold=0 -asan-optimize-callbacks --asan-kernel -S | FileCheck %s --check-prefixes=LOAD-KERNEL,STORE-KERNEL
 
 target triple = "x86_64-unknown-linux-gnu"
 

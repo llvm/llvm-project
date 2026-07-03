@@ -1,4 +1,4 @@
-// XFAIL: system-windows
+// XFAIL: target-windows
 // RUN: %clangxx_host -gdwarf -o %t %s
 // RUN: %lldb %t \
 // RUN:   -o "expr alignof(packed)" \

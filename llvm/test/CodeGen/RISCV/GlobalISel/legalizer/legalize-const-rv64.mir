@@ -6,9 +6,8 @@ name:            const_i8
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: const_i8
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -127
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s32)
-    ; CHECK-NEXT: $x10 = COPY [[ANYEXT]](s64)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -127
+    ; CHECK-NEXT: $x10 = COPY [[C]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(s8) = G_CONSTANT i8 129
     %1:_(s64) = G_ANYEXT %0(s8)
@@ -21,9 +20,8 @@ name:            const_i15
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: const_i15
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s32)
-    ; CHECK-NEXT: $x10 = COPY [[ANYEXT]](s64)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 15
+    ; CHECK-NEXT: $x10 = COPY [[C]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(s15) = G_CONSTANT i15 15
     %1:_(s64) = G_ANYEXT %0(s15)
@@ -36,9 +34,8 @@ name:            const_i16
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: const_i16
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 767
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s32)
-    ; CHECK-NEXT: $x10 = COPY [[ANYEXT]](s64)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 767
+    ; CHECK-NEXT: $x10 = COPY [[C]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(s16) = G_CONSTANT i16 -64769
     %1:_(s64) = G_ANYEXT %0(s16)
@@ -51,9 +48,8 @@ name:            const_i32
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: const_i32
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -64769
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s32)
-    ; CHECK-NEXT: $x10 = COPY [[ANYEXT]](s64)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -64769
+    ; CHECK-NEXT: $x10 = COPY [[C]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(s32) = G_CONSTANT i32 -64769
     %1:_(s64) = G_ANYEXT %0(s32)
@@ -146,12 +142,11 @@ name:            const_add_i32
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: const_add_i32
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -64769
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -64769
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[TRUNC]], [[C]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ADD]](s32)
-    ; CHECK-NEXT: $x10 = COPY [[ANYEXT]](s64)
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[COPY]], [[C]]
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[ADD]], 32
+    ; CHECK-NEXT: $x10 = COPY [[SEXT_INREG]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(s32) = G_CONSTANT i32 -64769
     %1:_(s64) = COPY $x10
@@ -167,12 +162,10 @@ name:            const_add_i8
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: const_add_i8
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[TRUNC]], [[C]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ADD]](s32)
-    ; CHECK-NEXT: $x10 = COPY [[ANYEXT]](s64)
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[COPY]], [[C]]
+    ; CHECK-NEXT: $x10 = COPY [[ADD]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(s8) = G_CONSTANT i8 1
     %1:_(s64) = COPY $x10

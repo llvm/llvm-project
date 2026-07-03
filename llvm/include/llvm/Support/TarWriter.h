@@ -11,16 +11,17 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 class TarWriter {
 public:
-  static Expected<std::unique_ptr<TarWriter>> create(StringRef OutputPath,
-                                                     StringRef BaseDir);
+  LLVM_ABI static Expected<std::unique_ptr<TarWriter>>
+  create(StringRef OutputPath, StringRef BaseDir);
 
-  void append(StringRef Path, StringRef Data);
+  LLVM_ABI void append(StringRef Path, StringRef Data);
 
 private:
   TarWriter(int FD, StringRef BaseDir);

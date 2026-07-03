@@ -1,11 +1,9 @@
-; RUN: llc -global-isel=0 -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,FUNC %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VIGFX9,FUNC %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VIGFX9,FUNC %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VIGFX9,FUNC %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VIGFX9,FUNC %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=bonaire < %s | FileCheck -check-prefixes=GCN,FUNC %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=bonaire < %s | FileCheck -check-prefixes=GCN,FUNC %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=GCN,VIGFX9,FUNC %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=GCN,VIGFX9,FUNC %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,VIGFX9,FUNC %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,VIGFX9,FUNC %s
 
 ; FUNC-LABEL: {{^}}ds_ordered_add:
 ; GCN-DAG: v_mov_b32_e32 v[[INCR:[0-9]+]], 31
@@ -68,7 +66,7 @@ define amdgpu_cs float @ds_ordered_add_cs(ptr addrspace(2) inreg %gds) {
 ; GCN-NEXT: ds_ordered_count v{{[0-9]+}}, v[[INCR]] offset:772 gds
 ; GCN-NEXT: s_waitcnt expcnt(0) lgkmcnt(0)
 define float @ds_ordered_add_default_cc() {
-  %val = call i32 @llvm.amdgcn.ds.ordered.add(ptr addrspace(2) null, i32 31, i32 0, i32 0, i1 false, i32 1, i1 true, i1 true)
+  %val = call i32 @llvm.amdgcn.ds.ordered.add(ptr addrspace(2) zeroinitializer, i32 31, i32 0, i32 0, i1 false, i32 1, i1 true, i1 true)
   %r = bitcast i32 %val to float
   ret float %r
 }
@@ -80,7 +78,7 @@ define float @ds_ordered_add_default_cc() {
 ; GCN-NEXT: ds_ordered_count v{{[0-9]+}}, v[[INCR]] offset:772 gds
 ; GCN-NEXT: s_waitcnt expcnt(0) lgkmcnt(0)
 define fastcc float @ds_ordered_add_fastcc() {
-  %val = call i32 @llvm.amdgcn.ds.ordered.add(ptr addrspace(2) null, i32 31, i32 0, i32 0, i1 false, i32 1, i1 true, i1 true)
+  %val = call i32 @llvm.amdgcn.ds.ordered.add(ptr addrspace(2) zeroinitializer, i32 31, i32 0, i32 0, i1 false, i32 1, i1 true, i1 true)
   %r = bitcast i32 %val to float
   ret float %r
 }
@@ -92,7 +90,7 @@ define fastcc float @ds_ordered_add_fastcc() {
 ; GCN-NEXT: ds_ordered_count v{{[0-9]+}}, v[[INCR]] offset:772 gds
 ; GCN-NEXT: s_waitcnt expcnt(0) lgkmcnt(0)
 define float @ds_ordered_add_func() {
-  %val = call i32@llvm.amdgcn.ds.ordered.add(ptr addrspace(2) null, i32 31, i32 0, i32 0, i1 false, i32 1, i1 true, i1 true)
+  %val = call i32@llvm.amdgcn.ds.ordered.add(ptr addrspace(2) zeroinitializer, i32 31, i32 0, i32 0, i1 false, i32 1, i1 true, i1 true)
   %r = bitcast i32 %val to float
   ret float %r
 }

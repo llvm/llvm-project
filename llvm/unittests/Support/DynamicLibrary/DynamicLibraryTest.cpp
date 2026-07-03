@@ -32,7 +32,7 @@ std::string LibPath(const std::string Name = "PipSqueak") {
   return std::string(Buf.str());
 }
 
-#if defined(_WIN32) || (defined(HAVE_DLFCN_H) && defined(HAVE_DLOPEN))
+#if defined(_WIN32) || defined(HAVE_DLOPEN)
 
 typedef void (*SetStrings)(std::string &GStr, std::string &LStr);
 typedef void (*TestOrder)(std::vector<std::string> &V);
@@ -59,7 +59,11 @@ static const char *OverloadTestA() { return "OverloadCall"; }
 
 std::string StdString(const char *Ptr) { return Ptr ? Ptr : ""; }
 
-TEST(DynamicLibrary, Overload) {
+TEST(DynamicLibrary, Overload)
+#ifdef __clang__
+LLVM_NO_SANITIZE("cfi-icall")
+#endif
+{
   {
     std::string Err;
     DynamicLibrary DL =

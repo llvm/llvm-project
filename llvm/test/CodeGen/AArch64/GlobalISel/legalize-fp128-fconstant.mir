@@ -12,9 +12,9 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: fp128-fconstant
     ; CHECK: [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) %const.0
-    ; CHECK: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) %const.0
-    ; CHECK: $q0 = COPY [[LDRQui]]
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) %const.0 :: (load (s128) from constant-pool)
+    ; CHECK-NEXT: $q0 = COPY [[LDRQui]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:fpr(s128) = G_FCONSTANT fp128 0xL00000000000000004000000000000000
     $q0 = COPY %0:fpr(s128)
     RET_ReallyLR implicit $q0

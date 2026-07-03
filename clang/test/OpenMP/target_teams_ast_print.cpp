@@ -40,10 +40,6 @@ struct S {
 // CHECK:        static int TS;
 // CHECK-NEXT:   #pragma omp threadprivate(S<int>::TS)
 // CHECK-NEXT: }
-// CHECK:      template<> struct S<long> {
-// CHECK:        static long TS;
-// CHECK-NEXT:   #pragma omp threadprivate(S<long>::TS)
-// CHECK-NEXT: }
 
 template <typename T, int C>
 T tmain(T argc, T *argv) {
@@ -119,10 +115,14 @@ int main (int argc, char **argv) {
 // CHECK-NEXT: #pragma omp target teams ompx_bare num_teams(1) thread_limit(32)
   a=3;
 // CHECK-NEXT: a = 3;
-#pragma omp target teams ompx_bare num_teams(1, 2, 3) thread_limit(2, 4, 6)
-// CHECK-NEXT: #pragma omp target teams ompx_bare num_teams(1,2,3) thread_limit(2,4,6)
+#pragma omp target teams ompx_bare num_teams(2, 1) thread_limit(4, 2)
+// CHECK-NEXT: #pragma omp target teams ompx_bare num_teams(2,1) thread_limit(4,2)
   a=4;
 // CHECK-NEXT: a = 4;
+#pragma omp target teams ompx_bare num_teams(1, 2, 3) thread_limit(2, 4, 6)
+// CHECK-NEXT: #pragma omp target teams ompx_bare num_teams(1,2,3) thread_limit(2,4,6)
+  a=5;
+// CHECK-NEXT: a = 5;
 #pragma omp target teams default(none), private(argc,b) num_teams(f) firstprivate(argv) reduction(| : c, d) reduction(* : e) thread_limit(f+g)
 // CHECK-NEXT: #pragma omp target teams default(none) private(argc,b) num_teams(f) firstprivate(argv) reduction(|: c,d) reduction(*: e) thread_limit(f + g)
   foo();

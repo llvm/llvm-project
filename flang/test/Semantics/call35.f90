@@ -5,14 +5,14 @@ subroutine s1
 end
 
 subroutine s2
-  !WARNING: Reference to the procedure 'ext' has an implicit interface that is distinct from another reference: distinct numbers of dummy arguments
+  !WARNING: Reference to the procedure 'ext' has an implicit interface that is distinct from another reference: distinct numbers of dummy arguments [-Wincompatible-implicit-interfaces]
   call ext(1.)
   call myerror('abcd') ! don't warn about distinct lengths
 end
 
 subroutine s3
   interface
-    !WARNING: The global subprogram 'ext' is not compatible with its local procedure declaration (incompatible procedure attributes: ImplicitInterface)
+    !WARNING: The global subprogram 'ext' is not compatible with its local procedure declaration (incompatible procedure attributes: ImplicitInterface) [-Wexternal-interface-mismatch]
     subroutine ext(n)
       integer n
     end

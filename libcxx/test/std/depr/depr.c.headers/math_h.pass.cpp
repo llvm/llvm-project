@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This test fails because Clang no longer enables -fdelayed-template-parsing
-// by default on Windows with C++20 (#69431).
-// XFAIL: msvc && (clang-18 || clang-19 || clang-20)
+// Missing some math functions.
+// XFAIL: LLVM-LIBC-FIXME
 
 // <math.h>
+
+// GCC warns about signbit comparing `bool_v < 0`, which we're testing
+// ADDITIONAL_COMPILE_FLAGS(gcc): -Wno-bool-compare
 
 #include <math.h>
 #include <type_traits>

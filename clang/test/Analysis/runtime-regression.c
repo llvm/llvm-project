@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 %s \
-// RUN:   -analyzer-checker=core,alpha.security.ArrayBoundV2 \
+// RUN:   -analyzer-checker=core,security.ArrayBound \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -triple x86_64-unknown-linux-gnu \
 // RUN:   -verify

@@ -30,9 +30,13 @@ entry:
   ; CHECK: insertelement <4 x float> %{{.*}}, float [[ie1]], i64 1
   ; CHECK: insertelement <4 x float> %{{.*}}, float [[ie2]], i64 2
   ; CHECK: insertelement <4 x float> %{{.*}}, float [[ie3]], i64 3
-  %2 = call <4 x float> @llvm.sinh.v4f32(<4 x float> %a) 
+  %2 = call <4 x float> @llvm.sinh.v4f32(<4 x float> %a)
   ret <4 x float> %2
 }
+
+; CHECK-DAG: declare half @dx.op.unary.f16(i32, half) #[[#ATTR0:]]
+; CHECK-DAG: declare float @dx.op.unary.f32(i32, float) #[[#ATTR0]]
+; CHECK: attributes #[[#ATTR0]] = { nounwind memory(none) }
 
 declare half @llvm.sinh.f16(half)
 declare float @llvm.sinh.f32(float)

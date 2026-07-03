@@ -27,8 +27,8 @@ public:
   void check(const MatchFinder::MatchResult &Result) override {
     const auto *D = Result.Nodes.getNodeAs<VarDecl>("var");
     using utils::fixit::addQualifierToVarDecl;
-    std::optional<FixItHint> Fix = addQualifierToVarDecl(
-        *D, *Result.Context, DeclSpec::TQ::TQ_const, CT, CP);
+    std::optional<FixItHint> Fix =
+        addQualifierToVarDecl(*D, *Result.Context, Qualifiers::Const, CT, CP);
     auto Diag = diag(D->getBeginLoc(), "doing const transformation");
     if (Fix)
       Diag << *Fix;

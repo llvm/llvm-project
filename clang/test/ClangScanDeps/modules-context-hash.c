@@ -1,5 +1,5 @@
 // RUN: rm -rf %t && mkdir %t
-// RUN: cp -r %S/Inputs/modules-context-hash/* %t
+// RUN: cp -R %S/Inputs/modules-context-hash/* %t
 
 // Check that the scanner reports the same module as distinct dependencies when
 // a single translation unit gets compiled with multiple command-lines that
@@ -34,9 +34,9 @@
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[HASH_MOD_A:.*]]",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/a/dep.h",
+// CHECK-NEXT:         "[[PREFIX]]/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/mod.h",
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/a/dep.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "mod"
@@ -72,9 +72,9 @@
 // CHECK:            ],
 // CHECK-NOT:        "context-hash": "[[HASH_MOD_A]]",
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/b/dep.h",
+// CHECK-NEXT:         "[[PREFIX]]/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/mod.h",
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/b/dep.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "mod"

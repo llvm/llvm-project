@@ -1,6 +1,6 @@
-// RUN: rm -rf %T/ctudir
-// RUN: mkdir %T/ctudir
-// RUN: %clang_cc1 -analyze -analyzer-checker=debug.ExprInspection -analyzer-config experimental-enable-naive-ctu-analysis=true -analyzer-config ctu-dir=%T/ctudir -verify %s
+// RUN: rm -rf %t.dir/ctudir
+// RUN: mkdir -p %t.dir/ctudir
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.ExprInspection -analyzer-config experimental-enable-naive-ctu-analysis=true -analyzer-config ctu-dir=%t.dir/ctudir -verify %s
 // expected-no-diagnostics
 
 struct S {

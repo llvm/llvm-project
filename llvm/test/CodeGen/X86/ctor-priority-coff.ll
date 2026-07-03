@@ -12,13 +12,13 @@
 ; CHECK: .section        .CRT$XCC00250,"dr"
 ; CHECK: .p2align        3
 ; CHECK: .quad   k
-; CHECK: .section        .CRT$XCL,"dr"
+; CHECK: .section        .CRT$XCL,"dr",unique,0
 ; CHECK: .p2align        3
 ; CHECK: .quad   j
 ; CHECK: .section        .CRT$XCT12345,"dr"
 ; CHECK: .p2align        3
 ; CHECK: .quad   g
-; CHECK: .section        .CRT$XCT23456,"dr",associative,h
+; CHECK: .section        .CRT$XCT23456,"dr",associative,h,unique,0
 ; CHECK: .p2align        3
 ; CHECK: .quad   init_h
 

@@ -16,7 +16,7 @@ entry:
   store i32 1, ptr addrspace(5) %tmp2
   %tmp3 = getelementptr inbounds [2 x i32], ptr addrspace(5) %tmp, i32 0, i32 %in
   %tmp4 = load i32, ptr addrspace(5) %tmp3
-  %tmp5 = load volatile i32, ptr addrspace(1) undef
+  %tmp5 = load volatile i32, ptr addrspace(1) poison
   %tmp6 = add i32 %tmp4, %tmp5
   store i32 %tmp6, ptr addrspace(1) %out
   ret void

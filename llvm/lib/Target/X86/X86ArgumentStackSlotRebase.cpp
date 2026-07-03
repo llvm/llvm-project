@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86.h"
-#include "X86InstrBuilder.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
@@ -23,28 +22,24 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 
 using namespace llvm;
 
-#define DEBUG_TYPE "x86argumentstackrebase"
+#define DEBUG_TYPE "x86-argument-stack-slot"
 
 namespace {
 
-class X86ArgumentStackSlotPass : public MachineFunctionPass {
+class X86ArgumentStackSlotLegacy : public MachineFunctionPass {
 
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  explicit X86ArgumentStackSlotPass() : MachineFunctionPass(ID) {
-    initializeX86ArgumentStackSlotPassPass(*PassRegistry::getPassRegistry());
-  }
+  explicit X86ArgumentStackSlotLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -56,13 +51,13 @@ public:
 
 } // end anonymous namespace
 
-char X86ArgumentStackSlotPass::ID = 0;
+char X86ArgumentStackSlotLegacy::ID = 0;
 
-INITIALIZE_PASS(X86ArgumentStackSlotPass, DEBUG_TYPE, "Argument Stack Rebase",
+INITIALIZE_PASS(X86ArgumentStackSlotLegacy, DEBUG_TYPE, "Argument Stack Rebase",
                 false, false)
 
-FunctionPass *llvm::createX86ArgumentStackSlotPass() {
-  return new X86ArgumentStackSlotPass();
+FunctionPass *llvm::createX86ArgumentStackSlotLegacyPass() {
+  return new X86ArgumentStackSlotLegacy();
 }
 
 static Register getArgBaseReg(MachineFunction &MF) {
@@ -102,7 +97,7 @@ static Register getArgBaseReg(MachineFunction &MF) {
     return NoReg;
 }
 
-bool X86ArgumentStackSlotPass::runOnMachineFunction(MachineFunction &MF) {
+static bool argumentStackSlotRebase(MachineFunction &MF) {
   const Function &F = MF.getFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
@@ -132,7 +127,7 @@ bool X86ArgumentStackSlotPass::runOnMachineFunction(MachineFunction &MF) {
           if (!MO.isReg())
             continue;
           Register Reg = MO.getReg();
-          if (!Register::isPhysicalRegister(Reg))
+          if (!Reg.isPhysical())
             continue;
           if (TRI->isSuperOrSubRegisterEq(BasePtr, Reg))
             return true;
@@ -195,4 +190,16 @@ bool X86ArgumentStackSlotPass::runOnMachineFunction(MachineFunction &MF) {
   }
 
   return Changed;
+}
+
+bool X86ArgumentStackSlotLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return argumentStackSlotRebase(MF);
+}
+
+PreservedAnalyses
+X86ArgumentStackSlotPass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &MFAM) {
+  return argumentStackSlotRebase(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                           .preserveSet<CFGAnalyses>()
+                                     : PreservedAnalyses::all();
 }

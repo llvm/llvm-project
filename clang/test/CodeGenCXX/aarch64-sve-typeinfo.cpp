@@ -21,6 +21,8 @@ auto &f64 = typeid(__SVFloat64_t);
 
 auto &bf16 = typeid(__SVBfloat16_t);
 
+auto &mf8 = typeid(__SVMfloat8_t);
+
 auto &b8 = typeid(__SVBool_t);
 auto &c8 = typeid(__SVCount_t);
 
@@ -59,6 +61,9 @@ auto &c8 = typeid(__SVCount_t);
 //
 // CHECK-DAG: @_ZTSu14__SVBfloat16_t = {{.*}} c"u14__SVBfloat16_t\00"
 // CHECK-DAG: @_ZTIu14__SVBfloat16_t = {{.*}} @_ZTVN10__cxxabiv123__fundamental_type_infoE, {{.*}} @_ZTSu14__SVBfloat16_t
+
+// CHECK-DAG: @_ZTSu13__SVMfloat8_t = {{.*}} c"u13__SVMfloat8_t\00"
+// CHECK-DAG: @_ZTIu13__SVMfloat8_t = {{.*}} @_ZTVN10__cxxabiv123__fundamental_type_infoE, {{.*}} @_ZTSu13__SVMfloat8_t
 
 // CHECK-DAG: @_ZTSu10__SVBool_t = {{.*}} c"u10__SVBool_t\00"
 // CHECK-DAG: @_ZTIu10__SVBool_t = {{.*}} @_ZTVN10__cxxabiv123__fundamental_type_infoE, {{.*}} @_ZTSu10__SVBool_t

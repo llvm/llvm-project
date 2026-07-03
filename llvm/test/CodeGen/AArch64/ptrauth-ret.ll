@@ -112,12 +112,9 @@ define void @test_noframe() #0 {
 define ptr @test_returnaddress_0() #0 {
 ; CHECK-LABEL: test_returnaddress_0:
 ; CHECK:       %bb.0:
-; CHECK-NEXT:    pacibsp
-; CHECK-NEXT:    str x30, [sp, #-16]!
-; CHECK-NEXT:    xpaci x30
 ; CHECK-NEXT:    mov x0, x30
-; CHECK-NEXT:    ldr x30, [sp], #16
-; CHECK-NEXT:    retab
+; CHECK-NEXT:    xpaci x0
+; CHECK-NEXT:    ret
   %r = call ptr @llvm.returnaddress(i32 0)
   ret ptr %r
 }

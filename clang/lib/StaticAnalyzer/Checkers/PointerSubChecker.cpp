@@ -17,7 +17,6 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -59,6 +58,10 @@ void PointerSubChecker::checkPreStmt(const BinaryOperator *B,
   // No warning if one operand is unknown or resides in a region that could be
   // equal to the other.
   if (LR->getSymbolicBase() || RR->getSymbolicBase())
+    return;
+
+  if (!B->getLHS()->getType()->isPointerType() ||
+      !B->getRHS()->getType()->isPointerType())
     return;
 
   const auto *ElemLR = dyn_cast<ElementRegion>(LR);

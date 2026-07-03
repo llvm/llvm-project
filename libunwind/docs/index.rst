@@ -78,7 +78,7 @@ and `Getting started with LLVM <https://llvm.org/docs/GettingStarted.html>`__.
 
 If you think you've found a bug in libunwind, please report it using
 the `LLVM bug tracker`_. If you're not sure, you
-can ask for support on the `Runtimes forum`_ or on IRC.
+can ask for support on the `Runtimes forum`_ or on Discord.
 Please use the tag "libunwind" for new threads.
 
 **Patches**

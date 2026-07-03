@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s
+; RUN: llc -mtriple=hexagon < %s
 ; REQUIRES: asserts
 ; Used to fail with "Unexpected illegal type!"
 ; Used to fail with "Cannot select: ch = store x,x,x,<ST4[undef](align=8), trunc to v4i8>"

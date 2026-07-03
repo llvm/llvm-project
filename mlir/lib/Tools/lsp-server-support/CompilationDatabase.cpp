@@ -8,14 +8,15 @@
 
 #include "mlir/Tools/lsp-server-support/CompilationDatabase.h"
 #include "mlir/Support/FileUtilities.h"
-#include "mlir/Tools/lsp-server-support/Logging.h"
-#include "mlir/Tools/lsp-server-support/Protocol.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/LSP/Logging.h"
+#include "llvm/Support/LSP/Protocol.h"
 #include "llvm/Support/YAMLTraits.h"
 
 using namespace mlir;
 using namespace mlir::lsp;
+using llvm::lsp::Logger;
 
 //===----------------------------------------------------------------------===//
 // YamlFileInfo
@@ -104,8 +105,7 @@ void CompilationDatabase::loadDatabase(StringRef filename) {
     }
 
     // Track the includes for the file.
-    for (StringRef include : it.first->second.includeDirs)
-      knownIncludes.insert(include);
+    knownIncludes.insert_range(it.first->second.includeDirs);
   }
 
   // Add all of the known includes to the default file info. We don't know any

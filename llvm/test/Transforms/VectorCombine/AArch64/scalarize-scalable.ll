@@ -30,7 +30,7 @@ define <vscale x 4 x i32> @scalarize_scalable_udiv(i32 %x, i32 %y) {
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
 ;
   %splatx = insertelement <vscale x 4 x i32> poison, i32 %x, i64 0
-  %splaty = insertelement <vscale x 4 x i32> poison, i32 %y, i64 0
+  %splaty = insertelement <vscale x 4 x i32> splat (i32 1), i32 %y, i64 0
   %r = udiv <vscale x 4 x i32> %splatx, %splaty
   ret <vscale x 4 x i32> %r
 }

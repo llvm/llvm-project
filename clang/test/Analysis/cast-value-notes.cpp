@@ -4,12 +4,12 @@
 //
 // RUN: %clang_analyze_cc1 -std=c++14 -triple amdgcn-unknown-unknown \
 // RUN: -analyzer-checker=core,apiModeling.llvm.CastValue,debug.ExprInspection\
-// RUN:  -analyzer-config core.NullDereference:SuppressAddressSpaces=false\
+// RUN:  -analyzer-config suppress-dereferences-from-any-address-space=false\
 // RUN:  -analyzer-output=text -verify -DX86 -DNOT_SUPPRESSED %s 2>&1 | FileCheck %s -check-prefix=X86-CHECK
 //
 // RUN: %clang_analyze_cc1 -std=c++14 -triple amdgcn-unknown-unknown \
 // RUN: -analyzer-checker=core,apiModeling.llvm.CastValue,debug.ExprInspection\
-// RUN:  -analyzer-config core.NullDereference:SuppressAddressSpaces=true\
+// RUN:  -analyzer-config suppress-dereferences-from-any-address-space=true\
 // RUN:  -analyzer-output=text -verify -DX86 -DSUPPRESSED %s 2>&1 | FileCheck %s -check-prefix=X86-CHECK
 //
 // RUN: %clang_analyze_cc1 -std=c++14 -triple x86_64-unknown-unknown \
@@ -18,12 +18,12 @@
 //
 // RUN: %clang_analyze_cc1 -std=c++14 -triple x86_64-unknown-unknown \
 // RUN:  -analyzer-checker=core,apiModeling.llvm.CastValue,debug.ExprInspection\
-// RUN:  -analyzer-config core.NullDereference:SuppressAddressSpaces=true\
+// RUN:  -analyzer-config suppress-dereferences-from-any-address-space=true\
 // RUN:  -analyzer-output=text -verify -DX86 -DSUPPRESSED %s 2>&1 | FileCheck %s --check-prefix=X86-CHECK-SUPPRESSED
 //
 // RUN: %clang_analyze_cc1 -std=c++14 -triple x86_64-unknown-unknown \
 // RUN:  -analyzer-checker=core,apiModeling.llvm.CastValue,debug.ExprInspection\
-// RUN:  -analyzer-config core.NullDereference:SuppressAddressSpaces=false\
+// RUN:  -analyzer-config suppress-dereferences-from-any-address-space=false\
 // RUN:  -analyzer-output=text -verify -DX86 -DNOT_SUPPRESSED %s 2>&1 | FileCheck %s --check-prefix=X86-CHECK
 //
 // RUN: %clang_analyze_cc1 -std=c++14 -triple mips-unknown-unknown \
@@ -32,12 +32,12 @@
 //
 // RUN: %clang_analyze_cc1 -std=c++14 -triple mips-unknown-unknown \
 // RUN: -analyzer-checker=core,apiModeling.llvm.CastValue,debug.ExprInspection\
-// RUN: -analyzer-config core.NullDereference:SuppressAddressSpaces=false\
+// RUN: -analyzer-config suppress-dereferences-from-any-address-space=false\
 // RUN: -analyzer-output=text -verify -DMIPS %s 2>&1
 //
 // RUN: %clang_analyze_cc1 -std=c++14 -triple mips-unknown-unknown \
 // RUN: -analyzer-checker=core,apiModeling.llvm.CastValue,debug.ExprInspection\
-// RUN: -analyzer-config core.NullDereference:SuppressAddressSpaces=true\
+// RUN: -analyzer-config suppress-dereferences-from-any-address-space=true\
 // RUN: -analyzer-output=text -verify -DMIPS_SUPPRESSED %s
 
 #include "Inputs/llvm.h"

@@ -188,7 +188,7 @@ a:
         class.s $f2, $f4         # CHECK: class.s $f2, $f4       # encoding: [0x46,0x00,0x20,0x9b]
         class.d $f2, $f4         # CHECK: class.d $f2, $f4       # encoding: [0x46,0x20,0x20,0x9b]
         j       1f               # CHECK: j $tmp0                # encoding: [0b000010AA,A,A,A]
-                                 # CHECK:                        #   fixup A - offset: 0, value: ($tmp0), kind: fixup_Mips_26
+                                 # CHECK:                        #   fixup A - offset: 0, value: $tmp0, kind: fixup_Mips_26
         j       a                # CHECK: j a                    # encoding: [0b000010AA,A,A,A]
                                  # CHECK:                        #   fixup A - offset: 0, value: a, kind: fixup_Mips_26
         j       1328             # CHECK: j 1328                 # encoding: [0x08,0x00,0x01,0x4c]

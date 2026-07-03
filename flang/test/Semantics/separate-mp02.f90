@@ -368,7 +368,7 @@ module m11
 end
 submodule(m11) sm11
  contains
-  !WARNING: Dummy procedure 'x' does not exactly match the corresponding argument in the interface body
+  !WARNING: Dummy procedure 'x' does not exactly match the corresponding argument in the interface body [-Wmismatching-dummy-procedure]
   module subroutine s(x)
     call x ! no error
   end

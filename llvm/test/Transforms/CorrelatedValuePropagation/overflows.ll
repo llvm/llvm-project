@@ -715,7 +715,7 @@ define { i8, i1 } @signed_mul_constant_folding() {
 
 define { <2 x i32>, <2 x i1> } @uaddo_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @uaddo_vec(
-; CHECK-NEXT:    [[ADD:%.*]] = call { <2 x i32>, <2 x i1> } @llvm.uadd.with.overflow.v2i32(<2 x i32> [[A:%.*]], <2 x i32> <i32 1, i32 1>)
+; CHECK-NEXT:    [[ADD:%.*]] = call { <2 x i32>, <2 x i1> } @llvm.uadd.with.overflow.v2i32(<2 x i32> [[A:%.*]], <2 x i32> splat (i32 1))
 ; CHECK-NEXT:    ret { <2 x i32>, <2 x i1> } [[ADD]]
 ;
   %add = call { <2 x i32>, <2 x i1> } @llvm.uadd.with.overflow.v2i32(<2 x i32> %a, <2 x i32> <i32 1, i32 1>)
@@ -909,7 +909,7 @@ cont:
 
 define <2 x i8> @uadd_sat_vec(<2 x i8> %a) {
 ; CHECK-LABEL: @uadd_sat_vec(
-; CHECK-NEXT:    [[ADD:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 1, i8 1>)
+; CHECK-NEXT:    [[ADD:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> splat (i8 1))
 ; CHECK-NEXT:    ret <2 x i8> [[ADD]]
 ;
   %add = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> %a, <2 x i8> <i8 1, i8 1>)

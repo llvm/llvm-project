@@ -37,6 +37,8 @@
 //   set(from_range_t, R&&, Allocator)
 //     -> set<ranges::range_value_t<R>, less<ranges::range_value_t<R>>, Allocator>; // C++23
 
+// constexpr since C++26
+
 #include <algorithm> // std::equal
 #include <array>
 #include <cassert>
@@ -49,40 +51,35 @@
 #include "test_allocator.h"
 
 struct NotAnAllocator {
-  friend bool operator<(NotAnAllocator, NotAnAllocator) { return false; }
+  TEST_CONSTEXPR_CXX26 friend bool operator<(NotAnAllocator, NotAnAllocator) { return false; }
 };
 
-int main(int, char **) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
-    const int arr[] = { 1, 2, 1, INT_MAX, 3 };
+    const int arr[] = {1, 2, 1, INT_MAX, 3};
     std::set s(std::begin(arr), std::end(arr));
 
     ASSERT_SAME_TYPE(decltype(s), std::set<int>);
-    const int expected_s[] = { 1, 2, 3, INT_MAX };
-    assert(std::equal(s.begin(), s.end(), std::begin(expected_s),
-                      std::end(expected_s)));
+    const int expected_s[] = {1, 2, 3, INT_MAX};
+    assert(std::equal(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
   }
 
   {
-    const int arr[] = { 1, 2, 1, INT_MAX, 3 };
+    const int arr[] = {1, 2, 1, INT_MAX, 3};
     std::set s(std::begin(arr), std::end(arr), std::greater<int>());
 
     ASSERT_SAME_TYPE(decltype(s), std::set<int, std::greater<int> >);
-    const int expected_s[] = { INT_MAX, 3, 2, 1 };
-    assert(std::equal(s.begin(), s.end(), std::begin(expected_s),
-                      std::end(expected_s)));
+    const int expected_s[] = {INT_MAX, 3, 2, 1};
+    assert(std::equal(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
   }
 
   {
-    const int arr[] = { 1, 2, 1, INT_MAX, 3 };
-    std::set s(std::begin(arr), std::end(arr), std::greater<int>(),
-               test_allocator<int>(0, 42));
+    const int arr[] = {1, 2, 1, INT_MAX, 3};
+    std::set s(std::begin(arr), std::end(arr), std::greater<int>(), test_allocator<int>(0, 42));
 
-    ASSERT_SAME_TYPE(decltype(s),
-                     std::set<int, std::greater<int>, test_allocator<int> >);
-    const int expected_s[] = { INT_MAX, 3, 2, 1 };
-    assert(std::equal(s.begin(), s.end(), std::begin(expected_s),
-                      std::end(expected_s)));
+    ASSERT_SAME_TYPE(decltype(s), std::set<int, std::greater<int>, test_allocator<int> >);
+    const int expected_s[] = {INT_MAX, 3, 2, 1};
+    assert(std::equal(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
     assert(s.get_allocator().get_id() == 42);
   }
 
@@ -95,7 +92,7 @@ int main(int, char **) {
 
   {
     std::set<long> source;
-    std::set s{ source };  // braces instead of parens
+    std::set s{source}; // braces instead of parens
     ASSERT_SAME_TYPE(decltype(s), std::set<long>);
     assert(s.size() == 0);
   }
@@ -108,123 +105,122 @@ int main(int, char **) {
   }
 
   {
-    std::set s{ 1, 2, 1, INT_MAX, 3 };
+    std::set s{1, 2, 1, INT_MAX, 3};
 
     ASSERT_SAME_TYPE(decltype(s), std::set<int>);
-    const int expected_s[] = { 1, 2, 3, INT_MAX };
-    assert(std::equal(s.begin(), s.end(), std::begin(expected_s),
-                      std::end(expected_s)));
+    const int expected_s[] = {1, 2, 3, INT_MAX};
+    assert(std::equal(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
   }
 
   {
-    std::set s({ 1, 2, 1, INT_MAX, 3 }, std::greater<int>());
+    std::set s({1, 2, 1, INT_MAX, 3}, std::greater<int>());
 
     ASSERT_SAME_TYPE(decltype(s), std::set<int, std::greater<int> >);
-    const int expected_s[] = { INT_MAX, 3, 2, 1 };
-    assert(std::equal(s.begin(), s.end(), std::begin(expected_s),
-                      std::end(expected_s)));
+    const int expected_s[] = {INT_MAX, 3, 2, 1};
+    assert(std::equal(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
   }
 
   {
-    std::set s({ 1, 2, 1, INT_MAX, 3 }, std::greater<int>(),
-               test_allocator<int>(0, 43));
+    std::set s({1, 2, 1, INT_MAX, 3}, std::greater<int>(), test_allocator<int>(0, 43));
 
-    ASSERT_SAME_TYPE(decltype(s),
-                     std::set<int, std::greater<int>, test_allocator<int> >);
-    const int expected_s[] = { INT_MAX, 3, 2, 1 };
-    assert(std::equal(s.begin(), s.end(), std::begin(expected_s),
-                      std::end(expected_s)));
+    ASSERT_SAME_TYPE(decltype(s), std::set<int, std::greater<int>, test_allocator<int> >);
+    const int expected_s[] = {INT_MAX, 3, 2, 1};
+    assert(std::equal(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
     assert(s.get_allocator().get_id() == 43);
   }
 
   {
-    const int arr[] = { 1, 2, 1, INT_MAX, 3 };
+    const int arr[] = {1, 2, 1, INT_MAX, 3};
     std::set s(std::begin(arr), std::end(arr), test_allocator<int>(0, 44));
 
-    ASSERT_SAME_TYPE(decltype(s),
-                     std::set<int, std::less<int>, test_allocator<int> >);
-    const int expected_s[] = { 1, 2, 3, INT_MAX };
-    assert(std::equal(s.begin(), s.end(), std::begin(expected_s),
-                      std::end(expected_s)));
+    ASSERT_SAME_TYPE(decltype(s), std::set<int, std::less<int>, test_allocator<int> >);
+    const int expected_s[] = {1, 2, 3, INT_MAX};
+    assert(std::equal(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
     assert(s.get_allocator().get_id() == 44);
   }
 
   {
-    std::set s({ 1, 2, 1, INT_MAX, 3 }, test_allocator<int>(0, 45));
+    std::set s({1, 2, 1, INT_MAX, 3}, test_allocator<int>(0, 45));
 
-    ASSERT_SAME_TYPE(decltype(s),
-                     std::set<int, std::less<int>, test_allocator<int> >);
-    const int expected_s[] = { 1, 2, 3, INT_MAX };
-    assert(std::equal(s.begin(), s.end(), std::begin(expected_s),
-                      std::end(expected_s)));
+    ASSERT_SAME_TYPE(decltype(s), std::set<int, std::less<int>, test_allocator<int> >);
+    const int expected_s[] = {1, 2, 3, INT_MAX};
+    assert(std::equal(s.begin(), s.end(), std::begin(expected_s), std::end(expected_s)));
     assert(s.get_allocator().get_id() == 45);
   }
 
   {
     NotAnAllocator a;
-    std::set s{ a }; // set(initializer_list<NotAnAllocator>)
+    std::set s{a}; // set(initializer_list<NotAnAllocator>)
     ASSERT_SAME_TYPE(decltype(s), std::set<NotAnAllocator>);
     assert(s.size() == 1);
   }
 
   {
     std::set<long> source;
-    std::set s{ source, source }; // set(initializer_list<set<long>>)
+    std::set s{source, source}; // set(initializer_list<set<long>>)
     ASSERT_SAME_TYPE(decltype(s), std::set<std::set<long> >);
     assert(s.size() == 1);
   }
 
   {
     NotAnAllocator a;
-    std::set s{ a, a }; // set(initializer_list<NotAnAllocator>)
+    std::set s{a, a}; // set(initializer_list<NotAnAllocator>)
     ASSERT_SAME_TYPE(decltype(s), std::set<NotAnAllocator>);
     assert(s.size() == 1);
   }
 
   {
-    int source[3] = { 3, 4, 5 };
+    int source[3] = {3, 4, 5};
     std::set s(source, source + 3); // set(InputIterator, InputIterator)
     ASSERT_SAME_TYPE(decltype(s), std::set<int>);
     assert(s.size() == 3);
   }
 
   {
-    int source[3] = { 3, 4, 5 };
-    std::set s{ source, source + 3 }; // set(initializer_list<int*>)
-    ASSERT_SAME_TYPE(decltype(s), std::set<int *>);
+    int source[3] = {3, 4, 5};
+    std::set s{source, source + 3}; // set(initializer_list<int*>)
+    ASSERT_SAME_TYPE(decltype(s), std::set<int*>);
     assert(s.size() == 2);
   }
 
 #if TEST_STD_VER >= 23
-    {
-      using Range = std::array<int, 0>;
-      using Comp = std::greater<int>;
-      using DefaultComp = std::less<int>;
-      using Alloc = test_allocator<int>;
+  {
+    using Range       = std::array<int, 0>;
+    using Comp        = std::greater<int>;
+    using DefaultComp = std::less<int>;
+    using Alloc       = test_allocator<int>;
 
-      { // (from_range, range)
-        std::set c(std::from_range, Range());
-        static_assert(std::is_same_v<decltype(c), std::set<int>>);
-      }
-
-      { // (from_range, range, comp)
-        std::set c(std::from_range, Range(), Comp());
-        static_assert(std::is_same_v<decltype(c), std::set<int, Comp>>);
-      }
-
-      { // (from_range, range, comp, alloc)
-        std::set c(std::from_range, Range(), Comp(), Alloc());
-        static_assert(std::is_same_v<decltype(c), std::set<int, Comp, Alloc>>);
-      }
-
-      { // (from_range, range, alloc)
-        std::set c(std::from_range, Range(), Alloc());
-        static_assert(std::is_same_v<decltype(c), std::set<int, DefaultComp, Alloc>>);
-      }
+    { // (from_range, range)
+      std::set c(std::from_range, Range());
+      static_assert(std::is_same_v<decltype(c), std::set<int>>);
     }
+
+    { // (from_range, range, comp)
+      std::set c(std::from_range, Range(), Comp());
+      static_assert(std::is_same_v<decltype(c), std::set<int, Comp>>);
+    }
+
+    { // (from_range, range, comp, alloc)
+      std::set c(std::from_range, Range(), Comp(), Alloc());
+      static_assert(std::is_same_v<decltype(c), std::set<int, Comp, Alloc>>);
+    }
+
+    { // (from_range, range, alloc)
+      std::set c(std::from_range, Range(), Alloc());
+      static_assert(std::is_same_v<decltype(c), std::set<int, DefaultComp, Alloc>>);
+    }
+  }
 #endif
 
   AssociativeContainerDeductionGuidesSfinaeAway<std::set, std::set<int>>();
 
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

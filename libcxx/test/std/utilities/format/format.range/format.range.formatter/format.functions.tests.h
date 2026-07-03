@@ -274,7 +274,7 @@ void test_char(TestFunction check, ExceptionTest check_exception) {
 // char -> wchar_t
 //
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
 template <class TestFunction, class ExceptionTest>
 void test_char_to_wchar(TestFunction check, ExceptionTest check_exception) {
   test_char_default<wchar_t>(check, check_exception, std::array{'H', 'e', 'l', 'l', 'o'});
@@ -1000,10 +1000,10 @@ void test_pair_tuple(TestFunction check, ExceptionTest check_exception, auto&& i
 
   // *** n
   check(SV("__(1, 'a'), (42, '*')___"), SV("{:_^24n}"), input);
-  check(SV("__(1, 'a'), (42, '*')___"), SV("{:_^24nm}"), input); // m should have no effect
+  check(SV("____1: 'a', 42: '*'_____"), SV("{:_^24nm}"), input);
 
   // *** type ***
-  check(SV("__{(1, 'a'), (42, '*')}___"), SV("{:_^26m}"), input);
+  check(SV("____{1: 'a', 42: '*'}_____"), SV("{:_^26m}"), input);
   check_exception("Type s requires character type as formatting argument", SV("{:s}"), input);
   check_exception("Type ?s requires character type as formatting argument", SV("{:?s}"), input);
   for (std::basic_string_view<CharT> fmt : fmt_invalid_types<CharT>("s"))
@@ -1060,7 +1060,7 @@ void test_pair_tuple(TestFunction check, ExceptionTest check_exception, auto&& i
   check(SV("1: 'a', 42: '*'"), SV("{:n:m}"), input);
   check(SV("1, 'a', 42, '*'"), SV("{:n:n}"), input);
   check(SV("{1: 'a', 42: '*'}"), SV("{:m:m}"), input);
-  check(SV("{1, 'a', 42, '*'}"), SV("{:m:n}"), input);
+  check(SV("{1: 'a', 42: '*'}"), SV("{:m:n}"), input);
 }
 
 template <class CharT, class TestFunction, class ExceptionTest>
@@ -1368,7 +1368,7 @@ void test_adaptor(TestFunction check, ExceptionTest check_exception) {
 template <class CharT, class TestFunction, class ExceptionTest>
 void format_tests(TestFunction check, ExceptionTest check_exception) {
   test_char<CharT>(check, check_exception);
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   if (std::same_as<CharT, wchar_t>) // avoid testing twice
     test_char_to_wchar(check, check_exception);
 #endif

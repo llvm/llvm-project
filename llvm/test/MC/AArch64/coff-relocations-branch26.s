@@ -61,7 +61,7 @@ main:
 err:
     nop
     b .Lerr_target+4
-// ERR: [[#@LINE-1]]:5: error: cannot perform a PC-relative fixup with a non-zero symbol offset
+// ERR: [[#@LINE-1]]:19: error: cannot perform a PC-relative fixup with a non-zero symbol offset
 
     .def .Lerr_target
     .scl 3

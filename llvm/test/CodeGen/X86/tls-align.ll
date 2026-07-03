@@ -1,4 +1,3 @@
-; REQUIRES: x86-registered-target
 ; RUN: opt -passes=instcombine -S < %s | FileCheck %s
 
 %class.Arr = type <{ [160 x %class.Derived], i32, [4 x i8] }>

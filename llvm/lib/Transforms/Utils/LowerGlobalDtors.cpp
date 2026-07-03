@@ -138,7 +138,7 @@ static bool runImpl(Module &M) {
   FunctionCallee AtExit = M.getOrInsertFunction(
       "__cxa_atexit",
       FunctionType::get(Type::getInt32Ty(C),
-                        {PointerType::get(AtExitFuncTy, 0), VoidStar, VoidStar},
+                        {PointerType::get(C, 0), VoidStar, VoidStar},
                         /*isVarArg=*/false));
 
   // If __cxa_atexit is defined (e.g. in the case of LTO) and arg0 is not
@@ -146,7 +146,7 @@ static bool runImpl(Module &M) {
   // the program never exits) we can simply return early and clear out
   // @llvm.global_dtors.
   if (auto F = dyn_cast<Function>(AtExit.getCallee())) {
-    if (F && F->hasExactDefinition() && F->getArg(0)->getNumUses() == 0) {
+    if (F && F->hasExactDefinition() && F->getArg(0)->use_empty()) {
       GV->eraseFromParent();
       return true;
     }
@@ -210,13 +210,13 @@ static bool runImpl(Module &M) {
       Value *Res = CallInst::Create(AtExit, Args, "call", EntryBB);
       Value *Cmp = new ICmpInst(EntryBB, ICmpInst::ICMP_NE, Res,
                                 Constant::getNullValue(Res->getType()));
-      BranchInst::Create(FailBB, RetBB, Cmp, EntryBB);
+      CondBrInst::Create(Cmp, FailBB, RetBB, EntryBB);
 
       // If `__cxa_atexit` hits out-of-memory, trap, so that we don't misbehave.
       // This should be very rare, because if the process is running out of
       // memory before main has even started, something is wrong.
-      CallInst::Create(Intrinsic::getDeclaration(&M, Intrinsic::trap), "",
-                       FailBB);
+      CallInst::Create(Intrinsic::getOrInsertDeclaration(&M, Intrinsic::trap),
+                       "", FailBB);
       new UnreachableInst(C, FailBB);
 
       ReturnInst::Create(C, RetBB);

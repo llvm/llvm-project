@@ -108,7 +108,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(s32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(s64) = COPY $d0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr(s64) = COPY $x1
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:fpr(s64) = COPY [[COPY2]](s64)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:fpr(i64) = COPY [[COPY2]](s64)
     ; CHECK-NEXT: [[SELECT:%[0-9]+]]:fpr(s64) = G_SELECT [[COPY]](s32), [[COPY1]], [[COPY3]]
     ; CHECK-NEXT: $d0 = COPY [[SELECT]](s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
@@ -139,7 +139,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr(s32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(s64) = COPY $d0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr(s64) = COPY $x1
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr(s64) = COPY [[COPY1]](s64)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr(i64) = COPY [[COPY1]](s64)
     ; CHECK-NEXT: [[SELECT:%[0-9]+]]:gpr(s64) = G_SELECT [[COPY]](s32), [[COPY3]], [[COPY2]]
     ; CHECK-NEXT: $x0 = COPY [[SELECT]](s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0

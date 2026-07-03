@@ -1,5 +1,5 @@
 ; Check handling of the constraint `c`.
-; RUN: llc -march=mips -target-abi o32 < %s | FileCheck %s
+; RUN: llc -mtriple=mips -target-abi o32 < %s | FileCheck %s
 
 define i32 @main() #0 {
 entry:

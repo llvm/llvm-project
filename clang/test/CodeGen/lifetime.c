@@ -8,14 +8,14 @@ extern void use(char *a);
 // CHECK-LABEL: @helper_no_markers
 __attribute__((always_inline)) void helper_no_markers(void) {
   char a;
-  // LIFETIME: call void @llvm.lifetime.start.p0(i64 1,
+  // LIFETIME: call void @llvm.lifetime.start.p0(
   use(&a);
-  // LIFETIME: call void @llvm.lifetime.end.p0(i64 1,
+  // LIFETIME: call void @llvm.lifetime.end.p0(
 }
 
 // CHECK-LABEL: @lifetime_test
 void lifetime_test(void) {
-// LIFETIME: call void @llvm.lifetime.start.p0(i64 1,
+// LIFETIME: call void @llvm.lifetime.start.p0(
   helper_no_markers();
-// LIFETIME: call void @llvm.lifetime.end.p0(i64 1,
+// LIFETIME: call void @llvm.lifetime.end.p0(
 }

@@ -37,6 +37,7 @@ struct SymbolMapping {
   std::optional<yaml::Hex64> ObjectAddress;
   yaml::Hex64 BinaryAddress;
   yaml::Hex32 Size;
+  yaml::Hex8 Type;
 
   SymbolMapping(std::optional<uint64_t> ObjectAddr, uint64_t BinaryAddress,
                 uint32_t Size)

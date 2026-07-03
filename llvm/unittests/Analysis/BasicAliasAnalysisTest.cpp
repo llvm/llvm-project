@@ -66,7 +66,8 @@ protected:
 
 public:
   BasicAATest()
-      : M("BasicAATest", C), B(C), DL(DLString), TLI(TLII), F(nullptr) {}
+      : M("BasicAATest", C), B(C), DL(DLString), TLII(M.getTargetTriple()),
+        TLI(TLII), F(nullptr) {}
 };
 
 // Check that a function arg can't trivially alias a global when we're accessing
@@ -78,11 +79,11 @@ TEST_F(BasicAATest, AliasInstWithObjectOfImpreciseSize) {
 
   BasicBlock *Entry(BasicBlock::Create(C, "", F));
   B.SetInsertPoint(Entry);
+  B.CreateRetVoid();
 
   Value *IncomingI32Ptr = F->arg_begin();
 
-  auto *GlobalPtr =
-      cast<GlobalVariable>(M.getOrInsertGlobal("some_global", B.getInt8Ty()));
+  auto *GlobalPtr = M.getOrInsertGlobal("some_global", B.getInt8Ty());
 
   // Without sufficiently restricted linkage/an init, some of the object size
   // checking bits get more conservative.
@@ -119,6 +120,7 @@ TEST_F(BasicAATest, AliasInstWithFullObjectOfImpreciseSize) {
   AllocaInst *I8 = B.CreateAlloca(B.getInt8Ty(), B.getInt32(2));
   auto *I8AtUncertainOffset =
       cast<GetElementPtrInst>(B.CreatePtrAdd(I8, ArbitraryI32));
+  B.CreateRetVoid();
 
   auto &AllAnalyses = setupAnalyses();
   BasicAAResult &BasicAA = AllAnalyses.BAA;

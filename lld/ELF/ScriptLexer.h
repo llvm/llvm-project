@@ -14,7 +14,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBufferRef.h"
-#include <vector>
 
 namespace lld::elf {
 struct Ctx;
@@ -33,12 +32,20 @@ protected:
     Buffer() = default;
     Buffer(Ctx &ctx, MemoryBufferRef mb);
   };
-  // The current buffer and parent buffers due to INCLUDE.
+  Ctx &ctx;
+  // The currently lexed buffer. INCLUDE runs a nested parse on a new `Buffer`,
+  // similar to a call stack frame.
   Buffer curBuf;
-  SmallVector<Buffer, 0> buffers;
 
   // Used to detect INCLUDE() cycles.
   llvm::DenseSet<StringRef> activeFilenames;
+
+  enum class State {
+    Script,
+    Expr,
+    // Used by version node and dynamic list parsing.
+    VersionNode,
+  };
 
   struct Token {
     StringRef str;
@@ -53,8 +60,9 @@ protected:
   // expression state changes.
   StringRef curTok;
   size_t prevTokLine = 1;
-  // The inExpr state when curTok is cached.
-  bool curTokState = false;
+  // The lex state when curTok is cached.
+  State curTokState = State::Script;
+  State lexState = State::Script;
   bool eof = false;
 
 public:
@@ -71,10 +79,6 @@ public:
   void expect(StringRef expect);
   Token till(StringRef tok);
   std::string getCurrentLocation();
-  MemoryBufferRef getCurrentMB();
-
-  std::vector<MemoryBufferRef> mbs;
-  bool inExpr = false;
 
 private:
   StringRef getLine();

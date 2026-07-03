@@ -1,5 +1,4 @@
-; RUN: opt --passes=loop-rotate -o - -S %s | FileCheck %s --implicit-check-not=dbg.value
-; RUN: opt --passes=loop-rotate -o - -S %s --try-experimental-debuginfo-iterators | FileCheck %s --implicit-check-not=dbg.value
+; RUN: opt --passes=loop-rotate -o - -S %s | FileCheck %s --implicit-check-not=dbg_value
 ;
 ;; Test some fine-grained behaviour of loop-rotate's de-duplication of
 ;; dbg.values. The intrinsic on the first branch should be seen and

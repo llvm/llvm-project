@@ -1,5 +1,5 @@
 // REQUIRES: aarch64
-// RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux %s -o %t.o
+// RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t.o
 // RUN: ld.lld --image-base=0x10000000 %t.o -o %t
 // RUN: llvm-objdump -d -z --no-show-raw-insn %t | FileCheck %s
 
@@ -37,7 +37,7 @@ _start:
 // R_AARCH64_PREL16
  .hword target - .
 // R_AARCH64_PLT32
- .word target@PLT - .
+ .word %pltpcrel(target)
 
 bl_undefweak2:
  bl undefweak2

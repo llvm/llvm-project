@@ -4,7 +4,7 @@
 //
 // UNSUPPORTED: system-darwin
 //
-// RUN: %dexter_regression_test_build %s -o %t
+// RUN: %dexter_regression_test_cxx_build %s -o %t
 // RUN: not %dexter_regression_test_run --binary %t -- %s | FileCheck %s
 // CHECK: expect_step_order.cpp:
 

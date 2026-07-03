@@ -109,10 +109,14 @@ callers:
 // CHECK3-NEXT:  1100034:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // CHECK3-NEXT:  1100038:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // CHECK3-NEXT:  110003c:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// CHECK3-EMPTY:
+// CHECK3-NEXT: <imported@plt>:
 // CHECK3-NEXT:  1100040:       e28fc600        add     r12, pc, #0, #12
 // CHECK3-NEXT:  1100044:       e28cca20        add     r12, r12, #32
 // CHECK3-NEXT:  1100048:       e5bcf07c        ldr     pc, [r12, #124]!
 // CHECK3-NEXT:  110004c:       d4 d4 d4 d4     .word   0xd4d4d4d4
+// CHECK3-EMPTY:
+// CHECK3-NEXT: <imported2@plt>:
 // CHECK3-NEXT:  1100050:       e28fc600        add     r12, pc, #0, #12
 // CHECK3-NEXT:  1100054:       e28cca20        add     r12, r12, #32
 // CHECK3-NEXT:  1100058:       e5bcf070        ldr     pc, [r12, #112]!
@@ -132,4 +136,5 @@ callers:
 // RUN: llvm-objdump --no-print-imm-hex -d %t.so --start-address=0x1000004 --stop-address=0x100001c | FileCheck --check-prefix=CHECK1 %s
 // RUN: llvm-objdump --no-print-imm-hex -d %t.so --start-address=0x1100008 --stop-address=0x1100022 | FileCheck --check-prefix=CHECK2 %s
 // RUN: llvm-objdump --no-print-imm-hex -d %t.so --start-address=0x1100020 --stop-address=0x1100064 --triple=armv7aeb-linux-gnueabihf | FileCheck --check-prefix=CHECK3 %s
+// RUN: rm %t %t.so
 

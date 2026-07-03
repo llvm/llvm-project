@@ -6,15 +6,15 @@
 void pointerToFunction() {
   void (*(*(f1)))() = static_cast<void (**)()>(nullptr);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use auto when initializing
-  // CHECK-FIXES-REMOVE: auto f1 =
-  // CHECK-FIXES: auto *f1 =
+  // CHECK-FIXES-REMOVE: auto f1 = static_cast<void (**)()>(nullptr);
+  // CHECK-FIXES: auto *f1 = static_cast<void (**)()>(nullptr);
 }
 
 void pointerToArray() {
   int(*a1)[2] = new int[10][2];
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use auto when initializing
-  // CHECK-FIXES-REMOVE: auto a1 =
-  // CHECK-FIXES: auto *a1 =
+  // CHECK-FIXES-REMOVE: auto a1 = new int[10][2];
+  // CHECK-FIXES: auto *a1 = new int[10][2];
 }
 
 void memberFunctionPointer() {
@@ -23,7 +23,7 @@ void memberFunctionPointer() {
   };
   void(A::* a1)() = static_cast<void(A::*)()>(nullptr);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use auto when initializing
-  // CHECK-FIXES-REMOVE: auto a1 =
-  // CHECK-FIXES: auto *a1 =
+  // CHECK-FIXES-REMOVE: auto a1 = static_cast<void(A::*)()>(nullptr);
+  // CHECK-FIXES: auto *a1 = static_cast<void(A::*)()>(nullptr);
 }
 

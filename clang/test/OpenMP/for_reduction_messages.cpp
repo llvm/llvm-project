@@ -237,6 +237,7 @@ T tmain(T argc) {
 #pragma omp for reduction(max : j) // expected-error 2 {{argument of OpenMP clause 'reduction' must reference the same object in all threads}}
   for (int i = 0; i < 10; ++i)
     foo();
+#if defined(_OPENMP) && (_OPENMP <= 202111)
 #pragma omp parallel private(fl)  // expected-note 2 {{defined as private}}
 #pragma omp for reduction(+ : fl) // expected-error 2 {{reduction variable must be shared}}
   for (int i = 0; i < 10; ++i)
@@ -253,7 +254,7 @@ T tmain(T argc) {
 #pragma omp for reduction(+ : fl)      // expected-error 2 {{reduction variable must be shared}}
   for (int i = 0; i < 10; ++i)
     foo();
-
+#endif
   return T();
 }
 
@@ -402,10 +403,12 @@ int main(int argc, char **argv) {
 #pragma omp for reduction(max : j) // expected-error {{argument of OpenMP clause 'reduction' must reference the same object in all threads}}
   for (int i = 0; i < 10; ++i)
     foo();
+#if defined(_OPENMP) && (_OPENMP <= 202111)
 #pragma omp parallel private(fl)  // expected-note {{defined as private}}
 #pragma omp for reduction(+ : fl) // expected-error {{reduction variable must be shared}}
   for (int i = 0; i < 10; ++i)
     foo();
+#endif
 #pragma omp parallel private(argv)
 #pragma omp for reduction(+ : argv[1], get()[0]) // expected-error {{expected variable name as a base of the array subscript}} expected-error {{invalid operands to binary expression ('char *' and 'char *')}}
   for (int i = 0; i < 10; ++i)
@@ -414,10 +417,12 @@ int main(int argc, char **argv) {
 #pragma omp for reduction(+ : qa[1], qa[0])
   for (int i = 0; i < 10; ++i)
     foo();
+#if defined(_OPENMP) && (_OPENMP <= 202111)
 #pragma omp parallel reduction(* : fl) // expected-note {{defined as reduction}}
 #pragma omp for reduction(+ : fl)      // expected-error {{reduction variable must be shared}}
   for (int i = 0; i < 10; ++i)
     foo();
+#endif
   static int m=0;
 #pragma omp for reduction(+:m)
   for (int i = 0; i < 10; ++i)

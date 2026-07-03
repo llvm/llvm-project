@@ -10,5 +10,7 @@ define void @intflag_inst(i64 %arg1, i64 %arg2) {
   %3 = mul nsw nuw i64 %arg1, %arg2
   ; CHECK: llvm.shl %{{.*}}, %{{.*}} overflow<nsw, nuw> : i64
   %4 = shl nuw nsw i64 %arg1, %arg2
+  ; CHECK: llvm.trunc %{{.*}} overflow<nsw> : i64 to i32
+  %5 = trunc nsw i64 %arg1 to i32
   ret void
 }

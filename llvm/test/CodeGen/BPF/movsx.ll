@@ -1,4 +1,4 @@
-; RUN: llc -march=bpfel -mcpu=v4 -verify-machineinstrs -show-mc-encoding < %s | FileCheck %s
+; RUN: llc -mtriple=bpfel -mcpu=v4 -verify-machineinstrs -show-mc-encoding < %s | FileCheck %s
 ; Source:
 ;   short f1(int a) {
 ;     return (char)a;

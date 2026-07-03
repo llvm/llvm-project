@@ -11,12 +11,7 @@ llvm.func @parallel_op_firstprivate(%arg0: !llvm.ptr) {
   llvm.return
 }
 
-omp.private {type = firstprivate} @x.privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  %c1 = llvm.mlir.constant(1 : i32) : i32
-  %0 = llvm.alloca %c1 x f32 : (i32) -> !llvm.ptr
-  omp.yield(%0 : !llvm.ptr)
-} copy {
+omp.private {type = firstprivate} @x.privatizer : f32 copy {
 ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
   %0 = llvm.load %arg0 : !llvm.ptr -> f32
   llvm.store %0, %arg1 : f32, !llvm.ptr
@@ -63,6 +58,14 @@ llvm.func @parallel_op_firstprivate_multi_block(%arg0: !llvm.ptr) {
 // CHECK: omp.par.entry:
 // CHECK:  %[[ORIG_PTR_PTR:.*]] = getelementptr { ptr }, ptr %{{.*}}, i32 0, i32 0
 // CHECK:  %[[ORIG_PTR:.*]] = load ptr, ptr %[[ORIG_PTR_PTR]], align 8
+// CHECK:  %[[PRIV_ALLOC:.*]] = alloca float, align 4
+// CHECK-NEXT: br label %omp.region.after_alloca
+
+// CHECK: omp.region.after_alloca:
+// CHECK-NEXT:   br label %[[PAR_REG:.*]]
+
+// Check that the body of the parallel region loads from the private clone.
+// CHECK: [[PAR_REG]]:
 // CHECK:   br label %[[PRIV_BB1:.*]]
 
 // CHECK: [[PRIV_BB1]]:
@@ -72,38 +75,41 @@ llvm.func @parallel_op_firstprivate_multi_block(%arg0: !llvm.ptr) {
 // CHECK-NEXT: br label %[[PRIV_BB2:.*]]
 
 // CHECK: [[PRIV_BB2]]:
-// CHECK-NEXT: %[[C1:.*]] = phi i32 [ 1, %[[PRIV_BB1]] ]
-// CHECK-NEXT: %[[PRIV_ALLOC:.*]] = alloca float, i32 %[[C1]], align 4
-// The entry block of the `copy` region is merged into the exit block of the
-// `alloc` region. So check for that.
+// CHECK-NEXT: br label %[[PRIV_BB3:.*]]
+
+// CHECK: [[PRIV_BB3]]:
+// CHECK-NEXT: br label %omp.region.cont
+
+// CHECK: omp.region.cont:
+// CHECK-NEXT: %[[PRIV_ALLOC2:.*]] = phi ptr [ %[[PRIV_ALLOC]], %[[PRIV_BB3]] ]
+// CHECK-NEXT: br label %omp.private.copy
+
+// CHECK: omp.private.copy:
+// CHECK-NEXT: br label %omp.private.copy4
+
+// CHECK: omp.private.copy4:
 // CHECK-NEXT: %[[ORIG_VAL:.*]] = load float, ptr %[[ORIG_PTR]], align 4
 // CHECK-NEXT: br label %[[PRIV_BB3:.*]]
 
 // Check contents of the 2nd block in the `copy` region.
 // CHECK: [[PRIV_BB3]]:
-// CHECK-NEXT: %[[ORIG_VAL2:.*]] = phi float [ %[[ORIG_VAL]], %[[PRIV_BB2]] ]
-// CHECK-NEXT: %[[PRIV_ALLOC2:.*]] = phi ptr [ %[[PRIV_ALLOC]], %[[PRIV_BB2]] ]
-// CHECK-NEXT: store float %[[ORIG_VAL2]], ptr %[[PRIV_ALLOC2]], align 4
+// CHECK-NEXT: %[[ORIG_VAL2:.*]] = phi float [ %[[ORIG_VAL]], %omp.private.copy4 ]
+// CHECK-NEXT: %[[PRIV_ALLOC3:.*]] = phi ptr [ %[[PRIV_ALLOC2]], %omp.private.copy4 ]
+// CHECK-NEXT: store float %[[ORIG_VAL2]], ptr %[[PRIV_ALLOC3]], align 4
 // CHECK-NEXT: br label %[[PRIV_CONT:.*]]
 
 // Check that the privatizer's continuation block yileds the private clone's
 // address.
 // CHECK: [[PRIV_CONT]]:
-// CHECK-NEXT:   %[[PRIV_ALLOC3:.*]] = phi ptr [ %[[PRIV_ALLOC2]], %[[PRIV_BB3]] ]
-// CHECK-NEXT:   br label %[[PAR_REG:.*]]
+// CHECK-NEXT:   %[[PRIV_ALLOC4:.*]] = phi ptr [ %[[PRIV_ALLOC3]], %[[PRIV_BB3]] ]
+// CHECK:        %{{.*}} = load float, ptr %[[PRIV_ALLOC2]], align 4
 
-// Check that the body of the parallel region loads from the private clone.
-// CHECK: [[PAR_REG]]:
-// CHECK:        %{{.*}} = load float, ptr %[[PRIV_ALLOC3]], align 4
+omp.private {type = firstprivate} @multi_block.privatizer : f32 init {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  llvm.br ^bb1
 
-omp.private {type = firstprivate} @multi_block.privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  %c1 = llvm.mlir.constant(1 : i32) : i32
-  llvm.br ^bb1(%c1 : i32)
-
-^bb1(%arg1: i32):
-  %0 = llvm.alloca %arg1 x f32 : (i32) -> !llvm.ptr
-  omp.yield(%0 : !llvm.ptr)
+^bb1:
+  omp.yield(%arg1 : !llvm.ptr)
 
 } copy {
 ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
@@ -134,8 +140,8 @@ llvm.func @non_const_len_char_test(%n: !llvm.ptr {fir.bindc_name = "n"}) {
   llvm.return
 }
 
-omp.private {type = firstprivate} @non_const_len_char : !llvm.struct<(ptr, i64)> alloc {
-^bb0(%orig_val: !llvm.struct<(ptr, i64)>):
+omp.private {type = firstprivate} @non_const_len_char : !llvm.struct<(ptr, i64)> init {
+^bb0(%orig_val: !llvm.struct<(ptr, i64)>, %arg1: !llvm.struct<(ptr, i64)>):
   %str_len = llvm.extractvalue %orig_val[1] : !llvm.struct<(ptr, i64)>
   %priv_alloc = llvm.alloca %str_len x i8 {bindc_name = "str", pinned} : (i64) -> !llvm.ptr
   %priv_val = llvm.mlir.undef : !llvm.struct<(ptr, i64)>
@@ -168,12 +174,7 @@ llvm.func @foo()
 // global), then we miss finding that input and we do not privatize the
 // variable.
 
-omp.private {type = firstprivate} @global_privatizer : !llvm.ptr alloc {
-^bb0(%arg0: !llvm.ptr):
-  %0 = llvm.mlir.constant(1 : i64) : i64
-  %1 = llvm.alloca %0 x f32 {bindc_name = "global", pinned} : (i64) -> !llvm.ptr
-  omp.yield(%1 : !llvm.ptr)
-} copy {
+omp.private {type = firstprivate} @global_privatizer : f32 copy {
 ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
   %0 = llvm.load %arg0 : !llvm.ptr -> f32
   llvm.store %0, %arg1 : f32, !llvm.ptr
@@ -199,6 +200,6 @@ llvm.mlir.global internal @global() {addr_space = 0 : i32} : f32 {
 // CHECK-NEXT:  omp.par.entry:
 // Verify that we found the privatizer by checking that we properly inlined the
 // bodies of the alloc and copy regions.
-// CHECK:         %[[PRIV_ALLOC:.*]] = alloca float, i64 1, align 4
+// CHECK:         %[[PRIV_ALLOC:.*]] = alloca float, align 4
 // CHECK:         %[[GLOB_VAL:.*]] = load float, ptr @global, align 4
 // CHECK:         store float %[[GLOB_VAL]], ptr %[[PRIV_ALLOC]], align 4

@@ -11,8 +11,6 @@
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Frontend/SerializedDiagnostics.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Bitstream/BitCodes.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"

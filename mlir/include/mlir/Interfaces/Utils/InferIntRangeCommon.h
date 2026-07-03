@@ -20,6 +20,9 @@
 #include <optional>
 
 namespace mlir {
+class AffineExpr;
+class ShapedDimOpInterface;
+
 namespace intrange {
 /// Function that performs inference on an array of `ConstantIntRanges`,
 /// abstracted away here to permit writing the function that handles both
@@ -142,6 +145,18 @@ enum class CmpPredicate : uint64_t {
 std::optional<bool> evaluatePred(CmpPredicate pred,
                                  const ConstantIntRanges &lhs,
                                  const ConstantIntRanges &rhs);
+
+/// Returns the integer range for the result of a `ShapedDimOpInterface` given
+/// the optional inferred ranges for the `dimension` index `maybeDim`. When a
+/// dynamic dimension is encountered, returns [0, signed_max(type(result))].
+ConstantIntRanges inferShapedDimOpInterface(ShapedDimOpInterface op,
+                                            const IntegerValueRange &maybeDim);
+
+/// Infer the integer range for an affine expression given ranges for its
+/// dimensions and symbols.
+ConstantIntRanges inferAffineExpr(AffineExpr expr,
+                                  ArrayRef<ConstantIntRanges> dimRanges,
+                                  ArrayRef<ConstantIntRanges> symbolRanges);
 
 } // namespace intrange
 } // namespace mlir

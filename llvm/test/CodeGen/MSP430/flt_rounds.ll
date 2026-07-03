@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -march=msp430
+; RUN: llc -verify-machineinstrs < %s -mtriple=msp430
 
 define i16 @foo() {
 entry:

@@ -6,8 +6,12 @@
 // RUN: %clang_cc1 -std=c++23 -fcxx-exceptions -verify %s
 // RUN: %clang_cc1 -std=c++2c -fcxx-exceptions -verify %s
 
+// RUN: %clang_cc1 -std=c++20 -fcxx-exceptions -verify -triple i686-unknown-windows-msvc -DX86_MSVC_TARGET %s
+// RUN: %clang_cc1 -std=c++23 -fcxx-exceptions -verify -triple i686-unknown-windows-msvc -DX86_MSVC_TARGET %s
+// RUN: %clang_cc1 -std=c++2c -fcxx-exceptions -verify -triple i686-unknown-windows-msvc -DX86_MSVC_TARGET %s
+
+
 //
-// RUN: %clang_cc1 -std=c++17 -fcxx-exceptions -fno-relaxed-template-template-args -DNO_RELAXED_TEMPLATE_TEMPLATE_ARGS=1 -verify %s
 // RUN: %clang_cc1 -std=c++17 -fcxx-exceptions -DCONCEPTS_TS=1 -verify %s
 // RUN: %clang_cc1 -std=c++14 -fno-rtti -fno-threadsafe-statics -verify %s -DNO_EXCEPTIONS -DNO_RTTI -DNO_THREADSAFE_STATICS
 // RUN: %clang_cc1 -std=c++14 -fchar8_t -DNO_EXCEPTIONS -DCHAR8_T -verify %s
@@ -50,6 +54,10 @@
 #error "wrong value for __cpp_placeholder_variables"
 #endif
 
+#if check(trivial_relocatability, 202502, 202502, 202502, 202502, 202502, 202502, 202502)
+#error "wrong value for __cpp_trivial_relocatability"
+#endif
+
 // --- C++23 features ---
 
 #if check(auto_cast, 0, 0, 0, 0, 0, 202110, 202110)
@@ -77,11 +85,11 @@
 #error "wrong value for __cpp_static_call_operator"
 #endif
 
-#if check(named_character_escapes, 202207, 202207, 202207, 202207, 202207, 202207, 202207)
+#if check(named_character_escapes, 202606, 202606, 202606, 202606, 202606, 202606, 202606)
 #error "wrong value for __cpp_named_character_escapes"
 #endif
 
-#if check(explicit_this_parameter, 0, 0, 0, 0, 0, 0, 0)
+#if check(explicit_this_parameter, 0, 0, 0, 0, 0, 202110L, 202110L)
 #error "wrong value for __cpp_explicit_this_parameter"
 #endif
 
@@ -139,13 +147,18 @@
 #error "wrong value for __cpp_impl_three_way_comparison"
 #endif
 
-#if check(impl_coroutine, 0, 0, 0, 0, 201902L, 201902L, 201902L)
-#error "wrong value for __cpp_impl_coroutine"
+
+#if X86_MSVC_TARGET
+#   if check(impl_coroutine, 0, 0, 0, 0, 0, 0, 0)
+#       error "wrong value for __cpp_impl_coroutine"
+#   endif
+#elif !(__i386__ && _WIN32) &&  check(impl_coroutine, 0, 0, 0, 0, 201902, 201902, 201902)
+#   error "wrong value for __cpp_impl_coroutine" __cpp_impl_coroutine
 #endif
 
 // init_captures checked below
 
-#if check(modules, 0, 0, 0, 0, 0, 0, 0)
+#if check(modules, 0, 0, 0, 0, 1, 1, 1)
 // FIXME: 201907 in C++20
 #error "wrong value for __cpp_modules"
 #endif
@@ -230,7 +243,7 @@
 #error "wrong value for __cpp_aggregate_bases"
 #endif
 
-#if check(structured_bindings, 0, 0, 0, 202403L, 202403L, 202403L, 202403L)
+#if check(structured_bindings, 0, 0, 0, 202411L, 202411L, 202411L, 202411L)
 #error "wrong value for __cpp_structured_bindings"
 #endif
 
@@ -239,9 +252,7 @@
 #error "wrong value for __cpp_nontype_template_args"
 #endif
 
-#if !defined(NO_RELAXED_TEMPLATE_TEMPLATE_ARGS) \
-    ? check(template_template_args, 201611, 201611, 201611, 201611, 201611, 201611, 201611) \
-    : check(template_template_args, 0, 0, 0, 0, 0, 0, 0)
+#if check(template_template_args, 201611, 201611, 201611, 201611, 201611, 201611, 201611)
 #error "wrong value for __cpp_template_template_args"
 #endif
 
@@ -317,7 +328,7 @@
 #error "wrong value for __cpp_lambdas"
 #endif
 
-#if check(constexpr, 0, 200704, 201304, 201603, 201907, 202211, 202406L)
+#if check(constexpr, 0, 200704, 201304, 201603, 202002, 202211, 202406L)
 #error "wrong value for __cpp_constexpr"
 #endif
 

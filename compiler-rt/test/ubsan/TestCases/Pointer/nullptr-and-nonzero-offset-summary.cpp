@@ -1,10 +1,10 @@
 // RUN: %clang -x c -fsanitize=pointer-overflow %s -o %t
-// RUN: %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK-NOTYPE,CHECK-NOTYPE-C
-// RUN: %env_ubsan_opts=report_error_type=1 %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK-TYPE,CHECK-TYPE-C
+// RUN: %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK-NOTYPE
+// RUN: %env_ubsan_opts=report_error_type=1 %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK-TYPE
 
 // RUN: %clangxx -fsanitize=pointer-overflow %s -o %t
-// RUN: %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK-NOTYPE,CHECK-NOTYPE-CPP
-// RUN: %env_ubsan_opts=report_error_type=1 %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK-TYPE,CHECK-TYPE-CPP
+// RUN: %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK-NOTYPE
+// RUN: %env_ubsan_opts=report_error_type=1 %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK-TYPE
 
 #include <stdlib.h>
 
@@ -13,10 +13,8 @@ int main(int argc, char *argv[]) {
 
   base = (char *)0;
   result = base + 0;
-  // CHECK-NOTYPE-C: SUMMARY: UndefinedBehaviorSanitizer: undefined-behavior {{.*}}summary.cpp:[[@LINE-1]]:17
-  // CHECK-TYPE-C: SUMMARY: UndefinedBehaviorSanitizer: nullptr-with-offset {{.*}}summary.cpp:[[@LINE-2]]:17
-  // CHECK-NOTYPE-CPP-NOT: SUMMARY:
-  // CHECK-TYPE-CPP-NOT: SUMMARY:
+  // CHECK-NOTYPE-NOT: SUMMARY:
+  // CHECK-TYPE-NOT: SUMMARY:
 
   base = (char *)0;
   result = base + 1;

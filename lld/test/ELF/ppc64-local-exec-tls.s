@@ -62,7 +62,7 @@ test_ds:
   addi 2, 2, .TOC.-.Lfunc_gep3@l
 .Lfunc_lep3:
   .localentry test_ds, .Lfunc_lep3-.Lfunc_gep3
-  ld 3, b@tprel, 13
+  ld 3, b@tprel(13)
   blr
 
 test_lo_ds:
@@ -71,7 +71,7 @@ test_lo_ds:
   addi 2, 2, .TOC.-.Lfunc_gep4@l
 .Lfunc_lep4:
   .localentry test_lo_ds, .Lfunc_lep4-.Lfunc_gep4
-  ld 3, b@tprel@l, 13
+  ld 3, b@tprel@l(13)
   blr
 
 test_highest_a:

@@ -21,7 +21,7 @@ else:
 
 def get_required_attr(config, attr_name):
     attr_value = getattr(config, attr_name, None)
-    if attr_value == None:
+    if attr_value is None:
         lit_config.fatal(
             "No attribute %r in test configuration! You may need to run "
             "tests from your build directory or add this attribute "
@@ -80,10 +80,10 @@ if is_msvc:
         config.compiler_rt_libdir, "clang_rt.builtins%s.lib " % config.target_suffix
     )
     config.substitutions.append(("%librt ", base_lib))
-elif config.host_os == "Darwin":
+elif config.target_os == "Darwin":
     base_lib = os.path.join(config.compiler_rt_libdir, "libclang_rt.osx.a ")
     config.substitutions.append(("%librt ", base_lib + " -lSystem "))
-elif config.host_os == "Windows":
+elif config.target_os == "Windows":
     base_lib = os.path.join(
         config.compiler_rt_libdir, "libclang_rt.builtins%s.a" % config.target_suffix
     )
@@ -104,10 +104,26 @@ else:
     if sys.platform in ["win32"] and execute_external:
         # Don't pass dosish path separator to msys bash.exe.
         base_lib = base_lib.replace("\\", "/")
-    config.substitutions.append(("%librt ", base_lib + " -lc -lm "))
+    if config.target_os == "Haiku":
+        config.substitutions.append(("%librt ", base_lib + " -lroot "))
+    else:
+        linker_supports_start_group = get_required_attr(
+            config, "linker_supports_start_group"
+        )
+        # Check if the linker supports --start-group and --end-group
+        # For nvptx64 target, it falls back to the default.
+        if linker_supports_start_group and "nvptx" not in config.target_arch:
+            config.substitutions.append(
+                (
+                    "%librt ",
+                    "-lm -Wl,--start-group " + base_lib + " -lc -Wl,--end-group ",
+                )
+            )
+        else:
+            config.substitutions.append(("%librt ", "-lm " + base_lib + " -lc "))
 
-builtins_build_crt = get_required_attr(config, "builtins_build_crt")
-if builtins_build_crt:
+builtins_test_crt = get_required_attr(config, "builtins_test_crt")
+if builtins_test_crt:
     base_obj = os.path.join(
         config.compiler_rt_libdir, "clang_rt.%%s%s.o" % config.target_suffix
     )
@@ -123,6 +139,9 @@ if builtins_build_crt:
     config.substitutions.append(("%crtn", get_library_path("crtn.o")))
 
     config.substitutions.append(("%libgcc", get_libgcc_file_name()))
+    config.substitutions.append(
+        ("%libc", "-lroot" if sys.platform.startswith("haiku") else "-lc")
+    )
 
     config.substitutions.append(
         ("%libstdcxx", "-l" + config.sanitizer_cxx_lib.lstrip("lib"))
@@ -152,7 +171,7 @@ clang_builtins_cxxflags = clang_builtins_static_cxxflags
 
 # FIXME: Right now we don't compile the C99 complex builtins when using
 # clang-cl. Fix that.
-if not is_msvc:
+if not is_msvc and config.target_arch not in ("amdgcn", "nvptx64"):
     config.available_features.add("c99-complex")
 
 builtins_is_msvc = get_required_attr(config, "builtins_is_msvc")

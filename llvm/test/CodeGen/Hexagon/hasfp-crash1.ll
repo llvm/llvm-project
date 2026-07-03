@@ -1,7 +1,7 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ;
 ; Check that this testcase does not crash.
-; CHECK: jumpr r31
+; CHECK: dealloc_return
 
 target triple = "hexagon"
 

@@ -13,11 +13,11 @@ body:             |
 
     ; CHECK-LABEL: name: ashr_v4s32
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
-    ; CHECK: [[VASHR:%[0-9]+]]:_(<4 x s32>) = G_VASHR [[COPY]], [[C]](s32)
-    ; CHECK: $q0 = COPY [[VASHR]](<4 x s32>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[VASHR:%[0-9]+]]:_(<4 x s32>) = G_VASHR [[COPY]], 5
+    ; CHECK-NEXT: $q0 = COPY [[VASHR]](<4 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<4 x s32>) = COPY $q0
     %1:_(s32) = G_CONSTANT i32 5
     %2:_(<4 x s32>) = G_BUILD_VECTOR %1(s32), %1(s32), %1(s32), %1(s32)
@@ -36,11 +36,11 @@ body:             |
 
     ; CHECK-LABEL: name: lshr_v4s32
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
-    ; CHECK: [[VLSHR:%[0-9]+]]:_(<4 x s32>) = G_VLSHR [[COPY]], [[C]](s32)
-    ; CHECK: $q0 = COPY [[VLSHR]](<4 x s32>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[VLSHR:%[0-9]+]]:_(<4 x s32>) = G_VLSHR [[COPY]], 5
+    ; CHECK-NEXT: $q0 = COPY [[VLSHR]](<4 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<4 x s32>) = COPY $q0
     %1:_(s32) = G_CONSTANT i32 5
     %2:_(<4 x s32>) = G_BUILD_VECTOR %1(s32), %1(s32), %1(s32), %1(s32)
@@ -59,11 +59,11 @@ body:             |
 
     ; CHECK-LABEL: name: lshr_v8s16
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
-    ; CHECK: [[VLSHR:%[0-9]+]]:_(<8 x s16>) = G_VLSHR [[COPY]], [[C]](s32)
-    ; CHECK: $q0 = COPY [[VLSHR]](<8 x s16>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
+    ; CHECK-NEXT: [[VLSHR:%[0-9]+]]:_(<8 x s16>) = G_VLSHR [[COPY]], 5
+    ; CHECK-NEXT: $q0 = COPY [[VLSHR]](<8 x s16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<8 x s16>) = COPY $q0
     %1:_(s16) = G_CONSTANT i16 5
     %2:_(<8 x s16>) = G_BUILD_VECTOR %1(s16), %1(s16), %1(s16), %1(s16), %1(s16), %1(s16), %1(s16), %1(s16)
@@ -82,12 +82,13 @@ body:             |
 
     ; CHECK-LABEL: name: imm_too_large
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 40
-    ; CHECK: [[DUP:%[0-9]+]]:_(<4 x s32>) = G_DUP [[C]](s32)
-    ; CHECK: [[LSHR:%[0-9]+]]:_(<4 x s32>) = G_LSHR [[COPY]], [[DUP]](<4 x s32>)
-    ; CHECK: $q0 = COPY [[LSHR]](<4 x s32>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 40
+    ; CHECK-NEXT: [[DUP:%[0-9]+]]:_(<4 x s32>) = G_DUP [[C]](s32)
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(<4 x s32>) = G_LSHR [[COPY]], [[DUP]](<4 x s32>)
+    ; CHECK-NEXT: $q0 = COPY [[LSHR]](<4 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<4 x s32>) = COPY $q0
     %1:_(s32) = G_CONSTANT i32 40
     %2:_(<4 x s32>) = G_BUILD_VECTOR %1(s32), %1(s32), %1(s32), %1(s32)
@@ -106,12 +107,13 @@ body:             |
 
     ; CHECK-LABEL: name: imm_zero
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
-    ; CHECK: [[LSHR:%[0-9]+]]:_(<4 x s32>) = G_LSHR [[COPY]], [[BUILD_VECTOR]](<4 x s32>)
-    ; CHECK: $q0 = COPY [[LSHR]](<4 x s32>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(<4 x s32>) = G_LSHR [[COPY]], [[BUILD_VECTOR]](<4 x s32>)
+    ; CHECK-NEXT: $q0 = COPY [[LSHR]](<4 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<4 x s32>) = COPY $q0
     %1:_(s32) = G_CONSTANT i32 0
     %2:_(<4 x s32>) = G_BUILD_VECTOR %1(s32), %1(s32), %1(s32), %1(s32)
@@ -130,13 +132,14 @@ body:             |
 
     ; CHECK-LABEL: name: imm_not_splat
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 6
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C1]](s32), [[C]](s32), [[C]](s32)
-    ; CHECK: [[LSHR:%[0-9]+]]:_(<4 x s32>) = G_LSHR [[COPY]], [[BUILD_VECTOR]](<4 x s32>)
-    ; CHECK: $q0 = COPY [[LSHR]](<4 x s32>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 6
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C1]](s32), [[C]](s32), [[C]](s32)
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(<4 x s32>) = G_LSHR [[COPY]], [[BUILD_VECTOR]](<4 x s32>)
+    ; CHECK-NEXT: $q0 = COPY [[LSHR]](<4 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<4 x s32>) = COPY $q0
     %1:_(s32) = G_CONSTANT i32 4
     %4:_(s32) = G_CONSTANT i32 6

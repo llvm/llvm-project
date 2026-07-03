@@ -88,7 +88,6 @@ Use these email addresses to create a topic by email in the specific discourse c
 <tr><td>Project Infrastructure - Code Review</td><td>infra-codereview@discourse.llvm.org</td></tr>
 <tr><td>Project Infrastructure - Discord</td><td>infra-discord@discourse.llvm.org</td></tr>
 <tr><td>Project Infrastructure - Mailing Lists and Forums</td><td>infra-mailinglists@discourse.llvm.org</td></tr>
-<tr><td>Project Infrastructure - IRC</td><td> infra-irc@discourse.llvm.org</td></tr>
 <tr><td>Project Infrastructure - Infrastructure Working Group</td><td>infra-iwg@discourse.llvm.org</td></tr>
 <tr><td>Community</td><td>community@discourse.llvm.org</td></tr>
 <tr><td>Community - Women in Compilers and Tools</td><td>wict@discourse.llvm.org</td></tr>

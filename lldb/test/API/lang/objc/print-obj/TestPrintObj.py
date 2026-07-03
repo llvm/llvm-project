@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class PrintObjTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -69,12 +71,9 @@ class PrintObjTestCase(TestBase):
         # We want to traverse the frame to the one corresponding to blocked.m to
         # issue our 'po lock_me' command.
 
-        depth = other_thread.GetNumFrames()
-        for i in range(depth):
-            frame = other_thread.GetFrameAtIndex(i)
-            name = frame.GetFunctionName()
-            if name == "main":
-                other_thread.SetSelectedFrame(i)
+        for frame in other_thread.frames:
+            if frame.name == "main":
+                other_thread.selected_frame = frame
                 if self.TraceOn():
                     print("selected frame:" + lldbutil.get_description(frame))
                 break

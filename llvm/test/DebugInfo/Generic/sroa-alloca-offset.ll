@@ -98,15 +98,15 @@ entry:
 ; OLD-NEXT: #dbg_value(i32 %[[bb_reg]], ![[y1]], !DIExpression(DW_OP_LLVM_fragment, 32, 32),
 ; OLD-NEXT: #dbg_value(i32 %[[bb_reg]], ![[A1]], !DIExpression(DW_OP_LLVM_fragment, 96, 32),
 
-; NEW-NEXT: #dbg_assign(i1 undef, ![[x1:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 32, 32), ![[#]], ptr %[[ab_ba_addr]], !DIExpression(),
-; NEW-NEXT: #dbg_assign(i1 undef, ![[A1:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 32, 64), ![[#]], ptr %[[ab_ba_addr]], !DIExpression(),
+; NEW-NEXT: #dbg_assign(i1 poison, ![[x1:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 32, 32), ![[#]], ptr %[[ab_ba_addr]], !DIExpression(),
+; NEW-NEXT: #dbg_assign(i1 poison, ![[A1:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 32, 64), ![[#]], ptr %[[ab_ba_addr]], !DIExpression(),
 ; NEW-NEXT: #dbg_declare(ptr %[[ab_ba_addr]], ![[y1:[0-9]+]], !DIExpression(DW_OP_plus_uconst, 4, DW_OP_LLVM_fragment, 0, 32),
 ; NEW-NEXT: %[[aa_reg:.*]] = load i32, ptr @gf, align 4
 ; NEW-NEXT: llvm.memcpy{{.*}}(ptr align 4 %[[ab_ba_addr]], ptr align 4 getelementptr inbounds (i8, ptr @gf, i64 4), i64 8, i1 false){{.*}}, !DIAssignID ![[ID:[0-9]+]]
 ; NEW-NEXT: %[[bb_reg:.*]] = load i32, ptr getelementptr inbounds (i8, ptr @gf, i64 12), align 4
 ; NEW-NEXT: #dbg_value(i32 %[[bb_reg]], ![[y1:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 32, 32),
 ; NEW-NEXT: #dbg_value(i32 %[[aa_reg]], ![[A1]], !DIExpression(DW_OP_LLVM_fragment, 0, 32),
-; NEW-NEXT: #dbg_assign(i1 undef, ![[A1]], !DIExpression(DW_OP_LLVM_fragment, 32, 64), ![[ID]], ptr %[[ab_ba_addr]], !DIExpression(),
+; NEW-NEXT: #dbg_assign(i1 poison, ![[A1]], !DIExpression(DW_OP_LLVM_fragment, 32, 64), ![[ID]], ptr %[[ab_ba_addr]], !DIExpression(),
 ; NEW-NEXT: #dbg_value(i32 %[[bb_reg]], ![[A1]], !DIExpression(DW_OP_LLVM_fragment, 96, 32),
 ; NEW-NEXT: #dbg_value(i32 %[[aa_reg]], ![[x1]], !DIExpression(DW_OP_LLVM_fragment, 0, 32),
 define dso_local noundef i32 @_Z4fun2v() #0 !dbg !48 {

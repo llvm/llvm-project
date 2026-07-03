@@ -41,7 +41,7 @@ public:
   using result_type = generator_type::result_type;
 
   /// Returns a random number in the range [0, Max).
-  result_type operator()();
+  LLVM_ABI result_type operator()();
 
   static constexpr result_type min() { return generator_type::min(); }
   static constexpr result_type max() { return generator_type::max(); }
@@ -63,7 +63,7 @@ private:
 };
 
 // Get random vector of specified size
-std::error_code getRandomBytes(void *Buffer, size_t Size);
+LLVM_ABI std::error_code getRandomBytes(void *Buffer, size_t Size);
 }
 
 #endif

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=thumbv7-apple-darwin -frame-pointer=all | not grep r7
+; RUN: llc < %s -mtriple=thumbv7-apple-darwin -frame-pointer=none | not grep r7
 
 %struct.noise3 = type { [3 x [17 x i32]] }
 %struct.noiseguard = type { i32, i32, i32 }

@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-to-spirv -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -test-convert-to-spirv -split-input-file %s | FileCheck %s
 
 module attributes {
   gpu.container_module,
@@ -8,7 +8,7 @@ module attributes {
 gpu.module @kernels {
   // CHECK-LABEL: spirv.func @all_reduce
   // CHECK-SAME: (%[[ARG0:.*]]: f32)
-  // CHECK: %{{.*}} = spirv.GroupNonUniformFAdd "Workgroup" "Reduce" %[[ARG0]] : f32
+  // CHECK: %{{.*}} = spirv.GroupNonUniformFAdd <Workgroup> <Reduce> %[[ARG0]] : f32 -> f32
   gpu.func @all_reduce(%arg0 : f32) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
     %reduced = gpu.all_reduce add %arg0 {} : (f32) -> (f32)
@@ -27,11 +27,12 @@ module attributes {
 
 gpu.module @kernels {
   // CHECK-LABEL: spirv.func @subgroup_reduce
-  // CHECK-SAME: (%[[ARG0:.*]]: f32)
-  // CHECK: %{{.*}} = spirv.GroupNonUniformFAdd "Subgroup" "Reduce" %[[ARG0]] : f32
-  gpu.func @subgroup_reduce(%arg0 : f32) kernel
+  // CHECK-SAME: (%[[ARG0:.*]]: f32, [[BUF:.*]]: !spirv.ptr{{[^)]*}})
+  // CHECK: %{{.*}} = spirv.GroupNonUniformFAdd <Subgroup> <Reduce> %[[ARG0]] : f32 -> f32
+  gpu.func @subgroup_reduce(%arg0 : f32, %buf : memref<f32>) kernel
     attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
     %reduced = gpu.subgroup_reduce add %arg0 {} : (f32) -> (f32)
+    memref.store %reduced, %buf[] : memref<f32>
     gpu.return
   }
 }

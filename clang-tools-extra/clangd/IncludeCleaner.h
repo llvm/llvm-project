@@ -57,12 +57,11 @@ IncludeCleanerFindings
 computeIncludeCleanerFindings(ParsedAST &AST,
                               bool AnalyzeAngledIncludes = false);
 
-using HeaderFilter = llvm::ArrayRef<std::function<bool(llvm::StringRef)>>;
-std::vector<Diag>
-issueIncludeCleanerDiagnostics(ParsedAST &AST, llvm::StringRef Code,
-                               const IncludeCleanerFindings &Findings,
-                               const ThreadsafeFS &TFS,
-                               HeaderFilter IgnoreHeader = {});
+std::vector<Diag> issueIncludeCleanerDiagnostics(
+    ParsedAST &AST, llvm::StringRef Code,
+    const IncludeCleanerFindings &Findings, const ThreadsafeFS &TFS,
+    HeaderFilter IgnoreHeader = {}, HeaderFilter AngledHeaders = {},
+    HeaderFilter QuotedHeaders = {});
 
 /// Converts the clangd include representation to include-cleaner
 /// include representation.

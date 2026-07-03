@@ -39,10 +39,9 @@ func.func @_QPmax1(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[C1_I64:.*]] = arith.constant 1 : i64
 // CHECK:   %[[VAL_19:.*]] = fir.convert %[[VAL_18]] : (index) -> i64
 // CHECK:   %[[VAL_20:.*]] = arith.muli %[[C1_I64]], %[[VAL_19]] : i64
-// CHECK:   %[[FALSE:.*]] = arith.constant false
-// CHECK:   %[[VAL_21:.*]] = fir.convert %[[VAL_16]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-// CHECK:   %[[VAL_22:.*]] = fir.convert %[[VAL_14]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-// CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[VAL_21]], %[[VAL_22]], %[[VAL_20]], %[[FALSE]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+// CHECK:   %[[VAL_21:.*]] = fir.convert %[[VAL_16]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
+// CHECK:   %[[VAL_22:.*]] = fir.convert %[[VAL_14]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
+// CHECK:   "llvm.intr.memmove"(%[[VAL_21]], %[[VAL_22]], %[[VAL_20]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
 // CHECK:   %[[C1:.*]] = arith.constant 1 : index
 // CHECK:   %[[VAL_23:.*]] = arith.subi %[[VAL_7]], %[[C1]] : index
 // CHECK:   %[[C32_I8:.*]] = arith.constant 32 : i8
@@ -76,7 +75,8 @@ func.func @_QPmin1(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
   return
 }
 
-// CHECK: func.func @_QPmin1(%[[ARG0:.*]]: !fir.boxchar<1> {fir.bindc_name = "c1"}, %[[ARG1:.*]]: !fir.boxchar<1> {fir.bindc_name = "c2"}, %[[ARG2:.*]]: !fir.boxchar<1> {fir.bindc_name = "c3"}) {
+// CHECK-LABEL: func.func @_QPmin1
+// CHECK-SAME: (%[[ARG0:.*]]: !fir.boxchar<1> {fir.bindc_name = "c1"}, %[[ARG1:.*]]: !fir.boxchar<1> {fir.bindc_name = "c2"}, %[[ARG2:.*]]: !fir.boxchar<1> {fir.bindc_name = "c3"}) {
 // CHECK:   %[[VAL_0:.*]]:2 = fir.unboxchar %[[ARG0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 // CHECK:   %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]]#0 typeparams %[[VAL_0]]#1 {uniq_name = "_QFmin1Ec1"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:   %[[VAL_2:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
@@ -100,10 +100,9 @@ func.func @_QPmin1(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[C1_I64:.*]] = arith.constant 1 : i64
 // CHECK:   %[[VAL_19:.*]] = fir.convert %[[VAL_18]] : (index) -> i64
 // CHECK:   %[[VAL_20:.*]] = arith.muli %[[C1_I64]], %[[VAL_19]] : i64
-// CHECK:   %[[FALSE:.*]] = arith.constant false
-// CHECK:   %[[VAL_21:.*]] = fir.convert %[[VAL_16]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-// CHECK:   %[[VAL_22:.*]] = fir.convert %[[VAL_14]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-// CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[VAL_21]], %[[VAL_22]], %[[VAL_20]], %[[FALSE]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+// CHECK:   %[[VAL_21:.*]] = fir.convert %[[VAL_16]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
+// CHECK:   %[[VAL_22:.*]] = fir.convert %[[VAL_14]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
+// CHECK:   "llvm.intr.memmove"(%[[VAL_21]], %[[VAL_22]], %[[VAL_20]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
 // CHECK:   %[[C1:.*]] = arith.constant 1 : index
 // CHECK:   %[[VAL_23:.*]] = arith.subi %[[VAL_7]], %[[C1]] : index
 // CHECK:   %[[C32_I8:.*]] = arith.constant 32 : i8
@@ -195,10 +194,9 @@ func.func @_QPmax2(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[C1_I64:.*]] = arith.constant 1 : i64
 // CHECK:   %[[VAL_29:.*]] = fir.convert %[[VAL_28]] : (index) -> i64
 // CHECK:   %[[VAL_30:.*]] = arith.muli %[[C1_I64]], %[[VAL_29]] : i64
-// CHECK:   %[[FALSE:.*]] = arith.constant false
-// CHECK:   %[[VAL_31:.*]] = fir.convert %[[VAL_26]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-// CHECK:   %[[VAL_32:.*]] = fir.convert %[[VAL_24]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-// CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[VAL_31]], %[[VAL_32]], %[[VAL_30]], %[[FALSE]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+// CHECK:   %[[VAL_31:.*]] = fir.convert %[[VAL_26]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
+// CHECK:   %[[VAL_32:.*]] = fir.convert %[[VAL_24]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
+// CHECK:   "llvm.intr.memmove"(%[[VAL_31]], %[[VAL_32]], %[[VAL_30]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
 // CHECK:   %[[C1_3:.*]] = arith.constant 1 : index
 // CHECK:   %[[VAL_33:.*]] = arith.subi %[[VAL_15]], %[[C1_3]] : index
 // CHECK:   %[[C32_I8:.*]] = arith.constant 32 : i8
@@ -293,10 +291,9 @@ func.func @_QPmin2(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[C1_I64:.*]] = arith.constant 1 : i64
 // CHECK:   %[[VAL_29:.*]] = fir.convert %[[VAL_28]] : (index) -> i64
 // CHECK:   %[[VAL_30:.*]] = arith.muli %[[C1_I64]], %[[VAL_29]] : i64
-// CHECK:   %[[FALSE:.*]] = arith.constant false
-// CHECK:   %[[VAL_31:.*]] = fir.convert %[[VAL_26]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-// CHECK:   %[[VAL_32:.*]] = fir.convert %[[VAL_24]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-// CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[VAL_31]], %[[VAL_32]], %[[VAL_30]], %[[FALSE]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+// CHECK:   %[[VAL_31:.*]] = fir.convert %[[VAL_26]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
+// CHECK:   %[[VAL_32:.*]] = fir.convert %[[VAL_24]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
+// CHECK:   "llvm.intr.memmove"(%[[VAL_31]], %[[VAL_32]], %[[VAL_30]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
 // CHECK:   %[[C1_3:.*]] = arith.constant 1 : index
 // CHECK:   %[[VAL_33:.*]] = arith.subi %[[VAL_15]], %[[C1_3]] : index
 // CHECK:   %[[C32_I8:.*]] = arith.constant 32 : i8
@@ -372,10 +369,9 @@ func.func @_QPmax3(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[C1_I64:.*]] = arith.constant 1 : i64
 // CHECK:   %[[VAL_31:.*]] = fir.convert %[[VAL_30]] : (index) -> i64
 // CHECK:   %[[VAL_32:.*]] = arith.muli %[[C1_I64]], %[[VAL_31]] : i64
-// CHECK:   %[[FALSE:.*]] = arith.constant false
-// CHECK:   %[[VAL_33:.*]] = fir.convert %[[VAL_28]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-// CHECK:   %[[VAL_34:.*]] = fir.convert %[[VAL_26]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-// CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[VAL_33]], %[[VAL_34]], %[[VAL_32]], %[[FALSE]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+// CHECK:   %[[VAL_33:.*]] = fir.convert %[[VAL_28]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
+// CHECK:   %[[VAL_34:.*]] = fir.convert %[[VAL_26]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
+// CHECK:   "llvm.intr.memmove"(%[[VAL_33]], %[[VAL_34]], %[[VAL_32]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
 // CHECK:   %[[C1:.*]] = arith.constant 1 : index
 // CHECK:   %[[VAL_35:.*]] = arith.subi %[[VAL_19]], %[[C1]] : index
 // CHECK:   %[[C32_I8:.*]] = arith.constant 32 : i8
@@ -448,10 +444,9 @@ func.func @_QPmin3(%arg0: !fir.boxchar<1> {fir.bindc_name = "c1"}, %arg1: !fir.b
 // CHECK:   %[[C1_I64:.*]] = arith.constant 1 : i64
 // CHECK:   %[[VAL_31:.*]] = fir.convert %[[VAL_30]] : (index) -> i64
 // CHECK:   %[[VAL_32:.*]] = arith.muli %[[C1_I64]], %[[VAL_31]] : i64
-// CHECK:   %[[FALSE:.*]] = arith.constant false
-// CHECK:   %[[VAL_33:.*]] = fir.convert %[[VAL_28]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-// CHECK:   %[[VAL_34:.*]] = fir.convert %[[VAL_26]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-// CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[VAL_33]], %[[VAL_34]], %[[VAL_32]], %[[FALSE]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+// CHECK:   %[[VAL_33:.*]] = fir.convert %[[VAL_28]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
+// CHECK:   %[[VAL_34:.*]] = fir.convert %[[VAL_26]] : (!fir.ref<!fir.char<1,?>>) -> !llvm.ptr
+// CHECK:   "llvm.intr.memmove"(%[[VAL_33]], %[[VAL_34]], %[[VAL_32]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
 // CHECK:   %[[C1:.*]] = arith.constant 1 : index
 // CHECK:   %[[VAL_35:.*]] = arith.subi %[[VAL_19]], %[[C1]] : index
 // CHECK:   %[[C32_I8:.*]] = arith.constant 32 : i8

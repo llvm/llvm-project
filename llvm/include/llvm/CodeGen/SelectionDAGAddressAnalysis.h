@@ -11,6 +11,7 @@
 
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 namespace llvm {
@@ -59,8 +60,8 @@ public:
   // Returns true if `Other` and `*this` are both some offset from the same base
   // pointer. In that case, `Off` is set to the offset between `*this` and
   // `Other` (negative if `Other` is before `*this`).
-  bool equalBaseIndex(const BaseIndexOffset &Other, const SelectionDAG &DAG,
-                      int64_t &Off) const;
+  LLVM_ABI bool equalBaseIndex(const BaseIndexOffset &Other,
+                               const SelectionDAG &DAG, int64_t &Off) const;
 
   bool equalBaseIndex(const BaseIndexOffset &Other,
                       const SelectionDAG &DAG) const {
@@ -70,9 +71,9 @@ public:
 
   // Returns true if `Other` (with size `OtherSize`) can be proven to be fully
   // contained in `*this` (with size `Size`).
-  bool contains(const SelectionDAG &DAG, int64_t BitSize,
-                const BaseIndexOffset &Other, int64_t OtherBitSize,
-                int64_t &BitOffset) const;
+  LLVM_ABI bool contains(const SelectionDAG &DAG, int64_t BitSize,
+                         const BaseIndexOffset &Other, int64_t OtherBitSize,
+                         int64_t &BitOffset) const;
 
   bool contains(const SelectionDAG &DAG, int64_t BitSize,
                 const BaseIndexOffset &Other, int64_t OtherBitSize) const {
@@ -82,15 +83,18 @@ public:
 
   // Returns true `Op0` and `Op1` can be proven to alias/not alias, in
   // which case `IsAlias` is set to true/false.
-  static bool computeAliasing(const SDNode *Op0, const LocationSize NumBytes0,
-                              const SDNode *Op1, const LocationSize NumBytes1,
-                              const SelectionDAG &DAG, bool &IsAlias);
+  LLVM_ABI static bool computeAliasing(const SDNode *Op0,
+                                       const LocationSize NumBytes0,
+                                       const SDNode *Op1,
+                                       const LocationSize NumBytes1,
+                                       const SelectionDAG &DAG, bool &IsAlias);
 
   /// Parses tree in N for base, index, offset addresses.
-  static BaseIndexOffset match(const SDNode *N, const SelectionDAG &DAG);
+  LLVM_ABI static BaseIndexOffset match(const SDNode *N,
+                                        const SelectionDAG &DAG);
 
-  void print(raw_ostream& OS) const;
-  void dump() const;
+  LLVM_ABI void print(raw_ostream &OS) const;
+  LLVM_ABI void dump() const;
 };
 
 } // end namespace llvm

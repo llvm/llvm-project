@@ -20,6 +20,7 @@ clang_target_link_libraries(modularize
   clangAST
   clangBasic
   clangDriver
+  clangOptions
   clangFrontend
   clangLex
   clangSerialization

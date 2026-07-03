@@ -5,10 +5,6 @@
 ; RUN:    -experimental-debug-variable-locations=true \
 ; RUN: | FileCheck %s --check-prefixes=CHECK,INSTRREF
 
-; RUN: llc -start-after=codegenprepare -stop-before finalize-isel -o - %s \
-; RUN:    -experimental-debug-variable-locations=false --try-experimental-debuginfo-iterators \
-; RUN: | FileCheck %s --check-prefixes=CHECK,DBGVALUE
-
 ; This is a reproducer based on the test case from PR37321.
 
 ; We verify that the fragment for the last DBG_VALUE is limited depending
@@ -39,9 +35,9 @@ target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686-w64-windows-gnu"
 
 ; Function Attrs: nounwind readnone
-define dso_local i64 @nextafterl(i80 %a) local_unnamed_addr #0 !dbg !6 {
+define dso_local i64 @nextafterl(i80 %a, i1 %arg) local_unnamed_addr #0 !dbg !6 {
 entry:
-  br i1 undef, label %if.else, label %if.then13, !dbg !28
+  br i1 %arg, label %if.else, label %if.then13, !dbg !28
 
 if.then13:                                        ; preds = %entry
   %u.sroa.0.8.insert.insert = or i80 %a, 2222, !dbg !29

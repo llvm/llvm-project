@@ -12,35 +12,7 @@
 #include "condition_variable.h"
 #include "internal_defs.h"
 #include "secondary.h"
-
-namespace {
-
-template <typename T> struct removeConst {
-  using type = T;
-};
-template <typename T> struct removeConst<const T> {
-  using type = T;
-};
-
-// This is only used for SFINAE when detecting if a type is defined.
-template <typename T> struct voidAdaptor {
-  using type = void;
-};
-
-// This is used for detecting the case that defines the flag with wrong type and
-// it'll be viewed as undefined optional flag.
-template <typename L, typename R> struct assertSameType {
-  template <typename, typename> struct isSame {
-    static constexpr bool value = false;
-  };
-  template <typename T> struct isSame<T, T> {
-    static constexpr bool value = true;
-  };
-  static_assert(isSame<L, R>::value, "Flag type mismatches");
-  using type = R;
-};
-
-} // namespace
+#include "type_traits.h"
 
 namespace scudo {
 
@@ -79,6 +51,16 @@ template <typename AllocatorConfig> struct BaseConfig {
   }
 
 #include "allocator_config.def"
+
+  static void getConfigValues(ScopedString *Str) {
+#define BASE_OPTIONAL(TYPE, NAME, DEFAULT)                                     \
+  Str->append(#NAME);                                                          \
+  Str->append(": ");                                                           \
+  Str->append(get##NAME());                                                    \
+  Str->append("; ");
+#include "allocator_config.def"
+  }
+
 }; // BaseConfig
 
 template <typename AllocatorConfig> struct PrimaryConfig {
@@ -86,6 +68,10 @@ template <typename AllocatorConfig> struct PrimaryConfig {
   //       function.
   static constexpr bool getMaySupportMemoryTagging() {
     return BaseConfig<AllocatorConfig>::getMaySupportMemoryTagging();
+  }
+
+  static constexpr bool getQuarantineDisabled() {
+    return BaseConfig<AllocatorConfig>::getQuarantineDisabled();
   }
 
 #define PRIMARY_REQUIRED_TYPE(NAME)                                            \
@@ -111,6 +97,15 @@ template <typename AllocatorConfig> struct PrimaryConfig {
 
 #include "allocator_config.def"
 
+  static void getConfigValues(ScopedString *Str) {
+#define PRIMARY_OPTIONAL(TYPE, NAME, DEFAULT)                                  \
+  Str->append(#NAME);                                                          \
+  Str->append(": ");                                                           \
+  Str->append(get##NAME());                                                    \
+  Str->append("; ");
+#include "allocator_config.def"
+  }
+
 }; // PrimaryConfig
 
 template <typename AllocatorConfig> struct SecondaryConfig {
@@ -120,9 +115,20 @@ template <typename AllocatorConfig> struct SecondaryConfig {
     return BaseConfig<AllocatorConfig>::getMaySupportMemoryTagging();
   }
 
+  static constexpr bool getQuarantineDisabled() {
+    return BaseConfig<AllocatorConfig>::getQuarantineDisabled();
+  }
+
 #define SECONDARY_REQUIRED_TEMPLATE_TYPE(NAME)                                 \
   template <typename T>                                                        \
   using NAME = typename AllocatorConfig::Secondary::template NAME<T>;
+
+#define SECONDARY_OPTIONAL(TYPE, NAME, DEFAULT)                                \
+  OPTIONAL_TEMPLATE(TYPE, NAME, DEFAULT, NAME)                                 \
+  static constexpr removeConst<TYPE>::type get##NAME() {                       \
+    return NAME##State<typename AllocatorConfig::Secondary>::getValue();       \
+  }
+
 #include "allocator_config.def"
 
   struct CacheConfig {
@@ -132,14 +138,39 @@ template <typename AllocatorConfig> struct SecondaryConfig {
       return BaseConfig<AllocatorConfig>::getMaySupportMemoryTagging();
     }
 
+    static constexpr bool getQuarantineDisabled() {
+      return BaseConfig<AllocatorConfig>::getQuarantineDisabled();
+    }
+
 #define SECONDARY_CACHE_OPTIONAL(TYPE, NAME, DEFAULT)                          \
   OPTIONAL_TEMPLATE(TYPE, NAME, DEFAULT, Cache::NAME)                          \
   static constexpr removeConst<TYPE>::type get##NAME() {                       \
     return NAME##State<typename AllocatorConfig::Secondary>::getValue();       \
   }
 #include "allocator_config.def"
+
+    static void getConfigValues(ScopedString *Str) {
+#define SECONDARY_CACHE_OPTIONAL(TYPE, NAME, DEFAULT)                          \
+  Str->append(#NAME);                                                          \
+  Str->append(": ");                                                           \
+  Str->append(get##NAME());                                                    \
+  Str->append("; ");
+#include "allocator_config.def"
+    }
+
   }; // CacheConfig
-};   // SecondaryConfig
+
+  static void getConfigValues(ScopedString *Str) {
+#define SECONDARY_OPTIONAL(TYPE, NAME, DEFAULT)                                \
+  Str->append(#NAME);                                                          \
+  Str->append(": ");                                                           \
+  Str->append(get##NAME());                                                    \
+  Str->append("; ");
+#include "allocator_config.def"
+    Str->append("\nConfig Stats Secondary Cache: ");
+    CacheConfig::getConfigValues(Str);
+  }
+}; // SecondaryConfig
 
 #undef OPTIONAL_TEMPLATE
 #undef OPTIONAL_TEMPLATE_TYPE

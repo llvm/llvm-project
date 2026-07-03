@@ -33,7 +33,7 @@ struct Y4095 {
 };
 Y4095::Y4095() {}
 // CHECK-DAG: @"??@a6a285da2eea70dba6b578022be61d81@??_R4@" = linkonce_odr constant %rtti.CompleteObjectLocator
-// CHECK-DAG: @"??@a6a285da2eea70dba6b578022be61d81@" = unnamed_addr alias
+// CHECK-DAG: @"??@a6a285da2eea70dba6b578022be61d81@" = alias
 
 // RUN: %clang_cc1 -DTHROW -fcxx-exceptions -fms-compatibility-version=18.0 -emit-llvm -o - -triple i686-pc-win32 %s | FileCheck --check-prefix=HAVECTOR %s
 // RUN: %clang_cc1 -DTHROW -fcxx-exceptions -fms-compatibility-version=19.0 -emit-llvm -o - -triple i686-pc-win32 %s | FileCheck --check-prefix=OMITCTOR %s

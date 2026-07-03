@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ABISysV_riscv_h_
-#define liblldb_ABISysV_riscv_h_
+#ifndef LLDB_SOURCE_PLUGINS_ABI_RISCV_ABISYSV_RISCV_H
+#define LLDB_SOURCE_PLUGINS_ABI_RISCV_ABISYSV_RISCV_H
 
 // Other libraries and framework includes
 #include "llvm/TargetParser/Triple.h"
@@ -51,10 +51,9 @@ public:
   lldb::ValueObjectSP GetReturnValueObjectImpl(lldb_private::Thread &thread,
                                                llvm::Type &type) const override;
 
-  bool
-  CreateFunctionEntryUnwindPlan(lldb_private::UnwindPlan &unwind_plan) override;
+  lldb::UnwindPlanSP CreateFunctionEntryUnwindPlan() override;
 
-  bool CreateDefaultUnwindPlan(lldb_private::UnwindPlan &unwind_plan) override;
+  lldb::UnwindPlanSP CreateDefaultUnwindPlan() override;
 
   bool RegisterIsVolatile(const lldb_private::RegisterInfo *reg_info) override;
 
@@ -126,4 +125,4 @@ private:
   bool m_is_rv64; // true if target is riscv64; false if target is riscv32
 };
 
-#endif // liblldb_ABISysV_riscv_h_
+#endif // LLDB_SOURCE_PLUGINS_ABI_RISCV_ABISYSV_RISCV_H

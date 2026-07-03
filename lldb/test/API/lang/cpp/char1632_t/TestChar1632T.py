@@ -74,11 +74,17 @@ class Char1632TestCase(TestBase):
         self.expect(
             "frame variable as16 as32",
             patterns=[
-                "\(char16_t\[[0-9]+\]\) as16 = ",
-                "\(char32_t\[[0-9]+\]\) as32 = ",
+                r"\(char16_t\[[0-9]+\]\) as16 = ",
+                r"\(char32_t\[[0-9]+\]\) as32 = ",
             ],
             substrs=['u"ﺸﺵۻ"', 'U"ЕЙРГЖО"'],
         )
+
+        # Check that embedded zeros show up in arrays
+        self.expect_var_path("aZero16", summary='u"I\\0have\\0zeros"')
+        self.expect_var_path("cZero16", summary='u"I"')
+        self.expect_var_path("aZero32", summary='U"I\\0have\\0zeros"')
+        self.expect_var_path("cZero32", summary='U"I"')
 
         self.runCmd("next")  # step to after the string is nullified
 
@@ -103,8 +109,8 @@ class Char1632TestCase(TestBase):
         self.expect(
             "frame variable as16 as32",
             patterns=[
-                "\(char16_t\[[0-9]+\]\) as16 = ",
-                "\(char32_t\[[0-9]+\]\) as32 = ",
+                r"\(char16_t\[[0-9]+\]\) as16 = ",
+                r"\(char32_t\[[0-9]+\]\) as32 = ",
             ],
             substrs=['"色ハ匂ヘト散リヌルヲ"', '"෴"'],
         )

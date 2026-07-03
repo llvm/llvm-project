@@ -25,18 +25,6 @@
 #define LIBC_TARGET_OS_IS_WINDOWS
 #endif
 
-#if (defined(__apple__) || defined(__APPLE__) || defined(__MACH__))
-// From https://stackoverflow.com/a/49560690
-#include "TargetConditionals.h"
-#if defined(TARGET_OS_OSX)
-#define LIBC_TARGET_OS_IS_MACOS
-#endif
-#if defined(TARGET_OS_IPHONE)
-// This is set for any non-Mac Apple products (IOS, TV, WATCH)
-#define LIBC_TARGET_OS_IS_IPHONE
-#endif
-#endif
-
 #if defined(__Fuchsia__)
 #define LIBC_TARGET_OS_IS_FUCHSIA
 #endif

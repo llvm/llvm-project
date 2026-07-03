@@ -1,5 +1,4 @@
 # RUN: llvm-mc %s -triple=mips64el-unknown-linux -disassemble -mcpu=mips3 | FileCheck %s
-# CHECK: .text
 0x85 0xc1 0x20 0x46 # CHECK: abs.d $f6, $f24
 0x45 0x82 0x00 0x46 # CHECK: abs.s $f9, $f16
 0x20 0xb8 0x45 0x02 # CHECK: add $23, $18, $5

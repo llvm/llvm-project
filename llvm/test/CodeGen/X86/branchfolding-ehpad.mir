@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=x86_64-windows-msvc -verify-machineinstrs -run-pass branch-folder -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64-windows-msvc -verify-machineinstrs -passes="require<profile-summary>,function(machine-function(branch-folder<enable-tail-merge>))" -o - %s | FileCheck %s
 
 # Check that branch-folder does not create a fallthrough to a landing pad.
 # Also make sure that the landing pad still can be tail merged.

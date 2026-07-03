@@ -4,7 +4,7 @@
 SBSection supports iteration through its subsection, represented as SBSection
 as well.  For example, ::
 
-    for sec in exe_module:
+    for sec in exe_module.section_iter():
         if sec.GetName() == '__TEXT':
             print sec
             break
@@ -26,12 +26,5 @@ produces: ::
 See also :py:class:`SBModule` ."
 ) lldb::SBSection;
 
-%feature("docstring", "
-    Return the size of a target's byte represented by this section
-    in numbers of host bytes. Note that certain architectures have
-    varying minimum addressable unit (i.e. byte) size for their
-    CODE or DATA buses.
-
-    @return
-        The number of host (8-bit) bytes needed to hold a target byte"
+%feature("docstring", "Deprecated. Always returns 1."
 ) lldb::SBSection::GetTargetByteSize;

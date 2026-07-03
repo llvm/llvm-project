@@ -54,7 +54,7 @@ define float @_Z6sincosfPU3AS0f(float %x, ptr %ptr) {
 
 define void @sincos_f32(float %x, ptr addrspace(1) nocapture writeonly %sin_out, ptr addrspace(1) nocapture writeonly %cos_out) {
 ; CHECK-LABEL: define void @sincos_f32
-; CHECK-SAME: (float [[X:%.*]], ptr addrspace(1) nocapture writeonly [[SIN_OUT:%.*]], ptr addrspace(1) nocapture writeonly [[COS_OUT:%.*]]) {
+; CHECK-SAME: (float [[X:%.*]], ptr addrspace(1) writeonly captures(none) [[SIN_OUT:%.*]], ptr addrspace(1) writeonly captures(none) [[COS_OUT:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5)
 ; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[__SINCOS_]] to ptr

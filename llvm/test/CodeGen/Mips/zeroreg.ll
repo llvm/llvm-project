@@ -1,10 +1,10 @@
-; RUN: llc < %s -march=mipsel -mcpu=mips32   -relocation-model=pic | FileCheck %s -check-prefixes=ALL,32-CMOV
-; RUN: llc < %s -march=mipsel -mcpu=mips32r2 -relocation-model=pic | FileCheck %s -check-prefixes=ALL,32-CMOV
-; RUN: llc < %s -march=mipsel -mcpu=mips32r6 -relocation-model=pic | FileCheck %s -check-prefixes=ALL,32R6
-; RUN: llc < %s -march=mipsel -mcpu=mips4    -target-abi n64 -relocation-model=pic | FileCheck %s -check-prefixes=ALL,64-CMOV
-; RUN: llc < %s -march=mipsel -mcpu=mips64   -target-abi n64 -relocation-model=pic | FileCheck %s -check-prefixes=ALL,64-CMOV
-; RUN: llc < %s -march=mipsel -mcpu=mips64r2 -target-abi n64 -relocation-model=pic | FileCheck %s -check-prefixes=ALL,64-CMOV
-; RUN: llc < %s -march=mipsel -mcpu=mips64r6 -target-abi n64 -relocation-model=pic | FileCheck %s -check-prefixes=ALL,64R6
+; RUN: llc < %s -mtriple=mipsel -mcpu=mips32   -relocation-model=pic | FileCheck %s -check-prefixes=ALL,32-CMOV
+; RUN: llc < %s -mtriple=mipsel -mcpu=mips32r2 -relocation-model=pic | FileCheck %s -check-prefixes=ALL,32-CMOV
+; RUN: llc < %s -mtriple=mipsel -mcpu=mips32r6 -relocation-model=pic | FileCheck %s -check-prefixes=ALL,32R6
+; RUN: llc < %s -mtriple=mipsel -mcpu=mips4    -target-abi n64 -relocation-model=pic | FileCheck %s -check-prefixes=ALL,64-CMOV
+; RUN: llc < %s -mtriple=mipsel -mcpu=mips64   -target-abi n64 -relocation-model=pic | FileCheck %s -check-prefixes=ALL,64-CMOV
+; RUN: llc < %s -mtriple=mipsel -mcpu=mips64r2 -target-abi n64 -relocation-model=pic | FileCheck %s -check-prefixes=ALL,64-CMOV
+; RUN: llc < %s -mtriple=mipsel -mcpu=mips64r6 -target-abi n64 -relocation-model=pic | FileCheck %s -check-prefixes=ALL,64R6
 
 @g1 = external global i32
 

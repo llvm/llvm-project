@@ -8,13 +8,25 @@
 define void @foo(ptr %p) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <vscale x 16 x i8>, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <vscale x 16 x i8>, ptr [[P]], i64 1
 ; CHECK-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[TMP1]], align 16
 ; CHECK-NEXT:    ret void
 ;
   store <vscale x 16 x i8> zeroinitializer, ptr %p
   %tmp1 = getelementptr <vscale x 16 x i8>, ptr %p, i64 1
   store <vscale x 16 x i8> zeroinitializer, ptr %tmp1
+  ret void
+}
+
+; Test the compiler does not crash on a store of a scalable aggregate type.
+define void @test_no_crash_scalable_agg(ptr %p) {
+; CHECK-LABEL: @test_no_crash_scalable_agg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store { <vscale x 16 x i1>, <vscale x 16 x i1> } zeroinitializer, ptr [[P:%.*]], align 2
+; CHECK-NEXT:    ret void
+;
+entry:
+  store { <vscale x 16 x i1>, <vscale x 16 x i1> } zeroinitializer, ptr %p, align 2
   ret void
 }
 

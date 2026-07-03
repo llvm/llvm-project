@@ -1,4 +1,4 @@
-; RUN: not llc -march=bpfel -mcpu=v1 -filetype=asm < %s
+; RUN: not llc -mtriple=bpfel -mcpu=v1 -filetype=asm < %s
 ;
 ; Source:
 ; $ cat atomics_sub64_relaxed_v1.c

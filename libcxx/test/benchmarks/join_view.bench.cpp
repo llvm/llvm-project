@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11, c++14, c++17
+
 #include <algorithm>
 #include <deque>
 #include <ranges>
@@ -13,7 +15,7 @@
 #include "benchmark/benchmark.h"
 
 namespace {
-void run_sizes(auto benchmark) {
+void run_sizes(benchmark::Benchmark* benchmark) {
   benchmark->Arg(0)
       ->Arg(1)
       ->Arg(2)

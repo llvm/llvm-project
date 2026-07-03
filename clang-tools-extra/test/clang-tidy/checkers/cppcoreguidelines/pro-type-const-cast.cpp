@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -check-suffix=STRICT  %s cppcoreguidelines-pro-type-const-cast %t -- -config="{CheckOptions: {StrictMode: true}}"
+// RUN: %check_clang_tidy -check-suffix=STRICT  %s cppcoreguidelines-pro-type-const-cast %t -- -config="{CheckOptions: {cppcoreguidelines-pro-type-const-cast.StrictMode: true}}"
 // RUN: %check_clang_tidy -check-suffix=NSTRICT %s cppcoreguidelines-pro-type-const-cast %t
 
 namespace Const {

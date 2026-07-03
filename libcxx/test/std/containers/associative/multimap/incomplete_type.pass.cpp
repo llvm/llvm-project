@@ -13,20 +13,35 @@
 
 #include <map>
 
+#include "min_allocator.h"
 #include "test_macros.h"
 
 struct A {
-    typedef std::multimap<A, A> Map;
-    int data;
-    Map m;
-    Map::iterator it;
-    Map::const_iterator cit;
+  typedef std::multimap<A, A> Map;
+  int data;
+  Map m;
+  Map::iterator it;
+  Map::const_iterator cit;
 };
 
 inline bool operator==(A const& L, A const& R) { return &L == &R; }
-inline bool operator<(A const& L, A const& R)  { return L.data < R.data; }
-int main(int, char**) {
-    A a;
+inline bool operator<(A const& L, A const& R) { return L.data < R.data; }
 
+TEST_CONSTEXPR_CXX26
+bool test() {
+  A a;
+
+  // Make sure that the allocator isn't rebound to and incomplete type
+  std::multimap<int, int, std::less<int>, complete_type_allocator<std::pair<const int, int> > > m;
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

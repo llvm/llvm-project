@@ -21,6 +21,7 @@ add_llvm_component_library(LLVMLTO
   BinaryFormat
   BitReader
   BitWriter
+  CGData
   CodeGen
   CodeGenTypes
   Core
@@ -33,6 +34,7 @@ add_llvm_component_library(LLVMLTO
   ObjCARC
   Object
   Passes
+  Plugins
   Remarks
   Scalar
   Support

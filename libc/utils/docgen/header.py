@@ -14,7 +14,7 @@ class Header:
     Maintains implementation information about a standard header file:
     * where does its implementation dir live
     * where is its macros file
-    * where is its docgen json file
+    * where is its docgen yaml file
 
     By convention, the macro-only part of a header file is in a header-specific
     file somewhere in the directory tree with root at
@@ -42,13 +42,28 @@ class Header:
         self.stem = header_name.rstrip(".h")
         self.docgen_root = Path(__file__).parent
         self.libc_root = self.docgen_root.parent.parent
-        self.docgen_json = self.docgen_root / Path(header_name).with_suffix(".json")
+        self.docgen_yaml = self.docgen_root / Path(header_name).with_suffix(".yaml")
+        # Path to libc/include/<name>.yaml
+        self.include_yaml = Path(
+            self.libc_root, "include", Path(header_name).with_suffix(".yaml")
+        )
         self.fns_dir = Path(self.libc_root, "src", self.stem)
         self.macros_dir = Path(self.libc_root, "include", "llvm-libc-macros")
 
     def macro_file_exists(self) -> bool:
         for _ in self.__get_macro_files():
             return True
+
+        if self.include_yaml.exists():
+            import yaml
+
+            parsed = yaml.safe_load(self.include_yaml.read_text(encoding="utf-8"))
+            if (
+                parsed
+                and "macros" in parsed
+                and any("macro_value" in m for m in parsed["macros"])
+            ):
+                return True
 
         return False
 
@@ -75,6 +90,15 @@ class Header:
             if f"#define {m_name}" in f.read_text():
                 return True
 
+        if self.include_yaml.exists():
+            import yaml
+
+            parsed = yaml.safe_load(self.include_yaml.read_text(encoding="utf-8"))
+            if parsed and "macros" in parsed:
+                for macro in parsed["macros"]:
+                    if macro.get("macro_name") == m_name and "macro_value" in macro:
+                        return True
+
         return False
 
     def __get_macro_files(self) -> Generator[Path, None, None]:
@@ -83,5 +107,10 @@ class Header:
         macro file might be located in a subdirectory:
         libc/include/llvm-libc-macros/fcntl-macros.h
         libc/include/llvm-libc-macros/linux/fcntl-macros.h
+
+        When a header would be nested in a dir (such as arpa/, sys/, etc) we
+        instead use a hyphen in the name.
+        libc/include/llvm-libc-macros/sys-mman-macros.h
         """
-        return self.macros_dir.glob(f"**/{self.stem}-macros.h")
+        stem = self.stem.replace("/", "-")
+        return self.macros_dir.glob(f"**/{stem}-macros.h")

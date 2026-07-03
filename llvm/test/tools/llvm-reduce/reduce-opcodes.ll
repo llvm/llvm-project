@@ -179,7 +179,7 @@ define float @sqrt_ninf(float %a, float %b) {
 }
 
 ; CHECK-LABEL: @sqrt_vec(
-; RESULT-NEXT: %op = fmul <2 x float> %a, <float 2.000000e+00, float 2.000000e+00>, !dbg !7
+; RESULT-NEXT: %op = fmul <2 x float> %a, splat (float 2.000000e+00), !dbg !7
 ; RESULT-NEXT: ret
 define <2 x float> @sqrt_vec(<2 x float> %a, <2 x float> %b) {
   %op = call <2 x float> @llvm.sqrt.v2f32(<2 x float> %a), !dbg !7

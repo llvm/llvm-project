@@ -77,7 +77,7 @@ static int countSymbols(Lang Language) {
   }
   }
 #undef SYMBOL
-  return llvm::DenseSet<StringRef>(Symbols.begin(), Symbols.end()).size();
+  return llvm::DenseSet<StringRef>(llvm::from_range, Symbols).size();
 }
 
 static int initialize(Lang Language) {
@@ -115,23 +115,23 @@ static int initialize(Lang Language) {
       NSLen = 0;
     }
 
-    if (SymIndex >= 0 &&
-        Mapping->SymbolNames[SymIndex].qualifiedName() == QName) {
-      // Not a new symbol, use the same index.
+    if (SymIndex > 0) {
       assert(llvm::none_of(llvm::ArrayRef(Mapping->SymbolNames, SymIndex),
                            [&QName](const SymbolHeaderMapping::SymbolName &S) {
                              return S.qualifiedName() == QName;
                            }) &&
              "The symbol has been added before, make sure entries in the .inc "
              "file are grouped by symbol name!");
-    } else {
+    }
+    if (SymIndex < 0 ||
+        Mapping->SymbolNames[SymIndex].qualifiedName() != QName) {
       // First symbol or new symbol, increment next available index.
       ++SymIndex;
-    }
+    } // Else use the same index.
     Mapping->SymbolNames[SymIndex] = {
         QName.data(), NSLen, static_cast<unsigned int>(QName.size() - NSLen)};
     if (!HeaderName.empty())
-       Mapping->SymbolHeaderIDs[SymIndex].push_back(AddHeader(HeaderName));
+      Mapping->SymbolHeaderIDs[SymIndex].push_back(AddHeader(HeaderName));
 
     NSSymbolMap &NSSymbols = AddNS(QName.take_front(NSLen));
     NSSymbols.try_emplace(QName.drop_front(NSLen), SymIndex);
@@ -236,7 +236,7 @@ std::optional<Symbol> Symbol::named(llvm::StringRef Scope, llvm::StringRef Name,
   return std::nullopt;
 }
 std::optional<Header> Symbol::header() const {
-  const auto& Headers = getMappingPerLang(Language)->SymbolHeaderIDs[ID];
+  const auto &Headers = getMappingPerLang(Language)->SymbolHeaderIDs[ID];
   if (Headers.empty())
     return std::nullopt;
   return Header(Headers.front(), Language);

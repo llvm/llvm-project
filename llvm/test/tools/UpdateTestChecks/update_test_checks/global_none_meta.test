@@ -1,0 +1,3 @@
+## Basic test checking that update_test_checks.py --check-globals none works correctly
+# RUN: cp -f %S/Inputs/global_none_meta.ll %t.ll && %update_test_checks %t.ll --check-globals none
+# RUN: diff -u %t.ll %S/Inputs/global_none_meta.ll.expected

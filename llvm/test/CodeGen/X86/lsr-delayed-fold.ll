@@ -30,7 +30,7 @@ bb24:                                             ; preds = %bb21, %bb11
 ; ScalarEvolution should be able to correctly expand the crazy addrec here.
 ; PR6914
 
-define void @int323() nounwind {
+define void @int323(i1 %arg) nounwind {
 entry:
   br label %for.cond
 
@@ -38,7 +38,7 @@ for.cond:                                         ; preds = %lbl_264, %for.inc, 
   %g_263.tmp.1 = phi i8 [ undef, %entry ], [ %g_263.tmp.1, %for.cond ]
   %p_95.addr.0 = phi i8 [ 0, %entry ], [ %add, %for.cond ]
   %add = add i8 %p_95.addr.0, 1                   ; <i8> [#uses=1]
-  br i1 undef, label %for.cond, label %lbl_264
+  br i1 %arg, label %for.cond, label %lbl_264
 
 lbl_264:                                          ; preds = %if.end, %lbl_264.preheader
   %g_263.tmp.0 = phi i8 [ %g_263.tmp.1, %for.cond ] ; <i8> [#uses=1]
@@ -56,13 +56,13 @@ lbl_264:                                          ; preds = %if.end, %lbl_264.pr
 
 %struct.Bu = type { i32, i32, i32 }
 
-define void @_Z3fooP2Bui(ptr nocapture %bu) {
+define void @_Z3fooP2Bui(ptr nocapture %bu, i1 %arg) {
 entry:
   br label %for.body
 
 for.body:                                         ; preds = %for.inc131, %entry
   %indvar = phi i64 [ %indvar.next, %for.inc131 ], [ 0, %entry ] ; <i64> [#uses=3]
-  br i1 undef, label %for.inc131, label %lor.lhs.false
+  br i1 %arg, label %for.inc131, label %lor.lhs.false
 
 lor.lhs.false:                                    ; preds = %for.body
   %tmp15 = add i64 %indvar, 1                     ; <i64> [#uses=1]
@@ -123,11 +123,11 @@ for.body123:                                      ; preds = %for.body123, %lor.l
   %add129 = add i32 %mul, %j.03                   ; <i32> [#uses=1]
   tail call void undef(i32 %add129)
   %inc = add nsw i32 %j.03, 1                     ; <i32> [#uses=1]
-  br i1 undef, label %for.inc131, label %for.body123
+  br i1 %arg, label %for.inc131, label %for.body123
 
 for.inc131:                                       ; preds = %for.body123, %for.body
   %indvar.next = add i64 %indvar, 1               ; <i64> [#uses=1]
-  br i1 undef, label %for.end134, label %for.body
+  br i1 %arg, label %for.end134, label %for.body
 
 for.end134:                                       ; preds = %for.inc131
   ret void
@@ -138,14 +138,14 @@ for.end134:                                       ; preds = %for.inc131
 ; require insert point adjustment.
 ; PR7306
 
-define fastcc i32 @GetOptimum() nounwind {
+define fastcc i32 @GetOptimum(i1 %arg) nounwind {
 bb:
   br label %bb1
 
 bb1:                                              ; preds = %bb1, %bb
   %t = phi i32 [ 0, %bb ], [ %t2, %bb1 ]      ; <i32> [#uses=1]
   %t2 = add i32 %t, undef                     ; <i32> [#uses=3]
-  br i1 undef, label %bb1, label %bb3
+  br i1 %arg, label %bb1, label %bb3
 
 bb3:                                              ; preds = %bb1
   %t4 = add i32 undef, -1                       ; <i32> [#uses=1]
@@ -155,13 +155,13 @@ bb5:                                              ; preds = %bb16, %bb3
   %t6 = phi i32 [ %t17, %bb16 ], [ 0, %bb3 ]  ; <i32> [#uses=3]
   %t7 = add i32 undef, %t6                    ; <i32> [#uses=2]
   %t8 = add i32 %t4, %t6                    ; <i32> [#uses=1]
-  br i1 undef, label %bb9, label %bb10
+  br i1 %arg, label %bb9, label %bb10
 
 bb9:                                              ; preds = %bb5
   br label %bb10
 
 bb10:                                             ; preds = %bb9, %bb5
-  br i1 undef, label %bb11, label %bb16
+  br i1 %arg, label %bb11, label %bb16
 
 bb11:                                             ; preds = %bb10
   %t12 = icmp ugt i32 %t7, %t2              ; <i1> [#uses=1]

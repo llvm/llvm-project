@@ -33,10 +33,9 @@ static DenseSet<StringRef> DWARFSectionNames = {
 static void preserveDWARFSection(LinkGraph &G, Section &Sec) {
   DenseMap<Block *, Symbol *> Preserved;
   for (auto Sym : Sec.symbols()) {
-    if (Sym->isLive())
-      Preserved[&Sym->getBlock()] = Sym;
-    else if (!Preserved.count(&Sym->getBlock()))
-      Preserved[&Sym->getBlock()] = Sym;
+    auto [It, Inserted] = Preserved.try_emplace(&Sym->getBlock());
+    if (Inserted || Sym->isLive())
+      It->second = Sym;
   }
   for (auto Block : Sec.blocks()) {
     auto &PSym = Preserved[Block];

@@ -73,3 +73,20 @@ spirv.func @no_decoration_name_attr(%arg0 : !spirv.ptr<i32, PhysicalStorageBuffe
 spirv.func @no_decoration_name_attr(%arg0 : !spirv.ptr<i32, PhysicalStorageBuffer> { spirv.decoration = #spirv.decoration<Restrict>, random_attr = #spirv.decoration<Aliased> }) "None" {
   spirv.Return
 }
+
+// -----
+
+// expected-error @+1 {{'spirv.func' op entry block must have 1 arguments to match function signature}}
+spirv.func @f(f32) "None" {
+  %c0 = arith.constant 0 : index
+  spirv.Return
+}
+
+// -----
+
+// expected-error @+1 {{'spirv.func' op type of entry block argument #0('f64') must match the type of the corresponding argument in function signature('f32')}}
+spirv.func @f(f32) "None" {
+  ^bb0(%arg0: f64):
+  %c0 = arith.constant 0 : index
+  spirv.Return
+}

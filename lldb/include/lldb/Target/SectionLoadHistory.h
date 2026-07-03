@@ -45,7 +45,7 @@ public:
                                      const lldb::SectionSP &section_sp);
 
   bool ResolveLoadAddress(uint32_t stop_id, lldb::addr_t load_addr,
-                          Address &so_addr);
+                          Address &so_addr, bool allow_section_end = false);
 
   bool SetSectionLoadAddress(uint32_t stop_id,
                              const lldb::SectionSP &section_sp,

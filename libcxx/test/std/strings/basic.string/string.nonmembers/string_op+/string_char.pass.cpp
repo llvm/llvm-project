@@ -16,41 +16,32 @@
 //   basic_string<charT,traits,Allocator>&&
 //   operator+(basic_string<charT,traits,Allocator>&& lhs, charT rhs); // constexpr since C++20
 
+#include <cassert>
 #include <string>
 #include <utility>
-#include <cassert>
 
-#include "test_macros.h"
-#include "min_allocator.h"
 #include "asan_testing.h"
-
-template <class S>
-TEST_CONSTEXPR_CXX20 void test0(const S& lhs, typename S::value_type rhs, const S& x) {
-  assert(lhs + rhs == x);
-  LIBCPP_ASSERT(is_string_asan_correct(lhs + rhs));
-}
-
-#if TEST_STD_VER >= 11
-template <class S>
-TEST_CONSTEXPR_CXX20 void test1(S&& lhs, typename S::value_type rhs, const S& x) {
-  assert(std::move(lhs) + rhs == x);
-}
-#endif
+#include "min_allocator.h"
+#include "test_macros.h"
 
 template <class S>
 TEST_CONSTEXPR_CXX20 void test_string() {
-  test0(S(""), '1', S("1"));
-  test0(S(""), '1', S("1"));
-  test0(S("abcde"), '1', S("abcde1"));
-  test0(S("abcdefghij"), '1', S("abcdefghij1"));
-  test0(S("abcdefghijklmnopqrst"), '1', S("abcdefghijklmnopqrst1"));
+  const char* test_data[] = {"", "12345", "1234567890", "12345678901234567890"};
+  const char* results[]   = {"a", "12345a", "1234567890a", "12345678901234567890a"};
 
+  for (size_t i = 0; i != 4; ++i) {
+    { // operator+(const string&, value_type);
+      const S str(test_data[i]);
+      assert(str + 'a' == results[i]);
+      LIBCPP_ASSERT(is_string_asan_correct(str + 'a'));
+    }
 #if TEST_STD_VER >= 11
-  test1(S(""), '1', S("1"));
-  test1(S("abcde"), '1', S("abcde1"));
-  test1(S("abcdefghij"), '1', S("abcdefghij1"));
-  test1(S("abcdefghijklmnopqrst"), '1', S("abcdefghijklmnopqrst1"));
+    { // operator+(string&&, value_type);
+      S str(test_data[i]);
+      assert(std::move(str) + 'a' == results[i]);
+    }
 #endif
+  }
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
@@ -60,12 +51,23 @@ TEST_CONSTEXPR_CXX20 bool test() {
   test_string<std::basic_string<char, std::char_traits<char>, safe_allocator<char> > >();
 #endif
 
+  { // check that growing to max_size() works
+    using string_type = std::basic_string<char, std::char_traits<char>, tiny_size_allocator<29, char> >;
+    string_type str;
+    str.resize(str.max_size() - 1);
+    string_type result = str + 'a';
+
+    assert(result.size() == result.max_size());
+    assert(result.back() == 'a');
+    assert(result.capacity() <= result.get_allocator().max_size());
+  }
+
   return true;
 }
 
 int main(int, char**) {
   test();
-#if TEST_STD_VER > 17
+#if TEST_STD_VER >= 20
   static_assert(test());
 #endif
 

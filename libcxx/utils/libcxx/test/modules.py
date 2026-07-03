@@ -7,7 +7,6 @@
 # ===----------------------------------------------------------------------===##
 
 from libcxx.header_information import module_headers
-from libcxx.header_information import header_restrictions
 from dataclasses import dataclass
 
 ### SkipDeclarations
@@ -92,6 +91,9 @@ ExtraHeader["ranges"] = "v1/__fwd/subrange.h$"
 # same definition.
 ExtraHeader["functional"] = "v1/__compare/compare_three_way.h$"
 
+# <flat_set> reuses some functionality defined inside <flat_map>
+ExtraHeader["flat_set"] = "v1/__flat_map/sorted_.+.h$"
+
 # Some C compatibility headers define std::size_t, which is in <__cstddef/size_t.h>
 for header in ("cstdio", "cstdlib", "cstring", "ctime", "cuchar", "cwchar"):
     ExtraHeader[header] = "v1/__cstddef/size_t.h$"
@@ -115,12 +117,18 @@ class module_test_generator:
         print(
             f"""\
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: clang-modules-build
+
+// These tests check that we provide all declarations, so they currently don't work when
+// carve-outs are enabled.
+// XFAIL: no-filesystem, no-tzdb, no-localization, no-threads, no-wide-characters
 
 // REQUIRES: has-clang-tidy
 
 // The GCC compiler flags are not always compatible with clang-tidy.
 // UNSUPPORTED: gcc
+
+// C++20 modules are incompatible with Clang modules
+// ADDITIONAL_COMPILE_FLAGS: -fno-modules
 
 // MODULE_DEPENDENCIES: {self.module}
 
@@ -132,15 +140,7 @@ class module_test_generator:
         # Some headers cannot be included when a libc++ feature is disabled.
         # In that case include the header conditionally. The header __config
         # ensures the libc++ feature macros are available.
-        if header in header_restrictions:
-            include = (
-                f"#include <__config>{nl}"
-                f"#if {header_restrictions[header]}{nl}"
-                f"#  include <{header}>{nl}"
-                f"#endif{nl}"
-            )
-        else:
-            include = f"#include <{header}>{nl}"
+        include = f"#include <{header}>{nl}"
 
         module_files = f'#include \\"{self.module_path}/std/{header}.inc\\"{nl}'
         if is_c_header:
@@ -163,7 +163,7 @@ class module_test_generator:
             f'" > {self.tmp_prefix}.{header}.cppm'
         )
 
-        # Extract the information of the module partition using lang-tidy
+        # Extract the information of the module partition using clang-tidy
         print(
             f"// RUN: {self.clang_tidy} {self.tmp_prefix}.{header}.cppm "
             "  --checks='-*,libcpp-header-exportable-declarations' "
@@ -219,6 +219,7 @@ class module_test_generator:
         print(f'// RUN: echo -e "' f"{include}" f'" > {self.tmp_prefix}.{header}.cpp')
         print(
             f"// RUN: {self.clang_tidy} {self.tmp_prefix}.{header}.cpp "
+            "  --system-headers "
             "  --checks='-*,libcpp-header-exportable-declarations' "
             "  -config='{CheckOptions: [ "
             "    {"

@@ -7,7 +7,7 @@
 
 ## .bar section has data in [0xfffffffffffffff1, 0xfffffffffffffff1 + 0x10] ==
 ## [0xfffffffffffffff1, 0x1]. Check we can catch this overflow.
-# ERR: error: section .bar at 0xFFFFFFFFFFFFFFF1 of size 0x10 exceeds available address space
+# ERR: error: section .bar at 0xfffffffffffffff1 of size 0x10 exceeds available address space
 
 .section .bar,"ax",@progbits
 .zero 0x10

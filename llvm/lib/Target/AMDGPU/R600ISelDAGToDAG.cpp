@@ -16,7 +16,6 @@
 #include "MCTargetDesc/R600MCTargetDesc.h"
 #include "R600.h"
 #include "R600Subtarget.h"
-#include "llvm/Analysis/ValueTracking.h"
 
 using namespace llvm;
 

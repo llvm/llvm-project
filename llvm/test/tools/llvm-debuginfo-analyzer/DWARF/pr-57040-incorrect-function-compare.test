@@ -35,7 +35,7 @@
 ;  8    return ParamUnsigned;
 ;  9  }
 
-; RUN: llvm-debuginfo-analyzer --attribute=level,producer \
+; RUN: llvm-debuginfo-analyzer --attribute=language,level,producer \
 ; RUN:                         --compare=types \
 ; RUN:                         --report=view \
 ; RUN:                         --print=symbols,types \
@@ -51,11 +51,12 @@
 ; ONE-EMPTY:
 ; ONE-NEXT:  [001]             {CompileUnit} 'test.cpp'
 ; ONE-NEXT:  [002]               {Producer} 'clang version 14.0.6'
+; ONE-NEXT:  [002]               {Language} 'DW_LANG_C_plus_plus_14'
 ; ONE-NEXT:  [002]     1         {TypeAlias} 'INTPTR' -> '* const int'
 ; ONE-NEXT:  [002]     2         {Function} extern not_inlined 'foo' -> 'int'
 ; ONE-NEXT:  [003]                 {Block}
-; ONE-NEXT:  [004]     5             {Variable} 'CONSTANT' -> 'const INTEGER'
 ; ONE-NEXT: +[004]     4             {TypeAlias} 'INTEGER' -> 'int'
+; ONE-NEXT:  [004]     5             {Variable} 'CONSTANT' -> 'const INTEGER'
 ; ONE-NEXT:  [003]     2           {Parameter} 'ParamBool' -> 'bool'
 ; ONE-NEXT:  [003]     2           {Parameter} 'ParamPtr' -> 'INTPTR'
 ; ONE-NEXT:  [003]     2           {Parameter} 'ParamUnsigned' -> 'unsigned int'
@@ -90,7 +91,7 @@
 
 ; Changing the 'Reference' and 'Target' order:
 
-; RUN: llvm-debuginfo-analyzer --attribute=level,producer \
+; RUN: llvm-debuginfo-analyzer --attribute=language,level,producer \
 ; RUN:                         --compare=types \
 ; RUN:                         --report=view \
 ; RUN:                         --print=symbols,types \
@@ -106,6 +107,7 @@
 ; THR-EMPTY:
 ; THR-NEXT:  [001]             {CompileUnit} 'test.cpp'
 ; THR-NEXT:  [002]               {Producer} 'GNU C++17 11.3.0 {{.*}}'
+; THR-NEXT:  [002]               {Language} 'DW_LANG_C_plus_plus_14'
 ; THR-NEXT:  [002]     1         {TypeAlias} 'INTPTR' -> '* const int'
 ; THR-NEXT:  [002]     2         {Function} extern not_inlined 'foo' -> 'int'
 ; THR-NEXT:  [003]                 {Block}

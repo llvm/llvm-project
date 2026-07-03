@@ -1,7 +1,7 @@
 ! Tests the OMPIRBuilder can handle multiple privatization regions that contain
 ! multiple BBs (for example, for allocatables).
 
-! RUN: %flang -S -emit-llvm -fopenmp -mmlir --openmp-enable-delayed-privatization \
+! RUN: %flang -S -emit-llvm -fopenmp -mmlir --enable-delayed-privatization \
 ! RUN:   -o - %s 2>&1 | FileCheck %s
 
 subroutine foo(x)

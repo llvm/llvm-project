@@ -10,7 +10,9 @@ unittest("InterpTests") {
     "//clang/lib/Tooling",
   ]
   sources = [
+    "BitcastBuffer.cpp",
     "Descriptor.cpp",
+    "Pointer.cpp",
     "toAPValue.cpp",
   ]
 }

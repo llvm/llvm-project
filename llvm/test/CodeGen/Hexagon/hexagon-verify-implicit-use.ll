@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O3 -verify-machineinstrs < %s
+; RUN: llc -mtriple=hexagon -O3 -verify-machineinstrs < %s
 ; REQUIRES: asserts
 
 target triple = "hexagon"

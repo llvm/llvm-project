@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 < %s | FileCheck %s
 
 ; Ensure that the second use of ##grcolor doesn't get replaced with
 ; r26 which is an induction variable

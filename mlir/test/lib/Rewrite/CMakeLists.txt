@@ -7,8 +7,8 @@ if (MLIR_ENABLE_PDL_IN_PATTERNMATCH)
 
     ADDITIONAL_HEADER_DIRS
     ${MLIR_MAIN_INCLUDE_DIR}/mlir/Rewrite
-
-    LINK_LIBS PUBLIC
+    )
+  mlir_target_link_libraries(MLIRTestRewrite PUBLIC
     MLIRIR
     MLIRPass
     MLIRSupport

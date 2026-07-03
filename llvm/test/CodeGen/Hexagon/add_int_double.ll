@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; CHECK: r{{[0-9]+}}:{{[0-9]+}} = add(r{{[0-9]+}}:{{[0-9+]}},r{{[0-9]+}}:{{[0-9]+}}):raw:{{..}}
 
 define i64 @f0(i32 %a0, i64 %a1) #0 {

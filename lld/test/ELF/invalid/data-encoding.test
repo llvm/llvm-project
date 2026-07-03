@@ -1,4 +1,6 @@
 # REQUIRES: x86
+# This test intentionally checks for fatal errors, and fatal errors aren't supported for testing when main is run twice.
+# XFAIL: main-run-twice
 
 # The object in the archive has invalid data encoding.
 # Check we report this.
@@ -7,7 +9,7 @@
 # RUN: llvm-ar rcS %t.a %t.o
 
 # RUN: not ld.lld --whole-archive %t.a -o /dev/null 2>&1 | FileCheck %s
-# CHECK: {{.*}}.a({{.*}}.o): corrupted ELF file: invalid data encoding
+# CHECK: error: {{.*}}.a({{.*}}.o): corrupted ELF file: invalid data encoding
 
 --- !ELF
 FileHeader:

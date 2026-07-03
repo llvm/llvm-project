@@ -1,16 +1,9 @@
-// RUN: %check_clang_tidy -std=c++14-or-later %s readability-const-return-type %t
+// RUN: %check_clang_tidy -std=c++14-or-later %s readability-const-return-type %t -- -- -Wno-error=return-type
 
 //  p# = positive test
 //  n# = negative test
 
-namespace std {
-template< class T >
-struct add_cv { typedef const volatile T type; };
-
-template< class T> struct add_const { typedef const T type; };
-
-template< class T> struct add_volatile { typedef volatile T type; };
-}
+#include <type_traits>
 
 const int p1() {
 // CHECK-MESSAGES: [[@LINE-1]]:1: warning: return type 'const int' is 'const'-qualified at the top level, which may reduce code readability without improving const correctness
@@ -66,7 +59,7 @@ class Clazz {
   const Klazz<const int>* const p5() const;
   // CHECK-FIXES: const Klazz<const int>* p5() const;
 
-  const Clazz operator++(int x) {  //  p12
+  const Clazz operator++(int x) {
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: return type 'const Clazz' is 'const
   // CHECK-FIXES: Clazz operator++(int x) {
   }

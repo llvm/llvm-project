@@ -53,8 +53,8 @@ define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" 
 ; CHECK-MIPS64-NEXT:   .8byte  .Lxray_sled_0-[[TMP]]
 ; CHECK-MIPS64-NEXT:   .8byte  .Lfunc_begin0-([[TMP]]+8)
 ; CHECK-MIPS32:      [[TMP:\$tmp[0-9]+]]:
-; CHECK-MIPS32-NEXT:   .4byte  ($xray_sled_0)-([[TMP]])
-; CHECK-MIPS32-NEXT:   .4byte  ($func_begin0)-(([[TMP]])+4)
+; CHECK-MIPS32-NEXT:   .4byte  $xray_sled_0-[[TMP]]
+; CHECK-MIPS32-NEXT:   .4byte  $func_begin0-([[TMP]]+4)
 
 ; We test multiple returns in a single function to make sure we're getting all
 ; of them with XRay instrumentation.
@@ -135,8 +135,8 @@ NotEqual:
 ; CHECK-MIPS64: .8byte  .Lxray_sled_3
 ; CHECK-MIPS64: .8byte  .Lxray_sled_4
 ; CHECK-MIPS32:      [[TMP:\$tmp[0-9]+]]:
-; CHECK-MIPS32-NEXT: .4byte	($xray_sled_2)-([[TMP]])
+; CHECK-MIPS32-NEXT: .4byte	$xray_sled_2-[[TMP]]
 ; CHECK-MIPS32:      [[TMP:\$tmp[0-9]+]]:
-; CHECK-MIPS32-NEXT: .4byte	($xray_sled_3)-([[TMP]])
+; CHECK-MIPS32-NEXT: .4byte	$xray_sled_3-[[TMP]]
 ; CHECK-MIPS32:      [[TMP:\$tmp[0-9]+]]:
-; CHECK-MIPS32-NEXT: .4byte	($xray_sled_4)-([[TMP]])
+; CHECK-MIPS32-NEXT: .4byte	$xray_sled_4-[[TMP]]

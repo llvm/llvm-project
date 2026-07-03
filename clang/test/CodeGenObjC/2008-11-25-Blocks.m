@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fblocks -emit-llvm %s -o /dev/null
+// RUN: %clang_cc1 -Wno-error=return-type -fblocks -emit-llvm %s -o /dev/null
 
 @interface bork
 - (id)B:(void (^)(void))blk;

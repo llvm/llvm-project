@@ -3,7 +3,7 @@
 
 ; CHECK-LABEL: @test_simple
 ; CHECK-LABEL: Header:
-; CHECK-NEXT: br i1 undef, label %Header.split
+; CHECK-NEXT: br i1 %arg, label %Header.split
 ; CHECK-LABEL: Header.split:
 ; CHECK: %[[CALL1:.*]] = call i32 @callee(ptr %a, i32 %v, i32 %p)
 ; CHECK-LABEL: TBB:
@@ -13,9 +13,9 @@
 ; CHECK-LABEL: Tail
 ; CHECK: %[[MERGED:.*]] = phi i32 [ %[[CALL1]], %Header.split ], [ %[[CALL2]], %TBB.split ]
 ; CHECK: ret i32 %[[MERGED]]
-define i32 @test_simple(ptr %a, i32 %v, i32 %p) {
+define i32 @test_simple(ptr %a, i32 %v, i32 %p, i1 %arg) {
 Header:
-  br i1 undef, label %Tail, label %End
+  br i1 %arg, label %Tail, label %End
 
 TBB:
   %cmp = icmp eq ptr %a, null

@@ -17,9 +17,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // exposition only
 enum class _OrdResult : signed char { __less = -1, __equiv = 0, __greater = 1 };
@@ -120,7 +120,7 @@ inline constexpr partial_ordering partial_ordering::greater(_PartialOrdResult::_
 inline constexpr partial_ordering partial_ordering::unordered(_PartialOrdResult::__unordered);
 
 class weak_ordering {
-  using _ValueT = signed char;
+  using _ValueT _LIBCPP_NODEBUG = signed char;
 
   _LIBCPP_HIDE_FROM_ABI explicit constexpr weak_ordering(_OrdResult __v) noexcept : __value_(_ValueT(__v)) {}
 
@@ -190,7 +190,7 @@ inline constexpr weak_ordering weak_ordering::equivalent(_OrdResult::__equiv);
 inline constexpr weak_ordering weak_ordering::greater(_OrdResult::__greater);
 
 class strong_ordering {
-  using _ValueT = signed char;
+  using _ValueT _LIBCPP_NODEBUG = signed char;
 
   _LIBCPP_HIDE_FROM_ABI explicit constexpr strong_ordering(_OrdResult __v) noexcept : __value_(_ValueT(__v)) {}
 
@@ -275,8 +275,8 @@ template <class _Tp>
 concept __comparison_category =
     is_same_v<_Tp, partial_ordering> || is_same_v<_Tp, weak_ordering> || is_same_v<_Tp, strong_ordering>;
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___COMPARE_ORDERING_H

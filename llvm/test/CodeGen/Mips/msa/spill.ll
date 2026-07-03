@@ -1,8 +1,8 @@
 ; Test that the correct instruction is chosen for spill and reload by trying
 ; to have 33 live MSA registers simultaneously
 
-; RUN: llc -march=mips -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s
-; RUN: llc -march=mipsel -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s
+; RUN: llc -mtriple=mips-elf -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel-elf -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s
 
 define i32 @test_i8(ptr %p0, ptr %q1) nounwind {
 entry:

@@ -10,10 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class SkipSummaryDataFormatterTestCase(TestBase):
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr24462, Data formatters have problems on Windows",
-    )
     def test_with_run_command(self):
         """Test data formatter commands."""
         self.build()
@@ -156,27 +152,6 @@ class SkipSummaryDataFormatterTestCase(TestBase):
                 "}",
             ],
         )
-
-        # Bad debugging info on SnowLeopard gcc (Apple Inc. build 5666).
-        # Skip the following tests if the condition is met.
-        if self.getCompiler().endswith("gcc") and not self.getCompiler().endswith(
-            "llvm-gcc"
-        ):
-            import re
-
-            gcc_version_output = system([[lldbutil.which(self.getCompiler()), "-v"]])
-            self.trace("my output:", gcc_version_output)
-            for line in gcc_version_output.split(os.linesep):
-                m = re.search("\(Apple Inc\. build ([0-9]+)\)", line)
-                self.trace("line:", line)
-                if m:
-                    gcc_build = int(m.group(1))
-                    self.trace("gcc build:", gcc_build)
-                    if gcc_build >= 5666:
-                        # rdar://problem/9804600"
-                        self.skipTest(
-                            "rdar://problem/9804600 wrong namespace for std::string in debug info"
-                        )
 
         # Expand same expression, skipping 3 layers of summaries
         self.expect(

@@ -1019,7 +1019,7 @@ bool expr_with_cleanups(A &S) {
   return true;
 }
 // CHECK-MESSAGES: :[[@LINE-4]]:12: warning: {{.*}} in conditional return
-// CHECK-FIXES: S == (A)S;{{$}}
+// CHECK-FIXES: return S == (A)S;{{$}}
 
 template <bool B>
 void ignoreInstantiations() {

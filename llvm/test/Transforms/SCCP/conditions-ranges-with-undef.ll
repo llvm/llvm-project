@@ -36,8 +36,6 @@ false:
 
 declare void @use.i32(i32)
 
-; It is not allowed to use the range information from the condition to remove
-; %a.127 = and ... in the true block, as %a could be undef.
 define void @val_undef_range() {
 ; CHECK-LABEL: @val_undef_range(
 ; CHECK-NEXT:  entry:
@@ -46,8 +44,7 @@ define void @val_undef_range() {
 ; CHECK-NEXT:    br i1 [[BC_1]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
 ; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    [[A_127:%.*]] = and i32 [[A]], 127
-; CHECK-NEXT:    call void @use.i32(i32 [[A_127]])
+; CHECK-NEXT:    call void @use.i32(i32 [[A]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       false:
 ; CHECK-NEXT:    ret void
@@ -82,8 +79,7 @@ define void @val_singlecrfromundef_range(i1 %cond) {
 ; CHECK-NEXT:    br label [[TRUE:%.*]]
 ; CHECK:       true:
 ; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    [[P_127:%.*]] = and i32 10, 127
-; CHECK-NEXT:    call void @use.i32(i32 [[P_127]])
+; CHECK-NEXT:    call void @use.i32(i32 10)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -113,9 +109,6 @@ false:
   ret void
 }
 
-
-; It is not allowed to use the information from the condition ([0, 128))
-; to remove a.127.2 = and i32 %p, 127, as %p might be undef.
 define void @val_undef_to_cr_to_overdef_range(i32 %a, i1 %cond) {
 ; CHECK-LABEL: @val_undef_to_cr_to_overdef_range(
 ; CHECK-NEXT:  entry:
@@ -131,8 +124,7 @@ define void @val_undef_to_cr_to_overdef_range(i32 %a, i1 %cond) {
 ; CHECK-NEXT:    br i1 [[BC_1]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
 ; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    [[P_127:%.*]] = and i32 [[P]], 127
-; CHECK-NEXT:    call void @use.i32(i32 [[P_127]])
+; CHECK-NEXT:    call void @use.i32(i32 [[P]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       false:
 ; CHECK-NEXT:    ret void
@@ -156,6 +148,43 @@ true:
   %f.1 = icmp eq i32 %p, 128
   call void @use(i1 %f.1)
 
+  %p.127 = and i32 %p, 127
+  call void @use.i32(i32 %p.127)
+  ret void
+
+false:
+  ret void
+}
+
+; It is not allowed to use the range information from the condition to remove
+; %p.127 = and i32 %p, 127, as %p could be undef.
+define void @masked_incoming_val_with_undef(i32 %a, i1 %cond) {
+; CHECK-LABEL: @masked_incoming_val_with_undef(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A_127:%.*]] = and i32 [[A:%.*]], 127
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[INC1:%.*]], label [[INC2:%.*]]
+; CHECK:       inc1:
+; CHECK-NEXT:    br label [[IF:%.*]]
+; CHECK:       inc2:
+; CHECK-NEXT:    br label [[IF]]
+; CHECK:       if:
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[A_127]], [[INC1]] ], [ undef, [[INC2]] ]
+; CHECK-NEXT:    [[P_127:%.*]] = and i32 [[P]], 127
+; CHECK-NEXT:    call void @use.i32(i32 [[P_127]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a.127 = and i32 %a, 127
+  br i1 %cond, label %inc1, label %inc2
+
+inc1:
+  br label %if
+
+inc2:
+  br label %if
+
+if:
+  %p = phi i32 [ %a.127, %inc1 ], [ undef, %inc2 ]
   %p.127 = and i32 %p, 127
   call void @use.i32(i32 %p.127)
   ret void

@@ -15,7 +15,7 @@ define void @and4(ptr noalias nocapture noundef writeonly %dst, ptr noalias noca
 ; CHECK-LABEL: @and4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i8> [[TMP0]], <i8 -64, i8 -64, i8 -64, i8 -64>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i8> [[TMP0]], splat (i8 -64)
 ; CHECK-NEXT:    store <4 x i8> [[TMP1]], ptr [[DST:%.*]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -45,7 +45,7 @@ define void @and8(ptr noalias nocapture noundef writeonly %dst, ptr noalias noca
 ; CHECK-LABEL: @and8(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = and <8 x i8> [[TMP0]], <i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <8 x i8> [[TMP0]], splat (i8 -64)
 ; CHECK-NEXT:    store <8 x i8> [[TMP1]], ptr [[DST:%.*]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -95,7 +95,7 @@ define void @and16(ptr noalias nocapture noundef writeonly %dst, ptr noalias noc
 ; CHECK-LABEL: @and16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[SRC:%.*]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = and <16 x i8> [[TMP0]], <i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <16 x i8> [[TMP0]], splat (i8 -64)
 ; CHECK-NEXT:    store <16 x i8> [[TMP1]], ptr [[DST:%.*]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -185,19 +185,19 @@ define void @and32(ptr noalias nocapture noundef writeonly %dst, ptr noalias noc
 ; SSE-LABEL: @and32(
 ; SSE-NEXT:  entry:
 ; SSE-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[SRC:%.*]], align 1
-; SSE-NEXT:    [[TMP1:%.*]] = and <16 x i8> [[TMP0]], <i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64>
+; SSE-NEXT:    [[TMP1:%.*]] = and <16 x i8> [[TMP0]], splat (i8 -64)
 ; SSE-NEXT:    store <16 x i8> [[TMP1]], ptr [[DST:%.*]], align 1
 ; SSE-NEXT:    [[ARRAYIDX_16:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 16
 ; SSE-NEXT:    [[ARRAYIDX3_16:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 16
 ; SSE-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr [[ARRAYIDX_16]], align 1
-; SSE-NEXT:    [[TMP3:%.*]] = and <16 x i8> [[TMP2]], <i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64>
+; SSE-NEXT:    [[TMP3:%.*]] = and <16 x i8> [[TMP2]], splat (i8 -64)
 ; SSE-NEXT:    store <16 x i8> [[TMP3]], ptr [[ARRAYIDX3_16]], align 1
 ; SSE-NEXT:    ret void
 ;
 ; AVX-LABEL: @and32(
 ; AVX-NEXT:  entry:
 ; AVX-NEXT:    [[TMP0:%.*]] = load <32 x i8>, ptr [[SRC:%.*]], align 1
-; AVX-NEXT:    [[TMP1:%.*]] = and <32 x i8> [[TMP0]], <i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64, i8 -64>
+; AVX-NEXT:    [[TMP1:%.*]] = and <32 x i8> [[TMP0]], splat (i8 -64)
 ; AVX-NEXT:    store <32 x i8> [[TMP1]], ptr [[DST:%.*]], align 1
 ; AVX-NEXT:    ret void
 ;

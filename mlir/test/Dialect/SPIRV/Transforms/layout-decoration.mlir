@@ -24,7 +24,7 @@ spirv.module Logical GLSL450 {
     // CHECK: {{%.*}} = spirv.mlir.addressof @var0 : !spirv.ptr<!spirv.struct<(i32 [0], !spirv.struct<(f32 [0], i32 [4])> [4], f32 [12])>, Uniform>
     %0 = spirv.mlir.addressof @var0 : !spirv.ptr<!spirv.struct<(i32, !spirv.struct<(f32, i32)>, f32)>, Uniform>
     // CHECK:  {{%.*}} = spirv.AccessChain {{%.*}}[{{%.*}}] : !spirv.ptr<!spirv.struct<(i32 [0], !spirv.struct<(f32 [0], i32 [4])> [4], f32 [12])>, Uniform>
-    %1 = spirv.AccessChain %0[%c0] : !spirv.ptr<!spirv.struct<(i32, !spirv.struct<(f32, i32)>, f32)>, Uniform>, i32
+    %1 = spirv.AccessChain %0[%c0] : !spirv.ptr<!spirv.struct<(i32, !spirv.struct<(f32, i32)>, f32)>, Uniform>, i32 -> !spirv.ptr<i32, Uniform>
     spirv.Return
   }
 }

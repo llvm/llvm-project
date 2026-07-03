@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Check that store is post-incremented.
 ; CHECK: memd(r{{[0-9]+}}++#8) = r

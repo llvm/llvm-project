@@ -19,6 +19,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -43,6 +44,9 @@ struct BytecodeWriterConfig::Impl {
   /// file.
   bool shouldElideResourceData = false;
 
+  /// A flag specifying whether to elide emission of locations.
+  bool shouldElideLocations = false;
+
   /// A map containing dialect version information for each dialect to emit.
   llvm::StringMap<std::unique_ptr<DialectVersion>> dialectVersionMap;
 
@@ -66,6 +70,9 @@ BytecodeWriterConfig::BytecodeWriterConfig(FallbackAsmResourceMap &map,
     : BytecodeWriterConfig(producer) {
   attachFallbackResourcePrinter(map);
 }
+BytecodeWriterConfig::BytecodeWriterConfig(BytecodeWriterConfig &&config)
+    : impl(std::move(config.impl)) {}
+
 BytecodeWriterConfig::~BytecodeWriterConfig() = default;
 
 ArrayRef<std::unique_ptr<AttrTypeBytecodeWriter<Attribute>>>
@@ -96,6 +103,14 @@ void BytecodeWriterConfig::attachResourcePrinter(
 void BytecodeWriterConfig::setElideResourceDataFlag(
     bool shouldElideResourceData) {
   impl->shouldElideResourceData = shouldElideResourceData;
+}
+
+void BytecodeWriterConfig::setElideLocations(bool shouldElideLocations) {
+  impl->shouldElideLocations = shouldElideLocations;
+}
+
+bool BytecodeWriterConfig::shouldElideLocations() const {
+  return impl->shouldElideLocations;
 }
 
 void BytecodeWriterConfig::setDesiredBytecodeVersion(int64_t bytecodeVersion) {
@@ -147,8 +162,7 @@ public:
 
   /// Backpatch a byte in the result buffer at the given offset.
   void patchByte(uint64_t offset, uint8_t value, StringLiteral desc) {
-    LLVM_DEBUG(llvm::dbgs() << "patchByte(" << offset << ',' << uint64_t(value)
-                            << ")\t" << desc << '\n');
+    LDBG() << "patchByte(" << offset << ',' << uint64_t(value) << ")\t" << desc;
     assert(offset < size() && offset >= prevResultSize &&
            "cannot patch previously emitted data");
     currentResult[offset - prevResultSize] = value;
@@ -157,8 +171,7 @@ public:
   /// Emit the provided blob of data, which is owned by the caller and is
   /// guaranteed to not die before the end of the bytecode process.
   void emitOwnedBlob(ArrayRef<uint8_t> data, StringLiteral desc) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "emitOwnedBlob(" << data.size() << "b)\t" << desc << '\n');
+    LDBG() << "emitOwnedBlob(" << data.size() << "b)\t" << desc;
     // Push the current buffer before adding the provided data.
     appendResult(std::move(currentResult));
     appendOwnedResult(data);
@@ -206,15 +219,13 @@ public:
   /// Emit a single byte.
   template <typename T>
   void emitByte(T byte, StringLiteral desc) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "emitByte(" << uint64_t(byte) << ")\t" << desc << '\n');
+    LDBG() << "emitByte(" << uint64_t(byte) << ")\t" << desc;
     currentResult.push_back(static_cast<uint8_t>(byte));
   }
 
   /// Emit a range of bytes.
   void emitBytes(ArrayRef<uint8_t> bytes, StringLiteral desc) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "emitBytes(" << bytes.size() << "b)\t" << desc << '\n');
+    LDBG() << "emitBytes(" << bytes.size() << "b)\t" << desc;
     llvm::append_range(currentResult, bytes);
   }
 
@@ -226,7 +237,7 @@ public:
   /// additional bytes, provide the value of the integer encoded in
   /// little-endian order.
   void emitVarInt(uint64_t value, StringLiteral desc) {
-    LLVM_DEBUG(llvm::dbgs() << "emitVarInt(" << value << ")\t" << desc << '\n');
+    LDBG() << "emitVarInt(" << value << ")\t" << desc;
 
     // In the most common case, the value can be represented in a single byte.
     // Given how hot this case is, explicitly handle that here.
@@ -465,6 +476,14 @@ public:
         "dialect blob");
   }
 
+  void writeUnownedBlob(ArrayRef<char> blob) override {
+    emitter.emitVarInt(blob.size(), "dialect blob");
+    emitter.emitBytes(
+        ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(blob.data()),
+                          blob.size()),
+        "dialect blob");
+  }
+
   void writeOwnedBool(bool value) override {
     emitter.emitByte(value, "dialect bool");
   }
@@ -565,9 +584,8 @@ private:
     std::vector<char> &newStorage = propertiesStorage.back();
     size_t propertiesSize = sizeScratch.size() + rawProperties.size();
     newStorage.reserve(propertiesSize);
-    newStorage.insert(newStorage.end(), sizeScratch.begin(), sizeScratch.end());
-    newStorage.insert(newStorage.end(), rawProperties.begin(),
-                      rawProperties.end());
+    llvm::append_range(newStorage, sizeScratch);
+    llvm::append_range(newStorage, rawProperties);
 
     // Try to de-duplicate the new serialized properties.
     // If the properties is a duplicate, pop it back from the storage.
@@ -610,6 +628,9 @@ private:
 } // namespace
 
 void EncodingEmitter::writeTo(raw_ostream &os) const {
+  // Reserve space in the ostream for the encoded contents.
+  os.reserveExtraSpace(size());
+
   for (auto &prevResult : prevResultList)
     os.write((const char *)prevResult.data(), prevResult.size());
   os.write((const char *)currentResult.data(), currentResult.size());
@@ -766,6 +787,7 @@ LogicalResult BytecodeWriter::write(Operation *rootOp, raw_ostream &os) {
 
 //===----------------------------------------------------------------------===//
 // Dialects
+//===----------------------------------------------------------------------===//
 
 /// Write the given entries in contiguous groups with the same parent dialect.
 /// Each dialect sub-group is encoded with the parent dialect and number of
@@ -849,6 +871,7 @@ void BytecodeWriter::writeDialectSection(EncodingEmitter &emitter) {
 
 //===----------------------------------------------------------------------===//
 // Attributes and Types
+//===----------------------------------------------------------------------===//
 
 void BytecodeWriter::writeAttrTypeSection(EncodingEmitter &emitter) {
   EncodingEmitter attrTypeEmitter;
@@ -930,6 +953,7 @@ void BytecodeWriter::writeAttrTypeSection(EncodingEmitter &emitter) {
 
 //===----------------------------------------------------------------------===//
 // Operations
+//===----------------------------------------------------------------------===//
 
 LogicalResult BytecodeWriter::writeBlock(EncodingEmitter &emitter,
                                          Block *block) {
@@ -1081,7 +1105,7 @@ void BytecodeWriter::writeUseListOrders(EncodingEmitter &emitter,
                                         uint8_t &opEncodingMask,
                                         ValueRange range) {
   // Loop over the results and store the use-list order per result index.
-  DenseMap<unsigned, llvm::SmallVector<unsigned>> map;
+  llvm::MapVector<unsigned, llvm::SmallVector<unsigned>> map;
   for (auto item : llvm::enumerate(range)) {
     auto value = item.value();
     // No need to store a custom use-list order if the result does not have
@@ -1134,10 +1158,7 @@ void BytecodeWriter::writeUseListOrders(EncodingEmitter &emitter,
     emitter.emitVarInt(map.size(), "custom use-list size");
   }
 
-  for (const auto &item : map) {
-    auto resultIdx = item.getFirst();
-    auto useListOrder = item.getSecond();
-
+  for (const auto &[resultIdx, useListOrder] : map) {
     // Compute the number of uses that are actually shuffled. If those are less
     // than half of the total uses, encoding the index pair `(src, dst)` is more
     // space efficient.
@@ -1209,6 +1230,7 @@ LogicalResult BytecodeWriter::writeIRSection(EncodingEmitter &emitter,
 
 //===----------------------------------------------------------------------===//
 // Resources
+//===----------------------------------------------------------------------===//
 
 namespace {
 /// This class represents a resource builder implementation for the MLIR
@@ -1321,6 +1343,7 @@ void BytecodeWriter::writeResourceSection(Operation *op,
 
 //===----------------------------------------------------------------------===//
 // Strings
+//===----------------------------------------------------------------------===//
 
 void BytecodeWriter::writeStringSection(EncodingEmitter &emitter) {
   EncodingEmitter stringEmitter;
@@ -1330,6 +1353,7 @@ void BytecodeWriter::writeStringSection(EncodingEmitter &emitter) {
 
 //===----------------------------------------------------------------------===//
 // Properties
+//===----------------------------------------------------------------------===//
 
 void BytecodeWriter::writePropertiesSection(EncodingEmitter &emitter) {
   EncodingEmitter propertiesEmitter;

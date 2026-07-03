@@ -116,7 +116,7 @@ void generateIdentifierTrigrams(llvm::StringRef Identifier,
   } else {
     identifierTrigrams(Identifier, [&](Trigram T) { Result.push_back(T); });
     llvm::sort(Result);
-    Result.erase(std::unique(Result.begin(), Result.end()), Result.end());
+    Result.erase(llvm::unique(Result), Result.end());
   }
 }
 

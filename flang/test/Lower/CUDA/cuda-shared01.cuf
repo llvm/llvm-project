@@ -1,0 +1,9 @@
+
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+attributes(global) subroutine sharedstar()
+  real, shared :: s(*) ! ok. dynamic shared memory.
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsharedstar()
+! CHECK: hlfir.declare %{{.*}}(%{{.*}}) {data_attr = #cuf.cuda<shared>, uniq_name = "_QFsharedstarEs"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)

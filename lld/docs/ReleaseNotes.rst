@@ -1,3 +1,6 @@
+.. If you want to modify sections/contents permanently, you should modify both
+   ReleaseNotes.rst and ReleaseNotesTemplate.txt.
+
 ===========================
 lld |release| Release Notes
 ===========================
@@ -26,29 +29,57 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
-* ``-z nosectionheader`` has been implemented to omit the section header table.
-  The operation is similar to ``llvm-objcopy --strip-sections``.
-  (`#101286 <https://github.com/llvm/llvm-project/pull/101286>`_)
-* Section ``CLASS`` linker script syntax binds input sections to named classes,
-  which are referenced later one or more times. This provides access to the
-  automatic spilling mechanism of `--enable-non-contiguous-regions` without
-  globally changing the semantics of section matching. It also independently
-  increases the expressive power of linker scripts.
-  (`#95323 <https://github.com/llvm/llvm-project/pull/95323>`_)
+* Added ``--bp-compression-sort-section=<glob>[=<layout_priority>[=<match_priority>]]``,
+  replacing the old coarse ``--bp-compression-sort`` modes with a way to split
+  input sections into multiple compression groups, run balanced partitioning
+  independently per group, and leave out sections that are poor candidates for
+  BP.
+  ``layout_priority`` controls group placement order (lower value = placed
+  first, default 0). ``match_priority`` resolves conflicts when multiple globs
+  match the same section (lower value = higher priority; explicit priority
+  beats positional last-match-wins; default: positional). In ELF, the glob
+  matches input section names (e.g. ``.text.unlikely.code1``).
+
+* When a ``SECTIONS`` command interleaves relro and non-relro sections, lld now
+  emits one ``PT_GNU_RELRO`` segment per contiguous run of relro sections
+  instead of reporting a ``not contiguous with other relro sections`` error.
 
 Breaking changes
 ----------------
 
+* The symbol partition feature has been removed. lld no longer recognizes
+  ``SHT_LLVM_SYMPART`` sections, which are now treated as ordinary sections. The
+  feature saw no adoption beyond a Chromium experiment that has since been
+  retired.
+
+* An OutputSection that has an address expression, and is also assigned
+  to a MEMORY region, will now use the address expression in preference
+  to the next available location in the MEMORY region. This brings LLD
+  in line with GNU ld, but is a change in behavior from previous LLD
+  releases.
+  
+* The default extension for time trace files is now ``.time-trace.json``.
+
 COFF Improvements
 -----------------
-* ``/includeglob`` has been implemented to match the behavior of ``--undefined-glob`` available for ELF.
 
 MinGW Improvements
 ------------------
-* ``--undefined-glob`` is now supported by translating into the ``/includeglob`` flag.
+
+* Added ``--push-state`` and ``--pop-state``, offering the same semantics as
+  when used with the ELF linker: The state of ``--Bstatic``/``--Bdynamic`` and
+  ``--whole-archive`` are pushed onto a stack and popped from it.
 
 MachO Improvements
 ------------------
+
+* ``--bp-compression-sort-section`` now accepts optional layout and match
+  priorities (same syntax as ELF). In Mach-O, the glob matches the
+  concatenated segment+section name (e.g. ``__TEXT__text``).
+* Restructure thunk generation algorithm to be more efficiently create thunks
+  (`#193367 <https://github.com/llvm/llvm-project/pull/193367>`_)
+* Alphabetically sort LC_LINKER_OPTIONS before processing to match Apple linker behavior
+  (`#201604 https://github.com/llvm/llvm-project/pull/201604`)
 
 WebAssembly Improvements
 ------------------------

@@ -48,7 +48,7 @@ define i32 @t3_exact(i64 %x) {
 
 define <2 x i32> @t4(<2 x i64> %x) {
 ; CHECK-LABEL: @t4(
-; CHECK-NEXT:    [[T0_NEG:%.*]] = ashr <2 x i64> [[X:%.*]], <i64 63, i64 63>
+; CHECK-NEXT:    [[T0_NEG:%.*]] = ashr <2 x i64> [[X:%.*]], splat (i64 63)
 ; CHECK-NEXT:    [[T1_NEG:%.*]] = trunc nsw <2 x i64> [[T0_NEG]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[T1_NEG]]
 ;

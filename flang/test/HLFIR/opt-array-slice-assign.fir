@@ -382,3 +382,427 @@ func.func @_QPtest6(%arg0: !fir.ref<!fir.array<?x?xf32>> {fir.bindc_name = "x"},
 }
 // CHECK-LABEL:   func.func @_QPtest6(
 // CHECK-NOT: hlfir.elemental
+
+// Check that 'x(9,:)=SUM(x(1:8,:),DIM=1)' is optimized
+// due to the LHS and RHS being disjoint array sections.
+func.func @test_disjoint_triple_index(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x"}) {
+  %cst = arith.constant 0.000000e+00 : f32
+  %c9 = arith.constant 9 : index
+  %c0 = arith.constant 0 : index
+  %c8 = arith.constant 8 : index
+  %c1 = arith.constant 1 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtestEx"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
+  %2:3 = fir.box_dims %1#1, %c1 : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
+  %3 = arith.cmpi sgt, %2#1, %c0 : index
+  %4 = arith.select %3, %2#1, %c0 : index
+  %5 = fir.shape %c8, %4 : (index, index) -> !fir.shape<2>
+  %6 = hlfir.designate %1#0 (%c1:%c8:%c1, %c1:%2#1:%c1)  shape %5 : (!fir.box<!fir.array<?x?xf32>>, index, index, index, index, index, index, !fir.shape<2>) -> !fir.box<!fir.array<8x?xf32>>
+  %7 = fir.shape %4 : (index) -> !fir.shape<1>
+  %8 = hlfir.elemental %7 unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
+  ^bb0(%arg1: index):
+    %10 = fir.alloca f32 {bindc_name = ".sum.reduction"}
+    fir.store %cst to %10 : !fir.ref<f32>
+    fir.do_loop %arg2 = %c1 to %c8 step %c1 unordered {
+      %12 = fir.load %10 : !fir.ref<f32>
+      %13 = hlfir.designate %6 (%arg2, %arg1)  : (!fir.box<!fir.array<8x?xf32>>, index, index) -> !fir.ref<f32>
+      %14 = fir.load %13 : !fir.ref<f32>
+      %15 = arith.addf %12, %14 fastmath<fast> : f32
+      fir.store %15 to %10 : !fir.ref<f32>
+    }
+    %11 = fir.load %10 : !fir.ref<f32>
+    hlfir.yield_element %11 : f32
+  }
+  %9 = hlfir.designate %1#0 (%c9, %c1:%2#1:%c1)  shape %7 : (!fir.box<!fir.array<?x?xf32>>, index, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
+  hlfir.assign %8 to %9 : !hlfir.expr<?xf32>, !fir.box<!fir.array<?xf32>>
+  hlfir.destroy %8 : !hlfir.expr<?xf32>
+  return
+}
+// CHECK-LABEL:   func.func @test_disjoint_triple_index(
+// CHECK-NOT: hlfir.elemental
+
+// Check that 'x(9,:)=SUM(x(9:9,:),DIM=1)' is not optimized.
+func.func @test_overlapping_triple_index(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x"}) {
+  %cst = arith.constant 0.000000e+00 : f32
+  %c9 = arith.constant 9 : index
+  %c0 = arith.constant 0 : index
+  %c8 = arith.constant 8 : index
+  %c1 = arith.constant 1 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtestEx"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
+  %2:3 = fir.box_dims %1#1, %c1 : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
+  %3 = arith.cmpi sgt, %2#1, %c0 : index
+  %4 = arith.select %3, %2#1, %c0 : index
+  %5 = fir.shape %c8, %4 : (index, index) -> !fir.shape<2>
+  %6 = hlfir.designate %1#0 (%c9:%c9:%c1, %c1:%2#1:%c1)  shape %5 : (!fir.box<!fir.array<?x?xf32>>, index, index, index, index, index, index, !fir.shape<2>) -> !fir.box<!fir.array<8x?xf32>>
+  %7 = fir.shape %4 : (index) -> !fir.shape<1>
+  %8 = hlfir.elemental %7 unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
+  ^bb0(%arg1: index):
+    %10 = fir.alloca f32 {bindc_name = ".sum.reduction"}
+    fir.store %cst to %10 : !fir.ref<f32>
+    fir.do_loop %arg2 = %c1 to %c8 step %c1 unordered {
+      %12 = fir.load %10 : !fir.ref<f32>
+      %13 = hlfir.designate %6 (%arg2, %arg1)  : (!fir.box<!fir.array<8x?xf32>>, index, index) -> !fir.ref<f32>
+      %14 = fir.load %13 : !fir.ref<f32>
+      %15 = arith.addf %12, %14 fastmath<fast> : f32
+      fir.store %15 to %10 : !fir.ref<f32>
+    }
+    %11 = fir.load %10 : !fir.ref<f32>
+    hlfir.yield_element %11 : f32
+  }
+  %9 = hlfir.designate %1#0 (%c9, %c1:%2#1:%c1)  shape %7 : (!fir.box<!fir.array<?x?xf32>>, index, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
+  hlfir.assign %8 to %9 : !hlfir.expr<?xf32>, !fir.box<!fir.array<?xf32>>
+  hlfir.destroy %8 : !hlfir.expr<?xf32>
+  return
+}
+// CHECK-LABEL:   func.func @test_overlapping_triple_index(
+// CHECK: hlfir.elemental
+
+// Check that 'x(9:ub) = x(lb:6) + 1' is optimized,
+// even though the lb and ub are unknown.
+func.func @test_disjoint_unknown_bounds(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}, %arg1: !fir.ref<i32> {fir.bindc_name = "lb"}, %arg2: !fir.ref<i32> {fir.bindc_name = "ub"}) {
+  %c-8 = arith.constant -8 : index
+  %c7 = arith.constant 7 : index
+  %c9 = arith.constant 9 : index
+  %cst = arith.constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c6 = arith.constant 6 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1:2 = hlfir.declare %arg1 dummy_scope %0 {uniq_name = "_QFtestElb"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %2:2 = hlfir.declare %arg2 dummy_scope %0 {uniq_name = "_QFtestEub"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtestEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  %4 = fir.load %1#0 : !fir.ref<i32>
+  %5 = fir.convert %4 : (i32) -> index
+  %6 = arith.subi %c7, %5 : index
+  %7 = arith.cmpi sgt, %6, %c0 : index
+  %8 = arith.select %7, %6, %c0 : index
+  %9 = fir.shape %8 : (index) -> !fir.shape<1>
+  %10 = hlfir.designate %3#0 (%5:%c6:%c1)  shape %9 : (!fir.box<!fir.array<?xf32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
+  %11 = hlfir.elemental %9 unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
+  ^bb0(%arg3: index):
+    %19 = hlfir.designate %10 (%arg3)  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+    %20 = fir.load %19 : !fir.ref<f32>
+    %21 = arith.addf %20, %cst fastmath<fast> : f32
+    hlfir.yield_element %21 : f32
+  }
+  %12 = fir.load %2#0 : !fir.ref<i32>
+  %13 = fir.convert %12 : (i32) -> index
+  %14 = arith.addi %13, %c-8 : index
+  %15 = arith.cmpi sgt, %14, %c0 : index
+  %16 = arith.select %15, %14, %c0 : index
+  %17 = fir.shape %16 : (index) -> !fir.shape<1>
+  %18 = hlfir.designate %3#0 (%c9:%13:%c1)  shape %17 : (!fir.box<!fir.array<?xf32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
+  hlfir.assign %11 to %18 : !hlfir.expr<?xf32>, !fir.box<!fir.array<?xf32>>
+  hlfir.destroy %11 : !hlfir.expr<?xf32>
+  return
+}
+// CHECK-LABEL:   func.func @test_disjoint_unknown_bounds(
+// CHECK-NOT: hlfir.elemental
+
+// Check that 'x(lb1:14) = x(lb2:15:-1) + 1' is optimized,
+// even though lb1 and lb2 are unknown.
+func.func @test_disjoint_unknown_bounds_negative_stride(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}, %arg1: !fir.ref<i32> {fir.bindc_name = "lb1"}, %arg2: !fir.ref<i32> {fir.bindc_name = "lb2"}) {
+  %c1 = arith.constant 1 : index
+  %c14 = arith.constant 14 : index
+  %cst = arith.constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %c-1 = arith.constant -1 : index
+  %c15 = arith.constant 15 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1:2 = hlfir.declare %arg1 dummy_scope %0 {uniq_name = "_QFtestElb1"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %2:2 = hlfir.declare %arg2 dummy_scope %0 {uniq_name = "_QFtestElb2"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtestEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  %4 = fir.load %2#0 : !fir.ref<i32>
+  %5 = fir.convert %4 : (i32) -> index
+  %6 = arith.subi %c14, %5 : index
+  %7 = arith.divsi %6, %c-1 : index
+  %8 = arith.cmpi sgt, %7, %c0 : index
+  %9 = arith.select %8, %7, %c0 : index
+  %10 = fir.shape %9 : (index) -> !fir.shape<1>
+  %11 = hlfir.designate %3#0 (%5:%c15:%c-1)  shape %10 : (!fir.box<!fir.array<?xf32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
+  %12 = hlfir.elemental %10 unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
+  ^bb0(%arg3: index):
+    %20 = hlfir.designate %11 (%arg3)  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+    %21 = fir.load %20 : !fir.ref<f32>
+    %22 = arith.addf %21, %cst fastmath<fast> : f32
+    hlfir.yield_element %22 : f32
+  }
+  %13 = fir.load %1#0 : !fir.ref<i32>
+  %14 = fir.convert %13 : (i32) -> index
+  %15 = arith.subi %c15, %14 : index
+  %16 = arith.cmpi sgt, %15, %c0 : index
+  %17 = arith.select %16, %15, %c0 : index
+  %18 = fir.shape %17 : (index) -> !fir.shape<1>
+  %19 = hlfir.designate %3#0 (%14:%c14:%c1)  shape %18 : (!fir.box<!fir.array<?xf32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
+  hlfir.assign %12 to %19 : !hlfir.expr<?xf32>, !fir.box<!fir.array<?xf32>>
+  hlfir.destroy %12 : !hlfir.expr<?xf32>
+  return
+}
+// CHECK-LABEL:   func.func @test_disjoint_unknown_bounds_negative_stride(
+// CHECK-NOT: hlfir.elemental
+
+// Check that 'x(1:5) = x(5:1:-1) + 1' is not optimized.
+func.func @test_overlap_known_triplets_negative_stride(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
+  %cst = arith.constant 1.000000e+00 : f32
+  %c-1 = arith.constant -1 : index
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtestEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  %2 = fir.shape %c5 : (index) -> !fir.shape<1>
+  %3 = hlfir.designate %1#0 (%c5:%c1:%c-1)  shape %2 : (!fir.box<!fir.array<?xf32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<5xf32>>
+  %4 = hlfir.elemental %2 unordered : (!fir.shape<1>) -> !hlfir.expr<5xf32> {
+  ^bb0(%arg1: index):
+    %6 = hlfir.designate %3 (%arg1)  : (!fir.box<!fir.array<5xf32>>, index) -> !fir.ref<f32>
+    %7 = fir.load %6 : !fir.ref<f32>
+    %8 = arith.addf %7, %cst fastmath<fast> : f32
+    hlfir.yield_element %8 : f32
+  }
+  %5 = hlfir.designate %1#0 (%c1:%c5:%c1)  shape %2 : (!fir.box<!fir.array<?xf32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<5xf32>>
+  hlfir.assign %4 to %5 : !hlfir.expr<5xf32>, !fir.box<!fir.array<5xf32>>
+  hlfir.destroy %4 : !hlfir.expr<5xf32>
+  return
+}
+// CHECK-LABEL:   func.func @test_overlap_known_triplets_negative_stride(
+// CHECK: hlfir.elemental
+
+// Check that 'x(1:5) = x(6:ub:-1) + 1' is not optimized.
+func.func @test_overlap_unknown_bound_negative_stride(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}, %arg1: !fir.ref<i32> {fir.bindc_name = "ub"}) {
+  %c-7 = arith.constant -7 : index
+  %c5 = arith.constant 5 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %c-1 = arith.constant -1 : index
+  %c6 = arith.constant 6 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1:2 = hlfir.declare %arg1 dummy_scope %0 {uniq_name = "_QFtestEub"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %2:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtestEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  %3 = fir.load %1#0 : !fir.ref<i32>
+  %4 = fir.convert %3 : (i32) -> index
+  %5 = arith.addi %4, %c-7 : index
+  %6 = arith.divsi %5, %c-1 : index
+  %7 = arith.cmpi sgt, %6, %c0 : index
+  %8 = arith.select %7, %6, %c0 : index
+  %9 = fir.shape %8 : (index) -> !fir.shape<1>
+  %10 = hlfir.designate %2#0 (%c6:%4:%c-1)  shape %9 : (!fir.box<!fir.array<?xf32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
+  %11 = hlfir.elemental %9 unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
+  ^bb0(%arg2: index):
+    %14 = hlfir.designate %10 (%arg2)  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+    %15 = fir.load %14 : !fir.ref<f32>
+    %16 = arith.addf %15, %cst fastmath<fast> : f32
+    hlfir.yield_element %16 : f32
+  }
+  %12 = fir.shape %c5 : (index) -> !fir.shape<1>
+  %13 = hlfir.designate %2#0 (%c1:%c5:%c1)  shape %12 : (!fir.box<!fir.array<?xf32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<5xf32>>
+  hlfir.assign %11 to %13 : !hlfir.expr<?xf32>, !fir.box<!fir.array<5xf32>>
+  hlfir.destroy %11 : !hlfir.expr<?xf32>
+  return
+}
+// CHECK-LABEL:   func.func @test_overlap_unknown_bound_negative_stride(
+// CHECK: hlfir.elemental
+
+// Check that 'x(1:5) = x(6:ub:stride) + 1' is not optimized.
+func.func @test_overlap_unknown_bound_and_stride(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}, %arg1: !fir.ref<i32> {fir.bindc_name = "ub"}, %arg2: !fir.ref<i32> {fir.bindc_name = "stride"}) {
+  %c5 = arith.constant 5 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %c6 = arith.constant 6 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1:2 = hlfir.declare %arg2 dummy_scope %0 {uniq_name = "_QFtestEstride"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %2:2 = hlfir.declare %arg1 dummy_scope %0 {uniq_name = "_QFtestEub"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtestEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  %4 = fir.load %2#0 : !fir.ref<i32>
+  %5 = fir.convert %4 : (i32) -> index
+  %6 = fir.load %1#0 : !fir.ref<i32>
+  %7 = fir.convert %6 : (i32) -> index
+  %8 = arith.subi %5, %c6 : index
+  %9 = arith.addi %8, %7 : index
+  %10 = arith.divsi %9, %7 : index
+  %11 = arith.cmpi sgt, %10, %c0 : index
+  %12 = arith.select %11, %10, %c0 : index
+  %13 = fir.shape %12 : (index) -> !fir.shape<1>
+  %14 = hlfir.designate %3#0 (%c6:%5:%7)  shape %13 : (!fir.box<!fir.array<?xf32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
+  %15 = hlfir.elemental %13 unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
+  ^bb0(%arg3: index):
+    %18 = hlfir.designate %14 (%arg3)  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+    %19 = fir.load %18 : !fir.ref<f32>
+    %20 = arith.addf %19, %cst fastmath<fast> : f32
+    hlfir.yield_element %20 : f32
+  }
+  %16 = fir.shape %c5 : (index) -> !fir.shape<1>
+  %17 = hlfir.designate %3#0 (%c1:%c5:%c1)  shape %16 : (!fir.box<!fir.array<?xf32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<5xf32>>
+  hlfir.assign %15 to %17 : !hlfir.expr<?xf32>, !fir.box<!fir.array<5xf32>>
+  hlfir.destroy %15 : !hlfir.expr<?xf32>
+  return
+}
+// CHECK-LABEL:   func.func @test_overlap_unknown_bound_and_stride(
+// CHECK: hlfir.elemental
+
+// Check that 'a(2:2:s1) = a(2:2:s2) + 1' is optimized,
+// even though the strides are unknown.
+func.func @test_identical_1element_unknown_strides(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "s1"}, %arg2: !fir.ref<i32> {fir.bindc_name = "s2"}) {
+  %c1_i32 = arith.constant 1 : i32
+  %c0 = arith.constant 0 : index
+  %c2 = arith.constant 2 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtestEa"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %2:2 = hlfir.declare %arg1 dummy_scope %0 {uniq_name = "_QFtestEs1"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3:2 = hlfir.declare %arg2 dummy_scope %0 {uniq_name = "_QFtestEs2"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %4 = fir.load %3#0 : !fir.ref<i32>
+  %5 = fir.convert %4 : (i32) -> index
+  %6 = arith.divsi %5, %5 : index
+  %7 = arith.cmpi sgt, %6, %c0 : index
+  %8 = arith.select %7, %6, %c0 : index
+  %9 = fir.shape %8 : (index) -> !fir.shape<1>
+  %10 = hlfir.designate %1#0 (%c2:%c2:%5)  shape %9 : (!fir.box<!fir.array<?xi32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
+  %11 = hlfir.elemental %9 unordered : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
+  ^bb0(%arg3: index):
+    %19 = hlfir.designate %10 (%arg3)  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+    %20 = fir.load %19 : !fir.ref<i32>
+    %21 = arith.addi %20, %c1_i32 : i32
+    hlfir.yield_element %21 : i32
+  }
+  %12 = fir.load %2#0 : !fir.ref<i32>
+  %13 = fir.convert %12 : (i32) -> index
+  %14 = arith.divsi %13, %13 : index
+  %15 = arith.cmpi sgt, %14, %c0 : index
+  %16 = arith.select %15, %14, %c0 : index
+  %17 = fir.shape %16 : (index) -> !fir.shape<1>
+  %18 = hlfir.designate %1#0 (%c2:%c2:%13)  shape %17 : (!fir.box<!fir.array<?xi32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
+  hlfir.assign %11 to %18 : !hlfir.expr<?xi32>, !fir.box<!fir.array<?xi32>>
+  hlfir.destroy %11 : !hlfir.expr<?xi32>
+  return
+}
+// CHECK-LABEL:   func.func @test_identical_1element_unknown_strides(
+// CHECK-NOT: hlfir.elemental
+
+func.func @test_disjoint_1element_unknown_strides(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "s1"}, %arg2: !fir.ref<i32> {fir.bindc_name = "s2"}) {
+  %c2 = arith.constant 2 : index
+  %c1_i32 = arith.constant 1 : i32
+  %c0 = arith.constant 0 : index
+  %c3 = arith.constant 3 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtestEa"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %2:2 = hlfir.declare %arg1 dummy_scope %0 {uniq_name = "_QFtestEs1"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3:2 = hlfir.declare %arg2 dummy_scope %0 {uniq_name = "_QFtestEs2"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %4 = fir.load %3#0 : !fir.ref<i32>
+  %5 = fir.convert %4 : (i32) -> index
+  %6 = arith.divsi %5, %5 : index
+  %7 = arith.cmpi sgt, %6, %c0 : index
+  %8 = arith.select %7, %6, %c0 : index
+  %9 = fir.shape %8 : (index) -> !fir.shape<1>
+  %10 = hlfir.designate %1#0 (%c3:%c3:%5)  shape %9 : (!fir.box<!fir.array<?xi32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
+  %11 = hlfir.elemental %9 unordered : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
+  ^bb0(%arg3: index):
+    %19 = hlfir.designate %10 (%arg3)  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+    %20 = fir.load %19 : !fir.ref<i32>
+    %21 = arith.addi %20, %c1_i32 : i32
+    hlfir.yield_element %21 : i32
+  }
+  %12 = fir.load %2#0 : !fir.ref<i32>
+  %13 = fir.convert %12 : (i32) -> index
+  %14 = arith.divsi %13, %13 : index
+  %15 = arith.cmpi sgt, %14, %c0 : index
+  %16 = arith.select %15, %14, %c0 : index
+  %17 = fir.shape %16 : (index) -> !fir.shape<1>
+  %18 = hlfir.designate %1#0 (%c2:%c2:%13)  shape %17 : (!fir.box<!fir.array<?xi32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
+  hlfir.assign %11 to %18 : !hlfir.expr<?xi32>, !fir.box<!fir.array<?xi32>>
+  hlfir.destroy %11 : !hlfir.expr<?xi32>
+  return
+}
+// CHECK-LABEL:   func.func @test_disjoint_1element_unknown_strides(
+// CHECK-NOT: hlfir.elemental
+
+// Check that 'a(x:y:1) = a(z:x-1:-1) + 1' is not optimized.
+// The bounds are like in Polyhedron/nf, but the second
+// stride is negative, so it cannot be optimized.
+func.func @test_overlap_sub1_negative_stride(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "x"}, %arg2: !fir.ref<i32> {fir.bindc_name = "y"}, %arg3: !fir.ref<i32> {fir.bindc_name = "z"}) {
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c-1 = arith.constant -1 : index
+  %c1_i32 = arith.constant 1 : i32
+  %0 = fir.dummy_scope : !fir.dscope
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtestEa"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %2:2 = hlfir.declare %arg1 dummy_scope %0 {uniq_name = "_QFtestEx"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3:2 = hlfir.declare %arg2 dummy_scope %0 {uniq_name = "_QFtestEy"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %4:2 = hlfir.declare %arg3 dummy_scope %0 {uniq_name = "_QFtestEz"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %5 = fir.load %4#0 : !fir.ref<i32>
+  %6 = fir.load %2#0 : !fir.ref<i32>
+  %7 = arith.subi %6, %c1_i32 overflow<nsw> : i32
+  %8 = fir.convert %5 : (i32) -> index
+  %9 = fir.convert %7 : (i32) -> index
+  %10 = arith.subi %9, %8 : index
+  %11 = arith.addi %10, %c-1 : index
+  %12 = arith.divsi %11, %c-1 : index
+  %13 = arith.cmpi sgt, %12, %c0 : index
+  %14 = arith.select %13, %12, %c0 : index
+  %15 = fir.shape %14 : (index) -> !fir.shape<1>
+  %16 = hlfir.designate %1#0 (%8:%9:%c-1)  shape %15 : (!fir.box<!fir.array<?xi32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
+  %17 = hlfir.elemental %15 unordered : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
+  ^bb0(%arg4: index):
+    %27 = hlfir.designate %16 (%arg4)  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+    %28 = fir.load %27 : !fir.ref<i32>
+    %29 = arith.addi %28, %c1_i32 : i32
+    hlfir.yield_element %29 : i32
+  }
+  %18 = fir.load %3#0 : !fir.ref<i32>
+  %19 = fir.convert %6 : (i32) -> index
+  %20 = fir.convert %18 : (i32) -> index
+  %21 = arith.subi %20, %19 : index
+  %22 = arith.addi %21, %c1 : index
+  %23 = arith.cmpi sgt, %22, %c0 : index
+  %24 = arith.select %23, %22, %c0 : index
+  %25 = fir.shape %24 : (index) -> !fir.shape<1>
+  %26 = hlfir.designate %1#0 (%19:%20:%c1)  shape %25 : (!fir.box<!fir.array<?xi32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
+  hlfir.assign %17 to %26 : !hlfir.expr<?xi32>, !fir.box<!fir.array<?xi32>>
+  hlfir.destroy %17 : !hlfir.expr<?xi32>
+  return
+}
+// CHECK-LABEL:   func.func @test_overlap_sub1_negative_stride(
+// CHECK: hlfir.elemental
+
+// Check that 'x(1:5) = x(16:8:stride) + 1' is not optimized.
+// TODO: because the bounds are known, we can still deduce
+// no overlap:
+//   * If stride is negative, then (1:5) does not overlap
+//     with (8:16).
+//   * If stride is positive, then (16:8:stride) is an empty
+//     slice, thus it does not overlap with (1:5).
+func.func @test_disjoint_known_bounds_unknown_stride(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}, %arg1: !fir.ref<i32> {fir.bindc_name = "ub"}, %arg2: !fir.ref<i32> {fir.bindc_name = "stride"}) {
+  %c-8 = arith.constant -8 : index
+  %c5 = arith.constant 5 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 1.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %c8 = arith.constant 8 : index
+  %c16 = arith.constant 16 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1:2 = hlfir.declare %arg2 dummy_scope %0 {uniq_name = "_QFtestEstride"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %2:2 = hlfir.declare %arg1 dummy_scope %0 {uniq_name = "_QFtestEub"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %3:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFtestEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  %4 = fir.load %1#0 : !fir.ref<i32>
+  %5 = fir.convert %4 : (i32) -> index
+  %6 = arith.addi %5, %c-8 : index
+  %7 = arith.divsi %6, %5 : index
+  %8 = arith.cmpi sgt, %7, %c0 : index
+  %9 = arith.select %8, %7, %c0 : index
+  %10 = fir.shape %9 : (index) -> !fir.shape<1>
+  %11 = hlfir.designate %3#0 (%c16:%c8:%5)  shape %10 : (!fir.box<!fir.array<?xf32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
+  %12 = hlfir.elemental %10 unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
+  ^bb0(%arg3: index):
+    %15 = hlfir.designate %11 (%arg3)  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+    %16 = fir.load %15 : !fir.ref<f32>
+    %17 = arith.addf %16, %cst fastmath<fast> : f32
+    hlfir.yield_element %17 : f32
+  }
+  %13 = fir.shape %c5 : (index) -> !fir.shape<1>
+  %14 = hlfir.designate %3#0 (%c1:%c5:%c1)  shape %13 : (!fir.box<!fir.array<?xf32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<5xf32>>
+  hlfir.assign %12 to %14 : !hlfir.expr<?xf32>, !fir.box<!fir.array<5xf32>>
+  hlfir.destroy %12 : !hlfir.expr<?xf32>
+  return
+}
+// CHECK-LABEL:   func.func @test_disjoint_known_bounds_unknown_stride(
+// CHECK: hlfir.elemental

@@ -19,7 +19,6 @@ module {
                 llvm.store %2, %12 : i64, !llvm.ptr
                 omp.yield
               }
-              omp.terminator
             }
             omp.terminator
           }
@@ -30,7 +29,6 @@ module {
           %21 = llvm.call @printf(%6, %20, %20) vararg(!llvm.func<i32 (ptr, ...)>): (!llvm.ptr, i32, i32) -> i32
           omp.yield
         }
-        omp.terminator
       }
       omp.terminator
     }

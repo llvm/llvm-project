@@ -6,9 +6,15 @@ lldb_tablegen(JITLoaderGDBPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE JITLoaderGDBProperties.td
   TARGET LLDBPluginJITLoaderGDBPropertiesEnumGen)
 
+lldb_tablegen(JITLoaderGDBProperties.json -dump-json
+  SOURCE JITLoaderGDBProperties.td
+  TARGET LLDBPluginJITLoaderGDBPropertiesJsonGen)
+
 add_lldb_library(lldbPluginJITLoaderGDB PLUGIN
   JITLoaderGDB.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbBreakpoint
     lldbCore
@@ -17,8 +23,6 @@ add_lldb_library(lldbPluginJITLoaderGDB PLUGIN
     lldbTarget
     lldbUtility
     lldbPluginObjectFileMachO
-  LINK_COMPONENTS
-    Support
   )
 
 add_dependencies(lldbPluginJITLoaderGDB

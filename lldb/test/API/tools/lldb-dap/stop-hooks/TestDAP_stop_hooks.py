@@ -2,7 +2,6 @@
 Test stop hooks
 """
 
-
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 import lldbdap_testcase
@@ -16,11 +15,7 @@ class TestDAP_stop_hooks(lldbdap_testcase.DAPTestCaseBase):
         """
         program = self.getBuildArtifact("a.out")
         preRunCommands = ["target stop-hook add -o help"]
-        self.build_and_launch(program, stopOnEntry=True, preRunCommands=preRunCommands)
-
-        # The first stop is on entry.
-        self.continue_to_next_stop()
-
+        self.build_and_launch(program, preRunCommands=preRunCommands)
         breakpoint_ids = self.set_function_breakpoints(["main"])
         # This request hangs if the race happens, because, in that case, the
         # command interpreter is in synchronous mode while lldb-dap expects

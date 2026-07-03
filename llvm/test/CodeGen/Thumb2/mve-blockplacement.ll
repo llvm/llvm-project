@@ -66,9 +66,8 @@ define i32 @test(i8 zeroext %var_2, i16 signext %var_15, ptr %arr_60) {
 ; CHECK-NEXT:    cset r6, ne
 ; CHECK-NEXT:    strb r6, [r5]
 ; CHECK-NEXT:    add.w r2, r2, #792
-; CHECK-NEXT:    ldrb r6, [r3]
+; CHECK-NEXT:    ldrb r6, [r3], #2
 ; CHECK-NEXT:    adds r4, #8
-; CHECK-NEXT:    adds r3, #2
 ; CHECK-NEXT:    cmp r6, #0
 ; CHECK-NEXT:    ite ne
 ; CHECK-NEXT:    sxthne r6, r1
@@ -101,8 +100,7 @@ define i32 @test(i8 zeroext %var_2, i16 signext %var_15, ptr %arr_60) {
 ; CHECK-NEXT:    cset r6, ne
 ; CHECK-NEXT:    adds r4, #8
 ; CHECK-NEXT:    strb r6, [r5]
-; CHECK-NEXT:    ldrb r6, [r3]
-; CHECK-NEXT:    adds r3, #2
+; CHECK-NEXT:    ldrb r6, [r3], #2
 ; CHECK-NEXT:    cmp r6, #0
 ; CHECK-NEXT:    ite ne
 ; CHECK-NEXT:    sxthne r6, r1
@@ -134,8 +132,7 @@ define i32 @test(i8 zeroext %var_2, i16 signext %var_15, ptr %arr_60) {
 ; CHECK-NEXT:    cset r4, ne
 ; CHECK-NEXT:    add.w r11, r11, #8
 ; CHECK-NEXT:    strb r4, [r5]
-; CHECK-NEXT:    ldrb r4, [r3]
-; CHECK-NEXT:    adds r3, #2
+; CHECK-NEXT:    ldrb r4, [r3], #2
 ; CHECK-NEXT:    cmp r4, #0
 ; CHECK-NEXT:    ite ne
 ; CHECK-NEXT:    sxthne r4, r1
@@ -489,10 +486,10 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    @ Parent Loop BB1_10 Depth=2
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=3
 ; CHECK-NEXT:    vqadd.u32 q2, q5, r1
-; CHECK-NEXT:    subs r2, #4
+; CHECK-NEXT:    adds r1, #4
 ; CHECK-NEXT:    vcmp.u32 hi, q7, q2
 ; CHECK-NEXT:    vshl.i32 q2, q1, #2
-; CHECK-NEXT:    add.w r1, r1, #4
+; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vadd.i32 q2, q2, r8
 ; CHECK-NEXT:    vadd.i32 q1, q1, r9
 ; CHECK-NEXT:    vpst
@@ -508,10 +505,10 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    @ Parent Loop BB1_10 Depth=2
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=3
 ; CHECK-NEXT:    vqadd.u32 q2, q5, r1
-; CHECK-NEXT:    subs r2, #4
+; CHECK-NEXT:    adds r1, #4
 ; CHECK-NEXT:    vcmp.u32 hi, q6, q2
 ; CHECK-NEXT:    vshl.i32 q2, q1, #2
-; CHECK-NEXT:    add.w r1, r1, #4
+; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vadd.i32 q2, q2, r8
 ; CHECK-NEXT:    vadd.i32 q1, q1, r9
 ; CHECK-NEXT:    vpst

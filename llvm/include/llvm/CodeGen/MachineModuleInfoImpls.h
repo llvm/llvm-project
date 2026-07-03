@@ -25,7 +25,7 @@ class MCSymbol;
 
 /// MachineModuleInfoMachO - This is a MachineModuleInfoImpl implementation
 /// for MachO targets.
-class MachineModuleInfoMachO : public MachineModuleInfoImpl {
+class LLVM_ABI MachineModuleInfoMachO : public MachineModuleInfoImpl {
   /// GVStubs - Darwin '$non_lazy_ptr' stubs.  The key is something like
   /// "Lfoo$non_lazy_ptr", the value is something like "_foo". The extra bit
   /// is true if this GV is external.
@@ -74,7 +74,7 @@ public:
 
 /// MachineModuleInfoELF - This is a MachineModuleInfoImpl implementation
 /// for ELF targets.
-class MachineModuleInfoELF : public MachineModuleInfoImpl {
+class LLVM_ABI MachineModuleInfoELF : public MachineModuleInfoImpl {
   /// GVStubs - These stubs are used to materialize global addresses in PIC
   /// mode.
   DenseMap<MCSymbol *, StubValueTy> GVStubs;
@@ -83,10 +83,14 @@ class MachineModuleInfoELF : public MachineModuleInfoImpl {
   /// extern_weak symbols.
   DenseMap<MCSymbol *, const MCExpr *> AuthPtrStubs;
 
+  /// HasSignedPersonality is true if the corresponding IR module has the
+  /// "ptrauth-sign-personality" flag set to 1.
+  bool HasSignedPersonality = false;
+
   virtual void anchor(); // Out of line virtual method.
 
 public:
-  MachineModuleInfoELF(const MachineModuleInfo &) {}
+  MachineModuleInfoELF(const MachineModuleInfo &);
 
   StubValueTy &getGVStubEntry(MCSymbol *Sym) {
     assert(Sym && "Key cannot be null");
@@ -105,11 +109,13 @@ public:
   ExprStubListTy getAuthGVStubList() {
     return getSortedExprStubs(AuthPtrStubs);
   }
+
+  bool hasSignedPersonality() const { return HasSignedPersonality; }
 };
 
 /// MachineModuleInfoCOFF - This is a MachineModuleInfoImpl implementation
 /// for COFF targets.
-class MachineModuleInfoCOFF : public MachineModuleInfoImpl {
+class LLVM_ABI MachineModuleInfoCOFF : public MachineModuleInfoImpl {
   /// GVStubs - These stubs are used to materialize global addresses in PIC
   /// mode.
   DenseMap<MCSymbol *, StubValueTy> GVStubs;
@@ -131,7 +137,7 @@ public:
 
 /// MachineModuleInfoWasm - This is a MachineModuleInfoImpl implementation
 /// for Wasm targets.
-class MachineModuleInfoWasm : public MachineModuleInfoImpl {
+class LLVM_ABI MachineModuleInfoWasm : public MachineModuleInfoImpl {
   virtual void anchor(); // Out of line virtual method.
 
 public:

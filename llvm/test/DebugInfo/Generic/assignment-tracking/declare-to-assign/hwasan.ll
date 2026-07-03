@@ -1,5 +1,4 @@
 ; RUN: opt %s -S -passes=declare-to-assign -o - | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators %s -S -passes=declare-to-assign -o - | FileCheck %s
 
 ; CHECK: #dbg_assign
 

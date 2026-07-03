@@ -23,7 +23,6 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/TargetParser/Triple.h"
-#include "llvm/Transforms/IPO.h"
 
 using namespace llvm;
 
@@ -74,8 +73,9 @@ void CrossDSOCFI::buildCFICheck(Module &M) {
   NamedMDNode *CfiFunctionsMD = M.getNamedMetadata("cfi.functions");
   if (CfiFunctionsMD) {
     for (auto *Func : CfiFunctionsMD->operands()) {
-      assert(Func->getNumOperands() >= 2);
-      for (unsigned I = 2; I < Func->getNumOperands(); ++I)
+      assert(Func->getNumOperands() >= 3);
+      assert(isa<ConstantAsMetadata>(Func->getOperand(2)));
+      for (unsigned I = 3; I < Func->getNumOperands(); ++I)
         if (ConstantInt *TypeId =
                 extractNumericTypeId(cast<MDNode>(Func->getOperand(I).get())))
           TypeIds.insert(TypeId->getZExtValue());
@@ -125,12 +125,12 @@ void CrossDSOCFI::buildCFICheck(Module &M) {
     ConstantInt *CaseTypeId = ConstantInt::get(Type::getInt64Ty(Ctx), TypeId);
     BasicBlock *TestBB = BasicBlock::Create(Ctx, "test", F);
     IRBuilder<> IRBTest(TestBB);
-    Function *BitsetTestFn = Intrinsic::getDeclaration(&M, Intrinsic::type_test);
 
-    Value *Test = IRBTest.CreateCall(
-        BitsetTestFn, {&Addr, MetadataAsValue::get(
-                                  Ctx, ConstantAsMetadata::get(CaseTypeId))});
-    BranchInst *BI = IRBTest.CreateCondBr(Test, ExitBB, TrapBB);
+    Value *Test = IRBTest.CreateIntrinsic(
+        Intrinsic::type_test,
+        {&Addr,
+         MetadataAsValue::get(Ctx, ConstantAsMetadata::get(CaseTypeId))});
+    CondBrInst *BI = IRBTest.CreateCondBr(Test, ExitBB, TrapBB);
     BI->setMetadata(LLVMContext::MD_prof, VeryLikelyWeights);
 
     SI->addCase(CaseTypeId, TestBB);

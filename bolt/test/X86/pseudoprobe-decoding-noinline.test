@@ -15,17 +15,18 @@
 # RUN: FileCheck --input-file %t.yaml2 %s --check-prefix CHECK-YAML
 # CHECK-YAML: name: bar
 # CHECK-YAML: - bid: 0
-# CHECK-YAML:   probes: [ { blx: 9 } ]
+# CHECK-YAML:   probes: [ { blk: [ 1, 4 ] } ]
 # CHECK-YAML: inline_tree: [ {  } ]
 #
 # CHECK-YAML: name: foo
 # CHECK-YAML: - bid: 0
-# CHECK-YAML:   probes: [ { blx: 3 } ]
+# CHECK-YAML:   probes: [ { blk: [ 1, 2 ] } ]
 # CHECK-YAML: inline_tree: [ { g: 2 } ]
 #
 # CHECK-YAML: name: main
 # CHECK-YAML: - bid: 0
-# CHECK-YAML:   probes: [ { blx: 1, call: [ 2 ] } ]
+# CHECK-YAML:   calls: [ { off: 0x4, fid: 0, cnt: 0, pp: 2 } ]
+# CHECK-YAML:   probes: [ { } ]
 # CHECK-YAML: inline_tree: [ { g: 1 } ]
 #
 # CHECK-YAML: pseudo_probe_desc:

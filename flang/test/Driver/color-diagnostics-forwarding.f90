@@ -1,5 +1,5 @@
-! Test that flang-new forwards -f{no-}color-diagnostics and
-! -f{no-}diagnostics-color options to flang-new -fc1 as expected.
+! Test that flang forwards -f{no-}color-diagnostics and
+! -f{no-}diagnostics-color options to flang -fc1 as expected.
 
 ! RUN: %flang -fsyntax-only -### %s -o %t 2>&1 -fcolor-diagnostics \
 ! RUN:   | FileCheck %s --check-prefix=CHECK-CD

@@ -14,6 +14,7 @@
 #define LLVM_CODEGEN_TARGETSUBTARGETINFO_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MacroFusion.h"
@@ -22,6 +23,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 #include <vector>
 
@@ -37,6 +39,7 @@ class InstrItineraryData;
 struct InstrStage;
 class InstructionSelector;
 class LegalizerInfo;
+class LibcallLoweringInfo;
 class MachineInstr;
 struct MachineSchedPolicy;
 struct MCReadAdvanceEntry;
@@ -53,6 +56,7 @@ class TargetRegisterClass;
 class TargetRegisterInfo;
 class TargetSchedModel;
 class Triple;
+struct SchedRegion;
 
 //===----------------------------------------------------------------------===//
 ///
@@ -60,10 +64,11 @@ class Triple;
 /// Target-specific options that control code generation and printing should
 /// be exposed through a TargetSubtargetInfo-derived class.
 ///
-class TargetSubtargetInfo : public MCSubtargetInfo {
+class LLVM_ABI TargetSubtargetInfo : public MCSubtargetInfo {
 protected: // Can only create subclasses...
   TargetSubtargetInfo(const Triple &TT, StringRef CPU, StringRef TuneCPU,
-                      StringRef FS, ArrayRef<SubtargetFeatureKV> PF,
+                      StringRef FS, ArrayRef<StringRef> PN,
+                      ArrayRef<SubtargetFeatureKV> PF,
                       ArrayRef<SubtargetSubTypeKV> PD,
                       const MCWriteProcResEntry *WPR,
                       const MCWriteLatencyEntry *WL,
@@ -82,6 +87,10 @@ public:
   ~TargetSubtargetInfo() override;
 
   virtual bool isXRaySupported() const { return false; }
+
+  /// \returns true if the target intrinsic \p IntrinsicID is supported by this
+  /// subtarget.
+  bool isIntrinsicSupported(unsigned IntrinsicID) const;
 
   // Interfaces to the major aspects of target machine information:
   //
@@ -123,9 +132,8 @@ public:
 
   virtual const LegalizerInfo *getLegalizerInfo() const { return nullptr; }
 
-  /// getRegisterInfo - If register information is available, return it.  If
-  /// not, return null.
-  virtual const TargetRegisterInfo *getRegisterInfo() const { return nullptr; }
+  /// Return the target's register information.
+  virtual const TargetRegisterInfo *getRegisterInfo() const = 0;
 
   /// If the information for the register banks is available, return it.
   /// Otherwise return nullptr.
@@ -136,6 +144,12 @@ public:
   virtual const InstrItineraryData *getInstrItineraryData() const {
     return nullptr;
   }
+
+  /// Configure the LibcallLoweringInfo for this subtarget. The libcalls will be
+  /// pre-configured with defaults based on RuntimeLibcallsInfo. This may be
+  /// used to override those decisions, such as disambiguating alternative
+  /// implementations.
+  virtual void initLibcallLoweringInfo(LibcallLoweringInfo &Info) const {}
 
   /// Resolve a SchedClass at runtime, where SchedClass identifies an
   /// MCSchedClassDesc with the isVariant property. This may return the ID of
@@ -164,7 +178,7 @@ public:
   ///
   /// Similar in behavior to `isZeroIdiom`. However, it knows how to identify
   /// all dependency breaking instructions (i.e. not just zero-idioms).
-  /// 
+  ///
   /// As for `isZeroIdiom`, this method returns a mask of "broken" dependencies.
   /// (See method `isZeroIdiom` for a detailed description of Mask).
   virtual bool isDependencyBreaking(const MachineInstr *MI, APInt &Mask) const {
@@ -208,6 +222,10 @@ public:
   /// can be overridden.
   virtual bool enableJoinGlobalCopies() const;
 
+  /// Hack to bring up option. This should be unconditionally true, all targets
+  /// should enable it and delete this.
+  virtual bool enableTerminalRule() const { return false; }
+
   /// True if the subtarget should run a scheduler after register allocation.
   ///
   /// By default this queries the PostRAScheduling bit in the scheduling model
@@ -230,7 +248,17 @@ public:
   /// scheduling heuristics (no custom MachineSchedStrategy) to make
   /// changes to the generic scheduling policy.
   virtual void overrideSchedPolicy(MachineSchedPolicy &Policy,
-                                   unsigned NumRegionInstrs) const {}
+                                   const SchedRegion &Region) const {}
+
+  /// Override generic post-ra scheduling policy within a region.
+  ///
+  /// This is a convenient way for targets that don't provide any custom
+  /// scheduling heuristics (no custom MachineSchedStrategy) to make
+  /// changes to the generic  post-ra scheduling policy.
+  /// Note that some options like tracking register pressure won't take effect
+  /// in post-ra scheduling.
+  virtual void overridePostRASchedPolicy(MachineSchedPolicy &Policy,
+                                         const SchedRegion &Region) const {}
 
   // Perform target-specific adjustments to the latency of a schedule
   // dependency.
@@ -313,7 +341,7 @@ public:
   /// written in the tablegen descriptions, false if it should allocate
   /// the specified physical register later if is it callee-saved.
   virtual bool ignoreCSRForAllocationOrder(const MachineFunction &MF,
-                                           unsigned PhysReg) const {
+                                           MCRegister PhysReg) const {
     return false;
   }
 
@@ -339,6 +367,20 @@ public:
     // Conservatively assume such instructions exist by default.
     return true;
   }
+
+  virtual bool isRegisterReservedByUser(Register R) const { return false; }
+
+  /// Target features to ignore for inline compatibility check.
+  virtual const FeatureBitset &getInlineIgnoreFeatures() const = 0;
+  /// Target features where the callee may have an additional feature,
+  /// instead of the caller.
+  virtual const FeatureBitset &getInlineInverseFeatures() const = 0;
+  /// Target features where all mismatches prevent inlining.
+  virtual const FeatureBitset &getInlineMustMatchFeatures() const = 0;
+
+private:
+  /// Lazy, incrementally-populated cache for isIntrinsicSupported().
+  mutable DenseMap<unsigned, bool> IntrinsicSupportCache;
 };
 } // end namespace llvm
 

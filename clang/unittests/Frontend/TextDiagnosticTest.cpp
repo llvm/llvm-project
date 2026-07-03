@@ -10,6 +10,7 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "gtest/gtest.h"
 
@@ -20,13 +21,12 @@ namespace {
 
 /// Prints a diagnostic with the given DiagnosticOptions and the given
 /// SourceLocation and returns the printed diagnostic text.
-static std::string PrintDiag(const DiagnosticOptions &Opts, FullSourceLoc Loc) {
+static std::string PrintDiag(DiagnosticOptions &Opts, FullSourceLoc Loc) {
   std::string Out;
   llvm::raw_string_ostream OS(Out);
   clang::LangOptions LangOpts;
   // Owned by TextDiagnostic.
-  DiagnosticOptions *DiagOpts = new DiagnosticOptions(Opts);
-  TextDiagnostic Diag(OS, LangOpts, DiagOpts);
+  TextDiagnostic Diag(OS, LangOpts, Opts);
   // Emit a dummy diagnostic that is just 'message'.
   Diag.emitDiagnostic(Loc, DiagnosticsEngine::Level::Warning, "message",
                       /*Ranges=*/{}, /*FixItHints=*/{});
@@ -37,8 +37,8 @@ TEST(TextDiagnostic, ShowLine) {
   // Create dummy FileManager and SourceManager.
   FileSystemOptions FSOpts;
   FileManager FileMgr(FSOpts);
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs);
-  DiagnosticsEngine DiagEngine(DiagID, new DiagnosticOptions,
+  DiagnosticOptions DiagEngineOpts;
+  DiagnosticsEngine DiagEngine(DiagnosticIDs::create(), DiagEngineOpts,
                                new IgnoringDiagConsumer());
   SourceManager SrcMgr(DiagEngine, FileMgr);
 
@@ -95,5 +95,30 @@ TEST(TextDiagnostic, ShowLine) {
   DiagOpts.ShowColumn = false;
   EXPECT_EQ("main.cpp:1: warning: message\n", PrintDiag(DiagOpts, Loc));
 }
+
+struct ShowLevelNoLocationTest
+    : public ::testing::TestWithParam<bool /* ShowLevel */> {};
+
+TEST_P(ShowLevelNoLocationTest, LevelPrefixRespected) {
+  bool ShowLevel = GetParam();
+  DiagnosticOptions DiagOpts;
+  DiagOpts.ShowLevel = ShowLevel;
+  std::string Output;
+  llvm::raw_string_ostream OS(Output);
+  TextDiagnosticPrinter Printer(OS, DiagOpts);
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts, &Printer,
+                          /*ShouldOwnClient=*/false);
+  // Report without a SourceLocation, exercises the no-location path in
+  // TextDiagnosticPrinter::HandleDiagnostic.
+  unsigned ID = Diags.getCustomDiagID(DiagnosticsEngine::Error, "%0");
+  Diags.Report(ID) << "message";
+  if (ShowLevel)
+    EXPECT_EQ(Output, "error: message\n");
+  else
+    EXPECT_EQ(Output, "message\n");
+}
+
+INSTANTIATE_TEST_SUITE_P(ShowLevelNoLocation, ShowLevelNoLocationTest,
+                         ::testing::Bool());
 
 } // anonymous namespace

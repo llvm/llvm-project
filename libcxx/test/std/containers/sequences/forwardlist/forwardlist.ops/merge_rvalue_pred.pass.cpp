@@ -10,7 +10,7 @@
 
 // <forward_list>
 
-// template <class Compare> void merge(forward_list&& x, Compare comp);
+// template <class Compare> void merge(forward_list&& x, Compare comp); // constexpr since C++26
 
 #include <forward_list>
 #include <functional>
@@ -29,11 +29,11 @@ struct value {
   int a;
   int b;
 
-  friend bool operator>(const value& lhs, const value& rhs) { return lhs.a > rhs.a; }
-  friend bool operator==(const value& lhs, const value& rhs) { return lhs.a == rhs.a && lhs.b == rhs.b; }
+  friend TEST_CONSTEXPR bool operator>(const value& lhs, const value& rhs) { return lhs.a > rhs.a; }
+  friend TEST_CONSTEXPR bool operator==(const value& lhs, const value& rhs) { return lhs.a == rhs.a && lhs.b == rhs.b; }
 };
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   { // Basic merge operation.
     typedef int T;
     typedef std::forward_list<T> C;
@@ -57,9 +57,9 @@ int main(int, char**) {
     const T to[3] = {2, 1, 0};
 
     C c2(std::begin(to), std::end(to));
-    I io[3] = {c2.begin(), ++c2.begin(), ++ ++c2.begin()};
+    I io[3]                         = {c2.begin(), ++c2.begin(), ++ ++c2.begin()};
     std::reference_wrapper<T> ro[3] = {*io[0], *io[1], *io[2]};
-    P po[3] = {&*io[0], &*io[1], &*io[2]};
+    P po[3]                         = {&*io[0], &*io[1], &*io[2]};
 
     C c1;
     c1.merge(std::move(c2), std::greater<T>());
@@ -102,6 +102,22 @@ int main(int, char**) {
     C c3(std::begin(t3), std::end(t3));
     assert(c1 == c3);
   }
+
+  { // LWG3088: Make sure self-merging does nothing.
+    int a[] = {5, 4, 3, 2, 1};
+    std::forward_list<int> c(std::begin(a), std::end(a));
+    c.merge(std::move(c), std::greater<int>());
+    assert(c == std::forward_list<int>(std::begin(a), std::end(a)));
+  }
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

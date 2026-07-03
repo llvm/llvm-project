@@ -34,12 +34,12 @@ define i32 @foo(i32 %x) nounwind ssp {
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:    .data_region jt32
-; CHECK-NEXT:  .set L0_0_set_2, LBB0_2-LJTI0_0
-; CHECK-NEXT:  .set L0_0_set_3, LBB0_3-LJTI0_0
-; CHECK-NEXT:  .set L0_0_set_4, LBB0_4-LJTI0_0
-; CHECK-NEXT:  .set L0_0_set_5, LBB0_5-LJTI0_0
-; CHECK-NEXT:  .set L0_0_set_6, LBB0_6-LJTI0_0
-; CHECK-NEXT:  .set L0_0_set_7, LBB0_7-LJTI0_0
+; CHECK-NEXT:  L0_0_set_2 = LBB0_2-LJTI0_0
+; CHECK-NEXT:  L0_0_set_3 = LBB0_3-LJTI0_0
+; CHECK-NEXT:  L0_0_set_4 = LBB0_4-LJTI0_0
+; CHECK-NEXT:  L0_0_set_5 = LBB0_5-LJTI0_0
+; CHECK-NEXT:  L0_0_set_6 = LBB0_6-LJTI0_0
+; CHECK-NEXT:  L0_0_set_7 = LBB0_7-LJTI0_0
 ; CHECK-NEXT:  LJTI0_0:
 ; CHECK-NEXT:    .long L0_0_set_2
 ; CHECK-NEXT:    .long L0_0_set_3
@@ -107,13 +107,12 @@ declare ptr @bar(ptr) uwtable optsize noinline ssp
 define hidden ptr @thingWithValue(ptr %self) uwtable ssp {
 ; CHECK-LABEL: thingWithValue:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je _bar ## TAILCALL
 ; CHECK-NEXT:  ## %bb.1: ## %someThingWithValue.exit
 ; CHECK-NEXT:    retq
 entry:
-  br i1 undef, label %if.then.i, label %if.else.i
+  br i1 poison, label %if.then.i, label %if.else.i
 
 if.then.i:                                        ; preds = %entry
   br label %someThingWithValue.exit

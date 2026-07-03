@@ -12,9 +12,6 @@
 
 #include "JITLinkGeneric.h"
 
-#include "llvm/Support/BinaryStreamReader.h"
-#include "llvm/Support/MemoryBuffer.h"
-
 #define DEBUG_TYPE "jitlink"
 
 namespace llvm {
@@ -24,23 +21,21 @@ JITLinkerBase::~JITLinkerBase() = default;
 
 void JITLinkerBase::linkPhase1(std::unique_ptr<JITLinkerBase> Self) {
 
-  LLVM_DEBUG({
-    dbgs() << "Starting link phase 1 for graph " << G->getName() << "\n";
-  });
+  LLVM_DEBUG(dbgs() << "Starting link phase 1\n");
 
   // Prune and optimize the graph.
   if (auto Err = runPasses(Passes.PrePrunePasses))
     return Ctx->notifyFailed(std::move(Err));
 
   LLVM_DEBUG({
-    dbgs() << "Link graph \"" << G->getName() << "\" pre-pruning:\n";
+    dbgs() << "Link graph pre-pruning:\n";
     G->dump(dbgs());
   });
 
   prune(*G);
 
   LLVM_DEBUG({
-    dbgs() << "Link graph \"" << G->getName() << "\" post-pruning:\n";
+    dbgs() << "Link graph post-pruning:\n";
     G->dump(dbgs());
   });
 
@@ -70,14 +65,15 @@ void JITLinkerBase::linkPhase1(std::unique_ptr<JITLinkerBase> Self) {
 void JITLinkerBase::linkPhase2(std::unique_ptr<JITLinkerBase> Self,
                                AllocResult AR) {
 
+  LLVM_DEBUG(dbgs() << "Starting link phase 2\n");
+
   if (AR)
     Alloc = std::move(*AR);
   else
     return Ctx->notifyFailed(AR.takeError());
 
   LLVM_DEBUG({
-    dbgs() << "Link graph \"" << G->getName()
-           << "\" before post-allocation passes:\n";
+    dbgs() << "Link graph before post-allocation passes:\n";
     G->dump(dbgs());
   });
 
@@ -134,9 +130,7 @@ void JITLinkerBase::linkPhase2(std::unique_ptr<JITLinkerBase> Self,
 void JITLinkerBase::linkPhase3(std::unique_ptr<JITLinkerBase> Self,
                                Expected<AsyncLookupResult> LR) {
 
-  LLVM_DEBUG({
-    dbgs() << "Starting link phase 3 for graph " << G->getName() << "\n";
-  });
+  LLVM_DEBUG(dbgs() << "Starting link phase 3\n");
 
   // If the lookup failed, bail out.
   if (!LR)
@@ -146,8 +140,7 @@ void JITLinkerBase::linkPhase3(std::unique_ptr<JITLinkerBase> Self,
   applyLookupResult(*LR);
 
   LLVM_DEBUG({
-    dbgs() << "Link graph \"" << G->getName()
-           << "\" before pre-fixup passes:\n";
+    dbgs() << "Link graph before pre-fixup passes:\n";
     G->dump(dbgs());
   });
 
@@ -155,7 +148,7 @@ void JITLinkerBase::linkPhase3(std::unique_ptr<JITLinkerBase> Self,
     return abandonAllocAndBailOut(std::move(Self), std::move(Err));
 
   LLVM_DEBUG({
-    dbgs() << "Link graph \"" << G->getName() << "\" before copy-and-fixup:\n";
+    dbgs() << "Link graph before copy-and-fixup:\n";
     G->dump(dbgs());
   });
 
@@ -164,7 +157,7 @@ void JITLinkerBase::linkPhase3(std::unique_ptr<JITLinkerBase> Self,
     return abandonAllocAndBailOut(std::move(Self), std::move(Err));
 
   LLVM_DEBUG({
-    dbgs() << "Link graph \"" << G->getName() << "\" after copy-and-fixup:\n";
+    dbgs() << "Link graph after copy-and-fixup:\n";
     G->dump(dbgs());
   });
 
@@ -189,16 +182,14 @@ void JITLinkerBase::linkPhase3(std::unique_ptr<JITLinkerBase> Self,
 void JITLinkerBase::linkPhase4(std::unique_ptr<JITLinkerBase> Self,
                                FinalizeResult FR) {
 
-  LLVM_DEBUG({
-    dbgs() << "Starting link phase 4 for graph " << G->getName() << "\n";
-  });
+  LLVM_DEBUG(dbgs() << "Starting link phase 4\n");
 
   if (!FR)
     return Ctx->notifyFailed(FR.takeError());
 
   Ctx->notifyFinalized(std::move(*FR));
 
-  LLVM_DEBUG({ dbgs() << "Link of graph " << G->getName() << " complete\n"; });
+  LLVM_DEBUG({ dbgs() << "Link complete\n"; });
 }
 
 Error JITLinkerBase::runPasses(LinkGraphPassList &Passes) {
@@ -214,8 +205,7 @@ JITLinkContext::LookupMap JITLinkerBase::getExternalSymbolNames() const {
   for (auto *Sym : G->external_symbols()) {
     assert(!Sym->getAddress() &&
            "External has already been assigned an address");
-    assert(Sym->getName() != StringRef() && Sym->getName() != "" &&
-           "Externals must be named");
+    assert(Sym->hasName() && "Externals must be named");
     SymbolLookupFlags LookupFlags =
         Sym->isWeaklyReferenced() ? SymbolLookupFlags::WeaklyReferencedSymbol
                                   : SymbolLookupFlags::RequiredSymbol;
@@ -256,7 +246,9 @@ void JITLinkerBase::applyLookupResult(AsyncLookupResult Result) {
       }
       switch (Sym->getScope()) {
       case Scope::Local:
-        llvm_unreachable("External symbol should not have local linkage");
+      case Scope::SideEffectsOnly:
+        llvm_unreachable("External symbol should not have local or "
+                         "side-effects-only linkage");
       case Scope::Hidden:
         break;
       case Scope::Default:

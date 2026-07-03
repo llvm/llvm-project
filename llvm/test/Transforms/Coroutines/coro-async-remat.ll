@@ -24,7 +24,7 @@ entry:
   ret ptr undef
 }
 
-define swifttailcc void @repo(ptr %0, ptr %1, ptr %arg, ptr %2) #1 {
+define swifttailcc void @repo(ptr %0, ptr %1, ptr %arg, ptr %2, i1 %arg2) #1 {
 entry:
   %swifterror = alloca swifterror ptr, align 8
   %3 = call token @llvm.coro.id.async(i32 20, i32 16, i32 1, ptr @repoTU)
@@ -33,10 +33,10 @@ entry:
   br label %6
 
 6:                                                ; preds = %21, %15, %entry
-  br i1 undef, label %7, label %23
+  br i1 %arg2, label %7, label %23
 
 7:                                                ; preds = %6
-  br i1 undef, label %8, label %16
+  br i1 %arg2, label %8, label %16
 
 8:                                                ; preds = %7
   %initializeWithTake35 = bitcast ptr undef to ptr
@@ -44,10 +44,10 @@ entry:
   %10 = call ptr @llvm.coro.async.resume()
   %11 = bitcast ptr %10 to ptr
   %12 = call { ptr, ptr } (i32, ptr, ptr, ...) @llvm.coro.suspend.async.sl_p0i8p0s_swift.error.4.220.413.429.445.461.672.683ss(i32 256, ptr %10, ptr @__swift_async_resume_project_context, ptr @__swift_suspend_dispatch_5.23, ptr undef, ptr undef, ptr undef, ptr %5, ptr undef, ptr undef)
-  br i1 undef, label %25, label %13
+  br i1 %arg2, label %25, label %13
 
 13:                                               ; preds = %8
-  br i1 undef, label %14, label %15
+  br i1 %arg2, label %14, label %15
 
 14:                                               ; preds = %13
   br label %24
@@ -56,16 +56,16 @@ entry:
   br label %6
 
 16:                                               ; preds = %7
-  br i1 undef, label %26, label %17
+  br i1 %arg2, label %26, label %17
 
 17:                                               ; preds = %16
-  br i1 undef, label %18, label %22
+  br i1 %arg2, label %18, label %22
 
 18:                                               ; preds = %17
-  br i1 undef, label %27, label %19
+  br i1 %arg2, label %27, label %19
 
 19:                                               ; preds = %18
-  br i1 undef, label %20, label %21
+  br i1 %arg2, label %20, label %21
 
 20:                                               ; preds = %19
   br label %24

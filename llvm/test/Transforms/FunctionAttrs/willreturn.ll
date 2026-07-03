@@ -88,7 +88,7 @@ define i32 @mustprogress_call_known_functions(ptr %ptr) mustprogress {
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; ATTRIBUTOR-LABEL: @mustprogress_call_known_functions(
 ; ATTRIBUTOR-NEXT:    call void @mustprogress_readnone() #[[ATTR9:[0-9]+]]
-; ATTRIBUTOR-NEXT:    [[R:%.*]] = call i32 @mustprogress_load(ptr nocapture nofree readonly [[PTR:%.*]]) #[[ATTR12:[0-9]+]]
+; ATTRIBUTOR-NEXT:    [[R:%.*]] = call i32 @mustprogress_load(ptr nofree readonly captures(none) [[PTR:%.*]]) #[[ATTR12:[0-9]+]]
 ; ATTRIBUTOR-NEXT:    ret i32 [[R]]
 ;
   call void @mustprogress_readnone()

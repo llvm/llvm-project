@@ -1,7 +1,7 @@
 ! Tests that there no debug-info conflicts arise because of DI attached to nested
 ! OMP regions arguments.
 
-! RUN: %flang -c -fopenmp -g -mmlir --openmp-enable-delayed-privatization=true \
+! RUN: %flang -c -fopenmp -g -mmlir --enable-delayed-privatization=true \
 ! RUN:   %s -o - 2>&1 | FileCheck %s
 
 subroutine bar (b)

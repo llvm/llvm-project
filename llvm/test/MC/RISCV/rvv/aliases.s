@@ -1,6 +1,6 @@
 # RUN: llvm-mc --triple=riscv64 -mattr +v < %s --show-encoding 2>&1 \
 # RUN:   -mattr +d | FileCheck --check-prefix=ALIAS %s
-# RUN: llvm-mc --triple=riscv64 -mattr=+v --riscv-no-aliases < %s \
+# RUN: llvm-mc --triple=riscv64 -mattr=+v --M no-aliases < %s \
 # RUN:   -mattr +d --show-encoding 2>&1 | FileCheck --check-prefix=NO-ALIAS %s
 
 # ALIAS:    vwcvt.x.x.v     v2, v1, v0.t    # encoding: [0x57,0x61,0x10,0xc4]
@@ -56,16 +56,28 @@ vmset.m v0
 vmnot.m v0, v1
 # ALIAS:    vl1r.v          v0, (a0)        # encoding: [0x07,0x00,0x85,0x02]
 # NO-ALIAS: vl1re8.v        v0, (a0)        # encoding: [0x07,0x00,0x85,0x02]
-vl1r.v v0, (a0) 
+vl1r.v v0, (a0)
+# ALIAS:    vl1r.v          v0, (a0)        # encoding: [0x07,0x00,0x85,0x02]
+# NO-ALIAS: vl1re8.v        v0, (a0)        # encoding: [0x07,0x00,0x85,0x02]
+vl1r.v v0, 0(a0)
 # ALIAS:    vl2r.v          v0, (a0)        # encoding: [0x07,0x00,0x85,0x22]
 # NO-ALIAS: vl2re8.v        v0, (a0)        # encoding: [0x07,0x00,0x85,0x22]
-vl2r.v v0, (a0) 
+vl2r.v v0, (a0)
+# ALIAS:    vl2r.v          v0, (a0)        # encoding: [0x07,0x00,0x85,0x22]
+# NO-ALIAS: vl2re8.v        v0, (a0)        # encoding: [0x07,0x00,0x85,0x22]
+vl2r.v v0, 0(a0)
 # ALIAS:    vl4r.v          v0, (a0)        # encoding: [0x07,0x00,0x85,0x62]
 # NO-ALIAS: vl4re8.v        v0, (a0)        # encoding: [0x07,0x00,0x85,0x62]
-vl4r.v v0, (a0) 
+vl4r.v v0, (a0)
+# ALIAS:    vl4r.v          v0, (a0)        # encoding: [0x07,0x00,0x85,0x62]
+# NO-ALIAS: vl4re8.v        v0, (a0)        # encoding: [0x07,0x00,0x85,0x62]
+vl4r.v v0, 0(a0)
 # ALIAS:    vl8r.v          v0, (a0)        # encoding: [0x07,0x00,0x85,0xe2]
 # NO-ALIAS: vl8re8.v        v0, (a0)        # encoding: [0x07,0x00,0x85,0xe2]
-vl8r.v v0, (a0) 
+vl8r.v v0, (a0)
+# ALIAS:    vl8r.v          v0, (a0)        # encoding: [0x07,0x00,0x85,0xe2]
+# NO-ALIAS: vl8re8.v        v0, (a0)        # encoding: [0x07,0x00,0x85,0xe2]
+vl8r.v v0, 0(a0)
 # ALIAS:    vneg.v          v2, v1, v0.t    # encoding: [0x57,0x41,0x10,0x0c]
 # NO-ALIAS: vrsub.vx        v2, v1, zero, v0.t # encoding: [0x57,0x41,0x10,0x0c]
 vneg.v v2, v1, v0.t 
@@ -81,9 +93,15 @@ vfabs.v v2, v1, v0.t
 # ALIAS:    vlm.v           v8, (a0)         # encoding: [0x07,0x04,0xb5,0x02]
 # NO-ALIAS: vlm.v           v8, (a0)         # encoding: [0x07,0x04,0xb5,0x02]
 vle1.v v8, (a0)
+# ALIAS:    vlm.v           v8, (a0)         # encoding: [0x07,0x04,0xb5,0x02]
+# NO-ALIAS: vlm.v           v8, (a0)         # encoding: [0x07,0x04,0xb5,0x02]
+vle1.v v8, 0(a0)
 # ALIAS:    vsm.v           v8, (a0)         # encoding: [0x27,0x04,0xb5,0x02]
 # NO-ALIAS: vsm.v           v8, (a0)         # encoding: [0x27,0x04,0xb5,0x02]
 vse1.v v8, (a0)
+# ALIAS:    vsm.v           v8, (a0)         # encoding: [0x27,0x04,0xb5,0x02]
+# NO-ALIAS: vsm.v           v8, (a0)         # encoding: [0x27,0x04,0xb5,0x02]
+vse1.v v8, 0(a0)
 # ALIAS:    vfredusum.vs v8, v4, v20, v0.t    # encoding: [0x57,0x14,0x4a,0x04]
 # NO-ALIAS: vfredusum.vs v8, v4, v20, v0.t   # encoding: [0x57,0x14,0x4a,0x04]
 vfredsum.vs v8, v4, v20, v0.t

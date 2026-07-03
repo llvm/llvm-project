@@ -11,17 +11,18 @@ body:             |
     liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: LD4Fourv8b
     ; CHECK: liveins: $x0, $x1, $x2
-    ; CHECK: %ptr:gpr64sp = COPY $x0
-    ; CHECK: [[LD4Fourv8b:%[0-9]+]]:dddd = LD4Fourv8b %ptr :: (load (<8 x s64>))
-    ; CHECK: %dst1:fpr64 = COPY [[LD4Fourv8b]].dsub0
-    ; CHECK: %dst2:fpr64 = COPY [[LD4Fourv8b]].dsub1
-    ; CHECK: %dst3:fpr64 = COPY [[LD4Fourv8b]].dsub2
-    ; CHECK: %dst4:fpr64 = COPY [[LD4Fourv8b]].dsub3
-    ; CHECK: $d0 = COPY %dst1
-    ; CHECK: $d1 = COPY %dst2
-    ; CHECK: $d2 = COPY %dst3
-    ; CHECK: $d3 = COPY %dst4
-    ; CHECK: RET_ReallyLR implicit $d0, implicit $d1, implicit $d2, implicit $d3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[LD4Fourv8b:%[0-9]+]]:dddd = LD4Fourv8b %ptr :: (load (<8 x s64>))
+    ; CHECK-NEXT: %dst1:fpr64 = COPY [[LD4Fourv8b]].dsub0
+    ; CHECK-NEXT: %dst2:fpr64 = COPY [[LD4Fourv8b]].dsub1
+    ; CHECK-NEXT: %dst3:fpr64 = COPY [[LD4Fourv8b]].dsub2
+    ; CHECK-NEXT: %dst4:fpr64 = COPY [[LD4Fourv8b]].dsub3
+    ; CHECK-NEXT: $d0 = COPY %dst1
+    ; CHECK-NEXT: $d1 = COPY %dst2
+    ; CHECK-NEXT: $d2 = COPY %dst3
+    ; CHECK-NEXT: $d3 = COPY %dst4
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0, implicit $d1, implicit $d2, implicit $d3
     %ptr:gpr(p0) = COPY $x0
     %dst1:fpr(<8 x s8>), %dst2:fpr(<8 x s8>), %dst3:fpr(<8 x s8>), %dst4:fpr(<8 x s8>)= G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.ld4), %ptr(p0) :: (load (<8 x s64>))
     $d0 = COPY %dst1(<8 x s8>)
@@ -40,17 +41,18 @@ body:             |
     liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: LD4Fourv16b
     ; CHECK: liveins: $x0, $x1, $x2
-    ; CHECK: %ptr:gpr64sp = COPY $x0
-    ; CHECK: [[LD4Fourv16b:%[0-9]+]]:qqqq = LD4Fourv16b %ptr :: (load (<16 x s64>))
-    ; CHECK: %dst1:fpr128 = COPY [[LD4Fourv16b]].qsub0
-    ; CHECK: %dst2:fpr128 = COPY [[LD4Fourv16b]].qsub1
-    ; CHECK: %dst3:fpr128 = COPY [[LD4Fourv16b]].qsub2
-    ; CHECK: %dst4:fpr128 = COPY [[LD4Fourv16b]].qsub3
-    ; CHECK: $q0 = COPY %dst1
-    ; CHECK: $q1 = COPY %dst2
-    ; CHECK: $q2 = COPY %dst3
-    ; CHECK: $q3 = COPY %dst4
-    ; CHECK: RET_ReallyLR implicit $q0, implicit $q1, implicit $q2, implicit $q3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[LD4Fourv16b:%[0-9]+]]:qqqq = LD4Fourv16b %ptr :: (load (<16 x s64>))
+    ; CHECK-NEXT: %dst1:fpr128 = COPY [[LD4Fourv16b]].qsub0
+    ; CHECK-NEXT: %dst2:fpr128 = COPY [[LD4Fourv16b]].qsub1
+    ; CHECK-NEXT: %dst3:fpr128 = COPY [[LD4Fourv16b]].qsub2
+    ; CHECK-NEXT: %dst4:fpr128 = COPY [[LD4Fourv16b]].qsub3
+    ; CHECK-NEXT: $q0 = COPY %dst1
+    ; CHECK-NEXT: $q1 = COPY %dst2
+    ; CHECK-NEXT: $q2 = COPY %dst3
+    ; CHECK-NEXT: $q3 = COPY %dst4
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0, implicit $q1, implicit $q2, implicit $q3
     %ptr:gpr(p0) = COPY $x0
     %dst1:fpr(<16 x s8>), %dst2:fpr(<16 x s8>), %dst3:fpr(<16 x s8>), %dst4:fpr(<16 x s8>)  = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.ld4), %ptr(p0) :: (load (<16 x s64>))
     $q0 = COPY %dst1(<16 x s8>)
@@ -69,17 +71,18 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: LD4Fourv4h
     ; CHECK: liveins: $x0
-    ; CHECK: %ptr:gpr64sp = COPY $x0
-    ; CHECK: [[LD4Fourv4h:%[0-9]+]]:dddd = LD4Fourv4h %ptr :: (load (<4 x s64>))
-    ; CHECK: %dst1:fpr64 = COPY [[LD4Fourv4h]].dsub0
-    ; CHECK: %dst2:fpr64 = COPY [[LD4Fourv4h]].dsub1
-    ; CHECK: %dst3:fpr64 = COPY [[LD4Fourv4h]].dsub2
-    ; CHECK: %dst4:fpr64 = COPY [[LD4Fourv4h]].dsub3
-    ; CHECK: $d0 = COPY %dst1
-    ; CHECK: $d1 = COPY %dst2
-    ; CHECK: $d2 = COPY %dst3
-    ; CHECK: $d3 = COPY %dst4
-    ; CHECK: RET_ReallyLR implicit $d0, implicit $d1, implicit $d2, implicit $d3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[LD4Fourv4h:%[0-9]+]]:dddd = LD4Fourv4h %ptr :: (load (<4 x s64>))
+    ; CHECK-NEXT: %dst1:fpr64 = COPY [[LD4Fourv4h]].dsub0
+    ; CHECK-NEXT: %dst2:fpr64 = COPY [[LD4Fourv4h]].dsub1
+    ; CHECK-NEXT: %dst3:fpr64 = COPY [[LD4Fourv4h]].dsub2
+    ; CHECK-NEXT: %dst4:fpr64 = COPY [[LD4Fourv4h]].dsub3
+    ; CHECK-NEXT: $d0 = COPY %dst1
+    ; CHECK-NEXT: $d1 = COPY %dst2
+    ; CHECK-NEXT: $d2 = COPY %dst3
+    ; CHECK-NEXT: $d3 = COPY %dst4
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0, implicit $d1, implicit $d2, implicit $d3
     %ptr:gpr(p0) = COPY $x0
     %dst1:fpr(<4 x s16>), %dst2:fpr(<4 x s16>), %dst3:fpr(<4 x s16>), %dst4:fpr(<4 x s16>)  = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.ld4), %ptr(p0) :: (load (<4 x s64>))
     $d0 = COPY %dst1(<4 x s16>)
@@ -98,17 +101,18 @@ body:             |
     liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: LD4Fourv8h
     ; CHECK: liveins: $x0, $x1, $x2
-    ; CHECK: %ptr:gpr64sp = COPY $x0
-    ; CHECK: [[LD4Fourv8h:%[0-9]+]]:qqqq = LD4Fourv8h %ptr :: (load (<8 x s64>))
-    ; CHECK: %dst1:fpr128 = COPY [[LD4Fourv8h]].qsub0
-    ; CHECK: %dst2:fpr128 = COPY [[LD4Fourv8h]].qsub1
-    ; CHECK: %dst3:fpr128 = COPY [[LD4Fourv8h]].qsub2
-    ; CHECK: %dst4:fpr128 = COPY [[LD4Fourv8h]].qsub3
-    ; CHECK: $q0 = COPY %dst1
-    ; CHECK: $q1 = COPY %dst2
-    ; CHECK: $q2 = COPY %dst3
-    ; CHECK: $q3 = COPY %dst4
-    ; CHECK: RET_ReallyLR implicit $q0, implicit $q1, implicit $q2, implicit $q3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[LD4Fourv8h:%[0-9]+]]:qqqq = LD4Fourv8h %ptr :: (load (<8 x s64>))
+    ; CHECK-NEXT: %dst1:fpr128 = COPY [[LD4Fourv8h]].qsub0
+    ; CHECK-NEXT: %dst2:fpr128 = COPY [[LD4Fourv8h]].qsub1
+    ; CHECK-NEXT: %dst3:fpr128 = COPY [[LD4Fourv8h]].qsub2
+    ; CHECK-NEXT: %dst4:fpr128 = COPY [[LD4Fourv8h]].qsub3
+    ; CHECK-NEXT: $q0 = COPY %dst1
+    ; CHECK-NEXT: $q1 = COPY %dst2
+    ; CHECK-NEXT: $q2 = COPY %dst3
+    ; CHECK-NEXT: $q3 = COPY %dst4
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0, implicit $q1, implicit $q2, implicit $q3
     %ptr:gpr(p0) = COPY $x0
     %dst1:fpr(<8 x s16>), %dst2:fpr(<8 x s16>), %dst3:fpr(<8 x s16>), %dst4:fpr(<8 x s16>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.ld4), %ptr(p0) :: (load (<8 x s64>))
     $q0 = COPY %dst1(<8 x s16>)
@@ -127,17 +131,18 @@ body:             |
     liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: LD4Fourv2s
     ; CHECK: liveins: $x0, $x1, $x2
-    ; CHECK: %ptr:gpr64sp = COPY $x0
-    ; CHECK: [[LD4Fourv2s:%[0-9]+]]:dddd = LD4Fourv2s %ptr :: (load (<2 x s64>))
-    ; CHECK: %dst1:fpr64 = COPY [[LD4Fourv2s]].dsub0
-    ; CHECK: %dst2:fpr64 = COPY [[LD4Fourv2s]].dsub1
-    ; CHECK: %dst3:fpr64 = COPY [[LD4Fourv2s]].dsub2
-    ; CHECK: %dst4:fpr64 = COPY [[LD4Fourv2s]].dsub3
-    ; CHECK: $d0 = COPY %dst1
-    ; CHECK: $d1 = COPY %dst2
-    ; CHECK: $d2 = COPY %dst3
-    ; CHECK: $d3 = COPY %dst4
-    ; CHECK: RET_ReallyLR implicit $d0, implicit $d1, implicit $d2, implicit $d3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[LD4Fourv2s:%[0-9]+]]:dddd = LD4Fourv2s %ptr :: (load (<2 x s64>))
+    ; CHECK-NEXT: %dst1:fpr64 = COPY [[LD4Fourv2s]].dsub0
+    ; CHECK-NEXT: %dst2:fpr64 = COPY [[LD4Fourv2s]].dsub1
+    ; CHECK-NEXT: %dst3:fpr64 = COPY [[LD4Fourv2s]].dsub2
+    ; CHECK-NEXT: %dst4:fpr64 = COPY [[LD4Fourv2s]].dsub3
+    ; CHECK-NEXT: $d0 = COPY %dst1
+    ; CHECK-NEXT: $d1 = COPY %dst2
+    ; CHECK-NEXT: $d2 = COPY %dst3
+    ; CHECK-NEXT: $d3 = COPY %dst4
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0, implicit $d1, implicit $d2, implicit $d3
     %ptr:gpr(p0) = COPY $x0
     %dst1:fpr(<2 x s32>), %dst2:fpr(<2 x s32>), %dst3:fpr(<2 x s32>), %dst4:fpr(<2 x s32>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.ld4), %ptr(p0) :: (load (<2 x s64>))
     $d0 = COPY %dst1(<2 x s32>)
@@ -156,17 +161,18 @@ body:             |
     liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: LD4Fourv4s
     ; CHECK: liveins: $x0, $x1, $x2
-    ; CHECK: %ptr:gpr64sp = COPY $x0
-    ; CHECK: [[LD4Fourv4s:%[0-9]+]]:qqqq = LD4Fourv4s %ptr :: (load (<4 x s64>))
-    ; CHECK: %dst1:fpr128 = COPY [[LD4Fourv4s]].qsub0
-    ; CHECK: %dst2:fpr128 = COPY [[LD4Fourv4s]].qsub1
-    ; CHECK: %dst3:fpr128 = COPY [[LD4Fourv4s]].qsub2
-    ; CHECK: %dst4:fpr128 = COPY [[LD4Fourv4s]].qsub3
-    ; CHECK: $q0 = COPY %dst1
-    ; CHECK: $q1 = COPY %dst2
-    ; CHECK: $q2 = COPY %dst3
-    ; CHECK: $q3 = COPY %dst4
-    ; CHECK: RET_ReallyLR implicit $q0, implicit $q1, implicit $q2, implicit $q3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[LD4Fourv4s:%[0-9]+]]:qqqq = LD4Fourv4s %ptr :: (load (<4 x s64>))
+    ; CHECK-NEXT: %dst1:fpr128 = COPY [[LD4Fourv4s]].qsub0
+    ; CHECK-NEXT: %dst2:fpr128 = COPY [[LD4Fourv4s]].qsub1
+    ; CHECK-NEXT: %dst3:fpr128 = COPY [[LD4Fourv4s]].qsub2
+    ; CHECK-NEXT: %dst4:fpr128 = COPY [[LD4Fourv4s]].qsub3
+    ; CHECK-NEXT: $q0 = COPY %dst1
+    ; CHECK-NEXT: $q1 = COPY %dst2
+    ; CHECK-NEXT: $q2 = COPY %dst3
+    ; CHECK-NEXT: $q3 = COPY %dst4
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0, implicit $q1, implicit $q2, implicit $q3
     %ptr:gpr(p0) = COPY $x0
     %dst1:fpr(<4 x s32>), %dst2:fpr(<4 x s32>), %dst3:fpr(<4 x s32>), %dst4:fpr(<4 x s32>)= G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.ld4), %ptr(p0) :: (load (<4 x s64>))
     $q0 = COPY %dst1(<4 x s32>)
@@ -185,17 +191,18 @@ body:             |
     liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: LD4Fourv2d_v2s64
     ; CHECK: liveins: $x0, $x1, $x2
-    ; CHECK: %ptr:gpr64sp = COPY $x0
-    ; CHECK: [[LD4Fourv2d:%[0-9]+]]:qqqq = LD4Fourv2d %ptr :: (load (<2 x s64>))
-    ; CHECK: %dst1:fpr128 = COPY [[LD4Fourv2d]].qsub0
-    ; CHECK: %dst2:fpr128 = COPY [[LD4Fourv2d]].qsub1
-    ; CHECK: %dst3:fpr128 = COPY [[LD4Fourv2d]].qsub2
-    ; CHECK: %dst4:fpr128 = COPY [[LD4Fourv2d]].qsub3
-    ; CHECK: $q0 = COPY %dst1
-    ; CHECK: $q1 = COPY %dst2
-    ; CHECK: $q2 = COPY %dst3
-    ; CHECK: $q3 = COPY %dst4
-    ; CHECK: RET_ReallyLR implicit $q0, implicit $q1, implicit $q2, implicit $q3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[LD4Fourv2d:%[0-9]+]]:qqqq = LD4Fourv2d %ptr :: (load (<2 x s64>))
+    ; CHECK-NEXT: %dst1:fpr128 = COPY [[LD4Fourv2d]].qsub0
+    ; CHECK-NEXT: %dst2:fpr128 = COPY [[LD4Fourv2d]].qsub1
+    ; CHECK-NEXT: %dst3:fpr128 = COPY [[LD4Fourv2d]].qsub2
+    ; CHECK-NEXT: %dst4:fpr128 = COPY [[LD4Fourv2d]].qsub3
+    ; CHECK-NEXT: $q0 = COPY %dst1
+    ; CHECK-NEXT: $q1 = COPY %dst2
+    ; CHECK-NEXT: $q2 = COPY %dst3
+    ; CHECK-NEXT: $q3 = COPY %dst4
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0, implicit $q1, implicit $q2, implicit $q3
     %ptr:gpr(p0) = COPY $x0
     %dst1:fpr(<2 x s64>), %dst2:fpr(<2 x s64>), %dst3:fpr(<2 x s64>), %dst4:fpr(<2 x s64>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.ld4), %ptr(p0) :: (load (<2 x s64>))
     $q0 = COPY %dst1(<2 x s64>)
@@ -214,17 +221,18 @@ body:             |
     liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: LD4Fourv2d_v2p0
     ; CHECK: liveins: $x0, $x1, $x2
-    ; CHECK: %ptr:gpr64sp = COPY $x0
-    ; CHECK: [[LD4Fourv2d:%[0-9]+]]:qqqq = LD4Fourv2d %ptr :: (load (<2 x p0>))
-    ; CHECK: %dst1:fpr128 = COPY [[LD4Fourv2d]].qsub0
-    ; CHECK: %dst2:fpr128 = COPY [[LD4Fourv2d]].qsub1
-    ; CHECK: %dst3:fpr128 = COPY [[LD4Fourv2d]].qsub2
-    ; CHECK: %dst4:fpr128 = COPY [[LD4Fourv2d]].qsub3
-    ; CHECK: $q0 = COPY %dst1
-    ; CHECK: $q1 = COPY %dst2
-    ; CHECK: $q2 = COPY %dst3
-    ; CHECK: $q3 = COPY %dst4
-    ; CHECK: RET_ReallyLR implicit $q0, implicit $q1, implicit $q2, implicit $q3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[LD4Fourv2d:%[0-9]+]]:qqqq = LD4Fourv2d %ptr :: (load (<2 x p0>))
+    ; CHECK-NEXT: %dst1:fpr128 = COPY [[LD4Fourv2d]].qsub0
+    ; CHECK-NEXT: %dst2:fpr128 = COPY [[LD4Fourv2d]].qsub1
+    ; CHECK-NEXT: %dst3:fpr128 = COPY [[LD4Fourv2d]].qsub2
+    ; CHECK-NEXT: %dst4:fpr128 = COPY [[LD4Fourv2d]].qsub3
+    ; CHECK-NEXT: $q0 = COPY %dst1
+    ; CHECK-NEXT: $q1 = COPY %dst2
+    ; CHECK-NEXT: $q2 = COPY %dst3
+    ; CHECK-NEXT: $q3 = COPY %dst4
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0, implicit $q1, implicit $q2, implicit $q3
     %ptr:gpr(p0) = COPY $x0
     %dst1:fpr(<2 x p0>), %dst2:fpr(<2 x p0>), %dst3:fpr(<2 x p0>), %dst4:fpr(<2 x p0>)  = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.ld4), %ptr(p0) :: (load (<2 x p0>))
     $q0 = COPY %dst1(<2 x p0>)
@@ -243,17 +251,18 @@ body:             |
     liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: LD1Fourv1d_s64
     ; CHECK: liveins: $x0, $x1, $x2
-    ; CHECK: %ptr:gpr64sp = COPY $x0
-    ; CHECK: [[LD1Fourv1d:%[0-9]+]]:dddd = LD1Fourv1d %ptr :: (load (s64))
-    ; CHECK: %dst1:fpr64 = COPY [[LD1Fourv1d]].dsub0
-    ; CHECK: %dst2:fpr64 = COPY [[LD1Fourv1d]].dsub1
-    ; CHECK: %dst3:fpr64 = COPY [[LD1Fourv1d]].dsub2
-    ; CHECK: %dst4:fpr64 = COPY [[LD1Fourv1d]].dsub3
-    ; CHECK: $d0 = COPY %dst1
-    ; CHECK: $d1 = COPY %dst2
-    ; CHECK: $d2 = COPY %dst3
-    ; CHECK: $d3 = COPY %dst4
-    ; CHECK: RET_ReallyLR implicit $d0, implicit $d1, implicit $d2, implicit $d3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[LD1Fourv1d:%[0-9]+]]:dddd = LD1Fourv1d %ptr :: (load (s64))
+    ; CHECK-NEXT: %dst1:fpr64 = COPY [[LD1Fourv1d]].dsub0
+    ; CHECK-NEXT: %dst2:fpr64 = COPY [[LD1Fourv1d]].dsub1
+    ; CHECK-NEXT: %dst3:fpr64 = COPY [[LD1Fourv1d]].dsub2
+    ; CHECK-NEXT: %dst4:fpr64 = COPY [[LD1Fourv1d]].dsub3
+    ; CHECK-NEXT: $d0 = COPY %dst1
+    ; CHECK-NEXT: $d1 = COPY %dst2
+    ; CHECK-NEXT: $d2 = COPY %dst3
+    ; CHECK-NEXT: $d3 = COPY %dst4
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0, implicit $d1, implicit $d2, implicit $d3
     %ptr:gpr(p0) = COPY $x0
     %dst1:fpr(s64), %dst2:fpr(s64), %dst3:fpr(s64), %dst4:fpr(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.ld4), %ptr(p0) :: (load (s64))
     $d0 = COPY %dst1(s64)
@@ -272,17 +281,18 @@ body:             |
     liveins: $x0, $x1, $x2
     ; CHECK-LABEL: name: LD1Fourv1d_p0
     ; CHECK: liveins: $x0, $x1, $x2
-    ; CHECK: %ptr:gpr64sp = COPY $x0
-    ; CHECK: [[LD1Fourv1d:%[0-9]+]]:dddd = LD1Fourv1d %ptr :: (load (p0))
-    ; CHECK: %dst1:fpr64 = COPY [[LD1Fourv1d]].dsub0
-    ; CHECK: %dst2:fpr64 = COPY [[LD1Fourv1d]].dsub1
-    ; CHECK: %dst3:fpr64 = COPY [[LD1Fourv1d]].dsub2
-    ; CHECK: %dst4:fpr64 = COPY [[LD1Fourv1d]].dsub3
-    ; CHECK: $d0 = COPY %dst1
-    ; CHECK: $d1 = COPY %dst2
-    ; CHECK: $d2 = COPY %dst3
-    ; CHECK: $d3 = COPY %dst4
-    ; CHECK: RET_ReallyLR implicit $d0, implicit $d1, implicit $d2, implicit $d3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:gpr64sp = COPY $x0
+    ; CHECK-NEXT: [[LD1Fourv1d:%[0-9]+]]:dddd = LD1Fourv1d %ptr :: (load (p0))
+    ; CHECK-NEXT: %dst1:fpr64 = COPY [[LD1Fourv1d]].dsub0
+    ; CHECK-NEXT: %dst2:fpr64 = COPY [[LD1Fourv1d]].dsub1
+    ; CHECK-NEXT: %dst3:fpr64 = COPY [[LD1Fourv1d]].dsub2
+    ; CHECK-NEXT: %dst4:fpr64 = COPY [[LD1Fourv1d]].dsub3
+    ; CHECK-NEXT: $d0 = COPY %dst1
+    ; CHECK-NEXT: $d1 = COPY %dst2
+    ; CHECK-NEXT: $d2 = COPY %dst3
+    ; CHECK-NEXT: $d3 = COPY %dst4
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0, implicit $d1, implicit $d2, implicit $d3
     %ptr:gpr(p0) = COPY $x0
     %dst1:fpr(p0), %dst2:fpr(p0), %dst3:fpr(p0), %dst4:fpr(p0) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.neon.ld4), %ptr(p0) :: (load (p0))
     $d0 = COPY %dst1(p0)

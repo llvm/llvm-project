@@ -75,9 +75,15 @@ protected:
     SBCommandReturnObject sb_return(result);
     SBCommandInterpreter sb_interpreter(&m_interpreter);
     SBDebugger debugger_sb(m_interpreter.GetDebugger().shared_from_this());
-    m_backend->DoExecute(debugger_sb, command.GetArgumentVector(), sb_return);
+    bool success = m_backend->DoExecute(debugger_sb,
+                                        command.GetArgumentVector(), sb_return);
+    // If the plugin command did not set its own status, infer it from the
+    // boolean return value so that callers always see a defined status.
+    if (result.GetStatus() == eReturnStatusInvalid)
+      result.SetStatus(success ? eReturnStatusSuccessFinishResult
+                               : eReturnStatusFailed);
   }
-  std::shared_ptr<lldb::SBCommandPluginInterface> m_backend;
+  lldb::SBCommandPluginInterface *m_backend;
   std::optional<std::string> m_auto_repeat_command;
 };
 } // namespace lldb_private
@@ -98,8 +104,8 @@ SBCommandInterpreter::SBCommandInterpreter(const SBCommandInterpreter &rhs)
 
 SBCommandInterpreter::~SBCommandInterpreter() = default;
 
-const SBCommandInterpreter &SBCommandInterpreter::
-operator=(const SBCommandInterpreter &rhs) {
+const SBCommandInterpreter &
+SBCommandInterpreter::operator=(const SBCommandInterpreter &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
 
   m_opaque_ptr = rhs.m_opaque_ptr;
@@ -151,7 +157,7 @@ bool SBCommandInterpreter::WasInterrupted() const {
 
 bool SBCommandInterpreter::InterruptCommand() {
   LLDB_INSTRUMENT_VA(this);
-  
+
   return (IsValid() ? m_opaque_ptr->InterruptCommand() : false);
 }
 
@@ -208,22 +214,21 @@ void SBCommandInterpreter::HandleCommandsFromFile(
   LLDB_INSTRUMENT_VA(this, file, override_context, options, result);
 
   if (!IsValid()) {
-    result->AppendError("SBCommandInterpreter is not valid.");
+    result->AppendError("SBCommandInterpreter is not valid");
     return;
   }
 
   if (!file.IsValid()) {
     SBStream s;
     file.GetDescription(s);
-    result->AppendErrorWithFormat("File is not valid: %s.", s.GetData());
+    result->AppendErrorWithFormat("File is not valid: %s", s.GetData());
   }
 
   FileSpec tmp_spec = file.ref();
   if (override_context.get())
     m_opaque_ptr->HandleCommandsFromFile(tmp_spec,
                                          override_context.get()->Lock(true),
-                                         options.ref(),
-                                         result.ref());
+                                         options.ref(), result.ref());
 
   else
     m_opaque_ptr->HandleCommandsFromFile(tmp_spec, options.ref(), result.ref());
@@ -264,12 +269,25 @@ int SBCommandInterpreter::HandleCompletionWithDescriptions(
   if (!IsValid())
     return 0;
 
+  if (max_return_elements == 0)
+    return 0;
+
   lldb_private::StringList lldb_matches, lldb_descriptions;
   CompletionResult result;
   CompletionRequest request(current_line, cursor - current_line, result);
+  if (max_return_elements > 0)
+    request.SetMaxReturnElements(max_return_elements);
   m_opaque_ptr->HandleCompletion(request);
   result.GetMatches(lldb_matches);
   result.GetDescriptions(lldb_descriptions);
+
+  // limit the matches to the max_return_elements if necessary
+  if (max_return_elements > 0 &&
+      lldb_matches.GetSize() > static_cast<size_t>(max_return_elements)) {
+    lldb_matches.SetSize(max_return_elements);
+    lldb_descriptions.SetSize(max_return_elements);
+  }
+  int number_of_matches = lldb_matches.GetSize();
 
   // Make the result array indexed from 1 again by adding the 'common prefix'
   // of all completions as element 0. This is done to emulate the old API.
@@ -304,7 +322,7 @@ int SBCommandInterpreter::HandleCompletionWithDescriptions(
   matches.AppendList(temp_matches_list);
   SBStringList temp_descriptions_list(&lldb_descriptions);
   descriptions.AppendList(temp_descriptions_list);
-  return result.GetNumberOfResults();
+  return number_of_matches;
 }
 
 int SBCommandInterpreter::HandleCompletionWithDescriptions(
@@ -365,7 +383,7 @@ SBProcess SBCommandInterpreter::GetProcess() {
   SBProcess sb_process;
   ProcessSP process_sp;
   if (IsValid()) {
-    TargetSP target_sp(m_opaque_ptr->GetDebugger().GetSelectedTarget());
+    TargetSP target_sp(m_opaque_ptr->GetSelectedTarget());
     if (target_sp) {
       std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
       process_sp = target_sp->GetProcessSP();
@@ -453,7 +471,7 @@ void SBCommandInterpreter::SourceInitFileInGlobalDirectory(
 
   result.Clear();
   if (IsValid()) {
-    TargetSP target_sp(m_opaque_ptr->GetDebugger().GetSelectedTarget());
+    TargetSP target_sp(m_opaque_ptr->GetSelectedTarget());
     std::unique_lock<std::recursive_mutex> lock;
     if (target_sp)
       lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
@@ -476,7 +494,7 @@ void SBCommandInterpreter::SourceInitFileInHomeDirectory(
 
   result.Clear();
   if (IsValid()) {
-    TargetSP target_sp(m_opaque_ptr->GetDebugger().GetSelectedTarget());
+    TargetSP target_sp(m_opaque_ptr->GetSelectedTarget());
     std::unique_lock<std::recursive_mutex> lock;
     if (target_sp)
       lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
@@ -492,7 +510,7 @@ void SBCommandInterpreter::SourceInitFileInCurrentWorkingDirectory(
 
   result.Clear();
   if (IsValid()) {
-    TargetSP target_sp(m_opaque_ptr->GetDebugger().GetSelectedTarget());
+    TargetSP target_sp(m_opaque_ptr->GetSelectedTarget());
     std::unique_lock<std::recursive_mutex> lock;
     if (target_sp)
       lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
@@ -514,7 +532,7 @@ const char *SBCommandInterpreter::GetBroadcasterClass() {
   LLDB_INSTRUMENT();
 
   return ConstString(CommandInterpreter::GetStaticBroadcasterClass())
-      .AsCString();
+      .AsCString(nullptr);
 }
 
 const char *SBCommandInterpreter::GetArgumentTypeAsCString(
@@ -649,20 +667,22 @@ SBCommand::operator bool() const {
 const char *SBCommand::GetName() {
   LLDB_INSTRUMENT_VA(this);
 
-  return (IsValid() ? ConstString(m_opaque_sp->GetCommandName()).AsCString() : nullptr);
+  return (IsValid()
+              ? ConstString(m_opaque_sp->GetCommandName()).AsCString(nullptr)
+              : nullptr);
 }
 
 const char *SBCommand::GetHelp() {
   LLDB_INSTRUMENT_VA(this);
 
-  return (IsValid() ? ConstString(m_opaque_sp->GetHelp()).AsCString()
+  return (IsValid() ? ConstString(m_opaque_sp->GetHelp()).AsCString(nullptr)
                     : nullptr);
 }
 
 const char *SBCommand::GetHelpLong() {
   LLDB_INSTRUMENT_VA(this);
 
-  return (IsValid() ? ConstString(m_opaque_sp->GetHelpLong()).AsCString()
+  return (IsValid() ? ConstString(m_opaque_sp->GetHelpLong()).AsCString(nullptr)
                     : nullptr);
 }
 
@@ -742,4 +762,16 @@ void SBCommand::SetFlags(uint32_t flags) {
 
   if (IsValid())
     m_opaque_sp->GetFlags().Set(flags);
+}
+
+void SBCommandInterpreter::SetPrintCallback(
+    lldb::SBCommandPrintCallback callback, void *baton) {
+  LLDB_INSTRUMENT_VA(this, callback, baton);
+
+  if (m_opaque_ptr)
+    m_opaque_ptr->SetPrintCallback(
+        [callback, baton](lldb_private::CommandReturnObject &result) {
+          SBCommandReturnObject sb_result(result);
+          return callback(sb_result, baton);
+        });
 }

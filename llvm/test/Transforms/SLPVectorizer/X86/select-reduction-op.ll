@@ -4,10 +4,12 @@
 define i1 @src(i1 %cmp4.118.i) {
 ; CHECK-LABEL: define i1 @src(
 ; CHECK-SAME: i1 [[CMP4_118_I:%.*]]) {
-; CHECK-NEXT:    [[CMP4_118_I_NOT:%.*]] = xor i1 [[CMP4_118_I]], true
-; CHECK-NEXT:    [[TMP1:%.*]] = freeze <4 x i1> poison
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i1> <i1 poison, i1 true, i1 true, i1 true>, i1 [[CMP4_118_I]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = xor <4 x i1> [[TMP4]], <i1 true, i1 poison, i1 poison, i1 poison>
+; CHECK-NEXT:    [[DOTNOT7:%.*]] = xor i1 poison, true
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze <4 x i1> [[TMP5]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP1]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[CMP4_118_I_NOT]], i1 true, i1 [[TMP2]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP2]], i1 true, i1 [[DOTNOT7]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = freeze i1 [[OP_RDX]]
 ; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[TMP3]], i1 true, i1 poison
 ; CHECK-NEXT:    ret i1 [[OP_RDX1]]

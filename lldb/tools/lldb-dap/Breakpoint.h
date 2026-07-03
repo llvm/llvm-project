@@ -10,23 +10,30 @@
 #define LLDB_TOOLS_LLDB_DAP_BREAKPOINT_H
 
 #include "BreakpointBase.h"
+#include "DAPForward.h"
+#include "lldb/API/SBBreakpoint.h"
 
 namespace lldb_dap {
 
-struct Breakpoint : public BreakpointBase {
-  // The LLDB breakpoint associated wit this source breakpoint
-  lldb::SBBreakpoint bp;
+class Breakpoint : public BreakpointBase {
+public:
+  Breakpoint(DAP &d, const std::optional<std::string> &condition,
+             const std::optional<std::string> &hit_condition)
+      : BreakpointBase(d, condition, hit_condition) {}
+  Breakpoint(DAP &d, lldb::SBBreakpoint bp) : BreakpointBase(d), m_bp(bp) {}
 
-  Breakpoint() = default;
-  Breakpoint(const llvm::json::Object &obj) : BreakpointBase(obj){};
-  Breakpoint(lldb::SBBreakpoint bp) : bp(bp) {}
+  lldb::break_id_t GetID() const { return m_bp.GetID(); }
 
   void SetCondition() override;
   void SetHitCondition() override;
-  void CreateJsonObject(llvm::json::Object &object) override;
+  protocol::Breakpoint ToProtocolBreakpoint() override;
 
   bool MatchesName(const char *name);
   void SetBreakpoint();
+
+protected:
+  /// The LLDB breakpoint associated wit this source breakpoint.
+  lldb::SBBreakpoint m_bp;
 };
 } // namespace lldb_dap
 

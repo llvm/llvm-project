@@ -1365,45 +1365,33 @@ define dso_local fp128 @qpFREXP(ptr %a, ptr %b) {
 ; CHECK-LABEL: qpFREXP:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    .cfi_offset r30, -16
-; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    stdu r1, -64(r1)
-; CHECK-NEXT:    std r0, 80(r1)
-; CHECK-NEXT:    addi r5, r1, 44
-; CHECK-NEXT:    mr r30, r4
 ; CHECK-NEXT:    lxv v2, 0(r3)
+; CHECK-NEXT:    mr r5, r4
 ; CHECK-NEXT:    bl frexpf128
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    lwz r3, 44(r1)
-; CHECK-NEXT:    stw r3, 0(r30)
-; CHECK-NEXT:    addi r1, r1, 64
+; CHECK-NEXT:    addi r1, r1, 32
 ; CHECK-NEXT:    ld r0, 16(r1)
-; CHECK-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: qpFREXP:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
-; CHECK-P8-NEXT:    .cfi_offset r30, -16
-; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-P8-NEXT:    stdu r1, -64(r1)
-; CHECK-P8-NEXT:    std r0, 80(r1)
-; CHECK-P8-NEXT:    addi r5, r1, 44
-; CHECK-P8-NEXT:    mr r30, r4
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    mr r5, r4
 ; CHECK-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-P8-NEXT:    bl frexpf128
 ; CHECK-P8-NEXT:    nop
-; CHECK-P8-NEXT:    lwz r3, 44(r1)
-; CHECK-P8-NEXT:    stw r3, 0(r30)
-; CHECK-P8-NEXT:    addi r1, r1, 64
+; CHECK-P8-NEXT:    addi r1, r1, 32
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
-; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
@@ -1415,3 +1403,448 @@ entry:
   ret fp128 %3
 }
 declare { fp128, i32 } @llvm.frexp.f128.i32(fp128)
+
+
+define dso_local fp128 @acos_f128(fp128 %x) {
+; CHECK-LABEL: acos_f128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    bl acosf128
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    addi r1, r1, 32
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+;
+; CHECK-P8-LABEL: acos_f128:
+; CHECK-P8:       # %bb.0:
+; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    bl acosf128
+; CHECK-P8-NEXT:    nop
+; CHECK-P8-NEXT:    addi r1, r1, 32
+; CHECK-P8-NEXT:    ld r0, 16(r1)
+; CHECK-P8-NEXT:    mtlr r0
+; CHECK-P8-NEXT:    blr
+  %result = call fp128 @llvm.acos.f128(fp128 %x)
+  ret fp128 %result
+}
+
+define dso_local fp128 @asin_f128(fp128 %x) {
+; CHECK-LABEL: asin_f128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    bl asinf128
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    addi r1, r1, 32
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+;
+; CHECK-P8-LABEL: asin_f128:
+; CHECK-P8:       # %bb.0:
+; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    bl asinf128
+; CHECK-P8-NEXT:    nop
+; CHECK-P8-NEXT:    addi r1, r1, 32
+; CHECK-P8-NEXT:    ld r0, 16(r1)
+; CHECK-P8-NEXT:    mtlr r0
+; CHECK-P8-NEXT:    blr
+  %result = call fp128 @llvm.asin.f128(fp128 %x)
+  ret fp128 %result
+}
+
+define dso_local fp128 @atan_f128(fp128 %x) {
+; CHECK-LABEL: atan_f128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    bl atanf128
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    addi r1, r1, 32
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+;
+; CHECK-P8-LABEL: atan_f128:
+; CHECK-P8:       # %bb.0:
+; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    bl atanf128
+; CHECK-P8-NEXT:    nop
+; CHECK-P8-NEXT:    addi r1, r1, 32
+; CHECK-P8-NEXT:    ld r0, 16(r1)
+; CHECK-P8-NEXT:    mtlr r0
+; CHECK-P8-NEXT:    blr
+  %result = call fp128 @llvm.atan.f128(fp128 %x)
+  ret fp128 %result
+}
+
+define dso_local fp128 @atan2_f128(fp128 %x, fp128 %y) {
+; CHECK-LABEL: atan2_f128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    bl atan2f128
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    addi r1, r1, 32
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+;
+; CHECK-P8-LABEL: atan2_f128:
+; CHECK-P8:       # %bb.0:
+; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    bl atan2f128
+; CHECK-P8-NEXT:    nop
+; CHECK-P8-NEXT:    addi r1, r1, 32
+; CHECK-P8-NEXT:    ld r0, 16(r1)
+; CHECK-P8-NEXT:    mtlr r0
+; CHECK-P8-NEXT:    blr
+  %result = call fp128 @llvm.atan2.f128(fp128 %x, fp128 %y)
+  ret fp128 %result
+}
+
+define dso_local fp128 @copysign_f128(fp128 %x, fp128 %y) {
+; CHECK-LABEL: copysign_f128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xscpsgnqp v2, v3, v2
+; CHECK-NEXT:    blr
+;
+; CHECK-P8-LABEL: copysign_f128:
+; CHECK-P8:       # %bb.0:
+; CHECK-P8-NEXT:    xxswapd vs0, v3
+; CHECK-P8-NEXT:    addi r3, r1, -16
+; CHECK-P8-NEXT:    xxswapd vs1, v2
+; CHECK-P8-NEXT:    stxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    addi r3, r1, -32
+; CHECK-P8-NEXT:    stxvd2x vs1, 0, r3
+; CHECK-P8-NEXT:    lbz r4, -1(r1)
+; CHECK-P8-NEXT:    lbz r5, -17(r1)
+; CHECK-P8-NEXT:    rlwimi r5, r4, 0, 0, 24
+; CHECK-P8-NEXT:    stb r5, -17(r1)
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
+; CHECK-P8-NEXT:    xxswapd v2, vs0
+; CHECK-P8-NEXT:    blr
+  %result = call fp128 @llvm.copysign.f128(fp128 %x, fp128 %y)
+  ret fp128 %result
+}
+
+define dso_local fp128 @cosh_f128(fp128 %x) {
+; CHECK-LABEL: cosh_f128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    bl coshf128
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    addi r1, r1, 32
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+;
+; CHECK-P8-LABEL: cosh_f128:
+; CHECK-P8:       # %bb.0:
+; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    bl coshf128
+; CHECK-P8-NEXT:    nop
+; CHECK-P8-NEXT:    addi r1, r1, 32
+; CHECK-P8-NEXT:    ld r0, 16(r1)
+; CHECK-P8-NEXT:    mtlr r0
+; CHECK-P8-NEXT:    blr
+  %result = call fp128 @llvm.cosh.f128(fp128 %x)
+  ret fp128 %result
+}
+
+define dso_local fp128 @exp10_f128(fp128 %x) {
+; CHECK-LABEL: exp10_f128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    bl exp10f128
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    addi r1, r1, 32
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+;
+; CHECK-P8-LABEL: exp10_f128:
+; CHECK-P8:       # %bb.0:
+; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    bl exp10f128
+; CHECK-P8-NEXT:    nop
+; CHECK-P8-NEXT:    addi r1, r1, 32
+; CHECK-P8-NEXT:    ld r0, 16(r1)
+; CHECK-P8-NEXT:    mtlr r0
+; CHECK-P8-NEXT:    blr
+  %result = call fp128 @llvm.exp10.f128(fp128 %x)
+  ret fp128 %result
+}
+
+; FIXME: Asserts
+; define dso_local fp128 @maximum_f128(fp128 %x, fp128 %y) {
+;   %result = call fp128 @llvm.maximum.f128(fp128 %x, fp128 %y)
+;   ret fp128 %result
+; }
+
+; FIXME: Asserts
+; define dso_local fp128 @minimum_f128(fp128 %x, fp128 %y) {
+;   %result = call fp128 @llvm.minimum.f128(fp128 %x, fp128 %y)
+;   ret fp128 %result
+; }
+
+; FIXME: Asserts
+; define dso_local fp128 @maximumnum_f128(fp128 %x, fp128 %y) {
+;   %result = call fp128 @llvm.maximumnum.f128(fp128 %x, fp128 %y)
+;   ret fp128 %result
+; }
+
+; FIXME: Asserts
+; define dso_local fp128 @minimumnum_f128(fp128 %x, fp128 %y) {
+;   %result = call fp128 @llvm.minimumnum.f128(fp128 %x, fp128 %y)
+;   ret fp128 %result
+; }
+
+define dso_local fp128 @ldexp_f128(fp128 %x, i32 %y) {
+; CHECK-LABEL: ldexp_f128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    extsw r5, r5
+; CHECK-NEXT:    bl ldexpf128
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    addi r1, r1, 32
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+;
+; CHECK-P8-LABEL: ldexp_f128:
+; CHECK-P8:       # %bb.0:
+; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    extsw r5, r5
+; CHECK-P8-NEXT:    bl ldexpf128
+; CHECK-P8-NEXT:    nop
+; CHECK-P8-NEXT:    addi r1, r1, 32
+; CHECK-P8-NEXT:    ld r0, 16(r1)
+; CHECK-P8-NEXT:    mtlr r0
+; CHECK-P8-NEXT:    blr
+  %result = call fp128 @llvm.ldexp.f128.i32(fp128 %x, i32 %y)
+  ret fp128 %result
+}
+
+define dso_local { fp128, fp128 } @modf_f128(fp128 %x) {
+; CHECK-LABEL: modf_f128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    stdu r1, -48(r1)
+; CHECK-NEXT:    std r0, 64(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    addi r5, r1, 32
+; CHECK-NEXT:    bl modff128
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    lxv v3, 32(r1)
+; CHECK-NEXT:    addi r1, r1, 48
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+;
+; CHECK-P8-LABEL: modf_f128:
+; CHECK-P8:       # %bb.0:
+; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    .cfi_offset r30, -16
+; CHECK-P8-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
+; CHECK-P8-NEXT:    stdu r1, -64(r1)
+; CHECK-P8-NEXT:    addi r30, r1, 32
+; CHECK-P8-NEXT:    std r0, 80(r1)
+; CHECK-P8-NEXT:    mr r5, r30
+; CHECK-P8-NEXT:    bl modff128
+; CHECK-P8-NEXT:    nop
+; CHECK-P8-NEXT:    lxvd2x vs0, 0, r30
+; CHECK-P8-NEXT:    xxswapd v3, vs0
+; CHECK-P8-NEXT:    addi r1, r1, 64
+; CHECK-P8-NEXT:    ld r0, 16(r1)
+; CHECK-P8-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
+; CHECK-P8-NEXT:    mtlr r0
+; CHECK-P8-NEXT:    blr
+  %result = call { fp128, fp128 } @llvm.modf.f128(fp128 %x)
+  ret { fp128, fp128 } %result
+}
+
+define dso_local fp128 @roundeven_f128(fp128 %x) {
+; CHECK-LABEL: roundeven_f128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    bl roundevenf128
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    addi r1, r1, 32
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+;
+; CHECK-P8-LABEL: roundeven_f128:
+; CHECK-P8:       # %bb.0:
+; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    bl roundevenf128
+; CHECK-P8-NEXT:    nop
+; CHECK-P8-NEXT:    addi r1, r1, 32
+; CHECK-P8-NEXT:    ld r0, 16(r1)
+; CHECK-P8-NEXT:    mtlr r0
+; CHECK-P8-NEXT:    blr
+  %result = call fp128 @llvm.roundeven.f128(fp128 %x)
+  ret fp128 %result
+}
+
+define dso_local fp128 @sinh_f128(fp128 %x) {
+; CHECK-LABEL: sinh_f128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    bl sinhf128
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    addi r1, r1, 32
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+;
+; CHECK-P8-LABEL: sinh_f128:
+; CHECK-P8:       # %bb.0:
+; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    bl sinhf128
+; CHECK-P8-NEXT:    nop
+; CHECK-P8-NEXT:    addi r1, r1, 32
+; CHECK-P8-NEXT:    ld r0, 16(r1)
+; CHECK-P8-NEXT:    mtlr r0
+; CHECK-P8-NEXT:    blr
+  %result = call fp128 @llvm.sinh.f128(fp128 %x)
+  ret fp128 %result
+}
+
+define dso_local fp128 @tanh_f128(fp128 %x) {
+; CHECK-LABEL: tanh_f128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    bl tanhf128
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    addi r1, r1, 32
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+;
+; CHECK-P8-LABEL: tanh_f128:
+; CHECK-P8:       # %bb.0:
+; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    bl tanhf128
+; CHECK-P8-NEXT:    nop
+; CHECK-P8-NEXT:    addi r1, r1, 32
+; CHECK-P8-NEXT:    ld r0, 16(r1)
+; CHECK-P8-NEXT:    mtlr r0
+; CHECK-P8-NEXT:    blr
+  %result = call fp128 @llvm.tanh.f128(fp128 %x)
+  ret fp128 %result
+}
+
+define dso_local fp128 @tan_f128(fp128 %x) {
+; CHECK-LABEL: tan_f128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    bl tanf128
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    addi r1, r1, 32
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+;
+; CHECK-P8-LABEL: tan_f128:
+; CHECK-P8:       # %bb.0:
+; CHECK-P8-NEXT:    mflr r0
+; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
+; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-P8-NEXT:    .cfi_offset lr, 16
+; CHECK-P8-NEXT:    bl tanf128
+; CHECK-P8-NEXT:    nop
+; CHECK-P8-NEXT:    addi r1, r1, 32
+; CHECK-P8-NEXT:    ld r0, 16(r1)
+; CHECK-P8-NEXT:    mtlr r0
+; CHECK-P8-NEXT:    blr
+  %result = call fp128 @llvm.tan.f128(fp128 %x)
+  ret fp128 %result
+}

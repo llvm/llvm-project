@@ -1,0 +1,18 @@
+# RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
+
+---
+# CHECK: error: {{.*}} firstKernArgPreloadReg must be a register, not a stack location
+name: kernarg_preload_stack_argument
+tracksRegLiveness: true
+machineFunctionInfo:
+  explicitKernArgSize: 4
+  maxKernArgAlign: 4
+  numKernargPreloadSGPRs: 1
+  isEntryFunction: true
+  argumentInfo:
+    kernargSegmentPtr: { reg: '$sgpr0_sgpr1' }
+    firstKernArgPreloadReg: { offset: 0 }  # ERROR: Stack instead of register
+body: |
+  bb.0:
+    S_ENDPGM 0
+...

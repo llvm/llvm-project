@@ -4,7 +4,7 @@ target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"
 
 ; return (n < 0 ? a + threadIdx.x : b + threadIdx.x)
-define i32 @no_diverge(i32 %n, i32 %a, i32 %b) {
+define ptx_kernel i32 @no_diverge(i32 %n, i32 %a, i32 %b) {
 ; CHECK-LABEL: for function 'no_diverge'
 entry:
   %tid = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
@@ -27,7 +27,7 @@ merge:
 ; if (threadIdx.x < 5)    // divergent: data dependent
 ;   c = b;
 ; return c;               // c is divergent: sync dependent
-define i32 @sync(i32 %a, i32 %b) {
+define ptx_kernel i32 @sync(i32 %a, i32 %b) {
 ; CHECK-LABEL: for function 'sync'
 bb1:
   %tid = call i32 @llvm.nvvm.read.ptx.sreg.tid.y()
@@ -49,7 +49,7 @@ bb3:
 ; }
 ; // c here is divergent because it is sync dependent on threadIdx.x >= 5
 ; return c;
-define i32 @mixed(i32 %n, i32 %a, i32 %b) {
+define ptx_kernel i32 @mixed(i32 %n, i32 %a, i32 %b) {
 ; CHECK-LABEL: for function 'mixed'
 bb1:
   %tid = call i32 @llvm.nvvm.read.ptx.sreg.tid.z()
@@ -101,7 +101,7 @@ merge:
 ; return i == 10 ? 0 : 1; // i here is divergent
 ;
 ; The i defined in the loop is used outside.
-define i32 @loop() {
+define ptx_kernel i32 @loop() {
 ; CHECK-LABEL: for function 'loop'
 entry:
   %laneid = call i32 @llvm.nvvm.read.ptx.sreg.laneid()
@@ -149,7 +149,7 @@ else:
 }
 
 ; Verifies sync-dependence is computed correctly in the absense of loops.
-define i32 @sync_no_loop(i32 %arg) {
+define ptx_kernel i32 @sync_no_loop(i32 %arg) {
 ; CHECK-LABEL: for function 'sync_no_loop'
 entry:
   %0 = add i32 %arg, 1
@@ -174,9 +174,3 @@ declare i32 @llvm.nvvm.read.ptx.sreg.tid.y()
 declare i32 @llvm.nvvm.read.ptx.sreg.tid.z()
 declare i32 @llvm.nvvm.read.ptx.sreg.laneid()
 
-!nvvm.annotations = !{!0, !1, !2, !3, !4}
-!0 = !{ptr @no_diverge, !"kernel", i32 1}
-!1 = !{ptr @sync, !"kernel", i32 1}
-!2 = !{ptr @mixed, !"kernel", i32 1}
-!3 = !{ptr @loop, !"kernel", i32 1}
-!4 = !{ptr @sync_no_loop, !"kernel", i32 1}

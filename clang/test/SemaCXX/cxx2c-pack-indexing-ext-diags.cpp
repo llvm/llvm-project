@@ -19,3 +19,35 @@ void f(T... t) {
     // cxx11-warning@+1 {{pack indexing is a C++2c extension}}
     T...[0] c;
 }
+
+template <typename... T>
+void g(T... [1]); // cxx11-warning {{'T...[1]' is no longer a pack expansion but a pack indexing type; add a name to specify a pack expansion}} \
+                  // cxx11-warning {{pack indexing is a C++2c extension}} \
+                  // cxx11-note {{candidate function template not viable}} \
+                  // cxx26-warning {{pack indexing is incompatible with C++ standards before C++2c}} \
+                  // cxx26-note {{candidate function template not viable}}
+
+template <typename... T>
+void h(T... param[1]);
+
+template <class T>
+struct S {
+  using type = T;
+};
+
+template <typename... T>
+void h(typename T... [1]::type); // cxx11-warning {{pack indexing is a C++2c extension}} \
+                                 // cxx26-warning {{pack indexing is incompatible with C++ standards before C++2c}}
+
+template <typename... T>
+void x(T... [0]); // cxx11-warning {{'T...[0]' is no longer a pack expansion but a pack indexing type; add a name to specify a pack expansion}} \
+                  // cxx11-warning {{pack indexing is a C++2c extension}} \
+                  // cxx26-warning {{pack indexing is incompatible with C++ standards before C++2c}}
+
+void call() {
+  g<int, double>(nullptr, nullptr); // cxx26-error {{no matching function for call to 'g'}} \
+                                    // cxx11-error {{no matching function for call to 'g'}}
+  h<int, double>(nullptr, nullptr);
+  h<S<int>, S<const char *>>("hello");
+  x<int*>(nullptr);
+}

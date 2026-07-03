@@ -52,7 +52,7 @@ class TestStdGen(unittest.TestCase):
   </tr>
 </tbody></table>
 """
-        self.assertEqual(_ParseSymbolPage(html, "foo"), set(["<cmath>"]))
+        self.assertEqual(_ParseSymbolPage(html, "foo", "foo"), set(["<cmath>"]))
 
     def testParseSymbolPage_MulHeaders(self):
         #  Defined in header <cstddef>
@@ -92,7 +92,9 @@ class TestStdGen(unittest.TestCase):
   </tr>
 </tbody></table>
 """
-        self.assertEqual(_ParseSymbolPage(html, "foo"), set(["<cstdio>", "<cstdlib>"]))
+        self.assertEqual(
+            _ParseSymbolPage(html, "foo", "foo"), set(["<cstdio>", "<cstdlib>"])
+        )
 
     def testParseSymbolPage_MulHeadersInSameDiv(self):
         # Multile <code> blocks in a Div.
@@ -118,7 +120,7 @@ class TestStdGen(unittest.TestCase):
 </tbody></table>
 """
         self.assertEqual(
-            _ParseSymbolPage(html, "foo"), set(["<algorithm>", "<utility>"])
+            _ParseSymbolPage(html, "foo", "foo"), set(["<algorithm>", "<utility>"])
         )
 
     def testParseSymbolPage_MulSymbolsInSameTd(self):
@@ -142,8 +144,10 @@ class TestStdGen(unittest.TestCase):
 </tr>
 </tbody></table>
 """
-        self.assertEqual(_ParseSymbolPage(html, "int8_t"), set(["<cstdint>"]))
-        self.assertEqual(_ParseSymbolPage(html, "int16_t"), set(["<cstdint>"]))
+        self.assertEqual(_ParseSymbolPage(html, "int8_t", "int8_t"), set(["<cstdint>"]))
+        self.assertEqual(
+            _ParseSymbolPage(html, "int16_t", "int16_t"), set(["<cstdint>"])
+        )
 
 
 if __name__ == "__main__":

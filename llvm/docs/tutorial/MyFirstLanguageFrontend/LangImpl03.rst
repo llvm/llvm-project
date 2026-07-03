@@ -313,7 +313,7 @@ in "``TheModule``"s symbol table.
 Finally, we set the name of each of the function's arguments according to the
 names given in the Prototype. This step isn't strictly necessary, but keeping
 the names consistent makes the IR more readable, and allows subsequent code to
-refer directly to the arguments for their names, rather than having to look up
+refer directly to the arguments for their names, rather than having to look
 them up in the Prototype AST.
 
 At this point we have a function prototype with no body. This is how LLVM IR
@@ -429,7 +429,7 @@ at the LLVM IR for simple functions. For example:
 
     ready> 4+5;
     Read top-level expression:
-    define double @0() {
+    define double @__anon_expr() {
     entry:
       ret double 9.000000e+00
     }
@@ -484,7 +484,7 @@ control flow to actually make recursion useful :).
 
     ready> cos(1.234);
     Read top-level expression:
-    define double @1() {
+    define double @__anon_expr() {
     entry:
       %calltmp = call double @cos(double 1.234000e+00)
       ret double %calltmp

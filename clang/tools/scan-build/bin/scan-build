@@ -820,7 +820,8 @@ ENDTEXT
       }
 
       # Emit the "View" link.
-      print OUT "<td><a href=\"$ReportFile#EndPath\">View Report</a></td>";
+      my $EncodedReport = URLEscape($ReportFile);
+      print OUT "<td><a href=\"$EncodedReport#EndPath\">View Report</a></td>";
 
       # Emit REPORTBUG markers.
       print OUT "\n<!-- REPORTBUG id=\"$ReportFile\" -->\n";
@@ -1466,6 +1467,16 @@ sub HtmlEscape {
 }
 
 ##----------------------------------------------------------------------------##
+# URLEscape - encode characters that are special in URLs
+##----------------------------------------------------------------------------##
+
+sub URLEscape {
+  my $arg = shift || '';
+  $arg =~ s/\+/%2B/g;
+  return $arg;
+}
+
+##----------------------------------------------------------------------------##
 # ShellEscape - backslash escape characters that are special to the shell
 ##----------------------------------------------------------------------------##
 
@@ -1887,7 +1898,7 @@ if ($Clang !~ /\+\+(\.exe)?$/) {
   # Determine operating system under which this copy of Perl was built.
   my $IsWinBuild = ($^O =~/msys|cygwin|MSWin32/);
   if($IsWinBuild) {
-    $ClangCXX =~ s/.exe$/++.exe/;
+    $ClangCXX =~ s/\-\d+(\.\d+)?.exe$/++.exe/;
   }
   else {
     $ClangCXX =~ s/\-\d+(\.\d+)?$//;

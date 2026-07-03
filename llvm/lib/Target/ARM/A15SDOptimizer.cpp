@@ -142,9 +142,10 @@ bool A15SDOptimizer::usesRegClass(MachineOperand &MO,
 }
 
 unsigned A15SDOptimizer::getDPRLaneFromSPR(unsigned SReg) {
-  unsigned DReg = TRI->getMatchingSuperReg(SReg, ARM::ssub_1,
-                                           &ARM::DPRRegClass);
-  if (DReg != ARM::NoRegister) return ARM::ssub_1;
+  MCRegister DReg =
+      TRI->getMatchingSuperReg(SReg, ARM::ssub_1, &ARM::DPRRegClass);
+  if (DReg)
+    return ARM::ssub_1;
   return ARM::ssub_0;
 }
 
@@ -431,11 +432,8 @@ unsigned A15SDOptimizer::createExtractSubreg(
     const DebugLoc &DL, unsigned DReg, unsigned Lane,
     const TargetRegisterClass *TRC) {
   Register Out = MRI->createVirtualRegister(TRC);
-  BuildMI(MBB,
-          InsertBefore,
-          DL,
-          TII->get(TargetOpcode::COPY), Out)
-    .addReg(DReg, 0, Lane);
+  BuildMI(MBB, InsertBefore, DL, TII->get(TargetOpcode::COPY), Out)
+      .addReg(DReg, {}, Lane);
 
   return Out;
 }
@@ -579,12 +577,12 @@ bool A15SDOptimizer::runOnInstruction(MachineInstr *MI) {
   //                      lane, and the other lane(s) of the DPR/QPR register
   //                      that we are inserting in are undefined, use the
   //                      original DPR/QPR value.
-  //                    * Otherwise, fall back on the same stategy as COPY.
+  //                    * Otherwise, fall back on the same strategy as COPY.
   //
   //   * REG_SEQUENCE:  * If all except one of the input operands are
   //                      IMPLICIT_DEFs, insert the VDUP pattern for just the
   //                      defined input operand
-  //                    * Otherwise, fall back on the same stategy as COPY.
+  //                    * Otherwise, fall back on the same strategy as COPY.
   //
 
   // First, get all the reads of D-registers done by this instruction.
@@ -616,10 +614,9 @@ bool A15SDOptimizer::runOnInstruction(MachineInstr *MI) {
         continue;
 
       // Collect all the uses of this MI's DPR def for updating later.
-      SmallVector<MachineOperand*, 8> Uses;
       Register DPRDefReg = MI->getOperand(0).getReg();
-      for (MachineOperand &MO : MRI->use_operands(DPRDefReg))
-        Uses.push_back(&MO);
+      SmallVector<MachineOperand *, 8> Uses(
+          llvm::make_pointer_range(MRI->use_operands(DPRDefReg)));
 
       // We can optimize this.
       unsigned NewReg = optimizeSDPattern(MI);

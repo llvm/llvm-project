@@ -25,9 +25,9 @@ __start:
     lw $31, (8 * 4) % (8 * 31)($29)     # CHECK: lw  $ra, 32($sp)     # encoding: [0x8f,0xbf,0x00,0x20]
     lw $31, (8 * 4) % (8)($29)          # CHECK: lw  $ra, 0($sp)      # encoding: [0x8f,0xbf,0x00,0x00]
     lw $31, (8 * 4) + (8 * 31) ($29)    # CHECK: lw  $ra, 280($sp)    # encoding: [0x8f,0xbf,0x01,0x18]
-    lw $31, (8*4) + (8*31) + (8*32 + __start) ($29) # CHECK:  lui $ra, %hi((248+((8*32)+__start))+32) # encoding: [0x3c,0x1f,A,A]
-                                                    # CHECK:                                #   fixup A - offset: 0, value: %hi((248+((8*32)+__start))+32), kind: fixup_Mips_HI16
+    lw $31, (8*4) + (8*31) + (8*32 + __start) ($29) # CHECK:  lui $ra, %hi(248+((8*32)+__start)+32) # encoding: [0x3c,0x1f,A,A]
+                                                    # CHECK:                                #   fixup A - offset: 0, value: %hi(248+((8*32)+__start)+32), kind: fixup_Mips_HI16
                                                     # CHECK:  addu  $ra, $ra, $sp           # encoding: [0x03,0xfd,0xf8,0x21]
-                                                    # CHECK:  lw  $ra, %lo((248+((8*32)+__start))+32)($ra) # encoding: [0x8f,0xff,A,A]
-                                                    # CHECK:                                #   fixup A - offset: 0, value: %lo((248+((8*32)+__start))+32), kind: fixup_Mips_LO16
+                                                    # CHECK:  lw  $ra, %lo(248+((8*32)+__start)+32)($ra) # encoding: [0x8f,0xff,A,A]
+                                                    # CHECK:                                #   fixup A - offset: 0, value: %lo(248+((8*32)+__start)+32), kind: fixup_Mips_LO16
     .end __start

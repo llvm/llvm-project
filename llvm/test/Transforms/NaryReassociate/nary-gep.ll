@@ -21,6 +21,17 @@ define void @no_sext_fat_pointer(ptr addrspace(2) %a, i32 %i, i32 %j) {
   ret void
 }
 
+define ptr addrspace(2) @zext_fat_pointer_crash(ptr addrspace(2) %p, i32 %a) {
+; CHECK-LABEL: @zext_fat_pointer_crash(
+; CHECK-NEXT:    [[C:%.*]] = add i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[Q:%.*]] = getelementptr double, ptr addrspace(2) [[P:%.*]], i32 [[C]]
+; CHECK-NEXT:    ret ptr addrspace(2) [[Q]]
+;
+  %c = add i32 %a, 1
+  %q = getelementptr double, ptr addrspace(2) %p, i32 %c
+  ret ptr addrspace(2) %q
+}
+
 define void @or_disjoint(ptr addrspace(2) %a, i32 %i, i32 %j, i32 %k) {
 ; CHECK-LABEL: @or_disjoint(
 ; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[I:%.*]], [[J:%.*]]

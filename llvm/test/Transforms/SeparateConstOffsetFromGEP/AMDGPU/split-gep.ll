@@ -14,7 +14,7 @@ define ptr addrspace(3) @packed_struct(i32 %i, i32 %j) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = trunc i64 0 to i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [1024 x %struct.Packed], ptr addrspace(3) @packed_struct_array, i32 [[IDXPROM]], i32 [[I:%.*]], i32 1, i32 [[J:%.*]]
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[TMP0]], i32 100
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP0]], i32 100
 ; CHECK-NEXT:    ret ptr addrspace(3) [[UGLYGEP]]
 ;
 entry:

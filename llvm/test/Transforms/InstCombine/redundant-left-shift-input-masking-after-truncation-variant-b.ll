@@ -57,9 +57,9 @@ declare void @use8xi64(<8 x i64>)
 define <8 x i32> @t1_vec_splat(<8 x i64> %x, <8 x i32> %nbits) {
 ; CHECK-LABEL: @t1_vec_splat(
 ; CHECK-NEXT:    [[T0:%.*]] = zext <8 x i32> [[NBITS:%.*]] to <8 x i64>
-; CHECK-NEXT:    [[T1:%.*]] = shl nsw <8 x i64> <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1>, [[T0]]
-; CHECK-NEXT:    [[T2:%.*]] = xor <8 x i64> [[T1]], <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1>
-; CHECK-NEXT:    [[T3:%.*]] = sub <8 x i32> <i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32>, [[NBITS]]
+; CHECK-NEXT:    [[T1:%.*]] = shl nsw <8 x i64> splat (i64 -1), [[T0]]
+; CHECK-NEXT:    [[T2:%.*]] = xor <8 x i64> [[T1]], splat (i64 -1)
+; CHECK-NEXT:    [[T3:%.*]] = sub <8 x i32> splat (i32 32), [[NBITS]]
 ; CHECK-NEXT:    [[T4:%.*]] = and <8 x i64> [[X:%.*]], [[T2]]
 ; CHECK-NEXT:    call void @use8xi32(<8 x i32> [[NBITS]])
 ; CHECK-NEXT:    call void @use8xi64(<8 x i64> [[T0]])
@@ -128,8 +128,8 @@ define <8 x i32> @t3_vec_nonsplat(<8 x i64> %x, <8 x i32> %nbits) {
 ; CHECK-LABEL: @t3_vec_nonsplat(
 ; CHECK-NEXT:    [[T0:%.*]] = add <8 x i32> [[NBITS:%.*]], <i32 -1, i32 0, i32 0, i32 1, i32 0, i32 0, i32 0, i32 0>
 ; CHECK-NEXT:    [[T1:%.*]] = zext <8 x i32> [[T0]] to <8 x i64>
-; CHECK-NEXT:    [[T2:%.*]] = shl nsw <8 x i64> <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1>, [[T1]]
-; CHECK-NEXT:    [[T3:%.*]] = xor <8 x i64> [[T2]], <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1>
+; CHECK-NEXT:    [[T2:%.*]] = shl nsw <8 x i64> splat (i64 -1), [[T1]]
+; CHECK-NEXT:    [[T3:%.*]] = xor <8 x i64> [[T2]], splat (i64 -1)
 ; CHECK-NEXT:    [[T4:%.*]] = sub <8 x i32> <i32 33, i32 32, i32 33, i32 32, i32 32, i32 32, i32 32, i32 32>, [[NBITS]]
 ; CHECK-NEXT:    [[T5:%.*]] = and <8 x i64> [[X:%.*]], [[T3]]
 ; CHECK-NEXT:    call void @use8xi32(<8 x i32> [[T0]])

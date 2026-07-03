@@ -15,6 +15,7 @@
 #include "JITLinkGeneric.h"
 #include "SEHFrameSupport.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/ExecutionEngine/JITLink/COFF.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/Endian.h"
@@ -93,9 +94,12 @@ private:
 
     Edge::Kind Kind = Edge::Invalid;
     const char *FixupPtr = BlockToFix.getContent().data() + Offset;
+    Symbol *ImageBase = GetImageBaseSymbol()(getGraph());
 
     switch (Rel.getType()) {
     case COFF::RelocationTypeAMD64::IMAGE_REL_AMD64_ADDR32NB: {
+      if (!ImageBase)
+        ImageBase = &addImageBaseSymbol();
       Kind = EdgeKind_coff_x86_64::Pointer32NB;
       Addend = *reinterpret_cast<const support::little32_t *>(FixupPtr);
       break;
@@ -148,6 +152,7 @@ private:
         SectionIdx = getObject().getNumberOfSections() + 1;
       else
         SectionIdx = COFFSymbol.getSectionNumber();
+
       auto *AbsSym = &getGraph().addAbsoluteSymbol(
           "secidx", orc::ExecutorAddr(SectionIdx), 2, Linkage::Strong,
           Scope::Local, false);
@@ -181,24 +186,25 @@ private:
   }
 
 public:
-  COFFLinkGraphBuilder_x86_64(const object::COFFObjectFile &Obj, const Triple T,
-                              const SubtargetFeatures Features)
-      : COFFLinkGraphBuilder(Obj, std::move(T), std::move(Features),
+  COFFLinkGraphBuilder_x86_64(const object::COFFObjectFile &Obj,
+                              std::shared_ptr<orc::SymbolStringPool> SSP,
+                              const Triple T, const SubtargetFeatures Features)
+      : COFFLinkGraphBuilder(Obj, std::move(SSP), std::move(T),
+                             std::move(Features),
                              getCOFFX86RelocationKindName) {}
 };
 
 class COFFLinkGraphLowering_x86_64 {
 public:
   // Lowers COFF x86_64 specific edges to generic x86_64 edges.
-  Error lowerCOFFRelocationEdges(LinkGraph &G, JITLinkContext &Ctx) {
+  Error operator()(LinkGraph &G) {
     for (auto *B : G.blocks()) {
       for (auto &E : B->edges()) {
         switch (E.getKind()) {
         case EdgeKind_coff_x86_64::Pointer32NB: {
-          auto ImageBase = getImageBaseAddress(G, Ctx);
-          if (!ImageBase)
-            return ImageBase.takeError();
-          E.setAddend(E.getAddend() - ImageBase->getValue());
+          auto ImageBase = GetImageBase(G);
+          assert(ImageBase && "__ImageBase symbol must be defined");
+          E.setAddend(E.getAddend() - ImageBase->getAddress().getValue());
           E.setKind(x86_64::Pointer32);
           break;
         }
@@ -216,8 +222,7 @@ public:
         }
         case EdgeKind_coff_x86_64::SecRel32: {
           E.setAddend(E.getAddend() -
-                      getSectionStart(E.getTarget().getBlock().getSection())
-                          .getValue());
+                      getSectionStart(E.getTarget().getSection()).getValue());
           E.setKind(x86_64::Pointer32);
           break;
         }
@@ -230,55 +235,88 @@ public:
   }
 
 private:
-  static StringRef getImageBaseSymbolName() { return "__ImageBase"; }
-
   orc::ExecutorAddr getSectionStart(Section &Sec) {
-    if (!SectionStartCache.count(&Sec)) {
+    auto [It, Inserted] = SectionStartCache.try_emplace(&Sec);
+    if (Inserted) {
       SectionRange Range(Sec);
-      SectionStartCache[&Sec] = Range.getStart();
+      It->second = Range.getStart();
     }
-    return SectionStartCache[&Sec];
+    return It->second;
   }
 
-  Expected<orc::ExecutorAddr> getImageBaseAddress(LinkGraph &G,
-                                                  JITLinkContext &Ctx) {
-    if (this->ImageBase)
-      return this->ImageBase;
-    for (auto *S : G.defined_symbols())
-      if (S->getName() == getImageBaseSymbolName()) {
-        this->ImageBase = S->getAddress();
-        return this->ImageBase;
-      }
-
-    JITLinkContext::LookupMap Symbols;
-    Symbols[getImageBaseSymbolName()] = SymbolLookupFlags::RequiredSymbol;
-    orc::ExecutorAddr ImageBase;
-    Error Err = Error::success();
-    Ctx.lookup(Symbols,
-               createLookupContinuation([&](Expected<AsyncLookupResult> LR) {
-                 ErrorAsOutParameter EAO(&Err);
-                 if (!LR) {
-                   Err = LR.takeError();
-                   return;
-                 }
-                 ImageBase = LR->begin()->second.getAddress();
-               }));
-    if (Err)
-      return std::move(Err);
-    this->ImageBase = ImageBase;
-    return ImageBase;
-  }
-
+  GetImageBaseSymbol GetImageBase;
   DenseMap<Section *, orc::ExecutorAddr> SectionStartCache;
-  orc::ExecutorAddr ImageBase;
 };
 
-Error lowerEdges_COFF_x86_64(LinkGraph &G, JITLinkContext *Ctx) {
-  LLVM_DEBUG(dbgs() << "Lowering COFF x86_64 edges:\n");
-  COFFLinkGraphLowering_x86_64 GraphLowering;
+// Synthesize COFF __imp_ Import Address Table (IAT) entries.
+//
+// For a dllimport reference, codegen emits an indirect access through a named
+// __imp_X symbol, e.g.
+//
+//     callq *__imp_bar(%rip)        ; or, for data: movq __imp_g(%rip), %rax
+//
+// where __imp_X is an undefined external. This pass supplies the missing IAT
+// entry by defining __imp_X over an 8-byte pointer slot that holds X's address:
+//
+//     __imp_bar:
+//         .quad bar                 ; X is resolved as an ordinary external
+//
+// X is left external, so its address is provided by whatever resolves the
+// JITDylib's externals (an import library, a DynamicLibrarySearchGenerator,
+// AutoImportGenerator, ...). If X is unresolvable the link fails, exactly as a
+// static link against the corresponding import library would.
+//
+// This is the COFF analog of the ELF/Mach-O GOT builder, but deliberately NOT
+// written as a TableManager/visitEdge pass like x86_64::GOTTableManager. ELF's
+// GOT references are *nameless* edge kinds, so that builder has to create an
+// anonymous entry and redirect every edge to it (and, for our case, would then
+// have to delete the now-orphaned __imp_X external so it isn't looked up).
+// COFF instead references a *named* __imp_X symbol, so the simpler and more
+// natural thing is to define that symbol over the slot: edges to __imp_X then
+// resolve to it with no edge rewriting and no orphan cleanup, call and
+// data-access references are handled identically, and sharing is automatic
+// because there is exactly one __imp_X symbol per import.
+//
+// Direct (non-dllimport) references such as `callq foo` are intentionally not
+// handled here: those are either kept in range by the slab allocator or thunked
+// by the opt-in AutoImportGenerator -- both outside this pass.
+Error synthesizeIATEntries_COFF_x86_64(LinkGraph &G) {
+  static constexpr StringRef ImpPrefix = "__imp_";
 
-  if (auto Err = GraphLowering.lowerCOFFRelocationEdges(G, *Ctx))
-    return Err;
+  // Collect the external __imp_ symbols up front: we mutate the symbol lists
+  // below (makeDefined / addExternalSymbol).
+  SmallVector<Symbol *, 8> Imps;
+  for (auto *Sym : G.external_symbols())
+    if (Sym->hasName() && (*Sym->getName()).starts_with(ImpPrefix))
+      Imps.push_back(Sym);
+  if (Imps.empty())
+    return Error::success();
+
+  auto FindByName = [&](const orc::SymbolStringPtr &Name) -> Symbol * {
+    if (auto *Sym = G.findExternalSymbolByName(Name))
+      return Sym;
+    if (auto *Sym = G.findDefinedSymbolByName(Name))
+      return Sym;
+    return nullptr;
+  };
+
+  Section &IATSec = G.createSection("$__IAT", orc::MemProt::Read);
+
+  for (auto *Imp : Imps) {
+    orc::SymbolStringPtr Base =
+        G.intern((*Imp->getName()).drop_front(ImpPrefix.size()));
+
+    // Find the real target X, or add it as an external to be resolved normally.
+    Symbol *Target = FindByName(std::move(Base));
+    if (!Target)
+      Target = &G.addExternalSymbol(std::move(Base), 0,
+                                    /*IsWeaklyReferenced=*/false);
+
+    // 8-byte slot holding &X, with __imp_X defined over it.
+    Symbol &Slot = x86_64::createAnonymousPointer(G, IATSec, Target);
+    G.makeDefined(*Imp, Slot.getBlock(), 0, G.getPointerSize(), Linkage::Strong,
+                  Scope::Local, /*IsLive=*/true);
+  }
 
   return Error::success();
 }
@@ -305,8 +343,8 @@ const char *getCOFFX86RelocationKindName(Edge::Kind R) {
   }
 }
 
-Expected<std::unique_ptr<LinkGraph>>
-createLinkGraphFromCOFFObject_x86_64(MemoryBufferRef ObjectBuffer) {
+Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromCOFFObject_x86_64(
+    MemoryBufferRef ObjectBuffer, std::shared_ptr<orc::SymbolStringPool> SSP) {
   LLVM_DEBUG({
     dbgs() << "Building jitlink graph for new input "
            << ObjectBuffer.getBufferIdentifier() << "...\n";
@@ -320,7 +358,8 @@ createLinkGraphFromCOFFObject_x86_64(MemoryBufferRef ObjectBuffer) {
   if (!Features)
     return Features.takeError();
 
-  return COFFLinkGraphBuilder_x86_64(**COFFObj, (*COFFObj)->makeTriple(),
+  return COFFLinkGraphBuilder_x86_64(**COFFObj, std::move(SSP),
+                                     (*COFFObj)->makeTriple(),
                                      std::move(*Features))
       .buildGraph();
 }
@@ -337,10 +376,13 @@ void link_COFF_x86_64(std::unique_ptr<LinkGraph> G,
     } else
       Config.PrePrunePasses.push_back(markAllSymbolsLive);
 
+    // Synthesize __imp_X IAT entries for dllimport references, like the GOT/PLT
+    // builders for ELF/Mach-O. Runs in PostPrune (before external-symbol
+    // lookup) so the X targets it introduces are resolved normally.
+    Config.PostPrunePasses.push_back(synthesizeIATEntries_COFF_x86_64);
+
     // Add COFF edge lowering passes.
-    JITLinkContext *CtxPtr = Ctx.get();
-    Config.PreFixupPasses.push_back(
-        [CtxPtr](LinkGraph &G) { return lowerEdges_COFF_x86_64(G, CtxPtr); });
+    Config.PreFixupPasses.push_back(COFFLinkGraphLowering_x86_64());
   }
 
   if (auto Err = Ctx->modifyPassConfig(*G, Config))

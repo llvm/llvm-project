@@ -1,0 +1,25 @@
+---
+# See: https://clang.llvm.org/docs/ClangFormatStyleOptions.html
+BasedOnStyle: LLVM
+AlignAfterOpenBracket: DontAlign
+AlignEscapedNewlines: DontAlign
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignOperands: false
+AlignTrailingComments: false
+IncludeCategories:
+  - Regex:           '^<'
+    Priority:        6
+  - Regex:           '^"(llvm|llvm-c|clang|clang-c)/'
+    Priority:        5
+  - Regex:           '^"flang/'     # Headers shared with Flang
+    Priority:        4
+  - Regex:           '^"flang-rt/'  # Public Flang-RT headers
+    Priority:        3
+  - Regex:           '^[^/]*$'      # Private headers from same library
+    Priority:        1
+  - Regex:           '.*'           # Private headers from sibling libraries
+    Priority:        2
+...
+
+# vim:set filetype=yaml:

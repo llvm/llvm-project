@@ -19,14 +19,10 @@
 
 #include "llvm/Analysis/InstructionPrecedenceTracking.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
-
-#define DEBUG_TYPE "ipt"
-STATISTIC(NumInstScanned, "Number of insts scanned while updating ibt");
 
 #ifndef NDEBUG
 static cl::opt<bool> ExpensiveAsserts(
@@ -47,11 +43,16 @@ const Instruction *InstructionPrecedenceTracking::getFirstSpecialInstruction(
     validate(BB);
 #endif
 
-  if (!FirstSpecialInsts.contains(BB)) {
-    fill(BB);
-    assert(FirstSpecialInsts.contains(BB) && "Must be!");
+  auto [It, Inserted] = FirstSpecialInsts.try_emplace(BB);
+  if (Inserted) {
+    for (const auto &I : *BB) {
+      if (isSpecialInstruction(&I)) {
+        It->second = &I;
+        break;
+      }
+    }
   }
-  return FirstSpecialInsts[BB];
+  return It->second;
 }
 
 bool InstructionPrecedenceTracking::hasSpecialInstructions(
@@ -64,20 +65,6 @@ bool InstructionPrecedenceTracking::isPreceededBySpecialInstruction(
   const Instruction *MaybeFirstSpecial =
       getFirstSpecialInstruction(Insn->getParent());
   return MaybeFirstSpecial && MaybeFirstSpecial->comesBefore(Insn);
-}
-
-void InstructionPrecedenceTracking::fill(const BasicBlock *BB) {
-  FirstSpecialInsts.erase(BB);
-  for (const auto &I : *BB) {
-    NumInstScanned++;
-    if (isSpecialInstruction(&I)) {
-      FirstSpecialInsts[BB] = &I;
-      return;
-    }
-  }
-
-  // Mark this block as having no special instructions.
-  FirstSpecialInsts[BB] = nullptr;
 }
 
 #ifndef NDEBUG
@@ -115,8 +102,9 @@ void InstructionPrecedenceTracking::insertInstructionTo(const Instruction *Inst,
 void InstructionPrecedenceTracking::removeInstruction(const Instruction *Inst) {
   auto *BB = Inst->getParent();
   assert(BB && "must be called before instruction is actually removed");
-  if (FirstSpecialInsts.count(BB) && FirstSpecialInsts[BB] == Inst)
-    FirstSpecialInsts.erase(BB);
+  auto It = FirstSpecialInsts.find(BB);
+  if (It != FirstSpecialInsts.end() && It->second == Inst)
+    FirstSpecialInsts.erase(It);
 }
 
 void InstructionPrecedenceTracking::removeUsersOf(const Instruction *Inst) {

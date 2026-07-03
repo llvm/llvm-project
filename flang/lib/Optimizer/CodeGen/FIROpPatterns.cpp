@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/CodeGen/FIROpPatterns.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "llvm/Support/Debug.h"
 
@@ -47,7 +48,7 @@ mlir::LLVM::ConstantOp ConvertFIRToLLVMPattern::genI32Constant(
     int value) const {
   mlir::Type i32Ty = rewriter.getI32Type();
   mlir::IntegerAttr attr = rewriter.getI32IntegerAttr(value);
-  return rewriter.create<mlir::LLVM::ConstantOp>(loc, i32Ty, attr);
+  return mlir::LLVM::ConstantOp::create(rewriter, loc, i32Ty, attr);
 }
 
 mlir::LLVM::ConstantOp ConvertFIRToLLVMPattern::genConstantOffset(
@@ -55,7 +56,7 @@ mlir::LLVM::ConstantOp ConvertFIRToLLVMPattern::genConstantOffset(
     int offset) const {
   mlir::Type ity = lowerTy().offsetType();
   mlir::IntegerAttr cattr = rewriter.getI32IntegerAttr(offset);
-  return rewriter.create<mlir::LLVM::ConstantOp>(loc, ity, cattr);
+  return mlir::LLVM::ConstantOp::create(rewriter, loc, ity, cattr);
 }
 
 /// Perform an extension or truncation as needed on an integer value. Lowering
@@ -79,9 +80,9 @@ mlir::Value ConvertFIRToLLVMPattern::integerCast(
       return rewriter.createOrFold<mlir::LLVM::SExtOp>(loc, ty, val);
   } else {
     if (toSize < fromSize)
-      return rewriter.create<mlir::LLVM::TruncOp>(loc, ty, val);
+      return mlir::LLVM::TruncOp::create(rewriter, loc, ty, val);
     if (toSize > fromSize)
-      return rewriter.create<mlir::LLVM::SExtOp>(loc, ty, val);
+      return mlir::LLVM::SExtOp::create(rewriter, loc, ty, val);
   }
   return val;
 }
@@ -99,16 +100,16 @@ mlir::Value ConvertFIRToLLVMPattern::getValueFromBox(
     mlir::ConversionPatternRewriter &rewriter, int boxValue) const {
   if (mlir::isa<mlir::LLVM::LLVMPointerType>(box.getType())) {
     auto pty = getLlvmPtrType(resultTy.getContext());
-    auto p = rewriter.create<mlir::LLVM::GEPOp>(
-        loc, pty, boxTy.llvm, box,
+    auto p = mlir::LLVM::GEPOp::create(
+        rewriter, loc, pty, boxTy.llvm, box,
         llvm::ArrayRef<mlir::LLVM::GEPArg>{0, boxValue});
     auto fldTy = getBoxEleTy(boxTy.llvm, {boxValue});
-    auto loadOp = rewriter.create<mlir::LLVM::LoadOp>(loc, fldTy, p);
+    auto loadOp = mlir::LLVM::LoadOp::create(rewriter, loc, fldTy, p);
     auto castOp = integerCast(loc, rewriter, resultTy, loadOp);
     attachTBAATag(loadOp, boxTy.fir, nullptr, p);
     return castOp;
   }
-  return rewriter.create<mlir::LLVM::ExtractValueOp>(loc, box, boxValue);
+  return mlir::LLVM::ExtractValueOp::create(rewriter, loc, box, boxValue);
 }
 
 /// Method to construct code sequence to get the triple for dimension `dim`
@@ -146,7 +147,7 @@ mlir::Value ConvertFIRToLLVMPattern::loadDimFieldFromBox(
          "in memory");
   mlir::LLVM::GEPOp p = genGEP(loc, boxTy.llvm, rewriter, box, 0,
                                static_cast<int>(kDimsPosInBox), dim, off);
-  auto loadOp = rewriter.create<mlir::LLVM::LoadOp>(loc, ty, p);
+  auto loadOp = mlir::LLVM::LoadOp::create(rewriter, loc, ty, p);
   attachTBAATag(loadOp, boxTy.fir, nullptr, p);
   return loadOp;
 }
@@ -157,12 +158,13 @@ mlir::Value ConvertFIRToLLVMPattern::getDimFieldFromBox(
   if (mlir::isa<mlir::LLVM::LLVMPointerType>(box.getType())) {
     mlir::LLVM::GEPOp p = genGEP(loc, boxTy.llvm, rewriter, box, 0,
                                  static_cast<int>(kDimsPosInBox), dim, off);
-    auto loadOp = rewriter.create<mlir::LLVM::LoadOp>(loc, ty, p);
+    auto loadOp = mlir::LLVM::LoadOp::create(rewriter, loc, ty, p);
     attachTBAATag(loadOp, boxTy.fir, nullptr, p);
     return loadOp;
   }
-  return rewriter.create<mlir::LLVM::ExtractValueOp>(
-      loc, box, llvm::ArrayRef<std::int64_t>{kDimsPosInBox, dim, off});
+  return mlir::LLVM::ExtractValueOp::create(
+      rewriter, loc, box,
+      llvm::ArrayRef<std::int64_t>{kDimsPosInBox, dim, off});
 }
 
 mlir::Value ConvertFIRToLLVMPattern::getStrideFromBox(
@@ -250,10 +252,10 @@ mlir::Value ConvertFIRToLLVMPattern::genBoxAttributeCheck(
       getValueFromBox(loc, boxTy, box, attrTy, rewriter, kAttributePosInBox);
   mlir::LLVM::ConstantOp attrMask = genConstantOffset(loc, rewriter, maskValue);
   auto maskRes =
-      rewriter.create<mlir::LLVM::AndOp>(loc, attrTy, attribute, attrMask);
+      mlir::LLVM::AndOp::create(rewriter, loc, attrTy, attribute, attrMask);
   mlir::LLVM::ConstantOp c0 = genConstantOffset(loc, rewriter, 0);
-  return rewriter.create<mlir::LLVM::ICmpOp>(loc, mlir::LLVM::ICmpPredicate::ne,
-                                             maskRes, c0);
+  return mlir::LLVM::ICmpOp::create(rewriter, loc,
+                                    mlir::LLVM::ICmpPredicate::ne, maskRes, c0);
 }
 
 mlir::Value ConvertFIRToLLVMPattern::computeBoxSize(
@@ -280,10 +282,10 @@ mlir::Value ConvertFIRToLLVMPattern::computeBoxSize(
               firBoxType.getBoxTypeWithNewShape(1)))) &&
          "descriptor layout requires adding padding for dim field");
   mlir::Value sizePerDim = genConstantOffset(loc, rewriter, sizePerDimCst);
-  mlir::Value dimsSize = rewriter.create<mlir::LLVM::MulOp>(
-      loc, sizePerDim.getType(), sizePerDim, rank);
-  mlir::Value size = rewriter.create<mlir::LLVM::AddOp>(
-      loc, scalarBoxSize.getType(), scalarBoxSize, dimsSize);
+  mlir::Value dimsSize = mlir::LLVM::MulOp::create(
+      rewriter, loc, sizePerDim.getType(), sizePerDim, rank);
+  mlir::Value size = mlir::LLVM::AddOp::create(
+      rewriter, loc, scalarBoxSize.getType(), scalarBoxSize, dimsSize);
   return size;
 }
 
@@ -323,9 +325,9 @@ mlir::Value ConvertFIRToLLVMPattern::genAllocaAndAddrCastWithType(
   unsigned allocaAs = getAllocaAddressSpace(rewriter);
   unsigned programAs = getProgramAddressSpace(rewriter);
 
-  mlir::Value al = rewriter.create<mlir::LLVM::AllocaOp>(
-      loc, ::getLlvmPtrType(llvmObjectTy.getContext(), allocaAs), llvmObjectTy,
-      size, alignment);
+  mlir::Value al = mlir::LLVM::AllocaOp::create(
+      rewriter, loc, ::getLlvmPtrType(llvmObjectTy.getContext(), allocaAs),
+      llvmObjectTy, size, alignment);
 
   // if our allocation address space, is not the same as the program address
   // space, then we must emit a cast to the program address space before use.
@@ -333,8 +335,9 @@ mlir::Value ConvertFIRToLLVMPattern::genAllocaAndAddrCastWithType(
   // the numeric value 5 (private), and the program address space is 0
   // (generic).
   if (allocaAs != programAs) {
-    al = rewriter.create<mlir::LLVM::AddrSpaceCastOp>(
-        loc, ::getLlvmPtrType(llvmObjectTy.getContext(), programAs), al);
+    al = mlir::LLVM::AddrSpaceCastOp::create(
+        rewriter, loc, ::getLlvmPtrType(llvmObjectTy.getContext(), programAs),
+        al);
   }
 
   rewriter.restoreInsertionPoint(thisPt);
@@ -346,7 +349,10 @@ unsigned ConvertFIRToLLVMPattern::getAllocaAddressSpace(
   mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
   assert(parentOp != nullptr &&
          "expected insertion block to have parent operation");
-  if (auto module = parentOp->getParentOfType<mlir::ModuleOp>())
+  auto module = mlir::isa<mlir::ModuleOp>(parentOp)
+                    ? mlir::cast<mlir::ModuleOp>(parentOp)
+                    : parentOp->getParentOfType<mlir::ModuleOp>();
+  if (module)
     if (mlir::Attribute addrSpace =
             mlir::DataLayout(module).getAllocaMemorySpace())
       return llvm::cast<mlir::IntegerAttr>(addrSpace).getUInt();
@@ -358,9 +364,27 @@ unsigned ConvertFIRToLLVMPattern::getProgramAddressSpace(
   mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
   assert(parentOp != nullptr &&
          "expected insertion block to have parent operation");
-  if (auto module = parentOp->getParentOfType<mlir::ModuleOp>())
+  auto module = mlir::isa<mlir::ModuleOp>(parentOp)
+                    ? mlir::cast<mlir::ModuleOp>(parentOp)
+                    : parentOp->getParentOfType<mlir::ModuleOp>();
+  if (module)
     if (mlir::Attribute addrSpace =
             mlir::DataLayout(module).getProgramMemorySpace())
+      return llvm::cast<mlir::IntegerAttr>(addrSpace).getUInt();
+  return defaultAddressSpace;
+}
+
+unsigned ConvertFIRToLLVMPattern::getGlobalAddressSpace(
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Operation *parentOp = rewriter.getInsertionBlock()->getParentOp();
+  assert(parentOp != nullptr &&
+         "expected insertion block to have parent operation");
+  auto module = mlir::isa<mlir::ModuleOp>(parentOp)
+                    ? mlir::cast<mlir::ModuleOp>(parentOp)
+                    : parentOp->getParentOfType<mlir::ModuleOp>();
+  if (module)
+    if (mlir::Attribute addrSpace =
+            mlir::DataLayout(module).getGlobalMemorySpace())
       return llvm::cast<mlir::IntegerAttr>(addrSpace).getUInt();
   return defaultAddressSpace;
 }

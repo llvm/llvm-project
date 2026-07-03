@@ -119,8 +119,8 @@ define <2 x i32> @test3vec(i1 %which) {
 ; CHECK:       delay:
 ; CHECK-NEXT:    br label [[FINAL]]
 ; CHECK:       final:
-; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi <2 x i32> [ <i32 -877, i32 -877>, [[ENTRY:%.*]] ], [ <i32 113, i32 113>, [[DELAY]] ]
-; CHECK-NEXT:    [[A:%.*]] = phi <2 x i32> [ <i32 1000, i32 1000>, [[ENTRY]] ], [ <i32 10, i32 10>, [[DELAY]] ]
+; CHECK-NEXT:    [[PHIOFOPS:%.*]] = phi <2 x i32> [ splat (i32 -877), [[ENTRY:%.*]] ], [ splat (i32 113), [[DELAY]] ]
+; CHECK-NEXT:    [[A:%.*]] = phi <2 x i32> [ splat (i32 1000), [[ENTRY]] ], [ splat (i32 10), [[DELAY]] ]
 ; CHECK-NEXT:    ret <2 x i32> [[PHIOFOPS]]
 ;
 
@@ -386,12 +386,12 @@ bb1:                                              ; preds = %bb1, %bb
 
 ;; Make sure we handle the case where we later come up with an expression that we need
 ;; for a phi of ops.
-define void @test9() {
+define void @test9(i1 %arg) {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    br i1 undef, label [[BB1]], label [[BB2:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[BB1]], label [[BB2:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB6:%.*]]
 ; CHECK:       bb6:
@@ -405,7 +405,7 @@ bb:
   br label %bb1
 
 bb1:                                              ; preds = %bb1, %bb
-  br i1 undef, label %bb1, label %bb2
+  br i1 %arg, label %bb1, label %bb2
 
 bb2:                                              ; preds = %bb1
   %tmp = select i1 true, i32 -14, i32 -10
@@ -426,7 +426,7 @@ bb6:                                              ; preds = %bb6, %bb2
 }
 
 ;; Ensure that we revisit predicateinfo operands at the right points in time.
-define void @test10() {
+define void @test10(i1 %arg) {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:  b:
 ; CHECK-NEXT:    br label [[G:%.*]]
@@ -436,7 +436,7 @@ define void @test10() {
 ; CHECK-NEXT:    [[J:%.*]] = icmp eq ptr [[H]], inttoptr (i64 32 to ptr)
 ; CHECK-NEXT:    br i1 [[J]], label [[C:%.*]], label [[I]]
 ; CHECK:       i:
-; CHECK-NEXT:    br i1 undef, label [[K:%.*]], label [[G]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[K:%.*]], label [[G]]
 ; CHECK:       k:
 ; CHECK-NEXT:    br i1 false, label [[C]], label [[O:%.*]]
 ; CHECK:       o:
@@ -455,7 +455,7 @@ g:                                                ; preds = %i, %b
   br i1 %j, label %c, label %i
 
 i:                                                ; preds = %g
-  br i1 undef, label %k, label %g
+  br i1 %arg, label %k, label %g
 
 k:                                                ; preds = %i
   %l = icmp eq ptr %n, %m
@@ -470,10 +470,10 @@ c:                                                ; preds = %o, %k, %g
 }
 
 ;; Ensure we handle VariableExpression properly.
-define void @test11() {
+define void @test11(i1 %arg) {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    br i1 undef, label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb2:
@@ -488,7 +488,7 @@ define void @test11() {
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  br i1 undef, label %bb1, label %bb2
+  br i1 %arg, label %bb1, label %bb2
 
 bb1:                                              ; preds = %bb
   br label %bb2

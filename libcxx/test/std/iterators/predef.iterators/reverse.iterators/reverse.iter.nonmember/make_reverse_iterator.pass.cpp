@@ -22,24 +22,34 @@
 #include "test_iterators.h"
 
 template <class It>
-TEST_CONSTEXPR_CXX17 void test(It i) {
-    const std::reverse_iterator<It> r = std::make_reverse_iterator(i);
-    assert(r.base() == i);
+TEST_CONSTEXPR_CXX17 void test_one(It i) {
+  const std::reverse_iterator<It> r = std::make_reverse_iterator(i);
+  assert(r.base() == i);
+}
+
+template <class It>
+TEST_CONSTEXPR_CXX17 void test() {
+  const char* s = "1234567890";
+  It b(s);
+  It e(s + 10);
+  while (b != e)
+    test_one(b++);
 }
 
 TEST_CONSTEXPR_CXX17 bool tests() {
-    const char* s = "1234567890";
-    random_access_iterator<const char*> b(s);
-    random_access_iterator<const char*> e(s+10);
-    while (b != e)
-        test (b++);
-    return true;
+  test<const char*>();
+  test<bidirectional_iterator<const char*>>();
+  test<random_access_iterator<const char*>>();
+#if TEST_STD_VER >= 20
+  test<cpp20_random_access_iterator<const char*>>();
+#endif
+  return true;
 }
 
 int main(int, char**) {
-    tests();
+  tests();
 #if TEST_STD_VER > 14
-    static_assert(tests(), "");
+  static_assert(tests(), "");
 #endif
-    return 0;
+  return 0;
 }

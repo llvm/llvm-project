@@ -2,8 +2,10 @@
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx17,precxx20 -std=c++17 %s
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx20 %std_cxx20- %s
 
-template<typename T, T Value> struct Constant; // precxx17-note{{template parameter is declared here}} \
-// FIXME: bad location precxx20-error{{a non-type template parameter cannot have type 'float'}}
+template<typename T, T Value> struct Constant;
+// FIXME: bad location precxx20-error@-1 {{a non-type template parameter cannot have type 'float'}}
+// expected-note@-2 {{template parameter is declared here}}
+// cxx20-note@-3 {{template parameter is declared here}}
 
 Constant<int, 5> *c1;
 

@@ -12,7 +12,6 @@
 #include "__llvm-libc-common.h"
 #include "llvm-libc-macros/float16-macros.h"
 #include "llvm-libc-macros/math-macros.h"
-#include "llvm-libc-types/float128.h"
 
 
 %%public_api()

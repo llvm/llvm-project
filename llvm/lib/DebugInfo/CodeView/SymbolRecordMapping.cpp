@@ -258,6 +258,19 @@ Error SymbolRecordMapping::visitKnownRecord(
 }
 
 Error SymbolRecordMapping::visitKnownRecord(
+    CVSymbol &CVR, DefRangeRegisterRelIndirSym &DefRangeRegisterRelIndir) {
+
+  error(IO.mapObject(DefRangeRegisterRelIndir.Hdr.Register));
+  error(IO.mapObject(DefRangeRegisterRelIndir.Hdr.Flags));
+  error(IO.mapObject(DefRangeRegisterRelIndir.Hdr.BasePointerOffset));
+  error(IO.mapObject(DefRangeRegisterRelIndir.Hdr.OffsetInUdt));
+  error(mapLocalVariableAddrRange(IO, DefRangeRegisterRelIndir.Range));
+  error(IO.mapVectorTail(DefRangeRegisterRelIndir.Gaps, MapGap()));
+
+  return Error::success();
+}
+
+Error SymbolRecordMapping::visitKnownRecord(
     CVSymbol &CVR, DefRangeRegisterSym &DefRangeRegister) {
 
   error(IO.mapObject(DefRangeRegister.Hdr.Register));
@@ -445,6 +458,17 @@ Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
 }
 
 Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
+                                            RegRelativeIndirSym &RegRelIndir) {
+  error(IO.mapInteger(RegRelIndir.Offset));
+  error(IO.mapInteger(RegRelIndir.Type));
+  error(IO.mapInteger(RegRelIndir.OffsetInUdt));
+  error(IO.mapEnum(RegRelIndir.Register));
+  error(IO.mapStringZ(RegRelIndir.Name));
+
+  return Error::success();
+}
+
+Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
                                             ThreadLocalDataSym &Data) {
 
   error(IO.mapInteger(Data.Type));
@@ -493,6 +517,13 @@ Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
   error(IO.mapInteger(JumpTable.BranchSegment));
   error(IO.mapInteger(JumpTable.TableSegment));
   error(IO.mapInteger(JumpTable.EntriesCount));
+  return Error::success();
+}
+
+Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
+                                            HotPatchFuncSym &HotPatchFunc) {
+  error(IO.mapInteger(HotPatchFunc.Function));
+  error(IO.mapStringZ(HotPatchFunc.Name));
   return Error::success();
 }
 

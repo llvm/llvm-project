@@ -34,7 +34,7 @@ namespace constant_evaluated {
      expected-note@-1{{candidate template ignored}}
   int a = (foo<int>(), 0);
   // expected-note@-1 {{while checking}} expected-error@-1{{no matching function}} \
-     expected-note@-1 {{in instantiation}}
+     expected-note@-1 {{while substituting}}
   template<typename T> void bar() requires requires { requires f<int[2]>; } { };
   // expected-note@-1{{in instantiation}} \
      expected-note@-1{{while substituting}} \

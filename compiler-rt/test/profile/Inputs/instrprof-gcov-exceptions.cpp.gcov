@@ -2,7 +2,6 @@
 // CHECK-NEXT:        -:    0:Graph:instrprof-gcov-exceptions.gcno
 // CHECK-NEXT:        -:    0:Data:instrprof-gcov-exceptions.gcda
 // CHECK-NEXT:        -:    0:Runs:1
-// CHECK-NEXT:        -:    0:Programs:1
 // CHECK-NEXT:        -:    1:#include <string>
 // CHECK-NEXT:        -:    2:
 // CHECK-NEXT:        1:    3:void asd(std::string i) {

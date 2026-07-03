@@ -62,12 +62,21 @@ public:
     AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
+    AU.addRequired<LibcallLoweringInfoWrapper>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 private:
+  MachineDominatorTree *MDT;
+  LiveIntervals *LIS;
+  const TargetLibraryInfo *LibInfo;
+
+  StringRef MemcpyName, MemmoveName, MemsetName;
+
+  bool optimizeCall(MachineBasicBlock &MBB, MachineInstr &MI,
+                    const MachineRegisterInfo &MRI) const;
 };
 } // end anonymous namespace
 
@@ -145,24 +154,24 @@ static bool replaceDominatedUses(MachineBasicBlock &MBB, MachineInstr &MI,
   return Changed;
 }
 
-static bool optimizeCall(MachineBasicBlock &MBB, MachineInstr &MI,
-                         const MachineRegisterInfo &MRI,
-                         MachineDominatorTree &MDT, LiveIntervals &LIS,
-                         const WebAssemblyTargetLowering &TLI,
-                         const TargetLibraryInfo &LibInfo) {
+bool WebAssemblyMemIntrinsicResults::optimizeCall(
+    MachineBasicBlock &MBB, MachineInstr &MI,
+    const MachineRegisterInfo &MRI) const {
   MachineOperand &Op1 = MI.getOperand(1);
   if (!Op1.isSymbol())
     return false;
 
   StringRef Name(Op1.getSymbolName());
-  bool CallReturnsInput = Name == TLI.getLibcallName(RTLIB::MEMCPY) ||
-                          Name == TLI.getLibcallName(RTLIB::MEMMOVE) ||
-                          Name == TLI.getLibcallName(RTLIB::MEMSET);
+
+  // TODO: Could generalize by parsing to LibcallImpl and checking signature
+  // attributes
+  bool CallReturnsInput =
+      Name == MemcpyName || Name == MemmoveName || Name == MemsetName;
   if (!CallReturnsInput)
     return false;
 
   LibFunc Func;
-  if (!LibInfo.getLibFunc(Name, Func))
+  if (!LibInfo->getLibFunc(Name, Func))
     return false;
 
   Register FromReg = MI.getOperand(2).getReg();
@@ -170,7 +179,7 @@ static bool optimizeCall(MachineBasicBlock &MBB, MachineInstr &MI,
   if (MRI.getRegClass(FromReg) != MRI.getRegClass(ToReg))
     report_fatal_error("Memory Intrinsic results: call to builtin function "
                        "with wrong signature, from/to mismatch");
-  return replaceDominatedUses(MBB, MI, FromReg, ToReg, MRI, MDT, LIS);
+  return replaceDominatedUses(MBB, MI, FromReg, ToReg, MRI, *MDT, *LIS);
 }
 
 bool WebAssemblyMemIntrinsicResults::runOnMachineFunction(MachineFunction &MF) {
@@ -180,12 +189,23 @@ bool WebAssemblyMemIntrinsicResults::runOnMachineFunction(MachineFunction &MF) {
   });
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  const WebAssemblyTargetLowering &TLI =
-      *MF.getSubtarget<WebAssemblySubtarget>().getTargetLowering();
-  const auto &LibInfo =
-      getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(MF.getFunction());
-  auto &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  const WebAssemblySubtarget &Subtarget =
+      MF.getSubtarget<WebAssemblySubtarget>();
+  LibInfo =
+      &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(MF.getFunction());
+  const LibcallLoweringInfo &Libcalls =
+      getAnalysis<LibcallLoweringInfoWrapper>().getLibcallLowering(
+          *MF.getFunction().getParent(), Subtarget);
+
+  MemcpyName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
+      Libcalls.getLibcallImpl(RTLIB::MEMCPY));
+  MemmoveName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
+      Libcalls.getLibcallImpl(RTLIB::MEMMOVE));
+  MemsetName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
+      Libcalls.getLibcallImpl(RTLIB::MEMSET));
+
   bool Changed = false;
 
   // We don't preserve SSA form.
@@ -201,7 +221,7 @@ bool WebAssemblyMemIntrinsicResults::runOnMachineFunction(MachineFunction &MF) {
       default:
         break;
       case WebAssembly::CALL:
-        Changed |= optimizeCall(MBB, MI, MRI, MDT, LIS, TLI, LibInfo);
+        Changed |= optimizeCall(MBB, MI, MRI);
         break;
       }
   }

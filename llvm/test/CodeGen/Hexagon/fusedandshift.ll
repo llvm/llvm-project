@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-extract=0 -hexbit-extract=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-extract=0 -hexbit-extract=0 < %s | FileCheck %s
 ; Check that we generate fused logical and with shift instruction.
 ; Disable "extract" generation, since it may eliminate the and/lsr.
 

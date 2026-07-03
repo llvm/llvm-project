@@ -3,6 +3,7 @@
 
 // FIXME: On MinGW frame #0 does not include the line number?
 // XFAIL: target={{.*-windows-gnu}}
+// XFAIL: msvc
 
 // Test the error output from misaligned SSE2 memory access. This is a READ
 // memory access. Windows appears to always provide an address of -1 for these

@@ -169,6 +169,11 @@ public:
     return Parent && (Parent == BD || Parent->isAncestorOf(BD));
   }
 
+  void updateSize(uint64_t N) {
+    if (N > Size)
+      Size = N;
+  }
+
   void setIsMoveable(bool Flag) { IsMoveable = Flag; }
   void setSection(BinarySection &NewSection);
   void setOutputSection(BinarySection &NewSection) {

@@ -79,6 +79,21 @@ See also SBThread."
 ) lldb::SBFrame::IsInlined;
 
 %feature("docstring", "
+    Returns an SBValueList which is an array of one or more register
+    sets that exist for this thread.  
+    Each SBValue in the SBValueList represents one register-set. 
+    The first register-set will be the general purpose registers -- 
+    the registers printed by the `register read` command-line in lldb, with 
+    no additional arguments.  
+    The register-set SBValue will have a name, e.g. 
+    SBFrame::GetRegisters().GetValueAtIndex(0).GetName() 
+    By convention, certain stubs choose to name their general-purpose 
+    register-set the 'General Purpose Registers', but that is not required.
+    A register-set SBValue will have children, one child per register 
+    in the register-set."
+) lldb::SBFrame::GetRegisters;
+
+%feature("docstring", "
     Return true if this frame is artificial (e.g a frame synthesized to
     capture a tail call). Local variables may not be available in an artificial
     frame."

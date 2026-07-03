@@ -5,15 +5,16 @@
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %t/main.s -o %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -nostdlib
 # RUN: llvm-bolt %t.exe -o %t.out --data %t/yaml --profile-ignore-hash -v=1 \
-# RUN:   --dyno-stats --print-cfg --infer-stale-profile=1 --debug 2>&1 | FileCheck %s
+# RUN:   --dyno-stats --print-cfg --infer-stale-profile=1 --debug-only=bolt-prof \
+# RUN:   2>&1 | FileCheck %s
 
 # CHECK: BOLT-INFO: applying profile inference for "qux"
 # CHECK: Matched yaml block (bid = 1) with hash 4 to BB (index = 0) with hash 314e1bc10000
-# CHECK:  loose match
+# CHECK:  call match
 
 # CHECK: BOLT-INFO: applying profile inference for "fred"
 # CHECK: Matched yaml block (bid = 1) with hash 5 to BB (index = 0) with hash 7541bc10000
-# CHECK:  loose match
+# CHECK:  call match
 
 #--- main.s
 .globl  foo                         # -- Begin function foo

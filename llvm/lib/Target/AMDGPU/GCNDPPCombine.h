@@ -12,14 +12,13 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 
 namespace llvm {
-class GCNDPPCombinePass : public PassInfoMixin<GCNDPPCombinePass> {
+class GCNDPPCombinePass : public OptionalPassInfoMixin<GCNDPPCombinePass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MAM);
 
-  MachineFunctionProperties getRequiredProperties() {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::IsSSA);
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().setIsSSA();
   }
 };
 

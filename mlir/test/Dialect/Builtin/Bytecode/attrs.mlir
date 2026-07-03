@@ -25,14 +25,14 @@ module @TestDenseArray attributes {
 } {}
 
 //===----------------------------------------------------------------------===//
-// DenseIntOfFPElementsAttr
+// DenseTypedElementsAttr
 //===----------------------------------------------------------------------===//
 
-// CHECK-LABEL: @TestDenseIntOrFPElements
+// CHECK-LABEL: @TestDenseTypedElements
 // CHECK: bytecode.test1 = dense<true> : tensor<256xi1>
 // CHECK: bytecode.test2 = dense<[10, 32, -1]> : tensor<3xi8>
 // CHECK: bytecode.test3 = dense<[1.{{.*}}e+01, 3.2{{.*}}e+01, 1.809{{.*}}e+03]> : tensor<3xf64>
-module @TestDenseIntOrFPElements attributes {
+module @TestDenseTypedElements attributes {
   bytecode.test1 = dense<true> : tensor<256xi1>,
   bytecode.test2 = dense<[10, 32, 255]> : tensor<3xi8>,
   bytecode.test3 = dense<[10.0, 32.0, 1809.0]> : tensor<3xf64>
@@ -192,3 +192,66 @@ module @TestLocUnknown attributes {
   // CHECK: bytecode.loc = loc(unknown)
   bytecode.loc = loc(unknown)
 } {}
+
+//===----------------------------------------------------------------------===//
+// AffineMapAttr
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @TestAffineMap
+module @TestAffineMap attributes {
+  // All binary expression types combined in a multi-result map.
+  // CHECK: bytecode.allops_combined = affine_map<(d0, d1)[s0] -> ((d0 * 5 + d1) floordiv 4, (d0 + d1 * 3) ceildiv s0, (d0 + d1) mod s0)>
+
+  // Binary operators (Add, Mul, Mod, FloorDiv, CeilDiv).
+  // CHECK: bytecode.binop_add = affine_map<(d0, d1) -> (d0 + d1)>
+  // CHECK: bytecode.binop_ceildiv = affine_map<(d0) -> (d0 ceildiv 8)>
+  // CHECK: bytecode.binop_floordiv = affine_map<(d0) -> (d0 floordiv 4)>
+  // CHECK: bytecode.binop_mod = affine_map<(d0) -> (d0 mod 3)>
+  // CHECK: bytecode.binop_mul = affine_map<(d0) -> (d0 * 5)>
+
+  // Dims, symbols, and constants.
+  // CHECK: bytecode.dsc_const = affine_map<(d0) -> (d0 + 42)>
+  // CHECK: bytecode.dsc_dim_sym = affine_map<(d0)[s0] -> (d0 + s0)>
+  // CHECK: bytecode.dsc_multi_sym = affine_map<(d0, d1)[s0, s1] -> (d0 + s0, d1 + s1)>
+  // CHECK: bytecode.dsc_sym_only = affine_map<()[s0] -> (s0 + 7)>
+
+  // Empty map (zero dims, zero results).
+  // CHECK: bytecode.empty_map = affine_map<() -> ()>
+
+  // Identity maps.
+  // CHECK: bytecode.identity_1d = affine_map<(d0) -> (d0)>
+  // CHECK: bytecode.identity_3d = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+
+  // Multi-result maps.
+  // CHECK: bytecode.multi_mix = affine_map<(d0, d1) -> (d0 + d1, d0 * 2, d1 mod 5)>
+  // CHECK: bytecode.multi_sym = affine_map<(d0, d1)[s0] -> (d0 floordiv s0, d1 ceildiv s0, d0 + d1 + s0)>
+
+  // Permutation maps.
+  // CHECK: bytecode.perm_2d = affine_map<(d0, d1) -> (d1, d0)>
+  // CHECK: bytecode.perm_3d = affine_map<(d0, d1, d2) -> (d2, d0, d1)>
+
+  // Projected permutation maps.
+  // CHECK: bytecode.projperm_4d = affine_map<(d0, d1, d2, d3) -> (d0, d2)>
+  // CHECK: bytecode.projperm_single = affine_map<(d0, d1, d2) -> (d2)>
+
+  bytecode.allops_combined = affine_map<(d0, d1)[s0] -> ((d0 * 5 + d1) floordiv 4, (d0 + d1 * 3) ceildiv s0, (d0 + d1) mod s0)>,
+  bytecode.binop_add = affine_map<(d0, d1) -> (d0 + d1)>,
+  bytecode.binop_ceildiv = affine_map<(d0) -> (d0 ceildiv 8)>,
+  bytecode.binop_floordiv = affine_map<(d0) -> (d0 floordiv 4)>,
+  bytecode.binop_mod = affine_map<(d0) -> (d0 mod 3)>,
+  bytecode.binop_mul = affine_map<(d0) -> (d0 * 5)>,
+  bytecode.dsc_const = affine_map<(d0) -> (d0 + 42)>,
+  bytecode.dsc_dim_sym = affine_map<(d0)[s0] -> (d0 + s0)>,
+  bytecode.dsc_multi_sym = affine_map<(d0, d1)[s0, s1] -> (d0 + s0, d1 + s1)>,
+  bytecode.dsc_sym_only = affine_map<()[s0] -> (s0 + 7)>,
+  bytecode.empty_map = affine_map<() -> ()>,
+  bytecode.identity_1d = affine_map<(d0) -> (d0)>,
+  bytecode.identity_3d = affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
+  bytecode.multi_mix = affine_map<(d0, d1) -> (d0 + d1, d0 * 2, d1 mod 5)>,
+  bytecode.multi_sym = affine_map<(d0, d1)[s0] -> (d0 floordiv s0, d1 ceildiv s0, d0 + d1 + s0)>,
+  bytecode.perm_2d = affine_map<(d0, d1) -> (d1, d0)>,
+  bytecode.perm_3d = affine_map<(d0, d1, d2) -> (d2, d0, d1)>,
+  bytecode.projperm_4d = affine_map<(d0, d1, d2, d3) -> (d0, d2)>,
+  bytecode.projperm_single = affine_map<(d0, d1, d2) -> (d2)>
+} {}
+

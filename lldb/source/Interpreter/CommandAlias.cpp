@@ -10,6 +10,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatAdapters.h"
 
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandObject.h"
@@ -20,20 +21,17 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static bool ProcessAliasOptionsArgs(lldb::CommandObjectSP &cmd_obj_sp,
-                                    llvm::StringRef options_args,
-                                    OptionArgVectorSP &option_arg_vector_sp) {
-  bool success = true;
+static llvm::Error
+ProcessAliasOptionsArgs(lldb::CommandObjectSP &cmd_obj_sp,
+                        llvm::StringRef options_args,
+                        OptionArgVectorSP &option_arg_vector_sp) {
   OptionArgVector *option_arg_vector = option_arg_vector_sp.get();
 
   if (options_args.size() < 1)
-    return true;
+    return llvm::Error::success();
 
   Args args(options_args);
   std::string options_string(options_args);
-  // TODO: Find a way to propagate errors in this CommandReturnObject up the
-  // stack.
-  CommandReturnObject result(false);
   // Check to see if the command being aliased can take any command options.
   Options *options = cmd_obj_sp->GetOptions();
   if (options) {
@@ -45,34 +43,30 @@ static bool ProcessAliasOptionsArgs(lldb::CommandObjectSP &cmd_obj_sp,
 
     llvm::Expected<Args> args_or =
         options->ParseAlias(args, option_arg_vector, options_string);
-    if (!args_or) {
-      result.AppendError(toString(args_or.takeError()));
-      result.AppendError("Unable to create requested alias.\n");
-      return false;
-    }
+    if (!args_or)
+      return llvm::createStringError(
+          llvm::formatv("unable to create alias: {0}",
+                        llvm::fmt_consume(args_or.takeError())));
     args = std::move(*args_or);
-    options->VerifyPartialOptions(result);
-    if (!result.Succeeded() &&
-        result.GetStatus() != lldb::eReturnStatusStarted) {
-      result.AppendError("Unable to create requested alias.\n");
-      return false;
-    }
+    if (llvm::Error error = options->VerifyPartialOptions())
+      return error;
   }
 
   if (!options_string.empty()) {
-    if (cmd_obj_sp->WantsRawCommandString())
-      option_arg_vector->emplace_back(CommandInterpreter::g_argument, 
-                                      -1, options_string);
-    else {
+    if (cmd_obj_sp->WantsRawCommandString()) {
+      option_arg_vector->emplace_back(CommandInterpreter::g_argument, -1,
+                                      options_string);
+    } else {
       for (auto &entry : args.entries()) {
         if (!entry.ref().empty())
-          option_arg_vector->emplace_back(std::string(CommandInterpreter::g_argument), -1,
-                                          std::string(entry.ref()));
+          option_arg_vector->emplace_back(
+              std::string(CommandInterpreter::g_argument), -1,
+              std::string(entry.ref()));
       }
     }
   }
 
-  return success;
+  return llvm::Error::success();
 }
 
 CommandAlias::CommandAlias(CommandInterpreter &interpreter,
@@ -85,10 +79,15 @@ CommandAlias::CommandAlias(CommandInterpreter &interpreter,
       m_option_args_sp(new OptionArgVector),
       m_is_dashdash_alias(eLazyBoolCalculate), m_did_set_help(false),
       m_did_set_help_long(false) {
-  if (ProcessAliasOptionsArgs(cmd_sp, options_args, m_option_args_sp)) {
+  if (llvm::Error error =
+          ProcessAliasOptionsArgs(cmd_sp, options_args, m_option_args_sp)) {
+    // FIXME: Find a way to percolate this error up.
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Host), std::move(error),
+                   "ProcessAliasOptionsArgs failed: {0}");
+  } else {
     m_underlying_command_sp = cmd_sp;
     for (int i = 0;
-         auto cmd_entry = m_underlying_command_sp->GetArgumentEntryAtIndex(i);
+         auto *cmd_entry = m_underlying_command_sp->GetArgumentEntryAtIndex(i);
          i++) {
       m_arguments.push_back(*cmd_entry);
     }

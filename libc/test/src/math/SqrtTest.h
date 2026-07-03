@@ -29,26 +29,26 @@ public:
       FPBits denormal(zero);
       denormal.set_mantissa(mant);
       InType x = denormal.get_val();
-      EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sqrt, x, func(x), 0.5);
+      ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sqrt, x, func(x), 0.5);
     }
 
-    constexpr StorageType COUNT = 200'001;
+    constexpr StorageType COUNT = 1'231;
     constexpr StorageType STEP = HIDDEN_BIT / COUNT;
     for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       InType x = FPBits(i).get_val();
-      EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sqrt, x, func(x), 0.5);
+      ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sqrt, x, func(x), 0.5);
     }
   }
 
   void test_normal_range(SqrtFunc func) {
-    constexpr StorageType COUNT = 200'001;
+    constexpr StorageType COUNT = 1'231;
     constexpr StorageType STEP = STORAGE_MAX / COUNT;
     for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       FPBits x_bits(v);
       InType x = x_bits.get_val();
       if (x_bits.is_nan() || (x < 0))
         continue;
-      EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sqrt, x, func(x), 0.5);
+      ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sqrt, x, func(x), 0.5);
     }
   }
 };

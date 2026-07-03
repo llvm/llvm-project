@@ -2,7 +2,7 @@
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @indvar_expansion(ptr nocapture readonly %rowsptr) {
+define void @indvar_expansion(ptr nocapture readonly %rowsptr, i1 %arg) {
 entry:
   br label %for.cond
 
@@ -22,7 +22,7 @@ for.cond:
   br i1 %cmp, label %for.cond, label %for.cond2
 
 for.cond2:
-  br i1 undef, label %for.cond2, label %for.body14.lr.ph
+  br i1 %arg, label %for.cond2, label %for.body14.lr.ph
 
 for.body14.lr.ph:
   %sext = shl i64 %indvars.iv44, 32

@@ -20,16 +20,29 @@
 ; }
 
 ; Ensure that lexical_blocks within inlined_subroutines are preserved/emitted.
+; CHECK:      DW_TAG_subprogram
+; CHECK-NEXT: DW_AT_linkage_name ("_Z2f1v")
+; CHECK:      [[ADDR1:0x[0-9a-f]+]]: DW_TAG_lexical_block
+; CHECK:      DW_TAG_subprogram
+; CHECK-NEXT: DW_AT_linkage_name ("_Z2f2v")
+; CHECK:      [[ADDR2:0x[0-9a-f]+]]: DW_TAG_lexical_block
 ; CHECK: DW_TAG_inlined_subroutine
 ; CHECK-NOT: DW_TAG
 ; CHECK-NOT: NULL
-; CHECK: DW_TAG_lexical_block
+; CHECK:      DW_TAG_lexical_block
+; CHECK-NOT: {{DW_TAG|NULL}}
+; CHECK:      DW_AT_abstract_origin ([[ADDR1]]
 ; CHECK-NOT: DW_TAG
 ; CHECK-NOT: NULL
 ; CHECK: DW_TAG_variable
 ; Ensure that file changes don't interfere with creating inlined subroutines.
 ; (see the line directive inside 'f2' in thesource)
 ; CHECK: DW_TAG_inlined_subroutine
+; CHECK-NOT: {{DW_TAG|NULL}}
+; CHECK:      DW_TAG_lexical_block
+; CHECK-NOT: {{DW_TAG|NULL}}
+; CHECK:      DW_AT_abstract_origin ([[ADDR2]]
+; CHECK-NOT: {{DW_TAG|NULL}}
 ; CHECK:   DW_TAG_variable
 ; CHECK-NOT: DW_TAG
 ; CHECK:     DW_AT_abstract_origin
@@ -85,9 +98,9 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 declare zeroext i1 @_Z1fv() #2
 
-attributes #0 = { uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }
-attributes #2 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #2 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!13, !14}

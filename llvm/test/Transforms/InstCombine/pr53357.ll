@@ -20,7 +20,7 @@ define i32 @src(i32 noundef %0, i32 noundef %1) {
 define <2 x i32> @src_vec(<2 x i32> noundef %0, <2 x i32> noundef %1) {
 ; CHECK-LABEL: @src_vec(
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i32> [[TMP1:%.*]], [[TMP0:%.*]]
-; CHECK-NEXT:    [[TMP4:%.*]] = xor <2 x i32> [[TMP3]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP4:%.*]] = xor <2 x i32> [[TMP3]], splat (i32 -1)
 ; CHECK-NEXT:    ret <2 x i32> [[TMP4]]
 ;
   %3 = and <2 x i32> %1, %0
@@ -34,7 +34,7 @@ define <2 x i32> @src_vec(<2 x i32> noundef %0, <2 x i32> noundef %1) {
 define <2 x i32> @src_vec_poison(<2 x i32> noundef %0, <2 x i32> noundef %1) {
 ; CHECK-LABEL: @src_vec_poison(
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i32> [[TMP1:%.*]], [[TMP0:%.*]]
-; CHECK-NEXT:    [[TMP4:%.*]] = xor <2 x i32> [[TMP3]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP4:%.*]] = xor <2 x i32> [[TMP3]], splat (i32 -1)
 ; CHECK-NEXT:    ret <2 x i32> [[TMP4]]
 ;
   %3 = and <2 x i32> %1, %0

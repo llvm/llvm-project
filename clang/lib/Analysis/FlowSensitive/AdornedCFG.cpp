@@ -16,7 +16,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Stmt.h"
 #include "clang/Analysis/CFG.h"
-#include "clang/Analysis/FlowSensitive/ASTOps.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Error.h"
@@ -163,6 +162,7 @@ llvm::Expected<AdornedCFG> AdornedCFG::build(const Decl &D, Stmt &S,
   Options.AddInitializers = true;
   Options.AddCXXDefaultInitExprInCtors = true;
   Options.AddLifetime = true;
+  Options.AddParameterLifetimes = true;
 
   // Ensure that all sub-expressions in basic blocks are evaluated.
   Options.setAllAlwaysAdd();

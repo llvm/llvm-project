@@ -11,7 +11,7 @@ define i32 @fastisel_select(i1 %exchSub2211_, i1 %trunc_8766) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movb %sil, %al
 ; CHECK-NEXT:    movb %dil, %dl
-; CHECK-NEXT:    subb %al, %dl
+; CHECK-NEXT:    xorb %al, %dl
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movl $1204476887, %ecx ## imm = 0x47CADBD7
 ; CHECK-NEXT:    testb $1, %dl

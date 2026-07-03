@@ -44,7 +44,7 @@ void Test() {
 #pragma acc parallel num_workers(Convert)
   while(1);
 
-  // expected-error@+2{{OpenACC integer expression type 'struct ExplicitConvertOnly' requires explicit conversion to 'int'}}
+  // expected-error@+2{{OpenACC integer expression requires explicit conversion from 'struct ExplicitConvertOnly' to 'int'}}
   // expected-note@#EXPL_CONV{{conversion to integral type 'int'}}
 #pragma acc kernels num_workers(Explicit)
   while(1);
@@ -90,12 +90,12 @@ void TestInst() {
 #pragma acc kernels num_workers(T::ACValue)
   while (1);
 
-  // expected-error@+2{{OpenACC integer expression type 'const ExplicitConvertOnly' requires explicit conversion to 'int'}}
+  // expected-error@+2{{OpenACC integer expression requires explicit conversion from 'const ExplicitConvertOnly' to 'int'}}
   // expected-note@#EXPL_CONV{{conversion to integral type 'int'}}
 #pragma acc parallel num_workers(HasInt::EXValue)
   while (1);
 
-  // expected-error@+2{{OpenACC integer expression type 'const ExplicitConvertOnly' requires explicit conversion to 'int'}}
+  // expected-error@+2{{OpenACC integer expression requires explicit conversion from 'const ExplicitConvertOnly' to 'int'}}
   // expected-note@#EXPL_CONV{{conversion to integral type 'int'}}
 #pragma acc kernels num_workers(T::EXValue)
   while (1);

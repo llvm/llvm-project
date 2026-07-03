@@ -118,8 +118,6 @@ module attributes {transform.with_named_sequence} {
   affine_map<(m, n, k) -> (m, n)>
 ]
 #generic_matmul_trait = {
-  args_in = 2,
-  args_out = 1,
   indexing_maps = #matmul_accesses,
   library_call = "linalg_matmul",
   iterator_types = ["parallel", "parallel", "reduction"]

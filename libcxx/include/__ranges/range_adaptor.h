@@ -34,9 +34,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
@@ -85,14 +85,14 @@ template <_RangeAdaptorClosure _Closure, _RangeAdaptorClosure _OtherClosure>
 #  if _LIBCPP_STD_VER >= 23
 template <class _Tp>
   requires is_class_v<_Tp> && same_as<_Tp, remove_cv_t<_Tp>>
-class range_adaptor_closure : public __range_adaptor_closure<_Tp> {};
+class _LIBCPP_NO_SPECIALIZATIONS range_adaptor_closure : public __range_adaptor_closure<_Tp> {};
 #  endif // _LIBCPP_STD_VER >= 23
 
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_POP_MACROS
 

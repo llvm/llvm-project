@@ -1,4 +1,4 @@
-; RUN: llc  -march=hexagon  -O3 -hexagon-small-data-threshold=0 -disable-hexagon-misched < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O3 -hexagon-small-data-threshold=0 -disable-hexagon-misched < %s | FileCheck %s
 ; CHECK-LABEL: f0
 ; CHECK-DAG: [[REG:r[0-9]+]] = add
 ; CHECK-DAG: memw(##g0) = [[REG]].new

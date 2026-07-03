@@ -3,9 +3,7 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 ;
 
-declare float @llvm.fabs.f32(float)
 declare double @llvm.fabs.f64(double)
-declare fp128 @llvm.fabs.f128(fp128)
 
 define i32 @fpc(double %x) {
 entry:

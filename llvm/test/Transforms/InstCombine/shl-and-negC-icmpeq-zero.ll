@@ -72,7 +72,7 @@ define i1 @scalar_i32_shl_and_negC_ne(i32 %x, i32 %y) {
 define <4 x i1> @vec_4xi32_shl_and_negC_eq(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @vec_4xi32_shl_and_negC_eq(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl <4 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult <4 x i32> [[SHL]], <i32 8, i32 8, i32 8, i32 8>
+; CHECK-NEXT:    [[R:%.*]] = icmp ult <4 x i32> [[SHL]], splat (i32 8)
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;
   %shl = shl <4 x i32> %x, %y
@@ -84,7 +84,7 @@ define <4 x i1> @vec_4xi32_shl_and_negC_eq(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i1> @vec_shl_and_negC_eq_poison1(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @vec_shl_and_negC_eq_poison1(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl <4 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult <4 x i32> [[SHL]], <i32 8, i32 8, i32 8, i32 8>
+; CHECK-NEXT:    [[R:%.*]] = icmp ult <4 x i32> [[SHL]], splat (i32 8)
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;
   %shl = shl <4 x i32> %x, %y
@@ -96,7 +96,7 @@ define <4 x i1> @vec_shl_and_negC_eq_poison1(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i1> @vec_shl_and_negC_eq_poison2(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @vec_shl_and_negC_eq_poison2(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl <4 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult <4 x i32> [[SHL]], <i32 8, i32 8, i32 8, i32 8>
+; CHECK-NEXT:    [[R:%.*]] = icmp ult <4 x i32> [[SHL]], splat (i32 8)
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;
   %shl = shl <4 x i32> %x, %y
@@ -108,7 +108,7 @@ define <4 x i1> @vec_shl_and_negC_eq_poison2(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i1> @vec_shl_and_negC_eq_poison3(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @vec_shl_and_negC_eq_poison3(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl <4 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult <4 x i32> [[SHL]], <i32 8, i32 8, i32 8, i32 8>
+; CHECK-NEXT:    [[R:%.*]] = icmp ult <4 x i32> [[SHL]], splat (i32 8)
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;
   %shl = shl <4 x i32> %x, %y

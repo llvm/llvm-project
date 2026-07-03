@@ -1,4 +1,4 @@
-; RUN: llc -march=mips -mcpu=mips32r3 -mattr=micromips -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -mtriple=mips -mcpu=mips32r3 -mattr=micromips -relocation-model=pic < %s | FileCheck %s
 
 define i32 @slt(i32 signext %a) nounwind readnone {
   %1 = icmp slt i32 %a, 7

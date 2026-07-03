@@ -41,7 +41,7 @@ template<typename T, unsigned int n>
 
 using char1 = my_vector_type<char, 1>;
 
-int mane() {
+void mane() {
 
     char1 f1{1};
     char1 f2{1};

@@ -2,10 +2,10 @@
 
 // Supported targets
 //
-// RUN: %clang -target dxil--shadermodel6.2-pixel %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-VALID %s
-// RUN: %clang -target dxil-unknown-shadermodel6.2-pixel %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-VALID %s
-// RUN: %clang -target dxil--shadermodel6.2-library %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-VALID %s
-// RUN: %clang -target dxil-unknown-shadermodel6.2-library %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-VALID %s
+// RUN: %clang -target dxil--shadermodel6.2-pixel %s -S -o /dev/null 2>&1 | FileCheck --allow-empty --check-prefix=CHECK-VALID %s
+// RUN: %clang -target dxil-unknown-shadermodel6.2-pixel %s -S -o /dev/null 2>&1 | FileCheck --allow-empty --check-prefix=CHECK-VALID %s
+// RUN: %clang -target dxil--shadermodel6.2-library %s -S -o /dev/null 2>&1 | FileCheck --allow-empty --check-prefix=CHECK-VALID %s
+// RUN: %clang -target dxil-unknown-shadermodel6.2-library %s -S -o /dev/null 2>&1 | FileCheck --allow-empty --check-prefix=CHECK-VALID %s
 
 // Empty shader model
 //

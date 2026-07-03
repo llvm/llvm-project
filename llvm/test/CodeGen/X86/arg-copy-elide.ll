@@ -188,11 +188,11 @@ define void @split_i128(ptr %sret, i128 %x) {
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    andl $-16, %esp
 ; CHECK-NEXT:    subl $48, %esp
-; CHECK-NEXT:    movl 12(%ebp), %eax
+; CHECK-NEXT:    movl 24(%ebp), %eax
 ; CHECK-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    movl 16(%ebp), %ebx
-; CHECK-NEXT:    movl 20(%ebp), %esi
-; CHECK-NEXT:    movl 24(%ebp), %edi
+; CHECK-NEXT:    movl 28(%ebp), %ebx
+; CHECK-NEXT:    movl 32(%ebp), %esi
+; CHECK-NEXT:    movl 36(%ebp), %edi
 ; CHECK-NEXT:    movl %edi, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl %ebx, {{[0-9]+}}(%esp)

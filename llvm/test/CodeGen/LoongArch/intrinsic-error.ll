@@ -1,4 +1,4 @@
-; RUN: not llc --mtriple=loongarch32 < %s 2>&1 | FileCheck %s
+; RUN: not llc --mtriple=loongarch32 < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,LA32
 ; RUN: not llc --mtriple=loongarch64 < %s 2>&1 | FileCheck %s
 
 declare void @llvm.loongarch.dbar(i32)
@@ -54,7 +54,7 @@ entry:
 }
 
 define void @movgr2fcsr(i32 %a) nounwind {
-; CHECK: llvm.loongarch.movgr2fcsr: requires basic 'f' target feature.
+; LA32: llvm.loongarch.movgr2fcsr: requires basic 'f' target feature.
 entry:
   call void @llvm.loongarch.movgr2fcsr(i32 1, i32 %a)
   ret void
@@ -75,7 +75,7 @@ entry:
 }
 
 define i32 @movfcsr2gr() nounwind {
-; CHECK: llvm.loongarch.movfcsr2gr: requires basic 'f' target feature.
+; LA32: llvm.loongarch.movfcsr2gr: requires basic 'f' target feature.
 entry:
   %res = call i32 @llvm.loongarch.movfcsr2gr(i32 1)
   ret i32 %res

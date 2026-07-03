@@ -1,5 +1,4 @@
 set (FILES
-  AlarmTest.cpp
   ConnectionFileDescriptorTest.cpp
   FileActionTest.cpp
   FileSystemTest.cpp
@@ -7,19 +6,28 @@ set (FILES
   HostInfoTest.cpp
   HostTest.cpp
   MainLoopTest.cpp
+  JSONTransportTest.cpp
   NativeProcessProtocolTest.cpp
   PipeTest.cpp
   ProcessLaunchInfoTest.cpp
+  ProcessRunLockTest.cpp
   SocketAddressTest.cpp
   SocketTest.cpp
+  StripConPTYSequencesTest.cpp
   ThreadLauncherTest.cpp
   XMLTest.cpp
 )
 
-if (CMAKE_SYSTEM_NAME MATCHES "Linux|Android")
+if (LLDB_ENABLE_PYTHON)
   list(APPEND FILES
-    linux/HostTest.cpp
-    linux/SupportTest.cpp
+    PythonRuntimeLoaderTest.cpp
+  )
+endif()
+
+if (UNIX)
+  list(APPEND FILES
+    posix/HostTest.cpp
+    posix/SupportTest.cpp
   )
 endif()
 
@@ -31,13 +39,16 @@ endif()
 
 add_lldb_unittest(HostTests
   ${FILES}
+  PARTIAL_SOURCES_INTENDED
   LINK_LIBS
     lldbHost
     lldbCore
     lldbUtilityHelpers
     lldbHostHelpers
     LLVMTestingSupport
-    LLVMTargetParser
+
+  LINK_COMPONENTS
+    TargetParser
   )
 
 add_subdirectory(common)

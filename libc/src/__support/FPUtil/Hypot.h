@@ -12,6 +12,7 @@
 #include "BasicOperations.h"
 #include "FEnvImpl.h"
 #include "FPBits.h"
+#include "cast.h"
 #include "rounding_mode.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
@@ -30,7 +31,7 @@ LIBC_INLINE T find_leading_one(T mant, int &shift_length) {
   if (mant > 0) {
     shift_length = (sizeof(mant) * 8) - 1 - cpp::countl_zero(mant);
   }
-  return T(1) << shift_length;
+  return static_cast<T>((T(1) << shift_length));
 }
 
 } // namespace internal
@@ -133,8 +134,18 @@ LIBC_INLINE T hypot(T x, T y) {
   uint16_t a_exp = a_bits.get_biased_exponent();
   uint16_t b_exp = b_bits.get_biased_exponent();
 
-  if ((a_exp - b_exp >= FPBits_t::FRACTION_LEN + 2) || (x == 0) || (y == 0))
-    return x_abs.get_val() + y_abs.get_val();
+  if ((a_exp - b_exp >= FPBits_t::FRACTION_LEN + 2) || (x == 0) || (y == 0)) {
+#ifdef LIBC_TYPES_HAS_FLOAT16
+    if constexpr (cpp::is_same_v<T, float16>) {
+      // Compiler runtime for basic operations of float16 might not be correctly
+      // rounded for all rounding modes.
+      float af = fputil::cast<float>(x_abs.get_val());
+      float bf = fputil::cast<float>(y_abs.get_val());
+      return fputil::cast<float16>(af + bf);
+    } else
+#endif // LIBC_TYPES_HAS_FLOAT16
+      return x_abs.get_val() + y_abs.get_val();
+  }
 
   uint64_t out_exp = a_exp;
   StorageType a_mant = a_bits.get_mantissa();
@@ -188,10 +199,14 @@ LIBC_INLINE T hypot(T x, T y) {
       sum >>= 2;
       ++out_exp;
       if (out_exp >= FPBits_t::MAX_BIASED_EXPONENT) {
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
         if (int round_mode = quick_get_round();
             round_mode == FE_TONEAREST || round_mode == FE_UPWARD)
           return FPBits_t::inf().get_val();
         return FPBits_t::max_normal().get_val();
+#else
+        return FPBits_t::inf().get_val();
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       }
     } else {
       // For denormal result, we simply move the leading bit of the result to
@@ -207,8 +222,10 @@ LIBC_INLINE T hypot(T x, T y) {
 
   for (StorageType current_bit = leading_one >> 1; current_bit;
        current_bit >>= 1) {
-    r = (r << 1) + ((tail_bits & current_bit) ? 1 : 0);
-    StorageType tmp = (y_new << 1) + current_bit; // 2*y_new(n - 1) + 2^(-n)
+    r = static_cast<StorageType>((r << 1) +
+                                 ((tail_bits & current_bit) ? 1 : 0));
+    StorageType tmp = static_cast<StorageType>((y_new << 1)) +
+                      current_bit; // 2*y_new(n - 1) + 2^(-n)
     if (r >= tmp) {
       r -= tmp;
       y_new += current_bit;
@@ -228,6 +245,17 @@ LIBC_INLINE T hypot(T x, T y) {
 
   y_new >>= 1;
 
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+  // Round to the nearest, tie to even.
+  if (round_bit && (lsb || sticky_bits || (r != 0)))
+    ++y_new;
+  if (y_new >= (ONE >> 1)) {
+    y_new -= ONE >> 1;
+    ++out_exp;
+    if (out_exp >= FPBits_t::MAX_BIASED_EXPONENT)
+      return FPBits_t::inf().get_val();
+  }
+#else
   // Round to the nearest, tie to even.
   int round_mode = quick_get_round();
   switch (round_mode) {
@@ -251,6 +279,7 @@ LIBC_INLINE T hypot(T x, T y) {
       return FPBits_t::max_normal().get_val();
     }
   }
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 
   y_new |= static_cast<StorageType>(out_exp) << FPBits_t::FRACTION_LEN;
 

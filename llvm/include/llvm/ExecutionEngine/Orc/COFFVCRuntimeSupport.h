@@ -18,6 +18,7 @@
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/Support/Compiler.h"
 
 #include <future>
 #include <memory>
@@ -45,12 +46,12 @@ public:
   ///
   /// More information is on:
   /// https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features
-  static Expected<std::unique_ptr<COFFVCRuntimeBootstrapper>>
+  LLVM_ABI static Expected<std::unique_ptr<COFFVCRuntimeBootstrapper>>
   Create(ExecutionSession &ES, ObjectLinkingLayer &ObjLinkingLayer,
          const char *RuntimePath = nullptr);
 
   /// Adds symbol definitions of static version of msvc runtime libraries.
-  Expected<std::vector<std::string>>
+  LLVM_ABI Expected<std::vector<std::string>>
   loadStaticVCRuntime(JITDylib &JD, bool DebugVersion = false);
 
   /// Runs the initializer of static version of msvc runtime libraries.
@@ -58,10 +59,10 @@ public:
   /// printf) within the jit session. Note that proper initialization of vc
   /// runtime requires ability of running static initializers. Cosider setting
   /// up COFFPlatform.
-  Error initializeStaticVCRuntime(JITDylib &JD);
+  LLVM_ABI Error initializeStaticVCRuntime(JITDylib &JD);
 
   /// Adds symbol definitions of dynamic version of msvc runtime libraries.
-  Expected<std::vector<std::string>>
+  LLVM_ABI Expected<std::vector<std::string>>
   loadDynamicVCRuntime(JITDylib &JD, bool DebugVersion = false);
 
 private:

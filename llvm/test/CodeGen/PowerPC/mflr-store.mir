@@ -27,12 +27,12 @@ body: |
     ; CHECK: $x0 = MFLR8 implicit $lr8
     ; CHECK-NEXT: STD killed $x0, 16, $x1
     ; CHECK-NEXT: $x1 = STDU $x1, -32752, $x1
-    ; CHECK-NEXT: BL8 @test_callee, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x2, implicit-def $r1, implicit-def $x3
+    ; CHECK-NEXT: BL8 @test_callee, csr_ppc64_r2, implicit-def dead $lr8, implicit $rm, implicit-def $r1, implicit-def $x3
     ; CHECK-NEXT: $x1 = ADDI8 $x1, 32752
     ; CHECK-NEXT: $x0 = LD 16, $x1
     ; CHECK-NEXT: MTLR8 $x0, implicit-def $lr8
     ; CHECK-NEXT: BLR8 implicit $lr8, implicit $rm, implicit killed $x3
-    BL8 @test_callee, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x2, implicit-def $r1, implicit-def $x3
+    BL8 @test_callee, csr_ppc64_r2, implicit-def dead $lr8, implicit $rm, implicit-def $r1, implicit-def $x3
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 ...
 

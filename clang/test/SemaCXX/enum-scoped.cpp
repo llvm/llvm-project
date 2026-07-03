@@ -1,5 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++11 -verify -triple x86_64-apple-darwin %s
-// RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++17 -verify -triple x86_64-apple-darwin %s
+// RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++11 -verify=expected,cxx11-17 -triple x86_64-apple-darwin %s
+// RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++17 -verify=expected,cxx11-17 -triple x86_64-apple-darwin %s
+// RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++20 -verify -triple x86_64-apple-darwin %s
 
 enum class E1 {
   Val1 = 1L
@@ -35,7 +36,7 @@ int a1[Val2];
 int a2[E1::Val1];
 
 #if __cplusplus >= 201703L
-// expected-error@-3 {{type 'E1' is not implicitly convertible to 'unsigned long'}}
+// expected-error@-3 {{type 'E1' is not implicitly convertible to '__size_t' (aka 'unsigned long')}}
 #else
 // expected-error@-5 {{size of array has non-integer type}}
 #endif
@@ -44,7 +45,7 @@ int* p1 = new int[Val2];
 int* p2 = new int[E1::Val1];
 
 #if __cplusplus >= 201703L
-// expected-error@-3 {{converting 'E1' to incompatible type 'unsigned long'}}
+// expected-error@-3 {{converting 'E1' to incompatible type '__size_t'}}
 #else
 // expected-error@-5 {{array size expression must have integral or unscoped enumeration type, not 'E1'}}
 #endif
@@ -128,7 +129,10 @@ namespace rdar9366066 {
 
   void f(X x) {
     x % X::value; // expected-error{{invalid operands to binary expression ('X' and 'rdar9366066::X')}}
+                  // expected-note@-1{{no implicit conversion for scoped enum; consider casting to underlying type}}
+                  // expected-note@-2{{no implicit conversion for scoped enum; consider casting to underlying type}}
     x % 8; // expected-error{{invalid operands to binary expression ('X' and 'int')}}
+           // expected-note@-1{{no implicit conversion for scoped enum; consider casting to underlying type}}
   }
 }
 
@@ -325,7 +329,7 @@ namespace PR18044 {
   int E::*p; // expected-error {{does not point into a class}}
   using E::f; // expected-error {{no member named 'f'}}
 
-  using E::a; // expected-warning {{using declaration naming a scoped enumerator is a C++20 extension}}
+  using E::a; // cxx11-17-warning {{using declaration naming a scoped enumerator is a C++20 extension}}
   E b = a;
 }
 
@@ -334,7 +338,7 @@ namespace test11 {
   typedef E E2;
   E2 f1() { return E::a; }
 
-  bool f() { return !f1(); } // expected-error {{invalid argument type 'E2' (aka 'test11::E') to unary expression}}
+  bool f() { return !f1(); } // expected-error {{invalid argument type 'E2' (aka 'E') to unary expression}}
 }
 
 namespace PR35586 {
@@ -348,4 +352,118 @@ enum class A;
 enum class B;
 A a;
 B b{a}; // expected-error {{cannot initialize}}
+}
+
+namespace GH147736 {
+template <typename Ty>
+struct S {
+  enum OhBoy : Ty { // expected-error 2 {{'_Atomic' qualifier ignored; operations involving the enumeration type will be non-atomic}}
+    Unimportant
+  } e;
+};
+
+// Okay, was previously rejected. The underlying type is int.
+S<_Atomic(int)> s; // expected-warning {{'_Atomic' is a C11 extension}}
+                   // expected-note@-1 {{in instantiation of template class 'GH147736::S<_Atomic(int)>' requested here}}
+static_assert(__is_same(__underlying_type(S<_Atomic(long long)>::OhBoy), long long), ""); // expected-warning {{'_Atomic' is a C11 extension}}
+                                                                                          // expected-note@-1 {{in instantiation of template class 'GH147736::S<_Atomic(long long)>' requested here}}
+}
+
+namespace GH24265 {
+  enum class E_int { e };
+  enum class E_long : long { e };
+
+  void f() {
+    E_int::e + E_long::e; // expected-error {{invalid operands to binary expression ('GH24265::E_int' and 'GH24265::E_long')}}
+                          // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                          // expected-note@-2 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+    E_int::e + 0; // expected-error {{invalid operands to binary expression ('GH24265::E_int' and 'int')}}
+                  // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+
+    0 * E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
+                  // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+    0 / E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
+                  // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+    0 % E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
+                  // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+    0 + E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
+                  // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+    0 - E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
+                  // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+    0 << E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
+                   // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+    0 >> E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
+                   // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+
+    #if __cplusplus >= 202002L
+    0 <=> E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
+                    // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+    #endif
+
+    0 < E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
+                  // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+    0 > E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
+                  // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+    0 <= E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
+                   // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+    0 >= E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
+                   // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+    0 == E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
+                   // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+    0 != E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
+                   // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+    0 & E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
+                  // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+    0 ^ E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
+                  // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+    0 | E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
+                  // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+    0 && E_int::e; // expected-error {{value of type 'GH24265::E_int' is not contextually convertible to 'bool'}}
+                   // expected-error@-1 {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
+                   // expected-note@-2 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+    0 || E_int::e; // expected-error {{value of type 'GH24265::E_int' is not contextually convertible to 'bool'}}
+                   // expected-error@-1 {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
+                   // expected-note@-2 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+
+    int a;
+    a *= E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
+                   // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+    a /= E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
+                   // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+    a %= E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
+                   // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+    a += E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
+                   // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+    a -= E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
+                   // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+    a <<= E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
+                    // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+    a >>= E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
+                    // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+    a &= E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
+                   // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+    a ^= E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
+                   // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+    a |= E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
+                   // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+
+    // TODO: These do not have the diagnostic yet
+    E_int b;
+    b *= 0; // expected-error {{invalid operands to binary expression ('E_int' and 'int')}}
+    b /= 0; // expected-error {{invalid operands to binary expression ('E_int' and 'int')}}
+    b %= 0; // expected-error {{invalid operands to binary expression ('E_int' and 'int')}}
+    b += 0; // expected-error {{invalid operands to binary expression ('E_int' and 'int')}}
+    b -= 0; // expected-error {{invalid operands to binary expression ('E_int' and 'int')}}
+    b <<= 0; // expected-error {{invalid operands to binary expression ('E_int' and 'int')}}
+    b >>= 0; // expected-error {{invalid operands to binary expression ('E_int' and 'int')}}
+    b &= 0; // expected-error {{invalid operands to binary expression ('E_int' and 'int')}}
+    b ^= 0; // expected-error {{invalid operands to binary expression ('E_int' and 'int')}}
+    b |= 0; // expected-error {{invalid operands to binary expression ('E_int' and 'int')}}
+
+    a = E_int::e; // expected-error {{assigning to 'int' from incompatible type 'GH24265::E_int'}}
+    b = 0; // expected-error {{assigning to 'E_int' from incompatible type 'int'}}
+
+    E_int c = 0; // expected-error {{cannot initialize a variable of type 'E_int' with an rvalue of type 'int'}}
+    int d = E_int::e; // expected-error {{cannot initialize a variable of type 'int' with an rvalue of type 'GH24265::E_int'}}
+  }
 }

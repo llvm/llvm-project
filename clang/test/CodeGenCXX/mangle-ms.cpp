@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fblocks -emit-llvm %s -o - -triple=i386-pc-win32 -std=c++98 | FileCheck %s
 // RUN: %clang_cc1 -fblocks -emit-llvm %s -o - -triple=x86_64-pc-win32 -std=c++98| FileCheck -check-prefix X64 %s
+// RUN: %clang_cc1 -fblocks -emit-llvm %s -o - -triple=x86_64-uefi -std=c++98| FileCheck -check-prefix X64 %s
 // RUN: %clang_cc1 -fblocks -emit-llvm %s -o - -triple=aarch64-pc-win32 -std=c++98 -DARM | FileCheck -check-prefixes=X64,ARM %s
 
 int a;
@@ -14,16 +15,28 @@ namespace N {
   int b;
 // CHECK-DAG: @"?b@N@@3HA"
 
+  struct O {
+    int v;
+  };
+
   namespace {
     int anonymous;
 // CHECK-DAG: @"?anonymous@?A0x{{[^@]*}}@N@@3HA"
+
+    O get() { return O(); }
+// CHECK-DAG: @"?get@?A0x{{[^@]*}}@N@@YA?AUO@2@XZ"
+
+    namespace {
+      int nested_anonymous;
+// CHECK-DAG: @"?nested_anonymous@?A0x{{[^@]*}}@1N@@3HA"
+    }
   }
 }
 
 static int c;
 // CHECK-DAG: @c
 
-int _c(void) {return N::anonymous + c;}
+int _c(void) {return N::anonymous + N::nested_anonymous + N::get().v + c;}
 // CHECK-DAG: @"?_c@@YAHXZ"
 // X64-DAG:   @"?_c@@YAHXZ"
 

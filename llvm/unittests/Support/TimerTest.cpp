@@ -66,4 +66,20 @@ TEST(Timer, CheckIfTriggered) {
   EXPECT_FALSE(T1.hasTriggered());
 }
 
-} // end anon namespace
+TEST(Timer, TimerGroupTimerDestructed) {
+  testing::internal::CaptureStderr();
+
+  {
+    TimerGroup TG("tg", "desc");
+    {
+      Timer T1("T1", "T1", TG);
+      T1.startTimer();
+      T1.stopTimer();
+    }
+    EXPECT_TRUE(testing::internal::GetCapturedStderr().empty());
+    testing::internal::CaptureStderr();
+  }
+  EXPECT_FALSE(testing::internal::GetCapturedStderr().empty());
+}
+
+} // namespace

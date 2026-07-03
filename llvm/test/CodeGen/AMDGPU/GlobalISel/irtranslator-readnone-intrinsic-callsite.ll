@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -global-isel -stop-after=irtranslator -o - %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -global-isel -stop-after=irtranslator -o - %s | FileCheck %s
 
 ; Make sure that an intrinsic declaration that has side effects, but
 ; called with a readnone call site is translated to
@@ -9,9 +9,9 @@
 ; CHECK: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.s.getreg)
 define amdgpu_kernel void @getreg_callsite_attributes() {
   %reg0 = call i32 @llvm.amdgcn.s.getreg(i32 0)
-  store volatile i32 %reg0, ptr addrspace(1) undef
+  store volatile i32 %reg0, ptr addrspace(1) poison
   %reg1 = call i32 @llvm.amdgcn.s.getreg(i32 0) #1
-  store volatile i32 %reg1, ptr addrspace(1) undef
+  store volatile i32 %reg1, ptr addrspace(1) poison
   ret void
 }
 

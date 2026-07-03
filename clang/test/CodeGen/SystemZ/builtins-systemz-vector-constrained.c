@@ -7,15 +7,17 @@ typedef __attribute__((vector_size(16))) double vec_double;
 
 volatile vec_slong vsl;
 volatile vec_double vd;
+volatile vec_double vd1;
+volatile vec_double vd2;
 
 int cc;
 
 void test_float(void) {
-  vsl = __builtin_s390_vfcedbs(vd, vd, &cc);
+  vsl = __builtin_s390_vfcedbs(vd, vd1, &cc);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfcedbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
-  vsl = __builtin_s390_vfchdbs(vd, vd, &cc);
+  vsl = __builtin_s390_vfchdbs(vd, vd1, &cc);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchdbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
-  vsl = __builtin_s390_vfchedbs(vd, vd, &cc);
+  vsl = __builtin_s390_vfchedbs(vd, vd1, &cc);
   // CHECK: call { <2 x i64>, i32 } @llvm.s390.vfchedbs(<2 x double> %{{.*}}, <2 x double> %{{.*}})
 
   vsl = __builtin_s390_vftcidb(vd, 0, &cc);
@@ -26,9 +28,9 @@ void test_float(void) {
   vd = __builtin_s390_vfsqdb(vd);
   // CHECK: call <2 x double> @llvm.experimental.constrained.sqrt.v2f64(<2 x double> %{{.*}})
 
-  vd = __builtin_s390_vfmadb(vd, vd, vd);
+  vd = __builtin_s390_vfmadb(vd, vd1, vd2);
   // CHECK: call <2 x double> @llvm.experimental.constrained.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
-  vd = __builtin_s390_vfmsdb(vd, vd, vd);
+  vd = __builtin_s390_vfmsdb(vd, vd1, vd2);
   // CHECK: [[NEG:%[^ ]+]] = fneg <2 x double> {{.*}}
   // CHECK: call <2 x double> @llvm.experimental.constrained.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> [[NEG]], {{.*}})
 
@@ -44,12 +46,14 @@ void test_float(void) {
   // CHECK: call <2 x double> @llvm.experimental.constrained.nearbyint.v2f64(<2 x double> %{{.*}})
   vd = __builtin_s390_vfidb(vd, 4, 1);
   // CHECK: call <2 x double> @llvm.experimental.constrained.round.v2f64(<2 x double> %{{.*}})
+  vd = __builtin_s390_vfidb(vd, 4, 4);
+  // CHECK: call <2 x double> @llvm.experimental.constrained.roundeven.v2f64(<2 x double> %{{.*}})
   vd = __builtin_s390_vfidb(vd, 4, 5);
   // CHECK: call <2 x double> @llvm.experimental.constrained.trunc.v2f64(<2 x double> %{{.*}})
   vd = __builtin_s390_vfidb(vd, 4, 6);
   // CHECK: call <2 x double> @llvm.experimental.constrained.ceil.v2f64(<2 x double> %{{.*}})
   vd = __builtin_s390_vfidb(vd, 4, 7);
   // CHECK: call <2 x double> @llvm.experimental.constrained.floor.v2f64(<2 x double> %{{.*}})
-  vd = __builtin_s390_vfidb(vd, 4, 4);
-  // CHECK: call <2 x double> @llvm.s390.vfidb(<2 x double> %{{.*}}, i32 4, i32 4)
+  vd = __builtin_s390_vfidb(vd, 4, 3);
+  // CHECK: call <2 x double> @llvm.s390.vfidb(<2 x double> %{{.*}}, i32 4, i32 3)
 }

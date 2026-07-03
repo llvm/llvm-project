@@ -24,6 +24,7 @@ class SystemZTargetMachine;
 
 namespace SystemZ {
 // Condition-code mask values.
+const unsigned CCMASK_NONE = 0;
 const unsigned CCMASK_0 = 1 << 3;
 const unsigned CCMASK_1 = 1 << 2;
 const unsigned CCMASK_2 = 1 << 1;
@@ -198,6 +199,7 @@ FunctionPass *createSystemZCopyPhysRegsPass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZPostRewritePass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZTDCPass();
 
+void initializeSystemZAsmPrinterPass(PassRegistry &);
 void initializeSystemZCopyPhysRegsPass(PassRegistry &);
 void initializeSystemZDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeSystemZElimComparePass(PassRegistry &);

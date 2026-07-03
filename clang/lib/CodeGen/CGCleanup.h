@@ -87,6 +87,10 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsLifetimeMarker : 1;
 
+    /// Whether this cleanup is a fake use
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsFakeUse : 1;
+
     /// Whether the normal cleanup should test the activation flag.
     LLVM_PREFERRED_TYPE(bool)
     unsigned TestFlagInNormalCleanup : 1;
@@ -94,6 +98,9 @@ protected:
     /// Whether the EH cleanup should test the activation flag.
     LLVM_PREFERRED_TYPE(bool)
     unsigned TestFlagInEHCleanup : 1;
+
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsSEHFinallyCleanup : 1;
 
     /// The amount of extra storage needed by the Cleanup.
     /// Always a multiple of the scope-stack alignment.
@@ -352,6 +359,8 @@ public:
     CleanupBits.IsEHCleanup = isEH;
     CleanupBits.IsActive = true;
     CleanupBits.IsLifetimeMarker = false;
+    CleanupBits.IsFakeUse = false;
+    CleanupBits.IsSEHFinallyCleanup = false;
     CleanupBits.TestFlagInNormalCleanup = false;
     CleanupBits.TestFlagInEHCleanup = false;
     CleanupBits.CleanupSize = cleanupSize;
@@ -383,6 +392,12 @@ public:
 
   bool isLifetimeMarker() const { return CleanupBits.IsLifetimeMarker; }
   void setLifetimeMarker() { CleanupBits.IsLifetimeMarker = true; }
+
+  bool isFakeUse() const { return CleanupBits.IsFakeUse; }
+  void setFakeUse() { CleanupBits.IsFakeUse = true; }
+
+  bool isSEHFinallyCleanup() const { return CleanupBits.IsSEHFinallyCleanup; }
+  void setSEHFinallyCleanup() { CleanupBits.IsSEHFinallyCleanup = true; }
 
   bool hasActiveFlag() const { return ActiveFlag.isValid(); }
   Address getActiveFlag() const {

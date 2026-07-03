@@ -10,11 +10,11 @@
 #include "lldb/Utility/Instrumentation.h"
 
 #include "lldb/API/SBAddress.h"
-#include "lldb/API/SBFrame.h"
 #include "lldb/API/SBFile.h"
+#include "lldb/API/SBFrame.h"
 
-#include "lldb/API/SBInstruction.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/EmulateInstruction.h"
@@ -27,6 +27,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/StructuredData.h"
 
 #include <memory>
 
@@ -164,7 +165,8 @@ const char *SBInstruction::GetComment(SBTarget target) {
   return ConstString(inst_sp->GetComment(&exe_ctx)).GetCString();
 }
 
-lldb::InstructionControlFlowKind SBInstruction::GetControlFlowKind(lldb::SBTarget target) {
+lldb::InstructionControlFlowKind
+SBInstruction::GetControlFlowKind(lldb::SBTarget target) {
   LLDB_INSTRUMENT_VA(this, target);
 
   lldb::InstructionSP inst_sp(GetOpaque());
@@ -269,7 +271,8 @@ bool SBInstruction::GetDescription(lldb::SBStream &s) {
 
 void SBInstruction::Print(FILE *outp) {
   LLDB_INSTRUMENT_VA(this, outp);
-  FileSP out = std::make_shared<NativeFile>(outp, /*take_ownership=*/false);
+  FileSP out = std::make_shared<NativeFile>(outp, File::eOpenOptionWriteOnly,
+                                            /*take_ownership=*/false);
   Print(out);
 }
 
@@ -347,4 +350,22 @@ bool SBInstruction::TestEmulation(lldb::SBStream &output_stream,
   if (inst_sp)
     return inst_sp->TestEmulation(output_stream.ref(), test_file);
   return false;
+}
+
+SBStructuredData SBInstruction::GetVariableAnnotations() {
+  LLDB_INSTRUMENT_VA(this);
+
+  SBStructuredData result;
+
+  if (!m_opaque_sp || !m_opaque_sp->IsValid())
+    return result;
+
+  lldb::InstructionSP inst_sp = m_opaque_sp->GetSP();
+  if (!inst_sp)
+    return result;
+
+  StructuredData::ArraySP array_sp = inst_sp->GetVariableAnnotations();
+  result.m_impl_up->SetObjectSP(array_sp);
+
+  return result;
 }

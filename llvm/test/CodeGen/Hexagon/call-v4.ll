@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -print-after=finalize-isel -o /dev/null 2>&1 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -print-after=finalize-isel -o /dev/null 2>&1 < %s | FileCheck %s
 ; REQUIRES: asserts
 
 ; CHECK: J2_call @f1

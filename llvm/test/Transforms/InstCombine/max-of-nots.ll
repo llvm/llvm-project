@@ -4,7 +4,7 @@
 define <2 x i32> @umin_of_nots(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @umin_of_nots(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.umax.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]])
-; CHECK-NEXT:    [[MIN:%.*]] = xor <2 x i32> [[TMP1]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[MIN:%.*]] = xor <2 x i32> [[TMP1]], splat (i32 -1)
 ; CHECK-NEXT:    ret <2 x i32> [[MIN]]
 ;
   %notx = xor <2 x i32> %x, <i32 -1, i32 -1>
@@ -17,7 +17,7 @@ define <2 x i32> @umin_of_nots(<2 x i32> %x, <2 x i32> %y) {
 define <2 x i32> @smin_of_nots(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @smin_of_nots(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.smax.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]])
-; CHECK-NEXT:    [[MIN:%.*]] = xor <2 x i32> [[TMP1]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[MIN:%.*]] = xor <2 x i32> [[TMP1]], splat (i32 -1)
 ; CHECK-NEXT:    ret <2 x i32> [[MIN]]
 ;
   %notx = xor <2 x i32> %x, <i32 -1, i32 -1>
@@ -242,7 +242,7 @@ define <2 x i32> @max_of_nots_vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @max_of_nots_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.smax.v2i32(<2 x i32> [[Y:%.*]], <2 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[TMP1]], <2 x i32> [[X:%.*]])
-; CHECK-NEXT:    [[SMAX96:%.*]] = xor <2 x i32> [[TMP2]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[SMAX96:%.*]] = xor <2 x i32> [[TMP2]], splat (i32 -1)
 ; CHECK-NEXT:    ret <2 x i32> [[SMAX96]]
 ;
   %c0 = icmp sgt <2 x i32> %y, zeroinitializer
@@ -258,7 +258,7 @@ define <2 x i37> @max_of_nots_weird_type_vec(<2 x i37> %x, <2 x i37> %y) {
 ; CHECK-LABEL: @max_of_nots_weird_type_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i37> @llvm.smax.v2i37(<2 x i37> [[Y:%.*]], <2 x i37> zeroinitializer)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i37> @llvm.smin.v2i37(<2 x i37> [[TMP1]], <2 x i37> [[X:%.*]])
-; CHECK-NEXT:    [[SMAX96:%.*]] = xor <2 x i37> [[TMP2]], <i37 -1, i37 -1>
+; CHECK-NEXT:    [[SMAX96:%.*]] = xor <2 x i37> [[TMP2]], splat (i37 -1)
 ; CHECK-NEXT:    ret <2 x i37> [[SMAX96]]
 ;
   %c0 = icmp sgt <2 x i37> %y, zeroinitializer
@@ -324,7 +324,7 @@ define i32 @min_of_max_swap(i32 %a) {
 
 define <2 x i32> @max_of_min_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @max_of_min_vec(
-; CHECK-NEXT:    ret <2 x i32> <i32 -1, i32 -1>
+; CHECK-NEXT:    ret <2 x i32> splat (i32 -1)
 ;
   %not_a = xor <2 x i32> %a, <i32 -1, i32 -1>
   %c0 = icmp sgt <2 x i32> %a, zeroinitializer

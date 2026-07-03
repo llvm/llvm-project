@@ -29,6 +29,14 @@ FileHeader:
 Sections:
   - Name:            .text
     Type:            SHT_PROGBITS
+  - Name:            .rela.text
+    Type:            SHT_RELA
+    Link:            .symtab
+    Info:            .text
+    Relocations:
+      - Offset: 0
+        Symbol: .L.referenced
+        Type:   R_X86_64_PC32
   - Name:            .LLVM.Custom.Section
     Type:            SHT_PROGBITS
 Symbols:
@@ -48,6 +56,8 @@ Symbols:
   - Name:     .L.undefined
   - Name:     .L.abs
     Index:    SHN_ABS
+  - Name:     .L.referenced
+    Section:  .text
   - Name:     .L.Global
     Type:     STT_FUNC
     Section:  .text
@@ -107,6 +117,15 @@ Symbols:
 # CHECK-NEXT:     Type: None
 # CHECK-NEXT:     Other:
 # CHECK-NEXT:     Section: Undefined
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: .L.referenced
+# CHECK-NEXT:     Value:
+# CHECK-NEXT:     Size:
+# CHECK-NEXT:     Binding: Local
+# CHECK-NEXT:     Type: None
+# CHECK-NEXT:     Other:
+# CHECK-NEXT:     Section: .text
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: .L.Global

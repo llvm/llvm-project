@@ -20,19 +20,8 @@
 
 #include "llvm/ADT/ADL.h"
 #include <type_traits>
-#include <utility>
 
 namespace llvm {
-
-template <typename From, typename To, typename = void>
-struct explicitly_convertible : std::false_type {};
-
-template <typename From, typename To>
-struct explicitly_convertible<
-    From, To,
-    std::void_t<decltype(static_cast<To>(
-        std::declval<std::add_rvalue_reference_t<From>>()))>> : std::true_type {
-};
 
 /// A range adaptor for a pair of iterators.
 ///
@@ -43,15 +32,17 @@ class iterator_range {
   IteratorT begin_iterator, end_iterator;
 
 public:
-#if __GNUC__ == 7 || (__GNUC__ == 8 && __GNUC_MINOR__ < 4)
+#if defined(__GNUC__) &&                                                       \
+    (__GNUC__ == 7 || (__GNUC__ == 8 && __GNUC_MINOR__ < 4))
   // Be careful no to break gcc-7 and gcc-8 < 8.4 on the mlir target.
   // See https://github.com/llvm/llvm-project/issues/63843
   template <typename Container>
 #else
   template <
       typename Container,
-      std::enable_if_t<explicitly_convertible<
-          llvm::detail::IterOfRange<Container>, IteratorT>::value> * = nullptr>
+      std::enable_if_t<std::is_constructible_v<
+                           IteratorT, llvm::detail::IterOfRange<Container> &&>,
+                       int> = 0>
 #endif
   iterator_range(Container &&c)
       : begin_iterator(adl_begin(c)), end_iterator(adl_end(c)) {

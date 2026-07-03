@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 < %s | FileCheck %s
 ; Check if the three stores in the loop were predicated.
 ; CHECK: if{{.*}}memw
 ; CHECK: if{{.*}}memw

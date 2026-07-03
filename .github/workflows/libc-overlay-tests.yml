@@ -1,0 +1,110 @@
+# This workflow is for pre-commit testing of the LLVM-libc project.
+name: LLVM-libc Pre-commit Overlay Tests
+permissions:
+  contents: read
+on:
+  pull_request:
+    paths:
+      - 'libc/**'
+      - '.github/workflows/libc-overlay-tests.yml'
+
+jobs:
+  build:
+    if: github.repository_owner == 'llvm'
+    timeout-minutes: 30
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container || null }}
+    strategy:
+      # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations.
+      fail-fast: false
+      matrix:
+        include:
+          # TODO: add linux gcc when it is fixed
+          - os: ubuntu-24.04
+            container: 'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:a902fb53bdad5e4a4bb6c11b6584e717a7b3d6e886f1ea58e11f95e46226249c'
+            compiler:
+              c_compiler: clang-23
+              cpp_compiler: clang++-23
+            linker: lld-23
+          - os: ubuntu-24.04-arm
+            container: 'ghcr.io/llvm/arm64v8/libc-ubuntu-24.04:latest@sha256:138636a45bb70f7b51a858b282e66291cb3c5c85371afee09032a5e09b263395'
+            compiler:
+              c_compiler: clang-23
+              cpp_compiler: clang++-23
+            linker: lld-23
+          - os: windows-2022
+            compiler:
+              c_compiler: clang-cl
+              cpp_compiler: clang-cl
+          - os: windows-2025
+            compiler:
+              c_compiler: clang-cl
+              cpp_compiler: clang-cl
+          - os: macos-15
+            compiler:
+              c_compiler: clang
+              cpp_compiler: clang++
+    
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      with:
+        persist-credentials: false
+    
+    # Libc's build is relatively small comparing with other components of LLVM.
+    # A fresh linux overlay takes about 180MiB of uncompressed disk space, which can
+    # be compressed into ~40MiB. MacOS and Windows overlay builds are less than 10MiB
+    # after compression. Limiting the cache size to 1G should be enough.
+    # Prefer sccache as it is modern and it has a guarantee to work with MSVC.
+    # Do not use direct GHAC access even though it is supported by sccache. GHAC rejects
+    # frequent small object writes.
+    - name: Setup ccache
+      uses: hendrikmuhs/ccache-action@33522472633dbd32578e909b315f5ee43ba878ce # v1.2.22
+      with:
+        max-size: 1G
+        key: libc_overlay_build_v2_${{ matrix.os }}_${{ matrix.compiler.c_compiler }}
+        variant: sccache
+    
+    # Chocolatey is shipped with Windows runners. Windows Server 2025 recommends WinGet.
+    # Consider migrating to WinGet when Windows Server 2025 is available.
+    - name: Prepare dependencies (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        choco install ninja
+    
+    - name: Prepare dependencies (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        brew install ninja
+
+    # Use MinSizeRel to reduce the size of the build.
+    # Notice that CMP0141=NEW and MSVC_DEBUG_INFORMATION_FORMAT=Embedded are required
+    # by the sccache tool.
+    - name: Configure CMake
+      run: >
+        cmake -B build
+        -DCMAKE_CXX_COMPILER=${{ matrix.compiler.cpp_compiler }}
+        -DCMAKE_C_COMPILER=${{ matrix.compiler.c_compiler }}
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo
+        -DCMAKE_C_COMPILER_LAUNCHER=sccache
+        -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
+        -DCMAKE_POLICY_DEFAULT_CMP0141=NEW
+        -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded
+        -DLIBC_COMPILE_OPTIONS_NATIVE=""
+        -DLLVM_ENABLE_RUNTIMES=libc
+        -DLLVM_USE_LINKER="${{ matrix.linker }}"
+        -G Ninja
+        -S runtimes
+
+    - name: Build
+      run: >
+        cmake 
+        --build build
+        --parallel 
+        --target libc
+
+    - name: Test
+      run: >
+        cmake 
+        --build build 
+        --parallel 
+        --target check-libc

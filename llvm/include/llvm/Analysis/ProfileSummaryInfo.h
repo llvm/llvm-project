@@ -21,6 +21,7 @@
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BlockFrequency.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 #include <optional>
 
@@ -63,8 +64,9 @@ public:
   ProfileSummaryInfo(const Module &M) : M(&M) { refresh(); }
   ProfileSummaryInfo(ProfileSummaryInfo &&Arg) = default;
 
-  /// If no summary is present, attempt to refresh.
-  void refresh();
+  /// If a summary is provided as argument, use that. Otherwise,
+  /// if the `Summary` member is null, attempt to refresh.
+  LLVM_ABI void refresh(std::unique_ptr<ProfileSummary> &&Other = nullptr);
 
   /// Returns true if profile summary is available.
   bool hasProfileSummary() const { return Summary != nullptr; }
@@ -99,26 +101,25 @@ public:
   }
 
   /// Returns the profile count for \p CallInst.
-  std::optional<uint64_t> getProfileCount(const CallBase &CallInst,
-                                          BlockFrequencyInfo *BFI,
-                                          bool AllowSynthetic = false) const;
+  LLVM_ABI std::optional<uint64_t>
+  getProfileCount(const CallBase &CallInst, BlockFrequencyInfo *BFI) const;
   /// Returns true if module \c M has partial-profile sample profile.
-  bool hasPartialSampleProfile() const;
+  LLVM_ABI bool hasPartialSampleProfile() const;
   /// Returns true if the working set size of the code is considered huge.
-  bool hasHugeWorkingSetSize() const;
+  LLVM_ABI bool hasHugeWorkingSetSize() const;
   /// Returns true if the working set size of the code is considered large.
-  bool hasLargeWorkingSetSize() const;
+  LLVM_ABI bool hasLargeWorkingSetSize() const;
   /// Returns true if \p F has hot function entry. If it returns false, it
   /// either means it is not hot or it is unknown whether it is hot or not (for
   /// example, no profile data is available).
   template <typename FuncT> bool isFunctionEntryHot(const FuncT *F) const {
     if (!F || !hasProfileSummary())
       return false;
-    std::optional<Function::ProfileCount> FunctionCount = getEntryCount(F);
+    std::optional<uint64_t> FunctionCount = getEntryCount(F);
     // FIXME: The heuristic used below for determining hotness is based on
     // preliminary SPEC tuning for inliner. This will eventually be a
     // convenience method that calls isHotCount.
-    return FunctionCount && isHotCount(FunctionCount->getCount());
+    return FunctionCount && isHotCount(*FunctionCount);
   }
 
   /// Returns true if \p F contains hot code.
@@ -127,7 +128,7 @@ public:
     if (!F || !hasProfileSummary())
       return false;
     if (auto FunctionCount = getEntryCount(F))
-      if (isHotCount(FunctionCount->getCount()))
+      if (isHotCount(*FunctionCount))
         return true;
 
     if (auto TotalCallCount = getTotalCallCount(F))
@@ -140,14 +141,14 @@ public:
     return false;
   }
   /// Returns true if \p F has cold function entry.
-  bool isFunctionEntryCold(const Function *F) const;
+  LLVM_ABI bool isFunctionEntryCold(const Function *F) const;
   /// Returns true if \p F contains only cold code.
   template <typename FuncT, typename BFIT>
   bool isFunctionColdInCallGraph(const FuncT *F, BFIT &BFI) const {
     if (!F || !hasProfileSummary())
       return false;
     if (auto FunctionCount = getEntryCount(F))
-      if (!isColdCount(FunctionCount->getCount()))
+      if (!isColdCount(*FunctionCount))
         return false;
 
     if (auto TotalCallCount = getTotalCallCount(F))
@@ -160,7 +161,7 @@ public:
     return true;
   }
   /// Returns true if the hotness of \p F is unknown.
-  bool isFunctionHotnessUnknown(const Function &F) const;
+  LLVM_ABI bool isFunctionHotnessUnknown(const Function &F) const;
   /// Returns true if \p F contains hot code with regard to a given hot
   /// percentile cutoff value.
   template <typename FuncT, typename BFIT>
@@ -178,19 +179,20 @@ public:
         PercentileCutoff, F, BFI);
   }
   /// Returns true if count \p C is considered hot.
-  bool isHotCount(uint64_t C) const;
+  LLVM_ABI bool isHotCount(uint64_t C) const;
   /// Returns true if count \p C is considered cold.
-  bool isColdCount(uint64_t C) const;
+  LLVM_ABI bool isColdCount(uint64_t C) const;
   /// Returns true if count \p C is considered hot with regard to a given
   /// hot percentile cutoff value.
   /// PercentileCutoff is encoded as a 6 digit decimal fixed point number, where
   /// the first two digits are the whole part. E.g. 995000 for 99.5 percentile.
-  bool isHotCountNthPercentile(int PercentileCutoff, uint64_t C) const;
+  LLVM_ABI bool isHotCountNthPercentile(int PercentileCutoff, uint64_t C) const;
   /// Returns true if count \p C is considered cold with regard to a given
   /// cold percentile cutoff value.
   /// PercentileCutoff is encoded as a 6 digit decimal fixed point number, where
   /// the first two digits are the whole part. E.g. 995000 for 99.5 percentile.
-  bool isColdCountNthPercentile(int PercentileCutoff, uint64_t C) const;
+  LLVM_ABI bool isColdCountNthPercentile(int PercentileCutoff,
+                                         uint64_t C) const;
 
   /// Returns true if BasicBlock \p BB is considered hot.
   template <typename BBType, typename BFIT>
@@ -243,15 +245,17 @@ public:
                                                       BlockFreq, BFI);
   }
   /// Returns true if the call site \p CB is considered hot.
-  bool isHotCallSite(const CallBase &CB, BlockFrequencyInfo *BFI) const;
+  LLVM_ABI bool isHotCallSite(const CallBase &CB,
+                              BlockFrequencyInfo *BFI) const;
   /// Returns true if call site \p CB is considered cold.
-  bool isColdCallSite(const CallBase &CB, BlockFrequencyInfo *BFI) const;
+  LLVM_ABI bool isColdCallSite(const CallBase &CB,
+                               BlockFrequencyInfo *BFI) const;
   /// Returns HotCountThreshold if set. Recompute HotCountThreshold
   /// if not set.
-  uint64_t getOrCompHotCountThreshold() const;
+  LLVM_ABI uint64_t getOrCompHotCountThreshold() const;
   /// Returns ColdCountThreshold if set. Recompute HotCountThreshold
   /// if not set.
-  uint64_t getOrCompColdCountThreshold() const;
+  LLVM_ABI uint64_t getOrCompColdCountThreshold() const;
   /// Returns HotCountThreshold if set.
   uint64_t getHotCountThreshold() const {
     return HotCountThreshold.value_or(0);
@@ -274,11 +278,9 @@ private:
     if (!F || !hasProfileSummary())
       return false;
     if (auto FunctionCount = getEntryCount(F)) {
-      if (isHot &&
-          isHotCountNthPercentile(PercentileCutoff, FunctionCount->getCount()))
+      if (isHot && isHotCountNthPercentile(PercentileCutoff, *FunctionCount))
         return true;
-      if (!isHot && !isColdCountNthPercentile(PercentileCutoff,
-                                              FunctionCount->getCount()))
+      if (!isHot && !isColdCountNthPercentile(PercentileCutoff, *FunctionCount))
         return false;
     }
     if (auto TotalCallCount = getTotalCallCount(F)) {
@@ -304,7 +306,7 @@ private:
   bool isHotOrColdBlockNthPercentile(int PercentileCutoff, const BBType *BB,
                                      BFIT *BFI) const {
     auto Count = BFI->getBlockProfileCount(BB);
-    if (isHot)
+    if constexpr (isHot)
       return Count && isHotCountNthPercentile(PercentileCutoff, *Count);
     else
       return Count && isColdCountNthPercentile(PercentileCutoff, *Count);
@@ -315,14 +317,14 @@ private:
                                      BlockFrequency BlockFreq,
                                      BFIT *BFI) const {
     auto Count = BFI->getProfileCountFromFreq(BlockFreq);
-    if (isHot)
+    if constexpr (isHot)
       return Count && isHotCountNthPercentile(PercentileCutoff, *Count);
     else
       return Count && isColdCountNthPercentile(PercentileCutoff, *Count);
   }
 
   template <typename FuncT>
-  std::optional<Function::ProfileCount> getEntryCount(const FuncT *F) const {
+  std::optional<uint64_t> getEntryCount(const FuncT *F) const {
     return F->getEntryCount();
   }
 };
@@ -345,12 +347,11 @@ ProfileSummaryInfo::getTotalCallCount<Function>(const Function *F) const {
 // here, because we cannot include MachineFunction header here, that would break
 // dependency rules.
 template <>
-std::optional<Function::ProfileCount>
-ProfileSummaryInfo::getEntryCount<MachineFunction>(
+std::optional<uint64_t> ProfileSummaryInfo::getEntryCount<MachineFunction>(
     const MachineFunction *F) const;
 
 /// An analysis pass based on legacy pass manager to deliver ProfileSummaryInfo.
-class ProfileSummaryInfoWrapperPass : public ImmutablePass {
+class LLVM_ABI ProfileSummaryInfoWrapperPass : public ImmutablePass {
   std::unique_ptr<ProfileSummaryInfo> PSI;
 
 public:
@@ -373,22 +374,21 @@ class ProfileSummaryAnalysis
 public:
   typedef ProfileSummaryInfo Result;
 
-  Result run(Module &M, ModuleAnalysisManager &);
+  LLVM_ABI Result run(Module &M, ModuleAnalysisManager &);
 
 private:
   friend AnalysisInfoMixin<ProfileSummaryAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 };
 
 /// Printer pass that uses \c ProfileSummaryAnalysis.
 class ProfileSummaryPrinterPass
-    : public PassInfoMixin<ProfileSummaryPrinterPass> {
+    : public RequiredPassInfoMixin<ProfileSummaryPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit ProfileSummaryPrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 } // end namespace llvm

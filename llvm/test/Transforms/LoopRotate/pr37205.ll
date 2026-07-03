@@ -95,7 +95,7 @@ if.then:                                          ; preds = %for.cond
   br label %for.cond1
 
 for.cond1:                                        ; preds = %for.cond4, %if.then
-  br i1 undef, label %for.body, label %for.end6
+  br i1 false, label %for.body, label %for.end6
 
 for.body:                                         ; preds = %for.cond1
   br i1 false, label %if.then3, label %if.end

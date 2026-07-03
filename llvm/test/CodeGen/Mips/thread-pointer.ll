@@ -1,7 +1,7 @@
-; RUN: llc -march=mips < %s | FileCheck %s
-; RUN: llc -march=mips64 < %s | FileCheck %s
-; RUN: llc -march=mipsel < %s | FileCheck %s
-; RUN: llc -march=mips64el < %s | FileCheck %s
+; RUN: llc -mtriple=mips < %s | FileCheck %s
+; RUN: llc -mtriple=mips64 < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel < %s | FileCheck %s
+; RUN: llc -mtriple=mips64el < %s | FileCheck %s
 
 declare ptr @llvm.thread.pointer() nounwind readnone
 

@@ -26,9 +26,9 @@ namespace llvm {
 
 /// A base class for all GenericMachineInstrs.
 class GenericMachineInstr : public MachineInstr {
-  constexpr static unsigned PoisonFlags = NoUWrap | NoSWrap | NoUSWrap |
-                                          IsExact | Disjoint | NonNeg |
-                                          FmNoNans | FmNoInfs;
+  constexpr static unsigned PoisonFlags =
+      NoUWrap | NoSWrap | NoUSWrap | IsExact | Disjoint | NonNeg | FmNoNans |
+      FmNoInfs | SameSign | InBounds;
 
 public:
   GenericMachineInstr() = delete;
@@ -66,6 +66,9 @@ public:
   /// memory operations can't be reordered.
   bool isUnordered() const { return getMMO().isUnordered(); }
 
+  /// Return the minimum known alignment in bytes of the actual memory
+  /// reference.
+  Align getAlign() const { return getMMO().getAlign(); }
   /// Returns the size in bytes of the memory access.
   LocationSize getMemSize() const { return getMMO().getSize(); }
   /// Returns the size in bits of the memory access.
@@ -77,7 +80,7 @@ public:
 };
 
 /// Represents any type of generic load or store.
-/// G_LOAD, G_STORE, G_ZEXTLOAD, G_SEXTLOAD.
+/// G_LOAD, G_STORE, G_ZEXTLOAD, G_SEXTLOAD, G_FPEXTLOAD, G_FPTRUNCSTORE.
 class GLoadStore : public GMemOperation {
 public:
   /// Get the source register of the pointer value.
@@ -89,6 +92,8 @@ public:
     case TargetOpcode::G_STORE:
     case TargetOpcode::G_ZEXTLOAD:
     case TargetOpcode::G_SEXTLOAD:
+    case TargetOpcode::G_FPEXTLOAD:
+    case TargetOpcode::G_FPTRUNCSTORE:
       return true;
     default:
       return false;
@@ -194,6 +199,7 @@ public:
     case TargetOpcode::G_LOAD:
     case TargetOpcode::G_ZEXTLOAD:
     case TargetOpcode::G_SEXTLOAD:
+    case TargetOpcode::G_FPEXTLOAD:
       return true;
     default:
       return false;
@@ -209,12 +215,13 @@ public:
   }
 };
 
-/// Represents either a G_SEXTLOAD or G_ZEXTLOAD.
+/// Represents either a G_SEXTLOAD, G_ZEXTLOAD, or G_FPEXTLOAD.
 class GExtLoad : public GAnyLoad {
 public:
   static bool classof(const MachineInstr *MI) {
     return MI->getOpcode() == TargetOpcode::G_SEXTLOAD ||
-           MI->getOpcode() == TargetOpcode::G_ZEXTLOAD;
+           MI->getOpcode() == TargetOpcode::G_ZEXTLOAD ||
+           MI->getOpcode() == TargetOpcode::G_FPEXTLOAD;
   }
 };
 
@@ -234,14 +241,44 @@ public:
   }
 };
 
-/// Represents a G_STORE.
-class GStore : public GLoadStore {
+/// Represents a G_FPEXTLOAD.
+class GFPExtLoad : public GAnyLoad {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_FPEXTLOAD;
+  }
+};
+
+/// Represents any generic store, including truncating variants.
+class GAnyStore : public GLoadStore {
 public:
   /// Get the stored value register.
   Register getValueReg() const { return getOperand(0).getReg(); }
 
   static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_STORE:
+    case TargetOpcode::G_FPTRUNCSTORE:
+      return true;
+    default:
+      return false;
+    }
+  }
+};
+
+/// Represents a G_STORE.
+class GStore : public GAnyStore {
+public:
+  static bool classof(const MachineInstr *MI) {
     return MI->getOpcode() == TargetOpcode::G_STORE;
+  }
+};
+
+/// Represents a G_FPTRUNCSTORE.
+class GFPTruncStore : public GAnyStore {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_FPTRUNCSTORE;
   }
 };
 
@@ -479,6 +516,23 @@ public:
     switch (MI->getOpcode()) {
     case TargetOpcode::G_UADDO:
     case TargetOpcode::G_SADDO:
+      return true;
+    default:
+      return false;
+    }
+  }
+};
+
+/// Represents overflowing sub operations.
+/// G_USUBO, G_SSUBO
+class GSubCarryOut : public GBinOpCarryOut {
+public:
+  bool isSigned() const { return getOpcode() == TargetOpcode::G_SSUBO; }
+
+  static bool classof(const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_USUBO:
+    case TargetOpcode::G_SSUBO:
       return true;
     default:
       return false;
@@ -811,6 +865,18 @@ public:
   }
 };
 
+/// Represents a insert subvector.
+class GInsertSubvector : public GenericMachineInstr {
+public:
+  Register getBigVec() const { return getOperand(1).getReg(); }
+  Register getSubVec() const { return getOperand(2).getReg(); }
+  uint64_t getIndexImm() const { return getOperand(3).getImm(); }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_INSERT_SUBVECTOR;
+  }
+};
+
 /// Represents a freeze.
 class GFreeze : public GenericMachineInstr {
 public:
@@ -842,6 +908,9 @@ public:
     case TargetOpcode::G_SEXT:
     case TargetOpcode::G_SITOFP:
     case TargetOpcode::G_TRUNC:
+    case TargetOpcode::G_TRUNC_SSAT_S:
+    case TargetOpcode::G_TRUNC_SSAT_U:
+    case TargetOpcode::G_TRUNC_USAT_U:
     case TargetOpcode::G_UITOFP:
     case TargetOpcode::G_ZEXT:
     case TargetOpcode::G_ANYEXT:
@@ -868,6 +937,14 @@ public:
   };
 };
 
+/// Represents an any ext.
+class GAnyExt : public GCastOp {
+public:
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_ANYEXT;
+  };
+};
+
 /// Represents a trunc.
 class GTrunc : public GCastOp {
 public:
@@ -883,6 +960,18 @@ public:
 
   static bool classof(const MachineInstr *MI) {
     return MI->getOpcode() == TargetOpcode::G_VSCALE;
+  };
+};
+
+/// Represents a step vector.
+class GStepVector : public GenericMachineInstr {
+public:
+  uint64_t getStep() const {
+    return getOperand(1).getCImm()->getValue().getZExtValue();
+  }
+
+  static bool classof(const MachineInstr *MI) {
+    return MI->getOpcode() == TargetOpcode::G_STEP_VECTOR;
   };
 };
 

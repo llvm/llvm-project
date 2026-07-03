@@ -117,7 +117,7 @@ attributes #6 = { noreturn nounwind }
 ; CHECK-NEXT:    ret i32 [[DOT]]
 ;
 ;
-; CHECK: Function Attrs: minsize mustprogress nofree norecurse nosync nounwind optsize willreturn memory(write, argmem: none, inaccessiblemem: none)
+; CHECK: Function Attrs: minsize mustprogress nofree norecurse nosync nounwind optsize willreturn memory(write, argmem: none, inaccessiblemem: none, target_mem: none)
 ; CHECK-LABEL: define dso_local noundef range(i32 0, 2) i32 @_Z10call_catchi
 ; CHECK-SAME: (i32 noundef [[NUM:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] !type [[META4]] !type [[META5]] !type [[META6]] {
 ; CHECK-NEXT:  entry:
@@ -153,7 +153,7 @@ attributes #6 = { noreturn nounwind }
 ;
 ; CHECK: Function Attrs: naked nocf_check noinline nounwind
 ; CHECK-LABEL: define internal void @_Z9nothrow_ei.cfi_jt
-; CHECK-SAME: () #[[ATTR5:[0-9]+]] align 8 {
+; CHECK-SAME: () #[[ATTR5:[0-9]+]] prefalign(8) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void asm sideeffect "jmp ${0:c}@plt\0Aint3\0Aint3\0Aint3\0A", "s"(ptr nonnull @_Z9nothrow_ei) #[[ATTR7:[0-9]+]]
 ; CHECK-NEXT:    unreachable

@@ -13,24 +13,20 @@ define dso_local i32 @check_boundaries() #0 {
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    mov w9, #2 // =0x2
 ; CHECK-NEXT:    stur xzr, [x29, #-8]
-; CHECK-NEXT:    cbz wzr, .LBB0_3
-; CHECK-NEXT:  // %bb.1:
-; CHECK-NEXT:    str w8, [sp, #16]
+; CHECK-NEXT:    bl OUTLINED_FUNCTION_0
 ; CHECK-NEXT:    ldur w8, [x29, #-8]
-; CHECK-NEXT:    cbz w8, .LBB0_4
+; CHECK-NEXT:    cbz w8, .LBB0_2
+; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:    mov w8, #1 // =0x1
+; CHECK-NEXT:    str w8, [sp, #16]
+; CHECK-NEXT:    b .LBB0_3
 ; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    str w8, [sp, #16]
-; CHECK-NEXT:    b .LBB0_5
+; CHECK-NEXT:    mov w9, #2 // =0x2
+; CHECK-NEXT:    bl OUTLINED_FUNCTION_0
 ; CHECK-NEXT:  .LBB0_3:
-; CHECK-NEXT:    bl OUTLINED_FUNCTION_0
-; CHECK-NEXT:    ldur w8, [x29, #-8]
-; CHECK-NEXT:    cbnz w8, .LBB0_2
-; CHECK-NEXT:  .LBB0_4:
-; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    bl OUTLINED_FUNCTION_0
-; CHECK-NEXT:  .LBB0_5:
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    .cfi_def_cfa wsp, 48
 ; CHECK-NEXT:    ldp x29, x30, [sp, #32] // 16-byte Folded Reload

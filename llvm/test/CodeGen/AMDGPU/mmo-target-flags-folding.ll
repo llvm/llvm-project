@@ -13,9 +13,9 @@ entry:
   %idx = getelementptr inbounds <2 x float>, ptr addrspace(1) %arrayidx, i64 0, i32 1
   %i4 = load float, ptr addrspace(1) %idx, align 4
   %i5 = load i64, ptr addrspace(1) %arrayidx, align 4, !amdgpu.noclobber !0
-  store i64 %i5, ptr addrspace(1) undef, align 4
+  store i64 %i5, ptr addrspace(1) poison, align 4
   %mul = fmul float %i3, %i4
-  store float %mul, ptr addrspace(1) undef, align 4
+  store float %mul, ptr addrspace(1) poison, align 4
   unreachable
 }
 

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O3 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O3 < %s | FileCheck %s
 ; Check for direct use of r0 in addadd.
 ; CHECK: = add(r0,add(r1,#2))
 

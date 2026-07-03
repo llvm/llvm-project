@@ -8,9 +8,9 @@
 
 #include "src/threads/thrd_create.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h"
-#include "src/errno/libc_errno.h"
 
 #include <threads.h> // For thrd_* type definitions.
 

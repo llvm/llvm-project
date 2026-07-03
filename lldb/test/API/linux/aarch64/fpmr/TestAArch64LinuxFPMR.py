@@ -11,9 +11,13 @@ from lldbsuite.test import lldbutil
 class AArch64LinuxFPMR(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    # The value set by the inferior.
+    EXPECTED_FPMR = (0b101010 << 32) | 0b101
+    EXPECTED_FPMR_FIELDS = ["LSCALE2 = 42", "F8S1 = FP8_E4M3 | 0x4"]
+
     @skipUnlessArch("aarch64")
     @skipUnlessPlatform(["linux"])
-    def test_fpmr_register(self):
+    def test_fpmr_register_live(self):
         if not self.isAArch64FPMR():
             self.skipTest("FPMR must be present.")
 
@@ -39,16 +43,16 @@ class AArch64LinuxFPMR(TestBase):
         )
 
         # This has been set by the program.
-        expected_fpmr = (0b101010 << 32) | 0b101
         self.expect(
             "register read --all",
-            substrs=["Floating Point Mode Register", f"fpmr = {expected_fpmr:#018x}"],
+            substrs=[
+                "Floating Point Mode Register",
+                f"fpmr = {self.EXPECTED_FPMR:#018x}",
+            ],
         )
 
         if self.hasXMLSupport():
-            self.expect(
-                "register read fpmr", substrs=["LSCALE2 = 42", "F8S1 = FP8_E4M3 | 0x4"]
-            )
+            self.expect("register read fpmr", substrs=self.EXPECTED_FPMR_FIELDS)
 
         # Write a value for the program to find. Same fields but with bit values
         # inverted.
@@ -61,3 +65,19 @@ class AArch64LinuxFPMR(TestBase):
 
         # 0 means the program found the new value in the sysreg as expected.
         self.expect("continue", substrs=["exited with status = 0"])
+
+    @skipIfLLVMTargetMissing("AArch64")
+    def test_fpmr_register_core(self):
+        if not self.isAArch64FPMR():
+            self.skipTest("FPMR must be present.")
+
+        self.runCmd("target create --core corefile")
+
+        self.expect(
+            "register read --all",
+            substrs=[
+                "Floating Point Mode Register",
+                f"fpmr = {self.EXPECTED_FPMR:#018x}",
+            ],
+        )
+        self.expect("register read fpmr", substrs=self.EXPECTED_FPMR_FIELDS)

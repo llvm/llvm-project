@@ -9,7 +9,7 @@
 void testMallocDoubleFree() {
   int *p = (int *)malloc(sizeof(int));
   free(p);
-  free(p); // expected-warning{{Attempt to free released memory}}
+  free(p); // expected-warning{{Attempt to release already released memory}}
 }
 
 void testMallocLeak() {
@@ -19,7 +19,7 @@ void testMallocLeak() {
 void testMallocUseAfterFree() {
   int *p = (int *)malloc(sizeof(int));
   free(p);
-  int j = *p; // expected-warning{{Use of memory after it is freed}}
+  int j = *p; // expected-warning{{Use of memory after it is released}}
 }
 
 void testMallocBadFree() {
@@ -46,7 +46,7 @@ void testMismatchedDeallocator() {
 void testNewDoubleFree() {
   int *p = new int;
   delete p;
-  delete p; // expected-warning{{Attempt to free released memory}}
+  delete p; // expected-warning{{Attempt to release already released memory}}
 }
 
 void testNewLeak() {
@@ -59,7 +59,7 @@ void testNewLeak() {
 void testNewUseAfterFree() {
   int *p = (int *)operator new(0);
   delete p;
-  int j = *p; // expected-warning{{Use of memory after it is freed}}
+  int j = *p; // expected-warning{{Use of memory after it is released}}
 }
 
 void testNewBadFree() {
@@ -95,7 +95,7 @@ void testShouldReportDoubleFreeNotMismatched() {
   int *p = (int*)malloc(sizeof(int)*4);
   globalPtr = p;
   free(p);
-  delete globalPtr; // expected-warning {{Attempt to free released memory}}
+  delete globalPtr; // expected-warning {{Attempt to release already released memory}}
 }
 int *allocIntArray(unsigned c) {
   return new int[c];

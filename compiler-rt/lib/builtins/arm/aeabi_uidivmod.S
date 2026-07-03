@@ -38,7 +38,12 @@ LOCAL_LABEL(case_denom_larger):
         movs    r0, #0
         JMP     (lr)
 #else // defined(USE_THUMB_1)
+        PACBTI_LANDING
+#if defined(__ARM_FEATURE_PAC_DEFAULT)
+        push    { r12, lr }
+#else
         push    { lr }
+#endif
         sub     sp, sp, #4
         mov     r2, sp
 #if defined(__MINGW32__)
@@ -49,7 +54,12 @@ LOCAL_LABEL(case_denom_larger):
         bl      SYMBOL_NAME(__udivmodsi4)
         ldr     r1, [sp]
         add     sp, sp, #4
+#if defined(__ARM_FEATURE_PAC_DEFAULT)
+        pop     { r12, lr }
+        PAC_RETURN
+#else
         pop     { pc }
+#endif
 #endif
 END_COMPILERRT_FUNCTION(__aeabi_uidivmod)
 

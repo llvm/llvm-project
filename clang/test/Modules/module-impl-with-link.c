@@ -3,4 +3,4 @@
 #include "foo.h"
 // Make sure we don't generate linker option for module Clib since this TU is
 // an implementation of Clib.
-// CHECK: !llvm.linker.options = !{}
+// CHECK-NOT: !llvm.linker.options =

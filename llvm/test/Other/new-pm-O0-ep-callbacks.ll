@@ -3,6 +3,7 @@
 ; RUN: opt -disable-output -debug-pass-manager -passes-ep-scalar-optimizer-late=no-op-function -passes='default<O0>' 2>&1 < %s | FileCheck %s
 ; RUN: opt -disable-output -debug-pass-manager -passes-ep-cgscc-optimizer-late=no-op-cgscc -passes='default<O0>' 2>&1 < %s | FileCheck %s
 ; RUN: opt -disable-output -debug-pass-manager -passes-ep-vectorizer-start=no-op-function -passes='default<O0>' 2>&1 < %s | FileCheck %s
+; RUN: opt -disable-output -debug-pass-manager -passes-ep-vectorizer-end=no-op-function -passes='default<O0>' 2>&1 < %s | FileCheck %s
 ; RUN: opt -disable-output -debug-pass-manager -passes-ep-pipeline-start=no-op-module -passes='default<O0>' 2>&1 < %s | FileCheck %s
 ; RUN: opt -disable-output -debug-pass-manager -passes-ep-pipeline-early-simplification=no-op-module -passes='default<O0>' 2>&1 < %s | FileCheck %s
 ; RUN: opt -disable-output -debug-pass-manager -passes-ep-optimizer-early=no-op-module -passes='default<O0>' 2>&1 < %s | FileCheck %s

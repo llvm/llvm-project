@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -triple=riscv32 -mattr=zcmp -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=zcmp -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=zcmp < %s \
 # RUN:     | llvm-objdump --mattr=-c,zcmp -M no-aliases -d -r - \

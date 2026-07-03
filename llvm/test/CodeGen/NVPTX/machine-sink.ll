@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64"
 
@@ -17,8 +17,8 @@ define float @post_dominate(float %x, i1 %cond) {
 entry:
   %0 = load float, ptr addrspacecast (ptr addrspace(3) @scalar1 to ptr), align 4
   %1 = load float, ptr addrspacecast (ptr addrspace(3) @scalar2 to ptr), align 4
-; CHECK: ld.shared.f32
-; CHECK: ld.shared.f32
+; CHECK: ld.shared.b32
+; CHECK: ld.shared.b32
   %2 = fmul float %0, %0
   %3 = fmul float %1, %2
 ; CHECK-NOT: bra

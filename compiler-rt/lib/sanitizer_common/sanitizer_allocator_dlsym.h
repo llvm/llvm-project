@@ -36,36 +36,34 @@ struct DlSymAllocator {
   static void *Allocate(uptr size_in_bytes, uptr align = kWordSize) {
     void *ptr = InternalAlloc(size_in_bytes, nullptr, align);
     CHECK(internal_allocator()->FromPrimary(ptr));
-    Details::OnAllocate(ptr,
-                        internal_allocator()->GetActuallyAllocatedSize(ptr));
+    Details::OnAllocate(ptr, GetSize(ptr));
     return ptr;
   }
 
-  static void *Callocate(usize nmemb, usize size) {
-    void *ptr = InternalCalloc(nmemb, size);
+  static void* Callocate(usize nmemb, usize size, uptr align = kWordSize) {
+    void* ptr = InternalCalloc(nmemb, size, nullptr, align);
     CHECK(internal_allocator()->FromPrimary(ptr));
-    Details::OnAllocate(ptr,
-                        internal_allocator()->GetActuallyAllocatedSize(ptr));
+    Details::OnAllocate(ptr, GetSize(ptr));
     return ptr;
   }
 
   static void Free(void *ptr) {
-    uptr size = internal_allocator()->GetActuallyAllocatedSize(ptr);
+    uptr size = GetSize(ptr);
     Details::OnFree(ptr, size);
     InternalFree(ptr);
   }
 
-  static void *Realloc(void *ptr, uptr new_size) {
+  static void* Realloc(void* ptr, uptr new_size, uptr align = kWordSize) {
     if (!ptr)
-      return Allocate(new_size);
+      return Allocate(new_size, align);
     CHECK(internal_allocator()->FromPrimary(ptr));
     if (!new_size) {
       Free(ptr);
       return nullptr;
     }
-    uptr size = internal_allocator()->GetActuallyAllocatedSize(ptr);
+    uptr size = GetSize(ptr);
     uptr memcpy_size = Min(new_size, size);
-    void *new_ptr = Allocate(new_size);
+    void* new_ptr = Allocate(new_size, align);
     if (new_ptr)
       internal_memcpy(new_ptr, ptr, memcpy_size);
     Free(ptr);
@@ -75,6 +73,10 @@ struct DlSymAllocator {
   static void *ReallocArray(void *ptr, uptr count, uptr size) {
     CHECK(!CheckForCallocOverflow(count, size));
     return Realloc(ptr, count * size);
+  }
+
+  static uptr GetSize(void *ptr) {
+    return internal_allocator()->GetActuallyAllocatedSize(ptr);
   }
 
   static void OnAllocate(const void *ptr, uptr size) {}

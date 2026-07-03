@@ -30,7 +30,7 @@
 # RUN:   | FileCheck -check-prefix=RV32E-LP64 %s
 # RUN: llvm-mc -triple=riscv32 -mattr=+e,+f -target-abi lp64f < %s 2>&1 \
 # RUN:   | FileCheck -check-prefix=RV32EF-LP64F %s
-# RUN: not --crash llvm-mc -triple=riscv32 -mattr=+e,+d -target-abi lp64f < %s 2>&1 \
+# RUN: not llvm-mc -triple=riscv32 -mattr=+e,+d -target-abi lp64f < %s 2>&1 \
 # RUN:   | FileCheck -check-prefix=RV32EFD-LP64D %s
 # RUN: llvm-mc -triple=riscv32 -mattr=+e -target-abi lp64e %s 2>&1 \
 # RUN:   | FileCheck -check-prefix=RV32E-LP64E %s
@@ -70,10 +70,12 @@
 # RUN:   | FileCheck -check-prefix=RV32EF-ILP32F %s
 # RUN: llvm-mc -triple=riscv32 -mattr=+e,+f -target-abi ilp32f < %s 2>&1 \
 # RUN:   | FileCheck -check-prefix=RV32EF-ILP32F %s
-# RUN: not --crash llvm-mc -triple=riscv32 -mattr=+e,+d -target-abi ilp32f < %s 2>&1 \
+# RUN: not llvm-mc -triple=riscv32 -mattr=+e,+d -target-abi ilp32f < %s 2>&1 \
 # RUN:   | FileCheck -check-prefix=RV32EFD-ILP32F %s
-# RUN: not --crash llvm-mc -triple=riscv32 -mattr=+e,+d -target-abi ilp32d < %s 2>&1 \
+# RUN: not llvm-mc -triple=riscv32 -mattr=+e,+d -target-abi ilp32d < %s 2>&1 \
 # RUN:   | FileCheck -check-prefix=RV32EFD-ILP32D %s
+# RUN: llvm-mc -triple=riscv32 -mattr=+e -target-abi cheriot < %s 2>&1 \
+# RUN:   | FileCheck -check-prefix=RV32E-CHERIOT %s
 
 # RV32E-ILP32: Only the ilp32e ABI is supported for RV32E (ignoring target-abi)
 # RV32EF-ILP32F: Only the ilp32e ABI is supported for RV32E (ignoring target-abi)
@@ -81,6 +83,7 @@
 # RV32EFD-ILP32F: LLVM ERROR: ILP32E cannot be used with the D ISA extension
 # RV32EFD-ILP32D: Only the ilp32e ABI is supported for RV32E (ignoring target-abi)
 # RV32EFD-ILP32D: LLVM ERROR: ILP32E cannot be used with the D ISA extension
+# RV32E-CHERIOT: Only the ilp32e ABI is supported for RV32E (ignoring target-abi)
 
 # RUN: llvm-mc -triple=riscv64 -mattr=+e -target-abi lp64 < %s 2>&1 \
 # RUN:   | FileCheck -check-prefix=RV64EF-LP64F %s
@@ -95,5 +98,10 @@
 # RV64EF-LP64F: Only the lp64e ABI is supported for RV64E (ignoring target-abi)
 # RV64EFD-LP64F: Only the lp64e ABI is supported for RV64E (ignoring target-abi)
 # RV64EFD-LP64D: Only the lp64e ABI is supported for RV64E (ignoring target-abi)
+
+# RUN: llvm-mc -triple=riscv32 -mattr=+e,+xcheriot -target-abi ilp32e < %s 2>&1 \
+# RUN:   | FileCheck -check-prefix=RV32EXCHERIOT-ILP32 %s
+
+# RV32EXCHERIOT-ILP32: Only the cheriot ABI is supported for XCheriot (ignoring target-abi)
 
 nop

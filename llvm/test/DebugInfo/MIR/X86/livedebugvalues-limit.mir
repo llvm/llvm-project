@@ -1,5 +1,5 @@
 --- |
-  ; RUN: llc -run-pass=livedebugvalues -march=x86-64 -o - %s | FileCheck %s
+  ; RUN: llc -run-pass=livedebugvalues -o - %s | FileCheck %s
   ; Created from:
   ; void sink(int a);
   ; void __attribute((always_inline)) f(int a) { sink(a); }

@@ -9,7 +9,6 @@
 #include "AbortWithPayloadFrameRecognizer.h"
 
 #include "lldb/Core/Value.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
@@ -18,6 +17,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StructuredData.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
@@ -128,7 +128,7 @@ AbortWithPayloadFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
 
   Value *cur_value;
   StackFrame *frame = frame_sp.get();
-  ValueObjectListSP arguments_sp = ValueObjectListSP(new ValueObjectList());
+  ValueObjectListSP arguments_sp = std::make_shared<ValueObjectList>();
 
   auto add_to_arguments = [&](llvm::StringRef name, Value *value,
                               bool dynamic) {

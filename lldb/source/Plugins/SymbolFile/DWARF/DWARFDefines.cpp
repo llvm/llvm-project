@@ -23,15 +23,5 @@ llvm::StringRef DW_TAG_value_to_name(dw_tag_t tag) {
   return s_unknown_tag_name;
 }
 
-const char *DW_OP_value_to_name(uint32_t val) {
-  static char invalid[100];
-  llvm::StringRef llvmstr = llvm::dwarf::OperationEncodingString(val);
-  if (llvmstr.empty()) {
-    snprintf(invalid, sizeof(invalid), "Unknown DW_OP constant: 0x%x", val);
-    return invalid;
-  }
-  return llvmstr.data();
-}
-
 } // namespace dwarf
 } // namespace lldb_private::plugin

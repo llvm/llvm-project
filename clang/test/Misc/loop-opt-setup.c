@@ -15,7 +15,7 @@ int foo(void) {
 // CHECK-NOT: br i1
 
 void Helper(void) {
-  const int *nodes[5];
+  const int *nodes[5] = {0};
   int num_active = 5;
 
   while (num_active)

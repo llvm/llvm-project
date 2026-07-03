@@ -230,7 +230,7 @@ Error LVCompare::execute(LVReader *ReferenceReader, LVReader *TargetReader) {
         }
         if (Pass == LVComparePass::Added)
           // Record all the current missing elements for this category.
-          Set.insert(Set.end(), Elements.begin(), Elements.end());
+          llvm::append_range(Set, Elements);
         if (options().getReportList()) {
           if (Elements.size()) {
             OS << "\n(" << Elements.size() << ") "
@@ -405,10 +405,10 @@ void LVCompare::printSummary() const {
   auto PrintSeparator = [&]() { OS << Separator << "\n"; };
   auto PrintHeadingRow = [&](const char *T, const char *U, const char *V,
                              const char *W) {
-    OS << format("%-9s%9s  %9s  %9s\n", T, U, V, W);
+    OS << formatv("{0,-9}{1,9}  {2,9}  {3,9}\n", T, U, V, W);
   };
   auto PrintDataRow = [&](const char *T, unsigned U, unsigned V, unsigned W) {
-    OS << format("%-9s%9d  %9d  %9d\n", T, U, V, W);
+    OS << formatv("{0,-9}{1,9}  {2,9}  {3,9}\n", T, U, V, W);
   };
 
   OS << "\n";

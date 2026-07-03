@@ -1,0 +1,26 @@
+# UNSUPPORTED: system-windows
+
+# Test the plugin.cplusplus.display.function-name-format setting.
+
+# RUN: split-file %s %t
+# RUN: %build %t/main.m -o %t.objc.out
+# RUN: %lldb -x -b -s %t/commands.input %t.objc.out -o exit 2>&1 \
+# RUN:       | FileCheck %s
+
+#--- main.m
+
+int func(int x) {}
+int bar(int y) { func(y); }
+
+int main() { return bar(10); }
+
+#--- commands.input
+settings set plugin.cplusplus.display.function-name-format "this affects C++ only"
+settings set -f frame-format "custom-frame '${function.name-with-args}'\n"
+break set -l 3 -f main.m
+run
+
+bt
+
+# CHECK: bt
+# CHECK-NOT: this affects C++ only

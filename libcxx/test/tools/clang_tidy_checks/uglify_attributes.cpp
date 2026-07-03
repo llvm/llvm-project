@@ -10,20 +10,11 @@
 #include "clang-tidy/ClangTidyModuleRegistry.h"
 
 #include "uglify_attributes.hpp"
+#include "utilities.hpp"
 
-#include <algorithm>
-#include <array>
-#include <span>
-#include <string_view>
+#include <optional>
 
 namespace {
-bool isUgly(std::string_view str) {
-  if (str.size() < 2)
-    return false;
-  if (str[0] == '_' && str[1] >= 'A' && str[1] <= 'Z')
-    return true;
-  return str.find("__") != std::string_view::npos;
-}
 
 // Starting with Clang 17 ToT C++23 support is provided by CPlusPlus23 instead
 // of C++23 support is provided by CPlusPlus2b. To allow a smooth transition for
@@ -77,17 +68,15 @@ AST_MATCHER(clang::Attr, isPretty) {
   if (Node.isKeywordAttribute() || !Node.getAttrName())
     return false;
   if (Node.isCXX11Attribute() && !Node.hasScope()) {
-    if (isUgly(Node.getAttrName()->getName()))
+    if (is_ugly_name(Node.getAttrName()->getName()))
       return false;
     return !llvm::is_contained(
         get_standard_attributes(Finder->getASTContext().getLangOpts()), Node.getAttrName()->getName());
   }
   if (Node.hasScope())
-    if (!isUgly(Node.getScopeName()->getName()))
+    if (!is_ugly_name(Node.getScopeName()->getName()))
       return true;
-  return !isUgly(Node.getAttrName()->getName());
-
-  return false;
+  return !is_ugly_name(Node.getAttrName()->getName());
 }
 
 std::optional<std::string> getUglyfiedCXX11Attr(const clang::Attr& attr) {

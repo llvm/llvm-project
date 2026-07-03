@@ -50,7 +50,7 @@ bb10:                                             ; preds = %bb10, %bb
   %tmp22 = shl i64 %tmp21, 1
   %tmp23 = mul i64 %tmp22, %tmp22
   %tmp24 = add nuw nsw i64 %tmp11, 1
-  br i1 undef, label %bb1, label %bb10
+  br i1 true, label %bb1, label %bb10
 }
 
 

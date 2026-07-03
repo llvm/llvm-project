@@ -13,7 +13,7 @@
 # CHECK-NEXT: error: {{.*}}:(.text+0x9): relocation R_X86_64_REX_GOTPCRELX out of range: 2147483659 is not in [-2147483648, 2147483647]; references '__stop_data'
 # CHECK-NEXT: >>> defined in <internal>
 # CHECK-EMPTY:
-# CHECK-NEXT: error: {{.*}}:(.text+0x11): relocation R_X86_64_REX2_GOTPCRELX out of range: 2147483651 is not in [-2147483648, 2147483647]; references '__stop_data'
+# CHECK-NEXT: error: {{.*}}:(.text+0x11): relocation R_X86_64_CODE_4_GOTPCRELX out of range: 2147483651 is not in [-2147483648, 2147483647]; references '__stop_data'
 # CHECK-NEXT: >>> defined in <internal>
 
 #--- a.s

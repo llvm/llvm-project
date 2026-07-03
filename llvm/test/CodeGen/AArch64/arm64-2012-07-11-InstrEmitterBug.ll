@@ -15,18 +15,18 @@ declare ptr @__strcat_chk(ptr, ptr, i64) nounwind optsize
 
 declare noalias ptr @xstrdup(ptr) optsize
 
-define ptr @dyld_fix_path(ptr %path) nounwind optsize ssp {
+define ptr @dyld_fix_path(ptr %path, i1 %arg) nounwind optsize ssp {
 entry:
-  br i1 undef, label %if.end56, label %for.cond
+  br i1  %arg, label %if.end56, label %for.cond
 
 for.cond:                                         ; preds = %entry
-  br i1 undef, label %for.cond10, label %for.body
+  br i1  %arg, label %for.cond10, label %for.body
 
 for.body:                                         ; preds = %for.cond
   unreachable
 
 for.cond10:                                       ; preds = %for.cond
-  br i1 undef, label %if.end56, label %for.body14
+  br i1  %arg, label %if.end56, label %for.body14
 
 for.body14:                                       ; preds = %for.cond10
   %call22 = tail call i64 @strlen(ptr undef) nounwind optsize
@@ -38,7 +38,7 @@ for.body14:                                       ; preds = %for.cond10
   %sext59 = add i64 %add31, 4294967296
   %conv33 = ashr exact i64 %sext59, 32
   %call34 = tail call noalias ptr @xmalloc(i64 %conv33) nounwind optsize
-  br i1 undef, label %cond.false45, label %cond.true43
+  br i1  %arg, label %cond.false45, label %cond.true43
 
 cond.true43:                                      ; preds = %for.body14
   unreachable

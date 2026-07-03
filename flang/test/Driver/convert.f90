@@ -1,5 +1,5 @@
 ! Ensure argument -fconvert=<value> accepts all relevant options and produces an
-! error if an invalid value is specified. 
+! error if an invalid value is specified.
 
 !--------------------------
 ! FLANG DRIVER (flang)
@@ -12,7 +12,7 @@
 ! RUN: not %flang -fconvert=foobar %s  2>&1 | FileCheck %s --check-prefix=INVALID
 
 !-----------------------------------------
-! FRONTEND FLANG DRIVER (flang-new -fc1)
+! FRONTEND FLANG DRIVER (flang -fc1)
 !-----------------------------------------
 ! RUN: %flang_fc1 -emit-mlir -fconvert=unknown %s -o - | FileCheck %s --check-prefix=VALID_FC1
 ! RUN: %flang_fc1 -emit-mlir -fconvert=native %s -o - | FileCheck %s --check-prefix=VALID_FC1

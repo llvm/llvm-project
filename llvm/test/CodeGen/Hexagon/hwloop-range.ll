@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-loop-range=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-loop-range=0 < %s | FileCheck %s
 
 ; Test that the loop start address operand uses a constant extender
 ; if the offset is out of range.

@@ -6,7 +6,7 @@ define void @test1() {
   call void  @test2(i128 %1)
   ret void
 
-; The i128 is 0 so the we can test to make sure it is propogated into the x
+; The i128 is 0 so the we can test to make sure it is propagated into the x
 ; registers that make up the i128 pair
 
 ; CHECK:  mov  x0, xzr

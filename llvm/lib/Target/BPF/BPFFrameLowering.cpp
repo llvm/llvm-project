@@ -11,16 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "BPFFrameLowering.h"
-#include "BPFInstrInfo.h"
 #include "BPFSubtarget.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 
 using namespace llvm;
 
-bool BPFFrameLowering::hasFP(const MachineFunction &MF) const { return true; }
+bool BPFFrameLowering::hasFPImpl(const MachineFunction &MF) const {
+  return true;
+}
 
 void BPFFrameLowering::emitPrologue(MachineFunction &MF,
                                     MachineBasicBlock &MBB) const {}
@@ -36,4 +35,15 @@ void BPFFrameLowering::determineCalleeSaves(MachineFunction &MF,
   SavedRegs.reset(BPF::R7);
   SavedRegs.reset(BPF::R8);
   SavedRegs.reset(BPF::R9);
+}
+
+StackOffset BPFFrameLowering::getFrameIndexReference(const MachineFunction &MF,
+                                                     int FI,
+                                                     Register &FrameReg) const {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const TargetRegisterInfo *RI = MF.getSubtarget().getRegisterInfo();
+
+  FrameReg = RI->getFrameRegister(MF);
+
+  return StackOffset::getFixed(MFI.getObjectOffset(FI));
 }

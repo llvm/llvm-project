@@ -17,14 +17,14 @@ main_body:
   %9 = bitcast float %4 to i32
   %10 = mul i32 %9, 6
   %11 = bitcast i32 %10 to float
-  %12 = insertelement <4 x float> undef, float %5, i32 0
+  %12 = insertelement <4 x float> poison, float %5, i32 0
   %13 = insertelement <4 x float> %12, float %6, i32 1
   %14 = insertelement <4 x float> %13, float %7, i32 2
   %15 = insertelement <4 x float> %14, float %8, i32 3
   %16 = insertelement <4 x float> %15, float %11, i32 3
 
   %17 = call float @llvm.r600.dot4(<4 x float> %15,<4 x float> %16)
-  %18 = insertelement <4 x float> undef, float %17, i32 0
+  %18 = insertelement <4 x float> poison, float %17, i32 0
   call void @llvm.r600.store.swizzle(<4 x float> %18, i32 0, i32 2)
   ret void
 }
@@ -46,14 +46,14 @@ main_body:
   %9 = bitcast float %4 to i32
   %10 = mul i32 %9, 6
   %11 = bitcast i32 %10 to float
-  %12 = insertelement <4 x float> undef, float %5, i32 0
+  %12 = insertelement <4 x float> poison, float %5, i32 0
   %13 = insertelement <4 x float> %12, float %6, i32 1
   %14 = insertelement <4 x float> %13, float %7, i32 2
   %15 = insertelement <4 x float> %14, float %8, i32 3
   %16 = insertelement <4 x float> %15, float %11, i32 3
 
   %17 = call float @llvm.r600.dot4(<4 x float> %15,<4 x float> %16)
-  %18 = insertelement <4 x float> undef, float %17, i32 0
+  %18 = insertelement <4 x float> poison, float %17, i32 0
   call void @llvm.r600.store.swizzle(<4 x float> %18, i32 0, i32 2)
   ret void
 }

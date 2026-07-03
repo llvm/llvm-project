@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-aa-sched-mi < %s
+; RUN: llc -mtriple=hexagon -enable-aa-sched-mi < %s
 ; REQUIRES: asserts
 
 ; Make sure the base is a register and not an address.
@@ -12,4 +12,4 @@ entry:
   ret void
 }
 
-attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "use-soft-float"="false" }

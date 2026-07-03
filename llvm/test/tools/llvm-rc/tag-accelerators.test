@@ -37,7 +37,7 @@
 ; ACCELERATORS-NEXT: Version (major): 0
 ; ACCELERATORS-NEXT: Version (minor): 0
 ; ACCELERATORS-NEXT: Characteristics: 0
-; ACCELERATORS-NEXT: Data size: 592
+; ACCELERATORS-NEXT: Data size: 600
 ; ACCELERATORS-NEXT: Data: (
 ; ACCELERATORS-NEXT:   0000: 00002A00 00000000 01002A00 01000000  |..*.......*.....|
 ; ACCELERATORS-NEXT:   0010: 02002A00 02000000 03002A00 03000000  |..*.......*.....|
@@ -75,7 +75,8 @@
 ; ACCELERATORS-NEXT:   0210: 15003700 42000000 0F003700 43000000  |..7.B.....7.C...|
 ; ACCELERATORS-NEXT:   0220: 1B003700 44000000 17003700 45000000  |..7.D.....7.E...|
 ; ACCELERATORS-NEXT:   0230: 1D003700 46000000 1F003700 47000000  |..7.F.....7.G...|
-; ACCELERATORS-NEXT:   0240: 00000A00 48000000 82000A00 49000000  |....H.......I...|
+; ACCELERATORS-NEXT:   0240: 00000A00 48000000 02000A00 49000000  |....H.......I...|
+; ACCELERATORS-NEXT:   0250: 90004100 0F000000                    |..A.....|
 ; ACCELERATORS-NEXT: )
 
 
@@ -94,19 +95,13 @@
 ; RUN: not llvm-rc -no-preprocess /FO %t -- %p/Inputs/tag-accelerators-ascii-control.rc 2>&1 | FileCheck %s --check-prefix ASCII2
 
 ; ASCII2: llvm-rc: Error in ACCELERATORS statement (ID 2):
-; ASCII2-NEXT: Accelerator ID 15: Can only apply ALT, SHIFT or CONTROL to VIRTKEY accelerators
+; ASCII2-NEXT: Accelerator ID 15: Can only apply SHIFT or CONTROL to VIRTKEY accelerators
 
 
 ; RUN: not llvm-rc -no-preprocess /FO %t -- %p/Inputs/tag-accelerators-ascii-shift.rc 2>&1 | FileCheck %s --check-prefix ASCII3
 
 ; ASCII3: llvm-rc: Error in ACCELERATORS statement (ID 2):
-; ASCII3-NEXT: Accelerator ID 15: Can only apply ALT, SHIFT or CONTROL to VIRTKEY accelerators
-
-
-; RUN: not llvm-rc -no-preprocess /FO %t -- %p/Inputs/tag-accelerators-ascii-alt.rc 2>&1 | FileCheck %s --check-prefix ASCII4
-
-; ASCII4: llvm-rc: Error in ACCELERATORS statement (ID 2):
-; ASCII4-NEXT: Accelerator ID 15: Can only apply ALT, SHIFT or CONTROL to VIRTKEY accelerators
+; ASCII3-NEXT: Accelerator ID 15: Can only apply SHIFT or CONTROL to VIRTKEY accelerators
 
 
 ; RUN: not llvm-rc -no-preprocess /FO %t -- %p/Inputs/tag-accelerators-bad-key-id.rc 2>&1 | FileCheck %s --check-prefix BADKEYID

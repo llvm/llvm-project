@@ -40,7 +40,7 @@ struct LVComputationKind {
   LLVM_PREFERRED_TYPE(bool)
   unsigned IgnoreAllVisibility : 1;
 
-  enum { NumLVComputationKindBits = 3 };
+  static constexpr int NumLVComputationKindBits = 3;
 
   explicit LVComputationKind(NamedDecl::ExplicitVisibilityKind EK)
       : ExplicitKind(EK), IgnoreExplicitVisibility(false),

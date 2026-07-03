@@ -43,10 +43,15 @@ define <8 x float> @test_vector_v8f32() {
 }
 
 define <4 x i64> @test_vector_v4i64() {
-; AVX-ALL-LABEL: test_vector_v4i64:
-; AVX-ALL:       # %bb.0:
-; AVX-ALL-NEXT:    vmovaps {{.*#+}} ymm0 = [23430,24650,1,12]
-; AVX-ALL-NEXT:    retq
+; AVX-LABEL: test_vector_v4i64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovaps {{.*#+}} ymm0 = [23430,24650,1,12]
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: test_vector_v4i64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovsxwq {{.*#+}} ymm0 = [23430,24650,1,12]
+; AVX512-NEXT:    retq
   ret <4 x i64> <i64 23430, i64 24650, i64 1, i64 12>
 }
 

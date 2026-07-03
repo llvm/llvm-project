@@ -57,12 +57,10 @@ void test() {
 void test2() {
   auto a = E1::e1;               // OK, namespace-scope name E1 is visible and e1 is reachable
   auto b = e1;                   // OK, namespace-scope name e1 is visible
-  auto c = E2::e2;               // expected-error {{declaration of 'E2' must be imported from module}}
-                                 // expected-note@* {{declaration here is not visible}}
-  auto d = e2;                   // should be error, namespace-scope name e2 is not visible
+  auto c = E2::e2;               // expected-error {{use of undeclared identifier 'E2'}}
+  auto d = e2;                   // expected-error {{use of undeclared identifier 'e2'}}
   auto e = E2U::e2;              // OK, namespace-scope name E2U is visible and E2::e2 is reachable
-  auto f = E3::e3;               // expected-error {{declaration of 'E3' must be imported from module 'p7' before it is required}}
-                                 // expected-note@* {{declaration here is not visible}}
-  auto g = e3;                   // should be error, namespace-scope name e3 is not visible
+  auto f = E3::e3;               // expected-error {{use of undeclared identifier 'E3'}}
+  auto g = e3;                   // expected-error {{use of undeclared identifier 'e3'}}
   auto h = decltype(func())::e3; // OK, namespace-scope name f is visible and E3::e3 is reachable
 }

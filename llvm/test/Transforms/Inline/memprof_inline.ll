@@ -28,7 +28,12 @@
 ;; }
 
 
-; RUN: opt -passes=inline %s -S | FileCheck %s
+;; Also check that remarks are emitted when the allocations are hinted.
+; RUN: opt -passes=inline -pass-remarks=memory-profile-info %s -S 2>&1 | FileCheck %s
+
+; CHECK: remark: memprof_inline.cc:5:10: call in function _Z4foo2v marked with memprof allocation attribute cold
+; CHECK: remark: memprof_inline.cc:5:10: call in function main marked with memprof allocation attribute notcold
+; CHECK: remark: memprof_inline.cc:5:10: call in function main marked with memprof allocation attribute cold
 
 ; ModuleID = 'memprof_inline.cc'
 source_filename = "memprof_inline.cc"

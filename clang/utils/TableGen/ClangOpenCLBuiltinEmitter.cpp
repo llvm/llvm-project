@@ -1,4 +1,4 @@
-//===- ClangOpenCLBuiltinEmitter.cpp - Generate Clang OpenCL Builtin handling
+//===-- ClangOpenCLBuiltinEmitter.cpp - Generate OpenCL Builtin handling --===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -18,7 +18,6 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -605,7 +604,7 @@ static unsigned short EncodeVersions(unsigned int MinVersion,
     MaxVersion = UINT_MAX;
   }
 
-  unsigned VersionIDs[] = {100, 110, 120, 200, 300};
+  unsigned VersionIDs[] = {100, 110, 120, 200, 300, 310};
   for (unsigned I = 0; I < std::size(VersionIDs); I++) {
     if (VersionIDs[I] >= MinVersion && VersionIDs[I] < MaxVersion) {
       Encoded |= 1 << I;
@@ -1176,9 +1175,7 @@ StringRef OpenCLBuiltinFileEmitterBase::emitTypeExtensionGuards(
       // The TypeExtensions are space-separated in the .td file.
       SmallVector<StringRef, 2> ExtVec;
       TypeExt.split(ExtVec, " ");
-      for (const auto Ext : ExtVec) {
-        ExtSet.insert(Ext);
-      }
+      ExtSet.insert_range(ExtVec);
     }
   }
 

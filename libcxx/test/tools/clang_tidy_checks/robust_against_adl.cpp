@@ -36,7 +36,6 @@ void robust_against_adl_check::registerMatchers(clang::ast_matchers::MatchFinder
   using namespace clang::ast_matchers;
   finder->addMatcher(
       callExpr(unless(isOperator()),
-               unless(argumentCountIs(0)),
                has(unresolvedLookupExpr(requiresADL(), unless(isCustomizationPoint()))),
                unless(callee(cxxMethodDecl(isStatic()))))
           .bind("ADLcall"),

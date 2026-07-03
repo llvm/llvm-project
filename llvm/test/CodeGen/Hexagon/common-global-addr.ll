@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-small-data-threshold=0 -disable-hexagon-amodeopt -hexagon-cext-threshold=1 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-small-data-threshold=0 -disable-hexagon-amodeopt -hexagon-cext-threshold=1 < %s | FileCheck %s
 ; Check commoning of global addresses.
 
 @g0 = external global i32

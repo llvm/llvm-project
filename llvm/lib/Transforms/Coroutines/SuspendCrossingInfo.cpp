@@ -12,7 +12,8 @@
 // ptrs in the BlockToIndexMapping.
 //===----------------------------------------------------------------------===//
 
-#include "SuspendCrossingInfo.h"
+#include "llvm/Transforms/Coroutines/SuspendCrossingInfo.h"
+#include "llvm/IR/ModuleSlotTracker.h"
 
 // The "coro-suspend-crossing" flag is very noisy. There is another debug type,
 // "coro-frame", which results in leaner debug spew.
@@ -20,24 +21,26 @@
 
 namespace llvm {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-static std::string getBasicBlockLabel(const BasicBlock *BB) {
-  if (BB->hasName())
-    return BB->getName().str();
+static void dumpBasicBlockLabel(const BasicBlock *BB, ModuleSlotTracker &MST) {
+  if (BB->hasName()) {
+    dbgs() << BB->getName();
+    return;
+  }
 
-  std::string S;
-  raw_string_ostream OS(S);
-  BB->printAsOperand(OS, false);
-  return OS.str().substr(1);
+  dbgs() << MST.getLocalSlot(BB);
 }
 
-LLVM_DUMP_METHOD void SuspendCrossingInfo::dump(
-    StringRef Label, BitVector const &BV,
-    const ReversePostOrderTraversal<Function *> &RPOT) const {
+LLVM_DUMP_METHOD void
+SuspendCrossingInfo::dump(StringRef Label, BitVector const &BV,
+                          const ReversePostOrderTraversal<Function *> &RPOT,
+                          ModuleSlotTracker &MST) const {
   dbgs() << Label << ":";
   for (const BasicBlock *BB : RPOT) {
     auto BBNo = Mapping.blockToIndex(BB);
-    if (BV[BBNo])
-      dbgs() << " " << getBasicBlockLabel(BB);
+    if (BV[BBNo]) {
+      dbgs() << " ";
+      dumpBasicBlockLabel(BB, MST);
+    }
   }
   dbgs() << "\n";
 }
@@ -49,12 +52,16 @@ LLVM_DUMP_METHOD void SuspendCrossingInfo::dump() const {
   BasicBlock *const B = Mapping.indexToBlock(0);
   Function *F = B->getParent();
 
+  ModuleSlotTracker MST(F->getParent());
+  MST.incorporateFunction(*F);
+
   ReversePostOrderTraversal<Function *> RPOT(F);
   for (const BasicBlock *BB : RPOT) {
     auto BBNo = Mapping.blockToIndex(BB);
-    dbgs() << getBasicBlockLabel(BB) << ":\n";
-    dump("   Consumes", Block[BBNo].Consumes, RPOT);
-    dump("      Kills", Block[BBNo].Kills, RPOT);
+    dumpBasicBlockLabel(BB, MST);
+    dbgs() << ":\n";
+    dump("   Consumes", Block[BBNo].Consumes, RPOT, MST);
+    dump("      Kills", Block[BBNo].Kills, RPOT, MST);
   }
   dbgs() << "\n";
 }
@@ -114,21 +121,13 @@ bool SuspendCrossingInfo::computeBlockData(
       B.Consumes |= P.Consumes;
       B.Kills |= P.Kills;
 
-      // If block P is a suspend block, it should propagate kills into block
-      // B for every block P consumes.
-      if (P.Suspend)
+      if (P.isAlwaysKill())
         B.Kills |= P.Consumes;
     }
 
-    if (B.Suspend) {
-      // If block B is a suspend block, it should kill all of the blocks it
-      // consumes.
+    if (B.isAlwaysKill()) {
       B.Kills |= B.Consumes;
-    } else if (B.End) {
-      // If block B is an end block, it should not propagate kills as the
-      // blocks following coro.end() are reached during initial invocation
-      // of the coroutine while all the data are still available on the
-      // stack or in the registers.
+    } else if (B.isNeverKill()) {
       B.Kills.reset();
     } else {
       // This is reached when B block it not Suspend nor coro.end and it
@@ -146,9 +145,7 @@ bool SuspendCrossingInfo::computeBlockData(
   return Changed;
 }
 
-SuspendCrossingInfo::SuspendCrossingInfo(
-    Function &F, const SmallVectorImpl<AnyCoroSuspendInst *> &CoroSuspends,
-    const SmallVectorImpl<AnyCoroEndInst *> &CoroEnds)
+SuspendCrossingInfo::SuspendCrossingInfo(Function &F, const coro::Shape &Shape)
     : Mapping(F) {
   const size_t N = Mapping.size();
   Block.resize(N);
@@ -165,13 +162,21 @@ SuspendCrossingInfo::SuspendCrossingInfo(
   // Mark all CoroEnd Blocks. We do not propagate Kills beyond coro.ends as
   // the code beyond coro.end is reachable during initial invocation of the
   // coroutine.
-  for (auto *CE : CoroEnds) {
+  for (auto *CE : Shape.CoroEnds) {
     // Verify CoroEnd was normalized
     assert(CE->getParent()->getFirstInsertionPt() == CE->getIterator() &&
            CE->getParent()->size() <= 2 && "CoroEnd must be in its own BB");
 
-    getBlockData(CE->getParent()).End = true;
+    getBlockData(CE->getParent()).setNeverKill();
   }
+
+  for (auto *InRamp : Shape.CoroIsInRampInsts)
+    for (auto *U : InRamp->users())
+      if (auto *Br = dyn_cast<CondBrInst>(U)) {
+        auto *TrueBB = Br->getSuccessor(0);
+        if (TrueBB->getSinglePredecessor())
+          getBlockData(TrueBB).setNeverKill();
+      }
 
   // Mark all suspend blocks and indicate that they kill everything they
   // consume. Note, that crossing coro.save also requires a spill, as any code
@@ -180,10 +185,10 @@ SuspendCrossingInfo::SuspendCrossingInfo(
   auto markSuspendBlock = [&](IntrinsicInst *BarrierInst) {
     BasicBlock *SuspendBlock = BarrierInst->getParent();
     auto &B = getBlockData(SuspendBlock);
-    B.Suspend = true;
+    B.setAlwaysKill();
     B.Kills |= B.Consumes;
   };
-  for (auto *CSI : CoroSuspends) {
+  for (auto *CSI : Shape.CoroSuspends) {
     // Verify CoroSuspend was normalized
     assert(CSI->getParent()->getFirstInsertionPt() == CSI->getIterator() &&
            CSI->getParent()->size() <= 2 &&

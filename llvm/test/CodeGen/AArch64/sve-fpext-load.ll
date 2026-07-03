@@ -37,8 +37,7 @@ define <vscale x 4 x double> @ext4_f16_f64(ptr %ptr, i64 %index) {
 define <vscale x 8 x double> @ext8_f16_f64(ptr %ptr, i64 %index) {
 ; CHECK-LABEL: ext8_f16_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uunpklo z1.s, z0.h
 ; CHECK-NEXT:    uunpkhi z0.s, z0.h
@@ -76,8 +75,7 @@ define <vscale x 2 x double> @ext2_f32_f64(ptr %ptr, i64 %index) {
 define <vscale x 4 x double> @ext4_f32_f64(ptr %ptr, i64 %index) {
 ; CHECK-LABEL: ext4_f32_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uunpklo z1.d, z0.s
 ; CHECK-NEXT:    uunpkhi z2.d, z0.s

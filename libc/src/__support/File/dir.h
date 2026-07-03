@@ -15,7 +15,6 @@
 #include "src/__support/threads/mutex.h"
 
 #include <dirent.h>
-#include <stdlib.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

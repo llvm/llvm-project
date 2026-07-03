@@ -12,6 +12,29 @@
 
 using namespace lldb_private;
 
+TEST(RangeVector, SignedBaseType) {
+  using RangeVector = RangeVector<int32_t, uint32_t>;
+  using Entry = RangeVector::Entry;
+
+  RangeVector V;
+  V.Append(10, 5);
+  V.Append(-3, 6);
+  V.Append(-10, 3);
+  V.Sort();
+  EXPECT_THAT(V,
+              testing::ElementsAre(Entry(-10, 3), Entry(-3, 6), Entry(10, 5)));
+  Entry e = *V.begin();
+  EXPECT_EQ(e.GetRangeBase(), -10);
+  EXPECT_EQ(e.GetByteSize(), 3u);
+  EXPECT_EQ(e.GetRangeEnd(), -7);
+  EXPECT_TRUE(e.Contains(-10));
+  EXPECT_TRUE(e.Contains(-8));
+  EXPECT_FALSE(e.Contains(-7));
+  EXPECT_TRUE(e.Union(Entry(-8, 2)));
+  EXPECT_EQ(e, Entry(-10, 4));
+  EXPECT_EQ(e.Intersect(Entry(-7, 3)), Entry(-7, 1));
+}
+
 TEST(RangeVector, CombineConsecutiveRanges) {
   using RangeVector = RangeVector<uint32_t, uint32_t>;
   using Entry = RangeVector::Entry;
@@ -214,4 +237,25 @@ TEST(RangeDataVector, FindEntryIndexesThatContain_Overlap) {
   EXPECT_THAT(FindEntryIndexes(30, Map), testing::ElementsAre(10));
   EXPECT_THAT(FindEntryIndexes(39, Map), testing::ElementsAre(10));
   EXPECT_THAT(FindEntryIndexes(40, Map), testing::ElementsAre());
+}
+
+TEST(RangeDataVector, CombineConsecutiveEntriesWithEqualData) {
+  RangeDataVectorT Map;
+  Map.Append(EntryT(0, 10, 47));
+  Map.Append(EntryT(10, 10, 47));
+  Map.Sort();
+  Map.CombineConsecutiveEntriesWithEqualData();
+  EXPECT_THAT(FindEntryIndexes(5, Map), testing::ElementsAre(47));
+  EXPECT_THAT(FindEntryIndexes(15, Map), testing::ElementsAre(47));
+  EXPECT_THAT(FindEntryIndexes(25, Map), testing::ElementsAre());
+
+  Map.Clear();
+  Map.Append(EntryT(0, 10, 47));
+  Map.Append(EntryT(20, 10, 47));
+  Map.Sort();
+  Map.CombineConsecutiveEntriesWithEqualData();
+  EXPECT_THAT(FindEntryIndexes(5, Map), testing::ElementsAre(47));
+  EXPECT_THAT(FindEntryIndexes(15, Map), testing::ElementsAre());
+  EXPECT_THAT(FindEntryIndexes(25, Map), testing::ElementsAre(47));
+  EXPECT_THAT(FindEntryIndexes(35, Map), testing::ElementsAre());
 }

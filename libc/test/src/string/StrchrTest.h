@@ -40,14 +40,16 @@ template <auto Func> struct StrchrTest : public LIBC_NAMESPACE::testing::Test {
     const char *src = "abcde";
 
     // Should return null terminator.
-    ASSERT_STREQ(Func(src, '\0'), "");
+    const char *nul_terminator = Func(src, '\0');
+    ASSERT_NE(nul_terminator, nullptr);
+    ASSERT_STREQ(nul_terminator, "");
     // Source string should not change.
     ASSERT_STREQ(src, "abcde");
   }
 
   void characterNotWithinStringShouldReturnNullptr() {
     // Since 'z' is not within the string, should return nullptr.
-    ASSERT_STREQ(Func("123?", 'z'), nullptr);
+    ASSERT_EQ(Func("123?", 'z'), nullptr);
   }
 
   void theSourceShouldNotChange() {
@@ -74,11 +76,13 @@ template <auto Func> struct StrchrTest : public LIBC_NAMESPACE::testing::Test {
 
   void emptyStringShouldOnlyMatchNullTerminator() {
     // Null terminator should match.
-    ASSERT_STREQ(Func("", '\0'), "");
+    const char empty_string[] = "";
+    ASSERT_EQ(static_cast<const char *>(Func(empty_string, '\0')),
+              empty_string);
     // All other characters should not match.
-    ASSERT_STREQ(Func("", 'Z'), nullptr);
-    ASSERT_STREQ(Func("", '3'), nullptr);
-    ASSERT_STREQ(Func("", '*'), nullptr);
+    ASSERT_EQ(Func("", 'Z'), nullptr);
+    ASSERT_EQ(Func("", '3'), nullptr);
+    ASSERT_EQ(Func("", '*'), nullptr);
   }
 };
 
@@ -114,7 +118,9 @@ template <auto Func> struct StrrchrTest : public LIBC_NAMESPACE::testing::Test {
     const char *src = "abcde";
 
     // Should return null terminator.
-    ASSERT_STREQ(Func(src, '\0'), "");
+    const char *nul_terminator = Func(src, '\0');
+    ASSERT_NE(nul_terminator, nullptr);
+    ASSERT_STREQ(nul_terminator, "");
     // Source string should not change.
     ASSERT_STREQ(src, "abcde");
   }
@@ -122,9 +128,9 @@ template <auto Func> struct StrrchrTest : public LIBC_NAMESPACE::testing::Test {
   void findsLastBehindFirstNullTerminator() {
     static const char src[6] = {'a', 'a', '\0', 'b', '\0', 'c'};
     // 'b' is behind a null terminator, so should not be found.
-    ASSERT_STREQ(Func(src, 'b'), nullptr);
+    ASSERT_EQ(Func(src, 'b'), nullptr);
     // Same goes for 'c'.
-    ASSERT_STREQ(Func(src, 'c'), nullptr);
+    ASSERT_EQ(Func(src, 'c'), nullptr);
 
     // Should find the second of the two a's.
     ASSERT_STREQ(Func(src, 'a'), "a");
@@ -132,7 +138,7 @@ template <auto Func> struct StrrchrTest : public LIBC_NAMESPACE::testing::Test {
 
   void characterNotWithinStringShouldReturnNullptr() {
     // Since 'z' is not within the string, should return nullptr.
-    ASSERT_STREQ(Func("123?", 'z'), nullptr);
+    ASSERT_EQ(Func("123?", 'z'), nullptr);
   }
 
   void shouldFindLastOfDuplicates() {
@@ -146,11 +152,13 @@ template <auto Func> struct StrrchrTest : public LIBC_NAMESPACE::testing::Test {
 
   void emptyStringShouldOnlyMatchNullTerminator() {
     // Null terminator should match.
-    ASSERT_STREQ(Func("", '\0'), "");
+    const char empty_string[] = "";
+    ASSERT_EQ(static_cast<const char *>(Func(empty_string, '\0')),
+              empty_string);
     // All other characters should not match.
-    ASSERT_STREQ(Func("", 'A'), nullptr);
-    ASSERT_STREQ(Func("", '2'), nullptr);
-    ASSERT_STREQ(Func("", '*'), nullptr);
+    ASSERT_EQ(Func("", 'A'), nullptr);
+    ASSERT_EQ(Func("", '2'), nullptr);
+    ASSERT_EQ(Func("", '*'), nullptr);
   }
 };
 

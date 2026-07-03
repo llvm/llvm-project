@@ -120,6 +120,17 @@ static constexpr GV NVPTXGridValues = {
     128,       // GV_Default_WG_Size
 };
 
+/// For generic SPIR-V GPUs
+static constexpr GV SPIRVGridValues = {
+    256,       // GV_Slot_Size
+    64,        // GV_Warp_Size
+    (1 << 16), // GV_Max_Teams
+    440,       // GV_Default_Num_Teams
+    896,       // GV_SimpleBufferSize
+    1024,      // GV_Max_WG_Size,
+    256,       // GV_Default_WG_Size
+};
+
 } // namespace omp
 } // namespace llvm
 

@@ -13,7 +13,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_RECONCILEUNREALIZEDCASTS
+#define GEN_PASS_DEF_RECONCILEUNREALIZEDCASTSPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -36,7 +36,7 @@ namespace {
 /// In the above example, %0 can be used instead of %3 and all cast ops are
 /// folded away.
 struct ReconcileUnrealizedCasts
-    : public impl::ReconcileUnrealizedCastsBase<ReconcileUnrealizedCasts> {
+    : public impl::ReconcileUnrealizedCastsPassBase<ReconcileUnrealizedCasts> {
   ReconcileUnrealizedCasts() = default;
 
   void runOnOperation() override {
@@ -48,7 +48,3 @@ struct ReconcileUnrealizedCasts
 };
 
 } // namespace
-
-std::unique_ptr<Pass> mlir::createReconcileUnrealizedCastsPass() {
-  return std::make_unique<ReconcileUnrealizedCasts>();
-}

@@ -12,7 +12,7 @@
 ; RUN: not %python %p/../Inputs/check-fake-use.py %t
 
 ; Generated with:
-; clang -O2 -g -S -emit-llvm -fextend-this-ptr fake-use.c
+; clang -O2 -g -S -emit-llvm -fextend-variable-liveness=this fake-use.c
 ;
 ; int glob[10];
 ; extern void bar();

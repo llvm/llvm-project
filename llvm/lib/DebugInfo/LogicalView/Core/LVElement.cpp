@@ -13,7 +13,6 @@
 #include "llvm/DebugInfo/LogicalView/Core/LVElement.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVReader.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVScope.h"
-#include "llvm/DebugInfo/LogicalView/Core/LVSymbol.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVType.h"
 
 using namespace llvm;
@@ -530,7 +529,7 @@ void LVElement::printFileIndex(raw_ostream &OS, bool Full) const {
 
       OS << "  {Source} ";
       if (getInvalidFilename())
-        OS << format("[0x%08x]\n", Index);
+        OS << formatv("[{0:x8}]\n", Index);
       else
         OS << formattedName(getPathname()) << "\n";
     }
@@ -556,11 +555,20 @@ void LVElement::printLinkageName(raw_ostream &OS, bool Full,
 void LVElement::printLinkageName(raw_ostream &OS, bool Full, LVElement *Parent,
                                  LVScope *Scope) const {
   if (options().getPrintFormatting() && options().getAttributeLinkage()) {
-    LVSectionIndex SectionIndex = getReader().getSectionIndex(Scope);
-    std::string Text = (Twine(" 0x") + Twine::utohexstr(SectionIndex) +
-                        Twine(" '") + Twine(getLinkageName()) + Twine("'"))
-                           .str();
+    // Include the section index only if '--attribute=offset', as the
+    // index can be different depending on the specific reader.
+    std::string Text;
+    if (options().getAttributeOffset()) {
+      LVSectionIndex SectionIndex = getReader().getSectionIndex(Scope);
+      Text = Twine(" 0x" + Twine::utohexstr(SectionIndex) + " ").str();
+    }
+    Text += Twine("'" + getLinkageName() + "'").str();
     printAttributes(OS, Full, "{Linkage} ", Parent, Text,
                     /*UseQuotes=*/false, /*PrintRef=*/false);
   }
+}
+
+void LVElement::printCommon(raw_ostream &OS, bool Full) const {
+  LVElement::print(OS, Full);
+  printExtra(OS, Full);
 }

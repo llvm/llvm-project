@@ -11,13 +11,20 @@
 
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include <memory>
-#include <vector>
 
 namespace llvm {
 
 namespace AMDGPU {
 // The current phase of instruction scheduling
 enum class SchedulingPhase { Initial, PreRAReentry, PostRA };
+
+/// Operand 0 immediate for IGLP_OPT pseudo instructions.
+enum IGLPStrategyID : int {
+  MFMASmallGemmOptID = 0,
+  MFMASmallGemmSingleWaveOptID = 1,
+  MFMAExpInterleaveID = 2,
+  MFMAExpSimpleInterleaveID = 3,
+};
 } // namespace AMDGPU
 
 std::unique_ptr<ScheduleDAGMutation>

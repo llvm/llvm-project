@@ -24,6 +24,7 @@
 #include "llvm/LTO/legacy/LTOCodeGenerator.h"
 #include "llvm/LTO/legacy/LTOModule.h"
 #include "llvm/LTO/legacy/ThinLTOCodeGenerator.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
@@ -43,6 +44,29 @@ static cl::opt<char>
 static cl::opt<bool> EnableFreestanding(
     "lto-freestanding", cl::init(false),
     cl::desc("Enable Freestanding (disable builtins / TLI) during LTO"));
+
+static cl::opt<std::string> ThinLTOCacheDir(
+    "legacy-thinlto-cache-dir",
+    cl::desc("Experimental option, enable ThinLTO caching. Note: the cache "
+             "currently does not take the mcmodel setting into account, so you "
+             "might get false hits if different mcmodels are used in different "
+             "builds using the same cache directory."));
+
+static cl::opt<int> ThinLTOCachePruningInterval(
+    "legacy-thinlto-cache-pruning-interval", cl::init(1200),
+    cl::desc("Set ThinLTO cache pruning interval (seconds)."));
+
+static cl::opt<uint64_t> ThinLTOCacheMaxSizeBytes(
+    "legacy-thinlto-cache-max-size-bytes",
+    cl::desc("Set ThinLTO cache pruning directory maximum size in bytes."));
+
+static cl::opt<int> ThinLTOCacheMaxSizeFiles(
+    "legacy-thinlto-cache-max-size-files", cl::init(1000000),
+    cl::desc("Set ThinLTO cache pruning directory maximum number of files."));
+
+static cl::opt<unsigned> ThinLTOCacheEntryExpiration(
+    "legacy-thinlto-cache-entry-expiration", cl::init(604800) /* 1w */,
+    cl::desc("Set ThinLTO cache entry expiration time (seconds)."));
 
 #ifdef NDEBUG
 static bool VerifyByDefault = false;
@@ -302,11 +326,11 @@ lto_module_t lto_module_create_in_codegen_context(const void *mem,
 void lto_module_dispose(lto_module_t mod) { delete unwrap(mod); }
 
 const char* lto_module_get_target_triple(lto_module_t mod) {
-  return unwrap(mod)->getTargetTriple().c_str();
+  return unwrap(mod)->getTargetTriple().str().c_str();
 }
 
 void lto_module_set_target_triple(lto_module_t mod, const char *triple) {
-  return unwrap(mod)->setTargetTriple(StringRef(triple));
+  return unwrap(mod)->setTargetTriple(Triple(StringRef(triple)));
 }
 
 unsigned int lto_module_get_num_symbols(lto_module_t mod) {
@@ -320,6 +344,15 @@ const char* lto_module_get_symbol_name(lto_module_t mod, unsigned int index) {
 lto_symbol_attributes lto_module_get_symbol_attribute(lto_module_t mod,
                                                       unsigned int index) {
   return unwrap(mod)->getSymbolAttributes(index);
+}
+
+unsigned int lto_module_get_num_asm_undef_symbols(lto_module_t mod) {
+  return unwrap(mod)->getAsmUndefSymbolCount();
+}
+
+const char *lto_module_get_asm_undef_symbol_name(lto_module_t mod,
+                                                 unsigned int index) {
+  return unwrap(mod)->getAsmUndefSymbolName(index).data();
 }
 
 const char* lto_module_get_linkeropts(lto_module_t mod) {
@@ -475,8 +508,7 @@ void lto_set_debug_options(const char *const *options, int number) {
   // Need to put each suboption in a null-terminated string before passing to
   // parseCommandLineOptions().
   std::vector<std::string> Options;
-  for (int i = 0; i < number; ++i)
-    Options.push_back(options[i]);
+  llvm::append_range(Options, ArrayRef(options, number));
 
   llvm::parseCommandLineOptions(Options);
   optionParsingState = OptParsingState::Early;
@@ -497,9 +529,7 @@ void lto_codegen_debug_options_array(lto_code_gen_t cg,
                                      const char *const *options, int number) {
   assert(optionParsingState != OptParsingState::Early &&
          "early option processing already happened");
-  SmallVector<StringRef, 4> Options;
-  for (int i = 0; i < number; ++i)
-    Options.push_back(options[i]);
+  SmallVector<StringRef, 4> Options(ArrayRef(options, number));
   unwrap(cg)->setCodeGenDebugOptions(ArrayRef(Options));
 }
 
@@ -537,6 +567,25 @@ thinlto_code_gen_t thinlto_create_codegen(void) {
     assert(CGOptLevelOrNone);
     CodeGen->setCodeGenOptLevel(*CGOptLevelOrNone);
   }
+  if (!ThinLTOCacheDir.empty()) {
+    auto Err = llvm::sys::fs::create_directories(ThinLTOCacheDir);
+    if (Err)
+      report_fatal_error(Twine("Unable to create thinLTO cache directory: ") +
+                         Err.message());
+    bool result;
+    Err = llvm::sys::fs::is_directory(ThinLTOCacheDir, result);
+    if (Err || !result)
+      report_fatal_error(Twine("Unable to get status of thinLTO cache path or "
+                               "path is not a directory: ") +
+                         Err.message());
+    CodeGen->setCacheDir(ThinLTOCacheDir);
+
+    CodeGen->setCachePruningInterval(ThinLTOCachePruningInterval);
+    CodeGen->setCacheEntryExpiration(ThinLTOCacheEntryExpiration);
+    CodeGen->setCacheMaxSizeFiles(ThinLTOCacheMaxSizeFiles);
+    CodeGen->setCacheMaxSizeBytes(ThinLTOCacheMaxSizeBytes);
+  }
+
   return wrap(CodeGen);
 }
 

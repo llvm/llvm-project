@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -O3 -run-pass hexagon-loop-align -o - %s\
+# RUN: llc -mtriple=hexagon -O3 -run-pass hexagon-loop-align -o - %s\
 # RUN: -debug-only=hexagon-loop-align -verify-machineinstrs 2>&1 | FileCheck %s
 # REQUIRES: asserts
 

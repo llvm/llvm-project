@@ -96,7 +96,7 @@ template<int L, class T, class N> T test_template(T* arr, N num) {
 template<int LEN> int test_warn() {
   int ind2 = 0;
 // expected-error@+1 {{only loop iteration variables are allowed in 'linear' clause in distribute directives}}
-  #pragma omp target teams distribute parallel for simd linear(ind2:LEN) // expected-warning {{zero linear step (ind2 should probably be const)}}
+  #pragma omp target teams distribute parallel for simd linear(ind2:LEN) // expected-warning {{zero linear step ('ind2' should probably be const)}}
   for (int i = 0; i < 100; i++) {
     ind2 += LEN;
   }

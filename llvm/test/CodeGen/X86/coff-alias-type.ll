@@ -13,6 +13,7 @@ entry:
 ; CHECK-NEXT: .scl     2
 ; CHECK-NEXT: .type    32
 ; CHECK-NEXT: .endef
+; CHECK-NEXT: .text
 ; CHECK-NEXT: .globl   _ZN8MyStructC2Ev
 ; CHECK:      {{^}}_ZN8MyStructC2Ev:
 
@@ -21,4 +22,4 @@ entry:
 ; CHECK-NEXT: .scl     2
 ; CHECK-NEXT: .type    32
 ; CHECK-NEXT: .endef
-; CHECK-NEXT: .set     _ZN8MyStructC1Ev, _ZN8MyStructC2Ev
+; CHECK-NEXT: _ZN8MyStructC1Ev = _ZN8MyStructC2Ev

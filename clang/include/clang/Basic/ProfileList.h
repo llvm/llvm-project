@@ -49,17 +49,16 @@ public:
   ~ProfileList();
 
   bool isEmpty() const { return Empty; }
-  ExclusionType getDefault(CodeGenOptions::ProfileInstrKind Kind) const;
+  ExclusionType getDefault(llvm::driver::ProfileInstrKind Kind) const;
 
   std::optional<ExclusionType>
   isFunctionExcluded(StringRef FunctionName,
-                     CodeGenOptions::ProfileInstrKind Kind) const;
+                     llvm::driver::ProfileInstrKind Kind) const;
   std::optional<ExclusionType>
   isLocationExcluded(SourceLocation Loc,
-                     CodeGenOptions::ProfileInstrKind Kind) const;
+                     llvm::driver::ProfileInstrKind Kind) const;
   std::optional<ExclusionType>
-  isFileExcluded(StringRef FileName,
-                 CodeGenOptions::ProfileInstrKind Kind) const;
+  isFileExcluded(StringRef FileName, llvm::driver::ProfileInstrKind Kind) const;
 };
 
 } // namespace clang

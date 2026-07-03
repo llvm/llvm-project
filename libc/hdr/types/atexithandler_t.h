@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_HDR_ATEXITHANDLER_T_H
-#define LLVM_LIBC_HDR_ATEXITHANDLER_T_H
+#ifndef LLVM_LIBC_HDR_TYPES_ATEXITHANDLER_T_H
+#define LLVM_LIBC_HDR_TYPES_ATEXITHANDLER_T_H
 
 #ifdef LIBC_FULL_BUILD
 
@@ -17,6 +17,6 @@
 
 #error // type not available in overlay mode
 
-#endif // LLVM_LIBC_FULL_BUILD
+#endif // LIBC_FULL_BUILD
 
-#endif // LLVM_LIBC_HDR_ATEXITHANDLER_T_H
+#endif // LLVM_LIBC_HDR_TYPES_ATEXITHANDLER_T_H

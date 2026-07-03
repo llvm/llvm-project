@@ -195,3 +195,10 @@ define half @test_f16_blocked([7 x double], [2 x half] %in) {
   %val = extractvalue [2 x half] %in, 0
   ret half %val
 }
+
+define bfloat @test_bf16_blocked([7 x double], [2 x bfloat] %in) {
+; CHECK-LABEL: test_bf16_blocked:
+; CHECK: ldr h0, [sp]
+  %val = extractvalue [2 x bfloat] %in, 0
+  ret bfloat %val
+}

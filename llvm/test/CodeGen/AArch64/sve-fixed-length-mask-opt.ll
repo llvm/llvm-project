@@ -20,7 +20,7 @@ define void @masked_gather_v2i8(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    st1b { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %ptrs = load <2 x ptr>, ptr %b
-  %vals = call <2 x i8> @llvm.masked.gather.v2i8(<2 x ptr> %ptrs, i32 8, <2 x i1> <i1 true, i1 true>, <2 x i8> undef)
+  %vals = call <2 x i8> @llvm.masked.gather.v2i8(<2 x ptr> %ptrs, i32 8, <2 x i1> splat (i1 true), <2 x i8> poison)
   store <2 x i8> %vals, ptr %a
   ret void
 }
@@ -34,7 +34,7 @@ define void @masked_gather_v4i8(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    st1b { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %ptrs = load <4 x ptr>, ptr %b
-  %vals = call <4 x i8> @llvm.masked.gather.v4i8(<4 x ptr> %ptrs, i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i8> undef)
+  %vals = call <4 x i8> @llvm.masked.gather.v4i8(<4 x ptr> %ptrs, i32 8, <4 x i1> splat (i1 true), <4 x i8> poison)
   store <4 x i8> %vals, ptr %a
   ret void
 }
@@ -67,7 +67,7 @@ define void @masked_gather_v8i8(ptr %a, ptr %b) #0 {
 ; VBITS_GE_512-NEXT:    str d0, [x0]
 ; VBITS_GE_512-NEXT:    ret
   %ptrs = load <8 x ptr>, ptr %b
-  %vals = call <8 x i8> @llvm.masked.gather.v8i8(<8 x ptr> %ptrs, i32 8, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i8> undef)
+  %vals = call <8 x i8> @llvm.masked.gather.v8i8(<8 x ptr> %ptrs, i32 8, <8 x i1> splat (i1 true), <8 x i8> poison)
   store <8 x i8> %vals, ptr %a
   ret void
 }
@@ -84,8 +84,7 @@ define void @masked_gather_v16i8(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
   %ptrs = load <16 x ptr>, ptr %b
-  %vals = call <16 x i8> @llvm.masked.gather.v16i8(<16 x ptr> %ptrs, i32 8, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true,
-                                                                                       i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x i8> undef)
+  %vals = call <16 x i8> @llvm.masked.gather.v16i8(<16 x ptr> %ptrs, i32 8, <16 x i1> splat (i1 true), <16 x i8> poison)
   store <16 x i8> %vals, ptr %a
   ret void
 }
@@ -99,10 +98,7 @@ define void @masked_gather_v32i8(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    st1b { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %ptrs = load <32 x ptr>, ptr %b
-  %vals = call <32 x i8> @llvm.masked.gather.v32i8(<32 x ptr> %ptrs, i32 8, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true,
-                                                                                       i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true,
-                                                                                       i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true,
-                                                                                       i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <32 x i8> undef)
+  %vals = call <32 x i8> @llvm.masked.gather.v32i8(<32 x ptr> %ptrs, i32 8, <32 x i1> splat (i1 true), <32 x i8> poison)
   store <32 x i8> %vals, ptr %a
   ret void
 }
@@ -122,7 +118,7 @@ define void @masked_gather_v2i16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %ptrs = load <2 x ptr>, ptr %b
-  %vals = call <2 x i16> @llvm.masked.gather.v2i16(<2 x ptr> %ptrs, i32 8, <2 x i1> <i1 true, i1 true>, <2 x i16> undef)
+  %vals = call <2 x i16> @llvm.masked.gather.v2i16(<2 x ptr> %ptrs, i32 8, <2 x i1> splat (i1 true), <2 x i16> poison)
   store <2 x i16> %vals, ptr %a
   ret void
 }
@@ -138,7 +134,7 @@ define void @masked_gather_v4i16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
   %ptrs = load <4 x ptr>, ptr %b
-  %vals = call <4 x i16> @llvm.masked.gather.v4i16(<4 x ptr> %ptrs, i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i16> undef)
+  %vals = call <4 x i16> @llvm.masked.gather.v4i16(<4 x ptr> %ptrs, i32 8, <4 x i1> splat (i1 true), <4 x i16> poison)
   store <4 x i16> %vals, ptr %a
   ret void
 }
@@ -170,7 +166,7 @@ define void @masked_gather_v8i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_512-NEXT:    str q0, [x0]
 ; VBITS_GE_512-NEXT:    ret
   %ptrs = load <8 x ptr>, ptr %b
-  %vals = call <8 x i16> @llvm.masked.gather.v8i16(<8 x ptr> %ptrs, i32 8, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i16> undef)
+  %vals = call <8 x i16> @llvm.masked.gather.v8i16(<8 x ptr> %ptrs, i32 8, <8 x i1> splat (i1 true), <8 x i16> poison)
   store <8 x i16> %vals, ptr %a
   ret void
 }
@@ -184,8 +180,7 @@ define void @masked_gather_v16i16(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    st1h { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %ptrs = load <16 x ptr>, ptr %b
-  %vals = call <16 x i16> @llvm.masked.gather.v16i16(<16 x ptr> %ptrs, i32 8, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true,
-                                                                                          i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x i16> undef)
+  %vals = call <16 x i16> @llvm.masked.gather.v16i16(<16 x ptr> %ptrs, i32 8, <16 x i1> splat (i1 true), <16 x i16> poison)
   store <16 x i16> %vals, ptr %a
   ret void
 }
@@ -199,10 +194,7 @@ define void @masked_gather_v32i16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    st1h { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %ptrs = load <32 x ptr>, ptr %b
-  %vals = call <32 x i16> @llvm.masked.gather.v32i16(<32 x ptr> %ptrs, i32 8, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true,
-                                                                                          i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true,
-                                                                                          i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true,
-                                                                                          i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <32 x i16> undef)
+  %vals = call <32 x i16> @llvm.masked.gather.v32i16(<32 x ptr> %ptrs, i32 8, <32 x i1> splat (i1 true), <32 x i16> poison)
   store <32 x i16> %vals, ptr %a
   ret void
 }
@@ -221,7 +213,7 @@ define void @masked_gather_v2i32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
   %ptrs = load <2 x ptr>, ptr %b
-  %vals = call <2 x i32> @llvm.masked.gather.v2i32(<2 x ptr> %ptrs, i32 8, <2 x i1> <i1 true, i1 true>, <2 x i32> undef)
+  %vals = call <2 x i32> @llvm.masked.gather.v2i32(<2 x ptr> %ptrs, i32 8, <2 x i1> splat (i1 true), <2 x i32> poison)
   store <2 x i32> %vals, ptr %a
   ret void
 }
@@ -236,7 +228,7 @@ define void @masked_gather_v4i32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
   %ptrs = load <4 x ptr>, ptr %b
-  %vals = call <4 x i32> @llvm.masked.gather.v4i32(<4 x ptr> %ptrs, i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+  %vals = call <4 x i32> @llvm.masked.gather.v4i32(<4 x ptr> %ptrs, i32 8, <4 x i1> splat (i1 true), <4 x i32> poison)
   store <4 x i32> %vals, ptr %a
   ret void
 }
@@ -266,7 +258,7 @@ define void @masked_gather_v8i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_512-NEXT:    st1w { z0.d }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
   %ptrs = load <8 x ptr>, ptr %b
-  %vals = call <8 x i32> @llvm.masked.gather.v8i32(<8 x ptr> %ptrs, i32 8, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i32> undef)
+  %vals = call <8 x i32> @llvm.masked.gather.v8i32(<8 x ptr> %ptrs, i32 8, <8 x i1> splat (i1 true), <8 x i32> poison)
   store <8 x i32> %vals, ptr %a
   ret void
 }
@@ -280,8 +272,7 @@ define void @masked_gather_v16i32(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    st1w { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %ptrs = load <16 x ptr>, ptr %b
-  %vals = call <16 x i32> @llvm.masked.gather.v16i32(<16 x ptr> %ptrs, i32 8, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true,
-                                                                                          i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x i32> undef)
+  %vals = call <16 x i32> @llvm.masked.gather.v16i32(<16 x ptr> %ptrs, i32 8, <16 x i1> splat (i1 true), <16 x i32> poison)
   store <16 x i32> %vals, ptr %a
   ret void
 }
@@ -295,10 +286,7 @@ define void @masked_gather_v32i32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    st1w { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %ptrs = load <32 x ptr>, ptr %b
-  %vals = call <32 x i32> @llvm.masked.gather.v32i32(<32 x ptr> %ptrs, i32 8, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true,
-                                                                                          i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true,
-                                                                                          i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true,
-                                                                                          i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <32 x i32> undef)
+  %vals = call <32 x i32> @llvm.masked.gather.v32i32(<32 x ptr> %ptrs, i32 8, <32 x i1> splat (i1 true), <32 x i32> poison)
   store <32 x i32> %vals, ptr %a
   ret void
 }
@@ -316,7 +304,7 @@ define void @masked_gather_v2i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
   %ptrs = load <2 x ptr>, ptr %b
-  %vals = call <2 x i64> @llvm.masked.gather.v2i64(<2 x ptr> %ptrs, i32 8, <2 x i1> <i1 true, i1 true>, <2 x i64> undef)
+  %vals = call <2 x i64> @llvm.masked.gather.v2i64(<2 x ptr> %ptrs, i32 8, <2 x i1> splat (i1 true), <2 x i64> poison)
   store <2 x i64> %vals, ptr %a
   ret void
 }
@@ -330,7 +318,7 @@ define void @masked_gather_v4i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %ptrs = load <4 x ptr>, ptr %b
-  %vals = call <4 x i64> @llvm.masked.gather.v4i64(<4 x ptr> %ptrs, i32 8, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i64> undef)
+  %vals = call <4 x i64> @llvm.masked.gather.v4i64(<4 x ptr> %ptrs, i32 8, <4 x i1> splat (i1 true), <4 x i64> poison)
   store <4 x i64> %vals, ptr %a
   ret void
 }
@@ -356,7 +344,7 @@ define void @masked_gather_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
   %ptrs = load <8 x ptr>, ptr %b
-  %vals = call <8 x i64> @llvm.masked.gather.v8i64(<8 x ptr> %ptrs, i32 8, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i64> undef)
+  %vals = call <8 x i64> @llvm.masked.gather.v8i64(<8 x ptr> %ptrs, i32 8, <8 x i1> splat (i1 true), <8 x i64> poison)
   store <8 x i64> %vals, ptr %a
   ret void
 }
@@ -370,8 +358,7 @@ define void @masked_gather_v16i64(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %ptrs = load <16 x ptr>, ptr %b
-  %vals = call <16 x i64> @llvm.masked.gather.v16i64(<16 x ptr> %ptrs, i32 8, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true,
-                                                                                          i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x i64> undef)
+  %vals = call <16 x i64> @llvm.masked.gather.v16i64(<16 x ptr> %ptrs, i32 8, <16 x i1> splat (i1 true), <16 x i64> poison)
   store <16 x i64> %vals, ptr %a
   ret void
 }
@@ -385,10 +372,7 @@ define void @masked_gather_v32i64(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   %ptrs = load <32 x ptr>, ptr %b
-  %vals = call <32 x i64> @llvm.masked.gather.v32i64(<32 x ptr> %ptrs, i32 8, <32 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true,
-                                                                                          i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true,
-                                                                                          i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true,
-                                                                                          i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <32 x i64> undef)
+  %vals = call <32 x i64> @llvm.masked.gather.v32i64(<32 x ptr> %ptrs, i32 8, <32 x i1> splat (i1 true), <32 x i64> poison)
   store <32 x i64> %vals, ptr %a
   ret void
 }

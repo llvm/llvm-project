@@ -221,8 +221,8 @@ define <4 x i16> @test_multisource(ptr %B) nounwind {
 ; CHECK-NEXT:    vld1.16 {d20, d21}, [r0:128]!
 ; CHECK-NEXT:    vorr d23, d20, d20
 ; CHECK-NEXT:    vldr d22, [r0]
-; CHECK-NEXT:    vzip.16 d23, d22
 ; CHECK-NEXT:    vtrn.16 d16, d18
+; CHECK-NEXT:    vzip.16 d23, d22
 ; CHECK-NEXT:    vext.16 d18, d20, d23, #2
 ; CHECK-NEXT:    vext.16 d16, d18, d16, #2
 ; CHECK-NEXT:    vext.16 d16, d16, d16, #2
@@ -266,13 +266,13 @@ define <8 x i16> @test_illegal(ptr %A, ptr %B) nounwind {
 ; CHECK-NEXT:    vmov.u16 r1, d19[1]
 ; CHECK-NEXT:    vuzp.16 d22, d23
 ; CHECK-NEXT:    vuzp.16 d22, d18
+; CHECK-NEXT:    vext.16 d16, d16, d18, #3
 ; CHECK-NEXT:    vmov.16 d20[0], r0
 ; CHECK-NEXT:    vmov.16 d20[1], r2
 ; CHECK-NEXT:    vmov.16 d20[2], r3
+; CHECK-NEXT:    vmov r2, r3, d16
 ; CHECK-NEXT:    vmov.16 d20[3], r1
-; CHECK-NEXT:    vext.16 d21, d16, d18, #3
 ; CHECK-NEXT:    vmov r0, r1, d20
-; CHECK-NEXT:    vmov r2, r3, d21
 ; CHECK-NEXT:    mov pc, lr
        %tmp1 = load <8 x i16>, ptr %A
        %tmp2 = load <8 x i16>, ptr %B

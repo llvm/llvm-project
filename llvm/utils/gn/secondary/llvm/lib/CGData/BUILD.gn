@@ -10,5 +10,7 @@ static_library("CGData") {
     "CodeGenDataWriter.cpp",
     "OutlinedHashTree.cpp",
     "OutlinedHashTreeRecord.cpp",
+    "StableFunctionMap.cpp",
+    "StableFunctionMapRecord.cpp",
   ]
 }

@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel -mcpu=mips32r2 -mattr=+micromips -asm-show-inst -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel -mcpu=mips32r2 -mattr=+micromips -asm-show-inst -verify-machineinstrs < %s | FileCheck %s
 
 ; Function Attrs: nounwind
 define i32 @function1(ptr %f) {

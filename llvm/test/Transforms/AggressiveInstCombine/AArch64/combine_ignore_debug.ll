@@ -16,7 +16,7 @@ define void @test() {
 ; DBG-LABEL: define void @test() {
 ; DBG-NEXT:  entry:
 ; DBG-NEXT:    [[L1:%.*]] = load i32, ptr @e, align 1
-; DBG-NEXT:      #dbg_value(i32 undef, [[META3:![0-9]+]], !DIExpression(), [[META5:![0-9]+]])
+; DBG-NEXT:      #dbg_value(i32 poison, [[META3:![0-9]+]], !DIExpression(), [[META5:![0-9]+]])
 ; DBG-NEXT:    store i32 [[L1]], ptr @l, align 1
 ; DBG-NEXT:    ret void
 ;
@@ -28,7 +28,7 @@ define void @test() {
 ;
 entry:
   %l1 = load i16, ptr @e, align 1
-  call void @llvm.dbg.value(metadata i32 undef, metadata !3, metadata !DIExpression()), !dbg !5
+  call void @llvm.dbg.value(metadata i32 poison, metadata !3, metadata !DIExpression()), !dbg !5
   %l2 = load i16, ptr getelementptr inbounds (%s, ptr @e, i16 0, i32 1), align 1
   %e2 = zext i16 %l2 to i32
   %e1 = zext i16 %l1 to i32
@@ -41,11 +41,13 @@ entry:
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
+!6 = !{null}
+!7 = !DISubroutineType(types: !6)
 !llvm.module.flags = !{!2}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C11, file: !1)
 !1 = !DIFile(filename: "foo.c", directory: "/")
 !2 = !{i32 2, !"Debug Info Version", i32 3}
 !3 = !DILocalVariable(scope: !4)
-!4 = distinct !DISubprogram(unit: !0)
+!4 = distinct !DISubprogram(type: !7, unit: !0)
 !5 = !DILocation(scope: !4)

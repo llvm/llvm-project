@@ -4,6 +4,8 @@
 // RUN:   | FileCheck --check-prefix=BASIC %s
 // RUN: %clang -### --target=aarch64-linux-gnu -fxray-instrument %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=FDR,BASIC %s
+// RUN: %clang -### --target=s390x-linux-gnu -fxray-instrument -fxray-modes=xray-basic %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=BASIC %s
 // RUN: %clang -### --target=x86_64-linux-gnu -fxray-instrument -fxray-modes=all %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=FDR,BASIC %s
 // RUN: %clang -### --target=x86_64-linux-gnu -fxray-instrument -fxray-modes=xray-fdr,xray-basic %s 2>&1 \

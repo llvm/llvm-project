@@ -50,6 +50,6 @@ Triple llvm::dwarf::utils::getDefaultTargetTripleForAddrSize(uint8_t AddrSize) {
 bool llvm::dwarf::utils::isConfigurationSupported(Triple &T) {
   initLLVMIfNeeded();
   std::string Err;
-  const Target *TheTarget = TargetRegistry::lookupTarget(T.getTriple(), Err);
+  const Target *TheTarget = TargetRegistry::lookupTarget(T, Err);
   return TheTarget && TheTarget->hasMCAsmBackend();
 }

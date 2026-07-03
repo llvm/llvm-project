@@ -22,6 +22,7 @@
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/STLExtras.h"
@@ -32,6 +33,11 @@
 
 namespace clang::include_cleaner {
 namespace {
+bool isOperatorNewDelete(OverloadedOperatorKind OpKind) {
+  return OpKind == OO_New || OpKind == OO_Delete || OpKind == OO_Array_New ||
+         OpKind == OO_Array_Delete;
+}
+
 using DeclCallback =
     llvm::function_ref<void(SourceLocation, NamedDecl &, RefType)>;
 
@@ -54,14 +60,10 @@ class ASTWalker : public RecursiveASTVisitor<ASTWalker> {
   NamedDecl *getMemberProvider(QualType Base) {
     if (Base->isPointerType())
       return getMemberProvider(Base->getPointeeType());
-    // Unwrap the sugar ElaboratedType.
-    if (const auto *ElTy = dyn_cast<ElaboratedType>(Base))
-      return getMemberProvider(ElTy->getNamedType());
-
     if (const auto *TT = dyn_cast<TypedefType>(Base))
       return TT->getDecl();
     if (const auto *UT = dyn_cast<UsingType>(Base))
-      return UT->getFoundDecl();
+      return UT->getDecl();
     // A heuristic: to resolve a template type to **only** its template name.
     // We're only using this method for the base type of MemberExpr, in general
     // the template provides the member, and the critical case `unique_ptr<Foo>`
@@ -129,18 +131,14 @@ public:
   }
 
   bool qualifierIsNamespaceOrNone(DeclRefExpr *DRE) {
-    const auto *Qual = DRE->getQualifier();
-    if (!Qual)
+    NestedNameSpecifier Qual = DRE->getQualifier();
+    switch (Qual.getKind()) {
+    case NestedNameSpecifier::Kind::Null:
+    case NestedNameSpecifier::Kind::Namespace:
+    case NestedNameSpecifier::Kind::Global:
       return true;
-    switch (Qual->getKind()) {
-    case NestedNameSpecifier::Namespace:
-    case NestedNameSpecifier::NamespaceAlias:
-    case NestedNameSpecifier::Global:
-      return true;
-    case NestedNameSpecifier::TypeSpec:
-    case NestedNameSpecifier::TypeSpecWithTemplate:
-    case NestedNameSpecifier::Super:
-    case NestedNameSpecifier::Identifier:
+    case NestedNameSpecifier::Kind::Type:
+    case NestedNameSpecifier::Kind::MicrosoftSuper:
       return false;
     }
     llvm_unreachable("Unknown value for NestedNameSpecifierKind");
@@ -158,7 +156,15 @@ public:
     // the container decl instead, which is preferred as it'll handle
     // aliases/exports properly.
     if (!FD->isCXXClassMember() && !llvm::isa<EnumConstantDecl>(FD)) {
-      report(DRE->getLocation(), FD);
+      // Global operator new/delete [] is available implicitly in every
+      // translation unit, even without including any explicit headers. So treat
+      // those as ambigious to not force inclusion in TUs that transitively
+      // depend on those.
+      RefType RT =
+          isOperatorNewDelete(FD->getDeclName().getCXXOverloadedOperator())
+              ? RefType::Ambiguous
+              : RefType::Explicit;
+      report(DRE->getLocation(), FD, RT);
       return true;
     }
     // If the ref is without a qualifier, and is a member, ignore it. As it is
@@ -308,8 +314,15 @@ public:
     return true;
   }
 
+  bool VisitCleanupAttr(CleanupAttr *attr) {
+    report(attr->getArgLoc(), attr->getFunctionDecl());
+    return true;
+  }
+
   // TypeLoc visitors.
   void reportType(SourceLocation RefLoc, NamedDecl *ND) {
+    if (!ND)
+      return;
     // Reporting explicit references to types nested inside classes can cause
     // issues, e.g. a type accessed through a derived class shouldn't require
     // inclusion of the base.
@@ -324,7 +337,7 @@ public:
   }
 
   bool VisitUsingTypeLoc(UsingTypeLoc TL) {
-    reportType(TL.getNameLoc(), TL.getFoundDecl());
+    reportType(TL.getNameLoc(), TL.getDecl());
     return true;
   }
 
@@ -334,7 +347,7 @@ public:
   }
 
   bool VisitTypedefTypeLoc(TypedefTypeLoc TTL) {
-    reportType(TTL.getNameLoc(), TTL.getTypedefNameDecl());
+    reportType(TTL.getNameLoc(), TTL.getDecl());
     return true;
   }
 

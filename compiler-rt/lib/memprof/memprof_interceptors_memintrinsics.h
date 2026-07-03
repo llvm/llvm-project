@@ -18,8 +18,8 @@
 #include "memprof_internal.h"
 #include "memprof_mapping.h"
 
-DECLARE_REAL(void *, memcpy, void *to, const void *from, uptr size)
-DECLARE_REAL(void *, memset, void *block, int c, uptr size)
+DECLARE_REAL(void *, memcpy, void *to, const void *from, SIZE_T size)
+DECLARE_REAL(void *, memset, void *block, int c, SIZE_T size)
 
 namespace __memprof {
 

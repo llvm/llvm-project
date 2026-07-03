@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; This testcase exposed a problem with a previous handling of selecting
 ; constant vectors (for vdelta). Originally a bitcast of a vsplat was

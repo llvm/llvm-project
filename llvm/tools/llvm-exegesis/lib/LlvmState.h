@@ -49,7 +49,7 @@ public:
                                     bool UseDummyPerfCounters = false);
 
   const TargetMachine &getTargetMachine() const { return *TheTargetMachine; }
-  std::unique_ptr<LLVMTargetMachine> createTargetMachine() const;
+  std::unique_ptr<TargetMachine> createTargetMachine() const;
 
   const ExegesisTarget &getExegesisTarget() const { return *TheExegesisTarget; }
 
@@ -60,10 +60,10 @@ public:
     return *TheTargetMachine->getMCInstrInfo();
   }
   const MCRegisterInfo &getRegInfo() const {
-    return *TheTargetMachine->getMCRegisterInfo();
+    return TheTargetMachine->getMCRegisterInfo();
   }
   const MCSubtargetInfo &getSubtargetInfo() const {
-    return *TheTargetMachine->getMCSubtargetInfo();
+    return TheTargetMachine->getMCSubtargetInfo();
   }
 
   const RegisterAliasingTrackerCache &getRATC() const { return *RATC; }

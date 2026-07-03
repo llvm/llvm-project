@@ -78,9 +78,9 @@ define void @test2(ptr nocapture %x) nounwind minsize {
 ; NOFAST32-NEXT:    pushl %esi
 ; NOFAST32-NEXT:    subl $4100, %esp # imm = 0x1004
 ; NOFAST32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; NOFAST32-NEXT:    movl $1024, %ecx # imm = 0x400
+; NOFAST32-NEXT:    movl $4096, %ecx # imm = 0x1000
 ; NOFAST32-NEXT:    movl %esp, %edi
-; NOFAST32-NEXT:    rep;movsl (%esi), %es:(%edi)
+; NOFAST32-NEXT:    rep;movsb (%esi), %es:(%edi)
 ; NOFAST32-NEXT:    calll foo@PLT
 ; NOFAST32-NEXT:    addl $4100, %esp # imm = 0x1004
 ; NOFAST32-NEXT:    popl %esi
@@ -106,9 +106,9 @@ define void @test2(ptr nocapture %x) nounwind minsize {
 ; NOFAST:       # %bb.0:
 ; NOFAST-NEXT:    subq $4104, %rsp # imm = 0x1008
 ; NOFAST-NEXT:    movq %rdi, %rsi
-; NOFAST-NEXT:    movl $512, %ecx # imm = 0x200
+; NOFAST-NEXT:    movl $4096, %ecx # imm = 0x1000
 ; NOFAST-NEXT:    movq %rsp, %rdi
-; NOFAST-NEXT:    rep;movsq (%rsi), %es:(%rdi)
+; NOFAST-NEXT:    rep;movsb (%rsi), %es:(%rdi)
 ; NOFAST-NEXT:    callq foo@PLT
 ; NOFAST-NEXT:    addq $4104, %rsp # imm = 0x1008
 ; NOFAST-NEXT:    retq

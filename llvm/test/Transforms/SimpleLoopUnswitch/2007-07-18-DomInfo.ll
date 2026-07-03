@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=simple-loop-unswitch -verify-memoryssa -disable-output
+; RUN: opt < %s -passes="loop-mssa(simple-loop-unswitch)" -verify-memoryssa -disable-output
 ; PR1559
 
 target triple = "i686-pc-linux-gnu"

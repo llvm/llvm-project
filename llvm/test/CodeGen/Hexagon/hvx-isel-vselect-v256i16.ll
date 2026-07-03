@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; This used to crash with
 ; "llvm::MVT llvm::EVT::getSimpleVT() const: Assertion `isSimple() &&
 ; Expected a SimpleValueType!' failed."

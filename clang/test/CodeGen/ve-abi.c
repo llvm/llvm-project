@@ -52,6 +52,7 @@ unsigned long fun_zi64(unsigned long a, unsigned long b) {
 
 // CHECK-LABEL: define{{.*}} i128 @fun_si128(i128 noundef %a, i128 noundef %b) #0 {
 __int128 fun_si128(__int128 a, __int128 b) {
+  return a;
 }
 
 // CHECK-LABEL: define{{.*}} i128 @fun_zi128(i128 noundef %a, i128 noundef %b) #0 {

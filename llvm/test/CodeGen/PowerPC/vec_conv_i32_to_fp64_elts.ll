@@ -185,18 +185,18 @@ define void @test16elt(ptr noalias nocapture sret(<16 x double>) %agg.result, pt
 ; CHECK-P8-NEXT:    xvcvuxwdp vs0, v6
 ; CHECK-P8-NEXT:    xvcvuxwdp vs1, v5
 ; CHECK-P8-NEXT:    xxswapd vs5, vs6
+; CHECK-P8-NEXT:    stxvd2x vs5, 0, r3
 ; CHECK-P8-NEXT:    xxswapd vs2, vs4
 ; CHECK-P8-NEXT:    xxswapd vs3, vs3
 ; CHECK-P8-NEXT:    xxswapd vs4, vs7
 ; CHECK-P8-NEXT:    stxvd2x vs2, r3, r4
 ; CHECK-P8-NEXT:    li r4, 64
+; CHECK-P8-NEXT:    stxvd2x vs4, r3, r7
 ; CHECK-P8-NEXT:    stxvd2x vs3, r3, r4
 ; CHECK-P8-NEXT:    xxswapd vs1, vs1
 ; CHECK-P8-NEXT:    xxswapd vs0, vs0
 ; CHECK-P8-NEXT:    stxvd2x vs1, r3, r5
 ; CHECK-P8-NEXT:    stxvd2x vs0, r3, r6
-; CHECK-P8-NEXT:    stxvd2x vs4, r3, r7
-; CHECK-P8-NEXT:    stxvd2x vs5, 0, r3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test16elt:
@@ -445,18 +445,18 @@ define void @test16elt_signed(ptr noalias nocapture sret(<16 x double>) %agg.res
 ; CHECK-P8-NEXT:    xvcvsxwdp vs0, v6
 ; CHECK-P8-NEXT:    xvcvsxwdp vs1, v5
 ; CHECK-P8-NEXT:    xxswapd vs5, vs6
+; CHECK-P8-NEXT:    stxvd2x vs5, 0, r3
 ; CHECK-P8-NEXT:    xxswapd vs2, vs4
 ; CHECK-P8-NEXT:    xxswapd vs3, vs3
 ; CHECK-P8-NEXT:    xxswapd vs4, vs7
 ; CHECK-P8-NEXT:    stxvd2x vs2, r3, r4
 ; CHECK-P8-NEXT:    li r4, 64
+; CHECK-P8-NEXT:    stxvd2x vs4, r3, r7
 ; CHECK-P8-NEXT:    stxvd2x vs3, r3, r4
 ; CHECK-P8-NEXT:    xxswapd vs1, vs1
 ; CHECK-P8-NEXT:    xxswapd vs0, vs0
 ; CHECK-P8-NEXT:    stxvd2x vs1, r3, r5
 ; CHECK-P8-NEXT:    stxvd2x vs0, r3, r6
-; CHECK-P8-NEXT:    stxvd2x vs4, r3, r7
-; CHECK-P8-NEXT:    stxvd2x vs5, 0, r3
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: test16elt_signed:

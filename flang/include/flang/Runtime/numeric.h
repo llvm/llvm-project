@@ -374,7 +374,7 @@ CppTypeFor<TypeCategory::Real, 16> RTDECL(Scale16)(
 CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedCharKind)(
     const char *, int, const char *, std::size_t);
 
-// SELECTED_INT_KIND
+// SELECTED_INT_KIND and SELECTED_UNSIGNED_KIND
 CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedIntKind)(
     const char *, int, void *, int);
 CppTypeFor<TypeCategory::Integer, 4> RTDECL(SelectedIntKindMasked)(
@@ -452,6 +452,19 @@ CppTypeFor<TypeCategory::Real, 16> RTDECL(FPow16k)(
     CppTypeFor<TypeCategory::Real, 16> b,
     CppTypeFor<TypeCategory::Integer, 8> e);
 #endif
+
+CppTypeFor<TypeCategory::Unsigned, 1> RTDEF(UPow1)(
+    CppTypeFor<TypeCategory::Unsigned, 1> b,
+    CppTypeFor<TypeCategory::Unsigned, 1> e);
+CppTypeFor<TypeCategory::Unsigned, 2> RTDEF(UPow2)(
+    CppTypeFor<TypeCategory::Unsigned, 2> b,
+    CppTypeFor<TypeCategory::Unsigned, 2> e);
+CppTypeFor<TypeCategory::Unsigned, 4> RTDEF(UPow4)(
+    CppTypeFor<TypeCategory::Unsigned, 4> b,
+    CppTypeFor<TypeCategory::Unsigned, 4> e);
+CppTypeFor<TypeCategory::Unsigned, 8> RTDEF(UPow8)(
+    CppTypeFor<TypeCategory::Unsigned, 8> b,
+    CppTypeFor<TypeCategory::Unsigned, 8> e);
 
 } // extern "C"
 } // namespace Fortran::runtime

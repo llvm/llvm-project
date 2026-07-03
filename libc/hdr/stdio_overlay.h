@@ -27,6 +27,17 @@
 #undef _FORTIFY_SOURCE
 #endif
 
+#ifdef __USE_EXTERN_INLINES
+#define LIBC_OLD_USE_EXTERN_INLINES
+#undef __USE_EXTERN_INLINES
+#endif
+
+#ifdef __USE_FORTIFY_LEVEL
+#define LIBC_OLD_USE_FORTIFY_LEVEL __USE_FORTIFY_LEVEL
+#undef __USE_FORTIFY_LEVEL
+#define __USE_FORTIFY_LEVEL 0
+#endif
+
 #ifndef __NO_INLINE__
 #define __NO_INLINE__ 1
 #define LIBC_SET_NO_INLINE
@@ -42,6 +53,31 @@
 #ifdef LIBC_SET_NO_INLINE
 #undef __NO_INLINE__
 #undef LIBC_SET_NO_INLINE
+#endif
+
+#ifdef LIBC_OLD_USE_FORTIFY_LEVEL
+#undef __USE_FORTIFY_LEVEL
+#define __USE_FORTIFY_LEVEL LIBC_OLD_USE_FORTIFY_LEVEL
+#undef LIBC_OLD_USE_FORTIFY_LEVEL
+#endif
+
+#ifdef LIBC_OLD_USE_EXTERN_INLINES
+#define __USE_EXTERN_INLINES
+#undef LIBC_OLD_USE_EXTERN_INLINES
+#endif
+
+// undefine symbolic macros for Apple platforms in overlay mode
+#ifdef __APPLE__
+#undef getc_unlocked
+#undef putc_unlocked
+#undef getchar_unlocked
+#undef putchar_unlocked
+#undef fropen
+#undef fwopen
+#undef feof_unlocked
+#undef ferror_unlocked
+#undef clearerr_unlocked
+#undef fileno_unlocked
 #endif
 
 #endif // LLVM_LIBC_HDR_STDIO_OVERLAY_H

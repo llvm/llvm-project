@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr | FileCheck %s
+; RUN: llc < %s -mtriple=avr | FileCheck %s
 
 ; At one point, the 16-vit atomic load/store operations we defined in TableGen
 ; to use 'PTRREGS', but the pseudo expander would generate LDDW/STDW instructions.

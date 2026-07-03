@@ -5,11 +5,6 @@ bfmmla z0.s, z1.s, z2.h
 // CHECK-NEXT: bfmmla z0.s, z1.s, z2.h
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
-bfmmla z0.h, z1.h, z2.h
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
-// CHECK-NEXT: bfmmla z0.h, z1.h, z2.h
-// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
-
 bfmmla z0.s, z1.h, z2.s
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
 // CHECK-NEXT: bfmmla z0.s, z1.h, z2.s

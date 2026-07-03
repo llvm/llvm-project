@@ -380,11 +380,11 @@ bool OptionValue::SetLanguageValue(lldb::LanguageType new_language) {
   return false;
 }
 
-const FormatEntity::Entry *OptionValue::GetFormatEntity() const {
+FormatEntity::Entry OptionValue::GetFormatEntityValue() const {
   std::lock_guard<std::mutex> lock(m_mutex);
   if (const OptionValueFormatEntity *option_value = GetAsFormatEntity())
-    return &option_value->GetCurrentValue();
-  return nullptr;
+    return option_value->GetCurrentValue();
+  return {};
 }
 
 const RegularExpression *OptionValue::GetRegexValue() const {
@@ -469,6 +469,15 @@ bool OptionValue::SetArchSpecValue(ArchSpec arch_spec) {
     std::lock_guard<std::mutex> lock(m_mutex);
   if (OptionValueArch *option_value = GetAsArch()) {
     option_value->SetCurrentValue(arch_spec, false);
+    return true;
+  }
+  return false;
+}
+
+bool OptionValue::SetFormatEntityValue(const FormatEntity::Entry &entry) {
+  std::lock_guard<std::mutex> lock(m_mutex);
+  if (OptionValueFormatEntity *option_value = GetAsFormatEntity()) {
+    option_value->SetCurrentValue(entry);
     return true;
   }
   return false;
@@ -570,11 +579,12 @@ lldb::OptionValueSP OptionValue::CreateValueFromCStringForTypeMask(
   return value_sp;
 }
 
-bool OptionValue::DumpQualifiedName(Stream &strm) const {
+bool OptionValue::DumpQualifiedName(
+    Stream &strm, std::optional<Stream::HighlightSettings> highlight) const {
   bool dumped_something = false;
   lldb::OptionValueSP m_parent_sp(m_parent_wp.lock());
   if (m_parent_sp) {
-    if (m_parent_sp->DumpQualifiedName(strm))
+    if (m_parent_sp->DumpQualifiedName(strm, highlight))
       dumped_something = true;
   }
   llvm::StringRef name(GetName());
@@ -583,7 +593,7 @@ bool OptionValue::DumpQualifiedName(Stream &strm) const {
       strm.PutChar('.');
     else
       dumped_something = true;
-    strm << name;
+    strm.PutCStringColorHighlighted(name, highlight);
   }
   return dumped_something;
 }

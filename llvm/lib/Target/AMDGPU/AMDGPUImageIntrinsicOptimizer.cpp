@@ -188,7 +188,7 @@ bool optimizeSection(ArrayRef<SmallVector<IntrinsicInst *, 4>> MergeableInsts) {
     // types along the way.
     SmallVector<Type *, 6> OverloadTys;
     Function *F = IIList.front()->getCalledFunction();
-    if (!Intrinsic::getIntrinsicSignature(F, OverloadTys))
+    if (!Intrinsic::isSignatureValid(F, OverloadTys))
       continue;
 
     Intrinsic::ID IntrinID = IIList.front()->getIntrinsicID();
@@ -237,12 +237,11 @@ bool optimizeSection(ArrayRef<SmallVector<IntrinsicInst *, 4>> MergeableInsts) {
       else
         NewIntrinID = Intrinsic::amdgcn_image_msaa_load_2darraymsaa;
 
-      Function *NewIntrin = Intrinsic::getDeclaration(
-          IIList.front()->getModule(), NewIntrinID, OverloadTys);
       Args[ImageDimIntr->DMaskIndex] =
           ConstantInt::get(DMask->getType(), NewMaskVal);
       Args[FragIdIndex] = ConstantInt::get(FragId->getType(), NewFragIdVal);
-      CallInst *NewCall = B.CreateCall(NewIntrin, Args);
+      CallInst *NewCall =
+          B.CreateIntrinsicWithoutFolding(NewIntrinID, OverloadTys, Args);
       LLVM_DEBUG(dbgs() << "Optimize: " << *NewCall << "\n");
 
       NewCalls.push_back(NewCall);
@@ -258,7 +257,7 @@ bool optimizeSection(ArrayRef<SmallVector<IntrinsicInst *, 4>> MergeableInsts) {
         VecOp = B.CreateExtractElement(NewCalls[0], Idx->getValue().urem(4));
         LLVM_DEBUG(dbgs() << "Add: " << *VecOp << "\n");
       } else {
-        VecOp = UndefValue::get(II->getType());
+        VecOp = PoisonValue::get(II->getType());
         for (unsigned I = 0; I < NumElts; ++I) {
           VecOp = B.CreateInsertElement(
               VecOp,

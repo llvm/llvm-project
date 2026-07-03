@@ -102,7 +102,7 @@ int main(int argc, const char **argv) {
   auto ExpectedParser =
       tooling::CommonOptionsParser::create(argc, argv, ChangeNamespaceCategory);
   if (!ExpectedParser) {
-    llvm::errs() << ExpectedParser.takeError();
+    llvm::errs() << llvm::toString(ExpectedParser.takeError());
     return 1;
   }
   tooling::CommonOptionsParser &OptionsParser = ExpectedParser.get();
@@ -126,11 +126,10 @@ int main(int argc, const char **argv) {
   if (int Result = Tool.run(Factory.get()))
     return Result;
   LangOptions DefaultLangOptions;
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
-  clang::TextDiagnosticPrinter DiagnosticPrinter(errs(), &*DiagOpts);
-  DiagnosticsEngine Diagnostics(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), &*DiagOpts,
-      &DiagnosticPrinter, false);
+  DiagnosticOptions DiagOpts;
+  clang::TextDiagnosticPrinter DiagnosticPrinter(errs(), DiagOpts);
+  DiagnosticsEngine Diagnostics(DiagnosticIDs::create(), DiagOpts,
+                                &DiagnosticPrinter, false);
   auto &FileMgr = Tool.getFiles();
   SourceManager Sources(Diagnostics, FileMgr);
   Rewriter Rewrite(Sources, DefaultLangOptions);

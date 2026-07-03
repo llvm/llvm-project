@@ -14,32 +14,28 @@ using namespace ento;
 void AnalysisManager::anchor() { }
 
 AnalysisManager::AnalysisManager(ASTContext &ASTCtx, Preprocessor &PP,
-                                 const PathDiagnosticConsumers &PDC,
+                                 PathDiagnosticConsumers PDC,
                                  StoreManagerCreator storemgr,
                                  ConstraintManagerCreator constraintmgr,
                                  CheckerManager *checkerMgr,
                                  AnalyzerOptions &Options,
-                                 CodeInjector *injector)
+                                 std::unique_ptr<CodeInjector> injector)
     : AnaCtxMgr(
           ASTCtx, Options.UnoptimizedCFG,
           Options.ShouldIncludeImplicitDtorsInCFG,
-          /*addInitializers=*/true,
-          Options.ShouldIncludeTemporaryDtorsInCFG,
+          /*addInitializers=*/true, Options.ShouldIncludeTemporaryDtorsInCFG,
           Options.ShouldIncludeLifetimeInCFG,
           // Adding LoopExit elements to the CFG is a requirement for loop
           // unrolling.
-          Options.ShouldIncludeLoopExitInCFG ||
-            Options.ShouldUnrollLoops,
-          Options.ShouldIncludeScopesInCFG,
-          Options.ShouldSynthesizeBodies,
+          Options.ShouldIncludeLoopExitInCFG || Options.ShouldUnrollLoops,
+          Options.ShouldIncludeScopesInCFG, Options.ShouldSynthesizeBodies,
           Options.ShouldConditionalizeStaticInitializers,
           /*addCXXNewAllocator=*/true,
           Options.ShouldIncludeRichConstructorsInCFG,
           Options.ShouldElideConstructors,
-          /*addVirtualBaseBranches=*/true,
-          injector),
+          /*addVirtualBaseBranches=*/true, std::move(injector)),
       Ctx(ASTCtx), PP(PP), LangOpts(ASTCtx.getLangOpts()),
-      PathConsumers(PDC), CreateStoreMgr(storemgr),
+      PathConsumers(std::move(PDC)), CreateStoreMgr(storemgr),
       CreateConstraintMgr(constraintmgr), CheckerMgr(checkerMgr),
       options(Options) {
   AnaCtxMgr.getCFGBuildOptions().setAllAlwaysAdd();
@@ -50,14 +46,11 @@ AnalysisManager::AnalysisManager(ASTContext &ASTCtx, Preprocessor &PP,
 
 AnalysisManager::~AnalysisManager() {
   FlushDiagnostics();
-  for (PathDiagnosticConsumer *Consumer : PathConsumers) {
-    delete Consumer;
-  }
 }
 
 void AnalysisManager::FlushDiagnostics() {
   PathDiagnosticConsumer::FilesMade filesMade;
-  for (PathDiagnosticConsumer *Consumer : PathConsumers) {
+  for (const auto &Consumer : PathConsumers) {
     Consumer->FlushDiagnostics(&filesMade);
   }
 }

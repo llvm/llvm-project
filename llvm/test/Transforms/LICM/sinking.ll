@@ -482,15 +482,15 @@ exit:
 ; Test that we don't crash when trying to sink stores and there's no preheader
 ; available (which is used for creating loads that may be used by the SSA
 ; updater)
-define void @test13() {
+define void @test13(i1 %arg) {
 ; CHECK-LABEL: @test13(
 ; CHECK-NEXT:    br label [[LAB59:%.*]]
 ; CHECK:       lab19:
-; CHECK-NEXT:    br i1 false, label [[LAB20:%.*]], label [[LAB38_LOOPEXIT:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[LAB20:%.*]], label [[LAB38_LOOPEXIT:%.*]]
 ; CHECK:       lab20:
 ; CHECK-NEXT:    br label [[LAB60:%.*]]
 ; CHECK:       lab21:
-; CHECK-NEXT:    br i1 undef, label [[LAB22:%.*]], label [[LAB38:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[LAB22:%.*]], label [[LAB38:%.*]]
 ; CHECK:       lab22:
 ; CHECK-NEXT:    br label [[LAB38]]
 ; CHECK:       lab38.loopexit:
@@ -506,13 +506,13 @@ define void @test13() {
   br label %lab59
 
 lab19:
-  br i1 undef, label %lab20, label %lab38
+  br i1 %arg, label %lab20, label %lab38
 
 lab20:
   br label %lab60
 
 lab21:
-  br i1 undef, label %lab22, label %lab38
+  br i1 %arg, label %lab22, label %lab38
 
 lab22:
   br label %lab38
@@ -886,16 +886,16 @@ try.cont:
 ; The sinkable call should be sunk into an exit block split. After splitting
 ; the exit block, BlockColor for new blocks should be added properly so
 ; that we should be able to access valid ColorVector.
-define i32 @test21_pr36184(ptr %P) personality ptr @__CxxFrameHandler3 {
+define i32 @test21_pr36184(ptr %P, i1 %arg) personality ptr @__CxxFrameHandler3 {
 ; CHECK-LABEL: @test21_pr36184(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       Loop:
-; CHECK-NEXT:    br i1 false, label [[CONTLOOP:%.*]], label [[OUT_SPLIT_LOOP_EXIT1:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[CONTLOOP:%.*]], label [[OUT_SPLIT_LOOP_EXIT1:%.*]]
 ; CHECK:       ContLoop:
-; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[OUT_SPLIT_LOOP_EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[LOOP]], label [[OUT_SPLIT_LOOP_EXIT:%.*]]
 ; CHECK:       Out.split.loop.exit:
 ; CHECK-NEXT:    [[IDX_PH:%.*]] = phi i32 [ 0, [[CONTLOOP]] ]
 ; CHECK-NEXT:    br label [[OUT:%.*]]
@@ -914,10 +914,10 @@ loop.ph:
 
 Loop:
   %sinkableCall = call i32 @strlen( ptr %P ) readonly
-  br i1 undef, label %ContLoop, label %Out
+  br i1 %arg, label %ContLoop, label %Out
 
 ContLoop:
-  br i1 undef, label %Loop, label %Out
+  br i1 %arg, label %Loop, label %Out
 
 Out:
   %idx = phi i32 [ %sinkableCall, %Loop ], [0, %ContLoop ]

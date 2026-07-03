@@ -9,6 +9,7 @@
 // RUN: not llvm-tblgen -DERROR8 %s 2>&1 | FileCheck --check-prefix=ERROR8 %s
 // RUN: not llvm-tblgen -DERROR9 %s 2>&1 | FileCheck --check-prefix=ERROR9 %s
 // RUN: not llvm-tblgen -DERROR10 %s 2>&1 | FileCheck --check-prefix=ERROR10 %s
+// RUN: not llvm-tblgen -DERROR11 %s 2>&1 | FileCheck --check-prefix=ERROR11 %s
 
 // This file tests that all required arguments are specified and template
 // arguments are type-checked and cast if necessary.
@@ -158,13 +159,13 @@ defm MissingComma : TwoArgs<2 "two">;
 #ifdef ERROR8
 def error8: Class1;
 // ERROR8: value not specified for template argument 'Class1:nm'
-// ERROR8: 18:21: note: declared in 'Class1'
+// ERROR8: 19:21: note: declared in 'Class1'
 #endif
 
 #ifdef ERROR9
 defm error9: MC1;
 // ERROR9: value not specified for template argument 'MC1::nm'
-// ERROR9: 99:23: note: declared in 'MC1'
+// ERROR9: 100:23: note: declared in 'MC1'
 #endif
 
 #ifdef ERROR10
@@ -172,5 +173,15 @@ def error10 {
   int value = Class2<>.Code;
 }
 // ERROR10: value not specified for template argument 'Class2:cd'
-// ERROR10: 37:22: note: declared in 'Class2'
+// ERROR10: 38:22: note: declared in 'Class2'
+#endif
+
+#ifdef ERROR11
+
+class Foo<int i, int j>;
+
+def error11 : Foo<"", "">;
+// ERROR11: [[#@LINE-1]]:19: error: Value specified for template argument 'Foo:i' is of type string; expected type int: ""
+// ERROR11: [[#@LINE-2]]:23: error: Value specified for template argument 'Foo:j' is of type string; expected type int: ""
+
 #endif

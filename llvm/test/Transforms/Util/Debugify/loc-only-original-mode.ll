@@ -14,12 +14,6 @@
 ; RUN:     -verify-each-debuginfo-preserve \
 ; RUN:     -debugify-func-limit=2 -S 2>&1 | FileCheck %s --check-prefix=CHECK-DROP
 
-;; Add some runlines that use RemoveDIs non-intrinsic debug-info, to check that
-;; variable preservation checking works.
-; RUN: opt < %s -passes=deadargelim --try-experimental-debuginfo-iterators \
-; RUN:     -verify-each-debuginfo-preserve \
-; RUN:     -debugify-level=location+variables -S 2>&1 | FileCheck %s --check-prefix=CHECK-DROP
-
 ; CHECK-NOT: drops dbg.value()/dbg.declare()
 ; CHECK-DROP: drops dbg.value()/dbg.declare()
 

@@ -10,13 +10,12 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_AMDGPU_H
 
 #include "Gnu.h"
-#include "ROCm.h"
 #include "clang/Basic/TargetID.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 #include <map>
 
@@ -41,6 +40,8 @@ void getAMDGPUTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                              const llvm::opt::ArgList &Args,
                              std::vector<StringRef> &Features);
 
+void addFullLTOPartitionOption(const Driver &D, const llvm::opt::ArgList &Args,
+                               llvm::opt::ArgStringList &CmdArgs);
 } // end namespace amdgpu
 } // end namespace tools
 
@@ -72,12 +73,16 @@ public:
   bool SupportsProfiling() const override { return false; }
 
   llvm::opt::DerivedArgList *
-  TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
+  TranslateArgs(const llvm::opt::DerivedArgList &Args, BoundArch BA,
                 Action::OffloadKind DeviceOffloadKind) const override;
 
-  void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                             llvm::opt::ArgStringList &CC1Args,
-                             Action::OffloadKind DeviceOffloadKind) const override;
+  void
+  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                        llvm::opt::ArgStringList &CC1Args, BoundArch BA,
+                        Action::OffloadKind DeviceOffloadKind) const override;
+  void
+  AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                            llvm::opt::ArgStringList &CC1Args) const override;
 
   /// Return whether denormals should be flushed, and treated as 0 by default
   /// for the subtarget.
@@ -90,18 +95,13 @@ public:
   static bool isWave64(const llvm::opt::ArgList &DriverArgs,
                        llvm::AMDGPU::GPUKind Kind);
   /// Needed for using lto.
-  bool HasNativeLLVMSupport() const override {
-    return true;
-  }
+  bool HasNativeLLVMSupport() const override { return true; }
 
   /// Needed for translating LTO options.
   const char *getDefaultLinker() const override { return "ld.lld"; }
 
-  /// Should skip sanitize options.
-  bool shouldSkipSanitizeOption(const ToolChain &TC,
-                                const llvm::opt::ArgList &DriverArgs,
-                                StringRef TargetID,
-                                const llvm::opt::Arg *A) const;
+  StringRef getSanitizerRequirement(SanitizerMask Kinds,
+                                    BoundArch BA) const override;
 
   /// Uses amdgpu-arch tool to get arch of the system GPU. Will return error
   /// if unable to find one.
@@ -109,15 +109,17 @@ public:
   getSystemGPUArchs(const llvm::opt::ArgList &Args) const override;
 
 protected:
-  /// Check and diagnose invalid target ID specified by -mcpu.
-  virtual void checkTargetID(const llvm::opt::ArgList &DriverArgs) const;
-
   /// The struct type returned by getParsedTargetID.
   struct ParsedTargetIDType {
     std::optional<std::string> OptionalTargetID;
     std::optional<std::string> OptionalGPUArch;
-    std::optional<llvm::StringMap<bool>> OptionalFeatures;
+    std::optional<llvm::StringMap<bool>> OptionalFeatureMap;
   };
+
+  /// Check and diagnose invalid target ID specified by -mcpu.
+  /// Returns the parsed target ID.
+  virtual ParsedTargetIDType
+  checkTargetID(const llvm::opt::ArgList &DriverArgs) const;
 
   /// Get target ID, GPU arch, and target ID features if the target ID is
   /// specified and valid.
@@ -130,25 +132,31 @@ protected:
   /// Common warning options shared by AMDGPU HIP, OpenCL and OpenMP toolchains.
   /// Language specific warning options should go to derived classes.
   void addClangWarningOptions(llvm::opt::ArgStringList &CC1Args) const override;
+
+  SanitizerMask
+  getSupportedSanitizers(BoundArch BA,
+                         Action::OffloadKind DeviceOffloadKind) const override;
 };
 
 class LLVM_LIBRARY_VISIBILITY ROCMToolChain : public AMDGPUToolChain {
 public:
   ROCMToolChain(const Driver &D, const llvm::Triple &Triple,
                 const llvm::opt::ArgList &Args);
+
+  llvm::opt::DerivedArgList *
+  TranslateArgs(const llvm::opt::DerivedArgList &Args, BoundArch BA,
+                Action::OffloadKind DeviceOffloadKind) const override;
+
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                        llvm::opt::ArgStringList &CC1Args,
+                        llvm::opt::ArgStringList &CC1Args, BoundArch BA,
                         Action::OffloadKind DeviceOffloadKind) const override;
 
   // Returns a list of device library names shared by different languages
-  llvm::SmallVector<std::string, 12>
+  llvm::SmallVector<BitCodeLibraryInfo, 12>
   getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
-                          const std::string &GPUArch,
-                          bool isOpenMP = false) const;
-  SanitizerMask getSupportedSanitizers() const override {
-    return SanitizerKind::Address;
-  }
+                          llvm::StringRef TargetID, llvm::StringRef GPUArch,
+                          Action::OffloadKind DeviceOffloadingKind) const;
 };
 
 } // end namespace toolchains

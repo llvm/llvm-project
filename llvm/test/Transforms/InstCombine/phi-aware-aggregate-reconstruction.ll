@@ -97,28 +97,26 @@ end:
   ret { i32, i32 } %i8
 }
 
-; When coming from %left, elements are swapped
-define { i32, i32 } @negative_test2({ i32, i32 } %agg_left, { i32, i32 } %agg_right, i1 %c) {
-; CHECK-LABEL: @negative_test2(
+; When coming from %left, elements are swapped, and new insertvalue is created.
+; From right side the old aggregate can be directly reused.
+define { i32, i32 } @positive_test2({ i32, i32 } %agg_left, { i32, i32 } %agg_right, i1 %c) {
+; CHECK-LABEL: @positive_test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
 ; CHECK:       left:
 ; CHECK-NEXT:    [[I2:%.*]] = extractvalue { i32, i32 } [[AGG_LEFT:%.*]], 1
 ; CHECK-NEXT:    [[I0:%.*]] = extractvalue { i32, i32 } [[AGG_LEFT]], 0
 ; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { i32, i32 } poison, i32 [[I2]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { i32, i32 } [[TMP0]], i32 [[I0]], 1
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       right:
-; CHECK-NEXT:    [[I4:%.*]] = extractvalue { i32, i32 } [[AGG_RIGHT:%.*]], 1
-; CHECK-NEXT:    [[I3:%.*]] = extractvalue { i32, i32 } [[AGG_RIGHT]], 0
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[I5:%.*]] = phi i32 [ [[I2]], [[LEFT]] ], [ [[I3]], [[RIGHT]] ]
-; CHECK-NEXT:    [[I6:%.*]] = phi i32 [ [[I0]], [[LEFT]] ], [ [[I4]], [[RIGHT]] ]
+; CHECK-NEXT:    [[I8_MERGED:%.*]] = phi { i32, i32 } [ [[TMP1]], [[LEFT]] ], [ [[AGG_RIGHT:%.*]], [[RIGHT]] ]
 ; CHECK-NEXT:    call void @baz()
-; CHECK-NEXT:    [[I7:%.*]] = insertvalue { i32, i32 } undef, i32 [[I5]], 0
-; CHECK-NEXT:    [[I8:%.*]] = insertvalue { i32, i32 } [[I7]], i32 [[I6]], 1
-; CHECK-NEXT:    ret { i32, i32 } [[I8]]
+; CHECK-NEXT:    ret { i32, i32 } [[I8_MERGED]]
 ;
 entry:
   %i0 = extractvalue { i32, i32 } %agg_left, 0
@@ -417,14 +415,14 @@ define { i32, i32 } @test8({ i32, i32 } %agg_left, { i32, i32 } %agg_right, i1 %
 ; CHECK:       left:
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    switch i32 [[VAL_LEFT:%.*]], label [[IMPOSSIBLE:%.*]] [
-; CHECK-NEXT:    i32 -42, label [[END:%.*]]
-; CHECK-NEXT:    i32 42, label [[END]]
+; CHECK-NEXT:      i32 -42, label [[END:%.*]]
+; CHECK-NEXT:      i32 42, label [[END]]
 ; CHECK-NEXT:    ]
 ; CHECK:       right:
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    switch i32 [[VAL_RIGHT:%.*]], label [[IMPOSSIBLE]] [
-; CHECK-NEXT:    i32 42, label [[END]]
-; CHECK-NEXT:    i32 -42, label [[END]]
+; CHECK-NEXT:      i32 42, label [[END]]
+; CHECK-NEXT:      i32 -42, label [[END]]
 ; CHECK-NEXT:    ]
 ; CHECK:       impossible:
 ; CHECK-NEXT:    unreachable

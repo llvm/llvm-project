@@ -7,6 +7,7 @@ from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class SharedLibTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().
@@ -31,8 +32,7 @@ class SharedLibTestCase(TestBase):
             self.target, self.shlib_names
         )
 
-        ctx = self.platformContext
-        self.shared_lib_name = ctx.shlib_prefix + "foo." + ctx.shlib_extension
+        self.shared_lib_name = self.platformContext.getFullLibName("foo")
 
     @skipIfWindows
     def test_source_line_breakpoint(self):
@@ -59,7 +59,7 @@ class SharedLibTestCase(TestBase):
         lldbutil.check_breakpoint(self, bpno=1, expected_hit_count=1)
 
         thread = process.GetSelectedThread()
-        stack_frames = lldbutil.get_stack_frames(thread)
+        stack_frames = thread.frames
         self.assertGreater(len(stack_frames), 2)
 
         leaf_frame = stack_frames[0]
@@ -97,7 +97,7 @@ class SharedLibTestCase(TestBase):
         lldbutil.check_breakpoint(self, bpno=1, expected_hit_count=1)
 
         thread = process.GetSelectedThread()
-        stack_frames = lldbutil.get_stack_frames(thread)
+        stack_frames = thread.frames
         self.assertGreater(len(stack_frames), 2)
 
         leaf_frame = stack_frames[0]

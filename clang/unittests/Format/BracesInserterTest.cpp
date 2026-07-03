@@ -257,9 +257,9 @@ TEST_F(BracesInserterTest, InsertBracesRange) {
   FormatStyle Style = getLLVMStyle();
   Style.InsertBraces = true;
 
-  const StringRef Code("while (a)\n"
-                       "  if (b)\n"
-                       "    return;");
+  constexpr StringRef Code("while (a)\n"
+                           "  if (b)\n"
+                           "    return;");
 
   verifyFormat("while (a) {\n"
                "  if (b)\n"

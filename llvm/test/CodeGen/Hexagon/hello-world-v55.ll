@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; CHECK: call puts
 
 @g0 = private unnamed_addr constant [13 x i8] c"Hello World!\00"

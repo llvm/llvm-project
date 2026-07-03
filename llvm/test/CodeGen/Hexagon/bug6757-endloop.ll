@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Make sure that we can handle loops with multiple ENDLOOP instructions.
 ; This situation can arise due to tail duplication.

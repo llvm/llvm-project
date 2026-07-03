@@ -9,7 +9,7 @@ import lit.formats
 
 def get_required_attr(config, attr_name):
     attr_value = getattr(config, attr_name, None)
-    if attr_value == None:
+    if attr_value is None:
         lit_config.fatal(
             "No attribute %r in test configuration! You may need to run "
             "tests from your build directory or add this attribute "
@@ -106,7 +106,7 @@ config.substitutions.append(("%fPIE", "-fPIE"))
 config.substitutions.append(("%pie", "-pie"))
 
 # Only run the tests on supported OSs.
-if config.host_os not in ["Linux"]:
+if config.target_os not in ["Linux"]:
     config.unsupported = True
 
 if not config.parallelism_group:

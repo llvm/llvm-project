@@ -8,18 +8,23 @@ Constant Interpreter
 Introduction
 ============
 
-The constexpr interpreter aims to replace the existing tree evaluator in
-clang, improving performance on constructs which are executed inefficiently
-by the evaluator. The interpreter is activated using the following flags:
+The bytecode interpreter aims to replace the existing AST traversal-based
+evaluator in Clang, improving performance on constructs which are executed
+inefficiently by the evaluator. The interpreter is activated by passing
+``-fexperimental-new-constant-interpreter`` to clang.
 
-* ``-fexperimental-new-constant-interpreter`` enables the interpreter,
-  emitting an error if an unsupported feature is encountered
+Since Clang 23, the bytecode interpreter can also be enabled by default
+by passing ``-DCLANG_USE_EXPERIMENTAL_CONST_INTERP=ON`` to cmake. In
+that case, it can be deactivated again via
+``-fno-experimental-new-constant-interpreter``.
+
+
 
 Bytecode Compilation
 ====================
 
-Bytecode compilation is handled in ``ByteCodeStmtGen.h`` for statements
-and ``ByteCodeExprGen.h`` for expressions. The compiler has two different
+Bytecode compilation is handled in ``Compiler.h`` for statements
+and for expressions. The compiler has two different
 backends: one to generate bytecode for functions (``ByteCodeEmitter``) and
 one to directly evaluate expressions as they are compiled, without
 generating bytecode (``EvalEmitter``). All functions are compiled to
@@ -41,14 +46,17 @@ Primitive Types
 
 * ``PT_{U|S}int{8|16|32|64}``
 
-  Signed or unsigned integers of a specific bit width, implemented using
-  the ```Integral``` type.
+  Signed or unsigned integers of a specific bit width.
+  1-byte types are also 1 byte in size. Sizes >= 16 bits are implemented
+  using the ``Integral`` class. they take up 24 bytes each since they
+  need to be able to represent a pointer that has been casted to an integer.
 
-* ``PT_{U|S}intFP``
+
+* ``PT_IntAP{S}``
 
   Signed or unsigned integers of an arbitrary, but fixed width used to
   implement integral types which are required by the target, but are not
-  supported by the host. Under the hood, they rely on APValue. The
+  supported by the host. Under the hood, they rely on ``APInt``. The
   ``Integral`` specialisation for these types is required by opcodes to
   share an implementation with fixed integrals.
 
@@ -57,7 +65,7 @@ Primitive Types
   Representation for boolean types, essentially a 1-bit unsigned
   ``Integral``.
 
-* ``PT_RealFP``
+* ``PT_Float``
 
   Arbitrary, but fixed precision floating point numbers. Could be
   specialised in the future similarly to integers in order to improve
@@ -65,29 +73,15 @@ Primitive Types
 
 * ``PT_Ptr``
 
-  Pointer type, defined in ``"Pointer.h"``. A pointer can be either null,
-  reference interpreter-allocated memory (``BlockPointer``) or point to an
-  address which can be derived, but not accessed (``ExternPointer``).
+  Pointer type, defined in ``"Pointer.h"``. The most common type of
+  pointer is a "BlockPointer", which points to an ``interp::Block``.
+  But other pointer types exist, such as typeid pointers or
+  integral pointers.
 
-* ``PT_FnPtr``
-
-  Function pointer type, can also be a null function pointer. Defined
-  in ``"FnPointer.h"``.
-
-* ``PT_MemPtr``
+* ``PT_MemberPtr``
 
   Member pointer type, can also be a null member pointer. Defined
   in ``"MemberPointer.h"``
-
-* ``PT_VoidPtr``
-
-  Void pointer type, can be used for round-trip casts. Represented as
-  the union of all pointers which can be cast to void.
-  Defined in ``"VoidPointer.h"``.
-
-* ``PT_ObjCBlockPtr``
-
-  Pointer type for ObjC blocks. Defined in ``"ObjCBlockPointer.h"``.
 
 Composite types
 ---------------
@@ -146,63 +140,42 @@ interpreter itself, not the frame. Reads and writes to these blocks are
 illegal and cause an appropriate diagnostic to be emitted. When the last
 pointer goes out of scope, dead blocks are also deallocated.
 
-The lifetime of blocks is managed through 3 methods stored in the
+The lifetime of blocks is managed through 2 methods stored in the
 descriptor of the block:
 
-* **CtorFn**: initializes the metadata which is store in the block,
+* **CtorFn**: initializes the metadata which is stored in the block,
   alongside actual data. Invokes the default constructors of objects
-  which are not trivial (``Pointer``, ``RealFP``, etc.)
+  which are not trivial (``Pointer``, ``Floating``, etc.)
 
 * **DtorFn**: invokes the destructors of non-trivial objects.
 
-* **MoveFn**: moves a block to dead storage.
-
-Non-static blocks track all the pointers into them through an intrusive
+Blocks track all the pointers into them through an intrusive
 doubly-linked list, required to adjust and invalidate all pointers when
 transforming a block into a dead block. If the lifetime of an object ends,
 all pointers to it are invalidated, emitting the appropriate diagnostics when
 dereferenced.
 
-The interpreter distinguishes 3 different kinds of blocks:
 
-* **Primitives**
+Records are laid out identically to arrays of composites: each field and base
+class is preceded by an inline descriptor. The ``InlineDescriptor`` saves
+information about the initialization state, constness, mutability, lifetime,
+etc. of a field.
 
-  A block containing a single primitive with no additional metadata.
+Consider this struct:
 
-* **Arrays of primitives**
+.. code-block:: c++
 
-  An array of primitives contains a pointer to an ``InitMap`` storage as its
-  first field: the initialisation map is a bit map indicating all elements of
-  the array which were initialised. If the pointer is null, no elements were
-  initialised, while a value of ``(InitMap*)-1`` indicates that the object was
-  fully initialised. When all fields are initialised, the map is deallocated
-  and replaced with that token.
+    struct S {
+        char c;
+    };
+    constexpr S s{12};
 
-  Array elements are stored sequentially, without padding, after the pointer
-  to the map.
+When allocating space for ``s``, we allocate 24 bytes (not counting the ``Descriptor``
+instances we created for the ``Record`` and the field). The field ``c`` needs 8 bytes,
+since we align to pointer size (this example uses a 64 bit system). The
+``InlineDescriptor`` preceding the field data uses up the remaining 16 bytes.
 
-* **Arrays of composites and records**
-
-  Each element in an array of composites is preceded by an ``InlineDescriptor``
-  which stores the attributes specific to the field and not the whole
-  allocation site. Descriptors and elements are stored sequentially in the
-  block.
-  Records are laid out identically to arrays of composites: each field and base
-  class is preceded by an inline descriptor. The ``InlineDescriptor``
-  has the following fields:
-
-   * **Offset**: byte offset into the array or record, used to step back to the
-     parent array or record.
-   * **IsConst**: flag indicating if the field is const-qualified.
-   * **IsInitialized**: flag indicating whether the field or element was
-     initialized. For non-primitive fields, this is only relevant to determine
-     the dynamic type of objects during construction.
-   * **IsBase**: flag indicating whether the record is a base class. In that
-     case, the offset can be used to identify the derived class.
-   * **IsActive**: indicates if the field is the active field of a union.
-   * **IsMutable**: indicates if the field is marked as mutable.
-
-Inline descriptors are filled in by the `CtorFn` of blocks, which leaves storage
+Inline descriptors are filled in by the ``CtorFn`` of blocks, which leaves storage
 in an uninitialised, but valid state.
 
 Descriptors
@@ -219,34 +192,21 @@ Pointers
 --------
 
 Pointers, implemented in ``Pointer.h`` are represented as a tagged union.
-Some of these may not yet be available in upstream ``clang``.
 
  * **BlockPointer**: used to reference memory allocated and managed by the
    interpreter, being the only pointer kind which allows dereferencing in the
    interpreter
- * **ExternPointer**: points to memory which can be addressed, but not read by
-   the interpreter. It is equivalent to APValue, tracking a declaration and a path
-   of fields and indices into that allocation.
- * **TargetPointer**: represents a target address derived from a base address
-   through pointer arithmetic, such as ``((int *)0x100)[20]``. Null pointers are
-   target pointers with a zero offset.
- * **TypeInfoPointer**: tracks information for the opaque type returned by
+ * **TypeIDPointer**: tracks information for the opaque type returned by
    ``typeid``
- * **InvalidPointer**: is dummy pointer created by an invalid operation which
-   allows the interpreter to continue execution. Does not allow pointer
-   arithmetic or dereferencing.
+ * **IntegralPointer**: a pointer formed from an integer,
+   think ``(int*)123``.
+ * **FunctionPointer**: a pointer to a function.
 
 Besides the previously mentioned union, a number of other pointer-like types
 have their own type:
 
- * **ObjCBlockPointer** tracks Objective-C blocks
- * **FnPointer** tracks functions and lazily caches their compiled version
+ * **FunctionPointer** tracks functions.
  * **MemberPointer** tracks C++ object members
-
-Void pointers, which can be built by casting any of the aforementioned
-pointers, are implemented as a union of all pointer types. The ``BitCast``
-opcode is responsible for performing all legal conversions between these
-types and primitive integers.
 
 BlockPointer
 ~~~~~~~~~~~~
@@ -278,11 +238,11 @@ As an example, consider the following structure:
 
 On the target, ``&a`` and ``&a.b.x`` are equal. So are ``&a.c[0]`` and
 ``&a.c[0].a``. In the interpreter, all these pointers must be
-distinguished since the are all allowed to address distinct range of
+distinguished since they are all allowed to address a distinct range of
 memory.
 
 In the interpreter, the object would require 240 bytes of storage and
-would have its field interleaved with metadata. The pointers which can
+would have its fields interleaved with metadata. The pointers which can
 be derived to the object are illustrated in the following diagram:
 
 ::
@@ -311,73 +271,58 @@ of ``a.c``, but its offset would point to ``&a.c[1]``. The
 array-to-pointer decay operation adjusts a pointer to an array (where
 the offset is equal to the base) to a pointer to the first element.
 
-ExternPointer
-~~~~~~~~~~~~~
-
-Extern pointers can be derived, pointing into symbols which are not
-readable from constexpr. An external pointer consists of a base
-declaration, along with a path designating a subobject, similar to
-the ``LValuePath`` of an APValue. Extern pointers can be converted
-to block pointers if the underlying variable is defined after the
-pointer is created, as is the case in the following example:
-
-.. code-block:: c
-
-  extern const int a;
-  constexpr const int *p = &a;
-  const int a = 5;
-  static_assert(*p == 5, "x");
-
-TargetPointer
-~~~~~~~~~~~~~
-
-While null pointer arithmetic or integer-to-pointer conversion is
-banned in constexpr, some expressions on target offsets must be folded,
-replicating the behaviour of the ``offsetof`` builtin. Target pointers
-are characterised by 3 offsets: a field offset, an array offset and a
-base offset, along with a descriptor specifying the type the pointer is
-supposed to refer to. Array indexing adjusts the array offset, while the
-field offset is adjusted when a pointer to a member is created. Casting
-an integer to a pointer sets the value of the base offset. As a special
-case, null pointers are target pointers with all offsets set to 0.
-
 TypeInfoPointer
 ~~~~~~~~~~~~~~~
 
 ``TypeInfoPointer`` tracks two types: the type assigned to
 ``std::type_info`` and the type which was passed to ``typeinfo``.
+It is part of the tagged union in ``Pointer``.
 
-InvalidPointer
-~~~~~~~~~~~~~~
 
-Such pointers are built by operations which cannot generate valid
-pointers, allowing the interpreter to continue execution after emitting
-a warning. Inspecting such a pointer stops execution.
 
-TODO
-====
+Interpretation
+--------------
+After bytecode has been generated (or not, for expressions), the bytecode
+is then interpreted. The bytecode is stack-based and uses ``InterpStack``
+to allocate memory for the produced values.
 
-Missing Language Features
--------------------------
+Here is an example function:
 
-* Changing the active field of unions
-* ``volatile``
-* ``__builtin_constant_p``
-* ``dynamic_cast``
-* ``new`` and ``delete``
-* Fixed Point numbers and arithmetic on Complex numbers
-* Several builtin methods, including string operations and
-  ``__builtin_bit_cast``
-* Continue-after-failure: a form of exception handling at the bytecode
-  level should be implemented to allow execution to resume. As an example,
-  argument evaluation should resume after the computation of an argument fails.
-* Pointer-to-Integer conversions
-* Lazy descriptors: the interpreter creates a ``Record`` and ``Descriptor``
-  when it encounters a type: ones which are not yet defined should be lazily
-  created when required
+.. code-block:: c++
 
-Known Bugs
-----------
+    constexpr int add(int a, int b) {
+      return a + b;
+    }
+    static_assert(add(1, 2) == 3);
 
-* If execution fails, memory storing APInts and APFloats is leaked when the
-  stack is cleared
+Which generates the following bytecode (this can be produced via ``interp::Function::dump()``):
+
+::
+
+  add 0x7cb97f7e2000
+  [...]
+  0     GetParamSint32    0
+  16    GetParamSint32    1
+  32    AddSint32
+  40    RetSint32
+  48    NoRet
+
+As you can see, all instructions here are type-aware. We're first pushing both parameter values
+to the stack. Then the ``Add`` opcode will add them up and push the result to the stack, which
+will be returned via the ``Ret`` opcode.
+
+
+Debugging
+---------
+Here are a few hints when working on the bytecode interpreter:
+
+* Setting a breakpoint on ``CCEDiag`` and ``FFDiag`` will stop the debugger when a diagnostic
+  is emitted.
+* If you want to see the bytecode of a function call ``dump()`` on the ``interp::Function``.
+* Additionally to the last point, ``interp::Function::dump(CodePtr)`` exists, which you can
+  pass the current ``OpPC`` and it will then show you where in the bytecode that opcode is.
+* ``interp::Pointer`` has an ``operator<<`` that prints useful information. Try it e.g.
+  via ``llvm::errs() << Ptr << '\n';``.
+* Printing ``APValue`` instances also works via ``APValue::dump()``.
+* If you want to see *everything* that's being evaluated, add debugging output to
+  the ``evaluate*`` functions in ``Context.cpp``.

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mv67t -debug-only=pipeliner < %s 2>&1 | FileCheck %s
+; RUN: llc -mtriple=hexagon -mv67t -debug-only=pipeliner < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; Test that the artificial dependencies have been created.

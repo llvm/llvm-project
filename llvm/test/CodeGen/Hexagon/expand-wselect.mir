@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass postrapseudos %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass postrapseudos %s -o - | FileCheck %s
 
 # Check that this doesn't crash.
 # CHECK: $w2 = V6_vccombine $p0, $v1, $v0

@@ -586,14 +586,23 @@ let Predicates = [iHasE2] in {
     BinOpFrag<(rotl node:$LHS, (and node:$RHS, 0x1f))>, "rotl32">;
 
   def BMASKI32 : I_5_Z<0b010100, 0x1, "bmaski32", oimm5, []>;
-  def LSLC32 : I_5_XZ<0x13, 0x1, "lslc32",
-    (outs GPR:$rz, CARRY:$cout), (ins GPR:$rx, oimm5:$imm5), []>;
-  def LSRC32 : I_5_XZ<0x13, 0x2, "lsrc32",
-    (outs GPR:$rz, CARRY:$cout), (ins GPR:$rx, oimm5:$imm5), []>;
-  def ASRC32 : I_5_XZ<0x13, 0x4, "asrc32",
-    (outs GPR:$rz, CARRY:$cout), (ins GPR:$rx, oimm5:$imm5), []>;
-  def XSR32 : I_5_XZ<0x13, 0x8, "xsr32",
-    (outs GPR:$rz, CARRY:$cout), (ins GPR:$rx, oimm5:$imm5, CARRY:$cin), []>;
+  def LSLC32 : I_5_XZ<0x13, 0x1, "lslc32", (outs GPR:$rz, CARRY:$cout),
+                      (ins GPR:$rx, oimm5:$imm5), []> {
+    bits<0> cout;
+  }
+  def LSRC32 : I_5_XZ<0x13, 0x2, "lsrc32", (outs GPR:$rz, CARRY:$cout),
+                      (ins GPR:$rx, oimm5:$imm5), []> {
+    bits<0> cout;
+  }
+  def ASRC32 : I_5_XZ<0x13, 0x4, "asrc32", (outs GPR:$rz, CARRY:$cout),
+                      (ins GPR:$rx, oimm5:$imm5), []> {
+    bits<0> cout;
+  }
+  def XSR32 : I_5_XZ<0x13, 0x8, "xsr32", (outs GPR:$rz, CARRY:$cout),
+                     (ins GPR:$rx, oimm5:$imm5, CARRY:$cin), []> {
+    bits<0> cout;
+    bits<0> cin;
+  }
 
   def IXH32 : R_YXZ_SP_F1<0x2, 0x1,
     BinOpFrag<(add node:$LHS, (shl node:$RHS, (i32 1)))>, "ixh32">;
@@ -605,9 +614,15 @@ let Predicates = [iHasE2] in {
 
   let isCommutable = 1, isAdd = 1 in
   def ADDC32 : R_YXZ<0x31, 0x0, 0x2, (outs GPR:$rz, CARRY:$cout),
-    (ins GPR:$rx, GPR:$ry, CARRY:$cin), "addc32", []>;
+                     (ins GPR:$rx, GPR:$ry, CARRY:$cin), "addc32", []> {
+    bits<0> cout;
+    bits<0> cin;
+  }
   def SUBC32 : R_YXZ<0x31, 0x0, 0x8, (outs GPR:$rz, CARRY:$cout),
-    (ins GPR:$rx, GPR:$ry, CARRY:$cin), "subc32", []>;
+                     (ins GPR:$rx, GPR:$ry, CARRY:$cin), "subc32", []> {
+    bits<0> cout;
+    bits<0> cin;
+  }
 
   def INCF32 : I_5_ZX<0x3, 0x1, "incf32", uimm5, []>;
   def INCT32 : I_5_ZX<0x3, 0x2, "inct32", uimm5, []>;
@@ -621,12 +636,18 @@ let Predicates = [iHas2E3] in {
   def DIVU32 : R_YXZ_SP_F1<0x20, 0x1,
     BinOpFrag<(udiv node:$LHS, node:$RHS)>, "divu32">;
 
-  def DECGT32 : I_5_XZ<0x4, 0x1, "decgt32",
-    (outs GPR:$rz, CARRY:$cout), (ins GPR:$rx, uimm5:$imm5), []>;
-  def DECLT32 : I_5_XZ<0x4, 0x2, "declt32",
-    (outs GPR:$rz, CARRY:$cout), (ins GPR:$rx, uimm5:$imm5), []>;
-  def DECNE32 : I_5_XZ<0x4, 0x4, "decne32",
-    (outs GPR:$rz, CARRY:$cout), (ins GPR:$rx, uimm5:$imm5), []>;
+  def DECGT32 : I_5_XZ<0x4, 0x1, "decgt32", (outs GPR:$rz, CARRY:$cout),
+                       (ins GPR:$rx, uimm5:$imm5), []> {
+    bits<0> cout;
+  }
+  def DECLT32 : I_5_XZ<0x4, 0x2, "declt32", (outs GPR:$rz, CARRY:$cout),
+                       (ins GPR:$rx, uimm5:$imm5), []> {
+    bits<0> cout;
+  }
+  def DECNE32 : I_5_XZ<0x4, 0x4, "decne32", (outs GPR:$rz, CARRY:$cout),
+                       (ins GPR:$rx, uimm5:$imm5), []> {
+    bits<0> cout;
+  }
 
   def SEXT32 : I_5_XZ_U<0x16, (outs GPR:$rz), (ins GPR:$rx, uimm5:$msb, uimm5:$lsb), "sext32", []>;
   let isCodeGenOnly = 1 in {
@@ -744,8 +765,9 @@ let Predicates = [iHas2E3] in {
   def CMPHS32 : R_YX<0x1, 0x1, "cmphs32">;
   def CMPLT32 : R_YX<0x1, 0x2, "cmplt32">;
 
-  def SETC32 : CSKY32Inst<AddrModeNone, 0x31,
-    (outs CARRY:$ca), (ins), "setc32", []> {
+  def SETC32 : CSKY32Inst<AddrModeNone, 0x31, (outs CARRY:$ca), (ins), "setc32",
+                          []> {
+    bits<0> ca;
     let Inst{25 - 21} = 0; //rx
     let Inst{20 - 16} = 0; //ry
     let Inst{15 - 10} = 0x1;
@@ -753,8 +775,9 @@ let Predicates = [iHas2E3] in {
     let Inst{4 - 0} = 0;
     let isCompare = 1;
   }
-  def CLRC32 : CSKY32Inst<AddrModeNone, 0x31,
-    (outs CARRY:$ca), (ins), "clrc32", []> {
+  def CLRC32 : CSKY32Inst<AddrModeNone, 0x31, (outs CARRY:$ca), (ins), "clrc32",
+                          []> {
+    bits<0> ca;
     let Inst{25 - 21} = 0; //rx
     let Inst{20 - 16} = 0; //ry
     let Inst{15 - 10} = 0x1;
@@ -764,8 +787,10 @@ let Predicates = [iHas2E3] in {
   }
 
   def TST32 : R_YX<0x8, 0x4, "tst32">;
-  def TSTNBZ32 : R_X<0x8, 0x8,
-    (outs CARRY:$ca), (ins GPR:$rx), "tstnbz32", []>;
+  def TSTNBZ32 : R_X<0x8, 0x8, (outs CARRY:$ca), (ins GPR:$rx), "tstnbz32",
+                     []> {
+    bits<0> ca;
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -806,9 +831,14 @@ let isBranch = 1, isTerminator = 1 in {
                      [(br bb:$imm16)]>;
 
   def BT32 : I_16_L<0x3, (outs), (ins CARRY:$ca, br_symbol:$imm16),
-    "bt32\t$imm16", [(brcond CARRY:$ca, bb:$imm16)]>, Requires<[iHasE2]>;
+                    "bt32\t$imm16", [(brcond CARRY:$ca, bb:$imm16)]>,
+             Requires<[iHasE2]> {
+    bits<0> ca;
+  }
   def BF32 : I_16_L<0x2, (outs), (ins CARRY:$ca, br_symbol:$imm16),
-    "bf32\t$imm16", []>, Requires<[iHasE2]>;
+                    "bf32\t$imm16", []>, Requires<[iHasE2]> {
+    bits<0> ca;
+  }
 }
 
 let Predicates = [iHas2E3] in {
@@ -1030,7 +1060,10 @@ def SE32 : I_5_XZ_PRIVI<0b010110, 0x1, "se32">;
 def WSC32 : I_5_XZ_PRIVI<0b001111, 0x1, "wsc32">;
 
 def CPOP32 : I_CPOP<(outs), (ins uimm5:$cpid, uimm20:$usdef), "cpop32 <$cpid, ${usdef}>">;
-def CPRC32 : I_CP<0b0100, (outs CARRY:$ca), (ins uimm5:$cpid, uimm12:$usdef), "cprc32 <$cpid, ${usdef}>">;
+def CPRC32 : I_CP<0b0100, (outs CARRY:$ca), (ins uimm5:$cpid, uimm12:$usdef),
+                  "cprc32 <$cpid, ${usdef}>"> {
+  bits<0> ca;
+}
 def CPRCR32 : I_CP_Z<0b0010, (outs GPR:$rz), (ins uimm5:$cpid, uimm12:$usdef), "cprcr32 $rz, <$cpid, ${usdef}>">;
 def CPRGR32 : I_CP_Z<0b0000, (outs GPR:$rz), (ins uimm5:$cpid, uimm12:$usdef), "cprgr32 $rz, <$cpid, ${usdef}>">;
 def CPWCR32 : I_CP_Z<0b0011, (outs), (ins GPR:$rz, uimm5:$cpid, uimm12:$usdef), "cpwcr32 $rz, <$cpid, ${usdef}>">;

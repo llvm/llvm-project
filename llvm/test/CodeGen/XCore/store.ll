@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=xcore | FileCheck %s
+; RUN: llc < %s -mtriple=xcore | FileCheck %s
 
 define void @store32(ptr %p, i32 %offset, i32 %val) nounwind {
 entry:

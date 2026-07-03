@@ -37,7 +37,7 @@ static_assert(_Generic(ci, int : 1, const int : 0) == 1); // expected-warning {{
 // but the expression operand form still rejects them.
 static_assert(_Generic(struct incomplete, struct incomplete : 1, default : 0) == 1);
 static_assert(_Generic(struct another_incomplete, struct incomplete : 1, default : 0) == 0);
-static_assert(_Generic(1, struct also_incomplete : 1, default : 0) == 0); // expected-error {{type 'struct also_incomplete' in generic association incomplete}}
+static_assert(_Generic(1, struct also_incomplete : 1, default : 0) == 0);
 
 void foo(int);
 static_assert(_Generic(__typeof__(foo), void(int) : 1, default : 0) == 1);

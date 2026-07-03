@@ -1,6 +1,10 @@
 ## When --mattr and --mcpu are both empty, disassemble all known instructions.
 # RUN: llvm-mc -filetype=obj -triple=aarch64 -mattr=+all %s -o %t
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s --check-prefixes=CHECK,ALL
+# RUN: llvm-mc -filetype=obj -triple=aarch64_be -mattr=+all %s -o %t
+# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s --check-prefixes=CHECK,ALL
+# RUN: llvm-mc -filetype=obj -triple=aarch64_32 -mattr=+all %s -o %t
+# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s --check-prefixes=CHECK,ALL
 
 ## If --mattr or --mcpu is specified, don't default to --mattr=+all.
 # RUN: llvm-objdump -d --no-show-raw-insn --mattr=+v8a %t | FileCheck %s --check-prefixes=CHECK,UNKNOWN

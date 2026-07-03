@@ -101,6 +101,9 @@ TEST_F(FormatTestTableGen, BangOperators) {
                "                                  \"zerozero\",\n"
                "                                  true:  // default\n"
                "                                  \"positivepositive\");\n"
+               "  let CondOpe3WithCommentAfterLParen = !cond(\n"
+               "      // comment\n"
+               "      !eq(/* comment */ x, 0): \"zero\");\n"
                "}");
 }
 
@@ -184,7 +187,14 @@ TEST_F(FormatTestTableGen, SimpleValue6) {
                "  );\n"
                "  let DAGArgBang = (!cast<SomeType>(\"Some\") i32:$src1,\n"
                "      i32:$src2);\n"
+               "  let NestedDAGArg = ((DAGArg1 (v111 v112, v113), v12) v2,\n"
+               "      (DAGArg3 (v31 v32)));\n"
                "}");
+}
+
+TEST_F(FormatTestTableGen, SimpleValue6_NestedInPat) {
+  verifyFormat("def : Pat<(vec.vt (avg (vec.vt V128:$l), (vec.vt V128:$r))),\n"
+               "          (inst $l, $r)>;");
 }
 
 TEST_F(FormatTestTableGen, SimpleValue7) {
@@ -215,6 +225,13 @@ TEST_F(FormatTestTableGen, PasteOperator) {
                "  string Z = [\"Traring\", \"Paste\", \"Traring\", \"Paste\",\n"
                "              \"Traring\", \"Paste\"]#;\n"
                "}");
+
+  verifyFormat("def x#x {}", "def x\n"
+                             "#x {}");
+  verifyFormat("def x#x {}", "def x\n"
+                             "#\n"
+                             "x {}");
+  verifyFormat("def x#x");
 }
 
 TEST_F(FormatTestTableGen, ClassDefinition) {

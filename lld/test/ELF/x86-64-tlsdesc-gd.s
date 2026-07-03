@@ -19,39 +19,45 @@
 # RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck --check-prefix=IE %s
 
 # GD-RELA:      .rela.dyn {
-# GD-RELA-NEXT:   0x23D0 R_X86_64_TLSDESC - 0xB
-# GD-RELA-NEXT:   0x23B0 R_X86_64_TLSDESC a 0x0
-# GD-RELA-NEXT:   0x23C0 R_X86_64_TLSDESC c 0x0
+# GD-RELA-NEXT:   0x23E0 R_X86_64_TLSDESC - 0xB
+# GD-RELA-NEXT:   0x23C0 R_X86_64_TLSDESC a 0x0
+# GD-RELA-NEXT:   0x23D0 R_X86_64_TLSDESC c 0x0
 # GD-RELA-NEXT: }
 # GD-RELA:      Hex dump of section '.got':
-# GD-RELA-NEXT: 0x000023b0 00000000 00000000 00000000 00000000
 # GD-RELA-NEXT: 0x000023c0 00000000 00000000 00000000 00000000
 # GD-RELA-NEXT: 0x000023d0 00000000 00000000 00000000 00000000
+# GD-RELA-NEXT: 0x000023e0 00000000 00000000 00000000 00000000
 
 # GD-REL:       .rel.dyn {
-# GD-REL-NEXT:    0x23B8 R_X86_64_TLSDESC -
-# GD-REL-NEXT:    0x2398 R_X86_64_TLSDESC a
-# GD-REL-NEXT:    0x23A8 R_X86_64_TLSDESC c
+# GD-REL-NEXT:    0x23C8 R_X86_64_TLSDESC -
+# GD-REL-NEXT:    0x23A8 R_X86_64_TLSDESC a
+# GD-REL-NEXT:    0x23B8 R_X86_64_TLSDESC c
 # GD-REL-NEXT:  }
 # GD-REL:       Hex dump of section '.got':
-# GD-REL-NEXT:  0x00002398 00000000 00000000 00000000 00000000
 # GD-REL-NEXT:  0x000023a8 00000000 00000000 00000000 00000000
-# GD-REL-NEXT:  0x000023b8 00000000 00000000 0b000000 00000000
+# GD-REL-NEXT:  0x000023b8 00000000 00000000 00000000 00000000
+# GD-REL-NEXT:  0x000023c8 00000000 00000000 0b000000 00000000
 
-## &.rela.dyn[a]-pc = 0x23B0-0x12e7 = 4297
-# GD:            leaq 4297(%rip), %rax
+## &.rela.dyn[a]-pc = 0x23C0-0x12e7 = 4313
+# GD:            leaq 4313(%rip), %rax
 # GD-NEXT: 12e7: callq *(%rax)
 # GD-NEXT:       movl %fs:(%rax), %eax
 
-## &.rela.dyn[b]-pc = 0x23D0-0x12f3 = 4317
-# GD-NEXT:       leaq 4317(%rip), %rcx
+## &.rela.dyn[b]-pc = 0x23E0-0x12f3 = 4333
+# GD-NEXT:       leaq 4333(%rip), %rcx
 # GD-NEXT: 12f3: movq %rcx, %rax
 # GD-NEXT:       callq *(%rax)
 # GD-NEXT:       movl %fs:(%rax), %eax
 
-## &.rela.dyn[c]-pc = 0x23C0-0x1302 = 4286
-# GD-NEXT:       leaq 4286(%rip), %r15
+## &.rela.dyn[c]-pc = 0x23D0-0x1302 = 4302
+# GD-NEXT:       leaq 4302(%rip), %r15
 # GD-NEXT: 1302: movq %r15, %rax
+# GD-NEXT:       callq *(%rax)
+# GD-NEXT:       movl %fs:(%rax), %eax
+
+## &.rela.dyn[c]-pc = 0x23D0-0x1312 = 4286
+# GD-NEXT:       leaq 4286(%rip), %r16
+# GD-NEXT: 1312: movq %r16, %rax
 # GD-NEXT:       callq *(%rax)
 # GD-NEXT:       movl %fs:(%rax), %eax
 
@@ -71,9 +77,14 @@
 # LE-NEXT: movq %r15, %rax
 # LE-NEXT: nop
 # LE-NEXT: movl %fs:(%rax), %eax
+## tpoff(c) = st_value(c) - tls_size = -4
+# LE:      movq $-4, %r16
+# LE-NEXT: movq %r16, %rax
+# LE-NEXT: nop
+# LE-NEXT: movl %fs:(%rax), %eax
 
 # IE-REL:      .rela.dyn {
-# IE-REL-NEXT:   0x202378 R_X86_64_TPOFF64 c 0x0
+# IE-REL-NEXT:   0x202388 R_X86_64_TPOFF64 c 0x0
 # IE-REL-NEXT: }
 
 ## a is relaxed to use LE.
@@ -84,9 +95,14 @@
 # IE-NEXT:         movq %rcx, %rax
 # IE-NEXT:         nop
 # IE-NEXT:         movl %fs:(%rax), %eax
-## &.rela.dyn[c]-pc = 0x202378 - 0x2012aa = 4302
-# IE-NEXT:         movq 4302(%rip), %r15
+## &.rela.dyn[c]-pc = 0x202388 - 0x2012aa = 4318
+# IE-NEXT:         movq 4318(%rip), %r15
 # IE-NEXT: 2012aa: movq %r15, %rax
+# IE-NEXT:         nop
+# IE-NEXT:         movl %fs:(%rax), %eax
+## &.rela.dyn[c]-pc = 0x202388 - 0x2012ba = 4302
+# IE-NEXT:         movq 4302(%rip), %r16
+# IE-NEXT: 2012ba: movq %r16, %rax
 # IE-NEXT:         nop
 # IE-NEXT:         movl %fs:(%rax), %eax
 
@@ -103,6 +119,11 @@ movl %fs:(%rax), %eax
 
 leaq c@tlsdesc(%rip), %r15
 movq %r15, %rax
+call *c@tlscall(%rax)
+movl %fs:(%rax), %eax
+
+leaq c@tlsdesc(%rip), %r16
+movq %r16, %rax
 call *c@tlscall(%rax)
 movl %fs:(%rax), %eax
 

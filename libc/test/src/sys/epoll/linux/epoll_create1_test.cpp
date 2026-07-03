@@ -6,15 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 #include "hdr/sys_epoll_macros.h"
-#include "src/errno/libc_errno.h"
 #include "src/sys/epoll/epoll_create1.h"
 #include "src/unistd/close.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
+using LlvmLibcEpollCreate1Test = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
-TEST(LlvmLibcEpollCreate1Test, Basic) {
+TEST_F(LlvmLibcEpollCreate1Test, Basic) {
   int fd = LIBC_NAMESPACE::epoll_create1(0);
   ASSERT_GT(fd, 0);
   ASSERT_ERRNO_SUCCESS();
@@ -22,7 +23,7 @@ TEST(LlvmLibcEpollCreate1Test, Basic) {
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds());
 }
 
-TEST(LlvmLibcEpollCreate1Test, CloseOnExecute) {
+TEST_F(LlvmLibcEpollCreate1Test, CloseOnExecute) {
   int fd = LIBC_NAMESPACE::epoll_create1(EPOLL_CLOEXEC);
   ASSERT_GT(fd, 0);
   ASSERT_ERRNO_SUCCESS();

@@ -1,4 +1,4 @@
-//===--- NewDeleteOverloadsCheck.cpp - clang-tidy--------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -51,15 +51,17 @@ AST_MATCHER(FunctionDecl, isPlacementOverload) {
     return true;
 
   const auto *FPT = Node.getType()->castAs<FunctionProtoType>();
-  ASTContext &Ctx = Node.getASTContext();
+  const ASTContext &Ctx = Node.getASTContext();
   if (Ctx.getLangOpts().SizedDeallocation &&
-      Ctx.hasSameType(FPT->getParamType(1), Ctx.getSizeType()))
+      ASTContext::hasSameType(FPT->getParamType(1), Ctx.getSizeType()))
     return false;
 
   return true;
 }
 
-OverloadedOperatorKind getCorrespondingOverload(const FunctionDecl *FD) {
+} // namespace
+
+static OverloadedOperatorKind getCorrespondingOverload(const FunctionDecl *FD) {
   switch (FD->getOverloadedOperator()) {
   default:
     break;
@@ -75,7 +77,7 @@ OverloadedOperatorKind getCorrespondingOverload(const FunctionDecl *FD) {
   llvm_unreachable("Not an overloaded allocation operator");
 }
 
-const char *getOperatorName(OverloadedOperatorKind K) {
+static const char *getOperatorName(OverloadedOperatorKind K) {
   switch (K) {
   default:
     break;
@@ -91,13 +93,14 @@ const char *getOperatorName(OverloadedOperatorKind K) {
   llvm_unreachable("Not an overloaded allocation operator");
 }
 
-bool areCorrespondingOverloads(const FunctionDecl *LHS,
-                               const FunctionDecl *RHS) {
+static bool areCorrespondingOverloads(const FunctionDecl *LHS,
+                                      const FunctionDecl *RHS) {
   return RHS->getOverloadedOperator() == getCorrespondingOverload(LHS);
 }
 
-bool hasCorrespondingOverloadInBaseClass(const CXXMethodDecl *MD,
-                                         const CXXRecordDecl *RD = nullptr) {
+static bool
+hasCorrespondingOverloadInBaseClass(const CXXMethodDecl *MD,
+                                    const CXXRecordDecl *RD = nullptr) {
   if (RD) {
     // Check the methods in the given class and accessible to derived classes.
     for (const auto *BMD : RD->methods())
@@ -111,20 +114,16 @@ bool hasCorrespondingOverloadInBaseClass(const CXXMethodDecl *MD,
     RD = MD->getParent();
   }
 
-  for (const auto &BS : RD->bases()) {
+  return llvm::any_of(RD->bases(), [&](const CXXBaseSpecifier &BS) {
     // We can't say much about a dependent base class, but to avoid false
     // positives assume it can have a corresponding overload.
     if (BS.getType()->isDependentType())
       return true;
-    if (const auto *BaseRD = BS.getType()->getAsCXXRecordDecl())
-      if (hasCorrespondingOverloadInBaseClass(MD, BaseRD))
-        return true;
-  }
-
-  return false;
+    if (const CXXRecordDecl *BaseRD = BS.getType()->getAsCXXRecordDecl())
+      return hasCorrespondingOverloadInBaseClass(MD, BaseRD);
+    return false;
+  });
 }
-
-} // anonymous namespace
 
 void NewDeleteOverloadsCheck::registerMatchers(MatchFinder *Finder) {
   // Match all operator new and operator delete overloads (including the array
@@ -168,22 +167,21 @@ void NewDeleteOverloadsCheck::onEndOfTranslationUnit() {
     // complexity when searching for corresponding free store functions.
     for (const auto *Overload : RP.second) {
       const auto *Match =
-          std::find_if(RP.second.begin(), RP.second.end(),
-                       [&Overload](const FunctionDecl *FD) {
-                         if (FD == Overload)
-                           return false;
-                         // If the declaration contexts don't match, we don't
-                         // need to check any further.
-                         if (FD->getDeclContext() != Overload->getDeclContext())
-                           return false;
+          llvm::find_if(RP.second, [&Overload](const FunctionDecl *FD) {
+            if (FD == Overload)
+              return false;
+            // If the declaration contexts don't match, we don't
+            // need to check any further.
+            if (FD->getDeclContext() != Overload->getDeclContext())
+              return false;
 
-                         // Since the declaration contexts match, see whether
-                         // the current element is the corresponding operator.
-                         if (!areCorrespondingOverloads(Overload, FD))
-                           return false;
+            // Since the declaration contexts match, see whether
+            // the current element is the corresponding operator.
+            if (!areCorrespondingOverloads(Overload, FD))
+              return false;
 
-                         return true;
-                       });
+            return true;
+          });
 
       if (Match == RP.second.end()) {
         // Check to see if there is a corresponding overload in a base class

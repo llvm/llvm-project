@@ -68,9 +68,9 @@ static mlir::Value genAllocmem(mlir::OpBuilder &builder, fir::AllocaOp alloca,
   };
   llvm::StringRef uniqName = unpackName(alloca.getUniqName());
   llvm::StringRef bindcName = unpackName(alloca.getBindcName());
-  auto heap = builder.create<fir::AllocMemOp>(alloca.getLoc(), varTy, uniqName,
-                                              bindcName, alloca.getTypeparams(),
-                                              alloca.getShape());
+  auto heap = fir::AllocMemOp::create(builder, alloca.getLoc(), varTy, uniqName,
+                                      bindcName, alloca.getTypeparams(),
+                                      alloca.getShape());
   LLVM_DEBUG(llvm::dbgs() << "memory allocation opt: replaced " << alloca
                           << " with " << heap << '\n');
   return heap;
@@ -78,7 +78,7 @@ static mlir::Value genAllocmem(mlir::OpBuilder &builder, fir::AllocaOp alloca,
 
 static void genFreemem(mlir::Location loc, mlir::OpBuilder &builder,
                        mlir::Value allocmem) {
-  [[maybe_unused]] auto free = builder.create<fir::FreeMemOp>(loc, allocmem);
+  [[maybe_unused]] auto free = fir::FreeMemOp::create(builder, loc, allocmem);
   LLVM_DEBUG(llvm::dbgs() << "memory allocation opt: add free " << free
                           << " for " << allocmem << '\n');
 }

@@ -1,4 +1,4 @@
-; RUN: llc -mattr=avr6 < %s -march=avr | FileCheck %s
+; RUN: llc -mattr=avr6 < %s -mtriple=avr | FileCheck %s
 
 ; CHECK-LABEL: atomic_swap8
 ; CHECK: call __sync_lock_test_and_set_1

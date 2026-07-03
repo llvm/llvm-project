@@ -38,7 +38,8 @@ inline_memmove_byte_per_byte(Ptr dst, CPtr src, size_t count) {
       dst[offset] = src[offset];
   } else {
     LIBC_LOOP_NOUNROLL
-    for (ptrdiff_t offset = count - 1; offset >= 0; --offset)
+    for (ptrdiff_t offset = static_cast<ptrdiff_t>(count - 1); offset >= 0;
+         --offset)
       dst[offset] = src[offset];
   }
 }

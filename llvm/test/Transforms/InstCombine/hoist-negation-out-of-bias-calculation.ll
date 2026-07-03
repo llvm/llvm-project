@@ -44,7 +44,7 @@ define i8 @t1_commutative(i8 %y) {
 
 define <2 x i8> @t2_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @t2_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[Y:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[Y:%.*]], splat (i8 -1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i8> [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[NEGBIAS:%.*]] = sub <2 x i8> zeroinitializer, [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i8> [[NEGBIAS]]
@@ -57,7 +57,7 @@ define <2 x i8> @t2_vec(<2 x i8> %x, <2 x i8> %y) {
 
 define <2 x i8> @t3_vec_poison(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @t3_vec_poison(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[Y:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[Y:%.*]], splat (i8 -1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i8> [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[NEGBIAS:%.*]] = sub <2 x i8> zeroinitializer, [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i8> [[NEGBIAS]]

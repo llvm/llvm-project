@@ -16,11 +16,12 @@ body:             |
 
     ; CHECK-LABEL: name: rotl
     ; CHECK: liveins: $w0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK: [[ROTL:%[0-9]+]]:_(s32) = G_ROTL [[COPY]], [[C]](s64)
-    ; CHECK: $w0 = COPY [[ROTL]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK-NEXT: [[ROTL:%[0-9]+]]:_(s32) = G_ROTL [[COPY]], [[C]](s64)
+    ; CHECK-NEXT: $w0 = COPY [[ROTL]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(s32) = COPY $w0
     %5:_(s64) = G_CONSTANT i64 -16
     %2:_(s32) = G_ROTL %0, %5(s64)
@@ -41,11 +42,12 @@ body:             |
 
     ; CHECK-LABEL: name: rotr
     ; CHECK: liveins: $w0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK: [[ROTR:%[0-9]+]]:_(s32) = G_ROTR [[COPY]], [[C]](s64)
-    ; CHECK: $w0 = COPY [[ROTR]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK-NEXT: [[ROTR:%[0-9]+]]:_(s32) = G_ROTR [[COPY]], [[C]](s64)
+    ; CHECK-NEXT: $w0 = COPY [[ROTR]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(s32) = COPY $w0
     %5:_(s64) = G_CONSTANT i64 -16
     %2:_(s32) = G_ROTR %0, %5(s64)
@@ -66,11 +68,12 @@ body:             |
 
     ; CHECK-LABEL: name: rotl_bitwidth_cst
     ; CHECK: liveins: $w0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK: [[ROTL:%[0-9]+]]:_(s32) = G_ROTL [[COPY]], [[C]](s64)
-    ; CHECK: $w0 = COPY [[ROTL]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[ROTL:%[0-9]+]]:_(s32) = G_ROTL [[COPY]], [[C]](s64)
+    ; CHECK-NEXT: $w0 = COPY [[ROTL]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(s32) = COPY $w0
     %5:_(s64) = G_CONSTANT i64 32
     %2:_(s32) = G_ROTL %0, %5(s64)
@@ -91,11 +94,12 @@ body:             |
 
     ; CHECK-LABEL: name: rotl_bitwidth_minus_one_cst
     ; CHECK: liveins: $w0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 31
-    ; CHECK: [[ROTL:%[0-9]+]]:_(s32) = G_ROTL [[COPY]], [[C]](s64)
-    ; CHECK: $w0 = COPY [[ROTL]](s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 31
+    ; CHECK-NEXT: [[ROTL:%[0-9]+]]:_(s32) = G_ROTL [[COPY]], [[C]](s64)
+    ; CHECK-NEXT: $w0 = COPY [[ROTL]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(s32) = COPY $w0
     %5:_(s64) = G_CONSTANT i64 31
     %2:_(s32) = G_ROTL %0, %5(s64)

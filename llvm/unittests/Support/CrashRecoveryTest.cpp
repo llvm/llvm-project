@@ -26,9 +26,7 @@
 #endif
 
 #ifdef LLVM_ON_UNIX
-#ifdef HAVE_SIGNAL_H
 #include <signal.h>
-#endif
 #endif
 
 using namespace llvm;

@@ -23,7 +23,6 @@
 #include "Utils/ARMBaseInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
@@ -47,13 +46,11 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <iterator>
-#include <utility>
 #include <vector>
 
 using namespace llvm;
@@ -110,7 +107,7 @@ namespace {
 
     /// NewWaterList - The subset of WaterList that was created since the
     /// previous iteration by inserting unconditional branches.
-    SmallSet<MachineBasicBlock*, 4> NewWaterList;
+    SmallPtrSet<MachineBasicBlock *, 4> NewWaterList;
 
     using water_iterator = std::vector<MachineBasicBlock *>::iterator;
 
@@ -184,9 +181,6 @@ namespace {
     /// base address.
     DenseMap<int, int> JumpTableUserIndices;
 
-    // Maps a MachineBasicBlock to the number of jump tables entries.
-    DenseMap<const MachineBasicBlock *, int> BlockJumpTableRefCount;
-
     /// ImmBranch - One per immediate branch, keeping the machine instruction
     /// pointer, conditional or unconditional, the max displacement,
     /// and (if isCond is true) the corresponding unconditional branch
@@ -194,7 +188,8 @@ namespace {
     struct ImmBranch {
       MachineInstr *MI;
       unsigned MaxDisp : 31;
-      bool isCond : 1;
+      LLVM_PREFERRED_TYPE(bool)
+      unsigned isCond : 1;
       unsigned UncondBr;
 
       ImmBranch(MachineInstr *mi, unsigned maxdisp, bool cond, unsigned ubr)
@@ -234,8 +229,7 @@ namespace {
     }
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
     StringRef getPassName() const override {
@@ -355,14 +349,14 @@ static bool AlignBlocks(MachineFunction *MF, const ARMSubtarget *STI) {
     return false;
 
   bool Changed = false;
-  bool PrevCanFallthough = true;
+  bool PrevCanFallthrough = true;
   for (auto &MBB : *MF) {
-    if (!PrevCanFallthough) {
+    if (!PrevCanFallthrough) {
       Changed = true;
       MBB.setAlignment(Alignment);
     }
 
-    PrevCanFallthough = MBB.canFallThrough();
+    PrevCanFallthrough = MBB.canFallThrough();
 
     // For LOB's, the ARMLowOverheadLoops pass may remove the unconditional
     // branch later in the pipeline.
@@ -373,7 +367,7 @@ static bool AlignBlocks(MachineFunction *MF, const ARMSubtarget *STI) {
           continue;
         if (isLoopStart(MI) || MI.getOpcode() == ARM::t2LoopEnd ||
             MI.getOpcode() == ARM::t2LoopEndDec) {
-          PrevCanFallthough = true;
+          PrevCanFallthrough = true;
           break;
         }
         // Any other terminator - nothing to do
@@ -414,7 +408,6 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
   // Renumber all of the machine basic blocks in the function, guaranteeing that
   // the numbers agree with the position of the block in the function.
   MF->RenumberBlocks();
-  DT->updateBlockNumbers();
 
   // Try to reorder and otherwise adjust the block layout to make good use
   // of the TB[BH] instructions.
@@ -426,7 +419,6 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
     T2JumpTables.clear();
     // Blocks may have shifted around. Keep the numbering up to date.
     MF->RenumberBlocks();
-    DT->updateBlockNumbers();
   }
 
   // Align any non-fallthrough blocks
@@ -480,8 +472,10 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
 
     LLVM_DEBUG(dbgs() << "Beginning BR iteration #" << NoBRIters << '\n');
     bool BRChange = false;
-    for (unsigned i = 0, e = ImmBranches.size(); i != e; ++i)
+    for (unsigned i = 0, e = ImmBranches.size(); i != e; ++i) {
+      // Note: fixupImmediateBr can append to ImmBranches.
       BRChange |= fixupImmediateBr(ImmBranches[i]);
+    }
     if (BRChange && ++NoBRIters > 30)
       report_fatal_error("Branch Fix Up pass failed to converge!");
     LLVM_DEBUG(dumpBBs());
@@ -523,7 +517,6 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
   CPEntries.clear();
   JumpTableEntryIndices.clear();
   JumpTableUserIndices.clear();
-  BlockJumpTableRefCount.clear();
   ImmBranches.clear();
   PushPopMIs.clear();
   T2JumpTables.clear();
@@ -672,10 +665,8 @@ void ARMConstantIslands::doInitialJumpTablePlacement(
   }
 
   // If we did anything then we need to renumber the subsequent blocks.
-  if (LastCorrectlyNumberedBB) {
+  if (LastCorrectlyNumberedBB)
     MF->RenumberBlocks(LastCorrectlyNumberedBB);
-    DT->updateBlockNumbers();
-  }
 }
 
 /// BBHasFallthrough - Return true if the specified basic block can fallthrough
@@ -736,14 +727,6 @@ Align ARMConstantIslands::getCPEAlign(const MachineInstr *CPEMI) {
   return MCP->getConstants()[CPI].getAlign();
 }
 
-// Exception landing pads, blocks that has their adress taken, and function
-// entry blocks will always be (potential) indirect jump targets, regardless of
-// whether they are referenced by or not by jump tables.
-static bool isAlwaysIndirectTarget(const MachineBasicBlock &MBB) {
-  return MBB.isEHPad() || MBB.hasAddressTaken() ||
-         &MBB == &MBB.getParent()->front();
-}
-
 /// scanFunctionJumpTables - Do a scan of the function, building up
 /// information about the sizes of each block and the locations of all
 /// the jump tables.
@@ -754,20 +737,6 @@ void ARMConstantIslands::scanFunctionJumpTables() {
           (I.getOpcode() == ARM::t2BR_JT || I.getOpcode() == ARM::tBR_JTr))
         T2JumpTables.push_back(&I);
   }
-
-  if (!MF->getInfo<ARMFunctionInfo>()->branchTargetEnforcement())
-    return;
-
-  if (const MachineJumpTableInfo *JTI = MF->getJumpTableInfo())
-    for (const MachineJumpTableEntry &JTE : JTI->getJumpTables())
-      for (const MachineBasicBlock *MBB : JTE.MBBs) {
-        if (isAlwaysIndirectTarget(*MBB))
-          // Set the reference count essentially to infinity, it will never
-          // reach zero and the BTI Instruction will never be removed.
-          BlockJumpTableRefCount[MBB] = std::numeric_limits<int>::max();
-        else
-          ++BlockJumpTableRefCount[MBB];
-      }
 }
 
 /// initializeFunctionInfo - Do the initial scan of the function, building up
@@ -976,7 +945,6 @@ static bool CompareMBBNumbers(const MachineBasicBlock *LHS,
 void ARMConstantIslands::updateForInsertedWaterBlock(MachineBasicBlock *NewBB) {
   // Renumber the MBB's to keep them consecutive.
   NewBB->getParent()->RenumberBlocks(NewBB);
-  DT->updateBlockNumbers();
 
   // Insert an entry into BBInfo to align it properly with the (newly
   // renumbered) block numbers.
@@ -1039,7 +1007,6 @@ MachineBasicBlock *ARMConstantIslands::splitBlockBeforeInstr(MachineInstr *MI) {
   // This is almost the same as updateForInsertedWaterBlock, except that
   // the Water goes after OrigBB, not NewBB.
   MF->RenumberBlocks(NewBB);
-  DT->updateBlockNumbers();
 
   // Insert an entry into BBInfo to align it properly with the (newly
   // renumbered) block numbers.
@@ -1463,7 +1430,7 @@ void ARMConstantIslands::createNewWater(unsigned CPUserIndex,
     // If the CP is referenced(ie, UserOffset) is in first four instructions
     // after IT, this recalculated BaseInsertOffset could be in the middle of
     // an IT block. If it is, change the BaseInsertOffset to just after the
-    // IT block. This still make the CP Entry is in range becuase of the
+    // IT block. This still make the CP Entry is in range because of the
     // following reasons.
     //   1. The initial BaseseInsertOffset calculated is (UserOffset +
     //   U.getMaxDisp() - UPad).
@@ -2491,7 +2458,6 @@ MachineBasicBlock *ARMConstantIslands::adjustJTTargetBlockForward(
     BB->updateTerminator(OldNext != MF->end() ? &*OldNext : nullptr);
     // Update numbering to account for the block being moved.
     MF->RenumberBlocks();
-    DT->updateBlockNumbers();
     ++NumJTMoved;
     return nullptr;
   }
@@ -2520,7 +2486,6 @@ MachineBasicBlock *ARMConstantIslands::adjustJTTargetBlockForward(
 
   // Update internal data structures to account for the newly inserted MBB.
   MF->RenumberBlocks(NewBB);
-  DT->updateBlockNumbers();
 
   // Update the CFG.
   NewBB->addSuccessor(BB);

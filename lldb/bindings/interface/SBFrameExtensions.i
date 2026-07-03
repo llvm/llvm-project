@@ -24,6 +24,13 @@ STRING_EXTENSION_OUTSIDE(SBFrame)
             else:
                 return SBFrame()
 
+        def get_child_frame(self):
+            child_idx = self.idx - 1
+            if child_idx >= 0:
+                return self.thread.frame[child_idx]
+            else:
+                return SBFrame()
+
         def get_arguments(self):
             return self.GetVariables(True,False,False,False)
 
@@ -87,11 +94,12 @@ STRING_EXTENSION_OUTSIDE(SBFrame)
         args = property(get_arguments, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the argument variables in this stack frame.''')
         arguments = property(get_arguments, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the argument variables in this stack frame.''')
         statics = property(get_statics, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the static variables in this stack frame.''')
-        registers = property(GetRegisters, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the CPU registers for this stack frame.''')
-        regs = property(GetRegisters, None, doc='''A read only property that returns a list() that contains a collection of lldb.SBValue objects that represent the CPU registers for this stack frame.''')
+        registers = property(GetRegisters, None, doc='''Returns the register sets for this thread as a list().  See SBFrame::GetRegisters() for details.''')
+        regs = property(GetRegisters, None, doc='''Returns the register sets for this thread as a list().  See SBFrame::GetRegisters() for details.''')
         register = property(get_registers_access, None, doc='''A read only property that returns an helper object providing a flattened indexable view of the CPU registers for this stack frame.''')
         reg = property(get_registers_access, None, doc='''A read only property that returns an helper object providing a flattened indexable view of the CPU registers for this stack frame''')
         parent = property(get_parent_frame, None, doc='''A read only property that returns the parent (caller) frame of the current frame.''')
+        child = property(get_child_frame, None, doc='''A read only property that returns the child (callee) frame of the current frame.''')
     %}
 #endif
 }

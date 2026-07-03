@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel -relocation-model=pic -mips-tail-calls=1 < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel -relocation-model=pic -mips-tail-calls=1 < %s | FileCheck %s
 
 ; CHECK-LABEL: foo6:
 ; CHECK: %while.body

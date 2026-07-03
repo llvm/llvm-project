@@ -118,7 +118,7 @@ libraries such as the Active Template Library (ATL) and Windows Runtime Library
 (WRL), some template rules have been relaxed or extended in Clang on Windows.
 
 The first major semantic difference is that MSVC appears to defer all parsing
-an analysis of inline method bodies in class templates until instantiation
+and analysis of inline method bodies in class templates until instantiation
 time.  By default on Windows, Clang attempts to follow suit.  This behavior is
 controlled by the ``-fdelayed-template-parsing`` flag.  While Clang delays
 parsing of method bodies, it still parses the bodies *before* template argument
@@ -240,7 +240,7 @@ In the above example ``hwPopCnt`` will not be inlined into ``PopCnt`` since ``Po
 With a larger function that does real work the function call overhead is negligible. However in our popcnt example there is the function call
 overhead. There is no analog for this specific MSVC behavior in clang.
 
-For clang we effectively have to create the dispatch function ourselves to each specfic implementation.
+For clang we effectively have to create the dispatch function ourselves to each specific implementation.
 
 SIMD vector types
 =================

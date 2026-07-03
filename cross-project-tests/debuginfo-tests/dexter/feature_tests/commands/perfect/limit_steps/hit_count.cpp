@@ -2,7 +2,7 @@
 //      Test that \DexLimitSteps keyword argument hit_count correctly limits
 //      the number of times the command can trigger.
 //
-// RUN: %dexter_regression_test_build %s -o %t
+// RUN: %dexter_regression_test_cxx_build %s -o %t
 // RUN: %dexter_regression_test_run --binary %t -- %s | FileCheck %s
 // CHECK: hit_count.cpp
 

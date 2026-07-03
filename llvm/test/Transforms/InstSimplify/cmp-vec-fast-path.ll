@@ -5,7 +5,7 @@
 
 define <2 x i1> @i32cmp_eq_fixed_zero() {
 ; CHECK-LABEL: @i32cmp_eq_fixed_zero(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %res = icmp eq <2 x i32> zeroinitializer, zeroinitializer
   ret <2 x i1> %res
@@ -13,7 +13,7 @@ define <2 x i1> @i32cmp_eq_fixed_zero() {
 
 define <vscale x 2 x i1> @i32cmp_eq_scalable_zero() {
 ; CHECK-LABEL: @i32cmp_eq_scalable_zero(
-; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> splat (i1 true)
 ;
   %res = icmp eq <vscale x 2 x i32> zeroinitializer, zeroinitializer
   ret <vscale x 2 x i1> %res
@@ -21,7 +21,7 @@ define <vscale x 2 x i1> @i32cmp_eq_scalable_zero() {
 
 define <2 x i1> @i32cmp_eq_fixed_one() {
 ; CHECK-LABEL: @i32cmp_eq_fixed_one(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %res = icmp eq <2 x i32> <i32 1, i32 1>, <i32 1, i32 1>
   ret <2 x i1> %res
@@ -29,7 +29,7 @@ define <2 x i1> @i32cmp_eq_fixed_one() {
 
 define <vscale x 2 x i1> @i32cmp_eq_scalable_one() {
 ; CHECK-LABEL: @i32cmp_eq_scalable_one(
-; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> splat (i1 true)
 ;
   %res = icmp eq <vscale x 2 x i32> splat (i32 1), splat (i32 1)
   ret <vscale x 2 x i1> %res
@@ -101,7 +101,7 @@ define <vscale x 2 x i1> @i32cmp_ugt_scalable_one() {
 
 define <2 x i1> @i32cmp_uge_fixed_zero() {
 ; CHECK-LABEL: @i32cmp_uge_fixed_zero(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %res = icmp uge <2 x i32> zeroinitializer, zeroinitializer
   ret <2 x i1> %res
@@ -109,7 +109,7 @@ define <2 x i1> @i32cmp_uge_fixed_zero() {
 
 define <vscale x 2 x i1> @i32cmp_uge_scalable_zero() {
 ; CHECK-LABEL: @i32cmp_uge_scalable_zero(
-; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> splat (i1 true)
 ;
   %res = icmp uge <vscale x 2 x i32> zeroinitializer, zeroinitializer
   ret <vscale x 2 x i1> %res
@@ -117,7 +117,7 @@ define <vscale x 2 x i1> @i32cmp_uge_scalable_zero() {
 
 define <2 x i1> @i32cmp_uge_fixed_one() {
 ; CHECK-LABEL: @i32cmp_uge_fixed_one(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %res = icmp uge <2 x i32> <i32 1, i32 1>, <i32 1, i32 1>
   ret <2 x i1> %res
@@ -125,7 +125,7 @@ define <2 x i1> @i32cmp_uge_fixed_one() {
 
 define <vscale x 2 x i1> @i32cmp_uge_scalable_one() {
 ; CHECK-LABEL: @i32cmp_uge_scalable_one(
-; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> splat (i1 true)
 ;
   %res = icmp uge <vscale x 2 x i32> splat (i32 1), splat (i32 1)
   ret <vscale x 2 x i1> %res
@@ -165,7 +165,7 @@ define <vscale x 2 x i1> @i32cmp_ult_scalable_one() {
 
 define <2 x i1> @i32cmp_ule_fixed_zero() {
 ; CHECK-LABEL: @i32cmp_ule_fixed_zero(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %res = icmp ule <2 x i32> zeroinitializer, zeroinitializer
   ret <2 x i1> %res
@@ -173,7 +173,7 @@ define <2 x i1> @i32cmp_ule_fixed_zero() {
 
 define <vscale x 2 x i1> @i32cmp_ule_scalable_zero() {
 ; CHECK-LABEL: @i32cmp_ule_scalable_zero(
-; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> splat (i1 true)
 ;
   %res = icmp ule <vscale x 2 x i32> zeroinitializer, zeroinitializer
   ret <vscale x 2 x i1> %res
@@ -181,7 +181,7 @@ define <vscale x 2 x i1> @i32cmp_ule_scalable_zero() {
 
 define <2 x i1> @i32cmp_ule_fixed_one() {
 ; CHECK-LABEL: @i32cmp_ule_fixed_one(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %res = icmp ule <2 x i32> <i32 1, i32 1>, <i32 1, i32 1>
   ret <2 x i1> %res
@@ -189,7 +189,7 @@ define <2 x i1> @i32cmp_ule_fixed_one() {
 
 define <vscale x 2 x i1> @i32cmp_ule_scalable_one() {
 ; CHECK-LABEL: @i32cmp_ule_scalable_one(
-; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> splat (i1 true)
 ;
   %res = icmp ule <vscale x 2 x i32> splat (i32 1), splat (i32 1)
   ret <vscale x 2 x i1> %res
@@ -229,7 +229,7 @@ define <vscale x 2 x i1> @i32cmp_sgt_scalable_one() {
 
 define <2 x i1> @i32cmp_sge_fixed_zero() {
 ; CHECK-LABEL: @i32cmp_sge_fixed_zero(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %res = icmp sge <2 x i32> zeroinitializer, zeroinitializer
   ret <2 x i1> %res
@@ -237,7 +237,7 @@ define <2 x i1> @i32cmp_sge_fixed_zero() {
 
 define <vscale x 2 x i1> @i32cmp_sge_scalable_zero() {
 ; CHECK-LABEL: @i32cmp_sge_scalable_zero(
-; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> splat (i1 true)
 ;
   %res = icmp sge <vscale x 2 x i32> zeroinitializer, zeroinitializer
   ret <vscale x 2 x i1> %res
@@ -245,7 +245,7 @@ define <vscale x 2 x i1> @i32cmp_sge_scalable_zero() {
 
 define <2 x i1> @i32cmp_sge_fixed_one() {
 ; CHECK-LABEL: @i32cmp_sge_fixed_one(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %res = icmp sge <2 x i32> <i32 1, i32 1>, <i32 1, i32 1>
   ret <2 x i1> %res
@@ -253,7 +253,7 @@ define <2 x i1> @i32cmp_sge_fixed_one() {
 
 define <vscale x 2 x i1> @i32cmp_sge_scalable_one() {
 ; CHECK-LABEL: @i32cmp_sge_scalable_one(
-; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> splat (i1 true)
 ;
   %res = icmp sge <vscale x 2 x i32> splat (i32 1), splat (i32 1)
   ret <vscale x 2 x i1> %res
@@ -293,7 +293,7 @@ define <vscale x 2 x i1> @i32cmp_slt_scalable_one() {
 
 define <2 x i1> @i32cmp_sle_fixed_zero() {
 ; CHECK-LABEL: @i32cmp_sle_fixed_zero(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %res = icmp sle <2 x i32> zeroinitializer, zeroinitializer
   ret <2 x i1> %res
@@ -301,7 +301,7 @@ define <2 x i1> @i32cmp_sle_fixed_zero() {
 
 define <vscale x 2 x i1> @i32cmp_sle_scalable_zero() {
 ; CHECK-LABEL: @i32cmp_sle_scalable_zero(
-; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> splat (i1 true)
 ;
   %res = icmp sle <vscale x 2 x i32> zeroinitializer, zeroinitializer
   ret <vscale x 2 x i1> %res
@@ -309,7 +309,7 @@ define <vscale x 2 x i1> @i32cmp_sle_scalable_zero() {
 
 define <2 x i1> @i32cmp_sle_fixed_one() {
 ; CHECK-LABEL: @i32cmp_sle_fixed_one(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %res = icmp sle <2 x i32> <i32 1, i32 1>, <i32 1, i32 1>
   ret <2 x i1> %res
@@ -317,7 +317,7 @@ define <2 x i1> @i32cmp_sle_fixed_one() {
 
 define <vscale x 2 x i1> @i32cmp_sle_scalable_one() {
 ; CHECK-LABEL: @i32cmp_sle_scalable_one(
-; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> splat (i1 true)
 ;
   %res = icmp sle <vscale x 2 x i32> splat (i32 1), splat (i32 1)
   ret <vscale x 2 x i1> %res
@@ -357,7 +357,7 @@ define <vscale x 2 x i1> @floatcmp_false_scalable_one() {
 
 define <2 x i1> @floatcmp_oeq_fixed_zero() {
 ; CHECK-LABEL: @floatcmp_oeq_fixed_zero(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %res = fcmp oeq <2 x float> zeroinitializer, zeroinitializer
   ret <2 x i1> %res
@@ -365,7 +365,7 @@ define <2 x i1> @floatcmp_oeq_fixed_zero() {
 
 define <vscale x 2 x i1> @floatcmp_oeq_scalable_zero() {
 ; CHECK-LABEL: @floatcmp_oeq_scalable_zero(
-; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> splat (i1 true)
 ;
   %res = fcmp oeq <vscale x 2 x float> zeroinitializer, zeroinitializer
   ret <vscale x 2 x i1> %res
@@ -373,7 +373,7 @@ define <vscale x 2 x i1> @floatcmp_oeq_scalable_zero() {
 
 define <2 x i1> @floatcmp_oeq_fixed_one() {
 ; CHECK-LABEL: @floatcmp_oeq_fixed_one(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %res = fcmp oeq <2 x float> <float 1.0, float 1.0>, <float 1.0, float 1.0>
   ret <2 x i1> %res
@@ -381,7 +381,7 @@ define <2 x i1> @floatcmp_oeq_fixed_one() {
 
 define <vscale x 2 x i1> @floatcmp_oeq_scalable_one() {
 ; CHECK-LABEL: @floatcmp_oeq_scalable_one(
-; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> splat (i1 true)
 ;
   %res = fcmp oeq <vscale x 2 x float> splat (float 1.0), splat (float 1.0)
   ret <vscale x 2 x i1> %res
@@ -421,7 +421,7 @@ define <vscale x 2 x i1> @floatcmp_ogt_scalable_one() {
 
 define <2 x i1> @floatcmp_oge_fixed_zero() {
 ; CHECK-LABEL: @floatcmp_oge_fixed_zero(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %res = fcmp oge <2 x float> zeroinitializer, zeroinitializer
   ret <2 x i1> %res
@@ -429,7 +429,7 @@ define <2 x i1> @floatcmp_oge_fixed_zero() {
 
 define <vscale x 2 x i1> @floatcmp_oge_scalable_zero() {
 ; CHECK-LABEL: @floatcmp_oge_scalable_zero(
-; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> splat (i1 true)
 ;
   %res = fcmp oge <vscale x 2 x float> zeroinitializer, zeroinitializer
   ret <vscale x 2 x i1> %res
@@ -437,7 +437,7 @@ define <vscale x 2 x i1> @floatcmp_oge_scalable_zero() {
 
 define <2 x i1> @floatcmp_oge_fixed_one() {
 ; CHECK-LABEL: @floatcmp_oge_fixed_one(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %res = fcmp oge <2 x float> <float 1.0, float 1.0>, <float 1.0, float 1.0>
   ret <2 x i1> %res
@@ -445,7 +445,7 @@ define <2 x i1> @floatcmp_oge_fixed_one() {
 
 define <vscale x 2 x i1> @floatcmp_oge_scalable_one() {
 ; CHECK-LABEL: @floatcmp_oge_scalable_one(
-; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> splat (i1 true)
 ;
   %res = fcmp oge <vscale x 2 x float> splat (float 1.0), splat (float 1.0)
   ret <vscale x 2 x i1> %res
@@ -485,7 +485,7 @@ define <vscale x 2 x i1> @floatcmp_olt_scalable_one() {
 
 define <2 x i1> @floatcmp_ole_fixed_zero() {
 ; CHECK-LABEL: @floatcmp_ole_fixed_zero(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %res = fcmp ole <2 x float> zeroinitializer, zeroinitializer
   ret <2 x i1> %res
@@ -493,7 +493,7 @@ define <2 x i1> @floatcmp_ole_fixed_zero() {
 
 define <vscale x 2 x i1> @floatcmp_ole_scalable_zero() {
 ; CHECK-LABEL: @floatcmp_ole_scalable_zero(
-; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> splat (i1 true)
 ;
   %res = fcmp ole <vscale x 2 x float> zeroinitializer, zeroinitializer
   ret <vscale x 2 x i1> %res
@@ -501,7 +501,7 @@ define <vscale x 2 x i1> @floatcmp_ole_scalable_zero() {
 
 define <2 x i1> @floatcmp_ole_fixed_one() {
 ; CHECK-LABEL: @floatcmp_ole_fixed_one(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %res = fcmp ole <2 x float> <float 1.0, float 1.0>, <float 1.0, float 1.0>
   ret <2 x i1> %res
@@ -509,7 +509,7 @@ define <2 x i1> @floatcmp_ole_fixed_one() {
 
 define <vscale x 2 x i1> @floatcmp_ole_scalable_one() {
 ; CHECK-LABEL: @floatcmp_ole_scalable_one(
-; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> splat (i1 true)
 ;
   %res = fcmp ole <vscale x 2 x float> splat (float 1.0), splat (float 1.0)
   ret <vscale x 2 x i1> %res
@@ -549,7 +549,7 @@ define <vscale x 2 x i1> @floatcmp_one_scalable_one() {
 
 define <2 x i1> @floatcmp_ord_fixed_zero() {
 ; CHECK-LABEL: @floatcmp_ord_fixed_zero(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %res = fcmp ord <2 x float> zeroinitializer, zeroinitializer
   ret <2 x i1> %res
@@ -557,7 +557,7 @@ define <2 x i1> @floatcmp_ord_fixed_zero() {
 
 define <vscale x 2 x i1> @floatcmp_ord_scalable_zero() {
 ; CHECK-LABEL: @floatcmp_ord_scalable_zero(
-; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> splat (i1 true)
 ;
   %res = fcmp ord <vscale x 2 x float> zeroinitializer, zeroinitializer
   ret <vscale x 2 x i1> %res
@@ -565,7 +565,7 @@ define <vscale x 2 x i1> @floatcmp_ord_scalable_zero() {
 
 define <2 x i1> @floatcmp_ord_fixed_one() {
 ; CHECK-LABEL: @floatcmp_ord_fixed_one(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %res = fcmp ord <2 x float> <float 1.0, float 1.0>, <float 1.0, float 1.0>
   ret <2 x i1> %res
@@ -573,7 +573,7 @@ define <2 x i1> @floatcmp_ord_fixed_one() {
 
 define <vscale x 2 x i1> @floatcmp_ord_scalable_one() {
 ; CHECK-LABEL: @floatcmp_ord_scalable_one(
-; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> splat (i1 true)
 ;
   %res = fcmp ord <vscale x 2 x float> splat (float 1.0), splat (float 1.0)
   ret <vscale x 2 x i1> %res
@@ -581,7 +581,7 @@ define <vscale x 2 x i1> @floatcmp_ord_scalable_one() {
 
 define <2 x i1> @floatcmp_ueq_fixed_zero() {
 ; CHECK-LABEL: @floatcmp_ueq_fixed_zero(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %res = fcmp ueq <2 x float> zeroinitializer, zeroinitializer
   ret <2 x i1> %res
@@ -589,7 +589,7 @@ define <2 x i1> @floatcmp_ueq_fixed_zero() {
 
 define <vscale x 2 x i1> @floatcmp_ueq_scalable_zero() {
 ; CHECK-LABEL: @floatcmp_ueq_scalable_zero(
-; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> splat (i1 true)
 ;
   %res = fcmp ueq <vscale x 2 x float> zeroinitializer, zeroinitializer
   ret <vscale x 2 x i1> %res
@@ -597,7 +597,7 @@ define <vscale x 2 x i1> @floatcmp_ueq_scalable_zero() {
 
 define <2 x i1> @floatcmp_ueq_fixed_one() {
 ; CHECK-LABEL: @floatcmp_ueq_fixed_one(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %res = fcmp ueq <2 x float> <float 1.0, float 1.0>, <float 1.0, float 1.0>
   ret <2 x i1> %res
@@ -605,7 +605,7 @@ define <2 x i1> @floatcmp_ueq_fixed_one() {
 
 define <vscale x 2 x i1> @floatcmp_ueq_scalable_one() {
 ; CHECK-LABEL: @floatcmp_ueq_scalable_one(
-; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> splat (i1 true)
 ;
   %res = fcmp ueq <vscale x 2 x float> splat (float 1.0), splat (float 1.0)
   ret <vscale x 2 x i1> %res
@@ -645,7 +645,7 @@ define <vscale x 2 x i1> @floatcmp_ugt_scalable_one() {
 
 define <2 x i1> @floatcmp_uge_fixed_zero() {
 ; CHECK-LABEL: @floatcmp_uge_fixed_zero(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %res = fcmp uge <2 x float> zeroinitializer, zeroinitializer
   ret <2 x i1> %res
@@ -653,7 +653,7 @@ define <2 x i1> @floatcmp_uge_fixed_zero() {
 
 define <vscale x 2 x i1> @floatcmp_uge_scalable_zero() {
 ; CHECK-LABEL: @floatcmp_uge_scalable_zero(
-; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> splat (i1 true)
 ;
   %res = fcmp uge <vscale x 2 x float> zeroinitializer, zeroinitializer
   ret <vscale x 2 x i1> %res
@@ -661,7 +661,7 @@ define <vscale x 2 x i1> @floatcmp_uge_scalable_zero() {
 
 define <2 x i1> @floatcmp_uge_fixed_one() {
 ; CHECK-LABEL: @floatcmp_uge_fixed_one(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %res = fcmp uge <2 x float> <float 1.0, float 1.0>, <float 1.0, float 1.0>
   ret <2 x i1> %res
@@ -669,7 +669,7 @@ define <2 x i1> @floatcmp_uge_fixed_one() {
 
 define <vscale x 2 x i1> @floatcmp_uge_scalable_one() {
 ; CHECK-LABEL: @floatcmp_uge_scalable_one(
-; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> splat (i1 true)
 ;
   %res = fcmp uge <vscale x 2 x float> splat (float 1.0), splat (float 1.0)
   ret <vscale x 2 x i1> %res
@@ -709,7 +709,7 @@ define <vscale x 2 x i1> @floatcmp_ult_scalable_one() {
 
 define <2 x i1> @floatcmp_ule_fixed_zero() {
 ; CHECK-LABEL: @floatcmp_ule_fixed_zero(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %res = fcmp ule <2 x float> zeroinitializer, zeroinitializer
   ret <2 x i1> %res
@@ -717,7 +717,7 @@ define <2 x i1> @floatcmp_ule_fixed_zero() {
 
 define <vscale x 2 x i1> @floatcmp_ule_scalable_zero() {
 ; CHECK-LABEL: @floatcmp_ule_scalable_zero(
-; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> splat (i1 true)
 ;
   %res = fcmp ule <vscale x 2 x float> zeroinitializer, zeroinitializer
   ret <vscale x 2 x i1> %res
@@ -725,7 +725,7 @@ define <vscale x 2 x i1> @floatcmp_ule_scalable_zero() {
 
 define <2 x i1> @floatcmp_ule_fixed_one() {
 ; CHECK-LABEL: @floatcmp_ule_fixed_one(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %res = fcmp ule <2 x float> <float 1.0, float 1.0>, <float 1.0, float 1.0>
   ret <2 x i1> %res
@@ -733,7 +733,7 @@ define <2 x i1> @floatcmp_ule_fixed_one() {
 
 define <vscale x 2 x i1> @floatcmp_ule_scalable_one() {
 ; CHECK-LABEL: @floatcmp_ule_scalable_one(
-; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> splat (i1 true)
 ;
   %res = fcmp ule <vscale x 2 x float> splat (float 1.0), splat (float 1.0)
   ret <vscale x 2 x i1> %res
@@ -805,7 +805,7 @@ define <vscale x 2 x i1> @floatcmp_uno_scalable_one() {
 
 define <2 x i1> @floatcmp_true_fixed_zero() {
 ; CHECK-LABEL: @floatcmp_true_fixed_zero(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %res = fcmp true <2 x float> zeroinitializer, zeroinitializer
   ret <2 x i1> %res
@@ -813,7 +813,7 @@ define <2 x i1> @floatcmp_true_fixed_zero() {
 
 define <vscale x 2 x i1> @floatcmp_true_scalable_zero() {
 ; CHECK-LABEL: @floatcmp_true_scalable_zero(
-; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> splat (i1 true)
 ;
   %res = fcmp true <vscale x 2 x float> zeroinitializer, zeroinitializer
   ret <vscale x 2 x i1> %res
@@ -821,7 +821,7 @@ define <vscale x 2 x i1> @floatcmp_true_scalable_zero() {
 
 define <2 x i1> @floatcmp_true_fixed_one() {
 ; CHECK-LABEL: @floatcmp_true_fixed_one(
-; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %res = fcmp true <2 x float> <float 1.0, float 1.0>, <float 1.0, float 1.0>
   ret <2 x i1> %res
@@ -829,7 +829,7 @@ define <2 x i1> @floatcmp_true_fixed_one() {
 
 define <vscale x 2 x i1> @floatcmp_true_scalable_one() {
 ; CHECK-LABEL: @floatcmp_true_scalable_one(
-; CHECK-NEXT:    ret <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> poison, i1 true, i64 0), <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> splat (i1 true)
 ;
   %res = fcmp true <vscale x 2 x float> splat (float 1.0), splat (float 1.0)
   ret <vscale x 2 x i1> %res

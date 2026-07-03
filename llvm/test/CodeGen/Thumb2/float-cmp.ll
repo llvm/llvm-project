@@ -200,8 +200,13 @@ define i1 @cmp_d_one(double %a, double %b) {
 ; CHECK-LABEL: cmp_d_one:
 ; NONE: bl __aeabi_dcmpeq
 ; NONE: bl __aeabi_dcmpun
-; SP: bl __aeabi_dcmpeq
 ; SP: bl __aeabi_dcmpun
+; SP: eor r8, r0, #1
+; SP: bl __aeabi_dcmpeq
+; SP-NEXT: clz r0, r0
+; SP-NEXT: lsrs r0, r0, #5
+; SP-NEXT: ands.w r0, r0, r8
+
 ; DP: vcmp.f64
 ; DP: movmi r0, #1
 ; DP: movgt r0, #1

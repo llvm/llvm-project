@@ -64,11 +64,10 @@ static std::optional<ReplacementItem> parseReplacementItem(StringRef Spec) {
   AlignStyle Where = AlignStyle::Right;
   StringRef Options;
   unsigned Index = ~0U;
-  RepString = RepString.trim();
+  RepString = RepString.ltrim();
 
   // If index is not specified, keep it ~0U to indicate unresolved index.
   RepString.consumeInteger(0, Index);
-  RepString = RepString.trim();
 
   if (RepString.consume_front(",")) {
     if (!consumeFieldLayout(RepString, Where, Align, Pad)) {
@@ -76,9 +75,9 @@ static std::optional<ReplacementItem> parseReplacementItem(StringRef Spec) {
       return std::nullopt;
     }
   }
-  RepString = RepString.trim();
+  RepString = RepString.ltrim();
   if (RepString.consume_front(":")) {
-    Options = RepString.trim();
+    Options = RepString;
     RepString = StringRef();
   }
   RepString = RepString.trim();

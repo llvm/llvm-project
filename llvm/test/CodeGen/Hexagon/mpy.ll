@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; CHECK: += mpyi
 
 define void @f0(i32 %a0, i32 %a1, i32 %a2) #0 {

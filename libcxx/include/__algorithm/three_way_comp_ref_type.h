@@ -19,9 +19,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Comp>
 struct __debug_three_way_comp {
@@ -61,14 +61,14 @@ struct __debug_three_way_comp {
 // Pass the comparator by lvalue reference. Or in the debug mode, using a debugging wrapper that stores a reference.
 #  if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
 template <class _Comp>
-using __three_way_comp_ref_type = __debug_three_way_comp<_Comp>;
+using __three_way_comp_ref_type _LIBCPP_NODEBUG = __debug_three_way_comp<_Comp>;
 #  else
 template <class _Comp>
-using __three_way_comp_ref_type = _Comp&;
+using __three_way_comp_ref_type _LIBCPP_NODEBUG = _Comp&;
 #  endif
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___ALGORITHM_THREE_WAY_COMP_REF_TYPE_H

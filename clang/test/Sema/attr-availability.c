@@ -40,7 +40,7 @@ void test_10095131(void) {
 #ifdef WARN_PARTIAL
 // FIXME: This note should point to the declaration with the availability
 // attribute.
-// expected-note@+2 {{'PartiallyAvailable' has been marked as being introduced in macOS 10.8 here, but the deployment target is macOS 10.5}}
+// expected-note@+2 5 {{'PartiallyAvailable' has been marked as being introduced in macOS 10.8 here, but the deployment target is macOS 10.5}}
 #endif
 extern void PartiallyAvailable(void) ;
 void with_redeclaration(void) {
@@ -52,6 +52,29 @@ void with_redeclaration(void) {
   PartiallyAvailable();
   enum PartialEnum p = kPartialEnumConstant;
 }
+
+#ifdef WARN_PARTIAL
+void conditional_warnings() {
+  if (__builtin_available(macos 10.8, *)) {
+    PartiallyAvailable();
+  } else {
+    PartiallyAvailable(); // expected-warning {{only available on macOS 10.8 or newer}} expected-note {{enclose 'PartiallyAvailable'}}
+  }
+  if (!__builtin_available(macos 10.8, *)) {
+    PartiallyAvailable(); // expected-warning {{only available on macOS 10.8 or newer}} expected-note {{enclose 'PartiallyAvailable'}}
+  } else {
+    PartiallyAvailable();
+  }
+  if (!!!(!__builtin_available(macos 10.8, *))) {
+    PartiallyAvailable();
+  } else {
+    PartiallyAvailable(); // expected-warning {{only available on macOS 10.8 or newer}} expected-note {{enclose 'PartiallyAvailable'}}
+  }
+  if (~__builtin_available(macos 10.8, *)) { // expected-warning {{does not guard availability here}}
+    PartiallyAvailable(); // expected-warning {{only available on macOS 10.8 or newer}} expected-note {{enclose 'PartiallyAvailable'}}
+  }
+}
+#endif
 
 __attribute__((availability(macos, unavailable))) // expected-warning {{attribute 'availability' is ignored}}
 enum {

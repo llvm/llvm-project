@@ -1,6 +1,8 @@
 // RUN: %clangxx_asan -O0 -mllvm -asan-instrument-dynamic-allocas %s -o %t
 // RUN: %run %t 2>&1
 //
+// MSVC doesn't support VLAs
+// UNSUPPORTED: msvc
 
 #include <assert.h>
 #include <stdint.h>

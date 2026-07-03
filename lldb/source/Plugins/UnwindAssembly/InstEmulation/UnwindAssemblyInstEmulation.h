@@ -63,15 +63,17 @@ private:
   UnwindAssemblyInstEmulation(const lldb_private::ArchSpec &arch,
                               lldb_private::EmulateInstruction *inst_emulator)
       : UnwindAssembly(arch), m_inst_emulator_up(inst_emulator),
-        m_range_ptr(nullptr), m_unwind_plan_ptr(nullptr), m_curr_row(),
-        m_initial_sp(0), m_cfa_reg_info(), m_fp_is_cfa(false),
-        m_register_values(), m_pushed_regs(), m_curr_row_modified(false),
-        m_forward_branch_offset(0) {
+        m_range_ptr(nullptr), m_unwind_plan_ptr(nullptr),
+        m_curr_row_modified(false) {
     if (m_inst_emulator_up) {
       m_inst_emulator_up->SetBaton(this);
       m_inst_emulator_up->SetCallbacks(ReadMemory, WriteMemory, ReadRegister,
                                        WriteRegister);
     }
+    // Initialize the CFA with a known value. In the 32 bit case it will be
+    // 0x80000000, and in the 64 bit case 0x8000000000000000. We use the address
+    // byte size to be safe for any future address sizes
+    m_initial_cfa = (1ull << ((m_arch.GetAddressByteSize() * 8) - 1));
   }
 
   static size_t
@@ -124,16 +126,20 @@ private:
   bool GetRegisterValue(const lldb_private::RegisterInfo &reg_info,
                         lldb_private::RegisterValue &reg_value);
 
+  typedef std::map<uint64_t, lldb_private::RegisterValue> RegisterValueMap;
+  struct UnwindState {
+    lldb_private::UnwindPlan::Row row = {};
+    lldb_private::RegisterInfo cfa_reg_info = {};
+    bool fp_is_cfa = false;
+    RegisterValueMap register_values = {};
+  };
+
   std::unique_ptr<lldb_private::EmulateInstruction> m_inst_emulator_up;
   lldb_private::AddressRange *m_range_ptr;
   lldb_private::UnwindPlan *m_unwind_plan_ptr;
-  lldb_private::UnwindPlan::RowSP m_curr_row;
+  UnwindState m_state;
+  uint64_t m_initial_cfa;
   typedef std::map<uint64_t, uint64_t> PushedRegisterToAddrMap;
-  uint64_t m_initial_sp;
-  lldb_private::RegisterInfo m_cfa_reg_info;
-  bool m_fp_is_cfa;
-  typedef std::map<uint64_t, lldb_private::RegisterValue> RegisterValueMap;
-  RegisterValueMap m_register_values;
   PushedRegisterToAddrMap m_pushed_regs;
 
   // While processing the instruction stream, we need to communicate some state
@@ -146,7 +152,7 @@ private:
   bool m_curr_row_modified;
   // The instruction is branching forward with the given offset. 0 value means
   // no branching.
-  uint32_t m_forward_branch_offset;
+  int64_t m_branch_offset = 0;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_UNWINDASSEMBLY_INSTEMULATION_UNWINDASSEMBLYINSTEMULATION_H

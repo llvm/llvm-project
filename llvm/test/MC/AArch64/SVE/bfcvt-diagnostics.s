@@ -11,7 +11,7 @@ bfcvt z0.h, p0/m, z1.h
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 bfcvt z0.h, p0/z, z1.s
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction requires: sme2p2 or sve2p2
 // CHECK-NEXT: bfcvt z0.h, p0/z, z1.s
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

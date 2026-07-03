@@ -11,12 +11,13 @@
 // We don't control the implementation on windows
 // UNSUPPORTED: windows
 
-// These compilers don't support constexpr `__builtin_signbit` yet.
-// UNSUPPORTED: clang-17, clang-18, clang-19, apple-clang-15, apple-clang-16
+// GCC warns about signbit comparing `bool_v < 0`, which we're testing
+// ADDITIONAL_COMPILE_FLAGS(gcc): -Wno-bool-compare
 
 #include <cassert>
 #include <cmath>
 #include <limits>
+#include <type_traits>
 
 #include "test_macros.h"
 #include "type_algorithms.h"

@@ -44,8 +44,8 @@ define i1 @pb(i65 %x) {
 
 define <2 x i1> @p1_vec_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @p1_vec_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[X:%.*]], <i8 4, i8 4>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <2 x i8> [[TMP1]], <i8 8, i8 8>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[X:%.*]], splat (i8 4)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <2 x i8> [[TMP1]], splat (i8 8)
 ; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
 ;
   %tmp0 = shl <2 x i8> %x, <i8 5, i8 5>
@@ -70,7 +70,7 @@ define <2 x i1> @p2_vec_nonsplat(<2 x i8> %x) {
 define <3 x i1> @p3_vec_undef0(<3 x i8> %x) {
 ; CHECK-LABEL: @p3_vec_undef0(
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl <3 x i8> [[X:%.*]], <i8 5, i8 undef, i8 5>
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr exact <3 x i8> [[TMP0]], <i8 5, i8 5, i8 5>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr exact <3 x i8> [[TMP0]], splat (i8 5)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <3 x i8> [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret <3 x i1> [[TMP2]]
 ;
@@ -82,7 +82,7 @@ define <3 x i1> @p3_vec_undef0(<3 x i8> %x) {
 
 define <3 x i1> @p4_vec_undef1(<3 x i8> %x) {
 ; CHECK-LABEL: @p4_vec_undef1(
-; CHECK-NEXT:    [[TMP0:%.*]] = shl <3 x i8> [[X:%.*]], <i8 5, i8 5, i8 5>
+; CHECK-NEXT:    [[TMP0:%.*]] = shl <3 x i8> [[X:%.*]], splat (i8 5)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr exact <3 x i8> [[TMP0]], <i8 5, i8 undef, i8 5>
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <3 x i8> [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret <3 x i1> [[TMP2]]
@@ -222,7 +222,7 @@ define i1 @n2(i8 %x, i8 %y) {
 
 define <2 x i1> @n3_vec_nonsplat(<2 x i8> %x) {
 ; CHECK-LABEL: @n3_vec_nonsplat(
-; CHECK-NEXT:    [[TMP0:%.*]] = shl <2 x i8> [[X:%.*]], <i8 5, i8 5>
+; CHECK-NEXT:    [[TMP0:%.*]] = shl <2 x i8> [[X:%.*]], splat (i8 5)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr exact <2 x i8> [[TMP0]], <i8 5, i8 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i8> [[TMP1]], [[X]]
 ; CHECK-NEXT:    ret <2 x i1> [[TMP2]]

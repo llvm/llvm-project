@@ -122,17 +122,14 @@ private:
 
   void substitutePV(MachineInstr &MI, const DenseMap<unsigned, unsigned> &PVs)
       const {
-    unsigned Ops[] = {
-      R600::OpName::src0,
-      R600::OpName::src1,
-      R600::OpName::src2
-    };
-    for (unsigned Op : Ops) {
+    const R600::OpName Ops[] = {R600::OpName::src0, R600::OpName::src1,
+                                R600::OpName::src2};
+    for (R600::OpName Op : Ops) {
       int OperandIdx = TII->getOperandIdx(MI.getOpcode(), Op);
       if (OperandIdx < 0)
         continue;
       Register Src = MI.getOperand(OperandIdx).getReg();
-      const DenseMap<unsigned, unsigned>::const_iterator It = PVs.find(Src);
+      const auto It = PVs.find(Src);
       if (It != PVs.end())
         MI.getOperand(OperandIdx).setReg(It->second);
     }
@@ -321,6 +318,11 @@ bool R600Packetizer::runOnMachineFunction(MachineFunction &Fn) {
   const R600InstrInfo *TII = ST.getInstrInfo();
 
   MachineLoopInfo &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+
+  const InstrItineraryData *II = ST.getInstrItineraryData();
+  // If there is no itineraries information, abandon.
+  if (II->Itineraries == nullptr)
+    return false;
 
   // Instantiate the packetizer.
   R600PacketizerList Packetizer(Fn, ST, MLI);

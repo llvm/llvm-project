@@ -18,25 +18,6 @@
 namespace llvm {
 namespace bolt {
 
-/// Strategy used to partition blocks into fragments.
-enum SplitFunctionsStrategy : char {
-  /// Split each function into a hot and cold fragment using profiling
-  /// information.
-  Profile2 = 0,
-  /// Split each function into a hot, warm, and cold fragment using
-  /// profiling information.
-  CDSplit,
-  /// Split each function into a hot and cold fragment at a randomly chosen
-  /// split point (ignoring any available profiling information).
-  Random2,
-  /// Split each function into N fragments at a randomly chosen split points
-  /// (ignoring any available profiling information).
-  RandomN,
-  /// Split all basic blocks of each function into fragments such that each
-  /// fragment contains exactly a single basic block.
-  All
-};
-
 class SplitStrategy {
 public:
   using BlockIt = BinaryFunction::BasicBlockOrderType::iterator;
@@ -61,10 +42,6 @@ private:
     TrampolineKey(const FragmentNum SourceFN, const MCSymbol *const Target)
         : SourceFN(SourceFN), Target(Target) {}
 
-    static inline TrampolineKey getEmptyKey() { return TrampolineKey(); };
-    static inline TrampolineKey getTombstoneKey() {
-      return TrampolineKey(FragmentNum(UINT_MAX), nullptr);
-    };
     static unsigned getHashValue(const TrampolineKey &Val) {
       return llvm::hash_combine(Val.SourceFN.get(), Val.Target);
     }

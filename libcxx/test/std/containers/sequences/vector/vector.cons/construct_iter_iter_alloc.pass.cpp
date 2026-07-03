@@ -11,6 +11,7 @@
 // template <class InputIter> vector(InputIter first, InputIter last,
 //                                   const allocator_type& a);
 
+#include <algorithm>
 #include <vector>
 #include <cassert>
 #include <cstddef>
@@ -21,8 +22,8 @@
 #include "min_allocator.h"
 #include "asan_testing.h"
 #if TEST_STD_VER >= 11
-#include "emplace_constructible.h"
-#include "container_test_types.h"
+#  include "emplace_constructible.h"
+#  include "container_test_types.h"
 #endif
 
 template <class C, class Iterator, class A>
@@ -31,9 +32,7 @@ TEST_CONSTEXPR_CXX20 void test(Iterator first, Iterator last, const A& a) {
   LIBCPP_ASSERT(c.__invariants());
   assert(c.size() == static_cast<std::size_t>(std::distance(first, last)));
   LIBCPP_ASSERT(is_contiguous_container_asan_correct(c));
-  for (typename C::const_iterator i = c.cbegin(), e = c.cend(); i != e;
-       ++i, ++first)
-    assert(*i == *first);
+  assert(std::equal(c.cbegin(), c.cend(), first));
 }
 
 #if TEST_STD_VER >= 11
@@ -54,14 +53,10 @@ TEST_CONSTEXPR_CXX20 void basic_tests() {
     int a[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 8, 7, 6, 5, 4, 3, 1, 0};
     int* an = a + sizeof(a) / sizeof(a[0]);
     std::allocator<int> alloc;
-    test<std::vector<int> >(cpp17_input_iterator<const int*>(a),
-                            cpp17_input_iterator<const int*>(an), alloc);
-    test<std::vector<int> >(forward_iterator<const int*>(a),
-                            forward_iterator<const int*>(an), alloc);
-    test<std::vector<int> >(bidirectional_iterator<const int*>(a),
-                            bidirectional_iterator<const int*>(an), alloc);
-    test<std::vector<int> >(random_access_iterator<const int*>(a),
-                            random_access_iterator<const int*>(an), alloc);
+    test<std::vector<int> >(cpp17_input_iterator<const int*>(a), cpp17_input_iterator<const int*>(an), alloc);
+    test<std::vector<int> >(forward_iterator<const int*>(a), forward_iterator<const int*>(an), alloc);
+    test<std::vector<int> >(bidirectional_iterator<const int*>(a), bidirectional_iterator<const int*>(an), alloc);
+    test<std::vector<int> >(random_access_iterator<const int*>(a), random_access_iterator<const int*>(an), alloc);
     test<std::vector<int> >(a, an, alloc);
   }
 #if TEST_STD_VER >= 11
@@ -72,14 +67,11 @@ TEST_CONSTEXPR_CXX20 void basic_tests() {
     test<std::vector<int, min_allocator<int> > >(
         cpp17_input_iterator<const int*>(a), cpp17_input_iterator<const int*>(an), alloc);
     test<std::vector<int, min_allocator<int> > >(
-        forward_iterator<const int*>(a), forward_iterator<const int*>(an),
-        alloc);
+        forward_iterator<const int*>(a), forward_iterator<const int*>(an), alloc);
     test<std::vector<int, min_allocator<int> > >(
-        bidirectional_iterator<const int*>(a),
-        bidirectional_iterator<const int*>(an), alloc);
+        bidirectional_iterator<const int*>(a), bidirectional_iterator<const int*>(an), alloc);
     test<std::vector<int, min_allocator<int> > >(
-        random_access_iterator<const int*>(a),
-        random_access_iterator<const int*>(an), alloc);
+        random_access_iterator<const int*>(a), random_access_iterator<const int*>(an), alloc);
     test<std::vector<int, min_allocator<int> > >(a, an, alloc);
     test<std::vector<int, implicit_conv_allocator<int> > >(a, an, nullptr);
   }
@@ -98,7 +90,7 @@ TEST_CONSTEXPR_CXX20 void basic_tests() {
     test<std::vector<int, safe_allocator<int> > >(a, an, alloc);
   }
 
-  // Regression test for https://github.com/llvm/llvm-project/issues/46841
+  // Regression test for https://llvm.org/PR47497
   {
     min_allocator<int> alloc;
     std::vector<int, min_allocator<int> > v1({}, forward_iterator<const int*>{}, alloc);
@@ -112,8 +104,8 @@ TEST_CONSTEXPR_CXX20 void emplaceable_concept_tests() {
   int arr1[] = {42};
   int arr2[] = {1, 101, 42};
   {
-    using T = EmplaceConstructible<int>;
-    using It = forward_iterator<int*>;
+    using T     = EmplaceConstructible<int>;
+    using It    = forward_iterator<int*>;
     using Alloc = std::allocator<T>;
     Alloc a;
     {
@@ -128,8 +120,8 @@ TEST_CONSTEXPR_CXX20 void emplaceable_concept_tests() {
     }
   }
   {
-    using T = EmplaceConstructibleAndMoveInsertable<int>;
-    using It = cpp17_input_iterator<int*>;
+    using T     = EmplaceConstructibleAndMoveInsertable<int>;
+    using It    = cpp17_input_iterator<int*>;
     using Alloc = std::allocator<T>;
     Alloc a;
     {
@@ -149,12 +141,12 @@ TEST_CONSTEXPR_CXX20 void emplaceable_concept_tests() {
 }
 
 void test_ctor_under_alloc() {
-#if TEST_STD_VER >= 11
   int arr1[] = {42};
   int arr2[] = {1, 101, 42};
+#if TEST_STD_VER >= 11
   {
-    using C = TCT::vector<>;
-    using It = forward_iterator<int*>;
+    using C     = TCT::vector<>;
+    using It    = forward_iterator<int*>;
     using Alloc = typename C::allocator_type;
     Alloc a;
     {
@@ -167,8 +159,8 @@ void test_ctor_under_alloc() {
     }
   }
   {
-    using C = TCT::vector<>;
-    using It = cpp17_input_iterator<int*>;
+    using C     = TCT::vector<>;
+    using It    = cpp17_input_iterator<int*>;
     using Alloc = typename C::allocator_type;
     Alloc a;
     {
@@ -181,6 +173,37 @@ void test_ctor_under_alloc() {
     }
   }
 #endif
+  // FIXME: This is mostly the same test as above, just worse. They should be merged.
+  {
+    typedef std::vector<int, cpp03_allocator<int> > C;
+    typedef C::allocator_type Alloc;
+    Alloc a;
+    {
+      Alloc::construct_called = false;
+      C v(arr1, arr1 + 1, a);
+      assert(Alloc::construct_called);
+    }
+    {
+      Alloc::construct_called = false;
+      C v(arr2, arr2 + 3, a);
+      assert(Alloc::construct_called);
+    }
+  }
+  {
+    typedef std::vector<int, cpp03_overload_allocator<int> > C;
+    typedef C::allocator_type Alloc;
+    Alloc a;
+    {
+      Alloc::construct_called = false;
+      C v(arr1, arr1 + 1, a);
+      assert(Alloc::construct_called);
+    }
+    {
+      Alloc::construct_called = false;
+      C v(arr2, arr2 + 3, a);
+      assert(Alloc::construct_called);
+    }
+  }
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {

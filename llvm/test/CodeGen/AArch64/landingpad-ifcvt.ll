@@ -2,6 +2,7 @@
 
 ; Make sure this doesn't crash (and the output is sane).
 ; CHECK: // %__except.ret
+; CHECK-NEXT: $ehgcr_0_2:
 ; CHECK-NEXT: mov     x0, xzr
 
 target datalayout = "e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128"

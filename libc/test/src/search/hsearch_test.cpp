@@ -15,7 +15,6 @@
 #include "src/search/hsearch.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <asm-generic/errno-base.h>
 
 TEST(LlvmLibcHsearchTest, CreateTooLarge) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;

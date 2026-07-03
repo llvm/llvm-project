@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; This one should generate a combine with two immediates.
 ; CHECK: combine(#7,#7)
 @B = common global [400 x i32] zeroinitializer, align 8

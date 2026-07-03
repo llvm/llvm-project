@@ -10,6 +10,7 @@ import lldbsuite.test.lldbplatformutil as lldbplatformutil
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test import configuration
 from lldbsuite.test_event import build_exception
+from lldbsuite.support import seven
 
 
 class Builder:
@@ -23,9 +24,8 @@ class Builder:
         compiler = lldbutil.which(compiler)
         return os.path.abspath(compiler)
 
-    def getTriple(self, arch):
-        """Returns the triple for the given architecture or None."""
-        return None
+    def getTriple(self):
+        return configuration.triple
 
     def getExtraMakeArgs(self):
         """
@@ -34,7 +34,14 @@ class Builder:
         """
         return []
 
-    def getArchCFlags(self, architecture):
+    def getTripleSpec(self):
+        """Returns the TRIPLE for the make system."""
+        triple = self.getTriple()
+        if triple:
+            return ["TRIPLE=" + triple]
+        return []
+
+    def getArchCFlags(self):
         """Returns the ARCH_CFLAGS for the make system."""
         return []
 
@@ -91,13 +98,6 @@ class Builder:
 
         return cmdline
 
-    def getArchSpec(self, architecture):
-        """
-        Helper function to return the key-value string to specify the architecture
-        used for the make system.
-        """
-        return ["ARCH=" + architecture] if architecture else []
-
     def getToolchainSpec(self, compiler):
         """
         Helper function to return the key-value strings to specify the toolchain
@@ -134,7 +134,7 @@ class Builder:
         cc_type = cc_name
         # A triple prefix of compiler name: <armv7-none-linux-gnu->gcc
         cc_prefix = ""
-        if not "clang-cl" in cc_name and not "llvm-gcc" in cc_name:
+        if "clang-cl" not in cc_name:
             cc_name_parts = cc_name.split("-")
             cc_type = cc_name_parts[-1]
             if len(cc_name_parts) > 1:
@@ -143,12 +143,16 @@ class Builder:
         # A kind of C++ compiler.
         cxx_types = {
             "icc": "icpc",
-            "llvm-gcc": "llvm-g++",
             "gcc": "g++",
             "cc": "c++",
             "clang": "clang++",
+            "xcrun clang": "xcrun clang++",
         }
-        cxx_type = cxx_types.get(cc_type, cc_type)
+        # Determine the C++ compiler based on the given compiler path/command.
+        cxx_type = cxx_types.get(compiler)
+        if cxx_type is None:
+            # If that did not work, then use the inferred cc_type.
+            cxx_type = cxx_types.get(cc_type, cxx_type)
 
         cc_dir = cc_path.parent
 
@@ -169,31 +173,34 @@ class Builder:
         if not os.getenv("LLVM_AR"):
             utils.extend(["LLVM_AR=%s" % getToolchainUtil("llvm-ar")])
 
-        if not lldbplatformutil.platformIsDarwin():
-            if cc_type in ["clang", "cc", "gcc"]:
-                util_paths = {}
-                # Assembly a toolchain side tool cmd based on passed CC.
-                for var, name in util_names.items():
-                    # Do not override explicity specified tool from the cmd line.
-                    if not os.getenv(var):
-                        util_paths[var] = getToolchainUtil("llvm-" + name)
-                    else:
-                        util_paths[var] = os.getenv(var)
-                utils.extend(["AR=%s" % util_paths["ARCHIVER"]])
+        if cc_type in ["clang", "cc", "gcc"]:
+            util_paths = {}
+            # Assembly a toolchain side tool cmd based on passed CC.
+            for var, name in util_names.items():
+                # Do not override explicity specified tool from the cmd line.
+                if not os.getenv(var):
+                    util_paths[var] = getToolchainUtil("llvm-" + name)
+                else:
+                    util_paths[var] = os.getenv(var)
+            utils.extend(["AR=%s" % util_paths["ARCHIVER"]])
 
-                # Look for llvm-dwp or gnu dwp
-                if not lldbutil.which(util_paths["DWP"]):
-                    util_paths["DWP"] = getToolchainUtil("llvm-dwp")
-                if not lldbutil.which(util_paths["DWP"]):
-                    util_paths["DWP"] = lldbutil.which("llvm-dwp")
+            # Look for llvm-dwp or gnu dwp
+            if not lldbutil.which(util_paths["DWP"]):
+                util_paths["DWP"] = getToolchainUtil("llvm-dwp")
+            if not lldbutil.which(util_paths["DWP"]):
+                util_paths["DWP"] = lldbutil.which("llvm-dwp")
+            if not util_paths["DWP"]:
+                util_paths["DWP"] = lldbutil.which("dwp")
                 if not util_paths["DWP"]:
-                    util_paths["DWP"] = lldbutil.which("dwp")
-                    if not util_paths["DWP"]:
-                        del util_paths["DWP"]
+                    del util_paths["DWP"]
 
-                for var, path in util_paths.items():
-                    utils.append("%s=%s" % (var, path))
-        else:
+            if lldbplatformutil.platformIsDarwin():
+                util_paths["STRIP"] = seven.get_command_output("xcrun -f strip")
+
+            for var, path in util_paths.items():
+                utils.append("%s=%s" % (var, path))
+
+        if lldbplatformutil.platformIsDarwin():
             utils.extend(["AR=%slibtool" % os.getenv("CROSS_COMPILE", "")])
 
         return [
@@ -238,18 +245,39 @@ class Builder:
         return []
 
     def getLLDBObjRoot(self):
-        return ["LLDB_OBJ_ROOT={}".format(configuration.lldb_obj_root)]
+        if configuration.lldb_obj_root:
+            return [f"LLDB_OBJ_ROOT={configuration.lldb_obj_root}"]
+        return []
+
+    def getResourceDirArgs(self):
+        if configuration.resource_dir:
+            return [f"RESOURCE_DIR={configuration.resource_dir}"]
+        return []
 
     def _getDebugInfoArgs(self, debug_info):
         if debug_info is None:
             return []
-        if debug_info == "dwarf":
-            return ["MAKE_DSYM=NO"]
-        if debug_info == "dwo":
-            return ["MAKE_DSYM=NO", "MAKE_DWO=YES"]
-        if debug_info == "gmodules":
-            return ["MAKE_DSYM=NO", "MAKE_GMODULES=YES"]
-        return None
+
+        debug_options = debug_info if isinstance(debug_info, list) else [debug_info]
+        option_flags = {
+            "dwarf": {"MAKE_DSYM": "NO"},
+            "dwo": {"MAKE_DSYM": "NO", "MAKE_DWO": "YES"},
+            "gmodules": {"MAKE_DSYM": "NO", "MAKE_GMODULES": "YES"},
+            "debug_names": {"MAKE_DEBUG_NAMES": "YES"},
+            "dwp": {"MAKE_DSYM": "NO", "MAKE_DWP": "YES"},
+            "pdb": {"MAKE_PDB": "YES"},
+            "none": {"MAKE_DSYM": "NO", "MAKE_NO_DEBUG_INFO": "YES"},
+        }
+
+        # Collect all flags, with later options overriding earlier ones
+        flags = {}
+
+        for option in debug_options:
+            if not option or option not in option_flags:
+                return None  # Invalid options
+            flags.update(option_flags[option])
+
+        return [f"{key}={value}" for key, value in flags.items()]
 
     def getBuildCommand(
         self,
@@ -270,14 +298,15 @@ class Builder:
             self.getMake(testdir, testname),
             debug_info_args,
             make_targets,
-            self.getArchCFlags(architecture),
-            self.getArchSpec(architecture),
+            self.getArchCFlags(),
+            self.getTripleSpec(),
             self.getToolchainSpec(compiler),
             self.getExtraMakeArgs(),
             self.getSDKRootSpec(),
             self.getModuleCacheSpec(),
             self.getLibCxxArgs(),
             self.getLLDBObjRoot(),
+            self.getResourceDirArgs(),
             self.getCmdLine(dictionary),
         ]
         command = list(itertools.chain(*command_parts))

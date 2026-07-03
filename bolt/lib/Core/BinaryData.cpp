@@ -24,7 +24,7 @@ namespace opts {
 extern cl::OptionCategory BoltCategory;
 extern cl::opt<unsigned> Verbosity;
 
-cl::opt<bool>
+static cl::opt<bool>
     PrintSymbolAliases("print-aliases",
                        cl::desc("print aliases when printing objects"),
                        cl::Hidden, cl::cat(BoltCategory));

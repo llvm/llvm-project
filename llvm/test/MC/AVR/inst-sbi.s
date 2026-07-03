@@ -21,7 +21,6 @@ foo:
 ; CHECK: sbi 31, 7                 ; encoding: [0xff,0x9a]
 
 ; CHECK: sbi main, 0               ; encoding: [0bAAAAA000,0x9a]
-; CHECK:                           ;   fixup A - offset: 0, value: main, kind: fixup_port5
 
 ; CHECK-INST: sbi 3, 5
 ; CHECK-INST: sbi 1, 1

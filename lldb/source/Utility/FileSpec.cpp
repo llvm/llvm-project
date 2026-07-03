@@ -60,7 +60,7 @@ void Denormalize(llvm::SmallVectorImpl<char> &path, FileSpec::Style style) {
   if (PathStyleIsPosix(style))
     return;
 
-  std::replace(path.begin(), path.end(), '/', '\\');
+  llvm::replace(path, '/', '\\');
 }
 
 } // end anonymous namespace
@@ -186,7 +186,7 @@ void FileSpec::SetFile(llvm::StringRef pathname, Style style) {
 
   // Normalize back slashes to forward slashes
   if (m_style == Style::windows)
-    std::replace(resolved.begin(), resolved.end(), '\\', '/');
+    llvm::replace(resolved, '\\', '/');
 
   if (resolved.empty()) {
     // If we have no path after normalization set the path to the current
@@ -292,16 +292,16 @@ int FileSpec::Compare(const FileSpec &a, const FileSpec &b, bool full) {
 }
 
 bool FileSpec::Equal(const FileSpec &a, const FileSpec &b, bool full) {
-  if (full || (a.GetDirectory() && b.GetDirectory()))
+  if (full || (!a.GetDirectory().empty() && !b.GetDirectory().empty()))
     return a == b;
 
   return a.FileEquals(b);
 }
 
 bool FileSpec::Match(const FileSpec &pattern, const FileSpec &file) {
-  if (pattern.GetDirectory())
+  if (!pattern.GetDirectory().empty())
     return pattern == file;
-  if (pattern.GetFilename())
+  if (!pattern.GetFilename().empty())
     return pattern.FileEquals(file);
   return true;
 }
@@ -330,20 +330,17 @@ void FileSpec::Dump(llvm::raw_ostream &s) const {
     s << path_separator;
 }
 
-FileSpec::Style FileSpec::GetPathStyle() const { return m_style; }
-
-void FileSpec::SetDirectory(ConstString directory) {
-  m_directory = directory;
-  PathWasModified();
+llvm::json::Value FileSpec::ToJSON() const {
+  std::string str;
+  llvm::raw_string_ostream stream(str);
+  this->Dump(stream);
+  return llvm::json::Value(std::move(str));
 }
+
+FileSpec::Style FileSpec::GetPathStyle() const { return m_style; }
 
 void FileSpec::SetDirectory(llvm::StringRef directory) {
   m_directory = ConstString(directory);
-  PathWasModified();
-}
-
-void FileSpec::SetFilename(ConstString filename) {
-  m_filename = filename;
   PathWasModified();
 }
 
@@ -380,10 +377,6 @@ std::string FileSpec::GetPath(bool denormalize) const {
   return static_cast<std::string>(result);
 }
 
-ConstString FileSpec::GetPathAsConstString(bool denormalize) const {
-  return ConstString{GetPath(denormalize)};
-}
-
 void FileSpec::GetPath(llvm::SmallVectorImpl<char> &path,
                        bool denormalize) const {
   path.append(m_directory.GetStringRef().begin(),
@@ -404,8 +397,8 @@ llvm::StringRef FileSpec::GetFileNameExtension() const {
   return llvm::sys::path::extension(m_filename.GetStringRef(), m_style);
 }
 
-ConstString FileSpec::GetFileNameStrippingExtension() const {
-  return ConstString(llvm::sys::path::stem(m_filename.GetStringRef(), m_style));
+llvm::StringRef FileSpec::GetFileNameStrippingExtension() const {
+  return llvm::sys::path::stem(m_filename.GetStringRef(), m_style);
 }
 
 // Return the size in bytes that this object takes in memory. This returns the
@@ -539,8 +532,8 @@ void llvm::format_provider<FileSpec>::format(const FileSpec &F,
           Style.equals_insensitive("D")) &&
          "Invalid FileSpec style!");
 
-  StringRef dir = F.GetDirectory().GetStringRef();
-  StringRef file = F.GetFilename().GetStringRef();
+  StringRef dir = F.GetDirectory();
+  StringRef file = F.GetFilename();
 
   if (dir.empty() && file.empty()) {
     Stream << "(empty)";

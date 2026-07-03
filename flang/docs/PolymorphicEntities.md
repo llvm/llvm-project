@@ -609,7 +609,7 @@ finalization with a call the the `@_FortranADestroy` function
 
 **FIR**
 ```
-%5 = fir.call @_FortranADestroy(%desc) : (!fir.box<none>) -> none
+fir.call @_FortranADestroy(%desc) : (!fir.box<none>) -> ()
 ```
 
 The `@_FortranADestroy` function will take care to call the final subroutines

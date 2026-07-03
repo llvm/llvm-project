@@ -15,7 +15,6 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "llvm/ADT/STLExtras.h"
-#include <cstdint>
 
 using namespace mlir::spirv::AttrNames;
 
@@ -23,7 +22,8 @@ namespace mlir::spirv {
 
 static LogicalResult
 verifyCoopMatrixAccess(Operation *op, Type pointer, Type coopMatrix,
-                       spirv::MemoryAccessAttr memoryOperand) {
+                       spirv::MemoryAccessAttr memoryOperand,
+                       IntegerAttr alignment) {
   auto pointerType = cast<PointerType>(pointer);
   Type pointeeType = pointerType.getPointeeType();
   if (!isa<ScalarType, VectorType>(pointeeType)) {
@@ -49,13 +49,18 @@ verifyCoopMatrixAccess(Operation *op, Type pointer, Type coopMatrix,
           "not compatible with memory operand 'MakePointerVisible'");
     }
 
-    // The 'Aligned' memory operand requires an alignment literal to follow,
-    // which needs to be implemented on the level of op parsing and
-    // (de-)serialization.
-    // TODO: Consider adding support for this attribute value.
-    if (spirv::bitEnumContainsAll(memoryOperand.getValue(),
-                                  spirv::MemoryAccess::Aligned)) {
-      return op->emitOpError("has unhandled memory operand 'Aligned'");
+    // TODO: Need to check that NonPrivatePointer is set for MakePointer*. See
+    // #145485.
+
+    if (spirv::bitEnumContainsAll(operandSet, spirv::MemoryAccess::Aligned) &&
+        !alignment) {
+      return op->emitOpError("missing value for the 'Aligned' memory operand");
+    }
+
+    if (!spirv::bitEnumContainsAll(operandSet, spirv::MemoryAccess::Aligned) &&
+        alignment) {
+      return op->emitOpError(
+          "found alignment attribute for non-'Aligned' memory operand");
     }
   }
 
@@ -72,7 +77,8 @@ verifyCoopMatrixAccess(Operation *op, Type pointer, Type coopMatrix,
 
 LogicalResult KHRCooperativeMatrixLoadOp::verify() {
   return verifyCoopMatrixAccess(*this, getPointer().getType(),
-                                getResult().getType(), getMemoryOperandAttr());
+                                getResult().getType(), getMemoryOperandAttr(),
+                                getAlignmentAttr());
 }
 
 //===----------------------------------------------------------------------===//
@@ -81,7 +87,8 @@ LogicalResult KHRCooperativeMatrixLoadOp::verify() {
 
 LogicalResult KHRCooperativeMatrixStoreOp::verify() {
   return verifyCoopMatrixAccess(*this, getPointer().getType(),
-                                getObject().getType(), getMemoryOperandAttr());
+                                getObject().getType(), getMemoryOperandAttr(),
+                                getAlignmentAttr());
 }
 
 //===----------------------------------------------------------------------===//

@@ -12,7 +12,7 @@
 
 // class multimap
 
-// void insert(initializer_list<value_type> il);
+// void insert(initializer_list<value_type> il); // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -20,27 +20,17 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
+TEST_CONSTEXPR_CXX26
+bool test() {
+  {
     typedef std::multimap<int, double> C;
     typedef C::value_type V;
-    C m =
-           {
-               {1, 1},
-               {1, 2},
-               {2, 1},
-               {2, 2},
-               {3, 1},
-               {3, 2}
-           };
-    m.insert(
-               {
-                   {1, 1.5},
-                   {2, 1.5},
-                   {3, 1.5},
-               }
-            );
+    C m = {{1, 1}, {1, 2}, {2, 1}, {2, 2}, {3, 1}, {3, 2}};
+    m.insert({
+        {1, 1.5},
+        {2, 1.5},
+        {3, 1.5},
+    });
     assert(m.size() == 9);
     assert(std::distance(m.begin(), m.end()) == 9);
     C::const_iterator i = m.cbegin();
@@ -53,26 +43,16 @@ int main(int, char**)
     assert(*++i == V(3, 1));
     assert(*++i == V(3, 2));
     assert(*++i == V(3, 1.5));
-    }
-    {
+  }
+  {
     typedef std::multimap<int, double, std::less<int>, min_allocator<std::pair<const int, double>>> C;
     typedef C::value_type V;
-    C m =
-           {
-               {1, 1},
-               {1, 2},
-               {2, 1},
-               {2, 2},
-               {3, 1},
-               {3, 2}
-           };
-    m.insert(
-               {
-                   {1, 1.5},
-                   {2, 1.5},
-                   {3, 1.5},
-               }
-            );
+    C m = {{1, 1}, {1, 2}, {2, 1}, {2, 2}, {3, 1}, {3, 2}};
+    m.insert({
+        {1, 1.5},
+        {2, 1.5},
+        {3, 1.5},
+    });
     assert(m.size() == 9);
     assert(std::distance(m.begin(), m.end()) == 9);
     C::const_iterator i = m.cbegin();
@@ -85,7 +65,16 @@ int main(int, char**)
     assert(*++i == V(3, 1));
     assert(*++i == V(3, 2));
     assert(*++i == V(3, 1.5));
-    }
+  }
 
+  return true;
+}
+
+int main(int, char**) {
+  test();
+
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

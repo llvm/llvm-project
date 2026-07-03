@@ -1,4 +1,4 @@
-//===--- BadSignalToKillThreadCheck.h - clang-tidy --------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ namespace clang::tidy::bugprone {
 /// Finds ``pthread_kill`` function calls when thread is terminated by
 /// ``SIGTERM`` signal.
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/bad-signal-to-kill-thread.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/bad-signal-to-kill-thread.html
 class BadSignalToKillThreadCheck : public ClangTidyCheck {
 public:
   BadSignalToKillThreadCheck(StringRef Name, ClangTidyContext *Context)

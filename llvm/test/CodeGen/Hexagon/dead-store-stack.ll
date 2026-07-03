@@ -1,4 +1,4 @@
-; RUN: llc -O2 -march=hexagon -mcpu=hexagonv62 < %s | FileCheck %s
+; RUN: llc -O2 -mtriple=hexagon -mcpu=hexagonv62 < %s | FileCheck %s
 ; CHECK: ParseFunc:
 ; CHECK: r[[ARG0:[0-9]+]] = memuh(r[[ARG1:[0-9]+]]+#[[OFFSET:[0-9]+]])
 ; CHECK: memw(r[[ARG1]]+#[[OFFSET]]) = r[[ARG0]]
@@ -126,7 +126,7 @@ sw.epilog:
 ; Function Attrs: nounwind
 declare void @snprintf(ptr nocapture, i32, ptr nocapture readonly, ...) local_unnamed_addr #1
 
-attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv62" "target-features"="+hvx,+hvx-length64b" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv62" "target-features"="+hvx,+hvx-length64b" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv62" "target-features"="+hvx,+hvx-length64b" "use-soft-float"="false" }
+attributes #1 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv62" "target-features"="+hvx,+hvx-length64b" "use-soft-float"="false" }
 attributes #2 = { nounwind }
 

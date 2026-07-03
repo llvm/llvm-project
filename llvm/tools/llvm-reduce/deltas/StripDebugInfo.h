@@ -12,7 +12,7 @@
 #include "Delta.h"
 
 namespace llvm {
-void stripDebugInfoDeltaPass(TestRunner &Test);
+void stripDebugInfoDeltaPass(Oracle &O, ReducerWorkItem &WorkItem);
 } // namespace llvm
 
 #endif

@@ -68,10 +68,10 @@
 6001 format(((I0, B0)))
 
      !ERROR: 'A' edit descriptor 'w' value must be positive
-     !ERROR: 'L' edit descriptor 'w' value must be positive
+     !WARNING: 'L' edit descriptor 'w' value should be positive
 6101 format((A0), ((L0)))
 
-     !ERROR: 'L' edit descriptor 'w' value must be positive
+     !WARNING: 'L' edit descriptor 'w' value should be positive
 6102 format((3(((L 0 0 0)))))
 
 7001 format(17G8.1, 17G8.1e3)

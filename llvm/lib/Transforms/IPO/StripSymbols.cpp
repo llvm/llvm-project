@@ -20,19 +20,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/StripSymbols.h"
+
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/TypeFinder.h"
 #include "llvm/IR/ValueSymbolTable.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Transforms/IPO.h"
-#include "llvm/Transforms/IPO/StripSymbols.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
@@ -75,15 +77,17 @@ static void RemoveDeadConstant(Constant *C) {
 // Strip the symbol table of its names.
 //
 static void StripSymtab(ValueSymbolTable &ST, bool PreserveDbgInfo) {
-  for (ValueSymbolTable::iterator VI = ST.begin(), VE = ST.end(); VI != VE; ) {
-    Value *V = VI->getValue();
-    ++VI;
-    if (!isa<GlobalValue>(V) || cast<GlobalValue>(V)->hasLocalLinkage()) {
+  // Collect the values to rename first: setName("") removes the value from the
+  // symbol table, which invalidates iterators into it.
+  SmallVector<Value *, 0> ToStrip;
+  for (const ValueName &VN : ST) {
+    Value *V = VN.getValue();
+    if (!isa<GlobalValue>(V) || cast<GlobalValue>(V)->hasLocalLinkage())
       if (!PreserveDbgInfo || !V->getName().starts_with("llvm.dbg"))
-        // Set name to "", removing from symbol table!
-        V->setName("");
-    }
+        ToStrip.push_back(V);
   }
+  for (Value *V : ToStrip)
+    V->setName("");
 }
 
 // Strip any named types of their names.
@@ -143,8 +147,8 @@ static bool StripSymbolNames(Module &M, bool PreserveDbgInfo) {
 }
 
 static bool stripDebugDeclareImpl(Module &M) {
-
-  Function *Declare = M.getFunction("llvm.dbg.declare");
+  Function *Declare =
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::dbg_declare);
   std::vector<Constant*> DeadConstants;
 
   if (Declare) {
@@ -297,4 +301,21 @@ PreservedAnalyses StripDeadDebugInfoPass::run(Module &M,
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
   return PA;
+}
+
+PreservedAnalyses StripDeadCGProfilePass::run(Module &M,
+                                              ModuleAnalysisManager &AM) {
+  auto *CGProf = dyn_cast_or_null<MDTuple>(M.getModuleFlag("CG Profile"));
+  if (!CGProf)
+    return PreservedAnalyses::all();
+
+  SmallVector<Metadata *, 16> ValidCGEdges;
+  for (Metadata *Edge : CGProf->operands()) {
+    if (auto *EdgeAsNode = dyn_cast_or_null<MDNode>(Edge))
+      if (!llvm::is_contained(EdgeAsNode->operands(), nullptr))
+        ValidCGEdges.push_back(Edge);
+  }
+  M.setModuleFlag(Module::Append, "CG Profile",
+                  MDTuple::getDistinct(M.getContext(), ValidCGEdges));
+  return PreservedAnalyses::none();
 }

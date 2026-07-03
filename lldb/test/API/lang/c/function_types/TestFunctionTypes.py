@@ -7,6 +7,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # no expression evaluation
 class FunctionTypesTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().
@@ -50,11 +51,11 @@ class FunctionTypesTestCase(TestBase):
 
         self.expect(
             "expr string_not_empty",
-            substrs=["(int (*)(const char *)) $0 = ", "(a.out`"],
+            substrs=["(int (*)(const char *)) $0 = ", "a.out`"],
         )
 
         if self.platformIsDarwin():
-            regexps = ["lib.*\.dylib`printf"]
+            regexps = [r"lib.*\.dylib`printf"]
         else:
             regexps = ["printf"]
         self.expect(

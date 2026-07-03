@@ -101,18 +101,24 @@ _start:
 // DSO-NEXT:     .word   0xd4d4d4d4
 
 /// 136 + 2 << 16 + 0x1026c = 0x302f4 = got entry 1
+// DSO-EMPTY:
+// DSO-NEXT:     <func1@plt>:
 // DSO-NEXT:     10260:       f240 0c88     movw    r12, #136
 // DSO-NEXT:                  f2c0 0c02     movt    r12, #2
 // DSO-NEXT:                  44fc          add     r12, pc
 // DSO-NEXT:                  f8dc f000     ldr.w   pc, [r12]
 // DSO-NEXT:                  e7fc          b       0x1026a
 /// 124 + 2 << 16 + 0x1027c = 0x302f8 = got entry 2
+// DSO-EMPTY:
+// DSO-NEXT:     <func2@plt>:
 // DSO-NEXT:     10270:       f240 0c7c     movw    r12, #124
 // DSO-NEXT:                  f2c0 0c02     movt    r12, #2
 // DSO-NEXT:                  44fc          add     r12, pc
 // DSO-NEXT:                  f8dc f000     ldr.w   pc, [r12]
 // DSO-NEXT:                  e7fc          b       0x1027a
 /// 112 + 2 << 16 + 0x1028c = 0x302fc = got entry 3
+// DSO-EMPTY:
+// DSO-NEXT:     <func3@plt>:
 // DSO-NEXT:     10280:       f240 0c70     movw    r12, #112
 // DSO-NEXT:                  f2c0 0c02     movt    r12, #2
 // DSO-NEXT:                  44fc          add     r12, pc

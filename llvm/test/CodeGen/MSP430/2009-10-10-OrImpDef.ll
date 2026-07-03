@@ -1,4 +1,4 @@
-; RUN: llc -march=msp430 < %s
+; RUN: llc -mtriple=msp430 < %s
 ; PR4779 
 define void @foo() nounwind {
 entry:

@@ -1,4 +1,4 @@
-//===--- InterfacesGlobalInitCheck.cpp - clang-tidy------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "InterfacesGlobalInitCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
@@ -20,7 +19,7 @@ void InterfacesGlobalInitCheck::registerMatchers(MatchFinder *Finder) {
               hasDeclContext(anyOf(translationUnitDecl(), // Global scope.
                                    namespaceDecl(),       // Namespace scope.
                                    recordDecl())),        // Class scope.
-              unless(isConstexpr()));
+              unless(isConstexpr()), unless(isConstinit()));
 
   const auto ReferencesUndefinedGlobalVar = declRefExpr(hasDeclaration(
       varDecl(GlobalVarDecl, unless(isDefinition())).bind("referencee")));

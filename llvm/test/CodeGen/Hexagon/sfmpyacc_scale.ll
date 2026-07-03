@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; CHECK: r{{[0-9]*}} += sfmpy(r{{[0-9]*}},r{{[0-9]*}},p{{[0-3]}}):scale
 
 target triple = "hexagon"

@@ -27,16 +27,13 @@ body:             |
     ; CHECK-M-LABEL: name: sdiv_i8
     ; CHECK-M: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-M-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; CHECK-M-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-M-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
-    ; CHECK-M-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[TRUNC]], [[C]](s32)
-    ; CHECK-M-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
-    ; CHECK-M-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
-    ; CHECK-M-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[TRUNC1]], [[C]](s32)
-    ; CHECK-M-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[SHL1]], [[C]](s32)
-    ; CHECK-M-NEXT: [[SDIV:%[0-9]+]]:_(s32) = G_SDIV [[ASHR]], [[ASHR1]]
-    ; CHECK-M-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[SDIV]](s32)
-    ; CHECK-M-NEXT: $x10 = COPY [[ANYEXT]](s64)
+    ; CHECK-M-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 56
+    ; CHECK-M-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[C]](s64)
+    ; CHECK-M-NEXT: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[SHL]], [[C]](s64)
+    ; CHECK-M-NEXT: [[SHL1:%[0-9]+]]:_(s64) = G_SHL [[COPY1]], [[C]](s64)
+    ; CHECK-M-NEXT: [[ASHR1:%[0-9]+]]:_(s64) = G_ASHR [[SHL1]], [[C]](s64)
+    ; CHECK-M-NEXT: [[DIVW:%[0-9]+]]:_(s64) = G_DIVW [[ASHR]], [[ASHR1]]
+    ; CHECK-M-NEXT: $x10 = COPY [[DIVW]](s64)
     ; CHECK-M-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
     %1:_(s64) = COPY $x11
@@ -72,16 +69,13 @@ body:             |
     ; CHECK-M-LABEL: name: sdiv_i15
     ; CHECK-M: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-M-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; CHECK-M-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-M-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 17
-    ; CHECK-M-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[TRUNC]], [[C]](s32)
-    ; CHECK-M-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
-    ; CHECK-M-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
-    ; CHECK-M-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[TRUNC1]], [[C]](s32)
-    ; CHECK-M-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[SHL1]], [[C]](s32)
-    ; CHECK-M-NEXT: [[SDIV:%[0-9]+]]:_(s32) = G_SDIV [[ASHR]], [[ASHR1]]
-    ; CHECK-M-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[SDIV]](s32)
-    ; CHECK-M-NEXT: $x10 = COPY [[ANYEXT]](s64)
+    ; CHECK-M-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 49
+    ; CHECK-M-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[C]](s64)
+    ; CHECK-M-NEXT: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[SHL]], [[C]](s64)
+    ; CHECK-M-NEXT: [[SHL1:%[0-9]+]]:_(s64) = G_SHL [[COPY1]], [[C]](s64)
+    ; CHECK-M-NEXT: [[ASHR1:%[0-9]+]]:_(s64) = G_ASHR [[SHL1]], [[C]](s64)
+    ; CHECK-M-NEXT: [[DIVW:%[0-9]+]]:_(s64) = G_DIVW [[ASHR]], [[ASHR1]]
+    ; CHECK-M-NEXT: $x10 = COPY [[DIVW]](s64)
     ; CHECK-M-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
     %1:_(s64) = COPY $x11
@@ -117,16 +111,13 @@ body:             |
     ; CHECK-M-LABEL: name: sdiv_i16
     ; CHECK-M: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-M-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; CHECK-M-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-M-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK-M-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[TRUNC]], [[C]](s32)
-    ; CHECK-M-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
-    ; CHECK-M-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
-    ; CHECK-M-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[TRUNC1]], [[C]](s32)
-    ; CHECK-M-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[SHL1]], [[C]](s32)
-    ; CHECK-M-NEXT: [[SDIV:%[0-9]+]]:_(s32) = G_SDIV [[ASHR]], [[ASHR1]]
-    ; CHECK-M-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[SDIV]](s32)
-    ; CHECK-M-NEXT: $x10 = COPY [[ANYEXT]](s64)
+    ; CHECK-M-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
+    ; CHECK-M-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[C]](s64)
+    ; CHECK-M-NEXT: [[ASHR:%[0-9]+]]:_(s64) = G_ASHR [[SHL]], [[C]](s64)
+    ; CHECK-M-NEXT: [[SHL1:%[0-9]+]]:_(s64) = G_SHL [[COPY1]], [[C]](s64)
+    ; CHECK-M-NEXT: [[ASHR1:%[0-9]+]]:_(s64) = G_ASHR [[SHL1]], [[C]](s64)
+    ; CHECK-M-NEXT: [[DIVW:%[0-9]+]]:_(s64) = G_DIVW [[ASHR]], [[ASHR1]]
+    ; CHECK-M-NEXT: $x10 = COPY [[DIVW]](s64)
     ; CHECK-M-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
     %1:_(s64) = COPY $x11
@@ -159,11 +150,8 @@ body:             |
     ; CHECK-M-LABEL: name: sdiv_i32
     ; CHECK-M: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-M-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; CHECK-M-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-M-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
-    ; CHECK-M-NEXT: [[SDIV:%[0-9]+]]:_(s32) = G_SDIV [[TRUNC]], [[TRUNC1]]
-    ; CHECK-M-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[SDIV]](s32)
-    ; CHECK-M-NEXT: $x10 = COPY [[ANYEXT]](s64)
+    ; CHECK-M-NEXT: [[DIVW:%[0-9]+]]:_(s64) = G_DIVW [[COPY]], [[COPY1]]
+    ; CHECK-M-NEXT: $x10 = COPY [[DIVW]](s64)
     ; CHECK-M-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
     %1:_(s64) = COPY $x11
@@ -343,14 +331,11 @@ body:             |
     ; CHECK-M-LABEL: name: udiv_i8
     ; CHECK-M: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-M-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; CHECK-M-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-M-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; CHECK-M-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[C]]
-    ; CHECK-M-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
-    ; CHECK-M-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[TRUNC1]], [[C]]
-    ; CHECK-M-NEXT: [[UDIV:%[0-9]+]]:_(s32) = G_UDIV [[AND]], [[AND1]]
-    ; CHECK-M-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[UDIV]](s32)
-    ; CHECK-M-NEXT: $x10 = COPY [[ANYEXT]](s64)
+    ; CHECK-M-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
+    ; CHECK-M-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
+    ; CHECK-M-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C]]
+    ; CHECK-M-NEXT: [[DIVUW:%[0-9]+]]:_(s64) = G_DIVUW [[AND]], [[AND1]]
+    ; CHECK-M-NEXT: $x10 = COPY [[DIVUW]](s64)
     ; CHECK-M-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
     %1:_(s64) = COPY $x11
@@ -384,14 +369,11 @@ body:             |
     ; CHECK-M-LABEL: name: udiv_i15
     ; CHECK-M: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-M-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; CHECK-M-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-M-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32767
-    ; CHECK-M-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[C]]
-    ; CHECK-M-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
-    ; CHECK-M-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[TRUNC1]], [[C]]
-    ; CHECK-M-NEXT: [[UDIV:%[0-9]+]]:_(s32) = G_UDIV [[AND]], [[AND1]]
-    ; CHECK-M-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[UDIV]](s32)
-    ; CHECK-M-NEXT: $x10 = COPY [[ANYEXT]](s64)
+    ; CHECK-M-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 32767
+    ; CHECK-M-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
+    ; CHECK-M-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C]]
+    ; CHECK-M-NEXT: [[DIVUW:%[0-9]+]]:_(s64) = G_DIVUW [[AND]], [[AND1]]
+    ; CHECK-M-NEXT: $x10 = COPY [[DIVUW]](s64)
     ; CHECK-M-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
     %1:_(s64) = COPY $x11
@@ -425,14 +407,11 @@ body:             |
     ; CHECK-M-LABEL: name: udiv_i16
     ; CHECK-M: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-M-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; CHECK-M-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-M-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; CHECK-M-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[C]]
-    ; CHECK-M-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
-    ; CHECK-M-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[TRUNC1]], [[C]]
-    ; CHECK-M-NEXT: [[UDIV:%[0-9]+]]:_(s32) = G_UDIV [[AND]], [[AND1]]
-    ; CHECK-M-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[UDIV]](s32)
-    ; CHECK-M-NEXT: $x10 = COPY [[ANYEXT]](s64)
+    ; CHECK-M-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 65535
+    ; CHECK-M-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
+    ; CHECK-M-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C]]
+    ; CHECK-M-NEXT: [[DIVUW:%[0-9]+]]:_(s64) = G_DIVUW [[AND]], [[AND1]]
+    ; CHECK-M-NEXT: $x10 = COPY [[DIVUW]](s64)
     ; CHECK-M-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
     %1:_(s64) = COPY $x11
@@ -466,11 +445,8 @@ body:             |
     ; CHECK-M-LABEL: name: udiv_i32
     ; CHECK-M: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-M-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; CHECK-M-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-M-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
-    ; CHECK-M-NEXT: [[UDIV:%[0-9]+]]:_(s32) = G_UDIV [[TRUNC]], [[TRUNC1]]
-    ; CHECK-M-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[UDIV]](s32)
-    ; CHECK-M-NEXT: $x10 = COPY [[ANYEXT]](s64)
+    ; CHECK-M-NEXT: [[DIVUW:%[0-9]+]]:_(s64) = G_DIVUW [[COPY]], [[COPY1]]
+    ; CHECK-M-NEXT: $x10 = COPY [[DIVUW]](s64)
     ; CHECK-M-NEXT: PseudoRET implicit $x10
     %0:_(s64) = COPY $x10
     %1:_(s64) = COPY $x11

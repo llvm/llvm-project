@@ -115,6 +115,14 @@ let SchedModel = P7Model in {
   def : InstRW<[P7_BRU_NONE, P7_DISP_BR],
     (instregex "^B(L)?(A)?(8)?(_NOP|_NOTOC)?(_TLS|_RM)?(_)?$")>;
 
+  def : InstRW<[P7_BRU_NONE, P7_DISP_BR, P7_LSU_2C, P7_DISP_LS],
+    (instrs
+    BL_LWZinto_toc,
+    BL_LWZinto_toc_RM,
+    BL8_LDinto_toc,
+    BL8_LDinto_toc_RM
+    )>;
+
   def : InstRW<[P7_BRU_3C, P7_DISP_BR], (instrs
     BDZLRLp, BDZLRm, BDZLRp, BDZLm, BDZLp, BDZm, BDZp,
     BDNZ, BDNZ8, BDNZA, BDNZAm, BDNZAp, BDNZL, BDNZLA, BDNZLAm, BDNZLAp, BDNZLR,
@@ -216,7 +224,7 @@ let SchedModel = P7Model in {
     RLWNM, RLWNM8, RLWNM_rec, RLDIMI, RLDIMI_rec,
     RLDICL_32, RLDICL_32_64, RLDICL_32_rec, RLDICR_32, RLWINM8_rec, RLWNM8_rec,
     SLD, SLD_rec, SLW, SLW8, SLW_rec, SLW8_rec, SRD, SRD_rec, SRW, SRW8, SRW_rec,
-    SRW8_rec, SRADI, SRADI_rec, SRAWI, SRAWI_rec, SRAD, SRAD_rec, SRAW, SRAW_rec,
+    SRW8_rec, SRADI, SRADI_rec, SRAWI, SRAWI_rec, SRAWI8, SRAWI8_rec, SRAD, SRAD_rec, SRAW, SRAW_rec, SRAW8, SRAW8_rec,
     SRADI_32, SUBFE, SUBFE8, SUBFE8O_rec, SUBFEO_rec
   )>;
 

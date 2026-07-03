@@ -220,7 +220,8 @@ static std::optional<ArrayRef> OffsetToArrayRef(FoldingContext &context,
   Shape lbs{GetRawLowerBounds(context, entity)};
   auto lower{AsConstantExtents(context, lbs)};
   auto elementBytes{ToInt64(elementType.MeasureSizeInBytes(context, true))};
-  if (!extents || !lower || !elementBytes || *elementBytes <= 0) {
+  if (!extents || HasNegativeExtent(*extents) || !lower || !elementBytes ||
+      *elementBytes <= 0) {
     return std::nullopt;
   }
   int rank{GetRank(shape)};

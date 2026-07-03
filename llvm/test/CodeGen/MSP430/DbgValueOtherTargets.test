@@ -1,1 +1,1 @@
-RUN: llc -O0 -march=msp430 -asm-verbose < %S/../Inputs/DbgValueOtherTargets.ll | FileCheck %S/../Inputs/DbgValueOtherTargets.ll
+RUN: llc -O0 -mtriple=msp430 -asm-verbose < %S/../Inputs/DbgValueOtherTargets.ll | FileCheck %S/../Inputs/DbgValueOtherTargets.ll

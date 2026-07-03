@@ -30,16 +30,10 @@ private:
 public:
   /// Zero-initializes a boolean.
   Boolean() : V(false) {}
-  Boolean(const llvm::APSInt &I) : V(!I.isZero()) {}
   explicit Boolean(bool V) : V(V) {}
 
   bool operator<(Boolean RHS) const { return V < RHS.V; }
   bool operator>(Boolean RHS) const { return V > RHS.V; }
-  bool operator<=(Boolean RHS) const { return V <= RHS.V; }
-  bool operator>=(Boolean RHS) const { return V >= RHS.V; }
-  bool operator==(Boolean RHS) const { return V == RHS.V; }
-  bool operator!=(Boolean RHS) const { return V != RHS.V; }
-
   bool operator>(unsigned RHS) const { return static_cast<unsigned>(V) > RHS; }
 
   Boolean operator-() const { return Boolean(V); }
@@ -67,11 +61,10 @@ public:
   bool isMin() const { return isZero(); }
 
   constexpr static bool isMinusOne() { return false; }
-
   constexpr static bool isSigned() { return false; }
-
   constexpr static bool isNegative() { return false; }
   constexpr static bool isPositive() { return !isNegative(); }
+  constexpr static bool isNumber() { return true; }
 
   ComparisonCategoryResult compare(const Boolean &RHS) const {
     return Compare(V, RHS.V);
@@ -80,6 +73,14 @@ public:
   unsigned countLeadingZeros() const { return V ? 0 : 1; }
 
   Boolean truncate(unsigned TruncBits) const { return *this; }
+
+  static Boolean bitcastFromMemory(const std::byte *Buff, unsigned BitWidth) {
+    // Just load the first byte.
+    bool Val = static_cast<bool>(*Buff);
+    return Boolean(Val);
+  }
+
+  void bitcastToMemory(std::byte *Buff) { std::memcpy(Buff, &V, sizeof(V)); }
 
   void print(llvm::raw_ostream &OS) const { OS << (V ? "true" : "false"); }
   std::string toDiagnosticString(const ASTContext &Ctx) const {

@@ -1,4 +1,4 @@
-; RUN: llc -mv65 -mattr=+hvxv65,hvx-length64b -march=hexagon -O2 < %s | FileCheck %s
+; RUN: llc -mv65 -mattr=+hvxv65,hvx-length64b -mtriple=hexagon -O2 < %s | FileCheck %s
 
 ; CHECK-LABEL: V6_vgathermw
 ; CHECK: vtmp.w = vgather(r1,m{{[0-9]+}},v{{[0-9]+}}.w).w

@@ -13,11 +13,12 @@
 #include "mlir/Conversion/FuncToSPIRV/FuncToSPIRVPass.h"
 
 #include "mlir/Conversion/FuncToSPIRV/FuncToSPIRV.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTFUNCTOSPIRV
+#define GEN_PASS_DEF_CONVERTFUNCTOSPIRVPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -26,7 +27,8 @@ using namespace mlir;
 namespace {
 /// A pass converting MLIR Func operations into the SPIR-V dialect.
 class ConvertFuncToSPIRVPass
-    : public impl::ConvertFuncToSPIRVBase<ConvertFuncToSPIRVPass> {
+    : public impl::ConvertFuncToSPIRVPassBase<ConvertFuncToSPIRVPass> {
+  using Base::Base;
   void runOnOperation() override;
 };
 } // namespace
@@ -35,12 +37,24 @@ void ConvertFuncToSPIRVPass::runOnOperation() {
   MLIRContext *context = &getContext();
   Operation *op = getOperation();
 
+  // This pass requires the target function to be nested inside a block so
+  // that the dialect conversion framework can properly replace or move it.
+  // Running it on a detached top-level op (e.g., via --no-implicit-module) is
+  // unsupported; wrap the input in a module op first.
+  if (!op->getBlock() && isa<func::FuncOp>(op)) {
+    op->emitError("'") << getArgument()
+                       << "' pass requires the target operation to be nested "
+                          "in a block; consider wrapping the input in a module";
+    return signalPassFailure();
+  }
+
   auto targetAttr = spirv::lookupTargetEnvOrDefault(op);
   std::unique_ptr<ConversionTarget> target =
       SPIRVConversionTarget::get(targetAttr);
 
   SPIRVConversionOptions options;
   options.emulateLT32BitScalarTypes = this->emulateLT32BitScalarTypes;
+  options.emulateUnsupportedFloatTypes = this->emulateUnsupportedFloatTypes;
   SPIRVTypeConverter typeConverter(targetAttr, options);
 
   RewritePatternSet patterns(context);
@@ -49,8 +63,4 @@ void ConvertFuncToSPIRVPass::runOnOperation() {
 
   if (failed(applyPartialConversion(op, *target, std::move(patterns))))
     return signalPassFailure();
-}
-
-std::unique_ptr<OperationPass<>> mlir::createConvertFuncToSPIRVPass() {
-  return std::make_unique<ConvertFuncToSPIRVPass>();
 }

@@ -1,4 +1,4 @@
-; RUN: llc -mattr=mul,movw < %s -march=avr | FileCheck %s
+; RUN: llc -mattr=mul,movw < %s -mtriple=avr | FileCheck %s
 
 ; Unsigned 8-bit remision
 define i8 @urem8(i8 %a, i8 %b) {

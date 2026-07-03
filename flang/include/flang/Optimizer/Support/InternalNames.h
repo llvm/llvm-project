@@ -30,6 +30,7 @@ static constexpr llvm::StringRef kProcPtrSeparator = ".p.";
 static constexpr llvm::StringRef kSpecialBindingSeparator = ".s.";
 static constexpr llvm::StringRef kBindingTableSeparator = ".v.";
 static constexpr llvm::StringRef boxprocSuffix = "UnboxProc";
+static constexpr llvm::StringRef kDerivedTypeInitSuffix = "DerivedInit";
 
 /// Internal name mangling of identifiers
 ///
@@ -155,6 +156,13 @@ struct NameUniquer {
   static bool belongsToModule(llvm::StringRef uniquedName,
                               llvm::StringRef moduleName);
 
+  /// True if \p uniquedName denotes module-scope data (variable, named
+  /// constant, or common block), as opposed to procedures, types, or other
+  /// symbols that may still carry a module prefix in the mangling. This
+  /// excludes symbols nested in a procedure according to the mangled prefix
+  /// (including \c SAVE locals in module procedures).
+  static bool isModuleScopeDataUniquedName(llvm::StringRef uniquedName);
+
   /// Given a mangled derived type name, get the name of the related derived
   /// type descriptor object. Returns an empty string if \p mangledTypeName is
   /// not a valid mangled derived type name.
@@ -183,6 +191,10 @@ struct NameUniquer {
   dropTypeConversionMarkers(llvm::StringRef mangledTypeName);
 
   static std::string replaceSpecialSymbols(const std::string &name);
+
+  /// Returns true if the passed name denotes a special symbol (e.g. global
+  /// symbol generated for derived type description).
+  static bool isSpecialSymbol(llvm::StringRef name);
 
 private:
   static std::string intAsString(std::int64_t i);

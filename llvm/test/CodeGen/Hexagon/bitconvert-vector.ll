@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; This testcase would fail on a bitcast from v64i16 to v32i32. Check that
 ; is compiles without errors.

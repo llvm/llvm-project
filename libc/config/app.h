@@ -15,6 +15,8 @@
 #include "gpu/app.h"
 #elif defined(__linux__)
 #include "linux/app.h"
+#elif defined(__UEFI__)
+#include "uefi/app.h"
 #endif
 
 #endif // LLVM_LIBC_CONFIG_APP_H

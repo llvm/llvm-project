@@ -1,5 +1,5 @@
 # RUN: not llc -mtriple=x86_64-- -run-pass none -debug-entry-values %s -o - 2>&1 | FileCheck %s
-# CHECK: baa call instruction block out of range. Unable to reference bb:1
+# CHECK: baa instruction block out of range. Unable to reference bb:1
 --- |
   define dso_local i32 @baa(i32 %a) local_unnamed_addr {
   entry:

@@ -1,30 +1,16 @@
 // RUN: %check_clang_tidy %s bugprone-unhandled-self-assignment %t -- -- -fno-delayed-template-parsing
 
+#include <utility>
+#include <memory>
+
 namespace std {
 
-template <class T>
-void swap(T &x, T &y) {
+namespace pmr {
+    template <typename TYPE = void>
+    class allocator {};
 }
 
-template <class T>
-T &&move(T &x) {
-}
-
-template <class T>
-class unique_ptr {
-};
-
-template <class T>
-class shared_ptr {
-};
-
-template <class T>
-class weak_ptr {
-};
-
-template <class T>
-class auto_ptr {
-};
+struct allocator_arg_t {} allocator_arg;
 
 } // namespace std
 
@@ -226,6 +212,122 @@ bool operator!=(Foo2 &, Foo2 &) {
     int *p;
   };
 }
+
+// Missing call to `swap` function
+class AllocatorAwareClassNoSwap {
+  // pointer member to trigger bugprone-unhandled-self-assignment
+  void *foo = nullptr;
+
+  public:
+    using allocator_type = std::pmr::allocator<>;
+
+    AllocatorAwareClassNoSwap(const AllocatorAwareClassNoSwap& other) {
+    }
+
+    AllocatorAwareClassNoSwap(const AllocatorAwareClassNoSwap& other, const allocator_type& alloc) {
+    }
+
+    AllocatorAwareClassNoSwap& operator=(const AllocatorAwareClassNoSwap& other) {
+        // CHECK-MESSAGES: [[@LINE-1]]:32: warning: operator=() does not handle self-assignment properly [bugprone-unhandled-self-assignment]
+        AllocatorAwareClassNoSwap tmp(other, get_allocator());
+        return *this;
+    }
+
+    allocator_type get_allocator() const {
+        return allocator_type();
+    }
+};
+
+// "Wrong" type is passed to member `swap` function
+class AllocatorAwareClassSwapWrongArgType {
+  // pointer member to trigger bugprone-unhandled-self-assignment
+  void *foo = nullptr;
+
+  public:
+    using allocator_type = std::pmr::allocator<>;
+
+    AllocatorAwareClassSwapWrongArgType(const AllocatorAwareClassSwapWrongArgType& other) {
+    }
+
+    AllocatorAwareClassSwapWrongArgType(const AllocatorAwareClassSwapWrongArgType& other, const allocator_type& alloc) {
+    }
+
+    AllocatorAwareClassSwapWrongArgType& operator=(const AllocatorAwareClassSwapWrongArgType& other) {
+        // CHECK-MESSAGES: [[@LINE-1]]:42: warning: operator=() does not handle self-assignment properly [bugprone-unhandled-self-assignment]
+        int tmp = 0;
+        swap(tmp);
+        
+        return *this;
+    }
+
+    void swap(int&) noexcept {
+    }
+
+    allocator_type get_allocator() const {
+        return allocator_type();
+    }
+};
+
+
+// Making ADL `swap` call but with wrong argument type
+class AllocatorAwareClassAdlSwapWrongArgType {
+  // pointer member to trigger bugprone-unhandled-self-assignment
+  void *foo = nullptr;
+
+  public:
+    using allocator_type = std::pmr::allocator<>;
+
+    AllocatorAwareClassAdlSwapWrongArgType(const AllocatorAwareClassAdlSwapWrongArgType& other) {
+    }
+
+    AllocatorAwareClassAdlSwapWrongArgType(const AllocatorAwareClassAdlSwapWrongArgType& other, const allocator_type& alloc) {
+    }
+
+    AllocatorAwareClassAdlSwapWrongArgType& operator=(const AllocatorAwareClassAdlSwapWrongArgType& other) {
+        // CHECK-MESSAGES: [[@LINE-1]]:45: warning: operator=() does not handle self-assignment properly [bugprone-unhandled-self-assignment]
+        int tmp = 0;
+        swap(*this, tmp);
+        
+        return *this;
+    }
+
+    allocator_type get_allocator() const {
+        return allocator_type();
+    }
+    
+    friend void swap(AllocatorAwareClassAdlSwapWrongArgType&, int&) {
+    }
+};
+
+// `this` isn't passed to `swap`
+class AllocatorAwareClassAdlSwapWrongArgs {
+  // pointer member to trigger bugprone-unhandled-self-assignment
+  void *foo = nullptr;
+
+  public:
+    using allocator_type = std::pmr::allocator<>;
+
+    AllocatorAwareClassAdlSwapWrongArgs(const AllocatorAwareClassAdlSwapWrongArgs& other) {
+    }
+
+    AllocatorAwareClassAdlSwapWrongArgs(const AllocatorAwareClassAdlSwapWrongArgs& other, const allocator_type& alloc) {
+    }
+
+    AllocatorAwareClassAdlSwapWrongArgs& operator=(const AllocatorAwareClassAdlSwapWrongArgs& other) {
+        // CHECK-MESSAGES: [[@LINE-1]]:42: warning: operator=() does not handle self-assignment properly [bugprone-unhandled-self-assignment]
+        AllocatorAwareClassAdlSwapWrongArgs tmp1(other, get_allocator());
+        AllocatorAwareClassAdlSwapWrongArgs tmp2(*this, get_allocator());
+        swap(tmp1, tmp2);
+        return *this;
+    }
+
+    allocator_type get_allocator() const {
+        return allocator_type();
+    }
+    
+    friend void swap(AllocatorAwareClassAdlSwapWrongArgs&, AllocatorAwareClassAdlSwapWrongArgs&) {
+    }
+};
 
 ///////////////////////////////////////////////////////////////////
 /// Test cases correctly ignored by the check.
@@ -536,6 +638,89 @@ public:
 
   Ty *getTy() const { return Ptr1; }
   Uy *getUy() const { return Ptr2; }
+};
+
+// Support "extended" copy/move constructors
+class AllocatorAwareClass {
+  // pointer member to trigger bugprone-unhandled-self-assignment
+  void *foo = nullptr;
+
+  public:
+    using allocator_type = std::pmr::allocator<>;
+
+    AllocatorAwareClass(const AllocatorAwareClass& other) {
+    }
+
+    AllocatorAwareClass(const AllocatorAwareClass& other, const allocator_type& alloc) {
+    }
+
+    AllocatorAwareClass& operator=(const AllocatorAwareClass& other) {
+        AllocatorAwareClass tmp(other, get_allocator());
+        swap(tmp);
+        return *this;
+    }
+
+    void swap(AllocatorAwareClass& other) noexcept {
+    }
+
+    allocator_type get_allocator() const {
+        return allocator_type();
+    }
+};
+
+// Support "extended" copy/move constructors + std::swap
+class AllocatorAwareClassStdSwap {
+  // pointer member to trigger bugprone-unhandled-self-assignment
+  void *foo = nullptr;
+
+  public:
+    using allocator_type = std::pmr::allocator<>;
+
+    AllocatorAwareClassStdSwap(const AllocatorAwareClassStdSwap& other) {
+    }
+
+    AllocatorAwareClassStdSwap(const AllocatorAwareClassStdSwap& other, const allocator_type& alloc) {
+    }
+
+    AllocatorAwareClassStdSwap& operator=(const AllocatorAwareClassStdSwap& other) {
+        using std::swap;
+        
+        AllocatorAwareClassStdSwap tmp(other, get_allocator());
+        swap(*this, tmp);
+        return *this;
+    }
+
+    allocator_type get_allocator() const {
+        return allocator_type();
+    }
+};
+
+// Support "extended" copy/move constructors + ADL swap
+class AllocatorAwareClassAdlSwap {
+  // pointer member to trigger bugprone-unhandled-self-assignment
+  void *foo = nullptr;
+
+  public:
+    using allocator_type = std::pmr::allocator<>;
+
+    AllocatorAwareClassAdlSwap(const AllocatorAwareClassAdlSwap& other) {
+    }
+
+    AllocatorAwareClassAdlSwap(const AllocatorAwareClassAdlSwap& other, const allocator_type& alloc) {
+    }
+
+    AllocatorAwareClassAdlSwap& operator=(const AllocatorAwareClassAdlSwap& other) {
+        AllocatorAwareClassAdlSwap tmp(other, get_allocator());
+        swap(*this, tmp);
+        return *this;
+    }
+
+    allocator_type get_allocator() const {
+        return allocator_type();
+    }
+    
+    friend void swap(AllocatorAwareClassAdlSwap&, AllocatorAwareClassAdlSwap&) {
+    }
 };
 
 ///////////////////////////////////////////////////////////////////

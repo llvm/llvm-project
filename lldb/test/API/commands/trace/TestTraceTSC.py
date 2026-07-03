@@ -5,6 +5,7 @@ from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 
 
+@skipIfNoIntelPT
 class TestTraceTimestampCounters(TraceIntelPTTestCaseBase):
     @testSBAPIAndCommands
     @skipIf(oslist=no_match(["linux"]), archs=no_match(["i386", "x86_64"]))
@@ -20,7 +21,7 @@ class TestTraceTimestampCounters(TraceIntelPTTestCaseBase):
         self.expect("n")
         self.expect(
             "thread trace dump instructions -t -c 1",
-            patterns=[": \[\d+.\d+ ns\] 0x0000000000400511    movl"],
+            patterns=[r": \[\d+.\d+ ns\] 0x0000000000400511    movl"],
         )
 
     @testSBAPIAndCommands
@@ -43,7 +44,7 @@ class TestTraceTimestampCounters(TraceIntelPTTestCaseBase):
         self.runCmd("thread trace dump instructions -t --raw --forward")
         id_to_timestamp = {}
         for line in self.res.GetOutput().splitlines():
-            m = re.search("    (.+): \[(.+)\ ns].*", line)
+            m = re.search(r"    (.+): \[(.+)\ ns].*", line)
             if m:
                 id_to_timestamp[int(m.group(1))] = m.group(2)
         self.assertEqual(len(id_to_timestamp), 3)
@@ -69,12 +70,12 @@ class TestTraceTimestampCounters(TraceIntelPTTestCaseBase):
         self.expect("n")
         self.expect(
             "thread trace dump instructions -t -c 1",
-            patterns=[": \[\d+.\d+ ns\] 0x0000000000400511    movl"],
+            patterns=[r": \[\d+.\d+ ns\] 0x0000000000400511    movl"],
         )
 
         self.expect(
             "thread trace dump instructions -t -c 1 --pretty-json",
-            patterns=['''"timestamp_ns": "\d+.\d+"'''],
+            patterns=[r'''"timestamp_ns": "\d+.\d+"'''],
         )
 
     @testSBAPIAndCommands
@@ -91,7 +92,7 @@ class TestTraceTimestampCounters(TraceIntelPTTestCaseBase):
         self.expect("n")
         self.expect(
             "thread trace dump instructions -t -c 1",
-            patterns=[": \[unavailable\] 0x0000000000400511    movl"],
+            patterns=[r": \[unavailable\] 0x0000000000400511    movl"],
         )
 
         self.expect(
