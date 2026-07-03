@@ -795,8 +795,8 @@ auto f() {
 
 namespace TemplateRedecl1 {
   template <class> auto f();
-  template <class T> void g() { f<T>(); };
-  template <class> auto f() {}
+  template <class T> void g() { (void)+f<T>(); };
+  template <class> auto f() { return 0; }
   template auto f<int>();
   template void g<int>();
 } // namespace TemplateRedecl1

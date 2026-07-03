@@ -6414,20 +6414,7 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
       return false;
 
     // Cannot qualify members within a class.
-    Diag(Loc, diag::err_member_qualification)
-      << Name << SS.getRange();
-    SS.clear();
-
-    // C++ constructors and destructors with incorrect scopes can break
-    // our AST invariants by having the wrong underlying types. If
-    // that's the case, then drop this declaration entirely.
-    if ((Name.getNameKind() == DeclarationName::CXXConstructorName ||
-         Name.getNameKind() == DeclarationName::CXXDestructorName) &&
-        !Context.hasSameType(
-            Name.getCXXNameType(),
-            Context.getCanonicalTagType(cast<CXXRecordDecl>(Cur))))
-      return true;
-
+    Diag(Loc, diag::err_member_qualification) << Name << SS.getRange();
     return false;
   }
 

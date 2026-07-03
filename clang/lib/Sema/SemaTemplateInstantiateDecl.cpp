@@ -2872,8 +2872,21 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
     Function->setRangeEnd(D->getSourceRange().getEnd());
   }
   Function->setPreviousDeclaration(PrevDecl);
-  if (PrevDecl)
+  if (PrevDecl) {
     SemaRef.mergeDeclAttributes(Function, PrevDecl);
+
+    if (QualType OT = PrevDecl->getReturnType();
+        OT != cast<FunctionType>(T)->getReturnType()) {
+      // If this function has a deduced return type and has already been
+      // defined, copy the deduced value from the old declaration.
+      if (AutoType *OldAT = OT->getContainedAutoType();
+          OldAT && OldAT->isDeduced()) {
+        QualType DT = OldAT->getDeducedType();
+        Function->setType(DT.isNull() ? SemaRef.SubstAutoTypeDependent(T)
+                                      : SemaRef.SubstAutoType(T, DT));
+      }
+    }
+  }
 
   if (D->isInlined())
     Function->setImplicitlyInline();
@@ -6002,7 +6015,10 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
         FunctionDecl *NewFunction = InstantiateFunctionDeclaration(
             (*It)->getDescribedFunctionTemplate(), Info->TemplateArguments,
             PointOfInstantiation);
-        assert(NewFunction && "Failed to instantiate function template");
+        // This should always succeed for well-formed code.
+        if (!NewFunction)
+          return;
+
         assert(NewFunction != Function && "Expected a new specialization");
         assert(declaresSameEntity(NewFunction, Function));
         if (TemplateSpecializationKind TSK =
