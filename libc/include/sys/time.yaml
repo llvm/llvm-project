@@ -2,6 +2,12 @@ header: sys/time.h
 standards:
   - posix
 macros:
+  - macro_name: ITIMER_REAL
+    macro_header: sys-time-macros.h
+  - macro_name: ITIMER_VIRTUAL
+    macro_header: sys-time-macros.h
+  - macro_name: ITIMER_PROF
+    macro_header: sys-time-macros.h
   - macro_name: timeradd
     macro_header: sys-time-macros.h
 types:
