@@ -97,6 +97,8 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
 
   VectorType vecTy = xferOp.getVectorType();
   unsigned vecRank = vecTy.getRank();
+  if (vecRank == 0)
+    return rewriter.notifyMatchFailure(xferOp, "0D vectors are not supported");
   if (xferOp.hasOutOfBoundsDim() && vecRank < 2)
     return rewriter.notifyMatchFailure(
         xferOp, "Boundary check is available only for block instructions.");
