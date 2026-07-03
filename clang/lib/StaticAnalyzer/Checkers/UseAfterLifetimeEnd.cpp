@@ -93,11 +93,12 @@ UseAfterLifetimeEnd::UseAfterLifetimeEndBRVisitor::VisitNode(
   if (!S)
     return nullptr;
 
-  SmallString<256> Str;
-  llvm::raw_svector_ostream OS(Str);
-  OS << "Value bound to '" << SourceRegion->getString() << "' here";
   PathDiagnosticLocation Pos(S, BRC.getSourceManager(), N->getStackFrame());
-  return std::make_shared<PathDiagnosticEventPiece>(Pos, OS.str(), true);
+  return std::make_shared<PathDiagnosticEventPiece>(
+      Pos,
+      (llvm::Twine("Value bound to '") + SourceRegion->getString() + "' here")
+          .str(),
+      true);
 }
 
 PathDiagnosticPieceRef
@@ -108,11 +109,13 @@ UseAfterLifetimeEnd::UseAfterLifetimeEndBRVisitor::getEndPath(
   if (!S)
     return nullptr;
 
-  SmallString<256> Str;
-  llvm::raw_svector_ostream OS(Str);
-  OS << "Lifetime of '" << SourceRegion->getString() << "' ended here";
   PathDiagnosticLocation Pos(S, BRC.getSourceManager(), N->getStackFrame());
-  return std::make_shared<PathDiagnosticEventPiece>(Pos, OS.str(), true);
+  return std::make_shared<PathDiagnosticEventPiece>(
+      Pos,
+      llvm::Twine(("Lifetime of '") + SourceRegion->getString() +
+                  "' ended here")
+          .str(),
+      true);
 }
 
 void ento::registerUseAfterLifetimeEnd(CheckerManager &Mgr) {
