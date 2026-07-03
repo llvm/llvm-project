@@ -16,6 +16,7 @@
 
 #include "NumericLiteralInfo.h"
 #include "llvm/ADT/StringExtras.h"
+#include <algorithm>
 
 namespace clang {
 namespace format {
@@ -46,11 +47,13 @@ NumericLiteralInfo::NumericLiteralInfo(StringRef Text, char Separator) {
 
   // e.g. 1.e2 or 0xFp2
   const auto Pos = DotPos != StringRef::npos ? DotPos + 1 : BaseLetterPos + 2;
+  // Trim C++ user-defined suffix as in `1_Pa`.
+  const auto TrimmedText =
+      Separator == '\'' ? Text.take_front(Text.find('_')) : Text;
 
-  ExponentLetterPos =
-      // Trim C++ user-defined suffix as in `1_Pa`.
-      (Separator == '\'' ? Text.take_front(Text.find('_')) : Text)
-          .find_insensitive(IsHex ? 'p' : 'e', Pos);
+  // Clamp searches due to possible incomplete literals.
+  ExponentLetterPos = TrimmedText.find_insensitive(
+      IsHex ? 'p' : 'e', std::min(Pos, TrimmedText.size()));
 
   const bool HasExponent = ExponentLetterPos != StringRef::npos;
   SuffixPos = Text.find_if_not(
@@ -58,7 +61,8 @@ NumericLiteralInfo::NumericLiteralInfo(StringRef Text, char Separator) {
         return (HasExponent || !IsHex ? isDigit : isHexDigit)(C) ||
                C == Separator;
       },
-      HasExponent ? ExponentLetterPos + 2 : Pos); // e.g. 1e-2f
+      std::min(HasExponent ? ExponentLetterPos + 2 : Pos,
+               Text.size())); // e.g. 1e-2f
 }
 
 } // namespace format
