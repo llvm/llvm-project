@@ -319,15 +319,33 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
       return {};
 
     RK = CurRK;
-    // Check required fast-math flags for FP recurrences.
+    // A select-based min/max whose compare also drives another select is the
+    // argmin/argmax shape: one select carries the value, the other the index.
+    // Detect it here so the fast-math check and chain handling treat it as a
+    // multi-use reduction rather than a plain one.
+    auto *SI = dyn_cast<SelectInst>(Cur);
+    bool FeedsOtherSelect =
+        SI && any_of(SI->getCondition()->users(),
+                     [&](User *U) { return U != SI && isa<SelectInst>(U); });
+
+    // Check required fast-math flags for FP recurrences. A plain min/max
+    // reduction must carry the flags on the select itself. Only for the
+    // shared-compare argmin/argmax shape do the NaN-free/signed-zero-free facts
+    // legitimately live on the compare, so fall back to the condition's flags
+    // there.
     if (RecurrenceDescriptor::isFPMinMaxRecurrenceKind(CurRK)) {
       auto CurFMF = hasRequiredFastMathFlags(cast<FPMathOperator>(Cur), RK);
+      if (!CurFMF && FeedsOtherSelect)
+        if (auto *FC = dyn_cast<FCmpInst>(SI->getCondition()))
+          CurFMF = hasRequiredFastMathFlags(cast<FPMathOperator>(FC), RK);
       if (!CurFMF)
         return {};
       FMF &= *CurFMF;
     }
 
-    if (auto *SI = dyn_cast<SelectInst>(I))
+    // Keep the compare external only for the argmin/argmax shape, so the
+    // multi-use reduction path below can recognize it.
+    if (SI && !FeedsOtherSelect)
       Chain.insert(SI->getCondition());
 
     if (A == Phi || B == Phi)
@@ -355,12 +373,18 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
            GetMinMaxRK(U, A, B) == RecurKind::None;
   });
   if (PhiHasInvalidUses) {
-    if (!RecurrenceDescriptor::isIntMinMaxRecurrenceKind(RK) ||
-        !BackedgeValue->hasOneUse())
+    // Accept integer (llvm.smin/smax intrinsic) and floating-point
+    // (select-based) min/max value reductions with a single-use backedge value.
+    // NaN-free semantics are required to reorder the parallel FP reduction.
+    bool IsIntArgmin = RecurrenceDescriptor::isIntMinMaxRecurrenceKind(RK);
+    bool IsFPArgmin =
+        RecurrenceDescriptor::isFPMinMaxRecurrenceKind(RK) && FMF.noNaNs();
+    if ((!IsIntArgmin && !IsFPArgmin) || !BackedgeValue->hasOneUse())
       return {};
     return RecurrenceDescriptor(
         Phi->getIncomingValueForBlock(TheLoop->getLoopPreheader()),
-        /*Exit=*/nullptr, /*Store=*/nullptr, RK, FastMathFlags(),
+        /*Exit=*/nullptr, /*Store=*/nullptr, RK,
+        IsIntArgmin ? FastMathFlags() : FMF,
         /*ExactFP=*/nullptr, Phi->getType(), /*IsMultiUse=*/true);
   }
 
