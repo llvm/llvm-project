@@ -12,7 +12,7 @@ define i8 @shl_nsw_from_overflow_guard(i8 %i) {
 ; CHECK-LABEL: define range(i8 0, 10) i8 @shl_nsw_from_overflow_guard(
 ; CHECK-SAME: i8 [[I:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[R:%.*]] = shl i8 [[I]], 2
+; CHECK-NEXT:    [[R:%.*]] = shl nsw i8 [[I]], 2
 ; CHECK-NEXT:    [[OV:%.*]] = add i8 [[I]], -32
 ; CHECK-NEXT:    [[OVC:%.*]] = icmp ult i8 [[OV]], -64
 ; CHECK-NEXT:    br i1 [[OVC]], label %[[EXIT:.*]], label %[[USES1:.*]]
@@ -51,9 +51,9 @@ define void @same_guard_diff_ops(i8 %i) {
 ; CHECK-LABEL: define void @same_guard_diff_ops(
 ; CHECK-SAME: i8 [[I:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[A:%.*]] = add i8 [[I]], 3
-; CHECK-NEXT:    [[S:%.*]] = sub i8 [[I]], 3
-; CHECK-NEXT:    [[L:%.*]] = shl i8 [[I]], 1
+; CHECK-NEXT:    [[A:%.*]] = add nuw nsw i8 [[I]], 3
+; CHECK-NEXT:    [[S:%.*]] = sub nsw i8 [[I]], 3
+; CHECK-NEXT:    [[L:%.*]] = shl nuw i8 [[I]], 1
 ; CHECK-NEXT:    [[M:%.*]] = mul i8 [[I]], 30
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[I]], 100
 ; CHECK-NEXT:    br i1 [[C]], label %[[USES:.*]], label %[[EXIT:.*]]
@@ -90,7 +90,7 @@ define void @sub_nuw_only(i8 %i) {
 ; CHECK-LABEL: define void @sub_nuw_only(
 ; CHECK-SAME: i8 [[I:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[R:%.*]] = sub i8 [[I]], 3
+; CHECK-NEXT:    [[R:%.*]] = sub nuw i8 [[I]], 3
 ; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[I]], 100
 ; CHECK-NEXT:    br i1 [[C]], label %[[USES:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[USES]]:
@@ -119,7 +119,7 @@ define void @mul_mixed(i8 %i) {
 ; CHECK-LABEL: define void @mul_mixed(
 ; CHECK-SAME: i8 [[I:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[A:%.*]] = mul i8 [[I]], 4
+; CHECK-NEXT:    [[A:%.*]] = mul nuw nsw i8 [[I]], 4
 ; CHECK-NEXT:    [[B:%.*]] = mul i8 [[I]], 50
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[I]], 10
 ; CHECK-NEXT:    br i1 [[C]], label %[[USES:.*]], label %[[EXIT:.*]]
@@ -154,7 +154,7 @@ define void @shl_mixed(i8 %i) {
 ; CHECK-LABEL: define void @shl_mixed(
 ; CHECK-SAME: i8 [[I:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[A:%.*]] = shl i8 [[I]], 2
+; CHECK-NEXT:    [[A:%.*]] = shl nuw nsw i8 [[I]], 2
 ; CHECK-NEXT:    [[B:%.*]] = shl i8 [[I]], 5
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[I]], 10
 ; CHECK-NEXT:    br i1 [[C]], label %[[USES:.*]], label %[[EXIT:.*]]
@@ -190,7 +190,7 @@ define void @nuw_only_across_guards(i8 %i) {
 ; CHECK-LABEL: define void @nuw_only_across_guards(
 ; CHECK-SAME: i8 [[I:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[R:%.*]] = shl i8 [[I]], 2
+; CHECK-NEXT:    [[R:%.*]] = shl nuw i8 [[I]], 2
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ult i8 [[I]], 10
 ; CHECK-NEXT:    br i1 [[C1]], label %[[USES1:.*]], label %[[REST:.*]]
 ; CHECK:       [[USES1]]:
