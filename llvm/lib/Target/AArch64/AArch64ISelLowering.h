@@ -587,6 +587,9 @@ public:
   // used for 64bit and 128bit vectors as well.
   bool useSVEForFixedLengthVectorVT(EVT VT, bool OverrideNEON = false) const;
 
+  /// Whether to use NEON for the given vector VT.
+  bool useNEONForVectorVT(EVT VT) const;
+
   // Follow NEON ABI rules even when using SVE for fixed length vectors.
   MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
                                     EVT VT) const override;
