@@ -494,6 +494,13 @@ interface unit of ``M``.
 ``[[profiles::require(...)]]`` on an import-declaration validates that the
 imported module's ``EnforcedProfileDesignators`` contains a matching designator.
 
+A *header unit* participates the same way: ``[[profiles::enforce(...)]]`` on
+an empty-declaration in the header (the form P3589R2 §2.3 prescribes for
+header units) is recorded on the header-unit module and serialized into its
+BMI, so ``[[profiles::require]]`` on an ``import "header.h";`` validates
+against it.  As with named modules, importing an enforced header unit does not
+enforce the profile in the importer.
+
 ``[[profiles::enforce(...)]]`` on a *non-interface* module-declaration (a
 ``module M;`` implementation unit, or a ``module M:P;`` partition
 implementation unit) is accepted but recorded only translation-unit-locally;
