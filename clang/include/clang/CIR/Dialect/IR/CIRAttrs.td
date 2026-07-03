@@ -1299,6 +1299,48 @@ def CIR_CXXSpecialMemberAttr : AnyAttrOf<[
 ]>;
 
 //===----------------------------------------------------------------------===//
+// FuncInfoAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_FuncInfoAttr : CIR_Attr<"FuncInfo", "func_info"> {
+  let summary = "Holds the source level identity of a function";
+  let description = [{
+    Carries facts about the source declaration a function was emitted from,
+    precomputed during CIRGen while the AST is available. Passes that want
+    to reason about what the source calls read this attribute instead of
+    the AST.
+
+    The `name` parameter holds the plain function name as written in the
+    source, without mangling, qualification, or template arguments.
+    Functions without a plain identifier, for example overloaded operators
+    and constructors, carry no attribute, and neither do static member
+    functions, so a free function and a static member with the same name
+    stay apart. The `in_std_namespace` parameter is true when the function
+    is declared directly in the `std` namespace, looking through inline
+    namespaces. For a member function the enclosing record decides. The
+    `instance_method` parameter is true for a member function that is not
+    static.
+
+    Example:
+    ```
+    #cir.func_info<name = "find", in_std_namespace = true>
+    ```
+  }];
+
+  let parameters = (ins
+    "mlir::StringAttr":$name,
+    DefaultValuedParameter<"bool", "false">:$in_std_namespace,
+    DefaultValuedParameter<"bool", "false">:$instance_method
+  );
+
+  let assemblyFormat = [{
+    `<` struct($name, $in_std_namespace, $instance_method) `>`
+  }];
+
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // BitfieldInfoAttr
 //===----------------------------------------------------------------------===//
 

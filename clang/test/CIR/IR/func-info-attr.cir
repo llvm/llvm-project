@@ -1,0 +1,11 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+module {
+
+cir.func private @_ZSt4findv() func_info<#cir.func_info<name = "find", in_std_namespace = true>>
+// CHECK: cir.func private @_ZSt4findv() func_info<#cir.func_info<name = "find", in_std_namespace = true>>
+
+cir.func private @_ZNSt9container5beginEv() func_info<#cir.func_info<name = "begin", in_std_namespace = true, instance_method = true>>
+// CHECK: cir.func private @_ZNSt9container5beginEv() func_info<#cir.func_info<name = "begin", in_std_namespace = true, instance_method = true>>
+
+}
