@@ -872,6 +872,19 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
     if (!isRelevantAttr(*this, New, TmplAttr))
       continue;
 
+    // The [[ref_to_uninit]] handler deferred type validation on a dependent
+    // subject; re-check against the substituted type and drop the marker when
+    // it is invalid (the diagnostic points at the pattern's attribute, with
+    // the instantiation note locating the culprit). In a SFINAE context
+    // (declaration substitution during deduction) the invalid marker is
+    // dropped silently: the marker must not affect overload resolution, and a
+    // dropped marker is inert -- the ref_to_uninit rule never consults a
+    // marker on a non-pointer/reference entity.
+    if (isa<RefToUninitAttr>(TmplAttr) &&
+        Profiles().diagnoseInvalidRefToUninitMarker(
+            New, TmplAttr->getLocation(), /*Diagnose=*/!isSFINAEContext()))
+      continue;
+
     // FIXME: This should be generalized to more than just the AlignedAttr.
     const AlignedAttr *Aligned = dyn_cast<AlignedAttr>(TmplAttr);
     if (Aligned && Aligned->isAlignmentDependent()) {

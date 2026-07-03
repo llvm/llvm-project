@@ -568,6 +568,29 @@ void SemaProfiles::checkInitProfileMarkerPlacement(const Decl *D) {
     Diag(Loc, diag::err_init_uninit_pointer_marker) << "std::init";
 }
 
+bool SemaProfiles::diagnoseInvalidRefToUninitMarker(const Decl *D,
+                                                    SourceLocation AttrLoc,
+                                                    bool Diagnose) {
+  QualType T;
+  if (const auto *FD = dyn_cast<FunctionDecl>(D))
+    T = FD->getReturnType();
+  else
+    T = cast<ValueDecl>(D)->getType();
+
+  // A dependent subject is validated at instantiation instead, once the
+  // substituted type is known (Sema::InstantiateAttrs).
+  if (T->isDependentType())
+    return false;
+
+  if ((!T->isPointerType() && !T->isReferenceType()) ||
+      T->isFunctionPointerType() || T->isFunctionReferenceType()) {
+    if (Diagnose)
+      Diag(AttrLoc, diag::err_ref_to_uninit_attr_invalid_type);
+    return true;
+  }
+  return false;
+}
+
 // std::init / ref_to_uninit (paper §5). Two mutually-recursive local
 // recognizers over the syntactic form of a source expression -- no flow
 // analysis and no type-system tracking. Uninitialized storage is only ever

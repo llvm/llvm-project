@@ -6981,16 +6981,9 @@ static void handleRefToUninitAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // never uninitialized storage, so the marker could never be satisfied; reject
   // it too (like a pointer-to-member, which is not a pointer type here). Like
   // the [[uninit]] subject checks, this is not profile policy and so fires
-  // regardless of -fprofiles.
-  QualType T;
-  if (const auto *FD = dyn_cast<FunctionDecl>(D))
-    T = FD->getReturnType();
-  else
-    T = cast<ValueDecl>(D)->getType();
-
-  if ((!T->isPointerType() && !T->isReferenceType()) ||
-      T->isFunctionPointerType() || T->isFunctionReferenceType()) {
-    S.Diag(AL.getLoc(), diag::err_ref_to_uninit_attr_invalid_type);
+  // regardless of -fprofiles. A dependent subject defers to the instantiation
+  // re-check in Sema::InstantiateAttrs, once the substituted type is known.
+  if (S.Profiles().diagnoseInvalidRefToUninitMarker(D, AL.getLoc())) {
     AL.setInvalid();
     return;
   }

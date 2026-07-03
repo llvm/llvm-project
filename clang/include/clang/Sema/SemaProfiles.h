@@ -226,6 +226,19 @@ public:
   /// templated pattern and is re-checked on the instantiated entity.
   void checkInitProfileMarkerPlacement(const Decl *D);
 
+  /// [[ref_to_uninit]] is only meaningful on a pointer or reference to an
+  /// object (for a function, its return type). Returns true when \p D's type
+  /// is invalid for the marker, diagnosing err_ref_to_uninit_attr_invalid_type
+  /// at \p AttrLoc unless \p Diagnose is false. A dependent type returns
+  /// false: validation defers to the instantiation re-check in
+  /// Sema::InstantiateAttrs, which drops the marker when the substituted type
+  /// is invalid -- silently in a SFINAE context (\p Diagnose false there), so
+  /// the marker can never affect overload resolution; a dropped marker is
+  /// inert. Not profile policy -- fires regardless of -fprofiles, like the
+  /// parse-time handler it serves.
+  bool diagnoseInvalidRefToUninitMarker(const Decl *D, SourceLocation AttrLoc,
+                                        bool Diagnose = true);
+
   class ProfileSuppressScope {
     Sema &S;
     unsigned Count = 0;

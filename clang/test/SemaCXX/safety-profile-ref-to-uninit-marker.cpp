@@ -58,3 +58,37 @@ struct BadFnPtrMember {
   void (*m [[ref_to_uninit]])(); // expected-error {{'ref_to_uninit' attribute only applies to pointers, references, and functions returning them}} \
                                  // no-profiles-error {{'ref_to_uninit' attribute only applies to pointers, references, and functions returning them}}
 };
+
+// A dependent subject is not validated on the template pattern; the check
+// runs at instantiation, once the substituted type is known, and the marker
+// is dropped when it is invalid there.
+template <typename T> struct DependentMember {
+  T m [[ref_to_uninit]]; // expected-error {{'ref_to_uninit' attribute only applies to pointers, references, and functions returning them}} \
+                         // no-profiles-error {{'ref_to_uninit' attribute only applies to pointers, references, and functions returning them}}
+};
+template struct DependentMember<int *>;
+template struct DependentMember<int>; // expected-note {{in instantiation of template class 'DependentMember<int>' requested here}} \
+                                      // no-profiles-note {{in instantiation of template class 'DependentMember<int>' requested here}}
+
+// A dependent *parameter* is substituted during template argument deduction,
+// inside the SFINAE trap. Diagnosing there would let the marker affect
+// overload resolution, so an invalid parameter marker is instead dropped
+// silently: no diagnostic, and the dropped marker is inert (the ref_to_uninit
+// rule never consults a marker on a non-pointer/reference parameter).
+template <typename T> void dependent_param(T p [[ref_to_uninit]]) {}
+template void dependent_param<int *>(int *);
+template void dependent_param<int>(int);
+
+template <typename T> [[ref_to_uninit]] T dependent_return() { return T{}; } // expected-error {{'ref_to_uninit' attribute only applies to pointers, references, and functions returning them}} \
+                                                                             // no-profiles-error {{'ref_to_uninit' attribute only applies to pointers, references, and functions returning them}}
+template int *dependent_return<int *>();
+template int dependent_return<int>(); // expected-note {{in instantiation of function template specialization 'dependent_return<int>' requested here}} \
+                                      // no-profiles-note {{in instantiation of function template specialization 'dependent_return<int>' requested here}}
+
+template <typename T> void dependent_local() {
+  T v [[ref_to_uninit]]; // expected-error {{'ref_to_uninit' attribute only applies to pointers, references, and functions returning them}} \
+                         // no-profiles-error {{'ref_to_uninit' attribute only applies to pointers, references, and functions returning them}}
+}
+template void dependent_local<int *>();
+template void dependent_local<int>(); // expected-note {{in instantiation of function template specialization 'dependent_local<int>' requested here}} \
+                                      // no-profiles-note {{in instantiation of function template specialization 'dependent_local<int>' requested here}}

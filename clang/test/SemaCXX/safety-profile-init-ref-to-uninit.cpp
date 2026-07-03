@@ -384,6 +384,16 @@ void template_nondependent_bad() {
 }
 template void template_nondependent_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_nondependent_bad<int>' requested here}}
 
+// A dependent [[ref_to_uninit]] parameter defers marker validation to
+// instantiation (the pattern is accepted); the instantiated parameter carries
+// the marker and drives this rule at the call.
+template <typename T>
+void dependent_marked_fill(T p [[ref_to_uninit]]) { (void)p; }
+void test_dependent_marked_param() {
+  dependent_marked_fill<int *>(&g_uninit); // OK: marked target, uninit source
+  dependent_marked_fill<int *>(&g_init); // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+}
+
 // A default-initialized new-expression that leaves a scalar subobject
 // indeterminate (e.g. new int, new int[n], paper §1.2 / §4.3) is a source of
 // uninitialized free-store memory; new T(...), new T{...}, and a type with a
