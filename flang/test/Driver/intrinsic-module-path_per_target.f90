@@ -42,7 +42,7 @@
 !-----------------------------------------
 
 ! DEFAULTPATH:      "-fc1"
-! DEFAULTPATH-SAME: "-fintrinsic-modules-path" "{{.*(\\\\|/)}}finclude{{(\\\\|/)}}flang{{(\\\\|/)}}{{[^/\]+}}"
+! DEFAULTPATH-SAME: "-fintrinsic-modules-path" "{{.*(\\\\|/)}}finclude{{(\\\\|/)}}flang{{(\\\\|/)}}{{[^/\]+/?}}"
 
 ! NOINPUTONE: Source file 'basictestmoduleone.mod' was not found
 ! NOINPUTTWO: Source file 'basictestmoduletwo.mod' was not found

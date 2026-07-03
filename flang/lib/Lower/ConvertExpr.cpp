@@ -13,7 +13,7 @@
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Common/unwrap.h"
 #include "flang/Evaluate/fold.h"
-#include "flang/Evaluate/real.h"
+#include "flang/Evaluate/real-value.h"
 #include "flang/Evaluate/traverse.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/Bridge.h"
@@ -788,11 +788,10 @@ public:
   }
 
   /// Generate an integral constant of `value`
-  template <int KIND>
-  mlir::Value genIntegerConstant(mlir::MLIRContext *context,
+  mlir::Value genIntegerConstant(mlir::MLIRContext *context, int kind,
                                  std::int64_t value) {
     mlir::Type type =
-        converter.genType(Fortran::common::TypeCategory::Integer, KIND);
+        converter.genType(Fortran::common::TypeCategory::Integer, kind);
     return builder.createIntegerConstant(getLoc(), type, value);
   }
 
@@ -1041,7 +1040,10 @@ public:
     auto castResult = [&](mlir::Value v) {
       using ResTy = Fortran::evaluate::DescriptorInquiry::Result;
       return builder.createConvert(
-          loc, converter.genType(ResTy::category, ResTy::kind), v);
+          loc,
+          converter.genType(ResTy::category,
+                            Fortran::evaluate::subscriptIntegerKind),
+          v);
     };
     switch (desc.field()) {
     case Fortran::evaluate::DescriptorInquiry::Field::Len:
@@ -1071,39 +1073,39 @@ public:
         cplx, isImagPart);
   }
 
-  template <int KIND>
-  ExtValue genval(const Fortran::evaluate::ComplexComponent<KIND> &part) {
+  ExtValue genval(const Fortran::evaluate::ComplexComponent &part) {
     return extractComplexPart(genunbox(part.left()), part.isImaginaryPart);
   }
 
-  template <int KIND>
-  ExtValue genval(const Fortran::evaluate::Negate<Fortran::evaluate::Type<
-                      Fortran::common::TypeCategory::Integer, KIND>> &op) {
+  ExtValue
+  genval(const Fortran::evaluate::Negate<
+         Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>> &op) {
     mlir::Value input = genunbox(op.left());
     // Like LLVM, integer negation is the binary op "0 - value"
-    mlir::Value zero = genIntegerConstant<KIND>(builder.getContext(), 0);
+    mlir::Value zero = genIntegerConstant(builder.getContext(),
+                                          op.GetType().value().kind(), 0);
     return mlir::arith::SubIOp::create(builder, getLoc(), zero, input);
   }
-  template <int KIND>
   ExtValue genval(const Fortran::evaluate::Negate<Fortran::evaluate::Type<
-                      Fortran::common::TypeCategory::Unsigned, KIND>> &op) {
+                      Fortran::common::TypeCategory::Unsigned>> &op) {
     auto loc = getLoc();
+    int kind = op.GetType().value().kind();
     mlir::Type signlessType =
-        converter.genType(Fortran::common::TypeCategory::Integer, KIND);
+        converter.genType(Fortran::common::TypeCategory::Integer, kind);
     mlir::Value input = genunbox(op.left());
     mlir::Value signless = builder.createConvert(loc, signlessType, input);
-    mlir::Value zero = genIntegerConstant<KIND>(builder.getContext(), 0);
+    mlir::Value zero = genIntegerConstant(builder.getContext(), kind, 0);
     mlir::Value neg = mlir::arith::SubIOp::create(builder, loc, zero, signless);
     return builder.createConvert(loc, input.getType(), neg);
   }
-  template <int KIND>
-  ExtValue genval(const Fortran::evaluate::Negate<Fortran::evaluate::Type<
-                      Fortran::common::TypeCategory::Real, KIND>> &op) {
+  ExtValue
+  genval(const Fortran::evaluate::Negate<
+         Fortran::evaluate::Type<Fortran::common::TypeCategory::Real>> &op) {
     return mlir::arith::NegFOp::create(builder, getLoc(), genunbox(op.left()));
   }
-  template <int KIND>
-  ExtValue genval(const Fortran::evaluate::Negate<Fortran::evaluate::Type<
-                      Fortran::common::TypeCategory::Complex, KIND>> &op) {
+  ExtValue
+  genval(const Fortran::evaluate::Negate<
+         Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex>> &op) {
     return fir::NegcOp::create(builder, getLoc(), genunbox(op.left()));
   }
 
@@ -1124,9 +1126,8 @@ public:
 
 #undef GENBIN
 #define GENBIN(GenBinEvOp, GenBinTyCat, GenBinFirOp)                           \
-  template <int KIND>                                                          \
   ExtValue genval(const Fortran::evaluate::GenBinEvOp<Fortran::evaluate::Type< \
-                      Fortran::common::TypeCategory::GenBinTyCat, KIND>> &x) { \
+                      Fortran::common::TypeCategory::GenBinTyCat>> &x) {       \
     return createBinaryOp<GenBinFirOp>(x);                                     \
   }
 
@@ -1146,44 +1147,42 @@ public:
   GENBIN(Divide, Unsigned, mlir::arith::DivUIOp)
   GENBIN(Divide, Real, mlir::arith::DivFOp)
 
-  template <int KIND>
-  ExtValue genval(const Fortran::evaluate::Divide<Fortran::evaluate::Type<
-                      Fortran::common::TypeCategory::Complex, KIND>> &op) {
-    mlir::Type ty =
-        converter.genType(Fortran::common::TypeCategory::Complex, KIND);
+  ExtValue
+  genval(const Fortran::evaluate::Divide<
+         Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex>> &op) {
+    mlir::Type ty = converter.genType(Fortran::common::TypeCategory::Complex,
+                                      op.GetType().value().kind());
     mlir::Value lhs = genunbox(op.left());
     mlir::Value rhs = genunbox(op.right());
     return fir::genDivC(builder, getLoc(), ty, lhs, rhs);
   }
 
-  template <Fortran::common::TypeCategory TC, int KIND>
-  ExtValue genval(
-      const Fortran::evaluate::Power<Fortran::evaluate::Type<TC, KIND>> &op) {
-    mlir::Type ty = converter.genType(TC, KIND);
+  template <Fortran::common::TypeCategory TC>
+  ExtValue
+  genval(const Fortran::evaluate::Power<Fortran::evaluate::Type<TC>> &op) {
+    mlir::Type ty = converter.genType(TC, op.GetType().value().kind());
     mlir::Value lhs = genunbox(op.left());
     mlir::Value rhs = genunbox(op.right());
     return fir::genPow(builder, getLoc(), ty, lhs, rhs);
   }
 
-  template <Fortran::common::TypeCategory TC, int KIND>
-  ExtValue genval(
-      const Fortran::evaluate::RealToIntPower<Fortran::evaluate::Type<TC, KIND>>
-          &op) {
-    mlir::Type ty = converter.genType(TC, KIND);
+  template <Fortran::common::TypeCategory TC>
+  ExtValue
+  genval(const Fortran::evaluate::RealToIntPower<Fortran::evaluate::Type<TC>>
+             &op) {
+    mlir::Type ty = converter.genType(TC, op.GetType().value().kind());
     mlir::Value lhs = genunbox(op.left());
     mlir::Value rhs = genunbox(op.right());
     return fir::genPow(builder, getLoc(), ty, lhs, rhs);
   }
 
-  template <int KIND>
-  ExtValue genval(const Fortran::evaluate::ComplexConstructor<KIND> &op) {
+  ExtValue genval(const Fortran::evaluate::ComplexConstructor &op) {
     mlir::Value realPartValue = genunbox(op.left());
     return fir::factory::Complex{builder, getLoc()}.createComplex(
         realPartValue, genunbox(op.right()));
   }
 
-  template <int KIND>
-  ExtValue genval(const Fortran::evaluate::Concat<KIND> &op) {
+  ExtValue genval(const Fortran::evaluate::Concat &op) {
     ExtValue lhs = genval(op.left());
     ExtValue rhs = genval(op.right());
     const fir::CharBoxValue *lhsChar = lhs.getCharBox();
@@ -1195,10 +1194,9 @@ public:
   }
 
   /// MIN and MAX operations
-  template <Fortran::common::TypeCategory TC, int KIND>
+  template <Fortran::common::TypeCategory TC>
   ExtValue
-  genval(const Fortran::evaluate::Extremum<Fortran::evaluate::Type<TC, KIND>>
-             &op) {
+  genval(const Fortran::evaluate::Extremum<Fortran::evaluate::Type<TC>> &op) {
     mlir::Value lhs = genunbox(op.left());
     mlir::Value rhs = genunbox(op.right());
     switch (op.ordering) {
@@ -1238,8 +1236,7 @@ public:
     return fir::CharBoxValue{charAddr, newLenValue};
   }
 
-  template <int KIND>
-  ExtValue genval(const Fortran::evaluate::SetLength<KIND> &x) {
+  ExtValue genval(const Fortran::evaluate::SetLength &x) {
     mlir::Value newLenValue = genunbox(x.right());
     fir::ExtendedValue lhs = gen(x.left());
     fir::factory::CharacterExprHelper charHelper(builder, getLoc());
@@ -1249,32 +1246,31 @@ public:
     return fir::ExtendedValue{temp};
   }
 
-  template <int KIND>
-  ExtValue genval(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
-                      Fortran::common::TypeCategory::Integer, KIND>> &op) {
+  ExtValue
+  genval(const Fortran::evaluate::Relational<
+         Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>> &op) {
     return createCompareOp<mlir::arith::CmpIOp>(
         op, translateSignedRelational(op.opr));
   }
-  template <int KIND>
   ExtValue genval(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
-                      Fortran::common::TypeCategory::Unsigned, KIND>> &op) {
+                      Fortran::common::TypeCategory::Unsigned>> &op) {
     return createCompareOp<mlir::arith::CmpIOp>(
-        op, translateUnsignedRelational(op.opr), KIND);
+        op, translateUnsignedRelational(op.opr),
+        op.left().GetType().value().kind());
   }
-  template <int KIND>
-  ExtValue genval(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
-                      Fortran::common::TypeCategory::Real, KIND>> &op) {
+  ExtValue
+  genval(const Fortran::evaluate::Relational<
+         Fortran::evaluate::Type<Fortran::common::TypeCategory::Real>> &op) {
     return createFltCmpOp<mlir::arith::CmpFOp>(
         op, translateFloatRelational(op.opr));
   }
-  template <int KIND>
-  ExtValue genval(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
-                      Fortran::common::TypeCategory::Complex, KIND>> &op) {
+  ExtValue
+  genval(const Fortran::evaluate::Relational<
+         Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex>> &op) {
     return createFltCmpOp<fir::CmpcOp>(op, translateFloatRelational(op.opr));
   }
-  template <int KIND>
   ExtValue genval(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
-                      Fortran::common::TypeCategory::Character, KIND>> &op) {
+                      Fortran::common::TypeCategory::Character>> &op) {
     return createCharCompare(op, translateSignedRelational(op.opr));
   }
 
@@ -1284,12 +1280,12 @@ public:
                                   op.u);
   }
 
-  template <Fortran::common::TypeCategory TC1, int KIND,
+  template <Fortran::common::TypeCategory TC1,
             Fortran::common::TypeCategory TC2>
-  ExtValue
-  genval(const Fortran::evaluate::Convert<Fortran::evaluate::Type<TC1, KIND>,
-                                          TC2> &convert) {
-    mlir::Type ty = converter.genType(TC1, KIND);
+  ExtValue genval(const Fortran::evaluate::Convert<Fortran::evaluate::Type<TC1>,
+                                                   TC2> &convert) {
+    int kind = convert.GetType().value().kind();
+    mlir::Type ty = converter.genType(TC1, kind);
     auto fromExpr = genval(convert.left());
     auto loc = getLoc();
     return fromExpr.match(
@@ -1297,7 +1293,7 @@ public:
           if constexpr (TC1 == Fortran::common::TypeCategory::Character &&
                         TC2 == TC1) {
             return fir::factory::convertCharacterKind(builder, loc, boxchar,
-                                                      KIND);
+                                                      kind);
           } else {
             fir::emitFatalError(
                 loc, "unsupported evaluate::Convert between CHARACTER type "
@@ -1321,8 +1317,7 @@ public:
     return fir::substBase(input, newBase);
   }
 
-  template <int KIND>
-  ExtValue genval(const Fortran::evaluate::Not<KIND> &op) {
+  ExtValue genval(const Fortran::evaluate::Not &op) {
     mlir::Value logical = genunbox(op.left());
     mlir::Value one = genBoolConstant(true);
     mlir::Value val =
@@ -1330,8 +1325,7 @@ public:
     return mlir::arith::XOrIOp::create(builder, getLoc(), val, one);
   }
 
-  template <int KIND>
-  ExtValue genval(const Fortran::evaluate::LogicalOperation<KIND> &op) {
+  ExtValue genval(const Fortran::evaluate::LogicalOperation &op) {
     mlir::IntegerType i1Type = builder.getI1Type();
     mlir::Value slhs = genunbox(op.left());
     mlir::Value srhs = genunbox(op.right());
@@ -1355,10 +1349,9 @@ public:
     llvm_unreachable("unhandled logical operation");
   }
 
-  template <Fortran::common::TypeCategory TC, int KIND>
+  template <Fortran::common::TypeCategory TC>
   ExtValue
-  genval(const Fortran::evaluate::Constant<Fortran::evaluate::Type<TC, KIND>>
-             &con) {
+  genval(const Fortran::evaluate::Constant<Fortran::evaluate::Type<TC>> &con) {
     return Fortran::lower::convertConstant(
         converter, getLoc(), con,
         /*outlineBigConstantsInReadOnlyMemory=*/!inInitializer);
@@ -1560,7 +1553,7 @@ public:
       Fortran::semantics::MaybeSubscriptIntExpr sub = bound.GetExplicit();
       if (sub.has_value())
         return genval(*sub);
-      return genIntegerConstant<8>(builder.getContext(), 1);
+      return genIntegerConstant(builder.getContext(), 8, 1);
     }
     TODO(getLoc(), "non explicit semantics::Bound implementation");
   }
@@ -3036,9 +3029,8 @@ public:
     return asArray(x);
   }
 
-  template <int KIND>
   ExtValue genval(const Fortran::evaluate::Expr<Fortran::evaluate::Type<
-                      Fortran::common::TypeCategory::Logical, KIND>> &exp) {
+                      Fortran::common::TypeCategory::Logical>> &exp) {
     if (mlir::Value val = getIfOverridenExpr(exp))
       return val;
     return Fortran::common::visit([&](const auto &e) { return genval(e); },
@@ -5119,13 +5111,13 @@ private:
           fir::emitFatalError(loc, "convert on adjusted extended value");
         });
   }
-  template <Fortran::common::TypeCategory TC1, int KIND,
+  template <Fortran::common::TypeCategory TC1,
             Fortran::common::TypeCategory TC2>
-  CC genarr(const Fortran::evaluate::Convert<Fortran::evaluate::Type<TC1, KIND>,
-                                             TC2> &x) {
+  CC genarr(
+      const Fortran::evaluate::Convert<Fortran::evaluate::Type<TC1>, TC2> &x) {
     mlir::Location loc = getLoc();
     auto lambda = genarr(x.left());
-    mlir::Type ty = converter.genType(TC1, KIND);
+    mlir::Type ty = converter.genType(TC1, x.GetType().value().kind());
     return [=](IterSpace iters) -> ExtValue {
       auto exv = lambda(iters);
       mlir::Value val = fir::getBase(exv);
@@ -5137,8 +5129,7 @@ private:
     };
   }
 
-  template <int KIND>
-  CC genarr(const Fortran::evaluate::ComplexComponent<KIND> &x) {
+  CC genarr(const Fortran::evaluate::ComplexComponent &x) {
     mlir::Location loc = getLoc();
     auto lambda = genarr(x.left());
     bool isImagPart = x.isImaginaryPart;
@@ -5168,15 +5159,16 @@ private:
       return fir::substBase(val, newBase);
     };
   }
-  template <Fortran::common::TypeCategory CAT, int KIND>
+  template <Fortran::common::TypeCategory CAT>
   CC genarrIntNeg(
-      const Fortran::evaluate::Expr<Fortran::evaluate::Type<CAT, KIND>> &left) {
+      const Fortran::evaluate::Expr<Fortran::evaluate::Type<CAT>> &left) {
     mlir::Location loc = getLoc();
+    int kind = left.GetType().value().kind();
     auto f = genarr(left);
     return [=](IterSpace iters) -> ExtValue {
       mlir::Value val = fir::getBase(f(iters));
       mlir::Type ty =
-          converter.genType(Fortran::common::TypeCategory::Integer, KIND);
+          converter.genType(Fortran::common::TypeCategory::Integer, kind);
       mlir::Value zero = builder.createIntegerConstant(loc, ty, 0);
       if constexpr (CAT == Fortran::common::TypeCategory::Unsigned) {
         mlir::Value signless = builder.createConvert(loc, ty, val);
@@ -5187,28 +5179,26 @@ private:
       return mlir::arith::SubIOp::create(builder, loc, zero, val);
     };
   }
-  template <int KIND>
-  CC genarr(const Fortran::evaluate::Negate<Fortran::evaluate::Type<
-                Fortran::common::TypeCategory::Integer, KIND>> &x) {
+  CC genarr(
+      const Fortran::evaluate::Negate<
+          Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>> &x) {
     return genarrIntNeg(x.left());
   }
-  template <int KIND>
   CC genarr(const Fortran::evaluate::Negate<Fortran::evaluate::Type<
-                Fortran::common::TypeCategory::Unsigned, KIND>> &x) {
+                Fortran::common::TypeCategory::Unsigned>> &x) {
     return genarrIntNeg(x.left());
   }
-  template <int KIND>
-  CC genarr(const Fortran::evaluate::Negate<Fortran::evaluate::Type<
-                Fortran::common::TypeCategory::Real, KIND>> &x) {
+  CC genarr(const Fortran::evaluate::Negate<
+            Fortran::evaluate::Type<Fortran::common::TypeCategory::Real>> &x) {
     mlir::Location loc = getLoc();
     auto f = genarr(x.left());
     return [=](IterSpace iters) -> ExtValue {
       return mlir::arith::NegFOp::create(builder, loc, fir::getBase(f(iters)));
     };
   }
-  template <int KIND>
-  CC genarr(const Fortran::evaluate::Negate<Fortran::evaluate::Type<
-                Fortran::common::TypeCategory::Complex, KIND>> &x) {
+  CC genarr(
+      const Fortran::evaluate::Negate<
+          Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex>> &x) {
     mlir::Location loc = getLoc();
     auto f = genarr(x.left());
     return [=](IterSpace iters) -> ExtValue {
@@ -5235,9 +5225,8 @@ private:
 
 #undef GENBIN
 #define GENBIN(GenBinEvOp, GenBinTyCat, GenBinFirOp)                           \
-  template <int KIND>                                                          \
   CC genarr(const Fortran::evaluate::GenBinEvOp<Fortran::evaluate::Type<       \
-                Fortran::common::TypeCategory::GenBinTyCat, KIND>> &x) {       \
+                Fortran::common::TypeCategory::GenBinTyCat>> &x) {             \
     return createBinaryOp<GenBinFirOp>(x);                                     \
   }
 
@@ -5257,12 +5246,12 @@ private:
   GENBIN(Divide, Unsigned, mlir::arith::DivUIOp)
   GENBIN(Divide, Real, mlir::arith::DivFOp)
 
-  template <int KIND>
-  CC genarr(const Fortran::evaluate::Divide<Fortran::evaluate::Type<
-                Fortran::common::TypeCategory::Complex, KIND>> &x) {
+  CC genarr(
+      const Fortran::evaluate::Divide<
+          Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex>> &x) {
     mlir::Location loc = getLoc();
-    mlir::Type ty =
-        converter.genType(Fortran::common::TypeCategory::Complex, KIND);
+    mlir::Type ty = converter.genType(Fortran::common::TypeCategory::Complex,
+                                      x.GetType().value().kind());
     auto lf = genarr(x.left());
     auto rf = genarr(x.right());
     return [=](IterSpace iters) -> ExtValue {
@@ -5272,11 +5261,10 @@ private:
     };
   }
 
-  template <Fortran::common::TypeCategory TC, int KIND>
-  CC genarr(
-      const Fortran::evaluate::Power<Fortran::evaluate::Type<TC, KIND>> &x) {
+  template <Fortran::common::TypeCategory TC>
+  CC genarr(const Fortran::evaluate::Power<Fortran::evaluate::Type<TC>> &x) {
     mlir::Location loc = getLoc();
-    mlir::Type ty = converter.genType(TC, KIND);
+    mlir::Type ty = converter.genType(TC, x.GetType().value().kind());
     auto lf = genarr(x.left());
     auto rf = genarr(x.right());
     return [=](IterSpace iters) -> ExtValue {
@@ -5285,9 +5273,8 @@ private:
       return fir::genPow(builder, loc, ty, lhs, rhs);
     };
   }
-  template <Fortran::common::TypeCategory TC, int KIND>
-  CC genarr(
-      const Fortran::evaluate::Extremum<Fortran::evaluate::Type<TC, KIND>> &x) {
+  template <Fortran::common::TypeCategory TC>
+  CC genarr(const Fortran::evaluate::Extremum<Fortran::evaluate::Type<TC>> &x) {
     mlir::Location loc = getLoc();
     auto lf = genarr(x.left());
     auto rf = genarr(x.right());
@@ -5309,12 +5296,11 @@ private:
     }
     llvm_unreachable("unknown ordering");
   }
-  template <Fortran::common::TypeCategory TC, int KIND>
+  template <Fortran::common::TypeCategory TC>
   CC genarr(
-      const Fortran::evaluate::RealToIntPower<Fortran::evaluate::Type<TC, KIND>>
-          &x) {
+      const Fortran::evaluate::RealToIntPower<Fortran::evaluate::Type<TC>> &x) {
     mlir::Location loc = getLoc();
-    auto ty = converter.genType(TC, KIND);
+    auto ty = converter.genType(TC, x.GetType().value().kind());
     auto lf = genarr(x.left());
     auto rf = genarr(x.right());
     return [=](IterSpace iters) {
@@ -5323,8 +5309,7 @@ private:
       return fir::genPow(builder, loc, ty, lhs, rhs);
     };
   }
-  template <int KIND>
-  CC genarr(const Fortran::evaluate::ComplexConstructor<KIND> &x) {
+  CC genarr(const Fortran::evaluate::ComplexConstructor &x) {
     mlir::Location loc = getLoc();
     auto lf = genarr(x.left());
     auto rf = genarr(x.right());
@@ -5336,8 +5321,7 @@ private:
   }
 
   /// Fortran's concatenation operator `//`.
-  template <int KIND>
-  CC genarr(const Fortran::evaluate::Concat<KIND> &x) {
+  CC genarr(const Fortran::evaluate::Concat &x) {
     mlir::Location loc = getLoc();
     auto lf = genarr(x.left());
     auto rf = genarr(x.right());
@@ -5355,14 +5339,14 @@ private:
     };
   }
 
-  template <int KIND>
-  CC genarr(const Fortran::evaluate::SetLength<KIND> &x) {
+  CC genarr(const Fortran::evaluate::SetLength &x) {
     auto lf = genarr(x.left());
     mlir::Value rhs = fir::getBase(asScalar(x.right()));
     fir::CharBoxValue temp =
         fir::factory::CharacterExprHelper(builder, getLoc())
             .createCharacterTemp(
-                fir::CharacterType::getUnknownLen(builder.getContext(), KIND),
+                fir::CharacterType::getUnknownLen(builder.getContext(),
+                                                  x.GetType().value().kind()),
                 rhs);
     return [=](IterSpace iters) -> ExtValue {
       fir::factory::CharacterExprHelper(builder, getLoc())
@@ -5390,17 +5374,17 @@ private:
   // Get rid of it here so the vector can be loaded. Add it back when
   // generating the elemental evaluation (inside the loop nest).
 
-  static Fortran::lower::SomeExpr
-  ignoreEvConvert(const Fortran::evaluate::Expr<Fortran::evaluate::Type<
-                      Fortran::common::TypeCategory::Integer, 8>> &x) {
+  static Fortran::lower::SomeExpr ignoreEvConvert(
+      const Fortran::evaluate::Expr<
+          Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>> &x) {
     return Fortran::common::visit(
         [&](const auto &v) { return ignoreEvConvert(v); }, x.u);
   }
   template <Fortran::common::TypeCategory FROM>
   static Fortran::lower::SomeExpr ignoreEvConvert(
       const Fortran::evaluate::Convert<
-          Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer, 8>,
-          FROM> &x) {
+          Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>, FROM>
+          &x) {
     return toEvExpr(x.left());
   }
   template <typename A>
@@ -6577,8 +6561,7 @@ private:
   // LOCICAL operators (.NOT., .AND., .EQV., etc.)
   //===--------------------------------------------------------------------===//
 
-  template <int KIND>
-  CC genarr(const Fortran::evaluate::Not<KIND> &x) {
+  CC genarr(const Fortran::evaluate::Not &x) {
     mlir::Location loc = getLoc();
     mlir::IntegerType i1Ty = builder.getI1Type();
     auto lambda = genarr(x.left());
@@ -6617,8 +6600,7 @@ private:
       return OP::create(builder, loc, pred, lhs, rhs);
     };
   }
-  template <int KIND>
-  CC genarr(const Fortran::evaluate::LogicalOperation<KIND> &x) {
+  CC genarr(const Fortran::evaluate::LogicalOperation &x) {
     switch (x.logicalOperator) {
     case Fortran::evaluate::LogicalOperator::And:
       return createBinaryBoolOp<mlir::arith::AndIOp>(x);
@@ -6670,32 +6652,30 @@ private:
       return fir::runtime::genCharCompare(builder, loc, pred, lhs, rhs);
     };
   }
-  template <int KIND>
-  CC genarr(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
-                Fortran::common::TypeCategory::Integer, KIND>> &x) {
+  CC genarr(
+      const Fortran::evaluate::Relational<
+          Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>> &x) {
     return createCompareOp<mlir::arith::CmpIOp>(
         translateSignedRelational(x.opr), x);
   }
-  template <int KIND>
   CC genarr(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
-                Fortran::common::TypeCategory::Unsigned, KIND>> &x) {
+                Fortran::common::TypeCategory::Unsigned>> &x) {
     return createCompareOp<mlir::arith::CmpIOp>(
-        translateUnsignedRelational(x.opr), x, KIND);
+        translateUnsignedRelational(x.opr), x,
+        x.left().GetType().value().kind());
   }
-  template <int KIND>
   CC genarr(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
-                Fortran::common::TypeCategory::Character, KIND>> &x) {
+                Fortran::common::TypeCategory::Character>> &x) {
     return createCompareCharOp(translateSignedRelational(x.opr), x);
   }
-  template <int KIND>
-  CC genarr(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
-                Fortran::common::TypeCategory::Real, KIND>> &x) {
+  CC genarr(const Fortran::evaluate::Relational<
+            Fortran::evaluate::Type<Fortran::common::TypeCategory::Real>> &x) {
     return createCompareOp<mlir::arith::CmpFOp>(translateFloatRelational(x.opr),
                                                 x);
   }
-  template <int KIND>
-  CC genarr(const Fortran::evaluate::Relational<Fortran::evaluate::Type<
-                Fortran::common::TypeCategory::Complex, KIND>> &x) {
+  CC genarr(
+      const Fortran::evaluate::Relational<
+          Fortran::evaluate::Type<Fortran::common::TypeCategory::Complex>> &x) {
     return createCompareOp<fir::CmpcOp>(translateFloatRelational(x.opr), x);
   }
   CC genarr(

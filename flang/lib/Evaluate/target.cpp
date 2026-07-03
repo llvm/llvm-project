@@ -155,103 +155,52 @@ void TargetCharacteristics::set_roundingMode(Rounding rounding) {
 
 // SELECTED_INT_KIND() -- F'2018 16.9.169
 // and SELECTED_UNSIGNED_KIND() extension (same results)
-class SelectedIntKindVisitor {
-public:
-  SelectedIntKindVisitor(
-      const TargetCharacteristics &targetCharacteristics, std::int64_t p)
-      : targetCharacteristics_{targetCharacteristics}, precision_{p} {}
-  using Result = std::optional<int>;
-  using Types = IntegerTypes;
-  template <typename T> Result Test() const {
-    if (Scalar<T>::RANGE >= precision_ &&
-        targetCharacteristics_.IsTypeEnabled(T::category, T::kind)) {
-      return T::kind;
-    } else {
-      return std::nullopt;
+int TargetCharacteristics::SelectedIntKind(std::int64_t precision) const {
+  // Candidate kinds in ascending order; the smallest satisfying kind wins.
+  for (int kind : {1, 2, 4, 8, 16}) {
+    if (value::IntegerValue::RANGE(kind) >= precision &&
+        IsTypeEnabled(TypeCategory::Integer, kind)) {
+      return kind;
     }
   }
-
-private:
-  const TargetCharacteristics &targetCharacteristics_;
-  std::int64_t precision_;
-};
-
-int TargetCharacteristics::SelectedIntKind(std::int64_t precision) const {
-  if (auto kind{
-          common::SearchTypes(SelectedIntKindVisitor{*this, precision})}) {
-    return *kind;
-  } else {
-    return -1;
-  }
+  return -1;
 }
 
 // SELECTED_LOGICAL_KIND() -- F'2023 16.9.182
-class SelectedLogicalKindVisitor {
-public:
-  SelectedLogicalKindVisitor(
-      const TargetCharacteristics &targetCharacteristics, std::int64_t bits)
-      : targetCharacteristics_{targetCharacteristics}, bits_{bits} {}
-  using Result = std::optional<int>;
-  using Types = LogicalTypes;
-  template <typename T> Result Test() const {
-    if (Scalar<T>::bits >= bits_ &&
-        targetCharacteristics_.IsTypeEnabled(T::category, T::kind)) {
-      return T::kind;
-    } else {
-      return std::nullopt;
+int TargetCharacteristics::SelectedLogicalKind(std::int64_t bits) const {
+  for (int kind : {1, 2, 4, 8}) {
+    if (value::LogicalValue::Zero(kind).bits() >= bits &&
+        IsTypeEnabled(TypeCategory::Logical, kind)) {
+      return kind;
     }
   }
-
-private:
-  const TargetCharacteristics &targetCharacteristics_;
-  std::int64_t bits_;
-};
-
-int TargetCharacteristics::SelectedLogicalKind(std::int64_t bits) const {
-  if (auto kind{common::SearchTypes(SelectedLogicalKindVisitor{*this, bits})}) {
-    return *kind;
-  } else {
-    return -1;
-  }
+  return -1;
 }
 
 // SELECTED_REAL_KIND() -- F'2018 16.9.170
-class SelectedRealKindVisitor {
-public:
-  SelectedRealKindVisitor(const TargetCharacteristics &targetCharacteristics,
-      std::int64_t p, std::int64_t r)
-      : targetCharacteristics_{targetCharacteristics}, precision_{p}, range_{
-                                                                          r} {}
-  using Result = std::optional<int>;
-  using Types = RealTypes;
-  template <typename T> Result Test() const {
-    if (Scalar<T>::PRECISION >= precision_ && Scalar<T>::RANGE >= range_ &&
-        targetCharacteristics_.IsTypeEnabled(T::category, T::kind)) {
-      return {T::kind};
-    } else {
-      return std::nullopt;
-    }
-  }
-
-private:
-  const TargetCharacteristics &targetCharacteristics_;
-  std::int64_t precision_, range_;
-};
-
 int TargetCharacteristics::SelectedRealKind(
     std::int64_t precision, std::int64_t range, std::int64_t radix) const {
   if (radix != 2) {
     return -5;
   }
-  if (auto kind{common::SearchTypes(
-          SelectedRealKindVisitor{*this, precision, range})}) {
-    return *kind;
+  auto search{[&](std::int64_t p, std::int64_t r) -> int {
+    for (int kind : {2, 3, 4, 8, 10, 16}) {
+      if (value::RealValue::PRECISION(kind) >= p &&
+          value::RealValue::RANGE(kind) >= r &&
+          IsTypeEnabled(TypeCategory::Real, kind)) {
+        return kind;
+      }
+    }
+    return -1;
+  }};
+  if (int kind{search(precision, range)}; kind > 0) {
+    return kind;
   }
   // No kind has both sufficient precision and sufficient range.
   // The negative return value encodes whether any kinds exist that
   // could satisfy either constraint independently.
-  bool pOK{common::SearchTypes(SelectedRealKindVisitor{*this, precision, 0})};
-  bool rOK{common::SearchTypes(SelectedRealKindVisitor{*this, 0, range})};
+  bool pOK{search(precision, 0) > 0};
+  bool rOK{search(0, range) > 0};
   if (pOK) {
     if (rOK) {
       return -4;

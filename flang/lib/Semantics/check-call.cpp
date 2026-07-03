@@ -264,7 +264,10 @@ static void CheckCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
                   ConvertToType(dummy.type.type(), std::move(actual))};
               CHECK(converted);
               actual = std::move(*converted);
-              actualType.set_LEN(SubscriptIntExpr{*dummyLength});
+              actualType.set_LEN(SubscriptIntExpr{
+                  evaluate::Constant<evaluate::SubscriptInteger>{
+                      evaluate::SubscriptInteger::Scalar{
+                          *dummyLength, evaluate::subscriptIntegerKind}}});
             }
           }
         }

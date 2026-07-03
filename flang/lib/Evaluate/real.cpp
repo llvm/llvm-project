@@ -10,9 +10,11 @@
 #include "int-power.h"
 #include "flang/Common/idioms.h"
 #include "flang/Decimal/decimal.h"
+#include "flang/Evaluate/formatting.h"
 #include "flang/Parser/characters.h"
 #include "llvm/Support/raw_ostream.h"
 #include <limits>
+#include <string>
 
 namespace Fortran::evaluate::value {
 
@@ -831,4 +833,5 @@ template class Real<Integer<32>, 24>;
 template class Real<Integer<64>, 53>;
 template class Real<X87IntegerContainer, 64>;
 template class Real<Integer<128>, 113>;
+
 } // namespace Fortran::evaluate::value

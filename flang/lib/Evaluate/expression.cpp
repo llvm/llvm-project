@@ -26,14 +26,14 @@ using namespace Fortran::parser::literals;
 
 namespace Fortran::evaluate {
 
-template <int KIND>
 std::optional<Expr<SubscriptInteger>>
-Expr<Type<TypeCategory::Character, KIND>>::LEN() const {
+Expr<Type<TypeCategory::Character>>::LEN() const {
   using T = std::optional<Expr<SubscriptInteger>>;
   return common::visit(
       common::visitors{
           [](const Constant<Result> &c) -> T {
-            return AsExpr(Constant<SubscriptInteger>{c.LEN()});
+            return AsExpr(Constant<SubscriptInteger>{
+                SubscriptInteger::Scalar{c.LEN(), subscriptIntegerKind}});
           },
           [](const ArrayConstructor<Result> &a) -> T {
             if (const auto *len{a.LEN()}) {
@@ -47,7 +47,7 @@ Expr<Type<TypeCategory::Character, KIND>>::LEN() const {
             return common::visit(
                 [&](const auto &kx) { return kx.LEN(); }, x.left().u);
           },
-          [](const Concat<KIND> &c) -> T {
+          [](const Concat &c) -> T {
             if (auto llen{c.left().LEN()}) {
               if (auto rlen{c.right().LEN()}) {
                 return *std::move(llen) + *std::move(rlen);
@@ -76,7 +76,7 @@ Expr<Type<TypeCategory::Character, KIND>>::LEN() const {
           },
           [](const Designator<Result> &dr) { return dr.LEN(); },
           [](const FunctionRef<Result> &fr) { return fr.LEN(); },
-          [](const SetLength<KIND> &x) -> T { return x.right(); },
+          [](const SetLength &x) -> T { return x.right(); },
       },
       u);
 }
@@ -97,18 +97,16 @@ const typename ExpressionBase<A>::Derived &ExpressionBase<A>::derived() const {
 
 template <typename A>
 std::optional<DynamicType> ExpressionBase<A>::GetType() const {
-  if constexpr (IsLengthlessIntrinsicType<Result>) {
-    return Result::GetType();
-  } else {
-    return common::visit(
-        [&](const auto &x) -> std::optional<DynamicType> {
-          if constexpr (!common::HasMember<decltype(x), TypelessExpression>) {
-            return x.GetType();
-          }
-          return std::nullopt; // w/o "else" to dodge bogus g++ 8.1 warning
-        },
-        derived().u);
-  }
+  // The kind is a runtime property of the active alternative now, so always
+  // recover the type by visiting rather than from a compile-time Result.
+  return common::visit(
+      [&](const auto &x) -> std::optional<DynamicType> {
+        if constexpr (!common::HasMember<decltype(x), TypelessExpression>) {
+          return x.GetType();
+        }
+        return std::nullopt; // w/o "else" to dodge bogus g++ 8.1 warning
+      },
+      derived().u);
 }
 
 template <typename A> int ExpressionBase<A>::Rank() const {
@@ -157,8 +155,7 @@ bool ConditionalExpr<A>::operator==(const ConditionalExpr &that) const {
       elseValue_ == that.elseValue_;
 }
 
-template <int KIND>
-bool LogicalOperation<KIND>::operator==(const LogicalOperation &that) const {
+bool LogicalOperation::operator==(const LogicalOperation &that) const {
   return logicalOperator == that.logicalOperator && Base::operator==(that);
 }
 
@@ -194,15 +191,13 @@ bool ArrayConstructorValues<R>::operator==(
   return values_ == that.values_;
 }
 
-template <int KIND>
-auto ArrayConstructor<Type<TypeCategory::Character, KIND>>::set_LEN(
+auto ArrayConstructor<Type<TypeCategory::Character>>::set_LEN(
     Expr<SubscriptInteger> &&len) -> ArrayConstructor & {
   length_.emplace(std::move(len));
   return *this;
 }
 
-template <int KIND>
-bool ArrayConstructor<Type<TypeCategory::Character, KIND>>::operator==(
+bool ArrayConstructor<Type<TypeCategory::Character>>::operator==(
     const ArrayConstructor &that) const {
   return length_ == that.length_ &&
       static_cast<const Base &>(*this) == static_cast<const Base &>(that);
@@ -227,39 +222,33 @@ bool StructureConstructor::operator==(const StructureConstructor &that) const {
   return result_ == that.result_ && values_ == that.values_;
 }
 
-template <int KIND>
-bool Expr<Type<TypeCategory::Integer, KIND>>::operator==(
-    const Expr<Type<TypeCategory::Integer, KIND>> &that) const {
+bool Expr<Type<TypeCategory::Integer>>::operator==(
+    const Expr<Type<TypeCategory::Integer>> &that) const {
   return u == that.u;
 }
 
-template <int KIND>
-bool Expr<Type<TypeCategory::Real, KIND>>::operator==(
-    const Expr<Type<TypeCategory::Real, KIND>> &that) const {
+bool Expr<Type<TypeCategory::Real>>::operator==(
+    const Expr<Type<TypeCategory::Real>> &that) const {
   return u == that.u;
 }
 
-template <int KIND>
-bool Expr<Type<TypeCategory::Complex, KIND>>::operator==(
-    const Expr<Type<TypeCategory::Complex, KIND>> &that) const {
+bool Expr<Type<TypeCategory::Complex>>::operator==(
+    const Expr<Type<TypeCategory::Complex>> &that) const {
   return u == that.u;
 }
 
-template <int KIND>
-bool Expr<Type<TypeCategory::Logical, KIND>>::operator==(
-    const Expr<Type<TypeCategory::Logical, KIND>> &that) const {
+bool Expr<Type<TypeCategory::Logical>>::operator==(
+    const Expr<Type<TypeCategory::Logical>> &that) const {
   return u == that.u;
 }
 
-template <int KIND>
-bool Expr<Type<TypeCategory::Character, KIND>>::operator==(
-    const Expr<Type<TypeCategory::Character, KIND>> &that) const {
+bool Expr<Type<TypeCategory::Character>>::operator==(
+    const Expr<Type<TypeCategory::Character>> &that) const {
   return u == that.u;
 }
 
-template <int KIND>
-bool Expr<Type<TypeCategory::Unsigned, KIND>>::operator==(
-    const Expr<Type<TypeCategory::Unsigned, KIND>> &that) const {
+bool Expr<Type<TypeCategory::Unsigned>>::operator==(
+    const Expr<Type<TypeCategory::Unsigned>> &that) const {
   return u == that.u;
 }
 
@@ -370,15 +359,16 @@ void GenericAssignmentWrapper::Deleter(GenericAssignmentWrapper *p) {
 }
 
 template <TypeCategory CAT> int Expr<SomeKind<CAT>>::GetKind() const {
+  // Recover the kind from the runtime type of the active alternative rather
+  // than from its compile-time Result::kind, in preparation for removing the
+  // KIND template parameter from Type.
   return common::visit(
-      [](const auto &kx) { return std::decay_t<decltype(kx)>::Result::kind; },
-      u);
+      [](const auto &kx) { return kx.GetType().value().kind(); }, u);
 }
 
 int Expr<SomeCharacter>::GetKind() const {
   return common::visit(
-      [](const auto &kx) { return std::decay_t<decltype(kx)>::Result::kind; },
-      u);
+      [](const auto &kx) { return kx.GetType().value().kind(); }, u);
 }
 
 std::optional<Expr<SubscriptInteger>> Expr<SomeCharacter>::LEN() const {

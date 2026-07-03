@@ -14,6 +14,7 @@
 // initializer for a symbol.
 
 #include "expression.h"
+#include <cstring>
 #include <map>
 #include <optional>
 #include <vector>
@@ -56,21 +57,24 @@ public:
         return OkNoChange;
       } else {
         // TODO endianness
-        auto *to{&data_.at(offset)};
-        const auto *from{&x.values().at(0)};
-        if (std::memcmp(to, from, bytes) == 0) {
-          return OkNoChange;
-        } else {
-          std::memcpy(to, from, bytes);
-          return Ok;
+        auto strideBytes{static_cast<std::size_t>(*elementBytes)};
+        Result result{OkNoChange};
+        auto at{x.lbounds()};
+        for (std::size_t j{0}; j < x.values().size();
+            ++j, x.IncrementSubscripts(at)) {
+          auto *to{&data_.at(offset + j * strideBytes)};
+          const auto &scalar{x.At(at)};
+          if (scalar.StoreRawBytes(to, strideBytes)) {
+            result = Ok;
+          }
         }
+        return result;
       }
     }
   }
-  template <int KIND>
   Result Add(ConstantSubscript offset, std::size_t bytes,
-      const Constant<Type<TypeCategory::Character, KIND>> &x,
-      FoldingContext &) {
+      const Constant<Type<TypeCategory::Character>> &x, FoldingContext &) {
+    const int KIND{x.GetType().kind()};
     if (offset < 0 || offset + bytes > data_.size()) {
       return OutOfRange;
     } else {

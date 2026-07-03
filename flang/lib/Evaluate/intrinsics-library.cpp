@@ -155,7 +155,7 @@ static Expr<SomeType> ApplyHostFunctionHelper(FuncType func,
   host::HostType<TR> hostResult{};
   Scalar<TR> result{};
   std::tuple<Scalar<TA>...> scalarArgs{
-      GetScalarConstantValue<TA>(args[I]).value()...};
+      GetScalarConstantValue<typename TA::FortranType>(args[I]).value()...};
   if (context.targetCharacteristics().areSubnormalsFlushedToZero() &&
       !hostFPE.hasSubnormalFlushingHardwareControl()) {
     hostResult = func(host::CastFortranToHost<TA>(
@@ -169,7 +169,7 @@ static Expr<SomeType> ApplyHostFunctionHelper(FuncType func,
     CheckFloatingPointIssues<TR>(hostFPE, result);
   }
   hostFPE.CheckAndRestoreFloatingPointEnvironment(context);
-  return AsGenericExpr(Constant<TR>(std::move(result)));
+  return AsGenericExpr(Constant<typename TR::FortranType>(std::move(result)));
 }
 template <typename HostTR, typename... HostTA>
 Expr<SomeType> ApplyHostFunction(FuncPointer<HostTR, HostTA...> func,
@@ -822,8 +822,11 @@ static const Expr<SomeType> &GetArg(
 template <typename T>
 static bool IsInRange(const Expr<T> &expr, int lb, int ub) {
   if (auto scalar{GetScalarConstantValue<T>(expr)}) {
-    auto lbValue{Scalar<T>::FromInteger(value::Integer<8>{lb}).value};
-    auto ubValue{Scalar<T>::FromInteger(value::Integer<8>{ub}).value};
+    int kind{scalar->kind()};
+    auto lbValue{
+        Scalar<T>::FromInteger(value::IntegerValue{lb, 1}, kind).value};
+    auto ubValue{
+        Scalar<T>::FromInteger(value::IntegerValue{ub, 1}, kind).value};
     return Satisfies(RelationalOperator::LE, lbValue.Compare(*scalar)) &&
         Satisfies(RelationalOperator::LE, scalar->Compare(ubValue));
   }
@@ -858,8 +861,8 @@ static bool VerifyStrictlyPositiveIfReal(
         [&](const auto &x) -> bool {
           using T = typename std::decay_t<decltype(x)>::Result;
           auto scalar{GetScalarConstantValue<T>(x)};
-          return Satisfies(
-              RelationalOperator::LT, Scalar<T>{}.Compare(*scalar));
+          return Satisfies(RelationalOperator::LT,
+              Scalar<T>::Zero(scalar->kind()).Compare(*scalar));
         },
         someReal->u)};
     if (!isStrictlyPositive) {

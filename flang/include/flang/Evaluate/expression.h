@@ -178,10 +178,20 @@ public:
     }
   }
 
-  static constexpr std::conditional_t<Result::category != TypeCategory::Derived,
+  std::conditional_t<Result::category != TypeCategory::Derived,
       std::optional<DynamicType>, void>
-  GetType() {
-    return Result::GetType();
+  GetType() const {
+    if constexpr (Result::category != TypeCategory::Derived) {
+      // The result kind of most operations equals their first operand's kind;
+      // derive it at runtime rather than from the compile-time Result::kind.
+      // Operations whose result kind differs (Convert, Relational) override
+      // this.  An operand may be typeless on an error path, so propagate that
+      // rather than aborting.
+      if (auto operandType{this->left().GetType()}) {
+        return DynamicType{Result::category, operandType->kind()};
+      }
+      return std::nullopt;
+    }
   }
   int Rank() const {
     int rank{left().Rank()};
@@ -222,7 +232,16 @@ struct Convert : public Operation<Convert<TO, FROMCAT>, TO, SomeKind<FROMCAT>> {
   using Operand = SomeKind<FROMCAT>;
   using Base = Operation<Convert, Result, Operand>;
   using Base::Base;
+  // A conversion's result kind is the target kind, not the operand kind, so it
+  // is stored at runtime (defaulting to the compile-time target kind while it
+  // remains a template parameter) rather than derived from the operand.
+  std::optional<DynamicType> GetType() const {
+    return DynamicType{Result::category, resultKind_};
+  }
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
+  // TODO(kind-flip): the conversion target kind must be supplied at
+  // construction (it was formerly the compile-time Result::kind, now removed).
+  int resultKind_{0};
 };
 
 template <typename A>
@@ -251,12 +270,11 @@ template <typename A> struct Negate : public Operation<Negate<A>, A, A> {
   using Base::Base;
 };
 
-template <int KIND>
 struct ComplexComponent
-    : public Operation<ComplexComponent<KIND>, Type<TypeCategory::Real, KIND>,
-          Type<TypeCategory::Complex, KIND>> {
-  using Result = Type<TypeCategory::Real, KIND>;
-  using Operand = Type<TypeCategory::Complex, KIND>;
+    : public Operation<ComplexComponent, Type<TypeCategory::Real>,
+          Type<TypeCategory::Complex>> {
+  using Result = Type<TypeCategory::Real>;
+  using Operand = Type<TypeCategory::Complex>;
   using Base = Operation<ComplexComponent, Result, Operand>;
   CLASS_BOILERPLATE(ComplexComponent)
   ComplexComponent(bool isImaginary, const Expr<Operand> &x)
@@ -267,24 +285,21 @@ struct ComplexComponent
   bool isImaginaryPart{true};
 };
 
-template <int KIND>
-struct Not : public Operation<Not<KIND>, Type<TypeCategory::Logical, KIND>,
-                 Type<TypeCategory::Logical, KIND>> {
-  using Result = Type<TypeCategory::Logical, KIND>;
+struct Not : public Operation<Not, Type<TypeCategory::Logical>,
+                 Type<TypeCategory::Logical>> {
+  using Result = Type<TypeCategory::Logical>;
   using Operand = Result;
   using Base = Operation<Not, Result, Operand>;
   using Base::Base;
 };
 
-// Character lengths are determined by context in Fortran and do not
+// CharacterValue lengths are determined by context in Fortran and do not
 // have explicit syntax for changing them.  Expressions represent
 // changes of length (e.g., for assignments and structure constructors)
 // with this operation.
-template <int KIND>
-struct SetLength
-    : public Operation<SetLength<KIND>, Type<TypeCategory::Character, KIND>,
-          Type<TypeCategory::Character, KIND>, SubscriptInteger> {
-  using Result = Type<TypeCategory::Character, KIND>;
+struct SetLength : public Operation<SetLength, Type<TypeCategory::Character>,
+                       Type<TypeCategory::Character>, SubscriptInteger> {
+  using Result = Type<TypeCategory::Character>;
   using CharacterOperand = Result;
   using LengthOperand = SubscriptInteger;
   using Base = Operation<SetLength, Result, CharacterOperand, LengthOperand>;
@@ -350,34 +365,28 @@ template <typename A> struct Extremum : public Operation<Extremum<A>, A, A, A> {
   Ordering ordering{Ordering::Greater};
 };
 
-template <int KIND>
 struct ComplexConstructor
-    : public Operation<ComplexConstructor<KIND>,
-          Type<TypeCategory::Complex, KIND>, Type<TypeCategory::Real, KIND>,
-          Type<TypeCategory::Real, KIND>> {
-  using Result = Type<TypeCategory::Complex, KIND>;
-  using Operand = Type<TypeCategory::Real, KIND>;
+    : public Operation<ComplexConstructor, Type<TypeCategory::Complex>,
+          Type<TypeCategory::Real>, Type<TypeCategory::Real>> {
+  using Result = Type<TypeCategory::Complex>;
+  using Operand = Type<TypeCategory::Real>;
   using Base = Operation<ComplexConstructor, Result, Operand, Operand>;
   using Base::Base;
 };
 
-template <int KIND>
 struct Concat
-    : public Operation<Concat<KIND>, Type<TypeCategory::Character, KIND>,
-          Type<TypeCategory::Character, KIND>,
-          Type<TypeCategory::Character, KIND>> {
-  using Result = Type<TypeCategory::Character, KIND>;
+    : public Operation<Concat, Type<TypeCategory::Character>,
+          Type<TypeCategory::Character>, Type<TypeCategory::Character>> {
+  using Result = Type<TypeCategory::Character>;
   using Operand = Result;
   using Base = Operation<Concat, Result, Operand, Operand>;
   using Base::Base;
 };
 
-template <int KIND>
 struct LogicalOperation
-    : public Operation<LogicalOperation<KIND>,
-          Type<TypeCategory::Logical, KIND>, Type<TypeCategory::Logical, KIND>,
-          Type<TypeCategory::Logical, KIND>> {
-  using Result = Type<TypeCategory::Logical, KIND>;
+    : public Operation<LogicalOperation, Type<TypeCategory::Logical>,
+          Type<TypeCategory::Logical>, Type<TypeCategory::Logical>> {
+  using Result = Type<TypeCategory::Logical>;
   using Operand = Result;
   using Base = Operation<LogicalOperation, Result, Operand, Operand>;
   CLASS_BOILERPLATE(LogicalOperation)
@@ -437,6 +446,9 @@ template <typename RESULT> class ArrayConstructorValues;
 struct ImpliedDoIndex {
   using Result = SubscriptInteger;
   bool operator==(const ImpliedDoIndex &) const;
+  static constexpr DynamicType GetType() {
+    return DynamicType{TypeCategory::Integer, subscriptIntegerKind};
+  }
   static constexpr int Rank() { return 0; }
   static constexpr int Corank() { return 0; }
   parser::CharBlock name; // nested implied DOs must use distinct names
@@ -499,6 +511,33 @@ protected:
   Values values_;
 };
 
+// Determine the runtime result kind of an array constructor by inspecting
+// its element values (recursing into implied DOs).  Returns 0 if none of the
+// elements have a known type.
+template <typename RESULT>
+int GleanArrayConstructorResultKind(
+    const ArrayConstructorValues<RESULT> &values) {
+  for (const auto &v : values) {
+    int kind{common::visit(
+        [](const auto &x) -> int {
+          if constexpr (std::is_same_v<std::decay_t<decltype(x)>,
+                            Expr<RESULT>>) {
+            if (auto type{x.GetType()}) {
+              return type->kind();
+            }
+            return 0;
+          } else {
+            return GleanArrayConstructorResultKind<RESULT>(x.values());
+          }
+        },
+        v.u)};
+    if (kind != 0) {
+      return kind;
+    }
+  }
+  return 0;
+}
+
 // Note that there are specializations of ArrayConstructor for character
 // and derived types, since they must carry additional type information,
 // but that an empty ArrayConstructor can be constructed for any type
@@ -509,30 +548,52 @@ public:
   using Result = RESULT;
   using Base = ArrayConstructorValues<Result>;
   DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(ArrayConstructor)
-  explicit ArrayConstructor(Base &&values) : Base{std::move(values)} {}
-  template <typename T> explicit ArrayConstructor(const Expr<T> &) {}
+  explicit ArrayConstructor(Base &&values)
+      : Base{std::move(values)},
+        resultKind_{GleanArrayConstructorResultKind<Result>(*this)} {}
+  template <typename T> explicit ArrayConstructor(const Expr<T> &x) {
+    if (auto type{x.GetType()}) {
+      resultKind_ = type->kind();
+    }
+  }
   static constexpr Result result() { return Result{}; }
-  static constexpr DynamicType GetType() { return Result::GetType(); }
+  // The element kind is stored at runtime (defaulting to the compile-time kind
+  // while it remains a template parameter) rather than taken from Result.
+  DynamicType GetType() const {
+    return DynamicType{Result::category, resultKind_};
+  }
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
+  // The element kind is supplied at construction (formerly the compile-time
+  // Result::kind, now removed).
+  int resultKind_{0};
 };
 
-template <int KIND>
-class ArrayConstructor<Type<TypeCategory::Character, KIND>>
-    : public ArrayConstructorValues<Type<TypeCategory::Character, KIND>> {
+template <>
+class ArrayConstructor<Type<TypeCategory::Character>>
+    : public ArrayConstructorValues<Type<TypeCategory::Character>> {
 public:
-  using Result = Type<TypeCategory::Character, KIND>;
+  using Result = Type<TypeCategory::Character>;
   using Base = ArrayConstructorValues<Result>;
   DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(ArrayConstructor)
   explicit ArrayConstructor(Base &&values) : Base{std::move(values)} {}
-  template <typename T> explicit ArrayConstructor(const Expr<T> &) {}
+  template <typename T> explicit ArrayConstructor(const Expr<T> &x) {
+    if (auto type{x.GetType()}) {
+      resultKind_ = type->kind();
+    }
+  }
   ArrayConstructor &set_LEN(Expr<SubscriptInteger> &&);
   bool operator==(const ArrayConstructor &) const;
   static constexpr Result result() { return Result{}; }
-  static constexpr DynamicType GetType() { return Result::GetType(); }
+  DynamicType GetType() const {
+    return DynamicType{Result::category, resultKind_};
+  }
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
   const Expr<SubscriptInteger> *LEN() const {
     return length_ ? &length_->value() : nullptr;
   }
+  // The character kind is supplied at construction (formerly the compile-time
+  // Result::kind, now removed).
+  int resultKind_{0};
 
 private:
   std::optional<common::CopyableIndirection<Expr<SubscriptInteger>>> length_;
@@ -563,13 +624,26 @@ private:
 
 // Expression representations for each type category.
 
-template <int KIND>
-class Expr<Type<TypeCategory::Integer, KIND>>
-    : public ExpressionBase<Type<TypeCategory::Integer, KIND>> {
+template <>
+class Expr<Type<TypeCategory::Integer>>
+    : public ExpressionBase<Type<TypeCategory::Integer>> {
 public:
-  using Result = Type<TypeCategory::Integer, KIND>;
+  using Result = Type<TypeCategory::Integer>;
 
   EVALUATE_UNION_CLASS_BOILERPLATE(Expr)
+  // Compiler-internal integer literals (subscripts, bounds, shapes) default to
+  // the subscript integer kind, which is the widest commonly-used kind and so
+  // is range-safe; the kind is carried at runtime in the resulting Constant.
+  explicit Expr(int n) : Expr(static_cast<long long>(n)) {}
+  explicit Expr(unsigned n) : Expr(static_cast<unsigned long long>(n)) {}
+  explicit Expr(long n) : Expr(static_cast<long long>(n)) {}
+  explicit Expr(unsigned long n) : Expr(static_cast<unsigned long long>(n)) {}
+  explicit Expr(long long n)
+      : u{Constant<Result>{typename Result::Scalar{n, subscriptIntegerKind},
+            Result{subscriptIntegerKind}}} {}
+  explicit Expr(unsigned long long n)
+      : u{Constant<Result>{typename Result::Scalar{n, subscriptIntegerKind},
+            Result{subscriptIntegerKind}}} {}
 
 private:
   using Conversions = std::tuple<Convert<Result, TypeCategory::Integer>,
@@ -578,14 +652,9 @@ private:
   using Operations = std::tuple<Parentheses<Result>, Negate<Result>,
       Add<Result>, Subtract<Result>, Multiply<Result>, Divide<Result>,
       Power<Result>, Extremum<Result>, ConditionalExpr<Result>>;
-  using Indices = std::conditional_t<KIND == ImpliedDoIndex::Result::kind,
-      std::tuple<ImpliedDoIndex>, std::tuple<>>;
-  using TypeParamInquiries =
-      std::conditional_t<KIND == TypeParamInquiry::Result::kind,
-          std::tuple<TypeParamInquiry>, std::tuple<>>;
-  using DescriptorInquiries =
-      std::conditional_t<KIND == DescriptorInquiry::Result::kind,
-          std::tuple<DescriptorInquiry>, std::tuple<>>;
+  using Indices = std::tuple<ImpliedDoIndex>;
+  using TypeParamInquiries = std::tuple<TypeParamInquiry>;
+  using DescriptorInquiries = std::tuple<DescriptorInquiry>;
   using Others = std::tuple<Constant<Result>, ArrayConstructor<Result>,
       Designator<Result>, FunctionRef<Result>>;
 
@@ -595,13 +664,23 @@ public:
       u;
 };
 
-template <int KIND>
-class Expr<Type<TypeCategory::Unsigned, KIND>>
-    : public ExpressionBase<Type<TypeCategory::Unsigned, KIND>> {
+template <>
+class Expr<Type<TypeCategory::Unsigned>>
+    : public ExpressionBase<Type<TypeCategory::Unsigned>> {
 public:
-  using Result = Type<TypeCategory::Unsigned, KIND>;
+  using Result = Type<TypeCategory::Unsigned>;
 
   EVALUATE_UNION_CLASS_BOILERPLATE(Expr)
+  explicit Expr(int n) : Expr(static_cast<long long>(n)) {}
+  explicit Expr(unsigned n) : Expr(static_cast<unsigned long long>(n)) {}
+  explicit Expr(long n) : Expr(static_cast<long long>(n)) {}
+  explicit Expr(unsigned long n) : Expr(static_cast<unsigned long long>(n)) {}
+  explicit Expr(long long n)
+      : u{Constant<Result>{typename Result::Scalar{n, subscriptIntegerKind},
+            Result{subscriptIntegerKind}}} {}
+  explicit Expr(unsigned long long n)
+      : u{Constant<Result>{typename Result::Scalar{n, subscriptIntegerKind},
+            Result{subscriptIntegerKind}}} {}
 
 private:
   using Conversions = std::tuple<Convert<Result, TypeCategory::Integer>,
@@ -618,11 +697,11 @@ public:
       u;
 };
 
-template <int KIND>
-class Expr<Type<TypeCategory::Real, KIND>>
-    : public ExpressionBase<Type<TypeCategory::Real, KIND>> {
+template <>
+class Expr<Type<TypeCategory::Real>>
+    : public ExpressionBase<Type<TypeCategory::Real>> {
 public:
-  using Result = Type<TypeCategory::Real, KIND>;
+  using Result = Type<TypeCategory::Real>;
 
   EVALUATE_UNION_CLASS_BOILERPLATE(Expr)
   explicit Expr(const Scalar<Result> &x) : u{Constant<Result>{x}} {}
@@ -633,7 +712,7 @@ private:
   using Conversions = std::variant<Convert<Result, TypeCategory::Integer>,
       Convert<Result, TypeCategory::Real>,
       Convert<Result, TypeCategory::Unsigned>>;
-  using Operations = std::variant<ComplexComponent<KIND>, Parentheses<Result>,
+  using Operations = std::variant<ComplexComponent, Parentheses<Result>,
       Negate<Result>, Add<Result>, Subtract<Result>, Multiply<Result>,
       Divide<Result>, Power<Result>, RealToIntPower<Result>, Extremum<Result>,
       ConditionalExpr<Result>>;
@@ -644,17 +723,17 @@ public:
   common::CombineVariants<Operations, Conversions, Others> u;
 };
 
-template <int KIND>
-class Expr<Type<TypeCategory::Complex, KIND>>
-    : public ExpressionBase<Type<TypeCategory::Complex, KIND>> {
+template <>
+class Expr<Type<TypeCategory::Complex>>
+    : public ExpressionBase<Type<TypeCategory::Complex>> {
 public:
-  using Result = Type<TypeCategory::Complex, KIND>;
+  using Result = Type<TypeCategory::Complex>;
   EVALUATE_UNION_CLASS_BOILERPLATE(Expr)
   explicit Expr(const Scalar<Result> &x) : u{Constant<Result>{x}} {}
   using Operations = std::variant<Parentheses<Result>, Negate<Result>,
       Convert<Result, TypeCategory::Complex>, Add<Result>, Subtract<Result>,
       Multiply<Result>, Divide<Result>, Power<Result>, RealToIntPower<Result>,
-      ComplexConstructor<KIND>, ConditionalExpr<Result>>;
+      ComplexConstructor, ConditionalExpr<Result>>;
   using Others = std::variant<Constant<Result>, ArrayConstructor<Result>,
       Designator<Result>, FunctionRef<Result>>;
 
@@ -667,11 +746,11 @@ FOR_EACH_UNSIGNED_KIND(extern template class Expr, )
 FOR_EACH_REAL_KIND(extern template class Expr, )
 FOR_EACH_COMPLEX_KIND(extern template class Expr, )
 
-template <int KIND>
-class Expr<Type<TypeCategory::Character, KIND>>
-    : public ExpressionBase<Type<TypeCategory::Character, KIND>> {
+template <>
+class Expr<Type<TypeCategory::Character>>
+    : public ExpressionBase<Type<TypeCategory::Character>> {
 public:
-  using Result = Type<TypeCategory::Character, KIND>;
+  using Result = Type<TypeCategory::Character>;
   EVALUATE_UNION_CLASS_BOILERPLATE(Expr)
   explicit Expr(const Scalar<Result> &x) : u{Constant<Result>{x}} {}
   explicit Expr(Scalar<Result> &&x) : u{Constant<Result>{std::move(x)}} {}
@@ -679,8 +758,8 @@ public:
   std::optional<Expr<SubscriptInteger>> LEN() const;
 
   std::variant<Constant<Result>, ArrayConstructor<Result>, Designator<Result>,
-      FunctionRef<Result>, Parentheses<Result>, Convert<Result>, Concat<KIND>,
-      Extremum<Result>, SetLength<KIND>, ConditionalExpr<Result>>
+      FunctionRef<Result>, Parentheses<Result>, Convert<Result>, Concat,
+      Extremum<Result>, SetLength, ConditionalExpr<Result>>
       u;
 };
 
@@ -691,7 +770,7 @@ FOR_EACH_CHARACTER_KIND(extern template class Expr, )
 // categories and kinds of comparable operands.
 // Fortran defines a numeric relation with distinct types or kinds as
 // first undergoing the same operand conversions that occur with the intrinsic
-// addition operator.  Character relations must have the same kind.
+// addition operator.  CharacterValue relations must have the same kind.
 // There are no relations between LOGICAL values.
 
 template <typename T>
@@ -711,6 +790,10 @@ public:
       : Base{a, b}, opr{r} {}
   Relational(RelationalOperator r, Expr<Operand> &&a, Expr<Operand> &&b)
       : Base{std::move(a), std::move(b)}, opr{r} {}
+  // A relation's result is always LogicalResult, independent of operand kind.
+  static constexpr std::optional<DynamicType> GetType() {
+    return DynamicType{TypeCategory::Logical, logicalResultKind};
+  }
   bool operator==(const Relational &) const;
   RelationalOperator opr;
 };
@@ -722,7 +805,9 @@ template <> class Relational<SomeType> {
 public:
   using Result = LogicalResult;
   EVALUATE_UNION_CLASS_BOILERPLATE(Relational)
-  static constexpr DynamicType GetType() { return Result::GetType(); }
+  static constexpr DynamicType GetType() {
+    return DynamicType{TypeCategory::Logical, logicalResultKind};
+  }
   int Rank() const {
     return common::visit([](const auto &x) { return x.Rank(); }, u);
   }
@@ -741,20 +826,19 @@ extern template class Relational<SomeType>;
 // do not include Relational<> operations as possibilities,
 // since the results of Relationals are always LogicalResult
 // (kind=4).
-template <int KIND>
-class Expr<Type<TypeCategory::Logical, KIND>>
-    : public ExpressionBase<Type<TypeCategory::Logical, KIND>> {
+template <>
+class Expr<Type<TypeCategory::Logical>>
+    : public ExpressionBase<Type<TypeCategory::Logical>> {
 public:
-  using Result = Type<TypeCategory::Logical, KIND>;
+  using Result = Type<TypeCategory::Logical>;
   EVALUATE_UNION_CLASS_BOILERPLATE(Expr)
   explicit Expr(const Scalar<Result> &x) : u{Constant<Result>{x}} {}
-  explicit Expr(bool x) : u{Constant<Result>{x}} {}
+  explicit Expr(bool x) : u{Constant<Result>{x, Result{logicalResultKind}}} {}
 
 private:
-  using Operations = std::tuple<Convert<Result>, Parentheses<Result>, Not<KIND>,
-      LogicalOperation<KIND>, ConditionalExpr<Result>>;
-  using Relations = std::conditional_t<KIND == LogicalResult::kind,
-      std::tuple<Relational<SomeType>>, std::tuple<>>;
+  using Operations = std::tuple<Convert<Result>, Parentheses<Result>, Not,
+      LogicalOperation, ConditionalExpr<Result>>;
+  using Relations = std::tuple<Relational<SomeType>>;
   using Others = std::tuple<Constant<Result>, ArrayConstructor<Result>,
       Designator<Result>, FunctionRef<Result>>;
 
@@ -891,21 +975,18 @@ public:
   // its destructor is externalized to reduce redundant default instances.
   ~Expr();
 
-  template <TypeCategory CAT, int KIND>
-  explicit Expr(const Expr<Type<CAT, KIND>> &x) : u{Expr<SomeKind<CAT>>{x}} {}
+  template <TypeCategory CAT>
+  explicit Expr(const Expr<Type<CAT>> &x) : u{Expr<SomeKind<CAT>>{x}} {}
 
-  template <TypeCategory CAT, int KIND>
-  explicit Expr(Expr<Type<CAT, KIND>> &&x)
-      : u{Expr<SomeKind<CAT>>{std::move(x)}} {}
+  template <TypeCategory CAT>
+  explicit Expr(Expr<Type<CAT>> &&x) : u{Expr<SomeKind<CAT>>{std::move(x)}} {}
 
-  template <TypeCategory CAT, int KIND>
-  Expr &operator=(const Expr<Type<CAT, KIND>> &x) {
+  template <TypeCategory CAT> Expr &operator=(const Expr<Type<CAT>> &x) {
     u = Expr<SomeKind<CAT>>{x};
     return *this;
   }
 
-  template <TypeCategory CAT, int KIND>
-  Expr &operator=(Expr<Type<CAT, KIND>> &&x) {
+  template <TypeCategory CAT> Expr &operator=(Expr<Type<CAT>> &&x) {
     u = Expr<SomeKind<CAT>>{std::move(x)};
     return *this;
   }

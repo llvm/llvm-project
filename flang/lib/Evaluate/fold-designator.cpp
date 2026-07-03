@@ -98,9 +98,13 @@ std::optional<OffsetSymbol> DesignatorFolder::FoldDesignator(
                         },
                         [&](const Triplet &triplet) {
                           auto start{ToInt64(Fold(context_,
-                              triplet.lower().value_or(ExtentExpr{lower})))};
+                              triplet.lower().value_or(ExtentExpr{
+                                  Constant<ExtentType>{ExtentType::Scalar{
+                                      lower, subscriptIntegerKind}}})))};
                           auto end{ToInt64(Fold(context_,
-                              triplet.upper().value_or(ExtentExpr{upper})))};
+                              triplet.upper().value_or(ExtentExpr{
+                                  Constant<ExtentType>{ExtentType::Scalar{
+                                      upper, subscriptIntegerKind}}})))};
                           auto step{ToInt64(Fold(context_, triplet.stride()))};
                           if (start && end && step) {
                             if (*step != 0) {
@@ -237,11 +241,13 @@ static std::optional<ArrayRef> OffsetToArrayRef(FoldingContext &context,
     }
     auto quotient{at / extent};
     auto remainder{at - quotient * extent};
-    subscripts.emplace_back(ExtentExpr{(*lower)[dim] + remainder});
+    subscripts.emplace_back(ExtentExpr{Constant<ExtentType>{
+        ExtentType::Scalar{(*lower)[dim] + remainder, subscriptIntegerKind}}});
     at = quotient;
   }
   // This final subscript might be out of range for use in error reporting.
-  subscripts.emplace_back(ExtentExpr{(*lower)[rank - 1] + at});
+  subscripts.emplace_back(ExtentExpr{Constant<ExtentType>{
+      ExtentType::Scalar{(*lower)[rank - 1] + at, subscriptIntegerKind}}});
   offset -= element * static_cast<std::size_t>(*elementBytes);
   return ArrayRef{std::move(entity), std::move(subscripts)};
 }
@@ -350,12 +356,17 @@ std::optional<Expr<SomeType>> OffsetToDesignator(FoldingContext &context,
               return common::visit(
                   [&](const auto &x) -> std::optional<Expr<SomeType>> {
                     using T = typename std::decay_t<decltype(x)>::Result;
-                    return AsGenericExpr(Designator<T>{
-                        Substring{ExtractDataRef(std::move(*cExpr)).value(),
-                            std::optional<Expr<SubscriptInteger>>{
-                                1 + (offset / T::kind)},
-                            std::optional<Expr<SubscriptInteger>>{
-                                1 + ((offset + size - 1) / T::kind)}}});
+                    const int charKind{x.GetType().value().kind()};
+                    return AsGenericExpr(Designator<T>{Substring{
+                        ExtractDataRef(std::move(*cExpr)).value(),
+                        std::optional<Expr<SubscriptInteger>>{
+                            Constant<SubscriptInteger>{SubscriptInteger::Scalar{
+                                1 + (offset / charKind),
+                                subscriptIntegerKind}}},
+                        std::optional<Expr<SubscriptInteger>>{
+                            Constant<SubscriptInteger>{SubscriptInteger::Scalar{
+                                1 + ((offset + size - 1) / charKind),
+                                subscriptIntegerKind}}}}});
                   },
                   cExpr->u);
             }

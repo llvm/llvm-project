@@ -136,6 +136,9 @@ private:
 class TypeParamInquiry {
 public:
   using Result = SubscriptInteger;
+  static constexpr DynamicType GetType() {
+    return DynamicType{TypeCategory::Integer, subscriptIntegerKind};
+  }
   CLASS_BOILERPLATE(TypeParamInquiry)
   TypeParamInquiry(NamedEntity &&x, const Symbol &param)
       : base_{std::move(x)}, parameter_{param} {}
@@ -413,6 +416,9 @@ FOR_EACH_CHARACTER_KIND(extern template class Designator, )
 class DescriptorInquiry {
 public:
   using Result = SubscriptInteger;
+  static constexpr DynamicType GetType() {
+    return DynamicType{TypeCategory::Integer, subscriptIntegerKind};
+  }
   ENUM_CLASS(Field, LowerBound, Extent, Stride, Rank, Len)
 
   CLASS_BOILERPLATE(DescriptorInquiry)

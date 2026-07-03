@@ -87,7 +87,7 @@ std::optional<uint64_t> TotalElementCount(const ConstantSubscripts &shape) {
     CHECK(dim >= 0);
     uint64_t osize{size};
     size = osize * dim;
-    if (size > std::numeric_limits<decltype(dim)>::max() ||
+    if (size > (uint64_t)std::numeric_limits<decltype(dim)>::max() ||
         (dim != 0 && size / dim != osize)) {
       return std::nullopt;
     }
@@ -154,6 +154,20 @@ ConstantBase<RESULT, ELEMENT>::~ConstantBase() {}
 
 template <typename RESULT, typename ELEMENT>
 bool ConstantBase<RESULT, ELEMENT>::operator==(const ConstantBase &that) const {
+  if constexpr (RESULT::category != TypeCategory::Derived) {
+    // Now that kind is a runtime property rather than a compile-time template
+    // parameter, two constants of the same category but different kinds are no
+    // longer distinct C++ types; they must be treated as unequal here (as they
+    // were in the baseline, where they were different types altogether) before
+    // comparing element values of mismatched storage widths.
+    // PAPAYA: In the baseline, `this` and `that` had the same type
+    // (ConstantBase<RESULT, ELEMENT>). Calling this when the kinds of RESULT
+    // are different was not possible. Type mismatch must have been resolved
+    // before.
+    if (GetType().kind() != that.GetType().kind()) {
+      return false;
+    }
+  }
   return shape() == that.shape() && values_ == that.values_;
 }
 
@@ -198,7 +212,16 @@ auto Constant<T>::At(const ConstantSubscripts &index) const -> Element {
 
 template <typename T>
 auto Constant<T>::Reshape(ConstantSubscripts &&dims) const -> Constant {
-  return {Base::Reshape(dims), std::move(dims)};
+  // Preserve the runtime kind: rebuilding from just the reshaped values would
+  // lose it for an empty result (no element values to source a kind from).
+  // Consult both the Result and the element values as ConstantBase::GetType()
+  // does, but without calling GetType(), which would assert on a kind-0 empty
+  // constant.
+  int kind{Base::result().runtimeKind()};
+  if (kind == 0 && !Base::empty()) {
+    kind = Base::values_.front().kind();
+  }
+  return {Base::Reshape(dims), std::move(dims), typename Base::Result{kind}};
 }
 
 template <typename T>
@@ -207,25 +230,34 @@ std::size_t Constant<T>::CopyFrom(const Constant<T> &source, std::size_t count,
   return Base::CopyFrom(source, count, resultSubscripts, dimOrder);
 }
 
-// Constant<Type<TypeCategory::Character, KIND> specializations
-template <int KIND>
-Constant<Type<TypeCategory::Character, KIND>>::Constant(
-    const Scalar<Result> &str)
-    : values_{str}, length_{static_cast<ConstantSubscript>(values_.size())} {}
+// Constant<Type<TypeCategory::Character>> specialization
+Constant<Type<TypeCategory::Character>>::Constant(const Scalar<Result> &str)
+    : values_{str}, length_{static_cast<ConstantSubscript>(values_.size())},
+      kind_{values_.kind()} {}
 
-template <int KIND>
-Constant<Type<TypeCategory::Character, KIND>>::Constant(Scalar<Result> &&str)
-    : values_{std::move(str)}, length_{static_cast<ConstantSubscript>(
-                                   values_.size())} {}
+Constant<Type<TypeCategory::Character>>::Constant(Scalar<Result> &&str)
+    : values_{std::move(str)},
+      length_{static_cast<ConstantSubscript>(values_.size())},
+      kind_{values_.kind()} {}
 
-template <int KIND>
-Constant<Type<TypeCategory::Character, KIND>>::Constant(ConstantSubscript len,
+Constant<Type<TypeCategory::Character>>::Constant(ConstantSubscript len,
     std::vector<Scalar<Result>> &&strings, ConstantSubscripts &&sh)
     : ConstantBounds(std::move(sh)), length_{len} {
   CHECK(TotalElementCount(shape()) &&
       strings.size() == *TotalElementCount(shape()));
-  values_.assign(strings.size() * length_,
-      static_cast<typename Scalar<Result>::value_type>(' '));
+  // The character kind is a runtime property carried by the element strings.
+  kind_ = strings.empty() ? 1 : strings.front().kind();
+  switch (kind_) {
+  case 1:
+    values_.assign(strings.size() * length_, char{' '});
+    break;
+  case 2:
+    values_.assign(strings.size() * length_, static_cast<char16_t>(' '));
+    break;
+  default:
+    values_.assign(strings.size() * length_, static_cast<char32_t>(' '));
+    break;
+  }
   ConstantSubscript at{0};
   for (const auto &str : strings) {
     auto strLen{static_cast<ConstantSubscript>(str.size())};
@@ -239,16 +271,13 @@ Constant<Type<TypeCategory::Character, KIND>>::Constant(ConstantSubscript len,
   CHECK(at == static_cast<ConstantSubscript>(values_.size()));
 }
 
-template <int KIND>
-Constant<Type<TypeCategory::Character, KIND>>::~Constant() {}
+Constant<Type<TypeCategory::Character>>::~Constant() {}
 
-template <int KIND>
-bool Constant<Type<TypeCategory::Character, KIND>>::empty() const {
+bool Constant<Type<TypeCategory::Character>>::empty() const {
   return size() == 0;
 }
 
-template <int KIND>
-std::size_t Constant<Type<TypeCategory::Character, KIND>>::size() const {
+std::size_t Constant<Type<TypeCategory::Character>>::size() const {
   if (length_ == 0) {
     std::optional<uint64_t> n{TotalElementCount(shape())};
     CHECK(n);
@@ -258,23 +287,21 @@ std::size_t Constant<Type<TypeCategory::Character, KIND>>::size() const {
   }
 }
 
-template <int KIND>
-auto Constant<Type<TypeCategory::Character, KIND>>::At(
+auto Constant<Type<TypeCategory::Character>>::At(
     const ConstantSubscripts &index) const -> Scalar<Result> {
   auto offset{SubscriptsToOffset(index)};
   return values_.substr(offset * length_, length_);
 }
 
-template <int KIND>
-auto Constant<Type<TypeCategory::Character, KIND>>::Substring(
-    ConstantSubscript lo, ConstantSubscript hi) const
-    -> std::optional<Constant> {
+auto Constant<Type<TypeCategory::Character>>::Substring(ConstantSubscript lo,
+    ConstantSubscript hi) const -> std::optional<Constant> {
   std::vector<Element> elements;
   ConstantSubscript n{GetSize(shape())};
   ConstantSubscript newLength{0};
   if (lo > hi) { // zero-length results
     while (n-- > 0) {
-      elements.emplace_back(); // ""
+      // An empty string still carries the character kind of this constant.
+      elements.emplace_back(Scalar<Result>::Zero(kind_)); // ""
     }
   } else if (lo < 1 || hi > length_) {
     return std::nullopt;
@@ -287,8 +314,7 @@ auto Constant<Type<TypeCategory::Character, KIND>>::Substring(
   return Constant{newLength, std::move(elements), ConstantSubscripts{shape()}};
 }
 
-template <int KIND>
-auto Constant<Type<TypeCategory::Character, KIND>>::Reshape(
+auto Constant<Type<TypeCategory::Character>>::Reshape(
     ConstantSubscripts &&dims) const -> Constant<Result> {
   std::optional<uint64_t> optN{TotalElementCount(dims)};
   CHECK(optN);
@@ -307,11 +333,9 @@ auto Constant<Type<TypeCategory::Character, KIND>>::Reshape(
   return {length_, std::move(elements), std::move(dims)};
 }
 
-template <int KIND>
-std::size_t Constant<Type<TypeCategory::Character, KIND>>::CopyFrom(
-    const Constant<Type<TypeCategory::Character, KIND>> &source,
-    std::size_t count, ConstantSubscripts &resultSubscripts,
-    const std::vector<int> *dimOrder) {
+std::size_t Constant<Type<TypeCategory::Character>>::CopyFrom(
+    const Constant<Type<TypeCategory::Character>> &source, std::size_t count,
+    ConstantSubscripts &resultSubscripts, const std::vector<int> *dimOrder) {
   CHECK(length_ == source.length_);
   if (length_ == 0) {
     // It's possible that the array of strings consists of all empty strings.
@@ -320,12 +344,14 @@ std::size_t Constant<Type<TypeCategory::Character, KIND>>::CopyFrom(
     return count;
   } else {
     std::size_t copied{0};
-    std::size_t elementBytes{length_ * sizeof(decltype(values_[0]))};
+    std::size_t charSize{values_.charSize()};
+    std::size_t elementBytes{length_ * charSize};
     ConstantSubscripts sourceSubscripts{source.lbounds()};
     while (copied < count) {
-      auto *dest{&values_.at(SubscriptsToOffset(resultSubscripts) * length_)};
-      const auto *src{&source.values_.at(
-          source.SubscriptsToOffset(sourceSubscripts) * length_)};
+      auto *dest{static_cast<char *>(values_.charData()) +
+          SubscriptsToOffset(resultSubscripts) * elementBytes};
+      const auto *src{static_cast<const char *>(source.values_.charData()) +
+          source.SubscriptsToOffset(sourceSubscripts) * elementBytes};
       std::memcpy(dest, src, elementBytes);
       copied++;
       source.IncrementSubscripts(sourceSubscripts);

@@ -6912,8 +6912,7 @@ private:
               return Fortran::common::visit(
                   [&](const auto &someKind) -> std::string {
                     using T = std::decay_t<decltype(someKind)>;
-                    using TK = Fortran::evaluate::Type<T::Result::category,
-                                                       T::Result::kind>;
+                    using TK = typename T::Result;
                     if (const auto *constant =
                             std::get_if<Fortran::evaluate::Constant<TK>>(
                                 &someKind.u)) {

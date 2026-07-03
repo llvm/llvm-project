@@ -21,7 +21,7 @@ ValueWithRealFlags<REAL> TimesIntPowerOf(const REAL &factor, const REAL &base,
     Rounding rounding = TargetCharacteristics::defaultRounding) {
   ValueWithRealFlags<REAL> result{factor};
   if (base.IsNotANumber()) {
-    result.value = REAL::NotANumber();
+    result.value = REAL::NotANumber(base.kind());
     result.flags.set(RealFlag::InvalidArgument);
   } else if (power.IsZero()) {
     if (base.IsZero() || base.IsInfinite()) {
@@ -31,7 +31,7 @@ ValueWithRealFlags<REAL> TimesIntPowerOf(const REAL &factor, const REAL &base,
     bool negativePower{power.IsNegative()};
     INT absPower{power.ABS().value};
     REAL squares{base};
-    int nbits{INT::bits - absPower.LEADZ()};
+    int nbits{absPower.bits() - absPower.LEADZ()};
     for (int j{0}; j < nbits; ++j) {
       if (j > 0) { // avoid spurious overflow on last iteration
         squares =
@@ -54,7 +54,7 @@ ValueWithRealFlags<REAL> TimesIntPowerOf(const REAL &factor, const REAL &base,
 template <typename REAL, typename INT>
 ValueWithRealFlags<REAL> IntPower(const REAL &base, const INT &power,
     Rounding rounding = TargetCharacteristics::defaultRounding) {
-  REAL one{REAL::FromInteger(INT{1}).value};
+  REAL one{REAL::FromInteger(INT{1, base.kind()}, base.kind()).value};
   return TimesIntPowerOf(one, base, power, rounding);
 }
 } // namespace Fortran::evaluate

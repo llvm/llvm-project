@@ -66,22 +66,21 @@ mangleArrayLiteral(size_t size,
                    Fortran::common::ConstantSubscript charLen = -1,
                    llvm::StringRef derivedName = {});
 
-template <Fortran::common::TypeCategory TC, int KIND>
+template <Fortran::common::TypeCategory TC>
 std::string mangleArrayLiteral(
     mlir::Type,
-    const Fortran::evaluate::Constant<Fortran::evaluate::Type<TC, KIND>> &x) {
+    const Fortran::evaluate::Constant<Fortran::evaluate::Type<TC>> &x) {
   return mangleArrayLiteral(x.values().size() * sizeof(x.values()[0]),
-                            x.shape(), TC, KIND);
+                            x.shape(), TC, x.GetType().kind());
 }
 
-template <int KIND>
-std::string
-mangleArrayLiteral(mlir::Type,
-                   const Fortran::evaluate::Constant<Fortran::evaluate::Type<
-                       Fortran::common::TypeCategory::Character, KIND>> &x) {
+inline std::string mangleArrayLiteral(
+    mlir::Type,
+    const Fortran::evaluate::Constant<
+        Fortran::evaluate::Type<Fortran::common::TypeCategory::Character>> &x) {
   return mangleArrayLiteral(x.values().size() * sizeof(x.values()[0]),
                             x.shape(), Fortran::common::TypeCategory::Character,
-                            KIND, x.LEN());
+                            x.GetType().kind(), x.LEN());
 }
 
 inline std::string mangleArrayLiteral(

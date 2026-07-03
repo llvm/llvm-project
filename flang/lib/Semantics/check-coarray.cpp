@@ -209,7 +209,7 @@ void CoarrayChecker::Leave(const parser::SyncImagesStmt &x) {
           someInt && evaluate::IsActuallyConstant(*someInt)) {
         auto converted{evaluate::Fold(context_.foldingContext(),
             evaluate::ConvertToType<evaluate::SubscriptInteger>(
-                common::Clone(*someInt)))};
+                evaluate::subscriptIntegerKind, common::Clone(*someInt)))};
         if (const auto *cst{
                 evaluate::UnwrapConstantValue<evaluate::SubscriptInteger>(
                     converted)}) {

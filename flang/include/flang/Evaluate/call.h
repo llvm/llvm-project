@@ -299,20 +299,39 @@ public:
   FunctionRef(ProcedureDesignator &&p, ActualArguments &&a)
       : ProcedureRef{std::move(p), std::move(a)} {}
 
+  // Records the runtime kind of an intrinsic function result when it cannot be
+  // recovered from the procedure designator's symbol (e.g. user procedures
+  // declared with an intrinsic interface).  Zero means "unspecified".
+  int resultKind() const { return resultKind_; }
+  void set_resultKind(int k) { resultKind_ = k; }
+
   std::optional<DynamicType> GetType() const {
-    if constexpr (IsLengthlessIntrinsicType<A>) {
-      return A::GetType();
-    } else if (auto type{proc_.GetType()}) {
+    // The result kind is a runtime property taken from the procedure's
+    // interface rather than a compile-time template parameter of A.
+    if (auto type{proc_.GetType()}) {
       // TODO: Non constant explicit length parameters of PDTs result should
       // likely be dropped too. This is not as easy as for characters since some
       // long lived DerivedTypeSpec pointer would need to be created here. It is
       // not clear if this is causing any issue so far since the storage size of
       // PDTs is independent of length parameters.
       return type->DropNonConstantCharacterLength();
+    } else if constexpr (IsLengthlessIntrinsicType<A>) {
+      // User procedures may be declared with an interface that is a specific
+      // intrinsic; in that case there is no result type available from the
+      // procedure symbol.  The result of such a procedure is always a
+      // lengthless intrinsic type whose kind was recorded when the reference
+      // was analyzed.
+      if (resultKind_ == 0) {
+        return std::nullopt;
+      }
+      return DynamicType{A::category, resultKind_};
     } else {
       return std::nullopt;
     }
   }
+
+private:
+  int resultKind_{0};
 };
 } // namespace Fortran::evaluate
 #endif // FORTRAN_EVALUATE_CALL_H_

@@ -258,7 +258,9 @@ private:
   template <typename T>
   MaybeExtentExpr GetArrayConstructorExtent(
       const ArrayConstructorValues<T> &values) const {
-    ExtentExpr result{0};
+    ExtentExpr result{
+        Constant<ExtentType>{ExtentType::Scalar{0, subscriptIntegerKind},
+            ExtentType{subscriptIntegerKind}}};
     for (const auto &value : values) {
       if (MaybeExtentExpr n{GetArrayConstructorValueExtent(value)}) {
         AccumulateExtent(result, std::move(*n));

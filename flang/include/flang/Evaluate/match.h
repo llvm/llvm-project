@@ -36,9 +36,9 @@ struct IsOperation<T, std::void_t<decltype(T::operands)>> {
 template <typename T>
 constexpr bool is_operation_v{detail::IsOperation<T>::value};
 
-template <common::TypeCategory C, int K>
-const evaluate::Expr<Type<C, K>> &deparen(const evaluate::Expr<Type<C, K>> &x) {
-  if (auto *parens{std::get_if<Parentheses<Type<C, K>>>(&x.u)}) {
+template <common::TypeCategory C>
+const evaluate::Expr<Type<C>> &deparen(const evaluate::Expr<Type<C>> &x) {
+  if (auto *parens{std::get_if<Parentheses<Type<C>>>(&x.u)}) {
     return deparen(parens->template operand<0>());
   } else {
     return x;
@@ -189,16 +189,13 @@ OperationPattern(const Ops &..., llvm::type_identity<OpType>)
 // only from operand patterns. This will make it usable in AnyOfPattern.
 template <common::LogicalOperator Operator, typename ValType, typename... Ops>
 struct LogicalOperationPattern
-    : public OperationPattern<LogicalOperation<ValType::kind>, Ops...> {
-  using Base = OperationPattern<LogicalOperation<ValType::kind>, Ops...>;
+    : public OperationPattern<LogicalOperation, Ops...> {
+  using Base = OperationPattern<LogicalOperation, Ops...>;
   static constexpr common::LogicalOperator opCode{Operator};
 
 private:
-  template <int K> bool matchOp(const LogicalOperation<K> &op) const {
-    if constexpr (ValType::kind == K) {
-      return op.logicalOperator == opCode;
-    }
-    return false;
+  bool matchOp(const LogicalOperation &op) const {
+    return op.logicalOperator == opCode;
   }
   template <typename U> bool matchOp(const U &) const { return false; }
 

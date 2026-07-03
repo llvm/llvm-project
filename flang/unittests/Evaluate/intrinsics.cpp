@@ -43,8 +43,44 @@ private:
   std::map<std::string, std::size_t> offsets_;
 };
 
-template <typename A> auto Const(A &&x) -> Constant<TypeOf<A>> {
-  return Constant<TypeOf<A>>{std::move(x)};
+// Since the migration to runtime kinds, Fortran's Type<CAT> no longer carries
+// its kind as a template parameter, so the kind can no longer be recovered from
+// a (kindless) scalar value alone.  This compile-time tag bundles the kindless
+// Fortran Type<CAT> with the kind that the test wants, so the existing
+// IntN/RealN/... aliases keep working: TagN::GetType() yields the runtime
+// DynamicType, Scalar<TagN> resolves to the runtime-kind Scalar, and
+// Const<TagN> stamps the kind onto the constant's result type.
+template <common::TypeCategory CAT, int KIND> struct TestTypeKind {
+  static constexpr common::TypeCategory category{CAT};
+  static constexpr int kind{KIND};
+  using FortranType = Type<CAT>;
+  using Scalar = Fortran::evaluate::Scalar<FortranType>;
+  static constexpr DynamicType GetType() { return DynamicType{CAT, KIND}; }
+};
+
+// With the collapsed-kind scalars, TypeOf<> can no longer recover the kind of a
+// scalar (all kinds of a category share one Scalar type), so a TestTypeKind tag
+// may be supplied to stamp the desired kind onto the constant:
+// Const<Int4>(...).
+template <typename T = void, typename A> auto Const(A &&x) {
+  if constexpr (std::is_void_v<T>) {
+    return Constant<TypeOf<A>>{std::move(x)};
+  } else {
+    using FT = typename T::FortranType;
+    constexpr int kind{T::kind};
+    // A default-constructed (monostate) numeric scalar cannot report its kind,
+    // which formatting and folding require, so materialize a zero value in the
+    // requested runtime kind.
+    if constexpr (FT::category == TypeCategory::Integer ||
+        FT::category == TypeCategory::Unsigned) {
+      return Constant<FT>{Scalar<FT>{x.ToInt64(), kind}, FT{kind}};
+    } else if constexpr (FT::category == TypeCategory::Real ||
+        FT::category == TypeCategory::Complex) {
+      return Constant<FT>{Scalar<FT>::Zero(kind), FT{kind}};
+    } else {
+      return Constant<FT>{std::move(x), FT{kind}};
+    }
+  }
 }
 
 template <typename A> struct NamedArg {
@@ -152,63 +188,65 @@ void TestIntrinsics() {
   IntrinsicProcTable table{IntrinsicProcTable::Configure(defaults)};
   table.Dump(llvm::outs());
 
-  using Int1 = Type<TypeCategory::Integer, 1>;
-  using Int4 = Type<TypeCategory::Integer, 4>;
-  using Int8 = Type<TypeCategory::Integer, 8>;
-  using Real4 = Type<TypeCategory::Real, 4>;
-  using Real8 = Type<TypeCategory::Real, 8>;
-  using Complex4 = Type<TypeCategory::Complex, 4>;
-  using Complex8 = Type<TypeCategory::Complex, 8>;
-  using Char = Type<TypeCategory::Character, 1>;
-  using Log4 = Type<TypeCategory::Logical, 4>;
+  using Int1 = TestTypeKind<TypeCategory::Integer, 1>;
+  using Int4 = TestTypeKind<TypeCategory::Integer, 4>;
+  using Int8 = TestTypeKind<TypeCategory::Integer, 8>;
+  using Real4 = TestTypeKind<TypeCategory::Real, 4>;
+  using Real8 = TestTypeKind<TypeCategory::Real, 8>;
+  using Complex4 = TestTypeKind<TypeCategory::Complex, 4>;
+  using Complex8 = TestTypeKind<TypeCategory::Complex, 8>;
+  using Char = TestTypeKind<TypeCategory::Character, 1>;
+  using Log4 = TestTypeKind<TypeCategory::Logical, 4>;
 
   TestCall{defaults, table, "bad"}
-      .Push(Const(Scalar<Int4>{}))
+      .Push(Const<Int4>(Scalar<Int4>{}))
       .DoCall(); // bad intrinsic name
   TestCall{defaults, table, "abs"}
-      .Push(Named("a", Const(Scalar<Int4>{})))
+      .Push(Named("a", Const<Int4>(Scalar<Int4>{})))
       .DoCall(Int4::GetType());
   TestCall{defaults, table, "abs"}
-      .Push(Const(Scalar<Int4>{}))
+      .Push(Const<Int4>(Scalar<Int4>{}))
       .DoCall(Int4::GetType());
   TestCall{defaults, table, "abs"}
-      .Push(Named("bad", Const(Scalar<Int4>{})))
+      .Push(Named("bad", Const<Int4>(Scalar<Int4>{})))
       .DoCall(); // bad keyword
   TestCall{defaults, table, "abs"}.DoCall(); // insufficient args
   TestCall{defaults, table, "abs"}
-      .Push(Const(Scalar<Int4>{}))
-      .Push(Const(Scalar<Int4>{}))
+      .Push(Const<Int4>(Scalar<Int4>{}))
+      .Push(Const<Int4>(Scalar<Int4>{}))
       .DoCall(); // too many args
   TestCall{defaults, table, "abs"}
-      .Push(Const(Scalar<Int4>{}))
-      .Push(Named("a", Const(Scalar<Int4>{})))
+      .Push(Const<Int4>(Scalar<Int4>{}))
+      .Push(Named("a", Const<Int4>(Scalar<Int4>{})))
       .DoCall();
   TestCall{defaults, table, "abs"}
-      .Push(Named("a", Const(Scalar<Int4>{})))
-      .Push(Const(Scalar<Int4>{}))
+      .Push(Named("a", Const<Int4>(Scalar<Int4>{})))
+      .Push(Const<Int4>(Scalar<Int4>{}))
       .DoCall();
   TestCall{defaults, table, "abs"}
-      .Push(Const(Scalar<Int1>{}))
+      .Push(Const<Int1>(Scalar<Int1>{}))
       .DoCall(Int1::GetType());
   TestCall{defaults, table, "abs"}
-      .Push(Const(Scalar<Int4>{}))
+      .Push(Const<Int4>(Scalar<Int4>{}))
       .DoCall(Int4::GetType());
   TestCall{defaults, table, "abs"}
-      .Push(Const(Scalar<Int8>{}))
+      .Push(Const<Int8>(Scalar<Int8>{}))
       .DoCall(Int8::GetType());
   TestCall{defaults, table, "abs"}
-      .Push(Const(Scalar<Real4>{}))
+      .Push(Const<Real4>(Scalar<Real4>{}))
       .DoCall(Real4::GetType());
   TestCall{defaults, table, "abs"}
-      .Push(Const(Scalar<Real8>{}))
+      .Push(Const<Real8>(Scalar<Real8>{}))
       .DoCall(Real8::GetType());
   TestCall{defaults, table, "abs"}
-      .Push(Const(Scalar<Complex4>{}))
+      .Push(Const<Complex4>(Scalar<Complex4>{}))
       .DoCall(Real4::GetType());
   TestCall{defaults, table, "abs"}
-      .Push(Const(Scalar<Complex8>{}))
+      .Push(Const<Complex8>(Scalar<Complex8>{}))
       .DoCall(Real8::GetType());
-  TestCall{defaults, table, "abs"}.Push(Const(Scalar<Char>{})).DoCall();
+  TestCall{defaults, table, "abs"}
+      .Push(Const(Scalar<Char>::Zero(Char::kind)))
+      .DoCall();
   TestCall{defaults, table, "abs"}.Push(Const(Scalar<Log4>{})).DoCall();
 
   // "Ext" in names for calls allowed as extensions
@@ -218,14 +256,14 @@ void TestIntrinsics() {
       max0ExtCall{defaults, table, "max0"},
       amin1ExtCall{defaults, table, "amin1"};
   for (int j{0}; j < 10; ++j) {
-    maxCallR.Push(Const(Scalar<Real4>{}));
-    maxCallI.Push(Const(Scalar<Int4>{}));
-    max0Call.Push(Const(Scalar<Int4>{}));
-    max0ExtCall.Push(Const(Scalar<Real4>{}));
-    max1Call.Push(Const(Scalar<Real4>{}));
-    amin0Call.Push(Const(Scalar<Int4>{}));
-    amin1ExtCall.Push(Const(Scalar<Int4>{}));
-    amin1Call.Push(Const(Scalar<Real4>{}));
+    maxCallR.Push(Const<Real4>(Scalar<Real4>{}));
+    maxCallI.Push(Const<Int4>(Scalar<Int4>{}));
+    max0Call.Push(Const<Int4>(Scalar<Int4>{}));
+    max0ExtCall.Push(Const<Real4>(Scalar<Real4>{}));
+    max1Call.Push(Const<Real4>(Scalar<Real4>{}));
+    amin0Call.Push(Const<Int4>(Scalar<Int4>{}));
+    amin1ExtCall.Push(Const<Int4>(Scalar<Int4>{}));
+    amin1Call.Push(Const<Real4>(Scalar<Real4>{}));
   }
   maxCallR.DoCall(Real4::GetType());
   maxCallI.DoCall(Int4::GetType());
@@ -237,63 +275,65 @@ void TestIntrinsics() {
   amin1ExtCall.DoCall(Real4::GetType());
 
   TestCall{defaults, table, "conjg"}
-      .Push(Const(Scalar<Complex4>{}))
+      .Push(Const<Complex4>(Scalar<Complex4>{}))
       .DoCall(Complex4::GetType());
   TestCall{defaults, table, "conjg"}
-      .Push(Const(Scalar<Complex8>{}))
+      .Push(Const<Complex8>(Scalar<Complex8>{}))
       .DoCall(Complex8::GetType());
   TestCall{defaults, table, "dconjg"}
-      .Push(Const(Scalar<Complex8>{}))
+      .Push(Const<Complex8>(Scalar<Complex8>{}))
       .DoCall(Complex8::GetType());
 
-  TestCall{defaults, table, "float"}.Push(Const(Scalar<Real4>{})).DoCall();
   TestCall{defaults, table, "float"}
-      .Push(Const(Scalar<Int4>{}))
+      .Push(Const<Real4>(Scalar<Real4>{}))
+      .DoCall();
+  TestCall{defaults, table, "float"}
+      .Push(Const<Int4>(Scalar<Int4>{}))
       .DoCall(Real4::GetType());
-  TestCall{defaults, table, "idint"}.Push(Const(Scalar<Int4>{})).DoCall();
+  TestCall{defaults, table, "idint"}.Push(Const<Int4>(Scalar<Int4>{})).DoCall();
   TestCall{defaults, table, "idint"}
-      .Push(Const(Scalar<Real8>{}))
+      .Push(Const<Real8>(Scalar<Real8>{}))
       .DoCall(Int4::GetType());
 
   // Allowed as extensions
   TestCall{defaults, table, "float"}
-      .Push(Const(Scalar<Int8>{}))
+      .Push(Const<Int8>(Scalar<Int8>{}))
       .DoCall(Real4::GetType());
   TestCall{defaults, table, "idint"}
-      .Push(Const(Scalar<Real4>{}))
+      .Push(Const<Real4>(Scalar<Real4>{}))
       .DoCall(Int4::GetType());
 
   TestCall{defaults, table, "num_images"}.DoCall(Int4::GetType());
   TestCall{defaults, table, "num_images"}
-      .Push(Const(Scalar<Int1>{}))
+      .Push(Const<Int1>(Scalar<Int1>{}))
       .DoCall(Int4::GetType());
   TestCall{defaults, table, "num_images"}
-      .Push(Const(Scalar<Int4>{}))
+      .Push(Const<Int4>(Scalar<Int4>{}))
       .DoCall(Int4::GetType());
   TestCall{defaults, table, "num_images"}
-      .Push(Const(Scalar<Int8>{}))
+      .Push(Const<Int8>(Scalar<Int8>{}))
       .DoCall(Int4::GetType());
   TestCall{defaults, table, "num_images"}
-      .Push(Named("team_number", Const(Scalar<Int4>{})))
+      .Push(Named("team_number", Const<Int4>(Scalar<Int4>{})))
       .DoCall(Int4::GetType());
   TestCall{defaults, table, "num_images"}
-      .Push(Const(Scalar<Int4>{}))
-      .Push(Const(Scalar<Int4>{}))
+      .Push(Const<Int4>(Scalar<Int4>{}))
+      .Push(Const<Int4>(Scalar<Int4>{}))
       .DoCall(); // too many args
   TestCall{defaults, table, "num_images"}
-      .Push(Named("bad", Const(Scalar<Int4>{})))
+      .Push(Named("bad", Const<Int4>(Scalar<Int4>{})))
       .DoCall(); // bad keyword
   TestCall{defaults, table, "num_images"}
-      .Push(Const(Scalar<Char>{}))
+      .Push(Const(Scalar<Char>::Zero(Char::kind)))
       .DoCall(); // bad type
   TestCall{defaults, table, "num_images"}
       .Push(Const(Scalar<Log4>{}))
       .DoCall(); // bad type
   TestCall{defaults, table, "num_images"}
-      .Push(Const(Scalar<Complex8>{}))
+      .Push(Const<Complex8>(Scalar<Complex8>{}))
       .DoCall(); // bad type
   TestCall{defaults, table, "num_images"}
-      .Push(Const(Scalar<Real4>{}))
+      .Push(Const<Real4>(Scalar<Real4>{}))
       .DoCall(); // bad type
 
   // This test temporarily removed because it requires access to
@@ -302,26 +342,26 @@ void TestIntrinsics() {
   // TestCall{defaults, table, "team_number"}.DoCall(Int4::GetType());
 
   TestCall{defaults, table, "team_number"}
-      .Push(Const(Scalar<Int4>{}))
-      .Push(Const(Scalar<Int4>{}))
+      .Push(Const<Int4>(Scalar<Int4>{}))
+      .Push(Const<Int4>(Scalar<Int4>{}))
       .DoCall(); // too many args
   TestCall{defaults, table, "team_number"}
-      .Push(Named("bad", Const(Scalar<Int4>{})))
+      .Push(Named("bad", Const<Int4>(Scalar<Int4>{})))
       .DoCall(); // bad keyword
   TestCall{defaults, table, "team_number"}
-      .Push(Const(Scalar<Int4>{}))
+      .Push(Const<Int4>(Scalar<Int4>{}))
       .DoCall(); // bad type
   TestCall{defaults, table, "team_number"}
-      .Push(Const(Scalar<Char>{}))
+      .Push(Const(Scalar<Char>::Zero(Char::kind)))
       .DoCall(); // bad type
   TestCall{defaults, table, "team_number"}
       .Push(Const(Scalar<Log4>{}))
       .DoCall(); // bad type
   TestCall{defaults, table, "team_number"}
-      .Push(Const(Scalar<Complex8>{}))
+      .Push(Const<Complex8>(Scalar<Complex8>{}))
       .DoCall(); // bad type
   TestCall{defaults, table, "team_number"}
-      .Push(Const(Scalar<Real4>{}))
+      .Push(Const<Real4>(Scalar<Real4>{}))
       .DoCall(); // bad type
 
   // TODO: test other intrinsics

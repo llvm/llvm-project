@@ -19,11 +19,15 @@ static Expr<T> FoldTransformationalBessel(
   /// Bessel runtime functions use `int` integer arguments. Convert integer
   /// arguments to Int4, any overflow error will be reported during the
   /// conversion folding.
-  using Int4 = Type<TypeCategory::Integer, 4>;
+  using Int4 = Type<TypeCategory::Integer>;
+  const int kind{funcRef.GetType().value().kind()};
   if (auto args{GetConstantArguments<Int4, Int4, T>(
           context, funcRef.arguments(), /*hasOptionalArgument=*/false)}) {
     const std::string &name{std::get<SpecificIntrinsic>(funcRef.proc().u).name};
-    if (auto elementalBessel{GetHostRuntimeWrapper<T, Int4, T>(name)}) {
+    if (auto elementalBessel{GetHostRuntimeWrapper<T, Int4, T>(name,
+            DynamicType{T::category, kind},
+            std::vector<DynamicType>{DynamicType{TypeCategory::Integer, 4},
+                DynamicType{T::category, kind}})}) {
       std::vector<Scalar<T>> results;
       int n1{static_cast<int>(
           std::get<0>(*args)->GetScalarValue().value().ToInt64())};
@@ -31,27 +35,27 @@ static Expr<T> FoldTransformationalBessel(
           std::get<1>(*args)->GetScalarValue().value().ToInt64())};
       Scalar<T> x{std::get<2>(*args)->GetScalarValue().value()};
       for (int i{n1}; i <= n2; ++i) {
-        results.emplace_back((*elementalBessel)(context, Scalar<Int4>{i}, x));
+        results.emplace_back(
+            (*elementalBessel)(context, value::IntegerValue{i, 4}, x));
       }
       return Expr<T>{Constant<T>{
           std::move(results), ConstantSubscripts{std::max(n2 - n1 + 1, 0)}}};
     } else {
       context.Warn(common::UsageWarning::FoldingFailure,
           "%s(integer(kind=4), real(kind=%d)) cannot be folded on host"_warn_en_US,
-          name, T::kind);
+          name, kind);
     }
   }
   return Expr<T>{std::move(funcRef)};
 }
 
 // NORM2
-template <int KIND> class Norm2Accumulator {
-  using T = Type<TypeCategory::Real, KIND>;
-
+template <typename T> class Norm2Accumulator {
 public:
   Norm2Accumulator(
       const Constant<T> &array, const Constant<T> &maxAbs, Rounding rounding)
-      : array_{array}, maxAbs_{maxAbs}, rounding_{rounding} {};
+      : array_{array}, maxAbs_{maxAbs}, rounding_{rounding},
+        correction_{Scalar<T>::Zero(array.GetType().kind())} {};
   void operator()(
       Scalar<T> &element, const ConstantSubscripts &at, bool /*first*/) {
     // Summation of scaled elements:
@@ -103,22 +107,22 @@ private:
   const Constant<T> &maxAbs_;
   const Rounding rounding_;
   bool overflow_{false};
-  Scalar<T> correction_{};
+  Scalar<T> correction_;
   ConstantSubscripts maxAbsAt_{maxAbs_.lbounds()};
 };
 
-template <int KIND>
-static Expr<Type<TypeCategory::Real, KIND>> FoldNorm2(FoldingContext &context,
-    FunctionRef<Type<TypeCategory::Real, KIND>> &&funcRef) {
-  using T = Type<TypeCategory::Real, KIND>;
+static Expr<Type<TypeCategory::Real>> FoldNorm2(
+    FoldingContext &context, FunctionRef<Type<TypeCategory::Real>> &&funcRef) {
+  using T = Type<TypeCategory::Real>;
   using Element = typename Constant<T>::Element;
+  const int kind{funcRef.GetType().value().kind()};
   std::optional<int> dim;
   if (std::optional<ArrayAndMask<T>> arrayAndMask{
           ProcessReductionArgs<T>(context, funcRef.arguments(), dim,
               /*X=*/0, /*DIM=*/1)}) {
     MaxvalMinvalAccumulator<T, /*ABS=*/true> maxAbsAccumulator{
         RelationalOperator::GT, context, arrayAndMask->array};
-    const Element identity{};
+    const Element identity{Element::Zero(kind)};
     Constant<T> maxAbs{DoReduction<T>(arrayAndMask->array, arrayAndMask->mask,
         dim, identity, maxAbsAccumulator)};
     Norm2Accumulator norm2Accumulator{arrayAndMask->array, maxAbs,
@@ -127,20 +131,19 @@ static Expr<Type<TypeCategory::Real, KIND>> FoldNorm2(FoldingContext &context,
         dim, identity, norm2Accumulator)};
     if (norm2Accumulator.overflow()) {
       context.Warn(common::UsageWarning::FoldingException,
-          "NORM2() of REAL(%d) data overflowed"_warn_en_US, KIND);
+          "NORM2() of REAL(%d) data overflowed"_warn_en_US, kind);
     }
     return Expr<T>{std::move(result)};
   }
   return Expr<T>{std::move(funcRef)};
 }
 
-template <int KIND>
-Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
-    FoldingContext &context,
-    FunctionRef<Type<TypeCategory::Real, KIND>> &&funcRef) {
-  using T = Type<TypeCategory::Real, KIND>;
-  using ComplexT = Type<TypeCategory::Complex, KIND>;
-  using Int4 = Type<TypeCategory::Integer, 4>;
+Expr<Type<TypeCategory::Real>> FoldIntrinsicFunction(
+    FoldingContext &context, FunctionRef<Type<TypeCategory::Real>> &&funcRef) {
+  using T = Type<TypeCategory::Real>;
+  using ComplexT = Type<TypeCategory::Complex>;
+  using Int4 = Type<TypeCategory::Integer>;
+  const int kind{funcRef.GetType().value().kind()};
   ActualArguments &args{funcRef.arguments()};
   auto *intrinsic{std::get_if<SpecificIntrinsic>(&funcRef.proc().u)};
   CHECK(intrinsic);
@@ -154,12 +157,12 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
       name == "log_gamma" || name == "sin" || name == "sinh" || name == "tan" ||
       name == "tanh") {
     CHECK(args.size() == 1);
-    if (auto callable{GetHostRuntimeWrapper<T, T>(name)}) {
+    if (auto callable{GetHostRuntimeWrapper<T, T>(name, kind)}) {
       return FoldElementalIntrinsic<T, T>(
           context, std::move(funcRef), *callable);
     } else {
       context.Warn(common::UsageWarning::FoldingFailure,
-          "%s(real(kind=%d)) cannot be folded on host"_warn_en_US, name, KIND);
+          "%s(real(kind=%d)) cannot be folded on host"_warn_en_US, name, kind);
     }
   } else if (name == "amax0" || name == "amin0" || name == "amin1" ||
       name == "amax1" || name == "dmin1" || name == "dmax1") {
@@ -167,24 +170,27 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
   } else if (name == "atan" || name == "atan2") {
     std::string localName{name == "atan" ? "atan2" : name};
     CHECK(args.size() == 2);
-    if (auto callable{GetHostRuntimeWrapper<T, T, T>(localName)}) {
+    if (auto callable{GetHostRuntimeWrapper<T, T, T>(localName, kind)}) {
       return FoldElementalIntrinsic<T, T, T>(
           context, std::move(funcRef), *callable);
     } else {
       context.Warn(common::UsageWarning::FoldingFailure,
           "%s(real(kind=%d), real(kind%d)) cannot be folded on host"_warn_en_US,
-          name, KIND, KIND);
+          name, kind, kind);
     }
   } else if (name == "bessel_jn" || name == "bessel_yn") {
     if (args.size() == 2) { // elemental
       // runtime functions use int arg
-      if (auto callable{GetHostRuntimeWrapper<T, Int4, T>(name)}) {
+      if (auto callable{GetHostRuntimeWrapper<T, Int4, T>(name,
+              DynamicType{T::category, kind},
+              std::vector<DynamicType>{DynamicType{TypeCategory::Integer, 4},
+                  DynamicType{T::category, kind}})}) {
         return FoldElementalIntrinsic<T, Int4, T>(
             context, std::move(funcRef), *callable);
       } else {
         context.Warn(common::UsageWarning::FoldingFailure,
             "%s(integer(kind=4), real(kind=%d)) cannot be folded on host"_warn_en_US,
-            name, KIND);
+            name, kind);
       }
     } else {
       return FoldTransformationalBessel<T>(std::move(funcRef), context);
@@ -247,18 +253,18 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
       const auto *yExpr{args[1]->UnwrapExpr()};
       if (xExpr && yExpr) {
         return Fold(context,
-            ToReal<T::kind>(context, common::Clone(*xExpr)) *
-                ToReal<T::kind>(context, common::Clone(*yExpr)));
+            ToReal(context, common::Clone(*xExpr), kind) *
+                ToReal(context, common::Clone(*yExpr), kind));
       }
     }
   } else if (name == "epsilon") {
-    return Expr<T>{Scalar<T>::EPSILON()};
+    return Expr<T>{Scalar<T>::EPSILON(kind)};
   } else if (name == "fraction") {
     return FoldElementalIntrinsic<T, T>(context, std::move(funcRef),
         ScalarFunc<T, T>(
             [](const Scalar<T> &x) -> Scalar<T> { return x.FRACTION(); }));
   } else if (name == "huge") {
-    return Expr<T>{Scalar<T>::HUGE()};
+    return Expr<T>{Scalar<T>::HUGE(kind)};
   } else if (name == "hypot") {
     CHECK(args.size() == 2);
     return FoldElementalIntrinsic<T, T, T>(context, std::move(funcRef),
@@ -277,12 +283,12 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Greater);
   } else if (name == "maxval") {
     return FoldMaxvalMinval<T>(context, std::move(funcRef),
-        RelationalOperator::GT, T::Scalar::HUGE().Negate());
+        RelationalOperator::GT, Scalar<T>::HUGE(kind).Negate());
   } else if (name == "min") {
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Less);
   } else if (name == "minval") {
-    return FoldMaxvalMinval<T>(
-        context, std::move(funcRef), RelationalOperator::LT, T::Scalar::HUGE());
+    return FoldMaxvalMinval<T>(context, std::move(funcRef),
+        RelationalOperator::LT, Scalar<T>::HUGE(kind));
   } else if (name == "mod") {
     CHECK(args.size() == 2);
     bool badPConst{false};
@@ -360,13 +366,13 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
           sExpr->u);
     }
   } else if (name == "norm2") {
-    return FoldNorm2<T::kind>(context, std::move(funcRef));
+    return FoldNorm2(context, std::move(funcRef));
   } else if (name == "product") {
-    auto one{Scalar<T>::FromInteger(value::Integer<8>{1}).value};
+    auto one{Scalar<T>::FromInteger(value::IntegerValue{1, 1}, kind).value};
     return FoldProduct<T>(context, std::move(funcRef), one);
   } else if (name == "real" || name == "dble") {
     if (auto *expr{args[0].value().UnwrapExpr()}) {
-      return ToReal<KIND>(context, std::move(*expr));
+      return ToReal(context, std::move(*expr), kind);
     }
   } else if (name == "rrspacing") {
     return FoldElementalIntrinsic<T, T>(context, std::move(funcRef),
@@ -381,8 +387,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
                 std::move(funcRef),
                 ScalarFunc<T, T, TBY>(
                     [&](const Scalar<T> &x, const Scalar<TBY> &y) -> Scalar<T> {
-                      ValueWithRealFlags<Scalar<T>> result{
-                          x.template SCALE<Scalar<TBY>>(y)};
+                      ValueWithRealFlags<Scalar<T>> result{x.SCALE(y)};
                       if (result.flags.test(RealFlag::Overflow)) {
                         context.Warn(common::UsageWarning::FoldingException,
                             "SCALE/IEEE_SCALB intrinsic folding overflow"_warn_en_US);
@@ -425,7 +430,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
   } else if (name == "sum") {
     return FoldSum<T>(context, std::move(funcRef));
   } else if (name == "tiny") {
-    return Expr<T>{Scalar<T>::TINY()};
+    return Expr<T>{Scalar<T>::TINY(kind)};
   } else if (name == "__builtin_fma") {
     CHECK(args.size() == 3);
   } else if (name == "__builtin_ieee_next_after") {
@@ -436,13 +441,15 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
             return FoldElementalIntrinsic<T, T, TY>(context, std::move(funcRef),
                 ScalarFunc<T, T, TY>([&](const Scalar<T> &x,
                                          const Scalar<TY> &y) -> Scalar<T> {
-                  auto xBig{Scalar<LargestReal>::Convert(x).value};
-                  auto yBig{Scalar<LargestReal>::Convert(y).value};
+                  auto xBig{
+                      Scalar<LargestReal>::Convert(x, largestRealKind).value};
+                  auto yBig{
+                      Scalar<LargestReal>::Convert(y, largestRealKind).value};
                   switch (xBig.Compare(yBig)) {
                   case Relation::Unordered:
                     context.Warn(common::UsageWarning::FoldingValueChecks,
                         "IEEE_NEXT_AFTER intrinsic folding: arguments are unordered"_warn_en_US);
-                    return x.NotANumber();
+                    return Scalar<T>::NotANumber(kind);
                   case Relation::Equal:
                     break;
                   case Relation::Less:

@@ -86,8 +86,18 @@ private:
         evaluate::FoldingContext foldingContext{
             context_.foldingContext(), foldingMessages};
         auto folded{evaluate::Fold(foldingContext, SomeExpr{*x->v})};
+        // Convert each CASE value to the category and kind of the SELECT CASE
+        // expression, but without its length.  The legacy static-kind code
+        // converted to T::GetType() (category + kind only); replicate that so
+        // that CHARACTER case values are not padded to the selector's length
+        // and LOGICAL case values are canonicalized to KIND=1, keeping the
+        // conflicting-case diagnostics stable.
+        evaluate::DynamicType convertType{caseExprType_.category(),
+            caseExprType_.category() == TypeCategory::Logical
+                ? 1
+                : caseExprType_.kind()};
         if (auto converted{evaluate::Fold(foldingContext,
-                evaluate::ConvertToType(T::GetType(), SomeExpr{folded}))}) {
+                evaluate::ConvertToType(convertType, SomeExpr{folded}))}) {
           if (auto value{evaluate::GetScalarConstantValue<T>(*converted)}) {
             auto back{evaluate::Fold(foldingContext,
                 evaluate::ConvertToType(*type, SomeExpr{*converted}))};
@@ -226,12 +236,8 @@ template <TypeCategory CAT> struct TypeVisitor {
   using Result = bool;
   using Types = evaluate::CategoryTypes<CAT>;
   template <typename T> Result Test() {
-    if (T::kind == exprType.kind()) {
-      CaseValues<T>(context, exprType).Check(caseList);
-      return true;
-    } else {
-      return false;
-    }
+    CaseValues<T>(context, exprType).Check(caseList);
+    return true;
   }
   SemanticsContext &context;
   const evaluate::DynamicType &exprType;
@@ -350,7 +356,7 @@ void CaseChecker::Enter(const parser::CaseConstruct &construct) {
           TypeVisitor<TypeCategory::Unsigned>{context_, *exprType, caseList});
       return;
     case TypeCategory::Logical:
-      CaseValues<evaluate::Type<TypeCategory::Logical, 1>>{context_, *exprType}
+      CaseValues<evaluate::Type<TypeCategory::Logical>>{context_, *exprType}
           .Check(caseList);
       return;
     case TypeCategory::Character:

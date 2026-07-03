@@ -100,27 +100,27 @@ static T AsRvalueRef(const T &t) {
 // (if present) is not needed. When it's present, though, it causes generated
 // names to contain "int(..., kind=8)".
 struct PeelConvert {
-  template <Fortran::common::TypeCategory Category, int Kind>
-  static Fortran::semantics::MaybeExpr visit_with_category(
-      const Fortran::evaluate::Expr<Fortran::evaluate::Type<Category, Kind>>
-          &expr) {
-    return Fortran::common::visit(
-        [](auto &&s) { return visit_with_category<Category, Kind>(s); },
-        expr.u);
-  }
-  template <Fortran::common::TypeCategory Category, int Kind>
-  static Fortran::semantics::MaybeExpr visit_with_category(
-      const Fortran::evaluate::Convert<Fortran::evaluate::Type<Category, Kind>,
-                                       Category> &expr) {
-    return AsGenericExpr(AsRvalueRef(expr.left()));
-  }
-  template <Fortran::common::TypeCategory Category, int Kind, typename T>
-  static Fortran::semantics::MaybeExpr visit_with_category(const T &) {
-    return std::nullopt; //
-  }
+  // Trait to detect a same-category evaluate::Convert (a kind conversion)
+  // without instantiating Convert<> for categories that do not support it
+  // (e.g. Derived).
+  template <typename T>
+  struct IsKindConvert : std::false_type {};
+  template <typename TO, Fortran::common::TypeCategory FROM>
+  struct IsKindConvert<Fortran::evaluate::Convert<TO, FROM>> {
+    static constexpr bool value{TO::category == FROM};
+  };
+
   template <Fortran::common::TypeCategory Category, typename T>
-  static Fortran::semantics::MaybeExpr visit_with_category(const T &) {
-    return std::nullopt; //
+  static Fortran::semantics::MaybeExpr visit_with_category(const T &x) {
+    if constexpr (std::is_same_v<T, Fortran::evaluate::Expr<
+                                        Fortran::evaluate::Type<Category>>>) {
+      return Fortran::common::visit(
+          [](auto &&s) { return visit_with_category<Category>(s); }, x.u);
+    } else if constexpr (IsKindConvert<T>::value) {
+      return AsGenericExpr(AsRvalueRef(x.left()));
+    } else {
+      return std::nullopt;
+    }
   }
 
   template <Fortran::common::TypeCategory Category>

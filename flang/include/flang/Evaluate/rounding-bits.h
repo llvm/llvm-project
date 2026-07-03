@@ -17,6 +17,8 @@
 
 namespace Fortran::evaluate::value {
 
+class IntegerValue;
+
 class RoundingBits {
 public:
   constexpr RoundingBits(
@@ -40,6 +42,8 @@ public:
       }
     }
   }
+
+  RoundingBits(const IntegerValue &fraction, int rshift);
 
   constexpr bool guard() const { return guard_; }
   constexpr bool round() const { return round_; }
