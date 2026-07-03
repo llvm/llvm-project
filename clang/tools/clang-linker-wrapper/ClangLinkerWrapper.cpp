@@ -473,9 +473,17 @@ fatbinary(ArrayRef<std::tuple<StringRef, StringRef, StringRef>> InputFiles,
   SmallVector<StringRef> Targets = {
       Saver.save("-targets=host-" + HostTriple.normalize())};
   for (const auto &[File, TripleRef, Arch] : InputFiles) {
+    llvm::Triple T(TripleRef);
+    // SPIR-V HIP targets (e.g. chipStar) can arrive without an arch, but the
+    // offload bundler requires a non-empty arch field; default to the
+    // canonical SPIR-V CPU model "generic".
+    StringRef EffectiveArch = Arch;
+    if (EffectiveArch.empty() && T.isSPIRV())
+      EffectiveArch = "generic";
     std::string NormalizedTriple =
-        normalizeForBundler(Triple(TripleRef), !Arch.empty());
-    Targets.push_back(Saver.save("hip-" + NormalizedTriple + "-" + Arch));
+        normalizeForBundler(T, !EffectiveArch.empty());
+    Targets.push_back(
+        Saver.save("hip-" + NormalizedTriple + "-" + EffectiveArch));
   }
   CmdArgs.push_back(Saver.save(llvm::join(Targets, ",")));
 

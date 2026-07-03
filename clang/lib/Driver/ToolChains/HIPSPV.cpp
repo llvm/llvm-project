@@ -13,8 +13,10 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Options/Options.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Program.h"
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;
@@ -48,6 +50,28 @@ static std::string findPassPlugin(const Driver &D,
   return std::string();
 }
 
+// Runs the HipSpvPasses plugin via `opt` on TempFile when the plugin is found.
+// Returns the lowered bitcode path, or TempFile unchanged if no plugin exists.
+static const char *runHipSpvPasses(Compilation &C, const JobAction &JA,
+                                   const Tool &Creator, const ToolChain &TC,
+                                   const InputInfoList &Inputs,
+                                   const InputInfo &Output,
+                                   const llvm::opt::ArgList &Args,
+                                   StringRef Name, const char *TempFile) {
+  auto PassPluginPath = findPassPlugin(C.getDriver(), Args);
+  if (PassPluginPath.empty())
+    return TempFile;
+  const char *PassPathCStr = C.getArgs().MakeArgString(PassPluginPath);
+  const char *OptOutput = HIP::getTempFile(C, Name.str() + "-lower", "bc");
+  ArgStringList OptArgs{TempFile,     "-load-pass-plugin",
+                        PassPathCStr, "-passes=hip-post-link-passes",
+                        "-o",         OptOutput};
+  const char *Opt = Args.MakeArgString(TC.GetProgramPath("opt"));
+  C.addCommand(std::make_unique<Command>(
+      JA, Creator, ResponseFileSupport::None(), Opt, OptArgs, Inputs, Output));
+  return OptOutput;
+}
+
 void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
     Compilation &C, const JobAction &JA, const InputInfoList &Inputs,
     const InputInfo &Output, const llvm::opt::ArgList &Args) const {
@@ -73,44 +97,111 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
   tools::constructLLVMLinkCommand(C, *this, JA, Inputs, LinkArgs, Output, Args,
                                   TempFile);
 
-  // Post-link HIP lowering.
-
-  // Run LLVM IR passes to lower/expand/emulate HIP code that does not translate
-  // to SPIR-V (E.g. dynamic shared memory).
-  auto PassPluginPath = findPassPlugin(C.getDriver(), Args);
-  if (!PassPluginPath.empty()) {
-    const char *PassPathCStr = C.getArgs().MakeArgString(PassPluginPath);
-    const char *OptOutput = HIP::getTempFile(C, Name + "-lower", "bc");
-    ArgStringList OptArgs{TempFile,     "-load-pass-plugin",
-                          PassPathCStr, "-passes=hip-post-link-passes",
-                          "-o",         OptOutput};
-    const char *Opt = Args.MakeArgString(getToolChain().GetProgramPath("opt"));
-    C.addCommand(std::make_unique<Command>(
-        JA, *this, ResponseFileSupport::None(), Opt, OptArgs, Inputs, Output));
-    TempFile = OptOutput;
-  }
-
-  // Emit SPIR-V binary.
-  llvm::opt::ArgStringList TrArgs;
   auto T = getToolChain().getTriple();
-  bool HasNoSubArch = T.getSubArch() == llvm::Triple::NoSubArch;
+
   if (T.getOS() == llvm::Triple::ChipStar) {
-    // chipStar needs 1.2 for supporting warp-level primitivies via sub-group
-    // extensions.  Strictly put we'd need 1.3 for the standard non-extension
-    // shuffle operations, but it's not supported by any backend driver of the
-    // chipStar.
-    if (HasNoSubArch)
-      TrArgs.push_back("--spirv-max-version=1.2");
-    TrArgs.push_back("--spirv-ext=-all"
-                     // Needed for experimental indirect call support.
-                     ",+SPV_INTEL_function_pointers"
-                     // Needed for shuffles below SPIR-V 1.3
-                     ",+SPV_INTEL_subgroups");
-  } else {
-    if (HasNoSubArch)
-      TrArgs.push_back("--spirv-max-version=1.1");
-    TrArgs.push_back("--spirv-ext=+all");
+    // chipStar: run HipSpvPasses via opt, then emit SPIR-V either via the
+    // external llvm-spirv translator (if available) or the in-tree SPIR-V
+    // backend (mirrors the fallback in clang-linker-wrapper).
+
+    // Run HipSpvPasses plugin via opt (must run on LLVM IR before
+    // the SPIR-V backend lowers to MIR).
+    TempFile = runHipSpvPasses(C, JA, *this, getToolChain(), Inputs, Output,
+                               Args, Name, TempFile);
+
+    // Prefer the external llvm-spirv translator when it is available next to
+    // the toolchain (or on PATH) - required when LLVM is built without the
+    // in-tree SPIR-V target. Mirror SPIRV::constructTranslateCommand, which
+    // prefers the versioned "llvm-spirv-<major>" over the plain name, so the
+    // translator-vs-backend choice matches the binary that will actually run.
+    // Use findProgramByName (not GetProgramPath) so a missing binary is
+    // reported as not-found rather than being silently substituted by its name.
+    std::string LLVMSpirvPath;
+    {
+      StringRef DriverDir(C.getDriver().Dir);
+      std::string Versioned =
+          "llvm-spirv-" + std::to_string(LLVM_VERSION_MAJOR);
+      for (StringRef Name : {StringRef(Versioned), StringRef("llvm-spirv")}) {
+        llvm::ErrorOr<std::string> P =
+            llvm::sys::findProgramByName(Name, {DriverDir});
+        if (!P)
+          P = llvm::sys::findProgramByName(Name);
+        if (P) {
+          LLVMSpirvPath = *P;
+          break;
+        }
+      }
+    }
+
+    if (!LLVMSpirvPath.empty()) {
+      // External translator path: BC -> SPIR-V via llvm-spirv.
+      llvm::opt::ArgStringList TrArgs;
+      // Match clang-linker-wrapper's chipstar version selection.
+      if (T.getSubArch() == llvm::Triple::SPIRVSubArch_v13)
+        TrArgs.push_back("--spirv-max-version=1.3");
+      else
+        TrArgs.push_back("--spirv-max-version=1.2");
+      // Keep this extension list in sync with the in-tree backend fallback
+      // below. SPV_EXT_relaxed_printf_string_address_space is required to
+      // translate modules whose printf format string is not in the constant
+      // address space (e.g. device-side assert / dynamic %s lowering); without
+      // it llvm-spirv aborts with exit code 18.
+      TrArgs.push_back(
+          "--spirv-ext=-all,+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups"
+          ",+SPV_EXT_relaxed_printf_string_address_space"
+          ",+SPV_KHR_bit_instructions"
+          ",+SPV_EXT_shader_atomic_float_add");
+
+      InputInfo TrInput = InputInfo(types::TY_LLVM_BC, TempFile, "");
+      SPIRV::constructTranslateCommand(C, *this, JA, Output, TrInput, TrArgs);
+      return;
+    }
+
+    // Fallback: compile the lowered bitcode to SPIR-V with the in-tree backend.
+    // Invoke `clang -cc1` directly rather than the clang driver: the driver
+    // would re-run config-file loading, toolchain detection and argument
+    // translation over an input that is already device-compiled and lowered,
+    // which is both wasteful and fragile. This mirrors how HIPAMD drives its
+    // SPIR-V backend emission (see HIPAMD::constructLinkAndEmitSpirvCommand).
+    // Keep the default -O0 backend pipeline (i.e. no -disable-llvm-optzns) so
+    // the mandatory lowering passes still run, matching the previously
+    // validated driver `-c` behavior.
+    ArgStringList Cc1Args;
+    Cc1Args.push_back("-cc1");
+    Cc1Args.push_back("-triple");
+    Cc1Args.push_back(C.getArgs().MakeArgString(T.getTriple()));
+    Cc1Args.push_back("-emit-obj");
+
+    // SPIR-V extensions the chipStar runtime relies on. Keep in sync with the
+    // llvm-spirv translator path above.
+    Cc1Args.push_back("-mllvm");
+    Cc1Args.push_back("-spirv-ext=+SPV_INTEL_function_pointers"
+                      ",+SPV_INTEL_subgroups"
+                      ",+SPV_EXT_relaxed_printf_string_address_space"
+                      ",+SPV_KHR_bit_instructions"
+                      ",+SPV_EXT_shader_atomic_float_add");
+
+    Cc1Args.push_back(TempFile);
+    Cc1Args.push_back("-o");
+    Cc1Args.push_back(Output.getFilename());
+
+    const Driver &Drv = C.getDriver();
+    const char *Clang = Drv.getDriverProgramPath();
+    C.addCommand(std::make_unique<Command>(
+        JA, *this, ResponseFileSupport::None(), Clang, Cc1Args, Inputs, Output,
+        Drv.getPrependArg()));
+    return;
   }
+
+  // Non-chipStar: run HIP passes via opt, then translate with llvm-spirv.
+  TempFile = runHipSpvPasses(C, JA, *this, getToolChain(), Inputs, Output, Args,
+                             Name, TempFile);
+
+  // Emit SPIR-V binary via llvm-spirv translator (non-chipStar targets).
+  llvm::opt::ArgStringList TrArgs;
+  if (T.getSubArch() == llvm::Triple::NoSubArch)
+    TrArgs.push_back("--spirv-max-version=1.1");
+  TrArgs.push_back("--spirv-ext=+all");
 
   InputInfo TrInput = InputInfo(types::TY_LLVM_BC, TempFile, "");
   SPIRV::constructTranslateCommand(C, *this, JA, Output, TrInput, TrArgs);
