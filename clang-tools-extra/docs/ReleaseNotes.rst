@@ -265,6 +265,12 @@ New checks
 
   Finds cyclical initialization of static variables.
 
+- New :doc:`modernize-default-arg-braced-init
+  <clang-tidy/checks/modernize/default-arg-braced-init>` check.
+
+  Replaces redundant non-explicit default constructor calls in default arguments with braced
+  initializer lists.
+
 - New :doc:`modernize-use-std-bit
   <clang-tidy/checks/modernize/use-std-bit>` check.
 

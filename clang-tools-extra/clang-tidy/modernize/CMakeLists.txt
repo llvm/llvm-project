@@ -10,6 +10,7 @@ add_clang_library(clangTidyModernizeModule STATIC
   AvoidSetjmpLongjmpCheck.cpp
   AvoidVariadicFunctionsCheck.cpp
   ConcatNestedNamespacesCheck.cpp
+  DefaultArgBracedInitCheck.cpp
   DeprecatedHeadersCheck.cpp
   DeprecatedIosBaseAliasesCheck.cpp
   IntegralLiteralExpressionMatcher.cpp

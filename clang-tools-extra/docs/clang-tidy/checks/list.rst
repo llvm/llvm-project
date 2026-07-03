@@ -295,6 +295,7 @@ Clang-Tidy Checks
    :doc:`modernize-avoid-setjmp-longjmp <modernize/avoid-setjmp-longjmp>`,
    :doc:`modernize-avoid-variadic-functions <modernize/avoid-variadic-functions>`,
    :doc:`modernize-concat-nested-namespaces <modernize/concat-nested-namespaces>`, "Yes"
+   :doc:`modernize-default-arg-braced-init <modernize/default-arg-braced-init>`, "Yes"
    :doc:`modernize-deprecated-headers <modernize/deprecated-headers>`, "Yes"
    :doc:`modernize-deprecated-ios-base-aliases <modernize/deprecated-ios-base-aliases>`, "Yes"
    :doc:`modernize-loop-convert <modernize/loop-convert>`, "Yes"
