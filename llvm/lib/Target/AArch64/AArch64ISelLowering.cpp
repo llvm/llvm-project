@@ -32041,8 +32041,9 @@ Value *AArch64TargetLowering::emitLoadLinked(IRBuilderBase &Builder,
     Value *LoHi =
         Builder.CreateIntrinsic(Int, Addr, /*FMFSource=*/nullptr, "lohi");
 
-    Value *Lo = Builder.CreateExtractValue(LoHi, 0, "lo");
-    Value *Hi = Builder.CreateExtractValue(LoHi, 1, "hi");
+    unsigned LoPos = Subtarget->isLittleEndian() ? 0 : 1;
+    Value *Lo = Builder.CreateExtractValue(LoHi, LoPos, "lo");
+    Value *Hi = Builder.CreateExtractValue(LoHi, 1 - LoPos, "hi");
 
     auto *Int128Ty = Type::getInt128Ty(Builder.getContext());
     Lo = Builder.CreateZExt(Lo, Int128Ty, "lo64");
@@ -32093,7 +32094,10 @@ Value *AArch64TargetLowering::emitStoreConditional(IRBuilderBase &Builder,
     Value *Lo = Builder.CreateTrunc(CastVal, Int64Ty, "lo");
     Value *Hi =
         Builder.CreateTrunc(Builder.CreateLShr(CastVal, 64), Int64Ty, "hi");
-    return Builder.CreateCall(Stxr, {Lo, Hi, Addr});
+    if (Subtarget->isLittleEndian())
+      return Builder.CreateCall(Stxr, {Lo, Hi, Addr});
+    else
+      return Builder.CreateCall(Stxr, {Hi, Lo, Addr});
   }
 
   Intrinsic::ID Int =
