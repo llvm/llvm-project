@@ -5769,7 +5769,10 @@ class TCGEN05_LDST_REGINFO<int Veclen> {
   list<NVPTXRegClass> regs = !listsplat(B32, Veclen);
   // generate list of regnames for load/store operands
   list<string> reg_names = !foreach(x, !range(0, Veclen), "r" # x);
-  string regstring = "{{" # !interleave(!foreach(n, !range(0, Veclen), "$r" # n), ", ") # "}}";
+  string regstring = "{{" #
+                      !interleave(
+                        !foreach(n, !range(0, Veclen), "$r" # n), ", ") #
+                     "}}";
   dag Ins = !dag(ins, regs, reg_names);
   dag Outs = !dag(outs, regs, reg_names);
 }
@@ -5785,7 +5788,8 @@ class TCGEN05_LD_INST<string Shape, int Num, bit Pack> :
                                 NVVM_TCGEN05_LDST_ACCESS_SIZE<Shape, Num>.veclen>;
 
   let InOperandList = !con((ins B32:$taddr),
-                           !if(!eq(Shape, "16x32bx2"), (ins i64imm:$offset), (ins)));
+                           !if(!eq(Shape, "16x32bx2"),
+                                  (ins i64imm:$offset), (ins)));
   let OutOperandList = Info.Outs;
   let AsmString = "tcgen05.ld.sync.aligned"
                   # "." # Shape
@@ -5809,7 +5813,8 @@ class TCGEN05_ST_INST<string Shape, int Num, bit Unpack> :
                                 NVVM_TCGEN05_LDST_ACCESS_SIZE<Shape, Num>.veclen>;
 
   let InOperandList = !con((ins B32:$taddr),
-                           !if(!eq(Shape, "16x32bx2"), (ins i64imm:$offset), (ins)),
+                           !if(!eq(Shape, "16x32bx2"),
+                                  (ins i64imm:$offset), (ins)),
                            Info.Ins);
   let OutOperandList = (outs);
   let AsmString = "tcgen05.st.sync.aligned"

@@ -83,7 +83,7 @@ gpu.module @tcgen05_cp_sm90a [#nvvm.target<chip = "sm_90a">] {
 gpu.module @tcgen05_ld_sm90 [#nvvm.target<chip = "sm_90">] {
   func.func @tcgen05_ld_sm90(%taddr: !llvm.ptr<6>) {
     // expected-error @below {{'nvvm.tcgen05.ld' op is not supported on sm_90}}
-    %0 = nvvm.tcgen05.ld %taddr {shape = #nvvm.tcgen05_ldst_shape<shape_16x64b>} : i32
+    %0 = nvvm.tcgen05.ld %taddr {shape = #nvvm.tcgen05_ldst_shape<shape_16x64b>} : vector<1 x i32>
     return
   }
 }
@@ -91,9 +91,9 @@ gpu.module @tcgen05_ld_sm90 [#nvvm.target<chip = "sm_90">] {
 // -----
 
 gpu.module @tcgen05_st_sm120f [#nvvm.target<chip = "sm_120f">] {
-  func.func @tcgen05_st_sm120f(%taddr: !llvm.ptr<6>, %val: i32) {
+  func.func @tcgen05_st_sm120f(%taddr: !llvm.ptr<6>, %val: vector<1 x i32>) {
     // expected-error @below {{'nvvm.tcgen05.st' op is not supported on sm_120f}}
-    nvvm.tcgen05.st %taddr, %val {shape = #nvvm.tcgen05_ldst_shape<shape_16x64b>} : i32
+    nvvm.tcgen05.st %taddr, %val {shape = #nvvm.tcgen05_ldst_shape<shape_16x64b>} : vector<1 x i32>
     return
   }
 }
