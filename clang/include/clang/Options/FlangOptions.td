@@ -310,6 +310,15 @@ def ffast_real_mod : Flag<["-"], "ffast-real-mod">, Group<f_Group>,
 def fno_fast_real_mod : Flag<["-"], "fno-fast-real-mod">, Group<f_Group>,
   HelpText<"Disable optimization of MOD for REAL types in presence of -ffast-math">;
 
+defm real_sum_reassociation
+    : BoolOptionWithoutMarshalling<
+          "f", "real-sum-reassociation",
+          PosFlag<SetTrue, [HelpHidden], [],
+                  "Enable Fortran-standard compliant reassociation within "
+                  "individual REAL sum expressions">,
+          NegFlag<SetFalse, [HelpHidden], [],
+                  "Disable reassociation within individual REAL sum expressions">>;
+
 defm init_global_zero : BoolOptionWithoutMarshalling<"f", "init-global-zero",
   PosFlag<SetTrue, [], [], "Zero initialize globals without default initialization (default)">,
   NegFlag<SetFalse, [], [], "Do not zero initialize globals without default initialization">>;
