@@ -296,7 +296,7 @@ define i32 @mul_by_signed_min_expanded_to_shl(i1 %a) {
 ; CHECK-NEXT:    IR   %rem.neg = zext i1 %a to i32
 ; CHECK-NEXT:    IR   %sub = sub i32 %rem.neg, 1
 ; CHECK-NEXT:    IR   %shl = shl i32 %sub, 31
-; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = shl nuw nsw ir<%rem.neg>, ir<31>
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = shl nuw ir<%rem.neg>, ir<31>
 ; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = add vp<[[VP2]]>, ir<-2147483547>
 ; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP3]]>, ir<4>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
