@@ -2624,6 +2624,61 @@ instCombineSVEPairwiseAddLong(InstCombiner &IC, IntrinsicInst &II) {
   return &II; // II is now trivially dead and will get erased.
 }
 
+// Combine long mull and accumulate into fused mlal/lmsl
+// E.g. add(smullb(a, b), wide_acc) -> smlalb(wide_acc, a, b)
+static std::optional<Instruction *>
+instCombineSVEMultiplyAccumulateLong(InstCombiner &IC, IntrinsicInst &II) {
+  auto GetOpcodeForMLA = [](Intrinsic::ID IID) {
+    switch (IID) {
+    case Intrinsic::aarch64_sve_smullb:
+      return Intrinsic::aarch64_sve_smlalb;
+    case Intrinsic::aarch64_sve_smullt:
+      return Intrinsic::aarch64_sve_smlalt;
+    case Intrinsic::aarch64_sve_umullb:
+      return Intrinsic::aarch64_sve_umlalb;
+    case Intrinsic::aarch64_sve_umullt:
+      return Intrinsic::aarch64_sve_umlalt;
+    default:
+      llvm_unreachable("Expected SVE MULL intrinsic");
+    }
+  };
+  auto GetOpcodeForMLS = [](Intrinsic::ID IID) {
+    switch (IID) {
+    case Intrinsic::aarch64_sve_smullb:
+      return Intrinsic::aarch64_sve_smlslb;
+    case Intrinsic::aarch64_sve_smullt:
+      return Intrinsic::aarch64_sve_smlslt;
+    case Intrinsic::aarch64_sve_umullb:
+      return Intrinsic::aarch64_sve_umlslb;
+    case Intrinsic::aarch64_sve_umullt:
+      return Intrinsic::aarch64_sve_umlslt;
+    default:
+      llvm_unreachable("Expected SVE MULL intrinsic");
+    }
+  };
+
+  auto *User = dyn_cast_or_null<Instruction>(II.getUniqueUndroppableUser());
+  if (!User)
+    return std::nullopt;
+
+  Value *Acc;
+  Intrinsic::ID FuseIID;
+  if (match(User, m_c_Add(m_Specific(&II), m_Value(Acc))))
+    FuseIID = GetOpcodeForMLA(II.getIntrinsicID());
+  else if (match(User, m_Sub(m_Value(Acc), m_Specific(&II))))
+    FuseIID = GetOpcodeForMLS(II.getIntrinsicID());
+  else
+    return std::nullopt;
+
+  IC.Builder.SetInsertPoint(User);
+  Value *MulAcc = IC.Builder.CreateIntrinsic(
+      FuseIID, {II.getType()}, {Acc, II.getArgOperand(0), II.getArgOperand(1)});
+
+  IC.replaceInstUsesWith(*User, MulAcc);
+  IC.eraseInstFromFunction(*User);
+  return &II; // II is now trivially dead and will get erased.
+}
+
 static std::optional<Instruction *> instCombineSVEVectorAdd(InstCombiner &IC,
                                                             IntrinsicInst &II) {
   if (auto MLA = instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_mul,
@@ -3194,6 +3249,11 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_sadalp:
   case Intrinsic::aarch64_sve_uadalp:
     return instCombineSVEPairwiseAddLong(IC, II);
+  case Intrinsic::aarch64_sve_smullb:
+  case Intrinsic::aarch64_sve_smullt:
+  case Intrinsic::aarch64_sve_umullb:
+  case Intrinsic::aarch64_sve_umullt:
+    return instCombineSVEMultiplyAccumulateLong(IC, II);
   case Intrinsic::aarch64_sve_sub:
     return instCombineSVEVectorSub(IC, II);
   case Intrinsic::aarch64_sve_sub_u:
