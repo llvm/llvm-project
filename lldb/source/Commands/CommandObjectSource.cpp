@@ -119,7 +119,7 @@ public:
       : CommandObjectParsed(
             interpreter, "source info",
             "Display source line information for the current target "
-            "process.  Defaults to instruction pointer in current stack "
+            "process.\nDefaults to instruction pointer in current stack "
             "frame.",
             nullptr, eCommandRequiresTarget) {}
 
@@ -1221,7 +1221,8 @@ class CommandObjectSourceCacheDump : public CommandObjectParsed {
 public:
   CommandObjectSourceCacheDump(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "source cache dump",
-                            "Dump the state of the source code cache. Intended "
+                            "Dump the state of the source code cache.\n"
+                            "Intended "
                             "to be used for debugging LLDB itself.",
                             nullptr) {}
 

@@ -402,7 +402,8 @@ public:
   CommandObjectFrameVariable(CommandInterpreter &interpreter)
       : CommandObjectParsed(
             interpreter, "frame variable",
-            "Show variables for the current stack frame. Defaults to all "
+            "Show variables for the current stack frame.\n"
+            "Defaults to all "
             "arguments and local variables in scope. Names of argument, "
             "local, file static and file global variables can be specified.",
             nullptr,

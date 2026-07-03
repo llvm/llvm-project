@@ -197,7 +197,8 @@ public:
   CommandObjectThreadBacktrace(CommandInterpreter &interpreter)
       : CommandObjectIterateOverThreads(
             interpreter, "thread backtrace",
-            "Show backtraces of thread call stacks.  Defaults to the current "
+            "Show backtraces of thread call stacks.\n"
+            "Defaults to the current "
             "thread, thread indexes can be specified as arguments.\n"
             "Use the thread-index \"all\" to see all threads.\n"
             "Use the thread-index \"unique\" to see threads grouped by unique "
@@ -823,7 +824,8 @@ public:
   CommandObjectThreadContinue(CommandInterpreter &interpreter)
       : CommandObjectParsed(
             interpreter, "thread continue",
-            "Continue execution of the current target process.  One "
+            "Continue execution of the current target process.\n"
+            "One "
             "or more threads may be specified, by default all "
             "threads continue.",
             nullptr,
@@ -1050,7 +1052,8 @@ public:
       : CommandObjectParsed(
             interpreter, "thread until",
             "Continue until a line number or address is reached by the "
-            "current or specified thread.  Stops when returning from "
+            "current or specified thread.\n"
+            "Stops when returning from "
             "the current function as a safety measure.  "
             "The target line number(s) are given as arguments, and if more "
             "than one"
@@ -1492,7 +1495,8 @@ public:
       : CommandObjectIterateOverThreads(
             interpreter, "thread info",
             "Show an extended summary of one or "
-            "more threads.  Defaults to the "
+            "more threads.\n"
+            "Defaults to the "
             "current thread.",
             "thread info",
             eCommandRequiresProcess | eCommandTryTargetAPILock |
@@ -1545,7 +1549,8 @@ public:
   CommandObjectThreadException(CommandInterpreter &interpreter)
       : CommandObjectIterateOverThreads(
             interpreter, "thread exception",
-            "Display the current exception object for a thread. Defaults to "
+            "Display the current exception object for a thread.\n"
+            "Defaults to "
             "the current thread.",
             "thread exception",
             eCommandRequiresProcess | eCommandTryTargetAPILock |
@@ -1596,7 +1601,8 @@ public:
   CommandObjectThreadSiginfo(CommandInterpreter &interpreter)
       : CommandObjectIterateOverThreads(
             interpreter, "thread siginfo",
-            "Display the current siginfo object for a thread. Defaults to "
+            "Display the current siginfo object for a thread.\n"
+            "Defaults to "
             "the current thread.",
             "thread siginfo",
             eCommandRequiresProcess | eCommandTryTargetAPILock |
@@ -1697,7 +1703,8 @@ public:
       : CommandObjectRaw(interpreter, "thread return",
                          "Prematurely return from a stack frame, "
                          "short-circuiting execution of newer frames "
-                         "and optionally yielding a specified value.  Defaults "
+                         "and optionally yielding a specified value.\n"
+                         "Defaults "
                          "to the exiting the current stack "
                          "frame.",
                          "thread return",
@@ -1997,7 +2004,8 @@ public:
   CommandObjectThreadPlanList(CommandInterpreter &interpreter)
       : CommandObjectIterateOverThreads(
             interpreter, "thread plan list",
-            "Show thread plans for one or more threads.  If no threads are "
+            "Show thread plans for one or more threads.\n"
+            "If no threads are "
             "specified, show the "
             "current thread.  Use the thread-index \"all\" to see all threads.",
             nullptr,
@@ -2071,7 +2079,7 @@ public:
   CommandObjectThreadPlanDiscard(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "thread plan discard",
                             "Discards thread plans up to and including the "
-                            "specified index (see 'thread plan list'.)  "
+                            "specified index (see 'thread plan list'.)\n"
                             "Only user visible plans can be discarded.",
                             nullptr,
                             eCommandRequiresProcess | eCommandRequiresThread |
@@ -2130,7 +2138,7 @@ public:
   CommandObjectThreadPlanPrune(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "thread plan prune",
                             "Removes any thread plans associated with "
-                            "currently unreported threads.  "
+                            "currently unreported threads.\n"
                             "Specify one or more TID's to remove, or if no "
                             "TID's are provides, remove threads for all "
                             "unreported threads",
@@ -2243,7 +2251,7 @@ public:
       : CommandObjectMultipleThreads(
             interpreter, "thread trace stop",
             "Stop tracing threads, including the ones traced with the "
-            "\"process trace start\" command."
+            "\"process trace start\" command.\n"
             "Defaults to the current thread. Thread indices can be "
             "specified as arguments.\n Use the thread-index \"all\" to stop "
             "tracing "
@@ -2345,7 +2353,8 @@ public:
   CommandObjectTraceDumpFunctionCalls(CommandInterpreter &interpreter)
       : CommandObjectParsed(
             interpreter, "thread trace dump function-calls",
-            "Dump the traced function-calls for one thread. If no "
+            "Dump the traced function-calls for one thread.\n"
+            "If no "
             "thread is specified, the current thread is used.",
             nullptr,
             eCommandRequiresProcess | eCommandRequiresThread |
@@ -2518,7 +2527,8 @@ public:
   CommandObjectTraceDumpInstructions(CommandInterpreter &interpreter)
       : CommandObjectParsed(
             interpreter, "thread trace dump instructions",
-            "Dump the traced instructions for one thread. If no "
+            "Dump the traced instructions for one thread.\n"
+            "If no "
             "thread is specified, show the current thread.",
             nullptr,
             eCommandRequiresProcess | eCommandRequiresThread |
@@ -2646,7 +2656,8 @@ public:
   CommandObjectTraceDumpInfo(CommandInterpreter &interpreter)
       : CommandObjectIterateOverThreads(
             interpreter, "thread trace dump info",
-            "Dump the traced information for one or more threads.  If no "
+            "Dump the traced information for one or more threads.\n"
+            "If no "
             "threads are specified, show the current thread. Use the "
             "thread-index \"all\" to see all threads.",
             nullptr,
@@ -2746,7 +2757,8 @@ CommandObjectMultiwordThread::CommandObjectMultiwordThread(
   LoadSubCommand("step-in",
                  CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
                      interpreter, "thread step-in",
-                     "Source level single step, stepping into calls.  Defaults "
+                     "Source level single step, stepping into calls.\n"
+                     "Defaults "
                      "to current thread unless specified.",
                      nullptr, eStepTypeInto)));
 
@@ -2754,27 +2766,29 @@ CommandObjectMultiwordThread::CommandObjectMultiwordThread(
                  CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
                      interpreter, "thread step-out",
                      "Finish executing the current stack frame and stop after "
-                     "returning.  Defaults to current thread unless specified.",
+                     "returning.\n"
+                     "Defaults to current thread unless specified.",
                      nullptr, eStepTypeOut)));
 
   LoadSubCommand("step-over",
                  CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
                      interpreter, "thread step-over",
-                     "Source level single step, stepping over calls.  Defaults "
+                     "Source level single step, stepping over calls.\n"
+                     "Defaults "
                      "to current thread unless specified.",
                      nullptr, eStepTypeOver)));
 
   LoadSubCommand("step-inst",
                  CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
                      interpreter, "thread step-inst",
-                     "Instruction level single step, stepping into calls.  "
+                     "Instruction level single step, stepping into calls.\n"
                      "Defaults to current thread unless specified.",
                      nullptr, eStepTypeTrace)));
 
   LoadSubCommand("step-inst-over",
                  CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
                      interpreter, "thread step-inst-over",
-                     "Instruction level single step, stepping over calls.  "
+                     "Instruction level single step, stepping over calls.\n"
                      "Defaults to current thread unless specified.",
                      nullptr, eStepTypeTraceOver)));
 
@@ -2782,7 +2796,7 @@ CommandObjectMultiwordThread::CommandObjectMultiwordThread(
       "step-scripted",
       CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
           interpreter, "thread step-scripted",
-          "Step as instructed by the script class passed in the -C option.  "
+          "Step as instructed by the script class passed in the -C option.\n"
           "You can also specify a dictionary of key (-k) and value (-v) pairs "
           "that will be used to populate an SBStructuredData Dictionary, which "
           "will be passed to the constructor of the class implementing the "

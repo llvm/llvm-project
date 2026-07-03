@@ -32,7 +32,7 @@ public:
       : CommandObjectRaw(
             interpreter, "scripting run",
             "Invoke the script interpreter with provided code and display any "
-            "results.  Start the interactive interpreter if no code is "
+            "results.\nStart the interactive interpreter if no code is "
             "supplied.",
             "scripting run [--language <scripting-language> --] "
             "[<script-code>]") {}

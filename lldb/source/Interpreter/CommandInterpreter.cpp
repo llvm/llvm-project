@@ -839,7 +839,8 @@ void CommandInterpreter::LoadCommandDictionary() {
 
   std::unique_ptr<CommandObjectRegexCommand> down_regex_cmd_up(
       new CommandObjectRegexCommand(*this, "_regexp-down",
-                                    "Select a newer stack frame.  Defaults to "
+                                    "Select a newer stack frame.\n"
+                                    "Defaults to "
                                     "moving one frame, a numeric argument can "
                                     "specify an arbitrary number.",
                                     "_regexp-down [<count>]", 0, false));
@@ -856,7 +857,8 @@ void CommandInterpreter::LoadCommandDictionary() {
   std::unique_ptr<CommandObjectRegexCommand> up_regex_cmd_up(
       new CommandObjectRegexCommand(
           *this, "_regexp-up",
-          "Select an older stack frame.  Defaults to moving one "
+          "Select an older stack frame.\n"
+          "Defaults to moving one "
           "frame, a numeric argument can specify an arbitrary number.",
           "_regexp-up [<count>]", 0, false));
   if (up_regex_cmd_up) {
@@ -939,7 +941,8 @@ void CommandInterpreter::LoadCommandDictionary() {
   std::unique_ptr<CommandObjectRegexCommand> bt_regex_cmd_up(
       new CommandObjectRegexCommand(
           *this, "_regexp-bt",
-          "Show backtrace of the current thread's call stack. Any numeric "
+          "Show backtrace of the current thread's call stack.\n"
+          "Any numeric "
           "argument displays at most that many frames. The argument 'all' "
           "displays all threads. Use 'settings set frame-format' to customize "
           "the printing of individual frames and 'settings set thread-format' "

@@ -42,7 +42,8 @@ public:
       : CommandObjectParsed(
             interpreter, "register read",
             "Dump the contents of one or more register values from the current "
-            "frame.  If no register is specified, dumps them all.",
+            "frame.\n"
+            "If no register is specified, dumps them all.",
             nullptr,
             eCommandRequiresFrame | eCommandRequiresRegContext |
                 eCommandProcessMustBeLaunched | eCommandProcessMustBePaused),

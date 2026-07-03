@@ -248,7 +248,8 @@ public:
   CommandObjectSettingsShow(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "settings show",
                             "Show matching debugger settings and their current "
-                            "values.  Defaults to showing all settings.") {
+                            "values.\n"
+                            "Defaults to showing all settings.") {
     AddSimpleArgumentList(eArgTypeSettingVariableName, eArgRepeatOptional);
   }
 
@@ -339,7 +340,7 @@ public:
             interpreter, "settings export",
             "Write matching debugger settings and their "
             "current values to a file that can be read in with "
-            "\"settings read\". Defaults to writing all settings.",
+            "\"settings read\".\nDefaults to writing all settings.",
             nullptr) {
     AddSimpleArgumentList(eArgTypeSettingVariableName, eArgRepeatOptional);
   }
@@ -504,7 +505,7 @@ class CommandObjectSettingsList : public CommandObjectParsed {
 public:
   CommandObjectSettingsList(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "settings list",
-                            "List and describe matching debugger settings.  "
+                            "List and describe matching debugger settings.\n"
                             "Defaults to all listing all settings.",
                             nullptr) {
     CommandArgumentEntry arg;
@@ -1030,7 +1031,7 @@ public:
   CommandObjectSettingsClear(CommandInterpreter &interpreter)
       : CommandObjectParsed(
             interpreter, "settings clear",
-            "Clear a debugger setting array, dictionary, or string. "
+            "Clear a debugger setting array, dictionary, or string.\n"
             "If '-a' option is specified, it clears all settings.", nullptr) {
     AddSimpleArgumentList(eArgTypeSettingVariableName);
   }

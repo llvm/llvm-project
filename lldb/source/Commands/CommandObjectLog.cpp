@@ -288,7 +288,7 @@ public:
   CommandObjectLogList(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "log list",
                             "List the log categories for one or more log "
-                            "channels.  If none specified, lists them all.",
+                            "channels.\nIf none specified, lists them all.",
                             nullptr) {
     AddSimpleArgumentList(eArgTypeLogChannel, eArgRepeatStar);
   }

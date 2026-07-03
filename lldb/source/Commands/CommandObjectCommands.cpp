@@ -2738,7 +2738,8 @@ public:
   CommandObjectCommandsContainerAdd(CommandInterpreter &interpreter)
       : CommandObjectParsed(
             interpreter, "command container add",
-            "Add a container command to lldb.  Adding to built-"
+            "Add a container command to lldb.\n"
+            "Adding to built-"
             "in container commands is not allowed.",
             "command container add [[path1]...] container-name") {
     AddSimpleArgumentList(eArgTypeCommand, eArgRepeatPlus);
@@ -2951,7 +2952,7 @@ public:
   CommandObjectCommandContainer(CommandInterpreter &interpreter)
       : CommandObjectMultiword(
             interpreter, "command container",
-            "Commands for adding container commands to lldb.  "
+            "Commands for adding container commands to lldb.\n"
             "Container commands are containers for other commands.  You can "
             "add nested container commands by specifying a command path, "
             "but you can't add commands into the built-in command hierarchy.",
