@@ -1710,13 +1710,14 @@ void RISCVAsmParser::FilterNearMisses(
   for (NearMissInfo &I : NearMissesIn) {
     switch (I.getKind()) {
     case NearMissInfo::NearMissOperand: {
+      SMLoc OperandLoc =
+          ((RISCVOperand &)*Operands[I.getOperandIndex()]).getStartLoc();
+
       // When the matcher finds surplus operands, it records them as
       // NearMissOperand with InvalidMatchClass. We detect this and report
       // "too many operands" instead of "invalid operand".
       if (I.getOperandClass() == InvalidMatchClass) {
         if (!ReportedTooManyOperands) {
-          SMLoc OperandLoc =
-              ((RISCVOperand &)*Operands[I.getOperandIndex()]).getStartLoc();
           NearMissesOut.emplace_back(
               NearMissMessage{OperandLoc, "too many operands for instruction"});
           ReportedTooManyOperands = true;
@@ -1724,8 +1725,6 @@ void RISCVAsmParser::FilterNearMisses(
         break;
       }
 
-      SMLoc OperandLoc =
-          ((RISCVOperand &)*Operands[I.getOperandIndex()]).getStartLoc();
       std::string OperandDiag = getCustomOperandDiag(I.getOperandError());
 
       // If we have already emitted a message for a superclass on this operand,
