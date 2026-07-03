@@ -6270,16 +6270,6 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
         return true;
 
       Arg = ArgE.getAs<Expr>();
-
-      // std::init / ref_to_uninit (paper §5): a pointer or reference argument
-      // must match the [[ref_to_uninit]] marking of its parameter.
-      if (Param && getLangOpts().Profiles) {
-        QualType PT = Param->getType();
-        if (PT->isPointerType() || PT->isReferenceType())
-          checkRefToUninitInit(Arg->getExprLoc(),
-                               Param->hasAttr<RefToUninitAttr>(),
-                               PT->isReferenceType(), Arg);
-      }
     } else {
       assert(Param && "can't use default arguments without a known callee");
 
@@ -6288,16 +6278,21 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
         return true;
 
       Arg = ArgExpr.getAs<Expr>();
+    }
 
-      // The recognizers don't see through the CXXDefaultArgExpr wrapper, so
-      // check the underlying default-argument expression.
-      if (getLangOpts().Profiles) {
-        QualType PT = Param->getType();
-        if (PT->isPointerType() || PT->isReferenceType())
-          checkRefToUninitInit(Arg->getExprLoc(),
-                               Param->hasAttr<RefToUninitAttr>(),
-                               PT->isReferenceType(),
-                               cast<CXXDefaultArgExpr>(Arg)->getExpr());
+    // std::init / ref_to_uninit (paper §5): a pointer or reference argument
+    // must match the [[ref_to_uninit]] marking of its parameter. The
+    // recognizers don't see through the CXXDefaultArgExpr wrapper, so check
+    // the underlying default-argument expression.
+    if (Param && getLangOpts().Profiles) {
+      QualType PT = Param->getType();
+      if (PT->isPointerType() || PT->isReferenceType()) {
+        const Expr *Src = Arg;
+        if (const auto *DAE = dyn_cast<CXXDefaultArgExpr>(Src))
+          Src = DAE->getExpr();
+        checkRefToUninitInit(Arg->getExprLoc(),
+                             Param->hasAttr<RefToUninitAttr>(),
+                             PT->isReferenceType(), Src);
       }
     }
 
