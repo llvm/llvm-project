@@ -257,9 +257,12 @@ define void @call_vec_double_vararg_straddle(<2 x double> %v) {
 ; CHECK-LABEL: call_vararg_integral0 DS 0H
 ; CHECK:         stmg 6,7,1872(4)
 ; CHECK-NEXT:    aghi 4,-192
-; CHECK-NEXT:    lg 0,2392(4)
+; CHECK-NEXT:    l 0,2396(4)
 ; CHECK-NEXT:    lg 6,40(5)
 ; CHECK-NEXT:    lg 5,32(5)
+; CHECK-NEXT:    llgfr 0,0
+; CHECK-NEXT:    llgfr 1,1
+; CHECK-NEXT:    llgfr 2,2
 ; CHECK-NEXT:    stg 0,2200(4)
 ; CHECK-NEXT:    basr 7,6
 ; CHECK-NEXT:    bcr 0,0
