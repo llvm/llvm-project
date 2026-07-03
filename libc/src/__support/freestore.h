@@ -31,7 +31,7 @@ public:
   /// Sets the range of possible block sizes. This can only be called when the
   /// trie is empty.
   LIBC_INLINE void set_range(FreeTrie::SizeRange range) {
-    large_trie.set_range(range);
+    large_trie_range = range;
   }
 
   /// Insert a free block. If the block is too small to be tracked, nothing
@@ -64,8 +64,13 @@ private:
   FreeList &small_list(BlockRef block);
   FreeList *find_best_small_fit(size_t size);
 
+  LIBC_INLINE FreeTrie large_trie() {
+    return FreeTrie(large_trie_root, large_trie_range);
+  }
+
   cpp::array<FreeList, NUM_SMALL_SIZES> small_lists;
-  FreeTrie large_trie;
+  FreeTrie::Node *large_trie_root = nullptr;
+  FreeTrie::SizeRange large_trie_range{0, 0};
 };
 
 LIBC_INLINE void FreeStore::insert(BlockRef block) {
@@ -74,7 +79,7 @@ LIBC_INLINE void FreeStore::insert(BlockRef block) {
   if (is_small(block))
     small_list(block).push(block);
   else
-    large_trie.push(block);
+    large_trie().push(block);
 }
 
 LIBC_INLINE void FreeStore::remove(BlockRef block) {
@@ -84,7 +89,8 @@ LIBC_INLINE void FreeStore::remove(BlockRef block) {
     small_list(block).remove(
         reinterpret_cast<FreeList::Node *>(block.usable_space()));
   } else {
-    large_trie.remove(reinterpret_cast<FreeTrie::Node *>(block.usable_space()));
+    large_trie().remove(
+        reinterpret_cast<FreeTrie::Node *>(block.usable_space()));
   }
 }
 
@@ -94,9 +100,10 @@ LIBC_INLINE BlockRef FreeStore::remove_best_fit(size_t size) {
     list->pop();
     return block;
   }
-  if (FreeTrie::Node *best_fit = large_trie.find_best_fit(size)) {
+  FreeTrie trie = large_trie();
+  if (FreeTrie::Node *best_fit = trie.find_best_fit(size)) {
     BlockRef block = best_fit->block();
-    large_trie.remove(best_fit);
+    trie.remove(best_fit);
     return block;
   }
   return BlockRef();
