@@ -657,6 +657,7 @@ void transform::FuseOp::build(OpBuilder &builder, OperationState &result,
         /*packed_tile_sizes=*/Value(),
         /*static_tile_sizes=*/staticTileSizesAttr,
         /*static_tile_interchange=*/staticTileInterchangeAttr,
+        /*inner_tile_alignments=*/ArrayRef<int64_t>{},
         /*apply_cleanup=*/applyCleanup,
         /*use_forall=*/useForall);
 }
@@ -757,6 +758,10 @@ transform::FuseOp::apply(transform::TransformRewriter &rewriter,
   tilingOptions = tilingOptions.setTileSizes(mixedTileSizes);
   scf::SCFTileAndFuseOptions tileAndFuseOptions;
   tileAndFuseOptions.tilingOptions = tilingOptions;
+  // Optional caller-asserted pack/unpack inner-tile alignment (see
+  // InnerTileAlignment).
+  tileAndFuseOptions.tilingOptions.setInnerTileAlignments(
+      convertInnerTileAlignments(getInnerTileAlignments()));
 
   if (getApplyCleanup()) {
     MLIRContext *context = rewriter.getContext();
@@ -821,7 +826,7 @@ LogicalResult transform::FuseOp::verify() {
   if (numExpectedLoops != getNumResults() - 1)
     return emitOpError() << "expects " << numExpectedLoops << " loop results";
 
-  return success();
+  return verifyInnerTileAlignments(getOperation(), getInnerTileAlignments());
 }
 
 SmallVector<OpFoldResult> transform::FuseOp::getMixedTileSizes() {
@@ -991,7 +996,8 @@ static bool sameOrEquivalentIterArg(Value src, Value dst) {
 /// results of the `containingOp` or nullptr if there are no dominated uses.
 static std::tuple<SmallVector<Operation *>, Operation *>
 tileAndFuseFirstExtractUse(RewriterBase &rewriter, Diagnostic &diag,
-                           Operation *producerOp, Operation *containingOp) {
+                           Operation *producerOp, Operation *containingOp,
+                           ArrayRef<InnerTileAlignment> innerTileAlignments) {
   LDBG() << "Try to fuse a direct extract use";
   auto tileableProducer = dyn_cast<TilingInterface>(producerOp);
   if (!tileableProducer) {
@@ -1067,7 +1073,7 @@ tileAndFuseFirstExtractUse(RewriterBase &rewriter, Diagnostic &diag,
 
   FailureOr<TilingResult> tileAndFuseResult =
       tileableProducer.generateResultTileValue(rewriter, resultNumber, offsets,
-                                               sizes);
+                                               sizes, innerTileAlignments);
 
   if (failed(tileAndFuseResult)) {
     diag.attachNote(tileableProducer->getLoc())
@@ -1115,7 +1121,7 @@ tileAndFuseFirstExtractUse(RewriterBase &rewriter, Diagnostic &diag,
 static SmallVector<Operation *>
 tileAndFuseFirstExtractUseThroughContainingOpBlockArgument(
     RewriterBase &rewriter, Diagnostic &diag, Operation *producerOp,
-    Operation *containingOp) {
+    Operation *containingOp, ArrayRef<InnerTileAlignment> innerTileAlignments) {
   LDBG() << "Try to fuse an extract use through block argument";
 
   auto tileableProducer = dyn_cast<TilingInterface>(producerOp);
@@ -1192,7 +1198,7 @@ tileAndFuseFirstExtractUseThroughContainingOpBlockArgument(
   FailureOr<TilingResult> tileAndFuseResult =
       tileableProducerClone.generateResultTileValue(
           rewriter, resultNumber, sliceOpToTile.getMixedOffsets(),
-          sliceOpToTile.getMixedSizes());
+          sliceOpToTile.getMixedSizes(), innerTileAlignments);
   if (failed(tileAndFuseResult)) {
     diag.attachNote(tileableProducer->getLoc())
         << "failed to tile producer op: " << *tileableProducer;
@@ -1268,6 +1274,10 @@ bool transform::FuseIntoContainingOp::allowsRepeatedHandleOperands() {
   return true;
 }
 
+LogicalResult transform::FuseIntoContainingOp::verify() {
+  return verifyInnerTileAlignments(getOperation(), getInnerTileAlignments());
+}
+
 DiagnosedSilenceableFailure
 transform::FuseIntoContainingOp::apply(transform::TransformRewriter &rewriter,
                                        transform::TransformResults &results,
@@ -1281,6 +1291,12 @@ transform::FuseIntoContainingOp::apply(transform::TransformRewriter &rewriter,
            << llvm::range_size(containingOps) << ")";
   }
   Operation *containingOp = *containingOps.begin();
+
+  // Forward the optional, caller-asserted alignment of a fused pack/unpack op's
+  // inner tiles relative to the loop tile sizes (see InnerTileAlignment) to
+  // each fused producer.
+  SmallVector<InnerTileAlignment> innerTileAlignments =
+      convertInnerTileAlignments(getInnerTileAlignments());
 
   // If nothing to fuse, propagate success.
   if (std::empty(producerOps)) {
@@ -1332,8 +1348,8 @@ transform::FuseIntoContainingOp::apply(transform::TransformRewriter &rewriter,
     // cases, we can tile/clone once and reuse the value for each use.
     // Futhermore, producers should then be traversed according to a
     // topological sorting.
-    auto [tiledOps, newContainingOp] =
-        tileAndFuseFirstExtractUse(rewriter, diag, producerOp, containingOp);
+    auto [tiledOps, newContainingOp] = tileAndFuseFirstExtractUse(
+        rewriter, diag, producerOp, containingOp, innerTileAlignments);
     if (!tiledOps.empty()) {
       LDBG() << "\nFused a direct extract use\n" << *containingOp;
       fusedOps.append(tiledOps);
@@ -1359,7 +1375,7 @@ transform::FuseIntoContainingOp::apply(transform::TransformRewriter &rewriter,
 
     SmallVector<Operation *> tiledContainingOpOperand =
         tileAndFuseFirstExtractUseThroughContainingOpBlockArgument(
-            rewriter, diag, producerOp, containingOp);
+            rewriter, diag, producerOp, containingOp, innerTileAlignments);
     if (!tiledContainingOpOperand.empty()) {
       LDBG() << "\nFused an extract use through block argument\n"
              << *containingOp;
@@ -3550,7 +3566,7 @@ LogicalResult transform::TileUsingForOp::verify() {
     return emitOpError("expected number of loops to tile (")
            << numExpectedLoops << ") to match number of `loops` results ("
            << getLoops().size() << ")";
-  return success();
+  return verifyInnerTileAlignments(getOperation(), getInnerTileAlignments());
 }
 
 DiagnosedSilenceableFailure
@@ -3680,6 +3696,8 @@ transform::TileUsingForOp::apply(transform::TransformRewriter &rewriter,
     }
 
     tilingOptions.setInterchange(getInterchange());
+    tilingOptions.setInnerTileAlignments(
+        convertInnerTileAlignments(getInnerTileAlignments()));
     FailureOr<scf::SCFTilingResult> maybeTilingResult =
         tileUsingSCF(rewriter, tilingInterface, tilingOptions);
     if (failed(maybeTilingResult))

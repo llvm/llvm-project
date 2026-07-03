@@ -3033,7 +3033,8 @@ SDValue SparcTargetLowering::LowerBSWAP(SDValue Op, SelectionDAG &DAG) const {
   SDValue ST = DAG.getMemIntrinsicNode(
       IsLittleEndian ? SPISD::STORE_BIG : SPISD::STORE_LITTLE, DL,
       DAG.getVTList(MVT::Other), Ops, VT,
-      MachinePointerInfo::getFixedStack(MF, TmpFI));
+      MachinePointerInfo::getFixedStack(MF, TmpFI), std::nullopt,
+      MachineMemOperand::MOStore);
   return DAG.getLoad(VT, DL, ST, TmpPtr,
                      MachinePointerInfo::getFixedStack(MF, TmpFI));
 }
