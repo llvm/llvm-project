@@ -83,6 +83,9 @@ SPIRVTypeInst lowerBuiltinType(const Type *Type,
                                AccessQualifier::AccessQualifier AccessQual,
                                MachineIRBuilder &MIRBuilder,
                                SPIRVGlobalRegistry *GR);
+
+/// Returns true if \p Name is a pipe or address-space-cast OpenCL builtin.
+bool isPipeOrAddressSpaceCastBuiltin(StringRef Name);
 } // namespace SPIRV
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVBUILTINS_H
