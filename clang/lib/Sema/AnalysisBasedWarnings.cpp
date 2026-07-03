@@ -1884,6 +1884,44 @@ static void checkInitProfileCtorBody(Sema &S, const CXXConstructorDecl *Ctor,
           continue;
         BlockEvents.push_back({ReadWrite, It->second, UO});
         Gen[B->getBlockID()].set(It->second);
+      } else if (const auto *LE = dyn_cast<LambdaExpr>(St)) {
+        // The lambda body is a separate function and never appears in this
+        // CFG, but a this-capturing lambda can read members the moment it is
+        // created (it may be invoked immediately). Treat every member read in
+        // its body -- and in nested lambda bodies, reached through children()
+        // -- as a Read at the LambdaExpr's program point. Writes in the body
+        // earn no assignment credit (the lambda may never run), consistent
+        // with the intersection semantics; a lambda stored now and called
+        // only after the member is assigned is still flagged (accepted
+        // imprecision). Capture initializers are ordinary CFG elements,
+        // already handled by the arms above.
+        if (llvm::none_of(LE->captures(), [](const LambdaCapture &C) {
+              return C.capturesThis();
+            }))
+          continue;
+        SmallVector<const Stmt *, 16> Stack(1, LE->getBody());
+        while (!Stack.empty()) {
+          const Stmt *Cur = Stack.pop_back_val();
+          if (!Cur)
+            continue;
+          const FieldDecl *F = nullptr;
+          if (const auto *BodyICE = dyn_cast<ImplicitCastExpr>(Cur);
+              BodyICE && BodyICE->getCastKind() == CK_LValueToRValue)
+            F = getCurrentObjectMember(BodyICE->getSubExpr());
+          else if (const auto *BodyBO = dyn_cast<BinaryOperator>(Cur);
+                   BodyBO && BodyBO->isCompoundAssignmentOp())
+            F = getCurrentObjectMember(BodyBO->getLHS());
+          else if (const auto *BodyUO = dyn_cast<UnaryOperator>(Cur);
+                   BodyUO && BodyUO->isIncrementDecrementOp())
+            F = getCurrentObjectMember(BodyUO->getSubExpr());
+          if (F) {
+            auto It = Index.find(F);
+            if (It != Index.end())
+              BlockEvents.push_back({Read, It->second, cast<Expr>(Cur)});
+          }
+          for (const Stmt *Child : Cur->children())
+            Stack.push_back(Child);
+        }
       }
     }
   }
@@ -3168,7 +3206,11 @@ static void addNonLinearizedAlwaysAddClasses(AnalysisDeclContext &AC) {
       .setAlwaysAdd(Stmt::CStyleCastExprClass)
       .setAlwaysAdd(Stmt::DeclRefExprClass)
       .setAlwaysAdd(Stmt::ImplicitCastExprClass)
-      .setAlwaysAdd(Stmt::UnaryOperatorClass);
+      .setAlwaysAdd(Stmt::UnaryOperatorClass)
+      // The std::init ctor-body pass scans this-capturing lambda bodies from
+      // the LambdaExpr's element; without always-add, a lambda in a
+      // non-statement position never gets its own CFG element.
+      .setAlwaysAdd(Stmt::LambdaExprClass);
 }
 
 // std::init: diagnose a read of a [[uninit]] scalar member before it is

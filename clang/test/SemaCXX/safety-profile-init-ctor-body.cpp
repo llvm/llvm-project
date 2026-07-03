@@ -211,6 +211,91 @@ struct [[profiles::suppress(std::init)]] InitListReadSuppressed {
   InitListReadSuppressed() : o(m) {} // OK: suppressed
 };
 
+// A this-capturing lambda created in the ctor body may run immediately, so a
+// member read in its body counts as a read at the point the lambda is
+// created. Writes in the body earn no assignment credit (the lambda may never
+// run), and a lambda stored now but called only after assignment is flagged
+// all the same (accepted imprecision).
+struct LambdaReadInvoked {
+  int m [[uninit]]; // expected-note {{member 'm' declared here}}
+  LambdaReadInvoked() {
+    int y = [this] { return m; }(); // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+    (void)y;
+  }
+};
+
+struct LambdaReadAfterAssign {
+  int m [[uninit]];
+  LambdaReadAfterAssign() {
+    m = 1;
+    auto l = [this] { return m; }; // OK: m assigned on every path here
+    (void)l;
+  }
+};
+
+struct LambdaWriteNoCredit {
+  int m [[uninit]]; // expected-note {{member 'm' declared here}}
+  LambdaWriteNoCredit() {
+    auto l = [this] { m = 1; }; // OK: a body write is not a read
+    l();
+    int y = m; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+    (void)y;
+  }
+};
+
+struct LambdaNoMemberUse {
+  int m [[uninit]];
+  LambdaNoMemberUse() {
+    auto l = [this] { return 42; }; // OK: body touches no member
+    m = l();
+  }
+};
+
+struct LambdaCompoundRead {
+  int m [[uninit]]; // expected-note {{member 'm' declared here}}
+  LambdaCompoundRead() {
+    auto l = [this] { m += 1; }; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+    (void)l;
+  }
+};
+
+struct LambdaNestedRead {
+  int m [[uninit]]; // expected-note {{member 'm' declared here}}
+  LambdaNestedRead() {
+    auto l = [this] { return [this] { return m; }; }; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+    (void)l;
+  }
+};
+
+struct LambdaImplicitThisCapture {
+  int m [[uninit]]; // expected-note {{member 'm' declared here}}
+  LambdaImplicitThisCapture() {
+    auto l = [&] { return m; }; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+    (void)l;
+  }
+};
+
+// An init-capture's initializer is an ordinary CFG element of the ctor and is
+// checked by the plain read arm, independent of the body scan.
+struct LambdaCaptureInitRead {
+  int m [[uninit]]; // expected-note {{member 'm' declared here}}
+  LambdaCaptureInitRead() {
+    auto l = [v = m] { return v; }; // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+    (void)l;
+  }
+};
+
+struct LambdaReadSuppressed {
+  int m [[uninit]];
+  LambdaReadSuppressed() {
+    // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+    [[profiles::suppress(std::init)]] {
+      auto l = [this] { return m; }; // OK: suppressed
+      (void)l;
+    }
+  }
+};
+
 // A delegating constructor's target initializes the members before the body
 // runs (paper §5.1), so its body is not analyzed.
 struct Delegating {

@@ -818,6 +818,13 @@ read-then-write of that member.  Details:
   ``this->m``, implicitly as ``m``, or as the equivalent ``(*this).m``; an
   access through any other object (``other.m``) is not the current object's
   member.
+- A ``this``-capturing lambda created in the body may run immediately, so a
+  member read in its body (or a nested lambda's) counts as a read at the point
+  the lambda is created; a body write earns no assignment credit (the lambda
+  may never run).  A lambda stored now but called only after the member is
+  assigned is flagged all the same -- an accepted imprecision.  An
+  init-capture's initializer runs at lambda creation and is checked as an
+  ordinary read.
 - There is **no** constructor-exit requirement: a ``[[uninit]]`` member that is
   simply never read is left as-is (paper §5.1/§5.3), exactly as R5 structurally
   excuses a marked member -- the two checks are complementary.
