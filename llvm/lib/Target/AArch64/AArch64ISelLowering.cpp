@@ -28719,11 +28719,11 @@ static SDValue performNVCASTCombine(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
   SDValue Op = N->getOperand(0);
 
-  if (Op.isUndef())
-    return DAG.getUNDEF(VT);
-
   if (VT == Op.getValueType())
     return Op;
+
+  if (Op.isUndef())
+    return DAG.getUNDEF(VT);
 
   if (Op.getOpcode() == AArch64ISD::NVCAST)
     return DAG.getNode(AArch64ISD::NVCAST, SDLoc(N), VT, Op.getOperand(0));
