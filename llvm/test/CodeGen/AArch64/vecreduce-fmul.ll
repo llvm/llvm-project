@@ -416,13 +416,10 @@ define float @fmul_reduct_reassoc_v4f32(<4 x float> %a, <4 x float> %b) {
 define float @fmul_reduct_reassoc_v4f32_init(float %i, <4 x float> %a, <4 x float> %b) {
 ; CHECK-SD-LABEL: fmul_reduct_reassoc_v4f32_init:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov d3, v1.d[1]
-; CHECK-SD-NEXT:    fmul v1.2s, v1.2s, v3.2s
-; CHECK-SD-NEXT:    mov d3, v2.d[1]
+; CHECK-SD-NEXT:    fmul v1.4s, v2.4s, v1.4s
+; CHECK-SD-NEXT:    mov d2, v1.d[1]
+; CHECK-SD-NEXT:    fmul v1.2s, v1.2s, v2.2s
 ; CHECK-SD-NEXT:    fmul v1.2s, v1.2s, v1.s[1]
-; CHECK-SD-NEXT:    fmul v2.2s, v2.2s, v3.2s
-; CHECK-SD-NEXT:    fmul s0, s0, s1
-; CHECK-SD-NEXT:    fmul v1.2s, v2.2s, v2.s[1]
 ; CHECK-SD-NEXT:    fmul s0, s0, s1
 ; CHECK-SD-NEXT:    ret
 ;
