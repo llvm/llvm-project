@@ -6851,6 +6851,14 @@ bool X86TTIImpl::enableInterleavedAccessVectorization() const {
   return !(ST->isAtom());
 }
 
+bool X86TTIImpl::shouldRewriteMaskedStoreAsLoadBlendStore() const {
+  // Driven by the X86 tuning feature `slow-masked-store`, which is set on
+  // znver1/znver2/znver3 (the AMD Zen generations whose variable-mask vector
+  // store path is microcoded). znver4 and later have first-class AVX-512
+  // masked stores and therefore opt out via X86.td.
+  return ST->hasSlowMaskedStore();
+}
+
 bool X86TTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   switch (II->getIntrinsicID()) {
   default:

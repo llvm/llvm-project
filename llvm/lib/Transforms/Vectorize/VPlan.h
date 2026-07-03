@@ -3906,9 +3906,12 @@ struct LLVM_ABI_FOR_TEST VPWidenStoreRecipe final : public VPRecipeBase,
   }
 
   VPWidenStoreRecipe *clone() override {
-    return new VPWidenStoreRecipe(cast<StoreInst>(Ingredient), getAddr(),
-                                  getStoredValue(), getMask(), Consecutive,
-                                  *this, getDebugLoc());
+    auto *Copy =
+        new VPWidenStoreRecipe(cast<StoreInst>(Ingredient), getAddr(),
+                               getStoredValue(), getMask(), Consecutive, *this,
+                               getDebugLoc());
+    Copy->RewriteAsLoadBlendStore = RewriteAsLoadBlendStore;
+    return Copy;
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenStoreSC);
@@ -3925,6 +3928,19 @@ struct LLVM_ABI_FOR_TEST VPWidenStoreRecipe final : public VPRecipeBase,
     return VPWidenMemoryRecipe::computeCost(VF, Ctx);
   }
 
+  /// OptimizeMaskedMemory: when set, the recipe will emit a
+  /// load-blend-store sequence (load, select-against-mask, plain store)
+  /// instead of a single masked store. Decided at recipe-build time by
+  /// VPRecipeBuilder::tryToWidenMemory after consulting MemSafetyAnalysis;
+  /// see -enable-masked-memory-optimization. The cost model honours the
+  /// same flag so the planner's compare-vs-other-VFs logic stays accurate.
+  void setRewriteAsLoadBlendStore(bool V = true) {
+    RewriteAsLoadBlendStore = V;
+  }
+  bool shouldRewriteAsLoadBlendStore() const {
+    return RewriteAsLoadBlendStore;
+  }
+
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
@@ -3933,6 +3949,10 @@ struct LLVM_ABI_FOR_TEST VPWidenStoreRecipe final : public VPRecipeBase,
     // unless the same operand is also stored.
     return Op == getAddr() && isConsecutive() && Op != getStoredValue();
   }
+
+private:
+  /// See setRewriteAsLoadBlendStore().
+  bool RewriteAsLoadBlendStore = false;
 
 protected:
   VPRecipeBase *getAsRecipe() override;

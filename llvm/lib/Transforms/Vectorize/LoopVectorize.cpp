@@ -89,6 +89,7 @@
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
+#include "llvm/Analysis/MemSafetyAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -177,6 +178,17 @@ STATISTIC(LoopsPartialAliasVectorized,
 static cl::opt<bool> EnableEpilogueVectorization(
     "enable-epilogue-vectorization", cl::init(true), cl::Hidden,
     cl::desc("Enable vectorization of epilogue loops."));
+
+// OptimizeMaskedMemory: rewrite masked stores as a load-blend-store sequence
+// when MemSafetyAnalysis proves the access is safe. On by default, but
+// further gated by TTI: only fires on targets whose
+// shouldRewriteMaskedStoreAsLoadBlendStore() returns true (today: X86 with
+// the slow-masked-store tuning feature, i.e. znver1/2/3). All other targets
+// see no IR change regardless of this flag's value.
+static cl::opt<bool> EnableOptimizeMaskedMemory(
+    "enable-masked-memory-optimization", cl::init(true), cl::Hidden,
+    cl::desc("Rewrite masked stores as load-blend-store when safe "
+             "(MemSafetyAnalysis-driven)."));
 
 static cl::opt<unsigned> EpilogueVectorizationForceVF(
     "epilogue-vectorization-force-VF", cl::init(1), cl::Hidden,
@@ -790,6 +802,16 @@ public:
         LI(LI), Legal(Legal), TTI(TTI), TLI(TLI), AC(AC), ORE(ORE),
         GetBFI(GetBFI), TheFunction(F), Hints(Hints), InterleaveInfo(IAI) {}
 
+  /// OptimizeMaskedMemory: per-loop analysis used by the load-blend-store
+  /// rewrite. Set by LoopVectorizePass::processLoop after legality succeeds;
+  /// null when -enable-masked-memory-optimization is off or the analysis is
+  /// not legal on this loop.
+  MemSafetyAnalysis *MSA = nullptr;
+
+  /// Attach a MemSafetyAnalysis to this cost model. Lifetime is owned by
+  /// the caller.
+  void setMSA(MemSafetyAnalysis *NewMSA) { MSA = NewMSA; }
+
   /// \return An upper bound for the vectorization factors (both fixed and
   /// scalable). If the factors are 0, vectorization and interleaving should be
   /// avoided up front.
@@ -1010,6 +1032,18 @@ public:
   /// don't have an alternate strategy such as masking available).
   /// \p VF is the vectorization factor that will be used to vectorize \p I.
   bool isScalarWithPredication(Instruction *I, ElementCount VF);
+
+  /// OptimizeMaskedMemory: returns true if the predicated store \p I should be
+  /// lowered as an unconditional load + select (blend) + unconditional store
+  /// instead of being scalarized into a per-lane predicated ladder (or emitted
+  /// as @llvm.masked.store). This is the single source of truth consulted by
+  /// isScalarWithPredication (to keep the store widenable), getConsecutiveMemOpCost
+  /// (to cost the rewritten sequence), and VPRecipeBuilder::tryToWidenMemory
+  /// (to flag the recipe). It returns true only when the target opts in
+  /// (TTI hook), the access is a masked, consecutive, forward store, the loop
+  /// is not tail-folded by masking, and MemSafetyAnalysis proves the address
+  /// is read on every iteration anyway.
+  bool canRewriteStoreAsLoadBlendStore(Instruction *I, ElementCount VF);
 
   /// Wrapper function for LoopVectorizationLegality::isMaskRequired,
   /// that passes the Instruction \p I and if we fold tail.
@@ -2396,6 +2430,41 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
   Scalars[VF].insert_range(Worklist);
 }
 
+bool LoopVectorizationCostModel::canRewriteStoreAsLoadBlendStore(
+    Instruction *I, ElementCount VF) {
+  // Only vector stores are candidates.
+  auto *Store = dyn_cast<StoreInst>(I);
+  if (!Store || VF.isScalar())
+    return false;
+
+  // The target must opt in (e.g. X86 znver1/2/3, AArch64 NEON without SVE).
+  if (!TTI.shouldRewriteMaskedStoreAsLoadBlendStore())
+    return false;
+
+  // The store must actually be predicated/masked; an unconditional store has
+  // nothing to blend.
+  if (!isMaskRequired(I) || !isPredicatedInst(I))
+    return false;
+
+  // Tail-folding gates past-end addresses on the trailing iterations, so an
+  // unconditional load/store would over-read/over-write.
+  if (foldTailByMasking())
+    return false;
+
+  // Only forward consecutive stores: scatters and reversed stores keep their
+  // existing lowering.
+  if (Legal->isConsecutivePtr(getLoadStoreType(I),
+                              getLoadStorePointerOperand(I)) != 1)
+    return false;
+
+  // MemSafetyAnalysis must prove the address is read on every iteration anyway,
+  // which makes the unconditional load + store safe.
+  if (!MSA || !MSA->isLegalAnalysis())
+    return false;
+  ScalarEvolution *SE = Legal->getScalarEvolution();
+  return MSA->isGuaranteedMemoryAccess(SE->getSCEV(Store->getPointerOperand()));
+}
+
 bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
                                                          ElementCount VF) {
   if (!isPredicatedInst(I))
@@ -2416,6 +2485,11 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
   }
   case Instruction::Load:
   case Instruction::Store: {
+    // OptimizeMaskedMemory: a guaranteed-safe predicated store is lowered as a
+    // widened load-blend-store sequence, so its predication strategy is not
+    // scalarization.
+    if (isa<StoreInst>(I) && canRewriteStoreAsLoadBlendStore(I, VF))
+      return false;
     bool IsConsecutive = Legal->isConsecutivePtr(getLoadStoreType(I),
                                                  getLoadStorePointerOperand(I));
     return !(IsConsecutive && Config.isLegalMaskedLoadOrStore(I, VF)) &&
@@ -4292,6 +4366,21 @@ InstructionCost LoopVectorizationCostModel::getConsecutiveMemOpCost(
 
   const Align Alignment = getLoadStoreAlignment(I);
   InstructionCost Cost = 0;
+  if (canRewriteStoreAsLoadBlendStore(I, VF)) {
+    // OptimizeMaskedMemory: this masked store will be rewritten as an
+    // unconditional load + select (blend) + unconditional store (see
+    // VPWidenStoreRecipe::execute). Cost the sequence accordingly so the
+    // legacy widening cost matches VPWidenMemoryRecipe::computeCost and the
+    // planner sees the true (cheaper) cost when comparing VFs.
+    Cost += TTI.getMemoryOpCost(Instruction::Load, VectorTy, Alignment, AS,
+                                Config.CostKind);
+    Type *CondTy = VectorType::get(Type::getInt1Ty(VectorTy->getContext()), VF);
+    Cost += TTI.getCmpSelInstrCost(Instruction::Select, VectorTy, CondTy,
+                                   CmpInst::BAD_ICMP_PREDICATE, Config.CostKind);
+    Cost += TTI.getMemoryOpCost(Instruction::Store, VectorTy, Alignment, AS,
+                                Config.CostKind);
+    return Cost;
+  }
   if (isMaskRequired(I)) {
     unsigned IID = I->getOpcode() == Instruction::Load
                        ? Intrinsic::masked_load
@@ -6234,8 +6323,41 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
   if (Reverse)
     StoredVal = Builder.createNaryOp(VPInstruction::Reverse, StoredVal,
                                      Store->getDebugLoc());
-  return new VPWidenStoreRecipe(*Store, Ptr, StoredVal, Mask, Consecutive, *VPI,
-                                Store->getDebugLoc());
+  auto *NewSR = new VPWidenStoreRecipe(*Store, Ptr, StoredVal, Mask, Consecutive,
+                                       *VPI, Store->getDebugLoc());
+
+  // OptimizeMaskedMemory: decide once, at recipe-build time, whether this
+  // masked store will be lowered as a load-blend-store. The decision is
+  // recorded on the recipe so that both the cost model and the execute path
+  // can consult the same answer.
+  //
+  // Gating:
+  //   1. The target must say it benefits from the rewrite. The TTI hook
+  //      is target-specific (X86 turns it on only for znver1/2/3 via the
+  //      `slow-masked-store` tuning feature); other targets and AVX-512
+  //      class chips fall through to the masked-store path untouched.
+  //   2. -enable-masked-memory-optimization must be on (CM.MSA is otherwise
+  //      null).
+  //   3. The store must be masked, consecutive, non-reverse: scatters and
+  //      reversed stores stay on the masked-store path.
+  //   4. The loop must not be tail-folded by masking. With tail-folding the
+  //      mask gates past-end addresses on the trailing iterations and the
+  //      load-blend-store would over-read.
+  //   5. MemSafetyAnalysis must prove the access is guaranteed to execute
+  //      on every iteration of the loop body.
+  //
+  // All of these conditions are encapsulated in
+  // canRewriteStoreAsLoadBlendStore, which is the same predicate the cost
+  // model consults to keep the store widenable (isScalarWithPredication) and
+  // to cost it (getConsecutiveMemOpCost). Using the shared helper here keeps
+  // the widening decision and the recipe flag in sync; otherwise a store that
+  // was widened on the assumption of a rewrite could fall through to an
+  // illegal/expensive @llvm.masked.store on a target without one (e.g. NEON).
+  if (Mask && Consecutive && !Reverse &&
+      CM.canRewriteStoreAsLoadBlendStore(Store, Range.Start))
+    NewSR->setRewriteAsLoadBlendStore();
+
+  return NewSR;
 }
 
 VPWidenIntOrFpInductionRecipe *
@@ -8046,6 +8168,17 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                             OptForSize);
   LoopVectorizationCostModel CM(SEL, L, PSE, LI, &LVL, *TTI, TLI, AC, ORE,
                                 GetBFI, F, &Hints, IAI, Config);
+
+  // OptimizeMaskedMemory: build the per-loop MemSafetyAnalysis once. Its
+  // lifetime extends until the end of processLoop, covering both planning
+  // and execute. The CM holds a non-owning pointer to it.
+  std::unique_ptr<MemSafetyAnalysis> MSA;
+  if (IsInnerLoop && EnableOptimizeMaskedMemory) {
+    MSA = std::make_unique<MemSafetyAnalysis>(L, LI, PSE.getSE(), DT, TLI, TTI);
+    if (MSA->isLegalAnalysis())
+      CM.setMSA(MSA.get());
+  }
+
   // Use the planner for vectorization.
   LoopVectorizationPlanner LVP(L, LI, DT, TLI, *TTI, &LVL, CM, Config, IAI, PSE,
                                Hints, ORE);
