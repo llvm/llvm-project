@@ -1213,7 +1213,7 @@ struct CancellingBlockScaledCastsOptimization
     const bool isLosslessCast = isa<Float32Type>(innerOutputElemType);
     if (!isLosslessCast)
       return rewriter.notifyMatchFailure(
-          castOp, "avoid cancelling casts that could by lossy");
+          castOp, "avoid cancelling casts that should be lossy");
 
     rewriter.replaceOp(castOp, innerInput);
 

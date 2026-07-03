@@ -251,8 +251,8 @@ class Tosa_I32EnumAttr<string name, string description, string mnemonic,
 // DOUBLEROUND  : Adds double rounding support to the RESCALE operator.
 // INEXACTROUND : Adds inexact rounding support to the RESCALE operator.
 // DYNAMIC      : Removes all Compile Time Constant state for CTC inputs.
-// MXFP         : Microscaling formats.
-// MXFP_CONV    : Microscaling format convolution.
+// MXFP         : Microscaling formats. (Deprecated, this extension will be removed in the future.)
+// MXFP_CONV    : Microscaling format convolution. (Deprecated, this extension will be removed in the future.)
 // SHAPE        : Shape calcuation operators.
 // MX_COMMON    : Base for MXFP microscaling formats.
 // MX_FP4E2M1   : Microscaling format FP4E2M1.
