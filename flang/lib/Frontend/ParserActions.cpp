@@ -96,8 +96,9 @@ void debugMeasureParseTree(CompilerInstance &ci, llvm::StringRef filename) {
   if ((ci.getParsing().parseTree().has_value() &&
        !ci.getParsing().consumedWholeFile()) ||
       (!ci.getParsing().messages().empty() &&
-       (ci.getInvocation().getWarnAsErr() ||
-        ci.getParsing().messages().AnyFatalError()))) {
+       ci.getParsing().messages().AnyFatalError(
+           ci.getInvocation().getWarnAsErr(),
+           &ci.getInvocation().getFortranOpts().features))) {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
         clang::DiagnosticsEngine::Error, "Could not parse %0");
     ci.getDiagnostics().Report(diagID) << filename;

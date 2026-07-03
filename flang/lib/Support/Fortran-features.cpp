@@ -263,6 +263,55 @@ bool LanguageFeatureControl::EnableWarning(std::string_view input) {
   return false;
 }
 
+bool LanguageFeatureControl::SetWarningErrorTreatment(
+    std::string_view specifier, bool asError) {
+  if (auto warning{FindWarning(specifier)}) {
+    if (std::holds_alternative<LanguageFeature>(warning->first)) {
+      auto feature{std::get<LanguageFeature>(warning->first)};
+      if (asError) {
+        warnNotAsErrorLanguage_.reset(feature);
+        warnAsErrorLanguage_.set(feature);
+      } else {
+        warnAsErrorLanguage_.reset(feature);
+        warnNotAsErrorLanguage_.set(feature);
+      }
+    } else {
+      auto usageWarning{std::get<UsageWarning>(warning->first)};
+      if (asError) {
+        warnNotAsErrorUsage_.reset(usageWarning);
+        warnAsErrorUsage_.set(usageWarning);
+      } else {
+        warnAsErrorUsage_.reset(usageWarning);
+        warnNotAsErrorUsage_.set(usageWarning);
+      }
+    }
+    return true;
+  }
+  return false;
+}
+
+bool LanguageFeatureControl::ShouldPromoteWarningToError(bool globalWarnAsErr,
+    std::optional<LanguageFeature> languageFeature,
+    std::optional<UsageWarning> usageWarning) const {
+  if (languageFeature) {
+    if (warnNotAsErrorLanguage_.test(*languageFeature)) {
+      return false;
+    }
+    if (warnAsErrorLanguage_.test(*languageFeature)) {
+      return true;
+    }
+  }
+  if (usageWarning) {
+    if (warnNotAsErrorUsage_.test(*usageWarning)) {
+      return false;
+    }
+    if (warnAsErrorUsage_.test(*usageWarning)) {
+      return true;
+    }
+  }
+  return globalWarnAsErr;
+}
+
 void LanguageFeatureControl::ReplaceCliCanonicalSpelling(
     LanguageFeature f, std::string input) {
   cliOptions_.erase(languageFeatureCliCanonicalSpelling_[EnumToInt(f)]);

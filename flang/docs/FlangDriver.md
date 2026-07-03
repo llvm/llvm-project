@@ -601,9 +601,20 @@ floating point and so always acts as though these flags were specified.
 GCC/GFortran will also set flush-to-zero mode: linking `crtfastmath.o`, the same
 as Flang.
 
-The only GCC/GFortran warning option currently supported is `-Werror`.  Passing
-any unsupported GCC/GFortran warning flags into Flang's compiler driver will
-result in warnings being emitted.
+Flang supports a subset of GCC/GFortran and Clang warning options.  The
+`-Werror` flag causes all warnings to become errors.  `-Wno-error` disables
+that behavior.  Per-warning control is also available: `-Werror=<name>` promotes
+a specific warning group to an error (even without global `-Werror`), and
+`-Wno-error=<name>` keeps that group as a warning even when `-Werror` is in
+effect.  For example, `-Werror -Wno-error=experimental-option` still emits
+OpenMP experimental-feature warnings but does not fail the compilation because
+of them.
+
+Flang-specific warnings (such as `-Wportability` or `-Wunused-variable`) use
+Flang warning group names.  Some diagnostics (including OpenMP
+`-Wexperimental-option`) are handled by Clang's diagnostic engine and use the
+same spellings.  Passing unsupported GCC/GFortran warning flags into Flang's
+compiler driver will result in warnings being emitted.
 
 ### Comparison with nvfortran
 nvfortran defines `-fast` as

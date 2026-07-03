@@ -232,7 +232,8 @@ bool FrontendAction::reportFatalErrors(const char (&message)[N]) {
       instance->getInvocation().getFortranOpts().features};
   const size_t maxErrors{instance->getInvocation().getMaxErrors()};
   const bool warningsAreErrors{instance->getInvocation().getWarnAsErr()};
-  if (instance->getParsing().messages().AnyFatalError(warningsAreErrors)) {
+  if (instance->getParsing().messages().AnyFatalError(warningsAreErrors,
+                                                      &features)) {
     const unsigned diagID = instance->getDiagnostics().getCustomDiagID(
         clang::DiagnosticsEngine::Error, message);
     instance->getDiagnostics().Report(diagID) << getCurrentFileOrBufferName();

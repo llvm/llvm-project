@@ -563,4 +563,19 @@ TEST(FortranFeaturesTest, HintLanguageControlFlag) {
       control.getDefaultCliSpelling(UsageWarning::Portability), "portability");
 }
 
+TEST(FortranFeaturesTest, WarningErrorTreatment) {
+  LanguageFeatureControl control{};
+  EXPECT_TRUE(control.SetWarningErrorTreatment("portability", false));
+  EXPECT_FALSE(control.ShouldPromoteWarningToError(
+      /*globalWarnAsErr=*/true, std::nullopt, UsageWarning::Portability));
+  EXPECT_TRUE(control.ShouldPromoteWarningToError(
+      /*globalWarnAsErr=*/true, std::nullopt, UsageWarning::Bounds));
+
+  EXPECT_TRUE(control.SetWarningErrorTreatment("benign-name-clash", true));
+  EXPECT_TRUE(control.ShouldPromoteWarningToError(/*globalWarnAsErr=*/false,
+      LanguageFeature::BenignNameClash, std::nullopt));
+  EXPECT_FALSE(control.ShouldPromoteWarningToError(/*globalWarnAsErr=*/false,
+      LanguageFeature::RedundantAttribute, std::nullopt));
+}
+
 } // namespace Fortran::common::details

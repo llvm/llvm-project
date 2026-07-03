@@ -1069,17 +1069,31 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   }
 
   // -Werror option
-  // TODO: Currently throws a Diagnostic for anything other than -W<error>,
-  // this has to change when other -W<opt>'s are supported.
   if (args.hasArg(clang::options::OPT_W_Joined)) {
     const auto &wArgs = args.getAllArgValues(clang::options::OPT_W_Joined);
     // TODO: Consider using std::string_view instead of llvm::StringRef
     // when moving to C++20:
     for (const llvm::StringRef wArg : wArgs) {
-      if (wArg == "error") {
-        res.setWarnAsErr(true);
-        // -Wfatal-errors
-      } else if (wArg == "fatal-errors") {
+      llvm::StringRef opt{wArg};
+      const bool isPositive{!opt.consume_front("no-")};
+      if (opt.starts_with("error")) {
+        if (opt.size() == 5) {
+          res.setWarnAsErr(isPositive);
+        } else if (opt.size() > 6 && opt[5] == '=') {
+          const llvm::StringRef specifier{opt.substr(6)};
+          if (!features.SetWarningErrorTreatment(specifier, isPositive)) {
+            // Unknown Flang warning groups are handled by Clang's
+            // ProcessWarningOptions (e.g. -Wno-error=experimental-option).
+          }
+        } else {
+          const unsigned diagID =
+              diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
+                                    "Unknown diagnostic option: -W%0");
+          diags.Report(diagID) << wArg;
+        }
+        continue;
+      }
+      if (opt == "fatal-errors") {
         res.setMaxErrors(1);
         // -W[no-]<feature>
       } else if (features.EnableWarning(wArg)) {
