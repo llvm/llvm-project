@@ -8,7 +8,7 @@ define void @replace_first_order_recurrence_with_versioned_iv_for_pointer_use(pt
 ; CHECK-NEXT:    [[X2:%.*]] = ptrtoaddr ptr [[X]] to i64
 ; CHECK-NEXT:    [[Y1:%.*]] = ptrtoaddr ptr [[Y]] to i64
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N]], i32 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[SMAX]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[SMAX]] to i64
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
@@ -168,7 +168,7 @@ define i64 @do_not_replace_first_order_recurrence_with_versioned_iv_for_wide_poi
 ; CHECK-NEXT:    [[X2:%.*]] = ptrtoaddr ptr [[X]] to i64
 ; CHECK-NEXT:    [[Y1:%.*]] = ptrtoaddr ptr [[Y]] to i64
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N]], i32 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[SMAX]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[SMAX]] to i64
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:

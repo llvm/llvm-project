@@ -83,9 +83,9 @@ define void @sgt_no_loopguard(ptr noalias nocapture readonly %a, ptr noalias noc
 ; COMMON-LABEL: define void @sgt_no_loopguard(
 ; COMMON-SAME: ptr noalias readonly captures(none) [[A:%.*]], ptr noalias readonly captures(none) [[B:%.*]], ptr noalias captures(none) [[C:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:  [[ENTRY:.*:]]
-; COMMON-NEXT:    [[TMP0:%.*]] = add i32 [[N]], 1
 ; COMMON-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[N]], i32 1)
-; COMMON-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[SMIN]]
+; COMMON-NEXT:    [[TMP4:%.*]] = sub i32 [[N]], [[SMIN]]
+; COMMON-NEXT:    [[TMP1:%.*]] = add i32 [[TMP4]], 1
 ; COMMON-NEXT:    br label %[[VECTOR_PH:.*]]
 ; COMMON:       [[VECTOR_PH]]:
 ; COMMON-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP1]], 15
@@ -142,9 +142,9 @@ define void @sgt_extra_use_cmp(ptr noalias nocapture readonly %a, ptr noalias no
 ; COMMON-LABEL: define void @sgt_extra_use_cmp(
 ; COMMON-SAME: ptr noalias readonly captures(none) [[A:%.*]], ptr noalias readonly captures(none) [[B:%.*]], ptr noalias captures(none) [[C:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:  [[ENTRY:.*:]]
-; COMMON-NEXT:    [[TMP0:%.*]] = add i32 [[N]], 1
 ; COMMON-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[N]], i32 1)
-; COMMON-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[SMIN]]
+; COMMON-NEXT:    [[TMP8:%.*]] = sub i32 [[N]], [[SMIN]]
+; COMMON-NEXT:    [[TMP1:%.*]] = add i32 [[TMP8]], 1
 ; COMMON-NEXT:    br label %[[VECTOR_PH:.*]]
 ; COMMON:       [[VECTOR_PH]]:
 ; COMMON-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP1]], 3

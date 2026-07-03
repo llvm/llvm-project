@@ -150,7 +150,7 @@ define i32 @cost_of_exit_branch_and_cond_insts(ptr %a, ptr %b, i1 %c, i16 %x) #0
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[X]] to i32
 ; CHECK-NEXT:    [[UMAX3:%.*]] = call i32 @llvm.umax.i32(i32 [[TMP0]], i32 111)
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 770, [[UMAX3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw i32 770, [[UMAX3]]
 ; CHECK-NEXT:    [[SMAX4:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP1]], i32 0)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i32 [[SMAX4]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[TMP2]], 19

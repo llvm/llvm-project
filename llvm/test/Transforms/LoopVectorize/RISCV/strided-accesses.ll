@@ -703,8 +703,7 @@ define void @double_stride_int_scaled(ptr %p, ptr %p2, i64 %stride) {
 ; NOSTRIDED-UF2-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP10]], [[TMP15]]
 ; NOSTRIDED-UF2-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; NOSTRIDED-UF2:       [[VECTOR_PH]]:
-; NOSTRIDED-UF2-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
-; NOSTRIDED-UF2-NEXT:    [[TMP9:%.*]] = shl nuw i64 [[TMP6]], 2
+; NOSTRIDED-UF2-NEXT:    [[TMP9:%.*]] = shl nuw i64 [[TMP0]], 2
 ; NOSTRIDED-UF2-NEXT:    [[TMP7:%.*]] = shl nuw i64 [[TMP9]], 1
 ; NOSTRIDED-UF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP7]]
 ; NOSTRIDED-UF2-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
@@ -891,8 +890,7 @@ define void @double_stride_int_scaled(ptr %p, ptr %p2, i64 %stride) {
 ; STRIDED-UF2-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; STRIDED-UF2-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; STRIDED-UF2:       [[VECTOR_PH]]:
-; STRIDED-UF2-NEXT:    [[TMP28:%.*]] = call i64 @llvm.vscale.i64()
-; STRIDED-UF2-NEXT:    [[TMP29:%.*]] = shl nuw i64 [[TMP28]], 2
+; STRIDED-UF2-NEXT:    [[TMP29:%.*]] = shl nuw i64 [[TMP0]], 2
 ; STRIDED-UF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP29]], i64 0
 ; STRIDED-UF2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; STRIDED-UF2-NEXT:    [[TMP30:%.*]] = shl nuw i64 [[TMP29]], 1
@@ -1222,8 +1220,7 @@ define void @double_stride_ptr_iv(ptr %p, ptr %p2, i64 %stride) {
 ; STRIDED-UF2-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; STRIDED-UF2-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; STRIDED-UF2:       [[VECTOR_PH]]:
-; STRIDED-UF2-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; STRIDED-UF2-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP7]], 2
+; STRIDED-UF2-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP0]], 2
 ; STRIDED-UF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP8]], i64 0
 ; STRIDED-UF2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; STRIDED-UF2-NEXT:    [[TMP9:%.*]] = shl nuw i64 [[TMP8]], 1

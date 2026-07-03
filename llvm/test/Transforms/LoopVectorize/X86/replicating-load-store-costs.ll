@@ -704,9 +704,9 @@ define void @loaded_address_used_by_load_through_blend(i64 %start, ptr noalias %
 ; I32-LABEL: define void @loaded_address_used_by_load_through_blend(
 ; I32-SAME: i64 [[START:%.*]], ptr noalias [[SRC:%.*]], ptr noalias [[SRC_2:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR0]] {
 ; I32-NEXT:  [[ENTRY:.*:]]
-; I32-NEXT:    [[TMP0:%.*]] = add i64 [[START]], 1
 ; I32-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[START]], i64 100)
-; I32-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[SMIN]]
+; I32-NEXT:    [[TMP92:%.*]] = sub i64 [[START]], [[SMIN]]
+; I32-NEXT:    [[TMP1:%.*]] = add i64 [[TMP92]], 1
 ; I32-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 8
 ; I32-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; I32:       [[VECTOR_PH]]:

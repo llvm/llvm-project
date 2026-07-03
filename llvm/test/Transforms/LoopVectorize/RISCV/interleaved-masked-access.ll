@@ -16,8 +16,7 @@ define void @masked_strided_factor2(ptr noalias nocapture readonly %p, ptr noali
 ; SCALAR_EPILOGUE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 1024, [[UMAX]]
 ; SCALAR_EPILOGUE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; SCALAR_EPILOGUE:       vector.ph:
-; SCALAR_EPILOGUE-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
-; SCALAR_EPILOGUE-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP2]], 4
+; SCALAR_EPILOGUE-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP0]], 4
 ; SCALAR_EPILOGUE-NEXT:    [[N_MOD_VF:%.*]] = urem i32 1024, [[TMP3]]
 ; SCALAR_EPILOGUE-NEXT:    [[N_VEC:%.*]] = sub i32 1024, [[N_MOD_VF]]
 ; SCALAR_EPILOGUE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[CONV]], i64 0
@@ -190,8 +189,7 @@ define void @masked_strided_factor4(ptr noalias nocapture readonly %p, ptr noali
 ; SCALAR_EPILOGUE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 1024, [[UMAX]]
 ; SCALAR_EPILOGUE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; SCALAR_EPILOGUE:       vector.ph:
-; SCALAR_EPILOGUE-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
-; SCALAR_EPILOGUE-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP2]], 4
+; SCALAR_EPILOGUE-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP0]], 4
 ; SCALAR_EPILOGUE-NEXT:    [[N_MOD_VF:%.*]] = urem i32 1024, [[TMP3]]
 ; SCALAR_EPILOGUE-NEXT:    [[N_VEC:%.*]] = sub i32 1024, [[N_MOD_VF]]
 ; SCALAR_EPILOGUE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[CONV]], i64 0
