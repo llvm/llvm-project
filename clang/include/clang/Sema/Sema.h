@@ -1102,6 +1102,18 @@ public:
   bool checkProfileViolation(StringRef ProfileName, StringRef RuleName,
                              SourceLocation Loc, unsigned DiagID);
 
+  /// std::init / uninit_decl (R2, paper §4.2): diagnose an automatic variable
+  /// definition that leaves the object (or a scalar subobject) indeterminate
+  /// without an acknowledging [[uninit]] marker. Called from
+  /// \c ActOnUninitializedDecl after default-initialization is attempted.
+  void checkInitProfileUninitDecl(const VarDecl *Var);
+
+  /// std::init / static_marker (paper §3, §4.2): diagnose [[uninit]] on a
+  /// static or thread-storage variable, which is zero-initialized by language
+  /// rule and therefore an initialized object. Called from
+  /// \c ActOnUninitializedDecl.
+  void checkInitProfileStaticMarker(const VarDecl *Var);
+
   /// std::init / static_runtime_init (paper §3): diagnose a non-local static
   /// whose initialization needs a runtime constructor. \p CheckConstInit
   /// lazily evaluates whether the initializer is constant (trivial

@@ -14715,69 +14715,8 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
         Var->setInit(RecoveryExpr.get());
     }
 
-    // std::init / uninit_decl: a definition without any initializer (after
-    // attempted default-initialization) must either carry [[uninit]] or
-    // be initialized by a language rule. Static / thread storage duration is
-    // excluded -- those are zero-initialized; runtime-init concerns are R3's.
-    static constexpr StringRef Profile = "std::init";
-    static constexpr StringRef Rule = "uninit_decl";
-    // The enforcement check gates the (possibly recursive) type walk below so
-    // it runs only under the profile, not on every default-initialized
-    // variable.
-    QualType BaseTy = Context.getBaseElementType(Var->getType());
-    if (!Var->isInvalidDecl() &&
-        Var->getStorageDuration() == SD_Automatic &&
-        !Var->hasAttr<UninitAttr>() &&
-        // std::byte may be left uninitialized (paper §4), so it -- and arrays
-        // of it -- are exempt from this rule.
-        !BaseTy->isStdByteType() &&
-        shouldEmitProfileViolation(Profile, Rule, Var->getLocation(), Var) &&
-        // A definition with no initializer (scalar / pointer / enum, or an
-        // array of them), or a class/aggregate type -- possibly the element
-        // type of an array -- whose default-init leaves a scalar subobject
-        // indeterminate (its synthesized constructor call provides an
-        // initializer, so the !getInit() test alone misses it).
-        (!Var->getInit() ||
-         (BaseTy->isRecordType() &&
-          defaultInitLeavesScalarIndeterminate(
-              Var->getType(), /*HonorUninitMarkers=*/true)))) {
-      // A union variable cannot carry [[uninit]] (union_marker bans it),
-      // so it must be initialized; use a message that does not suggest the
-      // marker as a remedy.
-      bool IsUnion = BaseTy->isUnionType();
-      Diag(Var->getLocation(),
-           IsUnion ? diag::err_init_uninit_union : diag::err_init_uninit_decl)
-          << Profile << Var->getDeclName();
-    }
-
-    // std::init / static_marker: a variable with static or thread storage
-    // duration is zero-initialized by language rule (paper §3), so it is an
-    // initialized object; marking it [[uninit]] contradicts paper §4.2 ("an
-    // initialized object marked [[uninit]] is an error"). The case with a real
-    // initializer -- explicit, or a constructor that actually runs -- is
-    // already caught by uninit_with_initializer (R4, in
-    // CheckCompleteVariableDeclaration below); this covers the zero-initialized,
-    // no-real-initializer case R4 treats as a consistent no-op. The factual
-    // (HonorUninitMarkers=false) walk matches R4: a static object whose only
-    // indeterminate scalars are themselves marked is still zero-initialized.
-    if (!Var->isInvalidDecl() &&
-        (Var->getStorageDuration() == SD_Static ||
-         Var->getStorageDuration() == SD_Thread) &&
-        Var->hasAttr<UninitAttr>() &&
-        // A union or pointer object marked [[uninit]] is already rejected by
-        // union_marker / pointer_marker (regardless of storage duration), and
-        // they retain the marker; do not pile a second diagnostic on top.
-        !Var->getType()->isUnionType() && !Var->getType()->isPointerType() &&
-        shouldEmitProfileViolation(Profile, "static_marker", Var->getLocation(),
-                                   Var) &&
-        (!Var->getInit() ||
-         (BaseTy->isRecordType() &&
-          defaultInitLeavesScalarIndeterminate(
-              Var->getType(), /*HonorUninitMarkers=*/false)))) {
-      bool IsThread = Var->getStorageDuration() == SD_Thread;
-      Diag(Var->getLocation(), diag::err_init_uninit_static_marker)
-          << Profile << Var->getDeclName() << IsThread;
-    }
+    checkInitProfileUninitDecl(Var);
+    checkInitProfileStaticMarker(Var);
 
     CheckCompleteVariableDeclaration(Var);
   }
@@ -14943,6 +14882,75 @@ bool Sema::defaultInitLeavesScalarIndeterminate(QualType T,
   llvm::SmallPtrSet<const CXXRecordDecl *, 8> Visited;
   return defaultInitLeavesScalarIndeterminateImpl(Context, T,
                                                   HonorUninitMarkers, Visited);
+}
+
+void Sema::checkInitProfileUninitDecl(const VarDecl *Var) {
+  // std::init / uninit_decl: a definition without any initializer (after
+  // attempted default-initialization) must either carry [[uninit]] or
+  // be initialized by a language rule. Static / thread storage duration is
+  // excluded -- those are zero-initialized; runtime-init concerns are R3's.
+  static constexpr StringRef Profile = "std::init";
+  static constexpr StringRef Rule = "uninit_decl";
+  // The enforcement check gates the (possibly recursive) type walk below so
+  // it runs only under the profile, not on every default-initialized
+  // variable.
+  QualType BaseTy = Context.getBaseElementType(Var->getType());
+  if (!Var->isInvalidDecl() && Var->getStorageDuration() == SD_Automatic &&
+      !Var->hasAttr<UninitAttr>() &&
+      // std::byte may be left uninitialized (paper §4), so it -- and arrays
+      // of it -- are exempt from this rule.
+      !BaseTy->isStdByteType() &&
+      shouldEmitProfileViolation(Profile, Rule, Var->getLocation(), Var) &&
+      // A definition with no initializer (scalar / pointer / enum, or an
+      // array of them), or a class/aggregate type -- possibly the element
+      // type of an array -- whose default-init leaves a scalar subobject
+      // indeterminate (its synthesized constructor call provides an
+      // initializer, so the !getInit() test alone misses it).
+      (!Var->getInit() ||
+       (BaseTy->isRecordType() &&
+        defaultInitLeavesScalarIndeterminate(Var->getType(),
+                                             /*HonorUninitMarkers=*/true)))) {
+    // A union variable cannot carry [[uninit]] (union_marker bans it),
+    // so it must be initialized; use a message that does not suggest the
+    // marker as a remedy.
+    bool IsUnion = BaseTy->isUnionType();
+    Diag(Var->getLocation(),
+         IsUnion ? diag::err_init_uninit_union : diag::err_init_uninit_decl)
+        << Profile << Var->getDeclName();
+  }
+}
+
+void Sema::checkInitProfileStaticMarker(const VarDecl *Var) {
+  // std::init / static_marker: a variable with static or thread storage
+  // duration is zero-initialized by language rule (paper §3), so it is an
+  // initialized object; marking it [[uninit]] contradicts paper §4.2 ("an
+  // initialized object marked [[uninit]] is an error"). The case with a real
+  // initializer -- explicit, or a constructor that actually runs -- is
+  // already caught by uninit_with_initializer (R4, in
+  // CheckCompleteVariableDeclaration); this covers the zero-initialized,
+  // no-real-initializer case R4 treats as a consistent no-op. The factual
+  // (HonorUninitMarkers=false) walk matches R4: a static object whose only
+  // indeterminate scalars are themselves marked is still zero-initialized.
+  static constexpr StringRef Profile = "std::init";
+  QualType BaseTy = Context.getBaseElementType(Var->getType());
+  if (!Var->isInvalidDecl() &&
+      (Var->getStorageDuration() == SD_Static ||
+       Var->getStorageDuration() == SD_Thread) &&
+      Var->hasAttr<UninitAttr>() &&
+      // A union or pointer object marked [[uninit]] is already rejected by
+      // union_marker / pointer_marker (regardless of storage duration), and
+      // they retain the marker; do not pile a second diagnostic on top.
+      !Var->getType()->isUnionType() && !Var->getType()->isPointerType() &&
+      shouldEmitProfileViolation(Profile, "static_marker", Var->getLocation(),
+                                 Var) &&
+      (!Var->getInit() ||
+       (BaseTy->isRecordType() &&
+        defaultInitLeavesScalarIndeterminate(Var->getType(),
+                                             /*HonorUninitMarkers=*/false)))) {
+    bool IsThread = Var->getStorageDuration() == SD_Thread;
+    Diag(Var->getLocation(), diag::err_init_uninit_static_marker)
+        << Profile << Var->getDeclName() << IsThread;
+  }
 }
 
 bool Sema::checkInitProfileStaticRuntimeInit(
