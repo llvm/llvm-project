@@ -90,6 +90,7 @@
 
 #include "llvm/Transforms/IPO/MergeFunctions.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Argument.h"
@@ -880,12 +881,27 @@ static bool isODR(const Function *F) {
   return F->hasWeakODRLinkage() || F->hasLinkOnceODRLinkage();
 }
 
-static void mergeEntryCountsInto(Function *F, std::optional<uint64_t> FC,
-                                 std::optional<uint64_t> GC) {
-  if (!FC && !GC)
+static DenseSet<GlobalValue::GUID> unionImportGUIDs(const Function *F,
+                                                    const Function *G) {
+  DenseSet<GlobalValue::GUID> AllImports = F->getImportGUIDs();
+  DenseSet<GlobalValue::GUID> GImports = G->getImportGUIDs();
+  AllImports.insert(GImports.begin(), GImports.end());
+  return AllImports;
+}
+
+static void
+mergeEntryCountsAndImportsInto(Function *F, std::optional<uint64_t> FC,
+                               std::optional<uint64_t> GC,
+                               const DenseSet<GlobalValue::GUID> &Imports) {
+  if (!FC && !GC && Imports.empty())
     return;
-  uint64_t Sum = SaturatingAdd(FC ? *FC : uint64_t{0}, GC ? *GC : uint64_t{0});
-  F->setEntryCount(Sum);
+
+  uint64_t Sum;
+  if (!FC && !GC)
+    Sum = static_cast<uint64_t>(-1);
+  else
+    Sum = SaturatingAdd(FC ? *FC : uint64_t{0}, GC ? *GC : uint64_t{0});
+  F->setEntryCount(Sum, Imports.empty() ? nullptr : &Imports);
 }
 
 // Merge two equivalent functions. Upon completion, Function G is deleted.
@@ -893,6 +909,7 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
 
   std::optional<uint64_t> FEC = F->getEntryCount();
   std::optional<uint64_t> GEC = G->getEntryCount();
+  DenseSet<GlobalValue::GUID> AllImports = unionImportGUIDs(F, G);
 
   // Create a new thunk that both F and G can call, if F cannot call G directly.
   // That is the case if F is either interposable or if G is either weak_odr or
@@ -947,7 +964,7 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     F->setLinkage(GlobalValue::PrivateLinkage);
     // The private shared implementation accumulates both symbols' entries
     // (FEC + GEC), while each ODR thunk retains its own per-symbol entry count.
-    mergeEntryCountsInto(F, FEC, GEC);
+    mergeEntryCountsAndImportsInto(F, FEC, GEC, AllImports);
     ++NumDoubleWeak;
     ++NumFunctionsMerged;
   } else {
@@ -975,14 +992,14 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     // stop here and delete G. There's no need for a thunk. (See note on
     // MergeFunctionsPDI above).
     if (G->isDiscardableIfUnused() && G->use_empty() && !MergeFunctionsPDI) {
-      mergeEntryCountsInto(F, FEC, GEC);
+      mergeEntryCountsAndImportsInto(F, FEC, GEC, AllImports);
       G->eraseFromParent();
       ++NumFunctionsMerged;
       return;
     }
 
     if (writeThunkOrAliasIfNeeded(F, G)) {
-      mergeEntryCountsInto(F, FEC, GEC);
+      mergeEntryCountsAndImportsInto(F, FEC, GEC, AllImports);
       ++NumFunctionsMerged;
     }
   }
