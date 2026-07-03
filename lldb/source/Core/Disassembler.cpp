@@ -822,74 +822,64 @@ const char *Instruction::GetNameForInstructionControlFlowKind(
   llvm_unreachable("Fully covered switch above!");
 }
 
-void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
-                       bool show_address, bool show_bytes,
-                       bool show_control_flow_kind,
-                       const ExecutionContext *exe_ctx,
-                       const SymbolContext *sym_ctx,
-                       const SymbolContext *prev_sym_ctx,
-                       const FormatEntity::Entry *disassembly_addr_format,
-                       size_t max_address_text_size) {
+void Instruction::DumpMnemonicOperandsAndComment(StreamString &ss,
+                                                 const DumpContext &ctx) {
   size_t opcode_column_width = 7;
   const size_t operand_column_width = 25;
 
-  CalculateMnemonicOperandsAndCommentIfNeeded(exe_ctx);
-
-  StreamString ss;
-
-  if (show_address) {
-    Debugger::FormatDisassemblerAddress(disassembly_addr_format, sym_ctx,
-                                        prev_sym_ctx, exe_ctx, &m_address, ss);
-    ss.FillLastLineToColumn(max_address_text_size, ' ');
+  if (ctx.show_address) {
+    Debugger::FormatDisassemblerAddress(ctx.disassembly_addr_format,
+                                        ctx.sym_ctx, ctx.prev_sym_ctx,
+                                        ctx.exe_ctx, &m_address, ss);
+    ss.FillLastLineToColumn(ctx.max_address_text_size, ' ');
   }
 
-  if (show_bytes) {
+  if (ctx.show_bytes) {
     if (m_opcode.GetType() == Opcode::eTypeBytes) {
-      // x86_64 and i386 are the only ones that use bytes right now so pad out
-      // the byte dump to be able to always show 15 bytes (3 chars each) plus a
-      // space
-      if (max_opcode_byte_size > 0)
-        m_opcode.Dump(&ss, max_opcode_byte_size * 3 + 1);
+      // x86_64 and i386 are the only ones that use bytes right now so pad
+      // out the byte dump to be able to always show 15 bytes (3 chars each)
+      // plus a space
+      if (ctx.max_opcode_byte_size > 0)
+        m_opcode.Dump(&ss, ctx.max_opcode_byte_size * 3 + 1);
       else
         m_opcode.Dump(&ss, 15 * 3 + 1);
     } else {
-      // Else, we have ARM or MIPS which can show up to a uint32_t 0x00000000
-      // (10 spaces) plus two for padding...
-      if (max_opcode_byte_size > 0)
-        m_opcode.Dump(&ss, max_opcode_byte_size * 3 + 1);
+      // Else, we have ARM or MIPS which can show up to a uint32_t
+      // 0x00000000 (10 spaces) plus two for padding...
+      if (ctx.max_opcode_byte_size > 0)
+        m_opcode.Dump(&ss, ctx.max_opcode_byte_size * 3 + 1);
       else
         m_opcode.Dump(&ss, 12);
     }
   }
 
-  if (show_control_flow_kind) {
+  if (ctx.show_control_flow_kind) {
     lldb::InstructionControlFlowKind instruction_control_flow_kind =
-        GetControlFlowKind(exe_ctx);
+        GetControlFlowKind(ctx.exe_ctx);
     ss.Printf("%-12s", GetNameForInstructionControlFlowKind(
                            instruction_control_flow_kind));
   }
 
   bool show_color = false;
-  if (exe_ctx) {
-    if (TargetSP target_sp = exe_ctx->GetTargetSP()) {
+  if (ctx.exe_ctx) {
+    if (TargetSP target_sp = ctx.exe_ctx->GetTargetSP())
       show_color = target_sp->GetDebugger().GetUseColor();
-    }
   }
+
   const size_t opcode_pos = ss.GetSizeOfLastLine();
   std::string &opcode_name = show_color ? m_markup_opcode_name : m_opcode_name;
   const std::string &mnemonics = show_color ? m_markup_mnemonics : m_mnemonics;
 
-  if (opcode_name.empty())
-    opcode_name = "<unknown>";
-
   // The default opcode size of 7 characters is plenty for most architectures
   // but some like arm can pull out the occasional vqrshrun.s16.  We won't get
-  // consistent column spacing in these cases, unfortunately. Also note that we
-  // need to directly use m_opcode_name here (instead of opcode_name) so we
+  // consistent column spacing in these cases, unfortunately. Also note that
+  // we need to directly use m_opcode_name here (instead of opcode_name) so we
   // don't include color codes as characters.
-  if (m_opcode_name.length() >= opcode_column_width) {
+  if (m_opcode_name.length() >= opcode_column_width)
     opcode_column_width = m_opcode_name.length() + 1;
-  }
+
+  if (opcode_name.empty())
+    opcode_name = "<unknown>";
 
   ss.PutCString(opcode_name);
   ss.FillLastLineToColumn(opcode_pos + opcode_column_width, ' ');
@@ -901,6 +891,32 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
     ss.PutCString(" ; ");
     ss.PutCString(m_comment);
   }
+}
+
+void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
+                       bool show_address, bool show_bytes,
+                       bool show_control_flow_kind,
+                       const ExecutionContext *exe_ctx,
+                       const SymbolContext *sym_ctx,
+                       const SymbolContext *prev_sym_ctx,
+                       const FormatEntity::Entry *disassembly_addr_format,
+                       size_t max_address_text_size) {
+  CalculateMnemonicOperandsAndCommentIfNeeded(exe_ctx);
+
+  StreamString ss;
+
+  DumpContext ctx;
+  ctx.max_opcode_byte_size = max_opcode_byte_size;
+  ctx.show_address = show_address;
+  ctx.show_bytes = show_bytes;
+  ctx.show_control_flow_kind = show_control_flow_kind;
+  ctx.exe_ctx = exe_ctx;
+  ctx.sym_ctx = sym_ctx;
+  ctx.prev_sym_ctx = prev_sym_ctx;
+  ctx.disassembly_addr_format = disassembly_addr_format;
+  ctx.max_address_text_size = max_address_text_size;
+
+  DumpMnemonicOperandsAndComment(ss, ctx);
   s->PutCString(ss.GetString());
 }
 
