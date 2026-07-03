@@ -283,6 +283,7 @@ class SPIRVEmitIntrinsics
   void insertSpirvDecorations(Instruction *I, IRBuilder<> &B);
   void insertConstantsForFPFastMathDefault(Module &M);
   Value *buildSpvUndefComposite(Type *AggrTy, IRBuilder<> &B);
+  void reconstructAggregateReturns(Function &Func, IRBuilder<> &B);
   void processGlobalValue(GlobalVariable &GV, IRBuilder<> &B);
   void processParamTypes(Function *F, IRBuilder<> &B);
   void processParamTypesByFunHeader(Function *F, IRBuilder<> &B);
@@ -2679,6 +2680,37 @@ Value *SPIRVEmitIntrinsics::buildSpvUndefComposite(Type *AggrTy,
   return Composite;
 }
 
+// If a function directly returns an aggregate-typed call result,
+// the ReturnInst carries an aggregate while the function signature
+// was rewritten to i32 by SPIRVPrepareFunctions. Rebuild the return value
+// via extractvalue/insertvalue so the regular spv_extractv/spv_insertv
+// lowering produces a valid OpReturnValue.
+void SPIRVEmitIntrinsics::reconstructAggregateReturns(Function &Func,
+                                                      IRBuilder<> &B) {
+  Type *OrigRetTy = GR->findMutated(&Func);
+  if (!OrigRetTy || !OrigRetTy->isAggregateType())
+    return;
+  for (BasicBlock &BB : Func) {
+    auto *RI = dyn_cast<ReturnInst>(BB.getTerminator());
+    if (!RI)
+      continue;
+    Value *RetVal = RI->getReturnValue();
+    if (!RetVal || RetVal->getType() != OrigRetTy || !isa<CallBase>(RetVal))
+      continue;
+    Type *AggrTy = RetVal->getType();
+    uint64_t NumElts = isa<StructType>(AggrTy)
+                           ? cast<StructType>(AggrTy)->getNumElements()
+                           : cast<ArrayType>(AggrTy)->getNumElements();
+    B.SetInsertPoint(RI);
+    Value *Rebuilt = PoisonValue::get(AggrTy);
+    for (uint64_t I = 0; I < NumElts; ++I) {
+      Value *Elt = B.CreateExtractValue(RetVal, I);
+      Rebuilt = B.CreateInsertValue(Rebuilt, Elt, I);
+    }
+    RI->setOperand(0, Rebuilt);
+  }
+}
+
 void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
                                              IRBuilder<> &B) {
 
@@ -3599,6 +3631,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   for (auto &GV : Func.getParent()->globals())
     processGlobalValue(GV, B);
 
+  reconstructAggregateReturns(Func, B);
   preprocessUndefsAndPoisons(B);
   simplifyNullAddrSpaceCasts();
   preprocessCompositeConstants(B);
