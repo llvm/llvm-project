@@ -93,7 +93,7 @@ class TestDAPUtils_EventHistory(DAPTestCaseBase):
             history.wait_for_any_event((), after=cap_event)
 
         # Test wait_for_any_event.
-        # Wait for_any_event should return the first seen event that in in the tuple
+        # wait_or_any_event should return the first seen event that in the tuple.
         any_event = history.wait_for_any_event(
             (ProcessEvent, OutputEvent, ModuleEvent, TerminatedEvent), after=cap_event
         )
