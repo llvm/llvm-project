@@ -636,6 +636,11 @@ enum NodeType {
   /// Result[J] = EXTRACT_SUBVECTOR(Interleaved, J * getVectorMinNumElements())
   VECTOR_INTERLEAVE,
 
+  /// VECTOR_BROADCAST(SRC_SUBVEC)
+  /// Duplicate a vector in a larger vector. The element count of the result
+  /// type is expected to be a multiple of the input vector's.
+  VECTOR_BROADCAST,
+
   /// VECTOR_REVERSE(VECTOR) - Returns a vector, of the same type as VECTOR,
   /// whose elements are shuffled using the following algorithm:
   ///   RESULT[i] = VECTOR[VECTOR.ElementCount - 1 - i]

@@ -360,6 +360,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::EXTRACT_SUBVECTOR:          return "extract_subvector";
   case ISD::VECTOR_DEINTERLEAVE:        return "vector_deinterleave";
   case ISD::VECTOR_INTERLEAVE:          return "vector_interleave";
+  case ISD::VECTOR_BROADCAST:           return "vector_broadcast";
   case ISD::SCALAR_TO_VECTOR:           return "scalar_to_vector";
   case ISD::VECTOR_SHUFFLE:             return "vector_shuffle";
   case ISD::VECTOR_SPLICE_LEFT:         return "vector_splice_left";

@@ -127,6 +127,9 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::VECTOR_SPLICE_RIGHT:
     Res = PromoteIntRes_VECTOR_SPLICE(N);
     break;
+  case ISD::VECTOR_BROADCAST:
+    Res = PromoteIntRes_VECTOR_BROADCAST(N);
+    break;
   case ISD::VECTOR_INTERLEAVE:
   case ISD::VECTOR_DEINTERLEAVE:
     Res = PromoteIntRes_VECTOR_INTERLEAVE_DEINTERLEAVE(N);
@@ -2123,6 +2126,9 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::PARTIAL_REDUCE_SUMLA:
     Res = PromoteIntOp_PARTIAL_REDUCE_MLA(N);
     break;
+  case ISD::VECTOR_BROADCAST:
+    Res = PromoteIntOp_VECTOR_BROADCAST(N);
+    break;
   case ISD::LOOP_DEPENDENCE_RAW_MASK:
   case ISD::LOOP_DEPENDENCE_WAR_MASK:
     Res = PromoteIntOp_LOOP_DEPENDENCE_MASK(N);
@@ -2982,6 +2988,17 @@ SDValue DAGTypeLegalizer::PromoteIntOp_LOOP_DEPENDENCE_MASK(SDNode *N) {
   NewOps[2] = ZExtPromotedInteger(N->getOperand(2));
   NewOps[3] = N->getOperand(3);
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_BROADCAST(SDNode *N) {
+  SDLoc DL(N);
+  SDValue Src = GetPromotedInteger(N->getOperand(0));
+  EVT SrcVT = Src.getValueType();
+  EVT OrigVT = N->getValueType(0);
+  EVT NewVT = EVT::getVectorVT(*DAG.getContext(), SrcVT.getVectorElementType(),
+                               OrigVT.getVectorElementCount());
+  SDValue Res = DAG.getNode(ISD::VECTOR_BROADCAST, DL, NewVT, Src);
+  return DAG.getNode(ISD::TRUNCATE, DL, OrigVT, Res);
 }
 
 //===----------------------------------------------------------------------===//
@@ -6060,6 +6077,19 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_SPLICE(SDNode *N) {
   EVT OutVT = V0.getValueType();
 
   return DAG.getNode(N->getOpcode(), dl, OutVT, V0, V1, N->getOperand(2));
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_BROADCAST(SDNode *N) {
+  SDLoc DL(N);
+
+  EVT OutVT = N->getValueType(0);
+  EVT NOutVT = TLI.getTypeToTransformTo(*DAG.getContext(), OutVT);
+  assert(NOutVT.isVector() && "This type must be promoted to a vector type");
+  EVT NInVT = N->getOperand(0).getValueType().changeVectorElementType(
+      *DAG.getContext(), NOutVT.getVectorElementType());
+
+  SDValue Op = DAG.getNode(ISD::ANY_EXTEND, DL, NInVT, N->getOperand(0));
+  return DAG.getNode(N->getOpcode(), DL, NOutVT, Op);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_INTERLEAVE_DEINTERLEAVE(SDNode *N) {

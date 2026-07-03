@@ -2773,6 +2773,13 @@ foreach n = 2...8 in {
                               [IntrNoMem, IntrSpeculatable]>;
 }
 
+// vector_broadcast( SrcVector )
+// Broadcast a vector in a larger one.
+// This is the equivalent of a vector splat for vector types.
+def int_vector_broadcast : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                                 [llvm_anyvector_ty],
+                                                 [IntrNoMem, IntrSpeculatable]>;
+
 //===-------------- Intrinsics to perform partial reduction ---------------===//
 
 def int_vector_partial_reduce_add : DefaultAttrsIntrinsic<[LLVMMatchType<0>],

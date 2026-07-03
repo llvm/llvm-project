@@ -1553,12 +1553,21 @@ multiclass sve_int_perm_dup_i<string asm> {
 
   // Duplicate an extracted vector element across a vector.
 
-  def : Pat<(nxv16i8 (splat_vector (i32 (vector_extract (nxv16i8 ZPR:$vec), sve_elm_idx_extdup_b:$index)))),
-            (!cast<Instruction>(NAME # _B) ZPR:$vec, sve_elm_idx_extdup_b:$index)>;
-  def : Pat<(nxv16i8 (splat_vector (i32 (vector_extract (v16i8 V128:$vec), sve_elm_idx_extdup_b:$index)))),
-            (!cast<Instruction>(NAME # _B) (SUBREG_TO_REG $vec, zsub), sve_elm_idx_extdup_b:$index)>;
-  def : Pat<(nxv16i8 (splat_vector (i32 (vector_extract (v8i8 V64:$vec), sve_elm_idx_extdup_b:$index)))),
-            (!cast<Instruction>(NAME # _B) (SUBREG_TO_REG $vec, dsub), sve_elm_idx_extdup_b:$index)>;
+  foreach VT = [nxv16i8] in {
+    def : Pat<(VT (splat_vector (i32 (vector_extract (SVEType<VT>.Packed ZPR:$vec), sve_elm_idx_extdup_b:$index)))),
+              (!cast<Instruction>(NAME # _B) ZPR:$vec, sve_elm_idx_extdup_b:$index)>;
+    def : Pat<(VT (splat_vector (i32 (vector_extract (SVEType<VT>.ZSub V128:$vec), sve_elm_idx_extdup_b:$index)))),
+              (!cast<Instruction>(NAME # _B) (SUBREG_TO_REG $vec, zsub), sve_elm_idx_extdup_b:$index)>;
+    def : Pat<(VT (splat_vector (i32 (vector_extract (SVEType<VT>.DSub V64:$vec), sve_elm_idx_extdup_b:$index)))),
+              (!cast<Instruction>(NAME # _B) (SUBREG_TO_REG $vec, dsub), sve_elm_idx_extdup_b:$index)>;
+
+    // Broadcast a whole 128-bit vector
+    def : Pat<(VT (vector_broadcast (SVEType<VT>.ZSub V128:$vec))),
+              (!cast<Instruction>(NAME # _Q) (SUBREG_TO_REG $vec, zsub), (i64 0))>;
+    // Broadcast a whole 64-bit vector
+    def : Pat<(VT (vector_broadcast (SVEType<VT>.DSub V64:$vec))),
+              (!cast<Instruction>(NAME # _D) (SUBREG_TO_REG $vec, dsub), (i64 0))>;
+  }
 
   foreach VT = [nxv8i16, nxv2f16, nxv4f16, nxv8f16, nxv2bf16, nxv4bf16, nxv8bf16] in {
     def : Pat<(VT (splat_vector (SVEType<VT>.EltAsScalar (vector_extract (SVEType<VT>.Packed ZPR:$vec), sve_elm_idx_extdup_h:$index)))),
@@ -1567,6 +1576,13 @@ multiclass sve_int_perm_dup_i<string asm> {
               (!cast<Instruction>(NAME # _H) (SUBREG_TO_REG $vec, zsub), sve_elm_idx_extdup_h:$index)>;
     def : Pat<(VT (splat_vector (SVEType<VT>.EltAsScalar (vector_extract (SVEType<VT>.DSub V64:$vec), sve_elm_idx_extdup_h:$index)))),
               (!cast<Instruction>(NAME # _H) (SUBREG_TO_REG $vec, dsub), sve_elm_idx_extdup_h:$index)>;
+
+    // Broadcast a whole 128-bit vector
+    def : Pat<(VT (vector_broadcast (SVEType<VT>.ZSub V128:$vec))),
+              (!cast<Instruction>(NAME # _Q) (SUBREG_TO_REG $vec, zsub), (i64 0))>;
+    // Broadcast a whole 64-bit vector
+    def : Pat<(VT (vector_broadcast (SVEType<VT>.DSub V64:$vec))),
+              (!cast<Instruction>(NAME # _D) (SUBREG_TO_REG $vec, dsub), (i64 0))>;
   }
 
   foreach VT = [nxv4i32, nxv2f32, nxv4f32 ] in {
@@ -1576,6 +1592,13 @@ multiclass sve_int_perm_dup_i<string asm> {
               (!cast<Instruction>(NAME # _S) (SUBREG_TO_REG $vec, zsub), sve_elm_idx_extdup_s:$index)>;
     def : Pat<(VT (splat_vector (SVEType<VT>.EltAsScalar (vector_extract (SVEType<VT>.DSub V64:$vec), sve_elm_idx_extdup_s:$index)))),
               (!cast<Instruction>(NAME # _S) (SUBREG_TO_REG $vec, dsub), sve_elm_idx_extdup_s:$index)>;
+
+    // Broadcast a whole 128-bit vector
+    def : Pat<(VT (vector_broadcast (SVEType<VT>.ZSub V128:$vec))),
+              (!cast<Instruction>(NAME # _Q) (SUBREG_TO_REG $vec, zsub), (i64 0))>;
+    // Broadcast a whole 64-bit vector
+    def : Pat<(VT (vector_broadcast (SVEType<VT>.DSub V64:$vec))),
+              (!cast<Instruction>(NAME # _D) (SUBREG_TO_REG $vec, dsub), (i64 0))>;
   }
 
   foreach VT = [nxv2i64, nxv2f64] in {
@@ -1585,6 +1608,13 @@ multiclass sve_int_perm_dup_i<string asm> {
               (!cast<Instruction>(NAME # _D) (SUBREG_TO_REG $vec, zsub), sve_elm_idx_extdup_d:$index)>;
     def : Pat<(VT (splat_vector (SVEType<VT>.EltAsScalar (vector_extract (SVEType<VT>.DSub V64:$vec), sve_elm_idx_extdup_d:$index)))),
               (!cast<Instruction>(NAME # _D) (SUBREG_TO_REG $vec, dsub), sve_elm_idx_extdup_d:$index)>;
+
+    // Broadcast a whole 128-bit vector
+    def : Pat<(VT (vector_broadcast (SVEType<VT>.ZSub V128:$vec))),
+              (!cast<Instruction>(NAME # _Q) (SUBREG_TO_REG $vec, zsub), (i64 0))>;
+    // Broadcast a whole 64-bit vector
+    def : Pat<(VT (vector_broadcast (SVEType<VT>.DSub V64:$vec))),
+              (!cast<Instruction>(NAME # _D) (SUBREG_TO_REG $vec, dsub), (i64 0))>;
   }
 
   // When extracting from an unpacked vector the index must be scaled to account
