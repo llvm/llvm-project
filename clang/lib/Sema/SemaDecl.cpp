@@ -14829,9 +14829,8 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
 
   // std::init / ref_to_uninit (paper §5): a pointer or reference variable
   // must be bound consistently with its [[ref_to_uninit]] marking.
-  Profiles().checkRefToUninitBinding(var->getLocation(), var, var->getType(),
-                                     
-                          var->getInit(), var);
+  Profiles().checkInitProfileRefToUninitBinding(
+      var->getLocation(), var, var->getType(), var->getInit(), var);
 
   CUDA().MaybeAddConstantAttr(var);
 

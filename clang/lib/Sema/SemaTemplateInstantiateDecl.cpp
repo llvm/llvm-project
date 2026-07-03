@@ -1838,7 +1838,7 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
   // the instantiated variable now that its type is known (the parse-time
   // handler deferred on the template pattern).
   if (!Var->isInvalidDecl())
-    SemaRef.Profiles().diagnoseInitUninitMarkerPlacement(Var);
+    SemaRef.Profiles().checkInitProfileMarkerPlacement(Var);
 
   return Var;
 }
@@ -1928,7 +1928,7 @@ Decl *TemplateDeclInstantiator::VisitFieldDecl(FieldDecl *D) {
   // on the (dependent) template member; re-check now that the substituted type
   // is known.
   if (!Field->isInvalidDecl())
-    SemaRef.Profiles().diagnoseInitUninitMarkerPlacement(Field);
+    SemaRef.Profiles().checkInitProfileMarkerPlacement(Field);
 
   return Field;
 }

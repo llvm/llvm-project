@@ -183,7 +183,7 @@ or in an ``if constexpr`` branch discarded only at instantiation.
 ``test::type_cast`` accepts this (it is a test-only profile).  A profile whose
 ``Build*`` routine *is* re-run at instantiation can instead defer on a template
 pattern with a ``CurContext->isDependentContext()`` guard, as the ``std::init``
-ref_to_uninit binding checks do (see ``checkRefToUninitInit``).
+ref_to_uninit binding checks do (see ``checkInitProfileRefToUninit``).
 
 Suppression for parse-time check sites is consulted via the
 ``ProfileSuppressStack`` maintained by the parser-side ``ProfileSuppressScope``
@@ -955,7 +955,7 @@ assignment when compiled without the profile.
    [[profiles::suppress(std::init)]] U e [[uninit]];  // OK
 
 - Diagnostic: ``err_init_union_marker``.
-- Check site: the shared helper ``SemaProfiles::diagnoseInitUninitMarkerPlacement``,
+- Check site: the shared helper ``SemaProfiles::checkInitProfileMarkerPlacement``,
   called from the ``Uninit`` handler in ``clang/lib/Sema/SemaDeclAttr.cpp`` and
   re-run on the instantiated entity from ``VisitFieldDecl`` / ``VisitVarDecl``
   in ``clang/lib/Sema/SemaTemplateInstantiateDecl.cpp``.  Unlike the reference /
@@ -1007,7 +1007,7 @@ recognizers symmetric.
   initialized source) and ``err_init_uninit_requires_ref_to_uninit`` (unmarked
   target, uninitialized source).
 - Recognizer + shared check: ``SemaProfiles::refersToUninitializedMemory`` and
-  ``SemaProfiles::checkRefToUninitInit`` in ``clang/lib/Sema/SemaProfiles.cpp``.
+  ``SemaProfiles::checkInitProfileRefToUninit`` in ``clang/lib/Sema/SemaProfiles.cpp``.
 - A ``new`` expression is recognised only when it default-initializes its
   object (none init style, no written initializer); ``new T(...)`` and
   ``new T{...}`` are value- or list-initialized and excluded.  Whether the
@@ -1033,7 +1033,7 @@ recognizers symmetric.
   ``ctor_uninit_member``.  The Decl-less call-argument, assignment, return, and
   aggregate-field sites -- whose ``Build*`` / ``InitListChecker`` routine is
   re-run at instantiation -- instead defer via a
-  ``CurContext->isDependentContext()`` guard in ``checkRefToUninitInit``, so
+  ``CurContext->isDependentContext()`` guard in ``checkInitProfileRefToUninit``, so
   they neither double-fire nor fire in a discarded ``if constexpr`` branch or a
   never-instantiated template.  The aggregate-field hooks
   (``CheckSubElementType`` for a pointer field, ``CheckReferenceType`` for a
@@ -1044,7 +1044,7 @@ recognizers symmetric.
 - Read-through enforcement (paper §4.5): a scalar *read* through a
   ``[[ref_to_uninit]]`` pointer or reference loads an uninitialized value and is
   diagnosed at the single lvalue-to-rvalue chokepoint
-  (``Sema::DefaultLvalueConversion`` calling ``SemaProfiles::checkRefToUninitRead``),
+  (``Sema::DefaultLvalueConversion`` calling ``SemaProfiles::checkInitProfileReadThrough``),
   which by-value reads -- copy-initialization, by-value arguments, returns, and
   operator/condition operands -- all funnel through.  It reuses the recognizer
   in a read-only mode (a ``ForRead`` flag that drops the directly-named
@@ -1098,7 +1098,7 @@ A pointer must instead be initialized (e.g. to ``nullptr``).
    [[profiles::suppress(std::init, rule: "pointer_marker")]] int *x [[uninit]];  // OK
 
 - Diagnostic: ``err_init_uninit_pointer_marker``.
-- Check site: ``SemaProfiles::diagnoseInitUninitMarkerPlacement``, alongside
+- Check site: ``SemaProfiles::checkInitProfileMarkerPlacement``, alongside
   ``union_marker`` (see R6 for the shared parse-time handler and the
   re-check on the instantiated field / variable).  Like that rule it is gated on
   enforcement -- a pointer may legitimately carry the marker without the profile

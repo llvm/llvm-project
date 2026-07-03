@@ -4238,9 +4238,8 @@ void Sema::ActOnFinishCXXInClassMemberInitializer(Decl *D,
   // std::init / ref_to_uninit (paper §5): a pointer or reference data member
   // with a default member initializer must be bound consistently with its
   // [[ref_to_uninit]] marking.
-  Profiles().checkRefToUninitBinding(FD->getLocation(), FD, FD->getType(),
-                                     
-                          FD->getInClassInitializer(), FD);
+  Profiles().checkInitProfileRefToUninitBinding(
+      FD->getLocation(), FD, FD->getType(), FD->getInClassInitializer(), FD);
 }
 
 /// Find the direct and/or virtual base specifiers that
@@ -4688,8 +4687,8 @@ Sema::BuildMemberInitializer(ValueDecl *Member, Expr *Init,
     // BuildMemberInitializer re-runs with the instantiated constructor as
     // CurContext, matching ctor_uninit_member.
     if (auto *Ctor = dyn_cast<CXXConstructorDecl>(CurContext))
-      Profiles().checkRefToUninitBinding(IdLoc, Member, Member->getType(),
-                                         Init, Ctor);
+      Profiles().checkInitProfileRefToUninitBinding(
+          IdLoc, Member, Member->getType(), Init, Ctor);
   }
 
   if (DirectMember) {

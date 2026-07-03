@@ -191,7 +191,7 @@ public:
   /// a marked target must refer to uninitialized memory, and an unmarked
   /// target must not. Shared by the variable, data-member, assignment,
   /// argument, and return check sites; gated by shouldEmitProfileViolation.
-  void checkRefToUninitInit(SourceLocation Loc, bool TargetIsRefToUninit,
+  void checkInitProfileRefToUninit(SourceLocation Loc, bool TargetIsRefToUninit,
                             bool IsReference, const Expr *Src,
                             const Decl *D = nullptr);
 
@@ -203,9 +203,10 @@ public:
   /// dependent type defers to instantiation, where the check site re-runs
   /// with the concrete type). \p D, when available, is the declaration used
   /// for suppression lookup and template-pattern deferral.
-  void checkRefToUninitBinding(SourceLocation Loc, const ValueDecl *Target,
-                               QualType T, const Expr *Src,
-                               const Decl *D = nullptr);
+  void checkInitProfileRefToUninitBinding(SourceLocation Loc,
+                                          const ValueDecl *Target, QualType T,
+                                          const Expr *Src,
+                                          const Decl *D = nullptr);
 
   /// std::init / uninit_read (paper §4.5): diagnose a read *through* a
   /// [[ref_to_uninit]] pointer or reference, whose result is itself
@@ -215,7 +216,7 @@ public:
   /// read-only mode, so a direct read of a named [[uninit]] object is left to
   /// the flow-based uninit_read pass. A std::byte read is exempt (paper
   /// §4.5).
-  void checkRefToUninitRead(SourceLocation Loc, const Expr *Glvalue,
+  void checkInitProfileReadThrough(SourceLocation Loc, const Expr *Glvalue,
                             QualType ValueType);
 
   /// std::init / pointer_marker + union_marker (paper §4.1, §5.6): diagnose
@@ -223,7 +224,7 @@ public:
   /// \p D must already carry the UninitAttr (the marker location is taken
   /// from it). Decl-aware via shouldEmitProfileViolation, so it defers on a
   /// templated pattern and is re-checked on the instantiated entity.
-  void diagnoseInitUninitMarkerPlacement(const Decl *D);
+  void checkInitProfileMarkerPlacement(const Decl *D);
 
   class ProfileSuppressScope {
     Sema &S;

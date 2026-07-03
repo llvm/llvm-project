@@ -259,8 +259,8 @@ bool SemaProfiles::shouldEmitProfileViolation(StringRef ProfileName,
   // Decl-less expression check sites whose Build* routine is re-run at
   // instantiation (the ref_to_uninit binding checks: call argument, pointer
   // assignment, return) instead defer in a dependent context from their own
-  // wrapper, checkRefToUninitInit, since no Decl is available here. The
-  // [[uninit]] marker checks pass D (via diagnoseInitUninitMarkerPlacement) and
+  // wrapper, checkInitProfileRefToUninit, since no Decl is available here. The
+  // [[uninit]] marker checks pass D (via checkInitProfileMarkerPlacement) and
   // are re-run on the instantiated field / variable, so they defer here too.
   // The reinterpret_cast check still passes D == nullptr and is not re-checked
   // at instantiation, so it keeps running once at parse time (a separate gap).
@@ -535,7 +535,7 @@ void SemaProfiles::checkInitProfileUninitWithInitializer(const ValueDecl *D,
       << Profile << D->getDeclName();
 }
 
-void SemaProfiles::diagnoseInitUninitMarkerPlacement(const Decl *D) {
+void SemaProfiles::checkInitProfileMarkerPlacement(const Decl *D) {
   const auto *UA = D->getAttr<UninitAttr>();
   if (!UA)
     return;
@@ -581,7 +581,8 @@ void SemaProfiles::diagnoseInitUninitMarkerPlacement(const Decl *D) {
 // treat
 // Unknown as not uninitialized.
 //
-// \p ForRead selects read-through mode (SemaProfiles::checkRefToUninitRead): a
+// \p ForRead selects read-through mode
+// (SemaProfiles::checkInitProfileReadThrough): a
 // directly named [[uninit]] object is then not treated as uninitialized,
 // because a read of such a named object is the flow-based uninit_read pass's
 // responsibility; only indirection through a [[ref_to_uninit]]
@@ -796,7 +797,7 @@ static bool deferUninitCheckOnTemplatePattern(Sema &S, const Decl *D) {
   return !D && S.CurContext && S.CurContext->isDependentContext();
 }
 
-void SemaProfiles::checkRefToUninitInit(SourceLocation Loc,
+void SemaProfiles::checkInitProfileRefToUninit(SourceLocation Loc,
                                         bool TargetIsRefToUninit,
                                         bool IsReference, const Expr *Src,
                                         const Decl *D) {
@@ -824,18 +825,19 @@ void SemaProfiles::checkRefToUninitInit(SourceLocation Loc,
     Diag(Loc, diag::err_init_uninit_requires_ref_to_uninit) << Profile << IsRef;
 }
 
-void SemaProfiles::checkRefToUninitBinding(SourceLocation Loc,
+void SemaProfiles::checkInitProfileRefToUninitBinding(SourceLocation Loc,
                                            const ValueDecl *Target, QualType T,
                                            const Expr *Src, const Decl *D) {
   if (!getLangOpts().Profiles || T.isNull() || T->isDependentType() ||
       (!T->isPointerType() && !T->isReferenceType()))
     return;
-  checkRefToUninitInit(Loc, Target->hasAttr<RefToUninitAttr>(),
+  checkInitProfileRefToUninit(Loc, Target->hasAttr<RefToUninitAttr>(),
                        T->isReferenceType(), Src, D);
 }
 
-void SemaProfiles::checkRefToUninitRead(SourceLocation Loc, const Expr *Glvalue,
-                                QualType ValueType) {
+void SemaProfiles::checkInitProfileReadThrough(SourceLocation Loc,
+                                               const Expr *Glvalue,
+                                               QualType ValueType) {
   // A RecoveryExpr is a placeholder for an expression that already failed, not
   // a read the user wrote, so it must not drive this rule.
   if (!Glvalue || isa<RecoveryExpr>(Glvalue->IgnoreParens()))

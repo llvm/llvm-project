@@ -6970,7 +6970,7 @@ static void handleUninitAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // std::init / union_marker + pointer_marker (paper §4.1, §5.6). Shared with
   // the template-instantiation re-check sites (VisitFieldDecl / VisitVarDecl),
   // since this handler only runs on the pattern.
-  S.Profiles().diagnoseInitUninitMarkerPlacement(D);
+  S.Profiles().checkInitProfileMarkerPlacement(D);
 }
 
 static void handleRefToUninitAttr(Sema &S, Decl *D, const ParsedAttr &AL) {

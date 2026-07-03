@@ -743,7 +743,7 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
   // lvalue-to-rvalue chokepoint that by-value reads (copy-init, by-value
   // arguments, returns, operator operands) all funnel through.
   if (getLangOpts().Profiles)
-    Profiles().checkRefToUninitRead(E->getExprLoc(), E, T);
+    Profiles().checkInitProfileReadThrough(E->getExprLoc(), E, T);
 
   // C++ [conv.lval]p3:
   //   If T is cv std::nullptr_t, the result is a null pointer constant.
@@ -6289,8 +6289,8 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
       const Expr *Src = Arg;
       if (const auto *DAE = dyn_cast<CXXDefaultArgExpr>(Src))
         Src = DAE->getExpr();
-      Profiles().checkRefToUninitBinding(Arg->getExprLoc(), Param,
-                                         Param->getType(), Src);
+      Profiles().checkInitProfileRefToUninitBinding(Arg->getExprLoc(), Param,
+                                                    Param->getType(), Src);
     }
 
     // Check for array bounds violations for each argument to the call. This
@@ -15512,7 +15512,7 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
       // memory.
       if (getLangOpts().Profiles && LHS.get()->getType()->isPointerType()) {
         const ValueDecl *VD = SemaProfiles::getDirectlyNamedDecl(LHS.get());
-        Profiles().checkRefToUninitInit(
+        Profiles().checkInitProfileRefToUninit(
             OpLoc, VD && VD->hasAttr<RefToUninitAttr>(),
                              /*IsReference=*/false, RHS.get());
       }
