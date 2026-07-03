@@ -25,6 +25,8 @@ class TestDAPUtils_EventHistory(DAPTestCaseBase):
     and managing timeouts during asynchronous event additions.
     """
 
+    USE_DEFAULT_DEBUG_ADAPTER = False
+
     def test_history_order(self):
         """Test that events added to EventHistory are in sequential order"""
 

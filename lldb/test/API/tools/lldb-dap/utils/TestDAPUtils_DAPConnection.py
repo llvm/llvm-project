@@ -16,6 +16,8 @@ class EchoClient:
 
 
 class TestDAPUtils_DAPConnection(DAPTestCaseBase):
+    USE_DEFAULT_DEBUG_ADAPTER = False
+
     def test_round_trip(self):
         expected_messages = self.get_sample_dap_log()
         transport = self.create_transport(expected_messages)
