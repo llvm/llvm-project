@@ -1816,11 +1816,13 @@ MachineInstr *RegisterCoalescer::eliminateUndefCopy(MachineInstr *CopyMI) {
 
   // Mark uses as undef.
   for (MachineOperand &MO : MRI->reg_nodbg_operands(DstReg)) {
-    if (MO.isDef() /*|| MO.isUndef()*/)
+    if (MO.isDef() && !MO.getSubReg())
       continue;
     const MachineInstr &MI = *MO.getParent();
     SlotIndex UseIdx = LIS->getInstructionIndex(MI);
     LaneBitmask UseMask = TRI->getSubRegIndexLaneMask(MO.getSubReg());
+    if (MO.isDef())
+      UseMask = ~UseMask;
     bool isLive;
     if (!UseMask.all() && DstLI.hasSubRanges()) {
       isLive = false;
