@@ -128,3 +128,39 @@ define void @test_arc_noop_use(ptr %out, ptr %x) {
 
 !0 = !{}
 
+declare void @llvm.assume(i1)
+declare void @llvm.memcpy.inline.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
+declare ptr @llvm.ptrmask.p0.i64(ptr, i64)
+
+; CHECK-LABEL: define void @test_assume(
+; CHECK-NOT: @llvm.objc.retain
+; CHECK-NOT: @llvm.objc.release
+; CHECK: ret void
+define void @test_assume(ptr %p) {
+  %1 = call ptr @llvm.objc.retain(ptr %p)
+  call void @llvm.assume(i1 true)
+  call void @llvm.objc.release(ptr %p)
+  ret void
+}
+
+; CHECK-LABEL: define void @test_memcpy_inline(
+; CHECK-NOT: @llvm.objc.retain
+; CHECK-NOT: @llvm.objc.release
+; CHECK: ret void
+define void @test_memcpy_inline(ptr %p, ptr %q, ptr %r) {
+  %1 = call ptr @llvm.objc.retain(ptr %p)
+  call void @llvm.memcpy.inline.p0.p0.i64(ptr %q, ptr %r, i64 8, i1 false)
+  call void @llvm.objc.release(ptr %p)
+  ret void
+}
+
+; CHECK-LABEL: define void @test_ptrmask(
+; CHECK-NOT: @llvm.objc.retain
+; CHECK-NOT: @llvm.objc.release
+; CHECK: ret void
+define void @test_ptrmask(ptr %p) {
+  %1 = call ptr @llvm.objc.retain(ptr %p)
+  %2 = call ptr @llvm.ptrmask.p0.i64(ptr %p, i64 -1)
+  call void @llvm.objc.release(ptr %p)
+  ret void
+}

@@ -154,9 +154,11 @@ ARCInstKind llvm::objcarc::GetFunctionClass(const Function *F) {
 }
 
 // A list of intrinsics that we know do not use objc pointers or decrement
-// ref counts.
+// ref counts. This is a fast-path for intrinsics that take pointer arguments
+// but are still ARC-inert. Intrinsics without pointer arguments are handled
+// by the doesNotAccessMemory() / onlyReadsMemory() fallbacks in
+// GetARCInstKind.
 static bool isInertIntrinsic(unsigned ID) {
-  // TODO: Make this into a covered switch.
   switch (ID) {
   case Intrinsic::returnaddress:
   case Intrinsic::addressofreturnaddress:
@@ -185,24 +187,32 @@ static bool isInertIntrinsic(unsigned ID) {
   case Intrinsic::dbg_declare:
   case Intrinsic::dbg_value:
   case Intrinsic::dbg_label:
-    // Short cut: Some intrinsics obviously don't use ObjC pointers.
+  case Intrinsic::dbg_assign:
+  // Optimizer hints and metadata-like intrinsics.
+  case Intrinsic::assume:
+  case Intrinsic::experimental_guard:
+  case Intrinsic::pseudoprobe:
+    // These intrinsics take pointer arguments but do not interact with
+    // ObjC reference counts.
     return true;
   default:
     return false;
   }
 }
 
-// A list of intrinsics that we know do not use objc pointers or decrement
-// ref counts.
+// A list of intrinsics that may read or write ObjC pointer memory but do
+// not decrement ref counts. Classified as User (requires positive refcount
+// but does not alter it).
 static bool isUseOnlyIntrinsic(unsigned ID) {
-  // We are conservative and even though intrinsics are unlikely to touch
-  // reference counts, we white list them for safety.
-  //
-  // TODO: Expand this into a covered switch. There is a lot more here.
   switch (ID) {
   case Intrinsic::memcpy:
   case Intrinsic::memmove:
   case Intrinsic::memset:
+  case Intrinsic::memcpy_inline:
+  case Intrinsic::memset_inline:
+  case Intrinsic::memcpy_element_unordered_atomic:
+  case Intrinsic::memmove_element_unordered_atomic:
+  case Intrinsic::memset_element_unordered_atomic:
     return true;
   default:
     return false;
@@ -230,6 +240,14 @@ ARCInstKind llvm::objcarc::GetARCInstKind(const Value *V) {
         if (isInertIntrinsic(ID))
           return ARCInstKind::None;
         if (isUseOnlyIntrinsic(ID))
+          return ARCInstKind::User;
+        // For intrinsics not explicitly listed above, use function
+        // attributes as a fallback. This handles the long tail of
+        // intrinsics (math, bit manipulation, etc.) that don't interact
+        // with ObjC reference counts.
+        if (F->doesNotAccessMemory())
+          return ARCInstKind::None;
+        if (F->onlyReadsMemory())
           return ARCInstKind::User;
       }
 
