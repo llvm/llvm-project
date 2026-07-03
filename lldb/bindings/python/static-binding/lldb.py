@@ -261,9 +261,12 @@ eStateInvalid = _lldb.eStateInvalid
 eStateUnloaded = _lldb.eStateUnloaded
 r"""Process is object is valid, but not currently loaded"""
 eStateConnected = _lldb.eStateConnected
-r"""Process is connected to remote debug services, but not"""
+r"""
+    Process is connected to remote debug services, but not launched or
+    attached to anything yet
+    """
 eStateAttaching = _lldb.eStateAttaching
-r"""launched or attached to anything yet Process is currently trying to attach"""
+r"""Process is currently trying to attach"""
 eStateLaunching = _lldb.eStateLaunching
 r"""Process is in the process of launching"""
 eStateStopped = _lldb.eStateStopped
@@ -271,71 +274,70 @@ r"""Process or thread is stopped and can be examined."""
 eStateRunning = _lldb.eStateRunning
 r"""Process or thread is running and can't be examined."""
 eStateStepping = _lldb.eStateStepping
-r"""Process or thread is in the process of stepping and can"""
+r"""Process or thread is in the process of stepping and can not be examined."""
 eStateCrashed = _lldb.eStateCrashed
-r"""not be examined. Process or thread has crashed and can be examined."""
+r"""Process or thread has crashed and can be examined."""
 eStateDetached = _lldb.eStateDetached
 r"""Process has been detached and can't be examined."""
 eStateExited = _lldb.eStateExited
 r"""Process has exited and can't be examined."""
 eStateSuspended = _lldb.eStateSuspended
 r"""
-    Process or thread is in a suspended state as far
-    as the debugger is concerned while other processes
-    or threads get the chance to run.
+    Process or thread is in a suspended state as far as the debugger is
+    concerned while other processes or threads get the chance to run.
     """
 kLastStateType = _lldb.kLastStateType
 
 eLaunchFlagNone = _lldb.eLaunchFlagNone
 
 eLaunchFlagExec = _lldb.eLaunchFlagExec
-r"""Exec when launching and turn the calling"""
+r"""Exec when launching and turn the calling process into a new process."""
 eLaunchFlagDebug = _lldb.eLaunchFlagDebug
-r"""process into a new process Stop as soon as the process launches to"""
-eLaunchFlagStopAtEntry = _lldb.eLaunchFlagStopAtEntry
-r"""allow the process to be debugged Stop at the program entry point"""
-eLaunchFlagDisableASLR = _lldb.eLaunchFlagDisableASLR
 r"""
-    instead of auto-continuing when
-    launching or attaching at entry point Disable Address Space Layout Randomization
+    Stop as soon as the process launches to allow the process to be
+    debugged.
     """
+eLaunchFlagStopAtEntry = _lldb.eLaunchFlagStopAtEntry
+r"""
+    Stop at the program entry point instead of auto-continuing when
+    launching or attaching at entry point.
+    """
+eLaunchFlagDisableASLR = _lldb.eLaunchFlagDisableASLR
+r"""Disable Address Space Layout Randomization."""
 eLaunchFlagDisableSTDIO = _lldb.eLaunchFlagDisableSTDIO
-r"""Disable stdio for inferior process (e.g. for a GUI app)"""
+r"""Disable stdio for inferior process (e.g. for a GUI app)."""
 eLaunchFlagLaunchInTTY = _lldb.eLaunchFlagLaunchInTTY
-r"""Launch the process in a new TTY if supported by the host"""
+r"""Launch the process in a new TTY if supported by the host."""
 eLaunchFlagLaunchInShell = _lldb.eLaunchFlagLaunchInShell
-r"""Launch the process inside a shell to get shell expansion"""
+r"""Launch the process inside a shell to get shell expansion."""
 eLaunchFlagLaunchInSeparateProcessGroup = _lldb.eLaunchFlagLaunchInSeparateProcessGroup
 r"""
-    Launch the process in a separate process group
-    If you are going to hand the process off (e.g. to
-    debugserver)
+    Launch the process in a separate process group. If you are going to hand
+    the process off (e.g. to debugserver).
     """
 eLaunchFlagDontSetExitStatus = _lldb.eLaunchFlagDontSetExitStatus
-r"""set this flag so lldb & the handee don't race to set its exit status."""
+r"""Set this flag so lldb & the handee don't race to set its exit status."""
 eLaunchFlagDetachOnError = _lldb.eLaunchFlagDetachOnError
 r"""
-    If set, then the client stub
-    should detach rather than killing
-    the debugee
-    if it loses connection with lldb.
+    If set, then the client stub should detach rather than killing the
+    debugee if it loses connection with lldb.
     """
 eLaunchFlagShellExpandArguments = _lldb.eLaunchFlagShellExpandArguments
-r"""Perform shell-style argument expansion"""
+r"""Perform shell-style argument expansion."""
 eLaunchFlagCloseTTYOnExit = _lldb.eLaunchFlagCloseTTYOnExit
-r"""Close the open TTY on exit"""
+r"""Close the open TTY on exit."""
 eLaunchFlagInheritTCCFromParent = _lldb.eLaunchFlagInheritTCCFromParent
 r"""
-    Don't make the inferior responsible for its own TCC
-    permissions but instead inherit them from its parent.
+    Don't make the inferior responsible for its own TCC permissions but
+    instead inherit them from its parent.
     """
 eLaunchFlagMemoryTagging = _lldb.eLaunchFlagMemoryTagging
 r"""Launch process with memory tagging explicitly enabled."""
 eLaunchFlagUsePipes = _lldb.eLaunchFlagUsePipes
 r"""
-    Use anonymous pipes for stdio instead of a ConPTY on
-    Windows. Useful when terminal emulation is not needed
-    (e.g. lldb-dap internalConsole mode).
+    Use anonymous pipes for stdio instead of a ConPTY on Windows. Useful
+    when terminal emulation is not needed (e.g. lldb-dap internalConsole
+    mode).
     """
 eOnlyThisThread = _lldb.eOnlyThisThread
 
@@ -400,10 +402,7 @@ eFormatFloat = _lldb.eFormatFloat
 eFormatOctal = _lldb.eFormatOctal
 
 eFormatOSType = _lldb.eFormatOSType
-r"""
-    OS character codes encoded into an integer 'PICT' 'text'
-    etc...
-    """
+r"""OS character codes encoded into an integer 'PICT' 'text' etc..."""
 eFormatUnicode16 = _lldb.eFormatUnicode16
 
 eFormatUnicode32 = _lldb.eFormatUnicode32
@@ -442,14 +441,13 @@ eFormatComplexInteger = _lldb.eFormatComplexInteger
 r"""Integer complex type"""
 eFormatCharArray = _lldb.eFormatCharArray
 r"""
-    Print characters with no single quotes, used for
-    character arrays that can contain non printable
-    characters
+    Print characters with no single quotes, used for character arrays that can
+    contain non printable characters
     """
 eFormatAddressInfo = _lldb.eFormatAddressInfo
 r"""
-    Describe what an address points to (func + offset
-    with file/line, symbol + offset, data, etc)
+    Describe what an address points to (func + offset with file/line, symbol +
+    offset, data, etc)
     """
 eFormatHexFloat = _lldb.eFormatHexFloat
 r"""ISO C99 hex float string"""
@@ -461,10 +459,9 @@ eFormatUnicode8 = _lldb.eFormatUnicode8
 
 eFormatFloat128 = _lldb.eFormatFloat128
 r"""
-    Disambiguate between 128-bit `long double` (which uses
-    `eFormatFloat`) and `__float128` (which uses
-    `eFormatFloat128`). If the value being formatted is not
-    128 bits, then this is identical to `eFormatFloat`.
+    Disambiguate between 128-bit `long double` (which uses `eFormatFloat`) and
+    `__float128` (which uses `eFormatFloat128`). If the value being formatted
+    is not 128 bits, then this is identical to `eFormatFloat`.
     """
 kNumFormats = _lldb.kNumFormats
 
@@ -493,14 +490,11 @@ r"""the register numbers seen in eh_frame"""
 eRegisterKindDWARF = _lldb.eRegisterKindDWARF
 r"""the register numbers seen DWARF"""
 eRegisterKindGeneric = _lldb.eRegisterKindGeneric
-r"""
-    insn ptr reg, stack ptr reg, etc not specific to
-    any particular target
-    """
+r"""insn ptr reg, stack ptr reg, etc not specific to any particular target"""
 eRegisterKindProcessPlugin = _lldb.eRegisterKindProcessPlugin
 r"""
-    num used by the process plugin - e.g. by the
-    remote gdb-protocol stub program
+    num used by the process plugin - e.g. by the remote gdb-protocol stub
+    program
     """
 eRegisterKindLLDB = _lldb.eRegisterKindLLDB
 r"""lldb's internal register numbers"""
@@ -603,10 +597,7 @@ r"""Request timed out"""
 eConnectionStatusNoConnection = _lldb.eConnectionStatusNoConnection
 r"""No connection"""
 eConnectionStatusLostConnection = _lldb.eConnectionStatusLostConnection
-r"""
-    Lost connection while connected to a
-    valid connection
-    """
+r"""Lost connection while connected to a valid connection"""
 eConnectionStatusInterrupted = _lldb.eConnectionStatusInterrupted
 r"""Interrupted read"""
 eErrorTypeInvalid = _lldb.eErrorTypeInvalid
@@ -643,6 +634,12 @@ eValueTypeVTable = _lldb.eValueTypeVTable
 r"""virtual function table"""
 eValueTypeVTableEntry = _lldb.eValueTypeVTableEntry
 r"""function pointer in virtual function table"""
+kLastValueType = _lldb.kLastValueType
+
+eValueTypeSyntheticFlag = _lldb.eValueTypeSyntheticFlag
+r"""A flag that indicates if the value type is synthetic or not."""
+kValueTypeFlagsMask = _lldb.kValueTypeFlagsMask
+
 eInputReaderGranularityInvalid = _lldb.eInputReaderGranularityInvalid
 
 eInputReaderGranularityByte = _lldb.eInputReaderGranularityByte
@@ -655,51 +652,50 @@ eInputReaderGranularityAll = _lldb.eInputReaderGranularityAll
 
 eSymbolContextTarget = _lldb.eSymbolContextTarget
 r"""
-    Set when *target* is requested from a query, or was located
-    in query results
+    Set when *target* is requested from a query, or was located in query
+    results
     """
 eSymbolContextModule = _lldb.eSymbolContextModule
 r"""
-    Set when *module* is requested from a query, or was located
-    in query results
+    Set when *module* is requested from a query, or was located in query
+    results
     """
 eSymbolContextCompUnit = _lldb.eSymbolContextCompUnit
 r"""
-    Set when *comp_unit* is requested from a query, or was
-    located in query results
+    Set when *comp_unit* is requested from a query, or was located in query
+    results
     """
 eSymbolContextFunction = _lldb.eSymbolContextFunction
 r"""
-    Set when *function* is requested from a query, or was located
-    in query results
+    Set when *function* is requested from a query, or was located in query
+    results
     """
 eSymbolContextBlock = _lldb.eSymbolContextBlock
 r"""
-    Set when the deepest *block* is requested from a query, or
-    was located in query results
+    Set when the deepest *block* is requested from a query, or was located
+    in query results
     """
 eSymbolContextLineEntry = _lldb.eSymbolContextLineEntry
 r"""
-    Set when *line_entry* is requested from a query, or was
-    located in query results
+    Set when *line_entry* is requested from a query, or was located in
+    query results
     """
 eSymbolContextSymbol = _lldb.eSymbolContextSymbol
 r"""
-    Set when *symbol* is requested from a query, or was located
-    in query results
+    Set when *symbol* is requested from a query, or was located in query
+    results
     """
 eSymbolContextEverything = _lldb.eSymbolContextEverything
 r"""
-    Indicates to try and lookup everything up during a routine
-    symbol context query.
+    Indicates to try and lookup everything up during a routine symbol
+    context query.
     """
 eSymbolContextVariable = _lldb.eSymbolContextVariable
 r"""
-    Set when *global* or static variable is requested from a
-    query, or was located in query results.
-    eSymbolContextVariable is potentially expensive to lookup so
-    it isn't included in eSymbolContextEverything which stops it
-    from being used during frame PC lookups and many other
+    Set when *global* or static variable is requested from a query, or was
+    located in query results. eSymbolContextVariable is potentially
+    expensive to lookup so it isn't included in eSymbolContextEverything
+    which stops it from being used during frame PC lookups and many other
     potential address to symbol context lookups.
     """
 eSymbolContextLastItem = _lldb.eSymbolContextLastItem
@@ -713,30 +709,17 @@ ePermissionsExecutable = _lldb.ePermissionsExecutable
 eInputReaderActivate = _lldb.eInputReaderActivate
 r"""reader is newly pushed onto the reader stack"""
 eInputReaderAsynchronousOutputWritten = _lldb.eInputReaderAsynchronousOutputWritten
-r"""
-    an async output event occurred;
-    the reader may want to do
-    something
-    """
+r"""an async output event occurred; the reader may want to do something"""
 eInputReaderReactivate = _lldb.eInputReaderReactivate
-r"""
-    reader is on top of the stack again after another
-    reader was popped off
-    """
+r"""reader is on top of the stack again after another reader was popped off"""
 eInputReaderDeactivate = _lldb.eInputReaderDeactivate
 r"""another reader was pushed on the stack"""
 eInputReaderGotToken = _lldb.eInputReaderGotToken
 r"""reader got one of its tokens (granularity)"""
 eInputReaderInterrupt = _lldb.eInputReaderInterrupt
-r"""
-    reader received an interrupt signal (probably from
-    a control-c)
-    """
+r"""reader received an interrupt signal (probably from a control-c)"""
 eInputReaderEndOfFile = _lldb.eInputReaderEndOfFile
-r"""
-    reader received an EOF char (probably from a
-    control-d)
-    """
+r"""reader received an EOF char (probably from a control-d)"""
 eInputReaderDone = _lldb.eInputReaderDone
 r"""reader was just popped off the stack and is done"""
 eBreakpointEventTypeInvalidType = _lldb.eBreakpointEventTypeInvalidType
@@ -746,11 +729,7 @@ eBreakpointEventTypeAdded = _lldb.eBreakpointEventTypeAdded
 eBreakpointEventTypeRemoved = _lldb.eBreakpointEventTypeRemoved
 
 eBreakpointEventTypeLocationsAdded = _lldb.eBreakpointEventTypeLocationsAdded
-r"""
-    Locations added doesn't
-    get sent when the
-    breakpoint is created
-    """
+r"""Locations added doesn't get sent when the breakpoint is created"""
 eBreakpointEventTypeLocationsRemoved = _lldb.eBreakpointEventTypeLocationsRemoved
 
 eBreakpointEventTypeLocationsResolved = _lldb.eBreakpointEventTypeLocationsResolved
@@ -793,17 +772,17 @@ eWatchpointWriteTypeDisabled = _lldb.eWatchpointWriteTypeDisabled
 r"""Don't stop when the watched memory region is written to."""
 eWatchpointWriteTypeAlways = _lldb.eWatchpointWriteTypeAlways
 r"""
-    Stop on any write access to the memory region, even if
-    the value doesn't change.  On some architectures, a write
-    near the memory region may be falsely reported as a match,
-    and notify this spurious stop as a watchpoint trap.
+    Stop on any write access to the memory region, even if the value doesn't
+    change. On some architectures, a write near the memory region may be
+    falsely reported as a match, and notify this spurious stop as a watchpoint
+    trap.
     """
 eWatchpointWriteTypeOnModify = _lldb.eWatchpointWriteTypeOnModify
 r"""
-    Stop on a write to the memory region that changes its value.
-    This is most likely the behavior a user expects, and is the
-    behavior in gdb.  lldb can silently ignore writes near the
-    watched memory region that are reported as accesses to lldb.
+    Stop on a write to the memory region that changes its value. This is most
+    likely the behavior a user expects, and is the behavior in gdb. lldb can
+    silently ignore writes near the watched memory region that are reported as
+    accesses to lldb.
     """
 eLanguageTypeUnknown = _lldb.eLanguageTypeUnknown
 r"""Unknown or invalid language value."""
@@ -1181,6 +1160,8 @@ eArgTypeNameMatchStyle = _lldb.eArgTypeNameMatchStyle
 
 eArgTypePluginDomain = _lldb.eArgTypePluginDomain
 
+eArgTypeBreakpointResolverMask = _lldb.eArgTypeBreakpointResolverMask
+
 eArgTypeLastArg = _lldb.eArgTypeLastArg
 
 eSymbolTypeAny = _lldb.eSymbolTypeAny
@@ -1228,10 +1209,7 @@ eSymbolTypeScopeBegin = _lldb.eSymbolTypeScopeBegin
 eSymbolTypeScopeEnd = _lldb.eSymbolTypeScopeEnd
 
 eSymbolTypeAdditional = _lldb.eSymbolTypeAdditional
-r"""
-    When symbols take more than one entry, the extra
-    entries get this type
-    """
+r"""When symbols take more than one entry, the extra entries get this type"""
 eSymbolTypeCompiler = _lldb.eSymbolTypeCompiler
 
 eSymbolTypeInstrumentation = _lldb.eSymbolTypeInstrumentation
@@ -1277,10 +1255,7 @@ eSectionTypeZeroFill = _lldb.eSectionTypeZeroFill
 eSectionTypeDataObjCMessageRefs = _lldb.eSectionTypeDataObjCMessageRefs
 r"""Pointer to function pointer + selector"""
 eSectionTypeDataObjCCFStrings = _lldb.eSectionTypeDataObjCCFStrings
-r"""
-    Objective-C const CFString/NSString
-    objects
-    """
+r"""Objective-C const CFString/NSString objects"""
 eSectionTypeDWARFDebugAbbrev = _lldb.eSectionTypeDWARFDebugAbbrev
 
 eSectionTypeDWARFDebugAddr = _lldb.eSectionTypeDWARFDebugAddr
@@ -1334,17 +1309,11 @@ eSectionTypeARMexidx = _lldb.eSectionTypeARMexidx
 eSectionTypeARMextab = _lldb.eSectionTypeARMextab
 
 eSectionTypeCompactUnwind = _lldb.eSectionTypeCompactUnwind
-r"""
-    compact unwind section in Mach-O,
-    __TEXT,__unwind_info
-    """
+r"""compact unwind section in Mach-O, __TEXT,__unwind_info"""
 eSectionTypeGoSymtab = _lldb.eSectionTypeGoSymtab
 
 eSectionTypeAbsoluteAddress = _lldb.eSectionTypeAbsoluteAddress
-r"""
-    Dummy section for symbols with absolute
-    address
-    """
+r"""Dummy section for symbols with absolute address"""
 eSectionTypeDWARFGNUDebugAltLink = _lldb.eSectionTypeDWARFGNUDebugAltLink
 
 eSectionTypeDWARFDebugTypes = _lldb.eSectionTypeDWARFDebugTypes
@@ -1397,32 +1366,27 @@ eFunctionNameTypeNone = _lldb.eFunctionNameTypeNone
 
 eFunctionNameTypeAuto = _lldb.eFunctionNameTypeAuto
 r"""
-    Automatically figure out which FunctionNameType
-    bits to set based on the function name.
+    Automatically figure out which FunctionNameType bits to set based on the
+    function name.
     """
 eFunctionNameTypeFull = _lldb.eFunctionNameTypeFull
 r"""
-    The function name.
-    For C this is the same as just the name of the function For C++ this is
-    the mangled or demangled version of the mangled name. For ObjC this is
-    the full function signature with the + or - and the square brackets and
-    the class and selector
+    The function name. For C this is the same as just the name of the
+    function. For C++ this is the mangled or demangled version of the
+    mangled name. For ObjC this is the full function signature with the + or
+    - and the square brackets and the class and selector.
     """
 eFunctionNameTypeBase = _lldb.eFunctionNameTypeBase
 r"""
-    The function name only, no namespaces
-    or arguments and no class
-    methods or selectors will be searched.
+    The function name only, no namespaces or arguments and no class methods
+    or selectors will be searched.
     """
 eFunctionNameTypeMethod = _lldb.eFunctionNameTypeMethod
-r"""
-    Find function by method name (C++)
-    with no namespace or arguments
-    """
+r"""Find function by method name (C++) with no namespace or arguments."""
 eFunctionNameTypeSelector = _lldb.eFunctionNameTypeSelector
-r"""Find function by selector name (ObjC) names"""
+r"""Find function by selector name (ObjC) names."""
 eFunctionNameTypeAny = _lldb.eFunctionNameTypeAny
-r"""DEPRECATED: use eFunctionNameTypeAuto"""
+r"""DEPRECATED: use eFunctionNameTypeAuto."""
 eBasicTypeInvalid = _lldb.eBasicTypeInvalid
 
 eBasicTypeVoid = _lldb.eBasicTypeVoid
@@ -1720,19 +1684,16 @@ eInstructionControlFlowKindCondJump = _lldb.eInstructionControlFlowKindCondJump
 r"""The instruction is a near conditional jump."""
 eInstructionControlFlowKindFarCall = _lldb.eInstructionControlFlowKindFarCall
 r"""
-    The instruction is a call-like far transfer.
-    E.g. SYSCALL, SYSENTER, or FAR CALL.
+    The instruction is a call-like far transfer. E.g. SYSCALL, SYSENTER, or
+    FAR CALL.
     """
 eInstructionControlFlowKindFarReturn = _lldb.eInstructionControlFlowKindFarReturn
 r"""
-    The instruction is a return-like far transfer.
-    E.g. SYSRET, SYSEXIT, IRET, or FAR RET.
+    The instruction is a return-like far transfer. E.g. SYSRET, SYSEXIT, IRET,
+    or FAR RET.
     """
 eInstructionControlFlowKindFarJump = _lldb.eInstructionControlFlowKindFarJump
-r"""
-    The instruction is a jump-like far transfer.
-    E.g. FAR JMP.
-    """
+r"""The instruction is a jump-like far transfer. E.g. FAR JMP."""
 eWatchpointKindWrite = _lldb.eWatchpointKindWrite
 
 eWatchpointKindRead = _lldb.eWatchpointKindRead
@@ -1751,14 +1712,11 @@ eGdbSignalBreakpoint = _lldb.eGdbSignalBreakpoint
 
 ePathTypeLLDBShlibDir = _lldb.ePathTypeLLDBShlibDir
 r"""
-    The directory where the lldb.so (unix) or LLDB
-    mach-o file in LLDB.framework (MacOSX) exists
+    The directory where the lldb.so (unix) or LLDB mach-o file in
+    LLDB.framework (MacOSX) exists
     """
 ePathTypeSupportExecutableDir = _lldb.ePathTypeSupportExecutableDir
-r"""
-    Find LLDB support executable directory
-    (debugserver, etc)
-    """
+r"""Find LLDB support executable directory (debugserver, etc)"""
 ePathTypeHeaderDir = _lldb.ePathTypeHeaderDir
 r"""Find LLDB header file directory"""
 ePathTypePythonDir = _lldb.ePathTypePythonDir
@@ -1768,15 +1726,9 @@ r"""System plug-ins directory"""
 ePathTypeLLDBUserPlugins = _lldb.ePathTypeLLDBUserPlugins
 r"""User plug-ins directory"""
 ePathTypeLLDBTempSystemDir = _lldb.ePathTypeLLDBTempSystemDir
-r"""
-    The LLDB temp directory for this system that
-    will be cleaned up on exit
-    """
+r"""The LLDB temp directory for this system that will be cleaned up on exit"""
 ePathTypeGlobalLLDBTempSystemDir = _lldb.ePathTypeGlobalLLDBTempSystemDir
-r"""
-    The LLDB temp directory for this system,
-    NOT cleaned up on a process exit.
-    """
+r"""The LLDB temp directory for this system, NOT cleaned up on a process exit."""
 ePathTypeClangDir = _lldb.ePathTypeClangDir
 r"""Find path to Clang builtin headers"""
 ePathTypeSwiftDir = _lldb.ePathTypeSwiftDir
@@ -1786,20 +1738,11 @@ r"""Not sure what the type of this is"""
 eMemberFunctionKindConstructor = _lldb.eMemberFunctionKindConstructor
 r"""A function used to create instances"""
 eMemberFunctionKindDestructor = _lldb.eMemberFunctionKindDestructor
-r"""
-    A function used to tear down existing
-    instances
-    """
+r"""A function used to tear down existing instances"""
 eMemberFunctionKindInstanceMethod = _lldb.eMemberFunctionKindInstanceMethod
-r"""
-    A function that applies to a specific
-    instance
-    """
+r"""A function that applies to a specific instance"""
 eMemberFunctionKindStaticMethod = _lldb.eMemberFunctionKindStaticMethod
-r"""
-    A function that applies to a type rather
-    than any instance
-    """
+r"""A function that applies to a type rather than any instance"""
 eMatchTypeNormal = _lldb.eMatchTypeNormal
 
 eMatchTypeRegex = _lldb.eMatchTypeRegex
@@ -1968,14 +1911,11 @@ eTypeSummaryUncapped = _lldb.eTypeSummaryUncapped
 eCommandInterpreterResultSuccess = _lldb.eCommandInterpreterResultSuccess
 r"""Command interpreter finished successfully."""
 eCommandInterpreterResultInferiorCrash = _lldb.eCommandInterpreterResultInferiorCrash
-r"""
-    Stopped because the corresponding option was set and the inferior
-    crashed.
-    """
+r"""Stopped because the corresponding option was set and the inferior crashed."""
 eCommandInterpreterResultCommandError = _lldb.eCommandInterpreterResultCommandError
 r"""
-    Stopped because the corresponding option was set and a command returned
-    an error.
+    Stopped because the corresponding option was set and a command returned an
+    error.
     """
 eCommandInterpreterResultQuitRequested = _lldb.eCommandInterpreterResultQuitRequested
 r"""Stopped because quit was requested."""
@@ -2027,14 +1967,14 @@ r"""
     expression.
     """
 eWatchPointValueKindInvalid = _lldb.eWatchPointValueKindInvalid
-r"""Watchpoint was created watching a variable"""
+
 eWatchPointValueKindVariable = _lldb.eWatchPointValueKindVariable
+r"""Watchpoint was created watching a variable"""
+eWatchPointValueKindExpression = _lldb.eWatchPointValueKindExpression
 r"""
     Watchpoint was created watching the result of an expression that was
     evaluated at creation time.
     """
-eWatchPointValueKindExpression = _lldb.eWatchPointValueKindExpression
-
 eNoCompletion = _lldb.eNoCompletion
 
 eSourceFileCompletion = _lldb.eSourceFileCompletion
@@ -2099,8 +2039,8 @@ eRefetch = _lldb.eRefetch
 r"""Children need to be recomputed dynamically."""
 eReuse = _lldb.eReuse
 r"""
-    Children did not change and don't need to be recomputed;
-    re-use what we computed the last time we called Update.
+    Children did not change and don't need to be recomputed; re-use what we
+    computed the last time we called Update.
     """
 eSymbolDownloadOff = _lldb.eSymbolDownloadOff
 
@@ -2189,10 +2129,7 @@ r"""Allowed: identifiers, operators: '.'."""
 eDILModeLegacy = _lldb.eDILModeLegacy
 r"""Allowed: identifiers, integers, operators: '.', '->', '*', '&', '[]'."""
 eDILModeFull = _lldb.eDILModeFull
-r"""
-    Allowed: everything supported by DIL.
-    See also: lldb/docs/dil-expr-lang.ebnf
-    """
+r"""Allowed: everything supported by DIL. See also: lldb/docs/dil-expr-lang.ebnf"""
 eBinaryInformationLevelAddrOnly = _lldb.eBinaryInformationLevelAddrOnly
 
 eBinaryInformationLevelAddrName = _lldb.eBinaryInformationLevelAddrName
@@ -2200,6 +2137,22 @@ eBinaryInformationLevelAddrName = _lldb.eBinaryInformationLevelAddrName
 eBinaryInformationLevelAddrNameUUID = _lldb.eBinaryInformationLevelAddrNameUUID
 
 eBinaryInformationLevelFull = _lldb.eBinaryInformationLevelFull
+
+eResolverUnknown = _lldb.eResolverUnknown
+
+eResolverFileAndLine = _lldb.eResolverFileAndLine
+
+eResolverAddress = _lldb.eResolverAddress
+
+eResolverName = _lldb.eResolverName
+
+eResolverFileRegex = _lldb.eResolverFileRegex
+
+eResolverPython = _lldb.eResolverPython
+
+eResolverException = _lldb.eResolverException
+
+eResolverLastKnown = _lldb.eResolverLastKnown
 
 class SBAddress(object):
     r"""
@@ -2403,7 +2356,7 @@ class SBAddress(object):
 # Register SBAddress in _lldb:
 _lldb.SBAddress_swigregister(SBAddress)
 cvar = _lldb.cvar
-ValueTypeSyntheticMask = cvar.ValueTypeSyntheticMask
+BreakpointResolverAllResolversMask = cvar.BreakpointResolverAllResolversMask
 
 class SBAddressRange(object):
     r"""API clients can get address range information."""
@@ -5988,6 +5941,13 @@ class SBDebugger(object):
     def SetTerminalHeight(self, term_height):
         r"""Set the terminal height."""
         return _lldb.SBDebugger_SetTerminalHeight(self, term_height)
+
+    def SetTerminalDimensions(self, term_width, term_height):
+        r"""
+        Set the terminal width and height together. Prefer this over the
+        single-axis setters when both are known, e.g. when handling a resize.
+        """
+        return _lldb.SBDebugger_SetTerminalDimensions(self, term_width, term_height)
 
     def GetID(self):
         r"""Get the unique ID of this debugger."""
@@ -9866,6 +9826,29 @@ class SBModule(object):
         """
         return _lldb.SBModule_GetSymbolFileSpec(self)
 
+    def GetSeparateDebugInfoFiles(self):
+        r"""
+        Get the separate debug info files for this module.
+
+        Returns a list of file paths for the separate debug info files
+        associated with this module. Separate debug info files are
+        considered any files that are referenced from debug info but
+        aren't the actual object file that the symbol file parses.
+
+        If this module uses split DWARF it will return a DWARF package
+        (.dwp) if it exists, otherwise it will return a list of all
+        .dwo files.
+
+        If this module uses DWARF in .o files (Darwin), it will return
+        a list of all .o files if there is no dSYM file. If a dSYM file
+        is present, no specifications will be returned since the debug
+        info is self-contained in the dSYM bundle.
+
+        An empty list will be returned if there are no separate debug
+        info files for this module.
+        """
+        return _lldb.SBModule_GetSeparateDebugInfoFiles(self)
+
     def GetObjectFileHeaderAddress(self):
         r"""GetObjectFileHeaderAddress(SBModule self) -> SBAddress"""
         return _lldb.SBModule_GetObjectFileHeaderAddress(self)
@@ -11409,6 +11392,19 @@ class SBProcess(object):
                 the process isn't loaded from a core file.
         """
         return _lldb.SBProcess_GetCoreFile(self)
+
+    def IsLiveDebugSession(self):
+        r"""
+        Check whether this process is a live debug session, as opposed to a
+        post-mortem session such as a core file or minidump.
+
+        :rtype: boolean
+        :return: 
+                **true** if the process represents a live debug session, **false** if it
+                is a post-mortem session (e.g. a core file) or there is no underlying
+                process.
+        """
+        return _lldb.SBProcess_IsLiveDebugSession(self)
 
     def GetAddressMask(self, *args):
         r"""
@@ -14219,12 +14215,13 @@ class SBTarget(object):
         """
         return _lldb.SBTarget_ReadMemory(self, addr, buf, error)
 
-    def AddBreakpointOverride(self, class_name, description, args_data, status):
+    def AddBreakpointOverride(self, class_name, description, type_mask, args_data, status):
         r"""
         Adds a breakpoint override implemented by class_name.  Returns the ID
-        of the new override or LLDB_INVALID_INDEX64 on error.
+        of the new override or LLDB_INVALID_INDEX64 on error.  The type_mask
+        is composed of elements from the lldb::BreakpointResolverType enum.
         """
-        return _lldb.SBTarget_AddBreakpointOverride(self, class_name, description, args_data, status)
+        return _lldb.SBTarget_AddBreakpointOverride(self, class_name, description, type_mask, args_data, status)
 
     def RemoveBreakpointOverride(self, id):
         r"""RemoveBreakpointOverride(SBTarget self, uint64_t id) -> bool"""
@@ -14492,6 +14489,48 @@ class SBTarget(object):
     def GetBasicType(self, type):
         r"""GetBasicType(SBTarget self, lldb::BasicType type) -> SBType"""
         return _lldb.SBTarget_GetBasicType(self, type)
+
+    def FindExpressionTypeForLanguage(self, typename_cstr, lang, error):
+        r"""
+        FindExpressionTypeForLanguage(SBTarget self, char const * typename_cstr, lldb::LanguageType lang, SBError error) -> SBType
+
+            Look up a persistent type defined using the expression parser.
+
+            @param[in] type_name
+                 The base name of the persistent type you defined.
+
+            @param[in] language
+                 A member of the enum lldb::LanguageType giving the
+                 language of the Expression parser you used to define
+                 the persistent type.
+
+            @param[out] error
+                 If there are errors fetching the type, they will be 
+                 returned here.
+
+            @return
+                An SBType representing the persistent type you defined.
+        """
+        return _lldb.SBTarget_FindExpressionTypeForLanguage(self, typename_cstr, lang, error)
+
+    def FindExpressionVariableForLanguage(self, varname_cstr, lang):
+        r"""
+        FindExpressionVariableForLanguage(SBTarget self, char const * varname_cstr, lldb::LanguageType lang) -> SBValue
+
+            Look up a persistent variable defined using the expression parser.
+
+            @param[in] variable_name
+                 The name of the persistent variable you defined.
+
+            @param[in] language
+        	 A member of the enum lldb::LanguageType giving	the
+        	 language of the Expression parser you used to define
+        	 the persistent type.
+
+            @return
+                An SBValue representing the persistent variable you defined.
+        """
+        return _lldb.SBTarget_FindExpressionVariableForLanguage(self, varname_cstr, lang)
 
     def CreateValueFromAddress(self, name, addr, type):
         r"""
@@ -19012,9 +19051,10 @@ class SBValue(object):
 
         def __getitem__(self, key):
             if isinstance(key, int):
-                count = len(self)
-                if -count <= key < count:
-                    key %= count
+                if key < 0:
+    # Support pythonic negative indexing.
+                    key += len(self)
+                if key >= 0:
                     return self.sbvalue.GetChildAtIndex(key)
             return None
 

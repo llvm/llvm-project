@@ -6229,17 +6229,16 @@ static SBError LLDBSwigPythonCallLocateModuleCallback(
 #ifdef __cplusplus
 extern "C" {
 #endif
-SWIGINTERN int Swig_var_ValueTypeSyntheticMask_set(PyObject *) {
-  SWIG_Error(SWIG_AttributeError,"Variable ValueTypeSyntheticMask is read-only.");
+SWIGINTERN int Swig_var_BreakpointResolverAllResolversMask_set(PyObject *) {
+  SWIG_Error(SWIG_AttributeError,"Variable BreakpointResolverAllResolversMask is read-only.");
   return 1;
 }
 
 
-SWIGINTERN PyObject *Swig_var_ValueTypeSyntheticMask_get(void) {
+SWIGINTERN PyObject *Swig_var_BreakpointResolverAllResolversMask_get(void) {
   PyObject *pyobj = 0;
-
-  pyobj = SWIG_From_unsigned_SS_int(
-      static_cast<unsigned int>(lldb::eValueTypeSyntheticFlag));
+  
+  pyobj = SWIG_From_unsigned_SS_int(static_cast< unsigned int >(lldb::BreakpointResolverAllResolversMask));
   return pyobj;
 }
 
@@ -29125,6 +29124,48 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBDebugger_SetTerminalDimensions(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBDebugger *arg1 = 0 ;
+  uint32_t arg2 ;
+  uint32_t arg3 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  unsigned int val2 ;
+  int ecode2 = 0 ;
+  unsigned int val3 ;
+  int ecode3 = 0 ;
+  PyObject *swig_obj[3] ;
+  
+  (void)self;
+  if (!SWIG_Python_UnpackTuple(args, "SBDebugger_SetTerminalDimensions", 3, 3, swig_obj)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_lldb__SBDebugger, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBDebugger_SetTerminalDimensions" "', argument " "1"" of type '" "lldb::SBDebugger *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBDebugger * >(argp1);
+  ecode2 = SWIG_AsVal_unsigned_SS_int(swig_obj[1], &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SBDebugger_SetTerminalDimensions" "', argument " "2"" of type '" "uint32_t""'");
+  } 
+  arg2 = static_cast< uint32_t >(val2);
+  ecode3 = SWIG_AsVal_unsigned_SS_int(swig_obj[2], &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "SBDebugger_SetTerminalDimensions" "', argument " "3"" of type '" "uint32_t""'");
+  } 
+  arg3 = static_cast< uint32_t >(val3);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    (arg1)->SetTerminalDimensions(arg2,arg3);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_SBDebugger_GetID(PyObject *self, PyObject *args) {
   PyObject *resultobj = 0;
   lldb::SBDebugger *arg1 = 0 ;
@@ -50207,6 +50248,34 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBModule_GetSeparateDebugInfoFiles(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBModule *arg1 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[1] ;
+  lldb::SBModuleSpecList result;
+  
+  (void)self;
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_lldb__SBModule, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBModule_GetSeparateDebugInfoFiles" "', argument " "1"" of type '" "lldb::SBModule *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBModule * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (arg1)->GetSeparateDebugInfoFiles();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_NewPointerObj((new lldb::SBModuleSpecList(result)), SWIGTYPE_p_lldb__SBModuleSpecList, SWIG_POINTER_OWN |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_SBModule_GetObjectFileHeaderAddress(PyObject *self, PyObject *args) {
   PyObject *resultobj = 0;
   lldb::SBModule *arg1 = 0 ;
@@ -57975,6 +58044,34 @@ SWIGINTERN PyObject *_wrap_SBProcess_GetCoreFile(PyObject *self, PyObject *args)
     SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = SWIG_NewPointerObj((new lldb::SBFileSpec(result)), SWIGTYPE_p_lldb__SBFileSpec, SWIG_POINTER_OWN |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBProcess_IsLiveDebugSession(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBProcess *arg1 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[1] ;
+  bool result;
+  
+  (void)self;
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_lldb__SBProcess, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBProcess_IsLiveDebugSession" "', argument " "1"" of type '" "lldb::SBProcess const *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBProcess * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (bool)((lldb::SBProcess const *)arg1)->IsLiveDebugSession();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
   return resultobj;
 fail:
   return NULL;
@@ -70962,8 +71059,9 @@ SWIGINTERN PyObject *_wrap_SBTarget_AddBreakpointOverride(PyObject *self, PyObje
   lldb::SBTarget *arg1 = 0 ;
   char *arg2 = 0 ;
   char *arg3 = 0 ;
-  lldb::SBStructuredData *arg4 = 0 ;
-  lldb::SBError *arg5 = 0 ;
+  uint64_t arg4 ;
+  lldb::SBStructuredData *arg5 = 0 ;
+  lldb::SBError *arg6 = 0 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
   int res2 ;
@@ -70972,15 +71070,17 @@ SWIGINTERN PyObject *_wrap_SBTarget_AddBreakpointOverride(PyObject *self, PyObje
   int res3 ;
   char *buf3 = 0 ;
   int alloc3 = 0 ;
-  void *argp4 = 0 ;
-  int res4 = 0 ;
+  unsigned long long val4 ;
+  int ecode4 = 0 ;
   void *argp5 = 0 ;
   int res5 = 0 ;
-  PyObject *swig_obj[5] ;
+  void *argp6 = 0 ;
+  int res6 = 0 ;
+  PyObject *swig_obj[6] ;
   uint64_t result;
   
   (void)self;
-  if (!SWIG_Python_UnpackTuple(args, "SBTarget_AddBreakpointOverride", 5, 5, swig_obj)) SWIG_fail;
+  if (!SWIG_Python_UnpackTuple(args, "SBTarget_AddBreakpointOverride", 6, 6, swig_obj)) SWIG_fail;
   res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_lldb__SBTarget, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBTarget_AddBreakpointOverride" "', argument " "1"" of type '" "lldb::SBTarget *""'"); 
@@ -70996,25 +71096,30 @@ SWIGINTERN PyObject *_wrap_SBTarget_AddBreakpointOverride(PyObject *self, PyObje
     SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "SBTarget_AddBreakpointOverride" "', argument " "3"" of type '" "char const *""'");
   }
   arg3 = reinterpret_cast< char * >(buf3);
-  res4 = SWIG_ConvertPtr(swig_obj[3], &argp4, SWIGTYPE_p_lldb__SBStructuredData,  0 );
-  if (!SWIG_IsOK(res4)) {
-    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "SBTarget_AddBreakpointOverride" "', argument " "4"" of type '" "lldb::SBStructuredData &""'"); 
-  }
-  if (!argp4) {
-    SWIG_exception_fail(SWIG_NullReferenceError, "invalid null reference " "in method '" "SBTarget_AddBreakpointOverride" "', argument " "4"" of type '" "lldb::SBStructuredData &""'"); 
-  }
-  arg4 = reinterpret_cast< lldb::SBStructuredData * >(argp4);
-  res5 = SWIG_ConvertPtr(swig_obj[4], &argp5, SWIGTYPE_p_lldb__SBError,  0 );
+  ecode4 = SWIG_AsVal_unsigned_SS_long_SS_long(swig_obj[3], &val4);
+  if (!SWIG_IsOK(ecode4)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "SBTarget_AddBreakpointOverride" "', argument " "4"" of type '" "uint64_t""'");
+  } 
+  arg4 = static_cast< uint64_t >(val4);
+  res5 = SWIG_ConvertPtr(swig_obj[4], &argp5, SWIGTYPE_p_lldb__SBStructuredData,  0 );
   if (!SWIG_IsOK(res5)) {
-    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "SBTarget_AddBreakpointOverride" "', argument " "5"" of type '" "lldb::SBError &""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res5), "in method '" "SBTarget_AddBreakpointOverride" "', argument " "5"" of type '" "lldb::SBStructuredData &""'"); 
   }
   if (!argp5) {
-    SWIG_exception_fail(SWIG_NullReferenceError, "invalid null reference " "in method '" "SBTarget_AddBreakpointOverride" "', argument " "5"" of type '" "lldb::SBError &""'"); 
+    SWIG_exception_fail(SWIG_NullReferenceError, "invalid null reference " "in method '" "SBTarget_AddBreakpointOverride" "', argument " "5"" of type '" "lldb::SBStructuredData &""'"); 
   }
-  arg5 = reinterpret_cast< lldb::SBError * >(argp5);
+  arg5 = reinterpret_cast< lldb::SBStructuredData * >(argp5);
+  res6 = SWIG_ConvertPtr(swig_obj[5], &argp6, SWIGTYPE_p_lldb__SBError,  0 );
+  if (!SWIG_IsOK(res6)) {
+    SWIG_exception_fail(SWIG_ArgError(res6), "in method '" "SBTarget_AddBreakpointOverride" "', argument " "6"" of type '" "lldb::SBError &""'"); 
+  }
+  if (!argp6) {
+    SWIG_exception_fail(SWIG_NullReferenceError, "invalid null reference " "in method '" "SBTarget_AddBreakpointOverride" "', argument " "6"" of type '" "lldb::SBError &""'"); 
+  }
+  arg6 = reinterpret_cast< lldb::SBError * >(argp6);
   {
     SWIG_PYTHON_THREAD_BEGIN_ALLOW;
-    result = (uint64_t)(arg1)->AddBreakpointOverride((char const *)arg2,(char const *)arg3,*arg4,*arg5);
+    result = (uint64_t)(arg1)->AddBreakpointOverride((char const *)arg2,(char const *)arg3,arg4,*arg5,*arg6);
     SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = SWIG_From_unsigned_SS_long_SS_long(static_cast< unsigned long long >(result));
@@ -74961,6 +75066,109 @@ SWIGINTERN PyObject *_wrap_SBTarget_GetBasicType(PyObject *self, PyObject *args)
   resultobj = SWIG_NewPointerObj((new lldb::SBType(result)), SWIGTYPE_p_lldb__SBType, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBTarget_FindExpressionTypeForLanguage(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBTarget *arg1 = 0 ;
+  char *arg2 = 0 ;
+  lldb::LanguageType arg3 ;
+  lldb::SBError *arg4 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int res2 ;
+  char *buf2 = 0 ;
+  int alloc2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  void *argp4 = 0 ;
+  int res4 = 0 ;
+  PyObject *swig_obj[4] ;
+  lldb::SBType result;
+  
+  (void)self;
+  if (!SWIG_Python_UnpackTuple(args, "SBTarget_FindExpressionTypeForLanguage", 4, 4, swig_obj)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_lldb__SBTarget, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBTarget_FindExpressionTypeForLanguage" "', argument " "1"" of type '" "lldb::SBTarget *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBTarget * >(argp1);
+  res2 = SWIG_AsCharPtrAndSize(swig_obj[1], &buf2, NULL, &alloc2);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SBTarget_FindExpressionTypeForLanguage" "', argument " "2"" of type '" "char const *""'");
+  }
+  arg2 = reinterpret_cast< char * >(buf2);
+  ecode3 = SWIG_AsVal_int(swig_obj[2], &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "SBTarget_FindExpressionTypeForLanguage" "', argument " "3"" of type '" "lldb::LanguageType""'");
+  } 
+  arg3 = static_cast< lldb::LanguageType >(val3);
+  res4 = SWIG_ConvertPtr(swig_obj[3], &argp4, SWIGTYPE_p_lldb__SBError,  0 );
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "SBTarget_FindExpressionTypeForLanguage" "', argument " "4"" of type '" "lldb::SBError &""'"); 
+  }
+  if (!argp4) {
+    SWIG_exception_fail(SWIG_NullReferenceError, "invalid null reference " "in method '" "SBTarget_FindExpressionTypeForLanguage" "', argument " "4"" of type '" "lldb::SBError &""'"); 
+  }
+  arg4 = reinterpret_cast< lldb::SBError * >(argp4);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (arg1)->FindExpressionTypeForLanguage((char const *)arg2,arg3,*arg4);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_NewPointerObj((new lldb::SBType(result)), SWIGTYPE_p_lldb__SBType, SWIG_POINTER_OWN |  0 );
+  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  return resultobj;
+fail:
+  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBTarget_FindExpressionVariableForLanguage(PyObject *self, PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBTarget *arg1 = 0 ;
+  char *arg2 = 0 ;
+  lldb::LanguageType arg3 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int res2 ;
+  char *buf2 = 0 ;
+  int alloc2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  PyObject *swig_obj[3] ;
+  lldb::SBValue result;
+  
+  (void)self;
+  if (!SWIG_Python_UnpackTuple(args, "SBTarget_FindExpressionVariableForLanguage", 3, 3, swig_obj)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_lldb__SBTarget, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBTarget_FindExpressionVariableForLanguage" "', argument " "1"" of type '" "lldb::SBTarget *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBTarget * >(argp1);
+  res2 = SWIG_AsCharPtrAndSize(swig_obj[1], &buf2, NULL, &alloc2);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SBTarget_FindExpressionVariableForLanguage" "', argument " "2"" of type '" "char const *""'");
+  }
+  arg2 = reinterpret_cast< char * >(buf2);
+  ecode3 = SWIG_AsVal_int(swig_obj[2], &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "SBTarget_FindExpressionVariableForLanguage" "', argument " "3"" of type '" "lldb::LanguageType""'");
+  } 
+  arg3 = static_cast< lldb::LanguageType >(val3);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (arg1)->FindExpressionVariableForLanguage((char const *)arg2,arg3);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_NewPointerObj((new lldb::SBValue(result)), SWIGTYPE_p_lldb__SBValue, SWIG_POINTER_OWN |  0 );
+  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  return resultobj;
+fail:
+  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
   return NULL;
 }
 
@@ -100767,6 +100975,10 @@ static PyMethodDef SwigMethods[] = {
 	 { "SBDebugger_SetTerminalWidth", _wrap_SBDebugger_SetTerminalWidth, METH_VARARGS, "Set the terminal width."},
 	 { "SBDebugger_GetTerminalHeight", _wrap_SBDebugger_GetTerminalHeight, METH_O, "Get the terminal height."},
 	 { "SBDebugger_SetTerminalHeight", _wrap_SBDebugger_SetTerminalHeight, METH_VARARGS, "Set the terminal height."},
+	 { "SBDebugger_SetTerminalDimensions", _wrap_SBDebugger_SetTerminalDimensions, METH_VARARGS, "\n"
+		"Set the terminal width and height together. Prefer this over the\n"
+		"single-axis setters when both are known, e.g. when handling a resize.\n"
+		""},
 	 { "SBDebugger_GetID", _wrap_SBDebugger_GetID, METH_O, "Get the unique ID of this debugger."},
 	 { "SBDebugger_GetPrompt", _wrap_SBDebugger_GetPrompt, METH_O, "Get the command prompt string."},
 	 { "SBDebugger_SetPrompt", _wrap_SBDebugger_SetPrompt, METH_VARARGS, "Set the command prompt string."},
@@ -102231,6 +102443,26 @@ static PyMethodDef SwigMethods[] = {
 		":return: \n"
 		"        A const reference to the file specification object.\n"
 		""},
+	 { "SBModule_GetSeparateDebugInfoFiles", _wrap_SBModule_GetSeparateDebugInfoFiles, METH_O, "\n"
+		"Get the separate debug info files for this module.\n"
+		"\n"
+		"Returns a list of file paths for the separate debug info files\n"
+		"associated with this module. Separate debug info files are\n"
+		"considered any files that are referenced from debug info but\n"
+		"aren't the actual object file that the symbol file parses.\n"
+		"\n"
+		"If this module uses split DWARF it will return a DWARF package\n"
+		"(.dwp) if it exists, otherwise it will return a list of all\n"
+		".dwo files.\n"
+		"\n"
+		"If this module uses DWARF in .o files (Darwin), it will return\n"
+		"a list of all .o files if there is no dSYM file. If a dSYM file\n"
+		"is present, no specifications will be returned since the debug\n"
+		"info is self-contained in the dSYM bundle.\n"
+		"\n"
+		"An empty list will be returned if there are no separate debug\n"
+		"info files for this module.\n"
+		""},
 	 { "SBModule_GetObjectFileHeaderAddress", _wrap_SBModule_GetObjectFileHeaderAddress, METH_O, "SBModule_GetObjectFileHeaderAddress(SBModule self) -> SBAddress"},
 	 { "SBModule_GetObjectFileEntryPointAddress", _wrap_SBModule_GetObjectFileEntryPointAddress, METH_O, "SBModule_GetObjectFileEntryPointAddress(SBModule self) -> SBAddress"},
 	 { "SBModule_IsTypeSystemCompatible", _wrap_SBModule_IsTypeSystemCompatible, METH_VARARGS, "SBModule_IsTypeSystemCompatible(SBModule self, lldb::LanguageType language) -> SBError"},
@@ -102854,6 +103086,16 @@ static PyMethodDef SwigMethods[] = {
 		":return: \n"
 		"        The path to the core file for this target or an invalid file spec if\n"
 		"        the process isn't loaded from a core file.\n"
+		""},
+	 { "SBProcess_IsLiveDebugSession", _wrap_SBProcess_IsLiveDebugSession, METH_O, "\n"
+		"Check whether this process is a live debug session, as opposed to a\n"
+		"post-mortem session such as a core file or minidump.\n"
+		"\n"
+		":rtype: boolean\n"
+		":return: \n"
+		"        **true** if the process represents a live debug session, **false** if it\n"
+		"        is a post-mortem session (e.g. a core file) or there is no underlying\n"
+		"        process.\n"
 		""},
 	 { "SBProcess_GetAddressMask", _wrap_SBProcess_GetAddressMask, METH_VARARGS, "\n"
 		"SBProcess_GetAddressMask(SBProcess self, lldb::AddressMaskType type, lldb::AddressMaskRange addr_range=eAddressMaskRangeLow) -> lldb::addr_t\n"
@@ -104048,7 +104290,8 @@ static PyMethodDef SwigMethods[] = {
 		""},
 	 { "SBTarget_AddBreakpointOverride", _wrap_SBTarget_AddBreakpointOverride, METH_VARARGS, "\n"
 		"Adds a breakpoint override implemented by class_name.  Returns the ID\n"
-		"of the new override or LLDB_INVALID_INDEX64 on error.\n"
+		"of the new override or LLDB_INVALID_INDEX64 on error.  The type_mask\n"
+		"is composed of elements from the lldb::BreakpointResolverType enum.\n"
 		""},
 	 { "SBTarget_RemoveBreakpointOverride", _wrap_SBTarget_RemoveBreakpointOverride, METH_VARARGS, "SBTarget_RemoveBreakpointOverride(SBTarget self, uint64_t id) -> bool"},
 	 { "SBTarget_BreakpointCreateByLocation", _wrap_SBTarget_BreakpointCreateByLocation, METH_VARARGS, "\n"
@@ -104212,6 +104455,42 @@ static PyMethodDef SwigMethods[] = {
 	 { "SBTarget_FindFirstType", _wrap_SBTarget_FindFirstType, METH_VARARGS, "SBTarget_FindFirstType(SBTarget self, char const * type) -> SBType"},
 	 { "SBTarget_FindTypes", _wrap_SBTarget_FindTypes, METH_VARARGS, "SBTarget_FindTypes(SBTarget self, char const * type) -> SBTypeList"},
 	 { "SBTarget_GetBasicType", _wrap_SBTarget_GetBasicType, METH_VARARGS, "SBTarget_GetBasicType(SBTarget self, lldb::BasicType type) -> SBType"},
+	 { "SBTarget_FindExpressionTypeForLanguage", _wrap_SBTarget_FindExpressionTypeForLanguage, METH_VARARGS, "\n"
+		"SBTarget_FindExpressionTypeForLanguage(SBTarget self, char const * typename_cstr, lldb::LanguageType lang, SBError error) -> SBType\n"
+		"\n"
+		"    Look up a persistent type defined using the expression parser.\n"
+		"\n"
+		"    @param[in] type_name\n"
+		"         The base name of the persistent type you defined.\n"
+		"\n"
+		"    @param[in] language\n"
+		"         A member of the enum lldb::LanguageType giving the\n"
+		"         language of the Expression parser you used to define\n"
+		"         the persistent type.\n"
+		"\n"
+		"    @param[out] error\n"
+		"         If there are errors fetching the type, they will be \n"
+		"         returned here.\n"
+		"\n"
+		"    @return\n"
+		"        An SBType representing the persistent type you defined.\n"
+		""},
+	 { "SBTarget_FindExpressionVariableForLanguage", _wrap_SBTarget_FindExpressionVariableForLanguage, METH_VARARGS, "\n"
+		"SBTarget_FindExpressionVariableForLanguage(SBTarget self, char const * varname_cstr, lldb::LanguageType lang) -> SBValue\n"
+		"\n"
+		"    Look up a persistent variable defined using the expression parser.\n"
+		"\n"
+		"    @param[in] variable_name\n"
+		"         The name of the persistent variable you defined.\n"
+		"\n"
+		"    @param[in] language\n"
+		"	 A member of the enum lldb::LanguageType giving	the\n"
+		"	 language of the Expression parser you used to define\n"
+		"	 the persistent type.\n"
+		"\n"
+		"    @return\n"
+		"        An SBValue representing the persistent variable you defined.\n"
+		""},
 	 { "SBTarget_CreateValueFromAddress", _wrap_SBTarget_CreateValueFromAddress, METH_VARARGS, "\n"
 		"SBTarget_CreateValueFromAddress(SBTarget self, char const * name, SBAddress addr, SBType type) -> SBValue\n"
 		"\n"
@@ -108395,12 +108674,9 @@ SWIGINTERN int SWIG_mod_exec(PyObject *m) {
   SWIG_Python_SetConstant(d, "eValueTypeVariableThreadLocal",SWIG_From_int(static_cast< int >(lldb::eValueTypeVariableThreadLocal)));
   SWIG_Python_SetConstant(d, "eValueTypeVTable",SWIG_From_int(static_cast< int >(lldb::eValueTypeVTable)));
   SWIG_Python_SetConstant(d, "eValueTypeVTableEntry",SWIG_From_int(static_cast< int >(lldb::eValueTypeVTableEntry)));
-  globals = SWIG_globals();
-  if (!globals) {
-    PyErr_SetString(PyExc_TypeError, "Failure to create SWIG globals.");
-    return -1;
-  }
-  PyDict_SetItemString(md, "cvar", globals);
+  SWIG_Python_SetConstant(d, "kLastValueType",SWIG_From_int(static_cast< int >(lldb::kLastValueType)));
+  SWIG_Python_SetConstant(d, "eValueTypeSyntheticFlag",SWIG_From_int(static_cast< int >(lldb::eValueTypeSyntheticFlag)));
+  SWIG_Python_SetConstant(d, "kValueTypeFlagsMask",SWIG_From_int(static_cast< int >(lldb::kValueTypeFlagsMask)));
   SWIG_Python_SetConstant(d, "eInputReaderGranularityInvalid",SWIG_From_int(static_cast< int >(lldb::eInputReaderGranularityInvalid)));
   SWIG_Python_SetConstant(d, "eInputReaderGranularityByte",SWIG_From_int(static_cast< int >(lldb::eInputReaderGranularityByte)));
   SWIG_Python_SetConstant(d, "eInputReaderGranularityWord",SWIG_From_int(static_cast< int >(lldb::eInputReaderGranularityWord)));
@@ -108641,6 +108917,7 @@ SWIGINTERN int SWIG_mod_exec(PyObject *m) {
   SWIG_Python_SetConstant(d, "eArgTypeExceptionStage",SWIG_From_int(static_cast< int >(lldb::eArgTypeExceptionStage)));
   SWIG_Python_SetConstant(d, "eArgTypeNameMatchStyle",SWIG_From_int(static_cast< int >(lldb::eArgTypeNameMatchStyle)));
   SWIG_Python_SetConstant(d, "eArgTypePluginDomain",SWIG_From_int(static_cast< int >(lldb::eArgTypePluginDomain)));
+  SWIG_Python_SetConstant(d, "eArgTypeBreakpointResolverMask",SWIG_From_int(static_cast< int >(lldb::eArgTypeBreakpointResolverMask)));
   SWIG_Python_SetConstant(d, "eArgTypeLastArg",SWIG_From_int(static_cast< int >(lldb::eArgTypeLastArg)));
   SWIG_Python_SetConstant(d, "eSymbolTypeAny",SWIG_From_int(static_cast< int >(lldb::eSymbolTypeAny)));
   SWIG_Python_SetConstant(d, "eSymbolTypeInvalid",SWIG_From_int(static_cast< int >(lldb::eSymbolTypeInvalid)));
@@ -109073,6 +109350,20 @@ SWIGINTERN int SWIG_mod_exec(PyObject *m) {
   SWIG_Python_SetConstant(d, "eBinaryInformationLevelAddrName",SWIG_From_int(static_cast< int >(lldb::eBinaryInformationLevelAddrName)));
   SWIG_Python_SetConstant(d, "eBinaryInformationLevelAddrNameUUID",SWIG_From_int(static_cast< int >(lldb::eBinaryInformationLevelAddrNameUUID)));
   SWIG_Python_SetConstant(d, "eBinaryInformationLevelFull",SWIG_From_int(static_cast< int >(lldb::eBinaryInformationLevelFull)));
+  SWIG_Python_SetConstant(d, "eResolverUnknown",SWIG_From_int(static_cast< int >(lldb::eResolverUnknown)));
+  SWIG_Python_SetConstant(d, "eResolverFileAndLine",SWIG_From_int(static_cast< int >(lldb::eResolverFileAndLine)));
+  SWIG_Python_SetConstant(d, "eResolverAddress",SWIG_From_int(static_cast< int >(lldb::eResolverAddress)));
+  SWIG_Python_SetConstant(d, "eResolverName",SWIG_From_int(static_cast< int >(lldb::eResolverName)));
+  SWIG_Python_SetConstant(d, "eResolverFileRegex",SWIG_From_int(static_cast< int >(lldb::eResolverFileRegex)));
+  SWIG_Python_SetConstant(d, "eResolverPython",SWIG_From_int(static_cast< int >(lldb::eResolverPython)));
+  SWIG_Python_SetConstant(d, "eResolverException",SWIG_From_int(static_cast< int >(lldb::eResolverException)));
+  SWIG_Python_SetConstant(d, "eResolverLastKnown",SWIG_From_int(static_cast< int >(lldb::eResolverLastKnown)));
+  globals = SWIG_globals();
+  if (!globals) {
+    PyErr_SetString(PyExc_TypeError, "Failure to create SWIG globals.");
+    return -1;
+  }
+  PyDict_SetItemString(md, "cvar", globals);
   SWIG_Python_SetConstant(d, "SBCommandInterpreter_eBroadcastBitThreadShouldExit",SWIG_From_int(static_cast< int >(lldb::SBCommandInterpreter::eBroadcastBitThreadShouldExit)));
   SWIG_Python_SetConstant(d, "SBCommandInterpreter_eBroadcastBitResetPrompt",SWIG_From_int(static_cast< int >(lldb::SBCommandInterpreter::eBroadcastBitResetPrompt)));
   SWIG_Python_SetConstant(d, "SBCommandInterpreter_eBroadcastBitQuitCommandReceived",SWIG_From_int(static_cast< int >(lldb::SBCommandInterpreter::eBroadcastBitQuitCommandReceived)));
@@ -109153,7 +109444,7 @@ SWIGINTERN int SWIG_mod_exec(PyObject *m) {
   
   /* Initialize threading */
   SWIG_PYTHON_INITIALIZE_THREADS;
-  SWIG_addvarlink(globals, "ValueTypeSyntheticMask", Swig_var_ValueTypeSyntheticMask_get, Swig_var_ValueTypeSyntheticMask_set);
+  SWIG_addvarlink(globals, "BreakpointResolverAllResolversMask", Swig_var_BreakpointResolverAllResolversMask_get, Swig_var_BreakpointResolverAllResolversMask_set);
   return 0;
 }
 
