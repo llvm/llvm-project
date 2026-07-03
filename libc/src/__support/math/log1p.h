@@ -882,6 +882,72 @@ LIBC_INLINE_VAR constexpr DFloat128 BIG_COEFFS[4]{
 }
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
+// Core range reduction + polynomial evaluation + Ziv rounding test for log.
+// Computes log(x_dd * 2^e_adj) where x_dd.hi is a normal positive finite
+// double. e_adj lets callers compute log(2^k * x) without forming 2^k * x
+// (e.g., to avoid overflow when k = 1 and x >= 2^1023).
+LIBC_INLINE double log_dd_core(fputil::DoubleDouble x_dd, int e_adj) {
+  using FPBits = fputil::FPBits<double>;
+  constexpr int EXP_BIAS = FPBits::EXP_BIAS;
+  constexpr int FRACTION_LEN = FPBits::FRACTION_LEN;
+
+  FPBits xhi_bits(x_dd.hi);
+  uint64_t xhi_frac = xhi_bits.get_mantissa();
+  uint64_t xdd_u = xhi_bits.uintval();
+
+  int idx = static_cast<int>((xhi_frac + (1ULL << (FRACTION_LEN - 8))) >>
+                             (FRACTION_LEN - 7));
+  int x_e = xhi_bits.get_exponent() + (idx >> 7) + e_adj;
+  double e_x = static_cast<double>(x_e);
+
+  double hi = fputil::multiply_add(e_x, LOG_2_HI, LOG_R1_DD[idx].hi);
+  double lo = fputil::multiply_add(e_x, LOG_2_LO, LOG_R1_DD[idx].lo);
+
+  int64_t s_u = static_cast<int64_t>(xdd_u & FPBits::EXP_MASK) -
+                (static_cast<int64_t>(EXP_BIAS) << FRACTION_LEN);
+
+  uint64_t m_hi = FPBits::one().uintval() | xhi_frac;
+  uint64_t m_lo =
+      FPBits(x_dd.lo).abs().get_val() > x_dd.hi * 0x1.0p-127
+          ? static_cast<uint64_t>(cpp::bit_cast<int64_t>(x_dd.lo) - s_u)
+          : 0;
+  fputil::DoubleDouble m_dd{FPBits(m_lo).get_val(), FPBits(m_hi).get_val()};
+
+  double r = R1[idx];
+  fputil::DoubleDouble v_lo_p = fputil::exact_mult(m_dd.lo, r);
+  double v_hi_p;
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
+  v_hi_p = fputil::multiply_add(r, m_dd.hi, -1.0);
+#else
+  double c = FPBits((static_cast<uint64_t>(idx) << (FRACTION_LEN - 7)) +
+                    uint64_t(0x3FF0'0000'0000'0000ULL))
+                 .get_val();
+  v_hi_p = fputil::multiply_add(r, m_dd.hi - c, RCM1[idx]);
+#endif
+
+  fputil::DoubleDouble v_dd = fputil::exact_add(v_hi_p, v_lo_p.hi);
+  v_dd.lo += v_lo_p.lo;
+
+  fputil::DoubleDouble r1 = fputil::exact_add(hi, v_dd.hi);
+  double v_sq = v_dd.hi * v_dd.hi;
+  double p0 = fputil::multiply_add(v_dd.hi, P_COEFFS[1], P_COEFFS[0]);
+  double p1 = fputil::multiply_add(v_dd.hi, P_COEFFS[3], P_COEFFS[2]);
+  double p2 = fputil::multiply_add(v_dd.hi, P_COEFFS[5], P_COEFFS[4]);
+  double p = fputil::polyeval(v_sq, (v_dd.lo + r1.lo) + lo, p0, p1, p2);
+
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+  return r1.hi + p;
+#else
+  constexpr double ERR_HI[2] = {0x1.0p-85, 0.0};
+  double err = fputil::multiply_add(v_sq, P_ERR, ERR_HI[hi == 0.0]);
+  double left = r1.hi + (p - err);
+  double right = r1.hi + (p + err);
+  if (LIBC_LIKELY(left == right))
+    return left;
+  return log1p_accurate(x_e, idx, v_dd);
+#endif
+}
+
 } // namespace log1p_internal
 
 LIBC_INLINE double log1p(double x) {
@@ -965,102 +1031,7 @@ LIBC_INLINE double log1p(double x) {
   //   |x_dd.hi| >= 2^-54
   //   |x_dd.lo| < ulp(x_dd.hi)
 
-  FPBits_t xhi_bits(x_dd.hi);
-  uint64_t xhi_frac = xhi_bits.get_mantissa();
-  x_u = xhi_bits.uintval();
-  // Range reduction:
-  // Find k such that |x_hi - k * 2^-7| <= 2^-8.
-  int idx = static_cast<int>((xhi_frac + (1ULL << (FRACTION_LEN - 8))) >>
-                             (FRACTION_LEN - 7));
-  int x_e = xhi_bits.get_exponent() + (idx >> 7);
-  double e_x = static_cast<double>(x_e);
-
-  // hi is exact
-  // ulp(hi) = ulp(LOG_2_HI) = ulp(LOG_R1_DD[idx].hi) = 2^-43
-  double hi = fputil::multiply_add(e_x, LOG_2_HI, LOG_R1_DD[idx].hi);
-  // lo errors < |e_x| * ulp(LOG_2_LO) + ulp(LOG_R1[idx].lo)
-  //           <= 2^11 * 2^(-43-53) = 2^-85
-  double lo = fputil::multiply_add(e_x, LOG_2_LO, LOG_R1_DD[idx].lo);
-
-#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-  // Error bound of e_x * log(2) - log(r1)
-  constexpr double ERR_HI[2] = {0x1.0p-85, 0.0};
-  double err_hi = ERR_HI[hi == 0.0];
-#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-
-  // Scale x_dd by 2^(-xh_bits.get_exponent()).
-  int64_t s_u = static_cast<int64_t>(x_u & FPBits_t::EXP_MASK) -
-                (static_cast<int64_t>(EXP_BIAS) << FRACTION_LEN);
-  // Normalize arguments:
-  //   1 <= m_dd.hi < 2
-  //   |m_dd.lo| < 2^-52.
-  // This is exact.
-  uint64_t m_hi = FPBits_t::one().uintval() | xhi_frac;
-
-  uint64_t m_lo =
-      FPBits_t(x_dd.lo).abs().get_val() > x_dd.hi * 0x1.0p-127
-          ? static_cast<uint64_t>(cpp::bit_cast<int64_t>(x_dd.lo) - s_u)
-          : 0;
-
-  fputil::DoubleDouble m_dd{FPBits_t(m_lo).get_val(), FPBits_t(m_hi).get_val()};
-
-  // Perform range reduction:
-  //   r * m - 1 = r * (m_dd.hi + m_dd.lo) - 1
-  //             = (r * m_dd.hi - 1) + r * m_dd.lo
-  //             = v_hi + (v_lo.hi + v_lo.lo)
-  // where:
-  //   v_hi = r * m_dd.hi - 1          (exact)
-  //   v_lo.hi + v_lo.lo = r * m_dd.lo (exact)
-  // Bounds on the values:
-  //   -0x1.69000000000edp-8 < r * m - 1 < 0x1.7f00000000081p-8
-  //   |v_lo.hi| <= |r| * |m_dd.lo| < 2^-52
-  //   |v_lo.lo| < ulp(v_lo.hi) <= 2^(-52 - 53) = 2^(-105)
-  double r = R1[idx];
-  fputil::DoubleDouble v_lo = fputil::exact_mult(m_dd.lo, r);
-
-  // Perform exact range reduction
-#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
-  double v_hi = fputil::multiply_add(r, m_dd.hi, -1.0); // Exact.
-#else
-  // c = 1 + idx * 2^-7.
-  double c = FPBits_t((static_cast<uint64_t>(idx) << (FRACTION_LEN - 7)) +
-                      uint64_t(0x3FF0'0000'0000'0000ULL))
-                 .get_val();
-  double v_hi = fputil::multiply_add(r, m_dd.hi - c, RCM1[idx]); // Exact
-#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
-
-  // Range reduction output:
-  //   -0x1.69000000000edp-8 < v_hi + v_lo < 0x1.7f00000000081p-8
-  //   |v_dd.lo| < ulp(v_dd.hi) <= 2^(-7 - 53) = 2^-60
-  fputil::DoubleDouble v_dd = fputil::exact_add(v_hi, v_lo.hi);
-  v_dd.lo += v_lo.lo;
-
-  // Exact sum:
-  //   r1.hi + r1.lo = e_x * log(2)_hi - log(r)_hi + u
-  fputil::DoubleDouble r1 = fputil::exact_add(hi, v_dd.hi);
-
-  // Overall error is bounded by:
-  //   C * ulp(v_sq) + err_hi
-  double v_sq = v_dd.hi * v_dd.hi;
-  double p0 = fputil::multiply_add(v_dd.hi, P_COEFFS[1], P_COEFFS[0]);
-  double p1 = fputil::multiply_add(v_dd.hi, P_COEFFS[3], P_COEFFS[2]);
-  double p2 = fputil::multiply_add(v_dd.hi, P_COEFFS[5], P_COEFFS[4]);
-  double p = fputil::polyeval(v_sq, (v_dd.lo + r1.lo) + lo, p0, p1, p2);
-
-#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-  return r1.hi + p;
-#else
-  double err = fputil::multiply_add(v_sq, P_ERR, err_hi);
-
-  double left = r1.hi + (p - err);
-  double right = r1.hi + (p + err);
-
-  // Ziv's test to see if fast pass is accurate enough.
-  if (left == right)
-    return left;
-
-  return log1p_accurate(x_e, idx, v_dd);
-#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+  return log_dd_core(x_dd, 0);
 }
 
 } // namespace math
