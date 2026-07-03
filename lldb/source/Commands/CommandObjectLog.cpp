@@ -271,13 +271,11 @@ protected:
       Log::DisableAllLogChannels();
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
-      std::string error;
-      llvm::raw_string_ostream error_stream(error);
-      if (Log::DisableLogChannel(channel, args.GetArgumentArrayRef(),
-                                 error_stream))
-        result.SetStatus(eReturnStatusSuccessFinishNoResult);
+      if (llvm::Error err =
+              Log::DisableLogChannel(channel, args.GetArgumentArrayRef()))
+        result.AppendError(toString(std::move(err)));
       else
-        result.AppendError(error);
+        result.SetStatus(eReturnStatusSuccessFinishNoResult);
     }
   }
 };
