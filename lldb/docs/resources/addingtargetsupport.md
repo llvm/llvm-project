@@ -14,7 +14,7 @@ This document provides some hints on implementation, but because every target
 is unique, we expect developers to learn about implementation from existing
 targets.
 
-This document starts with the end of the process, proposing your taret for
+This document starts with the end of the process, proposing your target for
 upstream inclusion. It is worth reading through this even if that is not one of
 your goals, as you will have to tackle the same topics even in a downstream
 implementation.
@@ -31,13 +31,7 @@ We require an RFC for target support upstreaming because:
 * We want ensure there is some level of public discussion on the topic.
   It is important that details, even those obvious to the community at the time,
   are written down so that future readers may learn from it.
-
-  :::{note}
-  Assuming they were done in good faith, these discussions are not to be used
-  to personally criticise anyone after the fact. Situations change, people make
-  mistakes, and that is ok.
-
-* These discussions forms the basis for future proposals and the assessment
+* These discussions form the basis for future proposals and the assessment
   of those proposals. Every proposal will be different in some way, and by
   contrast with the past we can do the best job assessing them.
 
@@ -60,7 +54,8 @@ leave some out, or explain why they do not apply to their proposal.
 
 If you do use these points, they need to come with an answer and evidence to
 justify the answer. Rather than simply "yes this applies to my target".
-In other words, your proposal must stand alone without requiring readers to read this document as well.
+In other words, your proposal must stand alone without requiring readers to read
+this document as well.
 
 The first set cover your motivation for your being upstream rather
 than on a fork:
@@ -85,7 +80,8 @@ adequately maintain the code upstream:
 * Who will be the maintainers for this target? Ideally there will be more than
   one, who is present in the LLVM community and can be contacted
   in a few different ways.
-* How often will it be tested, where, by whom and who will pay for it?
+* How often will it be tested, where, by whom and who will be responsible for
+  it?
 * Who will address problems with it? Will it always be the named maintainers,
   is it so common that anyone in upstream LLDB can deal with it, or perhaps
   only employees of a specific company will be required to work on it.
@@ -98,15 +94,16 @@ adequately maintain the code upstream:
 
 ## The Extent of Target Support
 
-Many of the factors mentioned above are on a spectrum. Not everyone can commit
-to spend maximum time, money, or effort on all those things. This is ok, not
-every target needs that and not every contributor is able to commit to that.
+The factors above are part of a cost benefit analysis that the LLDB community
+will do, prioritising the health of the community and the project. This means
+that there is no set level or type of commitment required for a new target.
 
-We need you to help us understand the scope of your target's impact on LLDB. So
-below are some questions and sterotypical "small" and "big" answers.
+Each case will have unqiue aspects, so you need to tell the community how much
+impact your target will have on LLDB. Below are some questions you can start
+with, along with stereotypical "big" and "small" answers.
 
-These are deliberately not "maximum" and "minimum" as that will vary between
-targets.
+Note that these are intentionally not maximums and minimums. Some target's
+impact will be bigger than "big" or smaller than "small".
 
 * How many users will use LLDB with this target?
   * Big: millions of developers worldwide.
@@ -133,7 +130,7 @@ targets.
   * Small: you and your target's community.
 * How do I reproduce a problem on this target?
   * Big: all components are open source and can be run anywhere by using
-    simulations.
+    simulations with very little setup.
   * Small: you contact the maintainer and they do it for you.
 * Who will fix problems?
   * Big: the maintainers and a large group of contributors.
@@ -146,9 +143,10 @@ how your target compares to these.
 
 ### Apple Targets
 
-Apple targets have possibly the most extensive support in LLDB:
-* Changes from LLVM's main branch are continuously tested. Results are accessible
-  publicly, and reported to all LLDB contributors.
+Apple targets have possibly the most extensive support in LLDB.
+
+* Changes from LLVM's main branch are continuously tested. Results are
+  accessible publicly, and reported to all LLDB contributors.
 * Many employees contribute upstream and are maintainers for these targets.
 * Target specific problems are either solved by the upstream community with
   maintainer input, or by the maintainers themselves.
@@ -162,7 +160,8 @@ Apple targets have possibly the most extensive support in LLDB:
 
 ### FreeBSD
 
-FreeBSD is an example of quite self contained support, managed by the project's community.
+FreeBSD is an example of quite self contained support, managed by the project's
+community.
 
 * FreeBSD is open source and available to anyone to build, modify, run on
   hardware, emulate or virtualize.
@@ -178,12 +177,13 @@ FreeBSD is an example of quite self contained support, managed by the project's 
 
 ### Linux
 
-Linux is an example where the Linux community as a whole does not do all the work
-of Linux support. Some architectures have a wide contributor base and others
-have company specific contributors.
+Linux is an example where the Linux community as a whole does not do all the
+work of Linux support. Some architectures have a wide contributor base and
+others have company specific contributors.
 
-* Linux is open source, freely available, to be installed on hardware, virtualised,
-  emulated, and so on. Most problems can be reproduced in more than one way.
+* Linux is open source, freely available, to be installed on hardware,
+  virtualised, emulated, and so on. Most problems can be reproduced in more than
+  one way.
 * Continuous testing for many supported architectures, often supported by the
   architecture vendor.
 * Remaining architectures are tested per release, or every other release.
@@ -204,7 +204,8 @@ is the most minimal example.
 * It does not use `lldb-server`, and `lldb` only required minor adjustments to
   be compatible with the commonly used debug server.
 * An ABI plugin was added, which is isolated to MSP430 only.
-* It is not systematically tested anywhere, but gets some use by MSP430 developers.
+* It is not systematically tested anywhere, but gets some use by MSP430
+  developers.
 * It has no documented maintainer.
 * We rely on users to report issues with it, and would likely guide them to fix
   them themselves.
@@ -222,15 +223,16 @@ Assuming that:
 * You want to port most of the LLDB features, which means porting both `lldb`
   and `lldb-server`.
 
-Then this is a list of components you will need to write. If your target is similar
-to others you may be able to reuse existing components and we encourage you to do
-so.
+Then this is a list of components you will need to write. If your target is
+similar to others you may be able to reuse existing components and we encourage
+you to do so.
 
 First the components concerned with operating systems:
 
 * A `Platform` plugin. For example `PlatformLinux`.
 * A `HostInfo` plugin. For example `HostInfoLinux`.
-* A native process plugin (native means it runs on your target). For example `NativeProcessLinux`.
+* A native process plugin (native means it runs on your target). For example
+  `NativeProcessLinux`.
 * Signal information. For example `LinuxSignals`.
 * A dynamic loader plugin. For example `DynamicLoaderPOSIXDYLD`.
 * An object file plugin. For example `ObjectFileELF`.
@@ -240,8 +242,8 @@ inexact):
 
 * ABI plugin. For example `ABISysV_arm64`.
 * Architecture plugin. For example `ArchitectureAArch64`.
-* Register definitions and register context (a context is a collection of registers).
-  For example `NativeRegisterContextLinux_arm64`.
+* Register definitions and register context (a context is a collection of
+  registers). For example `NativeRegisterContextLinux_arm64`.
 * Instruction emulation. Most targets need a small amount for unwind purposes,
   but if you lack hardware single step you will need a lot more. For example
   `EmulateInstructionARM64`.
