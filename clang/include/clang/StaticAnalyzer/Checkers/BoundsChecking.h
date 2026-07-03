@@ -107,12 +107,10 @@ struct CheckFlags {
   unsigned AcceptPastTheEnd : 1;
 };
 
-class CheckResult {
-public:
-  enum class Kind { Valid, Invalid, TaintBug, CorruptedState };
+class CheckResult;
 
-private:
-  Kind K = Kind::Valid;
+class CheckInfo {
+protected:
   // Changed to true if we see that underflow was not ruled out by the previous
   // knowledge about the offset.
   bool UnderflowFeasible = false;
@@ -122,16 +120,37 @@ private:
   // is irrelevant because overflow was ruled out by previous knowledge about
   // the offset and extent.
   std::optional<NonLoc> Extent = std::nullopt;
+
+public:
+  bool hasAssumption() const { return UnderflowFeasible || Extent; }
+
+  friend CheckResult checkBounds(ProgramStateRef State, SValBuilder &SVB,
+                                 NonLoc Offset, std::optional<NonLoc> Extent,
+                                 CheckFlags Flags);
+
+protected:
+  CheckInfo(NonLoc Offs) : Offset(Offs) {}
+
+  void recordUnderflowFeasible() { UnderflowFeasible = true; }
+  void recordRelevantExtent(NonLoc E) { Extent = E; }
+  void discardExtentInformation() { Extent = std::nullopt; }
+};
+
+class CheckResult : public CheckInfo {
+public:
+  enum class Kind { Valid, Invalid, TaintBug, CorruptedState };
+
+private:
+  Kind K = Kind::Valid;
   ProgramStateRef State = nullptr;
 
-  CheckResult(NonLoc Offs) : Offset(Offs) {}
+  CheckResult(CheckInfo CI, Kind K_, ProgramStateRef S)
+      : CheckInfo(CI), K(K_), State(S) {}
 
 public:
   friend CheckResult checkBounds(ProgramStateRef State, SValBuilder &SVB,
                                  NonLoc Offset, std::optional<NonLoc> Extent,
                                  CheckFlags Flags);
-
-  bool hasAssumption() const { return UnderflowFeasible || Extent; }
 
   ProgramStateRef getState() const { return State; }
 
@@ -152,26 +171,7 @@ public:
     return Res;
   }
 
-private:
-  void recordUnderflowFeasible() { UnderflowFeasible = true; }
-  void recordRelevantExtent(NonLoc E) { Extent = E; }
-  void discardExtentInformation() { Extent = std::nullopt; }
-
-  void finalize(Kind K_, ProgramStateRef S) {
-    K = K_;
-    State = S;
-  }
-
-  const char *offsetAdjective() const {
-    return UnderflowFeasible
-               ? (Extent ? "a negative or overflowing" : "a negative")
-               : (Extent ? "an overflowing" : "a valid");
-  }
-  const char *offsetPreposition() const {
-    return UnderflowFeasible ? (Extent ? "around" : "preceding")
-                             : (Extent ? "after the end of" : "in");
-  }
-
+protected:
   /// Return true if information about the symbol behind `SV` can constrain
   /// some symbol which is interesting within the bug report `BR`.
   /// In particular, this returns true when `SV` is interesting within `BR`;
@@ -188,6 +188,15 @@ private:
   /// to detect this out of bounds access).
   static bool providesInformationAboutInteresting(SVal SV,
                                                   PathSensitiveBugReport &BR);
+  const char *offsetAdjective() const {
+    return UnderflowFeasible
+               ? (Extent ? "a negative or overflowing" : "a negative")
+               : (Extent ? "an overflowing" : "a valid");
+  }
+  const char *offsetPreposition() const {
+    return UnderflowFeasible ? (Extent ? "around" : "preceding")
+                             : (Extent ? "after the end of" : "in");
+  }
 };
 
 CheckResult checkBounds(ProgramStateRef State, SValBuilder &SVB, NonLoc Offset,

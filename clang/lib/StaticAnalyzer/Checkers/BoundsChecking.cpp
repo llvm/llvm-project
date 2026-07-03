@@ -344,7 +344,8 @@ bool bounds::CheckResult::providesInformationAboutInteresting(
 CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB,
                                 NonLoc Offset, std::optional<NonLoc> Extent,
                                 CheckFlags Flags) {
-  CheckResult Res(Offset);
+  CheckInfo CI(Offset);
+  using CRK = CheckResult::Kind;
 
   // CHECK LOWER BOUND
   if (Flags.CheckUnderflow) {
@@ -352,7 +353,7 @@ CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB,
         compareValueToThreshold(State, Offset, SVB.makeZeroArrayIndex(), SVB);
 
     if (PrecedesLowerBound) {
-      Res.recordUnderflowFeasible();
+      CI.recordUnderflowFeasible();
       // The analyzer thinks that the offset may be invalid (negative)...
       if (Flags.OffsetObviouslyNonnegative) {
         // ...but the offset is obviously non-negative (clear array subscript
@@ -373,8 +374,7 @@ CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB,
 
         if (!WithinLowerBound) {
           // The state is corrupted -- let's just sink it!
-          Res.finalize(CheckResult::Kind::CorruptedState, PrecedesLowerBound);
-          return Res;
+          return CheckResult(CI, CRK::CorruptedState, PrecedesLowerBound);
         }
         // Otherwise continue on the 'WithinLowerBound' branch where the
         // unsigned index _is_ non-negative. Don't mention this assumption as a
@@ -382,8 +382,7 @@ CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB,
       } else {
         if (!WithinLowerBound) {
           // ...and it cannot be valid (>= 0), so report an error.
-          Res.finalize(CheckResult::Kind::Invalid, PrecedesLowerBound);
-          return Res;
+          return CheckResult(CI, CRK::Invalid, PrecedesLowerBound);
         }
         // ...but it can be valid as well, so the checker will (optimistically)
         // assume that it's valid and mention this in the note tag.
@@ -403,7 +402,7 @@ CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB,
         compareValueToThreshold(State, Offset, *Extent, SVB);
 
     if (ExceedsUpperBound) {
-      Res.recordRelevantExtent(*Extent);
+      CI.recordRelevantExtent(*Extent);
 
       // The offset may be invalid (>= Size)...
       if (!WithinUpperBound) {
@@ -418,22 +417,19 @@ CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB,
             // expression, which is valid and well-defined. We discard the
             // extent information because otherwise we would get an
             // inappropriate note tag about "assuming offset < extent".
-            Res.discardExtentInformation();
-            Res.finalize(CheckResult::Kind::Valid, State);
-            return Res;
+            CI.discardExtentInformation();
+            return CheckResult(CI, CRK::Valid, State);
           }
         }
 
         // Straightforward overflow, report an error.
-        Res.finalize(CheckResult::Kind::Invalid, ExceedsUpperBound);
-        return Res;
+        return CheckResult(CI, CRK::Invalid, ExceedsUpperBound);
       }
 
       // ...and it can be valid as well...
       if (taint::isTainted(State, Offset)) {
         // ...but it's tainted, so report an error.
-        Res.finalize(CheckResult::Kind::TaintBug, State);
-        return Res;
+        return CheckResult(CI, CRK::TaintBug, State);
       }
       // ...and it isn't tainted, so the checker will (optimistically) assume
       // that the offset is in bounds and mention this in the note tag.
@@ -445,6 +441,5 @@ CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB,
     if (WithinUpperBound)
       State = WithinUpperBound;
   }
-  Res.finalize(CheckResult::Kind::Valid, State);
-  return Res;
+  return CheckResult(CI, CRK::Valid, State);
 }
