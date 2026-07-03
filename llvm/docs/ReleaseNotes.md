@@ -102,7 +102,6 @@ Makes programs 10x faster by doing Special New Thing.
   outlining. Add the `noinline` and `nooutline` attributes as well in cases
   where inlining and outlining should additionally be disabled.
 
-<<<<<<< HEAD
 * Added support for ``callgraph`` metadata. The `!callgraph` metadata
   associates a function definition with its type identifier and is used for call
   graph section generation. See the [callgraph Metadata](https://llvm.org/docs/LangRef.html#callgraph-metadata)
