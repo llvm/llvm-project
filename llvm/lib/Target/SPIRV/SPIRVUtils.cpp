@@ -257,9 +257,10 @@ void buildOpName(Register Target, const StringRef &Name, MachineInstr &I,
 }
 
 static void finishBuildOpDecorate(MachineInstrBuilder &MIB,
+                                  SPIRV::Decoration::Decoration Dec,
                                   ArrayRef<uint32_t> DecArgs,
                                   StringRef StrImm) {
-  if (!StrImm.empty())
+  if (!StrImm.empty() || Dec == SPIRV::Decoration::LinkageAttributes)
     addStringImm(StrImm, MIB);
   for (const auto &DecArg : DecArgs)
     MIB.addImm(DecArg);
@@ -271,7 +272,7 @@ void buildOpDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate)
                  .addUse(Reg)
                  .addImm(static_cast<uint32_t>(Dec));
-  finishBuildOpDecorate(MIB, DecArgs, StrImm);
+  finishBuildOpDecorate(MIB, Dec, DecArgs, StrImm);
 }
 
 void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
@@ -281,7 +282,7 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
   auto MIB = BuildMI(MBB, I, I.getDebugLoc(), TII.get(SPIRV::OpDecorate))
                  .addUse(Reg)
                  .addImm(static_cast<uint32_t>(Dec));
-  finishBuildOpDecorate(MIB, DecArgs, StrImm);
+  finishBuildOpDecorate(MIB, Dec, DecArgs, StrImm);
 }
 
 void buildOpMemberDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
@@ -291,7 +292,7 @@ void buildOpMemberDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
                  .addUse(Reg)
                  .addImm(Member)
                  .addImm(static_cast<uint32_t>(Dec));
-  finishBuildOpDecorate(MIB, DecArgs, StrImm);
+  finishBuildOpDecorate(MIB, Dec, DecArgs, StrImm);
 }
 
 void buildOpMemberDecorate(Register Reg, MachineInstr &I,
@@ -303,7 +304,7 @@ void buildOpMemberDecorate(Register Reg, MachineInstr &I,
                  .addUse(Reg)
                  .addImm(Member)
                  .addImm(static_cast<uint32_t>(Dec));
-  finishBuildOpDecorate(MIB, DecArgs, StrImm);
+  finishBuildOpDecorate(MIB, Dec, DecArgs, StrImm);
 }
 
 void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
