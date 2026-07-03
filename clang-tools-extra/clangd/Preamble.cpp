@@ -728,11 +728,26 @@ bool isPreambleCompatible(const PreambleData &Preamble,
   auto Bounds = computePreambleBounds(CI.getLangOpts(), *ContentsBuffer,
                                       Inputs.Opts.SkipPreambleBuild);
   auto VFS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
+
+  // Check that the set of required modules hasn't changed.
+  // Preamble.RequiredModules->canReuse only verifies that the previously
+  // built module files are still up-to-date, but it cannot detect when a new
+  // import has been introduced.
+  auto RequiredModulesMatch = [&]() -> bool {
+    if (!Inputs.ModulesManager || !Preamble.RequiredModules)
+      return true;
+    auto NewNames = Inputs.ModulesManager->getRequiredModuleNames(FileName);
+    llvm::StringSet<> NewNameSet;
+    NewNameSet.insert_range(NewNames);
+    return NewNameSet == Preamble.RequiredModules->getRequiredModuleNames();
+  };
+
   return compileCommandsAreEqual(Inputs.CompileCommand,
                                  Preamble.CompileCommand) &&
          Preamble.Preamble.CanReuse(CI, *ContentsBuffer, Bounds, *VFS) &&
          (!Preamble.RequiredModules ||
-          Preamble.RequiredModules->canReuse(CI, VFS));
+          Preamble.RequiredModules->canReuse(CI, VFS)) &&
+         RequiredModulesMatch();
 }
 
 void escapeBackslashAndQuotes(llvm::StringRef Text, llvm::raw_ostream &OS) {
