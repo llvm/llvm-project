@@ -5428,9 +5428,7 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
       // Total shuffle cost: (Factor - 1) deinterleave2 operations, each
       // processing LT.first legal vector parts,with one uzp shuffle per part.
       auto LT = getTypeLegalizationCost(VecTy);
-      InstructionCost ShuffleCost = (Factor - 1) * LT.first;
-
-      return MemCost + ShuffleCost;
+      return MemCost + (Factor - 1) * LT.first;
     }
   }
 
