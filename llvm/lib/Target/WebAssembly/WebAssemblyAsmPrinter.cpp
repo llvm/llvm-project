@@ -207,7 +207,8 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
                          GV->getDataLayout(), GlobalVT, VTs);
 
     WebAssembly::wasmSymbolSetType(Sym, GlobalVT, VTs,
-                                   /*Mutable=*/!GV->isConstant());
+                                   /*Mutable=*/!GV->isConstant(),
+                                   /*Is64=*/ST->hasAddr64());
   }
 
   emitVisibility(Sym, GV->getVisibility(), !GV->isDeclaration());

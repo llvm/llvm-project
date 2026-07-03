@@ -966,19 +966,29 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
                                                              Subtarget);
       CalleeReg = getRegForValue(FuncrefArg);
       // Put the funcref in slot 0 of __funcref_call_table
-      unsigned ZeroReg = createResultReg(&WebAssembly::I32RegClass);
+      unsigned ZeroReg =
+          createResultReg(Subtarget->hasAddr64() ? &WebAssembly::I64RegClass
+                                                 : &WebAssembly::I32RegClass);
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-              TII.get(WebAssembly::CONST_I32), ZeroReg)
+              TII.get(Subtarget->hasAddr64() ? WebAssembly::CONST_I64
+                                             : WebAssembly::CONST_I32),
+              ZeroReg)
           .addImm(0);
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-              TII.get(WebAssembly::TABLE_SET_FUNCREF))
+              TII.get(Subtarget->hasAddr64()
+                          ? WebAssembly::TABLE_SET_FUNCREF_A64
+                          : WebAssembly::TABLE_SET_FUNCREF_A32))
           .addSym(Table)
           .addReg(ZeroReg)
           .addReg(CalleeReg);
       // Set CalleeReg to an immediate 0
-      CalleeReg = createResultReg(&WebAssembly::I32RegClass);
+      CalleeReg =
+          createResultReg(Subtarget->hasAddr64() ? &WebAssembly::I64RegClass
+                                                 : &WebAssembly::I32RegClass);
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-              TII.get(WebAssembly::CONST_I32), CalleeReg)
+              TII.get(Subtarget->hasAddr64() ? WebAssembly::CONST_I64
+                                             : WebAssembly::CONST_I32),
+              CalleeReg)
           .addImm(0);
     }
   }
@@ -1012,15 +1022,21 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
 
   if (IsFuncrefCall) {
     // Clear slot 0 of the funcref call table after the call.
-    unsigned ZeroReg = createResultReg(&WebAssembly::I32RegClass);
+    unsigned ZeroReg =
+        createResultReg(Subtarget->hasAddr64() ? &WebAssembly::I64RegClass
+                                               : &WebAssembly::I32RegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(WebAssembly::CONST_I32), ZeroReg)
+            TII.get(Subtarget->hasAddr64() ? WebAssembly::CONST_I64
+                                           : WebAssembly::CONST_I32),
+            ZeroReg)
         .addImm(0);
     unsigned NullReg = createResultReg(&WebAssembly::FUNCREFRegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(WebAssembly::REF_NULL_FUNCREF), NullReg);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(WebAssembly::TABLE_SET_FUNCREF))
+            TII.get(Subtarget->hasAddr64()
+                        ? WebAssembly::TABLE_SET_FUNCREF_A64
+                        : WebAssembly::TABLE_SET_FUNCREF_A32))
         .addSym(Table)
         .addReg(ZeroReg)
         .addReg(NullReg);
