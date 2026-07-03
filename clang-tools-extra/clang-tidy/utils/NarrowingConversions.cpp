@@ -68,6 +68,11 @@ static bool isIntToIntNarrowing(QualType From, QualType To, const Expr *Init,
   std::optional<llvm::APSInt> OptVal = Init->getIntegerConstantExpr(Ctx);
   if (!OptVal)
     return true;
+  if (FromWidth < ToWidth) {
+    // Widening signed->unsigned: only narrowing if value is negative.
+    // Mirrors the same guard in Sema's getNarrowingKind().
+    return OptVal->isSigned() && OptVal->isNegative();
+  }
   const llvm::APSInt Val = OptVal->extend(OptVal->getBitWidth() + 1);
   llvm::APSInt Converted = Val;
   Converted = Converted.trunc(ToWidth);

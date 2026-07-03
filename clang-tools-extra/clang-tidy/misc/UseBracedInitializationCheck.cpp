@@ -40,13 +40,13 @@ static bool mayConvertImplicitly(QualType From, QualType To) {
   return true;
 }
 
-static SmallVector<const Expr *>
-collectExplicitArgs(const CXXConstructExpr &Ctor) {
-  SmallVector<const Expr *> ExplicitArgs;
-  for (unsigned I = 0; I < Ctor.getNumArgs(); ++I)
-    if (!isa<CXXDefaultArgExpr>(Ctor.getArg(I)))
-      ExplicitArgs.push_back(Ctor.getArg(I));
-  return ExplicitArgs;
+/// Returns the prefix of \p Ctor 's arguments that are explicitly written.
+/// Default arguments always sit at the tail of the argument list.
+static ArrayRef<const Expr *> getExplicitArgs(const CXXConstructExpr &Ctor) {
+  ArrayRef<const Expr *> Args(Ctor.getArgs(), Ctor.getNumArgs());
+  while (!Args.empty() && isa<CXXDefaultArgExpr>(Args.back()))
+    Args = Args.drop_back();
+  return Args;
 }
 
 static bool hasInitListCtor(const CXXRecordDecl *RD,
@@ -100,11 +100,6 @@ AST_MATCHER(CXXConstructExpr, noMacroParens) {
          !Range.getEnd().isMacroID();
 }
 
-AST_MATCHER_P(CXXFunctionalCastExpr, hasSubExpr,
-              ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
-  return InnerMatcher.matches(*Node.getSubExpr(), Finder, Builder);
-}
-
 const ast_matchers::internal::VariadicDynCastAllOfMatcher<Stmt,
                                                           CXXParenListInitExpr>
     CxxParenListInitExpr;
@@ -115,27 +110,7 @@ const ast_matchers::internal::VariadicDynCastAllOfMatcher<Stmt,
 AST_MATCHER(CXXConstructExpr, canOverlapWithInitListCtor) {
   const CXXRecordDecl *RD = Node.getConstructor()->getParent();
   assert(RD && "CXXConstructExpr must have a parent CXXRecordDecl");
-  const SmallVector<const Expr *> ExplicitArgs = collectExplicitArgs(Node);
-  return hasInitListCtor(RD, ExplicitArgs);
-}
-
-AST_POLYMORPHIC_MATCHER(isListInit,
-                        AST_POLYMORPHIC_SUPPORTED_TYPES(CXXFunctionalCastExpr,
-                                                        CXXConstructExpr)) {
-  return Node.isListInitialization();
-}
-
-AST_MATCHER(CXXNewExpr, isParenInit) {
-  return Node.getInitializationStyle() == CXXNewInitializationStyle::Parens;
-}
-
-AST_MATCHER(CXXNewExpr, allocatesAutoType) {
-  return Node.getAllocatedTypeSourceInfo()->getType()->getContainedAutoType() !=
-         nullptr;
-}
-
-AST_MATCHER(CXXNewExpr, allocatesRecordType) {
-  return Node.getType()->getPointeeType()->isRecordType();
+  return hasInitListCtor(RD, getExplicitArgs(Node));
 }
 
 struct ParenRange {
@@ -156,6 +131,8 @@ static std::optional<NarrowingInfo>
 checkNarrowing(const Expr *Init, QualType TargetType, const ASTContext &Ctx) {
   const Expr *OrigInit = Init->IgnoreImpCasts();
   const QualType From = OrigInit->getType();
+  if (From.isNull())
+    return std::nullopt;
   const QualType To = TargetType.getNonReferenceType();
   if (utils::isNarrowingConversion(From, To, OrigInit, Ctx))
     return NarrowingInfo{OrigInit->getBeginLoc(), From, To};
@@ -198,24 +175,8 @@ isPLENarrowing(const CXXParenListInitExpr *PLE, const ASTContext &Ctx) {
   return Result;
 }
 
-static std::optional<ParenRange>
-handleMemInit(const CXXCtorInitializer *MemInit, const CXXConstructExpr *Ctor,
-              const SourceManager &SM, const LangOptions &LangOpts) {
-  if (!Ctor) {
-    // CXXCtorInitializer stores both '(' and '{' locations in the same
-    // fields. Only transform parenthesized initialization.
-    const SourceLocation LParen = MemInit->getLParenLoc();
-    if (!LParen.isValid() || !MemInit->getRParenLoc().isValid())
-      return std::nullopt;
-    Token Tok;
-    if (Lexer::getRawToken(LParen, Tok, SM, LangOpts) ||
-        Tok.isNot(tok::l_paren))
-      return std::nullopt;
-  }
-  return ParenRange{MemInit->getSourceLocation(), MemInit->getLParenLoc(),
-                    MemInit->getRParenLoc()};
-}
-
+/// Locates the parentheses of a scalar or decomposition variable declaration
+/// initialized with call syntax, e.g. 'int x(42)' or 'auto [a, b](expr)'.
 static std::optional<ParenRange> handleScalarVar(const VarDecl *Var,
                                                  const SourceManager &SM,
                                                  const LangOptions &LangOpts) {
@@ -241,40 +202,22 @@ static std::optional<ParenRange> handleScalarVar(const VarDecl *Var,
                     RTok->getLocation()};
 }
 
-static std::optional<ParenRange>
-handleScalarCast(const CXXFunctionalCastExpr *Cast) {
-  const SourceLocation LParen = Cast->getLParenLoc();
-  const SourceLocation RParen = Cast->getRParenLoc();
-  if (!LParen.isValid() || !RParen.isValid())
-    return std::nullopt;
-  return ParenRange{Cast->getBeginLoc(), LParen, RParen};
-}
-
-static std::optional<ParenRange> handleScalarNew(const CXXNewExpr *New) {
-  const SourceRange InitRange = New->getDirectInitRange();
-  if (!InitRange.isValid())
-    return std::nullopt;
-  return ParenRange{New->getBeginLoc(), InitRange.getBegin(),
-                    InitRange.getEnd()};
-}
-
+/// Computes the parenthesis range for a parenthesized list initialization,
+/// dispatching on which context (variable declaration, ...) it appears in.
 static std::optional<ParenRange>
 handlePLE(const CXXParenListInitExpr *PLE,
           const MatchFinder::MatchResult &Result) {
   SourceLocation DiagLoc;
   if (const auto *Var = Result.Nodes.getNodeAs<VarDecl>("var_ple"))
     DiagLoc = Var->getLocation();
-  else if (const auto *Cast =
-               Result.Nodes.getNodeAs<CXXFunctionalCastExpr>("cast_ple"))
-    DiagLoc = Cast->getBeginLoc();
-  else if (const auto *New = Result.Nodes.getNodeAs<CXXNewExpr>("new_ple"))
-    DiagLoc = New->getBeginLoc();
   else
-    llvm_unreachable("No context for CXXParenListInitExpr");
+    return std::nullopt;
   return ParenRange{DiagLoc, PLE->getBeginLoc(), PLE->getEndLoc()};
 }
 
 void UseBracedInitializationCheck::registerMatchers(MatchFinder *Finder) {
+  // The C++ Core Guidelines rule ES.23 only targets variable declarations:
+  // "Flag uses of () initialization syntax that are actually declarations."
   const auto GoodCtor =
       allOf(noMacroParens(), unless(canOverlapWithInitListCtor()),
             unless(isListInitialization()));
@@ -294,44 +237,16 @@ void UseBracedInitializationCheck::registerMatchers(MatchFinder *Finder) {
                                        unless(hasType(isDependentType())))
                          .bind("var"),
                      this);
-  Finder->addMatcher(cxxTemporaryObjectExpr(GoodCtor).bind("ctor"), this);
-  Finder->addMatcher(
-      traverse(
-          TK_AsIs,
-          cxxFunctionalCastExpr(
-              unless(hasType(autoType())), unless(hasType(isDependentType())),
-              unless(isInTemplateInstantiation()), unless(isListInit()),
-              anyOf(allOf(hasType(hasUnqualifiedDesugaredType(recordType())),
-                          hasSubExpr(ignoringImplicit(cxxConstructExpr(
-                              unless(isListInit()),
-                              unless(canOverlapWithInitListCtor()))))),
-                    unless(hasType(hasUnqualifiedDesugaredType(recordType())))))
-              .bind("func_cast")),
-      this);
-  Finder->addMatcher(
-      cxxNewExpr(unless(hasType(isDependentType())),
-                 anyOf(has(ignoringImplicit(GoodCtorExpr)),
-                       allOf(unless(allocatesRecordType()), isParenInit(),
-                             unless(allocatesAutoType()))))
-          .bind("new_expr"),
-      this);
-  Finder->addMatcher(
-      cxxCtorInitializer(
-          isWritten(),
-          anyOf(withInitializer(ignoringImplicit(GoodCtorExpr)),
-                unless(withInitializer(ignoringImplicit(cxxConstructExpr())))))
-          .bind("ctor_init"),
-      this);
 
+  // C++20 parenthesized aggregate initialization of a variable, e.g.
+  // 'Aggregate a(1, 2)' or 'int arr[3](1, 2, 3)'.
   if (getLangOpts().CPlusPlus20) {
-    auto GoodPLE = CxxParenListInitExpr().bind("ple");
-    Finder->addMatcher(varDecl(hasInitStyle(VarDecl::ParenListInit),
-                               hasInitializer(GoodPLE), GoodVar)
-                           .bind("var_ple"),
-                       this);
-    Finder->addMatcher(cxxFunctionalCastExpr(has(GoodPLE)).bind("cast_ple"),
-                       this);
-    Finder->addMatcher(cxxNewExpr(has(GoodPLE)).bind("new_ple"), this);
+    Finder->addMatcher(
+        CxxParenListInitExpr(
+            hasParent(varDecl(hasInitStyle(VarDecl::ParenListInit), GoodVar)
+                          .bind("var_ple")))
+            .bind("ple"),
+        this);
   }
 }
 
@@ -357,38 +272,19 @@ static MatchAnalysis analyzeMatch(const MatchFinder::MatchResult &Result,
 
   MatchAnalysis Res;
   if (const auto *Ctor = Result.Nodes.getNodeAs<CXXConstructExpr>("ctor")) {
-    // A 'ctor' binding can be standalone or nested inside Var/New/MemInit;
-    // it always carries the parens and arguments we need.
-    const auto *CtorInit =
-        Result.Nodes.getNodeAs<CXXCtorInitializer>("ctor_init");
+    // A class-type variable declaration binds both 'var' and the nested
+    // 'ctor', which carries the parentheses and arguments we need.
+    const SourceRange Parens = Ctor->getParenOrBraceRange();
     Res.Range =
-        CtorInit
-            ? handleMemInit(CtorInit, Ctor, SM, LangOpts)
-            : std::optional<ParenRange>(ParenRange{
-                  Ctor->getBeginLoc(), Ctor->getParenOrBraceRange().getBegin(),
-                  Ctor->getParenOrBraceRange().getEnd()});
+        ParenRange{Ctor->getBeginLoc(), Parens.getBegin(), Parens.getEnd()};
     Res.Narrowings = isCtorNarrowing(Ctor, Ctx);
   } else if (const auto *PLE =
                  Result.Nodes.getNodeAs<CXXParenListInitExpr>("ple")) {
     Res.Range = handlePLE(PLE, Result);
     Res.Narrowings = isPLENarrowing(PLE, Ctx);
-  } else if (const auto *CtorInit =
-                 Result.Nodes.getNodeAs<CXXCtorInitializer>("ctor_init")) {
-    Res.Range = handleMemInit(CtorInit, /*Ctor=*/nullptr, SM, LangOpts);
-    if (CtorInit->isMemberInitializer())
-      Res.Narrowings = ScalarNarrowing(CtorInit->getInit(),
-                                       CtorInit->getMember()->getType());
   } else if (const auto *Var = Result.Nodes.getNodeAs<VarDecl>("var")) {
     Res.Range = handleScalarVar(Var, SM, LangOpts);
     Res.Narrowings = ScalarNarrowing(Var->getInit(), Var->getType());
-  } else if (const auto *Cast =
-                 Result.Nodes.getNodeAs<CXXFunctionalCastExpr>("func_cast")) {
-    Res.Range = handleScalarCast(Cast);
-    Res.Narrowings = ScalarNarrowing(Cast->getSubExpr(), Cast->getType());
-  } else if (const auto *New = Result.Nodes.getNodeAs<CXXNewExpr>("new_expr")) {
-    Res.Range = handleScalarNew(New);
-    Res.Narrowings =
-        ScalarNarrowing(New->getInitializer(), New->getAllocatedType());
   } else {
     llvm_unreachable("No matches found");
   }

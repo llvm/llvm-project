@@ -13,8 +13,8 @@
 
 namespace clang::tidy::misc {
 
-/// Suggests replacing parenthesized initialization with braced
-/// initialization.
+/// Suggests replacing parenthesized initialization of variable declarations
+/// with braced initialization.
 ///
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/misc/use-braced-initialization.html

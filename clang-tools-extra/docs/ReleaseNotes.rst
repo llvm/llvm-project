@@ -184,8 +184,8 @@ New checks
 - New :doc:`misc-use-braced-initialization
   <clang-tidy/checks/misc/use-braced-initialization>` check.
 
-  Suggests replacing parenthesized initialization with braced
-  initialization.
+  Suggests replacing parenthesized initialization of variable declarations
+  with braced initialization.
 
 - New :doc:`modernize-use-std-bit
   <clang-tidy/checks/modernize/use-std-bit>` check.

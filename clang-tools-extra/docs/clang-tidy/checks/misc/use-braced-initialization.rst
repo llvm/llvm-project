@@ -3,7 +3,8 @@
 misc-use-braced-initialization
 ==============================
 
-Suggests replacing parenthesized initialization with braced initialization.
+Suggests replacing parenthesized initialization of variable declarations with
+braced initialization.
 
 Braced initialization has several advantages:
 
@@ -11,6 +12,11 @@ Braced initialization has several advantages:
   while ``int x(3.14)`` silently truncates.
 - **Uniform syntax.** Braces work consistently for aggregates, containers, and
   constructors, giving a single initialization style across all types.
+
+Following the C++ Core Guidelines rule ES.23, the check only flags variable
+declarations that use parenthesized initialization. Temporary objects,
+functional-style casts, ``new`` expressions, and member initializer lists are
+left untouched.
 
 For example:
 
@@ -20,25 +26,16 @@ For example:
     Matrix(int rows, int cols);
   };
 
-  // Variable declarations:
+  // Constructor calls:
   Matrix m(3, 4);          // -> Matrix m{3, 4};
   int n(42);               // -> int n{42};
 
-  // Copy initialization:
-  Matrix m = Matrix(3, 4); // -> Matrix m = Matrix{3, 4};
+  // Aggregates (C++20 parenthesized aggregate initialization):
+  struct Point { int x, y; };
+  Point p(1, 2);           // -> Point p{1, 2};
 
-  // Temporary objects:
-  use(Matrix(3, 4));       // -> use(Matrix{3, 4});
-
-  // New expressions:
-  auto *p = new Matrix(3, 4); // -> auto *p = new Matrix{3, 4};
-
-  // Member initializer lists:
-  struct Widget : Matrix {
-    int value;
-    Widget() : Matrix(3, 4), value(0) {}
-    // -> Widget() : Matrix{3, 4}, value{0} {}
-  };
+  // Structured bindings:
+  auto [a, b](p);          // -> auto [a, b]{p};
 
 The check skips cases where changing from ``()`` to ``{}`` would alter program
 semantics:

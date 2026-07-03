@@ -182,49 +182,6 @@ void multi_decl_scalar() {
   // CHECK-FIXES: int a{1}, b{2};
 }
 
-void temporary_single_arg() {
-  Simple(1);
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use braced initialization
-  // CHECK-FIXES: Simple{1};
-}
-
-void temporary_multi_arg() {
-  Simple(1, 2.0);
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use braced initialization
-  // CHECK-FIXES: Simple{1, 2.0};
-}
-
-void copy_init_rhs() {
-  Simple w = Simple(1);
-  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use braced initialization
-  // CHECK-FIXES: Simple w = Simple{1};
-}
-
-void auto_copy_init() {
-  auto w = Simple(1);
-  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use braced initialization
-  // CHECK-FIXES: auto w = Simple{1};
-}
-
-Simple return_simple() {
-  return Simple(1);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: use braced initialization
-  // CHECK-FIXES: return Simple{1};
-}
-
-void func_arg(Simple);
-void simple_as_argument() {
-  func_arg(Simple(1));
-  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use braced initialization
-  // CHECK-FIXES: func_arg(Simple{1});
-}
-
-void new_multi_arg() {
-  Simple *p = new Simple(1, 2.0);
-  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: use braced initialization
-  // CHECK-FIXES: Simple *p = new Simple{1, 2.0};
-}
-
 void braced_arg() {
   Takes tp({1, 2});
   // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use braced initialization
@@ -241,18 +198,6 @@ void multiple_braced_args() {
   TwoAggregates t({1, 2}, {3, 4});
   // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use braced initialization
   // CHECK-FIXES: TwoAggregates t{{[{][{]}}1, 2}, {3, 4{{[}][}]}};
-}
-
-void temporary_braced_arg() {
-  (void)Takes({1, 2});
-  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use braced initialization
-  // CHECK-FIXES: (void)Takes{{[{][{]}}1, 2{{[}][}]}};
-}
-
-void new_braced_arg() {
-  Takes *p = new Takes({1, 2});
-  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: use braced initialization
-  // CHECK-FIXES: Takes *p = new Takes{{[{][{]}}1, 2{{[}][}]}};
 }
 
 void class_comment_inside_parens() {
@@ -290,84 +235,16 @@ struct L2 {
   L2(L1, int);
 };
 
-struct L3 {
-  L2 m;
-  int z;
-  L3(L2, int);
-};
-
-struct L4 {
-  L3 n;
-  int w;
-  L4(L3, int);
-};
-
+// The inner constructor call is a temporary expression, not a declaration, so
+// only the outer variable declaration is rewritten.
 void nested_ctors_two_levels() {
   L2 v(L1(1, 2), 3);
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use braced initialization
-  // CHECK-MESSAGES: :[[@LINE-2]]:8: warning: use braced initialization
-  // CHECK-FIXES: L2 v{L1{1, 2}, 3};
-}
-
-void nested_ctors_three_levels() {
-  L3 v(L2(L1(1, 2), 3), 4);
-  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use braced initialization
-  // CHECK-MESSAGES: :[[@LINE-2]]:8: warning: use braced initialization
-  // CHECK-MESSAGES: :[[@LINE-3]]:11: warning: use braced initialization
-  // CHECK-FIXES: L3 v{L2{L1{1, 2}, 3}, 4};
-}
-
-void nested_ctors_four_levels() {
-  L4 v(L3(L2(L1(1, 2), 3), 4), 5);
-  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use braced initialization
-  // CHECK-MESSAGES: :[[@LINE-2]]:8: warning: use braced initialization
-  // CHECK-MESSAGES: :[[@LINE-3]]:11: warning: use braced initialization
-  // CHECK-MESSAGES: :[[@LINE-4]]:14: warning: use braced initialization
-  // CHECK-FIXES: L4 v{L3{L2{L1{1, 2}, 3}, 4}, 5};
-}
-
-void nested_ctors_temporary() {
-  (void)L3(L2(L1(1, 2), 3), 4);
-  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use braced initialization
-  // CHECK-MESSAGES: :[[@LINE-2]]:12: warning: use braced initialization
-  // CHECK-MESSAGES: :[[@LINE-3]]:15: warning: use braced initialization
-  // CHECK-FIXES: (void)L3{L2{L1{1, 2}, 3}, 4};
-}
-
-void nested_ctors_new() {
-  L3 *p = new L3(L2(L1(1, 2), 3), 4);
-  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: use braced initialization
-  // CHECK-MESSAGES: :[[@LINE-2]]:18: warning: use braced initialization
-  // CHECK-MESSAGES: :[[@LINE-3]]:21: warning: use braced initialization
-  // CHECK-FIXES: L3 *p = new L3{L2{L1{1, 2}, 3}, 4};
-}
-
-// Mixed: some levels already braced, only paren levels get fixed.
-void nested_ctors_mixed() {
-  L3 v(L2{L1(1, 2), 3}, 4);
-  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use braced initialization
-  // CHECK-MESSAGES: :[[@LINE-2]]:11: warning: use braced initialization
-  // CHECK-FIXES: L3 v{L2{L1{1, 2}, 3}, 4};
-}
-
-void nested_ctors_mixed_inner_braced() {
-  L3 v(L2(L1{1, 2}, 3), 4);
-  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use braced initialization
-  // CHECK-MESSAGES: :[[@LINE-2]]:8: warning: use braced initialization
-  // CHECK-FIXES: L3 v{L2{L1{1, 2}, 3}, 4};
+  // CHECK-FIXES: L2 v{L1(1, 2), 3};
 }
 
 void already_braced() {
   Simple w{1};
-}
-
-void already_braced_temporary() {
-  Simple{1};
-}
-
-void new_already_braced() {
-  Simple *p = new Simple{1};
-  (void)p;
 }
 
 void scalar_already_braced() {
@@ -413,26 +290,6 @@ void template_instantiated2(T x) {
   auto t(x);
 }
 
-template <typename T>
-void template_temporary_single() {
-  (void)T(1);
-}
-
-template <typename T>
-void template_temporary_multi() {
-  (void)T(1, 2.0);
-}
-
-template <typename T>
-T template_return() {
-  return T(1);
-}
-
-template <typename T>
-T *template_new_expr() {
-  return new T(1);
-}
-
 template <typename T, typename... Args>
 void template_variadic(Args... args) {
   T t(args...);
@@ -441,10 +298,6 @@ void template_variadic(Args... args) {
 void force_instantiation() {
   template_instantiated<Simple>(1);
   template_instantiated2<Simple>(1);
-  template_temporary_single<Simple>();
-  template_temporary_multi<Simple>();
-  (void)template_return<Simple>();
-  delete template_new_expr<Simple>();
   template_variadic<Simple>(1);
 }
 
@@ -507,17 +360,8 @@ void il_std_vector_count_value() {
   std::vector<int> v(5, 1);
 }
 
-void il_std_vector_temporary() {
-  std::vector<int>(5);
-}
-
 void il_std_vector_already_braced() {
   std::vector<int> v{1, 2, 3};
-}
-
-void il_new_std_vector() {
-  std::vector<int> *p = new std::vector<int>(5);
-  (void)p;
 }
 
 void il_braced_arg() {
@@ -669,45 +513,6 @@ void il_conv_class_arg() {
   InitListVsConvClass x(c);
 }
 
-struct OwnerOfSimple {
-  Simple s;
-  OwnerOfSimple() : s(1)
-  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: use braced initialization
-  // CHECK-FIXES: OwnerOfSimple() : s{1}
-  {}
-};
-
-struct OwnerOfScalar {
-  int n;
-  OwnerOfScalar() : n(42)
-  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: use braced initialization
-  // CHECK-FIXES: OwnerOfScalar() : n{42}
-  {}
-};
-
-struct OwnerAlreadyBraced {
-  Simple s;
-  OwnerAlreadyBraced() : s{1} {}
-};
-
-void scalar_functional_cast() {
-  (void)int(42);
-  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use braced initialization
-  // CHECK-FIXES: (void)int{42};
-}
-
-int scalar_functional_cast_return(int x) {
-  return int(x + 1);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: use braced initialization
-  // CHECK-FIXES: return int{x + 1};
-}
-
-void new_scalar() {
-  int *p = new int(42);
-  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use braced initialization
-  // CHECK-FIXES: int *p = new int{42};
-}
-
 void lambda_body_init() {
   auto f = [](int x) {
     Simple s(x);
@@ -739,7 +544,7 @@ void constexpr_init() {
   // CHECK-FIXES: constexpr int x{42};
 }
 
-// Narrowing conversions: warning emitted but no fix-it, with note.
+// Narrowing conversions: warning emitted but fix-it attached to the note.
 struct NarrowingTarget {
   NarrowingTarget(short);
 };
@@ -817,28 +622,6 @@ void narrowing_ctor_arg_constant() {
   // CHECK-FIXES: NarrowingTarget t{1};
 }
 
-void narrowing_functional_cast() {
-  (void)int(3.14);
-  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use braced initialization
-  // CHECK-MESSAGES: :[[@LINE-2]]:13: note: narrowing conversion from 'double' to 'int'
-  // CHECK-FIXES: (void)int{3.14};
-}
-
-void narrowing_new_scalar() {
-  int *p = new int(3.14);
-  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use braced initialization
-  // CHECK-MESSAGES: :[[@LINE-2]]:20: note: narrowing conversion from 'double' to 'int'
-  // CHECK-FIXES: int *p = new int{3.14};
-}
-
-struct NarrowingMember {
-  short n;
-  NarrowingMember(int x) : n(x) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use braced initialization
-  // CHECK-MESSAGES: :[[@LINE-2]]:30: note: narrowing conversion from 'int' to 'short'
-  // CHECK-FIXES: NarrowingMember(int x) : n{x} {}
-};
-
 void narrowing_ptr_to_bool() {
   int *p = nullptr;
   bool b(p);
@@ -863,6 +646,13 @@ void narrowing_signed_neg_to_unsigned() {
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use braced initialization
   // CHECK-MESSAGES: :[[@LINE-2]]:14: note: narrowing conversion from 'int' to 'unsigned int'
   // CHECK-FIXES: unsigned u{-1};
+}
+
+void narrowing_int_to_wider_unsigned() {
+  unsigned long long x(-1);
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: use braced initialization
+  // CHECK-MESSAGES: :[[@LINE-2]]:24: note: narrowing conversion from 'int' to 'unsigned long long'
+  // CHECK-FIXES: unsigned long long x{-1};
 }
 
 void no_narrowing_int_to_bool() {
@@ -895,83 +685,9 @@ void volatile_variable() {
   // CHECK-FIXES: volatile int x{42};
 }
 
-struct BaseClass {
-  BaseClass(int);
-};
-
-struct DerivedFromBase : BaseClass {
-  DerivedFromBase() : BaseClass(1)
-  // CHECK-MESSAGES: :[[@LINE-1]]:23: warning: use braced initialization
-  // CHECK-FIXES: DerivedFromBase() : BaseClass{1}
-  {}
-};
-
-struct DelegatingCtor {
-  DelegatingCtor(int);
-  DelegatingCtor() : DelegatingCtor(1)
-  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: use braced initialization
-  // CHECK-FIXES: DelegatingCtor() : DelegatingCtor{1}
-  {}
-};
-
-struct DelegatingNarrowing {
-  DelegatingNarrowing(short);
-  DelegatingNarrowing(int x, int) : DelegatingNarrowing(x)
-  // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: use braced initialization
-  // CHECK-MESSAGES: :[[@LINE-2]]:57: note: narrowing conversion from 'int' to 'short'
-  // CHECK-FIXES: DelegatingNarrowing(int x, int) : DelegatingNarrowing{x}
-  {}
-};
-
-enum Color { Red, Green, Blue };
-void enum_functional_cast() {
-  (void)Color(0);
-  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use braced initialization
-  // CHECK-FIXES: (void)Color{0};
-}
-
-enum class ScopedColor { R, G, B };
-void scoped_enum_cast() {
-  (void)ScopedColor(0);
-  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use braced initialization
-  // CHECK-FIXES: (void)ScopedColor{0};
-}
-
 struct WithStatic {
   static Simple member;
 };
 Simple WithStatic::member(1);
 // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: use braced initialization
 // CHECK-FIXES: Simple WithStatic::member{1};
-
-void zero_arg_temporary() {
-  (void)Simple(1);
-  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use braced initialization
-  // CHECK-FIXES: (void)Simple{1};
-}
-
-struct BaseWithIL {
-  BaseWithIL(std::initializer_list<int>);
-  BaseWithIL(int, int);
-};
-struct DerivedNoUsing : BaseWithIL {
-  DerivedNoUsing(int a, int b) : BaseWithIL(a, b) {}
-};
-
-struct BaseNoIL {
-  BaseNoIL(int, int);
-};
-struct DerivedFromNoIL : BaseNoIL {
-  DerivedFromNoIL(int a, int b) : BaseNoIL(a, b) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: use braced initialization
-  // CHECK-FIXES: DerivedFromNoIL(int a, int b) : BaseNoIL{a, b} {}
-};
-
-struct BitfieldStruct {
-  int x : 3;
-  BitfieldStruct(int n) : x(n)
-  // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: use braced initialization
-  // CHECK-FIXES: BitfieldStruct(int n) : x{n}
-  {}
-};
-
