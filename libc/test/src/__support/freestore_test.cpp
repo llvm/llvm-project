@@ -38,7 +38,6 @@ TEST(LlvmLibcFreeStore, TooSmall) {
   BlockRef remainder = *maybeBlock;
 
   FreeStore store;
-  store.set_range({0, 4096});
   store.insert(too_small);
   store.insert(remainder);
 
@@ -68,21 +67,26 @@ TEST(LlvmLibcFreeStore, RemoveBestFit) {
   BlockRef remainder = *maybeBlock;
 
   FreeStore store;
-  store.set_range({0, 4096});
   store.insert(smallest);
   if (largest_small != smallest)
     store.insert(largest_small);
   store.insert(remainder);
 
-  // Find exact match for smallest.
-  ASSERT_EQ(store.remove_best_fit(smallest.inner_size()).addr(),
-            smallest.addr());
-  store.insert(smallest);
+  // For TLSF (oversized first), asking for a size will return the block from
+  // the first non-empty oversized bin if one exists, bypassing the exact bin.
+  if (largest_small != smallest) {
+    BlockRef block = store.remove_best_fit(smallest.inner_size());
+    ASSERT_EQ(block.addr(), largest_small.addr());
+    store.insert(block);
 
-  // Find exact match for largest.
-  ASSERT_EQ(store.remove_best_fit(largest_small.inner_size()).addr(),
-            largest_small.addr());
-  store.insert(largest_small);
+    BlockRef block2 = store.remove_best_fit(largest_small.inner_size());
+    ASSERT_EQ(block2.addr(), remainder.addr());
+    store.insert(block2);
+  } else {
+    BlockRef block = store.remove_best_fit(smallest.inner_size());
+    ASSERT_EQ(block.addr(), remainder.addr());
+    store.insert(block);
+  }
 
   // Search small list for best fit.
   BlockRef next_smallest =
@@ -108,7 +112,6 @@ TEST(LlvmLibcFreeStore, Remove) {
   BlockRef remainder = *maybeBlock;
 
   FreeStore store;
-  store.set_range({0, 4096});
   store.insert(small);
   store.insert(remainder);
 
