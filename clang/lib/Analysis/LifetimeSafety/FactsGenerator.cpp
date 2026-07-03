@@ -858,6 +858,13 @@ void FactsGenerator::handleExitBlock() {
             FactMgr.createFact<GlobalEscapeFact>(O.ID, VD));
       }
     }
+
+  // A borrow captured via [[clang::lifetime_capture_by(this)]] flows into the
+  // never-expiring `this` origin, so it is not otherwise live at the captured
+  // local's expiry. Keep `this` live at exit so the dangle is caught.
+  if (auto ThisOrigins = FactMgr.getOriginMgr().getThisOrigins())
+    EscapesInCurrentBlock.push_back(FactMgr.createFact<ThisEscapeFact>(
+        (*ThisOrigins)->getOuterOriginID(), AC.getDecl()->getEndLoc()));
 }
 
 void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {
