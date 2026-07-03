@@ -18,9 +18,9 @@
 ! THIN-NEXT:  ret void
 ! THIN-NEXT: }
 ! THIN-NOT: !{{.*}} = !{i32 1, !"ThinLTO", i32 0}
-! THIN-NOT: ^{{.*}} = module:
-! THIN-NOT: ^{{.*}} = gv: (name:
-! THIN-NOT: ^{{.*}} = blockcount:
+! THIN: ^{{.*}} = module:
+! THIN: ^{{.*}} = gv: (name:
+! THIN: ^{{.*}} = blockcount:
 
 ! RUN: %flang -flto %s -c -o - | llvm-dis -o - | FileCheck %s --check-prefix=FULL
 ! FULL: define void @_QQmain()
@@ -33,5 +33,8 @@
 
 ! RUN: %flang_fc1 -flto -emit-llvm-bc %s -o - | llvm-bcanalyzer -dump| FileCheck --check-prefix=MOD-SUMM %s
 ! MOD-SUMM: FULL_LTO_GLOBALVAL_SUMMARY_BLOCK
+
+! RUN: %flang_fc1 -flto=thin -emit-llvm-bc %s -o - | llvm-bcanalyzer -dump| FileCheck --check-prefix=THIN-MOD-SUMM %s
+! THIN-MOD-SUMM: <GLOBALVAL_SUMMARY_BLOCK
 program main
 end program

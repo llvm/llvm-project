@@ -90,6 +90,7 @@ add_header_library(
     libc.hdr.func.realloc
     libc.src.__support.common
     libc.src.__support.integer_to_string
+    libc.src.__support.macros.null_check
     libc.src.string.memory_utils.inline_memcpy
     libc.src.string.memory_utils.inline_memset
     libc.src.string.string_utils
@@ -130,11 +131,13 @@ add_header_library(
     type_traits/invoke.h
     type_traits/is_arithmetic.h
     type_traits/is_array.h
+    type_traits/is_assignable.h
     type_traits/is_base_of.h
     type_traits/is_class.h
     type_traits/is_complex.h
     type_traits/is_const.h
     type_traits/is_constant_evaluated.h
+    type_traits/is_constructible.h
     type_traits/is_convertible.h
     type_traits/is_destructible.h
     type_traits/is_enum.h
@@ -212,6 +215,14 @@ add_object_library(
     libc.src.__support.common
     libc.src.__support.macros.properties.compiler
     libc.src.__support.macros.properties.os
+)
+
+add_header_library(
+  scope
+  HDRS
+    scope.h
+  DEPENDS
+    .utility
 )
 
 add_header_library(

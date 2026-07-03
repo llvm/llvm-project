@@ -81,10 +81,10 @@ public:
 
   /// Rewrite all uses and simplify the inserted PHI nodes.
   /// Use this method to preserve behavior when replacing SSAUpdater.
-  LLVM_ABI_FOR_TEST void RewriteAndOptimizeAllUses(DominatorTree &DT);
+  LLVM_ABI void RewriteAndOptimizeAllUses(DominatorTree &DT);
 };
 
-LLVM_ABI_FOR_TEST bool
+LLVM_ABI bool
 EliminateNewDuplicatePHINodes(BasicBlock *BB,
                               BasicBlock::phi_iterator FirstExistingPN);
 

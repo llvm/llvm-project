@@ -46,7 +46,11 @@ public:
 #define OP(OPC) OPC,
 #define OPCODES(...) __VA_ARGS__
 #define DEF_INSTR(ID, OPC, CLASS) OPC
-#include "llvm/SandboxIR/Values.def"
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
+#include "llvm/SandboxIR/ValuesDefFilesList.def"
+#undef OP
+#undef OPCODES
+#undef DEF_INSTR
   };
 
 protected:
@@ -113,7 +117,21 @@ protected:
   }
 
 public:
-  LLVM_ABI static const char *getOpcodeName(Opcode Opc);
+  static const char *getOpcodeName(Opcode Opc) {
+    switch (Opc) {
+#define OP(OPC)                                                                \
+  case Opcode::OPC:                                                            \
+    return #OPC;
+#define OPCODES(...) __VA_ARGS__
+#define DEF_INSTR(ID, OPC, CLASS) OPC
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
+#include "llvm/SandboxIR/ValuesDefFilesList.def"
+#undef OPCODES
+#undef DEF_INSTR
+    }
+    llvm_unreachable("Unknown Opcode");
+  }
+
   /// This is used by BasicBlock::iterator.
   virtual unsigned getNumOfIRInstrs() const = 0;
   /// \Returns a BasicBlock::iterator for this Instruction.
@@ -1079,8 +1097,8 @@ class UncondBrInst : public SingleLLVMInstructionImpl<llvm::UncondBrInst>,
   friend Context; // for UncondBrInst()
 
 public:
-  static UncondBrInst *create(BasicBlock *Target, InsertPosition InsertBefore,
-                              Context &Ctx);
+  LLVM_ABI static UncondBrInst *
+  create(BasicBlock *Target, InsertPosition InsertBefore, Context &Ctx);
   LLVM_ABI BasicBlock *getSuccessor() const;
   LLVM_ABI void setSuccessor(BasicBlock *NewSucc);
   unsigned getNumSuccessors() const { return 1; }
@@ -1105,11 +1123,11 @@ class CondBrInst : public SingleLLVMInstructionImpl<llvm::CondBrInst>,
   friend Context; // for UcnondBrInst()
 
 public:
-  static CondBrInst *create(Value *Cond, BasicBlock *IfTrue,
-                            BasicBlock *IfFalse, InsertPosition InsertBefore,
-                            Context &Ctx);
+  LLVM_ABI static CondBrInst *create(Value *Cond, BasicBlock *IfTrue,
+                                     BasicBlock *IfFalse,
+                                     InsertPosition InsertBefore, Context &Ctx);
   LLVM_ABI Value *getCondition() const;
-  void setCondition(Value *V);
+  LLVM_ABI void setCondition(Value *V);
   LLVM_ABI BasicBlock *getSuccessor(unsigned SuccIdx) const;
   LLVM_ABI void setSuccessor(unsigned Idx, BasicBlock *NewSucc);
   unsigned getNumSuccessors() const { return 2; }
@@ -1949,8 +1967,8 @@ public:
   public:
     CaseHandleImpl(Context &Ctx, LLVMCaseItT LLVMCaseIt)
         : Ctx(Ctx), LLVMCaseIt(LLVMCaseIt) {}
-    LLVM_ABI_FOR_TEST ConstT *getCaseValue() const;
-    LLVM_ABI_FOR_TEST BlockT *getCaseSuccessor() const;
+    LLVM_ABI ConstT *getCaseValue() const;
+    LLVM_ABI BlockT *getCaseSuccessor() const;
     unsigned getCaseIndex() const {
       const auto &LLVMCaseHandle = *LLVMCaseIt;
       return LLVMCaseHandle.getCaseIndex();

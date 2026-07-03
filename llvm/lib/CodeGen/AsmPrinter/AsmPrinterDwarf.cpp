@@ -260,6 +260,39 @@ void AsmPrinter::emitCFIInstruction(const MCCFIInstruction &Inst) const {
   case MCCFIInstruction::OpRestoreState:
     OutStreamer->emitCFIRestoreState(Loc);
     break;
+  case MCCFIInstruction::OpLLVMRegisterPair: {
+    const auto &Fields =
+        Inst.getExtraFields<MCCFIInstruction::RegisterPairFields>();
+    OutStreamer->emitCFILLVMRegisterPair(Fields.Register, Fields.Reg1,
+                                         Fields.Reg1SizeInBits, Fields.Reg2,
+                                         Fields.Reg2SizeInBits, Loc);
+    break;
+  }
+  case MCCFIInstruction::OpLLVMVectorRegisters: {
+    const auto &Fields =
+        Inst.getExtraFields<MCCFIInstruction::VectorRegistersFields>();
+    OutStreamer->emitCFILLVMVectorRegisters(Fields.Register,
+                                            Fields.VectorRegisters, Loc);
+    break;
+  }
+  case MCCFIInstruction::OpLLVMVectorOffset: {
+    const auto &Fields =
+        Inst.getExtraFields<MCCFIInstruction::VectorOffsetFields>();
+    OutStreamer->emitCFILLVMVectorOffset(
+        Fields.Register, Fields.RegisterSizeInBits, Fields.MaskRegister,
+        Fields.MaskRegisterSizeInBits, Fields.Offset, Loc);
+    break;
+  }
+  case MCCFIInstruction::OpLLVMVectorRegisterMask: {
+    const auto &Fields =
+        Inst.getExtraFields<MCCFIInstruction::VectorRegisterMaskFields>();
+    OutStreamer->emitCFILLVMVectorRegisterMask(
+        Fields.Register, Fields.SpillRegister,
+        Fields.SpillRegisterLaneSizeInBits, Fields.MaskRegister,
+        Fields.MaskRegisterSizeInBits);
+    break;
+  }
+
   case MCCFIInstruction::OpValOffset:
     OutStreamer->emitCFIValOffset(Inst.getRegister(), Inst.getOffset(), Loc);
     break;

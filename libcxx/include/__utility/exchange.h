@@ -28,7 +28,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _T1, class _T2 = _T1>
-[[nodiscard]] _LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _T1
+[[__nodiscard__]] _LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _T1
 __exchange(_T1& __obj, _T2&& __new_value)
     _NOEXCEPT_(is_nothrow_move_constructible<_T1>::value&& is_nothrow_assignable<_T1&, _T2>::value) {
   _T1 __old_value = std::move(__obj);
@@ -38,7 +38,8 @@ __exchange(_T1& __obj, _T2&& __new_value)
 
 #if _LIBCPP_STD_VER >= 14
 template <class _T1, class _T2 = _T1>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _T1 exchange(_T1& __obj, _T2&& __new_value) noexcept(
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _T1 exchange(_T1& __obj, _T2&& __new_value) noexcept(
     is_nothrow_move_constructible<_T1>::value && is_nothrow_assignable<_T1&, _T2>::value) {
   return std::__exchange(__obj, std::forward<_T2>(__new_value));
 }

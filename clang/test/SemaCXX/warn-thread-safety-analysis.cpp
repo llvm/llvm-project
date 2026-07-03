@@ -169,10 +169,10 @@ struct TestingMoreComplexAttributes {
 } more_complex_atttributes;
 
 void more_complex_attributes() {
-    more_complex_atttributes.a = true; // expected-warning{{writing variable 'a' requires holding mutex 'lock' exclusively}}
-    more_complex_atttributes.b = true; // expected-warning{{writing variable 'b' requires holding mutex 'strct.lock' exclusively}}
-    *more_complex_atttributes.ptr_a = true; // expected-warning{{writing the value pointed to by 'ptr_a' requires holding mutex 'lock' exclusively}}
-    *more_complex_atttributes.ptr_b = true; // expected-warning{{writing the value pointed to by 'ptr_b' requires holding mutex 'strct.lock' exclusively}}
+    more_complex_atttributes.a = true; // expected-warning{{writing variable 'a' requires holding mutex 'more_complex_atttributes.lock' exclusively}}
+    more_complex_atttributes.b = true; // expected-warning{{writing variable 'b' requires holding mutex 'more_complex_atttributes.strct.lock' exclusively}}
+    *more_complex_atttributes.ptr_a = true; // expected-warning{{writing the value pointed to by 'ptr_a' requires holding mutex 'more_complex_atttributes.lock' exclusively}}
+    *more_complex_atttributes.ptr_b = true; // expected-warning{{writing the value pointed to by 'ptr_b' requires holding mutex 'more_complex_atttributes.strct.lock' exclusively}}
 
     more_complex_atttributes.lock.Lock();
     more_complex_atttributes.lock1.Lock(); // expected-warning{{mutex 'lock1' must be acquired before 'lock'}}
@@ -3739,14 +3739,10 @@ void requireDecl(RelockableScope &scope) {
 struct foo
 {
   Mutex mu;
-  // expected-note@+1{{see attribute on parameter here}}
   void require(RelockableScope &scope EXCLUSIVE_LOCKS_REQUIRED(mu));
   void callRequire(){
     RelockableScope scope(&mu);
-    // TODO: False positive due to incorrect parsing of parameter attribute arguments.
     require(scope);
-    // expected-warning@-1{{calling function 'require' requires holding mutex 'mu' exclusively}}
-    // expected-warning@-2{{mutex managed by 'scope' is 'mu' instead of 'mu'}}
   }
 };
 
@@ -7715,6 +7711,18 @@ void testAliasChainUnrelatedReassignment2(ContainerOfPtr *list) {
   busyp = busyp->next;
   eb->data = 42;
   eb->mu.Unlock();
+}
+
+struct GuardedByIndirection {
+  int data GUARDED_BY(foo_ptr->mu);
+  Foo *foo_ptr;
+};
+
+void testGuardedByIndirection(GuardedByIndirection *x) {
+  Foo *f = x->foo_ptr;
+  f->mu.Lock();
+  x->data = 42;
+  f->mu.Unlock();
 }
 
 void testControlFlowDoWhile(Foo *f, int x) {

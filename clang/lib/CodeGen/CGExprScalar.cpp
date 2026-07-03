@@ -26,6 +26,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/MatrixUtils.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
@@ -46,6 +47,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
+#include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/MatrixBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/TypeSize.h"
@@ -2213,7 +2215,15 @@ Value *ScalarExprEmitter::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
   if (CGF.SanOpts.has(SanitizerKind::ArrayBounds))
     CGF.EmitBoundsCheck(E, E->getBase(), Idx, IdxTy, /*Accessed*/true);
 
-  return Builder.CreateExtractElement(Base, Idx, "vecext");
+  Value *Ret = Builder.CreateExtractElement(Base, Idx, "vecext");
+
+  // Even being a scalar the `__mfp8` type corresponds to `<1 x i8>` in LLVM IR.
+  if (E->getType()->isMFloat8Type())
+    Ret = Builder.CreateInsertElement(
+        llvm::PoisonValue::get(llvm::FixedVectorType::get(CGF.Int8Ty, 1)), Ret,
+        uint64_t(0), "mfp8ext");
+
+  return Ret;
 }
 
 Value *ScalarExprEmitter::VisitMatrixSingleSubscriptExpr(
@@ -2237,10 +2247,11 @@ Value *ScalarExprEmitter::VisitMatrixSingleSubscriptExpr(
   auto *ResultTy = llvm::FixedVectorType::get(ElemTy, NumColumns);
   Value *RowVec = llvm::PoisonValue::get(ResultTy);
 
+  bool IsMatrixRowMajor =
+      isMatrixRowMajor(CGF.getLangOpts(), E->getBase()->getType());
+
   for (unsigned Col = 0; Col != NumColumns; ++Col) {
     Value *ColVal = llvm::ConstantInt::get(RowIdx->getType(), Col);
-    bool IsMatrixRowMajor = CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
-                            LangOptions::MatrixMemoryLayout::MatrixRowMajor;
     Value *EltIdx = MB.CreateIndex(RowIdx, ColVal, NumRows, NumColumns,
                                    IsMatrixRowMajor, "matrix_row_idx");
     Value *Elt =
@@ -2266,8 +2277,8 @@ Value *ScalarExprEmitter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
   Value *Idx;
   unsigned NumCols = MatrixTy->getNumColumns();
   unsigned NumRows = MatrixTy->getNumRows();
-  bool IsMatrixRowMajor = CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
-                          LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+  bool IsMatrixRowMajor =
+      isMatrixRowMajor(CGF.getLangOpts(), E->getBase()->getType());
   Idx = MB.CreateIndex(RowIdx, ColumnIdx, NumRows, NumCols, IsMatrixRowMajor);
 
   if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0)
@@ -2352,8 +2363,7 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
   // column-major positions rather than inserting sequentially and shuffling.
   const ConstantMatrixType *ColMajorMT = nullptr;
   if (const auto *MT = E->getType()->getAs<ConstantMatrixType>();
-      MT && CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
-                LangOptions::MatrixMemoryLayout::MatrixColMajor)
+      MT && !isMatrixRowMajor(CGF.getLangOpts(), E->getType()))
     ColMajorMT = MT;
 
   // Loop over initializers collecting the Value for each, and remembering
@@ -2592,8 +2602,7 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
            "Flattened type on RHS must have the same number or more elements "
            "than vector on LHS.");
 
-    bool IsRowMajor = CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
-                      LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+    bool IsRowMajor = isMatrixRowMajor(CGF.getLangOpts(), DestTy);
 
     llvm::Value *V = CGF.Builder.CreateLoad(
         CGF.CreateIRTempWithoutCast(DestTy, "flatcast.tmp"));
@@ -2831,6 +2840,43 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     return CGF.authPointerToPointerCast(Result, E->getType(), DestTy);
   }
   case CK_AddressSpaceConversion: {
+    llvm::Type *DestLTy = ConvertType(DestTy);
+    // WebAssembly reference types are opaque target extension types so an
+    // "address space conversion" involving them is not a real pointer cast.
+    auto IsWasmFuncref = [](llvm::Type *T) {
+      auto *TET = dyn_cast<llvm::TargetExtType>(T);
+      return TET && TET->getName() == "wasm.funcref";
+    };
+    bool SrcIsFuncref = IsWasmFuncref(ConvertType(E->getType()));
+    bool DestIsFuncref = IsWasmFuncref(DestLTy);
+    if (SrcIsFuncref && DestIsFuncref) {
+      // funcref -> funcref (e.g. between differently-typed funcrefs) is the
+      // identity on the opaque reference value.
+      return Visit(E);
+    }
+    if (SrcIsFuncref && !DestIsFuncref) {
+      // funcref -> pointer: use wasm_funcref_to_ptr. This will probably crash
+      // later in codegen since we haven't implemented a way to actually get a
+      // function pointer from a funcref.
+      llvm::Function *ToPtr =
+          CGF.CGM.getIntrinsic(llvm::Intrinsic::wasm_funcref_to_ptr);
+      return CGF.Builder.CreateCall(ToPtr, {Visit(E)});
+    }
+    if (!SrcIsFuncref && DestIsFuncref) {
+      // A null function pointer converts to a null funcref (ref.null func),
+      // rather than a table lookup at index 0.
+      Expr::EvalResult NullResult;
+      if (E->EvaluateAsRValue(NullResult, CGF.getContext()) &&
+          NullResult.Val.isNullPointer()) {
+        if (NullResult.HasSideEffects)
+          Visit(E);
+        return llvm::Constant::getNullValue(DestLTy);
+      }
+      // pointer -> funcref: do a table.get from the indirect function table.
+      llvm::Function *ToFuncref =
+          CGF.CGM.getIntrinsic(llvm::Intrinsic::wasm_ptr_to_funcref);
+      return CGF.Builder.CreateCall(ToFuncref, {Visit(E)});
+    }
     Expr::EvalResult Result;
     if (E->EvaluateAsRValue(Result, CGF.getContext()) &&
         Result.Val.isNullPointer()) {
@@ -2839,12 +2885,11 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
       // eliminate the useless instructions emitted during translating E.
       if (Result.HasSideEffects)
         Visit(E);
-      return CGF.CGM.getNullPointer(cast<llvm::PointerType>(
-          ConvertType(DestTy)), DestTy);
+      return CGF.CGM.getNullPointer(cast<llvm::PointerType>(DestLTy), DestTy);
     }
     // Since target may map different address spaces in AST to the same address
     // space, an address space conversion may end up as a bitcast.
-    return CGF.performAddrSpaceCast(Visit(E), ConvertType(DestTy));
+    return CGF.performAddrSpaceCast(Visit(E), DestLTy);
   }
   case CK_AtomicToNonAtomic:
   case CK_NonAtomicToAtomic:
@@ -3172,12 +3217,16 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
       assert(SrcMatTy && "Source type must be a matrix type.");
       assert(NumRows <= SrcMatTy->getNumRows());
       assert(NumCols <= SrcMatTy->getNumColumns());
-      bool IsRowMajor = CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
-                        LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+
+      // isMatrix[Src|Dst]RowMajor needs the full sugared QualType to find
+      // matrix layout attrs. So use E->getType() &  DestTy rather than SrcMatTy
+      // & MatTy b/c getAs<ConstantMatrixType>() strips the sugar.
+      bool IsSrcRowMajor = isMatrixRowMajor(CGF.getLangOpts(), E->getType());
+      bool IsDstRowMajor = isMatrixRowMajor(CGF.getLangOpts(), DestTy);
       for (unsigned R = 0; R < NumRows; R++)
         for (unsigned C = 0; C < NumCols; C++)
-          Mask[MatTy->getFlattenedIndex(R, C, IsRowMajor)] =
-              SrcMatTy->getFlattenedIndex(R, C, IsRowMajor);
+          Mask[MatTy->getFlattenedIndex(R, C, IsDstRowMajor)] =
+              SrcMatTy->getFlattenedIndex(R, C, IsSrcRowMajor);
 
       return Builder.CreateShuffleVector(Mat, Mask, "trunc");
     }

@@ -117,9 +117,9 @@ bool SectionLoadList::SetSectionLoadAddress(const lldb::SectionSP &section,
         module_sp->ReportWarning(
             "address {0:x16} maps to more than one section: {1}.{2} and "
             "{3}.{4}",
-            load_addr, module_sp->GetFileSpec().GetFilename().GetCString(),
+            load_addr, module_sp->GetFileSpec().GetFilename(),
             section->GetName().GetCString(),
-            curr_module_sp->GetFileSpec().GetFilename().GetCString(),
+            curr_module_sp->GetFileSpec().GetFilename(),
             ats_pos->second->GetName().GetCString());
       }
     }

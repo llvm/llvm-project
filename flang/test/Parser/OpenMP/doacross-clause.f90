@@ -19,7 +19,7 @@ end
 !UNPARSE:  DO i=1_4,10_4
 !UNPARSE:   DO j=1_4,10_4
 !UNPARSE: !$OMP ORDERED  DOACROSS(SOURCE)
-!UNPARSE:     x(int(i,kind=8),int(j,kind=8))=i+j
+!UNPARSE:     x(__builtin_int(i,kind=8),__builtin_int(j,kind=8))=i+j
 !UNPARSE:   END DO
 !UNPARSE:  END DO
 !UNPARSE: !$OMP END DO
@@ -53,7 +53,7 @@ end
 !UNPARSE:  DO i=1_4,10_4
 !UNPARSE:   DO j=1_4,10_4
 !UNPARSE: !$OMP ORDERED  DOACROSS(SINK: i+1_4, j-2_4) DOACROSS(SINK: i, j+3_4)
-!UNPARSE:     x(int(i,kind=8),int(j,kind=8))=i+j
+!UNPARSE:     x(__builtin_int(i,kind=8),__builtin_int(j,kind=8))=i+j
 !UNPARSE:   END DO
 !UNPARSE:  END DO
 !UNPARSE: !$OMP END DO

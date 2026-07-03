@@ -23,7 +23,7 @@ protected:
 class BogusRegisterInfo : public TargetRegisterInfo {
 public:
   BogusRegisterInfo()
-      : TargetRegisterInfo(nullptr, {}, nullptr, {}, nullptr, nullptr,
+      : TargetRegisterInfo(nullptr, nullptr, {}, nullptr, nullptr,
                            LaneBitmask(~0u), nullptr, nullptr) {
     InitMCRegisterInfo(nullptr, 0, 0, 0, nullptr, 0, nullptr, 0, nullptr,
                        nullptr, nullptr, nullptr, nullptr, 0, nullptr);
@@ -62,6 +62,11 @@ public:
     return &Bogus[0];
   }
 
+  const TargetRegisterClass *
+  getMinimalPhysRegClass(MCRegister Reg) const override {
+    return nullptr;
+  }
+
   Register getFrameRegister(const MachineFunction &MF) const override {
     return 0;
   }
@@ -95,6 +100,21 @@ public:
   const TargetInstrInfo *getInstrInfo() const override { return &TII; }
 
   const TargetRegisterInfo *getRegisterInfo() const override { return &TRI; }
+
+  const FeatureBitset &getInlineIgnoreFeatures() const override {
+    static constexpr FeatureBitset Features;
+    return Features;
+  }
+
+  const FeatureBitset &getInlineInverseFeatures() const override {
+    static constexpr FeatureBitset Features;
+    return Features;
+  }
+
+  const FeatureBitset &getInlineMustMatchFeatures() const override {
+    static constexpr FeatureBitset Features;
+    return Features;
+  }
 
 private:
   BogusFrameLowering FL;

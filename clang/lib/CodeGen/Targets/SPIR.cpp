@@ -92,11 +92,6 @@ public:
   CommonSPIRTargetCodeGenInfo(std::unique_ptr<ABIInfo> ABIInfo)
       : TargetCodeGenInfo(std::move(ABIInfo)) {}
 
-  LangAS getASTAllocaAddressSpace() const override {
-    return getLangASFromTargetAS(
-        getABIInfo().getDataLayout().getAllocaAddrSpace());
-  }
-
   unsigned getDeviceKernelCallingConv() const override;
   llvm::Type *getOpenCLType(CodeGenModule &CGM, const Type *T) const override;
   llvm::Type *getHLSLType(CodeGenModule &CGM, const Type *Ty,
@@ -453,7 +448,8 @@ LangAS SPIRVTargetCodeGenInfo::getSRetAddrSpace(const CXXRecordDecl *RD) const {
   // default AS so the sret pointer matches the "this" convention.
   if (RD && !RD->canPassInRegisters())
     return LangAS::Default;
-  return getASTAllocaAddressSpace();
+  return getLangASFromTargetAS(
+      getABIInfo().getDataLayout().getAllocaAddrSpace());
 }
 
 void SPIRVTargetCodeGenInfo::setCUDAKernelCallingConvention(
@@ -926,7 +922,7 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getSPIRVImageTypeFromHLSLResource(
   IntParams[1] = 2;
 
   // Arrayed
-  IntParams[2] = 0;
+  IntParams[2] = static_cast<unsigned>(attributes.IsArray);
 
   // MS
   IntParams[3] = 0;

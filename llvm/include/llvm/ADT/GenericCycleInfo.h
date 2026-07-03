@@ -9,7 +9,7 @@
 /// \file
 /// \brief Find all cycles in a control-flow graph, including irreducible loops.
 ///
-/// See docs/CycleTerminology.rst for a formal definition of cycles.
+/// See docs/CycleTerminology.md for a formal definition of cycles.
 ///
 /// Briefly:
 /// - A cycle is a generalization of a loop which can represent
@@ -160,7 +160,7 @@ public:
   void getExitingBlocks(SmallVectorImpl<BlockT *> &TmpStorage) const;
 
   /// Return the preheader block for this cycle. Pre-header is well-defined for
-  /// reducible cycle in docs/LoopTerminology.rst as: the only one entering
+  /// reducible cycle in docs/LoopTerminology.md as: the only one entering
   /// block and its only edge is to the entry block. Return null for irreducible
   /// cycles.
   BlockT *getCyclePreheader() const;

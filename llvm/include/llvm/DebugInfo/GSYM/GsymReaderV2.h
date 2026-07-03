@@ -18,7 +18,7 @@ class MemoryBuffer;
 namespace gsym {
 
 /// GsymReaderV2 reads GSYM V2 data from a buffer.
-class GsymReaderV2 : public GsymReader {
+class LLVM_ABI GsymReaderV2 : public GsymReader {
   friend class GsymReader;
   const HeaderV2 *Hdr = nullptr;
   std::unique_ptr<HeaderV2> SwappedHdr;
@@ -44,7 +44,7 @@ public:
   }
 
   using GsymReader::dump;
-  LLVM_ABI void dump(raw_ostream &OS) override;
+  void dump(raw_ostream &OS) override;
 };
 
 } // namespace gsym

@@ -1160,6 +1160,10 @@ public:
   /// Returns true if it is a OverflowBehaviorType of Trap kind.
   bool isTrapType() const;
 
+  /// Returns true if this type requires laundering by checking if it is a
+  /// dynamic class type, or contains a subobject which is a dynamic class type.
+  bool requiresBuiltinLaunder(const ASTContext &Context) const;
+
   // Don't promise in the API that anything besides 'const' can be
   // easily added.
 
@@ -2222,6 +2226,9 @@ protected:
     unsigned hasTypeDifferentFromDecl : 1;
   };
 
+  static constexpr unsigned TemplateTypeParmTypeDepthBits = 15;
+  static constexpr unsigned TemplateTypeParmTypeIndexBits = 16;
+
   class TemplateTypeParmTypeBitfields {
     friend class TemplateTypeParmType;
 
@@ -2229,14 +2236,14 @@ protected:
     unsigned : NumTypeBits;
 
     /// The depth of the template parameter.
-    unsigned Depth : 15;
+    unsigned Depth : TemplateTypeParmTypeDepthBits;
 
     /// Whether this is a template parameter pack.
     LLVM_PREFERRED_TYPE(bool)
     unsigned ParameterPack : 1;
 
     /// The index of the template parameter.
-    unsigned Index : 16;
+    unsigned Index : TemplateTypeParmTypeIndexBits;
   };
 
   class SubstTemplateTypeParmTypeBitfields {
@@ -2791,8 +2798,10 @@ public:
   bool isHLSLInlineSpirvType() const;
   bool isHLSLResourceRecord() const;
   bool isHLSLResourceRecordArray() const;
-  bool isHLSLIntangibleType()
-      const; // Any HLSL intangible type (builtin, array, class)
+  // Any HLSL intangible type (builtin, array, class)
+  bool isHLSLIntangibleType() const;
+  // User-defined HLSL records or arrays of such records in standard layout
+  bool isHLSLStandardLayoutRecordOrArrayOf() const;
 
   /// Determines if this type, which must satisfy
   /// isObjCLifetimeType(), is implicitly __unsafe_unretained rather
@@ -2941,7 +2950,7 @@ public:
   ///
   /// If this is not a pointer or reference, or the type being pointed to does
   /// not refer to a CXXRecordDecl, returns NULL.
-  const CXXRecordDecl *getPointeeCXXRecordDecl() const;
+  CXXRecordDecl *getPointeeCXXRecordDecl() const;
 
   /// Get the DeducedType whose type will be deduced for a variable with
   /// an initializer of this type. This looks through declarators like pointer
@@ -6734,18 +6743,13 @@ public:
   /// \returns the top-level nullability, if present.
   static NullabilityKindOrNone stripOuterNullability(QualType &T);
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getAttrKind(), ModifiedType, EquivalentType, Attribute);
+  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx) {
+    Profile(ID, Ctx, getAttrKind(), ModifiedType, EquivalentType, Attribute);
   }
 
-  static void Profile(llvm::FoldingSetNodeID &ID, Kind attrKind,
-                      QualType modified, QualType equivalent,
-                      const Attr *attr) {
-    ID.AddInteger(attrKind);
-    ID.AddPointer(modified.getAsOpaquePtr());
-    ID.AddPointer(equivalent.getAsOpaquePtr());
-    ID.AddPointer(attr);
-  }
+  static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx,
+                      Kind attrKind, QualType modified, QualType equivalent,
+                      const Attr *attr);
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == Attributed;
@@ -6840,12 +6844,16 @@ public:
     LLVM_PREFERRED_TYPE(bool)
     uint8_t IsCounter : 1;
 
+    LLVM_PREFERRED_TYPE(bool)
+    uint8_t IsArray : 1;
+
     Attributes(llvm::dxil::ResourceClass ResourceClass,
                llvm::dxil::ResourceDimension ResourceDimension,
                bool IsROV = false, bool RawBuffer = false,
-               bool IsCounter = false)
+               bool IsCounter = false, bool IsArray = false)
         : ResourceClass(ResourceClass), ResourceDimension(ResourceDimension),
-          IsROV(IsROV), RawBuffer(RawBuffer), IsCounter(IsCounter) {}
+          IsROV(IsROV), RawBuffer(RawBuffer), IsCounter(IsCounter),
+          IsArray(IsArray) {}
 
     Attributes(llvm::dxil::ResourceClass ResourceClass)
         : Attributes(ResourceClass, llvm::dxil::ResourceDimension::Unknown) {}
@@ -6853,13 +6861,13 @@ public:
     Attributes()
         : Attributes(llvm::dxil::ResourceClass::UAV,
                      llvm::dxil::ResourceDimension::Unknown, false, false,
-                     false) {}
+                     false, false) {}
 
     friend bool operator==(const Attributes &LHS, const Attributes &RHS) {
       return std::tie(LHS.ResourceClass, LHS.ResourceDimension, LHS.IsROV,
-                      LHS.RawBuffer, LHS.IsCounter) ==
+                      LHS.RawBuffer, LHS.IsCounter, LHS.IsArray) ==
              std::tie(RHS.ResourceClass, RHS.ResourceDimension, RHS.IsROV,
-                      RHS.RawBuffer, RHS.IsCounter);
+                      RHS.RawBuffer, RHS.IsCounter, RHS.IsArray);
     }
     friend bool operator!=(const Attributes &LHS, const Attributes &RHS) {
       return !(LHS == RHS);
@@ -6904,6 +6912,7 @@ public:
     ID.AddBoolean(Attrs.IsROV);
     ID.AddBoolean(Attrs.RawBuffer);
     ID.AddBoolean(Attrs.IsCounter);
+    ID.AddBoolean(Attrs.IsArray);
   }
 
   static bool classof(const Type *T) {
@@ -7058,6 +7067,8 @@ class TemplateTypeParmType : public Type, public llvm::FoldingSetNode {
                  (PP ? TypeDependence::UnexpandedPack : TypeDependence::None)),
         TTPDecl(TTPDecl) {
     assert(!TTPDecl == Canon.isNull());
+    assert(D < (1 << TemplateTypeParmTypeDepthBits) && "Depth too large");
+    assert(I < (1 << TemplateTypeParmTypeIndexBits) && "Index too large");
     TemplateTypeParmTypeBits.Depth = D;
     TemplateTypeParmTypeBits.Index = I;
     TemplateTypeParmTypeBits.ParameterPack = PP;

@@ -69,6 +69,14 @@ namespace Fortran::runtime {
 static unsigned rand_seed = 1;
 static Lock rand_seed_lock;
 
+#ifndef _WIN32
+// Used by RTNAME(Timef).  Declared at namespace scope so that Lock's
+// non-trivial constructor does not require thread-safe-static guards
+// (__cxa_guard_acquire/_release), which would introduce a dependency on
+// the C++ runtime library.
+static Lock timef_lock;
+#endif
+
 // Common implementation that could be used for either SECNDS() or DSECNDS(),
 // which are defined for float or double.
 template <typename T> T SecndsImpl(T *refTime) {
@@ -424,7 +432,6 @@ double RTNAME(Timef)() {
   // posix-compliant
   static clock_t start = static_cast<clock_t>(-1);
   static long ticks_per_sec = 0;
-  static Lock timef_lock;
   static bool isInit{false};
 
   struct tms b;

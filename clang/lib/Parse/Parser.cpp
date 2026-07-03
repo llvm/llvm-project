@@ -2451,7 +2451,13 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
                           /*DiagnoseEmptyAttrs=*/false,
                           /*WarnOnUnknownAttrs=*/true);
 
-  if (PP.hadModuleLoaderFatalFailure()) {
+  // Clang modules can inject token streams while loading, so a fatal loader
+  // failure must stop parsing. C++20 named module imports are ordinary
+  // declarations, and a prior failed import should not hide later diagnostics.
+  bool IsCXX20NamedModuleImport =
+      getLangOpts().CPlusPlusModules && !IsObjCAtImport && !Path.empty();
+
+  if (PP.hadModuleLoaderFatalFailure() && !IsCXX20NamedModuleImport) {
     // With a fatal failure in the module loader, we abort parsing.
     cutOffParsing();
     return nullptr;

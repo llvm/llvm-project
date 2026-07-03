@@ -36,7 +36,7 @@ Example Wrapper (``src/__support/OSUtil/linux/syscall_wrappers/read.h``):
 .. code-block:: c++
 
     #include "hdr/types/ssize_t.h"
-    #include "src/__support/OSUtil/linux/syscall.h" // For syscall_impl
+    #include "src/__support/OSUtil/linux/syscall.h" // For syscall_checked
     #include "src/__support/common.h"
     #include "src/__support/error_or.h"
     #include "src/__support/macros/config.h"
@@ -46,11 +46,7 @@ Example Wrapper (``src/__support/OSUtil/linux/syscall_wrappers/read.h``):
     namespace linux_syscalls {
 
     LIBC_INLINE ErrorOr<ssize_t> read(int fd, void *buf, size_t count) {
-      ssize_t ret = syscall_impl<ssize_t>(SYS_read, fd, buf, count);
-      if (ret < 0) {
-        return Error(-static_cast<int>(ret));
-      }
-      return ret;
+      return syscall_checked<ssize_t>(SYS_read, fd, buf, count);
     }
 
     } // namespace linux_syscalls

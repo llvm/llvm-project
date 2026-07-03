@@ -88,6 +88,11 @@ void DefinitionBlockSeparator::separateBlocks(
       assert(TargetLine);
       assert(TargetToken);
 
+      // Lines should not be added in the disabled region.
+      if (TargetToken->is(tok::comment) &&
+          isClangFormatOn(TargetToken->TokenText)) {
+        return;
+      }
       // Do not handle EOF newlines.
       if (TargetToken->is(tok::eof))
         return;
@@ -201,6 +206,9 @@ void DefinitionBlockSeparator::separateBlocks(
           ++I;
     } else if (CurrentLine->First->closesScope()) {
       if (OpeningLineIndex > Lines.size())
+        continue;
+      // A function try block should be together.
+      if (CurrentLine->First->startsSequence(tok::r_brace, tok::kw_catch))
         continue;
       // Handling the case that opening brace has its own line, with checking
       // whether the last line already had an opening brace to guard against

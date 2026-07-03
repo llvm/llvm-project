@@ -66,7 +66,6 @@
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
-using ProfileCount = Function::ProfileCount;
 
 #define DEBUG_TYPE "code-extractor"
 
@@ -983,6 +982,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::NoFree:
       case Attribute::NoImplicitFloat:
       case Attribute::NoInline:
+      case Attribute::NoIPA:
       case Attribute::NoOutline:
       case Attribute::NonLazyBind:
       case Attribute::NoRedZone:
@@ -1092,8 +1092,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
   if (BFI) {
     auto Count = BFI->getProfileCountFromFreq(EntryFreq);
     if (Count.has_value())
-      newFunction->setEntryCount(
-          ProfileCount(*Count, Function::PCT_Real)); // FIXME
+      newFunction->setEntryCount(*Count);
   }
 
   return newFunction;
@@ -2125,11 +2124,9 @@ void CodeExtractor::insertReplacerCall(
   }
 
   if (FuncRetVal)
-    for (User *U : FuncRetVal->users()) {
-      Instruction *inst = cast<Instruction>(U);
-      if (inst->getParent()->getParent() == oldFunction)
-        inst->replaceUsesOfWith(FuncRetVal, ReplacerCall);
-    }
+    FuncRetVal->replaceUsesWithIf(ReplacerCall, [&](Use &U) {
+      return cast<Instruction>(U.getUser())->getFunction() == oldFunction;
+    });
 
   // Update the branch weights for the exit block.
   if (BFI && ExtractedFuncRetVals.size() > 1)

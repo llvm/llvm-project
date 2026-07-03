@@ -6,14 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../lldb-python.h"
+
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
 
 #include "../SWIGPythonBridge.h"
 #include "../ScriptInterpreterPythonImpl.h"
-#include "../lldb-python.h"
 #include "ScriptedHookPythonInterface.h"
 
 using namespace lldb;
@@ -52,9 +54,9 @@ ScriptedHookPythonInterface::GetSupportedMethods() {
 
 llvm::Expected<StructuredData::GenericSP>
 ScriptedHookPythonInterface::CreatePluginObject(
-    llvm::StringRef class_name, lldb::TargetSP target_sp,
-    const StructuredDataImpl &args_sp) {
-  return ScriptedPythonInterface::CreatePluginObject(class_name, nullptr,
+    const ScriptedMetadata &scripted_metadata, lldb::TargetSP target_sp) {
+  StructuredDataImpl args_sp(scripted_metadata.GetArgsSP());
+  return ScriptedPythonInterface::CreatePluginObject(scripted_metadata, nullptr,
                                                      target_sp, args_sp);
 }
 

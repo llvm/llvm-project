@@ -11,7 +11,7 @@
 #define _LIBCPP___FORMAT_FORMAT_FUNCTIONS
 
 #include <__algorithm/clamp.h>
-#include <__algorithm/ranges_find_first_of.h>
+#include <__algorithm/find_first_of.h>
 #include <__chrono/statically_widen.h>
 #include <__concepts/convertible_to.h>
 #include <__concepts/same_as.h>
@@ -459,8 +459,12 @@ template <class _CharT>
     basic_string_view<_CharT> __fmt,
     basic_format_args<basic_format_context<back_insert_iterator<__format::__output_buffer<_CharT>>, _CharT>> __args) {
   // Fold strings not containing '{' or '}' to just return the string
-  if (bool __is_identity = [&] [[__gnu__::__pure__]] // Make sure the compiler knows this call can be eliminated
-      { return std::ranges::find_first_of(__fmt, array{'{', '}'}) == __fmt.end(); }();
+  if (bool __is_identity =
+          [&] [[__gnu__::__pure__]] // Make sure the compiler knows this call can be eliminated
+      {
+        char __vals[] = {'{', '}'};
+        return std::find_first_of(__fmt.begin(), __fmt.end(), std::begin(__vals), std::end(__vals)) == __fmt.end();
+      }();
       __builtin_constant_p(__is_identity) && __is_identity)
     return basic_string<_CharT>{__fmt};
 

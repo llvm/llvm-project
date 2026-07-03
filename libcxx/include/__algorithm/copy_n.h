@@ -10,13 +10,13 @@
 #define _LIBCPP___ALGORITHM_COPY_N_H
 
 #include <__algorithm/copy.h>
+#include <__algorithm/in_out_result.h>
 #include <__algorithm/iterator_operations.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__type_traits/enable_if.h>
 #include <__utility/convert_to_integral.h>
 #include <__utility/move.h>
-#include <__utility/pair.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -31,7 +31,7 @@ template <class _AlgPolicy,
           class _InIter,
           class _OutIter,
           __enable_if_t<__has_random_access_iterator_category<_InIter>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_InIter, _OutIter>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __in_out_result<_InIter, _OutIter>
 __copy_n(_InIter __first, typename _IterOps<_AlgPolicy>::template __difference_type<_InIter> __n, _OutIter __result) {
   return std::__copy(__first, __first + __n, std::move(__result));
 }
@@ -40,7 +40,7 @@ template <class _AlgPolicy,
           class _InIter,
           class _OutIter,
           __enable_if_t<!__has_random_access_iterator_category<_InIter>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_InIter, _OutIter>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __in_out_result<_InIter, _OutIter>
 __copy_n(_InIter __first, typename _IterOps<_AlgPolicy>::template __difference_type<_InIter> __n, _OutIter __result) {
   while (__n != 0) {
     *__result = *__first;
@@ -48,7 +48,7 @@ __copy_n(_InIter __first, typename _IterOps<_AlgPolicy>::template __difference_t
     ++__result;
     --__n;
   }
-  return std::make_pair(std::move(__first), std::move(__result));
+  return {std::move(__first), std::move(__result)};
 }
 
 // The InputIterator case is handled specially here because it's been written in a way to avoid incrementing __first
@@ -84,7 +84,7 @@ copy_n(_InputIterator __first, _Size __n, _OutputIterator __result) {
   using _IntegralSize       = decltype(std::__convert_to_integral(__n));
   _IntegralSize __converted = __n;
   return std::__copy_n<_ClassicAlgPolicy>(__first, __iterator_difference_type<_InputIterator>(__converted), __result)
-      .second;
+      .__out_;
 }
 
 _LIBCPP_END_NAMESPACE_STD

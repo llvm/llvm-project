@@ -594,12 +594,13 @@ public:
     /// The basic block to which control should be transferred to
     /// implement the FiniCB. Memoized to avoid generating finalization
     /// multiple times.
-    Expected<BasicBlock *> getFiniBB(IRBuilderBase &Builder);
+    LLVM_ABI Expected<BasicBlock *> getFiniBB(IRBuilderBase &Builder);
 
     /// For cases where there is an unavoidable existing finalization block
     /// (e.g. loop finialization after omp sections). The existing finalization
     /// block must not contain any non-finalization code.
-    Error mergeFiniBB(IRBuilderBase &Builder, BasicBlock *ExistingFiniBB);
+    LLVM_ABI Error mergeFiniBB(IRBuilderBase &Builder,
+                               BasicBlock *ExistingFiniBB);
 
   private:
     /// Access via getFiniBB.
@@ -2046,7 +2047,7 @@ private:
   ///
   /// \param DescriptorAddr Address of the descriptor to initialize
   /// \param DataPtr Pointer to the actual data the descriptor should reference
-  /// \param ElemType Type of elements in the array (may be array type)
+  /// \param SrcDescriptorAddr Address of the descriptor to copy metadata from
   /// \param DescriptorType Type of the descriptor structure
   /// \param DataPtrPtrGen Callback to get the base_ptr field in the descriptor
   ///
@@ -2056,6 +2057,22 @@ private:
       Type *DescriptorType,
       function_ref<InsertPointOrErrorTy(InsertPointTy, Value *, Value *&)>
           DataPtrPtrGen);
+
+  /// Allocate a by-ref reduction descriptor, copy \p SrcDescriptorAddr into it,
+  /// and update its data pointer to reference \p DataPtr.
+  ///
+  /// \param AllocaIP Insertion point for the descriptor allocation.
+  /// \param RI Reduction info containing descriptor type and access callback.
+  /// \param DataPtr Pointer to the actual data the descriptor should reference.
+  /// \param SrcDescriptorAddr Address of the descriptor to copy metadata from.
+  /// \param DescriptorPtrTy Pointer type expected by the descriptor consumer.
+  ///
+  /// \return The new descriptor address, or an Error if descriptor generation
+  ///         fails.
+  Expected<Value *> createReductionDescriptorCopy(
+      InsertPointTy AllocaIP, const ReductionInfo &RI, Value *DataPtr,
+      Value *SrcDescriptorAddr, Type *DescriptorPtrTy,
+      const Twine &Name = ".omp.reduction.byref_descriptor");
 
   /// Emits reduction function.
   /// \param ReducerName Name of the function calling the reduction.
@@ -2165,7 +2182,7 @@ public:
   /// 4. Call the OpenMP runtime on the GPU to reduce across teams.
   ///    The last team writes the global reduced value to memory.
   ///
-  ///     ret = __kmpc_nvptx_teams_reduce_nowait(...,
+  ///     ret = __kmpc_gpu_teams_reduce_nowait(...,
   ///             reduceData, shuffleReduceFn, interWarpCpyFn,
   ///             scratchpadCopyFn, loadAndReduceFn)
   ///
@@ -2330,18 +2347,26 @@ public:
   /// \param IsByRef For each reduction clause, whether the reduction is by-ref.
   /// \param IsTeamsReduction   Optional flag set if it is a teams
   ///                           reduction.
+  /// \param IsSPMD             Optional flag set when the surrounding kernel
+  ///                           is compiled in SPMD execution mode (every
+  ///                           reduction private is then known to be a
+  ///                           per-thread scratch alloca).  When false, the
+  ///                           teams-reduction call site emits per-thread
+  ///                           scratch and copies the team-local value in so
+  ///                           the runtime's cross-team work cannot race on
+  ///                           team-shared LDS storage produced by Generic
+  ///                           globalization (Generic-SPMD case after
+  ///                           OpenMPOpt SPMD-ization).
   /// \param GridValue          Optional GPU grid value.
-  /// \param ReductionBufNum    Optional OpenMPCUDAReductionBufNumValue to be
   /// used for teams reduction.
   /// \param SrcLocInfo         Source location information global.
   LLVM_ABI InsertPointOrErrorTy createReductionsGPU(
       const LocationDescription &Loc, InsertPointTy AllocaIP,
       InsertPointTy CodeGenIP, ArrayRef<ReductionInfo> ReductionInfos,
       ArrayRef<bool> IsByRef, bool IsNoWait = false,
-      bool IsTeamsReduction = false,
+      bool IsTeamsReduction = false, bool IsSPMD = false,
       ReductionGenCBKind ReductionGenCBKind = ReductionGenCBKind::MLIR,
-      std::optional<omp::GV> GridValue = {}, unsigned ReductionBufNum = 1024,
-      Value *SrcLocInfo = nullptr);
+      std::optional<omp::GV> GridValue = {}, Value *SrcLocInfo = nullptr);
 
   // TODO: provide atomic and non-atomic reduction generators for reduction
   // operators defined by the OpenMP specification.
@@ -2431,9 +2456,9 @@ public:
 
   LLVM_ABI Function *getOrCreateRuntimeFunctionPtr(omp::RuntimeFunction FnID);
 
-  CallInst *createRuntimeFunctionCall(FunctionCallee Callee,
-                                      ArrayRef<Value *> Args,
-                                      StringRef Name = "");
+  LLVM_ABI CallInst *createRuntimeFunctionCall(FunctionCallee Callee,
+                                               ArrayRef<Value *> Args,
+                                               StringRef Name = "");
 
   /// Return the (LLVM-IR) string describing the source location \p LocStr.
   LLVM_ABI Constant *getOrCreateSrcLocStr(StringRef LocStr,
@@ -2560,7 +2585,7 @@ public:
 
   /// Helper that contains information about regions we need to outline
   /// during finalization.
-  struct OutlineInfo {
+  struct LLVM_ABI OutlineInfo {
     using PostOutlineCBTy = std::function<void(Function &)>;
     PostOutlineCBTy PostOutlineCB;
     BasicBlock *EntryBB, *ExitBB, *OuterAllocBB;
@@ -2570,18 +2595,18 @@ public:
     // TODO: this should be safe to enable by default
     bool FixUpNonEntryAllocas = false;
 
-    LLVM_ABI virtual ~OutlineInfo() = default;
+    virtual ~OutlineInfo() = default;
 
     /// Collect all blocks in between EntryBB and ExitBB in both the given
     /// vector and set.
-    LLVM_ABI void collectBlocks(SmallPtrSetImpl<BasicBlock *> &BlockSet,
-                                SmallVectorImpl<BasicBlock *> &BlockVector);
+    void collectBlocks(SmallPtrSetImpl<BasicBlock *> &BlockSet,
+                       SmallVectorImpl<BasicBlock *> &BlockVector);
 
     /// Create a CodeExtractor instance based on the information stored in this
     /// structure, the list of collected blocks from a previous call to
     /// \c collectBlocks and a flag stating whether arguments must be passed in
     /// address space 0.
-    LLVM_ABI virtual std::unique_ptr<CodeExtractor>
+    virtual std::unique_ptr<CodeExtractor>
     createCodeExtractor(ArrayRef<BasicBlock *> Blocks,
                         bool ArgsInZeroAddressSpace, Twine Suffix = Twine(""));
 
@@ -2728,7 +2753,6 @@ public:
     SmallVector<int32_t, 3> MaxThreads = {-1};
     int32_t MinThreads = 1;
     int32_t ReductionDataSize = 0;
-    int32_t ReductionBufferLength = 0;
   };
 
   /// Container to pass LLVM IR runtime values or constants related to the
@@ -2771,6 +2795,9 @@ public:
     Value *DynCGroupMem = nullptr;
     /// True if the kernel has 'no wait' clause.
     bool HasNoWait = false;
+    /// True if the kernel strictly requires the number of blocks and threads
+    /// above to run.
+    bool StrictBlocksAndThreads = false;
     /// The fallback mechanism for the shared memory.
     omp::OMPDynGroupprivateFallbackType DynCGroupMemFallback =
         omp::OMPDynGroupprivateFallbackType::Abort;
@@ -2780,12 +2807,13 @@ public:
     TargetKernelArgs(unsigned NumTargetItems, TargetDataRTArgs RTArgs,
                      Value *NumIterations, ArrayRef<Value *> NumTeams,
                      ArrayRef<Value *> NumThreads, Value *DynCGroupMem,
-                     bool HasNoWait,
+                     bool HasNoWait, bool StrictBlocksAndThreads,
                      omp::OMPDynGroupprivateFallbackType DynCGroupMemFallback)
         : NumTargetItems(NumTargetItems), RTArgs(RTArgs),
           NumIterations(NumIterations), NumTeams(NumTeams),
           NumThreads(NumThreads), DynCGroupMem(DynCGroupMem),
-          HasNoWait(HasNoWait), DynCGroupMemFallback(DynCGroupMemFallback) {}
+          HasNoWait(HasNoWait), StrictBlocksAndThreads(StrictBlocksAndThreads),
+          DynCGroupMemFallback(DynCGroupMemFallback) {}
   };
 
   /// Create the kernel args vector used by emitTargetKernel. This function
@@ -3409,11 +3437,8 @@ public:
   /// \param Loc The insert and source location description.
   /// \param TeamsReductionDataSize The maximal size of all the reduction data
   ///        for teams reduction.
-  /// \param TeamsReductionBufferLength The number of elements (each of up to
-  ///        \p TeamsReductionDataSize size), in the teams reduction buffer.
   LLVM_ABI void createTargetDeinit(const LocationDescription &Loc,
-                                   int32_t TeamsReductionDataSize = 0,
-                                   int32_t TeamsReductionBufferLength = 1024);
+                                   int32_t TeamsReductionDataSize = 0);
 
   ///}
 
@@ -3583,7 +3608,8 @@ public:
           InsertPointTy CodeGenIP, llvm::Value *PtrPHI, llvm::Value *BeginArg)>
           PrivAndGenMapInfoCB,
       llvm::Type *ElemTy, StringRef FuncName,
-      CustomMapperCallbackTy CustomMapperCB);
+      CustomMapperCallbackTy CustomMapperCB,
+      bool PreserveMemberOfFlags = false);
 
   /// Generator for '#omp target data'
   ///
@@ -4008,16 +4034,28 @@ public:
   ///                     the case the comparison is '=='.
   ///
   /// \return Insertion point after generated atomic capture IR.
-  LLVM_ABI InsertPointTy
-  createAtomicCompare(const LocationDescription &Loc, AtomicOpValue &X,
-                      AtomicOpValue &V, AtomicOpValue &R, Value *E, Value *D,
-                      AtomicOrdering AO, omp::OMPAtomicCompareOp Op,
-                      bool IsXBinopExpr, bool IsPostfixUpdate, bool IsFailOnly);
+  /// Whether to emit special handling for IEEE 754 -0.0 == +0.0 in
+  /// atomic compare operations on floating-point types.
+  bool HandleFPNegZero = false;
+
+  /// Set whether atomic compare should handle -0.0/+0.0 equivalence.
+  /// Returns the previous value so callers can save and restore it.
+  bool setHandleFPNegZero(bool FPNegZero) {
+    bool Old = HandleFPNegZero;
+    HandleFPNegZero = FPNegZero;
+    return Old;
+  }
+
   LLVM_ABI InsertPointTy createAtomicCompare(
       const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
       AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
       omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
-      bool IsFailOnly, AtomicOrdering Failure);
+      bool IsFailOnly, bool IsWeak = false);
+  LLVM_ABI InsertPointTy createAtomicCompare(
+      const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
+      AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
+      omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
+      bool IsFailOnly, AtomicOrdering Failure, bool IsWeak = false);
 
   /// Create the control flow structure of a canonical OpenMP loop.
   ///

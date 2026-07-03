@@ -193,7 +193,7 @@ static Value *computeVectorAddr(Value *BasePtr, Value *VecIdx, Value *Stride,
   if (isa<ConstantInt>(VecStart) && cast<ConstantInt>(VecStart)->isZero())
     VecStart = BasePtr;
   else
-    VecStart = Builder.CreateGEP(EltType, BasePtr, VecStart, "vec.gep");
+    VecStart = Builder.CreateInBoundsGEP(EltType, BasePtr, VecStart, "vec.gep");
 
   return VecStart;
 }
@@ -902,9 +902,10 @@ public:
     // it conditionally instead.
     auto S = ShapeMap.find(&Old);
     if (S != ShapeMap.end()) {
+      ShapeInfo Shape = S->second;
       ShapeMap.erase(S);
       if (supportsShapeInfo(New))
-        ShapeMap.insert({New, S->second});
+        ShapeMap.insert({New, Shape});
     }
     Old.replaceAllUsesWith(New);
   }
@@ -1387,7 +1388,7 @@ public:
     Value *Offset = Builder.CreateAdd(
         Builder.CreateMul(J, getIndex(MatrixPtr, MatrixShape.getStride())), I);
 
-    Value *TileStart = Builder.CreateGEP(EltTy, MatrixPtr, Offset);
+    Value *TileStart = Builder.CreateInBoundsGEP(EltTy, MatrixPtr, Offset);
     auto *TileTy = FixedVectorType::get(EltTy, ResultShape.NumRows *
                                                    ResultShape.NumColumns);
 
@@ -1425,7 +1426,7 @@ public:
     Value *Offset = Builder.CreateAdd(
         Builder.CreateMul(J, getIndex(MatrixPtr, MatrixShape.getStride())), I);
 
-    Value *TileStart = Builder.CreateGEP(EltTy, MatrixPtr, Offset);
+    Value *TileStart = Builder.CreateInBoundsGEP(EltTy, MatrixPtr, Offset);
     auto *TileTy = FixedVectorType::get(EltTy, StoreVal.getNumRows() *
                                                    StoreVal.getNumColumns());
 
@@ -1603,7 +1604,7 @@ public:
                   m_Load(m_Value()),
                   m_CombineOr(m_Intrinsic<Intrinsic::matrix_transpose>(),
                               m_Intrinsic<Intrinsic::matrix_column_major_load>(
-                                  m_Value(), m_SpecificInt(1))))));
+                                  m_Value(), m_One())))));
     };
     // Returns the cost benefit of using \p Op with the dot product lowering. If
     // the returned cost is < 0, the argument is cheaper to use in the

@@ -253,6 +253,7 @@ public:
                             std::string localName{
                                 std::get<0>(names.t).source.ToString()};
                             stmt.renames.push_back(localName);
+                            stmt.hasOnlyWithRenames = true;
                           },
                           [&](const parser::Rename::Operators &) {
                             // Operator renames - not commonly needed for debug
@@ -333,6 +334,20 @@ public:
     return true;
   }
   void Post(const parser::SpecificationPart &) { --specificationPartLevel; }
+
+  bool Pre(const parser::InterfaceBody &) {
+    ++interfaceBodyLevel;
+    return true;
+  }
+  void Post(const parser::InterfaceBody &) { --interfaceBodyLevel; }
+
+  // An acc declare in an interface body describes the interface's procedure,
+  // not the enclosing unit; skip it so it is not hoisted and lowered there.
+  bool Pre(const parser::OpenACCDeclarativeConstruct &accDecl) {
+    if (interfaceBodyLevel > 0)
+      return false;
+    return enterConstructOrDirective(accDecl);
+  }
 
   bool Pre(const parser::ContainsStmt &) {
     if (!specificationPartLevel) {
@@ -1260,6 +1275,7 @@ private:
   lower::pft::SymbolLabelMap *assignSymbolLabelMap{};
   std::map<std::string, lower::pft::Evaluation *> constructNameMap{};
   int specificationPartLevel{};
+  int interfaceBodyLevel{};
   lower::pft::Evaluation *lastLexicalEvaluation{};
   /// Current function-like unit being processed (for USE statement tracking)
   lower::pft::FunctionLikeUnit *currentFunctionUnit{nullptr};

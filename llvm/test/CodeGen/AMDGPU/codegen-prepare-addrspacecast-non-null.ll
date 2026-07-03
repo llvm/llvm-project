@@ -351,9 +351,10 @@ define void @recursive_phis(i1 %cond, ptr addrspace(5) %ptr) {
 ; GISEL-ASM:       ; %bb.0: ; %entry
 ; GISEL-ASM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-ASM-NEXT:    v_and_b32_e32 v0, 1, v0
+; GISEL-ASM-NEXT:    s_mov_b64 s[4:5], exec
 ; GISEL-ASM-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; GISEL-ASM-NEXT:    s_lshr_b32 s6, s32, 6
-; GISEL-ASM-NEXT:    s_xor_b64 s[4:5], vcc, -1
+; GISEL-ASM-NEXT:    s_xor_b64 s[4:5], vcc, s[4:5]
 ; GISEL-ASM-NEXT:    v_mov_b32_e32 v0, s6
 ; GISEL-ASM-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GISEL-ASM-NEXT:  ; %bb.1: ; %then

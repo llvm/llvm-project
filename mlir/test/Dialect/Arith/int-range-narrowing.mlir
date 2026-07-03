@@ -528,3 +528,11 @@ func.func @affine_for_dynamic_bound(%n: index) {
   }
   return
 }
+
+// Ensure a zero-element constant tensor doesn't crash range inference.
+// CHECK-LABEL: func @zero_element_tensor_constant
+func.func @zero_element_tensor_constant() -> tensor<2x0xi32> {
+  // CHECK: arith.constant dense<> : tensor<2x0xi32>
+  %0 = arith.constant dense<> : tensor<2x0xi32>
+  return %0 : tensor<2x0xi32>
+}

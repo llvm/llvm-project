@@ -154,3 +154,13 @@ namespace ModifyMutableMember {
   }
   static_assert(modify_mutable_member() == 12);
 }
+
+namespace NewDuringInit {
+  // Make sure an InitListExpr can overwrite an array initialized by
+  // placement new.
+  constexpr int f() {
+    struct X { int a, b[5]; } x = {(new(&x.b) int[5])[1]=12,15};
+    return x.b[1];
+  }
+  static_assert(f() == 0);
+}

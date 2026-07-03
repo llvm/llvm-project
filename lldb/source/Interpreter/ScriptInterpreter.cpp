@@ -163,6 +163,11 @@ lldb::StackFrameListSP ScriptInterpreter::GetOpaqueTypeFromSBFrameList(
   return frame_list.m_opaque_sp;
 }
 
+lldb::TargetSP ScriptInterpreter::GetOpaqueTypeFromSBTarget(
+    const lldb::SBTarget &target) const {
+  return target.m_opaque_sp;
+}
+
 lldb::ValueObjectSP
 ScriptInterpreter::GetOpaqueTypeFromSBValue(const lldb::SBValue &value) const {
   if (!value.m_opaque_sp)

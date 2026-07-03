@@ -410,7 +410,7 @@ public:
   TEST_CONSTEXPR_CXX20 complete_type_allocator() TEST_NOEXCEPT {}
 
   template <class U>
-  TEST_CONSTEXPR_CXX20 explicit complete_type_allocator(complete_type_allocator<U>) TEST_NOEXCEPT {}
+  TEST_CONSTEXPR_CXX20 complete_type_allocator(complete_type_allocator<U>) TEST_NOEXCEPT {}
 
   TEST_CONSTEXPR_CXX20 T* allocate(std::size_t n) { return static_cast<T*>(std::allocator<T>().allocate(n)); }
 

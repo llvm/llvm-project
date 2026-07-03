@@ -31,6 +31,7 @@ add_libc_test(
     rewind_test.cpp
   DEPENDS
     libc.include.stdio
+    libc.src.__support.CPP.scope
     libc.src.stdio.fclose
     libc.src.stdio.ferror
     libc.src.stdio.fopen
@@ -437,6 +438,7 @@ add_libc_test(
   SRCS
     fopen_test.cpp
   DEPENDS
+    libc.src.__support.CPP.scope
     libc.src.stdio.fread
     libc.src.stdio.fwrite
     libc.src.stdio.fclose
@@ -519,6 +521,7 @@ add_libc_test(
     fgetc_test.cpp
   DEPENDS
     libc.include.stdio
+    libc.src.__support.CPP.scope
     libc.src.errno.errno
     libc.src.stdio.fclose
     libc.src.stdio.feof
@@ -539,6 +542,7 @@ add_libc_test(
     fgetc_unlocked_test.cpp
   DEPENDS
     libc.include.stdio
+    libc.src.__support.CPP.scope
     libc.src.errno.errno
     libc.src.stdio.fclose
     libc.src.stdio.ferror
@@ -563,6 +567,7 @@ add_libc_test(
     fgets_test.cpp
   DEPENDS
     libc.include.stdio
+    libc.src.__support.CPP.scope
     libc.src.errno.errno
     libc.src.stdio.fclose
     libc.src.stdio.feof

@@ -111,8 +111,6 @@ json::Value ModuleStats::ToJSON() const {
 llvm::json::Value ConstStringStats::ToJSON() const {
   json::Object obj;
   obj.try_emplace<int64_t>("bytesTotal", stats.GetBytesTotal());
-  obj.try_emplace<int64_t>("bytesUsed", stats.GetBytesUsed());
-  obj.try_emplace<int64_t>("bytesUnused", stats.GetBytesUnused());
   return obj;
 }
 
@@ -130,8 +128,9 @@ TargetStats::ToJSON(Target &target,
     for (auto module_identifier : m_module_identifiers)
       json_module_uuid_array.emplace_back(module_identifier);
 
-    target_metrics_json.try_emplace(m_expr_eval.name, m_expr_eval.ToJSON());
-    target_metrics_json.try_emplace(m_frame_var.name, m_frame_var.ToJSON());
+    target_metrics_json.try_emplace("expressionEvaluation",
+                                    m_expr_eval.ToJSON());
+    target_metrics_json.try_emplace("frameVariable", m_frame_var.ToJSON());
     if (include_modules)
       target_metrics_json.try_emplace("moduleIdentifiers",
                                       std::move(json_module_uuid_array));

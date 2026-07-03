@@ -45,7 +45,7 @@ Currently, this check warns in the following cases:
 See also:
 `STR34-C. Cast characters to unsigned char before converting to larger
 integer sizes
-<https://wiki.sei.cmu.edu/confluence/display/c/STR34-C.+Cast+characters+to+unsigned+char+before+converting+to+larger+integer+sizes>`_
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/characters-and-strings-str/str34-c/>`_
 
 A good example from the CERT description when a ``char`` variable is used to
 read from a file that might contain non-ASCII characters. The problem comes

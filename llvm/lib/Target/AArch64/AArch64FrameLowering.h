@@ -87,6 +87,15 @@ public:
   /// Can this function use the red zone for local allocations.
   bool canUseRedZone(const MachineFunction &MF) const;
 
+  /// Returns how much of the incoming argument stack area (in bytes) we should
+  /// clean up in an epilogue. For the C calling convention this will be 0, for
+  /// guaranteed tail call conventions it can be positive (a normal return or a
+  /// tail call to a function that uses less stack space for arguments) or
+  /// negative (for a tail call to a function that needs more stack space than
+  /// us for arguments).
+  int64_t getArgumentStackToRestore(MachineFunction &MF,
+                                    MachineBasicBlock &MBB) const;
+
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
 
   bool
@@ -238,15 +247,6 @@ private:
   MachineBasicBlock::iterator insertSEH(MachineBasicBlock::iterator MBBI,
                                         const AArch64InstrInfo &TII,
                                         MachineInstr::MIFlag Flag) const;
-
-  /// Returns how much of the incoming argument stack area (in bytes) we should
-  /// clean up in an epilogue. For the C calling convention this will be 0, for
-  /// guaranteed tail call conventions it can be positive (a normal return or a
-  /// tail call to a function that uses less stack space for arguments) or
-  /// negative (for a tail call to a function that needs more stack space than
-  /// us for arguments).
-  int64_t getArgumentStackToRestore(MachineFunction &MF,
-                                    MachineBasicBlock &MBB) const;
 
   // Find a scratch register that we can use at the start of the prologue to
   // re-align the stack pointer.  We avoid using callee-save registers since

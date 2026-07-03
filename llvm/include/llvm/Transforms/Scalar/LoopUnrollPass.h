@@ -16,14 +16,14 @@
 
 namespace llvm {
 
-extern cl::opt<bool> ForgetSCEVInLoopUnroll;
+extern LLVM_ABI cl::opt<bool> ForgetSCEVInLoopUnroll;
 
 class Function;
 class Loop;
 class LPMUpdater;
 
 /// Loop unroll pass that only does full loop unrolling and peeling.
-class LoopFullUnrollPass : public PassInfoMixin<LoopFullUnrollPass> {
+class LoopFullUnrollPass : public OptionalPassInfoMixin<LoopFullUnrollPass> {
   const int OptLevel;
 
   /// If false, use a cost model to determine whether unrolling of a loop is
@@ -42,8 +42,9 @@ public:
       : OptLevel(OptLevel), OnlyWhenForced(OnlyWhenForced),
         ForgetSCEV(ForgetSCEV) {}
 
-  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
-                        LoopStandardAnalysisResults &AR, LPMUpdater &U);
+  LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
+                                 LoopStandardAnalysisResults &AR,
+                                 LPMUpdater &U);
 };
 
 /// A set of parameters used to control various transforms performed by the
@@ -130,7 +131,7 @@ struct LoopUnrollOptions {
 /// Loop unroll pass that will support both full and partial unrolling.
 /// It is a function pass to have access to function and module analyses.
 /// It will also put loops into canonical form (simplified and LCSSA).
-class LoopUnrollPass : public PassInfoMixin<LoopUnrollPass> {
+class LoopUnrollPass : public OptionalPassInfoMixin<LoopUnrollPass> {
   LoopUnrollOptions UnrollOpts;
 
 public:
@@ -139,9 +140,10 @@ public:
   explicit LoopUnrollPass(LoopUnrollOptions UnrollOpts = {})
       : UnrollOpts(UnrollOpts) {}
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 
 } // end namespace llvm

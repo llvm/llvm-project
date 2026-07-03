@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck --check-prefixes=SI-NOHSA,GCN-NOHSA,FUNC %s
-; RUN: llc -global-isel -mtriple=amdgcn < %s | FileCheck --check-prefixes=SI-NOHSA,GCN-NOHSA,FUNC %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck --check-prefixes=SI-NOHSA,GCN-NOHSA,FUNC %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck --check-prefixes=SI-NOHSA,GCN-NOHSA,FUNC %s
 
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck  --check-prefixes=VI-NOHSA,GCN-NOHSA,FUNC %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck  --check-prefixes=VI-NOHSA,GCN-NOHSA,FUNC %s

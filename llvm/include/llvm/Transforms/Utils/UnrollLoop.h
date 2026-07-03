@@ -126,7 +126,7 @@ LLVM_ABI MDNode *GetUnrollMetadata(MDNode *LoopID, StringRef Name);
 LLVM_ABI MDNode *getUnrollMetadataForLoop(const Loop *L, StringRef Name);
 
 struct UnrollPragmaInfo {
-  UnrollPragmaInfo(const Loop *L);
+  LLVM_ABI UnrollPragmaInfo(const Loop *L);
   const bool UserUnrollCount;
   const bool PragmaFullUnroll;
   const unsigned PragmaCount;

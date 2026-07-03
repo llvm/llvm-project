@@ -266,4 +266,4 @@ vstrb.8 q0, [r0, #0]
 # CHECK-NEXT: 37.    10    0.0    0.0    0.0       vstrb.8	q0, [r0]
 # CHECK-NEXT: 38.    10    0.0    0.0    0.0       vcvtb.f16.f32	q0, q2
 # CHECK-NEXT: 39.    10    0.0    0.0    0.0       vstrb.8	q0, [r0]
-# CHECK-NEXT:        10    0.0    0.0    0.0       <total>
+# CHECK-NEXT:        400   0.0    0.0    0.0       <total>

@@ -19,6 +19,7 @@
 #define LLVM_CLANG_AST_FORMATSTRING_H
 
 #include "clang/AST/CanonicalType.h"
+#include "llvm/ADT/StringRef.h"
 #include <optional>
 
 namespace clang {
@@ -80,6 +81,11 @@ public:
     AsInt3264,          // 'I'   (MSVCRT, like __int3264 from MIDL)
     AsInt64,            // 'I64' (MSVCRT, like __int64)
     AsLongDouble,       // 'L'
+    AsIntN,             // 'wN'
+    AsFastIntN,         // 'wfN'
+    AsDecimal32,        // 'H'  (C23, _Decimal32)
+    AsDecimal64,        // 'D'  (C23, _Decimal64)
+    AsDecimal128,       // 'DD' (C23, _Decimal128)
     AsAllocate,         // for '%as', GNU extension to C90 scanf
     AsMAllocate,        // for '%ms', GNU extension to scanf
     AsWide,             // 'w' (MSVCRT, like l but only for c, C, s, S, or Z
@@ -88,6 +94,8 @@ public:
 
   LengthModifier() : Position(nullptr), kind(None) {}
   LengthModifier(const char *pos, Kind k) : Position(pos), kind(k) {}
+  LengthModifier(const char *pos, Kind k, unsigned bitWidth, unsigned length)
+      : Position(pos), kind(k), BitWidth(bitWidth), ModifierLength(length) {}
 
   const char *getStart() const { return Position; }
 
@@ -97,7 +105,13 @@ public:
       return 1;
     case AsLongLong:
     case AsChar:
+    case AsDecimal128:
       return 2;
+    case AsIntN:
+    case AsFastIntN:
+      assert(ModifierLength != 0 &&
+             "C23 wN/wfN length modifiers must have a nonzero length");
+      return ModifierLength;
     case AsInt32:
     case AsInt64:
       return 3;
@@ -109,11 +123,15 @@ public:
   Kind getKind() const { return kind; }
   void setKind(Kind k) { kind = k; }
 
-  const char *toString() const;
+  unsigned getBitWidth() const { return BitWidth; }
+
+  StringRef toString() const;
 
 private:
   const char *Position;
   Kind kind;
+  unsigned BitWidth = 0;
+  unsigned ModifierLength = 0;
 };
 
 class ConversionSpecifier {
@@ -262,6 +280,7 @@ public:
   enum Kind {
     UnknownTy,
     InvalidTy,
+    UnsupportedTy,
     SpecificTy,
     ObjCPointerTy,
     CPointerTy,
@@ -301,10 +320,18 @@ private:
   const char *Name = nullptr;
   bool Ptr = false;
 
-  /// The TypeKind identifies certain well-known types like size_t and
-  /// ptrdiff_t.
-  enum class TypeKind { DontCare, SizeT, PtrdiffT };
+  /// The TypeKind identifies certain well-known types.
+  enum class TypeKind {
+    DontCare,
+    SizeT,
+    PtrdiffT,
+    IntN,
+    UIntN,
+    FastIntN,
+    FastUIntN,
+  };
   TypeKind TK = TypeKind::DontCare;
+  unsigned BitWidth = 0;
 
 public:
   ArgType(Kind K = UnknownTy, const char *N = nullptr) : K(K), Name(N) {}
@@ -312,7 +339,13 @@ public:
   ArgType(CanQualType T) : K(SpecificTy), T(T) {}
 
   static ArgType Invalid() { return ArgType(InvalidTy); }
+  static ArgType Unsupported(const char *N) {
+    ArgType A(UnsupportedTy);
+    A.Name = N;
+    return A;
+  }
   bool isValid() const { return K != InvalidTy; }
+  bool isUnsupported() const { return K == UnsupportedTy; }
 
   bool isSizeT() const { return TK == TypeKind::SizeT; }
 
@@ -340,6 +373,9 @@ public:
     Res.TK = TypeKind::PtrdiffT;
     return Res;
   }
+
+  static ArgType makeIntNType(ASTContext &Ctx, const LengthModifier &LengthMod,
+                              bool Signed);
 
   MatchKind matchesType(ASTContext &C, QualType argTy) const;
   MatchKind matchesArgType(ASTContext &C, const ArgType &other) const;
@@ -394,6 +430,10 @@ public:
   unsigned getConstantLength() const {
     assert(hs == Constant);
     return length + UsesDotPrefix;
+  }
+
+  StringRef getCharacters() const {
+    return StringRef(start - UsesDotPrefix, length + UsesDotPrefix);
   }
 
   ArgType getArgType(ASTContext &Ctx) const;

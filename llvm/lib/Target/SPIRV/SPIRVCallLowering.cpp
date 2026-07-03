@@ -21,6 +21,7 @@
 #include "SPIRVRegisterInfo.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
@@ -103,14 +104,10 @@ static FunctionType *
 fixFunctionTypeIfPtrArgs(SPIRVGlobalRegistry *GR, const Function &F,
                          FunctionType *FTy, SPIRVTypeInst SRetTy,
                          const SmallVector<SPIRVTypeInst, 4> &SArgTys) {
-  bool hasArgPtrs = false;
-  for (auto &Arg : F.args()) {
+  bool hasArgPtrs = any_of(F.args(), [](const Argument &Arg) {
     // check if it's an instance of a non-typed PointerType
-    if (Arg.getType()->isPointerTy()) {
-      hasArgPtrs = true;
-      break;
-    }
-  }
+    return Arg.getType()->isPointerTy();
+  });
   if (!hasArgPtrs) {
     Type *RetTy = FTy->getReturnType();
     // check if it's an instance of a non-typed PointerType
@@ -162,13 +159,25 @@ static SPIRVTypeInst getArgSPIRVType(const Function &F, unsigned ArgIdx,
   Type *OriginalArgType =
       SPIRV::getOriginalFunctionType(F)->getParamType(ArgIdx);
 
+  // Vector of untyped pointers: build with the deduced pointee instead of
+  // the default i8 (mismatches typed uses downstream).
+  Argument *Arg = F.getArg(ArgIdx);
+  if (auto *VTy = dyn_cast<FixedVectorType>(OriginalArgType);
+      VTy && isUntypedPointerTy(VTy->getElementType()))
+    if (Type *ElemTy = GR->findDeducedElementType(Arg))
+      return GR->getOrCreateSPIRVVectorType(
+          GR->getOrCreateSPIRVPointerType(
+              ElemTy, MIRBuilder,
+              addressSpaceToStorageClass(
+                  getPointerAddressSpace(OriginalArgType), ST)),
+          VTy->getNumElements(), MIRBuilder, true);
+
   // If OriginalArgType is non-pointer, use the OriginalArgType (the type cannot
   // be legally reassigned later).
   if (!isPointerTy(OriginalArgType))
     return GR->getOrCreateSPIRVType(OriginalArgType, MIRBuilder, ArgAccessQual,
                                     true);
 
-  Argument *Arg = F.getArg(ArgIdx);
   Type *ArgType = Arg->getType();
   if (isTypedPointerTy(ArgType)) {
     return GR->getOrCreateSPIRVPointerType(
@@ -298,6 +307,12 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
         if (Arg.hasAttribute(Attribute::ZExt)) {
           auto Attr =
               static_cast<unsigned>(SPIRV::FunctionParameterAttribute::Zext);
+          buildOpDecorate(VRegs[i][0], MIRBuilder,
+                          SPIRV::Decoration::FuncParamAttr, {Attr});
+        }
+        if (Arg.hasAttribute(Attribute::SExt)) {
+          auto Attr =
+              static_cast<unsigned>(SPIRV::FunctionParameterAttribute::Sext);
           buildOpDecorate(VRegs[i][0], MIRBuilder,
                           SPIRV::Decoration::FuncParamAttr, {Attr});
         }

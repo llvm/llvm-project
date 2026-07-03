@@ -29,6 +29,20 @@
 #include <cstring>
 #include <limits.h>
 
+/// Shared headers from LLVM libc
+/// Make sure to add ${LLVM_SOURCE_DIR}/../libc to include directories.
+///
+/// Notes: So far it looks like APFloat does not check errnos or floating-point
+/// exceptions after calling the math functions, so we will configure LLVM libc
+/// math functions to skip setting errnos and floating-point exceptions
+/// explicitly.  We also put them in a separate namespace so that the symbols
+/// do not clash with other libc math builds just in case.
+#define LIBC_NAMESPACE __llvm_libc_apfloat
+#define LIBC_MATH (LIBC_MATH_NO_ERRNO | LIBC_MATH_NO_EXCEPT)
+
+#include "shared/math.h"
+#include "shared/math_check_exceptions.h"
+
 #define APFLOAT_DISPATCH_ON_SEMANTICS(METHOD_CALL)                             \
   do {                                                                         \
     if (usesLayout<IEEEFloat>(getSemantics()))                                 \
@@ -78,6 +92,7 @@ constexpr fltSemantics APFloatBase::semFloat8E8M0FNU = {
     8,
     fltNonfiniteBehavior::NanOnly,
     fltNanEncoding::AllOnes,
+    false,
     false,
     false,
     false};
@@ -929,9 +944,10 @@ IEEEFloat &IEEEFloat::operator=(IEEEFloat &&rhs) {
 }
 
 bool IEEEFloat::isDenormal() const {
-  return isFiniteNonZero() && (exponent == semantics->minExponent) &&
-         (APInt::tcExtractBit(significandParts(),
-                              semantics->precision - 1) == 0);
+  return getSemantics().hasDenormals && isFiniteNonZero() &&
+         (exponent == semantics->minExponent) &&
+         (APInt::tcExtractBit(significandParts(), semantics->precision - 1) ==
+          0);
 }
 
 bool IEEEFloat::isSmallest() const {
@@ -3416,19 +3432,17 @@ APInt IEEEFloat::convertPPCDoubleDoubleLegacyAPFloatToAPInt() const {
 template <const fltSemantics &S>
 APInt IEEEFloat::convertIEEEFloatToAPInt() const {
   assert(semantics == &S);
-  const int bias = (semantics == &APFloatBase::semFloat8E8M0FNU)
-                       ? -S.minExponent
-                       : -(S.minExponent - 1);
   constexpr unsigned int trailing_significand_bits = S.precision - 1;
   constexpr int integer_bit_part = trailing_significand_bits / integerPartWidth;
   constexpr integerPart integer_bit =
       integerPart{1} << (trailing_significand_bits % integerPartWidth);
   constexpr uint64_t significand_mask = integer_bit - 1;
   constexpr unsigned int exponent_bits =
-      trailing_significand_bits ? (S.sizeInBits - 1 - trailing_significand_bits)
-                                : S.sizeInBits;
+      S.sizeInBits - (S.hasSignedRepr ? 1 : 0) - trailing_significand_bits;
   static_assert(exponent_bits < 64);
   constexpr uint64_t exponent_mask = (uint64_t{1} << exponent_bits) - 1;
+  constexpr bool is_zero_exp_reserved = S.hasDenormals || S.hasZero;
+  constexpr int bias = -(S.minExponent - (is_zero_exp_reserved ? 1 : 0));
 
   uint64_t myexponent;
   std::array<integerPart, partCountForBits(trailing_significand_bits)>
@@ -3703,7 +3717,8 @@ void IEEEFloat::initFromPPCDoubleDoubleLegacyAPInt(const APInt &api) {
   initFromDoubleAPInt(APInt(64, i1));
   [[maybe_unused]] opStatus fs = convert(APFloatBase::semPPCDoubleDoubleLegacy,
                                          rmNearestTiesToEven, &losesInfo);
-  assert(fs == opOK && !losesInfo);
+  // (convert may return opInvalidOp if i1 is an sNaN).
+  assert((fs == opOK || fs == opInvalidOp) && !losesInfo);
 
   // Unless we have a special case, add in second double.
   if (isFiniteNonZero()) {
@@ -3722,55 +3737,40 @@ void IEEEFloat::initFromPPCDoubleDoubleLegacyAPInt(const APInt &api) {
 // NaN is represented by all 1's.
 // Bias is 127.
 void IEEEFloat::initFromFloat8E8M0FNUAPInt(const APInt &api) {
-  const uint64_t exponent_mask = 0xff;
-  uint64_t val = api.getRawData()[0];
-  uint64_t myexponent = val & exponent_mask;
-
-  initialize(&APFloatBase::semFloat8E8M0FNU);
-  assert(partCount() == 1);
-
-  // This format has unsigned representation only
-  sign = 0;
-
-  // Set the significand
-  // This format does not have any significand but the 'Pth' precision bit is
-  // always set to 1 for consistency in APFloat's internal representation.
-  uint64_t mysignificand = 1;
-  significandParts()[0] = mysignificand;
-
-  // This format can either have a NaN or fcNormal
-  // All 1's i.e. 255 is a NaN
-  if (val == exponent_mask) {
-    category = fcNaN;
-    exponent = exponentNaN();
-    return;
-  }
-  // Handle fcNormal...
-  category = fcNormal;
-  exponent = myexponent - 127; // 127 is bias
+  initFromIEEEAPInt<APFloatBase::semFloat8E8M0FNU>(api);
 }
 
 template <const fltSemantics &S>
 void IEEEFloat::initFromIEEEAPInt(const APInt &api) {
   assert(api.getBitWidth() == S.sizeInBits);
-  constexpr integerPart integer_bit = integerPart{1}
-                                      << ((S.precision - 1) % integerPartWidth);
-  constexpr uint64_t significand_mask = integer_bit - 1;
+
   constexpr unsigned int trailing_significand_bits = S.precision - 1;
+  constexpr integerPart integer_bit =
+      integerPart{1} << (trailing_significand_bits % integerPartWidth);
+  constexpr uint64_t significand_mask = integer_bit - 1;
+  constexpr unsigned int exponent_bits =
+      S.sizeInBits - (S.hasSignedRepr ? 1 : 0) - trailing_significand_bits;
   constexpr unsigned int stored_significand_parts =
       partCountForBits(trailing_significand_bits);
-  constexpr unsigned int exponent_bits =
-      S.sizeInBits - 1 - trailing_significand_bits;
   static_assert(exponent_bits < 64);
   constexpr uint64_t exponent_mask = (uint64_t{1} << exponent_bits) - 1;
-  constexpr int bias = -(S.minExponent - 1);
+  constexpr bool is_zero_exp_reserved = S.hasDenormals || S.hasZero;
+  constexpr int bias = -(S.minExponent - (is_zero_exp_reserved ? 1 : 0));
+  constexpr bool has_significand = trailing_significand_bits > 0;
 
   // Copy the bits of the significand. We need to clear out the exponent and
   // sign bit in the last word.
   std::array<integerPart, stored_significand_parts> mysignificand;
-  std::copy_n(api.getRawData(), mysignificand.size(), mysignificand.begin());
-  if constexpr (significand_mask != 0) {
-    mysignificand[mysignificand.size() - 1] &= significand_mask;
+  if constexpr (has_significand) {
+    std::copy_n(api.getRawData(), mysignificand.size(), mysignificand.begin());
+    if constexpr (significand_mask != 0) {
+      mysignificand[mysignificand.size() - 1] &= significand_mask;
+    }
+  } else {
+    std::fill_n(mysignificand.begin(), mysignificand.size(), 0);
+    // Always set integer bit to 1 for consistency in APFloat's internal
+    // representation.
+    mysignificand[0] = 1;
   }
 
   // We assume the last word holds the sign bit, the exponent, and potentially
@@ -3782,11 +3782,14 @@ void IEEEFloat::initFromIEEEAPInt(const APInt &api) {
   initialize(&S);
   assert(partCount() == mysignificand.size());
 
-  sign = static_cast<unsigned int>(last_word >> ((S.sizeInBits - 1) % 64));
+  sign = S.hasSignedRepr
+             ? static_cast<unsigned int>(last_word >> ((S.sizeInBits - 1) % 64))
+             : 0;
 
-  bool all_zero_significand = llvm::all_of(mysignificand, equal_to(0));
+  bool all_zero_significand =
+      has_significand && llvm::all_of(mysignificand, equal_to(0));
 
-  bool is_zero = myexponent == 0 && all_zero_significand;
+  bool is_zero = myexponent == 0 && all_zero_significand && S.hasZero;
 
   if constexpr (S.nonFiniteBehavior == fltNonfiniteBehavior::IEEE754) {
     if (myexponent - bias == ::exponentInf(S) && all_zero_significand) {
@@ -3826,7 +3829,7 @@ void IEEEFloat::initFromIEEEAPInt(const APInt &api) {
   category = fcNormal;
   exponent = myexponent - bias;
   std::copy_n(mysignificand.begin(), mysignificand.size(), significandParts());
-  if (myexponent == 0) // denormal
+  if (myexponent == 0 && S.hasDenormals) // denormal
     exponent = S.minExponent;
   else
     significandParts()[mysignificand.size()-1] |= integer_bit; // integer bit
@@ -4514,6 +4517,13 @@ APFloat::opStatus IEEEFloat::next(bool nextDown) {
     changeSign();
 
   return result;
+}
+
+APInt IEEEFloat::getNaNPayload() const {
+  assert(isNaN() && "Can only be called on NaN values");
+  // Number of bits in the payload, excluding the (maybe implied) integer bit.
+  unsigned Bits = semantics->precision - 1;
+  return APInt(Bits, ArrayRef(significandParts(), partCountForBits(Bits)));
 }
 
 APFloatBase::ExponentType IEEEFloat::exponentNaN() const {
@@ -5780,6 +5790,7 @@ DoubleAPFloat frexp(const DoubleAPFloat &Arg, int &Exp,
                        std::move(Second));
 }
 
+APInt DoubleAPFloat::getNaNPayload() const { return Floats[0].getNaNPayload(); }
 } // namespace detail
 
 APFloat::Storage::Storage(IEEEFloat F, const fltSemantics &Semantics) {
@@ -6069,6 +6080,69 @@ APFloat::Storage &APFloat::Storage::operator=(APFloat::Storage &&RHS) {
     new (this) Storage(std::move(RHS));
   }
   return *this;
+}
+
+namespace {
+
+APFloat::opStatus getOpStatusFromLibc(int libc_exceptions) {
+  APFloat::opStatus status = APFloat::opOK;
+  if (libc_exceptions & FE_INVALID)
+    status = static_cast<APFloat::opStatus>(status | APFloat::opInvalidOp);
+  if (libc_exceptions & FE_DIVBYZERO)
+    status = static_cast<APFloat::opStatus>(status | APFloat::opDivByZero);
+  if (libc_exceptions & FE_OVERFLOW)
+    status = static_cast<APFloat::opStatus>(status | APFloat::opOverflow);
+  if (libc_exceptions & FE_UNDERFLOW)
+    status = static_cast<APFloat::opStatus>(status | APFloat::opUnderflow);
+  if (libc_exceptions & FE_INEXACT)
+    status = static_cast<APFloat::opStatus>(status | APFloat::opInexact);
+  return status;
+}
+
+} // namespace
+
+// TODO: Support other rounding modes when LLVM libc math implement static
+// roundings.
+std::optional<APFloat> exp(const APFloat &x, RoundingMode rounding_mode,
+                           APFloat::opStatus *status) {
+
+  if (rounding_mode == APFloatBase::rmNearestTiesToEven) {
+    if (APFloat::SemanticsToEnum(x.getSemantics()) ==
+        APFloatBase::S_IEEEsingle) {
+      float x_val = x.convertToFloat();
+      int exc =
+          LIBC_NAMESPACE::shared::check::exp_exceptions(x_val, FE_TONEAREST);
+      if (status) {
+        *status = getOpStatusFromLibc(exc);
+        if (x.isSignaling()) {
+          // 32-bit x86 will silence sNaN when loading floats, so we explicitly
+          // add the INVALID exception here.
+          *status =
+              static_cast<APFloat::opStatus>(*status | APFloat::opInvalidOp);
+        }
+      }
+      float result = LIBC_NAMESPACE::shared::expf(x_val);
+      return APFloat(result);
+    }
+    if (APFloat::SemanticsToEnum(x.getSemantics()) ==
+        APFloatBase::S_IEEEdouble) {
+      double x_val = x.convertToDouble();
+      int exc =
+          LIBC_NAMESPACE::shared::check::exp_exceptions(x_val, FE_TONEAREST);
+      if (status) {
+        *status = getOpStatusFromLibc(exc);
+        if (x.isSignaling()) {
+          // 32-bit x86 will silence sNaN when loading floats, so we explicitly
+          // add the INVALID exception here.
+          *status =
+              static_cast<APFloat::opStatus>(*status | APFloat::opInvalidOp);
+        }
+      }
+      double result = LIBC_NAMESPACE::shared::exp(x_val);
+      return APFloat(result);
+    }
+  }
+  return std::nullopt;
 }
 
 } // namespace llvm

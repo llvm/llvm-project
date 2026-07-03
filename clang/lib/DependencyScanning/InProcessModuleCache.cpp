@@ -24,13 +24,14 @@ void ModuleCacheEntries::flush() {
   auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
   for (auto &[Path, Entry] : Map) {
     if (Entry->State == ModuleCacheEntry::S_Written) {
+      assert(Entry->WrittenBuffer && "Wrote PCM with no contents");
       // Note: We could propagate Entry->ModTime to the on-disk file, but
       // implicitly-built modules (unlike explicitly-built modules) don't use
       // that metadata to refer to imports, rendering this unnecessary.
       off_t Size;
       time_t ModTime;
       // Best-effort: ignore errors (e.g. read-only cache directory).
-      (void)writeImpl(Path, Entry->Buffer->getMemBufferRef(), Size, ModTime);
+      (void)writeImpl(Path, *Entry->WrittenBuffer, Size, ModTime);
     }
   }
 }
@@ -145,18 +146,18 @@ public:
     ModuleCacheEntry &Entry = getOrCreateEntry(Path);
     std::lock_guard<std::mutex> Lock(Entry.Mutex);
     if (Entry.State == ModuleCacheEntry::S_Written) {
-      assert(Entry.Buffer && "Wrote PCM with no contents");
-      assert(Entry.Buffer->getBuffer() == Buffer.getBuffer() &&
+      assert(Entry.WrittenBuffer && "Wrote PCM with no contents");
+      assert(Entry.WrittenBuffer->getBuffer() == Buffer.getBuffer() &&
              "Wrote the same PCM with different contents");
-      Size = Entry.Buffer->getBufferSize();
+      Size = Entry.WrittenBuffer->getBufferSize();
       ModTime = Entry.ModTime;
       return {};
     }
-    Entry.Buffer =
+    Entry.WrittenBuffer =
         llvm::MemoryBuffer::getMemBufferCopy(Buffer.getBuffer(), Path);
     Entry.ModTime = llvm::sys::toTimeT(std::chrono::system_clock::now());
     Entry.State = ModuleCacheEntry::S_Written;
-    Size = Entry.Buffer->getBufferSize();
+    Size = Entry.WrittenBuffer->getBufferSize();
     ModTime = Entry.ModTime;
     return {};
   }
@@ -173,14 +174,18 @@ public:
       auto ReadBuffer = readImpl(FileName, ReadSize, ReadModTime);
       if (!ReadBuffer)
         return ReadBuffer.takeError();
-      Entry.Buffer = std::move(*ReadBuffer);
+      Entry.ReadBuffer = std::move(*ReadBuffer);
       Entry.ModTime = ReadModTime;
       Entry.State = ModuleCacheEntry::S_Read;
     }
-    Size = Entry.Buffer->getBufferSize();
+    // The written buffer takes precedence over any read buffer.
+    llvm::MemoryBuffer *Buffer = Entry.WrittenBuffer ? Entry.WrittenBuffer.get()
+                                                     : Entry.ReadBuffer.get();
+    Size = Buffer->getBufferSize();
     ModTime = Entry.ModTime;
-    return llvm::MemoryBuffer::getMemBuffer(*Entry.Buffer,
-                                            /* RequiresNullTerminator */ false);
+    // Note: Creates a reference to ReadBuffer or WrittenBuffer.
+    return llvm::MemoryBuffer::getMemBuffer(*Buffer,
+                                            /*RequiresNullTerminator=*/false);
   }
 };
 } // namespace
