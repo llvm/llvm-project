@@ -11,6 +11,7 @@
 
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include <string>
 
 namespace clang::profiles {
@@ -39,11 +40,16 @@ struct EnforcedProfile {
   std::string Designator;
 };
 
-inline std::string getCanonicalProfileArgumentSpelling(
-    const ProfileArgument &Argument) {
+/// The canonical spelling of a profile argument: the value token for a
+/// positional argument, "key : value" for a named one. Enforcement identity
+/// (P3589R2 [decl.attr.enforce]p3) compares designators by this spelling.
+/// A template over the argument representation so it serves both
+/// ProfileArgument and the parser's owning-string argument type.
+template <typename ArgumentT>
+std::string getCanonicalProfileArgumentSpelling(const ArgumentT &Argument) {
   if (!Argument.isNamed())
-    return Argument.Value.str();
-  return (Argument.Key + " : " + Argument.Value).str();
+    return std::string(Argument.Value);
+  return (llvm::Twine(Argument.Key) + " : " + Argument.Value).str();
 }
 
 } // namespace clang::profiles
