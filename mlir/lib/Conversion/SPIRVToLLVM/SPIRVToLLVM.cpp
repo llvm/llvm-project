@@ -1564,6 +1564,26 @@ public:
   }
 };
 
+/// Converts `spirv.GL.Fract` to `x - floor(x)`.
+class FractPattern : public SPIRVToLLVMConversion<spirv::GLFractOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::GLFractOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::GLFractOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    Value operand = adaptor.getOperand();
+    Value floored = LLVM::FFloorOp::create(rewriter, loc, dstType, operand);
+    rewriter.replaceOpWithNewOp<LLVM::FSubOp>(op, dstType, operand, floored);
+    return success();
+  }
+};
+
 class RadiansPattern : public SPIRVToLLVMConversion<spirv::GLRadiansOp> {
 public:
   using SPIRVToLLVMConversion<spirv::GLRadiansOp>::SPIRVToLLVMConversion;
@@ -1960,8 +1980,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::GLAsinOp, LLVM::ASinOp>,
       DirectConversionPattern<spirv::GLAcosOp, LLVM::ACosOp>,
       DirectConversionPattern<spirv::GLAtanOp, LLVM::ATanOp>,
-      InverseSqrtPattern, SAbsPattern, TanPattern, TanhPattern, RadiansPattern,
-      DegreesPattern,
+      InverseSqrtPattern, SAbsPattern, TanPattern, TanhPattern, FractPattern,
+      RadiansPattern, DegreesPattern,
 
       // OpenCL extended instruction set ops
       DirectConversionPattern<spirv::CLCeilOp, LLVM::FCeilOp>,

@@ -54,7 +54,6 @@ Implemented Papers
 - P3383R3: ``mdspan.at()`` (`Github <https://llvm.org/PR175213>`__)
 - P3369R0: constexpr for ``uninitialized_default_construct`` (`Github <https://llvm.org/PR118380>`__)
 - P3508R0: Wording for "constexpr for specialized memory algorithms" (`Github <https://llvm.org/PR118379>`__)
-- P3798R1: The unexpected in ``std::expected`` (`Github <https://llvm.org/PR204394>`__)
 - P4206R0: Revert string support in ``std::constant_wrapper`` (`Github <https://llvm.org/PR203338>`__)
 
 Improvements and New Features
@@ -70,6 +69,8 @@ Improvements and New Features
   ``"std::visit: variant is valueless"``, ``"std::get: variant is valueless"``, or
   ``"std::get: wrong alternative for variant"``. The standard only requires ``what()`` to return an
   unspecified non-null string, so user code that does not match on the exact message remains correct.
+- ``ifstream::read`` has been optimized to pass through large reads to system calls directly instead of copying them in
+  chunks.
 
 Deprecations and Removals
 -------------------------

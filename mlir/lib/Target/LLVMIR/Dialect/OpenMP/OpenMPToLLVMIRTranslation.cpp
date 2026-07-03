@@ -1745,6 +1745,25 @@ findAssociatedValue(Value privateVar, llvm::IRBuilderBase &builder,
   return moduleTranslation.lookupValue(privateVar);
 }
 
+// Privatizer region arguments may be by-value even when the available LLVM
+// value is storage for that value, e.g. lowered Fortran boxchar descriptors in
+// task context structs. Materialize the value expected by the region argument
+// while preserving the existing pointer mapping for pointer arguments.
+static llvm::Value *
+materializeRegionArgValue(llvm::IRBuilderBase &builder,
+                          LLVM::ModuleTranslation &moduleTranslation,
+                          BlockArgument regionArg, llvm::Value *value) {
+  if (!regionArg)
+    return value;
+
+  llvm::Type *regionArgType =
+      moduleTranslation.convertType(regionArg.getType());
+  if (regionArgType->isPointerTy() || !value->getType()->isPointerTy())
+    return value;
+
+  return builder.CreateLoad(regionArgType, value);
+}
+
 /// Initialize a single (first)private variable. You probably want to use
 /// allocateAndInitPrivateVars instead of this.
 /// This returns the private variable which has been initialized. This
@@ -1936,10 +1955,15 @@ static LogicalResult copyFirstPrivateVars(
     // copyRegion implements `lhs = rhs`
     Region &copyRegion = decl.getCopyRegion();
 
-    moduleTranslation.mapValue(decl.getCopyMoldArg(), moldVar);
+    llvm::Value *copyMoldVar = materializeRegionArgValue(
+        builder, moduleTranslation, decl.getCopyMoldArg(), moldVar);
+    llvm::Value *copyPrivateVar = materializeRegionArgValue(
+        builder, moduleTranslation, decl.getCopyPrivateArg(), llvmVar);
+
+    moduleTranslation.mapValue(decl.getCopyMoldArg(), copyMoldVar);
 
     // map copyRegion lhs arg
-    moduleTranslation.mapValue(decl.getCopyPrivateArg(), llvmVar);
+    moduleTranslation.mapValue(decl.getCopyPrivateArg(), copyPrivateVar);
 
     // in-place convert copy region
     if (failed(inlineConvertOmpRegions(copyRegion, "omp.private.copy", builder,
@@ -3130,14 +3154,15 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
     // initialized character box is yielded by value. Here we need to store the
     // yielded value into the private allocation, and load the private
     // allocation to match the type expected by region block arguments.
+    [[maybe_unused]] llvm::Value *llvmPrivateVar = llvmPrivateVarAlloc;
     if ((privateVarOrErr.get() != llvmPrivateVarAlloc) &&
         !mlir::isa<LLVM::LLVMPointerType>(blockArg.getType())) {
       builder.CreateStore(privateVarOrErr.get(), llvmPrivateVarAlloc);
       // Load it so we have the value pointed to by the GEP
-      llvmPrivateVarAlloc = builder.CreateLoad(privateVarOrErr.get()->getType(),
-                                               llvmPrivateVarAlloc);
+      llvmPrivateVar = builder.CreateLoad(privateVarOrErr.get()->getType(),
+                                          llvmPrivateVarAlloc);
     }
-    assert(llvmPrivateVarAlloc->getType() ==
+    assert(llvmPrivateVar->getType() ==
            moduleTranslation.convertType(blockArg.getType()));
 
     // Mapping blockArg -> llvmPrivateVarAlloc is done inside the body callback
@@ -3603,14 +3628,15 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
     llvm::IRBuilderBase::InsertPointGuard guard(builder);
     builder.SetInsertPoint(builder.GetInsertBlock()->getTerminator());
 
+    [[maybe_unused]] llvm::Value *llvmPrivateVar = llvmPrivateVarAlloc;
     if ((privateVarOrErr.get() != llvmPrivateVarAlloc) &&
         !mlir::isa<LLVM::LLVMPointerType>(blockArg.getType())) {
       builder.CreateStore(privateVarOrErr.get(), llvmPrivateVarAlloc);
       // Load it so we have the value pointed to by the GEP
-      llvmPrivateVarAlloc = builder.CreateLoad(privateVarOrErr.get()->getType(),
-                                               llvmPrivateVarAlloc);
+      llvmPrivateVar = builder.CreateLoad(privateVarOrErr.get()->getType(),
+                                          llvmPrivateVarAlloc);
     }
-    assert(llvmPrivateVarAlloc->getType() ==
+    assert(llvmPrivateVar->getType() ==
            moduleTranslation.convertType(blockArg.getType()));
   }
 
@@ -3884,9 +3910,11 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
       assert(llvmPrivateVarAlloc &&
              "reads from mold so shouldn't have been skipped");
 
-      llvm::Expected<llvm::Value *> privateVarOrErr =
-          initPrivateVar(builder, moduleTranslation, privDecl, mold, blockArg,
-                         llvmPrivateVarAlloc, builder.GetInsertBlock());
+      llvm::Value *moldArg = materializeRegionArgValue(
+          builder, moduleTranslation, privDecl.getInitMoldArg(), mold);
+      llvm::Expected<llvm::Value *> privateVarOrErr = initPrivateVar(
+          builder, moduleTranslation, privDecl, moldArg, blockArg,
+          llvmPrivateVarAlloc, builder.GetInsertBlock());
       if (!privateVarOrErr)
         return privateVarOrErr.takeError();
 
@@ -3897,14 +3925,15 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
       // initialized character box is yielded by value. Here we need to store
       // the yielded value into the private allocation, and load the private
       // allocation to match the type expected by region block arguments.
+      [[maybe_unused]] llvm::Value *llvmPrivateVar = llvmPrivateVarAlloc;
       if ((privateVarOrErr.get() != llvmPrivateVarAlloc) &&
           !mlir::isa<LLVM::LLVMPointerType>(blockArg.getType())) {
         builder.CreateStore(privateVarOrErr.get(), llvmPrivateVarAlloc);
         // Load it so we have the value pointed to by the GEP
-        llvmPrivateVarAlloc = builder.CreateLoad(
-            privateVarOrErr.get()->getType(), llvmPrivateVarAlloc);
+        llvmPrivateVar = builder.CreateLoad(privateVarOrErr.get()->getType(),
+                                            llvmPrivateVarAlloc);
       }
-      assert(llvmPrivateVarAlloc->getType() ==
+      assert(llvmPrivateVar->getType() ==
              moduleTranslation.convertType(blockArg.getType()));
 
       // Mapping blockArg -> llvmPrivateVarAlloc is done inside the body
@@ -7755,19 +7784,24 @@ convertOmpDistribute(Operation &opInst, llvm::IRBuilderBase &builder,
   return success();
 }
 
-/// Lowers the FlagsAttr which is applied to the module on the device
-/// pass when offloading, this attribute contains OpenMP RTL globals that can
-/// be passed as flags to the frontend, otherwise they are set to default
+/// Lowers the FlagsAttr which is applied to the module when offloading. This
+/// attribute contains OpenMP RTL globals that can be passed as flags to the
+/// frontend, otherwise they are set to default
 static LogicalResult
 convertFlagsAttr(Operation *op, mlir::omp::FlagsAttr attribute,
                  LLVM::ModuleTranslation &moduleTranslation) {
-  if (!cast<mlir::ModuleOp>(op))
-    return failure();
+  auto offloadMod = dyn_cast<omp::OffloadModuleInterface>(op);
+  if (!offloadMod)
+    return op->emitOpError() << "omp flags attached to non offload module op";
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
 
   ompBuilder->M.addModuleFlag(llvm::Module::Max, "openmp-device",
                               attribute.getOpenmpDeviceVersion());
+
+  // The flags below are only intended to be emitted for GPU offload targets.
+  if (!offloadMod.getIsGPU())
+    return success();
 
   if (attribute.getNoGpuLib())
     return success();

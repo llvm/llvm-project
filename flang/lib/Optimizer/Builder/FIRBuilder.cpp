@@ -8,7 +8,6 @@
 
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Analysis/AliasAnalysis.h"
-#include "flang/Optimizer/Analysis/ArraySectionAnalyzer.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/Complex.h"
@@ -22,12 +21,10 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/Utils.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -759,8 +756,8 @@ mlir::Value fir::FirOpBuilder::createSlice(mlir::Location loc,
 
 mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc,
                                          const fir::ExtendedValue &exv,
-                                         bool isPolymorphic,
-                                         bool isAssumedType) {
+                                         bool isPolymorphic, bool isAssumedType,
+                                         unsigned corank) {
   mlir::Value itemAddr = fir::getBase(exv);
   if (mlir::isa<fir::BaseBoxType>(itemAddr.getType()))
     return itemAddr;
@@ -777,13 +774,13 @@ mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc,
   if (mlir::isa<fir::BaseBoxType>(elementType)) {
     boxTy = elementType;
   } else {
-    boxTy = fir::BoxType::get(elementType, isVolatile);
+    boxTy = fir::BoxType::get(elementType, isVolatile, corank);
     if (isPolymorphic) {
       elementType = fir::updateTypeForUnlimitedPolymorphic(elementType);
       if (isAssumedType)
-        boxTy = fir::BoxType::get(elementType, isVolatile);
+        boxTy = fir::BoxType::get(elementType, isVolatile, corank);
       else
-        boxTy = fir::ClassType::get(elementType, isVolatile);
+        boxTy = fir::ClassType::get(elementType, isVolatile, corank);
     }
   }
 
@@ -1855,10 +1852,11 @@ mlir::Value fir::factory::genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
 
 fir::BoxValue fir::factory::createBoxValue(fir::FirOpBuilder &builder,
                                            mlir::Location loc,
-                                           const fir::ExtendedValue &exv) {
+                                           const fir::ExtendedValue &exv,
+                                           unsigned corank) {
   if (auto *boxValue = exv.getBoxOf<fir::BoxValue>())
     return *boxValue;
-  mlir::Value box = builder.createBox(loc, exv);
+  mlir::Value box = builder.createBox(loc, exv, false, false, corank);
   llvm::SmallVector<mlir::Value> lbounds;
   llvm::SmallVector<mlir::Value> explicitTypeParams;
   exv.match(
@@ -2008,138 +2006,4 @@ mlir::Value fir::factory::getDescriptorWithNewBaseAddress(
   mlir::Value typeMold = fir::isPolymorphicType(boxType) ? box : mlir::Value{};
   return builder.createBox(loc, boxType, newAddr, shape, /*slice=*/{},
                            fir::getTypeParams(openedInput), typeMold);
-}
-
-std::optional<mlir::Value> fir::factory::genIndexBasedDisjointnessCheck(
-    mlir::Location loc, fir::FirOpBuilder &builder, mlir::Value lhsRef,
-    mlir::Value rhsRef) {
-  auto des1 = lhsRef.getDefiningOp<hlfir::DesignateOp>();
-  auto des2 = rhsRef.getDefiningOp<hlfir::DesignateOp>();
-  if (!des1 || !des2)
-    return std::nullopt;
-
-  if (des1.getMemref() != des2.getMemref())
-    return std::nullopt;
-
-  if (des1.getComponent() != des2.getComponent() ||
-      des1.getComponentShape() != des2.getComponentShape() ||
-      des1.getSubstring() != des2.getSubstring() ||
-      des1.getComplexPart() != des2.getComplexPart() ||
-      des1.getTypeparams() != des2.getTypeparams())
-    return std::nullopt;
-
-  if (des1.getIsTriplet().empty() ||
-      !llvm::equal(des1.getIsTriplet(), des2.getIsTriplet()))
-    return std::nullopt;
-
-  using Analyzer = fir::ArraySectionAnalyzer;
-  mlir::Type idxTy = builder.getIndexType();
-  auto toIdx = [&](mlir::Value v) -> mlir::Value {
-    return fir::ConvertOp::create(builder, loc, idxTy, v);
-  };
-
-  mlir::Value disjoint;
-  auto des1It = des1.getIndices().begin();
-  auto des2It = des2.getIndices().begin();
-  for (bool isTriplet : des1.getIsTriplet()) {
-    Analyzer::SectionDesc desc1 = Analyzer::readSectionDesc(des1It, isTriplet);
-    Analyzer::SectionDesc desc2 = Analyzer::readSectionDesc(des2It, isTriplet);
-    auto [lb1, ub1] = Analyzer::getOrderedBounds(desc1);
-    auto [lb2, ub2] = Analyzer::getOrderedBounds(desc2);
-    if (!lb1 || !lb2)
-      continue;
-
-    mlir::Value c1 = mlir::arith::CmpIOp::create(
-        builder, loc, mlir::arith::CmpIPredicate::slt, toIdx(ub1), toIdx(lb2));
-    mlir::Value c2 = mlir::arith::CmpIOp::create(
-        builder, loc, mlir::arith::CmpIPredicate::slt, toIdx(ub2), toIdx(lb1));
-    mlir::Value c1Orc2 = mlir::arith::OrIOp::create(builder, loc, c1, c2);
-    disjoint = disjoint
-                   ? mlir::arith::OrIOp::create(builder, loc, disjoint, c1Orc2)
-                   : c1Orc2;
-  }
-  if (!disjoint)
-    return std::nullopt;
-  return disjoint;
-}
-
-std::optional<mlir::Value> fir::factory::genAddressBasedDisjointnessCheck(
-    mlir::Location loc, fir::FirOpBuilder &builder, mlir::Value lhsRef,
-    mlir::Value rhsRef) {
-  if (!mlir::isa<fir::BaseBoxType>(lhsRef.getType()) ||
-      !mlir::isa<fir::BaseBoxType>(rhsRef.getType()))
-    return std::nullopt;
-
-  mlir::Type idxTy = builder.getIndexType();
-  mlir::Type intPtrTy = builder.getIntPtrType();
-
-  //   Disjoint if: xEnd < yStart || yEnd < xStart.
-  auto computeRange =
-      [&](mlir::Value box) -> std::pair<mlir::Value, mlir::Value> {
-    mlir::Value baseAddr = fir::BoxAddrOp::create(builder, loc, box);
-    mlir::Value baseInt =
-        fir::ConvertOp::create(builder, loc, intPtrTy, baseAddr);
-
-    mlir::Value eleSize = fir::BoxEleSizeOp::create(builder, loc, idxTy, box);
-    mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
-    mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
-
-    mlir::Value least = zero;
-    mlir::Value most = zero;
-
-    auto boxTy = mlir::cast<fir::BaseBoxType>(box.getType());
-    unsigned rank = 0;
-    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(
-            fir::unwrapRefType(boxTy.getEleTy())))
-      rank = seqTy.getShape().size();
-
-    if (rank == 0)
-      return {nullptr, nullptr};
-
-    for (unsigned dim = 0; dim < rank; ++dim) {
-      mlir::Value dimVal = builder.createIntegerConstant(loc, idxTy, dim);
-      auto dims = fir::BoxDimsOp::create(builder, loc, idxTy, idxTy, idxTy, box,
-                                         dimVal);
-      mlir::Value extent = dims.getExtent();
-      mlir::Value stride = dims.getByteStride();
-
-      mlir::Value extentM1 =
-          mlir::arith::SubIOp::create(builder, loc, extent, one);
-      mlir::Value dimOffset =
-          mlir::arith::MulIOp::create(builder, loc, extentM1, stride);
-
-      mlir::Value isStrideNeg = mlir::arith::CmpIOp::create(
-          builder, loc, mlir::arith::CmpIPredicate::slt, stride, zero);
-      mlir::Value addToLeast = mlir::arith::SelectOp::create(
-          builder, loc, isStrideNeg, dimOffset, zero);
-      mlir::Value addToMost = mlir::arith::SelectOp::create(
-          builder, loc, isStrideNeg, zero, dimOffset);
-      least = mlir::arith::AddIOp::create(builder, loc, least, addToLeast);
-      most = mlir::arith::AddIOp::create(builder, loc, most, addToMost);
-    }
-
-    mlir::Value eleSizeM1 =
-        mlir::arith::SubIOp::create(builder, loc, eleSize, one);
-    most = mlir::arith::AddIOp::create(builder, loc, most, eleSizeM1);
-
-    mlir::Value leastInt =
-        fir::ConvertOp::create(builder, loc, intPtrTy, least);
-    mlir::Value mostInt = fir::ConvertOp::create(builder, loc, intPtrTy, most);
-    mlir::Value rangeStart =
-        mlir::arith::AddIOp::create(builder, loc, baseInt, leastInt);
-    mlir::Value rangeEnd =
-        mlir::arith::AddIOp::create(builder, loc, baseInt, mostInt);
-    return {rangeStart, rangeEnd};
-  };
-
-  auto [lhsStart, lhsEnd] = computeRange(lhsRef);
-  auto [rhsStart, rhsEnd] = computeRange(rhsRef);
-  if (!lhsStart || !rhsStart)
-    return std::nullopt;
-
-  mlir::Value cond1 = mlir::arith::CmpIOp::create(
-      builder, loc, mlir::arith::CmpIPredicate::ult, lhsEnd, rhsStart);
-  mlir::Value cond2 = mlir::arith::CmpIOp::create(
-      builder, loc, mlir::arith::CmpIPredicate::ult, rhsEnd, lhsStart);
-  return mlir::arith::OrIOp::create(builder, loc, cond1, cond2);
 }

@@ -63,7 +63,8 @@ void takes_inout_s(inout S s) {}
 
 void foo() {
   // This case should fail because we cannot writeback to `cb` after the call.
-  // expected-error@+1 {{no viable constructor copying parameter of type 'const hlsl_constant S'}}
+  // expected-error@+2 {{no viable overloaded '='}}
+  // expected-note@*:* {{candidate function not viable: no known conversion from 'S' to 'const hlsl::ConstantBuffer<S>' for 1st argument}}
   takes_inout_s(cb);
 }
 

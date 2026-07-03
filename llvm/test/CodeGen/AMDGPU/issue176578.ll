@@ -48,8 +48,10 @@ define <4 x i8> @issue176578() #0 {
 ; CHECK-NEXT:    s_branch .LBB0_2
 ; CHECK-NEXT:  .LBB0_1: ; %Flow
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    s_andn2_b64 vcc, exec, s[4:5]
-; CHECK-NEXT:    s_cbranch_vccz .LBB0_4
+; CHECK-NEXT:    s_and_b64 s[4:5], s[4:5], exec
+; CHECK-NEXT:    s_cselect_b32 s4, 1, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s4, 1
+; CHECK-NEXT:    s_cbranch_scc0 .LBB0_4
 ; CHECK-NEXT:  .LBB0_2: ; %bb1
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_and_b64 vcc, exec, -1
