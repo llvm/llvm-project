@@ -127,8 +127,8 @@ public:
                 ? std::make_unique<AMDGCNSPIRVABIInfo>(CGT)
                 : std::make_unique<SPIRVABIInfo>(CGT)) {}
   void setCUDAKernelCallingConvention(const FunctionType *&FT) const override;
-  LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
-                                  const VarDecl *D) const override;
+  LangAS adjustGlobalVarAddressSpace(CodeGenModule &CGM, const VarDecl *D,
+                                     std::optional<LangAS> AS) const override;
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &M) const override;
   StringRef getLLVMSyncScopeStr(const LangOptions &LangOpts, SyncScope Scope,
@@ -500,12 +500,11 @@ CommonSPIRTargetCodeGenInfo::getNullPointer(const CodeGen::CodeGenModule &CGM,
       llvm::ConstantPointerNull::get(NPT), PT);
 }
 
-LangAS
-SPIRVTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
-                                                 const VarDecl *D) const {
-  assert(!CGM.getLangOpts().OpenCL &&
-         !(CGM.getLangOpts().CUDA && CGM.getLangOpts().CUDAIsDevice) &&
-         "Address space agnostic languages only");
+LangAS SPIRVTargetCodeGenInfo::adjustGlobalVarAddressSpace(
+    CodeGenModule &CGM, const VarDecl *D, std::optional<LangAS> AS) const {
+  if (AS)
+    return *AS;
+
   // If we're here it means that we're using the SPIRDefIsGen ASMap, hence for
   // the global AS we can rely on either cuda_device or sycl_global to be
   // correct; however, since this is not a CUDA Device context, we use

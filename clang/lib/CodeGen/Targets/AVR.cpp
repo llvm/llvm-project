@@ -114,8 +114,11 @@ public:
   AVRTargetCodeGenInfo(CodeGenTypes &CGT, unsigned NPR, unsigned NRR)
       : TargetCodeGenInfo(std::make_unique<AVRABIInfo>(CGT, NPR, NRR)) {}
 
-  LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
-                                  const VarDecl *D) const override {
+  LangAS adjustGlobalVarAddressSpace(CodeGenModule &CGM, const VarDecl *D,
+                                     std::optional<LangAS> AS) const override {
+    if (AS)
+      return *AS;
+
     // Check if global/static variable is defined in address space
     // 1~6 (__flash, __flash1, __flash2, __flash3, __flash4, __flash5)
     // but not constant.
@@ -127,7 +130,7 @@ public:
                               diag::err_verify_nonconst_addrspace)
             << "__flash*";
     }
-    return TargetCodeGenInfo::getGlobalVarAddressSpace(CGM, D);
+    return TargetCodeGenInfo::adjustGlobalVarAddressSpace(CGM, D, std::nullopt);
   }
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,

@@ -6153,7 +6153,9 @@ CharUnits CodeGenModule::GetTargetTypeStoreSize(llvm::Type *Ty) const {
       getDataLayout().getTypeStoreSizeInBits(Ty));
 }
 
-LangAS CodeGenModule::GetGlobalVarAddressSpace(const VarDecl *D) {
+static std::optional<LangAS>
+getGlobalVarDefaultAddressSpace(const VarDecl *D, const LangOptions &LangOpts,
+                                CGOpenMPRuntime *OpenMPRuntime) {
   if (LangOpts.OpenCL) {
     LangAS AS = D ? D->getType().getAddressSpace() : LangAS::opencl_global;
     assert(AS == LangAS::opencl_global ||
@@ -6188,7 +6190,14 @@ LangAS CodeGenModule::GetGlobalVarAddressSpace(const VarDecl *D) {
     if (OpenMPRuntime->hasAllocateAttributeForGlobalVar(D, AS))
       return AS;
   }
-  return getTargetCodeGenInfo().getGlobalVarAddressSpace(*this, D);
+
+  return std::nullopt;
+}
+
+LangAS CodeGenModule::GetGlobalVarAddressSpace(const VarDecl *D) {
+  std::optional<LangAS> AS =
+      getGlobalVarDefaultAddressSpace(D, LangOpts, OpenMPRuntime.get());
+  return getTargetCodeGenInfo().adjustGlobalVarAddressSpace(*this, D, AS);
 }
 
 LangAS CodeGenModule::GetGlobalConstantAddressSpace() const {

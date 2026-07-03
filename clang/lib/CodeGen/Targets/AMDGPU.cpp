@@ -307,8 +307,8 @@ public:
 
   LangAS getSRetAddrSpace(const CXXRecordDecl *RD) const override;
 
-  LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
-                                  const VarDecl *D) const override;
+  LangAS adjustGlobalVarAddressSpace(CodeGenModule &CGM, const VarDecl *D,
+                                     std::optional<LangAS> AS) const override;
   StringRef getLLVMSyncScopeStr(const LangOptions &LangOpts, SyncScope Scope,
                                 llvm::AtomicOrdering Ordering) const override;
   void setTargetAtomicMetadata(CodeGenFunction &CGF,
@@ -476,20 +476,20 @@ AMDGPUTargetCodeGenInfo::getSRetAddrSpace(const CXXRecordDecl *RD) const {
       getABIInfo().getDataLayout().getAllocaAddrSpace());
 }
 
-LangAS
-AMDGPUTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
-                                                  const VarDecl *D) const {
-  assert(!CGM.getLangOpts().OpenCL &&
-         !(CGM.getLangOpts().CUDA && CGM.getLangOpts().CUDAIsDevice) &&
-         "Address space agnostic languages only");
+LangAS AMDGPUTargetCodeGenInfo::adjustGlobalVarAddressSpace(
+    CodeGenModule &CGM, const VarDecl *D, std::optional<LangAS> AS) const {
+  if (AS)
+    return *AS;
+
   LangAS DefaultGlobalAS = getLangASFromTargetAS(
       CGM.getContext().getTargetAddressSpace(LangAS::opencl_global));
   if (!D)
     return DefaultGlobalAS;
 
   LangAS AddrSpace = D->getType().getAddressSpace();
-  if (AddrSpace != LangAS::Default)
+  if (AddrSpace != LangAS::Default) {
     return AddrSpace;
+  }
 
   // Only promote to address space 4 if VarDecl has constant initialization.
   if (D->getType().isConstantStorage(CGM.getContext(), false, false) &&
@@ -497,6 +497,7 @@ AMDGPUTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
     if (auto ConstAS = CGM.getTarget().getConstantAddressSpace())
       return *ConstAS;
   }
+
   return DefaultGlobalAS;
 }
 
