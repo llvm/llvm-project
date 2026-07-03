@@ -1,0 +1,376 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -run-pass=machine-scheduler -verify-misched -o - %s | FileCheck %s
+#
+# Test for the WMMASchedule DAG mutation on an 8x8 outer product tile
+# (64 DS_READ_B128, 8 A/B fragments, 64 V_WMMA). Without the mutation the
+# scheduler schedules all 64 loads at the beginning of the block; the mutation
+# debunches these loads.
+#
+# XFAIL: *
+
+--- |
+  target datalayout = "e-m:e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9"
+  target triple = "amdgcn"
+  define amdgpu_kernel void @wmma_op() #0 { ret void }
+  attributes #0 = { "target-cpu"="gfx1250" "amdgpu-flat-work-group-size"="1,128" "amdgpu-waves-per-eu"="1,1" }
+...
+---
+name:            wmma_op
+alignment:       4
+tracksRegLiveness: true
+isSSA:           false
+noPhis:          true
+machineFunctionInfo:
+  isEntryFunction: true
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  stackPtrOffsetReg: '$sgpr32'
+  occupancy:       1
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: wmma_op
+    ; CHECK:      V_WMMA
+    ; CHECK-NEXT: V_WMMA
+    ; CHECK-NEXT: DS_READ_B128
+    ; CHECK-NEXT: DS_READ_B128
+    ; CHECK-NEXT: DS_READ_B128
+    ; CHECK-NEXT: DS_READ_B128
+    ; CHECK-NEXT: V_WMMA
+    ; CHECK-NEXT: DS_READ_B128
+    ; CHECK-NEXT: DS_READ_B128
+    ; CHECK-NEXT: DS_READ_B128
+    ; CHECK-NEXT: DS_READ_B128
+    ; CHECK-NEXT: V_WMMA
+    successors: %bb.1(0x80000000)
+    %ptra:vgpr_32 = IMPLICIT_DEF
+    %ptrb:vgpr_32 = IMPLICIT_DEF
+    %scale:vreg_64_lo256_align2 = IMPLICIT_DEF
+    %vo:vgpr_32 = IMPLICIT_DEF
+    %rsrc:sgpr_128 = IMPLICIT_DEF
+    %500:vreg_256_align2 = IMPLICIT_DEF
+    %501:vreg_256_align2 = IMPLICIT_DEF
+    %502:vreg_256_align2 = IMPLICIT_DEF
+    %503:vreg_256_align2 = IMPLICIT_DEF
+    %504:vreg_256_align2 = IMPLICIT_DEF
+    %505:vreg_256_align2 = IMPLICIT_DEF
+    %506:vreg_256_align2 = IMPLICIT_DEF
+    %507:vreg_256_align2 = IMPLICIT_DEF
+    %508:vreg_256_align2 = IMPLICIT_DEF
+    %509:vreg_256_align2 = IMPLICIT_DEF
+    %510:vreg_256_align2 = IMPLICIT_DEF
+    %511:vreg_256_align2 = IMPLICIT_DEF
+    %512:vreg_256_align2 = IMPLICIT_DEF
+    %513:vreg_256_align2 = IMPLICIT_DEF
+    %514:vreg_256_align2 = IMPLICIT_DEF
+    %515:vreg_256_align2 = IMPLICIT_DEF
+    %516:vreg_256_align2 = IMPLICIT_DEF
+    %517:vreg_256_align2 = IMPLICIT_DEF
+    %518:vreg_256_align2 = IMPLICIT_DEF
+    %519:vreg_256_align2 = IMPLICIT_DEF
+    %520:vreg_256_align2 = IMPLICIT_DEF
+    %521:vreg_256_align2 = IMPLICIT_DEF
+    %522:vreg_256_align2 = IMPLICIT_DEF
+    %523:vreg_256_align2 = IMPLICIT_DEF
+    %524:vreg_256_align2 = IMPLICIT_DEF
+    %525:vreg_256_align2 = IMPLICIT_DEF
+    %526:vreg_256_align2 = IMPLICIT_DEF
+    %527:vreg_256_align2 = IMPLICIT_DEF
+    %528:vreg_256_align2 = IMPLICIT_DEF
+    %529:vreg_256_align2 = IMPLICIT_DEF
+    %530:vreg_256_align2 = IMPLICIT_DEF
+    %531:vreg_256_align2 = IMPLICIT_DEF
+    %532:vreg_256_align2 = IMPLICIT_DEF
+    %533:vreg_256_align2 = IMPLICIT_DEF
+    %534:vreg_256_align2 = IMPLICIT_DEF
+    %535:vreg_256_align2 = IMPLICIT_DEF
+    %536:vreg_256_align2 = IMPLICIT_DEF
+    %537:vreg_256_align2 = IMPLICIT_DEF
+    %538:vreg_256_align2 = IMPLICIT_DEF
+    %539:vreg_256_align2 = IMPLICIT_DEF
+    %540:vreg_256_align2 = IMPLICIT_DEF
+    %541:vreg_256_align2 = IMPLICIT_DEF
+    %542:vreg_256_align2 = IMPLICIT_DEF
+    %543:vreg_256_align2 = IMPLICIT_DEF
+    %544:vreg_256_align2 = IMPLICIT_DEF
+    %545:vreg_256_align2 = IMPLICIT_DEF
+    %546:vreg_256_align2 = IMPLICIT_DEF
+    %547:vreg_256_align2 = IMPLICIT_DEF
+    %548:vreg_256_align2 = IMPLICIT_DEF
+    %549:vreg_256_align2 = IMPLICIT_DEF
+    %550:vreg_256_align2 = IMPLICIT_DEF
+    %551:vreg_256_align2 = IMPLICIT_DEF
+    %552:vreg_256_align2 = IMPLICIT_DEF
+    %553:vreg_256_align2 = IMPLICIT_DEF
+    %554:vreg_256_align2 = IMPLICIT_DEF
+    %555:vreg_256_align2 = IMPLICIT_DEF
+    %556:vreg_256_align2 = IMPLICIT_DEF
+    %557:vreg_256_align2 = IMPLICIT_DEF
+    %558:vreg_256_align2 = IMPLICIT_DEF
+    %559:vreg_256_align2 = IMPLICIT_DEF
+    %560:vreg_256_align2 = IMPLICIT_DEF
+    %561:vreg_256_align2 = IMPLICIT_DEF
+    %562:vreg_256_align2 = IMPLICIT_DEF
+    %563:vreg_256_align2 = IMPLICIT_DEF
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2(0x80000000)
+    undef %300.sub0_sub1_sub2_sub3:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    %300.sub4_sub5_sub6_sub7:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 32, 0, implicit $exec :: (load (s128), addrspace 3)
+    %300.sub8_sub9_sub10_sub11:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 64, 0, implicit $exec :: (load (s128), addrspace 3)
+    %300.sub12_sub13_sub14_sub15:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 96, 0, implicit $exec :: (load (s128), addrspace 3)
+    undef %301.sub0_sub1_sub2_sub3:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    %301.sub4_sub5_sub6_sub7:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 32, 0, implicit $exec :: (load (s128), addrspace 3)
+    %301.sub8_sub9_sub10_sub11:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 64, 0, implicit $exec :: (load (s128), addrspace 3)
+    %301.sub12_sub13_sub14_sub15:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 96, 0, implicit $exec :: (load (s128), addrspace 3)
+    undef %302.sub0_sub1_sub2_sub3:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    %302.sub4_sub5_sub6_sub7:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 32, 0, implicit $exec :: (load (s128), addrspace 3)
+    %302.sub8_sub9_sub10_sub11:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 64, 0, implicit $exec :: (load (s128), addrspace 3)
+    %302.sub12_sub13_sub14_sub15:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 96, 0, implicit $exec :: (load (s128), addrspace 3)
+    undef %303.sub0_sub1_sub2_sub3:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    %303.sub4_sub5_sub6_sub7:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 32, 0, implicit $exec :: (load (s128), addrspace 3)
+    %303.sub8_sub9_sub10_sub11:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 64, 0, implicit $exec :: (load (s128), addrspace 3)
+    %303.sub12_sub13_sub14_sub15:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 96, 0, implicit $exec :: (load (s128), addrspace 3)
+    undef %304.sub0_sub1_sub2_sub3:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    %304.sub4_sub5_sub6_sub7:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 32, 0, implicit $exec :: (load (s128), addrspace 3)
+    %304.sub8_sub9_sub10_sub11:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 64, 0, implicit $exec :: (load (s128), addrspace 3)
+    %304.sub12_sub13_sub14_sub15:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 96, 0, implicit $exec :: (load (s128), addrspace 3)
+    undef %305.sub0_sub1_sub2_sub3:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    %305.sub4_sub5_sub6_sub7:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 32, 0, implicit $exec :: (load (s128), addrspace 3)
+    %305.sub8_sub9_sub10_sub11:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 64, 0, implicit $exec :: (load (s128), addrspace 3)
+    %305.sub12_sub13_sub14_sub15:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 96, 0, implicit $exec :: (load (s128), addrspace 3)
+    undef %306.sub0_sub1_sub2_sub3:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    %306.sub4_sub5_sub6_sub7:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 32, 0, implicit $exec :: (load (s128), addrspace 3)
+    %306.sub8_sub9_sub10_sub11:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 64, 0, implicit $exec :: (load (s128), addrspace 3)
+    %306.sub12_sub13_sub14_sub15:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 96, 0, implicit $exec :: (load (s128), addrspace 3)
+    undef %307.sub0_sub1_sub2_sub3:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    %307.sub4_sub5_sub6_sub7:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 32, 0, implicit $exec :: (load (s128), addrspace 3)
+    %307.sub8_sub9_sub10_sub11:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 64, 0, implicit $exec :: (load (s128), addrspace 3)
+    %307.sub12_sub13_sub14_sub15:vreg_512_align2 = DS_READ_B128_gfx9 %ptra, 96, 0, implicit $exec :: (load (s128), addrspace 3)
+    undef %400.sub0_sub1_sub2_sub3:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    %400.sub4_sub5_sub6_sub7:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 32, 0, implicit $exec :: (load (s128), addrspace 3)
+    %400.sub8_sub9_sub10_sub11:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 64, 0, implicit $exec :: (load (s128), addrspace 3)
+    %400.sub12_sub13_sub14_sub15:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 96, 0, implicit $exec :: (load (s128), addrspace 3)
+    undef %401.sub0_sub1_sub2_sub3:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    %401.sub4_sub5_sub6_sub7:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 32, 0, implicit $exec :: (load (s128), addrspace 3)
+    %401.sub8_sub9_sub10_sub11:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 64, 0, implicit $exec :: (load (s128), addrspace 3)
+    %401.sub12_sub13_sub14_sub15:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 96, 0, implicit $exec :: (load (s128), addrspace 3)
+    undef %402.sub0_sub1_sub2_sub3:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    %402.sub4_sub5_sub6_sub7:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 32, 0, implicit $exec :: (load (s128), addrspace 3)
+    %402.sub8_sub9_sub10_sub11:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 64, 0, implicit $exec :: (load (s128), addrspace 3)
+    %402.sub12_sub13_sub14_sub15:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 96, 0, implicit $exec :: (load (s128), addrspace 3)
+    undef %403.sub0_sub1_sub2_sub3:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    %403.sub4_sub5_sub6_sub7:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 32, 0, implicit $exec :: (load (s128), addrspace 3)
+    %403.sub8_sub9_sub10_sub11:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 64, 0, implicit $exec :: (load (s128), addrspace 3)
+    %403.sub12_sub13_sub14_sub15:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 96, 0, implicit $exec :: (load (s128), addrspace 3)
+    undef %404.sub0_sub1_sub2_sub3:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    %404.sub4_sub5_sub6_sub7:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 32, 0, implicit $exec :: (load (s128), addrspace 3)
+    %404.sub8_sub9_sub10_sub11:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 64, 0, implicit $exec :: (load (s128), addrspace 3)
+    %404.sub12_sub13_sub14_sub15:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 96, 0, implicit $exec :: (load (s128), addrspace 3)
+    undef %405.sub0_sub1_sub2_sub3:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    %405.sub4_sub5_sub6_sub7:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 32, 0, implicit $exec :: (load (s128), addrspace 3)
+    %405.sub8_sub9_sub10_sub11:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 64, 0, implicit $exec :: (load (s128), addrspace 3)
+    %405.sub12_sub13_sub14_sub15:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 96, 0, implicit $exec :: (load (s128), addrspace 3)
+    undef %406.sub0_sub1_sub2_sub3:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    %406.sub4_sub5_sub6_sub7:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 32, 0, implicit $exec :: (load (s128), addrspace 3)
+    %406.sub8_sub9_sub10_sub11:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 64, 0, implicit $exec :: (load (s128), addrspace 3)
+    %406.sub12_sub13_sub14_sub15:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 96, 0, implicit $exec :: (load (s128), addrspace 3)
+    undef %407.sub0_sub1_sub2_sub3:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    %407.sub4_sub5_sub6_sub7:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 32, 0, implicit $exec :: (load (s128), addrspace 3)
+    %407.sub8_sub9_sub10_sub11:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 64, 0, implicit $exec :: (load (s128), addrspace 3)
+    %407.sub12_sub13_sub14_sub15:vreg_512_align2 = DS_READ_B128_gfx9 %ptrb, 96, 0, implicit $exec :: (load (s128), addrspace 3)
+    early-clobber %500:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %300, %400, 8, %500, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %501:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %300, %401, 8, %501, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %502:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %300, %402, 8, %502, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %503:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %300, %403, 8, %503, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %504:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %300, %404, 8, %504, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %505:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %300, %405, 8, %505, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %506:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %300, %406, 8, %506, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %507:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %300, %407, 8, %507, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %508:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %301, %400, 8, %508, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %509:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %301, %401, 8, %509, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %510:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %301, %402, 8, %510, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %511:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %301, %403, 8, %511, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %512:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %301, %404, 8, %512, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %513:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %301, %405, 8, %513, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %514:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %301, %406, 8, %514, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %515:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %301, %407, 8, %515, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %516:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %302, %400, 8, %516, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %517:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %302, %401, 8, %517, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %518:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %302, %402, 8, %518, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %519:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %302, %403, 8, %519, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %520:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %302, %404, 8, %520, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %521:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %302, %405, 8, %521, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %522:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %302, %406, 8, %522, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %523:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %302, %407, 8, %523, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %524:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %303, %400, 8, %524, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %525:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %303, %401, 8, %525, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %526:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %303, %402, 8, %526, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %527:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %303, %403, 8, %527, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %528:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %303, %404, 8, %528, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %529:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %303, %405, 8, %529, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %530:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %303, %406, 8, %530, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %531:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %303, %407, 8, %531, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %532:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %304, %400, 8, %532, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %533:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %304, %401, 8, %533, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %534:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %304, %402, 8, %534, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %535:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %304, %403, 8, %535, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %536:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %304, %404, 8, %536, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %537:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %304, %405, 8, %537, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %538:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %304, %406, 8, %538, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %539:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %304, %407, 8, %539, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %540:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %305, %400, 8, %540, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %541:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %305, %401, 8, %541, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %542:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %305, %402, 8, %542, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %543:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %305, %403, 8, %543, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %544:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %305, %404, 8, %544, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %545:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %305, %405, 8, %545, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %546:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %305, %406, 8, %546, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %547:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %305, %407, 8, %547, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %548:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %306, %400, 8, %548, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %549:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %306, %401, 8, %549, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %550:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %306, %402, 8, %550, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %551:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %306, %403, 8, %551, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %552:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %306, %404, 8, %552, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %553:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %306, %405, 8, %553, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %554:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %306, %406, 8, %554, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %555:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %306, %407, 8, %555, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %556:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %307, %400, 8, %556, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %557:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %307, %401, 8, %557, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %558:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %307, %402, 8, %558, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %559:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %307, %403, 8, %559, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %560:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %307, %404, 8, %560, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %561:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %307, %405, 8, %561, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %562:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %307, %406, 8, %562, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    early-clobber %563:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr %307, %407, 8, %563, %scale.sub0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %500.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %500.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %501.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %501.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %502.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %502.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %503.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %503.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %504.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %504.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %505.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %505.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %506.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %506.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %507.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %507.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %508.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %508.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %509.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %509.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %510.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %510.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %511.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %511.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %512.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %512.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %513.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %513.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %514.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %514.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %515.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %515.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %516.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %516.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %517.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %517.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %518.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %518.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %519.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %519.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %520.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %520.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %521.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %521.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %522.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %522.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %523.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %523.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %524.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %524.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %525.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %525.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %526.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %526.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %527.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %527.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %528.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %528.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %529.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %529.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %530.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %530.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %531.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %531.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %532.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %532.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %533.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %533.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %534.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %534.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %535.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %535.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %536.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %536.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %537.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %537.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %538.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %538.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %539.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %539.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %540.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %540.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %541.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %541.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %542.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %542.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %543.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %543.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %544.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %544.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %545.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %545.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %546.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %546.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %547.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %547.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %548.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %548.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %549.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %549.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %550.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %550.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %551.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %551.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %552.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %552.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %553.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %553.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %554.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %554.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %555.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %555.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %556.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %556.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %557.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %557.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %558.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %558.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %559.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %559.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %560.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %560.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %561.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %561.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %562.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %562.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %563.sub0_sub1_sub2_sub3, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    BUFFER_STORE_DWORDX4_VBUFFER_OFFEN_exact %563.sub4_sub5_sub6_sub7, %vo, %rsrc, $sgpr_null, 0, 0, 0, implicit $exec :: (store (s128), addrspace 8)
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...
