@@ -14438,11 +14438,8 @@ void Sema::DiagnoseAlwaysNonNullPointer(Expr *E,
   Diag(E->getExprLoc(), DiagID) << DiagType << S.str() << E->getSourceRange()
                                 << Range << IsEqual;
 
-  if (!IsFunction)
-    return;
-
   // The fix-it notes below only apply to a bare function name, not a reference.
-  if (IsFunctionReference)
+  if (!IsFunction || IsFunctionReference)
     return;
 
   // Suggest '&' to silence the function warning.
