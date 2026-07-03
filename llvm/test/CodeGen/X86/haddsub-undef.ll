@@ -193,6 +193,7 @@ define <4 x float> @add_v4f32_0uu3(<4 x float> %a, <4 x float> %b) {
   ret <4 x float> %r
 }
 
+; FIXME: Use lower xmm only
 define <8 x float> @add_v8f32_0uu3uuuu(<8 x float> %a, <8 x float> %b) {
 ; SSE-LABEL: add_v8f32_0uu3uuuu:
 ; SSE:       # %bb.0:
@@ -235,6 +236,7 @@ define <8 x float> @add_v8f32_0uuuuu6u(<8 x float> %a, <8 x float> %b) {
   ret <8 x float> %r
 }
 
+; FIXME: Use lower xmm only
 define <8 x float> @add_v8f32_01uuuuuu(<8 x float> %a, <8 x float> %b) {
 ; SSE-LABEL: add_v8f32_01uuuuuu:
 ; SSE:       # %bb.0:

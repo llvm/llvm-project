@@ -10,6 +10,7 @@
 
 ; Verify that we correctly fold horizontal binop even in the presence of UNDEF/POISON.
 
+; FIXME: Use lower xmm only
 define <8 x i32> @add_v8i32_0uu3uuuu(<8 x i32> %a, <8 x i32> %b) {
 ; SSE-LABEL: add_v8i32_0uu3uuuu:
 ; SSE:       # %bb.0:
@@ -74,6 +75,7 @@ define <8 x i32> @add_v8i32_0uuuuu6u(<8 x i32> %a, <8 x i32> %b) {
 }
 
 ; PR40243_alt
+; FIXME: Use upper xmm only
 define <8 x i32> @add_v8i32_uuuu4uu7(<8 x i32> %a, <8 x i32> %b) {
 ; SSE-LABEL: add_v8i32_uuuu4uu7:
 ; SSE:       # %bb.0:
@@ -105,6 +107,7 @@ define <8 x i32> @add_v8i32_uuuu4uu7(<8 x i32> %a, <8 x i32> %b) {
   ret <8 x i32> %h
 }
 
+; FIXME: Use lower xmm only
 define <8 x i32> @add_v8i32_01uuuuuu(<8 x i32> %a, <8 x i32> %b) {
 ; SSE-LABEL: add_v8i32_01uuuuuu:
 ; SSE:       # %bb.0:
@@ -135,6 +138,7 @@ define <8 x i32> @add_v8i32_01uuuuuu(<8 x i32> %a, <8 x i32> %b) {
   ret <8 x i32> %h
 }
 
+; FIXME: AVX512 should use PHADDD xmm
 define <16 x i32> @add_v16i32_01uuuuuuuuuuuuuu(<16 x i32> %a, <16 x i32> %b) {
 ; SSE-LABEL: add_v16i32_01uuuuuuuuuuuuuu:
 ; SSE:       # %bb.0:
