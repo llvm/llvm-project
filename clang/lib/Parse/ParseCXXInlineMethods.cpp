@@ -17,7 +17,6 @@
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Scope.h"
-#include "clang/Sema/Sema.h"
 #include "llvm/ADT/ScopeExit.h"
 
 using namespace clang;
