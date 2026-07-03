@@ -47,9 +47,11 @@ public:
 ///
 /// MapTy should be either
 ///
-///   DenseMap<ValueT, detail::DenseSetEmpty, detail::DenseSetPair<ValueT>>
+///   DenseMap<ValueT, detail::DenseSetEmpty, ValueInfoT,
+///            detail::DenseSetPair<ValueT>>
 ///
-/// or the equivalent SmallDenseMap type.
+/// or the equivalent SmallDenseMap type.  ValueInfoT must implement the
+/// DenseMapInfo "concept".
 template <typename ValueT, typename MapTy> class DenseSetImpl {
   static_assert(sizeof(typename MapTy::value_type) == sizeof(ValueT),
                 "DenseMap buckets unexpectedly large!");
