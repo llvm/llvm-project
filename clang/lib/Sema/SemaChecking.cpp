@@ -1299,7 +1299,103 @@ private:
   const DiagnoseAsBuiltinAttr *DABAttr;
   unsigned SizeTypeWidth;
 };
+
+// read/write/readlink/readlinkat/getcwd and pread/pwrite are deliberately not
+// Clang builtins: the former are common identifiers whose builtin declarations
+// would clash with unrelated user code, and pread/pwrite use off_t, whose
+// width is target- and _FILE_OFFSET_BITS-dependent. They are matched by name
+// against the POSIX prototype below instead.
+struct LibcFuncDesc {
+  StringRef Name;
+  QualType Return;
+  SmallVector<QualType, 4> Params;
+  // Index of an off_t offset parameter, matched as any signed integer;
+  // std::nullopt if none. See checkFortifiedBuiltinMemoryFunction.
+  std::optional<unsigned> OffsetParamIdx;
+  unsigned BufIdx;
+  unsigned CountIdx;
+  // True if CountIdx bytes are read from BufIdx (source over-read, like write);
+  // false if written into BufIdx (destination mismatch, like read).
+  bool BufIsSource;
+};
 } // anonymous namespace
+
+static std::optional<LibcFuncDesc> lookupLibCFunctionDesc(ASTContext &Ctx,
+                                                          StringRef Name) {
+  QualType IntTy = Ctx.IntTy;
+  QualType SizeTy = Ctx.getSizeType();
+  QualType VoidPtrTy = Ctx.VoidPtrTy;
+  QualType ConstVoidPtrTy = Ctx.getPointerType(Ctx.VoidTy.withConst());
+  QualType CharPtrTy = Ctx.getPointerType(Ctx.CharTy);
+  QualType ConstCharPtrTy = Ctx.getPointerType(Ctx.CharTy.withConst());
+  // Placeholders: SSizeTy marks an ssize_t return, OffTy an off_t offset; both
+  // are matched structurally rather than by exact type (see the gate).
+  QualType SSizeTy = IntTy;
+  QualType OffTy = IntTy;
+
+  llvm::DenseMap<StringRef, LibcFuncDesc> Table;
+  Table.insert_range(std::initializer_list<std::pair<StringRef, LibcFuncDesc>>{
+      {"getcwd",
+       {"getcwd", CharPtrTy, {CharPtrTy, SizeTy}, std::nullopt, 0, 1, false}},
+      {"read",
+       {"read",
+        SSizeTy,
+        {IntTy, VoidPtrTy, SizeTy},
+        std::nullopt,
+        1,
+        2,
+        false}},
+      {"write",
+       {"write",
+        SSizeTy,
+        {IntTy, ConstVoidPtrTy, SizeTy},
+        std::nullopt,
+        1,
+        2,
+        true}},
+      {"readlink",
+       {"readlink",
+        SSizeTy,
+        {ConstCharPtrTy, CharPtrTy, SizeTy},
+        std::nullopt,
+        1,
+        2,
+        false}},
+      {"readlinkat",
+       {"readlinkat",
+        SSizeTy,
+        {IntTy, ConstCharPtrTy, CharPtrTy, SizeTy},
+        std::nullopt,
+        2,
+        3,
+        false}},
+      {"pread",
+       {"pread", SSizeTy, {IntTy, VoidPtrTy, SizeTy, OffTy}, 3, 1, 2, false}},
+      {"pread64",
+       {"pread64", SSizeTy, {IntTy, VoidPtrTy, SizeTy, OffTy}, 3, 1, 2, false}},
+      {"pwrite",
+       {"pwrite",
+        SSizeTy,
+        {IntTy, ConstVoidPtrTy, SizeTy, OffTy},
+        3,
+        1,
+        2,
+        true}},
+      {"pwrite64",
+       {"pwrite64",
+        SSizeTy,
+        {IntTy, ConstVoidPtrTy, SizeTy, OffTy},
+        3,
+        1,
+        2,
+        true}},
+  });
+
+  auto It = Table.find(Name);
+  if (It == Table.end())
+    return std::nullopt;
+  return It->second;
+}
 
 void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
                                                CallExpr *TheCall) {
@@ -1309,7 +1405,46 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   FortifiedBufferChecker Checker(*this, FD, TheCall);
 
   unsigned BuiltinID = Checker.getBuiltinID();
-  if (!BuiltinID)
+
+  // Match the non-builtin libc I/O functions (see LibcFuncDesc) by name. Only
+  // external-linkage C declarations qualify: a static same-name helper is
+  // file-local and not the libc function.
+  std::optional<LibcFuncDesc> LibCMatch;
+  if (!BuiltinID && FD->isExternC() && FD->hasExternalFormalLinkage() &&
+      FD->getIdentifier() && !FD->isVariadic()) {
+    ASTContext &Ctx = getASTContext();
+    if (auto Desc =
+            lookupLibCFunctionDesc(Ctx, FD->getIdentifier()->getName())) {
+      // ssize_t is a signed integer of size_t width whose spelling varies
+      // across libcs, so a non-pointer return is matched structurally (getcwd,
+      // the only pointer-returning entry, matches exactly). The off_t offset
+      // matches any signed integer (its width varies); the int fd, pointer
+      // buffer, and size_t count must match exactly -- pinning identity and
+      // keeping a signed count out of the (asserted-unsigned) size-argument
+      // evaluation.
+      auto IsSSizeT = [&](QualType T) {
+        return T->isSignedIntegerType() &&
+               Ctx.getTypeSize(T) == Ctx.getTypeSize(Ctx.getSizeType());
+      };
+      QualType RetTy = FD->getReturnType();
+      bool Matches = FD->getNumParams() == Desc->Params.size() &&
+                     TheCall->getNumArgs() == Desc->Params.size() &&
+                     (Desc->Return->isPointerType()
+                          ? Ctx.hasSameUnqualifiedType(Desc->Return, RetTy)
+                          : IsSSizeT(RetTy));
+      for (unsigned I = 0; Matches && I < Desc->Params.size(); ++I) {
+        QualType ActualTy = FD->getParamDecl(I)->getType();
+        if (Desc->OffsetParamIdx == I)
+          Matches = ActualTy->isSignedIntegerType();
+        else
+          Matches = Ctx.hasSameUnqualifiedType(Desc->Params[I], ActualTy);
+      }
+      if (Matches)
+        LibCMatch = std::move(*Desc);
+    }
+  }
+
+  if (!BuiltinID && !LibCMatch)
     return;
 
   unsigned SizeTypeWidth = Checker.getSizeTypeWidth();
@@ -1318,9 +1453,22 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   std::optional<llvm::APSInt> DestinationSize;
   unsigned DiagID = 0;
 
+  if (LibCMatch) {
+    if (LibCMatch->BufIsSource) {
+      // write/pwrite: a source over-read, same as the memcpy family below.
+      Checker.checkSourceOverread(LibCMatch->BufIdx, LibCMatch->CountIdx);
+      return;
+    }
+    DiagID = diag::warn_fortify_source_size_mismatch;
+    SourceSize = Checker.ComputeExplicitObjectSizeArgument(LibCMatch->CountIdx);
+    DestinationSize = Checker.ComputeSizeArgument(LibCMatch->BufIdx);
+  }
+
+  // For a LibCMatch the sizes are already set above and BuiltinID is zero, so
+  // the switch falls through its default to the shared size check below.
   switch (BuiltinID) {
   default:
-    return;
+    break;
   case Builtin::BI__builtin_strcat:
   case Builtin::BIstrcat:
   case Builtin::BI__builtin_stpcpy:
@@ -1553,6 +1701,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     const Expr *Dest = TheCall->getArg(0)->IgnoreCasts();
     IdentifierInfo *FnInfo = FD->getIdentifier();
     CheckSizeofMemaccessArgument(LenArg, Dest, FnInfo);
+    break;
   }
   }
 

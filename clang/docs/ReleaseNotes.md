@@ -684,6 +684,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   by the kernel, so setting them is almost always a typo (matching the
   bionic libc `diagnose_if` check).
 
+- `-Wfortify-source` now diagnoses buffer-size mismatches in calls to the
+  POSIX `unistd.h` I/O functions `read`, `write`, `pread`, `pread64`,
+  `pwrite`, `pwrite64`, `readlink`, `readlinkat`, and `getcwd` when the
+  buffer and the size argument are both statically known.
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -1089,6 +1094,16 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 - `alpha.unix.PthreadLock` now emits path notes on lock, unlock, destroy,
   and init operations.
+
+- `unix.StdCLibraryFunctions` now diagnoses size arguments greater than
+  `SSIZE_MAX` passed to `read`, `write`, `readlink`, and `readlinkat`. This
+  catches common mistakes such as passing `-1` to a `size_t` parameter or
+  using a constant that is valid on one platform but exceeds `SSIZE_MAX` on
+  another.
+
+- `unix.StdCLibraryFunctions` now models `pread`, `pread64`, `pwrite`, and
+  `pwrite64` with the same size constraint and return-value bounds as `read`
+  and `write`.
 
 % comment:
 % This is for the Static Analyzer.
