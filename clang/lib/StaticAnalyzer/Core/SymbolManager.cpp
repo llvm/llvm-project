@@ -78,6 +78,18 @@ void UnarySymExpr::dumpToStream(raw_ostream &os) const {
     os << ')';
 }
 
+InvalidationHistoryIterator &InvalidationHistoryIterator::operator++() {
+  assert(Curr && "Cannot dereference end iterator!");
+  const auto *Artifact = dyn_cast<SymbolInvalidationArtifact>(Curr);
+  Curr = Artifact ? Artifact->getPreviousSymbol() : nullptr;
+  return *this;
+}
+
+llvm::iterator_range<InvalidationHistoryIterator>
+SymExpr::invalidationHistory() const {
+  return {InvalidationHistoryIterator{this}, {}};
+}
+
 const Stmt *SymbolConjured::getStmt() const {
   // Sometimes the CFG element is invalid, avoid dereferencing it.
   if (Elem.getParent() == nullptr ||
@@ -143,8 +155,14 @@ void SymbolInvalidationArtifact::dumpToStream(raw_ostream &os) const {
     os << ", S" << US->getStmt()->getID(SF->getDecl()->getASTContext());
   }
 
-  if (PreviousSym)
-    os << ", prev=" << PreviousSym;
+  if (PreviousSym) {
+    // Avoid recursively printing the whole prev-chain.
+    if (const auto *Data = dyn_cast<SymbolInvalidationArtifact>(PreviousSym))
+      os << ", prev=" << Data->getKindStr() << Data->getSymbolID();
+    else
+      os << ", prev=" << PreviousSym;
+  }
+
   os << ", #" << Count << '}';
 }
 

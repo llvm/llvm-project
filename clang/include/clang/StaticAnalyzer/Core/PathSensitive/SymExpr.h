@@ -23,6 +23,7 @@
 namespace clang {
 namespace ento {
 
+class InvalidationHistoryIterator;
 class MemRegion;
 
 using SymbolID = unsigned;
@@ -107,6 +108,8 @@ public:
   llvm::iterator_range<symbol_iterator> symbols() const {
     return llvm::make_range(symbol_iterator(this), symbol_iterator());
   }
+
+  llvm::iterator_range<InvalidationHistoryIterator> invalidationHistory() const;
 
   virtual unsigned computeComplexity() const = 0;
 
