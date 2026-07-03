@@ -6378,16 +6378,27 @@ void llvm::UpgradeARCRuntime(Module &M) {
     UpgradeToIntrinsic(I.first, I.second);
 }
 
-// Upgrade from storing `ptrauth` constants in `@llvm.global_(ctors|dtors)`
-// arrays to configuring signing of pointers to *structors via module flags.
+// Upgrade the way signing of pointers to init/fini functions is described.
 //
-// Only perform the upgrade if all elements of *both* arrays agree on a common
-// signing schema.
+// Originally, the `@llvm.global_(ctors|dtors)` arrays contained `ptrauth`
+// constants, if signing was requested. After the upgrade, these arrays contain
+// plain function pointers and the desired signing schema is described via a
+// pair of module flags.
+//
+// Note that the upgrade is only performed if all elements of *both* arrays
+// agree on a common signing schema.
 static bool upgradePtrauthInitFiniArrays(Module &M) {
-  // Either "not decided yet" or whether we should request address diversity
-  // in addition to the basic constant diversity.
-  // There is no value representing "decided not to sign", as this results
-  // in immediate return from upgradePtrauthInitFiniArrays.
+  // As we cannot always decide whether the particular module should have
+  // ptrauth-init-fini flags, we have to treat absent flags as having zero
+  // values for compatibility reasons. Thus, upgradePtrauthInitFiniArrays
+  // returns as soon as it spots any non-signed init/fini pointer: either we
+  // should request non-signed pointers (safe to omit both flags) or there is
+  // no common schema (and thus we do not modify anything).
+  //
+  // UseAddressDisc's value either represents "not decided yet" state (nullopt)
+  // or whether we should request address diversity in addition to the basic
+  // constant diversity. There is no value representing "decided not to sign"
+  // for the reasons explained above.
   std::optional<bool> UseAddressDisc;
 
   // Do not attempt upgrading if the new module flags already exist.
@@ -6469,9 +6480,8 @@ static bool upgradePtrauthInitFiniArrays(Module &M) {
     GV->setInitializer(NewInit);
 
   M.addModuleFlag(Module::Error, "ptrauth-init-fini", 1);
-  if (UseAddressDisc.value())
-    M.addModuleFlag(Module::Error, "ptrauth-init-fini-address-discrimination",
-                    1);
+  M.addModuleFlag(Module::Error, "ptrauth-init-fini-address-discrimination",
+                  *UseAddressDisc);
 
   return true;
 }

@@ -400,6 +400,17 @@ private:
 
 } // end anonymous namespace
 
+// Get boolean module flag (0 or 1), treating absent flag as having value 0.
+static bool getOptionalBooleanModuleFlag(Module &M, StringRef Name) {
+  Metadata *Flag = M.getModuleFlag(Name);
+  if (!Flag)
+    return false;
+
+  uint64_t Value = mdconst::extract<ConstantInt>(Flag)->getZExtValue();
+  assert((Value == 0 || Value == 1) && "Boolean flag is expected, if present");
+  return Value;
+}
+
 void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
   const Triple &TT = TM.getTargetTriple();
 
@@ -411,10 +422,9 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
       EnableImportCallOptimization = true;
   }
 
-  if (M.getModuleFlag("ptrauth-init-fini"))
-    PtrauthInitFini = true;
-  if (M.getModuleFlag("ptrauth-init-fini-address-discrimination"))
-    PtrauthInitFiniAddressDisc = true;
+  PtrauthInitFini = getOptionalBooleanModuleFlag(M, "ptrauth-init-fini");
+  PtrauthInitFiniAddressDisc = getOptionalBooleanModuleFlag(
+      M, "ptrauth-init-fini-address-discrimination");
 
   if (!TT.isOSBinFormatELF())
     return;

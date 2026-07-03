@@ -20,15 +20,14 @@
 
 // The below checks assume no other module flags happens to be set.
 
-// UNSIGNED-NOT: !llvm.module.flags
-// UNSIGNED-NOT: !"ptrauth-init-fini"
-// UNSIGNED-NOT: !"ptrauth-init-fini-address-discrimination"
+// COMMON: !llvm.module.flags = !{!0, !1}
 
-// SIGNED: !llvm.module.flags = !{!0}
-// SIGNED: !0 = !{i32 1, !"ptrauth-init-fini", i32 1}
-// SIGNED-NOT: !"ptrauth-init-fini-address-discrimination"
+// UNSIGNED: !0 = !{i32 1, !"ptrauth-init-fini", i32 0}
+// UNSIGNED: !1 = !{i32 1, !"ptrauth-init-fini-address-discrimination", i32 0}
 
-// ADDRDISC: !llvm.module.flags = !{!0, !1}
+// SIGNED:   !0 = !{i32 1, !"ptrauth-init-fini", i32 1}
+// SIGNED:   !1 = !{i32 1, !"ptrauth-init-fini-address-discrimination", i32 0}
+
 // ADDRDISC: !0 = !{i32 1, !"ptrauth-init-fini", i32 1}
 // ADDRDISC: !1 = !{i32 1, !"ptrauth-init-fini-address-discrimination", i32 1}
 

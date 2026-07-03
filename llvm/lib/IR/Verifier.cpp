@@ -1835,10 +1835,13 @@ void Verifier::visitModuleFlags() {
   // Scan each flag, and track the flags and requirements.
   DenseMap<const MDString*, const MDNode*> SeenIDs;
   SmallVector<const MDNode*, 16> Requirements;
+
+  // Either both aarch64-elf-pauthabi-* flags should be set or none at all.
   std::optional<uint64_t> PAuthABIPlatform;
   std::optional<uint64_t> PAuthABIVersion;
-  std::optional<uint64_t> HasPtrauthInitFini;
-  std::optional<uint64_t> HasPtrauthInitFiniAddr;
+  // Signing of init/fini pointers: address diversity implies basic signing.
+  uint64_t HasPtrauthInitFini = 0;
+  uint64_t HasPtrauthInitFiniAddr = 0;
 
   for (const MDNode *MDN : Flags->operands()) {
     visitModuleFlag(MDN, SeenIDs, Requirements);
@@ -1869,10 +1872,10 @@ void Verifier::visitModuleFlags() {
     }
   }
 
-  Check(!HasPtrauthInitFini || HasPtrauthInitFini.value() == 1,
-        "ptrauth-init-fini must be set to 1 or unset");
-  Check(!HasPtrauthInitFiniAddr || HasPtrauthInitFiniAddr.value() == 1,
-        "ptrauth-init-fini-address-discrimination must be set to 1 or unset");
+  Check(llvm::is_contained({0u, 1u}, HasPtrauthInitFini),
+        "ptrauth-init-fini must be 0 or 1");
+  Check(llvm::is_contained({0u, 1u}, HasPtrauthInitFiniAddr),
+        "ptrauth-init-fini-address-discrimination must be 0 or 1, if set");
   if (HasPtrauthInitFiniAddr)
     Check(HasPtrauthInitFini, "ptrauth-init-fini-address-discrimination module "
                               "flag requires ptrauth-init-fini");
