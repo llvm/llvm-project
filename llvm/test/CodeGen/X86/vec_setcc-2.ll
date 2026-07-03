@@ -195,7 +195,8 @@ define <8 x i1> @ugt_v8i16_splat(<8 x i16> %x) {
 ; SSE2-LABEL: ugt_v8i16_splat:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [243,243,243,243,243,243,243,243]
-; SSE2-NEXT:    psubusw %xmm0, %xmm1
+; SSE2-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    psubusb %xmm0, %xmm1
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-NEXT:    pcmpeqw %xmm1, %xmm0
 ; SSE2-NEXT:    retq
@@ -264,7 +265,8 @@ define <8 x i1> @uge_v8i16_splat(<8 x i16> %x) {
 ; SSE2-LABEL: uge_v8i16_splat:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [242,242,242,242,242,242,242,242]
-; SSE2-NEXT:    psubusw %xmm0, %xmm1
+; SSE2-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    psubusb %xmm0, %xmm1
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-NEXT:    pcmpeqw %xmm1, %xmm0
 ; SSE2-NEXT:    retq
@@ -531,8 +533,10 @@ define <4 x i1> @ugt_v4i32_splat_commute(<4 x i32> %x) {
 define <8 x i16> @PR39859(<8 x i16> %x, <8 x i16> %y) {
 ; SSE2-LABEL: PR39859:
 ; SSE2:       ## %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [65280,65280,65280,65280,65280,65280,65280,65280]
+; SSE2-NEXT:    por %xmm0, %xmm2
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [43,43,43,43,43,43,43,43]
-; SSE2-NEXT:    psubusw %xmm0, %xmm3
+; SSE2-NEXT:    psubusb %xmm2, %xmm3
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-NEXT:    pcmpeqw %xmm3, %xmm2
 ; SSE2-NEXT:    pand %xmm2, %xmm1
