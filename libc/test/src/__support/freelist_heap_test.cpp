@@ -32,8 +32,16 @@ using LIBC_NAMESPACE::BlockRef;
 using LIBC_NAMESPACE::freelist_heap;
 using LIBC_NAMESPACE::FreeListHeap;
 using LIBC_NAMESPACE::FreeListHeapBuffer;
+using LIBC_NAMESPACE::FreeListSecrets;
 using LIBC_NAMESPACE::cpp::byte;
 using LIBC_NAMESPACE::cpp::span;
+
+#if LIBC_COPT_HARDEN_FREELIST
+#define TEST_SECRETS_INIT FreeListSecrets{0x123, 0x456, 0x789}
+#else
+#define TEST_SECRETS_INIT                                                      \
+  FreeListSecrets {}
+#endif
 
 // Similar to `LlvmLibcBlockTest` in block_test.cpp, we'd like to run the same
 // tests independently for different parameters. In this case, we'd like to test
@@ -53,12 +61,14 @@ using LIBC_NAMESPACE::cpp::span;
     void SetUp() override {                                                    \
       freelist_heap =                                                          \
           new (&fake_global_buffer) FreeListHeapBuffer<BufferSize>;            \
+      freelist_heap->init(TEST_SECRETS_INIT);                                  \
     }                                                                          \
     void RunTest(FreeListHeap &allocator, [[maybe_unused]] size_t N);          \
   };                                                                           \
   TEST_F(LlvmLibcFreeListHeapTest##TestCase, TestCase) {                       \
     byte buf[BufferSize] = {byte(0)};                                          \
     FreeListHeap allocator(buf);                                               \
+    allocator.init(TEST_SECRETS_INIT);                                         \
     RunTest(allocator, BufferSize);                                            \
     RunTest(*freelist_heap, freelist_heap->region().size());                   \
   }                                                                            \
@@ -113,6 +123,7 @@ TEST(LlvmLibcFreeListHeap, ReturnsNullWhenFull) {
   byte buf[N];
 
   FreeListHeap allocator(buf);
+  allocator.init(TEST_SECRETS_INIT);
 
   bool went_null = false;
   for (size_t i = 0; i < N; i++) {
@@ -309,6 +320,7 @@ TEST(LlvmLibcFreeListHeap, AlignedAllocUnalignedBuffer) {
 
   // Ensure the underlying buffer is poorly aligned.
   FreeListHeap allocator(span<byte>(buf).subspan(1));
+  allocator.init(TEST_SECRETS_INIT);
 
   constexpr size_t ALIGNMENTS[] = {1, 2, 4, 8, 16, 32, 64, 128, 256};
   constexpr size_t SIZE_SCALES[] = {1, 2, 3, 4, 5};
@@ -345,4 +357,20 @@ TEST_FOR_EACH_ALLOCATOR(InvalidAlignedAllocAlignment, 2048) {
   // Don't accept zero alignment.
   ptr = allocator.aligned_allocate(0, 8);
   EXPECT_EQ(ptr, static_cast<void *>(nullptr));
+}
+
+TEST_FOR_EACH_ALLOCATOR(SanitizeHeap, 2048) {
+  void *ptr1 = allocator.allocate(128);
+  void *ptr2 = allocator.allocate(256);
+  void *ptr3 = allocator.allocate(512);
+  EXPECT_NE(ptr1, static_cast<void *>(nullptr));
+  EXPECT_NE(ptr2, static_cast<void *>(nullptr));
+  EXPECT_NE(ptr3, static_cast<void *>(nullptr));
+
+  allocator.free(ptr2);
+  allocator.sanitize_heap();
+
+  allocator.free(ptr1);
+  allocator.free(ptr3);
+  allocator.sanitize_heap();
 }

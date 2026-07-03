@@ -17,9 +17,17 @@
 #include "test/UnitTest/Test.h"
 
 using LIBC_NAMESPACE::BlockRef;
+using LIBC_NAMESPACE::FreeListSecrets;
 using LIBC_NAMESPACE::FreeTrie;
 using LIBC_NAMESPACE::cpp::byte;
 using LIBC_NAMESPACE::cpp::optional;
+
+#if LIBC_COPT_HARDEN_FREELIST
+#define TEST_SECRETS FreeListSecrets{0x1234, 0x5678, 0x9abc}
+#else
+#define TEST_SECRETS                                                           \
+  FreeListSecrets {}
+#endif
 
 TEST(LlvmLibcFreeTrie, FindBestFitRoot) {
   FreeTrie trie({0, 4096});
@@ -29,7 +37,7 @@ TEST(LlvmLibcFreeTrie, FindBestFitRoot) {
   optional<BlockRef> maybeBlock = BlockRef::init(mem);
   ASSERT_TRUE(maybeBlock.has_value());
   BlockRef block = *maybeBlock;
-  trie.push(block);
+  trie.push(block, TEST_SECRETS);
 
   FreeTrie::Node *root = trie.find_best_fit(0);
   ASSERT_EQ(root->block().addr(), block.addr());
@@ -50,8 +58,8 @@ TEST(LlvmLibcFreeTrie, FindBestFitLower) {
   BlockRef root = *maybeBlock;
 
   FreeTrie trie({0, 4096});
-  trie.push(root);
-  trie.push(lower);
+  trie.push(root, TEST_SECRETS);
+  trie.push(lower, TEST_SECRETS);
 
   EXPECT_EQ(trie.find_best_fit(0)->block().addr(), lower.addr());
 }
@@ -66,8 +74,8 @@ TEST(LlvmLibcFreeTrie, FindBestFitUpper) {
   BlockRef upper = *maybeBlock;
 
   FreeTrie trie({0, 4096});
-  trie.push(root);
-  trie.push(upper);
+  trie.push(root, TEST_SECRETS);
+  trie.push(upper, TEST_SECRETS);
 
   EXPECT_EQ(trie.find_best_fit(root.inner_size() + 1)->block().addr(),
             upper.addr());
@@ -89,9 +97,9 @@ TEST(LlvmLibcFreeTrie, FindBestFitLowerAndUpper) {
   BlockRef upper = *maybeBlock;
 
   FreeTrie trie({0, 4096});
-  trie.push(root);
-  trie.push(lower);
-  trie.push(upper);
+  trie.push(root, TEST_SECRETS);
+  trie.push(lower, TEST_SECRETS);
+  trie.push(upper, TEST_SECRETS);
 
   // The lower subtrie is examined first.
   EXPECT_EQ(trie.find_best_fit(0)->block().addr(), lower.addr());
@@ -115,20 +123,20 @@ TEST(LlvmLibcFreeTrie, Remove) {
 
   // Removing the root empties the trie.
   FreeTrie trie({0, 4096});
-  trie.push(large);
+  trie.push(large, TEST_SECRETS);
   FreeTrie::Node *large_node = trie.find_best_fit(0);
   ASSERT_EQ(large_node->block().addr(), large.addr());
-  trie.remove(large_node);
+  trie.remove(large_node, TEST_SECRETS);
   ASSERT_TRUE(trie.empty());
 
   // Removing the head of a trie list preserves the trie structure.
-  trie.push(small1);
-  trie.push(small2);
-  trie.push(large);
-  trie.remove(trie.find_best_fit(small1.inner_size()));
+  trie.push(small1, TEST_SECRETS);
+  trie.push(small2, TEST_SECRETS);
+  trie.push(large, TEST_SECRETS);
+  trie.remove(trie.find_best_fit(small1.inner_size()), TEST_SECRETS);
   EXPECT_EQ(trie.find_best_fit(large.inner_size())->block().addr(),
             large.addr());
-  trie.remove(trie.find_best_fit(small1.inner_size()));
+  trie.remove(trie.find_best_fit(small1.inner_size()), TEST_SECRETS);
   EXPECT_EQ(trie.find_best_fit(large.inner_size())->block().addr(),
             large.addr());
 }

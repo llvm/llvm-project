@@ -36,15 +36,18 @@ public:
 
   /// Insert a free block. If the block is too small to be tracked, nothing
   /// happens.
-  void insert(BlockRef block);
+  void insert(BlockRef block, const FreeListSecrets &secrets);
 
   /// Remove a free block. If the block is too small to be tracked, nothing
   /// happens.
-  void remove(BlockRef block);
+  void remove(BlockRef block, const FreeListSecrets &secrets);
 
   /// Remove a best-fit free block that can contain the given size when
   /// allocated. Returns nullptr if there is no such block.
-  BlockRef remove_best_fit(size_t size);
+  BlockRef remove_best_fit(size_t size, const FreeListSecrets &secrets);
+
+  /// Verify secret invariants for all free lists in the store.
+  void sanitize(const FreeListSecrets &secrets) const;
 
 private:
   static constexpr size_t MIN_OUTER_SIZE = align_up(
@@ -68,35 +71,39 @@ private:
   FreeTrie large_trie;
 };
 
-LIBC_INLINE void FreeStore::insert(BlockRef block) {
+LIBC_INLINE void FreeStore::insert(BlockRef block,
+                                   const FreeListSecrets &secrets) {
   if (too_small(block))
     return;
   if (is_small(block))
-    small_list(block).push(block);
+    small_list(block).push(block, secrets);
   else
-    large_trie.push(block);
+    large_trie.push(block, secrets);
 }
 
-LIBC_INLINE void FreeStore::remove(BlockRef block) {
+LIBC_INLINE void FreeStore::remove(BlockRef block,
+                                   const FreeListSecrets &secrets) {
   if (too_small(block))
     return;
   if (is_small(block)) {
     small_list(block).remove(
-        reinterpret_cast<FreeList::Node *>(block.usable_space()));
+        reinterpret_cast<FreeList::Node *>(block.usable_space()), secrets);
   } else {
-    large_trie.remove(reinterpret_cast<FreeTrie::Node *>(block.usable_space()));
+    large_trie.remove(reinterpret_cast<FreeTrie::Node *>(block.usable_space()),
+                      secrets);
   }
 }
 
-LIBC_INLINE BlockRef FreeStore::remove_best_fit(size_t size) {
+LIBC_INLINE BlockRef
+FreeStore::remove_best_fit(size_t size, const FreeListSecrets &secrets) {
   if (FreeList *list = find_best_small_fit(size)) {
     BlockRef block = list->front();
-    list->pop();
+    list->pop(secrets);
     return block;
   }
   if (FreeTrie::Node *best_fit = large_trie.find_best_fit(size)) {
     BlockRef block = best_fit->block();
-    large_trie.remove(best_fit);
+    large_trie.remove(best_fit, secrets);
     return block;
   }
   return BlockRef();
@@ -113,6 +120,12 @@ LIBC_INLINE FreeList *FreeStore::find_best_small_fit(size_t size) {
     if (!list.empty() && list.size() >= size)
       return &list;
   return nullptr;
+}
+
+LIBC_INLINE void FreeStore::sanitize(const FreeListSecrets &secrets) const {
+  for (const FreeList &list : small_lists)
+    list.sanitize(secrets);
+  large_trie.sanitize(secrets);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

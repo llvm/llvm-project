@@ -15,33 +15,64 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-void FreeList::push(Node *node) {
+void FreeList::push(Node *node, const FreeListSecrets &secrets) {
   if (begin_) {
-    LIBC_ASSERT(BlockRef::from_usable_space(node).outer_size() ==
-                    begin_->block().outer_size() &&
-                "freelist entries must have the same size");
-    // Since the list is circular, insert the node immediately before begin_.
-    node->prev = begin_->prev;
-    node->next = begin_;
-    begin_->prev->next = node;
-    begin_->prev = node;
+    Node *begin_prev = secrets.decrypt_prev(begin_, begin_->prev);
+
+    LIBC_HARDENING_ASSERT(secrets.decrypt_next(begin_prev->next) == begin_ &&
+                          "Corrupted free list links (push check)");
+
+    node->prev = secrets.encrypt_prev(node, begin_prev);
+    node->next = secrets.encrypt_next(begin_);
+    begin_prev->next = secrets.encrypt_next(node);
+    begin_->prev = secrets.encrypt_prev(begin_, node);
   } else {
-    begin_ = node->prev = node->next = node;
+    begin_ = node;
+    node->next = secrets.encrypt_next(node);
+    node->prev = secrets.encrypt_prev(node, node);
   }
 }
 
-void FreeList::remove(Node *node) {
+void FreeList::remove(Node *node, const FreeListSecrets &secrets) {
   LIBC_ASSERT(begin_ && "cannot remove from empty list");
-  if (node == node->next) {
+  Node *node_next = secrets.decrypt_next(node->next);
+  if (node == node_next) {
     LIBC_ASSERT(node == begin_ &&
                 "a self-referential node must be the only element");
     begin_ = nullptr;
   } else {
-    node->prev->next = node->next;
-    node->next->prev = node->prev;
+    Node *node_prev = secrets.decrypt_prev(node, node->prev);
+
+    LIBC_HARDENING_ASSERT(
+        secrets.decrypt_next(node_prev->next) == node &&
+        "Corrupted free list links (remove check prev->next)");
+    LIBC_HARDENING_ASSERT(
+        secrets.decrypt_prev(node_next, node_next->prev) == node &&
+        "Corrupted free list links (remove check next->prev)");
+
+    node_prev->next = secrets.encrypt_next(node_next);
+    node_next->prev = secrets.encrypt_prev(node_next, node_prev);
     if (begin_ == node)
-      begin_ = node->next;
+      begin_ = node_next;
   }
+}
+
+void FreeList::sanitize(const FreeListSecrets &secrets) const {
+  if (!begin_)
+    return;
+  Node *curr = begin_;
+  do {
+    Node *next_node = secrets.decrypt_next(curr->next);
+    Node *prev_node = secrets.decrypt_prev(curr, curr->prev);
+    (void)prev_node;
+    LIBC_HARDENING_ASSERT(
+        secrets.decrypt_next(prev_node->next) == curr &&
+        "Corrupted free list links (sanitize check prev->next)");
+    LIBC_HARDENING_ASSERT(
+        secrets.decrypt_prev(next_node, next_node->prev) == curr &&
+        "Corrupted free list links (sanitize check next->prev)");
+    curr = next_node;
+  } while (curr != begin_);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
