@@ -2203,6 +2203,15 @@ static bool IsVectorConversion(Sema &S, QualType FromType, QualType ToType,
                                ImplicitConversionKind &ICK,
                                ImplicitConversionKind &ElConv, Expr *From,
                                bool InOverloadResolution, bool CStyle) {
+  // A special treatment is needed when targeting a sizeless vector type.
+  if (ToType->isSizelessVectorType()) {
+    // Vector splat from any arithmetic type to a sizeless vector.
+    if (FromType->isArithmeticType() && S.getLangOpts().CPlusPlus) {
+      ICK = ICK_Vector_Splat;
+      return true;
+    }
+  }
+
   // We need at least one of these types to be a vector type to have a vector
   // conversion.
   if (!ToType->isVectorType() && !FromType->isVectorType())
