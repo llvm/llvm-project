@@ -14945,6 +14945,31 @@ bool Sema::defaultInitLeavesScalarIndeterminate(QualType T,
                                                   HonorUninitMarkers, Visited);
 }
 
+bool Sema::checkInitProfileStaticRuntimeInit(
+    const VarDecl *Var, llvm::function_ref<bool()> CheckConstInit) {
+  // Thread-locals have thread (not static) storage duration; paper §3 scopes
+  // this rule to non-local *static* objects (uninit_decl likewise excludes
+  // thread storage).
+  if (Var->getTLSKind() != VarDecl::TLS_None)
+    return false;
+  // std::init / static_runtime_init: paper says non-local statics must be
+  // initialized at compile or link time. CheckConstInit() permits trivial
+  // default initialization (not a constant initializer but needs no global
+  // constructor), so a zero-initialized aggregate such as
+  // `struct S { int x; }; S g;` is not a violation. Runs before
+  // -Wglobal-constructors so the profile error (when enforced) takes
+  // precedence over the standalone warning.
+  static constexpr StringRef Profile = "std::init";
+  static constexpr StringRef Rule = "static_runtime_init";
+  if (CheckConstInit())
+    return false;
+  if (!shouldEmitProfileViolation(Profile, Rule, Var->getLocation(), Var))
+    return false;
+  Diag(Var->getLocation(), diag::err_init_static_runtime_init)
+      << Profile << Var->getDeclName();
+  return true;
+}
+
 void Sema::checkInitProfileUninitWithInitializer(const ValueDecl *D,
                                                  const Expr *Init) {
   // [[uninit]] documents that the entity is intentionally left
@@ -15517,32 +15542,9 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
       for (auto &it : Notes)
         Diag(it.first, it.second);
       var->setInvalidDecl();
-    } else if (IsGlobal && [&] {
-                 // Thread-locals have thread (not static) storage duration;
-                 // paper §3 scopes this rule to non-local *static* objects
-                 // (uninit_decl likewise excludes thread storage).
-                 if (var->getTLSKind() != VarDecl::TLS_None)
-                   return false;
-                 // std::init / static_runtime_init: paper says non-local
-                 // statics must be initialized at compile or link time.
-                 // checkConstInit() permits trivial default initialization
-                 // (not a constant initializer but needs no global
-                 // constructor), so a zero-initialized aggregate such as
-                 // `struct S { int x; }; S g;` is not a violation. Runs before
-                 // -Wglobal-constructors so the profile error (when enforced)
-                 // takes precedence over the standalone warning.
-                 static constexpr StringRef Profile = "std::init";
-                 static constexpr StringRef Rule = "static_runtime_init";
-                 if (checkConstInit())
-                   return false;
-                 if (!shouldEmitProfileViolation(Profile, Rule,
-                                                 var->getLocation(), var))
-                   return false;
-                 Diag(var->getLocation(), diag::err_init_static_runtime_init)
-                     << Profile << var->getDeclName();
-                 return true;
-               }()) {
-      // Diagnostic emitted in the lambda above.
+    } else if (IsGlobal &&
+               checkInitProfileStaticRuntimeInit(var, checkConstInit)) {
+      // The profile diagnostic supersedes -Wglobal-constructors below.
     } else if (IsGlobal &&
                !getDiagnostics().isIgnored(diag::warn_global_constructor,
                                            var->getLocation())) {

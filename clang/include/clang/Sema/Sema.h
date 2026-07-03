@@ -1102,6 +1102,15 @@ public:
   bool checkProfileViolation(StringRef ProfileName, StringRef RuleName,
                              SourceLocation Loc, unsigned DiagID);
 
+  /// std::init / static_runtime_init (paper §3): diagnose a non-local static
+  /// whose initialization needs a runtime constructor. \p CheckConstInit
+  /// lazily evaluates whether the initializer is constant (trivial
+  /// default-init counts as constant here). Returns true if the diagnostic
+  /// was emitted, in which case the caller skips -Wglobal-constructors.
+  bool
+  checkInitProfileStaticRuntimeInit(const VarDecl *Var,
+                                    llvm::function_ref<bool()> CheckConstInit);
+
   /// std::init / uninit_with_initializer (R4): diagnose \p D if it is both
   /// marked [[uninit]] and has an initializer. Shared by the variable
   /// (\c CheckCompleteVariableDeclaration) and non-static data member
