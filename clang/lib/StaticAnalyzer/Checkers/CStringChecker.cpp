@@ -2679,9 +2679,13 @@ void CStringChecker::evalStrchrCommon(CheckerContext &C, const CallEvent &Call,
   }
 
   // The result is: Src + SymOffset
+  auto RemainingExtentBytes =
+      getDynamicExtentWithOffset(State, *SrcLoc).castAs<DefinedOrUnknownSVal>();
   NonLoc SymOffset =
       SVB.conjureSymbolVal(Call, Ctx.getSizeType(), C.blockCount())
           .castAs<NonLoc>();
+  State = State->assumeInBound(SymOffset, RemainingExtentBytes, true);
+
   SVal Result = SVB.evalBinOpLN(State, BO_Add, *SrcLoc, SymOffset,
                                 Src.Expression->getType());
   State = State->BindExpr(CE, SF, Result);
