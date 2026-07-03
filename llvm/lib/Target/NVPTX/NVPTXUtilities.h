@@ -41,23 +41,16 @@ Function *getMaybeBitcastedCallee(const CallBase *CB);
 Align getPTXPromotedParamTypeAlign(const Function *F, Type *ArgTy,
                                    const DataLayout &DL);
 
-Align getDeviceByValParamAlign(const Function *F, Type *ArgTy,
-                               Align InitialAlign, const DataLayout &DL);
+/// Compute the PTX .param alignment for a function or call-site argument.
+/// Byval params are aligned by their pointee type; other aggregates use the
+/// generic per-parameter alignment.
+Align getPTXArgAlign(const Function *F, const Argument &Arg,
+                     const DataLayout &DL);
+Align getPTXArgAlign(const CallBase *CB, unsigned ArgNo,
+                     Type *Ty, const DataLayout &DL);
 
-/// Get the alignment for a function parameter or return value.
-/// \p AttrIdx is the AttributeList index (e.g. FirstArgIndex + argNo, or
-/// ReturnIndex for return values). Checks for an explicit alignment attribute,
-/// then falls back to getPromotedParamTypeAlign, incorporating byval param
-/// alignment when applicable.
-Align getPTXParamAlign(const Function *F, Type *Ty, unsigned AttrIdx,
-                       const DataLayout &DL);
-
-/// Get the alignment for a call-site argument or return value. Resolves the
-/// callee and delegates to the Function overload of getParamAlign. For
-/// indirect calls with no resolvable callee, falls back to
-/// getPromotedParamTypeAlign.
-Align getPTXParamAlign(const CallBase *CB, Type *Ty, unsigned AttrIdx,
-                       const DataLayout &DL);
+Align getPTXReturnAlign(const Function *F, Type *Ty, const DataLayout &DL);
+Align getPTXReturnAlign(const CallBase *CB, Type *Ty, const DataLayout &DL);
 
 // PTX ABI requires all scalar argument/return values to have
 // bit-size as a power of two of at least 32 bits.

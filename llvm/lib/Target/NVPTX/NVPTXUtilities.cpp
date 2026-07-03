@@ -21,7 +21,7 @@
 #include "llvm/Support/CommandLine.h"
 #include <algorithm>
 
-namespace llvm {
+using namespace llvm;
 
 static cl::opt<bool> ForceMinByValParamAlign(
     "nvptx-force-min-byval-param-align", cl::Hidden,
@@ -29,12 +29,12 @@ static cl::opt<bool> ForceMinByValParamAlign(
              " params of device functions."),
     cl::init(false));
 
-Function *getMaybeBitcastedCallee(const CallBase *CB) {
+Function *llvm::getMaybeBitcastedCallee(const CallBase *CB) {
   return dyn_cast<Function>(CB->getCalledOperand()->stripPointerCasts());
 }
 
-Align getPTXPromotedParamTypeAlign(const Function *F, Type *ArgTy,
-                                   const DataLayout &DL) {
+Align llvm::getPTXPromotedParamTypeAlign(const Function *F, Type *ArgTy,
+                                         const DataLayout &DL) {
   // Capping the alignment to 128 bytes as that is the maximum alignment
   // supported by PTX.
   const Align ABITypeAlign = std::min(Align(128), DL.getABITypeAlign(ArgTy));
@@ -54,9 +54,44 @@ Align getPTXPromotedParamTypeAlign(const Function *F, Type *ArgTy,
   return std::max(OptimizedAlign, ABITypeAlign);
 }
 
-Align getDeviceByValParamAlign(const Function *F, Type *ArgTy,
-                               Align InitialAlign, const DataLayout &DL) {
-  const Align OptimizedAlign = getPTXPromotedParamTypeAlign(F, ArgTy, DL);
+static Align getPTXPromotedParamTypeAlign(const CallBase *CB, Type *Ty,
+                                          const DataLayout &DL) {
+  const Function *F = CB ? getMaybeBitcastedCallee(CB) : nullptr;
+  return getPTXPromotedParamTypeAlign(F, Ty, DL);
+}
+
+static bool isKernelFunction(const CallBase &CB) {
+  // A call target is never a kernel.
+  return false;
+}
+
+template <typename AttrSourceT>
+static Type *getParamByValType(const AttrSourceT *AttrSource,
+                               unsigned AttrIdx) {
+  if (AttrSource && AttrIdx >= AttributeList::FirstArgIndex) {
+    const unsigned ArgNo = AttrIdx - AttributeList::FirstArgIndex;
+    return AttrSource->getParamByValType(ArgNo);
+  }
+  return nullptr;
+}
+
+template <typename AttrSourceT>
+static Align getPTXArgAlign(const AttrSourceT *AttrSource, unsigned AttrIdx,
+                            Type *Ty, const DataLayout &DL) {
+
+  const Align OptimizedAlign = getPTXPromotedParamTypeAlign(AttrSource, Ty, DL);
+
+  const MaybeAlign StackAlign =
+      AttrSource ? getStackAlign(*AttrSource, AttrIdx) : std::nullopt;
+
+  const bool IsByVal = !!getParamByValType(AttrSource, AttrIdx);
+  const MaybeAlign ByValAlign =
+      IsByVal
+          ? AttrSource->getParamAlign(AttrIdx - AttributeList::FirstArgIndex)
+          : std::nullopt;
+
+  if (IsByVal && !isKernelFunction(*AttrSource)) {
+    const Align InitialAlign = StackAlign.value_or(ByValAlign.valueOrOne());
 
   // Old ptx versions have a bug. When PTX code takes address of
   // byval parameter with alignment < 4, ptxas generates code to
@@ -67,43 +102,37 @@ Align getDeviceByValParamAlign(const Function *F, Type *ArgTy,
   // ptxas > 9.0.
   // TODO: remove this after verifying the bug is not reproduced
   // on non-deprecated ptxas versions.
-  const bool ShouldForceMinAlign =
-      ForceMinByValParamAlign && (!F || !isKernelFunction(*F));
-  const Align AlignFloor = ShouldForceMinAlign ? Align(4) : Align(1);
+    const Align AlignFloor = ForceMinByValParamAlign ? Align(4) : Align(1);
 
-  return std::max({InitialAlign, OptimizedAlign, AlignFloor});
-}
-
-Align getPTXParamAlign(const Function *F, Type *Ty, unsigned AttrIdx,
-                       const DataLayout &DL) {
-  if (F)
-    if (MaybeAlign StackAlign = getStackAlign(*F, AttrIdx))
-      return StackAlign.value();
-
-  Align TypeAlign = getPTXPromotedParamTypeAlign(F, Ty, DL);
-  if (F && AttrIdx >= AttributeList::FirstArgIndex) {
-    unsigned ArgNo = AttrIdx - AttributeList::FirstArgIndex;
-    if (F->getAttributes().hasParamAttr(ArgNo, Attribute::ByVal))
-      return std::max(TypeAlign, F->getParamAlign(ArgNo).valueOrOne());
-  }
-  return TypeAlign;
-}
-
-Align getPTXParamAlign(const CallBase *CB, Type *Ty, unsigned Idx,
-                       const DataLayout &DL) {
-  const Function *DirectCallee = CB ? CB->getCalledFunction() : nullptr;
-
-  if (!DirectCallee && CB) {
-    if (MaybeAlign StackAlign = getStackAlign(*CB, Idx))
-      return StackAlign.value();
-
-    DirectCallee = getMaybeBitcastedCallee(CB);
+    return std::max({InitialAlign, OptimizedAlign, AlignFloor});
   }
 
-  return getPTXParamAlign(DirectCallee, Ty, Idx, DL);
+  return StackAlign.value_or(
+      std::max({OptimizedAlign, ByValAlign.valueOrOne()}));
 }
 
-bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM) {
+Align llvm::getPTXArgAlign(const Function *F, const Argument &Arg,
+                           const DataLayout &DL) {
+  Type *Ty = Arg.hasByValAttr() ? Arg.getParamByValType() : Arg.getType();
+  return ::getPTXArgAlign(F, Arg.getArgNo() + AttributeList::FirstArgIndex, Ty,
+                          DL);
+}
+
+Align llvm::getPTXArgAlign(const CallBase *CB,
+                           unsigned ArgNo, Type *Ty, const DataLayout &DL) {
+  return ::getPTXArgAlign(CB, ArgNo + AttributeList::FirstArgIndex, Ty, DL);
+}
+
+Align llvm::getPTXReturnAlign(const Function *F, Type *Ty,
+                              const DataLayout &DL) {
+  return ::getPTXArgAlign(F, AttributeList::ReturnIndex, Ty, DL);
+}
+Align llvm::getPTXReturnAlign(const CallBase *CB, Type *Ty,
+                              const DataLayout &DL) {
+  return ::getPTXArgAlign(CB, AttributeList::ReturnIndex, Ty, DL);
+}
+
+bool llvm::shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM) {
   const auto &ST =
       *static_cast<const NVPTXTargetMachine &>(TM).getSubtargetImpl();
   if (!ST.hasNoReturn())
@@ -121,5 +150,3 @@ bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM) {
          F->getFunctionType()->getReturnType()->isVoidTy() &&
          !isKernelFunction(*F);
 }
-
-} // namespace llvm
