@@ -323,6 +323,40 @@ void template_init_capture_bad() {
 }
 template void template_init_capture_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_init_capture_bad<int>' requested here}}
 
+// A by-reference capture -- explicit or via a capture-default -- is the same
+// binding as an init-capture: a capture cannot carry [[ref_to_uninit]], so
+// capturing an [[uninit]] variable (or a [[ref_to_uninit]] reference) by
+// reference is always the unmarked-direction violation. A copy capture is not
+// a binding; it reads the variable in the enclosing function's CFG, which is
+// the flow-based uninit_read pass's territory.
+void test_ref_captures() {
+  int x [[uninit]];
+  int ok = 0;
+  auto c1 = [&x] { x = 1; }; // expected-error {{capturing 'x' by reference binds a reference to uninitialized memory under profile 'std::init'}}
+  auto c2 = [&] { x = 1; };  // expected-error {{capturing 'x' by reference binds a reference to uninitialized memory under profile 'std::init'}}
+  auto c3 = [&ok] { ok = 1; }; // OK: initialized
+  int *rtu [[ref_to_uninit]] = &g_uninit;
+  auto c4 = [&rtu] { (void)rtu; }; // OK: the pointer object itself is initialized
+  int &ur [[ref_to_uninit]] = *rtu;
+  auto c5 = [&ur] { (void)ur; }; // expected-error {{capturing 'ur' by reference binds a reference to uninitialized memory under profile 'std::init'}}
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init, rule: "ref_to_uninit")]] {
+    auto c6 = [&x] { x = 2; }; // OK: suppressed
+    (void)c6;
+  }
+  (void)c1; (void)c2; (void)c3; (void)c4; (void)c5;
+}
+
+// A by-reference capture inside a template body defers on the pattern and
+// fires once, at instantiation (TreeTransform rebuilds the lambda).
+template <typename T>
+void template_ref_capture_bad() {
+  int x [[uninit]];
+  auto c = [&x] { x = 1; }; // expected-error {{capturing 'x' by reference binds a reference to uninitialized memory under profile 'std::init'}}
+  (void)c;
+}
+template void template_ref_capture_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_ref_capture_bad<int>' requested here}}
+
 struct OpTag {};
 OpTag operator+(OpTag, int *p [[ref_to_uninit]]);
 

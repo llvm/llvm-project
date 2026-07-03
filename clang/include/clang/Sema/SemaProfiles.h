@@ -226,6 +226,17 @@ public:
   void checkInitProfileReadThrough(SourceLocation Loc, const Expr *Glvalue,
                             QualType ValueType);
 
+  /// std::init / ref_to_uninit (paper §4.3): a by-reference lambda capture of
+  /// \p Var binds a reference to its storage, and a capture cannot carry
+  /// [[ref_to_uninit]], so capturing an entity that denotes uninitialized
+  /// storage -- an [[uninit]] variable, or a [[ref_to_uninit]] reference --
+  /// is always the unmarked-direction violation. Called from
+  /// \c Sema::BuildLambdaExpr for each by-reference non-init variable capture
+  /// (init-captures are checked at \c createLambdaInitCaptureVarDecl); defers
+  /// on a template pattern, where TreeTransform rebuilds the lambda at
+  /// instantiation.
+  void checkInitProfileRefCapture(SourceLocation Loc, const ValueDecl *Var);
+
   /// std::init / pointer_marker + union_marker (paper §4.1, §5.6): diagnose
   /// [[uninit]] placed on a pointer, a union variable, or a union member.
   /// \p D must already carry the UninitAttr (the marker location is taken

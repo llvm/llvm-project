@@ -900,6 +900,25 @@ void SemaProfiles::checkInitProfileRefToUninitBinding(SourceLocation Loc,
                        T->isReferenceType(), Src, D);
 }
 
+void SemaProfiles::checkInitProfileRefCapture(SourceLocation Loc,
+                                              const ValueDecl *Var) {
+  if (!getLangOpts().Profiles)
+    return;
+  // Mirrors the glvalue recognizer's named-entity arm: the captured variable
+  // denotes uninitialized storage if it is [[uninit]], or if it is a
+  // [[ref_to_uninit]] reference (the capture binds to its referent). A copy
+  // capture is not this check's: it reads the variable in the enclosing
+  // function's CFG, which is the flow-based uninit_read pass's territory.
+  if (!Var->hasAttr<UninitAttr>() &&
+      !(Var->getType()->isReferenceType() && Var->hasAttr<RefToUninitAttr>()))
+    return;
+  if (deferUninitCheckOnTemplatePattern(SemaRef, /*D=*/nullptr))
+    return;
+  if (!shouldEmitProfileViolation("std::init", "ref_to_uninit", Loc))
+    return;
+  Diag(Loc, diag::err_init_uninit_ref_capture) << "std::init" << Var;
+}
+
 // The read-through diagnostic distinguishes indirection through a
 // [[ref_to_uninit]] pointer/reference from a subobject read of a named
 // [[uninit]] object, which involves no [[ref_to_uninit]] entity. Approximate

@@ -1050,8 +1050,17 @@ recognizers symmetric.
   overloaded operators, and calls to objects of class type such as functors
   and lambdas), arguments supplied by a parameter's default argument
   (``Sema::GatherArgumentsForCall``, which reuses the pre-built expression
-  rather than re-running copy-initialization), and return statements
-  (``Sema::BuildReturnStmt``).  Every site defers on a template pattern and
+  rather than re-running copy-initialization), return statements
+  (``Sema::BuildReturnStmt``), and lambda captures -- an init-capture binds
+  like a variable initialization when its variable is created
+  (``Sema::createLambdaInitCaptureVarDecl``), and a plain by-reference capture
+  of an entity denoting uninitialized storage (an ``[[uninit]]`` variable, or
+  a ``[[ref_to_uninit]]`` reference) is checked when the closure is built
+  (``Sema::BuildLambdaExpr``).  A capture cannot carry the marker, so only the
+  unmarked-direction violation can fire there; a *copy* capture is not a
+  binding -- it reads the variable in the enclosing function's CFG, which is
+  the flow-based ``uninit_read`` pass's territory.  Every site defers on a
+  template pattern and
   fires once, at instantiation.  The variable, data-member, and constructor
   member-initializer sites pass the instantiated ``Decl`` (deferred by the
   ``D->isTemplated()`` check in ``shouldEmitProfileViolation``); the

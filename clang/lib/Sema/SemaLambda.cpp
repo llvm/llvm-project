@@ -2281,6 +2281,12 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc,
         assert(From.isVariableCapture() && "unknown kind of capture");
         ValueDecl *Var = From.getVariable();
         LambdaCaptureKind Kind = From.isCopyCapture() ? LCK_ByCopy : LCK_ByRef;
+        // std::init / ref_to_uninit (paper §4.3): a by-reference capture binds
+        // an unmarked reference to the captured variable's storage. An
+        // init-capture was already checked when its variable was created
+        // (createLambdaInitCaptureVarDecl).
+        if (Kind == LCK_ByRef && !From.isInitCapture())
+          Profiles().checkInitProfileRefCapture(From.getLocation(), Var);
         return LambdaCapture(From.getLocation(), IsImplicit, Kind, Var,
                              From.getEllipsisLoc());
       }
