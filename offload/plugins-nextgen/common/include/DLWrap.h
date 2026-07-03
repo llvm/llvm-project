@@ -135,6 +135,8 @@ template <size_t Requested, size_t Required> constexpr void verboseAssert() {
   static_assert(Requested == Required, "Arity Error");
 }
 
+template <auto Fn> bool loaded();
+
 } // namespace dlwrap
 
 #define DLWRAP_INSTANTIATE(SYM_DEF, SYM_USE, ARITY)                            \
@@ -167,6 +169,9 @@ template <size_t Requested, size_t Required> constexpr void verboseAssert() {
       return reinterpret_cast<T::FunctionType>(P);                             \
     }                                                                          \
   };                                                                           \
+  template <> bool loaded<&(::SYMBOL)>() {                                     \
+    return SYMBOL##_Trait::get() != nullptr;                                   \
+  }                                                                            \
   }
 
 #define DLWRAP_IMPL(SYMBOL, ARITY)                                             \
