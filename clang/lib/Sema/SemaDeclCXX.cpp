@@ -6922,6 +6922,8 @@ struct DefaultedFunctionFPFeaturesRAII {
     S.CurFPFeatures = FPO.applyOverrides(S.LangOpts);
     S.FpPragmaStack.CurrentValue = FPO;
   }
+
+  ~DefaultedFunctionFPFeaturesRAII() = default;
 };
 } // namespace
 
