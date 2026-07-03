@@ -456,6 +456,45 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// When only some dimensions are tiled (tile_sizes [1, 0, 0]) and the untiled
+// dimensions are not aligned with inner tile sizes (123 % 128 != 0,
+// 1023 % 128 != 0), the tiled unpack should use extract_slice on the dest
+// (not tensor.empty) because the untiled dimensions pass through as-is and
+// the original unpack handles truncation.
+
+// CHECK-LABEL: func.func @unpack_with_untiled_non_aligned_dims
+// CHECK-SAME:    %[[SRC:[a-zA-Z0-9]+]]
+// CHECK-SAME:    %[[DEST:[a-zA-Z0-9]+]]
+// CHECK:       scf.for %[[IV:[a-zA-Z0-9]+]] =
+// CHECK-SAME:    iter_args(%[[ITER:[a-zA-Z0-9]+]] = %[[DEST]])
+// CHECK:         %[[SRC_SLICE:.+]] = tensor.extract_slice %[[SRC]][%[[IV]], 0, 0, 0, 0] [1, 1, 8, 128, 128]
+// CHECK:         %[[DEST_SLICE:.+]] = tensor.extract_slice %[[ITER]][%[[IV]], 0, 0] [1, 123, 1023] [1, 1, 1]
+// CHECK:         %[[UNPACK:.+]] = linalg.unpack %[[SRC_SLICE]]
+// CHECK-SAME:      outer_dims_perm = [0, 1, 2] inner_dims_pos = [1, 2] inner_tiles = [128, 128]
+// CHECK-SAME:      into %[[DEST_SLICE]]
+// CHECK:         %[[INSERT:.+]] = tensor.insert_slice %[[UNPACK]] into %[[ITER]][%[[IV]], 0, 0] [1, 123, 1023] [1, 1, 1]
+// CHECK:         scf.yield %[[INSERT]]
+func.func @unpack_with_untiled_non_aligned_dims(
+    %src: tensor<1828x1x8x128x128xf32>,
+    %dest: tensor<1828x123x1023xf32>) -> tensor<1828x123x1023xf32> {
+  %0 = linalg.unpack %src
+      outer_dims_perm = [0, 1, 2]
+      inner_dims_pos = [1, 2]
+      inner_tiles = [128, 128]
+      into %dest : tensor<1828x1x8x128x128xf32> -> tensor<1828x123x1023xf32>
+  return %0 : tensor<1828x123x1023xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.unpack"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %loops:1 = transform.structured.tile_using_for %0 tile_sizes [1, 0, 0] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
 // CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0) -> (d0 * 2)>
 // CHECK: func.func @perfect_NPQK_to_NKPQk
 // CHECK-SAME:  %[[SOURCE:.+]]: tensor<1x6x6x8xf32>,

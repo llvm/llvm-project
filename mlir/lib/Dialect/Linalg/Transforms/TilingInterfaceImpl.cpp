@@ -1434,6 +1434,13 @@ struct UnPackOpTiling
     // The perfect tiling case indicates that the tiling sizes are multiple of
     // inner_tile_size. In this context, no extra data is needed when
     // representing the tiled unpack op.
+    //
+    // Also, if a dimension is not tiled (tile size equals the iteration domain
+    // size), the original unpack already handles any truncation from
+    // (outerTiles * innerTileSize) down to the dest dim size. No intermediate
+    // expansion is needed for that dimension.
+    SmallVector<Range> iterationDomain =
+        cast<TilingInterface>(op).getIterationDomain(b);
     bool isPerfectTilingCase = true;
     Attribute oneAttr = b.getIndexAttr(1);
     SmallVector<OpFoldResult> sliceSrcStrides(destRank, oneAttr);
@@ -1442,7 +1449,10 @@ struct UnPackOpTiling
     for (auto dim : llvm::seq<int64_t>(0, destRank)) {
       UnpackTileDimInfo info =
           getUnpackTileDimInfo(b, unpackOp, dim, offsets[dim], sizes[dim]);
-      if (!info.isAlignedToInnerTileSize)
+      // If a dimension is tiled and it is not aligned to inner tile size, it is
+      // not a perfect tiling case.
+      if (!info.isAlignedToInnerTileSize &&
+          !isEqualConstantIntOrValue(sizes[dim], iterationDomain[dim].size))
         isPerfectTilingCase = false;
       sliceSrcIndices.push_back(info.sourceOffset);
       sliceSrcSizes.push_back(info.sourceSize);
