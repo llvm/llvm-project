@@ -8224,6 +8224,22 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       TheIndex.addBlockCount(Record[0]);
       break;
 
+    case bitc::FS_OBJC_CLASS_INFO: {
+      // [classGUID, superclassGUID, instanceStart, instanceSize,
+      //  maxIvarAlignment]
+      // Written by {Module,Index}BitcodeWriter::write*GlobalValueSummary().
+      if (Record.size() != 5)
+        return error("Invalid record");
+      GlobalValue::GUID ClassGUID = Record[0];
+      GlobalValue::GUID SuperGUID = Record[1];
+      uint32_t InstStart = static_cast<uint32_t>(Record[2]);
+      uint32_t InstSize = static_cast<uint32_t>(Record[3]);
+      uint32_t MaxAlign = static_cast<uint32_t>(Record[4]);
+      TheIndex.getObjCClasses()[ClassGUID] = {SuperGUID, InstStart, InstSize,
+                                              MaxAlign};
+      break;
+    }
+
     case bitc::FS_PARAM_ACCESS: {
       PendingParamAccesses = parseParamAccesses(Record);
       break;

@@ -343,6 +343,9 @@ enum GlobalValueSummarySymtabCodes {
   //  nummib x alloc type,
   //  numver x version]
   FS_COMBINED_ALLOC_INFO_NO_CONTEXT = 33,
+  // ObjC class hierarchy info for ivar offset constification.
+  // [classGUID, superclassGUID, instanceStart, instanceSize, maxIvarAlignment]
+  FS_OBJC_CLASS_INFO = 34,
 };
 
 enum MetadataCodes {

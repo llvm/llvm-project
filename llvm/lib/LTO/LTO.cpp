@@ -32,6 +32,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/ObjCClassHierarchy.h"
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/LTO/LTOBackend.h"
 #include "llvm/Linker/IRMover.h"
@@ -2136,6 +2137,9 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   runWholeProgramDevirtOnIndex(ThinLTO.CombinedIndex, ExportedGUIDs,
                                LocalWPDTargetsMap,
                                ExternallyVisibleSymbolNamesPtr);
+
+  // Resolve ObjC class hierarchy from the combined index.
+  ObjCClassHierarchy::resolveHierarchy(ThinLTO.CombinedIndex.getObjCClasses());
 
   auto isPrevailing = [&](GlobalValue::GUID GUID, const GlobalValueSummary *S) {
     return ThinLTO.isPrevailingModuleForGUID(GUID, S->modulePath());

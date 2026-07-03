@@ -315,6 +315,16 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
   }
 };
 
+template <> struct MappingTraits<ObjCClassInfo> {
+  static void mapping(IO &io, ObjCClassInfo &info) {
+    io.mapRequired("SuperclassGUID", info.SuperclassGUID);
+    io.mapRequired("InstanceStart", info.InstanceStart);
+    io.mapRequired("InstanceSize", info.InstanceSize);
+    io.mapOptional("MaxIvarAlignment", info.MaxIvarAlignment,
+                   static_cast<uint32_t>(1));
+  }
+};
+
 template <> struct CustomMappingTraits<TypeIdSummaryMapTy> {
   static void inputOne(IO &io, StringRef Key, TypeIdSummaryMapTy &V) {
     TypeIdSummary TId;
@@ -345,6 +355,27 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::StringAndGUID)
 namespace llvm {
 namespace yaml {
 
+template <>
+struct CustomMappingTraits<
+    std::map<uint64_t, ObjCClassInfo>> {
+  static void inputOne(
+      IO &io, StringRef Key,
+      std::map<uint64_t, ObjCClassInfo> &V) {
+    uint64_t KeyInt;
+    if (Key.getAsInteger(0, KeyInt)) {
+      io.setError("key not an integer");
+      return;
+    }
+    io.mapRequired(Key, V[KeyInt]);
+  }
+  static void output(
+      IO &io,
+      std::map<uint64_t, ObjCClassInfo> &V) {
+    for (auto &P : V)
+      io.mapRequired(llvm::utostr(P.first), P.second);
+  }
+};
+
 template <> struct MappingTraits<ModuleSummaryIndex> {
   static void mapping(IO &io, ModuleSummaryIndex& index) {
     io.mapOptional("GlobalValueMap", index.GlobalValueMap);
@@ -368,6 +399,19 @@ template <> struct MappingTraits<ModuleSummaryIndex> {
 
     io.mapOptional("WithGlobalValueDeadStripping",
                    index.WithGlobalValueDeadStripping);
+
+    if (io.outputting()) {
+      if (!index.ObjCClasses.empty()) {
+        std::map<uint64_t, ObjCClassInfo> SortedObjCClasses(
+            index.ObjCClasses.begin(), index.ObjCClasses.end());
+        io.mapOptional("ObjCClasses", SortedObjCClasses);
+      }
+    } else {
+      std::map<uint64_t, ObjCClassInfo> ObjCClasses;
+      io.mapOptional("ObjCClasses", ObjCClasses);
+      for (auto &[GUID, Info] : ObjCClasses)
+        index.ObjCClasses[GUID] = Info;
+    }
 
     if (io.outputting()) {
       auto CfiFunctionDefs = index.CfiFunctionDefs.getSortedSymbols();

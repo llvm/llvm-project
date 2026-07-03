@@ -1431,6 +1431,15 @@ struct TypeIdOffsetVtableInfo {
 /// to inheritance, which is why this is a vector.
 using TypeIdCompatibleVtableInfo = std::vector<TypeIdOffsetVtableInfo>;
 
+/// ObjC class info for cross-module ivar offset constant constification.
+struct ObjCClassInfo {
+  GlobalValue::GUID SuperclassGUID; ///< Superclass GUID (0 = root class)
+  uint32_t InstanceStart;           ///< From _class_ro_t field 1
+  uint32_t InstanceSize;            ///< From _class_ro_t field 2
+  uint32_t MaxIvarAlignment;        ///< Max alignment (1 << alignment_raw)
+                                    ///< across all ivars, or 1 if no ivars
+};
+
 /// Class to hold module path string table and global value map,
 /// and encapsulate methods for operating on them.
 class ModuleSummaryIndex {
@@ -1539,6 +1548,9 @@ private:
   // built via releaseTemporaryMemory.
   DenseMap<uint64_t, unsigned> StackIdToIndex;
 
+  /// Map from class GUID to its hierarchy/layout info.
+  DenseMap<GlobalValue::GUID, ObjCClassInfo> ObjCClasses;
+
   // YAML I/O support.
   friend yaml::MappingTraits<ModuleSummaryIndex>;
 
@@ -1561,7 +1573,7 @@ public:
   // in the way some record are interpreted, like flags for instance.
   // Note that incrementing this may require changes in both BitcodeReader.cpp
   // and BitcodeWriter.cpp.
-  static constexpr uint64_t BitcodeSummaryVersion = 14;
+  static constexpr uint64_t BitcodeSummaryVersion = 15;
 
   // Regular LTO module name for ASM writer
   static constexpr const char *getRegularLTOModuleName() {
@@ -1968,6 +1980,14 @@ public:
     if (I == TypeIdCompatibleVtableMap.end())
       return std::nullopt;
     return I->second;
+  }
+
+  ///  "ObjC class hierarchy info" accessors
+  const DenseMap<GlobalValue::GUID, ObjCClassInfo> &getObjCClasses() const {
+    return ObjCClasses;
+  }
+  DenseMap<GlobalValue::GUID, ObjCClassInfo> &getObjCClasses() {
+    return ObjCClasses;
   }
 
   /// Collect for the given module the list of functions it defines
