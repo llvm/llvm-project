@@ -4229,6 +4229,22 @@ bool SITargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
   return true;
 }
 
+bool SITargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
+  // GlobalISel does not yet lower "VGPR as memory" (addrspace(13)) accesses, so
+  // fall back to SelectionDAG (which does) for any instruction that produces or
+  // consumes such a pointer. TODO: implement the GlobalISel path.
+  auto IsVGPRPtr = [](const Value *V) {
+    Type *Ty = V->getType();
+    return Ty->isPointerTy() && Ty->getPointerAddressSpace() == AMDGPUAS::VGPR;
+  };
+  if (IsVGPRPtr(&Inst))
+    return true;
+  for (const Value *Op : Inst.operands())
+    if (IsVGPRPtr(Op))
+      return true;
+  return false;
+}
+
 namespace {
 // Chain calls have special arguments that we need to handle. These are
 // tagging along at the end of the arguments list(s), after the SGPR and VGPR
@@ -5230,11 +5246,16 @@ emitLoadM0FromVGPRLoop(const SIInstrInfo *TII, MachineRegisterInfo &MRI,
       MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
   Register CondReg = MRI.createVirtualRegister(BoolRC);
 
-  BuildMI(LoopBB, I, DL, TII->get(TargetOpcode::PHI), PhiReg)
-      .addReg(InitReg)
-      .addMBB(&OrigBB)
-      .addReg(ResultReg)
-      .addMBB(&LoopBB);
+  // A zero PhiReg means the caller threads no per-iteration result value
+  // through the loop (e.g. a store whose destination is a fixed physical
+  // register), so the result PHI - and its requirement that ResultReg be
+  // live-out of the loop - is omitted.
+  if (PhiReg)
+    BuildMI(LoopBB, I, DL, TII->get(TargetOpcode::PHI), PhiReg)
+        .addReg(InitReg)
+        .addMBB(&OrigBB)
+        .addReg(ResultReg)
+        .addMBB(&LoopBB);
 
   BuildMI(LoopBB, I, DL, TII->get(TargetOpcode::PHI), PhiExec)
       .addReg(InitSaveExecReg)
@@ -5591,6 +5612,118 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
         .add(*Val)
         .addImm(SubReg);
   }
+
+  MI.eraseFromParent();
+  return LoopBB;
+}
+
+// Expand a runtime-index "VGPR as memory" access into an indirect movrel /
+// s_set_gpr_idx read/write of the reserved file (a waterfall loop if the index
+// is divergent), reusing the indirect-vector-element machinery.
+static MachineBasicBlock *emitVGPRFrameDynamic(MachineInstr &MI,
+                                               MachineBasicBlock &MBB,
+                                               const GCNSubtarget &ST) {
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  const SIRegisterInfo &TRI = TII->getRegisterInfo();
+  MachineFunction *MF = MBB.getParent();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  const DebugLoc &DL = MI.getDebugLoc();
+  const bool IsLoad = MI.getOpcode() == AMDGPU::SI_VGPR_FRAME_DYN_LOAD_B32;
+
+  auto [BaseIdx, Count] = TRI.getVGPRMemoryFile(*MF);
+  assert(Count && "dynamic VGPR-memory access without a reserved file");
+  const TargetRegisterClass *VecRC = TRI.getVGPRClassForBitWidth(Count * 32);
+  assert(VecRC && "dynamic VGPR-memory file has no tuple class; "
+                  "LowerLoadStoreVGPR rejects this before creating the pseudo");
+  unsigned VecBits = TRI.getRegSizeInBits(*VecRC);
+  // movrel reads name the base sub-register directly (a subregister index is
+  // not allowed on a physical-register operand), with the whole file tuple as
+  // an implicit use.
+  MCRegister FileReg = TRI.getMatchingSuperReg(
+      AMDGPU::VGPR_32RegClass.getRegister(BaseIdx), AMDGPU::sub0, VecRC);
+  MCRegister FileBaseReg = AMDGPU::VGPR_32RegClass.getRegister(BaseIdx);
+
+  const MachineOperand *Idx = TII->getNamedOperand(MI, AMDGPU::OpName::idx);
+  const TargetRegisterClass *IdxRC = MRI.getRegClass(Idx->getReg());
+  const bool UseGPRIdxMode = ST.useVGPRIndexMode();
+
+  // Index is file-relative (the constant part was folded in at ISel): base
+  // sub0, no extra offset.
+  unsigned SubReg = AMDGPU::sub0;
+  int Offset = 0;
+
+  // Emit the indexed read/write at InsPt: GPR-idx mode uses IdxReg, movrel mode
+  // uses the preset m0 (IdxReg then unused).
+  auto EmitAccess = [&](MachineBasicBlock &BB,
+                        MachineBasicBlock::iterator InsPt, Register IdxReg) {
+    if (IsLoad) {
+      Register Dst = MI.getOperand(0).getReg();
+      if (UseGPRIdxMode)
+        BuildMI(BB, InsPt, DL, TII->getIndirectGPRIDXPseudo(VecBits, true), Dst)
+            .addReg(FileReg)
+            .addReg(IdxReg)
+            .addImm(SubReg);
+      else
+        BuildMI(BB, InsPt, DL, TII->get(AMDGPU::V_MOVRELS_B32_e32), Dst)
+            .addReg(FileBaseReg)
+            .addReg(FileReg, RegState::Implicit);
+    } else {
+      const MachineOperand *Val =
+          TII->getNamedOperand(MI, AMDGPU::OpName::vdata);
+      if (UseGPRIdxMode)
+        BuildMI(BB, InsPt, DL, TII->getIndirectGPRIDXPseudo(VecBits, false),
+                FileReg)
+            .addReg(FileReg)
+            .add(*Val)
+            .addReg(IdxReg)
+            .addImm(SubReg);
+      else
+        BuildMI(BB, InsPt, DL,
+                TII->getIndirectRegWriteMovRelPseudo(VecBits, 32, false),
+                FileReg)
+            .addReg(FileReg)
+            .add(*Val)
+            .addImm(SubReg);
+    }
+  };
+
+  MachineBasicBlock::iterator I(&MI);
+
+  // Uniform (scalar) index: set up the index in place and emit the access.
+  if (TRI.isSGPRClass(IdxRC)) {
+    Register IdxReg;
+    if (UseGPRIdxMode)
+      IdxReg = getIndirectSGPRIdx(TII, MRI, MI, Offset);
+    else
+      setM0ToIndexFromSGPR(TII, MRI, MI, Offset);
+    EmitAccess(MBB, I, IdxReg);
+    MI.eraseFromParent();
+    return &MBB;
+  }
+
+  // Divergent (per-lane) index: a waterfall loop covers the lanes sharing each
+  // index. The file is in fixed (reserved) physical registers, so unlike
+  // indirect vector access it is not threaded through a PHI - the per-lane
+  // access reads/writes it in place under EXEC - and a stored value must stay
+  // live across the back-edge.
+  if (!IsLoad)
+    MRI.clearKillFlags(
+        TII->getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg());
+
+  // A load threads its result through the loop; a store threads nothing
+  // (PhiReg == 0 skips the result PHI).
+  Register PhiReg, InitReg;
+  if (IsLoad) {
+    PhiReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    InitReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    BuildMI(MBB, I, DL, TII->get(TargetOpcode::IMPLICIT_DEF), InitReg);
+  }
+
+  Register SGPRIdxReg;
+  auto InsPt = loadM0FromVGPR(TII, MBB, MI, InitReg, PhiReg, Offset,
+                              UseGPRIdxMode, SGPRIdxReg);
+  MachineBasicBlock *LoopBB = InsPt->getParent();
+  EmitAccess(*LoopBB, InsPt, SGPRIdxReg);
 
   MI.eraseFromParent();
   return LoopBB;
@@ -7123,6 +7256,9 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case AMDGPU::SI_INDIRECT_DST_V16:
   case AMDGPU::SI_INDIRECT_DST_V32:
     return emitIndirectDst(MI, *BB, *getSubtarget());
+  case AMDGPU::SI_VGPR_FRAME_DYN_LOAD_B32:
+  case AMDGPU::SI_VGPR_FRAME_DYN_STORE_B32:
+    return emitVGPRFrameDynamic(MI, *BB, *getSubtarget());
   case AMDGPU::SI_KILL_F32_COND_IMM_PSEUDO:
   case AMDGPU::SI_KILL_I1_PSEUDO:
     return splitKillBlock(MI, BB);
@@ -9933,6 +10069,14 @@ buildPCRelGlobalAddress(SelectionDAG &DAG, const GlobalValue *GV,
   return DAG.getNode(AMDGPUISD::PC_ADD_REL_OFFSET, DL, PtrVT, PtrLo, PtrHi);
 }
 
+// Byte offset of an addrspace(13) global in its file (metadata from
+// AMDGPULowerModuleVGPRs), or nullopt if it was not laid out.
+static std::optional<uint64_t> getVGPRMemoryOffset(const GlobalVariable *GV) {
+  if (MDNode *MD = GV->getMetadata("amdgpu.vgpr.memory.offset"))
+    return mdconst::extract<ConstantInt>(MD->getOperand(0))->getZExtValue();
+  return std::nullopt;
+}
+
 SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI,
                                              SDValue Op,
                                              SelectionDAG &DAG) const {
@@ -9941,6 +10085,30 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI,
   EVT PtrVT = Op.getValueType();
 
   const GlobalValue *GV = GSD->getGlobal();
+
+  // A "VGPR as memory" (addrspace(13)) global has no numeric address; its
+  // "address" is the object's byte offset in the file. Lower it to that
+  // constant so even a standalone materialization (e.g. a constexpr GEP) never
+  // reaches the pc-relative global-address sequence.
+  if (GSD->getAddressSpace() == AMDGPUAS::VGPR) {
+    // The object (resolving aliases) must be a global variable laid out by
+    // AMDGPULowerModuleVGPRs. Diagnose a missing layout here too: this fold
+    // runs before LowerLoadStoreVGPR's own check, so a folded constant base
+    // would otherwise bypass it and silently resolve to offset 0.
+    const auto *GVar = dyn_cast<GlobalVariable>(GV->getAliaseeObject());
+    std::optional<uint64_t> MDOffset =
+        GVar ? getVGPRMemoryOffset(GVar) : std::nullopt;
+    if (!MDOffset) {
+      DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+          DAG.getMachineFunction().getFunction(),
+          "unsupported 'VGPR as memory' access: missing "
+          "amdgpu.vgpr.memory.offset layout metadata",
+          DL.getDebugLoc()));
+      return DAG.getPOISON(PtrVT);
+    }
+    return DAG.getConstant(GSD->getOffset() + *MDOffset, DL, PtrVT);
+  }
+
   if ((GSD->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS &&
        shouldUseLDSConstAddress(GV)) ||
       GSD->getAddressSpace() == AMDGPUAS::REGION_ADDRESS ||
@@ -14353,6 +14521,248 @@ SDValue SITargetLowering::performSHLPtrCombine(SDNode *N, unsigned AddrSpace,
   return DAG.getNode(ISD::ADD, SL, VT, ShlX, COffset, Flags);
 }
 
+/// Lower a load/store of a "VGPR as memory" object (a global in AMDGPUAS::VGPR)
+/// into an AMDGPUISD::REG_{LOAD,STORE} node carrying the dword index of the
+/// access within the reserved VGPR file. A constant index selects the
+/// SI_VGPR_FRAME_* pseudos (rewritten to register copies by
+/// AMDGPUPrivateObjectVGPRs); a runtime index selects the SI_VGPR_FRAME_DYN_*
+/// pseudos (expanded to an indexed register move). Sub-dword (i8/i16) accesses
+/// are realized as a read-modify-write of the containing dword.
+///
+/// An access this routine cannot handle (e.g. a wider-than-dword dynamic
+/// access, or a base with no layout metadata) is diagnosed and replaced with
+/// poison (load) / its incoming chain (store), so it never reaches instruction
+/// selection as an unselectable memory operation.
+SDValue SITargetLowering::LowerLoadStoreVGPR(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  MemSDNode *MemOp = cast<MemSDNode>(Op);
+  SDLoc DL(Op);
+
+  // Emit the diagnosis described above (poison for a load, the incoming chain
+  // for a store).
+  auto Unsupported = [&](const Twine &Reason) -> SDValue {
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        DAG.getMachineFunction().getFunction(),
+        "unsupported 'VGPR as memory' access: " + Reason, DL.getDebugLoc()));
+    if (isa<StoreSDNode>(MemOp))
+      return MemOp->getChain();
+    return DAG.getMergeValues(
+        {DAG.getPOISON(MemOp->getValueType(0)), MemOp->getChain()}, DL);
+  };
+
+  // The pointer is a byte offset into the file. After stripping a folded GEP
+  // offset, the base is the addrspace(13) global (offset in metadata), the
+  // constant LowerGlobalAddress folds it to, or a runtime value (dynamic).
+  SDValue Ptr = MemOp->getBasePtr();
+  // Accumulate the byte offset in 64 bits: the addrspace(13) pointer is only
+  // 32-bit, so a folded constant such as a negative GEP index would otherwise
+  // wrap and defeat the out-of-range check below.
+  uint64_t ExtraOffset = 0;
+  SDValue DynByteOffset; // non-constant byte offset, for a runtime index
+  if (Ptr.getOpcode() == ISD::ADD || Ptr.getOpcode() == ISD::PTRADD) {
+    if (auto *C = dyn_cast<ConstantSDNode>(Ptr.getOperand(1)))
+      ExtraOffset = C->getZExtValue();
+    else
+      DynByteOffset = Ptr.getOperand(1);
+    Ptr = Ptr.getOperand(0);
+  }
+
+  uint64_t ByteOffset = ExtraOffset;
+  if (auto *GA = dyn_cast<GlobalAddressSDNode>(Ptr)) {
+    if (GA->getAddressSpace() != AMDGPUAS::VGPR)
+      return Unsupported(
+          "base is a global outside the VGPR address space (13)");
+    const auto *GV = dyn_cast<GlobalVariable>(GA->getGlobal());
+    if (!GV)
+      return Unsupported(
+          "base is not a VGPR address space (13) global variable");
+    std::optional<uint64_t> MDOffset = getVGPRMemoryOffset(GV);
+    if (!MDOffset)
+      return Unsupported("missing amdgpu.vgpr.memory.offset layout metadata");
+    ByteOffset += *MDOffset + GA->getOffset();
+  } else if (auto *C = dyn_cast<ConstantSDNode>(Ptr)) {
+    ByteOffset += C->getZExtValue();
+  } else {
+    if (DynByteOffset)
+      return Unsupported("two independent dynamic address terms");
+    DynByteOffset = Ptr; // the base is itself a runtime byte offset
+  }
+  EVT MemVT = MemOp->getMemoryVT();
+  unsigned BitWidth = MemVT.getSizeInBits();
+  MachineFunction &MFn = DAG.getMachineFunction();
+  const SIMachineFunctionInfo *MFI = MFn.getInfo<SIMachineFunctionInfo>();
+  unsigned FileBytes = MFI->getVGPRMemorySize();
+  SDValue Chain = MemOp->getChain();
+
+  auto GetDwordMMO = [&](MachineMemOperand::Flags F) {
+    return MFn.getMachineMemOperand(MemOp->getPointerInfo(), F, /*Size=*/4,
+                                    Align(4));
+  };
+
+  // Lower a sub-dword (8/16-bit) access at dword Index, with the field starting
+  // at bit BitInDword, as a read-modify-write (store) or extract (load) of the
+  // containing dword. Index and BitInDword may be constants - which fold, so
+  // this serves both the constant- and runtime-index paths.
+  auto EmitSubDword = [&](SDValue Index, SDValue BitInDword) -> SDValue {
+    SDValue LowMaskC =
+        DAG.getConstant(maskTrailingOnes<uint32_t>(BitWidth), DL, MVT::i32);
+    SDValue Old = DAG.getMemIntrinsicNode(
+        AMDGPUISD::REG_LOAD, DL, DAG.getVTList(MVT::i32, MVT::Other),
+        {Chain, Index}, MVT::i32, GetDwordMMO(MachineMemOperand::MOLoad));
+    if (auto *StoreOp = dyn_cast<StoreSDNode>(MemOp)) {
+      SDValue Val = DAG.getZExtOrTrunc(StoreOp->getValue(), DL, MVT::i32);
+      Val = DAG.getNode(ISD::AND, DL, MVT::i32, Val, LowMaskC);
+      Val = DAG.getNode(ISD::SHL, DL, MVT::i32, Val, BitInDword);
+      SDValue MaskShifted =
+          DAG.getNode(ISD::SHL, DL, MVT::i32, LowMaskC, BitInDword);
+      SDValue Cleared = DAG.getNode(ISD::AND, DL, MVT::i32, Old,
+                                    DAG.getNOT(DL, MaskShifted, MVT::i32));
+      SDValue New = DAG.getNode(ISD::OR, DL, MVT::i32, Cleared, Val);
+      return DAG.getMemIntrinsicNode(AMDGPUISD::REG_STORE, DL,
+                                     DAG.getVTList(MVT::Other),
+                                     {Old.getValue(1), New, Index}, MVT::i32,
+                                     GetDwordMMO(MachineMemOperand::MOStore));
+    }
+    auto *LoadOp = cast<LoadSDNode>(MemOp);
+    bool IsSExt = LoadOp->getExtensionType() == ISD::SEXTLOAD;
+    SDValue Field = DAG.getNode(ISD::SRL, DL, MVT::i32, Old, BitInDword);
+    if (IsSExt)
+      Field = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i32, Field,
+                          DAG.getValueType(MemVT));
+    else
+      Field = DAG.getNode(ISD::AND, DL, MVT::i32, Field, LowMaskC);
+    // Narrow/extend i32 Field to the result type per the load's extension kind.
+    EVT ResVT = LoadOp->getValueType(0);
+    SDValue Result = IsSExt ? DAG.getSExtOrTrunc(Field, DL, ResVT)
+                            : DAG.getZExtOrTrunc(Field, DL, ResVT);
+    return DAG.getMergeValues({Result, Old.getValue(1)}, DL);
+  };
+
+  // Runtime index. Sub-dword (8/16-bit) accesses RMW the containing dword
+  // (race-free: VGPRs are per-lane).
+  if (DynByteOffset) {
+    if (BitWidth != 8 && BitWidth != 16 && BitWidth != 32)
+      return Unsupported("dynamic index wider than 32 bits");
+    if (!FileBytes)
+      return Unsupported("dynamic access to an empty VGPR-memory file");
+    // The dynamic index move treats the whole file as one indexed tuple, so the
+    // file's (even-dword-rounded) size must have a VGPR tuple class.
+    unsigned FileDwords = divideCeil(FileBytes, 4u);
+    if (!Subtarget->getRegisterInfo()->getVGPRClassForBitWidth(
+            AMDGPU::getVGPRMemoryFileDwords(FileBytes) * 32))
+      return Unsupported("VGPR-memory file too large for a dynamic index");
+    // The address is a 32-bit addrspace(13) pointer, so the byte offset is
+    // computed in i32: any wrap is the defined behavior of that pointer width,
+    // and the UMIN clamp below bounds the resulting dword index into the file
+    // regardless. (The constant-index path uses 64-bit arithmetic instead,
+    // because it must statically range-check rather than clamp.)
+    SDValue DynI32 = DAG.getZExtOrTrunc(DynByteOffset, DL, MVT::i32);
+    SDValue Bytes = DAG.getNode(ISD::ADD, DL, MVT::i32, DynI32,
+                                DAG.getConstant(ByteOffset, DL, MVT::i32));
+    SDValue Index = DAG.getNode(ISD::SRL, DL, MVT::i32, Bytes,
+                                DAG.getConstant(2, DL, MVT::i32));
+
+    // Clamp the dword index into the file so an out-of-range dynamic access
+    // disturbs only the file's own last register, not arbitrary live VGPRs.
+    Index = DAG.getNode(ISD::UMIN, DL, MVT::i32, Index,
+                        DAG.getConstant(FileDwords - 1, DL, MVT::i32));
+
+    if (BitWidth == 8 || BitWidth == 16) {
+      // The RMW assumes the field stays within one dword, which holds only for
+      // a naturally aligned access; an underaligned one could cross a boundary
+      // at runtime, so reject it rather than silently drop the high bits.
+      if (MemOp->getAlign() < Align(BitWidth / 8))
+        return Unsupported("underaligned sub-dword dynamic access");
+
+      SDValue ByteInDword = DAG.getNode(ISD::AND, DL, MVT::i32, Bytes,
+                                        DAG.getConstant(3, DL, MVT::i32));
+      SDValue BitInDword = DAG.getNode(ISD::SHL, DL, MVT::i32, ByteInDword,
+                                       DAG.getConstant(3, DL, MVT::i32));
+      return EmitSubDword(Index, BitInDword);
+    }
+
+    // Whole-dword dynamic access: both the constant and runtime parts must be
+    // dword-aligned so the index shift does not silently round down.
+    if (ByteOffset % 4 != 0 || MemOp->getAlign() < Align(4))
+      return Unsupported("misaligned 32-bit dynamic access");
+    if (auto *StoreOp = dyn_cast<StoreSDNode>(MemOp)) {
+      SDValue Val = DAG.getBitcast(MVT::i32, StoreOp->getValue());
+      return DAG.getMemIntrinsicNode(AMDGPUISD::REG_STORE, DL,
+                                     DAG.getVTList(MVT::Other),
+                                     {Chain, Val, Index}, MVT::i32,
+                                     GetDwordMMO(MachineMemOperand::MOStore));
+    }
+    auto *LoadOp = cast<LoadSDNode>(MemOp);
+    if (LoadOp->getExtensionType() != ISD::NON_EXTLOAD)
+      return Unsupported("extending 32-bit dynamic load");
+    SDValue Ld = DAG.getMemIntrinsicNode(
+        AMDGPUISD::REG_LOAD, DL, DAG.getVTList(MVT::i32, MVT::Other),
+        {Chain, Index}, MVT::i32, GetDwordMMO(MachineMemOperand::MOLoad));
+    EVT ResVT = LoadOp->getValueType(0);
+    SDValue Res = ResVT == MVT::i32 ? Ld : DAG.getBitcast(ResVT, Ld);
+    return DAG.getMergeValues({Res, Ld.getValue(1)}, DL);
+  }
+
+  // A statically out-of-range constant index would select physical registers
+  // outside the reserved file. It is undefined behavior; diagnose it rather
+  // than miscompile into a copy to/from an arbitrary live VGPR.
+  if (ByteOffset + BitWidth / 8 > FileBytes)
+    return Unsupported("constant index out of range");
+
+  // Sub-dword (8/16-bit) constant-index access. Registers have no sub-dword
+  // addressing, so extract from (load) or RMW (store) the containing dword.
+  if (BitWidth == 8 || BitWidth == 16) {
+    unsigned BitInDword = (ByteOffset % 4) * 8;
+    if (BitInDword + BitWidth > 32)
+      return Unsupported("sub-dword field crosses a dword boundary");
+    return EmitSubDword(DAG.getConstant(ByteOffset / 4, DL, MVT::i32),
+                        DAG.getConstant(BitInDword, DL, MVT::i32));
+  }
+
+  // Whole-dword accesses.
+  if (ByteOffset % 4 != 0)
+    return Unsupported("misaligned multi-dword access");
+  if (BitWidth == 0 || BitWidth % 32 != 0)
+    return Unsupported("access is not a whole number of dwords");
+  if (!Subtarget->getRegisterInfo()->getVGPRClassForBitWidth(BitWidth))
+    return Unsupported("access wider than the largest VGPR tuple");
+
+  if (auto *Load = dyn_cast<LoadSDNode>(MemOp)) {
+    if (Load->getExtensionType() != ISD::NON_EXTLOAD)
+      return Unsupported("extending multi-dword load");
+  } else if (cast<StoreSDNode>(MemOp)->isTruncatingStore()) {
+    return Unsupported("truncating multi-dword store");
+  }
+
+  // View the access as i32 / <N x i32> so one node covers it; bitcast when the
+  // memory type is not register legal.
+  EVT RegVT = MemVT;
+  if (!isTypeLegal(RegVT)) {
+    unsigned NumDwords = BitWidth / 32;
+    RegVT = NumDwords == 1
+                ? EVT(MVT::i32)
+                : EVT::getVectorVT(*DAG.getContext(), MVT::i32, NumDwords);
+  }
+
+  SDValue Index = DAG.getConstant(ByteOffset / 4, DL, MVT::i32);
+  if (auto *StoreOp = dyn_cast<StoreSDNode>(MemOp)) {
+    SDValue Value = StoreOp->getValue();
+    if (RegVT != MemVT)
+      Value = DAG.getNode(ISD::BITCAST, DL, RegVT, Value);
+    return DAG.getMemIntrinsicNode(
+        AMDGPUISD::REG_STORE, DL, DAG.getVTList(MVT::Other),
+        {Chain, Value, Index}, MemVT, StoreOp->getMemOperand());
+  }
+
+  SDValue NewLoad = DAG.getMemIntrinsicNode(
+      AMDGPUISD::REG_LOAD, DL, DAG.getVTList(RegVT, MVT::Other), {Chain, Index},
+      MemVT, MemOp->getMemOperand());
+  if (RegVT == MemVT)
+    return NewLoad;
+  SDValue Value = DAG.getNode(ISD::BITCAST, DL, MemVT, NewLoad);
+  return DAG.getMergeValues({Value, NewLoad.getValue(1)}, DL);
+}
+
 /// MemSDNode::getBasePtr() does not work for intrinsics, which needs to offset
 /// by the chain and intrinsic ID. Theoretically we would also need to check the
 /// specific intrinsic, but they all place the pointer operand first.
@@ -18590,6 +19000,19 @@ SDValue SITargetLowering::performSelectCombine(SDNode *N,
 
 SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
+  // Lower "VGPR as memory" (addrspace(13)) accesses into AMDGPUISD::REG_*. This
+  // is mandatory lowering, but it is done here rather than in LowerOperation
+  // because it must apply to a load/store of *any* value type (including legal
+  // scalars like i32, which are never custom-lowered), and the address space
+  // cannot be expressed in setOperationAction. It is scoped to addrspace(13)
+  // nodes (so ordinary memory is untouched) and runs first in PerformDAGCombine
+  // and replaces the node, so no other combine preempts it.
+  unsigned Opc = N->getOpcode();
+  if ((Opc == ISD::LOAD || Opc == ISD::STORE) &&
+      cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::VGPR)
+    if (SDValue V = LowerLoadStoreVGPR(SDValue(N, 0), DCI.DAG))
+      return V;
+
   switch (N->getOpcode()) {
   case ISD::ABS:
     if (SDValue Res = promoteUniformUnaryOpToI32(SDValue(N, 0), DCI))

@@ -31,6 +31,7 @@
 #include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPUPreloadKernArgProlog.h"
 #include "AMDGPUPrepareAGPRAlloc.h"
+#include "AMDGPUPrivateObjectVGPRs.h"
 #include "AMDGPURemoveIncompatibleFunctions.h"
 #include "AMDGPUReserveWWMRegs.h"
 #include "AMDGPUResourceUsageAnalysis.h"
@@ -668,6 +669,8 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSILowerSGPRSpillsLegacyPass(*PR);
   initializeSIFixSGPRCopiesLegacyPass(*PR);
   initializeSIFixVGPRCopiesLegacyPass(*PR);
+  initializeAMDGPUPrivateObjectVGPRsLegacyPass(*PR);
+  initializeAMDGPULowerModuleVGPRsPass(*PR);
   initializeSIFoldOperandsLegacyPass(*PR);
   initializeSIPeepholeSDWALegacyPass(*PR);
   initializeSIShrinkInstructionsLegacyPass(*PR);
@@ -1491,6 +1494,11 @@ void AMDGPUPassConfig::addIRPasses() {
     addPass(createAMDGPULowerModuleLDSLegacyPass(&TM));
   }
 
+  // Lay out "VGPR as memory" (addrspace(13)) globals into one shared register
+  // file and record its size/base on the participating functions, so it
+  // resolves to the same registers across a kernel's call graph.
+  addPass(createAMDGPULowerModuleVGPRsPass());
+
   // Run atomic optimizer before Atomic Expand
   if ((TM.getTargetTriple().isAMDGCN()) &&
       (TM.getOptLevel() >= CodeGenOptLevel::Less) &&
@@ -1894,6 +1902,11 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
 }
 
 void GCNPassConfig::addPostRegAlloc() {
+  // Lower "VGPR as memory" accesses into copies to/from the reserved VGPR file.
+  // Runs after register allocation (so the file's reserved registers are final)
+  // and before memory-aware post-RA passes (so the pseudos are no longer seen
+  // as memory operations).
+  addPass(&AMDGPUPrivateObjectVGPRsID);
   addPass(&SIFixVGPRCopiesID);
   if (getOptLevel() > CodeGenOptLevel::None)
     addPass(&SIOptimizeExecMaskingLegacyID);
@@ -2275,6 +2288,10 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
   if (EnableLowerModuleLDS)
     addModulePass(AMDGPULowerModuleLDSPass(TM), PMW);
 
+  // Lay out "VGPR as memory" (addrspace(13)) globals into a shared register
+  // file (see the legacy pipeline above for details).
+  addModulePass(AMDGPULowerModuleVGPRsPass(), PMW);
+
   // Run atomic optimizer before Atomic Expand
   if (TM.getOptLevel() >= CodeGenOptLevel::Less &&
       (AMDGPUAtomicOptimizerStrategy != ScanOptions::None))
@@ -2597,6 +2614,9 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
 }
 
 void AMDGPUCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) const {
+  // Lower "VGPR as memory" accesses into copies to/from the reserved VGPR file
+  // (see the legacy GCNPassConfig::addPostRegAlloc for ordering rationale).
+  addMachineFunctionPass(AMDGPUPrivateObjectVGPRsPass(), PMW);
   addMachineFunctionPass(SIFixVGPRCopiesPass(), PMW);
   if (TM.getOptLevel() > CodeGenOptLevel::None)
     addMachineFunctionPass(SIOptimizeExecMaskingPass(), PMW);

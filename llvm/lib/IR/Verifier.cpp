@@ -807,6 +807,9 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
         "Global variable is too large to fit into the address space", &GV,
         GVType);
 
+  // Target-specific global variable checks.
+  verifyAMDGPUGlobalVariable(*this, GV);
+
   if (!GV.hasInitializer()) {
     visitGlobalValue(GV);
     return;
@@ -4546,6 +4549,7 @@ void Verifier::visitLoadInst(LoadInst &LI) {
           ElTy, &LI);
 
     checkAtomicMemAccessSize(ElTy, &LI);
+    verifyAMDGPUAtomicAccess(*this, LI.getPointerAddressSpace(), &LI);
   } else {
     Check(LI.getSyncScopeID() == SyncScope::System,
           "Non-atomic load cannot have SynchronizationScope specified", &LI);
@@ -4574,6 +4578,7 @@ void Verifier::visitStoreInst(StoreInst &SI) {
           "point, or vector type!",
           ElTy, &SI);
     checkAtomicMemAccessSize(ElTy, &SI);
+    verifyAMDGPUAtomicAccess(*this, SI.getPointerAddressSpace(), &SI);
   } else {
     Check(SI.getSyncScopeID() == SyncScope::System,
           "Non-atomic store cannot have SynchronizationScope specified", &SI);
@@ -4652,6 +4657,7 @@ void Verifier::visitAtomicCmpXchgInst(AtomicCmpXchgInst &CXI) {
   Check(ElTy->isIntOrPtrTy(),
         "cmpxchg operand must have integer or pointer type", ElTy, &CXI);
   checkAtomicMemAccessSize(ElTy, &CXI);
+  verifyAMDGPUAtomicAccess(*this, CXI.getPointerAddressSpace(), &CXI);
   visitInstruction(CXI);
 }
 
@@ -4691,6 +4697,7 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
   checkAtomicMemAccessSize(ElTy, &RMWI);
   Check(AtomicRMWInst::FIRST_BINOP <= Op && Op <= AtomicRMWInst::LAST_BINOP,
         "Invalid binary operation!", &RMWI);
+  verifyAMDGPUAtomicAccess(*this, RMWI.getPointerAddressSpace(), &RMWI);
   visitInstruction(RMWI);
 }
 

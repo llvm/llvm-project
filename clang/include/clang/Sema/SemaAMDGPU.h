@@ -79,6 +79,11 @@ public:
   void handleAMDGPUNumVGPRAttr(Decl *D, const ParsedAttr &AL);
   void handleAMDGPUMaxNumWorkGroupsAttr(Decl *D, const ParsedAttr &AL);
   void handleAMDGPUFlatWorkGroupSizeAttr(Decl *D, const ParsedAttr &AL);
+  void handleAMDGPUVGPRAttr(Decl *D, const ParsedAttr &AL);
+
+  /// Diagnose constraints on an 'amdgpu_vgpr' variable that depend on its
+  /// initializer, once the declaration is complete.
+  void checkAMDGPUVGPRVarDecl(VarDecl *VD);
 
   /// Expand a valid use of the feature identification builtins into its
   /// corresponding sequence of instructions.

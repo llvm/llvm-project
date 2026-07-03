@@ -276,6 +276,17 @@ private:
   TargetMachine &TM;
 };
 
+void initializeAMDGPUPrivateObjectVGPRsLegacyPass(PassRegistry &);
+extern char &AMDGPUPrivateObjectVGPRsID;
+
+ModulePass *createAMDGPULowerModuleVGPRsPass();
+void initializeAMDGPULowerModuleVGPRsPass(PassRegistry &);
+extern char &AMDGPULowerModuleVGPRsID;
+
+struct AMDGPULowerModuleVGPRsPass : PassInfoMixin<AMDGPULowerModuleVGPRsPass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
 struct AMDGPUPromoteAllocaToVectorPass
     : OptionalPassInfoMixin<AMDGPUPromoteAllocaToVectorPass> {
   AMDGPUPromoteAllocaToVectorPass(TargetMachine &TM) : TM(TM) {}

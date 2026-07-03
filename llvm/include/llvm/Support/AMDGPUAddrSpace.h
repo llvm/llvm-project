@@ -47,6 +47,10 @@ enum : unsigned {
   BUFFER_STRIDED_POINTER = 9, ///< Address space for 192-bit fat buffer
                               ///< pointers with an additional index.
 
+  VGPR = 13, ///< Address space for "VGPR as memory": objects backed by VGPRs
+             ///< rather than scratch. Shares its numeric value with the
+             ///< graphics-only CONSTANT_BUFFER_5 alias below.
+
   RESERVED_ADDRESS_SPACE_16 = 16, ///< Reserved for downstream use.
 
   /// Internal address spaces. Can be freely renumbered.
@@ -92,17 +96,25 @@ namespace AMDGPU {
 enum class FlatAddrSpace : unsigned { FLAT, FlatGlobal, FlatScratch };
 
 inline bool isFlatGlobalAddrSpace(unsigned AS) {
+  // AMDGPUAS::VGPR is register-backed, not flat-addressable (see its enum
+  // note).
   return AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS ||
-         AS == AMDGPUAS::CONSTANT_ADDRESS || AS > AMDGPUAS::MAX_AMDGPU_ADDRESS;
+         AS == AMDGPUAS::CONSTANT_ADDRESS ||
+         (AS > AMDGPUAS::MAX_AMDGPU_ADDRESS && AS != AMDGPUAS::VGPR);
 }
 
 inline bool isExtendedGlobalAddrSpace(unsigned AS) {
+  // AMDGPUAS::VGPR is register-backed, not global (see its enum note).
   return AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::CONSTANT_ADDRESS ||
          AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
-         AS > AMDGPUAS::MAX_AMDGPU_ADDRESS;
+         (AS > AMDGPUAS::MAX_AMDGPU_ADDRESS && AS != AMDGPUAS::VGPR);
 }
 
 inline bool isConstantAddressSpace(unsigned AS) {
+  // AMDGPUAS::VGPR is register-backed read/write storage, not constant memory,
+  // despite aliasing CONSTANT_BUFFER_5 (see its enum note).
+  if (AS == AMDGPUAS::VGPR)
+    return false;
   switch (AS) {
     using namespace AMDGPUAS;
   case CONSTANT_ADDRESS:
@@ -181,6 +193,7 @@ constexpr int64_t getNullPointerValue(unsigned AS) {
   case PRIVATE_ADDRESS:
   case LOCAL_ADDRESS:
   case REGION_ADDRESS:
+  case VGPR:
     return -1;
   default:
     return 0;

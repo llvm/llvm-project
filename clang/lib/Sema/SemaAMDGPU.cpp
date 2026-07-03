@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Sema/SemaAMDGPU.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
@@ -21,6 +22,7 @@
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -624,6 +626,42 @@ void SemaAMDGPU::handleAMDGPUFlatWorkGroupSizeAttr(Decl *D,
   Expr *MaxExpr = AL.getArgAsExpr(1);
 
   addAMDGPUFlatWorkGroupSizeAttr(D, AL, MinExpr, MaxExpr);
+}
+
+void SemaAMDGPU::handleAMDGPUVGPRAttr(Decl *D, const ParsedAttr &AL) {
+  // Like __shared__/LDS, this is device-side register storage, so it is allowed
+  // in any device-side function (kernel or __device__) and rejected only in
+  // host code. There is no kernel-only restriction: the backend handles direct
+  // references to the resulting addrspace(13) global from any function (e.g.
+  // ones IPO may introduce), independently of where the attribute was written.
+  if (SemaRef.getLangOpts().CUDA &&
+      SemaRef.CUDA().DiagIfHostCode(AL.getLoc(), diag::err_amdgpu_vgpr_host)
+          << SemaRef.CUDA().CurrentTarget())
+    return;
+
+  D->addAttr(::new (getASTContext()) AMDGPUVGPRAttr(getASTContext(), AL));
+}
+
+void SemaAMDGPU::checkAMDGPUVGPRVarDecl(VarDecl *VD) {
+  if (!VD->hasAttr<AMDGPUVGPRAttr>() || VD->isInvalidDecl())
+    return;
+
+  // Only a fixed-size local is register-backed at codegen (the attribute's
+  // LocalVar subject already excludes static-storage locals); a variable-length
+  // array would silently ignore the attribute, so reject it.
+  if (VD->getType()->isVariablyModifiedType()) {
+    Diag(VD->getLocation(), diag::err_amdgpu_vgpr_bad_storage);
+    VD->setInvalidDecl();
+    return;
+  }
+
+  // "VGPR as memory" objects are backed by registers with no defined initial
+  // contents (like __shared__), so they cannot be initialized.
+  if (VD->hasInit()) {
+    Diag(VD->getLocation(), diag::err_amdgpu_vgpr_initializer)
+        << VD->getInit()->getSourceRange();
+    VD->setInvalidDecl();
+  }
 }
 
 static bool checkAMDGPUWavesPerEUArguments(Sema &S, Expr *MinExpr,

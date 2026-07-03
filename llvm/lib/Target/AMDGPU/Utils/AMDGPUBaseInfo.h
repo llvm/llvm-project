@@ -49,6 +49,14 @@ namespace AMDGPU {
 struct AMDGPUMCKernelCodeT;
 struct IsaVersion;
 
+/// Number of (even-aligned) dword registers a "VGPR as memory" (addrspace(13))
+/// file of \p Bytes bytes occupies. Single-sources the size shared by the
+/// module layout pass, register reservation, and instruction selection.
+inline unsigned getVGPRMemoryFileDwords(unsigned Bytes) {
+  unsigned Dwords = (Bytes + 3u) / 4u; // divideCeil(Bytes, 4)
+  return (Dwords + 1u) & ~1u;          // alignTo(Dwords, 2)
+}
+
 /// Generic target versions emitted by this version of LLVM.
 ///
 /// These numbers are incremented every time a codegen breaking change occurs

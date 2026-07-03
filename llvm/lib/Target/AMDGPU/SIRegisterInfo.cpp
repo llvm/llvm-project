@@ -584,6 +584,45 @@ MCRegister SIRegisterInfo::reservedPrivateSegmentBufferReg(
   return getAlignedHighSGPRForRC(MF, /*Align=*/4, &AMDGPU::SGPR_128RegClass);
 }
 
+std::pair<unsigned, unsigned>
+SIRegisterInfo::getVGPRMemoryFile(const MachineFunction &MF) const {
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  unsigned Bytes = MFI->getVGPRMemorySize();
+  if (!Bytes)
+    return {0, 0};
+
+  // Even number of dwords so wide (>=64-bit) tuple accesses start on an aligned
+  // register on targets that require aligned VGPR tuples.
+  unsigned Dwords = AMDGPU::getVGPRMemoryFileDwords(Bytes);
+
+  // The base is assigned module-wide by AMDGPULowerModuleVGPRs (identical
+  // across the call graph, so an address resolves to the same register
+  // everywhere).
+  unsigned BaseIdx = MFI->getVGPRMemoryBase();
+  assert(BaseIdx != ~0u && "VGPR-memory size set without a base");
+
+  // The file [BaseIdx, BaseIdx + Dwords) must not overlap any VGPR ABI input.
+  // A small file sits below the work-item-ID register; a larger one is placed
+  // above it by the module pass. Verify no overlap remains rather than risk
+  // silently clobbering an input.
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  for (const auto &LI : MRI.liveins()) {
+    MCRegister Reg = LI.first;
+    const TargetRegisterClass *RC = getMinimalPhysRegClass(Reg);
+    if (!RC || !isVGPRClass(RC))
+      continue;
+    unsigned Start = getHWRegIndex(Reg);
+    unsigned End = Start + getRegSizeInBits(*RC) / 32u;
+    if (BaseIdx < End && Start < BaseIdx + Dwords)
+      report_fatal_error("VGPR-as-memory file overlaps a VGPR ABI input");
+  }
+
+  assert(BaseIdx + Dwords <=
+             ST.getAddressableNumVGPRs(MFI->getDynamicVGPRBlockSize()) &&
+         "VGPR-as-memory file does not fit");
+  return {BaseIdx, Dwords};
+}
+
 BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
   Reserved.set(AMDGPU::MODE);
@@ -746,6 +785,13 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   for (Register Reg : MFI->getWWMReservedRegs())
     reserveRegisterTuples(Reserved, Reg);
+
+  // Reserve the registers backing "VGPR as memory" (addrspace(13)) objects
+  // (see getVGPRMemoryFile).
+  auto [VGPRMemBase, VGPRMemCount] = getVGPRMemoryFile(MF);
+  for (unsigned I = 0; I != VGPRMemCount; ++I)
+    reserveRegisterTuples(Reserved,
+                          AMDGPU::VGPR_32RegClass.getRegister(VGPRMemBase + I));
 
   // FIXME: Stop using reserved registers for this.
   for (MCPhysReg Reg : MFI->getAGPRSpillVGPRs())

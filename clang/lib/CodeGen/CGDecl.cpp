@@ -41,6 +41,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include <optional>
 
 using namespace clang;
@@ -1601,9 +1602,30 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       // Create the alloca.  Note that we set the name separately from
       // building the instruction so that it's there even in no-asserts
       // builds.
-      address = CreateTempAlloca(allocaTy, Ty.getAddressSpace(),
-                                 allocaAlignment, D.getName(),
-                                 /*ArraySize=*/nullptr, &AllocaAddr);
+      //
+      // A "VGPR as memory" object (amdgpu_vgpr) is register-backed, not on the
+      // stack, so - like LDS/__shared__ - it is emitted as an internal global
+      // in AMDGPUAS::VGPR with a poison initializer (the registers have no
+      // defined initial value). Only in device compilation; on the host (e.g. a
+      // __host__ __device__ function compiled for the host) it falls back to an
+      // ordinary stack alloca.
+      const bool UseVGPRMemory =
+          D.hasAttr<AMDGPUVGPRAttr>() && getLangOpts().CUDAIsDevice;
+      if (UseVGPRMemory) {
+        auto *GV = new llvm::GlobalVariable(
+            CGM.getModule(), allocaTy, /*isConstant=*/false,
+            llvm::GlobalValue::InternalLinkage,
+            llvm::PoisonValue::get(allocaTy), getStaticDeclName(CGM, D),
+            /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal,
+            llvm::AMDGPUAS::VGPR);
+        GV->setAlignment(allocaAlignment.getAsAlign());
+        AllocaAddr = RawAddress(GV, allocaTy, allocaAlignment, KnownNonNull);
+        address = AllocaAddr;
+      } else {
+        address = CreateTempAlloca(allocaTy, Ty.getAddressSpace(),
+                                   allocaAlignment, D.getName(),
+                                   /*ArraySize=*/nullptr, &AllocaAddr);
+      }
 
       // Don't emit lifetime markers for MSVC catch parameters. The lifetime of
       // the catch parameter starts in the catchpad instruction, and we can't
@@ -1612,8 +1634,10 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
           D.isExceptionVariable() && getTarget().getCXXABI().isMicrosoft();
 
       // Emit a lifetime intrinsic if meaningful. There's no point in doing this
-      // if we don't have a valid insertion point (?).
-      if (HaveInsertPoint() && !IsMSCatchParam) {
+      // if we don't have a valid insertion point (?). "VGPR as memory" objects
+      // are globals, not allocas, so the stack-slot lifetime markers are
+      // skipped.
+      if (HaveInsertPoint() && !IsMSCatchParam && !UseVGPRMemory) {
         // If there's a jump into the lifetime of this variable, its lifetime
         // gets broken up into several regions in IR, which requires more work
         // to handle correctly. For now, just omit the intrinsics; this is a

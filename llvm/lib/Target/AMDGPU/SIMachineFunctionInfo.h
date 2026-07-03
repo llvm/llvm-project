@@ -587,6 +587,12 @@ private:
   // the serialization easier.
   ReservedRegSet WWMReservedRegs;
 
+  // "VGPR as memory" (addrspace(13)) file assigned by AMDGPULowerModuleVGPRs:
+  // size in bytes and the shared base register index (~0u = none). Reserved out
+  // of allocation for the whole function, like LDS; offsets come from metadata.
+  unsigned VGPRMemorySize = 0;
+  unsigned VGPRMemoryBase = ~0u;
+
   bool IsWholeWaveFunction = false;
 
   using PrologEpilogSGPRSpill =
@@ -689,6 +695,10 @@ public:
 
   const WWMSpillsMap &getWWMSpills() const { return WWMSpills; }
   const ReservedRegSet &getWWMReservedRegs() const { return WWMReservedRegs; }
+
+  // "VGPR as memory" file size in bytes (0 if none) and shared base register.
+  unsigned getVGPRMemorySize() const { return VGPRMemorySize; }
+  unsigned getVGPRMemoryBase() const { return VGPRMemoryBase; }
 
   bool isWWMReservedRegister(Register Reg) const {
     return WWMReservedRegs.contains(Reg);

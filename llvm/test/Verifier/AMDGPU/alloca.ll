@@ -20,6 +20,8 @@ target triple = "amdgcn-amd-amdhsa"
 ; CHECK-NEXT: %alloca.8 = alloca i32, align 4, addrspace(8)
 ; CHECK-NEXT: alloca on amdgpu must be in addrspace(5)
 ; CHECK-NEXT: %alloca.9 = alloca i32, align 4, addrspace(9)
+; CHECK-NEXT: alloca on amdgpu must be in addrspace(5)
+; CHECK-NEXT: %alloca.13 = alloca i32, align 4, addrspace(13)
 define void @static_alloca() {
 entry:
   %alloca.0 = alloca i32, align 4
@@ -32,6 +34,7 @@ entry:
   %alloca.7 = alloca i32, align 4, addrspace(7)
   %alloca.8 = alloca i32, align 4, addrspace(8)
   %alloca.9 = alloca i32, align 4, addrspace(9)
+  %alloca.13 = alloca i32, align 4, addrspace(13)
   ret void
 }
 

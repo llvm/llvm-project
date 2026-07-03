@@ -994,7 +994,7 @@ supported for the ``amdgcn`` target.
      *reserved for future use*             10
      *reserved for future use*             11
      *reserved for downstream use (LLPC)*  12
-     *reserved for future use*             13
+     VGPR as memory                        13              N/A         VGPR             32      0xFFFFFFFF
      *reserved for future use*             14
      *reserved for future use*             16
      Streamout Registers                   128             N/A         GS_REGS
@@ -1103,6 +1103,41 @@ supported for the ``amdgcn`` target.
 
   When using code object V5 ``LIBOMPTARGET_STACK_SIZE`` may be used to provide the
   private segment size in bytes, for cases where a dynamic stack is used.
+
+**VGPR as memory**
+  The "VGPR as memory" address space holds small objects directly in vector
+  registers instead of scratch (private) memory, avoiding memory traffic for
+  frequently accessed kernel-local data. Objects in this address space are
+  represented as global variables (similar to how *Local* memory uses LDS
+  global variables) and are backed by a block of physical VGPRs that is
+  reserved out of the register allocator for the duration of the function.
+
+  An address in this space is a register-relative dword index into the reserved
+  VGPR block, not a byte address into an addressable memory segment. A load or
+  store at a constant index lowers to a register copy to/from a fixed VGPR; a
+  load or store at a variable (dynamic) index lowers to a hardware register
+  indexing sequence. Sub-dword (8/16-bit) accesses are implemented as
+  read-modify-write of the containing dword.
+
+  An ``addrspacecast`` to or from this address space has no meaningful
+  translation (there is no real address to convert): it is permitted but lowers
+  to ``poison``. ``ptrtoint``/``inttoptr`` are also permitted, but they are
+  *not* poison - the integer is the register-relative byte offset, so an access
+  through an ``inttoptr`` value is lowered as a dynamic (runtime-indexed)
+  access and clamped into the reserved block like any other dynamic index. The
+  verifier still rejects an initializer on such a global variable, atomic
+  accesses, and memory intrinsics
+  (``llvm.memcpy``/``memset``/``memmove``), none of which can be modelled by
+  register storage. The numeric value 13 it uses coincides with the
+  graphics-only ``CONSTANT_BUFFER_5`` alias, which never co-exists with this
+  feature.
+
+  The backing registers have no defined initial contents: reading an object
+  before it is written is undefined behavior and may observe values left in
+  those physical VGPRs by a previously executed wave, just like reading
+  uninitialized scratch or LDS. The reserved block is per-lane and private to
+  the function's call graph; an out-of-range dynamic index is clamped into the
+  block so it cannot read or modify unrelated registers.
 
 **Constant 32-bit**
   *TODO*
