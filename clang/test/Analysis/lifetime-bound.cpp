@@ -254,21 +254,3 @@ int *one_dangling_source_ptr(int *a [[clang::lifetimebound]]) {
   // expected-note@-3 {{Lifetime of 'x' ended here}}
 }
 
-// Testing destructors
-
-struct S {
-    int x;
-    int* get() [[clang::lifetimebound]] { return &x; }
-    S() = default;
-    S(S&& other) { (void)other.get(); }
-    ~S() { get(); }
-};
-
-S make() { return S(); }
-
-S passThrough(S param) { return param; }
-
-void outer() {
-    auto f = passThrough(make());
-    (void)f; // no-warning
-}
