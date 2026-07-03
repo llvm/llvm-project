@@ -343,12 +343,36 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
   return *TheTargetCodeGenInfo;
 }
 
-bool CodeGenModule::shouldUseLLVMABILowering() const {
+bool CodeGenModule::shouldUseLLVMABILowering(unsigned CallingConv) const {
   if (!CodeGenOpts.ExperimentalABILowering)
     return false;
-  // Only opt in for targets that have an LLVMABI implementation; others
-  // continue through the legacy ABIInfo path.
-  return getTriple().isBPF();
+
+  const llvm::Triple &T = getTriple();
+  if (T.isBPF())
+    return true;
+
+  if (T.getArch() == llvm::Triple::x86_64 && !T.isOSWindows() &&
+      !T.isOSDarwin() && !T.isOSCygMing()) {
+    switch (CallingConv) {
+    case llvm::CallingConv::Win64:
+    case llvm::CallingConv::X86_RegCall:
+    case llvm::CallingConv::X86_FastCall:
+    case llvm::CallingConv::X86_VectorCall:
+    case llvm::CallingConv::X86_StdCall:
+    case llvm::CallingConv::X86_ThisCall:
+    // These conventions are not yet handled by X86_64TargetInfo::computeInfo,
+    // so they must fall back to Clang's classic ABIInfo rather than hit its
+    // unreachable.
+    case llvm::CallingConv::Intel_OCL_BI:
+    case llvm::CallingConv::PreserveMost:
+    case llvm::CallingConv::PreserveAll:
+    case llvm::CallingConv::PreserveNone:
+      return false;
+    default:
+      return true;
+    }
+  }
+  return false;
 }
 
 const llvm::abi::TargetInfo &
@@ -356,10 +380,41 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
   if (TheLLVMABITargetInfo)
     return *TheLLVMABITargetInfo;
 
-  assert(getTriple().isBPF() &&
-         "LLVMABI lowering requested for an unsupported target");
-  TheLLVMABITargetInfo = llvm::abi::createBPFTargetInfo(TB);
-  return *TheLLVMABITargetInfo;
+  const llvm::Triple &T = getTriple();
+  if (T.isBPF()) {
+    TheLLVMABITargetInfo = llvm::abi::createBPFTargetInfo(TB);
+    return *TheLLVMABITargetInfo;
+  }
+
+  if (T.getArch() == llvm::Triple::x86_64) {
+    StringRef ABI = getTarget().getABI();
+    llvm::abi::X86AVXABILevel AVXLevel =
+        ABI == "avx512" ? llvm::abi::X86AVXABILevel::AVX512
+        : ABI == "avx"  ? llvm::abi::X86AVXABILevel::AVX
+                        : llvm::abi::X86AVXABILevel::None;
+
+    llvm::abi::ABICompatInfo CompatInfo;
+    LangOptions::ClangABI Compat = getLangOpts().getClangABICompat();
+    CompatInfo.ClassifyIntegerMMXAsSSE =
+        Compat > LangOptions::ClangABI::Ver3_8 && !T.isOSDarwin() &&
+        !T.isPS() && !T.isOSFreeBSD();
+    CompatInfo.HonorsRevision98 = !T.isOSDarwin();
+    CompatInfo.PassInt128VectorsInMem = Compat > LangOptions::ClangABI::Ver9 &&
+                                        (T.isOSLinux() || T.isOSNetBSD());
+    // Clang <= 20.0 did not do this, and PlayStation does not do this.
+    CompatInfo.ReturnCXXRecordGreaterThan128InMem =
+        Compat > LangOptions::ClangABI::Ver20 && !T.isPS();
+    CompatInfo.Clang11Compat =
+        Compat <= LangOptions::ClangABI::Ver11 || T.isPS();
+
+    bool Has64BitPointers = getTarget().getPointerWidth(LangAS::Default) == 64;
+
+    TheLLVMABITargetInfo = llvm::abi::createX86_64TargetInfo(
+        TB, AVXLevel, Has64BitPointers, CompatInfo);
+    return *TheLLVMABITargetInfo;
+  }
+
+  llvm_unreachable("LLVMABI lowering requested for an unsupported target");
 }
 
 static void checkDataLayoutConsistency(const TargetInfo &Target,

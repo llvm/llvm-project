@@ -913,8 +913,9 @@ public:
   const llvm::abi::TargetInfo &getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB);
 
   /// True when -fexperimental-abi-lowering is in effect AND the active target
-  /// has an LLVMABI implementation we can route to.
-  bool shouldUseLLVMABILowering() const;
+  /// has an LLVMABI implementation that supports the given LLVM calling
+  /// convention. Unsupported CCs fall back to the legacy ABIInfo path.
+  bool shouldUseLLVMABILowering(unsigned CallingConv) const;
 
   /// Drive the experimental LLVMABI-based lowering path: map argument and
   /// return types into the LLVMABI library, ask its target lowering to fill
