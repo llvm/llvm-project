@@ -1302,8 +1302,9 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
                   dyn_cast_if_present<llvm::DISubprogram>(cb->getScope()))
             scope = sp->getUnit();
         } else if (auto *lbb =
-                       dyn_cast_if_present<llvm::DILexicalBlockBase>(scope))
+                       dyn_cast_if_present<llvm::DILexicalBlockBase>(scope)) {
           scope = lbb->getSubprogram();
+        }
 
         // Get the compile unit (scope) of the the global variable, or the
         // subprogram of the static local variable.
