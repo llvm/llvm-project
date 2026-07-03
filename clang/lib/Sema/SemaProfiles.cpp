@@ -108,7 +108,11 @@ bool SemaProfiles::processProfilesEnforceAttr(
     StringRef Name = D.Name;
     StringRef Spelling = D.Spelling;
 
-    bool IsNew = !isProfileEnforced(Name);
+    // "Already recorded?" must use the ungated lookup: isProfileEnforced
+    // filters gated-off test:: names (and -fprofiles off), which would make
+    // every repetition of such a profile look new and re-append its
+    // designator to the attribute's argument arrays.
+    bool IsNew = !getProfileEnforcement(Name);
     if (!addProfileEnforcement(Name, Spelling, AL.getLoc()))
       continue;
 
