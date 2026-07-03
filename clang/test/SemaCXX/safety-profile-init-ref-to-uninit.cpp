@@ -530,6 +530,37 @@ void test_new_assignment() {
   (void)p; (void)q;
 }
 
+// A written initializer for an *allocated pointer* is itself a binding: the
+// heap pointer object cannot carry [[ref_to_uninit]], so it must not be bound
+// to uninitialized memory. Both the parenthesized and the braced form are
+// checked; copying the value of a marked pointer is the same violation, as at
+// variable scope.
+void test_new_pointer_init() {
+  int **n1 = new (int *)(&g_init);   // OK
+  int **n2 = new (int *)(&g_uninit); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int **n3 = new (int *){&g_uninit}; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int *rtu [[ref_to_uninit]] = &g_uninit;
+  int **n4 = new (int *)(rtu); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int **n5 [[ref_to_uninit]] = new (int *); // OK: no written initializer -- the
+                                            // allocated pointer is indeterminate,
+                                            // so the marked target accepts it
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init)]] {
+    int **s = new (int *)(&g_uninit); // OK: suppressed
+    (void)s;
+  }
+  (void)n1; (void)n2; (void)n3; (void)n4; (void)n5;
+}
+
+// A dependent allocated type defers on the pattern and fires once, at
+// instantiation.
+template <typename T>
+void template_new_pointer_bad() {
+  T **p = new (T *)(&g_uninit); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  (void)p;
+}
+template void template_new_pointer_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_new_pointer_bad<int>' requested here}}
+
 void test_new_call_arguments() {
   take_uninit_ptr(new int);    // OK
   take_uninit_ptr(new int(5)); // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
