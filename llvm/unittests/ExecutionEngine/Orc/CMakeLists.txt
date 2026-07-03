@@ -18,6 +18,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_unittest(OrcJITTests
+  AutoImportGeneratorTest.cpp
   CallableTraitsHelperTest.cpp
   CallSPSViaEPCTest.cpp
   CoreAPIsTest.cpp
