@@ -120,8 +120,7 @@ DebugTranslation::getRetainedNodesOrNull(ArrayRef<Attribute> retainedNodes) {
     return nullptr;
   SmallVector<llvm::Metadata *> llvmElements = llvm::map_to_vector(
       retainedNodes, [&](Attribute attr) -> llvm::Metadata * {
-        if (auto GVE =
-                dyn_cast<DIGlobalVariableExpressionAttr>(attr))
+        if (auto GVE = dyn_cast<DIGlobalVariableExpressionAttr>(attr))
           return translateGlobalVariableExpression(GVE);
 
         auto diAttr = dyn_cast<DINodeAttr>(attr);
