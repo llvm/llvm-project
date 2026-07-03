@@ -304,7 +304,7 @@ void llvm::SplitModule(
             return isInPartition(GV, I, N);
         }));
     if (I != 0)
-      MPart->removeModuleInlineAsm();
+      MPart->setModuleInlineAsm("");
     ModuleCallback(std::move(MPart));
   }
 }

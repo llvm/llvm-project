@@ -388,7 +388,7 @@ void splitAndWriteThinLTOBitcode(
         return false;
       }));
   StripDebugInfo(*MergedM);
-  MergedM->removeModuleInlineAsm();
+  MergedM->setModuleInlineAsm("");
 
   // Clone any llvm.*used globals to ensure the included values are
   // not deleted.

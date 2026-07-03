@@ -1283,20 +1283,18 @@ void DataFlowSanitizer::addGlobalNameSuffix(GlobalValue *GV) {
   // corrupting asm which happens to contain the symbol name as a substring.
   // Note that the substitution for .symver assumes that the versioned symbol
   // also has an instrumented name.
-  for (Module::GlobalAsmFragment &Frag :
-       GV->getParent()->getModuleInlineAsm()) {
-    std::string SearchStr = ".symver " + GVName + ",";
-    size_t Pos = Frag.Asm.find(SearchStr);
-    if (Pos != std::string::npos) {
-      Frag.Asm.replace(Pos, SearchStr.size(),
-                       ".symver " + GVName + Suffix + ",");
-      Pos = Frag.Asm.find('@');
+  std::string Asm = GV->getParent()->getModuleInlineAsm();
+  std::string SearchStr = ".symver " + GVName + ",";
+  size_t Pos = Asm.find(SearchStr);
+  if (Pos != std::string::npos) {
+    Asm.replace(Pos, SearchStr.size(), ".symver " + GVName + Suffix + ",");
+    Pos = Asm.find('@');
 
-      if (Pos == std::string::npos)
-        report_fatal_error(Twine("unsupported .symver: ", Frag.Asm));
+    if (Pos == std::string::npos)
+      report_fatal_error(Twine("unsupported .symver: ", Asm));
 
-      Frag.Asm.replace(Pos, 1, Suffix + "@");
-    }
+    Asm.replace(Pos, 1, Suffix + "@");
+    GV->getParent()->setModuleInlineAsm(Asm);
   }
 }
 
