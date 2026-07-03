@@ -130,6 +130,10 @@ LIBC_INLINE size_t strnlen(const char *s, size_t max_len) {
   return temp ? reinterpret_cast<const char *>(temp) - s : max_len;
 }
 
+LIBC_INLINE size_t strnlen_s(const char *s, size_t n) {
+  return (s != nullptr) ? internal::strnlen(s, n) : 0;
+}
+
 } // namespace internal
 } // namespace LIBC_NAMESPACE_DECL
 

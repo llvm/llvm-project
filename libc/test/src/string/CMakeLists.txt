@@ -150,6 +150,19 @@ add_libc_test(
 )
 
 add_libc_test(
+  strcpy_s_test
+  SUITE
+    libc-string-tests
+  SRCS
+    strcpy_s_test.cpp
+  DEPENDS
+    libc.src.string.strcpy_s
+    libc.hdr.stdint_proxy
+    libc.hdr.types.errno_t
+    libc.test.UnitTest.ConstraintHandlerCheckingTest
+)
+
+add_libc_test(
   strcspn_test
   SUITE
     libc-string-tests
