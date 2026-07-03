@@ -96,12 +96,24 @@ static constexpr inline bool isDataSharingAttributeClause(Clause C,
   }
 }
 
+static constexpr inline bool isEndClause(Clause C) {
+  switch (C) {
+  case OMPC_copyprivate:
+  case OMPC_nowait:
+    return true;
+  default:
+    return false;
+  }
+}
+
 static constexpr unsigned FallbackVersion = 52;
 LLVM_ABI ArrayRef<unsigned> getOpenMPVersions();
 
 /// Can directive D, under some circumstances, create a private copy
 /// of a variable in given OpenMP version?
 LLVM_ABI bool isPrivatizingConstruct(Directive D, unsigned Version);
+
+LLVM_ABI ArrayRef<StringRef> getReservedLocatorNames();
 
 /// Create a nicer version of a function name for humans to look at.
 LLVM_ABI std::string prettifyFunctionName(StringRef FunctionName);

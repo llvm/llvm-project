@@ -3231,33 +3231,39 @@ void Verifier::visitFunction(const Function &F) {
   // direct call/invokes, never having its "address taken".
   // Only do this if the module is materialized, otherwise we don't have all the
   // uses.
-  if (F.isIntrinsic() && F.getParent()->isMaterialized()) {
+  bool isMaterialized = F.getParent()->isMaterialized();
+  if (F.isIntrinsic() && isMaterialized) {
     const User *U;
     if (F.hasAddressTaken(&U, false, true, false,
                           /*IgnoreARCAttachedCall=*/true))
       Check(false, "Invalid user of intrinsic instruction!", U);
   }
 
-  // Check intrinsics' signatures.
-  switch (F.getIntrinsicID()) {
-  case Intrinsic::experimental_gc_get_pointer_base: {
-    FunctionType *FT = F.getFunctionType();
-    Check(FT->getNumParams() == 1, "wrong number of parameters", F);
-    Check(isa<PointerType>(F.getReturnType()),
-          "gc.get.pointer.base must return a pointer", F);
-    Check(FT->getParamType(0) == F.getReturnType(),
-          "gc.get.pointer.base operand and result must be of the same type", F);
-    break;
-  }
-  case Intrinsic::experimental_gc_get_pointer_offset: {
-    FunctionType *FT = F.getFunctionType();
-    Check(FT->getNumParams() == 1, "wrong number of parameters", F);
-    Check(isa<PointerType>(FT->getParamType(0)),
-          "gc.get.pointer.offset operand must be a pointer", F);
-    Check(F.getReturnType()->isIntegerTy(),
-          "gc.get.pointer.offset must return integer", F);
-    break;
-  }
+  // Verify if the intrinsic's signature and name are valid. We do this if
+  // the intrinsic has at least one materialized use, or if the module is fully
+  // materialized.
+  Intrinsic::ID IID = F.getIntrinsicID();
+  if (IID && (isMaterialized || !F.materialized_use_empty())) {
+    // Verify that the intrinsic prototype lines up with what the .td files
+    // describe.
+    std::string ErrMsg;
+    raw_string_ostream ErrOS(ErrMsg);
+    SmallVector<Type *, 4> OverloadTys;
+    bool IsValid = Intrinsic::isSignatureValid(IID, FT, OverloadTys, ErrOS);
+    Printable PrintDecl([&F](raw_ostream &OS) { F.print(OS); });
+    Check(IsValid, ErrMsg, PrintDecl);
+
+    // Now that we have the intrinsic ID and the actual argument types (and we
+    // know they are legal for the intrinsic!) get the intrinsic name through
+    // the usual means. This allows us to verify the mangling of argument types
+    // into the name.
+    const std::string ExpectedName = Intrinsic::getName(
+        IID, OverloadTys, const_cast<Module *>(F.getParent()), FT);
+    Check(ExpectedName == F.getName(),
+          "Intrinsic name not mangled correctly for type arguments! "
+          "Should be: " +
+              ExpectedName,
+          PrintDecl);
   }
 
   auto *N = F.getSubprogram();
@@ -5400,28 +5406,25 @@ void Verifier::visitCallsiteMetadata(Instruction &I, MDNode *MD) {
   visitCallStackMetadata(MD);
 }
 
-static inline bool isConstantIntMetadataOperand(const Metadata *MD) {
-  if (auto *VAL = dyn_cast<ValueAsMetadata>(MD))
-    return isa<ConstantInt>(VAL->getValue());
-  return false;
-}
-
 void Verifier::visitCalleeTypeMetadata(Instruction &I, MDNode *MD) {
   Check(isa<CallBase>(I), "!callee_type metadata should only exist on calls",
         &I);
   for (Metadata *Op : MD->operands()) {
     Check(isa<MDNode>(Op),
-          "The callee_type metadata must be a list of type metadata nodes", Op);
-    auto *TypeMD = cast<MDNode>(Op);
-    Check(TypeMD->getNumOperands() == 2,
-          "Well-formed generalized type metadata must contain exactly two "
-          "operands",
+          "The callee_type metadata must be a list of callgraph metadata nodes",
           Op);
-    Check(isConstantIntMetadataOperand(TypeMD->getOperand(0)) &&
-              mdconst::extract<ConstantInt>(TypeMD->getOperand(0))->isZero(),
-          "The first operand of type metadata for functions must be zero", Op);
-    Check(TypeMD->hasGeneralizedMDString(),
-          "Only generalized type metadata can be part of the callee_type "
+    auto *CallgraphMD = cast<MDNode>(Op);
+    Check(CallgraphMD->getNumOperands() == 1,
+          "Well-formed generalized callgraph metadata must contain exactly one "
+          "operand",
+          Op);
+    Check(isa<MDString>(CallgraphMD->getOperand(0)),
+          "The operand of callgraph metadata for functions must be an MDString",
+          Op);
+    Check(cast<MDString>(CallgraphMD->getOperand(0))
+              ->getString()
+              .ends_with(".generalized"),
+          "Only generalized callgraph metadata can be part of the callee_type "
           "metadata list",
           Op);
   }
@@ -5883,31 +5886,6 @@ void Verifier::visitInstruction(Instruction &I) {
 /// Allow intrinsics to be verified in different ways.
 void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   Function *IF = Call.getCalledFunction();
-  Check(IF->isDeclaration(), "Intrinsic functions should never be defined!",
-        IF);
-
-  // Verify that the intrinsic prototype lines up with what the .td files
-  // describe.
-  FunctionType *IFTy = IF->getFunctionType();
-
-  // Walk the descriptors to extract overloaded types.
-  std::string ErrMsg;
-  raw_string_ostream ErrOS(ErrMsg);
-  SmallVector<Type *, 4> OverloadTys;
-  bool IsValid = Intrinsic::isSignatureValid(ID, IFTy, OverloadTys, ErrOS);
-  Check(IsValid, ErrMsg, IF);
-
-  // Now that we have the intrinsic ID and the actual argument types (and we
-  // know they are legal for the intrinsic!) get the intrinsic name through the
-  // usual means.  This allows us to verify the mangling of argument types into
-  // the name.
-  const std::string ExpectedName =
-      Intrinsic::getName(ID, OverloadTys, IF->getParent(), IFTy);
-  Check(ExpectedName == IF->getName(),
-        "Intrinsic name not mangled correctly for type arguments! "
-        "Should be: " +
-            ExpectedName,
-        IF);
 
   // If the intrinsic takes MDNode arguments, verify that they are either global
   // or are local to *this* function.
@@ -6586,11 +6564,12 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Type *ValTy = Call.getArgOperand(0)->getType();
     Type *ResultTy = Call.getType();
     Check(ValTy->isVectorTy() == ResultTy->isVectorTy(),
-          ExpectedName + ": argument and result disagree on vector use", &Call);
+          IF->getName() + ": argument and result disagree on vector use",
+          &Call);
     if (auto *VTy = dyn_cast<VectorType>(ValTy)) {
       auto *RTy = dyn_cast<VectorType>(ResultTy);
       Check(VTy->getElementCount() == RTy->getElementCount(),
-            ExpectedName + ": argument must be same length as result", &Call);
+            IF->getName() + ": argument must be same length as result", &Call);
     }
     break;
   }
@@ -7178,13 +7157,7 @@ void Verifier::visitVPIntrinsic(VPIntrinsic &VPI) {
           *VPCast);
 
     switch (VPCast->getIntrinsicID()) {
-    default:
-      llvm_unreachable("Unknown VP cast intrinsic");
     case Intrinsic::vp_trunc:
-      Check(RetTy->isIntOrIntVectorTy() && ValTy->isIntOrIntVectorTy(),
-            "llvm.vp.trunc intrinsic first argument and result element type "
-            "must be integer",
-            *VPCast);
       Check(RetTy->getScalarSizeInBits() < ValTy->getScalarSizeInBits(),
             "llvm.vp.trunc intrinsic the bit size of first argument must be "
             "larger than the bit size of the return type",
@@ -7192,64 +7165,24 @@ void Verifier::visitVPIntrinsic(VPIntrinsic &VPI) {
       break;
     case Intrinsic::vp_zext:
     case Intrinsic::vp_sext:
-      Check(RetTy->isIntOrIntVectorTy() && ValTy->isIntOrIntVectorTy(),
-            "llvm.vp.zext or llvm.vp.sext intrinsic first argument and result "
-            "element type must be integer",
-            *VPCast);
       Check(RetTy->getScalarSizeInBits() > ValTy->getScalarSizeInBits(),
             "llvm.vp.zext or llvm.vp.sext intrinsic the bit size of first "
             "argument must be smaller than the bit size of the return type",
             *VPCast);
       break;
-    case Intrinsic::vp_fptoui:
-    case Intrinsic::vp_fptosi:
-    case Intrinsic::vp_lrint:
-    case Intrinsic::vp_llrint:
-      Check(
-          RetTy->isIntOrIntVectorTy() && ValTy->isFPOrFPVectorTy(),
-          "llvm.vp.fptoui, llvm.vp.fptosi, llvm.vp.lrint or llvm.vp.llrint" "intrinsic first argument element "
-          "type must be floating-point and result element type must be integer",
-          *VPCast);
-      break;
-    case Intrinsic::vp_uitofp:
-    case Intrinsic::vp_sitofp:
-      Check(
-          RetTy->isFPOrFPVectorTy() && ValTy->isIntOrIntVectorTy(),
-          "llvm.vp.uitofp or llvm.vp.sitofp intrinsic first argument element "
-          "type must be integer and result element type must be floating-point",
-          *VPCast);
-      break;
     case Intrinsic::vp_fptrunc:
-      Check(RetTy->isFPOrFPVectorTy() && ValTy->isFPOrFPVectorTy(),
-            "llvm.vp.fptrunc intrinsic first argument and result element type "
-            "must be floating-point",
-            *VPCast);
       Check(RetTy->getScalarSizeInBits() < ValTy->getScalarSizeInBits(),
             "llvm.vp.fptrunc intrinsic the bit size of first argument must be "
             "larger than the bit size of the return type",
             *VPCast);
       break;
     case Intrinsic::vp_fpext:
-      Check(RetTy->isFPOrFPVectorTy() && ValTy->isFPOrFPVectorTy(),
-            "llvm.vp.fpext intrinsic first argument and result element type "
-            "must be floating-point",
-            *VPCast);
       Check(RetTy->getScalarSizeInBits() > ValTy->getScalarSizeInBits(),
             "llvm.vp.fpext intrinsic the bit size of first argument must be "
             "smaller than the bit size of the return type",
             *VPCast);
       break;
-    case Intrinsic::vp_ptrtoint:
-      Check(RetTy->isIntOrIntVectorTy() && ValTy->isPtrOrPtrVectorTy(),
-            "llvm.vp.ptrtoint intrinsic first argument element type must be "
-            "pointer and result element type must be integer",
-            *VPCast);
-      break;
-    case Intrinsic::vp_inttoptr:
-      Check(RetTy->isPtrOrPtrVectorTy() && ValTy->isIntOrIntVectorTy(),
-            "llvm.vp.inttoptr intrinsic first argument element type must be "
-            "integer and result element type must be pointer",
-            *VPCast);
+    default:
       break;
     }
   }

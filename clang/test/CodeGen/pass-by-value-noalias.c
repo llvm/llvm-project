@@ -11,6 +11,6 @@ struct Foo {
   int f;
 };
 
-// WITH_NOALIAS: define{{.*}} void @take(ptr noalias noundef dead_on_return %arg)
-// NO_NOALIAS: define{{.*}} void @take(ptr noundef dead_on_return %arg)
+// WITH_NOALIAS: define{{.*}} void @take(ptr noalias noundef align 4 dead_on_return %arg)
+// NO_NOALIAS: define{{.*}} void @take(ptr noundef align 4 dead_on_return %arg)
 void take(struct Foo arg) {}
