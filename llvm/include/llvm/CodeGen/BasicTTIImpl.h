@@ -1464,9 +1464,14 @@ public:
 
       // Return the cost of multiple scalar invocation plus the cost of
       // inserting and extracting the values.
-      return getScalarizationOverhead(ValVTy, /*Insert*/ true,
-                                      /*Extract*/ false, CostKind) +
-             Num * Cost;
+      InstructionCost Overhead =
+          getScalarizationOverhead(ValVTy, /*Insert*/ false,
+                                   /*Extract*/ true, CostKind);
+      if (Opcode == Instruction::ICmp || Opcode == Instruction::FCmp)
+        Overhead +=
+            getScalarizationOverhead(cast<VectorType>(CondTy), /*Insert*/ true,
+                                     /*Extract*/ false, CostKind);
+      return Overhead + Num * Cost;
     }
 
     // Unknown scalar opcode.

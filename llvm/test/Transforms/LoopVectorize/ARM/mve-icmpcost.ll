@@ -27,7 +27,7 @@ define void @expensive_icmp(ptr noalias nocapture %d, ptr nocapture readonly %s,
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%arrayidx>, ir<1>
 ; CHECK:  Cost of 18 for VF 2: WIDEN ir<%1> = load vp<[[VP5]]>
 ; CHECK:  Cost of 4 for VF 2: WIDEN-CAST ir<%conv> = sext ir<%1> to i32
-; CHECK:  Cost of 20 for VF 2: WIDEN ir<%cmp2> = icmp sgt ir<%conv>, ir<%conv1>
+; CHECK:  Cost of 36 for VF 2: WIDEN ir<%cmp2> = icmp sgt ir<%conv>, ir<%conv1>
 ; CHECK:  Cost of 26 for VF 2: WIDEN ir<%conv6> = add ir<%1>, ir<%0>
 ; CHECK:  Cost of 0 for VF 2: CLONE ir<%arrayidx7> = getelementptr ir<%d>, vp<[[VP4]]>
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP6:%[0-9]+]]> = vector-pointer ir<%arrayidx7>, ir<1>
@@ -45,7 +45,7 @@ define void @expensive_icmp(ptr noalias nocapture %d, ptr nocapture readonly %s,
 ; CHECK:  Cost of 0 for VF 2: IR %cmp2 = icmp sgt i32 %conv, %conv1
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT branch-on-cond vp<%cmp.n>
-; CHECK:  Cost for VF 2: 86 (Estimated cost per lane: 43)
+; CHECK:  Cost for VF 2: 102 (Estimated cost per lane: 51)
 ; CHECK:  Cost of 1 for VF 4: induction instruction %inc = add nuw nsw i32 %i.016, 1
 ; CHECK:  Cost of 0 for VF 4: induction instruction %i.016 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.inc ]
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP4]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
@@ -179,7 +179,7 @@ define void @cheap_icmp(ptr nocapture readonly %pSrcA, ptr nocapture readonly %p
 ; CHECK:  Cost of 26 for VF 2: WIDEN ir<%mul> = mul nsw ir<%conv3>, ir<%conv1>
 ; CHECK:  Cost of 18 for VF 2: WIDEN ir<%shr> = ashr ir<%mul>, ir<7>
 ; CHECK:  Cost of 0 for VF 2: WIDEN ir<%2> = icmp slt ir<%shr>, ir<127>
-; CHECK:  Cost of 22 for VF 2: WIDEN ir<%spec.select.i> = select ir<%2>, ir<%shr>, ir<127>
+; CHECK:  Cost of 38 for VF 2: WIDEN ir<%spec.select.i> = select ir<%2>, ir<%shr>, ir<127>
 ; CHECK:  Cost of 0 for VF 2: WIDEN-CAST ir<%conv4> = trunc ir<%spec.select.i> to i8
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP13:%[0-9]+]]> = vector-pointer vp<%next.gep>.1, ir<1>
 ; CHECK:  Cost of 18 for VF 2: WIDEN store vp<[[VP13]]>, ir<%conv4>
@@ -215,7 +215,7 @@ define void @cheap_icmp(ptr nocapture readonly %pSrcA, ptr nocapture readonly %p
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP6]]> = DERIVED-IV ir<%pSrcB> + vp<[[VP2]]> * ir<1>
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<%cmp.n> = icmp eq ir<%blockSize>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT branch-on-cond vp<%cmp.n>
-; CHECK:  Cost for VF 2: 130 (Estimated cost per lane: 65)
+; CHECK:  Cost for VF 2: 146 (Estimated cost per lane: 73)
 ; CHECK:  Cost of 1 for VF 4: induction instruction %dec = add i32 %blkCnt.012, -1
 ; CHECK:  Cost of 0 for VF 4: induction instruction %blkCnt.012 = phi i32 [ %dec, %while.body ], [ %blockSize, %while.body.preheader ]
 ; CHECK:  Cost of 0 for VF 4: induction instruction %incdec.ptr = getelementptr inbounds i8, ptr %pSrcA.addr.011, i32 1
