@@ -2178,7 +2178,7 @@ static std::optional<Instruction *> instCombineSVECmpNE(InstCombiner &IC,
   LLVMContext &Ctx = II.getContext();
 
   if (auto Res = instCombineXorSVECmpNE(IC, II))
-    return *Res;
+    return Res;
 
   if (!isAllActivePredicate(II.getArgOperand(0)))
     return std::nullopt;
