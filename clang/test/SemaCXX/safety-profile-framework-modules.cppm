@@ -28,6 +28,8 @@
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only %t/import_noflag_require.cpp -fmodule-file=BareMod=%t/mod_bare.pcm -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/mod_enforce_no_args.cppm -verify
 // RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/import_require_no_args.cpp -fmodule-file=TestMod=%t/mod_enforced.pcm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/unknown_attr_mod.cppm -verify
+// RUN: %clang_cc1 -std=c++20 -fprofiles -fsyntax-only %t/unknown_attr_import.cpp -fmodule-file=TestMod=%t/mod_enforced.pcm -verify
 
 // ===================================================================
 // Module with enforced profiles
@@ -270,3 +272,19 @@ export void f();
 // ===================================================================
 //--- import_require_no_args.cpp
 import TestMod [[profiles::require]]; // expected-error {{'require' attribute requires an argument clause}}
+
+// ===================================================================
+// An unknown attribute on a module-declaration or import-declaration
+// is a warning (exactly as in ProhibitCXX11Attributes), while a known
+// but non-module attribute stays an error.
+// ===================================================================
+//--- unknown_attr_mod.cppm
+export module UnknownAttrMod [[vendor::unknown]] [[deprecated]];
+// expected-warning@-1 {{unknown attribute 'vendor::unknown' ignored}}
+// expected-error@-2 {{'deprecated' attribute cannot be applied to a module}}
+
+export void f();
+
+//--- unknown_attr_import.cpp
+import TestMod [[vendor::unknown]]; // expected-warning {{unknown attribute 'vendor::unknown' ignored}}
+import TestMod [[deprecated]]; // expected-error {{'deprecated' attribute cannot be applied to a module import}}

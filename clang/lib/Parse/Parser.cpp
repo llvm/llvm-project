@@ -2314,10 +2314,18 @@ void Parser::ProhibitModuleAttributesExcept(const ParsedAttributesView &Attrs,
   for (const ParsedAttr &AL : Attrs) {
     if (AL.getKind() == AllowedKind)
       continue;
-    if (AL.isRegularKeywordAttribute())
+    if (AL.isRegularKeywordAttribute()) {
       Diag(AL.getLoc(), KeywordDiagID) << AL;
-    else if (AL.isStandardAttributeSyntax())
-      Diag(AL.getLoc(), AttrDiagID) << AL;
+      AL.setInvalid();
+    } else if (AL.isStandardAttributeSyntax()) {
+      // An unknown attribute stays a warning, exactly as in
+      // ProhibitCXX11Attributes.
+      if (AL.getKind() == ParsedAttr::UnknownAttribute)
+        Actions.DiagnoseUnknownAttribute(AL);
+      else
+        Diag(AL.getLoc(), AttrDiagID) << AL;
+      AL.setInvalid();
+    }
   }
 }
 
