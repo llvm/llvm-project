@@ -4,7 +4,7 @@
 ; Check that nofpclass attributes on call returns are used in
 ; selectiondag.
 
-define internal float @func_f32(ptr addrspace(1) %ptr) {
+define internal float @func_f32(ptr addrspace(1) %ptr) #0 {
 ; CHECK-LABEL: func_f32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -15,7 +15,7 @@ define internal float @func_f32(ptr addrspace(1) %ptr) {
   ret float %ld
 }
 
-define float @call_nofpclass_funcs_f32(ptr addrspace(1) %ptr) {
+define float @call_nofpclass_funcs_f32(ptr addrspace(1) %ptr) #0 {
 ; CHECK-LABEL: call_nofpclass_funcs_f32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -24,20 +24,20 @@ define float @call_nofpclass_funcs_f32(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[16:17], -1
 ; CHECK-NEXT:    buffer_store_dword v4, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[16:17]
-; CHECK-NEXT:    s_addk_i32 s32, 0x400
 ; CHECK-NEXT:    v_writelane_b32 v4, s30, 0
+; CHECK-NEXT:    s_addk_i32 s32, 0x400
+; CHECK-NEXT:    v_writelane_b32 v4, s31, 1
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, func_f32@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, func_f32@rel32@hi+12
-; CHECK-NEXT:    v_writelane_b32 v4, s31, 1
 ; CHECK-NEXT:    v_mov_b32_e32 v2, v0
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v2
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; CHECK-NEXT:    v_readlane_b32 s30, v4, 0
 ; CHECK-NEXT:    v_min_f32_e32 v0, v3, v0
 ; CHECK-NEXT:    v_readlane_b32 s31, v4, 1
-; CHECK-NEXT:    v_readlane_b32 s30, v4, 0
 ; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; CHECK-NEXT:    buffer_load_dword v4, off, s[0:3], s33 ; 4-byte Folded Reload
@@ -51,7 +51,7 @@ define float @call_nofpclass_funcs_f32(ptr addrspace(1) %ptr) {
   ret float %min
 }
 
-define internal <2 x float> @func_v2f32(ptr addrspace(1) %ptr) {
+define internal <2 x float> @func_v2f32(ptr addrspace(1) %ptr) #0 {
 ; CHECK-LABEL: func_v2f32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -62,7 +62,7 @@ define internal <2 x float> @func_v2f32(ptr addrspace(1) %ptr) {
   ret <2 x float> %ld
 }
 
-define <2 x float> @call_nofpclass_funcs_v2f32(ptr addrspace(1) %ptr) {
+define <2 x float> @call_nofpclass_funcs_v2f32(ptr addrspace(1) %ptr) #0 {
 ; CHECK-LABEL: call_nofpclass_funcs_v2f32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -71,12 +71,12 @@ define <2 x float> @call_nofpclass_funcs_v2f32(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[16:17], -1
 ; CHECK-NEXT:    buffer_store_dword v6, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[16:17]
-; CHECK-NEXT:    s_addk_i32 s32, 0x400
 ; CHECK-NEXT:    v_writelane_b32 v6, s30, 0
+; CHECK-NEXT:    s_addk_i32 s32, 0x400
+; CHECK-NEXT:    v_writelane_b32 v6, s31, 1
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, func_v2f32@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, func_v2f32@rel32@hi+12
-; CHECK-NEXT:    v_writelane_b32 v6, s31, 1
 ; CHECK-NEXT:    v_mov_b32_e32 v2, v1
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v0
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
@@ -85,10 +85,10 @@ define <2 x float> @call_nofpclass_funcs_v2f32(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v3
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v2
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; CHECK-NEXT:    v_readlane_b32 s30, v6, 0
 ; CHECK-NEXT:    v_min_f32_e32 v0, v4, v0
 ; CHECK-NEXT:    v_min_f32_e32 v1, v5, v1
 ; CHECK-NEXT:    v_readlane_b32 s31, v6, 1
-; CHECK-NEXT:    v_readlane_b32 s30, v6, 0
 ; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; CHECK-NEXT:    buffer_load_dword v6, off, s[0:3], s33 ; 4-byte Folded Reload
@@ -102,7 +102,7 @@ define <2 x float> @call_nofpclass_funcs_v2f32(ptr addrspace(1) %ptr) {
   ret <2 x float> %min
 }
 
-define internal double @func_f64(ptr addrspace(1) %ptr) {
+define internal double @func_f64(ptr addrspace(1) %ptr) #0 {
 ; CHECK-LABEL: func_f64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -113,7 +113,7 @@ define internal double @func_f64(ptr addrspace(1) %ptr) {
   ret double %ld
 }
 
-define double @call_nofpclass_funcs_f64(ptr addrspace(1) %ptr) {
+define double @call_nofpclass_funcs_f64(ptr addrspace(1) %ptr) #0 {
 ; CHECK-LABEL: call_nofpclass_funcs_f64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -122,12 +122,12 @@ define double @call_nofpclass_funcs_f64(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[16:17], -1
 ; CHECK-NEXT:    buffer_store_dword v6, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[16:17]
-; CHECK-NEXT:    s_addk_i32 s32, 0x400
 ; CHECK-NEXT:    v_writelane_b32 v6, s30, 0
+; CHECK-NEXT:    s_addk_i32 s32, 0x400
+; CHECK-NEXT:    v_writelane_b32 v6, s31, 1
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, func_f64@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, func_f64@rel32@hi+12
-; CHECK-NEXT:    v_writelane_b32 v6, s31, 1
 ; CHECK-NEXT:    v_mov_b32_e32 v4, v1
 ; CHECK-NEXT:    v_mov_b32_e32 v5, v0
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
@@ -136,9 +136,9 @@ define double @call_nofpclass_funcs_f64(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v5
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v4
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; CHECK-NEXT:    v_readlane_b32 s30, v6, 0
 ; CHECK-NEXT:    v_min_f64 v[0:1], v[2:3], v[0:1]
 ; CHECK-NEXT:    v_readlane_b32 s31, v6, 1
-; CHECK-NEXT:    v_readlane_b32 s30, v6, 0
 ; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; CHECK-NEXT:    buffer_load_dword v6, off, s[0:3], s33 ; 4-byte Folded Reload
@@ -152,7 +152,7 @@ define double @call_nofpclass_funcs_f64(ptr addrspace(1) %ptr) {
   ret double %min
 }
 
-define float @call_nofpclass_intrinsic_f32(float %x, float %y, float %z) {
+define float @call_nofpclass_intrinsic_f32(float %x, float %y, float %z) #0 {
 ; CHECK-LABEL: call_nofpclass_intrinsic_f32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -168,7 +168,7 @@ define float @call_nofpclass_intrinsic_f32(float %x, float %y, float %z) {
   ret float %min
 }
 
-define <2 x half> @call_nofpclass_intrinsic_v2f16(float %x, float %y, float %z, float %w) {
+define <2 x half> @call_nofpclass_intrinsic_v2f16(float %x, float %y, float %z, float %w) #0 {
 ; CHECK-LABEL: call_nofpclass_intrinsic_v2f16:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -190,7 +190,7 @@ define <2 x half> @call_nofpclass_intrinsic_v2f16(float %x, float %y, float %z, 
   ret <2 x half> %min
 }
 
-define nofpclass(nan inf) { double, double } @aggregate() {
+define nofpclass(nan inf) { double, double } @aggregate() #0 {
 ; CHECK-LABEL: aggregate:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -199,18 +199,18 @@ define nofpclass(nan inf) { double, double } @aggregate() {
 ; CHECK-NEXT:    s_or_saveexec_b64 s[18:19], -1
 ; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
-; CHECK-NEXT:    s_addk_i32 s32, 0x400
 ; CHECK-NEXT:    v_writelane_b32 v40, s16, 2
+; CHECK-NEXT:    v_writelane_b32 v40, s30, 0
+; CHECK-NEXT:    s_addk_i32 s32, 0x400
+; CHECK-NEXT:    v_writelane_b32 v40, s31, 1
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, aggregate@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, aggregate@gotpcrel32@hi+12
 ; CHECK-NEXT:    s_load_dwordx2 s[16:17], s[16:17], 0x0
-; CHECK-NEXT:    v_writelane_b32 v40, s30, 0
-; CHECK-NEXT:    v_writelane_b32 v40, s31, 1
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v40, 0
+; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
 ; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    v_readlane_b32 s4, v40, 2
 ; CHECK-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -226,7 +226,7 @@ entry:
 
 declare hidden nofpclass(nan inf) { float, float } @aggregate_f32()
 
-define { float, float } @aggregate_use(float %z) {
+define { float, float } @aggregate_use(float %z) #0 {
 ; CHECK-LABEL: aggregate_use:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -237,20 +237,20 @@ define { float, float } @aggregate_use(float %z) {
 ; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
 ; CHECK-NEXT:    v_writelane_b32 v41, s16, 2
 ; CHECK-NEXT:    s_addk_i32 s32, 0x400
+; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    v_writelane_b32 v41, s30, 0
+; CHECK-NEXT:    v_writelane_b32 v41, s31, 1
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, aggregate_f32@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, aggregate_f32@rel32@hi+12
-; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
-; CHECK-NEXT:    v_writelane_b32 v41, s31, 1
 ; CHECK-NEXT:    v_mov_b32_e32 v40, v0
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    v_max_f32_e32 v2, v40, v40
 ; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
+; CHECK-NEXT:    v_readlane_b32 s30, v41, 0
 ; CHECK-NEXT:    v_min_f32_e32 v0, v0, v2
 ; CHECK-NEXT:    v_min_f32_e32 v1, v1, v2
 ; CHECK-NEXT:    v_readlane_b32 s31, v41, 1
-; CHECK-NEXT:    v_readlane_b32 s30, v41, 0
 ; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    v_readlane_b32 s4, v41, 2
 ; CHECK-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -269,7 +269,7 @@ define { float, float } @aggregate_use(float %z) {
    ret { float, float } %insert.1
 }
 
-define internal <5 x double> @func_v5f64(ptr addrspace(1) %ptr) {
+define internal <5 x double> @func_v5f64(ptr addrspace(1) %ptr) #0 {
 ; CHECK-LABEL: func_v5f64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -286,7 +286,7 @@ define internal <5 x double> @func_v5f64(ptr addrspace(1) %ptr) {
   ret <5 x double> %ld
 }
 
-define <5 x double> @call_nofpclass_funcs_v5f64_non_mvt_vector(ptr addrspace(1) %ptr) {
+define <5 x double> @call_nofpclass_funcs_v5f64_non_mvt_vector(ptr addrspace(1) %ptr) #0 {
 ; CHECK-LABEL: call_nofpclass_funcs_v5f64_non_mvt_vector:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -295,12 +295,12 @@ define <5 x double> @call_nofpclass_funcs_v5f64_non_mvt_vector(ptr addrspace(1) 
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[16:17], -1
 ; CHECK-NEXT:    buffer_store_dword v24, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[16:17]
-; CHECK-NEXT:    s_addk_i32 s32, 0x400
 ; CHECK-NEXT:    v_writelane_b32 v24, s30, 0
+; CHECK-NEXT:    s_addk_i32 s32, 0x400
+; CHECK-NEXT:    v_writelane_b32 v24, s31, 1
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, func_v5f64@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, func_v5f64@rel32@hi+12
-; CHECK-NEXT:    v_writelane_b32 v24, s31, 1
 ; CHECK-NEXT:    v_mov_b32_e32 v22, v1
 ; CHECK-NEXT:    v_mov_b32_e32 v23, v0
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
@@ -317,13 +317,13 @@ define <5 x double> @call_nofpclass_funcs_v5f64_non_mvt_vector(ptr addrspace(1) 
 ; CHECK-NEXT:    v_mov_b32_e32 v20, v8
 ; CHECK-NEXT:    v_mov_b32_e32 v21, v9
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; CHECK-NEXT:    v_readlane_b32 s30, v24, 0
 ; CHECK-NEXT:    v_min_f64 v[0:1], v[12:13], v[0:1]
 ; CHECK-NEXT:    v_min_f64 v[2:3], v[14:15], v[2:3]
 ; CHECK-NEXT:    v_min_f64 v[4:5], v[16:17], v[4:5]
 ; CHECK-NEXT:    v_min_f64 v[6:7], v[18:19], v[6:7]
 ; CHECK-NEXT:    v_min_f64 v[8:9], v[20:21], v[8:9]
 ; CHECK-NEXT:    v_readlane_b32 s31, v24, 1
-; CHECK-NEXT:    v_readlane_b32 s30, v24, 0
 ; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; CHECK-NEXT:    buffer_load_dword v24, off, s[0:3], s33 ; 4-byte Folded Reload
@@ -336,3 +336,5 @@ define <5 x double> @call_nofpclass_funcs_v5f64_non_mvt_vector(ptr addrspace(1) 
   %min = call <5 x double> @llvm.minnum.v5f64(<5 x double> %call0, <5 x double> %call1)
   ret <5 x double> %min
 }
+
+attributes #0 = { nounwind }

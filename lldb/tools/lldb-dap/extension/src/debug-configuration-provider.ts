@@ -1,7 +1,9 @@
 import * as child_process from "child_process";
+import * as os from "os";
 import * as util from "util";
 import * as vscode from "vscode";
-import * as os from "os";
+import { pickProcess } from "./commands/pick-process";
+import { convertToInteger } from "./commands/pid-helpers";
 import { createDebugAdapterExecutable } from "./debug-adapter-factory";
 import { LLDBDapServer } from "./lldb-dap-server";
 import { LogFilePathProvider } from "./logging";
@@ -59,6 +61,7 @@ const configurations: Record<string, DefaultConfig> = {
 
   // Keys for platform / target configuration.
   platformName: { type: "string", default: "" },
+  platformUrl: { type: "string", default: "" },
   targetTriple: { type: "string", default: "" },
 
   // Keys for debugger command hooks.
@@ -77,7 +80,8 @@ export function getDefaultConfigKey(
 }
 
 export class LLDBDapConfigurationProvider
-  implements vscode.DebugConfigurationProvider {
+  implements vscode.DebugConfigurationProvider
+{
   constructor(
     private readonly server: LLDBDapServer,
     private readonly logger: vscode.LogOutputChannel,
@@ -110,13 +114,13 @@ export class LLDBDapConfigurationProvider
     folder: vscode.WorkspaceFolder | undefined,
     debugConfiguration: vscode.DebugConfiguration,
     token?: vscode.CancellationToken,
-  ): Promise<vscode.DebugConfiguration> {
+  ): Promise<vscode.DebugConfiguration | null | undefined> {
     this.logger.info(
       `Resolving debug configuration for "${debugConfiguration.name}"`,
     );
     this.logger.debug(
       "Initial debug configuration:\n" +
-      JSON.stringify(debugConfiguration, undefined, 2),
+        JSON.stringify(debugConfiguration, undefined, 2),
     );
     let config = vscode.workspace.getConfiguration("lldb-dap");
     for (const [key, cfg] of Object.entries(configurations)) {
@@ -158,6 +162,24 @@ export class LLDBDapConfigurationProvider
       debugConfiguration[key] = value;
     }
 
+    // If the user asked for the process picker, run it here — while we still
+    // have the workspace folder and platform fields — rather than deferring
+    // to VS Code's variable substitution, which doesn't pass the
+    // configuration to the command handler.
+    if (debugConfiguration.pid === "${command:pickProcess}") {
+      const pid = await pickProcess(
+        this.logger,
+        this.logFilePath,
+        folder,
+        debugConfiguration,
+      );
+      if (pid === undefined) {
+        // User cancelled, or the picker surfaced its own error.
+        return null;
+      }
+      debugConfiguration.pid = pid;
+    }
+
     return debugConfiguration;
   }
 
@@ -167,6 +189,19 @@ export class LLDBDapConfigurationProvider
     _token?: vscode.CancellationToken,
   ): Promise<vscode.DebugConfiguration | null | undefined> {
     try {
+      // Convert "pid" to a number if it came in as a string (e.g. via the
+      // ${command:pickProcess} variable substitution).
+      if ("pid" in debugConfiguration) {
+        const pid = convertToInteger(debugConfiguration.pid);
+        if (pid === undefined) {
+          throw new ErrorWithNotification(
+            "Invalid debug configuration: property 'pid' must either be an integer or a string containing an integer value.",
+            new ConfigureButton(),
+          );
+        }
+        debugConfiguration.pid = pid;
+      }
+
       if (
         "debugAdapterHostname" in debugConfiguration &&
         !("debugAdapterPort" in debugConfiguration)
@@ -202,9 +237,10 @@ export class LLDBDapConfigurationProvider
         }
 
         if (os.platform() === "win32") {
-          const pythonCheckProcess = child_process.spawnSync(executable.command, [
-            "--check-python",
-          ]);
+          const pythonCheckProcess = child_process.spawnSync(
+            executable.command,
+            ["--check-python"],
+          );
           if (pythonCheckProcess.status !== 0) {
             await vscode.window.showErrorMessage(
               "Python is not installed correctly. Please install it to use lldb-dap.",
@@ -249,7 +285,7 @@ export class LLDBDapConfigurationProvider
 
       this.logger.info(
         "Resolved debug configuration:\n" +
-        JSON.stringify(debugConfiguration, undefined, 2),
+          JSON.stringify(debugConfiguration, undefined, 2),
       );
 
       return debugConfiguration;

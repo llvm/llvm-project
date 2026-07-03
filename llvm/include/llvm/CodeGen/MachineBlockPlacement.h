@@ -21,10 +21,10 @@ class MachineBlockPlacementPass
 public:
   MachineBlockPlacementPass(bool AllowTailMerge)
       : AllowTailMerge(AllowTailMerge) {}
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 
-  void
+  LLVM_ABI void
   printPipeline(raw_ostream &OS,
                 function_ref<StringRef(StringRef)> MapClassName2PassName) const;
 };
@@ -33,8 +33,8 @@ class MachineBlockPlacementStatsPass
     : public RequiredPassInfoMixin<MachineBlockPlacementStatsPass> {
 
 public:
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 };
 
 } // namespace llvm

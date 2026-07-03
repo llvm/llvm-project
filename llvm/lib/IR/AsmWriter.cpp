@@ -1202,7 +1202,8 @@ int SlotTracker::processIndex() {
   // Start numbering the GUIDs after the module ids.
   GUIDNext = ModulePathNext;
 
-  for (auto &GlobalList : *TheIndex)
+  // Sort by GUID for deterministic slot assignment.
+  for (const auto &GlobalList : TheIndex->sortedGlobalValueSummariesRange())
     CreateGUIDSlot(GlobalList.first);
 
   // Start numbering the TypeIdCompatibleVtables after the GUIDs.
@@ -2444,6 +2445,8 @@ static void writeDICompileUnit(raw_ostream &Out, const DICompileUnit *N,
   Printer.printBool("rangesBaseAddress", N->getRangesBaseAddress(), false);
   Printer.printString("sysroot", N->getSysRoot());
   Printer.printString("sdk", N->getSDK());
+  Printer.printDwarfEnum("dialect", Lang.getDialect(),
+                         dwarf::LanguageDialectString);
   Out << ")";
 }
 
@@ -2624,7 +2627,7 @@ static void writeDILabel(raw_ostream &Out, const DILabel *N,
   Printer.printMetadata("scope", N->getRawScope(), /* ShouldSkipNull */ false);
   Printer.printString("name", N->getName());
   Printer.printMetadata("file", N->getRawFile());
-  Printer.printInt("line", N->getLine());
+  Printer.printInt("line", N->getLine(), /* ShouldSkipZero */ false);
   Printer.printInt("column", N->getColumn());
   Printer.printBool("isArtificial", N->isArtificial(), false);
   if (N->getCoroSuspendIdx())
@@ -3227,14 +3230,17 @@ void AssemblyWriter::printModuleSummaryIndex() {
 
   // FIXME: Change AliasSummary to hold a ValueInfo instead of summary pointer
   // for aliasee (then update BitcodeWriter.cpp and remove get/setAliaseeGUID).
-  for (auto &GlobalList : *TheIndex) {
+  // Sort by GUID for deterministic output matching slot assignment order.
+  auto SortedGVS = TheIndex->sortedGlobalValueSummariesRange();
+
+  for (const auto &GlobalList : SortedGVS) {
     auto GUID = GlobalList.first;
     for (auto &Summary : GlobalList.second.getSummaryList())
       SummaryToGUIDMap[Summary.get()] = GUID;
   }
 
   // Print the global value summary entries.
-  for (auto &GlobalList : *TheIndex) {
+  for (const auto &GlobalList : SortedGVS) {
     auto GUID = GlobalList.first;
     auto VI = TheIndex->getValueInfo(GlobalList);
     printSummaryInfo(Machine.getGUIDSlot(GUID), VI);
@@ -4978,6 +4984,9 @@ void AssemblyWriter::printMetadataAttachments(
 }
 
 void AssemblyWriter::writeMDNode(unsigned Slot, const MDNode *Node) {
+  if (AnnotationWriter)
+    AnnotationWriter->emitMDNodeAnnot(Node, Out);
+
   Out << '!' << Slot << " = ";
   printMDNodeBody(Node);
   Out << "\n";
@@ -5036,20 +5045,11 @@ void AssemblyWriter::writeAllAttributeGroups() {
 
 void AssemblyWriter::printUseListOrder(const Value *V,
                                        ArrayRef<unsigned> Shuffle) {
-  bool IsInFunction = Machine.getFunction();
-  if (IsInFunction)
+  if (Machine.getFunction())
     Out << "  ";
 
-  Out << "uselistorder";
-  if (const BasicBlock *BB = IsInFunction ? nullptr : dyn_cast<BasicBlock>(V)) {
-    Out << "_bb ";
-    writeOperand(BB->getParent(), false);
-    Out << ", ";
-    writeOperand(BB, false);
-  } else {
-    Out << " ";
-    writeOperand(V, true);
-  }
+  Out << "uselistorder ";
+  writeOperand(V, true);
 
   assert(Shuffle.size() >= 2 && "Shuffle too small");
   Out << ", { " << llvm::interleaved(Shuffle) << " }\n";

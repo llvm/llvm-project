@@ -43,6 +43,11 @@ static cl::opt<unsigned> BPFMinimumJumpTableEntries(
     "bpf-min-jump-table-entries", cl::init(13), cl::Hidden,
     cl::desc("Set minimum number of entries to use a jump table on BPF"));
 
+static cl::opt<bool> BPFAllowsLibcalls(
+    "bpf-allows-libcalls", cl::Hidden, cl::init(false),
+    cl::desc("Allow libcalls instead of rejecting unsupported built-in "
+             "functions"));
+
 static void fail(const SDLoc &DL, SelectionDAG &DAG, const Twine &Msg,
                  SDValue Val = {}) {
   std::string Str;
@@ -109,6 +114,8 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ATOMIC_LOAD, VT, Custom);
     setOperationAction(ISD::ATOMIC_STORE, VT, Custom);
   }
+
+  setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Custom);
 
   for (auto VT : { MVT::i32, MVT::i64 }) {
     if (VT == MVT::i32 && !STI.getHasAlu32())
@@ -372,6 +379,8 @@ SDValue BPFTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ATOMIC_LOAD:
   case ISD::ATOMIC_STORE:
     return LowerATOMIC_LOAD_STORE(Op, DAG);
+  case ISD::ATOMIC_FENCE:
+    return LowerATOMIC_FENCE(Op, DAG);
   case ISD::TRAP:
     return LowerTRAP(Op, DAG);
   }
@@ -597,9 +606,10 @@ SDValue BPFTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   } else if (ExternalSymbolSDNode *E = dyn_cast<ExternalSymbolSDNode>(Callee)) {
     Callee = DAG.getTargetExternalSymbol(E->getSymbol(), PtrVT, 0);
     StringRef Sym = E->getSymbol();
-    if (Sym != BPF_TRAP && Sym != "__multi3" && Sym != "__divti3" &&
-        Sym != "__modti3" && Sym != "__udivti3" && Sym != "__umodti3" &&
-        Sym != "memcpy" && Sym != "memset" && Sym != "memmove")
+    if (!BPFAllowsLibcalls && Sym != BPF_TRAP && Sym != "__multi3" &&
+        Sym != "__divti3" && Sym != "__modti3" && Sym != "__udivti3" &&
+        Sym != "__umodti3" && Sym != "memcpy" && Sym != "memset" &&
+        Sym != "memmove")
       fail(
           CLI.DL, DAG,
           Twine("A call to built-in function '" + Sym + "' is not supported."));
@@ -797,6 +807,19 @@ SDValue BPFTargetLowering::LowerATOMIC_LOAD_STORE(SDValue Op,
          "atomic load/store is not supported");
 
   return Op;
+}
+
+SDValue BPFTargetLowering::LowerATOMIC_FENCE(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SyncScope::ID FenceSSID =
+      static_cast<SyncScope::ID>(Op.getConstantOperandVal(2));
+
+  if (FenceSSID == SyncScope::SingleThread)
+    // MEMBARRIER is a compiler barrier; it codegens to a no-op.
+    return DAG.getNode(ISD::MEMBARRIER, DL, MVT::Other, Op.getOperand(0));
+
+  report_fatal_error("Runtime fence is not supported at the moment");
 }
 
 static Function *createBPFUnreachable(Module *M) {

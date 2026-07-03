@@ -16,10 +16,10 @@
 # RUN:   -oso-prepend-path=%t.dir/sub -o %t.dir/parallel.dSYM
 # RUN: cat %t.dir/parallel.dSYM/Contents/Resources/CASConfigs.json | FileCheck %s
 
-# CHECK: [
-# CHECK:   {"CASPath": "test-cas1"}
-# CHECK:   {"CASPath": "test-cas2"}
-# CHECK: ]
+# CHECK:      [
+# CHECK-NEXT:   {"CASPath": "test-cas1"},
+# CHECK-NEXT:   {"CASPath": "test-cas2"}
+# CHECK-NEXT: ]
 
 # Without a .cas-config file present, no CASConfigs.json should be produced.
 

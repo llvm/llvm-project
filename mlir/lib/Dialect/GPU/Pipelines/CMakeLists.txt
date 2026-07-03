@@ -15,6 +15,7 @@ add_mlir_dialect_library(MLIRGPUPipelines
   MLIRAffineToStandard
   MLIRAMDGPUToROCDL
   MLIRArithToLLVM
+  MLIRArithTransforms
   MLIRFuncToLLVM
   MLIRGPUToLLVMSPV
   MLIRGPUToNVVMTransforms
@@ -22,6 +23,7 @@ add_mlir_dialect_library(MLIRGPUPipelines
   MLIRIndexToLLVM
   MLIRMathToLLVM
   MLIRMathToXeVM
+  MLIRMathTransforms
   MLIRNVGPUToNVVM
   MLIRNVVMToLLVM
   MLIRReconcileUnrealizedCasts

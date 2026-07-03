@@ -35,7 +35,7 @@ class SPIRV_GLOp<string mnemonic, int opcode, list<Trait> traits = []> :
 // Base class for GL unary ops.
 class SPIRV_GLUnaryOp<string mnemonic, int opcode, Type resultType,
                       Type operandType, list<Trait> traits = []> :
-  SPIRV_GLOp<mnemonic, opcode, !listconcat([Pure], traits)> {
+  SPIRV_GLOp<mnemonic, opcode, !listconcat([NoMemoryEffect], traits)> {
 
   let arguments = (ins
     SPIRV_ScalarOrVectorOf<operandType>:$operand
@@ -60,7 +60,7 @@ class SPIRV_GLUnaryArithmeticOp<string mnemonic, int opcode, Type type,
 // Base class for GL binary ops.
 class SPIRV_GLBinaryOp<string mnemonic, int opcode, Type resultType,
                         Type operandType, list<Trait> traits = []> :
-  SPIRV_GLOp<mnemonic, opcode, !listconcat([Pure], traits)> {
+  SPIRV_GLOp<mnemonic, opcode, !listconcat([NoMemoryEffect], traits)> {
 
   let arguments = (ins
     SPIRV_ScalarOrVectorOf<operandType>:$lhs,
@@ -86,7 +86,7 @@ class SPIRV_GLBinaryArithmeticOp<string mnemonic, int opcode, Type type,
 // Base class for GL ternary ops.
 class SPIRV_GLTernaryArithmeticOp<string mnemonic, int opcode, Type type,
                         list<Trait> traits = []> :
-  SPIRV_GLOp<mnemonic, opcode, !listconcat([Pure], traits)> {
+  SPIRV_GLOp<mnemonic, opcode, !listconcat([NoMemoryEffect], traits)> {
 
   let arguments = (ins
     SPIRV_ScalarOrVectorOf<type>:$x,
@@ -104,7 +104,7 @@ class SPIRV_GLTernaryArithmeticOp<string mnemonic, int opcode, Type type,
 
 // -----
 
-def SPIRV_GLFAbsOp : SPIRV_GLUnaryArithmeticOp<"FAbs", 4, SPIRV_Float> {
+def SPIRV_GLFAbsOp : SPIRV_GLUnaryArithmeticOp<"FAbs", 4, SPIRV_Float, [AlwaysSpeculatable]> {
   let summary = "Absolute value of operand";
 
   let description = [{
@@ -127,7 +127,7 @@ def SPIRV_GLFAbsOp : SPIRV_GLUnaryArithmeticOp<"FAbs", 4, SPIRV_Float> {
 
 // -----
 
-def SPIRV_GLSAbsOp : SPIRV_GLUnaryArithmeticOp<"SAbs", 5, SPIRV_Integer> {
+def SPIRV_GLSAbsOp : SPIRV_GLUnaryArithmeticOp<"SAbs", 5, SPIRV_Integer, [AlwaysSpeculatable]> {
   let summary = "Absolute value of operand";
 
   let description = [{
@@ -149,7 +149,7 @@ def SPIRV_GLSAbsOp : SPIRV_GLUnaryArithmeticOp<"SAbs", 5, SPIRV_Integer> {
 
 // -----
 
-def SPIRV_GLCeilOp : SPIRV_GLUnaryArithmeticOp<"Ceil", 9, SPIRV_Float> {
+def SPIRV_GLCeilOp : SPIRV_GLUnaryArithmeticOp<"Ceil", 9, SPIRV_Float, [AlwaysSpeculatable]> {
   let summary = "Rounds up to the next whole number";
 
   let description = [{
@@ -173,7 +173,7 @@ def SPIRV_GLCeilOp : SPIRV_GLUnaryArithmeticOp<"Ceil", 9, SPIRV_Float> {
 
 // -----
 
-def SPIRV_GLCosOp : SPIRV_GLUnaryArithmeticOp<"Cos", 14, SPIRV_Float16or32> {
+def SPIRV_GLCosOp : SPIRV_GLUnaryArithmeticOp<"Cos", 14, SPIRV_Float16or32, [AlwaysSpeculatable]> {
   let summary = "Cosine of operand in radians";
 
   let description = [{
@@ -196,7 +196,7 @@ def SPIRV_GLCosOp : SPIRV_GLUnaryArithmeticOp<"Cos", 14, SPIRV_Float16or32> {
 
 // -----
 
-def SPIRV_GLSinOp : SPIRV_GLUnaryArithmeticOp<"Sin", 13, SPIRV_Float16or32> {
+def SPIRV_GLSinOp : SPIRV_GLUnaryArithmeticOp<"Sin", 13, SPIRV_Float16or32, [AlwaysSpeculatable]> {
   let summary = "Sine of operand in radians";
 
   let description = [{
@@ -219,7 +219,7 @@ def SPIRV_GLSinOp : SPIRV_GLUnaryArithmeticOp<"Sin", 13, SPIRV_Float16or32> {
 
 // -----
 
-def SPIRV_GLTanOp : SPIRV_GLUnaryArithmeticOp<"Tan", 15, SPIRV_Float16or32> {
+def SPIRV_GLTanOp : SPIRV_GLUnaryArithmeticOp<"Tan", 15, SPIRV_Float16or32, [AlwaysSpeculatable]> {
   let summary = "Tangent of operand in radians";
 
   let description = [{
@@ -242,14 +242,14 @@ def SPIRV_GLTanOp : SPIRV_GLUnaryArithmeticOp<"Tan", 15, SPIRV_Float16or32> {
 
 // -----
 
-def SPIRV_GLAsinOp : SPIRV_GLUnaryArithmeticOp<"Asin", 16, SPIRV_Float16or32> {
+def SPIRV_GLAsinOp : SPIRV_GLUnaryArithmeticOp<"Asin", 16, SPIRV_Float16or32, [AlwaysSpeculatable]> {
   let summary = "Arc Sine of operand in radians";
 
   let description = [{
     The standard trigonometric arc sine of x radians.
 
     Result is an angle, in radians, whose sine is x. The range of result values
-    is [-π / 2, π / 2]. Result is undefined if abs x > 1.
+    is [-π / 2, π / 2]. The resulting value is NaN if abs x > 1.
 
     The operand x must be a scalar or vector whose component type is 16-bit or
     32-bit floating-point.
@@ -268,14 +268,14 @@ def SPIRV_GLAsinOp : SPIRV_GLUnaryArithmeticOp<"Asin", 16, SPIRV_Float16or32> {
 
 // -----
 
-def SPIRV_GLAcosOp : SPIRV_GLUnaryArithmeticOp<"Acos", 17, SPIRV_Float16or32> {
+def SPIRV_GLAcosOp : SPIRV_GLUnaryArithmeticOp<"Acos", 17, SPIRV_Float16or32, [AlwaysSpeculatable]> {
   let summary = "Arc Cosine of operand in radians";
 
   let description = [{
     The standard trigonometric arc cosine of x radians.
 
     Result is an angle, in radians, whose cosine is x. The range of result
-    values is [0, π]. Result is undefined if abs x > 1.
+    values is [0, π]. The resulting value is NaN if abs x > 1.
 
     The operand x must be a scalar or vector whose component type is 16-bit or
     32-bit floating-point.
@@ -294,7 +294,7 @@ def SPIRV_GLAcosOp : SPIRV_GLUnaryArithmeticOp<"Acos", 17, SPIRV_Float16or32> {
 
 // -----
 
-def SPIRV_GLAtanOp : SPIRV_GLUnaryArithmeticOp<"Atan", 18, SPIRV_Float16or32> {
+def SPIRV_GLAtanOp : SPIRV_GLUnaryArithmeticOp<"Atan", 18, SPIRV_Float16or32, [AlwaysSpeculatable]> {
   let summary = "Arc Tangent of operand in radians";
 
   let description = [{
@@ -320,7 +320,7 @@ def SPIRV_GLAtanOp : SPIRV_GLUnaryArithmeticOp<"Atan", 18, SPIRV_Float16or32> {
 
 // -----
 
-def SPIRV_GLExpOp : SPIRV_GLUnaryArithmeticOp<"Exp", 27, SPIRV_Float16or32> {
+def SPIRV_GLExpOp : SPIRV_GLUnaryArithmeticOp<"Exp", 27, SPIRV_Float16or32, [AlwaysSpeculatable]> {
   let summary = "Exponentiation of Operand 1";
 
   let description = [{
@@ -343,7 +343,7 @@ def SPIRV_GLExpOp : SPIRV_GLUnaryArithmeticOp<"Exp", 27, SPIRV_Float16or32> {
 
 // -----
 
-def SPIRV_GLFloorOp : SPIRV_GLUnaryArithmeticOp<"Floor", 8, SPIRV_Float> {
+def SPIRV_GLFloorOp : SPIRV_GLUnaryArithmeticOp<"Floor", 8, SPIRV_Float, [AlwaysSpeculatable]> {
   let summary = "Rounds down to the next whole number";
 
   let description = [{
@@ -367,7 +367,7 @@ def SPIRV_GLFloorOp : SPIRV_GLUnaryArithmeticOp<"Floor", 8, SPIRV_Float> {
 
 // -----
 
-def SPIRV_GLRoundOp: SPIRV_GLUnaryArithmeticOp<"Round", 1, SPIRV_Float> {
+def SPIRV_GLRoundOp: SPIRV_GLUnaryArithmeticOp<"Round", 1, SPIRV_Float, [AlwaysSpeculatable]> {
   let summary = "Rounds to the nearest whole number";
 
   let description = [{
@@ -393,7 +393,7 @@ def SPIRV_GLRoundOp: SPIRV_GLUnaryArithmeticOp<"Round", 1, SPIRV_Float> {
 
 // -----
 
-def SPIRV_GLRoundEvenOp: SPIRV_GLUnaryArithmeticOp<"RoundEven", 2, SPIRV_Float> {
+def SPIRV_GLRoundEvenOp: SPIRV_GLUnaryArithmeticOp<"RoundEven", 2, SPIRV_Float, [AlwaysSpeculatable]> {
   let summary = "Rounds to the nearest even whole number";
 
   let description = [{
@@ -418,11 +418,35 @@ def SPIRV_GLRoundEvenOp: SPIRV_GLUnaryArithmeticOp<"RoundEven", 2, SPIRV_Float> 
 
 // -----
 
-def SPIRV_GLInverseSqrtOp : SPIRV_GLUnaryArithmeticOp<"InverseSqrt", 32, SPIRV_Float> {
+def SPIRV_GLTruncOp: SPIRV_GLUnaryArithmeticOp<"Trunc", 3, SPIRV_Float, [AlwaysSpeculatable]> {
+  let summary = "Rounds to the nearest whole number toward zero";
+
+  let description = [{
+    Result is the value equal to the nearest whole number to x whose absolute
+    value is not larger than the absolute value of x.
+
+    The operand x must be a scalar or vector whose component type is
+    floating-point.
+
+    Result Type and the type of x must be the same type. Results are computed
+    per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.Trunc %0 : f32
+    %3 = spirv.GL.Trunc %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_GLInverseSqrtOp : SPIRV_GLUnaryArithmeticOp<"InverseSqrt", 32, SPIRV_Float, [AlwaysSpeculatable]> {
   let summary = "Reciprocal of sqrt(operand)";
 
   let description = [{
-    Result is the reciprocal of sqrt x. Result is undefined if x <= 0.
+    Result is the reciprocal of sqrt x. The resulting value is NaN if x < 0.
 
     The operand x must be a scalar or vector whose component type is
     floating-point.
@@ -441,12 +465,12 @@ def SPIRV_GLInverseSqrtOp : SPIRV_GLUnaryArithmeticOp<"InverseSqrt", 32, SPIRV_F
 
 // -----
 
-def SPIRV_GLLogOp : SPIRV_GLUnaryArithmeticOp<"Log", 28, SPIRV_Float16or32> {
+def SPIRV_GLLogOp : SPIRV_GLUnaryArithmeticOp<"Log", 28, SPIRV_Float16or32, [AlwaysSpeculatable]> {
   let summary = "Natural logarithm of the operand";
 
   let description = [{
     Result is the natural logarithm of x, i.e., the value y which satisfies the
-    equation x = ey. Result is undefined if x <= 0.
+    equation x = ey. The resulting value is NaN if x < 0.
 
     The operand x must be a scalar or vector whose component type is 16-bit or
     32-bit floating-point.
@@ -465,12 +489,12 @@ def SPIRV_GLLogOp : SPIRV_GLUnaryArithmeticOp<"Log", 28, SPIRV_Float16or32> {
 
 // -----
 
-def SPIRV_GLFMaxOp : SPIRV_GLBinaryArithmeticOp<"FMax", 40, SPIRV_Float> {
+def SPIRV_GLFMaxOp : SPIRV_GLBinaryArithmeticOp<"FMax", 40, SPIRV_Float, [AlwaysSpeculatable]> {
   let summary = "Return maximum of two floating-point operands";
 
   let description = [{
-    Result is y if x < y; otherwise result is x. Which operand is the
-    result is undefined if one of the operands is a NaN.
+    Result is y if x < y; otherwise result is x. Which operand is the result
+    if one of the operands is a NaN is implementation-dependent.
 
     The operands must all be a scalar or vector whose component type
     is floating-point.
@@ -489,7 +513,7 @@ def SPIRV_GLFMaxOp : SPIRV_GLBinaryArithmeticOp<"FMax", 40, SPIRV_Float> {
 
 // -----
 
-def SPIRV_GLUMaxOp : SPIRV_GLBinaryArithmeticOp<"UMax", 41, SPIRV_Integer> {
+def SPIRV_GLUMaxOp : SPIRV_GLBinaryArithmeticOp<"UMax", 41, SPIRV_Integer, [AlwaysSpeculatable]> {
   let summary = "Return maximum of two unsigned integer operands";
 
   let description = [{
@@ -512,7 +536,7 @@ def SPIRV_GLUMaxOp : SPIRV_GLBinaryArithmeticOp<"UMax", 41, SPIRV_Integer> {
 
 // -----
 
-def SPIRV_GLSMaxOp : SPIRV_GLBinaryArithmeticOp<"SMax", 42, SPIRV_Integer> {
+def SPIRV_GLSMaxOp : SPIRV_GLBinaryArithmeticOp<"SMax", 42, SPIRV_Integer, [AlwaysSpeculatable]> {
   let summary = "Return maximum of two signed integer operands";
 
   let description = [{
@@ -535,12 +559,12 @@ def SPIRV_GLSMaxOp : SPIRV_GLBinaryArithmeticOp<"SMax", 42, SPIRV_Integer> {
 
 // -----
 
-def SPIRV_GLFMinOp : SPIRV_GLBinaryArithmeticOp<"FMin", 37, SPIRV_Float> {
+def SPIRV_GLFMinOp : SPIRV_GLBinaryArithmeticOp<"FMin", 37, SPIRV_Float, [AlwaysSpeculatable]> {
   let summary = "Return minimum of two floating-point operands";
 
   let description = [{
-    Result is y if y < x; otherwise result is x. Which operand is the result is
-    undefined if one of the operands is a NaN.
+    Result is y if y < x; otherwise result is x. Which operand is the result
+    if one of the operands is a NaN is implementation-dependent.
 
     The operands must all be a scalar or vector whose component type is
     floating-point.
@@ -559,7 +583,7 @@ def SPIRV_GLFMinOp : SPIRV_GLBinaryArithmeticOp<"FMin", 37, SPIRV_Float> {
 
 // -----
 
-def SPIRV_GLUMinOp : SPIRV_GLBinaryArithmeticOp<"UMin", 38, SPIRV_Integer> {
+def SPIRV_GLUMinOp : SPIRV_GLBinaryArithmeticOp<"UMin", 38, SPIRV_Integer, [AlwaysSpeculatable]> {
   let summary = "Return minimum of two unsigned integer operands";
 
   let description = [{
@@ -582,7 +606,7 @@ def SPIRV_GLUMinOp : SPIRV_GLBinaryArithmeticOp<"UMin", 38, SPIRV_Integer> {
 
 // -----
 
-def SPIRV_GLSMinOp : SPIRV_GLBinaryArithmeticOp<"SMin", 39, SPIRV_Integer> {
+def SPIRV_GLSMinOp : SPIRV_GLBinaryArithmeticOp<"SMin", 39, SPIRV_Integer, [AlwaysSpeculatable]> {
   let summary = "Return minimum of two signed integer operands";
 
   let description = [{
@@ -611,7 +635,7 @@ def SPIRV_GLPowOp : SPIRV_GLBinaryArithmeticOp<"Pow", 26, SPIRV_Float16or32> {
   let description = [{
     Result is x raised to the y power; x^y.
 
-    Result is undefined if x = 0 and y ≤ 0.
+    The resulting value is poison if x < 0. Result is poison if x = 0 and y ≤ 0.
 
     The operand x and y must be a scalar or vector whose component type is
     16-bit or 32-bit floating-point.
@@ -630,7 +654,7 @@ def SPIRV_GLPowOp : SPIRV_GLBinaryArithmeticOp<"Pow", 26, SPIRV_Float16or32> {
 
 // -----
 
-def SPIRV_GLFSignOp : SPIRV_GLUnaryArithmeticOp<"FSign", 6, SPIRV_Float> {
+def SPIRV_GLFSignOp : SPIRV_GLUnaryArithmeticOp<"FSign", 6, SPIRV_Float, [AlwaysSpeculatable]> {
   let summary = "Returns the sign of the operand";
 
   let description = [{
@@ -653,7 +677,7 @@ def SPIRV_GLFSignOp : SPIRV_GLUnaryArithmeticOp<"FSign", 6, SPIRV_Float> {
 
 // -----
 
-def SPIRV_GLSSignOp : SPIRV_GLUnaryArithmeticOp<"SSign", 7, SPIRV_Integer> {
+def SPIRV_GLSSignOp : SPIRV_GLUnaryArithmeticOp<"SSign", 7, SPIRV_Integer, [AlwaysSpeculatable]> {
   let summary = "Returns the sign of the operand";
 
   let description = [{
@@ -675,11 +699,11 @@ def SPIRV_GLSSignOp : SPIRV_GLUnaryArithmeticOp<"SSign", 7, SPIRV_Integer> {
 
 // -----
 
-def SPIRV_GLSqrtOp : SPIRV_GLUnaryArithmeticOp<"Sqrt", 31, SPIRV_Float> {
+def SPIRV_GLSqrtOp : SPIRV_GLUnaryArithmeticOp<"Sqrt", 31, SPIRV_Float, [AlwaysSpeculatable]> {
   let summary = "Returns the square root of the operand";
 
   let description = [{
-    Result is the square root of x. Result is undefined if x < 0.
+    Result is the square root of x. The resulting value is NaN if x < 0.
 
     The operand x must be a scalar or vector whose component type is
     floating-point.
@@ -698,7 +722,7 @@ def SPIRV_GLSqrtOp : SPIRV_GLUnaryArithmeticOp<"Sqrt", 31, SPIRV_Float> {
 
 // -----
 
-def SPIRV_GLSinhOp : SPIRV_GLUnaryArithmeticOp<"Sinh", 19, SPIRV_Float16or32> {
+def SPIRV_GLSinhOp : SPIRV_GLUnaryArithmeticOp<"Sinh", 19, SPIRV_Float16or32, [AlwaysSpeculatable]> {
   let summary = "Hyperbolic sine of operand in radians";
 
   let description = [{
@@ -721,7 +745,7 @@ def SPIRV_GLSinhOp : SPIRV_GLUnaryArithmeticOp<"Sinh", 19, SPIRV_Float16or32> {
 
 // -----
 
-def SPIRV_GLCoshOp : SPIRV_GLUnaryArithmeticOp<"Cosh", 20, SPIRV_Float16or32> {
+def SPIRV_GLCoshOp : SPIRV_GLUnaryArithmeticOp<"Cosh", 20, SPIRV_Float16or32, [AlwaysSpeculatable]> {
   let summary = "Hyperbolic cosine of operand in radians";
 
   let description = [{
@@ -744,7 +768,7 @@ def SPIRV_GLCoshOp : SPIRV_GLUnaryArithmeticOp<"Cosh", 20, SPIRV_Float16or32> {
 
 // -----
 
-def SPIRV_GLTanhOp : SPIRV_GLUnaryArithmeticOp<"Tanh", 21, SPIRV_Float16or32> {
+def SPIRV_GLTanhOp : SPIRV_GLUnaryArithmeticOp<"Tanh", 21, SPIRV_Float16or32, [AlwaysSpeculatable]> {
   let summary = "Hyperbolic tangent of operand in radians";
 
   let description = [{
@@ -767,7 +791,7 @@ def SPIRV_GLTanhOp : SPIRV_GLUnaryArithmeticOp<"Tanh", 21, SPIRV_Float16or32> {
 
 // -----
 
-def SPIRV_GLAsinhOp : SPIRV_GLUnaryArithmeticOp<"Asinh", 22, SPIRV_Float16or32> {
+def SPIRV_GLAsinhOp : SPIRV_GLUnaryArithmeticOp<"Asinh", 22, SPIRV_Float16or32, [AlwaysSpeculatable]> {
   let summary = "Arc hyperbolic sine of operand in radians.";
 
   let description = [{
@@ -790,7 +814,7 @@ def SPIRV_GLAsinhOp : SPIRV_GLUnaryArithmeticOp<"Asinh", 22, SPIRV_Float16or32> 
 
 // -----
 
-def SPIRV_GLAcoshOp : SPIRV_GLUnaryArithmeticOp<"Acosh", 23, SPIRV_Float16or32> {
+def SPIRV_GLAcoshOp : SPIRV_GLUnaryArithmeticOp<"Acosh", 23, SPIRV_Float16or32, [AlwaysSpeculatable]> {
   let summary = "Arc hyperbolic cosine of operand in radians.";
 
   let description = [{
@@ -814,7 +838,7 @@ def SPIRV_GLAcoshOp : SPIRV_GLUnaryArithmeticOp<"Acosh", 23, SPIRV_Float16or32> 
 
 // -----
 
-def SPIRV_GLAtanhOp : SPIRV_GLUnaryArithmeticOp<"Atanh", 24, SPIRV_Float16or32> {
+def SPIRV_GLAtanhOp : SPIRV_GLUnaryArithmeticOp<"Atanh", 24, SPIRV_Float16or32, [AlwaysSpeculatable]> {
   let summary = "Arc hyperbolic tangent of operand in radians.";
 
   let description = [{
@@ -838,7 +862,80 @@ def SPIRV_GLAtanhOp : SPIRV_GLUnaryArithmeticOp<"Atanh", 24, SPIRV_Float16or32> 
 
 // -----
 
-def SPIRV_GLExp2Op : SPIRV_GLUnaryArithmeticOp<"Exp2", 29, SPIRV_Float16or32> {
+def SPIRV_GLAtan2Op : SPIRV_GLBinaryArithmeticOp<"Atan2", 25, SPIRV_Float16or32> {
+  let summary = "Arc tangent of y / x in radians";
+
+  let description = [{
+    Result is the arc tangent of y / x. The signs of x and y are used to
+    determine what quadrant the angle is in. The range of result values is
+    [-π, π]. Result is poison if x and y are both 0.
+
+    The operand y and x must be a scalar or vector whose component type is
+    16-bit or 32-bit floating-point.
+
+    Result Type and the type of all operands must be the same type. Results are
+    computed per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.Atan2 %0, %1 : f32
+    %3 = spirv.GL.Atan2 %0, %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_GLRadiansOp : SPIRV_GLUnaryArithmeticOp<"Radians", 11, SPIRV_Float16or32, [AlwaysSpeculatable]> {
+  let summary = "Convert a quantity in degrees to radians";
+
+  let description = [{
+    Result is the quantity in radians for the quantity x given in degrees, i.e.,
+    (π / 180) * x.
+
+    The operand x must be a scalar or vector whose component type is 16-bit or
+    32-bit floating-point.
+
+    Result Type and the type of x must be the same type. Results are computed
+    per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.Radians %0 : f32
+    %3 = spirv.GL.Radians %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_GLDegreesOp : SPIRV_GLUnaryArithmeticOp<"Degrees", 12, SPIRV_Float16or32, [AlwaysSpeculatable]> {
+  let summary = "Convert a quantity in radians to degrees";
+
+  let description = [{
+    Result is the quantity in degrees for the quantity x given in radians, i.e.,
+    (180 / π) * x.
+
+    The operand x must be a scalar or vector whose component type is 16-bit or
+    32-bit floating-point.
+
+    Result Type and the type of x must be the same type. Results are computed
+    per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.Degrees %0 : f32
+    %3 = spirv.GL.Degrees %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_GLExp2Op : SPIRV_GLUnaryArithmeticOp<"Exp2", 29, SPIRV_Float16or32, [AlwaysSpeculatable]> {
   let summary = "Result is 2 raised to the x power";
 
   let description = [{
@@ -866,7 +963,7 @@ def SPIRV_GLExp2Op : SPIRV_GLUnaryArithmeticOp<"Exp2", 29, SPIRV_Float16or32> {
 
 // -----
 
-def SPIRV_GLLog2Op : SPIRV_GLUnaryArithmeticOp<"Log2", 30, SPIRV_Float16or32> {
+def SPIRV_GLLog2Op : SPIRV_GLUnaryArithmeticOp<"Log2", 30, SPIRV_Float16or32, [AlwaysSpeculatable]> {
   let summary = "Result is the base-2 logarithm of x";
 
   let description = [{
@@ -900,7 +997,7 @@ def SPIRV_GLFClampOp : SPIRV_GLTernaryArithmeticOp<"FClamp", 43, SPIRV_Float> {
   let summary = "Clamp x between min and max values.";
 
   let description = [{
-    Result is min(max(x, minVal), maxVal). The resulting value is undefined if
+    Result is min(max(x, minVal), maxVal). The resulting value is poison if
     minVal > maxVal. The semantics used by min() and max() are those of FMin and
     FMax.
 
@@ -931,7 +1028,7 @@ def SPIRV_GLUClampOp : SPIRV_GLTernaryArithmeticOp<"UClamp", 44, SPIRV_Integer> 
 
   let description = [{
     Result is min(max(x, minVal), maxVal), where x, minVal and maxVal are
-    interpreted as unsigned integers. The resulting value is undefined if
+    interpreted as unsigned integers. The resulting value is poison if
     minVal > maxVal.
 
     Result Type and the type of the operands must both be integer scalar or
@@ -960,7 +1057,7 @@ def SPIRV_GLSClampOp : SPIRV_GLTernaryArithmeticOp<"SClamp", 45, SPIRV_Integer> 
 
   let description = [{
     Result is min(max(x, minVal), maxVal), where x, minVal and maxVal are
-    interpreted as signed integers. The resulting value is undefined if
+    interpreted as signed integers. The resulting value is poison if
     minVal > maxVal.
 
     Result Type and the type of the operands must both be integer scalar or
@@ -984,7 +1081,84 @@ def SPIRV_GLSClampOp : SPIRV_GLTernaryArithmeticOp<"SClamp", 45, SPIRV_Integer> 
 
 // -----
 
-def SPIRV_GLFmaOp : SPIRV_GLTernaryArithmeticOp<"Fma", 50, SPIRV_Float> {
+def SPIRV_GLNMaxOp : SPIRV_GLBinaryArithmeticOp<"NMax", 80, SPIRV_Float, [AlwaysSpeculatable]> {
+  let summary = "Return maximum of two floating-point operands, NaN-aware";
+
+  let description = [{
+    Result is y if x < y; otherwise result is x, where x and y are interpreted
+    as floating-point. NMax considers a NaN argument as missing, so if one
+    operand is a NaN the result is the other operand. If both operands are NaNs,
+    the result is a NaN.
+
+    The operands must all be a scalar or vector whose component type is
+    floating-point.
+
+    Result Type and the type of all operands must be the same type. Results are
+    computed per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.NMax %0, %1 : f32
+    %3 = spirv.GL.NMax %0, %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_GLNMinOp : SPIRV_GLBinaryArithmeticOp<"NMin", 79, SPIRV_Float, [AlwaysSpeculatable]> {
+  let summary = "Return minimum of two floating-point operands, NaN-aware";
+
+  let description = [{
+    Result is y if y < x; otherwise result is x, where x and y are interpreted
+    as floating-point. NMin considers a NaN argument as missing, so if one
+    operand is a NaN the result is the other operand. If both operands are NaNs,
+    the result is a NaN.
+
+    The operands must all be a scalar or vector whose component type is
+    floating-point.
+
+    Result Type and the type of all operands must be the same type. Results are
+    computed per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.NMin %0, %1 : f32
+    %3 = spirv.GL.NMin %0, %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_GLNClampOp : SPIRV_GLTernaryArithmeticOp<"NClamp", 81, SPIRV_Float> {
+  let summary = "Clamp x between min and max values, NaN-aware";
+
+  let description = [{
+    Result is min(max(x, minVal), maxVal). The resulting value is poison if
+    minVal > maxVal. The semantics used by min() and max() are those of NMin
+    and NMax, so NaN arguments are considered missing.
+
+    The operands must all be a scalar or vector whose component type is
+    floating-point.
+
+    Result Type and the type of all operands must be the same type. Results are
+    computed per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.NClamp %x, %min, %max : f32
+    %3 = spirv.GL.NClamp %x, %min, %max : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_GLFmaOp : SPIRV_GLTernaryArithmeticOp<"Fma", 50, SPIRV_Float, [AlwaysSpeculatable]> {
   let summary = "Computes a * b + c.";
 
   let description = [{
@@ -1024,7 +1198,7 @@ def SPIRV_GLFmaOp : SPIRV_GLTernaryArithmeticOp<"Fma", 50, SPIRV_Float> {
 
 // ----
 
-def SPIRV_GLFrexpStructOp : SPIRV_GLOp<"FrexpStruct", 52, [Pure]> {
+def SPIRV_GLFrexpStructOp : SPIRV_GLOp<"FrexpStruct", 52, [NoMemoryEffect]> {
   let summary = "Splits x into two components such that x = significand * 2^exponent";
 
   let description = [{
@@ -1034,7 +1208,7 @@ def SPIRV_GLFrexpStructOp : SPIRV_GLOp<"FrexpStruct", 52, [Pure]> {
     x = significand * 2^exponent
 
     If x is a zero, the exponent is 0.0. If x is an infinity or a NaN, the
-    exponent is undefined. If x is 0.0, the significand is 0.0. If x is -0.0,
+    exponent is poison. If x is 0.0, the significand is 0.0. If x is -0.0,
     the significand is -0.0
 
     Result Type must be an OpTypeStruct with two members. Member 0 must have
@@ -1069,7 +1243,7 @@ def SPIRV_GLFrexpStructOp : SPIRV_GLOp<"FrexpStruct", 52, [Pure]> {
 
 def SPIRV_GLLdexpOp :
   SPIRV_GLOp<"Ldexp", 53, [
-      Pure, AllTypesMatch<["x", "y"]>]> {
+      NoMemoryEffect, AllTypesMatch<["x", "y"]>]> {
   let summary = "Builds y such that y = significand * 2^exponent";
 
   let description = [{
@@ -1078,14 +1252,14 @@ def SPIRV_GLLdexpOp :
 
     significand * 2^exponent
 
-    If this product is too large to be represented in the floating-point
-    type, the resulting value is undefined. If exp is greater than +128
-    (single precision) or +1024 (double precision), the resulting value is
-    undefined. If exp is less than -126 (single precision) or -1022 (double precision),
-    the result may be flushed to zero. Additionally, splitting the value
-    into a significand and exponent using frexp and then reconstructing a
-    floating-point value using ldexp should yield the original input for
-    zero and all finite non-denormalized values.
+    If this product is too large to be finitely represented in the floating-point
+    type, the resulting value is poison. If exp is greater than +128 (single
+    precision), +1024 (double precision) or +16 (half precision), the resulting
+    value is poison. If exp is less than -126 (single precision) or -1022 (double
+    precision), the result may be flushed to zero. Additionally, splitting the
+    value into a significand and exponent using frexp and then reconstructing a
+    floating-point value using ldexp should yield the original input for zero and
+    all finite non-denormalized values.
 
     The operand x must be a scalar or vector whose component type is floating-point.
 
@@ -1241,7 +1415,7 @@ def SPIRV_GLDistanceOp : SPIRV_GLOp<"Distance", 67, [
 
 // -----
 
-def SPIRV_GLCrossOp : SPIRV_GLBinaryArithmeticOp<"Cross", 68, SPIRV_Float> {
+def SPIRV_GLCrossOp : SPIRV_GLBinaryArithmeticOp<"Cross", 68, SPIRV_Float, [AlwaysSpeculatable]> {
   let summary = "Return the cross product of two 3-component vectors";
 
   let description = [{
@@ -1268,7 +1442,7 @@ def SPIRV_GLCrossOp : SPIRV_GLBinaryArithmeticOp<"Cross", 68, SPIRV_Float> {
 
 // -----
 
-def SPIRV_GLNormalizeOp : SPIRV_GLUnaryArithmeticOp<"Normalize", 69, SPIRV_Float> {
+def SPIRV_GLNormalizeOp : SPIRV_GLUnaryArithmeticOp<"Normalize", 69, SPIRV_Float, [AlwaysSpeculatable]> {
   let summary = "Normalizes a vector operand";
 
   let description = [{
@@ -1289,7 +1463,7 @@ def SPIRV_GLNormalizeOp : SPIRV_GLUnaryArithmeticOp<"Normalize", 69, SPIRV_Float
 
 // -----
 
-def SPIRV_GLReflectOp : SPIRV_GLBinaryArithmeticOp<"Reflect", 71, SPIRV_Float> {
+def SPIRV_GLReflectOp : SPIRV_GLBinaryArithmeticOp<"Reflect", 71, SPIRV_Float, [AlwaysSpeculatable]> {
   let summary = "Calculate reflection direction vector";
 
   let description = [{
@@ -1314,7 +1488,59 @@ def SPIRV_GLReflectOp : SPIRV_GLBinaryArithmeticOp<"Reflect", 71, SPIRV_Float> {
 
 // ----
 
-def SPIRV_GLFindILsbOp : SPIRV_GLUnaryArithmeticOp<"FindILsb", 73, SPIRV_Integer> {
+def SPIRV_GLStepOp : SPIRV_GLBinaryArithmeticOp<"Step", 48, SPIRV_Float, [AlwaysSpeculatable]> {
+  let summary = "Return 0.0 if x < edge, else 1.0";
+
+  let description = [{
+    Result is 0.0 if x < edge; otherwise result is 1.0.
+
+    The operands must all be a scalar or vector whose component type is
+    floating-point.
+
+    Result Type and the type of all operands must be the same type. Results
+    are computed per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.Step %edge, %x : f32
+    %3 = spirv.GL.Step %edge, %x : vector<3xf32>
+    ```
+  }];
+}
+
+// ----
+
+def SPIRV_GLSmoothStepOp : SPIRV_GLTernaryArithmeticOp<"SmoothStep", 49, SPIRV_Float> {
+  let summary = "Return smooth Hermite interpolation between 0 and 1";
+
+  let description = [{
+    Result is 0.0 if x <= edge0 and 1.0 if x >= edge1 and performs smooth
+    Hermite interpolation between 0 and 1 when edge0 < x < edge1. This is
+    equivalent to:
+      t = clamp((x - edge0) / (edge1 - edge0), 0, 1)
+      t * t * (3 - 2 * t)
+
+    The resulting value is undefined if edge0 >= edge1.
+
+    The operands must all be a scalar or vector whose component type is
+    floating-point.
+
+    Result Type and the type of all operands must be the same type. Results
+    are computed per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.SmoothStep %edge0, %edge1, %x : f32
+    %3 = spirv.GL.SmoothStep %edge0, %edge1, %x : vector<3xf32>
+    ```
+  }];
+}
+
+// ----
+
+def SPIRV_GLFindILsbOp : SPIRV_GLUnaryArithmeticOp<"FindILsb", 73, SPIRV_Integer, [AlwaysSpeculatable]> {
   let summary = "Integer least-significant bit";
 
   let description = [{
@@ -1330,7 +1556,7 @@ def SPIRV_GLFindILsbOp : SPIRV_GLUnaryArithmeticOp<"FindILsb", 73, SPIRV_Integer
 
 // ----
 
-def SPIRV_GLFindSMsbOp : SPIRV_GLUnaryArithmeticOp<"FindSMsb", 74, SPIRV_Int32> {
+def SPIRV_GLFindSMsbOp : SPIRV_GLUnaryArithmeticOp<"FindSMsb", 74, SPIRV_Int32, [AlwaysSpeculatable]> {
   let summary = "Signed-integer most-significant bit, with Value interpreted as a signed integer";
 
   let description = [{
@@ -1349,7 +1575,7 @@ def SPIRV_GLFindSMsbOp : SPIRV_GLUnaryArithmeticOp<"FindSMsb", 74, SPIRV_Int32> 
 
 // ----
 
-def SPIRV_GLFindUMsbOp : SPIRV_GLUnaryArithmeticOp<"FindUMsb", 75, SPIRV_Int32> {
+def SPIRV_GLFindUMsbOp : SPIRV_GLUnaryArithmeticOp<"FindUMsb", 75, SPIRV_Int32, [AlwaysSpeculatable]> {
   let summary = "Unsigned-integer most-significant bit";
 
   let description = [{
@@ -1367,7 +1593,7 @@ def SPIRV_GLFindUMsbOp : SPIRV_GLUnaryArithmeticOp<"FindUMsb", 75, SPIRV_Int32> 
 
 // ----
 
-def SPIRV_GLFractOp : SPIRV_GLUnaryArithmeticOp<"Fract", 10, SPIRV_Float> {
+def SPIRV_GLFractOp : SPIRV_GLUnaryArithmeticOp<"Fract", 10, SPIRV_Float, [AlwaysSpeculatable]> {
   let summary = "Returns the `x - floor(x)` of the operand";
 
   let description = [{

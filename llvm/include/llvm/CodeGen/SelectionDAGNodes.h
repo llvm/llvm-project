@@ -238,22 +238,10 @@ public:
   inline bool hasOneUse() const;
 };
 
-template<> struct DenseMapInfo<SDValue> {
-  static inline SDValue getEmptyKey() {
-    SDValue V;
-    V.ResNo = -1U;
-    return V;
-  }
-
-  static inline SDValue getTombstoneKey() {
-    SDValue V;
-    V.ResNo = -2U;
-    return V;
-  }
-
+template <> struct DenseMapInfo<SDValue> {
   static unsigned getHashValue(const SDValue &Val) {
-    return ((unsigned)((uintptr_t)Val.getNode() >> 4) ^
-            (unsigned)((uintptr_t)Val.getNode() >> 9)) + Val.getResNo();
+    return DenseMapInfo<const void *>::getHashValue(Val.getNode()) +
+           Val.getResNo();
   }
 
   static bool isEqual(const SDValue &LHS, const SDValue &RHS) {
@@ -1232,7 +1220,6 @@ protected:
       : NodeType(Opc), ValueList(VTs.VTs), NumValues(VTs.NumVTs),
         IROrder(Order), debugLoc(std::move(dl)) {
     memset(&RawSDNodeBits, 0, sizeof(RawSDNodeBits));
-    assert(debugLoc.hasTrivialDestructor() && "Expected trivial destructor");
     assert(NumValues == VTs.NumVTs &&
            "NumValues wasn't wide enough for its operands!");
   }
@@ -1893,6 +1880,12 @@ public:
   /// Return true if the value is positive or negative zero.
   bool isZero() const { return Value->isZero(); }
 
+  /// Return true if the value is positive zero.
+  bool isPosZero() const { return Value->isPosZero(); }
+
+  /// Return true if the value is negative zero.
+  bool isNegZero() const { return Value->isNegZero(); }
+
   /// Return true if the value is a NaN.
   bool isNaN() const { return Value->isNaN(); }
 
@@ -1901,6 +1894,12 @@ public:
 
   /// Return true if the value is negative.
   bool isNegative() const { return Value->isNegative(); }
+
+  /// Returns true if this value is exactly +1.0.
+  bool isOne() const { return Value->isOne(); }
+
+  /// Returns true if this value is exactly -1.0.
+  bool isMinusOne() const { return Value->isMinusOne(); }
 
   /// We don't rely on operator== working on double values, as
   /// it returns true for things that are clearly not equal, like -0.0 and 0.0.

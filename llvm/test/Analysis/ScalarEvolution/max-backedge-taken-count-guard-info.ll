@@ -1334,7 +1334,7 @@ define i32 @ptr_induction_ult_1(ptr %a, ptr %b) {
 ; CHECK-LABEL: 'ptr_induction_ult_1'
 ; CHECK-NEXT:  Classifying expressions for: @ptr_induction_ult_1
 ; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop ], [ %a, %entry ]
-; CHECK-NEXT:    --> {%a,+,4}<nw><%loop> U: full-set S: full-set Exits: %a LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%a,+,4}<nuw><nsw><%loop> U: full-set S: full-set Exits: %a LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %ptr.iv.next = getelementptr i32, ptr %ptr.iv, i64 1
 ; CHECK-NEXT:    --> {(4 + %a),+,4}<nw><%loop> U: full-set S: full-set Exits: (4 + %a) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_ult_1

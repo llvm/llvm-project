@@ -174,24 +174,26 @@ public:
 struct ReplacementIRBuilder
     : IRBuilder<InstSimplifyFolder, IRBuilderCallbackInserter> {
   MDNode *MMRAMD = nullptr;
+  MDNode *PCSectionsMD = nullptr;
 
   // Preserves the DebugLoc from I, and preserves still valid metadata.
   // Enable StrictFP builder mode when appropriate.
   explicit ReplacementIRBuilder(Instruction *I, const DataLayout &DL)
-      : IRBuilder(I->getContext(), InstSimplifyFolder(DL),
-                  IRBuilderCallbackInserter(
-                      [this](Instruction *I) { addMMRAMD(I); })) {
+      : IRBuilder(
+            I->getContext(), InstSimplifyFolder(DL),
+            IRBuilderCallbackInserter([this](Instruction *I) { addMD(I); })) {
     SetInsertPoint(I);
-    this->CollectMetadataToCopy(I, {LLVMContext::MD_pcsections});
     if (BB->getParent()->getAttributes().hasFnAttr(Attribute::StrictFP))
       this->setIsFPConstrained(true);
 
     MMRAMD = I->getMetadata(LLVMContext::MD_mmra);
+    PCSectionsMD = I->getMetadata(LLVMContext::MD_pcsections);
   }
 
-  void addMMRAMD(Instruction *I) {
+  void addMD(Instruction *I) {
     if (canInstructionHaveMMRAs(*I))
       I->setMetadata(LLVMContext::MD_mmra, MMRAMD);
+    I->setMetadata(LLVMContext::MD_pcsections, PCSectionsMD);
   }
 };
 
@@ -673,12 +675,24 @@ bool AtomicExpandImpl::expandAtomicLoadToCmpXchg(LoadInst *LI) {
 
   Value *Addr = LI->getPointerOperand();
   Type *Ty = LI->getType();
-  Constant *DummyVal = Constant::getNullValue(Ty);
 
-  Value *Pair = Builder.CreateAtomicCmpXchg(
+  // cmpxchg supports only integer and pointer operands. If the load type is
+  // FP or vector, run the cmpxchg on the same-sized integer and bitcast the
+  // result back; mirrors createCmpXchgInstFun.
+  bool NeedBitcast = Ty->isFloatingPointTy() || Ty->isVectorTy();
+  Type *CmpXchgTy = Ty;
+  if (NeedBitcast)
+    CmpXchgTy = Builder.getIntNTy(Ty->getPrimitiveSizeInBits());
+  Constant *DummyVal = Constant::getNullValue(CmpXchgTy);
+
+  AtomicCmpXchgInst *Pair = Builder.CreateAtomicCmpXchg(
       Addr, DummyVal, DummyVal, LI->getAlign(), Order,
-      AtomicCmpXchgInst::getStrongestFailureOrdering(Order));
+      AtomicCmpXchgInst::getStrongestFailureOrdering(Order),
+      LI->getSyncScopeID());
+  Pair->setVolatile(LI->isVolatile());
   Value *Loaded = Builder.CreateExtractValue(Pair, 0, "loaded");
+  if (NeedBitcast)
+    Loaded = Builder.CreateBitCast(Loaded, Ty);
 
   LI->replaceAllUsesWith(Loaded);
   LI->eraseFromParent();
@@ -699,7 +713,9 @@ StoreInst *AtomicExpandImpl::convertAtomicStoreToIntegerType(StoreInst *SI) {
   auto *M = SI->getModule();
   Type *NewTy = getCorrespondingIntegerType(SI->getValueOperand()->getType(),
                                             M->getDataLayout());
-  Value *NewVal = Builder.CreateBitCast(SI->getValueOperand(), NewTy);
+  Value *NewVal = SI->getValueOperand()->getType()->isPtrOrPtrVectorTy()
+                      ? Builder.CreatePtrToInt(SI->getValueOperand(), NewTy)
+                      : Builder.CreateBitCast(SI->getValueOperand(), NewTy);
 
   Value *Addr = SI->getPointerOperand();
 
@@ -727,7 +743,8 @@ void AtomicExpandImpl::expandAtomicStoreToXChg(StoreInst *SI) {
                                    : Ordering;
   AtomicRMWInst *AI = Builder.CreateAtomicRMW(
       AtomicRMWInst::Xchg, SI->getPointerOperand(), SI->getValueOperand(),
-      SI->getAlign(), RMWOrdering);
+      SI->getAlign(), RMWOrdering, SI->getSyncScopeID());
+  AI->setVolatile(SI->isVolatile());
   SI->eraseFromParent();
 
   // Now we have an appropriate swap instruction, lower it as usual.
@@ -1142,6 +1159,7 @@ AtomicRMWInst *AtomicExpandImpl::widenPartwordAtomicRMW(AtomicRMWInst *AI) {
       Op, PMV.AlignedAddr, NewOperand, PMV.AlignedAddrAlignment,
       AI->getOrdering(), AI->getSyncScopeID());
 
+  NewAI->setVolatile(AI->isVolatile());
   copyMetadataForAtomic(*NewAI, *AI);
 
   Value *FinalOldResult = extractMaskedValue(Builder, NewAI, PMV);
@@ -1699,6 +1717,8 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
 }
 
 bool AtomicExpandImpl::isIdempotentRMW(AtomicRMWInst *RMWI) {
+  if (RMWI->isVolatile())
+    return false;
   // TODO: Add floating point support.
   auto C = dyn_cast<ConstantInt>(RMWI->getValOperand());
   if (!C)
@@ -2175,7 +2195,7 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
   if (ValueOperand) {
     if (UseSizedLibcall) {
       Value *IntValue =
-          Builder.CreateBitOrPointerCast(ValueOperand, SizedIntTy);
+          Builder.CreateBitPreservingCastChain(DL, ValueOperand, SizedIntTy);
       Args.push_back(IntValue);
     } else {
       AllocaValue = AllocaBuilder.CreateAlloca(ValueOperand->getType());

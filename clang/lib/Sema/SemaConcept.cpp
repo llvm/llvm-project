@@ -381,6 +381,10 @@ public:
     return true;
   }
 
+  bool TraverseCXXThisExpr(CXXThisExpr *E) {
+    return inherited::TraverseType(E->getType());
+  }
+
   bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier = true) {
     // We don't care about TypeLocs. So traverse Types instead.
     return TraverseType(TL.getType().getCanonicalType(), TraverseQualifier);
@@ -397,6 +401,16 @@ public:
     // FIXME: Add an assert to catch cases where we failed to profile the
     // concept.
     return true;
+  }
+
+  bool TraverseUnresolvedUsingType(UnresolvedUsingType *T,
+                                   bool TraverseQualifier) {
+    // Sometimes the written type doesn't contain a qualifier which contains
+    // necessary template arguments, whereas the declaration does.
+    if (NestedNameSpecifier NNS = T->getDecl()->getQualifier();
+        TraverseQualifier && NNS)
+      return inherited::TraverseNestedNameSpecifier(NNS);
+    return inherited::TraverseUnresolvedUsingType(T, TraverseQualifier);
   }
 
   bool TraverseInjectedClassNameType(InjectedClassNameType *T,
@@ -732,8 +746,17 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
   // i.e they should not have access to the current class object or its
   // non-public members.
   std::optional<Sema::ContextRAII> ConceptContext;
-  if (ParentConcept)
+  if (ParentConcept) {
     ConceptContext.emplace(S, ParentConcept->getDeclContext());
+    // FIXME: the evaluation context should learn to track template arguments
+    // separately from a Decl.
+    EvaluationContext.emplace(
+        S, Sema::ExpressionEvaluationContext::ConstantEvaluated,
+        /*LambdaContextDecl=*/
+        ImplicitConceptSpecializationDecl::Create(
+            S.Context, ParentConcept->getDeclContext(),
+            ParentConcept->getBeginLoc(), SubstitutedOutermost));
+  }
 
   Sema::ArgPackSubstIndexRAII SubstIndex(S, PackSubstitutionIndex);
   ExprResult SubstitutedAtomicExpr = EvaluateAtomicConstraint(
@@ -2296,14 +2319,6 @@ bool SubstituteParameterMappings::substitute(NormalizedConstraint &N) {
     }
     assert(!ArgsAsWritten);
     const ConceptSpecializationExpr *CSE = CC.getConceptSpecializationExpr();
-    // Make sure that lambdas within template arguments live in a
-    // dependent context such that they are assured to be transformed during
-    // constraint evaluation.
-    EnterExpressionEvaluationContext EECtx(
-        SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated,
-        /*LambdaContextDecl=*/
-        const_cast<ImplicitConceptSpecializationDecl *>(
-            CSE->getSpecializationDecl()));
     SmallVector<TemplateArgument> InnerArgs(CSE->getTemplateArguments());
     ConceptDecl *Concept = CSE->getNamedConcept();
     if (RemovePacksForFoldExpr) {

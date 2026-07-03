@@ -37,24 +37,28 @@
 using namespace llvm;
 using namespace object;
 
-const EnumEntry<unsigned> llvm::object::ElfSymbolTypes[NumElfSymbolTypes] = {
-    {"None", "NOTYPE", ELF::STT_NOTYPE},
-    {"Object", "OBJECT", ELF::STT_OBJECT},
-    {"Function", "FUNC", ELF::STT_FUNC},
-    {"Section", "SECTION", ELF::STT_SECTION},
-    {"File", "FILE", ELF::STT_FILE},
-    {"Common", "COMMON", ELF::STT_COMMON},
-    {"TLS", "TLS", ELF::STT_TLS},
-    {"Unknown", "<unknown>: 7", 7},
-    {"Unknown", "<unknown>: 8", 8},
-    {"Unknown", "<unknown>: 9", 9},
-    {"GNU_IFunc", "IFUNC", ELF::STT_GNU_IFUNC},
-    {"OS Specific", "<OS specific>: 11", 11},
-    {"OS Specific", "<OS specific>: 12", 12},
-    {"Proc Specific", "<processor specific>: 13", 13},
-    {"Proc Specific", "<processor specific>: 14", 14},
-    {"Proc Specific", "<processor specific>: 15", 15}
-};
+EnumStrings<uint8_t, 2> llvm::object::getElfSymbolTypes() {
+  constexpr EnumStringDef<uint8_t, 2> ElfSymbolTypeDefs[] = {
+      {{"None", "NOTYPE"}, ELF::STT_NOTYPE},
+      {{"Object", "OBJECT"}, ELF::STT_OBJECT},
+      {{"Function", "FUNC"}, ELF::STT_FUNC},
+      {{"Section", "SECTION"}, ELF::STT_SECTION},
+      {{"File", "FILE"}, ELF::STT_FILE},
+      {{"Common", "COMMON"}, ELF::STT_COMMON},
+      {{"TLS", "TLS"}, ELF::STT_TLS},
+      {{"Unknown", "<unknown>: 7"}, 7},
+      {{"Unknown", "<unknown>: 8"}, 8},
+      {{"Unknown", "<unknown>: 9"}, 9},
+      {{"GNU_IFunc", "IFUNC"}, ELF::STT_GNU_IFUNC},
+      {{"OS Specific", "<OS specific>: 11"}, 11},
+      {{"OS Specific", "<OS specific>: 12"}, 12},
+      {{"Proc Specific", "<processor specific>: 13"}, 13},
+      {{"Proc Specific", "<processor specific>: 14"}, 14},
+      {{"Proc Specific", "<processor specific>: 15"}, 15},
+  };
+  static constexpr auto ElfSymbolTypes = BUILD_ENUM_STRINGS(ElfSymbolTypeDefs);
+  return ElfSymbolTypes;
+}
 
 ELFObjectFileBase::ELFObjectFileBase(unsigned int Type, MemoryBufferRef Source)
     : ObjectFile(Type, Source) {}
@@ -287,37 +291,8 @@ SubtargetFeatures ELFObjectFileBase::getARMFeatures() const {
   return Features;
 }
 
-static std::optional<std::string> hexagonAttrToFeatureString(unsigned Attr) {
-  switch (Attr) {
-  case 5:
-    return "v5";
-  case 55:
-    return "v55";
-  case 60:
-    return "v60";
-  case 62:
-    return "v62";
-  case 65:
-    return "v65";
-  case 67:
-    return "v67";
-  case 68:
-    return "v68";
-  case 69:
-    return "v69";
-  case 71:
-    return "v71";
-  case 73:
-    return "v73";
-  case 75:
-    return "v75";
-  case 79:
-    return "v79";
-  case 81:
-    return "v81";
-  default:
-    return {};
-  }
+static std::string hexagonAttrToFeatureString(unsigned Attr) {
+  return "v" + utostr(Attr);
 }
 
 SubtargetFeatures ELFObjectFileBase::getHexagonFeatures() const {
@@ -331,19 +306,11 @@ SubtargetFeatures ELFObjectFileBase::getHexagonFeatures() const {
   }
   std::optional<unsigned> Attr;
 
-  if ((Attr = Parser.getAttributeValue(HexagonAttrs::ARCH))) {
-    if (std::optional<std::string> FeatureString =
-            hexagonAttrToFeatureString(*Attr))
-      Features.AddFeature(*FeatureString);
-  }
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::ARCH)))
+    Features.AddFeature(hexagonAttrToFeatureString(*Attr));
 
-  if ((Attr = Parser.getAttributeValue(HexagonAttrs::HVXARCH))) {
-    std::optional<std::string> FeatureString =
-        hexagonAttrToFeatureString(*Attr);
-    // There is no corresponding hvx arch for v5 and v55.
-    if (FeatureString && *Attr >= 60)
-      Features.AddFeature("hvx" + *FeatureString);
-  }
+  if ((Attr = Parser.getAttributeValue(HexagonAttrs::HVXARCH)))
+    Features.AddFeature("hvx" + hexagonAttrToFeatureString(*Attr));
 
   if ((Attr = Parser.getAttributeValue(HexagonAttrs::HVXIEEEFP)))
     if (*Attr)

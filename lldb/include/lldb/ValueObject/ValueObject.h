@@ -454,14 +454,14 @@ public:
   /// Update an existing integer ValueObject with a new integer value. If
   /// can_update_var is true, will allow updating objects associated with
   /// program variables; otherwise not.
-  void SetValueFromInteger(const llvm::APInt &value, Status &error,
-                           bool can_update_var = true);
+  llvm::Error SetValueFromInteger(const llvm::APInt &value,
+                                  bool can_update_var = true);
 
   /// Update an existing integer ValueObject with an integer value created
   /// frome 'new_val_sp'. If can_update_var is true, will allow updating objects
   /// associated with program variables; otherwise not.
-  void SetValueFromInteger(lldb::ValueObjectSP new_val_sp, Status &error,
-                           bool can_update_var = true);
+  llvm::Error SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
+                                  bool can_update_var = true);
 
   virtual bool SetValueFromCString(const char *value_str, Status &error);
 
@@ -569,7 +569,7 @@ public:
   /// Change the name of the current ValueObject. Should *not* be used from a
   /// synthetic child provider as it would change the name of the non synthetic
   /// child as well.
-  void SetName(ConstString name) { m_name = name; }
+  void SetName(llvm::StringRef name) { m_name = ConstString(name); }
 
   struct AddrAndType {
     lldb::addr_t address = LLDB_INVALID_ADDRESS;
@@ -628,7 +628,7 @@ public:
   /// ValueObject as its parent. It should be used when we want to change the
   /// name of a ValueObject without modifying the actual ValueObject itself
   /// (e.g. sythetic child provider).
-  virtual lldb::ValueObjectSP Clone(ConstString new_name);
+  virtual lldb::ValueObjectSP Clone(llvm::StringRef new_name);
 
   virtual lldb::ValueObjectSP AddressOf(Status &error);
 
@@ -913,9 +913,15 @@ public:
   // update itself then use m_parent.  The ValueObjectDynamicValue's parent is
   // not the correct parent for displaying, they are really siblings, so for
   // display it needs to route through to its grandparent.
-  virtual ValueObject *GetParent() { return m_parent; }
+  virtual ValueObject *GetParent() {
+    return m_logical_parent ? m_logical_parent : m_parent;
+  }
 
-  virtual const ValueObject *GetParent() const { return m_parent; }
+  virtual const ValueObject *GetParent() const {
+    return m_logical_parent ? m_logical_parent : m_parent;
+  }
+
+  void SetLogicalParent(ValueObject *parent) { m_logical_parent = parent; }
 
   ValueObject *GetNonBaseClassParent();
 
@@ -1045,6 +1051,10 @@ protected:
 
   /// The parent value object, or nullptr if this has no parent.
   ValueObject *m_parent = nullptr;
+  /// The parent to report from GetParent() when m_parent does not reflect the
+  /// "display" (i.e logical) parent. Used for synthetic children whose logical
+  /// parent is the synthetic ValueObject. See also GetParent().
+  ValueObject *m_logical_parent = nullptr;
   /// The root of the hierarchy for this ValueObject (or nullptr if never
   /// calculated).
   ValueObject *m_root = nullptr;

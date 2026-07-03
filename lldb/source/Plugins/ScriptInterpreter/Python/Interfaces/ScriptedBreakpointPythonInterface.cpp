@@ -9,6 +9,7 @@
 #include "../lldb-python.h"
 
 #include "lldb/Breakpoint/Breakpoint.h"
+#include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/BreakpointResolverScripted.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -30,10 +31,9 @@ ScriptedBreakpointPythonInterface::ScriptedBreakpointPythonInterface(
 
 llvm::Expected<StructuredData::GenericSP>
 ScriptedBreakpointPythonInterface::CreatePluginObject(
-    llvm::StringRef class_name, lldb::BreakpointSP break_sp,
-    const StructuredDataImpl &args_sp) {
-  return ScriptedPythonInterface::CreatePluginObject(class_name, nullptr,
-                                                     break_sp, args_sp);
+    const ScriptedMetadata &scripted_metadata, lldb::BreakpointSP break_sp) {
+  return ScriptedPythonInterface::CreatePluginObject(
+      scripted_metadata, nullptr, break_sp, scripted_metadata.GetArgsSP());
 }
 
 bool ScriptedBreakpointPythonInterface::OverridesResolver(

@@ -17,7 +17,7 @@ gpu.module @dpas_mx_bf8 [#xevm.target<chip = "cri">] {
     // CHECK-SAME: {shape = <m = 8, n = 16, k = 32>, types = <d = f32, a = bf8, b = bf8, c = f32>}
     // CHECK-SAME: : (vector<16xi8>, vector<32xi8>, i8, i8, vector<8xf32>) -> vector<8xf32>
     %res = xegpu.dpas_mx %a, %b, %acc scale_a = %scale_a scale_b = %scale_b :
-        vector<16xf8E5M2>, vector<32xf8E5M2>, vector<8xf32>, vector<1xf8E8M0FNU>, vector<1xf8E8M0FNU> -> vector<8xf32>
+        (vector<16xf8E5M2>, vector<32xf8E5M2>, vector<8xf32>, vector<1xf8E8M0FNU>, vector<1xf8E8M0FNU>) -> vector<8xf32>
     gpu.return
   }
 }
@@ -41,7 +41,7 @@ gpu.module @dpas_mx_f8 [#xevm.target<chip = "cri">] {
     // CHECK-SAME: {shape = <m = 8, n = 16, k = 32>, types = <d = f32, a = f8, b = f8, c = f32>}
     // CHECK-SAME: : (vector<16xi8>, vector<32xi8>, i8, i8, vector<8xf32>) -> vector<8xf32>
     %res = xegpu.dpas_mx %a, %b, %acc scale_a = %scale_a scale_b = %scale_b :
-        vector<16xf8E4M3FN>, vector<32xf8E4M3FN>, vector<8xf32>, vector<1xf8E8M0FNU>, vector<1xf8E8M0FNU> -> vector<8xf32>
+        (vector<16xf8E4M3FN>, vector<32xf8E4M3FN>, vector<8xf32>, vector<1xf8E8M0FNU>, vector<1xf8E8M0FNU>) -> vector<8xf32>
     gpu.return
   }
 }
@@ -65,7 +65,7 @@ gpu.module @dpas_mx_e2m1 [#xevm.target<chip = "cri">] {
     // CHECK-SAME: {shape = <m = 8, n = 16, k = 64>, types = <d = f32, a = e2m1, b = e2m1, c = f32>}
     // CHECK-SAME: : (vector<16xi8>, vector<32xi8>, vector<2xi8>, vector<2xi8>, vector<8xf32>) -> vector<8xf32>
     %res = xegpu.dpas_mx %a, %b, %acc scale_a = %scale_a scale_b = %scale_b :
-        vector<32xf4E2M1FN>, vector<64xf4E2M1FN>, vector<8xf32>, vector<2xf8E8M0FNU>, vector<2xf8E8M0FNU> -> vector<8xf32>
+        (vector<32xf4E2M1FN>, vector<64xf4E2M1FN>, vector<8xf32>, vector<2xf8E8M0FNU>, vector<2xf8E8M0FNU>) -> vector<8xf32>
     gpu.return
   }
 }
@@ -79,7 +79,7 @@ gpu.module @dpas_mx_no_acc [#xevm.target<chip = "cri">] {
     // CHECK: %[[ACC:.*]] = arith.constant dense<0.000000e+00> : vector<8xf32>
     // CHECK: %{{.*}} = xevm.mma_mx %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[ACC]]
     %res = xegpu.dpas_mx %a, %b scale_a = %scale_a scale_b = %scale_b :
-        vector<32xf4E2M1FN>, vector<64xf4E2M1FN>, vector<8xf32>, vector<2xf8E8M0FNU>, vector<2xf8E8M0FNU> -> vector<8xf32>
+        (vector<32xf4E2M1FN>, vector<64xf4E2M1FN>, vector<2xf8E8M0FNU>, vector<2xf8E8M0FNU>) -> vector<8xf32>
     gpu.return
   }
 }

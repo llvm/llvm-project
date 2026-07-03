@@ -87,10 +87,16 @@ private:
     hlfir::DestroyOp destroy;
   };
   /// determines if the transformation can be applied to this elemental
-  static std::optional<MatchInfo> findMatch(hlfir::ElementalOp elemental);
+  std::optional<MatchInfo> findMatch(hlfir::ElementalOp elemental) const;
+
+  mlir::AliasAnalysis &aliasAnalysis;
 
 public:
   using mlir::OpRewritePattern<hlfir::ElementalOp>::OpRewritePattern;
+
+  ElementalAssignBufferization(mlir::MLIRContext *ctx,
+                               mlir::AliasAnalysis &aliasAnalysis)
+      : OpRewritePattern{ctx}, aliasAnalysis{aliasAnalysis} {}
 
   llvm::LogicalResult
   matchAndRewrite(hlfir::ElementalOp elemental,
@@ -122,17 +128,75 @@ getEffectsBetween(mlir::Operation *start, mlir::Operation *end) {
   return ret;
 }
 
+/// Given two sets of memory effects checks if they contain
+/// conflicting effects on overlapping non-addressable resources.
+/// Only read-read effects are not conflicting.
+/// If any of the given sets is std::nullopt, the result is true.
+static bool haveNonAddressableEffectsConflict(
+    const std::optional<mlir::SmallVector<mlir::MemoryEffects::EffectInstance>>
+        &effects1,
+    const std::optional<mlir::SmallVector<mlir::MemoryEffects::EffectInstance>>
+        &effects2) {
+  if (!effects1 || !effects2)
+    return true;
+  auto splitEffects =
+      [](const mlir::SmallVector<mlir::MemoryEffects::EffectInstance> &effects)
+      -> std::pair<llvm::SmallPtrSet<mlir::SideEffects::Resource *, 4>,
+                   llvm::SmallPtrSet<mlir::SideEffects::Resource *, 4>> {
+    llvm::SmallPtrSet<mlir::SideEffects::Resource *, 4> reads;
+    llvm::SmallPtrSet<mlir::SideEffects::Resource *, 4> others;
+    for (const mlir::MemoryEffects::EffectInstance &effect : effects) {
+      mlir::SideEffects::Resource *resource = effect.getResource();
+      if (!resource->isAddressable()) {
+        if (mlir::isa<mlir::MemoryEffects::Read>(effect.getEffect()))
+          reads.insert(resource);
+        else
+          others.insert(resource);
+      }
+    }
+    return {std::move(reads), std::move(others)};
+  };
+  auto [reads1, others1] = splitEffects(*effects1);
+  auto [reads2, others2] = splitEffects(*effects2);
+
+  auto accessSameResource =
+      [](const llvm::SmallPtrSetImpl<mlir::SideEffects::Resource *> &set1,
+         const llvm::SmallPtrSetImpl<mlir::SideEffects::Resource *> &set2) {
+        if (set1.empty() || set2.empty())
+          return false;
+        for (const auto *r1 : set1) {
+          for (const auto *r2 : set2) {
+            if (!r1->isDisjointFrom(r2)) {
+              LLVM_DEBUG(llvm::dbgs()
+                         << "resources " << r1->getName() << " and "
+                         << r2->getName() << " are not disjoint\n");
+              return true;
+            }
+          }
+        }
+        return false;
+      };
+  if (accessSameResource(reads1, others2) ||
+      accessSameResource(reads2, others1) ||
+      accessSameResource(others1, others2)) {
+    LLVM_DEBUG(
+        llvm::dbgs()
+        << "conflicting effects on overlapping non-addressable resources\n");
+    return true;
+  }
+  return false;
+}
+
 /// If effect is a read or write on val, return whether it aliases.
 /// Otherwise return mlir::AliasResult::NoAlias
 static mlir::AliasResult
 containsReadOrWriteEffectOn(const mlir::MemoryEffects::EffectInstance &effect,
-                            mlir::Value val) {
-  fir::AliasAnalysis aliasAnalysis;
-
+                            mlir::Value val,
+                            mlir::AliasAnalysis &aliasAnalysis) {
   if (mlir::isa<mlir::MemoryEffects::Read, mlir::MemoryEffects::Write>(
           effect.getEffect())) {
     mlir::Value accessedVal = effect.getValue();
-    if (mlir::isa<fir::DebuggingResource>(effect.getResource()))
+    if (!effect.getResource()->isAddressable())
       return mlir::AliasResult::NoAlias;
     if (!accessedVal)
       return mlir::AliasResult::MayAlias;
@@ -162,7 +226,7 @@ containsReadOrWriteEffectOn(const mlir::MemoryEffects::EffectInstance &effect,
 }
 
 std::optional<ElementalAssignBufferization::MatchInfo>
-ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
+ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) const {
   mlir::Operation::user_range users = elemental->getUsers();
   // the only uses of the elemental should be the assignment and the destroy
   if (std::distance(users.begin(), users.end()) != 2) {
@@ -236,17 +300,29 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
   mlir::SmallVector<mlir::Value, 1> notToBeWrittenBeforeAssign;
 
   // 1) side effects in the elemental body - it isn't sufficient to just look
-  // for ordered elementals because we also cannot support out of order reads
+  // for ordered elementals because we also cannot support out of order reads.
+  // We can use mlir::getEffectsRecursively(), because the hlfir.elemental's
+  // MemAlloc effect will effectively be ignored below.
   std::optional<mlir::SmallVector<mlir::MemoryEffects::EffectInstance>>
-      effects = getEffectsBetween(&elemental.getBody()->front(),
-                                  elemental.getBody()->getTerminator());
-  if (!effects) {
+      elementalEffects = mlir::getEffectsRecursively(elemental);
+  if (!elementalEffects) {
     LLVM_DEBUG(llvm::dbgs()
                << "operation with unknown effects inside elemental\n");
     return std::nullopt;
   }
-  for (const mlir::MemoryEffects::EffectInstance &effect : *effects) {
-    mlir::AliasResult res = containsReadOrWriteEffectOn(effect, match.array);
+  std::optional<mlir::SmallVector<mlir::MemoryEffects::EffectInstance>>
+      assignEffects = mlir::getEffectsRecursively(match.assign);
+  if (haveNonAddressableEffectsConflict(elementalEffects, assignEffects)) {
+    LLVM_DEBUG(llvm::dbgs() << "the elemental and assign have conflicting "
+                               "effects on non-addressable resources\n");
+    return std::nullopt;
+  }
+
+  for (const mlir::MemoryEffects::EffectInstance &effect : *elementalEffects) {
+    // TODO: we should probably use AliasAnalysis::getModRef() here,
+    // because it might be more precise in identifying no aliases.
+    mlir::AliasResult res =
+        containsReadOrWriteEffectOn(effect, match.array, aliasAnalysis);
     if (res.isNo()) {
       if (effect.getValue()) {
         if (mlir::isa<mlir::MemoryEffects::Write>(effect.getEffect()))
@@ -310,18 +386,48 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
   }
 
   // 2) look for conflicting effects between the elemental and the assignment
-  effects = getEffectsBetween(elemental->getNextNode(), match.assign);
+  std::optional<mlir::SmallVector<mlir::MemoryEffects::EffectInstance>>
+      effects = getEffectsBetween(elemental->getNextNode(), match.assign);
   if (!effects) {
     LLVM_DEBUG(
         llvm::dbgs()
         << "operation with unknown effects between elemental and assign\n");
     return std::nullopt;
   }
+  if (haveNonAddressableEffectsConflict(elementalEffects, effects)) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "the elemental and an operation between elemental and assign "
+                  "have conflicting effects on non-addressable resources\n");
+    return std::nullopt;
+  }
   for (const mlir::MemoryEffects::EffectInstance &effect : *effects) {
+    // A deallocation between the elemental and the assignment would invalidate
+    // memory accessed by the elemental once its evaluation is moved down to the
+    // assignment. containsReadOrWriteEffectOn only covers Read/Write effects,
+    // so MemoryEffects::Free is checked explicitly here.
+    if (mlir::isa<mlir::MemoryEffects::Free>(effect.getEffect())) {
+      mlir::Value freed = effect.getValue();
+      auto mayAccessFreed = [&](llvm::ArrayRef<mlir::Value> vals) {
+        if (!freed)
+          return true; // unknown freed memory - be conservative
+        for (mlir::Value val : vals)
+          if (!aliasAnalysis.alias(val, freed).isNo())
+            return true;
+        return false;
+      };
+      if (mayAccessFreed(notToBeWrittenBeforeAssign) ||
+          mayAccessFreed(notToBeAccessedBeforeAssign)) {
+        LLVM_DEBUG(llvm::dbgs()
+                   << "disallowed deallocation between elemental and assign: "
+                   << freed << " for " << elemental.getLoc() << "\n");
+        return std::nullopt;
+      }
+    }
     // not safe to access anything written in the elemental as this write
     // will be moved to the assignment
     for (mlir::Value val : notToBeAccessedBeforeAssign) {
-      mlir::AliasResult res = containsReadOrWriteEffectOn(effect, val);
+      mlir::AliasResult res =
+          containsReadOrWriteEffectOn(effect, val, aliasAnalysis);
       if (!res.isNo()) {
         LLVM_DEBUG(llvm::dbgs()
                    << "disallowed side-effect: " << effect.getValue() << " for "
@@ -332,7 +438,8 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
     // Anything that is read inside the elemental can only be safely read
     // between the elemental and the assignment.
     for (mlir::Value val : notToBeWrittenBeforeAssign) {
-      mlir::AliasResult res = containsReadOrWriteEffectOn(effect, val);
+      mlir::AliasResult res =
+          containsReadOrWriteEffectOn(effect, val, aliasAnalysis);
       if (!res.isNo() &&
           !mlir::isa<mlir::MemoryEffects::Read>(effect.getEffect())) {
         LLVM_DEBUG(llvm::dbgs()
@@ -512,26 +619,48 @@ class EvaluateIntoMemoryAssignBufferization
 public:
   using mlir::OpRewritePattern<hlfir::EvaluateInMemoryOp>::OpRewritePattern;
 
+  EvaluateIntoMemoryAssignBufferization(mlir::MLIRContext *ctx,
+                                        mlir::AliasAnalysis &aliasAnalysis)
+      : OpRewritePattern{ctx}, aliasAnalysis{aliasAnalysis} {}
+
   llvm::LogicalResult
   matchAndRewrite(hlfir::EvaluateInMemoryOp,
                   mlir::PatternRewriter &rewriter) const override;
+
+private:
+  mlir::AliasAnalysis &aliasAnalysis;
 };
 
 static llvm::LogicalResult
 tryUsingAssignLhsDirectly(hlfir::EvaluateInMemoryOp evalInMem,
-                          mlir::PatternRewriter &rewriter) {
+                          mlir::PatternRewriter &rewriter,
+                          mlir::AliasAnalysis &aliasAnalysis) {
   mlir::Location loc = evalInMem.getLoc();
   hlfir::DestroyOp destroy;
   hlfir::AssignOp assign;
-  for (auto user : llvm::enumerate(evalInMem->getUsers())) {
-    if (user.index() > 2)
+  // To evaluate the hlfir.eval_in_mem directly into the LHS, its result must
+  // only be used in the assignment, in a destroy, and in hlfir.shape_of (which
+  // can be replaced by a direct use of the shape operand).
+  llvm::SmallVector<hlfir::ShapeOfOp> shapeOfs;
+  for (mlir::Operation *user : evalInMem->getUsers()) {
+    if (auto op = mlir::dyn_cast<hlfir::AssignOp>(user)) {
+      if (assign)
+        return mlir::failure();
+      assign = op;
+    } else if (auto op = mlir::dyn_cast<hlfir::DestroyOp>(user)) {
+      if (destroy)
+        return mlir::failure();
+      destroy = op;
+    } else if (auto op = mlir::dyn_cast<hlfir::ShapeOfOp>(user)) {
+      shapeOfs.push_back(op);
+    } else {
       return mlir::failure();
-    mlir::TypeSwitch<mlir::Operation *, void>(user.value())
-        .Case([&](hlfir::AssignOp op) { assign = op; })
-        .Case([&](hlfir::DestroyOp op) { destroy = op; });
+    }
   }
   if (!assign || !destroy || destroy.mustFinalizeExpr() ||
       assign.isAllocatableAssignment())
+    return mlir::failure();
+  if (!shapeOfs.empty() && !evalInMem.getShape())
     return mlir::failure();
 
   hlfir::Entity lhs{assign.getLhs()};
@@ -544,7 +673,6 @@ tryUsingAssignLhsDirectly(hlfir::EvaluateInMemoryOp evalInMem,
   // RHS lengths are the same.
   if (lhs.isCharacter())
     return mlir::failure();
-  fir::AliasAnalysis aliasAnalysis;
   // The region must not read or write the LHS.
   // Note that getModRef is used instead of mlir::MemoryEffects because
   // EvaluateInMemoryOp is typically expected to hold fir.calls and that
@@ -554,7 +682,7 @@ tryUsingAssignLhsDirectly(hlfir::EvaluateInMemoryOp evalInMem,
   // hence getModRef is needed here and below. Also note that getModRef uses
   // mlir::MemoryEffects for operations that do not have special handling in
   // getModRef.
-  if (aliasAnalysis.getModRef(evalInMem.getBody(), lhs).isModOrRef())
+  if (aliasAnalysis.getModRef(evalInMem, lhs).isModOrRef())
     return mlir::failure();
   // Any variables affected between the hlfir.evalInMem and assignment must not
   // be read or written inside the region since it will be moved at the
@@ -568,8 +696,7 @@ tryUsingAssignLhsDirectly(hlfir::EvaluateInMemoryOp evalInMem,
   }
   for (const mlir::MemoryEffects::EffectInstance &effect : *effects) {
     mlir::Value affected = effect.getValue();
-    if (!affected ||
-        aliasAnalysis.getModRef(evalInMem.getBody(), affected).isModOrRef())
+    if (!affected || aliasAnalysis.getModRef(evalInMem, affected).isModOrRef())
       return mlir::failure();
   }
 
@@ -577,6 +704,10 @@ tryUsingAssignLhsDirectly(hlfir::EvaluateInMemoryOp evalInMem,
   fir::FirOpBuilder builder(rewriter, evalInMem.getOperation());
   mlir::Value rawLhs = hlfir::genVariableRawAddress(loc, builder, lhs);
   hlfir::computeEvaluateOpIn(loc, builder, evalInMem, rawLhs);
+  // Redirect shape_of users to the shape operand so the eval_in_mem can be
+  // erased without leaving dangling uses.
+  for (hlfir::ShapeOfOp shapeOf : shapeOfs)
+    rewriter.replaceOp(shapeOf, evalInMem.getShape());
   rewriter.eraseOp(assign);
   rewriter.eraseOp(destroy);
   rewriter.eraseOp(evalInMem);
@@ -586,7 +717,8 @@ tryUsingAssignLhsDirectly(hlfir::EvaluateInMemoryOp evalInMem,
 llvm::LogicalResult EvaluateIntoMemoryAssignBufferization::matchAndRewrite(
     hlfir::EvaluateInMemoryOp evalInMem,
     mlir::PatternRewriter &rewriter) const {
-  if (mlir::succeeded(tryUsingAssignLhsDirectly(evalInMem, rewriter)))
+  if (mlir::succeeded(
+          tryUsingAssignLhsDirectly(evalInMem, rewriter, aliasAnalysis)))
     return mlir::success();
   // Rewrite to temp + as_expr here so that the assign + as_expr pattern can
   // kick-in for simple types and at least implement the assignment inline
@@ -605,6 +737,9 @@ class OptimizedBufferizationPass
           OptimizedBufferizationPass> {
 public:
   void runOnOperation() override {
+    auto &aliasAnalysis = getAnalysis<mlir::AliasAnalysis>();
+    aliasAnalysis.addAnalysisImplementation(fir::AliasAnalysis{});
+
     mlir::MLIRContext *context = &getContext();
 
     mlir::GreedyRewriteConfig config;
@@ -619,9 +754,10 @@ public:
     // at one place (e.g. we may use some heuristics and
     // choose different optimization strategies).
     // This requires small code reordering in ElementalAssignBufferization.
-    patterns.insert<ElementalAssignBufferization>(context);
+    patterns.insert<ElementalAssignBufferization>(context, aliasAnalysis);
     patterns.insert<BroadcastAssignBufferization>(context);
-    patterns.insert<EvaluateIntoMemoryAssignBufferization>(context);
+    patterns.insert<EvaluateIntoMemoryAssignBufferization>(context,
+                                                           aliasAnalysis);
 
     if (mlir::failed(mlir::applyPatternsGreedily(
             getOperation(), std::move(patterns), config))) {

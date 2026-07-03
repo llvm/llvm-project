@@ -1065,9 +1065,7 @@ void JITDylib::removeFromLinkOrder(JITDylib &JD) {
 Error JITDylib::remove(const SymbolNameSet &Names) {
   return ES.runSessionLocked([&]() -> Error {
     assert(State == Open && "JD is defunct");
-    using SymbolMaterializerItrPair =
-        std::pair<SymbolTable::iterator, UnmaterializedInfosMap::iterator>;
-    std::vector<SymbolMaterializerItrPair> SymbolsToRemove;
+    SmallVector<SymbolStringPtr, 0> SymbolsToRemove;
     SymbolNameSet Missing;
     SymbolNameSet Materializing;
 
@@ -1087,10 +1085,7 @@ Error JITDylib::remove(const SymbolNameSet &Names) {
         continue;
       }
 
-      auto UMII = I->second.hasMaterializerAttached()
-                      ? UnmaterializedInfos.find(Name)
-                      : UnmaterializedInfos.end();
-      SymbolsToRemove.push_back(std::make_pair(I, UMII));
+      SymbolsToRemove.push_back(Name);
     }
 
     // If any of the symbols are not defined, return an error.
@@ -1103,18 +1098,18 @@ Error JITDylib::remove(const SymbolNameSet &Names) {
       return make_error<SymbolsCouldNotBeRemoved>(ES.getSymbolStringPool(),
                                                   std::move(Materializing));
 
-    // Remove the symbols.
-    for (auto &SymbolMaterializerItrPair : SymbolsToRemove) {
-      auto UMII = SymbolMaterializerItrPair.second;
-
+    // Remove the symbols. Erase by key rather than holding iterators across the
+    // loop: a prior erase invalidates other stored iterators under
+    // backward-shift deletion.
+    for (const SymbolStringPtr &Name : SymbolsToRemove) {
       // If there is a materializer attached, call discard.
+      auto UMII = UnmaterializedInfos.find(Name);
       if (UMII != UnmaterializedInfos.end()) {
         UMII->second->MU->doDiscard(*this, UMII->first);
         UnmaterializedInfos.erase(UMII);
       }
 
-      auto SymI = SymbolMaterializerItrPair.first;
-      Symbols.erase(SymI);
+      Symbols.erase(Name);
     }
 
     shrinkMaterializationInfoMemory();

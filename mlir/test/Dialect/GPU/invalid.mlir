@@ -20,12 +20,26 @@ func.func @not_enough_sizes(%sz : index) {
 // -----
 
 func.func @no_region_attrs(%sz : index) {
-  // expected-error@+1 {{unexpected number of region arguments}}
+  // expected-error@+1 {{expected at least 12 region arguments, but got 6}}
   "gpu.launch"(%sz, %sz, %sz, %sz, %sz, %sz) ({
   ^bb1(%bx: index, %by: index, %bz: index,
        %tx: index, %ty: index, %tz: index):
     gpu.terminator
   }) {operandSegmentSizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0>} : (index, index, index, index, index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @not_enough_cluster_region_attrs(%sz : index) {
+  // expected-error@+1 {{expected at least 18 region arguments, but got 12}}
+  "gpu.launch"(%sz, %sz, %sz, %sz, %sz, %sz, %sz, %sz, %sz) ({
+  ^bb1(%bx: index, %by: index, %bz: index,
+       %tx: index, %ty: index, %tz: index,
+       %sbx: index, %sby: index, %sbz: index,
+       %stx: index, %sty: index, %stz: index):
+    gpu.terminator
+  }) {operandSegmentSizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0>} : (index, index, index, index, index, index, index, index, index) -> ()
   return
 }
 

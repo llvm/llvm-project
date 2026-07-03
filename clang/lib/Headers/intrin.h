@@ -377,6 +377,9 @@ static __inline__ void __DEFAULT_FN_ATTRS __nop(void) {
 \*----------------------------------------------------------------------------*/
 #if defined(__aarch64__) || defined(__arm64ec__)
 unsigned __int64 __getReg(int);
+double __getRegFp(int _Reg);
+void __setReg(int, unsigned __int64);
+void __setRegFp(int, double);
 unsigned char _interlockedbittestandreset_acq(long volatile *, long);
 unsigned char _interlockedbittestandreset_nf(long volatile *, long);
 unsigned char _interlockedbittestandreset_rel(long volatile *, long);
@@ -441,10 +444,13 @@ unsigned int _CountLeadingSigns(long);
 unsigned int _CountLeadingSigns64(__int64);
 unsigned int _CountOneBits(unsigned long);
 unsigned int _CountOneBits64(unsigned __int64);
+unsigned int _CountTrailingZeros(unsigned long);
+unsigned int _CountTrailingZeros64(unsigned __int64);
 
 unsigned int __hlt(unsigned int, ...);
 
 void __cdecl __prefetch(const void *);
+void __cdecl __prefetch2(const void *, unsigned char);
 
 #endif
 

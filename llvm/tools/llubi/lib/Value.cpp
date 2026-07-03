@@ -16,23 +16,43 @@
 
 namespace llvm::ubi {
 
+IntrusiveRefCntPtr<Provenance> Provenance::nullary() {
+  static IntrusiveRefCntPtr<Provenance> Instance =
+      makeIntrusiveRefCnt<Provenance>(nullptr);
+  return Instance;
+}
+
+IntrusiveRefCntPtr<Provenance>
+Provenance::getWithKnownMemoryObject(MemoryObject &KnownObj) {
+  assert(!Obj && Wildcard && "The memory object has been determined.");
+  auto Res = makeIntrusiveRefCnt<Provenance>(*this);
+  Res->Obj = &KnownObj;
+  Res->Tag = APInt();
+  return Res;
+}
+
 void Pointer::print(raw_ostream &OS) const {
   SmallString<32> AddrStr;
   Address.toStringUnsigned(AddrStr, 16);
   OS << "ptr 0x" << AddrStr << " [";
-  if (Obj && Obj->getState() != MemoryObjectState::Freed) {
+  if (MemoryObject *Obj = Prov->getMemoryObject()) {
+    if (Obj->isIRGlobalValue())
+      OS << "@";
     OS << Obj->getName();
-    // TODO: print " (dead)" if the stack object is out of lifetime.
     if (Address != Obj->getAddress())
       OS << " + " << (Address - Obj->getAddress());
+    MemoryObjectState State = Obj->getState();
+    if (State != MemoryObjectState::Alive)
+      OS << (State == MemoryObjectState::Dead ? " (dead)" : " (dangling)");
   } else {
-    OS << "dangling";
+    OS << (Prov->isWildcard() ? "wildcard" : "nullary");
   }
+  // TODO: print provenance
   OS << "]";
 }
 
 AnyValue Pointer::null(unsigned AS, const DataLayout &DL) {
-  return AnyValue(Pointer(nullptr, DL.getNullPtrValue(AS)));
+  return AnyValue(Pointer(Provenance::nullary(), DL.getNullPtrValue(AS)));
 }
 
 bool Pointer::isNullPtr(unsigned AS, const DataLayout &DL) const {

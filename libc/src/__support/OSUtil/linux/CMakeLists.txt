@@ -4,6 +4,7 @@ endif()
 
 add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
 add_subdirectory(syscall_wrappers)
+add_subdirectory(stat)
 
 add_object_library(
   linux_util
@@ -35,10 +36,21 @@ add_header_library(
     libc.hdr.sys_auxv_macros
     libc.hdr.sys_mman_macros
     libc.src.__support.OSUtil.linux.syscall_wrappers.mmap
+    libc.src.__support.OSUtil.linux.syscall_wrappers.munmap
+    libc.src.__support.OSUtil.linux.syscall_wrappers.open
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.CPP.optional
     libc.src.__support.threads.callonce
+)
+
+add_header_library(
+  path
+  HDRS
+    path.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.CPP.string_view
 )
 
 add_header_library(

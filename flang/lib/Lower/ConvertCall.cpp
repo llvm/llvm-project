@@ -79,15 +79,15 @@ static fir::ExtendedValue toExtendedValue(mlir::Location loc, mlir::Value base,
   return base;
 }
 
-/// Lower a type(C_PTR/C_FUNPTR) argument with VALUE attribute into a
+/// Lower a type(C_PTR/C_FUNPTR/C_DEVPTR) argument with VALUE attribute into a
 /// reference. A C pointer can correspond to a Fortran dummy argument of type
 /// C_PTR with the VALUE attribute. (see 18.3.6 note 3).
 static mlir::Value genRecordCPtrValueArg(fir::FirOpBuilder &builder,
                                          mlir::Location loc, mlir::Value rec,
-                                         mlir::Type ty) {
-  mlir::Value cAddr = fir::factory::genCPtrOrCFunptrAddr(builder, loc, rec, ty);
-  mlir::Value cVal = fir::LoadOp::create(builder, loc, cAddr);
-  return builder.createConvert(loc, cAddr.getType(), cVal);
+                                         mlir::Type) {
+  mlir::Value cVal = fir::factory::genCPtrOrCFunptrValue(builder, loc, rec);
+  return builder.createConvert(loc, fir::ReferenceType::get(cVal.getType()),
+                               cVal);
 }
 
 // Find the argument that corresponds to the host associations.
@@ -1752,7 +1752,7 @@ void prepareUserCallArguments(
 
       mlir::Type eleTy = value.getFortranElementType();
       if (fir::isa_builtin_cptr_type(eleTy)) {
-        // Pass-by-value argument of type(C_PTR/C_FUNPTR).
+        // Pass-by-value argument of type(C_PTR/C_FUNPTR/C_DEVPTR).
         // Load the __address component and pass it by value.
         if (value.isValue()) {
           auto associate = hlfir::genAssociateExpr(loc, builder, value, eleTy,
@@ -2143,6 +2143,17 @@ static std::optional<hlfir::EntityWithAttributes> genCustomIntrinsicRefCore(
       loc, builder, result, ".tmp.custom_intrinsic_result")}};
 }
 
+static unsigned getCorank(const Fortran::lower::SomeExpr &expr) {
+  if (auto dataRef{Fortran::evaluate::ExtractDataRef(expr)}) {
+    const Fortran::semantics::Symbol sym = dataRef->GetLastSymbol();
+    if (const auto *object =
+            sym.GetUltimate()
+                .detailsIf<Fortran::semantics::ObjectEntityDetails>())
+      return object->coshape().size();
+  }
+  return 0;
+}
+
 /// Lower calls to intrinsic procedures with actual arguments that have been
 /// pre-lowered but have not yet been prepared according to the interface.
 static std::optional<hlfir::EntityWithAttributes>
@@ -2166,6 +2177,12 @@ genIntrinsicRefCore(Fortran::lower::PreparedActualArguments &loweredActuals,
   const fir::IntrinsicArgumentLoweringRules *argLowering =
       intrinsicEntry.getArgumentLoweringRules();
   for (auto arg : llvm::enumerate(loweredActuals)) {
+    // Trying to retrieve the corank of a variable if this is a coarray
+    unsigned corank = 0;
+    if (const Fortran::lower::SomeExpr *expr =
+            callContext.procRef.UnwrapArgExpr(arg.index()))
+      corank = getCorank(*expr);
+
     if (!arg.value()) {
       operands.emplace_back(fir::getAbsentIntrinsicArgument());
       continue;
@@ -2244,19 +2261,22 @@ genIntrinsicRefCore(Fortran::lower::PreparedActualArguments &loweredActuals,
       llvm_unreachable("bad switch");
     }
 
+    fir::ExtendedValue exv;
     hlfir::Entity actual = arg.value()->getActual(loc, builder);
     switch (argRules.lowerAs) {
     case fir::LowerIntrinsicArgAs::Value:
-      operands.emplace_back(
-          Fortran::lower::convertToValue(loc, converter, actual, stmtCtx));
+      exv = Fortran::lower::convertToValue(loc, converter, actual, stmtCtx);
+      operands.emplace_back(exv);
       continue;
     case fir::LowerIntrinsicArgAs::Addr:
-      operands.emplace_back(Fortran::lower::convertToAddress(
-          loc, converter, actual, stmtCtx, getActualFortranElementType()));
+      exv = Fortran::lower::convertToAddress(loc, converter, actual, stmtCtx,
+                                             getActualFortranElementType());
+      operands.emplace_back(exv);
       continue;
     case fir::LowerIntrinsicArgAs::Box:
-      operands.emplace_back(Fortran::lower::convertToBox(
-          loc, converter, actual, stmtCtx, getActualFortranElementType()));
+      exv = Fortran::lower::convertToBox(loc, converter, actual, stmtCtx,
+                                         getActualFortranElementType(), corank);
+      operands.emplace_back(exv);
       continue;
     case fir::LowerIntrinsicArgAs::Inquired:
       if (const Fortran::lower::SomeExpr *expr =
@@ -2299,8 +2319,9 @@ genIntrinsicRefCore(Fortran::lower::PreparedActualArguments &loweredActuals,
     scalarResultType = hlfir::getFortranElementType(*callContext.resultType);
   const std::string intrinsicName = callContext.getProcedureName();
   // Let the intrinsic library lower the intrinsic procedure call.
-  auto [resultExv, mustBeFreed] = genIntrinsicCall(
-      builder, loc, intrinsicEntry, scalarResultType, operands, &converter);
+  auto [resultExv, mustBeFreed] =
+      genIntrinsicCall(builder, loc, intrinsicEntry, scalarResultType, operands,
+                       Fortran::lower::getIntrinsicLoweringOptions(converter));
   for (const hlfir::CleanupFunction &fn : cleanupFns)
     fn();
   if (!fir::getBase(resultExv))
@@ -2957,6 +2978,7 @@ genCustomIntrinsicRef(const Fortran::evaluate::SpecificIntrinsic *intrinsic,
     auto getActualFortranElementType = [&]() -> mlir::Type {
       return hlfir::getFortranElementType(converter.genType(expr));
     };
+    unsigned corank = getCorank(expr);
     hlfir::EntityWithAttributes actual = Fortran::lower::convertExprToHLFIR(
         loc, converter, expr, callContext.symMap, callContext.stmtCtx);
     std::optional<fir::ExtendedValue> exv;
@@ -2970,7 +2992,7 @@ genCustomIntrinsicRef(const Fortran::evaluate::SpecificIntrinsic *intrinsic,
       break;
     case fir::LowerIntrinsicArgAs::Box:
       exv = Fortran::lower::convertToBox(loc, converter, actual, stmtCtx,
-                                         getActualFortranElementType());
+                                         getActualFortranElementType(), corank);
       break;
     case fir::LowerIntrinsicArgAs::Inquired:
       exv = Fortran::lower::translateToExtendedValue(loc, builder, actual,

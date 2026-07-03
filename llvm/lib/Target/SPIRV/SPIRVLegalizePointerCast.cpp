@@ -237,6 +237,16 @@ class SPIRVLegalizePointerCastImpl {
   Value *
   buildVectorFromLoadedElements(IRBuilder<> &B, FixedVectorType *TargetType,
                                 SmallVector<Value *, 4> &LoadedElements) {
+    // <1 x T> shares the SPIR-V type with T, so emitting OpCompositeInsert on
+    // a scalar would be invalid. Bridge with spv_bitcast instead.
+    if (TargetType->getNumElements() == 1) {
+      Value *Scalar = LoadedElements[0];
+      Value *NewVector = B.CreateIntrinsic(
+          Intrinsic::spv_bitcast, {TargetType, Scalar->getType()}, {Scalar});
+      buildAssignType(B, TargetType, NewVector);
+      return NewVector;
+    }
+
     // Build the vector from the loaded elements.
     Value *NewVector = PoisonValue::get(TargetType);
     buildAssignType(B, TargetType, NewVector);
@@ -387,8 +397,7 @@ class SPIRVLegalizePointerCastImpl {
     SmallVector<Type *, 4> Types = {Vector->getType(), Vector->getType(),
                                     Element->getType(), Int32Ty};
     SmallVector<Value *> Args = {Vector, Element, B.getInt32(Index)};
-    Instruction *NewI =
-        B.CreateIntrinsic(Intrinsic::spv_insertelt, {Types}, {Args});
+    Value *NewI = B.CreateIntrinsic(Intrinsic::spv_insertelt, {Types}, {Args});
     buildAssignType(B, Vector->getType(), NewI);
     return NewI;
   }
@@ -400,8 +409,7 @@ class SPIRVLegalizePointerCastImpl {
     Type *Int32Ty = Type::getInt32Ty(B.getContext());
     SmallVector<Type *, 3> Types = {ElementType, Vector->getType(), Int32Ty};
     SmallVector<Value *> Args = {Vector, B.getInt32(Index)};
-    Instruction *NewI =
-        B.CreateIntrinsic(Intrinsic::spv_extractelt, {Types}, {Args});
+    Value *NewI = B.CreateIntrinsic(Intrinsic::spv_extractelt, {Types}, {Args});
     buildAssignType(B, ElementType, NewI);
     return NewI;
   }

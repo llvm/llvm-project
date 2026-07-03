@@ -1,4 +1,6 @@
-; RUN: llc --filetype=obj %s -o - | dxil-dis -o - | FileCheck %s
+; RUN: llc --filetype=obj %s -o %t.dxbc
+; RUN: llvm-objcopy --dump-section=ILDB=%t.bc %t.dxbc
+; RUN: dxil-dis %t.bc -o - | FileCheck %s
 target triple = "dxil-unknown-shadermodel6.7-library"
 
 define float @fmaf(float %x, float %y, float %z) !dbg !4 {
@@ -17,7 +19,7 @@ define float @fmaf(float %x, float %y, float %z) !dbg !4 {
 !1 = !DIFile(filename: "some-source", directory: "some-path")
 !2 = !{}
 
-; CHECK: !4 = distinct !DISubprogram(name: "fmaf", scope: !1, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped | 536870912, isOptimized: true, function: float (float, float, float)* @fmaf, variables: !8)
+; CHECK: !4 = !DISubprogram(name: "fmaf", scope: !1, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: true, function: float (float, float, float)* @fmaf, variables: !8)
 !4 = distinct !DISubprogram(name: "fmaf", scope: !1, file: !1, line: 1, type: !5, scopeLine: 1, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
 
 ; CHECK: !5 = !DISubroutineType(types: !6)

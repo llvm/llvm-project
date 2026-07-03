@@ -1585,14 +1585,16 @@ def LLVM_DereferenceableAttr : LLVM_Attr<"Dereferenceable", "dereferenceable"> {
 //===----------------------------------------------------------------------===//
 
 def ModuleFlagAttr
-    : LLVM_Attr<"ModuleFlag", "mlir.module_flag"> {
+    : LLVM_Attr<"ModuleFlag", "mlir.module_flag",
+                [DeclareAttrInterfaceMethods<LLVM_ModuleFlagAttrInterface>]> {
   let summary = "LLVM module flag metadata";
   let description = [{
     Represents a single entry of llvm.module.flags metadata
     (llvm::Module::ModuleFlagEntry in LLVM). The first element is a behavior
     flag described by `ModFlagBehaviorAttr`, the second is a string ID
     and third is the value of the flag. Supported keys and values include:
-      - Arbitrary `key`s holding integer constants or strings.
+      - Arbitrary `key`s holding integer constants, integer-like dialect
+        attributes, strings, or non-empty string arrays.
       - Domain specific keys (e.g "CG Profile"), holding lists of supported
         module flag values (e.g. `llvm.cgprofile_entry`).
 
@@ -1783,5 +1785,9 @@ def LLVM_MDNodeAttr : LLVM_Attr<"MDNode", "md_node"> {
   let parameters = (ins OptionalArrayRefParameter<"Attribute">:$operands);
   let assemblyFormat = "`<` (`>`) : ($operands^ `>`)?";
 }
+
+def LLVM_AnyMDAttr : AnyAttrOf<[
+    LLVM_MDStringAttr, LLVM_MDConstantAttr, LLVM_MDFuncAttr, LLVM_MDNodeAttr],
+    "LLVM metadata attribute (md_string, md_const, md_func, or md_node)">;
 
 #endif // LLVMIR_ATTRDEFS

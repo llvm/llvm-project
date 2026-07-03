@@ -779,6 +779,10 @@ enum NodeType {
   CLMULR,
   CLMULH,
 
+  /// Parallel bit extract (compress) and parallel bit deposit (expand).
+  PEXT,
+  PDEP,
+
   /// Byte Swap and Counting operators.
   BSWAP,
   CTTZ,
@@ -1023,6 +1027,15 @@ enum NodeType {
   /// The first operand is the integer containing the source FP bits.
   /// The second operand is a constant indicating the source FP semantics.
   CONVERT_FROM_ARBITRARY_FP,
+
+  /// CONVERT_TO_ARBITRARY_FP - Converts a native FP value to an arbitrary
+  /// floating-point format, returning the result as an integer.
+  /// The first operand is the source value.
+  /// The second operand is a constant indicating the destination FP semantics.
+  /// The third operand is a constant indication the rounding mode.
+  /// The last operand is a boolean constant indicating whether the result has
+  /// to be saturated.
+  CONVERT_TO_ARBITRARY_FP,
 
   /// Perform various unary floating-point operations inspired by libm. For
   /// FPOWI, the result is undefined if the integer operand doesn't fit into

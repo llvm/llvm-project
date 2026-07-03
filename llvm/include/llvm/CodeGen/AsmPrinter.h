@@ -657,7 +657,7 @@ public:
   }
 
   virtual const MCExpr *lowerConstantPtrAuth(const ConstantPtrAuth &CPA) {
-    report_fatal_error("ptrauth constant lowering not implemented");
+    reportFatalUsageError("ptrauth constant lowering not implemented");
   }
 
   /// Lower the specified BlockAddress to an MCExpr.
@@ -1010,12 +1010,12 @@ protected:
   }
 };
 
-void setupModuleAsmPrinter(Module &M, ModuleAnalysisManager &MAM,
-                           AsmPrinter &AsmPrinter);
-
-void setupMachineFunctionAsmPrinter(MachineFunctionAnalysisManager &MFAM,
-                                    MachineFunction &MF,
+LLVM_ABI void setupModuleAsmPrinter(Module &M, ModuleAnalysisManager &MAM,
                                     AsmPrinter &AsmPrinter);
+
+LLVM_ABI void
+setupMachineFunctionAsmPrinter(MachineFunctionAnalysisManager &MFAM,
+                               MachineFunction &MF, AsmPrinter &AsmPrinter);
 
 } // end namespace llvm
 

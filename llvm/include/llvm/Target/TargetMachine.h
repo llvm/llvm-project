@@ -121,7 +121,7 @@ protected: // Can only create subclasses.
   std::optional<PGOOptions> PGOOption;
 
 public:
-  mutable TargetOptions Options;
+  TargetOptions Options;
 
   TargetMachine(const TargetMachine &) = delete;
   void operator=(const TargetMachine &) = delete;
@@ -230,11 +230,6 @@ public:
   unsigned getAllocaPointerSize() const {
     return DL.getPointerSize(DL.getAllocaAddrSpace());
   }
-
-  /// Reset the target options based on the function's attributes.
-  // FIXME: Remove TargetOptions that affect per-function code generation
-  // from TargetMachine.
-  void resetTargetOptions(const Function &F) const;
 
   /// Return target specific asm information.
   const MCAsmInfo &getMCAsmInfo() const { return *AsmInfo; }

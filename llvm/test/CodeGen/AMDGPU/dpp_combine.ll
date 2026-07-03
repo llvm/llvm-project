@@ -1,11 +1,13 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck %s -check-prefixes=GCN,GFX9GFX10
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck %s -check-prefixes=GCN,GFX9GFX10
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-TRUE16
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-FAKE16
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-FAKE16,NO_SRC1_SGPR
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1150 -mattr=+real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-TRUE16
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1150 -mattr=-real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-FAKE16
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1150 -mattr=-real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-FAKE16,SRC1_SGPR
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=+real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-TRUE16
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -mattr=-real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-FAKE16,SRC1_SGPR
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1251 -mattr=+real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-TRUE16
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1251 -mattr=-real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-FAKE16
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1251 -mattr=-real-true16 < %s | FileCheck %s -check-prefixes=GCN,GFX11-FAKE16,SRC1_SGPR
 
 ; GCN-LABEL: {{^}}dpp_add:
 ; GCN: global_load_{{dword|b32}} [[V:v[0-9]+]],
@@ -211,6 +213,19 @@ entry:
   %dpp.shr8 = tail call half @llvm.amdgcn.update.dpp.f16(half 0xHFC00, half %max3, i32 280, i32 15, i32 15, i1 false)
   %max4 = tail call nnan half @llvm.maxnum.f16(half %max3, half %dpp.shr8)
   ret half %max4
+}
+
+; should be combined only on subtargets that allow sgpr for src1
+; GCN-LABEL: {{^}}dpp_src1_sgpr:
+; NO_SRC1_SGPR: v_add_nc_u16 {{v[0-9]+}}, {{s[0-9]+}}, {{v[0-9]+}}
+; SRC1_SGPR: v_add_nc_u16_e64_dpp {{v[0-9]+}}, {{v[0-9]+}}, {{s[0-9]+}}
+define amdgpu_kernel void @dpp_src1_sgpr(ptr addrspace(1) %out, i16 %in) {
+  %ext = sext i16 %in to i32
+  %tmp = tail call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 %ext, i32 280, i32 15, i32 15, i1 true)
+  %trunc = trunc i32 %tmp to i16
+  %add = add i16 %in, %trunc
+  store i16 %add, ptr addrspace(1) %out
+  ret void
 }
 
 declare i32 @llvm.amdgcn.workitem.id.x()

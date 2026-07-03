@@ -2231,10 +2231,10 @@ public:
   }
 
   /// Note that this member template is a specialization.
+  /// A partial specialization may be a member specialization even if it is not
+  /// an instantiation of a member partial specialization.
   void setMemberSpecialization() {
     auto *First = cast<ClassTemplatePartialSpecializationDecl>(getFirstDecl());
-    assert(First->InstantiatedFromMember.getPointer() &&
-           "Only member templates can be member template specializations");
     return First->InstantiatedFromMember.setInt(true);
   }
 
@@ -2999,10 +2999,10 @@ public:
   }
 
   /// Note that this member template is a specialization.
+  /// A partial specialization may be a member specialization even if it is not
+  /// an instantiation of a member partial specialization.
   void setMemberSpecialization() {
     auto *First = cast<VarTemplatePartialSpecializationDecl>(getFirstDecl());
-    assert(First->InstantiatedFromMember.getPointer() &&
-           "Only member templates can be member template specializations");
     return First->InstantiatedFromMember.setInt(true);
   }
 
@@ -3440,9 +3440,19 @@ class ExplicitInstantiationDecl final
     return hasTrailingQualifier() ? 1 : 0;
   }
 
-  /// Raw access to the internal TypeSourceInfo.  For class templates this is
-  /// a TemplateSpecializationTypeLoc; for nested classes a TagTypeLoc.
-  /// Public getTypeAsWritten() returns null for those cases.
+  /// For class templates / nested classes, returns the TypeLoc encoding the
+  /// entity (TemplateSpecializationTypeLoc or TagTypeLoc).  For function /
+  /// variable templates -- where TypeSourceInfo holds the declared type
+  /// rather than the entity -- returns std::nullopt.
+  std::optional<TypeLoc> getClassTypeLoc() const {
+    if (!isa<RecordDecl>(getSpecialization()))
+      return std::nullopt;
+    if (auto *TSI = TypeAndFlags.getPointer())
+      return TSI->getTypeLoc();
+    return std::nullopt;
+  }
+
+  /// Raw TypeSourceInfo pointer, needed by the serializer.
   TypeSourceInfo *getRawTypeSourceInfo() const {
     return TypeAndFlags.getPointer();
   }
@@ -3484,13 +3494,10 @@ public:
   SourceLocation getTemplateLoc() const { return getLocation(); }
   SourceLocation getNameLoc() const { return NameLoc; }
 
-  /// For class templates / nested classes, the tag keyword location is
-  /// stored inside TypeSourceInfo; otherwise returns an invalid location.
+  /// The tag keyword (struct/class/union) location for class templates /
+  /// nested classes; invalid for function / variable templates.
   SourceLocation getTagKWLoc() const;
 
-  /// Whether the qualifier is stored as a trailing object (function / variable
-  /// templates) rather than inside TypeSourceInfo (class templates / nested
-  /// classes).
   bool hasTrailingQualifier() const {
     return TypeAndFlags.getInt() & HasQualifierFlag;
   }
@@ -3499,24 +3506,19 @@ public:
   }
 
   /// Returns the qualifier regardless of where it is stored.
-  /// For class templates / nested classes, it is extracted from TypeSourceInfo
-  /// (TemplateSpecializationTypeLoc or TagTypeLoc).
-  /// For function / variable templates, it comes from a trailing object.
+  /// For class templates / nested classes, extracted from the class TypeLoc;
+  /// for function / variable templates, from a trailing object.
   NestedNameSpecifierLoc getQualifierLoc() const;
 
-  /// Number of explicit template arguments, regardless of storage.
-  /// For class templates they come from TemplateSpecializationTypeLoc;
-  /// for function / variable templates from trailing
-  /// ASTTemplateArgumentListInfo.
-  unsigned getNumTemplateArgs() const;
+  /// Returns the number of explicit template arguments, or std::nullopt if
+  /// this entity has no template argument list (e.g., nested classes).
+  std::optional<unsigned> getNumTemplateArgs() const;
   TemplateArgumentLoc getTemplateArg(unsigned I) const;
   SourceLocation getTemplateArgsLAngleLoc() const;
   SourceLocation getTemplateArgsRAngleLoc() const;
 
-  /// For function / variable templates, returns the declared type (return type
-  /// or variable type).  For class templates and nested classes returns null —
-  /// the qualifier, tag keyword, and template arguments are accessible via
-  /// getQualifierLoc(), getTagKWLoc(), and getTemplateArg().
+  /// The declared type (return type or variable type) for function / variable
+  /// templates.  Null for class templates and nested classes.
   TypeSourceInfo *getTypeAsWritten() const;
 
   TemplateSpecializationKind getTemplateSpecializationKind() const {

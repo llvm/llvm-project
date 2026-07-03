@@ -12,6 +12,7 @@
 
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBDeclaration.h"
+#include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBFormat.h"
 #include "lldb/API/SBMutex.h"
 #include "lldb/API/SBStream.h"
@@ -159,8 +160,11 @@ std::optional<protocol::Source> CreateSource(const lldb::SBFileSpec &file) {
     source.name = name;
   char path[PATH_MAX] = "";
   if (file.GetPath(path, sizeof(path)) &&
-      lldb::SBFileSpec::ResolvePath(path, path, PATH_MAX))
+      lldb::SBFileSpec::ResolvePath(path, path, PATH_MAX)) {
     source.path = path;
+    if (!lldb::SBFileSpec(path).Exists())
+      source.presentationHint = Source::eSourcePresentationHintDeemphasize;
+  }
   return source;
 }
 

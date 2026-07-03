@@ -4,9 +4,13 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefix=RV64
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zicfiss < %s \
-; RUN:   -verify-machineinstrs | FileCheck %s --check-prefix=RV32-ZICFISS
+; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=RV32-ZICFISS,RV32-NOZCMOP
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-zicfiss < %s \
-; RUN:   -verify-machineinstrs | FileCheck %s --check-prefix=RV64-ZICFISS
+; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=RV64-ZICFISS,RV64-NOZCMOP
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-zicfiss,+zcmop < %s -M no-aliases \
+; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=RV32-ZICFISS,RV32-ZCMOP
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-zicfiss,+zcmop < %s -M no-aliases \
+; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=RV64-ZICFISS,RV64-ZCMOP
 
 define void @f1() shadowcallstack {
 ; RV32-LABEL: f1:
@@ -17,13 +21,21 @@ define void @f1() shadowcallstack {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    ret
 ;
-; RV32-ZICFISS-LABEL: f1:
-; RV32-ZICFISS:       # %bb.0:
-; RV32-ZICFISS-NEXT:    ret
+; RV32-NOZCMOP-LABEL: f1:
+; RV32-NOZCMOP:       # %bb.0:
+; RV32-NOZCMOP-NEXT:    ret
 ;
-; RV64-ZICFISS-LABEL: f1:
-; RV64-ZICFISS:       # %bb.0:
-; RV64-ZICFISS-NEXT:    ret
+; RV64-NOZCMOP-LABEL: f1:
+; RV64-NOZCMOP:       # %bb.0:
+; RV64-NOZCMOP-NEXT:    ret
+;
+; RV32-ZCMOP-LABEL: f1:
+; RV32-ZCMOP:       # %bb.0:
+; RV32-ZCMOP-NEXT:    c.jr ra
+;
+; RV64-ZCMOP-LABEL: f1:
+; RV64-ZCMOP:       # %bb.0:
+; RV64-ZCMOP-NEXT:    c.jr ra
   ret void
 }
 
@@ -90,43 +102,81 @@ define i32 @f3() shadowcallstack {
 ; RV64-NEXT:    .cfi_restore gp
 ; RV64-NEXT:    ret
 ;
-; RV32-ZICFISS-LABEL: f3:
-; RV32-ZICFISS:       # %bb.0:
-; RV32-ZICFISS-NEXT:    addi gp, gp, 4
-; RV32-ZICFISS-NEXT:    sw ra, -4(gp)
-; RV32-ZICFISS-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x7c #
-; RV32-ZICFISS-NEXT:    addi sp, sp, -16
-; RV32-ZICFISS-NEXT:    .cfi_def_cfa_offset 16
-; RV32-ZICFISS-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-ZICFISS-NEXT:    .cfi_offset ra, -4
-; RV32-ZICFISS-NEXT:    call bar
-; RV32-ZICFISS-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-ZICFISS-NEXT:    .cfi_restore ra
-; RV32-ZICFISS-NEXT:    addi sp, sp, 16
-; RV32-ZICFISS-NEXT:    .cfi_def_cfa_offset 0
-; RV32-ZICFISS-NEXT:    lw ra, -4(gp)
-; RV32-ZICFISS-NEXT:    addi gp, gp, -4
-; RV32-ZICFISS-NEXT:    .cfi_restore gp
-; RV32-ZICFISS-NEXT:    ret
+; RV32-NOZCMOP-LABEL: f3:
+; RV32-NOZCMOP:       # %bb.0:
+; RV32-NOZCMOP-NEXT:    addi gp, gp, 4
+; RV32-NOZCMOP-NEXT:    sw ra, -4(gp)
+; RV32-NOZCMOP-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x7c #
+; RV32-NOZCMOP-NEXT:    addi sp, sp, -16
+; RV32-NOZCMOP-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NOZCMOP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NOZCMOP-NEXT:    .cfi_offset ra, -4
+; RV32-NOZCMOP-NEXT:    call bar
+; RV32-NOZCMOP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NOZCMOP-NEXT:    .cfi_restore ra
+; RV32-NOZCMOP-NEXT:    addi sp, sp, 16
+; RV32-NOZCMOP-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NOZCMOP-NEXT:    lw ra, -4(gp)
+; RV32-NOZCMOP-NEXT:    addi gp, gp, -4
+; RV32-NOZCMOP-NEXT:    .cfi_restore gp
+; RV32-NOZCMOP-NEXT:    ret
 ;
-; RV64-ZICFISS-LABEL: f3:
-; RV64-ZICFISS:       # %bb.0:
-; RV64-ZICFISS-NEXT:    addi gp, gp, 8
-; RV64-ZICFISS-NEXT:    sd ra, -8(gp)
-; RV64-ZICFISS-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x78 #
-; RV64-ZICFISS-NEXT:    addi sp, sp, -16
-; RV64-ZICFISS-NEXT:    .cfi_def_cfa_offset 16
-; RV64-ZICFISS-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-ZICFISS-NEXT:    .cfi_offset ra, -8
-; RV64-ZICFISS-NEXT:    call bar
-; RV64-ZICFISS-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64-ZICFISS-NEXT:    .cfi_restore ra
-; RV64-ZICFISS-NEXT:    addi sp, sp, 16
-; RV64-ZICFISS-NEXT:    .cfi_def_cfa_offset 0
-; RV64-ZICFISS-NEXT:    ld ra, -8(gp)
-; RV64-ZICFISS-NEXT:    addi gp, gp, -8
-; RV64-ZICFISS-NEXT:    .cfi_restore gp
-; RV64-ZICFISS-NEXT:    ret
+; RV64-NOZCMOP-LABEL: f3:
+; RV64-NOZCMOP:       # %bb.0:
+; RV64-NOZCMOP-NEXT:    addi gp, gp, 8
+; RV64-NOZCMOP-NEXT:    sd ra, -8(gp)
+; RV64-NOZCMOP-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x78 #
+; RV64-NOZCMOP-NEXT:    addi sp, sp, -16
+; RV64-NOZCMOP-NEXT:    .cfi_def_cfa_offset 16
+; RV64-NOZCMOP-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NOZCMOP-NEXT:    .cfi_offset ra, -8
+; RV64-NOZCMOP-NEXT:    call bar
+; RV64-NOZCMOP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NOZCMOP-NEXT:    .cfi_restore ra
+; RV64-NOZCMOP-NEXT:    addi sp, sp, 16
+; RV64-NOZCMOP-NEXT:    .cfi_def_cfa_offset 0
+; RV64-NOZCMOP-NEXT:    ld ra, -8(gp)
+; RV64-NOZCMOP-NEXT:    addi gp, gp, -8
+; RV64-NOZCMOP-NEXT:    .cfi_restore gp
+; RV64-NOZCMOP-NEXT:    ret
+;
+; RV32-ZCMOP-LABEL: f3:
+; RV32-ZCMOP:       # %bb.0:
+; RV32-ZCMOP-NEXT:    c.addi gp, 4
+; RV32-ZCMOP-NEXT:    sw ra, -4(gp)
+; RV32-ZCMOP-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x7c #
+; RV32-ZCMOP-NEXT:    c.addi sp, -16
+; RV32-ZCMOP-NEXT:    .cfi_def_cfa_offset 16
+; RV32-ZCMOP-NEXT:    c.swsp ra, 12(sp) # 4-byte Folded Spill
+; RV32-ZCMOP-NEXT:    .cfi_offset ra, -4
+; RV32-ZCMOP-NEXT:    call bar
+; RV32-ZCMOP-NEXT:    c.lwsp ra, 12(sp) # 4-byte Folded Reload
+; RV32-ZCMOP-NEXT:    .cfi_restore ra
+; RV32-ZCMOP-NEXT:    c.addi sp, 16
+; RV32-ZCMOP-NEXT:    .cfi_def_cfa_offset 0
+; RV32-ZCMOP-NEXT:    lw ra, -4(gp)
+; RV32-ZCMOP-NEXT:    c.addi gp, -4
+; RV32-ZCMOP-NEXT:    .cfi_restore gp
+; RV32-ZCMOP-NEXT:    c.jr ra
+;
+; RV64-ZCMOP-LABEL: f3:
+; RV64-ZCMOP:       # %bb.0:
+; RV64-ZCMOP-NEXT:    c.addi gp, 8
+; RV64-ZCMOP-NEXT:    sd ra, -8(gp)
+; RV64-ZCMOP-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x78 #
+; RV64-ZCMOP-NEXT:    c.addi sp, -16
+; RV64-ZCMOP-NEXT:    .cfi_def_cfa_offset 16
+; RV64-ZCMOP-NEXT:    c.sdsp ra, 8(sp) # 8-byte Folded Spill
+; RV64-ZCMOP-NEXT:    .cfi_offset ra, -8
+; RV64-ZCMOP-NEXT:    call bar
+; RV64-ZCMOP-NEXT:    c.ldsp ra, 8(sp) # 8-byte Folded Reload
+; RV64-ZCMOP-NEXT:    .cfi_restore ra
+; RV64-ZCMOP-NEXT:    c.addi sp, 16
+; RV64-ZCMOP-NEXT:    .cfi_def_cfa_offset 0
+; RV64-ZCMOP-NEXT:    ld ra, -8(gp)
+; RV64-ZCMOP-NEXT:    c.addi gp, -8
+; RV64-ZCMOP-NEXT:    .cfi_restore gp
+; RV64-ZCMOP-NEXT:    c.jr ra
   %res = call i32 @bar()
   %res1 = add i32 %res, 1
   ret i32 %res
@@ -213,85 +263,165 @@ define i32 @f4() shadowcallstack {
 ; RV64-NEXT:    .cfi_restore gp
 ; RV64-NEXT:    ret
 ;
-; RV32-ZICFISS-LABEL: f4:
-; RV32-ZICFISS:       # %bb.0:
-; RV32-ZICFISS-NEXT:    addi gp, gp, 4
-; RV32-ZICFISS-NEXT:    sw ra, -4(gp)
-; RV32-ZICFISS-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x7c #
-; RV32-ZICFISS-NEXT:    addi sp, sp, -16
-; RV32-ZICFISS-NEXT:    .cfi_def_cfa_offset 16
-; RV32-ZICFISS-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-ZICFISS-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32-ZICFISS-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
-; RV32-ZICFISS-NEXT:    sw s2, 0(sp) # 4-byte Folded Spill
-; RV32-ZICFISS-NEXT:    .cfi_offset ra, -4
-; RV32-ZICFISS-NEXT:    .cfi_offset s0, -8
-; RV32-ZICFISS-NEXT:    .cfi_offset s1, -12
-; RV32-ZICFISS-NEXT:    .cfi_offset s2, -16
-; RV32-ZICFISS-NEXT:    call bar
-; RV32-ZICFISS-NEXT:    mv s0, a0
-; RV32-ZICFISS-NEXT:    call bar
-; RV32-ZICFISS-NEXT:    mv s1, a0
-; RV32-ZICFISS-NEXT:    call bar
-; RV32-ZICFISS-NEXT:    mv s2, a0
-; RV32-ZICFISS-NEXT:    call bar
-; RV32-ZICFISS-NEXT:    add s0, s0, s1
-; RV32-ZICFISS-NEXT:    add a0, s2, a0
-; RV32-ZICFISS-NEXT:    add a0, s0, a0
-; RV32-ZICFISS-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-ZICFISS-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32-ZICFISS-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32-ZICFISS-NEXT:    lw s2, 0(sp) # 4-byte Folded Reload
-; RV32-ZICFISS-NEXT:    .cfi_restore ra
-; RV32-ZICFISS-NEXT:    .cfi_restore s0
-; RV32-ZICFISS-NEXT:    .cfi_restore s1
-; RV32-ZICFISS-NEXT:    .cfi_restore s2
-; RV32-ZICFISS-NEXT:    addi sp, sp, 16
-; RV32-ZICFISS-NEXT:    .cfi_def_cfa_offset 0
-; RV32-ZICFISS-NEXT:    lw ra, -4(gp)
-; RV32-ZICFISS-NEXT:    addi gp, gp, -4
-; RV32-ZICFISS-NEXT:    .cfi_restore gp
-; RV32-ZICFISS-NEXT:    ret
+; RV32-NOZCMOP-LABEL: f4:
+; RV32-NOZCMOP:       # %bb.0:
+; RV32-NOZCMOP-NEXT:    addi gp, gp, 4
+; RV32-NOZCMOP-NEXT:    sw ra, -4(gp)
+; RV32-NOZCMOP-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x7c #
+; RV32-NOZCMOP-NEXT:    addi sp, sp, -16
+; RV32-NOZCMOP-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NOZCMOP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NOZCMOP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-NOZCMOP-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32-NOZCMOP-NEXT:    sw s2, 0(sp) # 4-byte Folded Spill
+; RV32-NOZCMOP-NEXT:    .cfi_offset ra, -4
+; RV32-NOZCMOP-NEXT:    .cfi_offset s0, -8
+; RV32-NOZCMOP-NEXT:    .cfi_offset s1, -12
+; RV32-NOZCMOP-NEXT:    .cfi_offset s2, -16
+; RV32-NOZCMOP-NEXT:    call bar
+; RV32-NOZCMOP-NEXT:    mv s0, a0
+; RV32-NOZCMOP-NEXT:    call bar
+; RV32-NOZCMOP-NEXT:    mv s1, a0
+; RV32-NOZCMOP-NEXT:    call bar
+; RV32-NOZCMOP-NEXT:    mv s2, a0
+; RV32-NOZCMOP-NEXT:    call bar
+; RV32-NOZCMOP-NEXT:    add s0, s0, s1
+; RV32-NOZCMOP-NEXT:    add a0, s2, a0
+; RV32-NOZCMOP-NEXT:    add a0, s0, a0
+; RV32-NOZCMOP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NOZCMOP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-NOZCMOP-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32-NOZCMOP-NEXT:    lw s2, 0(sp) # 4-byte Folded Reload
+; RV32-NOZCMOP-NEXT:    .cfi_restore ra
+; RV32-NOZCMOP-NEXT:    .cfi_restore s0
+; RV32-NOZCMOP-NEXT:    .cfi_restore s1
+; RV32-NOZCMOP-NEXT:    .cfi_restore s2
+; RV32-NOZCMOP-NEXT:    addi sp, sp, 16
+; RV32-NOZCMOP-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NOZCMOP-NEXT:    lw ra, -4(gp)
+; RV32-NOZCMOP-NEXT:    addi gp, gp, -4
+; RV32-NOZCMOP-NEXT:    .cfi_restore gp
+; RV32-NOZCMOP-NEXT:    ret
 ;
-; RV64-ZICFISS-LABEL: f4:
-; RV64-ZICFISS:       # %bb.0:
-; RV64-ZICFISS-NEXT:    addi gp, gp, 8
-; RV64-ZICFISS-NEXT:    sd ra, -8(gp)
-; RV64-ZICFISS-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x78 #
-; RV64-ZICFISS-NEXT:    addi sp, sp, -32
-; RV64-ZICFISS-NEXT:    .cfi_def_cfa_offset 32
-; RV64-ZICFISS-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64-ZICFISS-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64-ZICFISS-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; RV64-ZICFISS-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
-; RV64-ZICFISS-NEXT:    .cfi_offset ra, -8
-; RV64-ZICFISS-NEXT:    .cfi_offset s0, -16
-; RV64-ZICFISS-NEXT:    .cfi_offset s1, -24
-; RV64-ZICFISS-NEXT:    .cfi_offset s2, -32
-; RV64-ZICFISS-NEXT:    call bar
-; RV64-ZICFISS-NEXT:    mv s0, a0
-; RV64-ZICFISS-NEXT:    call bar
-; RV64-ZICFISS-NEXT:    mv s1, a0
-; RV64-ZICFISS-NEXT:    call bar
-; RV64-ZICFISS-NEXT:    mv s2, a0
-; RV64-ZICFISS-NEXT:    call bar
-; RV64-ZICFISS-NEXT:    add s0, s0, s1
-; RV64-ZICFISS-NEXT:    add a0, s2, a0
-; RV64-ZICFISS-NEXT:    addw a0, s0, a0
-; RV64-ZICFISS-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64-ZICFISS-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; RV64-ZICFISS-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64-ZICFISS-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
-; RV64-ZICFISS-NEXT:    .cfi_restore ra
-; RV64-ZICFISS-NEXT:    .cfi_restore s0
-; RV64-ZICFISS-NEXT:    .cfi_restore s1
-; RV64-ZICFISS-NEXT:    .cfi_restore s2
-; RV64-ZICFISS-NEXT:    addi sp, sp, 32
-; RV64-ZICFISS-NEXT:    .cfi_def_cfa_offset 0
-; RV64-ZICFISS-NEXT:    ld ra, -8(gp)
-; RV64-ZICFISS-NEXT:    addi gp, gp, -8
-; RV64-ZICFISS-NEXT:    .cfi_restore gp
-; RV64-ZICFISS-NEXT:    ret
+; RV64-NOZCMOP-LABEL: f4:
+; RV64-NOZCMOP:       # %bb.0:
+; RV64-NOZCMOP-NEXT:    addi gp, gp, 8
+; RV64-NOZCMOP-NEXT:    sd ra, -8(gp)
+; RV64-NOZCMOP-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x78 #
+; RV64-NOZCMOP-NEXT:    addi sp, sp, -32
+; RV64-NOZCMOP-NEXT:    .cfi_def_cfa_offset 32
+; RV64-NOZCMOP-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64-NOZCMOP-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64-NOZCMOP-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64-NOZCMOP-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; RV64-NOZCMOP-NEXT:    .cfi_offset ra, -8
+; RV64-NOZCMOP-NEXT:    .cfi_offset s0, -16
+; RV64-NOZCMOP-NEXT:    .cfi_offset s1, -24
+; RV64-NOZCMOP-NEXT:    .cfi_offset s2, -32
+; RV64-NOZCMOP-NEXT:    call bar
+; RV64-NOZCMOP-NEXT:    mv s0, a0
+; RV64-NOZCMOP-NEXT:    call bar
+; RV64-NOZCMOP-NEXT:    mv s1, a0
+; RV64-NOZCMOP-NEXT:    call bar
+; RV64-NOZCMOP-NEXT:    mv s2, a0
+; RV64-NOZCMOP-NEXT:    call bar
+; RV64-NOZCMOP-NEXT:    add s0, s0, s1
+; RV64-NOZCMOP-NEXT:    add a0, s2, a0
+; RV64-NOZCMOP-NEXT:    addw a0, s0, a0
+; RV64-NOZCMOP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64-NOZCMOP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64-NOZCMOP-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64-NOZCMOP-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; RV64-NOZCMOP-NEXT:    .cfi_restore ra
+; RV64-NOZCMOP-NEXT:    .cfi_restore s0
+; RV64-NOZCMOP-NEXT:    .cfi_restore s1
+; RV64-NOZCMOP-NEXT:    .cfi_restore s2
+; RV64-NOZCMOP-NEXT:    addi sp, sp, 32
+; RV64-NOZCMOP-NEXT:    .cfi_def_cfa_offset 0
+; RV64-NOZCMOP-NEXT:    ld ra, -8(gp)
+; RV64-NOZCMOP-NEXT:    addi gp, gp, -8
+; RV64-NOZCMOP-NEXT:    .cfi_restore gp
+; RV64-NOZCMOP-NEXT:    ret
+;
+; RV32-ZCMOP-LABEL: f4:
+; RV32-ZCMOP:       # %bb.0:
+; RV32-ZCMOP-NEXT:    c.addi gp, 4
+; RV32-ZCMOP-NEXT:    sw ra, -4(gp)
+; RV32-ZCMOP-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x7c #
+; RV32-ZCMOP-NEXT:    c.addi sp, -16
+; RV32-ZCMOP-NEXT:    .cfi_def_cfa_offset 16
+; RV32-ZCMOP-NEXT:    c.swsp ra, 12(sp) # 4-byte Folded Spill
+; RV32-ZCMOP-NEXT:    c.swsp s0, 8(sp) # 4-byte Folded Spill
+; RV32-ZCMOP-NEXT:    c.swsp s1, 4(sp) # 4-byte Folded Spill
+; RV32-ZCMOP-NEXT:    c.swsp s2, 0(sp) # 4-byte Folded Spill
+; RV32-ZCMOP-NEXT:    .cfi_offset ra, -4
+; RV32-ZCMOP-NEXT:    .cfi_offset s0, -8
+; RV32-ZCMOP-NEXT:    .cfi_offset s1, -12
+; RV32-ZCMOP-NEXT:    .cfi_offset s2, -16
+; RV32-ZCMOP-NEXT:    call bar
+; RV32-ZCMOP-NEXT:    c.mv s0, a0
+; RV32-ZCMOP-NEXT:    call bar
+; RV32-ZCMOP-NEXT:    c.mv s1, a0
+; RV32-ZCMOP-NEXT:    call bar
+; RV32-ZCMOP-NEXT:    c.mv s2, a0
+; RV32-ZCMOP-NEXT:    call bar
+; RV32-ZCMOP-NEXT:    c.add s0, s1
+; RV32-ZCMOP-NEXT:    c.add a0, s2
+; RV32-ZCMOP-NEXT:    c.add a0, s0
+; RV32-ZCMOP-NEXT:    c.lwsp ra, 12(sp) # 4-byte Folded Reload
+; RV32-ZCMOP-NEXT:    c.lwsp s0, 8(sp) # 4-byte Folded Reload
+; RV32-ZCMOP-NEXT:    c.lwsp s1, 4(sp) # 4-byte Folded Reload
+; RV32-ZCMOP-NEXT:    c.lwsp s2, 0(sp) # 4-byte Folded Reload
+; RV32-ZCMOP-NEXT:    .cfi_restore ra
+; RV32-ZCMOP-NEXT:    .cfi_restore s0
+; RV32-ZCMOP-NEXT:    .cfi_restore s1
+; RV32-ZCMOP-NEXT:    .cfi_restore s2
+; RV32-ZCMOP-NEXT:    c.addi sp, 16
+; RV32-ZCMOP-NEXT:    .cfi_def_cfa_offset 0
+; RV32-ZCMOP-NEXT:    lw ra, -4(gp)
+; RV32-ZCMOP-NEXT:    c.addi gp, -4
+; RV32-ZCMOP-NEXT:    .cfi_restore gp
+; RV32-ZCMOP-NEXT:    c.jr ra
+;
+; RV64-ZCMOP-LABEL: f4:
+; RV64-ZCMOP:       # %bb.0:
+; RV64-ZCMOP-NEXT:    c.addi gp, 8
+; RV64-ZCMOP-NEXT:    sd ra, -8(gp)
+; RV64-ZCMOP-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x78 #
+; RV64-ZCMOP-NEXT:    c.addi sp, -32
+; RV64-ZCMOP-NEXT:    .cfi_def_cfa_offset 32
+; RV64-ZCMOP-NEXT:    c.sdsp ra, 24(sp) # 8-byte Folded Spill
+; RV64-ZCMOP-NEXT:    c.sdsp s0, 16(sp) # 8-byte Folded Spill
+; RV64-ZCMOP-NEXT:    c.sdsp s1, 8(sp) # 8-byte Folded Spill
+; RV64-ZCMOP-NEXT:    c.sdsp s2, 0(sp) # 8-byte Folded Spill
+; RV64-ZCMOP-NEXT:    .cfi_offset ra, -8
+; RV64-ZCMOP-NEXT:    .cfi_offset s0, -16
+; RV64-ZCMOP-NEXT:    .cfi_offset s1, -24
+; RV64-ZCMOP-NEXT:    .cfi_offset s2, -32
+; RV64-ZCMOP-NEXT:    call bar
+; RV64-ZCMOP-NEXT:    c.mv s0, a0
+; RV64-ZCMOP-NEXT:    call bar
+; RV64-ZCMOP-NEXT:    c.mv s1, a0
+; RV64-ZCMOP-NEXT:    call bar
+; RV64-ZCMOP-NEXT:    c.mv s2, a0
+; RV64-ZCMOP-NEXT:    call bar
+; RV64-ZCMOP-NEXT:    c.add s0, s1
+; RV64-ZCMOP-NEXT:    c.add a0, s2
+; RV64-ZCMOP-NEXT:    c.addw a0, s0
+; RV64-ZCMOP-NEXT:    c.ldsp ra, 24(sp) # 8-byte Folded Reload
+; RV64-ZCMOP-NEXT:    c.ldsp s0, 16(sp) # 8-byte Folded Reload
+; RV64-ZCMOP-NEXT:    c.ldsp s1, 8(sp) # 8-byte Folded Reload
+; RV64-ZCMOP-NEXT:    c.ldsp s2, 0(sp) # 8-byte Folded Reload
+; RV64-ZCMOP-NEXT:    .cfi_restore ra
+; RV64-ZCMOP-NEXT:    .cfi_restore s0
+; RV64-ZCMOP-NEXT:    .cfi_restore s1
+; RV64-ZCMOP-NEXT:    .cfi_restore s2
+; RV64-ZCMOP-NEXT:    c.addi16sp sp, 32
+; RV64-ZCMOP-NEXT:    .cfi_def_cfa_offset 0
+; RV64-ZCMOP-NEXT:    ld ra, -8(gp)
+; RV64-ZCMOP-NEXT:    c.addi gp, -8
+; RV64-ZCMOP-NEXT:    .cfi_restore gp
+; RV64-ZCMOP-NEXT:    c.jr ra
   %res1 = call i32 @bar()
   %res2 = call i32 @bar()
   %res3 = call i32 @bar()
@@ -329,31 +459,57 @@ define i32 @f5() shadowcallstack nounwind {
 ; RV64-NEXT:    addi gp, gp, -8
 ; RV64-NEXT:    ret
 ;
-; RV32-ZICFISS-LABEL: f5:
-; RV32-ZICFISS:       # %bb.0:
-; RV32-ZICFISS-NEXT:    addi gp, gp, 4
-; RV32-ZICFISS-NEXT:    sw ra, -4(gp)
-; RV32-ZICFISS-NEXT:    addi sp, sp, -16
-; RV32-ZICFISS-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-ZICFISS-NEXT:    call bar
-; RV32-ZICFISS-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-ZICFISS-NEXT:    addi sp, sp, 16
-; RV32-ZICFISS-NEXT:    lw ra, -4(gp)
-; RV32-ZICFISS-NEXT:    addi gp, gp, -4
-; RV32-ZICFISS-NEXT:    ret
+; RV32-NOZCMOP-LABEL: f5:
+; RV32-NOZCMOP:       # %bb.0:
+; RV32-NOZCMOP-NEXT:    addi gp, gp, 4
+; RV32-NOZCMOP-NEXT:    sw ra, -4(gp)
+; RV32-NOZCMOP-NEXT:    addi sp, sp, -16
+; RV32-NOZCMOP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NOZCMOP-NEXT:    call bar
+; RV32-NOZCMOP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NOZCMOP-NEXT:    addi sp, sp, 16
+; RV32-NOZCMOP-NEXT:    lw ra, -4(gp)
+; RV32-NOZCMOP-NEXT:    addi gp, gp, -4
+; RV32-NOZCMOP-NEXT:    ret
 ;
-; RV64-ZICFISS-LABEL: f5:
-; RV64-ZICFISS:       # %bb.0:
-; RV64-ZICFISS-NEXT:    addi gp, gp, 8
-; RV64-ZICFISS-NEXT:    sd ra, -8(gp)
-; RV64-ZICFISS-NEXT:    addi sp, sp, -16
-; RV64-ZICFISS-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-ZICFISS-NEXT:    call bar
-; RV64-ZICFISS-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64-ZICFISS-NEXT:    addi sp, sp, 16
-; RV64-ZICFISS-NEXT:    ld ra, -8(gp)
-; RV64-ZICFISS-NEXT:    addi gp, gp, -8
-; RV64-ZICFISS-NEXT:    ret
+; RV64-NOZCMOP-LABEL: f5:
+; RV64-NOZCMOP:       # %bb.0:
+; RV64-NOZCMOP-NEXT:    addi gp, gp, 8
+; RV64-NOZCMOP-NEXT:    sd ra, -8(gp)
+; RV64-NOZCMOP-NEXT:    addi sp, sp, -16
+; RV64-NOZCMOP-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NOZCMOP-NEXT:    call bar
+; RV64-NOZCMOP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NOZCMOP-NEXT:    addi sp, sp, 16
+; RV64-NOZCMOP-NEXT:    ld ra, -8(gp)
+; RV64-NOZCMOP-NEXT:    addi gp, gp, -8
+; RV64-NOZCMOP-NEXT:    ret
+;
+; RV32-ZCMOP-LABEL: f5:
+; RV32-ZCMOP:       # %bb.0:
+; RV32-ZCMOP-NEXT:    c.addi gp, 4
+; RV32-ZCMOP-NEXT:    sw ra, -4(gp)
+; RV32-ZCMOP-NEXT:    c.addi sp, -16
+; RV32-ZCMOP-NEXT:    c.swsp ra, 12(sp) # 4-byte Folded Spill
+; RV32-ZCMOP-NEXT:    call bar
+; RV32-ZCMOP-NEXT:    c.lwsp ra, 12(sp) # 4-byte Folded Reload
+; RV32-ZCMOP-NEXT:    c.addi sp, 16
+; RV32-ZCMOP-NEXT:    lw ra, -4(gp)
+; RV32-ZCMOP-NEXT:    c.addi gp, -4
+; RV32-ZCMOP-NEXT:    c.jr ra
+;
+; RV64-ZCMOP-LABEL: f5:
+; RV64-ZCMOP:       # %bb.0:
+; RV64-ZCMOP-NEXT:    c.addi gp, 8
+; RV64-ZCMOP-NEXT:    sd ra, -8(gp)
+; RV64-ZCMOP-NEXT:    c.addi sp, -16
+; RV64-ZCMOP-NEXT:    c.sdsp ra, 8(sp) # 8-byte Folded Spill
+; RV64-ZCMOP-NEXT:    call bar
+; RV64-ZCMOP-NEXT:    c.ldsp ra, 8(sp) # 8-byte Folded Reload
+; RV64-ZCMOP-NEXT:    c.addi sp, 16
+; RV64-ZCMOP-NEXT:    ld ra, -8(gp)
+; RV64-ZCMOP-NEXT:    c.addi gp, -8
+; RV64-ZCMOP-NEXT:    c.jr ra
   %res = call i32 @bar()
   %res1 = add i32 %res, 1
   ret i32 %res
@@ -368,13 +524,21 @@ define void @f1_hw() "hw-shadow-stack" {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    ret
 ;
-; RV32-ZICFISS-LABEL: f1_hw:
-; RV32-ZICFISS:       # %bb.0:
-; RV32-ZICFISS-NEXT:    ret
+; RV32-NOZCMOP-LABEL: f1_hw:
+; RV32-NOZCMOP:       # %bb.0:
+; RV32-NOZCMOP-NEXT:    ret
 ;
-; RV64-ZICFISS-LABEL: f1_hw:
-; RV64-ZICFISS:       # %bb.0:
-; RV64-ZICFISS-NEXT:    ret
+; RV64-NOZCMOP-LABEL: f1_hw:
+; RV64-NOZCMOP:       # %bb.0:
+; RV64-NOZCMOP-NEXT:    ret
+;
+; RV32-ZCMOP-LABEL: f1_hw:
+; RV32-ZCMOP:       # %bb.0:
+; RV32-ZCMOP-NEXT:    c.jr ra
+;
+; RV64-ZCMOP-LABEL: f1_hw:
+; RV64-ZCMOP:       # %bb.0:
+; RV64-ZCMOP-NEXT:    c.jr ra
   ret void
 }
 
@@ -425,35 +589,65 @@ define i32 @f3_hw() "hw-shadow-stack" {
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
 ;
-; RV32-ZICFISS-LABEL: f3_hw:
-; RV32-ZICFISS:       # %bb.0:
-; RV32-ZICFISS-NEXT:    mop.rr.7 zero, zero, ra
-; RV32-ZICFISS-NEXT:    addi sp, sp, -16
-; RV32-ZICFISS-NEXT:    .cfi_def_cfa_offset 16
-; RV32-ZICFISS-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-ZICFISS-NEXT:    .cfi_offset ra, -4
-; RV32-ZICFISS-NEXT:    call bar
-; RV32-ZICFISS-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-ZICFISS-NEXT:    .cfi_restore ra
-; RV32-ZICFISS-NEXT:    addi sp, sp, 16
-; RV32-ZICFISS-NEXT:    .cfi_def_cfa_offset 0
-; RV32-ZICFISS-NEXT:    mop.r.28 zero, ra
-; RV32-ZICFISS-NEXT:    ret
+; RV32-NOZCMOP-LABEL: f3_hw:
+; RV32-NOZCMOP:       # %bb.0:
+; RV32-NOZCMOP-NEXT:    sspush ra
+; RV32-NOZCMOP-NEXT:    addi sp, sp, -16
+; RV32-NOZCMOP-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NOZCMOP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NOZCMOP-NEXT:    .cfi_offset ra, -4
+; RV32-NOZCMOP-NEXT:    call bar
+; RV32-NOZCMOP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NOZCMOP-NEXT:    .cfi_restore ra
+; RV32-NOZCMOP-NEXT:    addi sp, sp, 16
+; RV32-NOZCMOP-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NOZCMOP-NEXT:    sspopchk ra
+; RV32-NOZCMOP-NEXT:    ret
 ;
-; RV64-ZICFISS-LABEL: f3_hw:
-; RV64-ZICFISS:       # %bb.0:
-; RV64-ZICFISS-NEXT:    mop.rr.7 zero, zero, ra
-; RV64-ZICFISS-NEXT:    addi sp, sp, -16
-; RV64-ZICFISS-NEXT:    .cfi_def_cfa_offset 16
-; RV64-ZICFISS-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-ZICFISS-NEXT:    .cfi_offset ra, -8
-; RV64-ZICFISS-NEXT:    call bar
-; RV64-ZICFISS-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64-ZICFISS-NEXT:    .cfi_restore ra
-; RV64-ZICFISS-NEXT:    addi sp, sp, 16
-; RV64-ZICFISS-NEXT:    .cfi_def_cfa_offset 0
-; RV64-ZICFISS-NEXT:    mop.r.28 zero, ra
-; RV64-ZICFISS-NEXT:    ret
+; RV64-NOZCMOP-LABEL: f3_hw:
+; RV64-NOZCMOP:       # %bb.0:
+; RV64-NOZCMOP-NEXT:    sspush ra
+; RV64-NOZCMOP-NEXT:    addi sp, sp, -16
+; RV64-NOZCMOP-NEXT:    .cfi_def_cfa_offset 16
+; RV64-NOZCMOP-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NOZCMOP-NEXT:    .cfi_offset ra, -8
+; RV64-NOZCMOP-NEXT:    call bar
+; RV64-NOZCMOP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NOZCMOP-NEXT:    .cfi_restore ra
+; RV64-NOZCMOP-NEXT:    addi sp, sp, 16
+; RV64-NOZCMOP-NEXT:    .cfi_def_cfa_offset 0
+; RV64-NOZCMOP-NEXT:    sspopchk ra
+; RV64-NOZCMOP-NEXT:    ret
+;
+; RV32-ZCMOP-LABEL: f3_hw:
+; RV32-ZCMOP:       # %bb.0:
+; RV32-ZCMOP-NEXT:    c.sspush ra
+; RV32-ZCMOP-NEXT:    c.addi sp, -16
+; RV32-ZCMOP-NEXT:    .cfi_def_cfa_offset 16
+; RV32-ZCMOP-NEXT:    c.swsp ra, 12(sp) # 4-byte Folded Spill
+; RV32-ZCMOP-NEXT:    .cfi_offset ra, -4
+; RV32-ZCMOP-NEXT:    call bar
+; RV32-ZCMOP-NEXT:    c.lwsp ra, 12(sp) # 4-byte Folded Reload
+; RV32-ZCMOP-NEXT:    .cfi_restore ra
+; RV32-ZCMOP-NEXT:    c.addi sp, 16
+; RV32-ZCMOP-NEXT:    .cfi_def_cfa_offset 0
+; RV32-ZCMOP-NEXT:    sspopchk ra
+; RV32-ZCMOP-NEXT:    c.jr ra
+;
+; RV64-ZCMOP-LABEL: f3_hw:
+; RV64-ZCMOP:       # %bb.0:
+; RV64-ZCMOP-NEXT:    c.sspush ra
+; RV64-ZCMOP-NEXT:    c.addi sp, -16
+; RV64-ZCMOP-NEXT:    .cfi_def_cfa_offset 16
+; RV64-ZCMOP-NEXT:    c.sdsp ra, 8(sp) # 8-byte Folded Spill
+; RV64-ZCMOP-NEXT:    .cfi_offset ra, -8
+; RV64-ZCMOP-NEXT:    call bar
+; RV64-ZCMOP-NEXT:    c.ldsp ra, 8(sp) # 8-byte Folded Reload
+; RV64-ZCMOP-NEXT:    .cfi_restore ra
+; RV64-ZCMOP-NEXT:    c.addi sp, 16
+; RV64-ZCMOP-NEXT:    .cfi_def_cfa_offset 0
+; RV64-ZCMOP-NEXT:    sspopchk ra
+; RV64-ZCMOP-NEXT:    c.jr ra
   %res = call i32 @bar()
   %res1 = add i32 %res, 1
   ret i32 %res
@@ -528,77 +722,149 @@ define i32 @f4_hw() "hw-shadow-stack" {
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
 ;
-; RV32-ZICFISS-LABEL: f4_hw:
-; RV32-ZICFISS:       # %bb.0:
-; RV32-ZICFISS-NEXT:    mop.rr.7 zero, zero, ra
-; RV32-ZICFISS-NEXT:    addi sp, sp, -16
-; RV32-ZICFISS-NEXT:    .cfi_def_cfa_offset 16
-; RV32-ZICFISS-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-ZICFISS-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32-ZICFISS-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
-; RV32-ZICFISS-NEXT:    sw s2, 0(sp) # 4-byte Folded Spill
-; RV32-ZICFISS-NEXT:    .cfi_offset ra, -4
-; RV32-ZICFISS-NEXT:    .cfi_offset s0, -8
-; RV32-ZICFISS-NEXT:    .cfi_offset s1, -12
-; RV32-ZICFISS-NEXT:    .cfi_offset s2, -16
-; RV32-ZICFISS-NEXT:    call bar
-; RV32-ZICFISS-NEXT:    mv s0, a0
-; RV32-ZICFISS-NEXT:    call bar
-; RV32-ZICFISS-NEXT:    mv s1, a0
-; RV32-ZICFISS-NEXT:    call bar
-; RV32-ZICFISS-NEXT:    mv s2, a0
-; RV32-ZICFISS-NEXT:    call bar
-; RV32-ZICFISS-NEXT:    add s0, s0, s1
-; RV32-ZICFISS-NEXT:    add a0, s2, a0
-; RV32-ZICFISS-NEXT:    add a0, s0, a0
-; RV32-ZICFISS-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-ZICFISS-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32-ZICFISS-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32-ZICFISS-NEXT:    lw s2, 0(sp) # 4-byte Folded Reload
-; RV32-ZICFISS-NEXT:    .cfi_restore ra
-; RV32-ZICFISS-NEXT:    .cfi_restore s0
-; RV32-ZICFISS-NEXT:    .cfi_restore s1
-; RV32-ZICFISS-NEXT:    .cfi_restore s2
-; RV32-ZICFISS-NEXT:    addi sp, sp, 16
-; RV32-ZICFISS-NEXT:    .cfi_def_cfa_offset 0
-; RV32-ZICFISS-NEXT:    mop.r.28 zero, ra
-; RV32-ZICFISS-NEXT:    ret
+; RV32-NOZCMOP-LABEL: f4_hw:
+; RV32-NOZCMOP:       # %bb.0:
+; RV32-NOZCMOP-NEXT:    sspush ra
+; RV32-NOZCMOP-NEXT:    addi sp, sp, -16
+; RV32-NOZCMOP-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NOZCMOP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NOZCMOP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-NOZCMOP-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32-NOZCMOP-NEXT:    sw s2, 0(sp) # 4-byte Folded Spill
+; RV32-NOZCMOP-NEXT:    .cfi_offset ra, -4
+; RV32-NOZCMOP-NEXT:    .cfi_offset s0, -8
+; RV32-NOZCMOP-NEXT:    .cfi_offset s1, -12
+; RV32-NOZCMOP-NEXT:    .cfi_offset s2, -16
+; RV32-NOZCMOP-NEXT:    call bar
+; RV32-NOZCMOP-NEXT:    mv s0, a0
+; RV32-NOZCMOP-NEXT:    call bar
+; RV32-NOZCMOP-NEXT:    mv s1, a0
+; RV32-NOZCMOP-NEXT:    call bar
+; RV32-NOZCMOP-NEXT:    mv s2, a0
+; RV32-NOZCMOP-NEXT:    call bar
+; RV32-NOZCMOP-NEXT:    add s0, s0, s1
+; RV32-NOZCMOP-NEXT:    add a0, s2, a0
+; RV32-NOZCMOP-NEXT:    add a0, s0, a0
+; RV32-NOZCMOP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NOZCMOP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-NOZCMOP-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32-NOZCMOP-NEXT:    lw s2, 0(sp) # 4-byte Folded Reload
+; RV32-NOZCMOP-NEXT:    .cfi_restore ra
+; RV32-NOZCMOP-NEXT:    .cfi_restore s0
+; RV32-NOZCMOP-NEXT:    .cfi_restore s1
+; RV32-NOZCMOP-NEXT:    .cfi_restore s2
+; RV32-NOZCMOP-NEXT:    addi sp, sp, 16
+; RV32-NOZCMOP-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NOZCMOP-NEXT:    sspopchk ra
+; RV32-NOZCMOP-NEXT:    ret
 ;
-; RV64-ZICFISS-LABEL: f4_hw:
-; RV64-ZICFISS:       # %bb.0:
-; RV64-ZICFISS-NEXT:    mop.rr.7 zero, zero, ra
-; RV64-ZICFISS-NEXT:    addi sp, sp, -32
-; RV64-ZICFISS-NEXT:    .cfi_def_cfa_offset 32
-; RV64-ZICFISS-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64-ZICFISS-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64-ZICFISS-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; RV64-ZICFISS-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
-; RV64-ZICFISS-NEXT:    .cfi_offset ra, -8
-; RV64-ZICFISS-NEXT:    .cfi_offset s0, -16
-; RV64-ZICFISS-NEXT:    .cfi_offset s1, -24
-; RV64-ZICFISS-NEXT:    .cfi_offset s2, -32
-; RV64-ZICFISS-NEXT:    call bar
-; RV64-ZICFISS-NEXT:    mv s0, a0
-; RV64-ZICFISS-NEXT:    call bar
-; RV64-ZICFISS-NEXT:    mv s1, a0
-; RV64-ZICFISS-NEXT:    call bar
-; RV64-ZICFISS-NEXT:    mv s2, a0
-; RV64-ZICFISS-NEXT:    call bar
-; RV64-ZICFISS-NEXT:    add s0, s0, s1
-; RV64-ZICFISS-NEXT:    add a0, s2, a0
-; RV64-ZICFISS-NEXT:    addw a0, s0, a0
-; RV64-ZICFISS-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64-ZICFISS-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; RV64-ZICFISS-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64-ZICFISS-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
-; RV64-ZICFISS-NEXT:    .cfi_restore ra
-; RV64-ZICFISS-NEXT:    .cfi_restore s0
-; RV64-ZICFISS-NEXT:    .cfi_restore s1
-; RV64-ZICFISS-NEXT:    .cfi_restore s2
-; RV64-ZICFISS-NEXT:    addi sp, sp, 32
-; RV64-ZICFISS-NEXT:    .cfi_def_cfa_offset 0
-; RV64-ZICFISS-NEXT:    mop.r.28 zero, ra
-; RV64-ZICFISS-NEXT:    ret
+; RV64-NOZCMOP-LABEL: f4_hw:
+; RV64-NOZCMOP:       # %bb.0:
+; RV64-NOZCMOP-NEXT:    sspush ra
+; RV64-NOZCMOP-NEXT:    addi sp, sp, -32
+; RV64-NOZCMOP-NEXT:    .cfi_def_cfa_offset 32
+; RV64-NOZCMOP-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64-NOZCMOP-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64-NOZCMOP-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64-NOZCMOP-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; RV64-NOZCMOP-NEXT:    .cfi_offset ra, -8
+; RV64-NOZCMOP-NEXT:    .cfi_offset s0, -16
+; RV64-NOZCMOP-NEXT:    .cfi_offset s1, -24
+; RV64-NOZCMOP-NEXT:    .cfi_offset s2, -32
+; RV64-NOZCMOP-NEXT:    call bar
+; RV64-NOZCMOP-NEXT:    mv s0, a0
+; RV64-NOZCMOP-NEXT:    call bar
+; RV64-NOZCMOP-NEXT:    mv s1, a0
+; RV64-NOZCMOP-NEXT:    call bar
+; RV64-NOZCMOP-NEXT:    mv s2, a0
+; RV64-NOZCMOP-NEXT:    call bar
+; RV64-NOZCMOP-NEXT:    add s0, s0, s1
+; RV64-NOZCMOP-NEXT:    add a0, s2, a0
+; RV64-NOZCMOP-NEXT:    addw a0, s0, a0
+; RV64-NOZCMOP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64-NOZCMOP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64-NOZCMOP-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64-NOZCMOP-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; RV64-NOZCMOP-NEXT:    .cfi_restore ra
+; RV64-NOZCMOP-NEXT:    .cfi_restore s0
+; RV64-NOZCMOP-NEXT:    .cfi_restore s1
+; RV64-NOZCMOP-NEXT:    .cfi_restore s2
+; RV64-NOZCMOP-NEXT:    addi sp, sp, 32
+; RV64-NOZCMOP-NEXT:    .cfi_def_cfa_offset 0
+; RV64-NOZCMOP-NEXT:    sspopchk ra
+; RV64-NOZCMOP-NEXT:    ret
+;
+; RV32-ZCMOP-LABEL: f4_hw:
+; RV32-ZCMOP:       # %bb.0:
+; RV32-ZCMOP-NEXT:    c.sspush ra
+; RV32-ZCMOP-NEXT:    c.addi sp, -16
+; RV32-ZCMOP-NEXT:    .cfi_def_cfa_offset 16
+; RV32-ZCMOP-NEXT:    c.swsp ra, 12(sp) # 4-byte Folded Spill
+; RV32-ZCMOP-NEXT:    c.swsp s0, 8(sp) # 4-byte Folded Spill
+; RV32-ZCMOP-NEXT:    c.swsp s1, 4(sp) # 4-byte Folded Spill
+; RV32-ZCMOP-NEXT:    c.swsp s2, 0(sp) # 4-byte Folded Spill
+; RV32-ZCMOP-NEXT:    .cfi_offset ra, -4
+; RV32-ZCMOP-NEXT:    .cfi_offset s0, -8
+; RV32-ZCMOP-NEXT:    .cfi_offset s1, -12
+; RV32-ZCMOP-NEXT:    .cfi_offset s2, -16
+; RV32-ZCMOP-NEXT:    call bar
+; RV32-ZCMOP-NEXT:    c.mv s0, a0
+; RV32-ZCMOP-NEXT:    call bar
+; RV32-ZCMOP-NEXT:    c.mv s1, a0
+; RV32-ZCMOP-NEXT:    call bar
+; RV32-ZCMOP-NEXT:    c.mv s2, a0
+; RV32-ZCMOP-NEXT:    call bar
+; RV32-ZCMOP-NEXT:    c.add s0, s1
+; RV32-ZCMOP-NEXT:    c.add a0, s2
+; RV32-ZCMOP-NEXT:    c.add a0, s0
+; RV32-ZCMOP-NEXT:    c.lwsp ra, 12(sp) # 4-byte Folded Reload
+; RV32-ZCMOP-NEXT:    c.lwsp s0, 8(sp) # 4-byte Folded Reload
+; RV32-ZCMOP-NEXT:    c.lwsp s1, 4(sp) # 4-byte Folded Reload
+; RV32-ZCMOP-NEXT:    c.lwsp s2, 0(sp) # 4-byte Folded Reload
+; RV32-ZCMOP-NEXT:    .cfi_restore ra
+; RV32-ZCMOP-NEXT:    .cfi_restore s0
+; RV32-ZCMOP-NEXT:    .cfi_restore s1
+; RV32-ZCMOP-NEXT:    .cfi_restore s2
+; RV32-ZCMOP-NEXT:    c.addi sp, 16
+; RV32-ZCMOP-NEXT:    .cfi_def_cfa_offset 0
+; RV32-ZCMOP-NEXT:    sspopchk ra
+; RV32-ZCMOP-NEXT:    c.jr ra
+;
+; RV64-ZCMOP-LABEL: f4_hw:
+; RV64-ZCMOP:       # %bb.0:
+; RV64-ZCMOP-NEXT:    c.sspush ra
+; RV64-ZCMOP-NEXT:    c.addi sp, -32
+; RV64-ZCMOP-NEXT:    .cfi_def_cfa_offset 32
+; RV64-ZCMOP-NEXT:    c.sdsp ra, 24(sp) # 8-byte Folded Spill
+; RV64-ZCMOP-NEXT:    c.sdsp s0, 16(sp) # 8-byte Folded Spill
+; RV64-ZCMOP-NEXT:    c.sdsp s1, 8(sp) # 8-byte Folded Spill
+; RV64-ZCMOP-NEXT:    c.sdsp s2, 0(sp) # 8-byte Folded Spill
+; RV64-ZCMOP-NEXT:    .cfi_offset ra, -8
+; RV64-ZCMOP-NEXT:    .cfi_offset s0, -16
+; RV64-ZCMOP-NEXT:    .cfi_offset s1, -24
+; RV64-ZCMOP-NEXT:    .cfi_offset s2, -32
+; RV64-ZCMOP-NEXT:    call bar
+; RV64-ZCMOP-NEXT:    c.mv s0, a0
+; RV64-ZCMOP-NEXT:    call bar
+; RV64-ZCMOP-NEXT:    c.mv s1, a0
+; RV64-ZCMOP-NEXT:    call bar
+; RV64-ZCMOP-NEXT:    c.mv s2, a0
+; RV64-ZCMOP-NEXT:    call bar
+; RV64-ZCMOP-NEXT:    c.add s0, s1
+; RV64-ZCMOP-NEXT:    c.add a0, s2
+; RV64-ZCMOP-NEXT:    c.addw a0, s0
+; RV64-ZCMOP-NEXT:    c.ldsp ra, 24(sp) # 8-byte Folded Reload
+; RV64-ZCMOP-NEXT:    c.ldsp s0, 16(sp) # 8-byte Folded Reload
+; RV64-ZCMOP-NEXT:    c.ldsp s1, 8(sp) # 8-byte Folded Reload
+; RV64-ZCMOP-NEXT:    c.ldsp s2, 0(sp) # 8-byte Folded Reload
+; RV64-ZCMOP-NEXT:    .cfi_restore ra
+; RV64-ZCMOP-NEXT:    .cfi_restore s0
+; RV64-ZCMOP-NEXT:    .cfi_restore s1
+; RV64-ZCMOP-NEXT:    .cfi_restore s2
+; RV64-ZCMOP-NEXT:    c.addi16sp sp, 32
+; RV64-ZCMOP-NEXT:    .cfi_def_cfa_offset 0
+; RV64-ZCMOP-NEXT:    sspopchk ra
+; RV64-ZCMOP-NEXT:    c.jr ra
   %res1 = call i32 @bar()
   %res2 = call i32 @bar()
   %res3 = call i32 @bar()
@@ -628,27 +894,49 @@ define i32 @f5_hw() "hw-shadow-stack" nounwind {
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
 ;
-; RV32-ZICFISS-LABEL: f5_hw:
-; RV32-ZICFISS:       # %bb.0:
-; RV32-ZICFISS-NEXT:    mop.rr.7 zero, zero, ra
-; RV32-ZICFISS-NEXT:    addi sp, sp, -16
-; RV32-ZICFISS-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-ZICFISS-NEXT:    call bar
-; RV32-ZICFISS-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-ZICFISS-NEXT:    addi sp, sp, 16
-; RV32-ZICFISS-NEXT:    mop.r.28 zero, ra
-; RV32-ZICFISS-NEXT:    ret
+; RV32-NOZCMOP-LABEL: f5_hw:
+; RV32-NOZCMOP:       # %bb.0:
+; RV32-NOZCMOP-NEXT:    sspush ra
+; RV32-NOZCMOP-NEXT:    addi sp, sp, -16
+; RV32-NOZCMOP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NOZCMOP-NEXT:    call bar
+; RV32-NOZCMOP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NOZCMOP-NEXT:    addi sp, sp, 16
+; RV32-NOZCMOP-NEXT:    sspopchk ra
+; RV32-NOZCMOP-NEXT:    ret
 ;
-; RV64-ZICFISS-LABEL: f5_hw:
-; RV64-ZICFISS:       # %bb.0:
-; RV64-ZICFISS-NEXT:    mop.rr.7 zero, zero, ra
-; RV64-ZICFISS-NEXT:    addi sp, sp, -16
-; RV64-ZICFISS-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-ZICFISS-NEXT:    call bar
-; RV64-ZICFISS-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64-ZICFISS-NEXT:    addi sp, sp, 16
-; RV64-ZICFISS-NEXT:    mop.r.28 zero, ra
-; RV64-ZICFISS-NEXT:    ret
+; RV64-NOZCMOP-LABEL: f5_hw:
+; RV64-NOZCMOP:       # %bb.0:
+; RV64-NOZCMOP-NEXT:    sspush ra
+; RV64-NOZCMOP-NEXT:    addi sp, sp, -16
+; RV64-NOZCMOP-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NOZCMOP-NEXT:    call bar
+; RV64-NOZCMOP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NOZCMOP-NEXT:    addi sp, sp, 16
+; RV64-NOZCMOP-NEXT:    sspopchk ra
+; RV64-NOZCMOP-NEXT:    ret
+;
+; RV32-ZCMOP-LABEL: f5_hw:
+; RV32-ZCMOP:       # %bb.0:
+; RV32-ZCMOP-NEXT:    c.sspush ra
+; RV32-ZCMOP-NEXT:    c.addi sp, -16
+; RV32-ZCMOP-NEXT:    c.swsp ra, 12(sp) # 4-byte Folded Spill
+; RV32-ZCMOP-NEXT:    call bar
+; RV32-ZCMOP-NEXT:    c.lwsp ra, 12(sp) # 4-byte Folded Reload
+; RV32-ZCMOP-NEXT:    c.addi sp, 16
+; RV32-ZCMOP-NEXT:    sspopchk ra
+; RV32-ZCMOP-NEXT:    c.jr ra
+;
+; RV64-ZCMOP-LABEL: f5_hw:
+; RV64-ZCMOP:       # %bb.0:
+; RV64-ZCMOP-NEXT:    c.sspush ra
+; RV64-ZCMOP-NEXT:    c.addi sp, -16
+; RV64-ZCMOP-NEXT:    c.sdsp ra, 8(sp) # 8-byte Folded Spill
+; RV64-ZCMOP-NEXT:    call bar
+; RV64-ZCMOP-NEXT:    c.ldsp ra, 8(sp) # 8-byte Folded Reload
+; RV64-ZCMOP-NEXT:    c.addi sp, 16
+; RV64-ZCMOP-NEXT:    sspopchk ra
+; RV64-ZCMOP-NEXT:    c.jr ra
   %res = call i32 @bar()
   %res1 = add i32 %res, 1
   ret i32 %res
@@ -663,13 +951,21 @@ define void @f1_both() "hw-shadow-stack" shadowcallstack {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    ret
 ;
-; RV32-ZICFISS-LABEL: f1_both:
-; RV32-ZICFISS:       # %bb.0:
-; RV32-ZICFISS-NEXT:    ret
+; RV32-NOZCMOP-LABEL: f1_both:
+; RV32-NOZCMOP:       # %bb.0:
+; RV32-NOZCMOP-NEXT:    ret
 ;
-; RV64-ZICFISS-LABEL: f1_both:
-; RV64-ZICFISS:       # %bb.0:
-; RV64-ZICFISS-NEXT:    ret
+; RV64-NOZCMOP-LABEL: f1_both:
+; RV64-NOZCMOP:       # %bb.0:
+; RV64-NOZCMOP-NEXT:    ret
+;
+; RV32-ZCMOP-LABEL: f1_both:
+; RV32-ZCMOP:       # %bb.0:
+; RV32-ZCMOP-NEXT:    c.jr ra
+;
+; RV64-ZCMOP-LABEL: f1_both:
+; RV64-ZCMOP:       # %bb.0:
+; RV64-ZCMOP-NEXT:    c.jr ra
   ret void
 }
 
@@ -732,35 +1028,65 @@ define i32 @f3_both() "hw-shadow-stack" shadowcallstack {
 ; RV64-NEXT:    .cfi_restore gp
 ; RV64-NEXT:    ret
 ;
-; RV32-ZICFISS-LABEL: f3_both:
-; RV32-ZICFISS:       # %bb.0:
-; RV32-ZICFISS-NEXT:    mop.rr.7 zero, zero, ra
-; RV32-ZICFISS-NEXT:    addi sp, sp, -16
-; RV32-ZICFISS-NEXT:    .cfi_def_cfa_offset 16
-; RV32-ZICFISS-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-ZICFISS-NEXT:    .cfi_offset ra, -4
-; RV32-ZICFISS-NEXT:    call bar
-; RV32-ZICFISS-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-ZICFISS-NEXT:    .cfi_restore ra
-; RV32-ZICFISS-NEXT:    addi sp, sp, 16
-; RV32-ZICFISS-NEXT:    .cfi_def_cfa_offset 0
-; RV32-ZICFISS-NEXT:    mop.r.28 zero, ra
-; RV32-ZICFISS-NEXT:    ret
+; RV32-NOZCMOP-LABEL: f3_both:
+; RV32-NOZCMOP:       # %bb.0:
+; RV32-NOZCMOP-NEXT:    sspush ra
+; RV32-NOZCMOP-NEXT:    addi sp, sp, -16
+; RV32-NOZCMOP-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NOZCMOP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NOZCMOP-NEXT:    .cfi_offset ra, -4
+; RV32-NOZCMOP-NEXT:    call bar
+; RV32-NOZCMOP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NOZCMOP-NEXT:    .cfi_restore ra
+; RV32-NOZCMOP-NEXT:    addi sp, sp, 16
+; RV32-NOZCMOP-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NOZCMOP-NEXT:    sspopchk ra
+; RV32-NOZCMOP-NEXT:    ret
 ;
-; RV64-ZICFISS-LABEL: f3_both:
-; RV64-ZICFISS:       # %bb.0:
-; RV64-ZICFISS-NEXT:    mop.rr.7 zero, zero, ra
-; RV64-ZICFISS-NEXT:    addi sp, sp, -16
-; RV64-ZICFISS-NEXT:    .cfi_def_cfa_offset 16
-; RV64-ZICFISS-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-ZICFISS-NEXT:    .cfi_offset ra, -8
-; RV64-ZICFISS-NEXT:    call bar
-; RV64-ZICFISS-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64-ZICFISS-NEXT:    .cfi_restore ra
-; RV64-ZICFISS-NEXT:    addi sp, sp, 16
-; RV64-ZICFISS-NEXT:    .cfi_def_cfa_offset 0
-; RV64-ZICFISS-NEXT:    mop.r.28 zero, ra
-; RV64-ZICFISS-NEXT:    ret
+; RV64-NOZCMOP-LABEL: f3_both:
+; RV64-NOZCMOP:       # %bb.0:
+; RV64-NOZCMOP-NEXT:    sspush ra
+; RV64-NOZCMOP-NEXT:    addi sp, sp, -16
+; RV64-NOZCMOP-NEXT:    .cfi_def_cfa_offset 16
+; RV64-NOZCMOP-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NOZCMOP-NEXT:    .cfi_offset ra, -8
+; RV64-NOZCMOP-NEXT:    call bar
+; RV64-NOZCMOP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NOZCMOP-NEXT:    .cfi_restore ra
+; RV64-NOZCMOP-NEXT:    addi sp, sp, 16
+; RV64-NOZCMOP-NEXT:    .cfi_def_cfa_offset 0
+; RV64-NOZCMOP-NEXT:    sspopchk ra
+; RV64-NOZCMOP-NEXT:    ret
+;
+; RV32-ZCMOP-LABEL: f3_both:
+; RV32-ZCMOP:       # %bb.0:
+; RV32-ZCMOP-NEXT:    c.sspush ra
+; RV32-ZCMOP-NEXT:    c.addi sp, -16
+; RV32-ZCMOP-NEXT:    .cfi_def_cfa_offset 16
+; RV32-ZCMOP-NEXT:    c.swsp ra, 12(sp) # 4-byte Folded Spill
+; RV32-ZCMOP-NEXT:    .cfi_offset ra, -4
+; RV32-ZCMOP-NEXT:    call bar
+; RV32-ZCMOP-NEXT:    c.lwsp ra, 12(sp) # 4-byte Folded Reload
+; RV32-ZCMOP-NEXT:    .cfi_restore ra
+; RV32-ZCMOP-NEXT:    c.addi sp, 16
+; RV32-ZCMOP-NEXT:    .cfi_def_cfa_offset 0
+; RV32-ZCMOP-NEXT:    sspopchk ra
+; RV32-ZCMOP-NEXT:    c.jr ra
+;
+; RV64-ZCMOP-LABEL: f3_both:
+; RV64-ZCMOP:       # %bb.0:
+; RV64-ZCMOP-NEXT:    c.sspush ra
+; RV64-ZCMOP-NEXT:    c.addi sp, -16
+; RV64-ZCMOP-NEXT:    .cfi_def_cfa_offset 16
+; RV64-ZCMOP-NEXT:    c.sdsp ra, 8(sp) # 8-byte Folded Spill
+; RV64-ZCMOP-NEXT:    .cfi_offset ra, -8
+; RV64-ZCMOP-NEXT:    call bar
+; RV64-ZCMOP-NEXT:    c.ldsp ra, 8(sp) # 8-byte Folded Reload
+; RV64-ZCMOP-NEXT:    .cfi_restore ra
+; RV64-ZCMOP-NEXT:    c.addi sp, 16
+; RV64-ZCMOP-NEXT:    .cfi_def_cfa_offset 0
+; RV64-ZCMOP-NEXT:    sspopchk ra
+; RV64-ZCMOP-NEXT:    c.jr ra
   %res = call i32 @bar()
   %res1 = add i32 %res, 1
   ret i32 %res
@@ -847,77 +1173,149 @@ define i32 @f4_both() "hw-shadow-stack" shadowcallstack {
 ; RV64-NEXT:    .cfi_restore gp
 ; RV64-NEXT:    ret
 ;
-; RV32-ZICFISS-LABEL: f4_both:
-; RV32-ZICFISS:       # %bb.0:
-; RV32-ZICFISS-NEXT:    mop.rr.7 zero, zero, ra
-; RV32-ZICFISS-NEXT:    addi sp, sp, -16
-; RV32-ZICFISS-NEXT:    .cfi_def_cfa_offset 16
-; RV32-ZICFISS-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-ZICFISS-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32-ZICFISS-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
-; RV32-ZICFISS-NEXT:    sw s2, 0(sp) # 4-byte Folded Spill
-; RV32-ZICFISS-NEXT:    .cfi_offset ra, -4
-; RV32-ZICFISS-NEXT:    .cfi_offset s0, -8
-; RV32-ZICFISS-NEXT:    .cfi_offset s1, -12
-; RV32-ZICFISS-NEXT:    .cfi_offset s2, -16
-; RV32-ZICFISS-NEXT:    call bar
-; RV32-ZICFISS-NEXT:    mv s0, a0
-; RV32-ZICFISS-NEXT:    call bar
-; RV32-ZICFISS-NEXT:    mv s1, a0
-; RV32-ZICFISS-NEXT:    call bar
-; RV32-ZICFISS-NEXT:    mv s2, a0
-; RV32-ZICFISS-NEXT:    call bar
-; RV32-ZICFISS-NEXT:    add s0, s0, s1
-; RV32-ZICFISS-NEXT:    add a0, s2, a0
-; RV32-ZICFISS-NEXT:    add a0, s0, a0
-; RV32-ZICFISS-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-ZICFISS-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32-ZICFISS-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32-ZICFISS-NEXT:    lw s2, 0(sp) # 4-byte Folded Reload
-; RV32-ZICFISS-NEXT:    .cfi_restore ra
-; RV32-ZICFISS-NEXT:    .cfi_restore s0
-; RV32-ZICFISS-NEXT:    .cfi_restore s1
-; RV32-ZICFISS-NEXT:    .cfi_restore s2
-; RV32-ZICFISS-NEXT:    addi sp, sp, 16
-; RV32-ZICFISS-NEXT:    .cfi_def_cfa_offset 0
-; RV32-ZICFISS-NEXT:    mop.r.28 zero, ra
-; RV32-ZICFISS-NEXT:    ret
+; RV32-NOZCMOP-LABEL: f4_both:
+; RV32-NOZCMOP:       # %bb.0:
+; RV32-NOZCMOP-NEXT:    sspush ra
+; RV32-NOZCMOP-NEXT:    addi sp, sp, -16
+; RV32-NOZCMOP-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NOZCMOP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NOZCMOP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32-NOZCMOP-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32-NOZCMOP-NEXT:    sw s2, 0(sp) # 4-byte Folded Spill
+; RV32-NOZCMOP-NEXT:    .cfi_offset ra, -4
+; RV32-NOZCMOP-NEXT:    .cfi_offset s0, -8
+; RV32-NOZCMOP-NEXT:    .cfi_offset s1, -12
+; RV32-NOZCMOP-NEXT:    .cfi_offset s2, -16
+; RV32-NOZCMOP-NEXT:    call bar
+; RV32-NOZCMOP-NEXT:    mv s0, a0
+; RV32-NOZCMOP-NEXT:    call bar
+; RV32-NOZCMOP-NEXT:    mv s1, a0
+; RV32-NOZCMOP-NEXT:    call bar
+; RV32-NOZCMOP-NEXT:    mv s2, a0
+; RV32-NOZCMOP-NEXT:    call bar
+; RV32-NOZCMOP-NEXT:    add s0, s0, s1
+; RV32-NOZCMOP-NEXT:    add a0, s2, a0
+; RV32-NOZCMOP-NEXT:    add a0, s0, a0
+; RV32-NOZCMOP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NOZCMOP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32-NOZCMOP-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32-NOZCMOP-NEXT:    lw s2, 0(sp) # 4-byte Folded Reload
+; RV32-NOZCMOP-NEXT:    .cfi_restore ra
+; RV32-NOZCMOP-NEXT:    .cfi_restore s0
+; RV32-NOZCMOP-NEXT:    .cfi_restore s1
+; RV32-NOZCMOP-NEXT:    .cfi_restore s2
+; RV32-NOZCMOP-NEXT:    addi sp, sp, 16
+; RV32-NOZCMOP-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NOZCMOP-NEXT:    sspopchk ra
+; RV32-NOZCMOP-NEXT:    ret
 ;
-; RV64-ZICFISS-LABEL: f4_both:
-; RV64-ZICFISS:       # %bb.0:
-; RV64-ZICFISS-NEXT:    mop.rr.7 zero, zero, ra
-; RV64-ZICFISS-NEXT:    addi sp, sp, -32
-; RV64-ZICFISS-NEXT:    .cfi_def_cfa_offset 32
-; RV64-ZICFISS-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64-ZICFISS-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64-ZICFISS-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; RV64-ZICFISS-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
-; RV64-ZICFISS-NEXT:    .cfi_offset ra, -8
-; RV64-ZICFISS-NEXT:    .cfi_offset s0, -16
-; RV64-ZICFISS-NEXT:    .cfi_offset s1, -24
-; RV64-ZICFISS-NEXT:    .cfi_offset s2, -32
-; RV64-ZICFISS-NEXT:    call bar
-; RV64-ZICFISS-NEXT:    mv s0, a0
-; RV64-ZICFISS-NEXT:    call bar
-; RV64-ZICFISS-NEXT:    mv s1, a0
-; RV64-ZICFISS-NEXT:    call bar
-; RV64-ZICFISS-NEXT:    mv s2, a0
-; RV64-ZICFISS-NEXT:    call bar
-; RV64-ZICFISS-NEXT:    add s0, s0, s1
-; RV64-ZICFISS-NEXT:    add a0, s2, a0
-; RV64-ZICFISS-NEXT:    addw a0, s0, a0
-; RV64-ZICFISS-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64-ZICFISS-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; RV64-ZICFISS-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64-ZICFISS-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
-; RV64-ZICFISS-NEXT:    .cfi_restore ra
-; RV64-ZICFISS-NEXT:    .cfi_restore s0
-; RV64-ZICFISS-NEXT:    .cfi_restore s1
-; RV64-ZICFISS-NEXT:    .cfi_restore s2
-; RV64-ZICFISS-NEXT:    addi sp, sp, 32
-; RV64-ZICFISS-NEXT:    .cfi_def_cfa_offset 0
-; RV64-ZICFISS-NEXT:    mop.r.28 zero, ra
-; RV64-ZICFISS-NEXT:    ret
+; RV64-NOZCMOP-LABEL: f4_both:
+; RV64-NOZCMOP:       # %bb.0:
+; RV64-NOZCMOP-NEXT:    sspush ra
+; RV64-NOZCMOP-NEXT:    addi sp, sp, -32
+; RV64-NOZCMOP-NEXT:    .cfi_def_cfa_offset 32
+; RV64-NOZCMOP-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64-NOZCMOP-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64-NOZCMOP-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64-NOZCMOP-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; RV64-NOZCMOP-NEXT:    .cfi_offset ra, -8
+; RV64-NOZCMOP-NEXT:    .cfi_offset s0, -16
+; RV64-NOZCMOP-NEXT:    .cfi_offset s1, -24
+; RV64-NOZCMOP-NEXT:    .cfi_offset s2, -32
+; RV64-NOZCMOP-NEXT:    call bar
+; RV64-NOZCMOP-NEXT:    mv s0, a0
+; RV64-NOZCMOP-NEXT:    call bar
+; RV64-NOZCMOP-NEXT:    mv s1, a0
+; RV64-NOZCMOP-NEXT:    call bar
+; RV64-NOZCMOP-NEXT:    mv s2, a0
+; RV64-NOZCMOP-NEXT:    call bar
+; RV64-NOZCMOP-NEXT:    add s0, s0, s1
+; RV64-NOZCMOP-NEXT:    add a0, s2, a0
+; RV64-NOZCMOP-NEXT:    addw a0, s0, a0
+; RV64-NOZCMOP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64-NOZCMOP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64-NOZCMOP-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64-NOZCMOP-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; RV64-NOZCMOP-NEXT:    .cfi_restore ra
+; RV64-NOZCMOP-NEXT:    .cfi_restore s0
+; RV64-NOZCMOP-NEXT:    .cfi_restore s1
+; RV64-NOZCMOP-NEXT:    .cfi_restore s2
+; RV64-NOZCMOP-NEXT:    addi sp, sp, 32
+; RV64-NOZCMOP-NEXT:    .cfi_def_cfa_offset 0
+; RV64-NOZCMOP-NEXT:    sspopchk ra
+; RV64-NOZCMOP-NEXT:    ret
+;
+; RV32-ZCMOP-LABEL: f4_both:
+; RV32-ZCMOP:       # %bb.0:
+; RV32-ZCMOP-NEXT:    c.sspush ra
+; RV32-ZCMOP-NEXT:    c.addi sp, -16
+; RV32-ZCMOP-NEXT:    .cfi_def_cfa_offset 16
+; RV32-ZCMOP-NEXT:    c.swsp ra, 12(sp) # 4-byte Folded Spill
+; RV32-ZCMOP-NEXT:    c.swsp s0, 8(sp) # 4-byte Folded Spill
+; RV32-ZCMOP-NEXT:    c.swsp s1, 4(sp) # 4-byte Folded Spill
+; RV32-ZCMOP-NEXT:    c.swsp s2, 0(sp) # 4-byte Folded Spill
+; RV32-ZCMOP-NEXT:    .cfi_offset ra, -4
+; RV32-ZCMOP-NEXT:    .cfi_offset s0, -8
+; RV32-ZCMOP-NEXT:    .cfi_offset s1, -12
+; RV32-ZCMOP-NEXT:    .cfi_offset s2, -16
+; RV32-ZCMOP-NEXT:    call bar
+; RV32-ZCMOP-NEXT:    c.mv s0, a0
+; RV32-ZCMOP-NEXT:    call bar
+; RV32-ZCMOP-NEXT:    c.mv s1, a0
+; RV32-ZCMOP-NEXT:    call bar
+; RV32-ZCMOP-NEXT:    c.mv s2, a0
+; RV32-ZCMOP-NEXT:    call bar
+; RV32-ZCMOP-NEXT:    c.add s0, s1
+; RV32-ZCMOP-NEXT:    c.add a0, s2
+; RV32-ZCMOP-NEXT:    c.add a0, s0
+; RV32-ZCMOP-NEXT:    c.lwsp ra, 12(sp) # 4-byte Folded Reload
+; RV32-ZCMOP-NEXT:    c.lwsp s0, 8(sp) # 4-byte Folded Reload
+; RV32-ZCMOP-NEXT:    c.lwsp s1, 4(sp) # 4-byte Folded Reload
+; RV32-ZCMOP-NEXT:    c.lwsp s2, 0(sp) # 4-byte Folded Reload
+; RV32-ZCMOP-NEXT:    .cfi_restore ra
+; RV32-ZCMOP-NEXT:    .cfi_restore s0
+; RV32-ZCMOP-NEXT:    .cfi_restore s1
+; RV32-ZCMOP-NEXT:    .cfi_restore s2
+; RV32-ZCMOP-NEXT:    c.addi sp, 16
+; RV32-ZCMOP-NEXT:    .cfi_def_cfa_offset 0
+; RV32-ZCMOP-NEXT:    sspopchk ra
+; RV32-ZCMOP-NEXT:    c.jr ra
+;
+; RV64-ZCMOP-LABEL: f4_both:
+; RV64-ZCMOP:       # %bb.0:
+; RV64-ZCMOP-NEXT:    c.sspush ra
+; RV64-ZCMOP-NEXT:    c.addi sp, -32
+; RV64-ZCMOP-NEXT:    .cfi_def_cfa_offset 32
+; RV64-ZCMOP-NEXT:    c.sdsp ra, 24(sp) # 8-byte Folded Spill
+; RV64-ZCMOP-NEXT:    c.sdsp s0, 16(sp) # 8-byte Folded Spill
+; RV64-ZCMOP-NEXT:    c.sdsp s1, 8(sp) # 8-byte Folded Spill
+; RV64-ZCMOP-NEXT:    c.sdsp s2, 0(sp) # 8-byte Folded Spill
+; RV64-ZCMOP-NEXT:    .cfi_offset ra, -8
+; RV64-ZCMOP-NEXT:    .cfi_offset s0, -16
+; RV64-ZCMOP-NEXT:    .cfi_offset s1, -24
+; RV64-ZCMOP-NEXT:    .cfi_offset s2, -32
+; RV64-ZCMOP-NEXT:    call bar
+; RV64-ZCMOP-NEXT:    c.mv s0, a0
+; RV64-ZCMOP-NEXT:    call bar
+; RV64-ZCMOP-NEXT:    c.mv s1, a0
+; RV64-ZCMOP-NEXT:    call bar
+; RV64-ZCMOP-NEXT:    c.mv s2, a0
+; RV64-ZCMOP-NEXT:    call bar
+; RV64-ZCMOP-NEXT:    c.add s0, s1
+; RV64-ZCMOP-NEXT:    c.add a0, s2
+; RV64-ZCMOP-NEXT:    c.addw a0, s0
+; RV64-ZCMOP-NEXT:    c.ldsp ra, 24(sp) # 8-byte Folded Reload
+; RV64-ZCMOP-NEXT:    c.ldsp s0, 16(sp) # 8-byte Folded Reload
+; RV64-ZCMOP-NEXT:    c.ldsp s1, 8(sp) # 8-byte Folded Reload
+; RV64-ZCMOP-NEXT:    c.ldsp s2, 0(sp) # 8-byte Folded Reload
+; RV64-ZCMOP-NEXT:    .cfi_restore ra
+; RV64-ZCMOP-NEXT:    .cfi_restore s0
+; RV64-ZCMOP-NEXT:    .cfi_restore s1
+; RV64-ZCMOP-NEXT:    .cfi_restore s2
+; RV64-ZCMOP-NEXT:    c.addi16sp sp, 32
+; RV64-ZCMOP-NEXT:    .cfi_def_cfa_offset 0
+; RV64-ZCMOP-NEXT:    sspopchk ra
+; RV64-ZCMOP-NEXT:    c.jr ra
   %res1 = call i32 @bar()
   %res2 = call i32 @bar()
   %res3 = call i32 @bar()
@@ -955,27 +1353,49 @@ define i32 @f5_both() "hw-shadow-stack" shadowcallstack nounwind {
 ; RV64-NEXT:    addi gp, gp, -8
 ; RV64-NEXT:    ret
 ;
-; RV32-ZICFISS-LABEL: f5_both:
-; RV32-ZICFISS:       # %bb.0:
-; RV32-ZICFISS-NEXT:    mop.rr.7 zero, zero, ra
-; RV32-ZICFISS-NEXT:    addi sp, sp, -16
-; RV32-ZICFISS-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-ZICFISS-NEXT:    call bar
-; RV32-ZICFISS-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-ZICFISS-NEXT:    addi sp, sp, 16
-; RV32-ZICFISS-NEXT:    mop.r.28 zero, ra
-; RV32-ZICFISS-NEXT:    ret
+; RV32-NOZCMOP-LABEL: f5_both:
+; RV32-NOZCMOP:       # %bb.0:
+; RV32-NOZCMOP-NEXT:    sspush ra
+; RV32-NOZCMOP-NEXT:    addi sp, sp, -16
+; RV32-NOZCMOP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-NOZCMOP-NEXT:    call bar
+; RV32-NOZCMOP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-NOZCMOP-NEXT:    addi sp, sp, 16
+; RV32-NOZCMOP-NEXT:    sspopchk ra
+; RV32-NOZCMOP-NEXT:    ret
 ;
-; RV64-ZICFISS-LABEL: f5_both:
-; RV64-ZICFISS:       # %bb.0:
-; RV64-ZICFISS-NEXT:    mop.rr.7 zero, zero, ra
-; RV64-ZICFISS-NEXT:    addi sp, sp, -16
-; RV64-ZICFISS-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-ZICFISS-NEXT:    call bar
-; RV64-ZICFISS-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64-ZICFISS-NEXT:    addi sp, sp, 16
-; RV64-ZICFISS-NEXT:    mop.r.28 zero, ra
-; RV64-ZICFISS-NEXT:    ret
+; RV64-NOZCMOP-LABEL: f5_both:
+; RV64-NOZCMOP:       # %bb.0:
+; RV64-NOZCMOP-NEXT:    sspush ra
+; RV64-NOZCMOP-NEXT:    addi sp, sp, -16
+; RV64-NOZCMOP-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-NOZCMOP-NEXT:    call bar
+; RV64-NOZCMOP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-NOZCMOP-NEXT:    addi sp, sp, 16
+; RV64-NOZCMOP-NEXT:    sspopchk ra
+; RV64-NOZCMOP-NEXT:    ret
+;
+; RV32-ZCMOP-LABEL: f5_both:
+; RV32-ZCMOP:       # %bb.0:
+; RV32-ZCMOP-NEXT:    c.sspush ra
+; RV32-ZCMOP-NEXT:    c.addi sp, -16
+; RV32-ZCMOP-NEXT:    c.swsp ra, 12(sp) # 4-byte Folded Spill
+; RV32-ZCMOP-NEXT:    call bar
+; RV32-ZCMOP-NEXT:    c.lwsp ra, 12(sp) # 4-byte Folded Reload
+; RV32-ZCMOP-NEXT:    c.addi sp, 16
+; RV32-ZCMOP-NEXT:    sspopchk ra
+; RV32-ZCMOP-NEXT:    c.jr ra
+;
+; RV64-ZCMOP-LABEL: f5_both:
+; RV64-ZCMOP:       # %bb.0:
+; RV64-ZCMOP-NEXT:    c.sspush ra
+; RV64-ZCMOP-NEXT:    c.addi sp, -16
+; RV64-ZCMOP-NEXT:    c.sdsp ra, 8(sp) # 8-byte Folded Spill
+; RV64-ZCMOP-NEXT:    call bar
+; RV64-ZCMOP-NEXT:    c.ldsp ra, 8(sp) # 8-byte Folded Reload
+; RV64-ZCMOP-NEXT:    c.addi sp, 16
+; RV64-ZCMOP-NEXT:    sspopchk ra
+; RV64-ZCMOP-NEXT:    c.jr ra
   %res = call i32 @bar()
   %res1 = add i32 %res, 1
   ret i32 %res

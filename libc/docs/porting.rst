@@ -95,7 +95,7 @@ people are the maintainers, and they are responsible for keeping their target in
 good shape. This means fixing their target when it breaks, reviewing patches
 related to their target, and keeping the target's CI running.
 
-Maintainers are listed in libc/maintainers.rst and must follow
+Maintainers are listed in libc/maintainers.md and must follow
 `LLVM's maintainer policy <https://llvm.org/docs/DeveloperPolicy.html#maintainers>`_.
 
 CI builders

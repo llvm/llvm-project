@@ -106,14 +106,14 @@ static void handleHVXTargetFeatures(const Driver &D, const ArgList &Args,
 
   // Handle HVX floating point flags.
   auto checkFlagHvxVersion =
-      [&](auto FlagOn, auto FlagOff,
+      [&](auto FlagOn, auto FlagOnWithModes, auto FlagOff, bool CheckMode,
           unsigned MinVerNum) -> std::optional<StringRef> {
     // Return an std::optional<StringRef>:
     // - std::nullopt indicates a verification failure, or that the flag was not
     //   present in Args.
     // - Otherwise the returned value is that name of the feature to add
     //   to Features.
-    Arg *A = Args.getLastArg(FlagOn, FlagOff);
+    Arg *A = Args.getLastArg(FlagOn, FlagOnWithModes, FlagOff);
     if (!A)
       return std::nullopt;
 
@@ -130,17 +130,34 @@ static void handleHVXTargetFeatures(const Driver &D, const ArgList &Args,
           << withMinus(OptName) << ("v" + std::to_string(HvxVerNum));
       return std::nullopt;
     }
+
+    if (CheckMode && A->getOption().matches(FlagOnWithModes)) {
+      bool ValidMode =
+          llvm::StringSwitch<bool>(StringRef(A->getValue()).lower())
+              .Cases({"strict-ieee", "ieee", "lossy", "legacy"}, true)
+              .Default(false);
+      if (!ValidMode)
+        D.Diag(diag::err_drv_invalid_value)
+            << A->getAsString(Args) << A->getValue();
+    }
     return makeFeature(OptName, true);
   };
 
-  if (auto F = checkFlagHvxVersion(options::OPT_mhexagon_hvx_qfloat,
-                                   options::OPT_mno_hexagon_hvx_qfloat, 68)) {
+  if (auto F = checkFlagHvxVersion(
+          options::OPT_mhexagon_hvx_qfloat, options::OPT_mhexagon_hvx_qfloat_EQ,
+          options::OPT_mno_hexagon_hvx_qfloat, /*CheckMode=*/true, 68)) {
     Features.push_back(*F);
   }
-  if (auto F = checkFlagHvxVersion(options::OPT_mhexagon_hvx_ieee_fp,
-                                   options::OPT_mno_hexagon_hvx_ieee_fp, 68)) {
+  if (auto F = checkFlagHvxVersion(
+          options::OPT_mhexagon_hvx_ieee_fp, options::OPT_mhexagon_hvx_ieee_fp,
+          options::OPT_mno_hexagon_hvx_ieee_fp, /*CheckMode=*/false, 68)) {
     Features.push_back(*F);
   }
+
+  // On v79 and above, there is no IEEE hardware. Treat -mhvx-ieee-fp
+  // as "qfloat mode ieee".
+  if (HvxVerNum >= 79 && Args.getLastArg(options::OPT_mhexagon_hvx_ieee_fp))
+    Features.push_back("+hvx-qfloat");
 }
 
 // Hexagon target features.
@@ -336,14 +353,15 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   CmdArgs.push_back(Output.getFilename());
 
   if (HTC.getTriple().isMusl()) {
-    if (!Args.hasArg(options::OPT_shared, options::OPT_static))
+    if (!Args.hasArg(options::OPT_shared, options::OPT_static, options::OPT_r))
       CmdArgs.push_back("-dynamic-linker=/lib/ld-musl-hexagon.so.1");
 
     if (!Args.hasArg(options::OPT_shared, options::OPT_nostartfiles,
-                     options::OPT_nostdlib))
+                     options::OPT_nostdlib, options::OPT_r))
       CmdArgs.push_back(Args.MakeArgString(D.SysRoot + "/usr/lib/crt1.o"));
     else if (Args.hasArg(options::OPT_shared) &&
-             !Args.hasArg(options::OPT_nostartfiles, options::OPT_nostdlib))
+             !Args.hasArg(options::OPT_nostartfiles, options::OPT_nostdlib,
+                          options::OPT_r))
       CmdArgs.push_back(Args.MakeArgString(D.SysRoot + "/usr/lib/crti.o"));
 
     if (!HTC.getSelectedMultilibs().empty() &&
@@ -358,9 +376,8 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
                               options::OPT_t, options::OPT_u_Group});
     AddLinkerInputs(HTC, Inputs, Args, CmdArgs, JA);
 
-    if (D.isUsingLTO())
-      addLTOOptions(HTC, Args, CmdArgs, Output, Inputs,
-                    D.getLTOMode() == LTOK_Thin);
+    if (auto LTO = HTC.getLTOMode(Args); LTO != LTOK_None)
+      addLTOOptions(HTC, Args, CmdArgs, Output, Inputs, LTO == LTOK_Thin);
 
     ToolChain::UnwindLibType UNW = HTC.GetUnwindLibType(Args);
 
@@ -456,9 +473,8 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
 
   AddLinkerInputs(HTC, Inputs, Args, CmdArgs, JA);
 
-  if (D.isUsingLTO())
-    addLTOOptions(HTC, Args, CmdArgs, Output, Inputs,
-                  D.getLTOMode() == LTOK_Thin);
+  if (auto LTO = HTC.getLTOMode(Args); LTO != LTOK_None)
+    addLTOOptions(HTC, Args, CmdArgs, Output, Inputs, LTO == LTOK_Thin);
 
   //----------------------------------------------------------------------------
   // Libraries
@@ -535,7 +551,6 @@ void hexagon::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 std::string HexagonToolChain::getHexagonTargetDir(
       const std::string &InstalledDir,
       const SmallVectorImpl<std::string> &PrefixDirs) const {
-  std::string InstallRelDir;
   const Driver &D = getDriver();
 
   // Locate the rest of the toolchain ...
@@ -557,11 +572,11 @@ HexagonToolChain::getEffectiveSysRoot(const ArgList &Args) const {
   SmallString<128> Dir(getHexagonTargetDir(D.Dir, D.PrefixDirs));
   // For Picolibc, use picolibc/<triple> with no fallback.
   if (GetCStdlibType(Args) == ToolChain::CST_Picolibc) {
-    llvm::sys::path::append(Dir, "picolibc", getTriple().normalize());
+    llvm::sys::path::append(Dir, "picolibc", getTripleString());
     return Dir;
   }
   // Otherwise, try a triple subdirectory first, then fall back to "hexagon".
-  llvm::sys::path::append(Dir, getTriple().normalize());
+  llvm::sys::path::append(Dir, getTripleString());
   if (getVFS().exists(Dir))
     return Dir;
   Dir = getHexagonTargetDir(D.Dir, D.PrefixDirs);
@@ -725,7 +740,7 @@ void HexagonToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
     const Arg *A = Args.getLastArg(options::OPT_unwindlib_EQ);
     if (A) {
       getDriver().Diag(diag::err_drv_unsupported_unwind_for_platform)
-          << A->getValue() << getTriple().normalize();
+          << A->getValue() << getTripleString();
       return;
     }
   }
@@ -781,6 +796,7 @@ unsigned HexagonToolChain::getOptimizationLevel(
 
 void HexagonToolChain::addClangTargetOptions(const ArgList &DriverArgs,
                                              ArgStringList &CC1Args,
+                                             BoundArch BA,
                                              Action::OffloadKind) const {
 
   bool UseInitArrayDefault = getTriple().isMusl();
@@ -790,9 +806,26 @@ void HexagonToolChain::addClangTargetOptions(const ArgList &DriverArgs,
                           UseInitArrayDefault))
     CC1Args.push_back("-fno-use-init-array");
 
-  if (DriverArgs.hasArg(options::OPT_ffixed_r19)) {
-    CC1Args.push_back("-target-feature");
-    CC1Args.push_back("+reserved-r19");
+  static const std::pair<options::ID, const char *> FixedRegs[] = {
+      {options::OPT_ffixed_r16, "+reserved-r16"},
+      {options::OPT_ffixed_r17, "+reserved-r17"},
+      {options::OPT_ffixed_r18, "+reserved-r18"},
+      {options::OPT_ffixed_r19, "+reserved-r19"},
+      {options::OPT_ffixed_r20, "+reserved-r20"},
+      {options::OPT_ffixed_r21, "+reserved-r21"},
+      {options::OPT_ffixed_r22, "+reserved-r22"},
+      {options::OPT_ffixed_r23, "+reserved-r23"},
+      {options::OPT_ffixed_r24, "+reserved-r24"},
+      {options::OPT_ffixed_r25, "+reserved-r25"},
+      {options::OPT_ffixed_r26, "+reserved-r26"},
+      {options::OPT_ffixed_r27, "+reserved-r27"},
+      {options::OPT_ffixed_r28, "+reserved-r28"},
+  };
+  for (const auto &[Opt, Feature] : FixedRegs) {
+    if (DriverArgs.hasArg(Opt)) {
+      CC1Args.push_back("-target-feature");
+      CC1Args.push_back(Feature);
+    }
   }
   if (isAutoHVXEnabled(DriverArgs)) {
     CC1Args.push_back("-mllvm");

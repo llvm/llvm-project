@@ -343,6 +343,7 @@ namespace ReadMutableInCopyCtor {
   constexpr G g1 = {};
   constexpr G g2 = g1; // both-error {{must be initialized by a constant expression}} \
                        // both-note {{read of mutable member 'u'}} \
+                       // expected-note {{in call to 'U(g1.u)'}} \
                        // both-note {{in call to 'G(g1)'}}
 }
 
@@ -404,13 +405,12 @@ constexpr int PassByValue(Counter c) { return c.copies; }
 static_assert(PassByValue(Counter(0)) == 0, "expect no copies");
 
 namespace PointerCast {
-  /// The two interpreters disagree here.
   struct S { int x, y; } s;
   constexpr S* sptr = &s;
   struct U {};
   struct Str {
-    int e : (Str*)(sptr) == (Str*)(sptr); // expected-error {{not an integral constant expression}} \
-                                          // expected-note {{cast that performs the conversions of a reinterpret_cast}}
+    int e : (Str*)(sptr) == (Str*)(sptr);
+    int f : &(U&)(*sptr) == &(U&)(*sptr);
   };
 }
 
@@ -445,4 +445,33 @@ namespace AddSubMulNonNumber {
                                                                              // both-note {{call to 'mulBy3(&&a - &&b)'}}
     a:b:return;
   }
+}
+
+namespace SubobjectCompare {
+  struct S {
+    int i;
+  };
+  constexpr S s[2] = {};
+  static_assert(&s[0].i < &s[1].i, "");
+  static_assert(&s[0].i != &s[1].i, "");
+  static_assert(!(&s[0] < &s[0]), "");
+
+  class A            { public: int a; };
+  class B : public A { public: int b; };
+  class C : public B {                };
+  constexpr C c{};
+  static_assert(&c.a < &c.b, ""); // both-error {{not an integral constant expression}} \
+                                  // both-note {{comparison of address of base class subobject 'A' of class 'B' to field 'b' has unspecified value}}
+  static_assert(&c.a != &c.b, "");
+
+  class X { public: int x; };
+  class Y { public: int y; };
+  class Z : public X, public Y {};
+  constexpr Z z{};
+  static_assert(&z.x < &z.y, ""); // both-error {{not an integral constant expression}} \
+                                  // both-note {{comparison of addresses of subobjects of different base classes has unspecified value}}
+  static_assert(&z.x != &z.y, "");
+  static_assert((void*)(X*)&z < (void*)(Y*)&z, ""); // both-error {{not an integral constant expression}} \
+                                                    // both-note {{comparison of addresses of subobjects of different base classes has unspecified value}}
+  static_assert((void*)(X*)&z != (void*)(Y*)&z, "");
 }

@@ -5,7 +5,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-    @skipIfWindows
     def test_synthetic(self):
         self.build()
         if self.TraceOn():
@@ -22,7 +21,6 @@ class TestCase(TestBase):
 
         self.expect("v acc", matching=False, substrs=["password"])
 
-    @skipIfWindows
     def test_update_reuse(self):
         self.build()
 

@@ -74,15 +74,20 @@ enum TokenKey : unsigned {
   KEYSYCL = 0x800000,
   KEYCUDA = 0x1000000,
   KEYZOS = 0x2000000,
-  KEYNOZOS = 0x4000000,
+  // 0x4000000 was KEYNOZOS, which was unused. The value is kept reserved
+  // so that KEYALL's bit-mask computation remains correct: keywords like
+  // 'volatile' (KEYALL|KEYNOHLSL) go through the per-bit loop in
+  // getKeywordStatus, and every bit set in KEYALL must map to a valid
+  // TokenKey with a handler in getKeywordStatusHelper.
   KEYHLSL = 0x8000000,
   KEYFIXEDPOINT = 0x10000000,
   KEYDEFERTS = 0x20000000,
   KEYNOHLSL = 0x40000000,
   KEYMAX = KEYNOHLSL, // The maximum key
   KEYALLCXX = KEYCXX | KEYCXX11 | KEYCXX20,
-  KEYALL = (KEYMAX | (KEYMAX - 1)) & ~KEYNOMS18 & ~KEYNOOPENCL & ~KEYNOZOS &
-           ~KEYNOHLSL // KEYNOMS18, KEYNOOPENCL, KEYNOZOS, KEYNOHLSL excluded.
+  KEYALL = (KEYMAX | (KEYMAX - 1)) & ~KEYNOMS18 & ~KEYNOOPENCL & ~0x4000000u &
+           ~KEYNOHLSL // KEYNOMS18, KEYNOOPENCL, 0x4000000 (reserved),
+                      // KEYNOHLSL excluded.
 };
 
 /// How a keyword is treated in the selected standard. This enum is ordered
@@ -1185,14 +1190,6 @@ public:
     return getStringFormatFamilyImpl(*this);
   }
 
-  static Selector getEmptyMarker() {
-    return Selector(uintptr_t(-1));
-  }
-
-  static Selector getTombstoneMarker() {
-    return Selector(uintptr_t(-2));
-  }
-
   static ObjCInstanceTypeFamily getInstTypeMethodFamily(Selector sel);
 };
 
@@ -1273,14 +1270,6 @@ namespace llvm {
 /// DenseSets.
 template <>
 struct DenseMapInfo<clang::Selector> {
-  static clang::Selector getEmptyKey() {
-    return clang::Selector::getEmptyMarker();
-  }
-
-  static clang::Selector getTombstoneKey() {
-    return clang::Selector::getTombstoneMarker();
-  }
-
   static unsigned getHashValue(clang::Selector S);
 
   static bool isEqual(clang::Selector LHS, clang::Selector RHS) {

@@ -81,6 +81,7 @@ jobs:
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action/macos@c950f6fb443cb5af20a377fd0dfaa78838901040 # v2.23.0
         if: always() && runner.os == 'macOS'
+        continue-on-error: true
         with:
           comment_mode: off
           files: llvm-project/build/**/testresults.xunit.xml

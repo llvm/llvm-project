@@ -62,6 +62,7 @@ define void @vector_reverse_i32(ptr noalias %A, ptr noalias %B) {
 ; RV32-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1023, [[INDEX]]
 ; RV32-NEXT:    [[TMP7:%.*]] = add nsw i64 [[OFFSET_IDX]], -1
 ; RV32-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP7]]
+; RV32-NEXT:    [[TMP23:%.*]] = zext i32 [[TMP9]] to i64
 ; RV32-NEXT:    [[TMP3:%.*]] = sub nuw nsw i32 [[TMP9]], 1
 ; RV32-NEXT:    [[TMP4:%.*]] = sub i32 0, [[TMP3]]
 ; RV32-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[TMP8]], i32 [[TMP4]]
@@ -72,7 +73,6 @@ define void @vector_reverse_i32(ptr noalias %A, ptr noalias %B) {
 ; RV32-NEXT:    [[TMP22:%.*]] = getelementptr i32, ptr [[TMP16]], i32 [[TMP4]]
 ; RV32-NEXT:    [[VP_REVERSE1:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vp.reverse.nxv4i32(<vscale x 4 x i32> [[TMP15]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
 ; RV32-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[VP_REVERSE1]], ptr align 4 [[TMP22]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
-; RV32-NEXT:    [[TMP23:%.*]] = zext i32 [[TMP9]] to i64
 ; RV32-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP23]], [[INDEX]]
 ; RV32-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP23]]
 ; RV32-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
@@ -90,8 +90,7 @@ define void @vector_reverse_i32(ptr noalias %A, ptr noalias %B) {
 ; RV64-UF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1023, [[TMP1]]
 ; RV64-UF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; RV64-UF2:       [[VECTOR_PH]]:
-; RV64-UF2-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; RV64-UF2-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP4]], 2
+; RV64-UF2-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP0]], 2
 ; RV64-UF2-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 1
 ; RV64-UF2-NEXT:    [[N_VEC:%.*]] = urem i64 1023, [[TMP6]]
 ; RV64-UF2-NEXT:    [[TMP7:%.*]] = sub i64 1023, [[N_VEC]]
@@ -244,6 +243,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV32-NEXT:    [[TMP13:%.*]] = add nsw i32 [[OFFSET_IDX]], -1
 ; RV32-NEXT:    [[TMP14:%.*]] = zext i32 [[TMP13]] to i64
 ; RV32-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP14]]
+; RV32-NEXT:    [[TMP29:%.*]] = zext i32 [[TMP16]] to i64
 ; RV32-NEXT:    [[TMP9:%.*]] = sub nuw nsw i32 [[TMP16]], 1
 ; RV32-NEXT:    [[TMP10:%.*]] = sub i32 0, [[TMP9]]
 ; RV32-NEXT:    [[TMP28:%.*]] = getelementptr i32, ptr [[TMP15]], i32 [[TMP10]]
@@ -254,7 +254,6 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV32-NEXT:    [[TMP25:%.*]] = getelementptr i32, ptr [[TMP23]], i32 [[TMP10]]
 ; RV32-NEXT:    [[VP_REVERSE3:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vp.reverse.nxv4i32(<vscale x 4 x i32> [[TMP22]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP16]])
 ; RV32-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[VP_REVERSE3]], ptr align 4 [[TMP25]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP16]])
-; RV32-NEXT:    [[TMP29:%.*]] = zext i32 [[TMP16]] to i64
 ; RV32-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP29]], [[INDEX]]
 ; RV32-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP29]]
 ; RV32-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
@@ -301,8 +300,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP16]], [[TMP15]]
 ; RV64-UF2-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; RV64-UF2:       [[VECTOR_PH]]:
-; RV64-UF2-NEXT:    [[TMP17:%.*]] = call i64 @llvm.vscale.i64()
-; RV64-UF2-NEXT:    [[TMP18:%.*]] = shl nuw i64 [[TMP17]], 2
+; RV64-UF2-NEXT:    [[TMP18:%.*]] = shl nuw i64 [[TMP1]], 2
 ; RV64-UF2-NEXT:    [[TMP19:%.*]] = shl nuw i64 [[TMP18]], 1
 ; RV64-UF2-NEXT:    [[N_VEC:%.*]] = urem i64 [[TMP0]], [[TMP19]]
 ; RV64-UF2-NEXT:    [[TMP20:%.*]] = sub i64 [[TMP0]], [[N_VEC]]
@@ -472,6 +470,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV32-NEXT:    [[TMP13:%.*]] = add nsw i32 [[OFFSET_IDX]], -1
 ; RV32-NEXT:    [[TMP14:%.*]] = zext i32 [[TMP13]] to i64
 ; RV32-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP14]]
+; RV32-NEXT:    [[TMP29:%.*]] = zext i32 [[TMP16]] to i64
 ; RV32-NEXT:    [[TMP9:%.*]] = sub nuw nsw i32 [[TMP16]], 1
 ; RV32-NEXT:    [[TMP10:%.*]] = sub i32 0, [[TMP9]]
 ; RV32-NEXT:    [[TMP28:%.*]] = getelementptr float, ptr [[TMP15]], i32 [[TMP10]]
@@ -482,7 +481,6 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV32-NEXT:    [[TMP25:%.*]] = getelementptr float, ptr [[TMP23]], i32 [[TMP10]]
 ; RV32-NEXT:    [[VP_REVERSE3:%.*]] = call <vscale x 4 x float> @llvm.experimental.vp.reverse.nxv4f32(<vscale x 4 x float> [[TMP22]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP16]])
 ; RV32-NEXT:    call void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float> [[VP_REVERSE3]], ptr align 4 [[TMP25]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP16]])
-; RV32-NEXT:    [[TMP29:%.*]] = zext i32 [[TMP16]] to i64
 ; RV32-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP29]], [[INDEX]]
 ; RV32-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP29]]
 ; RV32-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
@@ -529,8 +527,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; RV64-UF2-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP16]], [[TMP15]]
 ; RV64-UF2-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; RV64-UF2:       [[VECTOR_PH]]:
-; RV64-UF2-NEXT:    [[TMP17:%.*]] = call i64 @llvm.vscale.i64()
-; RV64-UF2-NEXT:    [[TMP18:%.*]] = shl nuw i64 [[TMP17]], 2
+; RV64-UF2-NEXT:    [[TMP18:%.*]] = shl nuw i64 [[TMP1]], 2
 ; RV64-UF2-NEXT:    [[TMP19:%.*]] = shl nuw i64 [[TMP18]], 1
 ; RV64-UF2-NEXT:    [[N_VEC:%.*]] = urem i64 [[TMP0]], [[TMP19]]
 ; RV64-UF2-NEXT:    [[TMP20:%.*]] = sub i64 [[TMP0]], [[N_VEC]]
@@ -652,6 +649,7 @@ define void @vector_reverse_f32_simplify(ptr noalias %A, ptr noalias %B) {
 ; RV32-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1023, [[INDEX]]
 ; RV32-NEXT:    [[TMP7:%.*]] = add nsw i64 [[OFFSET_IDX]], -1
 ; RV32-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP7]]
+; RV32-NEXT:    [[TMP23:%.*]] = zext i32 [[TMP9]] to i64
 ; RV32-NEXT:    [[TMP3:%.*]] = sub nuw nsw i32 [[TMP9]], 1
 ; RV32-NEXT:    [[TMP4:%.*]] = sub i32 0, [[TMP3]]
 ; RV32-NEXT:    [[TMP14:%.*]] = getelementptr float, ptr [[TMP8]], i32 [[TMP4]]
@@ -662,7 +660,6 @@ define void @vector_reverse_f32_simplify(ptr noalias %A, ptr noalias %B) {
 ; RV32-NEXT:    [[TMP22:%.*]] = getelementptr float, ptr [[TMP16]], i32 [[TMP4]]
 ; RV32-NEXT:    [[VP_REVERSE1:%.*]] = call <vscale x 4 x float> @llvm.experimental.vp.reverse.nxv4f32(<vscale x 4 x float> [[TMP15]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
 ; RV32-NEXT:    call void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float> [[VP_REVERSE1]], ptr align 4 [[TMP22]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP9]])
-; RV32-NEXT:    [[TMP23:%.*]] = zext i32 [[TMP9]] to i64
 ; RV32-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP23]], [[INDEX]]
 ; RV32-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP23]]
 ; RV32-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
@@ -680,8 +677,7 @@ define void @vector_reverse_f32_simplify(ptr noalias %A, ptr noalias %B) {
 ; RV64-UF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1023, [[TMP1]]
 ; RV64-UF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; RV64-UF2:       [[VECTOR_PH]]:
-; RV64-UF2-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; RV64-UF2-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP4]], 2
+; RV64-UF2-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP0]], 2
 ; RV64-UF2-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 1
 ; RV64-UF2-NEXT:    [[N_VEC:%.*]] = urem i64 1023, [[TMP6]]
 ; RV64-UF2-NEXT:    [[TMP7:%.*]] = sub i64 1023, [[N_VEC]]
@@ -769,17 +765,17 @@ define void @vector_reverse_irregular_type(ptr noalias %A, ptr noalias %B) {
 ; RV64-NEXT:    [[TMP18:%.*]] = insertelement <4 x i7> [[TMP17]], i7 [[TMP14]], i32 2
 ; RV64-NEXT:    [[TMP19:%.*]] = insertelement <4 x i7> [[TMP18]], i7 [[TMP15]], i32 3
 ; RV64-NEXT:    [[TMP20:%.*]] = add <4 x i7> [[TMP19]], splat (i7 1)
-; RV64-NEXT:    [[TMP25:%.*]] = extractelement <4 x i7> [[TMP20]], i64 0
-; RV64-NEXT:    [[TMP26:%.*]] = extractelement <4 x i7> [[TMP20]], i64 1
-; RV64-NEXT:    [[TMP27:%.*]] = extractelement <4 x i7> [[TMP20]], i64 2
-; RV64-NEXT:    [[TMP28:%.*]] = extractelement <4 x i7> [[TMP20]], i64 3
 ; RV64-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP4]]
 ; RV64-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP5]]
 ; RV64-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP6]]
 ; RV64-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP7]]
+; RV64-NEXT:    [[TMP25:%.*]] = extractelement <4 x i7> [[TMP20]], i64 0
 ; RV64-NEXT:    store i7 [[TMP25]], ptr [[TMP21]], align 1
+; RV64-NEXT:    [[TMP26:%.*]] = extractelement <4 x i7> [[TMP20]], i64 1
 ; RV64-NEXT:    store i7 [[TMP26]], ptr [[TMP22]], align 1
+; RV64-NEXT:    [[TMP27:%.*]] = extractelement <4 x i7> [[TMP20]], i64 2
 ; RV64-NEXT:    store i7 [[TMP27]], ptr [[TMP23]], align 1
+; RV64-NEXT:    [[TMP28:%.*]] = extractelement <4 x i7> [[TMP20]], i64 3
 ; RV64-NEXT:    store i7 [[TMP28]], ptr [[TMP24]], align 1
 ; RV64-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; RV64-NEXT:    [[TMP29:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1020
@@ -819,17 +815,17 @@ define void @vector_reverse_irregular_type(ptr noalias %A, ptr noalias %B) {
 ; RV32-NEXT:    [[TMP18:%.*]] = insertelement <4 x i7> [[TMP17]], i7 [[TMP14]], i32 2
 ; RV32-NEXT:    [[TMP19:%.*]] = insertelement <4 x i7> [[TMP18]], i7 [[TMP15]], i32 3
 ; RV32-NEXT:    [[TMP20:%.*]] = add <4 x i7> [[TMP19]], splat (i7 1)
-; RV32-NEXT:    [[TMP25:%.*]] = extractelement <4 x i7> [[TMP20]], i64 0
-; RV32-NEXT:    [[TMP26:%.*]] = extractelement <4 x i7> [[TMP20]], i64 1
-; RV32-NEXT:    [[TMP27:%.*]] = extractelement <4 x i7> [[TMP20]], i64 2
-; RV32-NEXT:    [[TMP28:%.*]] = extractelement <4 x i7> [[TMP20]], i64 3
 ; RV32-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP4]]
 ; RV32-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP5]]
 ; RV32-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP6]]
 ; RV32-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP7]]
+; RV32-NEXT:    [[TMP25:%.*]] = extractelement <4 x i7> [[TMP20]], i64 0
 ; RV32-NEXT:    store i7 [[TMP25]], ptr [[TMP21]], align 1
+; RV32-NEXT:    [[TMP26:%.*]] = extractelement <4 x i7> [[TMP20]], i64 1
 ; RV32-NEXT:    store i7 [[TMP26]], ptr [[TMP22]], align 1
+; RV32-NEXT:    [[TMP27:%.*]] = extractelement <4 x i7> [[TMP20]], i64 2
 ; RV32-NEXT:    store i7 [[TMP27]], ptr [[TMP23]], align 1
+; RV32-NEXT:    [[TMP28:%.*]] = extractelement <4 x i7> [[TMP20]], i64 3
 ; RV32-NEXT:    store i7 [[TMP28]], ptr [[TMP24]], align 1
 ; RV32-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; RV32-NEXT:    [[TMP29:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1020
@@ -889,15 +885,7 @@ define void @vector_reverse_irregular_type(ptr noalias %A, ptr noalias %B) {
 ; RV64-UF2-NEXT:    [[TMP38:%.*]] = insertelement <4 x i7> [[TMP37]], i7 [[TMP34]], i32 2
 ; RV64-UF2-NEXT:    [[TMP39:%.*]] = insertelement <4 x i7> [[TMP38]], i7 [[TMP35]], i32 3
 ; RV64-UF2-NEXT:    [[TMP40:%.*]] = add <4 x i7> [[TMP31]], splat (i7 1)
-; RV64-UF2-NEXT:    [[TMP50:%.*]] = extractelement <4 x i7> [[TMP40]], i64 0
-; RV64-UF2-NEXT:    [[TMP51:%.*]] = extractelement <4 x i7> [[TMP40]], i64 1
-; RV64-UF2-NEXT:    [[TMP52:%.*]] = extractelement <4 x i7> [[TMP40]], i64 2
-; RV64-UF2-NEXT:    [[TMP53:%.*]] = extractelement <4 x i7> [[TMP40]], i64 3
 ; RV64-UF2-NEXT:    [[TMP41:%.*]] = add <4 x i7> [[TMP39]], splat (i7 1)
-; RV64-UF2-NEXT:    [[TMP54:%.*]] = extractelement <4 x i7> [[TMP41]], i64 0
-; RV64-UF2-NEXT:    [[TMP55:%.*]] = extractelement <4 x i7> [[TMP41]], i64 1
-; RV64-UF2-NEXT:    [[TMP56:%.*]] = extractelement <4 x i7> [[TMP41]], i64 2
-; RV64-UF2-NEXT:    [[TMP57:%.*]] = extractelement <4 x i7> [[TMP41]], i64 3
 ; RV64-UF2-NEXT:    [[TMP42:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP8]]
 ; RV64-UF2-NEXT:    [[TMP43:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP9]]
 ; RV64-UF2-NEXT:    [[TMP44:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP10]]
@@ -906,13 +894,21 @@ define void @vector_reverse_irregular_type(ptr noalias %A, ptr noalias %B) {
 ; RV64-UF2-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP13]]
 ; RV64-UF2-NEXT:    [[TMP48:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP14]]
 ; RV64-UF2-NEXT:    [[TMP49:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP15]]
+; RV64-UF2-NEXT:    [[TMP50:%.*]] = extractelement <4 x i7> [[TMP40]], i64 0
 ; RV64-UF2-NEXT:    store i7 [[TMP50]], ptr [[TMP42]], align 1
+; RV64-UF2-NEXT:    [[TMP51:%.*]] = extractelement <4 x i7> [[TMP40]], i64 1
 ; RV64-UF2-NEXT:    store i7 [[TMP51]], ptr [[TMP43]], align 1
+; RV64-UF2-NEXT:    [[TMP52:%.*]] = extractelement <4 x i7> [[TMP40]], i64 2
 ; RV64-UF2-NEXT:    store i7 [[TMP52]], ptr [[TMP44]], align 1
+; RV64-UF2-NEXT:    [[TMP53:%.*]] = extractelement <4 x i7> [[TMP40]], i64 3
 ; RV64-UF2-NEXT:    store i7 [[TMP53]], ptr [[TMP45]], align 1
+; RV64-UF2-NEXT:    [[TMP54:%.*]] = extractelement <4 x i7> [[TMP41]], i64 0
 ; RV64-UF2-NEXT:    store i7 [[TMP54]], ptr [[TMP46]], align 1
+; RV64-UF2-NEXT:    [[TMP55:%.*]] = extractelement <4 x i7> [[TMP41]], i64 1
 ; RV64-UF2-NEXT:    store i7 [[TMP55]], ptr [[TMP47]], align 1
+; RV64-UF2-NEXT:    [[TMP56:%.*]] = extractelement <4 x i7> [[TMP41]], i64 2
 ; RV64-UF2-NEXT:    store i7 [[TMP56]], ptr [[TMP48]], align 1
+; RV64-UF2-NEXT:    [[TMP57:%.*]] = extractelement <4 x i7> [[TMP41]], i64 3
 ; RV64-UF2-NEXT:    store i7 [[TMP57]], ptr [[TMP49]], align 1
 ; RV64-UF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; RV64-UF2-NEXT:    [[TMP58:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1016
