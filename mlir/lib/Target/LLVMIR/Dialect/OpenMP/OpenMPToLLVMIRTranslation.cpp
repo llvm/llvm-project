@@ -480,6 +480,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkDepend(op, result);
         checkNowait(op, result);
       })
+      .Case([&](omp::DispatchOp op) { checkNowait(op, result); })
       .Case([&](omp::TaskloopContextOp op) {
         checkAllocate(op, result);
         checkInReductionByref(op, result);

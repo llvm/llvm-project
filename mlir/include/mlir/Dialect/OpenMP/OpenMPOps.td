@@ -2289,17 +2289,21 @@ def MaskedOp : OpenMP_Op<"masked", clauses = [
 // [Spec 5.1] 12.3 dispatch Construct
 //===----------------------------------------------------------------------===//
 def DispatchOp : OpenMP_Op<"dispatch", singleRegion = true, clauses = [
-     // TODO: Complete clause lists (device, is_device_ptr,nowait, nocontext, novariants).
-   ]> {
+    // TODO: Complete clause list (device, depend, is_device_ptr, nocontext,
+    // novariants).
+    OpenMP_NowaitClause
+  ]> {
   let summary = "dispatch construct";
   let description = [{
     The dispatch construct enables the invocation of a variant of a
     base procedure. The structured block of a dispatch construct is
     a single expression statement that contains a function call or
     a subroutine call.
-  }];
+  }] # clausesDescription;
 
-  let assemblyFormat = "$region attr-dict";
+  let builders = [
+    OpBuilder<(ins CArg<"const DispatchOperands &">:$clauses)>
+  ];
 }
 
 //===----------------------------------------------------------------------===//

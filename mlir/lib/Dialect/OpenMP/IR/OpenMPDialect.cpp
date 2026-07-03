@@ -4934,6 +4934,15 @@ void MaskedOp::build(OpBuilder &builder, OperationState &state,
 }
 
 //===----------------------------------------------------------------------===//
+// Spec 5.1: Dispatch construct (12.3)
+//===----------------------------------------------------------------------===//
+
+void DispatchOp::build(OpBuilder &builder, OperationState &state,
+                       const DispatchOperands &clauses) {
+  DispatchOp::build(builder, state, clauses.nowait);
+}
+
+//===----------------------------------------------------------------------===//
 // Spec 5.2: Scan construct (5.6)
 //===----------------------------------------------------------------------===//
 

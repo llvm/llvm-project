@@ -1774,11 +1774,12 @@ static void genDistributeClauses(lower::AbstractConverter &converter,
 
 static void genDispatchClauses(lower::AbstractConverter &converter,
                                semantics::SemanticsContext &semaCtx,
-                               const List<Clause> &clauses,
-                               mlir::Location loc) {
+                               const List<Clause> &clauses, mlir::Location loc,
+                               mlir::omp::DispatchOperands &clauseOps) {
   ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processNowait(clauseOps);
   cp.processTODO<clause::Depend, clause::Device, clause::IsDevicePtr,
-                 clause::Nocontext, clause::Novariants, clause::Nowait>(
+                 clause::Nocontext, clause::Novariants>(
       loc, llvm::omp::Directive::OMPD_dispatch);
 }
 
@@ -2276,10 +2277,13 @@ genDispatchOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
               lower::pft::Evaluation &eval, mlir::Location loc,
               const ConstructQueue &queue,
               ConstructQueue::const_iterator item) {
+  mlir::omp::DispatchOperands clauseOps;
+  genDispatchClauses(converter, semaCtx, item->clauses, loc, clauseOps);
+
   return genOpWithBody<mlir::omp::DispatchOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_dispatch),
-      queue, item);
+      queue, item, clauseOps);
 }
 
 static mlir::omp::FlushOp
@@ -5425,8 +5429,6 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   llvm::omp::Directive directive = beginSpec.DirId();
   mlir::Location currentLocation = converter.genLocation(beginSpec.source);
-
-  genDispatchClauses(converter, semaCtx, clauses, currentLocation);
 
   ConstructQueue queue{
       buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,

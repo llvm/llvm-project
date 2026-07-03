@@ -62,4 +62,11 @@ program dispatch_test
     call foo_dispatch(x)
   !HLFIR:   omp.terminator
   !HLFIR: }
+
+  !HLFIR: omp.dispatch nowait {
+  !$omp dispatch nowait
+  !HLFIR:   fir.call @_QMfuncsPfoo_dispatch(%[[X]]#0) {{.*}}: (!fir.ref<i32>) -> ()
+    call foo_dispatch(x)
+  !HLFIR:   omp.terminator
+  !HLFIR: }
 end program

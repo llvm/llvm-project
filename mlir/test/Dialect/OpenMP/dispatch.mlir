@@ -72,6 +72,21 @@ func.func @omp_dispatch_multiple(%x : memref<i32>) -> () {
   return
 }
 
+// Test the nowait clause on omp.dispatch.
+// CHECK-LABEL: func @omp_dispatch_nowait
+// CHECK-SAME: (%[[X:.*]]: memref<i32>)
+func.func @omp_dispatch_nowait(%x : memref<i32>) -> () {
+  // CHECK: omp.dispatch nowait {
+  // CHECK-NEXT: func.call @foo_dispatch(%[[X]]) : (memref<i32>) -> ()
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+  omp.dispatch nowait {
+    func.call @foo_dispatch(%x) : (memref<i32>) -> ()
+    omp.terminator
+  }
+  return
+}
+
 // CHECK-LABEL: func private @variant1()
 // CHECK-LABEL: func private @variant2()
 func.func private @variant1() -> ()
