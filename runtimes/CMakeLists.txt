@@ -212,6 +212,12 @@ endif()
 # Avoid checking whether the compiler is working.
 set(LLVM_COMPILER_CHECKED ON)
 
+# Match default PIC behavior between bootstrap and standalone runtime builds.
+# Required before including HandleLLVMOptions.
+if (NOT CMAKE_SYSTEM_NAME MATCHES "OS390")
+  option(LLVM_ENABLE_PIC "Build Position-Independent Code" ON)
+endif()
+
 # Handle common options used by all runtimes.
 include(AddLLVM)
 include(HandleLLVMOptions)
