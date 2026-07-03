@@ -2121,10 +2121,9 @@ static Value createExtConversion(ImplicitLocOpBuilder &b, MLIRContext *ctx,
   llvm_unreachable("unhandled FPExtConvOp");
 }
 
-static LogicalResult lowerExtf(nvgpu::ExtfOp op,
-                               nvgpu::ExtfOp::Adaptor adaptor,
-                                ConversionPatternRewriter &rewriter,
-                                const LLVMTypeConverter *typeConverter) {
+static LogicalResult lowerExtf(nvgpu::ExtfOp op, nvgpu::ExtfOp::Adaptor adaptor,
+                               ConversionPatternRewriter &rewriter,
+                               const LLVMTypeConverter *typeConverter) {
   MLIRContext *ctx = op.getContext();
   ImplicitLocOpBuilder b(op->getLoc(), rewriter);
   IntegerType i8Ty = b.getI8Type();
@@ -2271,8 +2270,7 @@ struct NVGPUTruncfOpLowering : public ConvertOpToLLVMPattern<nvgpu::TruncfOp> {
   }
 };
 
-struct NVGPUExtfOpLowering
-    : public ConvertOpToLLVMPattern<nvgpu::ExtfOp> {
+struct NVGPUExtfOpLowering : public ConvertOpToLLVMPattern<nvgpu::ExtfOp> {
   using ConvertOpToLLVMPattern<nvgpu::ExtfOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
@@ -2434,6 +2432,6 @@ void mlir::populateNVGPUToNVVMConversionPatterns(
       NVGPUAsyncCreateGroupLowering, NVGPUAsyncWaitLowering,
       NVGPUMmaSparseSyncLowering, NVGPURcpOpLowering>(converter);
 
-  patterns.add<NVGPUTruncfCanonicalizePattern,
-               NVGPUExtfCanonicalizePattern>(patterns.getContext());
+  patterns.add<NVGPUTruncfCanonicalizePattern, NVGPUExtfCanonicalizePattern>(
+      patterns.getContext());
 }
