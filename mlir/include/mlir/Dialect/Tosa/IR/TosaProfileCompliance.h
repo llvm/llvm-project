@@ -26,18 +26,18 @@ using namespace mlir::tosa;
 struct TypeInfo {
   TypeInfo(mlir::TypeID typeID, uint32_t bitWidth)
       : typeID(typeID), bitWidth(bitWidth), valueTypeID(mlir::TypeID()),
-        scaleTypeID(mlir::TypeID()), blockSize(0) {}
+        scaleTypeID(mlir::TypeID()), blockShape(std::nullopt) {}
 
   TypeInfo(mlir::TypeID typeID, uint32_t bitWidth, mlir::TypeID valueTypeID,
-           mlir::TypeID scaleTypeID, uint32_t blockSize)
+           mlir::TypeID scaleTypeID, tosa::BlockShape blockShape)
       : typeID(typeID), bitWidth(bitWidth), valueTypeID(valueTypeID),
-        scaleTypeID(scaleTypeID), blockSize(blockSize) {}
+        scaleTypeID(scaleTypeID), blockShape(blockShape) {}
 
   mlir::TypeID typeID;
   uint32_t bitWidth;
   mlir::TypeID valueTypeID;
   mlir::TypeID scaleTypeID;
-  uint32_t blockSize;
+  std::optional<tosa::BlockShape> blockShape;
 };
 
 enum CheckCondition {
@@ -85,10 +85,8 @@ private:
     if (auto blockScaledTy = dyn_cast<tosa::BlockScaledType>(type)) {
       Type valueTy = blockScaledTy.getValueType();
       Type scaleTy = blockScaledTy.getScaleType();
-      return {
-          type.getTypeID(), tosa::getBitWidth(valueTy), valueTy.getTypeID(),
-          scaleTy.getTypeID(),
-          BlockShapeAttr::getBlockShapeValue(blockScaledTy.getBlockShape())};
+      return {type.getTypeID(), tosa::getBitWidth(valueTy), valueTy.getTypeID(),
+              scaleTy.getTypeID(), blockScaledTy.getBlockShape()};
     }
     return {type.getTypeID(), tosa::getBitWidth(type)};
   }
@@ -150,7 +148,7 @@ public:
   bool isSameTypeInfo(TypeInfo a, TypeInfo b) {
     return a.typeID == b.typeID && a.bitWidth == b.bitWidth &&
            a.valueTypeID == b.valueTypeID && a.scaleTypeID == b.scaleTypeID &&
-           a.blockSize == b.blockSize;
+           a.blockShape == b.blockShape;
   }
 
   // Find the required profiles or extensions from the compliance info according
