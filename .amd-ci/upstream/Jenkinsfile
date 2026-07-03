@@ -805,7 +805,7 @@ try {
                     stageBuildPassed = runParallelSpecTesting(
                         'Stage Build', prebuiltExesEnvPrefix, '1', 'functional',
                         resolvedGitCommit, effectiveZnver, compilerTar,
-                        'build', prebuiltExesEnvPrefix
+                        actualTarget, 'build', prebuiltExesEnvPrefix
                     )
                     echo "Stage Build result: ${stageBuildPassed ? 'PASSED' : 'FAILED'}"
                     ['CPU2017_BASE', 'CPU2017_LATEST', 'CPU2017_SINGLE',
@@ -829,7 +829,7 @@ try {
                     stage1Passed = runParallelSpecTesting(
                         'Stage 1', '', stage1Copies, stage1Validation,
                         resolvedGitCommit, effectiveZnver, compilerTar,
-                        runStagesMode, runStagesPrefix
+                        actualTarget, runStagesMode, runStagesPrefix
                     )
                     echo "Stage 1 result: ${stage1Passed ? 'PASSED' : 'FAILED'}"
                 }
@@ -847,7 +847,7 @@ try {
                     Boolean stage2Passed = runParallelSpecTesting(
                         'Stage 2', 'STAGE2_', stage2Copies, stage2Validation,
                         resolvedGitCommit, effectiveZnver, compilerTar,
-                        runStagesMode, runStagesPrefix
+                        actualTarget, runStagesMode, runStagesPrefix
                     )
                     echo "Stage 2 result: ${stage2Passed ? 'PASSED' : 'FAILED'}"
                 }
@@ -947,6 +947,24 @@ String findBuildDir() {
         return buildDirs[zero]
     }
     return null
+}
+
+/**
+ * Resolve the ZNVER / SLURM partition for a given SPEC suite and validation
+ * mode. Mirrors CommitCheck.groovy specFunctionalPartitions /
+ * specPerformancePartitions maps.
+ *
+ *   functional:  cpu2017 -> '5_512c_dvt'   cpu2026 -> '5_384c'
+ *   performance: cpu2017 -> '5_512c'       cpu2026 -> '5_512c'
+ */
+String getSpecPartition(String suite, String validationMode) {
+    if (validationMode == 'performance') {
+        return '5_512c'
+    }
+    if (suite == 'cpu2017') {
+        return '5_512c_dvt'
+    }
+    return '5_384c'
 }
 
 /* ==========================================================================
@@ -1281,7 +1299,7 @@ List getMlceTuningParams() {
  */
 Boolean runCpu2017Stage(String stageLabel, String envPrefix, String specCopies,
                         String specValidation, String gitCommitValue, String znverValue,
-                        String compilerTar,
+                        String compilerTar, String branchContext,
                         String specBuildOrRun = 'both',
                         String prebuiltExesEnvPrefix = '') {
     if (!params.ENABLE_CPU2017) { return true }
@@ -1292,7 +1310,9 @@ Boolean runCpu2017Stage(String stageLabel, String envPrefix, String specCopies,
         return true
     }
     String combinedCfgFiles = cfgFilesList.join(', ')
-    echo "[${stageLabel}] Testing CPU2017 (SPEC_COPIES=${specCopies}, SPEC_BUILD_OR_RUN=${specBuildOrRun}) with configs: ${combinedCfgFiles}"
+    String defaultZnver = '5_512c'
+    String resolvedZnver = (znverValue != defaultZnver) ? znverValue : getSpecPartition('cpu2017', specValidation)
+    echo "[${stageLabel}] Testing CPU2017 (SPEC_COPIES=${specCopies}, SPEC_BUILD_OR_RUN=${specBuildOrRun}, ZNVER=${resolvedZnver}) with configs: ${combinedCfgFiles}"
 
     def buildResults = [:]
     String specCfgDirValue = getSpecCfgDirValue()
@@ -1325,7 +1345,7 @@ Boolean runCpu2017Stage(String stageLabel, String envPrefix, String specCopies,
                 string(name: 'COMPILER_VERSION', value: params.COMPILER_VERSION ?: 'aocc'),
                 string(name: 'SPEC_COMPILER_ID', value: params.SPEC_COMPILER_ID ?: 'llvm'),
                 string(name: 'CFG_FILENAME', value: combinedCfgFiles),
-                string(name: 'ZNVER', value: znverValue),
+                string(name: 'ZNVER', value: resolvedZnver),
                 string(name: 'BENCHMARK_LIST', value: params.CPU2017_BENCHMARK_LIST ?: ''),
                 string(name: 'SPEC_VALIDATION', value: specValidation),
                 string(name: 'SPEC_COPIES', value: specCopies),
@@ -1334,6 +1354,7 @@ Boolean runCpu2017Stage(String stageLabel, String envPrefix, String specCopies,
                 string(name: 'BUILD_TYPE_SUFFIX', value: buildType),
                 string(name: 'SPEC_BUILD_OR_RUN', value: specBuildOrRun),
                 string(name: 'PREBUILT_EXES_TAR_URL', value: prebuiltExesUrl),
+                string(name: 'BRANCH_CONTEXT', value: branchContext),
                 string(name: 'jemalloc_url', value: params.jemalloc_url ?: ''),
                 string(name: 'libm_url', value: params.libm_url ?: ''),
                 string(name: 'amdalloc_url', value: params.amdalloc_url ?: ''),
@@ -1393,7 +1414,7 @@ Boolean runCpu2017Stage(String stageLabel, String envPrefix, String specCopies,
  */
 Boolean runCpu2026Stage(String stageLabel, String envPrefix, String specCopies,
                         String specValidation, String gitCommitValue, String znverValue,
-                        String compilerTar,
+                        String compilerTar, String branchContext,
                         String specBuildOrRun = 'both',
                         String prebuiltExesEnvPrefix = '') {
     if (!params.ENABLE_CPU2026) { return true }
@@ -1404,7 +1425,9 @@ Boolean runCpu2026Stage(String stageLabel, String envPrefix, String specCopies,
         return true
     }
     String combinedCfgFiles = cfgFilesList.join(', ')
-    echo "[${stageLabel}] Testing CPU2026 (SPEC_COPIES=${specCopies}, SPEC_BUILD_OR_RUN=${specBuildOrRun}) with configs: ${combinedCfgFiles}"
+    String defaultZnver = '5_512c'
+    String resolvedZnver = (znverValue != defaultZnver) ? znverValue : getSpecPartition('cpu2026', specValidation)
+    echo "[${stageLabel}] Testing CPU2026 (SPEC_COPIES=${specCopies}, SPEC_BUILD_OR_RUN=${specBuildOrRun}, ZNVER=${resolvedZnver}) with configs: ${combinedCfgFiles}"
 
     def buildResults = [:]
     String specCfgDirValue = getSpecCfgDirValue()
@@ -1437,7 +1460,7 @@ Boolean runCpu2026Stage(String stageLabel, String envPrefix, String specCopies,
                 string(name: 'COMPILER_VERSION', value: params.COMPILER_VERSION ?: 'aocc'),
                 string(name: 'SPEC_COMPILER_ID', value: params.SPEC_COMPILER_ID ?: 'llvm'),
                 string(name: 'CFG_FILENAME', value: combinedCfgFiles),
-                string(name: 'ZNVER', value: znverValue),
+                string(name: 'ZNVER', value: resolvedZnver),
                 string(name: 'BENCHMARK_LIST', value: params.CPU2026_BENCHMARK_LIST ?: ''),
                 string(name: 'SPEC_VALIDATION', value: specValidation),
                 string(name: 'SPEC_COPIES', value: specCopies),
@@ -1446,6 +1469,7 @@ Boolean runCpu2026Stage(String stageLabel, String envPrefix, String specCopies,
                 string(name: 'BUILD_TYPE_SUFFIX', value: buildType),
                 string(name: 'SPEC_BUILD_OR_RUN', value: specBuildOrRun),
                 string(name: 'PREBUILT_EXES_TAR_URL', value: prebuiltExesUrl),
+                string(name: 'BRANCH_CONTEXT', value: branchContext),
                 string(name: 'jemalloc_url', value: params.jemalloc_url ?: ''),
                 string(name: 'libm_url', value: params.libm_url ?: ''),
                 string(name: 'amdalloc_url', value: params.amdalloc_url ?: ''),
@@ -1505,7 +1529,7 @@ Boolean runCpu2026Stage(String stageLabel, String envPrefix, String specCopies,
  */
 Boolean runParallelSpecTesting(String stageLabel, String envPrefix, String specCopies,
                                String specValidation, String gitCommitValue, String znverValue,
-                               String compilerTar,
+                               String compilerTar, String branchContext,
                                String specBuildOrRun = 'both',
                                String prebuiltExesEnvPrefix = '') {
     Map<String, Boolean> branchPassed = ['SPEC2017': true, 'SPEC-CPU2026': true]
@@ -1513,12 +1537,12 @@ Boolean runParallelSpecTesting(String stageLabel, String envPrefix, String specC
         'SPEC2017': {
             branchPassed['SPEC2017'] = runCpu2017Stage(stageLabel, envPrefix, specCopies,
                                                       specValidation, gitCommitValue, znverValue,
-                                                      compilerTar, specBuildOrRun, prebuiltExesEnvPrefix)
+                                                      compilerTar, branchContext, specBuildOrRun, prebuiltExesEnvPrefix)
         },
         'SPEC-CPU2026': {
             branchPassed['SPEC-CPU2026'] = runCpu2026Stage(stageLabel, envPrefix, specCopies,
                                                           specValidation, gitCommitValue, znverValue,
-                                                          compilerTar, specBuildOrRun, prebuiltExesEnvPrefix)
+                                                          compilerTar, branchContext, specBuildOrRun, prebuiltExesEnvPrefix)
         }
     )
     return branchPassed.values().every { it }
