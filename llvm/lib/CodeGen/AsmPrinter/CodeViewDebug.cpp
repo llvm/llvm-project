@@ -3260,10 +3260,8 @@ void CodeViewDebug::collectGlobalOrStaticLocalVariableInfo(
     CVGlobalVariableOffsets.insert(std::make_pair(DIGV, DIE->getElement(1)));
 
   // Emit constant global variables in a global symbol section.
-  if (GlobalMap.count(GVE) == 0 && DIE->isConstant()) {
-    CVGlobalVariable CVGV = {DIGV, DIE};
-    GlobalVariables.emplace_back(std::move(CVGV));
-  }
+  if (!GlobalMap.count(GVE) && DIE->isConstant())
+    GlobalVariables.emplace_back(CVGlobalVariable{DIGV, DIE});
 
   const auto *GV = GlobalMap.lookup(GVE);
   if (!GV || GV->isDeclarationForLinker())
@@ -3286,8 +3284,7 @@ void CodeViewDebug::collectGlobalOrStaticLocalVariableInfo(
     // Emit this global variable in a single global symbol section.
     VariableList = &GlobalVariables;
   }
-  CVGlobalVariable CVGV = {DIGV, GV};
-  VariableList->emplace_back(std::move(CVGV));
+  VariableList->emplace_back(CVGlobalVariable{DIGV, GV});
 }
 
 void CodeViewDebug::collectGlobalVariableInfo() {

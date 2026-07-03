@@ -561,17 +561,22 @@ class MetadataLoader::MetadataLoaderImpl {
     if (!List)
       return;
 
-    CU->replaceOperandWith(ListIndex, List->filter([&](Metadata *N) {
+    if (llvm::all_of(List->operands(), [](Metadata *MD) {
+          return !isa_and_nonnull<DILocalScope>(getScope(cast<NodeT>(MD)));
+        }))
+      return;
+
+    SmallVector<Metadata *> MDs;
+    for (Metadata *MD : List->operands()) {
       DILocalScope *LS =
-          dyn_cast_or_null<DILocalScope>(getScope(cast<NodeT>(N)));
+          dyn_cast_or_null<DILocalScope>(getScope(cast<NodeT>(MD)));
       if (!LS)
-        return false;
+        MDs.push_back(MD);
+      else if (auto *SP = findEnclosingSubprogram(LS))
+        SPToEntities[SP].push_back(MD);
+    }
 
-      if (auto *SP = findEnclosingSubprogram(LS))
-        SPToEntities[SP].push_back(N);
-
-      return true;
-    }));
+    CU->replaceOperandWith(ListIndex, MDNode::get(CU->getContext(), MDs));
   }
 
   /// Move function-local entities from DICompileUnit's 'imports',
@@ -588,14 +593,11 @@ class MetadataLoader::MetadataLoaderImpl {
         continue;
 
       // Remove all static local variables from CU's globals list.
-      upgradeOneCULocalsList<DIGlobalVariableExpression>(
-          SPToEntities, CU, DICompileUnit::GLOBALS_IDX);
+      upgradeOneCULocalsList<DIGlobalVariableExpression>(SPToEntities, CU, 6);
       // Remove all local imports from CU's imports list.
-      upgradeOneCULocalsList<DIImportedEntity>(
-          SPToEntities, CU, DICompileUnit::IMPORTED_ENTITIES_IDX);
+      upgradeOneCULocalsList<DIImportedEntity>(SPToEntities, CU, 7);
       // Remove all local types from CU's enums list.
-      upgradeOneCULocalsList<DICompositeType>(SPToEntities, CU,
-                                              DICompileUnit::ENUMS_IDX);
+      upgradeOneCULocalsList<DICompositeType>(SPToEntities, CU, 4);
 
       // Retain local entities removed from the CU in their corresponding
       // subprograms.

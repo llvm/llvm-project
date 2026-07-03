@@ -362,8 +362,8 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
   if (DISubprogram *NewSP = NewFunc->getSubprogram())
     NewSP->cleanupRetainedNodesIf([NewSP](Metadata *N) {
       auto *GVE = dyn_cast_or_null<DIGlobalVariableExpression>(N);
-      return GVE &&
-             DISubprogram::getRetainedNodeScope(GVE)->getSubprogram() != NewSP;
+      return !GVE ||
+             DISubprogram::getRetainedNodeScope(GVE)->getSubprogram() == NewSP;
     });
 
   // Only update !llvm.dbg.cu for DifferentModule (not CloneModule). In the

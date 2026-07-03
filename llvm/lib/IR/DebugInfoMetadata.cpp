@@ -1474,22 +1474,22 @@ DILocalScope *DISubprogram::getRetainedNodeScope(MDNode *N) {
 }
 
 void DISubprogram::cleanupRetainedNodes() {
-  // Checks if a metadata node from retainedTypes is a type not belonging to
+  // Checks if a metadata node from retainedTypes is a type belonging to
   // this subprogram.
-  auto IsAlienType = [this](Metadata *N) {
+  auto IsTypeInSP = [this](Metadata *N) {
     auto *T = dyn_cast_or_null<DIType>(N);
     if (!T)
-      return false;
+      return true;
 
     DISubprogram *TypeSP = nullptr;
     // The type might have been global in the previously loaded IR modules.
     if (auto *LS = dyn_cast_or_null<DILocalScope>(T->getScope()))
       TypeSP = LS->getSubprogram();
 
-    return this != TypeSP;
+    return this == TypeSP;
   };
 
-  cleanupRetainedNodesIf(IsAlienType);
+  cleanupRetainedNodesIf(IsTypeInSP);
 }
 
 DILexicalBlockBase::DILexicalBlockBase(LLVMContext &C, unsigned ID,

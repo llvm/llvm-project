@@ -2124,10 +2124,6 @@ private:
   }
 
 public:
-  constexpr static unsigned GLOBALS_IDX = 6;
-  constexpr static unsigned IMPORTED_ENTITIES_IDX = 7;
-  constexpr static unsigned ENUMS_IDX = 4;
-
   static void get() = delete;
   static void getIfExists() = delete;
 
@@ -2215,12 +2211,10 @@ public:
   MDString *getRawSplitDebugFilename() const {
     return getOperandAs<MDString>(3);
   }
-  Metadata *getRawEnumTypes() const { return getOperand(ENUMS_IDX); }
+  Metadata *getRawEnumTypes() const { return getOperand(4); }
   Metadata *getRawRetainedTypes() const { return getOperand(5); }
-  Metadata *getRawGlobalVariables() const { return getOperand(GLOBALS_IDX); }
-  Metadata *getRawImportedEntities() const {
-    return getOperand(IMPORTED_ENTITIES_IDX);
-  }
+  Metadata *getRawGlobalVariables() const { return getOperand(6); }
+  Metadata *getRawImportedEntities() const { return getOperand(7); }
   Metadata *getRawMacros() const { return getOperand(8); }
   MDString *getRawSysRoot() const { return getOperandAs<MDString>(9); }
   MDString *getRawSDK() const { return getOperandAs<MDString>(10); }
@@ -2231,14 +2225,14 @@ public:
   /// DICompileUnit should be fairly rare.
   /// @{
   void replaceEnumTypes(DICompositeTypeArray N) {
-    replaceOperandWith(ENUMS_IDX, N.get());
+    replaceOperandWith(4, N.get());
   }
   void replaceRetainedTypes(DITypeArray N) { replaceOperandWith(5, N.get()); }
   void replaceGlobalVariables(DIGlobalVariableExpressionArray N) {
-    replaceOperandWith(GLOBALS_IDX, N.get());
+    replaceOperandWith(6, N.get());
   }
   void replaceImportedEntities(DIImportedEntityArray N) {
-    replaceOperandWith(IMPORTED_ENTITIES_IDX, N.get());
+    replaceOperandWith(7, N.get());
   }
   void replaceMacros(DIMacroNodeArray N) { replaceOperandWith(8, N.get()); }
   /// @}
@@ -2554,7 +2548,9 @@ public:
   void replaceRawLinkageName(MDString *LinkageName) {
     replaceOperandWith(3, LinkageName);
   }
-  void replaceRetainedNodes(MDNodeArray N) { replaceOperandWith(7, N.get()); }
+  void replaceRetainedNodes(MDNodeArray N) {
+    replaceOperandWith(7, N.get());
+  }
 
   template <typename IterT> void retainNodes(IterT NodesBegin, IterT NodesEnd) {
     auto RetainedNodes = getRetainedNodes();
@@ -2636,7 +2632,7 @@ public:
   /// of a current scope for expression evaluation.
   LLVM_ABI void cleanupRetainedNodes();
 
-  template <typename T> void cleanupRetainedNodesIf(T &&RemovePred) {
+  template <typename T> void cleanupRetainedNodesIf(T &&Pred) {
     MDTuple *RetainedNodes = dyn_cast_or_null<MDTuple>(getRawRetainedNodes());
     // As this is expected to be called during module loading, before
     // stripping old or incorrect debug info, perform minimal sanity check.
@@ -2644,7 +2640,7 @@ public:
       return;
     // replaceRetainedNodes() should not re-unique DISubprogram if new list is
     // the same pointer.
-    replaceRetainedNodes(RetainedNodes->filter(RemovePred));
+    replaceRetainedNodes(RetainedNodes->filter(Pred));
   }
 
   /// Calls SP->cleanupRetainedNodes() for a range of DISubprograms.
