@@ -1598,7 +1598,8 @@ def : InstAlias<"tsb csync", (HINT 18), 1>, Requires<[HasTRACEV8_4]>;
 
 // As far as LLVM is concerned this writes to the system's exclusive monitors.
 let mayLoad = 1, mayStore = 1 in
-def CLREX : CRmSystemI<imm0_15, 0b010, "clrex">;
+def CLREX : CRmSystemI<imm32_0_15, 0b010, "clrex",
+                       [(int_aarch64_clrex (i32 imm32_0_15:$CRm))]>;
 
 // NOTE: ideally, this would have mayStore = 0, mayLoad = 0, but we cannot
 // model patterns with sufficiently fine granularity.
@@ -1929,6 +1930,14 @@ let Predicates = [HasRCPC] in {
   def LDAPRH  : RCPCLoad<0b01, "ldaprh", GPR32>;
   def LDAPRW  : RCPCLoad<0b10, "ldapr", GPR32>;
   def LDAPRX  : RCPCLoad<0b11, "ldapr", GPR64>;
+}
+
+// Code-gen-only LDAPR variants for the __ldapr* MSVC builtins.
+let isCodeGenOnly = 1 in {
+  def LDAPRB_cg : RCPCLoad<0b00, "ldaprb", GPR32>;
+  def LDAPRH_cg : RCPCLoad<0b01, "ldaprh", GPR32>;
+  def LDAPRW_cg : RCPCLoad<0b10, "ldapr", GPR32>;
+  def LDAPRX_cg : RCPCLoad<0b11, "ldapr", GPR64>;
 }
 
 // v8.3a complex add and multiply-accumulate. No predicate here, that is done
@@ -3037,6 +3046,15 @@ defm CASA  : CompareAndSwap<1, 0, "a">;
 defm CASL  : CompareAndSwap<0, 1, "l">;
 defm CASAL : CompareAndSwap<1, 1, "al">;
 
+// isCodeGenOnly=1: excluded from asm parser/disassembler, no HasLSE predicate.
+// Used by the __cas* MS intrinsics to force CAS* emission regardless of -march.
+let isCodeGenOnly = 1 in {
+  defm CAS   : CompareAndSwap_cg<0, 0, "">;
+  defm CASA  : CompareAndSwap_cg<1, 0, "a">;
+  defm CASL  : CompareAndSwap_cg<0, 1, "l">;
+  defm CASAL : CompareAndSwap_cg<1, 1, "al">;
+}
+
 // v8.1 atomic CASP
 defm CASP   : CompareAndSwapPair<0, 0, "">;
 defm CASPA  : CompareAndSwapPair<1, 0, "a">;
@@ -3062,6 +3080,15 @@ defm SWP   : Swap<0, 0, "">;
 defm SWPA  : Swap<1, 0, "a">;
 defm SWPL  : Swap<0, 1, "l">;
 defm SWPAL : Swap<1, 1, "al">;
+
+// isCodeGenOnly=1: excluded from asm parser/disassembler, no HasLSE predicate.
+// Used by the __swp* MS intrinsics to force SWP* emission regardless of -march.
+let isCodeGenOnly = 1 in {
+  defm SWP  : Swap_cg<0, 0, "">;
+  defm SWPA : Swap_cg<1, 0, "a">;
+  defm SWPL : Swap_cg<0, 1, "l">;
+  defm SWPAL : Swap_cg<1, 1, "al">;
+}
 
 // v9.6a atomic swap (FEAT_LSUI)
 let Predicates = [HasLSUI] in {

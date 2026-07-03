@@ -170,11 +170,11 @@ define dso_local void @test_clear() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    clrex
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.clrex()
+  call void @llvm.aarch64.clrex(i32 15)
   ret void
 }
 
-declare void @llvm.aarch64.clrex() nounwind
+declare void @llvm.aarch64.clrex(i32) nounwind
 
 define dso_local i128 @test_load_acquire_i128(ptr %p) nounwind readonly {
 ; CHECK-LABEL: test_load_acquire_i128:

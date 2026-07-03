@@ -974,6 +974,13 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
     }
   } else {
     // 'aarch64.*'.
+    // Changed: 'aarch64.clrex' gained a CRm operand. Rename the old nullary
+    // form so the call is rewritten below to pass the previous implicit CRm
+    // value of 15.
+    if (Name == "clrex" && F->arg_size() == 0) {
+      rename(F);
+      return true;
+    }
     if (Neon) {
       // 'aarch64.neon.*'.
       Intrinsic::ID ID = StringSwitch<Intrinsic::ID>(Name)
@@ -4680,6 +4687,12 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
 
 static Value *upgradeAArch64IntrinsicCall(StringRef Name, CallBase *CI,
                                           Function *F, IRBuilder<> &Builder) {
+  if (Name == "clrex.old") {
+    // The old nullary 'aarch64.clrex' is upgraded to pass the previous implicit
+    // CRm value of 15.
+    return Builder.CreateIntrinsic(Intrinsic::aarch64_clrex, {},
+                                   {Builder.getInt32(15)});
+  }
   if (Name.starts_with("neon.bfcvt")) {
     if (Name.starts_with("neon.bfcvtn2")) {
       SmallVector<int, 32> LoMask(4);

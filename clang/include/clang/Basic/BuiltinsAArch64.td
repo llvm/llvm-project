@@ -409,3 +409,75 @@ let Attributes = [NoThrow, RequireDeclaration], Languages = "ALL_MS_LANGUAGES", 
 let Attributes = [NoThrow, RequireDeclaration], Languages = "ALL_MS_LANGUAGES", Header = "intrin.h" in {
 	def __hlt : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned int, ...)">;
 }
+
+let Attributes = [NoThrow, RequireDeclaration], Languages = "ALL_MS_LANGUAGES", Header = "intrin.h" in {
+	def __ldar8  : AArch64NoPrefixTargetLibBuiltin<"unsigned char (unsigned char const volatile *)">;
+	def __ldar16 : AArch64NoPrefixTargetLibBuiltin<"unsigned short (unsigned short const volatile *)">;
+	def __ldar32 : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned int const volatile *)">;
+	def __ldar64 : AArch64NoPrefixTargetLibBuiltin<"unsigned long long int (unsigned long long int const volatile*)">;
+	def __stlr8  : AArch64NoPrefixTargetLibBuiltin<"void (unsigned char volatile *, unsigned char)">;
+	def __stlr16 : AArch64NoPrefixTargetLibBuiltin<"void (unsigned short volatile *, unsigned short)">;
+	def __stlr32 : AArch64NoPrefixTargetLibBuiltin<"void (unsigned int volatile *, unsigned int)">;
+	def __stlr64 : AArch64NoPrefixTargetLibBuiltin<"void (unsigned long long int volatile *, unsigned long long int)">;
+
+	def __ldxr8  : AArch64NoPrefixTargetLibBuiltin<"unsigned char (unsigned char const volatile *)">;
+	def __ldxr16 : AArch64NoPrefixTargetLibBuiltin<"unsigned short (unsigned short const volatile *)">;
+	def __ldxr32 : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned int const volatile *)">;
+	def __ldxr64 : AArch64NoPrefixTargetLibBuiltin<"unsigned long long int (unsigned long long int const volatile *)">;
+
+	def __ldaxr8  : AArch64NoPrefixTargetLibBuiltin<"unsigned char (unsigned char const volatile *)">;
+	def __ldaxr16 : AArch64NoPrefixTargetLibBuiltin<"unsigned short (unsigned short const volatile *)">;
+	def __ldaxr32 : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned int const volatile *)">;
+	def __ldaxr64 : AArch64NoPrefixTargetLibBuiltin<"unsigned long long int (unsigned long long int const volatile *)">;
+
+	def __stxr8  : AArch64NoPrefixTargetLibBuiltin<"unsigned char (unsigned char volatile *, unsigned char)">;
+	def __stxr16 : AArch64NoPrefixTargetLibBuiltin<"unsigned char (unsigned short volatile *, unsigned short)">;
+	def __stxr32 : AArch64NoPrefixTargetLibBuiltin<"unsigned char (unsigned int volatile *, unsigned int)">;
+	def __stxr64 : AArch64NoPrefixTargetLibBuiltin<"unsigned char (unsigned long long int volatile *, unsigned long long int)">;
+
+	def __stlxr8  : AArch64NoPrefixTargetLibBuiltin<"unsigned char (unsigned char volatile *, unsigned char)">;
+	def __stlxr16 : AArch64NoPrefixTargetLibBuiltin<"unsigned char (unsigned short volatile *, unsigned short)">;
+	def __stlxr32 : AArch64NoPrefixTargetLibBuiltin<"unsigned char (unsigned int volatile *, unsigned int)">;
+	def __stlxr64 : AArch64NoPrefixTargetLibBuiltin<"unsigned char (unsigned long long int volatile *, unsigned long long int)">;
+
+	def __clrex : AArch64NoPrefixTargetLibBuiltin<"void (unsigned char)">;
+
+	def __cas8  : AArch64NoPrefixTargetLibBuiltin<"unsigned char (unsigned char volatile *, unsigned char, unsigned char)">;
+	def __cas16 : AArch64NoPrefixTargetLibBuiltin<"unsigned short (unsigned short volatile *, unsigned short, unsigned short)">;
+	def __cas32 : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned int volatile *, unsigned int, unsigned int)">;
+	def __cas64 : AArch64NoPrefixTargetLibBuiltin<"unsigned long long int (unsigned long long int volatile *, unsigned long long int, unsigned long long int)">;
+	def __casa8  : AArch64NoPrefixTargetLibBuiltin<"unsigned char (unsigned char volatile *, unsigned char, unsigned char)">;
+	def __casa16 : AArch64NoPrefixTargetLibBuiltin<"unsigned short (unsigned short volatile *, unsigned short, unsigned short)">;
+	def __casa32 : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned int volatile *, unsigned int, unsigned int)">;
+	def __casa64 : AArch64NoPrefixTargetLibBuiltin<"unsigned long long int (unsigned long long int volatile *, unsigned long long int, unsigned long long int)">;
+	def __casl8  : AArch64NoPrefixTargetLibBuiltin<"unsigned char (unsigned char volatile *, unsigned char, unsigned char)">;
+	def __casl16 : AArch64NoPrefixTargetLibBuiltin<"unsigned short (unsigned short volatile *, unsigned short, unsigned short)">;
+	def __casl32 : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned int volatile *, unsigned int, unsigned int)">;
+	def __casl64 : AArch64NoPrefixTargetLibBuiltin<"unsigned long long int (unsigned long long int volatile *, unsigned long long int, unsigned long long int)">;
+	def __casal8  : AArch64NoPrefixTargetLibBuiltin<"unsigned char (unsigned char volatile *, unsigned char, unsigned char)">;
+	def __casal16 : AArch64NoPrefixTargetLibBuiltin<"unsigned short (unsigned short volatile *, unsigned short, unsigned short)">;
+	def __casal32 : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned int volatile *, unsigned int, unsigned int)">;
+	def __casal64 : AArch64NoPrefixTargetLibBuiltin<"unsigned long long int (unsigned long long int volatile *, unsigned long long int, unsigned long long int)">;
+
+	def __swp8 : AArch64NoPrefixTargetLibBuiltin<"unsigned char (unsigned char volatile *, unsigned char)">;
+	def __swp16 : AArch64NoPrefixTargetLibBuiltin<"unsigned short (unsigned short volatile *, unsigned short)">;
+	def __swp32 : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned int volatile *, unsigned int)">;
+	def __swp64 : AArch64NoPrefixTargetLibBuiltin<"unsigned long long int (unsigned long long int volatile *, unsigned long long int)">;
+	def __swpa8 : AArch64NoPrefixTargetLibBuiltin<"unsigned char (unsigned char volatile *, unsigned char)">;
+	def __swpa16 : AArch64NoPrefixTargetLibBuiltin<"unsigned short (unsigned short volatile *, unsigned short)">;
+	def __swpa32 : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned int volatile *, unsigned int)">;
+	def __swpa64 : AArch64NoPrefixTargetLibBuiltin<"unsigned long long int (unsigned long long int volatile *, unsigned long long int)">;
+	def __swpl8 : AArch64NoPrefixTargetLibBuiltin<"unsigned char (unsigned char volatile *, unsigned char)">;
+	def __swpl16 : AArch64NoPrefixTargetLibBuiltin<"unsigned short (unsigned short volatile *, unsigned short)">;
+	def __swpl32 : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned int volatile *, unsigned int)">;
+	def __swpl64 : AArch64NoPrefixTargetLibBuiltin<"unsigned long long int (unsigned long long int volatile *, unsigned long long int)">;
+	def __swpal8 : AArch64NoPrefixTargetLibBuiltin<"unsigned char (unsigned char volatile *, unsigned char)">;
+	def __swpal16 : AArch64NoPrefixTargetLibBuiltin<"unsigned short (unsigned short volatile *, unsigned short)">;
+	def __swpal32 : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned int volatile *, unsigned int)">;
+	def __swpal64 : AArch64NoPrefixTargetLibBuiltin<"unsigned long long int (unsigned long long int volatile *, unsigned long long int)">;
+
+	def __ldapr8  : AArch64NoPrefixTargetLibBuiltin<"unsigned char (unsigned char const volatile *)">;
+	def __ldapr16 : AArch64NoPrefixTargetLibBuiltin<"unsigned short (unsigned short const volatile *)">;
+	def __ldapr32 : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned int const volatile *)">;
+	def __ldapr64 : AArch64NoPrefixTargetLibBuiltin<"unsigned long long int (unsigned long long int const volatile *)">;
+}

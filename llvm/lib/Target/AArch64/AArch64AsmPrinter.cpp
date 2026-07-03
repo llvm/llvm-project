@@ -3137,6 +3137,59 @@ void AArch64AsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
 #endif
 }
 
+// The codegen-only CAS*/SWP*/LDAPR* "_cg" instructions are emitted by the MSVC
+// __cas*/__swp*/__ldapr* intrinsics regardless of the active -march, so they
+// carry no LSE/RCPC predicate. When we emit textual assembly (-S/-save-temps)
+// the assembler would otherwise reject them, so bracket each with a
+// .arch_extension directive enabling the required feature. Returns the
+// extension name ("lse"/"rcpc") and the feature controlling it, or an empty
+// name for any other opcode.
+static std::pair<StringRef, unsigned>
+getCodeGenOnlyAtomicArchExtension(unsigned Opc) {
+  switch (Opc) {
+  default:
+    return {StringRef(), 0};
+  case AArch64::CASB_cg:
+  case AArch64::CASH_cg:
+  case AArch64::CASW_cg:
+  case AArch64::CASX_cg:
+  case AArch64::CASAB_cg:
+  case AArch64::CASAH_cg:
+  case AArch64::CASAW_cg:
+  case AArch64::CASAX_cg:
+  case AArch64::CASLB_cg:
+  case AArch64::CASLH_cg:
+  case AArch64::CASLW_cg:
+  case AArch64::CASLX_cg:
+  case AArch64::CASALB_cg:
+  case AArch64::CASALH_cg:
+  case AArch64::CASALW_cg:
+  case AArch64::CASALX_cg:
+  case AArch64::SWPB_cg:
+  case AArch64::SWPH_cg:
+  case AArch64::SWPW_cg:
+  case AArch64::SWPX_cg:
+  case AArch64::SWPAB_cg:
+  case AArch64::SWPAH_cg:
+  case AArch64::SWPAW_cg:
+  case AArch64::SWPAX_cg:
+  case AArch64::SWPLB_cg:
+  case AArch64::SWPLH_cg:
+  case AArch64::SWPLW_cg:
+  case AArch64::SWPLX_cg:
+  case AArch64::SWPALB_cg:
+  case AArch64::SWPALH_cg:
+  case AArch64::SWPALW_cg:
+  case AArch64::SWPALX_cg:
+    return {"lse", AArch64::FeatureLSE};
+  case AArch64::LDAPRB_cg:
+  case AArch64::LDAPRH_cg:
+  case AArch64::LDAPRW_cg:
+  case AArch64::LDAPRX_cg:
+    return {"rcpc", AArch64::FeatureRCPC};
+  }
+}
+
 void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   AArch64_MC::verifyInstructionPredicates(MI->getOpcode(), STI->getFeatureBits());
 
@@ -3818,10 +3871,24 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   if (emitDeactivationSymbolRelocation(MI->getDeactivationSymbol()))
     return;
 
+  // Codegen-only CAS*/SWP*/LDAPR* instructions are emitted without an LSE/RCPC
+  // predicate. When producing assembly, enable the needed extension around the
+  // instruction so the assembler accepts it. Skip this if the active subtarget
+  // already has the feature, otherwise the trailing "no" directive would
+  // wrongly disable it for the rest of the function.
+  auto [ArchExt, ArchExtFeature] =
+      getCodeGenOnlyAtomicArchExtension(MI->getOpcode());
+  bool ToggleArchExt = !ArchExt.empty() && !STI->hasFeature(ArchExtFeature);
+  if (ToggleArchExt)
+    TS->emitDirectiveArchExtension(ArchExt);
+
   // Finally, do the automated lowerings for everything else.
   MCInst TmpInst;
   MCInstLowering.Lower(MI, TmpInst);
   EmitToStreamer(*OutStreamer, TmpInst);
+
+  if (ToggleArchExt)
+    TS->emitDirectiveArchExtension((Twine("no") + ArchExt).str());
 }
 
 void AArch64AsmPrinter::recordIfImportCall(
