@@ -239,29 +239,29 @@ TEST_F(VPDominatorTreeTest, DominanceRegionsTest) {
     IntegerType *Int32 = IntegerType::get(C, 32);
     VPBasicBlock *R1BB1 = Plan.createVPBasicBlock("R1BB1");
     VPInstruction *R1BB1I =
-        new VPInstructionWithType(VPInstruction::VScale, {}, Int32);
+        new VPInstruction(VPInstruction::VScale, {}, {}, {}, {}, "", Int32);
     R1BB1->appendRecipe(R1BB1I);
     VPBasicBlock *R1BB2 = Plan.createVPBasicBlock("R1BB2");
     VPInstruction *R1BB2I =
-        new VPInstructionWithType(VPInstruction::VScale, {}, Int32);
+        new VPInstruction(VPInstruction::VScale, {}, {}, {}, {}, {}, Int32);
     R1BB2->appendRecipe(R1BB2I);
     VPBasicBlock *R1BB3 = Plan.createVPBasicBlock("R1BB3");
     VPInstruction *R1BB3I =
-        new VPInstructionWithType(VPInstruction::VScale, {}, Int32);
+        new VPInstruction(VPInstruction::VScale, {}, {}, {}, {}, {}, Int32);
     R1BB3->appendRecipe(R1BB3I);
     VPRegionBlock *R1 = Plan.createReplicateRegion(R1BB1, R1BB3, "R1");
 
     VPBasicBlock *R2BB1 = Plan.createVPBasicBlock("R2BB1");
     VPInstruction *R2BB1I =
-        new VPInstructionWithType(VPInstruction::VScale, {}, Int32);
+        new VPInstruction(VPInstruction::VScale, {}, {}, {}, {}, {}, Int32);
     R2BB1->appendRecipe(R2BB1I);
     VPBasicBlock *R2BB2 = Plan.createVPBasicBlock("R2BB2");
     VPInstruction *R2BB2I =
-        new VPInstructionWithType(VPInstruction::VScale, {}, Int32);
+        new VPInstruction(VPInstruction::VScale, {}, {}, {}, {}, {}, Int32);
     R2BB2->appendRecipe(R2BB2I);
     VPBasicBlock *R2BB3 = Plan.createVPBasicBlock("R2BB3");
     VPInstruction *R2BB3I =
-        new VPInstructionWithType(VPInstruction::VScale, {}, Int32);
+        new VPInstruction(VPInstruction::VScale, {}, {}, {}, {}, {}, Int32);
     R2BB3->appendRecipe(R2BB3I);
     VPRegionBlock *R2 = Plan.createReplicateRegion(R2BB1, R2BB3, "R2");
     R2BB2->setParent(R2);

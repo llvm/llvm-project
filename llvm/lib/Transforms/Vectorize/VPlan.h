@@ -1331,14 +1331,6 @@ public:
     /// backedge value). Has the wide induction recipe as operand.
     ExitingIVValue,
     MaskedCond,
-
-    // The opcodes below are used for VPInstructionWithType.
-    // NOTE: VPInstructionWithType classes are also used for:
-    // 1. All CastInst variants - see createVPInstructionsForVPBB, and other
-    //    cases where createScalarCast, createScalarZExtOrTrunc and
-    //    createScalarSExtOrTrunc are invoked.
-    // 2. Scalar load instructions - see createVPInstructionsForVPBB.
-
     /// Scale the first operand (vector step) by the second operand
     /// (scalar-step).  Casts both operands to the result type if needed.
     WideIVStep,
@@ -1505,6 +1497,11 @@ public:
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override;
 
+  /// Returns true if the recipe only uses scalars of operand \p Op.
+  bool usesScalars(const VPValue *Op) const override {
+    return isSingleScalar() || usesFirstLaneOnly(Op);
+  }
+
   /// Returns true if the recipe only uses the first part of operand \p Op.
   bool usesFirstPartOnly(const VPValue *Op) const override;
 
@@ -1525,78 +1522,6 @@ public:
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the VPInstruction to \p O.
-  void printRecipe(raw_ostream &O, const Twine &Indent,
-                   VPSlotTracker &SlotTracker) const override;
-#endif
-};
-
-/// A specialization of VPInstruction augmenting it with a dedicated result
-/// type, to be used when the opcode and operands of the VPInstruction don't
-/// directly determine the result type. Note that there is no separate recipe ID
-/// for VPInstructionWithType; it shares the same ID as VPInstruction and is
-/// distinguished purely by the opcode.
-/// TODO: Merge with VPInstruction, now that VPRecipeValue provides the type.
-class VPInstructionWithType : public VPInstruction {
-public:
-  VPInstructionWithType(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                        Type *ResultTy, const VPIRFlags &Flags = {},
-                        const VPIRMetadata &Metadata = {},
-                        DebugLoc DL = DebugLoc::getUnknown(),
-                        const Twine &Name = "", Value *UV = nullptr)
-      : VPInstruction(Opcode, Operands, Flags, Metadata, DL, Name, ResultTy) {
-    setUnderlyingValue(UV);
-  }
-
-  static inline bool classof(const VPRecipeBase *R) {
-    // VPInstructionWithType are VPInstructions with specific opcodes requiring
-    // type information.
-    auto *VPI = dyn_cast<VPInstruction>(R);
-    if (!VPI)
-      return false;
-    unsigned Opc = VPI->getOpcode();
-    if (Instruction::isCast(Opc))
-      return true;
-    switch (Opc) {
-    case VPInstruction::WideIVStep:
-    case VPInstruction::StepVector:
-    case VPInstruction::VScale:
-    case Instruction::Load:
-      return true;
-    default:
-      return false;
-    }
-  }
-
-  static inline bool classof(const VPUser *R) {
-    return isa<VPInstructionWithType>(cast<VPRecipeBase>(R));
-  }
-
-  VPInstruction *clone() override {
-    auto *New =
-        new VPInstructionWithType(getOpcode(), operands(), getResultType(),
-                                  *this, *this, getDebugLoc(), getName());
-    New->setUnderlyingValue(getUnderlyingValue());
-    return New;
-  }
-
-  void execute(VPTransformState &State) override;
-
-  /// Return the cost of this VPInstruction.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override;
-
-  Type *getResultType() const { return getScalarType(); }
-
-  /// Cast recipes always use scalars of their operand.
-  bool usesScalars(const VPValue *Op) const override {
-    if (Instruction::isCast(getOpcode()))
-      return true;
-    return VPInstruction::usesScalars(Op);
-  }
-
-protected:
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
   void printRecipe(raw_ostream &O, const Twine &Indent,
                    VPSlotTracker &SlotTracker) const override;
 #endif
@@ -3399,7 +3324,7 @@ public:
         VPIRMetadata(Metadata), IsSingleScalar(IsSingleScalar),
         IsPredicated(Mask) {
     assert((!IsSingleScalar || !I->isCast()) &&
-           "single-scalar casts should use VPInstructionWithType");
+           "Single-scalar casts should use VPInstruction");
     setUnderlyingValue(I);
     if (Mask)
       addOperand(Mask);
