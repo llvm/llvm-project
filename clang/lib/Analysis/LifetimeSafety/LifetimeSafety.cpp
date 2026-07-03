@@ -96,7 +96,7 @@ void LifetimeSafetyAnalysis::run() {
       Factory.MovedLoansMapFactory);
 
   runLifetimeChecker(*LoanPropagation, *MovedLoans, *LiveOrigins, *FactMgr, AC,
-                     SemaHelper);
+                     SemaHelper, LSOpts);
 
   DEBUG_WITH_TYPE("PrintCFG", Cfg.dump(AC.getASTContext().getLangOpts(),
                                        /*ShowColors=*/true));
@@ -122,11 +122,8 @@ void collectLifetimeStats(AnalysisDeclContext &AC, OriginManager &OM,
 
 void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                                LifetimeSafetySemaHelper *SemaHelper,
+                               const LifetimeSafetyOpts &LSOpts,
                                LifetimeSafetyStats &Stats, bool CollectStats) {
-  LifetimeSafetyOpts LSOpts;
-  LSOpts.MaxCFGBlocks =
-      AC.getASTContext().getLangOpts().LifetimeSafetyMaxCFGBlocks;
-
   internal::LifetimeSafetyAnalysis Analysis(AC, SemaHelper, LSOpts);
   Analysis.run();
   if (CollectStats)

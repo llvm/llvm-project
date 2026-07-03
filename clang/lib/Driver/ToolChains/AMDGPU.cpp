@@ -610,6 +610,9 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-shared");
   }
 
+  if (Args.hasArg(options::OPT_hipstdpar))
+    CmdArgs.push_back("-plugin-opt=-amdgpu-enable-hipstdpar");
+
   if (auto LTO = getToolChain().getLTOMode(Args); LTO != LTOK_None) {
     addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs,
                   LTO == LTOK_Thin);
@@ -892,6 +895,9 @@ void AMDGPUToolChain::addClangTargetOptions(
   if (getTriple().isSPIRV() &&
       !DriverArgs.hasArg(options::OPT_disable_llvm_optzns))
     CC1Args.push_back("-disable-llvm-optzns");
+
+  if (DriverArgs.hasArg(options::OPT_hipstdpar))
+    CC1Args.append({"-mllvm", "-amdgpu-enable-hipstdpar"});
 
   if (DeviceOffloadingKind == Action::OFK_None)
     addOpenCLBuiltinsLib(getDriver(), getTriple(), DriverArgs, CC1Args);

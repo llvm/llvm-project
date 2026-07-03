@@ -1754,6 +1754,17 @@ class PatGprPairGprPair<SDPatternOperator OpNode, RVInst Inst, ValueType vt>
     : Pat<(vt (OpNode (vt GPRPair:$rs1), (vt GPRPair:$rs2))),
           (Inst GPRPair:$rs1, GPRPair:$rs2)>;
 
+// Reduction sum. PatRedSum is the single-GPR source (predsum.bs/hs/ws), result
+// XLenVT; PatRedSumPair is the RV32 paired source (predsum.dbs/dhs), result i32.
+// Target-illegal results (i32 accumulator on RV64, i64 on RV32) don't reach
+// isel and are split in ReplaceNodeResults.
+class PatRedSum<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT>
+    : Pat<(XLenVT (OpNode (VecVT GPR:$rs1), (XLenVT GPR:$rs2))),
+          (Inst GPR:$rs1, GPR:$rs2)>;
+class PatRedSumPair<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT>
+    : Pat<(i32 (OpNode (VecVT GPRPair:$rs1), (i32 GPR:$rs2))),
+          (Inst GPRPair:$rs1, GPR:$rs2)>;
+
 class PatGprPairImm<SDPatternOperator OpNode, RVInst Inst,
                     SDPatternOperator ImmType, ValueType vt>
     : Pat<(vt (OpNode (vt GPRPair:$rs1), ImmType:$imm)),
@@ -1799,6 +1810,10 @@ def SDT_RISCVWideningAddSubAccumulate : SDTypeProfile<2, 4, [SDTCisVT<0, i32>,
 def riscv_waddau : RVSDNode<"WADDAU", SDT_RISCVWideningAddSubAccumulate>;
 // Widening sub accumulate unsigned: rd = rd + zext(rs1) - zext(rs2)
 def riscv_wsubau : RVSDNode<"WSUBAU", SDT_RISCVWideningAddSubAccumulate>;
+// Widening add accumulate signed: rd = rd + sext(rs1) + sext(rs2)
+def riscv_wadda : RVSDNode<"WADDA", SDT_RISCVWideningAddSubAccumulate>;
+// Widening sub accumulate signed: rd = rd + sext(rs1) - sext(rs2)
+def riscv_wsuba : RVSDNode<"WSUBA", SDT_RISCVWideningAddSubAccumulate>;
 
 def riscv_waddu : RVSDNode<"WADDU", SDTIntBinHiLoOp, [SDNPCommutative]>;
 def riscv_wsubu : RVSDNode<"WSUBU", SDTIntBinHiLoOp>;
@@ -2387,6 +2402,18 @@ let append Predicates = [IsRV32] in {
   def : PatGprPairGprPair<setult, PMSLTU_DH, v4i16>;
   def : PatGprPairGprPair<setult, PMSLTU_DW, v2i32>;
 
+  // 8-bit reduction sum patterns
+  def : PatRedSum<int_riscv_predsum, PREDSUM_BS, v4i8>;
+  def : PatRedSum<int_riscv_predsumu, PREDSUMU_BS, v4i8>;
+  def : PatRedSumPair<int_riscv_predsum, PREDSUM_DBS, v8i8>;
+  def : PatRedSumPair<int_riscv_predsumu, PREDSUMU_DBS, v8i8>;
+
+  // 16-bit reduction sum patterns
+  def : PatRedSum<int_riscv_predsum, PREDSUM_HS, v2i16>;
+  def : PatRedSum<int_riscv_predsumu, PREDSUMU_HS, v2i16>;
+  def : PatRedSumPair<int_riscv_predsum, PREDSUM_DHS, v4i16>;
+  def : PatRedSumPair<int_riscv_predsumu, PREDSUMU_DHS, v4i16>;
+
   // [s|u]min/[s|u]max patterns
   def : PatGprPairGprPair<smin, PMIN_DB, v8i8>;
   def : PatGprPairGprPair<umin, PMINU_DB, v8i8>;
@@ -2595,6 +2622,18 @@ let append Predicates = [IsRV64] in {
   // a < b
   def : PatGprGpr<setlt, PMSLT_W, v2i32>;
   def : PatGprGpr<setult, PMSLTU_W, v2i32>;
+
+  // 8-bit reduction sum patterns
+  def : PatRedSum<int_riscv_predsum, PREDSUM_BS, v8i8>;
+  def : PatRedSum<int_riscv_predsumu, PREDSUMU_BS, v8i8>;
+
+  // 16-bit reduction sum patterns
+  def : PatRedSum<int_riscv_predsum, PREDSUM_HS, v4i16>;
+  def : PatRedSum<int_riscv_predsumu, PREDSUMU_HS, v4i16>;
+
+  // 32-bit reduction sum patterns
+  def : PatRedSum<int_riscv_predsum, PREDSUM_WS, v2i32>;
+  def : PatRedSum<int_riscv_predsumu, PREDSUMU_WS, v2i32>;
 
   // 32-bit [s|u]min/[s|u]max patterns
   def : PatGprGpr<smin, PMIN_W, v2i32>;

@@ -133,7 +133,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(
       {G_IMPLICIT_DEF, G_FREEZE, G_CONSTANT_FOLD_BARRIER})
-      .legalFor({p0, s8, s16, s32, s64})
+      .legalFor({p0, s8, s16, s32, s64, s128})
       .legalFor({v2s8, v4s8, v8s8, v16s8, v2s16, v4s16, v8s16, v2s32, v4s32,
                  v2s64, v2p0})
       .widenScalarToNextPow2(0)
@@ -399,6 +399,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .moreElementsToNextPow2(0)
       .scalarizeIf(scalarOrEltWiderThan(0, 32), 0)
       .scalarSameSizeAs(0, 1);
+
+  getActionDefinitionsBuilder(G_INSERT_SUBVECTOR).lower();
 
   getActionDefinitionsBuilder(G_CTLZ_ZERO_POISON).lower();
 

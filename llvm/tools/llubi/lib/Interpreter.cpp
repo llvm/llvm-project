@@ -130,6 +130,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
           AnyValue::getPoisonValue(Ctx, C->getType()));
       return UnsupportedConstantValues.back();
     }
+    if (isa<MetadataAsValue>(V))
+      return None;
     return CurrentFrame->ValueMap.at(V);
   }
 
@@ -763,12 +765,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     }
 
     MutableArrayRef<Byte> DstBytes = DstMO->getBytes().slice(DstOffset, Len);
-    if (SrcMO->getState() == MemoryObjectState::Dead) {
-      fill(DstBytes, Byte::poison());
-    } else {
-      ArrayRef<Byte> SrcBytes = SrcMO->getBytes().slice(SrcOffset, Len);
-      std::memmove(DstBytes.data(), SrcBytes.data(), Len * sizeof(Byte));
-    }
+    ArrayRef<Byte> SrcBytes = SrcMO->getBytes().slice(SrcOffset, Len);
+    std::memmove(DstBytes.data(), SrcBytes.data(), Len * sizeof(Byte));
     return AnyValue();
   }
 
@@ -909,6 +907,10 @@ public:
     }
     setResult(CB, std::move(RetVal));
 
+    for (auto &ByValArg : CurrentFrame->CalleeByValArgs)
+      Ctx.free(*ByValArg);
+    CurrentFrame->CalleeByValArgs.clear();
+
     if (auto *II = dyn_cast<InvokeInst>(&CB))
       jumpTo(*II, II->getNormalDest());
     else if (CurrentFrame->State == FrameState::Pending)
@@ -1014,6 +1016,7 @@ public:
         MO->setState(MemoryObjectState::Alive);
         fill(MO->getBytes(), Byte::undef());
       } else {
+        fill(MO->getBytes(), Byte::poison());
         MO->setState(MemoryObjectState::Dead);
       }
       return AnyValue();
@@ -1623,6 +1626,9 @@ public:
     case Intrinsic::memset:
     case Intrinsic::memset_inline:
       return callMemSetIntrinsic(CB, Args);
+    case Intrinsic::experimental_noalias_scope_decl:
+      // FIXME: Not implemented yet. Currently it acts as a noop.
+      return AnyValue();
     default:
       Handler.onUnrecognizedInstruction(CB);
       setFailed();
@@ -1781,7 +1787,7 @@ public:
 
   void enterCall(CallBase &CB) {
     Function *Callee = CB.getCalledFunction();
-    // TODO: handle byval/initializes
+    // TODO: handle initializes
     auto &CalleeArgs = CurrentFrame->CalleeArgs;
     assert(CalleeArgs.empty() &&
            "Forgot to call returnFromCallee before entering a new call.");
@@ -1832,10 +1838,61 @@ public:
     for (auto [I, Arg] : enumerate(CB.args())) {
       Type *ArgTy = Arg->getType();
       AnyValue &ArgVal = CalleeArgs[I];
+
       // CallBase::paramHasAttr also checks parameter attributes at known
       // callee. We do it explicitly to avoid duplication.
       AttributeSet AttrsAtCallSite = CB.getParamAttributes(I);
       AttributeSet AttrsAtCallee = Callee->getAttributes().getParamAttrs(I);
+
+      if (ArgTy->isPointerTy()) {
+        auto *ByValTy = AttrsAtCallSite.getByValType();
+        auto *ByValTyFromCallee = AttrsAtCallee.getByValType();
+        if (ByValTy != ByValTyFromCallee) {
+          reportImmediateUB()
+              << "Mismatched byval attribute between callee and callsite.";
+          return;
+        }
+        if (ByValTy) {
+          if (ArgVal.isPoison()) {
+            reportImmediateUB() << "Invalid poison byval pointer argument.";
+            return;
+          }
+
+          uint64_t Size = Ctx.getEffectiveTypeAllocSize(ByValTy);
+          MaybeAlign AllocAlign = AttrsAtCallSite.getAlignment();
+          // Ignore the alignment at the callsite when it is set on the callee.
+          if (MaybeAlign CalleeAlign = AttrsAtCallee.getAlignment())
+            AllocAlign = CalleeAlign;
+          if (!AllocAlign.has_value()) {
+            // If the alignment is not specified, we use the default ABI
+            // alignment. This is the default behavior of
+            // TargetLoweringBase::getByValTypeAlignment.
+            AllocAlign = DL.getABITypeAlign(ByValTy);
+          }
+          assert(I < Callee->arg_size() &&
+                 "Byval pointers cannot be passed via variadic arguments.");
+          auto Obj = Ctx.allocate(
+              Size, AllocAlign->value(), Callee->getArg(I)->getName(),
+              ArgTy->getPointerAddressSpace(), MemInitKind::Uninitialized,
+              MemAllocKind::Stack);
+          if (!Obj) {
+            reportError()
+                << "Insufficient stack space for byval pointer argument.";
+            return;
+          }
+          if (auto [MO, Offset] = verifyMemAccess(
+                  ArgVal.asPointer(), Size,
+                  std::max(AllocAlign.value(),
+                           AttrsAtCallSite.getAlignment().valueOrOne()),
+                  /*IsStore=*/false);
+              MO)
+            copy(MO->getBytes().slice(Offset, Size), Obj->getBytes().begin());
+          else
+            return;
+          CurrentFrame->CalleeByValArgs.push_back(Obj);
+          ArgVal = Ctx.deriveFromMemoryObject(std::move(Obj));
+        }
+      }
       handleAttributes(ArgTy, ArgVal, AttrsAtCallSite, AttrsAtCallee);
     }
 
@@ -2522,6 +2579,7 @@ public:
 
         Instruction &I = *Top.PC;
         visit(&I);
+        Ctx.resetNoncacheableConstantBuffer();
         if (hasProgramExited())
           break;
 

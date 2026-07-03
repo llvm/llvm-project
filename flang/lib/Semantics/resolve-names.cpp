@@ -1000,6 +1000,9 @@ public:
   void Post(const parser::EnumDef &);
   bool Pre(const parser::Enumerator &);
   bool Pre(const parser::EnumerationTypeDef &);
+  void Post(const parser::EnumerationTypeStmt &);
+  bool Pre(const parser::EnumerationEnumeratorStmt &);
+  void Post(const parser::EndEnumerationTypeStmt &);
   bool Pre(const parser::AccessSpec &);
   bool Pre(const parser::AsynchronousStmt &);
   bool Pre(const parser::ContiguousStmt &);
@@ -1635,22 +1638,40 @@ void AccVisitor::CopySymbolWithDevice(const parser::Name *name) {
 
 Symbol *AccVisitor::CopyUseDeviceSymbol(const Symbol &symbol) {
   const Symbol &ultimate{symbol.GetUltimate()};
-  Symbol *copy{currScope().CopySymbol(ultimate)};
+  // Key the device copy under the name as referenced here, which differs from
+  // the ultimate symbol's name for a USE-renamed variable, so that references
+  // inside the construct resolve to this copy rather than the host symbol.
+  const SourceName localName{symbol.name()};
+  Symbol *copy{nullptr};
+  // CopySymbol would key the copy under the ultimate's name; only use it when
+  // that matches the local name, otherwise reuse the host-associated symbol.
+  if (localName == ultimate.name()) {
+    copy = currScope().CopySymbol(ultimate);
+  }
   if (!copy) {
-    copy = FindInScope(currScope(), ultimate.name());
+    copy = FindInScope(currScope(), localName);
   }
   if (copy && copy->has<HostAssocDetails>()) {
     if (const auto *hostAssoc{copy->detailsIf<HostAssocDetails>()};
         hostAssoc && copy->owner().kind() == Scope::Kind::OpenACCConstruct) {
       Scope &hostScope{currScope().parent()};
-      if (!FindInScope(hostScope, ultimate.name())) {
+      if (!FindInScope(hostScope, localName)) {
         hostScope.CopySymbol(*copy);
       }
     }
     if (const auto *object{ultimate.detailsIf<ObjectEntityDetails>()}) {
       currScope().erase(copy->name());
       auto pair{currScope().try_emplace(
-          ultimate.name(), ultimate.attrs(), ObjectEntityDetails{*object})};
+          localName, ultimate.attrs(), ObjectEntityDetails{*object})};
+      copy = &*pair.first->second;
+      copy->flags() = ultimate.flags();
+    }
+  } else if (!copy) {
+    // USE-renamed object with no host-association symbol in this scope: key an
+    // object-entity copy under the local name (CopySymbol cannot rename).
+    if (const auto *object{ultimate.detailsIf<ObjectEntityDetails>()}) {
+      auto pair{currScope().try_emplace(
+          localName, ultimate.attrs(), ObjectEntityDetails{*object})};
       copy = &*pair.first->second;
       copy->flags() = ultimate.flags();
     }
@@ -1752,7 +1773,7 @@ public:
     // Iterate over elements of x, and resolve any common blocks that
     // are still unresolved.
     for (const parser::OmpObject &obj : x.v) {
-      auto *name{std::get_if<parser::Name>(&obj.u)};
+      auto *name{parser::omp::GetCommonBlockFromObj(obj)};
       if (name && !name->symbol) {
         Resolve(*name, currScope().MakeCommonBlock(name->source, name->source));
       }
@@ -2168,29 +2189,39 @@ void OmpVisitor::ProcessReductionSpecifier(
 }
 
 void OmpVisitor::ResolveCriticalName(const parser::OmpArgument &arg) {
-  auto &globalScope{[&]() -> Scope & {
-    for (Scope *s{&currScope()};; s = &s->parent()) {
-      if (s->IsTopLevel()) {
-        return *s;
-      }
-    }
-    llvm_unreachable("Cannot find global scope");
-  }()};
+  auto *object{parser::Unwrap<parser::OmpObject>(arg.u)};
+  if (!object) {
+    return;
+  }
 
-  if (auto *object{parser::Unwrap<parser::OmpObject>(arg.u)}) {
-    if (auto *desg{parser::omp::GetDesignatorFromObj(*object)}) {
-      if (auto *name{parser::GetDesignatorNameIfDataRef(*desg)}) {
-        if (auto *symbol{FindInScope(globalScope, *name)}) {
-          if (!symbol->test(Symbol::Flag::OmpCriticalLock)) {
-            SayWithDecl(*name, *symbol,
-                "CRITICAL construct name '%s' conflicts with a previous declaration"_warn_en_US,
-                name->ToString());
-          }
-        } else {
-          name->symbol = &MakeSymbol(globalScope, name->source, Attrs{});
-          name->symbol->set(Symbol::Flag::OmpCriticalLock);
-        }
+  const parser::Name *name{common::visit( //
+      common::visitors{//
+          [&](const parser::Designator &x) -> const parser::Name * {
+            return parser::GetDesignatorNameIfDataRef(x);
+          },
+          [&](const parser::OmpLocator &x) -> const parser::Name * {
+            if (auto *res{std::get_if<parser::OmpReservedIdentifier>(&x.u)}) {
+              return &res->v;
+            }
+            return nullptr;
+          },
+          [&](const parser::Name &) -> const parser::Name * { return nullptr; },
+          [&](const parser::OmpObject::Invalid &) -> const parser::Name * {
+            return nullptr;
+          }},
+      object->u)};
+
+  if (name) {
+    if (auto *symbol{FindInScope(context().globalScope(), *name)}) {
+      if (!symbol->test(Symbol::Flag::OmpCriticalLock)) {
+        SayWithDecl(*name, *symbol,
+            "CRITICAL construct name '%s' conflicts with a previous declaration"_warn_en_US,
+            name->ToString());
       }
+    } else {
+      name->symbol =
+          &MakeSymbol(context().globalScope(), name->source, Attrs{});
+      name->symbol->set(Symbol::Flag::OmpCriticalLock);
     }
   }
 }
@@ -4543,38 +4574,6 @@ Scope *ModuleVisitor::FindModule(const parser::Name &name,
   return scope;
 }
 
-// Map a mangled declare reduction name (e.g., op.+, op.max, op..myop.) back
-// to the Fortran identifier that controls its accessibility in a module scope.
-// Intrinsic operators map to "operator(+)" etc., named functions to "max" etc.,
-// and defined operators to "operator(.myop.)" etc.
-static std::string GetReductionIdentifierName(const SourceName &mangledName) {
-  llvm::StringRef name{mangledName.begin(), mangledName.size()};
-  if (!name.starts_with("op.")) {
-    return {};
-  }
-  llvm::StringRef suffix{name.drop_front(3)};
-  // Intrinsic arithmetic operators: op.+ → operator(+)
-  if (suffix == "+" || suffix == "-" || suffix == "*") {
-    return ("operator(" + suffix + ")").str();
-  }
-  // Intrinsic logical operators (mangled uppercase, scope uses lowercase)
-  llvm::StringRef logicalOp{llvm::StringSwitch<llvm::StringRef>(suffix)
-          .Case("AND", ".and.")
-          .Case("OR", ".or.")
-          .Case("EQV", ".eqv.")
-          .Case("NEQV", ".neqv.")
-          .Default("")};
-  if (!logicalOp.empty()) {
-    return ("operator(" + logicalOp + ")").str();
-  }
-  // Defined operators: op..myop. → operator(.myop.)
-  if (suffix.size() > 2 && suffix.front() == '.' && suffix.back() == '.') {
-    return ("operator(" + suffix + ")").str();
-  }
-  // Named functions: op.max → max
-  return suffix.str();
-}
-
 void ModuleVisitor::ApplyDefaultAccess() {
   const auto *moduleDetails{
       DEREF(currScope().symbol()).detailsIf<ModuleDetails>()};
@@ -4601,7 +4600,7 @@ void ModuleVisitor::ApplyDefaultAccess() {
         // a module has accessibility as if it were declared as a module entity.
         // If the corresponding operator/procedure has explicit accessibility,
         // the reduction inherits it.
-        std::string opName{GetReductionIdentifierName(symbol.name())};
+        std::string opName{GetReductionFortranId(symbol.name())};
         if (!opName.empty()) {
           if (auto *opSym{FindInScope(currScope(), SourceName{opName})}) {
             if (opSym->attrs().test(Attr::PUBLIC)) {
@@ -6080,14 +6079,115 @@ bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
   return false;
 }
 
+void DeclarationVisitor::Post(const parser::EnumDef &) {
+  enumerationState_ = EnumeratorState{};
+}
+
+// F2023 R766 EnumerationTypeDef — scope is pushed in Post(EnumerationTypeStmt)
+// and popped in Post(EndEnumerationTypeStmt).
 bool DeclarationVisitor::Pre(const parser::EnumerationTypeDef &x) {
-  Say(std::get<parser::Statement<parser::EnumerationTypeStmt>>(x.t).source,
-      "F2023 ENUMERATION TYPEs are not yet implemented"_err_en_US);
+  const auto &source{
+      std::get<parser::Statement<parser::EnumerationTypeStmt>>(x.t).source};
+  // ENUMERATION TYPE is an experimental feature: semantics are partially
+  // implemented.  FIR lowering is not implemented.
+  if (!context().IsEnabled(common::LanguageFeature::EnumerationType)) {
+    Say(source, "F2023 ENUMERATION TYPEs are not yet implemented"_err_en_US);
+    return false;
+  }
+  Say(source,
+      "ENUMERATION TYPE support is incomplete and should be enabled only for testing"_warn_en_US);
+  BeginAttrs();
+  return true;
+}
+
+// F2023 R767 EnumerationTypeStmt — create the enumeration type symbol
+// in the enclosing scope and push a DerivedType scope for it.
+void DeclarationVisitor::Post(const parser::EnumerationTypeStmt &x) {
+  const auto &name{std::get<parser::Name>(x.t)};
+  Attrs attrs{EndAttrs()};
+  if (const auto &optAccessSpec{
+          std::get<std::optional<parser::AccessSpec>>(x.t)};
+      optAccessSpec) {
+    if (!NonDerivedTypeScope().IsModule()) { // F2023 C7114
+      Say(currStmtSource().value(),
+          "Access specifier on ENUMERATION TYPE may only appear in the specification part of a module"_err_en_US);
+    }
+  }
+  // F2023 C7116: the enumeration-type-name in an enumeration-type-spec shall be
+  // the name of a previously defined enumeration type.  Enumeration Types are
+  // based on derived types, but unlike derived types, an enumeration type may
+  // not be forward referenced.
+  if (Symbol * prev{FindInScope(name.source)}) {
+    if (const auto *prevDetails{prev->detailsIf<DerivedTypeDetails>()};
+        prevDetails && prevDetails->isForwardReferenced()) {
+      Say(prev->name(),
+          "Enumeration type '%s' must be defined before it is referenced"_err_en_US,
+          name.source);
+    }
+  }
+  DerivedTypeDetails details;
+  details.set_isEnumerationType(true);
+  auto &symbol{MakeSymbol(name, attrs, std::move(details))};
+  symbol.ReplaceName(name.source);
+  PushScope(Scope::Kind::DerivedType, &symbol);
+  // Add a hidden __ordinal component to hold the 1-based enumerator position.
+  // This is a compiler-created INTEGER(4) component that preserves ordinal
+  // identity through constant folding and enables enumerator comparison.
+  SourceName ordinalName{context().SaveTempName(
+      std::string{DerivedTypeDetails::ordinalComponentName})};
+  Symbol &ordinalSym{MakeSymbol(currScope(), ordinalName, Attrs{})};
+  ordinalSym.set_details(ObjectEntityDetails{});
+  ordinalSym.SetType(
+      currScope().MakeNumericType(TypeCategory::Integer, KindExpr{4}));
+  ordinalSym.set(Symbol::Flag::CompilerCreated);
+  symbol.get<DerivedTypeDetails>().add_component(ordinalSym);
+}
+
+// F2023 R768 EnumerationEnumeratorStmt — create PARAMETER symbols for
+// each enumerator name in the enclosing scope with 1-based ordinal init.
+bool DeclarationVisitor::Pre(const parser::EnumerationEnumeratorStmt &x) {
+  Scope &enclosingScope{NonDerivedTypeScope()};
+  // The current DerivedType scope's symbol is the enumeration type.
+  Symbol *typeSymbol{currScope().symbol()};
+  CHECK(typeSymbol);
+  auto &typeDetails{typeSymbol->get<DerivedTypeDetails>()};
+  // Build a DerivedTypeSpec for the enumeration type.
+  DerivedTypeSpec enumTypeSpec{typeSymbol->name(), *typeSymbol};
+  enumTypeSpec.set_category(DerivedTypeSpec::Category::EnumerationType);
+  DeclTypeSpec &declType{enclosingScope.MakeDerivedType(
+      DeclTypeSpec::TypeDerived, std::move(enumTypeSpec))};
+  for (const parser::Name &name : x.v) {
+    int ordinal{typeDetails.enumeratorCount() + 1};
+    // Create the enumerator symbol in the enclosing scope, not the
+    // enumeration type's own DerivedType scope.
+    Symbol &enumerator{
+        MakeSymbol(enclosingScope, name.source, Attrs{Attr::PARAMETER})};
+    Resolve(name, enumerator);
+    enumerator.set_details(ObjectEntityDetails{});
+    enumerator.SetType(declType);
+    // Store the init as a StructureConstructor of the enumeration type with
+    // the ordinal in the hidden __ordinal component.  This gives each
+    // enumerator a distinct Constant<SomeDerived> value.
+    evaluate::StructureConstructor enumCtor{declType.derivedTypeSpec()};
+    // Look up the __ordinal component symbol in the type's scope.
+    auto ordinalIter{
+        currScope().find(SourceName{DerivedTypeDetails::ordinalComponentName,
+            sizeof(DerivedTypeDetails::ordinalComponentName) - 1})};
+    CHECK(ordinalIter != currScope().end());
+    const Symbol &ordinalSym{*ordinalIter->second};
+    enumCtor.Add(ordinalSym,
+        evaluate::AsGenericExpr(evaluate::Expr<evaluate::CInteger>{ordinal}));
+    enumerator.get<ObjectEntityDetails>().set_init(
+        SomeExpr{evaluate::Expr<evaluate::SomeDerived>{
+            evaluate::Constant<evaluate::SomeDerived>{std::move(enumCtor)}}});
+    typeDetails.set_enumeratorCount(ordinal);
+  }
   return false;
 }
 
-void DeclarationVisitor::Post(const parser::EnumDef &) {
-  enumerationState_ = EnumeratorState{};
+// F2023 R769 EndEnumerationTypeStmt — pop the scope.
+void DeclarationVisitor::Post(const parser::EndEnumerationTypeStmt &) {
+  PopScope();
 }
 
 bool DeclarationVisitor::Pre(const parser::AccessSpec &x) {
@@ -6679,6 +6779,17 @@ void DeclarationVisitor::Post(const parser::DerivedTypeSpec &x) {
   // in the current scope, this spec will be moved into that collection.
   const auto &dtDetails{spec->typeSymbol().get<DerivedTypeDetails>()};
   auto category{GetDeclTypeSpecCategory()};
+
+  // Enumeration types are a special case of derived types and are handled
+  // differently.
+  if (dtDetails.isEnumerationType()) {
+    spec->set_category(DerivedTypeSpec::Category::EnumerationType);
+    DeclTypeSpec &type{currScope().MakeDerivedType(category, std::move(*spec))};
+    SetDeclTypeSpec(type);
+    x.derivedTypeSpec = &GetDeclTypeSpec()->derivedTypeSpec();
+    return;
+  }
+
   if (dtDetails.isForwardReferenced()) {
     DeclTypeSpec &type{currScope().MakeDerivedType(category, std::move(*spec))};
     SetDeclTypeSpec(type);
@@ -8999,6 +9110,12 @@ public:
     return true;
   }
   void Post(const parser::DerivedTypeDef &) { PopScope(); }
+  bool Pre(const parser::EnumerationTypeStmt &x) {
+    Hide(std::get<parser::Name>(x.t));
+    PushScope();
+    return true;
+  }
+  void Post(const parser::EnumerationTypeDef &) { PopScope(); }
   bool Pre(const parser::SelectTypeConstruct &) {
     PushScope();
     return true;
@@ -9469,6 +9586,12 @@ const parser::Name *DeclarationVisitor::FindComponent(
       return &component;
     }
   } else if (DerivedTypeSpec * derived{type->AsDerived()}) {
+    if (derived->IsEnumerationType()) {
+      Say(component.source,
+          "Component reference is not allowed for enumeration type '%s'"_err_en_US,
+          derived->typeSymbol().name());
+      return nullptr;
+    }
     derived->Instantiate(currScope()); // in case of forward referenced type
     if (const Scope * scope{derived->scope()}) {
       if (Resolve(component, scope->FindComponent(component.source))) {
@@ -10465,6 +10588,32 @@ void ResolveNamesVisitor::AnalyzeStmtFunctionStmt(
       details->moduleInterface() || symbol->test(Symbol::Flag::Subroutine)) {
     return; // error recovery
   }
+
+  // F2023 19.4 p2: a statement-function dummy argument name may be the same
+  // as an accessible name only if that name is a scalar variable.  The lookup
+  // walks the host chain (but not into the global scope), so host-associated
+  // identifiers are also considered.
+  for (const auto &dummyName : std::get<std::list<parser::Name>>(stmtFunc.t)) {
+    if (const Symbol *hostSymbol{currScope().FindSymbol(dummyName.source)}) {
+      const Symbol &ultimate{hostSymbol->GetUltimate()};
+      const bool isScalarVariable{(ultimate.has<ObjectEntityDetails>() ||
+                                      ultimate.has<EntityDetails>()) &&
+          !IsNamedConstant(ultimate) && ultimate.Rank() == 0};
+      if (!isScalarVariable) {
+        Say(dummyName.source,
+            "The name '%s' of a statement function dummy argument may not be the same as an accessible name unless that name is a scalar variable"_err_en_US);
+      }
+    } else {
+      // Also check the global scope, which FindSymbol skips
+      const Scope &globals{context().globalScope()};
+      if (auto it{globals.find(dummyName.source)}; it != globals.end()) {
+        // global function/subroutine — definitely not a scalar variable
+        Say(dummyName.source,
+            "The name '%s' of a statement function dummy argument may not be the same as an accessible name unless that name is a scalar variable"_err_en_US);
+      }
+    }
+  }
+
   // Resolve the symbols on the RHS of the statement function.
   PushScope(*symbol->scope());
   const auto &parsedExpr{std::get<parser::Scalar<parser::Expr>>(stmtFunc.t)};
@@ -11189,6 +11338,25 @@ public:
     }
   }
   void Post(const parser::EndTypeStmt &) {
+    if (outerScope_) {
+      resolver_.SetScope(*outerScope_);
+      outerScope_ = nullptr;
+    }
+  }
+
+  void Post(const parser::EnumerationTypeStmt &x) {
+    const auto &name{std::get<parser::Name>(x.t)};
+    if (Symbol * symbol{name.symbol}) {
+      if (Scope * scope{symbol->scope()}) {
+        if (scope->IsDerivedType()) {
+          CHECK(outerScope_ == nullptr);
+          outerScope_ = &resolver_.currScope();
+          resolver_.SetScope(*scope);
+        }
+      }
+    }
+  }
+  void Post(const parser::EndEnumerationTypeStmt &) {
     if (outerScope_) {
       resolver_.SetScope(*outerScope_);
       outerScope_ = nullptr;

@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "lldb/Core/DebuggerEvents.h"
+#include "lldb/Core/Diagnostics.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/SourceManager.h"
@@ -31,7 +32,6 @@
 #include "lldb/Target/TargetList.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Diagnostics.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
@@ -258,13 +258,17 @@ public:
 
   void ClearIOHandlers();
 
-  bool EnableLog(llvm::StringRef channel,
-                 llvm::ArrayRef<const char *> categories,
-                 llvm::StringRef log_file, uint32_t log_options,
-                 size_t buffer_size, LogHandlerKind log_handler_kind,
-                 llvm::raw_ostream &error_stream);
+  llvm::Error EnableLog(llvm::StringRef channel,
+                        llvm::ArrayRef<const char *> categories,
+                        llvm::StringRef log_file, uint32_t log_options,
+                        size_t buffer_size, LogHandlerKind log_handler_kind);
 
   void SetLoggingCallback(lldb::LogOutputCallback log_callback, void *baton);
+
+  /// Copy this debugger's file-backed log files into the given directory, for
+  /// inclusion in a diagnostics bundle. Returns the names of the files that
+  /// were copied. Best-effort: files that cannot be copied are skipped.
+  std::vector<std::string> CopyLogFilesToDirectory(const FileSpec &dir);
 
   Status SetPropertyValue(const ExecutionContext *exe_ctx,
                           VarSetOperationType op, llvm::StringRef property_path,
@@ -344,7 +348,7 @@ public:
 
   llvm::StringRef GetDisabledAnsiSuffix() const;
 
-  bool GetUseAutosuggestion() const;
+  AutosuggestionMode GetAutosuggestionMode() const;
 
   llvm::StringRef GetAutosuggestionAnsiPrefix() const;
 
@@ -805,7 +809,6 @@ protected:
   lldb::ListenerSP m_forward_listener_sp;
   llvm::once_flag m_clear_once;
   lldb::TargetSP m_dummy_target_sp;
-  Diagnostics::CallbackID m_diagnostics_callback_id;
 
   /// Bookkeeping for command line progress events.
   /// @{

@@ -899,14 +899,6 @@ VPlan::~VPlan() {
   delete BackedgeTakenCount;
 }
 
-VPIRBasicBlock *VPlan::getExitBlock(BasicBlock *IRBB) const {
-  auto Iter = find_if(getExitBlocks(), [IRBB](const VPIRBasicBlock *VPIRBB) {
-    return VPIRBB->getIRBasicBlock() == IRBB;
-  });
-  assert(Iter != getExitBlocks().end() && "no exit block found");
-  return *Iter;
-}
-
 bool VPlan::isExitBlock(VPBlockBase *VPBB) {
   return is_contained(ExitBlocks, VPBB);
 }
@@ -1321,13 +1313,6 @@ VPIRBasicBlock *VPlan::createVPIRBasicBlock(BasicBlock *IRBB) {
 Twine VPlanPrinter::getUID(const VPBlockBase *Block) {
   return (isa<VPRegionBlock>(Block) ? "cluster_N" : "N") +
          Twine(getOrCreateBID(Block));
-}
-
-Twine VPlanPrinter::getOrCreateName(const VPBlockBase *Block) {
-  const std::string &Name = Block->getName();
-  if (!Name.empty())
-    return Name;
-  return "VPB" + Twine(getOrCreateBID(Block));
 }
 
 void VPlanPrinter::dump() {

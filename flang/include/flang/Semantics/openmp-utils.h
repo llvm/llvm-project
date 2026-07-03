@@ -119,6 +119,12 @@ const Symbol *GetHostSymbol(const Symbol &sym);
 bool IsMapEnteringType(parser::OmpMapType::Value type);
 bool IsMapExitingType(parser::OmpMapType::Value type);
 
+// Returns true if the symbol has a temporary stack-allocated descriptor.
+// This includes assumed-shape and assumed-rank dummy arguments that are
+// not allocatable or pointer. These descriptors are created on the caller's
+// stack and become invalid after the function returns.
+bool HasTemporaryStackDescriptor(const Symbol &symbol);
+
 MaybeExpr GetEvaluateExpr(const parser::Expr &parserExpr);
 template <typename T> MaybeExpr GetEvaluateExpr(const T &inp) {
   return GetEvaluateExpr(parser::UnwrapRef<parser::Expr>(inp));

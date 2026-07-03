@@ -48,7 +48,6 @@ InstCombineContributorGuide
 WritingAnLLVMBackend
 CodeGenerator
 TableGen/index
-GlobalISel/MIRPatterns
 MCJITDesignAndImplementation
 ORCv2
 JITLink
@@ -64,8 +63,6 @@ CompileCudaWithLLVM
 NVPTXUsage
 AMDGPUUsage
 AMDGPUAsyncOperations
-AMDGPUDwarfExtensionsForHeterogeneousDebugging
-AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack/AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack
 AMDGPUExecutionSynchronization
 AMDGPUMemoryModel
 SPIRVUsage

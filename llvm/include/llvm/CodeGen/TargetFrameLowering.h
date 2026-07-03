@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TypeSize.h"
 #include <vector>
 
@@ -402,7 +403,7 @@ public:
                                             RegScavenger *RS = nullptr) const {}
 
   virtual unsigned getWinEHParentFrameOffset(const MachineFunction &MF) const {
-    report_fatal_error("WinEH not implemented for this target");
+    reportFatalUsageError("WinEH not implemented for this target");
   }
 
   /// This method is called during prolog/epilog code insertion to eliminate
