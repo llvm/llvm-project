@@ -23,6 +23,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/IR/IRMapping.h"
 #include "llvm/Support/CommandLine.h"
 #include <type_traits>
 
@@ -908,6 +909,185 @@ bool ReductionProcessor::processReductionArguments(
                          &redOperator.u)) {
         if (!ReductionProcessor::supportedIntrinsicProcReduction(
                 *reductionIntrinsic)) {
+          if (isByRef) {
+            // create a new declare_reduction for the boxed type, reusing
+            // the existing init and combiner
+            semantics::Symbol *sym = reductionIntrinsic->v.sym();
+            llvm::StringRef baseName = {sym->name().begin(),
+                                        sym->name().size()};
+            mlir::ModuleOp module = builder.getModule();
+            auto existingDecl = module.lookupSymbol<OpType>(baseName);
+            if (!existingDecl) {
+              TODO(currentLocation,
+                   "User-defined reductions on allocatable or pointer "
+                   "variables: cannot find base reduction declaration");
+            }
+
+            std::string byrefName = getReductionName(
+                baseName, builder.getKindMap(), redType, isByRef);
+
+            mlir::Region &existingInitRegion =
+                existingDecl.getInitializerRegion();
+            auto genInitValueCB =
+                [&existingInitRegion](fir::FirOpBuilder &builder,
+                                      mlir::Location loc, mlir::Type elemTy,
+                                      mlir::Value) -> mlir::Value {
+              // unwrap box type to get the scalar element type
+              mlir::Type scalarTy = unwrapSeqOrBoxedType(elemTy);
+              // find a constant-producing op in the existing init region
+              mlir::Operation *constOp = nullptr;
+              existingInitRegion.walk([&](mlir::Operation *op) {
+                if (constOp)
+                  return;
+                if (auto arithConst =
+                        mlir::dyn_cast<mlir::arith::ConstantOp>(op)) {
+                  if (arithConst.getType() == scalarTy)
+                    constOp = op;
+                  return;
+                }
+                if (mlir::isa<fir::StringLitOp>(op)) {
+                  constOp = op;
+                  return;
+                }
+                if (mlir::isa<fir::AddrOfOp>(op)) {
+                  constOp = op;
+                  return;
+                }
+              });
+
+              if (constOp) {
+                mlir::IRMapping mapper;
+                mlir::Value cloned =
+                    builder.clone(*constOp, mapper)->getResult(0);
+                // load if the cloned op produces a reference
+                if (fir::isa_ref_type(cloned.getType()))
+                  cloned = fir::LoadOp::create(builder, loc, cloned);
+                if (cloned.getType() != scalarTy)
+                  cloned = builder.createConvert(loc, scalarTy, cloned);
+                return cloned;
+              }
+              // Fallback: zero-initialize for trivial types.
+              if (fir::isa_integer(scalarTy))
+                return builder.createIntegerConstant(loc, scalarTy, 0);
+              if (mlir::isa<mlir::FloatType>(scalarTy))
+                return builder.createRealConstant(loc, scalarTy,
+                                                  llvm::APFloat(0.0));
+              if (fir::isa_char(scalarTy))
+                return mlir::Value{};
+              TODO(loc, "User-defined reduction: unsupported init "
+                        "value type for allocatable wrapper");
+              return mlir::Value{};
+            };
+
+            // combiner: unbox, apply the existing combiner, rebox.
+            mlir::Region &existingCombinerRegion =
+                existingDecl.getReductionRegion();
+            bool existingCombinerIsByRef = fir::isa_ref_type(
+                existingCombinerRegion.front().getArgument(0).getType());
+            auto genCombinerCB = [&existingCombinerRegion,
+                                  existingCombinerIsByRef](
+                                     fir::FirOpBuilder &builder,
+                                     mlir::Location loc, mlir::Type type,
+                                     mlir::Value op1, mlir::Value op2, bool) {
+              // clone the existing combiner ops with remapped block args.
+              auto cloneCombiner =
+                  [&](mlir::Value lhs,
+                      mlir::Value rhs) -> std::optional<mlir::Value> {
+                mlir::IRMapping mapper;
+                mlir::Block &block = existingCombinerRegion.front();
+                mapper.map(block.getArgument(0), lhs);
+                mapper.map(block.getArgument(1), rhs);
+                mlir::Value result;
+                for (mlir::Operation &op : block) {
+                  if (auto yieldOp = mlir::dyn_cast<mlir::omp::YieldOp>(op)) {
+                    if (!existingCombinerIsByRef)
+                      result = mapper.lookup(yieldOp.getOperand(0));
+                    break;
+                  }
+                  builder.clone(op, mapper);
+                }
+                if (result)
+                  return result;
+                return std::nullopt;
+              };
+
+              auto boxTy =
+                  mlir::dyn_cast<fir::BaseBoxType>(fir::unwrapRefType(type));
+              if (!boxTy) {
+                TODO(loc, "User-defined reductions: unsupported byref type");
+                return;
+              }
+              // seqTy is non-null for array allocatables.
+              auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(
+                  fir::dyn_cast_ptrOrBoxEleTy(boxTy));
+
+              mlir::Value lhsBox = fir::LoadOp::create(builder, loc, op1);
+              mlir::Value rhsBox = fir::LoadOp::create(builder, loc, op2);
+
+              if (!seqTy) {
+                // Scalar allocatable
+                mlir::Value lhsAddr =
+                    fir::BoxAddrOp::create(builder, loc, lhsBox);
+                mlir::Value rhsAddr =
+                    fir::BoxAddrOp::create(builder, loc, rhsBox);
+                if (existingCombinerIsByRef) {
+                  mlir::Type expectedArgTy =
+                      existingCombinerRegion.front().getArgument(0).getType();
+                  lhsAddr = builder.createConvert(loc, expectedArgTy, lhsAddr);
+                  rhsAddr = builder.createConvert(loc, expectedArgTy, rhsAddr);
+                  cloneCombiner(lhsAddr, rhsAddr);
+                } else {
+                  mlir::Value lhsVal =
+                      fir::LoadOp::create(builder, loc, lhsAddr);
+                  mlir::Value rhsVal =
+                      fir::LoadOp::create(builder, loc, rhsAddr);
+                  if (auto result = cloneCombiner(lhsVal, rhsVal))
+                    fir::StoreOp::create(builder, loc, *result, lhsAddr);
+                }
+              } else {
+                // array allocatable: iterate elements
+                fir::ShapeShiftOp shapeShift =
+                    getShapeShift(builder, loc, lhsBox,
+                                  /*cannotHaveNonDefaultLowerBounds=*/false,
+                                  /*useDefaultLowerBounds=*/true);
+                hlfir::LoopNest nest =
+                    hlfir::genLoopNest(loc, builder, shapeShift.getExtents(),
+                                       /*isUnordered=*/true);
+                builder.setInsertionPointToStart(nest.body);
+                mlir::Type eleTy = seqTy.getEleTy();
+                mlir::Type refTy = fir::ReferenceType::get(
+                    eleTy, fir::isa_volatile_type(eleTy));
+                auto lhsEleAddr = fir::ArrayCoorOp::create(
+                    builder, loc, refTy, lhsBox, shapeShift,
+                    /*slice=*/mlir::Value{}, nest.oneBasedIndices,
+                    /*typeparms=*/mlir::ValueRange{});
+                auto rhsEleAddr = fir::ArrayCoorOp::create(
+                    builder, loc, refTy, rhsBox, shapeShift,
+                    /*slice=*/mlir::Value{}, nest.oneBasedIndices,
+                    /*typeparms=*/mlir::ValueRange{});
+                if (existingCombinerIsByRef) {
+                  cloneCombiner(lhsEleAddr, rhsEleAddr);
+                } else {
+                  mlir::Value lhsEle =
+                      fir::LoadOp::create(builder, loc, lhsEleAddr);
+                  mlir::Value rhsEle =
+                      fir::LoadOp::create(builder, loc, rhsEleAddr);
+                  if (auto result = cloneCombiner(lhsEle, rhsEle))
+                    fir::StoreOp::create(builder, loc, *result, lhsEleAddr);
+                }
+                builder.setInsertionPointAfter(nest.outerOp);
+              }
+              mlir::omp::YieldOp::create(builder, loc, op1);
+            };
+
+            OpType decl = createDeclareReductionHelper<OpType>(
+                converter, byrefName, redType, currentLocation, isByRef,
+                genCombinerCB, genInitValueCB);
+            reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
+                builder.getContext(), decl.getSymName()));
+            ++idx;
+            continue;
+          }
           // Custom reductions we can just add to the symbols without
           // generating the declare reduction op.
           semantics::Symbol *sym = reductionIntrinsic->v.sym();
