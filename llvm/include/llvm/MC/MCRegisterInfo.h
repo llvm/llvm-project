@@ -51,7 +51,7 @@ public:
   const bool Allocatable;
   const bool BaseClass;
 
-  const uint32_t SubClassMaskOff;    ///< Relative offset to uin32t_t array.
+  const uint32_t SubClassMaskOff;    ///< Relative offset to uint32_t array.
   const uint32_t SuperRegIndicesOff; ///< Relative offset to MCPhysReg array.
   const LaneBitmask LaneMask;
   /// Classes with a higher priority value are assigned first by register
