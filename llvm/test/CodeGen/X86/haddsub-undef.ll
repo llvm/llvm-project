@@ -615,13 +615,13 @@ define <4 x double> @add_pd_011(<4 x double> %0, <4 x double> %1) {
   ret <4 x double> %6
 }
 
-define <4 x float> @v8f32_inputs_v4f32_output_0101(<8 x float> %a, <8 x float> %b) {
-; SSE-LABEL: v8f32_inputs_v4f32_output_0101:
+define <4 x float> @add_8f32_0u2u(<8 x float> %a, <8 x float> %b) {
+; SSE-LABEL: add_8f32_0u2u:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    haddps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: v8f32_inputs_v4f32_output_0101:
+; AVX-LABEL: add_8f32_0u2u:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vzeroupper
@@ -637,13 +637,13 @@ define <4 x float> @v8f32_inputs_v4f32_output_0101(<8 x float> %a, <8 x float> %
   ret <4 x float> %r
 }
 
-define <4 x float> @v8f32_input0_v4f32_output_0123(<8 x float> %a, <4 x float> %b) {
-; SSE-LABEL: v8f32_input0_v4f32_output_0123:
+define <4 x float> @add_8f32_v4f32_0uuu3(<8 x float> %a, <4 x float> %b) {
+; SSE-LABEL: add_8f32_v4f32_0uuu3:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    haddps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: v8f32_input0_v4f32_output_0123:
+; AVX-LABEL: add_8f32_v4f32_0uuu3:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vzeroupper
@@ -659,13 +659,13 @@ define <4 x float> @v8f32_input0_v4f32_output_0123(<8 x float> %a, <4 x float> %
   ret <4 x float> %r
 }
 
-define <4 x float> @v8f32_input1_v4f32_output_2301(<4 x float> %a, <8 x float> %b) {
-; SSE-LABEL: v8f32_input1_v4f32_output_2301:
+define <4 x float> @add_v4f32_8f32_u12u(<4 x float> %a, <8 x float> %b) {
+; SSE-LABEL: add_v4f32_8f32_u12u:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    haddps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: v8f32_input1_v4f32_output_2301:
+; AVX-LABEL: add_v4f32_8f32_u12u:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vzeroupper
@@ -681,13 +681,13 @@ define <4 x float> @v8f32_input1_v4f32_output_2301(<4 x float> %a, <8 x float> %
   ret <4 x float> %r
 }
 
-define <4 x float> @v8f32_inputs_v4f32_output_2323(<8 x float> %a, <8 x float> %b) {
-; SSE-LABEL: v8f32_inputs_v4f32_output_2323:
+define <4 x float> @add_8f32_u1u3(<8 x float> %a, <8 x float> %b) {
+; SSE-LABEL: add_8f32_u1u3:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    haddps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: v8f32_inputs_v4f32_output_2323:
+; AVX-LABEL: add_8f32_u1u3:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vzeroupper
@@ -703,25 +703,25 @@ define <4 x float> @v8f32_inputs_v4f32_output_2323(<8 x float> %a, <8 x float> %
   ret <4 x float> %r
 }
 
-define <4 x float> @v16f32_inputs_v4f32_output_0123(<16 x float> %a, <16 x float> %b) {
-; SSE-LABEL: v16f32_inputs_v4f32_output_0123:
+define <4 x float> @add_16f32_0uu3(<16 x float> %a, <16 x float> %b) {
+; SSE-LABEL: add_16f32_0uu3:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    haddps %xmm4, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX1-SLOW-LABEL: v16f32_inputs_v4f32_output_0123:
+; AVX1-SLOW-LABEL: add_16f32_0uu3:
 ; AVX1-SLOW:       # %bb.0:
 ; AVX1-SLOW-NEXT:    vhaddps %xmm2, %xmm0, %xmm0
 ; AVX1-SLOW-NEXT:    vzeroupper
 ; AVX1-SLOW-NEXT:    retq
 ;
-; AVX1-FAST-LABEL: v16f32_inputs_v4f32_output_0123:
+; AVX1-FAST-LABEL: add_16f32_0uu3:
 ; AVX1-FAST:       # %bb.0:
 ; AVX1-FAST-NEXT:    vhaddps %xmm2, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vzeroupper
 ; AVX1-FAST-NEXT:    retq
 ;
-; AVX512-LABEL: v16f32_inputs_v4f32_output_0123:
+; AVX512-LABEL: add_16f32_0uu3:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vhaddps %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
@@ -737,23 +737,23 @@ define <4 x float> @v16f32_inputs_v4f32_output_0123(<16 x float> %a, <16 x float
   ret <4 x float> %r
 }
 
-define <8 x float> @v16f32_inputs_v8f32_output_4567(<16 x float> %a, <16 x float> %b) {
-; SSE-LABEL: v16f32_inputs_v8f32_output_4567:
+define <8 x float> @add_16f32_uuuu4uu7(<16 x float> %a, <16 x float> %b) {
+; SSE-LABEL: add_16f32_uuuu4uu7:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    haddps %xmm5, %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX1-SLOW-LABEL: v16f32_inputs_v8f32_output_4567:
+; AVX1-SLOW-LABEL: add_16f32_uuuu4uu7:
 ; AVX1-SLOW:       # %bb.0:
 ; AVX1-SLOW-NEXT:    vhaddps %ymm2, %ymm0, %ymm0
 ; AVX1-SLOW-NEXT:    retq
 ;
-; AVX1-FAST-LABEL: v16f32_inputs_v8f32_output_4567:
+; AVX1-FAST-LABEL: add_16f32_uuuu4uu7:
 ; AVX1-FAST:       # %bb.0:
 ; AVX1-FAST-NEXT:    vhaddps %ymm2, %ymm0, %ymm0
 ; AVX1-FAST-NEXT:    retq
 ;
-; AVX512-LABEL: v16f32_inputs_v8f32_output_4567:
+; AVX512-LABEL: add_16f32_uuuu4uu7:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vhaddps %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
@@ -768,13 +768,13 @@ define <8 x float> @v16f32_inputs_v8f32_output_4567(<16 x float> %a, <16 x float
   ret <8 x float> %r
 }
 
-define <8 x float> @PR40243(<8 x float> %a, <8 x float> %b) {
-; SSE-LABEL: PR40243:
+define <8 x float> @PR40243_add_v8f32_uuuu4uu7(<8 x float> %a, <8 x float> %b) {
+; SSE-LABEL: PR40243_add_v8f32_uuuu4uu7:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    haddps %xmm3, %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: PR40243:
+; AVX-LABEL: PR40243_add_v8f32_uuuu4uu7:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vhaddps %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
@@ -789,8 +789,8 @@ define <8 x float> @PR40243(<8 x float> %a, <8 x float> %b) {
   ret <8 x float> %r
 }
 
-define <4 x double> @PR44694(<4 x double> %0, <4 x double> %1) {
-; SSE-SLOW-LABEL: PR44694:
+define <4 x double> @PR44694_add_v4f64_u123(<4 x double> %0, <4 x double> %1) {
+; SSE-SLOW-LABEL: PR44694_add_v4f64_u123:
 ; SSE-SLOW:       # %bb.0:
 ; SSE-SLOW-NEXT:    movddup {{.*#+}} xmm0 = xmm1[0,0]
 ; SSE-SLOW-NEXT:    haddpd %xmm3, %xmm2
@@ -798,7 +798,7 @@ define <4 x double> @PR44694(<4 x double> %0, <4 x double> %1) {
 ; SSE-SLOW-NEXT:    movapd %xmm2, %xmm1
 ; SSE-SLOW-NEXT:    retq
 ;
-; SSE-FAST-LABEL: PR44694:
+; SSE-FAST-LABEL: PR44694_add_v4f64_u123:
 ; SSE-FAST:       # %bb.0:
 ; SSE-FAST-NEXT:    movapd %xmm1, %xmm0
 ; SSE-FAST-NEXT:    haddpd %xmm3, %xmm2
@@ -806,21 +806,21 @@ define <4 x double> @PR44694(<4 x double> %0, <4 x double> %1) {
 ; SSE-FAST-NEXT:    movapd %xmm2, %xmm1
 ; SSE-FAST-NEXT:    retq
 ;
-; AVX1-SLOW-LABEL: PR44694:
+; AVX1-SLOW-LABEL: PR44694_add_v4f64_u123:
 ; AVX1-SLOW:       # %bb.0:
 ; AVX1-SLOW-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3]
 ; AVX1-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
 ; AVX1-SLOW-NEXT:    vhaddpd %ymm0, %ymm1, %ymm0
 ; AVX1-SLOW-NEXT:    retq
 ;
-; AVX1-FAST-LABEL: PR44694:
+; AVX1-FAST-LABEL: PR44694_add_v4f64_u123:
 ; AVX1-FAST:       # %bb.0:
 ; AVX1-FAST-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[2,3]
 ; AVX1-FAST-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
 ; AVX1-FAST-NEXT:    vhaddpd %ymm0, %ymm1, %ymm0
 ; AVX1-FAST-NEXT:    retq
 ;
-; AVX512-LABEL: PR44694:
+; AVX512-LABEL: PR44694_add_v4f64_u123:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vhaddpd %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,1,3]
