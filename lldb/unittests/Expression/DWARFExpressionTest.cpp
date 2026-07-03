@@ -585,7 +585,8 @@ DWARF:
   // DW_OP_convert with an empty stack.
   EXPECT_THAT_ERROR(
       Evaluate({DW_OP_convert, 0x00}, nullptr, nullptr).takeError(),
-      llvm::FailedWithMessage("DW_OP_convert needs an argument"));
+      llvm::FailedWithMessage("DW_OP_convert needs at least 1 stack entries "
+                              "(stack has 0 entries)"));
 }
 
 TEST(DWARFExpression, DW_OP_stack_value) {
