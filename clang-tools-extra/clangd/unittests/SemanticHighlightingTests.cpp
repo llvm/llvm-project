@@ -1164,6 +1164,10 @@ TEST(SemanticHighlighting, NoCrash) {
       template < template <> class a > using b = a<>;  // error-ok
       template <class c>
       using e = b<c::template d>
+    )cpp",
+      R"cpp(
+      constexpr auto v = 0;
+      template <decltype(v) t> class c {};
     )cpp"};
   for (const auto &TestCase : TestCases) {
     TestTU TU;
