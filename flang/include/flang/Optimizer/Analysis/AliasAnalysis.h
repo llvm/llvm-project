@@ -20,13 +20,29 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include <memory>
+#include <utility>
 
 namespace fir {
+
+/// Listener used to evict getSource() cache entries as the IR is mutated
+/// through a rewriter. Defined in AliasAnalysis.cpp.
+class AliasAnalysisCacheListener;
 
 //===----------------------------------------------------------------------===//
 // AliasAnalysis
 //===----------------------------------------------------------------------===//
 struct AliasAnalysis {
+  // Special members are user-declared (and mostly defined out of line) because
+  // the source cache owns a std::unique_ptr to the incomplete listener type
+  // AliasAnalysisCacheListener. A move constructor is required so instances can
+  // be registered via mlir::AliasAnalysis::addAnalysisImplementation().
+  AliasAnalysis();
+  ~AliasAnalysis();
+  AliasAnalysis(AliasAnalysis &&);
+  AliasAnalysis &operator=(AliasAnalysis &&);
+  AliasAnalysis(const AliasAnalysis &) = delete;
+  AliasAnalysis &operator=(const AliasAnalysis &) = delete;
+
   // Structures to describe the memory source of a value.
 
   /// Kind of the memory source referenced by a value.
@@ -351,9 +367,38 @@ struct AliasAnalysis {
   /// snapshots are not collected, and getSource performs only the
   /// SourceKind/origin classification without that bookkeeping side
   /// effect.
+  ///
+  /// When source caching is enabled (see enableSourceCache()), the result is
+  /// memoized keyed on (value, flags), and recursive sub-queries share the
+  /// same cache. The cache is a frozen snapshot: it is only valid while the IR
+  /// reachable from the queried values is not mutated in a way that would
+  /// change the source. Callers must scope caching no wider than such a region
+  /// (see mlir::AliasAnalysis::QueryCacheScope).
   fir::AliasAnalysis::Source getSource(mlir::Value,
                                        bool getLastInstantiationPoint = false,
                                        bool collectScopedOrigins = true);
+
+  /// Enable/disable memoization of getSource() results. These are invoked by
+  /// the mlir::AliasAnalysis aggregator (via mlir::AliasAnalysis::
+  /// QueryCacheScope) and are not meant to be called directly by passes.
+  ///
+  /// If \p rewriter is null, the cache is a frozen snapshot with no automatic
+  /// invalidation: it is only valid while the IR reachable from the queried
+  /// values is not mutated. If \p rewriter is non-null, a listener is installed
+  /// on it (chained ahead of any existing listener) so that cached entries are
+  /// evicted precisely as operations are erased / modified / replaced through
+  /// that rewriter; the cache then stays valid as long as all such mutations
+  /// flow through the rewriter.
+  ///
+  /// disableSourceCache() clears the cache (and reverse index), uninstalls the
+  /// listener if any, and turns caching off.
+  void enableSourceCache(mlir::RewriterBase *rewriter = nullptr);
+  void disableSourceCache();
+
+  /// Testing only: number of entries currently held in the getSource() cache.
+  std::size_t getSourceCacheSizeForTesting() const {
+    return getSourceCache.size();
+  }
 
   /// Return true, if `ty` is a reference type to a boxed
   /// POINTER object or a raw fir::PointerType.
@@ -370,6 +415,48 @@ struct AliasAnalysis {
   bool functionHasMultipleScopes(mlir::Value v);
 
 private:
+  friend class fir::AliasAnalysisCacheListener;
+
+  /// Cache key for getSource(): the queried value together with the two
+  /// boolean flags (getLastInstantiationPoint, collectScopedOrigins) packed
+  /// into the unsigned.
+  using SourceCacheKey = std::pair<mlir::Value, unsigned>;
+
+  /// A memoized getSource() result together with the operations it depends on
+  /// (the def-use chain and scope ops visited while computing it). The deps
+  /// drive precise eviction: if any of them is erased / modified / replaced,
+  /// this entry must be dropped.
+  struct CachedSource {
+    Source result;
+    llvm::SmallVector<mlir::Operation *, 4> deps;
+  };
+
+  /// Compute the memory source of a value. This is the uncached
+  /// implementation of getSource(); getSource() is a thin wrapper that
+  /// memoizes the result when source caching is enabled.
+  fir::AliasAnalysis::Source getSourceImpl(mlir::Value v,
+                                           bool getLastInstantiationPoint,
+                                           bool collectScopedOrigins);
+
+  /// Record \p op as a dependency of the getSource() computation currently in
+  /// progress (no-op when not collecting dependencies). Used to build the
+  /// reverse index that drives precise cache eviction.
+  void recordSourceDep(mlir::Operation *op) {
+    if (currentDepSink && op)
+      currentDepSink->push_back(op);
+  }
+
+  /// Evict every cached getSource() entry that depends on \p op (and, for
+  /// erasure, on any op nested within its regions), dropping the corresponding
+  /// reverse-index entries.
+  void evictSourceDependents(mlir::Operation *op);
+
+  /// Clear the getSource() memoization cache and its reverse index.
+  void clearSourceCache() {
+    getSourceCache.clear();
+    opDependents.clear();
+  }
+
   /// Build an intermediate Source rooted at the declare captured by the
   /// snapshot. Reuses getSource(declValue) for the SourceKind / origin
   /// classification (with collectScopedOrigins=false), then overrides
@@ -446,6 +533,38 @@ private:
   /// functionHasMultipleScopes(); both true and false are cached so that
   /// repeated queries are O(1) without re-walking the function body.
   llvm::DenseMap<mlir::Operation *, bool> multiScopeCache;
+
+  /// Opt-in memoization of getSource() results, keyed on the queried value and
+  /// the two boolean flags (see SourceCacheKey). Only consulted/populated while
+  /// \c sourceCacheEnabled is set. Each entry also records the operations it
+  /// depends on so it can be evicted precisely. Without a listener (frozen
+  /// mode) this is a snapshot with no automatic invalidation, valid only while
+  /// the relevant IR is not mutated; with a listener installed (see
+  /// enableSourceCache(rewriter)) entries are evicted as the IR is mutated
+  /// through that rewriter. Driven by mlir::AliasAnalysis::QueryCacheScope.
+  llvm::DenseMap<SourceCacheKey, CachedSource> getSourceCache;
+
+  /// Reverse dependency index: for each operation, the set of getSourceCache
+  /// keys whose result depends on it. Maintained alongside getSourceCache and
+  /// used to evict only the affected entries when an op is mutated/erased.
+  llvm::DenseMap<mlir::Operation *, llvm::SmallVector<SourceCacheKey, 2>>
+      opDependents;
+
+  /// When non-null, getSourceImpl() and nested getSource() hits append the
+  /// operations they depend on here, so the in-progress getSource() result can
+  /// be stored with its dependencies. Saved/restored around nested queries.
+  llvm::SmallVectorImpl<mlir::Operation *> *currentDepSink = nullptr;
+
+  /// Whether getSource() should consult/populate getSourceCache.
+  bool sourceCacheEnabled = false;
+
+  /// The rewriter on which \c cacheListener is installed (listener mode), or
+  /// null in frozen mode. Used to uninstall the listener on disable.
+  mlir::RewriterBase *cacheRewriter = nullptr;
+
+  /// Listener installed on \c cacheRewriter that evicts cache entries as the
+  /// IR is mutated. Null in frozen mode. Owns a back-pointer to this analysis.
+  std::unique_ptr<AliasAnalysisCacheListener> cacheListener;
 };
 
 inline bool operator==(const AliasAnalysis::Source::SourceOrigin &lhs,
