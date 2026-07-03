@@ -759,6 +759,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   calling `__builtin_bit_cast`. (#GH200112)
 - Clang now SFINAE friendly when the ``__reference_meows_from_temporary`` builtins
   should SFINAE friendly when the 1st type is not a reference type. (#GH206524)
+- Fixed `__builtin_offsetof` incorrectly sign-extending unsigned array indices
+  with the high bit set (e.g. `uint8_t` values >= 128), which produced wrong
+  offset values in constant expressions. (#GH199319)
 
 
 #### Bug Fixes to Attribute Support

@@ -1,19 +1,19 @@
-.. _cycle-terminology:
+(cycle-terminology)=
 
-======================
-LLVM Cycle Terminology
-======================
+# LLVM Cycle Terminology
 
-.. contents::
-   :local:
+```{contents}
+:local:
+```
 
-.. _cycle-definition:
+(cycle-definition)=
 
-Cycles
-======
+## Cycles
 
+```{eval-rst}
 Cycles are a generalization of LLVM :ref:`loops <loop-terminology>`,
 defined recursively as follows [HavlakCycles]_:
+```
 
 1. In a directed graph G that is a function CFG or a subgraph of it, a *cycle*
    is a maximal strongly connected region with at least one internal edge.
@@ -44,23 +44,23 @@ irreducible cycle, no one entry dominates the nodes of the cycle. One
 of the entries is chosen as header of the cycle, in an
 implementation-defined way.
 
-.. _cycle-irreducible:
+(cycle-irreducible)=
 
 A cycle is *irreducible* if it has multiple entries and it is
 *reducible* otherwise.
 
-.. _cycle-parent-block:
+(cycle-parent-block)=
 
 A cycle C is said to be the *parent* of a basic block B if B occurs in
 C but not in any child cycle of C. Then B is also said to be a *child*
 of cycle C.
 
-.. _cycle-toplevel-block:
+(cycle-toplevel-block)=
 
 A block B is said to be a *top-level block* if it is not the child of
 any cycle.
 
-.. _cycle-sibling:
+(cycle-sibling)=
 
 A basic block or cycle X is a *sibling* of another basic block or
 cycle Y if they both have no parent or both have the same parent.
@@ -73,136 +73,142 @@ Informational notes:
 - Cycles are well-nested (by definition).
 - The entry blocks of a cycle are siblings in the dominator tree.
 
+```{eval-rst}
 .. [HavlakCycles] Paul Havlak, "Nesting of reducible and irreducible
                   loops." ACM Transactions on Programming Languages
                   and Systems (TOPLAS) 19.4 (1997): 557-567.
+```
 
-.. _cycle-examples:
+(cycle-examples)=
 
-Examples of Cycles
-==================
+## Examples of Cycles
 
-Irreducible cycle enclosing natural loops
------------------------------------------
+### Irreducible cycle enclosing natural loops
 
-.. Graphviz source; the indented blocks below form a comment.
+% Graphviz source; leading `%` is a markdown comment
+%
+% ///     |   |
+% ///   />A] [B<\
+% ///   |  \ /  |
+% ///   ^---C---^
+% ///       |
+%
+% strict digraph {
+%   { rank=same; A B}
+%   Entry -> A
+%   Entry -> B
+%   A -> A
+%   A -> C
+%   B -> B
+%   B -> C
+%   C -> A
+%   C -> B
+%   C -> Exit
+% }
 
-  ///     |   |
-  ///   />A] [B<\
-  ///   |  \ /  |
-  ///   ^---C---^
-  ///       |
+```{image} cycle-1.png
+```
 
-  strict digraph {
-    { rank=same; A B}
-    Entry -> A
-    Entry -> B
-    A -> A
-    A -> C
-    B -> B
-    B -> C
-    C -> A
-    C -> B
-    C -> Exit
-  }
+The self-loops of `A` and `B` give rise to two single-block
+natural loops. A possible hierarchy of cycles is:
 
-.. image:: cycle-1.png
+```
+cycle: {A, B, C} entries: {A, B} header: A
+- cycle: {B, C}  entries: {B, C} header: C
+  - cycle: {B}   entries: {B}    header: B
+```
 
-The self-loops of ``A`` and ``B`` give rise to two single-block
-natural loops. A possible hierarchy of cycles is::
+This hierarchy arises when DFS visits the blocks in the order `A`,
+`C`, `B` (in preorder).
 
-    cycle: {A, B, C} entries: {A, B} header: A
-    - cycle: {B, C}  entries: {B, C} header: C
-      - cycle: {B}   entries: {B}    header: B
+### Irreducible union of two natural loops
 
-This hierarchy arises when DFS visits the blocks in the order ``A``,
-``C``, ``B`` (in preorder).
+% Graphviz source; leading `%` is a markdown comment
+%
+% ///     |   |
+% ///     A<->B
+% ///     ^   ^
+% ///     |   |
+% ///     v   v
+% ///     C   D
+% ///     |   |
+%
+% strict digraph {
+%   { rank=same; A B}
+%   { rank=same; C D}
+%   Entry -> A
+%   Entry -> B
+%   A -> B
+%   B -> A
+%   A -> C
+%   C -> A
+%   B -> D
+%   D -> B
+%   C -> Exit
+%   D -> Exit
+% }
 
-Irreducible union of two natural loops
---------------------------------------
+```{image} cycle-2.png
+```
 
-.. Graphviz source; the indented blocks below form a comment.
+There are two natural loops: `{A, C}` and `{B, D}`. A possible
+hierarchy of cycles is:
 
-  ///     |   |
-  ///     A<->B
-  ///     ^   ^
-  ///     |   |
-  ///     v   v
-  ///     C   D
-  ///     |   |
+```
+cycle: {A, B, C, D} entries: {A, B} header: A
+- cycle: {B, D}     entries: {B}    header: B
+```
 
-  strict digraph {
-    { rank=same; A B}
-    { rank=same; C D}
-    Entry -> A
-    Entry -> B
-    A -> B
-    B -> A
-    A -> C
-    C -> A
-    B -> D
-    D -> B
-    C -> Exit
-    D -> Exit
-  }
+### Irreducible cycle without natural loops
 
-.. image:: cycle-2.png
+% Graphviz source; leading `%` is a markdown comment
+%
+% ///     |   |
+% ///   />A   B<\
+% ///   | |\ /| |
+% ///   | | x | |
+% ///   | |/ \| |
+% ///   ^-C   D-^
+% ///     |   |
+% ///
+%
+% strict digraph {
+%   { rank=same; A B}
+%   { rank=same; C D}
+%   Entry -> A
+%   Entry -> B
+%   A -> C
+%   A -> D
+%   B -> C
+%   B -> D
+%   C -> A
+%   D -> B
+%   C -> Exit
+%   D -> Exit
+% }
 
-There are two natural loops: ``{A, C}`` and ``{B, D}``. A possible
-hierarchy of cycles is::
+```{image} cycle-3.png
+```
 
-    cycle: {A, B, C, D} entries: {A, B} header: A
-    - cycle: {B, D}     entries: {B}    header: B
+This graph does not contain any natural loops --- the nodes `A`,
+`B`, `C` and `D` are siblings in the dominator tree. A possible
+hierarchy of cycles is:
 
-Irreducible cycle without natural loops
----------------------------------------
+```
+cycle: {A, B, C, D} entries: {A, B} header: A
+- cycle: {B, D}     entries: {B, D} header: D
+```
 
-.. Graphviz source; the indented blocks below form a comment.
+(cycle-closed-path)=
 
-  ///     |   |
-  ///   />A   B<\
-  ///   | |\ /| |
-  ///   | | x | |
-  ///   | |/ \| |
-  ///   ^-C   D-^
-  ///     |   |
-  ///
-
-  strict digraph {
-    { rank=same; A B}
-    { rank=same; C D}
-    Entry -> A
-    Entry -> B
-    A -> C
-    A -> D
-    B -> C
-    B -> D
-    C -> A
-    D -> B
-    C -> Exit
-    D -> Exit
-  }
-
-.. image:: cycle-3.png
-
-This graph does not contain any natural loops --- the nodes ``A``,
-``B``, ``C`` and ``D`` are siblings in the dominator tree. A possible
-hierarchy of cycles is::
-
-    cycle: {A, B, C, D} entries: {A, B} header: A
-    - cycle: {B, D}     entries: {B, D} header: D
-
-.. _cycle-closed-path:
-
-Closed Paths and Cycles
-=======================
+## Closed Paths and Cycles
 
 A *closed path* in a CFG is a connected sequence of nodes and edges in
 the CFG whose start and end nodes are the same, and whose remaining
 (inner) nodes are distinct.
 
-An *entry* to a closed path ``P`` is a node on ``P`` that is reachable
-from the function entry without passing through any other node on ``P``.
+An *entry* to a closed path `P` is a node on `P` that is reachable
+from the function entry without passing through any other node on `P`.
 
 1. If a node D dominates one or more nodes in a closed path P and P
    does not contain D, then D dominates every node in P.
@@ -236,30 +242,29 @@ from the function entry without passing through any other node on ``P``.
    Hence there is always a cycle that contains U1 and U2 but neither
    of D1 and D2.
 
-.. _cycle-closed-path-header:
+(cycle-closed-path-header)=
 
-4. In any cycle hierarchy, the header ``H`` of the smallest cycle
-   ``C`` containing a closed path ``P`` itself lies on ``P``.
+4. In any cycle hierarchy, the header `H` of the smallest cycle
+   `C` containing a closed path `P` itself lies on `P`.
 
-   **Proof:** If ``H`` is not in ``P``, then there is a smaller cycle
-   ``C'`` in the set ``C - H`` containing ``P``, thus contradicting
-   the claim that ``C`` is the smallest such cycle.
+   **Proof:** If `H` is not in `P`, then there is a smaller cycle
+   `C'` in the set `C - H` containing `P`, thus contradicting
+   the claim that `C` is the smallest such cycle.
 
-.. _cycle-reducible-headers:
+(cycle-reducible-headers)=
 
-Reducible Cycle Headers
-=======================
+## Reducible Cycle Headers
 
 Although the cycle hierarchy depends on the DFS chosen, reducible
 cycles satisfy the following invariant:
 
-  If a reducible cycle ``C`` with header ``H`` is discovered in any
-  DFS, then there exists a cycle ``C'`` in every DFS with header
-  ``H``, that contains ``C``.
+> If a reducible cycle `C` with header `H` is discovered in any
+> DFS, then there exists a cycle `C'` in every DFS with header
+> `H`, that contains `C`.
 
-**Proof:** For a closed path ``P`` in ``C`` that passes through ``H``,
-every cycle hierarchy has a smallest cycle ``C'`` containing ``P`` and
-whose header is in ``P``. Since ``H`` is the only entry to ``P``,
-``H`` must be the header of ``C'``. Since headers uniquely define
-cycles, ``C'`` contains every such closed path ``P``, and hence ``C'``
-contains ``C``.
+**Proof:** For a closed path `P` in `C` that passes through `H`,
+every cycle hierarchy has a smallest cycle `C'` containing `P` and
+whose header is in `P`. Since `H` is the only entry to `P`,
+`H` must be the header of `C'`. Since headers uniquely define
+cycles, `C'` contains every such closed path `P`, and hence `C'`
+contains `C`.

@@ -19456,7 +19456,19 @@ bool IntExprEvaluator::VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
         return Error(OOE);
       CurrentType = AT->getElementType();
       CharUnits ElementSize = Info.Ctx.getTypeSizeInChars(CurrentType);
-      Result += IdxResult.getSExtValue() * ElementSize;
+      // Reject negative indices, indices too large to fit in int64_t,
+      // and overflow in the offset computation.
+      if (IdxResult.isNegative() || IdxResult.getActiveBits() > 63)
+        return Error(OOE);
+      int64_t IdxVal = IdxResult.getExtValue();
+      int64_t ElemSize = ElementSize.getQuantity();
+      if (IdxVal != 0 &&
+          ElemSize > std::numeric_limits<int64_t>::max() / IdxVal)
+        return Error(OOE, diag::note_constexpr_offsetof_overflow);
+      int64_t Offset = IdxVal * ElemSize;
+      if (Result.getQuantity() > std::numeric_limits<int64_t>::max() - Offset)
+        return Error(OOE, diag::note_constexpr_offsetof_overflow);
+      Result += CharUnits::fromQuantity(Offset);
       break;
     }
 
