@@ -19719,12 +19719,6 @@ void SITargetLowering::computeKnownBitsForStackObjectPointer(
   Known.Zero.setHighBits(getSubtarget()->getKnownHighZeroBitsForFrameIndex());
 }
 
-void SITargetLowering::computeKnownBitsForFrameIndex(
-    const int FI, KnownBits &Known, const MachineFunction &MF) const {
-  computeKnownBitsForStackObjectPointer(Known, MF,
-                                        MF.getFrameInfo().getObjectAlign(FI));
-}
-
 static void knownBitsForWorkitemID(const GCNSubtarget &ST,
                                    GISelValueTracking &VT, KnownBits &Known,
                                    unsigned Dim) {

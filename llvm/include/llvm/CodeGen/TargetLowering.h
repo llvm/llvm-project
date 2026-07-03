@@ -4423,9 +4423,8 @@ public:
   /// Determine which of the bits of FrameIndex \p FIOp are known to be 0.
   /// Default implementation computes low bits based on alignment
   /// information. This should preserve known bits passed into it.
-  virtual void computeKnownBitsForFrameIndex(int FIOp,
-                                             KnownBits &Known,
-                                             const MachineFunction &MF) const;
+  void computeKnownBitsForFrameIndex(int FIOp, KnownBits &Known,
+                                     const MachineFunction &MF) const;
 
   /// Determine known bits of a pointer to a known valid stack object.
   /// The default implementation computes low bits based on alignment.

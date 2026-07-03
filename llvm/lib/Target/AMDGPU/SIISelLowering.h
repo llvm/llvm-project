@@ -545,9 +545,6 @@ public:
   void computeKnownBitsForStackObjectPointer(KnownBits &Known,
                                              const MachineFunction &MF,
                                              Align Alignment) const override;
-  void computeKnownBitsForFrameIndex(int FrameIdx,
-                                     KnownBits &Known,
-                                     const MachineFunction &MF) const override;
   void computeKnownBitsForTargetInstr(GISelValueTracking &Analysis, Register R,
                                       KnownBits &Known,
                                       const APInt &DemandedElts,

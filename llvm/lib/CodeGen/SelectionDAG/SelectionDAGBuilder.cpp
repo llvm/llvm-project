@@ -2221,8 +2221,8 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
         DAG.getCopyFromReg(Chain, getCurSDLoc(), DemoteReg, PtrValueVT);
     Type *RetTy = I.getOperand(0)->getType();
     Align BaseAlign = DL.getPrefTypeAlign(RetTy);
-    RetPtr = TLI.annotateStackObjectPointer(RetPtr, DAG, getCurSDLoc(),
-                                            DL.getABITypeAlign(RetTy));
+    RetPtr =
+        TLI.annotateStackObjectPointer(RetPtr, DAG, getCurSDLoc(), BaseAlign);
     SDValue RetOp = getValue(I.getOperand(0));
 
     SmallVector<EVT, 4> ValueVTs, MemVTs;
