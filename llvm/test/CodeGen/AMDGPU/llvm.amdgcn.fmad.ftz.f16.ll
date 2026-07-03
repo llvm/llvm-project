@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tonga -denormal-fp-math-f32=preserve-sign < %s | FileCheck -check-prefixes=GFX8 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tonga -denormal-fp-math-f32=ieee < %s | FileCheck -check-prefixes=GFX8 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx900 -denormal-fp-math-f32=ieee < %s | FileCheck -check-prefixes=GFX9-SDAG %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx900 -denormal-fp-math-f32=ieee < %s | FileCheck -check-prefixes=GFX9-GISEL %s
+; RUN: llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx900 -denormal-fp-math-f32=ieee < %s | FileCheck -check-prefixes=GFX9-GISEL %s
 
 declare half @llvm.amdgcn.fmad.ftz.f16(half %a, half %b, half %c)
 
@@ -183,12 +183,7 @@ define amdgpu_kernel void @mad_f16_neg_b(
 ; GFX9-GISEL-LABEL: mad_f16_neg_b:
 ; GFX9-GISEL:  ; %bb.0:
 ; GFX9-GISEL:    v_mov_b32_e32 v0, 0
-; GFX9-GISEL:    v_readfirstlane_b32 s0, v1
-; GFX9-GISEL:    v_readfirstlane_b32 s1, v2
-; GFX9-GISEL:    v_readfirstlane_b32 s2, v3
-; GFX9-GISEL:    v_max_f16_e64 v1, s1, s1
-; GFX9-GISEL:    v_mov_b32_e32 v2, s2
-; GFX9-GISEL:    v_mad_legacy_f16 v1, s0, -v1, v2
+; GFX9-GISEL:    v_mad_legacy_f16 v1, v1, -v2, v3
 ; GFX9-GISEL:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
@@ -269,12 +264,7 @@ define amdgpu_kernel void @mad_f16_neg_abs_b(
 ; GFX9-GISEL-LABEL: mad_f16_neg_abs_b:
 ; GFX9-GISEL:  ; %bb.0:
 ; GFX9-GISEL:    v_mov_b32_e32 v0, 0
-; GFX9-GISEL:    v_readfirstlane_b32 s0, v1
-; GFX9-GISEL:    v_readfirstlane_b32 s1, v2
-; GFX9-GISEL:    v_readfirstlane_b32 s2, v3
-; GFX9-GISEL:    v_max_f16_e64 v1, |s1|, |s1|
-; GFX9-GISEL:    v_mov_b32_e32 v2, s2
-; GFX9-GISEL:    v_mad_legacy_f16 v1, s0, -v1, v2
+; GFX9-GISEL:    v_mad_legacy_f16 v1, v1, -|v2|, v3
 ; GFX9-GISEL:    s_endpgm
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,

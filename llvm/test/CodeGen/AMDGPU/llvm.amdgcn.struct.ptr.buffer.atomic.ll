@@ -1,6 +1,6 @@
 ;RUN: llc < %s -global-isel=0 -mtriple=amdgcn -mcpu=verde -amdgpu-atomic-optimizer-strategy=None | FileCheck -check-prefixes=CHECK,SDAG %s
 ;RUN: llc < %s -global-isel=0 -mtriple=amdgcn -mcpu=tonga -amdgpu-atomic-optimizer-strategy=None | FileCheck -check-prefixes=CHECK,SDAG %s
-;RUN: llc < %s -global-isel=1 -mtriple=amdgcn -mcpu=tonga -amdgpu-atomic-optimizer-strategy=None | FileCheck -check-prefixes=CHECK,GISEL %s
+;RUN: llc < %s -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn -mcpu=tonga -amdgpu-atomic-optimizer-strategy=None | FileCheck -check-prefixes=CHECK,GISEL %s
 
 ;CHECK-LABEL: {{^}}test1:
 ;CHECK-NOT: s_waitcnt
@@ -127,10 +127,9 @@ main_body:
 ;CHECK-NOT: s_waitcnt
 ;CHECK: buffer_atomic_cmpswap_x2 {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, s[0:3], 0 idxen glc
 ;CHECK: s_waitcnt vmcnt(0)
-;GISEL: s_movk_i32 [[SOFS:s[0-9]+]], 0x1ffc
 ;CHECK: buffer_atomic_cmpswap_x2 {{v\[[0-9]+:[0-9]+\]}}, {{v[0-9]+}}, s[0:3], 0 idxen glc
 ;CHECK: s_waitcnt vmcnt(0)
-;SDAG: s_movk_i32 [[SOFS:s[0-9]+]], 0x1ffc
+;CHECK: s_movk_i32 [[SOFS:s[0-9]+]], 0x1ffc
 ;CHECK: buffer_atomic_cmpswap_x2 {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, s[0:3], 0 idxen offen glc
 ;CHECK: s_waitcnt vmcnt(0)
 ;CHECK: buffer_atomic_cmpswap_x2 {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, s[0:3], 0 idxen offen glc
