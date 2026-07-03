@@ -163,6 +163,20 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
     // occupancy target (the register budget must cover the pinned range).
     unsigned NumRegs = TRI->getRegSizeInBits(*RC) / 32;
     bool WantAGPR = TRI->isAGPRClass(RC);
+
+    // Targets without an AGPR file (e.g. RDNA) cannot honor an AGPR pin. Degrade
+    // to a soft no-op -- forward the source to the uses and drop the pin -- so the
+    // value stays in its natural VGPR location instead of failing register
+    // allocation with "no registers from class available".
+    if (WantAGPR && !ST.hasMAIInsts()) {
+      for (MachineOperand &MO :
+           llvm::make_early_inc_range(MRI.use_operands(Dst)))
+        MO.setReg(Src);
+      if (Src.isVirtual())
+        MRI.constrainRegClass(Src, TRI->getEquivalentVGPRClass(RC));
+      Pin->eraseFromParent();
+      continue;
+    }
     if (WantAGPR)
       ReqAGPRs = std::max(ReqAGPRs, RegNo + NumRegs);
     else
