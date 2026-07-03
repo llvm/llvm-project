@@ -438,6 +438,7 @@ bool __ubsan::IsVptrCheckSuppressed(const char *TypeName) {
 bool __ubsan::IsPCSuppressed(ErrorType ET, uptr PC, const char *Filename) {
   InitAsStandaloneIfNecessary();
   CHECK(suppression_ctx);
+  PC = StackTrace::GetPreviousInstructionPc(PC);
   const char *SuppType = ConvertTypeToFlagName(ET);
   // Fast path: don't symbolize PC if there is no suppressions for given UB
   // type.
@@ -452,11 +453,14 @@ bool __ubsan::IsPCSuppressed(ErrorType ET, uptr PC, const char *Filename) {
     if (suppression_ctx->Match(Module, SuppType, &s))
       return true;
   }
-  // Suppress by function or source file name from debug info.
+  // Suppress by function name from any inlined frame or by source file name
+  // from the top frame.
   SymbolizedStackHolder Stack(Symbolizer::GetOrInit()->SymbolizePC(PC));
-  const AddressInfo &AI = Stack.get()->info;
-  return suppression_ctx->Match(AI.function, SuppType, &s) ||
-         suppression_ctx->Match(AI.file, SuppType, &s);
+  for (const SymbolizedStack *Frame = Stack.get(); Frame; Frame = Frame->next) {
+    if (suppression_ctx->Match(Frame->info.function, SuppType, &s))
+      return true;
+  }
+  return suppression_ctx->Match(Stack.get()->info.file, SuppType, &s);
 }
 
 #endif  // CAN_SANITIZE_UB
