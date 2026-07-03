@@ -684,6 +684,10 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   by the kernel, so setting them is almost always a typo (matching the
   bionic libc `diagnose_if` check).
 
+- `-Wpadded` now works even when a type is not referenced (that is, it is
+  triggered on completion rather than first reference) and in `-fsyntax-only`
+  mode (#GH15711).
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -748,6 +752,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed an assertion where we improperly handled implicit conversions to integral types from an atomic-type with a conversion function. (#GH201770)
 - Fixed assertion failures involving code completion with delayed default arguments and exception specifications. (#GH200879)
 - Fixed a regression where calling a function that takes a class-type parameter by value inside `decltype` of a concept could be incorrectly rejected when used as a non-type template argument. (#GH175831)
+- Fixed a bug where `-fdump-record-layouts-complete` would apply the layout checking before it had its trailing attributes applied, which would make combining it with a `packed` attribute cause the wrong layout (#GH15711)
 
 #### Bug Fixes to Compiler Builtins
 

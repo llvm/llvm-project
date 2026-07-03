@@ -963,6 +963,16 @@ public:
            diag::Severity::Ignored;
   }
 
+  bool areAllIgnored(StringRef Group, SourceLocation Loc) const {
+    llvm::SmallVector<diag::kind> diagsInGroup;
+    bool Failed = Diags->getDiagnosticsInGroup(diag::Flavor::WarningOrError,
+                                               Group, diagsInGroup);
+    assert(!Failed && "Incorrect group name?");
+    (void)Failed;
+    return Diags->getDiagnosticListHighestSeverity(diagsInGroup, Loc, *this) ==
+           diag::Severity::Ignored;
+  }
+
   /// Based on the way the client configured the DiagnosticsEngine
   /// object, classify the specified diagnostic ID into a Level, consumable by
   /// the DiagnosticConsumer.
