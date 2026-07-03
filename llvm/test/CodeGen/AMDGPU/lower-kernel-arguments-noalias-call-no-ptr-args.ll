@@ -15,7 +15,7 @@ declare i32 @memory_read_no_ptr_args() #1
 define amdgpu_kernel void @call_without_ptr_args(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @call_without_ptr_args(
 ; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]], ptr addrspace(1) noalias [[IN:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[CALL_WITHOUT_PTR_ARGS_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(272) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; CHECK-NEXT:    [[CALL_WITHOUT_PTR_ARGS_KERNARG_SEGMENT:%.*]] = call nofree nonnull align 16 dereferenceable(272) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; CHECK-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[CALL_WITHOUT_PTR_ARGS_KERNARG_SEGMENT]], i64 0
 ; CHECK-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[CALL_WITHOUT_PTR_ARGS_KERNARG_SEGMENT]], i64 8
@@ -40,7 +40,7 @@ declare i32 @readnone_no_ptr_args() #2
 define amdgpu_kernel void @readnone_call_without_ptr_args(ptr addrspace(1) noalias %out) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @readnone_call_without_ptr_args(
 ; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[READNONE_CALL_WITHOUT_PTR_ARGS_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; CHECK-NEXT:    [[READNONE_CALL_WITHOUT_PTR_ARGS_KERNARG_SEGMENT:%.*]] = call nofree nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; CHECK-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[READNONE_CALL_WITHOUT_PTR_ARGS_KERNARG_SEGMENT]], i64 0
 ; CHECK-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @readnone_no_ptr_args()
@@ -61,7 +61,7 @@ declare i32 @argmemonly_read_no_ptr_args() #3
 define amdgpu_kernel void @argmemonly_call_without_ptr_args(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @argmemonly_call_without_ptr_args(
 ; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]], ptr addrspace(1) noalias [[IN:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[ARGMEMONLY_CALL_WITHOUT_PTR_ARGS_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(272) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; CHECK-NEXT:    [[ARGMEMONLY_CALL_WITHOUT_PTR_ARGS_KERNARG_SEGMENT:%.*]] = call nofree nonnull align 16 dereferenceable(272) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; CHECK-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ARGMEMONLY_CALL_WITHOUT_PTR_ARGS_KERNARG_SEGMENT]], i64 0
 ; CHECK-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ARGMEMONLY_CALL_WITHOUT_PTR_ARGS_KERNARG_SEGMENT]], i64 8
@@ -87,7 +87,7 @@ declare void @argmemonly_with_ptr_arg(ptr addrspace(1)) #4
 define amdgpu_kernel void @argmemonly_call_with_ptr_arg(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @argmemonly_call_with_ptr_arg(
 ; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]], ptr addrspace(1) noalias [[IN:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[ARGMEMONLY_CALL_WITH_PTR_ARG_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(272) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; CHECK-NEXT:    [[ARGMEMONLY_CALL_WITH_PTR_ARG_KERNARG_SEGMENT:%.*]] = call nofree nonnull align 16 dereferenceable(272) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; CHECK-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ARGMEMONLY_CALL_WITH_PTR_ARG_KERNARG_SEGMENT]], i64 0
 ; CHECK-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ARGMEMONLY_CALL_WITH_PTR_ARG_KERNARG_SEGMENT]], i64 8

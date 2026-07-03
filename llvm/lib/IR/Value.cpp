@@ -867,6 +867,10 @@ bool Value::canBeFreed() const {
       ITP && ITP->hasMetadata(LLVMContext::MD_nofree))
     return false;
 
+  if (auto *CB = dyn_cast<CallBase>(this))
+    if (CB->hasRetAttr(Attribute::NoFree))
+      return false;
+
   const Function *F = nullptr;
   if (auto *I = dyn_cast<Instruction>(this))
     F = I->getFunction();

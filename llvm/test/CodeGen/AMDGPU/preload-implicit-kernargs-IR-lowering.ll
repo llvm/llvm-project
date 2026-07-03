@@ -5,7 +5,7 @@
 define amdgpu_kernel void @preload_block_count_x(ptr addrspace(1) %out) {
 ; NO-PRELOAD-LABEL: define amdgpu_kernel void @preload_block_count_x(
 ; NO-PRELOAD-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0:[0-9]+]] {
-; NO-PRELOAD-NEXT:    [[PRELOAD_BLOCK_COUNT_X_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; NO-PRELOAD-NEXT:    [[PRELOAD_BLOCK_COUNT_X_KERNARG_SEGMENT:%.*]] = call nofree nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; NO-PRELOAD-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[PRELOAD_BLOCK_COUNT_X_KERNARG_SEGMENT]], i64 0
 ; NO-PRELOAD-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load [[META0:![0-9]+]]
 ; NO-PRELOAD-NEXT:    [[IMP_ARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
@@ -15,7 +15,7 @@ define amdgpu_kernel void @preload_block_count_x(ptr addrspace(1) %out) {
 ;
 ; PRELOAD-LABEL: define amdgpu_kernel void @preload_block_count_x(
 ; PRELOAD-SAME: ptr addrspace(1) inreg [[OUT:%.*]], i32 inreg "amdgpu-hidden-argument" [[_HIDDEN_BLOCK_COUNT_X:%.*]]) #[[ATTR0:[0-9]+]] {
-; PRELOAD-NEXT:    [[PRELOAD_BLOCK_COUNT_X_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; PRELOAD-NEXT:    [[PRELOAD_BLOCK_COUNT_X_KERNARG_SEGMENT:%.*]] = call nofree nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; PRELOAD-NEXT:    [[IMP_ARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; PRELOAD-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(4) [[IMP_ARG_PTR]], align 4
 ; PRELOAD-NEXT:    store i32 [[_HIDDEN_BLOCK_COUNT_X]], ptr addrspace(1) [[OUT]], align 4
@@ -30,7 +30,7 @@ define amdgpu_kernel void @preload_block_count_x(ptr addrspace(1) %out) {
 define amdgpu_kernel void @no_free_sgprs_block_count_x(ptr addrspace(1) %out, i512) {
 ; NO-PRELOAD-LABEL: define amdgpu_kernel void @no_free_sgprs_block_count_x(
 ; NO-PRELOAD-SAME: ptr addrspace(1) [[OUT:%.*]], i512 [[TMP0:%.*]]) #[[ATTR0]] {
-; NO-PRELOAD-NEXT:    [[NO_FREE_SGPRS_BLOCK_COUNT_X_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(328) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; NO-PRELOAD-NEXT:    [[NO_FREE_SGPRS_BLOCK_COUNT_X_KERNARG_SEGMENT:%.*]] = call nofree nonnull align 16 dereferenceable(328) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; NO-PRELOAD-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[NO_FREE_SGPRS_BLOCK_COUNT_X_KERNARG_SEGMENT]], i64 0
 ; NO-PRELOAD-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[IMP_ARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
@@ -40,7 +40,7 @@ define amdgpu_kernel void @no_free_sgprs_block_count_x(ptr addrspace(1) %out, i5
 ;
 ; PRELOAD-LABEL: define amdgpu_kernel void @no_free_sgprs_block_count_x(
 ; PRELOAD-SAME: ptr addrspace(1) inreg [[OUT:%.*]], i512 [[TMP0:%.*]]) #[[ATTR0]] {
-; PRELOAD-NEXT:    [[NO_FREE_SGPRS_BLOCK_COUNT_X_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(328) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; PRELOAD-NEXT:    [[NO_FREE_SGPRS_BLOCK_COUNT_X_KERNARG_SEGMENT:%.*]] = call nofree nonnull align 16 dereferenceable(328) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; PRELOAD-NEXT:    [[IMP_ARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; PRELOAD-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(4) [[IMP_ARG_PTR]], align 4
 ; PRELOAD-NEXT:    store i32 [[LOAD]], ptr addrspace(1) [[OUT]], align 4
@@ -55,7 +55,7 @@ define amdgpu_kernel void @no_free_sgprs_block_count_x(ptr addrspace(1) %out, i5
 define amdgpu_kernel void @preloadremainder_z(ptr addrspace(1) %out) {
 ; NO-PRELOAD-LABEL: define amdgpu_kernel void @preloadremainder_z(
 ; NO-PRELOAD-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; NO-PRELOAD-NEXT:    [[PRELOADREMAINDER_Z_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; NO-PRELOAD-NEXT:    [[PRELOADREMAINDER_Z_KERNARG_SEGMENT:%.*]] = call nofree nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; NO-PRELOAD-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[PRELOADREMAINDER_Z_KERNARG_SEGMENT]], i64 0
 ; NO-PRELOAD-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[IMP_ARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
@@ -67,7 +67,7 @@ define amdgpu_kernel void @preloadremainder_z(ptr addrspace(1) %out) {
 ;
 ; PRELOAD-LABEL: define amdgpu_kernel void @preloadremainder_z(
 ; PRELOAD-SAME: ptr addrspace(1) inreg [[OUT:%.*]], i32 inreg "amdgpu-hidden-argument" [[_HIDDEN_BLOCK_COUNT_X:%.*]], i32 inreg "amdgpu-hidden-argument" [[_HIDDEN_BLOCK_COUNT_Y:%.*]], i32 inreg "amdgpu-hidden-argument" [[_HIDDEN_BLOCK_COUNT_Z:%.*]], i16 inreg "amdgpu-hidden-argument" [[_HIDDEN_GROUP_SIZE_X:%.*]], i16 inreg "amdgpu-hidden-argument" [[_HIDDEN_GROUP_SIZE_Y:%.*]], i16 inreg "amdgpu-hidden-argument" [[_HIDDEN_GROUP_SIZE_Z:%.*]], i16 inreg "amdgpu-hidden-argument" [[_HIDDEN_REMAINDER_X:%.*]], i16 inreg "amdgpu-hidden-argument" [[_HIDDEN_REMAINDER_Y:%.*]], i16 inreg "amdgpu-hidden-argument" [[_HIDDEN_REMAINDER_Z:%.*]]) #[[ATTR0]] {
-; PRELOAD-NEXT:    [[PRELOADREMAINDER_Z_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; PRELOAD-NEXT:    [[PRELOADREMAINDER_Z_KERNARG_SEGMENT:%.*]] = call nofree nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; PRELOAD-NEXT:    [[IMP_ARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; PRELOAD-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr addrspace(4) [[IMP_ARG_PTR]], i32 22
 ; PRELOAD-NEXT:    [[LOAD:%.*]] = load i16, ptr addrspace(4) [[GEP]], align 2
@@ -86,7 +86,7 @@ define amdgpu_kernel void @preloadremainder_z(ptr addrspace(1) %out) {
 define amdgpu_kernel void @preload_workgroup_size_xyz(ptr addrspace(1) %out) {
 ; NO-PRELOAD-LABEL: define amdgpu_kernel void @preload_workgroup_size_xyz(
 ; NO-PRELOAD-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; NO-PRELOAD-NEXT:    [[PRELOAD_WORKGROUP_SIZE_XYZ_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; NO-PRELOAD-NEXT:    [[PRELOAD_WORKGROUP_SIZE_XYZ_KERNARG_SEGMENT:%.*]] = call nofree nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; NO-PRELOAD-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[PRELOAD_WORKGROUP_SIZE_XYZ_KERNARG_SEGMENT]], i64 0
 ; NO-PRELOAD-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 16, !invariant.load [[META0]]
 ; NO-PRELOAD-NEXT:    [[IMP_ARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
@@ -107,7 +107,7 @@ define amdgpu_kernel void @preload_workgroup_size_xyz(ptr addrspace(1) %out) {
 ;
 ; PRELOAD-LABEL: define amdgpu_kernel void @preload_workgroup_size_xyz(
 ; PRELOAD-SAME: ptr addrspace(1) inreg [[OUT:%.*]], i32 inreg "amdgpu-hidden-argument" [[_HIDDEN_BLOCK_COUNT_X:%.*]], i32 inreg "amdgpu-hidden-argument" [[_HIDDEN_BLOCK_COUNT_Y:%.*]], i32 inreg "amdgpu-hidden-argument" [[_HIDDEN_BLOCK_COUNT_Z:%.*]], i16 inreg "amdgpu-hidden-argument" [[_HIDDEN_GROUP_SIZE_X:%.*]], i16 inreg "amdgpu-hidden-argument" [[_HIDDEN_GROUP_SIZE_Y:%.*]], i16 inreg "amdgpu-hidden-argument" [[_HIDDEN_GROUP_SIZE_Z:%.*]]) #[[ATTR0]] {
-; PRELOAD-NEXT:    [[PRELOAD_WORKGROUP_SIZE_XYZ_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; PRELOAD-NEXT:    [[PRELOAD_WORKGROUP_SIZE_XYZ_KERNARG_SEGMENT:%.*]] = call nofree nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; PRELOAD-NEXT:    [[IMP_ARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; PRELOAD-NEXT:    [[GEP_X:%.*]] = getelementptr i8, ptr addrspace(4) [[IMP_ARG_PTR]], i32 12
 ; PRELOAD-NEXT:    [[LOAD_X:%.*]] = load i16, ptr addrspace(4) [[GEP_X]], align 2
@@ -144,7 +144,7 @@ define amdgpu_kernel void @preload_workgroup_size_xyz(ptr addrspace(1) %out) {
 define amdgpu_kernel void @incorrect_type_i64_block_count_x(ptr addrspace(1) inreg %out) {
 ; NO-PRELOAD-LABEL: define amdgpu_kernel void @incorrect_type_i64_block_count_x(
 ; NO-PRELOAD-SAME: ptr addrspace(1) inreg [[OUT:%.*]]) #[[ATTR0]] {
-; NO-PRELOAD-NEXT:    [[INCORRECT_TYPE_I64_BLOCK_COUNT_X_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; NO-PRELOAD-NEXT:    [[INCORRECT_TYPE_I64_BLOCK_COUNT_X_KERNARG_SEGMENT:%.*]] = call nofree nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; NO-PRELOAD-NEXT:    [[IMP_ARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; NO-PRELOAD-NEXT:    [[LOAD:%.*]] = load i64, ptr addrspace(4) [[IMP_ARG_PTR]], align 8
 ; NO-PRELOAD-NEXT:    store i64 [[LOAD]], ptr addrspace(1) [[OUT]], align 8
@@ -152,7 +152,7 @@ define amdgpu_kernel void @incorrect_type_i64_block_count_x(ptr addrspace(1) inr
 ;
 ; PRELOAD-LABEL: define amdgpu_kernel void @incorrect_type_i64_block_count_x(
 ; PRELOAD-SAME: ptr addrspace(1) inreg [[OUT:%.*]]) #[[ATTR0]] {
-; PRELOAD-NEXT:    [[INCORRECT_TYPE_I64_BLOCK_COUNT_X_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; PRELOAD-NEXT:    [[INCORRECT_TYPE_I64_BLOCK_COUNT_X_KERNARG_SEGMENT:%.*]] = call nofree nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; PRELOAD-NEXT:    [[IMP_ARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; PRELOAD-NEXT:    [[LOAD:%.*]] = load i64, ptr addrspace(4) [[IMP_ARG_PTR]], align 8
 ; PRELOAD-NEXT:    store i64 [[LOAD]], ptr addrspace(1) [[OUT]], align 8
@@ -167,7 +167,7 @@ define amdgpu_kernel void @incorrect_type_i64_block_count_x(ptr addrspace(1) inr
 define amdgpu_kernel void @random_incorrect_offset(ptr addrspace(1) inreg %out) {
 ; NO-PRELOAD-LABEL: define amdgpu_kernel void @random_incorrect_offset(
 ; NO-PRELOAD-SAME: ptr addrspace(1) inreg [[OUT:%.*]]) #[[ATTR0]] {
-; NO-PRELOAD-NEXT:    [[RANDOM_INCORRECT_OFFSET_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; NO-PRELOAD-NEXT:    [[RANDOM_INCORRECT_OFFSET_KERNARG_SEGMENT:%.*]] = call nofree nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; NO-PRELOAD-NEXT:    [[IMP_ARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; NO-PRELOAD-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr addrspace(4) [[IMP_ARG_PTR]], i32 2
 ; NO-PRELOAD-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(4) [[GEP]], align 4
@@ -176,7 +176,7 @@ define amdgpu_kernel void @random_incorrect_offset(ptr addrspace(1) inreg %out) 
 ;
 ; PRELOAD-LABEL: define amdgpu_kernel void @random_incorrect_offset(
 ; PRELOAD-SAME: ptr addrspace(1) inreg [[OUT:%.*]]) #[[ATTR0]] {
-; PRELOAD-NEXT:    [[RANDOM_INCORRECT_OFFSET_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; PRELOAD-NEXT:    [[RANDOM_INCORRECT_OFFSET_KERNARG_SEGMENT:%.*]] = call nofree nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; PRELOAD-NEXT:    [[IMP_ARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; PRELOAD-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr addrspace(4) [[IMP_ARG_PTR]], i32 2
 ; PRELOAD-NEXT:    [[LOAD:%.*]] = load i32, ptr addrspace(4) [[GEP]], align 4
@@ -193,7 +193,7 @@ define amdgpu_kernel void @random_incorrect_offset(ptr addrspace(1) inreg %out) 
 define amdgpu_kernel void @incompatible_attribute_block_count_x(ptr addrspace(1) byref(i32) %out) {
 ; NO-PRELOAD-LABEL: define amdgpu_kernel void @incompatible_attribute_block_count_x(
 ; NO-PRELOAD-SAME: ptr addrspace(1) byref(i32) [[OUT:%.*]]) #[[ATTR0]] {
-; NO-PRELOAD-NEXT:    [[INCOMPATIBLE_ATTRIBUTE_BLOCK_COUNT_X_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; NO-PRELOAD-NEXT:    [[INCOMPATIBLE_ATTRIBUTE_BLOCK_COUNT_X_KERNARG_SEGMENT:%.*]] = call nofree nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; NO-PRELOAD-NEXT:    [[OUT_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[INCOMPATIBLE_ATTRIBUTE_BLOCK_COUNT_X_KERNARG_SEGMENT]], i64 0
 ; NO-PRELOAD-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(4) [[OUT_BYVAL_KERNARG_OFFSET]] to ptr addrspace(1)
 ; NO-PRELOAD-NEXT:    [[IMP_ARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
@@ -203,7 +203,7 @@ define amdgpu_kernel void @incompatible_attribute_block_count_x(ptr addrspace(1)
 ;
 ; PRELOAD-LABEL: define amdgpu_kernel void @incompatible_attribute_block_count_x(
 ; PRELOAD-SAME: ptr addrspace(1) byref(i32) [[OUT:%.*]]) #[[ATTR0]] {
-; PRELOAD-NEXT:    [[INCOMPATIBLE_ATTRIBUTE_BLOCK_COUNT_X_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; PRELOAD-NEXT:    [[INCOMPATIBLE_ATTRIBUTE_BLOCK_COUNT_X_KERNARG_SEGMENT:%.*]] = call nofree nonnull align 16 dereferenceable(264) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; PRELOAD-NEXT:    [[OUT_BYVAL_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[INCOMPATIBLE_ATTRIBUTE_BLOCK_COUNT_X_KERNARG_SEGMENT]], i64 0
 ; PRELOAD-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(4) [[OUT_BYVAL_KERNARG_OFFSET]] to ptr addrspace(1)
 ; PRELOAD-NEXT:    [[IMP_ARG_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
