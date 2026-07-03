@@ -629,10 +629,6 @@ bool CodeGenPrepare::_run(Function &F) {
   // (plus arguments that we can get rid of).
   EverMadeChange |= eliminateAssumptions(F);
 
-  // If we are optimzing huge function, we need to consider the build time.
-  // Because the basic algorithm's complex is near O(N!).
-  IsHugeFunc = F.size() > HugeFuncThresholdInCGPP;
-
   auto resetLoopInfo = [this]() {
     LI->releaseMemory();
     LI->analyze(DTU->getDomTree());
@@ -664,6 +660,10 @@ bool CodeGenPrepare::_run(Function &F) {
   if (VerifyLoopInfo)
     LI->verify(getDT());
 #endif
+
+  // If we are optimzing huge function, we need to consider the build time.
+  // Because the basic algorithm's complex is near O(N!).
+  IsHugeFunc = F.size() > HugeFuncThresholdInCGPP;
 
   bool MadeChange = true;
   bool FuncIterated = false;
@@ -947,13 +947,11 @@ bool CodeGenPrepare::eliminateMostlyEmptyBlocks(Function &F, bool &ResetLI) {
   ResetLI = false;
   bool MadeChange = false;
   SmallPtrSet<PHINode *, 32> KnownNonDeadPHIs;
-  SmallPtrSet<PHINode *, 32> *KnownNonDeadPHIsPtr =
-      IsHugeFunc ? &KnownNonDeadPHIs : nullptr;
   // Note that this intentionally skips the entry block.
   for (auto &Block : llvm::drop_begin(F)) {
     // Delete phi nodes that could block deleting other empty blocks.
     if (!DisableDeletePHIs)
-      MadeChange |= DeleteDeadPHIs(&Block, TLInfo, nullptr, KnownNonDeadPHIsPtr);
+      MadeChange |= DeleteDeadPHIs(&Block, TLInfo, nullptr, &KnownNonDeadPHIs);
   }
 
   for (auto &Block : llvm::drop_begin(F)) {
