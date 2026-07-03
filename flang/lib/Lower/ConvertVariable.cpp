@@ -698,10 +698,15 @@ static void instantiateGlobal(Fortran::lower::AbstractConverter &converter,
   mlir::StringAttr linkage = getLinkageAttribute(converter, var);
   fir::GlobalOp global;
 
-  if (Fortran::evaluate::IsCoarray(sym))
+  if (Fortran::evaluate::IsCoarray(sym)) {
     if (hasFinalization(sym) || hasAllocatableDirectComponent(sym))
       TODO(loc, "coarray: coarray with an allocatable direct component and/or "
                 "requiring finalization");
+    const auto *details =
+        sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
+    if (details && details->init())
+      TODO(loc, "coarray: default initialization.");
+  }
 
   if (var.isModuleOrSubmoduleVariable()) {
     // A non-intrinsic module global is defined when lowering the module.
