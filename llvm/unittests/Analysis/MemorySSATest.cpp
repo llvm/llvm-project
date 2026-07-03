@@ -1801,3 +1801,57 @@ TEST_F(MemorySSATest, TestNoDbgInsts) {
   ASSERT_EQ(MSSA.getMemoryAccess(DbgDeclare), nullptr);
   ASSERT_EQ(MSSA.getMemoryAccess(DbgValue), nullptr);
 }
+
+// getPreviousDefIterative (formerly getPreviousDefRecursive) walks the CFG
+// backwards to find the previous memory definition for a use. The original
+// implementation used native recursion, nesting one call per block along the
+// predecessor walk (mutually recursive with getPreviousDefFromEnd), so a
+// sufficiently long block chain overflowed the native stack. This test builds
+// a long single-predecessor chain with a store in the entry block and inserts
+// a load in the last block; updating MemorySSA forces the walk over the whole
+// chain. The recursive implementation overflowed the stack on this input,
+// while the iterative one completes and wires the load to the entry store.
+TEST_F(MemorySSATest, DeepChainDoesNotRecurse) {
+  F = Function::Create(FunctionType::get(B.getVoidTy(), {B.getPtrTy()}, false),
+                       GlobalValue::ExternalLinkage, "F", &M);
+  Argument *PointerArg = &*F->arg_begin();
+
+  // Build entry -> bb0 -> bb1 -> ... -> exit. The chain is far deeper than the
+  // native stack could tolerate under the old recursive walk (~2 frames per
+  // block), but is processed in O(1) stack space by the iterative version.
+  const unsigned Depth = 16 * 1024;
+  SmallVector<BasicBlock *, 16> Blocks;
+  Blocks.push_back(BasicBlock::Create(C, "entry", F));
+  for (unsigned I = 0; I < Depth; ++I)
+    Blocks.push_back(BasicBlock::Create(C, "bb" + std::to_string(I), F));
+  Blocks.push_back(BasicBlock::Create(C, "exit", F));
+
+  // Entry block: a single store, then branch into the chain.
+  B.SetInsertPoint(Blocks.front());
+  StoreInst *SI = B.CreateStore(B.getInt8(0), PointerArg);
+  B.CreateBr(Blocks[1]);
+  // Remaining blocks: unconditional branch to the next, exit returns.
+  for (unsigned I = 1; I + 1 < Blocks.size(); ++I) {
+    B.SetInsertPoint(Blocks[I]);
+    B.CreateBr(Blocks[I + 1]);
+  }
+  B.SetInsertPoint(Blocks.back());
+  B.CreateRetVoid();
+
+  setupAnalyses();
+  MemorySSA &MSSA = *Analyses->MSSA;
+  MemorySSAUpdater Updater(&MSSA);
+
+  // Insert a load in the exit block. getPreviousDefIterative must walk the
+  // entire predecessor chain back to the entry store without recursing.
+  B.SetInsertPoint(&Blocks.back()->front());
+  LoadInst *LI = B.CreateLoad(B.getInt8Ty(), PointerArg);
+  MemoryUse *LoadAccess = cast<MemoryUse>(Updater.createMemoryAccessInBB(
+      LI, nullptr, Blocks.back(), MemorySSA::Beginning));
+  Updater.insertUse(LoadAccess, /*RenameUses=*/false);
+
+  // The load must be defined by the single store in the entry block, found at
+  // the far end of the chain.
+  EXPECT_EQ(LoadAccess->getDefiningAccess(), MSSA.getMemoryAccess(SI));
+  MSSA.verifyMemorySSA();
+}
