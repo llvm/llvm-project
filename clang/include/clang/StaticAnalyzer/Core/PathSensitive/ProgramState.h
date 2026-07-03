@@ -335,17 +335,17 @@ public:
   [[nodiscard]] ProgramStateRef invalidateRegions(
       ArrayRef<const MemRegion *> Regions, ConstCFGElementRef Elem,
       unsigned BlockCount, const StackFrame *SF, bool CausesPointerEscape,
-      InvalidatedSymbols *IS = nullptr, const CallEvent *Call = nullptr,
-      RegionAndSymbolInvalidationTraits *ITraits = nullptr,
-      const InvalidationCause *Cause = nullptr) const;
+      const InvalidationCause *Cause, InvalidatedSymbols *IS = nullptr,
+      const CallEvent *Call = nullptr,
+      RegionAndSymbolInvalidationTraits *ITraits = nullptr) const;
 
   [[nodiscard]] ProgramStateRef
   invalidateRegions(ArrayRef<SVal> Values, ConstCFGElementRef Elem,
                     unsigned BlockCount, const StackFrame *SF,
-                    bool CausesPointerEscape, InvalidatedSymbols *IS = nullptr,
+                    bool CausesPointerEscape, const InvalidationCause *Cause,
+                    InvalidatedSymbols *IS = nullptr,
                     const CallEvent *Call = nullptr,
-                    RegionAndSymbolInvalidationTraits *ITraits = nullptr,
-                    const InvalidationCause *Cause = nullptr) const;
+                    RegionAndSymbolInvalidationTraits *ITraits = nullptr) const;
 
   /// enterStackFrame - Returns the state for entry to the given stack frame,
   ///  preserving the current state.

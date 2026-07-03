@@ -76,8 +76,8 @@ ProgramStateRef getWidenedLoopState(const Stmt *LoopStmt,
 
   return PrevState->invalidateRegions(
       Regions, Elem, BlockCount, SF, /*CausesPointerEscape=*/true,
-      /*InvalidatedSymbols=*/nullptr, /*Call=*/nullptr, &ITraits,
-      SymMgr.acquireCause<LoopWidening>(LoopStmt));
+      SymMgr.acquireCause<LoopWidening>(LoopStmt),
+      /*InvalidatedSymbols=*/nullptr, /*Call=*/nullptr, &ITraits);
 }
 
 } // end namespace ento

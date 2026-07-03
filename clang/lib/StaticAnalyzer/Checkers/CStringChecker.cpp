@@ -1303,8 +1303,8 @@ ProgramStateRef CStringChecker::invalidateBufferAux(
 
     return State->invalidateRegions(
         R, Call.getCFGElementRef(), C.blockCount(), SF, CausesPointerEscape,
-        /*InvalidatedSymbols=*/nullptr, /*Call=*/nullptr, &ITraits,
-        Call.tryCreateInvalidationCause<PartiallyModeledCall>());
+        Call.tryCreateInvalidationCause<PartiallyModeledCall>(),
+        /*InvalidatedSymbols=*/nullptr, /*Call=*/nullptr, &ITraits);
   }
 
   // If we have a non-region value by chance, just remove the binding.

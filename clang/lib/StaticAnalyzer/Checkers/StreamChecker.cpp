@@ -861,8 +861,8 @@ escapeByStartIndexAndCount(ProgramStateRef State, const CallEvent &Call,
   return State->invalidateRegions(
       EscapingVals, Call.getCFGElementRef(), BlockCount, SF,
       /*CausesPointerEscape=*/false,
-      /*InvalidatedSymbols=*/nullptr, &Call, &ITraits,
-      Call.tryCreateInvalidationCause<PartiallyModeledCall>());
+      Call.tryCreateInvalidationCause<PartiallyModeledCall>(),
+      /*InvalidatedSymbols=*/nullptr, &Call, &ITraits);
 }
 
 static ProgramStateRef escapeArgs(ProgramStateRef State, CheckerContext &C,
@@ -873,7 +873,6 @@ static ProgramStateRef escapeArgs(ProgramStateRef State, CheckerContext &C,
   State = State->invalidateRegions(
       EscapingVals, Call.getCFGElementRef(), C.blockCount(), C.getStackFrame(),
       /*CausesPointerEscape=*/false,
-      /*InvalidatedSymbols=*/nullptr, /*Call=*/nullptr, /*ITraits=*/nullptr,
       Call.tryCreateInvalidationCause<PartiallyModeledCall>());
   return State;
 }

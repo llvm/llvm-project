@@ -424,8 +424,7 @@ ProgramStateRef ExprEngine::createTemporaryRegionIfNeeded(
       // FIXME: Unimplemented.
       State = State->invalidateRegions(
           Reg, getCFGElementRef(), getNumVisitedCurrent(), SF,
-          /*CausesPointerEscape=*/true, /*InvalidatedSymbols=*/nullptr,
-          /*Call=*/nullptr, /*ITraits=*/nullptr,
+          /*CausesPointerEscape=*/true,
           getStateManager().getSymbolManager().acquireCause<UnmodeledExpr>(
               InitWithAdjustments));
       return State;
@@ -3448,7 +3447,6 @@ void ExprEngine::VisitAtomicExpr(const AtomicExpr *AE, ExplodedNode *Pred,
     State = State->invalidateRegions(
         ValuesToInvalidate, getCFGElementRef(), getNumVisitedCurrent(), SF,
         /*CausedByPointerEscape*/ true,
-        /*Symbols=*/nullptr, /*Call=*/nullptr, /*ITraits=*/nullptr,
         getStateManager().getSymbolManager().acquireCause<UnmodeledExpr>(AE));
 
     AfterInvalidateSet.insert(
@@ -3786,12 +3784,10 @@ void ExprEngine::VisitGCCAsmStmt(const GCCAsmStmt *A, ExplodedNode *Pred,
     assert(!isa<NonLoc>(X)); // Should be an Lval, or unknown, undef.
 
     if (std::optional<Loc> LV = X.getAs<Loc>())
-      state = state->invalidateRegions(*LV, getCFGElementRef(),
-                                       getNumVisitedCurrent(),
-                                       Pred->getStackFrame(),
-                                       /*CausedByPointerEscape=*/true,
-                                       /*Symbols=*/nullptr, /*Call=*/nullptr,
-                                       /*ITraits=*/nullptr, AsmCause);
+      state = state->invalidateRegions(
+          *LV, getCFGElementRef(), getNumVisitedCurrent(),
+          Pred->getStackFrame(),
+          /*CausedByPointerEscape=*/true, AsmCause);
   }
 
   // Do not reason about locations passed inside inline assembly.
@@ -3799,12 +3795,10 @@ void ExprEngine::VisitGCCAsmStmt(const GCCAsmStmt *A, ExplodedNode *Pred,
     SVal X = state->getSVal(I, Pred->getStackFrame());
 
     if (std::optional<Loc> LV = X.getAs<Loc>())
-      state = state->invalidateRegions(*LV, getCFGElementRef(),
-                                       getNumVisitedCurrent(),
-                                       Pred->getStackFrame(),
-                                       /*CausedByPointerEscape=*/true,
-                                       /*Symbols=*/nullptr, /*Call=*/nullptr,
-                                       /*ITraits=*/nullptr, AsmCause);
+      state = state->invalidateRegions(
+          *LV, getCFGElementRef(), getNumVisitedCurrent(),
+          Pred->getStackFrame(),
+          /*CausedByPointerEscape=*/true, AsmCause);
   }
 
   Dst.insert(Engine.makePostStmtNode(A, state, Pred));

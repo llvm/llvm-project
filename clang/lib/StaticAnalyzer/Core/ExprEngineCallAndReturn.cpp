@@ -789,8 +789,9 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
         RegionAndSymbolInvalidationTraits::TK_DoNotInvalidateSuperRegion);
     State = State->invalidateRegions(
         TargetR, Elem, Count, SF,
-        /* CausesPointerEscape=*/false, /*InvalidatedSymbols=*/nullptr, &Call,
-        &ITraits, Call.tryCreateInvalidationCause<PartiallyModeledCall>());
+        /* CausesPointerEscape=*/false,
+        Call.tryCreateInvalidationCause<PartiallyModeledCall>(),
+        /*InvalidatedSymbols=*/nullptr, &Call, &ITraits);
 
     R = State->getSVal(Target.castAs<Loc>(), E->getType());
   } else {

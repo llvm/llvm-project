@@ -2482,7 +2482,6 @@ MallocChecker::FreeMemAux(CheckerContext &C, const Expr *ArgExpr,
   State = State->invalidateRegions(
       {location}, Call.getCFGElementRef(), C.blockCount(), C.getStackFrame(),
       /*CausesPointerEscape=*/false,
-      /*InvalidatedSymbols=*/nullptr, /*Call=*/nullptr, /*ITraits=*/nullptr,
       Call.tryCreateInvalidationCause<PartiallyModeledCall>());
 
   // Normal free.

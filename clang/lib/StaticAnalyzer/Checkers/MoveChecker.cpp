@@ -571,8 +571,7 @@ bool MoveChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
 
   State = State->invalidateRegions(
       {DestRegion}, Call.getCFGElementRef(), C.blockCount(), C.getStackFrame(),
-      /*CausesPointerEscape=*/false, /*IS=*/nullptr, /*Call=*/nullptr,
-      /*ITraits=*/nullptr,
+      /*CausesPointerEscape=*/false,
       Call.tryCreateInvalidationCause<PartiallyModeledCall>());
 
   if (shouldBeTracked(OK))

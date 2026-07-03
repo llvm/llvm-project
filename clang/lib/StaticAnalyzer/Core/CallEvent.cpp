@@ -299,8 +299,8 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
   return State->invalidateRegions(
       ValuesToInvalidate, getCFGElementRef(), BlockCount, getStackFrame(),
       /*CausedByPointerEscape*/ true,
-      /*Symbols=*/nullptr, this, &ETraits,
-      tryCreateInvalidationCause<ConservativeEvalCall>());
+      tryCreateInvalidationCause<ConservativeEvalCall>(),
+      /*Symbols=*/nullptr, this, &ETraits);
 }
 
 ProgramPoint CallEvent::getProgramPoint(bool IsPreVisit,

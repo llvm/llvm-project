@@ -261,8 +261,6 @@ ProgramStateRef setErrnoStdMustBeChecked(ProgramStateRef State,
   State = State->invalidateRegions(
       ErrnoR, Call.getCFGElementRef(), C.blockCount(), C.getStackFrame(),
       /*CausesPointerEscape=*/false,
-      /*InvalidatedSymbols=*/nullptr, /*Call=*/nullptr,
-      /*ITraits=*/nullptr,
       Call.tryCreateInvalidationCause<PartiallyModeledCall>());
   if (!State)
     return nullptr;

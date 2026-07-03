@@ -534,10 +534,7 @@ bool SmartPtrModeling::handleOstreamOperator(const CallEvent &Call,
   const auto *Cause = Call.tryCreateInvalidationCause<PartiallyModeledCall>();
   State = State->invalidateRegions({StreamThisRegion}, Call.getCFGElementRef(),
                                    C.blockCount(), C.getStackFrame(),
-                                   /*CausesPointerEscape=*/false,
-                                   /*InvalidatedSymbols=*/nullptr,
-                                   /*Call=*/nullptr,
-                                   /*ITraits=*/nullptr, Cause);
+                                   /*CausesPointerEscape=*/false, Cause);
   State = State->BindExpr(Call.getOriginExpr(), C.getStackFrame(), StreamVal);
   C.addTransition(State);
   return true;
