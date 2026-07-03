@@ -166,6 +166,7 @@ private:
     return find(x.u);
   }
   RT find(const Fortran::evaluate::DescriptorInquiry &) { return {}; }
+  RT find(const Fortran::evaluate::RankOneBoundElement &) { return {}; }
   RT find(const Fortran::evaluate::SpecificIntrinsic &) { return {}; }
   RT find(const Fortran::evaluate::ProcedureDesignator &x) { return {}; }
   RT find(const Fortran::evaluate::ProcedureRef &x) {

@@ -1062,6 +1062,10 @@ public:
     llvm_unreachable("unknown descriptor inquiry");
   }
 
+  ExtValue genval(const Fortran::evaluate::RankOneBoundElement &) {
+    llvm_unreachable("RankOneBoundElement in legacy lowering path");
+  }
+
   ExtValue genval(const Fortran::evaluate::TypeParamInquiry &) {
     TODO(getLoc(), "type parameter inquiry");
   }
@@ -6566,6 +6570,11 @@ private:
   }
   CC genarr(const Fortran::evaluate::DescriptorInquiry &x) {
     TODO(getLoc(), "array expr descriptor inquiry");
+    return [](IterSpace iters) -> ExtValue { return mlir::Value{}; };
+  }
+  CC genarr(const Fortran::evaluate::RankOneBoundElement &x) {
+    fir::emitFatalError(getLoc(),
+                        "rank-1 bound element cannot appear in array context");
     return [](IterSpace iters) -> ExtValue { return mlir::Value{}; };
   }
   CC genarr(const Fortran::evaluate::StructureConstructor &x) {

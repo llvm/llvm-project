@@ -586,12 +586,15 @@ private:
   using DescriptorInquiries =
       std::conditional_t<KIND == DescriptorInquiry::Result::kind,
           std::tuple<DescriptorInquiry>, std::tuple<>>;
+  using RankOneBoundElements =
+      std::conditional_t<KIND == RankOneBoundElement::Result::kind,
+          std::tuple<RankOneBoundElement>, std::tuple<>>;
   using Others = std::tuple<Constant<Result>, ArrayConstructor<Result>,
       Designator<Result>, FunctionRef<Result>>;
 
 public:
   common::TupleToVariant<common::CombineTuples<Operations, Conversions, Indices,
-      TypeParamInquiries, DescriptorInquiries, Others>>
+      TypeParamInquiries, DescriptorInquiries, RankOneBoundElements, Others>>
       u;
 };
 
