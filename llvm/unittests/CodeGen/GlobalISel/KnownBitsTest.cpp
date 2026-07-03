@@ -1180,7 +1180,9 @@ static void AddRangeMetadata(LLVMContext &Context, MachineInstr *Load) {
   MachineMemOperand *NewMMO =
       Load->getParent()->getParent()->getMachineMemOperand(
           OldMMO->getPointerInfo(), OldMMO->getFlags(), OldMMO->getMemoryType(),
-          OldMMO->getAlign(), OldMMO->getAAInfo(), NewMDNode);
+          OldMMO->getAlign(),
+          MachineMemOperand::Metadata(/*AAInfo=*/OldMMO->getAAInfo(),
+                                      /*Ranges=*/NewMDNode));
   MachineIRBuilder MIB(*Load);
   MIB.buildLoadInstr(Load->getOpcode(), Load->getOperand(0),
                      Load->getOperand(1), *NewMMO);

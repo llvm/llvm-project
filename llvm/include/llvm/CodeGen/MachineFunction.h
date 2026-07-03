@@ -1113,35 +1113,39 @@ public:
   /// MachineMemOperands are owned by the MachineFunction and need not be
   /// explicitly deallocated.
   MachineMemOperand *getMachineMemOperand(
-      MachinePointerInfo PtrInfo, MachineMemOperand::Flags f, LLT MemTy,
-      Align base_alignment, const AAMDNodes &AAInfo = AAMDNodes(),
-      const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
+      MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, LLT MemTy,
+      Align BaseAlignment,
+      MachineMemOperand::Metadata MMOMetadata = MachineMemOperand::Metadata(),
+      SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
   MachineMemOperand *getMachineMemOperand(
       MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, LocationSize Size,
-      Align BaseAlignment, const AAMDNodes &AAInfo = AAMDNodes(),
-      const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
+      Align BaseAlignment,
+      MachineMemOperand::Metadata MMOMetadata = MachineMemOperand::Metadata(),
+      SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
   MachineMemOperand *getMachineMemOperand(
       MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, uint64_t Size,
-      Align BaseAlignment, const AAMDNodes &AAInfo = AAMDNodes(),
-      const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
+      Align BaseAlignment,
+      MachineMemOperand::Metadata MMOMetadata = MachineMemOperand::Metadata(),
+      SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic) {
     return getMachineMemOperand(PtrInfo, F, LocationSize::precise(Size),
-                                BaseAlignment, AAInfo, Ranges, SSID, Ordering,
+                                BaseAlignment, MMOMetadata, SSID, Ordering,
                                 FailureOrdering);
   }
   MachineMemOperand *getMachineMemOperand(
       MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, TypeSize Size,
-      Align BaseAlignment, const AAMDNodes &AAInfo = AAMDNodes(),
-      const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
+      Align BaseAlignment,
+      MachineMemOperand::Metadata MMOMetadata = MachineMemOperand::Metadata(),
+      SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic) {
     return getMachineMemOperand(PtrInfo, F, LocationSize::precise(Size),
-                                BaseAlignment, AAInfo, Ranges, SSID, Ordering,
+                                BaseAlignment, MMOMetadata, SSID, Ordering,
                                 FailureOrdering);
   }
 

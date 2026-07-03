@@ -393,6 +393,79 @@ void NVPTXInstPrinter::printAtomicCode(const MCInst *MI, int OpNum,
   llvm_unreachable(formatv("Unknown Modifier: {}", Modifier).str().c_str());
 }
 
+void NVPTXInstPrinter::printEvictionAndPrefetchHint(const MCInst *MI, int OpNum,
+                                                    const MCSubtargetInfo &,
+                                                    raw_ostream &O,
+                                                    StringRef Modifier) {
+  const MCOperand &MO = MI->getOperand(OpNum);
+  unsigned Hint = MO.getImm();
+
+  // If no hint is set, print nothing.
+  if (Hint == 0)
+    return;
+
+  // Check if L2::cache_hint mode is active.
+  bool IsCacheHintMode = NVPTX::isL2CacheHintMode(Hint);
+
+  if (Modifier == "l1") {
+    switch (NVPTX::decodeL1Eviction(Hint)) {
+    case NVPTX::L1Eviction::Normal:
+      return;
+    case NVPTX::L1Eviction::Unchanged:
+      O << ".L1::evict_unchanged";
+      return;
+    case NVPTX::L1Eviction::First:
+      O << ".L1::evict_first";
+      return;
+    case NVPTX::L1Eviction::Last:
+      O << ".L1::evict_last";
+      return;
+    case NVPTX::L1Eviction::NoAllocate:
+      O << ".L1::no_allocate";
+      return;
+    }
+  } else if (Modifier == "l2") {
+    switch (NVPTX::decodeL2Eviction(Hint)) {
+    case NVPTX::L2Eviction::Normal:
+      break;
+    case NVPTX::L2Eviction::First:
+      O << ".L2::evict_first";
+      break;
+    case NVPTX::L2Eviction::Last:
+      O << ".L2::evict_last";
+      break;
+    }
+    if (IsCacheHintMode)
+      O << ".L2::cache_hint";
+    return;
+  } else if (Modifier == "prefetch") {
+    switch (NVPTX::decodeL2Prefetch(Hint)) {
+    case NVPTX::L2Prefetch::None:
+      return;
+    case NVPTX::L2Prefetch::Bytes64:
+      O << ".L2::64B";
+      return;
+    case NVPTX::L2Prefetch::Bytes128:
+      O << ".L2::128B";
+      return;
+    case NVPTX::L2Prefetch::Bytes256:
+      O << ".L2::256B";
+      return;
+    }
+  }
+}
+
+void NVPTXInstPrinter::printCachePolicy(const MCInst *MI, int OpNum,
+                                        const MCSubtargetInfo &,
+                                        raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNum);
+  // If the operand is a register and valid, print ", $reg"
+  if (MO.isReg() && MO.getReg().isValid()) {
+    O << ", ";
+    printRegName(O, MO.getReg());
+  }
+}
+
 void NVPTXInstPrinter::printMmaCode(const MCInst *MI, int OpNum,
                                     const MCSubtargetInfo &, raw_ostream &O,
                                     StringRef Modifier) {

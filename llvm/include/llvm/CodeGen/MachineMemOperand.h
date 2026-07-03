@@ -129,6 +129,18 @@ struct MachinePointerInfo {
 ///
 class MachineMemOperand {
 public:
+  /// LLVM IR metadata carried by a MachineMemOperand.
+  struct Metadata {
+    AAMDNodes AAInfo;
+    const MDNode *Ranges;
+    const MDNode *MemCacheHint;
+
+    Metadata() : Ranges(nullptr), MemCacheHint(nullptr) {}
+    Metadata(const AAMDNodes &AAInfo, const MDNode *Ranges = nullptr,
+             const MDNode *MemCacheHint = nullptr)
+        : AAInfo(AAInfo), Ranges(Ranges), MemCacheHint(MemCacheHint) {}
+  };
+
   /// Flags values. These may be or'd together.
   enum Flags : uint16_t {
     // No flags set.
@@ -182,6 +194,7 @@ private:
   MachineAtomicInfo AtomicInfo;
   AAMDNodes AAInfo;
   const MDNode *Ranges;
+  const MDNode *MemCacheHint;
 
 public:
   /// Construct a MachineMemOperand object with the specified PtrInfo, flags,
@@ -190,19 +203,19 @@ public:
   /// atomic operations the atomic ordering requirements when store does not
   /// occur must also be specified.
   LLVM_ABI
-  MachineMemOperand(MachinePointerInfo PtrInfo, Flags flags, LocationSize TS,
-                    Align a, const AAMDNodes &AAInfo = AAMDNodes(),
-                    const MDNode *Ranges = nullptr,
-                    SyncScope::ID SSID = SyncScope::System,
-                    AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
-                    AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
+  MachineMemOperand(
+      MachinePointerInfo PtrInfo, Flags Flags, LocationSize TS, Align A,
+      MachineMemOperand::Metadata MMOMetadata = MachineMemOperand::Metadata(),
+      SyncScope::ID SSID = SyncScope::System,
+      AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
+      AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
   LLVM_ABI
-  MachineMemOperand(MachinePointerInfo PtrInfo, Flags flags, LLT type, Align a,
-                    const AAMDNodes &AAInfo = AAMDNodes(),
-                    const MDNode *Ranges = nullptr,
-                    SyncScope::ID SSID = SyncScope::System,
-                    AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
-                    AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
+  MachineMemOperand(
+      MachinePointerInfo PtrInfo, Flags Flags, LLT Type, Align A,
+      MachineMemOperand::Metadata MMOMetadata = MachineMemOperand::Metadata(),
+      SyncScope::ID SSID = SyncScope::System,
+      AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
+      AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
 
   const MachinePointerInfo &getPointerInfo() const { return PtrInfo; }
 
@@ -271,6 +284,9 @@ public:
   /// Return the range tag for the memory reference.
   const MDNode *getRanges() const { return Ranges; }
 
+  /// Return the cache hint metadata for the memory reference.
+  const MDNode *getMemCacheHint() const { return MemCacheHint; }
+
   /// Returns the synchronization scope ID for this memory operation.
   SyncScope::ID getSyncScopeID() const {
     return static_cast<SyncScope::ID>(AtomicInfo.SSID);
@@ -338,6 +354,9 @@ public:
   /// Unset the tracked range metadata.
   void clearRanges() { Ranges = nullptr; }
 
+  /// Unset the cache hint metadata.
+  void clearMemCacheHint() { MemCacheHint = nullptr; }
+
   /// Support for operator<<.
   /// @{
   LLVM_ABI void print(raw_ostream &OS, ModuleSlotTracker &MST,
@@ -355,6 +374,7 @@ public:
            LHS.getFlags() == RHS.getFlags() &&
            LHS.getAAInfo() == RHS.getAAInfo() &&
            LHS.getRanges() == RHS.getRanges() &&
+           LHS.getMemCacheHint() == RHS.getMemCacheHint() &&
            LHS.getAlign() == RHS.getAlign() &&
            LHS.getAddrSpace() == RHS.getAddrSpace() &&
            LHS.getSuccessOrdering() == RHS.getSuccessOrdering() &&

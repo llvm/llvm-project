@@ -1469,6 +1469,11 @@ public:
   /// Returns the Ranges that describes the dereference.
   const MDNode *getRanges() const { return getMemOperand()->getRanges(); }
 
+  /// Returns the cache hint metadata for this memory access.
+  const MDNode *getMemCacheHint() const {
+    return getMemOperand()->getMemCacheHint();
+  }
+
   /// Returns the synchronization scope ID for this memory operation.
   SyncScope::ID getSyncScopeID() const {
     return getMemOperand()->getSyncScopeID();
@@ -1570,6 +1575,23 @@ public:
 
   void refineRanges(MachineMemOperand *NewMMO) {
     refineRanges(ArrayRef(NewMMO));
+  }
+
+  /// Refine cache hint metadata for all MMOs. The NewMMOs array must parallel
+  /// memoperands(). For each pair, if cache hints differ, the stored hint is
+  /// cleared.
+  void refineMemCacheHints(ArrayRef<MachineMemOperand *> NewMMOs) {
+    ArrayRef<MachineMemOperand *> MMOs = memoperands();
+    assert(NewMMOs.size() == MMOs.size() && "MMO count mismatch");
+    for (auto [MMO, NewMMO] : zip(MMOs, NewMMOs)) {
+      if (MMO->getMemCacheHint() &&
+          MMO->getMemCacheHint() != NewMMO->getMemCacheHint())
+        MMO->clearMemCacheHint();
+    }
+  }
+
+  void refineMemCacheHints(MachineMemOperand *NewMMO) {
+    refineMemCacheHints(ArrayRef(NewMMO));
   }
 
   const SDValue &getChain() const { return getOperand(0); }

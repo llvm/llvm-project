@@ -39,6 +39,13 @@ private:
   LLVMContext *Context = nullptr;
 };
 
+struct NVPTXMemCacheHintAccess {
+  NVPTX::AddressSpace AddrSpace;
+  bool IsLoad;
+  unsigned NumElts;
+  unsigned EltWidth;
+};
+
 class LLVM_LIBRARY_VISIBILITY NVPTXDAGToDAGISel : public SelectionDAGISel {
   const NVPTXTargetMachine &TM;
 
@@ -104,6 +111,15 @@ private:
   bool SelectADDR(SDValue Addr, SDValue &Base, SDValue &Offset);
   SDValue getPTXCmpMode(const CondCodeSDNode &CondCode);
   SDValue selectPossiblyImm(SDValue V);
+
+  // Returns the encoded eviction/prefetch hint and cache policy register for a
+  // memory operation. Hints unsupported by the subtarget or address space are
+  // dropped. If L2::cache_hint is active, returns the hint with
+  // L2CacheHintBit set and a register containing the 64-bit cache policy
+  // value. Otherwise returns NOREG for the policy operand.
+  std::pair<unsigned, SDValue>
+  getMemCacheHintOperands(const MemSDNode *N, NVPTXMemCacheHintAccess Access,
+                          const SDLoc &DL);
 
   // Returns the Memory Order and Scope that the PTX memory instruction should
   // use, and inserts appropriate fence instruction before the memory

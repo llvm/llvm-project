@@ -17,11 +17,32 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/Support/Casting.h"
 
 #define DEBUG_TYPE "codegen-common"
 
 using namespace llvm;
+
+const MDNode *llvm::getMemCacheHintMetadata(const Instruction &I,
+                                            unsigned OperandNo) {
+  const MDNode *MD = I.getMetadata(LLVMContext::MD_mem_cache_hint);
+  if (!MD)
+    return nullptr;
+
+  for (unsigned Idx = 0, E = MD->getNumOperands(); Idx != E; Idx += 2) {
+    const auto *OpNoCI = mdconst::extract<ConstantInt>(MD->getOperand(Idx));
+    const auto *Hint = cast<MDNode>(MD->getOperand(Idx + 1));
+    if (OpNoCI->getZExtValue() == OperandNo)
+      return Hint;
+  }
+
+  return nullptr;
+}
 
 /// Add a successor MBB to ParentMBB< creating a new MachineBB for BB if SuccMBB
 /// is 0.

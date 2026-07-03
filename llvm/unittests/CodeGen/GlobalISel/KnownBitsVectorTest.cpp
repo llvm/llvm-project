@@ -164,7 +164,9 @@ TEST_F(AArch64GISelMITest, TestVectorMetadata) {
   const MachineMemOperand *OldMMO = *Load->memoperands_begin();
   MachineMemOperand NewMMO(OldMMO->getPointerInfo(), OldMMO->getFlags(),
                            OldMMO->getMemoryType(), OldMMO->getAlign(),
-                           OldMMO->getAAInfo(), NewMDNode);
+                           MachineMemOperand::Metadata(
+                               /*AAInfo=*/OldMMO->getAAInfo(),
+                               /*Ranges=*/NewMDNode));
   MachineIRBuilder MIB(*Load);
   MIB.buildLoad(Load->getOperand(0), Load->getOperand(1), NewMMO);
   Load->eraseFromParent();

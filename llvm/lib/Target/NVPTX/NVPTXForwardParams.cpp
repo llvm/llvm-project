@@ -96,13 +96,23 @@ static bool eliminateMove(MachineInstr &Mov, const MachineRegisterInfo &MRI,
   const MachineOperand *ParamSymbol = Mov.uses().begin();
   assert(ParamSymbol->isSymbol());
 
-  constexpr unsigned LDInstBasePtrOpIdx = 6;
-  constexpr unsigned LDInstAddrSpaceOpIdx = 2;
-  for (auto *LI : LoadInsts) {
-    (LI->uses().begin() + LDInstBasePtrOpIdx)
-        ->ChangeToES(ParamSymbol->getSymbolName());
-    (LI->uses().begin() + LDInstAddrSpaceOpIdx)
-        ->ChangeToImmediate(NVPTX::AddressSpace::DeviceParam);
+  for (MachineInstr *LI : LoadInsts) {
+    unsigned Opc = LI->getOpcode();
+    int Idx = getNamedOperandIdx(Opc, NVPTX::OpName::addr);
+    assert(Idx != -1 && "no addr operand");
+    LI->getOperand(Idx).ChangeToES(ParamSymbol->getSymbolName());
+
+    Idx = getNamedOperandIdx(Opc, NVPTX::OpName::addsp);
+    assert(Idx != -1 && "no addsp operand");
+    LI->getOperand(Idx).ChangeToImmediate(NVPTX::AddressSpace::DeviceParam);
+    // PTX cache hints and policy are not allowed on ld.param
+    Idx = getNamedOperandIdx(Opc, NVPTX::OpName::evictionAndPrefetchHint);
+    assert(Idx != -1 && "no evictionAndPrefetchHint operand");
+    LI->getOperand(Idx).ChangeToImmediate(0);
+
+    Idx = getNamedOperandIdx(Opc, NVPTX::OpName::policy);
+    assert(Idx != -1 && "no policy operand");
+    LI->getOperand(Idx).ChangeToRegister(NVPTX::NoRegister, false);
   }
   return true;
 }
