@@ -602,10 +602,8 @@ LoadInst *InstCombinerImpl::combineLoadToNewType(LoadInst &LI, Type *NewTy,
   assert((!LI.isAtomic() || isSupportedAtomicType(NewTy)) &&
          "can't fold an atomic load to requested type");
 
-  LoadInst *NewLoad =
-      Builder.CreateAlignedLoad(NewTy, LI.getPointerOperand(), LI.getAlign(),
-                                LI.isVolatile(), LI.getName() + Suffix);
-  NewLoad->setProperties(LI.getProperties());
+  LoadInst *NewLoad = Builder.CreateLoad(
+      NewTy, LI.getPointerOperand(), LI.getProperties(), LI.getName() + Suffix);
   copyMetadataForLoad(*NewLoad, LI);
   return NewLoad;
 }
@@ -622,9 +620,7 @@ static StoreInst *combineStoreToNewValue(InstCombinerImpl &IC, StoreInst &SI,
   SmallVector<std::pair<unsigned, MDNode *>, 8> MD;
   SI.getAllMetadata(MD);
 
-  StoreInst *NewStore =
-      IC.Builder.CreateAlignedStore(V, Ptr, SI.getAlign(), SI.isVolatile());
-  NewStore->setProperties(SI.getProperties());
+  StoreInst *NewStore = IC.Builder.CreateStore(V, Ptr, SI.getProperties());
   for (const auto &MDPair : MD) {
     unsigned ID = MDPair.first;
     MDNode *N = MDPair.second;
@@ -1159,15 +1155,15 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
           return Op;
         };
         Value *LoadOp1 = MaybeCastedLoadOperand(SI->getOperand(1));
-        LoadInst *V1 = Builder.CreateLoad(LI.getType(), LoadOp1,
-                                          LoadOp1->getName() + ".val");
+        LoadInst *V1 =
+            Builder.CreateLoad(LI.getType(), LoadOp1, LI.getProperties(),
+                               LoadOp1->getName() + ".val");
 
         Value *LoadOp2 = MaybeCastedLoadOperand(SI->getOperand(2));
-        LoadInst *V2 = Builder.CreateLoad(LI.getType(), LoadOp2,
-                                          LoadOp2->getName() + ".val");
+        LoadInst *V2 =
+            Builder.CreateLoad(LI.getType(), LoadOp2, LI.getProperties(),
+                               LoadOp2->getName() + ".val");
         assert(LI.isUnordered() && "implied by above");
-        V1->setProperties(LI.getProperties());
-        V2->setProperties(LI.getProperties());
         // It is safe to copy any metadata that does not trigger UB. Copy any
         // poison-generating metadata.
         V1->copyMetadata(LI, Metadata::PoisonGeneratingIDs);

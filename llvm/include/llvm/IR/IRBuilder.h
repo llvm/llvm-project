@@ -1916,8 +1916,22 @@ public:
     return CreateAlignedLoad(Ty, Ptr, MaybeAlign(), isVolatile, Name);
   }
 
+  LoadInst *CreateLoad(Type *Ty, Value *Ptr,
+                       const LoadStoreInstProperties &Props,
+                       const Twine &Name = "") {
+    return Insert(new LoadInst(Ty, Ptr, Twine(), Props.IsVolatile,
+                               Props.Alignment, Props.Ordering, Props.SSID),
+                  Name);
+  }
+
   StoreInst *CreateStore(Value *Val, Value *Ptr, bool isVolatile = false) {
     return CreateAlignedStore(Val, Ptr, MaybeAlign(), isVolatile);
+  }
+
+  StoreInst *CreateStore(Value *Val, Value *Ptr,
+                         const LoadStoreInstProperties &Props) {
+    return Insert(new StoreInst(Val, Ptr, Props.IsVolatile, Props.Alignment,
+                                Props.Ordering, Props.SSID));
   }
 
   LoadInst *CreateAlignedLoad(Type *Ty, Value *Ptr, MaybeAlign Align,
