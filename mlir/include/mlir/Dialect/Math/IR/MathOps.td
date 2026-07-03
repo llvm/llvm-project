@@ -1350,7 +1350,8 @@ def Math_TruncOp : Math_FloatUnaryOpWithFenv<"trunc"> {
 
 def Math_FPowIOp : Math_Op<"fpowi",
     [SameOperandsAndResultShape, AllTypesMatch<["lhs", "result"]>,
-     DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
+     DeclareOpInterfaceMethods<ArithFastMathInterface>,
+     DeclareOpInterfaceMethods<FPEnvConstrainedOpInterface>]> {
   let summary = "floating point raised to the signed integer power";
   let description = [{
     The `fpowi` operation takes a `base` operand of floating point type
@@ -1375,13 +1376,64 @@ def Math_FPowIOp : Math_Op<"fpowi",
     // Scalar exponentiation.
     %a = math.fpowi %base, %power : f64, i32
     ```
+
+    An optional `#arith.fenv` attribute may be attached to describe constraints
+    on the floating-point environment.
   }];
 
   let arguments = (ins FloatLike:$lhs, SignlessIntegerOrIndexLike:$rhs,
       DefaultValuedAttr<Arith_FastMathAttr,
-                        "::mlir::arith::FastMathFlags::none">:$fastmath);
+                        "::mlir::arith::FastMathFlags::none">:$fastmath,
+      OptionalAttr<Arith_FenvAttr>:$fenv);
   let results = (outs FloatLike:$result);
+  // With a trailing optional `fenv` attribute following the `fastmath`
+  // attribute, the generated builders no longer provide C++ default arguments,
+  // so the convenience builders that predate the `fenv` attribute must be
+  // provided explicitly.
+  let builders = [
+    OpBuilder<(ins "::mlir::Value":$lhs, "::mlir::Value":$rhs,
+      CArg<"::mlir::arith::FastMathFlags",
+           "::mlir::arith::FastMathFlags::none">:$fastmath), [{
+      build($_builder, $_state, lhs, rhs,
+            ::mlir::arith::FastMathFlagsAttr::get(
+                $_builder.getContext(), fastmath),
+            ::mlir::arith::FenvAttr{});
+    }]>,
+    OpBuilder<(ins "::mlir::Value":$lhs, "::mlir::Value":$rhs,
+      "::mlir::arith::FastMathFlagsAttr":$fastmath), [{
+      build($_builder, $_state, lhs, rhs, fastmath, ::mlir::arith::FenvAttr{});
+    }]>,
+    OpBuilder<(ins "::mlir::Type":$result, "::mlir::Value":$lhs,
+      "::mlir::Value":$rhs,
+      CArg<"::mlir::arith::FastMathFlags",
+           "::mlir::arith::FastMathFlags::none">:$fastmath), [{
+      build($_builder, $_state, result, lhs, rhs,
+            ::mlir::arith::FastMathFlagsAttr::get(
+                $_builder.getContext(), fastmath),
+            ::mlir::arith::FenvAttr{});
+    }]>,
+    OpBuilder<(ins "::mlir::Type":$result, "::mlir::Value":$lhs,
+      "::mlir::Value":$rhs, "::mlir::arith::FastMathFlagsAttr":$fastmath), [{
+      build($_builder, $_state, result, lhs, rhs, fastmath,
+            ::mlir::arith::FenvAttr{});
+    }]>,
+    OpBuilder<(ins "::mlir::TypeRange":$resultTypes, "::mlir::Value":$lhs,
+      "::mlir::Value":$rhs,
+      CArg<"::mlir::arith::FastMathFlags",
+           "::mlir::arith::FastMathFlags::none">:$fastmath), [{
+      build($_builder, $_state, resultTypes, lhs, rhs,
+            ::mlir::arith::FastMathFlagsAttr::get(
+                $_builder.getContext(), fastmath),
+            ::mlir::arith::FenvAttr{});
+    }]>,
+    OpBuilder<(ins "::mlir::TypeRange":$resultTypes, "::mlir::Value":$lhs,
+      "::mlir::Value":$rhs, "::mlir::arith::FastMathFlagsAttr":$fastmath), [{
+      build($_builder, $_state, resultTypes, lhs, rhs, fastmath,
+            ::mlir::arith::FenvAttr{});
+    }]>,
+  ];
   let assemblyFormat = [{ $lhs `,` $rhs (`fastmath` `` $fastmath^)?
+                          (`fenv` `` $fenv^)?
                           attr-dict `:` type($lhs) `,` type($rhs) }];
 
   let hasFolder = 1;

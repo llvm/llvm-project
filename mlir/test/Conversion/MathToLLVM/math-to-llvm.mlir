@@ -778,6 +778,29 @@ func.func @experimental_constrained_binary(%a : f64, %b : f64) {
 
 // -----
 
+// `math.fpowi` with a floating-point environment lowers to the constrained
+// `powi` intrinsic, which takes a scalar `i32` exponent.
+// CHECK-LABEL: func @experimental_constrained_fpowi
+func.func @experimental_constrained_fpowi(%a : f64, %b : i32) {
+  // CHECK-NEXT: llvm.intr.experimental.constrained.powi %{{.*}}, %{{.*}} tonearest maytrap : (f64, i32) -> f64
+  %0 = math.fpowi %a, %b fenv<dynamic_rounding_mode = to_nearest_even, except_mode = unknown> : f64, i32
+  return
+}
+
+// -----
+
+// Without the `#arith.fenv` attribute, `math.fpowi` uses the unconstrained
+// `llvm.intr.powi` lowering.
+// CHECK-LABEL: func @unconstrained_fpowi
+func.func @unconstrained_fpowi(%a : f64, %b : i32) {
+  // CHECK-NEXT: llvm.intr.powi(%{{.*}}, %{{.*}}) : (f64, i32) -> f64
+  // CHECK-NOT: constrained
+  %0 = math.fpowi %a, %b : f64, i32
+  return
+}
+
+// -----
+
 // The constrained lowering also applies element-wise to vector operands.
 // CHECK-LABEL: func @experimental_constrained_vector
 func.func @experimental_constrained_vector(%a : vector<4xf32>) {

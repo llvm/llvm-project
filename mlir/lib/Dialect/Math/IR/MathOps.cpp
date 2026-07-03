@@ -828,6 +828,11 @@ OpFoldResult math::TruncOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult math::FPowIOp::fold(FoldAdaptor adaptor) {
+  // Do not fold when a constrained floating-point environment is requested.
+  // In theory, we could fold this when we know the rounding mode and we can
+  // verify that the operation wouldn't raise an exception.
+  if (getFenvAttr())
+    return {};
   return constFoldBinaryOpConditional<FloatAttr, IntegerAttr>(
       adaptor.getOperands(),
       [](const APFloat &base, const APInt &exp) -> std::optional<APFloat> {

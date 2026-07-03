@@ -318,8 +318,8 @@ func.func @fastmath(%f: f32, %i: i32, %v: vector<4xf32>, %t: tensor<4x4x?xf32>) 
 }
 
 // CHECK-LABEL: func @fenv(
-// CHECK-SAME:      %[[F:.*]]: f32, %[[V:.*]]: vector<4xf32>)
-func.func @fenv(%f: f32, %v: vector<4xf32>) {
+// CHECK-SAME:      %[[F:.*]]: f32, %[[V:.*]]: vector<4xf32>, %[[I:.*]]: i32)
+func.func @fenv(%f: f32, %v: vector<4xf32>, %i: i32) {
   // CHECK: math.sqrt %[[F]] fenv<> : f32
   %0 = math.sqrt %f fenv<> : f32
   // CHECK: math.exp %[[F]] fenv<dynamic_rounding_mode = to_nearest_even, strict_except = true> : f32
@@ -332,6 +332,8 @@ func.func @fenv(%f: f32, %v: vector<4xf32>) {
   %4 = math.powf %f, %f fenv<dynamic_rounding_mode = toward_zero> : f32
   // CHECK: math.atan2 %[[F]], %[[F]] fenv<> : f32
   %5 = math.atan2 %f, %f fenv<> : f32
+  // CHECK: math.fpowi %[[F]], %[[I]] fenv<dynamic_rounding_mode = toward_zero> : f32, i32
+  %6 = math.fpowi %f, %i fenv<dynamic_rounding_mode = toward_zero> : f32, i32
   return
 }
 

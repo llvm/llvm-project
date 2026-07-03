@@ -156,7 +156,7 @@ using PowFOpLowering =
 using ConstrainedPowFOpLowering =
     ConvertConstrainedMathToLLVMPattern<math::PowFOp, LLVM::ConstrainedPowIntr>;
 using FPowIOpLowering =
-    ConvertFMFMathToLLVMPattern<math::FPowIOp, LLVM::PowIOp>;
+    ConvertUnconstrainedMathToLLVMPattern<math::FPowIOp, LLVM::PowIOp>;
 using RoundEvenOpLowering =
     ConvertUnconstrainedMathToLLVMPattern<math::RoundEvenOp, LLVM::RoundEvenOp>;
 using ConstrainedRoundEvenOpLowering =
@@ -205,6 +205,46 @@ using ATan2OpLowering =
 using ConstrainedATan2OpLowering =
     ConvertConstrainedMathToLLVMPattern<math::Atan2Op,
                                         LLVM::ConstrainedATan2Intr>;
+
+// A `math.fpowi` carrying a floating-point environment (`#arith.fenv`) lowers
+// to the constrained `powi` intrinsic.
+struct ConstrainedFPowIOpLowering
+    : public ConvertOpToLLVMPattern<math::FPowIOp,
+                                    /*FailOnUnsupportedFP=*/true> {
+  using ConvertOpToLLVMPattern<
+      math::FPowIOp, /*FailOnUnsupportedFP=*/true>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(math::FPowIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (!op.getFenvAttr())
+      return rewriter.notifyMatchFailure(
+          op, "unconstrained fpowi is handled by a separate pattern");
+
+    // `llvm.intr.experimental.constrained.powi` requires a scalar operand with
+    // an `i32` exponent.
+    Type resultType = op.getResult().getType();
+    if (!isa<FloatType>(resultType))
+      return rewriter.notifyMatchFailure(
+          op, "constrained fpowi only supports scalar operands");
+    if (!op.getRhs().getType().isInteger(32))
+      return rewriter.notifyMatchFailure(
+          op, "constrained fpowi requires an i32 exponent");
+
+    Type llvmResultType = getTypeConverter()->convertType(resultType);
+    if (!llvmResultType)
+      return failure();
+
+    arith::AttrConverterConstrainedFPToLLVM<math::FPowIOp,
+                                            LLVM::ConstrainedPowIIntr>
+        attrConvert(op);
+    rewriter.replaceOpWithNewOp<LLVM::ConstrainedPowIIntr>(
+        op, llvmResultType, ValueRange{adaptor.getLhs(), adaptor.getRhs()},
+        attrConvert.getAttrs());
+    return success();
+  }
+};
+
 // A `CtLz/CtTz/absi(a)` is converted into `CtLz/CtTz/absi(a, false)`.
 // TODO: Result and operand types match for `absi` as opposed to `ct*z`, so it
 // may be better to separate the patterns.
@@ -575,6 +615,7 @@ void mlir::populateMathToLLVMConversionPatterns(
     ExpOpLowering,
     ConstrainedExpOpLowering,
     FPowIOpLowering,
+    ConstrainedFPowIOpLowering,
     FloorOpLowering,
     ConstrainedFloorOpLowering,
     FmaOpLowering,
