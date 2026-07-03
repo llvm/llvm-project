@@ -2508,27 +2508,29 @@ public:
         MsgParam = 5;
       } else if (const auto *ECE = dyn_cast<ExplicitCastExpr>(Operation)) {
         QualType destType = ECE->getType();
-        bool destTypeComplete = true;
 
         if (!isa<PointerType>(destType))
           return;
         destType = destType.getTypePtr()->getPointeeType();
-        if (const auto *D = destType->getAsTagDecl())
-          destTypeComplete = D->isCompleteDefinition();
 
-        // If destination type is incomplete, it is unsafe to cast to anyway, no
-        // need to check its type:
-        if (destTypeComplete) {
+        // If destination type is incomplete or dependent, it is unsafe to cast
+        // to anyway, no need to check its type:
+        if (!destType->isIncompleteType() && !destType->isDependentType()) {
           const uint64_t dSize = Ctx.getTypeSize(destType);
           QualType srcType = ECE->getSubExpr()->getType();
 
           assert(srcType->isPointerType());
 
-          const uint64_t sSize =
-              Ctx.getTypeSize(srcType.getTypePtr()->getPointeeType());
+          QualType srcPointeeType = srcType.getTypePtr()->getPointeeType();
 
-          if (sSize >= dSize)
-            return;
+          // Check if source type is incomplete or dependent as well:
+          if (!srcPointeeType->isIncompleteType() &&
+              !srcPointeeType->isDependentType()) {
+            const uint64_t sSize = Ctx.getTypeSize(srcPointeeType);
+
+            if (sSize >= dSize)
+              return;
+          }
         }
         if (const auto *CE = dyn_cast<CXXMemberCallExpr>(
                 ECE->getSubExpr()->IgnoreParens())) {

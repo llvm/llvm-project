@@ -244,6 +244,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BF16_TO_FP, MVT::f32, Custom);
     setOperationAction(ISD::FP_TO_BF16, MVT::f32,
                        Subtarget.isSoftFPABI() ? LibCall : Custom);
+    setOperationAction(ISD::SET_ROUNDING, MVT::Other, Custom);
 
     if (Subtarget.is64Bit())
       setOperationAction(ISD::FRINT, MVT::f32, Legal);
@@ -616,6 +617,8 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerFRAMEADDR(Op, DAG);
   case ISD::RETURNADDR:
     return lowerRETURNADDR(Op, DAG);
+  case ISD::SET_ROUNDING:
+    return lowerSET_ROUNDING(Op, DAG);
   case ISD::WRITE_REGISTER:
     return lowerWRITE_REGISTER(Op, DAG);
   case ISD::INSERT_VECTOR_ELT:
@@ -4022,6 +4025,63 @@ SDValue LoongArchTargetLowering::lowerATOMIC_FENCE(SDValue Op,
   return Op;
 }
 
+SDValue LoongArchTargetLowering::lowerSET_ROUNDING(SDValue Op,
+                                                   SelectionDAG &DAG) const {
+  MVT GRLenVT = Subtarget.getGRLenVT();
+  SDLoc DL(Op);
+  SDValue Chain = Op.getOperand(0);
+  SDValue RMValue = Op.getOperand(1);
+
+  if (auto *CVal = dyn_cast<ConstantSDNode>(RMValue)) {
+    uint64_t RM = CVal->getZExtValue();
+    if (RM > 3) {
+      MachineFunction &MF = DAG.getMachineFunction();
+      LLVMContext &C = MF.getFunction().getContext();
+      C.diagnose(DiagnosticInfoUnsupported(
+          MF.getFunction(),
+          "rounding mode is not supported by LoongArch hardware",
+          DiagnosticLocation(DL.getDebugLoc()), DS_Error));
+      return Chain;
+    }
+  }
+
+  RMValue = DAG.getNode(ISD::ZERO_EXTEND, DL, GRLenVT, RMValue);
+
+  // LLVM rounding mode encoding differs from LoongArch FCSR encoding:
+  //   LLVM: 0=RTZ, 1=RNE, 2=RUP, 3=RDN
+  //   FCSR: 0=RNE, 1=RZ,  2=RP,  3=RN
+  //
+  // Need to convert argument into bits of control word:
+  //    0 Round to 0       -> 01
+  //    1 Round to nearest -> 00
+  //    2 Round to +inf    -> 10
+  //    3 Round to -inf    -> 11
+  //
+  // Transformation: RM ^ (~(RM >> 1) & 1)
+  SDValue ShiftRight1 = DAG.getNode(ISD::SRL, DL, GRLenVT, RMValue,
+                                    DAG.getConstant(1, DL, GRLenVT));
+  SDValue SwapMask = DAG.getNode(ISD::AND, DL, GRLenVT,
+                                 DAG.getNode(ISD::XOR, DL, GRLenVT, ShiftRight1,
+                                             DAG.getConstant(1, DL, GRLenVT)),
+                                 DAG.getConstant(1, DL, GRLenVT));
+  RMValue = DAG.getNode(ISD::XOR, DL, GRLenVT, RMValue, SwapMask);
+
+  RMValue = DAG.getNode(ISD::AND, DL, GRLenVT, RMValue,
+                        DAG.getConstant(0x3, DL, GRLenVT));
+
+  // The RM field in FCSR is at bits [9:8]. Shift the rounding mode value
+  // into position before writing via WRFCSR.
+  RMValue = DAG.getNode(ISD::SHL, DL, GRLenVT, RMValue,
+                        DAG.getConstant(8, DL, GRLenVT));
+
+  // FCSR3 is an alias of the RM field; writing it avoids clobbering
+  // unrelated fields in FCSR0.
+  SDValue FCSRNo = DAG.getTargetConstant(3, DL, GRLenVT);
+  MachineSDNode *RN = DAG.getMachineNode(LoongArch::WRFCSR, DL, MVT::Other,
+                                         FCSRNo, RMValue, Chain);
+  return SDValue(RN, 0);
+}
+
 SDValue LoongArchTargetLowering::lowerWRITE_REGISTER(SDValue Op,
                                                      SelectionDAG &DAG) const {
 
@@ -4123,14 +4183,12 @@ SDValue LoongArchTargetLowering::lowerUINT_TO_FP(SDValue Op,
       isOperationLegal(ISD::SINT_TO_FP, Op0VT))
     return DAG.getNode(ISD::SINT_TO_FP, DL, VT, Op0);
 
-  if (Subtarget.hasExtLSX() && Op0VT == MVT::i64 &&
-      (VT == MVT::f32 || VT == MVT::f64)) {
+  // We can't do uint64 -> double -> float because of double-rounding issue.
+  if (Subtarget.hasExtLSX() && Op0VT == MVT::i64 && VT == MVT::f64) {
     Op0 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i64, Op0);
     SDValue Conv = DAG.getNode(ISD::UINT_TO_FP, DL, MVT::v2f64, Op0);
     Conv = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f64, Conv,
                        DAG.getIntPtrConstant(0, DL));
-    if (VT == MVT::f32)
-      Conv = DAG.getFPExtendOrRound(Conv, DL, VT);
     return Conv;
   }
 

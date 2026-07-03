@@ -32,6 +32,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -191,14 +193,6 @@ void NVPTXAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
 void NVPTXAsmPrinter::lowerToMCInst(const MachineInstr *MI, MCInst &OutMI) {
   OutMI.setOpcode(MI->getOpcode());
-  // Special: Do not mangle symbol operand of CALL_PROTOTYPE
-  if (MI->getOpcode() == NVPTX::CALL_PROTOTYPE) {
-    const MachineOperand &MO = MI->getOperand(0);
-    OutMI.addOperand(GetSymbolRef(
-      OutContext.getOrCreateSymbol(Twine(MO.getSymbolName()))));
-    return;
-  }
-
   for (const auto MO : MI->operands())
     OutMI.addOperand(lowerOperand(MO));
 }
@@ -290,7 +284,9 @@ void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
   const auto *TLI = cast<NVPTXTargetLowering>(STI.getTargetLowering());
 
   Type *Ty = F->getReturnType();
-  if (Ty->getTypeID() == Type::VoidTyID)
+  // A void or zero-sized return type (e.g. an empty struct) produces no return
+  // parameter.
+  if (Ty->isVoidTy() || Ty->isEmptyTy())
     return;
   O << " (";
 
@@ -318,6 +314,113 @@ void NVPTXAsmPrinter::printReturnValStr(const MachineFunction &MF,
                                         raw_ostream &O) {
   const Function &F = MF.getFunction();
   printReturnValStr(&F, O);
+}
+
+void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
+                                        unsigned UniqueCallSite,
+                                        raw_ostream &O) const {
+  const DataLayout &DL = getDataLayout();
+  const NVPTXSubtarget &STI = MF->getSubtarget<NVPTXSubtarget>();
+  const auto *TLI = cast<NVPTXTargetLowering>(STI.getTargetLowering());
+  const auto PtrVT = TLI->getPointerTy(DL);
+  Type *RetTy = CB.getFunctionType()->getReturnType();
+
+  O << "prototype_" << UniqueCallSite << " : .callprototype ";
+
+  if (RetTy->isVoidTy() || RetTy->isEmptyTy()) {
+    O << "()";
+  } else {
+    O << "(";
+    if (shouldPassAsArray(RetTy)) {
+      const Align RetAlign =
+          getPTXParamAlign(&CB, RetTy, AttributeList::ReturnIndex, DL);
+      O << ".param .align " << RetAlign.value() << " .b8 _["
+        << DL.getTypeAllocSize(RetTy) << "]";
+    } else if (RetTy->isFloatingPointTy() || RetTy->isIntegerTy()) {
+      unsigned size = 0;
+      if (auto *ITy = dyn_cast<IntegerType>(RetTy)) {
+        size = ITy->getBitWidth();
+      } else {
+        assert(RetTy->isFloatingPointTy() &&
+               "Floating point type expected here");
+        size = RetTy->getPrimitiveSizeInBits();
+      }
+      // PTX ABI requires all scalar return values to be at least 32
+      // bits in size.  fp16 normally uses .b16 as its storage type in
+      // PTX, so its size must be adjusted here, too.
+      size = promoteScalarArgumentSize(size);
+
+      O << ".param .b" << size << " _";
+    } else if (isa<PointerType>(RetTy)) {
+      O << ".param .b" << PtrVT.getSizeInBits() << " _";
+    } else {
+      llvm_unreachable("Unknown return type");
+    }
+    O << ") ";
+  }
+  O << "_ (";
+
+  auto MakeArg = [&](const unsigned I) {
+    Type *Ty = CB.getArgOperand(I)->getType();
+
+    if (CB.paramHasAttr(I, Attribute::ByVal)) {
+      // Indirect calls need strict ABI alignment so we disable optimizations by
+      // not providing a function to optimize.
+      Type *ETy = CB.getParamByValType(I);
+      // Mirror the byval alignment computed by SelectionDAGBuilder: prefer an
+      // explicit stack/param alignment, otherwise fall back to the byval type
+      // alignment.
+      MaybeAlign InitialAlign = CB.getParamStackAlign(I);
+      if (!InitialAlign)
+        InitialAlign = CB.getParamAlign(I);
+      Align ByValAlign =
+          InitialAlign.value_or(TLI->getByValTypeAlignment(ETy, DL));
+      Align ParamByValAlign =
+          getDeviceByValParamAlign(/*F=*/nullptr, ETy, ByValAlign, DL);
+
+      O << ".param .align " << ParamByValAlign.value() << " .b8 _["
+        << DL.getTypeAllocSize(ETy) << "]";
+      return;
+    }
+
+    if (shouldPassAsArray(Ty)) {
+      Align ParamAlign =
+          getPTXParamAlign(&CB, Ty, I + AttributeList::FirstArgIndex, DL);
+      O << ".param .align " << ParamAlign.value() << " .b8 _["
+        << DL.getTypeAllocSize(Ty) << "]";
+      return;
+    }
+    // scalar type
+    unsigned sz = 0;
+    if (auto *ITy = dyn_cast<IntegerType>(Ty)) {
+      sz = promoteScalarArgumentSize(ITy->getBitWidth());
+    } else if (isa<PointerType>(Ty)) {
+      sz = PtrVT.getSizeInBits();
+    } else {
+      sz = Ty->getPrimitiveSizeInBits();
+    }
+    O << ".param .b" << sz << " _";
+  };
+
+  const FunctionType *FTy = CB.getFunctionType();
+  const unsigned NumArgs = FTy->getNumParams();
+
+  // Zero-sized arguments (e.g. empty structs) are not passed and so do not
+  // appear in the prototype.
+  const auto NonEmptyArgs = make_filter_range(seq(NumArgs), [&](unsigned I) {
+    return !CB.getArgOperand(I)->getType()->isEmptyTy();
+  });
+
+  interleave(NonEmptyArgs, O, MakeArg, ", ");
+
+  if (FTy->isVarArg() && CB.arg_size() > NumArgs)
+    O << (NonEmptyArgs.empty() ? "" : ",") << " .param .align "
+      << STI.getMaxRequiredAlignment() << " .b8 _[]";
+
+  O << ")";
+  if (shouldEmitPTXNoReturn(&CB, TM))
+    O << " .noreturn";
+  O << ";\n";
 }
 
 // Return true if MBB is the header of a loop marked with
@@ -417,6 +520,11 @@ void NVPTXAsmPrinter::emitFunctionBodyStart() {
   SmallString<128> Str;
   raw_svector_ostream O(Str);
   emitDemotedVars(&MF->getFunction(), O);
+
+  const auto *MFI = MF->getInfo<NVPTXMachineFunctionInfo>();
+  for (const auto &[Id, CB] : MFI->getCallPrototypes())
+    emitCallPrototype(*CB, Id, O);
+
   OutStreamer->emitRawText(O.str());
 }
 
@@ -1363,16 +1471,25 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
   bool IsFirst = true;
   const bool IsKernelFunc = isKernelFunction(*F);
 
-  if (F->arg_empty() && !F->isVarArg()) {
+  // Zero-sized arguments (e.g. empty structs) do not produce a parameter.
+  // Number the emitted parameters contiguously, skipping the zero-sized ones,
+  // so that the names match those used in LowerFormalArguments and the
+  // contiguous numbering used by callers (see LowerCall).
+  const auto NonEmptyArgs =
+      make_filter_range(F->args(), [](const Argument &Arg) {
+        return !Arg.getType()->isEmptyTy();
+      });
+
+  if (NonEmptyArgs.empty() && !F->isVarArg()) {
     O << "()";
     return;
   }
 
   O << "(\n";
 
-  for (const Argument &Arg : F->args()) {
+  for (const auto &[ParamIndex, Arg] : enumerate(NonEmptyArgs)) {
     Type *Ty = Arg.getType();
-    const std::string ParamSym = TLI->getParamName(F, Arg.getArgNo());
+    const std::string ParamSym = TLI->getParamName(F, ParamIndex);
 
     if (!IsFirst)
       O << ",\n";
@@ -1546,13 +1663,13 @@ void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
 
   // Emit declaration of the virtual registers or 'physical' registers for
   // each register class
-  for (const TargetRegisterClass *RC : TRI->regclasses()) {
-    const unsigned N = VRegMapping[RC].size();
+  for (const TargetRegisterClass &RC : TRI->regclasses()) {
+    const unsigned N = VRegMapping[&RC].size();
 
     // Only declare those registers that may be used.
     if (N) {
-      const StringRef RCName = getNVPTXRegClassName(RC);
-      const StringRef RCStr = getNVPTXRegClassStr(RC);
+      const StringRef RCName = getNVPTXRegClassName(&RC);
+      const StringRef RCStr = getNVPTXRegClassStr(&RC);
       O << "\t.reg " << RCName << " \t" << RCStr << "<" << (N + 1) << ">;\n";
     }
   }

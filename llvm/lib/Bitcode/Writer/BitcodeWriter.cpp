@@ -230,10 +230,12 @@ public:
     GlobalValueId = VE.getValues().size();
     if (!Index)
       return;
-    for (const auto &GUIDSummaryLists : *Index)
+    // Sort by GUID for deterministic value ID assignment.
+    for (const auto &GUIDSummaryLists :
+         Index->sortedGlobalValueSummariesRange())
       // Examine all summaries for this GUID.
       for (auto &Summary : GUIDSummaryLists.second.getSummaryList())
-        if (auto FS = dyn_cast<FunctionSummary>(Summary.get())) {
+        if (auto *FS = dyn_cast<FunctionSummary>(Summary.get())) {
           // For each call in the function summary, see if the call
           // is to a GUID (which means it is for an indirect call,
           // otherwise we would have a Value for it). If so, synthesize
@@ -583,7 +585,8 @@ public:
             Callback({AS->getAliaseeGUID(), &AS->getAliasee()}, true);
         }
     } else {
-      for (auto &Summaries : Index)
+      // Sort by GUID for deterministic output.
+      for (const auto &Summaries : Index.sortedGlobalValueSummariesRange())
         for (auto &Summary : Summaries.second.getSummaryList())
           Callback({Summaries.first, Summary.get()}, false);
     }
@@ -1548,9 +1551,19 @@ void ModuleBitcodeWriter::writeModuleInfo() {
   const std::string &DL = M.getDataLayoutStr();
   if (!DL.empty())
     writeStringRecord(Stream, bitc::MODULE_CODE_DATALAYOUT, DL, 0 /*TODO*/);
-  if (!M.getModuleInlineAsm().empty())
-    writeStringRecord(Stream, bitc::MODULE_CODE_ASM, M.getModuleInlineAsm(),
-                      0 /*TODO*/);
+
+  for (const Module::GlobalAsmFragment &Frag : M.getModuleInlineAsm()) {
+    SmallVector<std::pair<StringRef, StringRef>> Props =
+        Frag.Props.getAsStrings();
+    for (auto [Key, Value] : Props) {
+      SmallVector<unsigned, 64> Record;
+      Record.append(Key.begin(), Key.end());
+      Record.push_back(0);
+      Record.append(Value.begin(), Value.end());
+      Stream.EmitRecord(bitc::MODULE_CODE_ASM_PROPERTY, Record);
+    }
+    writeStringRecord(Stream, bitc::MODULE_CODE_ASM, Frag.Asm, 0 /*TODO*/);
+  }
 
   // Emit information about sections and GC, computing how many there are. Also
   // compute the maximum alignment value.

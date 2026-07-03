@@ -16,6 +16,7 @@
 #include "PrimType.h"
 #include "Program.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
@@ -1249,7 +1250,7 @@ bool Compiler<Emitter>::VisitPointerArithBinOp(const BinaryOperator *E) {
       ElemTypeSize = Ctx.getASTContext().getTypeSizeInChars(ElemType);
 
     PrimType IntT = classifyPrim(E->getType());
-    if (!this->emitSubPtr(IntT, ElemTypeSize.isZero(), E))
+    if (!this->emitSubPtr(IntT, ElemTypeSize.getQuantity(), E))
       return false;
     return DiscardResult ? this->emitPop(IntT, E) : true;
   }
@@ -3763,6 +3764,13 @@ bool Compiler<Emitter>::VisitOffsetOfExpr(const OffsetOfExpr *E) {
         continue;
       }
 
+      if (IndexT == PT_IntAP || IndexT == PT_IntAPS) {
+        if (!this->visit(ArrayIndexExpr))
+          return false;
+        if (!this->emitCastNoOverflow(IndexT, E))
+          return false;
+        continue;
+      }
       if (!this->visit(ArrayIndexExpr))
         return false;
       // Cast to Sint64.
@@ -5401,6 +5409,115 @@ bool Compiler<Emitter>::visitDtorCall(const VarDecl *VD, const APValue &Value) {
   return this->emitDestructionPop(D, VD);
 }
 
+class ParamFinder : public ConstDynamicRecursiveASTVisitor {
+public:
+  llvm::SmallPtrSet<const ParmVarDecl *, 1> FoundParams;
+  explicit ParamFinder() {}
+
+  bool VisitDeclRefExpr(const DeclRefExpr *E) override {
+    if (const auto *P = dyn_cast<ParmVarDecl>(E->getDecl()))
+      FoundParams.insert(P);
+    return true;
+  }
+};
+
+/// Evaluate the \p Condition as if it was in the body of \p Callee.
+/// Specifically, all the parameters of the callee are available to use
+/// for the condition, and their values are given by \p Args (and \p This).
+///
+// Since this is a somewhat niche feature, we're abusing a few other mechanisms
+// to implement this.
+//
+// We don't create an actual function frame but instead register the parameters
+// as local variables.
+//
+// So we evaluate something like:
+//
+// bool thisfunc() {
+//    auto Arg0 = Args[0];
+//    ...
+//    return Condition;
+// }
+//
+template <class Emitter>
+bool Compiler<Emitter>::visitWithSubstitutions(const FunctionDecl *Callee,
+                                               ArrayRef<const Expr *> Args,
+                                               const Expr *This,
+                                               const Expr *Condition) {
+  // Instead of evaluating all parameters and trying to ignore failure,
+  // we collect all the parameters used in the condition and only evaluate
+  // those. Note that we still ignore failure in the loop below because the
+  // failure might be inconsequential in the end,
+  // e.g. in the case of `true || x`.
+  ParamFinder PF;
+  PF.TraverseStmt(Condition);
+
+  LocalScope<Emitter> ArgScope(this);
+  for (const ParmVarDecl *PVD : PF.FoundParams) {
+    unsigned ParamIndex = 0;
+    for (const ParmVarDecl *P : Callee->parameters()) {
+      if (P == PVD)
+        break;
+      ++ParamIndex;
+    }
+
+    const Expr *Arg = Args[ParamIndex];
+    const ParmVarDecl *Param = Callee->getParamDecl(ParamIndex);
+    if (OptPrimType ParamT = classify(Param->getType())) {
+      unsigned ArgOffset =
+          allocateLocalPrimitive(Param, *ParamT, /*IsConst=*/true);
+      if (!this->visit(Arg))
+        continue;
+      if (!this->emitSetLocal(*ParamT, ArgOffset, Arg))
+        return false;
+    } else {
+      UnsignedOrNone ArgOffset = this->allocateLocal(Param, Param->getType());
+      if (!ArgOffset)
+        return false;
+      if (!this->emitGetPtrLocal(*ArgOffset, Arg))
+        return false;
+      if (!this->visitInitializerPop(Arg))
+        continue;
+    }
+  }
+
+  if (This) {
+    // We abuse the init stack for this and tell it to use
+    // either a local variable or another decl for the This pointer.
+    this->InitStackActive = true;
+
+    if (This->getType()->isPointerType()) {
+      // Nothing to do here, the evaluation will fail if the instance
+      // pointer is used.
+    } else if (const auto *DRE = dyn_cast<DeclRefExpr>(This)) {
+      InitStack.push_back(InitLink::Decl(DRE->getDecl()));
+    } else {
+      assert(!canClassify(This->getType()));
+      UnsignedOrNone ArgOffset = this->allocateLocal(This, This->getType());
+      if (!ArgOffset)
+        return false;
+      if (!this->emitGetPtrLocal(*ArgOffset, This))
+        return false;
+      if (!this->visitInitializerPop(This))
+        return false;
+      this->InitStack.push_back(InitLink::Temp(*ArgOffset));
+    }
+  }
+
+  // Destruction of the argument values is part of the callee frame,
+  // so we simply ignore them here.
+  this->VarScope = nullptr;
+
+  LocalScope<Emitter> RetScope(this);
+  if (!this->visit(Condition))
+    return false;
+  if (!RetScope.destroyLocals())
+    return false;
+
+  // Result of the condition should be on the stack.
+  return this->emitRet(PT_Bool, Condition);
+}
+
 template <class Emitter>
 bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
                                      SourceInfo Info) {
@@ -6041,7 +6158,10 @@ bool Compiler<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
   if (StartIndex == 0 && EndIndex == 0)
     EndIndex = InitStack.size() - 1;
 
-  assert(StartIndex < EndIndex);
+  // NOTE: This could be StartIndex < EndIndex, but we're also abusing the
+  // InitStack mechanism in visitWithSubstitutions to have the This pointer
+  // _just_ be a local variable.
+  assert(StartIndex <= EndIndex);
 
   // Emit the instructions.
   for (unsigned I = StartIndex; I != (EndIndex + 1); ++I) {
@@ -7712,10 +7832,11 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
       return this->emitGetPtrParam(It->second.Index, E);
     }
 
-    if (!Ctx.getLangOpts().CPlusPlus23 && IsReference)
+    if (!Ctx.getLangOpts().CPlusPlus23 && IsReference && !Locals.contains(D))
       return this->emitInvalidDeclRef(cast<DeclRefExpr>(E),
                                       /*InitializerFailed=*/false, E);
   }
+
   // Local variables.
   if (auto It = Locals.find(D); It != Locals.end()) {
     const unsigned Offset = It->second.Offset;

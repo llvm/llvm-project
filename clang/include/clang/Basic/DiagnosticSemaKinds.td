@@ -139,14 +139,15 @@ def err_typecheck_converted_constant_expression_disallowed : Error<
 def err_typecheck_converted_constant_expression_indirect : Error<
   "conversion from %0 to %1 in converted constant expression would "
   "bind reference to a temporary">;
+
+def select_cce_kind : TextSubstitution<
+  "%select{case value|enumerator value|non-type template argument|non-type parameter of template template parameter|"
+  "array size|explicit specifier argument|noexcept specifier argument|"
+  "call to 'size()'|call to 'data()'|pack index}0">;
 def err_expr_not_cce : Error<
-  "%select{case value|enumerator value|non-type template argument|non-type parameter of template template parameter|"
-  "array size|explicit specifier argument|noexcept specifier argument|"
-  "call to 'size()'|call to 'data()'}0 is not a constant expression">;
+  "%sub{select_cce_kind}0 is not a constant expression">;
 def ext_cce_narrowing : ExtWarn<
-  "%select{case value|enumerator value|non-type template argument|non-type parameter of template template parameter|"
-  "array size|explicit specifier argument|noexcept specifier argument|"
-  "call to 'size()'|call to 'data()'}0 %select{cannot be narrowed from "
+  "%sub{select_cce_kind}0 %select{cannot be narrowed from "
   "type %2 to %3|evaluates to %2, which cannot be narrowed to type %3}1">,
   InGroup<CXX11Narrowing>, DefaultError, SFINAEFailure;
 def err_ice_not_integral : Error<
@@ -796,13 +797,6 @@ def warn_const_attr_with_pure_attr : Warning<
 def warn_pure_function_returns_void : Warning<
   "'%select{pure|const}0' attribute on function returning 'void'; attribute ignored">,
   InGroup<IgnoredAttributes>;
-def warn_const_pure_noreturn_call : Warning<
-  "calling a 'noreturn' function from a function with the "
-  "'%select{pure|const}0' attribute is undefined behavior">,
-  InGroup<DiagGroup<"noreturn-const-pure">>;
-def note_const_pure_noreturn_call : Note<
-  "function declared '%select{pure|const}0' here">;
-
 
 def warn_suggest_noreturn_function : Warning<
   "%select{function|method}0 %1 could be declared with attribute 'noreturn'">,
@@ -982,6 +976,11 @@ def warn_stringop_overread
 def warn_fortify_strlen_overflow: Warning<
   "'%0' will always overflow; destination buffer has size %1,"
   " but the source string has length %2 (including NUL byte)">,
+  InGroup<FortifySource>;
+
+def warn_fortify_umask_unused_bits : Warning<
+  "'umask' argument sets non-file-permission bits (0%0); those bits are "
+  "ignored">,
   InGroup<FortifySource>;
 
 def subst_format_overflow : TextSubstitution<
@@ -11848,6 +11847,12 @@ def err_record_with_pointers_kernel_param : Error<
   "%select{struct|union}0 kernel parameters may not contain pointers">;
 def note_within_field_of_type : Note<
   "within field of type %0 declared here">;
+def note_within_capture : Note<
+  "within capture %0 of lambda expression here">;
+def note_within_base_of_type : Note<
+  "within base class of type %0 declared here">;
+def note_within_param_of_type : Note<
+  "within parameter %0 of type %1 declared here">;
 def note_illegal_field_declared_here : Note<
   "field of illegal %select{type|pointer type}0 %1 declared here">;
 def err_opencl_type_struct_or_union_field : Error<

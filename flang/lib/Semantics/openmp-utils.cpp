@@ -140,24 +140,26 @@ static const Symbol *GetFunctionReferenceSymbol(
 const Symbol *GetObjectSymbol(const parser::OmpObject &object, bool ultimate) {
   // Some symbols may be missing if the resolution failed, e.g. when an
   // undeclared name is used with implicit none.
-  if (auto *name{std::get_if<parser::Name>(&object.u)}) {
+  if (auto *name{GetCommonBlockFromObj(object)}) {
     if (ultimate) {
       return name->symbol ? &name->symbol->GetUltimate() : nullptr;
     } else {
       return name->symbol;
     }
-  } else if (auto *desg{std::get_if<parser::Designator>(&object.u)}) {
+  } else if (auto *desg{GetDesignatorFromObj(object)}) {
     const parser::Name &last{GetLastName(*desg)};
     if (ultimate) {
       return last.symbol ? &last.symbol->GetUltimate() : nullptr;
     } else {
       return last.symbol;
     }
-  } else if (auto *locator{std::get_if<parser::OmpLocator>(&object.u)}) {
+  } else if (auto *locator{GetLocatorFromObj(object)}) {
     const Symbol *sym = common::visit( //
         common::visitors{
-            [](const parser::OmpReservedIdentifier &x) { return x.v.symbol; },
-            [](const parser::FunctionReference &x) {
+            [](const parser::OmpReservedIdentifier &x) -> const Symbol * {
+              return x.v.symbol;
+            },
+            [](const parser::FunctionReference &x) -> const Symbol * {
               return GetFunctionReferenceSymbol(x);
             },
         },
@@ -261,7 +263,7 @@ bool IsExtendedListItem(
   if (IsVariableListItem(object, semaCtx)) {
     return true;
   }
-  if (!std::holds_alternative<parser::OmpLocator>(object.u)) {
+  if (!GetLocatorFromObj(object)) {
     if (auto *sym{GetObjectSymbol(object, /*ultimate=*/true)}) {
       return IsProcedure(*sym);
     }
@@ -271,12 +273,11 @@ bool IsExtendedListItem(
 
 bool IsLocatorListItem(
     const parser::OmpObject &object, SemanticsContext *semaCtx) {
-  if (IsVariableListItem(object, semaCtx) ||
-      std::holds_alternative<parser::OmpLocator>(object.u)) {
+  if (IsVariableListItem(object, semaCtx) || GetLocatorFromObj(object)) {
     return true;
   }
   // A statement function call may look like an array element access.
-  if (auto *desg{parser::Unwrap<parser::Designator>(object)}) {
+  if (auto *desg{GetDesignatorFromObj(object)}) {
     evaluate::ExpressionAnalyzer ea(*semaCtx);
     auto restorer{ea.GetContextualMessages().DiscardMessages()};
     return IsVarOrFunctionRef(ea.Analyze(*desg));
@@ -293,7 +294,7 @@ bool IsVariableListItem(
 }
 
 bool IsSubstring(const parser::OmpObject &object, SemanticsContext *semaCtx) {
-  if (auto *desg{parser::Unwrap<parser::Designator>(object)}) {
+  if (auto *desg{GetDesignatorFromObj(object)}) {
     evaluate::ExpressionAnalyzer ea(*semaCtx);
     auto restorer{ea.GetContextualMessages().DiscardMessages()};
     if (MaybeExpr expr{ea.Analyze(*desg)}) {
