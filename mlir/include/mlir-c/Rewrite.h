@@ -161,6 +161,11 @@ mlirRewriterBaseClone(MlirRewriterBase rewriter, MlirOperation op);
 MLIR_CAPI_EXPORTED MlirOperation mlirRewriterBaseCloneWithoutRegions(
     MlirRewriterBase rewriter, MlirOperation op);
 
+/// Clones the given operation using the rewriter and the provided IRMapping.
+/// The mapping is updated with the results of the cloned operation.
+MLIR_CAPI_EXPORTED MlirOperation mlirRewriterBaseCloneWithMapping(
+    MlirRewriterBase rewriter, MlirOperation op, MlirIRMapping mapping);
+
 /// Clone the blocks that belong to "region" before the given position in
 /// another region "parent".
 MLIR_CAPI_EXPORTED void

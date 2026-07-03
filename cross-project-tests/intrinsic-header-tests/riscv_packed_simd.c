@@ -1968,3 +1968,117 @@ uint8x8_t test_pabdu_u8x8(uint8x8_t a, uint8x8_t b) {
 uint16x4_t test_pabdu_u16x4(uint16x4_t a, uint16x4_t b) {
   return __riscv_pabdu_u16x4(a, b);
 }
+
+// CHECK-LABEL: test_predsum_i8x4_i32:
+// RV32:        predsum.bs
+// RV64:        zext.w
+// RV64:        predsum.bs
+int32_t test_predsum_i8x4_i32(int8x4_t a, int32_t b) {
+  return __riscv_predsum_i8x4_i32(a, b);
+}
+
+// CHECK-LABEL: test_predsumu_u8x4_u32:
+// RV32:        predsumu.bs
+// RV64:        zext.w
+// RV64:        predsumu.bs
+uint32_t test_predsumu_u8x4_u32(uint8x4_t a, uint32_t b) {
+  return __riscv_predsumu_u8x4_u32(a, b);
+}
+
+// CHECK-LABEL: test_predsum_i16x2_i32:
+// RV32:        predsum.hs
+// RV64:        zext.w
+// RV64:        predsum.hs
+int32_t test_predsum_i16x2_i32(int16x2_t a, int32_t b) {
+  return __riscv_predsum_i16x2_i32(a, b);
+}
+
+// CHECK-LABEL: test_predsumu_u16x2_u32:
+// RV32:        predsumu.hs
+// RV64:        zext.w
+// RV64:        predsumu.hs
+uint32_t test_predsumu_u16x2_u32(uint16x2_t a, uint32_t b) {
+  return __riscv_predsumu_u16x2_u32(a, b);
+}
+
+// CHECK-LABEL: test_predsum_i8x8_i32:
+// RV32:        predsum.dbs
+// RV64:        predsum.bs
+int32_t test_predsum_i8x8_i32(int8x8_t a, int32_t b) {
+  return __riscv_predsum_i8x8_i32(a, b);
+}
+
+// CHECK-LABEL: test_predsumu_u8x8_u32:
+// RV32:        predsumu.dbs
+// RV64:        predsumu.bs
+uint32_t test_predsumu_u8x8_u32(uint8x8_t a, uint32_t b) {
+  return __riscv_predsumu_u8x8_u32(a, b);
+}
+
+// CHECK-LABEL: test_predsum_i16x4_i32:
+// RV32:        predsum.dhs
+// RV64:        predsum.hs
+int32_t test_predsum_i16x4_i32(int16x4_t a, int32_t b) {
+  return __riscv_predsum_i16x4_i32(a, b);
+}
+
+// CHECK-LABEL: test_predsumu_u16x4_u32:
+// RV32:        predsumu.dhs
+// RV64:        predsumu.hs
+uint32_t test_predsumu_u16x4_u32(uint16x4_t a, uint32_t b) {
+  return __riscv_predsumu_u16x4_u32(a, b);
+}
+
+// TODO: The trailing "mvd" is a GPRPair copy inserted because wadda clobbers
+// its rd; it may be avoidable (e.g. via convertToThreeAddress).
+// CHECK-LABEL: test_predsum_i8x8_i64:
+// RV32:        predsum.dbs
+// RV32:        wadda{{[[:space:]]}}
+// RV32:        mvd
+// RV64:        predsum.bs
+int64_t test_predsum_i8x8_i64(int8x8_t a, int64_t b) {
+  return __riscv_predsum_i8x8_i64(a, b);
+}
+
+// CHECK-LABEL: test_predsumu_u8x8_u64:
+// RV32:        predsumu.dbs
+// RV32:        waddau{{[[:space:]]}}
+// RV32:        mvd
+// RV64:        predsumu.bs
+uint64_t test_predsumu_u8x8_u64(uint8x8_t a, uint64_t b) {
+  return __riscv_predsumu_u8x8_u64(a, b);
+}
+
+// CHECK-LABEL: test_predsum_i16x4_i64:
+// RV32:        predsum.dhs
+// RV32:        wadda{{[[:space:]]}}
+// RV32:        mvd
+// RV64:        predsum.hs
+int64_t test_predsum_i16x4_i64(int16x4_t a, int64_t b) {
+  return __riscv_predsum_i16x4_i64(a, b);
+}
+
+// CHECK-LABEL: test_predsumu_u16x4_u64:
+// RV32:        predsumu.dhs
+// RV32:        waddau{{[[:space:]]}}
+// RV32:        mvd
+// RV64:        predsumu.hs
+uint64_t test_predsumu_u16x4_u64(uint16x4_t a, uint64_t b) {
+  return __riscv_predsumu_u16x4_u64(a, b);
+}
+
+// CHECK-LABEL: test_predsum_i32x2_i64:
+// RV32:        wadda{{[[:space:]]}}
+// RV32:        mvd
+// RV64:        predsum.ws
+int64_t test_predsum_i32x2_i64(int32x2_t a, int64_t b) {
+  return __riscv_predsum_i32x2_i64(a, b);
+}
+
+// CHECK-LABEL: test_predsumu_u32x2_u64:
+// RV32:        waddau{{[[:space:]]}}
+// RV32:        mvd
+// RV64:        predsumu.ws
+uint64_t test_predsumu_u32x2_u64(uint32x2_t a, uint64_t b) {
+  return __riscv_predsumu_u32x2_u64(a, b);
+}

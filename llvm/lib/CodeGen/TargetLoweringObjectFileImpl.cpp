@@ -816,14 +816,34 @@ getGlobalObjectInfo(const GlobalObject *GO, const TargetMachine &TM,
   return {Group, IsComdat, Flags, Type, EntrySize};
 }
 
+static StringRef handlePragmaClangSection(const GlobalObject *GO,
+                                          SectionKind Kind) {
+  // Check if '#pragma clang section' name is applicable.
+  // Note that pragma directive overrides -ffunction-section, -fdata-section
+  // and so section name is exactly as user specified and not uniqued.
+  const GlobalVariable *GV = dyn_cast<GlobalVariable>(GO);
+  if (GV && GV->hasImplicitSection()) {
+    auto Attrs = GV->getAttributes();
+    if (Attrs.hasAttribute("bss-section") && Kind.isBSS())
+      return Attrs.getAttribute("bss-section").getValueAsString();
+    else if (Attrs.hasAttribute("rodata-section") && Kind.isReadOnly())
+      return Attrs.getAttribute("rodata-section").getValueAsString();
+    else if (Attrs.hasAttribute("relro-section") && Kind.isReadOnlyWithRel())
+      return Attrs.getAttribute("relro-section").getValueAsString();
+    else if (Attrs.hasAttribute("data-section") && Kind.isData())
+      return Attrs.getAttribute("data-section").getValueAsString();
+  }
+
+  return GO->getSection();
+}
+
 static MCSection *selectExplicitSectionGlobal(const GlobalObject *GO,
                                               SectionKind Kind,
                                               const TargetMachine &TM,
                                               MCContext &Ctx, Mangler &Mang,
                                               unsigned &NextUniqueID,
                                               bool Retain, bool ForceUnique) {
-  StringRef SectionName =
-      TargetLoweringObjectFile::getCustomSectionName(GO, Kind);
+  StringRef SectionName = handlePragmaClangSection(GO, Kind);
 
   // Infer section flags from the section name if we can.
   Kind = getELFKindForNamedSection(SectionName, Kind);
@@ -1364,8 +1384,7 @@ static void checkMachOComdat(const GlobalValue *GV) {
 MCSection *TargetLoweringObjectFileMachO::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
 
-  StringRef SectionName =
-      TargetLoweringObjectFile::getCustomSectionName(GO, Kind);
+  StringRef SectionName = handlePragmaClangSection(GO, Kind);
 
   // Parse the section specifier and create it if valid.
   StringRef Segment, Section;
@@ -1731,7 +1750,7 @@ static int getSelectionForCOFF(const GlobalValue *GV) {
 
 MCSection *TargetLoweringObjectFileCOFF::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
-  StringRef Name = TargetLoweringObjectFile::getCustomSectionName(GO, Kind);
+  StringRef Name = handlePragmaClangSection(GO, Kind);
   if (Name == getInstrProfSectionName(IPSK_covmap, Triple::COFF,
                                       /*AddSegmentInfo=*/false) ||
       Name == getInstrProfSectionName(IPSK_covfun, Triple::COFF,

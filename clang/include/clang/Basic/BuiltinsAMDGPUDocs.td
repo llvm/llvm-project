@@ -691,3 +691,23 @@ def DocTensorStoreFromLDS_GFX1250 : Documentation {
 Asynchronously copies a tensor from LDS into global memory.
 }];
 }
+
+//===----------------------------------------------------------------------===//
+// Bit Manipulation Builtins
+//===----------------------------------------------------------------------===//
+
+def DocCatBitManip : DocumentationCategory<"Bit Manipulation Builtins"> {
+  let Content = [{
+These builtins perform bit-manipulation operations within a wavefront.
+}];
+}
+
+def DocSBitReplicate : Documentation {
+  let Category = DocCatBitManip;
+  let Content = [{
+Replicates each bit of the 32-bit ``src`` operand into two adjacent bits of a
+64-bit result. Bit ``i`` of the input is copied to bits ``2*i`` and ``2*i+1``
+of the output. The operand must be uniform across the wavefront. A divergent
+value gives an undefined result.
+}];
+}

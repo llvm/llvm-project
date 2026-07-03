@@ -67,6 +67,8 @@ inline bool IsLifetimeSafetyEnabled(Sema &S, const Decl *D) {
       diag::warn_lifetime_safety_invalidated_global,
       diag::warn_lifetime_safety_cross_tu_param_suggestion,
       diag::warn_lifetime_safety_intra_tu_param_suggestion,
+      diag::warn_lifetime_safety_cross_tu_ctor_param_suggestion,
+      diag::warn_lifetime_safety_intra_tu_ctor_param_suggestion,
       diag::warn_lifetime_safety_cross_tu_this_suggestion,
       diag::warn_lifetime_safety_intra_tu_this_suggestion,
       diag::warn_lifetime_safety_inapplicable_lifetimebound};
@@ -74,6 +76,28 @@ inline bool IsLifetimeSafetyEnabled(Sema &S, const Decl *D) {
     if (!Diags.isIgnored(DiagID, D->getBeginLoc()))
       return true;
   return false;
+}
+
+inline bool ShouldSuggestLifetimeAnnotations(Sema &S, const Decl *D) {
+  DiagnosticsEngine &Diags = S.getDiagnostics();
+  constexpr unsigned DiagIDs[] = {
+      diag::warn_lifetime_safety_intra_tu_param_suggestion,
+      diag::warn_lifetime_safety_cross_tu_param_suggestion,
+      diag::warn_lifetime_safety_intra_tu_ctor_param_suggestion,
+      diag::warn_lifetime_safety_cross_tu_ctor_param_suggestion,
+      diag::warn_lifetime_safety_intra_tu_this_suggestion,
+      diag::warn_lifetime_safety_cross_tu_this_suggestion};
+  for (unsigned DiagID : DiagIDs)
+    if (!Diags.isIgnored(DiagID, D->getBeginLoc()))
+      return true;
+  return false;
+}
+
+inline LifetimeSafetyOpts GetLifetimeSafetyOpts(Sema &S, const Decl *D) {
+  LifetimeSafetyOpts LSOpts;
+  LSOpts.MaxCFGBlocks = S.getLangOpts().LifetimeSafetyMaxCFGBlocks;
+  LSOpts.SuggestAnnotations = ShouldSuggestLifetimeAnnotations(S, D);
+  return LSOpts;
 }
 
 class LifetimeSafetySemaHelperImpl : public LifetimeSafetySemaHelper {
@@ -260,10 +284,15 @@ public:
   void suggestLifetimeboundToParmVar(WarningScope Scope,
                                      const ParmVarDecl *ParmToAnnotate,
                                      EscapingTarget Target) override {
-    unsigned DiagID =
-        (Scope == WarningScope::CrossTU)
-            ? diag::warn_lifetime_safety_cross_tu_param_suggestion
-            : diag::warn_lifetime_safety_intra_tu_param_suggestion;
+    unsigned DiagID;
+    if (isa<CXXConstructorDecl>(ParmToAnnotate->getDeclContext()))
+      DiagID = (Scope == WarningScope::CrossTU)
+                   ? diag::warn_lifetime_safety_cross_tu_ctor_param_suggestion
+                   : diag::warn_lifetime_safety_intra_tu_ctor_param_suggestion;
+    else
+      DiagID = (Scope == WarningScope::CrossTU)
+                   ? diag::warn_lifetime_safety_cross_tu_param_suggestion
+                   : diag::warn_lifetime_safety_intra_tu_param_suggestion;
 
     auto [InsertionPoint, FixItText] = getLifetimeBoundFixIt(ParmToAnnotate);
 

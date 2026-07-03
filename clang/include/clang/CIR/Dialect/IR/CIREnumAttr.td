@@ -26,6 +26,12 @@ class CIR_I64EnumAttr<string name, string summary, list<I64EnumAttrCase> cases>
   let cppNamespace = "::cir";
 }
 
+class CIR_I32BitEnumAttr<string name, string summary,
+                         list<BitEnumCaseBase> cases>
+    : I32BitEnumAttr<name, summary, cases> {
+  let cppNamespace = "::cir";
+}
+
 class CIR_EnumAttr<EnumAttrInfo info, string name = "", list<Trait> traits = []>
     : EnumAttr<CIR_Dialect, info, name, traits> {
   let assemblyFormat = "`<` $value `>`";

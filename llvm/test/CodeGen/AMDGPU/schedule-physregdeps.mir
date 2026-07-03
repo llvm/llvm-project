@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -run-pass machine-scheduler -verify-machineinstrs %s -o - -debug-only=machine-scheduler 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx700 -run-pass machine-scheduler -verify-machineinstrs %s -o - -debug-only=machine-scheduler 2>&1 | FileCheck %s
 # REQUIRES: asserts
 
 # CHECK:     SU(0):   $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec
@@ -34,7 +34,7 @@
 # CHECK-NEXT:    SU(2): Out  Latency=1
 # CHECK-NEXT:    SU(2): Data Latency=1 Reg=$vgpr0
 # CHECK:       Successors:
-# CHECK-NEXT:    ExitSU: Ord  Latency=3 Artificial
+# CHECK-NEXT:    ExitSU: Ord  Latency=79 Artificial
 
 ---
 name: test

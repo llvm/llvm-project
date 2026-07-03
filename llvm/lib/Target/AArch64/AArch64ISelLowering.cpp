@@ -155,8 +155,6 @@ cl::opt<bool> EnableSVEGISel(
     cl::desc("Enable / disable SVE scalable vectors in Global ISel"),
     cl::init(false));
 
-// TODO: This option should be removed once we switch to always using PTRADD in
-// the SelectionDAG.
 static cl::opt<int> BrMergingBaseCostThresh(
     "aarch64-br-merging-base-cost", cl::init(2),
     cl::desc(
@@ -195,6 +193,8 @@ static cl::opt<int> BrMergingUnlikelyBias(
         "merge unlikely branches."),
     cl::Hidden);
 
+// TODO: This option should be removed once we switch to always using PTRADD in
+// the SelectionDAG.
 static cl::opt<bool> UseFEATCPACodegen(
     "aarch64-use-featcpa-codegen", cl::Hidden,
     cl::desc("Generate ISD::PTRADD nodes for pointer arithmetic in "
@@ -1234,6 +1234,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::GlobalAddress);
 
   setTargetDAGCombine(ISD::CTLZ);
+  setTargetDAGCombine({ISD::CTTZ, ISD::CTTZ_ZERO_POISON});
 
   setTargetDAGCombine(ISD::GET_ACTIVE_LANE_MASK);
 
@@ -1595,7 +1596,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CLMUL, MVT::i8, Custom);
     setOperationAction(ISD::CLMUL, {MVT::v8i8, MVT::v16i8}, Legal);
     if (Subtarget->hasAES()) {
-      setOperationAction(ISD::CLMUL, {MVT::i16, MVT::i32, MVT::i64}, Custom);
+      setOperationAction(ISD::CLMUL, {MVT::i16, MVT::i32, MVT::i64, MVT::v4i32},
+                         Custom);
       setOperationAction(ISD::CLMUL, {MVT::v1i64, MVT::v2i64}, Legal);
       setOperationAction(ISD::CLMULH, {MVT::v1i64, MVT::v2i64}, Legal);
     }
@@ -8315,10 +8317,26 @@ SDValue AArch64TargetLowering::LowerCLMUL(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
   assert((VT == MVT::i64 || VT == MVT::i32 || VT == MVT::i16 || VT == MVT::i8 ||
-          VT == MVT::nxv8i16 || VT == MVT::nxv2i64) &&
+          VT == MVT::v4i32 || VT == MVT::nxv8i16 || VT == MVT::nxv2i64) &&
          "Unexpected Type");
   uint64_t ScalarSize = VT.getScalarSizeInBits();
   APInt HiWordMask = APInt::getBitsSet(ScalarSize, ScalarSize / 2, ScalarSize);
+
+  if (VT == MVT::v4i32) {
+    SDValue LoIdx = DAG.getVectorIdxConstant(0, DL);
+    SDValue HiIdx = DAG.getVectorIdxConstant(2, DL);
+    SDValue LoA = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32,
+                              Op.getOperand(0), LoIdx);
+    SDValue LoB = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32,
+                              Op.getOperand(1), LoIdx);
+    SDValue HiA = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32,
+                              Op.getOperand(0), HiIdx);
+    SDValue HiB = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32,
+                              Op.getOperand(1), HiIdx);
+    SDValue LoCLMUL = DAG.getNode(ISD::CLMUL, DL, MVT::v2i32, LoA, LoB);
+    SDValue HiCLMUL = DAG.getNode(ISD::CLMUL, DL, MVT::v2i32, HiA, HiB);
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, LoCLMUL, HiCLMUL);
+  }
 
   if (VT == MVT::nxv2i64) {
     SDValue OpA =
@@ -19758,7 +19776,7 @@ bool AArch64TargetLowering::isFMAFasterThanFMulAndFAdd(
     return Subtarget->hasFullFP16();
   case MVT::f32:
   case MVT::f64:
-    return true;
+    return Subtarget->hasFPARMv8();
   case MVT::bf16:
     return VT.isScalableVector() && Subtarget->hasBF16() &&
            Subtarget->isNonStreamingSVEorSME2Available();
@@ -19774,7 +19792,7 @@ bool AArch64TargetLowering::isFMAFasterThanFMulAndFAdd(const Function &F,
   switch (Ty->getScalarType()->getTypeID()) {
   case Type::FloatTyID:
   case Type::DoubleTyID:
-    return true;
+    return Subtarget->hasFPARMv8();
   default:
     return false;
   }
@@ -24455,6 +24473,109 @@ tryCombineFADDReductionWithZero(SDNode *N, SelectionDAG &DAG,
   return Elts[0];
 }
 
+/// Returns the element size of a predicate-as-counter while intrinsic.
+static unsigned getPredCounterWhileElementSize(Intrinsic::ID IID) {
+  switch (IID) {
+  case Intrinsic::aarch64_sve_whilege_c8:
+  case Intrinsic::aarch64_sve_whilegt_c8:
+  case Intrinsic::aarch64_sve_whilelt_c8:
+  case Intrinsic::aarch64_sve_whilele_c8:
+  case Intrinsic::aarch64_sve_whilehs_c8:
+  case Intrinsic::aarch64_sve_whilehi_c8:
+  case Intrinsic::aarch64_sve_whilelo_c8:
+  case Intrinsic::aarch64_sve_whilels_c8:
+    return 8;
+  case Intrinsic::aarch64_sve_whilege_c16:
+  case Intrinsic::aarch64_sve_whilegt_c16:
+  case Intrinsic::aarch64_sve_whilelt_c16:
+  case Intrinsic::aarch64_sve_whilele_c16:
+  case Intrinsic::aarch64_sve_whilehs_c16:
+  case Intrinsic::aarch64_sve_whilehi_c16:
+  case Intrinsic::aarch64_sve_whilelo_c16:
+  case Intrinsic::aarch64_sve_whilels_c16:
+    return 16;
+  case Intrinsic::aarch64_sve_whilege_c32:
+  case Intrinsic::aarch64_sve_whilegt_c32:
+  case Intrinsic::aarch64_sve_whilelt_c32:
+  case Intrinsic::aarch64_sve_whilele_c32:
+  case Intrinsic::aarch64_sve_whilehs_c32:
+  case Intrinsic::aarch64_sve_whilehi_c32:
+  case Intrinsic::aarch64_sve_whilelo_c32:
+  case Intrinsic::aarch64_sve_whilels_c32:
+    return 32;
+  case Intrinsic::aarch64_sve_whilege_c64:
+  case Intrinsic::aarch64_sve_whilegt_c64:
+  case Intrinsic::aarch64_sve_whilelt_c64:
+  case Intrinsic::aarch64_sve_whilele_c64:
+  case Intrinsic::aarch64_sve_whilehs_c64:
+  case Intrinsic::aarch64_sve_whilehi_c64:
+  case Intrinsic::aarch64_sve_whilelo_c64:
+  case Intrinsic::aarch64_sve_whilels_c64:
+    return 64;
+  default:
+    llvm_unreachable("Unexpected IID");
+  }
+}
+
+/// Returns the ISD opcode for a predicate-as-counter while intrinsic.
+static unsigned getPredCounterWhileOpcode(Intrinsic::ID IID) {
+  switch (IID) {
+  case Intrinsic::aarch64_sve_whilege_c8:
+  case Intrinsic::aarch64_sve_whilege_c16:
+  case Intrinsic::aarch64_sve_whilege_c32:
+  case Intrinsic::aarch64_sve_whilege_c64:
+    return AArch64ISD::WHILEGE_PRED_COUNTER;
+  case Intrinsic::aarch64_sve_whilegt_c8:
+  case Intrinsic::aarch64_sve_whilegt_c16:
+  case Intrinsic::aarch64_sve_whilegt_c32:
+  case Intrinsic::aarch64_sve_whilegt_c64:
+    return AArch64ISD::WHILEGT_PRED_COUNTER;
+  case Intrinsic::aarch64_sve_whilelt_c8:
+  case Intrinsic::aarch64_sve_whilelt_c16:
+  case Intrinsic::aarch64_sve_whilelt_c32:
+  case Intrinsic::aarch64_sve_whilelt_c64:
+    return AArch64ISD::WHILELT_PRED_COUNTER;
+  case Intrinsic::aarch64_sve_whilele_c8:
+  case Intrinsic::aarch64_sve_whilele_c16:
+  case Intrinsic::aarch64_sve_whilele_c32:
+  case Intrinsic::aarch64_sve_whilele_c64:
+    return AArch64ISD::WHILELE_PRED_COUNTER;
+  case Intrinsic::aarch64_sve_whilehs_c8:
+  case Intrinsic::aarch64_sve_whilehs_c16:
+  case Intrinsic::aarch64_sve_whilehs_c32:
+  case Intrinsic::aarch64_sve_whilehs_c64:
+    return AArch64ISD::WHILEHS_PRED_COUNTER;
+  case Intrinsic::aarch64_sve_whilehi_c8:
+  case Intrinsic::aarch64_sve_whilehi_c16:
+  case Intrinsic::aarch64_sve_whilehi_c32:
+  case Intrinsic::aarch64_sve_whilehi_c64:
+    return AArch64ISD::WHILEHI_PRED_COUNTER;
+  case Intrinsic::aarch64_sve_whilelo_c8:
+  case Intrinsic::aarch64_sve_whilelo_c16:
+  case Intrinsic::aarch64_sve_whilelo_c32:
+  case Intrinsic::aarch64_sve_whilelo_c64:
+    return AArch64ISD::WHILELO_PRED_COUNTER;
+  case Intrinsic::aarch64_sve_whilels_c8:
+  case Intrinsic::aarch64_sve_whilels_c16:
+  case Intrinsic::aarch64_sve_whilels_c32:
+  case Intrinsic::aarch64_sve_whilels_c64:
+    return AArch64ISD::WHILELS_PRED_COUNTER;
+  default:
+    llvm_unreachable("Unexpected IID");
+  }
+}
+
+/// Lower a predicate-as-counter while intrinsic to an AArch64ISD node.
+static SDValue lowerPredCounterWhile(Intrinsic::ID IID, SDNode *N,
+                                     SelectionDAG &DAG) {
+  SDLoc DL(N);
+  unsigned ElementSizeInBits = getPredCounterWhileElementSize(IID);
+  return DAG.getNode(getPredCounterWhileOpcode(IID), DL,
+                     DAG.getVTList(MVT::aarch64svcount, FlagsVT),
+                     N->getOperand(1), N->getOperand(2), N->getOperand(3),
+                     DAG.getTargetConstant(ElementSizeInBits, DL, MVT::i64));
+}
+
 static SDValue performIntrinsicCombine(SDNode *N,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const AArch64Subtarget *Subtarget) {
@@ -24792,6 +24913,39 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_sve_bsl2n:
   case Intrinsic::aarch64_sve_nbsl:
     return combineSVEBitSel(IID, N, DAG);
+  case Intrinsic::aarch64_sve_whilege_c8:
+  case Intrinsic::aarch64_sve_whilege_c16:
+  case Intrinsic::aarch64_sve_whilege_c32:
+  case Intrinsic::aarch64_sve_whilege_c64:
+  case Intrinsic::aarch64_sve_whilegt_c8:
+  case Intrinsic::aarch64_sve_whilegt_c16:
+  case Intrinsic::aarch64_sve_whilegt_c32:
+  case Intrinsic::aarch64_sve_whilegt_c64:
+  case Intrinsic::aarch64_sve_whilelt_c8:
+  case Intrinsic::aarch64_sve_whilelt_c16:
+  case Intrinsic::aarch64_sve_whilelt_c32:
+  case Intrinsic::aarch64_sve_whilelt_c64:
+  case Intrinsic::aarch64_sve_whilele_c8:
+  case Intrinsic::aarch64_sve_whilele_c16:
+  case Intrinsic::aarch64_sve_whilele_c32:
+  case Intrinsic::aarch64_sve_whilele_c64:
+  case Intrinsic::aarch64_sve_whilehs_c8:
+  case Intrinsic::aarch64_sve_whilehs_c16:
+  case Intrinsic::aarch64_sve_whilehs_c32:
+  case Intrinsic::aarch64_sve_whilehs_c64:
+  case Intrinsic::aarch64_sve_whilehi_c8:
+  case Intrinsic::aarch64_sve_whilehi_c16:
+  case Intrinsic::aarch64_sve_whilehi_c32:
+  case Intrinsic::aarch64_sve_whilehi_c64:
+  case Intrinsic::aarch64_sve_whilelo_c8:
+  case Intrinsic::aarch64_sve_whilelo_c16:
+  case Intrinsic::aarch64_sve_whilelo_c32:
+  case Intrinsic::aarch64_sve_whilelo_c64:
+  case Intrinsic::aarch64_sve_whilels_c8:
+  case Intrinsic::aarch64_sve_whilels_c16:
+  case Intrinsic::aarch64_sve_whilels_c32:
+  case Intrinsic::aarch64_sve_whilels_c64:
+    return lowerPredCounterWhile(IID, N, DAG);
   }
   return SDValue();
 }
@@ -26560,6 +26714,134 @@ static SDValue vectorToScalarBitmask(SDNode *N, SelectionDAG &DAG) {
   EVT ResultVT = MVT::getIntegerVT(std::max<unsigned>(
       NumElts, VecVT.getVectorElementType().getSizeInBits()));
   return DAG.getNode(ISD::VECREDUCE_ADD, DL, ResultVT, RepresentativeBits);
+}
+
+// When taking the trailing-zero count of a bitcast from <N x i1> to scalar
+// iN, we can pack each lane into a small bit-slot of a 64-bit scalar
+// with shrn (for byte lanes) or xtn (for wider lanes) then run a
+// scalar cttz on the result.
+static SDValue performCTTZCombine(SDNode *N,
+                                  TargetLowering::DAGCombinerInfo &DCI,
+                                  SelectionDAG &DAG) {
+  // Run before vectorToScalarBitmask() expands it.
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (!VT.isScalarInteger())
+    return SDValue();
+  SDValue BitcastNode = N->getOperand(0);
+  if (BitcastNode.getOpcode() != ISD::BITCAST)
+    return SDValue();
+  SDValue Predicate = BitcastNode.getOperand(0);
+  EVT PredVT = Predicate.getValueType();
+  if (!PredVT.isFixedLengthVector() || PredVT.getVectorElementType() != MVT::i1)
+    return SDValue();
+
+  unsigned NumLanes = PredVT.getVectorNumElements();
+  if (!isPowerOf2_32(NumLanes) || NumLanes < 2 || NumLanes > 32)
+    return SDValue();
+
+  constexpr unsigned DRegBits = 64;
+  constexpr unsigned QRegBits = 128;
+  constexpr unsigned MinLaneBits = 8;
+
+  // Pick a lane width to sext the predicate to. Prefer the original
+  // compare input width if we can find it and it fits in at most two NEON
+  // registers but otherwise pick a minimum-width type that fits.
+  EVT MaskVT = tryGetOriginalBoolVectorType(Predicate);
+  if (!MaskVT.isSimple() ||
+      MaskVT.changeVectorElementTypeToInteger().getSizeInBits() >
+          2 * QRegBits ||
+      MaskVT.changeVectorElementTypeToInteger().getSizeInBits() < DRegBits) {
+    unsigned LaneBits = std::max(DRegBits / NumLanes, MinLaneBits);
+    MaskVT = MVT::getVectorVT(MVT::getIntegerVT(LaneBits), NumLanes);
+  }
+  MaskVT = MaskVT.changeVectorElementTypeToInteger();
+
+  unsigned MaskBits = MaskVT.getSizeInBits();
+  if (MaskBits != DRegBits && MaskBits != QRegBits && MaskBits != 2 * QRegBits)
+    return SDValue();
+
+  // Target 64 bits when lanes fit, otherwise 128.
+  unsigned TargetBits = DRegBits;
+  if (MaskBits == 2 * QRegBits && NumLanes > 16)
+    TargetBits = QRegBits;
+  unsigned CompressedBits = std::min(MaskBits, TargetBits);
+
+  SDLoc DL(N);
+  SDValue Mask = DAG.getSExtOrTrunc(Predicate, DL, MaskVT);
+
+  LLVMContext &Ctx = *DAG.getContext();
+
+  // NEON's smallest vector lane type is i8 so we can't narrow further.
+  // Instead, bitcast the mask to i16 lanes and shrn by 4 to pack each
+  // input byte into 4 bits of the output
+  auto ShrnPair = [&](SDValue V) -> SDValue {
+    EVT InVT = V.getValueType();
+    EVT OutVT = InVT.getHalfNumVectorElementsVT(Ctx);
+    EVT PairedVT = OutVT.widenIntegerVectorElementType(Ctx);
+    SDValue Paired = DAG.getNode(AArch64ISD::NVCAST, DL, PairedVT, V);
+    SDValue ShAmt = DAG.getConstant(MinLaneBits / 2, DL, PairedVT);
+    SDValue Shifted = DAG.getNode(ISD::SRL, DL, PairedVT, Paired, ShAmt);
+    return DAG.getNode(ISD::TRUNCATE, DL, OutVT, Shifted);
+  };
+
+  // Trailing-zero count of the compressed result as an i64.
+  auto CompressedCttz = [&](SDValue V) -> SDValue {
+    if (V.getValueType().getSizeInBits() == DRegBits) {
+      SDValue Nv = DAG.getNode(AArch64ISD::NVCAST, DL, MVT::v1i64, V);
+      SDValue Scalar = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Nv,
+                                   DAG.getConstant(0, DL, MVT::i64));
+      return DAG.getNode(ISD::CTTZ, DL, MVT::i64, Scalar);
+    }
+    SDValue Compressed = DAG.getBitcast(MVT::i128, V);
+    // BITCAST puts lane 0 at the high end of the scalar on BE (unlike NVCAST
+    // above), so use clz instead of cttz to find the first match
+    unsigned Op = DAG.getDataLayout().isLittleEndian() ? ISD::CTTZ : ISD::CTLZ;
+    SDValue Ctz = DAG.getNode(Op, DL, MVT::i128, Compressed);
+    return DAG.getNode(ISD::TRUNCATE, DL, MVT::i64, Ctz);
+  };
+
+  SDValue Cur = Mask;
+  // Narrow wide lanes toward CompressedBits with xtn.
+  while (Cur.getValueType().getScalarSizeInBits() > MinLaneBits &&
+         Cur.getValueType().getSizeInBits() > CompressedBits) {
+    EVT CurVT = Cur.getValueType();
+    unsigned CurLaneBits = CurVT.getScalarSizeInBits();
+    EVT NarrowVT = CurVT.changeVectorElementType(
+        Ctx, EVT::getIntegerVT(Ctx, CurLaneBits / 2));
+    Cur = DAG.getNode(ISD::TRUNCATE, DL, NarrowVT, Cur);
+  }
+
+  // If still too wide, pack two lanes per byte with shrn.
+  if (Cur.getValueType().getSizeInBits() > CompressedBits) {
+    EVT CurVT = Cur.getValueType();
+    if (CurVT.getSizeInBits() <= QRegBits) {
+      Cur = ShrnPair(Cur);
+    } else {
+      // Split into Q-reg-sized halves so each ShrnPair stays in range.
+      EVT HalfVT = CurVT.getHalfNumVectorElementsVT(Ctx);
+      SDValue Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, Cur,
+                               DAG.getConstant(0, DL, MVT::i64));
+      SDValue Hi = DAG.getNode(
+          ISD::EXTRACT_SUBVECTOR, DL, HalfVT, Cur,
+          DAG.getConstant(HalfVT.getVectorNumElements(), DL, MVT::i64));
+      Cur = DAG.getNode(ISD::CONCAT_VECTORS, DL, HalfVT, ShrnPair(Lo),
+                        ShrnPair(Hi));
+    }
+  }
+
+  // Cur has been narrowed to CompressedBits.
+  assert(Cur.getValueType().getSizeInBits() == CompressedBits &&
+         "Unexpected mask width!");
+
+  SDValue Ctz = CompressedCttz(Cur);
+  unsigned LaneIndexShift = Log2_32(CompressedBits / NumLanes);
+  if (LaneIndexShift)
+    Ctz = DAG.getNode(ISD::SRL, DL, MVT::i64, Ctz,
+                      DAG.getShiftAmountConstant(LaneIndexShift, MVT::i64, DL));
+  return DAG.getSExtOrTrunc(Ctz, DL, VT);
 }
 
 static SDValue combineBoolVectorAndTruncateStore(SelectionDAG &DAG,
@@ -30127,6 +30409,9 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performMINMAXCombine(N, DAG, *this);
   case ISD::TRUNCATE:
     return performTruncateCombine(N, DAG, DCI);
+  case ISD::CTTZ:
+  case ISD::CTTZ_ZERO_POISON:
+    return performCTTZCombine(N, DCI, DAG);
   case AArch64ISD::ANDS:
     return performANDSCombine(N, DCI);
   case AArch64ISD::ADC:
@@ -31439,6 +31724,22 @@ bool AArch64TargetLowering::useLoadStackGuardNode(const Module &M) const {
   if (Subtarget->isTargetAndroid() || Subtarget->isTargetFuchsia())
     return TargetLowering::useLoadStackGuardNode(M);
   return true;
+}
+
+bool AArch64TargetLowering::useStackGuardMixFP() const {
+  // Currently only MSVC CRTs mix the frame pointer into the stack guard value.
+  return Subtarget->getTargetTriple().isOSMSVCRT();
+}
+
+SDValue AArch64TargetLowering::emitStackGuardMixFP(SelectionDAG &DAG,
+                                                   SDValue Val,
+                                                   const SDLoc &DL) const {
+  // Mix the cookie value with FP to create a position-dependent guard.
+  // Both prologue (stores FP - Cookie) and epilogue (compares FP - Cookie)
+  // use the same mixing operation: FP - Val.
+  return DAG.getNode(
+      ISD::SUB, DL, Val.getValueType(),
+      DAG.getCopyFromReg(DAG.getEntryNode(), DL, AArch64::FP, MVT::i64), Val);
 }
 
 unsigned AArch64TargetLowering::combineRepeatedFPDivisors() const {
@@ -32944,7 +33245,8 @@ SDValue AArch64TargetLowering::LowerToScalableOp(SDValue Op,
     Ops.push_back(convertToScalableVector(DAG, ContainerVT, V));
   }
 
-  auto ScalableRes = DAG.getNode(Op.getOpcode(), SDLoc(Op), ContainerVT, Ops);
+  auto ScalableRes =
+      DAG.getNode(Op.getOpcode(), SDLoc(Op), ContainerVT, Ops, Op->getFlags());
   return convertFromScalableVector(DAG, VT, ScalableRes);
 }
 

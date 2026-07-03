@@ -16,30 +16,19 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       pull-requests: write
+    container:
+      image: "ghcr.io/llvm/amd64/ci-ubuntu-24.04-github-automation:latest@sha256:82b5304c5d99cf5d75a2334885aca57490cbb04f37d07fc49a10a2649824e526"
     if: >-
       (github.repository == 'llvm/llvm-project') &&
       (github.event.pull_request.merged == true)
     steps:
-      - name: Checkout Automation Script
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-          sparse-checkout: llvm/utils/git/
-          ref: main
-
-      - name: Setup Automation Script
-        working-directory: ./llvm/utils/git/
-        run: |
-          pip install --require-hashes -r requirements.txt
-
       - name: Add Buildbot information comment
-        working-directory: ./llvm/utils/git/
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_NUMBER: ${{ github.event.pull_request.number }}
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
         run: |
-          python3 ./github-automation.py \
+          github-automation.py \
             --token "$GH_TOKEN" \
             pr-buildbot-information \
             --issue-number "$ISSUE_NUMBER" \
