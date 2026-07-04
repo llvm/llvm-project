@@ -266,11 +266,8 @@ jobs:
           brew install ninja
       - name: Build and Test
         run: |
-          echo "** Debug **"
-          git diff --name-only HEAD~1...HEAD
-          echo "** Debug **"
-          
-          source <(git diff --name-only HEAD~1...HEAD | python3 .ci/compute_projects.py)
+          git diff --name-only HEAD~1...HEAD | python3 .ci/compute_projects.py > /tmp/env_vars.sh
+          source /tmp/env_vars.sh
 
           echo "Building projects: ${projects_to_build}"
           echo "Running project checks targets: ${project_check_targets}"
