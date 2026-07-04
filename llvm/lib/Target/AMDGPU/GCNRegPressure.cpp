@@ -22,6 +22,17 @@ using namespace llvm;
 
 #define DEBUG_TYPE "machine-scheduler"
 
+static cl::opt<bool> TrackPhysRegInGCNTrackers(
+    "amdgpu-track-physregs-in-gcn-trackers", cl::Hidden,
+    cl::desc("Track physical registers (e.g. from inline asm) in the GCN "
+             "Up/Down RP trackers. Enabled by default; acts as a global "
+             "safety switch to control physical register pressure tracking."),
+    cl::init(true));
+
+bool GCNRPTracker::physRegTrackingEnabled() const {
+  return TrackPhysRegInGCNTrackers;
+}
+
 bool llvm::isEqual(const GCNRPTracker::LiveRegSet &S1,
                    const GCNRPTracker::LiveRegSet &S2) {
   if (S1.size() != S2.size())
@@ -642,9 +653,8 @@ void GCNRPTracker::reset(const MachineRegisterInfo &MRI, SlotIndex SI) {
   VirtLiveRegs = llvm::getVirtLiveRegs(SI, LIS, MRI);
   MaxPressure = CurPressure = getVirtRegPressure(MRI, VirtLiveRegs);
 
-  updatePhysRegTracking();
-  // Always clear PhysLiveRegUnits even when TrackPhysRegs is false, to avoid
-  // stale data if physical tracking was previously enabled.
+  // Always clear PhysLiveRegUnits even when physical tracking is disabled, to
+  // avoid stale data if physical tracking was previously enabled.
   PhysLiveRegUnits.reset();
 }
 
@@ -657,9 +667,8 @@ void GCNRPTracker::reset(const MachineRegisterInfo &MRI,
     this->VirtLiveRegs = VirtLiveRegs;
   MaxPressure = CurPressure = getVirtRegPressure(MRI, VirtLiveRegs);
 
-  updatePhysRegTracking();
-  // Always clear PhysLiveRegUnits even when TrackPhysRegs is false, to avoid
-  // stale data if physical tracking was previously enabled.
+  // Always clear PhysLiveRegUnits even when physical tracking is disabled, to
+  // avoid stale data if physical tracking was previously enabled.
   PhysLiveRegUnits.reset();
 }
 
@@ -671,7 +680,7 @@ void GCNRPTracker::reset(const MachineRegisterInfo &MRInfo,
 }
 
 void GCNRPTracker::initPhysLiveUnits(const BitVector &PhysLiveUnits) {
-  if (!TrackPhysRegs)
+  if (!physRegTrackingEnabled())
     return;
   PhysLiveRegUnits = PhysLiveUnits;
   GCNRegPressure PhysPressure = constructPhysRegPressure();
@@ -753,7 +762,7 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
     CurPressure.inc(U.VRegOrUnit.asVirtualReg(), PrevMask, LiveMask, *MRI);
   }
 
-  if (TrackPhysRegs) {
+  if (physRegTrackingEnabled()) {
     for (const MachineOperand &MO : MI.all_uses()) {
       if (!MO.readsReg())
         continue;
@@ -804,7 +813,7 @@ bool GCNDownwardRPTracker::reset(const MachineInstr &MI,
   else
     GCNRPTracker::reset(*MI.getParent(), /*End=*/true);
 
-  if (SeedPhysMBB && TrackPhysRegs &&
+  if (SeedPhysMBB && physRegTrackingEnabled() &&
       MI.getMF()->getProperties().hasTracksLiveness())
     initPhysLiveUnitsFromRegMaskPairs(SeedPhysMBB->liveins());
 
@@ -1036,7 +1045,7 @@ GCNDownwardRPTracker::bumpDownwardPressure(const MachineInstr *MI,
       LaneBitmask NewMask = LiveMask & ~LastUseMask;
       PostUseMask[Reg] = NewMask;
       TempPressure.inc(Reg, LiveMask, NewMask, *MRI);
-    } else if (TrackPhysRegs) {
+    } else if (physRegTrackingEnabled()) {
       MCRegUnit Unit = Use.VRegOrUnit.asMCRegUnit();
       unsigned U = static_cast<unsigned>(Unit);
       if (PhysLiveRegUnits.test(U) && !isUnitLiveAt(Unit, SlotIdx))
@@ -1060,7 +1069,7 @@ GCNDownwardRPTracker::bumpDownwardPressure(const MachineInstr *MI,
 
       LaneBitmask NewMask = LiveMask | Def.LaneMask;
       TempPressure.inc(Reg, LiveMask, NewMask, *MRI);
-    } else if (TrackPhysRegs) {
+    } else if (physRegTrackingEnabled()) {
       MCRegUnit Unit = Def.VRegOrUnit.asMCRegUnit();
       unsigned U = static_cast<unsigned>(Unit);
       if (!PhysLiveRegUnits.test(U))

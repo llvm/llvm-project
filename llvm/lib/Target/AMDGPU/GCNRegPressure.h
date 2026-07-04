@@ -354,18 +354,12 @@ protected:
 
   GCNRegPressure CurPressure, MaxPressure;
 
-  // Flag to control whether physical register tracking is active.
-  // Set to true when GCNTrackers are enabled, false otherwise.
-  bool TrackPhysRegs = false;
-
   const MachineInstr *LastTrackedMI = nullptr;
 
   GCNRPTracker(const LiveIntervals &LIS, const MachineRegisterInfo &MRI)
       : LIS(LIS), MRI(&MRI),
         SRI(static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo())),
-        PhysLiveRegUnits(SRI->getNumRegUnits()) {
-    updatePhysRegTracking();
-  }
+        PhysLiveRegUnits(SRI->getNumRegUnits()) {}
 
   /// Resets tracker before or \p After the provided \p MI, which can be a debug
   /// instruction.
@@ -383,7 +377,8 @@ protected:
   LaneBitmask getLastUsedLanes(Register Reg, SlotIndex Pos) const;
 
   bool shouldTrackPhysReg(Register Reg) const {
-    return TrackPhysRegs && Reg.isPhysical() && MRI->isAllocatable(Reg);
+    return physRegTrackingEnabled() && Reg.isPhysical() &&
+           MRI->isAllocatable(Reg);
   }
 
   // Check if a register unit is live at a given slot index per LIS.
@@ -405,9 +400,8 @@ protected:
                                        GCNRegPressure &Pressure);
 
 public:
-  // Enable physical register tracking only if both GCNTrackers and
-  // TrackPhysRegInTrackers are true.
-  void updatePhysRegTracking();
+  // Returns whether physical register tracking is enabled.
+  bool physRegTrackingEnabled() const;
 
   /// Resets tracker with the provided \p VirtLiveRegs.
   void reset(const MachineRegisterInfo &MRI, const LiveRegSet &VirtLiveRegs);
@@ -425,7 +419,8 @@ public:
   /// and update CurPressure/MaxPressure accordingly.
   template <typename RangeT>
   void initPhysLiveUnitsFromRegMaskPairs(RangeT &&Pairs) {
-    assert(TrackPhysRegs && "physical register tracking must be enabled");
+    assert(physRegTrackingEnabled() &&
+           "physical register tracking must be enabled");
     for (const auto &RM : Pairs)
       if (MRI->isAllocatable(RM.PhysReg))
         addUnitsAndIncPressure(RM.PhysReg, CurPressure);
@@ -463,7 +458,7 @@ public:
   void reset(const MachineRegisterInfo &MRI, SlotIndex SI,
              const MachineBasicBlock *SeedPhysMBB = nullptr) {
     GCNRPTracker::reset(MRI, llvm::getVirtLiveRegs(SI, LIS, MRI));
-    if (SeedPhysMBB && TrackPhysRegs &&
+    if (SeedPhysMBB && physRegTrackingEnabled() &&
         SeedPhysMBB->getParent()->getProperties().hasTracksLiveness())
       initPhysLiveUnitsFromRegMaskPairs(SeedPhysMBB->liveouts());
   }

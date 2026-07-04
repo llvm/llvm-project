@@ -79,12 +79,6 @@ static cl::opt<bool> GCNTrackers(
     cl::desc("Use the AMDGPU specific RPTrackers during scheduling"),
     cl::init(false));
 
-static cl::opt<bool> TrackPhysRegInTrackers(
-    "amdgpu-trackers-physical-register-tracking", cl::Hidden,
-    cl::desc("When using GCN trackers, count physical registers (e.g. from "
-             "inline asm) in pressure."),
-    cl::init(true));
-
 static cl::opt<unsigned> PendingQueueLimit(
     "amdgpu-scheduler-pending-queue-limit", cl::Hidden,
     cl::desc(
@@ -213,14 +207,6 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
                     << ", VGPRExcessLimit = " << VGPRExcessLimit
                     << ", SGPRCriticalLimit = " << SGPRCriticalLimit
                     << ", SGPRExcessLimit = " << SGPRExcessLimit << "\n\n");
-}
-
-void GCNRPTracker::updatePhysRegTracking() {
-  if (!GCNTrackers || !TrackPhysRegInTrackers) {
-    TrackPhysRegs = false;
-    return;
-  }
-  TrackPhysRegs = true;
 }
 
 /// Checks whether \p SU can use the cached DAG pressure diffs to compute the

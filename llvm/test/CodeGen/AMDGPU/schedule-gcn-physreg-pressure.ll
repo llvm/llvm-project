@@ -3,7 +3,7 @@
 ; RUN: FileCheck --check-prefix=GCN-DEBUG %s < %t
 ; RUN: llc -mtriple=amdgcn -mcpu=tahiti -amdgpu-use-amdgpu-trackers=0 -debug-only=machine-scheduler < %s 2> %t | FileCheck --check-prefix=NO-GCN %s
 ; RUN: FileCheck --check-prefix=GENERIC-DEBUG %s < %t
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti -amdgpu-use-amdgpu-trackers=1 -amdgpu-trackers-physical-register-tracking=0 -debug-only=machine-scheduler < %s 2> %t | FileCheck --check-prefix=GCN-NOPHYS %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti -amdgpu-use-amdgpu-trackers=1 -amdgpu-track-physregs-in-gcn-trackers=0 -debug-only=machine-scheduler < %s 2> %t | FileCheck --check-prefix=GCN-NOPHYS %s
 ; RUN: FileCheck --check-prefix=GCN-NOPHYS-DEBUG %s < %t
 ; REQUIRES: asserts
 
@@ -14,8 +14,8 @@
 ; GCN-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
 
 ; GENERIC-DEBUG-LABEL: test_single_physreg
-; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 6
-; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 6
+; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
+; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
 
 ; GCN-NOPHYS-DEBUG-LABEL: test_single_physreg
 ; GCN-NOPHYS-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 6
@@ -73,7 +73,7 @@ entry:
 ; GCN-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 7, LVGPR WT: 0, LSGPR WT: 6
 
 ; GENERIC-DEBUG-LABEL: test_multiple_physregs
-; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 7, LVGPR WT: 0, LSGPR WT: 6
+; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 9, LVGPR WT: 0, LSGPR WT: 6
 ; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 7, LVGPR WT: 0, LSGPR WT: 6
 
 ; GCN-NOPHYS-DEBUG-LABEL: test_multiple_physregs
@@ -138,8 +138,8 @@ entry:
 ; GCN-DEBUG: Pressure after scheduling: VGPRs: 2 AGPRs: 0, SGPRs: 8, LVGPR WT: 0, LSGPR WT: 12
 
 ; GENERIC-DEBUG-LABEL: test_physreg_with_vreg
-; GENERIC-DEBUG: Region register pressure: VGPRs: 2 AGPRs: 0, SGPRs: 9, LVGPR WT: 0, LSGPR WT: 12
-; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 2 AGPRs: 0, SGPRs: 7, LVGPR WT: 0, LSGPR WT: 12
+; GENERIC-DEBUG: Region register pressure: VGPRs: 2 AGPRs: 0, SGPRs: 10, LVGPR WT: 0, LSGPR WT: 12
+; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 2 AGPRs: 0, SGPRs: 8, LVGPR WT: 0, LSGPR WT: 12
 
 ; GCN-NOPHYS-DEBUG-LABEL: test_physreg_with_vreg
 ; GCN-NOPHYS-DEBUG: Region register pressure: VGPRs: 2 AGPRs: 0, SGPRs: 9, LVGPR WT: 0, LSGPR WT: 12
@@ -217,8 +217,8 @@ entry:
 ; GCN-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
 
 ; GENERIC-DEBUG-LABEL: test_early_clobber
-; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 6
-; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 6
+; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
+; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
 
 ; GCN-NOPHYS-DEBUG-LABEL: test_early_clobber
 ; GCN-NOPHYS-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 6
@@ -277,8 +277,8 @@ entry:
 ; GCN-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 8, LVGPR WT: 0, LSGPR WT: 8
 
 ; GENERIC-DEBUG-LABEL: test_early_clobber_tuple
-; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
-; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
+; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 9, LVGPR WT: 0, LSGPR WT: 9
+; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 8, LVGPR WT: 0, LSGPR WT: 8
 
 ; GCN-NOPHYS-DEBUG-LABEL: test_early_clobber_tuple
 ; GCN-NOPHYS-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
@@ -347,8 +347,8 @@ entry:
 ; GCN-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
 
 ; GENERIC-DEBUG-LABEL: test_physreg_input
-; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 6
-; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 6
+; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
+; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
 
 ; GCN-NOPHYS-DEBUG-LABEL: test_physreg_input
 ; GCN-NOPHYS-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 6
@@ -407,8 +407,8 @@ entry:
 ; GCN-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 8, LVGPR WT: 0, LSGPR WT: 8
 
 ; GENERIC-DEBUG-LABEL: test_tuple_physreg
-; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
-; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
+; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 8, LVGPR WT: 0, LSGPR WT: 8
+; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 8, LVGPR WT: 0, LSGPR WT: 8
 
 ; GCN-NOPHYS-DEBUG-LABEL: test_tuple_physreg
 ; GCN-NOPHYS-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 6, LVGPR WT: 0, LSGPR WT: 6
@@ -468,8 +468,8 @@ entry:
 ; GCN-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 12, LVGPR WT: 0, LSGPR WT: 12
 
 ; GENERIC-DEBUG-LABEL: test_tuple128_physreg
-; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 8, LVGPR WT: 0, LSGPR WT: 8
-; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 8, LVGPR WT: 0, LSGPR WT: 8
+; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 12, LVGPR WT: 0, LSGPR WT: 12
+; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 12, LVGPR WT: 0, LSGPR WT: 12
 
 ; GCN-NOPHYS-DEBUG-LABEL: test_tuple128_physreg
 ; GCN-NOPHYS-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 8, LVGPR WT: 0, LSGPR WT: 8
@@ -528,8 +528,8 @@ entry:
 ; GCN-DEBUG: Pressure after scheduling: VGPRs: 3 AGPRs: 0, SGPRs: 13, LVGPR WT: 0, LSGPR WT: 16
 
 ; GENERIC-DEBUG-LABEL: test_vreg_and_physreg_live_range_overlap
-; GENERIC-DEBUG: Region register pressure: VGPRs: 3 AGPRs: 0, SGPRs: 14, LVGPR WT: 0, LSGPR WT: 16
-; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 3 AGPRs: 0, SGPRs: 12, LVGPR WT: 0, LSGPR WT: 16
+; GENERIC-DEBUG: Region register pressure: VGPRs: 3 AGPRs: 0, SGPRs: 16, LVGPR WT: 0, LSGPR WT: 16
+; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 3 AGPRs: 0, SGPRs: 13, LVGPR WT: 0, LSGPR WT: 16
 
 ; GCN-NOPHYS-DEBUG-LABEL: test_vreg_and_physreg_live_range_overlap
 ; GCN-NOPHYS-DEBUG: Region register pressure: VGPRs: 3 AGPRs: 0, SGPRs: 14, LVGPR WT: 0, LSGPR WT: 16
