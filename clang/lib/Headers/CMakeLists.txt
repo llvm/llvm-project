@@ -454,7 +454,7 @@ endfunction(copy_header_to_output_dir)
 
 function(clang_generate_header td_option td_file out_file)
   clang_tablegen(${out_file} ${td_option}
-  -I ${CLANG_SOURCE_DIR}/include/clang/Basic/
+  EXTRA_INCLUDES ${CLANG_SOURCE_DIR}/include/clang/Basic/
   SOURCE ${CLANG_SOURCE_DIR}/include/clang/Basic/${td_file})
 
   copy_header_to_output_dir(${CMAKE_CURRENT_BINARY_DIR} ${out_file})
