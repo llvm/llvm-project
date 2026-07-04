@@ -21,6 +21,8 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/Timer.h"
 
+#include "llvm/Support/FormatAdapters.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -129,6 +131,9 @@ public:
       case 'F':
         log_options |= LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION;
         break;
+      case 'j':
+        log_options |= LLDB_LOG_OPTION_JSON;
+        break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -198,18 +203,16 @@ protected:
     else
       log_file[0] = '\0';
 
-    std::string error;
-    llvm::raw_string_ostream error_stream(error);
-    bool success = GetDebugger().EnableLog(
+    llvm::Error error = GetDebugger().EnableLog(
         channel, args.GetArgumentArrayRef(), log_file, m_options.log_options,
-        m_options.buffer_size.GetCurrentValue(), m_options.handler,
-        error_stream);
-    result.GetErrorStream() << error;
+        m_options.buffer_size.GetCurrentValue(), m_options.handler);
 
-    if (success)
-      result.SetStatus(eReturnStatusSuccessFinishNoResult);
-    else
+    if (error) {
+      result.GetErrorStream()
+          << llvm::formatv("{}", llvm::fmt_consume(std::move(error)));
       result.SetStatus(eReturnStatusFailed);
+    } else
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
   }
 
   CommandOptions m_options;

@@ -52,6 +52,7 @@
 #include "clang/Lex/ScratchBuffer.h"
 #include "clang/Lex/Token.h"
 #include "clang/Lex/TokenLexer.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -79,7 +80,7 @@ using namespace clang;
 /// Minimum distance between two check points, in tokens.
 static constexpr unsigned CheckPointStepSize = 1024;
 
-LLVM_INSTANTIATE_REGISTRY(PragmaHandlerRegistry)
+LLVM_INSTANTIATE_REGISTRY_EX(CLANG_ABI_EXPORT, PragmaHandlerRegistry)
 
 ExternalPreprocessorSource::~ExternalPreprocessorSource() = default;
 
@@ -1746,16 +1747,11 @@ void Preprocessor::removePPCallbacks() {
 const char *Preprocessor::getCheckPoint(FileID FID, const char *Start) const {
   if (auto It = CheckPoints.find(FID); It != CheckPoints.end()) {
     const SmallVector<const char *> &FileCheckPoints = It->second;
-    const char *Last = nullptr;
-    // FIXME: Do better than a linear search.
-    for (const char *P : FileCheckPoints) {
-      if (P > Start)
-        break;
-      Last = P;
-    }
-    return Last;
+    auto P = llvm::upper_bound(FileCheckPoints, Start);
+    if (P == FileCheckPoints.begin())
+      return nullptr;
+    return *std::prev(P);
   }
-
   return nullptr;
 }
 

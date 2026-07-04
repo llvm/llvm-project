@@ -436,6 +436,10 @@ void CommandInterpreter::Initialize() {
   if (cmd_obj_sp)
     AddAlias("image", cmd_obj_sp);
 
+  cmd_obj_sp = GetCommandSPExact("diagnostics report");
+  if (cmd_obj_sp)
+    AddAlias("bugreport", cmd_obj_sp);
+
   alias_arguments_vector_sp = std::make_shared<OptionArgVector>();
 
   cmd_obj_sp = GetCommandSPExact("dwim-print");
@@ -2707,8 +2711,7 @@ void CommandInterpreter::SourceInitFileHome(CommandReturnObject &result,
     GetHomeInitFile(init_file);
 
   if (!m_skip_app_init_files) {
-    llvm::StringRef program_name =
-        HostInfo::GetProgramFileSpec().GetFilename().GetStringRef();
+    llvm::StringRef program_name = HostInfo::GetProgramFileSpec().GetFilename();
     FileSpec program_init_file;
     GetHomeInitFile(program_init_file, program_name);
     if (FileSystem::Instance().Exists(program_init_file))
@@ -2952,9 +2955,9 @@ void CommandInterpreter::HandleCommandsFromFile(
     FileSpec &cmd_file, const CommandInterpreterRunOptions &options,
     CommandReturnObject &result) {
   if (!FileSystem::Instance().Exists(cmd_file)) {
-    result.AppendErrorWithFormat(
-        "Error reading commands from file %s - file not found",
-        cmd_file.GetFilename().AsCString("<Unknown>"));
+    result.AppendErrorWithFormatv(
+        "Error reading commands from file {0} - file not found",
+        cmd_file.GetFilename().nonEmptyOr("<Unknown>"));
     return;
   }
 

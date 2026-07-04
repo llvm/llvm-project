@@ -17,6 +17,7 @@
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Environment.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Listener.h"
 #include "lldb/Utility/Log.h"
@@ -57,6 +58,10 @@ public:
 
   llvm::StringRef GetPortArg() const {
     return GetPropertyAtIndexAs<llvm::StringRef>(ePropertyPortArg, {});
+  }
+
+  llvm::StringRef GetEnvArg() const {
+    return GetPropertyAtIndexAs<llvm::StringRef>(ePropertyEnvArg, {});
   }
 };
 
@@ -170,6 +175,14 @@ lldb::ProcessSP PlatformWasm::DebugProcess(ProcessLaunchInfo &launch_info,
   Args args({runtime.GetPath(),
              llvm::formatv("{0}{1}", properties.GetPortArg(), port).str()});
   args.AppendArguments(properties.GetRuntimeArgs());
+
+  // Forward the inferior's environment into the WASI runtime. How arguments are
+  // passed is configurable. When not configured, no environment is passed.
+  if (llvm::StringRef env_arg = properties.GetEnvArg(); !env_arg.empty())
+    for (const auto &kv : launch_info.GetEnvironment())
+      args.AppendArgument(
+          llvm::formatv("{0}{1}", env_arg, Environment::compose(kv)).str());
+
   args.AppendArguments(launch_info.GetArguments());
 
   launch_info.SetArguments(args, true);
@@ -177,6 +190,7 @@ lldb::ProcessSP PlatformWasm::DebugProcess(ProcessLaunchInfo &launch_info,
   // We're launching the Wasm runtime (a native host binary), not the target
   // being debugged. Clear flags that don't apply to the runtime process.
   launch_info.GetFlags().Clear(eLaunchFlagDebug | eLaunchFlagDisableASLR);
+  // The runtime itself runs with the host environment.
   launch_info.GetEnvironment() = Host::GetEnvironment();
 
   auto exit_code = std::make_shared<std::optional<int>>();
