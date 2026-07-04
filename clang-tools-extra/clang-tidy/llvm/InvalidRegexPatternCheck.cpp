@@ -72,7 +72,7 @@ void InvalidRegexPatternCheck::check(const MatchFinder::MatchResult &Result) {
         Result.Nodes.getNodeAs<IntegerLiteral>("regexFlagsInt");
     const auto *FlagEnum =
         Result.Nodes.getNodeAs<EnumConstantDecl>("regexFlagEnum");
-    uint Flag = llvm::Regex::RegexFlags::NoFlags;
+    unsigned int Flag = llvm::Regex::RegexFlags::NoFlags;
     if (FlagInt)
       Flag = FlagInt->getValue().getZExtValue();
     if (FlagEnum)
