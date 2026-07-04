@@ -170,14 +170,17 @@ jobs:
       artifact_group: ${{ inputs.artifact_group }}
       amdgpu_families: ${{ inputs.amdgpu_families }}
       amdgpu_targets: ${{ inputs.amdgpu_targets }}
-      test_retry_count: ${{ inputs.test_retry_count }}        
-      # If the test requires a multi GPU, use the multi GPU test runner
-      # Otherwise, use the standard test runner
+      test_retry_count: ${{ inputs.test_retry_count }}
+      # RCCL uses the family test-runs-on (1-GPU) instead of multi_gpu_runner (8-GPU).
+      # Other components still use multi_gpu_runner when configured.
       test_runs_on: >-
         ${{
-          matrix.components.multi_gpu_runner != '' &&
+          (matrix.components.job_name == 'rccl' ||
+            contains(matrix.components.fetch_artifact_args, '--rccl')) &&
+            inputs.test_runs_on ||
+          (matrix.components.multi_gpu_runner != '' &&
             matrix.components.multi_gpu_runner ||
-            inputs.test_runs_on
+            inputs.test_runs_on)
         }}
       platform: ${{ needs.configure_test_matrix.outputs.platform }}
       component: ${{ toJSON(matrix.components) }}
