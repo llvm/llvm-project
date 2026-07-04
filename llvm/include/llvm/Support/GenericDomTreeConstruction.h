@@ -62,15 +62,16 @@ template <typename DomTreeT> struct SemiNCAInfo {
   // Marks a node that hasn't been visited by DFS.
   static constexpr unsigned Unvisited = 0;
 
-  // std::is_trivial information used by Semi-NCA during tree construction.
-  // DFSNum is the DFS number + 1, so a zero-initialized InfoRec is unvisited.
+  // Information used by Semi-NCA during tree construction; trivial type for
+  // resize efficiency. DFSNumPlus1 is the DFS number + 1, so a zeroed InfoRec
+  // is unvisited.
   struct InfoRec {
-    unsigned DFSNum;
+    unsigned DFSNumPlus1;
     unsigned Parent;
     unsigned Semi;
     unsigned Label;
     NodePtr IDom;
-    // Head index + 1 into ReverseChildren; 0 = empty.
+    // Head index + 1 into ReverseChildren; 0: empty list.
     unsigned ReverseChildrenHead;
   };
 
@@ -222,12 +223,12 @@ template <typename DomTreeT> struct SemiNCAInfo {
       ReverseChildren.emplace_back(ParentNum, BBInfo.ReverseChildrenHead);
       BBInfo.ReverseChildrenHead = ReverseChildren.size();
 
-      if (BBInfo.DFSNum != Unvisited)
+      if (BBInfo.DFSNumPlus1 != Unvisited)
         continue;
       BBInfo.Parent = ParentNum;
       unsigned Num = LastNum++;
       BBInfo.Semi = BBInfo.Label = Num;
-      BBInfo.DFSNum = Num + 1; // stored as Num+1
+      BBInfo.DFSNumPlus1 = Num + 1;
       NumToNode.push_back(BB);
 
       constexpr bool Direction = IsReverse != IsPostDom; // XOR.
@@ -361,7 +362,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
 
     auto &BBInfo = getNodeInfo(nullptr);
     BBInfo.Semi = BBInfo.Label = 0;
-    BBInfo.DFSNum = 1; // DFS number 0, stored as 1.
+    BBInfo.DFSNumPlus1 = 1;
 
     NumToNode.push_back(nullptr); // NumToNode[0] = nullptr;
   }
@@ -442,7 +443,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
       auto InitSuccOrderOnce = [&]() {
         SuccOrder = NodeOrderMap();
         for (const auto Node : nodes(DT.Parent))
-          if (SNCA.getNodeInfo(Node).DFSNum == Unvisited)
+          if (SNCA.getNodeInfo(Node).DFSNumPlus1 == Unvisited)
             for (const auto Succ : getChildren<false>(Node, SNCA.BatchUpdates))
               SuccOrder->try_emplace(Succ, 0);
 
@@ -466,7 +467,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
       // unreachable node once, we may just visit it in two directions,
       // depending on how lucky we get.
       for (const NodePtr I : nodes(DT.Parent)) {
-        if (SNCA.getNodeInfo(I).DFSNum == Unvisited) {
+        if (SNCA.getNodeInfo(I).DFSNumPlus1 == Unvisited) {
           LLVM_DEBUG(dbgs()
                      << "\t\t\tVisiting node " << BlockNamePrinter(I) << "\n");
           // Find the furthest away we can get by following successors, then
@@ -1305,7 +1306,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
       if (DT.isVirtualRoot(TN))
         continue;
 
-      if (getNodeInfo(BB).DFSNum == Unvisited) {
+      if (getNodeInfo(BB).DFSNumPlus1 == Unvisited) {
         errs() << "DomTree node " << BlockNamePrinter(BB)
                << " not found by DFS walk!\n";
         errs().flush();
@@ -1518,7 +1519,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
       });
 
       for (TreeNodePtr Child : TN->children())
-        if (getNodeInfo(Child->getBlock()).DFSNum != Unvisited) {
+        if (getNodeInfo(Child->getBlock()).DFSNumPlus1 != Unvisited) {
           errs() << "Child " << BlockNamePrinter(Child)
                  << " reachable after its parent " << BlockNamePrinter(BB)
                  << " is removed!\n";
@@ -1556,7 +1557,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
           if (S == N)
             continue;
 
-          if (getNodeInfo(S->getBlock()).DFSNum == Unvisited) {
+          if (getNodeInfo(S->getBlock()).DFSNumPlus1 == Unvisited) {
             errs() << "Node " << BlockNamePrinter(S)
                    << " not reachable when its sibling " << BlockNamePrinter(N)
                    << " is removed!\n";
