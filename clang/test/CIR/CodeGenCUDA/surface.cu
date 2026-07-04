@@ -18,8 +18,8 @@ struct __attribute__((device_builtin_surface_type)) surface<void, dim>
 
 surface<void, 2> surf;
 
-// CIR-DEVICE: cir.global external target_address_space(1) @surf = #cir.poison : !s64i
+// CIR-DEVICE: cir.global external target_address_space(1) @surf = #cir.undef : !s64i
 
-// CIR lowers poison to LLVM poison, while OG CodeGen emits undef.
-// LLVM-DEVICE: @surf ={{.*}} addrspace(1) externally_initialized global i64 poison
+// CIR now matches OG CodeGen and emits undef for CUDA shadow variables.
+// LLVM-DEVICE: @surf ={{.*}} addrspace(1) externally_initialized global i64 undef
 // OGCG-DEVICE: @surf ={{.*}} addrspace(1) externally_initialized global i64 undef
