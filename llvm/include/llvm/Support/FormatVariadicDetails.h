@@ -27,9 +27,8 @@ namespace detail {
 using FormatFunctorRef = function_ref<void(llvm::raw_ostream &, StringRef)>;
 
 template <typename T> class FormatFunctor {
-  // If the caller passed an Error by value, then stream_operator_format_adapter
-  // would be responsible for consuming it.
-  // Make the caller opt into this by calling fmt_consume().
+  // If the caller passed an Error by value, then we would be responsible for
+  // consuming it. Make the caller opt into this by calling fmt_consume().
   static_assert(
       !std::is_same_v<llvm::Error, std::remove_cv_t<T>>,
       "llvm::Error-by-value must be wrapped in fmt_consume() for formatv");

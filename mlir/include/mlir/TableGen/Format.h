@@ -263,6 +263,7 @@ inline auto tgfmt(StringRef fmt, const FmtContext *ctx, Ts &&...vals)
           llvm::support::detail::FormatFunctor(std::forward<Ts>(vals))...));
 }
 
+/// Like tgfmt, but take replacement parameters as an array of strings instead.
 inline FmtStrVecObject tgfmtv(StringRef fmt, const FmtContext *ctx,
                               ArrayRef<std::string> params) {
   return FmtStrVecObject(fmt, ctx, params);
