@@ -210,20 +210,6 @@ public:
     assert(getLoans(StartOID, StartPoint).contains(TargetLoan) &&
            "TargetLoan must be present in the StartOID at the StartPoint");
 
-    const auto ShouldTrack = [&](const CFGBlock *Block, OriginID StartOID) {
-      for (const Fact *F : llvm::reverse(FactMgr.getFacts(Block))) {
-        const auto *OFF = llvm::dyn_cast<OriginFlowFact>(F);
-        if (!OFF)
-          continue;
-        if (OFF->getDestOriginID() == StartOID) {
-          if (getLoans(StartOID, OFF).contains(TargetLoan))
-            return true;
-          return false;
-        }
-      }
-      return true;
-    };
-
     // Locate the CFG block containing the StartPoint
     const CFGBlock *EndBlock = nullptr;
     size_t BlockID = FactMgr.getBlockID(StartPoint);
@@ -251,10 +237,6 @@ public:
       DFSNode CurrNode = PendingStates.pop_back_val();
       auto [CurrBlock, CurrOID] = CurrNode.CurrState;
 
-      DEBUG_WITH_TYPE("LifetimeBuildOriginFlow",
-                      llvm::dbgs() << "CurrBlockID: " << CurrBlock->getBlockID()
-                                   << ", StartOriginID: " << CurrOID << "\n");
-
       // Trace origins within the current block
       const auto [BuildResult, Complete] =
           buildOriginFlowChain(CurrBlock, CurrOID, TargetLoan);
@@ -267,12 +249,9 @@ public:
       if (Complete)
         return CurrNode.OriginFlowChain;
 
-      DEBUG_WITH_TYPE("LifetimeBuildOriginFlow",
-                      llvm::dbgs() << "EndOriginID: " << CurrOID << "\n");
-
       for (const CFGBlock *PredBlock : CurrBlock->preds()) {
         SearchState NextState = {PredBlock, CurrOID};
-        if (ShouldTrack(PredBlock, CurrOID) &&
+        if (getLoans(getOutState(PredBlock), CurrOID).contains(TargetLoan) &&
             VistedStates.insert(NextState).second)
           PendingStates.push_back({NextState, CurrNode.OriginFlowChain});
       }
