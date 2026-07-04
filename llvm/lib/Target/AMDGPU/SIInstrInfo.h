@@ -34,7 +34,8 @@ class MachineDominatorTree;
 class MachineRegisterInfo;
 class RegScavenger;
 class SIMachineFunctionInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class ScheduleHazardRecognizer;
 
 constexpr unsigned DefaultMemoryClusterDWordsLimit = 8;

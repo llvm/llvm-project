@@ -491,7 +491,12 @@ void Paragraph::renderNewlinesMarkdown(llvm::raw_ostream &OS,
 
     OS << Line;
 
-    if (!Rest.empty() && isHardLineBreakAfter(Line, Rest, /*IsMarkdown=*/true))
+    if (Rest.empty())
+      // In this case the paragraph ends and we don't need to add another
+      // newline
+      continue;
+
+    if (isHardLineBreakAfter(Line, Rest, /*IsMarkdown=*/true))
       // In markdown, 2 spaces before a line break forces a line break.
       OS << "  ";
     OS << '\n';
@@ -528,7 +533,11 @@ void Paragraph::renderEscapedMarkdown(llvm::raw_ostream &OS) const {
     NeedsSpace = C.SpaceAfter;
   }
 
-  renderNewlinesMarkdown(OS, ParagraphText);
+  // We use the same newline handling as for plaintext to "escape" markdown
+  // whitespace rendering.
+  // But we need to use Markdown linebreaks since the client requested Markdown
+  // content.
+  renderNewlinesPlaintext(OS, ParagraphText, /*UseMarkdownLinebreaks=*/true);
 
   // A paragraph in markdown is separated by a blank line.
   OS << "\n\n";
@@ -647,7 +656,8 @@ bool Paragraph::isHardLineBreakAfter(llvm::StringRef Line, llvm::StringRef Rest,
 }
 
 void Paragraph::renderNewlinesPlaintext(llvm::raw_ostream &OS,
-                                        llvm::StringRef ParagraphText) const {
+                                        llvm::StringRef ParagraphText,
+                                        bool UseMarkdownLinebreaks) const {
   llvm::StringRef Line, Rest;
 
   for (std::tie(Line, Rest) = ParagraphText.trim().split('\n');
@@ -671,13 +681,22 @@ void Paragraph::renderNewlinesPlaintext(llvm::raw_ostream &OS,
 
     OS << canonicalizeSpaces(Line);
 
-    if (isHardLineBreakAfter(Line, Rest, /*IsMarkdown=*/false))
+    if (Rest.empty())
+      // In this case the paragraph ends and we don't need to add another
+      // newline
+      continue;
+
+    if (isHardLineBreakAfter(Line, Rest, /*IsMarkdown=*/false)) {
+      if (UseMarkdownLinebreaks)
+        // In markdown, 2 spaces before a line break forces a line break.
+        OS << "  ";
       OS << '\n';
-    else if (!Rest.empty())
+    } else {
       // Since we removed any trailing whitespace from the input using trim(),
       // we know that the next line contains non-whitespace characters.
       // Therefore, we can add a space without worrying about trailing spaces.
       OS << ' ';
+    }
   }
 }
 
@@ -712,7 +731,7 @@ void Paragraph::renderPlainText(llvm::raw_ostream &OS) const {
     NeedsSpace = C.SpaceAfter;
   }
 
-  renderNewlinesPlaintext(OS, ParagraphText);
+  renderNewlinesPlaintext(OS, ParagraphText, /*UseMarkdownLinebreaks=*/false);
 
   // Paragraphs are separated by a blank line.
   OS << "\n\n";

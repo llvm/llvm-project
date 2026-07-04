@@ -1370,6 +1370,53 @@ FalseView binary_conditional_folded_false(FalseView fb) {
   return FalseView(local) ?: fb;  // no-warning (result is always fb)
 }
 
+// Unary plus on a pointer is the identity, so the result carries the operand's
+// loans.
+namespace unary_plus {
+void use(int *p);
+
+void borrow_of_local() {
+  int *p;
+  {
+    int local = 0;
+    p = +&local; // expected-warning {{local variable 'local' does not live long enough}}
+  }              // expected-note {{local variable 'local' is destroyed here}}
+  use(p);        // expected-note {{later used here}}
+}
+
+int *return_borrow_of_local() {
+  int local = 0;
+  return +&local; // expected-warning {{stack memory associated with local variable 'local' is returned}}
+                  // expected-note@-1 {{returned here}}
+}
+
+// A pointer glvalue operand forwards its loan too.
+void forward_pointer_value() {
+  int *p;
+  {
+    int local = 0;
+    int *q = &local; // expected-warning {{local variable 'local' does not live long enough}}
+    p = +q;          // expected-note {{local variable 'q' aliases the storage of local variable 'local'}}
+  }                  // expected-note {{local variable 'local' is destroyed here}}
+  use(p);            // expected-note {{later used here}}
+}
+
+// Negative: a long-lived borrow stays silent.
+void ok() {
+  static int s;
+  int *p = +&s;
+  use(p); // no-warning
+}
+
+// Multi-level: the deeper origin flows through unary plus too.
+int **return_multilevel() {
+  int a = 1;
+  int *b = &a;   // expected-warning {{stack memory associated with local variable 'a' is returned}}
+  int **c = +&b; // expected-warning {{stack memory associated with local variable 'b' is returned}}
+  return c;      // expected-note 2 {{returned here}}
+}
+} // namespace unary_plus
+
 // FIXME: Diagnostic output does not handle ParenExpr correctly, causing alias
 // information to be missed (local variable 'p' aliases the storage of local variable 'b').
 void simpleparen() {
@@ -2389,6 +2436,44 @@ auto capture_multilevel_pointer() {
   return lambda; // expected-note 3 {{returned here}}
 }
 } // namespace lambda_captures
+
+namespace global_init_lambda {
+// A lambda defined in a global-storage variable initializer is reached by the
+// call graph, so TU-end analysis (not just per-function mode) sees a stack
+// address escaping to a global.
+int *leaked = nullptr; // expected-note 3 {{this global dangles}}
+
+int escaping = [] {
+  int local = 0;
+  leaked = &local; // expected-warning {{stack memory associated with local variable 'local' escapes to the global variable 'leaked' which will dangle}}
+  return 1;
+}();
+
+// A lambda nested inside another global-init lambda is reached too.
+int nested = [] {
+  auto inner = [] {
+    int local = 0;
+    leaked = &local; // expected-warning {{stack memory associated with local variable 'local' escapes to the global variable 'leaked' which will dangle}}
+    return 0;
+  };
+  return inner();
+}();
+
+// A static data member initializer is reached the same way.
+struct S {
+  static inline int member = [] {
+    int local = 0;
+    leaked = &local; // expected-warning {{stack memory associated with local variable 'local' escapes to the global variable 'leaked' which will dangle}}
+    return 1;
+  }();
+};
+
+// A clean lambda introduces no false positive.
+int ok = [] {
+  int local = 42;
+  return local;
+}();
+} // namespace global_init_lambda
 
 namespace LoopLocalPointers {
 

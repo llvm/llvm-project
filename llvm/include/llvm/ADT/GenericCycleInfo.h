@@ -9,7 +9,7 @@
 /// \file
 /// \brief Find all cycles in a control-flow graph, including irreducible loops.
 ///
-/// See docs/CycleTerminology.rst for a formal definition of cycles.
+/// See docs/CycleTerminology.md for a formal definition of cycles.
 ///
 /// Briefly:
 /// - A cycle is a generalization of a loop which can represent

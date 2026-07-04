@@ -1355,20 +1355,20 @@ ExprResult Sema::BuildPackIndexingExpr(Expr *PackExpression,
                                        ArrayRef<Expr *> ExpandedExprs,
                                        bool FullySubstituted) {
 
-  std::optional<int64_t> Index;
+  std::optional<uint64_t> Index;
   if (!IndexExpr->isInstantiationDependent()) {
     llvm::APSInt Value(Context.getIntWidth(Context.getSizeType()));
 
     ExprResult Res = CheckConvertedConstantExpression(
-        IndexExpr, Context.getSizeType(), Value, CCEKind::ArrayBound);
-    if (!Res.isUsable())
+        IndexExpr, Context.getSizeType(), Value, CCEKind::PackIndex);
+    if (!Res.isUsable() || !Value.isRepresentableByInt64())
       return ExprError();
-    Index = Value.getExtValue();
+    Index = Value.getZExtValue();
     IndexExpr = Res.get();
   }
 
   if (Index && FullySubstituted) {
-    if (*Index < 0 || *Index >= int64_t(ExpandedExprs.size())) {
+    if (*Index >= ExpandedExprs.size()) {
       Diag(PackExpression->getBeginLoc(), diag::err_pack_index_out_of_bound)
           << *Index << PackExpression << ExpandedExprs.size();
       return ExprError();
