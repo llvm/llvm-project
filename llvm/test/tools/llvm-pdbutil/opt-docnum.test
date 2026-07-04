@@ -10,7 +10,8 @@
 # RUN: llvm-pdbutil yaml2pdb %s --pdb=%t-third.pdb --docnum=3
 # RUN: llvm-pdbutil dump --publics %t-third.pdb | FileCheck --check-prefix=CHECK-THIRD %s
 
-# RUN: not llvm-pdbutil yaml2pdb %s --pdb=%t-err.pdb --docnum=4 2>&1 | FileCheck --check-prefix=CHECK-ERR %s
+# RUN: not llvm-pdbutil yaml2pdb %s --pdb=%t-err.pdb --docnum=4 2>&1 | FileCheck --check-prefix=CHECK-ERR-4TH %s
+# RUN: not llvm-pdbutil yaml2pdb %s --pdb=%t-err.pdb --docnum=0 2>&1 | FileCheck --check-prefix=CHECK-ERR-0TH %s
 
 # CHECK-FIRST: S_PUB32 [size = 24] `firstDoc`
 # CHECK-FIRST-NOT: secondDoc
@@ -24,7 +25,8 @@
 # CHECK-THIRD-NOT: secondDoc
 # CHECK-THIRD: S_PUB32 [size = 24] `thirdDoc`
 
-# CHECK-ERR: cannot find the 4th document
+# CHECK-ERR-0TH: document numbers are 1-based, there is no 0th document
+# CHECK-ERR-4TH: cannot find the 4th document
 
 ---
 PublicsStream:

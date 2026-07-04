@@ -813,6 +813,10 @@ static void yamlToPdb(StringRef Path, unsigned DocNum) {
     ExitOnErr(createFileError(Path, errorCodeToError(ErrorOrBuffer.getError())));
   }
 
+  if (DocNum == 0)
+    ExitOnErr(createStringError(
+        "document numbers are 1-based, there is no 0th document"));
+
   std::unique_ptr<MemoryBuffer> &Buffer = ErrorOrBuffer.get();
 
   llvm::yaml::Input In(Buffer->getBuffer());
