@@ -67,3 +67,140 @@ TEST(CallableTraitsHelperTest, PreservesRValueRef) {
   typedef CallableArgInfo<decltype(RefOp)> CAI;
   static_assert(std::is_same_v<CAI::args_tuple_type, std::tuple<int &&>>);
 }
+
+// Free functions cannot be const-qualified.
+TEST(CallableTraitsHelperTest, FreeFunctionIsNonConst) {
+  static_assert(!CallableArgInfo<decltype(freeVoidVoid)>::is_const);
+  static_assert(!CallableArgInfo<decltype(freeBinaryOp)>::is_const);
+}
+
+TEST(CallableTraitsHelperTest, FunctionPointerIsNonConst) {
+  static_assert(!CallableArgInfo<int (*)(int, float)>::is_const);
+}
+
+TEST(CallableTraitsHelperTest, FunctionReferenceIsNonConst) {
+  static_assert(!CallableArgInfo<int (&)(int, float)>::is_const);
+}
+
+// A non-mutable lambda's call operator is const-qualified.
+TEST(CallableTraitsHelperTest, NonMutableLambdaIsConst) {
+  auto L = []() {};
+  static_assert(CallableArgInfo<decltype(L)>::is_const);
+}
+
+// A mutable lambda's call operator is not const-qualified.
+TEST(CallableTraitsHelperTest, MutableLambdaIsNonConst) {
+  auto L = []() mutable {};
+  static_assert(!CallableArgInfo<decltype(L)>::is_const);
+}
+
+TEST(CallableTraitsHelperTest, ConstFunctorIsConst) {
+  struct F {
+    void operator()() const {}
+  };
+  static_assert(CallableArgInfo<F>::is_const);
+}
+
+TEST(CallableTraitsHelperTest, NonConstFunctorIsNonConst) {
+  struct F {
+    void operator()() {}
+  };
+  static_assert(!CallableArgInfo<F>::is_const);
+}
+
+TEST(CallableTraitsHelperTest, NonConstMemberFnPtrIsNonConst) {
+  struct C {
+    void m(int) {}
+  };
+  static_assert(!CallableArgInfo<decltype(&C::m)>::is_const);
+}
+
+TEST(CallableTraitsHelperTest, ConstMemberFnPtrIsConst) {
+  struct C {
+    void m(int) const {}
+  };
+  static_assert(CallableArgInfo<decltype(&C::m)>::is_const);
+}
+
+TEST(CallableTraitsHelperTest, FunctionTypeIsNonConst) {
+  static_assert(!CallableArgInfo<int(int, float)>::is_const);
+}
+
+// Abominable function type: const cv-qualifier on the function type itself.
+TEST(CallableTraitsHelperTest, AbominableFunctionTypeIsConst) {
+  static_assert(CallableArgInfo<int(int, float) const>::is_const);
+}
+
+// noexcept coverage — mirrors the const-qualifier tests above.
+
+static void freeVoidVoidNoexcept() noexcept {}
+
+TEST(CallableTraitsHelperTest, FreeFunctionNoexcept) {
+  (void)freeVoidVoidNoexcept;
+  static_assert(!CallableArgInfo<decltype(freeVoidVoid)>::is_noexcept);
+  static_assert(CallableArgInfo<decltype(freeVoidVoidNoexcept)>::is_noexcept);
+}
+
+TEST(CallableTraitsHelperTest, FunctionPointerNoexcept) {
+  static_assert(!CallableArgInfo<int (*)(int, float)>::is_noexcept);
+  static_assert(CallableArgInfo<int (*)(int, float) noexcept>::is_noexcept);
+}
+
+TEST(CallableTraitsHelperTest, FunctionReferenceNoexcept) {
+  static_assert(!CallableArgInfo<int (&)(int, float)>::is_noexcept);
+  static_assert(CallableArgInfo<int (&)(int, float) noexcept>::is_noexcept);
+}
+
+TEST(CallableTraitsHelperTest, NonNoexceptLambdaIsNotNoexcept) {
+  auto L = []() {};
+  static_assert(!CallableArgInfo<decltype(L)>::is_noexcept);
+}
+
+TEST(CallableTraitsHelperTest, NoexceptLambdaIsNoexcept) {
+  auto L = []() noexcept {};
+  static_assert(CallableArgInfo<decltype(L)>::is_noexcept);
+}
+
+TEST(CallableTraitsHelperTest, NoexceptFunctor) {
+  struct F {
+    void operator()() const noexcept {}
+  };
+  static_assert(CallableArgInfo<F>::is_noexcept);
+  static_assert(CallableArgInfo<F>::is_const);
+}
+
+TEST(CallableTraitsHelperTest, NonNoexceptFunctor) {
+  struct F {
+    void operator()() const {}
+  };
+  static_assert(!CallableArgInfo<F>::is_noexcept);
+}
+
+TEST(CallableTraitsHelperTest, NoexceptMemberFnPtr) {
+  struct C {
+    void m(int) noexcept {}
+    void mConstNoexcept(int) const noexcept {}
+    void mConst(int) const {}
+    void mPlain(int) {}
+  };
+  static_assert(CallableArgInfo<decltype(&C::m)>::is_noexcept);
+  static_assert(!CallableArgInfo<decltype(&C::m)>::is_const);
+  static_assert(CallableArgInfo<decltype(&C::mConstNoexcept)>::is_noexcept);
+  static_assert(CallableArgInfo<decltype(&C::mConstNoexcept)>::is_const);
+  static_assert(!CallableArgInfo<decltype(&C::mConst)>::is_noexcept);
+  static_assert(CallableArgInfo<decltype(&C::mConst)>::is_const);
+  static_assert(!CallableArgInfo<decltype(&C::mPlain)>::is_noexcept);
+  static_assert(!CallableArgInfo<decltype(&C::mPlain)>::is_const);
+}
+
+TEST(CallableTraitsHelperTest, FunctionTypeNoexcept) {
+  static_assert(!CallableArgInfo<int(int, float)>::is_noexcept);
+  static_assert(CallableArgInfo<int(int, float) noexcept>::is_noexcept);
+}
+
+// Abominable function type with both const and noexcept cv-qualifiers.
+TEST(CallableTraitsHelperTest, AbominableFunctionTypeConstNoexcept) {
+  using F = int(int, float) const noexcept;
+  static_assert(CallableArgInfo<F>::is_const);
+  static_assert(CallableArgInfo<F>::is_noexcept);
+}
