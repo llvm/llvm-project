@@ -89,6 +89,12 @@ add_header_library(
     subsf3.h
   DEPENDS
     libc.src.__support.FPUtil.generic.add_sub
+  fixdfsi
+  HDRS
+    fixdfsi.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.builtins.fixint_helper
     libc.src.__support.macros.config
 )
 
@@ -98,6 +104,12 @@ add_header_library(
     mulsf3.h
   DEPENDS
     libc.src.__support.FPUtil.generic.mul
+  fixdfdi
+  HDRS
+    fixdfdi.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.builtins.fixint_helper
     libc.src.__support.macros.config
 )
 
@@ -108,4 +120,106 @@ add_header_library(
   DEPENDS
     libc.src.__support.FPUtil.generic.div
     libc.src.__support.macros.config
+)
+  fixdfti
+  HDRS
+    fixdfti.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.builtins.fixint_helper
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  fixsfsi
+  HDRS
+    fixsfsi.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.builtins.fixint_helper
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fixsfdi
+  HDRS
+    fixsfdi.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.builtins.fixint_helper
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fixsfti
+  HDRS
+    fixsfti.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.builtins.fixint_helper
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  fixunsdfsi
+  HDRS
+    fixunsdfsi.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.builtins.fixint_helper
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fixunsdfdi
+  HDRS
+    fixunsdfdi.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.builtins.fixint_helper
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fixunsdfti
+  HDRS
+    fixunsdfti.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.builtins.fixint_helper
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  fixunssfsi
+  HDRS
+    fixunssfsi.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.builtins.fixint_helper
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fixunssfdi
+  HDRS
+    fixunssfdi.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.builtins.fixint_helper
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fixunssfti
+  HDRS
+    fixunssfti.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.builtins.fixint_helper
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
 )

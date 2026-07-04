@@ -265,6 +265,18 @@ if(COMPILER_RT_USE_LIBC_MATH)
   add_definitions(-DCOMPILER_RT_USE_LIBC_MATH)
 
   use_libc_builtin(GENERIC_TF_SOURCES addtf3)
+  use_libc_builtin(GENERIC_SOURCES    fixdfsi)
+  use_libc_builtin(GENERIC_SOURCES    fixdfdi)
+  use_libc_builtin(GENERIC_SOURCES    fixdfti)
+  use_libc_builtin(GENERIC_SOURCES    fixsfsi)
+  use_libc_builtin(GENERIC_SOURCES    fixsfdi)
+  use_libc_builtin(GENERIC_SOURCES    fixsfti)
+  use_libc_builtin(GENERIC_SOURCES    fixunsdfsi)
+  use_libc_builtin(GENERIC_SOURCES    fixunsdfdi)
+  use_libc_builtin(GENERIC_SOURCES    fixunsdfti)
+  use_libc_builtin(GENERIC_SOURCES    fixunssfsi)
+  use_libc_builtin(GENERIC_SOURCES    fixunssfdi)
+  use_libc_builtin(GENERIC_SOURCES    fixunssfti)
 endif()
 
 option(COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN
