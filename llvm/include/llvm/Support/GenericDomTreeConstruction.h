@@ -119,13 +119,14 @@ template <typename DomTreeT> struct SemiNCAInfo {
   }
 
   // Returns a lazy range over N's children, reversed for non-inverted graphs so
-  // a LIFO worklist visits them in their natural order. Graphs whose children
-  // aren't NodePtr (clang's CFGBlock::AdjacentBlock) may include nullptr, which
-  // are filtered out.
+  // a LIFO worklist visits them in their natural order.
   template <bool Inversed> static auto getChildren(NodePtr N) {
     using DirectedNodeT =
         std::conditional_t<Inversed, Inverse<NodePtr>, NodePtr>;
     auto R = detail::reverse_if<!Inversed>(children<DirectedNodeT>(N));
+    // Most graphs' iterators yield NodePtr directly; return the range as is.
+    // clang's CFGBlock instead yields a CFGBlock::AdjacentBlock proxy that is
+    // convertible to NodePtr but can be null for AB_Unreachable.
     if constexpr (std::is_same_v<std::decay_t<decltype(*R.begin())>, NodePtr>)
       return R;
     else
@@ -293,15 +294,17 @@ template <typename DomTreeT> struct SemiNCAInfo {
   // This function requires DFS to be run before calling it.
   void runSemiNCA() {
     const unsigned NextDFSNum(NumToNode.size());
-    SmallVector<InfoRec *, 32> NumToInfo = {nullptr};
-    NumToInfo.reserve(NextDFSNum);
-    // Immediate dominators in DFS-number space, initialized to spanning tree
-    // parents.
-    SmallVector<unsigned, 32> IDoms(NextDFSNum);
+    // NumToInfo and IDoms are indexed by DFS number; index 0 is an unused
+    // sentinel. IDoms holds immediate dominators in DFS-number space,
+    // initialized below to spanning tree parents.
+    SmallVector<InfoRec *, 32> NumToInfo;
+    NumToInfo.resize_for_overwrite(NextDFSNum);
+    SmallVector<unsigned, 32> IDoms;
+    IDoms.resize_for_overwrite(NextDFSNum);
     for (unsigned i = 1; i < NextDFSNum; ++i) {
       auto &VInfo = getNodeInfo(NumToNode[i]);
       IDoms[i] = VInfo.Parent;
-      NumToInfo.push_back(&VInfo);
+      NumToInfo[i] = &VInfo;
     }
 
     // Step #1: Calculate the semidominators of all vertices.
