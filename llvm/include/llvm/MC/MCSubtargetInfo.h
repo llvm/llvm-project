@@ -185,6 +185,12 @@ public:
   /// the provided string, ignoring all other features.
   bool checkFeatures(StringRef FS) const;
 
+  /// Check whether the current subtarget satisfies a target feature expression.
+  /// The expression uses feature names from the target's subtarget feature
+  /// table. Comma means AND, | means OR, comma has higher precedence than |,
+  /// and parentheses group expressions.
+  bool checkFeatureExpression(StringRef FeatureExpr) const;
+
   /// Get the machine model of a CPU.
   const MCSchedModel &getSchedModelForCPU(StringRef CPU) const;
 

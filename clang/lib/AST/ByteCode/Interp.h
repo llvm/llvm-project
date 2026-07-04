@@ -2702,7 +2702,7 @@ static inline bool DecPtr(InterpState &S, CodePtr OpPC) {
 /// 2) Pops another Pointer from the stack.
 /// 3) Pushes the difference of the indices of the two pointers on the stack.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-inline bool SubPtr(InterpState &S, CodePtr OpPC, bool ElemSizeIsZero) {
+inline bool SubPtr(InterpState &S, CodePtr OpPC, uint32_t ElemSize) {
   const Pointer &LHS = S.Stk.pop<Pointer>().expand();
   const Pointer &RHS = S.Stk.pop<Pointer>().expand();
 
@@ -2737,11 +2737,8 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC, bool ElemSizeIsZero) {
     return false;
   }
 
-  if (ElemSizeIsZero) {
-    QualType PtrT = LHS.getType();
-    while (auto *AT = dyn_cast<ArrayType>(PtrT))
-      PtrT = AT->getElementType();
-
+  if (ElemSize == 0) {
+    QualType PtrT = S.getASTContext().getBaseElementType(LHS.getType());
     QualType ArrayTy = S.getASTContext().getConstantArrayType(
         PtrT, APInt::getZero(1), nullptr, ArraySizeModifier::Normal, 0);
     S.FFDiag(S.Current->getSource(OpPC),
@@ -2756,17 +2753,16 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC, bool ElemSizeIsZero) {
     return true;
   }
 
-  int64_t A64 =
-      LHS.isBlockPointer()
-          ? (LHS.isElementPastEnd() ? LHS.getNumElems() : LHS.getIndex())
-          : LHS.getIntegerRepresentation();
+  std::optional<size_t> VL = LHS.computeLayoutOffset(S.getASTContext());
+  if (!VL)
+    return false;
+  std::optional<size_t> VR = RHS.computeLayoutOffset(S.getASTContext());
+  if (!VR)
+    return false;
 
-  int64_t B64 =
-      RHS.isBlockPointer()
-          ? (RHS.isElementPastEnd() ? RHS.getNumElems() : RHS.getIndex())
-          : RHS.getIntegerRepresentation();
-
-  int64_t R64 = A64 - B64;
+  assert(((int64_t)*VL - (int64_t)*VR) % ElemSize == 0);
+  int64_t R64 =
+      (static_cast<int64_t>(*VL) - static_cast<int64_t>(*VR)) / ElemSize;
   if (static_cast<int64_t>(T::from(R64)) != R64)
     return handleOverflow(S, OpPC, R64);
 
@@ -2885,6 +2881,19 @@ bool CastAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
     Result.copy(SourceInt);
   }
   S.Stk.push<IntegralAP<true>>(Result);
+  return true;
+}
+
+// Cast an AP integer to Sint64, failing constant evaluation if the value is
+// negative or too large to fit (i.e. truncation would change the value).
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool CastNoOverflow(InterpState &S, CodePtr OpPC) {
+  T Source = S.Stk.pop<T>();
+  APSInt Val = Source.toAPSInt();
+  if (Val.isNegative() || Val.getActiveBits() > 63)
+    return Invalid(S, OpPC);
+  S.Stk.push<Integral<64, true>>(
+      Integral<64, true>::from((int64_t)Val.getZExtValue()));
   return true;
 }
 

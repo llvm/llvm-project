@@ -594,7 +594,7 @@ def SubOffset : Opcode {
 // [Pointer, Pointer] -> [Integral]
 def SubPtr : Opcode {
   let Types = [IntegerTypeClass];
-  let Args = [ArgBool];
+  let Args = [ArgUint32];
   let HasGroup = 1;
 }
 
@@ -745,6 +745,16 @@ def CastAP : Opcode {
 def CastAPS : Opcode {
   let Types = [AluTypeClass];
   let Args = [ArgUint32];
+  let HasGroup = 1;
+}
+
+def APOnlyTypeClass : TypeClass {
+  let Types = [IntAP, IntAPS];
+}
+
+// Cast from an AP integer type to Sint64, failing if the value doesn't fit.
+def CastNoOverflow : Opcode {
+  let Types = [APOnlyTypeClass];
   let HasGroup = 1;
 }
 

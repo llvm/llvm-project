@@ -193,6 +193,8 @@ set(x86_files
   avx2intrin.h
   avx512bf16intrin.h
   avx512bitalgintrin.h
+  avx512bmmintrin.h
+  avx512bmmvlintrin.h
   avx512bwintrin.h
   avx512cdintrin.h
   avx512dqintrin.h
@@ -407,6 +409,13 @@ set(llvm_libc_wrapper_files
 
 set(zos_wrapper_files
   zos_wrappers/builtins.h
+  zos_wrappers/grp.h
+  zos_wrappers/locale.h
+  zos_wrappers/math.h
+  zos_wrappers/poll.h
+  zos_wrappers/string.h
+  zos_wrappers/time.h
+  zos_wrappers/variant.h
 )
 
 include(GetClangResourceDir)

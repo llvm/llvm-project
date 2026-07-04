@@ -15,6 +15,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPULaneMaskUtils.h"
+#include "AMDGPUMemoryUtils.h"
 #include "AMDGPUSelectionDAGInfo.h"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
@@ -9862,6 +9863,13 @@ SDValue SITargetLowering::lowerBUILD_VECTOR(SDValue Op,
 
 bool SITargetLowering::isOffsetFoldingLegal(
     const GlobalAddressSDNode *GA) const {
+  // Named barriers have fixed, non-relocated LDS addresses, so a constant
+  // offset into an array of them can be folded into the address.
+  if (GA->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
+    const auto *GV = dyn_cast<GlobalVariable>(GA->getGlobal());
+    return GV && AMDGPU::isNamedBarrier(*GV);
+  }
+
   // OSes that use ELF REL relocations (instead of RELA) can only store a
   // 32-bit addend in the instruction, so it is not safe to allow offset folding
   // which can create arbitrary 64-bit addends. (This is only a problem for
@@ -10810,25 +10818,38 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   switch (IntrinsicID) {
   case Intrinsic::amdgcn_wave_reduce_min:
   case Intrinsic::amdgcn_wave_reduce_umin:
+  case Intrinsic::amdgcn_wave_reduce_fmin:
   case Intrinsic::amdgcn_wave_reduce_max:
   case Intrinsic::amdgcn_wave_reduce_umax:
+  case Intrinsic::amdgcn_wave_reduce_fmax:
   case Intrinsic::amdgcn_wave_reduce_add:
+  case Intrinsic::amdgcn_wave_reduce_fadd:
   case Intrinsic::amdgcn_wave_reduce_sub:
+  case Intrinsic::amdgcn_wave_reduce_fsub:
   case Intrinsic::amdgcn_wave_reduce_and:
   case Intrinsic::amdgcn_wave_reduce_or:
   case Intrinsic::amdgcn_wave_reduce_xor: {
     EVT SrcVT = Op.getOperand(1).getValueType();
-    if (SrcVT == MVT::i16) {
+    if (SrcVT.getFixedSizeInBits() == 16) {
+      bool IsFPOp = SrcVT.isFloatingPoint();
       bool NeedsSignExt = IntrinsicID == Intrinsic::amdgcn_wave_reduce_min ||
                           IntrinsicID == Intrinsic::amdgcn_wave_reduce_max ||
                           IntrinsicID == Intrinsic::amdgcn_wave_reduce_add ||
                           IntrinsicID == Intrinsic::amdgcn_wave_reduce_sub;
-      unsigned ExtOpc = NeedsSignExt ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
-      SDValue ExtendedSrc = DAG.getNode(ExtOpc, DL, MVT::i32, Op.getOperand(1));
+      unsigned ExtOpc = IsFPOp         ? ISD::FP_EXTEND
+                        : NeedsSignExt ? ISD::SIGN_EXTEND
+                                       : ISD::ZERO_EXTEND;
+      auto SrcType = IsFPOp ? MVT::f16 : MVT::i16;
+      auto ExtType = IsFPOp ? MVT::f32 : MVT::i32;
+      SDValue ExtendedSrc = DAG.getNode(ExtOpc, DL, ExtType, Op.getOperand(1));
       SDValue Strategy = Op.getOperand(2);
-      SDValue Result = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+      SDValue Result = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, ExtType,
                                    Op.getOperand(0), ExtendedSrc, Strategy);
-      return DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Result);
+      if (IsFPOp)
+        return DAG.getNode(ISD::FP_ROUND, DL, SrcType, Result,
+                           DAG.getTargetConstant(1, DL, MVT::i32));
+      else
+        return DAG.getNode(ISD::TRUNCATE, DL, SrcType, Result);
     }
     return SDValue();
   }
@@ -11120,7 +11141,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return lowerBALLOTIntrinsic(*this, Op.getNode(), DAG);
   case Intrinsic::amdgcn_fmed3:
     return DAG.getNode(AMDGPUISD::FMED3, DL, VT, Op.getOperand(1),
-                       Op.getOperand(2), Op.getOperand(3));
+                       Op.getOperand(2), Op.getOperand(3), Op->getFlags());
   case Intrinsic::amdgcn_fdot2:
     return DAG.getNode(AMDGPUISD::FDOT2, DL, VT, Op.getOperand(1),
                        Op.getOperand(2), Op.getOperand(3), Op.getOperand(4));
