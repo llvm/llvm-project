@@ -3231,13 +3231,6 @@ PRESERVE_NONE static bool BCP(InterpState &S, CodePtr OpPC, int32_t Offset,
   // We have already evaluated this speculation's EndSpeculation opcode.
   assert(S.SpeculationDepth == DepthBefore - 1);
 
-  // Jump to end label. This is a little tricker than just RealPC += Offset
-  // because our usual jump instructions don't have any arguments, to the offset
-  // we get is a little too much and we need to subtract the size of the
-  // bool and PrimType arguments again.
-  int32_t ParamSize = align(sizeof(PrimType));
-  assert(Offset >= ParamSize);
-
   return true;
 }
 
