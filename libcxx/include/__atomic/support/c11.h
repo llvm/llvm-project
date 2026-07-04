@@ -162,7 +162,7 @@ template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI bool __cxx_atomic_compare_exchange_strong(
     __cxx_atomic_base_impl<_Tp>* __a, _Tp* __expected, _Tp __value, memory_order __success, memory_order __failure)
     _NOEXCEPT {
-  return __atomic_cas_with_clear_padding(
+  return std::__atomic_cas_with_clear_padding(
       __expected, __value, [__a, __success, __failure](_Tp* __expected_or_copy, _Tp __value_maybe_padding_cleared) {
         return __c11_atomic_compare_exchange_strong(
             std::addressof(__a->__a_value),
@@ -180,7 +180,7 @@ _LIBCPP_HIDE_FROM_ABI bool __cxx_atomic_compare_exchange_weak(
     _Tp __value,
     memory_order __success,
     memory_order __failure) _NOEXCEPT {
-  return __atomic_cas_with_clear_padding(
+  return std::__atomic_cas_with_clear_padding(
       __expected, __value, [__a, __success, __failure](_Tp* __expected_or_copy, _Tp __value_maybe_padding_cleared) {
         return __c11_atomic_compare_exchange_weak(
             std::addressof(__a->__a_value),
@@ -195,7 +195,7 @@ template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI bool __cxx_atomic_compare_exchange_weak(
     __cxx_atomic_base_impl<_Tp>* __a, _Tp* __expected, _Tp __value, memory_order __success, memory_order __failure)
     _NOEXCEPT {
-  return __atomic_cas_with_clear_padding(
+  return std::__atomic_cas_with_clear_padding(
       __expected, __value, [__a, __success, __failure](_Tp* __expected_or_copy, _Tp __value_maybe_padding_cleared) {
         return __c11_atomic_compare_exchange_weak(
             std::addressof(__a->__a_value),

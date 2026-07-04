@@ -33,7 +33,7 @@ struct __needs_clear_padding
     : _And<_Not<has_unique_object_representations<_Tp>>, _Not<is_same<_Tp, float>>, _Not<is_same<_Tp, double>>> {};
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr void __clear_padding_if_needed(_Tp&& __obj) noexcept {
+_LIBCPP_HIDE_FROM_ABI constexpr void __clear_padding_if_needed(_Tp& __obj) noexcept {
   if constexpr (__needs_clear_padding<remove_cvref_t<_Tp>>::value) {
     if (!__builtin_is_constant_evaluated()) {
       __builtin_clear_padding(std::addressof(__obj));
@@ -44,12 +44,12 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __clear_padding_if_needed(_Tp&& __obj) noex
 template <class _Tp, class _Up, class _CasFunc>
 _LIBCPP_HIDE_FROM_ABI bool __atomic_cas_with_clear_padding(_Tp* __expected, _Up __value, _CasFunc&& __cas_func) {
   if constexpr (!__needs_clear_padding<remove_cv_t<_Tp>>::value) {
-    return __cas_func(__expected, std::forward<_Up>(__value));
+    return __cas_func(__expected, __value);
   } else {
     std::__clear_padding_if_needed(__value);
     remove_cv_t<_Tp> __expected_copy = *__expected;
     std::__clear_padding_if_needed(__expected_copy);
-    if (__cas_func(std::addressof(__expected_copy), std::forward<_Up>(__value))) {
+    if (__cas_func(std::addressof(__expected_copy), __value)) {
       return true;
     } else {
       std::memcpy(__expected, std::addressof(__expected_copy), sizeof(remove_cv_t<_Tp>));
@@ -61,17 +61,11 @@ _LIBCPP_HIDE_FROM_ABI bool __atomic_cas_with_clear_padding(_Tp* __expected, _Up 
 #else // _LIBCPP_STD_VER >= 20 && __has_builtin(__builtin_clear_padding)
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI
-#  if _LIBCPP_STD_VER >= 14
-// c++11 does not allow constexpr functions to return void
-constexpr
-#  endif
-    void __clear_padding_if_needed(_Tp&&) _NOEXCEPT {
-}
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __clear_padding_if_needed(_Tp&) _NOEXCEPT {}
 
 template <class _Tp, class _Up, class _CasFunc>
-_LIBCPP_HIDE_FROM_ABI bool __atomic_cas_with_clear_padding(_Tp* __expected, _Up&& __value, _CasFunc&& __cas_func) {
-  return __cas_func(__expected, std::forward<_Up>(__value));
+_LIBCPP_HIDE_FROM_ABI bool __atomic_cas_with_clear_padding(_Tp* __expected, _Up __value, _CasFunc&& __cas_func) {
+  return __cas_func(__expected, __value);
 }
 
 #endif // _LIBCPP_STD_VER >= 20 && __has_builtin(__builtin_clear_padding)
