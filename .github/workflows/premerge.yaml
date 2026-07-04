@@ -266,15 +266,22 @@ jobs:
           brew install ninja
       - name: Build and Test
         run: |
+          echo "** Debug **"
+          git diff --name-only HEAD~1...HEAD
+          echo "** Debug **"
+          
           source <(git diff --name-only HEAD~1...HEAD | python3 .ci/compute_projects.py)
+
+          echo "Building projects: ${projects_to_build}"
+          echo "Running project checks targets: ${project_check_targets}"
+          echo "Building runtimes: ${runtimes_to_build}"
+          echo "Running runtimes checks targets: ${runtimes_check_targets}"
+          echo "Running runtimes checks requiring reconfiguring targets: ${runtimes_check_targets_needs_reconfig}"
 
           if [[ "${projects_to_build}" == "" ]]; then
             echo "No projects to build"
             exit 0
           fi
-
-          echo "Building projects: ${projects_to_build}"
-          echo "Running project checks targets: ${project_check_targets}"
 
           xcrun cmake -G Ninja \
                 -B build \
