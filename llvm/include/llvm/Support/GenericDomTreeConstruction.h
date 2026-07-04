@@ -60,16 +60,18 @@ template <typename DomTreeT> struct SemiNCAInfo {
   using GraphDiffT = GraphDiff<NodePtr, IsPostDom>;
 
   // Marks a node that hasn't been visited by DFS.
-  static constexpr unsigned Unvisited = -1u;
+  static constexpr unsigned Unvisited = 0;
 
-  // Information record used by Semi-NCA during tree construction.
+  // std::is_trivial information used by Semi-NCA during tree construction.
+  // DFSNum is the DFS number + 1, so a zero-initialized InfoRec is unvisited.
   struct InfoRec {
-    unsigned DFSNum = Unvisited;
-    unsigned Parent = 0;
-    unsigned Semi = 0;
-    unsigned Label = 0;
-    NodePtr IDom = nullptr;
-    SmallVector<unsigned, 4> ReverseChildren;
+    unsigned DFSNum;
+    unsigned Parent;
+    unsigned Semi;
+    unsigned Label;
+    NodePtr IDom;
+    // Head index + 1 into ReverseChildren; 0 = empty.
+    unsigned ReverseChildrenHead;
   };
 
   // Map a 0-based DFS number to the node. 0 is the DFS root, or the virtual
@@ -80,6 +82,9 @@ template <typename DomTreeT> struct SemiNCAInfo {
   std::conditional_t<GraphHasNodeNumbers<NodePtr>, SmallVector<InfoRec, 64>,
                      DenseMap<NodePtr, InfoRec>>
       NodeInfos;
+  // Reverse children of nodes; pairs of (DFSNum (predecessor), next-or-zero);
+  // forms a linked list in this vector.
+  SmallVector<std::pair<unsigned, unsigned>> ReverseChildren;
 
   using UpdateT = typename DomTreeT::UpdateType;
   using UpdateKind = typename DomTreeT::UpdateKind;
@@ -106,6 +111,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
   void clear() {
     NumToNode.clear();
     NodeInfos.clear();
+    ReverseChildren.clear();
     // Don't reset the pointer to BatchUpdateInfo here -- if there's an update
     // in progress, we need this information to continue it.
   }
@@ -192,8 +198,8 @@ template <typename DomTreeT> struct SemiNCAInfo {
   using NodeOrderMap = DenseMap<NodePtr, unsigned>;
 
   // Custom DFS implementation which can skip nodes based on a provided
-  // predicate. It also collects ReverseChildren so that we don't have to spend
-  // time getting predecessors in SemiNCA.
+  // predicate. It also builds the ReverseChildren lists to avoid re-fetching
+  // predecessors in SemiNCA.
   //
   // If IsReverse is set to true, the DFS walk will be performed backwards
   // relative to IsPostDom -- using reverse edges for dominators and forward
@@ -212,13 +218,16 @@ template <typename DomTreeT> struct SemiNCAInfo {
     while (!WorkList.empty()) {
       const auto [BB, ParentNum] = WorkList.pop_back_val();
       auto &BBInfo = getNodeInfo(BB);
-      BBInfo.ReverseChildren.push_back(ParentNum);
+      // Prepend the reverse edge (predecessor ParentNum) to BB's list.
+      ReverseChildren.emplace_back(ParentNum, BBInfo.ReverseChildrenHead);
+      BBInfo.ReverseChildrenHead = ReverseChildren.size();
 
       if (BBInfo.DFSNum != Unvisited)
         continue;
       BBInfo.Parent = ParentNum;
       unsigned Num = LastNum++;
-      BBInfo.DFSNum = BBInfo.Semi = BBInfo.Label = Num;
+      BBInfo.Semi = BBInfo.Label = Num;
+      BBInfo.DFSNum = Num + 1; // stored as Num+1
       NumToNode.push_back(BB);
 
       constexpr bool Direction = IsReverse != IsPostDom; // XOR.
@@ -297,6 +306,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
   // This function requires DFS to be run before calling it.
   void runSemiNCA() {
     const unsigned NextDFSNum(NumToNode.size());
+
     // NumToInfo and IDoms are indexed by DFS number; 0 is the root. IDoms holds
     // immediate dominators in DFS-number space, initialized below to spanning
     // tree parents.
@@ -317,10 +327,13 @@ template <typename DomTreeT> struct SemiNCAInfo {
 
       // Initialize the semi dominator to point to the parent node.
       WInfo.Semi = WInfo.Parent;
-      for (unsigned N : WInfo.ReverseChildren) {
-        unsigned SemiU = NumToInfo[eval(N, i + 1, EvalStack, NumToInfo)]->Semi;
+      for (unsigned RCIdx = WInfo.ReverseChildrenHead; RCIdx != 0;) {
+        auto [Pred, NextIdx] = ReverseChildren[RCIdx - 1];
+        unsigned SemiU =
+            NumToInfo[eval(Pred, i + 1, EvalStack, NumToInfo)]->Semi;
         if (SemiU < WInfo.Semi)
           WInfo.Semi = SemiU;
+        RCIdx = NextIdx;
       }
     }
 
@@ -347,7 +360,8 @@ template <typename DomTreeT> struct SemiNCAInfo {
     assert(NumToNode.empty() && "SNCAInfo must be freshly constructed");
 
     auto &BBInfo = getNodeInfo(nullptr);
-    BBInfo.DFSNum = BBInfo.Semi = BBInfo.Label = 0;
+    BBInfo.Semi = BBInfo.Label = 0;
+    BBInfo.DFSNum = 1; // DFS number 0, stored as 1.
 
     NumToNode.push_back(nullptr); // NumToNode[0] = nullptr;
   }
