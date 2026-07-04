@@ -149,7 +149,7 @@ StdAllocatorCaller InterpState::getStdAllocatorCaller(StringRef Name) const {
     if (CTSD->isInStdNamespace() && ClassII && ClassII->isStr("allocator") &&
         TAL.size() >= 1 && TAL[0].getKind() == TemplateArgument::Type) {
       QualType ElemType = TAL[0].getAsType();
-      const auto *NewCall = cast<CallExpr>(F->Caller->getExpr(F->getRetPC()));
+      const auto *NewCall = cast<CallExpr>(F->Caller->getExpr(F->getRetOpPC()));
       return {NewCall, ElemType};
     }
   }
