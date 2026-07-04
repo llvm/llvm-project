@@ -1081,6 +1081,10 @@ inline auto m_WidenIntrinsic(const T &...Ops) {
   return m_Isa<VPWidenIntrinsicRecipe>(m_Intrinsic<IntrID>(Ops...));
 }
 
+inline VPInstruction_match<VPInstruction::VScale> m_VScale() {
+  return m_VPInstruction<VPInstruction::VScale>();
+}
+
 inline auto m_LiveIn() { return m_Isa<VPIRValue, VPSymbolicValue>(); }
 
 /// Match a GEP recipe (VPWidenGEPRecipe, VPInstruction, or VPReplicateRecipe)
