@@ -266,8 +266,10 @@ define void @alias_mask_reverse_iterate(ptr noalias %ptrA, ptr %ptrB, ptr %ptrC,
 ; CHECK-TF:       [[VECTOR_MEMCHECK]]:
 ; CHECK-TF-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-TF-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 16
+; CHECK-TF-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP1]], 1
 ; CHECK-TF-NEXT:    [[TMP2:%.*]] = sub i64 [[PTRB1]], [[PTRC2]]
-; CHECK-TF-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP2]], [[TMP1]]
+; CHECK-TF-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP2]], 1
+; CHECK-TF-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], [[TMP5]]
 ; CHECK-TF-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-TF:       [[VECTOR_PH]]:
 ; CHECK-TF-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()

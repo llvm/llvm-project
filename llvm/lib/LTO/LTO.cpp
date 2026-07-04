@@ -1112,7 +1112,7 @@ LTO::addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
 
   // Prepend ".lto_discard <sym>, <sym>*" directive to each module inline asm
   // block.
-  if (M.hasModuleInlineAsm()) {
+  if (!M.getModuleInlineAsm().empty()) {
     std::string NewIA = ".lto_discard";
     if (!NonPrevailingAsmSymbols.empty()) {
       // Don't dicard a symbol if there is a live .symver for it.
@@ -1124,7 +1124,7 @@ LTO::addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
       NewIA += " " + llvm::join(NonPrevailingAsmSymbols, ", ");
     }
     NewIA += "\n";
-    M.prependModuleInlineAsm(NewIA);
+    M.setModuleInlineAsm(NewIA + M.getModuleInlineAsm());
   }
 
   assert(MsymI == MsymE);

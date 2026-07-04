@@ -7,7 +7,6 @@ target triple = "x86_64-unknown-linux-gnu"
 @g = constant i32 0, !type !0
 !0 = !{i32 0, !"typeid"}
 
-; M0: module asm
-; M0-NEXT: "ret"
+; M0: module asm "ret"
 ; M1-NOT: module asm
 module asm "ret"
