@@ -73,7 +73,7 @@ private:
   static SourceLocation
   GetFactLoc(llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> F) {
     if (const auto *UF = F.dyn_cast<const UseFact *>())
-      return UF->getUseExpr()->getExprLoc();
+      return UF->getUseLoc();
     if (const auto *OEF = F.dyn_cast<const OriginEscapesFact *>()) {
       if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
         return ReturnEsc->getReturnExpr()->getExprLoc();
@@ -258,7 +258,23 @@ public:
       SourceLocation ExpiryLoc = Warning.ExpiryLoc;
 
       if (const auto *UF = CausingFact.dyn_cast<const UseFact *>()) {
-        if (Warning.InvalidatedByExpr) {
+        // An implicit use has no source expression; anchor diagnostics at its
+        // location.
+        if (UF->isImplicit()) {
+          if (Warning.InvalidatedByExpr) {
+            if (IssueExpr)
+              SemaHelper->reportUseAfterInvalidation(
+                  IssueExpr, UF->getImplicitLoc(), Warning.InvalidatedByExpr);
+            else if (InvalidatedPVD)
+              SemaHelper->reportUseAfterInvalidation(InvalidatedPVD,
+                                                     UF->getImplicitLoc(),
+                                                     Warning.InvalidatedByExpr);
+          } else {
+            SemaHelper->reportUseAfterScope(
+                IssueExpr, UF->getImplicitLoc(), MovedExpr, ExpiryLoc,
+                getExprChain(LoanPropagation.buildOriginFlowChain(UF, LID)));
+          }
+        } else if (Warning.InvalidatedByExpr) {
           if (IssueExpr)
             // Use-after-invalidation of an object on stack.
             SemaHelper->reportUseAfterInvalidation(IssueExpr, UF->getUseExpr(),

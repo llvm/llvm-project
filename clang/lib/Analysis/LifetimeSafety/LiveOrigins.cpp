@@ -56,7 +56,7 @@ struct Lattice {
 
 static SourceLocation GetFactLoc(CausingFactType F) {
   if (const auto *UF = F.dyn_cast<const UseFact *>())
-    return UF->getUseExpr()->getExprLoc();
+    return UF->getUseLoc();
   if (const auto *OEF = F.dyn_cast<const OriginEscapesFact *>()) {
     if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
       return ReturnEsc->getReturnExpr()->getExprLoc();
