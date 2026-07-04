@@ -1564,7 +1564,7 @@ void range_based_for_use_after_scope() {
   {
     MyObjStorage s;
     for (const MyObj &o : s) { // expected-warning {{local variable 's' does not live long enough}} \
-                               // expected-note {{result of call to 'begin' aliases the storage of local variable 's'}}
+                               // expected-note {{local variable '__range2' aliases the storage of local variable 's'}}
       v = o;
     }
   } // expected-note {{local variable 's' is destroyed here}}
@@ -2750,7 +2750,8 @@ void chained_defaulted_assignment_propagation() {
     std::string str{"abc"};
     S a = getS(str); // expected-warning {{local variable 'str' does not live long enough}} \
                      // expected-note {{result of call to 'getS' aliases the storage of local variable 'str'}}
-    c = b = a;       // expected-note {{local variable 'a' aliases the storage of local variable 'str'}}
+    c = b = a;       // expected-note {{local variable 'a' aliases the storage of local variable 'str'}} \
+                     // expected-note {{expression aliases the storage of local variable 'str'}}
   }                  // expected-note {{local variable 'str' is destroyed here}}
   use(c);            // expected-note {{later used here}}
 }
