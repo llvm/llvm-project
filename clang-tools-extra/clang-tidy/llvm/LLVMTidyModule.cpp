@@ -14,11 +14,11 @@
 #include "FormatvStringCheck.h"
 #include "HeaderGuardCheck.h"
 #include "IncludeOrderCheck.h"
+#include "InvalidRegexPatternCheck.h"
 #include "PreferIsaOrDynCastInConditionalsCheck.h"
 #include "PreferRegisterOverUnsignedCheck.h"
 #include "PreferStaticOverAnonymousNamespaceCheck.h"
 #include "RedundantCastingCheck.h"
-#include "InvalidRegexPatternCheck.h"
 #include "TwineLocalCheck.h"
 #include "TypeSwitchCaseTypesCheck.h"
 #include "UseNewMLIROpBuilderCheck.h"
@@ -49,7 +49,8 @@ public:
         "llvm-qualified-auto");
     CheckFactories.registerCheck<RedundantCastingCheck>(
         "llvm-redundant-casting");
-    CheckFactories.registerCheck<InvalidRegexPatternCheck>("llvm-invalid-regex-pattern");
+    CheckFactories.registerCheck<InvalidRegexPatternCheck>(
+        "llvm-invalid-regex-pattern");
     CheckFactories.registerCheck<TwineLocalCheck>("llvm-twine-local");
     CheckFactories.registerCheck<TypeSwitchCaseTypesCheck>(
         "llvm-type-switch-case-types");
