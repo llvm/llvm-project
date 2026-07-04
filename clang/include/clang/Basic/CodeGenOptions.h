@@ -702,7 +702,7 @@ public:
   }
 
   /// Remap specified path prefix using provided DebugPrefixMap map.
-  /// Returns updated path or unchanged if no substituion was found.
+  /// Returns updated path or unchanged if no substitution was found.
   std::string remapDebugPathPrefix(StringRef Path) const;
 };
 

@@ -52,7 +52,7 @@ void CodeGenOptions::resetNonModularOptions(StringRef ModuleFormat) {
 }
 
 std::string CodeGenOptions::remapDebugPathPrefix(StringRef Path) const {
-  SmallString<0> P = Path;
+  SmallString<256> P = Path;
 
   for (auto &[From, To] : llvm::reverse(DebugPrefixMap))
     if (llvm::sys::path::replace_path_prefix(P, From, To))
