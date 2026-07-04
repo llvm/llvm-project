@@ -268,7 +268,7 @@ LLVM_ABI BasicBlock *SplitEdge(BasicBlock *From, BasicBlock *To,
                                MemorySSAUpdater *MSSAU = nullptr,
                                const Twine &BBName = "");
 
-/// \brief Create a new intermediate target block for a callbr and switch edges.
+/// \brief Create a new intermediate target block for a callbr or switch edge.
 ///
 /// Create a new basic block between a callbr or switch instruction and one of
 /// its successors. The new block replaces the original successor in the
