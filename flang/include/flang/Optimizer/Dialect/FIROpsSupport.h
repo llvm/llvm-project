@@ -98,6 +98,18 @@ static constexpr llvm::StringRef getVolatileAttrName() {
   return "fir.volatile";
 }
 
+/// Attribute to mark a dummy data object argument as read-only, i.e. the callee
+/// does not write through this argument (INTENT(IN), passed by reference).
+/// TARGET and derived-type arguments are allowed: LLVM `readonly` only
+/// constrains writes through the argument and pointers based on it. Writes
+/// through pointers loaded from the object, such as a POINTER component's
+/// target, do not violate it. Lowered to the LLVM `readonly` argument
+/// attribute by the FunctionAttr pass, which keeps `noalias` and `nocapture`
+/// disabled for TARGET arguments.
+static constexpr llvm::StringRef getReadOnlyAttrName() {
+  return "fir.read_only";
+}
+
 /// Attribute to mark that a function argument is a character dummy procedure.
 /// Character dummy procedure have special ABI constraints.
 static constexpr llvm::StringRef getCharacterProcedureDummyAttrName() {

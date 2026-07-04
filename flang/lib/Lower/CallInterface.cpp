@@ -187,6 +187,30 @@ asImplicitArg(Fortran::evaluate::characteristics::DummyDataObject &&dummy) {
                                                        std::move(shape)));
 }
 
+/// An INTENT(IN) data object passed by reference is not modified by the callee,
+/// so the LLVM `readonly` argument attribute can be set. Notes on the
+/// exclusions:
+///   - VALUE, POINTER, and ALLOCATABLE dummies require ABI- or
+///     descriptor-specific handling before `readonly` can be applied and are
+///     left out of scope;
+///   - ASYNCHRONOUS memory may change underneath the callee;
+///   - VOLATILE+INTENT(IN) is prohibited by the standard (C870); kept here
+///     defensively.
+/// TARGET and derived types are intentionally allowed: any write that
+/// INTENT(IN) still permits (e.g. writing the target of a POINTER component)
+/// goes through a pointer loaded from the object, not through the argument
+/// pointer, and hence does not violate LLVM `readonly` (which only constrains
+/// the argument and pointers based on it).
+static bool dummyArgIsReadOnly(
+    const Fortran::evaluate::characteristics::DummyDataObject &obj) {
+  using Attrs = Fortran::evaluate::characteristics::DummyDataObject::Attr;
+  return obj.intent == Fortran::common::Intent::In &&
+         !obj.attrs.test(Attrs::Value) && !obj.attrs.test(Attrs::Pointer) &&
+         !obj.attrs.test(Attrs::Allocatable) &&
+         !obj.attrs.test(Attrs::Asynchronous) &&
+         !obj.attrs.test(Attrs::Volatile);
+}
+
 static Fortran::evaluate::characteristics::DummyArgument
 asImplicitArg(Fortran::evaluate::characteristics::DummyArgument &&dummy) {
   return Fortran::common::visit(
@@ -1084,8 +1108,15 @@ private:
     } else {
       // non-PDT derived type allowed in implicit interface.
       mlir::Type refType = getRefType(dynamicType, obj);
+      llvm::SmallVector<mlir::NamedAttribute> attrs = dummyNameAttr(entity);
+      // Propagate the INTENT(IN) contract for by-reference dummies handled by
+      // the implicit-interface path.
+      if (dummyArgIsReadOnly(obj))
+        attrs.emplace_back(
+            mlir::StringAttr::get(&mlirContext, fir::getReadOnlyAttrName()),
+            mlir::UnitAttr::get(&mlirContext));
       addFirOperand(refType, nextPassedArgPosition(), Property::BaseAddress,
-                    dummyNameAttr(entity));
+                    attrs);
       addPassedArg(PassEntityBy::BaseAddress, entity, characteristics);
     }
   }
@@ -1143,6 +1174,12 @@ private:
       attrs.emplace_back(
           mlir::StringAttr::get(&mlirContext, cuf::getDataAttrName()),
           cuf::getDataAttribute(&mlirContext, obj.cudaDataAttr));
+
+    // INTENT(IN) by-reference dummies can be marked readonly (see
+    // dummyArgIsReadOnly). On non-reference (e.g. box) arguments the marker is
+    // a no-op: the FunctionAttr pass only translates it for fir::ReferenceType.
+    if (dummyArgIsReadOnly(obj))
+      addMLIRAttr(fir::getReadOnlyAttrName());
 
     // TODO: intents that require special care (e.g finalization)
 
