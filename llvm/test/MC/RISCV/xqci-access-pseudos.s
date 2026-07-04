@@ -20,7 +20,9 @@ lb a0, 0(a1), %qc.access(extern1)
 # CHECK-RELOC: R_RISCV_VENDOR QUALCOMM
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_32 extern1
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
-# CHECK-RV64: [[@LINE-7]]:1: error: instruction requires the following: RV32I Base Instruction Set
+# CHECK-RV64: [[@LINE-7]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK-RV64: [[@LINE-8]]:15: note: invalid operand for instruction
+# CHECK-RV64: [[@LINE-9]]:1: note: instruction requires the following: RV32I Base Instruction Set
 
 lbu a0, 0(a1), %qc.access(extern1)
 # CHECK-INST: lbu a0, 0(a1)
@@ -29,7 +31,9 @@ lbu a0, 0(a1), %qc.access(extern1)
 # CHECK-RELOC: R_RISCV_VENDOR QUALCOMM
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_32 extern1
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
-# CHECK-RV64: [[@LINE-7]]:1: error: instruction requires the following: RV32I Base Instruction Set
+# CHECK-RV64: [[@LINE-7]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK-RV64: [[@LINE-8]]:16: note: invalid operand for instruction
+# CHECK-RV64: [[@LINE-9]]:1: note: instruction requires the following: RV32I Base Instruction Set
 
 lh a2, 0(a3), %qc.access(extern2)
 # CHECK-INST: lh a2, 0(a3)
@@ -38,7 +42,9 @@ lh a2, 0(a3), %qc.access(extern2)
 # CHECK-RELOC: R_RISCV_VENDOR QUALCOMM
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_32 extern2
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
-# CHECK-RV64: [[@LINE-7]]:1: error: instruction requires the following: RV32I Base Instruction Set
+# CHECK-RV64: [[@LINE-7]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK-RV64: [[@LINE-8]]:15: note: invalid operand for instruction
+# CHECK-RV64: [[@LINE-9]]:1: note: instruction requires the following: RV32I Base Instruction Set
 
 lhu a2, 0(a3), %qc.access(extern2)
 # CHECK-INST: lhu a2, 0(a3)
@@ -47,7 +53,9 @@ lhu a2, 0(a3), %qc.access(extern2)
 # CHECK-RELOC: R_RISCV_VENDOR QUALCOMM
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_32 extern2
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
-# CHECK-RV64: [[@LINE-7]]:1: error: instruction requires the following: RV32I Base Instruction Set
+# CHECK-RV64: [[@LINE-7]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK-RV64: [[@LINE-8]]:16: note: invalid operand for instruction
+# CHECK-RV64: [[@LINE-9]]:1: note: instruction requires the following: RV32I Base Instruction Set
 
 lw a4, 0(a5), %qc.access(extern4)
 # CHECK-INST: lw a4, 0(a5)
@@ -56,7 +64,9 @@ lw a4, 0(a5), %qc.access(extern4)
 # CHECK-RELOC: R_RISCV_VENDOR QUALCOMM
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_32 extern4
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
-# CHECK-RV64: [[@LINE-7]]:1: error: instruction requires the following: RV32I Base Instruction Set
+# CHECK-RV64: [[@LINE-7]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK-RV64: [[@LINE-8]]:15: note: invalid operand for instruction
+# CHECK-RV64: [[@LINE-9]]:1: note: instruction requires the following: RV32I Base Instruction Set
 
 sb a0, 0(a1), %qc.access(extern1)
 # CHECK-INST: sb a0, 0(a1)
@@ -65,7 +75,9 @@ sb a0, 0(a1), %qc.access(extern1)
 # CHECK-RELOC: R_RISCV_VENDOR QUALCOMM
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_32 extern1
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
-# CHECK-RV64: [[@LINE-7]]:1: error: instruction requires the following: RV32I Base Instruction Set
+# CHECK-RV64: [[@LINE-7]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK-RV64: [[@LINE-8]]:15: note: invalid operand for instruction
+# CHECK-RV64: [[@LINE-9]]:1: note: instruction requires the following: RV32I Base Instruction Set
 
 sh a2, 0(a3), %qc.access(extern2)
 # CHECK-INST: sh a2, 0(a3)
@@ -74,7 +86,9 @@ sh a2, 0(a3), %qc.access(extern2)
 # CHECK-RELOC: R_RISCV_VENDOR QUALCOMM
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_32 extern2
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
-# CHECK-RV64: [[@LINE-7]]:1: error: instruction requires the following: RV32I Base Instruction Set
+# CHECK-RV64: [[@LINE-7]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK-RV64: [[@LINE-8]]:15: note: invalid operand for instruction
+# CHECK-RV64: [[@LINE-9]]:1: note: instruction requires the following: RV32I Base Instruction Set
 
 sw a4, 0(a5), %qc.access(extern4)
 # CHECK-INST: sw a4, 0(a5)
@@ -83,7 +97,9 @@ sw a4, 0(a5), %qc.access(extern4)
 # CHECK-RELOC: R_RISCV_VENDOR QUALCOMM
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_32 extern4
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
-# CHECK-RV64: [[@LINE-7]]:1: error: instruction requires the following: RV32I Base Instruction Set
+# CHECK-RV64: [[@LINE-7]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK-RV64: [[@LINE-8]]:15: note: invalid operand for instruction
+# CHECK-RV64: [[@LINE-9]]:1: note: instruction requires the following: RV32I Base Instruction Set
 
 ## No c.lb
 
@@ -94,7 +110,9 @@ c.lbu a0, 0(a1), %qc.access(extern1)
 # CHECK-RELOC: R_RISCV_VENDOR QUALCOMM
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_16 extern1
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
-# CHECK-RV64: [[@LINE-7]]:1: error: instruction requires the following: RV32I Base Instruction Set
+# CHECK-RV64: [[@LINE-7]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK-RV64: [[@LINE-8]]:18: note: invalid operand for instruction
+# CHECK-RV64: [[@LINE-9]]:1: note: instruction requires the following: RV32I Base Instruction Set
 
 c.lh a2, 0(a3), %qc.access(extern2)
 # CHECK-INST: c.lh a2, 0(a3)
@@ -103,7 +121,9 @@ c.lh a2, 0(a3), %qc.access(extern2)
 # CHECK-RELOC: R_RISCV_VENDOR QUALCOMM
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_16 extern2
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
-# CHECK-RV64: [[@LINE-7]]:1: error: instruction requires the following: RV32I Base Instruction Set
+# CHECK-RV64: [[@LINE-7]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK-RV64: [[@LINE-8]]:17: note: invalid operand for instruction
+# CHECK-RV64: [[@LINE-9]]:1: note: instruction requires the following: RV32I Base Instruction Set
 
 c.lhu a2, 0(a3), %qc.access(extern2)
 # CHECK-INST: c.lhu a2, 0(a3)
@@ -112,7 +132,9 @@ c.lhu a2, 0(a3), %qc.access(extern2)
 # CHECK-RELOC: R_RISCV_VENDOR QUALCOMM
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_16 extern2
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
-# CHECK-RV64: [[@LINE-7]]:1: error: instruction requires the following: RV32I Base Instruction Set
+# CHECK-RV64: [[@LINE-7]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK-RV64: [[@LINE-8]]:18: note: invalid operand for instruction
+# CHECK-RV64: [[@LINE-9]]:1: note: instruction requires the following: RV32I Base Instruction Set
 
 c.lw a4, 0(a5), %qc.access(extern4)
 # CHECK-INST: c.lw a4, 0(a5)
@@ -121,7 +143,9 @@ c.lw a4, 0(a5), %qc.access(extern4)
 # CHECK-RELOC: R_RISCV_VENDOR QUALCOMM
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_16 extern4
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
-# CHECK-RV64: [[@LINE-7]]:1: error: instruction requires the following: RV32I Base Instruction Set
+# CHECK-RV64: [[@LINE-7]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK-RV64: [[@LINE-8]]:17: note: invalid operand for instruction
+# CHECK-RV64: [[@LINE-9]]:1: note: instruction requires the following: RV32I Base Instruction Set
 
 c.sb a0, 0(a1), %qc.access(extern1)
 # CHECK-INST: c.sb a0, 0(a1)
@@ -130,7 +154,9 @@ c.sb a0, 0(a1), %qc.access(extern1)
 # CHECK-RELOC: R_RISCV_VENDOR QUALCOMM
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_16 extern1
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
-# CHECK-RV64: [[@LINE-7]]:1: error: instruction requires the following: RV32I Base Instruction Set
+# CHECK-RV64: [[@LINE-7]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK-RV64: [[@LINE-8]]:17: note: invalid operand for instruction
+# CHECK-RV64: [[@LINE-9]]:1: note: instruction requires the following: RV32I Base Instruction Set
 
 c.sh a2, 0(a3), %qc.access(extern2)
 # CHECK-INST: c.sh a2, 0(a3)
@@ -139,7 +165,9 @@ c.sh a2, 0(a3), %qc.access(extern2)
 # CHECK-RELOC: R_RISCV_VENDOR QUALCOMM
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_16 extern2
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
-# CHECK-RV64: [[@LINE-7]]:1: error: instruction requires the following: RV32I Base Instruction Set
+# CHECK-RV64: [[@LINE-7]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK-RV64: [[@LINE-8]]:17: note: invalid operand for instruction
+# CHECK-RV64: [[@LINE-9]]:1: note: instruction requires the following: RV32I Base Instruction Set
 
 c.sw a4, 0(a5), %qc.access(extern4)
 # CHECK-INST: c.sw a4, 0(a5)
@@ -148,4 +176,6 @@ c.sw a4, 0(a5), %qc.access(extern4)
 # CHECK-RELOC: R_RISCV_VENDOR QUALCOMM
 # CHECK-RELOC-NEXT: R_RISCV_QC_ACCESS_16 extern4
 # CHECK-RELOC-NEXT: R_RISCV_RELAX
-# CHECK-RV64: [[@LINE-7]]:1: error: instruction requires the following: RV32I Base Instruction Set
+# CHECK-RV64: [[@LINE-7]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK-RV64: [[@LINE-8]]:17: note: invalid operand for instruction
+# CHECK-RV64: [[@LINE-9]]:1: note: instruction requires the following: RV32I Base Instruction Set
