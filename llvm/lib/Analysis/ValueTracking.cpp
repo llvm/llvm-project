@@ -2232,6 +2232,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
             I, DemandedElts, Q, Depth, KnownBits::ssub_sat);
         break;
       }
+      /*
       case Intrinsic::x86_bmi_bextr_32:
       case Intrinsic::x86_bmi_bextr_64:
       case Intrinsic::x86_tbm_bextri_u32:
@@ -2255,6 +2256,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         }
         break;
       }
+        */
       case Intrinsic::riscv_vsetvli:
       case Intrinsic::riscv_vsetvlimax: {
         bool HasAVL = II->getIntrinsicID() == Intrinsic::riscv_vsetvli;
