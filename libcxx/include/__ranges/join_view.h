@@ -339,8 +339,8 @@ public:
     return __x.__outer_ == __y.__outer_ && __x.__inner_ == __y.__inner_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr decltype(auto)
-  [[nodiscard]] iter_move(const __iterator& __i) noexcept(noexcept(ranges::iter_move(*__i.__inner_))) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr decltype(auto)
+  iter_move(const __iterator& __i) noexcept(noexcept(ranges::iter_move(*__i.__inner_))) {
     return ranges::iter_move(*__i.__inner_);
   }
 
