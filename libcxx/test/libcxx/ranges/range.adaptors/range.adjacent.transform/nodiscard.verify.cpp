@@ -89,6 +89,15 @@ void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::views::adjacent_transform<0>(range);
 
+  int range[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  static_assert(std::ranges::forward_range<decltype(range)>);
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::views::adjacent_transform<0>(range, Fn{});
+
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::views::adjacent_transform<2>(range, std::multiplies());
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::views::adjacent_transform<2>(std::multiplies());
 }
