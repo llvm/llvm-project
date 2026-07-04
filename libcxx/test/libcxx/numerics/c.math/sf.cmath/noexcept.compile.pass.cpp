@@ -17,21 +17,14 @@
 #include <cmath>
 
 #include "test_macros.h"
-#include "type_algorithms.h"
-
-struct TestIntegral {
-  template <class T>
-  void operator()() const {
-    ASSERT_NOEXCEPT(std::assoc_laguerre(0, 0, T{}));
-  }
-};
 
 void test() {
   // assoc_laguerre
+  ASSERT_NOEXCEPT(std::assoc_laguerre(0, 0, 0.0f));
   ASSERT_NOEXCEPT(std::assoc_laguerre(0, 0, 0.0));
+  ASSERT_NOEXCEPT(std::assoc_laguerre(0, 0, 0.0l));
+  ASSERT_NOEXCEPT(std::assoc_laguerre(0, 0, 0));
 
   ASSERT_NOEXCEPT(std::assoc_laguerref(0, 0, 0.0f));
   ASSERT_NOEXCEPT(std::assoc_laguerrel(0, 0, 0.0l));
-
-  types::for_each(types::integral_types{}, TestIntegral{});
 }

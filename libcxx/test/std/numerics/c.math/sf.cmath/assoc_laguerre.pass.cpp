@@ -66,8 +66,10 @@ struct TestInteger {
 
 int main(int, char**) {
   test_floating_point<float>([](unsigned n, unsigned m, float x) { return std::assoc_laguerref(n, m, x); });
+  test_floating_point<float>([](unsigned n, unsigned m, float x) { return std::assoc_laguerre(n, m, x); });
   test_floating_point<double>([](unsigned n, unsigned m, double x) { return std::assoc_laguerre(n, m, x); });
   test_floating_point<long double>([](unsigned n, unsigned m, long double x) { return std::assoc_laguerrel(n, m, x); });
+  test_floating_point<long double>([](unsigned n, unsigned m, long double x) { return std::assoc_laguerre(n, m, x); });
 
   types::for_each(types::integral_types{}, TestInteger{});
 
