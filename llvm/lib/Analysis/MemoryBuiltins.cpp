@@ -308,7 +308,7 @@ bool llvm::isAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI) {
 
 /// Tests if a functions is a call or invoke to a library function that
 /// reallocates memory (e.g., realloc).
-bool llvm::isReallocLikeFn(const Function *F) {
+bool llvm::isReallocLikeFn(const Value *F) {
   return checkFnAllocKind(F, AllocFnKind::Realloc);
 }
 
@@ -352,6 +352,15 @@ static bool checkedZextOrTrunc(APInt &I, unsigned IntTyBits) {
   if (I.getBitWidth() != IntTyBits)
     I = I.zextOrTrunc(IntTyBits);
   return true;
+}
+
+Use *llvm::getAllocSizeArg(CallBase *CB, const TargetLibraryInfo *TLI) {
+  std::optional<AllocFnsTy> FnData = getAllocationSize(CB, TLI);
+  if (!FnData)
+    return nullptr;
+  if (FnData->FstParam == -1 || FnData->SndParam != -1)
+    return nullptr;
+  return &CB->getArgOperandUse(FnData->FstParam);
 }
 
 std::optional<APInt>
