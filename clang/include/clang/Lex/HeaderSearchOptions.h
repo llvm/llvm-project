@@ -187,6 +187,12 @@ public:
   /// The set of user-provided virtual filesystem overlay files.
   std::vector<std::string> VFSOverlayFiles;
 
+  /// Module map files that should be excluded from implicit module map
+  /// discovery (i.e. the ones that would otherwise be found by name while
+  /// walking header search directories). They can still be loaded explicitly
+  /// via \c -fmodule-map-file=.
+  std::vector<std::string> ExcludedImplicitModuleMapFiles;
+
   /// Include the compiler builtin includes.
   LLVM_PREFERRED_TYPE(bool)
   unsigned UseBuiltinIncludes : 1;

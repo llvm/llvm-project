@@ -416,6 +416,13 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   reproducable builds. These macros can be redefined from the command line if
   necessary. `/d1nodatetime-` can be used to turn this feature off if
   necessary to override the common build settings.
+- New option `-fno-implicit-module-map-file=<file>` added to exclude a specific
+  module map from *implicit* module map discovery (`-fimplicit-module-maps`),
+  without disabling implicit discovery globally. The excluded map can still be
+  loaded explicitly via `-fmodule-map-file=`. This lets a project ship a
+  standard-named `module.modulemap` for consumers that opt in (e.g. Swift's
+  ClangImporter) while preventing unrelated C++ consumers from implicitly
+  modularizing the same headers.
 
 ### Deprecated Compiler Flags
 

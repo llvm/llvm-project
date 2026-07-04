@@ -3802,6 +3802,13 @@ def fmodule_map_file : Joined<["-"], "fmodule-map-file=">,
   MetaVarName<"<file>">,
   HelpText<"Load this module map file">,
   MarshallingInfoStringVector<FrontendOpts<"ModuleMapFiles">>;
+def fno_implicit_module_map_file : Joined<["-"], "fno-implicit-module-map-file=">,
+  Group<f_Group>,
+  Visibility<[ClangOption, CC1Option, CLOption]>,
+  MetaVarName<"<file>">,
+  HelpText<"Exclude this module map file from implicit module map discovery. "
+           "It can still be loaded explicitly via -fmodule-map-file=.">,
+  MarshallingInfoStringVector<HeaderSearchOpts<"ExcludedImplicitModuleMapFiles">>;
 def fmodule_file : Joined<["-"], "fmodule-file=">,
   Group<i_Group>,
   Visibility<[ClangOption, CC1Option, CLOption]>,

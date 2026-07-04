@@ -2171,10 +2171,38 @@ HeaderSearch::parseModuleMapFileImpl(FileEntryRef File, bool IsSystem,
   return MMR_NewlyProcessed;
 }
 
+bool HeaderSearch::isModuleMapFileExcludedFromImplicitDiscovery(
+    FileEntryRef File) {
+  if (HSOpts.ExcludedImplicitModuleMapFiles.empty())
+    return false;
+
+  // Resolve the excluded paths to their underlying files once, so that
+  // matching is robust to path spelling (relative vs absolute, symlinks, ...)
+  // rather than a brittle string comparison.
+  if (!ExcludedImplicitModuleMaps) {
+    ExcludedImplicitModuleMaps.emplace();
+    for (StringRef Path : HSOpts.ExcludedImplicitModuleMapFiles)
+      if (auto Excluded = FileMgr.getOptionalFileRef(Path))
+        ExcludedImplicitModuleMaps->insert(&Excluded->getFileEntry());
+  }
+
+  return ExcludedImplicitModuleMaps->contains(&File.getFileEntry());
+}
+
 OptionalFileEntryRef
 HeaderSearch::lookupModuleMapFile(DirectoryEntryRef Dir, bool IsFramework) {
   if (!HSOpts.ImplicitModuleMaps)
     return std::nullopt;
+
+  // Return the given implicitly-discovered module map file unless it has been
+  // excluded via -fno-implicit-module-map-file=, in which case discovery
+  // continues as if the file were not present.
+  auto ReturnUnlessExcluded = [&](FileEntryRef F) -> OptionalFileEntryRef {
+    if (isModuleMapFileExcludedFromImplicitDiscovery(F))
+      return std::nullopt;
+    return F;
+  };
+
   // For frameworks, the preferred spelling is Modules/module.modulemap, but
   // module.map at the framework root is also accepted.
   SmallString<128> ModuleMapFileName(Dir.getName());
@@ -2182,12 +2210,14 @@ HeaderSearch::lookupModuleMapFile(DirectoryEntryRef Dir, bool IsFramework) {
     llvm::sys::path::append(ModuleMapFileName, "Modules");
   llvm::sys::path::append(ModuleMapFileName, "module.modulemap");
   if (auto F = FileMgr.getOptionalFileRef(ModuleMapFileName))
-    return *F;
+    return ReturnUnlessExcluded(*F);
 
   // Continue to allow module.map, but warn it's deprecated.
   ModuleMapFileName = Dir.getName();
   llvm::sys::path::append(ModuleMapFileName, "module.map");
   if (auto F = FileMgr.getOptionalFileRef(ModuleMapFileName)) {
+    if (isModuleMapFileExcludedFromImplicitDiscovery(*F))
+      return std::nullopt;
     Diags.Report(diag::warn_deprecated_module_dot_map)
         << ModuleMapFileName << 0 << IsFramework;
     return *F;
@@ -2200,7 +2230,7 @@ HeaderSearch::lookupModuleMapFile(DirectoryEntryRef Dir, bool IsFramework) {
     llvm::sys::path::append(ModuleMapFileName, "Modules",
                             "module.private.modulemap");
     if (auto F = FileMgr.getOptionalFileRef(ModuleMapFileName))
-      return *F;
+      return ReturnUnlessExcluded(*F);
   }
   return std::nullopt;
 }

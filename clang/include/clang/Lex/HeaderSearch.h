@@ -21,6 +21,7 @@
 #include "clang/Lex/ModuleMap.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
@@ -30,6 +31,7 @@
 #include <cassert>
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -276,6 +278,11 @@ class HeaderSearch {
   /// list which is a prefix of 'x' determines whether the file is treated as
   /// a system header.
   std::vector<std::pair<std::string, bool>> SystemHeaderPrefixes;
+
+  /// Lazily-computed set of module map files, resolved to their underlying
+  /// \c FileEntry, that should be excluded from implicit module map discovery.
+  /// Derived from \c HeaderSearchOptions::ExcludedImplicitModuleMapFiles.
+  std::optional<llvm::DenseSet<const FileEntry *>> ExcludedImplicitModuleMaps;
 
   /// The context hash used in SpecificModuleCachePath (unless suppressed).
   std::string ContextHash;
@@ -730,6 +737,10 @@ public:
   /// \c nullopt if none is found.
   OptionalFileEntryRef lookupModuleMapFile(DirectoryEntryRef Dir,
                                            bool IsFramework);
+
+  /// Determine whether the given module map file has been excluded from
+  /// implicit module map discovery via \c -fno-implicit-module-map-file=.
+  bool isModuleMapFileExcludedFromImplicitDiscovery(FileEntryRef File);
 
   /// Determine whether there is a module map that may map the header
   /// with the given file name to a (sub)module.
