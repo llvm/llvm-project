@@ -247,6 +247,7 @@ S_DEFRANGE (0x113f)
 ^^^^^^^^^^^^^^^^^^^
 
 .. FIXME: Document the DIA programs. Are these the same as FPO programs?
+
 A live range expressed as a DIA program.
 
 .. code:: cpp
