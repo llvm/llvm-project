@@ -45,10 +45,12 @@ void test_floating_point(Func assoc_laguerre) {
   check_no_domain_error([&] { assert(between(1.99, assoc_laguerre(1, 0, Float(-1)), 2.01)); });
 
   // NaN argument -> NaN result, without a domain error ([sf.cmath.general]/1)
-  auto test_nan = [&](Float nan) { check_no_domain_error([&] { assert(std::isnan(assoc_laguerre(0, 0, nan))); }); };
-  if (std::numeric_limits<Float>::has_quiet_NaN)
+  [[maybe_unused]] auto test_nan = [&](Float nan) {
+    check_no_domain_error([&] { assert(std::isnan(assoc_laguerre(0, 0, nan))); });
+  };
+  if constexpr (std::numeric_limits<Float>::has_quiet_NaN)
     test_nan(std::numeric_limits<Float>::quiet_NaN());
-  if (std::numeric_limits<Float>::has_signaling_NaN)
+  if constexpr (std::numeric_limits<Float>::has_signaling_NaN)
     test_nan(std::numeric_limits<Float>::signaling_NaN());
 }
 
