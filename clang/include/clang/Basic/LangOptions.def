@@ -57,6 +57,7 @@ LANGOPT(CPlusPlus17       , 1, 0, NotCompatible, "C++17")
 LANGOPT(CPlusPlus20       , 1, 0, NotCompatible, "C++20")
 LANGOPT(CPlusPlus23       , 1, 0, NotCompatible, "C++23")
 LANGOPT(CPlusPlus26       , 1, 0, NotCompatible, "C++26")
+LANGOPT(CPlusPlus29       , 1, 0, NotCompatible, "C++29")
 LANGOPT(ObjC              , 1, 0, NotCompatible, "Objective-C")
 LANGOPT(ObjCDefaultSynthProperties , 1, 0, Benign,
         "Objective-C auto-synthesized properties")
