@@ -181,6 +181,8 @@ S_COMPILE3 (0x113c)
 S_ENVBLOCK (0x113d)
 ^^^^^^^^^^^^^^^^^^^
 
+.. _s_local:
+
 S_LOCAL (0x113e)
 ^^^^^^^^^^^^^^^^
 
@@ -188,9 +190,37 @@ Defines a local variable.
 This record is followed by a series of ``S_DEFRANGE*`` records that define the
 live range of this variable.
 
+.. code:: cpp
+
+   struct LocalSym {
+     /// The type of this variable (TPI type index).
+     uint32_t Type;
+     /// See enum below.
+     uint16_t Flags;
+     /// Name of the variable. A zero terminated string.
+     char Name[];
+   };
+   enum class LocalSymFlags : uint16_t {
+     None = 0,
+     IsParameter = 1 << 0,
+     IsAddressTaken = 1 << 1,
+     IsCompilerGenerated = 1 << 2,
+     IsAggregate = 1 << 3,
+     IsAggregated = 1 << 4,
+     IsAliased = 1 << 5,
+     IsAlias = 1 << 6,
+     IsReturnValue = 1 << 7,
+     IsOptimizedOut = 1 << 8,
+     IsEnregisteredGlobal = 1 << 9,
+     IsEnregisteredStatic = 1 << 10,
+   };
+
+
 All ``S_DEFRANGE*`` records consist of a header followed by
 ``LocalVariableAddrRange`` and a list of ``LocalVariableAddrGap`` (until the
-record length is reached).
+record length is reached) except for the
+`S_DEFRANGE_FRAMEPOINTER_REL_FULL_SCOPE <_defrange_framepointer_rel_full_scope>`_
+record.
 
 .. code:: cpp
 
@@ -216,6 +246,9 @@ The following records only describe the header.
 S_DEFRANGE (0x113f)
 ^^^^^^^^^^^^^^^^^^^
 
+.. FIXME: Document the DIA programs. Are these the same as FPO programs?
+A live range expressed as a DIA program.
+
 .. code:: cpp
 
    struct DefrangeSymHeader {
@@ -240,14 +273,14 @@ A live range of sub field of variable (e.g. ``local.i``).
 S_DEFRANGE_REGISTER (0x1141)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A live range of en-registed variable.
+A live range of a variable living in a register.
 
 .. code:: cpp
 
    struct DefrangeRegisterSymHeader {
      /// Register to hold the value of the symbol
      uint16_t Register;
-     /// May have no user name on one of control flow path
+     /// May have no user name on one control flow path
      uint16_t MayHaveNoName : 1;
      uint16_t Padding : 15;
    };
@@ -271,7 +304,7 @@ A live range of sub field of variable (e.g. ``local.i``).
 
 .. code:: cpp
 
-   struct DefrangeSubfieldSymHeader {
+   struct DefrangeSubfieldRegisterSymHeader {
      /// Register to hold the value of the symbol
      uint16_t Register;
      /// May have no user name on one of control flow path
@@ -281,6 +314,8 @@ A live range of sub field of variable (e.g. ``local.i``).
      uint32_t OffsetInParent : 12;
      uint32_t Padding2 : 20;
    };
+
+.. _defrange_framepointer_rel_full_scope:
 
 S_DEFRANGE_FRAMEPOINTER_REL_FULL_SCOPE (0x1144)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -327,11 +362,11 @@ A live range of variable indirectly relative to a register (range version of ``S
      uint16_t SpilledUdtMember : 1;
      uint16_t Padding : 3;
      /// Offset in parent variable.
-     uint16_t OffsetInParent : 12;
-     /// Offset to add after dereferencing `Register + BasePointerOffset`
-     int32_t OffsetInUdt;
+     uint16_t OffsetInParent : 12; 
      /// Offset to register
      int32_t BasePointerOffset;
+     /// Offset to add after dereferencing `Register + BasePointerOffset`
+     int32_t OffsetInUdt;
    };
 
 S_LPROC32_ID (0x1146)
