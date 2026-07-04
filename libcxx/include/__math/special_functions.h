@@ -11,7 +11,6 @@
 #define _LIBCPP___MATH_SPECIAL_FUNCTIONS_H
 
 #include <__config>
-#include <__configuration/attributes.h>
 #include <__math/copysign.h>
 #include <__math/traits.h>
 #include <__type_traits/enable_if.h>
