@@ -1,21 +1,6 @@
 // RUN: %check_clang_tidy -std=c++17-or-later %s llvm-regex %t
 
-namespace std {
-  template <typename T>
-  class basic_string {
-  public:
-    basic_string(const char*);
-  };
-  using string = basic_string<char>;
-
-  template <typename T>
-  class basic_string_view {
-  public:
-    basic_string_view(const char*);
-    const char* begin() const;
-  };
-  using string_view = basic_string_view<char>;
-} // namespace std
+#include <string>
 
 namespace llvm {
   class StringRef {
