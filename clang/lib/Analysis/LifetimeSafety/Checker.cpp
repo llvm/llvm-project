@@ -222,11 +222,18 @@ public:
     /// Get loans directly pointing to the invalidated container
     LoanSet DirectlyInvalidatedLoans =
         LoanPropagation.getLoans(InvalidatedOrigin, IOF);
+    bool AllowEquality =
+        isa_and_nonnull<CXXDeleteExpr>(IOF->getInvalidationExpr());
     auto IsInvalidated = [&](const Loan *L) {
       for (LoanID InvalidID : DirectlyInvalidatedLoans) {
         const Loan *InvalidL = FactMgr.getLoanMgr().getLoan(InvalidID);
-        if (InvalidL->getAccessPath().isPrefixOf(L->getAccessPath()))
-          return true;
+        if (AllowEquality) {
+          if (InvalidL->getAccessPath().isPrefixOf(L->getAccessPath()))
+            return true;
+        } else {
+          if (InvalidL->getAccessPath().isStrictPrefixOf(L->getAccessPath()))
+            return true;
+        }
       }
       return false;
     };
