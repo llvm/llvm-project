@@ -20,8 +20,3 @@ Make][CodeGen] Add PCH for Clang CodeGen (#206018)
 breaks accel2023 456
 [Flang][OpenMP][MLIR] Improve SPMD-No-Loop handling (#3168)
 ---
-breaks comgr hipify builds
-error: 'llvm/Config/config.h' file not found
-Enable fexec-charset option  (#138895)
-Put TextEncoding class in clang namespace to prevent naming conflicts (#207247)
----
