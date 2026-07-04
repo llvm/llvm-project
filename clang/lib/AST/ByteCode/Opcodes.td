@@ -141,7 +141,6 @@ class Opcode {
   list<ArgType> Args = [];
   string Name = "";
   bit CanReturn = 0;
-  bit ChangesPC = 0;
   bit HasCustomLink = 0;
   bit HasCustomEval = 0;
   bit HasGroup = 0;
@@ -172,7 +171,6 @@ class IntegerOpcode : Opcode {
 
 class JumpOpcode : Opcode {
   let Args = [ArgSint32];
-  let ChangesPC = 1;
   let HasCustomEval = 1;
 }
 
@@ -192,7 +190,6 @@ def EndInit : SuccessOpcode;
 def StartSpeculation : SuccessOpcode;
 def EndSpeculation : SuccessOpcode;
 def BCP : Opcode {
-  let ChangesPC = 1;
   let HasCustomEval = 1;
   let Args = [ArgSint32, ArgPrimType];
 }
@@ -204,7 +201,6 @@ def BCP : Opcode {
 // [Value] -> []
 def Ret : Opcode {
   let Types = [AllTypeClass];
-  let ChangesPC = 1;
   let CanReturn = 1;
   let HasGroup = 1;
   let HasCustomEval = 1;
@@ -213,14 +209,12 @@ def Ret : Opcode {
 // [] -> []
 def RetVoid : Opcode {
   let CanReturn = 1;
-  let ChangesPC = 1;
   let HasCustomEval = 1;
   let CanFail = 0;
 }
 // [Value] -> []
 def RetValue : Opcode {
   let CanReturn = 1;
-  let ChangesPC = 1;
   let HasCustomEval = 1;
 }
 // [] -> EXIT
