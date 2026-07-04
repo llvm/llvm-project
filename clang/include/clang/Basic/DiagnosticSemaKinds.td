@@ -978,6 +978,11 @@ def warn_fortify_strlen_overflow: Warning<
   " but the source string has length %2 (including NUL byte)">,
   InGroup<FortifySource>;
 
+def warn_fortify_umask_unused_bits : Warning<
+  "'umask' argument sets non-file-permission bits (0%0); those bits are "
+  "ignored">,
+  InGroup<FortifySource>;
+
 def subst_format_overflow : TextSubstitution<
   "'%0' will always overflow; destination buffer has size %1,"
   " but format string expands to at least %2">;
@@ -11842,6 +11847,12 @@ def err_record_with_pointers_kernel_param : Error<
   "%select{struct|union}0 kernel parameters may not contain pointers">;
 def note_within_field_of_type : Note<
   "within field of type %0 declared here">;
+def note_within_capture : Note<
+  "within capture %0 of lambda expression here">;
+def note_within_base_of_type : Note<
+  "within base class of type %0 declared here">;
+def note_within_param_of_type : Note<
+  "within parameter %0 of type %1 declared here">;
 def note_illegal_field_declared_here : Note<
   "field of illegal %select{type|pointer type}0 %1 declared here">;
 def err_opencl_type_struct_or_union_field : Error<

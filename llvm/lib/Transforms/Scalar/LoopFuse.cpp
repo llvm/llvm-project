@@ -1192,6 +1192,16 @@ private:
     assert(FC0.L->getLoopDepth() == FC1.L->getLoopDepth());
     assert(DT.dominates(FC0.getEntryBlock(), FC1.getEntryBlock()));
 
+    // Walk through all uses in FC1. For each use, find the reaching def.
+    // If the def is located in FC0 then it is not safe to fuse.
+    for (BasicBlock *BB : FC1.L->blocks())
+      for (Instruction &I : *BB)
+        for (auto &Op : I.operands())
+          if (Instruction *Def = dyn_cast<Instruction>(Op))
+            if (FC0.L->contains(Def->getParent())) {
+              return false;
+            }
+
     for (Instruction *WriteL0 : FC0.MemWrites) {
       for (Instruction *WriteL1 : FC1.MemWrites)
         if (!dependencesAllowFusion(FC0, FC1, *WriteL0, *WriteL1)) {
@@ -1210,16 +1220,6 @@ private:
         if (!dependencesAllowFusion(FC0, FC1, *ReadL0, *WriteL1)) {
           return false;
         }
-
-    // Walk through all uses in FC1. For each use, find the reaching def. If the
-    // def is located in FC0 then it is not safe to fuse.
-    for (BasicBlock *BB : FC1.L->blocks())
-      for (Instruction &I : *BB)
-        for (auto &Op : I.operands())
-          if (Instruction *Def = dyn_cast<Instruction>(Op))
-            if (FC0.L->contains(Def->getParent())) {
-              return false;
-            }
 
     return true;
   }
