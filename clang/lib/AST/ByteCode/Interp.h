@@ -243,10 +243,10 @@ bool InvalidDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR,
                     bool InitializerFailed);
 
 /// DerivedToBaseMemberPointer
-bool CastMemberPtrBasePop(InterpState &S, CodePtr OpPC, int32_t Off,
+bool CastMemberPtrBasePop(InterpState &S, int32_t Off,
                           const RecordDecl *BaseDecl);
 /// BaseToDerivedMemberPointer
-bool CastMemberPtrDerivedPop(InterpState &S, CodePtr OpPC, int32_t Off,
+bool CastMemberPtrDerivedPop(InterpState &S, int32_t Off,
                              const RecordDecl *BaseDecl);
 enum class ArithOp { Add, Sub };
 
@@ -502,7 +502,7 @@ inline bool Mulf(InterpState &S, CodePtr OpPC, uint32_t FPOI) {
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-inline bool Mulc(InterpState &S, CodePtr OpPC) {
+inline bool Mulc(InterpState &S) {
   const Pointer &RHS = S.Stk.pop<Pointer>();
   const Pointer &LHS = S.Stk.pop<Pointer>();
   const Pointer &Result = S.Stk.peek<Pointer>();
@@ -668,7 +668,7 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
 /// 2) Pops the LHS from the stack.
 /// 3) Pushes 'LHS & RHS' on the stack
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool BitAnd(InterpState &S, CodePtr OpPC) {
+bool BitAnd(InterpState &S) {
   const T &RHS = S.Stk.pop<T>();
   const T &LHS = S.Stk.pop<T>();
   unsigned Bits = RHS.bitWidth();
@@ -693,7 +693,7 @@ bool BitAnd(InterpState &S, CodePtr OpPC) {
 /// 2) Pops the LHS from the stack.
 /// 3) Pushes 'LHS | RHS' on the stack
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool BitOr(InterpState &S, CodePtr OpPC) {
+bool BitOr(InterpState &S) {
   const T &RHS = S.Stk.pop<T>();
   const T &LHS = S.Stk.pop<T>();
   unsigned Bits = RHS.bitWidth();
@@ -718,7 +718,7 @@ bool BitOr(InterpState &S, CodePtr OpPC) {
 /// 2) Pops the LHS from the stack.
 /// 3) Pushes 'LHS ^ RHS' on the stack
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool BitXor(InterpState &S, CodePtr OpPC) {
+bool BitXor(InterpState &S) {
   const T &RHS = S.Stk.pop<T>();
   const T &LHS = S.Stk.pop<T>();
   unsigned Bits = RHS.bitWidth();
@@ -812,7 +812,7 @@ inline bool Divf(InterpState &S, CodePtr OpPC, uint32_t FPOI) {
 // Inv
 //===----------------------------------------------------------------------===//
 
-inline bool Inv(InterpState &S, CodePtr OpPC) {
+inline bool Inv(InterpState &S) {
   const auto &Val = S.Stk.pop<Boolean>();
   S.Stk.push<Boolean>(!Val);
   return true;
@@ -1176,7 +1176,7 @@ inline bool DecfPop(InterpState &S, CodePtr OpPC, uint32_t FPOI) {
 /// 1) Pops the value from the stack.
 /// 2) Pushes the bitwise complemented value on the stack (~V).
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool Comp(InterpState &S, CodePtr OpPC) {
+bool Comp(InterpState &S) {
   const T &Val = S.Stk.pop<T>();
 
   T Result;
@@ -1617,21 +1617,21 @@ bool GetLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
 
 bool EndLifetime(InterpState &S, CodePtr OpPC);
 bool EndLifetimePop(InterpState &S, CodePtr OpPC);
-bool StartThisLifetime(InterpState &S, CodePtr OpPC);
-bool StartThisLifetime1(InterpState &S, CodePtr OpPC);
+bool StartThisLifetime(InterpState &S);
+bool StartThisLifetime1(InterpState &S);
 bool MarkDestroyed(InterpState &S, CodePtr OpPC);
 
 /// 1) Pops the value from the stack.
 /// 2) Writes the value to the local variable with the
 ///    given offset.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool SetLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
+bool SetLocal(InterpState &S, uint32_t I) {
   S.Current->setLocal<T>(I, S.Stk.pop<T>());
   return true;
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool GetParam(InterpState &S, CodePtr OpPC, uint32_t Index) {
+bool GetParam(InterpState &S, uint32_t Index) {
   if (S.checkingPotentialConstantExpression()) {
     return false;
   }
@@ -1640,7 +1640,7 @@ bool GetParam(InterpState &S, CodePtr OpPC, uint32_t Index) {
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool SetParam(InterpState &S, CodePtr OpPC, uint32_t I) {
+bool SetParam(InterpState &S, uint32_t I) {
   S.Current->setParam<T>(I, S.Stk.pop<T>());
   return true;
 }
@@ -1766,7 +1766,7 @@ bool SetGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool InitGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
+bool InitGlobal(InterpState &S, uint32_t I) {
   const Pointer &P = S.P.getGlobal(I);
 
   P.deref<T>() = S.Stk.pop<T>();
@@ -1802,7 +1802,7 @@ bool InitGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
 /// 2) Sets that APValue on \Temp
 /// 3) Initializes global with index \I with that
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool InitGlobalTemp(InterpState &S, CodePtr OpPC, uint32_t I,
+bool InitGlobalTemp(InterpState &S, uint32_t I,
                     const LifetimeExtendedTemporaryDecl *Temp) {
   if (S.EvalMode == EvaluationMode::ConstantFold)
     return false;
@@ -1821,7 +1821,7 @@ bool InitGlobalTemp(InterpState &S, CodePtr OpPC, uint32_t I,
 /// 1) Converts the value on top of the stack to an APValue
 /// 2) Sets that APValue on \Temp
 /// 3) Initialized global with index \I with that
-inline bool InitGlobalTempComp(InterpState &S, CodePtr OpPC,
+inline bool InitGlobalTempComp(InterpState &S,
                                const LifetimeExtendedTemporaryDecl *Temp) {
   if (S.EvalMode == EvaluationMode::ConstantFold)
     return false;
@@ -2037,7 +2037,7 @@ bool InitBitFieldActivate(InterpState &S, CodePtr OpPC, uint32_t FieldOffset,
 // GetPtr Local/Param/Global/Field/This
 //===----------------------------------------------------------------------===//
 
-inline bool GetPtrLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
+inline bool GetPtrLocal(InterpState &S, uint32_t I) {
   S.Stk.push<Pointer>(S.Current->getLocalPointer(I));
   return true;
 }
@@ -2076,14 +2076,14 @@ inline bool CheckRefInit(InterpState &S, CodePtr OpPC) {
   return CheckRange(S, OpPC, Ptr, AK_Read);
 }
 
-inline bool GetPtrParam(InterpState &S, CodePtr OpPC, uint32_t Index) {
+inline bool GetPtrParam(InterpState &S, uint32_t Index) {
   if (S.Current->isBottomFrame())
     return false;
   S.Stk.push<Pointer>(S.Current->getParamPointer(Index));
   return true;
 }
 
-inline bool GetPtrGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
+inline bool GetPtrGlobal(InterpState &S, uint32_t I) {
   S.Stk.push<Pointer>(S.P.getPtrGlobal(I));
   return true;
 }
@@ -2153,7 +2153,7 @@ inline bool FinishInitActivatePop(InterpState &S) {
 
 bool FinishInitGlobal(InterpState &S);
 
-inline bool Dump(InterpState &S, CodePtr OpPC) {
+inline bool Dump(InterpState &S) {
   S.Stk.dump();
   return true;
 }
@@ -2168,7 +2168,7 @@ inline bool CheckNull(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
-inline bool VirtBaseHelper(InterpState &S, CodePtr OpPC, const RecordDecl *Decl,
+inline bool VirtBaseHelper(InterpState &S, const RecordDecl *Decl,
                            const Pointer &Ptr) {
   if (!Ptr.isBlockPointer())
     return false;
@@ -2188,7 +2188,7 @@ inline bool GetPtrVirtBasePop(InterpState &S, CodePtr OpPC,
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckNull(S, OpPC, Ptr, CSK_Base))
     return false;
-  return VirtBaseHelper(S, OpPC, D, Ptr);
+  return VirtBaseHelper(S, D, Ptr);
 }
 
 inline bool GetPtrThisVirtBase(InterpState &S, CodePtr OpPC,
@@ -2199,7 +2199,7 @@ inline bool GetPtrThisVirtBase(InterpState &S, CodePtr OpPC,
   if (!CheckThis(S, OpPC))
     return false;
   const Pointer &This = S.Current->getThis();
-  return VirtBaseHelper(S, OpPC, D, This);
+  return VirtBaseHelper(S, D, This);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2486,7 +2486,7 @@ inline bool Memcpy(InterpState &S, CodePtr OpPC) {
   return DoMemcpy(S, OpPC, Src, Dest);
 }
 
-inline bool ToMemberPtr(InterpState &S, CodePtr OpPC) {
+inline bool ToMemberPtr(InterpState &S) {
   const auto &Member = S.Stk.pop<MemberPointer>();
   const auto &Base = S.Stk.pop<Pointer>();
 
@@ -2768,18 +2768,18 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC, uint32_t ElemSize) {
   return true;
 }
 
-inline bool InitScope(InterpState &S, CodePtr OpPC, uint32_t I) {
+inline bool InitScope(InterpState &S, uint32_t I) {
   S.Current->initScope(I);
   return true;
 }
 
-inline bool EnableLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
+inline bool EnableLocal(InterpState &S, uint32_t I) {
   assert(!S.Current->isLocalEnabled(I));
   S.Current->enableLocal(I);
   return true;
 }
 
-inline bool GetLocalEnabled(InterpState &S, CodePtr OpPC, uint32_t I) {
+inline bool GetLocalEnabled(InterpState &S, uint32_t I) {
   assert(S.Current);
   S.Stk.push<bool>(S.Current->isLocalEnabled(I));
   return true;
@@ -2818,7 +2818,7 @@ template <PrimType TIn, PrimType TOut> bool Cast(InterpState &S, CodePtr OpPC) {
 
 /// 1) Pops a Floating from the stack.
 /// 2) Pushes a new floating on the stack that uses the given semantics.
-inline bool CastFP(InterpState &S, CodePtr OpPC, const llvm::fltSemantics *Sem,
+inline bool CastFP(InterpState &S, const llvm::fltSemantics *Sem,
                    llvm::RoundingMode RM) {
   Floating F = S.Stk.pop<Floating>();
   Floating Result = S.allocFloat(*Sem);
@@ -2845,7 +2845,7 @@ inline bool CastFixedPoint(InterpState &S, CodePtr OpPC, uint32_t FPS) {
 /// Like Cast(), but we cast to an arbitrary-bitwidth integral, so we need
 /// to know what bitwidth the result should be.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool CastAP(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
+bool CastAP(InterpState &S, uint32_t BitWidth) {
   T Source = S.Stk.pop<T>();
 
   if constexpr (isIntegralOrPointer<T>()) {
@@ -2864,7 +2864,7 @@ bool CastAP(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool CastAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth) {
+bool CastAPS(InterpState &S, uint32_t BitWidth) {
   T Source = S.Stk.pop<T>();
 
   if constexpr (isIntegralOrPointer<T>()) {
@@ -3067,7 +3067,7 @@ static inline bool CastFloatingFixedPoint(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static inline bool CastFixedPointFloating(InterpState &S, CodePtr OpPC,
+static inline bool CastFixedPointFloating(InterpState &S,
                                           const llvm::fltSemantics *Sem) {
   const auto &Fixed = S.Stk.pop<FixedPoint>();
   Floating Result = S.allocFloat(*Sem);
@@ -3168,7 +3168,7 @@ inline bool Null(InterpState &S, uint64_t Value, const Type *Ty) {
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-inline bool IsNonNull(InterpState &S, CodePtr OpPC) {
+inline bool IsNonNull(InterpState &S) {
   const auto &P = S.Stk.pop<T>();
   if (P.isWeak())
     return false;
@@ -3207,7 +3207,7 @@ inline bool This(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
-inline bool RVOPtr(InterpState &S, CodePtr OpPC) {
+inline bool RVOPtr(InterpState &S) {
   assert(S.Current->getFunction()->hasRVO());
   if (S.checkingPotentialConstantExpression())
     return false;
@@ -3422,7 +3422,7 @@ static inline bool ShiftFixedPoint(InterpState &S, CodePtr OpPC, bool Left) {
 //===----------------------------------------------------------------------===//
 // NoRet
 //===----------------------------------------------------------------------===//
-PRESERVE_NONE inline bool NoRet(InterpState &S, CodePtr OpPC) {
+PRESERVE_NONE inline bool NoRet(InterpState &S) {
   SourceLocation EndLoc = S.Current->getCallee()->getEndLoc();
   S.FFDiag(EndLoc, diag::note_constexpr_no_return);
   return false;
@@ -3596,7 +3596,7 @@ inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
   return false;
 }
 
-inline bool GetFnPtr(InterpState &S, CodePtr OpPC, const Function *Func) {
+inline bool GetFnPtr(InterpState &S, const Function *Func) {
   assert(Func);
   S.Stk.push<Pointer>(Func);
   return true;
@@ -3637,11 +3637,10 @@ inline bool GetIntPtr(InterpState &S, CodePtr OpPC, const Type *Ty) {
   return true;
 }
 
-bool GetMemberPtr(InterpState &S, CodePtr OpPC, const ValueDecl *D);
-bool GetMemberPtrBase(InterpState &S, CodePtr OpPC);
-bool GetMemberPtrDecl(InterpState &S, CodePtr OpPC);
-bool CopyMemberPtrPath(InterpState &S, CodePtr OpPC, const RecordDecl *Entry,
-                       bool IsDerived);
+bool GetMemberPtr(InterpState &S, const ValueDecl *D);
+bool GetMemberPtrBase(InterpState &S);
+bool GetMemberPtrDecl(InterpState &S);
+bool CopyMemberPtrPath(InterpState &S, const RecordDecl *Entry, bool IsDerived);
 
 /// Just emit a diagnostic. The expression that caused emission of this
 /// op is not valid in a constant context.
@@ -3728,17 +3727,15 @@ inline bool PopMSVCCE(InterpState &S) {
 }
 
 /// Do nothing and just abort execution.
-inline bool Error(InterpState &S, CodePtr OpPC) { return false; }
+inline bool Error(InterpState &S) { return false; }
 
-inline bool SideEffect(InterpState &S, CodePtr OpPC) {
-  return S.noteSideEffect();
-}
+inline bool SideEffect(InterpState &S) { return S.noteSideEffect(); }
 
 /// Abort without a diagnostic if we're checking for a potential constant
 /// expression and this is not the bottom frame. This is used in constructors to
 /// allow evaluating their initializers but abort if we encounter anything in
 /// their body.
-inline bool CtorCheck(InterpState &S, CodePtr OpPC) {
+inline bool CtorCheck(InterpState &S) {
   if (S.checkingPotentialConstantExpression() && !S.Current->isBottomFrame())
     return false;
   return true;
@@ -3828,8 +3825,7 @@ inline bool CheckEnumValue(InterpState &S, CodePtr OpPC, const EnumDecl *ED) {
 }
 
 /// OldPtr -> Integer -> NewPtr.
-template <PrimType TIn, PrimType TOut>
-inline bool DecayPtr(InterpState &S, CodePtr OpPC) {
+template <PrimType TIn, PrimType TOut> inline bool DecayPtr(InterpState &S) {
   static_assert(isPtrType(TIn) && isPtrType(TOut));
   using FromT = typename PrimConv<TIn>::T;
   using ToT = typename PrimConv<TOut>::T;
@@ -3853,7 +3849,7 @@ inline bool DecayPtr(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
-inline bool CheckDecl(InterpState &S, CodePtr OpPC, const VarDecl *VD) {
+inline bool CheckDecl(InterpState &S, const VarDecl *VD) {
   // An expression E is a core constant expression unless the evaluation of E
   // would evaluate one of the following: [C++23] - a control flow that passes
   // through a declaration of a variable with static or thread storage duration
@@ -3988,12 +3984,12 @@ inline bool AllocCN(InterpState &S, CodePtr OpPC, const Descriptor *ElementDesc,
 bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
           bool IsGlobalDelete);
 
-static inline bool IsConstantContext(InterpState &S, CodePtr OpPC) {
+static inline bool IsConstantContext(InterpState &S) {
   S.Stk.push<Boolean>(Boolean::from(S.inConstantContext()));
   return true;
 }
 
-static inline bool CheckAllocations(InterpState &S, CodePtr OpPC) {
+static inline bool CheckAllocations(InterpState &S) {
   return S.maybeDiagnoseDanglingAllocations();
 }
 
@@ -4101,8 +4097,7 @@ inline bool BitCast(InterpState &S, CodePtr OpPC) {
 }
 
 /// Typeid support.
-bool GetTypeid(InterpState &S, CodePtr OpPC, const Type *TypePtr,
-               const Type *TypeInfoType);
+bool GetTypeid(InterpState &S, const Type *TypePtr, const Type *TypeInfoType);
 bool GetTypeidPtr(InterpState &S, CodePtr OpPC, const Type *TypeInfoType);
 bool DiagTypeid(InterpState &S, CodePtr OpPC);
 

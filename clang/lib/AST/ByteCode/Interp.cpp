@@ -2365,7 +2365,7 @@ static void startLifetimeRecurse(PtrView Ptr) {
   Ptr.startLifetime();
 }
 
-bool StartThisLifetime(InterpState &S, CodePtr OpPC) {
+bool StartThisLifetime(InterpState &S) {
   if (S.checkingPotentialConstantExpression())
     return true;
 
@@ -2376,7 +2376,7 @@ bool StartThisLifetime(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
-bool StartThisLifetime1(InterpState &S, CodePtr OpPC) {
+bool StartThisLifetime1(InterpState &S) {
   if (S.checkingPotentialConstantExpression())
     return true;
 
@@ -2695,8 +2695,7 @@ bool handleReference(InterpState &S, CodePtr OpPC, Block *B) {
   return true;
 }
 
-bool GetTypeid(InterpState &S, CodePtr OpPC, const Type *TypePtr,
-               const Type *TypeInfoType) {
+bool GetTypeid(InterpState &S, const Type *TypePtr, const Type *TypeInfoType) {
   S.Stk.push<Pointer>(TypePtr, TypeInfoType);
   return true;
 }
@@ -3006,7 +3005,7 @@ static bool appendToMemberPointer(InterpState &S,
 }
 
 /// DerivedToBaseMemberPointer
-bool CastMemberPtrBasePop(InterpState &S, CodePtr OpPC, int32_t Off,
+bool CastMemberPtrBasePop(InterpState &S, int32_t Off,
                           const RecordDecl *BaseDecl) {
   const auto &Ptr = S.Stk.pop<MemberPointer>();
 
@@ -3018,7 +3017,7 @@ bool CastMemberPtrBasePop(InterpState &S, CodePtr OpPC, int32_t Off,
 }
 
 /// BaseToDerivedMemberPointer
-bool CastMemberPtrDerivedPop(InterpState &S, CodePtr OpPC, int32_t Off,
+bool CastMemberPtrDerivedPop(InterpState &S, int32_t Off,
                              const RecordDecl *BaseDecl) {
   const auto &Ptr = S.Stk.pop<MemberPointer>();
 
@@ -3031,12 +3030,12 @@ bool CastMemberPtrDerivedPop(InterpState &S, CodePtr OpPC, int32_t Off,
   return castBackMemberPointer(S, Ptr, Off, BaseDecl);
 }
 
-bool GetMemberPtr(InterpState &S, CodePtr OpPC, const ValueDecl *D) {
+bool GetMemberPtr(InterpState &S, const ValueDecl *D) {
   S.Stk.push<MemberPointer>(D);
   return true;
 }
 
-bool GetMemberPtrBase(InterpState &S, CodePtr OpPC) {
+bool GetMemberPtrBase(InterpState &S) {
   const auto &MP = S.Stk.pop<MemberPointer>();
 
   if (!MP.isBaseCastPossible())
@@ -3046,7 +3045,7 @@ bool GetMemberPtrBase(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
-bool GetMemberPtrDecl(InterpState &S, CodePtr OpPC) {
+bool GetMemberPtrDecl(InterpState &S) {
   const auto &MP = S.Stk.pop<MemberPointer>();
 
   const ValueDecl *D = MP.getDecl();
@@ -3073,7 +3072,7 @@ bool GetMemberPtrDecl(InterpState &S, CodePtr OpPC) {
 
 /// Just append the given Entry to the MemberPointer's path.
 /// This is used to re-inject APValues into the bytecode interpreter.
-bool CopyMemberPtrPath(InterpState &S, CodePtr OpPC, const RecordDecl *Entry,
+bool CopyMemberPtrPath(InterpState &S, const RecordDecl *Entry,
                        bool IsDerived) {
   const auto &MemberPtr = S.Stk.pop<MemberPointer>();
 
