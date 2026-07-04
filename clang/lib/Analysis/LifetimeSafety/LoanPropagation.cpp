@@ -249,6 +249,8 @@ public:
       if (Complete)
         return CurrNode.OriginFlowChain;
 
+      // Only explore predecessor blocks where the target loan is present in the
+      // current origin.
       for (const CFGBlock *PredBlock : CurrBlock->preds()) {
         SearchState NextState = {PredBlock, CurrOID};
         if (getLoans(getOutState(PredBlock), CurrOID).contains(TargetLoan) &&
