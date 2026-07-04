@@ -766,6 +766,8 @@ void AMDGPUTargetAsmStreamer::emitAMDGPUInfo(
         Flags |= AMDGPU::FuncInfoFlags::FUNC_USES_FLAT_SCRATCH;
       if (Info->HasDynStack)
         Flags |= AMDGPU::FuncInfoFlags::FUNC_HAS_DYN_STACK;
+      if (Info->UsesFullSIMDMode)
+        Flags |= AMDGPU::FuncInfoFlags::FUNC_FULL_SIMD_MODE;
       OS << "\t\t.amdgpu_flags " << llvm::to_underlying(Flags) << '\n';
       OS << "\t\t.amdgpu_num_sgpr " << Info->NumSGPR << '\n';
       OS << "\t\t.amdgpu_num_vgpr " << Info->NumArchVGPR << '\n';
@@ -1239,6 +1241,8 @@ void AMDGPUTargetELFStreamer::emitAMDGPUInfo(
         Flags |= AMDGPU::FuncInfoFlags::FUNC_USES_FLAT_SCRATCH;
       if (Info->HasDynStack)
         Flags |= AMDGPU::FuncInfoFlags::FUNC_HAS_DYN_STACK;
+      if (Info->UsesFullSIMDMode)
+        Flags |= AMDGPU::FuncInfoFlags::FUNC_FULL_SIMD_MODE;
       EmitU32Entry(AMDGPU::InfoKind::INFO_FLAGS, llvm::to_underlying(Flags));
       EmitU32Entry(AMDGPU::InfoKind::INFO_NUM_SGPR, Info->NumSGPR);
       EmitU32Entry(AMDGPU::InfoKind::INFO_NUM_VGPR, Info->NumArchVGPR);

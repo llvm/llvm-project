@@ -1,5 +1,11 @@
 ; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -amdgpu-enable-object-linking < %s | FileCheck -check-prefixes=ASM %s --implicit-check-not=.amdgpu_num_agpr
 ; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -amdgpu-enable-object-linking -filetype=obj < %s | llvm-readobj -r --syms --sections - | FileCheck -check-prefixes=ELF %s
+; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -amdgpu-enable-object-linking -filetype=asm < %s | FileCheck -check-prefixes=FULL %s
+; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -mattr=+wavefrontsize64 -amdgpu-enable-object-linking -filetype=asm < %s | FileCheck -check-prefixes=FULL %s
+; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -mattr=+cumode -amdgpu-enable-object-linking -filetype=asm < %s | FileCheck -check-prefixes=HALF %s
+; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -mattr=+cumode,+wavefrontsize64 -amdgpu-enable-object-linking -filetype=asm < %s | FileCheck -check-prefixes=HALF %s
+; RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -amdgpu-enable-object-linking -filetype=asm < %s | FileCheck -check-prefixes=FULL %s
+; RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -mattr=+cumode -amdgpu-enable-object-linking -filetype=asm < %s | FileCheck -check-prefixes=FULL %s
 
 ; Test that with object linking enabled, external LDS declarations produce
 ; @abs32@lo relocations, SHN_AMDGPU_LDS symbols, .amdgpu_lds directives,
@@ -37,6 +43,21 @@
 ; ASM-DAG:   .amdgpu_use lds_small
 ; ASM-DAG:   .amdgpu_call device_func
 ; ASM-DAG: .end_amdgpu_info
+
+; COM: FUNC_FULL_SIMD_MODE (0x8): set when the function uses full SIMD mode
+; COM: (all four SIMD32s). gfx11 default is full SIMD; +cumode selects half
+; COM: SIMD and clears the flag. gfx1250 is always full SIMD, even with
+; COM: +cumode. Checked for both +wavefrontsize32 (default) and
+; COM: +wavefrontsize64 on gfx11.
+; FULL:      .amdgpu_info device_func
+; FULL-NEXT:   .amdgpu_flags 8
+; FULL:      .amdgpu_info test_kernel
+; FULL-NEXT:   .amdgpu_flags 8
+
+; HALF:      .amdgpu_info device_func
+; HALF-NEXT:   .amdgpu_flags 0
+; HALF:      .amdgpu_info test_kernel
+; HALF-NEXT:   .amdgpu_flags 0
 
 ; SHN_AMDGPU_LDS directives.
 ; ASM-DAG: .amdgpu_lds lds_large, 256, 16
