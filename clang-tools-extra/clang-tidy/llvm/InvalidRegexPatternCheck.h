@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVM_REGEXCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVM_REGEXCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVM_INVALIDREGEXPATTERNCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVM_INVALIDREGEXPATTERNCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -30,4 +30,4 @@ public:
 
 } // namespace clang::tidy::llvm_check
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVM_InvalidRegexPatternCheck_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVM_INVALIDREGEXPATTERNCHECK_H
