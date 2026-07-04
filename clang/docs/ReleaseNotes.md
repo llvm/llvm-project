@@ -231,6 +231,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 #### C++2d Feature Support
 
+- Added compiler flags `-std=c++2d` and `-std=gnu++2d` for experimental C++2d implementation work.
+
 - Clang now supports [P3733R1](https://wg21.link/p3733r1>) More named universal character escapes.
   The change is applied as a DR to all C++ language modes. (#GH203944)
 
