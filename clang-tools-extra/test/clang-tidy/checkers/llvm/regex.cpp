@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++17 %s llvm-regex %t
+// RUN: %check_clang_tidy -std=c++17-or-later %s llvm-regex %t
 
 namespace std {
   template <typename T>

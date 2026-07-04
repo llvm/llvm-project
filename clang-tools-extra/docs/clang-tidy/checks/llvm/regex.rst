@@ -3,7 +3,7 @@
 llvm-regex
 ==========
 
-The checker detects malformed regex patterns defined in a single string literal
+Detects malformed regex patterns defined in a single string literal
 to catch mistakes at compile time.
 It detects these string literals if they are defined in the regex constructor
 with a string literal, or stored in one of these non mutable container:
