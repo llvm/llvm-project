@@ -260,10 +260,11 @@ let Definition = "debugger", Path = "" in {
     Global,
     DefaultStringValue<"frame #${frame.index}: {${ansi.fg.cyan}${frame.pc}${ansi.normal} }{${module.file.basename}{`}}{${function.name-without-args}{${frame.no-debug}${function.pc-offset}}}{ at ${ansi.fg.cyan}${line.file.basename}${ansi.normal}:${ansi.fg.yellow}${line.number}${ansi.normal}{:${ansi.fg.yellow}${line.column}${ansi.normal}}}${frame.kind}{${function.is-optimized} [opt]}{${function.is-inlined} [inlined]}{${frame.is-artificial} [artificial]}\\\\n">,
     Desc<"The default frame format string to use when displaying stack frame information for threads from thread backtrace unique.">;
-  def ShowAutosuggestion: Property<"show-autosuggestion", "Boolean">,
+  def ShowAutosuggestion: Property<"show-autosuggestion", "Enum">,
     Global,
-    DefaultFalse,
-    Desc<"If true, LLDB will show suggestions to complete the command the user typed. Suggestions may be accepted using Ctrl-F.">;
+    DefaultEnumValue<"eAutosuggestionOff">,
+    EnumValues<"OptionEnumValues(g_show_autosuggestion_enum_values)">,
+    Desc<"Controls whether LLDB shows suggestions to complete the command the user typed. Suggestions may be accepted using Ctrl-F. Use 'true' to suggest from previously entered commands, 'tab-mode' to suggest the prefix that would be inserted by tab completion, or 'false' to disable suggestions.">;
   def ShowAutosuggestionAnsiPrefix: Property<"show-autosuggestion-ansi-prefix", "String">,
     Global,
     DefaultStringValue<"${ansi.faint}">,

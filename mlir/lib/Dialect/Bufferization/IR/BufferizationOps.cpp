@@ -60,7 +60,7 @@ FailureOr<Value> mlir::bufferization::castOrReallocMemRefValue(
   // a fix extra conditions in `isGuaranteedCastCompatible`.
   if (memref::CastOp::areCastCompatible(srcType, destType) &&
       isGuaranteedCastCompatible(srcType, destType)) {
-    Value casted = memref::CastOp::create(b, value.getLoc(), destType, value);
+    Value casted = *options.createCast(b, value.getLoc(), destType, value);
     return casted;
   }
 
@@ -97,6 +97,20 @@ LogicalResult mlir::bufferization::foldToBufferToTensorPair(
   // Directly rewrite if the type did not change.
   if (srcType == destType) {
     rewriter.replaceOp(toBuffer, bufferToTensor.getBuffer());
+    return success();
+  }
+
+  if (!llvm::isa<BaseMemRefType>(srcType) ||
+      !llvm::isa<BaseMemRefType>(destType)) {
+    // Non-builtin case: the best is to try the user-provided cast.
+    assert(options.castFn.has_value() &&
+           "user-provided cast is required for non-builtin types");
+    auto replacement =
+        options.createCast(rewriter, bufferToTensor.getBuffer().getLoc(),
+                           destType, bufferToTensor.getBuffer());
+    if (failed(replacement))
+      return failure();
+    rewriter.replaceOp(toBuffer, *replacement);
     return success();
   }
 
