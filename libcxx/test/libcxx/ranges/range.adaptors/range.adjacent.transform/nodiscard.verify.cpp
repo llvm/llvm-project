@@ -1,4 +1,3 @@
-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -24,6 +23,10 @@ struct View : std::ranges::view_interface<View> {
 static_assert(!std::ranges::common_range<View>);
 static_assert(!std::same_as<std::ranges::iterator_t<View>, std::ranges::iterator_t<const View>>);
 static_assert(!std::same_as<std::ranges::sentinel_t<View>, std::ranges::sentinel_t<const View>>);
+
+struct Fn {
+  int operator()(auto...) const;
+};
 
 void test() {
   auto v = View{} | std::views::adjacent_transform<2>(std::multiplies());
@@ -83,11 +86,6 @@ void test() {
   c_it - st;
 
   // [range.adjacent.overview]
-
-  int range[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::views::adjacent_transform<0>(range);
 
   int range[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   static_assert(std::ranges::forward_range<decltype(range)>);
