@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++17-or-later %s llvm-regex %t
+// RUN: %check_clang_tidy -std=c++17-or-later %s llvm-invalid-regex-pattern %t
 
 #include <string>
 

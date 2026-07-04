@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RegexCheck.h"
+#include "InvalidRegexPatternCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/Support/Regex.h"
 
@@ -14,7 +14,7 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::llvm_check {
 
-void RegexCheck::registerMatchers(MatchFinder *Finder) {
+void InvalidRegexPatternCheck::registerMatchers(MatchFinder *Finder) {
   // main matcher
   auto IsConstllvmStringRef = qualType(
       isConstQualified(), hasUnqualifiedDesugaredType(recordType(hasDeclaration(
@@ -64,7 +64,7 @@ void RegexCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-void RegexCheck::check(const MatchFinder::MatchResult &Result) {
+void InvalidRegexPatternCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *DetectedPattern =
       Result.Nodes.getNodeAs<StringLiteral>("stringLiteral");
   if (DetectedPattern) {

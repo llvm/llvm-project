@@ -12,7 +12,7 @@ add_clang_library(clangTidyLLVMModule STATIC
   PreferRegisterOverUnsignedCheck.cpp
   PreferStaticOverAnonymousNamespaceCheck.cpp
   RedundantCastingCheck.cpp
-  RegexCheck.cpp
+  InvalidRegexPatternCheck.cpp
   TwineLocalCheck.cpp
   TypeSwitchCaseTypesCheck.cpp
   UseNewMLIROpBuilderCheck.cpp

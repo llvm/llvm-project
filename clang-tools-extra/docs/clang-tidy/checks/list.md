@@ -246,12 +246,12 @@ zircon/*
 | {doc}`llvm-formatv-string <llvm/formatv-string>` |  |
 | {doc}`llvm-header-guard <llvm/header-guard>` |  |
 | {doc}`llvm-include-order <llvm/include-order>` | Yes |
+| {doc}`llvm-invalid-regex-pattern <llvm/invalid-regex-pattern>` |  |
 | {doc}`llvm-namespace-comment <llvm/namespace-comment>` |  |
 | {doc}`llvm-prefer-isa-or-dyn-cast-in-conditionals <llvm/prefer-isa-or-dyn-cast-in-conditionals>` | Yes |
 | {doc}`llvm-prefer-register-over-unsigned <llvm/prefer-register-over-unsigned>` | Yes |
 | {doc}`llvm-prefer-static-over-anonymous-namespace <llvm/prefer-static-over-anonymous-namespace>` |  |
 | {doc}`llvm-redundant-casting <llvm/redundant-casting>` | Yes |
-| {doc}`llvm-regex <llvm/regex>` |  |
 | {doc}`llvm-twine-local <llvm/twine-local>` | Yes |
 | {doc}`llvm-type-switch-case-types <llvm/type-switch-case-types>` | Yes |
 | {doc}`llvm-use-new-mlir-op-builder <llvm/use-new-mlir-op-builder>` | Yes |

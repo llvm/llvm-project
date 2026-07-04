@@ -1,7 +1,7 @@
-.. title:: clang-tidy - llvm-regex
+.. title:: clang-tidy - llvm-invalid-regex-pattern
 
-llvm-regex
-==========
+llvm-invalid-regex-pattern
+==========================
 
 Detects malformed regex patterns defined in a single string literal
 to catch mistakes at compile time.

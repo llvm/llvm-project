@@ -17,9 +17,9 @@ namespace clang::tidy::llvm_check {
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/llvm/regex.html
-class RegexCheck : public ClangTidyCheck {
+class InvalidRegexPatternCheck : public ClangTidyCheck {
 public:
-  RegexCheck(StringRef Name, ClangTidyContext *Context)
+  InvalidRegexPatternCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
@@ -30,4 +30,4 @@ public:
 
 } // namespace clang::tidy::llvm_check
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVM_REGEXCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVM_InvalidRegexPatternCheck_H
