@@ -25,8 +25,19 @@ static_assert(!std::ranges::common_range<View>);
 static_assert(!std::same_as<std::ranges::iterator_t<View>, std::ranges::iterator_t<const View>>);
 static_assert(!std::same_as<std::ranges::sentinel_t<View>, std::ranges::sentinel_t<const View>>);
 
+struct CommonView : std::ranges::view_interface<View> {
+  std::tuple<int, int>* begin();
+  const std::tuple<int, int>* begin() const;
+  std::tuple<int, int>* end();
+  const std::tuple<int, int>* end() const;
+};
+static_assert(std::ranges::common_range<CommonView>);
+static_assert(!std::same_as<std::ranges::iterator_t<CommonView>, std::ranges::iterator_t<const CommonView>>);
+static_assert(!std::same_as<std::ranges::sentinel_t<CommonView>, std::ranges::sentinel_t<const CommonView>>);
+
 void test() {
-  auto v = View{} | std::views::elements<1>;
+  auto v        = View{} | std::views::elements<1>;
+  auto common_v = CommonView{} | std::views::elements<1>;
 
   // [range.elements.view]
 
@@ -44,6 +55,11 @@ void test() {
   v.end();
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::as_const(v).end();
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  common_v.end();
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::as_const(common_v).end();
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   v.size();
