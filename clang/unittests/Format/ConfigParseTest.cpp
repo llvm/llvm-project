@@ -650,8 +650,6 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               "AlignAfterOpenBracket: AlwaysBreak",
               BreakAfterOpenBracketLoop, true);
   CHECK_PARSE("AlignAfterOpenBracket: false", AlignAfterOpenBracket, false);
-  CHECK_PARSE("AlignAfterOpenBracket: BlockIndent", AlignAfterOpenBracket,
-              true);
   // BlockIndent implies breaking after the open bracket and before the close
   // bracket of braced lists, function calls/declarations, and if conditions.
   Style.BreakAfterOpenBracketBracedList = false;
@@ -664,9 +662,8 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   Style.BreakBeforeCloseBracketIf = false;
   Style.BreakBeforeCloseBracketLoop = true;
   Style.BreakBeforeCloseBracketSwitch = true;
-  EXPECT_EQ(
-      0,
-      parseConfiguration("AlignAfterOpenBracket: BlockIndent", &Style).value());
+  CHECK_PARSE("AlignAfterOpenBracket: BlockIndent", AlignAfterOpenBracket,
+              true);
   EXPECT_TRUE(Style.BreakAfterOpenBracketBracedList);
   EXPECT_TRUE(Style.BreakAfterOpenBracketFunction);
   EXPECT_TRUE(Style.BreakAfterOpenBracketIf);
