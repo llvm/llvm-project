@@ -81,6 +81,8 @@ add_header_library(
   DEPENDS
     libc.src.__support.FPUtil.generic.add_sub
     libc.src.__support.macros.config
+)
+
 add_header_library(
   negsf2
   HDRS

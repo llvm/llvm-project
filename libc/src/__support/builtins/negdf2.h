@@ -21,14 +21,14 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace builtins {
 
-// Double-precision negation 
+// Double-precision negation
 // Mirrors compiler-rt's __negdf2.
 LIBC_INLINE double negdf2(double x) {
-    using FPBits = fputil::FPBits<double>;
+  using FPBits = fputil::FPBits<double>;
 
-    FPBits bits(x);
-    bits.set_sign(bits.sign().negate());
-    return bits.get_val();
+  FPBits bits(x);
+  bits.set_sign(bits.sign().negate());
+  return bits.get_val();
 }
 
 } // namespace builtins
