@@ -72,7 +72,8 @@ initializeRecordStreamer(const Module &M,
   // caused errors in the first run, suppress the second run.
   if (M.getContext().getDiagHandlerPtr()->HasErrors)
     return;
-  if (!M.hasModuleInlineAsm())
+  StringRef InlineAsm = M.getModuleInlineAsm();
+  if (InlineAsm.empty())
     return;
 
   std::string Err;
@@ -89,55 +90,52 @@ initializeRecordStreamer(const Module &M,
   if (!MAI)
     return;
 
+  std::unique_ptr<MCSubtargetInfo> STI(T->createMCSubtargetInfo(TT, "", ""));
+  if (!STI)
+    return;
+
   std::unique_ptr<MCInstrInfo> MCII(T->createMCInstrInfo());
   if (!MCII)
     return;
 
-  for (const Module::GlobalAsmFragment &Frag : M.getModuleInlineAsm()) {
-    std::unique_ptr<MCSubtargetInfo> STI(T->createMCSubtargetInfo(
-        TT, Frag.Props.TargetCPU, Frag.Props.TargetFeatures));
-    if (!STI)
-      return;
+  std::unique_ptr<MemoryBuffer> Buffer(
+      MemoryBuffer::getMemBuffer(InlineAsm, "<inline asm>"));
+  SourceMgr SrcMgr;
+  SrcMgr.AddNewSourceBuffer(std::move(Buffer), SMLoc());
 
-    std::unique_ptr<MemoryBuffer> Buffer(
-        MemoryBuffer::getMemBuffer(Frag.Asm, "<inline asm>"));
-    SourceMgr SrcMgr;
-    SrcMgr.AddNewSourceBuffer(std::move(Buffer), SMLoc());
+  MCContext MCCtx(TT, *MAI, *MRI, *STI, &SrcMgr);
+  std::unique_ptr<MCObjectFileInfo> MOFI(
+      T->createMCObjectFileInfo(MCCtx, /*PIC=*/false));
+  MCCtx.setObjectFileInfo(MOFI.get());
+  RecordStreamer Streamer(MCCtx, M);
+  T->createNullTargetStreamer(Streamer);
 
-    MCContext MCCtx(TT, *MAI, *MRI, *STI, &SrcMgr);
-    std::unique_ptr<MCObjectFileInfo> MOFI(
-        T->createMCObjectFileInfo(MCCtx, /*PIC=*/false));
-    MCCtx.setObjectFileInfo(MOFI.get());
-    RecordStreamer Streamer(MCCtx, M);
-    T->createNullTargetStreamer(Streamer);
+  std::unique_ptr<MCAsmParser> Parser(
+      createMCAsmParser(SrcMgr, MCCtx, Streamer, *MAI));
 
-    std::unique_ptr<MCAsmParser> Parser(
-        createMCAsmParser(SrcMgr, MCCtx, Streamer, *MAI));
+  std::unique_ptr<MCTargetAsmParser> TAP(
+      T->createMCAsmParser(*STI, *Parser, *MCII));
+  if (!TAP)
+    return;
 
-    std::unique_ptr<MCTargetAsmParser> TAP(
-        T->createMCAsmParser(*STI, *Parser, *MCII));
-    if (!TAP)
-      return;
+  MCCtx.setDiagnosticHandler([&](const SMDiagnostic &SMD, bool IsInlineAsm,
+                                 const SourceMgr &SrcMgr,
+                                 std::vector<const MDNode *> &LocInfos) {
+    M.getContext().diagnose(
+        DiagnosticInfoSrcMgr(SMD, M.getName(), IsInlineAsm, /*LocCookie=*/0));
+  });
 
-    MCCtx.setDiagnosticHandler([&](const SMDiagnostic &SMD, bool IsInlineAsm,
-                                   const SourceMgr &SrcMgr,
-                                   std::vector<const MDNode *> &LocInfos) {
-      M.getContext().diagnose(
-          DiagnosticInfoSrcMgr(SMD, M.getName(), IsInlineAsm, /*LocCookie=*/0));
-    });
+  // Module-level inline asm is assumed to use At&t syntax (see
+  // AsmPrinter::doInitialization()).
+  Parser->setAssemblerDialect(InlineAsm::AD_ATT);
 
-    // Module-level inline asm is assumed to use At&t syntax (see
-    // AsmPrinter::doInitialization()).
-    Parser->setAssemblerDialect(InlineAsm::AD_ATT);
+  Parser->setSymbolScanningMode(true);
 
-    Parser->setSymbolScanningMode(true);
+  Parser->setTargetParser(*TAP);
+  if (Parser->Run(false))
+    return;
 
-    Parser->setTargetParser(*TAP);
-    if (Parser->Run(false))
-      return;
-
-    Init(Streamer);
-  }
+  Init(Streamer);
 }
 
 void ModuleSymbolTable::CollectAsmSymbols(

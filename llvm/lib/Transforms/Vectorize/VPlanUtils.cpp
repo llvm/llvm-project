@@ -694,8 +694,7 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
     VPSymbolicValue &UF = Plan.getUF();
     if (!UF.isMaterialized())
       return Step == &UF ||
-             match(Step, m_c_Mul(m_Specific(&Plan.getUF()),
-                                 m_VPInstruction<VPInstruction::VScale>()));
+             match(Step, m_c_Mul(m_Specific(&Plan.getUF()), m_VScale()));
 
     // Alias masking: step is number of active lanes of a dependence mask.
     if (match(Step, m_ZExtOrTruncOrSelf(
@@ -709,15 +708,13 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
 
     // Scalable VF: step involves VScale.
     if (ConcreteUF == 1)
-      return match(Step, m_VPInstruction<VPInstruction::VScale>());
-    if (match(Step, m_c_Mul(m_SpecificInt(ConcreteUF),
-                            m_VPInstruction<VPInstruction::VScale>())))
+      return match(Step, m_VScale());
+    if (match(Step, m_c_Mul(m_SpecificInt(ConcreteUF), m_VScale())))
       return true;
     // mul(VScale, ConcreteUF) may have been simplified to
     // shl(VScale, log2(ConcreteUF)) when ConcreteUF is a power of 2.
     return isPowerOf2_32(ConcreteUF) &&
-           match(Step, m_Shl(m_VPInstruction<VPInstruction::VScale>(),
-                             m_SpecificInt(Log2_32(ConcreteUF))));
+           match(Step, m_Shl(m_VScale(), m_SpecificInt(Log2_32(ConcreteUF))));
   };
 
   VPInstruction *Increment = nullptr;
@@ -851,7 +848,7 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
   case scUnknown:
     return Builder.getPlan().getOrAddLiveIn(cast<SCEVUnknown>(S)->getValue());
   case scVScale:
-    return Builder.createNaryOp(VPInstruction::VScale, {}, S->getType());
+    return Builder.createVScale(S->getType(), DL);
   case scAddExpr:
   case scMulExpr: {
     auto *NAry = cast<SCEVNAryExpr>(S);
