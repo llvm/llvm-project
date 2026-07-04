@@ -1081,6 +1081,16 @@ inline auto m_WidenIntrinsic(const T &...Ops) {
   return m_Isa<VPWidenIntrinsicRecipe>(m_Intrinsic<IntrID>(Ops...));
 }
 
+/// Match VPValues that represent live-ins: VPIRValues and (plain)
+/// VPSymbolicValues. VPRegionValues (which inherit from VPSymbolicValue) are
+/// not live-ins and are excluded.
+struct LiveIn_match {
+  template <typename ITy> bool match(ITy *V) const {
+    return isa<VPIRValue>(V) ||
+           (isa<VPSymbolicValue>(V) && !isa<VPRegionValue>(V));
+  }
+};
+
 inline VPInstruction_match<VPInstruction::VScale> m_VScale() {
   return m_VPInstruction<VPInstruction::VScale>();
 }
