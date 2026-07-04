@@ -519,14 +519,12 @@ void ConditionalFieldInvalidatesIterator(bool flag) {
     (flag ? s.strings1 : s.strings2).push_back("1");
     *it;
 }
-// FIXME: Requires field-sensitive AccessPaths to fix.
 void Invalidate1Use2ViaRefIsOk() {
     S s;
-    auto it = s.strings2.begin(); // expected-warning {{local variable 's' is later invalidated}} \
-                                  // expected-note {{result of call to 'begin' aliases the storage of local variable 's'}}
+    auto it = s.strings2.begin();
     auto& strings1 = s.strings1;
-    strings1.push_back("1");      // expected-note {{local variable 's' is invalidated here}}
-    *it;                          // expected-note {{later used here}}
+    strings1.push_back("1");      // OK
+    *it;
 }
 void Invalidate1UseSIsOk() {
   S s;
@@ -942,13 +940,11 @@ struct StringOwner {
   std::string s, t;
 };
 
-// FIXME: False-positive
 void member_destructor_invalidates_pointer() {
   StringOwner owner = {"42", "43"};
-  const char *p = owner.s.data(); // expected-warning {{local variable 'owner' is later invalidated}} \
-                                  // expected-note {{result of call to 'data' aliases the storage of local variable 'owner'}}
-  owner.t.~basic_string();        // expected-note {{local variable 'owner' is invalidated here}}
-  (void)*p;                       // expected-note {{later used here}}
+  const char *p = owner.s.data();
+  owner.t.~basic_string();        // OK
+  (void)*p;
 }
 
 } // namespace explicit_destructor
@@ -990,3 +986,79 @@ void invalid_after_ternary_reset(bool flag) {
 }
 
 } // namespace unique_ptr_invalidation
+
+namespace DeepFieldNesting {
+struct Level3 {
+  std::vector<std::string> vec;
+  int x;
+};
+struct Level2 {
+  Level3 inner3_1;
+  Level3 inner3_2;
+};
+struct Level1 {
+  Level2 inner2_1;
+  Level2 inner2_2;
+};
+
+// Modifying sibling at Level 3: OK
+void SiblingLevel3Ok() {
+  Level1 obj;
+  auto it = obj.inner2_1.inner3_1.vec.begin();
+  obj.inner2_1.inner3_2.vec.push_back("1"); 
+  *it; 
+}
+
+// Modifying sibling at Level 2: OK
+void SiblingLevel2Ok() {
+  Level1 obj;
+  auto it = obj.inner2_1.inner3_1.vec.begin();
+  obj.inner2_2.inner3_1.vec.push_back("1");
+  *it;
+}
+
+// Modifying sibling non-container field at Level 3: OK
+void SiblingFieldLevel3Ok() {
+  Level1 obj;
+  auto it = obj.inner2_1.inner3_1.vec.begin();
+  obj.inner2_1.inner3_1.x = 42;
+  *it;
+}
+
+// Modifying parent structure after use: OK
+void ParentModifiedAfterUseOk() {
+  Level1 obj;
+  auto it = obj.inner2_1.inner3_1.vec.begin();
+  *it; // Use here
+  Level3 new_val;
+  obj.inner2_1.inner3_1 = new_val; // OK, because 'it' is no longer used!
+}
+
+// Pointers with sibling modification: OK
+void PointerSiblingLevel3Ok(Level1* ptr) {
+  auto it = ptr->inner2_1.inner3_1.vec.begin();
+  ptr->inner2_1.inner3_2.vec.push_back("1"); // OK
+  *it;
+}
+
+// References with sibling modification: OK
+void ReferenceSiblingLevel3Ok(Level1& ref) {
+  auto it = ref.inner2_1.inner3_1.vec.begin();
+  ref.inner2_1.inner3_2.vec.push_back("1"); // OK
+  *it;
+}
+} // namespace DeepFieldNesting
+
+namespace StructFieldDisambiguation {
+struct S {
+  std::vector<int> v;
+  int x;
+};
+
+void TestStructVsField(S& s) {
+  int* px = &s.x;
+  s.v.push_back(1); // Invalidates s.v.* (interior), but must NOT invalidate s.x
+  *px = 42;         // OK
+}
+} // namespace StructFieldDisambiguation
+

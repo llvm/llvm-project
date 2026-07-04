@@ -208,6 +208,7 @@ public:
 
 /// Manages the creation, storage and retrieval of loans.
 class LoanManager {
+  using ExtensionCacheKey = std::pair<LoanID, PathElement>;
 
 public:
   LoanManager() = default;
@@ -226,6 +227,14 @@ public:
     return createLoan(AccessPath(getOrCreatePlaceholderBase(MD)));
   }
 
+  /// Gets or creates a loan by extending BaseLoanID with Element.
+  /// Caches the result to ensure convergence in LoanPropagation.
+  Loan *getOrCreateExtendedLoan(LoanID BaseLoanID, PathElement Element);
+
+  /// Finds the base loan ID that was extended to produce ExtendedLoanID, if
+  /// any.
+  std::optional<LoanID> getBaseLoan(LoanID ExtendedLoanID) const;
+
   const Loan *getLoan(LoanID ID) const {
     assert(ID.Value < AllLoans.size());
     return AllLoans[ID.Value];
@@ -243,6 +252,14 @@ private:
   LoanID NextLoanID{0};
 
   llvm::FoldingSet<PlaceholderBase> PlaceholderBases;
+  /// Cache for extended loans. Maps (BaseLoanID, PathElement) to the extended
+  /// loan. Ensures that extending the same loan with the same path element
+  /// always returns the same loan object, which is necessary for dataflow
+  /// analysis convergence.
+  llvm::DenseMap<ExtensionCacheKey, Loan *> ExtensionCache;
+
+  /// Maps an extended loan ID back to its base loan ID.
+  llvm::DenseMap<LoanID, LoanID> BaseLoansMap;
 
   /// TODO(opt): Profile and evaluate the usefullness of small buffer
   /// optimisation.
@@ -250,5 +267,17 @@ private:
   llvm::BumpPtrAllocator LoanAllocator;
 };
 } // namespace clang::lifetimes::internal
+
+namespace llvm {
+template <> struct DenseMapInfo<clang::lifetimes::internal::PathElement> {
+  using PathElement = clang::lifetimes::internal::PathElement;
+  static unsigned getHashValue(const PathElement &Val) {
+    return llvm::hash_combine(Val.isInterior(), Val.getFieldDecl());
+  }
+  static bool isEqual(const PathElement &LHS, const PathElement &RHS) {
+    return LHS == RHS;
+  }
+};
+} // namespace llvm
 
 #endif // LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_LOANS_H

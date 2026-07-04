@@ -60,9 +60,6 @@ public:
   using Base = DataflowAnalysis<Derived, Lattice, Dir>;
 
 private:
-  const CFG &Cfg;
-  AnalysisDeclContext &AC;
-
   /// The dataflow state before a basic block is processed.
   llvm::DenseMap<const CFGBlock *, Lattice> InStates;
   /// The dataflow state after a basic block is processed.
@@ -75,6 +72,8 @@ private:
   static constexpr bool isForward() { return Dir == Direction::Forward; }
 
 protected:
+  const CFG &Cfg;
+  AnalysisDeclContext &AC;
   FactManager &FactMgr;
 
   explicit DataflowAnalysis(const CFG &Cfg, AnalysisDeclContext &AC,
@@ -170,6 +169,8 @@ private:
       return D->transfer(In, *F->getAs<ExpireFact>());
     case Fact::Kind::OriginFlow:
       return D->transfer(In, *F->getAs<OriginFlowFact>());
+    case Fact::Kind::Projection:
+      return D->transfer(In, *F->getAs<ProjectionFact>());
     case Fact::Kind::MovedOrigin:
       return D->transfer(In, *F->getAs<MovedOriginFact>());
     case Fact::Kind::OriginEscapes:
@@ -190,6 +191,7 @@ public:
   Lattice transfer(Lattice In, const IssueFact &) { return In; }
   Lattice transfer(Lattice In, const ExpireFact &) { return In; }
   Lattice transfer(Lattice In, const OriginFlowFact &) { return In; }
+  Lattice transfer(Lattice In, const ProjectionFact &) { return In; }
   Lattice transfer(Lattice In, const MovedOriginFact &) { return In; }
   Lattice transfer(Lattice In, const OriginEscapesFact &) { return In; }
   Lattice transfer(Lattice In, const UseFact &) { return In; }

@@ -12,6 +12,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Loans.h"
 #include "clang/Testing/TestAST.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/raw_ostream.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <optional>
@@ -141,6 +142,14 @@ public:
                .getLoan(LID)
                ->getAccessPath()
                .getAsMaterializeTemporaryExpr() != nullptr;
+  }
+
+  std::string getAccessPathString(LoanID LID) {
+    const Loan *L = Analysis.getFactManager().getLoanMgr().getLoan(LID);
+    std::string S;
+    llvm::raw_string_ostream OS(S);
+    L->getAccessPath().dump(OS);
+    return S;
   }
 
   // Gets the set of loans that are live at the given program point. A loan is
@@ -287,7 +296,7 @@ public:
 /// variable expected to be the source of a loan.
 /// \param Annotation A string identifying the program point (created with
 /// POINT()) where the check should be performed.
-MATCHER_P2(HasLoansToImpl, LoanVars, Annotation, "") {
+MATCHER_P2(HasLoansToImpl, LoanPathStrs, Annotation, "") {
   const OriginInfo &Info = arg;
   std::optional<OriginID> OIDOpt = Info.Helper.getOriginForDecl(Info.OriginVar);
   if (!OIDOpt) {
@@ -303,36 +312,12 @@ MATCHER_P2(HasLoansToImpl, LoanVars, Annotation, "") {
                      << Annotation << "'";
     return false;
   }
-  std::vector<LoanID> ActualLoans(ActualLoansSetOpt->begin(),
-                                  ActualLoansSetOpt->end());
+  std::vector<std::string> ActualLoanPaths;
+  for (LoanID LID : *ActualLoansSetOpt)
+    ActualLoanPaths.push_back(Info.Helper.getAccessPathString(LID));
 
-  std::vector<LoanID> ExpectedLoans;
-  for (const auto &LoanVar : LoanVars) {
-    std::vector<LoanID> ExpectedLIDs = Info.Helper.getLoansForVar(LoanVar);
-    if (ExpectedLIDs.empty()) {
-      *result_listener << "could not find loan for var '" << LoanVar << "'";
-      return false;
-    }
-    ExpectedLoans.insert(ExpectedLoans.end(), ExpectedLIDs.begin(),
-                         ExpectedLIDs.end());
-  }
-  std::sort(ExpectedLoans.begin(), ExpectedLoans.end());
-  std::sort(ActualLoans.begin(), ActualLoans.end());
-  if (ExpectedLoans != ActualLoans) {
-    *result_listener << "Expected: {";
-    for (const auto &LoanID : ExpectedLoans) {
-      *result_listener << LoanID.Value << ", ";
-    }
-    *result_listener << "} Actual: {";
-    for (const auto &LoanID : ActualLoans) {
-      *result_listener << LoanID.Value << ", ";
-    }
-    *result_listener << "}";
-    return false;
-  }
-
-  return ExplainMatchResult(UnorderedElementsAreArray(ExpectedLoans),
-                            ActualLoans, result_listener);
+  return ExplainMatchResult(UnorderedElementsAreArray(LoanPathStrs),
+                            ActualLoanPaths, result_listener);
 }
 
 enum class LivenessKindFilter { Maybe, Must, All };
@@ -1211,6 +1196,63 @@ TEST_F(LifetimeAnalysisTest, LifetimeboundConversionOperator) {
     }
   )");
   EXPECT_THAT(Origin("v"), HasLoansTo({"owner"}, "p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, NestedFieldAccess) {
+  SetupTest(R"(
+    struct Inner { int val; };
+    struct Outer { Inner f; };
+    void target() {
+        Outer o;
+        Outer *p = &o;
+        int* p1 = &o.f.val;
+        POINT(a);
+        int* p2 = &p->f.val;
+        POINT(b);
+    }
+  )");
+  EXPECT_THAT(Origin("p1"), HasLoansTo({"o.f.val"}, "a"));
+  EXPECT_THAT(Origin("p2"), HasLoansTo({"o.f.val"}, "b"));
+}
+
+TEST_F(LifetimeAnalysisTest, PlaceholderParamField) {
+  SetupTest(R"(
+    struct S { int val; };
+    void target(S* p) {
+      int* p1 = &p->val;
+      POINT(a);
+    }
+  )");
+  EXPECT_THAT(Origin("p1"), HasLoansTo({"$p.val"}, "a"));
+}
+
+TEST_F(LifetimeAnalysisTest, PlaceholderThisField) {
+  SetupTest(R"(
+    struct S {
+      int f;
+      void target() {
+        int* p1 = &f;
+        POINT(a);
+      }
+    };
+  )");
+  EXPECT_THAT(Origin("p1"), HasLoansTo({"$this.f"}, "a"));
+}
+
+TEST_F(LifetimeAnalysisTest, PlaceholderThisNestedField) {
+  SetupTest(R"(
+    struct S1 {
+      int f;
+    };
+    struct S {
+      S1 s1;
+      void target() {
+        int* p1 = &s1.f;
+        POINT(a);
+      }
+    };
+  )");
+  EXPECT_THAT(Origin("p1"), HasLoansTo({"$this.s1.f"}, "a"));
 }
 
 TEST_F(LifetimeAnalysisTest, LivenessDeadPointer) {
