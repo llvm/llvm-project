@@ -98,10 +98,11 @@ infrastructure are described first, followed by tool-specific sections.
   Finds calls to `value_or` (and alternative spellings `valueOr`,
   `ValueOr`) on optional types where the return type is expensive to copy.
 
-- New :doc:`llvm-regex
+- New {doc}`llvm-regex
   <clang-tidy/checks/llvm/regex>` check.
 
-  Detects malformed regex patterns used in `llvm::Regex`.
+  Detects malformed regex patterns defined in a single string literal
+  to catch mistakes at compile time.
 
 #### New check aliases
 
