@@ -899,6 +899,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   immediate-escalated callable. (#GH192846)
 - Fixed a crash when passing one sized implicitly casted vector to a `abs` function. (#GH204777)
 - Fixed a crash when diagnosing an invalid out-of-line definition of a member class template. (#GH201490)
+- Fixed a crash in CTAD for type alias templates when the aggregate deduction guide could not be resolved. (#GH206994)
 
 ### OpenACC Specific Changes
 
