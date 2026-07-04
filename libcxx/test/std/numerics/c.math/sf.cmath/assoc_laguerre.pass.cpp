@@ -8,6 +8,10 @@
 
 // REQUIRES: std-at-least-c++17
 
+// These functions are implemented in the built library, so a program using them fails to
+// load against a back-deployment target whose libc++ predates them.
+// XFAIL: availability-mathematical_special_functions-missing
+
 // <cmath>
 
 // double      assoc_laguerre(unsigned n, unsigned m, double x);

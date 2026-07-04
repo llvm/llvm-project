@@ -271,6 +271,11 @@
 #define _LIBCPP_AVAILABILITY_HAS_FROM_CHARS_FLOATING_POINT _LIBCPP_INTRODUCED_IN_LLVM_20
 #define _LIBCPP_AVAILABILITY_FROM_CHARS_FLOATING_POINT _LIBCPP_INTRODUCED_IN_LLVM_20_ATTRIBUTE
 
+// This controls the availability of the C++17 mathematical special functions
+// ([sf.cmath]). Their implementation lives in the built library (backed by Boost.Math).
+#define _LIBCPP_AVAILABILITY_HAS_MATHEMATICAL_SPECIAL_FUNCTIONS _LIBCPP_INTRODUCED_IN_LLVM_23
+#define _LIBCPP_AVAILABILITY_MATHEMATICAL_SPECIAL_FUNCTIONS _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE
+
 // This controls the availability of the C++20 time zone database.
 // The parser code is built in the library.
 #define _LIBCPP_AVAILABILITY_HAS_TZDB _LIBCPP_INTRODUCED_IN_LLVM_19

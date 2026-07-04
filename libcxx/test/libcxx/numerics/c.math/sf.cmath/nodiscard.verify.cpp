@@ -8,6 +8,10 @@
 
 // REQUIRES: std-at-least-c++17
 
+// The functions carry availability markup, so referencing them fails to compile against a
+// back-deployment target whose libc++ predates them.
+// XFAIL: availability-mathematical_special_functions-missing
+
 // Check that functions are marked [[nodiscard]]
 
 #include <cmath>

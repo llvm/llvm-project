@@ -211,4 +211,12 @@ features += [
             cfg.available_features,
         ),
     ),
+    # Tests that require the C++17 mathematical special functions in the built library
+    Feature(
+        name="availability-mathematical_special_functions-missing",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-23)",
+            cfg.available_features,
+        ),
+    ),
 ]
