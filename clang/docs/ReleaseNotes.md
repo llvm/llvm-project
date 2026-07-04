@@ -275,6 +275,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 #### Resolutions to C++ Defect Reports
 
+- Clang now implements [CWG1504](https://cplusplus.github.io/CWG/issues/1504.html)
+  which makes pointer arithmetic after derived-base conversion undefined behavior,
+  allowing devirtualization of calls through non-zero array subscripts.
 - Implemented [CWG1780 Explicit instantiation/specialization of generic lambda
   operator()](https://cplusplus.github.io/CWG/issues/1780.html)
 - Clang now allows omitting `typename` before a template name in a
@@ -323,6 +326,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### Non-comprehensive list of changes in this release
 
+- Clang can now devirtualize virtual function calls on objects accessed through
+  array subscript expressions with non-zero constant indices, based on the
+  resolution of [CWG1504](https://cplusplus.github.io/CWG/issues/1504.html).
 - Added support for floating point and pointer values in most `__atomic_`
   builtins.
 - Added `__builtin_stdc_rotate_left` and `__builtin_stdc_rotate_right`
