@@ -115,25 +115,23 @@ void ClangOpcodesEmitter::EmitInterpFnDispatchers(raw_ostream &OS, StringRef N,
   OS << "#ifdef GET_INTERPFN_DISPATCHERS\n";
   // PRESERVE NONE static bool Interp_* (InterpState &S, CodePtr &PC) {
   Enumerate(R, N, [&](ArrayRef<const Record *> TS, const Twine &ID) {
-    OS << "PRESERVE_NONE\nstatic bool Interp_" << ID
-       << "(InterpState &S, CodePtr &PC) {\n";
+    OS << "PRESERVE_NONE\nstatic bool Interp_" << ID << "(InterpState &S) {\n";
 
     if (ID.str() == "EndSpeculation") {
-      OS << "    MUSTTAIL return EndSpeculation(S, PC);\n";
+      OS << "    MUSTTAIL return EndSpeculation(S);\n";
       OS << "}\n";
       return;
     }
 
     bool CanReturn = R->getValueAsBit("CanReturn");
     const auto &Args = R->getValueAsListOfDefs("Args");
-    bool ChangesPC = R->getValueAsBit("ChangesPC");
     bool CanFail = R->getValueAsBit("CanFail");
 
     if (Args.empty()) {
       if (CanReturn) {
         OS << " MUSTTAIL return " << N;
         PrintTypes(OS, TS);
-        OS << "(S, PC);\n";
+        OS << "(S);\n";
         OS << "}\n";
         return;
       }
@@ -144,7 +142,7 @@ void ClangOpcodesEmitter::EmitInterpFnDispatchers(raw_ostream &OS, StringRef N,
 
       OS << N;
       PrintTypes(OS, TS);
-      OS << "(S, PC)";
+      OS << "(S, S.PC)";
 
       if (CanFail)
         OS << ") return false";
@@ -152,7 +150,7 @@ void ClangOpcodesEmitter::EmitInterpFnDispatchers(raw_ostream &OS, StringRef N,
       OS << ";\n";
 
       OS << "#if USE_TAILCALLS\n";
-      OS << "  MUSTTAIL return InterpNext(S, PC);\n";
+      OS << "  MUSTTAIL return InterpNext(S);\n";
       OS << "#else\n";
       OS << "  return true;\n";
       OS << "#endif\n";
@@ -162,8 +160,7 @@ void ClangOpcodesEmitter::EmitInterpFnDispatchers(raw_ostream &OS, StringRef N,
 
     OS << "  {\n";
 
-    if (!ChangesPC)
-      OS << "    CodePtr OpPC = PC;\n";
+    OS << "    CodePtr OpPC = S.PC;\n";
 
     // Emit calls to read arguments.
     for (size_t I = 0, N = Args.size(); I < N; ++I) {
@@ -175,7 +172,7 @@ void ClangOpcodesEmitter::EmitInterpFnDispatchers(raw_ostream &OS, StringRef N,
       else
         OS << "    const auto V" << I;
       OS << " = ";
-      OS << "ReadArg<" << Arg->getValueAsString("Name") << ">(S, PC);\n";
+      OS << "ReadArg<" << Arg->getValueAsString("Name") << ">(S, S.PC);\n";
     }
 
     OS << "    ";
@@ -185,10 +182,7 @@ void ClangOpcodesEmitter::EmitInterpFnDispatchers(raw_ostream &OS, StringRef N,
     OS << N;
     PrintTypes(OS, TS);
     OS << "(S";
-    if (ChangesPC)
-      OS << ", PC";
-    else
-      OS << ", OpPC";
+    OS << ", OpPC";
     for (size_t I = 0, N = Args.size(); I < N; ++I)
       OS << ", V" << I;
 
@@ -202,7 +196,7 @@ void ClangOpcodesEmitter::EmitInterpFnDispatchers(raw_ostream &OS, StringRef N,
 
     if (!CanReturn) {
       OS << "#if USE_TAILCALLS\n";
-      OS << "  MUSTTAIL return InterpNext(S, PC);\n";
+      OS << "  MUSTTAIL return InterpNext(S);\n";
       OS << "#else\n";
       OS << "  return true;\n";
       OS << "#endif\n";
@@ -434,12 +428,17 @@ void ClangOpcodesEmitter::EmitEval(raw_ostream &OS, StringRef N,
               OS << "  if (!isActive()) return true;\n";
               OS << "  CurrentSource = L;\n";
 
-              OS << "  return " << N;
-              PrintTypes(OS, TS);
-              OS << "(S, OpPC";
-              for (size_t I = 0, N = Args.size(); I < N; ++I)
-                OS << ", A" << I;
-              OS << ");\n";
+              if (N == "EndSpeculation") {
+                OS << "return EndSpeculation(S);\n";
+              } else {
+
+                OS << "  return " << N;
+                PrintTypes(OS, TS);
+                OS << "(S, OpPC";
+                for (size_t I = 0, N = Args.size(); I < N; ++I)
+                  OS << ", A" << I;
+                OS << ");\n";
+              }
               OS << "}\n";
             });
 
