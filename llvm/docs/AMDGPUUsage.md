@@ -4526,6 +4526,9 @@ if needed.
   * - 0x8
     - `FUNC_HALF_SIMD_MODE`
     - Function uses half SIMD execution mode; otherwise full SIMD mode
+  * - 0x10
+    - `FUNC_ALTERNATE_WAVESIZE`
+    - Function uses the alternate wave size of the target; otherwise the default (wave32 if supported, else wave64)
   :::
 
   Symbol references (`INFO_FUNC`, `INFO_USE`, `INFO_CALL`) generate

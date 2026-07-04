@@ -987,6 +987,9 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
         *ResourceUsage;
     uint32_t Occupancy = static_cast<uint32_t>(
         MF.getInfo<SIMachineFunctionInfo>()->getMinWavesPerEU());
+    // The default wave size of a target is wave32 if the target supports
+    // wave32, and wave64 otherwise.
+    unsigned DefaultWaveSize = STM.supportsWave32() ? 32 : 64;
     FunctionInfos.push_back(
         {/*NumSGPR=*/static_cast<uint32_t>(RU.NumExplicitSGPR),
          /*NumArchVGPR=*/static_cast<uint32_t>(RU.NumVGPR),
@@ -994,6 +997,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
          /*PrivateSegmentSize=*/static_cast<uint32_t>(RU.PrivateSegmentSize),
          /*Occupancy=*/Occupancy,
          /*UsesHalfSIMDMode=*/!AMDGPU::isFullSIMDMode(STM),
+         /*UsesAlternateWaveSize=*/STM.getWavefrontSize() != DefaultWaveSize,
          /*UsesVCC=*/RU.UsesVCC,
          /*UsesFlatScratch=*/RU.UsesFlatScratch,
          /*HasDynStack=*/RU.HasDynamicallySizedStack,

@@ -70,7 +70,11 @@ enum class FuncInfoFlags : uint32_t {
   FUNC_HAS_DYN_STACK = 1U << 2,
   /// Function uses half SIMD mode. If unset, the function uses full SIMD mode.
   FUNC_HALF_SIMD_MODE = 1U << 3,
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/FUNC_HALF_SIMD_MODE),
+  /// Function uses the alternate wave size of the target. If unset, the
+  /// function uses the default wave size of the target: wave32 if the target
+  /// supports wave32, and wave64 otherwise.
+  FUNC_ALTERNATE_WAVESIZE = 1U << 4,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/FUNC_ALTERNATE_WAVESIZE),
 };
 
 } // namespace AMDGPU
