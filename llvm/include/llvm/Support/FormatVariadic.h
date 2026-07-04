@@ -246,7 +246,7 @@ public:
 template <typename... Ts>
 inline auto formatv(bool Validate, const char *Fmt, Ts &&...Vals) {
   auto Params = std::make_tuple(
-      support::detail::FormatFunctor<Ts>(std::forward<Ts>(Vals))...);
+      support::detail::FormatFunctor(std::forward<Ts>(Vals))...);
   return formatv_object<decltype(Params)>(Fmt, std::move(Params), Validate);
 }
 

@@ -36,7 +36,7 @@ public:
         Fill(Fill) {}
 
   void format(llvm::raw_ostream &Stream, StringRef Style) {
-    auto Adapter = detail::FormatFunctor<T>(std::forward<T>(this->Item));
+    auto Adapter = detail::FormatFunctor(std::forward<T>(this->Item));
     FmtAlign(Adapter, Where, Amount, Fill).format(Stream, Style);
   }
 };
@@ -50,7 +50,7 @@ public:
       : FormatAdapter<T>(std::forward<T>(Item)), Left(Left), Right(Right) {}
 
   void format(llvm::raw_ostream &Stream, StringRef Style) {
-    auto Adapter = detail::FormatFunctor<T>(std::forward<T>(this->Item));
+    auto Adapter = detail::FormatFunctor(std::forward<T>(this->Item));
     Stream.indent(Left);
     Adapter(Stream, Style);
     Stream.indent(Right);
@@ -65,7 +65,7 @@ public:
       : FormatAdapter<T>(std::forward<T>(Item)), Count(Count) {}
 
   void format(llvm::raw_ostream &Stream, StringRef Style) {
-    auto Adapter = detail::FormatFunctor<T>(std::forward<T>(this->Item));
+    auto Adapter = detail::FormatFunctor(std::forward<T>(this->Item));
     for (size_t I = 0; I < Count; ++I) {
       Adapter(Stream, Style);
     }

@@ -113,20 +113,20 @@ static llvm::Error FormatImpl(DataStack &data) {
     };
 
     if (auto s = std::get_if<std::string>(&arg))
-      format(FormatFunctor<const char *>(s->c_str()));
+      format(FormatFunctor(s->c_str()));
     else if (auto u = std::get_if<uint64_t>(&arg))
-      format(FormatFunctor<uint64_t *&>(u));
+      format(FormatFunctor(u));
     else if (auto i = std::get_if<int64_t>(&arg))
-      format(FormatFunctor<int64_t *&>(i));
+      format(FormatFunctor(i));
     else if (auto valobj = std::get_if<ValueObjectSP>(&arg)) {
       if (!valobj->get())
-        format(FormatFunctor<const char *>("null object"));
+        format(FormatFunctor("null object"));
       else
-        format(FormatFunctor<const char *>(valobj->get()->GetValueAsCString()));
+        format(FormatFunctor(valobj->get()->GetValueAsCString()));
     } else if (auto type = std::get_if<CompilerType>(&arg))
-      format(FormatFunctor<llvm::StringRef>(type->GetDisplayTypeName()));
+      format(FormatFunctor(type->GetDisplayTypeName()));
     else if (auto sel = std::get_if<FormatterBytecode::Selectors>(&arg))
-      format(FormatFunctor<std::string>(toString(*sel)));
+      format(FormatFunctor(toString(*sel)));
   }
   data.Push(s);
   return llvm::Error::success();

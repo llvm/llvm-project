@@ -395,13 +395,13 @@ public:
     auto Begin = V.begin();
     auto End = V.end();
     if (Begin != End) {
-      auto Adapter = support::detail::FormatFunctor<decltype(*Begin)>(*Begin);
+      auto Adapter = support::detail::FormatFunctor(*Begin);
       Adapter(Stream, ArgStyle);
       ++Begin;
     }
     while (Begin != End) {
       Stream << Sep;
-      auto Adapter = support::detail::FormatFunctor<decltype(*Begin)>(*Begin);
+      auto Adapter = support::detail::FormatFunctor(*Begin);
       Adapter(Stream, ArgStyle);
       ++Begin;
     }

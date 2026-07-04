@@ -74,6 +74,8 @@ public:
   }
 };
 
+template <typename T> FormatFunctor(T &&) -> FormatFunctor<T>;
+
 } // namespace detail
 } // namespace support
 } // namespace llvm
