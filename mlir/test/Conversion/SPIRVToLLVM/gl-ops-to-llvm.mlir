@@ -335,6 +335,36 @@ spirv.func @inverse_sqrt(%arg0: f32) "None" {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.GL.Radians
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @radians
+spirv.func @radians(%arg0: f32, %arg1: vector<3xf32>) "None" {
+  // CHECK: %[[FACTOR:.*]] = llvm.mlir.constant(0.0174532924 : f32) : f32
+  // CHECK: llvm.fmul %{{.*}}, %[[FACTOR]] : f32
+  %0 = spirv.GL.Radians %arg0 : f32
+  // CHECK: %[[VFACTOR:.*]] = llvm.mlir.constant(dense<0.0174532924> : vector<3xf32>) : vector<3xf32>
+  // CHECK: llvm.fmul %{{.*}}, %[[VFACTOR]] : vector<3xf32>
+  %1 = spirv.GL.Radians %arg1 : vector<3xf32>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Degrees
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @degrees
+spirv.func @degrees(%arg0: f32, %arg1: vector<3xf32>) "None" {
+  // CHECK: %[[FACTOR:.*]] = llvm.mlir.constant(57.2957802 : f32) : f32
+  // CHECK: llvm.fmul %{{.*}}, %[[FACTOR]] : f32
+  %0 = spirv.GL.Degrees %arg0 : f32
+  // CHECK: %[[VFACTOR:.*]] = llvm.mlir.constant(dense<57.2957802> : vector<3xf32>) : vector<3xf32>
+  // CHECK: llvm.fmul %{{.*}}, %[[VFACTOR]] : vector<3xf32>
+  %1 = spirv.GL.Degrees %arg1 : vector<3xf32>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.GL.Trunc
 //===----------------------------------------------------------------------===//
 
@@ -359,5 +389,20 @@ spirv.func @asin_acos_atan(%arg0: f32, %arg1: vector<3xf16>) "None" {
   %1 = spirv.GL.Acos %arg1 : vector<3xf16>
   // CHECK: llvm.intr.atan(%{{.*}}) : (f32) -> f32
   %2 = spirv.GL.Atan %arg0 : f32
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Fract
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @fract
+spirv.func @fract(%arg0: f32, %arg1: vector<3xf16>) "None" {
+  // CHECK: %[[FLOOR:.*]] = llvm.intr.floor(%{{.*}}) : (f32) -> f32
+  // CHECK: llvm.fsub %{{.*}}, %[[FLOOR]] : f32
+  %0 = spirv.GL.Fract %arg0 : f32
+  // CHECK: %[[FLOORV:.*]] = llvm.intr.floor(%{{.*}}) : (vector<3xf16>) -> vector<3xf16>
+  // CHECK: llvm.fsub %{{.*}}, %[[FLOORV]] : vector<3xf16>
+  %1 = spirv.GL.Fract %arg1 : vector<3xf16>
   spirv.Return
 }

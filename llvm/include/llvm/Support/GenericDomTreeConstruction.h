@@ -111,19 +111,26 @@ template <typename DomTreeT> struct SemiNCAInfo {
   static SmallVector<NodePtr, 8> getChildren(NodePtr N, BatchUpdatePtr BUI) {
     if (BUI)
       return BUI->PreViewCFG.template getChildren<Inversed>(N);
-    return getChildren<Inversed>(N);
+    // Force the element type to NodePtr. some graphs (clang's
+    // CFGBlock::AdjacentBlock) yield a proxy convertible to NodePtr rather than
+    // NodePtr itself.
+    auto Children = getChildren<Inversed>(N);
+    return SmallVector<NodePtr, 8>(Children.begin(), Children.end());
   }
 
-  template <bool Inversed>
-  static SmallVector<NodePtr, 8> getChildren(NodePtr N) {
+  // Returns a lazy range over N's children, reversed for non-inverted graphs so
+  // a LIFO worklist visits them in their natural order.
+  template <bool Inversed> static auto getChildren(NodePtr N) {
     using DirectedNodeT =
         std::conditional_t<Inversed, Inverse<NodePtr>, NodePtr>;
-    auto R = children<DirectedNodeT>(N);
-    SmallVector<NodePtr, 8> Res(detail::reverse_if<!Inversed>(R));
-
-    // Remove nullptr children for clang.
-    llvm::erase(Res, nullptr);
-    return Res;
+    auto R = detail::reverse_if<!Inversed>(children<DirectedNodeT>(N));
+    // Most graphs' iterators yield NodePtr directly; return the range as is.
+    // clang's CFGBlock instead yields a CFGBlock::AdjacentBlock proxy that is
+    // convertible to NodePtr but can be null for AB_Unreachable.
+    if constexpr (std::is_same_v<std::decay_t<decltype(*R.begin())>, NodePtr>)
+      return R;
+    else
+      return llvm::make_filter_range(R, [](NodePtr C) { return C != nullptr; });
   }
 
   InfoRec &getNodeInfo(NodePtr BB) {
@@ -212,6 +219,16 @@ template <typename DomTreeT> struct SemiNCAInfo {
       NumToNode.push_back(BB);
 
       constexpr bool Direction = IsReverse != IsPostDom; // XOR.
+      // Common case: iterate the lazy successor range directly. Materializing
+      // is only needed to reorder by SuccOrder or to consult a batch update
+      // view.
+      if (!SuccOrder && !BatchUpdates) {
+        for (const NodePtr Succ : getChildren<Direction>(BB))
+          if (Condition(BB, Succ))
+            WorkList.push_back({Succ, LastNum});
+        continue;
+      }
+
       auto Successors = getChildren<Direction>(BB, BatchUpdates);
       if (SuccOrder && Successors.size() > 1)
         llvm::sort(
@@ -277,14 +294,17 @@ template <typename DomTreeT> struct SemiNCAInfo {
   // This function requires DFS to be run before calling it.
   void runSemiNCA() {
     const unsigned NextDFSNum(NumToNode.size());
-    SmallVector<InfoRec *, 8> NumToInfo = {nullptr};
-    NumToInfo.reserve(NextDFSNum);
-    // Initialize IDoms to spanning tree parents.
+    // NumToInfo and IDoms are indexed by DFS number; index 0 is an unused
+    // sentinel. IDoms holds immediate dominators in DFS-number space,
+    // initialized below to spanning tree parents.
+    SmallVector<InfoRec *, 32> NumToInfo;
+    NumToInfo.resize_for_overwrite(NextDFSNum);
+    SmallVector<unsigned, 32> IDoms;
+    IDoms.resize_for_overwrite(NextDFSNum);
     for (unsigned i = 1; i < NextDFSNum; ++i) {
-      const NodePtr V = NumToNode[i];
-      auto &VInfo = getNodeInfo(V);
-      VInfo.IDom = NumToNode[VInfo.Parent];
-      NumToInfo.push_back(&VInfo);
+      auto &VInfo = getNodeInfo(NumToNode[i]);
+      IDoms[i] = VInfo.Parent;
+      NumToInfo[i] = &VInfo;
     }
 
     // Step #1: Calculate the semidominators of all vertices.
@@ -303,21 +323,15 @@ template <typename DomTreeT> struct SemiNCAInfo {
 
     // Step #2: Explicitly define the immediate dominator of each vertex.
     //          IDom[i] = NCA(SDom[i], SpanningTreeParent(i)).
-    // Note that the parents were stored in IDoms and later got invalidated
-    // during path compression in Eval.
+    // SDom[i]'s DFS number is just Semi.
     for (unsigned i = 2; i < NextDFSNum; ++i) {
       auto &WInfo = *NumToInfo[i];
       assert(WInfo.Semi != 0);
-      const unsigned SDomNum = NumToInfo[WInfo.Semi]->DFSNum;
-      NodePtr WIDomCandidate = WInfo.IDom;
-      while (true) {
-        auto &WIDomCandidateInfo = getNodeInfo(WIDomCandidate);
-        if (WIDomCandidateInfo.DFSNum <= SDomNum)
-          break;
-        WIDomCandidate = WIDomCandidateInfo.IDom;
-      }
-
-      WInfo.IDom = WIDomCandidate;
+      unsigned WIDom = IDoms[i];
+      while (WIDom > WInfo.Semi)
+        WIDom = IDoms[WIDom];
+      IDoms[i] = WIDom;
+      WInfo.IDom = NumToNode[WIDom];
     }
   }
 

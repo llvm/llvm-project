@@ -8697,14 +8697,30 @@ void SIInstrInfo::lowerSelect(SIInstrWorklist &Worklist, MachineInstr &Inst,
   Register CondReg = Cond.getReg();
   bool IsSCC = (CondReg == AMDGPU::SCC);
 
-  // If this is a trivial select where the condition is effectively not SCC
-  // (CondReg is a source of copy to SCC), then the select is semantically
-  // equivalent to copying CondReg. Hence, there is no need to create
-  // V_CNDMASK, we can just use that and bail out.
+  // Remove S_CSELECT instructions that we previously inserted to feed the SCC
+  // condition output from S_CMP into the SGPR condition input of V_CNDMASK. If
+  // the S_CMP has been promoted to V_CMP then we can feed its SGPR condition
+  // output directly into the V_CNDMASK.
   if (!IsSCC && Src0.isImm() && (Src0.getImm() == -1) && Src1.isImm() &&
       (Src1.getImm() == 0)) {
-    MRI.replaceRegWith(Dest.getReg(), CondReg);
-    return;
+    for (MachineOperand &UseMO :
+         make_early_inc_range(MRI.use_nodbg_operands(Dest.getReg()))) {
+      MachineInstr &UseMI = *UseMO.getParent();
+      switch (UseMI.getOpcode()) {
+      case AMDGPU::V_CNDMASK_B16_fake16_e32:
+      case AMDGPU::V_CNDMASK_B16_fake16_e64:
+      case AMDGPU::V_CNDMASK_B16_t16_e32:
+      case AMDGPU::V_CNDMASK_B16_t16_e64:
+      case AMDGPU::V_CNDMASK_B32_e32:
+      case AMDGPU::V_CNDMASK_B32_e64:
+      case AMDGPU::V_CNDMASK_B64_PSEUDO:
+        if (UseMO.isImplicit() ||
+            &UseMO == getNamedOperand(UseMI, AMDGPU::OpName::src2))
+          UseMO.setReg(CondReg);
+      }
+    }
+    if (MRI.use_nodbg_empty(Dest.getReg()))
+      return;
   }
 
   Register NewCondReg = CondReg;

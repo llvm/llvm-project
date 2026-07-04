@@ -67,6 +67,8 @@ inline bool IsLifetimeSafetyEnabled(Sema &S, const Decl *D) {
       diag::warn_lifetime_safety_invalidated_global,
       diag::warn_lifetime_safety_cross_tu_param_suggestion,
       diag::warn_lifetime_safety_intra_tu_param_suggestion,
+      diag::warn_lifetime_safety_cross_tu_ctor_param_suggestion,
+      diag::warn_lifetime_safety_intra_tu_ctor_param_suggestion,
       diag::warn_lifetime_safety_cross_tu_this_suggestion,
       diag::warn_lifetime_safety_intra_tu_this_suggestion,
       diag::warn_lifetime_safety_inapplicable_lifetimebound};
@@ -81,6 +83,8 @@ inline bool ShouldSuggestLifetimeAnnotations(Sema &S, const Decl *D) {
   constexpr unsigned DiagIDs[] = {
       diag::warn_lifetime_safety_intra_tu_param_suggestion,
       diag::warn_lifetime_safety_cross_tu_param_suggestion,
+      diag::warn_lifetime_safety_intra_tu_ctor_param_suggestion,
+      diag::warn_lifetime_safety_cross_tu_ctor_param_suggestion,
       diag::warn_lifetime_safety_intra_tu_this_suggestion,
       diag::warn_lifetime_safety_cross_tu_this_suggestion};
   for (unsigned DiagID : DiagIDs)
@@ -280,14 +284,19 @@ public:
   void suggestLifetimeboundToParmVar(WarningScope Scope,
                                      const ParmVarDecl *ParmToAnnotate,
                                      EscapingTarget Target) override {
-    unsigned DiagID =
-        (Scope == WarningScope::CrossTU)
-            ? diag::warn_lifetime_safety_cross_tu_param_suggestion
-            : diag::warn_lifetime_safety_intra_tu_param_suggestion;
+    unsigned DiagID;
+    if (isa<CXXConstructorDecl>(ParmToAnnotate->getDeclContext()))
+      DiagID = (Scope == WarningScope::CrossTU)
+                   ? diag::warn_lifetime_safety_cross_tu_ctor_param_suggestion
+                   : diag::warn_lifetime_safety_intra_tu_ctor_param_suggestion;
+    else
+      DiagID = (Scope == WarningScope::CrossTU)
+                   ? diag::warn_lifetime_safety_cross_tu_param_suggestion
+                   : diag::warn_lifetime_safety_intra_tu_param_suggestion;
 
     auto [InsertionPoint, FixItText] = getLifetimeBoundFixIt(ParmToAnnotate);
 
-    S.Diag(ParmToAnnotate->getBeginLoc(), DiagID)
+    S.Diag(InsertionPoint, DiagID)
         << ParmToAnnotate->getSourceRange()
         << FixItHint::CreateInsertion(InsertionPoint, FixItText);
 
@@ -367,7 +376,7 @@ public:
     if (IsMacro || InsertionPoint.isInvalid())
       S.Diag(PVDDecl->getBeginLoc(), DiagID) << PVDDecl->getSourceRange();
     else
-      S.Diag(PVDDecl->getBeginLoc(), DiagID)
+      S.Diag(InsertionPoint, DiagID)
           << PVDDecl->getSourceRange()
           << FixItHint::CreateInsertion(InsertionPoint, FixItText);
 
