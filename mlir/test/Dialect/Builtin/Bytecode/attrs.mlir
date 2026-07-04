@@ -255,3 +255,19 @@ module @TestAffineMap attributes {
   bytecode.projperm_single = affine_map<(d0, d1, d2) -> (d2)>
 } {}
 
+//===----------------------------------------------------------------------===//
+// IntegerSetAttr
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @TestIntegerSetAttr
+module @TestIntegerSetAttr attributes {
+  // CHECK-DAG: bytecode.eq = affine_set<(d0) : (d0 == 0)>
+  // CHECK-DAG: bytecode.ineq = affine_set<(d0) : (d0 >= 0)>
+  // CHECK-DAG: bytecode.multi = affine_set<(d0, d1)[s0] : (d0 >= 0, -d0 + s0 >= 0, d1 >= 0)>
+  // CHECK-DAG: bytecode.eq_ineq = affine_set<(d0, d1) : (d0 == 0, d1 >= 0)>
+  bytecode.eq = affine_set<(d0) : (d0 == 0)>,
+  bytecode.ineq = affine_set<(d0) : (d0 >= 0)>,
+  bytecode.multi = affine_set<(d0, d1)[s0] : (d0 >= 0, -d0 + s0 >= 0, d1 >= 0)>,
+  bytecode.eq_ineq = affine_set<(d0, d1) : (d0 == 0, d1 >= 0)>
+} {}
+
