@@ -48,6 +48,11 @@ public:
     /// it. Otherwise, the source's loan set is merged into the destination's
     /// loan set.
     OriginFlow,
+    /// Loans held by the origin are projected (their access paths are
+    /// extended by a path element).
+    /// Example: if `obj` holds loan `{x}`, `p = obj.field` projects `{x}` with
+    /// `field` to `{x.field}`before flowing into `p`.
+    Projection,
     /// An origin is used (eg. appears as l-value expression like DeclRefExpr).
     Use,
     /// An origin that is moved (e.g., passed to an rvalue reference parameter).
@@ -155,6 +160,25 @@ public:
   OriginID getDestOriginID() const { return OIDDest; }
   OriginID getSrcOriginID() const { return OIDSrc; }
   bool getKillDest() const { return KillDest; }
+
+  void dump(llvm::raw_ostream &OS, const LoanManager &, const OriginManager &OM,
+            const LoanPropagationAnalysis *LPA = nullptr) const override;
+};
+
+class ProjectionFact : public Fact {
+  OriginID OID;
+  PathElement Element;
+
+public:
+  static bool classof(const Fact *F) {
+    return F->getKind() == Kind::Projection;
+  }
+
+  ProjectionFact(OriginID OID, PathElement Element)
+      : Fact(Kind::Projection), OID(OID), Element(Element) {}
+
+  OriginID getOriginID() const { return OID; }
+  PathElement getPathElement() const { return Element; }
 
   void dump(llvm::raw_ostream &OS, const LoanManager &, const OriginManager &OM,
             const LoanPropagationAnalysis *LPA = nullptr) const override;
