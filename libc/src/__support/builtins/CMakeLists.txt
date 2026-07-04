@@ -81,6 +81,22 @@ add_header_library(
   DEPENDS
     libc.src.__support.FPUtil.generic.add_sub
     libc.src.__support.macros.config
+add_header_library(
+  negsf2
+  HDRS
+    negsf2.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_header_library(
+  negdf2
+  HDRS
+    negdf2.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.FPUtil.fp_bits
 )
 
 add_header_library(

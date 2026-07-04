@@ -1,4 +1,4 @@
-//===-- lib/divtf3.cpp - Quad-precision addition (libc-backed) --*- C++ -*-===//
+//===-- lib/divtf3.cpp - quad-precision division ----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

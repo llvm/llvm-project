@@ -1,4 +1,4 @@
-//===-- lib/adddf3.cpp - double-precision addition --------------*- C++ -*-===//
+//===-- lib/negdf2.cpp - double-precision negation --------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// __adddf3 implemented on top of LLVM-libc's shared::adddf3 instruction.
+// __negdf2 implemented on top of LLVM-libc's shared::negdf2 instruction.
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,8 +14,8 @@
 
 #include "fp_libc_config.h"
 #include "int_lib.h"
-#include "shared/builtins/adddf3.h"
+#include "shared/builtins/negdf2.h"
 
-extern "C" COMPILER_RT_ABI fp_t __adddf3(fp_t a, fp_t b) {
-  return LIBC_NAMESPACE::shared::adddf3(a, b);
+extern "C" COMPILER_RT_ABI fp_t __negdf2(fp_t a, fp_t b) {
+  return LIBC_NAMESPACE::shared::negdf2(a, b);
 }

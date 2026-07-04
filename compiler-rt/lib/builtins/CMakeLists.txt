@@ -270,8 +270,10 @@ if(COMPILER_RT_USE_LIBC_MATH)
   use_libc_builtin(GENERIC_TF_SOURCES divtf3)
   use_libc_builtin(GENERIC_SOURCES    muldf3)
   use_libc_builtin(GENERIC_TF_SOURCES multf3)
+  use_libc_builtin(GENERIC_SOURCES    negdf2)
+  use_libc_builtin(GENERIC_SOURCES    negsf2)
   use_libc_builtin(GENERIC_SOURCES    subdf3)
-  use_libc_builtin(GENERIC_TF_SOURCES divtf3)
+  use_libc_builtin(GENERIC_TF_SOURCES subtf3)
 endif()
 
 option(COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN
