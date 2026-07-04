@@ -42,7 +42,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __clear_padding_if_needed(_Tp&& __obj) noex
 }
 
 template <class _Tp, class _Up, class _CasFunc>
-_LIBCPP_HIDE_FROM_ABI bool __atomic_cas_with_clear_padding(_Tp* __expected, _Up&& __value, _CasFunc&& __cas_func) {
+_LIBCPP_HIDE_FROM_ABI bool __atomic_cas_with_clear_padding(_Tp* __expected, _Up __value, _CasFunc&& __cas_func) {
   if constexpr (!__needs_clear_padding<remove_cv_t<_Tp>>::value) {
     return __cas_func(__expected, std::forward<_Up>(__value));
   } else {
