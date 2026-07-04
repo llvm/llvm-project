@@ -73,6 +73,13 @@ struct ModuleDecl {
   ModuleAttributes Attrs;
   std::vector<Decl> Decls;
 
+  /// Features from enclosing `requires` blocks that must all be satisfied for
+  /// this module to exist. Unlike a member-level `requires` (which creates the
+  /// module and marks it unimportable), an unsatisfied guard means the module
+  /// is never created. Nesting accumulates the features of all enclosing
+  /// blocks; negation rides on RequiresFeature::RequiredState.
+  std::vector<RequiresFeature> Guards;
+
   LLVM_PREFERRED_TYPE(bool)
   unsigned Explicit : 1;
   LLVM_PREFERRED_TYPE(bool)

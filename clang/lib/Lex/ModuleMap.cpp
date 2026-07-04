@@ -1833,6 +1833,19 @@ void ModuleMapLoader::diagnosePrivateModules(SourceLocation StartLoc) {
 }
 
 void ModuleMapLoader::handleModuleDecl(const modulemap::ModuleDecl &MD) {
+  // A `requires` block makes the wrapped modules conditionally exist: if any
+  // guarding feature is unsatisfied for this compilation, the module is simply
+  // not created. This differs from a member-level `requires`, which creates the
+  // module and marks it unimportable. Skipping creation entirely means an
+  // `@import` finds no such module and a direct `#include` of one of its
+  // headers falls back to a plain textual include (the header never enters the
+  // Headers map). Guards accumulate from nested blocks; all must hold.
+  for (const modulemap::RequiresFeature &RF : MD.Guards) {
+    if (Module::hasFeature(RF.Feature, Map.LangOpts, *Map.Target) !=
+        RF.RequiredState)
+      return;
+  }
+
   if (MD.Id.front().first == "*")
     return handleInferredModuleDecl(MD);
 

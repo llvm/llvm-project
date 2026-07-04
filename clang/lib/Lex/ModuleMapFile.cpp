@@ -113,6 +113,9 @@ struct ModuleMapFileParser {
   std::optional<ExportAsDecl> parseExportAsDecl();
   std::optional<UseDecl> parseUseDecl();
   std::optional<RequiresDecl> parseRequiresDecl();
+  template <typename Container>
+  bool parseRequiresBlock(Container &Parent, ArrayRef<RequiresFeature> Guards,
+                          bool TopLevel);
   std::optional<HeaderDecl> parseHeaderDecl(MMToken::TokenKind LeadingToken,
                                             SourceLocation LeadingLoc);
   std::optional<ExcludeDecl> parseExcludeDecl(clang::SourceLocation LeadingLoc);
@@ -197,6 +200,21 @@ bool ModuleMapFileParser::parseTopLevelDecls() {
         MMF.Decls.push_back(std::move(*MD));
       break;
     }
+    case MMToken::RequiresKeyword: {
+      // A `requires` block conditionally provides the wrapped modules based on
+      // language/target features. The wrapped modules are flattened into the
+      // top-level decl list, guarded by the block's feature list. A bare
+      // `requires` (no block) remains an error at the top level.
+      std::optional<RequiresDecl> RD = parseRequiresDecl();
+      if (RD && Tok.is(MMToken::LBrace)) {
+        parseRequiresBlock(MMF.Decls, RD->Features, /*TopLevel=*/true);
+      } else {
+        Diags.Report(RD ? RD->Location : Tok.getLocation(),
+                     diag::err_mmap_expected_module);
+        HadError = true;
+      }
+      break;
+    }
     case MMToken::Comma:
     case MMToken::ConfigMacros:
     case MMToken::Conflict:
@@ -213,7 +231,6 @@ bool ModuleMapFileParser::parseTopLevelDecls() {
     case MMToken::PrivateKeyword:
     case MMToken::RBrace:
     case MMToken::RSquare:
-    case MMToken::RequiresKeyword:
     case MMToken::Star:
     case MMToken::StringLiteral:
     case MMToken::IntegerLiteral:
@@ -372,9 +389,19 @@ std::optional<ModuleDecl> ModuleMapFileParser::parseModuleDecl(bool TopLevel) {
       SubDecl = parseUseDecl();
       break;
 
-    case MMToken::RequiresKeyword:
-      SubDecl = parseRequiresDecl();
+    case MMToken::RequiresKeyword: {
+      std::optional<RequiresDecl> RD = parseRequiresDecl();
+      if (RD && Tok.is(MMToken::LBrace)) {
+        // A `requires` block gating submodules: flatten the wrapped modules
+        // into this module's decl list, guarded by the block's features.
+        parseRequiresBlock(MDecl.Decls, RD->Features, /*TopLevel=*/false);
+      } else if (RD) {
+        // Member-level `requires`: kept as-is (creates the module and marks it
+        // unimportable when unsatisfied).
+        SubDecl = std::move(*RD);
+      }
       break;
+    }
 
     case MMToken::TextualKeyword:
       SubDecl = parseHeaderDecl(MMToken::TextualKeyword, consumeToken());
@@ -666,6 +693,81 @@ std::optional<RequiresDecl> ModuleMapFileParser::parseRequiresDecl() {
     consumeToken();
   } while (true);
   return std::move(RD);
+}
+
+/// Parse the body of a `requires` block.
+///
+///   requires-block:
+///     'requires' feature-list '{' module-declaration* '}'
+///
+/// The feature-list has already been parsed by the caller; the current token is
+/// the opening brace. Each wrapped module declaration is flattened directly
+/// into \p Parent, stamped with \p Guards (the accumulated feature lists of all
+/// enclosing blocks) so the consumer can decide whether the module exists.
+/// Nested `requires` blocks accumulate their features onto \p Guards. Only
+/// module declarations may appear in a block; anything else is an error.
+template <typename Container>
+bool ModuleMapFileParser::parseRequiresBlock(Container &Parent,
+                                             ArrayRef<RequiresFeature> Guards,
+                                             bool TopLevel) {
+  assert(Tok.is(MMToken::LBrace));
+  SourceLocation LBraceLoc = consumeToken();
+
+  bool Done = false;
+  do {
+    switch (Tok.Kind) {
+    case MMToken::EndOfFile:
+    case MMToken::RBrace:
+      Done = true;
+      break;
+
+    case MMToken::ExplicitKeyword:
+    case MMToken::FrameworkKeyword:
+    case MMToken::ModuleKeyword: {
+      std::optional<ModuleDecl> MD = parseModuleDecl(TopLevel);
+      if (MD) {
+        MD->Guards.assign(Guards.begin(), Guards.end());
+        Parent.push_back(std::move(*MD));
+      }
+      break;
+    }
+
+    case MMToken::RequiresKeyword: {
+      std::optional<RequiresDecl> RD = parseRequiresDecl();
+      if (!RD)
+        break;
+      if (!Tok.is(MMToken::LBrace)) {
+        // A member-level `requires` has no meaning inside a `requires` block;
+        // only module declarations may appear here.
+        Diags.Report(RD->Location, diag::err_mmap_expected_module);
+        HadError = true;
+        break;
+      }
+      std::vector<RequiresFeature> Nested(Guards.begin(), Guards.end());
+      Nested.insert(Nested.end(), RD->Features.begin(), RD->Features.end());
+      parseRequiresBlock(Parent, Nested, TopLevel);
+      break;
+    }
+
+    default:
+      // Notably this rejects `extern module` inside a `requires` block, which
+      // is intentionally unsupported (its declaration does not flow through the
+      // guard check on the consumer side).
+      Diags.Report(Tok.getLocation(), diag::err_mmap_expected_module);
+      HadError = true;
+      consumeToken();
+      break;
+    }
+  } while (!Done);
+
+  if (Tok.is(MMToken::RBrace))
+    consumeToken();
+  else {
+    Diags.Report(Tok.getLocation(), diag::err_mmap_expected_rbrace);
+    Diags.Report(LBraceLoc, diag::note_mmap_lbrace_match);
+    HadError = true;
+  }
+  return HadError;
 }
 
 /// Parse a header declaration.

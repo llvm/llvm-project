@@ -349,6 +349,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   map source locations back to explicit instantiation sites.
 - `typeid` on references and pointers of `final` types no longer emits a
   vtable lookup at runtime.
+- Module maps now support wrapping module declarations in a `requires` block,
+  e.g. `requires cplusplus { module m { header "m.h" } }`. Unlike a
+  member-level `requires`, an unsatisfied block causes the wrapped modules to
+  not be created at all, so a direct `#include` of one of their headers falls
+  back to a plain textual include instead of producing an error. (#GH163965)
 - Updated support for Unicode from 15.1 to 18.0.
 - Linux and Windows toolchains now support Clang multilibs using
   `-fmultilib-flag=`.

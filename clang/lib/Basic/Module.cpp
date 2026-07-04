@@ -92,8 +92,8 @@ static bool isPlatformEnvironment(const TargetInfo &Target, StringRef Feature) {
 
 /// Determine whether a translation unit built using the current
 /// language options has the given feature.
-static bool hasFeature(StringRef Feature, const LangOptions &LangOpts,
-                       const TargetInfo &Target) {
+bool Module::hasFeature(StringRef Feature, const LangOptions &LangOpts,
+                        const TargetInfo &Target) {
   bool HasFeature = llvm::StringSwitch<bool>(Feature)
                         .Case("altivec", LangOpts.AltiVec)
                         .Case("blocks", LangOpts.Blocks)

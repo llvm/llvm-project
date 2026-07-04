@@ -1027,6 +1027,11 @@ public:
                       const LangOptions &LangOpts,
                       const TargetInfo &Target);
 
+  /// Determine whether a translation unit built using the current language
+  /// options has the given feature.
+  static bool hasFeature(StringRef Feature, const LangOptions &LangOpts,
+                         const TargetInfo &Target);
+
   /// Mark this module and all of its submodules as unavailable.
   void markUnavailable(bool Unimportable);
 

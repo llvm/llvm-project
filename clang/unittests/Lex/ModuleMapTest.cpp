@@ -127,5 +127,42 @@ extern module C "../root/C.cppmap"
   ASSERT_TRUE(Seen.contains("C.cppmap"));
 }
 
+// A `requires` block makes the wrapped modules conditionally exist based on
+// language/target features. Unlike a member-level `requires` (which creates the
+// module and marks it unimportable), an unsatisfied block means the module is
+// never created. The fixture uses default (C, non-C++) LangOpts.
+TEST_F(ModuleMapTest, RequiresBlockGatesModuleCreation) {
+  addFile("/root/map.modulemap", R"(
+requires cplusplus {
+  module CXXOnly {}
+}
+requires !cplusplus {
+  module NotCXX {}
+}
+requires cplusplus, cplusplus20 {
+  module CXX20 {}
+}
+module Outer {
+  requires cplusplus {
+    module Inner {}
+  }
+}
+  )");
+
+  ASSERT_FALSE(loadRoot("/root/map.modulemap"));
+
+  // C++-guarded blocks are inactive under C, so their modules don't exist.
+  EXPECT_EQ(Map.findModule("CXXOnly"), nullptr);
+  EXPECT_EQ(Map.findModule("CXX20"), nullptr);
+
+  // The negation block is active under C, so its module exists.
+  EXPECT_NE(Map.findModule("NotCXX"), nullptr);
+
+  // The unguarded enclosing module exists, but its guarded submodule does not.
+  Module *Outer = Map.findModule("Outer");
+  ASSERT_NE(Outer, nullptr);
+  EXPECT_FALSE(Outer->findSubmodule("Inner"));
+}
+
 } // namespace
 } // namespace clang

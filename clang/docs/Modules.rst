@@ -467,7 +467,11 @@ A module map file consists of a series of module declarations:
 .. parsed-literal::
 
   *module-map-file*:
-    *module-declaration**
+    *top-level-declaration**
+
+  *top-level-declaration*:
+    *module-declaration*
+    *requires-block*
 
 Within a module map file, modules are referred to by a *module-id*, which uses periods to separate each part of a module's name:
 
@@ -514,6 +518,7 @@ Modules can have a number of different kinds of members, each of which is descri
 
   *module-member*:
     *requires-declaration*
+    *requires-block*
     *header-declaration*
     *umbrella-dir-declaration*
     *submodule-declaration*
@@ -542,6 +547,31 @@ A *requires-declaration* specifies the requirements that an importing translatio
     ``!``:sub:`opt` *identifier*
 
 The requirements clause allows specific modules or submodules to specify that they are only accessible with certain language dialects, platforms, environments and target specific features. The feature list is a set of identifiers, defined below. If any of the features is not available in a given translation unit, that translation unit shall not import the module. When building a module for use by a compilation, submodules requiring unavailable features are ignored. The optional ``!`` indicates that a feature is incompatible with the module.
+
+A *requires-declaration* is a "hard" requirement: the module is still created, but it is marked unimportable when a feature is unsatisfied, so an attempt to import it produces an error.
+
+Requires block
+~~~~~~~~~~~~~~
+A *requires-block* wraps one or more module declarations in a feature list. Unlike a *requires-declaration*, the wrapped modules *conditionally exist*: when a feature is unsatisfied the wrapped modules are simply not created, rather than being created and marked unimportable.
+
+.. parsed-literal::
+
+  *requires-block*:
+    ``requires`` *feature-list* '{' *module-declaration** '}'
+
+The same *feature-list* grammar and features as a *requires-declaration* apply. A *requires-block* may appear at the top level of a module map or as a *module-member* (gating submodules), and blocks may be nested; a module is only created when the features of every enclosing block are satisfied.
+
+Because an unsatisfied block skips module creation entirely, importing a wrapped module yields an ordinary "module not found" (rather than "module is unavailable"), and a direct ``#include`` of one of its headers falls back to a plain textual include, since the header never enters the module's header map. This is what allows a header to opt into being modular only under, e.g., ``requires cplusplus`` while remaining a normal textual include otherwise.
+
+Only *module-declaration*\ s (and nested *requires-block*\ s) may appear inside a *requires-block*. In particular, ``extern module`` is not permitted inside a block. For example:
+
+.. parsed-literal::
+
+  requires cplusplus20 {
+    module m {
+      header "m.h"
+    }
+  }
 
 The following features are defined:
 
