@@ -23,6 +23,7 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "llvm/Support/CommandLine.h"
 #include <type_traits>
@@ -863,37 +864,45 @@ bool ReductionProcessor::processReductionArguments(
                 std::get_if<omp::clause::DefinedOperator::DefinedOpName>(
                     &redDefinedOp->u)) {
           // User-defined operator reduction (e.g. reduction(.myop.:x)). Resolve
-          // the use-site operator to its reduction symbol, which semantics
-          // names "op<spelling>" (MangleDefinedOperator in resolve-names), in
-          // the current scope, then reference the omp.declare_reduction op the
-          // directive materialized for it. Only a locally-declared,
-          // single-declaration, single-type reduction whose type the variable
-          // supports is handled here; anything else (imported, renamed, merged,
-          // or multiple declarations/types) is a clean TODO rather than a crash
-          // or a wrong binding.
+          // the use-site operator to the source reduction symbol as the OpenMP
+          // semantic checks do (resolving from the clause scope, so it follows
+          // USE and host association, operator renames, private visibility, and
+          // merged generics), then reference the
+          // omp.declare_reduction op named from that symbol's scoped (name,
+          // owner). Reductions in different source modules have distinct owner
+          // scopes, so a same-spelling/same-type operator reduction imported
+          // from two modules yields two distinct ops, each clause binding its
+          // own combiner instead of colliding onto one. Single-declaration,
+          // single-type only; anything else, or an operator with no reduction
+          // for the variable's type, is a clean TODO rather than a crash or a
+          // wrong binding.
           const semantics::Symbol *opSym = definedOpName->v.sym();
-          std::string mangledName = "op" + opSym->name().ToString();
-          const semantics::Symbol *redSym =
-              converter.getCurrentScope().FindSymbol(
-                  parser::CharBlock{mangledName});
+          const semantics::DeclTypeSpec *varType =
+              reductionSymbols[idx]->GetUltimate().GetType();
+          // The variable's type disambiguates an operator that carries
+          // reductions for several types (e.g. a generic merged from multiple
+          // single-type modules): the resolver returns only a reduction that
+          // supports varType.
+          const semantics::Symbol *resolvedSym =
+              semantics::omp::FindOperatorUserReductionSymbol(
+                  converter.getCurrentScope(), *opSym, varType);
+          // resolvedSym is the found symbol, which may be a USE-associated
+          // wrapper; take its ultimate before reading the reduction details.
           const semantics::Symbol *ultimate =
-              redSym ? &redSym->GetUltimate() : nullptr;
+              resolvedSym ? &resolvedSym->GetUltimate() : nullptr;
           const semantics::UserReductionDetails *userDetails =
               ultimate ? ultimate->detailsIf<semantics::UserReductionDetails>()
                        : nullptr;
-          const semantics::DeclTypeSpec *varType =
-              reductionSymbols[idx]->GetUltimate().GetType();
-          if (!redSym || ultimate != redSym || !userDetails ||
+          if (!varType || !resolvedSym || !userDetails ||
               userDetails->GetDeclList().size() != 1 ||
-              userDetails->GetTypeList().size() != 1 || !varType ||
-              !userDetails->SupportsType(*varType)) {
+              userDetails->GetTypeList().size() != 1) {
             TODO(currentLocation,
                  "OpenMP user-defined operator reduction is not yet supported "
                  "for imported, renamed, or multiple-declaration/type "
                  "reductions");
           }
           std::string opName = ReductionProcessor::getScopedUserReductionName(
-              converter, *redSym);
+              converter, *resolvedSym);
           mlir::ModuleOp module = builder.getModule();
           auto existingDecl = module.lookupSymbol<OpType>(opName);
           // The MLIR verifier does not type-check these ops (they have no

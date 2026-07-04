@@ -33,6 +33,7 @@
 #include <vector>
 
 namespace Fortran::semantics {
+class DeclTypeSpec;
 class Scope;
 class SemanticsContext;
 class Symbol;
@@ -113,6 +114,26 @@ bool IsSubstring(const parser::OmpObject &object, SemanticsContext *semaCtx);
 bool IsArrayElement(const parser::OmpObject &object, SemanticsContext *semaCtx);
 
 const Symbol *GetHostSymbol(const Symbol &sym);
+
+// Resolve a user-defined reduction visible in scope under the mangled name
+// mangledName (e.g. "op.myop." for operator(.myop.), or a named reduction).
+// Follows USE associations, operator renames, private visibility, and merged
+// generics exactly as the OpenMP semantic checks do, returning the found
+// (non-ultimate) reduction symbol, or null if none is visible. When type is
+// non-null, only a reduction that supports that type is accepted (used to
+// disambiguate an operator that carries reductions for several types).
+const Symbol *FindUserReductionSymbol(const Scope &scope,
+    const parser::CharBlock &mangledName, const DeclTypeSpec *type = nullptr);
+
+// Resolve the user-defined reduction associated with the defined-operator
+// symbol operatorSym. Delegates to FindUserReductionSymbol from scope (the
+// scope where the reduction clause appears) with the operator's mangled
+// ("op...") name. Searching from the clause scope, not the operator's owning
+// scope, finds a reduction that is local, host-, or use-associated there (a
+// reduction may be declared in a contained procedure that host-associates the
+// operator from an enclosing module). type filters by supported type as above.
+const Symbol *FindOperatorUserReductionSymbol(const Scope &scope,
+    const Symbol &operatorSym, const DeclTypeSpec *type = nullptr);
 
 bool IsMapEnteringType(parser::OmpMapType::Value type);
 bool IsMapExitingType(parser::OmpMapType::Value type);

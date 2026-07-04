@@ -580,6 +580,15 @@ public:
           *this, bridge.getSemanticsContext());
     });
 
+    // Ensure imported OpenMP user-defined operator declare reductions are
+    // materialized at module scope before lowering any reduction clauses that
+    // may reference them (the separate-compilation counterpart of same-file
+    // module reduction lowering).
+    createBuilderOutsideOfFuncOpAndDo([&]() {
+      Fortran::lower::materializeOpenMPDeclareReductions(
+          *this, bridge.getSemanticsContext());
+    });
+
     // Create definitions of intrinsic module constants.
     createBuilderOutsideOfFuncOpAndDo(
         [&]() { createIntrinsicModuleDefinitions(pft); });

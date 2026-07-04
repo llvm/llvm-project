@@ -12,6 +12,8 @@
 
 #include "flang/Semantics/openmp-utils.h"
 
+#include "resolve-names-utils.h"
+
 #include "flang/Common/Fortran-consts.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
@@ -36,6 +38,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
 
@@ -2452,5 +2455,141 @@ bool OmpVariantMatchContext::matchesISATrait(llvm::StringRef rawString) const {
   llvm::StringRef(features_).split(
       tokens, ',', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
   return llvm::is_contained(tokens, want);
+}
+
+// User-defined reduction resolution, shared between the OpenMP semantic checks
+// and lowering. The two public entry points (FindUserReductionSymbol and
+// FindOperatorUserReductionSymbol) return the resolved (non-ultimate) reduction
+// symbol; the caller reads its UserReductionDetails.
+
+// Compute the mangled reduction name to look up in a reduction's source module.
+// If the operator was renamed on import (e.g. USE m, ONLY: operator(.local.) =>
+// operator(.remote.)), the local mangled name will not match in the source
+// module; re-derive the lookup name from the source operator's ultimate name.
+// Only defined operators can be renamed (intrinsic operators and named
+// reductions cannot), so a detected rename always has a ".op." source name.
+// For non-renamed lookups the original mangled name is returned unchanged.
+static std::string SourceReductionName(const parser::CharBlock &mangledName,
+    const parser::CharBlock &localName, const parser::CharBlock &sourceName) {
+  if (sourceName != localName && sourceName.size() >= 3 &&
+      sourceName.front() == '.' && sourceName.back() == '.') {
+    return MangleDefinedOperator(sourceName);
+  }
+  return mangledName.ToString();
+}
+
+// Return the reduction details of `symbol` if it is a user reduction that
+// supports `type` (any type when `type` is null).
+static const UserReductionDetails *AcceptReduction(
+    const Symbol &symbol, const DeclTypeSpec *type) {
+  const auto *details{symbol.GetUltimate().detailsIf<UserReductionDetails>()};
+  if (details && (!type || details->SupportsType(*type))) {
+    return details;
+  }
+  return nullptr;
+}
+
+// A reduction symbol is locally declared (authoritative) when it is not reached
+// through any USE association, even via host association. Such a reduction
+// shadows reductions imported or reachable through its operator.
+static bool IsLocalReduction(const Symbol &symbol) {
+  const Symbol *s{&symbol};
+  while (const auto *host{s->detailsIf<HostAssocDetails>()}) {
+    s = &host->symbol();
+  }
+  return !s->detailsIf<UseDetails>();
+}
+
+// Search for a user reduction supporting `type` by following the operator/
+// procedure symbol `opSym` through its USE associations and merged generic
+// sources. Each module the operator passes through is checked for a (possibly
+// renamed) reduction; `localName` is the operator name written at the use site,
+// used to detect renames. A locally declared reduction in a module is
+// authoritative: it is returned if it supports the type, otherwise it shadows
+// reductions reachable further along that branch.
+static const Symbol *SearchOperatorReduction(const Symbol &opSym,
+    const parser::CharBlock &mangledName, const parser::CharBlock &localName,
+    const DeclTypeSpec *type, llvm::SmallPtrSetImpl<const Symbol *> &visited) {
+  if (!visited.insert(&opSym).second) {
+    return nullptr;
+  }
+  const Scope &scope{opSym.owner()};
+  if (scope.kind() == Scope::Kind::Module) {
+    std::string lookupName{
+        SourceReductionName(mangledName, localName, opSym.name())};
+    auto it{scope.find(parser::CharBlock{lookupName})};
+    if (it != scope.end()) {
+      const Symbol &reductionSym{*it->second};
+      const Symbol &reductionUltimate{reductionSym.GetUltimate()};
+      if (!reductionUltimate.attrs().test(Attr::PRIVATE)) {
+        if (AcceptReduction(reductionUltimate, type)) {
+          return &reductionSym;
+        }
+        // A locally declared reduction here shadows reductions reachable
+        // further along this branch.
+        if (reductionUltimate.detailsIf<UserReductionDetails>() &&
+            IsLocalReduction(reductionSym)) {
+          return nullptr;
+        }
+      }
+    }
+  }
+  // Follow a USE-associated operator to the module it was imported from.
+  if (const auto *use{opSym.detailsIf<UseDetails>()}) {
+    return SearchOperatorReduction(
+        use->symbol(), mangledName, localName, type, visited);
+  }
+  // Search each module merged into a generic operator (recursing through
+  // re-exporting facade modules).
+  if (const auto *generic{opSym.detailsIf<GenericDetails>()}) {
+    for (const Symbol &useSym : generic->uses()) {
+      if (const Symbol *result{SearchOperatorReduction(
+              useSym, mangledName, localName, type, visited)}) {
+        return result;
+      }
+    }
+  }
+  return nullptr;
+}
+
+// Find user reduction details for a mangled name, following USE associations
+// when the reduction is not directly visible in the scope. A type may be
+// supplied to disambiguate an operator that carries reductions for several
+// types (e.g. a generic merged from multiple modules); a candidate is accepted
+// only if it supports that type. A locally declared reduction is authoritative
+// for its operator in its scope and shadows USE-associated reductions.
+const Symbol *FindUserReductionSymbol(const Scope &scope,
+    const parser::CharBlock &mangledName, const DeclTypeSpec *type) {
+  // Direct lookup: a reduction directly visible via bare USE or a local
+  // declaration.
+  const Symbol *directSymbol{scope.FindSymbol(mangledName)};
+  if (directSymbol) {
+    if (AcceptReduction(*directSymbol, type)) {
+      return directSymbol;
+    }
+    // A locally declared reduction that does not support the requested type is
+    // authoritative: it shadows USE-associated reductions (ProcessReduction-
+    // Specifier erases the latter), so do not resurrect them via the operator.
+    if (directSymbol->GetUltimate().detailsIf<UserReductionDetails>() &&
+        IsLocalReduction(*directSymbol)) {
+      return nullptr;
+    }
+  }
+  // Trace the operator/procedure to the modules that declare its reduction.
+  std::string fortranName{GetReductionFortranId(mangledName)};
+  const Symbol *opSymbol{
+      fortranName.empty() ? nullptr : scope.FindSymbol(fortranName)};
+  if (!opSymbol) {
+    return nullptr;
+  }
+  llvm::SmallPtrSet<const Symbol *, 8> visited;
+  return SearchOperatorReduction(
+      *opSymbol, mangledName, opSymbol->name(), type, visited);
+}
+
+const Symbol *FindOperatorUserReductionSymbol(
+    const Scope &scope, const Symbol &operatorSym, const DeclTypeSpec *type) {
+  return FindUserReductionSymbol(
+      scope, MangleDefinedOperator(operatorSym.name()), type);
 }
 } // namespace Fortran::semantics::omp

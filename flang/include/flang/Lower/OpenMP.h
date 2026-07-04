@@ -113,6 +113,14 @@ resolveDeclareVariantCallee(const Fortran::semantics::Symbol &base,
                             AbstractConverter &converter);
 } // namespace omp
 
+// Materialize omp.declare_reduction ops for user-defined operator reduction
+// declarations found in imported modules (separate compilation). If scope
+// is null, materialize for the whole semantics global scope; otherwise, operate
+// recursively starting at scope.
+void materializeOpenMPDeclareReductions(
+    Fortran::lower::AbstractConverter &, Fortran::semantics::SemanticsContext &,
+    const Fortran::semantics::Scope *scope = nullptr);
+
 } // namespace lower
 } // namespace Fortran
 
