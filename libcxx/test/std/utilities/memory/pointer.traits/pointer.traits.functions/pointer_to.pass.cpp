@@ -50,9 +50,12 @@ TEST_CONSTEXPR_CXX20 bool test() {
 int main(int, char**) {
   test<A<int> >();
   test<A<long> >();
-  static_assert(test<A<int> >(), "");
-  static_assert(test<A<long> >(), "");
   { (std::pointer_traits<A<void> >::element_type)0; }
+
+#if TEST_STD_VER >= 20
+  static_assert(test<A<int> >());
+  static_assert(test<A<long> >());
+#endif // TEST_STD_VER
 
   return 0;
 }
