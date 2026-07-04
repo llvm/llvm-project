@@ -110,8 +110,8 @@ void test_compare_exchange_strong_success_padding_only() {
   Foo expected = make_foo(10, 'a', 0xAA);
   assert_foo_padding(expected, 0xAA);
 
-  alignas(Foo) char original_expected[sizeof(Foo)];
-  std::memcpy(original_expected, &expected, sizeof(Foo));
+Foo original_expected; // make a copy including padding bits
+std::memcpy(&original_expected, expected, sizeof(Foo));
 
   Foo new_value = make_foo(42, 'b', 0xCC);
   assert_foo_padding(new_value, 0xCC);
