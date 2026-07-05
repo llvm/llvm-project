@@ -30,21 +30,18 @@ entry:
 define i32 @test_addze_64_32(i32 %x, i32 %z) {
 ; PPC64-LABEL: test_addze_64_32:
 ; PPC64:       # %bb.0: # %entry
-; PPC64-NEXT:    xori 4, 4, 42
-; PPC64-NEXT:    cntlzw 4, 4
-; PPC64-NEXT:    srwi 4, 4, 5
-; PPC64-NEXT:    xori 4, 4, 1
-; PPC64-NEXT:    add 3, 3, 4
+; PPC64-NEXT:    extsw 4, 4
+; PPC64-NEXT:    extsw 3, 3
+; PPC64-NEXT:    addi 4, 4, -42
+; PPC64-NEXT:    addic 4, 4, -1
+; PPC64-NEXT:    addze 3, 3
 ; PPC64-NEXT:    blr
 ;
 ; PPC32-LABEL: test_addze_64_32:
 ; PPC32:       # %bb.0: # %entry
-; PPC32-NEXT:    mr 5, 3
-; PPC32-NEXT:    cmpwi 4, 42
-; PPC32-NEXT:    addi 3, 3, 0
-; PPC32-NEXT:    bclr 12, 2, 0
-; PPC32-NEXT:  # %bb.1: # %entry
-; PPC32-NEXT:    addi 3, 5, 1
+; PPC32-NEXT:    addi 4, 4, -42
+; PPC32-NEXT:    addic 4, 4, -1
+; PPC32-NEXT:    addze 3, 3
 ; PPC32-NEXT:    blr
 entry:
   %cmp = icmp ne i32 %z, 42
@@ -56,11 +53,10 @@ entry:
 define i64 @test_addze_64_32_zext(i64 %x, i32 %z) {
 ; PPC64-LABEL: test_addze_64_32_zext:
 ; PPC64:       # %bb.0: # %entry
-; PPC64-NEXT:    xori 4, 4, 42
-; PPC64-NEXT:    cntlzw 4, 4
-; PPC64-NEXT:    srwi 4, 4, 5
-; PPC64-NEXT:    xori 4, 4, 1
-; PPC64-NEXT:    add 3, 3, 4
+; PPC64-NEXT:    extsw 4, 4
+; PPC64-NEXT:    addi 4, 4, -42
+; PPC64-NEXT:    addic 4, 4, -1
+; PPC64-NEXT:    addze 3, 3
 ; PPC64-NEXT:    blr
 ;
 ; PPC32-LABEL: test_addze_64_32_zext:

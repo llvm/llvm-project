@@ -20014,23 +20014,31 @@ SDValue PPCTargetLowering::combineSRL(SDNode *N, DAGCombinerInfo &DCI) const {
 // Transform (add X, (zext(setne Z, C))) -> (addze X, (addic (addi Z, -C), -1))
 // Transform (add X, (zext(sete  Z, C))) -> (addze X, (subfic (addi Z, -C), 0))
 // When C is zero, the equation (addi Z, -C) can be simplified to Z
-// Requirement: -C in [-32768, 32767], X and Z are MVT::i64 types
+// Requirement: -C in [-32768, 32767]. If X or Z are i32 on PPC64,
+// they are sign-extended to i64 and the result is truncated back.
 static SDValue combineADDToADDZE(SDNode *N, SelectionDAG &DAG,
                                  const PPCSubtarget &Subtarget) {
-  if (!Subtarget.isPPC64())
-    return SDValue();
-
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
 
-  auto isZextOfCompareWithConstant = [](SDValue Op) {
-    if (Op.getOpcode() != ISD::ZERO_EXTEND || !Op.hasOneUse() ||
-        Op.getValueType() != MVT::i64)
+  EVT NativeVT = Subtarget.isPPC64() ? MVT::i64 : MVT::i32;
+  EVT VT = N->getValueType(0);
+
+  if (VT.getSizeInBits() > NativeVT.getSizeInBits())
+    return SDValue();
+
+  auto isZextOfCompareWithConstant = [VT, NativeVT](SDValue Op) {
+    if ((Op.getOpcode() != ISD::ZERO_EXTEND &&
+         Op.getOpcode() != ISD::ANY_EXTEND) ||
+        !Op.hasOneUse() || Op.getValueType() != VT)
       return false;
 
     SDValue Cmp = Op.getOperand(0);
-    if (Cmp.getOpcode() != ISD::SETCC || !Cmp.hasOneUse() ||
-        Cmp.getOperand(0).getValueType() != MVT::i64)
+    if (Cmp.getOpcode() != ISD::SETCC || !Cmp.hasOneUse())
+      return false;
+
+    EVT CmpOp0VT = Cmp.getOperand(0).getValueType();
+    if (CmpOp0VT != NativeVT && CmpOp0VT != MVT::i32)
       return false;
 
     if (auto *Constant = dyn_cast<ConstantSDNode>(Cmp.getOperand(1))) {
@@ -20054,12 +20062,21 @@ static SDValue combineADDToADDZE(SDNode *N, SelectionDAG &DAG,
 
   SDLoc DL(N);
   EVT CarryType = Subtarget.useCRBits() ? MVT::i1 : MVT::i32;
-  SDVTList VTs = DAG.getVTList(MVT::i64, CarryType);
+  SDVTList VTs = DAG.getVTList(NativeVT, CarryType);
   SDValue Cmp = RHS.getOperand(0);
   SDValue Z = Cmp.getOperand(0);
+
+  if (Z.getValueType() != NativeVT)
+    Z = DAG.getNode(ISD::SIGN_EXTEND, DL, NativeVT, Z);
+
+  SDValue ExtLHS = LHS;
+  if (ExtLHS.getValueType() != NativeVT)
+    ExtLHS = DAG.getNode(ISD::SIGN_EXTEND, DL, NativeVT, ExtLHS);
+
   auto *Constant = cast<ConstantSDNode>(Cmp.getOperand(1));
   int64_t NegConstant = 0 - Constant->getSExtValue();
 
+  SDValue Result;
   switch(cast<CondCodeSDNode>(Cmp.getOperand(2))->get()) {
   default: break;
   case ISD::SETNE: {
@@ -20069,16 +20086,19 @@ static SDValue combineADDToADDZE(SDNode *N, SelectionDAG &DAG,
     // add X, (zext(setne Z, C))--
     //                            \    when -32768 <= -C <= 32767 && C != 0
     //                             --> addze X, (addic (addi Z, -C), -1).carry
-    SDValue Add = DAG.getNode(ISD::ADD, DL, MVT::i64, Z,
-                              DAG.getConstant(NegConstant, DL, MVT::i64));
+    SDValue Add = DAG.getNode(ISD::ADD, DL, NativeVT, Z,
+                              DAG.getConstant(NativeVT == MVT::i32
+                                                  ? (uint32_t)NegConstant
+                                                  : (uint64_t)NegConstant,
+                                              DL, NativeVT));
     SDValue AddOrZ = NegConstant != 0 ? Add : Z;
-    SDValue Addc =
-        DAG.getNode(ISD::UADDO_CARRY, DL, DAG.getVTList(MVT::i64, CarryType),
-                    AddOrZ, DAG.getAllOnesConstant(DL, MVT::i64),
-                    DAG.getConstant(0, DL, CarryType));
-    return DAG.getNode(ISD::UADDO_CARRY, DL, VTs, LHS,
-                       DAG.getConstant(0, DL, MVT::i64),
-                       SDValue(Addc.getNode(), 1));
+    SDValue Addc = DAG.getNode(ISD::UADDO_CARRY, DL, VTs, AddOrZ,
+                               DAG.getAllOnesConstant(DL, NativeVT),
+                               DAG.getConstant(0, DL, CarryType));
+    Result = DAG.getNode(ISD::UADDO_CARRY, DL, VTs, ExtLHS,
+                         DAG.getConstant(0, DL, NativeVT),
+                         SDValue(Addc.getNode(), 1));
+    break;
   }
   case ISD::SETEQ: {
     //                                 when C == 0
@@ -20087,18 +20107,27 @@ static SDValue combineADDToADDZE(SDNode *N, SelectionDAG &DAG,
     // add X, (zext(sete  Z, C))--
     //                            \    when -32768 <= -C <= 32767 && C != 0
     //                             --> addze X, (subfic (addi Z, -C), 0).carry
-    SDValue Add = DAG.getNode(ISD::ADD, DL, MVT::i64, Z,
-                              DAG.getConstant(NegConstant, DL, MVT::i64));
+    SDValue Add = DAG.getNode(ISD::ADD, DL, NativeVT, Z,
+                              DAG.getConstant(NativeVT == MVT::i32
+                                                  ? (uint32_t)NegConstant
+                                                  : (uint64_t)NegConstant,
+                                              DL, NativeVT));
     SDValue AddOrZ = NegConstant != 0 ? Add : Z;
     SDValue Subc =
-        DAG.getNode(ISD::USUBO_CARRY, DL, DAG.getVTList(MVT::i64, CarryType),
-                    DAG.getConstant(0, DL, MVT::i64), AddOrZ,
-                    DAG.getConstant(0, DL, CarryType));
+        DAG.getNode(ISD::USUBO_CARRY, DL, VTs, DAG.getConstant(0, DL, NativeVT),
+                    AddOrZ, DAG.getConstant(0, DL, CarryType));
     SDValue Invert = DAG.getNode(ISD::XOR, DL, CarryType, Subc.getValue(1),
                                  DAG.getConstant(1UL, DL, CarryType));
-    return DAG.getNode(ISD::UADDO_CARRY, DL, VTs, LHS,
-                       DAG.getConstant(0, DL, MVT::i64), Invert);
+    Result = DAG.getNode(ISD::UADDO_CARRY, DL, VTs, ExtLHS,
+                         DAG.getConstant(0, DL, NativeVT), Invert);
+    break;
   }
+  }
+
+  if (Result) {
+    if (Result.getValueType() != VT)
+      Result = DAG.getNode(ISD::TRUNCATE, DL, VT, Result);
+    return Result;
   }
 
   return SDValue();
