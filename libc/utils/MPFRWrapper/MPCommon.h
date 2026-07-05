@@ -128,7 +128,7 @@ public:
 #ifdef LIBC_TYPES_HAS_FLOAT16
                                  || cpp::is_same_v<float16, XType>
 #endif
-                                 || cpp::is_same_v<bfloat16, XType> || cpp::is_same_v<Float128,XType>,
+                                 || cpp::is_same_v<bfloat16, XType>,
                              int> = 0>
   explicit MPFRNumber(XType x,
                       unsigned int precision = ExtraPrecision<XType>::VALUE,
@@ -173,6 +173,17 @@ public:
     mpfr_set_float128(value, x, mpfr_rounding);
   }
 #endif // LIBC_TYPES_FLOAT128_IS_NOT_LONG_DOUBLE
+
+  template <typename XType,
+            cpp::enable_if_t<cpp::is_same_v<Float128, XType>, int> = 0>
+  explicit MPFRNumber(XType x,
+                      unsigned int precision = ExtraPrecision<XType>::VALUE,
+                      RoundingMode rounding = RoundingMode::Nearest)
+      : mpfr_precision(precision),
+        mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
+    mpfr_init2(value, mpfr_precision);
+    mpfr_set_float128(value, x, mpfr_rounding);
+  }
 
   template <typename XType,
             cpp::enable_if_t<cpp::is_integral_v<XType>, int> = 0>
