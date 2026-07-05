@@ -224,13 +224,6 @@ void llvm::ilist_traits<::mlir::Block>::transferNodesFromList(
   }
 }
 
-void Region::renumberBlocks() {
-  nextBlockNumber = 0;
-  for (Block &block : *this)
-    block.blockNumber = nextBlockNumber++;
-  ++blockNumberEpoch;
-}
-
 //===----------------------------------------------------------------------===//
 // Region::OpIterator
 //===----------------------------------------------------------------------===//

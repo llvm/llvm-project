@@ -80,13 +80,10 @@ public:
   /// lie in [0, getMaxBlockNumber()). See Block::getNumber().
   unsigned getMaxBlockNumber() const { return nextBlockNumber; }
 
-  /// A counter bumped whenever the region's block numbers are reassigned
-  /// (renumberBlocks), so users indexing by block number can detect staleness.
-  unsigned getBlockNumberEpoch() const { return blockNumberEpoch; }
-
-  /// Renumber the blocks in this region 0..N in iteration order, compacting the
-  /// number space and bumping the block-number epoch.
-  void renumberBlocks();
+  /// The block-number epoch, part of the generic number-indexed graph contract
+  /// (LoopInfo, DominatorTree) for detecting stale numbering. MLIR never
+  /// renumbers blocks, so this is a fixed 0. See Block::getNumber().
+  unsigned getBlockNumberEpoch() const { return 0; }
 
   //===--------------------------------------------------------------------===//
   // Argument Handling
@@ -360,10 +357,8 @@ private:
   /// This is the object we are part of.
   Operation *container = nullptr;
 
-  /// Next block number to hand out, and an epoch bumped when the block numbers
-  /// are reassigned by renumberBlocks(). See Block::getNumber().
+  /// Next block number to hand out. See Block::getNumber().
   unsigned nextBlockNumber = 0;
-  unsigned blockNumberEpoch = 0;
 
   friend struct llvm::ilist_traits<Block>;
 };

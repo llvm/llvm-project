@@ -53,9 +53,9 @@ public:
   Region *getParent() const;
 
   /// Return a number uniquely identifying this block within its parent region.
-  /// The number is assigned when the block is added to a region and is stable
-  /// until the region's blocks are renumbered (see Region::renumberBlocks and
-  /// Region::getBlockNumberEpoch). Only valid for a block that is in a region.
+  /// The number is assigned when the block is added to a region and never
+  /// changes while the block stays in that region; removing a block leaves a
+  /// hole (numbers are not reused). Only valid for a block that is in a region.
   ///
   /// Unlike computeBlockNumber(), this is O(1) and stable; it exists so that
   /// generic graph algorithms (e.g. LoopInfo, DominatorTree) can index blocks
