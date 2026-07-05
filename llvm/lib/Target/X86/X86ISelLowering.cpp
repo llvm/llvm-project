@@ -50451,7 +50451,7 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
   SDLoc DL(N);
 
   // Run before the legalizer expands the division.
-  if (!VT.isVector() || !DCI.isBeforeLegalizeOps())
+  if (!VT.isVector() || !Subtarget.hasSSE2() || !DCI.isBeforeLegalizeOps())
     return SDValue();
 
   // Don't introduce a trapping FP divide under strict FP.
@@ -50483,7 +50483,7 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
 
   // i8/i16/i32: operands fit the float mantissa exactly (f32 for <=16-bit, f64
   // for 32-bit) so one float divide recovers the exact quotient.
-  if (VT.getScalarSizeInBits() <= 32 && Subtarget.hasSSE2()) {
+  if (VT.getScalarSizeInBits() <= 32) {
     // Unsigned i32 needs FP_TO_UINT(f64->u32) which is emulated and a loss
     // for latency and code size before AVX2.
     if (!IsSigned && VT.getScalarSizeInBits() == 32 && !Subtarget.hasAVX2())
@@ -50512,8 +50512,15 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
 
   // i64: the quotient doesn't fit f64 exactly, so build it from two
   // rounded-down reciprocal multiplies, one of the dividend and one of its
-  // remainder. {rd/ru-sae} rounding is 512-bit only, so v8i64 on AVX512DQ.
-  if (VT == MVT::v8i64 && Subtarget.hasDQI() && Subtarget.useAVX512Regs()) {
+  // remainder. {rd/ru-sae} rounding is 512-bit so AVX512DQ only.
+  bool Widen = VT == MVT::v4i64;
+  if ((Widen || VT == MVT::v8i64) && Subtarget.hasDQI() &&
+      Subtarget.useAVX512Regs()) {
+    if (Widen) {
+      Dividend = widenSubVector(Dividend, false, Subtarget, DAG, DL, 512);
+      Divisor = widenSubVector(Divisor, false, Subtarget, DAG, DL, 512);
+      VT = MVT::v8i64;
+    }
     MVT FPVT = MVT::v8f64;
     SDValue RD = DAG.getTargetConstant(X86::STATIC_ROUNDING::TO_NEG_INF, DL,
                                        MVT::i32); // {rd-sae}
@@ -50561,15 +50568,16 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
       Mag = DAG.getNode(ISD::ADD, DL, VT, Quot,
                         DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Ge));
     if (!IsSigned)
-      return Mag;
+      return Widen ? extract256BitVector(Mag, 0, DAG, DL) : Mag;
     // A quotient is negative when the operand signs differ. A remainder takes
     // the dividend's sign.
     SDValue SignSrc =
         IsRem ? Dividend : DAG.getNode(ISD::XOR, DL, VT, Dividend, Divisor);
     SDValue Zero = DAG.getConstant(0, DL, VT);
     SDValue IsNeg = DAG.getSetCC(DL, CCVT, SignSrc, Zero, ISD::SETLT);
-    return DAG.getSelect(DL, VT, IsNeg,
-                         DAG.getNode(ISD::SUB, DL, VT, Zero, Mag), Mag);
+    SDValue Res = DAG.getSelect(DL, VT, IsNeg,
+                                DAG.getNode(ISD::SUB, DL, VT, Zero, Mag), Mag);
+    return Widen ? extract256BitVector(Res, 0, DAG, DL) : Res;
   }
 
   return SDValue();
