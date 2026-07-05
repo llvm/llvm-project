@@ -259,13 +259,14 @@ void MCSubtargetInfo::setDefaultFeatures(StringRef CPU, StringRef TuneCPU,
 MCSubtargetInfo::MCSubtargetInfo(
     const Triple &TT, StringRef C, StringRef TC, StringRef FS,
     ArrayRef<StringRef> PN, ArrayRef<SubtargetFeatureKV> PF,
-    ArrayRef<SubtargetSubTypeKV> PD, const MCWriteProcResEntry *WPR,
-    const MCWriteLatencyEntry *WL, const MCReadAdvanceEntry *RA,
-    const InstrStage *IS, const unsigned *OC, const unsigned *FP)
+    ArrayRef<SubtargetSubTypeKV> PD, const MCSchedModel *PSM,
+    const MCWriteProcResEntry *WPR, const MCWriteLatencyEntry *WL,
+    const MCReadAdvanceEntry *RA, const InstrStage *IS, const unsigned *OC,
+    const unsigned *FP)
     : TargetTriple(TT), CPU(std::string(C)), TuneCPU(std::string(TC)),
-      ProcNames(PN), ProcFeatures(PF), ProcDesc(PD), WriteProcResTable(WPR),
-      WriteLatencyTable(WL), ReadAdvanceTable(RA), Stages(IS),
-      OperandCycles(OC), ForwardingPaths(FP) {
+      ProcNames(PN), ProcFeatures(PF), ProcDesc(PD), ProcSchedModels(PSM),
+      WriteProcResTable(WPR), WriteLatencyTable(WL), ReadAdvanceTable(RA),
+      Stages(IS), OperandCycles(OC), ForwardingPaths(FP) {
   InitMCProcessorInfo(CPU, TuneCPU, FS);
 }
 
@@ -449,8 +450,7 @@ const MCSchedModel &MCSubtargetInfo::getSchedModelForCPU(StringRef CPU) const {
              << " (ignoring processor)\n";
     return MCSchedModel::Default;
   }
-  assert(CPUEntry->schedModel() && "Missing processor SchedModel value");
-  return *CPUEntry->schedModel();
+  return ProcSchedModels[CPUEntry->SchedModelIdx];
 }
 
 InstrItineraryData

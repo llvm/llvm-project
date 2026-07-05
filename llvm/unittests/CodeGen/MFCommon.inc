@@ -89,7 +89,8 @@ class BogusSubtarget : public TargetSubtargetInfo {
 public:
   BogusSubtarget(TargetMachine &TM)
       : TargetSubtargetInfo(Triple(""), "", "", "", {}, {}, {}, nullptr,
-                            nullptr, nullptr, nullptr, nullptr, nullptr),
+                            nullptr, nullptr, nullptr, nullptr, nullptr,
+                            nullptr),
         FL(), TL(TM, *this) {}
   ~BogusSubtarget() override = default;
 
@@ -144,7 +145,7 @@ public:
     STI = std::make_unique<MCSubtargetInfo>(
         Triple(""), "", "", "", ArrayRef<StringRef>{},
         ArrayRef<SubtargetFeatureKV>{}, ArrayRef<SubtargetSubTypeKV>{}, nullptr,
-        nullptr, nullptr, nullptr, nullptr, nullptr);
+        nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
   }
 
   ~BogusTargetMachine() override = default;
