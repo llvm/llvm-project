@@ -32,14 +32,26 @@ static RT_API_ATTRS void *MallocWrapper(std::size_t size,
     [[maybe_unused]] std::size_t alignment, [[maybe_unused]] std::int64_t *) {
 #if !defined(RT_DEVICE_COMPILATION) && !defined(_WIN32)
   // std::malloc only guarantees alignof(std::max_align_t). When a larger
-  // alignment is requested, use std::aligned_alloc.
+  // alignment is requested, an aligned allocation routine must be used.
   if (alignment > alignof(std::max_align_t)) {
-    // Round size up to a multiple of the alignment
+#if defined(__APPLE__)
+    // std::aligned_alloc is only available on macOS 10.15 and newer, but
+    // flang-rt is built with an older deployment target. posix_memalign is
+    // available on all supported macOS versions.
+    void *ptr{nullptr};
+    if (posix_memalign(&ptr, alignment, size) != 0) {
+      return nullptr;
+    }
+    return ptr;
+#else
+    // Round size up to a multiple of the alignment, as required by
+    // std::aligned_alloc.
     if (size > SIZE_MAX - alignment) {
       return nullptr;
     }
     std::size_t alignedSize{((size + alignment - 1) / alignment) * alignment};
     return std::aligned_alloc(alignment, alignedSize);
+#endif
   }
 #endif
   return std::malloc(size);

@@ -103,8 +103,18 @@ constexpr fltSemantics APFloatBase::semFloat6E2M3FN = {
     2, 0, 4, 6, fltNonfiniteBehavior::FiniteOnly};
 constexpr fltSemantics APFloatBase::semFloat4E2M1FN = {
     2, 0, 2, 4, fltNonfiniteBehavior::FiniteOnly};
-constexpr fltSemantics APFloatBase::semX87DoubleExtended = {16383, -16382, 64,
-                                                            80};
+constexpr fltSemantics APFloatBase::semX87DoubleExtended = {
+    16383,
+    -16382,
+    64,
+    80,
+    fltNonfiniteBehavior::IEEE754,
+    fltNanEncoding::IEEE,
+    true,
+    true,
+    true,
+    true,
+    true};
 constexpr fltSemantics APFloatBase::semBogus = {0, 0, 0, 0};
 constexpr fltSemantics APFloatBase::semPPCDoubleDouble = {-1, 0, 0, 128};
 constexpr fltSemantics APFloatBase::semPPCDoubleDoubleLegacy = {
@@ -3670,42 +3680,8 @@ float128 IEEEFloat::convertToQuad() const {
 }
 #endif
 
-/// Integer bit is explicit in this format.  Intel hardware (387 and later)
-/// does not support these bit patterns:
-///  exponent = all 1's, integer bit 0, significand 0 ("pseudoinfinity")
-///  exponent = all 1's, integer bit 0, significand nonzero ("pseudoNaN")
-///  exponent!=0 nor all 1's, integer bit 0 ("unnormal")
-///  exponent = 0, integer bit 1 ("pseudodenormal")
-/// At the moment, the first three are treated as NaNs, the last one as Normal.
 void IEEEFloat::initFromF80LongDoubleAPInt(const APInt &api) {
-  uint64_t i1 = api.getRawData()[0];
-  uint64_t i2 = api.getRawData()[1];
-  uint64_t myexponent = (i2 & 0x7fff);
-  uint64_t mysignificand = i1;
-  uint8_t myintegerbit = mysignificand >> 63;
-
-  initialize(&APFloatBase::semX87DoubleExtended);
-  assert(partCount()==2);
-
-  sign = static_cast<unsigned int>(i2>>15);
-  if (myexponent == 0 && mysignificand == 0) {
-    makeZero(sign);
-  } else if (myexponent==0x7fff && mysignificand==0x8000000000000000ULL) {
-    makeInf(sign);
-  } else if ((myexponent == 0x7fff && mysignificand != 0x8000000000000000ULL) ||
-             (myexponent != 0x7fff && myexponent != 0 && myintegerbit == 0)) {
-    category = fcNaN;
-    exponent = exponentNaN();
-    significandParts()[0] = mysignificand;
-    significandParts()[1] = 0;
-  } else {
-    category = fcNormal;
-    exponent = myexponent - 16383;
-    significandParts()[0] = mysignificand;
-    significandParts()[1] = 0;
-    if (myexponent==0)          // denormal
-      exponent = -16382;
-  }
+  return initFromIEEEAPInt<APFloatBase::semX87DoubleExtended>(api);
 }
 
 void IEEEFloat::initFromPPCDoubleDoubleLegacyAPInt(const APInt &api) {
@@ -3744,15 +3720,16 @@ template <const fltSemantics &S>
 void IEEEFloat::initFromIEEEAPInt(const APInt &api) {
   assert(api.getBitWidth() == S.sizeInBits);
 
-  constexpr unsigned int trailing_significand_bits = S.precision - 1;
+  constexpr unsigned int trailing_significand_bits =
+      S.precision - 1 + S.hasExplicitIntegerBit;
   constexpr integerPart integer_bit =
       integerPart{1} << (trailing_significand_bits % integerPartWidth);
   constexpr uint64_t significand_mask = integer_bit - 1;
   constexpr unsigned int exponent_bits =
       S.sizeInBits - (S.hasSignedRepr ? 1 : 0) - trailing_significand_bits;
-  constexpr unsigned int stored_significand_parts =
-      partCountForBits(trailing_significand_bits);
   static_assert(exponent_bits < 64);
+  constexpr unsigned int stored_significand_parts =
+      partCountForBits(trailing_significand_bits + 1);
   constexpr uint64_t exponent_mask = (uint64_t{1} << exponent_bits) - 1;
   constexpr bool is_zero_exp_reserved = S.hasDenormals || S.hasZero;
   constexpr int bias = -(S.minExponent - (is_zero_exp_reserved ? 1 : 0));
@@ -3763,7 +3740,7 @@ void IEEEFloat::initFromIEEEAPInt(const APInt &api) {
   std::array<integerPart, stored_significand_parts> mysignificand;
   if constexpr (has_significand) {
     std::copy_n(api.getRawData(), mysignificand.size(), mysignificand.begin());
-    if constexpr (significand_mask != 0) {
+    if constexpr (significand_mask != 0 || S.precision >= integerPartWidth) {
       mysignificand[mysignificand.size() - 1] &= significand_mask;
     }
   } else {
@@ -3792,7 +3769,23 @@ void IEEEFloat::initFromIEEEAPInt(const APInt &api) {
   bool is_zero = myexponent == 0 && all_zero_significand && S.hasZero;
 
   if constexpr (S.nonFiniteBehavior == fltNonfiniteBehavior::IEEE754) {
-    if (myexponent - bias == ::exponentInf(S) && all_zero_significand) {
+    bool is_inf = false;
+
+    if constexpr (S.hasExplicitIntegerBit) {
+      // This is only used and tested for x87DoubleExtended
+      static_assert(S.precision == 64);
+      constexpr integerPart significand_mask_no_int_bit =
+          (uint64_t{1} << (trailing_significand_bits - 1)) - 1;
+      const integerPart myintegerbit =
+          mysignificand[0] >> (trailing_significand_bits - 1);
+
+      is_inf = myexponent - bias == ::exponentInf(S) && myintegerbit == 1 &&
+               (mysignificand[0] & significand_mask_no_int_bit) == 0;
+    } else {
+      is_inf = myexponent - bias == ::exponentInf(S) && all_zero_significand;
+    }
+
+    if (is_inf) {
       makeInf(sign);
       return;
     }
@@ -3801,7 +3794,30 @@ void IEEEFloat::initFromIEEEAPInt(const APInt &api) {
   bool is_nan = false;
 
   if constexpr (S.nanEncoding == fltNanEncoding::IEEE) {
-    is_nan = myexponent - bias == ::exponentNaN(S) && !all_zero_significand;
+    if constexpr (S.hasExplicitIntegerBit) {
+      // This is only used and tested for x87DoubleExtended
+      static_assert(S.precision == 64);
+      const integerPart myintegerbit =
+          mysignificand[0] >> (trailing_significand_bits - 1);
+      constexpr integerPart significand_mask_no_int_bit =
+          (uint64_t{1} << (trailing_significand_bits - 1)) - 1;
+
+      if (myexponent - bias == ::exponentNaN(S) &&
+          (mysignificand[0] & significand_mask_no_int_bit) != 0) {
+        // regular NaN and pseudoNaN
+        is_nan = true;
+      } else if (myexponent - bias == ::exponentNaN(S) &&
+                 (mysignificand[0] & significand_mask_no_int_bit) == 0) {
+        // pseudoinfinity
+        is_nan = true;
+      } else if (myexponent - bias != ::exponentNaN(S) && myexponent != 0 &&
+                 myintegerbit == 0) {
+        // unnormal
+        is_nan = true;
+      }
+    } else {
+      is_nan = myexponent - bias == ::exponentNaN(S) && !all_zero_significand;
+    }
   } else if constexpr (S.nanEncoding == fltNanEncoding::AllOnes) {
     bool all_ones_significand =
         std::all_of(mysignificand.begin(), mysignificand.end() - 1,
@@ -3831,8 +3847,11 @@ void IEEEFloat::initFromIEEEAPInt(const APInt &api) {
   std::copy_n(mysignificand.begin(), mysignificand.size(), significandParts());
   if (myexponent == 0 && S.hasDenormals) // denormal
     exponent = S.minExponent;
-  else
-    significandParts()[mysignificand.size()-1] |= integer_bit; // integer bit
+  else {
+    if constexpr (!S.hasExplicitIntegerBit) {
+      significandParts()[mysignificand.size() - 1] |= integer_bit;
+    }
+  }
 }
 
 void IEEEFloat::initFromQuadrupleAPInt(const APInt &api) {

@@ -1078,8 +1078,8 @@ MLocTracker::MLocTracker(MachineFunction &MF, const TargetInstrInfo &TII,
   }
 
   // There may also be strange register class sizes (think x86 fp80s).
-  for (const TargetRegisterClass *RC : TRI.regclasses()) {
-    unsigned Size = TRI.getRegSizeInBits(*RC);
+  for (const TargetRegisterClass &RC : TRI.regclasses()) {
+    unsigned Size = TRI.getRegSizeInBits(RC);
 
     // We might see special reserved values as sizes, and classes for other
     // stuff the machine tries to model. If it's more than 512 bits, then it
@@ -1590,9 +1590,9 @@ std::optional<ValueIDNum> InstrRefBasedLDV::getValueForInstrRef(
       // FIXME: no index for this?
       Register Reg = MTracker->LocIdxToLocID[L];
       const TargetRegisterClass *TRC = nullptr;
-      for (const auto *TRCI : TRI->regclasses())
-        if (TRCI->contains(Reg))
-          TRC = TRCI;
+      for (const auto &TRCI : TRI->regclasses())
+        if (TRCI.contains(Reg))
+          TRC = &TRCI;
       assert(TRC && "Couldn't find target register class?");
 
       // If the register we have isn't the right size or in the right place,

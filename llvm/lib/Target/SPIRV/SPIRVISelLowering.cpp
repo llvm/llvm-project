@@ -684,3 +684,18 @@ SPIRVTargetLowering::shouldCastAtomicRMWIInIR(AtomicRMWInst *RMWI) const {
   // SPIR-V only supports atomic exchange for integer and floating-point types.
   return AtomicExpansionKind::None;
 }
+
+TargetLowering::AtomicExpansionKind
+SPIRVTargetLowering::shouldCastAtomicLoadInIR(LoadInst *LI) const {
+  // TODO: pointer load should return CastToInteger, but
+  // convertAtomicLoadToIntegerType uses BitCast which asserts on pointer types.
+  return AtomicExpansionKind::None;
+}
+
+TargetLowering::AtomicExpansionKind
+SPIRVTargetLowering::shouldCastAtomicStoreInIR(StoreInst *SI) const {
+  // TODO: pointer store should return CastToInteger, but
+  // convertAtomicStoreToIntegerType uses BitCast which asserts on pointer
+  // types.
+  return AtomicExpansionKind::None;
+}

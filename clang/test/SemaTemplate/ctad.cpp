@@ -140,3 +140,20 @@ namespace GH200418 {
   using T = S<A>::X<0>;
 } // namespace GH200418
 #endif
+
+namespace GH203261 {
+  template <class> struct A {}; // expected-note {{template is declared here}}
+  template <template <class> class TT> struct S {
+    A(int) -> TT<int>;
+    // expected-error@-1 {{deduction guide must be declared in the same scope as template 'GH203261::A'}}
+    // expected-error@-2 {{deduced type 'TT<int>' of deduction guide is not written as a specialization of template 'A'}}
+  };
+} // namespace GH203261
+
+namespace TemplateTemplateParm1 {
+  template <template <class> class TT> struct S {
+    template <class> struct A {};
+    A(int) -> TT<int>;
+    // expected-error@-1 {{deduced type 'TT<int>' of deduction guide is not written as a specialization of template 'A'}}
+  };
+} // namespace TemplateTemplateParm1

@@ -1663,13 +1663,13 @@ void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
 
   // Emit declaration of the virtual registers or 'physical' registers for
   // each register class
-  for (const TargetRegisterClass *RC : TRI->regclasses()) {
-    const unsigned N = VRegMapping[RC].size();
+  for (const TargetRegisterClass &RC : TRI->regclasses()) {
+    const unsigned N = VRegMapping[&RC].size();
 
     // Only declare those registers that may be used.
     if (N) {
-      const StringRef RCName = getNVPTXRegClassName(RC);
-      const StringRef RCStr = getNVPTXRegClassStr(RC);
+      const StringRef RCName = getNVPTXRegClassName(&RC);
+      const StringRef RCStr = getNVPTXRegClassStr(&RC);
       O << "\t.reg " << RCName << " \t" << RCStr << "<" << (N + 1) << ">;\n";
     }
   }

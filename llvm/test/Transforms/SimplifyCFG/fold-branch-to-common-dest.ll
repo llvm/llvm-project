@@ -1295,17 +1295,15 @@ define void @load_derefable_two_preds(i8 %v0, i8 %v1, i8 %v2, ptr dereferenceabl
 ; CHECK-NEXT:    [[C0:%.*]] = icmp eq i8 [[V0:%.*]], 0
 ; CHECK-NEXT:    br i1 [[C0]], label [[PRED0:%.*]], label [[PRED1:%.*]]
 ; CHECK:       pred0:
-; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[V1:%.*]], 0
-; CHECK-NEXT:    [[V3_OLD:%.*]] = load i8, ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[C3_OLD:%.*]] = icmp eq i8 [[V3_OLD]], 0
-; CHECK-NEXT:    [[OR_COND1:%.*]] = select i1 [[C1]], i1 true, i1 [[C3_OLD]]
-; CHECK-NEXT:    br i1 [[OR_COND1]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT:%.*]]
+; CHECK-NEXT:    [[C3_OLD:%.*]] = icmp eq i8 [[V3_OLD:%.*]], 0
+; CHECK-NEXT:    br i1 [[C3_OLD]], label [[FINAL_LEFT:%.*]], label [[DISPATCH:%.*]]
 ; CHECK:       pred1:
 ; CHECK-NEXT:    [[C2:%.*]] = icmp eq i8 [[V2:%.*]], 0
-; CHECK-NEXT:    [[V3:%.*]] = load i8, ptr [[P]], align 1
+; CHECK-NEXT:    br i1 [[C2]], label [[DISPATCH]], label [[FINAL_RIGHT:%.*]]
+; CHECK:       dispatch:
+; CHECK-NEXT:    [[V3:%.*]] = load i8, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[C3:%.*]] = icmp eq i8 [[V3]], 0
-; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[C2]], i1 [[C3]], i1 false
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[FINAL_LEFT]], label [[FINAL_RIGHT]]
+; CHECK-NEXT:    br i1 [[C3]], label [[FINAL_LEFT]], label [[FINAL_RIGHT]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       final_left:

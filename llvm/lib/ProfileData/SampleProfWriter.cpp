@@ -58,8 +58,7 @@ struct SeekableWriter {
   SeekableWriter(raw_pwrite_stream &OS, endianness Endian)
       : OS(OS), Endian(Endian) {}
 
-  template <typename ValueType>
-  void pwrite(ValueType Val, size_t Offset) {
+  template <typename ValueType> void pwrite(ValueType Val, size_t Offset) {
     std::string StringBuf;
     raw_string_ostream SStream(StringBuf);
     Writer(SStream, Endian).write(Val);

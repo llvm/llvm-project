@@ -261,25 +261,31 @@ static void demoteDefined(Defined &sym, DenseMap<SectionBase *, size_t> &map) {
 // references to /DISCARD/ discarded symbols will lead to errors.
 static void demoteSymbolsAndComputeIsPreemptible(Ctx &ctx) {
   llvm::TimeTraceScope timeScope("Demote symbols");
-  DenseMap<InputFile *, DenseMap<SectionBase *, size_t>> sectionIndexMap;
-  for (Symbol *sym : ctx.symtab->getSymbols()) {
-    if (auto *d = dyn_cast<Defined>(sym)) {
-      if (d->section && !d->section->isLive())
-        demoteDefined(*d, sectionIndexMap[d->file]);
-    } else {
-      auto *s = dyn_cast<SharedSymbol>(sym);
-      if (sym->isLazy() || (s && !cast<SharedFile>(s->file)->isNeeded)) {
-        uint8_t binding = sym->isLazy() ? sym->binding : uint8_t(STB_WEAK);
-        Undefined(ctx.internalFile, sym->getName(), binding, sym->stOther,
-                  sym->type)
-            .overwrite(*sym);
-        sym->versionId = VER_NDX_GLOBAL;
+  ArrayRef<Symbol *> syms = ctx.symtab->getSymbols();
+  constexpr size_t chunkSize = 4096;
+  parallelFor(0, (syms.size() + chunkSize - 1) / chunkSize, [&](size_t c) {
+    DenseMap<InputFile *, DenseMap<SectionBase *, size_t>> sectionIndexMap;
+    size_t begin = c * chunkSize;
+    for (Symbol *sym :
+         syms.slice(begin, std::min(chunkSize, syms.size() - begin))) {
+      if (auto *d = dyn_cast<Defined>(sym)) {
+        if (d->section && !d->section->isLive())
+          demoteDefined(*d, sectionIndexMap[d->file]);
+      } else {
+        auto *s = dyn_cast<SharedSymbol>(sym);
+        if (sym->isLazy() || (s && !cast<SharedFile>(s->file)->isNeeded)) {
+          uint8_t binding = sym->isLazy() ? sym->binding : uint8_t(STB_WEAK);
+          Undefined(ctx.internalFile, sym->getName(), binding, sym->stOther,
+                    sym->type)
+              .overwrite(*sym);
+          sym->versionId = VER_NDX_GLOBAL;
+        }
       }
-    }
 
-    sym->isPreemptible = (sym->isUndefined() || sym->isExported) &&
-                         computeIsPreemptible(ctx, *sym);
-  }
+      sym->isPreemptible = (sym->isUndefined() || sym->isExported) &&
+                           computeIsPreemptible(ctx, *sym);
+    }
+  });
 }
 
 static OutputSection *findSection(Ctx &ctx, StringRef name) {

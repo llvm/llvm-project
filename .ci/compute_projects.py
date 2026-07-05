@@ -75,6 +75,7 @@ DEPENDENTS_TO_TEST = {
 # but not necessarily run for testing. The only case of this currently is lldb
 # which needs some runtimes enabled for tests.
 DEPENDENT_RUNTIMES_TO_BUILD = {
+    "flang": {"openmp"},
     "lldb": {"libcxx", "libcxxabi", "libunwind", "compiler-rt"}
 }
 

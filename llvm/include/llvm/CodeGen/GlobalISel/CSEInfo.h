@@ -165,7 +165,8 @@ public:
   void changedInstr(MachineInstr &MI) override;
 };
 
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class RegisterBank;
 
 // Simple builder class to easily profile properties about MIs.

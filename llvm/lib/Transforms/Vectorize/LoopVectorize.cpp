@@ -6189,29 +6189,10 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
   VPValue *Ptr = VPI->getOpcode() == Instruction::Load ? VPI->getOperand(0)
                                                        : VPI->getOperand(1);
   if (Consecutive) {
-    GEPNoWrapFlags Flags = vputils::getGEPFlagsForPtr(Ptr);
-    VPSingleDefRecipe *VectorPtr;
-    if (Reverse) {
-      // When folding the tail, we may compute an address that we don't in the
-      // original scalar loop: drop the GEP no-wrap flags in this case.
-      // Otherwise preserve existing flags without no-unsigned-wrap, as we will
-      // emit negative indices.
-      GEPNoWrapFlags ReverseFlags = CM.foldTailByMasking()
-                                        ? GEPNoWrapFlags::none()
-                                        : Flags.withoutNoUnsignedWrap();
-      VectorPtr = new VPVectorEndPointerRecipe(
-          Ptr, &Plan.getVF(), getLoadStoreType(I),
-          /*Stride*/ -1, ReverseFlags, VPI->getDebugLoc());
-    } else {
-      const DataLayout &DL = I->getDataLayout();
-      auto *StrideTy = DL.getIndexType(Ptr->getUnderlyingValue()->getType());
-      VPValue *StrideOne = Plan.getConstantInt(StrideTy, 1);
-      VectorPtr = new VPVectorPointerRecipe(Ptr, getLoadStoreType(I), StrideOne,
-                                            Flags, VPI->getDebugLoc());
-    }
     Builder.setInsertPoint(VPI);
-    Builder.insert(VectorPtr);
-    Ptr = VectorPtr;
+    Ptr = Builder.createConsecutiveVectorPointer(
+        Ptr, getLoadStoreType(I), Reverse, CM.foldTailByMasking(),
+        VPI->getDebugLoc());
   }
 
   if (Reverse && Mask)
@@ -6943,10 +6924,8 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     // the reduction phi to operate on bools before creating the final
     // reduction result.
     if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RecurrenceKind)) {
-      auto *AnyOfSelect =
-          cast<VPSingleDefRecipe>(*find_if(PhiR->users(), [](VPUser *U) {
-            return match(U, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
-          }));
+      auto *AnyOfSelect = cast<VPSingleDefRecipe>(
+          findUserOf(PhiR, m_Select(m_VPValue(), m_VPValue(), m_VPValue())));
       VPValue *Start = PhiR->getStartValue();
       bool TrueValIsPhi = AnyOfSelect->getOperand(1) == PhiR;
       // NewVal is the non-phi operand of the select.

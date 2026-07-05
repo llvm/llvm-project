@@ -568,6 +568,9 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
     }
   }
 
+  LLVM_DEBUG(dbgs() << "Found a binop of extractions: " << I << "\n  OldCost: "
+                    << OldCost << " vs NewCost: " << NewCost << "\n");
+
   // Aggressively form a vector op if the cost is equal because the transform
   // may enable further optimization.
   // Codegen can reverse this transform (scalarize) if it was not profitable.

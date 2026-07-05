@@ -488,6 +488,11 @@ let Command = "breakpoint add scripted" in {
 let Command = "breakpoint override add" in {
   def breakpoint_override_add_description : Option<"description", "d">,
     Desc<"Description string for this override resolver">, Arg<"HelpText">;
+  def breakpoint_override_add_mask : Option<"resolver-type-mask", "m">,
+    Desc<"Specifies which breakpoint resolver type the override operates on.  "
+    "The option can be repeated, lldb will 'and' the options together.  "
+    "If no options are specified, the default value is 'file_and_line'">,
+    EnumArg<"BreakpointResolverMask">;
 }
 
 let Command = "breakpoint clear" in {

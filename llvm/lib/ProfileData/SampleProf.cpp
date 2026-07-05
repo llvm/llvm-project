@@ -286,7 +286,7 @@ void sampleprof::sortFuncProfiles(
 
 unsigned FunctionSamples::getOffset(const DILocation *DIL) {
   return (DIL->getLine() - DIL->getScope()->getSubprogram()->getLine()) &
-      0xffff;
+         0xffff;
 }
 
 LineLocation FunctionSamples::getCallSiteIdentifier(const DILocation *DIL,

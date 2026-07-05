@@ -13621,23 +13621,63 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetUpdateDirective(
                                           Clauses, AStmt);
 }
 
-/// This checks whether a \p ClauseType clause \p C has at most \p Max
-/// expression. If not, a diag of number \p Diag will be emitted.
-template <typename ClauseType>
-static bool checkNumExprsInClause(SemaBase &SemaRef,
-                                  ArrayRef<OMPClause *> Clauses,
-                                  unsigned MaxNum, unsigned Diag) {
-  auto ClauseItr = llvm::find_if(Clauses, llvm::IsaPred<ClauseType>);
-  if (ClauseItr == Clauses.end())
-    return true;
-  const auto *C = cast<ClauseType>(*ClauseItr);
-  auto VarList = C->getVarRefs();
-  if (VarList.size() > MaxNum) {
-    SemaRef.Diag(VarList[MaxNum]->getBeginLoc(), Diag)
-        << getOpenMPClauseNameForDiag(C->getClauseKind());
+/// Check the number of expressions specified in a multidimensional clause and
+/// return whether an error was encountered.
+template <typename ClauseT>
+static bool checkExprsInMultidimClause(SemaBase &SemaRef, const ClauseT *Clause,
+                                       const OMPXBareClause *BareClause) {
+  if (!Clause)
     return false;
+
+  const uint64_t NumVars = Clause->getVarRefs().size();
+
+  // The ompx_bare clause allows up to three expressions.
+  if (BareClause && NumVars > 3) {
+    SemaRef.Diag(Clause->getBeginLoc(),
+                 diag::err_ompx_more_than_three_expr_not_allowed)
+        << getOpenMPClauseName(Clause->getClauseKind());
+    return true;
   }
-  return true;
+
+  // Only one expression is allowed otherwise.
+  if (!BareClause && NumVars != 1) {
+    SemaRef.Diag(Clause->getBeginLoc(), diag::err_omp_multi_expr_not_allowed)
+        << getOpenMPClauseName(Clause->getClauseKind());
+    return true;
+  }
+  return false;
+}
+
+/// Check the number of expressions specified in clauses that can contain
+/// multidimensional values, e.g., num_teams and thread_limit. The function
+/// returns true on error.
+static bool checkMultidimClauses(SemaBase &SemaRef,
+                                 ArrayRef<OMPClause *> Clauses,
+                                 bool MayHaveBareClause = false) {
+  auto BareClauseIt =
+      MayHaveBareClause ? llvm::find_if(Clauses, llvm::IsaPred<OMPXBareClause>)
+                        : Clauses.end();
+  auto ThreadLimitIt =
+      llvm::find_if(Clauses, llvm::IsaPred<OMPThreadLimitClause>);
+  auto NumTeamsIt = llvm::find_if(Clauses, llvm::IsaPred<OMPNumTeamsClause>);
+
+  const auto *BareClause = BareClauseIt != Clauses.end()
+                               ? cast<OMPXBareClause>(*BareClauseIt)
+                               : nullptr;
+  const auto *ThreadLimitClause =
+      ThreadLimitIt != Clauses.end()
+          ? cast<OMPThreadLimitClause>(*ThreadLimitIt)
+          : nullptr;
+  const auto *NumTeamsClause = NumTeamsIt != Clauses.end()
+                                   ? cast<OMPNumTeamsClause>(*NumTeamsIt)
+                                   : nullptr;
+
+  if (BareClause && (!NumTeamsClause || !ThreadLimitClause)) {
+    SemaRef.Diag(BareClause->getBeginLoc(), diag::err_ompx_bare_no_grid);
+    return true;
+  }
+  return checkExprsInMultidimClause(SemaRef, ThreadLimitClause, BareClause) ||
+         checkExprsInMultidimClause(SemaRef, NumTeamsClause, BareClause);
 }
 
 StmtResult SemaOpenMP::ActOnOpenMPTeamsDirective(ArrayRef<OMPClause *> Clauses,
@@ -13647,10 +13687,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTeamsDirective(ArrayRef<OMPClause *> Clauses,
   if (!AStmt)
     return StmtError();
 
-  if (!checkNumExprsInClause<OMPNumTeamsClause>(
-          *this, Clauses, /*MaxNum=*/1, diag::err_omp_multi_expr_not_allowed) ||
-      !checkNumExprsInClause<OMPThreadLimitClause>(
-          *this, Clauses, /*MaxNum=*/1, diag::err_omp_multi_expr_not_allowed))
+  if (checkMultidimClauses(*this, Clauses))
     return StmtError();
 
   // Report affected OpenMP target offloading behavior when in HIP lang-mode.
@@ -14414,30 +14451,9 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDirective(
 
   setBranchProtectedScope(SemaRef, OMPD_target_teams, AStmt);
 
-  const OMPClause *BareClause = nullptr;
-  bool HasThreadLimitAndNumTeamsClause = hasClauses(Clauses, OMPC_num_teams) &&
-                                         hasClauses(Clauses, OMPC_thread_limit);
-  bool HasBareClause = llvm::any_of(Clauses, [&](const OMPClause *C) {
-    BareClause = C;
-    return C->getClauseKind() == OMPC_ompx_bare;
-  });
-
-  if (HasBareClause && !HasThreadLimitAndNumTeamsClause) {
-    Diag(BareClause->getBeginLoc(), diag::err_ompx_bare_no_grid);
+  if (checkMultidimClauses(*this, Clauses, /*MayHaveBareClause=*/true))
     return StmtError();
-  }
 
-  unsigned ClauseMaxNumExprs = HasBareClause ? 3 : 1;
-  unsigned DiagNo = HasBareClause
-                        ? diag::err_ompx_more_than_three_expr_not_allowed
-                        : diag::err_omp_multi_expr_not_allowed;
-
-  if (!checkNumExprsInClause<OMPNumTeamsClause>(*this, Clauses,
-                                                ClauseMaxNumExprs, DiagNo) ||
-      !checkNumExprsInClause<OMPThreadLimitClause>(*this, Clauses,
-                                                   ClauseMaxNumExprs, DiagNo)) {
-    return StmtError();
-  }
   return OMPTargetTeamsDirective::Create(getASTContext(), StartLoc, EndLoc,
                                          Clauses, AStmt);
 }
@@ -14448,10 +14464,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDistributeDirective(
   if (!AStmt)
     return StmtError();
 
-  if (!checkNumExprsInClause<OMPNumTeamsClause>(
-          *this, Clauses, /*MaxNum=*/1, diag::err_omp_multi_expr_not_allowed) ||
-      !checkNumExprsInClause<OMPThreadLimitClause>(
-          *this, Clauses, /*MaxNum=*/1, diag::err_omp_multi_expr_not_allowed))
+  if (checkMultidimClauses(*this, Clauses))
     return StmtError();
 
   CapturedStmt *CS =
@@ -14480,10 +14493,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDistributeParallelForDirective(
   if (!AStmt)
     return StmtError();
 
-  if (!checkNumExprsInClause<OMPNumTeamsClause>(
-          *this, Clauses, /*MaxNum=*/1, diag::err_omp_multi_expr_not_allowed) ||
-      !checkNumExprsInClause<OMPThreadLimitClause>(
-          *this, Clauses, /*MaxNum=*/1, diag::err_omp_multi_expr_not_allowed))
+  if (checkMultidimClauses(*this, Clauses))
     return StmtError();
 
   CapturedStmt *CS = setBranchProtectedScope(
@@ -14513,10 +14523,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDistributeParallelForSimdDirective(
   if (!AStmt)
     return StmtError();
 
-  if (!checkNumExprsInClause<OMPNumTeamsClause>(
-          *this, Clauses, /*MaxNum=*/1, diag::err_omp_multi_expr_not_allowed) ||
-      !checkNumExprsInClause<OMPThreadLimitClause>(
-          *this, Clauses, /*MaxNum=*/1, diag::err_omp_multi_expr_not_allowed))
+  if (checkMultidimClauses(*this, Clauses))
     return StmtError();
 
   CapturedStmt *CS = setBranchProtectedScope(
@@ -14549,10 +14556,7 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDistributeSimdDirective(
   if (!AStmt)
     return StmtError();
 
-  if (!checkNumExprsInClause<OMPNumTeamsClause>(
-          *this, Clauses, /*MaxNum=*/1, diag::err_omp_multi_expr_not_allowed) ||
-      !checkNumExprsInClause<OMPThreadLimitClause>(
-          *this, Clauses, /*MaxNum=*/1, diag::err_omp_multi_expr_not_allowed))
+  if (checkMultidimClauses(*this, Clauses))
     return StmtError();
 
   CapturedStmt *CS = setBranchProtectedScope(

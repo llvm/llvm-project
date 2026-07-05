@@ -3,7 +3,7 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-declare void @init_mem(ptr, i64);
+declare void @init_mem(ptr, i64) nofree
 
 define i64 @same_exit_block_pre_inc_use1() #1 {
 ; CHECK-LABEL: define i64 @same_exit_block_pre_inc_use1(

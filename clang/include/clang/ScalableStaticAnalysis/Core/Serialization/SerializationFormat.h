@@ -16,6 +16,7 @@
 
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/LUSummary.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/LUSummaryEncoding.h"
+#include "clang/ScalableStaticAnalysis/Core/EntityLinker/MultiArchSharedLibrary.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/MultiArchStaticLibrary.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/StaticLibrary.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/TUSummaryEncoding.h"
@@ -43,12 +44,13 @@ using Artifact = std::variant<TUSummary, LUSummary, WPASuite>;
 /// artifacts but with their per-entity summary payloads left as opaque
 /// format-specific encodings rather than fully resolved analysis results.
 ///
-/// \c StaticLibrary and \c MultiArchStaticLibrary appear only in this
-/// variant: the archiver/arch tools and the linker pass member payloads
-/// through without decoding them, so fully decoded shapes would have no
-/// consumer.
-using ArtifactEncoding = std::variant<TUSummaryEncoding, LUSummaryEncoding,
-                                      StaticLibrary, MultiArchStaticLibrary>;
+/// \c StaticLibrary, \c MultiArchStaticLibrary, and
+/// \c MultiArchSharedLibrary appear only in this variant: the
+/// archiver/arch tools and the linker pass member payloads through
+/// without decoding them, so fully decoded shapes would have no consumer.
+using ArtifactEncoding =
+    std::variant<TUSummaryEncoding, LUSummaryEncoding, StaticLibrary,
+                 MultiArchStaticLibrary, MultiArchSharedLibrary>;
 
 /// Abstract base class for serialization formats.
 class SerializationFormat {
@@ -113,6 +115,13 @@ public:
 
   virtual llvm::Error
   writeMultiArchStaticLibrary(const MultiArchStaticLibrary &M,
+                              llvm::StringRef Path) = 0;
+
+  virtual llvm::Expected<MultiArchSharedLibrary>
+  readMultiArchSharedLibrary(llvm::StringRef Path) = 0;
+
+  virtual llvm::Error
+  writeMultiArchSharedLibrary(const MultiArchSharedLibrary &M,
                               llvm::StringRef Path) = 0;
 
   virtual llvm::Expected<WPASuite> readWPASuite(llvm::StringRef Path) = 0;

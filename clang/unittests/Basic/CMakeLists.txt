@@ -21,4 +21,3 @@ add_distinct_clang_unittest(BasicTests
   Support
   TargetParser
   )
-target_compile_options(BasicTests PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")

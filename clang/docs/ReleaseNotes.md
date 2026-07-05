@@ -231,6 +231,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 #### C++2d Feature Support
 
+- Added compiler flags `-std=c++2d` and `-std=gnu++2d` for experimental C++2d implementation work.
+
 - Clang now supports [P3733R1](https://wg21.link/p3733r1>) More named universal character escapes.
   The change is applied as a DR to all C++ language modes. (#GH203944)
 
@@ -759,6 +761,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   calling `__builtin_bit_cast`. (#GH200112)
 - Clang now SFINAE friendly when the ``__reference_meows_from_temporary`` builtins
   should SFINAE friendly when the 1st type is not a reference type. (#GH206524)
+- Fixed `__builtin_offsetof` incorrectly sign-extending unsigned array indices
+  with the high bit set (e.g. `uint8_t` values >= 128), which produced wrong
+  offset values in constant expressions. (#GH199319)
 
 
 #### Bug Fixes to Attribute Support
@@ -808,6 +813,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   when used inside decltype in the return type. (#GH180460)
 - Fixed a crash when evaluating uninitialized GCC vector/ext_vector_type vectors in `constexpr`. (#GH180044)
 - Fixed a crash when `explicit(bool)` is used with an incomplete enumeration. (#GH183887)
+- Fix crash-on-invalid caused by qualified forward declarations. (#GH202320)
 - Fixed a crash on `typeid` of incomplete local types during template instantiation. (#GH63242), (#GH176397)
 - Fixed spurious diagnostics produced when checking if constraints are equivalent for redeclarations,
   which could make the program mistakenly ill-formed.

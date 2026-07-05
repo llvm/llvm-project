@@ -477,7 +477,8 @@ define void @widen_intrinsic_dbg(i64 %n, ptr %y, ptr %x) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[X1]], [[Y2]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 16
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP0]], 1
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP5]], 15
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
@@ -521,7 +522,8 @@ define void @widen_intrinsic_dbg(i64 %n, ptr %y, ptr %x) {
 ; DEBUGLOC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]], !dbg [[DBG94]]
 ; DEBUGLOC:       [[VECTOR_MEMCHECK]]:
 ; DEBUGLOC-NEXT:    [[TMP0:%.*]] = sub i64 [[X1]], [[Y2]], !dbg [[DBG94]]
-; DEBUGLOC-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 16, !dbg [[DBG94]]
+; DEBUGLOC-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP0]], 1, !dbg [[DBG94]]
+; DEBUGLOC-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP5]], 15, !dbg [[DBG94]]
 ; DEBUGLOC-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]], !dbg [[DBG95:![0-9]+]]
 ; DEBUGLOC:       [[VECTOR_PH]]:
 ; DEBUGLOC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4

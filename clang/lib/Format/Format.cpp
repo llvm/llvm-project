@@ -1159,14 +1159,14 @@ template <> struct MappingTraits<FormatStyle> {
         break;
       case BAS_BlockIndent:
         Style.AlignAfterOpenBracket = true;
+        Style.BreakAfterOpenBracketBracedList = true;
+        Style.BreakAfterOpenBracketFunction = true;
+        Style.BreakAfterOpenBracketIf = true;
+        Style.BreakAfterOpenBracketLoop = false;
+        Style.BreakAfterOpenBracketSwitch = false;
         Style.BreakBeforeCloseBracketBracedList = true;
         Style.BreakBeforeCloseBracketFunction = true;
         Style.BreakBeforeCloseBracketIf = true;
-        Style.BreakAfterOpenBracketLoop = false;
-        Style.BreakAfterOpenBracketSwitch = false;
-        Style.BreakBeforeCloseBracketBracedList = false;
-        Style.BreakBeforeCloseBracketFunction = false;
-        Style.BreakBeforeCloseBracketIf = false;
         Style.BreakBeforeCloseBracketLoop = false;
         Style.BreakBeforeCloseBracketSwitch = false;
         break;

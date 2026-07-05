@@ -181,6 +181,9 @@ public:
     for (size_t __i = 1; __i < __n; ++__i)
       __x_[__i] = (__f * (__x_[__i - 1] ^ __rshift<__w - 2>(__x_[__i - 1])) + __i) & _Max;
     __i_ = 0;
+#ifdef _LIBCPP_ABI_VECTORIZED_MERSENNE_TWISTER_ENGINE
+    __update_all_states();
+#endif
   }
   template <class _Sseq, __enable_if_t<__is_seed_sequence_v<_Sseq, mersenne_twister_engine>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI void seed(_Sseq& __q) {
@@ -203,17 +206,43 @@ public:
           return;
       __x_[0] = result_type(1) << (__w - 1);
     }
+#ifdef _LIBCPP_ABI_VECTORIZED_MERSENNE_TWISTER_ENGINE
+    __update_all_states();
+#endif
+  }
+
+  void __update_state(size_t __i, size_t __k) {
+    const size_t __j         = (__i + 1) % __n;
+    const result_type __mask = __r == _Dt ? result_type(~0) : (result_type(1) << __r) - result_type(1);
+    const result_type __yp   = (__x_[__i] & ~__mask) | (__x_[__j] & __mask);
+    __x_[__i]                = __x_[__k] ^ __rshift<1>(__yp) ^ (__a * (__yp & 1));
+  }
+
+  void __update_state(size_t __i) { __update_state(__i, (__i + __m) % __n); }
+
+  void __update_all_states() {
+    size_t __i = 0;
+    // This is split into two loops to help the compiler vectorize the code
+    for (; __i != (__n - __m); ++__i)
+      __update_state(__i);
+    for (size_t __j = 0; __i != __n; ++__i, ++__j)
+      __update_state(__i, __j);
   }
 
   // generating functions
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()() {
-    const size_t __j         = (__i_ + 1) % __n;
-    const result_type __mask = __r == _Dt ? result_type(~0) : (result_type(1) << __r) - result_type(1);
-    const result_type __yp   = (__x_[__i_] & ~__mask) | (__x_[__j] & __mask);
-    const size_t __k         = (__i_ + __m) % __n;
-    __x_[__i_]               = __x_[__k] ^ __rshift<1>(__yp) ^ (__a * (__yp & 1));
-    result_type __z          = __x_[__i_] ^ (__rshift<__u>(__x_[__i_]) & __d);
-    __i_                     = __j;
+#ifdef _LIBCPP_ABI_VECTORIZED_MERSENNE_TWISTER_ENGINE
+    result_type __val = __x_[__i_];
+    if (++__i_ == __n) [[__unlikely__]] {
+      __update_all_states();
+      __i_ = 0;
+    }
+#else
+    __update_state(__i_);
+    result_type __val = __x_[__i_];
+    __i_              = (__i_ + 1) % __n;
+#endif
+    result_type __z = __val ^ (__rshift<__u>(__val) & __d);
     __z ^= __lshift<__s>(__z) & __b;
     __z ^= __lshift<__t>(__z) & __c;
     return __z ^ __rshift<__l>(__z);

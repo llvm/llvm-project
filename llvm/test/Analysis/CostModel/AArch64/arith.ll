@@ -153,6 +153,31 @@ define void @i128() {
   ret void
 }
 
+define void @i256() {
+; CHECK-LABEL: 'i256'
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %c = add i256 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %d = sub i256 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %e = mul i256 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %f = ashr i256 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %g = lshr i256 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %h = shl i256 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %i = and i256 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %j = or i256 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %k = xor i256 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  %c = add i256 undef, undef
+  %d = sub i256 undef, undef
+  %e = mul i256 undef, undef
+  %f = ashr i256 undef, undef
+  %g = lshr i256 undef, undef
+  %h = shl i256 undef, undef
+  %i = and i256 undef, undef
+  %j = or i256 undef, undef
+  %k = xor i256 undef, undef
+  ret void
+}
+
 
 define void @vi8() {
 ; CHECK-LABEL: 'vi8'

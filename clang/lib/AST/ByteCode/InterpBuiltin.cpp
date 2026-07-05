@@ -6760,12 +6760,28 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
       // When generating bytecode, we put all the index expressions as Sint64 on
       // the stack.
       int64_t Index = ArrayIndices[ArrayIndex];
+      if (Index < 0)
+        return Invalid(S, OpPC);
       const ArrayType *AT = S.getASTContext().getAsArrayType(CurrentType);
       if (!AT)
         return false;
       CurrentType = AT->getElementType();
       CharUnits ElementSize = S.getASTContext().getTypeSizeInChars(CurrentType);
-      Result += Index * ElementSize;
+      int64_t ElemSize = ElementSize.getQuantity();
+      if (Index != 0 && ElemSize > llvm::maxIntN(64) / Index) {
+        S.FFDiag(S.Current->getLocation(OpPC),
+                 diag::note_constexpr_offsetof_overflow)
+            << S.Current->getRange(OpPC);
+        return false;
+      }
+      int64_t Offset = Index * ElemSize;
+      if (Result.getQuantity() > llvm::maxIntN(64) - Offset) {
+        S.FFDiag(S.Current->getLocation(OpPC),
+                 diag::note_constexpr_offsetof_overflow)
+            << S.Current->getRange(OpPC);
+        return false;
+      }
+      Result += CharUnits::fromQuantity(Offset);
       ++ArrayIndex;
       break;
     }

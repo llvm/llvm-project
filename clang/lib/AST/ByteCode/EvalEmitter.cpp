@@ -209,8 +209,8 @@ bool EvalEmitter::speculate(const CallExpr *E, const LabelTy &EndLabel) {
   if (!isActive())
     return true;
 
-  PushIgnoreDiags(S, OpPC);
-  auto _ = llvm::scope_exit([&]() { PopIgnoreDiags(S, OpPC); });
+  PushIgnoreDiags(S);
+  auto _ = llvm::scope_exit([&]() { PopIgnoreDiags(S); });
 
   size_t StackSizeBefore = S.Stk.size();
   const Expr *Arg = E->getArg(0);

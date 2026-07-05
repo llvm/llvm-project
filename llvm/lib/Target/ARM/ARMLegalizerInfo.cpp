@@ -40,10 +40,8 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
 
-  auto &LegacyInfo = getLegacyLegalizerInfo();
   if (ST.isThumb1Only()) {
     // Thumb1 is not supported yet.
-    LegacyInfo.computeTables();
     verify(*ST.getInstrInfo());
     return;
   }
@@ -230,7 +228,6 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
         .clampScalar(0, s32, s32);
   }
 
-  LegacyInfo.computeTables();
   verify(*ST.getInstrInfo());
 }
 

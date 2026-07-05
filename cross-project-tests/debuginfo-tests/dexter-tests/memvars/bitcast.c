@@ -4,8 +4,7 @@
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
 // RUN: %clang -std=gnu11 -O3 -glldb %s -o %t
-// RUN: %dexter --use-script -w --use-script %dexter_lldb_args --binary %t \
-// RUN:   -- %s | FileCheck %s
+// RUN: %dexter -w %dexter_lldb_args --binary %t -- %s | FileCheck %s
 
 //// Adapted from https://bugs.llvm.org/show_bug.cgi?id=34136#c1
 //// LowerDbgDeclare has since been updated to look through bitcasts. We still

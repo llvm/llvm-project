@@ -61,6 +61,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadSpec.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBAssert.h"
@@ -951,19 +952,27 @@ void Target::GetBreakpointNames(std::vector<std::string> &names) {
   llvm::sort(names);
 }
 
-llvm::Expected<lldb::user_id_t>
-Target::AddBreakpointResolverOverride(llvm::StringRef class_name,
-                                      StructuredData::DictionarySP args_data_sp,
-                                      llvm::StringRef description) {
+llvm::Expected<lldb::user_id_t> Target::AddBreakpointResolverOverride(
+    llvm::StringRef class_name, uint64_t type_mask,
+    StructuredData::DictionarySP args_data_sp, llvm::StringRef description) {
   if (class_name.empty())
-    return LLDB_INVALID_INDEX64;
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "empty class name");
+
+  if (!BreakpointResolver::TypeMaskIsValid(type_mask))
+    return llvm::createStringErrorV(
+        llvm::inconvertibleErrorCode(),
+        "invalid breakpoint type mask: {0}, should be composed of the "
+        "elements of the BreakpointResolverType enum.",
+        type_mask);
 
   StructuredDataImpl impl;
   impl.SetObjectSP(args_data_sp);
 
   BreakpointResolverOverrideUP new_override_up(
       new ScriptedBreakpointResolverOverride(*this, std::string(description),
-                                             std::string(class_name), impl));
+                                             type_mask, std::string(class_name),
+                                             impl));
   llvm::Error error = new_override_up->Validate();
   if (error)
     return error;
@@ -971,8 +980,14 @@ Target::AddBreakpointResolverOverride(llvm::StringRef class_name,
   return AddBreakpointResolverOverride(std::move(new_override_up));
 }
 
+std::string Target::BreakpointResolverOverride::DescribeTypeMask() {
+  return BreakpointResolver::DescribeMask(m_type_mask);
+}
+
 void Target::DescribeBreakpointOverrides(Stream &stream,
-                                         std::vector<lldb::user_id_t> &idxs) {
+                                         std::vector<lldb::user_id_t> &idxs,
+                                         uint32_t output_width,
+                                         bool use_color) {
   if (m_breakpoint_overrides.size() == 0) {
     stream << "No overrides.\n";
     return;
@@ -984,12 +999,18 @@ void Target::DescribeBreakpointOverrides(Stream &stream,
     auto idx_pos = llvm::find(idxs, elem.first);
     if (empty || idx_pos != idxs.end()) {
       if (print_first) {
-        // FIXME: Is there some good way to flow the description?
-        stream << "ID    Description\n";
-        stream << "----  -----------\n";
+
+        ansi::OutputWordWrappedLines(stream, "ID    Mask    Description\n",
+                                     output_width, use_color);
+        ansi::OutputWordWrappedLines(stream, "----  ------  -----------\n",
+                                     output_width, use_color);
         print_first = false;
       }
-      stream.Format("{0,4}  {1}\n", elem.first, elem.second->GetDescription());
+      auto content = llvm::formatv("{0,4}  {1,6}  {2}\n", elem.first,
+                                   elem.second->DescribeTypeMask(),
+                                   elem.second->GetDescription())
+                         .str();
+      ansi::OutputWordWrappedLines(stream, content, output_width, use_color);
       if (!empty)
         idxs.erase(idx_pos);
     }
@@ -998,6 +1019,18 @@ void Target::DescribeBreakpointOverrides(Stream &stream,
 
 bool Target::ProcessIsValid() {
   return (m_process_sp && m_process_sp->IsAlive());
+}
+
+lldb::BreakpointResolverSP
+Target::CheckBreakpointOverrides(lldb::BreakpointResolverSP original_sp) {
+  for (auto const &elem : m_breakpoint_overrides) {
+    if (!original_sp->ResolverTyInMask(elem.second->GetTypeMask()))
+      continue;
+    if (lldb::BreakpointResolverSP overriden_sp =
+            elem.second->CheckForOverride(*this, original_sp))
+      return overriden_sp;
+  }
+  return {};
 }
 
 static bool CheckIfWatchpointsSupported(Target *target, Status &error) {

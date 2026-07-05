@@ -5,7 +5,7 @@
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
 // RUN: %clang++ -std=gnu++11 -O0 -g %s -o %t
-// RUN: %dexter -w --use-script \
+// RUN: %dexter -w \
 // RUN:     --binary  %t %dexter_lldb_args -v -- %s | FileCheck %s
 
 const int d = 100;

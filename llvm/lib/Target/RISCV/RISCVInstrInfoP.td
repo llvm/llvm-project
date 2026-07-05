@@ -2213,9 +2213,13 @@ let append Predicates = [IsRV32] in {
   //          (PWMULSU_H GPR:$rs1, GPR:$rs2)>;
 
   // 8/16-bit bitreverse patterns
-  // FIXME: Use BREV8 with Zbkb.
+  // With Zbkb, brev8 reverses the bits within each byte directly; otherwise
+  // reverse all bits then swap the bytes back.
+  let append Predicates = [NoStdExtZbkb] in
   def : Pat<(v4i8 (bitreverse GPR:$rs)),
             (REV8_RV32 (REV_RV32 GPR:$rs))>;
+  let append Predicates = [HasStdExtZbkb] in
+  def : Pat<(v4i8 (bitreverse GPR:$rs)), (BREV8 GPR:$rs)>;
   def : Pat<(v2i16 (bitreverse GPR:$rs)),
             (PPAIROE_H (REV_RV32 GPR:$rs), (REV_RV32 GPR:$rs))>;
 
@@ -2434,9 +2438,15 @@ let append Predicates = [IsRV32] in {
 
   // 8/16-bit bitreverse patterns
   // FIXME: Custom lower?
+  // With Zbkb, brev8 reverses the bits within each byte directly.
+  let append Predicates = [NoStdExtZbkb] in
   def : Pat<(v8i8 (bitreverse GPRPair:$rs)),
             (BuildGPRPair (REV8_RV32 (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_even))),
                           (REV8_RV32 (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_odd))))>;
+  let append Predicates = [HasStdExtZbkb] in
+  def : Pat<(v8i8 (bitreverse GPRPair:$rs)),
+            (BuildGPRPair (BREV8 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_even)),
+                          (BREV8 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_odd)))>;
   def : Pat<(v4i16 (bitreverse GPRPair:$rs)),
             (PPAIROE_DH (BuildGPRPair (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_even)),
                                       (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_odd))),
@@ -2650,8 +2660,12 @@ let append Predicates = [IsRV64] in {
             (PPAIROE_W (REV8_RV64 GPR:$rs), (REV8_RV64 GPR:$rs))>;
 
   // 8/16/32-bit bitreverse patterns
+  // With Zbkb, brev8 reverses the bits within each byte directly.
+  let append Predicates = [NoStdExtZbkb] in
   def : Pat<(v8i8 (bitreverse GPR:$rs)),
             (REV8_RV64 (REV_RV64 GPR:$rs))>;
+  let append Predicates = [HasStdExtZbkb] in
+  def : Pat<(v8i8 (bitreverse GPR:$rs)), (BREV8 GPR:$rs)>;
   def : Pat<(v4i16 (bitreverse GPR:$rs)),
             (REV16_RV64 (REV_RV64 GPR:$rs))>;
   def : Pat<(v2i32 (bitreverse GPR:$rs)),
