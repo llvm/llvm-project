@@ -51,7 +51,7 @@ using VectorParts = SmallVector<Value *, 2>;
 // It is sometimes necessary to disable printing of metadata in tests in order
 // to avoid non-deterministic behaviour due to metadata introduced by VPlan
 // that wasn't present in the original scalar IR.
-static cl::opt<bool> VPlanPrintMetadata(
+cl::opt<bool> VPlanPrintMetadata(
     "vplan-print-metadata", cl::init(true), cl::Hidden,
     cl::desc("Controls the printing of recipe metadata when debugging."));
 #endif
@@ -3875,9 +3875,8 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     ScalarCost += VF.getFixedValue() *
                   Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
     // Scale the cost by the probability of executing the predicated blocks.
-    // This assumes the predicated block for each vector lane is equally
-    // likely.
-    ScalarCost /= Ctx.getPredBlockCostDivisor(UI->getParent());
+    // This assumes the predicated block for each vector lane is equally likely.
+    ScalarCost /= Ctx.getPredBlockCostDivisor(getParent());
     return ScalarCost;
   }
   case Instruction::Load:
@@ -3936,7 +3935,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     if (ParentRegion && ParentRegion->isReplicator()) {
       if (!PtrSCEV)
         break;
-      Cost /= Ctx.getPredBlockCostDivisor(UI->getParent());
+      Cost /= Ctx.getPredBlockCostDivisor(getParent());
       Cost += Ctx.TTI.getCFInstrCost(Instruction::CondBr, Ctx.CostKind);
 
       auto *VecI1Ty = VectorType::get(

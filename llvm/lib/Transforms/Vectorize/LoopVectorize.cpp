@@ -1028,20 +1028,10 @@ public:
   /// Superset of instructions that return true for isScalarWithPredication.
   bool isPredicatedInst(Instruction *I) const;
 
-  /// A helper function that returns how much we should divide the cost of a
-  /// predicated block by. Typically this is the reciprocal of the block
-  /// probability, i.e. if we return X we are assuming the predicated block will
-  /// execute once for every X iterations of the loop header so the block should
-  /// only contribute 1/X of its cost to the total cost calculation, but when
-  /// optimizing for code size it will just be 1 as code size costs don't depend
-  /// on execution probabilities.
-  ///
-  /// Note that if a block wasn't originally predicated but was predicated due
-  /// to tail folding, the divisor will still be 1 because it will execute for
-  /// every iteration of the loop header.
-  inline uint64_t
-  getPredBlockCostDivisor(TargetTransformInfo::TargetCostKind CostKind,
-                          const BasicBlock *BB);
+  /// Returns branch_weights estimating how often the predicated block \p BB
+  /// executes relative to the loop header, or nullptr if \p BB is not
+  /// predicated or its probability is unknown.
+  MDNode *getEstimatedPredBlockWeights(const BasicBlock *BB);
 
   /// Returns true if an artificially high cost for emulated masked memrefs
   /// should be used.
@@ -1319,6 +1309,27 @@ public:
 
 private:
   unsigned NumPredStores = 0;
+
+  /// A helper function that returns how much we should divide the cost of a
+  /// predicated block by. Typically this is the reciprocal of the block
+  /// probability, i.e. if we return X we are assuming the predicated block will
+  /// execute once for every X iterations of the loop header so the block should
+  /// only contribute 1/X of its cost to the total cost calculation, but when
+  /// optimizing for code size it will just be 1 as code size costs don't depend
+  /// on execution probabilities.
+  ///
+  /// Note that if a block wasn't originally predicated but was predicated due
+  /// to tail folding, the divisor will still be 1 because it will execute for
+  /// every iteration of the loop header.
+  inline uint64_t
+  getPredBlockCostDivisor(TargetTransformInfo::TargetCostKind CostKind,
+                          const BasicBlock *BB);
+
+  /// Returns the reciprocal of the estimated probability that predicated block
+  /// \p BB executes, from block frequency info (which incorporates branch
+  /// weights when present). Returns 1 if \p BB is not predicated or has unknown
+  /// (zero) frequency.
+  uint64_t getReciprocalPredBlockProbability(const BasicBlock *BB);
 
   /// VF selection state independent of cost-modeling decisions.
   VFSelectionContext &Config;
@@ -2504,6 +2515,11 @@ uint64_t LoopVectorizationCostModel::getPredBlockCostDivisor(
     TargetTransformInfo::TargetCostKind CostKind, const BasicBlock *BB) {
   if (CostKind == TTI::TCK_CodeSize)
     return 1;
+  return getReciprocalPredBlockProbability(BB);
+}
+
+uint64_t LoopVectorizationCostModel::getReciprocalPredBlockProbability(
+    const BasicBlock *BB) {
   // If the block wasn't originally predicated then return early to avoid
   // computing BlockFrequencyInfo unnecessarily.
   if (!Legal->blockNeedsPredication(BB))
@@ -2514,7 +2530,24 @@ uint64_t LoopVectorizationCostModel::getPredBlockCostDivisor(
   uint64_t BBFreq = getBFI().getBlockFreq(BB).getFrequency();
   assert(HeaderFreq >= BBFreq &&
          "Header has smaller block freq than dominated BB?");
+  // Treat a zero frequency (e.g. a block BFI considers unreachable) as
+  // always-executed, avoiding a division by zero.
+  if (BBFreq == 0)
+    return 1;
   return std::round((double)HeaderFreq / BBFreq);
+}
+
+MDNode *
+LoopVectorizationCostModel::getEstimatedPredBlockWeights(const BasicBlock *BB) {
+  // A block entered on true and skipped on false with reciprocal probability R
+  // maps to weights {1, R - 1}. Saturate R - 1 to the 32-bit range MDBuilder
+  // requires.
+  uint64_t R = getReciprocalPredBlockProbability(BB);
+  if (R <= 1)
+    return nullptr;
+  MDBuilder MDB(TheLoop->getHeader()->getContext());
+  return MDB.createBranchWeights(
+      1, std::min<uint64_t>(R - 1, std::numeric_limits<uint32_t>::max()));
 }
 
 static Intrinsic::ID getMaskedDivRemIntrinsic(unsigned Opcode) {
@@ -5613,8 +5646,17 @@ void VPCostContext::invalidateWideningDecision(Instruction *I,
                          LoopVectorizationCostModel::CM_InvalidatedDecision, 0);
 }
 
-uint64_t VPCostContext::getPredBlockCostDivisor(BasicBlock *BB) const {
-  return CM.getPredBlockCostDivisor(CostKind, BB);
+uint64_t
+VPCostContext::getPredBlockCostDivisor(const VPBasicBlock *VPBB) const {
+  // Code size is independent of execution probability.
+  if (CostKind == TTI::TCK_CodeSize)
+    return 1;
+  uint64_t TotalWeight;
+  if (MDNode *BW = VPBB->getBranchWeights()) {
+    if (BW && extractProfTotalWeight(BW, TotalWeight))
+      return TotalWeight;
+  }
+  return 1;
 }
 
 bool VPCostContext::willBeScalarized(Instruction *I, ElementCount VF) const {
@@ -6514,10 +6556,19 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
   }
 
   // Create initial base VPlan0, to serve as common starting point for all
-  // candidates built later for specific VF ranges.
-  auto VPlan0 = VPlanTransforms::buildVPlan0(OrigLoop, *LI,
-                                             Legal->getWidestInductionType(),
-                                             PSE, LVer ? &*LVer : nullptr);
+  // candidates built later for specific VF ranges. For inner loops, seed each
+  // block's branch_weights from its estimated execution probability, recorded
+  // on the block and later used to scale predicated blocks' costs. The
+  // VPlan-native path is skipped: it creates no replicate regions and breaks
+  // the single-header frequency assumption.
+  auto GetBranchWeights = [this](const BasicBlock *BB) {
+    return CM.getEstimatedPredBlockWeights(BB);
+  };
+  auto VPlan0 = VPlanTransforms::buildVPlan0(
+      OrigLoop, *LI, Legal->getWidestInductionType(), PSE,
+      LVer ? &*LVer : nullptr,
+      IsInnerLoop ? function_ref<MDNode *(const BasicBlock *)>(GetBranchWeights)
+                  : nullptr);
 
   VPDominatorTree VPDT(*VPlan0);
   if (const LoopAccessInfo *LAI = Legal->getLAI())

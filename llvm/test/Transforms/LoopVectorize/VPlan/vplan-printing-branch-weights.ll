@@ -22,7 +22,7 @@ define void @predicated_store_profile_metadata(ptr %a, i32 %n) {
 ; CHECK-NEXT:    EMIT branch-on-cond ir<%cmp>
 ; CHECK-NEXT:  Successor(s): if.then, latch
 ; CHECK-EMPTY:
-; CHECK-NEXT:  if.then:
+; CHECK-NEXT:  if.then: (!prof {1, 3})
 ; CHECK-NEXT:    EMIT store ir<0>, ir<%gep>
 ; CHECK-NEXT:  Successor(s): latch
 ; CHECK-EMPTY:
@@ -83,7 +83,7 @@ define void @two_predicated_blocks(ptr noalias %a, i32 %n) {
 ; CHECK-NEXT:    EMIT branch-on-cond ir<%c1>
 ; CHECK-NEXT:  Successor(s): then.1, if.2
 ; CHECK-EMPTY:
-; CHECK-NEXT:  then.1:
+; CHECK-NEXT:  then.1: (!prof {1, 3})
 ; CHECK-NEXT:    EMIT store ir<0>, ir<%gep>
 ; CHECK-NEXT:  Successor(s): if.2
 ; CHECK-EMPTY:
@@ -92,7 +92,7 @@ define void @two_predicated_blocks(ptr noalias %a, i32 %n) {
 ; CHECK-NEXT:    EMIT branch-on-cond ir<%c2>
 ; CHECK-NEXT:  Successor(s): then.2, latch
 ; CHECK-EMPTY:
-; CHECK-NEXT:  then.2:
+; CHECK-NEXT:  then.2: (!prof {1, 7})
 ; CHECK-NEXT:    EMIT store ir<1>, ir<%gep>
 ; CHECK-NEXT:  Successor(s): latch
 ; CHECK-EMPTY:

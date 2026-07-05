@@ -1,5 +1,5 @@
 ; RUN: opt -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=1 \
-; RUN:     -vplan-print-after=simplifyRecipes -disable-output %s 2>&1 \
+; RUN:     -vplan-print-after=simplifyRecipes -disable-output -vplan-print-metadata=false %s 2>&1 \
 ; RUN:   | FileCheck --strict-whitespace %s
 ; REQUIRES: asserts
 

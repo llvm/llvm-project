@@ -351,9 +351,10 @@ struct VPCostContext {
   /// transform replaced the original recipe.
   void invalidateWideningDecision(Instruction *I, ElementCount VF);
 
-  /// \returns how much the cost of a predicated block should be divided by.
-  /// Forwards to LoopVectorizationCostModel::getPredBlockCostDivisor.
-  uint64_t getPredBlockCostDivisor(BasicBlock *BB) const;
+  /// \returns how much the cost of the predicated block \p VPBB should be
+  /// divided by to account for it only executing conditionally. Returns 1 (no
+  /// scaling) if the probability is unknown or when computing code size.
+  uint64_t getPredBlockCostDivisor(const VPBasicBlock *VPBB) const;
 
   /// Returns true if \p I is known to be scalarized at \p VF.
   bool willBeScalarized(Instruction *I, ElementCount VF) const;

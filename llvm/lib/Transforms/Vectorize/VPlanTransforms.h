@@ -28,6 +28,7 @@ class InductionDescriptor;
 class Instruction;
 class Loop;
 class LoopVersioning;
+class MDNode;
 class OptimizationRemarkEmitter;
 class PHINode;
 class ScalarEvolution;
@@ -140,9 +141,10 @@ struct VPlanTransforms {
   ///    \   |
   ///     \  v
   ///      >[ ]     <-- original loop exit block(s), wrapped in VPIRBasicBlocks.
-  LLVM_ABI_FOR_TEST static std::unique_ptr<VPlan>
-  buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
-              PredicatedScalarEvolution &PSE, LoopVersioning *LVer = nullptr);
+  LLVM_ABI_FOR_TEST static std::unique_ptr<VPlan> buildVPlan0(
+      Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
+      PredicatedScalarEvolution &PSE, LoopVersioning *LVer = nullptr,
+      function_ref<MDNode *(const BasicBlock *)> GetBranchWeights = nullptr);
 
   /// Replace VPPhi recipes in \p Plan's header with corresponding
   /// VPHeaderPHIRecipe subclasses for inductions, reductions, and

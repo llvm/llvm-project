@@ -4371,6 +4371,10 @@ protected:
   /// The VPRecipes held in the order of output instructions to generate.
   RecipeListTy Recipes;
 
+  /// Estimated branch_weights for this block, in the {TakenWeight,
+  /// NotTakenWeight}.
+  MDNode *BranchWeights = nullptr;
+
   VPBasicBlock(const unsigned char BlockSC, const Twine &Name = "")
       : VPBlockBase(BlockSC, Name.str()) {}
 
@@ -4408,6 +4412,13 @@ public:
 
   /// Returns a reference to the list of recipes.
   RecipeListTy &getRecipeList() { return Recipes; }
+
+  /// Returns the estimated branch_weights for this block, or null if none.
+  MDNode *getBranchWeights() const { return BranchWeights; }
+
+  /// Records the estimated branch_weights for this block. See \ref
+  /// BranchWeights.
+  void setBranchWeights(MDNode *BW) { BranchWeights = BW; }
 
   /// Returns a pointer to a member of the recipe list.
   static RecipeListTy VPBasicBlock::*getSublistAccess(VPRecipeBase *) {

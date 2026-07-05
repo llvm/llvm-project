@@ -37,6 +37,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -69,6 +70,11 @@ const char LLVMLoopVectorizeFollowupEpilogue[] =
 extern cl::opt<unsigned> ForceTargetInstructionCost;
 
 extern cl::opt<unsigned> NumberOfStoresToPredicate;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+// Defined in VPlanRecipes.cpp; also gates printing of a block's branch weights.
+extern cl::opt<bool> VPlanPrintMetadata;
+#endif
 
 static cl::opt<bool> PrintVPlansInDotFormat(
     "vplan-print-in-dot-format", cl::Hidden,
@@ -538,6 +544,7 @@ void VPBasicBlock::execute(VPTransformState *State) {
 
 VPBasicBlock *VPBasicBlock::clone() {
   auto *NewBlock = getPlan()->createVPBasicBlock(getName());
+  NewBlock->setBranchWeights(getBranchWeights());
   for (VPRecipeBase &R : *this)
     NewBlock->appendRecipe(R.clone());
   return NewBlock;
@@ -563,6 +570,7 @@ VPBasicBlock *VPBasicBlock::splitAt(iterator SplitAt) {
 
   // Create new empty block after the block to split.
   auto *SplitBlock = getPlan()->createVPBasicBlock(getName() + ".split");
+  SplitBlock->setBranchWeights(getBranchWeights());
   VPBlockUtils::insertBlockAfter(SplitBlock, this);
 
   // If this is the exiting block, make the split the new exiting block.
@@ -672,7 +680,20 @@ void VPBlockBase::printSuccessors(raw_ostream &O, const Twine &Indent) const {
 
 void VPBasicBlock::print(raw_ostream &O, const Twine &Indent,
                          VPSlotTracker &SlotTracker) const {
-  O << Indent << getName() << ":\n";
+  O << Indent << getName() << ":";
+  // Print the block's estimated branch weights, if any, on the header line.
+  // The weights are printed by value rather than as a metadata operand
+  // reference: the estimated node is not attached to any IR instruction, so it
+  // has no stable slot number in the module and printAsOperand would emit its
+  // (non-deterministic) address.
+  if (SmallVector<uint32_t, 2> Weights;
+      BranchWeights && VPlanPrintMetadata &&
+      extractBranchWeights(BranchWeights, Weights)) {
+    O << " (!prof {";
+    interleaveComma(Weights, O, [&](uint32_t W) { O << W; });
+    O << "})";
+  }
+  O << "\n";
 
   auto RecipeIndent = Indent + "  ";
   for (const VPRecipeBase &Recipe : *this) {
