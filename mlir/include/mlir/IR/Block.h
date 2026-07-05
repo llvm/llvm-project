@@ -52,6 +52,19 @@ public:
   /// model.
   Region *getParent() const;
 
+  /// Return a number uniquely identifying this block within its parent region.
+  /// The number is assigned when the block is added to a region and is stable
+  /// until the region's blocks are renumbered (see Region::renumberBlocks and
+  /// Region::getBlockNumberEpoch). Only valid for a block that is in a region.
+  ///
+  /// Unlike computeBlockNumber(), this is O(1) and stable; it exists so that
+  /// generic graph algorithms (e.g. LoopInfo, DominatorTree) can index blocks
+  /// by number.
+  unsigned getNumber() const {
+    assert(getParent() && "only blocks in a region have a valid number");
+    return blockNumber;
+  }
+
   /// Returns the closest surrounding operation that contains this block.
   Operation *getParentOp();
 
@@ -422,6 +435,10 @@ private:
   /// the operations within this block have a valid ordering.
   llvm::PointerIntPair<Region *, /*IntBits=*/1, bool> parentValidOpOrderPair;
 
+  /// Unique number of this block within its parent region, assigned when the
+  /// block is added to a region. See getNumber().
+  unsigned blockNumber = 0;
+
   /// This is the list of operations in the block.
   OpListType operations;
 
@@ -432,6 +449,7 @@ private:
   void operator=(Block &) = delete;
 
   friend struct llvm::ilist_traits<Block>;
+  friend class Region;
 };
 
 raw_ostream &operator<<(raw_ostream &, Block &);

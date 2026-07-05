@@ -194,7 +194,9 @@ Region *llvm::ilist_traits<::mlir::Block>::getParentRegion() {
 /// We keep the region pointer up to date.
 void llvm::ilist_traits<::mlir::Block>::addNodeToList(Block *block) {
   assert(!block->getParent() && "already in a region!");
-  block->parentValidOpOrderPair.setPointer(getParentRegion());
+  Region *region = getParentRegion();
+  block->parentValidOpOrderPair.setPointer(region);
+  block->blockNumber = region->nextBlockNumber++;
 }
 
 /// This is a trait method invoked when an operation is removed from a
@@ -214,9 +216,19 @@ void llvm::ilist_traits<::mlir::Block>::transferNodesFromList(
   if (curParent == otherList.getParentRegion())
     return;
 
-  // Update the 'parent' member of each Block.
-  for (; first != last; ++first)
+  // Update the 'parent' member of each Block and give it a number in its new
+  // region.
+  for (; first != last; ++first) {
     first->parentValidOpOrderPair.setPointer(curParent);
+    first->blockNumber = curParent->nextBlockNumber++;
+  }
+}
+
+void Region::renumberBlocks() {
+  nextBlockNumber = 0;
+  for (Block &block : *this)
+    block.blockNumber = nextBlockNumber++;
+  ++blockNumberEpoch;
 }
 
 //===----------------------------------------------------------------------===//

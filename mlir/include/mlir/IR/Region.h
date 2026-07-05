@@ -73,6 +73,22 @@ public:
   }
 
   //===--------------------------------------------------------------------===//
+  // Block numbering
+  //===--------------------------------------------------------------------===//
+
+  /// One past the largest block number handed out in this region; block numbers
+  /// lie in [0, getMaxBlockNumber()). See Block::getNumber().
+  unsigned getMaxBlockNumber() const { return nextBlockNumber; }
+
+  /// A counter bumped whenever the region's block numbers are reassigned
+  /// (renumberBlocks), so users indexing by block number can detect staleness.
+  unsigned getBlockNumberEpoch() const { return blockNumberEpoch; }
+
+  /// Renumber the blocks in this region 0..N in iteration order, compacting the
+  /// number space and bumping the block-number epoch.
+  void renumberBlocks();
+
+  //===--------------------------------------------------------------------===//
   // Argument Handling
   //===--------------------------------------------------------------------===//
 
@@ -343,6 +359,13 @@ private:
 
   /// This is the object we are part of.
   Operation *container = nullptr;
+
+  /// Next block number to hand out, and an epoch bumped when the block numbers
+  /// are reassigned by renumberBlocks(). See Block::getNumber().
+  unsigned nextBlockNumber = 0;
+  unsigned blockNumberEpoch = 0;
+
+  friend struct llvm::ilist_traits<Block>;
 };
 
 /// This class provides an abstraction over the different types of ranges over
