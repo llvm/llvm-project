@@ -27,6 +27,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -1162,7 +1163,10 @@ PreservedAnalyses X86AsmPrinterBeginPass::run(Module &M,
   AsmPrinter.GetPSI = [&MAM](Module &M) {
     return &MAM.getResult<ProfileSummaryAnalysis>(M);
   };
-  AsmPrinter.GetSDPI = [](Module &M) { return nullptr; };
+  AsmPrinter.GetSDPI = [&MAM](Module &M) {
+    return &MAM.getResult<StaticDataProfileInfoAnalysis>(M)
+                .getStaticDataProfileInfo();
+  };
   setupModuleAsmPrinter(M, MAM, AsmPrinter);
   AsmPrinter.doInitialization(M);
   return PreservedAnalyses::all();
@@ -1178,7 +1182,12 @@ PreservedAnalyses X86AsmPrinterPass::run(MachineFunction &MF,
     return MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
         .getCachedResult<ProfileSummaryAnalysis>(M);
   };
-  AsmPrinter.GetSDPI = [](Module &M) { return nullptr; };
+  AsmPrinter.GetSDPI = [&MFAM, &MF](Module &M) {
+    return &MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+                .getCachedResult<StaticDataProfileInfoAnalysis>(
+                    *MF.getFunction().getParent())
+                ->getStaticDataProfileInfo();
+  };
   setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
   AsmPrinter.runOnMachineFunction(MF);
   return PreservedAnalyses::all();
@@ -1191,7 +1200,10 @@ PreservedAnalyses X86AsmPrinterEndPass::run(Module &M,
   AsmPrinter.GetPSI = [&MAM](Module &M) {
     return &MAM.getResult<ProfileSummaryAnalysis>(M);
   };
-  AsmPrinter.GetSDPI = [](Module &M) { return nullptr; };
+  AsmPrinter.GetSDPI = [&MAM](Module &M) {
+    return &MAM.getResult<StaticDataProfileInfoAnalysis>(M)
+                .getStaticDataProfileInfo();
+  };
   setupModuleAsmPrinter(M, MAM, AsmPrinter);
   AsmPrinter.doFinalization(M);
   return PreservedAnalyses::all();
