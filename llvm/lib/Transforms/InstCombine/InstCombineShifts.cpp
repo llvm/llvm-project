@@ -1760,13 +1760,8 @@ InstCombinerImpl::foldVariableSignZeroExtensionOfVariableHighBitExtract(
 
   // Check that constant C is a splat of the element-wise bitwidth of V.
   auto BitWidthSplat = [](Constant *C, Value *V) {
-    auto CBitWidth = C->getType()->getScalarSizeInBits();
-    auto VBitWidth = V->getType()->getScalarSizeInBits();
-    if (!llvm::isUIntN(CBitWidth, VBitWidth))
-      return false;
-
-    return match(C, m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_EQ,
-                                       APInt(CBitWidth, VBitWidth)));
+    return match(C,
+                 m_SpecificIntAllowPoison(V->getType()->getScalarSizeInBits()));
   };
 
   // It should look like variable-length sign-extension on the outside:
