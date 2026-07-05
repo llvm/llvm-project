@@ -279,6 +279,7 @@ LLVM_ABI BasicBlock *SplitEdge(BasicBlock *From, BasicBlock *To,
 /// \param Succ           original successor block
 /// \param SuccIdx        index of the original successor in the callbr
 ///                       instruction
+/// \param CallBrTarget   optional \p BasicBlock to reuse for the split
 /// \param DTU            optional \p DomTreeUpdater for updating the
 ///                       dominator tree
 /// \param CI             optional \p CycleInfo for updating cycle membership
@@ -292,6 +293,7 @@ LLVM_ABI BasicBlock *SplitEdge(BasicBlock *From, BasicBlock *To,
 /// cycle info as needed.
 LLVM_ABI BasicBlock *
 SplitCallBrEdge(BasicBlock *CallBrBlock, BasicBlock *Succ, unsigned SuccIdx,
+                BasicBlock *CallBrTarget = nullptr,
                 DomTreeUpdater *DTU = nullptr, CycleInfo *CI = nullptr,
                 LoopInfo *LI = nullptr, bool *UpdatedLI = nullptr);
 

@@ -241,13 +241,11 @@ define void @callbr_duplicate_successors() {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    callbr void asm sideeffect "", "!i,!i"()
-; CHECK-NEXT:            to label [[LOOP_TARGET_EXIT:%.*]] [label [[LOOP]], label [[LOOP_TARGET_EXIT1:%.*]]]
+; CHECK-NEXT:            to label [[LOOP_TARGET_EXIT:%.*]] [label [[LOOP]], label [[LOOP_TARGET_EXIT]]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       loop.target.exit:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       loop.target.exit1:
-; CHECK-NEXT:    br label [[EXIT]]
 ;
 entry:
   br label %loop
