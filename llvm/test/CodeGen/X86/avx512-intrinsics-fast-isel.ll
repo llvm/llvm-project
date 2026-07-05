@@ -6895,7 +6895,7 @@ define i32 @test_mm512_reduce_mul_epi32(<8 x i64> %__W) nounwind {
 ; CHECK-LABEL: test_mm512_reduce_mul_epi32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; CHECK-NEXT:    vpmulld %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vpmulld %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -7000,7 +7000,7 @@ define i32 @test_mm512_mask_reduce_mul_epi32(i16 zeroext %__M, <8 x i64> %__W) n
 ; X86-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; X86-NEXT:    vmovdqa32 %zmm0, %zmm1 {%k1}
 ; X86-NEXT:    vextracti64x4 $1, %zmm1, %ymm0
-; X86-NEXT:    vpmulld %zmm0, %zmm1, %zmm0
+; X86-NEXT:    vpmulld %ymm0, %ymm1, %ymm0
 ; X86-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; X86-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -7017,7 +7017,7 @@ define i32 @test_mm512_mask_reduce_mul_epi32(i16 zeroext %__M, <8 x i64> %__W) n
 ; X64-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; X64-NEXT:    vmovdqa32 %zmm0, %zmm1 {%k1}
 ; X64-NEXT:    vextracti64x4 $1, %zmm1, %ymm0
-; X64-NEXT:    vpmulld %zmm0, %zmm1, %zmm0
+; X64-NEXT:    vpmulld %ymm0, %ymm1, %ymm0
 ; X64-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; X64-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
