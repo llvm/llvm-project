@@ -1383,8 +1383,7 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
 
     // 1 << X --> X + 1 if 0 <= X <= 1.
     if (computeKnownBits(Op1, &I).countMaxActiveBits() <= 1) {
-      auto *Add = BinaryOperator::CreateAdd(Op1, ConstantInt::get(Ty, 1));
-      Add->setHasNoUnsignedWrap();
+      auto *Add = BinaryOperator::CreateNUWAdd(Op1, ConstantInt::get(Ty, 1));
       // The result can be as large as 2, which is only representable as a
       // non-negative signed value when Ty has more than 2 bits (otherwise
       // the constant 2 is itself already negative, e.g. i2 2 == -2).
@@ -1421,8 +1420,7 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
   // 2 >> X --> 2 - X if 0 <= X <= 1.
   if (match(Op0, m_SpecificInt(2)) &&
       computeKnownBits(Op1, &I).countMaxActiveBits() <= 1) {
-    auto *Sub = BinaryOperator::CreateSub(ConstantInt::get(Ty, 2), Op1);
-    Sub->setHasNoUnsignedWrap();
+    auto *Sub = BinaryOperator::CreateNUWSub(ConstantInt::get(Ty, 2), Op1);
     // The result can be as large as 2, which is only representable as a
     // non-negative signed value when Ty has more than 2 bits (otherwise
     // the constant 2 is itself already negative, e.g. i2 2 == -2).
