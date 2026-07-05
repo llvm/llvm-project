@@ -183,8 +183,12 @@ static void reconnectChildLoops(LoopInfo &LI, Loop *ParentLoop, Loop *NewLoop,
                                     : LI.getTopLevelLoopsVector();
   // Any candidate is a child iff its header is owned by the new loop. Move all
   // the children to a new vector.
+  // The new loop's block list is already populated but its subloops are not yet
+  // attached, so query the block list directly rather than contains(), which
+  // reflects the not-yet-updated loop nesting.
   auto FirstChild = llvm::partition(CandidateLoops, [&](Loop *L) {
-    return NewLoop == L || !NewLoop->contains(L->getHeader());
+    return NewLoop == L ||
+           !llvm::is_contained(NewLoop->getBlocks(), L->getHeader());
   });
   SmallVector<Loop *, 8> ChildLoops(FirstChild, CandidateLoops.end());
   CandidateLoops.erase(FirstChild, CandidateLoops.end());

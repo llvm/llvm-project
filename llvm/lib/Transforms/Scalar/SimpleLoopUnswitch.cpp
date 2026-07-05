@@ -515,10 +515,6 @@ static void hoistLoopToNewParent(Loop &L, BasicBlock &Preheader,
                      return BB == &Preheader || L.contains(BB);
                    });
 
-    OldContainingL->getBlocksSet().erase(&Preheader);
-    for (BasicBlock *BB : L.blocks())
-      OldContainingL->getBlocksSet().erase(BB);
-
     // Because we just hoisted a loop out of this one, we have essentially
     // created new exit paths from it. That means we need to form LCSSA PHI
     // nodes for values used in the no-longer-nested loop.
@@ -1836,8 +1832,6 @@ static void deleteDeadBlocksFromLoop(Loop &L,
 
   // Walk from this loop up through its parents removing all of the dead blocks.
   for (Loop *ParentL = &L; ParentL; ParentL = ParentL->getParentLoop()) {
-    for (auto *BB : DeadBlockSet)
-      ParentL->getBlocksSet().erase(BB);
     llvm::erase_if(ParentL->getBlocksVector(),
                    [&](BasicBlock *BB) { return DeadBlockSet.count(BB); });
   }
@@ -2036,9 +2030,6 @@ static bool rebuildLoopAfterUnswitch(Loop &L, ArrayRef<BasicBlock *> ExitBlocks,
     // Remove this loop's (original) blocks from all of the intervening loops.
     for (Loop *IL = L.getParentLoop(); IL != ParentL;
          IL = IL->getParentLoop()) {
-      IL->getBlocksSet().erase(PH);
-      for (auto *BB : L.blocks())
-        IL->getBlocksSet().erase(BB);
       llvm::erase_if(IL->getBlocksVector(), [&](BasicBlock *BB) {
         return BB == PH || L.contains(BB);
       });
@@ -2067,8 +2058,6 @@ static bool rebuildLoopAfterUnswitch(Loop &L, ArrayRef<BasicBlock *> ExitBlocks,
     UnloopedBlocks.insert(PH);
 
   // Now erase these blocks from the loop.
-  for (auto *BB : make_range(BlocksSplitI, Blocks.end()))
-    L.getBlocksSet().erase(BB);
   Blocks.erase(BlocksSplitI, Blocks.end());
 
   // Sort the exits in ascending loop depth, we'll work backwards across these
@@ -2083,8 +2072,6 @@ static bool rebuildLoopAfterUnswitch(Loop &L, ArrayRef<BasicBlock *> ExitBlocks,
 
   auto RemoveUnloopedBlocksFromLoop =
       [](Loop &L, SmallPtrSetImpl<BasicBlock *> &UnloopedBlocks) {
-        for (auto *BB : UnloopedBlocks)
-          L.getBlocksSet().erase(BB);
         llvm::erase_if(L.getBlocksVector(), [&](BasicBlock *BB) {
           return UnloopedBlocks.count(BB);
         });
