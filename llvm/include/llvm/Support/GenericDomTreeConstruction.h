@@ -66,7 +66,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
     unsigned Semi = 0;
     unsigned Label = 0;
     NodePtr IDom = nullptr;
-    SmallVector<unsigned, 4> ReverseChildren;
+    unsigned ReverseChildrenStart = 0; ///< Index in ReverseChildren vector.
   };
 
   // Number to node mapping is 1-based. Initialize the mapping to start with
@@ -77,6 +77,10 @@ template <typename DomTreeT> struct SemiNCAInfo {
   std::conditional_t<GraphHasNodeNumbers<NodePtr>, SmallVector<InfoRec, 64>,
                      DenseMap<NodePtr, InfoRec>>
       NodeInfos;
+
+  /// Reverse children of nodes; pairs of (DFSNum (predecessor), next-or-zero);
+  /// forms a linked list in this vector; first entry is sentinel.
+  SmallVector<std::pair<unsigned, unsigned>, 32> ReverseChildren = {{0, 0}};
 
   using UpdateT = typename DomTreeT::UpdateType;
   using UpdateKind = typename DomTreeT::UpdateKind;
@@ -209,7 +213,8 @@ template <typename DomTreeT> struct SemiNCAInfo {
     while (!WorkList.empty()) {
       const auto [BB, ParentNum] = WorkList.pop_back_val();
       auto &BBInfo = getNodeInfo(BB);
-      BBInfo.ReverseChildren.push_back(ParentNum);
+      ReverseChildren.emplace_back(ParentNum, BBInfo.ReverseChildrenStart);
+      BBInfo.ReverseChildrenStart = ReverseChildren.size() - 1;
 
       // Visited nodes always have positive DFS numbers.
       if (BBInfo.DFSNum != 0)
@@ -314,8 +319,11 @@ template <typename DomTreeT> struct SemiNCAInfo {
 
       // Initialize the semi dominator to point to the parent node.
       WInfo.Semi = WInfo.Parent;
-      for (unsigned N : WInfo.ReverseChildren) {
-        unsigned SemiU = NumToInfo[eval(N, i + 1, EvalStack, NumToInfo)]->Semi;
+      for (unsigned RCIdx = WInfo.ReverseChildrenStart; RCIdx != 0;) {
+        const auto &Entry = ReverseChildren[RCIdx];
+        RCIdx = Entry.second;
+        unsigned SemiU =
+            NumToInfo[eval(Entry.first, i + 1, EvalStack, NumToInfo)]->Semi;
         if (SemiU < WInfo.Semi)
           WInfo.Semi = SemiU;
       }
