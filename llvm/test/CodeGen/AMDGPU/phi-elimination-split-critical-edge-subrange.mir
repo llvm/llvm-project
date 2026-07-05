@@ -1,0 +1,42 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs -run-pass liveintervals,phi-node-elimination -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs -passes='require<live-intervals>,phi-node-elimination' -o - %s | FileCheck %s
+
+# PHIElimination splits the critical edge bb.0 -> bb.2 while LiveIntervals with
+# subranges are live. The PHI sources are subregisters (%r.sub0/%r.sub1) of a
+# 64-bit vreg that is live *through* the newly inserted split block (used in
+# bb.1). MachineBasicBlock::SplitCriticalEdge used to extend each subrange with
+# the parent range's VNInfo, overlapping the subrange's own value and asserting
+# in LiveRange::addSegment ("Cannot overlap two segments with differing
+# ValID's"). It must use the subrange's own VNInfo instead.
+
+---
+name: real_split_subrange
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: real_split_subrange
+  ; CHECK: bb.0:
+  ; CHECK: successors: %bb.3({{[^)]+}}), %bb.1
+  ; CHECK: bb.3:
+  ; CHECK: successors: %bb.2
+  ; CHECK: bb.2:
+  ; CHECK: S_ENDPGM
+  bb.0:
+    %r:vreg_64 = IMPLICIT_DEF
+    %c0:sreg_32 = IMPLICIT_DEF
+    %c1:sreg_32 = IMPLICIT_DEF
+    %const:vgpr_32 = IMPLICIT_DEF
+    S_CMP_EQ_U32 killed %c0:sreg_32, killed %c1:sreg_32, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    ; Use %r so it is live-out of bb.0 past the PHI (forces edge split).
+    %u0:vgpr_32 = V_ADD_F32_e64 0, %r.sub0:vreg_64, 0, %const:vgpr_32, 0, 0, implicit $mode, implicit $exec
+    %u1:vgpr_32 = V_ADD_F32_e64 0, %r.sub1:vreg_64, 0, %const:vgpr_32, 0, 0, implicit $mode, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.2:
+    %p0:vgpr_32 = PHI %r.sub0:vreg_64, %bb.0, %u0:vgpr_32, %bb.1
+    %p1:vgpr_32 = PHI %r.sub1:vreg_64, %bb.0, %u1:vgpr_32, %bb.1
+    S_ENDPGM 0, implicit %p0:vgpr_32, implicit %p1:vgpr_32
+...
