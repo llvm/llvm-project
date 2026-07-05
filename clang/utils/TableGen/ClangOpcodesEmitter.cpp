@@ -126,6 +126,7 @@ void ClangOpcodesEmitter::EmitInterpFnDispatchers(raw_ostream &OS, StringRef N,
     bool CanReturn = R->getValueAsBit("CanReturn");
     const auto &Args = R->getValueAsListOfDefs("Args");
     bool CanFail = R->getValueAsBit("CanFail");
+    bool PassOpPC = R->getValueAsBit("NeedsOpPC");
 
     if (Args.empty()) {
       if (CanReturn) {
@@ -142,7 +143,11 @@ void ClangOpcodesEmitter::EmitInterpFnDispatchers(raw_ostream &OS, StringRef N,
 
       OS << N;
       PrintTypes(OS, TS);
-      OS << "(S, S.PC)";
+      OS << "(S";
+      if (PassOpPC)
+        OS << ", S.PC)";
+      else
+        OS << ")";
 
       if (CanFail)
         OS << ") return false";
@@ -160,7 +165,8 @@ void ClangOpcodesEmitter::EmitInterpFnDispatchers(raw_ostream &OS, StringRef N,
 
     OS << "  {\n";
 
-    OS << "    CodePtr OpPC = S.PC;\n";
+    if (PassOpPC)
+      OS << "    CodePtr OpPC = S.PC;\n";
 
     // Emit calls to read arguments.
     for (size_t I = 0, N = Args.size(); I < N; ++I) {
@@ -182,7 +188,8 @@ void ClangOpcodesEmitter::EmitInterpFnDispatchers(raw_ostream &OS, StringRef N,
     OS << N;
     PrintTypes(OS, TS);
     OS << "(S";
-    OS << ", OpPC";
+    if (PassOpPC)
+      OS << ", OpPC";
     for (size_t I = 0, N = Args.size(); I < N; ++I)
       OS << ", V" << I;
 
@@ -431,10 +438,13 @@ void ClangOpcodesEmitter::EmitEval(raw_ostream &OS, StringRef N,
               if (N == "EndSpeculation") {
                 OS << "return EndSpeculation(S);\n";
               } else {
+                bool PassOpPC = R->getValueAsBit("NeedsOpPC");
 
                 OS << "  return " << N;
                 PrintTypes(OS, TS);
-                OS << "(S, OpPC";
+                OS << "(S";
+                if (PassOpPC)
+                  OS << ", OpPC";
                 for (size_t I = 0, N = Args.size(); I < N; ++I)
                   OS << ", A" << I;
                 OS << ");\n";
