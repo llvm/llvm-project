@@ -84,7 +84,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
       NodeInfos;
 
   /// Reverse children of nodes; pairs of (DFSNum (predecessor), next-or-zero);
-  /// forms a linked list in this vector; first entry is sentinel.
+  /// forms a linked list in this vector.
   SmallVector<std::pair<unsigned, unsigned>, 32> ReverseChildren;
 
   using UpdateT = typename DomTreeT::UpdateType;
