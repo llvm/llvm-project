@@ -3268,11 +3268,8 @@ SDValue SparcTargetLowering::PerformBSWAPCombine(SDNode *N,
   LoadSDNode *LN = dyn_cast<LoadSDNode>(Op.getNode());
 
   bool IsLittleEndian = DAG.getDataLayout().isLittleEndian();
-  bool IsAlignedLoad =
-      LN && ISD::isNormalLoad(Op.getNode()) &&
-      (VT.isZeroSized() ||
-       LN->getAlign() >= DAG.getDataLayout().getABITypeAlign(Ty)) &&
-      (LN->getAlign() >= VT.getScalarStoreSize());
+  bool IsAlignedLoad = LN && ISD::isNormalLoad(Op.getNode()) &&
+                       LN->getAlign() >= VT.getScalarStoreSize();
 
   // Turn BSWAP (aligned-LOAD) -> ld*a #ASI_P(_L) on V9.
   if (Subtarget->isV9() && IsAlignedLoad && Op.getNode()->hasOneUse() &&
@@ -3311,11 +3308,7 @@ SDValue SparcTargetLowering::PerformSTORECombine(SDNode *N,
   StoreSDNode *SN = dyn_cast<StoreSDNode>(N);
 
   bool IsLittleEndian = DAG.getDataLayout().isLittleEndian();
-  bool IsAlignedStore =
-      SN &&
-      (VT.isZeroSized() ||
-       SN->getAlign() >= DAG.getDataLayout().getABITypeAlign(Ty)) &&
-      (SN->getAlign() >= VT.getScalarStoreSize());
+  bool IsAlignedStore = SN && SN->getAlign() >= VT.getScalarStoreSize();
 
   // Turn aligned-STORE (BSWAP) -> st*a #ASI_P(_L) on V9.
   if (Subtarget->isV9() && Opcode == ISD::BSWAP && Op.getNode()->hasOneUse() &&
