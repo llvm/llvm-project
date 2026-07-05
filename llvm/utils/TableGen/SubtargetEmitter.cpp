@@ -350,10 +350,8 @@ unsigned SubtargetEmitter::cpuKeyValues(raw_ostream &OS,
     OS << ", ";
     printFeatureMask(OS, TuneFeatureList, FeatureMap);
 
-    // Emit the scheduler model pointer.
-    const std::string &ProcModelName =
-        SchedModels.getModelForProc(Processor).ModelName;
-    OS << ", &" << ProcModelName << " },\n";
+    // Emit the scheduler model index.
+    OS << ", " << SchedModels.getModelIndexForProc(Processor) << " },\n";
   }
 
   // End processor table.
@@ -1470,10 +1468,13 @@ void SubtargetEmitter::emitProcessorModels(raw_ostream &OS) {
       PrintFatalError(PM.ModelDef->getLoc(),
                       "SchedMachineModel defines "
                       "ProcResources without defining WriteRes SchedWriteRes");
+  }
 
+  OS << "\n";
+  OS << "extern const llvm::MCSchedModel " << Target << "SchedModels[] = {\n";
+  for (const CodeGenProcModel &PM : SchedModels.procModels()) {
     // Begin processor itinerary properties
-    OS << "\n";
-    OS << "static const llvm::MCSchedModel " << PM.ModelName << " = {\n";
+    OS << "{ // " << PM.ModelName << "\n";
     emitProcessorProp(OS, PM.ModelDef, "IssueWidth", ',');
     emitProcessorProp(OS, PM.ModelDef, "MicroOpBufferSize", ',');
     emitProcessorProp(OS, PM.ModelDef, "LoopMicroOpBufferSize", ',');
@@ -1518,8 +1519,9 @@ void SubtargetEmitter::emitProcessorModels(raw_ostream &OS) {
       OS << "  &" << PM.ModelName << "ExtraInfo,\n";
     else
       OS << "  nullptr // No extra processor descriptor\n";
-    OS << "};\n";
+    OS << "  },\n";
   }
+  OS << "};\n";
 }
 
 //
@@ -2050,11 +2052,12 @@ void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
      << "    ArrayRef<StringRef> PN,\n"
      << "    ArrayRef<SubtargetFeatureKV> PF,\n"
      << "    ArrayRef<SubtargetSubTypeKV> PD,\n"
+     << "    const MCSchedModel *PSM,\n"
      << "    const MCWriteProcResEntry *WPR,\n"
      << "    const MCWriteLatencyEntry *WL,\n"
      << "    const MCReadAdvanceEntry *RA, const InstrStage *IS,\n"
      << "    const unsigned *OC, const unsigned *FP) :\n"
-     << "      MCSubtargetInfo(TT, CPU, TuneCPU, FS, PN, PF, PD,\n"
+     << "      MCSubtargetInfo(TT, CPU, TuneCPU, FS, PN, PF, PD, PSM,\n"
      << "                      WPR, WL, RA, IS, OC, FP) { }\n\n"
      << "  unsigned resolveVariantSchedClass(unsigned SchedClass,\n"
      << "      const MCInst *MI, const MCInstrInfo *MCII,\n"
@@ -2140,9 +2143,9 @@ SubtargetEmitter::emitMCDesc(raw_ostream &OS, const FeatureMapTy &FeatureMap) {
   else
     OS << "{}, ";
   if (Res.NumProcs)
-    OS << Target << "SubTypeKV, ";
+    OS << Target << "SubTypeKV, " << Target << "SchedModels, ";
   else
-    OS << "{}, ";
+    OS << "{}, nullptr, ";
   OS << '\n';
   OS.indent(22);
   OS << Target << "WriteProcResTable, " << Target << "WriteLatencyTable, "
@@ -2246,6 +2249,7 @@ void SubtargetEmitter::emitCtor(raw_ostream &OS, MCDescInfo DescInfo) {
        << Target << "FeatureKVStorage;\n";
   }
   OS << "extern const llvm::SubtargetSubTypeKV " << Target << "SubTypeKV[];\n";
+  OS << "extern const llvm::MCSchedModel " << Target << "SchedModels[];\n";
   OS << "extern const llvm::MCWriteProcResEntry " << Target
      << "WriteProcResTable[];\n";
   OS << "extern const llvm::MCWriteLatencyEntry " << Target
@@ -2276,10 +2280,12 @@ void SubtargetEmitter::emitCtor(raw_ostream &OS, MCDescInfo DescInfo) {
     OS << "ArrayRef(" << Target << "FeatureKVStorage.Features), ";
   else
     OS << "{}, ";
-  if (DescInfo.NumProcs)
-    OS << "ArrayRef(" << Target << "SubTypeKV, " << DescInfo.NumProcs << "), ";
-  else
-    OS << "{}, ";
+  if (DescInfo.NumProcs) {
+    OS << "ArrayRef(" << Target << "SubTypeKV, " << DescInfo.NumProcs << "), "
+       << Target << "SchedModels, ";
+  } else {
+    OS << "{}, nullptr, ";
+  }
   OS << '\n';
   OS.indent(24);
   OS << Target << "WriteProcResTable, " << Target << "WriteLatencyTable, "

@@ -44,7 +44,8 @@ std::unique_ptr<MCContext> createMCContext(const MCAsmInfo &AsmInfo) {
                    /*EnvironmentStr=*/"elf");
   static MCRegisterInfo MRI;
   static const MCSubtargetInfo STI(TheTriple, "", "", "", {}, {}, {}, nullptr,
-                                   nullptr, nullptr, nullptr, nullptr, nullptr);
+                                   nullptr, nullptr, nullptr, nullptr, nullptr,
+                                   nullptr);
   return std::make_unique<MCContext>(TheTriple, AsmInfo, MRI, STI, nullptr,
                                      false);
 }
