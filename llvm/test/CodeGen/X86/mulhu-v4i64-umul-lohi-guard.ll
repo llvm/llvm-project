@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx2     | FileCheck %s --check-prefixes=AVX2
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512f  | FileCheck %s --check-prefixes=AVX512
 
-; Step 1 guard for the vXi64 MULHU lowering. The `zext to i128 / mul / lshr 64 /
+; Guard for the vXi64 MULHU lowering. The `zext to i128 / mul / lshr 64 /
 ; trunc` idiom below is exactly what the loop vectorizer emits for a full
 ; 128-bit product (e.g. a wyhash-style `lo ^ hi` mix). When BOTH halves are
 ; used (UMUL_LOHI), vectorizing the high half via the vpmuludq schoolbook loses
