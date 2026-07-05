@@ -30,6 +30,9 @@ public:
   ~LLDBServerMockAcceleratorPlugin() override;
 
   llvm::StringRef GetPluginName() override;
+  llvm::StringRef GetDynamicLoaderPluginName() override {
+    return "accelerator-gdb-remote";
+  }
   std::optional<AcceleratorActions> GetInitializeActions() override;
   llvm::Expected<AcceleratorBreakpointHitResponse>
   BreakpointWasHit(AcceleratorBreakpointHitArgs &args) override;

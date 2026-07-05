@@ -4563,7 +4563,9 @@ std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
     ret.push_back("address-spaces+");
     m_address_space_suffix_supported = true;
   }
-  if (!m_accelerator_plugins.empty())
+  if (!m_accelerator_plugins.empty() ||
+      (m_connection_accelerator_plugin &&
+       !m_connection_accelerator_plugin->GetDynamicLoaderPluginName().empty()))
     ret.push_back("accelerator-plugins+");
 
   // check for client features
@@ -4667,14 +4669,20 @@ void GDBRemoteCommunicationServerLLGS::InstallPlugin(
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_jAcceleratorPluginInitialize(
     StringExtractorGDBRemote &) {
-  std::vector<AcceleratorActions> accelerator_actions;
+  AcceleratorInitializeResponse initialize_response;
   for (std::unique_ptr<lldb_server::LLDBServerAcceleratorPlugin> &plugin_up :
        m_accelerator_plugins) {
     if (auto actions = plugin_up->GetInitializeActions())
-      accelerator_actions.push_back(std::move(*actions));
+      initialize_response.actions.push_back(std::move(*actions));
+  }
+  if (m_connection_accelerator_plugin) {
+    llvm::StringRef dynamic_loader_plugin_name =
+        m_connection_accelerator_plugin->GetDynamicLoaderPluginName();
+    if (!dynamic_loader_plugin_name.empty())
+      initialize_response.dyld_plugin_name = dynamic_loader_plugin_name;
   }
   StreamGDBRemote response;
-  response.PutAsJSONArray(accelerator_actions, /*hex_ascii=*/false);
+  response.PutAsJSON(initialize_response, /*hex_ascii=*/false);
   return SendPacketNoLock(response.GetString());
 }
 
@@ -4715,20 +4723,35 @@ GDBRemoteCommunication::PacketResult GDBRemoteCommunicationServerLLGS::
   if (!args)
     return SendErrorResponse(args.takeError());
 
-  for (std::unique_ptr<lldb_server::LLDBServerAcceleratorPlugin> &plugin_up :
-       m_accelerator_plugins) {
-    if (plugin_up->GetPluginName() == args->plugin_name) {
-      std::optional<AcceleratorDynamicLoaderResponse> response =
-          plugin_up->GetDynamicLoaderLibraryInfos(*args);
-      if (!response)
-        return SendErrorResponse(
-            Status::FromErrorString("no dynamic loader info available"));
+  // On the native connection, forward to the named accelerator plugin.
+  if (!m_accelerator_plugins.empty()) {
+    for (std::unique_ptr<lldb_server::LLDBServerAcceleratorPlugin> &plugin_up :
+         m_accelerator_plugins) {
+      if (plugin_up->GetPluginName() == args->plugin_name) {
+        std::optional<AcceleratorDynamicLoaderResponse> response =
+            plugin_up->GetDynamicLoaderLibraryInfos(*args);
+        if (!response)
+          return SendErrorResponse(
+              Status::FromErrorString("no dynamic loader info available"));
 
-      StreamGDBRemote stream;
-      stream.PutAsJSON(*response, /*hex_ascii=*/false);
-      return SendPacketNoLock(stream.GetString());
+        StreamGDBRemote stream;
+        stream.PutAsJSON(*response, /*hex_ascii=*/false);
+        return SendPacketNoLock(stream.GetString());
+      }
     }
+    return SendErrorResponse(
+        Status::FromErrorString("unknown accelerator plugin name"));
   }
-  return SendErrorResponse(
-      Status::FromErrorString("unknown accelerator plugin name"));
+
+  // On the accelerator connection, ask the process directly.
+  if (!m_current_process)
+    return SendErrorResponse(Status::FromErrorString("no current process"));
+  std::optional<AcceleratorDynamicLoaderResponse> response =
+      m_current_process->GetAcceleratorDynamicLoaderLibraryInfos(*args);
+  if (!response)
+    return SendErrorResponse(
+        Status::FromErrorString("dynamic loader library info not supported"));
+  StreamGDBRemote stream;
+  stream.PutAsJSON(*response, /*hex_ascii=*/false);
+  return SendPacketNoLock(stream.GetString());
 }

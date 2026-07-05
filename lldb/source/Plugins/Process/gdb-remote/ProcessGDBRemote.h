@@ -525,6 +525,10 @@ private:
   /// guards against handling them (e.g. setting the same breakpoints) twice.
   std::map<std::string, int64_t> m_processed_accelerator_actions;
 
+  /// DynamicLoader plugin selected by this connection's accelerator
+  /// initialization response. Empty means normal auto-selection.
+  std::string m_accelerator_dynamic_loader_plugin_name;
+
   // ContinueDelegate interface
   void HandleAsyncStdout(llvm::StringRef out) override;
   void HandleAsyncMisc(llvm::StringRef data) override;

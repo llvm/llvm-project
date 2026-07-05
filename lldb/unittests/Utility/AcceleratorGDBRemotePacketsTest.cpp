@@ -148,6 +148,47 @@ TEST(AcceleratorGDBRemotePacketsTest, AcceleratorActionsEmpty) {
   EXPECT_TRUE(deserialized->breakpoints.empty());
 }
 
+TEST(AcceleratorGDBRemotePacketsTest, AcceleratorInitializeResponse) {
+  AcceleratorInitializeResponse response;
+  response.actions.emplace_back("mock", 1);
+  response.actions.back().session_name = "Mock Session";
+  response.dyld_plugin_name = "accelerator-gdb-remote";
+
+  Expected<AcceleratorInitializeResponse> deserialized =
+      roundtripJSON(response);
+  ASSERT_THAT_EXPECTED(deserialized, Succeeded());
+  ASSERT_EQ(1u, deserialized->actions.size());
+  EXPECT_EQ("mock", deserialized->actions[0].plugin_name);
+  EXPECT_EQ("Mock Session", deserialized->actions[0].session_name);
+  EXPECT_EQ("accelerator-gdb-remote", deserialized->dyld_plugin_name);
+}
+
+TEST(AcceleratorGDBRemotePacketsTest,
+     AcceleratorInitializeResponseWithoutDynamicLoader) {
+  AcceleratorInitializeResponse response;
+  response.actions.emplace_back("mock", 2);
+
+  Expected<AcceleratorInitializeResponse> deserialized =
+      roundtripJSON(response);
+  ASSERT_THAT_EXPECTED(deserialized, Succeeded());
+  ASSERT_EQ(1u, deserialized->actions.size());
+  EXPECT_EQ("mock", deserialized->actions[0].plugin_name);
+  EXPECT_EQ(std::nullopt, deserialized->dyld_plugin_name);
+}
+
+TEST(AcceleratorGDBRemotePacketsTest,
+     AcceleratorInitializeResponseLegacyActionsArray) {
+  Expected<AcceleratorInitializeResponse> deserialized = json::parse<
+      AcceleratorInitializeResponse>(
+      R"([{"plugin_name":"mock","session_name":"Mock Session","identifier":3,"breakpoints":[]}])",
+      "AcceleratorInitializeResponse");
+  ASSERT_THAT_EXPECTED(deserialized, Succeeded());
+  ASSERT_EQ(1u, deserialized->actions.size());
+  EXPECT_EQ("mock", deserialized->actions[0].plugin_name);
+  EXPECT_EQ("Mock Session", deserialized->actions[0].session_name);
+  EXPECT_EQ(std::nullopt, deserialized->dyld_plugin_name);
+}
+
 TEST(AcceleratorGDBRemotePacketsTest,
      AcceleratorBreakpointHitResponseNoActions) {
   AcceleratorBreakpointHitResponse response;
