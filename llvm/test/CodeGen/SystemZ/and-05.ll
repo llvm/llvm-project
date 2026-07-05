@@ -686,6 +686,102 @@ define void @f13_i64(i64 %src, i64 %index) {
   ret void
 }
 
+; Check NI with a i64 intermediate value for an i16.
+define void @f14_i16(ptr %src) {
+; CHECK-LABEL: f14_i16:
+; CHECK: ni 4095(%r2), 127
+; CHECK: br %r14
+  %ptr = getelementptr i8, ptr %src, i64 4094
+  %val = load i16, ptr %ptr
+  %ext = zext i16 %val to i64
+  %and = and i64 %ext, 65407
+  %tr  = trunc i64 %and to i16
+  store i16 %tr, ptr %ptr
+  ret void
+}
+
+; Check NI with a i64 intermediate value for an i32.
+define void @f14_i32(ptr %src) {
+; CHECK-LABEL: f14_i32:
+; CHECK: ni 4095(%r2), 127
+; CHECK: br %r14
+  %ptr = getelementptr i8, ptr %src, i64 4092
+  %val = load i32, ptr %ptr
+  %ext = zext i32 %val to i64
+  %and = and i64 %ext, 4294967167
+  %tr  = trunc i64 %and to i32
+  store i32 %tr, ptr %ptr
+  ret void
+}
+
+; Check NIY with a i64 intermediate value for an i16.
+define void @f15_i16(ptr %src) {
+; CHECK-LABEL: f15_i16:
+; CHECK: niy 4096(%r2), 127
+; CHECK: br %r14
+  %ptr = getelementptr i8, ptr %src, i64 4095
+  %val = load i16, ptr %ptr
+  %ext = zext i16 %val to i64
+  %and = and i64 %ext, 65407
+  %tr  = trunc i64 %and to i16
+  store i16 %tr, ptr %ptr
+  ret void
+}
+
+; Check NIY with a i64 intermediate value for an i32.
+define void @f15_i32(ptr %src) {
+; CHECK-LABEL: f15_i32:
+; CHECK: niy 4096(%r2), 127
+; CHECK: br %r14
+  %ptr = getelementptr i8, ptr %src, i64 4093
+  %val = load i32, ptr %ptr
+  %ext = zext i32 %val to i64
+  %and = and i64 %ext, 4294967167
+  %tr  = trunc i64 %and to i32
+  store i32 %tr, ptr %ptr
+  ret void
+}
+
+; Check volatile i16 load/store with AND is not folded.
+define void @f16_i16(ptr %ptr) {
+; CHECK-LABEL: f16_i16:
+; CHECK:       llh [[REG:%r[0-5]]], 0(%r2)
+; CHECK-NEXT:  nill [[REG]], 65407
+; CHECK-NOT:   ni
+; CHECK-NOT:   niy
+; CHECK:       br %r14
+  %val = load volatile i16, ptr %ptr
+  %and = and i16 %val, 65407
+  store volatile i16 %and, ptr %ptr
+  ret void
+}
+
+; Check volatile i32 load/store with AND is not folded.
+define void @f16_i32(ptr %ptr) {
+; CHECK-LABEL: f16_i32:
+; CHECK:       n [[REG:%r[0-5]]], 0(%r2)
+; CHECK-NOT:   ni
+; CHECK-NOT:   niy
+; CHECK:       br %r14
+  %val = load volatile i32, ptr %ptr
+  %and = and i32 %val, 4294967167
+  store volatile i32 %and, ptr %ptr
+  ret void
+}
+
+; Check volatile i64 load/store with AND is not folded.
+define void @f16_i64(ptr %ptr) {
+; CHECK-LABEL: f16_i64:
+; CHECK:       ng [[REG:%r[0-5]]], 0(%r2)
+; CHECK-NOT:   ni
+; CHECK-NOT:   niy
+; CHECK:       br %r14
+  %val = load volatile i64, ptr %ptr
+  %and = and i64 %val, -129
+  store volatile i64 %and, ptr %ptr
+  ret void
+}
+
 ; Check folding of multi-byte 'and' operations into byte-immediate memory
 ; operation 'ni'.
 ; Additional tests for immAndLSB8 PatLeaf logic - preservation of upper bytes

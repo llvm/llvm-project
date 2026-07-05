@@ -666,3 +666,98 @@ define void @f13_i64(i64 %src, i64 %index) {
   ret void
 }
 
+; Check XI with a i64 intermediate value for an i16.
+define void @f14_i16(ptr %src) {
+; CHECK-LABEL: f14_i16:
+; CHECK: xi 4095(%r2), 127
+; CHECK: br %r14
+  %ptr = getelementptr i8, ptr %src, i64 4094
+  %val = load i16, ptr %ptr
+  %ext = zext i16 %val to i64
+  %xor = xor i64 %ext, 127
+  %tr  = trunc i64 %xor to i16
+  store i16 %tr, ptr %ptr
+  ret void
+}
+
+; Check XI with a i64 intermediate value for an i32.
+define void @f14_i32(ptr %src) {
+; CHECK-LABEL: f14_i32:
+; CHECK: xi 4095(%r2), 127
+; CHECK: br %r14
+  %ptr = getelementptr i8, ptr %src, i64 4092
+  %val = load i32, ptr %ptr
+  %ext = zext i32 %val to i64
+  %xor = xor i64 %ext, 127
+  %tr  = trunc i64 %xor to i32
+  store i32 %tr, ptr %ptr
+  ret void
+}
+
+; Check XIY with a i64 intermediate value for an i16.
+define void @f15_i16(ptr %src) {
+; CHECK-LABEL: f15_i16:
+; CHECK: xiy 4096(%r2), 127
+; CHECK: br %r14
+  %ptr = getelementptr i8, ptr %src, i64 4095
+  %val = load i16, ptr %ptr
+  %ext = zext i16 %val to i64
+  %xor = xor i64 %ext, 127
+  %tr  = trunc i64 %xor to i16
+  store i16 %tr, ptr %ptr
+  ret void
+}
+
+; Check XIY with a i64 intermediate value for an i32.
+define void @f15_i32(ptr %src) {
+; CHECK-LABEL: f15_i32:
+; CHECK: xiy 4096(%r2), 127
+; CHECK: br %r14
+  %ptr = getelementptr i8, ptr %src, i64 4093
+  %val = load i32, ptr %ptr
+  %ext = zext i32 %val to i64
+  %xor = xor i64 %ext, 127
+  %tr  = trunc i64 %xor to i32
+  store i32 %tr, ptr %ptr
+  ret void
+}
+
+; Check volatile i16 load/store with XOR is not folded.
+define void @f16_i16(ptr %ptr) {
+; CHECK-LABEL: f16_i16:
+; CHECK:       lh [[REG:%r[0-5]]], 0(%r2)
+; CHECK-NEXT:  xilf [[REG]], 128
+; CHECK-NOT:   xi
+; CHECK-NOT:   xiy
+; CHECK:       br %r14
+  %val = load volatile i16, ptr %ptr
+  %xor = xor i16 %val, 128
+  store volatile i16 %xor, ptr %ptr
+  ret void
+}
+
+; Check volatile i32 load/store with XOR is not folded.
+define void @f16_i32(ptr %ptr) {
+; CHECK-LABEL: f16_i32:
+; CHECK:       x [[REG:%r[0-5]]], 0(%r2)
+; CHECK-NOT:   xi
+; CHECK-NOT:   xiy
+; CHECK:       br %r14
+  %val = load volatile i32, ptr %ptr
+  %xor = xor i32 %val, 128
+  store volatile i32 %xor, ptr %ptr
+  ret void
+}
+
+; Check volatile i64 load/store with XOR is not folded.
+define void @f16_i64(ptr %ptr) {
+; CHECK-LABEL: f16_i64:
+; CHECK:       xg [[REG:%r[0-5]]], 0(%r2)
+; CHECK-NOT:   xi
+; CHECK-NOT:   xiy
+; CHECK:       br %r14
+  %val = load volatile i64, ptr %ptr
+  %xor = xor i64 %val, 128
+  store volatile i64 %xor, ptr %ptr
+  ret void
+}

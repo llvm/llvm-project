@@ -665,3 +665,99 @@ define void @f13_i64(i64 %src, i64 %index) {
   store i64 %or, ptr %ptr
   ret void
 }
+
+; Check OI with a i64 intermediate value for an i16.
+define void @f14_i16(ptr %src) {
+; CHECK-LABEL: f14_i16:
+; CHECK: oi 4095(%r2), 127
+; CHECK: br %r14
+  %ptr = getelementptr i8, ptr %src, i64 4094
+  %val = load i16, ptr %ptr
+  %ext = zext i16 %val to i64
+  %or  = or i64 %ext, 127
+  %tr  = trunc i64 %or to i16
+  store i16 %tr, ptr %ptr
+  ret void
+}
+
+; Check OI with a i64 intermediate value for an i32.
+define void @f14_i32(ptr %src) {
+; CHECK-LABEL: f14_i32:
+; CHECK: oi 4095(%r2), 127
+; CHECK: br %r14
+  %ptr = getelementptr i8, ptr %src, i64 4092
+  %val = load i32, ptr %ptr
+  %ext = zext i32 %val to i64
+  %or  = or i64 %ext, 127
+  %tr  = trunc i64 %or to i32
+  store i32 %tr, ptr %ptr
+  ret void
+}
+
+; Check OIY with a i64 intermediate value for an i16.
+define void @f15_i16(ptr %src) {
+; CHECK-LABEL: f15_i16:
+; CHECK: oiy 4096(%r2), 127
+; CHECK: br %r14
+  %ptr = getelementptr i8, ptr %src, i64 4095
+  %val = load i16, ptr %ptr
+  %ext = zext i16 %val to i64
+  %or  = or i64 %ext, 127
+  %tr  = trunc i64 %or to i16
+  store i16 %tr, ptr %ptr
+  ret void
+}
+
+; Check OIY with a i64 intermediate value for an i32.
+define void @f15_i32(ptr %src) {
+; CHECK-LABEL: f15_i32:
+; CHECK: oiy 4096(%r2), 127
+; CHECK: br %r14
+  %ptr = getelementptr i8, ptr %src, i64 4093
+  %val = load i32, ptr %ptr
+  %ext = zext i32 %val to i64
+  %or  = or i64 %ext, 127
+  %tr  = trunc i64 %or to i32
+  store i32 %tr, ptr %ptr
+  ret void
+}
+
+; Check volatile i16 load/store with OR is not folded.
+define void @f16_i16(ptr %ptr) {
+; CHECK-LABEL: f16_i16:
+; CHECK:       lh [[REG:%r[0-5]]], 0(%r2)
+; CHECK-NEXT:  oill [[REG]], 128
+; CHECK-NOT:   oi
+; CHECK-NOT:   oiy
+; CHECK:       br %r14
+  %val = load volatile i16, ptr %ptr
+  %or = or i16 %val, 128
+  store volatile i16 %or, ptr %ptr
+  ret void
+}
+
+; Check volatile i32 load/store with OR is not folded.
+define void @f16_i32(ptr %ptr) {
+; CHECK-LABEL: f16_i32:
+; CHECK:       o [[REG:%r[0-5]]], 0(%r2)
+; CHECK-NOT:   oi
+; CHECK-NOT:   oiy
+; CHECK:       br %r14
+  %val = load volatile i32, ptr %ptr
+  %or = or i32 %val, 128
+  store volatile i32 %or, ptr %ptr
+  ret void
+}
+
+; Check volatile i64 load/store with OR is not folded.
+define void @f16_i64(ptr %ptr) {
+; CHECK-LABEL: f16_i64:
+; CHECK:       og [[REG:%r[0-5]]], 0(%r2)
+; CHECK-NOT:   oi
+; CHECK-NOT:   oiy
+; CHECK:       br %r14
+  %val = load volatile i64, ptr %ptr
+  %or = or i64 %val, 128
+  store volatile i64 %or, ptr %ptr
+  ret void
+}
