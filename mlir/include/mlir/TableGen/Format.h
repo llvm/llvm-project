@@ -127,15 +127,15 @@ protected:
   // std::vector<Base*>.
   struct CreateAdapters {
     template <typename... Ts>
-    std::vector<llvm::support::detail::format_adapter *>
+    std::vector<llvm::support::detail::FormatFunctorRef>
     operator()(Ts &...items) {
-      return std::vector<llvm::support::detail::format_adapter *>{&items...};
+      return std::vector<llvm::support::detail::FormatFunctorRef>{items...};
     }
   };
 
   StringRef fmt;
   const FmtContext *context;
-  std::vector<llvm::support::detail::format_adapter *> adapters;
+  std::vector<llvm::support::detail::FormatFunctorRef> adapters;
   std::vector<FmtReplacement> replacements;
 
 public:
@@ -200,8 +200,7 @@ public:
 
 class FmtStrVecObject : public FmtObjectBase {
 public:
-  using StrFormatAdapter = decltype(llvm::support::detail::build_format_adapter(
-      std::declval<std::string>()));
+  using StrFormatAdapter = llvm::support::detail::FormatFunctor<std::string>;
 
   FmtStrVecObject(StringRef fmt, const FmtContext *ctx,
                   ArrayRef<std::string> params);
@@ -254,19 +253,19 @@ private:
 ///    in C++ code generation.
 template <typename... Ts>
 inline auto tgfmt(StringRef fmt, const FmtContext *ctx, Ts &&...vals)
-    -> FmtObject<
-        decltype(std::make_tuple(llvm::support::detail::build_format_adapter(
-            std::forward<Ts>(vals))...))> {
+    -> FmtObject<decltype(std::make_tuple(
+        llvm::support::detail::FormatFunctor(std::forward<Ts>(vals))...))> {
   using ParamTuple = decltype(std::make_tuple(
-      llvm::support::detail::build_format_adapter(std::forward<Ts>(vals))...));
+      llvm::support::detail::FormatFunctor(std::forward<Ts>(vals))...));
   return FmtObject<ParamTuple>(
       fmt, ctx,
-      std::make_tuple(llvm::support::detail::build_format_adapter(
-          std::forward<Ts>(vals))...));
+      std::make_tuple(
+          llvm::support::detail::FormatFunctor(std::forward<Ts>(vals))...));
 }
 
-inline FmtStrVecObject tgfmt(StringRef fmt, const FmtContext *ctx,
-                             ArrayRef<std::string> params) {
+/// Like tgfmt, but take replacement parameters as an array of strings instead.
+inline FmtStrVecObject tgfmtv(StringRef fmt, const FmtContext *ctx,
+                              ArrayRef<std::string> params) {
   return FmtStrVecObject(fmt, ctx, params);
 }
 
