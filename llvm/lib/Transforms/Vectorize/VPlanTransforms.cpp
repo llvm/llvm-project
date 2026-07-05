@@ -7415,6 +7415,7 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
   }
 
   // Widen unmasked unit-stride consecutive accesses, matching the legacy CM.
+  // Both forward (stride +1) and reverse (stride -1) accesses are handled.
   VPlanTransforms::runPass(
       "widenConsecutiveMemOps", ProcessSubset, Plan, [&](VPInstruction *VPI) {
         Instruction *I = VPI->getUnderlyingInstr();
@@ -7425,27 +7426,39 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
         VPValue *Ptr = VPI->getOperand(!IsLoad);
         Type *ScalarTy =
             IsLoad ? VPI->getScalarType() : VPI->getOperand(0)->getScalarType();
-        if (getConstantStride(Ptr, ScalarTy, CostCtx.PSE, CostCtx.L) != 1)
+        std::optional<int64_t> Stride =
+            getConstantStride(Ptr, ScalarTy, CostCtx.PSE, CostCtx.L);
+        if (Stride != 1 && Stride != -1)
           return false;
+        bool Reverse = *Stride == -1;
 
-        Type *StrideTy =
-            Plan.getDataLayout().getIndexType(Ptr->getScalarType());
-        VPValue *StrideOne = Plan.getConstantInt(StrideTy, 1);
-        auto *VectorPtr = new VPVectorPointerRecipe(
-            Ptr, ScalarTy, StrideOne, vputils::getGEPFlagsForPtr(Ptr),
-            VPI->getDebugLoc());
-        VectorPtr->insertBefore(VPI);
-        VPRecipeBase *WidenedR;
-        if (IsLoad)
-          WidenedR = new VPWidenLoadRecipe(*cast<LoadInst>(I), VectorPtr,
-                                           /*Mask=*/nullptr,
-                                           /*Consecutive=*/true, *VPI,
+        VPBuilder Builder(VPI);
+        VPSingleDefRecipe *VectorPtr = Builder.createConsecutiveVectorPointer(
+            Ptr, ScalarTy, Reverse, VPI->getDebugLoc());
+
+        if (IsLoad) {
+          auto *LoadR = new VPWidenLoadRecipe(*cast<LoadInst>(I), VectorPtr,
+                                              /*Mask=*/nullptr,
+                                              /*Consecutive=*/true, *VPI,
+                                              VPI->getDebugLoc());
+          if (!Reverse)
+            return ReplaceWith(VPI, LoadR);
+          // Reverse the loaded values back into program order.
+          Builder.insert(LoadR);
+          auto *ReverseR = new VPInstruction(VPInstruction::Reverse, {LoadR},
+                                             {}, {}, VPI->getDebugLoc());
+          return ReplaceWith(VPI, ReverseR);
+        }
+
+        VPValue *StoredVal = VPI->getOperand(0);
+        if (Reverse)
+          // Reverse the stored values so they are written in descending order.
+          StoredVal = Builder.createNaryOp(VPInstruction::Reverse, {StoredVal},
                                            VPI->getDebugLoc());
-        else
-          WidenedR = new VPWidenStoreRecipe(
-              *cast<StoreInst>(I), VectorPtr, VPI->getOperand(0),
-              /*Mask=*/nullptr, /*Consecutive=*/true, *VPI, VPI->getDebugLoc());
-        return ReplaceWith(VPI, WidenedR);
+        auto *StoreR = new VPWidenStoreRecipe(
+            *cast<StoreInst>(I), VectorPtr, StoredVal,
+            /*Mask=*/nullptr, /*Consecutive=*/true, *VPI, VPI->getDebugLoc());
+        return ReplaceWith(VPI, StoreR);
       });
 
   VPlanTransforms::runPass("delegateMemOpWideningToLegacyCM", ProcessSubset,
