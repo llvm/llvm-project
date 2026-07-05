@@ -112,3 +112,15 @@ ProcessMockAccelerator::GetFileLoadAddress(const llvm::StringRef &file_name,
                                            lldb::addr_t &load_addr) {
   return Status::FromErrorString("unimplemented");
 }
+
+std::optional<AcceleratorDynamicLoaderResponse>
+ProcessMockAccelerator::GetAcceleratorDynamicLoaderLibraryInfos(
+    const AcceleratorDynamicLoaderArgs &args) {
+  AcceleratorDynamicLoaderResponse response;
+  AcceleratorDynamicLoaderLibraryInfo info;
+  info.pathname = "/path/to/lib.so";
+  info.load = true;
+  info.load_address = 0x10000000;
+  response.library_infos.push_back(std::move(info));
+  return response;
+}
