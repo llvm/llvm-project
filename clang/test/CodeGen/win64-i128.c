@@ -2,6 +2,10 @@
 // RUN:    | FileCheck %s --check-prefix=GNU64
 // RUN: %clang_cc1 -triple x86_64-windows-msvc -emit-llvm -o - %s \
 // RUN:    | FileCheck %s --check-prefix=MSC64
+// RUN: %clang_cc1 -triple aarch64-windows-msvc -emit-llvm -o - %s \
+// RUN:    | FileCheck %s --check-prefix=ARM64
+// RUN: %clang_cc1 -triple arm64ec-windows-msvc -emit-llvm -o - %s \
+// RUN:    | FileCheck %s --check-prefix=ARM64EC
 
 typedef int int128_t __attribute__((mode(TI)));
 
@@ -9,21 +13,41 @@ int128_t foo(void) { return 0; }
 
 // GNU64: define dso_local <2 x i64> @foo()
 // MSC64: define dso_local <2 x i64> @foo()
+// ARM64: define dso_local i128 @foo()
+// ARM64EC: define dso_local i128 @foo()
 
 int128_t bar(int128_t a, int128_t b) { return a * b; }
 
 // GNU64: define dso_local <2 x i64> @bar(ptr noundef align 16 dead_on_return %0, ptr noundef align 16 dead_on_return %1)
 // MSC64: define dso_local <2 x i64> @bar(ptr noundef align 16 dead_on_return %0, ptr noundef align 16 dead_on_return %1)
+// ARM64: define dso_local i128 @bar(i128 noundef %a, i128 noundef %b)
+// ARM64EC: define dso_local i128 @bar(i128 noundef %a, i128 noundef %b)
 
 void vararg(int a, ...) {
   // GNU64-LABEL: define{{.*}} void @vararg
   // MSC64-LABEL: define{{.*}} void @vararg
+  // ARM64-LABEL: define{{.*}} void @vararg
+  // ARM64EC-LABEL: define{{.*}} void @vararg
   __builtin_va_list ap;
   __builtin_va_start(ap, a);
   int128_t i = __builtin_va_arg(ap, int128_t);
   // GNU64: load ptr, ptr
   // GNU64: load i128, ptr
+
   // MSC64: load ptr, ptr
   // MSC64: load i128, ptr
+
+  // Explicitly check that the read is properly aligned.
+  //
+  // ARM64: %argp.cur = load ptr, ptr %ap
+  // ARM64: %argp.cur.aligned = call ptr @llvm.ptrmask.p0.i64(ptr %{{.*}}, i64 -16)
+  // ARM64: load i128, ptr %argp.cur.aligned, align 16
+
+  // On ARM64EC __int128 is passed indirectly, so there is a double load.
+  //
+  // ARM64EC: %argp.cur = load ptr, ptr %ap
+  // ARM64EC: %argp.next = getelementptr inbounds i8, ptr %argp.cur, i64 8
+  // ARM64EC: [[P:%.*]] = load ptr, ptr %argp.cur
+  // ARM64EC: load i128, ptr [[P]], align 16
   __builtin_va_end(ap);
 }
