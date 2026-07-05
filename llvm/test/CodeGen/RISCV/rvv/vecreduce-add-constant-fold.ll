@@ -5,12 +5,7 @@
 define i32 @test_const() {
 ; CHECK-LABEL: test_const:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v8, zero
-; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    vadd.vi v9, v9, 1
-; CHECK-NEXT:    vredsum.vs v8, v9, v8
-; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    li a0, 10
 ; CHECK-NEXT:    ret
   %r = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> <i32 1, i32 2, i32 3, i32 4>)
   ret i32 %r
@@ -35,14 +30,7 @@ define i32 @test_undef() {
 define i32 @test_const_wide() {
 ; CHECK-LABEL: test_const_wide:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 10
-; CHECK-NEXT:    vid.v v10
-; CHECK-NEXT:    li a0, 10
-; CHECK-NEXT:    vmadd.vx v10, a0, v8
-; CHECK-NEXT:    vmv.s.x v8, zero
-; CHECK-NEXT:    vredsum.vs v8, v10, v8
-; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    li a0, 360
 ; CHECK-NEXT:    ret
   %r = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> <i32 10, i32 20, i32 30, i32 40, i32 50, i32 60, i32 70, i32 80>)
   ret i32 %r
@@ -58,6 +46,21 @@ define i32 @test_nonconst(<4 x i32> %v) {
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %r = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %v)
+  ret i32 %r
+}
+
+; Case 5: vector containing a poison element -> should NOT fold
+define i32 @test_poison() {
+; CHECK-LABEL: test_poison:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, zero
+; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    vadd.vi v9, v9, 1
+; CHECK-NEXT:    vredsum.vs v8, v9, v8
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    ret
+  %r = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> <i32 1, i32 2, i32 poison, i32 4>)
   ret i32 %r
 }
 
