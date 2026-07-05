@@ -114,24 +114,17 @@ void RISCV::updateCZceFeatureImplications(MCSubtargetInfo &STI) {
   //   - D: Zca + Zcd/Y implies C
   if (!STI.hasFeature(RISCV::FeatureStdExtC) &&
       STI.hasFeature(RISCV::FeatureStdExtZca)) {
-    bool ShouldAddC = false;
-    if (!STI.hasFeature(RISCV::Feature64Bit)) {
-      if (STI.hasFeature(RISCV::FeatureStdExtD))
-        ShouldAddC = STI.hasFeature(RISCV::FeatureStdExtZcd) &&
-                     (STI.hasFeature(RISCV::FeatureStdExtY) ||
-                      STI.hasFeature(RISCV::FeatureStdExtZcf));
-      else if (STI.hasFeature(RISCV::FeatureStdExtF))
-        ShouldAddC = STI.hasFeature(RISCV::FeatureStdExtY) ||
-                     STI.hasFeature(RISCV::FeatureStdExtZcf);
-      else
-        ShouldAddC = true;
-    } else {
-      if (STI.hasFeature(RISCV::FeatureStdExtD))
-        ShouldAddC = STI.hasFeature(RISCV::FeatureStdExtY) ||
-                     STI.hasFeature(RISCV::FeatureStdExtZcd);
-      else
-        ShouldAddC = true;
-    }
+    bool ShouldAddC;
+    if (!STI.hasFeature(RISCV::Feature64Bit))
+      ShouldAddC = (!STI.hasFeature(RISCV::FeatureStdExtD) ||
+                    STI.hasFeature(RISCV::FeatureStdExtZcd)) &&
+                   (STI.hasFeature(RISCV::FeatureStdExtY) ||
+                    !STI.hasFeature(RISCV::FeatureStdExtF) ||
+                    STI.hasFeature(RISCV::FeatureStdExtZcf));
+    else
+      ShouldAddC = STI.hasFeature(RISCV::FeatureStdExtY) ||
+                   !STI.hasFeature(RISCV::FeatureStdExtD) ||
+                   STI.hasFeature(RISCV::FeatureStdExtZcd);
     if (ShouldAddC)
       STI.ToggleFeature(RISCV::FeatureStdExtC);
   }
@@ -142,23 +135,16 @@ void RISCV::updateCZceFeatureImplications(MCSubtargetInfo &STI) {
   //   - F: Zca+Zcb+Zcmp+Zcmt + Zcf/Y implies Zce
   // For RV64:
   //   - Zca+Zcb+Zcmp+Zcmt alone implies Zce
-  //   - RV64Y: Zca+Zcb alone implies Zce
+  //   - Note: RV64Y is incompatible with Zcmp/Zcmt, never implies Zce
   if (!STI.hasFeature(RISCV::FeatureStdExtZce) &&
       STI.hasFeature(RISCV::FeatureStdExtZca) &&
-      STI.hasFeature(RISCV::FeatureStdExtZcb)) {
-    bool ShouldAddZce = false;
-    if (STI.hasFeature(RISCV::FeatureStdExtZcmp) &&
-        STI.hasFeature(RISCV::FeatureStdExtZcmt)) {
-      if (!STI.hasFeature(RISCV::Feature64Bit)) {
-        ShouldAddZce = !STI.hasFeature(RISCV::FeatureStdExtF) ||
-                       STI.hasFeature(RISCV::FeatureStdExtZcf) ||
-                       STI.hasFeature(RISCV::FeatureStdExtY);
-      } else {
-        ShouldAddZce = true;
-      }
-    }
-
-    if (ShouldAddZce)
+      STI.hasFeature(RISCV::FeatureStdExtZcb) &&
+      STI.hasFeature(RISCV::FeatureStdExtZcmp) &&
+      STI.hasFeature(RISCV::FeatureStdExtZcmt)) {
+    if (STI.hasFeature(RISCV::Feature64Bit) ||
+        STI.hasFeature(RISCV::FeatureStdExtY) ||
+        !STI.hasFeature(RISCV::FeatureStdExtF) ||
+        STI.hasFeature(RISCV::FeatureStdExtZcf))
       STI.ToggleFeature(RISCV::FeatureStdExtZce);
   }
 }

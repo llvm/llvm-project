@@ -817,13 +817,13 @@ Error RISCVISAInfo::checkDependency() {
 
   if (Exts.count("y") != 0) {
     if (XLen == 32) {
-      // On RVY32 systems the zclsd/zcf encodings are used for y load/stores.
+      // On RV32Y systems the zclsd/zcf encodings are used for y load/stores.
       if (Exts.count("zclsd") != 0)
         return getBaseIncompatibleError("zclsd", "rv32y");
       if (Exts.count("zcf") != 0)
         return getBaseIncompatibleError("zcf", "rv32y");
     } else {
-      // On RVY64 systems the zcd encodings are used for y load/stores.
+      // On RV64Y systems the zcd encodings are used for y load/stores.
       if (Exts.count("zcd") != 0)
         return getBaseIncompatibleError("zcd", "rv64y");
       for (auto Ext : ZcdOverlaps)
@@ -943,14 +943,14 @@ void RISCVISAInfo::updateImplication() {
     }
   }
 
-  if (!Exts.count("zce") && Exts.count("zca") && Exts.count("zcb")) {
+  if (!Exts.count("zce") && Exts.count("zca") && Exts.count("zcb") &&
+      Exts.count("zcmp") && Exts.count("zcmt")) {
     bool ShouldAddZce = false;
-    if (Exts.count("zcmp") && Exts.count("zcmt")) {
-      if (XLen == 32) {
-        ShouldAddZce = !Exts.count("f") || Exts.count("zcf") || Exts.count("y");
-      } else if (XLen == 64) {
-        ShouldAddZce = true;
-      }
+    if (XLen == 32) {
+      ShouldAddZce = !Exts.count("f") || Exts.count("zcf") || Exts.count("y");
+    } else if (XLen == 64) {
+      // Zce is incompatible with RV64Y, only add it if Y is not enabled.
+      ShouldAddZce = !Exts.count("y");
     }
     if (ShouldAddZce)
       Exts["zce"] = *findDefaultVersion("zce");
