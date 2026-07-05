@@ -2541,7 +2541,7 @@ static Instruction *foldFPtoI(Instruction &FI, InstCombiner &IC) {
       return nullptr;
   }
   Type *IntTy = X->getType();
-  if (!IntTy->isIntOrIntVectorTy() || FI.getType() != IntTy)
+  if (FI.getType() != IntTy)
     return nullptr;
 
   unsigned IntWidth = IntTy->getScalarSizeInBits();
