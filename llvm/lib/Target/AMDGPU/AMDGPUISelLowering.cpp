@@ -1041,7 +1041,6 @@ bool AMDGPUTargetLowering::isZExtFree(EVT Src, EVT Dest) const {
 bool AMDGPUTargetLowering::isNarrowingProfitable(SDNode *N, EVT SrcVT,
                                                  EVT DestVT) const {
   switch (N->getOpcode()) {
-  case ISD::ABS:
   case ISD::ADD:
   case ISD::SUB:
   case ISD::SHL:
