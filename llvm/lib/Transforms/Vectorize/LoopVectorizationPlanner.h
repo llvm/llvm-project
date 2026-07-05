@@ -511,6 +511,13 @@ public:
         new VPVectorPointerRecipe(Ptr, SourceElementTy, Stride, GEPFlags, DL));
   }
 
+  /// Create a vector pointer recipe for a consecutive memory access to \p Ptr
+  /// with element type \p SourceElementTy.
+  VPSingleDefRecipe *createConsecutiveVectorPointer(VPValue *Ptr,
+                                                    Type *SourceElementTy,
+                                                    bool Reverse, bool FoldTail,
+                                                    DebugLoc DL);
+
   VPWidenMemIntrinsicRecipe *createWidenMemIntrinsic(
       Intrinsic::ID VectorIntrinsicID, ArrayRef<VPValue *> CallArguments,
       Type *Ty, Align Alignment, const VPIRMetadata &MD, DebugLoc DL) {
