@@ -352,7 +352,7 @@ public:
 #    else
   static const mask __regex_word = 0x80;
 #    endif
-#  elif defined(_LIBCPP_MSVCRT_LIKE)
+#  elif defined(_WIN32)
   typedef unsigned short mask;
   static const mask space        = _SPACE;
   static const mask print        = _BLANK | _PUNCT | _ALPHA | _DIGIT;

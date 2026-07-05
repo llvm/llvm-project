@@ -26,7 +26,7 @@
 #include "posix_compat.h"
 #include "time_utils.h"
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
 #  define WIN32_LEAN_AND_MEAN
 #  define NOMINMAX
 #  include <windows.h>
@@ -100,7 +100,7 @@ path __canonical(path const& orig_p, error_code* ec) {
   ErrorHandler<path> err("canonical", ec, &orig_p, &cwd);
 
   path p = __do_absolute(orig_p, &cwd, ec);
-#if (defined(_POSIX_VERSION) && _POSIX_VERSION >= 200112) || defined(_LIBCPP_WIN32API)
+#if (defined(_POSIX_VERSION) && _POSIX_VERSION >= 200112) || defined(_WIN32)
   std::unique_ptr<path::value_type, decltype(&::free)> hold(detail::realpath(p.c_str(), nullptr), &::free);
   if (hold.get() == nullptr)
     return err.report(detail::get_last_error());
@@ -460,7 +460,7 @@ void __copy_symlink(const path& existing_symlink, const path& new_symlink, error
   if (ec && *ec) {
     return;
   }
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
   error_code local_ec;
   if (is_directory(real_path, local_ec))
     __create_directory_symlink(real_path, new_symlink, ec);
@@ -564,7 +564,7 @@ void __create_symlink(path const& from, path const& to, error_code* ec) {
 path __current_path(error_code* ec) {
   ErrorHandler<path> err("current_path", ec);
 
-#if defined(_LIBCPP_WIN32API) || defined(__GLIBC__) || defined(__APPLE__)
+#if defined(_WIN32) || defined(__GLIBC__) || defined(__APPLE__)
   // Common extension outside of POSIX getcwd() spec, without needing to
   // preallocate a buffer. Also supported by a number of other POSIX libcs.
   int size              = 0;
@@ -691,7 +691,7 @@ void __last_write_time(const path& p, file_time_type new_time, error_code* ec) {
   using detail::fs_time;
   ErrorHandler<void> err("last_write_time", ec, &p);
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
   TimeSpec ts;
   if (!fs_time::convert_to_timespec(ts, new_time))
     return err.report(errc::value_too_large);
@@ -819,7 +819,7 @@ bool __remove(const path& p, error_code* ec) {
 //
 // The second implementation is used on platforms where `openat()` & friends are available,
 // and it threads file descriptors through recursive calls to avoid such race conditions.
-#if defined(_LIBCPP_WIN32API) || defined(__MVS__)
+#if defined(_WIN32) || defined(__MVS__)
 #  define REMOVE_ALL_USE_DIRECTORY_ITERATOR
 #endif
 
@@ -996,7 +996,7 @@ file_status __symlink_status(const path& p, error_code* ec) { return detail::pos
 path __temp_directory_path(error_code* ec) {
   ErrorHandler<path> err("temp_directory_path", ec);
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
   wchar_t buf[MAX_PATH];
   DWORD retval = GetTempPathW(MAX_PATH, buf);
   if (!retval)

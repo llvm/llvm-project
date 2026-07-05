@@ -222,7 +222,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
-#    if _LIBCPP_STD_VER >= 23 && defined(_LIBCPP_WIN32API)
+#    if _LIBCPP_STD_VER >= 23 && defined(_WIN32)
 _LIBCPP_EXPORTED_FROM_ABI void* __filebuf_windows_native_handle(FILE* __file) noexcept;
 #    endif
 
@@ -236,7 +236,7 @@ public:
   typedef typename traits_type::off_type off_type;
   typedef typename traits_type::state_type state_type;
 #    if _LIBCPP_STD_VER >= 26
-#      if defined(_LIBCPP_WIN32API)
+#      if defined(_WIN32)
   using native_handle_type = void*; // HANDLE
 #      elif __has_include(<unistd.h>)
   using native_handle_type = int; // POSIX file descriptor
@@ -272,7 +272,7 @@ public:
 #    if _LIBCPP_STD_VER >= 26
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() const noexcept {
     _LIBCPP_ASSERT_UNCATEGORIZED(this->is_open(), "File must be opened");
-#      if defined(_LIBCPP_WIN32API)
+#      if defined(_WIN32)
     return std::__filebuf_windows_native_handle(__file_);
 #      elif __has_include(<unistd.h>)
     return fileno(__file_);
@@ -1020,7 +1020,7 @@ basic_filebuf<_CharT, _Traits>::seekoff(off_type __off, ios_base::seekdir __way,
 
 template <class _CharT, class _Traits>
 int basic_filebuf<_CharT, _Traits>::__fseek(FILE* __file, pos_type __offset, int __whence) {
-#    if defined(_LIBCPP_MSVCRT_LIKE)
+#    ifdef _WIN32
   return _fseeki64(__file, __offset, __whence);
 #    elif _LIBCPP_LIBC_NEWLIB
   return fseek(__file, __offset, __whence);
@@ -1031,7 +1031,7 @@ int basic_filebuf<_CharT, _Traits>::__fseek(FILE* __file, pos_type __offset, int
 
 template <class _CharT, class _Traits>
 typename basic_filebuf<_CharT, _Traits>::pos_type basic_filebuf<_CharT, _Traits>::__ftell(FILE* __file) {
-#    if defined(_LIBCPP_MSVCRT_LIKE)
+#    ifdef _WIN32
   return _ftelli64(__file);
 #    elif _LIBCPP_LIBC_NEWLIB
   return ftell(__file);
