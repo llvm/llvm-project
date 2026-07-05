@@ -34,6 +34,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator.h"
@@ -54,6 +55,7 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
@@ -1042,11 +1044,23 @@ private:
       AS.DeadUsers.push_back(&I);
   }
 
+  static void warnOOBUse(const Instruction &I, uint64_t Size,
+                         const APInt &Offset) {
+    auto &Ctx = I.getContext();
+    Ctx.diagnose(DiagnosticInfoGenericWithLoc(
+        "Potential OOB use: " + Twine(Size) + " bytes, offset " +
+            toString(Offset, 10, false),
+        *I.getFunction(), DiagnosticLocation(I.getDebugLoc()),
+        DiagnosticSeverity::DS_Warning));
+  }
+
   void insertUse(Instruction &I, const APInt &Offset, uint64_t Size,
                  bool IsSplittable = false) {
     // Completely skip uses which have a zero size or start either before or
     // past the end of the allocation.
     if (Size == 0 || Offset.uge(AllocSize)) {
+      if (Offset.uge(AllocSize))
+        warnOOBUse(I, Size, Offset);
       LLVM_DEBUG(dbgs() << "WARNING: Ignoring " << Size << " byte use @"
                         << Offset
                         << " which has zero size or starts outside of the "
@@ -1158,6 +1172,7 @@ private:
     // FIXME: We should instead consider the pointer to have escaped if this
     // function is being instrumented for addressing bugs or race conditions.
     if (Size > AllocSize || Offset.ugt(AllocSize - Size)) {
+      warnOOBUse(SI, Size, Offset);
       LLVM_DEBUG(dbgs() << "WARNING: Ignoring " << Size << " byte store @"
                         << Offset << " which extends past the end of the "
                         << AllocSize << " byte alloca:\n"
