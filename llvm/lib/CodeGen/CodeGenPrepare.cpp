@@ -8997,7 +8997,7 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
       // Hoist bitcasts of illegal types to reduce cross-block register pressure
       // and prevent register splitting.
       if (optimizeBitCast(BCI, *TLI, *DL)) {
-        return true;        
+        return true;
       }
     }
 
