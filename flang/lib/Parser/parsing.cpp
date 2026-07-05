@@ -306,7 +306,9 @@ void Parsing::Parse(llvm::raw_ostream &out) {
 // suggest the -flogical-abbreviations option.  Tying each suggestion to
 // a failing source line keeps it from appearing for an occurrence that parses
 // successfully as a defined operator (those fail later in semantics, not here)
-// or on a line that failed for an unrelated reason.
+// or on a line that failed for an unrelated reason.  Line granularity is a
+// heuristic, though: a valid defined-operator use that happens to share its
+// source line with an unrelated parse error still receives the suggestion.
 void Parsing::SuggestLogicalAbbreviations(
     const UserState &userState, Messages &messages) {
   const std::set<CharBlock, UserState::CharBlockByPosition> &abbreviations{
