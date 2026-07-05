@@ -5,6 +5,7 @@ set_property(DIRECTORY PROPERTY LLDB_TOLERATED_PLUGIN_DEPENDENCIES
   TypeSystem
 )
 
+add_subdirectory(AcceleratorGDBRemote)
 add_subdirectory(Darwin-Kernel)
 add_subdirectory(FreeBSD-Kernel)
 add_subdirectory(MacOSX-DYLD)
