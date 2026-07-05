@@ -1192,10 +1192,7 @@ Value *InstCombinerImpl::SimplifyAddWithRemainder(BinaryOperator &I) {
     }
   }
 
-  // Match I = (X / C0) * C1 + (X % C0) * C2. The division and remainder may
-  // appear in either operand order, and the remainder may be spelled
-  // `and X, lowmask` rather than urem/srem, so try the fold with both argument
-  // orders instead of normalizing them.
+  // Match I = (X / C0) * C1 + (X % C0) * C2.
   auto FoldDivRem = [&](Value *DivSide, Value *RemSide) -> Value * {
     Value *Div, *Rem;
     APInt C1, C2;
