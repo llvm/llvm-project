@@ -9,8 +9,8 @@
 #define LIBC_ENABLE_CONSTEXPR 1
 
 #include "shared/math.h"
-#include "test/UnitTest/Test.h"
 #include "src/__support/FPUtil/float128.h"
+#include "test/UnitTest/Test.h"
 
 using LIBC_NAMESPACE::fputil::Float128;
 
@@ -376,10 +376,9 @@ static_assert(0 == LIBC_NAMESPACE::shared::isnanl(0.0L));
 
 #endif
 
-//emulated float128 
+// emulated float128
 
 static_assert(Float128(0.0) == LIBC_NAMESPACE::shared::ceilf128(Float128(0.0)));
-
 
 //===----------------------------------------------------------------------===//
 //                       Float128 Tests
