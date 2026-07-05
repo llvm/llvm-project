@@ -545,7 +545,9 @@ end program
   (but not Hollerith) [-fbackslash], including Unicode escapes
   with `\U`.
 * Logical abbreviations `.T.`, `.F.`, `.N.`, `.A.`, `.O.`, and `.X.`
-  [-flogical-abbreviations]
+  [-flogical-abbreviations]; when the option is not enabled and a parse
+  error occurs on a source line bearing one of these abbreviations, the
+  error output includes a note suggesting the option.
 * `.XOR.` as a synonym for `.NEQV.` [-fxor-operator]
 * The default `INTEGER` type is required by the standard to occupy
   the same amount of storage as the default `REAL` type.  Default
