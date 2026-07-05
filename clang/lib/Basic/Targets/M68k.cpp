@@ -24,6 +24,18 @@
 namespace clang {
 namespace targets {
 
+// Linux/m68k ("old") uses the ABI from Sun Microsystems a.out
+// for m68k, and uses 16-bit alignments for int/long/pointers.
+//
+// NetBSD/m68k uses the ABI from SVR4 for m68k,
+// which uses 32-bit alignments for int/long/pointers.
+//
+// Ref. https://github.com/M680x0/issues/issues/13 and
+// https://github.com/llvm/llvm-project/issues/199826
+//
+// Arguably this ought to respect -malign-int, as suggested
+// above, this code doesn't so far.
+
 M68kTargetInfo::M68kTargetInfo(const llvm::Triple &Triple,
                                const TargetOptions &Opts)
     : TargetInfo(Triple), TargetOpts(Opts) {
@@ -32,7 +44,11 @@ M68kTargetInfo::M68kTargetInfo(const llvm::Triple &Triple,
   SizeType = UnsignedInt;
   PtrDiffType = SignedInt;
   IntPtrType = SignedInt;
-  IntAlign = LongAlign = PointerAlign = 16;
+  if (getTriple().isOSNetBSD()) {
+    IntAlign = LongAlign = PointerAlign = 32;
+  } else {
+    IntAlign = LongAlign = PointerAlign = 16;
+  }
 }
 
 bool M68kTargetInfo::setCPU(StringRef Name) {
