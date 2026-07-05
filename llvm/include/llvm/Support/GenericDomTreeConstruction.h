@@ -270,8 +270,9 @@ template <typename DomTreeT> struct SemiNCAInfo {
   // O(m*alpha(m,n)) running time. But it requires two auxiliary arrays (Size
   // and Child) and is unlikely to be faster than the simple implementation.
   //
-  // For each vertex V, its Label points to the vertex with the minimal sdom(U)
-  // (Semi) in its path from V (included) to NodeToInfo[V].Parent (excluded).
+  // For each vertex V, its Label is the minimal sdom (Semi) on its path from V
+  // (included) to NodeToInfo[V].Parent (excluded), held directly as a Semi
+  // value.
   unsigned eval(unsigned V, unsigned LastLinked,
                 SmallVectorImpl<InfoRec *> &Stack,
                 ArrayRef<InfoRec *> NumToInfo) {
@@ -287,17 +288,17 @@ template <typename DomTreeT> struct SemiNCAInfo {
     } while (VInfo->Parent >= LastLinked);
 
     // Path compression. Point each vertex's Parent to the root and update its
-    // Label if any of its ancestors (PInfo->Label) has a smaller Semi.
+    // Label if any of its ancestors (PLabel) has a smaller Semi.
     const InfoRec *PInfo = VInfo;
-    const InfoRec *PLabelInfo = NumToInfo[PInfo->Label];
+    unsigned PLabel = PInfo->Label;
     do {
       VInfo = Stack.pop_back_val();
       VInfo->Parent = PInfo->Parent;
-      const InfoRec *VLabelInfo = NumToInfo[VInfo->Label];
-      if (PLabelInfo->Semi < VLabelInfo->Semi)
-        VInfo->Label = PInfo->Label;
+      unsigned VLabel = VInfo->Label;
+      if (PLabel < VLabel)
+        VInfo->Label = PLabel;
       else
-        PLabelInfo = VLabelInfo;
+        PLabel = VLabel;
       PInfo = VInfo;
     } while (!Stack.empty());
     return VInfo->Label;
@@ -329,11 +330,12 @@ template <typename DomTreeT> struct SemiNCAInfo {
       for (unsigned RCIdx = WInfo.ReverseChildrenStart; RCIdx != 0;) {
         const auto &Entry = ReverseChildren[RCIdx - 1];
         RCIdx = Entry.second;
-        unsigned SemiU =
-            NumToInfo[eval(Entry.first, i + 1, EvalStack, NumToInfo)]->Semi;
+        unsigned SemiU = eval(Entry.first, i + 1, EvalStack, NumToInfo);
         if (SemiU < WInfo.Semi)
           WInfo.Semi = SemiU;
       }
+      // Label now holds the semidominator value for later eval() calls.
+      WInfo.Label = WInfo.Semi;
     }
 
     // Step #2: Explicitly define the immediate dominator of each vertex.
