@@ -718,6 +718,30 @@ static mlir::Value emitCommonNeonBuiltinExpr(
     // %res = trunc <4 x i32> %high to <4 x i16>
     return cgf.getBuilder().createIntCast(result, vTy);
   }
+  case NEON::BI__builtin_neon_vsubhn_v: {
+    // srcTy has double-width elements (e.g. <8 x i16> when VTy is <8 x i8>).
+    // Unsigned so createShiftRight emits lshr, not ashr.
+    cir::VectorType srcTy =
+        cgf.getBuilder().getExtendedOrTruncatedElementVectorType(
+            vTy, /*isExtended=*/true, /*isSigned=*/false);
+
+    // %diff = sub <4 x i32> %lhs, %rhs
+    ops[0] = cgf.getBuilder().createBitcast(ops[0], srcTy);
+    ops[1] = cgf.getBuilder().createBitcast(ops[1], srcTy);
+    mlir::Value result = cgf.getBuilder().createSub(loc, ops[0], ops[1]);
+
+    // %high = lshr <4 x i32> %diff, <i32 16, i32 16, i32 16, i32 16>
+    auto wideEltTy = mlir::cast<cir::IntType>(srcTy.getElementType());
+    mlir::Value shiftAmt = cgf.getBuilder().getConstantInt(
+        loc, wideEltTy, wideEltTy.getWidth() / 2);
+    mlir::Value shiftVec =
+        emitNeonShiftVector(cgf.getBuilder(), shiftAmt, srcTy, loc,
+                            /*neg=*/false);
+    result = cgf.getBuilder().createShiftRight(loc, result, shiftVec);
+
+    // %res = trunc <4 x i32> %high to <4 x i16>
+    return cgf.getBuilder().createIntCast(result, vTy);
+  }
   case NEON::BI__builtin_neon_vcale_v:
   case NEON::BI__builtin_neon_vcaleq_v:
   case NEON::BI__builtin_neon_vcalt_v:
@@ -1042,7 +1066,6 @@ static mlir::Value emitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vst1q_x3_v:
   case NEON::BI__builtin_neon_vst1_x4_v:
   case NEON::BI__builtin_neon_vst1q_x4_v:
-  case NEON::BI__builtin_neon_vsubhn_v:
   case NEON::BI__builtin_neon_vtrn_v:
   case NEON::BI__builtin_neon_vtrnq_v:
   case NEON::BI__builtin_neon_vtst_v:
@@ -1121,11 +1144,14 @@ static mlir::Value emitCommonNeonBuiltinExpr(
   }
   case NEON::BI__builtin_neon_vhadd_v:
   case NEON::BI__builtin_neon_vhaddq_v:
+  case NEON::BI__builtin_neon_vhsub_v:
+  case NEON::BI__builtin_neon_vhsubq_v:
   case NEON::BI__builtin_neon_vrhadd_v:
   case NEON::BI__builtin_neon_vrhaddq_v:
   case NEON::BI__builtin_neon_vshl_v:
   case NEON::BI__builtin_neon_vshlq_v:
-  case NEON::BI__builtin_neon_vraddhn_v: {
+  case NEON::BI__builtin_neon_vraddhn_v:
+  case NEON::BI__builtin_neon_vrsubhn_v: {
     // Pick the signed/unsigned intrinsic when the builtin has both
     // (UnsignedAlts); otherwise there is a single intrinsic.
     unsigned intrinsic =
