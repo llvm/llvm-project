@@ -130,6 +130,8 @@ const API = {
     return API.get(url);
   },
   compare: (before, after) => API.get(`/compare/${encodeURIComponent(before)}/${encodeURIComponent(after)}`),
+  compareRemarks: (before, after, offset, limit) => API.get(`/compare/${encodeURIComponent(before)}/${encodeURIComponent(after)}/remarks?offset=${offset||0}&limit=${limit||100}`),
+  compareFunctionDetail: (before, after, fn) => API.get(`/compare/${encodeURIComponent(before)}/${encodeURIComponent(after)}/remarks/${encodeURIComponent(fn)}`),
   inspect: (mode, body) => API.post(`/inspect/${encodeURIComponent(mode)}`, body),
   jobs: () => API.get('/jobs'),
   async importFile(file, sourceRoot) {

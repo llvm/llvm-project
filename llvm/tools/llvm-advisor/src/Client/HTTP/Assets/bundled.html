@@ -512,6 +512,8 @@ ul,ol{list-style:none}
 /* Compare Summary Section */
 .compare-summary-section{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:18px}
 .compare-summary-section h3{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--fg3);margin-bottom:14px}
+.compare-remarks-section{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:18px}
+.compare-remarks-section h3{font-size:13px;font-weight:600;margin-bottom:10px}
 .compare-health-delta{display:flex;align-items:center;gap:16px;padding:12px 0;margin-bottom:12px}
 .compare-health-value{font-family:var(--mono);font-size:28px;font-weight:700}
 .compare-health-arrow{font-size:18px}
@@ -865,6 +867,8 @@ const API = {
     return API.get(url);
   },
   compare: (before, after) => API.get(`/compare/${encodeURIComponent(before)}/${encodeURIComponent(after)}`),
+  compareRemarks: (before, after, offset, limit) => API.get(`/compare/${encodeURIComponent(before)}/${encodeURIComponent(after)}/remarks?offset=${offset||0}&limit=${limit||100}`),
+  compareFunctionDetail: (before, after, fn) => API.get(`/compare/${encodeURIComponent(before)}/${encodeURIComponent(after)}/remarks/${encodeURIComponent(fn)}`),
   inspect: (mode, body) => API.post(`/inspect/${encodeURIComponent(mode)}`, body),
   jobs: () => API.get('/jobs'),
   async importFile(file, sourceRoot) {
@@ -3580,6 +3584,9 @@ const CompareView = {
   _results: null,
   _baseSummary: null,
   _candidateSummary: null,
+  _remarksDiff: null,
+  _remarkPage: 0,
+  _remarkPageCount: 1,
 
   async render(params) {
     this._baseId = params.base || null;
@@ -3594,6 +3601,7 @@ const CompareView = {
 
     container.appendChild(h('div', { id: 'compare-summary-section' }));
     container.appendChild(h('div', { class: 'summary-bar', id: 'compare-summary' }));
+    container.appendChild(h('div', { id: 'compare-remarks-diff' }));
     container.appendChild(h('div', { class: 'section-header' }, 'Unit Changes'));
     container.appendChild(h('div', { id: 'compare-results' }));
 
@@ -3628,14 +3636,17 @@ const CompareView = {
     const sumSectionEl = document.getElementById('compare-summary-section');
     if (resultsEl) { clearEl(resultsEl); resultsEl.appendChild(h('div', { class: 'text-muted mono', style: { padding: '16px' } }, 'Comparing…')); }
 
-    const [compareRes, baseSumRes, candSumRes] = await Promise.all([
+    const [compareRes, baseSumRes, candSumRes, remDiffRes] = await Promise.all([
       API.compare(this._baseId, this._candidateId),
       API.snapshotSummary(this._baseId).catch(() => ({ ok: false, data: {} })),
       API.snapshotSummary(this._candidateId).catch(() => ({ ok: false, data: {} })),
+      API.compareRemarks(this._baseId, this._candidateId, 0, 100).catch(() => ({ ok: false, data: null })),
     ]);
 
     this._baseSummary = baseSumRes.ok && baseSumRes.data ? baseSumRes.data : {};
     this._candidateSummary = candSumRes.ok && candSumRes.data ? candSumRes.data : {};
+    this._remarksDiff = remDiffRes.ok && remDiffRes.data ? remDiffRes.data : null;
+    this._remarkPage = 0;
 
     if (!compareRes.ok) {
       if (resultsEl) { clearEl(resultsEl); resultsEl.appendChild(UI.errorCard(compareRes.error || 'Compare failed', () => this.runCompare())); }
@@ -3645,6 +3656,8 @@ const CompareView = {
     this._results = compareRes.data;
     this.renderMatchSummary(summaryEl);
     this.renderSummaryComparison(sumSectionEl);
+    const remDiffEl = document.getElementById('compare-remarks-diff');
+    if (remDiffEl) this.renderRemarksDiff(remDiffEl);
     this.renderResults(resultsEl);
   },
 
@@ -3748,6 +3761,154 @@ const CompareView = {
     }
 
     el.appendChild(section);
+  },
+
+  renderRemarksDiff(el) {
+    clearEl(el);
+    const diff = this._remarksDiff;
+    if (!diff) return;
+
+    const s = diff.summary || {};
+    const newMissed = s.new_missed || 0;
+    const resolved = s.resolved_missed || 0;
+    const changed = s.functions_changed || 0;
+    const added = s.functions_added || 0;
+    const removed = s.functions_removed || 0;
+
+    if (changed === 0 && newMissed === 0 && resolved === 0) return;
+
+    const section = h('div', { class: 'compare-remarks-section' });
+    section.appendChild(h('h3', { style: { margin: '0 0 10px' } }, 'Optimization Impact'));
+
+    const impactBar = h('div', { style: { display: 'flex', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' } });
+    if (newMissed > 0)
+      impactBar.appendChild(h('div', { class: 'summary-metric warn' },
+        h('div', { class: 'label' }, 'New Missed'),
+        h('div', { class: 'values', style: { color: 'var(--orange)' } }, `+${formatNumber(newMissed)}`)
+      ));
+    if (resolved > 0)
+      impactBar.appendChild(h('div', { class: 'summary-metric' },
+        h('div', { class: 'label' }, 'Resolved'),
+        h('div', { class: 'values', style: { color: 'var(--green)' } }, `-${formatNumber(resolved)}`)
+      ));
+    impactBar.appendChild(h('div', { class: 'summary-metric' },
+      h('div', { class: 'label' }, 'Functions Changed'),
+      h('div', { class: 'values' }, formatNumber(changed))
+    ));
+    if (added > 0)
+      impactBar.appendChild(h('div', { class: 'summary-metric' },
+        h('div', { class: 'label' }, 'Functions Added'),
+        h('div', { class: 'values' }, formatNumber(added))
+      ));
+    if (removed > 0)
+      impactBar.appendChild(h('div', { class: 'summary-metric' },
+        h('div', { class: 'label' }, 'Functions Removed'),
+        h('div', { class: 'values' }, formatNumber(removed))
+      ));
+    section.appendChild(impactBar);
+
+    const functions = diff.functions || [];
+    if (!functions.length) { el.appendChild(section); return; }
+
+    const tbl = h('table', { class: 'top-units-table', style: { width: '100%' } });
+    const thead = h('tr', {},
+      h('th', {}, 'Function'),
+      h('th', { style: { textAlign: 'right' } }, 'Before'),
+      h('th', { style: { textAlign: 'right' } }, 'After'),
+      h('th', { style: { textAlign: 'right' } }, '∆ Missed'),
+      h('th', { style: { textAlign: 'right' } }, '∆ Total'),
+    );
+    tbl.appendChild(h('thead', {}, thead));
+    const tbody = h('tbody', {});
+
+    functions.forEach((fn, idx) => {
+      const delta = fn.delta_missed;
+      const color = delta > 0 ? 'var(--orange)' : delta < 0 ? 'var(--green)' : 'var(--fg)';
+      const row = h('tr', { style: { cursor: 'pointer' },
+        onClick: () => this._toggleFnDetail(fn, row, tbody, idx)
+      },
+        h('td', { class: 'mono', style: { fontSize: '11px', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }, title: fn.name }, fn.name),
+        h('td', { class: 'num' }, formatNumber(fn.before?.missed || 0)),
+        h('td', { class: 'num' }, formatNumber(fn.after?.missed || 0)),
+        h('td', { class: 'num', style: { color } }, `${delta >= 0 ? '+' : ''}${formatNumber(delta)}`),
+        h('td', { class: 'num', style: { color: fn.delta_total > 0 ? 'var(--orange)' : fn.delta_total < 0 ? 'var(--green)' : '' } }, `${fn.delta_total >= 0 ? '+' : ''}${formatNumber(fn.delta_total)}`),
+      );
+      tbody.appendChild(row);
+    });
+    tbl.appendChild(tbody);
+
+    const wrap = h('div', { class: 'top-units-wrap', style: { maxHeight: '300px', overflow: 'auto' } }, tbl);
+    section.appendChild(wrap);
+
+    const total = diff.total || 0;
+    const pageSize = 100;
+    this._remarkPageCount = Math.max(1, Math.ceil(total / pageSize));
+    if (total > functions.length) {
+      const pager = h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', marginTop: '8px', fontSize: '12px' } });
+      const prevBtn = h('button', { class: 'triage-chip', onClick: async () => {
+        if (this._remarkPage <= 0) return;
+        this._remarkPage--;
+        await this._fetchRemarkPage(el);
+      }}, '← Prev');
+      const nextBtn = h('button', { class: 'triage-chip', onClick: async () => {
+        if (this._remarkPage >= this._remarkPageCount - 1) return;
+        this._remarkPage++;
+        await this._fetchRemarkPage(el);
+      }}, 'Next →');
+      const pageLabel = h('span', { class: 'text-muted' }, `Page ${this._remarkPage + 1} of ${this._remarkPageCount} (${formatNumber(total)} changed)`);
+      pager.appendChild(prevBtn); pager.appendChild(pageLabel); pager.appendChild(nextBtn);
+      section.appendChild(pager);
+    }
+
+    el.appendChild(section);
+  },
+
+  async _fetchRemarkPage(el) {
+    const res = await API.compareRemarks(this._baseId, this._candidateId, this._remarkPage * 100, 100);
+    if (res.ok && res.data) { this._remarksDiff = res.data; this.renderRemarksDiff(el); }
+  },
+
+  async _toggleFnDetail(fn, row, tbody, idx) {
+    const existingId = `fn-detail-${idx}`;
+    const existing = tbody.querySelector(`#${existingId}`);
+    if (existing) { existing.remove(); row.classList.remove('expanded'); return; }
+    row.classList.add('expanded');
+    const detailRow = h('tr', { id: existingId });
+    const cell = h('td', { colspan: '5', style: { padding: '8px 12px', background: 'var(--bg2)', fontSize: '11px' } });
+    cell.textContent = 'Loading…';
+    detailRow.appendChild(cell);
+    row.after(detailRow);
+
+    const res = await API.compareFunctionDetail(this._baseId, this._candidateId, fn.name);
+    clearEl(cell);
+    if (!res.ok) { cell.textContent = 'Failed to load detail.'; return; }
+    const d = res.data;
+    const added = d.added || [];
+    const removed = d.removed || [];
+
+    if (!added.length && !removed.length) { cell.textContent = 'No remark-level changes found.'; return; }
+
+    const TYPE_NAMES = { 1: 'passed', 2: 'missed', 3: 'analysis', 6: 'failure' };
+    const TYPE_COLORS = { 1: 'var(--green)', 2: 'var(--orange)', 3: 'var(--teal)', 6: 'var(--red)' };
+
+    const makeEntries = (items, sign, color) => items.map(r =>
+      h('div', { style: { display: 'flex', gap: '8px', padding: '2px 0', alignItems: 'baseline' } },
+        h('span', { style: { color, fontWeight: '600', minWidth: '16px' } }, sign),
+        h('span', { style: { color: TYPE_COLORS[r.type] || 'var(--fg3)', minWidth: '60px' } }, TYPE_NAMES[r.type] || '?'),
+        h('span', { style: { fontWeight: '500' } }, r.name || ''),
+        h('span', { class: 'text-muted' }, r.pass || ''),
+        h('span', { style: { color: color, fontSize: '10px' } }, `×${Math.abs(r.delta || r.after_count - r.before_count)}`),
+      )
+    );
+
+    if (removed.length) {
+      cell.appendChild(h('div', { style: { marginBottom: '4px', fontWeight: '600', color: 'var(--red)' } }, 'Removed (resolved):'));
+      makeEntries(removed, '−', 'var(--green)').forEach(e => cell.appendChild(e));
+    }
+    if (added.length) {
+      cell.appendChild(h('div', { style: { marginTop: removed.length ? '8px' : 0, marginBottom: '4px', fontWeight: '600', color: 'var(--orange)' } }, 'Added (new):'));
+      makeEntries(added, '+', 'var(--orange)').forEach(e => cell.appendChild(e));
+    }
   },
 
   renderResults(el) {

@@ -503,6 +503,8 @@ ul,ol{list-style:none}
 /* Compare Summary Section */
 .compare-summary-section{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:18px}
 .compare-summary-section h3{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--fg3);margin-bottom:14px}
+.compare-remarks-section{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:18px}
+.compare-remarks-section h3{font-size:13px;font-weight:600;margin-bottom:10px}
 .compare-health-delta{display:flex;align-items:center;gap:16px;padding:12px 0;margin-bottom:12px}
 .compare-health-value{font-family:var(--mono);font-size:28px;font-weight:700}
 .compare-health-arrow{font-size:18px}
