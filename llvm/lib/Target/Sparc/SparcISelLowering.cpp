@@ -3264,7 +3264,6 @@ SDValue SparcTargetLowering::PerformBSWAPCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   SDValue Op = N->getOperand(0);
   EVT VT = N->getValueType(0);
-  Type *Ty = VT.getTypeForEVT(*DAG.getContext());
   LoadSDNode *LN = dyn_cast<LoadSDNode>(Op.getNode());
 
   bool IsLittleEndian = DAG.getDataLayout().isLittleEndian();
@@ -3303,12 +3302,12 @@ SDValue SparcTargetLowering::PerformSTORECombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   SDValue Op = N->getOperand(1);
   EVT VT = Op.getValueType();
+  EVT MemVT = cast<StoreSDNode>(N)->getMemoryVT();
   unsigned Opcode = Op.getOpcode();
-  Type *Ty = VT.getTypeForEVT(*DAG.getContext());
   StoreSDNode *SN = dyn_cast<StoreSDNode>(N);
 
   bool IsLittleEndian = DAG.getDataLayout().isLittleEndian();
-  bool IsAlignedStore = SN && SN->getAlign() >= VT.getScalarStoreSize();
+  bool IsAlignedStore = SN && SN->getAlign() >= MemVT.getScalarStoreSize();
 
   // Turn aligned-STORE (BSWAP) -> st*a #ASI_P(_L) on V9.
   if (Subtarget->isV9() && Opcode == ISD::BSWAP && Op.getNode()->hasOneUse() &&
@@ -3318,7 +3317,6 @@ SDValue SparcTargetLowering::PerformSTORECombine(SDNode *N,
 
     // st*a can only handle simple types and it makes no sense to store less
     // than two bytes in byte-reversed order.
-    EVT MemVT = cast<StoreSDNode>(N)->getMemoryVT();
     if (MemVT.getSizeInBits() < 16)
       return SDValue();
 
