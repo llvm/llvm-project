@@ -82,10 +82,41 @@ static bool insertModuleCtor(Module &M) {
       M, CopyProfModuleCtorName, CopyProfInitName,
       /*InitArgTypes=*/{},
       /*InitArgs=*/{}, [&](Function *Ctor, FunctionCallee) {
+        // Mark the ctor so it's never instrumented itself.
+        Ctor->addFnAttr(Attribute::DisableSanitizerInstrumentation);
         appendToGlobalCtors(M, Ctor, 0);
         Modified = true;
       });
   return Modified;
+}
+
+static bool isCopyProfCandidate(const Function &F) {
+  // Must not instrument functions that are explicitly disallowed for
+  // instrumentation, or naked functions.
+  if (F.isDeclaration() ||
+      F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation) ||
+      F.hasFnAttribute(Attribute::Naked))
+    return false;
+
+  // Don't instrument a function at all if it's ending with a tail call.
+  // Alternatively, the exit callback could be placed before the tail call, but
+  // that would risk missing observable side-effects needed by CopyProf to infer
+  // memory ownership (potentially leading to flase positive reports).
+  // Skipping this function favors false negatives over false positives.
+  for (const BasicBlock &BB : F)
+    if (BB.getTerminatingMustTailCall())
+      return false;
+
+  return F.hasFnAttribute(CopyProfCtorAttr) ||
+         F.hasFnAttribute(CopyProfCopyCtorAttr) ||
+         F.hasFnAttribute(CopyProfCopyAssignAttr) ||
+         F.hasFnAttribute(CopyProfDtorAttr);
+}
+
+static bool isCopyProfStoresCandidate(const Function &F) {
+  return !F.isDeclaration() &&
+         !F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation) &&
+         !F.hasFnAttribute(Attribute::Naked);
 }
 
 // Returns the object size in bytes that was stored in the given function
@@ -170,13 +201,6 @@ CopyProf::CopyProf(Module &M) {
 }
 
 bool CopyProf::instrumentFunction(Function &F) {
-  // Must not instrument our own module c'tor or functions that are explicitly
-  // disallowed for instrumentation.
-  if (F.isDeclaration() ||
-      F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation) ||
-      F.getName() == CopyProfModuleCtorName)
-    return false;
-
   bool Modified = true;
   if (F.hasFnAttribute(CopyProfCtorAttr))
     insertCallback(F, getAttrValueAsInt(F, CopyProfCtorAttr), /*NumArgs=*/1,
@@ -242,28 +266,27 @@ CopyProfStores::CopyProfStores(Module &M) {
 }
 
 bool CopyProfStores::instrumentFunction(Function &F) {
-  if (F.isDeclaration() ||
-      F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation) ||
-      F.getName() == CopyProfModuleCtorName)
-    return false;
-
   // TODO: handle all types of memory stores (memory intrinsics, masked store
   // intrinsics, AtomicRMW, and AtomicCmpXchg).
+  const DataLayout &DL = F.getParent()->getDataLayout();
   SmallVector<StoreInst *, 16> ToInstrument;
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       if (auto *SI = dyn_cast<StoreInst>(&I);
           SI != nullptr && SI->getPointerAddressSpace() == 0 &&
-          !SI->hasMetadata(LLVMContext::MD_nosanitize))
+          !SI->hasMetadata(LLVMContext::MD_nosanitize) &&
+          // Scalable vector stores have no compile-time-constant size so skip
+          // them.
+          !DL.getTypeStoreSize(SI->getValueOperand()->getType()).isScalable())
         ToInstrument.push_back(SI);
     }
   }
   if (ToInstrument.empty())
     return false;
 
-  const DataLayout &DL = F.getParent()->getDataLayout();
   for (StoreInst *SI : ToInstrument) {
-    uint64_t StoredSize = DL.getTypeStoreSize(SI->getValueOperand()->getType());
+    uint64_t StoredSize =
+        DL.getTypeStoreSize(SI->getValueOperand()->getType()).getFixedValue();
     InstrumentationIRBuilder IRB(SI);
     std::array<Value *, 2> Args = {SI->getPointerOperand(),
                                    ConstantInt::get(IntPtrTy, StoredSize)};
@@ -273,6 +296,8 @@ bool CopyProfStores::instrumentFunction(Function &F) {
 }
 
 PreservedAnalyses CopyProfPass::run(Function &F, FunctionAnalysisManager &) {
+  if (!isCopyProfCandidate(F))
+    return PreservedAnalyses::all();
   CopyProf Impl(*F.getParent());
   if (!Impl.instrumentFunction(F))
     return PreservedAnalyses::all();
@@ -288,6 +313,8 @@ PreservedAnalyses ModuleCopyProfPass::run(Module &M, ModuleAnalysisManager &) {
 
 PreservedAnalyses CopyProfStoresPass::run(Function &F,
                                           FunctionAnalysisManager &) {
+  if (!isCopyProfStoresCandidate(F))
+    return PreservedAnalyses::all();
   CopyProfStores Impl(*F.getParent());
   if (!Impl.instrumentFunction(F))
     return PreservedAnalyses::all();

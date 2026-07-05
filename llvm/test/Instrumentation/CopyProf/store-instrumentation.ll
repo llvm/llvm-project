@@ -59,6 +59,18 @@ entry:
 ; CHECK:         store i32 42, ptr addrspace(1) %a
 ; CHECK-NEXT:    ret void
 
+;; Tests that scalable vector stores are skipped as they have no
+;; compile-time-constant store size.
+define void @test_store_scalable_vector(ptr %a) {
+entry:
+  store <vscale x 4 x i32> zeroinitializer, ptr %a, align 16
+  ret void
+}
+; CHECK-LABEL: define void @test_store_scalable_vector(ptr %a)
+; CHECK-NOT:     call void @__copyprof_store_callback
+; CHECK:         store <vscale x 4 x i32> zeroinitializer, ptr %a
+; CHECK-NEXT:    ret void
+
 ;; Tests that a vector store is instrumented with the correct aggregate size.
 define void @test_store_vector(ptr %a) {
 entry:

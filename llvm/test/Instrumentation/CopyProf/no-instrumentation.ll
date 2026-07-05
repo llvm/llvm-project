@@ -53,6 +53,20 @@ entry:
 ; STORES:         store i32 42, ptr %a
 ; STORES-NEXT:    ret void
 
+;; Tests that instrumentation is skipped for naked functions.
+define void @naked_ctor_with_store(ptr %this) "copyprof-ctor"="8" naked {
+entry:
+  store i32 0, ptr null
+  ret void
+}
+; CHECK-LABEL: define void @naked_ctor_with_store(ptr %this)
+; CHECK-NOT:     call void @__copyprof_
+; CHECK:         ret void
+; STORES-LABEL: define void @naked_ctor_with_store(ptr %this)
+; STORES-NOT:     call void @__copyprof_store_callback
+; STORES:         store i32 0, ptr null
+; STORES-NEXT:    ret void
+
 ;; Tests that the module constructor itself is not instrumented by either pass.
 define internal void @copyprof.module_ctor() {
 entry:

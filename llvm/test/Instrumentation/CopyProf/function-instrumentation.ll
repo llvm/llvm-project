@@ -106,6 +106,20 @@ declare i32 @__gxx_personality_v0(...)
 ; CHECK:         call void @__copyprof_ctor_exit_callback(ptr %this, i64 8)
 ; CHECK-NEXT:    resume
 
+;; Tests that a function containing a musttail call is skipped entirely.
+declare void @tail_callee(ptr)
+
+define void @ctor_with_musttail(ptr %this) "copyprof-ctor"="8" {
+entry:
+  musttail call void @tail_callee(ptr %this)
+  ret void
+}
+; CHECK-LABEL: define void @ctor_with_musttail(ptr %this)
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    musttail call void @tail_callee(ptr %this)
+; CHECK-NEXT:    ret void
+; CHECK-NOT:     call void @__copyprof_
+
 ;; Tests that entry callbacks are inserted after alloca instructions.
 define void @ctor_with_alloca(ptr %this) "copyprof-ctor"="8" {
 entry:
@@ -130,6 +144,8 @@ entry:
 ; CHECK-NOT:     call void @__copyprof_ctor_exit_callback
 ; CHECK:         unreachable
 
-;; Verifies that the module constructor calls the init function.
+;; Verifies that the module constructor calls the init function and is marked so
+;; that it's never instrumented itself.
 ; CHECK: define internal void @copyprof.module_ctor()
 ; CHECK:   call void @__copyprof_init()
+; CHECK: disable_sanitizer_instrumentation
