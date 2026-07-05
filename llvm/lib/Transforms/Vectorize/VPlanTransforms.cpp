@@ -1254,6 +1254,9 @@ getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R) {
       .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe, VPWidenGEPRecipe,
             VPReplicateRecipe>(
           [](auto *I) { return std::make_pair(false, I->getOpcode()); })
+      .Case([](const VPWidenPHIRecipe *I) {
+        return std::make_pair(true, Instruction::PHI);
+      })
       .Case([](const VPWidenIntrinsicRecipe *I) {
         return std::make_pair(true, I->getVectorIntrinsicID());
       })
@@ -2526,6 +2529,10 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
       if (LSIV->getInductionOpcode() !=
           cast<VPScalarIVStepsRecipe>(R)->getInductionOpcode())
         return false;
+    // Phi recipes can only be equal if they are in the same VPBB, as they
+    // implicitly depend on their predecessors.
+    if (isa<VPWidenPHIRecipe>(L) && L->getParent() != R->getParent())
+      return false;
     // Recipes in replicate regions implicitly depend on predicate. If either
     // recipe is in a replicate region, only consider them equal if both have
     // the same parent.
