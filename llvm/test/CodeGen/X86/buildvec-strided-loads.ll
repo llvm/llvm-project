@@ -793,9 +793,15 @@ define <8 x i8> @buildvec_v8i8_stride8(ptr %p) {
 ;
 ; AVX512-LABEL: buildvec_v8i8_stride8:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovdqu64 (%rdi), %zmm0
-; AVX512-NEXT:    vpmovqb %zmm0, %xmm0
-; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    movzbl (%rdi), %eax
+; AVX512-NEXT:    vmovd %eax, %xmm0
+; AVX512-NEXT:    vpinsrb $1, 8(%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrb $2, 16(%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrb $3, 24(%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrb $4, 32(%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrb $5, 40(%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrb $6, 48(%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrb $7, 56(%rdi), %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %p0 = getelementptr inbounds i8, ptr %p, i64 0
   %p1 = getelementptr inbounds i8, ptr %p, i64 8
@@ -894,8 +900,15 @@ define <32 x i8> @buildvec_v32i8_stride8_basepos16(ptr %p) {
 ;
 ; AVX512-LABEL: buildvec_v32i8_stride8_basepos16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovdqu64 (%rdi), %zmm0
-; AVX512-NEXT:    vpmovqb %zmm0, %xmm0
+; AVX512-NEXT:    movzbl (%rdi), %eax
+; AVX512-NEXT:    vmovd %eax, %xmm0
+; AVX512-NEXT:    vpinsrb $1, 8(%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrb $2, 16(%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrb $3, 24(%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrb $4, 32(%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrb $5, 40(%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrb $6, 48(%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrb $7, 56(%rdi), %xmm0, %xmm0
 ; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %p0 = getelementptr inbounds i8, ptr %p, i64 0
@@ -941,9 +954,15 @@ define <32 x i8> @buildvec_v32i8_stride8_basepos8(ptr %p) {
 ;
 ; AVX512-LABEL: buildvec_v32i8_stride8_basepos8:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovdqu64 (%rdi), %zmm0
-; AVX512-NEXT:    vpmovqb %zmm0, %xmm0
-; AVX512-NEXT:    vpbroadcastq %xmm0, %xmm0
+; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrb $8, (%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrb $9, 8(%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrb $10, 16(%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrb $11, 24(%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrb $12, 32(%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrb $13, 40(%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrb $14, 48(%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrb $15, 56(%rdi), %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %p0 = getelementptr inbounds i8, ptr %p, i64 0
   %p1 = getelementptr inbounds i8, ptr %p, i64 8
@@ -1071,8 +1090,15 @@ define <32 x i8> @buildvec_v32i8_stride8_trailing_zeros(ptr %p) {
 ;
 ; AVX512-LABEL: buildvec_v32i8_stride8_trailing_zeros:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovdqu64 (%rdi), %zmm0
-; AVX512-NEXT:    vpmovqb %zmm0, %xmm0
+; AVX512-NEXT:    movzbl (%rdi), %eax
+; AVX512-NEXT:    vmovd %eax, %xmm0
+; AVX512-NEXT:    vpinsrb $1, 8(%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrb $2, 16(%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrb $3, 24(%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrb $4, 32(%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrb $5, 40(%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrb $6, 48(%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpinsrb $7, 56(%rdi), %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %p0 = getelementptr inbounds i8, ptr %p, i64 0
   %p1 = getelementptr inbounds i8, ptr %p, i64 8

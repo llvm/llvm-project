@@ -8057,28 +8057,21 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
 
   // STRIDED - element loads at a uniform byte stride larger than the element
   // size are folded into wide load(s) + vector truncation.
-  unsigned LoadCount = LoadMask.popcount();
-  // Depth 1 lets the REVERSE block above recurse into us to catch reverse
+  // Depth 1 lets the REVERSE block below recurse into us to catch reverse
   // strides.
   if (Depth <= 1 && Subtarget.hasAVX2() && !IsConsecutiveLoad &&
-      isPowerOf2_32(LoadCount) && LoadCount >= 2 && BaseSizeInBits <= 32 &&
+      LoadMask.isAllOnes() && isPowerOf2_32(NumElems) && BaseSizeInBits <= 32 &&
       VT.getSizeInBits() >= 128) {
-    SmallVector<int, 16> LoadedPositions;
-    LoadedPositions.reserve(LoadCount);
-    for (int i = 0; i < (int)NumElems; ++i)
-      if (LoadMask[i])
-        LoadedPositions.push_back(i);
     unsigned WideEltBits = 0;
     for (unsigned Trial : {16u, 32u, 64u}) {
       if (Trial <= BaseSizeInBits || Trial % BaseSizeInBits != 0)
         continue;
       unsigned LaneStride = Trial / BaseSizeInBits;
       bool AllMatch = true;
-      for (unsigned k = 1; k < LoadCount && AllMatch; ++k) {
-        int i = LoadedPositions[k];
-        AllMatch = ByteOffsets[i] == 0 &&
+      for (unsigned k = 1; k < NumElems && AllMatch; ++k) {
+        AllMatch = ByteOffsets[k] == 0 &&
                    DAG.areNonVolatileConsecutiveLoads(
-                       Loads[i], LDBase, BaseSizeInBytes, k * LaneStride);
+                       Loads[k], LDBase, BaseSizeInBytes, k * LaneStride);
       }
       if (AllMatch) {
         WideEltBits = Trial;
@@ -8095,16 +8088,14 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
       // Try wider register sizes first.
       for (unsigned WideRegBits : {512u, 256u, 128u}) {
         unsigned LanesPerWideLoad = WideRegBits / WideEltBits;
-        if (LanesPerWideLoad < 2 || LoadCount % LanesPerWideLoad != 0)
+        if (LanesPerWideLoad < 2 || NumElems % LanesPerWideLoad != 0)
           continue;
         if (LanesPerWideLoad > TruncDstLanes)
           continue; // VTRUNC dest must hold all good lanes of one piece.
         MVT WideVT = MVT::getVectorVT(WideEltVT, LanesPerWideLoad);
         if (!TLI.isTypeLegal(WideVT) || !TLI.isTypeLegal(TruncDstVT))
           continue;
-        unsigned NumWideLoads = LoadCount / LanesPerWideLoad;
-        if (!isPowerOf2_32(NumWideLoads))
-          continue;
+        unsigned NumWideLoads = NumElems / LanesPerWideLoad;
         // VTRUNC has no non-AVX-512 lowering so the i16 to i8 form needs BWI.
         bool Partial = LanesPerWideLoad != TruncDstLanes;
         if (Partial && (!Subtarget.hasAVX512() ||
@@ -8157,39 +8148,7 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
             continue;
           Result = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, Pieces);
         }
-        bool Contiguous =
-            LoadCount == (unsigned)(1 + LastLoadedElt - FirstLoadedElt);
-        if (Contiguous && FirstLoadedElt > 0) {
-          unsigned ResultLanes = Result.getValueType().getVectorNumElements();
-          if (FirstLoadedElt % ResultLanes == 0) {
-            // Aligned placement uses INSERT_SUBVECTOR.
-            MVT InsertVT =
-                MVT::getVectorVT(VT.getScalarType().getSimpleVT(), ResultLanes);
-            SDValue Background = !ZeroMask.isZero() ? DAG.getConstant(0, DL, VT)
-                                                    : DAG.getUNDEF(VT);
-            return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, Background,
-                               DAG.getBitcast(InsertVT, Result),
-                               DAG.getVectorIdxConstant(FirstLoadedElt, DL));
-          }
-          // Misaligned. Fall through to the shuffle path.
-        }
-        if (Result.getValueSizeInBits() < VT.getSizeInBits())
-          Result = widenSubVector(Result, !ZeroMask.isZero(), Subtarget, DAG,
-                                  DL, VT.getSizeInBits());
-        if (Result.getValueSizeInBits() != VT.getSizeInBits())
-          continue;
-        if (Contiguous && FirstLoadedElt == 0)
-          return DAG.getBitcast(VT, Result);
-        // Place values at LoadedPositions with shuffle.
-        MVT ShuffleVT = MVT::getVectorVT(VT.getScalarType().getSimpleVT(),
-                                         VT.getVectorNumElements());
-        SDValue Wide = DAG.getBitcast(ShuffleVT, Result);
-        SmallVector<int, 16> ShuffleMask(NumElems, -1);
-        for (unsigned k = 0; k < LoadCount; ++k)
-          ShuffleMask[LoadedPositions[k]] = k;
-        return DAG.getBitcast(VT, DAG.getVectorShuffle(ShuffleVT, DL, Wide,
-                                                       DAG.getUNDEF(ShuffleVT),
-                                                       ShuffleMask));
+        return DAG.getBitcast(VT, Result);
       }
     }
   }

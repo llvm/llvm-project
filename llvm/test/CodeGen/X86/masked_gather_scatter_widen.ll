@@ -662,7 +662,7 @@ define <17 x float> @test_mgather_v17f32(ptr %base, <17 x i32> %index)
 ; WIDEN_AVX2-NEXT:    vpermd {{[0-9]+}}(%rsp), %ymm0, %ymm1
 ; WIDEN_AVX2-NEXT:    movq %rdi, %rax
 ; WIDEN_AVX2-NEXT:    vpermd {{[0-9]+}}(%rsp), %ymm0, %ymm2
-; WIDEN_AVX2-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; WIDEN_AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
 ; WIDEN_AVX2-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; WIDEN_AVX2-NEXT:    vmovd %edx, %xmm3
 ; WIDEN_AVX2-NEXT:    vpinsrd $1, %ecx, %xmm3, %xmm3
