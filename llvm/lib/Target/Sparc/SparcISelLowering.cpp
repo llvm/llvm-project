@@ -3264,7 +3264,7 @@ SDValue SparcTargetLowering::PerformBSWAPCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   SDValue Op = N->getOperand(0);
   EVT VT = N->getValueType(0);
-  LoadSDNode *LN = dyn_cast<LoadSDNode>(Op.getNode());
+  auto *LN = dyn_cast<LoadSDNode>(Op.getNode());
 
   bool IsLittleEndian = DAG.getDataLayout().isLittleEndian();
   bool IsAlignedLoad = LN && ISD::isNormalLoad(Op.getNode()) &&
@@ -3304,7 +3304,7 @@ SDValue SparcTargetLowering::PerformSTORECombine(SDNode *N,
   EVT VT = Op.getValueType();
   EVT MemVT = cast<StoreSDNode>(N)->getMemoryVT();
   unsigned Opcode = Op.getOpcode();
-  StoreSDNode *SN = dyn_cast<StoreSDNode>(N);
+  auto *SN = dyn_cast<StoreSDNode>(N);
 
   bool IsLittleEndian = DAG.getDataLayout().isLittleEndian();
   bool IsAlignedStore = SN && SN->getAlign() >= MemVT.getScalarStoreSize();
