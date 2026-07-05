@@ -1158,6 +1158,9 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86AsmPrinter() {
 
 PreservedAnalyses X86AsmPrinterBeginPass::run(Module &M,
                                               ModuleAnalysisManager &MAM) {
+  // Force the computation of SDPI so that it is available for the
+  // actual pass, where it cannot be explicitly requested.
+  MAM.getResult<StaticDataProfileInfoAnalysis>(M);
   X86AsmPrinter &AsmPrinter = static_cast<X86AsmPrinter &>(
       MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
   AsmPrinter.GetPSI = [&MAM](Module &M) {

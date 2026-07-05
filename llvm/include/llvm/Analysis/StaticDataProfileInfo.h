@@ -118,7 +118,7 @@ private:
 class LLVM_ABI StaticDataProfileInfoAnalysis
     : public AnalysisInfoMixin<StaticDataProfileInfoAnalysis> {
 public:
-  LLVM_ABI static AnalysisKey Key;
+  static AnalysisKey Key;
 
   class Result {
     std::unique_ptr<StaticDataProfileInfo> HeldInfo;
