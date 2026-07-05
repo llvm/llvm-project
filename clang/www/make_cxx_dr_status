@@ -186,6 +186,9 @@ def availability(issue):
   elif status.endswith(' c++26'):
     status = status[:-6]
     avail_suffix = ' (C++26 onwards)'
+  elif status.endswith(' c++29'):
+    status = status[:-6]
+    avail_suffix = ' (C++29 onwards)'
   if status == 'unknown':
     avail = 'Unknown'
     avail_style = 'unknown'

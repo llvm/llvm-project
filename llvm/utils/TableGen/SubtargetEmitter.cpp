@@ -2225,6 +2225,7 @@ void SubtargetEmitter::emitHeader(raw_ostream &OS) {
 
   OS << "  const FeatureBitset &getInlineIgnoreFeatures() const override;\n";
   OS << "  const FeatureBitset &getInlineInverseFeatures() const override;\n";
+  OS << "  const FeatureBitset &getInlineMustMatchFeatures() const override;\n";
 
   STIPredicateExpander PE(Target);
   PE.setByRef(false);
@@ -2298,6 +2299,7 @@ void SubtargetEmitter::emitCtor(raw_ostream &OS, MCDescInfo DescInfo) {
   emitGetMacroFusions(ClassName, OS);
   emitInlineFeatures(ClassName, OS, "InlineIgnore");
   emitInlineFeatures(ClassName, OS, "InlineInverse");
+  emitInlineFeatures(ClassName, OS, "InlineMustMatch");
 }
 
 //

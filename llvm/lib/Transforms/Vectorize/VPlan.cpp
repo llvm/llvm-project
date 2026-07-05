@@ -1234,16 +1234,18 @@ VPlan *VPlan::duplicate() {
   // else NewTripCount will be created and inserted into Old2NewVPValues when
   // TripCount is cloned. In any case NewPlan->TripCount is updated below.
 
+  assert(none_of(Old2NewVPValues.keys(), IsaPred<VPSymbolicValue>) &&
+         "All VPSymbolicValues must be handled below");
+
   if (auto *LoopRegion = getVectorLoopRegion()) {
     auto *OldCanIV = LoopRegion->getCanonicalIV();
     auto *NewCanIV = NewPlan->getVectorLoopRegion()->getCanonicalIV();
     assert(OldCanIV && NewCanIV &&
            "Loop regions of both plans must have canonical IVs.");
     Old2NewVPValues[OldCanIV] = NewCanIV;
+    if (OldCanIV->isMaterialized())
+      NewCanIV->markMaterialized();
   }
-
-  assert(none_of(Old2NewVPValues.keys(), IsaPred<VPSymbolicValue>) &&
-         "All VPSymbolicValues must be handled below");
 
   if (BackedgeTakenCount)
     NewPlan->BackedgeTakenCount =
