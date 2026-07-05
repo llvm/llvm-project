@@ -1,0 +1,43 @@
+# RUN: yaml2obj %s -o %t.o
+
+## By default, only executable sections are disassembled,
+## but with the use of the --section flag, we can change this behavior.
+## Show that llvm-objdump can disassemble the specified sections.
+
+# RUN: llvm-objdump -d %t.o | FileCheck %s --check-prefix=TEXT \
+# RUN:   --implicit-check-not=.rodata --implicit-check-not=.data
+
+# RUN: llvm-objdump -d %t.o --section=.rodata \
+# RUN:   | FileCheck %s --check-prefix=RODATA \
+# RUN:   --implicit-check-not=.text --implicit-check-not=.data
+
+# RUN: llvm-objdump -d %t.o --section=.rodata --section=.text \
+# RUN:   | FileCheck %s --check-prefixes=RODATA,TEXT \
+# RUN:   --implicit-check-not=.data
+
+# RUN: llvm-objdump -d %t.o --section=.rodata --section=.text --section=.data \
+# RUN:   | FileCheck %s --check-prefixes=RODATA,TEXT,DATA
+
+# RODATA: Disassembly of section .rodata
+# TEXT:   Disassembly of section .text
+# DATA:   Disassembly of section .data
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .rodata
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC]
+    Content: '00'
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Content: '00'
+  - Name:    .data
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_WRITE]
+    Content: '00'

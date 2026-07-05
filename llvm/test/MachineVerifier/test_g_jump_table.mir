@@ -1,0 +1,22 @@
+# RUN: not --crash llc -mtriple=aarch64 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+
+---
+name: test_jump_table
+jumpTable:
+  kind: block-address
+  entries:
+    - id: 0
+      blocks: [ '%bb.0' ]
+body: |
+  bb.0:
+
+    ; CHECK: Bad machine code: Too few operands
+    %0:_(s32) = G_JUMP_TABLE
+
+    ; CHECK: G_JUMP_TABLE source operand must be a jump table index
+    %2:_(s32) = G_JUMP_TABLE %0
+
+    ; CHECK: G_JUMP_TABLE dest operand must have a pointer type
+    %3:_(s32) = G_JUMP_TABLE %jump-table.0
+...

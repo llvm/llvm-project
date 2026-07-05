@@ -1,0 +1,236 @@
+#pragma once
+
+// __clang_cuda_(c)math(.h) also provide `abs` which actually belong in
+// cstdlib. We could split them out but for now we just include cstdlib from
+// cmath.h which is what the systems I've seen do as well.
+#include <cstdlib>
+
+#include <math.h>
+
+double acos(double);
+float acos(float);
+double acosh(double);
+float acosh(float);
+double asin(double);
+float asin(float);
+double asinh(double);
+float asinh(float);
+double atan2(double, double);
+float atan2(float, float);
+double atan(double);
+float atan(float);
+double atanh(double);
+float atanh(float);
+double cbrt(double);
+float cbrt(float);
+double ceil(double);
+float ceil(float);
+double copysign(double, double);
+float copysign(float, float);
+double cos(double);
+float cos(float);
+double cosh(double);
+float cosh(float);
+double erfc(double);
+float erfc(float);
+double erf(double);
+float erf(float);
+double exp2(double);
+float exp2(float);
+double exp(double);
+float exp(float);
+double expm1(double);
+float expm1(float);
+double fdim(double, double);
+float fdim(float, float);
+double floor(double);
+float floor(float);
+double fma(double, double, double);
+float fma(float, float, float);
+double fmax(double, double);
+float fmax(float, float);
+float max(float, float);
+double max(double, double);
+double fmin(double, double);
+float fmin(float, float);
+float min(float, float);
+double min(double, double);
+double fmod(double, double);
+float fmod(float, float);
+int fpclassify(double);
+int fpclassify(float);
+double frexp(double, int *);
+float frexp(float, int *);
+double hypot(double, double);
+float hypot(float, float);
+int ilogb(double);
+int ilogb(float);
+bool isfinite(long double);
+bool isfinite(double);
+bool isfinite(float);
+bool isgreater(double, double);
+bool isgreaterequal(double, double);
+bool isgreaterequal(float, float);
+bool isgreater(float, float);
+bool isinf(long double);
+bool isinf(double);
+bool isinf(float);
+bool isless(double, double);
+bool islessequal(double, double);
+bool islessequal(float, float);
+bool isless(float, float);
+bool islessgreater(double, double);
+bool islessgreater(float, float);
+bool isnan(long double);
+#ifdef USE_ISNAN_WITH_INT_RETURN
+int isnan(double);
+int isnan(float);
+#else
+bool isnan(double);
+bool isnan(float);
+#endif
+bool isnormal(double);
+bool isnormal(float);
+bool isunordered(double, double);
+bool isunordered(float, float);
+double ldexp(double, int);
+float ldexp(float, int);
+double lgamma(double);
+float lgamma(float);
+long long llrint(double);
+long long llrint(float);
+double log10(double);
+float log10(float);
+double log1p(double);
+float log1p(float);
+double log2(double);
+float log2(float);
+double logb(double);
+float logb(float);
+double log(double);
+float log(float);
+long lrint(double);
+long lrint(float);
+long lround(double);
+long lround(float);
+long long llround(float); // No llround(double).
+double modf(double, double *);
+float modf(float, float *);
+double nan(const char *);
+float nanf(const char *);
+double nearbyint(double);
+float nearbyint(float);
+double nextafter(double, double);
+float nextafter(float, float);
+double pow(double, double);
+double pow(double, int);
+float pow(float, float);
+float pow(float, int);
+double remainder(double, double);
+float remainder(float, float);
+double remquo(double, double, int *);
+float remquo(float, float, int *);
+double rint(double);
+float rint(float);
+double round(double);
+float round(float);
+double scalbln(double, long);
+float scalbln(float, long);
+double scalbn(double, int);
+float scalbn(float, int);
+bool signbit(double);
+bool signbit(float);
+long double sin(long double);
+double sin(double);
+float sin(float);
+double sinh(double);
+float sinh(float);
+double sqrt(double);
+float sqrt(float);
+double tan(double);
+float tan(float);
+double tanh(double);
+float tanh(float);
+double tgamma(double);
+float tgamma(float);
+double trunc(double);
+float trunc(float);
+
+namespace std {
+
+using ::acos;
+using ::acosh;
+using ::asin;
+using ::asinh;
+using ::atan;
+using ::atan2;
+using ::atanh;
+using ::cbrt;
+using ::ceil;
+using ::copysign;
+using ::cos;
+using ::cosh;
+using ::erf;
+using ::erfc;
+using ::exp;
+using ::exp2;
+using ::expm1;
+using ::fdim;
+using ::floor;
+using ::fma;
+using ::fmax;
+using ::fmin;
+using ::fmod;
+using ::fpclassify;
+using ::frexp;
+using ::hypot;
+using ::ilogb;
+using ::isfinite;
+using ::isgreater;
+using ::isgreaterequal;
+using ::isinf;
+using ::isless;
+using ::islessequal;
+using ::islessgreater;
+using ::isnan;
+using ::isnormal;
+using ::isunordered;
+using ::ldexp;
+using ::lgamma;
+using ::llrint;
+using ::log;
+using ::log10;
+using ::log1p;
+using ::log2;
+using ::logb;
+using ::lrint;
+using ::lround;
+using ::llround;
+using ::modf;
+using ::nan;
+using ::nanf;
+using ::nearbyint;
+using ::nextafter;
+using ::pow;
+using ::remainder;
+using ::remquo;
+using ::rint;
+using ::round;
+using ::scalbln;
+using ::scalbn;
+using ::signbit;
+using ::sin;
+using ::sinh;
+using ::sqrt;
+using ::tan;
+using ::tanh;
+using ::tgamma;
+using ::trunc;
+
+} // namespace std
+
+#define FP_NAN 0
+#define FP_INFINITE 1
+#define FP_ZERO 2
+#define FP_SUBNORMAL 3
+#define FP_NORMAL 4

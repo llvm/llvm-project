@@ -1,0 +1,9 @@
+RUN: mkdir -p %t.d
+RUN: cd %t.d
+
+RUN: %clang --coverage -o %t %S/Inputs/instrprof-gcov-one-line-function.c -dumpdir ./
+RUN: test -f instrprof-gcov-one-line-function.gcno
+RUN: rm -f instrprof-gcov-one-line-function.gcda
+RUN: %run %t
+RUN: llvm-cov gcov instrprof-gcov-one-line-function.gcda
+RUN: FileCheck --match-full-lines --strict-whitespace --input-file instrprof-gcov-one-line-function.c.gcov %S/Inputs/instrprof-gcov-one-line-function.c.gcov

@@ -1,0 +1,13 @@
+//
+// Verify that CUDA device commands do not get OpenMP flags.
+//
+// RUN: %clang -### -x cuda --target=powerpc64le-linux-gnu -std=c++11 --cuda-gpu-arch=sm_35 -nocudainc -nocudalib --no-cuda-version-check -fopenmp=libomp %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix NO-OPENMP-FLAGS-FOR-CUDA-DEVICE
+//
+// NO-OPENMP-FLAGS-FOR-CUDA-DEVICE:      "-cc1" "-triple" "nvptx64-nvidia-cuda"
+// NO-OPENMP-FLAGS-FOR-CUDA-DEVICE-NOT:  -fopenmp
+// NO-OPENMP-FLAGS-FOR-CUDA-DEVICE-NEXT: ptxas" "-m64"
+// NO-OPENMP-FLAGS-FOR-CUDA-DEVICE-NEXT: fatbinary"{{( "--cuda")?}} "-64"
+// NO-OPENMP-FLAGS-FOR-CUDA-DEVICE-NEXT: "-cc1" "-triple" "powerpc64le-unknown-linux-gnu"
+// NO-OPENMP-FLAGS-FOR-CUDA-DEVICE:      -fopenmp
+// NO-OPENMP-FLAGS-FOR-CUDA-DEVICE-NEXT: {{ld(.exe)?"}} {{.*}}"-m" "elf64lppc"

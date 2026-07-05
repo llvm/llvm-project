@@ -1,0 +1,18 @@
+// RUN: %clang %s -Xclang -verify -fsyntax-only
+// RUN: %clang %s -cl-std=clc++ -Xclang -verify -fsyntax-only
+// RUN: %clang %s -cl-std=cl2.0 -Xclang -verify -fsyntax-only
+// RUN: %clang %s -### 2>&1 | FileCheck %s
+
+// CHECK: "-x" "clcpp"
+
+#ifdef __OPENCL_CPP_VERSION__
+//expected-no-diagnostics
+#endif
+
+kernel void k(){
+  auto a = get_local_id(1);
+#ifndef __OPENCL_CPP_VERSION__
+//expected-error@-2{{OpenCL C version 2.0 does not support the 'auto' storage class specifier}}
+//expected-error@-3{{type specifier missing, defaults to 'int'}}
+#endif
+}

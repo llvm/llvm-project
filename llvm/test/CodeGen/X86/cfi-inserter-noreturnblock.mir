@@ -1,0 +1,30 @@
+# RUN: llc -o - %s -mtriple=x86_64-- -verify-cfiinstrs \
+# RUN:     -run-pass=cfi-instr-inserter
+
+# Test that CFI verifier does not report inconsistent offset for the
+# 'noreturn' block.
+---
+name: testNoreturnBlock
+body: |
+  bb.0:
+    CFI_INSTRUCTION def_cfa_offset 24
+    JCC_1 %bb.2, 5, implicit undef $eflags
+
+  bb.1:
+    CFI_INSTRUCTION def_cfa_offset 32
+
+  bb.2:
+    TRAP
+...
+
+# C code to reproduce the issue, built with
+# '-O2 -mllvm -tail-merge-size=1 -mllvm -verify-cfiinstrs':
+#
+# void foo1(int v) __attribute__((noreturn)) {
+#   if (v == 1) {
+#     __builtin_trap();
+#   }
+#   if (foo2(v)) {
+#     __builtin_trap();
+#   }
+# }

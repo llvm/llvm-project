@@ -1,0 +1,10 @@
+## Show that help text is printed correctly when requested.
+
+RUN: llvm-size -h | FileCheck %s
+RUN: llvm-size --help | FileCheck %s
+
+CHECK: OVERVIEW: LLVM object size dumper
+CHECK: USAGE: {{.*}}llvm-size{{(.exe)?}} [options] <input object files>{{$}}
+CHECK: OPTIONS:
+CHECK: OPTIONS (Mach-O specific):
+CHECK: @FILE

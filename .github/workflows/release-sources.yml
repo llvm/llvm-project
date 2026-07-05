@@ -1,0 +1,145 @@
+name: Release Sources
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      release-version:
+        description: Release Version
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      release-version:
+        description: Release Version
+        required: true
+        type: string
+    secrets:
+      LLVM_TOKEN_GENERATOR_CLIENT_ID:
+        description: "Client ID for our GitHub App we use for generating access tokens."
+        required: true
+      LLVM_TOKEN_GENERATOR_PRIVATE_KEY:
+        description: "Private key for our GitHub App we use for generating access tokens."
+        required: true
+  # Run on pull_requests for testing purposes.
+  pull_request:
+    paths:
+      - '.github/workflows/release-sources.yml'
+      - 'llvm/utils/release/export.sh'
+    types:
+      - opened
+      - synchronize
+      - reopened
+      # When a PR is closed, we still start this workflow, but then skip
+      # all the jobs, which makes it effectively a no-op.  The reason to
+      # do this is that it allows us to take advantage of concurrency groups
+      # to cancel in progress CI jobs whenever the PR is closed.
+      - closed
+
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.release-version || github.event.pull_request.number }}
+  cancel-in-progress: True
+
+jobs:
+  inputs:
+    name: Collect Job Inputs
+    if: >-
+      github.repository_owner == 'llvm' &&
+      github.event.action != 'closed'
+    outputs:
+      ref: ${{ steps.inputs.outputs.ref }}
+      export-args: ${{ steps.inputs.outputs.export-args }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Validate Input
+        if: inputs.release-version != ''
+        uses: ./.github/workflows/validate-release-version
+        with:
+          release-version: ${{ inputs.release-version }}
+      - id: inputs
+        env:
+          REF: ${{ (inputs.release-version && format('llvmorg-{0}', inputs.release-version)) || github.sha }}
+          INPUTS_RELEASE_VERSION: ${{ inputs.release-version }}
+        run: |
+          if [ -n "$INPUTS_RELEASE_VERSION" ]; then
+            export_args="-release $INPUTS_RELEASE_VERSION -final"
+          else
+            export_args="-git-ref ${{ github.sha }}"
+          fi
+          echo "ref=$REF" >> $GITHUB_OUTPUT
+          echo "export-args=$export_args" >> $GITHUB_OUTPUT
+
+  release-sources:
+    name: Package Release Sources
+    if: github.repository_owner == 'llvm'
+    runs-on: ubuntu-24.04
+    outputs:
+      digest: ${{ steps.digest.outputs.digest }}
+      artifact-id: ${{ steps.artifact-upload.outputs.artifact-id }}
+    needs:
+      - inputs
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          ref: ${{ needs.inputs.outputs.ref }}
+          fetch-tags: true
+      - name: Install Dependencies
+        run: |
+          pip install --require-hashes -r ./llvm/utils/git/requirements.txt
+
+      - name: Create Tarballs
+        env:
+          EXPORT_ARGS: ${{ needs.inputs.outputs.export-args }}
+        run: |
+          ./llvm/utils/release/export.sh $EXPORT_ARGS
+
+      - name: Generate sha256 digest for sources
+        id: digest
+        run: |
+          echo "digest=$(cat *.xz | sha256sum | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+    
+      - name: Release Sources Artifact
+        id: artifact-upload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ needs.inputs.outputs.ref }}-sources
+          path: |
+            *.xz
+
+  attest-release-sources:
+    name: Attest Release Sources
+    runs-on: ubuntu-24.04
+    environment:
+      deployment: false
+      name: release
+    if: github.event_name != 'pull_request'
+    needs:
+      - inputs
+      - release-sources
+    permissions:
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout Release Scripts
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github/workflows/upload-release-artifact
+            llvm/utils/release/github-upload-release.py
+            llvm/utils/git/requirements.txt
+          sparse-checkout-cone-mode: false
+
+      - name: Upload Artifacts
+        uses: ./.github/workflows/upload-release-artifact
+        with:
+          artifact-id: ${{ needs.release-sources.outputs.artifact-id }}
+          attestation-name: ${{ needs.inputs.outputs.ref }}-sources-attestation
+          digest: ${{ needs.release-sources.outputs.digest }}
+          upload: false
+          LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+          LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}

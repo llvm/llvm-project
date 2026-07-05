@@ -1,0 +1,54 @@
+REQUIRES: x86
+RUN: split-file %s %t.dir && cd %t.dir
+
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows antidep.s -o antidep.obj
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows antidep2.s -o antidep2.obj
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows weak.s -o weak.obj
+RUN: llvm-mc -filetype=obj -triple=x86_64-windows test.s -o test.obj
+
+Check that a regular weak alias overrides an anti-dependency symbol.
+
+RUN: lld-link -dll -noentry -out:out1.dll antidep.obj weak.obj test.obj
+RUN: llvm-readobj --hex-dump=.test out1.dll | FileCheck --check-prefix=CHECK2 %s
+
+RUN: lld-link -dll -noentry -out:out2.dll weak.obj antidep.obj test.obj
+RUN: llvm-readobj --hex-dump=.test out2.dll | FileCheck --check-prefix=CHECK2 %s
+
+RUN: lld-link -dll -noentry -out:out3.dll antidep.obj weak.obj test.obj -lld-allow-duplicate-weak
+RUN: llvm-readobj --hex-dump=.test out3.dll | FileCheck --check-prefix=CHECK2 %s
+
+RUN: lld-link -dll -noentry -out:out4.dll weak.obj antidep.obj test.obj -lld-allow-duplicate-weak
+RUN: llvm-readobj --hex-dump=.test out4.dll | FileCheck --check-prefix=CHECK2 %s
+
+When an anti-dependency symbol is duplicated, the first definition takes precedence over subsequent ones.
+
+RUN: lld-link -dll -noentry -out:out5.dll antidep.obj antidep2.obj test.obj
+RUN: llvm-readobj --hex-dump=.test out5.dll | FileCheck --check-prefix=CHECK1 %s
+
+RUN: lld-link -dll -noentry -out:out6.dll antidep2.obj antidep.obj test.obj
+RUN: llvm-readobj --hex-dump=.test out6.dll | FileCheck --check-prefix=CHECK2 %s
+
+CHECK1: 01000000
+CHECK2: 02000000
+
+#--- antidep.s
+     .weak_anti_dep sym
+.set sym,target1
+
+#--- antidep2.s
+     .weak_anti_dep sym
+.set sym,target2
+
+#--- weak.s
+     .weak sym
+.set sym,target2
+
+#--- test.s
+     .section .target,"dr"
+     .globl target1
+.set target1,1
+     .globl target2
+.set target2,2
+
+     .section .test,"dr"
+     .long sym

@@ -1,0 +1,17 @@
+REQUIRES: linux, x86_64
+RUN: %cpp_compiler %S/KeepSeedTest.cpp -o %t-KeepSeedTest
+
+RUN: rm -rf %t-corpus
+RUN: mkdir %t-corpus
+RUN: echo -n SELECTxFROMxWHERE > %t-corpus/valid-fragments
+
+RUN: not %run %t-KeepSeedTest -keep_seed=1 -seed=1 -runs=3000000 %t-corpus 2>&1 | FileCheck %s
+CHECK: BINGO
+
+RUN: rm -rf %t-corpus-baseline
+RUN: mkdir %t-corpus-baseline
+RUN: echo -n SELECTxFROMxWHERE > %t-corpus-baseline/valid-fragments
+
+# The following checks whether without -keep_seed=1 libFuzzer does not find the
+# crashing input "SELECT FROM WHERE" even with more runs.
+RUN: %run %t-KeepSeedTest -seed=1 -runs=4000000 %t-corpus-baseline -print_final_stats=1

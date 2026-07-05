@@ -1,0 +1,716 @@
+## Test that yaml2obj emits a .debug_rnglists section when requested.
+
+## a) Generate and verify a little endian DWARF32 .debug_rnglists section in a 64-bit object file.
+
+# RUN: yaml2obj --docnum=1 -DENDIAN=ELFDATA2LSB %s -o %t1.le.dwarf32.o
+# RUN: llvm-readobj --sections --section-data %t1.le.dwarf32.o | \
+# RUN:   FileCheck -DSIZE=99 -DADDRALIGN=1 %s --check-prefixes=SHDR,DWARF32-LE
+
+#            SHDR: Index: 1
+#       SHDR-NEXT: Name: .debug_rnglists (1)
+#       SHDR-NEXT: Type: SHT_PROGBITS (0x1)
+#       SHDR-NEXT: Flags [ (0x0)
+#       SHDR-NEXT: ]
+#       SHDR-NEXT: Address: 0x0
+#       SHDR-NEXT: Offset: 0x40
+#       SHDR-NEXT: Size: [[SIZE]]
+#       SHDR-NEXT: Link: 0
+#       SHDR-NEXT: Info: 0
+#       SHDR-NEXT: AddressAlignment: [[ADDRALIGN]]
+#       SHDR-NEXT: EntrySize: 0
+# DWARF32-LE-NEXT: SectionData (
+# DWARF32-LE-NEXT:   0000: 24000000 05000800 02000000 08000000  |$...............|
+##                         ^-------                             unit_length (4-byte)
+##                                  ^---                        version (2-byte)
+##                                      ^-                      address_size (1-byte)
+##                                        ^-                    segment_selector_size (1-byte)
+##                                           ^-------           offset_entry_count (4-byte)
+##                                                    ^-------  offsets[0] (4-byte)
+# DWARF32-LE-NEXT:   0010: 11000000 01B42402 B424B424 0003B424  |......$..$.$...$|
+##                         ^-------                             offsets[1] (4-byte)
+##                                  ^-                          DW_RLE_base_addressx (1-byte)
+##                                    ^---                      operands[0] (ULEB128) 0x1234
+##                                        ^-                    DW_RLE_startx_endx (1-byte)
+##                                           ^---               operands[0] (ULEB128) 0x1234
+##                                               ^---           operands[1] (ULEB128) 0x1234
+##                                                    ^-        DW_RLE_end_of_list (1-byte)
+##                                                      ^-      DW_RLE_startx_length (1-byte)
+##                                                        ^---  operands[0] (ULEB128) 0x1234
+# DWARF32-LE-NEXT:   0020: B42404B4 24B42400 37000000 05000800  |.$..$.$.7.......|
+##                         ^---                                 operands[1] (ULEB128) 0x1234
+##                             ^-                               DW_RLE_offset_pair (1-byte)
+##                               ^----                          operands[0] (ULEB128) 0x1234
+##                                    ^---                      operands[1] (ULEB128) 0x1234
+##                                        ^-                    DW_RLE_end_of_list (1-byte)
+##                                           ^-------           unit_length (4-byte)
+##                                                    ^---      version (2-byte)
+##                                                        ^-    address_size (1-byte)
+##                                                          ^-  segment_selector_size (1-byte)
+# DWARF32-LE-NEXT:   0030: 02000000 08000000 23000000 05341200  |........#....4..|
+##                         ^-------                             offset_entry_count (4-byte)
+##                                  ^-------                    offsets[0] (4-byte)
+##                                           ^-------           offsets[1] (4-byte)
+##                                                    ^-        DW_RLE_base_address (1-byte)
+##                                                      ^-----  operands[0] (8-byte)
+# DWARF32-LE-NEXT:   0040: 00000000 00063412 00000000 00003412  |......4.......4.|
+##                         -----------
+##                                    ^-                        DW_RLE_start_end (1-byte)
+##                                      ^-----------------      operands[0] (8-byte)
+##                                                        ^---  operands[1] (8-byte)
+# DWARF32-LE-NEXT:   0050: 00000000 00000007 34120000 00000000  |........4.......|
+##                         -------------
+##                                      ^-                      DW_RLE_end_of_list (1-byte)
+##                                        ^-                    DW_RLE_start_length (1-byte)
+##                                           ^----------------  operands[0] (8-byte)
+# DWARF32-LE-NEXT:   0060: B42400                               |.$.|
+##                         ^---                                 operands[1] (ULEB128) 0x1234
+##                             ^-                               DW_RLE_end_of_list (1-byte)
+# DWARF32-LE-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  [[ENDIAN]]
+  Type:  ET_EXEC
+DWARF:
+  debug_rnglists:
+    - Lists:
+        - Entries:
+            - Operator: DW_RLE_base_addressx
+              Values:   [ 0x1234 ]
+            - Operator: DW_RLE_startx_endx
+              Values:   [ 0x1234, 0x1234 ]
+            - Operator: DW_RLE_end_of_list
+        - Entries:
+            - Operator: DW_RLE_startx_length
+              Values:   [ 0x1234, 0x1234 ]
+            - Operator: DW_RLE_offset_pair
+              Values:   [ 0x1234, 0x1234 ]
+            - Operator: DW_RLE_end_of_list
+    - Lists:
+        - Entries:
+            - Operator: DW_RLE_base_address
+              Values:   [ 0x1234 ]
+            - Operator: DW_RLE_start_end
+              Values:   [ 0x1234, 0x1234 ]
+            - Operator: DW_RLE_end_of_list
+        - Entries:
+            - Operator: DW_RLE_start_length
+              Values:   [ 0x1234, 0x1234 ]
+            - Operator: DW_RLE_end_of_list
+
+## b) Generate and verify a big endian DWARF32 .debug_rnglists section in a 64-bit object file.
+
+# RUN: yaml2obj --docnum=1 -DENDIAN=ELFDATA2MSB %s -o %t1.be.dwarf32.o
+# RUN: llvm-readobj --sections --section-data %t1.be.dwarf32.o | \
+# RUN:   FileCheck -DSIZE=99 -DADDRALIGN=1 %s --check-prefixes=SHDR,DWARF32-BE
+
+# DWARF32-BE-NEXT: SectionData (
+# DWARF32-BE-NEXT:   0000: 00000024 00050800 00000002 00000008  |...$............|
+##                         ^-------                             unit_length (4-byte)
+##                                  ^---                        version (2-byte)
+##                                      ^-                      address_size (1-byte)
+##                                        ^-                    segment_selector_size (1-byte)
+##                                           ^-------           offset_entry_count (4-byte)
+##                                                    ^-------  offsets[0] (4-byte)
+# DWARF32-BE-NEXT:   0010: 00000011 01B42402 B424B424 0003B424  |......$..$.$...$|
+##                         ^-------                             offsets[1] (4-byte)
+##                                  ^-                          DW_RLE_base_addressx (1-byte)
+##                                    ^---                      operands[0] (ULEB128) 0x1234
+##                                        ^-                    DW_RLE_startx_endx (1-byte)
+##                                           ^---               operands[0] (ULEB128) 0x1234
+##                                               ^---           operands[1] (ULEB128) 0x1234
+##                                                    ^-        DW_RLE_end_of_list (1-byte)
+##                                                      ^-      DW_RLE_startx_length (1-byte)
+##                                                        ^---  operands[0] (ULEB128) 0x1234
+# DWARF32-BE-NEXT:   0020: B42404B4 24B42400 00000037 00050800  |.$..$.$....7....|
+##                         ^---                                 operands[1] (ULEB128) 0x1234
+##                             ^-                               DW_RLE_offset_pair (1-byte)
+##                               ^----                          operands[0] (ULEB128) 0x1234
+##                                    ^---                      operands[1] (ULEB128) 0x1234
+##                                        ^-                    DW_RLE_end_of_list (1-byte)
+##                                           ^-------           unit_length (4-byte)
+##                                                    ^---      version (2-byte)
+##                                                        ^-    address_size (1-byte)
+##                                                          ^-  segment_selector_size (1-byte)
+# DWARF32-BE-NEXT:   0030: 00000002 00000008 00000023 05000000  |...........#....|
+##                         ^-------                             offset_entry_count (4-byte)
+##                                  ^-------                    offsets[0] (4-byte)
+##                                           ^-------           offsets[1] (4-byte)
+##                                                    ^-        DW_RLE_base_address (1-byte)
+##                                                      ^-----  operands[0] (8-byte)
+# DWARF32-BE-NEXT:   0040: 00000012 34060000 00000000 12340000  |....4........4..|
+##                         -----------
+##                                    ^-                        DW_RLE_start_end (1-byte)
+##                                      ^-----------------      operands[0] (8-byte)
+##                                                        ^---  operands[1] (8-byte)
+# DWARF32-BE-NEXT:   0050: 00000000 12340007 00000000 00001234  |.....4.........4|
+##                         -------------
+##                                      ^-                      DW_RLE_end_of_list (1-byte)
+##                                        ^-                    DW_RLE_start_length (1-byte)
+##                                           ^----------------  operands[0] (8-byte)
+# DWARF32-BE-NEXT:   0060: B42400                               |.$.|
+##                         ^---                                 operands[1] (ULEB128) 0x1234
+##                             ^-                               DW_RLE_end_of_list (1-byte)
+# DWARF32-BE-NEXT: )
+
+## c) Generate and verify a little endian DWARF64 .debug_rnglists section in a 64-bit object file.
+
+# RUN: yaml2obj --docnum=2 -DENDIAN=ELFDATA2LSB %s -o %t2.le.dwarf64.o
+# RUN: llvm-readobj --sections --section-data %t2.le.dwarf64.o | \
+# RUN:   FileCheck -DSIZE=38 -DADDRALIGN=1 %s --check-prefixes=SHDR,DWARF64-LE
+
+# DWARF64-LE-NEXT: SectionData (
+# DWARF64-LE-NEXT:   0000: FFFFFFFF 1A000000 00000000 05000800  |................|
+##                         ^-------------------------           unit_length (12-byte)
+##                                                    ^---      version (2-byte)
+##                                                        ^-    address_size (1-byte)
+##                                                          ^-  segment_selector_size (1-byte)
+# DWARF64-LE-NEXT:   0010: 02000000 10000000 00000000 11000000  |................|
+##                         ^-------                             offset_entry_count (4-byte)
+##                                  ^----------------           offsets[0] (8-byte)
+##                                                    ^-------  offsets[1] (8-byte)
+# DWARF64-LE-NEXT:   0020: 00000000 0000                        |......|
+##                         --------
+##                                  ^-                          DW_RLE_end_of_list (1-byte)
+##                                    ^-                        DW_RLE_end_of_list (1-byte)
+# DWARF64-LE-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  [[ENDIAN]]
+  Type:  ET_EXEC
+DWARF:
+  debug_rnglists:
+    - Format:  DWARF64
+      Lists:
+        - Entries:
+            - Operator: DW_RLE_end_of_list
+        - Entries:
+            - Operator: DW_RLE_end_of_list
+
+## d) Generate and verify a big endian DWARF64 .debug_rnglists section in a 64-bit object file.
+
+# RUN: yaml2obj --docnum=2 -DENDIAN=ELFDATA2MSB %s -o %t2.be.dwarf64.o
+# RUN: llvm-readobj --sections --section-data %t2.be.dwarf64.o | \
+# RUN:   FileCheck -DSIZE=38 -DADDRALIGN=1 %s --check-prefixes=SHDR,DWARF64-BE
+
+# DWARF64-BE-NEXT: SectionData (
+# DWARF64-BE-NEXT:   0000: FFFFFFFF 00000000 0000001A 00050800  |................|
+##                         ^-------------------------           unit_length (12-byte)
+##                                                    ^---      version (2-byte)
+##                                                        ^-    address_size (1-byte)
+##                                                          ^-  segment_selector_size (1-byte)
+# DWARF64-BE-NEXT:   0010: 00000002 00000000 00000010 00000000  |................|
+##                         ^-------                             offset_entry_count (4-byte)
+##                                  ^----------------           offsets[0] (8-byte)
+##                                                    ^-------  offsets[1] (8-byte)
+# DWARF64-BE-NEXT:   0020: 00000011 0000                        |......|
+##                         --------
+##                                  ^-                          DW_RLE_end_of_list (1-byte)
+##                                    ^-                        DW_RLE_end_of_list (1-byte)
+# DWARF64-BE-NEXT: )
+
+## e) Test that the length, version, segment_selector_size, address_size, offset_entry_count
+## and offsets fields can be specified manually.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3.o
+# RUN: llvm-readelf --hex-dump=.debug_rnglists %t3.o | \
+# RUN:   FileCheck %s --check-prefix=OVERWRITE
+
+#      OVERWRITE: Hex dump of section '.debug_rnglists':
+# OVERWRITE-NEXT: 0x00000000 34120000 06000303 04000000 01000000 4...............
+##                           ^-------                            unit_length (4-byte)
+##                                    ^---                       version (2-byte)
+##                                        ^-                     address_size (1-byte)
+##                                          ^-                   segment_selector_size (1-byte)
+##                                             ^-------          offset_entry_count (4-byte)
+##                                                      ^------- offsets[0] (4-byte)
+# OVERWRITE-NEXT: 0x00000010 0000                                ..
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_rnglists:
+    - Length:              0x1234
+      Version:             6
+      AddressSize:         3
+      SegmentSelectorSize: 3
+      OffsetEntryCount:    4
+      Offsets:             [ 0x01 ]
+      Lists:
+        - Entries:
+            - Operator: DW_RLE_end_of_list
+        - Entries:
+            - Operator: DW_RLE_end_of_list
+
+## f) Test that the default value of the address_size field in a 32-bit object file is 4.
+
+# RUN: yaml2obj --docnum=4 %s -o %t4.o
+# RUN: llvm-readelf --hex-dump=.debug_rnglists %t4.o | \
+# RUN:   FileCheck %s --check-prefix=ADDRSIZE32
+
+#      ADDRSIZE32: Hex dump of section '.debug_rnglists':
+# ADDRSIZE32-NEXT: 0x00000000 22000000 05000400 01000000 04000000 "...............
+##                                         ^-                     address_size (1-byte)
+# ADDRSIZE32-NEXT: 0x00000010 05341200 00063412 00002143 00000734 .4....4...!C...4
+##                            ^-                                  DW_RLE_base_address (1-byte)
+##                              ^--------                         operands[0] (4-byte)
+##                                       ^-                       DW_RLE_start_end (1-byte)
+##                                         ^--------              operands[0] (4-byte)
+##                                                  ^--------     operands[1] (4-byte)
+##                                                           ^-   DW_RLE_start_length (1-byte)
+##                                                             ^- operands[0] (4-byte)
+# ADDRSIZE32-NEXT: 0x00000020 120000a1 8601                       ......
+##                            ------
+##                                  ^------                       operands[1] (ULEB128) 0x4321
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_rnglists:
+    - Lists:
+        - Entries:
+            - Operator: DW_RLE_base_address
+              Values:   [ 0x1234 ]
+            - Operator: DW_RLE_start_end
+              Values:   [ 0x1234, 0x4321 ]
+            - Operator: DW_RLE_start_length
+              Values:   [ 0x1234, 0x4321 ]
+
+## g) Test that the address_size field can be specified manually and the size of
+## corresponding operands will be changed accordingly.
+
+# RUN: yaml2obj --docnum=5 %s -o %t5.o
+# RUN: llvm-readelf --hex-dump=.debug_rnglists %t5.o | \
+# RUN:   FileCheck %s --check-prefix=ADDRSIZE
+
+#      ADDRSIZE: Hex dump of section '.debug_rnglists':
+# ADDRSIZE-NEXT: 0x00000000 22000000 05000400 01000000 04000000 "...............
+##                                       ^-                     address_size 0x04
+# ADDRSIZE-NEXT: 0x00000010 05341200 00063412 00002143 00000734 .4....4...!C...4
+##                          ^-                                  DW_RLE_base_address
+##                            ^--------                         operands[0] (4-byte)
+##                                     ^-                       DW_RLE_start_end
+##                                       ^--------              operands[0] (4-byte)
+##                                                ^--------     operands[1] (4-byte)
+##                                                         ^-   DW_RLE_start_length
+##                                                           ^- operands[0] (4-byte)
+# ADDRSIZE-NEXT: 0x00000020 120000b4 2400                       ....$.
+##                          ------
+##                                ^----                         operands[1] (ULEB128)
+##                                     ^-                       DW_RLE_end_of_list
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_rnglists:
+    - AddressSize: 4
+      Lists:
+        - Entries:
+            - Operator: DW_RLE_base_address
+              Values:   [ 0x1234 ]
+            - Operator: DW_RLE_start_end
+              Values:   [ 0x1234, 0x4321 ]
+            - Operator: DW_RLE_start_length
+              Values:   [ 0x1234, 0x1234 ]
+            - Operator: DW_RLE_end_of_list
+
+## h) Test that yaml2obj emits an error message if we try to assign an invalid value to
+## 'AddressSize' when there is an entry whose operands contain address.
+
+# RUN: not yaml2obj -DOPERATOR=base_address -DVALUES=[0x01] --docnum=6 %s 2>&1 | \
+# RUN:   FileCheck -DOPERATOR=base_address %s --check-prefix=INVALID-ADDRSIZE
+
+# RUN: not yaml2obj -DOPERATOR=start_end -DVALUES=[0x01,0x02] --docnum=6 %s 2>&1 | \
+# RUN:   FileCheck -DOPERATOR=start_end %s --check-prefix=INVALID-ADDRSIZE
+
+# RUN: not yaml2obj -DOPERATOR=start_length -DVALUES=[0x01,0x02] --docnum=6 %s 2>&1 | \
+# RUN:   FileCheck -DOPERATOR=start_length %s --check-prefix=INVALID-ADDRSIZE
+
+# INVALID-ADDRSIZE: yaml2obj: error: unable to write address for the operator DW_RLE_[[OPERATOR]]: invalid integer write size: 3
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_rnglists:
+    - AddressSize: 3
+      Lists:
+        - Entries:
+            - Operator: DW_RLE_[[OPERATOR]]
+              Values:   [[VALUES]]
+
+## i) Test that an invalid address_size can be used when there are no address-using operators.
+
+# RUN: yaml2obj --docnum=7 %s -o %t7.o
+# RUN: llvm-readelf --hex-dump=.debug_rnglists %t7.o | \
+# RUN:   FileCheck %s --check-prefix=ADDRSIZE-NOERROR
+
+#      ADDRSIZE-NOERROR: Hex dump of section '.debug_rnglists':
+# ADDRSIZE-NOERROR-NEXT: 0x00000000 0e000000 05000300 01000000 04000000 ................
+##                                               ^-                     address_size (1-byte) 0x03
+# ADDRSIZE-NOERROR-NEXT: 0x00000010 0101                                ..
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_rnglists:
+    - AddressSize: 3
+      Lists:
+        - Entries:
+            - Operator: DW_RLE_base_addressx
+              Values:   [ 0x01 ]
+
+## j) Test that yaml2obj emits an error message if we specify invalid numbers of operands
+## for an operator.
+
+# RUN: not yaml2obj -DOPERATOR=end_of_list -DVALUES=[0x01] --docnum=8 %s 2>&1 | \
+# RUN:   FileCheck -DOPERATOR=end_of_list -DACTUAL=1 -DEXPECTED=0 %s --check-prefix=INVALID-OPERANDS
+
+# RUN: not yaml2obj -DOPERATOR=base_addressx -DVALUES=[] --docnum=8 %s 2>&1 | \
+# RUN:   FileCheck -DOPERATOR=base_addressx -DACTUAL=0 -DEXPECTED=1 %s --check-prefix=INVALID-OPERANDS
+
+# RUN: not yaml2obj -DOPERATOR=startx_endx -DVALUES=[0x01] --docnum=8 %s 2>&1 | \
+# RUN:   FileCheck -DOPERATOR=startx_endx -DACTUAL=1 -DEXPECTED=2 %s --check-prefix=INVALID-OPERANDS
+
+# RUN: not yaml2obj -DOPERATOR=startx_length -DVALUES=[0x01] --docnum=8 %s 2>&1 | \
+# RUN:   FileCheck -DOPERATOR=startx_length -DACTUAL=1 -DEXPECTED=2 %s --check-prefix=INVALID-OPERANDS
+
+# RUN: not yaml2obj -DOPERATOR=offset_pair -DVALUES=[] --docnum=8 %s 2>&1 | \
+# RUN:   FileCheck -DOPERATOR=offset_pair -DACTUAL=0 -DEXPECTED=2 %s --check-prefix=INVALID-OPERANDS
+
+# RUN: not yaml2obj -DOPERATOR=base_address -DVALUES=[0x01,0x02] --docnum=8 %s 2>&1 | \
+# RUN:   FileCheck -DOPERATOR=base_address -DACTUAL=2 -DEXPECTED=1 %s --check-prefix=INVALID-OPERANDS
+
+# RUN: not yaml2obj -DOPERATOR=start_end -DVALUES=[0x01,0x02,0x03] --docnum=8 %s 2>&1 | \
+# RUN:   FileCheck -DOPERATOR=start_end -DACTUAL=3 -DEXPECTED=2 %s --check-prefix=INVALID-OPERANDS
+
+# RUN: not yaml2obj -DOPERATOR=start_length -DVALUES=[0x01] --docnum=8 %s 2>&1 | \
+# RUN:   FileCheck -DOPERATOR=start_length -DACTUAL=1 -DEXPECTED=2 %s --check-prefix=INVALID-OPERANDS
+
+# INVALID-OPERANDS: yaml2obj: error: invalid number ([[ACTUAL]]) of operands for the operator: DW_RLE_[[OPERATOR]], [[EXPECTED]] expected
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_rnglists:
+    - AddressSize: 3
+      Lists:
+        - Entries:
+            - Operator: DW_RLE_[[OPERATOR]]
+              Values:   [[VALUES]]
+
+## k) Test that an empty list is allowed for a range list table.
+
+# RUN: yaml2obj --docnum=9 %s -o %t9.o
+# RUN: llvm-readelf --hex-dump=.debug_rnglists %t9.o | \
+# RUN:   FileCheck %s --check-prefix=EMPTY-LIST
+
+#      EMPTY-LIST: Hex dump of section '.debug_rnglists':
+# EMPTY-LIST-NEXT: 0x00000000 08000000 05000800 00000000          ............
+##                            ^-------                            unit_length (4-byte)
+##                                     ^---                       version (2-byte)
+##                                         ^---                   address_size (1-byte)
+##                                              ^-------          offset_entry_count (4-byte)
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_rnglists:
+    - Lists: []
+
+## l) Generate the .debug_rnglists section from raw section content.
+
+# RUN: yaml2obj --docnum=10 %s -o %t10.o
+# RUN: llvm-readobj --sections --section-data %t10.o | \
+# RUN:   FileCheck %s -DSIZE=3 -DADDRALIGN=0 --check-prefixes=SHDR,ARBITRARY-CONTENT
+
+#      ARBITRARY-CONTENT: SectionData (
+# ARBITRARY-CONTENT-NEXT:   0000: 112233
+# ARBITRARY-CONTENT-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .debug_rnglists
+    Type:    SHT_PROGBITS
+    Content: "112233"
+
+## m) Generate the .debug_rnglists section when the "Size" is specified.
+
+# RUN: yaml2obj --docnum=11 %s -o %t11.o
+# RUN: llvm-readelf --hex-dump=.debug_rnglists %t11.o | \
+# RUN:   FileCheck %s --check-prefix=SIZE
+
+#       SIZE: Hex dump of section '.debug_rnglists':
+#  SIZE-NEXT: 0x00000000 00000000 00000000 00000000 00000000 ................
+# SIZE-EMPTY:
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name: .debug_rnglists
+    Type: SHT_PROGBITS
+    Size: 0x10
+
+## n) Test that yaml2obj emits an error message when both the "Size" and the
+## "debug_rnglists" entry are specified at the same time.
+
+# RUN: not yaml2obj --docnum=12 %s 2>&1 | FileCheck %s --check-prefix=ERROR
+
+# ERROR: yaml2obj: error: cannot specify section '.debug_rnglists' contents in the 'DWARF' entry and the 'Content' or 'Size' in the 'Sections' entry at the same time
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name: .debug_rnglists
+    Type: SHT_PROGBITS
+    Size: 0x10
+DWARF:
+  debug_rnglists:
+    - Lists: []
+
+## o) Test that yaml2obj emits an error message when both the "Content" and the
+## "debug_rnglists" entry are specified at the same time.
+
+# RUN: not yaml2obj --docnum=13 %s 2>&1 | FileCheck %s --check-prefix=ERROR
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .debug_rnglists
+    Type:    SHT_PROGBITS
+    Content: "00"
+DWARF:
+  debug_rnglists:
+    - Lists: []
+
+## p) Test that all the properties can be overridden by the section header when
+## the "debug_rnglists" entry doesn't exist.
+
+# RUN: yaml2obj --docnum=14 %s -o %t14.o
+# RUN: llvm-readelf --sections %t14.o | FileCheck %s --check-prefix=OVERRIDDEN
+
+#      OVERRIDDEN: [Nr] Name            Type   Address          Off    Size   ES Flg Lk Inf Al
+#      OVERRIDDEN: [ 1] .debug_rnglists STRTAB 0000000000002020 000050 00000c 01   A  2   1  2
+# OVERRIDDEN-NEXT: [ 2] .sec            STRTAB 0000000000000000 00005c 000000 00      0   0  0
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:         .debug_rnglists
+    Type:         SHT_STRTAB  ## SHT_PROGBITS by default.
+    Flags:        [SHF_ALLOC] ## 0 by default.
+    Link:         .sec        ## 0 by default.
+    EntSize:      1           ## 0 by default.
+    Info:         1           ## 0 by default.
+    AddressAlign: 2           ## 0 by default.
+    Address:      0x2020      ## 0x00 by default.
+    Offset:       0x50        ## 0x40 for the first section.
+    Size:         0x0c        ## Set the "Size" so that we can reuse the check tag "OVERRIDDEN".
+  - Name:         .sec        ## Linked by .debug_rnglists.
+    Type:         SHT_STRTAB
+
+## q) Test that all the properties can be overridden by the section header when
+## the "debug_rnglists" entry exists.
+
+# RUN: yaml2obj --docnum=15 %s -o %t15.o
+# RUN: llvm-readelf --sections %t15.o | FileCheck %s --check-prefix=OVERRIDDEN
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:         .debug_rnglists
+    Type:         SHT_STRTAB  ## SHT_PROGBITS by default.
+    Flags:        [SHF_ALLOC] ## 0 by default.
+    Link:         .sec        ## 0 by default.
+    EntSize:      1           ## 0 by default.
+    Info:         1           ## 0 by default.
+    AddressAlign: 2           ## 1 by default.
+    Address:      0x2020      ## 0x00 by default.
+    Offset:       0x50        ## 0x40 for the first section.
+  - Name:         .sec        ## Linked by .debug_rnglists.
+    Type:         SHT_STRTAB
+DWARF:
+  debug_rnglists:
+    - Lists: []
+
+## r) Test that the .debug_rnglists section header is emitted if the "debug_rnglists"
+## entry is empty.
+
+# RUN: yaml2obj --docnum=16 %s -o %t16.o
+# RUN: llvm-readobj --sections --section-data %t16.o | \
+# RUN:   FileCheck -DSIZE=0 -DADDRALIGN=1 %s --check-prefixes=SHDR,EMPTY-CONTENT
+
+# EMPTY-CONTENT-NEXT: SectionData (
+# EMPTY-CONTENT-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_rnglists: []
+
+## s) Test that we are able to generate a range list via raw binary data.
+
+# RUN: yaml2obj --docnum=17 %s -o %t17.o
+# RUN: llvm-readelf --hex-dump=.debug_rnglists %t17.o | \
+# RUN:   FileCheck %s --check-prefix=CUSTOM-LIST
+
+#      CUSTOM-LIST: Hex dump of section '.debug_rnglists':
+# CUSTOM-LIST-NEXT: 0x00000000 29000000 05000800 03000000 0c000000 )...............
+##                             ^-------                            unit_length (4-byte)
+##                                      ^---                       version (2-byte)
+##                                          ^-                     address_size (1-byte)
+##                                            ^-                   segment_selector_size (1-byte)
+##                                               ^-------          offset_entry_count (4-byte)
+##                                                        ^------- offsets[0] (4-byte)
+# CUSTOM-LIST-NEXT: 0x00000010 11000000 19000000 02b424b4 24123456 ..........$.$.4V
+##                             ^-------                            offsets[1] (4-byte)
+##                                      ^-------                   offsets[2] (4-byte)
+##                                               ^-                DW_RLE_startx_endx
+##                                                 ^---            operands[0] (ULEB128) 0x1234
+##                                                     ^----       operands[1] (ULEB128) 0x1234
+##                                                          ^----- custom list content
+# CUSTOM-LIST-NEXT: 0x00000020 7890abcd efabcdef 12345678 90       x........4Vx.
+##                             -----------
+##                                        ^-----------------       custom list content
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_rnglists:
+    - Lists:
+        - Entries:
+            - Operator: DW_RLE_startx_endx
+              Values:   [ 0x1234, 0x1234 ]
+        - Content: '1234567890abcdef'
+        - Content: 'abcdef1234567890'
+
+## t) Test that yaml2obj emits an error message when 'Content' and 'Entries' are specified
+## at the same time.
+
+# RUN: not yaml2obj --docnum=18 %s 2>&1 | FileCheck %s --check-prefix=ERR
+
+#      ERR: YAML:{{.*}}: error: Entries and Content can't be used together
+# ERR-NEXT:         - Entries: []
+# ERR-NEXT:           ^
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_rnglists:
+    - Lists:
+        - Entries: []
+          Content: ''
+
+## u) Test that when the "OffsetEntryCount" is specified to be 0 and "Offsets" is not specified,
+## the offsets array is not emitted.
+
+# RUN: yaml2obj --docnum=19 -DENTRYCOUNT=0 %s -o %t19.o
+# RUN: llvm-readelf --hex-dump=.debug_rnglists %t19.o | \
+# RUN:   FileCheck %s --check-prefix=NO-OFFSETS
+
+#      NO-OFFSETS: Hex dump of section '.debug_rnglists':
+# NO-OFFSETS-NEXT: 0x00000000 0e000000 05000800 00000000 02010202 ................
+##                                              ^-------          offset_entry_count (4-byte)
+##                                                       ^-       DW_RLE_startx_endx
+##                                                         ^-     operands[0] (ULEB128) 0x01
+##                                                           ^-   operands[1] (ULEB128) 0x02
+##                                                             ^- DW_RLE_startx_endx
+# NO-OFFSETS-NEXT: 0x00000010 0102                                ..
+##                            ^-                                  operands[0] (ULEB128) 0x01
+##                              ^-                                operands[1] (ULEB128) 0x02
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_rnglists:
+    - OffsetEntryCount: [[ENTRYCOUNT=<none>]]
+      Offsets:          [[OFFSETS=<none>]]
+      Lists:
+        - Entries:
+            - Operator: DW_RLE_startx_endx
+              Values:   [ 0x01, 0x02 ]
+        - Entries:
+            - Operator: DW_RLE_startx_endx
+              Values:   [ 0x01, 0x02 ]
+
+## v) Test that when the "Offsets" entry is specified to be empty and the "OffsetEntryCount" is not specified,
+## the offsets array will be omitted.
+
+# RUN: yaml2obj --docnum=19 -DOFFSETS=[] %s -o %t20.o
+# RUN: llvm-readelf --hex-dump=.debug_rnglists %t20.o | \
+# RUN:   FileCheck %s --check-prefix=NO-OFFSETS
+
+## w) Test that if "Offsets" is specified, the offsets array will be emitted accordingly, even when
+## the "OffsetEntryCount" is specified to be 0.
+
+# RUN: yaml2obj --docnum=19 -DOFFSETS=[0x01,0x02,0x03] -DENTRYCOUNT=0 %s -o %t21.o
+# RUN: llvm-readelf --hex-dump=.debug_rnglists %t21.o | \
+# RUN:   FileCheck %s --check-prefix=OFFSETS
+
+#      OFFSETS: Hex dump of section '.debug_rnglists':
+# OFFSETS-NEXT: 0x00000000 0e000000 05000800 00000000 01000000 ................
+##                                           ^-------          offset_entry_count (4-byte)
+##                                                    ^------- offsets[0] (4-byte)
+# OFFSETS-NEXT: 0x00000010 02000000 03000000 02010202 0102     ..............
+##                         ^-------                            offsets[1] (4-byte)
+##                                  ^-------                   offsets[2] (4-byte)
+##                                           ^-                DW_RLE_startx_endx
+##                                             ^-              operands[0] (ULEB128) 0x01
+##                                               ^-            operands[1] (ULEB128) 0x02
+##                                                 ^-          DW_RLE_startx_endx
+##                                                    ^-       operands[0] (ULEB128) 0x01
+##                                                      ^-     operands[1] (ULEB128) 0x02

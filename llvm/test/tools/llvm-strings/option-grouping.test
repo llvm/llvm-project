@@ -1,0 +1,6 @@
+## Show that llvm-strings can handle grouped short options.
+
+RUN: echo abcd > %t
+RUN: llvm-strings -af %t | FileCheck %s -DFILE=%t
+
+CHECK: [[FILE]]: abcd

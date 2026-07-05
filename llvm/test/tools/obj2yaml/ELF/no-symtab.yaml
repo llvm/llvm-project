@@ -1,0 +1,69 @@
+## Check that obj2yaml doesn't create a "Symbols" tag for the objects
+## without a symbol table.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: obj2yaml %t1 | FileCheck %s --check-prefix=NOSYMTAB
+
+# NOSYMTAB:      --- !ELF
+# NOSYMTAB-NEXT:  FileHeader:
+# NOSYMTAB-NEXT:    Class: ELFCLASS64
+# NOSYMTAB-NEXT:    Data:  ELFDATA2LSB
+# NOSYMTAB-NEXT:    Type:  ET_DYN
+# NOSYMTAB-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+
+## Check that obj2yaml creates a "Symbols" tag for the objects
+## that have a symbol table.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: obj2yaml %t2 | FileCheck %s --check-prefix=SYMTAB
+
+# SYMTAB:      --- !ELF
+# SYMTAB-NEXT:  FileHeader:
+# SYMTAB-NEXT:   Class: ELFCLASS64
+# SYMTAB-NEXT:   Data:  ELFDATA2LSB
+# SYMTAB-NEXT:   Type:  ET_DYN
+# SYMTAB-NEXT:  Symbols: []
+# SYMTAB-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Symbols: []
+
+## A symbol table without the null entry is non-conforming.
+## Check we don't print "Symbols" and "DynamicSymbols" keys in this case.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: obj2yaml %t3 | FileCheck %s --check-prefix=EMPTY
+
+# EMPTY:      Sections:
+# EMPTY-NEXT:   - Name:  .symtab
+# EMPTY-NEXT:     Type:  SHT_SYMTAB
+# EMPTY-NEXT:     Link:  .strtab
+# EMPTY-NEXT:     Size:  0x0
+# EMPTY-NEXT:   - Name:  .dynsym
+# EMPTY-NEXT:     Type:  SHT_DYNSYM
+# EMPTY-NEXT:     Flags: [ SHF_ALLOC ]
+# EMPTY-NEXT:     Size:  0x0
+# EMPTY-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: .symtab
+    Type: SHT_SYMTAB
+    Size: 0
+  - Name: .dynsym
+    Type: SHT_DYNSYM
+    Size: 0

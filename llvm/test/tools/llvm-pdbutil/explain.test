@@ -1,0 +1,88 @@
+; REQUIRES: diasdk
+
+; RUN: llvm-pdbutil explain -offset=0 %p/Inputs/InjectedSource.pdb \
+; RUN:  | FileCheck --check-prefix=ZERO %s
+; RUN: llvm-pdbutil explain -offset=40 %p/Inputs/InjectedSource.pdb \
+; RUN:  | FileCheck --check-prefix=FORTY %s
+; RUN: llvm-pdbutil explain -offset=60 %p/Inputs/InjectedSource.pdb \
+; RUN:  | FileCheck --check-prefix=SIXTY %s
+
+; RUN: llvm-pdbutil explain -offset=0x1000 %p/Inputs/InjectedSource.pdb \
+; RUN:  | FileCheck --check-prefix=FPM1 %s
+; RUN: llvm-pdbutil explain -offset=0x1100 %p/Inputs/InjectedSource.pdb \
+; RUN:  | FileCheck --check-prefix=EXTRANEOUSFPM %s
+; RUN: llvm-pdbutil explain -offset=0x2000 %p/Inputs/InjectedSource.pdb \
+; RUN:  | FileCheck --check-prefix=FPM2 %s
+
+; RUN: llvm-pdbutil explain -offset=0x3000 %p/Inputs/InjectedSource.pdb \
+; RUN:  | FileCheck --check-prefix=UNALLOCATED %s
+
+; RUN: llvm-pdbutil explain -offset=0x7000 %p/Inputs/InjectedSource.pdb \
+; RUN:  | FileCheck --check-prefix=STREAM %s
+
+; RUN: llvm-pdbutil explain -offset=0x1A000 %p/Inputs/InjectedSource.pdb \
+; RUN:  | FileCheck --check-prefix=STREAMDIR %s
+
+; RUN: llvm-pdbutil explain -offset=0x1B000 %p/Inputs/InjectedSource.pdb \
+; RUN:  | FileCheck --check-prefix=DIRBLOCKLIST %s
+
+; RUN: llvm-pdbutil explain -offset=0x1D000 %p/Inputs/InjectedSource.pdb \
+; RUN:  | FileCheck --check-prefix=INVALIDFILEOFFSET %s
+
+; RUN: llvm-pdbutil explain -offset=0xA100 %p/Inputs/InjectedSource.pdb \
+; RUN:  | FileCheck --check-prefix=UNUSED %s
+
+
+ZERO:      Block:Offset = 0:0000.
+ZERO-NEXT: Address is in block 0 (allocated).
+ZERO-NEXT:   This corresponds to offset 0 of the MSF super block,
+ZERO-NEXT:   which is part of the MSF file magic.
+
+FORTY:      Block:Offset = 0:0028.
+FORTY-NEXT: Address is in block 0 (allocated).
+FORTY-NEXT:   This corresponds to offset 40 of the MSF super block,
+FORTY-NEXT:   which contains the number of blocks in the file.
+FORTY-NEXT:   The current value is 29.
+
+SIXTY:      Block:Offset = 0:003C.
+SIXTY-NEXT: Address is in block 0 (allocated).
+SIXTY-NEXT:   This corresponds to offset 60 of the MSF super block,
+SIXTY-NEXT:   which is outside the range of valid data for the super block.
+
+FPM1:      Block:Offset = 1:0000.
+FPM1-NEXT: Address is in block 1 (allocated).
+FPM1-NEXT:   Address is in FPM1 (Alt FPM)
+FPM1-NEXT:   Address describes the allocation status of blocks [0,8)
+FPM1-NEXT:   Status = 00000011 (Note: 0 = allocated, 1 = free)
+
+EXTRANEOUSFPM:      Block:Offset = 1:0100.
+EXTRANEOUSFPM-NEXT: Address is in block 1 (allocated).
+EXTRANEOUSFPM-NEXT:   Address is in FPM1 (Alt FPM)
+EXTRANEOUSFPM-NEXT:   Address is in extraneous FPM space.
+
+FPM2:      Block:Offset = 2:0000.
+FPM2-NEXT: Address is in block 2 (allocated).
+FPM2-NEXT:   Address is in FPM2 (Main FPM)
+FPM2-NEXT:   Address describes the allocation status of blocks [0,8)
+FPM2-NEXT:   Status = 00011100 (Note: 0 = allocated, 1 = free)
+
+UNALLOCATED:      Block:Offset = 3:0000.
+UNALLOCATED-NEXT: Address is in block 3 (unallocated).
+
+STREAM:      Block:Offset = 7:0000.
+STREAM-NEXT: Address is in block 7 (allocated).
+STREAM-NEXT:   Address is at offset 0/684 of Stream 12 (Module "* Linker *").
+
+STREAMDIR:      Block:Offset = 1A:0000.
+STREAMDIR-NEXT: Address is in block 26 (allocated).
+STREAMDIR-NEXT:   Address is at offset 0/156 of Stream Directory.
+
+DIRBLOCKLIST:      Block:Offset = 1B:0000.
+DIRBLOCKLIST-NEXT: Address is in block 27 (allocated).
+DIRBLOCKLIST-NEXT:   Address is at offset 0 of the directory block list
+
+INVALIDFILEOFFSET: Address 118784 is not in the file (file size = 118784).
+
+UNUSED:      Block:Offset = A:0100.
+UNUSED-NEXT: Address is in block 10 (allocated).
+UNUSED-NEXT:   Address is at offset 256/120 of Stream 11 (Section Header Data) in unused space.

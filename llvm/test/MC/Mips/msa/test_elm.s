@@ -1,0 +1,16 @@
+# RUN: llvm-mc %s -triple=mips -mcpu=mips32r2 -mattr=+msa -show-encoding | FileCheck %s
+
+copy_s.b $13, $w8[2]   # CHECK: copy_s.b $13, $w8[2]   # encoding: [0x78,0x82,0x43,0x59]
+copy_s.h $1, $w25[0]   # CHECK: copy_s.h $1, $w25[0]   # encoding: [0x78,0xa0,0xc8,0x59]
+copy_s.w $22, $w5[1]   # CHECK: copy_s.w $22, $w5[1]   # encoding: [0x78,0xb1,0x2d,0x99]
+copy_u.b $22, $w20[4]  # CHECK: copy_u.b $22, $w20[4]  # encoding: [0x78,0xc4,0xa5,0x99]
+copy_u.h $20, $w4[0]   # CHECK: copy_u.h $20, $w4[0]   # encoding: [0x78,0xe0,0x25,0x19]
+sldi.b   $w0, $w29[4]  # CHECK: sldi.b   $w0, $w29[4]  # encoding: [0x78,0x04,0xe8,0x19]
+sldi.h   $w8, $w17[0]  # CHECK: sldi.h   $w8, $w17[0]  # encoding: [0x78,0x20,0x8a,0x19]
+sldi.w   $w20, $w27[2] # CHECK: sldi.w   $w20, $w27[2] # encoding: [0x78,0x32,0xdd,0x19]
+sldi.d   $w4, $w12[0]  # CHECK: sldi.d   $w4, $w12[0]  # encoding: [0x78,0x38,0x61,0x19]
+splati.b $w25, $w3[2]  # CHECK: splati.b $w25, $w3[2]  # encoding: [0x78,0x42,0x1e,0x59]
+splati.h $w24, $w28[1] # CHECK: splati.h $w24, $w28[1] # encoding: [0x78,0x61,0xe6,0x19]
+splati.w $w13, $w18[0] # CHECK: splati.w $w13, $w18[0] # encoding: [0x78,0x70,0x93,0x59]
+splati.d $w28, $w1[0]  # CHECK: splati.d $w28, $w1[0]  # encoding: [0x78,0x78,0x0f,0x19]
+move.v   $w23, $w24    # CHECK: move.v   $w23, $w24    # encoding: [0x78,0xbe,0xc5,0xd9]

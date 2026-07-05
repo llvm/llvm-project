@@ -1,0 +1,63 @@
+## This is a test case for --section-symbols, --section-relocations
+## and --section-data command line options and their aliases.
+
+# RUN: llvm-readobj -S --st --sr --sd %p/Inputs/trivial.obj.coff-i386 | FileCheck %s
+# RUN: llvm-readobj -S --section-symbols --section-relocations --section-data \
+# RUN:  %p/Inputs/trivial.obj.coff-i386 | FileCheck %s
+
+# CHECK:      Sections [
+# CHECK-NEXT:   Section {
+# CHECK-NEXT:     Number: 1
+# CHECK-NEXT:     Name: .text (2E 74 65 78 74 00 00 00)
+# CHECK-NEXT:     VirtualSize: 0x0
+# CHECK-NEXT:     VirtualAddress: 0x0
+# CHECK-NEXT:     RawDataSize: 22
+# CHECK-NEXT:     PointerToRawData: 0x64
+# CHECK-NEXT:     PointerToRelocations: 0x7A
+# CHECK-NEXT:     PointerToLineNumbers: 0x0
+# CHECK-NEXT:     RelocationCount: 3
+# CHECK-NEXT:     LineNumberCount: 0
+# CHECK-NEXT:     Characteristics [ (0x60500020)
+# CHECK-NEXT:       IMAGE_SCN_ALIGN_16BYTES (0x500000)
+# CHECK-NEXT:       IMAGE_SCN_CNT_CODE (0x20)
+# CHECK-NEXT:       IMAGE_SCN_MEM_EXECUTE (0x20000000)
+# CHECK-NEXT:       IMAGE_SCN_MEM_READ (0x40000000)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Relocations [
+# CHECK-NEXT:       0x4 IMAGE_REL_I386_DIR32 .data
+# CHECK-NEXT:       0x9 IMAGE_REL_I386_REL32 _puts
+# CHECK-NEXT:       0xE IMAGE_REL_I386_REL32 _SomeOtherFunction
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Symbols [
+# CHECK-NEXT:       Symbol {
+# CHECK-NEXT:         Name: .text
+# CHECK-NEXT:         Value: 0
+# CHECK-NEXT:         Section: .text (1)
+# CHECK-NEXT:         BaseType: Null (0x0)
+# CHECK-NEXT:         ComplexType: Null (0x0)
+# CHECK-NEXT:         StorageClass: Static (0x3)
+# CHECK-NEXT:         AuxSymbolCount: 1
+# CHECK-NEXT:         AuxSectionDef {
+# CHECK-NEXT:           Length: 22
+# CHECK-NEXT:           RelocationCount: 3
+# CHECK-NEXT:           LineNumberCount: 0
+# CHECK-NEXT:           Checksum: 0x0
+# CHECK-NEXT:           Number: 1
+# CHECK-NEXT:           Selection: 0x0
+# CHECK-NEXT:         }
+# CHECK-NEXT:       }
+# CHECK-NEXT:       Symbol {
+# CHECK-NEXT:         Name: _main
+# CHECK-NEXT:         Value: 0
+# CHECK-NEXT:         Section: .text (1)
+# CHECK-NEXT:         BaseType: Null (0x0)
+# CHECK-NEXT:         ComplexType: Function (0x2)
+# CHECK-NEXT:         StorageClass: External (0x2)
+# CHECK-NEXT:         AuxSymbolCount: 0
+# CHECK-NEXT:       }
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     SectionData (
+# CHECK-NEXT:       0000: 50C70424 00000000 E8000000 00E80000  |P..$............|
+# CHECK-NEXT:       0010: 000031C0 5AC3                        |..1.Z.|
+# CHECK-NEXT:     )
+# CHECK-NEXT:   }

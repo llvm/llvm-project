@@ -1,0 +1,78 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: wasm-ld --shared-memory -o %t.wasm %t.o
+
+# Verify compatability with older object files that didn't mark individual
+# symbols as TLS.   In this case the symbol `bar` is being used in a TLS-only
+# relocation (R_WASM_MEMORY_ADDR_TLS_SLEB) but is not itself marked as TLS.
+# However, because it is defined in a section (`.mydata`) that *is* marked as
+# TLS we implicitly mark bar as TLS.
+#
+# We had a regression where llvm-13-generated object files were being rejected
+# with: "R_WASM_MEMORY_ADDR_TLS_SLEB cannot be used against non-TLS symbol"
+# This test verifies that this error is not triggered.
+
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:      []
+        ReturnTypes:     []
+  - Type:            IMPORT
+    Imports:
+      - Module:          env
+        Field:           __linear_memory
+        Kind:            MEMORY
+        Memory:
+          Minimum:         0x1
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0 ]
+  - Type:            DATACOUNT
+    Count:           1
+  - Type:            CODE
+    Relocations:
+      - Type:            R_WASM_MEMORY_ADDR_TLS_SLEB
+        Index:           1
+        Offset:          0x4
+    Functions:
+      - Index:           0
+        Locals:          []
+        Body:            4180808080001A0B
+  - Type:            DATA
+    Segments:
+      - SectionOffset:   6
+        InitFlags:       0
+        Offset:
+          Opcode:          I32_CONST
+          Value:           0
+        Content:         '00000000'
+  - Type:            CUSTOM
+    Name:            linking
+    Version:         2
+    SymbolTable:
+      - Index:           0
+        Kind:            FUNCTION
+        Name:            _start
+        Flags:           [  ]
+        Function:        0
+      - Index:           1
+        Kind:            DATA
+        Name:            bar
+        Flags:           [  ]
+        Segment:         0
+        Size:            4
+    SegmentInfo:
+      - Index:           0
+        Name:            .mydata
+        Alignment:       0
+        Flags:           [ TLS ]
+  - Type:            CUSTOM
+    Name:            target_features
+    Features:
+      - Prefix:        USED
+        Name:          "atomics"
+      - Prefix:        USED
+        Name:          "bulk-memory"
+...

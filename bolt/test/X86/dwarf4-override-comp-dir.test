@@ -1,0 +1,17 @@
+; REQUIRES: system-linux
+
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; RUN: cd %t
+; RUN: mkdir temp
+; RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-df-basic.s \
+; RUN: -split-dwarf-file=main.dwo -o main.o
+; RUN: %clang %cflags -gdwarf-4 -gsplit-dwarf=split main.o -o main.exe
+; RUN: cd temp
+; RUN: llvm-bolt ../main.exe -o ../main.exe.bolt --update-debug-sections -v 1 --comp-dir-override=%t
+; RUN: cd ..
+; RUN: ls -lat | FileCheck %s -check-prefix=BOLT-CHECK
+
+;; Tests that BOLT processes .dwo files with --comp-dir-override.
+
+; BOLT-CHECK: main.dwo.dwo

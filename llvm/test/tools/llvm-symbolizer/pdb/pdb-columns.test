@@ -1,0 +1,29 @@
+RUN: echo 0x140001000 > %t.input
+RUN: echo 0x140001030 >> %t.input
+RUN: echo 0x140001010 >> %t.input
+RUN: echo 0x140001040 >> %t.input
+RUN: echo 0x140001050 >> %t.input
+RUN: echo 0x140001060 >> %t.input
+RUN: echo 0x140001070 >> %t.input
+RUN: echo 0x140001080 >> %t.input
+RUN:    llvm-symbolizer --obj="%p/Inputs/test-columns.exe" < %t.input \
+RUN:    | FileCheck %s
+
+This tests that the symbolizer outputs column info when it is present in the pdb.
+
+CHECK: foo(void)
+CHECK-NEXT: test.cpp:11:1
+CHECK: {{^private_symbol$}}
+CHECK-NEXT: test.cpp:14:1
+CHECK: {{^main}}
+CHECK-NEXT: test.cpp:16:0
+CHECK: {{^foo_cdecl$}}
+CHECK-NEXT: test.cpp:25:27
+CHECK: {{^foo_stdcall$}}
+CHECK-NEXT: test.cpp:26:31
+CHECK: {{^foo_fastcall$}}
+CHECK-NEXT: test.cpp:27:33
+CHECK: {{^foo_vectorcall}}
+CHECK-NEXT: test.cpp:28:37
+CHECK: NS::Foo::bar(void)
+CHECK-NEXT: test.cpp:6:0

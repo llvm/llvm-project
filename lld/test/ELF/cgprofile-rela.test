@@ -1,0 +1,121 @@
+## Under some circumstances, GNU tools strip/objcopy change REL to RELA. https://sourceware.org/bugzilla/show_bug.cgi?id=28035
+## Test that LLD can handle call graph profile data relocated with RELA relocations.
+# REQUIRES: x86
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: ld.lld --call-graph-profile-sort=hfsort %t.o -o %t
+# RUN: llvm-nm --no-sort %t | FileCheck %s
+# RUN: ld.lld --no-call-graph-profile-sort %t.o -o %t
+# RUN: llvm-nm --no-sort %t | FileCheck %s --check-prefix=NO-CG
+
+# RUN: yaml2obj -DTYPE=SHT_CREL %s -o %tcrel.o
+# RUN: ld.lld --call-graph-profile-sort=hfsort %tcrel.o -o %t
+# RUN: llvm-nm --no-sort %t | FileCheck %s
+
+# CHECK: 0000000000201124 t D
+# CHECK: 0000000000201122 t C
+# CHECK: 0000000000201128 t B
+# CHECK: 0000000000201120 t A
+# CHECK: 0000000000201126 T _start
+
+# NO-CG: 0000000000201120 t D
+# NO-CG: 0000000000201122 t C
+# NO-CG: 0000000000201124 t B
+# NO-CG: 0000000000201126 t A
+# NO-CG: 0000000000201128 T _start
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text.D
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size: 2
+  - Name: .text.C
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size: 2
+  - Name: .text.B
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size: 2
+  - Name: .text.A
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size: 2
+  - Name: .text._start
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size: 2
+  - Name: .llvm.call-graph-profile
+    Type: SHT_LLVM_CALL_GRAPH_PROFILE
+    Flags: [ SHF_EXCLUDE ]
+    Link: .symtab
+    AddressAlign: 0x1
+    Entries:
+      - Weight: 10
+      - Weight: 10
+      - Weight: 80
+      - Weight: 40
+      - Weight: 30
+      - Weight: 90
+  - Name: .rela.llvm.call-graph-profile
+    Type: [[TYPE=SHT_RELA]]
+    Info: .llvm.call-graph-profile
+    Relocations:
+      - Offset: 0x0
+        Symbol: A
+        Type:   R_X86_64_NONE
+      - Offset: 0x0
+        Symbol: B
+        Type:   R_X86_64_NONE
+      - Offset: 0x8
+        Symbol: A
+        Type:   R_X86_64_NONE
+      - Offset: 0x8
+        Symbol: B
+        Type:   R_X86_64_NONE
+      - Offset: 0x10
+        Symbol: _start
+        Type:   R_X86_64_NONE
+      - Offset: 0x10
+        Symbol: B
+        Type:   R_X86_64_NONE
+      - Offset: 0x18
+        Symbol: A
+        Type:   R_X86_64_NONE
+      - Offset: 0x18
+        Symbol: C
+        Type:   R_X86_64_NONE
+      - Offset: 0x20
+        Symbol: B
+        Type:   R_X86_64_NONE
+      - Offset: 0x20
+        Symbol: C
+        Type:   R_X86_64_NONE
+      - Offset: 0x28
+        Symbol: C
+        Type:   R_X86_64_NONE
+      - Offset: 0x28
+        Symbol: D
+        Type:   R_X86_64_NONE
+Symbols:
+  - Name: D
+    Type: STT_FUNC
+    Section: .text.D
+  - Name: C
+    Type: STT_FUNC
+    Section: .text.C
+  - Name: B
+    Type: STT_FUNC
+    Section: .text.B
+  - Name: A
+    Type: STT_FUNC
+    Section: .text.A
+  - Name: _start
+    Binding: STB_GLOBAL
+    Section: .text._start

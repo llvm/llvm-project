@@ -1,0 +1,12 @@
+# UNSUPPORTED: system-windows, remote-linux
+
+# RUN: %clangxx_host %p/Inputs/call-function.cpp -g -o %t
+
+# RUN: lldb-test ir-memory-map %t %S/Inputs/ir-memory-map-basic
+# RUN: lldb-test ir-memory-map -host-only %t %S/Inputs/ir-memory-map-basic
+
+# RUN: lldb-test ir-memory-map %t %S/Inputs/ir-memory-map-overlap1
+# RUN: lldb-test ir-memory-map -host-only %t %S/Inputs/ir-memory-map-overlap1
+
+# RUN: lldb-test ir-memory-map %t %S/Inputs/ir-memory-map-mix-malloc-free
+# RUN: lldb-test ir-memory-map -host-only %t %S/Inputs/ir-memory-map-mix-malloc-free

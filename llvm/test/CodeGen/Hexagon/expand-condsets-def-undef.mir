@@ -1,0 +1,43 @@
+# RUN: llc -mtriple=hexagon -run-pass expand-condsets -o - %s -verify-machineinstrs | FileCheck %s
+
+# CHECK-LABEL: name: fred
+
+# Make sure that <def,read-undef> is accounted for when validating moves
+# during predication. In the code below, %2.isub_hi is invalidated
+# by the C2_mux instruction, and so predicating the A2_addi as an argument
+# to the C2_muxir should not happen.
+
+--- |
+  define void @fred() { ret void }
+
+...
+---
+
+name: fred
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: predregs }
+  - { id: 1, class: intregs }
+  - { id: 2, class: doubleregs }
+  - { id: 3, class: intregs }
+liveins:
+  - { reg: '$p0', virtual-reg: '%0' }
+  - { reg: '$r0', virtual-reg: '%1' }
+  - { reg: '$d0', virtual-reg: '%2' }
+
+body: |
+  bb.0:
+    liveins: $r0, $d0, $p0
+    %0 = COPY $p0
+    %1 = COPY $r0
+    %2 = COPY $d0
+    ; This copy is added by distributing disjoint live interval. Check
+    ; for it to make sure %4 is the right thing.
+    ; CHECK: %4:doubleregs = COPY $d0
+    ; Check that this instruction is unchanged (remains unpredicated)
+    ; CHECK: %3:intregs = A2_addi %4.isub_hi, 1
+    %3 = A2_addi %2.isub_hi, 1
+    undef %2.isub_lo = C2_mux %0, %2.isub_lo, %1
+    %2.isub_hi = C2_muxir %0, %3, 0
+
+...

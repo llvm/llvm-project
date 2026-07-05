@@ -1,0 +1,15 @@
+# This test verifies that llvm-profdata will do wildcard expansion on its
+# arguments. The expansion is done by Windows-specific support in InitLLVM, so
+# we only expect this to work on Windows hosts.
+# REQUIRES: system-windows
+
+# Create two files to glob.
+RUN: echo '# empty profile 1' >  %t.prof1.proftxt
+RUN: echo '# empty profile 2' >> %t.prof2.proftxt
+
+# Prevent LIT itself from globbing by quoting the wildcard argument.
+RUN: llvm-profdata merge "%t.*.proftxt" -dump-input-file-list -o /dev/null | FileCheck %s
+
+# Verify that llvm-profdata expanded the wildcard argument.
+CHECK: 1,{{.*}}.prof1.proftxt
+CHECK-NEXT: 1,{{.*}}.prof2.proftxt

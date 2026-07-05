@@ -1,0 +1,42 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+// <iostream>
+
+// wostream wcerr;
+
+// UNSUPPORTED: no-wide-characters
+
+// RUN: %{build}
+// RUN: %{exec} %t.exe 2> %t.actual
+// RUN: echo -n zzzz > %t.expected
+// RUN: diff %t.expected %t.actual
+
+#include <iostream>
+
+struct custom_codecvt : std::codecvt<wchar_t, char, std::mbstate_t> {
+  using base = std::codecvt<wchar_t, char, std::mbstate_t>;
+protected:
+  result do_out(std::mbstate_t&, const wchar_t *from, const wchar_t *from_end,
+                const wchar_t *&from_next, char *to, char *to_end, char *&to_next) const {
+    while (from != from_end && to != to_end) {
+      ++from;
+      *to++ = 'z';
+    }
+    from_next = from;
+    to_next = to;
+    return ok;
+  }
+};
+
+int main(int, char**) {
+    std::locale loc(std::locale::classic(), new custom_codecvt);
+    std::wcerr.imbue(loc);
+    std::wcerr << L"1234";
+    return 0;
+}

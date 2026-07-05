@@ -1,0 +1,10 @@
+// Ignore everything by default
+**/*
+
+// Only include specific files and directories
+!LICENSE.TXT
+!package.json
+!README.md
+!llvm-logo.png
+!out/**
+!syntaxes/**

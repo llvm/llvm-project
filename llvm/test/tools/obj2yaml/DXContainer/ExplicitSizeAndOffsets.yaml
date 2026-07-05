@@ -1,0 +1,55 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s 
+
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  FileSize:        184
+  PartCount:       7
+  PartOffsets:     [ 60, 76, 92, 108, 124, 140, 168 ]
+Parts:
+  - Name:            FKE0
+    Size:            8
+  - Name:            FKE1
+    Size:            8
+  - Name:            FKE2
+    Size:            8
+  - Name:            FKE3
+    Size:            8
+  - Name:            FKE4
+    Size:            8
+  - Name:            FKE5
+    Size:            20
+  - Name:            FKE6
+    Size:            8
+...
+
+# CHECK: --- !dxcontainer
+# CHECK-NEXT: Header:
+# CHECK-NEXT:   Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+# CHECK-NEXT:                      0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+# CHECK-NEXT:   Version:
+# CHECK-NEXT:     Major:           1
+# CHECK-NEXT:     Minor:           0
+# CHECK-NEXT:   FileSize:        184
+# CHECK-NEXT:   PartCount:       7
+# CHECK-NEXT:   PartOffsets:     [ 60, 76, 92, 108, 124, 140, 168 ]
+# CHECK-NEXT: Parts:
+# CHECK-NEXT:   - Name:            FKE0
+# CHECK-NEXT:     Size:            8
+# CHECK-NEXT:   - Name:            FKE1
+# CHECK-NEXT:     Size:            8
+# CHECK-NEXT:   - Name:            FKE2
+# CHECK-NEXT:     Size:            8
+# CHECK-NEXT:   - Name:            FKE3
+# CHECK-NEXT:     Size:            8
+# CHECK-NEXT:   - Name:            FKE4
+# CHECK-NEXT:     Size:            8
+# CHECK-NEXT:   - Name:            FKE5
+# CHECK-NEXT:     Size:            20
+# CHECK-NEXT:   - Name:            FKE6
+# CHECK-NEXT:     Size:            8
+# CHECK-NEXT: ...

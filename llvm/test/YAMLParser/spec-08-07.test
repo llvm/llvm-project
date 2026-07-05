@@ -1,0 +1,6 @@
+# RUN: yaml-bench -canonical %s
+
+# Assuming conventional resolution:
+- "12"
+- 12
+- ! 12

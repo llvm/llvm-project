@@ -1,0 +1,40 @@
+# RUN: llc -mtriple=hexagon -run-pass if-converter -verify-machineinstrs -o - %s | FileCheck %s
+
+# CHECK-LABEL: name: foo
+# CHECK: $p0 = C2_cmpeqi $r16, 0
+# Make sure there is no implicit use of r1.
+# CHECK: $r1 = L2_ploadruhf_io $p0, $r29, 6
+
+--- |
+  define void @foo() {
+    ret void
+  }
+...
+
+
+---
+name: foo
+tracksRegLiveness: true
+
+body: |
+  bb.0:
+    liveins: $r0, $r16
+    successors: %bb.1, %bb.2
+        $p0 = C2_cmpeqi $r16, 0
+        J2_jumpt $p0, %bb.2, implicit-def $pc
+
+  bb.1:
+    ; The lane mask $d0:0002 is equivalent to $r0. LivePhysRegs would ignore
+    ; it and treat it as the whole $d0, which is a pair $r1, $r0. The extra
+    ; $r1 would cause an (undefined) implicit use to be added during
+    ; if-conversion.
+    liveins: $d0:0x00000002, $d15:0x00000001, $r16
+    successors: %bb.2
+        $r1 = L2_loadruh_io $r29, 6
+        S2_storeri_io killed $r16, 0, $r1
+
+  bb.2:
+    liveins: $r0
+        $d8 = L2_loadrd_io $r29, 8
+        $d15 = L4_return $r29, implicit-def $r29, implicit-def $pc, implicit $r30, implicit $framekey
+

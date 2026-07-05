@@ -1,0 +1,43 @@
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass none -o - %s | FileCheck %s
+
+--- |
+  @var = global i64 0
+  @local_addr = global ptr null
+
+  define void @stack_local() {
+  entry:
+    %local_var = alloca i64
+    %val = load i64, ptr @var
+    store i64 %val, ptr %local_var
+    store ptr %local_var, ptr @local_addr
+    ret void
+  }
+...
+---
+name:            stack_local
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gpr64common }
+  - { id: 1, class: gpr64 }
+  - { id: 2, class: gpr64common }
+  - { id: 3, class: gpr64common }
+frameInfo:
+  maxAlignment:    8
+# CHECK-LABEL: stack_local
+# CHECK: stack:
+# CHECK: - { id: 0, name: local_var, type: default, offset: 0, size: 8, alignment: 8,
+# CHECK-NEXT: stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+# CHECK-NEXT: local-offset: -8, debug-info-variable: '', debug-info-expression: '',
+# CHECK-NEXT: debug-info-location: '' }
+stack:
+  - { id: 0,name: local_var,offset: 0,size: 8,alignment: 8, local-offset: -8 }
+body: |
+  bb.0.entry:
+    %0 = ADRP @var
+    %1 = LDRXui killed %0, @var :: (load (s64) from @var)
+    STRXui killed %1, %stack.0.local_var, 0 :: (store (s64) into %ir.local_var)
+    %2 = ADRP @local_addr
+    %3 = ADDXri %stack.0.local_var, 0, 0
+    STRXui killed %3, killed %2, @local_addr :: (store (s64) into @local_addr)
+    RET_ReallyLR
+...

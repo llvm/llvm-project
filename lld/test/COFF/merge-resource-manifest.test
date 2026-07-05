@@ -1,0 +1,61 @@
+# RUN: yaml2obj %p/Inputs/ret42.yaml -o %t.o
+
+# RUN: yaml2obj %p/Inputs/manifest-lang0.yaml -o %t-manifest-lang0.o
+# RUN: yaml2obj %p/Inputs/manifest-lang1.yaml -o %t-manifest-lang1.o
+# RUN: yaml2obj %p/Inputs/manifest-lang2.yaml -o %t-manifest-lang2.o
+
+# RUN: lld-link /lldmingw /out:%t.exe /entry:main %t.o %p/Inputs/manifest-lang0.res %p/Inputs/manifest-lang1.res
+# RUN: llvm-readobj --coff-resources %t.exe | FileCheck %s
+
+# RUN: lld-link /lldmingw /out:%t.exe /entry:main %t.o %t-manifest-lang0.o %t-manifest-lang1.o
+# RUN: llvm-readobj --coff-resources %t.exe | FileCheck %s
+
+# RUN: lld-link /lldmingw /out:%t.exe /entry:main %t.o %p/Inputs/manifest-lang1.res %p/Inputs/manifest-lang0.res
+# RUN: llvm-readobj --coff-resources %t.exe | FileCheck %s
+
+# RUN: lld-link /lldmingw /out:%t.exe /entry:main %t.o %t-manifest-lang1.o %t-manifest-lang0.o
+# RUN: llvm-readobj --coff-resources %t.exe | FileCheck %s
+
+# RUN: cp %t-manifest-lang0.o %t-manifest-lang0-copy.o
+# RUN: lld-link /lldmingw /out:%t.exe /entry:main %t.o %t-manifest-lang0.o %t-manifest-lang0-copy.o %t-manifest-lang1.o
+# RUN: llvm-readobj --coff-resources %t.exe | FileCheck %s
+
+# RUN: not lld-link /lldmingw /out:%t.exe /entry:main %t.o %p/Inputs/manifest-lang1.res %p/Inputs/manifest-lang2.res 2>&1 | FileCheck --check-prefix=ERROR %s
+
+# RUN: not lld-link /lldmingw /out:%t.exe /entry:main %t.o %t-manifest-lang1.o %t-manifest-lang2.o 2>&1 | FileCheck --check-prefix=ERROR %s
+
+# CHECK:      Resources [
+# CHECK-NEXT:  Total Number of Resources: 1
+# CHECK-NEXT:  Base Table Address: 0x
+# CHECK-NEXT:  {{ }}
+# CHECK-NEXT:   Number of String Entries: 0
+# CHECK-NEXT:   Number of ID Entries: 1
+# CHECK-NEXT:   Type: MANIFEST (ID 24) [
+# CHECK-NEXT:     Table Offset: 0x18
+# CHECK-NEXT:     Number of String Entries: 0
+# CHECK-NEXT:     Number of ID Entries: 1
+# CHECK-NEXT:     Name: (ID 1) [
+# CHECK-NEXT:       Table Offset: 0x30
+# CHECK-NEXT:       Number of String Entries: 0
+# CHECK-NEXT:       Number of ID Entries: 1
+# CHECK-NEXT:       Language: (ID 1) [
+# CHECK-NEXT:         Entry Offset: 0x48
+# CHECK-NEXT:         Time/Date Stamp: 1970-01-01 00:00:00 (0x0)
+# CHECK-NEXT:         Major Version: 0
+# CHECK-NEXT:         Minor Version: 0
+# CHECK-NEXT:         Characteristics: 0
+# CHECK-NEXT:         Data [
+# CHECK-NEXT:           DataRVA:
+# CHECK-NEXT:           DataSize: 14
+# CHECK-NEXT:           Codepage: 0
+# CHECK-NEXT:           Reserved: 0
+# CHECK-NEXT:           Data (
+# CHECK-NEXT:             0000: 6D616E69 66657374 2D6C616E 6731      |manifest-lang1|
+# CHECK-NEXT:           )
+# CHECK-NEXT:         ]
+# CHECK-NEXT:       ]
+# CHECK-NEXT:     ]
+# CHECK-NEXT:   ]
+# CHECK-NEXT: ]
+
+# ERROR: error: duplicate non-default manifests with languages 1 in {{.*}}manifest-lang1.{{res|o}} and 2 in {{.*}}manifest-lang2.{{res|o}}

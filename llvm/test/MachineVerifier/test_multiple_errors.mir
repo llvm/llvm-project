@@ -1,0 +1,20 @@
+# RUN: not --crash llc -mtriple=aarch64 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+
+# Since we abort after reporting the first error, we should only expect one error to be reported.
+# CHECK: Bad machine code: Generic virtual register use cannot be undef
+# CHECK: Found 1 machine code errors.
+
+---
+name: foo
+body: |
+  bb.0:
+    $x0 = COPY undef %0:_(s64)
+...
+
+---
+name: bar
+body: |
+  bb.0:
+    $x0 = COPY undef %0:_(s64)
+...

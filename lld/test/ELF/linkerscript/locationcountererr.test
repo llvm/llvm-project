@@ -1,0 +1,11 @@
+# REQUIRES: x86
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux /dev/null -o %t
+# RUN: not ld.lld %t --script %s -o /dev/null 2>&1 | FileCheck %s
+# CHECK: {{.*}}.test:8: unable to move location counter (0x2000) backward to 0x10 for section '.text'
+
+SECTIONS {
+  .text 0x2000 : {
+    . = 0x10;
+    *(.text)
+  }
+}

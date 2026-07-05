@@ -1,0 +1,6 @@
+# RUN: yaml-bench -canonical %s
+
+{
+key : value,
+empty: # empty value↓
+}

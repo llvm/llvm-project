@@ -1,0 +1,62 @@
+# This test tests that if two non-overlapping segments are right next to each
+# other no problems arise.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy %t %t2
+# RUN: llvm-readobj --program-headers %t2 | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x1000
+    Size:            24
+  - Name:            .text2
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x10
+    Size:            16
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    FirstSec: .text
+    LastSec:  .text
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    FirstSec: .text2
+    LastSec:  .text2
+
+#CHECK:     ProgramHeaders [
+#CHECK-NEXT:  ProgramHeader {
+#CHECK-NEXT:    Type: PT_LOAD (0x1)
+#CHECK-NEXT:    Offset: 0x1000
+#CHECK-NEXT:    VirtualAddress: 0x0
+#CHECK-NEXT:    PhysicalAddress: 0x0
+#CHECK-NEXT:    FileSize: 24
+#CHECK-NEXT:    MemSize: 24
+#CHECK-NEXT:    Flags [ (0x5)
+#CHECK-NEXT:      PF_R (0x4)
+#CHECK-NEXT:      PF_X (0x1)
+#CHECK-NEXT:    ]
+#CHECK-NEXT:    Alignment: 4096
+#CHECK-NEXT:  }
+#CHECK-NEXT:  ProgramHeader {
+#CHECK-NEXT:    Type: PT_LOAD (0x1)
+#CHECK-NEXT:    Offset: 0x1020
+#CHECK-NEXT:    VirtualAddress: 0x0
+#CHECK-NEXT:    PhysicalAddress: 0x0
+#CHECK-NEXT:    FileSize: 16
+#CHECK-NEXT:    MemSize: 16
+#CHECK-NEXT:    Flags [ (0x5)
+#CHECK-NEXT:      PF_R (0x4)
+#CHECK-NEXT:      PF_X (0x1)
+#CHECK-NEXT:    ]
+#CHECK-NEXT:    Alignment: 16
+#CHECK-NEXT:  }
+#CHECK-NEXT:]

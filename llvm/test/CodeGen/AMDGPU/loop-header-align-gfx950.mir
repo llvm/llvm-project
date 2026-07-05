@@ -1,0 +1,74 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx950 -start-before=block-placement -o - %s | FileCheck %s
+
+# Test that loop headers are aligned to 32 bytes on GFX950 when the first
+# instruction is 8 bytes, to prevent the instruction from being split by the
+# 32-byte fetch window boundary.
+# The second test case verifies that 4-byte instructions do NOT trigger
+# alignment (CHECK-NEXT chain would break if .p2align were inserted).
+
+---
+name:            loop_with_8byte_first_inst
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: loop_with_8byte_first_inst:
+  ; CHECK:       ; %bb.0:
+  ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+  ; CHECK-NEXT:    s_mov_b64 s[0:1], 0
+  ; CHECK-NEXT:    .p2align 5, , 4
+  ; CHECK-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
+  ; CHECK-NEXT:    v_lshrrev_b64 v[0:1], 1, v[0:1]
+  bb.0:
+    successors: %bb.1(0x80000000)
+    liveins: $vgpr0_vgpr1
+
+    renamable $sgpr0_sgpr1 = S_MOV_B64 0
+
+  bb.1:
+    successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+    liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
+
+    renamable $vgpr0_vgpr1 = V_LSHRREV_B64_e64 1, killed renamable $vgpr0_vgpr1, implicit $exec
+    V_CMP_EQ_U64_e32 0, $vgpr0_vgpr1, implicit-def $vcc, implicit $exec
+    renamable $sgpr0_sgpr1 = S_OR_B64 killed renamable $vcc, killed renamable $sgpr0_sgpr1, implicit-def $scc
+    $exec = S_ANDN2_B64 $exec, renamable $sgpr0_sgpr1, implicit-def $scc
+    S_CBRANCH_EXECNZ %bb.1, implicit $exec
+
+  bb.2:
+    liveins: $sgpr0_sgpr1
+
+    $exec = S_OR_B64 $exec, killed renamable $sgpr0_sgpr1, implicit-def $scc
+    S_SETPC_B64_return undef $sgpr30_sgpr31
+...
+
+---
+name:            loop_with_4byte_first_inst
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: loop_with_4byte_first_inst:
+  ; CHECK:       ; %bb.0:
+  ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+  ; CHECK-NEXT:    s_mov_b64 s[0:1], 0
+  ; CHECK-NEXT:  .LBB1_1: ; =>This Inner Loop Header: Depth=1
+  ; CHECK-NEXT:    v_add_u32_e32 v0, 1, v0
+  bb.0:
+    successors: %bb.1(0x80000000)
+    liveins: $vgpr0
+
+    renamable $sgpr0_sgpr1 = S_MOV_B64 0
+
+  bb.1:
+    successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+    liveins: $sgpr0_sgpr1, $vgpr0
+
+    renamable $vgpr0 = V_ADD_U32_e32 1, killed $vgpr0, implicit $exec
+    V_CMP_LT_U32_e32 10, $vgpr0, implicit-def $vcc, implicit $exec
+    renamable $sgpr0_sgpr1 = S_OR_B64 killed renamable $vcc, killed renamable $sgpr0_sgpr1, implicit-def $scc
+    $exec = S_ANDN2_B64 $exec, renamable $sgpr0_sgpr1, implicit-def $scc
+    S_CBRANCH_EXECNZ %bb.1, implicit $exec
+
+  bb.2:
+    liveins: $sgpr0_sgpr1
+
+    $exec = S_OR_B64 $exec, killed renamable $sgpr0_sgpr1, implicit-def $scc
+    S_SETPC_B64_return undef $sgpr30_sgpr31
+...

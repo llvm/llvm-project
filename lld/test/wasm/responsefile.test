@@ -1,0 +1,20 @@
+RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/ret32.s -o %t.o
+
+RUN: echo "%/t.o -o %/t.wasm -e ret32" > %t.rsp
+RUN: wasm-ld @%t.rsp --initial-memory=655360
+RUN: llvm-readobj --sections %t.wasm | FileCheck %s
+CHECK: MinPages: 10
+
+RUN: not wasm-ld --rsp-quoting=foobar @%t.rsp 2>&1 | \
+RUN:     FileCheck --check-prefix=INVRSP %s
+INVRSP: invalid response file quoting: foobar
+
+RUN: echo "blah\foo" > %t.rsp
+RUN: not wasm-ld -o a.out --rsp-quoting=windows @%t.rsp 2>&1 | \
+RUN:     FileCheck --check-prefix=WINRSP %s
+WINRSP: error: cannot open blah\foo:
+
+RUN: echo "blah\foo" > %t.rsp
+RUN: not wasm-ld -o a.out --rsp-quoting=posix @%t.rsp 2>&1 | \
+RUN:     FileCheck --check-prefix=POSRSP %s
+POSRSP: error: cannot open blahfoo:

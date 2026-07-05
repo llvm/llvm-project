@@ -1,0 +1,8 @@
+macros:
+  bswap_16:
+    c-definition: ''
+  bswap_32:
+    c-definition: ''
+  bswap_64:
+    c-definition: ''
+

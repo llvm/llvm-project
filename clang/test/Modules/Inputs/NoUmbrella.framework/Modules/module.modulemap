@@ -1,0 +1,6 @@
+framework module NoUmbrella [system] {
+  umbrella "Headers"
+  module * { }
+
+  exclude header "Boom.h"
+}

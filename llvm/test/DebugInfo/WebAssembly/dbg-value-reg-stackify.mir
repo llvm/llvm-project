@@ -1,0 +1,523 @@
+# RUN: llc -run-pass wasm-reg-stackify %s -o - | FileCheck %s
+
+# Tests for DBG_VALUE hanlding in RegStackify + DebugValueManager
+
+--- |
+  target triple = "wasm32-unknown-unknown"
+
+  declare void @use(i32)
+  declare void @use_2(i32, i32)
+
+  define void @sink_simple() !dbg !6 {
+    call void @llvm.dbg.value(metadata i32 0, metadata !5, metadata !DIExpression()), !dbg !10
+    call void @llvm.dbg.value(metadata i32 0, metadata !11, metadata !DIExpression()), !dbg !10
+    call void @llvm.dbg.value(metadata i32 0, metadata !12, metadata !DIExpression()), !dbg !10
+    call void @llvm.dbg.value(metadata i32 0, metadata !13, metadata !DIExpression()), !dbg !10
+    ret void
+  }
+  define void @sink_non_consecutive() !dbg !14 {
+    unreachable
+  }
+  define void @dont_sink_above_def() !dbg !15 {
+    unreachable
+  }
+  define void @sink_to_same_place() !dbg !16 {
+    unreachable
+  }
+  define void @cannot_sink_across_same_variable() !dbg !17 {
+    unreachable
+  }
+  define void @cannot_sink_across_same_variable2() !dbg !18 {
+    unreachable
+  }
+  define void @can_sink_across_same_variable_with_same_const() !dbg !19 {
+    unreachable
+  }
+  define void @sink_multiple_defs() !dbg !20 {
+    unreachable
+  }
+  define void @clone_same_bb() !dbg !21 {
+    unreachable
+  }
+  define void @clone_different_bb() !dbg !22 {
+    unreachable
+  }
+  define void @tee_with_two_use_insts() !dbg !23 {
+    unreachable
+  }
+  define void @tee_with_one_inst_with_two_uses() !dbg !24 {
+    unreachable
+  }
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2, !3, !4}
+
+  ; Note the current mapping variable metadata and their names, which we will
+  ; use in all functions in ths file:
+  ; - "var_a" / VAR_A: !5
+  ; - "var_b" / VAR_B: !11
+  ; - "var_c" / VAR_C: !12
+  ; - "var_d" / VAR_D: !13
+  ; We will use VAR_? in the CHECK lines for robustness in case of metadata
+  ; renumbering, but currently in mir tests we cannot use variable names like
+  ; "var_a" directly in the input, which can be confusing to read.
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, emissionKind: FullDebug)
+  !1 = !DIFile(filename: "test.c", directory: "")
+  !2 = !{i32 7, !"Dwarf Version", i32 5}
+  !3 = !{i32 2, !"Debug Info Version", i32 3}
+  !4 = !{i32 1, !"wchar_size", i32 4}
+  !5 = !DILocalVariable(name: "var_a", scope: !6, file: !1, line: 2, type: !9)
+  ; CHECK: ![[VAR_A:[0-9]+]] = !DILocalVariable(name: "var_a"
+  !6 = distinct !DISubprogram(name: "sink_simple", scope: !1, file: !1, line: 1, type: !7, scopeLine: 1, unit: !0)
+  !7 = !DISubroutineType(types: !8)
+  !8 = !{null}
+  !9 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !10 = !DILocation(line: 0, scope: !6)
+  !11 = !DILocalVariable(name: "var_b", scope: !6, file: !1, line: 2, type: !9)
+  ; CHECK: ![[VAR_B:[0-9]+]] = !DILocalVariable(name: "var_b"
+  !12 = !DILocalVariable(name: "var_c", scope: !6, file: !1, line: 2, type: !9)
+  ; CHECK: ![[VAR_C:[0-9]+]] = !DILocalVariable(name: "var_c"
+  !13 = !DILocalVariable(name: "var_d", scope: !6, file: !1, line: 2, type: !9)
+  ; CHECK: ![[VAR_D:[0-9]+]] = !DILocalVariable(name: "var_d"
+  !14 = distinct !DISubprogram(name: "sink_non_consecutive", scope: !1, file: !1, line: 1, type: !7, scopeLine: 1, unit: !0)
+  !15 = distinct !DISubprogram(name: "dont_sink_above_def", scope: !1, file: !1, line: 1, type: !7, scopeLine: 1, unit: !0)
+  !16 = distinct !DISubprogram(name: "sink_to_same_place", scope: !1, file: !1, line: 1, type: !7, scopeLine: 1, unit: !0)
+  !17 = distinct !DISubprogram(name: "cannot_sink_across_same_variable", scope: !1, file: !1, line: 1, type: !7, scopeLine: 1, unit: !0)
+  !18 = distinct !DISubprogram(name: "cannot_sink_across_same_variable2", scope: !1, file: !1, line: 1, type: !7, scopeLine: 1, unit: !0)
+  !19 = distinct !DISubprogram(name: "can_sink_across_same_variable_with_same_const", scope: !1, file: !1, line: 1, type: !7, scopeLine: 1, unit: !0)
+  !20 = distinct !DISubprogram(name: "sink_multiple_defs", scope: !1, file: !1, line: 1, type: !7, scopeLine: 1, unit: !0)
+  !21 = distinct !DISubprogram(name: "clone_same_bb", scope: !1, file: !1, line: 1, type: !7, scopeLine: 1, unit: !0)
+  !22 = distinct !DISubprogram(name: "clone_different_bb", scope: !1, file: !1, line: 1, type: !7, scopeLine: 1, unit: !0)
+  !23 = distinct !DISubprogram(name: "tee_with_two_use_insts", scope: !1, file: !1, line: 1, type: !7, scopeLine: 1, unit: !0)
+  !24 = distinct !DISubprogram(name: "tee_with_one_inst_with_two_uses", scope: !1, file: !1, line: 1, type: !7, scopeLine: 1, unit: !0)
+...
+
+---
+# A simple sinking example.
+# '%0 = CONST_I32 1' will sink to the place before 'CALL %use', and the two
+# DBG_VALUEs will sink with it, leaving the original DBG_VALUEs to be set to
+# undef (= DBG_VALUE $noreg).
+# CHECK-LABEL: name: sink_simple
+name: sink_simple
+liveins:
+  - { reg: '$arguments' }
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $arguments
+    %0:i32 = CONST_I32 1, implicit-def $arguments
+    DBG_VALUE %0:i32, $noreg, !5, !DIExpression(), debug-location !10
+    DBG_VALUE %0:i32, $noreg, !11, !DIExpression(), debug-location !10
+    NOP implicit-def $arguments
+    CALL @use, %0:i32, implicit-def $arguments
+    RETURN implicit-def $arguments
+
+  ; CHECK:      DBG_VALUE $noreg, $noreg, ![[VAR_A]], !DIExpression()
+  ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, ![[VAR_B]], !DIExpression()
+  ; CHECK-NEXT: NOP implicit-def $arguments
+  ; CHECK-NEXT: %0:i32 = CONST_I32 1, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK-NEXT: DBG_VALUE %0, $noreg, ![[VAR_A]], !DIExpression()
+  ; CHECK-NEXT: DBG_VALUE %0, $noreg, ![[VAR_B]], !DIExpression()
+  ; CHECK-NEXT: CALL @use, %0, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK-NEXT: RETURN implicit-def $arguments
+...
+
+---
+# Sinking when DBG_VALUEs are non-consecutive.
+# '%0 = CONST_I32 1' will sink to the place before 'CALL %use', and the two
+# DBG_VALUEs will sink with it, even though they are not consecutive. The
+# original DBG_VALUEs will be set to undef.
+# CHECK-LABEL: name: sink_non_consecutive
+name: sink_non_consecutive
+liveins:
+  - { reg: '$arguments' }
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $arguments
+    %0:i32 = CONST_I32 1, implicit-def $arguments
+    DBG_VALUE %0:i32, $noreg, !5, !DIExpression(), debug-location !10
+    NOP implicit-def $arguments
+    DBG_VALUE %0:i32, $noreg, !11, !DIExpression(), debug-location !10
+    NOP implicit-def $arguments
+    CALL @use, %0:i32, implicit-def $arguments
+    RETURN implicit-def $arguments
+
+  ; CHECK:      DBG_VALUE $noreg, $noreg, ![[VAR_A]], !DIExpression()
+  ; CHECK-NEXT: NOP implicit-def $arguments
+  ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, ![[VAR_B]], !DIExpression()
+  ; CHECK-NEXT: NOP implicit-def $arguments
+  ; CHECK-NEXT: %0:i32 = CONST_I32 1, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK-NEXT: DBG_VALUE %0, $noreg, ![[VAR_A]], !DIExpression()
+  ; CHECK-NEXT: DBG_VALUE %0, $noreg, ![[VAR_B]], !DIExpression()
+  ; CHECK-NEXT: CALL @use, %0, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK-NEXT: RETURN implicit-def $arguments
+...
+
+---
+# Only DBG_VALUEs following a def should be sunk together.
+# '%0 = CONST_I32 1' will sink to the place before 'CALL %use', but the
+# DBG_VALUE above it should be untouched.
+# CHECK-LABEL: name: dont_sink_above_def
+name: dont_sink_above_def
+liveins:
+  - { reg: '$arguments' }
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $arguments
+    DBG_VALUE %0:i32, $noreg, !5, !DIExpression(), debug-location !10
+    %0:i32 = CONST_I32 1, implicit-def $arguments
+    NOP implicit-def $arguments
+    CALL @use, %0:i32, implicit-def $arguments
+    RETURN implicit-def $arguments
+
+  ; CHECK:      DBG_VALUE %0, $noreg, ![[VAR_A]], !DIExpression()
+  ; CHECK-NEXT: NOP implicit-def $arguments
+  ; CHECK-NEXT: %0:i32 = CONST_I32 1, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK-NEXT: CALL @use, %0, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK-NEXT: RETURN implicit-def $arguments
+...
+
+---
+# A sink no-op case.
+# '%0 = CONST_I32 1' will sink to the place before 'CALL %use', but it's already
+# right before the CALL so it should be effectively a no-op. But currently
+# sinking happens anyway so this will create unnecessary two undef DBG_VALUEs.
+# This increases the number of DBG_VALUEs but doesn't hurt the coverage or
+# generate incorrect debug info. TODO Improve this?
+# CHECK-LABEL: name: sink_to_same_place
+name: sink_to_same_place
+liveins:
+  - { reg: '$arguments' }
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $arguments
+    %0:i32 = CONST_I32 1, implicit-def $arguments
+    DBG_VALUE %0:i32, $noreg, !5, !DIExpression(), debug-location !10
+    DBG_VALUE %0:i32, $noreg, !11, !DIExpression(), debug-location !10
+    CALL @use, %0:i32, implicit-def $arguments
+    RETURN implicit-def $arguments
+
+  ; CHECK:      %0:i32 = CONST_I32 1, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK-NEXT: DBG_VALUE %0, $noreg, ![[VAR_A]], !DIExpression()
+  ; CHECK-NEXT: DBG_VALUE %0, $noreg, ![[VAR_B]], !DIExpression()
+  ; CHECK-NEXT: CALL @use, %0, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK-NEXT: RETURN implicit-def $arguments
+...
+
+---
+# A DBG_VALUE cannot be sunk across another DBG_VALUE that has the same
+# DebugVariable, because it will reorder assignments.
+# '%0 = CONST_I32 1' will sink to the place before 'CALL %use'. But from the two
+# DBG_VALUEs following it, only the DBG_VALUE for "var_b" can sink with it,
+# because there is another 'DBG_VALUE 10' for "var_a" in the middle.
+# CHECK-LABEL: name: cannot_sink_across_same_variable
+name: cannot_sink_across_same_variable
+liveins:
+  - { reg: '$arguments' }
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $arguments
+    %0:i32 = CONST_I32 1, implicit-def $arguments
+    DBG_VALUE %0:i32, $noreg, !5, !DIExpression(), debug-location !10
+    DBG_VALUE %0:i32, $noreg, !11, !DIExpression(), debug-location !10
+    DBG_VALUE 10, $noreg, !5, !DIExpression(), debug-location !10
+    NOP implicit-def $arguments
+    CALL @use, %0:i32, implicit-def $arguments
+    RETURN implicit-def $arguments
+
+  ; CHECK:      DBG_VALUE $noreg, $noreg, ![[VAR_A]], !DIExpression()
+  ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, ![[VAR_B]], !DIExpression()
+  ; CHECK-NEXT: DBG_VALUE 10, $noreg, ![[VAR_A]], !DIExpression()
+  ; CHECK-NEXT: NOP implicit-def $arguments
+  ; CHECK-NEXT: %0:i32 = CONST_I32 1, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK-NEXT: DBG_VALUE %0, $noreg, ![[VAR_B]], !DIExpression()
+  ; CHECK-NEXT: CALL @use, %0, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK-NEXT: RETURN implicit-def $arguments
+...
+
+---
+# Another case in which a DBG_VALUE cannot be sunk across another DBG_VALUE with
+# the same DebugVariable, because it will reorder assignments.
+# '%0 = CONST_I32 1' will sink to the place before 'CALL %use'. But from the two
+# DBG_VALUEs following it, only the DBG_VALUE for "var_b" can sink with it,
+# because there is another 'DBG_VALUE %1, "var_a"' in the middle.
+# CHECK-LABEL: name: cannot_sink_across_same_variable2
+name: cannot_sink_across_same_variable2
+liveins:
+  - { reg: '$arguments' }
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $arguments
+    %0:i32 = CONST_I32 1, implicit-def $arguments
+    %1:i32 = CONST_I32 2, implicit-def $arguments
+    DBG_VALUE %0:i32, $noreg, !5, !DIExpression(), debug-location !10
+    DBG_VALUE %0:i32, $noreg, !11, !DIExpression(), debug-location !10
+    DBG_VALUE %1:i32, $noreg, !5, !DIExpression(), debug-location !10
+    NOP implicit-def $arguments
+    CALL @use, %0:i32, implicit-def $arguments
+    RETURN implicit-def $arguments
+
+  ; CHECK:      %1:i32 = CONST_I32 2, implicit-def $arguments
+  ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, ![[VAR_A]], !DIExpression()
+  ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, ![[VAR_B]], !DIExpression()
+  ; CHECK-NEXT: DBG_VALUE %1, $noreg, ![[VAR_A]], !DIExpression()
+  ; CHECK-NEXT: NOP implicit-def $arguments
+  ; CHECK-NEXT: %0:i32 = CONST_I32 1, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK-NEXT: DBG_VALUE %0, $noreg, ![[VAR_B]], !DIExpression()
+  ; CHECK-NEXT: CALL @use, %0, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK-NEXT: RETURN implicit-def $arguments
+...
+
+---
+# There is a exception in which a DBG_VALUE can be sunk across another DBG_VALUE
+# with the same DebugVariable: when the interfering DBG_VALUE refers to the same
+# CONST_[I32/I64/F32/F64] instruction, in which case we don't reorder
+# assignments.
+#
+# This is the same test with the previous one with one difference: %1 has the
+# same CONST instruction with %0 'CONST_I32 1'. We can sink the DBG_VALUE for
+# "var_a" here as well.
+# CHECK-LABEL: name: can_sink_across_same_variable_with_same_const
+name: can_sink_across_same_variable_with_same_const
+liveins:
+  - { reg: '$arguments' }
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $arguments
+    %0:i32 = CONST_I32 1, implicit-def $arguments
+    %1:i32 = CONST_I32 1, implicit-def $arguments ; Same CONST_I32
+    DBG_VALUE %0:i32, $noreg, !5, !DIExpression(), debug-location !10
+    DBG_VALUE %0:i32, $noreg, !11, !DIExpression(), debug-location !10
+    DBG_VALUE %1:i32, $noreg, !5, !DIExpression(), debug-location !10
+    NOP implicit-def $arguments
+    CALL @use, %0:i32, implicit-def $arguments
+    RETURN implicit-def $arguments
+
+  ; CHECK:      %1:i32 = CONST_I32 1, implicit-def $arguments
+  ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, ![[VAR_A]], !DIExpression()
+  ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, ![[VAR_B]], !DIExpression()
+  ; CHECK-NEXT: DBG_VALUE %1, $noreg, ![[VAR_A]], !DIExpression()
+  ; CHECK-NEXT: NOP implicit-def $arguments
+  ; CHECK-NEXT: %0:i32 = CONST_I32 1, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK-NEXT: DBG_VALUE %0, $noreg, ![[VAR_A]], !DIExpression()
+  ; CHECK-NEXT: DBG_VALUE %0, $noreg, ![[VAR_B]], !DIExpression()
+  ; CHECK-NEXT: CALL @use, %0, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK-NEXT: RETURN implicit-def $arguments
+...
+
+---
+# Both %0 and %1 will be sunk to the place before ADD_I32. DBG_VALUEs associated
+# with those two defs will be sunk as well, leaving the original DBG_VALUEs set
+# to undef.
+# CHECK-LABEL: name: sink_multiple_defs
+name: sink_multiple_defs
+liveins:
+  - { reg: '$arguments' }
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $arguments
+    %0:i32 = CONST_I32 1, implicit-def $arguments
+    DBG_VALUE %0:i32, $noreg, !5, !DIExpression(), debug-location !10
+    DBG_VALUE %0:i32, $noreg, !11, !DIExpression(), debug-location !10
+    NOP implicit-def $arguments
+    %1:i32 = CONST_I32 2, implicit-def $arguments
+    DBG_VALUE %1:i32, $noreg, !12, !DIExpression(), debug-location !10
+    DBG_VALUE %1:i32, $noreg, !13, !DIExpression(), debug-location !10
+    NOP implicit-def $arguments
+    %2:i32 = ADD_I32 %0:i32, %1:i32, implicit-def $arguments
+    RETURN implicit-def $arguments
+
+  ; CHECK:      DBG_VALUE $noreg, $noreg, ![[VAR_A]], !DIExpression()
+  ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, ![[VAR_B]], !DIExpression()
+  ; CHECK-NEXT: NOP implicit-def $arguments
+  ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, ![[VAR_C]], !DIExpression()
+  ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, ![[VAR_D]], !DIExpression()
+  ; CHECK-NEXT: NOP implicit-def $arguments
+  ; CHECK-NEXT: %0:i32 = CONST_I32 1, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK-NEXT: DBG_VALUE %0, $noreg, ![[VAR_A]], !DIExpression()
+  ; CHECK-NEXT: DBG_VALUE %0, $noreg, ![[VAR_B]], !DIExpression()
+  ; CHECK-NEXT: %1:i32 = CONST_I32 2, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK-NEXT: DBG_VALUE %1, $noreg, ![[VAR_C]], !DIExpression()
+  ; CHECK-NEXT: DBG_VALUE %1, $noreg, ![[VAR_D]], !DIExpression()
+  ; CHECK-NEXT: dead %2:i32 = ADD_I32 %0, %1, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK-NEXT: RETURN implicit-def $arguments
+...
+
+---
+# A simple cloning example.
+# When processing the second 'CALL @use', because %0 has multiple uses, the def
+# '%0 = CONST_I32 1' is cloned before the CALL, along with its DBG_VALUEs. And
+# then when processing the first 'CALL @use', by that time %0 has only one use
+# remaining, so it is just sink with the DBG_VALUEs, leaving the original
+# DBG_VALUEs undef.
+# CHECK-LABEL: name: clone_same_bb
+name: clone_same_bb
+liveins:
+  - { reg: '$arguments' }
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $arguments
+    %0:i32 = CONST_I32 1, implicit-def $arguments
+    DBG_VALUE %0:i32, $noreg, !5, !DIExpression(), debug-location !10
+    DBG_VALUE %0:i32, $noreg, !11, !DIExpression(), debug-location !10
+    NOP implicit-def $arguments
+    CALL @use, %0:i32, implicit-def $arguments
+    CALL @use, %0:i32, implicit-def $arguments
+    RETURN implicit-def $arguments
+
+  ; CHECK:      DBG_VALUE $noreg, $noreg, ![[VAR_A]], !DIExpression()
+  ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, ![[VAR_B]], !DIExpression()
+  ; CHECK-NEXT: NOP implicit-def $arguments
+  ; CHECK-NEXT: %0:i32 = CONST_I32 1, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK-NEXT: DBG_VALUE %0, $noreg, ![[VAR_A]], !DIExpression()
+  ; CHECK-NEXT: DBG_VALUE %0, $noreg, ![[VAR_B]], !DIExpression()
+  ; CHECK-NEXT: CALL @use, %0, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK-NEXT: %1:i32 = CONST_I32 1, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK-NEXT: DBG_VALUE %1, $noreg, ![[VAR_A]], !DIExpression()
+  ; CHECK-NEXT: DBG_VALUE %1, $noreg, ![[VAR_B]], !DIExpression()
+  ; CHECK-NEXT: CALL @use, %1, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK-NEXT: RETURN implicit-def $arguments
+...
+
+---
+# Cloning across different BBs.
+# First, when bb.0's 'CALL @use' is procssed, '%0 = CONST_I32 1' and its
+# DBG_VALUEs are cloned before the CALL. And when bb.1's 'CALL @use' is
+# processed, '%0 = CONST_I32 1' and its DBG_VALUEs are cloned to bb.1 this time.
+# Even though there are (previously cloned) DBG_VALUEs for "var_a" and "var_b"
+# in the middle, it's fine because they point to the same 'CONST_I32 1'
+# instruction.
+# After the second cloning, the original '%0 = CONST_I32 1' is removed because
+# it doesn't have any users anymore, leaving its original DBG_VALUEs as undef.
+# CHECK-LABEL: name: clone_different_bb
+name: clone_different_bb
+liveins:
+  - { reg: '$arguments' }
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1
+    liveins: $arguments
+    %0:i32 = CONST_I32 1, implicit-def $arguments
+    DBG_VALUE %0:i32, $noreg, !5, !DIExpression(), debug-location !10
+    DBG_VALUE %0:i32, $noreg, !11, !DIExpression(), debug-location !10
+    NOP implicit-def $arguments
+    CALL @use, %0:i32, implicit-def $arguments
+    BR %bb.1, implicit-def $arguments
+
+  ; CHECK:    bb.0:
+  ; CHECK:      DBG_VALUE $noreg, $noreg, ![[VAR_A]], !DIExpression()
+  ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, ![[VAR_B]], !DIExpression()
+  ; CHECK-NEXT: NOP implicit-def $arguments
+  ; CHECK-NEXT: %1:i32 = CONST_I32 1, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK-NEXT: DBG_VALUE %1, $noreg, ![[VAR_A]], !DIExpression()
+  ; CHECK-NEXT: DBG_VALUE %1, $noreg, ![[VAR_B]], !DIExpression()
+  ; CHECK-NEXT: CALL @use, %1, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK-NEXT: BR %bb.1, implicit-def $arguments
+
+  bb.1:
+  ; predecessors: %bb.0
+    CALL @use, %0:i32, implicit-def $arguments
+    RETURN implicit-def $arguments
+
+  ; CHECK:    bb.1:
+  ; CHECK:      %2:i32 = CONST_I32 1, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK-NEXT: DBG_VALUE %2, $noreg, ![[VAR_A]], !DIExpression()
+  ; CHECK-NEXT: DBG_VALUE %2, $noreg, ![[VAR_B]], !DIExpression()
+  ; CHECK-NEXT: CALL @use, %2, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK-NEXT: RETURN implicit-def $arguments
+...
+
+---
+# TEE conversion example.
+# Convert this form:
+#   Reg = INST ...        // Def
+#   DBG_VALUE Reg, ...
+#   INST ..., Reg, ...    // Insert
+#   INST ..., Reg, ...
+# to
+#   DefReg = INST ...     // Def (to become the new Insert)
+#   DBG_VALUE DefReg, ...
+#   TeeReg, Reg = TEE_... DefReg
+#   DBG_VALUE TeeReg, ...
+#   INST ..., TeeReg, ... // Insert
+#   INST ..., Reg, ...
+# CHECK-LABEL: name: tee_with_two_use_insts
+name: tee_with_two_use_insts
+liveins:
+  - { reg: '$arguments' }
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $arguments
+    %0:i32 = ARGUMENT_i32 0, implicit $arguments
+    %1:i32 = ARGUMENT_i32 1, implicit $arguments
+    %2:i32 = MUL_I32 %1:i32, %0:i32, implicit-def $arguments
+    DBG_VALUE %2:i32, $noreg, !5, !DIExpression(), debug-location !10
+    DBG_VALUE %2:i32, $noreg, !11, !DIExpression(), debug-location !10
+    NOP implicit-def $arguments
+    CALL @use, %2:i32, implicit-def $arguments
+    CALL @use, %2:i32, implicit-def $arguments
+    RETURN implicit-def $arguments
+
+  ; CHECK:      %0:i32 = ARGUMENT_i32 0, implicit $arguments
+  ; CHECK-NEXT: %1:i32 = ARGUMENT_i32 1, implicit $arguments
+  ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, ![[VAR_A]], !DIExpression()
+  ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, ![[VAR_B]], !DIExpression()
+  ; CHECK-NEXT: NOP implicit-def $arguments
+  ; CHECK-NEXT: %4:i32 = MUL_I32 %1, %0, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK-NEXT: DBG_VALUE %4, $noreg, ![[VAR_A]], !DIExpression()
+  ; CHECK-NEXT: DBG_VALUE %4, $noreg, ![[VAR_B]], !DIExpression()
+  ; CHECK-NEXT: %3:i32, %2:i32 = TEE_I32 %4, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK-NEXT: DBG_VALUE %3, $noreg, ![[VAR_A]], !DIExpression()
+  ; CHECK-NEXT: DBG_VALUE %3, $noreg, ![[VAR_B]], !DIExpression()
+  ; CHECK-NEXT: CALL @use, %3, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK-NEXT: CALL @use, %2, implicit-def $arguments
+  ; CHECK-NEXT: RETURN implicit-def $arguments
+...
+
+---
+# Another TEE conversion example. The previous example had two instructions
+# that use a single register, whereas this has one instructions that has two
+# same use operands. The resulting transformation is the same.
+# CHECK-LABEL: name: tee_with_one_inst_with_two_uses
+name: tee_with_one_inst_with_two_uses
+liveins:
+  - { reg: '$arguments' }
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $arguments
+    %0:i32 = ARGUMENT_i32 0, implicit $arguments
+    %1:i32 = ARGUMENT_i32 1, implicit $arguments
+    %2:i32 = MUL_I32 %1:i32, %0:i32, implicit-def $arguments
+    DBG_VALUE %2:i32, $noreg, !5, !DIExpression(), debug-location !10
+    DBG_VALUE %2:i32, $noreg, !11, !DIExpression(), debug-location !10
+    NOP implicit-def $arguments
+    CALL @use_2, %2:i32, %2:i32, implicit-def $arguments
+    RETURN implicit-def $arguments
+
+  ; CHECK:      %0:i32 = ARGUMENT_i32 0, implicit $arguments
+  ; CHECK-NEXT: %1:i32 = ARGUMENT_i32 1, implicit $arguments
+  ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, ![[VAR_A]], !DIExpression()
+  ; CHECK-NEXT: DBG_VALUE $noreg, $noreg, ![[VAR_B]], !DIExpression()
+  ; CHECK-NEXT: NOP implicit-def $arguments
+  ; CHECK-NEXT: %4:i32 = MUL_I32 %1, %0, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK-NEXT: DBG_VALUE %4, $noreg, ![[VAR_A]], !DIExpression()
+  ; CHECK-NEXT: DBG_VALUE %4, $noreg, ![[VAR_B]], !DIExpression()
+  ; CHECK-NEXT: %3:i32, %2:i32 = TEE_I32 %4, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK-NEXT: DBG_VALUE %3, $noreg, ![[VAR_A]], !DIExpression()
+  ; CHECK-NEXT: DBG_VALUE %3, $noreg, ![[VAR_B]], !DIExpression()
+  ; CHECK-NEXT: CALL @use_2, %3, %2, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+  ; CHECK-NEXT: RETURN implicit-def $arguments
+...

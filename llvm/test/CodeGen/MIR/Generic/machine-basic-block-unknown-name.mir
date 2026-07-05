@@ -1,0 +1,18 @@
+# RUN: not llc -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# This test ensures that an error is reported whenever the MIR parser can't find
+# a basic block with the machine basis block's name.
+
+--- |
+
+  define i32 @foo() {
+  entry:
+    ret i32 0
+  }
+
+...
+---
+name:            foo
+body: |
+  ; CHECK: [[@LINE+1]]:3: basic block 'entrie' is not defined in the function 'foo'
+  bb.0.entrie:
+...

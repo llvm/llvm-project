@@ -1,0 +1,30 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# These diff tests ensure that the current Bazel configuration does not drift
+# from the configuration in the .cmake files, since we don't alway use them
+# directly (and even if we did we wouldn't necessarily pick up changes there).
+# These are literal change-detector tests. We perform diff testing here since
+# it isn't really part of building LLVM and we don't want to include the config
+# copies in the workspace used by dependent projects.
+
+load("@bazel_skylib//rules:diff_test.bzl", "diff_test")
+
+diff_test(
+    name = "diff_config.h.cmake",
+    file1 = "@llvm-project//llvm:include/llvm/Config/config.h.cmake",
+    file2 = "config.h.cmake",
+)
+
+diff_test(
+    name = "diff_llvm-config.h.cmake",
+    file1 = "@llvm-project//llvm:include/llvm/Config/llvm-config.h.cmake",
+    file2 = "llvm-config.h.cmake",
+)
+
+diff_test(
+    name = "diff_abi-breaking.h.cmake",
+    file1 = "@llvm-project//llvm:include/llvm/Config/abi-breaking.h.cmake",
+    file2 = "abi-breaking.h.cmake",
+)

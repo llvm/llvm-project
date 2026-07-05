@@ -1,0 +1,10 @@
+## With --no-leading-lines, don't add leading lines (which is used to preserve line numbers).
+
+# RUN: split-file --no-leading-lines %s %t
+# RUN: count 1 < %t/a.txt
+# RUN: FileCheck %s < %t/a.txt
+
+# CHECK: input
+
+#--- a.txt
+input

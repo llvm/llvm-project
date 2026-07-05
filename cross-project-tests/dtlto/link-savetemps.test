@@ -1,0 +1,44 @@
+REQUIRES: lld-link
+
+# Test that DTLTO temporary files are "best-effort" cleaned up unless
+# --save-temps is specified. We use archives in this test as the handling for
+# archives requires a superset of the temporary files used for object inputs.
+
+RUN: rm -rf %t && split-file %s %t && cd %t
+
+RUN: %clang --target=x86_64-pc-windows-msvc -O2 t1.c -flto=thin -c
+
+RUN: lld-link /lib /out:t.lib t1.o
+
+DEFINE: %{tdir} = dummy-to-make-lit-work
+DEFINE: %{dtlto} = mkdir %{tdir} && \
+DEFINE:   lld-link /subsystem:console /machine:x64 /out:%{tdir}/my.exe  \
+DEFINE:     /wholearchive:t.lib \
+DEFINE:     -thinlto-distributor:%python \
+DEFINE:     -thinlto-distributor-arg:%llvm_src_root/utils/dtlto/local.py \
+DEFINE:     -thinlto-remote-compiler:%clang
+
+# Check that temporary files are removed normally.
+REDEFINE: %{tdir} = empty
+RUN: %{dtlto}
+RUN: ls %{tdir} | sort | FileCheck %s --check-prefixes=BOOKEND,ELF
+
+# Check that --save-temps preserves temporary files.
+REDEFINE: %{tdir} = savetemps
+RUN: %{dtlto} /lldsavetemps
+RUN: ls %{tdir} | sort | FileCheck %s --check-prefixes=BOOKEND,TEMPS,ELF,OTHER
+
+# No files are expected before.
+BOOKEND-NOT: {{.}}
+TEMPS: {{^}}my.[[#PID:]].dist-file.json{{$}}
+ELF:   {{^}}my.exe{{$}}
+OTHER: {{^}}my.exe.resolution.txt{{$}}
+# Filename composition: <archive><member><member offset>.<task>.<pid>.<task>.<pid>.native.o.
+TEMPS: {{^}}t.libt1.o[[#T1_OFFSET:]].1.[[#%X,HEXPID:]].1.[[#PID]].native.o{{$}}
+TEMPS: {{^}}t.libt1.o[[#T1_OFFSET]].1.[[#%X,HEXPID]].1.[[#PID]].native.o.thinlto.bc{{$}}
+TEMPS: {{^}}t.libt1.o[[#T1_OFFSET]].1.[[#%X,HEXPID]].o{{$}}
+# No files are expected after.
+BOOKEND-NOT: {{.}}
+
+#--- t1.c
+__attribute__((retain)) int mainCRTStartup() { return 0; }

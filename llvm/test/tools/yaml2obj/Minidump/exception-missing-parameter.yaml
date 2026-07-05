@@ -1,0 +1,21 @@
+# RUN: not yaml2obj %s -o /dev/null 2>&1 | FileCheck %s
+
+## Test that we report an error for an ExceptionStream where the specified
+## number of parameters is greater than the number of ExceptionInformation
+## elements listed.
+
+--- !minidump
+Streams:
+  - Type:            Exception
+    Thread ID:  0x7
+    Exception Record:
+      Exception Code:  0x23
+      Exception Flags: 0x5
+      Exception Record: 0x0102030405060708
+      Exception Address: 0x0a0b0c0d0e0f1011
+      Number of Parameters: 4
+      Parameter 0: 0x99
+      Parameter 1: 0x23
+      Parameter 2: 0x42
+# CHECK: error: missing required key 'Parameter 3'
+    Thread Context:  3DeadBeefDefacedABadCafe)");

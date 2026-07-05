@@ -1,0 +1,20 @@
+# RUN: llc -o - -mtriple=x86_64-- -run-pass=regallocfast %s | FileCheck %s
+# RUN: llc -o - -mtriple=x86_64-- -passes=regallocfast %s | FileCheck %s
+# Fast regalloc used to not collect physical register definitions
+# before walking and assigning the virtual definition.
+# Therefore it was possible for a virtual definition to end up
+# using the same register as a later (in terms of operand list) physical
+# register.
+# Check this does not happen.
+#
+# PR41790
+---
+name: instruction_with_1virtreg_1physreg_defs
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-NOT: $rax = KILL implicit-def dead $rax
+    %0:gr64 = KILL implicit-def dead $rax
+    KILL killed %0
+    RET 0
+...

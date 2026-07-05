@@ -1,0 +1,195 @@
+## Test that yaml2obj automatically sets fields of the auxiliary file header
+## if not set explicitly.
+
+## Case1: if text/data/bss/tdata/tbss/loader sections are set and corresponding
+##        fields in the aux header are omitted, we use the derived values of
+##        those sections to set corresponding fields.
+# RUN: yaml2obj %s --docnum=1 -o %t1
+# RUN: llvm-readobj --auxiliary-header %t1 | FileCheck %s --check-prefix=CASE1
+
+# CASE1:      AuxiliaryHeader {
+# CASE1-NEXT:   Magic: 0x10B
+# CASE1-NEXT:   Version: 0x1
+# CASE1-NEXT:   Size of .text section: 0x5
+# CASE1-NEXT:   Size of .data section: 0x5
+# CASE1-NEXT:   Size of .bss section: 0x5
+# CASE1-NEXT:   Entry point address: 0x0
+# CASE1-NEXT:   .text section start address: 0x0
+# CASE1-NEXT:   .data section start address: 0x0
+# CASE1-NEXT:   TOC anchor address: 0x0
+# CASE1-NEXT:   Section number of entryPoint: 0
+# CASE1-NEXT:   Section number of .text: 2
+# CASE1-NEXT:   Section number of .data: 4
+# CASE1-NEXT:   Section number of TOC: 0
+# CASE1-NEXT:   Section number of loader data: 12
+# CASE1-NEXT:   Section number of .bss: 6
+# CASE1-NEXT:   Maxium alignment of .text: 0x0
+# CASE1-NEXT:   Maxium alignment of .data: 0x0
+# CASE1-NEXT:   Module type: 0x0
+# CASE1-NEXT:   CPU type of objects: 0x0
+# CASE1-NEXT:   (Reserved): 0x0
+# CASE1-NEXT:   Maximum stack size: 0x0
+# CASE1-NEXT:   Maximum data size: 0x0
+# CASE1-NEXT:   Reserved for debugger: 0x0
+# CASE1-NEXT:   Text page size: 0x0
+# CASE1-NEXT:   Data page size: 0x0
+# CASE1-NEXT:   Stack page size: 0x0
+# CASE1-NEXT:   Flag: 0x0
+# CASE1-NEXT:   Alignment of thread-local storage: 0x0
+# CASE1-NEXT:   Section number for .tdata: 8
+# CASE1-NEXT:   Section number for .tbss: 10
+# CASE1-NEXT: }
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: [[MAGIC=0x1DF]]
+AuxiliaryHeader:
+  Magic: 0x10B
+Sections:
+  - Flags:       [ STYP_PAD ]
+    SectionData: "1234"
+## Set two sections with different contents for a given type to
+## demonstrate that the values in the aux header depend on the first one.
+  - Flags:       [ STYP_TEXT ]
+    SectionData: "1234000000"
+  - Flags:       [ STYP_TEXT ]
+    SectionData: "1234"
+  - Flags:       [ STYP_DATA ]
+    SectionData: "1234000000"
+  - Flags:       [ STYP_DATA ]
+    SectionData: "1234"
+  - Flags:       [ STYP_BSS ]
+    SectionData: "1234000000"
+  - Flags:       [ STYP_BSS ]
+    SectionData: "1234"
+  - Flags:       [ STYP_TDATA ]
+    SectionData: "1234000000"
+  - Flags:       [ STYP_TDATA ]
+    SectionData: "1234"
+  - Flags:       [ STYP_TBSS ]
+    SectionData: "1234000000"
+  - Flags:       [ STYP_TBSS ]
+    SectionData: "1234"
+  - Flags:       [ STYP_LOADER ]
+    SectionData: "1234000000"
+  - Flags:       [ STYP_LOADER ]
+    SectionData: "1234"
+
+## Case2: same as case1, except producing 64-bit output.
+# RUN: yaml2obj %s --docnum=1 -DMAGIC=0x1F7 -o %t2
+# RUN: llvm-readobj --auxiliary-header %t2 | FileCheck %s --check-prefix=CASE2
+
+# CASE2:      AuxiliaryHeader {
+# CASE2-NEXT:   Magic: 0x10B
+# CASE2-NEXT:   Version: 0x1
+# CASE2-NEXT:   Reserved for debugger: 0x0
+# CASE2-NEXT:   .text section start address: 0x0
+# CASE2-NEXT:   .data section start address: 0x0
+# CASE2-NEXT:   TOC anchor address: 0x0
+# CASE2-NEXT:   Section number of entryPoint: 0
+# CASE2-NEXT:   Section number of .text: 2
+# CASE2-NEXT:   Section number of .data: 4
+# CASE2-NEXT:   Section number of TOC: 0
+# CASE2-NEXT:   Section number of loader data: 12
+# CASE2-NEXT:   Section number of .bss: 6
+# CASE2-NEXT:   Maxium alignment of .text: 0x0
+# CASE2-NEXT:   Maxium alignment of .data: 0x0
+# CASE2-NEXT:   Module type: 0x0
+# CASE2-NEXT:   CPU type of objects: 0x0
+# CASE2-NEXT:   (Reserved): 0x0
+# CASE2-NEXT:   Text page size: 0x0
+# CASE2-NEXT:   Data page size: 0x0
+# CASE2-NEXT:   Stack page size: 0x0
+# CASE2-NEXT:   Flag: 0x80
+# CASE2-NEXT:   Alignment of thread-local storage: 0x0
+# CASE2-NEXT:   Size of .text section: 0x5
+# CASE2-NEXT:   Size of .data section: 0x5
+# CASE2-NEXT:   Size of .bss section: 0x5
+# CASE2-NEXT:   Entry point address: 0x0
+# CASE2-NEXT:   Maximum stack size: 0x0
+# CASE2-NEXT:   Maximum data size: 0x0
+# CASE2-NEXT:   Section number for .tdata: 8
+# CASE2-NEXT:   Section number for .tbss: 10
+# CASE2-NEXT:   Additional flags 64-bit XCOFF: 0x8000
+# CASE2-NEXT: }
+
+## Case3: if all fields in the aux header are omitted and text/data/bss/tdata/tbss/loader
+##        sections are not set, we set the fields using default values.
+# RUN: yaml2obj %s --docnum=2 -o %t3
+# RUN: llvm-readobj --auxiliary-header %t3 | FileCheck %s --check-prefix=CASE3
+
+# CASE3:      AuxiliaryHeader {
+# CASE3-NEXT:   Magic: 0x1
+# CASE3-NEXT:   Version: 0x1
+# CASE3-NEXT:   Size of .text section: 0x0
+# CASE3-NEXT:   Size of .data section: 0x0
+# CASE3-NEXT:   Size of .bss section: 0x0
+# CASE3-NEXT:   Entry point address: 0x0
+# CASE3-NEXT:   .text section start address: 0x0
+# CASE3-NEXT:   .data section start address: 0x0
+# CASE3-NEXT:   TOC anchor address: 0x0
+# CASE3-NEXT:   Section number of entryPoint: 0
+# CASE3-NEXT:   Section number of .text: 0
+# CASE3-NEXT:   Section number of .data: 0
+# CASE3-NEXT:   Section number of TOC: 0
+# CASE3-NEXT:   Section number of loader data: 0
+# CASE3-NEXT:   Section number of .bss: 0
+# CASE3-NEXT:   Maxium alignment of .text: 0x0
+# CASE3-NEXT:   Maxium alignment of .data: 0x0
+# CASE3-NEXT:   Module type: 0x0
+# CASE3-NEXT:   CPU type of objects: 0x0
+# CASE3-NEXT:   (Reserved): 0x0
+# CASE3-NEXT:   Maximum stack size: 0x0
+# CASE3-NEXT:   Maximum data size: 0x0
+# CASE3-NEXT:   Reserved for debugger: 0x0
+# CASE3-NEXT:   Text page size: 0x0
+# CASE3-NEXT:   Data page size: 0x0
+# CASE3-NEXT:   Stack page size: 0x0
+# CASE3-NEXT:   Flag: 0x0
+# CASE3-NEXT:   Alignment of thread-local storage: 0x0
+# CASE3-NEXT:   Section number for .tdata: 0
+# CASE3-NEXT:   Section number for .tbss: 0
+# CASE3-NEXT: }
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: [[MAGIC=0x1DF]]
+AuxiliaryHeader:
+
+## Case4: same as case3, except producing 64-bit output.
+# RUN: yaml2obj %s --docnum=2 -DMAGIC=0x1F7 -o %t4
+# RUN: llvm-readobj --auxiliary-header %t4 | FileCheck %s --check-prefix=CASE4
+
+# CASE4:      AuxiliaryHeader {
+# CASE4-NEXT:   Magic: 0x1
+# CASE4-NEXT:   Version: 0x1
+# CASE4-NEXT:   Reserved for debugger: 0x0
+# CASE4-NEXT:   .text section start address: 0x0
+# CASE4-NEXT:   .data section start address: 0x0
+# CASE4-NEXT:   TOC anchor address: 0x0
+# CASE4-NEXT:   Section number of entryPoint: 0
+# CASE4-NEXT:   Section number of .text: 0
+# CASE4-NEXT:   Section number of .data: 0
+# CASE4-NEXT:   Section number of TOC: 0
+# CASE4-NEXT:   Section number of loader data: 0
+# CASE4-NEXT:   Section number of .bss: 0
+# CASE4-NEXT:   Maxium alignment of .text: 0x0
+# CASE4-NEXT:   Maxium alignment of .data: 0x0
+# CASE4-NEXT:   Module type: 0x0
+# CASE4-NEXT:   CPU type of objects: 0x0
+# CASE4-NEXT:   (Reserved): 0x0
+# CASE4-NEXT:   Text page size: 0x0
+# CASE4-NEXT:   Data page size: 0x0
+# CASE4-NEXT:   Stack page size: 0x0
+# CASE4-NEXT:   Flag: 0x80
+# CASE4-NEXT:   Alignment of thread-local storage: 0x0
+# CASE4-NEXT:   Size of .text section: 0x0
+# CASE4-NEXT:   Size of .data section: 0x0
+# CASE4-NEXT:   Size of .bss section: 0x0
+# CASE4-NEXT:   Entry point address: 0x0
+# CASE4-NEXT:   Maximum stack size: 0x0
+# CASE4-NEXT:   Maximum data size: 0x0
+# CASE4-NEXT:   Section number for .tdata: 0
+# CASE4-NEXT:   Section number for .tbss: 0
+# CASE4-NEXT:   Additional flags 64-bit XCOFF: 0x8000
+# CASE4-NEXT: }

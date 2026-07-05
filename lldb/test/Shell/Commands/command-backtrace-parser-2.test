@@ -1,0 +1,6 @@
+# RUN: %lldb -s %s 2>&1 | FileCheck %s
+
+# Make sure this is not rejected by the parser as invalid syntax.
+# Blank characters after the 'all' are important, as we're testing the parser.
+bt all       
+# CHECK: error: invalid target

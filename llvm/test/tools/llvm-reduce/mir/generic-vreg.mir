@@ -1,0 +1,48 @@
+# REQUIRES: amdgpu-registered-target
+# RUN: llvm-reduce -abort-on-invalid-reduction -mtriple=amdgcn-amd-amdhsa --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
+# RUN: FileCheck --match-full-lines --check-prefix=RESULT %s < %t
+
+# Verify that reduction works with generic virtual registers, and the
+# properties like register banks, types and names.
+
+
+# CHECK-INTERESTINGNESS: G_IMPLICIT_DEF
+# CHECK-INTERESTINGNESS: G_BITCAST
+# CHECK-INTERESTINGNESS: S_NOP 0, implicit %unused_load_ptr
+# CHECK-INTERESTINGNESS: G_ADD
+# CHECK-INTERESTINGNESS: G_IMPLICIT_DEF
+# CHECK-INTERESTINGNESS: G_STORE
+# CHECK-INTERESTINGNESS: S_ENDPGM 0, implicit %add(s64), implicit %v1(<2 x s16>), implicit %{{[0-9]+}}(s64)
+
+# RESULT: %{{[0-9]+}}:vgpr(s32) = G_IMPLICIT_DEF
+# RESULT-NEXT: %{{[0-9]+}}:vreg_64(s64) = IMPLICIT_DEF
+# RESULT-NEXT: %{{[0-9]+}}:_(<2 x s32>) = G_IMPLICIT_DEF
+# RESULT-NEXT: %v1:vgpr(<2 x s16>) = G_IMPLICIT_DEF
+# RESULT-NEXT: %unused_load_ptr:sgpr(p1) = G_IMPLICIT_DEF
+# RESULT-NEXT: %aoeu:_(s64) = G_BITCAST %{{[0-9]+}}(<2 x s32>)
+# RESULT-NEXT: S_NOP 0, implicit %unused_load_ptr(p1)
+# RESULT-NEXT: %add:_(s64) = G_ADD %aoeu, %aoeu
+# RESULT-NEXT: %ptr:_(p1) = G_IMPLICIT_DEF
+# RESULT-NEXT: G_STORE %{{[0-9]+}}(s32), %ptr(p1) :: (store (s32), addrspace 1)
+# RESULT-NEXT: S_ENDPGM 0, implicit %add(s64), implicit %v1(<2 x s16>), implicit %14(s64)
+
+---
+name:            f
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3
+    %v0:vgpr(s32) = COPY $vgpr0
+    %v1:vgpr(<2 x s16>) = COPY $vgpr1
+    %unused_load_ptr:sgpr(p1) = G_IMPLICIT_DEF
+    %unused_load:_(s64) = G_LOAD %unused_load_ptr :: (load (s64), addrspace 1)
+    G_STORE %unused_load, %unused_load_ptr :: (store (s64), addrspace 1)
+    %2:vreg_64(s64) = COPY $vgpr2_vgpr3
+    %arst:_(<2 x s32>) = G_IMPLICIT_DEF
+    %aoeu:_(s64) = G_BITCAST %arst
+    S_NOP 0, implicit %unused_load_ptr
+    %add:_(s64) = G_ADD %aoeu, %aoeu
+    %ptr:_(p1) = G_IMPLICIT_DEF
+    G_STORE %v0, %ptr :: (store 4, addrspace 1)
+    S_ENDPGM 0, implicit %add, implicit %v1, implicit %2
+...

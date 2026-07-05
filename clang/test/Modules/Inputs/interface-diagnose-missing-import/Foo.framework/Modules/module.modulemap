@@ -1,0 +1,6 @@
+// interface-diagnose-missing-import/Foo.framework/Modules/module.modulemap
+framework module Foo {
+  umbrella header "Foo.h"
+  export *
+  module * { export * }
+}

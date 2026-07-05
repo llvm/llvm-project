@@ -1,0 +1,76 @@
+; RUN: split-file %p/Inputs/dwarf5-str-split-dwarf.s %t
+; RUN: cd %t
+; RUN: llvm-mc --split-dwarf-file=main.dwo --triple=x86_64-unknown-linux-gnu \
+; RUN: --filetype=obj main.s -o=main.o
+; RUN: llvm-mc --split-dwarf-file=helper.dwo --triple=x86_64-unknown-linux-gnu \
+; RUN: --filetype=obj helper.s -o=helper.o
+; RUN: %clang %cflags -gdwarf-4 -gsplit-dwarf=split main.o helper.o -o main.exe
+; RUN: llvm-dwp -e main.exe -o main.exe.dwp
+; RUN: llvm-dwarfdump --show-form --verbose --debug-str main.exe.dwp \
+; RUN: | FileCheck -check-prefix=PRE-BOLT-STR %s
+; RUN: llvm-dwarfdump --show-form --verbose --debug-str-offsets main.exe.dwp \
+; RUN: | FileCheck -check-prefix=PRE-BOLT-STR-OFFSETS %s
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections
+; RUN: llvm-dwarfdump --show-form --verbose --debug-str main.dwo.dwo \
+; RUN: | FileCheck -check-prefix=BOLT-MAIN-STR %s
+; RUN: llvm-dwarfdump --show-form --verbose --debug-str-offsets main.dwo.dwo \
+; RUN: | FileCheck -check-prefix=BOLT-MAIN-STR-OFFSETS %s
+; RUN: llvm-dwarfdump --show-form --verbose --debug-str helper.dwo.dwo \
+; RUN: | FileCheck -check-prefix=BOLT-HELPER-STR %s
+; RUN: llvm-dwarfdump --show-form --verbose --debug-str-offsets helper.dwo.dwo \
+; RUN: | FileCheck -check-prefix=BOLT-HELPER-STR-OFFSETS %s
+
+;; For DWARF5, this test checks that strings are split correctly from a combined
+;; section in DWP file, into appropriate .dwo files.
+
+; PRE-BOLT-STR: 0x00000000: "main"
+; PRE-BOLT-STR: 0x00000005: "int"
+; PRE-BOLT-STR: 0x00000009: "clang version 22.0.0"
+; PRE-BOLT-STR: 0x0000001e: "main.cpp"
+; PRE-BOLT-STR: 0x00000027: "main.dwo"
+; PRE-BOLT-STR: 0x00000030: "_Z9getReturnv"
+; PRE-BOLT-STR: 0x0000003e: "getReturn"
+; PRE-BOLT-STR: 0x00000048: "helper.cpp"
+; PRE-BOLT-STR: 0x00000053: "helper.dwo"
+
+; PRE-BOLT-STR-OFFSETS: 0x00000000: Contribution size = 24, Format = DWARF32, Version = 5
+; PRE-BOLT-STR-OFFSETS: 0x00000008: 00000000 "main"
+; PRE-BOLT-STR-OFFSETS: 0x0000000c: 00000005 "int"
+; PRE-BOLT-STR-OFFSETS: 0x00000010: 00000009 "clang version 22.0.0"
+; PRE-BOLT-STR-OFFSETS: 0x00000014: 0000001e "main.cpp"
+; PRE-BOLT-STR-OFFSETS: 0x00000018: 00000027 "main.dwo"
+; PRE-BOLT-STR-OFFSETS: 0x0000001c: Contribution size = 28, Format = DWARF32, Version = 5
+; PRE-BOLT-STR-OFFSETS: 0x00000024: 00000030 "_Z9getReturnv"
+; PRE-BOLT-STR-OFFSETS: 0x00000028: 0000003e "getReturn"
+; PRE-BOLT-STR-OFFSETS: 0x0000002c: 00000005 "int"
+; PRE-BOLT-STR-OFFSETS: 0x00000030: 00000009 "clang version 22.0.0"
+; PRE-BOLT-STR-OFFSETS: 0x00000034: 00000048 "helper.cpp"
+; PRE-BOLT-STR-OFFSETS: 0x00000038: 00000053 "helper.dwo"
+
+; BOLT-MAIN-STR: 0x00000000: "main"
+; BOLT-MAIN-STR: 0x00000005: "int"
+; BOLT-MAIN-STR: 0x00000009: "clang version 22.0.0"
+; BOLT-MAIN-STR: 0x0000001e: "main.cpp"
+; BOLT-MAIN-STR: 0x00000027: "main.dwo"
+
+; BOLT-MAIN-STR-OFFSETS: 0x00000000: Contribution size = 24, Format = DWARF32, Version = 5
+; BOLT-MAIN-STR-OFFSETS: 0x00000008: 00000000 "main"
+; BOLT-MAIN-STR-OFFSETS: 0x0000000c: 00000005 "int"
+; BOLT-MAIN-STR-OFFSETS: 0x00000010: 00000009 "clang version 22.0.0"
+; BOLT-MAIN-STR-OFFSETS: 0x00000014: 0000001e "main.cpp"
+; BOLT-MAIN-STR-OFFSETS: 0x00000018: 00000027 "main.dwo"
+
+; BOLT-HELPER-STR: 0x00000000: "_Z9getReturnv"
+; BOLT-HELPER-STR: 0x0000000e: "getReturn"
+; BOLT-HELPER-STR: 0x00000018: "int"
+; BOLT-HELPER-STR: 0x0000001c: "clang version 22.0.0"
+; BOLT-HELPER-STR: 0x00000031: "helper.cpp"
+; BOLT-HELPER-STR: 0x0000003c: "helper.dwo"
+
+; BOLT-HELPER-STR-OFFSETS: 0x00000000: Contribution size = 28, Format = DWARF32, Version = 5
+; BOLT-HELPER-STR-OFFSETS: 0x00000008: 00000000 "_Z9getReturnv"
+; BOLT-HELPER-STR-OFFSETS: 0x0000000c: 0000000e "getReturn"
+; BOLT-HELPER-STR-OFFSETS: 0x00000010: 00000018 "int"
+; BOLT-HELPER-STR-OFFSETS: 0x00000014: 0000001c "clang version 22.0.0"
+; BOLT-HELPER-STR-OFFSETS: 0x00000018: 00000031 "helper.cpp"
+; BOLT-HELPER-STR-OFFSETS: 0x0000001c: 0000003c "helper.dwo"

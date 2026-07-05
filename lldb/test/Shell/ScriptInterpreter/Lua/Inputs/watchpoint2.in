@@ -1,0 +1,11 @@
+breakpoint set -p "Break here"
+r
+watchpoint set variable val
+watchpoint modify 1 -c "(val == 1)"
+watchpoint command add -s lua
+print("conditional watchpoint")
+wp:SetEnabled(false)
+quit
+c
+# CHECK-COUNT-1: conditional watchpoint
+# CHECK-NOT: conditional watchpoint

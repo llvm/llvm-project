@@ -1,0 +1,141 @@
+## Show how llvm-size behaves when passed in an archive.
+
+# RUN: yaml2obj %s --docnum=1 -o %t1
+# RUN: yaml2obj %s --docnum=2 -o %t2
+
+## Case 1: Empty archive. No output expected.
+# RUN: rm -f %t1.a
+# RUN: llvm-ar rc %t1.a
+
+# RUN: llvm-size -B %t1.a | count 0
+# RUN: llvm-size -A %t1.a | count 0
+
+## Case 2: Single member.
+# RUN: rm -f %t2.a
+# RUN: llvm-ar rc %t2.a %t1
+
+# RUN: llvm-size -B %t2.a | FileCheck %s -DARCHIVE=%t2.a --check-prefix=BERKELEY-1
+# RUN: llvm-size -A %t2.a | FileCheck %s -DARCHIVE=%t2.a --check-prefix=SYSV-1
+# RUN: llvm-size -m %t2.a | FileCheck %s -DARCHIVE=%t2.a --check-prefix=DARWIN-1
+
+## Case 3: Multiple members.
+# RUN: rm -f %t3.a
+# RUN: llvm-ar rc %t3.a %t1 %t2
+
+# RUN: llvm-size -B %t3.a | FileCheck %s -DARCHIVE=%t3.a --check-prefixes=BERKELEY-1,BERKELEY-2
+# RUN: llvm-size -A %t3.a | FileCheck %s -DARCHIVE=%t3.a --check-prefixes=SYSV-1,SYSV-2
+# RUN: llvm-size -m %t3.a | FileCheck %s -DARCHIVE=%t3.a --check-prefixes=DARWIN-1,DARWIN-2
+
+## Case 4: Mixing archives and non-archives produces sensible output:
+# RUN: llvm-size -B %t1 %t2.a %t2 %t3.a \
+# RUN:   | FileCheck %s -DARCHIVE=%t3.a -DARCHIVE2=%t2.a -DFILE1=%t1 -DFILE2=%t2 \
+# RUN:                  --check-prefixes=BERKELEY-1,BERKELEY-2,BERKELEY-3
+# RUN: llvm-size -A %t1 %t2.a %t2 %t3.a \
+# RUN:   | FileCheck %s -DARCHIVE=%t3.a -DARCHIVE2=%t2.a -DFILE1=%t1 -DFILE2=%t2 \
+# RUN:                  --check-prefixes=SYSV-1,SYSV-2,SYSV-3
+# RUN: llvm-size -B %t1 %t2.a %t2 %t3.a \
+# RUN:   | FileCheck %s -DARCHIVE=%t3.a -DARCHIVE2=%t2.a -DFILE1=%t1 -DFILE2=%t2 \
+# RUN:                  --check-prefixes=DARWIN-1,DARWIN-2,DARWIN-3
+
+# BERKELEY-1:     text    data     bss     dec     hex filename
+# BERKELEY-3-NEXT:   1       2       4       7       7 [[FILE1]]
+# BERKELEY-3-NEXT:   1       2       4       7       7 archive.test.tmp1 (ex [[ARCHIVE2]])
+# BERKELEY-3-NEXT:   8      16      32      56      38 [[FILE2]]
+# BERKELEY-1-NEXT:   1       2       4       7       7 archive.test.tmp1 (ex [[ARCHIVE]])
+# BERKELEY-2-NEXT:   8      16      32      56      38 archive.test.tmp2 (ex [[ARCHIVE]])
+# BERKELEY-1-NOT:{{.}}
+
+# SYSV-3:      [[FILE1]]  :
+# SYSV-3-NEXT: section     size   addr
+# SYSV-3-NEXT: .text          1      4
+# SYSV-3-NEXT: .data          2      2
+# SYSV-3-NEXT: .bss           4      1
+# SYSV-3-NEXT: Total          7
+# SYSV-3-EMPTY:
+# SYSV-3-EMPTY:
+# SYSV-3-NEXT: archive.test.tmp1   (ex [[ARCHIVE2]]):
+# SYSV-3-NEXT: section     size   addr
+# SYSV-3-NEXT: .text          1      4
+# SYSV-3-NEXT: .data          2      2
+# SYSV-3-NEXT: .bss           4      1
+# SYSV-3-NEXT: Total          7
+# SYSV-3-EMPTY:
+# SYSV-3-EMPTY:
+# SYSV-3-NEXT: [[FILE2]]  :
+# SYSV-3-NEXT: section     size   addr
+# SYSV-3-NEXT: .text          8      32
+# SYSV-3-NEXT: .data         16      16
+# SYSV-3-NEXT: .bss          32      8
+# SYSV-3-NEXT: Total         56
+# SYSV-3-EMPTY:
+
+# SYSV-1:      archive.test.tmp1   (ex [[ARCHIVE]]):
+# SYSV-1-NEXT: section     size   addr
+# SYSV-1-NEXT: .text          1      4
+# SYSV-1-NEXT: .data          2      2
+# SYSV-1-NEXT: .bss           4      1
+# SYSV-1-NEXT: Total          7
+# SYSV-1-EMPTY:
+# SYSV-1-EMPTY:
+
+# SYSV-2-NEXT: archive.test.tmp2   (ex [[ARCHIVE]]):
+# SYSV-2-NEXT: section     size   addr
+# SYSV-2-NEXT: .text          8      32
+# SYSV-2-NEXT: .data         16      16
+# SYSV-2-NEXT: .bss          32      8
+# SYSV-2-NEXT: Total         56
+# SYSV-1-NOT:{{.}}
+
+# DARWIN-1:     text    data     bss     dec     hex filename
+# DARWIN-3-NEXT:   1       2       4       7       7 [[FILE1]]
+# DARWIN-3-NEXT:   1       2       4       7       7 archive.test.tmp1 (ex [[ARCHIVE2]])
+# DARWIN-3-NEXT:   8      16      32      56      38 [[FILE2]]
+# DARWIN-1-NEXT:   1       2       4       7       7 archive.test.tmp1 (ex [[ARCHIVE]])
+# DARWIN-2-NEXT:   8      16      32      56      38 archive.test.tmp2 (ex [[ARCHIVE]])
+# DARWIN-1-NOT:{{.}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Size:    1
+    Address: 4
+  - Name:    .data
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_WRITE]
+    Size:    2
+    Address: 2
+  - Name:    .bss
+    Type:    SHT_NOBITS
+    Flags:   [SHF_ALLOC, SHF_WRITE]
+    Size:    4
+    Address: 1
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_EXECINSTR]
+    Size:    8
+    Address: 32
+  - Name:    .data
+    Type:    SHT_PROGBITS
+    Flags:   [SHF_ALLOC, SHF_WRITE]
+    Size:    16
+    Address: 16
+  - Name:    .bss
+    Type:    SHT_NOBITS
+    Flags:   [SHF_ALLOC, SHF_WRITE]
+    Size:    32
+    Address: 8

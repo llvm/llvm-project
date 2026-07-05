@@ -1,0 +1,17 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+# Tool-specific config options.
+config.name_suffix = "@RTSAN_TEST_CONFIG_SUFFIX@"
+config.rtsan_lit_source_dir = "@RTSAN_LIT_SOURCE_DIR@"
+config.target_cflags = "@RTSAN_TEST_TARGET_CFLAGS@"
+config.target_arch = "@RTSAN_TEST_TARGET_ARCH@"
+config.built_with_llvm = ("@COMPILER_RT_STANDALONE_BUILD@" != "TRUE")
+
+if config.built_with_llvm:
+  config.available_features.add('built-in-llvm-tree')
+
+# Load common config for all compiler-rt lit tests
+lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")
+
+# Load tool-specific config that would do the real work.
+lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg.py")

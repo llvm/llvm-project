@@ -1,0 +1,5 @@
+// RUN: llvm-objdump -afxz %p/Inputs/private-headers-x86_64.elf 2>&1 >%t0
+// RUN: llvm-objdump -a -f -x -z %p/Inputs/private-headers-x86_64.elf 2>&1 >%t1
+// RUN: cmp %t0 %t1
+// RUN: FileCheck --input-file %t0 %s
+// CHECK-NOT: Unknown command line argument

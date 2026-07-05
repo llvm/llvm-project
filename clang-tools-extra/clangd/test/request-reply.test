@@ -1,0 +1,43 @@
+# RUN: clangd -log=verbose -lit-test < %s | FileCheck -strict-whitespace %s
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+---
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"test:///main.cpp","languageId":"cpp","version":1,"text":"auto i = 0;"}}}
+---
+{"jsonrpc":"2.0","id":4,"method":"workspace/executeCommand","params":{"command":"clangd.applyTweak","arguments":[{"file":"test:///main.cpp","selection":{"end":{"character":4,"line":0},"start":{"character":0,"line":0}},"tweakID":"ExpandDeducedType"}]}}
+#      CHECK:  "id": 0,
+#      CHECK:  "method": "workspace/applyEdit",
+#      CHECK:  "newText": "int",
+# CHECK-NEXT:  "range": {
+# CHECK-NEXT:    "end": {
+# CHECK-NEXT:      "character": 4,
+# CHECK-NEXT:      "line": 0
+# CHECK-NEXT:    },
+# CHECK-NEXT:    "start": {
+# CHECK-NEXT:      "character": 0,
+# CHECK-NEXT:      "line": 0
+# CHECK-NEXT:    }
+# CHECK-NEXT:  }
+---
+{"jsonrpc":"2.0","id":0,"result":{"applied":false}}
+#      CHECK:  "error": {
+# CHECK-NEXT:    "code": -32001,
+# CHECK-NEXT:    "message": "edits were not applied: unknown reason"
+# CHECK-NEXT:  },
+# CHECK-NEXT:  "id": 4,
+---
+{"jsonrpc":"2.0","id":5,"method":"workspace/executeCommand","params":{"command":"clangd.applyTweak","arguments":[{"file":"test:///main.cpp","selection":{"end":{"character":4,"line":0},"start":{"character":0,"line":0}},"tweakID":"ExpandDeducedType"}]}}
+#      CHECK:  "id": 1,
+#      CHECK:  "method": "workspace/applyEdit",
+---
+{"jsonrpc":"2.0","id":1,"result":{"applied":true}}
+#      CHECK:  "id": 5,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": "Tweak applied."
+---
+# a reply with an invalid id.
+{"jsonrpc":"2.0","id":"invalid","result":{"applied":true}}
+# clangd doesn't reply, just emits an elog.
+---
+{"jsonrpc":"2.0","id":6,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}

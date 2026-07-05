@@ -1,0 +1,111 @@
+!COFF
+header: !Header
+  Machine: IMAGE_FILE_MACHINE_AMD64 # (0x8664)
+
+sections:
+  - !Section
+    Name: .text
+    Alignment: 16
+    Characteristics: [IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ, ] # 0x60500020
+    SectionData:  !hex "4883EC28C744242400000000488D0D00000000E800000000E8000000008B4424244883C428C3" # |H..(.D$$....H.................D$$H..(.|
+
+    Relocations:
+      - !Relocation
+        VirtualAddress: 0xf
+        SymbolName: L.str
+        Type: IMAGE_REL_AMD64_REL32
+
+      - !Relocation
+        VirtualAddress: 0x14
+        SymbolName: puts
+        Type: IMAGE_REL_AMD64_REL32
+
+      - !Relocation
+        VirtualAddress: 0x19
+        SymbolName: SomeOtherFunction
+        Type: IMAGE_REL_AMD64_REL32
+
+  - !Section
+    Name: .data
+    Alignment: 1
+    Characteristics: [IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE, ] # 0xc0100040
+    SectionData:  !hex "48656C6C6F20576F726C642100" # |Hello World!.|
+
+  - !Section
+    Name: '.CRT$XCU'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    Alignment: 8
+    SectionData:  !hex "0000000000000000"
+    Relocations:
+      - VirtualAddress: 0
+        SymbolName: '??__Ex@@YAXXZ'
+        Type: IMAGE_REL_AMD64_ADDR64
+
+symbols:
+  - !Symbol
+    Name: .text
+    Value: 0
+    SectionNumber: 1
+    SimpleType: IMAGE_SYM_TYPE_NULL # (0)
+    ComplexType: IMAGE_SYM_DTYPE_NULL # (0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC # (3)
+    SectionDefinition:
+      Length:          38
+      NumberOfRelocations: 3
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          1
+
+  - !Symbol
+    Name: .data
+    Value: 0
+    SectionNumber: 2
+    SimpleType: IMAGE_SYM_TYPE_NULL # (0)
+    ComplexType: IMAGE_SYM_DTYPE_NULL # (0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC # (3)
+    SectionDefinition:
+      Length:          13
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          2
+
+  - !Symbol
+    Name: main
+    Value: 0
+    SectionNumber: 1
+    SimpleType: IMAGE_SYM_TYPE_NULL # (0)
+    ComplexType: IMAGE_SYM_DTYPE_FUNCTION # (2)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL # (2)
+
+  - !Symbol
+    Name: L.str
+    Value: 0
+    SectionNumber: 2
+    SimpleType: IMAGE_SYM_TYPE_NULL # (0)
+    ComplexType: IMAGE_SYM_DTYPE_NULL # (0)
+    StorageClass: IMAGE_SYM_CLASS_STATIC # (3)
+
+  - !Symbol
+    Name: puts
+    Value: 0
+    SectionNumber: 0
+    SimpleType: IMAGE_SYM_TYPE_NULL # (0)
+    ComplexType: IMAGE_SYM_DTYPE_NULL # (0)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL # (2)
+
+  - !Symbol
+    Name: SomeOtherFunction
+    Value: 0
+    SectionNumber: 0
+    SimpleType: IMAGE_SYM_TYPE_NULL # (0)
+    ComplexType: IMAGE_SYM_DTYPE_NULL # (0)
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL # (2)
+
+  - !Symbol
+    Name: '??__Ex@@YAXXZ'
+    Value: 0
+    SectionNumber: 3
+    SimpleType: IMAGE_SYM_TYPE_NULL # (0)
+    ComplexType: IMAGE_SYM_DTYPE_FUNCTION # (2)
+    StorageClass: IMAGE_SYM_CLASS_STATIC # (3)

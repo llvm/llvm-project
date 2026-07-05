@@ -1,0 +1,20 @@
+static_library("TableGen") {
+  output_name = "LLVMTableGen"
+  deps = [ "//llvm/lib/Support" ]
+  sources = [
+    "DetailedRecordsBackend.cpp",
+    "Error.cpp",
+    "JSONBackend.cpp",
+    "Main.cpp",
+    "Parser.cpp",
+    "Record.cpp",
+    "SetTheory.cpp",
+    "StringMatcher.cpp",
+    "StringToOffsetTable.cpp",
+    "TGLexer.cpp",
+    "TGParser.cpp",
+    "TGTimer.cpp",
+    "TableGenBackend.cpp",
+    "TableGenBackendSkeleton.cpp",
+  ]
+}

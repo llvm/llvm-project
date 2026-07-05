@@ -1,0 +1,42 @@
+## Test some relocation types for REL format.
+# RUN: yaml2obj -DMACHINE=AARCH64 -DR0=R_AARCH64_ABS64 -DR1=R_AARCH64_PREL32 -DR2=R_AARCH64_PREL64 %s -o %t.o
+# RUN: ld.lld %t.o -o /dev/null
+# RUN: yaml2obj -DMACHINE=PPC -DBITS=32 -DR0=R_PPC_ADDR32 -DR1=R_PPC_REL32 %s -o %t.o
+# RUN: ld.lld %t.o -o /dev/null
+# RUN: yaml2obj -DMACHINE=PPC64 -DR0=R_PPC64_ADDR64 -DR1=R_PPC64_REL32 -DR2=R_PPC64_REL64 %s -o %t.o
+# RUN: ld.lld %t.o -o /dev/null
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS[[BITS=64]]
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_[[MACHINE]]
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Size:  24
+  - Name:  .data
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_WRITE, SHF_ALLOC ]
+  - Name:  .rel.text
+    Type:  SHT_REL
+    Info:  .text
+    Relocations:
+      - Symbol: .data
+        Type:   [[R0]]
+      - Offset: 8
+        Symbol: .data
+        Type:   [[R1=0]]
+      - Offset: 16
+        Symbol: .data
+        Type:   [[R2=0]]
+Symbols:
+  - Name:    .data
+    Type:    STT_SECTION
+    Section: .data
+  - Name:    _start
+    Section: .text
+    Binding: STB_GLOBAL
+...

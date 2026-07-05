@@ -1,0 +1,31 @@
+The executable was generated like so:
+$ cat t.c
+int main() { return 0; }
+$ clang --target=i686-windows -c t.c -o t.o
+$ lld-link t.o -out:t.exe -entry:main -debug
+
+It has a mingw-style symbol table in the executable, which MSVC-produced images
+don't have.
+
+RUN: llvm-nm %p/Inputs/main-ret-zero-pe-i386.exe \
+RUN:         | FileCheck %s -check-prefix PE-EXE
+
+PE-EXE: 00401000 t .bss
+PE-EXE: 00401000 t .data
+PE-EXE: 00401000 t .text
+PE-EXE: 00401000 T _main
+
+The DLL was generated like so:
+$ cat t.c
+int DllMain(void *mod, long reason, void *reserved) { return 1; }
+$ clang --target=i686-windows -c t.c -o t.o
+$ lld-link t.o -out:t.exe -entry:DllMain -debug -dll
+
+
+RUN: llvm-nm %p/Inputs/main-ret-zero-pe-i386.dll \
+RUN:         | FileCheck %s -check-prefix PE-DLL
+
+PE-DLL: 10001000 t .bss
+PE-DLL: 10001000 t .data
+PE-DLL: 10001000 t .text
+PE-DLL: 10001000 T _DllMain

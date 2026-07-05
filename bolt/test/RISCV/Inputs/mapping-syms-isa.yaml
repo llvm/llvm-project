@@ -1,0 +1,47 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_RISCV
+  Flags:           [ EF_RISCV_RVC, EF_RISCV_FLOAT_ABI_DOUBLE ]
+  Entry:           0x100B0
+ProgramHeaders:
+  - Type:            0x70000003
+    Flags:           [ PF_R ]
+    FirstSec:        .riscv.attributes
+    LastSec:         .riscv.attributes
+    Offset:          0xB8
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .text
+    LastSec:         .text
+    VAddr:           0x10000
+    Align:           0x1000
+    Offset:          0x0
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x100B0
+    AddressAlign:    0x2
+    Content:         '0100000000008280'
+  - Name:            .riscv.attributes
+    Type:            SHT_RISCV_ATTRIBUTES
+    AddressAlign:    0x1
+    Content:         4144000000726973637600013A0000000572763634693270315F6D3270305F613270315F663270325F643270325F633270305F7A696373723270305F7A6D6D756C31703000
+Symbols:
+  - Name:            '_start'
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x100B0
+  - Name:            '$xrv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_zicsr2p0_zmmul1p0'
+    Section:         .text
+    Value:           0x100B0
+  - Name:            '$d'
+    Section:         .text
+    Value:           0x100B2
+  - Name:            '$x'
+    Section:         .text
+    Value:           0x100B6
+...

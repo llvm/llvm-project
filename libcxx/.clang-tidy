@@ -1,0 +1,85 @@
+Checks: >
+  bugprone-copy-constructor-init,
+  bugprone-dangling-handle,
+  bugprone-infinite-loop,
+  bugprone-stringview-nullptr,
+  bugprone-use-after-move,
+
+  libcpp-*,
+
+  llvm-include-order,
+  llvm-namespace-comment,
+
+  misc-definitions-in-headers,
+  misc-misplaced-const,
+  misc-non-copyable-objects,
+  misc-uniqueptr-reset-release,
+
+  modernize-loop-convert,
+  modernize-redundant-void-arg,
+  modernize-use-nullptr,
+  modernize-use-override,
+  modernize-use-equals-delete,
+
+  readability-duplicate-include,
+  readability-identifier-naming,
+  readability-function-cognitive-complexity,
+  readability-function-size,
+  readability-misplaced-array-index,
+  readability-redundant-control-flow,
+  readability-redundant-function-ptr-dereference,
+  readability-redundant-preprocessor,
+  readability-simplify-boolean-expr,
+  readability-simplify-subscript-expr,
+  readability-uniqueptr-delete-release,
+
+CheckOptions:
+  - key:   readability-function-cognitive-complexity.Threshold
+    value: 143 # TODO: bring that number down
+  - key:   readability-function-size.LineThreshold
+    value: 194 # TODO: bring that number down
+  - key:   readability-identifier-naming.GetConfigPerFile
+    value: false
+  - key:   readability-identifier-naming.ParameterCase
+    value: lower_case
+  - key:   readability-identifier-naming.ParameterPrefix
+    value: __
+  - key:   readability-identifier-naming.PrivateMemberCase
+    value: lower_case
+  - key:   readability-identifier-naming.PrivateMemberPrefix
+    value: __
+  - key:   readability-identifier-naming.PrivateMemberSuffix
+    value: _
+  - key:   readability-identifier-naming.LocalVariableCase
+    value: lower_case
+  - key:   readability-identifier-naming.LocalVariablePrefix
+    value: __
+  - key:   readability-identifier-naming.TemplateParameterCase
+    value: CamelCase
+  - key:   readability-identifier-naming.TemplateParameterPrefix
+    value: _
+  - key:   readability-identifier-naming.TemplateParameterIgnoredRegexp
+    value: (.*\:auto|expr-type) # This is https://llvm.org/PR56464
+  - key:   readability-identifier-naming.ValueTemplateParameterCase
+    value: CamelCase
+  - key:   readability-identifier-naming.ValueTemplateParameterPrefix
+    value: _
+  - key:   readability-identifier-naming.ValueTemplateParameterIgnoredRegexp
+    value: (__[a-z_]|_[A-Z]).* # TODO: Converge on a single style for value template parameters
+
+# TODO: investigate these checks
+# bugprone-branch-clone,
+# bugprone-macro-parentheses,
+# cppcoreguidelines-prefer-member-initializer,
+# misc-unused-parameters,
+# modernize-use-bool-literals,
+# modernize-use-default-member-init,
+# modernize-use-equals-default,
+# portability-restrict-system-includes,
+# readability-function-cognitive-complexity,
+# readability-implicit-bool-conversion,
+# readability-isolate-declaration,
+# readability-redundant-access-specifiers,
+# readability-redundant-declaration,
+# readability-redundant-member-init,
+#

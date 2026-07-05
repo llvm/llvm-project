@@ -1,0 +1,61 @@
+# Test the different ways of hooking the fini function for instrumentation (via
+# DT_FINI and via DT_FINI_ARRAY). We test the latter for both PIE and non-PIE
+# binaries because of the different ways of handling relocations (static or
+# dynamic).
+# All tests perform the following steps:
+# - Compile and link for the case to be tested
+# - Some sanity-checks on the dynamic section and relocations in the binary to
+#   verify it has the shape we want for testing:
+#   - DT_FINI or DT_FINI_ARRAY in dynamic section
+#   - No relative relocations for non-PIE
+# - Instrument
+# - Run instrumented binary
+# - Verify generated profile
+REQUIRES: system-linux,bolt-runtime
+
+RUN: %clang %cflags -pie %p/Inputs/basic-instrumentation.s -Wl,-q -o %t.exe
+RUN: llvm-readelf -d %t.exe | FileCheck --check-prefix=DYN-FINI %s
+RUN: llvm-readelf -r %t.exe | FileCheck --check-prefix=RELOC-PIE %s
+RUN: llvm-bolt %t.exe -o %t --instrument \
+RUN:     --instrumentation-file=%t \
+RUN:     --instrumentation-file-append-pid
+RUN: rm -f %t.*.fdata
+RUN: %t
+RUN: cat %t.*.fdata | FileCheck %s
+
+RUN: %clang %cflags -pie %p/Inputs/basic-instrumentation.s -Wl,-q,-fini=0 -o %t-no-fini.exe
+RUN: llvm-readelf -d %t-no-fini.exe | FileCheck --check-prefix=DYN-NO-FINI %s
+RUN: llvm-readelf -r %t-no-fini.exe | FileCheck --check-prefix=RELOC-PIE %s
+RUN: llvm-bolt %t-no-fini.exe -o %t-no-fini --instrument \
+RUN:     --instrumentation-file=%t-no-fini \
+RUN:     --instrumentation-file-append-pid
+RUN: rm -f %t-no-fini.*.fdata
+RUN: %t-no-fini
+RUN: cat %t-no-fini.*.fdata | FileCheck %s
+
+RUN: %clang %cflags -no-pie %p/Inputs/basic-instrumentation.s -Wl,-q,-fini=0 -o %t-no-pie-no-fini.exe
+RUN: llvm-readelf -d %t-no-pie-no-fini.exe | FileCheck --check-prefix=DYN-NO-FINI %s
+RUN: llvm-readelf -r %t-no-pie-no-fini.exe | FileCheck --check-prefix=RELOC-NO-PIE %s
+RUN: llvm-bolt %t-no-pie-no-fini.exe -o %t-no-pie-no-fini --instrument \
+RUN:     --instrumentation-file=%t-no-pie-no-fini \
+RUN:     --instrumentation-file-append-pid
+RUN: rm -f %t-no-pie-no-fini.*.fdata
+RUN: %t-no-pie-no-fini
+RUN: cat %t-no-pie-no-fini.*.fdata | FileCheck %s
+
+# With fini: dynamic section should contain DT_FINI
+DYN-FINI: (FINI)
+
+# Without fini: dynamic section should only contain DT_FINI_ARRAY
+DYN-NO-FINI-NOT: (FINI)
+DYN-NO-FINI:     (FINI_ARRAY)
+DYN-NO-FINI:     (FINI_ARRAYSZ)
+
+# With PIE: binary should have relative relocations
+RELOC-PIE: R_AARCH64_RELATIVE
+
+# Without PIE: binary should not have relative relocations
+RELOC-NO-PIE-NOT: R_AARCH64_RELATIVE
+
+# The instrumented profile should at least say main was called once
+CHECK: main 0 0 1{{$}}

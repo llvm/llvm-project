@@ -1,0 +1,38 @@
+// REQUIRES: !asan, compiler-rt, lldb
+// UNSUPPORTED: system-windows
+//           Zorg configures the ASAN stage2 bots to not build the asan
+//           compiler-rt. Only run this test on non-asanified configurations.
+//
+// RUN: %clang -std=gnu11 --driver-mode=gcc -O0 -glldb -fblocks -arch x86_64 \
+// RUN:     -fsanitize=address %s -o %t
+// RUN: %dexter -w \
+// RUN:     --binary %t %dexter_lldb_args -- %s | FileCheck %s
+
+struct S {
+  int a[8];
+};
+
+int f(struct S s, unsigned i) {
+  return s.a[i]; // !dex_label asan
+}
+
+int main(int argc, const char **argv) {
+  struct S s = {{0, 1, 2, 3, 4, 5, 6, 7}};
+  if (f(s, 4) == 4)
+    return f(s, 0);
+  return 0;
+}
+
+// CHECK-DAG: seen_values: 3
+// CHECK-DAG: correct_step_coverage: 100.0%
+
+/*
+---
+!where {lines: !label asan}:
+  !value s:
+    a:
+      "[0]": 0
+      "[1]": 1
+      "[7]": 7
+...
+*/

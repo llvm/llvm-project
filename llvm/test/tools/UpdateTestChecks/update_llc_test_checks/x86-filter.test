@@ -1,0 +1,33 @@
+# REQUIRES: x86-registered-target
+
+## Check that --filter works properly.
+# RUN: cp -f %S/Inputs/x86-non-temporal.ll %t.ll && %update_llc_test_checks --filter="movnt" %t.ll
+# RUN: diff -u %t.ll %S/Inputs/x86-non-temporal.ll.filter.expected
+
+## Check that running the script again does not change the result:
+# RUN: %update_llc_test_checks --filter="movnt" %t.ll
+# RUN: diff -u %t.ll %S/Inputs/x86-non-temporal.ll.filter.expected
+
+## Check that --filter-out works properly.
+# RUN: cp -f %S/Inputs/x86-non-temporal.ll %t.ll && %update_llc_test_checks --filter-out="movnt" %t.ll
+# RUN: diff -u %t.ll %S/Inputs/x86-non-temporal.ll.filter-out.expected
+
+## Check that running the script again does not change the result:
+# RUN: %update_llc_test_checks --filter-out="movnt" %t.ll
+# RUN: diff -u %t.ll %S/Inputs/x86-non-temporal.ll.filter-out.expected
+
+## Check that multiple filters work properly.
+# RUN: cp -f %S/Inputs/x86-non-temporal.ll %t.ll && %update_llc_test_checks --filter="LCPI[0-9]+_[0-9]+" --filter="movnt" --filter="(%esp|%rsi)" %t.ll
+# RUN: diff -u %t.ll %S/Inputs/x86-non-temporal.ll.multifilter.expected
+
+## Check that running the script again does not change the result:
+# RUN: %update_llc_test_checks --filter="LCPI[0-9]+_[0-9]+" --filter="movnt" --filter="(%esp|%rsi)" %t.ll
+# RUN: diff -u %t.ll %S/Inputs/x86-non-temporal.ll.multifilter.expected
+
+## Check that no filtering is done.
+# RUN: cp -f %S/Inputs/x86-non-temporal.ll %t.ll && %update_llc_test_checks %t.ll
+# RUN: diff -u %t.ll %S/Inputs/x86-non-temporal.ll.nofilter.expected
+
+## Check that running the script again does not change the result:
+# RUN: %update_llc_test_checks %t.ll
+# RUN: diff -u %t.ll %S/Inputs/x86-non-temporal.ll.nofilter.expected

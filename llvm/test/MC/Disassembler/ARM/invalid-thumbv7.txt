@@ -1,0 +1,432 @@
+# RUN: not llvm-mc -disassemble %s -mcpu cortex-a15 -triple thumbv7 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-V7
+# RUN: not llvm-mc -disassemble %s -mcpu cortex-a53 -triple thumbv8 2>&1 | FileCheck %s
+
+# This file is checking Thumbv7 encodings which are globally invalid, usually due
+# to the constraints of the instructions not being met. For example invalid
+# combinations of registers.
+
+#------------------------------------------------------------------------------
+# Undefined encoding for b.cc
+#------------------------------------------------------------------------------
+
+# Opcode=1894 Name=t2Bcc Format=ARM_FORMAT_THUMBFRM(25)
+#  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+# -------------------------------------------------------------------------------------------------
+# | 1: 1: 1: 1| 0: 1: 1: 1| 1: 0: 1: 0| 1: 1: 1: 1| 1: 0: 0: 0| 1: 0: 1: 1| 0: 1: 0: 0| 0: 1: 0: 0|
+# -------------------------------------------------------------------------------------------------
+#
+# A8.6.16 B
+# if cond<3:1> == '111' then SEE "Related Encodings"
+
+[0xaf 0xf7 0x44 0x8b]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0xaf 0xf7 0x44 0x8b]
+
+#------------------------------------------------------------------------------
+# Undefined encoding for it
+#------------------------------------------------------------------------------
+
+[0xff 0xbf 0x6b 0x80 0x00 0x75]
+# CHECK: potentially undefined instruction encoding
+# CHECK-NEXT: [0xff 0xbf 0x6b 0x80 0x00 0x75]
+
+[0x50 0xbf] # hint #5; legal as the third instruction for the iteee above
+
+# Two warnings from this block since there are two instructions in there
+[0xdb 0xbf 0x42 0xbb]
+# CHECK: potentially undefined instruction encoding
+# CHECK-NEXT: [0xdb 0xbf 0x42 0xbb]
+# CHECK: potentially undefined instruction encoding
+# CHECK-NEXT: [0xdb 0xbf 0x42 0xbb]
+
+#------------------------------------------------------------------------------
+# Undefined encoding for ldm
+#------------------------------------------------------------------------------
+
+# Writeback is not allowed is Rn is in the target register list.
+[0xb4 0xe8 0x34 0x04]
+# CHECK: potentially undefined instruction encoding
+# CHECK-NEXT: [0xb4 0xe8 0x34 0x04]
+
+
+#------------------------------------------------------------------------------
+# Undefined encoding for ldrd
+#------------------------------------------------------------------------------
+
+# Opcode=1930 Name=t2LDRD_PRE Format=ARM_FORMAT_THUMBFRM(25)
+#  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0 
+# -------------------------------------------------------------------------------------------------
+# | 1: 1: 1: 0| 1: 0: 0: 1| 1: 1: 1: 1| 1: 1: 1: 1| 1: 1: 1: 0| 1: 0: 1: 1| 0: 0: 0: 0| 0: 0: 0: 0|
+# -------------------------------------------------------------------------------------------------
+#
+# A8.6.66 LDRD (immediate)
+# if Rn = '1111' then SEE LDRD (literal)
+# A8.6.67 LDRD (literal)
+# Inst{21} = 0
+
+[0xff 0xe9 0x0 0xeb]
+# CHECK: potentially undefined
+# CHECK-NEXT: [0xff 0xe9 0x0 0xeb]
+
+
+#------------------------------------------------------------------------------
+# Undefined encodings for ldrbt
+#------------------------------------------------------------------------------
+
+# Opcode=1922 Name=t2LDRBT Format=ARM_FORMAT_THUMBFRM(25)
+#  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+# -------------------------------------------------------------------------------------------------
+# | 1: 1: 1: 1| 1: 0: 0: 0| 0: 0: 0: 1| 0: 0: 0: 0| 1: 1: 1: 1| 1: 1: 1: 0| 0: 0: 0: 0| 0: 0: 1: 1|
+# -------------------------------------------------------------------------------------------------
+#
+# The unpriviledged Load/Store cannot have SP or PC as Rt.
+[0x10 0xf8 0x3 0xfe]
+# CHECK: potentially undefined instruction encoding
+# CHECK-NEXT: [0x10 0xf8 0x3 0xfe]
+
+
+#------------------------------------------------------------------------------
+# Undefined encodings for ldrsh
+#------------------------------------------------------------------------------
+
+# invalid LDRSHs Rt=PC
+[0x30 0xf9 0x00 0xf0]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x30 0xf9 0x00 0xf0]
+
+# invalid LDRSHi8 Rt=PC
+[0x30 0xf9 0x00 0xfc]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x30 0xf9 0x00 0xfc]
+
+# invalid LDRSHi12 Rt=PC
+[0xb0 0xf9 0x00 0xf0]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0xb0 0xf9 0x00 0xf0]
+
+# Opcode=1954 Name=t2LDRSHi8 Format=ARM_FORMAT_THUMBFRM(25)
+#  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+# -------------------------------------------------------------------------------------------------
+# | 1: 1: 1: 1| 1: 0: 0: 1| 0: 0: 1: 1| 0: 1: 0: 1| 1: 1: 1: 1| 1: 1: 0: 0| 0: 0: 0: 0| 0: 0: 0: 0|
+# -------------------------------------------------------------------------------------------------
+#
+# if Rt == '1111' and PUW == '100' then SEE "Unallocated memory hints"
+[0x35 0xf9 0x00 0xfc]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x35 0xf9 0x00 0xfc]
+
+# Opcode=1953 Name=t2LDRSHi12 Format=ARM_FORMAT_THUMBFRM(25)
+#  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+# -------------------------------------------------------------------------------------------------
+# | 1: 1: 1: 1| 1: 0: 0: 1| 1: 0: 1: 1| 0: 0: 1: 1| 1: 1: 1: 1| 1: 0: 0: 0| 1: 1: 0: 1| 1: 1: 1: 1|
+# -------------------------------------------------------------------------------------------------
+#
+# if Rt = '1111' then SEE "Unallocated memory hints"
+[0xb3 0xf9 0xdf 0xf8]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0xb3 0xf9 0xdf 0xf8]
+
+
+#------------------------------------------------------------------------------
+# Undefined encoding for push
+#------------------------------------------------------------------------------
+
+# SP and PC are not allowed in the register list on STM instructions in Thumb2.
+[0x2d 0xe9 0xf7 0xb6]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x2d 0xe9 0xf7 0xb6]
+
+
+#------------------------------------------------------------------------------
+# Undefined encoding for stmia
+#------------------------------------------------------------------------------
+
+# Opcode=2313 Name=tSTMIA_UPD Format=ARM_FORMAT_THUMBFRM(25)
+#  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+# -------------------------------------------------------------------------------------------------
+# | 0: 0: 0: 0| 0: 0: 0: 0| 0: 0: 0: 0| 0: 0: 0: 0| 1: 1: 0: 0| 0: 1: 1: 1| 0: 0: 0: 0| 0: 0: 0: 0|
+# -------------------------------------------------------------------------------------------------
+#
+# if BitCount(registers) < 1 then UNPREDICTABLE
+[0x00 0xc7]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x00 0xc7]
+
+
+#------------------------------------------------------------------------------
+# Undefined encodings for str
+#------------------------------------------------------------------------------
+
+# invalid STRi12   Rn=PC
+[0xcf 0xf8 0x00 0x00]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0xcf 0xf8 0x00 0x00]
+
+# invalid STRi8    Rn=PC
+[0x4f 0xf8 0x00 0x0c]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x4f 0xf8 0x00 0x0c]
+
+# invalid STRs     Rn=PC
+[0x4f 0xf8 0x00 0x00]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x4f 0xf8 0x00 0x00]
+
+# invalid STRBi12  Rn=PC
+[0x0f 0xf8 0x00 0x00]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x0f 0xf8 0x00 0x00]
+
+# invalid STRBi8   Rn=PC
+[0x0f 0xf8 0x00 0x0c]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x0f 0xf8 0x00 0x0c]
+
+# invalid STRBs    Rn=PC
+[0x0f 0xf8 0x00 0x00]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x0f 0xf8 0x00 0x00]
+
+# invalid STRHi12  Rn=PC
+[0xaf 0xf8 0x00 0x00]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0xaf 0xf8 0x00 0x00]
+
+# invalid STRHi8   Rn=PC
+[0x2f 0xf8 0x00 0x0c]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x2f 0xf8 0x00 0x0c]
+
+# invalid STRHs    Rn=PC
+[0x2f 0xf8 0x00 0x00]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x2f 0xf8 0x00 0x00]
+
+# invalid STRBT    Rn=PC
+[0x0f 0xf8 0x00 0x0e]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x0f 0xf8 0x00 0x0e]
+
+# invalid STRHT    Rn=PC
+[0x2f 0xf8 0x00 0x0e]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x2f 0xf8 0x00 0x0e]
+
+# invalid STRT     Rn=PC
+[0x4f 0xf8 0x00 0x0e]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x4f 0xf8 0x00 0x0e]
+
+# Opcode=2137 Name=t2STR_POST Format=ARM_FORMAT_THUMBFRM(25)
+#  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+# -------------------------------------------------------------------------------------------------
+# | 1: 1: 1: 1| 1: 0: 0: 0| 0: 1: 0: 0| 1: 1: 1: 1| 1: 1: 1: 0| 1: 0: 1: 1| 1: 1: 1: 1| 1: 1: 1: 1|
+# -------------------------------------------------------------------------------------------------
+#
+# if Rn == '1111' then UNDEFINED
+
+[0x4f 0xf8 0xff 0xeb]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x4f 0xf8 0xff 0xeb]
+
+#------------------------------------------------------------------------------
+# Undefined encodings for strd
+#------------------------------------------------------------------------------
+
+# Rt == Rn is UNPREDICTABLE
+[0xe4 0xe9 0x02 0x46]
+# CHECK: warning: potentially undefined instruction encoding
+# CHECK-NEXT: [0xe4 0xe9 0x02 0x46]
+
+#------------------------------------------------------------------------------
+# Undefined encodings for NEON vld instructions
+#------------------------------------------------------------------------------
+
+# size = '00' and index_align == '0001' so UNDEFINED
+[0xa0 0xf9 0x10 0x08]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0xa0 0xf9 0x10 0x08]
+
+
+# vld3
+
+# Opcode=871 Name=VLD3DUPd32_UPD Format=ARM_FORMAT_NLdSt(30)
+#  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+# -------------------------------------------------------------------------------------------------
+# | 1: 1: 1: 1| 0: 1: 0: 0| 1: 0: 1: 0| 0: 0: 1: 0| 0: 0: 1: 0| 1: 1: 1: 0| 1: 0: 0: 1| 0: 0: 1: 0|
+# -------------------------------------------------------------------------------------------------
+#
+# A8.6.315 VLD3 (single 3-element structure to all lanes)
+# The a bit must be encoded as 0.
+
+[0xa2 0xf9 0x92 0x2e]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0xa2 0xf9 0x92 0x2e]
+
+
+# Some vld4 ones
+# size == '11' and a == '0' so UNDEFINED
+[0xa0 0xf9 0xc0 0x0f]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0xa0 0xf9 0xc0 0x0f]
+
+[0xa0 0xf9 0x30 0x0b]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0xa0 0xf9 0x30 0x0b]
+
+
+# VLD1 multi-element, type=0b1010 align=0b11
+[0x24 0xf9 0xbf 0x8a]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x24 0xf9 0xbf 0x8a]
+
+# VLD1 multi-element type=0b0111 align=0b1x
+[0x24 0xf9 0xbf 0x87]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x24 0xf9 0xbf 0x87]
+
+# VLD1 multi-element type=0b0010 align=0b1x
+[0x24 0xf9 0xbf 0x86]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x24 0xf9 0xbf 0x86]
+
+# VLD2 multi-element size=0b11
+[0x60 0xf9 0xcf 0x08]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x60 0xf9 0xcf 0x08]
+
+# VLD2 multi-element type=0b1111 align=0b11
+[0x60 0xf9 0xbf 0x08]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x60 0xf9 0xbf 0x08]
+
+# VLD2 multi-element type=0b1001 align=0b11
+[0x60 0xf9 0xbf 0x09]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x60 0xf9 0xbf 0x09]
+
+# VLD3 multi-element size=0b11
+[0x60 0xf9 0x7f 0x04]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x60 0xf9 0x7f 0x04]
+
+# VLD3 multi-element align=0b1x
+[0x60 0xf9 0xcf 0x04]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x60 0xf9 0xcf 0x04]
+
+# VLD4 multi-element size=0b11
+[0x60 0xf9 0xcd 0x11]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x60 0xf9 0xcd 0x11]
+
+
+#------------------------------------------------------------------------------
+# Undefined encodings for NEON vst1
+#------------------------------------------------------------------------------
+
+# size == '10' and index_align == '0001' so UNDEFINED
+[0x80 0xf9 0x10 0x08]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x80 0xf9 0x10 0x08]
+
+# Opcode=1839 Name=VST1d8Twb_register Format=ARM_FORMAT_NLdSt(30)
+#  31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+# -------------------------------------------------------------------------------------------------
+# | 1: 1: 1: 1| 1: 0: 0: 1| 0: 0: 0: 0| 0: 0: 0: 0| 0: 0: 0: 0| 0: 1: 1: 0| 0: 0: 1: 0| 1: 1: 1: 1|
+# -------------------------------------------------------------------------------------------------
+#
+# A8.6.391 VST1 (multiple single elements)
+# This encoding looks like: vst1.8 {d0,d1,d2}, [r0:128]
+# But bits 5-4 for the alignment of 128 encoded as align = 0b10, is available only if <list>
+# contains two or four registers.  rdar://11220250
+[0x00 0xf9 0x2f 0x06]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x00 0xf9 0x2f 0x06]
+
+#------------------------------------------------------------------------------
+# Undefined encodings for NEON vst4
+#------------------------------------------------------------------------------
+
+[0x80 0xf9 0x30 0x0b]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x80 0xf9 0x30 0x0b]
+
+
+#------------------------------------------------------------------------------
+# Unpredictable STMs
+#------------------------------------------------------------------------------
+
+# 32-bit Thumb STM instructions cannot have a writeback register which appears
+# in the list.
+
+[0xa1 0xe8 0x07 0x04]
+# CHECK: warning: potentially undefined instruction encoding
+# CHECK-NEXT: [0xa1 0xe8 0x07 0x04]
+
+[0x21 0xe9 0x07 0x04]
+# CHECK: warning: potentially undefined instruction encoding
+# CHECK-NEXT: [0x21 0xe9 0x07 0x04]
+
+#------------------------------------------------------------------------------
+# SP is invalid as rGPR before ARMv8
+#------------------------------------------------------------------------------
+
+[0x00 0xf0 0x00 0x0d]
+# CHECK-V7: warning: potentially undefined instruction encoding
+# CHECK-V7-NEXT: [0x00 0xf0 0x00 0x0d]
+
+[0x63 0xeb 0x2d 0x46]
+# CHECK-V7: warning: potentially undefined instruction encoding
+# CHECK-V7-NEXT: [0x63 0xeb 0x2d 0x46]
+
+#------------------------------------------------------------------------------
+# Undefined encodings for MSR/MRS (banked register)
+#------------------------------------------------------------------------------
+# These have a banked register encoding of 0b111111, which is unallocated.
+
+# msr <invalid>, r0
+[0x90,0xf3,0x30,0x8f]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0x90,0xf3,0x30,0x8f]
+
+# mrs r0, <invalid>
+[0xff,0xf3,0x30,0x80]
+# CHECK: invalid instruction encoding
+# CHECK-NEXT: [0xff,0xf3,0x30,0x80]
+
+#------------------------------------------------------------------------------
+# If dest is sp then source must be in T2 add/sub
+#------------------------------------------------------------------------------
+
+[0x05,0xf1,0x01,0x0d]
+[0x07,0xf2,0x04,0x0d]
+[0x03,0xeb,0x02,0x0d]
+[0x03,0xeb,0xc5,0x0d]
+# CHECK-V7: warning: potentially undefined instruction encoding
+# CHECK-V7-NEXT: [0x05,0xf1,0x01,0x0d]
+# CHECK-V7: warning: potentially undefined instruction encoding
+# CHECK-V7-NEXT: [0x07,0xf2,0x04,0x0d]
+# CHECK-V7: warning: potentially undefined instruction encoding
+# CHECK-V7-NEXT: [0x03,0xeb,0x02,0x0d]
+# CHECK-V7: warning: potentially undefined instruction encoding
+# CHECK-V7-NEXT: [0x03,0xeb,0xc5,0x0d]
+
+
+[0xa5,0xf1,0x01,0x0d]
+[0xa7,0xf2,0x04,0x0d]
+[0xa3,0xeb,0x02,0x0d]
+[0xa3,0xeb,0xc5,0x0d]
+# CHECK-V7: warning: potentially undefined instruction encoding
+# CHECK-V7-NEXT: [0xa5,0xf1,0x01,0x0d]
+# CHECK-V7: warning: potentially undefined instruction encoding
+# CHECK-V7-NEXT: [0xa7,0xf2,0x04,0x0d]
+# CHECK-V7: warning: potentially undefined instruction encoding
+# CHECK-V7-NEXT: [0xa3,0xeb,0x02,0x0d]
+# CHECK-V7: warning: potentially undefined instruction encoding
+# CHECK-V7-NEXT: [0xa3,0xeb,0xc5,0x0d]
+# CHECK-V7-NEXT: ^
+[0x0f,0xf2,0x00,0x4d]
+# CHECK-V7-NEXT: warning: potentially undefined instruction encoding
+# CHECK-V7-NEXT: [0x0f,0xf2,0x00,0x4d]
+# CHECK-V7-NEXT: ^

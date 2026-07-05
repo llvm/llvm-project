@@ -1,0 +1,25 @@
+REQUIRES: msan
+UNSUPPORTED: target=arm{{.*}}
+RUN: %msan_compiler %S/SimpleTestStdio.cpp -o %t
+RUN: not %run %t -seed=1 -runs=10000000 2>&1 | FileCheck %s --check-prefix=NO-REPORT
+
+RUN: %msan_compiler %S/SimpleCmpTest.cpp -o %t
+RUN: not %run %t -seed=1 -runs=10000000 2>&1 | FileCheck %s --check-prefix=NO-REPORT
+
+RUN: %msan_compiler %S/MemcmpTest.cpp -o %t
+RUN: not %run %t -seed=1 -runs=10000000 2>&1 | FileCheck %s --check-prefix=NO-REPORT
+
+RUN: %msan_compiler %S/StrcmpTest.cpp -o %t
+RUN: not %run %t -seed=1 -runs=10000000 2>&1 | FileCheck %s --check-prefix=NO-REPORT
+
+NO-REPORT-NOT: MemorySanitizer
+NO-REPORT: BINGO
+
+
+RUN: %msan_compiler %S/UseAfterDtor.cpp -o %t
+RUN: not %run %t -seed=1 -runs=10000000 2>&1 | FileCheck %s --check-prefix=REPORT
+
+RUN: %msan_compiler %S/UninitializedStrlen.cpp -o %t
+RUN: not %run %t -seed=1 -runs=10000000 2>&1 | FileCheck %s --check-prefix=REPORT
+
+REPORT: MemorySanitizer: use-of-uninitialized-value

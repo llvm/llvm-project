@@ -1,0 +1,194 @@
+--- !fat-mach-o
+FatHeader:
+  magic:           0xCAFEBABE
+  nfat_arch:       3
+FatArchs:
+  - cputype:         0x0000000C
+    cpusubtype:      0x00000009
+    offset:          0x0000000000004000
+    size:            200
+    align:           14
+  - cputype:         0x0000000C
+    cpusubtype:      0x0000000B
+    offset:          0x0000000000008000
+    size:            200
+    align:           14
+  - cputype:         0x0100000C
+    cpusubtype:      0x00000000
+    offset:          0x000000000000C000
+    size:            332
+    align:           14
+Slices:
+  - !mach-o
+    FileHeader:
+      magic:           0xFEEDFACE
+      # Bogus
+      cputype:         0x00000003
+      cpusubtype:      0x00000009
+      filetype:        0x00000001
+      ncmds:           4
+      sizeofcmds:      112
+      flags:           0x00002000
+    LoadCommands:
+      - cmd:             LC_SEGMENT
+        cmdsize:         56
+        segname:         ''
+        vmaddr:          0
+        vmsize:          0
+        fileoff:         0
+        filesize:        0
+        maxprot:         7
+        initprot:        7
+        nsects:          0
+        flags:           0
+      - cmd:             LC_SYMTAB
+        cmdsize:         24
+        symoff:          172
+        nsyms:           1
+        stroff:          184
+        strsize:         16
+      - cmd:             LC_VERSION_MIN_IPHONEOS
+        cmdsize:         16
+        version:         327680
+        sdk:             0
+      - cmd:             LC_DATA_IN_CODE
+        cmdsize:         16
+        dataoff:         172
+        datasize:        0
+    LinkEditData:
+      NameList:
+        - n_strx:          4
+          n_type:          0x01
+          n_sect:          0
+          n_desc:          512
+          n_value:         4
+      StringTable:
+        - ''
+        - ''
+        - ''
+        - ''
+        - _armv7_var
+        - ''
+  - !mach-o
+    FileHeader:
+      magic:           0xFEEDFACE
+      # Bogus
+      cputype:         0x00000002
+      cpusubtype:      0x0000000B
+      filetype:        0x00000001
+      ncmds:           4
+      sizeofcmds:      112
+      flags:           0x00002000
+    LoadCommands:
+      - cmd:             LC_SEGMENT
+        cmdsize:         56
+        segname:         ''
+        vmaddr:          0
+        vmsize:          0
+        fileoff:         0
+        filesize:        0
+        maxprot:         7
+        initprot:        7
+        nsects:          0
+        flags:           0
+      - cmd:             LC_SYMTAB
+        cmdsize:         24
+        symoff:          172
+        nsyms:           1
+        stroff:          184
+        strsize:         16
+      - cmd:             LC_VERSION_MIN_IPHONEOS
+        cmdsize:         16
+        version:         327680
+        sdk:             0
+      - cmd:             LC_DATA_IN_CODE
+        cmdsize:         16
+        dataoff:         172
+        datasize:        0
+    LinkEditData:
+      NameList:
+        - n_strx:          4
+          n_type:          0x01
+          n_sect:          0
+          n_desc:          512
+          n_value:         4
+      StringTable:
+        - ''
+        - ''
+        - ''
+        - ''
+        - _armv7s_var
+  - !mach-o
+    FileHeader:
+      magic:           0xFEEDFACF
+      # Bogus
+      cputype:         0x00000001
+      cpusubtype:      0x00000000
+      filetype:        0x00000001
+      ncmds:           4
+      sizeofcmds:      208
+      flags:           0x00002000
+      reserved:        0x00000000
+    LoadCommands:
+      - cmd:             LC_SEGMENT_64
+        cmdsize:         152
+        segname:         ''
+        vmaddr:          0
+        vmsize:          0
+        fileoff:         272
+        filesize:        0
+        maxprot:         7
+        initprot:        7
+        nsects:          1
+        flags:           0
+        Sections:
+          - sectname:        __text
+            segname:         __TEXT
+            addr:            0x0000000000000000
+            size:            0
+            offset:          0x00000110
+            align:           0
+            reloff:          0x00000000
+            nreloc:          0
+            flags:           0x80000400
+            reserved1:       0x00000000
+            reserved2:       0x00000000
+            reserved3:       0x00000000
+            content:         ''
+      - cmd:             LC_SYMTAB
+        cmdsize:         24
+        symoff:          276
+        nsyms:           2
+        stroff:          308
+        strsize:         24
+      - cmd:             LC_VERSION_MIN_IPHONEOS
+        cmdsize:         16
+        version:         327680
+        sdk:             0
+      - cmd:             LC_DATA_IN_CODE
+        cmdsize:         16
+        dataoff:         276
+        datasize:        0
+    LinkEditData:
+      NameList:
+        - n_strx:          15
+          n_type:          0x0E
+          n_sect:          1
+          n_desc:          0
+          n_value:         0
+        - n_strx:          4
+          n_type:          0x01
+          n_sect:          0
+          n_desc:          512
+          n_value:         4
+      StringTable:
+        - ''
+        - ''
+        - ''
+        - ''
+        - _arm64_var
+        - ltmp0
+        - ''
+        - ''
+        - ''
+...

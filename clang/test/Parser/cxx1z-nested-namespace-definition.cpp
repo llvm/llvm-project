@@ -1,0 +1,38 @@
+// RUN: cp %s %t
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++98
+// RUN: not %clang_cc1 -x c++ -std=c++14 -fixit %t -Werror -DFIXIT
+// RUN: %clang_cc1 -x c++ -std=c++14 %t -DFIXIT
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++17 -Wc++14-compat
+
+namespace foo1::foo2::foo3 {
+#if __cplusplus <= 201400L
+// expected-warning@-2 {{nested namespace definition is a C++17 extension; define each namespace separately}}
+#else
+// expected-warning@-4 {{nested namespace definition is incompatible with C++ standards before C++17}}
+#endif
+  int foo(int x) { return x; }
+}
+
+#ifndef FIXIT
+inline namespace goo::bar { // expected-error {{nested namespace definition cannot be 'inline'}} expected-warning 0-1{{C++11 feature}}
+  int n;
+}
+
+int m = goo::bar::n;
+#endif
+
+int foo(int x) {
+  return foo1::foo2::foo3::foo(x);
+}
+
+namespace bar1 {
+  namespace bar2 {
+    namespace bar3 {
+      int bar(int x) { return x; }
+    }
+  }
+}
+
+int bar(int x) {
+  return bar1::bar2::bar3::bar(x);
+}

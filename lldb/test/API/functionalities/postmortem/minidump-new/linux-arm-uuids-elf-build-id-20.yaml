@@ -1,0 +1,19 @@
+--- !minidump
+Streams:         
+  - Type:            SystemInfo
+    Processor Arch:  ARM
+    Platform ID:     Linux
+    CSD Version:     '15E216'
+    CPU:             
+      CPUID:           0x00000000
+  - Type:            ModuleList
+    Modules:         
+      - Base of Image:   0x0000000000001000
+        Size of Image:   0x00001000
+        Module Name:     '/tmp/a'
+        CodeView Record: 4C4570420102030405060708090A0B0C0D0E0F1011121314
+      - Base of Image:   0x0000000000001000
+        Size of Image:   0x00001000
+        Module Name:     '/tmp/b'
+        CodeView Record: 4C4570420A141E28323C46505A646E78828C96A0AAB4BEC8
+...

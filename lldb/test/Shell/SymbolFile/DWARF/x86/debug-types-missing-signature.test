@@ -1,0 +1,26 @@
+Create a dangling DW_AT_signature reference by stripping the debug_types
+section, and make sure lldb does something reasonable.
+RUN: %clangxx -target x86_64-pc-linux %S/Inputs/debug-types-basic.cpp \
+RUN:   -g -gdwarf-4 -fdebug-types-section -c -o %t.o
+RUN: llvm-objcopy --remove-section=.debug_types %t.o %t
+
+
+RUN: %lldb %t -b -o "type lookup A" | FileCheck --check-prefix=LOOKUPA %s
+LOOKUPA: no type was found matching 'A'
+
+RUN: %lldb %t -b -o "type lookup E" | FileCheck --check-prefix=LOOKUPE %s
+LOOKUPE: no type was found matching 'E'
+
+RUN: %lldb %t -b -o "type lookup EC" | FileCheck --check-prefix=LOOKUPEC %s
+LOOKUPEC: no type was found matching 'EC'
+
+RUN: not %lldb %t -b -o "expression (E) 1" 2>&1 | FileCheck --check-prefix=PRINTE %s
+PRINTE: use of undeclared identifier 'E'
+
+RUN: not %lldb %t -b -o "expression (EC) 1" 2>&1 | FileCheck --check-prefix=PRINTEC %s
+PRINTEC: use of undeclared identifier 'EC'
+
+RUN: %lldb %t -b -o "target variable a e ec" | FileCheck --check-prefix=VARS %s
+VARS: (const (unnamed struct)) a = <incomplete type "const (unnamed struct)">
+VARS: (const (unnamed enum)) e = 1
+VARS: (const (unnamed enum)) ec = 1

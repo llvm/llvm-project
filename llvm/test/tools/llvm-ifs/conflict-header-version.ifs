@@ -1,0 +1,15 @@
+# RUN: not llvm-ifs --input-format=IFS --output-ifs - %s %S/object.ifs 2>&1 | \
+# RUN: FileCheck %s --check-prefixes=CHECK-IFS
+
+# RUN: not llvm-ifs --input-format=IFS --output-ifs - %s 2>&1 | \
+# RUN: FileCheck %s --check-prefixes=CHECK-IFS2
+
+# CHECK-IFS: error: Interface Stub: IfsVersion Mismatch.
+# CHECK-IFS2: error: Interface Stub: Bad IfsVersion: 0.0, llvm-ifs supported version: 3.0.
+
+--- !ifs-v1
+IfsVersion:      0.0
+Target:          x86_64-unknown-linux-gnu
+Symbols:
+  - { Name: a, Type: Func }
+...

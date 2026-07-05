@@ -1,0 +1,36 @@
+# RUN: llc -mtriple=x86_64-linux-gnu                     -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=ALL,INC
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+slow-incdec -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=ALL,ADD
+
+--- |
+  define i8 @test_add_i8(i8 %arg1) {
+    %ret = add i8 %arg1, 1
+    ret i8 %ret
+  }
+...
+
+---
+name:            test_add_i8
+legalized:       true
+regBankSelected: true
+# ALL:      registers:
+# ALL-NEXT:  - { id: 0, class: gr8, preferred-register: '', flags: [   ] }
+# INC-NEXT:  - { id: 1, class: gpr, preferred-register: '', flags: [   ] }
+# ADD-NEXT:  - { id: 1, class: gpr, preferred-register: '', flags: [   ] }
+# ALL-NEXT:  - { id: 2, class: gr8, preferred-register: '', flags: [   ] }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+# ALL:      %0:gr8 = COPY $al
+# INC-NEXT: %2:gr8 = INC8r %0
+# ADD-NEXT: %2:gr8 = ADD8ri %0, 1
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $al
+
+    %0(s8) = COPY $al
+    %1(s8) = G_CONSTANT i8 1
+    %2(s8) = G_ADD %0, %1
+    $al = COPY %2(s8)
+
+...

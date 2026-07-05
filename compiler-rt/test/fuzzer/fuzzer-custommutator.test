@@ -1,0 +1,27 @@
+RUN: %cpp_compiler %S/CustomMutatorTest.cpp -o %t-CustomMutatorTest
+RUN: not %run %t-CustomMutatorTest 2>&1 | FileCheck %s --check-prefix=LLVMFuzzerCustomMutator
+LLVMFuzzerCustomMutator: INFO: found LLVMFuzzerCustomMutator
+LLVMFuzzerCustomMutator: In LLVMFuzzerCustomMutator
+LLVMFuzzerCustomMutator: {{.*}} lim: 4096 {{.*}}
+LLVMFuzzerCustomMutator: BINGO
+
+# len_control is disabled for custom mutators by default, test that it can be enabled.
+RUN: not %run %t-CustomMutatorTest -len_control=1000 2>&1 | FileCheck %s --check-prefix=LLVMFuzzerCustomMutatorWithLenControl
+LLVMFuzzerCustomMutatorWithLenControl: INFO: found LLVMFuzzerCustomMutator
+LLVMFuzzerCustomMutatorWithLenControl: In LLVMFuzzerCustomMutator
+LLVMFuzzerCustomMutatorWithLenControl: {{.*}} lim: {{[1-9][0-9]?}} {{.*}}
+LLVMFuzzerCustomMutatorWithLenControl: BINGO
+
+# sanity check: verify that we do get long lines with verbose printing on
+RUN: %cpp_compiler %S/CustomMutatorWithLongSequencesTest.cpp -o %t-CustomMutatorWithLongSequencesTest
+RUN: not %run %t-CustomMutatorWithLongSequencesTest -verbosity=2 2>&1 | FileCheck %s --check-prefix=LLVMFuzzerCustomMutatorLongSequence
+LLVMFuzzerCustomMutatorLongSequence: Flag: verbosity 2
+LLVMFuzzerCustomMutatorLongSequence: {{.*}} MS: {{[0-9]*}} {{(([a-zA-Z]*-){11,})}}
+LLVMFuzzerCustomMutatorLongSequence: BINGO
+
+# check a target that prints long mutation sequences and verifies the printed
+# output is capped at 10 entries
+RUN: not %run %t-CustomMutatorWithLongSequencesTest 2>&1 | FileCheck %s --check-prefix=LLVMFuzzerCustomMutatorLongSequenceTrimmed
+LLVMFuzzerCustomMutatorLongSequenceTrimmed-NOT: Flag: verbosity 2
+LLVMFuzzerCustomMutatorLongSequenceTrimmed-NOT: {{.*}} MS: {{[0-9]*}} {{(([a-zA-Z]*-){11,})}} {{.*}}
+LLVMFuzzerCustomMutatorLongSequenceTrimmed: BINGO

@@ -1,0 +1,32 @@
+# RUN: not llc -mtriple=x86_64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# This test ensures that an error is reported when an stack object reference
+# uses a different name then the stack object definition.
+
+--- |
+
+  define i32 @test(i32 %a) {
+  entry:
+    %b = alloca i32
+    store i32 %a, ptr %b
+    %c = load i32, ptr %b
+    ret i32 %c
+  }
+
+...
+---
+name:            test
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr32 }
+frameInfo:
+  maxAlignment:  4
+stack:
+  - { id: 0, name: b, size: 4, alignment: 4 }
+body: |
+  bb.0.entry:
+    %0 = COPY $edi
+    ; CHECK: [[@LINE+1]]:13: the name of the stack object '%stack.0' isn't 'x'
+    MOV32mr %stack.0.x, 1, _, 0, _, %0
+    $eax = COPY %0
+    RET64 $eax
+...

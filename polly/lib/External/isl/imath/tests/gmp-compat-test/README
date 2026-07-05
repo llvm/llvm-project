@@ -1,0 +1,106 @@
+Overview
+==================================================
+This directory contains a random test generator for the gmp
+compatibility layer of imath. The tests cases are randomly generated
+and run with both gmp and imath. The results are compared and any
+mismatching results are flagged as failures.
+
+You should not see any failures when running these tests.
+
+Requirements
+==================================================
+These tests use the python ffi to run the imath and gmp functions. To
+run these tests you will need the following items
+
+  * libimath.so
+  * python 3
+  * gmp library and header files
+
+
+Running
+==================================================
+All the tests cases will be generated and run automatically by the
+makefile. First, make sure you have built libimath.so in the top level
+imath directory.
+
+Use the following command to generate and run the tests
+
+    $ make TESTS=random.tests
+
+This should generate all the needed wrapper files along with the
+randomized unit tests. By default the unit tests are output to the
+random.tests file. The tests can be run by hand using the following
+command line
+
+    $ ./runtest random.tests
+
+You can also write your own unit tests and run them by passing the
+file name to the runtest script.
+
+
+Testing Methodology
+==================================================
+The goal of our testing is to ensure that we are compatible with the
+gmp api. To test our compatibility layer we generate inputs for each
+gmp api that we wrap and then call the gmp version of the api and
+compare the results to the imath version. The results should be
+identical. Any output mismatch is considered an error.
+
+
+Testcase Generation
+--------------------
+The test data generation is inspired by the QuickCheck testing
+methodolgy. We want to test both random data and important values such
+as 0,1,-1, etc. We generate input data based on the type of the input
+parameter. Most apis take either an mpz_t or a signed/unsigned long.
+
+For each parameter of the given type we generate the following values:
+
+  mpz_t:  0,1,-1, all min/max values, all min/max values +/- 1
+          small  numbers: 1-4    digits
+          medium numbers: 5-20   digits
+          large  numbers: 20-100 digits
+  long :  0,1,-1 short,int,long min/max values
+          random long values
+  unsigned long: 0,1,-1, unsigned short, unsigned int, unsigned long min/max values
+                 random unsigned long values
+
+The generated data for each paramater is combined to produce a series
+of inputs to the function. The input data format looks like:
+
+mpz_add|0,1,2
+
+Which represents the call mpz_add(0, 1, 2). Additional test cases can be written by hand.
+
+Test Structure
+--------------------
+The tests are run using the python ffi (the ctypes module). We have a
+single description of each api that is used to generate the following:
+
+  * intput data
+  * c function wrapper to call the libgmp or libimath function
+  * python wrapper to call both libgmp and libimath wrappers and compare results
+
+The test_gmp.so and test_imath.so libraries are loaded at runtime by
+the python runner scrip and used to run each test input and compare
+the results.
+
+The code generation pattern looks something like this:
+
+genctest.py  ~~generates~~> gmp_test.c   <--includes--  gmp_custom_test.c
+gmp_test.c   ~~generates~~> gmp_tests.so <--links--     libgmp.so
+genpytest.py ~~generates~~> wrappers.py  <--calls--     gmp_test.so
+gmp_test.so      --loads--> runtest.py   <--includes--  wrappers.py
+                               ^
+                               |
+                             reads
+                               |
+gendata.py  ~~generates~~> random.tests
+
+Adding tests for new APIs
+==================================================
+New apis can be tested by modifying the gmpapy.py file. This file
+contains a list of all apis that will be tested. Adding an api to the
+apis list will cause code and input data to be generated for that api.
+Rerunning make will generate the test data and code to run the test.
+

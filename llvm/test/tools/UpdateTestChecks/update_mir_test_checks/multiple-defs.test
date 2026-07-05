@@ -1,0 +1,7 @@
+# REQUIRES: x86-registered-target
+## Check that update_mir_test_checks handles multiple definitions of the same
+## virtual register (after coming out of SSA form).
+
+# RUN: cp -f %S/Inputs/multiple-defs.mir %t.mir && %update_mir_test_checks %t.mir
+# RUN: diff -u %S/Inputs/multiple-defs.mir.expected %t.mir
+# RUN: FileCheck %t.mir < %t.mir

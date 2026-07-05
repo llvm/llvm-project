@@ -1,0 +1,161 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Tests for LLVM libc math.h functions.
+
+load("//libc/test:libc_test_rules.bzl", "libc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+libc_test(
+    name = "exception_status_test",
+    srcs = [
+        "exception_status_test.cpp",
+        "excepts.h",
+    ],
+    deps = [
+        "//libc:__support_fputil_fenv_impl",
+        "//libc:feclearexcept",
+        "//libc:feraiseexcept",
+        "//libc:fesetexcept",
+        "//libc:fetestexcept",
+        "//libc:hdr_fenv_macros",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "rounding_mode_test",
+    srcs = [
+        "excepts.h",
+        "rounding_mode_test.cpp",
+    ],
+    deps = [
+        "//libc:fegetround",
+        "//libc:fesetround",
+        "//libc:hdr_fenv_macros",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "enabled_exceptions_test",
+    srcs = [
+        "enabled_exceptions_test.cpp",
+        "excepts.h",
+    ],
+    tags = ["nosan"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:__support_fputil_fenv_impl",
+        "//libc:__support_macros_properties_architectures",
+        "//libc:feclearexcept",
+        "//libc:feraiseexcept",
+        "//libc:fetestexcept",
+        "//libc:hdr_fenv_macros",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "feholdexcept_test",
+    srcs = [
+        "excepts.h",
+        "feholdexcept_test.cpp",
+    ],
+    tags = ["nosan"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:__support_fputil_fenv_impl",
+        "//libc:__support_macros_properties_architectures",
+        "//libc:feholdexcept",
+        "//libc:hdr_fenv_macros",
+        "//libc:types_fenv_t",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "exception_flags_test",
+    srcs = [
+        "exception_flags_test.cpp",
+        "excepts.h",
+    ],
+    deps = [
+        "//libc:__support_fputil_fenv_impl",
+        "//libc:fegetexceptflag",
+        "//libc:fesetexceptflag",
+        "//libc:fetestexceptflag",
+        "//libc:hdr_fenv_macros",
+        "//libc:types_fexcept_t",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "feclearexcept_test",
+    srcs = [
+        "excepts.h",
+        "feclearexcept_test.cpp",
+    ],
+    deps = [
+        "//libc:__support_fputil_fenv_impl",
+        "//libc:feclearexcept",
+        "//libc:hdr_fenv_macros",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "feenableexcept_test",
+    srcs = [
+        "excepts.h",
+        "feenableexcept_test.cpp",
+    ],
+    deps = [
+        "//libc:__support_common",
+        "//libc:__support_macros_properties_architectures",
+        "//libc:fedisableexcept",
+        "//libc:feenableexcept",
+        "//libc:fegetexcept",
+        "//libc:hdr_fenv_macros",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "feupdateenv_test",
+    srcs = [
+        "excepts.h",
+        "feupdateenv_test.cpp",
+    ],
+    deps = [
+        "//libc:__support_fputil_fenv_impl",
+        "//libc:feupdateenv",
+        "//libc:hdr_fenv_macros",
+        "//libc:types_fenv_t",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)
+
+libc_test(
+    name = "getenv_and_setenv_test",
+    srcs = [
+        "excepts.h",
+        "getenv_and_setenv_test.cpp",
+    ],
+    deps = [
+        "//libc:__support_fputil_fenv_impl",
+        "//libc:__support_macros_properties_os",
+        "//libc:fegetenv",
+        "//libc:fegetround",
+        "//libc:fesetenv",
+        "//libc:fesetround",
+        "//libc:hdr_fenv_macros",
+        "//libc:types_fenv_t",
+        "//libc/test/UnitTest:fp_test_helpers",
+    ],
+)

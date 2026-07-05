@@ -1,0 +1,96 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass si-insert-waitcnts  %s -o - | FileCheck %s
+
+# Ensure we insert waitcnts after any meta instructions at the start of
+# non-kernel functions. Without this, the inserted waitcnts can affect e.g. the
+# PC ranges covered by CFI and debug values.
+
+---
+# CHECK-LABEL: name: skip_implicit_def{{$}}
+# CHECK: IMPLICIT_DEF
+# CHECK: S_WAITCNT
+name: skip_implicit_def
+machineFunctionInfo:
+body: |
+  bb.0:
+    $sgpr0 = IMPLICIT_DEF
+...
+---
+# CHECK-LABEL: name: skip_kill{{$}}
+# CHECK: KILL
+# CHECK: S_WAITCNT
+name: skip_kill
+machineFunctionInfo:
+body: |
+  bb.0:
+    KILL $sgpr0
+...
+---
+# CHECK-LABEL: name: skip_cfi{{$}}
+# CHECK: CFI_INSTRUCTION
+# CHECK: S_WAITCNT
+name: skip_cfi
+machineFunctionInfo:
+body: |
+  bb.0:
+    CFI_INSTRUCTION undefined $sgpr0
+...
+---
+# CHECK-LABEL: name: skip_eh_label{{$}}
+# CHECK: EH_LABEL
+# CHECK: S_WAITCNT
+name: skip_eh_label
+machineFunctionInfo:
+body: |
+  bb.0:
+    EH_LABEL 0
+...
+---
+# CHECK-LABEL: name: skip_gc_label{{$}}
+# CHECK: GC_LABEL
+# CHECK: S_WAITCNT
+name: skip_gc_label
+machineFunctionInfo:
+body: |
+  bb.0:
+    GC_LABEL 0
+...
+---
+# CHECK-LABEL: name: skip_dbg_value{{$}}
+# CHECK: DBG_VALUE
+# CHECK: S_WAITCNT
+name: skip_dbg_value
+machineFunctionInfo:
+body: |
+  bb.0:
+    DBG_VALUE 0
+...
+---
+# CHECK-LABEL: name: skip_dbg_label{{$}}
+# CHECK: DBG_LABEL
+# CHECK: S_WAITCNT
+name: skip_dbg_label
+machineFunctionInfo:
+body: |
+  bb.0:
+    DBG_LABEL 0
+...
+---
+# CHECK-LABEL: name: skip_lifetime_start{{$}}
+# CHECK: LIFETIME_START
+# CHECK: S_WAITCNT
+name: skip_lifetime_start
+machineFunctionInfo:
+body: |
+  bb.0:
+    LIFETIME_START 0
+...
+---
+# CHECK-LABEL: name: skip_lifetime_end{{$}}
+# CHECK: LIFETIME_END
+# CHECK: S_WAITCNT
+name: skip_lifetime_end
+machineFunctionInfo:
+body: |
+  bb.0:
+    LIFETIME_END 0
+...

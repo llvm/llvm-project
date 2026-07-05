@@ -1,0 +1,16 @@
+# RUN: not llc -o - %s -mtriple=arm64-eabi -run-pass=legalizer 2>&1 | FileCheck %s
+
+# CHECK: [[@LINE+10]]:44: missing implicit register operand 'implicit $nzcv'
+...
+---
+name:            test_flags
+liveins:
+  - { reg: '$w0' }
+body:             |
+  bb.0:
+    liveins: $w0
+
+    SETF8 renamable $w0, implicit-def $nzcv
+    RET undef $lr, implicit killed $w0
+
+

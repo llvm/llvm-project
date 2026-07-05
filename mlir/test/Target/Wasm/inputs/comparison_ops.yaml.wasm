@@ -1,0 +1,88 @@
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:      []
+        ReturnTypes:
+          - I32
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                       0, 0, 0, 0, 0, 0, 0, 0 ]
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:          []
+        Body:            410C4132480B
+      - Index:           1
+        Locals:          []
+        Body:            410C41324C0B
+      - Index:           2
+        Locals:          []
+        Body:            410C4132490B
+      - Index:           3
+        Locals:          []
+        Body:            410C41324D0B
+      - Index:           4
+        Locals:          []
+        Body:            410C41324A0B
+      - Index:           5
+        Locals:          []
+        Body:            410C41324B0B
+      - Index:           6
+        Locals:          []
+        Body:            410C41324E0B
+      - Index:           7
+        Locals:          []
+        Body:            410C41324F0B
+      - Index:           8
+        Locals:          []
+        Body:            420C4232530B
+      - Index:           9
+        Locals:          []
+        Body:            420C4232570B
+      - Index:           10
+        Locals:          []
+        Body:            420C4232540B
+      - Index:           11
+        Locals:          []
+        Body:            420C4232580B
+      - Index:           12
+        Locals:          []
+        Body:            420C4232550B
+      - Index:           13
+        Locals:          []
+        Body:            420C4232560B
+      - Index:           14
+        Locals:          []
+        Body:            420C4232590B
+      - Index:           15
+        Locals:          []
+        Body:            420C42325A0B
+      - Index:           16
+        Locals:          []
+        Body:            430000A04043000060415D0B
+      - Index:           17
+        Locals:          []
+        Body:            430000A04043000060415F0B
+      - Index:           18
+        Locals:          []
+        Body:            430000A04043000060415E0B
+      - Index:           19
+        Locals:          []
+        Body:            430000A0404300006041600B
+      - Index:           20
+        Locals:          []
+        Body:            440000000000001440440000000000002C40630B
+      - Index:           21
+        Locals:          []
+        Body:            440000000000001440440000000000002C40650B
+      - Index:           22
+        Locals:          []
+        Body:            440000000000001440440000000000002C40640B
+      - Index:           23
+        Locals:          []
+        Body:            440000000000001440440000000000002C40660B
+...

@@ -1,0 +1,24 @@
+# RUN: llc -mtriple=aarch64-none-linux-gnu -start-before=greedy -stop-after=prologepilog %s -o - | FileCheck %s
+...
+# Ensure that an object with a different stack-id is not allocated to a
+# callee-save slot using stack-slot scavenging. This test saves X28 which
+# creates a hole in the CSR stack region, but it should not be saved to.
+# Instead of saving to SP + 1 (which would be the hole in the region), it
+# should save to SP + 2 (since AArch64 codegen currently does not support
+# (and thus allocate) objects with a stack-id > 0).
+name:            test_no_stackslot_scavenging
+# CHECK: name: test_no_stackslot_scavenging
+# CHECK: STRXui $x0, $sp, 2
+tracksRegLiveness: true
+frameInfo:
+  maxAlignment:  16
+stack:
+  - { id: 0, stack-id: noalloc, size: 8, alignment: 8 }
+body:             |
+  bb.0.entry:
+    liveins: $x0
+    STRXui $x0, %stack.0, 0
+    ; Force preserve a CSR to create a hole in the CSR stack region.
+    $x28 = IMPLICIT_DEF
+    RET_ReallyLR
+---

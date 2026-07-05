@@ -1,0 +1,23 @@
+// RUN: not mlir-pdll %s -split-input-file 2>&1  | FileCheck %s
+
+// CHECK: unknown directive `#foo`
+#foo
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Include
+//===----------------------------------------------------------------------===//
+
+// CHECK: expected string file name after `include` directive
+#include <>
+
+// -----
+
+// CHECK: unable to open include file `unknown_file.pdll`
+#include "unknown_file.pdll"
+
+// -----
+
+// CHECK: expected include filename to end with `.pdll` or `.td`
+#include "unknown_file.foo"

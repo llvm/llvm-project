@@ -1,0 +1,24 @@
+llvm-lib should behave like "link.exe /lib" and use relative paths to describe
+archive members.
+
+First, get in a clean working directory.
+RUN: rm -rf %t && mkdir -p %t && cd %t
+
+Make foo/a.obj and foo/b.obj.
+RUN: mkdir foo
+RUN: llvm-mc -triple=x86_64-pc-windows-msvc -filetype=obj -o foo/a.obj %S/Inputs/a.s
+RUN: llvm-mc -triple=x86_64-pc-windows-msvc -filetype=obj -o foo/b.obj %S/Inputs/b.s
+
+RUN: llvm-lib -out:foo.lib foo/a.obj foo/b.obj
+RUN: llvm-ar t foo.lib | FileCheck %s
+
+FIXME: We should probably use backslashes on Windows to better match MSVC tools.
+CHECK: foo/b.obj
+CHECK: foo/a.obj
+
+Do it again with absolute paths and see that we get something.
+RUN: llvm-lib -out:foo.lib %t/foo/a.obj %t/foo/b.obj
+RUN: llvm-ar t foo.lib | FileCheck %s --check-prefix=ABS
+
+ABS: {{.*}}/foo/b.obj
+ABS: {{.*}}/foo/a.obj

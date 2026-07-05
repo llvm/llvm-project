@@ -1,0 +1,22 @@
+# RUN: echo abcd > %t.txt
+
+# Preserve input to verify it is not modified
+# RUN: cp %t.txt %t-copy.txt
+
+# -F <target> is equivalent to -I <target> -O <target>
+# RUN: llvm-objcopy -F binary %t.txt %t.2.txt
+# RUN: cmp %t-copy.txt %t.2.txt
+
+# --target <target> is equivalent to --input-target <target> --output-target <target>
+# RUN: llvm-objcopy --target binary %t.txt %t.3.txt
+# RUN: cmp %t-copy.txt %t.3.txt
+
+# --target is incompatibile with --input-target/--output-target
+# RUN: not llvm-objcopy --target binary --input-target binary \
+# RUN:     %t.txt %t.4.txt 2>&1 \
+# RUN:     | FileCheck %s --check-prefix=BAD-FLAG
+# RUN: not llvm-objcopy --target binary --output-target binary \
+# RUN:     %t.txt %t.4.txt 2>&1 \
+# RUN:     | FileCheck %s --check-prefix=BAD-FLAG
+
+# BAD-FLAG: --target cannot be used with --input-target or --output-target

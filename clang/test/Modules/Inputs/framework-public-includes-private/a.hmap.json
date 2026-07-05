@@ -1,0 +1,8 @@
+
+{
+  "mappings" :
+    {
+     "A.h" : "A/A.h",
+     "APriv2.h" : "A/APriv2.h"
+    }
+}

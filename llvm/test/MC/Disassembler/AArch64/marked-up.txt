@@ -1,0 +1,29 @@
+# RUN: llvm-mc -triple=aarch64 -mattr=+all --mdis %s | FileCheck %s
+
+# CHECK:      b.ne	<imm:#20>
+0xa1 0x00 0x00 0x54
+# CHECK-NEXT: asr	<reg:w0>, <reg:w0>, <imm:#0>
+0x00 0x7c 0x00 0x13
+# CHECK-NEXT: subs	<reg:x12>, <reg:x13>, <reg:x14>, asr <imm:#39>
+0xac 0x9d 0x8e 0xeb
+# CHECK-NEXT: ldp	<reg:w3>, <reg:w2>, [<reg:x15>, <imm:#16>]!
+0xe3 0x09 0xc2 0x29
+
+## ls64
+# CHECK-NEXT: st64b <reg:x2>, [<reg:x1>]
+0x22 0x90 0x3f 0xf8
+
+# CHECK-NEXT: bfi	<reg:x4>, <reg:x5>, <imm:#52>, <imm:#11>
+0xa4 0x28 0x4c 0xb3
+# CHECK-NEXT: bfxil	<reg:w9>, <reg:w10>, <imm:#0>, <imm:#1>
+0x49 0x1 0x0 0x33
+# CHECK-NEXT: sbfiz	<reg:x2>, <reg:x3>, <imm:#63>, <imm:#1>
+0x62 0x0 0x41 0x93
+# CHECK-NEXT: ubfiz	<reg:xzr>, <reg:xzr>, <imm:#10>, <imm:#11>
+0xff 0x2b 0x76 0xd3
+# CHECK-NEXT: sbfx	<reg:w12>, <reg:w9>, <imm:#0>, <imm:#1>
+0x2c 0x1 0x0 0x13
+# CHECK-NEXT: ubfx	<reg:xzr>, <reg:x4>, <imm:#0>, <imm:#1>
+0x9f 0x0 0x40 0xd3
+# CHECK-NEXT: tbx	<reg:v0>.8b, { <reg:v6>.16b, <reg:v7>.16b }, <reg:v1>.8b
+0xc0 0x30 0x01 0x0e

@@ -1,0 +1,56 @@
+# UNSUPPORTED: system-windows
+
+# Checks that the recognizers that should work across language runtimes
+# are only registered once with the target.
+
+# RUN: split-file %s %t
+
+# RUN: %clangxx_host %t/main.cpp -g -o %t/cpp.out
+# RUN: %lldb -b -s %t/commands.input %t/cpp.out | FileCheck %s
+
+# RUN: %clangxx_host %t/main.mm -g -o %t/objcxx.out
+# RUN: %lldb -b -s %t/commands.input %t/objcxx.out | FileCheck %s
+
+# RUN: %clang_host %t/main.c -g -o %t/c.out
+# RUN: %lldb -b -s %t/commands.input %t/c.out | FileCheck %s
+
+# RUN: %clang_host %t/main.m -g -o %t/objc.out
+# RUN: %lldb -b -s %t/commands.input %t/objc.out | FileCheck %s
+
+#--- main.m
+int main() {}
+
+#--- main.c
+int main() {}
+
+#--- main.mm
+int main() {}
+
+#--- main.cpp
+int main() {}
+
+#--- commands.input
+
+b main
+frame recognizer list
+run
+frame recognizer list
+continue
+run
+frame recognizer list
+
+# CHECK: frame recognizer list
+# CHECK-NEXT: no matching results found.
+
+# CHECK: frame recognizer list
+# CHECK-DAG: Verbose Trap StackFrame Recognizer
+# CHECK-DAG: Assert StackFrame Recognizer
+# CHECK-NOT: Verbose Trap StackFrame Recognizer
+# CHECK-NOT: Assert StackFrame Recognizer
+
+# FIXME: avoid duplicate frame recognizers in the target: https://github.com/llvm/llvm-project/issues/166341
+# CHECK: frame recognizer list
+# CHECK-DAG: Verbose Trap StackFrame Recognizer
+# CHECK-DAG: Assert StackFrame Recognizer
+# CHECK-DAG: Verbose Trap StackFrame Recognizer
+# CHECK-DAG: Assert StackFrame Recognizer

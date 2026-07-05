@@ -1,0 +1,21 @@
+RUN: yaml2obj %p/Inputs/only-keep-sections.yaml -o %t.in.exe
+
+RUN: llvm-objcopy --only-section .debug_discardable %t.in.exe %t.out.exe
+RUN: llvm-objdump --section-headers -t %t.out.exe | FileCheck %s --check-prefixes=SECTIONS,SECTIONS-DEBUG,SYMBOLS,SYMBOLS-DEBUG
+
+Adding another section stripping option makes it return the intersection of
+kept sections - in this case keeping only .text.
+
+RUN: llvm-objcopy --only-section .debug_discardable --only-section .text --strip-debug %t.in.exe %t.combination.exe
+RUN: llvm-objdump --section-headers -t %t.combination.exe | FileCheck %s --check-prefixes=SECTIONS,SECTIONS-TEXT,SYMBOLS,SYMBOLS-TEXT
+
+SECTIONS:            Sections:
+SECTIONS-NEXT:       Idx Name
+SECTIONS-DEBUG-NEXT: .debug_discardable
+SECTIONS-TEXT-NEXT:  .text
+SECTIONS-EMPTY:
+
+SYMBOLS:            SYMBOL TABLE:
+SYMBOLS-DEBUG-NEXT: debug_discardable_sym
+SYMBOLS-TEXT-NEXT:  main
+SYMBOLS-EMPTY:

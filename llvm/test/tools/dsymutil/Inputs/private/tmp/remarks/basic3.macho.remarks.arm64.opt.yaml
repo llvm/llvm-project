@@ -1,0 +1,181 @@
+--- !Missed
+Pass:            inline
+Name:            NoDefinition
+DebugLoc:        { File: basic3.c, Line: 8, Column: 10 }
+Function:        unused2
+Args:
+  - Callee:          foo
+    DebugLoc:        { File: basic3.c, Line: 0, Column: 0 }
+  - String:          ' will not be inlined into '
+  - Caller:          unused2
+    DebugLoc:        { File: basic3.c, Line: 7, Column: 0 }
+  - String:          ' because its definition is unavailable'
+...
+--- !Missed
+Pass:            inline
+Name:            NoDefinition
+DebugLoc:        { File: basic3.c, Line: 19, Column: 10 }
+Function:        bar
+Args:
+  - Callee:          foo
+    DebugLoc:        { File: basic3.c, Line: 0, Column: 0 }
+  - String:          ' will not be inlined into '
+  - Caller:          bar
+    DebugLoc:        { File: basic3.c, Line: 16, Column: 0 }
+  - String:          ' because its definition is unavailable'
+...
+--- !Passed
+Pass:            inline
+Name:            Inlined
+DebugLoc:        { File: basic3.c, Line: 18, Column: 12 }
+Function:        bar
+Args:
+  - String:          ''''
+  - Callee:          inc
+    DebugLoc:        { File: basic3.c, Line: 11, Column: 0 }
+  - String:          ''' inlined into '''
+  - Caller:          bar
+    DebugLoc:        { File: basic3.c, Line: 16, Column: 0 }
+  - String:          ''''
+  - String:          ' with '
+  - String:          '(cost='
+  - Cost:            '-15015'
+  - String:          ', threshold='
+  - Threshold:       '75'
+  - String:          ')'
+  - String:          ' at callsite '
+  - String:          bar
+  - String:          ':'
+  - Line:            '2'
+  - String:          ':'
+  - Column:          '12'
+  - String:          ';'
+...
+--- !Analysis
+Pass:            prologepilog
+Name:            StackSize
+DebugLoc:        { File: basic3.c, Line: 7, Column: 0 }
+Function:        unused2
+Args:
+  - NumStackBytes:   '0'
+  - String:          ' stack bytes in function '''
+  - Function:        unused2
+  - String:          ''''
+...
+--- !Analysis
+Pass:            prologepilog
+Name:            StackSize
+DebugLoc:        { File: basic3.c, Line: 16, Column: 0 }
+Function:        bar
+Args:
+  - NumStackBytes:   '0'
+  - String:          ' stack bytes in function '''
+  - Function:        bar
+  - String:          ''''
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+DebugLoc:        { File: basic3.c, Line: 8, Column: 14 }
+Function:        unused2
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      entry
+  - String:          "\n"
+  - String:          ADRP
+  - String:          ': '
+  - INST_ADRP:       '1'
+  - String:          "\n"
+  - String:          LDRWui
+  - String:          ': '
+  - INST_LDRWui:     '1'
+  - String:          "\n"
+  - String:          TCRETURNdi
+  - String:          ': '
+  - INST_TCRETURNdi: '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionCount
+DebugLoc:        { File: basic3.c, Line: 7, Column: 0 }
+Function:        unused2
+Args:
+  - NumInstructions: '3'
+  - String:          ' instructions in function'
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+DebugLoc:        { File: basic3.c, Line: 0, Column: 0 }
+Function:        bar
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      entry
+  - String:          "\n"
+  - String:          ADRP
+  - String:          ': '
+  - INST_ADRP:       '1'
+  - String:          "\n"
+  - String:          Bcc
+  - String:          ': '
+  - INST_Bcc:        '1'
+  - String:          "\n"
+  - String:          LDRWui
+  - String:          ': '
+  - INST_LDRWui:     '1'
+  - String:          "\n"
+  - String:          SUBSWri
+  - String:          ': '
+  - INST_SUBSWri:    '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+DebugLoc:        { File: basic3.c, Line: 12, Column: 10 }
+Function:        bar
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      if.then
+  - String:          "\n"
+  - String:          ADDWri
+  - String:          ': '
+  - INST_ADDWri:     '1'
+  - String:          "\n"
+  - String:          RET
+  - String:          ': '
+  - INST_RET:        '1'
+  - String:          "\n"
+  - String:          STRWui
+  - String:          ': '
+  - INST_STRWui:     '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionMix
+DebugLoc:        { File: basic3.c, Line: 19, Column: 18 }
+Function:        bar
+Args:
+  - String:          'BasicBlock: '
+  - BasicBlock:      if.end
+  - String:          "\n"
+  - String:          ADDWrs
+  - String:          ': '
+  - INST_ADDWrs:     '1'
+  - String:          "\n"
+  - String:          TCRETURNdi
+  - String:          ': '
+  - INST_TCRETURNdi: '1'
+  - String:          "\n"
+...
+--- !Analysis
+Pass:            asm-printer
+Name:            InstructionCount
+DebugLoc:        { File: basic3.c, Line: 16, Column: 0 }
+Function:        bar
+Args:
+  - NumInstructions: '9'
+  - String:          ' instructions in function'
+...

@@ -1,0 +1,1173 @@
+; RUN: llvm-pdbutil dump -all -dont-resolve-forward-refs %p/Inputs/empty.pdb \
+; RUN:   | FileCheck -check-prefix=ALL %s
+; RUN: llvm-pdbutil dump -summary -modules -files \
+; RUN:              %p/Inputs/big-read.pdb | FileCheck -check-prefix=BIG %s
+; RUN: not llvm-pdbutil dump -summary %p/Inputs/bad-block-size.pdb 2>&1 \
+; RUN:   | FileCheck -check-prefix=BAD-BLOCK-SIZE %s
+
+ALL:                                Summary
+ALL-NEXT: ============================================================
+ALL-NEXT:   Block Size: 4096
+ALL-NEXT:   Number of blocks: 25
+ALL-NEXT:   Number of streams: 17
+ALL-NEXT:   Signature: 1424295906
+ALL-NEXT:   Age: 1
+ALL-NEXT:   GUID: {4156350B-A086-49A2-896F-9988FAE52FF0}
+ALL-NEXT:   Features: 0x1
+ALL-NEXT:   Has Debug Info: true
+ALL-NEXT:   Has Types: true
+ALL-NEXT:   Has IDs: true
+ALL-NEXT:   Has Globals: true
+ALL-NEXT:   Has Publics: true
+ALL-NEXT:   Is incrementally linked: true
+ALL-NEXT:   Has conflicting types: false
+ALL-NEXT:   Is stripped: false
+ALL:                                  Streams
+ALL-NEXT: ============================================================
+ALL-NEXT:     Stream  0 (  40 bytes): [Old MSF Directory]
+ALL-NEXT:                Blocks: [8]
+ALL-NEXT:     Stream  1 ( 118 bytes): [PDB Stream]
+ALL-NEXT:                Blocks: [19]
+ALL-NEXT:     Stream  2 (5392 bytes): [TPI Stream]
+ALL-NEXT:                Blocks: [18, 17]
+ALL-NEXT:     Stream  3 ( 739 bytes): [DBI Stream]
+ALL-NEXT:                Blocks: [14]
+ALL-NEXT:     Stream  4 ( 784 bytes): [IPI Stream]
+ALL-NEXT:                Blocks: [20]
+ALL-NEXT:     Stream  5 (   0 bytes): [Named Stream "/LinkInfo"]
+ALL-NEXT:                Blocks: []
+ALL-NEXT:     Stream  6 ( 556 bytes): [Global Symbol Hash]
+ALL-NEXT:                Blocks: [11]
+ALL-NEXT:     Stream  7 ( 604 bytes): [Public Symbol Hash]
+ALL-NEXT:                Blocks: [13]
+ALL-NEXT:     Stream  8 ( 104 bytes): [Symbol Records]
+ALL-NEXT:                Blocks: [12]
+ALL-NEXT:     Stream  9 (   0 bytes): [Named Stream "/src/headerblock"]
+ALL-NEXT:                Blocks: []
+ALL-NEXT:     Stream 10 ( 160 bytes): [Section Header Data]
+ALL-NEXT:                Blocks: [10]
+ALL-NEXT:     Stream 11 (  32 bytes): [New FPO Data]
+ALL-NEXT:                Blocks: [15]
+ALL-NEXT:     Stream 12 ( 308 bytes): [Module "d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj"]
+ALL-NEXT:                Blocks: [6]
+ALL-NEXT:     Stream 13 ( 239 bytes): [Named Stream "/names"]
+ALL-NEXT:                Blocks: [16]
+ALL-NEXT:     Stream 14 ( 520 bytes): [Module "* Linker *"]
+ALL-NEXT:                Blocks: [7]
+ALL-NEXT:     Stream 15 ( 308 bytes): [TPI Hash]
+ALL-NEXT:                Blocks: [21]
+ALL-NEXT:     Stream 16 (  68 bytes): [IPI Hash]
+ALL-NEXT:                Blocks: [22]
+ALL:                                String Table
+ALL-NEXT: ============================================================
+ALL-NEXT:    ID | String
+ALL-NEXT:     1 | 'd:\src\llvm\test\debuginfo\pdb\inputs\predefined c++ attributes (compiler internal)'
+ALL-NEXT:    86 | 'd:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp'
+ALL-NEXT:   134 | '$T0 $ebp = $eip $T0 4 + ^ = $ebp $T0 ^ = $esp $T0 8 + = '
+ALL:      		                    Modules
+ALL-NEXT: ============================================================
+ALL-NEXT:   Mod 0000 | `d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj`:
+ALL-NEXT:               SC[.text]  | mod = 0, 0001:0016, size = 10, data crc = 3617027124, reloc crc = 0
+ALL-NEXT:                            IMAGE_SCN_CNT_CODE | IMAGE_SCN_ALIGN_16BYTES | IMAGE_SCN_MEM_EXECUTE |
+ALL-NEXT:                            IMAGE_SCN_MEM_READ
+ALL-NEXT:              Obj: `d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj`:
+ALL-NEXT:              debug stream: 12, # files: 1, has ec info: false
+ALL-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+ALL-NEXT:   Mod 0001 |  `* Linker *`:
+ALL-NEXT:               SC[.text]  | mod = 1, 0001:0000, size = 10, data crc = 0, reloc crc = 0
+ALL-NEXT:                            IMAGE_SCN_CNT_CODE | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_READ
+ALL-NEXT:              Obj: ``:
+ALL-NEXT:              debug stream: 14, # files: 0, has ec info: false
+ALL-NEXT:              pdb file ni: 1 `{{.*empty.pdb}}`, src file ni: 0 ``
+ALL:                                Files
+ALL-NEXT: ============================================================
+ALL-NEXT:   Mod 0000 | `d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj`:
+ALL-NEXT:              - (MD5: A0A5BD0D3ECD93FC29D19DE826FBF4BC) d:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp
+ALL-NEXT:   Mod 0001 | `* Linker *`:
+ALL:                                 Lines
+ALL-NEXT: ============================================================
+ALL-NEXT:   Mod 0000 | `d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj`:
+ALL-NEXT:       d:\src\llvm\test\debuginfo\pdb\inputs\empty.cpp (MD5: A0A5BD0D3ECD93FC29D19DE826FBF4BC)
+ALL-NEXT:         0001:00000010-0000001A, line/addr entries = 3
+ALL-NEXT:            5 00000010      6 00000013      7 00000018
+ALL:       Mod 0001 | `* Linker *`:
+ALL:                             Inlinee Lines
+ALL-NEXT: ============================================================
+ALL-NEXT:   Mod 0000 | `d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj`:
+ALL-NEXT:   Mod 0001 | `* Linker *`:
+ALL:                           Types (TPI Stream)
+ALL-NEXT: ============================================================
+ALL-NEXT:   Showing 75 records
+ALL-NEXT:   0x1000 | LF_ARGLIST [size = 8, hash = 0x32484]
+ALL-NEXT:   0x1001 | LF_PROCEDURE [size = 16, hash = 0x27EE9]
+ALL-NEXT:            return type = 0x0074 (int), # args = 0, param list = 0x1000
+ALL-NEXT:            calling conv = cdecl, options = None
+ALL-NEXT:   0x1002 | LF_FIELDLIST [size = 76, hash = 0xE9A3]
+ALL-NEXT:            - LF_ENUMERATE [apartment = 1]
+ALL-NEXT:            - LF_ENUMERATE [single = 2]
+ALL-NEXT:            - LF_ENUMERATE [free = 3]
+ALL-NEXT:            - LF_ENUMERATE [neutral = 4]
+ALL-NEXT:            - LF_ENUMERATE [both = 5]
+ALL-NEXT:   0x1003 | LF_ENUM [size = 120, hash = 0x32D6F] `__vc_attributes::threadingAttribute::threading_e`
+ALL-NEXT:            unique name: `.?AW4threading_e@threadingAttribute@__vc_attributes@@`
+ALL-NEXT:            field list: 0x1002, underlying type: 0x0074 (int)
+ALL-NEXT:            options: has unique name | is nested
+ALL-NEXT:   0x1004 | LF_STRUCTURE [size = 100, hash = 0x3FF9] `__vc_attributes::threadingAttribute`
+ALL-NEXT:            unique name: `.?AUthreadingAttribute@__vc_attributes@@`
+ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
+ALL-NEXT:            options: forward ref | has unique name
+ALL-NEXT:   0x1005 | LF_POINTER [size = 12, hash = 0x3C526]
+ALL-NEXT:            referent = 0x1004, mode = pointer, opts = const, kind = ptr32
+ALL-NEXT:   0x1006 | LF_ARGLIST [size = 12, hash = 0x2F726]
+ALL-NEXT:            0x1003: `__vc_attributes::threadingAttribute::threading_e`
+ALL-NEXT:   0x1007 | LF_MFUNCTION [size = 28, hash = 0x3E0CC]
+ALL-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x1006
+ALL-NEXT:            class type = 0x1004, this type = 0x1005, this adjust = 0
+ALL-NEXT:            calling conv = thiscall, options = constructor
+ALL-NEXT:   0x1008 | LF_MFUNCTION [size = 28, hash = 0x2F7E8]
+ALL-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x1000
+ALL-NEXT:            class type = 0x1004, this type = 0x1005, this adjust = 0
+ALL-NEXT:            calling conv = thiscall, options = constructor
+ALL-NEXT:   0x1009 | LF_METHODLIST [size = 20, hash = 0x28E44]
+ALL-NEXT:            - Method [type = 0x1007, vftable offset = -1, attrs = public]
+ALL-NEXT:            - Method [type = 0x1008, vftable offset = -1, attrs = public]
+ALL-NEXT:   0x100A | LF_FIELDLIST [size = 68, hash = 0x2D44D]
+ALL-NEXT:            - LF_NESTTYPE [name = `threading_e`, parent = 0x1003]
+ALL-NEXT:            - LF_METHOD [name = `threadingAttribute`, # overloads = 2, overload list = 0x1009]
+ALL-NEXT:            - LF_MEMBER [name = `value`, Type = 0x1003, offset = 0, attrs = public]
+ALL-NEXT:   0x100B | LF_STRUCTURE [size = 100, hash = 0x1D2F4] `__vc_attributes::threadingAttribute`
+ALL-NEXT:            unique name: `.?AUthreadingAttribute@__vc_attributes@@`
+ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x100A
+ALL-NEXT:            options: has ctor / dtor | contains nested class | has unique name
+ALL-NEXT:   0x100C | LF_FIELDLIST [size = 48, hash = 0x3FEEF]
+ALL-NEXT:            - LF_ENUMERATE [native = 0]
+ALL-NEXT:            - LF_ENUMERATE [com = 1]
+ALL-NEXT:            - LF_ENUMERATE [managed = 2]
+ALL-NEXT:   0x100D | LF_ENUM [size = 120, hash = 0x305E7] `__vc_attributes::event_receiverAttribute::type_e`
+ALL-NEXT:            unique name: `.?AW4type_e@event_receiverAttribute@__vc_attributes@@`
+ALL-NEXT:            field list: 0x100C, underlying type: 0x0074 (int)
+ALL-NEXT:            options: has unique name | is nested
+ALL-NEXT:   0x100E | LF_STRUCTURE [size = 112, hash = 0xBBB8] `__vc_attributes::event_receiverAttribute`
+ALL-NEXT:            unique name: `.?AUevent_receiverAttribute@__vc_attributes@@`
+ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
+ALL-NEXT:            options: forward ref | has unique name
+ALL-NEXT:   0x100F | LF_POINTER [size = 12, hash = 0x3D65E]
+ALL-NEXT:            referent = 0x100E, mode = pointer, opts = const, kind = ptr32
+ALL-NEXT:   0x1010 | LF_ARGLIST [size = 16, hash = 0x20DB4]
+ALL-NEXT:            0x100D: `__vc_attributes::event_receiverAttribute::type_e`
+ALL-NEXT:            0x0030 (bool): `bool`
+ALL-NEXT:   0x1011 | LF_MFUNCTION [size = 28, hash = 0x242DE]
+ALL-NEXT:            return type = 0x0003 (void), # args = 2, param list = 0x1010
+ALL-NEXT:            class type = 0x100E, this type = 0x100F, this adjust = 0
+ALL-NEXT:            calling conv = thiscall, options = constructor
+ALL-NEXT:   0x1012 | LF_ARGLIST [size = 12, hash = 0x1BBE4]
+ALL-NEXT:            0x100D: `__vc_attributes::event_receiverAttribute::type_e`
+ALL-NEXT:   0x1013 | LF_MFUNCTION [size = 28, hash = 0xD058]
+ALL-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x1012
+ALL-NEXT:            class type = 0x100E, this type = 0x100F, this adjust = 0
+ALL-NEXT:            calling conv = thiscall, options = constructor
+ALL-NEXT:   0x1014 | LF_MFUNCTION [size = 28, hash = 0xD9E3]
+ALL-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x1000
+ALL-NEXT:            class type = 0x100E, this type = 0x100F, this adjust = 0
+ALL-NEXT:            calling conv = thiscall, options = constructor
+ALL-NEXT:   0x1015 | LF_METHODLIST [size = 28, hash = 0x35E17]
+ALL-NEXT:            - Method [type = 0x1011, vftable offset = -1, attrs = public]
+ALL-NEXT:            - Method [type = 0x1013, vftable offset = -1, attrs = public]
+ALL-NEXT:            - Method [type = 0x1014, vftable offset = -1, attrs = public]
+ALL-NEXT:   0x1016 | LF_FIELDLIST [size = 96, hash = 0x305E2]
+ALL-NEXT:            - LF_NESTTYPE [name = `type_e`, parent = 0x100D]
+ALL-NEXT:            - LF_METHOD [name = `event_receiverAttribute`, # overloads = 3, overload list = 0x1015]
+ALL-NEXT:            - LF_MEMBER [name = `type`, Type = 0x100D, offset = 0, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `layout_dependent`, Type = 0x0030 (bool), offset = 4, attrs = public]
+ALL-NEXT:   0x1017 | LF_STRUCTURE [size = 112, hash = 0x244FE] `__vc_attributes::event_receiverAttribute`
+ALL-NEXT:            unique name: `.?AUevent_receiverAttribute@__vc_attributes@@`
+ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x1016
+ALL-NEXT:            options: has ctor / dtor | contains nested class | has unique name
+ALL-NEXT:   0x1018 | LF_FIELDLIST [size = 48, hash = 0x13CE8]
+ALL-NEXT:            - LF_ENUMERATE [never = 0]
+ALL-NEXT:            - LF_ENUMERATE [allowed = 1]
+ALL-NEXT:            - LF_ENUMERATE [always = 2]
+ALL-NEXT:   0x1019 | LF_ENUM [size = 116, hash = 0xEAFE] `__vc_attributes::aggregatableAttribute::type_e`
+ALL-NEXT:            unique name: `.?AW4type_e@aggregatableAttribute@__vc_attributes@@`
+ALL-NEXT:            field list: 0x1018, underlying type: 0x0074 (int)
+ALL-NEXT:            options: has unique name | is nested
+ALL-NEXT:   0x101A | LF_STRUCTURE [size = 108, hash = 0x350A1] `__vc_attributes::aggregatableAttribute`
+ALL-NEXT:            unique name: `.?AUaggregatableAttribute@__vc_attributes@@`
+ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
+ALL-NEXT:            options: forward ref | has unique name
+ALL-NEXT:   0x101B | LF_POINTER [size = 12, hash = 0x2A881]
+ALL-NEXT:            referent = 0x101A, mode = pointer, opts = const, kind = ptr32
+ALL-NEXT:   0x101C | LF_ARGLIST [size = 12, hash = 0x270EA]
+ALL-NEXT:            0x1019: `__vc_attributes::aggregatableAttribute::type_e`
+ALL-NEXT:   0x101D | LF_MFUNCTION [size = 28, hash = 0x3CEA0]
+ALL-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x101C
+ALL-NEXT:            class type = 0x101A, this type = 0x101B, this adjust = 0
+ALL-NEXT:            calling conv = thiscall, options = constructor
+ALL-NEXT:   0x101E | LF_MFUNCTION [size = 28, hash = 0x22A75]
+ALL-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x1000
+ALL-NEXT:            class type = 0x101A, this type = 0x101B, this adjust = 0
+ALL-NEXT:            calling conv = thiscall, options = constructor
+ALL-NEXT:   0x101F | LF_METHODLIST [size = 20, hash = 0x3A4C1]
+ALL-NEXT:            - Method [type = 0x101D, vftable offset = -1, attrs = public]
+ALL-NEXT:            - Method [type = 0x101E, vftable offset = -1, attrs = public]
+ALL-NEXT:   0x1020 | LF_FIELDLIST [size = 68, hash = 0x1846]
+ALL-NEXT:            - LF_NESTTYPE [name = `type_e`, parent = 0x1019]
+ALL-NEXT:            - LF_METHOD [name = `aggregatableAttribute`, # overloads = 2, overload list = 0x101F]
+ALL-NEXT:            - LF_MEMBER [name = `type`, Type = 0x1019, offset = 0, attrs = public]
+ALL-NEXT:   0x1021 | LF_STRUCTURE [size = 108, hash = 0x172D7] `__vc_attributes::aggregatableAttribute`
+ALL-NEXT:            unique name: `.?AUaggregatableAttribute@__vc_attributes@@`
+ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x1020
+ALL-NEXT:            options: has ctor / dtor | contains nested class | has unique name
+ALL-NEXT:   0x1022 | LF_ENUM [size = 116, hash = 0x24F99] `__vc_attributes::event_sourceAttribute::type_e`
+ALL-NEXT:            unique name: `.?AW4type_e@event_sourceAttribute@__vc_attributes@@`
+ALL-NEXT:            field list: 0x100C, underlying type: 0x0074 (int)
+ALL-NEXT:            options: has unique name | is nested
+ALL-NEXT:   0x1023 | LF_FIELDLIST [size = 28, hash = 0x211A5]
+ALL-NEXT:            - LF_ENUMERATE [speed = 0]
+ALL-NEXT:            - LF_ENUMERATE [size = 1]
+ALL-NEXT:   0x1024 | LF_ENUM [size = 124, hash = 0x11E9D] `__vc_attributes::event_sourceAttribute::optimize_e`
+ALL-NEXT:            unique name: `.?AW4optimize_e@event_sourceAttribute@__vc_attributes@@`
+ALL-NEXT:            field list: 0x1023, underlying type: 0x0074 (int)
+ALL-NEXT:            options: has unique name | is nested
+ALL-NEXT:   0x1025 | LF_STRUCTURE [size = 108, hash = 0x17900] `__vc_attributes::event_sourceAttribute`
+ALL-NEXT:            unique name: `.?AUevent_sourceAttribute@__vc_attributes@@`
+ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
+ALL-NEXT:            options: forward ref | has unique name
+ALL-NEXT:   0x1026 | LF_POINTER [size = 12, hash = 0x3E15B]
+ALL-NEXT:            referent = 0x1025, mode = pointer, opts = const, kind = ptr32
+ALL-NEXT:   0x1027 | LF_ARGLIST [size = 12, hash = 0x4550]
+ALL-NEXT:            0x1022: `__vc_attributes::event_sourceAttribute::type_e`
+ALL-NEXT:   0x1028 | LF_MFUNCTION [size = 28, hash = 0x3A79A]
+ALL-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x1027
+ALL-NEXT:            class type = 0x1025, this type = 0x1026, this adjust = 0
+ALL-NEXT:            calling conv = thiscall, options = constructor
+ALL-NEXT:   0x1029 | LF_MFUNCTION [size = 28, hash = 0x2A485]
+ALL-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x1000
+ALL-NEXT:            class type = 0x1025, this type = 0x1026, this adjust = 0
+ALL-NEXT:            calling conv = thiscall, options = constructor
+ALL-NEXT:   0x102A | LF_METHODLIST [size = 20, hash = 0x1FDF0]
+ALL-NEXT:            - Method [type = 0x1028, vftable offset = -1, attrs = public]
+ALL-NEXT:            - Method [type = 0x1029, vftable offset = -1, attrs = public]
+ALL-NEXT:   0x102B | LF_FIELDLIST [size = 128, hash = 0x31E95]
+ALL-NEXT:            - LF_NESTTYPE [name = `type_e`, parent = 0x1022]
+ALL-NEXT:            - LF_NESTTYPE [name = `optimize_e`, parent = 0x1024]
+ALL-NEXT:            - LF_METHOD [name = `event_sourceAttribute`, # overloads = 2, overload list = 0x102A]
+ALL-NEXT:            - LF_MEMBER [name = `type`, Type = 0x1022, offset = 0, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `optimize`, Type = 0x1024, offset = 4, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `decorate`, Type = 0x0030 (bool), offset = 8, attrs = public]
+ALL-NEXT:   0x102C | LF_STRUCTURE [size = 108, hash = 0x3A3E0] `__vc_attributes::event_sourceAttribute`
+ALL-NEXT:            unique name: `.?AUevent_sourceAttribute@__vc_attributes@@`
+ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x102B
+ALL-NEXT:            options: has ctor / dtor | contains nested class | has unique name
+ALL-NEXT:   0x102D | LF_FIELDLIST [size = 92, hash = 0x23521]
+ALL-NEXT:            - LF_ENUMERATE [dll = 1]
+ALL-NEXT:            - LF_ENUMERATE [exe = 2]
+ALL-NEXT:            - LF_ENUMERATE [service = 3]
+ALL-NEXT:            - LF_ENUMERATE [unspecified = 4]
+ALL-NEXT:            - LF_ENUMERATE [EXE = 2]
+ALL-NEXT:            - LF_ENUMERATE [SERVICE = 3]
+ALL-NEXT:   0x102E | LF_ENUM [size = 104, hash = 0x1C1CF] `__vc_attributes::moduleAttribute::type_e`
+ALL-NEXT:            unique name: `.?AW4type_e@moduleAttribute@__vc_attributes@@`
+ALL-NEXT:            field list: 0x102D, underlying type: 0x0074 (int)
+ALL-NEXT:            options: has unique name | is nested
+ALL-NEXT:   0x102F | LF_STRUCTURE [size = 96, hash = 0x302BA] `__vc_attributes::moduleAttribute`
+ALL-NEXT:            unique name: `.?AUmoduleAttribute@__vc_attributes@@`
+ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
+ALL-NEXT:            options: forward ref | has unique name
+ALL-NEXT:   0x1030 | LF_POINTER [size = 12, hash = 0x3E823]
+ALL-NEXT:            referent = 0x102F, mode = pointer, opts = const, kind = ptr32
+ALL-NEXT:   0x1031 | LF_MODIFIER [size = 12, hash = 0x18AE8]
+ALL-NEXT:            referent = 0x0070 (char), modifiers = const
+ALL-NEXT:   0x1032 | LF_POINTER [size = 12, hash = 0x38770]
+ALL-NEXT:            referent = 0x1031, mode = pointer, opts = None, kind = ptr32
+ALL-NEXT:   0x1033 | LF_ARGLIST [size = 68, hash = 0xCBBC]
+ALL-NEXT:            0x102E: `__vc_attributes::moduleAttribute::type_e`
+ALL-NEXT:            0x1032: `const char*`
+ALL-NEXT:            0x1032: `const char*`
+ALL-NEXT:            0x1032: `const char*`
+ALL-NEXT:            0x0074 (int): `int`
+ALL-NEXT:            0x0030 (bool): `bool`
+ALL-NEXT:            0x1032: `const char*`
+ALL-NEXT:            0x0074 (int): `int`
+ALL-NEXT:            0x1032: `const char*`
+ALL-NEXT:            0x1032: `const char*`
+ALL-NEXT:            0x0074 (int): `int`
+ALL-NEXT:            0x0030 (bool): `bool`
+ALL-NEXT:            0x0030 (bool): `bool`
+ALL-NEXT:            0x1032: `const char*`
+ALL-NEXT:            0x1032: `const char*`
+ALL-NEXT:   0x1034 | LF_MFUNCTION [size = 28, hash = 0xBED6]
+ALL-NEXT:            return type = 0x0003 (void), # args = 15, param list = 0x1033
+ALL-NEXT:            class type = 0x102F, this type = 0x1030, this adjust = 0
+ALL-NEXT:            calling conv = thiscall, options = constructor
+ALL-NEXT:   0x1035 | LF_ARGLIST [size = 12, hash = 0x29833]
+ALL-NEXT:            0x102E: `__vc_attributes::moduleAttribute::type_e`
+ALL-NEXT:   0x1036 | LF_MFUNCTION [size = 28, hash = 0x2B391]
+ALL-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x1035
+ALL-NEXT:            class type = 0x102F, this type = 0x1030, this adjust = 0
+ALL-NEXT:            calling conv = thiscall, options = constructor
+ALL-NEXT:   0x1037 | LF_MFUNCTION [size = 28, hash = 0x19159]
+ALL-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x1000
+ALL-NEXT:            class type = 0x102F, this type = 0x1030, this adjust = 0
+ALL-NEXT:            calling conv = thiscall, options = constructor
+ALL-NEXT:   0x1038 | LF_METHODLIST [size = 28, hash = 0x4233]
+ALL-NEXT:            - Method [type = 0x1034, vftable offset = -1, attrs = public]
+ALL-NEXT:            - Method [type = 0x1036, vftable offset = -1, attrs = public]
+ALL-NEXT:            - Method [type = 0x1037, vftable offset = -1, attrs = public]
+ALL-NEXT:   0x1039 | LF_FIELDLIST [size = 356, hash = 0x2CD97]
+ALL-NEXT:            - LF_NESTTYPE [name = `type_e`, parent = 0x102E]
+ALL-NEXT:            - LF_METHOD [name = `moduleAttribute`, # overloads = 3, overload list = 0x1038]
+ALL-NEXT:            - LF_MEMBER [name = `type`, Type = 0x102E, offset = 0, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `name`, Type = 0x1032, offset = 4, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `version`, Type = 0x1032, offset = 8, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `uuid`, Type = 0x1032, offset = 12, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `lcid`, Type = 0x0074 (int), offset = 16, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `control`, Type = 0x0030 (bool), offset = 20, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `helpstring`, Type = 0x1032, offset = 24, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `helpstringcontext`, Type = 0x0074 (int), offset = 28, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `helpstringdll`, Type = 0x1032, offset = 32, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `helpfile`, Type = 0x1032, offset = 36, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `helpcontext`, Type = 0x0074 (int), offset = 40, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `hidden`, Type = 0x0030 (bool), offset = 44, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `restricted`, Type = 0x0030 (bool), offset = 45, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `custom`, Type = 0x1032, offset = 48, attrs = public]
+ALL-NEXT:            - LF_MEMBER [name = `resource_name`, Type = 0x1032, offset = 52, attrs = public]
+ALL-NEXT:   0x103A | LF_STRUCTURE [size = 96, hash = 0x180F4] `__vc_attributes::moduleAttribute`
+ALL-NEXT:            unique name: `.?AUmoduleAttribute@__vc_attributes@@`
+ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x1039
+ALL-NEXT:            options: has ctor / dtor | contains nested class | has unique name
+ALL-NEXT:   0x103B | LF_FIELDLIST [size = 756, hash = 0x8B6D]
+ALL-NEXT:            - LF_ENUMERATE [eAnyUsage = 0]
+ALL-NEXT:            - LF_ENUMERATE [eCoClassUsage = 1]
+ALL-NEXT:            - LF_ENUMERATE [eCOMInterfaceUsage = 2]
+ALL-NEXT:            - LF_ENUMERATE [eInterfaceUsage = 6]
+ALL-NEXT:            - LF_ENUMERATE [eMemberUsage = 8]
+ALL-NEXT:            - LF_ENUMERATE [eMethodUsage = 16]
+ALL-NEXT:            - LF_ENUMERATE [eInterfaceMethodUsage = 32]
+ALL-NEXT:            - LF_ENUMERATE [eInterfaceMemberUsage = 64]
+ALL-NEXT:            - LF_ENUMERATE [eCoClassMemberUsage = 128]
+ALL-NEXT:            - LF_ENUMERATE [eCoClassMethodUsage = 256]
+ALL-NEXT:            - LF_ENUMERATE [eGlobalMethodUsage = 768]
+ALL-NEXT:            - LF_ENUMERATE [eGlobalDataUsage = 1024]
+ALL-NEXT:            - LF_ENUMERATE [eClassUsage = 2048]
+ALL-NEXT:            - LF_ENUMERATE [eInterfaceParameterUsage = 4096]
+ALL-NEXT:            - LF_ENUMERATE [eMethodParameterUsage = 12288]
+ALL-NEXT:            - LF_ENUMERATE [eIDLModuleUsage = 16384]
+ALL-NEXT:            - LF_ENUMERATE [eAnonymousUsage = 32768]
+ALL-NEXT:            - LF_ENUMERATE [eTypedefUsage = 65536]
+ALL-NEXT:            - LF_ENUMERATE [eUnionUsage = 131072]
+ALL-NEXT:            - LF_ENUMERATE [eEnumUsage = 262144]
+ALL-NEXT:            - LF_ENUMERATE [eDefineTagUsage = 524288]
+ALL-NEXT:            - LF_ENUMERATE [eStructUsage = 1048576]
+ALL-NEXT:            - LF_ENUMERATE [eLocalUsage = 2097152]
+ALL-NEXT:            - LF_ENUMERATE [ePropertyUsage = 4194304]
+ALL-NEXT:            - LF_ENUMERATE [eEventUsage = 8388608]
+ALL-NEXT:            - LF_ENUMERATE [eTemplateUsage = 16777216]
+ALL-NEXT:            - LF_ENUMERATE [eModuleUsage = 16777216]
+ALL-NEXT:            - LF_ENUMERATE [eIllegalUsage = 33554432]
+ALL-NEXT:            - LF_ENUMERATE [eAsynchronousUsage = 67108864]
+ALL-NEXT:            - LF_ENUMERATE [eAnyIDLUsage = 4161535]
+ALL-NEXT:   0x103C | LF_ENUM [size = 140, hash = 0x29D40] `__vc_attributes::helper_attributes::usageAttribute::usage_e`
+ALL-NEXT:            unique name: `.?AW4usage_e@usageAttribute@helper_attributes@__vc_attributes@@`
+ALL-NEXT:            field list: 0x103B, underlying type: 0x0074 (int)
+ALL-NEXT:            options: has unique name | is nested
+ALL-NEXT:   0x103D | LF_STRUCTURE [size = 128, hash = 0x31B78] `__vc_attributes::helper_attributes::usageAttribute`
+ALL-NEXT:            unique name: `.?AUusageAttribute@helper_attributes@__vc_attributes@@`
+ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
+ALL-NEXT:            options: forward ref | has unique name
+ALL-NEXT:   0x103E | LF_POINTER [size = 12, hash = 0x2201C]
+ALL-NEXT:            referent = 0x103D, mode = pointer, opts = const, kind = ptr32
+ALL-NEXT:   0x103F | LF_ARGLIST [size = 12, hash = 0xBF7A]
+ALL-NEXT:            0x0075 (unsigned): `unsigned`
+ALL-NEXT:   0x1040 | LF_MFUNCTION [size = 28, hash = 0xAB2D]
+ALL-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x103F
+ALL-NEXT:            class type = 0x103D, this type = 0x103E, this adjust = 0
+ALL-NEXT:            calling conv = thiscall, options = constructor
+ALL-NEXT:   0x1041 | LF_FIELDLIST [size = 60, hash = 0x3173B]
+ALL-NEXT:            - LF_NESTTYPE [name = `usage_e`, parent = 0x103C]
+ALL-NEXT:            - LF_ONEMETHOD [name = `usageAttribute`]
+ALL-NEXT:              type = 0x1040, vftable offset = -1, attrs = public
+ALL-NEXT:            - LF_MEMBER [name = `value`, Type = 0x0075 (unsigned), offset = 0, attrs = public]
+ALL-NEXT:   0x1042 | LF_STRUCTURE [size = 128, hash = 0x284B0] `__vc_attributes::helper_attributes::usageAttribute`
+ALL-NEXT:            unique name: `.?AUusageAttribute@helper_attributes@__vc_attributes@@`
+ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x1041
+ALL-NEXT:            options: has ctor / dtor | contains nested class | has unique name
+ALL-NEXT:   0x1043 | LF_FIELDLIST [size = 68, hash = 0x34B1B]
+ALL-NEXT:            - LF_ENUMERATE [eBoolean = 0]
+ALL-NEXT:            - LF_ENUMERATE [eInteger = 1]
+ALL-NEXT:            - LF_ENUMERATE [eFloat = 2]
+ALL-NEXT:            - LF_ENUMERATE [eDouble = 3]
+ALL-NEXT:   0x1044 | LF_ENUM [size = 148, hash = 0x22D21] `__vc_attributes::helper_attributes::v1_alttypeAttribute::type_e`
+ALL-NEXT:            unique name: `.?AW4type_e@v1_alttypeAttribute@helper_attributes@__vc_attributes@@`
+ALL-NEXT:            field list: 0x1043, underlying type: 0x0074 (int)
+ALL-NEXT:            options: has unique name | is nested
+ALL-NEXT:   0x1045 | LF_STRUCTURE [size = 140, hash = 0xCD36] `__vc_attributes::helper_attributes::v1_alttypeAttribute`
+ALL-NEXT:            unique name: `.?AUv1_alttypeAttribute@helper_attributes@__vc_attributes@@`
+ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
+ALL-NEXT:            options: forward ref | has unique name
+ALL-NEXT:   0x1046 | LF_POINTER [size = 12, hash = 0xAC9A]
+ALL-NEXT:            referent = 0x1045, mode = pointer, opts = const, kind = ptr32
+ALL-NEXT:   0x1047 | LF_ARGLIST [size = 12, hash = 0x195FA]
+ALL-NEXT:            0x1044: `__vc_attributes::helper_attributes::v1_alttypeAttribute::type_e`
+ALL-NEXT:   0x1048 | LF_MFUNCTION [size = 28, hash = 0x1B15E]
+ALL-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x1047
+ALL-NEXT:            class type = 0x1045, this type = 0x1046, this adjust = 0
+ALL-NEXT:            calling conv = thiscall, options = constructor
+ALL-NEXT:   0x1049 | LF_FIELDLIST [size = 64, hash = 0x4647]
+ALL-NEXT:            - LF_NESTTYPE [name = `type_e`, parent = 0x1044]
+ALL-NEXT:            - LF_ONEMETHOD [name = `v1_alttypeAttribute`]
+ALL-NEXT:              type = 0x1048, vftable offset = -1, attrs = public
+ALL-NEXT:            - LF_MEMBER [name = `type`, Type = 0x1044, offset = 0, attrs = public]
+ALL-NEXT:   0x104A | LF_STRUCTURE [size = 140, hash = 0x340DF] `__vc_attributes::helper_attributes::v1_alttypeAttribute`
+ALL-NEXT:            unique name: `.?AUv1_alttypeAttribute@helper_attributes@__vc_attributes@@`
+ALL-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x1049
+ALL-NEXT:            options: has ctor / dtor | contains nested class | has unique name
+ALL:        Type Index Offsets:
+ALL-NEXT:     TI: 0x1000, Offset: 0
+ALL:        Hash Adjusters:
+ALL:                           Types (IPI Stream)
+ALL-NEXT: ============================================================
+ALL-NEXT:   Showing 15 records
+ALL-NEXT:   0x1000 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 0x1C12]
+ALL-NEXT:            udt = 0x100B, mod = 1, file = 1, line = 481
+ALL-NEXT:   0x1001 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 0x1C1E]
+ALL-NEXT:            udt = 0x1017, mod = 1, file = 1, line = 194
+ALL-NEXT:   0x1002 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 0x1C0C]
+ALL-NEXT:            udt = 0x1021, mod = 1, file = 1, line = 603
+ALL-NEXT:   0x1003 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 0x1C17]
+ALL-NEXT:            udt = 0x102C, mod = 1, file = 1, line = 1200
+ALL-NEXT:   0x1004 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 0x1C21]
+ALL-NEXT:            udt = 0x103A, mod = 1, file = 1, line = 540
+ALL-NEXT:   0x1005 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 0x1C49]
+ALL-NEXT:            udt = 0x1042, mod = 1, file = 1, line = 108
+ALL-NEXT:   0x1006 | LF_UDT_MOD_SRC_LINE [size = 20, hash = 0x1C51]
+ALL-NEXT:            udt = 0x104A, mod = 1, file = 1, line = 96
+ALL-NEXT:   0x1007 | LF_STRING_ID [size = 48, hash = 0x13B57] ID: <no type>, String: d:\src\llvm\test\DebugInfo\PDB\Inputs
+ALL-NEXT:   0x1008 | LF_STRING_ID [size = 76, hash = 0x25A41] ID: <no type>, String: C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\cl.exe
+ALL-NEXT:   0x1009 | LF_STRING_ID [size = 20, hash = 0x125B5] ID: <no type>, String: empty.cpp
+ALL-NEXT:   0x100A | LF_STRING_ID [size = 56, hash = 0x3DEDE] ID: <no type>, String: d:\src\llvm\test\DebugInfo\PDB\Inputs\vc120.pdb
+ALL-NEXT:   0x100B | LF_STRING_ID [size = 252, hash = 0x2F3BB] ID: <no type>, String: -Zi -MT -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\INCLUDE" -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\ATLMFC\INCLUDE" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared" -I"C:\Program Files (x86)\Windows
+ALL-NEXT:   0x100C | LF_SUBSTR_LIST [size = 12, hash = 0x365F1]
+ALL-NEXT:            0x100B: `-Zi -MT -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\INCLUDE" -I"C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\ATLMFC\INCLUDE" -I"C:\Program Files (x86)\Windows Kits\8.1\include\shared" -I"C:\Program Files (x86)\Windows`
+ALL-NEXT:   0x100D | LF_STRING_ID [size = 96, hash = 0x2D6F3] ID: 0x100C, String:  Kits\8.1\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\winrt" -TP -X
+ALL-NEXT:   0x100E | LF_BUILDINFO [size = 28, hash = 0x3EC54]
+ALL-NEXT:            0x1007: `d:\src\llvm\test\DebugInfo\PDB\Inputs`
+ALL-NEXT:            0x1008: `C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\cl.exe`
+ALL-NEXT:            0x1009: `empty.cpp`
+ALL-NEXT:            0x100A: `d:\src\llvm\test\DebugInfo\PDB\Inputs\vc120.pdb`
+ALL-NEXT:            0x100D: ` Kits\8.1\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\winrt" -TP -X`
+ALL:        Type Index Offsets:
+ALL-NEXT:     TI: 0x1000, Offset: 0
+ALL:        Hash Adjusters:
+ALL:                             Global Symbols
+ALL-NEXT: ============================================================
+ALL-NEXT:  Records
+ALL-NEXT:   56 | S_PROCREF [size = 20] `main`
+ALL-NEXT:       module = 1, sum name = 0, offset = 120
+ALL-NEXT:   76 | S_GDATA32 [size = 28] `__purecall`
+ALL-NEXT:       type = 0x0403 (void*), addr = 0003:0000
+ALL-NOT:   S_PUB32
+ALL:                             Public Symbols
+ALL-NEXT: ============================================================
+ALL-NEXT:  Records
+ALL-NEXT:    0 | S_PUB32 [size = 36] `?__purecall@@3PAXA`
+ALL-NEXT:       flags = none, addr = 0003:0000
+ALL-NEXT:   36 | S_PUB32 [size = 20] `_main`
+ALL-NEXT:       flags = function, addr = 0001:0016
+ALL-NOT:   S_PROCREF
+ALL:                                Symbols
+ALL-NEXT: ============================================================
+ALL-NEXT:   Mod 0000 | `d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj`:
+ALL-NEXT:      4 | S_OBJNAME [size = 56] sig=0, `d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.obj`
+ALL-NEXT:     60 | S_COMPILE3 [size = 60]
+ALL-NEXT:          machine = intel pentium 3, Ver = Microsoft (R) Optimizing Compiler, language = c++
+ALL-NEXT:          frontend = 18.0.31101.0, backend = 18.0.31101.0
+ALL-NEXT:          flags = security checks
+ALL-NEXT:    120 | S_GPROC32 [size = 44] `main`
+ALL-NEXT:          parent = 0, end = 196, addr = 0001:0016, code size = 10
+ALL-NEXT:          type = `0x1001 (int ())`, debug start = 3, debug end = 8, flags = has fp
+ALL-NEXT:    164 | S_FRAMEPROC [size = 32]
+ALL-NEXT:          size = 0, padding size = 0, offset to padding = 0
+ALL-NEXT:          bytes of callee saved registers = 0, exception handler addr = 0000:0000
+ALL-NEXT:          local fp reg = EBP, param fp reg = EBP
+ALL-NEXT:          flags = has async eh | opt speed
+ALL-NEXT:    196 | S_END [size = 4]
+ALL-NEXT:    200 | S_BUILDINFO [size = 8] BuildId = `0x100E`
+ALL-NEXT:   Mod 0001 | `* Linker *`:
+ALL-NEXT:          4 | S_OBJNAME [size = 20] sig=0, `* Linker *`
+ALL-NEXT:         24 | S_COMPILE3 [size = 48]
+ALL-NEXT:              machine = intel 80386, Ver = Microsoft (R) LINK, language = link
+ALL-NEXT:              frontend = 0.0.0.0, backend = 12.0.31101.0
+ALL-NEXT:              flags = none
+ALL-NEXT:         72 | S_ENVBLOCK [size = 172]
+ALL-NEXT:              - cwd
+ALL-NEXT:              - d:\src\llvm\test\DebugInfo\PDB\Inputs
+ALL-NEXT:              - exe
+ALL-NEXT:              - C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\BIN\link.exe
+ALL-NEXT:              - pdb
+ALL-NEXT:              - d:\src\llvm\test\DebugInfo\PDB\Inputs\empty.pdb
+ALL-NEXT:        244 | S_TRAMPOLINE [size = 20]
+ALL-NEXT:              type = tramp incremental, size = 5, source = 0001:0005, target = 0001:0005
+ALL-NEXT:        264 | S_SECTION [size = 28] `.text`
+ALL-NEXT:              length = 4122, alignment = 12, rva = 4096, section # = 1
+ALL-NEXT:              characteristics =
+ALL-NEXT:                code
+ALL-NEXT:                execute permissions
+ALL-NEXT:                read permissions
+ALL-NEXT:        292 | S_COFFGROUP [size = 28] `.text$mn`
+ALL-NEXT:              length = 4122, addr = 0001:0000
+ALL-NEXT:              characteristics =
+ALL-NEXT:                code
+ALL-NEXT:                execute permissions
+ALL-NEXT:                read permissions
+ALL-NEXT:        320 | S_SECTION [size = 28] `.rdata`
+ALL-NEXT:              length = 690, alignment = 12, rva = 12288, section # = 2
+ALL-NEXT:              characteristics =
+ALL-NEXT:                initialized data
+ALL-NEXT:                read permissions
+ALL-NEXT:        348 | S_COFFGROUP [size = 28] `.rdata`
+ALL-NEXT:              length = 323, addr = 0002:0000
+ALL-NEXT:              characteristics =
+ALL-NEXT:                initialized data
+ALL-NEXT:                read permissions
+ALL-NEXT:        376 | S_COFFGROUP [size = 28] `.edata`
+ALL-NEXT:              length = 0, addr = 0002:0323
+ALL-NEXT:              characteristics =
+ALL-NEXT:                initialized data
+ALL-NEXT:                read permissions
+ALL-NEXT:        404 | S_COFFGROUP [size = 32] `.rdata$debug`
+ALL-NEXT:              length = 366, addr = 0002:0324
+ALL-NEXT:              characteristics =
+ALL-NEXT:                initialized data
+ALL-NEXT:                read permissions
+ALL-NEXT:        436 | S_SECTION [size = 28] `.data`
+ALL-NEXT:              length = 4, alignment = 12, rva = 16384, section # = 3
+ALL-NEXT:              characteristics =
+ALL-NEXT:                initialized data
+ALL-NEXT:                read permissions
+ALL-NEXT:                write permissions
+ALL-NEXT:        464 | S_COFFGROUP [size = 24] `.bss`
+ALL-NEXT:              length = 4, addr = 0003:0000
+ALL-NEXT:              characteristics =
+ALL-NEXT:                uninitialized data
+ALL-NEXT:                read permissions
+ALL-NEXT:                write permissions
+ALL-NEXT:        488 | S_SECTION [size = 28] `.reloc`
+ALL-NEXT:              length = 8, alignment = 12, rva = 20480, section # = 4
+ALL-NEXT:              characteristics =
+ALL-NEXT:                initialized data
+ALL-NEXT:                discardable
+ALL-NEXT:                read permissions
+ALL:                         Section Contributions
+ALL-NEXT: ============================================================
+ALL-NEXT:   SC[.text]  | mod = 1, 0001:0000, size = 10, data crc = 0, reloc crc = 0
+ALL-NEXT:                IMAGE_SCN_CNT_CODE | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_READ
+ALL-NEXT:   SC[.text]  | mod = 0, 0001:0016, size = 10, data crc = 3617027124, reloc crc = 0
+ALL-NEXT:                IMAGE_SCN_CNT_CODE | IMAGE_SCN_ALIGN_16BYTES | IMAGE_SCN_MEM_EXECUTE |
+ALL-NEXT:                IMAGE_SCN_MEM_READ
+ALL-NEXT:   SC[.rdata] | mod = 1, 0002:0000, size = 56, data crc = 0, reloc crc = 0
+ALL-NEXT:                IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ
+ALL-NEXT:   SC[.rdata] | mod = 1, 0002:0324, size = 72, data crc = 0, reloc crc = 0
+ALL-NEXT:                IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_READ
+ALL-NEXT:   SC[.rdata] | mod = 1, 0002:0396, size = 20, data crc = 0, reloc crc = 0
+ALL-NEXT:                IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_READ
+ALL-NEXT:   SC[.data]  | mod = 0, 0003:0000, size = 4, data crc = 0, reloc crc = 0
+ALL-NEXT:                IMAGE_SCN_CNT_UNINITIALIZED_DATA | IMAGE_SCN_ALIGN_4BYTES | IMAGE_SCN_MEM_READ |
+ALL-NEXT:                IMAGE_SCN_MEM_WRITE
+ALL:                              Section Map
+ALL-NEXT: ============================================================
+ALL-NEXT:   Section 0000 | ovl = 0, group = 0, frame = 1, name = 65535
+ALL-NEXT:                  class = 65535, offset = 0, size = 4122
+ALL-NEXT:                  flags = read | execute | 32 bit addr | selector
+ALL-NEXT:   Section 0001 | ovl = 0, group = 0, frame = 2, name = 65535
+ALL-NEXT:                  class = 65535, offset = 0, size = 690
+ALL-NEXT:                  flags = read | 32 bit addr | selector
+ALL-NEXT:   Section 0002 | ovl = 0, group = 0, frame = 3, name = 65535
+ALL-NEXT:                  class = 65535, offset = 0, size = 4
+ALL-NEXT:                  flags = read | write | 32 bit addr | selector
+ALL-NEXT:   Section 0003 | ovl = 0, group = 0, frame = 4, name = 65535
+ALL-NEXT:                  class = 65535, offset = 0, size = 8
+ALL-NEXT:                  flags = read | 32 bit addr | selector
+ALL-NEXT:   Section 0004 | ovl = 0, group = 0, frame = 0, name = 65535
+ALL-NEXT:                  class = 65535, offset = 0, size = 4294967295
+ALL-NEXT:                  flags = 32 bit addr | absolute addr
+
+
+
+BIG:                            Summary
+BIG-NEXT: ============================================================
+BIG-NEXT:   Block Size: 4096
+BIG-NEXT:   Number of blocks: 99
+BIG-NEXT:   Number of streams: 64
+BIG-NEXT:   Signature: 1461714535
+BIG-NEXT:   Age: 1
+BIG-NEXT:   GUID: {89CC0E88-81DF-4F0B-839C-58CBD052E937}
+BIG-NEXT:   Features: 0x1
+BIG-NEXT:   Has Debug Info: true
+BIG-NEXT:   Has Types: true
+BIG-NEXT:   Has IDs: true
+BIG-NEXT:   Has Globals: true
+BIG-NEXT:   Has Publics: true
+BIG-NEXT:   Is incrementally linked: true
+BIG-NEXT:   Has conflicting types: false
+BIG-NEXT:   Is stripped: false
+BIG:                              Modules
+BIG-NEXT: ============================================================
+BIG-NEXT:   Mod 0000 | `D:\src\llvm\test\tools\llvm-symbolizer\pdb\Inputs\test.obj`:
+BIG-NEXT:              Obj: `D:\src\llvm\test\tools\llvm-symbolizer\pdb\Inputs\test.obj`:
+BIG-NEXT:              debug stream: 12, # files: 1, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0001 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_cpu_disp_.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 14, # files: 14, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0002 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_initsect_.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 15, # files: 19, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0003 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_sehprolg4_.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 16, # files: 1, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 1 `f:\dd\vctools\crt\vcstartup\src\eh\i386\sehprolg4.asm`
+BIG-NEXT:   Mod 0004 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_chandler4gs_.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 17, # files: 14, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0005 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_secchk_.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 18, # files: 14, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0006 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\gs_cookie.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 19, # files: 9, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0007 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\gs_report.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 20, # files: 14, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0008 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\gs_support.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 21, # files: 10, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0009 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\checkcfg.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 22, # files: 14, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0010 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\guard_support.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 23, # files: 10, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0011 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\loadcfg.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 24, # files: 9, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0012 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\dyn_tls_dtor.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 25, # files: 11, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0013 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\dyn_tls_init.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 26, # files: 10, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0014 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\matherr_detection.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 27, # files: 1, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0015 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\ucrt_detection.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 28, # files: 1, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0016 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\argv_mode.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 29, # files: 1, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0017 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\commit_mode.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 30, # files: 1, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0018 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\default_local_stdio_options.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 31, # files: 24, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0019 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\denormal_control.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 32, # files: 1, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0020 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\env_mode.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 33, # files: 1, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0021 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\file_mode.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 34, # files: 1, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0022 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\invalid_parameter_handler.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 35, # files: 1, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0023 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\matherr.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 36, # files: 2, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0024 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\new_mode.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 37, # files: 1, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0025 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\thread_locale.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 38, # files: 1, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0026 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\tncleanup.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 39, # files: 21, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0027 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\exe_main.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 40, # files: 26, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0028 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\initializers.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 41, # files: 20, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0029 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\utility.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 42, # files: 20, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0030 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\ucrt_stubs.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 43, # files: 1, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0031 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\utility_desktop.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 44, # files: 20, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0032 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\default_precision.obj`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\MSVCRT.lib`:
+BIG-NEXT:              debug stream: 45, # files: 20, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0033 | `Import:KERNEL32.dll`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\um\x86\kernel32.lib`:
+BIG-NEXT:              debug stream: 47, # files: 0, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0034 | `KERNEL32.dll`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\um\x86\kernel32.lib`:
+BIG-NEXT:              debug stream: 46, # files: 0, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0035 | `Import:VCRUNTIME140.dll`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\vcruntime.lib`:
+BIG-NEXT:              debug stream: 49, # files: 0, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0036 | `VCRUNTIME140.dll`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\MI0E91~1.0\VC\LIB\vcruntime.lib`:
+BIG-NEXT:              debug stream: 48, # files: 0, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0037 | `Import:api-ms-win-crt-stdio-l1-1-0.dll`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib`:
+BIG-NEXT:              debug stream: 59, # files: 0, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0038 | `api-ms-win-crt-stdio-l1-1-0.dll`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib`:
+BIG-NEXT:              debug stream: 58, # files: 0, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0039 | `Import:api-ms-win-crt-runtime-l1-1-0.dll`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib`:
+BIG-NEXT:              debug stream: 57, # files: 0, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0040 | `api-ms-win-crt-runtime-l1-1-0.dll`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib`:
+BIG-NEXT:              debug stream: 56, # files: 0, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0041 | `Import:api-ms-win-crt-math-l1-1-0.dll`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib`:
+BIG-NEXT:              debug stream: 55, # files: 0, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0042 | `api-ms-win-crt-math-l1-1-0.dll`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib`:
+BIG-NEXT:              debug stream: 54, # files: 0, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0043 | `Import:api-ms-win-crt-locale-l1-1-0.dll`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib`:
+BIG-NEXT:              debug stream: 53, # files: 0, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0044 | `api-ms-win-crt-locale-l1-1-0.dll`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib`:
+BIG-NEXT:              debug stream: 52, # files: 0, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0045 | `Import:api-ms-win-crt-heap-l1-1-0.dll`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib`:
+BIG-NEXT:              debug stream: 51, # files: 0, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0046 | `api-ms-win-crt-heap-l1-1-0.dll`:
+BIG-NEXT:              Obj: `C:\PROGRA~2\WI3CF2~1\10\Lib\10.0.10586.0\ucrt\x86\ucrt.lib`:
+BIG-NEXT:              debug stream: 50, # files: 0, has ec info: false
+BIG-NEXT:              pdb file ni: 0 ``, src file ni: 0 ``
+BIG-NEXT:   Mod 0047 |  `* Linker *`:
+BIG-NEXT:              Obj: ``:
+BIG-NEXT:              debug stream: 60, # files: 0, has ec info: false
+BIG-NEXT:              pdb file ni: 55 `{{.*test.pdb}}`, src file ni: 0 ``
+BIG:                                Files
+BIG-NEXT: ============================================================
+BIG-NEXT:   Mod 0000 | `D:\src\llvm\test\tools\llvm-symbolizer\pdb\Inputs\test.obj`:
+BIG-NEXT:              - (MD5: A20261917ADC01A12CBDBF778BC6CCC8) d:\src\llvm\test\tools\llvm-symbolizer\pdb\inputs\test.cpp
+BIG-NEXT:   Mod 0001 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_cpu_disp_.obj`:
+BIG-NEXT:              - (MD5: 928553F8BA198C9030B65FA10B6B3DD2) f:\dd\externalapis\unifiedcrt\inc\malloc.h
+BIG-NEXT:              - (MD5: 377E41F4DAE6F93EA819B4EFCF229F08) f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - (MD5: A5976652B404EDDDBDA326FF9A9488A3) f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - (MD5: 8A16383C445FDABF21BDBAC3825E8133) f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+BIG-NEXT:              - (MD5: 9393435BC7FDE9F624E309D56629171A) f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+BIG-NEXT:              - (MD5: DCC558DEFD73C17745F94CC5A98632D9) f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - (MD5: 493F2CAB7A6BE4175748A9FC6C4A38FB) f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - (MD5: E4963431577926D9BA190CD6C10F8743) f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+BIG-NEXT:              - (MD5: B38ACA278420B7C5F25A50AD159CACA0) f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - (MD5: 2D923CBDE24BB8F217FE09A5F7D88929) f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - (MD5: 884E12AC852D3B4E1E625A0F01595A68) f:\dd\vctools\crt\vcstartup\src\misc\i386\cpu_disp.c
+BIG-NEXT:              - (MD5: C3412F163DF064CCDEF8CFBE0A387550) f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - (MD5: ADDFD8BEB612E9A30D5FB7C44F9F3D37) f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - (MD5: 386A22AB644E999820C7C22FCE5DB574) f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:   Mod 0002 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_initsect_.obj`:
+BIG-NEXT:              - (MD5: 9393435BC7FDE9F624E309D56629171A) f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+BIG-NEXT:              - (MD5: C3412F163DF064CCDEF8CFBE0A387550) f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - (MD5: DD3FFC8C4284997F6762C449313244B2) f:\dd\vctools\crt\vcstartup\src\rtc\initsect.cpp
+BIG-NEXT:              - (MD5: DCC558DEFD73C17745F94CC5A98632D9) f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - (MD5: 928553F8BA198C9030B65FA10B6B3DD2) f:\dd\externalapis\unifiedcrt\inc\malloc.h
+BIG-NEXT:              - (MD5: 493F2CAB7A6BE4175748A9FC6C4A38FB) f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - (MD5: E4963431577926D9BA190CD6C10F8743) f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+BIG-NEXT:              - (MD5: 2D923CBDE24BB8F217FE09A5F7D88929) f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - (MD5: B38ACA278420B7C5F25A50AD159CACA0) f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - (MD5: C44C7E39EE3B3A4EF6B3211EC0110AA8) f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+BIG-NEXT:              - (MD5: ADDFD8BEB612E9A30D5FB7C44F9F3D37) f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - (MD5: 386A22AB644E999820C7C22FCE5DB574) f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:              - (MD5: 8A16383C445FDABF21BDBAC3825E8133) f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+BIG-NEXT:              - (MD5: CA7D066706A198EA5999B084AAB0CE58) f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+BIG-NEXT:              - (MD5: F9FC1E83CBE1A51209ED1C05BB0F70B2) f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+BIG-NEXT:              - (MD5: A40485987BE01BAF5F57569A41DAB837) f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+BIG-NEXT:              - (MD5: 377E41F4DAE6F93EA819B4EFCF229F08) f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - (MD5: 96C01EE8E4C01B90601D93353838EBF8) f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+BIG-NEXT:              - (MD5: A5976652B404EDDDBDA326FF9A9488A3) f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:   Mod 0003 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_sehprolg4_.obj`:
+BIG-NEXT:              - (MD5: E562BB073C88A6A3791CE9FBDC64E7A7) f:\dd\vctools\crt\vcstartup\src\eh\i386\sehprolg4.asm
+BIG-NEXT:   Mod 0004 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_chandler4gs_.obj`:
+BIG-NEXT:              - (MD5: 928553F8BA198C9030B65FA10B6B3DD2) f:\dd\externalapis\unifiedcrt\inc\malloc.h
+BIG-NEXT:              - (MD5: 377E41F4DAE6F93EA819B4EFCF229F08) f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - (MD5: A5976652B404EDDDBDA326FF9A9488A3) f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - (MD5: 8A16383C445FDABF21BDBAC3825E8133) f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+BIG-NEXT:              - (MD5: 9393435BC7FDE9F624E309D56629171A) f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+BIG-NEXT:              - (MD5: DCC558DEFD73C17745F94CC5A98632D9) f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - (MD5: 493F2CAB7A6BE4175748A9FC6C4A38FB) f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - (MD5: E4963431577926D9BA190CD6C10F8743) f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+BIG-NEXT:              - (MD5: B38ACA278420B7C5F25A50AD159CACA0) f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - (MD5: 2D923CBDE24BB8F217FE09A5F7D88929) f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - (MD5: D014BFD91FD6D4163AF92452CBC9EEA0) f:\dd\vctools\crt\vcstartup\src\eh\i386\chandler4gs.c
+BIG-NEXT:              - (MD5: C3412F163DF064CCDEF8CFBE0A387550) f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - (MD5: ADDFD8BEB612E9A30D5FB7C44F9F3D37) f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - (MD5: 386A22AB644E999820C7C22FCE5DB574) f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:   Mod 0005 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\_secchk_.obj`:
+BIG-NEXT:              - (MD5: 928553F8BA198C9030B65FA10B6B3DD2) f:\dd\externalapis\unifiedcrt\inc\malloc.h
+BIG-NEXT:              - (MD5: 377E41F4DAE6F93EA819B4EFCF229F08) f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - (MD5: A5976652B404EDDDBDA326FF9A9488A3) f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - (MD5: 8A16383C445FDABF21BDBAC3825E8133) f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+BIG-NEXT:              - (MD5: 9393435BC7FDE9F624E309D56629171A) f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+BIG-NEXT:              - (MD5: DCC558DEFD73C17745F94CC5A98632D9) f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - (MD5: 493F2CAB7A6BE4175748A9FC6C4A38FB) f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - (MD5: E4963431577926D9BA190CD6C10F8743) f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+BIG-NEXT:              - (MD5: B38ACA278420B7C5F25A50AD159CACA0) f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - (MD5: 2D923CBDE24BB8F217FE09A5F7D88929) f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - (MD5: 6C34B4E5ACA82CB0D6BD6CB8C059C9C9) f:\dd\vctools\crt\vcstartup\src\eh\i386\secchk.c
+BIG-NEXT:              - (MD5: C3412F163DF064CCDEF8CFBE0A387550) f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - (MD5: ADDFD8BEB612E9A30D5FB7C44F9F3D37) f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - (MD5: 386A22AB644E999820C7C22FCE5DB574) f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:   Mod 0006 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\gs_cookie.obj`:
+BIG-NEXT:              - (MD5: DCC558DEFD73C17745F94CC5A98632D9) f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - (MD5: 377E41F4DAE6F93EA819B4EFCF229F08) f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - (MD5: A5976652B404EDDDBDA326FF9A9488A3) f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - (MD5: B38ACA278420B7C5F25A50AD159CACA0) f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - (MD5: 2D923CBDE24BB8F217FE09A5F7D88929) f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - (MD5: C3412F163DF064CCDEF8CFBE0A387550) f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - (MD5: 493F2CAB7A6BE4175748A9FC6C4A38FB) f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - (MD5: ADDFD8BEB612E9A30D5FB7C44F9F3D37) f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - (MD5: 386A22AB644E999820C7C22FCE5DB574) f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:   Mod 0007 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\gs_report.obj`:
+BIG-NEXT:              - (MD5: 928553F8BA198C9030B65FA10B6B3DD2) f:\dd\externalapis\unifiedcrt\inc\malloc.h
+BIG-NEXT:              - (MD5: 377E41F4DAE6F93EA819B4EFCF229F08) f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - (MD5: A5976652B404EDDDBDA326FF9A9488A3) f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - (MD5: 8A16383C445FDABF21BDBAC3825E8133) f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+BIG-NEXT:              - (MD5: 9393435BC7FDE9F624E309D56629171A) f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+BIG-NEXT:              - (MD5: DCC558DEFD73C17745F94CC5A98632D9) f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - (MD5: 493F2CAB7A6BE4175748A9FC6C4A38FB) f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - (MD5: E4963431577926D9BA190CD6C10F8743) f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+BIG-NEXT:              - (MD5: B38ACA278420B7C5F25A50AD159CACA0) f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - (MD5: 2D923CBDE24BB8F217FE09A5F7D88929) f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - (MD5: 87566AA39C18DD3CEAC021002D34B63D) f:\dd\vctools\crt\vcstartup\src\gs\gs_report.c
+BIG-NEXT:              - (MD5: C3412F163DF064CCDEF8CFBE0A387550) f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - (MD5: ADDFD8BEB612E9A30D5FB7C44F9F3D37) f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - (MD5: 386A22AB644E999820C7C22FCE5DB574) f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:   Mod 0008 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\gs_support.obj`:
+BIG-NEXT:              - (MD5: DCC558DEFD73C17745F94CC5A98632D9) f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - (MD5: 377E41F4DAE6F93EA819B4EFCF229F08) f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - (MD5: A5976652B404EDDDBDA326FF9A9488A3) f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - (MD5: B38ACA278420B7C5F25A50AD159CACA0) f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - (MD5: 2D923CBDE24BB8F217FE09A5F7D88929) f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - (MD5: C3412F163DF064CCDEF8CFBE0A387550) f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - (MD5: 493F2CAB7A6BE4175748A9FC6C4A38FB) f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - (MD5: ADDFD8BEB612E9A30D5FB7C44F9F3D37) f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - (MD5: 386A22AB644E999820C7C22FCE5DB574) f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:              - (MD5: 57AC84319EF78F67DAA9372FDA8CBFCC) f:\dd\vctools\crt\vcstartup\src\gs\gs_support.c
+BIG-NEXT:   Mod 0009 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\checkcfg.obj`:
+BIG-NEXT:              - (MD5: 928553F8BA198C9030B65FA10B6B3DD2) f:\dd\externalapis\unifiedcrt\inc\malloc.h
+BIG-NEXT:              - (MD5: 377E41F4DAE6F93EA819B4EFCF229F08) f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - (MD5: A5976652B404EDDDBDA326FF9A9488A3) f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - (MD5: 8A16383C445FDABF21BDBAC3825E8133) f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+BIG-NEXT:              - (MD5: 9393435BC7FDE9F624E309D56629171A) f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+BIG-NEXT:              - (MD5: DCC558DEFD73C17745F94CC5A98632D9) f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - (MD5: 493F2CAB7A6BE4175748A9FC6C4A38FB) f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - (MD5: E4963431577926D9BA190CD6C10F8743) f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+BIG-NEXT:              - (MD5: B38ACA278420B7C5F25A50AD159CACA0) f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - (MD5: 2D923CBDE24BB8F217FE09A5F7D88929) f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - (MD5: 9552C4FC4125F9D7D3A8B5FD18B7BCCF) f:\dd\vctools\crt\vcstartup\src\misc\checkcfg.c
+BIG-NEXT:              - (MD5: C3412F163DF064CCDEF8CFBE0A387550) f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - (MD5: ADDFD8BEB612E9A30D5FB7C44F9F3D37) f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - (MD5: 386A22AB644E999820C7C22FCE5DB574) f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:   Mod 0010 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\guard_support.obj`:
+BIG-NEXT:              - (MD5: DCC558DEFD73C17745F94CC5A98632D9) f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - (MD5: 377E41F4DAE6F93EA819B4EFCF229F08) f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - (MD5: A5976652B404EDDDBDA326FF9A9488A3) f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - (MD5: B38ACA278420B7C5F25A50AD159CACA0) f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - (MD5: 2D923CBDE24BB8F217FE09A5F7D88929) f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - (MD5: C3412F163DF064CCDEF8CFBE0A387550) f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - (MD5: 493F2CAB7A6BE4175748A9FC6C4A38FB) f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - (MD5: ADDFD8BEB612E9A30D5FB7C44F9F3D37) f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - (MD5: 386A22AB644E999820C7C22FCE5DB574) f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:              - (MD5: 8BFBA3D0672A148A9FB0E9F0A6BC256D) f:\dd\vctools\crt\vcstartup\src\misc\guard_support.c
+BIG-NEXT:   Mod 0011 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\loadcfg.obj`:
+BIG-NEXT:              - (MD5: DCC558DEFD73C17745F94CC5A98632D9) f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - (MD5: 377E41F4DAE6F93EA819B4EFCF229F08) f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - (MD5: A5976652B404EDDDBDA326FF9A9488A3) f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - (MD5: B38ACA278420B7C5F25A50AD159CACA0) f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - (MD5: 2D923CBDE24BB8F217FE09A5F7D88929) f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - (MD5: C3412F163DF064CCDEF8CFBE0A387550) f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - (MD5: 493F2CAB7A6BE4175748A9FC6C4A38FB) f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - (MD5: ADDFD8BEB612E9A30D5FB7C44F9F3D37) f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - (MD5: 386A22AB644E999820C7C22FCE5DB574) f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:   Mod 0012 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\dyn_tls_dtor.obj`:
+BIG-NEXT:              - (MD5: DCC558DEFD73C17745F94CC5A98632D9) f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - (MD5: 377E41F4DAE6F93EA819B4EFCF229F08) f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - (MD5: A5976652B404EDDDBDA326FF9A9488A3) f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - (MD5: B38ACA278420B7C5F25A50AD159CACA0) f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - (MD5: 2D923CBDE24BB8F217FE09A5F7D88929) f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - (MD5: 23CC88BD1D9451C2CE5F824306E16E4D) f:\dd\externalapis\unifiedcrt\inc\math.h
+BIG-NEXT:              - (MD5: C3412F163DF064CCDEF8CFBE0A387550) f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - (MD5: 493F2CAB7A6BE4175748A9FC6C4A38FB) f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - (MD5: ADDFD8BEB612E9A30D5FB7C44F9F3D37) f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - (MD5: 386A22AB644E999820C7C22FCE5DB574) f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:              - (MD5: EE3858E06B118BDBAAE53F5E55B0BB0C) f:\dd\vctools\crt\vcstartup\src\utility\dyn_tls_dtor.c
+BIG-NEXT:   Mod 0013 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\dyn_tls_init.obj`:
+BIG-NEXT:              - (MD5: DCC558DEFD73C17745F94CC5A98632D9) f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - (MD5: 377E41F4DAE6F93EA819B4EFCF229F08) f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - (MD5: A5976652B404EDDDBDA326FF9A9488A3) f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - (MD5: B38ACA278420B7C5F25A50AD159CACA0) f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - (MD5: 2D923CBDE24BB8F217FE09A5F7D88929) f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - (MD5: C3412F163DF064CCDEF8CFBE0A387550) f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - (MD5: 493F2CAB7A6BE4175748A9FC6C4A38FB) f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - (MD5: ADDFD8BEB612E9A30D5FB7C44F9F3D37) f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - (MD5: 386A22AB644E999820C7C22FCE5DB574) f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:              - (MD5: 9DA48F59075BBAAAB4F7FC4575F34405) f:\dd\vctools\crt\vcstartup\src\utility\dyn_tls_init.c
+BIG-NEXT:   Mod 0014 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\matherr_detection.obj`:
+BIG-NEXT:              - (MD5: 2DF28D8BA8B7AAAA67C94719B214B060) f:\dd\vctools\crt\vcstartup\src\utility\matherr_detection.c
+BIG-NEXT:   Mod 0015 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\ucrt_detection.obj`:
+BIG-NEXT:              - (MD5: 737902C62D7458629D0DDD52E122C033) f:\dd\vctools\crt\vcstartup\src\utility\ucrt_detection.c
+BIG-NEXT:   Mod 0016 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\argv_mode.obj`:
+BIG-NEXT:              - (MD5: 634D3D57BDE292817F77F8DBF366E2D2) f:\dd\vctools\crt\vcstartup\src\defaults\argv_mode.cpp
+BIG-NEXT:   Mod 0017 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\commit_mode.obj`:
+BIG-NEXT:              - (MD5: CF5B0F6243121A3F5E206E07CA457128) f:\dd\vctools\crt\vcstartup\src\defaults\commit_mode.cpp
+BIG-NEXT:   Mod 0018 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\default_local_stdio_options.obj`:
+BIG-NEXT:              - (MD5: 928553F8BA198C9030B65FA10B6B3DD2) f:\dd\externalapis\unifiedcrt\inc\malloc.h
+BIG-NEXT:              - (MD5: 493F2CAB7A6BE4175748A9FC6C4A38FB) f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - (MD5: E4963431577926D9BA190CD6C10F8743) f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+BIG-NEXT:              - (MD5: E6391682D136711F96E730F4D6162E0C) f:\dd\vctools\crt\vcstartup\src\defaults\default_local_stdio_options.cpp
+BIG-NEXT:              - (MD5: C3412F163DF064CCDEF8CFBE0A387550) f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - (MD5: 23CC88BD1D9451C2CE5F824306E16E4D) f:\dd\externalapis\unifiedcrt\inc\math.h
+BIG-NEXT:              - (MD5: C44C7E39EE3B3A4EF6B3211EC0110AA8) f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+BIG-NEXT:              - (MD5: DCC558DEFD73C17745F94CC5A98632D9) f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - (MD5: ADDFD8BEB612E9A30D5FB7C44F9F3D37) f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - (MD5: 386A22AB644E999820C7C22FCE5DB574) f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:              - (MD5: CA7D066706A198EA5999B084AAB0CE58) f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+BIG-NEXT:              - (MD5: 2D923CBDE24BB8F217FE09A5F7D88929) f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - (MD5: B38ACA278420B7C5F25A50AD159CACA0) f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - (MD5: 2D5E699DF1BED89FCCCCCF0DCFC49050) f:\dd\externalapis\unifiedcrt\inc\stdio.h
+BIG-NEXT:              - (MD5: 2443DB19DCC585E308F60DAFEF1D4C4C) f:\dd\externalapis\unifiedcrt\inc\corecrt_wstdio.h
+BIG-NEXT:              - (MD5: 79921ECB03C5C56E28D771ADF8910FD8) f:\dd\externalapis\unifiedcrt\inc\corecrt_stdio_config.h
+BIG-NEXT:              - (MD5: 7C388EF80868D8301B5A908485637FEE) f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
+BIG-NEXT:              - (MD5: 377E41F4DAE6F93EA819B4EFCF229F08) f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - (MD5: 96C01EE8E4C01B90601D93353838EBF8) f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+BIG-NEXT:              - (MD5: A5976652B404EDDDBDA326FF9A9488A3) f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - (MD5: 9393435BC7FDE9F624E309D56629171A) f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+BIG-NEXT:              - (MD5: A40485987BE01BAF5F57569A41DAB837) f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+BIG-NEXT:              - (MD5: 303C50A7BC924CD426BAA20C7F16192C) f:\dd\vctools\crt\vcruntime\inc\vadefs.h
+BIG-NEXT:              - (MD5: F9FC1E83CBE1A51209ED1C05BB0F70B2) f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+BIG-NEXT:   Mod 0019 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\denormal_control.obj`:
+BIG-NEXT:              - (MD5: 0513001DBCB8CB8F8561DC117FD943BA) f:\dd\vctools\crt\vcstartup\src\defaults\denormal_control.cpp
+BIG-NEXT:   Mod 0020 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\env_mode.obj`:
+BIG-NEXT:              - (MD5: 5B7121FC3210A120D7B70CB668D8EF0C) f:\dd\vctools\crt\vcstartup\src\defaults\env_mode.cpp
+BIG-NEXT:   Mod 0021 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\file_mode.obj`:
+BIG-NEXT:              - (MD5: 749603C05EB2FB5024819A3107DA9A7D) f:\dd\vctools\crt\vcstartup\src\defaults\file_mode.cpp
+BIG-NEXT:   Mod 0022 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\invalid_parameter_handler.obj`:
+BIG-NEXT:              - (MD5: 0C385FD7C6DB91E0BA7C72C1AB680BE6) f:\dd\vctools\crt\vcstartup\src\defaults\invalid_parameter_handler.cpp
+BIG-NEXT:   Mod 0023 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\matherr.obj`:
+BIG-NEXT:              - (MD5: F8B3DAD79F14E4169CCBA611203C89CD) f:\dd\vctools\crt\vcstartup\src\defaults\matherr.cpp
+BIG-NEXT:              - (MD5: 23CC88BD1D9451C2CE5F824306E16E4D) f:\dd\externalapis\unifiedcrt\inc\math.h
+BIG-NEXT:   Mod 0024 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\new_mode.obj`:
+BIG-NEXT:              - (MD5: 4F22B6A5E4E0D01E8C000B17F2B2640D) f:\dd\vctools\crt\vcstartup\src\defaults\new_mode.cpp
+BIG-NEXT:   Mod 0025 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\thread_locale.obj`:
+BIG-NEXT:              - (MD5: 435F5F51541F7D6565DF6BE20F8AC8A3) f:\dd\vctools\crt\vcstartup\src\defaults\thread_locale.cpp
+BIG-NEXT:   Mod 0026 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\tncleanup.obj`:
+BIG-NEXT:              - (MD5: 9393435BC7FDE9F624E309D56629171A) f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+BIG-NEXT:              - (MD5: C3412F163DF064CCDEF8CFBE0A387550) f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - (MD5: 984A18787250F7F6D0506E6BC1FD7991) f:\dd\vctools\crt\vcstartup\src\eh\tncleanup.cpp
+BIG-NEXT:              - (MD5: DCC558DEFD73C17745F94CC5A98632D9) f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - (MD5: 928553F8BA198C9030B65FA10B6B3DD2) f:\dd\externalapis\unifiedcrt\inc\malloc.h
+BIG-NEXT:              - (MD5: 493F2CAB7A6BE4175748A9FC6C4A38FB) f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - (MD5: E4963431577926D9BA190CD6C10F8743) f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+BIG-NEXT:              - (MD5: 2D923CBDE24BB8F217FE09A5F7D88929) f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - (MD5: B38ACA278420B7C5F25A50AD159CACA0) f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - (MD5: 2465A06B1F50CD26AD5EC7D20DA6DB3D) f:\dd\vctools\crt\vcruntime\inc\vcruntime_typeinfo.h
+BIG-NEXT:              - (MD5: 385CF08DA92F72075026067CE03F8402) f:\dd\vctools\crt\vcruntime\inc\vcruntime_exception.h
+BIG-NEXT:              - (MD5: C44C7E39EE3B3A4EF6B3211EC0110AA8) f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+BIG-NEXT:              - (MD5: ADDFD8BEB612E9A30D5FB7C44F9F3D37) f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - (MD5: 386A22AB644E999820C7C22FCE5DB574) f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:              - (MD5: 8A16383C445FDABF21BDBAC3825E8133) f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+BIG-NEXT:              - (MD5: CA7D066706A198EA5999B084AAB0CE58) f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+BIG-NEXT:              - (MD5: F9FC1E83CBE1A51209ED1C05BB0F70B2) f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+BIG-NEXT:              - (MD5: A40485987BE01BAF5F57569A41DAB837) f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+BIG-NEXT:              - (MD5: 377E41F4DAE6F93EA819B4EFCF229F08) f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - (MD5: 96C01EE8E4C01B90601D93353838EBF8) f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+BIG-NEXT:              - (MD5: A5976652B404EDDDBDA326FF9A9488A3) f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:   Mod 0027 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\exe_main.obj`:
+BIG-NEXT:              - (MD5: 928553F8BA198C9030B65FA10B6B3DD2) f:\dd\externalapis\unifiedcrt\inc\malloc.h
+BIG-NEXT:              - (MD5: 493F2CAB7A6BE4175748A9FC6C4A38FB) f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - (MD5: E4963431577926D9BA190CD6C10F8743) f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+BIG-NEXT:              - (MD5: B71A807A307A52C400179EF5D3FAA1A7) f:\dd\vctools\crt\vcstartup\src\startup\exe_main.cpp
+BIG-NEXT:              - (MD5: C3412F163DF064CCDEF8CFBE0A387550) f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - (MD5: 23CC88BD1D9451C2CE5F824306E16E4D) f:\dd\externalapis\unifiedcrt\inc\math.h
+BIG-NEXT:              - (MD5: 2D5E699DF1BED89FCCCCCF0DCFC49050) f:\dd\externalapis\unifiedcrt\inc\stdio.h
+BIG-NEXT:              - (MD5: 2443DB19DCC585E308F60DAFEF1D4C4C) f:\dd\externalapis\unifiedcrt\inc\corecrt_wstdio.h
+BIG-NEXT:              - (MD5: 79921ECB03C5C56E28D771ADF8910FD8) f:\dd\externalapis\unifiedcrt\inc\corecrt_stdio_config.h
+BIG-NEXT:              - (MD5: C44C7E39EE3B3A4EF6B3211EC0110AA8) f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+BIG-NEXT:              - (MD5: DCC558DEFD73C17745F94CC5A98632D9) f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - (MD5: ADDFD8BEB612E9A30D5FB7C44F9F3D37) f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - (MD5: 386A22AB644E999820C7C22FCE5DB574) f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:              - (MD5: CA7D066706A198EA5999B084AAB0CE58) f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+BIG-NEXT:              - (MD5: 2D923CBDE24BB8F217FE09A5F7D88929) f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - (MD5: B38ACA278420B7C5F25A50AD159CACA0) f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - (MD5: 36A3069CD09EC9F92668000F200D5545) f:\dd\vctools\crt\vcstartup\src\startup\exe_common.inl
+BIG-NEXT:              - (MD5: 7C388EF80868D8301B5A908485637FEE) f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
+BIG-NEXT:              - (MD5: 377E41F4DAE6F93EA819B4EFCF229F08) f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - (MD5: 96C01EE8E4C01B90601D93353838EBF8) f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+BIG-NEXT:              - (MD5: A5976652B404EDDDBDA326FF9A9488A3) f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - (MD5: 9393435BC7FDE9F624E309D56629171A) f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+BIG-NEXT:              - (MD5: A40485987BE01BAF5F57569A41DAB837) f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+BIG-NEXT:              - (MD5: 8A16383C445FDABF21BDBAC3825E8133) f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+BIG-NEXT:              - (MD5: 303C50A7BC924CD426BAA20C7F16192C) f:\dd\vctools\crt\vcruntime\inc\vadefs.h
+BIG-NEXT:              - (MD5: F9FC1E83CBE1A51209ED1C05BB0F70B2) f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+BIG-NEXT:   Mod 0028 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\initializers.obj`:
+BIG-NEXT:              - (MD5: 928553F8BA198C9030B65FA10B6B3DD2) f:\dd\externalapis\unifiedcrt\inc\malloc.h
+BIG-NEXT:              - (MD5: 493F2CAB7A6BE4175748A9FC6C4A38FB) f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - (MD5: E4963431577926D9BA190CD6C10F8743) f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+BIG-NEXT:              - (MD5: C3412F163DF064CCDEF8CFBE0A387550) f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - (MD5: 23CC88BD1D9451C2CE5F824306E16E4D) f:\dd\externalapis\unifiedcrt\inc\math.h
+BIG-NEXT:              - (MD5: C44C7E39EE3B3A4EF6B3211EC0110AA8) f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+BIG-NEXT:              - (MD5: DCC558DEFD73C17745F94CC5A98632D9) f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - (MD5: ADDFD8BEB612E9A30D5FB7C44F9F3D37) f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - (MD5: 386A22AB644E999820C7C22FCE5DB574) f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:              - (MD5: CA7D066706A198EA5999B084AAB0CE58) f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+BIG-NEXT:              - (MD5: 2D923CBDE24BB8F217FE09A5F7D88929) f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - (MD5: B38ACA278420B7C5F25A50AD159CACA0) f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - (MD5: 7C388EF80868D8301B5A908485637FEE) f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
+BIG-NEXT:              - (MD5: 377E41F4DAE6F93EA819B4EFCF229F08) f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - (MD5: 96C01EE8E4C01B90601D93353838EBF8) f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+BIG-NEXT:              - (MD5: A5976652B404EDDDBDA326FF9A9488A3) f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - (MD5: 9393435BC7FDE9F624E309D56629171A) f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+BIG-NEXT:              - (MD5: A40485987BE01BAF5F57569A41DAB837) f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+BIG-NEXT:              - (MD5: 8A16383C445FDABF21BDBAC3825E8133) f:\dd\externalapis\windows\8.1\sdk\inc\evntprov.h
+BIG-NEXT:              - (MD5: F9FC1E83CBE1A51209ED1C05BB0F70B2) f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+BIG-NEXT:   Mod 0029 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\utility.obj`:
+BIG-NEXT:              - (MD5: 928553F8BA198C9030B65FA10B6B3DD2) f:\dd\externalapis\unifiedcrt\inc\malloc.h
+BIG-NEXT:              - (MD5: 493F2CAB7A6BE4175748A9FC6C4A38FB) f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - (MD5: E4963431577926D9BA190CD6C10F8743) f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+BIG-NEXT:              - (MD5: 2D42DDF1AAE9B3491E4BB346255346D5) f:\dd\vctools\crt\vcstartup\src\utility\utility.cpp
+BIG-NEXT:              - (MD5: C3412F163DF064CCDEF8CFBE0A387550) f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - (MD5: 23CC88BD1D9451C2CE5F824306E16E4D) f:\dd\externalapis\unifiedcrt\inc\math.h
+BIG-NEXT:              - (MD5: C44C7E39EE3B3A4EF6B3211EC0110AA8) f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+BIG-NEXT:              - (MD5: DCC558DEFD73C17745F94CC5A98632D9) f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - (MD5: ADDFD8BEB612E9A30D5FB7C44F9F3D37) f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - (MD5: 386A22AB644E999820C7C22FCE5DB574) f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:              - (MD5: CA7D066706A198EA5999B084AAB0CE58) f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+BIG-NEXT:              - (MD5: 2D923CBDE24BB8F217FE09A5F7D88929) f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - (MD5: B38ACA278420B7C5F25A50AD159CACA0) f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - (MD5: 7C388EF80868D8301B5A908485637FEE) f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
+BIG-NEXT:              - (MD5: 377E41F4DAE6F93EA819B4EFCF229F08) f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - (MD5: 96C01EE8E4C01B90601D93353838EBF8) f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+BIG-NEXT:              - (MD5: A5976652B404EDDDBDA326FF9A9488A3) f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - (MD5: 9393435BC7FDE9F624E309D56629171A) f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+BIG-NEXT:              - (MD5: A40485987BE01BAF5F57569A41DAB837) f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+BIG-NEXT:              - (MD5: F9FC1E83CBE1A51209ED1C05BB0F70B2) f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+BIG-NEXT:   Mod 0030 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\ucrt_stubs.obj`:
+BIG-NEXT:              - (MD5: 20976B3B6CD70F2DF77312D18D9C8D32) f:\dd\vctools\crt\vcstartup\src\utility\ucrt_stubs.cpp
+BIG-NEXT:   Mod 0031 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\utility_desktop.obj`:
+BIG-NEXT:              - (MD5: 928553F8BA198C9030B65FA10B6B3DD2) f:\dd\externalapis\unifiedcrt\inc\malloc.h
+BIG-NEXT:              - (MD5: 493F2CAB7A6BE4175748A9FC6C4A38FB) f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - (MD5: E4963431577926D9BA190CD6C10F8743) f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+BIG-NEXT:              - (MD5: CC9AAE4BAA114C08FFC7F1515EC09E4C) f:\dd\vctools\crt\vcstartup\src\utility\utility_desktop.cpp
+BIG-NEXT:              - (MD5: C3412F163DF064CCDEF8CFBE0A387550) f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - (MD5: 23CC88BD1D9451C2CE5F824306E16E4D) f:\dd\externalapis\unifiedcrt\inc\math.h
+BIG-NEXT:              - (MD5: C44C7E39EE3B3A4EF6B3211EC0110AA8) f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+BIG-NEXT:              - (MD5: DCC558DEFD73C17745F94CC5A98632D9) f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - (MD5: ADDFD8BEB612E9A30D5FB7C44F9F3D37) f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - (MD5: 386A22AB644E999820C7C22FCE5DB574) f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:              - (MD5: CA7D066706A198EA5999B084AAB0CE58) f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+BIG-NEXT:              - (MD5: 2D923CBDE24BB8F217FE09A5F7D88929) f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - (MD5: B38ACA278420B7C5F25A50AD159CACA0) f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:              - (MD5: 7C388EF80868D8301B5A908485637FEE) f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
+BIG-NEXT:              - (MD5: 377E41F4DAE6F93EA819B4EFCF229F08) f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - (MD5: 96C01EE8E4C01B90601D93353838EBF8) f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+BIG-NEXT:              - (MD5: A5976652B404EDDDBDA326FF9A9488A3) f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - (MD5: 9393435BC7FDE9F624E309D56629171A) f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+BIG-NEXT:              - (MD5: A40485987BE01BAF5F57569A41DAB837) f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+BIG-NEXT:              - (MD5: F9FC1E83CBE1A51209ED1C05BB0F70B2) f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+BIG-NEXT:   Mod 0032 | `f:\dd\vctools\crt\vcstartup\build\md\msvcrt_kernel32\obj1r\i386\default_precision.obj`:
+BIG-NEXT:              - (MD5: 377E41F4DAE6F93EA819B4EFCF229F08) f:\dd\externalapis\unifiedcrt\inc\string.h
+BIG-NEXT:              - (MD5: 96C01EE8E4C01B90601D93353838EBF8) f:\dd\externalapis\unifiedcrt\inc\corecrt_memory.h
+BIG-NEXT:              - (MD5: A5976652B404EDDDBDA326FF9A9488A3) f:\dd\externalapis\unifiedcrt\inc\corecrt_memcpy_s.h
+BIG-NEXT:              - (MD5: 9621B7E7C6A138B5185711F98CCC568E) f:\dd\vctools\crt\vcstartup\src\defaults\default_precision.cpp
+BIG-NEXT:              - (MD5: 9393435BC7FDE9F624E309D56629171A) f:\dd\vctools\crt\vcruntime\inc\internal_shared.h
+BIG-NEXT:              - (MD5: A40485987BE01BAF5F57569A41DAB837) f:\dd\vctools\crt\vcruntime\inc\vcruntime_new.h
+BIG-NEXT:              - (MD5: F9FC1E83CBE1A51209ED1C05BB0F70B2) f:\dd\externalapis\windows\8.1\sdk\inc\winuser.h
+BIG-NEXT:              - (MD5: 928553F8BA198C9030B65FA10B6B3DD2) f:\dd\externalapis\unifiedcrt\inc\malloc.h
+BIG-NEXT:              - (MD5: 493F2CAB7A6BE4175748A9FC6C4A38FB) f:\dd\externalapis\windows\8.1\sdk\inc\basetsd.h
+BIG-NEXT:              - (MD5: E4963431577926D9BA190CD6C10F8743) f:\dd\vctools\crt\vcruntime\inc\i386\xmmintrin.h
+BIG-NEXT:              - (MD5: C3412F163DF064CCDEF8CFBE0A387550) f:\dd\externalapis\windows\8.1\sdk\inc\winbase.h
+BIG-NEXT:              - (MD5: 7C388EF80868D8301B5A908485637FEE) f:\dd\vctools\crt\vcstartup\inc\vcstartup_internal.h
+BIG-NEXT:              - (MD5: 23CC88BD1D9451C2CE5F824306E16E4D) f:\dd\externalapis\unifiedcrt\inc\math.h
+BIG-NEXT:              - (MD5: C44C7E39EE3B3A4EF6B3211EC0110AA8) f:\dd\externalapis\unifiedcrt\inc\stdlib.h
+BIG-NEXT:              - (MD5: DCC558DEFD73C17745F94CC5A98632D9) f:\dd\externalapis\windows\8.1\sdk\inc\stralign.h
+BIG-NEXT:              - (MD5: ADDFD8BEB612E9A30D5FB7C44F9F3D37) f:\dd\externalapis\windows\8.1\sdk\inc\winnt.h
+BIG-NEXT:              - (MD5: 386A22AB644E999820C7C22FCE5DB574) f:\dd\externalapis\unifiedcrt\inc\ctype.h
+BIG-NEXT:              - (MD5: CA7D066706A198EA5999B084AAB0CE58) f:\dd\externalapis\windows\8.1\sdk\inc\guiddef.h
+BIG-NEXT:              - (MD5: 2D923CBDE24BB8F217FE09A5F7D88929) f:\dd\externalapis\unifiedcrt\inc\corecrt_wstring.h
+BIG-NEXT:              - (MD5: B38ACA278420B7C5F25A50AD159CACA0) f:\dd\externalapis\windows\8.1\sdk\inc\winerror.h
+BIG-NEXT:   Mod 0033 | `Import:KERNEL32.dll`:
+BIG-NEXT:   Mod 0034 | `KERNEL32.dll`:
+BIG-NEXT:   Mod 0035 | `Import:VCRUNTIME140.dll`:
+BIG-NEXT:   Mod 0036 | `VCRUNTIME140.dll`:
+BIG-NEXT:   Mod 0037 | `Import:api-ms-win-crt-stdio-l1-1-0.dll`:
+BIG-NEXT:   Mod 0038 | `api-ms-win-crt-stdio-l1-1-0.dll`:
+BIG-NEXT:   Mod 0039 | `Import:api-ms-win-crt-runtime-l1-1-0.dll`:
+BIG-NEXT:   Mod 0040 | `api-ms-win-crt-runtime-l1-1-0.dll`:
+BIG-NEXT:   Mod 0041 | `Import:api-ms-win-crt-math-l1-1-0.dll`:
+BIG-NEXT:   Mod 0042 | `api-ms-win-crt-math-l1-1-0.dll`:
+BIG-NEXT:   Mod 0043 | `Import:api-ms-win-crt-locale-l1-1-0.dll`:
+BIG-NEXT:   Mod 0044 | `api-ms-win-crt-locale-l1-1-0.dll`:
+BIG-NEXT:   Mod 0045 | `Import:api-ms-win-crt-heap-l1-1-0.dll`:
+BIG-NEXT:   Mod 0046 | `api-ms-win-crt-heap-l1-1-0.dll`:
+BIG-NEXT:   Mod 0047 | `* Linker *`:
+
+BAD-BLOCK-SIZE: The PDB file is corrupt. MSF superblock is missing

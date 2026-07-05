@@ -1,0 +1,69 @@
+# RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 -debug-only=regalloc -verify-machineinstrs -run-pass=liveintervals -o - %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1100 -debug-only=regalloc --passes='print<live-intervals>' -o - %s 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# CHECK: Computing live-in reg-units in ABI blocks.
+# CHECK: 0B      %bb.0 SGPR16_LO16#0 SGPR16_HI16#0
+# CHECK: SGPR16_LO16 [0B,16r:0)[32r,144r:1) 0@0B-phi 1@32r
+# CHECK: SGPR16_HI16 [0B,16r:0)[32r,144r:1) 0@0B-phi 1@32r
+
+# CHECK: Computing live-in reg-units in ABI blocks.
+# CHECK: 0B      %bb.0 SGPR2_LO16#0 SGPR2_HI16#0 SGPR3_LO16#0 SGPR3_HI16#0 SGPR7_LO16#0 SGPR7_HI16#0
+# CHECK: SGPR2_LO16 [0B,64r:0) 0@0B-phi
+# CHECK: SGPR2_HI16 [0B,64r:0) 0@0B-phi
+# CHECK: SGPR3_LO16 [0B,16r:0)[48r,64r:1) 0@0B-phi 1@48r
+# CHECK: SGPR3_HI16 [0B,16r:0)[48r,64r:1) 0@0B-phi 1@48r
+# CHECK: SGPR7_LO16 [0B,48r:0) 0@0B-phi
+# CHECK: SGPR7_HI16 [0B,48r:0) 0@0B-phi
+
+---
+name: phys_reg_partial_liveness_1
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1
+    liveins: $sgpr16
+
+    $sgpr1 = S_AND_B32 3, killed $sgpr16, implicit-def $scc
+    $sgpr16 = S_AND_B32 2, killed $sgpr1, implicit-def $scc
+
+  bb.1:
+    successors: %bb.2
+    liveins: $sgpr16_sgpr17_sgpr18_sgpr19:0x0000000000000003
+
+    $sgpr18 = S_MOV_B32 -1
+    $sgpr17 = S_MOV_B32 -2097152000
+    $sgpr19 = S_MOV_B32 -2122316801
+    renamable $sgpr42 = COPY renamable $sgpr16
+
+  bb.2:
+    liveins: $sgpr16_sgpr17_sgpr18_sgpr19:0x00000000000000FF, $sgpr42
+
+    $sgpr2 = S_BUFFER_LOAD_DWORD_IMM $sgpr16_sgpr17_sgpr18_sgpr19, 3780, 0 :: (dereferenceable invariant load (s32))
+    $sgpr0 = S_AND_B32 $sgpr42, $sgpr2, implicit-def $scc
+    S_ENDPGM 0, implicit $sgpr0
+...
+
+---
+name: phys_reg_partial_liveness_2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1
+    liveins: $sgpr2, $sgpr3, $sgpr7
+
+    $sgpr1 = S_AND_B32 1, killed $sgpr3, implicit-def $scc
+
+  bb.1:
+    successors: %bb.2
+    liveins: $sgpr2_sgpr3:0x0000000000000003, $sgpr7
+
+    $sgpr3 = COPY $sgpr7
+    $sgpr0 = S_LOAD_DWORD_IMM $sgpr2_sgpr3, 0, 0 :: (dereferenceable invariant load (s32))
+
+  bb.2:
+    liveins: $sgpr0
+
+    S_ENDPGM 0, implicit $sgpr0
+...
+

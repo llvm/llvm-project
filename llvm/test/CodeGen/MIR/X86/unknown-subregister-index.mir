@@ -1,0 +1,28 @@
+# RUN: not llc -mtriple=x86_64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# This test ensures that an error is reported when an unknown subregister index
+# is encountered.
+
+--- |
+
+  define zeroext i1 @t(i1 %c) {
+  entry:
+    ret i1 %c
+  }
+
+...
+---
+name:            t
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr32 }
+  - { id: 1, class: gr8 }
+  - { id: 2, class: gr8 }
+body: |
+  bb.0.entry:
+    %0 = COPY $edi
+    ; CHECK: [[@LINE+1]]:18: use of unknown subregister index 'bit8'
+    %1 = COPY %0.bit8
+    %2 = AND8ri %1, 1, implicit-def $eflags
+    $al = COPY %2
+    RET64 $al
+...

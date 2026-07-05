@@ -1,0 +1,4 @@
+// RUN: %clang_dxc -Tlib_6_3  -### %s 2>&1 | FileCheck %s
+
+// Make sure a non `.hlsl` file is considered an HLSL source file in dxc mode.
+// CHECK: "-x" "hlsl" "{{.*}}dxc_I.test"

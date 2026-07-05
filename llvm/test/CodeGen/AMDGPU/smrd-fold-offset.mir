@@ -1,0 +1,50 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass si-fix-sgpr-copies -o - %s | FileCheck -check-prefix=GCN %s
+
+# GCN-LABEL: name: smrd_vgpr_offset_imm
+# GCN: V_READFIRSTLANE_B32
+# GCN: S_BUFFER_LOAD_DWORD_SGPR
+---
+name:            smrd_vgpr_offset_imm
+body:             |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
+
+    %4:vgpr_32 = COPY $vgpr0
+    %3:sgpr_32 = COPY $sgpr3
+    %2:sgpr_32 = COPY $sgpr2
+    %1:sgpr_32 = COPY $sgpr1
+    %0:sgpr_32 = COPY $sgpr0
+    %5:sgpr_128 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2, %3, %subreg.sub3
+    %6:sreg_32_xm0 = S_MOV_B32 4095
+    %8:vgpr_32 = COPY %6
+    %7:vgpr_32 = V_ADD_CO_U32_e32 %4, killed %8, implicit-def dead $vcc, implicit $exec
+    %10:sreg_32 = COPY %7
+    %9:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR killed %5, killed %10, 0
+    $vgpr0 = COPY %9
+    SI_RETURN_TO_EPILOG $vgpr0
+...
+
+# GCN-LABEL: name: smrd_vgpr_offset_imm_add_u32
+# GCN: V_READFIRSTLANE_B32
+# GCN: S_BUFFER_LOAD_DWORD_SGPR
+---
+name:            smrd_vgpr_offset_imm_add_u32
+body:             |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
+
+    %4:vgpr_32 = COPY $vgpr0
+    %3:sgpr_32 = COPY $sgpr3
+    %2:sgpr_32 = COPY $sgpr2
+    %1:sgpr_32 = COPY $sgpr1
+    %0:sgpr_32 = COPY $sgpr0
+    %5:sgpr_128 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2, %3, %subreg.sub3
+    %6:sreg_32_xm0 = S_MOV_B32 4095
+    %8:vgpr_32 = COPY %6
+    %7:vgpr_32 = V_ADD_U32_e32 %4, killed %8, implicit $exec
+    %10:sreg_32 = COPY %7
+    %9:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_SGPR killed %5, killed %10, 0 :: (dereferenceable invariant load (s32))
+    $vgpr0 = COPY %9
+    SI_RETURN_TO_EPILOG $vgpr0
+
+...

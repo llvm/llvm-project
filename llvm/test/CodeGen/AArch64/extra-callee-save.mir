@@ -1,0 +1,28 @@
+#RUN: llc -mtriple=aarch64-- -run-pass prologepilog %s -o - | FileCheck %s
+# Check that we spill a scratch register, but not also an additional
+# emergency spill slot.
+---
+name: big_stack
+# CHECK-LABEL: name: big_stack
+# CHECK: frame-setup STPXi killed $x20, killed $x19
+# CHECK: $sp = frame-setup SUBXri $sp, 8, 12
+# CHECK-NOT: frame-setup SUBXri $sp, 16, 0
+tracksRegLiveness: true
+stack:
+  - { id: 0, name: '', size: 32761, alignment: 8 }
+body: |
+  bb.0:
+    $x19 = IMPLICIT_DEF
+  ; $x20 can be used as scratch register.
+    $x21 = IMPLICIT_DEF
+    $x22 = IMPLICIT_DEF
+    $x23 = IMPLICIT_DEF
+    $x24 = IMPLICIT_DEF
+    $x25 = IMPLICIT_DEF
+    $x26 = IMPLICIT_DEF
+    $x27 = IMPLICIT_DEF
+    $x28 = IMPLICIT_DEF
+    $lr  = IMPLICIT_DEF
+    $fp  = IMPLICIT_DEF
+    RET_ReallyLR
+...

@@ -1,0 +1,76 @@
+# RUN: llc -mtriple=aarch64 -simplify-mir -run-pass=shrink-wrap -o - %s | FileCheck %s
+--- |
+  declare double @foo()
+
+  define double @shrink_wrap_load_from_const_pool(double %q) {
+  entry:
+    %0 = fcmp oeq double %q, 3.125500e+02
+    br i1 %0, label %common.ret, label %if.else
+
+  common.ret:                                       ; preds = %if.else, %entry, %exit1
+    %common.ret.op = phi double [ %3, %exit1 ], [ 0.000000e+00, %entry ], [ 0.000000e+00, %if.else ]
+    ret double %common.ret.op
+
+  if.else:                                          ; preds = %entry
+    %1 = call double @foo()
+    %2 = fcmp oeq double %1, 0.000000e+00
+    br i1 %2, label %exit1, label %common.ret
+
+  exit1:                                            ; preds = %if.else
+    %3 = call double @foo()
+    br label %common.ret
+  }
+...
+# Following code has a load from constant pool. Accessing constant pool
+# must not be considered as a stack access and hence, shrink wrapping must
+# happen.
+# CHECK-LABEL:name:            shrink_wrap_load_from_const_pool
+# CHECK:  savePoint:
+# CHECK:    - point:           '%bb.3'
+# CHECK:  restorePoint:
+# CHECK:    - point:           '%bb.5'
+---
+name:            shrink_wrap_load_from_const_pool
+tracksRegLiveness: true
+constants:
+  - id:              0
+    value:           'double 3.125500e+02'
+    alignment:       8
+body:             |
+  bb.0.entry:
+    successors: %bb.4(0x50000000), %bb.2(0x30000000)
+    liveins: $d0
+
+    renamable $d1 = COPY $d0
+    renamable $x8 = ADRP target-flags(aarch64-page) %const.0
+    renamable $d2 = LDRDui killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) %const.0 :: (load (s64) from constant-pool)
+    renamable $d0 = FMOVD0
+    nofpexcept FCMPDrr killed renamable $d1, killed renamable $d2, implicit-def $nzcv, implicit $fpcr
+    Bcc 1, %bb.2, implicit killed $nzcv
+
+  bb.4:
+    liveins: $d0
+
+  bb.1.common.ret:
+    liveins: $d0
+
+    RET_ReallyLR implicit $d0
+
+  bb.2.if.else:
+    successors: %bb.3(0x50000000), %bb.1(0x30000000)
+
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    BL @foo, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $d0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    renamable $d1 = COPY $d0
+    renamable $d0 = FMOVD0
+    nofpexcept FCMPDri killed renamable $d1, implicit-def $nzcv, implicit $fpcr
+    Bcc 1, %bb.1, implicit killed $nzcv
+    B %bb.3
+
+  bb.3.exit1:
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    BL @foo, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $d0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    B %bb.1
+...

@@ -1,0 +1,6 @@
+# RUN: yaml-bench -canonical %s
+
+# Explicit document. Root
+# scalar (literal) node.
+--- |
+ Text content

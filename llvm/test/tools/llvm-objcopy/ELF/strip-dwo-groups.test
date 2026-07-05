@@ -1,0 +1,83 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy --strip-dwo %t
+# RUN: llvm-readobj --symbols -S --section-groups %t | \
+# RUN:   FileCheck %s --implicit-check-not=.debug_
+
+## `llvm-objcopy --strip-dwo` strips out dwo sections, as a result, the index of
+## the symbol table, the indices of the symbols and the indices of the sections
+## which go after the removed ones will change. Consequently, the fields Link,
+## Info and the content of .group need to be updated.
+
+## Note. 'Signature' is generated using 'Link' and 'Info', so checking it
+## validates updating these fields.
+
+# CHECK:      Groups {
+# CHECK-NEXT:  Group {
+# CHECK-NEXT:   Name: .group
+# CHECK-NEXT:   Index:
+# CHECK-NEXT:   Link:
+# CHECK-NEXT:   Info:
+# CHECK-NEXT:   Type:
+# CHECK-NEXT:   Signature: group1
+# CHECK-NEXT:   Section(s) in group [
+# CHECK-NEXT:     .text.group1
+# CHECK-NEXT:   ]
+
+# CHECK:        Name: .group
+# CHECK-NEXT:   Index:
+# CHECK-NEXT:   Link:
+# CHECK-NEXT:   Info:
+# CHECK-NEXT:   Type:
+# CHECK-NEXT:   Signature: group2
+# CHECK-NEXT:   Section(s) in group [
+# CHECK-NEXT:     .text.group2
+# CHECK-NEXT:     .rela.text.group2
+# CHECK-NEXT:   ]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .debug_before.dwo
+    Type: SHT_PROGBITS
+  - Name: .group
+    Type: SHT_GROUP
+    Link: .symtab
+    Info: group1
+    Members:
+      - SectionOrType: GRP_COMDAT
+      - SectionOrType: .text.group1
+  - Name:  .text.group1
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR, SHF_GROUP ]
+  - Name: '.group (1)'
+    Type: SHT_GROUP
+    Link: .symtab
+    Info: group2
+    Members:
+      - SectionOrType: GRP_COMDAT
+      - SectionOrType: .text.group2
+      - SectionOrType: .rela.text.group2
+  - Name:  .text.group2
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR, SHF_GROUP ]
+  - Name:  .rela.text.group2
+    Type:  SHT_RELA
+    Flags: [ SHF_GROUP ]
+    Info:  .text.group2
+  - Name: .debug_after.dwo
+    Type: SHT_PROGBITS
+Symbols:
+  - Name:    debug_before
+    Section: .debug_before.dwo
+  - Name:    debug_after
+    Section: .debug_after.dwo
+  - Name:    group2
+    Section: .text.group2
+    Binding: STB_WEAK
+  - Name:    group1
+    Section: .text.group1
+    Binding: STB_WEAK

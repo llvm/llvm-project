@@ -1,0 +1,88 @@
+# RUN: llc -run-pass pipeliner -debug-only=pipeliner %s -o /dev/null -pipeliner-max-num-stores=5 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# This loop has six stores, which exceeds the limit set by
+# `pipeliner-max-num-stores`.
+
+# CHECK: Too many stores
+
+--- |
+  target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
+  target triple = "hexagon-unknown-linux-musl"
+  
+  define void @f(ptr %a, i32 %n) #0 {
+  entry:
+    %guard = icmp sgt i32 %n, 0
+    %btc = sub nsw i32 %n, 1
+    br i1 %guard, label %loop.preheader, label %exit
+  
+  loop.preheader:                                   ; preds = %entry
+    %0 = add i32 %n, 1
+    %cgep = getelementptr i8, ptr %a, i32 %0
+    br label %loop
+  
+  loop:                                             ; preds = %loop.preheader, %loop
+    %lsr.iv = phi ptr [ %cgep, %loop.preheader ], [ %cgep8, %loop ]
+    %i = phi i32 [ %i.dec, %loop ], [ %btc, %loop.preheader ]
+    %cgep7 = getelementptr i8, ptr %lsr.iv, i32 -2
+    store i8 0, ptr %cgep7, align 1
+    %cgep8 = getelementptr i8, ptr %lsr.iv, i32 -1
+    store i8 1, ptr %cgep8, align 1
+    store i8 2, ptr %lsr.iv, align 1
+    %cgep9 = getelementptr i8, ptr %lsr.iv, i32 1
+    store i8 3, ptr %cgep9, align 1
+    %cgep10 = getelementptr i8, ptr %lsr.iv, i32 2
+    store i8 4, ptr %cgep10, align 1
+    %cgep11 = getelementptr i8, ptr %lsr.iv, i32 3
+    store i8 5, ptr %cgep11, align 1
+    %i.dec = sub i32 %i, 1
+    %ec = icmp eq i32 %i.dec, 0
+    br i1 %ec, label %exit, label %loop
+  
+  exit:                                             ; preds = %loop, %entry
+    ret void
+  }
+  
+  attributes #0 = { "target-cpu"="hexagonv79" }
+...
+---
+name:            f
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x50000000), %bb.3(0x30000000)
+    liveins: $r0, $r1
+  
+    %7:intregs = COPY $r1
+    %6:intregs = COPY $r0
+    %8:predregs = C2_cmpgti %7, 0
+    J2_jumpf %8, %bb.3, implicit-def dead $pc
+    J2_jump %bb.1, implicit-def dead $pc
+  
+  bb.1.loop.preheader:
+    successors: %bb.2(0x80000000)
+  
+    %0:intregs = A2_addi %7, -1
+    %1:intregs = S4_addaddi %7, %6, 1
+    %10:intregs = A2_tfrsi 0
+    %11:intregs = A2_tfrsi 1
+    %14:intregs = COPY %0
+    J2_loop0r %bb.2, %14, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+  
+  bb.2.loop (machine-block-address-taken):
+    successors: %bb.3(0x04000000), %bb.2(0x7c000000)
+  
+    %2:intregs = PHI %1, %bb.1, %4, %bb.2
+    S2_storerb_io %2, -2, %10 :: (store (s8) into %ir.cgep7)
+    %4:intregs = A2_addi %2, -1
+    S2_storerb_io %2, -1, %11 :: (store (s8) into %ir.cgep8)
+    S4_storeirb_io %2, 0, 2 :: (store (s8) into %ir.lsr.iv)
+    S4_storeirb_io %2, 1, 3 :: (store (s8) into %ir.cgep9)
+    S4_storeirb_io %2, 2, 4 :: (store (s8) into %ir.cgep10)
+    S4_storeirb_io %2, 3, 5 :: (store (s8) into %ir.cgep11)
+    ENDLOOP0 %bb.2, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
+    J2_jump %bb.3, implicit-def dead $pc
+  
+  bb.3.exit:
+    PS_jmpret $r31, implicit-def dead $pc
+...

@@ -1,0 +1,60 @@
+# RUN: rm -rf %t && split-file %s %t
+# RUN: yaml2obj %t/v5.yaml -o %t/v5.o
+# RUN: not llvm-dwarfdump -debug-str-offsets -verify %t/v5.o | FileCheck %s
+# RUN: yaml2obj %t/v4.yaml -o %t/v4.o
+# RUN: not llvm-dwarfdump -debug-str-offsets -verify %t/v4.o | FileCheck --check-prefix=V4 %s
+
+#      CHECK: Verifying .debug_abbrev...
+#      CHECK: Verifying .debug_str_offsets...
+# CHECK-NEXT: error: .debug_str_offsets: contribution 0x0: index 0x2: invalid string offset *0x10 == 0x1, is neither zero nor immediately following a null character
+# CHECK-NEXT: error: .debug_str_offsets: contribution 0x0: index 0x3: invalid string offset *0x14 == 0x42, is beyond the bounds of the string section of length 0x8
+# CHECK-NEXT: error: .debug_str_offsets: contribution 0x18: invalid version 42
+# CHECK-NEXT: error: .debug_str_offsets: contribution 0x20: invalid length ((length (0x5) - header (0x4)) % offset size 0x4 == 0x1 != 0)
+# CHECK-NEXT: error: .debug_str_offsets: contribution 0x29: length exceeds available space (contribution offset (0x29) + length field space (0x4) + length (0x5000000) == 0x500002D > section size 0x30)
+# Errors detected.
+
+# V4: error: .debug_str_offsets.dwo: contribution 0x0: index 0x2: invalid string offset *0x8 == 0x2, is neither zero nor immediately following a null character
+
+
+#--- v4.yaml
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+Sections:
+  - Name: '.debug_info.dwo'
+    Type: SHT_PROGBITS
+    Content: "0700000004000000000004"
+  - Name: '.debug_str_offsets.dwo'
+    Type: SHT_PROGBITS
+    Content: "000000000400000002000000"
+  - Name: 'debug_str.dwo'
+    Type: SHT_PROGBITS
+    Content: "666F6F0062617200"
+
+
+#--- v5.yaml
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+DWARF:
+  debug_str:
+    - 'foo'
+    - 'bar'
+  debug_info:
+    - Version: 5
+      UnitType:        DW_UT_compile
+      AddrSize:        8
+  debug_str_offsets:
+    - Offsets:
+        - 0x00000000
+        - 0x00000004
+        - 0x00000001
+        - 0x00000042
+    - Version: 42
+    - Length: 5
+    - Length: 8

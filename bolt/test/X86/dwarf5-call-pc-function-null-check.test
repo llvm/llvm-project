@@ -1,0 +1,18 @@
+# REQUIRES: system-linux
+
+# RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-call-pc-function-null-check-main.s -o %tmain.o
+# RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-call-pc-function-null-check-helper.s -o %thelper.o
+# RUN: %clang %cflags -dwarf-5 %tmain.o %thelper.o -o %t.exe -Wl,-q
+# RUN: llvm-bolt %t.exe -o %t.exe.bolt --update-debug-sections --debug-thread-count=4 --cu-processing-batch-size=4
+# RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.exe > %t.txt
+# RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.exe.bolt >> %t.txt
+# RUN: cat %t.txt | FileCheck --check-prefix=CHECK %s
+
+## Test checks we correctly handle nullptr returned by getBinaryFunctionContainingAddress for DW_AT_call_pc.
+## This happens when address is not contained in any function.
+
+# CHECK: DW_AT_call_pc [DW_FORM_addrx]
+# CHECK-SAME: address = 0x[[#%.16x,ADDR:]]
+
+# CHECK: DW_AT_call_pc [DW_FORM_addrx]
+# CHECK-SAME: address = 0x[[#ADDR]]

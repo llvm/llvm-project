@@ -1,0 +1,30 @@
+# RUN: llc -mtriple=x86_64 -run-pass none -o - %s | FileCheck %s
+
+--- |
+
+  define i32 @test(i32 %a, i32 %b) {
+  body:
+    %c = mul i32 %a, %b
+    ret i32 %c
+  }
+
+...
+---
+name:            test
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr32 }
+  # CHECK: - { id: 1, class: gr32, preferred-register: '%0', flags: [  ] }
+  # CHECK: - { id: 2, class: gr32, preferred-register: '$edi', flags: [  ] }
+  - { id: 1, class: gr32, preferred-register: '%0' }
+  - { id: 2, class: gr32, preferred-register: '$edi' }
+body: |
+  bb.0.body:
+    liveins: $edi, $esi
+
+    %1 = COPY $esi
+    %2 = COPY $edi
+    %2 = IMUL32rr %2, %1, implicit-def dead $eflags
+    $eax = COPY %2
+    RET64 killed $eax
+...

@@ -1,0 +1,8 @@
+framework module NeedsGNUInlineAsm {
+  header "NeedsGNUInlineAsm.h"
+
+  explicit module Asm {
+    requires gnuinlineasm
+    header "asm.h"
+  }
+}

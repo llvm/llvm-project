@@ -1,0 +1,4 @@
+framework module RecordDefIncluder {
+  header "RecordDefIncluder.h"
+  export *
+}

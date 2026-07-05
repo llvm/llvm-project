@@ -1,0 +1,34 @@
+# RUN: llc -mtriple=i686 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses fixed stack objects correctly.
+
+--- |
+
+  define i32 @test(i32 %a) #0 {
+  entry:
+    %b = alloca i32
+    store i32 %a, ptr %b
+    %c = load i32, ptr %b
+    ret i32 %c
+  }
+
+  attributes #0 = { "frame-pointer"="none" }
+
+...
+---
+name:            test
+frameInfo:
+  stackSize:       4
+  maxAlignment:    4
+# CHECK: fixedStack:
+# CHECK-NEXT: - { id: 0, type: default, offset: 0, size: 4, alignment: 4, stack-id: default
+# CHECK-NEXT: isImmutable: true,
+fixedStack:
+  - { id: 0, offset: 0, size: 4, alignment: 4, isImmutable: true, isAliased: false }
+stack:
+  - { id: 0, offset: -8, size: 4, alignment: 4 }
+body: |
+  bb.0.entry:
+    $eax = MOV32rm $esp, 1, _, 8, _
+    MOV32mr $esp, 1, _, 0, _, $eax
+    RET32 $eax
+...

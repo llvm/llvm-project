@@ -1,0 +1,15 @@
+; RUN: llvm-undname < %s | FileCheck %s
+
+; CHECK-NOT: Invalid mangled name
+
+?f@C@@WBA@EAAHXZ
+; CHECK: [thunk]: public: virtual int __cdecl C::f`adjustor{16}'(void)
+
+??_EDerived@@$4PPPPPPPM@A@EAAPEAXI@Z
+; CHECK: [thunk]: public: virtual void * __cdecl Derived::`vector deleting dtor'`vtordisp{-4, 0}'(unsigned int)
+
+?f@A@simple@@$R477PPPPPPPM@7AEXXZ
+; CHECK: [thunk]: public: virtual void __thiscall simple::A::f`vtordispex{8, 8, -4, 8}'(void)
+
+??_9Base@@$B7AA
+; CHECK: [thunk]: __cdecl Base::`vcall'{8, {flat}}

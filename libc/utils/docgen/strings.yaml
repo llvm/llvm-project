@@ -1,0 +1,26 @@
+functions:
+  bcmp:
+    removed-in-posix-2008: ''
+  bcopy:
+    removed-in-posix-2008: ''
+  bzero:
+    removed-in-posix-2008: ''
+  ffs:
+    in-latest-posix: ''
+  ffsl:
+    in-latest-posix: ''
+  ffsll:
+    in-latest-posix: ''
+  index:
+    removed-in-posix-2008: ''
+  rindex:
+    removed-in-posix-2008: ''
+  strcasecmp:
+    in-latest-posix: ''
+  strcasecmp_l:
+    in-latest-posix: ''
+  strncasecmp:
+    in-latest-posix: ''
+  strncasecmp_l:
+    in-latest-posix: ''
+

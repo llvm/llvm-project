@@ -1,0 +1,50 @@
+add_entrypoint_object(
+  clock
+  SRCS
+    clock.cpp
+  HDRS
+    ../clock.h
+  DEPENDS
+    libc.include.time
+    libc.src.__support.GPU.utils
+    libc.src.__support.time.clock_gettime
+    libc.src.__support.time.gpu.time_utils
+)
+
+add_entrypoint_object(
+  nanosleep
+  SRCS
+    nanosleep.cpp
+  HDRS
+    ../nanosleep.h
+  DEPENDS
+    libc.include.time
+    libc.src.__support.GPU.utils
+    libc.src.__support.time.gpu.time_utils
+)
+
+add_entrypoint_object(
+  timespec_get
+  SRCS
+    timespec_get.cpp
+  HDRS
+    ../timespec_get.h
+  DEPENDS
+    libc.hdr.time_macros
+    libc.hdr.types.struct_timespec
+    libc.src.__support.time.gpu.time_utils
+)
+
+add_entrypoint_object(
+  clock_gettime
+  SRCS
+    clock_gettime.cpp
+  HDRS
+    ../clock_gettime.h
+  DEPENDS
+    libc.hdr.time_macros
+    libc.hdr.types.clockid_t
+    libc.hdr.types.struct_timespec
+    libc.src.__support.time.gpu.time_utils
+    libc.src.__support.time.clock_gettime
+)

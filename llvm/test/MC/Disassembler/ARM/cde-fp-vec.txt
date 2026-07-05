@@ -1,0 +1,79 @@
+# RUN: not llvm-mc -disassemble -triple=thumbv8m.main -mattr=+fp-armv8 -mattr=+cdecp0 -mattr=+cdecp1 < %s 2>%t | FileCheck %s
+# RUN: FileCheck <%t --check-prefixes=ERROR,ERROR-FP %s
+# RUN: not llvm-mc -disassemble -triple=thumbv8.1m.main -mattr=+mve -mattr=+cdecp0 -mattr=+cdecp1 < %s 2>%t | FileCheck --check-prefixes=CHECK,CHECK-MVE %s
+# RUN: FileCheck <%t --check-prefixes=ERROR,ERROR-MVE %s
+
+# GCP instructions
+
+# CHECK: mrc p3, #1, r3, c15, c15, #5
+[0x3f,0xee,0xbf,0x33]
+# CHECK-NEXT: mcr2 p3, #2, r2, c7, c11, #7
+[0x47,0xfe,0xfb,0x23]
+
+# VCX1
+
+# CHECK: vcx1 p0, s11, #1234
+[0x69,0xec,0x92,0x50]
+# CHECK-NEXT: vcx1a p1, s7, #2047
+[0x6f,0xfc,0xbf,0x31]
+# CHECK-NEXT: vcx1 p0, d0, #0
+[0x20,0xed,0x00,0x00]
+# CHECK-NEXT: vcx1a p1, d3, #2047
+[0x2f,0xfd,0xbf,0x31]
+# CHECK-MVE-NEXT: vcx1 p0, q1, #1234
+# ERROR-FP: [[@LINE+1]]:{{[0-9]+}}: warning: invalid instruction encoding
+[0x29,0xec,0xd2,0x20]
+# CHECK-MVE-NEXT: vcx1a p1, q5, #4095
+# ERROR-FP: [[@LINE+1]]:{{[0-9]+}}: warning: invalid instruction encoding
+[0x2f,0xfd,0xff,0xa1]
+
+# Vector variant, Vd<0> == 1
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: warning: invalid instruction encoding
+[0x29,0xec,0xd2,0x30]
+
+# VCX2
+
+# CHECK: vcx2 p0, s0, s31, #12
+[0x33,0xec,0x2f,0x00]
+# CHECK-NEXT: vcx2a p0, s1, s1, #63
+[0x7f,0xfc,0xb0,0x00]
+# CHECK-NEXT: vcx2 p0, d0, d15, #0
+[0x30,0xed,0x0f,0x00]
+# CHECK-NEXT: vcx2a p0, d1, d11, #63
+[0x3f,0xfd,0x9b,0x10]
+# CHECK-MVE-NEXT: vcx2 p1, q0, q6, #123
+# ERROR-FP: [[@LINE+1]]:{{[0-9]+}}: warning: invalid instruction encoding
+[0x3e,0xed,0xdc,0x01]
+# CHECK-MVE-NEXT: vcx2a p1, q3, q7, #127
+# ERROR-FP: [[@LINE+1]]:{{[0-9]+}}: warning: invalid instruction encoding
+[0x3f,0xfd,0xde,0x61]
+
+# VCX2 Vector variant, Vm<0> == 1
+# ERROR-MVE: [[@LINE+1]]:{{[0-9]+}}: warning: invalid instruction encoding
+[0x3e,0xed,0xff,0x01]
+
+# vcx2 p1, q0, q15, #123
+# CHECK-MVE: vcx2 p1, q0, q7, #123
+# ERROR-MVE: [[@LINE+1]]:{{[0-9]+}}: warning: potentially undefined instruction encoding
+[0x3e,0xed,0xfe,0x01]
+
+# VCX3
+
+# CHECK: vcx3 p0, s0, s31, s0, #1
+[0x8f,0xec,0x90,0x00]
+# CHECK-NEXT: vcx3a p1, s1, s17, s11, #7
+[0xf8,0xfc,0xb5,0x01]
+# CHECK-NEXT: vcx3 p0, d0, d15, d7, #0
+[0x8f,0xed,0x07,0x00]
+# CHECK-NEXT: vcx3a p1, d1, d11, d11, #7
+[0xbb,0xfd,0x1b,0x11]
+# CHECK-MVE-NEXT: vcx3 p0, q0, q2, q0, #12
+# ERROR-FP: [[@LINE+1]]:{{[0-9]+}}: warning: invalid instruction encoding
+[0xa4,0xed,0x40,0x00]
+# CHECK-MVE-NEXT: vcx3a p1, q3, q7, q6, #15
+# ERROR-FP: [[@LINE+1]]:{{[0-9]+}}: warning: invalid instruction encoding
+[0xbe,0xfd,0x5c,0x61]
+
+# Vector variant, Vn<0> == 1
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: warning: invalid instruction encoding
+[0xbf,0xfd,0x7e,0x61]

@@ -1,0 +1,59 @@
+RUN: not llvm-cov show --instr-profile=/dev/null -coverage-watermark=foo /dev/null 2>&1 | FileCheck --check-prefix=INVALID-ARG %s
+INVALID-ARG: error: -coverage-watermark: invalid argument 'foo', must be in format 'high,low'
+
+RUN: not llvm-cov show --instr-profile=/dev/null -coverage-watermark=a,2 /dev/null 2>&1 | FileCheck --check-prefix=INVALID-HIGH %s
+INVALID-HIGH: error: -coverage-watermark: invalid number 'a', invalid value for 'high'
+
+RUN: not llvm-cov show --instr-profile=/dev/null -coverage-watermark=10,b /dev/null 2>&1 | FileCheck --check-prefix=INVALID-LOW %s
+INVALID-LOW: error: -coverage-watermark: invalid number 'b', invalid value for 'low'
+
+RUN: not llvm-cov show --instr-profile=/dev/null -coverage-watermark=10,20 /dev/null 2>&1 | FileCheck --check-prefix=INVALID-ARRANGE %s
+INVALID-ARRANGE: error: -coverage-watermark: invalid number range '10,20', must be both high and low should be between 0-100, and high > low
+
+RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -format html -show-region-summary -show-instantiation-summary -o %t.html.dir -path-equivalence=/tmp,%S %S/showTemplateInstantiations.cpp
+RUN: FileCheck -check-prefix=ORIGIN %s -input-file %t.html.dir/index.html
+
+ORIGIN: Totals
+ORIGIN: <td class='column-entry-green'>
+ORIGIN: 100.00% (2/2)
+ORIGIN: <td class='column-entry-green'>
+ORIGIN: 100.00% (3/3)
+ORIGIN: <td class='column-entry-red'>
+ORIGIN: 75.00% (9/12)
+ORIGIN: <td class='column-entry-red'>
+ORIGIN: 66.67% (4/6)
+ORIGIN: <td class='column-entry-gray'>
+ORIGIN: - (0/0)
+ORIGIN: </tr>
+
+RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -format html -show-region-summary -show-instantiation-summary -o %t.html.dir -path-equivalence=/tmp,%S -coverage-watermark 80,70 %S/showTemplateInstantiations.cpp
+RUN: FileCheck -check-prefix=DOWNGRADE1 %s -input-file %t.html.dir/index.html
+
+DOWNGRADE:1 Totals
+DOWNGRADE1: <td class='column-entry-green'>
+DOWNGRADE1: 100.00% (2/2)
+DOWNGRADE1: <td class='column-entry-green'>
+DOWNGRADE1: 100.00% (3/3)
+DOWNGRADE1: <td class='column-entry-yellow'>
+DOWNGRADE1: 75.00% (9/12)
+DOWNGRADE1: <td class='column-entry-red'>
+DOWNGRADE1: 66.67% (4/6)
+DOWNGRADE1: <td class='column-entry-gray'>
+DOWNGRADE1: - (0/0)
+DOWNGRADE1: </tr>
+
+RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -format html -show-region-summary -show-instantiation-summary -o %t.html.dir -path-equivalence=/tmp,%S -coverage-watermark 70,50 %S/showTemplateInstantiations.cpp
+RUN: FileCheck -check-prefix=DOWNGRADE2 %s -input-file %t.html.dir/index.html
+
+DOWNGRADE:1 Totals
+DOWNGRADE2: <td class='column-entry-green'>
+DOWNGRADE2: 100.00% (2/2)
+DOWNGRADE2: <td class='column-entry-green'>
+DOWNGRADE2: 100.00% (3/3)
+DOWNGRADE2: <td class='column-entry-green'>
+DOWNGRADE2: 75.00% (9/12)
+DOWNGRADE2: <td class='column-entry-yellow'>
+DOWNGRADE2: 66.67% (4/6)
+DOWNGRADE1: <td class='column-entry-gray'>
+DOWNGRADE1: - (0/0)
+DOWNGRADE1: </tr>

@@ -1,0 +1,22 @@
+# RUN: not llc -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# This test ensures an error is reported if the embedded LLVM IR contains an
+# error.
+
+--- |
+  
+  ; CHECK: [[@LINE+3]]:15: use of undefined value '%a'
+  define i32 @foo(i32 %x, i32 %y) {
+    %z = alloca i32, align 4
+    store i32 %a, ptr %z, align 4
+    br label %Test
+  Test:
+    %m = load i32, ptr %z, align 4
+    %cond = icmp eq i32 %y, %m
+    br i1 %cond, label %IfEqual, label %IfUnequal
+  IfEqual:
+    ret i32 1
+  IfUnequal:
+    ret i32 0
+  }
+  
+...

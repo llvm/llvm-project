@@ -1,0 +1,107 @@
+// RUN: mlir-pdll-lsp-server -pdll-extra-dir %S -pdll-extra-dir %S/../../include  -lit-test < %s | FileCheck -strict-whitespace %s
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"pdll","capabilities":{},"trace":"off"}}
+// -----
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{
+  "uri":"test:///foo.pdll",
+  "languageId":"pdll",
+  "version":1,
+  "text":"#include \"include/included.td\"\nConstraint Cst(attr: Attr);\nPattern {\n  op<test.multi>(_: Value, _: Value);\n  op<test.multi>(_: ValueRange) -> (_: Type, _: Type);\n  let op = op<test.multi>;\n  let value = op.0;\n  Cst(_: Attr);\n  erase op;\n}\n"
+}}}
+// -----
+{"jsonrpc":"2.0","id":2,"method":"textDocument/inlayHint","params":{
+  "textDocument":{"uri":"test:///foo.pdll"},
+  "range": {
+    "start": {"line":3,"character":0},
+    "end": {"line":5,"character":0}
+  }
+}}
+//      CHECK:  "id": 2,
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": [
+// CHECK-NEXT:    {
+// CHECK-NEXT:      "kind": 2,
+// CHECK-NEXT:      "label": "operand:",
+// CHECK-NEXT:      "paddingLeft": false,
+// CHECK-NEXT:      "paddingRight": true,
+// CHECK-NEXT:      "position": {
+// CHECK-NEXT:        "character": 17,
+// CHECK-NEXT:        "line": 3
+// CHECK-NEXT:      }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    {
+// CHECK-NEXT:      "kind": 2,
+// CHECK-NEXT:      "label": "operand2:",
+// CHECK-NEXT:      "paddingLeft": false,
+// CHECK-NEXT:      "paddingRight": true,
+// CHECK-NEXT:      "position": {
+// CHECK-NEXT:        "character": 27,
+// CHECK-NEXT:        "line": 3
+// CHECK-NEXT:      }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    {
+// CHECK-NEXT:      "kind": 2,
+// CHECK-NEXT:      "label": "operands:",
+// CHECK-NEXT:      "paddingLeft": false,
+// CHECK-NEXT:      "paddingRight": true,
+// CHECK-NEXT:      "position": {
+// CHECK-NEXT:        "character": 17,
+// CHECK-NEXT:        "line": 4
+// CHECK-NEXT:      }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    {
+// CHECK-NEXT:      "kind": 2,
+// CHECK-NEXT:      "label": "result:",
+// CHECK-NEXT:      "paddingLeft": false,
+// CHECK-NEXT:      "paddingRight": true,
+// CHECK-NEXT:      "position": {
+// CHECK-NEXT:        "character": 36,
+// CHECK-NEXT:        "line": 4
+// CHECK-NEXT:      }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    {
+// CHECK-NEXT:      "kind": 2,
+// CHECK-NEXT:      "label": "result2:",
+// CHECK-NEXT:      "paddingLeft": false,
+// CHECK-NEXT:      "paddingRight": true,
+// CHECK-NEXT:      "position": {
+// CHECK-NEXT:        "character": 45,
+// CHECK-NEXT:        "line": 4
+// CHECK-NEXT:      }
+// CHECK-NEXT:    }
+// CHECK-NEXT:  ]
+// -----
+{"jsonrpc":"2.0","id":3,"method":"textDocument/inlayHint","params":{
+  "textDocument":{"uri":"test:///foo.pdll"},
+  "range": {
+    "start": {"line":5,"character":0},
+    "end": {"line":8,"character":0}
+  }
+}}
+//      CHECK:  "id": 3,
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": [
+// CHECK-NEXT:    {
+// CHECK-NEXT:      "kind": 1,
+// CHECK-NEXT:      "label": ": Value",
+// CHECK-NEXT:      "paddingLeft": false,
+// CHECK-NEXT:      "paddingRight": false,
+// CHECK-NEXT:      "position": {
+// CHECK-NEXT:        "character": 11,
+// CHECK-NEXT:        "line": 6
+// CHECK-NEXT:      }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    {
+// CHECK-NEXT:      "kind": 2,
+// CHECK-NEXT:      "label": "attr:",
+// CHECK-NEXT:      "paddingLeft": false,
+// CHECK-NEXT:      "paddingRight": true,
+// CHECK-NEXT:      "position": {
+// CHECK-NEXT:        "character": 6,
+// CHECK-NEXT:        "line": 7
+// CHECK-NEXT:      }
+// CHECK-NEXT:    }
+// CHECK-NEXT:  ]
+// -----
+{"jsonrpc":"2.0","id":4,"method":"shutdown"}
+// -----
+{"jsonrpc":"2.0","method":"exit"}

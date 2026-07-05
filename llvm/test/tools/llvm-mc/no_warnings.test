@@ -1,0 +1,5 @@
+# UNSUPPORTED: target={{.*}}-zos{{.*}}
+# RUN: llvm-mc --no-warn %s 2>&1 | FileCheck %s
+
+# CHECK-NOT: warning:
+.warning

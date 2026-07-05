@@ -1,0 +1,203 @@
+## Check we are able to produce a valid SHT_GNU_versym
+## section from its description.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj -V %t1 | FileCheck %s
+
+# CHECK:      VersionSymbols [
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Version: 0
+# CHECK-NEXT:     Name:
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Version: 3
+# CHECK-NEXT:     Name: f1@v1
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Version: 4
+# CHECK-NEXT:     Name: f2@v2
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]
+# CHECK-NEXT: VersionDefinitions [
+# CHECK-NEXT: ]
+# CHECK-NEXT: VersionRequirements [
+# CHECK-NEXT:   Dependency {
+# CHECK-NEXT:     Version: 1
+# CHECK-NEXT:     Count: 2
+# CHECK-NEXT:     FileName: dso.so.0
+# CHECK-NEXT:     Entries [
+# CHECK-NEXT:       Entry {
+# CHECK-NEXT:         Hash: 1937
+# CHECK-NEXT:         Flags [ (0x0)
+# CHECK-NEXT:         ]
+# CHECK-NEXT:         Index: 3
+# CHECK-NEXT:         Name: v1
+# CHECK-NEXT:       }
+# CHECK-NEXT:       Entry {
+# CHECK-NEXT:         Hash: 1938
+# CHECK-NEXT:         Flags [ (0x0)
+# CHECK-NEXT:         ]
+# CHECK-NEXT:         Index: 4
+# CHECK-NEXT:         Name: v2
+# CHECK-NEXT:       }
+# CHECK-NEXT:     ]
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+  Entry: 0x0000000000201000
+Sections:
+  - Name:            .gnu.version
+    Type:            SHT_GNU_versym
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000200210
+    AddressAlign:    0x0000000000000002
+    EntSize:         0x0000000000000002
+    Entries:         [ 0, 3, 4 ]
+  - Name:            .gnu.version_r
+    Type:            SHT_GNU_verneed
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000200250
+    AddressAlign:    0x0000000000000004
+    Dependencies:
+      - Version:         1
+        File:            dso.so.0
+        Entries:
+          - Name:            v1
+            Hash:            1937
+            Flags:           0
+            Other:           3
+          - Name:            v2
+            Hash:            1938
+            Flags:           0
+            Other:           4
+DynamicSymbols:
+  - Name:    f1
+    Binding: STB_GLOBAL
+  - Name:    f2
+    Binding: STB_GLOBAL
+...
+
+## Check we are able to set custom sh_entsize field for SHT_GNU_versym section.
+## Check we link the SHT_GNU_versym section to the .dynsym section by default.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-readelf -S %t2 | FileCheck %s -DLINK=2 --check-prefix=FIELDS
+
+# FIELDS: Section Headers:
+# FIELDS:   [Nr] Name         Type   Address          Off    Size   ES Flg Lk
+# FIELDS:   [ 1] .gnu.version VERSYM 0000000000000000 000040 000000 03     [[LINK]]
+# FIELDS:   [ 2] .dynsym      DYNSYM 0000000000000000 000040 000018 18   A 3
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  OSABI: ELFOSABI_FREEBSD
+  Type:  ET_DYN
+Sections:
+  - Name:    .gnu.version
+    Type:    SHT_GNU_versym
+    EntSize: 0x0000000000000003
+    Entries: [ ]
+    Link:    [[LINK=<none>]]
+## Needed to emit the .dynsym section.
+DynamicSymbols: []
+
+## Check we are able to set the sh_link field to an arbitrary value.
+
+# RUN: yaml2obj --docnum=2 -DLINK=0xff %s -o %t2.link
+# RUN: llvm-readelf -S %t2.link | FileCheck %s -DLINK=255 --check-prefix=FIELDS
+
+## Check we can use the "Content" key with the "Size" key when the size is greater
+## than or equal to the content size.
+## Also, check that we set the sh_link field to 0 when there is no .dynsym section.
+
+# RUN: not yaml2obj --docnum=3 -DSIZE=1 -DCONTENT="'0011'" %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=CONTENT-SIZE-ERR
+
+# CONTENT-SIZE-ERR: error: Section size must be greater than or equal to the content size
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:    .gnu.version
+    Type:    SHT_GNU_versym
+    Size:    [[SIZE=<none>]]
+    Content: [[CONTENT=<none>]]
+    Entries: [[ENTRIES=<none>]]
+
+# RUN: yaml2obj --docnum=3 -DSIZE=2 -DCONTENT="'0011'" %s -o %t.cont.size.eq.o
+# RUN: llvm-readobj --sections --section-data %t.cont.size.eq.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="0011"
+
+# RUN: yaml2obj --docnum=3 -DSIZE=3 -DCONTENT="'0011'" %s -o %t.cont.size.gr.o
+# RUN: llvm-readobj --sections --section-data %t.cont.size.gr.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="001100"
+
+# CHECK-CONTENT:        Name: .gnu.version
+# CHECK-CONTENT-NEXT:   Type: SHT_GNU_versym (0x6FFFFFFF)
+# CHECK-CONTENT-NEXT:   Flags [ (0x0)
+# CHECK-CONTENT-NEXT:   ]
+# CHECK-CONTENT-NEXT:   Address:
+# CHECK-CONTENT-NEXT:   Offset:
+# CHECK-CONTENT-NEXT:   Size:
+# CHECK-CONTENT-NEXT:   Link: 0
+# CHECK-CONTENT:        SectionData (
+# CHECK-CONTENT-NEXT:   0000: [[DATA]] |
+# CHECK-CONTENT-NEXT: )
+
+## Check we can use the "Size" key alone to create the section.
+
+# RUN: yaml2obj --docnum=3 -DSIZE=3 %s -o %t.size.o
+# RUN: llvm-readobj --sections --section-data %t.size.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="000000"
+
+## Check we can use the "Content" key alone to create the section.
+
+# RUN: yaml2obj --docnum=3 -DCONTENT="'112233'" %s -o %t.content.o
+# RUN: llvm-readobj --sections --section-data %t.content.o | \
+# RUN:   FileCheck %s --check-prefix=CHECK-CONTENT -DDATA="112233"
+
+## Check we can't use the "Entries" key together with the "Content" or "Size" keys.
+
+# RUN: not yaml2obj --docnum=3 -DSIZE=0 -DENTRIES="[]" %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ENTRIES-ERR
+# RUN: not yaml2obj --docnum=3 -DCONTENT="'00'" -DENTRIES="[]" %s 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ENTRIES-ERR
+
+# ENTRIES-ERR: error: "Entries" cannot be used with "Content" or "Size"
+
+## Check we set the sh_link field to 0 when the .dynsym section is excluded
+## from the section header table.
+
+# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: llvm-readelf --sections %t4 | FileCheck %s --check-prefix=EXCLUDED
+
+# EXCLUDED: [Nr] Name         {{.*}} ES Flg Lk Inf
+# EXCLUDED: [ 1] .gnu.version {{.*}} 02     0   0
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: .gnu.version
+    Type: SHT_GNU_versym
+  - Name: .dynsym
+    Type: SHT_DYNSYM
+  - Type: SectionHeaderTable
+    Sections:
+      - Name: .gnu.version
+      - Name: .strtab
+      - Name: .shstrtab
+    Excluded:
+      - Name: .dynsym

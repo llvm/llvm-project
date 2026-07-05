@@ -1,0 +1,11 @@
+#RUN: llvm-dwarfdump -lookup 1161 %p/Inputs/dwarfdump-test.macho-i386.o | FileCheck %s
+
+// When we pass an address to getDIEsFromAddress that doesn't belong to any DIE
+// (only to a CU), this function is triggering an assert, which is not the
+// intended behavior (as the address still belongs to a CU).
+
+#CHECK: DW_TAG_compile_unit
+#CHECK-NEXT:   DW_AT_producer{{.*}}"clang version 3.6.2 (tags/RELEASE_362/final)"
+#CHECK-NEXT:   DW_AT_language{{.*}}DW_LANG_C_plus_plus
+#CHECK-NEXT:   DW_AT_name{{.*}}"dwarfdump-test.cc"
+#CHECK-NOT:    DW_TAG

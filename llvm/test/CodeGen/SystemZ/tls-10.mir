@@ -1,0 +1,24 @@
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z196 -O0 -start-after=finalize-isel \
+# RUN:   -stop-before=regallocfast -o - %s | FileCheck %s
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z196 -O3 -start-after=finalize-isel \
+# RUN:   -stop-before=livevars -o - %s | FileCheck %s
+#
+# Test that a COPY from CC gets implemented with an IPM to a GR32 reg.
+
+---
+name:            fun0
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: grx32bit }
+body:             |
+  bb.0:
+  liveins: $cc
+    ; CHECK-LABEL: name: fun0
+    ; CHECK: %1:gr32bit = IPM implicit $cc
+    ; CHECK-NEXT: %0:grx32bit = COPY %1
+    ; CHECK-NEXT: $r2l = COPY %0
+    ; CHECK-NEXT: Return implicit $r2l
+    %0:grx32bit = COPY $cc
+    $r2l = COPY %0
+    Return implicit $r2l
+...

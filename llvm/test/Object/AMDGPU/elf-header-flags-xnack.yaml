@@ -1,0 +1,37 @@
+# RUN: yaml2obj --docnum=1 %s -o %t.o.1
+# RUN: llvm-readobj -S --file-headers %t.o.1 | FileCheck --check-prefixes=ELF-ALL,ELF-XNACK-NONE %s
+# RUN: obj2yaml %t.o.1 | FileCheck --check-prefixes=YAML-XNACK-NONE %s
+# RUN: yaml2obj --docnum=2 %s -o %t.o.2
+# RUN: llvm-readobj -S --file-headers %t.o.2 | FileCheck --check-prefixes=ELF-ALL,ELF-XNACK-GFX801 %s
+# RUN: obj2yaml %t.o.2 | FileCheck --check-prefixes=YAML-XNACK-GFX801 %s
+
+# ELF-ALL:          Flags [
+# ELF-XNACK-NONE:     EF_AMDGPU_FEATURE_XNACK_V3   (0x100)
+# ELF-XNACK-GFX801:   EF_AMDGPU_FEATURE_XNACK_V3   (0x100)
+# ELF-XNACK-GFX801:   EF_AMDGPU_MACH_AMDGCN_GFX801 (0x28)
+# ELF-ALL:          ]
+
+# YAML-XNACK-NONE:   Flags: [ EF_AMDGPU_MACH_NONE, EF_AMDGPU_FEATURE_XNACK_V3 ]
+# YAML-XNACK-GFX801: Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX801, EF_AMDGPU_FEATURE_XNACK_V3 ]
+
+# Doc1
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  OSABI:   ELFOSABI_NONE
+  Type:    ET_REL
+  Machine: EM_AMDGPU
+  Flags:   [ EF_AMDGPU_FEATURE_XNACK_V3 ]
+...
+
+# Doc2
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  OSABI:   ELFOSABI_NONE
+  Type:    ET_REL
+  Machine: EM_AMDGPU
+  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX801, EF_AMDGPU_FEATURE_XNACK_V3 ]
+...

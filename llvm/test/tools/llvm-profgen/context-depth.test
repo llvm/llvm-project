@@ -1,0 +1,125 @@
+; Test --csprof-max-context-depth and --csprof-max-unsymbolized-context-depth
+
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t --compress-recursion=0 --profile-summary-hot-count=0 --csprof-max-context-depth=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0
+; RUN: FileCheck %s --input-file %t -check-prefix=CHECK-MAX-CTX-DEPTH
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t --compress-recursion=0 --profile-summary-hot-count=0 --csprof-max-unsymbolized-context-depth=2 --csspgo-preinliner=0 --gen-cs-nested-profile=0 --skip-symbolization
+; RUN: FileCheck %s --input-file %t -check-prefix=CHECK-MAX-UNSYM-CTX-DEPTH
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t --compress-recursion=0 --profile-summary-hot-count=0 --csprof-max-unsymbolized-context-depth=2 --csspgo-preinliner=0 --gen-cs-nested-profile=0
+; RUN: FileCheck %s --input-file %t -check-prefix=CHECK-MAX-UNSYM-CTX-DEPTH-PROF
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t --compress-recursion=0 --profile-summary-hot-count=0 --csprof-max-unsymbolized-context-depth=2 --csprof-max-context-depth=0  --csspgo-preinliner=0 --gen-cs-nested-profile=0
+; RUN: FileCheck %s --input-file %t -check-prefix=CHECK-MAX-CTX-DEPTH
+
+
+; CHECK-MAX-CTX-DEPTH: [fb]:19:6
+; CHECK-MAX-CTX-DEPTH:  1: 6
+; CHECK-MAX-CTX-DEPTH:  2: 3
+; CHECK-MAX-CTX-DEPTH:  3: 3
+; CHECK-MAX-CTX-DEPTH:  4: 0
+; CHECK-MAX-CTX-DEPTH:  5: 4 fb:4
+; CHECK-MAX-CTX-DEPTH:  6: 3 fa:3
+; CHECK-MAX-CTX-DEPTH:  !CFGChecksum: 563022570642068
+; CHECK-MAX-CTX-DEPTH: [fa]:14:4
+; CHECK-MAX-CTX-DEPTH:  1: 4
+; CHECK-MAX-CTX-DEPTH:  3: 4
+; CHECK-MAX-CTX-DEPTH:  4: 2
+; CHECK-MAX-CTX-DEPTH:  5: 1
+; CHECK-MAX-CTX-DEPTH:  6: 0
+; CHECK-MAX-CTX-DEPTH:  7: 2 fb:2
+; CHECK-MAX-CTX-DEPTH:  8: 1 fa:1
+; CHECK-MAX-CTX-DEPTH:  !CFGChecksum: 563070469352221
+
+
+; CHECK-MAX-UNSYM-CTX-DEPTH: [0x7ab @ 0x7ab]
+; CHECK-MAX-UNSYM-CTX-DEPTH:   3
+; CHECK-MAX-UNSYM-CTX-DEPTH:   7a0-7a7:1
+; CHECK-MAX-UNSYM-CTX-DEPTH:   7a0-7ab:3
+; CHECK-MAX-UNSYM-CTX-DEPTH:   7b2-7b5:1
+; CHECK-MAX-UNSYM-CTX-DEPTH:   3
+; CHECK-MAX-UNSYM-CTX-DEPTH:   7a7->7b2:1
+; CHECK-MAX-UNSYM-CTX-DEPTH:   7ab->7a0:4
+; CHECK-MAX-UNSYM-CTX-DEPTH:   7b5->7c0:1
+; CHECK-MAX-UNSYM-CTX-DEPTH: [0x7ab @ 0x7b5]
+; CHECK-MAX-UNSYM-CTX-DEPTH:   1
+; CHECK-MAX-UNSYM-CTX-DEPTH:   7c0-7d4:1
+; CHECK-MAX-UNSYM-CTX-DEPTH:   1
+; CHECK-MAX-UNSYM-CTX-DEPTH:   7d4->7c0:1
+; CHECK-MAX-UNSYM-CTX-DEPTH: [0x7b5 @ 0x7d4]
+; CHECK-MAX-UNSYM-CTX-DEPTH:   2
+; CHECK-MAX-UNSYM-CTX-DEPTH:   7c0-7cd:1
+; CHECK-MAX-UNSYM-CTX-DEPTH:   7db-7e0:1
+; CHECK-MAX-UNSYM-CTX-DEPTH:   2
+; CHECK-MAX-UNSYM-CTX-DEPTH:   7cd->7db:1
+; CHECK-MAX-UNSYM-CTX-DEPTH:   7e0->7a0:1
+; CHECK-MAX-UNSYM-CTX-DEPTH: [0x7b5 @ 0x7e0]
+; CHECK-MAX-UNSYM-CTX-DEPTH:   2
+; CHECK-MAX-UNSYM-CTX-DEPTH:   7a0-7a7:1
+; CHECK-MAX-UNSYM-CTX-DEPTH:   7b2-7b5:1
+; CHECK-MAX-UNSYM-CTX-DEPTH:   2
+; CHECK-MAX-UNSYM-CTX-DEPTH:   7a7->7b2:1
+; CHECK-MAX-UNSYM-CTX-DEPTH:   7b5->7c0:1
+; CHECK-MAX-UNSYM-CTX-DEPTH: [0x7d4 @ 0x7e0]
+; CHECK-MAX-UNSYM-CTX-DEPTH:   2
+; CHECK-MAX-UNSYM-CTX-DEPTH:   7a0-7a7:1
+; CHECK-MAX-UNSYM-CTX-DEPTH:   7b2-7b5:1
+; CHECK-MAX-UNSYM-CTX-DEPTH:   2
+; CHECK-MAX-UNSYM-CTX-DEPTH:   7a7->7b2:1
+; CHECK-MAX-UNSYM-CTX-DEPTH:   7b5->7c0:1
+; CHECK-MAX-UNSYM-CTX-DEPTH: [0x7e0 @ 0x7b5]
+; CHECK-MAX-UNSYM-CTX-DEPTH:   2
+; CHECK-MAX-UNSYM-CTX-DEPTH:   7c0-7cd:2
+; CHECK-MAX-UNSYM-CTX-DEPTH:   7db-7e0:1
+; CHECK-MAX-UNSYM-CTX-DEPTH:   2
+; CHECK-MAX-UNSYM-CTX-DEPTH:   7cd->7db:2
+; CHECK-MAX-UNSYM-CTX-DEPTH:   7e0->7a0:1
+
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF: [fb:5 @ fb:5 @ fb]:13:4
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  1: 4
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  2: 3
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  3: 1
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  4: 0
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  5: 4 fb:4
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  6: 1 fa:1
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  !CFGChecksum: 563022570642068
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF: [fa:7 @ fb:6 @ fa]:6:2
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  1: 2
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  3: 2
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  4: 1
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  5: 0
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  6: 0
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  7: 1 fb:1
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  8: 0
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  !CFGChecksum: 563070469352221
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF: [fb:5 @ fb:6 @ fa]:4:1
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  1: 1
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  3: 1
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  4: 0
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  5: 1
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  6: 0
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  7: 0
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  8: 1 fa:1
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  !CFGChecksum: 563070469352221
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF: [fb:6 @ fa:8 @ fa]:4:1
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  1: 1
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  3: 1
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  4: 1
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  5: 0
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  6: 0
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  7: 1 fb:1
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  8: 0
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  !CFGChecksum: 563070469352221
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF: [fa:8 @ fa:7 @ fb]:3:1
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  1: 1
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  2: 0
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  3: 1
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  4: 0
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  5: 0
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  6: 1 fa:1
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  !CFGChecksum: 563022570642068
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF: [fb:6 @ fa:7 @ fb]:3:1
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  1: 1
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  2: 0
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  3: 1
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  4: 0
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  5: 0
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  6: 1 fa:1
+; CHECK-MAX-UNSYM-CTX-DEPTH-PROF:  !CFGChecksum: 563022570642068

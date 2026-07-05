@@ -1,0 +1,41 @@
+name: Check CI Scripts
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+     - main
+    paths:
+     - '.ci/**'
+     - '.github/workflows/check-ci.yml'
+  pull_request:
+    paths:
+     - '.ci/**'
+     - '.github/workflows/check-ci.yml'
+
+jobs:
+  test-python:
+    name: "Check Python Tests"
+    runs-on: ubuntu-24.04
+    if: github.repository == 'llvm/llvm-project'
+    steps:
+      - name: Fetch LLVM sources
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          sparse-checkout: .ci
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: 3.14
+          cache: 'pip'
+      - name: Install Python Dependencies
+        run: |
+          pip3 install -r .ci/all_requirements.txt
+          pip3 install -r .ci/metrics/requirements.lock.txt
+          pip3 install pytest==8.4.1
+      - name: Run Tests
+        working-directory: .ci
+        run: pytest

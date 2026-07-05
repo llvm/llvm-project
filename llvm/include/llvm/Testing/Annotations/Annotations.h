@@ -1,0 +1,176 @@
+//===--- Annotations.h - Annotated source code for tests ---------*- C++-*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+#ifndef LLVM_TESTING_SUPPORT_ANNOTATIONS_H
+#define LLVM_TESTING_SUPPORT_ANNOTATIONS_H
+
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include <tuple>
+#include <vector>
+
+namespace llvm {
+
+class raw_ostream;
+
+/// Annotations lets you mark points and ranges inside source code, for tests:
+///
+///    Annotations Example(R"cpp(
+///       int complete() { x.pri^ }         // ^ indicates a point
+///       void err() { [["hello" == 42]]; } // [[this is a range]]
+///       $definition^class Foo{};          // points can be named: "definition"
+///       $(foo)^class Foo{};               // ...or have a payload: "foo"
+///       $definition(foo)^class Foo{};     // ...or both
+///       $fail(runtime)[[assert(false)]]   // ranges can have names/payloads
+///                                         // too
+///    )cpp");
+///
+///    StringRef Code = Example.code();             // annotations stripped.
+///    std::vector<size_t> PP = Example.points();   // all unnamed points
+///    size_t P = Example.point();                  // there must be exactly one
+///    llvm::Range R = Example.range("fail");       // find named ranges
+///
+/// Points/ranges are coordinated into `code()` which is stripped of
+/// annotations.
+///
+/// Names consist of only alphanumeric characters or '_'.
+/// Payloads can contain any character expect '(' and ')'.
+///
+/// Ranges may be nested (and points can be inside ranges), but there's no way
+/// to define general overlapping ranges.
+///
+/// The markers for points, names and ranges can be customized. This is useful
+/// when the default markers would otherwise conflict with the underlying syntax
+/// (e.g. C++ attributes or the reflection operator). For example, to use "~" as
+/// the point marker, "@@" as the name/payload marker, and "{{" / "}}" as range
+/// delimiters:
+///
+///    Annotations Example("~point @@name{{range}}", {"~", "@@", "{{", "}}"});
+///
+/// Alternatively, use setters to customize markers individually:
+///
+///    // Customize only the point marker, leaving the rest as default:
+///    Annotations Example("~point $name[[range]]", Annotations::Markers()
+///      .setPoint("~"));
+///
+///    // Customize all markers:
+///    Annotations Example("~point @@name{{range}}", Annotations::Markers()
+///      .setPoint("~")
+///      .setName("@@")
+///      .setRangeBegin("{{")
+///      .setRangeEnd("}}"));
+class Annotations {
+public:
+  /// Two offsets pointing to a continuous substring. End is not included, i.e.
+  /// represents a half-open range.
+  struct Range {
+    size_t Begin = 0;
+    size_t End = 0;
+
+    friend bool operator==(const Range &L, const Range &R) {
+      return std::tie(L.Begin, L.End) == std::tie(R.Begin, R.End);
+    }
+    friend bool operator!=(const Range &L, const Range &R) { return !(L == R); }
+  };
+
+  /// Markers used to denote points, names/payloads and ranges in the annotated
+  /// text.
+  struct Markers {
+    llvm::StringRef Point = "^";
+    llvm::StringRef Name = "$";
+    llvm::StringRef RangeBegin = "[[";
+    llvm::StringRef RangeEnd = "]]";
+
+    Markers &setPoint(llvm::StringRef P) {
+      Point = P;
+      return *this;
+    }
+    Markers &setName(llvm::StringRef N) {
+      Name = N;
+      return *this;
+    }
+    Markers &setRangeBegin(llvm::StringRef B) {
+      RangeBegin = B;
+      return *this;
+    }
+    Markers &setRangeEnd(llvm::StringRef E) {
+      RangeEnd = E;
+      return *this;
+    }
+  };
+
+  /// Parses the annotations from Text. Crashes if it's malformed.
+  Annotations(llvm::StringRef Text);
+  /// Parses the annotations from Text using custom markers.
+  /// Markers must be non-empty and unambiguous.
+  Annotations(llvm::StringRef Text, const Markers &Markers);
+
+  /// The input text with all annotations stripped.
+  /// All points and ranges are relative to this stripped text.
+  llvm::StringRef code() const { return Code; }
+
+  /// Returns the position of the point marked by ^ (or $name^) in the text.
+  /// Crashes if there isn't exactly one.
+  size_t point(llvm::StringRef Name = "") const;
+  /// Returns the position of the point with \p Name and its payload (if any).
+  std::pair<size_t, llvm::StringRef>
+  pointWithPayload(llvm::StringRef Name = "") const;
+  /// Returns the position of all points marked by ^ (or $name^) in the text.
+  /// Order matches the order within the text.
+  std::vector<size_t> points(llvm::StringRef Name = "") const;
+  /// Returns the positions and payloads (if any) of all points named \p Name
+  std::vector<std::pair<size_t, llvm::StringRef>>
+  pointsWithPayload(llvm::StringRef Name = "") const;
+  /// Returns the mapping of all names of points marked in the text to their
+  /// position. Unnamed points are mapped to the empty string. The positions are
+  /// sorted.
+  /// FIXME Remove this and expose `All` directly (currently used out-of-tree)
+  llvm::StringMap<llvm::SmallVector<size_t, 1>> all_points() const;
+
+  /// Returns the location of the range marked by [[ ]] (or $name[[ ]]).
+  /// Crashes if there isn't exactly one.
+  Range range(llvm::StringRef Name = "") const;
+  /// Returns the location and payload of the range marked by [[ ]]
+  /// (or $name(payload)[[ ]]). Crashes if there isn't exactly one.
+  std::pair<Range, llvm::StringRef>
+  rangeWithPayload(llvm::StringRef Name = "") const;
+  /// Returns the location of all ranges marked by [[ ]] (or $name[[ ]]).
+  /// They are ordered by start position within the text.
+  std::vector<Range> ranges(llvm::StringRef Name = "") const;
+  /// Returns the location of all ranges marked by [[ ]]
+  /// (or $name(payload)[[ ]]).
+  /// They are ordered by start position within the text.
+  std::vector<std::pair<Range, llvm::StringRef>>
+  rangesWithPayload(llvm::StringRef Name = "") const;
+  /// Returns the mapping of all names of ranges marked in the text to their
+  /// location. Unnamed ranges are mapped to the empty string. The ranges are
+  /// sorted by their start position.
+  llvm::StringMap<llvm::SmallVector<Range, 1>> all_ranges() const;
+
+private:
+  std::string Code;
+  /// Either a Point (Only Start) or a Range (Start and End)
+  struct Annotation {
+    size_t Begin;
+    size_t End = -1;
+    bool isPoint() const { return End == size_t(-1); }
+    llvm::StringRef Name;
+    llvm::StringRef Payload;
+  };
+  std::vector<Annotation> All;
+  // Values are the indices into All
+  llvm::StringMap<llvm::SmallVector<size_t, 1>> Points;
+  llvm::StringMap<llvm::SmallVector<size_t, 1>> Ranges;
+};
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &O,
+                              const llvm::Annotations::Range &R);
+
+} // namespace llvm
+
+#endif

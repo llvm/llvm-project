@@ -1,0 +1,7 @@
+module HasWarnings {
+  header "has_warnings.h"
+}
+
+module HasErrors {
+  header "has_errors.h"
+}

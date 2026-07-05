@@ -1,0 +1,24 @@
+# REQUIRES: x86
+
+# RUN: echo '.section .text,"ax"; .quad 0' > %t.s
+# RUN: echo '.section .foo,"ax"; .quad 0' >> %t.s
+# RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %t.s -o %t.o
+# RUN: ld.lld --hash-style=sysv -o %t1 --script %s %t.o -shared
+# RUN: llvm-readelf -l %t1 | FileCheck %s
+
+# CHECK:      Segment Sections...
+# CHECK-NEXT:   00     .text
+# CHECK-NEXT:   01     .foo .dynsym .hash .dynstr .dynamic
+# CHECK-NEXT:   02     .foo .dynsym .hash .dynstr .dynamic
+
+PHDRS {
+  ph_write PT_LOAD FLAGS(2);
+  ph_exec  PT_LOAD FLAGS(1);
+  ph_note  PT_NOTE;
+}
+
+SECTIONS {
+  .text : { *(.text) } : ph_write
+  .bar : { *(.bar) } : ph_exec : ph_note
+  .foo : { *(.foo) }
+}

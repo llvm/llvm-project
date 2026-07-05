@@ -1,0 +1,72 @@
+add_entrypoint_object(
+  strtoimax
+  SRCS
+    strtoimax.cpp
+  HDRS
+    strtoimax.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.str_to_integer
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  strtoumax
+  SRCS
+    strtoumax.cpp
+  HDRS
+    strtoumax.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.str_to_integer
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  imaxdiv
+  SRCS
+    imaxdiv.cpp
+  HDRS
+    imaxdiv.h
+  DEPENDS
+    libc.include.inttypes
+    libc.src.__support.integer_operations
+)
+
+add_entrypoint_object(
+  imaxabs
+  SRCS
+    imaxabs.cpp
+  HDRS
+    imaxabs.h
+  DEPENDS
+    libc.include.inttypes
+    libc.src.__support.integer_operations
+)
+
+add_entrypoint_object(
+  wcstoimax
+  SRCS
+    wcstoimax.cpp
+  HDRS
+    wcstoimax.h
+  DEPENDS
+    libc.hdr.types.wchar_t
+    libc.hdr.stdint_proxy
+    libc.src.__support.str_to_integer
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  wcstoumax
+  SRCS
+    wcstoumax.cpp
+  HDRS
+    wcstoumax.h
+  DEPENDS
+    libc.hdr.types.wchar_t
+    libc.hdr.stdint_proxy
+    libc.src.__support.str_to_integer
+    libc.src.errno.errno
+)
+

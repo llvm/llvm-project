@@ -1,0 +1,150 @@
+# RUN: llc -o - %s -mtriple=aarch64-windows -start-after=prologepilog -filetype=obj  \
+# RUN:   | llvm-readobj --unwind - | FileCheck %s
+# RUN: llc -o - %s -mtriple=aarch64-windows -run-pass=aarch64-ldst-opt \
+# RUN:   | FileCheck %s --check-prefix=CHECK-LDSTOPT
+# This test case checks the basic validity of the .xdata section.  It's
+# documented at:
+# https://docs.microsoft.com/en-us/cpp/build/arm64-exception-handling
+
+# Also test the generated assembler SEH directives.
+# RUN: llc -o - %s -mtriple=aarch64-windows -start-after=prologepilog -filetype=asm  \
+# RUN:   | FileCheck %s --check-prefix=ASM
+
+# We expect to see the following in the .xdata section:
+
+# CHECK: 	 ExceptionData {
+# CHECK-NEXT:      FunctionLength: 96
+# CHECK-NEXT:      Version: 0
+# CHECK-NEXT:      ExceptionData: No
+# CHECK-NEXT:      EpiloguePacked: Yes
+# CHECK-NEXT:      EpilogueOffset: 13
+# CHECK-NEXT:      ByteCodeLength: 28
+# CHECK-NEXT:      Prologue [
+# CHECK-NEXT:        0xc808              ; stp x19, x20, [sp, #64]
+# CHECK-NEXT:        0xd0c7              ; str x22, [sp, #56]
+# CHECK-NEXT:        0xd086              ; str x21, [sp, #48]
+# CHECK-NEXT:        0xc904              ; stp x23, x24, [sp, #32]
+# CHECK-NEXT:        0xc982              ; stp x25, x26, [sp, #16]
+# CHECK-NEXT:        0xce09              ; stp x27, x28, [sp, #-80]!
+# CHECK-NEXT:        0xe4                ; end
+# CHECK-NEXT:      ]
+# CHECK-NEXT:      Epilogue [
+# CHECK-NEXT:        0xc808              ; ldp x19, x20, [sp, #64]
+# CHECK-NEXT:        0xd086              ; ldr x21, [sp, #48]
+# CHECK-NEXT:        0xe3                ; nop
+# CHECK-NEXT:        0xd0c7              ; ldr x22, [sp, #56]
+# CHECK-NEXT:        0xc904              ; ldp x23, x24, [sp, #32]
+# CHECK-NEXT:        0xc982              ; ldp x25, x26, [sp, #16]
+# CHECK-NEXT:        0xce09              ; ldp x27, x28, [sp], #80
+# CHECK-NEXT:        0xe4                ; end
+# CHECK-NEXT:      ]
+# CHECK-NEXT:    }
+
+# Check that the load-store optimizer does not merge the two
+# callee-saved stores in the prologue.
+# CHECK-LDSTOPT: name: test
+# CHECK-LDSTOPT: frame-setup STRXui killed $x21, $sp, 6
+# CHECK-LDSTOPT: frame-setup STRXui killed $x22, $sp, 7
+
+# ASM-LABEL: test:
+# ASM: .seh_proc test
+# ASM: .seh_save_regp_x x27, 80
+# ASM: .seh_save_regp x25, 16
+# ASM: .seh_save_regp x23, 32
+# ASM: .seh_save_reg x21, 48
+# ASM: .seh_save_reg x22, 56
+# ASM: .seh_save_regp x19, 64
+# ASM: .seh_endprologue
+
+# ASM: .seh_startepilogue
+# ASM: .seh_save_regp x19, 64
+# ASM: .seh_save_reg x21, 48
+# ASM: .seh_nop
+# ASM: .seh_save_reg x22, 56
+# ASM: .seh_save_regp x23, 32
+# ASM: .seh_save_regp x25, 16
+# ASM: .seh_save_regp_x x27, 80
+# ASM: .seh_endepilogue
+
+# ASM: .seh_endfunclet
+# ASM: .seh_endproc
+
+...
+---
+name:            test
+alignment:       4
+tracksRegLiveness: true
+hasWinCFI: true
+liveins:
+  - { reg: '$w0' }
+frameInfo:
+  stackSize:       80
+  maxAlignment:    8
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: true
+stack:
+  - { id: 0, type: spill-slot, offset: -8, size: 8, alignment: 8, stack-id: default,
+      callee-saved-register: '$x19' }
+  - { id: 1, type: spill-slot, offset: -16, size: 8, alignment: 8, stack-id: default,
+      callee-saved-register: '$x20' }
+  - { id: 2, type: spill-slot, offset: -24, size: 8, alignment: 8, stack-id: default,
+      callee-saved-register: '$x21' }
+  - { id: 3, type: spill-slot, offset: -32, size: 8, alignment: 8, stack-id: default,
+      callee-saved-register: '$x22' }
+  - { id: 4, type: spill-slot, offset: -40, size: 8, alignment: 8, stack-id: default,
+      callee-saved-register: '$x23' }
+  - { id: 5, type: spill-slot, offset: -48, size: 8, alignment: 8, stack-id: default,
+      callee-saved-register: '$x24' }
+  - { id: 6, type: spill-slot, offset: -56, size: 8, alignment: 8, stack-id: default,
+      callee-saved-register: '$x25' }
+  - { id: 7, type: spill-slot, offset: -64, size: 8, alignment: 8, stack-id: default,
+      callee-saved-register: '$x26' }
+  - { id: 8, type: spill-slot, offset: -72, size: 8, alignment: 8, stack-id: default,
+      callee-saved-register: '$x27' }
+  - { id: 9, type: spill-slot, offset: -80, size: 8, alignment: 8, stack-id: default,
+      callee-saved-register: '$x28' }
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1, $x27, $x28, $x25, $x26, $x23, $x24, $x21, $x22, $x19, $x20
+    early-clobber $sp = frame-setup STPXpre killed $x27, killed $x28, $sp, -10 :: (store (s64) into %stack.8), (store (s64) into %stack.9)
+    frame-setup SEH_SaveRegP_X 27, 28, -80
+    frame-setup STPXi killed $x25, killed $x26, $sp, 2 :: (store (s64) into %stack.6), (store (s64) into %stack.7)
+    frame-setup SEH_SaveRegP 25, 26, 16
+    frame-setup STPXi killed $x23, killed $x24, $sp, 4 :: (store (s64) into %stack.4), (store (s64) into %stack.5)
+    frame-setup SEH_SaveRegP 23, 24, 32
+    frame-setup STRXui killed $x21, $sp, 6 :: (store (s64) into %stack.2)
+    frame-setup SEH_SaveReg 21, 48
+    frame-setup STRXui killed $x22, $sp, 7 :: (store (s64) into %stack.3)
+    frame-setup SEH_SaveReg 22, 56
+    frame-setup STPXi killed $x19, killed $x20, $sp, 8 :: (store (s64) into %stack.0), (store (s64) into %stack.1)
+    frame-setup SEH_SaveRegP 19, 20, 64
+    frame-setup SEH_PrologEnd
+    $x19 = ADDXrr $x0, killed $x1
+    $x20 = ADDXrr $x19, killed $x0
+    $x21 = ADDXrr $x20, killed $x19
+    $x22 = ADDXrr $x21, killed $x20
+    $x23 = ADDXrr $x22, killed $x21
+    $x24 = ADDXrr $x23, killed $x22
+    $x25 = ADDXrr $x24, killed $x23
+    $x26 = ADDXrr $x25, killed $x24
+    $x27 = ADDXrr $x26, killed $x25
+    $x28 = ADDXrr $x27, killed $x26
+    frame-destroy SEH_EpilogStart
+    $x19, $x20 = frame-destroy LDPXi $sp, 8 :: (load (s64) from %stack.0), (load (s64) from %stack.1)
+    frame-destroy SEH_SaveRegP 19, 20, 64
+    $x21 = frame-destroy LDRXui $sp, 6 :: (load (s64) from %stack.2)
+    frame-destroy SEH_SaveReg 21, 48
+    $x0 = COPY $x28
+    frame-destroy SEH_Nop
+    $x21 = frame-destroy LDRXui $sp, 6 :: (load (s64) from %stack.2)
+    frame-destroy SEH_SaveReg 22, 56
+    $x23, $x24 = frame-destroy LDPXi $sp, 4 :: (load (s64) from %stack.4), (load (s64) from %stack.5)
+    frame-destroy SEH_SaveRegP 23, 24, 32
+    $x25, $x26 = frame-destroy LDPXi $sp, 2 :: (load (s64) from %stack.6), (load (s64) from %stack.7)
+    frame-destroy SEH_SaveRegP 25, 26, 16
+    early-clobber $sp, $x27, $x28 = frame-destroy LDPXpost $sp, 10 :: (load (s64) from %stack.8), (load (s64) from %stack.9)
+    frame-destroy SEH_SaveRegP_X 27, 28, -80
+    frame-destroy SEH_EpilogEnd
+    RET_ReallyLR implicit $x0
+
+...

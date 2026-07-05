@@ -1,0 +1,12 @@
+# RUN: not --crash llc -mtriple=riscv32 -run-pass machineverifier %s -o - 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=riscv32 --passes='machine-function(verify)' %s -o - 2>&1 | FileCheck %s
+
+# CHECK: *** Bad machine code: Invalid immediate ***
+# CHECK: - instruction: $x2 = ADDI $x1, 10000
+
+---
+name: verify_instr
+body: |
+  bb.0:
+    $x2 = ADDI $x1, 10000
+...

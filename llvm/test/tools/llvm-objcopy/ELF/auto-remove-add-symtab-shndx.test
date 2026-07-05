@@ -1,0 +1,47 @@
+# This test makes sure that the .symtab_shndx section is automatically removed
+# when it is not needed and added when it is.
+
+RUN: %python %p/../Inputs/ungzip.py %p/Inputs/many-sections.o.gz > %t.0
+RUN: echo 'foo' > %t
+# many-sections.o contains sections from s1 to s65535, each with a symbol.
+# Remove enough so that the last section with a symbol has index
+# SHN_LORESERVE (i.e. s65280), and show the section hasn't been removed.
+RUN: llvm-objcopy -R 's65[3-9][0-9][0-9]' -R 's6529[0-9]' -R 's6528[1-9]' %t.0 %t2
+RUN: llvm-readobj --sections %t2 | FileCheck --check-prefix=SHNDX %s
+# Remove one more to cause removal of the section.
+RUN: llvm-objcopy -R s65280 %t2 %t3
+RUN: llvm-readobj --sections %t3 | FileCheck --check-prefix=NOSHNDX %s
+
+# Add additional sections. No .symtab_shndx should be added, as they contain no
+# symbols.
+RUN: llvm-objcopy --add-section=newsec1=%t --add-section=newsec2=%t --add-section=newsec3=%t %t3 %t4
+RUN: llvm-readobj --sections %t4 | FileCheck --check-prefix=NOSHNDX %s
+
+# Add a symbol to one of these sections and show that the .symtab_shndx
+# section has been created and that the new symbol has the right section index.
+RUN: llvm-objcopy --add-symbol=newsym=newsec1:0 %t4 %t5
+RUN: llvm-readobj --symbols --sections %t5 | \
+RUN:   FileCheck --check-prefixes=SHNDX,SHNDX-SYM -DSECTION=newsec1 %s
+
+# Show that removing and adding symbols, but not their sections, has the same
+# effect regarding removal/addition of the .symtab_shndx section.
+# FIXME: llvm-objcopy does not currently remove this section in these
+# circumstances. See https://bugs.llvm.org/show_bug.cgi?id=49364
+# Test is left here to document the current behaviour.
+RUN: llvm-objcopy -N 'sym65[3-9][0-9][0-9]' -N 'sym652[89][0-9]' -w %t.0 %t6
+RUN: llvm-readobj --sections %t6 | not FileCheck --check-prefix=NOSHNDX %s
+# FIXME: Remove these test lines once the bug has been fixed. They simply show
+# that the section is removed by a run without any further operations.
+RUN: llvm-objcopy %t6 %t6b
+RUN: llvm-readobj --sections %t6b | FileCheck --check-prefix=NOSHNDX %s
+
+# Add a symbol to ensure the section is reinstated.
+RUN: llvm-objcopy --add-symbol=newsym=s65280:0 -w %t6 %t7
+RUN: llvm-readobj --sections --symbols %t7 | \
+RUN:   FileCheck --check-prefixes=SHNDX,SHNDX-SYM -DSECTION=s65280 %s
+
+NOSHNDX-NOT:    Name: .symtab_shndx
+SHNDX:          Name: .symtab_shndx
+SHNDX-SYM:      Name: newsym
+SHNDX-SYM:      Section:
+SHNDX-SYM-SAME:           [[SECTION]]

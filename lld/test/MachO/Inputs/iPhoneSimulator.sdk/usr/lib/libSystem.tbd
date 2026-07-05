@@ -1,0 +1,53 @@
+--- !tapi-tbd-v3
+archs:            [ i386, x86_64, arm64 ]
+uuids:            [ 'i386: 00000000-0000-0000-0000-000000000000',
+                    'x86_64: 00000000-0000-0000-0000-000000000001',
+                    'arm64: 00000000-0000-0000-0000-000000000002' ]
+platform:         ios
+install-name:     '/usr/lib/libSystem.dylib'
+current-version:  1281
+exports:
+  - archs:      [ i386, x86_64, arm64 ]
+    re-exports: [ '/usr/lib/system/libcache.dylib',
+                  '/usr/lib/system/libsystem_kernel.dylib' ]
+    symbols:    [ __crashreporter_info__, _cache_create, dyld_stub_binder ]
+--- !tapi-tbd-v3
+archs:            [ i386, x86_64, arm64 ]
+uuids:            [ 'i386: 00000000-0000-0000-0000-000000000003',
+                    'x86_64: 00000000-0000-0000-0000-000000000004',
+                    'arm64: 00000000-0000-0000-0000-000000000005' ]
+platform:         ios
+install-name:     '/usr/lib/system/libcache.dylib'
+current-version:  83
+parent-umbrella:  System
+exports:
+  - archs:      [ i386 ]
+    symbols:    [ __cache_handle_memory_pressure_event ]
+  - archs:      [ i386, x86_64 ]
+    symbols:    [ _cache_create, _cache_destroy, _cache_get ]
+--- !tapi-tbd-v3
+archs:            [ i386, x86_64, arm64 ]
+uuids:            [ 'i386: 00000000-0000-0000-0000-000000000003',
+                    'x86_64: 00000000-0000-0000-0000-000000000004',
+                    'arm64: 00000000-0000-0000-0000-000000000005' ]
+platform:         macosx
+install-name:     '/usr/lib/system/libsystem_kernel.dylib'
+current-version:  83
+parent-umbrella:  System
+exports:
+  - archs:      [ i386, x86_64, arm64 ]
+    symbols:    [ ___fsync ]
+
+# The following TAPI document is not re-exported by any other document in this
+# TBD file, and should therefore be inaccessible.
+--- !tapi-tbd-v3
+archs:            [ i386, x86_64, arm64 ]
+uuids:            [ 'i386: 00000000-0000-0000-0000-000000000006',
+                    'x86_64: 00000000-0000-0000-0000-000000000007',
+                    'arm64: 00000000-0000-0000-0000-000000000008' ]
+platform:         ios
+install-name:     '/usr/lib/libnotreexported.dylib'
+exports:
+  - archs:      [ i386, x86_64, arm64 ]
+    symbols:    [ _from_non_reexported_tapi_dylib ]
+...

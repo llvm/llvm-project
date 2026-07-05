@@ -1,0 +1,77 @@
+# RUN: llc -mtriple=x86_64-apple-darwin -start-after=virtregrewriter -o - %s | FileCheck %s
+
+# Check there's no assertion for anyregcc with an undef operand to a stackmap.
+
+# CHECK: __LLVM_StackMaps:
+# CHECK-NEXT: .byte	3
+# CHECK-NEXT: .byte	0
+# CHECK-NEXT: .short	0
+# CHECK-NEXT: .long	1
+# CHECK-NEXT: .long	0
+# CHECK-NEXT: .long	1
+# CHECK-NEXT: .quad	_undef_anyregcc_patchpoint
+# CHECK-NEXT: .quad	8
+# CHECK-NEXT: .quad	1
+# CHECK-NEXT: .quad	12
+# CHECK-NEXT: .long	Ltmp0-_undef_anyregcc_patchpoint
+# CHECK-NEXT: .short	0
+# CHECK-NEXT: .short	2
+# CHECK-NEXT: .byte	1
+# CHECK-NEXT: .byte	0
+# CHECK-NEXT: .short	8
+# CHECK-NEXT: .short	0
+# CHECK-NEXT: .short	0
+# CHECK-NEXT: .long	0
+# CHECK-NEXT: .byte	1
+# CHECK-NEXT: .byte	0
+# CHECK-NEXT: .short	8
+# CHECK-NEXT: .short	0
+# CHECK-NEXT: .short	0
+# CHECK-NEXT: .long	0
+# CHECK-NEXT: .p2align	3, 0x0
+# CHECK-NEXT: .short	0
+# CHECK-NEXT: .short	7
+# CHECK-NEXT: .short	0
+# CHECK-NEXT: .byte	0
+# CHECK-NEXT: .byte	8
+# CHECK-NEXT: .short	3
+# CHECK-NEXT: .byte	0
+# CHECK-NEXT: .byte	8
+# CHECK-NEXT: .short	7
+# CHECK-NEXT: .byte	0
+# CHECK-NEXT: .byte	8
+# CHECK-NEXT: .short	12
+# CHECK-NEXT: .byte	0
+# CHECK-NEXT: .byte	8
+# CHECK-NEXT: .short	13
+# CHECK-NEXT: .byte	0
+# CHECK-NEXT: .byte	8
+# CHECK-NEXT: .short	14
+# CHECK-NEXT: .byte	0
+# CHECK-NEXT: .byte	8
+# CHECK-NEXT: .short	15
+# CHECK-NEXT: .byte	0
+# CHECK-NEXT: .byte	8
+# CHECK-NEXT: .p2align	3
+---
+name:  undef_anyregcc_patchpoint
+tracksRegLiveness: true
+frameInfo:
+  hasPatchPoint:   true
+  hasCalls:        true
+  adjustsStack:    true
+fixedStack:
+  - { id: 0, type: default, offset: 72, size: 8, alignment: 8, stack-id: default,
+      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+body:             |
+  bb.0:
+    liveins: $rcx, $rdi, $rdx, $rsi, $r8, $r9
+
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    dead renamable $rax = MOV64rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.0)
+    renamable $rax = PATCHPOINT 12, 15, 0, 1, 13, undef renamable $rax, csr_64_allregs, implicit-def dead early-clobber $r11, implicit-def $rsp, implicit-def $ssp
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    RET 0, $rax
+
+...

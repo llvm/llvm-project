@@ -1,0 +1,20 @@
+# RUN: not llc -mtriple=x86_64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+
+--- |
+
+  define i32 @test(i32 %a) {
+  body:
+    ret i32 %a
+  }
+
+...
+---
+name:            test
+body: |
+  bb.0.body:
+    ; CHECK: [[@LINE+1]]:14: expected a named register
+    liveins: %0
+
+    $eax = COPY $edi
+    RET64 $eax
+...

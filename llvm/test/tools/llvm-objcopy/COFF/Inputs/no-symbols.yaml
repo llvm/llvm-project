@@ -1,0 +1,11 @@
+--- !COFF
+header:          
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:        
+  - Name:            .text
+    Characteristics: [  ]
+    Alignment:       4
+    SectionData:     E800000000C3C3C3
+symbols:         
+...

@@ -1,0 +1,103 @@
+#RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=+v8.4a --disassemble < %s | FileCheck %s
+#RUN: llvm-mc -triple aarch64-none-linux-gnu -mattr=-v8.4a --disassemble < %s | FileCheck %s --check-prefix=CHECK-NOV84
+
+[0x20,0xa5,0x18,0xd5]
+[0x00,0xa5,0x18,0xd5]
+[0x00,0xa5,0x1c,0xd5]
+[0x00,0xa5,0x1e,0xd5]
+[0x00,0xa5,0x1d,0xd5]
+[0x00,0xa4,0x1c,0xd5]
+[0x20,0xa4,0x1c,0xd5]
+[0x00,0xa6,0x1c,0xd5]
+[0x20,0xa6,0x1c,0xd5]
+[0x40,0xa6,0x1c,0xd5]
+[0x60,0xa6,0x1c,0xd5]
+[0x80,0xa6,0x1c,0xd5]
+[0xa0,0xa6,0x1c,0xd5]
+[0xc0,0xa6,0x1c,0xd5]
+[0xe0,0xa6,0x1c,0xd5]
+[0x20,0xa5,0x38,0xd5]
+[0x00,0xa5,0x38,0xd5]
+[0x00,0xa5,0x3c,0xd5]
+[0x00,0xa5,0x3e,0xd5]
+[0x00,0xa5,0x3d,0xd5]
+[0x00,0xa4,0x3c,0xd5]
+[0x20,0xa4,0x3c,0xd5]
+[0x00,0xa6,0x3c,0xd5]
+[0x20,0xa6,0x3c,0xd5]
+[0x40,0xa6,0x3c,0xd5]
+[0x60,0xa6,0x3c,0xd5]
+[0x80,0xa6,0x3c,0xd5]
+[0xa0,0xa6,0x3c,0xd5]
+[0xc0,0xa6,0x3c,0xd5]
+[0xe0,0xa6,0x3c,0xd5]
+[0x80,0xa4,0x38,0xd5]
+
+#CHECK:  msr MPAM0_EL1, x0
+#CHECK:  msr MPAM1_EL1, x0
+#CHECK:  msr MPAM2_EL2, x0
+#CHECK:  msr MPAM3_EL3, x0
+#CHECK:  msr MPAM1_EL12, x0
+#CHECK:  msr MPAMHCR_EL2, x0
+#CHECK:  msr MPAMVPMV_EL2, x0
+#CHECK:  msr MPAMVPM0_EL2, x0
+#CHECK:  msr MPAMVPM1_EL2, x0
+#CHECK:  msr MPAMVPM2_EL2, x0
+#CHECK:  msr MPAMVPM3_EL2, x0
+#CHECK:  msr MPAMVPM4_EL2, x0
+#CHECK:  msr MPAMVPM5_EL2, x0
+#CHECK:  msr MPAMVPM6_EL2, x0
+#CHECK:  msr MPAMVPM7_EL2, x0
+#CHECK:  mrs x0, MPAM0_EL1
+#CHECK:  mrs x0, MPAM1_EL1
+#CHECK:  mrs x0, MPAM2_EL2
+#CHECK:  mrs x0, MPAM3_EL3
+#CHECK:  mrs x0, MPAM1_EL12
+#CHECK:  mrs x0, MPAMHCR_EL2
+#CHECK:  mrs x0, MPAMVPMV_EL2
+#CHECK:  mrs x0, MPAMVPM0_EL2
+#CHECK:  mrs x0, MPAMVPM1_EL2
+#CHECK:  mrs x0, MPAMVPM2_EL2
+#CHECK:  mrs x0, MPAMVPM3_EL2
+#CHECK:  mrs x0, MPAMVPM4_EL2
+#CHECK:  mrs x0, MPAMVPM5_EL2
+#CHECK:  mrs x0, MPAMVPM6_EL2
+#CHECK:  mrs x0, MPAMVPM7_EL2
+#CHECK:  mrs x0, MPAMIDR_EL1
+
+// Available outside MPAM from Armv9.7
+#CHECK-NOV84: msr MPAM0_EL1, x0
+#CHECK-NOV84: msr MPAM1_EL1, x0
+#CHECK-NOV84: msr MPAM2_EL2, x0
+#CHECK-NOV84: msr MPAM3_EL3, x0
+#CHECK-NOV84: msr MPAM1_EL12, x0
+#CHECK-NOV84: msr MPAMHCR_EL2, x0
+
+#CHECK-NOV84:  msr MPAMVPMV_EL2, x0
+#CHECK-NOV84:  msr MPAMVPM0_EL2, x0
+#CHECK-NOV84:  msr MPAMVPM1_EL2, x0
+#CHECK-NOV84:  msr MPAMVPM2_EL2, x0
+#CHECK-NOV84:  msr MPAMVPM3_EL2, x0
+#CHECK-NOV84:  msr MPAMVPM4_EL2, x0
+#CHECK-NOV84:  msr MPAMVPM5_EL2, x0
+#CHECK-NOV84:  msr MPAMVPM6_EL2, x0
+#CHECK-NOV84:  msr MPAMVPM7_EL2, x0
+
+// Available outside MPAM from Armv9.7
+#CHECK-NOV84: mrs x0, MPAM0_EL1
+#CHECK-NOV84: mrs x0, MPAM1_EL1
+#CHECK-NOV84: mrs x0, MPAM2_EL2
+#CHECK-NOV84: mrs x0, MPAM3_EL3
+#CHECK-NOV84: mrs x0, MPAM1_EL12
+#CHECK-NOV84: mrs x0, MPAMHCR_EL2
+
+#CHECK-NOV84:  mrs x0, MPAMVPMV_EL2
+#CHECK-NOV84:  mrs x0, MPAMVPM0_EL2
+#CHECK-NOV84:  mrs x0, MPAMVPM1_EL2
+#CHECK-NOV84:  mrs x0, MPAMVPM2_EL2
+#CHECK-NOV84:  mrs x0, MPAMVPM3_EL2
+#CHECK-NOV84:  mrs x0, MPAMVPM4_EL2
+#CHECK-NOV84:  mrs x0, MPAMVPM5_EL2
+#CHECK-NOV84:  mrs x0, MPAMVPM6_EL2
+#CHECK-NOV84:  mrs x0, MPAMVPM7_EL2
+#CHECK-NOV84:  mrs x0, MPAMIDR_EL1

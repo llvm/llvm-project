@@ -1,0 +1,11 @@
+// RUN: cir-translate --cir-to-llvmir --target x86_64-unknown-linux-gnu --disable-cc-lowering %s -o %t.ll
+// RUN: FileCheck %s -input-file %t.ll -check-prefix=LLVM
+
+module {
+  cir.func @foo() {
+    cir.return
+  }
+}
+
+// LLVM-DAG: target triple = "x86_64-unknown-linux-gnu"
+// LLVM-DAG: target datalayout = "{{.*}}"

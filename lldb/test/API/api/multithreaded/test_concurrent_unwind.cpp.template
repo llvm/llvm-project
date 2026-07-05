@@ -1,0 +1,91 @@
+#include "pseudo_barrier.h"
+
+#include <atomic>
+#include <thread>
+
+%include_SB_APIs%
+
+#include "common.h"
+
+using namespace lldb;
+
+void test (SBDebugger &dbg, std::vector<std::string> args) {
+
+SBError error;
+  dbg.SetAsync(false);
+  SBTarget target = dbg.CreateTarget(args.at(0).c_str());
+  if (!target.IsValid())
+    throw Exception("Invalid target");
+
+  // Now set our breakpoint and launch:
+  SBFileSpec main_sourcefile("deep_stack.cpp");
+  SBBreakpoint bkpt = target.BreakpointCreateBySourceRegex("Set a breakpoint here",
+                                                           main_sourcefile);
+  if (bkpt.GetNumLocations() == 0)
+    throw Exception("Main breakpoint got no locations");
+
+  SBLaunchInfo launch_info = target.GetLaunchInfo();
+  SBProcess process = target.Launch(launch_info, error);
+  if (error.Fail())
+    throw Exception("Failed to launch process");
+  if (!process.IsValid())
+    throw Exception("Process is not valid");
+  if (process.GetState() != lldb::eStateStopped)
+    throw Exception("Process was not stopped");
+
+  size_t num_threads = process.GetNumThreads();
+  if (num_threads != 1)
+    throw Exception("Unexpected number of threads.");
+  SBThread cur_thread = process.GetThreadAtIndex(0);
+  if (!cur_thread.IsValid())
+    throw Exception("Didn't get a valid thread");
+
+  // Record the number of frames at the point where we stopped:
+  const size_t num_frames = cur_thread.GetNumFrames();
+  // Now step once to clear the frame cache:
+  cur_thread.StepOver();
+  
+  // Create three threads and set them to getting frames simultaneously,
+  // and make sure we don't deadlock.
+  pseudo_barrier_t rendevous;
+  pseudo_barrier_init(rendevous, 5);
+  std::atomic_size_t success(true);
+  std::atomic_size_t largest(0);
+
+  auto lambda = [&](size_t stride){
+    pseudo_barrier_wait(rendevous);
+    bool younger = true;
+    while (1) {
+      size_t cursor = largest;
+      if (cursor > stride && !younger) {
+        cursor -= stride;
+        younger = true;
+      } else {
+        cursor += stride;
+        largest += stride;
+        younger = false;
+      }
+      SBFrame frame = cur_thread.GetFrameAtIndex(cursor);
+      if (!frame.IsValid()) {
+        if (cursor < num_frames)
+          success = false;
+        break;
+      }
+    }
+    
+  };
+
+  std::thread thread1(lambda, 1);
+  std::thread thread2(lambda, 3);
+  std::thread thread3(lambda, 5);
+  std::thread thread4(lambda, 7);
+  std::thread thread5(lambda, 11);
+  thread1.join();
+  thread2.join();
+  thread3.join();
+  thread4.join();
+  thread5.join();
+  
+  if (!success)
+    throw Exception("One thread stopped before 1000");
+}

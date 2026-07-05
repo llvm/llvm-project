@@ -1,0 +1,37 @@
+# REQUIRES: x86
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 a.s -o a.o
+
+# RUN: not ld.lld a.o -T a.lds 2>&1 | FileCheck %s --implicit-check-not=error:
+# CHECK: error: address (0x6014) of section '.text' does not converge
+
+# RUN: ld.lld a.o -T b.lds --noinhibit-exec 2>&1 | FileCheck %s --check-prefix=CHECK2 --implicit-check-not=warning:
+# CHECK2: warning: address (0x5014) of section '.text' does not converge
+# CHECK2: warning: assignment to symbol a does not converge
+
+#--- a.s
+.globl _start
+_start: .space 4
+.data; .byte 0
+
+#--- a.lds
+SECTIONS {
+  . = 0x1000;
+  .text ADDR(.data) + 0x1000 : { *(.text) }
+  .data : { *(.data) }
+}
+
+#--- b.lds
+SECTIONS {
+  . = 0x1000;
+  .text text : { *(.text) }
+  .data : {
+    *(.data)
+    x = ADDR(.text);
+    a = b;
+    b = c;
+    ## Absolute symbol; not converging
+    c = ABSOLUTE(ADDR(.text));
+  }
+  text = ADDR(.data) + 0x1000;
+}

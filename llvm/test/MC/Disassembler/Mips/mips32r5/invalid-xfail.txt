@@ -1,0 +1,13 @@
+# RUN: llvm-mc %s -triple=mips-unknown-linux -disassemble -mcpu=mips32r5 | FileCheck %s
+# XFAIL: *
+
+# Start with a valid instruction. Otherwise llvm-mc gives up immediately.
+0x00 0x00 0x00 0x00
+
+# CHECK: .text
+0x45 0x06 0x00 0x82 # bc1fl $fcc1, 520    # CHECK: :[[@LINE]]:1: warning: invalid instruction encoding
+0x45 0x07 0xd8 0x01 # bc1tl $fcc1, -40956 # CHECK: :[[@LINE]]:1: warning: invalid instruction encoding
+0x45 0x08 0x14 0x02 # bc1f $fcc2, 20488   # CHECK: :[[@LINE]]:1: warning: invalid instruction encoding
+0x45 0x09 0x01 0x01 # bc1t $fcc2, 1028    # CHECK: :[[@LINE]]:1: warning: invalid instruction encoding
+0x48 0x00 0x00 0x01 # mfc2 $zero, $0, 1   # CHECK: :[[@LINE]]:1: warning: invalid instruction encoding
+0x48 0x86 0x00 0x04 # mtc2 $6, $0, 4      # CHECK: :[[@LINE]]:1: warning: invalid instruction encoding

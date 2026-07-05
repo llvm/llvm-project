@@ -1,0 +1,28 @@
+# RUN: llc -mtriple=aarch64-linux-gnu -start-before prologepilog %s -o - | FileCheck %s
+
+---
+name: TestFrameRecordLocation
+tracksRegLiveness: true
+frameInfo:
+  isFrameAddressTaken: true
+body: |
+  bb.0:
+    $d8 = IMPLICIT_DEF
+    $d9 = IMPLICIT_DEF
+    $x19 = IMPLICIT_DEF
+    RET_ReallyLR
+
+# CHECK-LABEL: TestFrameRecordLocation
+
+# CHECK: stp d9, d8, [sp, #-48]!
+# CHECK: stp x29, x30, [sp, #16]
+# CHECK: str x19, [sp, #32]
+# CHECK: add x29, sp, #16
+
+# CHECK: .cfi_def_cfa w29, 32
+# CHECK: .cfi_offset w19, -16
+# CHECK: .cfi_offset w30, -24
+# CHECK: .cfi_offset w29, -32
+# CHECK: .cfi_offset b8, -40
+# CHECK: .cfi_offset b9, -48
+...

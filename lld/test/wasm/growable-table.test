@@ -1,0 +1,18 @@
+# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/start.s -o %t.start.o
+# RUN: wasm-ld --export-table --growable-table -o %t.wasm %t.start.o
+# RUN: obj2yaml %t.wasm | FileCheck %s
+
+# Verify the --growable-table flag creates a growable table
+
+# CHECK:        - Type:            TABLE
+# CHECK-NEXT:     Tables:
+# CHECK-NEXT:       - Index:           0
+# CHECK-NEXT:         ElemType:        FUNCREF
+# CHECK-NEXT:         Limits:
+# CHECK-NEXT:           Minimum:       0x1
+# CHECK-NEXT:   - Type:
+# CHECK:        - Type:            EXPORT
+# CHECK-NEXT:     Exports:
+# CHECK:            - Name:            __indirect_function_table
+# CHECK-NEXT:         Kind:            TABLE
+# CHECK-NEXT:         Index:           0

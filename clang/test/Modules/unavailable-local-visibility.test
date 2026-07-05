@@ -1,0 +1,2 @@
+// RUN: %clang_cc1 -fmodules -I%S/Inputs/unavailable-local-visibility -fmodule-name=X -emit-module -x c++-module-map %S/Inputs/unavailable-local-visibility/module.modulemap -o %t/x.pcm
+// RUN: %clang_cc1 -fmodules -I%S/Inputs/unavailable-local-visibility -fmodule-name=M -fmodule-map-file=%S/Inputs/unavailable-local-visibility/module.modulemap -fmodules-local-submodule-visibility -fmodule-file=%t/x.pcm -fsyntax-only -x c++-header %S/Inputs/unavailable-local-visibility/b.h

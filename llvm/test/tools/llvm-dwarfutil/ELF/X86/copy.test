@@ -1,0 +1,34 @@
+## This test checks that debug info contained in the source file
+## is fully copied to the destination file in case --no-garbage-collection
+## is specified.
+
+# RUN: yaml2obj %p/Inputs/common.yaml -o %t.o
+
+## Check that the resulting file contains debug info from source file.
+# RUN: llvm-dwarfutil --no-garbage-collection %t.o %t1
+# RUN: llvm-dwarfdump -a %t1 | FileCheck %s
+
+## Check that the second copy matches with the first.
+# RUN: llvm-dwarfutil --no-garbage-collection %t1 %t2
+# RUN: cmp %t1 %t2
+
+## Check that input file passed through <stdin> is correctly processesed.
+# RUN: llvm-dwarfutil --no-garbage-collection - %t2 < %t1
+# RUN: cmp %t1 %t2
+
+# CHECK: .debug_abbrev
+# CHECK: DW_TAG_compile_unit
+# CHECK: .debug_info
+# CHECK: DW_TAG_compile_unit
+# CHECK: DW_AT_producer{{.*}}"by_hand"
+# CHECK: DW_AT_language{{.*}}DW_LANG_C_plus_plus
+# CHECK: DW_AT_name{{.*}}"CU1"
+# CHECK: DW_TAG_class_type
+# CHECK: DW_AT_name{{.*}}"class1"
+# CHECK: DW_TAG_base_type
+# CHECK: DW_AT_name{{.*}}"int"
+# CHECK: DW_AT_name{{.*}}"char"
+# CHECK: DW_AT_name{{.*}}"float"
+# CHECK: DW_TAG_pointer_type
+# CHECK: DW_TAG_variable
+# CHECK: DW_AT_name{{.*}}"var1"

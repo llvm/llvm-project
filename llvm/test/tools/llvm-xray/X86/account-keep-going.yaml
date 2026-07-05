@@ -1,0 +1,20 @@
+#RUN: llvm-xray account %s -o - -m %S/Inputs/simple-instrmap.yaml -k | FileCheck %s
+---
+header:
+  version: 1
+  type: 0
+  constant-tsc: true
+  nonstop-tsc: true
+  cycle-frequency: 0
+records:
+# We want to test the case for when we see spurious exits without sibling call deduction, 
+# but keep going anyway ignoring the records in the process.
+  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-enter, tsc: 10000 }
+  - { type: 0, func-id: 2, cpu: 1, thread: 111, kind: function-enter, tsc: 10001 }
+  - { type: 0, func-id: 3, cpu: 1, thread: 111, kind: function-enter, tsc: 10002 }
+  - { type: 0, func-id: 3, cpu: 1, thread: 111, kind: function-exit,  tsc: 10003 }
+  - { type: 0, func-id: 1, cpu: 1, thread: 111, kind: function-exit,  tsc: 10004 }
+...
+#CHECK:       Functions with latencies: 1
+#CHECK-NEXT:  funcid  count  [ min, med, 90p, 99p, max] sum function
+#CHECK-NEXT:  3 1 [ 1.{{.*}}, 1.{{.*}}, 1.{{.*}}, 1.{{.*}}, 1.{{.*}}] {{.*}} {{.*}}

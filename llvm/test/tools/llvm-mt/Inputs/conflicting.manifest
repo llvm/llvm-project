@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1">
+  <trustInfo>
+    <security>
+      <requestedPrivileges>
+        <requestedExecutionLevel level="2" uiAccess="1"/>
+      </requestedPrivileges>
+    </security>
+  </trustInfo>
+</assembly>

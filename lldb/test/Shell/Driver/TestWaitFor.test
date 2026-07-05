@@ -1,0 +1,2 @@
+# RUN: not %lldb --wait-for 2>&1 | FileCheck %s
+# CHECK: error: --wait-for requires a name (--attach-name)

@@ -1,0 +1,32 @@
+## No input files.
+# RUN: not llvm-tli-checker 2>&1 | FileCheck %s --check-prefix=NOFILES
+#
+## File not found.
+# RUN: rm -f %t0.txt
+# RUN: llvm-tli-checker %t0.txt 2>&1 | FileCheck %s -DFILE=%t0.txt --check-prefixes=FILE-NOT-FOUND,NOSYMBOLS-AT-ALL
+#
+## Reject a non-binary file.
+# RUN: echo nonsense > %t1.o
+# RUN: llvm-tli-checker %t1.o 2>&1 | FileCheck %s --check-prefixes=INVALID-FILE,NOSYMBOLS-AT-ALL
+#
+## Reject an empty file.
+# RUN: yaml2obj %s -o %t2.o
+# RUN: llvm-tli-checker %t2.o 2>&1 | FileCheck %s -DFILE=%t2.o --check-prefixes=NOSYMBOLS-IN-FILE,NOSYMBOLS-AT-ALL
+#
+# NOFILES: error: no input files
+# FILE-NOT-FOUND-DAG: warning: [[FILE]]: not found
+# INVALID-FILE-DAG: warning: The file was not recognized as a valid object file
+# NOSYMBOLS-AT-ALL-DAG: error: NO symbols found!
+# NOSYMBOLS-IN-FILE-DAG: warning: [[FILE]]: no symbols found
+
+## Minimal ELF with no symbols.
+--- !ELF
+FileHeader:
+    Class:           ELFCLASS64
+    Data:            ELFDATA2LSB
+    OSABI:           ELFOSABI_FREEBSD
+    Type:            ET_DYN
+    Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS

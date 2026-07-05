@@ -1,0 +1,28 @@
+## Ensures that dynamic section has sh_entsize correctly set.
+
+# RUN: yaml2obj -DBITS=64 %s -o %t.64
+# RUN: llvm-readobj --sections %t.64 | FileCheck %s -DENTSIZE=16
+# RUN: yaml2obj -DBITS=32 %s -o %t.32
+# RUN: llvm-readobj --sections %t.32 | FileCheck %s -DENTSIZE=8
+
+!ELF
+FileHeader:
+  Class: ELFCLASS[[BITS]]
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+## Test default values set by yaml2obj.
+  - Name:  .dynamic
+    Type:  SHT_DYNAMIC
+    Flags: [ SHF_ALLOC, SHF_WRITE ]
+## Test we can use an arbitrary value for sh_entsize.
+  - Name:    .mydynamic
+    Type:    SHT_DYNAMIC
+    EntSize: 0xFE
+
+# CHECK:      Name:      .dynamic
+# CHECK:      EntrySize:
+# CHECK-SAME:           {{^}} [[ENTSIZE]]{{$}}
+# CHECK:      Name:      .mydynamic
+# CHECK:      EntrySize:
+# CHECK-SAME:           {{^}} 254{{$}}

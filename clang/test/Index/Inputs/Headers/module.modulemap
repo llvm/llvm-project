@@ -1,0 +1,10 @@
+module LibA {
+  header "a.h"
+  module Extensions { 
+    header "a_extensions.h"
+  }
+}
+
+module Crash {
+  header "crash.h"
+}

@@ -1,0 +1,13 @@
+# REQUIRES: x86
+## Create a readonly PT_LOAD in the absence of PHDRS.
+
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux /dev/null -o %t
+# RUN: ld.lld -o %t1 --script %s %t -shared
+# RUN: llvm-readelf -l %t1 | FileCheck %s
+
+SECTIONS {
+}
+
+# CHECK:      Type {{.*}} Flg Align
+# CHECK-NEXT: LOAD {{.*}} R   0x1000
+# CHECK-NEXT: LOAD {{.*}} RW  0x1000

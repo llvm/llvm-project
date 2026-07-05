@@ -1,0 +1,5 @@
+// path1. This comment keeps this file from being identical to
+// path2/A/module.modulemap.
+module A {
+  header "a.h"
+}

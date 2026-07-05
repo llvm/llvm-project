@@ -1,0 +1,567 @@
+## Check how yaml2obj produces SHT_NOTE sections.
+
+## Check we can describe SHT_NOTE using the "Notes" tag. We can define
+## notes using names, descriptions and types.
+## Check we produce a valid name size and description size fields.
+## Check we produce valid paddings.
+
+# RUN: yaml2obj --docnum=1 %s -o %t1
+# RUN: llvm-readobj --sections --section-data %t1 | FileCheck %s --check-prefix=NOTE
+
+# NOTE:      Section {
+# NOTE:        Index: 1
+# NOTE-NEXT:   Name: .note.foo (1)
+# NOTE-NEXT:   Type: SHT_NOTE (0x7)
+# NOTE-NEXT:   Flags [ (0x2)
+# NOTE-NEXT:     SHF_ALLOC (0x2)
+# NOTE-NEXT:   ]
+# NOTE-NEXT:   Address:
+# NOTE-NEXT:   Offset:
+# NOTE-NEXT:   Size: 36
+# NOTE-NEXT:   Link: 0
+# NOTE-NEXT:   Info: 0
+# NOTE-NEXT:   AddressAlignment: 0
+# NOTE-NEXT:   EntrySize: 0
+# NOTE-NEXT:   SectionData (
+## namesz == (0x03000000) == sizeof("AB") + NUL terminator.
+## descsz == (0x00000000) for an empty description.
+## Check we produce a valid 2 bytes zeroes padding after the Name.
+# NOTE-NEXT:     0000: 03000000 00000000 FF000000 41420000  |............AB..|
+## namesz == (0x04000000) == sizeof("ABC") + NUL terminator.
+## descsz == (0x06000000) == sizeof("123456").
+## Check we produce a valid (zero align to 4) 1 byte padding after the Name.
+## Check we produce a valid (zero align to 4) 2 bytes padding after the Desc.
+# NOTE-NEXT:     0010: 04000000 03000000 FE000000 41424300  |............ABC.|
+# NOTE-NEXT:     0020: 12345600                             |.4V.|
+# NOTE-NEXT:   )
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name:  .note.foo
+    Type:  SHT_NOTE
+    Flags: [ SHF_ALLOC ]
+    Notes:
+      - Name: AB
+        Desc: ''
+        Type: 0xFF
+      - Name: ABC
+        Desc: '123456'
+        Type: 254
+
+## Check that for 32-bit little-endian case we produce the same section content.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-readobj --sections --section-data %t2 | FileCheck %s --check-prefix=NOTE
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name:  .note.foo
+    Type:  SHT_NOTE
+    Flags: [ SHF_ALLOC ]
+    Notes:
+      - Name: AB
+        Desc: ''
+        Type: 0xFF
+      - Name: ABC
+        Desc: '123456'
+        Type: 254
+
+## Check big-endian 32/64 bit cases.
+## Check they produce the same content.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: llvm-readobj --sections --section-data %t3 | FileCheck %s --check-prefix=NOTE-BE
+# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: llvm-readobj --sections --section-data %t4 | FileCheck %s --check-prefix=NOTE-BE
+
+# NOTE-BE:      Name: .note.foo
+# NOTE-BE:      SectionData (
+# NOTE-BE-NEXT:   0000: 00000004 00000003 000000FE 41424300  |
+# NOTE-BE-NEXT:   0010: 12345600                             |
+# NOTE-BE-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data:  ELFDATA2MSB
+  Type:  ET_REL
+Sections:
+  - Name: .note.foo
+    Type: SHT_NOTE
+    Notes:
+      - Name: ABC
+        Desc: '123456'
+        Type: 254
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2MSB
+  Type:  ET_REL
+Sections:
+  - Name: .note.foo
+    Type: SHT_NOTE
+    Notes:
+      - Name: ABC
+        Desc: '123456'
+        Type: 254
+
+## Check that 'Type' field is mandatory. 
+
+# RUN: not yaml2obj --docnum=5 %s 2>&1 | FileCheck %s --check-prefix=TYPE-REQ
+# TYPE-REQ: error: missing required key 'Type'
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name: .note.foo
+    Type: SHT_NOTE
+    Notes:
+      - Name: ''
+        Desc: ''
+
+## Check that neither `Name` nor `Desc` are mandatory fields.
+
+# RUN: yaml2obj --docnum=6 %s -o %t6
+# RUN: llvm-readobj --sections --section-data %t6 | FileCheck %s --check-prefix=NAME-DESC
+
+# NAME-DESC:      Name: .note.foo
+# NAME-DESC:      SectionData (
+# NAME-DESC-NEXT:   0000: 00000000 00000000 FF000000 |
+# NAME-DESC-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name: .note.foo
+    Type: SHT_NOTE
+    Notes:
+      - Type: 0xFF
+
+## Check we can use the "Content" tag to specify any data for SHT_NOTE sections.
+
+# RUN: yaml2obj --docnum=7 %s -o %t7
+# RUN: llvm-readobj --sections --section-data %t7 | FileCheck %s --check-prefix=CONTENT
+
+# CONTENT:      Name: .note.foo
+# CONTENT:      SectionData (
+# CONTENT-NEXT:   0000: 11223344 55 |
+# CONTENT-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:    .note.foo
+    Type:    SHT_NOTE
+    Content: "1122334455"
+
+## Check we emit an empty section if neither "Content", "Size" nor "Notes" were set.
+
+# RUN: yaml2obj --docnum=8 %s -o %t8
+# RUN: llvm-readelf --sections %t8 | FileCheck %s --check-prefix=NO-TAGS
+
+# NO-TAGS: [Nr] Name      Type Address          Off    Size
+# NO-TAGS: [ 1] .note.foo NOTE 0000000000000000 000040 000000
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name: .note.foo
+    Type: SHT_NOTE
+
+## "Content" and "Notes" cannot be used together to describe the SHT_NOTE section.
+
+# RUN: not yaml2obj --docnum=9 %s 2>&1 | FileCheck %s --check-prefix=CONTENT-NOTES
+
+# CONTENT-NOTES: error: "Notes" cannot be used with "Content" or "Size"
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:    .note.foo
+    Type:    SHT_NOTE
+    Content: ""
+    Notes:   []
+
+## "Size" and "Notes" cannot be used together to describe the SHT_NOTE section.
+
+# RUN: not yaml2obj --docnum=10 %s 2>&1 | FileCheck %s --check-prefix=CONTENT-NOTES
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:  .note.foo
+    Type:  SHT_NOTE
+    Size:  1
+    Notes: []
+
+## Check we can use only "Size" to create a SHT_NOTE section.
+
+# RUN: yaml2obj --docnum=11 %s -o %t11
+# RUN: llvm-readobj --sections --section-data %t11 | FileCheck %s --check-prefix=SIZE
+
+# SIZE:      Name: .note.foo
+# SIZE:      SectionData (
+# SIZE-NEXT:   0000: 00000000 00000000 00000000 00000000  |
+# SIZE-NEXT:   0010: 00                                   |
+# SIZE-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name: .note.foo
+    Type: SHT_NOTE
+    Size: 0x11
+
+## Check we can use "Size" and "Content" together to create a SHT_NOTE section.
+
+# RUN: yaml2obj --docnum=12 %s -o %t12
+# RUN: llvm-readobj --sections --section-data %t12 | FileCheck %s --check-prefix=SIZE-CONTENT
+
+# SIZE-CONTENT:      Name: .note.sizegr
+# SIZE-CONTENT:      SectionData (
+# SIZE-CONTENT-NEXT:   0000: 11223300 00 |
+# SIZE-CONTENT-NEXT: )
+
+# SIZE-CONTENT:      Name: .note.sizeeq
+# SIZE-CONTENT:      SectionData (
+# SIZE-CONTENT-NEXT:   0000: 112233 |
+# SIZE-CONTENT-NEXT: )
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .note.sizegr
+    Type:    SHT_NOTE
+    Size:    0x5
+    Content: "112233"
+  - Name:    .note.sizeeq
+    Type:    SHT_NOTE
+    Size:    0x3
+    Content: "112233"
+
+## Check that when "Size" and "Content" are used together, the size
+## must be greater than or equal to the content size.
+
+# RUN: not yaml2obj --docnum=13 %s 2>&1 | FileCheck %s --check-prefix=SIZE-CONTENT-ERR
+# SIZE-CONTENT-ERR: error: Section size must be greater than or equal to the content size
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .note
+    Type:    SHT_NOTE
+    Size:    0x1
+    Content: "1122"
+
+## Check we can't use "Size" and "Notes" tags together.
+
+# RUN: not yaml2obj --docnum=14 %s 2>&1 | FileCheck %s --check-prefix=CONTENT-NOTES
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:  .note
+    Type:  SHT_NOTE
+    Size:  0x1
+    Notes: []
+
+## Check that we can use NT_* names for the note type.
+
+# RUN: yaml2obj --docnum=15 %s -o %t15
+# RUN: llvm-readobj --sections --section-data %t15 | FileCheck %s --check-prefix=TEXTUAL-TYPE
+
+# TEXTUAL-TYPE:      Name: .note.foo
+# TEXTUAL-TYPE:      SectionData (
+# TEXTUAL-TYPE-NEXT:   0000: 03000000 00000000 03000000 41420000  |............AB..|
+# TEXTUAL-TYPE-NEXT:   0010: 04000000 03000000 01000000 41424300  |............ABC.|
+# TEXTUAL-TYPE-NEXT:   0020: 12345600                             |.4V.|
+# TEXTUAL-TYPE-NEXT: )
+
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:  .note.foo
+    Type:  SHT_NOTE
+    Flags: [ SHF_ALLOC ]
+    Notes:
+      - Name: AB
+        Desc: ''
+        Type: NT_GNU_BUILD_ID
+      - Name: ABC
+        Desc: '123456'
+        Type: NT_VERSION
+
+## Check that an incorrect alignment is reported.
+
+# RUN: not yaml2obj --docnum=16 %s 2>&1 | FileCheck %s --check-prefix=ERR_ALIGN1
+# ERR_ALIGN1: error: .note.foo: invalid alignment for a note section: 0x1
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:         .note.foo
+    Type:         SHT_NOTE
+    AddressAlign: 1
+    Notes:
+      - Type: 0x1
+
+## Check that note entries and their "Desc" fields are aligned according to the
+## specified section alignment.
+
+# RUN: yaml2obj --docnum=17 -D ELFCLASS=64 %s -o - | \
+# RUN:   llvm-readobj --sections --section-data --notes - | \
+# RUN:   FileCheck %s --check-prefix=TEST17
+
+# RUN: yaml2obj --docnum=17 -D ELFCLASS=32 %s -o - | \
+# RUN:   llvm-readobj --sections --section-data --notes - | \
+# RUN:   FileCheck %s --check-prefix=TEST17
+
+# TEST17:      Name: .note.foo4
+# TEST17:      SectionData (
+# TEST17-NEXT:   0000: 05000000 02000000 01000000 41424344  |............ABCD|
+# TEST17-NEXT:   0010: 00000000 01020000 00000000 03000000  |................|
+# TEST17-NEXT:   0020: 02000000 03040500 04000000 00000000  |................|
+# TEST17-NEXT:   0030: 03000000 474E5500                    |....GNU.|
+# TEST17-NEXT: )
+# TEST17:      Name: .note.foo8
+# TEST17:      SectionData (
+# TEST17-NEXT:   0000: 05000000 02000000 01000000 41424344  |............ABCD|
+# TEST17-NEXT:   0010: 00000000 00000000 01020000 00000000  |................|
+# TEST17-NEXT:   0020: 00000000 03000000 02000000 00000000  |................|
+# TEST17-NEXT:   0030: 03040500 00000000 04000000 00000000  |................|
+# TEST17-NEXT:   0040: 03000000 474E5500                    |....GNU.|
+# TEST17-NEXT: )
+# TEST17:      NoteSections [
+# TEST17-NEXT:   NoteSection {
+# TEST17-NEXT:     Name: .note.foo4
+# TEST17-NEXT:     Offset:
+# TEST17-NEXT:     Size:
+# TEST17-NEXT:     Notes [
+# TEST17-NEXT:       {
+# TEST17-NEXT:         Owner: ABCD
+# TEST17-NEXT:         Data size: 0x2
+# TEST17-NEXT:         Type: NT_VERSION (version)
+# TEST17-NEXT:         Description data (
+# TEST17-NEXT:           0000: 0102                                 |..|
+# TEST17-NEXT:         )
+# TEST17-NEXT:       }
+# TEST17-NEXT:       {
+# TEST17-NEXT:         Owner: 
+# TEST17-NEXT:         Data size: 0x3
+# TEST17-NEXT:         Type: NT_ARCH (architecture)
+# TEST17-NEXT:         Description data (
+# TEST17-NEXT:           0000: 030405                               |...|
+# TEST17-NEXT:         )
+# TEST17-NEXT:       }
+# TEST17-NEXT:       {
+# TEST17-NEXT:         Owner: GNU
+# TEST17-NEXT:         Data size: 0x0
+# TEST17-NEXT:         Type: NT_GNU_BUILD_ID (unique build ID bitstring)
+# TEST17-NEXT:         Build ID: 
+# TEST17-NEXT:       }
+# TEST17-NEXT:     ]
+# TEST17-NEXT:   }
+# TEST17-NEXT:   NoteSection {
+# TEST17-NEXT:     Name: .note.foo8
+# TEST17-NEXT:     Offset:
+# TEST17-NEXT:     Size:
+# TEST17-NEXT:     Notes [
+# TEST17-NEXT:       {
+# TEST17-NEXT:         Owner: ABCD
+# TEST17-NEXT:         Data size: 0x2
+# TEST17-NEXT:         Type: NT_VERSION (version)
+# TEST17-NEXT:         Description data (
+# TEST17-NEXT:           0000: 0102                                 |..|
+# TEST17-NEXT:         )
+# TEST17-NEXT:       }
+# TEST17-NEXT:       {
+# TEST17-NEXT:         Owner: 
+# TEST17-NEXT:         Data size: 0x3
+# TEST17-NEXT:         Type: NT_ARCH (architecture)
+# TEST17-NEXT:         Description data (
+# TEST17-NEXT:           0000: 030405                               |...|
+# TEST17-NEXT:         )
+# TEST17-NEXT:       }
+# TEST17-NEXT:       {
+# TEST17-NEXT:         Owner: GNU
+# TEST17-NEXT:         Data size: 0x0
+# TEST17-NEXT:         Type: NT_GNU_BUILD_ID (unique build ID bitstring)
+# TEST17-NEXT:         Build ID: 
+# TEST17-NEXT:       }
+# TEST17-NEXT:     ]
+# TEST17-NEXT:   }
+# TEST17-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS[[ELFCLASS]]
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:         .note.foo4
+    Type:         SHT_NOTE
+    AddressAlign: 4
+    Notes:
+      - Name: ABCD
+        Type: NT_VERSION
+        Desc: 0102
+      - Type: NT_ARCH
+        Desc: 030405
+      - Name: GNU
+        Type: NT_GNU_BUILD_ID
+  - Name:        .note.foo8
+    Type:         SHT_NOTE
+    AddressAlign: 8
+    Notes:
+      - Name: ABCD
+        Type: NT_VERSION
+        Desc: 0102
+      - Type: NT_ARCH
+        Desc: 030405
+      - Name: GNU
+        Type: NT_GNU_BUILD_ID
+
+## Check that the alignment for note entries is taken from the "AddressAlign"
+## field even if "ShAddrAlign" is also specified; an unexpected value in the
+## "ShAddrAlign" property does not trigger an incorrect alignment error.
+
+# RUN: yaml2obj --docnum=18 -D ADDRALIGN=0 -D SHADDRALIGN=8 %s -o - | \
+# RUN:   llvm-readobj --sections --section-data --notes - | \
+# RUN:   FileCheck %s --check-prefixes=TEST18,TEST18_4
+
+# RUN: yaml2obj --docnum=18 -D ADDRALIGN=4 -D SHADDRALIGN=3 %s -o - | \
+# RUN:   llvm-readobj --sections --section-data --notes - | \
+# RUN:   FileCheck %s --check-prefixes=TEST18,TEST18_4
+
+# RUN: yaml2obj --docnum=18 -D ADDRALIGN=8 -D SHADDRALIGN=4 %s -o - | \
+# RUN:   llvm-readobj --sections --section-data --notes - | \
+# RUN:   FileCheck %s --check-prefixes=TEST18,TEST18_8
+
+# TEST18:        Name: .note
+# TEST18:        SectionData (
+# TEST18_4-NEXT:   0000: 05000000 02000000 01000000 41424344  |............ABCD|
+# TEST18_4-NEXT:   0010: 00000000 01020000 00000000 03000000  |................|
+# TEST18_4-NEXT:   0020: 02000000 03040500 04000000 00000000  |................|
+# TEST18_4-NEXT:   0030: 03000000 474E5500                    |....GNU.|
+# TEST18_8-NEXT:   0000: 05000000 02000000 01000000 41424344  |............ABCD|
+# TEST18_8-NEXT:   0010: 00000000 00000000 01020000 00000000  |................|
+# TEST18_8-NEXT:   0020: 00000000 03000000 02000000 00000000  |................|
+# TEST18_8-NEXT:   0030: 03040500 00000000 04000000 00000000  |................|
+# TEST18_8-NEXT:   0040: 03000000 474E5500                    |....GNU.|
+# TEST18-NEXT:   )
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:         .note
+    Type:         SHT_NOTE
+    AddressAlign: [[ADDRALIGN]]
+    ShAddrAlign:  [[SHADDRALIGN]]
+    Notes:
+      - Name: ABCD
+        Type: NT_VERSION
+        Desc: 0102
+      - Type: NT_ARCH
+        Desc: 030405
+      - Name: GNU
+        Type: NT_GNU_BUILD_ID
+
+## Check that an incorrect offset for generating notes is reported.
+
+# RUN: not yaml2obj --docnum=19 %s 2>&1 | FileCheck %s --check-prefix=ERR_OFFSET
+# ERR_OFFSET: error: .note: invalid offset of a note section: 0x501, should be aligned to 4
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:   .note
+    Type:   SHT_NOTE
+    Offset: 0x501
+    Notes:
+      - Type: 0x1
+
+## Do not issue an error if the notes array is empty.
+
+# RUN: yaml2obj --docnum=20 %s -o - | \
+# RUN:   llvm-readobj --sections --section-data - | \
+# RUN:   FileCheck %s --check-prefix=TEST20
+
+# TEST20:      Section {
+# TEST20:      Name: .note
+# TEST20-NEXT:   Type: SHT_NOTE
+# TEST20-NEXT:   Flags [ (0x0)
+# TEST20-NEXT:   ]
+# TEST20-NEXT:   Address:
+# TEST20-NEXT:   Offset: 0x501
+# TEST20-NEXT:   Size: 0
+# TEST20-NEXT:   Link:
+# TEST20-NEXT:   Info:
+# TEST20-NEXT:   AddressAlignment: 5
+# TEST20-NEXT:   EntrySize:
+# TEST20-NEXT:   SectionData (
+# TEST20-NEXT:   )
+# TEST20-NEXT: }
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS32
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:         .note
+    Type:         SHT_NOTE
+    Offset:       0x501
+    AddressAlign: 5
+    Notes:        []

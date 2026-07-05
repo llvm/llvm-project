@@ -1,0 +1,160 @@
+# Keep track if we have all dependencies.
+set(ENABLE_CHECK_TARGETS TRUE)
+
+if (TARGET FileCheck)
+  set(OPENMP_FILECHECK_EXECUTABLE ${LLVM_TOOLS_BINARY_DIR}/FileCheck)
+else()
+  message(STATUS "Cannot find 'FileCheck'.")
+  message(WARNING "The check targets will not be available!")
+  set(ENABLE_CHECK_TARGETS FALSE)
+endif()
+set(OPENMP_NOT_EXECUTABLE ${LLVM_TOOLS_BINARY_DIR}/not)
+
+# Macro to extract information about compiler from file. (no own scope)
+macro(extract_test_compiler_information lang file)
+  file(READ ${file} information)
+  list(GET information 0 path)
+  list(GET information 1 id)
+  list(GET information 2 version)
+  list(GET information 3 openmp_flags)
+  list(GET information 4 has_tsan_flags)
+  list(GET information 5 has_omit_frame_pointer_flags)
+  list(GET information 6 has_omp_h)
+
+  set(OPENMP_TEST_${lang}_COMPILER_PATH ${path})
+  set(OPENMP_TEST_${lang}_COMPILER_ID ${id})
+  set(OPENMP_TEST_${lang}_COMPILER_VERSION ${version})
+  set(OPENMP_TEST_${lang}_COMPILER_OPENMP_FLAGS ${openmp_flags})
+  set(OPENMP_TEST_${lang}_COMPILER_HAS_TSAN_FLAGS ${has_tsan_flags})
+  set(OPENMP_TEST_${lang}_COMPILER_HAS_OMIT_FRAME_POINTER_FLAGS ${has_omit_frame_pointer_flags})
+  set(OPENMP_TEST_${lang}_COMPILER_HAS_OMP_H ${has_omp_h})
+endmacro()
+
+# Function to set variables with information about the test compiler.
+function(set_test_compiler_information dir)
+  extract_test_compiler_information(C ${dir}/CCompilerInformation.txt)
+  extract_test_compiler_information(CXX ${dir}/CXXCompilerInformation.txt)
+  if (NOT("${OPENMP_TEST_C_COMPILER_ID}" STREQUAL "${OPENMP_TEST_CXX_COMPILER_ID}" AND
+          "${OPENMP_TEST_C_COMPILER_VERSION}" STREQUAL "${OPENMP_TEST_CXX_COMPILER_VERSION}"))
+    message(STATUS "Test compilers for C and C++ don't match.")
+    message(WARNING "The check targets will not be available!")
+    set(ENABLE_CHECK_TARGETS FALSE PARENT_SCOPE)
+  else()
+    set(OPENMP_TEST_COMPILER_ID "${OPENMP_TEST_C_COMPILER_ID}" PARENT_SCOPE)
+    set(OPENMP_TEST_COMPILER_VERSION "${OPENMP_TEST_C_COMPILER_VERSION}" PARENT_SCOPE)
+    set(OPENMP_TEST_COMPILER_OPENMP_FLAGS "${OPENMP_TEST_C_COMPILER_OPENMP_FLAGS}" PARENT_SCOPE)
+    set(OPENMP_TEST_COMPILER_HAS_TSAN_FLAGS "${OPENMP_TEST_C_COMPILER_HAS_TSAN_FLAGS}" PARENT_SCOPE)
+    set(OPENMP_TEST_COMPILER_HAS_OMIT_FRAME_POINTER_FLAGS "${OPENMP_TEST_C_COMPILER_HAS_OMIT_FRAME_POINTER_FLAGS}" PARENT_SCOPE)
+
+    # Determine major version.
+    string(REGEX MATCH "[0-9]+" major "${OPENMP_TEST_C_COMPILER_VERSION}")
+    string(REGEX MATCH "[0-9]+\\.[0-9]+" majorminor "${OPENMP_TEST_C_COMPILER_VERSION}")
+    set(OPENMP_TEST_COMPILER_VERSION_MAJOR "${major}" PARENT_SCOPE)
+    set(OPENMP_TEST_COMPILER_VERSION_MAJOR_MINOR "${majorminor}" PARENT_SCOPE)
+  endif()
+endfunction()
+
+# Set the information that we know.
+set(OPENMP_TEST_COMPILER_ID "Clang")
+# Cannot use CLANG_VERSION because we are not guaranteed that this is already set.
+set(OPENMP_TEST_COMPILER_VERSION "${LLVM_VERSION}")
+set(OPENMP_TEST_COMPILER_VERSION_MAJOR "${LLVM_VERSION_MAJOR}")
+set(OPENMP_TEST_COMPILER_VERSION_MAJOR_MINOR "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
+# Unfortunately the top-level cmake/config-ix.cmake file mangles CMake's
+# CMAKE_THREAD_LIBS_INIT variable from the FindThreads package, so work
+# around that, until it is fixed there.
+if("${CMAKE_THREAD_LIBS_INIT}" STREQUAL "-lpthread")
+  set(OPENMP_TEST_COMPILER_THREAD_FLAGS "-pthread")
+else()
+  set(OPENMP_TEST_COMPILER_THREAD_FLAGS "${CMAKE_THREAD_LIBS_INIT}")
+endif()
+if(TARGET tsan)
+  set(OPENMP_TEST_COMPILER_HAS_TSAN_FLAGS 1)
+else()
+  set(OPENMP_TEST_COMPILER_HAS_TSAN_FLAGS 0)
+endif()
+set(OPENMP_TEST_COMPILER_OPENMP_FLAGS "-fopenmp ${OPENMP_TEST_COMPILER_THREAD_FLAGS}")
+set(OPENMP_TEST_COMPILER_HAS_OMIT_FRAME_POINTER_FLAGS 1)
+
+set(OPENMP_TEST_ENABLE_TSAN "${OPENMP_TEST_COMPILER_HAS_TSAN_FLAGS}" CACHE BOOL
+    "Whether to enable tests using tsan")
+
+# Function to set compiler features for use in lit.
+function(update_test_compiler_features)
+  set(FEATURES "[")
+  set(first TRUE)
+  foreach(feat IN LISTS OPENMP_TEST_COMPILER_FEATURE_LIST)
+    if (NOT first)
+      string(APPEND FEATURES ", ")
+    endif()
+    set(first FALSE)
+    string(APPEND FEATURES "'${feat}'")
+  endforeach()
+  string(APPEND FEATURES "]")
+  set(OPENMP_TEST_COMPILER_FEATURES ${FEATURES} PARENT_SCOPE)
+endfunction()
+
+function(set_test_compiler_features)
+  if ("${OPENMP_TEST_COMPILER_ID}" STREQUAL "GNU")
+    set(comp "gcc")
+  elseif ("${OPENMP_TEST_COMPILER_ID}" STREQUAL "Intel")
+    set(comp "icc")
+  else()
+    # Just use the lowercase of the compiler ID as fallback.
+    string(TOLOWER "${OPENMP_TEST_COMPILER_ID}" comp)
+  endif()
+  set(OPENMP_TEST_COMPILER_FEATURE_LIST ${comp} ${comp}-${OPENMP_TEST_COMPILER_VERSION_MAJOR} ${comp}-${OPENMP_TEST_COMPILER_VERSION_MAJOR_MINOR} ${comp}-${OPENMP_TEST_COMPILER_VERSION} PARENT_SCOPE)
+endfunction()
+set_test_compiler_features()
+update_test_compiler_features()
+
+# Function to add a testsuite for an OpenMP runtime library.
+function(add_openmp_testsuite target comment)
+  if (NOT ENABLE_CHECK_TARGETS)
+    add_custom_target(${target}
+      COMMAND ${CMAKE_COMMAND} -E echo "${target} does nothing, dependencies not found.")
+    message(STATUS "${target} does nothing.")
+    return()
+  endif()
+
+  cmake_parse_arguments(ARG "EXCLUDE_FROM_CHECK_ALL" "" "DEPENDS;ARGS" ${ARGN})
+  # EXCLUDE_FROM_CHECK_ALL excludes the test ${target} out of check-openmp.
+  if (NOT ARG_EXCLUDE_FROM_CHECK_ALL)
+    # Register the testsuites and depends for the check-openmp rule.
+    set_property(GLOBAL APPEND PROPERTY OPENMP_LIT_TESTSUITES ${ARG_UNPARSED_ARGUMENTS})
+    set_property(GLOBAL APPEND PROPERTY OPENMP_LIT_DEPENDS ${ARG_DEPENDS})
+  endif()
+
+  set(EXTRA_CHECK_DEPENDS "")
+  if (TARGET "clang")
+    list(APPEND EXTRA_CHECK_DEPENDS clang)
+  endif()
+  if (ARG_EXCLUDE_FROM_CHECK_ALL)
+    add_lit_testsuite(${target}
+      ${comment}
+      ${ARG_UNPARSED_ARGUMENTS}
+      EXCLUDE_FROM_CHECK_ALL
+      DEPENDS ${EXTRA_CHECK_DEPENDS} FileCheck not ${ARG_DEPENDS}
+      ARGS ${ARG_ARGS}
+    )
+  else()
+    add_lit_testsuite(${target}
+      ${comment}
+      ${ARG_UNPARSED_ARGUMENTS}
+      DEPENDS ${EXTRA_CHECK_DEPENDS} FileCheck not ${ARG_DEPENDS}
+      ARGS ${ARG_ARGS}
+    )
+  endif()
+
+  if (TARGET flang-rt)
+    add_dependencies(${target} flang-rt)
+  endif ()
+endfunction()
+
+function(construct_check_openmp_target)
+  get_property(OPENMP_LIT_TESTSUITES GLOBAL PROPERTY OPENMP_LIT_TESTSUITES)
+  get_property(OPENMP_LIT_DEPENDS GLOBAL PROPERTY OPENMP_LIT_DEPENDS)
+
+  # We already added the testsuites themselves, no need to do that again.
+  add_openmp_testsuite(check-openmp "Running OpenMP tests" ${OPENMP_LIT_TESTSUITES} EXCLUDE_FROM_CHECK_ALL DEPENDS ${OPENMP_LIT_DEPENDS})
+endfunction()

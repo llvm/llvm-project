@@ -1,0 +1,92 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_RISCV
+  Entry:           0x100B0
+ProgramHeaders:
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .text
+    LastSec:         .text
+    VAddr:           0x10000
+    Align:           0x1000
+    Offset:          0x0
+  - Type:            PT_TLS
+    Flags:           [ PF_R ]
+    FirstSec:        .tbss
+    LastSec:         .tbss
+    VAddr:           0x110C0
+    Align:           0x8
+    Offset:          0xc0
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x100B0
+    AddressAlign:    0x4
+    Content:         '13000000832202002320520067800000'
+  - Name:            .tbss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC, SHF_TLS ]
+    Address:         0x110C0
+    AddressAlign:    0x8
+    Size:            0x8
+  - Name:            .rela.text
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .text
+    Relocations:
+      - Offset:          0x100B4
+        Type:            R_RISCV_NONE
+      - Offset:          0x100B4
+        Type:            R_RISCV_RELAX
+      - Offset:          0x100B4
+        Type:            R_RISCV_NONE
+      - Offset:          0x100B4
+        Type:            R_RISCV_RELAX
+      - Offset:          0x100B4
+        Symbol:          i
+        Type:            0x31
+      - Offset:          0x100B4
+        Type:            R_RISCV_RELAX
+      - Offset:          0x100B8
+        Symbol:          i
+        Type:            0x32
+      - Offset:          0x100B8
+        Type:            R_RISCV_RELAX
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .text
+      - Name:            .rela.text
+      - Name:            .tbss
+      - Name:            .symtab
+      - Name:            .strtab
+      - Name:            .shstrtab
+Symbols:
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+    Value:           0x100B0
+  - Name:            .tbss
+    Type:            STT_SECTION
+    Section:         .tbss
+    Value:           0x110C0
+  - Name:            '__global_pointer$'
+    Index:           SHN_ABS
+    Binding:         STB_GLOBAL
+    Value:           0x118C0
+  - Name:            i
+    Type:            STT_TLS
+    Section:         .tbss
+    Binding:         STB_GLOBAL
+    Size:            0x8
+  - Name:            _start
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x100B0
+    Size:            0x10
+...

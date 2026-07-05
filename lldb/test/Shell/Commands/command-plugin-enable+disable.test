@@ -1,0 +1,87 @@
+# This test validates the plugin enable and disable commands.
+# Currently it works only for system-runtime plugins and we only have one
+# system runtime plugin so testing is a bit limited.
+#
+# Note that commands that return errors will stop running a script, so we
+# have new RUN lines for any command that is expected to return an error.
+
+# RUN: %lldb -s %s -o exit 2>&1 | FileCheck %s
+
+# Test plugin list shows the default state which is expected to be enabled.
+plugin list
+# CHECK-LABEL: plugin list
+# CHECK: system-runtime
+# CHECK:  [+] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
+
+# Test plugin disable disables a plugin.
+plugin disable system-runtime.systemruntime-macosx
+# CHECK-LABEL: plugin disable system-runtime.systemruntime-macosx
+# CHECK: system-runtime
+# CHECK:  [-] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
+
+# Make sure plugin list shows it disabled as well.
+plugin list
+# CHECK: system-runtime
+# CHECK:  [-] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
+
+# Test plugin enable re-enables a plugin.
+plugin enable system-runtime.systemruntime-macosx
+# CHECK-LABEL: plugin enable system-runtime.systemruntime-macosx
+# CHECK: system-runtime
+# CHECK:  [+] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
+
+# Make sure plugin list shows it enabled as well.
+plugin list
+# CHECK: system-runtime
+# CHECK:  [+] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
+
+# Test plugin disable with namespace works.
+plugin disable system-runtime
+# CHECK-LABEL: plugin disable system-runtime
+# CHECK: system-runtime
+# CHECK:  [-] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
+
+# Test plugin enable with namespace works.
+plugin enable system-runtime
+# CHECK-LABEL: plugin enable system-runtime
+# CHECK: system-runtime
+# CHECK:  [+] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
+
+# Test plugin enable/disable for instrumentation plugin works.
+plugin enable instrumentation-runtime
+# CHECK-LABEL: plugin enable instrumentation-runtime
+# CHECK: instrumentation-runtime
+# CHECK:  [+] AddressSanitizer
+plugin disable instrumentation-runtime
+# CHECK-LABEL: plugin disable instrumentation-runtime
+# CHECK: instrumentation-runtime
+# CHECK:  [-] AddressSanitizer
+
+# Test plugin enable with multiple arguments.
+plugin enable system-runtime instrumentation-runtime
+# CHECK-LABEL: plugin enable system-runtime instrumentation-runtime
+# CHECK: system-runtime
+# CHECK:   [+] systemruntime-macosx           System runtime plugin for Mac OS X native libraries.
+# CHECK: instrumentation-runtime
+# CHECK:   [+] AddressSanitizer               AddressSanitizer instrumentation runtime plugin.
+
+# Test plugin disable with multiple arguments.
+plugin disable system-runtime instrumentation-runtime
+# CHECK-LABEL: plugin disable system-runtime instrumentation-runtime
+# CHECK: system-runtime
+# CHECK:   [-] systemruntime-macosx           System runtime plugin for Mac OS X native libraries.
+# CHECK: instrumentation-runtime
+# CHECK:   [-] AddressSanitizer               AddressSanitizer instrumentation runtime plugin.
+
+# Test plugin enable/disable for unknown plugin returns an error.
+# RUN: %lldb -o "plugin enable some-plugin-that-does-not-exist" 2>&1 | FileCheck %s --check-prefix=ERROR_PLUGIN_NOT_FOUND
+# RUN: %lldb -o "plugin disable some-plugin-that-does-not-exist" 2>&1 | FileCheck %s --check-prefix=ERROR_PLUGIN_NOT_FOUND
+# RUN: %lldb -o "plugin enable system-runtime some-plugin-that-does-not-exist" 2>&1 | FileCheck %s --check-prefix=ERROR_PLUGIN_NOT_FOUND
+# ERROR_PLUGIN_NOT_FOUND: error: Found no matching plugins
+
+# Test plugin enable/disable requires a plugin name.
+# RUN: %lldb -o "plugin enable" 2>&1 | FileCheck %s --check-prefix=ERROR_ARGUMENTS_ENABLE
+# ERROR_ARGUMENTS_ENABLE: error: 'plugin enable' requires one or more arguments
+
+# RUN: %lldb -o "plugin disable" 2>&1 | FileCheck %s --check-prefix=ERROR_ARGUMENTS_DISABLE
+# ERROR_ARGUMENTS_DISABLE: error: 'plugin disable' requires one or more arguments

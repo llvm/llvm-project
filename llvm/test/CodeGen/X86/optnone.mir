@@ -1,0 +1,20 @@
+# RUN: llc -mtriple=x86_64-- -passes=machine-cse -debug-pass-manager %s -o - 2>&1 | FileCheck %s
+
+# CHECK: Skipping pass MachineCSEPass on test_optnone due to optnone attribute
+# CHECK: Running pass: MachineCSEPass on test_opt
+--- |
+  define void @test_optnone() noinline optnone { ret void }
+  define void @test_opt() { ret void }
+...
+---
+name:            test_optnone
+body:             |
+  bb.0:
+    RET64
+...
+---
+name:            test_opt
+body:             |
+  bb.0:
+    RET64
+...

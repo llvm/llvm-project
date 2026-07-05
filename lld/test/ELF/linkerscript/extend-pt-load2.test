@@ -1,0 +1,31 @@
+# REQUIRES: x86
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/extend-pt-load.s -o %t.o
+# RUN: ld.lld --hash-style=sysv -o %t2 --script %s %t.o -shared
+# RUN: llvm-readelf -S -l %t2 | FileCheck %s
+
+# Then add the section bar. Note how bar is given AX flags, which causes the PT_LOAD to now
+# cover the padding bits created by ALIGN.
+
+SECTIONS {
+  . = SIZEOF_HEADERS;
+  .dynsym : {}
+  .hash : {}
+  .dynstr : {}
+  .rodata : { *(.rodata) }
+  foo : { sym = .; }
+
+  .text : { *(.text) }
+  bar : { . = ALIGN(0x1000); }
+  .data.rel.ro : { *(.data.rel.ro) }
+}
+
+# CHECK:      .rodata      PROGBITS 000000000000024d 00024d 000001 00 A  0
+# CHECK-NEXT: foo          PROGBITS 000000000000024e 00024e 000000 00 A  0
+# CHECK-NEXT: .text        PROGBITS 0000000000000250 000250 000001 00 AX 0
+# CHECK-NEXT: bar          PROGBITS 0000000000000251 000251 000daf 00 A  0
+# CHECK-NEXT: .data.rel.ro PROGBITS 0000000000001000 001000 000001 00 WA 0
+
+# CHECK:      LOAD 0x000000 0x0000000000000000 0x0000000000000000 0x00024e 0x00024e R   0x1000
+# CHECK-NEXT: LOAD 0x000250 0x0000000000000250 0x0000000000000250 0x000001 0x000001 R E 0x1000
+# CHECK-NEXT: LOAD 0x000251 0x0000000000000251 0x0000000000000251 0x000daf 0x000daf R   0x1000
+# CHECK-NEXT: LOAD 0x001000 0x0000000000001000 0x0000000000001000 0x000068 0x000068 RW  0x1000

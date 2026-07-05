@@ -1,0 +1,14 @@
+RUN: %build -n --verbose --arch=32 --compiler=clang --mode=compile-and-link -o %t/foo.exe foobar.c \
+RUN:    | FileCheck --check-prefix=CHECK --check-prefix=CHECK-32 %s
+
+RUN: %build -n --verbose --arch=64 --compiler=clang --mode=compile-and-link -o %t/foo.exe foobar.c \
+RUN:    | FileCheck --check-prefix=CHECK --check-prefix=CHECK-64 %s
+
+CHECK: Cleaning {{.*}}toolchain-clang.test.tmp{{.}}foo.exe-foobar.o
+CHECK: Cleaning {{.*}}toolchain-clang.test.tmp{{.}}foo.exe
+CHECK: compiling foobar.c -> foo.exe-foobar.o
+CHECK-32: {{.*}}clang++{{(\.EXE)?}} -m32 -g -O0 -c {{.*}}-o {{.*}}foo.exe-foobar.o {{.*}}foobar.c
+CHECK-64: {{.*}}clang++{{(\.EXE)?}} -m64 -g -O0 -c {{.*}}-o {{.*}}foo.exe-foobar.o {{.*}}foobar.c
+CHECK: linking foo.exe-foobar.o -> foo.exe
+CHECK-32: {{.*}}clang++{{(\.EXE)?}} -m32 {{(-L.* )?(-Wl,-rpath,.* )?}}-o {{.*}}foo.exe {{.*}}foo.exe-foobar.o
+CHECK-64: {{.*}}clang++{{(\.EXE)?}} -m64 {{(-L.* )?(-Wl,-rpath,.* )?}}-o {{.*}}foo.exe {{.*}}foo.exe-foobar.o

@@ -1,0 +1,25 @@
+--- !minidump
+Streams:
+  - Type:            ThreadList
+    Threads:
+      - Thread Id:       0x00002177
+        Context:         0000
+        Stack:
+          Start of Memory Range: 0x00007FFE2F689000
+          Content:         00000000
+  - Type:            Exception
+    Thread ID:       0x00002177
+    Exception Record:
+      Exception Code:  0x00000000
+      Exception Address: 0x0000000000400582
+    Thread Context:  0000
+  - Type:            SystemInfo
+    Processor Arch:  AMD64
+    Platform ID:     Linux
+  - Type:            LinuxProcStatus
+    Text:             |
+      Name:	busyloop
+      Umask:	0002
+      State:	t (tracing stop)
+      Pid:	8567
+...

@@ -1,0 +1,94 @@
+Test the exact archive format. In particular, test which file names use the
+string table or not.
+
+RUN: mkdir -p %t
+RUN: cd %t
+
+RUN: printf bar. > 0123456789abcde
+RUN: printf zed. > 0123456789abcdef
+RUN: mkdir -p foo
+RUN: printf bar2 > foo/0123456789abcde
+RUN: printf zed2 > foo/0123456789abcdef
+
+RUN: rm -f %t.a
+RUN: llvm-ar --format=gnu rc %t.a 0123456789abcde 0123456789abcdef foo/0123456789abcde foo/0123456789abcdef
+RUN: cat %t.a | FileCheck -strict-whitespace %s
+
+CHECK:      !<arch>
+CHECK-NEXT: //                                              18        `
+CHECK-NEXT: 0123456789abcdef/
+CHECK-NEXT: 0123456789abcde/0           0     0     644     4         `
+CHECK-NEXT: bar.
+CHECK-SAME: /0              0           0     0     644     4         `
+CHECK-NEXT: zed.
+CHECK-SAME: 0123456789abcde/0           0     0     644     4         `
+CHECK-NEXT: bar2
+CHECK-SAME: /0              0           0     0     644     4         `
+CHECK-NEXT: zed2
+
+RUN: rm -f %t.a
+RUN: llvm-ar --format=bsd rc %t.a 0123456789abcde 0123456789abcdef
+RUN: cat %t.a | FileCheck -strict-whitespace --check-prefix=BSD %s
+
+BSD:      !<arch>
+BSD-NEXT: #1/20           0           0     0     644     24        `
+BSD-NEXT: 0123456789abcde{{.....}}bar.
+BSD-SAME: #1/16           0           0     0     644     20        `
+BSD-NEXT: 0123456789abcdefzed.
+
+RUN: rm -f %t.a
+RUN: llvm-ar --format=darwin rcS %t.a 0123456789abcde 0123456789abcdef
+RUN: cat %t.a | FileCheck -strict-whitespace --check-prefix=DARWIN %s
+
+DARWIN:      !<arch>
+DARWIN-NEXT: #1/20           0           0     0     644     28        `
+Each [[:space:]] matches a newline.  We explicitly match 3 newlines, as the
+fourth newline is implicitly consumed by FileCheck and cannot be matched.
+DARWIN-NEXT: 0123456789abcde{{.....}}bar.{{[[:space:]][[:space:]][[:space:]]}}
+DARWIN-NEXT: #1/20           0           0     0     644     28        `
+DARWIN-NEXT: 0123456789abcdef{{....}}zed.
+
+
+RUN: rm -f test.a
+RUN: llvm-ar --format=gnu rcT test.a 0123456789abcde 0123456789abcdef
+RUN: cat test.a | FileCheck -strict-whitespace --check-prefix=THIN %s
+THIN: !<thin>
+THIN-NEXT: //                                              36        `
+THIN-NEXT: 0123456789abcde/
+THIN-NEXT: 0123456789abcdef/{{$}}
+THIN: {{^$}}
+THIN: /0              0           0     0     644     4         `
+THIN-NEXT: /17             0           0     0     644     4         `
+
+RUN: mkdir -p bar
+RUN: rm -f bar/test.a
+RUN: llvm-ar --format=gnu rcT bar/test.a 0123456789abcde 0123456789abcdef foo/0123456789abcde foo/0123456789abcdef
+RUN: cat bar/test.a | FileCheck -strict-whitespace --check-prefix=THIN-PATH %s
+THIN-PATH: !<thin>
+THIN-PATH-NEXT: //                                              90        `
+THIN-PATH-NEXT: ..{{/|\\}}0123456789abcde/
+THIN-PATH-NEXT: ..{{/|\\}}0123456789abcdef/
+THIN-PATH-NEXT: ..{{/|\\}}foo{{/|\\}}0123456789abcde/
+THIN-PATH-NEXT: ..{{/|\\}}foo{{/|\\}}0123456789abcdef/
+THIN-PATH-NEXT: /0              0           0     0     644     4         `
+THIN-PATH-NEXT: /20             0           0     0     644     4         `
+THIN-PATH-NEXT: /41             0           0     0     644     4         `
+THIN-PATH-NEXT: /65             0           0     0     644     4         `
+
+RUN: not llvm-ar --format=bsd rcT bad.a 0123456789abcde 0123456789abcdef 2>&1 | FileCheck --check-prefix=BSD-THIN %s
+BSD-THIN: error: only the gnu format has a thin mode
+
+If an archive has an object with no symbols, the linker and some other
+tools on some versions of Solaris will abort operations if there is no
+symbol table.  Create such an object, put it into an archive, and check to
+see that there is an empty symbol table.
+RUN: mkdir -p %t
+RUN: yaml2obj %S/Inputs/solaris-nosymbols.yaml -o %t/foo.o
+RUN: llvm-ar rs %t/foo.a %t/foo.o
+RUN: cat -v %t/foo.a | FileCheck -strict-whitespace --check-prefix=SOLARIS %s
+SOLARIS:      !<arch>
+SOLARIS-NEXT: /               0           0     0     0       8         `
+SOLARIS-NEXT: ^@^@^@^@^@^@^@^@foo.o/
+
+RUN: not llvm-ar -format=gnu rc %t.a 0123456789abcde 2>&1 | FileCheck --check-prefix=ONE-DASH %s
+ONE-DASH: error: unknown option f

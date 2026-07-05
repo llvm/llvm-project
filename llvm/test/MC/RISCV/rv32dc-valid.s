@@ -1,0 +1,34 @@
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+c,+d -M no-aliases -show-encoding \
+# RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
+# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+c,+d < %s \
+# RUN:     | llvm-objdump --no-print-imm-hex --mattr=+c,+d -M no-aliases -d -r - \
+# RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+zcd,+d -M no-aliases -show-encoding \
+# RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
+# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+zcd,+d < %s \
+# RUN:     | llvm-objdump --no-print-imm-hex --mattr=+zcd,+d -M no-aliases -d -r - \
+# RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
+#
+# RUN: not llvm-mc -triple riscv32 -mattr=+c \
+# RUN:     -M no-aliases -show-encoding < %s 2>&1 \
+# RUN:     | FileCheck -check-prefixes=CHECK-NO-EXT %s
+# RUN: not llvm-mc -triple riscv32 -M no-aliases -show-encoding < %s 2>&1 \
+# RUN:     | FileCheck -check-prefixes=CHECK-NO-EXT %s
+
+# CHECK-ASM-AND-OBJ: c.fldsp  fs0, 504(sp)
+# CHECK-ASM: encoding: [0x7e,0x34]
+# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) and 'D' (Double-Precision Floating-Point) or 'Zcd' (Compressed Double-Precision Floating-Point Instructions)
+c.fldsp  fs0, 504(sp)
+# CHECK-ASM-AND-OBJ: c.fsdsp  fa7, 504(sp)
+# CHECK-ASM: encoding: [0xc6,0xbf]
+# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) and 'D' (Double-Precision Floating-Point) or 'Zcd' (Compressed Double-Precision Floating-Point Instructions)
+c.fsdsp  fa7, 504(sp)
+
+# CHECK-ASM-AND-OBJ: c.fld  fa3, 248(a5)
+# CHECK-ASM: encoding: [0xf4,0x3f]
+# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) and 'D' (Double-Precision Floating-Point) or 'Zcd' (Compressed Double-Precision Floating-Point Instructions)
+c.fld  fa3, 248(a5)
+# CHECK-ASM-AND-OBJ: c.fsd  fa2, 248(a1)
+# CHECK-ASM: encoding: [0xf0,0xbd]
+# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) and 'D' (Double-Precision Floating-Point) or 'Zcd' (Compressed Double-Precision Floating-Point Instructions)
+c.fsd  fa2, 248(a1)

@@ -1,0 +1,54 @@
+# RUN: yaml2obj %s -o %t
+
+# RUN: llvm-objcopy --set-section-type=.foo=14 --set-section-type .bar=0xf %t %t.1
+# RUN: llvm-readobj --sections %t.1 | FileCheck %s
+
+# RUN: llvm-objcopy --set-section-type=.foo=13 --set-section-type=.foo=14 --set-section-type .bar=0xf %t %t.1
+# RUN: llvm-readobj --sections %t.1 | FileCheck %s
+
+# CHECK:        Name: .foo
+# CHECK-NEXT:   Type: SHT_INIT_ARRAY (0xE)
+# CHECK-NEXT:   Flags [
+# CHECK-NEXT:     SHF_ALLOC
+# CHECK-NEXT:   ]
+
+# CHECK:        Name: .bar
+# CHECK-NEXT:   Type: SHT_FINI_ARRAY (0xF)
+# CHECK-NEXT:   Flags [
+# CHECK-NEXT:   ]
+
+## --set-section-flags does not specify "readonly", so the output gets SHF_WRITE.
+## "contents" changes SHT_NOBITS to SHT_PROGBITS, but this is overridden by --set-section-type.
+## sh_type is a uint32_t. There is no diagnostic for an overflow value.
+# RUN: llvm-objcopy --set-section-flags=.foo=alloc,contents --set-section-type=.foo=0x10000000a %t %t.2 2>&1 | count 0
+# RUN: llvm-readobj --sections %t.2 | FileCheck %s --check-prefix=CHECK2
+
+# CHECK2:        Name: .foo
+# CHECK2-NEXT:   Type: SHT_SHLIB
+# CHECK2-NEXT:   Flags [
+# CHECK2-NEXT:     SHF_ALLOC
+# CHECK2-NEXT:     SHF_WRITE
+# CHECK2-NEXT:   ]
+
+# RUN: not llvm-objcopy --set-section-type=.foo %t /dev/null 2>&1 | FileCheck %s --check-prefix=BAD-FORMAT
+# BAD-FORMAT: bad format for --set-section-type: missing '='
+
+# RUN: not llvm-objcopy --set-section-type==4 %t /dev/null 2>&1 | FileCheck %s --check-prefix=MISSING-SECTION
+# MISSING-SECTION: error: bad format for --set-section-type: missing section name
+
+# RUN: not llvm-objcopy --set-section-type=.foo=aaa %t /dev/null 2>&1 | FileCheck %s --check-prefix=INVALID-TYPE
+# INVALID-TYPE: error: invalid value for --set-section-type: 'aaa'
+
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .foo
+    Type:  SHT_NOBITS
+    Flags: [ SHF_ALLOC ]
+  - Name:  .bar
+    Type:  SHT_PROGBITS
+    Flags: [ ]

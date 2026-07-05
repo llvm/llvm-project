@@ -1,0 +1,36 @@
+# Test format (e.g., indentation) when printing the list of stop hooks.
+#
+# RUN: %lldb -b -s %s | FileCheck %s --match-full-lines --strict-whitespace
+
+# Create some stop hooks
+target stop-hook add -o 'print "Hello"' --auto-continue true --at-initial-stop true
+target stop-hook add -o 'print "world,"' -o 'print "nice"' --file 'my_file'
+target stop-hook add -o 'print "weather!"'  --classname 'MyClass' --thread-name 'my_thread'
+
+# Print hooks
+target stop-hook list
+
+# CHECK:(lldb) target stop-hook list
+# CHECK:Hook: 1
+# CHECK:  State: enabled
+# CHECK:  AutoContinue on
+# CHECK:  Commands:
+# CHECK:      print "Hello"
+# CHECK-EMPTY:
+# CHECK:Hook: 2
+# CHECK:  State: enabled
+# CHECK:  Specifier:
+# CHECK:    File: my_file.
+# CHECK:  Commands:
+# CHECK:      print "world,"
+# CHECK:      print "nice"
+# CHECK-EMPTY:
+# CHECK:Hook: 3
+# CHECK:  State: enabled
+# CHECK:  Specifier:
+# CHECK:    Class name: MyClass.
+# CHECK:  Thread:
+# CHECK:    thread name: "my_thread" 
+# CHECK:  Commands:
+# CHECK:      print "weather!"
+# CHECK-EMPTY:

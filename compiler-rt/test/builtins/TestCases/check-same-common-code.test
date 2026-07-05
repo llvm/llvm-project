@@ -1,0 +1,5 @@
+;
+; NOTE: if this test fails, please make sure the relevant copies are identical
+; copies of each other.
+;
+; RUN: diff %crt_src/lib/builtins/cpu_model/AArch64CPUFeatures.inc %llvm_src/include/llvm/TargetParser/AArch64CPUFeatures.inc

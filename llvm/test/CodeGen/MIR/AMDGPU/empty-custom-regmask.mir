@@ -1,0 +1,18 @@
+# RUN: llc -mtriple=amdgcn -run-pass=none -o - %s | FileCheck %s
+
+# Make sure there's no parse error on empty CustomRegMask or trailing comma
+
+# CHECK: $sgpr30_sgpr31 = SI_CALL %0, 0, CustomRegMask()
+# CHECK: $sgpr30_sgpr31 = SI_CALL %0, 0, CustomRegMask($vgpr0)
+
+---
+name: func
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr8_sgpr9
+    %0:sreg_64_xexec = COPY $sgpr8_sgpr9
+    $sgpr30_sgpr31 = SI_CALL %0, 0, CustomRegMask()
+    $sgpr30_sgpr31 = SI_CALL %0, 0, CustomRegMask($vgpr0,)
+    S_ENDPGM 0
+...

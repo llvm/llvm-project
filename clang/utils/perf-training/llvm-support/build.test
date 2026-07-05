@@ -1,0 +1,2 @@
+RUN: %cmake -G %cmake_generator -B %t -S %llvm_src_dir %cmake_compiler_args -DCMAKE_BUILD_TYPE=Release
+RUN: %perf_wrapper %cmake --build %t -v --target LLVMSupport

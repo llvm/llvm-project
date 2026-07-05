@@ -1,0 +1,22 @@
+// RUN: %clangxx_asan  %s -o %t
+// RUN: rm -f %t.log.*
+// Set verbosity to 1 so that the log files are opened prior to fork().
+// RUN: %env_asan_opts=log_path='"%t.log"':verbosity=1 not %run %t 2> %t.out
+// RUN: for f in %t.log.* ; do FileCheck %s < $f; done
+// RUN: [ `ls %t.log.* | wc -l` == 2 ]
+
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+int main(int argc, char **argv) {
+  void *x = malloc(10);
+  free(x);
+  if (fork() == -1) return 1;
+  // There are two processes at this point, thus there should be two distinct
+  // error logs.
+  free(x);
+  return 0;
+}
+
+// CHECK: ERROR: AddressSanitizer

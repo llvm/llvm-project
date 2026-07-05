@@ -1,0 +1,19 @@
+add_clang_unittest(ClangCodeGenTests
+  BufferSourceTest.cpp
+  CodeGenExternalTest.cpp
+  DemangleTrapReasonInDebugInfo.cpp
+  TBAAMetadataTest.cpp
+  CheckTargetFeaturesTest.cpp
+  CLANG_LIBS
+  clangAST
+  clangBasic
+  clangCodeGen
+  clangFrontend
+  clangLex
+  clangParse
+  clangSerialization
+  LLVM_COMPONENTS
+  Core
+  Support
+  TargetParser
+  )

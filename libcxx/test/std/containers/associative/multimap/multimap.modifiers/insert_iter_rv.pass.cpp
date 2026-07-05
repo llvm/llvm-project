@@ -1,0 +1,107 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+// UNSUPPORTED: c++03
+
+// <map>
+
+// class multimap
+
+// template <class P>
+//     iterator insert(const_iterator position, P&& p); // constexpr since C++26
+
+#include <map>
+#include <cassert>
+
+#include "MoveOnly.h"
+#include "min_allocator.h"
+#include "test_macros.h"
+
+template <class Container, class Pair>
+TEST_CONSTEXPR_CXX26 void do_insert_rv_test() {
+  typedef Container M;
+  typedef Pair P;
+  typedef typename M::iterator R;
+  M m;
+  R r = m.insert(m.cend(), P(2, 2));
+  assert(r == m.begin());
+  assert(m.size() == 1);
+  assert(r->first == 2);
+  assert(r->second == 2);
+
+  r = m.insert(m.cend(), P(1, 1));
+  assert(r == m.begin());
+  assert(m.size() == 2);
+  assert(r->first == 1);
+  assert(r->second == 1);
+
+  r = m.insert(m.cend(), P(3, 3));
+  assert(r == std::prev(m.end()));
+  assert(m.size() == 3);
+  assert(r->first == 3);
+  assert(r->second == 3);
+
+  r = m.insert(m.cend(), P(3, 2));
+  assert(r == std::prev(m.end()));
+  assert(m.size() == 4);
+  assert(r->first == 3);
+  assert(r->second == 2);
+}
+
+TEST_CONSTEXPR_CXX26
+bool test() {
+  do_insert_rv_test<std::multimap<int, MoveOnly>, std::pair<int, MoveOnly> >();
+  do_insert_rv_test<std::multimap<int, MoveOnly>, std::pair<const int, MoveOnly> >();
+
+  {
+    typedef std::multimap<int, MoveOnly, std::less<int>, min_allocator<std::pair<const int, MoveOnly>>> M;
+    typedef std::pair<int, MoveOnly> P;
+    typedef std::pair<const int, MoveOnly> CP;
+    do_insert_rv_test<M, P>();
+    do_insert_rv_test<M, CP>();
+  }
+  {
+    typedef std::multimap<int, MoveOnly> M;
+    typedef M::iterator R;
+    M m;
+    R r = m.insert(m.cend(), {2, MoveOnly(2)});
+    assert(r == m.begin());
+    assert(m.size() == 1);
+    assert(r->first == 2);
+    assert(r->second == 2);
+
+    r = m.insert(m.cend(), {1, MoveOnly(1)});
+    assert(r == m.begin());
+    assert(m.size() == 2);
+    assert(r->first == 1);
+    assert(r->second == 1);
+
+    r = m.insert(m.cend(), {3, MoveOnly(3)});
+    assert(r == std::prev(m.end()));
+    assert(m.size() == 3);
+    assert(r->first == 3);
+    assert(r->second == 3);
+
+    r = m.insert(m.cend(), {3, MoveOnly(2)});
+    assert(r == std::prev(m.end()));
+    assert(m.size() == 4);
+    assert(r->first == 3);
+    assert(r->second == 2);
+  }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
+  return 0;
+}

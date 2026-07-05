@@ -1,0 +1,41 @@
+# RUN: yaml2obj %s -o - | \
+# RUN:   llvm-dwarfdump -debug-frame - | \
+# RUN:   FileCheck %s
+
+## This checks that we resolve relocations when reading CIE pointers.
+## The second FDE references the second CIE. The value for the CIE pointer
+## field in the raw section data is 0, thus, to recover the real reference,
+## it is required to read the addend from the corresponding RELA relocation.
+
+# CHECK: .debug_frame contents:
+# CHECK: 00000000 0000000c ffffffff CIE
+# CHECK: 00000010 00000014 00000000 FDE cie=00000000 pc=00000000...00000001
+# CHECK: 00000028 0000000c ffffffff CIE
+# CHECK: 00000038 00000014 00000028 FDE cie=00000028 pc=00000010...00000011
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .debug_frame
+    Type:    SHT_PROGBITS
+    Content: 0C000000FFFFFFFF02000178100000001400000000000000000000000000000001000000000000000C000000FFFFFFFF0200017810000000140000000000000010000000000000000100000000000000
+  - Name:    .rela.debug_frame
+    Type:    SHT_RELA
+    Info:    .debug_frame
+    Relocations:
+      - Offset: 0x0000000000000014
+        Symbol: .debug_frame
+        Type:   R_X86_64_32
+      - Offset: 0x000000000000003C
+        Symbol: .debug_frame
+        Type:   R_X86_64_32
+        Addend: 0x28
+Symbols:
+  - Name:    .debug_frame
+    Type:    STT_SECTION
+    Section: .debug_frame
+...

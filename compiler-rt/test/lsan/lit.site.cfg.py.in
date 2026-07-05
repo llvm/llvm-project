@@ -1,0 +1,13 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+# Tool-specific config options.
+config.name_suffix = "@LSAN_TEST_CONFIG_SUFFIX@"
+config.target_cflags = "@LSAN_TEST_TARGET_CFLAGS@"
+config.lsan_lit_test_mode = "@LSAN_LIT_TEST_MODE@"
+config.target_arch = "@LSAN_TEST_TARGET_ARCH@"
+
+# Load common config for all compiler-rt lit tests.
+lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")
+
+# Load tool-specific config that would do the real work.
+lit_config.load_config(config, "@LSAN_LIT_SOURCE_DIR@/lit.common.cfg.py")

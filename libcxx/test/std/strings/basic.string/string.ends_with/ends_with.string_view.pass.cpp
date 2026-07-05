@@ -1,0 +1,82 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+// UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// <string>
+
+// constexpr bool ends_with(basic_string_view x) const noexcept;
+
+#include <string>
+#include <cassert>
+
+#include "test_macros.h"
+
+template <class CharT, template <class> class Alloc>
+constexpr void test_string() {
+  using S       = std::basic_string<CharT, std::char_traits<CharT>, Alloc<CharT> >;
+  using SV      = std::basic_string_view< CharT, std::char_traits<CharT> >;
+  const char* s = "abcde";
+
+  S s0;
+  S s1{s + 4, 1};
+  S s2{s + 3, 2};
+  //  S   s3  { s + 2, 3 };
+  //  S   s4  { s + 1, 4 };
+  //  S   s5  { s,     5 };
+  S sNot{"def", 3};
+
+  SV sv0;
+  SV sv1{s + 4, 1};
+  SV sv2{s + 3, 2};
+  SV sv3{s + 2, 3};
+  SV sv4{s + 1, 4};
+  SV sv5{s, 5};
+  SV svNot{"def", 3};
+
+  ASSERT_NOEXCEPT(s0.ends_with(sv0));
+
+  assert(s0.ends_with(sv0));
+  assert(!s0.ends_with(sv1));
+
+  assert(s1.ends_with(sv0));
+  assert(s1.ends_with(sv1));
+  assert(!s1.ends_with(sv2));
+  assert(!s1.ends_with(sv3));
+  assert(!s1.ends_with(sv4));
+  assert(!s1.ends_with(sv5));
+  assert(!s1.ends_with(svNot));
+
+  assert(s2.ends_with(sv0));
+  assert(s2.ends_with(sv1));
+  assert(s2.ends_with(sv2));
+  assert(!s2.ends_with(sv3));
+  assert(!s2.ends_with(sv4));
+  assert(!s2.ends_with(sv5));
+  assert(!s2.ends_with(svNot));
+
+  assert(sNot.ends_with(sv0));
+  assert(!sNot.ends_with(sv1));
+  assert(!sNot.ends_with(sv2));
+  assert(!sNot.ends_with(sv3));
+  assert(!sNot.ends_with(sv4));
+  assert(!sNot.ends_with(sv5));
+  assert(sNot.ends_with(svNot));
+}
+
+constexpr bool test() {
+  test_string<char, std::allocator>();
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+  static_assert(test());
+
+  return 0;
+}

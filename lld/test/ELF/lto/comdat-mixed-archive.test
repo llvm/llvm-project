@@ -1,0 +1,74 @@
+REQUIRES: x86
+
+;; This checks a case when an archive contains a bitcode and a regular object
+;; files, and a comdat symbol is defined and used in both of them. Previously,
+;; lld could lose the flag that the symbol is used in a regular object file
+;; which led to the LTO backend internalizing the symbol and the linker
+;; reporting an "undefined symbol" error.
+
+;; In this test, group "foo" in "obj.o" is rejected in favor of "bc.bc" but we
+;; need to prevent LTO from internalizing "foo" as there is still a reference
+;; from outside the group in "obj.o".
+
+RUN: rm -rf %t.dir
+RUN: split-file %s %t.dir
+RUN: cd %t.dir
+
+RUN: llvm-mc -filetype=obj -triple=x86_64 start.s -o start.o
+RUN: llvm-mc -filetype=obj -triple=x86_64 obj.s -o obj.o
+RUN: llvm-as bc.ll -o bc.bc
+RUN: llvm-nm bc.bc --no-sort | FileCheck %s --check-prefix=BCSYM
+RUN: llvm-ar rc lib.a obj.o bc.bc
+RUN: ld.lld start.o lib.a -y foo -y bar -o /dev/null | FileCheck %s --check-prefix=TRACE
+
+;; "bar" should be encountered before "foo" so that it triggers the loading of
+;; "obj.o" while "foo" is still lazy.
+BCSYM:      U bar
+BCSYM-NEXT: W foo
+
+;; Check that the symbols are handled in the expected order.
+TRACE:      lib.a(obj.o): lazy definition of foo
+TRACE-NEXT: lib.a(obj.o): lazy definition of bar
+TRACE-NEXT: lib.a(bc.bc): definition of foo
+TRACE-NEXT: lib.a(bc.bc): reference to bar
+TRACE-NEXT: lib.a(obj.o): definition of bar
+TRACE-NEXT: lib.a(obj.o): reference to foo
+TRACE-NEXT: <internal>: reference to foo
+;; The definition of "foo" is visible outside the LTO result.
+TRACE-NEXT: {{.*}}.lto.o: definition of foo
+TRACE-NEXT: {{.*}}.lto.o: reference to bar
+
+;--- start.s
+  .global _start, baz
+_start:
+  call baz
+
+;--- obj.s
+  .weak foo
+  .global bar
+
+  .section .text.foo,"axG",@progbits,foo,comdat
+foo:
+  ret
+
+  .section .text.bar,"ax",@progbits
+bar:
+  call foo
+
+;--- bc.ll
+target triple = "x86_64-unknown-linux-gnu"
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+
+$foo = comdat any
+
+declare void @bar()
+
+define linkonce_odr void @foo() comdat {
+  ret void
+}
+
+define void @baz() {
+  call void @foo()
+  call void @bar()
+  ret void
+}

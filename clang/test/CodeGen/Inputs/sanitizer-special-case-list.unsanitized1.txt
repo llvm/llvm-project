@@ -1,0 +1,2 @@
+fun:*cfi*
+fun:*overflow*

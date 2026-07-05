@@ -1,0 +1,4 @@
+module cpp_stdint [system] {
+  header "stdint.h"
+  export *
+}

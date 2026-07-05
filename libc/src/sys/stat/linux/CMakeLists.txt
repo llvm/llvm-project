@@ -1,0 +1,116 @@
+add_entrypoint_object(
+  chmod
+  SRCS
+    chmod.cpp
+  HDRS
+    ../chmod.h
+  DEPENDS
+    libc.hdr.types.mode_t
+    libc.hdr.fcntl_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.chmod
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  fchmod
+  SRCS
+    fchmod.cpp
+  HDRS
+    ../fchmod.h
+  DEPENDS
+    libc.hdr.types.mode_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.fchmod
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  fchmodat
+  SRCS
+    fchmodat.cpp
+  HDRS
+    ../fchmodat.h
+  DEPENDS
+    libc.hdr.types.mode_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.fchmodat
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  mkdir
+  SRCS
+    mkdir.cpp
+  HDRS
+    ../mkdir.h
+  DEPENDS
+    libc.hdr.types.mode_t
+    libc.hdr.fcntl_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mkdir
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  mkdirat
+  SRCS
+    mkdirat.cpp
+  HDRS
+    ../mkdirat.h
+  DEPENDS
+    libc.hdr.types.mode_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mkdirat
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  stat
+  SRCS
+    stat.cpp
+  HDRS
+    ../stat.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.types.struct_stat
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.OSUtil.linux.stat.stat_via_statx
+)
+
+add_entrypoint_object(
+  lstat
+  SRCS
+    lstat.cpp
+  HDRS
+    ../lstat.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.types.struct_stat
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.OSUtil.linux.stat.stat_via_statx
+)
+
+add_entrypoint_object(
+  fstat
+  SRCS
+    fstat.cpp
+  HDRS
+    ../fstat.h
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.types.struct_stat
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.OSUtil.linux.stat.stat_via_statx
+)
+
+add_entrypoint_object(
+  utimensat
+  SRCS
+    utimensat.cpp
+  HDRS
+    ../utimensat.h
+  DEPENDS
+    libc.hdr.types.struct_timespec
+    libc.src.__support.OSUtil.linux.syscall_wrappers.utimensat
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+)

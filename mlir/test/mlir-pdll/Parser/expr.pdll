@@ -1,0 +1,315 @@
+// RUN: mlir-pdll %s -I %S -I %S/../../../include -split-input-file | FileCheck %s
+
+//===----------------------------------------------------------------------===//
+// AttrExpr
+//===----------------------------------------------------------------------===//
+
+// CHECK: Module
+// CHECK: `-AttributeExpr {{.*}} Value<"10: i32">
+Pattern {
+  let attr = attr<"10: i32">;
+
+  erase _: Op;
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// CallExpr
+//===----------------------------------------------------------------------===//
+
+// CHECK: Module
+// CHECK: |-UserConstraintDecl {{.*}} Name<MakeRootOp> ResultType<Op<my_dialect.foo>>
+// CHECK:   `-CallExpr {{.*}} Type<Op<my_dialect.foo>>
+// CHECK:     `-DeclRefExpr {{.*}} Type<Constraint>
+// CHECK:       `-UserConstraintDecl {{.*}} Name<MakeRootOp> ResultType<Op<my_dialect.foo>>
+Constraint MakeRootOp() => op<my_dialect.foo>;
+
+Pattern {
+  erase MakeRootOp();
+}
+
+// -----
+
+// CHECK: Module
+// CHECK: |-UserRewriteDecl {{.*}} Name<CreateNewOp> ResultType<Op<my_dialect.foo>>
+// CHECK: `-PatternDecl {{.*}}
+// CHECK:   `-CallExpr {{.*}} Type<Op<my_dialect.foo>>
+// CHECK:     `-DeclRefExpr {{.*}} Type<Rewrite>
+// CHECK:       `-UserRewriteDecl {{.*}} Name<CreateNewOp> ResultType<Op<my_dialect.foo>>
+// CHECK:     `Arguments`
+// CHECK:       `-MemberAccessExpr {{.*}} Member<$results> Type<ValueRange>
+// CHECK:         `-DeclRefExpr {{.*}} Type<Op<my_dialect.bar>>
+// CHECK:           `-VariableDecl {{.*}} Name<inputOp> Type<Op<my_dialect.bar>>
+Rewrite CreateNewOp(inputs: ValueRange) => op<my_dialect.foo>(inputs);
+
+Pattern {
+  let inputOp = op<my_dialect.bar>;
+  replace op<my_dialect.bar>(inputOp) with CreateNewOp(inputOp);
+}
+
+// -----
+
+// CHECK: Module {{.*}}
+// CHECK:  -UserConstraintDecl {{.*}} Name<TestConstraint> ResultType<Tuple<>>
+// CHECK: `-PatternDecl {{.*}}
+// CHECK:   -CallExpr {{.*}} Type<Tuple<>> Negated
+// CHECK:     `-DeclRefExpr {{.*}} Type<Constraint>
+// CHECK:       `-UserConstraintDecl {{.*}} Name<TestConstraint> ResultType<Tuple<>>
+Constraint TestConstraint(op: Op);
+
+Pattern {
+  let inputOp = op<my_dialect.bar>;
+  not TestConstraint(inputOp);
+  erase inputOp;
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// MemberAccessExpr
+//===----------------------------------------------------------------------===//
+
+// CHECK: Module
+// CHECK: `-VariableDecl {{.*}} Name<firstEltIndex> Type<Op>
+// CHECK:   `-MemberAccessExpr {{.*}} Member<0> Type<Op>
+// CHECK:     `-DeclRefExpr {{.*}} Type<Tuple<firstElt: Op>>
+// CHECK: `-VariableDecl {{.*}} Name<firstEltName> Type<Op>
+// CHECK:   `-MemberAccessExpr {{.*}} Member<firstElt> Type<Op>
+// CHECK:     `-DeclRefExpr {{.*}} Type<Tuple<firstElt: Op>>
+Pattern {
+  let tuple = (firstElt = _: Op);
+  let firstEltIndex = tuple.0;
+  let firstEltName = tuple.firstElt;
+
+  erase _: Op;
+}
+
+// -----
+
+#include "include/ops.td"
+
+// CHECK: Module
+// CHECK: `-VariableDecl {{.*}} Name<firstEltIndex> Type<Value>
+// CHECK:   `-MemberAccessExpr {{.*}} Member<0> Type<Value>
+// CHECK:     `-DeclRefExpr {{.*}} Type<Op<test.all_single>>
+// CHECK: `-VariableDecl {{.*}} Name<firstEltName> Type<Value>
+// CHECK:   `-MemberAccessExpr {{.*}} Member<result> Type<Value>
+// CHECK:     `-DeclRefExpr {{.*}} Type<Op<test.all_single>>
+Pattern {
+  let op: Op<test.all_single>;
+  let firstEltIndex = op.0;
+  let firstEltName = op.result;
+
+  erase op;
+}
+
+// -----
+
+// CHECK: Module
+// CHECK: `-VariableDecl {{.*}} Name<op> Type<Op<my_dialect.unregistered_foo>>
+// CHECK:   `-OperationExpr {{.*}} Type<Op<my_dialect.unregistered_foo>>
+// CHECK:     `-OpNameDecl {{.*}} Name<my_dialect.unregistered_foo>
+// CHECK:     `Operands`
+// CHECK:       `-MemberAccessExpr {{.*}} Member<0> Type<Value>
+// CHECK:         `-OperationExpr {{.*}} Type<Op<my_dialect.unregistered_bar>>
+// CHECK:           `-OpNameDecl {{.*}} Name<my_dialect.unregistered_bar>
+// CHECK:           `Operands`
+// CHECK:             `-DeclRefExpr {{.*}} Type<ValueRange>
+// CHECK:               `-VariableDecl {{.*}} Name<_> Type<ValueRange>
+// CHECK:                 `Constraints`
+// CHECK:                   `-ValueRangeConstraintDecl
+Pattern {
+  let op = op<my_dialect.unregistered_foo>(op<my_dialect.unregistered_bar>.0);
+  erase op;
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// OperationExpr
+//===----------------------------------------------------------------------===//
+
+// Test a non-constrained operation expression, and ensure that we don't treat
+// unconstrained as "not present"(e.g. zero operands).
+
+// CHECK: Module
+// CHECK: `-OperationExpr {{.*}} Type<Op>
+// CHECK:   `-OpNameDecl
+// CHECK:   `Operands`
+// CHECK:     `-DeclRefExpr {{.*}} Type<ValueRange>
+// CHECK:       `-VariableDecl {{.*}} Name<_> Type<ValueRange>
+// CHECK:         `Constraints`
+// CHECK:           `-ValueRangeConstraintDecl
+// CHECK:   `Result Types`
+// CHECK:     `-DeclRefExpr {{.*}} Type<TypeRange>
+// CHECK:       `-VariableDecl {{.*}} Name<_> Type<TypeRange>
+// CHECK:         `Constraints`
+// CHECK:           `-TypeRangeConstraintDecl
+Pattern {
+  erase op<>;
+}
+
+// -----
+
+// Test explicitly empty operand/result/etc. lists, which are different from the 
+// "unconstrained" examples above.
+
+// CHECK: Module
+// CHECK: `-OperationExpr {{.*}} Type<Op>
+// CHECK:   `-OpNameDecl
+// CHECK-NOT: `Operands`
+// CHECK-NOT: `Result Types`
+Pattern {
+  erase op<>() -> ();
+}
+
+// -----
+
+// CHECK: Module
+// CHECK: `-OperationExpr {{.*}} Type<Op<my_dialect.foo>>
+// CHECK:   `-OpNameDecl {{.*}} Name<my_dialect.foo>
+Pattern {
+  erase op<my_dialect.foo>;
+}
+
+// -----
+
+// CHECK: Module
+// CHECK: `-OperationExpr {{.*}} Type<Op>
+// CHECK:   `-OpNameDecl
+// CHECK:   `Operands`
+// CHECK:     |-DeclRefExpr {{.*}} Type<Value>
+// CHECK:     |-DeclRefExpr {{.*}} Type<ValueRange>
+// CHECK:     `-DeclRefExpr {{.*}} Type<Value>
+Pattern {
+  erase op<>(_: Value, _: ValueRange, _: Value);
+}
+
+// -----
+
+// CHECK: Module
+// CHECK: `-OperationExpr {{.*}} Type<Op>
+// CHECK:   `-OpNameDecl
+// CHECK:   `Operands`
+// CHECK:     `-MemberAccessExpr {{.*}} Member<$results> Type<ValueRange>
+// CHECK:       `-OperationExpr {{.*}} Type<Op<my_dialect.bar>>
+// CHECK:         `-OpNameDecl {{.*}} Name<my_dialect.bar>
+Pattern {
+  erase op<>(op<my_dialect.bar>);
+}
+
+// -----
+
+// CHECK: Module
+// CHECK: `-OperationExpr {{.*}} Type<Op>
+// CHECK:   `-OpNameDecl
+// CHECK:   `Attributes`
+// CHECK:     |-NamedAttributeDecl {{.*}} Name<unitAttr>
+// CHECK:       `-AttributeExpr {{.*}} Value<"unit">
+// CHECK:     `-NamedAttributeDecl {{.*}} Name<normal$Attr>
+// CHECK:       `-DeclRefExpr {{.*}} Type<Attr>
+
+Pattern {
+  erase op<> {unitAttr, "normal$Attr" = _: Attr};
+}
+
+// -----
+
+// CHECK: Module
+// CHECK: `-OperationExpr {{.*}} Type<Op>
+// CHECK:   `-OpNameDecl
+// CHECK:   `Result Types`
+// CHECK:     |-DeclRefExpr {{.*}} Type<Type>
+// CHECK:     |-DeclRefExpr {{.*}} Type<TypeRange>
+// CHECK:     `-DeclRefExpr {{.*}} Type<Type>
+Pattern {
+  erase op<> -> (_: Type, _: TypeRange, _: Type);
+}
+
+// -----
+
+// Test that we don't need to provide values if all elements
+// are optional.
+
+#include "include/ops.td"
+
+// CHECK: Module
+// CHECK:  -OperationExpr {{.*}} Type<Op<test.multi_variadic>>
+// CHECK-NOT:   `Operands`
+// CHECK-NOT:   `Result Types`
+// CHECK:  -OperationExpr {{.*}} Type<Op<test.all_variadic>>
+// CHECK-NOT:   `Operands`
+// CHECK-NOT:   `Result Types`
+// CHECK:  -OperationExpr {{.*}} Type<Op<test.multi_variadic>>
+// CHECK:    `Operands`
+// CHECK:      -RangeExpr {{.*}} Type<ValueRange>
+// CHECK:      -RangeExpr {{.*}} Type<ValueRange>
+// CHECK:    `Result Types`
+// CHECK:      -RangeExpr {{.*}} Type<TypeRange>
+// CHECK:      -RangeExpr {{.*}} Type<TypeRange>
+Pattern {
+  rewrite op<test.multi_variadic>() -> () with {
+    op<test.all_variadic> -> ();
+    op<test.multi_variadic> -> ();
+  };
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// TupleExpr
+//===----------------------------------------------------------------------===//
+
+// CHECK: Module
+// CHECK: `-VariableDecl {{.*}} Name<emptyTuple>
+// CHECK:   `-TupleExpr {{.*}} Type<Tuple<>>
+// CHECK: `-VariableDecl {{.*}} Name<mixedTuple>
+// CHECK:   `-TupleExpr {{.*}} Type<Tuple<arg1: Attr, Value>>
+// CHECK:     |-DeclRefExpr {{.*}} Type<Attr>
+// CHECK:     `-DeclRefExpr {{.*}} Type<Value>
+Pattern {
+  let value: Value;
+
+  let emptyTuple = ();
+  let mixedTuple = (arg1 = _: Attr, value);
+
+  erase _: Op;
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// RangeExpr
+//===----------------------------------------------------------------------===//
+
+// CHECK: Module
+// CHECK: `Operands`
+// CHECK:   -RangeExpr {{.*}} Type<ValueRange>
+// CHECK:   -RangeExpr {{.*}} Type<ValueRange>
+// CHECK:     -MemberAccessExpr {{.*}} Member<0> Type<Value>
+// CHECK:     -MemberAccessExpr {{.*}} Member<1> Type<ValueRange>
+// CHECK: `Result Types`
+// CHECK:   -RangeExpr {{.*}} Type<TypeRange>
+// CHECK:   -RangeExpr {{.*}} Type<TypeRange>
+// CHECK:     -MemberAccessExpr {{.*}} Member<0> Type<Type>
+// CHECK:     -MemberAccessExpr {{.*}} Member<1> Type<TypeRange>
+Pattern {
+  rewrite op<>(arg: Value, args: ValueRange) -> (type: Type, types: TypeRange) with {
+    op<test.op>((), (arg, args)) -> ((), (type, types));
+  };
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// TypeExpr
+//===----------------------------------------------------------------------===//
+
+// CHECK: Module
+// CHECK: `-TypeExpr {{.*}} Value<"i64">
+Pattern {
+  let type = type<"i64">;
+
+  erase _: Op;
+}

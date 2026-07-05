@@ -1,0 +1,73 @@
+# RUN: llc -mtriple=x86_64 -run-pass none -o - %s | FileCheck %s
+# This test ensures that the MIR parser parses machine basic block operands.
+
+--- |
+
+  define i32 @foo(ptr %p) {
+  entry:
+    %a = load i32, ptr %p
+    %0 = icmp sle i32 %a, 10
+    br i1 %0, label %less, label %exit
+
+  less:
+    ret i32 0
+
+  exit:
+    ret i32 %a
+  }
+
+  define i32 @bar(ptr %p) {
+  entry:
+    %a = load i32, ptr %p
+    %b = icmp sle i32 %a, 10
+    br i1 %b, label %0, label %1
+
+  ; <label>:0
+    ret i32 0
+
+  ; <label>:1
+    ret i32 %a
+  }
+
+...
+---
+# CHECK: name: foo
+name:            foo
+body: |
+  ; CHECK: bb.0.entry
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+
+    $eax = MOV32rm $rdi, 1, _, 0, _
+    ; CHECK:      CMP32ri8 $eax, 10
+    ; CHECK-NEXT: JCC_1 %bb.2, 15
+    CMP32ri8 $eax, 10, implicit-def $eflags
+    JCC_1 %bb.2, 15, implicit $eflags
+  ; CHECK: bb.1.less:
+
+  bb.1.less:
+    $eax = MOV32r0 implicit-def $eflags
+
+  bb.2.exit:
+    RET64 $eax
+...
+---
+# CHECK: name: bar
+name:            bar
+body: |
+  ; CHECK: bb.0.entry:
+  bb.0.entry:
+    successors: %bb.1, %bb.3
+
+    $eax = MOV32rm $rdi, 1, _, 0, _
+    ; CHECK:      CMP32ri8 $eax, 10
+    ; CHECK-NEXT: JCC_1 %bb.2, 15
+    CMP32ri8 $eax, 10, implicit-def $eflags
+    JCC_1 %bb.3, 15, implicit $eflags
+
+  bb.1:
+    $eax = MOV32r0 implicit-def $eflags
+
+  bb.3:
+    RET64 $eax
+...

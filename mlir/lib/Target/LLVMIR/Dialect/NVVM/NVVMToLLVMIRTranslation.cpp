@@ -1,0 +1,814 @@
+//===- NVVMToLLVMIRTranslation.cpp - Translate NVVM to LLVM IR ------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file implements a translation between the MLIR NVVM dialect and
+// LLVM IR.
+//
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
+#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/Target/LLVMIR/ModuleTranslation.h"
+
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/iterator_range.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/IntrinsicsNVPTX.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/NVVMAttributes.h"
+
+using namespace mlir;
+using namespace mlir::LLVM;
+using mlir::LLVM::detail::createIntrinsicCall;
+
+#define REDUX_F32_ID_IMPL(op, abs, hasNaN)                                     \
+  hasNaN ? llvm::Intrinsic::nvvm_redux_sync_f##op##abs##_NaN                   \
+         : llvm::Intrinsic::nvvm_redux_sync_f##op##abs
+
+#define GET_REDUX_F32_ID(op, hasAbs, hasNaN)                                   \
+  hasAbs ? REDUX_F32_ID_IMPL(op, _abs, hasNaN) : REDUX_F32_ID_IMPL(op, , hasNaN)
+
+static llvm::Intrinsic::ID getReduxIntrinsicId(llvm::Type *resultType,
+                                               NVVM::ReductionKind kind,
+                                               bool hasAbs, bool hasNaN) {
+  switch (kind) {
+  case NVVM::ReductionKind::ADD:
+    return llvm::Intrinsic::nvvm_redux_sync_add;
+  case NVVM::ReductionKind::UMAX:
+    return llvm::Intrinsic::nvvm_redux_sync_umax;
+  case NVVM::ReductionKind::UMIN:
+    return llvm::Intrinsic::nvvm_redux_sync_umin;
+  case NVVM::ReductionKind::AND:
+    return llvm::Intrinsic::nvvm_redux_sync_and;
+  case NVVM::ReductionKind::OR:
+    return llvm::Intrinsic::nvvm_redux_sync_or;
+  case NVVM::ReductionKind::XOR:
+    return llvm::Intrinsic::nvvm_redux_sync_xor;
+  case NVVM::ReductionKind::MAX:
+    return llvm::Intrinsic::nvvm_redux_sync_max;
+  case NVVM::ReductionKind::MIN:
+    return llvm::Intrinsic::nvvm_redux_sync_min;
+  case NVVM::ReductionKind::FMIN:
+    return GET_REDUX_F32_ID(min, hasAbs, hasNaN);
+  case NVVM::ReductionKind::FMAX:
+    return GET_REDUX_F32_ID(max, hasAbs, hasNaN);
+  }
+  llvm_unreachable("unknown reduction kind");
+}
+
+static llvm::Intrinsic::ID getShflIntrinsicId(llvm::Type *resultType,
+                                              NVVM::ShflKind kind,
+                                              bool withPredicate) {
+
+  if (withPredicate) {
+    resultType = cast<llvm::StructType>(resultType)->getElementType(0);
+    switch (kind) {
+    case NVVM::ShflKind::bfly:
+      return resultType->isFloatTy()
+                 ? llvm::Intrinsic::nvvm_shfl_sync_bfly_f32p
+                 : llvm::Intrinsic::nvvm_shfl_sync_bfly_i32p;
+    case NVVM::ShflKind::up:
+      return resultType->isFloatTy() ? llvm::Intrinsic::nvvm_shfl_sync_up_f32p
+                                     : llvm::Intrinsic::nvvm_shfl_sync_up_i32p;
+    case NVVM::ShflKind::down:
+      return resultType->isFloatTy()
+                 ? llvm::Intrinsic::nvvm_shfl_sync_down_f32p
+                 : llvm::Intrinsic::nvvm_shfl_sync_down_i32p;
+    case NVVM::ShflKind::idx:
+      return resultType->isFloatTy() ? llvm::Intrinsic::nvvm_shfl_sync_idx_f32p
+                                     : llvm::Intrinsic::nvvm_shfl_sync_idx_i32p;
+    }
+  } else {
+    switch (kind) {
+    case NVVM::ShflKind::bfly:
+      return resultType->isFloatTy() ? llvm::Intrinsic::nvvm_shfl_sync_bfly_f32
+                                     : llvm::Intrinsic::nvvm_shfl_sync_bfly_i32;
+    case NVVM::ShflKind::up:
+      return resultType->isFloatTy() ? llvm::Intrinsic::nvvm_shfl_sync_up_f32
+                                     : llvm::Intrinsic::nvvm_shfl_sync_up_i32;
+    case NVVM::ShflKind::down:
+      return resultType->isFloatTy() ? llvm::Intrinsic::nvvm_shfl_sync_down_f32
+                                     : llvm::Intrinsic::nvvm_shfl_sync_down_i32;
+    case NVVM::ShflKind::idx:
+      return resultType->isFloatTy() ? llvm::Intrinsic::nvvm_shfl_sync_idx_f32
+                                     : llvm::Intrinsic::nvvm_shfl_sync_idx_i32;
+    }
+  }
+  llvm_unreachable("unknown shuffle kind");
+}
+
+static llvm::Intrinsic::ID getMatchSyncIntrinsicId(Type valType,
+                                                   NVVM::MatchSyncKind kind) {
+  switch (kind) {
+  case NVVM::MatchSyncKind::any:
+    return valType.isInteger(32) ? llvm::Intrinsic::nvvm_match_any_sync_i32
+                                 : llvm::Intrinsic::nvvm_match_any_sync_i64;
+  case NVVM::MatchSyncKind::all:
+    // match.all instruction has two variants -- one returns a single value,
+    // another returns a pair {value, predicate}. We currently only implement
+    // the latter as that's the variant exposed by CUDA API.
+    return valType.isInteger(32) ? llvm::Intrinsic::nvvm_match_all_sync_i32p
+                                 : llvm::Intrinsic::nvvm_match_all_sync_i64p;
+  }
+  llvm_unreachable("unsupported match sync kind");
+}
+
+static llvm::Intrinsic::ID getVoteSyncIntrinsicId(NVVM::VoteSyncKind kind) {
+  switch (kind) {
+  case NVVM::VoteSyncKind::any:
+    return llvm::Intrinsic::nvvm_vote_any_sync;
+  case NVVM::VoteSyncKind::all:
+    return llvm::Intrinsic::nvvm_vote_all_sync;
+  case NVVM::VoteSyncKind::ballot:
+    return llvm::Intrinsic::nvvm_vote_ballot_sync;
+  case NVVM::VoteSyncKind::uni:
+    return llvm::Intrinsic::nvvm_vote_uni_sync;
+  }
+  llvm_unreachable("unsupported vote kind");
+}
+
+static llvm::Intrinsic::ID
+getLdMatrixIntrinsicId(NVVM::MMALayout layout, int32_t num,
+                       NVVM::LdStMatrixShapeAttr shape,
+                       NVVM::LdStMatrixEltType eltType) {
+  if (shape.getM() == 8 && shape.getN() == 8) {
+    switch (num) {
+    case 1:
+      return (layout == NVVM::MMALayout::row)
+                 ? llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x1_b16
+                 : llvm::Intrinsic::
+                       nvvm_ldmatrix_sync_aligned_m8n8_x1_trans_b16;
+    case 2:
+      return (layout == NVVM::MMALayout::row)
+                 ? llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x2_b16
+                 : llvm::Intrinsic::
+                       nvvm_ldmatrix_sync_aligned_m8n8_x2_trans_b16;
+    case 4:
+      return (layout == NVVM::MMALayout::row)
+                 ? llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x4_b16
+                 : llvm::Intrinsic::
+                       nvvm_ldmatrix_sync_aligned_m8n8_x4_trans_b16;
+    }
+  } else if (shape.getM() == 8 && shape.getN() == 16) {
+    if (eltType == NVVM::LdStMatrixEltType::B8X16_B6X16_P32) {
+      switch (num) {
+      case 1:
+        return llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m8n16_x1_b8x16_b6x16_p32;
+      case 2:
+        return llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m8n16_x2_b8x16_b6x16_p32;
+      case 4:
+        return llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m8n16_x4_b8x16_b6x16_p32;
+      }
+    } else if (eltType == NVVM::LdStMatrixEltType::B8X16_B4X16_P64) {
+      switch (num) {
+      case 1:
+        return llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m8n16_x1_b8x16_b4x16_p64;
+      case 2:
+        return llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m8n16_x2_b8x16_b4x16_p64;
+      case 4:
+        return llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m8n16_x4_b8x16_b4x16_p64;
+      }
+    }
+  } else if (shape.getM() == 16 && shape.getN() == 16) {
+    if (eltType == NVVM::LdStMatrixEltType::B8) {
+      switch (num) {
+      case 1:
+        return llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x1_trans_b8;
+      case 2:
+        return llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x2_trans_b8;
+      }
+    } else if (eltType == NVVM::LdStMatrixEltType::B8X16_B6X16_P32) {
+      switch (num) {
+      case 1:
+        return llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m16n16_x1_trans_b8x16_b6x16_p32;
+      case 2:
+        return llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m16n16_x2_trans_b8x16_b6x16_p32;
+      }
+    } else if (eltType == NVVM::LdStMatrixEltType::B8X16_B4X16_P64) {
+      switch (num) {
+      case 1:
+        return llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m16n16_x1_trans_b8x16_b4x16_p64;
+      case 2:
+        return llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m16n16_x2_trans_b8x16_b4x16_p64;
+      }
+    }
+  }
+  llvm_unreachable("unknown ldmatrix kind");
+}
+
+/// Return the intrinsic ID associated with stmatrix for the given paramters.
+static llvm::Intrinsic::ID
+getStMatrixIntrinsicId(NVVM::MMALayout layout, int32_t num,
+                       NVVM::LdStMatrixShapeAttr shape,
+                       NVVM::LdStMatrixEltType eltType) {
+  if (shape.getM() == 8 && shape.getN() == 8) {
+    switch (num) {
+    case 1:
+      return (layout == NVVM::MMALayout::row)
+                 ? llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x1_b16
+                 : llvm::Intrinsic::
+                       nvvm_stmatrix_sync_aligned_m8n8_x1_trans_b16;
+    case 2:
+      return (layout == NVVM::MMALayout::row)
+                 ? llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x2_b16
+                 : llvm::Intrinsic::
+                       nvvm_stmatrix_sync_aligned_m8n8_x2_trans_b16;
+    case 4:
+      return (layout == NVVM::MMALayout::row)
+                 ? llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x4_b16
+                 : llvm::Intrinsic::
+                       nvvm_stmatrix_sync_aligned_m8n8_x4_trans_b16;
+    }
+  } else if (shape.getM() == 16 && shape.getN() == 8) {
+    switch (num) {
+    case 1:
+      return llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m16n8_x1_trans_b8;
+    case 2:
+      return llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m16n8_x2_trans_b8;
+    case 4:
+      return llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m16n8_x4_trans_b8;
+    }
+  }
+  llvm_unreachable("unknown stmatrix kind");
+}
+
+/// Return the intrinsic ID associated with st.bulk for the given address type.
+static llvm::Intrinsic::ID
+getStBulkIntrinsicId(LLVM::LLVMPointerType addrType) {
+  bool isSharedMemory = addrType.getAddressSpace() ==
+                        static_cast<unsigned>(NVVM::NVVMMemorySpace::Shared);
+  return isSharedMemory ? llvm::Intrinsic::nvvm_st_bulk_shared_cta
+                        : llvm::Intrinsic::nvvm_st_bulk;
+}
+
+static unsigned getUnidirectionalFenceProxyID(NVVM::ProxyKind fromProxy,
+                                              NVVM::ProxyKind toProxy,
+                                              NVVM::MemScopeKind scope,
+                                              bool isRelease) {
+  if (fromProxy == NVVM::ProxyKind::GENERIC &&
+      toProxy == NVVM::ProxyKind::TENSORMAP) {
+    switch (scope) {
+    case NVVM::MemScopeKind::CTA: {
+      if (isRelease)
+        return llvm::Intrinsic::nvvm_fence_proxy_tensormap_generic_release_cta;
+      return llvm::Intrinsic::nvvm_fence_proxy_tensormap_generic_acquire_cta;
+    }
+    case NVVM::MemScopeKind::CLUSTER: {
+      if (isRelease)
+        return llvm::Intrinsic::
+            nvvm_fence_proxy_tensormap_generic_release_cluster;
+      return llvm::Intrinsic::
+          nvvm_fence_proxy_tensormap_generic_acquire_cluster;
+    }
+    case NVVM::MemScopeKind::GPU: {
+      if (isRelease)
+        return llvm::Intrinsic::nvvm_fence_proxy_tensormap_generic_release_gpu;
+      return llvm::Intrinsic::nvvm_fence_proxy_tensormap_generic_acquire_gpu;
+    }
+    case NVVM::MemScopeKind::SYS: {
+      if (isRelease)
+        return llvm::Intrinsic::nvvm_fence_proxy_tensormap_generic_release_sys;
+      return llvm::Intrinsic::nvvm_fence_proxy_tensormap_generic_acquire_sys;
+    }
+    }
+    llvm_unreachable("Unknown scope for uni-directional fence.proxy operation");
+  }
+  llvm_unreachable("Unsupported proxy kinds");
+}
+
+static unsigned getMembarIntrinsicID(NVVM::MemScopeKind scope) {
+  switch (scope) {
+  case NVVM::MemScopeKind::CTA:
+    return llvm::Intrinsic::nvvm_membar_cta;
+  case NVVM::MemScopeKind::CLUSTER:
+    return llvm::Intrinsic::nvvm_fence_sc_cluster;
+  case NVVM::MemScopeKind::GPU:
+    return llvm::Intrinsic::nvvm_membar_gl;
+  case NVVM::MemScopeKind::SYS:
+    return llvm::Intrinsic::nvvm_membar_sys;
+  }
+  llvm_unreachable("Unknown scope for memory barrier");
+}
+
+#define TCGEN05LD(SHAPE, NUM) llvm::Intrinsic::nvvm_tcgen05_ld_##SHAPE##_##NUM
+
+static llvm::Intrinsic::ID
+getTcgen05LdIntrinsicID(mlir::NVVM::Tcgen05LdStShape shape, uint32_t num) {
+  llvm::Intrinsic::ID Shape16x64b[] = {
+      TCGEN05LD(16x64b, x1),  TCGEN05LD(16x64b, x2),   TCGEN05LD(16x64b, x4),
+      TCGEN05LD(16x64b, x8),  TCGEN05LD(16x64b, x16),  TCGEN05LD(16x64b, x32),
+      TCGEN05LD(16x64b, x64), TCGEN05LD(16x64b, x128),
+  };
+
+  llvm::Intrinsic::ID Shape16x128b[] = {
+      TCGEN05LD(16x128b, x1),  TCGEN05LD(16x128b, x2),  TCGEN05LD(16x128b, x4),
+      TCGEN05LD(16x128b, x8),  TCGEN05LD(16x128b, x16), TCGEN05LD(16x128b, x32),
+      TCGEN05LD(16x128b, x64),
+  };
+
+  llvm::Intrinsic::ID Shape16x256b[] = {
+      TCGEN05LD(16x256b, x1), TCGEN05LD(16x256b, x2),  TCGEN05LD(16x256b, x4),
+      TCGEN05LD(16x256b, x8), TCGEN05LD(16x256b, x16), TCGEN05LD(16x256b, x32),
+  };
+
+  llvm::Intrinsic::ID Shape16x32bx2[] = {
+      TCGEN05LD(16x32bx2, x1),  TCGEN05LD(16x32bx2, x2),
+      TCGEN05LD(16x32bx2, x4),  TCGEN05LD(16x32bx2, x8),
+      TCGEN05LD(16x32bx2, x16), TCGEN05LD(16x32bx2, x32),
+      TCGEN05LD(16x32bx2, x64), TCGEN05LD(16x32bx2, x128),
+  };
+
+  llvm::Intrinsic::ID Shape32x32b[] = {
+      TCGEN05LD(32x32b, x1),  TCGEN05LD(32x32b, x2),   TCGEN05LD(32x32b, x4),
+      TCGEN05LD(32x32b, x8),  TCGEN05LD(32x32b, x16),  TCGEN05LD(32x32b, x32),
+      TCGEN05LD(32x32b, x64), TCGEN05LD(32x32b, x128),
+  };
+
+  // `num` contains the length of vector and log2 of `num` returns the index
+  // into the shape array
+  unsigned Idx = std::log2(num);
+
+  switch (shape) {
+  case NVVM::Tcgen05LdStShape::SHAPE_16X64B:
+    return Shape16x64b[Idx];
+  case NVVM::Tcgen05LdStShape::SHAPE_16X128B:
+    return Shape16x128b[Idx - 1];
+  case NVVM::Tcgen05LdStShape::SHAPE_16X256B:
+    return Shape16x256b[Idx - 2];
+  case NVVM::Tcgen05LdStShape::SHAPE_32X32B:
+    return Shape32x32b[Idx];
+  case NVVM::Tcgen05LdStShape::SHAPE_16X32BX2:
+    return Shape16x32bx2[Idx];
+  }
+  llvm_unreachable("unhandled tcgen05.ld lowering");
+}
+
+#define TCGEN05ST(SHAPE, NUM) llvm::Intrinsic::nvvm_tcgen05_st_##SHAPE##_##NUM
+
+static llvm::Intrinsic::ID
+getTcgen05StIntrinsicID(mlir::NVVM::Tcgen05LdStShape shape, uint32_t num) {
+  llvm::Intrinsic::ID Shape16x64b[] = {
+      TCGEN05ST(16x64b, x1),  TCGEN05ST(16x64b, x2),   TCGEN05ST(16x64b, x4),
+      TCGEN05ST(16x64b, x8),  TCGEN05ST(16x64b, x16),  TCGEN05ST(16x64b, x32),
+      TCGEN05ST(16x64b, x64), TCGEN05ST(16x64b, x128),
+  };
+
+  llvm::Intrinsic::ID Shape16x128b[] = {
+      TCGEN05ST(16x128b, x1),  TCGEN05ST(16x128b, x2),  TCGEN05ST(16x128b, x4),
+      TCGEN05ST(16x128b, x8),  TCGEN05ST(16x128b, x16), TCGEN05ST(16x128b, x32),
+      TCGEN05ST(16x128b, x64),
+  };
+
+  llvm::Intrinsic::ID Shape16x256b[] = {
+      TCGEN05ST(16x256b, x1), TCGEN05ST(16x256b, x2),  TCGEN05ST(16x256b, x4),
+      TCGEN05ST(16x256b, x8), TCGEN05ST(16x256b, x16), TCGEN05ST(16x256b, x32),
+  };
+
+  llvm::Intrinsic::ID Shape16x32bx2[] = {
+      TCGEN05ST(16x32bx2, x1),  TCGEN05ST(16x32bx2, x2),
+      TCGEN05ST(16x32bx2, x4),  TCGEN05ST(16x32bx2, x8),
+      TCGEN05ST(16x32bx2, x16), TCGEN05ST(16x32bx2, x32),
+      TCGEN05ST(16x32bx2, x64), TCGEN05ST(16x32bx2, x128),
+  };
+
+  llvm::Intrinsic::ID Shape32x32b[] = {
+      TCGEN05ST(32x32b, x1),  TCGEN05ST(32x32b, x2),   TCGEN05ST(32x32b, x4),
+      TCGEN05ST(32x32b, x8),  TCGEN05ST(32x32b, x16),  TCGEN05ST(32x32b, x32),
+      TCGEN05ST(32x32b, x64), TCGEN05ST(32x32b, x128),
+  };
+
+  // `num` contains the length of vector and log2 of `num` returns the index
+  // into the shape array
+  unsigned Idx = std::log2(num);
+
+  switch (shape) {
+  case NVVM::Tcgen05LdStShape::SHAPE_16X64B:
+    return Shape16x64b[Idx];
+  case NVVM::Tcgen05LdStShape::SHAPE_16X128B:
+    return Shape16x128b[Idx - 1];
+  case NVVM::Tcgen05LdStShape::SHAPE_16X256B:
+    return Shape16x256b[Idx - 2];
+  case NVVM::Tcgen05LdStShape::SHAPE_32X32B:
+    return Shape32x32b[Idx];
+  case NVVM::Tcgen05LdStShape::SHAPE_16X32BX2:
+    return Shape16x32bx2[Idx];
+  }
+  llvm_unreachable("unhandled tcgen05.st lowering");
+}
+
+static llvm::Intrinsic::ID getFenceSyncRestrictID(NVVM::MemOrderKind order) {
+  return order == NVVM::MemOrderKind::ACQUIRE
+             ? llvm::Intrinsic::
+                   nvvm_fence_acquire_sync_restrict_space_cluster_scope_cluster
+             : llvm::Intrinsic::
+                   nvvm_fence_release_sync_restrict_space_cta_scope_cluster;
+}
+
+static llvm::Intrinsic::ID
+getFenceProxyID(NVVM::ProxyKind kind, std::optional<NVVM::SharedSpace> space) {
+  switch (kind) {
+  case NVVM::ProxyKind::alias:
+    return llvm::Intrinsic::nvvm_fence_proxy_alias;
+  case NVVM::ProxyKind::async:
+    return llvm::Intrinsic::nvvm_fence_proxy_async;
+  case NVVM::ProxyKind::async_global:
+    return llvm::Intrinsic::nvvm_fence_proxy_async_global;
+  case NVVM::ProxyKind::async_shared:
+    return *space == NVVM::SharedSpace::shared_cta
+               ? llvm::Intrinsic::nvvm_fence_proxy_async_shared_cta
+               : llvm::Intrinsic::nvvm_fence_proxy_async_shared_cluster;
+  default:
+    llvm_unreachable("unsupported proxy kind");
+  }
+}
+
+static llvm::Intrinsic::ID
+getFenceProxySyncRestrictID(NVVM::MemOrderKind order) {
+  return order == NVVM::MemOrderKind::ACQUIRE
+             ? llvm::Intrinsic::
+                   nvvm_fence_proxy_async_generic_acquire_sync_restrict_space_cluster_scope_cluster
+             : llvm::Intrinsic::
+                   nvvm_fence_proxy_async_generic_release_sync_restrict_space_cta_scope_cluster;
+}
+
+// Calls an LLVM intrinsic on the given operands. For f32/f64 vector types,
+// the intrinsic is called per-element and the results are packed back into a
+// vector. If retType is non-null, it is forwarded as the return-type
+// overload to `createIntrinsicCall`.
+static llvm::Value *
+createScalarizedIntrinsicCall(llvm::IRBuilderBase &builder,
+                              llvm::Intrinsic::ID IID, llvm::Type *opTypeLLVM,
+                              ArrayRef<llvm::Value *> operands,
+                              llvm::Type *retType) {
+  if (opTypeLLVM->isVectorTy() && (opTypeLLVM->getScalarType()->isFloatTy() ||
+                                   opTypeLLVM->getScalarType()->isDoubleTy())) {
+    llvm::Value *result = llvm::PoisonValue::get(
+        llvm::FixedVectorType::get(opTypeLLVM->getScalarType(), 2));
+    for (int64_t i = 0; i < 2; ++i) {
+      llvm::SmallVector<llvm::Value *> scalarArgs;
+      for (llvm::Value *op : operands)
+        scalarArgs.push_back(
+            builder.CreateExtractElement(op, builder.getInt32(i)));
+      llvm::Value *res = createIntrinsicCall(builder, IID, retType, scalarArgs);
+      result = builder.CreateInsertElement(result, res, builder.getInt32(i));
+    }
+    return result;
+  }
+
+  return createIntrinsicCall(builder, IID, retType, operands);
+}
+
+void NVVM::AddFOp::lowerAddFToLLVMIR(llvm::Value *argLHS, llvm::Value *argRHS,
+                                     Value res, NVVM::FPRoundingMode rndMode,
+                                     NVVM::SaturationMode satMode, bool isFTZ,
+                                     LLVM::ModuleTranslation &mt,
+                                     llvm::IRBuilderBase &builder) {
+  llvm::Type *opTypeLLVM = argLHS->getType();
+  bool isVectorOp = opTypeLLVM->isVectorTy();
+  bool isSat = satMode != NVVM::SaturationMode::NONE;
+
+  // FIXME: Add intrinsics for add.rn.ftz.f16x2 and add.rn.ftz.f16 here when
+  // they are available.
+  static constexpr llvm::Intrinsic::ID f16IDs[] = {
+      llvm::Intrinsic::nvvm_add_rn_sat_f16,
+      llvm::Intrinsic::nvvm_add_rn_ftz_sat_f16,
+      llvm::Intrinsic::nvvm_add_rn_sat_v2f16,
+      llvm::Intrinsic::nvvm_add_rn_ftz_sat_v2f16,
+  };
+
+  static constexpr llvm::Intrinsic::ID f32IDs[] = {
+      llvm::Intrinsic::nvvm_add_rn_f, // default rounding mode RN
+      llvm::Intrinsic::nvvm_add_rn_f,
+      llvm::Intrinsic::nvvm_add_rm_f,
+      llvm::Intrinsic::nvvm_add_rp_f,
+      llvm::Intrinsic::nvvm_add_rz_f,
+      llvm::Intrinsic::nvvm_add_rn_sat_f, // default rounding mode RN
+      llvm::Intrinsic::nvvm_add_rn_sat_f,
+      llvm::Intrinsic::nvvm_add_rm_sat_f,
+      llvm::Intrinsic::nvvm_add_rp_sat_f,
+      llvm::Intrinsic::nvvm_add_rz_sat_f,
+      llvm::Intrinsic::nvvm_add_rn_ftz_f, // default rounding mode RN
+      llvm::Intrinsic::nvvm_add_rn_ftz_f,
+      llvm::Intrinsic::nvvm_add_rm_ftz_f,
+      llvm::Intrinsic::nvvm_add_rp_ftz_f,
+      llvm::Intrinsic::nvvm_add_rz_ftz_f,
+      llvm::Intrinsic::nvvm_add_rn_ftz_sat_f, // default rounding mode RN
+      llvm::Intrinsic::nvvm_add_rn_ftz_sat_f,
+      llvm::Intrinsic::nvvm_add_rm_ftz_sat_f,
+      llvm::Intrinsic::nvvm_add_rp_ftz_sat_f,
+      llvm::Intrinsic::nvvm_add_rz_ftz_sat_f,
+  };
+
+  static constexpr llvm::Intrinsic::ID f64IDs[] = {
+      llvm::Intrinsic::nvvm_add_rn_d, // default rounding mode RN
+      llvm::Intrinsic::nvvm_add_rn_d, llvm::Intrinsic::nvvm_add_rm_d,
+      llvm::Intrinsic::nvvm_add_rp_d, llvm::Intrinsic::nvvm_add_rz_d};
+
+  auto addIntrinsic = [&](llvm::Intrinsic::ID IID) -> llvm::Value * {
+    return createScalarizedIntrinsicCall(builder, IID, opTypeLLVM,
+                                         {argLHS, argRHS}, opTypeLLVM);
+  };
+
+  // f16 + f16 -> f16 / vector<2xf16> + vector<2xf16> -> vector<2xf16>
+  // FIXME: Allow lowering to add.rn.ftz.f16x2 and add.rn.ftz.f16 here when the
+  // intrinsics are available.
+  if (opTypeLLVM->getScalarType()->isHalfTy()) {
+    llvm::Value *result;
+    if (isSat) {
+      unsigned index = (isVectorOp << 1) | isFTZ;
+      result = addIntrinsic(f16IDs[index]);
+    } else {
+      result = builder.CreateFAdd(argLHS, argRHS);
+    }
+    mt.mapValue(res, result);
+    return;
+  }
+
+  // bf16 + bf16 -> bf16 / vector<2xbf16> + vector<2xbf16> -> vector<2xbf16>
+  if (opTypeLLVM->getScalarType()->isBFloatTy()) {
+    mt.mapValue(res, builder.CreateFAdd(argLHS, argRHS));
+    return;
+  }
+
+  // f64 + f64 -> f64 / vector<2xf64> + vector<2xf64> -> vector<2xf64>
+  if (opTypeLLVM->getScalarType()->isDoubleTy()) {
+    unsigned index = static_cast<unsigned>(rndMode);
+    mt.mapValue(res, addIntrinsic(f64IDs[index]));
+    return;
+  }
+
+  // f32 + f32 -> f32 / vector<2xf32> + vector<2xf32> -> vector<2xf32>
+  const unsigned numRndModes = 5; // NONE, RM, RN, RP, RZ
+  if (opTypeLLVM->getScalarType()->isFloatTy()) {
+    unsigned index =
+        ((isFTZ << 1) | isSat) * numRndModes + static_cast<unsigned>(rndMode);
+    mt.mapValue(res, addIntrinsic(f32IDs[index]));
+    return;
+  }
+}
+
+void NVVM::FmaOp::lowerFmaToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
+                                   llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::FmaOp>(op);
+  mlir::NVVM::FPRoundingMode rndMode = thisOp.getRnd();
+  unsigned rndIndex = static_cast<unsigned>(rndMode) - 1; // 1-4 mapped to 0-3
+  mlir::NVVM::SaturationMode satMode = thisOp.getSat();
+  bool isFTZ = thisOp.getFtz();
+  bool isRelu = thisOp.getRelu();
+  bool isSat = satMode == NVVM::SaturationMode::SAT;
+  bool isOOB = thisOp.getOob();
+
+  mlir::Type opType = thisOp.getRes().getType();
+  llvm::Type *opTypeLLVM = mt.convertType(opType);
+  bool isVectorFma = opTypeLLVM->isVectorTy();
+
+  llvm::Value *argA = mt.lookupValue(thisOp.getA());
+  llvm::Value *argB = mt.lookupValue(thisOp.getB());
+  llvm::Value *argC = mt.lookupValue(thisOp.getC());
+
+  static constexpr llvm::Intrinsic::ID f16IDs[] = {
+      llvm::Intrinsic::nvvm_fma_rn_f16,
+      llvm::Intrinsic::nvvm_fma_rn_f16x2,
+      llvm::Intrinsic::nvvm_fma_rn_ftz_f16,
+      llvm::Intrinsic::nvvm_fma_rn_ftz_f16x2,
+      llvm::Intrinsic::nvvm_fma_rn_sat_f16,
+      llvm::Intrinsic::nvvm_fma_rn_sat_f16x2,
+      llvm::Intrinsic::nvvm_fma_rn_ftz_sat_f16,
+      llvm::Intrinsic::nvvm_fma_rn_ftz_sat_f16x2,
+      llvm::Intrinsic::nvvm_fma_rn_relu_f16,
+      llvm::Intrinsic::nvvm_fma_rn_relu_f16x2,
+      llvm::Intrinsic::nvvm_fma_rn_ftz_relu_f16,
+      llvm::Intrinsic::nvvm_fma_rn_ftz_relu_f16x2};
+
+  static constexpr llvm::Intrinsic::ID bf16IDs[] = {
+      llvm::Intrinsic::nvvm_fma_rn_bf16, llvm::Intrinsic::nvvm_fma_rn_bf16x2,
+      llvm::Intrinsic::nvvm_fma_rn_relu_bf16,
+      llvm::Intrinsic::nvvm_fma_rn_relu_bf16x2};
+
+  static constexpr llvm::Intrinsic::ID f32IDs[] = {
+      llvm::Intrinsic::nvvm_fma_rn_f,
+      llvm::Intrinsic::nvvm_fma_rm_f,
+      llvm::Intrinsic::nvvm_fma_rp_f,
+      llvm::Intrinsic::nvvm_fma_rz_f,
+      llvm::Intrinsic::nvvm_fma_rn_sat_f,
+      llvm::Intrinsic::nvvm_fma_rm_sat_f,
+      llvm::Intrinsic::nvvm_fma_rp_sat_f,
+      llvm::Intrinsic::nvvm_fma_rz_sat_f,
+      llvm::Intrinsic::nvvm_fma_rn_ftz_f,
+      llvm::Intrinsic::nvvm_fma_rm_ftz_f,
+      llvm::Intrinsic::nvvm_fma_rp_ftz_f,
+      llvm::Intrinsic::nvvm_fma_rz_ftz_f,
+      llvm::Intrinsic::nvvm_fma_rn_ftz_sat_f,
+      llvm::Intrinsic::nvvm_fma_rm_ftz_sat_f,
+      llvm::Intrinsic::nvvm_fma_rp_ftz_sat_f,
+      llvm::Intrinsic::nvvm_fma_rz_ftz_sat_f,
+  };
+
+  static constexpr llvm::Intrinsic::ID f64IDs[] = {
+      llvm::Intrinsic::nvvm_fma_rn_d, llvm::Intrinsic::nvvm_fma_rm_d,
+      llvm::Intrinsic::nvvm_fma_rp_d, llvm::Intrinsic::nvvm_fma_rz_d};
+
+  auto fmaIntrinsic = [&](llvm::Intrinsic::ID IID,
+                          llvm::Type *retType) -> llvm::Value * {
+    return createScalarizedIntrinsicCall(
+        builder, IID, opTypeLLVM, {argA, argB, argC}, /*retType=*/retType);
+  };
+
+  // f16 + f16 -> f16 / vector<2xf16> + vector<2xf16> -> vector<2xf16>
+  if (opTypeLLVM->getScalarType()->isHalfTy()) {
+    llvm::Value *result;
+    if (isOOB) {
+      result = fmaIntrinsic(isRelu ? llvm::Intrinsic::nvvm_fma_rn_oob_relu
+                                   : llvm::Intrinsic::nvvm_fma_rn_oob,
+                            opTypeLLVM);
+    } else {
+      unsigned index =
+          (isRelu << 3) | (isSat << 2) | (isFTZ << 1) |
+          isVectorFma; // Op verifier ensures that this index is valid
+      result = fmaIntrinsic(f16IDs[index], opTypeLLVM);
+    }
+    mt.mapValue(thisOp.getRes(), result);
+    return;
+  }
+
+  // bf16 + bf16 -> bf16 / vector<2xbf16> + vector<2xbf16> -> vector<2xbf16>
+  if (opTypeLLVM->getScalarType()->isBFloatTy()) {
+    llvm::Value *result;
+    if (isOOB) {
+      result = fmaIntrinsic(isRelu ? llvm::Intrinsic::nvvm_fma_rn_oob_relu
+                                   : llvm::Intrinsic::nvvm_fma_rn_oob,
+                            opTypeLLVM);
+    } else {
+      unsigned index = (isRelu << 1) | isVectorFma;
+      result = fmaIntrinsic(bf16IDs[index], opTypeLLVM);
+    }
+    mt.mapValue(thisOp.getRes(), result);
+    return;
+  }
+
+  // f64 + f64 -> f64 / vector<2xf64> + vector<2xf64> -> vector<2xf64>
+  if (opTypeLLVM->getScalarType()->isDoubleTy()) {
+    mt.mapValue(thisOp.getRes(),
+                fmaIntrinsic(f64IDs[rndIndex], opTypeLLVM->getScalarType()));
+    return;
+  }
+
+  // f32 + f32 -> f32 / vector<2xf32> + vector<2xf32> -> vector<2xf32>
+  const unsigned numRndModes = 4; // RN, RM, RP, RZ
+  if (opTypeLLVM->getScalarType()->isFloatTy()) {
+    unsigned index = ((isFTZ << 1) | isSat) * numRndModes + rndIndex;
+    mt.mapValue(thisOp.getRes(),
+                fmaIntrinsic(f32IDs[index], opTypeLLVM->getScalarType()));
+    return;
+  }
+}
+
+namespace {
+/// Implementation of the dialect interface that converts operations belonging
+/// to the NVVM dialect to LLVM IR.
+class NVVMDialectLLVMIRTranslationInterface
+    : public LLVMTranslationDialectInterface {
+public:
+  using LLVMTranslationDialectInterface::LLVMTranslationDialectInterface;
+
+  /// Translates the given operation to LLVM IR using the provided IR builder
+  /// and saving the state in `moduleTranslation`.
+  LogicalResult
+  convertOperation(Operation *op, llvm::IRBuilderBase &builder,
+                   LLVM::ModuleTranslation &moduleTranslation) const final {
+    // All NVVM ops are instruction-level and require an active insertion point.
+    // A null insert block means the op is misplaced (e.g., at module scope),
+    // which would otherwise cause a null dereference in createIntrinsicCall.
+    if (!builder.GetInsertBlock())
+      return op->emitOpError(
+          "cannot be translated to LLVM IR without an active insertion "
+          "point; make sure the op is inside a function");
+    Operation &opInst = *op;
+#include "mlir/Dialect/LLVMIR/NVVMConversions.inc"
+
+    return failure();
+  }
+
+  /// Attaches module-level metadata for functions marked as kernels
+  /// and managed annotations for global variables.
+  LogicalResult
+  amendOperation(Operation *op, ArrayRef<llvm::Instruction *> instructions,
+                 NamedAttribute attribute,
+                 LLVM::ModuleTranslation &moduleTranslation) const final {
+    if (auto globalOp = dyn_cast<LLVM::GlobalOp>(op)) {
+      if (attribute.getName() == NVVM::NVVMDialect::getManagedAttrName()) {
+        auto *gv = cast<llvm::GlobalVariable>(
+            moduleTranslation.lookupGlobal(globalOp));
+        llvm::Module *m = gv->getParent();
+        llvm::LLVMContext &ctx = m->getContext();
+        llvm::NamedMDNode *md = m->getOrInsertNamedMetadata("nvvm.annotations");
+        md->addOperand(llvm::MDNode::get(
+            ctx, {llvm::ConstantAsMetadata::get(gv),
+                  llvm::MDString::get(ctx, "managed"),
+                  llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+                      llvm::Type::getInt32Ty(ctx), 1))}));
+      }
+      return success();
+    }
+
+    auto func = dyn_cast<LLVM::LLVMFuncOp>(op);
+    if (!func)
+      return failure();
+    llvm::Function *llvmFunc = moduleTranslation.lookupFunction(func.getName());
+
+    if (attribute.getName() == NVVM::NVVMDialect::getMaxntidAttrName()) {
+      if (!isa<DenseI32ArrayAttr>(attribute.getValue()))
+        return failure();
+      auto values = cast<DenseI32ArrayAttr>(attribute.getValue());
+      const std::string attr = llvm::formatv(
+          "{0:$[,]}", llvm::make_range(values.asArrayRef().begin(),
+                                       values.asArrayRef().end()));
+      llvmFunc->addFnAttr(llvm::NVVMAttr::MaxNTID, attr);
+    } else if (attribute.getName() == NVVM::NVVMDialect::getReqntidAttrName()) {
+      if (!isa<DenseI32ArrayAttr>(attribute.getValue()))
+        return failure();
+      auto values = cast<DenseI32ArrayAttr>(attribute.getValue());
+      const std::string attr = llvm::formatv(
+          "{0:$[,]}", llvm::make_range(values.asArrayRef().begin(),
+                                       values.asArrayRef().end()));
+      llvmFunc->addFnAttr(llvm::NVVMAttr::ReqNTID, attr);
+    } else if (attribute.getName() ==
+               NVVM::NVVMDialect::getClusterDimAttrName()) {
+      if (!isa<DenseI32ArrayAttr>(attribute.getValue()))
+        return failure();
+      auto values = cast<DenseI32ArrayAttr>(attribute.getValue());
+      const std::string attr = llvm::formatv(
+          "{0:$[,]}", llvm::make_range(values.asArrayRef().begin(),
+                                       values.asArrayRef().end()));
+      llvmFunc->addFnAttr(llvm::NVVMAttr::ClusterDim, attr);
+    } else if (attribute.getName() ==
+               NVVM::NVVMDialect::getClusterMaxBlocksAttrName()) {
+      auto value = dyn_cast<IntegerAttr>(attribute.getValue());
+      llvmFunc->addFnAttr(llvm::NVVMAttr::MaxClusterRank,
+                          llvm::utostr(value.getInt()));
+    } else if (attribute.getName() ==
+               NVVM::NVVMDialect::getMinctasmAttrName()) {
+      auto value = dyn_cast<IntegerAttr>(attribute.getValue());
+      llvmFunc->addFnAttr(llvm::NVVMAttr::MinCTASm,
+                          llvm::utostr(value.getInt()));
+    } else if (attribute.getName() == NVVM::NVVMDialect::getMaxnregAttrName()) {
+      auto value = dyn_cast<IntegerAttr>(attribute.getValue());
+      llvmFunc->addFnAttr(llvm::NVVMAttr::MaxNReg,
+                          llvm::utostr(value.getInt()));
+    } else if (attribute.getName() ==
+               NVVM::NVVMDialect::getKernelFuncAttrName()) {
+      llvmFunc->setCallingConv(llvm::CallingConv::PTX_Kernel);
+    } else if (attribute.getName() ==
+               NVVM::NVVMDialect::getBlocksAreClustersAttrName()) {
+      llvmFunc->addFnAttr(llvm::NVVMAttr::BlocksAreClusters);
+    }
+
+    return success();
+  }
+
+  LogicalResult
+  convertParameterAttr(LLVMFuncOp funcOp, int argIdx, NamedAttribute attribute,
+                       LLVM::ModuleTranslation &moduleTranslation) const final {
+
+    llvm::LLVMContext &llvmContext = moduleTranslation.getLLVMContext();
+    llvm::Function *llvmFunc =
+        moduleTranslation.lookupFunction(funcOp.getName());
+
+    if (attribute.getName() == NVVM::NVVMDialect::getGridConstantAttrName()) {
+      llvmFunc->addParamAttr(
+          argIdx,
+          llvm::Attribute::get(llvmContext, llvm::NVVMAttr::GridConstant));
+    }
+    return success();
+  }
+};
+} // namespace
+
+void mlir::registerNVVMDialectTranslation(DialectRegistry &registry) {
+  registry.insert<NVVM::NVVMDialect>();
+  registry.addExtension(+[](MLIRContext *ctx, NVVM::NVVMDialect *dialect) {
+    dialect->addInterfaces<NVVMDialectLLVMIRTranslationInterface>();
+  });
+}
+
+void mlir::registerNVVMDialectTranslation(MLIRContext &context) {
+  DialectRegistry registry;
+  registerNVVMDialectTranslation(registry);
+  context.appendDialectRegistry(registry);
+}

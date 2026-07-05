@@ -1,0 +1,93 @@
+# RUN: yaml2obj %s -o %t
+# RUN: lldb-test object-file -contents %t | FileCheck %s
+
+# CHECK:      Name: .debug_info
+# CHECK:      Data:  (
+# CHECK-NEXT:     0000: 47000000 04000000 00000801 00000000 0C002D00 00000000 00003700 00000000
+# CHECK-NEXT:     0020: 00000000 00000800 00000200 00000000 00000008 00000001 6F490000 00010243
+# CHECK-NEXT:     0040: 00000003 4B000000 050400
+# CHECK-NEXT: )
+
+--- !ELF
+FileHeader:      
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_AARCH64
+Sections:        
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x0000000000000004
+    Content:         E0031B32C0035FD6
+  - Name:            .debug_str
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x0000000000000001
+    Size:            0x50
+  - Name:            .debug_abbrev
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Size:            0x10
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         470000000400000000000801000000000C0000000000000000000000000000000000000000000800000002000000000000000008000000016F000000000102430000000300000000050400
+  - Name:            .rela.debug_info
+    Type:            SHT_RELA
+    Link:            .symtab
+    AddressAlign:    0x0000000000000008
+    Info:            .debug_info
+    Relocations:     
+      - Offset:          0x0000000000000006
+        Symbol:          .debug_abbrev
+        Type:            R_AARCH64_ABS32
+      - Offset:          0x000000000000000C
+        Symbol:          .debug_str
+        Type:            R_AARCH64_ABS32
+      - Offset:          0x0000000000000012
+        Symbol:          .debug_str
+        Type:            R_AARCH64_ABS32
+        Addend:          45
+      - Offset:          0x0000000000000016
+        Symbol:          .debug_line
+        Type:            R_AARCH64_ABS32
+      - Offset:          0x000000000000001A
+        Symbol:          .debug_str
+        Type:            R_AARCH64_ABS32
+        Addend:          55
+      - Offset:          0x000000000000001E
+        Symbol:          .text
+        Type:            R_AARCH64_ABS64
+      - Offset:          0x000000000000002B
+        Symbol:          .text
+        Type:            R_AARCH64_ABS64
+      - Offset:          0x0000000000000039
+        Symbol:          .debug_str
+        Type:            R_AARCH64_ABS32
+        Addend:          73
+      - Offset:          0x0000000000000044
+        Symbol:          .debug_str
+        Type:            R_AARCH64_ABS32
+        Addend:          75
+  - Name:            .debug_line
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Size:            0x20
+Symbols:         
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+  - Name:            .debug_str
+    Type:            STT_SECTION
+    Section:         .debug_str
+  - Name:            .debug_abbrev
+    Type:            STT_SECTION
+    Section:         .debug_abbrev
+  - Name:            .debug_info
+    Type:            STT_SECTION
+    Section:         .debug_info
+  - Name:            .debug_line
+    Type:            STT_SECTION
+    Section:         .debug_line
+...

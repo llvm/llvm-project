@@ -1,0 +1,92 @@
+# RUN: yaml2obj -DMACHINE=AARCH64 %s -o %t.o
+# RUN: ld.lld --gc-sections %t.o -o %t
+# RUN: llvm-readelf -S -r %t | FileCheck %s
+
+## Test that we discard R_*_NONE, but respect the references it creates
+## among sections.
+
+# CHECK: .data
+# CHECK: There are no relocations in this file.
+
+# RUN: ld.lld -r %t.o -o %t
+# RUN: llvm-readobj -r %t | FileCheck --check-prefix=RELOC %s
+
+# RUN: yaml2obj -DBITS=32 -DMACHINE=ARM %s -o %t.o
+# RUN: ld.lld -r %t.o -o %t
+# RUN: llvm-readobj -r %t | FileCheck --check-prefix=RELOC %s
+
+# RUN: yaml2obj -DBITS=32 -DMACHINE=PPC %s -o %t.o
+# RUN: ld.lld -r %t.o -o %t
+# RUN: llvm-readobj -r %t | FileCheck --check-prefix=RELOC %s
+
+# RUN: yaml2obj -DMACHINE=PPC64 %s -o %t.o
+# RUN: ld.lld -r %t.o -o %t
+# RUN: llvm-readobj -r %t | FileCheck --check-prefix=RELOC %s
+
+# RUN: yaml2obj -DMACHINE=RISCV %s -o %t.o
+# RUN: ld.lld -r %t.o -o %t
+# RUN: llvm-readobj -r %t | FileCheck --check-prefix=RELOC %s
+
+# RUN: yaml2obj -DBITS=32 -DMACHINE=386 %s -o %t.o
+# RUN: ld.lld -r %t.o -o %t
+# RUN: llvm-readobj -r %t | FileCheck --check-prefix=RELOC %s
+
+# RUN: yaml2obj -DMACHINE=X86_64 %s -o %t.o
+# RUN: ld.lld -r %t.o -o %t
+# RUN: llvm-readobj -r %t | FileCheck --check-prefix=RELOC %s
+
+## Both REL and RELA are supported. .rel.llvm.call-graph-profile uses REL even
+## if the prevailing format is RELA.
+# RELOC:      Section ({{.*}}) .rela.text {
+# RELOC-NEXT:   0x0 R_{{.*}}_NONE .data 0x0
+# RELOC-NEXT: }
+# RELOC:      Section ({{.*}}) .rel.nonalloc1 {
+# RELOC-NEXT:   0x0 R_{{.*}}_NONE .data
+# RELOC-NEXT: }
+# RELOC:      Section ({{.*}}) .rela.nonalloc2 {
+# RELOC-NEXT:   0x0 R_{{.*}}_NONE .data 0x0
+# RELOC-NEXT: }
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS[[BITS=64]]
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_[[MACHINE]]
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+  - Name:            .nonalloc1
+    Type:            SHT_PROGBITS
+  - Name:            .nonalloc2
+    Type:            SHT_PROGBITS
+  - Name:            .rela.text
+    Type:            SHT_RELA
+    Info:            .text
+    Relocations:
+      - Symbol:          .data
+        Type:            R_[[MACHINE]]_NONE
+  - Name:            .rel.nonalloc1
+    Type:            SHT_REL
+    Info:            .nonalloc1
+    Relocations:
+      - Symbol:          .data
+        Type:            R_[[MACHINE]]_NONE
+  - Name:            .rela.nonalloc2
+    Type:            SHT_RELA
+    Info:            .nonalloc2
+    Relocations:
+      - Symbol:          .data
+        Type:            R_[[MACHINE]]_NONE
+Symbols:
+  - Name:            .data
+    Type:            STT_SECTION
+    Section:         .data
+  - Name:            _start
+    Section:         .text
+    Binding:         STB_GLOBAL
+...

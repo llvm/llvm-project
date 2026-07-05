@@ -1,0 +1,4 @@
+RUN: llvm-symbolizer --no-demangle --obj=%p/Inputs/arange-overlap.elf-x86_64 0x714 | FileCheck %s
+
+CHECK: _ZN1S3bazEv
+CHECK-NEXT: {{.*}}arange-overlap.cc:6

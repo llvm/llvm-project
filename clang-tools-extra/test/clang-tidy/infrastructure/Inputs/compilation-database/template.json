@@ -1,0 +1,37 @@
+[
+{
+  "directory": "test_dir/a",
+  "command": "clang++ -o test.o test_dir/a/a.cpp",
+  "file": "test_dir/a/a.cpp"
+},
+{
+  "directory": "test_dir/a",
+  "command": "clang++ -o test.o test_dir/a/b.cpp",
+  "file": "test_dir/a/b.cpp"
+},
+{
+  "directory": "test_dir/",
+  "command": "clang++ -o test.o test_dir/b/b.cpp",
+  "file": "test_dir/b/b.cpp"
+},
+{
+  "directory": "test_dir/b",
+  "command": "clang++ -o test.o ../b/c.cpp",
+  "file": "test_dir/b/c.cpp"
+},
+{
+  "directory": "test_dir/",
+  "command": "clang++ -o test.o ./b/d.cpp",
+  "file": "test_dir/b/d.cpp"
+},
+{
+  "directory": "test_dir/b",
+  "command": "clang++ -I../include -o test.o ../include.cpp",
+  "file": "test_dir/include.cpp"
+},
+{
+  "directory": "test_dir/",
+  "command": "clang++ -o test.o test_dir/b/not-exist.cpp",
+  "file": "test_dir/b/not-exist.cpp"
+}
+]

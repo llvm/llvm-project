@@ -1,0 +1,39 @@
+# REQUIRES: clangd-remote-index
+# RUN: rm -rf %t
+# RUN: clangd-indexer %S/Inputs/Source.cpp > %t.idx
+# RUN: %python %S/pipeline_helper.py --input-file-name=%s --server-arg=--limit-results=1 --project-root=%S --index-file=%t.idx | FileCheck %s
+
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+---
+# Ensure there's a single result.
+{"jsonrpc":"2.0","id":1,"method":"workspace/symbol","params":{"query":"c"}}
+# CHECK: {
+# CHECK:   "id": 1,
+# CHECK:   "jsonrpc": "2.0",
+# CHECK:   "result": [
+# CHECK:     {
+# CHECK:       "containerName": "{{.*}}",
+# CHECK:       "kind": {{.*}},
+# CHECK:       "location": {
+# CHECK:         "range": {
+# CHECK:           "end": {
+# CHECK:             "character": {{.*}},
+# CHECK:             "line": {{.*}}
+# CHECK:           },
+# CHECK:           "start": {
+# CHECK:             "character": {{.*}},
+# CHECK:             "line": {{.*}}
+# CHECK:           }
+# CHECK:         },
+# CHECK:         "uri": "{{.*}}"
+# CHECK:       },
+# CHECK:       "name": "{{.*}}",
+# CHECK:       "score": {{.*}}
+# CHECK:     }
+# CHECK:   ]
+# CHECK: }
+---
+{"jsonrpc":"2.0","id":4,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}
+

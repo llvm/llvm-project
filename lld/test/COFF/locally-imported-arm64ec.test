@@ -1,0 +1,68 @@
+REQUIRES: aarch64
+RUN: split-file %s %t.dir && cd %t.dir
+
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows funcs.s -o funcs.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows func-mangled.s -o func-mangled.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows impsym.s -o impsym.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows impauxsym.s -o impauxsym.obj
+
+Ensure that when both mangled and demangled symbols are present, the __imp_ symbol
+resolves to the demangled symbol.
+
+RUN: lld-link -machine:arm64ec -dll -noentry funcs.obj impsym.obj -out:impsym.dll
+
+RUN: llvm-readobj --coff-basereloc impsym.dll | FileCheck --check-prefix=RELOCS %s
+RELOCS:       Entry {
+RELOCS-NEXT:    Type: DIR64
+RELOCS-NEXT:    Address: 0x2000
+RELOCS-NEXT:  }
+
+RUN: llvm-readobj --hex-dump=.test impsym.dll | FileCheck --check-prefix=TEST %s
+TEST: 0x180004000 00200000
+
+RUN: llvm-readobj --hex-dump=.rdata impsym.dll | FileCheck --check-prefix=RDATA-DEMANGLED %s
+RDATA-MANGLED:   0x180002000 00100080 01000000
+RDATA-DEMANGLED: 0x180002000 04100080 01000000
+
+
+Ensure that when both mangled and demangled symbols are present, the __imp_aux_ symbol
+resolves to the demangled symbol.
+
+RUN: lld-link -machine:arm64ec -dll -noentry funcs.obj impauxsym.obj -out:impauxsym.dll
+RUN: llvm-readobj --hex-dump=.test impauxsym.dll | FileCheck --check-prefix=TEST %s
+RUN: llvm-readobj --hex-dump=.rdata impauxsym.dll | FileCheck --check-prefix=RDATA-DEMANGLED %s
+
+Ensure that if only the mangled symbol is present, the __imp_ symbol resolves to it.
+
+RUN: lld-link -machine:arm64ec -dll -noentry func-mangled.obj impsym.obj -out:impsym-mangled.dll
+RUN: llvm-readobj --coff-basereloc impsym-mangled.dll | FileCheck --check-prefix=RELOCS %s
+RUN: llvm-readobj --hex-dump=.test impsym-mangled.dll | FileCheck --check-prefix=TEST %s
+RUN: llvm-readobj --hex-dump=.rdata impsym-mangled.dll | FileCheck --check-prefix=RDATA-MANGLED %s
+
+Ensure that if only the mangled symbol is present, the __imp_aux_ symbol resolves to it.
+
+RUN: lld-link -machine:arm64ec -dll -noentry func-mangled.obj impauxsym.obj -out:impauxsym-mangled.dll
+RUN: llvm-readobj --hex-dump=.test impauxsym-mangled.dll | FileCheck --check-prefix=TEST %s
+RUN: llvm-readobj --hex-dump=.rdata impauxsym-mangled.dll | FileCheck --check-prefix=RDATA-MANGLED %s
+
+#--- funcs.s
+    .globl "#myfunc"
+"#myfunc":
+    ret
+    .text
+    .globl myfunc
+myfunc:
+    ret
+
+#--- func-mangled.s
+    .globl "#myfunc"
+"#myfunc":
+    ret
+
+#--- impsym.s
+    .section .test, "r"
+    .rva __imp_myfunc
+
+#--- impauxsym.s
+    .section .test, "r"
+    .rva __imp_aux_myfunc

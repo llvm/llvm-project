@@ -1,0 +1,183 @@
+# RUN: llc -mtriple=powerpc64le--linux-gnu -stop-after ppc-pre-emit-peephole %s -o - -verify-machineinstrs | FileCheck %s
+
+---
+# LI + XFORM -> DFORM, no killed/dead flag fixup.
+name: testKillPassUpLI1
+#CHECK: name: testKillPassUpLI1
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3, $f1, $x5
+    $x3 = LI8 100
+    STFSX killed $f1, $x3, $x5
+    ; CHECK: STFS killed $f1, 100, $x5
+    STD killed $x3, killed $x5, 100
+    ; CHECK: STD killed $x3, killed $x5, 100
+    BLR8 implicit $lr8, implicit $rm
+
+...
+---
+# LI + XFORM -> DFORM, fixup killed/dead flag for $x3, find no use, set def as
+# dead(LI8 is deleted).
+name: testKillPassUpLI2
+# CHECK: name: testKillPassUpLI2
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3, $f1, $x5
+    $x3 = LI8 100
+    ; CHECK-NOT: LI8
+    STFSX killed $f1, killed $x3, killed $x5
+    ; CHECK: STFS killed $f1, 100, killed $x5
+    BLR8 implicit $lr8, implicit $rm
+
+...
+---
+# LI + XFORM -> DFORM, fixup killed/dead flag for $x3, find last use, set last
+# use as killed.
+name: testKillPassUpLI3
+# CHECK: name: testKillPassUpLI3
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3, $f1, $x5
+    $x3 = LI8 100
+    STD $x3, $x5, 100
+    ; CHECK: STD killed $x3, $x5, 100
+    STFSX killed $f1, killed $x3, $x5
+    ; CHECK: STFS killed $f1, 100, $x5
+    STD killed $x5, $x5, 100
+    ; CHECK: STD killed $x5, killed $x5, 100
+    BLR8 implicit $lr8, implicit $rm
+
+...
+---
+# LI + OP -> LI, fixup killed/dead flag for $x3, find last use, set last use as
+# killed.
+name: testKillPassUpLI4
+# CHECK: name: testKillPassUpLI4
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3, $x5
+    $x3 = LI8 100
+    STD $x3, $x5, 100
+    ; CHECK: STD killed $x3, killed $x5, 100
+    $x5 = ADDI8 killed $x3, 200
+    ; CHECK: $x5 = LI8 300
+    STD $x5, $x5, 100
+    BLR8 implicit $lr8, implicit $rm
+
+...
+---
+# ADD + XFORM -> DFORM, fixup killed/dead flag for $x3, find no use, set def as dead
+# (ADDI8 is deleted).
+name: testKillPassUpADD1
+# CHECK: name: testKillPassUpADD1
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3, $f1, $x5
+    $x3 = ADDI8 killed $x5, 100
+    ; CHECK-NOT: ADDI8
+    STFSX killed $f1, $zero8, killed $x3
+    ; CHECK: STFS killed $f1, 100, killed $x5
+    BLR8 implicit $lr8, implicit $rm
+
+...
+---
+# ADD + XFORM -> DFORM, fixup killed/dead flag for $x3, find last use, set last
+# use as killed.
+name: testKillPassUpADD2
+# CHECK: name: testKillPassUpADD2
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3, $f1, $x5
+    $x3 = ADDI8 $x5, 100
+    STD $x3, $x5, 100
+    ; CHECK: STD killed $x3, $x5, 100
+    STFSX killed $f1, $zero8, killed $x3
+    ; CHECK: STFS killed $f1, 100, $x5
+    STD killed $x5, $x5, 100
+    ; CHECK: STD killed $x5, killed $x5, 100
+    BLR8 implicit $lr8, implicit $rm
+
+...
+---
+# ADD + XFORM -> DFORM, fixup killed/dead flag for register $x5, DFORM
+# instruction uses $x5 and no other kill uses, set it as killed in
+# DFORM instruction.
+name: testKillPassDownADD1
+# CHECK: name: testKillPassDownADD1
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3, $f1, $x5
+    $x3 = ADDI8 killed $x5, 100
+    ; CHECK: $x3 = ADDI8 $x5, 100
+    STFSX killed $f1, $zero8, $x3
+    ; CHECK: STFS killed $f1, 100, killed $x5
+    STD killed $x3, $x3, 100
+    ; CHECK: STD killed $x3, killed $x3, 100
+    BLR8 implicit $lr8, implicit $rm
+
+...
+---
+# ADD + XFORM -> DFORM, fixup killed/dead flag for register $x5, DFORM
+# instruction uses $x5 and there is one kill use, set $x5 as killed in
+# DFORM instruction and clear the other kill use killed flag.
+name: testKillPassDownADD2
+# CHECK: name: testKillPassDownADD2
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3, $f1, $x5
+    $x3 = ADDI8 $x5, 100
+    STD killed $x5, $x5, 100
+    ; CHECK: STD $x5, $x5, 100
+    STFSX killed $f1, $zero8, killed $x3
+    ; CHECK: STFS killed $f1, 100, killed $x5
+    BLR8 implicit $lr8, implicit $rm
+
+...
+---
+# ADD + XFORM -> DFORM, fixup killed/dead flag for register $x3, DFORM
+# instruction defines $x3, do nothing for killed/dead flag.
+name: testKillPassDownADD3
+# CHECK: name: testKillPassDownADD3
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3, $x5
+    $x3 = ADDI8 $x5, 100
+    $x3 = LDX $zero8, killed $x3
+    ; CHECK: $x3 = LD 100, $x5
+    STD killed $x5, $x5, 100
+    ; CHECK: STD killed $x5, killed $x5, 100
+    STD killed $x3, $x3, 200
+    ; CHECK: STD killed $x3, killed $x3, 200
+    BLR8 implicit $lr8, implicit $rm
+
+...
+---
+# ADD + XFORM -> DFORM, fixup killed/dead flag for both register $x5 and $x3,
+# DFORM instruction uses $x5 and there is one kill use, set $x5 as killed in
+# DFORM instruction and clear the other kill use killed flag. Find last use for
+# $x3, set last use as killed.
+name: testKillPassDownADD4
+# CHECK: name: testKillPassDownADD4
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3, $f1, $x5
+    $x3 = ADDI8 $x5, 100
+    STD killed $x5, $x5, 100
+    ; CHECK: STD $x5, $x5, 100
+    STD $x3, $x3, 200
+    ; CHECK: STD killed $x3, killed $x3, 200
+    STFSX killed $f1, $zero8, killed $x3
+    ; CHECK: STFS killed $f1, 100, killed $x5
+    BLR8 implicit $lr8, implicit $rm
+
+...

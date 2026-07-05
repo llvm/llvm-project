@@ -1,0 +1,21 @@
+# RUN: llc -mtriple=aarch64-- -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+
+  define void @selected_property() { ret void }
+...
+
+---
+# Check that we set the "selected" property.
+# CHECK-LABEL: name: selected_property
+# CHECK: legalized: true
+# CHECK-NEXT: regBankSelected: true
+# CHECK-NEXT: selected: true
+name:            selected_property
+legalized:       true
+regBankSelected: true
+selected:        false
+body:             |
+  bb.0:
+...

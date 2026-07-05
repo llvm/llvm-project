@@ -1,0 +1,16 @@
+# RUN: not llvm-ifs --input-format=ELF --output-ifs=%t %s 2>&1 | FileCheck %s
+
+--- !ifs-v1
+SoName: somelib.so
+IfsVersion: 3.0
+Target: { ObjectFormat: ELF, Arch: AArch64, Endianness: little, BitWidth: 64 }
+Symbols:
+  - { Name: foo, Type: Func }
+  - { Name: bar, Type: Object, Size: 42 }
+  - { Name: baz, Type: Object, Size: 8 }
+  - { Name: not, Type: Object, Undefined: true, Size: 128 }
+  - { Name: nor, Type: Func, Undefined: true }
+...
+
+# CHECK: The file was not recognized as a valid object file
+# CHECK: No file readers succeeded reading `{{.*}}read-ifs-as-elf.test` (unsupported/malformed file?)

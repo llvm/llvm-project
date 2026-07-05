@@ -1,0 +1,20 @@
+REQUIRES: x86
+RUN: mkdir -p %t-out
+RUN: llvm-mc -triple x86_64-windows-msvc -filetype obj -o %t-out/object.obj %S/Inputs/object.s
+
+Test that /noimplib writes no .lib file
+
+RUN: rm -f %t-out/library.lib
+RUN: lld-link -dll -machine:x64 -def:%S/Inputs/named.def -out:%t-out/library.dll %t-out/object.obj -entry:f -subsystem:console /noimplib
+RUN: not test -f %t-out/library.lib
+
+Just make sure the normal stuff works and then we just add /noimplib
+
+RUN: lld-link -dll -machine:x64 -def:%S/Inputs/named.def -out:%t-out/library.dll %t-out/object.obj -entry:f -subsystem:console /implib:%t-out/nolibrary.lib
+RUN: test -f %t-out/nolibrary.lib
+
+Test that it overrides /implib as well. This is how link.exe works
+
+RUN: rm -f %t-out/nolibrary.lib
+RUN: lld-link -dll -machine:x64 -def:%S/Inputs/named.def -out:%t-out/library.dll %t-out/object.obj -entry:f -subsystem:console /implib:%t-out/nolibrary.lib /noimplib
+RUN: not test -f %t-out/nolibrary.lib

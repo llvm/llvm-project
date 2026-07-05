@@ -1,0 +1,158 @@
+; RUN: rm -rf %t
+; RUN: split-file %s %t
+; RUN: yaml2obj %S/Inputs/flat_namespace.yaml -o %t/flat_namespace.dylib
+; RUN: yaml2obj %S/Inputs/thread_local.yaml -o %t/thread_local.dylib
+; RUN: yaml2obj %S/Inputs/universal.yaml -o %t/fat.dylib
+; RUN: yaml2obj %S/Inputs/objc.yaml -o %t/objc.dylib
+; RUN: llvm-readtapi -stubify %t/objc.dylib -o %t/new_objc.tbd 2>&1 | FileCheck %s --allow-empty 
+; RUN: llvm-readtapi -stubify %t/objc.dylib %t/flat_namespace.dylib %t/thread_local.dylib %t/fat.dylib -delete-input 2>&1 | FileCheck %s --allow-empty 
+; RUN: llvm-readtapi -compare %t/expected_flat.tbd %t/flat_namespace.tbd 2>&1 | FileCheck %s --allow-empty 
+; RUN: llvm-readtapi -compare %t/expected_tl.tbd %t/thread_local.tbd 2>&1 | FileCheck %s --allow-empty 
+; RUN: llvm-readtapi -compare %t/objc.tbd %t/expected_objc.tbd 2>&1 | FileCheck %s --allow-empty 
+; RUN: llvm-readtapi -compare %t/new_objc.tbd %t/expected_objc.tbd 2>&1 | FileCheck %s --allow-empty 
+
+; CHECK-NOT: error: 
+; CHECK-NOT: warning: 
+
+;--- expected_flat.tbd
+{
+  "main_library": {
+    "compatibility_versions": [
+      {
+        "version": "0"
+      }
+    ],
+    "current_versions": [
+      {
+        "version": "0"
+      }
+    ],
+    "exported_symbols": [
+      {
+        "text": {
+          "global": [ "_foo" ]
+        }
+      }
+    ],
+    "flags": [
+      {
+        "attributes": [
+          "flat_namespace",
+          "not_app_extension_safe"
+        ]
+      }
+    ],
+    "install_names": [
+      {
+        "name": "foo.dylib"
+      }
+    ],
+    "target_info": [
+      {
+        "min_deployment": "10.14",
+        "target": "x86_64-macos"
+      }
+    ],
+    "undefined_symbols": [
+      {
+        "data": {
+          "global": [ "dyld_stub_binder", "_bar", "_putchar" ]
+        }
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}
+
+;--- expected_tl.tbd
+{
+  "main_library": {
+    "compatibility_versions": [
+      {
+        "version": "0"
+      }
+    ],
+    "current_versions": [
+      {
+        "version": "0"
+      }
+    ],
+    "exported_symbols": [
+      {
+        "data": {
+          "thread_local": [
+            "_MySymbol"
+          ]
+        }
+      }
+    ],
+    "flags": [
+      {
+        "attributes": [
+          "not_app_extension_safe"
+        ]
+      }
+    ],
+    "install_names": [
+      {
+        "name": "/System/Library/Frameworks/ThreadLocal.framework/ThreadLocal"
+      }
+    ],
+    "target_info": [
+      {
+        "min_deployment": "11",
+        "target": "x86_64-macos"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}
+
+;--- expected_objc.tbd
+{
+  "main_library": {
+    "compatibility_versions": [
+      {
+        "version": "0"
+      }
+    ],
+    "current_versions": [
+      {
+        "version": "0"
+      }
+    ],
+    "exported_symbols": [
+      {
+        "data": {
+          "objc_class": [
+            "Suggestion"
+          ],
+          "objc_ivar": [
+            "Suggestion._topChoice",
+            "Suggestion._other"
+          ]
+        }
+      }
+    ],
+    "flags": [
+      {
+        "attributes": [
+          "not_app_extension_safe"
+        ]
+      }
+    ],
+    "install_names": [
+      {
+        "name": "tmp.dylib"
+      }
+    ],
+    "target_info": [
+      {
+        "min_deployment": "13",
+        "target": "arm64-macos"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}
+

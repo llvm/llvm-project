@@ -1,0 +1,12 @@
+add_clang_unittest(CrossTUTests
+  CrossTranslationUnitTest.cpp
+  CLANG_LIBS
+  clangAST
+  clangBasic
+  clangCrossTU
+  clangFrontend
+  clangSerialization
+  clangTooling
+  LLVM_COMPONENTS
+  Support
+  )

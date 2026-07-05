@@ -1,0 +1,13 @@
+# REQUIRES: x86
+# RUN: llvm-mc -filetype=obj -triple=x86_64 /dev/null -o %t.o
+# RUN: not ld.lld -shared %t.o -o /dev/null --script %s 2>&1 | FileCheck -strict-whitespace %s
+
+## Check that flags are separated by &
+
+SECTIONS {
+ .text : { INPUT_SECTION_FLAGS(SHF_ALLOC SHF_EXECINSTR) *(.text) }
+}
+
+// CHECK: expected & or )
+// CHECK-NEXT: >>>  .text : { INPUT_SECTION_FLAGS(SHF_ALLOC SHF_EXECINSTR) *(.text) }
+// CHECK-NEXT: >>>                                          ^

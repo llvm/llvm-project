@@ -1,0 +1,26 @@
+# RUN: llc -mtriple=s390x-linux-gnu -run-pass=postrapseudos \
+# RUN:   %s -o - -verify-machineinstrs | FileCheck %s
+#
+# Test that a L128 reload do not overwrite an address register prematurely
+# after being split into two LGs.
+
+--- |
+  target triple = "s390x-unknown-unknown"
+
+  define void @fun() {
+    ret void
+  }
+
+...
+
+# CHECK: name: fun
+
+---
+name:            'fun'
+body:             |
+  bb.0:
+    liveins: $r4d, $r15d
+    $r4q = L128 $r15d, 14920, killed $r4d
+    Return
+
+...

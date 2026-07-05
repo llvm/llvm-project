@@ -1,0 +1,24 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Tests for LLVM libc socket.h functions.
+
+load("//libc/test:libc_test_rules.bzl", "libc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+libc_test(
+    name = "getrlimit_setrlimit_test",
+    srcs = ["getrlimit_setrlimit_test.cpp"],
+    deps = [
+        "//libc:__support_cpp_string_view",
+        "//libc:close",
+        "//libc:getrlimit",
+        "//libc:open",
+        "//libc:setrlimit",
+        "//libc:unlink",
+    ],
+)

@@ -1,0 +1,55 @@
+## In this test we check that short command line options can be grouped.
+
+## Check grouped options produce identical output to when not grouped.
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-readelf -aeWhSrnudlVgIs %t.o > %t.grouped
+# RUN: llvm-readelf -a -e -W -h -S -r -n -u -d -l -V -g -I -s %t.o > %t.not-grouped
+# RUN: cmp %t.grouped %t.not-grouped
+# RUN: FileCheck /dev/null --input-file %t.grouped --implicit-check-not=error:
+
+## Check that the output without -a (--all) option is the same. We do it
+## to verify that each of the options is handled, and not just the first
+## one nor just -a, which triggers all other options.
+# RUN: llvm-readelf -eWhSrnudlVgIs %t.o > %t.grouped.no.a
+# RUN: cmp %t.grouped %t.grouped.no.a
+
+## -e (--headers) is equivalent to setting --file-headers (-h),
+## --program-headers (-l) and --section-headers (-S).
+## Check that the output without -e is equal to the output with it.
+## We do not use -a in this test either.
+# RUN: llvm-readelf -WhSrnudlVgIs %t.o > %t.grouped.no.ae
+# RUN: cmp %t.grouped %t.grouped.no.ae
+
+## An arbitrary YAML description that triggers an output for each of
+## the short option from the test sequence.
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .note.ABI-tag
+    Type:    SHT_NOTE
+## An arbitrary valid note content.
+    Content: 040000001000000001000000474E550000000000020000000600000020000000
+  - Name: .eh_frame
+    Type: SHT_PROGBITS
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_NULL
+        Value: 0
+  - Name:    .gnu.version
+    Type:    SHT_GNU_versym
+    Flags:   [ SHF_ALLOC ]
+    Entries: [ 0, 1 ]
+DynamicSymbols:
+  - Name:    foo
+    Binding: STB_GLOBAL
+
+## Check llvm-readobj supports grouped short options as well.
+# RUN: llvm-readobj -aeWhSsrnudlVgIS %t.o > %t.grouped
+# RUN: llvm-readobj -a -e -W -h -S -r -n -u -d -l -V -g -I -s %t.o > %t.not-grouped
+# RUN: cmp %t.grouped %t.not-grouped

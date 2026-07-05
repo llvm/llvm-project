@@ -1,0 +1,28 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy %t %t2
+# RUN: llvm-readobj --file-headers --sections %t2 | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2MSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_ALLOC ]
+    AddressAlign:    0x0000000000000010
+    Size:            64
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x0000000000000010
+    Content:         "00000000"
+
+# CHECK: Class: 64-bit
+# CHECK: DataEncoding: BigEndian
+
+# CHECK:      Name: .bss
+# CHECK:      Name: .text
+# CHECK:      Name: .shstrtab

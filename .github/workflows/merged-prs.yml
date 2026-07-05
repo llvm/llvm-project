@@ -1,0 +1,35 @@
+name: "Add buildbot information to first PRs from new contributors"
+
+permissions:
+  contents: read
+
+on:
+  # It's safe to use pull_request_target here, because we aren't checking out
+  # code from the pull request branch.
+  # See https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
+  pull_request_target:
+    types:
+      - closed
+
+jobs:
+  buildbot_comment:
+    runs-on: ubuntu-24.04
+    permissions:
+      pull-requests: write
+    container:
+      image: "ghcr.io/llvm/amd64/ci-ubuntu-24.04-github-automation:latest@sha256:82b5304c5d99cf5d75a2334885aca57490cbb04f37d07fc49a10a2649824e526"
+    if: >-
+      (github.repository == 'llvm/llvm-project') &&
+      (github.event.pull_request.merged == true)
+    steps:
+      - name: Add Buildbot information comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.pull_request.number }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          github-automation.py \
+            --token "$GH_TOKEN" \
+            pr-buildbot-information \
+            --issue-number "$ISSUE_NUMBER" \
+            --author "$PR_AUTHOR"

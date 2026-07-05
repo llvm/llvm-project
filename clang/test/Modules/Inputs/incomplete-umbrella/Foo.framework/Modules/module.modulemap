@@ -1,0 +1,5 @@
+framework module Foo {
+    umbrella header "FooPublic.h"
+    requires objc
+    export *
+}

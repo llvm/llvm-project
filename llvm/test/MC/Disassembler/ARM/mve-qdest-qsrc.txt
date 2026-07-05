@@ -1,0 +1,391 @@
+# RUN: llvm-mc -disassemble -triple=thumbv8.1m.main-none-eabi -mattr=+mve.fp,+fp64 -show-encoding %s | FileCheck %s
+# RUN: not llvm-mc -disassemble -triple=thumbv8.1m.main-none-eabi -show-encoding %s &> %t
+# RUN: FileCheck --check-prefix=CHECK-NOMVE < %t %s
+
+# CHECK: vqdmladhx.s8 q1, q6, q6  @ encoding: [0x0c,0xee,0x0c,0x3e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x0c,0xee,0x0c,0x3e]
+
+# CHECK: vqdmladhx.s16 q0, q1, q4  @ encoding: [0x12,0xee,0x08,0x1e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x12,0xee,0x08,0x1e]
+
+# CHECK: vqdmladhx.s32 q0, q3, q7  @ encoding: [0x26,0xee,0x0e,0x1e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x26,0xee,0x0e,0x1e]
+
+# CHECK: vqdmladh.s8 q0, q1, q1  @ encoding: [0x02,0xee,0x02,0x0e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x02,0xee,0x02,0x0e]
+
+# CHECK: vqdmladh.s16 q0, q2, q2  @ encoding: [0x14,0xee,0x04,0x0e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x14,0xee,0x04,0x0e]
+
+# CHECK: vqdmladh.s32 q1, q5, q7  @ encoding: [0x2a,0xee,0x0e,0x2e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x2a,0xee,0x0e,0x2e]
+
+# CHECK: vqrdmladhx.s8 q0, q7, q0  @ encoding: [0x0e,0xee,0x01,0x1e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x0e,0xee,0x01,0x1e]
+
+# CHECK: vqrdmladhx.s16 q0, q0, q1  @ encoding: [0x10,0xee,0x03,0x1e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x10,0xee,0x03,0x1e]
+
+# CHECK: vqrdmladhx.s32 q1, q0, q4  @ encoding: [0x20,0xee,0x09,0x3e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x20,0xee,0x09,0x3e]
+
+# CHECK: vqrdmladh.s8 q0, q6, q2  @ encoding: [0x0c,0xee,0x05,0x0e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x0c,0xee,0x05,0x0e]
+
+# CHECK: vqrdmladh.s16 q1, q5, q4  @ encoding: [0x1a,0xee,0x09,0x2e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x1a,0xee,0x09,0x2e]
+
+# CHECK: vqrdmladh.s32 q0, q2, q2  @ encoding: [0x24,0xee,0x05,0x0e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x24,0xee,0x05,0x0e]
+
+# CHECK: vqdmlsdhx.s8 q1, q4, q7  @ encoding: [0x08,0xfe,0x0e,0x3e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x08,0xfe,0x0e,0x3e]
+
+# CHECK: vqdmlsdhx.s16 q0, q2, q5  @ encoding: [0x14,0xfe,0x0a,0x1e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x14,0xfe,0x0a,0x1e]
+
+# CHECK: vqdmlsdhx.s32 q3, q4, q6  @ encoding: [0x28,0xfe,0x0c,0x7e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x28,0xfe,0x0c,0x7e]
+
+# CHECK: vqdmlsdh.s8 q0, q3, q6  @ encoding: [0x06,0xfe,0x0c,0x0e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x06,0xfe,0x0c,0x0e]
+
+# CHECK: vqdmlsdh.s16 q0, q4, q1  @ encoding: [0x18,0xfe,0x02,0x0e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x18,0xfe,0x02,0x0e]
+
+# CHECK: vqdmlsdh.s32 q2, q5, q0  @ encoding: [0x2a,0xfe,0x00,0x4e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x2a,0xfe,0x00,0x4e]
+
+# CHECK: vqrdmlsdhx.s8 q0, q3, q1  @ encoding: [0x06,0xfe,0x03,0x1e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x06,0xfe,0x03,0x1e]
+
+# CHECK: vqrdmlsdhx.s16 q0, q1, q4  @ encoding: [0x12,0xfe,0x09,0x1e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x12,0xfe,0x09,0x1e]
+
+# CHECK: vqrdmlsdhx.s32 q1, q6, q3  @ encoding: [0x2c,0xfe,0x07,0x3e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x2c,0xfe,0x07,0x3e]
+
+# CHECK: vqrdmlsdh.s8 q3, q3, q0  @ encoding: [0x06,0xfe,0x01,0x6e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x06,0xfe,0x01,0x6e]
+
+# CHECK: vqrdmlsdh.s16 q0, q7, q4  @ encoding: [0x1e,0xfe,0x09,0x0e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x1e,0xfe,0x09,0x0e]
+
+# CHECK: vqrdmlsdh.s32 q0, q6, q7  @ encoding: [0x2c,0xfe,0x0f,0x0e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x2c,0xfe,0x0f,0x0e]
+
+# CHECK: vcmul.f16 q6, q2, q5, #0  @ encoding: [0x34,0xee,0x0a,0xce]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x34,0xee,0x0a,0xce]
+
+# CHECK: vcmul.f16 q1, q0, q5, #90  @ encoding: [0x30,0xee,0x0b,0x2e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x30,0xee,0x0b,0x2e]
+
+# CHECK: vcmul.f16 q1, q0, q5, #180  @ encoding: [0x30,0xee,0x0a,0x3e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x30,0xee,0x0a,0x3e]
+
+# CHECK: vcmul.f16 q1, q0, q5, #270  @ encoding: [0x30,0xee,0x0b,0x3e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x30,0xee,0x0b,0x3e]
+
+# CHECK: vcmul.f32 q1, q7, q5, #0  @ encoding: [0x3e,0xfe,0x0a,0x2e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x3e,0xfe,0x0a,0x2e]
+
+# CHECK: vcmul.f32 q3, q4, q2, #90  @ encoding: [0x38,0xfe,0x05,0x6e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x38,0xfe,0x05,0x6e]
+
+# CHECK: vcmul.f32 q5, q1, q3, #180  @ encoding: [0x32,0xfe,0x06,0xbe]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x32,0xfe,0x06,0xbe]
+
+# CHECK: vcmul.f32 q0, q7, q4, #270  @ encoding: [0x3e,0xfe,0x09,0x1e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x3e,0xfe,0x09,0x1e]
+
+# CHECK: vmullb.s8 q2, q6, q0  @ encoding: [0x0d,0xee,0x00,0x4e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x0d,0xee,0x00,0x4e]
+
+# CHECK: vmullb.s16 q3, q4, q3  @ encoding: [0x19,0xee,0x06,0x6e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x19,0xee,0x06,0x6e]
+
+# CHECK: vmullb.s32 q3, q5, q6  @ encoding: [0x2b,0xee,0x0c,0x6e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x2b,0xee,0x0c,0x6e]
+
+# CHECK: vmullt.s8 q0, q6, q2  @ encoding: [0x0d,0xee,0x04,0x1e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x0d,0xee,0x04,0x1e]
+
+# CHECK: vmullt.s16 q0, q0, q2  @ encoding: [0x11,0xee,0x04,0x1e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x11,0xee,0x04,0x1e]
+
+# CHECK: vmullt.s32 q2, q4, q4  @ encoding: [0x29,0xee,0x08,0x5e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x29,0xee,0x08,0x5e]
+
+# CHECK: vmullb.p8 q2, q3, q7  @ encoding: [0x37,0xee,0x0e,0x4e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x37,0xee,0x0e,0x4e]
+
+# CHECK: vmullb.p16 q0, q1, q3  @ encoding: [0x33,0xfe,0x06,0x0e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x33,0xfe,0x06,0x0e]
+
+# CHECK: vmullt.p8 q1, q1, q7  @ encoding: [0x33,0xee,0x0e,0x3e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x33,0xee,0x0e,0x3e]
+
+# CHECK: vmullt.p16 q0, q7, q7  @ encoding: [0x3f,0xfe,0x0e,0x1e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x3f,0xfe,0x0e,0x1e]
+
+# CHECK: vmulh.s8 q0, q4, q5  @ encoding: [0x09,0xee,0x0b,0x0e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x09,0xee,0x0b,0x0e]
+
+# CHECK: vmulh.s16 q0, q7, q4  @ encoding: [0x1f,0xee,0x09,0x0e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x1f,0xee,0x09,0x0e]
+
+# CHECK: vmulh.s32 q0, q7, q4  @ encoding: [0x2f,0xee,0x09,0x0e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x2f,0xee,0x09,0x0e]
+
+# CHECK: vmulh.u8 q3, q5, q2  @ encoding: [0x0b,0xfe,0x05,0x6e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x0b,0xfe,0x05,0x6e]
+
+# CHECK: vmulh.u16 q2, q7, q4  @ encoding: [0x1f,0xfe,0x09,0x4e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x1f,0xfe,0x09,0x4e]
+
+# CHECK: vmulh.u32 q1, q3, q2  @ encoding: [0x27,0xfe,0x05,0x2e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x27,0xfe,0x05,0x2e]
+
+# CHECK: vrmulh.s8 q1, q1, q2  @ encoding: [0x03,0xee,0x05,0x3e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x03,0xee,0x05,0x3e]
+
+# CHECK: vrmulh.s16 q1, q1, q2  @ encoding: [0x13,0xee,0x05,0x3e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x13,0xee,0x05,0x3e]
+
+# CHECK: vrmulh.s32 q3, q1, q0  @ encoding: [0x23,0xee,0x01,0x7e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x23,0xee,0x01,0x7e]
+
+# CHECK: vrmulh.u8 q1, q6, q0  @ encoding: [0x0d,0xfe,0x01,0x3e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x0d,0xfe,0x01,0x3e]
+
+# CHECK: vrmulh.u16 q4, q3, q6  @ encoding: [0x17,0xfe,0x0d,0x9e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x17,0xfe,0x0d,0x9e]
+
+# CHECK: vrmulh.u32 q1, q2, q2  @ encoding: [0x25,0xfe,0x05,0x3e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x25,0xfe,0x05,0x3e]
+
+# CHECK: vqmovnb.s16 q0, q1  @ encoding: [0x33,0xee,0x03,0x0e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x33,0xee,0x03,0x0e]
+
+# CHECK: vqmovnt.s16 q2, q0  @ encoding: [0x33,0xee,0x01,0x5e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x33,0xee,0x01,0x5e]
+
+# CHECK: vqmovnb.s32 q0, q5  @ encoding: [0x37,0xee,0x0b,0x0e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x37,0xee,0x0b,0x0e]
+
+# CHECK: vqmovnt.s32 q0, q1  @ encoding: [0x37,0xee,0x03,0x1e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x37,0xee,0x03,0x1e]
+
+# CHECK: vqmovnb.u16 q0, q4  @ encoding: [0x33,0xfe,0x09,0x0e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x33,0xfe,0x09,0x0e]
+
+# CHECK: vqmovnt.u16 q0, q7  @ encoding: [0x33,0xfe,0x0f,0x1e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x33,0xfe,0x0f,0x1e]
+
+# CHECK: vqmovnb.u32 q0, q4  @ encoding: [0x37,0xfe,0x09,0x0e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x37,0xfe,0x09,0x0e]
+
+# CHECK: vqmovnt.u32 q0, q2  @ encoding: [0x37,0xfe,0x05,0x1e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x37,0xfe,0x05,0x1e]
+
+# CHECK: vcvtb.f16.f32 q1, q4  @ encoding: [0x3f,0xee,0x09,0x2e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x3f,0xee,0x09,0x2e]
+
+# CHECK: vcvtt.f16.f32 q1, q4  @ encoding: [0x3f,0xee,0x09,0x3e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x3f,0xee,0x09,0x3e]
+
+# CHECK: vcvtb.f32.f16 q0, q3  @ encoding: [0x3f,0xfe,0x07,0x0e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x3f,0xfe,0x07,0x0e]
+
+# CHECK: vcvtt.f32.f16 q0, q1  @ encoding: [0x3f,0xfe,0x03,0x1e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x3f,0xfe,0x03,0x1e]
+
+# CHECK: vcvtb.f16.f32 q1, q4  @ encoding: [0x3f,0xee,0x09,0x2e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x3f,0xee,0x09,0x2e]
+
+# CHECK: vcvtt.f32.f16 q0, q1  @ encoding: [0x3f,0xfe,0x03,0x1e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x3f,0xfe,0x03,0x1e]
+
+# CHECK: vcvtt.f64.f16 d0, s0 @ encoding: [0xb2,0xee,0xc0,0x0b]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0xb2,0xee,0xc0,0x0b]
+
+# CHECK: vcvtt.f16.f64 s1, d2 @ encoding: [0xf3,0xee,0xc2,0x0b]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0xf3,0xee,0xc2,0x0b]
+
+# CHECK: vqmovunb.s16 q0, q3  @ encoding: [0x31,0xee,0x87,0x0e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x31,0xee,0x87,0x0e]
+
+# CHECK: vqmovunt.s16 q4, q1  @ encoding: [0x31,0xee,0x83,0x9e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x31,0xee,0x83,0x9e]
+
+# CHECK: vqmovunb.s32 q1, q7  @ encoding: [0x35,0xee,0x8f,0x2e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x35,0xee,0x8f,0x2e]
+
+# CHECK: vqmovunt.s32 q0, q2  @ encoding: [0x35,0xee,0x85,0x1e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x35,0xee,0x85,0x1e]
+
+# CHECK: vmovnb.i16 q1, q5  @ encoding: [0x31,0xfe,0x8b,0x2e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x31,0xfe,0x8b,0x2e]
+
+# CHECK: vmovnt.i16 q0, q0  @ encoding: [0x31,0xfe,0x81,0x1e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x31,0xfe,0x81,0x1e]
+
+# CHECK: vmovnb.i32 q1, q0  @ encoding: [0x35,0xfe,0x81,0x2e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x35,0xfe,0x81,0x2e]
+
+# CHECK: vmovnt.i32 q3, q3  @ encoding: [0x35,0xfe,0x87,0x7e]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x35,0xfe,0x87,0x7e]
+
+# CHECK: vhcadd.s8 q3, q7, q5, #90  @ encoding: [0x0e,0xee,0x0a,0x6f]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x0e,0xee,0x0a,0x6f]
+
+# CHECK: vhcadd.s16 q0, q0, q6, #90  @ encoding: [0x10,0xee,0x0c,0x0f]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x10,0xee,0x0c,0x0f]
+
+# CHECK: vhcadd.s16 q0, q0, q6, #90  @ encoding: [0x10,0xee,0x0c,0x0f]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x10,0xee,0x0c,0x0f]
+
+# CHECK: vhcadd.s16 q3, q1, q0, #270  @ encoding: [0x12,0xee,0x00,0x7f]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x12,0xee,0x00,0x7f]
+
+# CHECK: vhcadd.s32 q3, q4, q5, #90  @ encoding: [0x28,0xee,0x0a,0x6f]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x28,0xee,0x0a,0x6f]
+
+# CHECK: vhcadd.s32 q6, q7, q2, #270  @ encoding: [0x2e,0xee,0x04,0xdf]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x2e,0xee,0x04,0xdf]
+
+# CHECK: vadc.i32 q1, q0, q2  @ encoding: [0x30,0xee,0x04,0x2f]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x30,0xee,0x04,0x2f]
+
+# CHECK: vadci.i32 q0, q1, q1  @ encoding: [0x32,0xee,0x02,0x1f]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x32,0xee,0x02,0x1f]
+
+# CHECK: vcadd.i8 q1, q0, q2, #90  @ encoding: [0x00,0xfe,0x04,0x2f]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x00,0xfe,0x04,0x2f]
+
+# CHECK: vcadd.i16 q0, q2, q3, #90  @ encoding: [0x14,0xfe,0x06,0x0f]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x14,0xfe,0x06,0x0f]
+
+# CHECK: vcadd.i16 q0, q5, q5, #270  @ encoding: [0x1a,0xfe,0x0a,0x1f]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x1a,0xfe,0x0a,0x1f]
+
+# CHECK: vcadd.i32 q4, q2, q5, #90  @ encoding: [0x24,0xfe,0x0a,0x8f]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x24,0xfe,0x0a,0x8f]
+
+# CHECK: vcadd.i32 q5, q5, q0, #270  @ encoding: [0x2a,0xfe,0x00,0xbf]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x2a,0xfe,0x00,0xbf]
+
+# CHECK: vsbc.i32 q3, q1, q1  @ encoding: [0x32,0xfe,0x02,0x6f]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x32,0xfe,0x02,0x6f]
+
+# CHECK: vsbci.i32 q2, q6, q2  @ encoding: [0x3c,0xfe,0x04,0x5f]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x3c,0xfe,0x04,0x5f]
+
+# CHECK: vqdmullb.s16 q0, q4, q5  @ encoding: [0x38,0xee,0x0b,0x0f]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x38,0xee,0x0b,0x0f]
+
+# CHECK: vqdmullt.s16 q0, q6, q5  @ encoding: [0x3c,0xee,0x0b,0x1f]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x3c,0xee,0x0b,0x1f]
+
+# CHECK: vqdmullb.s32 q0, q3, q7  @ encoding: [0x36,0xfe,0x0f,0x0f]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x36,0xfe,0x0f,0x0f]
+
+# CHECK: vqdmullt.s32 q0, q7, q5  @ encoding: [0x3e,0xfe,0x0b,0x1f]
+# CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
+[0x3e,0xfe,0x0b,0x1f]

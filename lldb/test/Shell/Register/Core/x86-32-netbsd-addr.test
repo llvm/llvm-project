@@ -1,0 +1,13 @@
+# RUN: %lldb -b -s %s -c %p/Inputs/x86-32-netbsd.core | FileCheck %s
+
+register read --all
+# CHECK-DAG: eip = 0x08048955
+# CHECK-DAG: eflags = 0x00010282
+# CHECK-DAG: cs = 0x00000037
+# CHECK-DAG: fs = 0x0000004f
+# CHECK-DAG: gs = 0x0000008b
+# CHECK-DAG: ss = 0x0000004f
+# CHECK-DAG: ds = 0x0000004f
+# CHECK-DAG: es = 0x0000004f
+
+# TODO: fix reading fp registers

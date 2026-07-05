@@ -1,0 +1,67 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-readobj -a --cg-profile --addrsig %t.o | FileCheck %s
+
+# Test that multiple sections with the same type does not trigger an error.
+
+# CHECK: ElfHeader {
+# CHECK: VersionSymbols [
+# CHECK: VersionDefinitions [
+# CHECK: VersionRequirements [
+# CHECK: CGProfile [
+# CHECK: CGProfile [
+# CHECK: Addrsig [
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .symtab2
+    Type:            SHT_SYMTAB
+    Link:            .strtab
+    Content:         ''
+    EntSize:         24
+  - Name:            .versym
+    Type:            SHT_GNU_versym
+    Entries:         [ 0 ]
+    Link:            .dynsym
+  - Name:            .versym2
+    Type:            SHT_GNU_versym
+    Entries:         [ 0 ]
+    Link:            .dynsym
+  - Name:            .verdef
+    Type:            SHT_GNU_verdef
+    Info:            0x0000000000000000
+    Entries:
+  - Name:            .verdef2
+    Type:            SHT_GNU_verdef
+    Info:            0x0000000000000000
+    Entries:
+  - Name:            .verneed
+    Type:            SHT_GNU_verneed
+    Info:            0x0000000000000000
+    Dependencies:
+  - Name:            .verneed2
+    Type:            SHT_GNU_verneed
+    Info:            0x0000000000000000
+    Dependencies:
+  - Name:            .llvm.call-graph-profile
+    Type:            SHT_LLVM_CALL_GRAPH_PROFILE
+    Content:         ''
+    EntSize:         8
+  - Name:            .llvm.call-graph-profile2
+    Type:            SHT_LLVM_CALL_GRAPH_PROFILE
+    Content:         ''
+    EntSize:         8
+  - Name:            .llvm_addrsig
+    Type:            SHT_LLVM_ADDRSIG
+    Content:         ''
+  - Name:            .llvm_addrsig2
+    Type:            SHT_LLVM_ADDRSIG
+    Content:         ''
+Symbols:
+  - Name:            f
+DynamicSymbols: []
+...

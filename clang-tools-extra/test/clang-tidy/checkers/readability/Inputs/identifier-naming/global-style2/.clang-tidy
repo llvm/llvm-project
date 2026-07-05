@@ -1,0 +1,5 @@
+Checks: readability-identifier-naming
+CheckOptions:
+  readability-identifier-naming.GlobalFunctionCase: UPPER_CASE
+  readability-identifier-naming.IgnoreMainLikeFunctions: false
+

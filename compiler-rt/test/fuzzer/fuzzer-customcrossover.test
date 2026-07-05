@@ -1,0 +1,12 @@
+RUN: %cpp_compiler %S/CustomCrossOverTest.cpp -o %t-CustomCrossOverTest
+
+RUN: not %run %t-CustomCrossOverTest -seed=1 -runs=1000000                2>&1 | FileCheck %s --check-prefix=CHECK_CO
+Disable cross_over, verify that we can't find the target w/o it.
+RUN:     %run %t-CustomCrossOverTest -seed=1 -runs=1000000 -cross_over=0 2>&1 | FileCheck %s --check-prefix=CHECK_NO_CO
+
+CHECK_CO: In LLVMFuzzerCustomCrossover
+CHECK_CO: BINGO
+
+CHECK_NO_CO-NO: LLVMFuzzerCustomCrossover
+CHECK_NO_CO: DONE
+

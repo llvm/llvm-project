@@ -1,0 +1,17 @@
+## Show that llvm-objcopy/llvm-strip stabs symbols and debug sections.
+
+# RUN: yaml2obj %p/Inputs/strip-stabs.yaml -o %t
+
+# RUN: llvm-objcopy --strip-debug %t %t.stripped
+
+## Make sure that stabs symbols are stripped.
+# RUN: llvm-readobj --symbols %t | FileCheck %s --check-prefix=SYM
+# RUN: llvm-readobj --symbols %t.stripped | FileCheck %s --check-prefix=SYM_STRIP
+
+# SYM:         Symbols [
+# SYM-COUNT-5: Type: SymDebugTable ({{.*}})
+# SYM:         ]
+
+# SYM_STRIP:     Symbols [
+# SYM_STRIP-NOT: Type: SymDebugTable ({{.*}})
+# SYM_STRIP:     ]

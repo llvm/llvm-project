@@ -1,0 +1,5 @@
+# REQUIRES: native && (target-x86 || target-x86_64)
+# RUN: %clangxx_host %p/Inputs/CommandOnCrashMultiThreaded.cpp -o %t -pthread
+# RUN: %lldb -b -o "process launch" -k "process continue" -k "exit" %t | FileCheck %s
+
+# CHECK: Process {{[0-9]+}} exited with status = 0

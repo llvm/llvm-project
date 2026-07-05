@@ -1,0 +1,103 @@
+## Check that we are able to dump AArch64 STO_* flags correctly when dumping symbols.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-readobj --symbols %t.o | FileCheck %s --check-prefix=LLVM
+# RUN: llvm-readobj --symbols %t.o --elf-output-style=JSON --pretty-print | FileCheck %s --check-prefix=JSON
+# RUN: llvm-readelf --symbols %t.o | FileCheck %s --check-prefix=GNU
+# RUN: llvm-readelf --symbols --extra-sym-info %t.o | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=GNUX
+
+# LLVM:      Name: foo1
+# LLVM:      Other [ (0x80)
+# LLVM-NEXT:   STO_AARCH64_VARIANT_PCS (0x80)
+# LLVM-NEXT: ]
+# LLVM:      Name: foo2
+# LLVM:      Other [ (0xC0)
+# LLVM-NEXT:   STO_AARCH64_VARIANT_PCS (0x80)
+# LLVM-NEXT: ]
+# LLVM:      Name: foo3
+# LLVM:      Other [ (0x83)
+# LLVM-NEXT:   STO_AARCH64_VARIANT_PCS (0x80)
+# LLVM-NEXT:   STV_PROTECTED (0x3)
+# LLVM-NEXT: ]
+# LLVM:      Name: foo4
+# LLVM:      Other [ (0x3)
+# LLVM-NEXT:   STV_PROTECTED (0x3)
+# LLVM-NEXT: ]
+
+# GNU:      Symbol table '.symtab' contains 5 entries:
+# GNU:      1: 0000000000000000 0 NOTYPE LOCAL DEFAULT   [VARIANT_PCS]      UND foo1
+# GNU-NEXT: 2: 0000000000000000 0 NOTYPE LOCAL DEFAULT   [VARIANT_PCS | 40] UND foo2
+# GNU-NEXT: 3: 0000000000000000 0 NOTYPE LOCAL PROTECTED [VARIANT_PCS]      UND foo3
+# GNU-NEXT: 4: 0000000000000000 0 NOTYPE LOCAL PROTECTED                    UND foo4
+
+#      GNUX:Symbol table '.symtab' contains 5 entries:
+# GNUX-NEXT:   Num:    Value          Size Type    Bind   Vis+Other              Ndx(SecName) Name [+ Version Info]
+# GNUX-NEXT:     0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT                UND 
+# GNUX-NEXT:     1: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT [VARIANT_PCS]  UND foo1
+# GNUX-NEXT:     2: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT [VARIANT_PCS | 40] UND foo2
+# GNUX-NEXT:     3: 0000000000000000     0 NOTYPE  LOCAL  PROTECTED [VARIANT_PCS] UND foo3
+# GNUX-NEXT:     4: 0000000000000000     0 NOTYPE  LOCAL  PROTECTED              UND foo4
+
+# JSON:     "Name": "foo1",
+# JSON:     "Other": {
+# JSON-NEXT:  "Value": 128,
+# JSON-NEXT:  "Flags": [
+# JSON-NEXT:    {
+# JSON-NEXT:      "Name": "STO_AARCH64_VARIANT_PCS",
+# JSON-NEXT:      "Value": 128
+# JSON-NEXT:    }
+# JSON-NEXT:  ]
+# JSON-NEXT:},
+
+# JSON:     "Name": "foo2",
+# JSON:     "Other": {
+# JSON-NEXT:  "Value": 192,
+# JSON-NEXT:  "Flags": [
+# JSON-NEXT:    {
+# JSON-NEXT:      "Name": "STO_AARCH64_VARIANT_PCS",
+# JSON-NEXT:      "Value": 128
+# JSON-NEXT:    }
+# JSON-NEXT:  ]
+# JSON-NEXT:},
+
+# JSON:     "Name": "foo3",
+# JSON:     "Other": {
+# JSON-NEXT:  "Value": 131,
+# JSON-NEXT:  "Flags": [
+# JSON-NEXT:    {
+# JSON-NEXT:      "Name": "STO_AARCH64_VARIANT_PCS",
+# JSON-NEXT:      "Value": 128
+# JSON-NEXT:    },
+# JSON-NEXT:    {
+# JSON-NEXT:      "Name": "STV_PROTECTED",
+# JSON-NEXT:      "Value": 3
+# JSON-NEXT:    }
+# JSON-NEXT:  ]
+# JSON-NEXT:},
+
+# JSON:     "Name": "foo4",
+# JSON:     "Other": {
+# JSON-NEXT:  "Value": 3,
+# JSON-NEXT:  "Flags": [
+# JSON-NEXT:    {
+# JSON-NEXT:      "Name": "STV_PROTECTED",
+# JSON-NEXT:      "Value": 3
+# JSON-NEXT:    }
+# JSON-NEXT:  ]
+# JSON-NEXT:},
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_AARCH64
+Symbols:
+  - Name: foo1
+    Other: [ STO_AARCH64_VARIANT_PCS ]
+  - Name: foo2
+    Other: [ STO_AARCH64_VARIANT_PCS, 0x40 ]
+  - Name: foo3
+    Other: [ STO_AARCH64_VARIANT_PCS, STV_PROTECTED ]
+  - Name: foo4
+    Other: [ STV_PROTECTED ]

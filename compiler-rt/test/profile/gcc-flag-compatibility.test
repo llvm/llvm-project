@@ -1,0 +1,18 @@
+RUN: rm -rf %t.d
+RUN: mkdir -p %t.d
+RUN: %clang_pgogen=%t.d/d1/d2 -o %t.d/code %S/Inputs/gcc-flag-compatibility.c
+
+# Test that the instrumented code writes to %t.d/d1/d2/
+RUN: %run %t.d/code
+RUN: llvm-profdata merge -o %t.profdata %t.d/d1/d2/
+
+# Test that we can override the directory and file name with LLVM_PROFILE_FILE.
+RUN: env LLVM_PROFILE_FILE=%t.d/x1/prof.raw %run %t.d/code
+RUN: llvm-profdata merge -o %t.profdata %t.d/x1/
+
+# Test that we can specify a directory with -fprofile-use.
+RUN: llvm-profdata merge -o %t.d/default.profdata %t.d/x1/
+RUN: %clang_pgouse=%t.d -o %t.d/code %S/Inputs/gcc-flag-compatibility.c
+
+# Test that we can specify a file with -fprofile-use.
+RUN: %clang_pgouse=%t.profdata -o %t.d/code %S/Inputs/gcc-flag-compatibility.c

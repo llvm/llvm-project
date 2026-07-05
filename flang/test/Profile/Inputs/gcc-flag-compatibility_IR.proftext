@@ -1,0 +1,18 @@
+# IR level Instrumentation Flag
+:ir
+_QQmain
+# Func Hash:
+146835646621254984
+# Num Counters:
+2
+# Counter Values:
+100
+1
+
+main
+# Func Hash:
+742261418966908927
+# Num Counters:
+1
+# Counter Values:
+1

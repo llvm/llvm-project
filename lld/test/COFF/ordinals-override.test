@@ -1,0 +1,115 @@
+# RUN: yaml2obj %s -o %t.obj
+#
+# RUN: lld-link /out:%t.dll /dll %t.obj
+# RUN: llvm-objdump -p %t.dll | FileCheck --check-prefix=CHECK1 %s
+#
+# CHECK1:      Export Table:
+# CHECK1:      DLL name: ordinals-override.test.tmp.dll
+# CHECK1:      Ordinal base: 1
+# CHECK1:      Ordinal      RVA  Name
+# CHECK1-NEXT:       1   0x1010  ?bar@@YAXXZ
+# CHECK1-NEXT:       2   0x1000  ?foo@@YAXXZ
+# CHECK1-NEXT:       3   0x1020  baz
+#
+# RUN: lld-link /out:%t.dll /dll %t.obj /EXPORT:?foo@@YAXXZ,@55
+# RUN: llvm-objdump -p %t.dll | FileCheck --check-prefix=CHECK2 %s
+#
+# CHECK2:      Export Table:
+# CHECK2:      DLL name: ordinals-override.test.tmp.dll
+# CHECK2:      Ordinal base: 55
+# CHECK2:      Ordinal      RVA  Name
+# CHECK2-NEXT:      55   0x1000  ?foo@@YAXXZ
+# CHECK2-NEXT:      56   0x1010  ?bar@@YAXXZ
+# CHECK2-NEXT:      57   0x1020  baz
+#
+# RUN: lld-link /out:%t.dll /dll %t.obj /EXPORT:?foo@@YAXXZ,@55 /EXPORT:?bar@@YAXXZ,@122
+# RUN: llvm-objdump -p %t.dll | FileCheck --check-prefix=CHECK3 %s
+#
+# CHECK3:      Export Table:
+# CHECK3:      DLL name: ordinals-override.test.tmp.dll
+# CHECK3:      Ordinal base: 55
+# CHECK3:      Ordinal      RVA  Name
+# CHECK3-NEXT:      55   0x1000  ?foo@@YAXXZ
+# CHECK3-NEXT:     122   0x1010  ?bar@@YAXXZ
+# CHECK3-NEXT:     123   0x1020  baz
+#
+# RUN: echo "EXPORTS" > %t.def
+# RUN: echo "?foo@@YAXXZ @55" >> %t.def
+# RUN: echo "?bar@@YAXXZ @122" >> %t.def
+# RUN: lld-link /out:%t.dll /dll %t.obj /DEF:%t.def 2>&1 | FileCheck --check-prefix=WARN --allow-empty %s
+# WARN-NOT: lld-link: warning
+#
+# RUN: llvm-objdump -p %t.dll | FileCheck --check-prefix=CHECK3 %s
+#
+# RUN: lld-link /out:%t.dll /dll %t.obj /DEF:%t.def /EXPORT:?foo@@YAXXZ,@10000 2>&1 | FileCheck --check-prefix=DUPLICATED %s
+# DUPLICATED: lld-link: warning: duplicate export: ?foo@@YAXXZ first seen in /export, now in /def
+#
+# RUN: llvm-objdump -p %t.dll | FileCheck --check-prefix=CHECK4 %s
+#
+# CHECK4:      Export Table:
+# CHECK4:      DLL name: ordinals-override.test.tmp.dll
+# CHECK4:      Ordinal base: 122
+# CHECK4:      Ordinal      RVA  Name
+# CHECK4-NEXT:     122   0x1010  ?bar@@YAXXZ
+# CHECK4-NEXT:   10000   0x1000  ?foo@@YAXXZ
+# CHECK4-NEXT:   10001   0x1020  baz
+
+# The .drectve section below contains the following:
+#
+#   Linker Directives
+#   -----------------
+#   /export:baz=?baz@@YAXXZ
+#   /EXPORT:?foo@@YAXXZ
+#   /EXPORT:?bar@@YAXXZ
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .drectve
+    Characteristics: [ IMAGE_SCN_LNK_INFO, IMAGE_SCN_LNK_REMOVE ]
+    Alignment:       1
+    SectionData:     2f6578706f72743a62617a3d3f62617a4040594158585a202f4558504f52543a3f666f6f4040594158585a202f4558504f52543a3f6261724040594158585a
+  - Name:            '.text$mn'
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       16
+    SectionData:     C20000CCCCCCCCCCCCCCCCCCCCCCCCCCC20000CCCCCCCCCCCCCCCCCCCCCCCCCCC20000
+symbols:
+  - Name:            '.text$mn'
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          35
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          0
+  - Name:            _DllMainCRTStartup
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            '?foo@@YAXXZ'
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            '?bar@@YAXXZ'
+    Value:           16
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            '?baz@@YAXXZ'
+    Value:           32
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...

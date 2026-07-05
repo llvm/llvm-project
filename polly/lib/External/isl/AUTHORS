@@ -1,0 +1,71 @@
+isl was written by
+
+	    Sven Verdoolaege
+2006-2007   Leiden Institute of Advanced Computer Science
+	    Universiteit Leiden
+	    Niels Bohrweg 1
+	    2333 CA Leiden
+	    The Netherlands
+2008-2009   K.U.Leuven
+	    Departement Computerwetenschappen
+	    Celestijnenlaan 200A
+	    B-3001 Leuven
+	    Belgium
+2010-2011   INRIA Saclay - Ile-de-France
+	    Parc Club Orsay Universite, ZAC des vignes, 4 rue Jacques Monod
+	    91893 Orsay
+	    France
+2011-2012   consultant for Leiden Institute of Advanced Computer Science
+2012-2014   Ecole Normale Superieure
+	    45 rue d'Ulm, 75230 Paris
+	    France
+2014-2015   INRIA Rocquencourt
+	    Domaine de Voluceau - Rocquencourt, B.P. 105
+	    78153 Le Chesnay
+	    France
+2015-2022   Polly Labs
+2018-2021   Cerebras Systems
+	    175 S San Antonio Rd
+	    Los Altos, CA
+	    USA
+2021-2022   Cerebras Systems
+	    1237 E Arques Ave
+	    Sunnyvale, CA
+	    USA
+
+Contributions by
+
+Mythri Alle
+Riyadh Baghdadi
+Serge Belyshev
+Basile Clement
+Albert Cohen
+Ray Donnelly
+Johannes Doerfert
+Andi Drebes
+Ron Estrin
+Clement Foyer
+Armin Groesslinger
+Tobias Grosser
+Frederik Harwath
+Alexandre Isoard
+Andreas Kloeckner
+Michael Kruse
+Manjunath Kudlur
+Alexander Matz
+Chielo Newctle
+Riccardo Mori
+Sebastian Pop
+Louis-Noel Pouchet
+Benoit Pradelle
+Uday Bondhugula
+Andreas Simbuerger
+Tianjiao Sun
+Malhar Thakkar
+Sergei Trofimovich
+Miheer Vaidya
+Sven van Haastregt
+Matt Whitlock
+Oleksandr Zinenko
+
+The merge sort implementation was written by Jeffrey Stedfast.

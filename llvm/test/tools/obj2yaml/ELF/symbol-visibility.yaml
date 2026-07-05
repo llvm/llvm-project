@@ -1,0 +1,33 @@
+## Check obj2yaml is able to dump the Visibility field correctly.
+
+# RUN: yaml2obj %s | obj2yaml - | FileCheck %s
+
+# CHECK:      --- !ELF
+# CHECK-NEXT: FileHeader:
+# CHECK-NEXT:   Class: ELFCLASS64
+# CHECK-NEXT:   Data:  ELFDATA2LSB
+# CHECK-NEXT:   Type:  ET_REL
+# CHECK-NEXT: Symbols:
+# CHECK-NEXT:   - Name: default
+# CHECK-NEXT:   - Name: internal
+# CHECK-NEXT:     Other: [ STV_INTERNAL ]
+# CHECK-NEXT:   - Name: hidden
+# CHECK-NEXT:     Other: [ STV_HIDDEN ]
+# CHECK-NEXT:   - Name: protected
+# CHECK-NEXT:     Other: [ STV_PROTECTED ]
+# CHECK-NEXT: ...
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Symbols:
+  - Name:  default
+    Other: [ STV_DEFAULT ]
+  - Name:  internal
+    Other: [ STV_INTERNAL ]
+  - Name:  hidden
+    Other: [ STV_HIDDEN ]
+  - Name:  protected
+    Other: [ STV_PROTECTED ]

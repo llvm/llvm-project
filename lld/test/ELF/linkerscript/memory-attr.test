@@ -1,0 +1,75 @@
+REQUIRES: x86
+
+RUN: split-file %s %ts
+RUN: llvm-mc -filetype=obj -triple=x86_64 %ts/s -o %t.o
+
+## Check assigning sections to memory regions by attributes.
+
+#--- s
+  .text
+  .zero 8
+
+  .rodata
+  .zero 8
+
+  .data
+  .zero 8
+
+#--- t1
+## Check memory region attribute 'a'.
+
+# RUN: ld.lld -o %t1 -T %ts/t1 %t.o
+# RUN: llvm-readelf -S %t1 | FileCheck %s --check-prefix=TEST1
+
+# TEST1:      Name     Type      Address
+# TEST1:      .text    PROGBITS  0000000000002000
+# TEST1-NEXT: .rodata  PROGBITS  0000000000002008
+# TEST1-NEXT: .data    PROGBITS  0000000000002010
+
+MEMORY
+{
+  ## All sections have SHF_ALLOC attribute, so no one can be added here.
+  NOMEM (rwx!a) : org = 0x1000, l = 1K
+  ## All sections are assigned to this memory region.
+  MEM   (a)     : org = 0x2000, l = 1K
+}
+
+SECTIONS
+{
+  .text   : { *(.text) }
+  .rodata : { *(.rodata) }
+  .data   : { *(.data) }
+}
+
+#--- t2
+## Check that memory region attributes 'r', 'w', and 'x' are supported both in
+## positive and negative forms.
+
+# RUN: ld.lld -o %t2 -T %ts/t2 %t.o
+# RUN: llvm-readelf -S %t2 | FileCheck %s --check-prefix=TEST2
+
+# TEST2:      Name     Type      Address
+# TEST2:      .text    PROGBITS  0000000000004000
+# TEST2-NEXT: .rodata  PROGBITS  0000000000003000
+# TEST2-NEXT: .data    PROGBITS  0000000000002000
+
+MEMORY
+{
+  ## While all sections are allocatable, '.text' and '.rodata' are read-only and
+  ## '.data' is writable, so no sections should be assigned to this region.
+  NOMEM (a!rw) : org = 0x1000, l = 1K
+  ## Only writable section '.data' is allowed here.
+  RAM   (w)    : org = 0x2000, l = 1K
+  ## Executable sections are not allowed here, so only '.rodata' should be
+  ## assigned to the region.
+  ROM   (r!x)  : org = 0x3000, l = 1K
+  ## An executable section '.text' comes here.
+  EXEC  (x)    : org = 0x4000, l = 1K
+}
+
+SECTIONS
+{
+  .text   : { *(.text) }
+  .rodata : { *(.rodata) }
+  .data   : { *(.data) }
+}

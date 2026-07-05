@@ -1,0 +1,51 @@
+digraph "Scop Graph for 'print_array' function" {
+	label="Scop Graph for 'print_array' function";
+
+	Node0x7fffdb5c9180 [shape=record,label="{entry}"];
+	Node0x7fffdb5c9180 -> Node0x7fffdb5b7940;
+	Node0x7fffdb5b7940 [shape=record,label="{entry.split}"];
+	Node0x7fffdb5b7940 -> Node0x7fffdb5b7960;
+	Node0x7fffdb5b7960 [shape=record,label="{for.cond1.preheader}"];
+	Node0x7fffdb5b7960 -> Node0x7fffdb5b79c0;
+	Node0x7fffdb5b79c0 [shape=record,label="{for.body3}"];
+	Node0x7fffdb5b79c0 -> Node0x7fffdb5b79e0;
+	Node0x7fffdb5b79c0 -> Node0x7fffdb5b7a80;
+	Node0x7fffdb5b79e0 [shape=record,label="{if.then}"];
+	Node0x7fffdb5b79e0 -> Node0x7fffdb5b7a80;
+	Node0x7fffdb5b7a80 [shape=record,label="{for.inc}"];
+	Node0x7fffdb5b7a80 -> Node0x7fffdb5b79c0[constraint=false];
+	Node0x7fffdb5b7a80 -> Node0x7fffdb5b7ae0;
+	Node0x7fffdb5b7ae0 [shape=record,label="{for.end}"];
+	Node0x7fffdb5b7ae0 -> Node0x7fffdb5b7960[constraint=false];
+	Node0x7fffdb5b7ae0 -> Node0x7fffdb5b7b40;
+	Node0x7fffdb5b7b40 [shape=record,label="{for.end12}"];
+	colorscheme = "paired12"
+        subgraph cluster_0x7fffdb5b8530 {
+          label = "";
+          style = solid;
+          color = 1
+          subgraph cluster_0x7fffdb5cc3c0 {
+            label = "Call instruction:   %call = tail call i32 (%struct._IO_FILE*, i8*, ...) @fprintf(%struct._IO_FILE* %1, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i64 0, i64 0), double %conv) #2";
+            style = solid;
+            color = 6
+            subgraph cluster_0x7fffdb5b86a0 {
+              label = "Call instruction:   %call = tail call i32 (%struct._IO_FILE*, i8*, ...) @fprintf(%struct._IO_FILE* %1, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i64 0, i64 0), double %conv) #2";
+              style = solid;
+              color = 5
+              subgraph cluster_0x7fffdb5b8f40 {
+                label = "Region can not profitably be optimized!";
+                style = solid;
+                color = 7
+                Node0x7fffdb5b79c0;
+                Node0x7fffdb5b79e0;
+              }
+              Node0x7fffdb5b7a80;
+            }
+            Node0x7fffdb5b7960;
+            Node0x7fffdb5b7ae0;
+          }
+          Node0x7fffdb5c9180;
+          Node0x7fffdb5b7940;
+          Node0x7fffdb5b7b40;
+        }
+}

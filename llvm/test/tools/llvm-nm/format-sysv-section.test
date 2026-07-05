@@ -1,0 +1,59 @@
+# RUN: yaml2obj --docnum=1 %s -o %t1.o
+# RUN: llvm-nm %t1.o --format=sysv | FileCheck %s
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+Symbols:
+  - Name:    symbol_undefined
+  - Name:    symbol
+    Section: .text
+  - Name:    symbol_common
+    Index:   SHN_COMMON
+  - Name:    symbol_absolute
+    Index:   SHN_ABS
+  - Name:    proc
+    Index:   0xff01
+  - Name:    os
+    Index:   0xff21
+  - Name:    reserved
+    Index:   0xfffe
+
+# CHECK:      os               {{.*}}|
+# CHECK-NEXT: proc             {{.*}}|
+# CHECK-NEXT: reserved         {{.*}}|
+# CHECK-NEXT: symbol           {{.*}}|     |.text
+# CHECK-NEXT: symbol_absolute  {{.*}}|     |*ABS*
+# CHECK-NEXT: symbol_common    {{.*}}|     |*COM*
+# CHECK-NEXT: symbol_undefined {{.*}}|     |*UND*
+
+## Here we have a symbol that belongs to a section with a broken name
+## (sh_name offset goes past the end of the sections name string table).
+## We test that we can still print a reasonable output and don't crash/assert.
+
+# RUN: yaml2obj --docnum=2 %s -o %t2.o
+# RUN: llvm-nm %t2.o --format=sysv | FileCheck %s --check-prefix=ERR
+
+# ERR: foo |0000000000000000| ? | NOTYPE|0000000000000000| |
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .broken
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    ShName: 0xffff
+Symbols:
+  - Name:    foo
+    Section: .broken

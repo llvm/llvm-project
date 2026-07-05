@@ -1,0 +1,25 @@
+// Check that the ubsan and ubsan-minimal runtimes have the same symbols,
+// making exceptions as necessary.
+//
+// REQUIRES: x86_64-darwin
+
+// RUN: %clangxx_min_runtime -fsanitize-minimal-runtime -fsanitize=undefined %s -o %t '-###' 2>&1 | \
+// RUN: grep "libclang_rt.ubsan_minimal_osx_dynamic.dylib" | \
+// RUN: sed -e 's/.*"\(.*libclang_rt.ubsan_minimal_osx_dynamic.dylib\)".*/\1/' | \
+// RUN: tr -d '\n' > %t.dylib_path1
+// RUN: nm -jgU %{readfile:%t.dylib_path1} | grep "^___ubsan_handle" \
+// RUN:  | grep -vE "_minimal_preserve" \
+// RUN:  | sed 's/_minimal//g' \
+// RUN:  > %t.minimal.symlist
+//
+// RUN: %clangxx_min_runtime -fno-sanitize-minimal-runtime -fsanitize=undefined %s -o %t '-###' 2>&1 | \
+// RUN: grep "libclang_rt.ubsan_osx_dynamic.dylib" | \
+// RUN: sed -e 's/.*"\(.*libclang_rt.ubsan_osx_dynamic.dylib\)".*/\1/' | \
+// RUN: tr -d '\n' > %t.dylib_path2
+// RUN: nm -jgU %{readfile:%t.dylib_path2} | grep "^___ubsan_handle" \
+// RUN:  | grep -vE "^___ubsan_handle_dynamic_type_cache_miss" \
+// RUN:  | grep -vE "^___ubsan_handle_cfi_bad_type" \
+// RUN:  | sed 's/_v1//g' \
+// RUN:  > %t.full.symlist
+//
+// RUN: diff %t.minimal.symlist %t.full.symlist

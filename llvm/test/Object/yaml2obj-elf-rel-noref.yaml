@@ -1,0 +1,75 @@
+# RUN: yaml2obj %s | llvm-readobj --sections -r - | FileCheck %s
+
+!ELF
+FileHeader:        !FielHeader
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_ARM
+  Flags:           [ EF_ARM_EABI_VER5 ]
+Sections:        
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x0000000000000004
+    Content:         03308FE0022093E7000052E31EFF2F01
+  - Name:            .rel.text
+    Type:            SHT_REL
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x0000000000000004
+    Info:            .text
+    Relocations:     
+      - Offset:          0x000000000000000C
+        Type:            R_ARM_V4BX
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    AddressAlign:    0x0000000000000001
+    Content:         ''
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    AddressAlign:    0x0000000000000001
+    Size:            0
+  - Name:            .ARM.attributes
+    Type:            SHT_ARM_ATTRIBUTES
+    AddressAlign:    0x0000000000000001
+    Content:         4115000000616561626900010B000000060208010901
+Symbols:
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+  - Name:            .data
+    Type:            STT_SECTION
+    Section:         .data
+  - Name:            .bss
+    Type:            STT_SECTION
+    Section:         .bss
+  - Name:            '$a'
+    Section:         .text
+  - Name:            call_weak_fn
+    Type:            STT_FUNC
+    Section:         .text
+  - Name:            .ARM.attributes
+    Type:            STT_SECTION
+    Section:         .ARM.attributes
+
+# CHECK:        Section {
+# CHECK-NEXT:     Index: 0
+# CHECK:        }
+# CHECK:        Section {
+# CHECK-NEXT:     Index: 1
+# CHECK-NEXT:     Name: .text (5)
+# CHECK:        }
+# CHECK-NEXT:   Section {
+# CHECK-NEXT:     Index: 2
+# CHECK-NEXT:     Name: .rel.text (1)
+# CHECK-NEXT:     Type: SHT_REL (0x9)
+# CHECK-NEXT:     Flags [ (0x40)
+# CHECK:	}
+# CHECK:        Relocations [
+# CHECK-NEXT:     Section (2) .rel.text {
+# CHECK-NEXT:       0xC R_ARM_V4BX -
+# CHECK-NEXT:     }
+# CHECK-NEXT:   ]

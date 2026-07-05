@@ -1,0 +1,5 @@
+
+HANDLE_MD(Val1)
+HANDLE_MD(Val2)
+
+#undef HANDLE_MD

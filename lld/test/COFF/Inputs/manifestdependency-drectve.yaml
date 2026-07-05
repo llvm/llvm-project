@@ -1,0 +1,14 @@
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: []
+sections:
+  - Name:            .drectve
+    Characteristics: [ IMAGE_SCN_LNK_INFO, IMAGE_SCN_LNK_REMOVE ]
+    Alignment:       1
+    # "/manifestdependency:foo='bar'" "/manifestdependency:baz='quux'"
+    # (pipe into `xxd -p -r` to recover raw contents; pipe into `xxd -p` to put
+    # something new here.)
+    SectionData: 222f6d616e6966657374646570656e64656e63793a666f6f3d27626172272220222f6d616e6966657374646570656e64656e63793a62617a3d27717575782722
+symbols:
+...

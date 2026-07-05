@@ -1,0 +1,2 @@
+RUN: llvm-cxxmap %S/Inputs/before.sym %S/Inputs/ambiguous.sym -r %S/Inputs/remap.map -o /dev/null -Wambiguous 2>&1 | FileCheck %s
+CHECK: warning: {{.*}}:2: symbol _ZN1N1fEN1M1X1YE is equivalent to earlier symbol _ZN1N1fENS_1X1YE

@@ -1,0 +1,27 @@
+RUN: yaml2obj %p/Inputs/discard-locals.yaml -o %t.in.o
+
+RUN: llvm-objdump -t %t.in.o | FileCheck %s --check-prefixes=SYMBOLS,SYMBOLS-PRE
+
+RUN: llvm-objcopy --discard-all %t.in.o %t.out.o
+RUN: llvm-objdump -t %t.out.o | FileCheck %s --check-prefixes=SYMBOLS
+
+RUN: llvm-objcopy -x %t.in.o %t.out-x.o
+RUN: cmp %t.out.o %t.out-x.o
+
+RUN: cp %t.in.o %t.strip-x.o
+RUN: llvm-strip -x %t.strip-x.o
+RUN: cmp %t.out.o %t.strip-x.o
+
+RUN: cp %t.in.o %t.strip-discard-all.o
+RUN: llvm-strip --discard-all %t.strip-discard-all.o
+RUN: cmp %t.out.o %t.strip-discard-all.o
+
+SYMBOLS: SYMBOL TABLE:
+SYMBOLS-NEXT: external
+SYMBOLS-NEXT: external_undefined
+SYMBOLS-NEXT: external_undefined_unreferenced
+SYMBOLS-PRE-NEXT: local_unreferenced
+SYMBOLS-NEXT: local_referenced
+SYMBOLS-NEXT: local_undefined_unreferenced
+SYMBOLS-PRE-NEXT: @feat.00
+SYMBOLS-EMPTY:

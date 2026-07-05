@@ -1,0 +1,24 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx908 -start-before=si-pre-emit-peephole %s -o - | FileCheck -check-prefix=GCN %s
+
+# Verify that the dedicated hazard recognizer pass is run after late peephole
+# optimizations. New hazards can be introduced if instructions are removed by
+# passes that are run before the final hazard recognizer.
+
+---
+# GCN-LABEL: {{^}}mai_hazard_pass_ordering_optimize_vcc_branch:
+# GCN: v_accvgpr_read_b32
+# GCN-NEXT: s_nop
+# GCN-NEXT: flat_load_dword
+name:            mai_hazard_pass_ordering_optimize_vcc_branch
+body:             |
+  bb.0:
+    $vgpr0 = V_MOV_B32_e32 1, implicit $exec
+    $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec
+    $sgpr8_sgpr9 = S_MOV_B64 -1
+    $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    $vcc = S_ANDN2_B64 $exec, killed renamable $sgpr8_sgpr9, implicit-def dead $scc
+    S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
+
+  bb.1:
+    S_ENDPGM 0
+...

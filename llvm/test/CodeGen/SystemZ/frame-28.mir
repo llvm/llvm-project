@@ -1,0 +1,326 @@
+# RUN: llc -mtriple=s390x-linux-gnu -start-before=prologepilog %s -o - -mcpu=z14 \
+# RUN:   -verify-machineinstrs 2>&1 | FileCheck %s
+#
+# Test that redundant frame addressing anchor points are removed by
+# MachineLateInstrsCleanup.
+
+--- |
+  define void @fun1() { ret void }
+  define void @fun2() { ret void }
+  define void @fun3() { ret void }
+  define void @fun4() { ret void }
+  define void @fun5() { ret void }
+  define void @fun6() { ret void }
+  define void @fun7() { ret void }
+  define void @fun8() { ret void }
+
+  declare i32 @foo()
+
+  @ptr = external dso_local local_unnamed_addr global ptr
+---
+
+# Test elimination of redundant LAYs in successor blocks.
+# CHECK-LABEL: fun1:
+# CHECK: lay %r1, 4096(%r15)
+# CHECK: # %bb.1:
+# CHECK-NOT: lay
+# CHECK: .LBB0_2:
+# CHECK-NOT: lay
+---
+name:            fun1
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 5000 }
+  - { id: 1, size: 2500 }
+  - { id: 2, size: 2500 }
+
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $f16d
+    successors: %bb.2(0x00000001), %bb.1(0x7fffffff)
+
+    VST64 renamable $f16d, %stack.0, 0, $noreg
+    VST64 renamable $f16d, %stack.0, 0, $noreg
+    VST64 renamable $f16d, %stack.0, 0, $noreg
+    VST64 renamable $f16d, %stack.0, 0, $noreg
+    VST64 renamable $f16d, %stack.0, 0, $noreg
+    VST64 renamable $f16d, %stack.1, 0, $noreg
+    CHIMux undef $r0l, 3, implicit-def $cc
+    BRC 14, 8, %bb.2, implicit killed $cc
+    J %bb.1
+
+  bb.1:
+    liveins: $f16d
+    VST64 renamable $f16d, %stack.2, 0, $noreg
+    J %bb.2
+
+  bb.2:
+    liveins: $f16d
+    VST64 renamable $f16d, %stack.1, 0, $noreg
+    Return
+...
+
+# In this function the LAY in bb.1 will have a different offset, so the first
+# LAY in bb.2 must remain.
+# CHECK-LABEL: fun2:
+# CHECK: lay %r1, 4096(%r15)
+# CHECK: # %bb.1:
+# CHECK: lay %r1, 8192(%r15)
+# CHECK: .LBB1_2:
+# CHECK: lay %r1, 4096(%r15)
+# CHECK-NOT: lay
+---
+name:            fun2
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 5000 }
+  - { id: 1, size: 5000 }
+  - { id: 2, size: 2500 }
+
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $f16d
+    successors: %bb.2(0x00000001), %bb.1(0x7fffffff)
+
+    VST64 renamable $f16d, %stack.0, 0, $noreg
+    VST64 renamable $f16d, %stack.0, 0, $noreg
+    VST64 renamable $f16d, %stack.0, 0, $noreg
+    VST64 renamable $f16d, %stack.0, 0, $noreg
+    VST64 renamable $f16d, %stack.0, 0, $noreg
+    VST64 renamable $f16d, %stack.1, 0, $noreg
+    CHIMux undef $r0l, 3, implicit-def $cc
+    BRC 14, 8, %bb.2, implicit killed $cc
+    J %bb.1
+
+  bb.1:
+    liveins: $f16d
+    VST64 renamable $f16d, %stack.2, 0, $noreg
+    J %bb.2
+
+  bb.2:
+    liveins: $f16d
+    VST64 renamable $f16d, %stack.1, 0, $noreg
+    VST64 renamable $f16d, %stack.1, 0, $noreg
+    Return
+...
+
+# Test case with a loop (with room for improvement: since %r1 is not clobbered
+# inside the loop only the first LAY is needed).
+# CHECK-LABEL: fun3:
+# CHECK: lay %r1, 4096(%r15)
+# CHECK: .LBB2_1:
+# CHECK: lay %r1, 4096(%r15)
+# CHECK: .LBB2_2:
+# CHECK-NOT: lay %r1, 4096(%r15)
+---
+name:            fun3
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 5000 }
+  - { id: 1, size: 2500 }
+  - { id: 2, size: 2500 }
+
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $f16d
+    successors: %bb.2(0x00000001), %bb.1(0x7fffffff)
+
+    VST64 renamable $f16d, %stack.0, 0, $noreg
+    VST64 renamable $f16d, %stack.0, 0, $noreg
+    VST64 renamable $f16d, %stack.0, 0, $noreg
+    VST64 renamable $f16d, %stack.0, 0, $noreg
+    VST64 renamable $f16d, %stack.0, 0, $noreg
+    VST64 renamable $f16d, %stack.1, 0, $noreg
+    CHIMux undef $r0l, 3, implicit-def $cc
+    BRC 14, 8, %bb.2, implicit killed $cc
+    J %bb.1
+
+  bb.1:
+    liveins: $f16d
+    successors: %bb.2(0x00000001), %bb.1(0x7fffffff)
+
+    VST64 renamable $f16d, %stack.2, 0, $noreg
+    CHIMux undef $r0l, 3, implicit-def $cc
+    BRC 14, 8, %bb.1, implicit killed $cc
+    J %bb.2
+
+  bb.2:
+    liveins: $f16d
+    VST64 renamable $f16d, %stack.1, 0, $noreg
+    Return
+...
+
+# Test case with a call which clobbers r1: the second LAY after the call is needed.
+# CHECK-LABEL: fun4:
+# CHECK: lay %r1, 4096(%r15)
+# CHECK: brasl
+# CHECK: lay %r1, 4096(%r15)
+---
+name:            fun4
+tracksRegLiveness: true
+frameInfo:
+  adjustsStack:    true
+stack:
+  - { id: 0, size: 5000 }
+  - { id: 1, size: 2500 }
+
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $f16d
+
+    VST64 renamable $f16d, %stack.0, 0, $noreg
+    VST64 renamable $f16d, %stack.0, 0, $noreg
+    VST64 renamable $f16d, %stack.0, 0, $noreg
+    VST64 renamable $f16d, %stack.0, 0, $noreg
+    VST64 renamable $f16d, %stack.0, 0, $noreg
+    VST64 renamable $f16d, %stack.1, 0, $noreg
+    CallBRASL @foo, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc, implicit-def $r2l
+    $f17d = IMPLICIT_DEF
+    VST64 renamable $f17d, %stack.1, 0, $noreg
+    Return
+...
+
+# Test case where index reg is loaded instead of using an LAY. Only one LGHI is needed.
+# CHECK-LABEL: fun5:
+# CHECK: lghi %r1, 4096
+# CHECK-NOT: lghi
+---
+name:            fun5
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 5000 }
+  - { id: 1, size: 2500 }
+
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $f16d
+
+    VST64 renamable $f16d, %stack.0, 0, $noreg
+    VST64 renamable $f16d, %stack.0, 0, $noreg
+    VST64 renamable $f16d, %stack.0, 0, $noreg
+    VST64 renamable $f16d, %stack.0, 0, $noreg
+    VST64 renamable $f16d, %stack.0, 0, $noreg
+    $f0q = nofpexcept LXEB %stack.1, 0, $noreg, implicit $fpc
+    $f1q = nofpexcept LXEB %stack.1, 0, $noreg, implicit $fpc
+    Return
+...
+
+# Test where the constant is a Global. Only one LARL is needed.
+# CHECK-LABEL: fun6:
+# CHECK: larl %r1, ptr
+# CHECK-NOT: larl
+---
+name:            fun6
+alignment:       16
+tracksRegLiveness: true
+tracksDebugUserValues: true
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+fixedStack:
+  - { id: 0, offset: -160, size: 8, alignment: 8 }
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    successors: %bb.2(0x30000000), %bb.1(0x50000000)
+
+    renamable $r1d = LARL @ptr
+    CGHSI killed renamable $r1d, 0, 0, implicit-def $cc :: (volatile dereferenceable load (s64) from @ptr)
+    BRC 14, 8, %bb.2, implicit killed $cc
+    J %bb.1
+
+  bb.1:
+    renamable $r1d = LARL @ptr
+    MVGHI killed renamable $r1d, 0, 0
+
+  bb.2:
+    Return
+
+...
+
+# Load of an invariant location (GOT). Only one LGRL is needed.
+# CHECK-LABEL: fun7:
+# CHECK: lgrl %r1, ptr
+# CHECK-NOT: lgrl
+---
+name:            fun7
+alignment:       16
+tracksRegLiveness: true
+tracksDebugUserValues: true
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+fixedStack:
+  - { id: 0, offset: -160, size: 8, alignment: 8 }
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    successors: %bb.2(0x30000000), %bb.1(0x50000000)
+
+    renamable $r1d = LGRL @ptr :: (load (s64) from got)
+    CGHSI killed renamable $r1d, 0, 0, implicit-def $cc :: (volatile dereferenceable load (s64) from @ptr)
+    BRC 14, 8, %bb.2, implicit killed $cc
+    J %bb.1
+
+  bb.1:
+    renamable $r1d = LGRL @ptr :: (load (s64) from got)
+    MVGHI killed renamable $r1d, 0, 0
+
+  bb.2:
+    Return
+
+...
+
+# Load from constant pool. Only one LARL is needed.
+# CHECK-LABEL: fun8:
+# CHECK: larl %r1, .LCPI7_0
+# CHECK-NOT: larl
+---
+name:            fun8
+alignment:       16
+tracksRegLiveness: true
+tracksDebugUserValues: true
+liveins:
+  - { reg: '$f0s' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+fixedStack:
+  - { id: 0, offset: -160, size: 8, alignment: 8 }
+constants:
+  - id:              0
+    value:           float 0x43E0000000000000
+    alignment:       4
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.0):
+    successors: %bb.1, %bb.2
+    liveins: $f0s
+
+    renamable $r1d = LARL %const.0
+    renamable $f1s = LE killed renamable $r1d, 0, $noreg :: (load (s32) from constant-pool)
+    nofpexcept CEBR renamable $f0s, renamable $f1s, implicit-def $cc, implicit $fpc
+    BRC 15, 11, %bb.2, implicit killed $cc
+
+  bb.1:
+    liveins: $f0s
+
+    J %bb.3
+
+  bb.2 (%ir-block.0):
+    liveins: $f0s, $f1s
+
+    renamable $r1d = LARL %const.0
+    renamable $f1s = LE killed renamable $r1d, 0, $noreg :: (load (s32) from constant-pool)
+
+  bb.3 (%ir-block.0):
+    liveins: $r2d
+
+    Return
+
+...

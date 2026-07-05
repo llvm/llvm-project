@@ -1,0 +1,508 @@
+# RUN: llc -mtriple=i386-unknown-unknown -mcpu=i486 %s -o - -run-pass greedy \
+# RUN:   -debug-only=regalloc 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+--- |
+  define void @fun() { ret void }
+
+  declare noalias nonnull ptr @_Znwj()
+  declare void @_ZNSt3__127__tree_balance_after_insertIPNS_16__tree_node_baseIPvEEEEvT_S5_()
+  declare zeroext i1 @_ZN15COLLADASaxFWL1429ColladaParserAutoGen14Private14_end__commentsEv()
+  declare zeroext i1 @_ZN15COLLADASaxFWL1429ColladaParserAutoGen14Private15_preEnd__authorEv()
+...
+---
+# A physreg should always only be hinted once per getRegAllocationHints() query.
+# CHECK: hints: $ebx $edi
+# CHECK-NOT: hints: $ebx $edi $ebx $edi
+name:            fun
+alignment:       16
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: gr32 }
+  - { id: 1, class: gr32 }
+  - { id: 2, class: gr32 }
+  - { id: 3, class: gr32 }
+  - { id: 4, class: gr32 }
+  - { id: 5, class: gr32 }
+  - { id: 6, class: gr32 }
+  - { id: 7, class: gr32 }
+  - { id: 8, class: gr32 }
+  - { id: 9, class: gr32 }
+  - { id: 10, class: gr32 }
+  - { id: 11, class: gr32 }
+  - { id: 12, class: gr32 }
+  - { id: 13, class: gr32_abcd }
+  - { id: 14, class: gr8 }
+  - { id: 15, class: gr32_abcd }
+  - { id: 16, class: gr8 }
+  - { id: 17, class: gr32 }
+  - { id: 18, class: gr32_abcd }
+  - { id: 19, class: gr8 }
+  - { id: 20, class: gr32_abcd }
+  - { id: 21, class: gr8 }
+  - { id: 22, class: gr32_abcd }
+  - { id: 23, class: gr8 }
+  - { id: 24, class: gr32_abcd }
+  - { id: 25, class: gr8 }
+  - { id: 26, class: gr32_abcd }
+  - { id: 27, class: gr8 }
+  - { id: 28, class: gr32_abcd }
+  - { id: 29, class: gr8 }
+  - { id: 30, class: gr32_abcd }
+  - { id: 31, class: gr8 }
+  - { id: 32, class: gr32_abcd }
+  - { id: 33, class: gr8 }
+  - { id: 34, class: gr32 }
+  - { id: 35, class: gr32_abcd }
+  - { id: 36, class: gr8 }
+  - { id: 37, class: gr32 }
+  - { id: 38, class: gr32 }
+  - { id: 39, class: gr32_abcd }
+  - { id: 40, class: gr8 }
+  - { id: 41, class: gr32_abcd }
+  - { id: 42, class: gr8 }
+  - { id: 43, class: gr32_abcd }
+  - { id: 44, class: gr8 }
+  - { id: 45, class: gr32_abcd }
+  - { id: 46, class: gr8 }
+  - { id: 47, class: gr32_abcd }
+  - { id: 48, class: gr8 }
+  - { id: 49, class: gr8 }
+  - { id: 50, class: gr32_abcd }
+  - { id: 51, class: gr8 }
+  - { id: 52, class: gr32 }
+  - { id: 53, class: gr32 }
+  - { id: 54, class: gr32 }
+  - { id: 55, class: gr32 }
+  - { id: 56, class: gr32_abcd }
+  - { id: 57, class: gr8 }
+  - { id: 58, class: gr32_abcd }
+  - { id: 59, class: gr8 }
+  - { id: 60, class: gr32_abcd }
+  - { id: 61, class: gr8 }
+  - { id: 62, class: gr32_abcd }
+  - { id: 63, class: gr8 }
+  - { id: 64, class: gr32_abcd }
+  - { id: 65, class: gr8 }
+  - { id: 66, class: gr32_abcd }
+  - { id: 67, class: gr8 }
+  - { id: 68, class: gr32_abcd }
+  - { id: 69, class: gr8 }
+  - { id: 70, class: gr32_abcd }
+  - { id: 71, class: gr8 }
+  - { id: 72, class: gr32_abcd }
+  - { id: 73, class: gr8 }
+  - { id: 74, class: gr32 }
+  - { id: 75, class: gr32 }
+  - { id: 76, class: gr32_abcd }
+  - { id: 77, class: gr8 }
+  - { id: 78, class: gr32_abcd }
+  - { id: 79, class: gr32 }
+  - { id: 80, class: gr32 }
+  - { id: 81, class: gr32_abcd }
+  - { id: 82, class: gr32 }
+frameInfo:       
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+fixedStack:      
+  - { id: 0, size: 4, alignment: 4, stack-id: default, isImmutable: true }
+body:             |
+  bb.0:
+    successors: %bb.1(0x00000001), %bb.2(0x7fffffff)
+  
+    %13:gr32_abcd = MOV32r0 implicit-def dead $eflags
+    TEST8rr %13.sub_8bit, %13.sub_8bit, implicit-def $eflags
+    JCC_1 %bb.2, 5, implicit killed $eflags
+    JMP_1 %bb.1
+  
+  bb.1:
+    successors: 
+  
+  
+  bb.2:
+    successors: %bb.4(0x7fffffff), %bb.3(0x00000001)
+  
+    %15:gr32_abcd = MOV32r0 implicit-def dead $eflags
+    TEST8rr %15.sub_8bit, %15.sub_8bit, implicit-def $eflags
+    JCC_1 %bb.4, 5, implicit killed $eflags
+    JMP_1 %bb.3
+  
+  bb.3:
+    successors: 
+  
+  
+  bb.4:
+    successors: %bb.6(0x7fffffff), %bb.5(0x00000001)
+  
+    %12:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg
+    %1:gr32 = LEA32r %12, 1, $noreg, 144, $noreg
+    MOV32mr undef %17:gr32, 1, $noreg, 0, $noreg, %1
+    %18:gr32_abcd = MOV32r0 implicit-def dead $eflags
+    TEST8rr %18.sub_8bit, %18.sub_8bit, implicit-def $eflags
+    JCC_1 %bb.6, 5, implicit killed $eflags
+    JMP_1 %bb.5
+  
+  bb.5:
+    successors: 
+  
+  
+  bb.6:
+    successors: %bb.7(0x00000001), %bb.8(0x7fffffff)
+  
+    %20:gr32_abcd = MOV32r0 implicit-def dead $eflags
+    TEST8rr %20.sub_8bit, %20.sub_8bit, implicit-def $eflags
+    JCC_1 %bb.8, 5, implicit killed $eflags
+    JMP_1 %bb.7
+  
+  bb.7:
+    successors: 
+  
+  
+  bb.8:
+    successors: %bb.10(0x7fffffff), %bb.9(0x00000001)
+  
+    %22:gr32_abcd = MOV32r0 implicit-def dead $eflags
+    TEST8rr %22.sub_8bit, %22.sub_8bit, implicit-def $eflags
+    JCC_1 %bb.10, 5, implicit killed $eflags
+    JMP_1 %bb.9
+  
+  bb.9:
+    successors: 
+  
+  
+  bb.10:
+    successors: %bb.12(0x7fffffff), %bb.11(0x00000001)
+  
+    %24:gr32_abcd = MOV32r0 implicit-def dead $eflags
+    TEST8rr %24.sub_8bit, %24.sub_8bit, implicit-def $eflags
+    JCC_1 %bb.12, 5, implicit killed $eflags
+    JMP_1 %bb.11
+  
+  bb.11:
+    successors: 
+  
+  
+  bb.12:
+    successors: %bb.13(0x00000001), %bb.14(0x7fffffff)
+  
+    %26:gr32_abcd = MOV32r0 implicit-def dead $eflags
+    TEST8rr %26.sub_8bit, %26.sub_8bit, implicit-def $eflags
+    JCC_1 %bb.14, 5, implicit killed $eflags
+    JMP_1 %bb.13
+  
+  bb.13:
+    successors: 
+  
+  
+  bb.14:
+    %0:gr32 = LEA32r %12, 1, $noreg, 80, $noreg
+    %28:gr32_abcd = MOV32r0 implicit-def dead $eflags
+    TEST8rr %28.sub_8bit, %28.sub_8bit, implicit-def $eflags
+    JCC_1 %bb.20, 5, implicit killed $eflags
+    JMP_1 %bb.15
+  
+  bb.15:
+    successors: %bb.16(0x00000001), %bb.17(0x7fffffff)
+  
+    %78:gr32_abcd = MOV32r0 implicit-def dead $eflags
+    TEST8rr %78.sub_8bit, %78.sub_8bit, implicit-def $eflags
+    JCC_1 %bb.17, 5, implicit killed $eflags
+    JMP_1 %bb.16
+  
+  bb.16:
+    successors: 
+  
+  
+  bb.17:
+    successors: %bb.18(0x7fffffff), %bb.19(0x00000001)
+  
+    TEST8rr %78.sub_8bit, %78.sub_8bit, implicit-def $eflags
+    JCC_1 %bb.19, 4, implicit killed $eflags
+  
+  bb.18:
+    %79:gr32 = LEA32r %12, 1, $noreg, 80, $noreg
+    JMP_1 %bb.21
+  
+  bb.19:
+    successors: 
+  
+  
+  bb.20:
+    %78:gr32_abcd = COPY %0
+    %79:gr32 = COPY %0
+  
+  bb.21:
+    successors: %bb.22, %bb.23
+  
+    %35:gr32_abcd = MOV32r0 implicit-def dead $eflags
+    TEST8rr %35.sub_8bit, %35.sub_8bit, implicit-def $eflags
+    %80:gr32 = IMPLICIT_DEF
+    JCC_1 %bb.23, 5, implicit killed $eflags
+    JMP_1 %bb.22
+  
+  bb.22:
+    ADJCALLSTACKDOWN32 0, 0, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
+    CALLpcrel32 @_Znwj, csr_32, implicit $esp, implicit $ssp, implicit-def $esp, implicit-def $ssp, implicit-def $eax
+    ADJCALLSTACKUP32 0, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
+    %80:gr32 = COPY killed $eax
+    MOV32mr undef %38:gr32, 1, $noreg, 0, $noreg, %78
+    MOV32mr %79, 1, $noreg, 0, $noreg, %80
+    ADJCALLSTACKDOWN32 0, 0, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
+    CALLpcrel32 @_ZNSt3__127__tree_balance_after_insertIPNS_16__tree_node_baseIPvEEEEvT_S5_, csr_32, implicit $esp, implicit $ssp, implicit-def $esp, implicit-def $ssp
+    ADJCALLSTACKUP32 0, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
+  
+  bb.23:
+    successors: %bb.24(0x00000001), %bb.25(0x7fffffff)
+  
+    MOV32mi %80, 1, $noreg, 52, $noreg, @_ZN15COLLADASaxFWL1429ColladaParserAutoGen14Private15_preEnd__authorEv
+    %39:gr32_abcd = MOV32r0 implicit-def dead $eflags
+    TEST8rr %39.sub_8bit, %39.sub_8bit, implicit-def $eflags
+    JCC_1 %bb.25, 5, implicit killed $eflags
+    JMP_1 %bb.24
+  
+  bb.24:
+    successors: 
+  
+  
+  bb.25:
+    successors: %bb.27(0x7fffffff), %bb.26(0x00000001)
+  
+    %41:gr32_abcd = MOV32r0 implicit-def dead $eflags
+    TEST8rr %41.sub_8bit, %41.sub_8bit, implicit-def $eflags
+    JCC_1 %bb.27, 5, implicit killed $eflags
+    JMP_1 %bb.26
+  
+  bb.26:
+    successors: 
+  
+  
+  bb.27:
+    successors: %bb.29(0x7fffffff), %bb.28(0x00000001)
+  
+    %43:gr32_abcd = MOV32r0 implicit-def dead $eflags
+    TEST8rr %43.sub_8bit, %43.sub_8bit, implicit-def $eflags
+    JCC_1 %bb.29, 5, implicit killed $eflags
+    JMP_1 %bb.28
+  
+  bb.28:
+    successors: 
+  
+  
+  bb.29:
+    successors: %bb.31(0x7fffffff), %bb.30(0x00000001)
+  
+    %45:gr32_abcd = MOV32r0 implicit-def dead $eflags
+    TEST8rr %45.sub_8bit, %45.sub_8bit, implicit-def $eflags
+    JCC_1 %bb.31, 5, implicit killed $eflags
+    JMP_1 %bb.30
+  
+  bb.30:
+    successors: 
+  
+  
+  bb.31:
+    successors: %bb.32(0x00000001), %bb.33(0x7fffffff)
+  
+    %47:gr32_abcd = MOV32r0 implicit-def dead $eflags
+    TEST8rr %47.sub_8bit, %47.sub_8bit, implicit-def $eflags
+    JCC_1 %bb.33, 5, implicit killed $eflags
+    JMP_1 %bb.32
+  
+  bb.32:
+    successors: 
+  
+  
+  bb.33:
+    successors: %bb.37(0x30000000), %bb.34(0x50000000)
+  
+    %49:gr8 = MOV8ri 1
+    TEST8rr %49, %49, implicit-def $eflags
+    JCC_1 %bb.37, 5, implicit killed $eflags
+    JMP_1 %bb.34
+  
+  bb.34:
+    successors: %bb.36(0x00000001), %bb.35(0x7fffffff)
+  
+    %81:gr32_abcd = MOV32r0 implicit-def dead $eflags
+    TEST8rr %81.sub_8bit, %81.sub_8bit, implicit-def $eflags
+    JCC_1 %bb.36, 4, implicit killed $eflags
+  
+  bb.35:
+    %82:gr32 = LEA32r %12, 1, $noreg, 80, $noreg
+    JMP_1 %bb.38
+  
+  bb.36:
+    successors: 
+  
+  
+  bb.37:
+    %81:gr32_abcd = COPY %0
+    %82:gr32 = COPY %0
+  
+  bb.38:
+    successors: %bb.40(0x7fffffff), %bb.39(0x00000001)
+  
+    ADJCALLSTACKDOWN32 0, 0, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
+    CALLpcrel32 @_Znwj, csr_32, implicit $esp, implicit $ssp, implicit-def $esp, implicit-def $ssp, implicit-def $eax
+    ADJCALLSTACKUP32 0, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
+    %52:gr32 = COPY killed $eax
+    MOV32mr undef %53:gr32, 1, $noreg, 0, $noreg, %81
+    MOV32mr %82, 1, $noreg, 0, $noreg, %52
+    ADJCALLSTACKDOWN32 0, 0, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
+    CALLpcrel32 @_ZNSt3__127__tree_balance_after_insertIPNS_16__tree_node_baseIPvEEEEvT_S5_, csr_32, implicit $esp, implicit $ssp, implicit-def $esp, implicit-def $ssp
+    ADJCALLSTACKUP32 0, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
+    MOV32mi %52, 1, $noreg, 36, $noreg, @_ZN15COLLADASaxFWL1429ColladaParserAutoGen14Private14_end__commentsEv
+    MOV32mr undef %54:gr32, 1, $noreg, 0, $noreg, %1
+    %55:gr32 = MOV32rm %12, 1, $noreg, 140, $noreg
+    CMP32mi8 %55, 1, $noreg, 0, $noreg, 0, implicit-def $eflags
+    JCC_1 %bb.40, 4, implicit killed $eflags
+    JMP_1 %bb.39
+  
+  bb.39:
+    successors: 
+  
+  
+  bb.40:
+    successors: %bb.42(0x00000001), %bb.41(0x7fffffff)
+  
+    %56:gr32_abcd = MOV32r0 implicit-def dead $eflags
+    TEST8rr %56.sub_8bit, %56.sub_8bit, implicit-def $eflags
+    JCC_1 %bb.42, 5, implicit killed $eflags
+    JMP_1 %bb.41
+  
+  bb.41:
+    successors: %bb.43(0x00000001), %bb.44(0x7fffffff)
+  
+    %58:gr32_abcd = MOV32r0 implicit-def dead $eflags
+    TEST8rr %58.sub_8bit, %58.sub_8bit, implicit-def $eflags
+    JCC_1 %bb.43, 5, implicit killed $eflags
+    JMP_1 %bb.44
+  
+  bb.42:
+    successors: 
+  
+  
+  bb.43:
+    successors: 
+  
+  
+  bb.44:
+    successors: %bb.45(0x00000001), %bb.46(0x7fffffff)
+  
+    %60:gr32_abcd = MOV32r0 implicit-def dead $eflags
+    TEST8rr %60.sub_8bit, %60.sub_8bit, implicit-def $eflags
+    JCC_1 %bb.46, 5, implicit killed $eflags
+    JMP_1 %bb.45
+  
+  bb.45:
+    successors: 
+  
+  
+  bb.46:
+    successors: %bb.48(0x7fffffff), %bb.47(0x00000001)
+  
+    %62:gr32_abcd = MOV32r0 implicit-def dead $eflags
+    TEST8rr %62.sub_8bit, %62.sub_8bit, implicit-def $eflags
+    JCC_1 %bb.48, 5, implicit killed $eflags
+    JMP_1 %bb.47
+  
+  bb.47:
+    successors: 
+  
+  
+  bb.48:
+    successors: %bb.50(0x7fffffff), %bb.49(0x00000001)
+  
+    %64:gr32_abcd = MOV32r0 implicit-def dead $eflags
+    TEST8rr %64.sub_8bit, %64.sub_8bit, implicit-def $eflags
+    JCC_1 %bb.50, 5, implicit killed $eflags
+    JMP_1 %bb.49
+  
+  bb.49:
+    successors: 
+  
+  
+  bb.50:
+    successors: %bb.51(0x00000001), %bb.52(0x7fffffff)
+  
+    %66:gr32_abcd = MOV32r0 implicit-def dead $eflags
+    TEST8rr %66.sub_8bit, %66.sub_8bit, implicit-def $eflags
+    JCC_1 %bb.52, 5, implicit killed $eflags
+    JMP_1 %bb.51
+  
+  bb.51:
+    successors: 
+  
+  
+  bb.52:
+    successors: %bb.54(0x7fffffff), %bb.53(0x00000001)
+  
+    %68:gr32_abcd = MOV32r0 implicit-def dead $eflags
+    TEST8rr %68.sub_8bit, %68.sub_8bit, implicit-def $eflags
+    JCC_1 %bb.54, 5, implicit killed $eflags
+    JMP_1 %bb.53
+  
+  bb.53:
+    successors: 
+  
+  
+  bb.54:
+    successors: %bb.55(0x00000001), %bb.56(0x7fffffff)
+  
+    %70:gr32_abcd = MOV32r0 implicit-def dead $eflags
+    TEST8rr %70.sub_8bit, %70.sub_8bit, implicit-def $eflags
+    JCC_1 %bb.56, 5, implicit killed $eflags
+    JMP_1 %bb.55
+  
+  bb.55:
+    successors: 
+  
+  
+  bb.56:
+    successors: %bb.57(0x00000001), %bb.58(0x7fffffff)
+  
+    %72:gr32_abcd = MOV32r0 implicit-def dead $eflags
+    TEST8rr %72.sub_8bit, %72.sub_8bit, implicit-def $eflags
+    JCC_1 %bb.58, 5, implicit killed $eflags
+    JMP_1 %bb.57
+  
+  bb.57:
+    successors: 
+  
+  
+  bb.58:
+    successors: %bb.62(0x00000001), %bb.59(0x7fffffff)
+  
+    CMP32mi8 %0, 1, $noreg, 0, $noreg, 0, implicit-def $eflags
+    JCC_1 %bb.62, 4, implicit killed $eflags
+    JMP_1 %bb.59
+  
+  bb.59:
+  
+  bb.60:
+    successors: %bb.60(0x7fffffff), %bb.61(0x00000001)
+  
+    CMP32ri undef %75:gr32, 95406325, implicit-def $eflags
+    JCC_1 %bb.61, 2, implicit killed $eflags
+    JMP_1 %bb.60
+  
+  bb.61:
+    successors: 
+  
+  
+  bb.62:
+    successors: %bb.63, %bb.64
+  
+    %76:gr32_abcd = MOV32r0 implicit-def dead $eflags
+    TEST8rr %76.sub_8bit, %76.sub_8bit, implicit-def $eflags
+    JCC_1 %bb.64, 5, implicit killed $eflags
+    JMP_1 %bb.63
+  
+  bb.63:
+    successors: 
+  
+  
+  bb.64:
+
+...
