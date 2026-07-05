@@ -4941,6 +4941,40 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                          FPClassTest InterestedClasses, KnownFPClass &Known,
                          const SimplifyQuery &Q, unsigned Depth);
 
+/// Evaluates the known FP classes for an operand of an instruction.
+/// If the instruction has the 'nsz' flag, it non-deterministically relaxes
+/// the zero sign in the known classes.
+static void
+computeKnownFPClassForOperand(const Value *V, const APInt &DemandedElts,
+                              FPClassTest InterestedClasses,
+                              KnownFPClass &Known, const SimplifyQuery &Q,
+                              unsigned Depth, const Operator *CxtI) {
+  computeKnownFPClass(V, DemandedElts, InterestedClasses, Known, Q, Depth);
+
+  auto *I = dyn_cast_or_null<Instruction>(CxtI);
+  if (!I || !Q.IIQ.hasNoSignedZeros(I))
+    return;
+
+  Type *Ty = V->getType()->getScalarType();
+  if (!Ty->isFloatingPointTy())
+    return;
+
+  const Function *F = I->getFunction();
+  DenormalMode Mode = F ? F->getDenormalMode(Ty->getFltSemantics())
+                        : DenormalMode::getDynamic();
+
+  bool NeverPosZero = Known.isKnownNeverLogicalPosZero(Mode);
+  bool NeverNegZero = Known.isKnownNeverLogicalNegZero(Mode);
+
+  if (NeverPosZero != NeverNegZero) {
+    if (NeverPosZero)
+      Known.KnownFPClasses |= fcPosZero;
+    else
+      Known.KnownFPClasses |= fcNegZero;
+    Known.SignBit = std::nullopt;
+  }
+}
+
 static void computeKnownFPClass(const Value *V, KnownFPClass &Known,
                                 FPClassTest InterestedClasses,
                                 const SimplifyQuery &Q, unsigned Depth) {
@@ -4961,8 +4995,8 @@ static void computeKnownFPClassForFPTrunc(const Operator *Op,
     return;
 
   KnownFPClass KnownSrc;
-  computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedClasses,
-                      KnownSrc, Q, Depth + 1);
+  computeKnownFPClassForOperand(Op->getOperand(0), DemandedElts,
+                                InterestedClasses, KnownSrc, Q, Depth + 1, Op);
   Known = KnownFPClass::fptrunc(KnownSrc);
 }
 
@@ -5134,8 +5168,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   const unsigned Opc = Op->getOpcode();
   switch (Opc) {
   case Instruction::FNeg: {
-    computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedClasses,
-                        Known, Q, Depth + 1);
+    computeKnownFPClassForOperand(Op->getOperand(0), DemandedElts,
+                                  InterestedClasses, Known, Q, Depth + 1, Op);
     Known.fneg();
     break;
   }
@@ -5657,8 +5691,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       InterestedSrcs |= KnownFPClass::OrderedLessThanZeroMask;
     if (InterestedClasses & fcNan)
       InterestedSrcs |= fcInf;
-    computeKnownFPClass(Op->getOperand(1), DemandedElts, InterestedSrcs,
-                        KnownRHS, Q, Depth + 1);
+    computeKnownFPClassForOperand(Op->getOperand(1), DemandedElts,
+                                  InterestedSrcs, KnownRHS, Q, Depth + 1, Op);
 
     // Special case fadd x, x, which is the canonical form of fmul x, 2.
     bool Self = Op->getOperand(0) == Op->getOperand(1) &&
@@ -5685,8 +5719,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         // there's no point.
 
         if (!Self) {
-          computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedSrcs,
-                              KnownLHS, Q, Depth + 1);
+          computeKnownFPClassForOperand(Op->getOperand(0), DemandedElts,
+                                        InterestedSrcs, KnownLHS, Q, Depth + 1,
+                                        Op);
         }
 
         Known = Opc == Instruction::FAdd
@@ -5765,9 +5800,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         break;
 
       KnownFPClass KnownSrc;
-      computeKnownFPClass(Op->getOperand(0), DemandedElts,
-                          fcNan | fcInf | fcZero | fcSubnormal, KnownSrc, Q,
-                          Depth + 1);
+      computeKnownFPClassForOperand(Op->getOperand(0), DemandedElts,
+                                    fcNan | fcInf | fcZero | fcSubnormal,
+                                    KnownSrc, Q, Depth + 1, Op);
       const Function *F = cast<Instruction>(Op)->getFunction();
       const fltSemantics &FltSem =
           Op->getType()->getScalarType()->getFltSemantics();
@@ -5789,17 +5824,17 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
     KnownFPClass KnownLHS, KnownRHS;
 
-    computeKnownFPClass(Op->getOperand(1), DemandedElts,
-                        fcNan | fcInf | fcZero | fcNegative, KnownRHS, Q,
-                        Depth + 1);
+    computeKnownFPClassForOperand(Op->getOperand(1), DemandedElts,
+                                  fcNan | fcInf | fcZero | fcNegative, KnownRHS,
+                                  Q, Depth + 1, Op);
 
     bool KnowSomethingUseful = KnownRHS.isKnownNeverNaN() ||
                                KnownRHS.isKnownNever(fcNegative) ||
                                KnownRHS.isKnownNever(fcPositive);
 
     if (KnowSomethingUseful || WantPositive) {
-      computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownLHS,
-                          Q, Depth + 1);
+      computeKnownFPClassForOperand(Op->getOperand(0), DemandedElts, fcAllFlags,
+                                    KnownLHS, Q, Depth + 1, Op);
     }
 
     const Function *F = cast<Instruction>(Op)->getFunction();
@@ -5835,8 +5870,9 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   }
   case Instruction::FPExt: {
     KnownFPClass KnownSrc;
-    computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedClasses,
-                        KnownSrc, Q, Depth + 1);
+    computeKnownFPClassForOperand(Op->getOperand(0), DemandedElts,
+                                  InterestedClasses, KnownSrc, Q, Depth + 1,
+                                  Op);
 
     const fltSemantics &DstTy =
         Op->getType()->getScalarType()->getFltSemantics();

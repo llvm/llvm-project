@@ -1299,3 +1299,21 @@ define <2 x float> @fabs_fmul_nan_vector(<2 x float> %x) {
   %abs2 = call <2 x float> @llvm.fabs.v2f32(<2 x float> %mul)
   ret <2 x float> %abs2
 }
+
+; The fabs cannot be eliminated because fneg nsz may return -0.0.
+define float @fabs_fneg_nsz_assume_neg(float %a) {
+; CHECK-LABEL: @fabs_fneg_nsz_assume_neg(
+; CHECK-NEXT:    [[I32:%.*]] = bitcast float [[A:%.*]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I32]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[B:%.*]] = fneg nsz float [[A]]
+; CHECK-NEXT:    [[C:%.*]] = call float @llvm.fabs.f32(float [[B]])
+; CHECK-NEXT:    ret float [[C]]
+;
+  %i32 = bitcast float %a to i32
+  %cmp = icmp slt i32 %i32, 0
+  call void @llvm.assume(i1 %cmp)
+  %b = fneg nsz float %a
+  %c = call float @llvm.fabs.f32(float %b)
+  ret float %c
+}
