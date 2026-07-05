@@ -13,7 +13,9 @@
 // ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-ops-limit): -fconstexpr-ops-limit=1000000000
 
 // Our table has 882 aliases exactly, test to make sure that number matches with the total alias count
-// Internally, there are 884 entries with 2 reserved for id::unknown and id::other
+// Internally, there are a total of 884 entries in our offset table, 882 for the actual aliases,
+// and +2 reserved as sentinels for id::unknown and id::other
+
 #include <cassert>
 #include <ranges>
 #include <text_encoding>
@@ -28,7 +30,7 @@ constexpr bool test() {
     sum += std::ranges::size(te.aliases());
   }
 
-  assert(sum == 882);
+  assert(sum == std::text_encoding::__num_aliases - 2);
 
   return true;
 }
