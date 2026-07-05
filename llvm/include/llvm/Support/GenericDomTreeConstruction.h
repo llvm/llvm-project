@@ -80,7 +80,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
 
   /// Reverse children of nodes; pairs of (DFSNum (predecessor), next-or-zero);
   /// forms a linked list in this vector; first entry is sentinel.
-  SmallVector<std::pair<unsigned, unsigned>> ReverseChildren = {{0, 0}};
+  SmallVector<std::pair<unsigned, unsigned>, 32> ReverseChildren = {{0, 0}};
 
   using UpdateT = typename DomTreeT::UpdateType;
   using UpdateKind = typename DomTreeT::UpdateKind;
@@ -319,8 +319,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
 
       // Initialize the semi dominator to point to the parent node.
       WInfo.Semi = WInfo.Parent;
-      unsigned RCIdx = WInfo.ReverseChildrenStart;
-      while (RCIdx != 0) {
+      for (unsigned RCIdx = WInfo.ReverseChildrenStart; RCIdx != 0;) {
         const auto &Entry = ReverseChildren[RCIdx];
         RCIdx = Entry.second;
         unsigned SemiU =
