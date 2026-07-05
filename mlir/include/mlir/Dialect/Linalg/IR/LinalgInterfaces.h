@@ -114,6 +114,18 @@ struct ConvolutionDimensions {
 /// Returns a failure if `output_image` (and implicitly `filter_loop`) is empty.
 FailureOr<ConvolutionDimensions> inferConvolutionDims(LinalgOp linalgOp);
 
+/// Maps-based overload of `inferConvolutionDims`. The `indexingMaps` are
+/// expected in operand order: input, filter, output. The iterator types are
+/// inferred from the output map: dimensions that appear in the output are
+/// parallel, all others are reduction. Since there is no operation to carry
+/// native `strides`/`dilations` attributes, the strides and dilations are
+/// derived from the convolution access pattern in the input indexing map.
+/// Returns a failure if there are not exactly 3 maps, the output map is not a
+/// projected permutation, or `output_image` (and implicitly `filter_loop`) is
+/// empty.
+FailureOr<ConvolutionDimensions>
+inferConvolutionDims(ArrayRef<AffineMap> indexingMaps);
+
 /// Checks whether `linalgOp` conforms to ConvolutionOpInterface.
 /// By default, we require the `linalgOp` to have non-empty convolved dims
 /// (implicitly non-empty `output_image` and `filter_loop`).
@@ -148,7 +160,11 @@ bool isaElemwiseSingleUnaryOpInterface(GenericOp genericOp,
 
 /// Checks whether `genericOp` is semantically equivalent to a single linalg
 /// elementwise binary op e.g. linalg.sub.
-bool isaElemwiseSingleBinaryOpInterface(GenericOp genericOp);
+/// If `allowNonIdentityMaps` is true, operations with custom indexing maps are
+/// included in the check. Note that these operations can only be represented by
+/// the category op.
+bool isaElemwiseSingleBinaryOpInterface(GenericOp genericOp,
+                                        bool allowNonIdentityMaps = false);
 
 /// Checks whether `genericOp` is semantically equivalent to a `linalg.fill`.
 /// Supports two patterns:

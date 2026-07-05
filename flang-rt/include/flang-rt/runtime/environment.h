@@ -67,6 +67,9 @@ struct ExecutionEnvironment {
       decimal::FortranRounding::RoundNearest}; // RP(==PN)
   Convert conversion{Convert::Unknown}; // FORT_CONVERT
   bool noStopMessage{false}; // NO_STOP_MESSAGE=1 inhibits "Fortran STOP"
+  // FLANG_TIMEF_IN_MILLISECONDS=1 sets TIMEF resolution to milliseconds.
+  // Default resolution is seconds.
+  bool timefInMillisec{false};
   bool defaultUTF8{false}; // DEFAULT_UTF8
   bool checkPointerDeallocation{true}; // FORT_CHECK_POINTER_DEALLOCATION
   bool truncateStream{true}; // FORT_TRUNCATE_STREAM

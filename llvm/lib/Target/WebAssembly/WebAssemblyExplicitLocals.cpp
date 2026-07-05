@@ -366,7 +366,14 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
           const TargetRegisterClass *RC = MRI.getRegClass(OldReg);
           Register NewReg = MRI.createVirtualRegister(RC);
           auto InsertPt = std::next(MI.getIterator());
-          if (UseEmpty[OldReg.virtRegIndex()]) {
+          // When libcalls are emitted for thread context, the frame base vreg
+          // has an implicit use in the DW_AT_frame_base debug info, so we
+          // should not remove it.
+          bool NeedsRegForDebug =
+              MFI.isFrameBaseVirtual() && OldReg == MFI.getFrameBaseVreg() &&
+              MF.getFunction().getSubprogram() &&
+              MF.getSubtarget<WebAssemblySubtarget>().hasLibcallThreadContext();
+          if (UseEmpty[OldReg.virtRegIndex()] && !NeedsRegForDebug) {
             unsigned Opc = getDropOpcode(RC);
             MachineInstr *Drop =
                 BuildMI(MBB, InsertPt, MI.getDebugLoc(), TII->get(Opc))

@@ -26,7 +26,7 @@ end function
 subroutine ubound_test(x, n, m)
   integer :: x(n, m)
   integer :: y(0:n, 0:m) ! UBOUND could be 0 if n or m are < 0
-  !CHECK: PRINT *, [INTEGER(4)::int(size(x,dim=1,kind=8),kind=4),int(size(x,dim=2,kind=8),kind=4)]
+  !CHECK: PRINT *, [INTEGER(4)::__builtin_int(size(x,dim=1,kind=8),kind=4),__builtin_int(size(x,dim=2,kind=8),kind=4)]
   print *, ubound(x)
   !CHECK: PRINT *, ubound(returns_array(n,m))
   print *, ubound(returns_array(n, m))
@@ -44,7 +44,7 @@ end subroutine
 
 subroutine size_test(x, n, m)
   integer :: x(n, m)
-  !CHECK: PRINT *, int(size(x,dim=1,kind=8)*size(x,dim=2,kind=8),kind=4)
+  !CHECK: PRINT *, __builtin_int(size(x,dim=1,kind=8)*size(x,dim=2,kind=8),kind=4)
   print *, size(x)
   !CHECK: PRINT *, size(returns_array(n,m))
   print *, size(returns_array(n, m))
@@ -65,7 +65,7 @@ subroutine shape_test(x, n, m)
   end interface
   procedure(foo), pointer :: pf
   integer :: x(n, m)
-  !CHECK: PRINT *, [INTEGER(4)::int(size(x,dim=1,kind=8),kind=4),int(size(x,dim=2,kind=8),kind=4)]
+  !CHECK: PRINT *, [INTEGER(4)::__builtin_int(size(x,dim=1,kind=8),kind=4),__builtin_int(size(x,dim=2,kind=8),kind=4)]
   print *, shape(x)
   !CHECK: PRINT *, shape(returns_array(n,m))
   print *, shape(returns_array(n, m))
@@ -126,7 +126,7 @@ subroutine len_test(a,b, c, d, e, n, m)
      end function mofun
   end interface
 
-  !CHECK: PRINT *, int(int(a%len,kind=8),kind=4)
+  !CHECK: PRINT *, __builtin_int(__builtin_int(a%len,kind=8),kind=4)
   print *, len(a)
   !CHECK: PRINT *, 5_4
   print *, len(a(1:5))
@@ -136,7 +136,7 @@ subroutine len_test(a,b, c, d, e, n, m)
   print *, len(b(a) // a)
   !CHECK: PRINT *, 10_4
   print *, len(c)
-  !CHECK: PRINT *, len(c(int(i,kind=8):int(j,kind=8)))
+  !CHECK: PRINT *, len(c(__builtin_int(i,kind=8):__builtin_int(j,kind=8)))
   print *, len(c(i:j))
   !CHECK: PRINT *, 5_4
   print *, len(c(1:5))
@@ -146,11 +146,11 @@ subroutine len_test(a,b, c, d, e, n, m)
   print *, len(d(c) // c)
   !CHECK: PRINT *, 0_4
   print *, len(a(10:4))
-  !CHECK: PRINT *, int(max(0_8,int(m,kind=8)-int(n,kind=8)+1_8),kind=4)
+  !CHECK: PRINT *, __builtin_int(max(0_8,__builtin_int(m,kind=8)-__builtin_int(n,kind=8)+1_8),kind=4)
   print *, len(a(n:m))
-  !CHECK: PRINT *, len(b(a(int(n,kind=8):int(m,kind=8))))
+  !CHECK: PRINT *, len(b(a(__builtin_int(n,kind=8):__builtin_int(m,kind=8))))
   print *, len(b(a(n:m)))
-  !CHECK: PRINT *, int(max(0_8,max(0_8,int(n,kind=8))-4_8+1_8),kind=4)
+  !CHECK: PRINT *, __builtin_int(max(0_8,max(0_8,__builtin_int(n,kind=8))-4_8+1_8),kind=4)
   print *, len(e(4:))
   !CHECK: PRINT *, len(fun1(n-m))
   print *, len(fun1(n-m))
@@ -162,7 +162,7 @@ subroutine len_test(a,b, c, d, e, n, m)
   print *, len(trim(c))
   !CHECK: PRINT *, 40_4
   print *, len(repeat(c, 4))
-  !CHECK: PRINT *, len(repeat(c,int(i,kind=8)))
+  !CHECK: PRINT *, len(repeat(c,__builtin_int(i,kind=8)))
   print *, len(repeat(c, i))
 end subroutine len_test
 
@@ -237,7 +237,7 @@ subroutine array_ctor_implied_do_index(x, j)
   character(10) :: c
   !CHECK: PRINT *, size([INTEGER(4)::(x(1_8:i:1_8),INTEGER(8)::i=1_8,2_8,1_8)])
   print *, size([(x(1:i), integer(8)::i=1,2)])
-  !CHECK: PRINT *, int(2_8*max((j-1_8+1_8)/1_8,0_8),kind=4)
+  !CHECK: PRINT *, __builtin_int(2_8*max((j-1_8+1_8)/1_8,0_8),kind=4)
   print *, size([(x(1:j), integer(8)::i=1,2)])
   !CHECK: PRINT *, len([(c(i:i),INTEGER(8)::i=1_8,4_8,1_8)])
   print *, len([(c(i:i), integer(8)::i = 1,4)])

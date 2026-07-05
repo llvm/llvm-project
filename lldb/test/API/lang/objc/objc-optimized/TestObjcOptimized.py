@@ -17,12 +17,12 @@ from lldbsuite.test import lldbutil
 # test failure: objc_optimized does not work for "-C clang -A i386"
 
 
+@skipUnlessDarwin
 class ObjcOptimizedTestCase(TestBase):
     myclass = "MyClass"
     mymethod = "description"
     method_spec = "-[%s %s]" % (myclass, mymethod)
 
-    @expectedFailureAll(remote=True)
     def test_break(self):
         """Test 'expr member' continues to work for optimized build."""
         self.build()

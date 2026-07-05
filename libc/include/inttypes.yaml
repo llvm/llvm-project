@@ -345,3 +345,19 @@ functions:
       - type: const char *__restrict
       - type: char * *__restrict
       - type: int
+  - name: wcstoimax
+    standards:
+      - stdc
+    return_type: intmax_t
+    arguments:
+      - type: const wchar_t *__restrict
+      - type: wchar_t * *__restrict
+      - type: int
+  - name: wcstoumax
+    standards:
+      - stdc
+    return_type: uintmax_t
+    arguments:
+      - type: const wchar_t *__restrict
+      - type: wchar_t * *__restrict
+      - type: int

@@ -3,7 +3,9 @@
 // RUN: %clang     --help 2>&1 | %{filecheck}=HELP
 // RUN: %clang_cc1 --help 2>&1 | %{filecheck}=HELP
 
-// HELP:       --ssaf-extract-summaries=<summary-names>
+// HELP:       --ssaf-compilation-unit-id=<id>
+// HELP-NEXT:    Stable identifier used as the CompilationUnit namespace name of every produced SSAF TU summary. Required when '--ssaf-tu-summary-file=' is set.
+// HELP-NEXT:  --ssaf-extract-summaries=<summary-names>
 // HELP-NEXT:    Comma-separated list of summary names to extract
 // HELP-NEXT:  --ssaf-list-extractors  Display the list of available SSAF summary extractors
 // HELP-NEXT:  --ssaf-list-formats     Display the list of available SSAF serialization formats

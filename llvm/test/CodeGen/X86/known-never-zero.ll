@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=X64
 
 ;; Use cttz to test if we properly prove never-zero. There is a very
-;; simple transform from cttz -> cttz_zero_undef if its operand is
+;; simple transform from cttz -> cttz_zero_poison if its operand is
 ;; known never zero.
 
 define i32 @or_known_nonzero(i32 %x) {
@@ -1613,9 +1613,7 @@ define i32 @udiv_known_nonzero_vec(<4 x i32> %xx, <4 x i32> %y, ptr %p) nounwind
 ; X86-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
 ; X86-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm0[0]
 ; X86-NEXT:    movdqa %xmm2, (%esi)
-; X86-NEXT:    bsfl %ecx, %ecx
-; X86-NEXT:    movl $32, %eax
-; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    rep bsfl %ecx, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
@@ -1645,9 +1643,8 @@ define i32 @udiv_known_nonzero_vec(<4 x i32> %xx, <4 x i32> %y, ptr %p) nounwind
 ; X64-NEXT:    divl %ecx
 ; X64-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rdi)
-; X64-NEXT:    vmovd %xmm0, %ecx
-; X64-NEXT:    movl $32, %eax
-; X64-NEXT:    rep bsfl %ecx, %eax
+; X64-NEXT:    vmovd %xmm0, %eax
+; X64-NEXT:    rep bsfl %eax, %eax
 ; X64-NEXT:    retq
   %x = or <4 x i32> %xx, <i32 64, i32 -1, i32 0, i32 0>
   %z = udiv exact <4 x i32> %x, %y
@@ -1743,9 +1740,7 @@ define i32 @sdiv_known_nonzero_vec(<4 x i32> %xx, <4 x i32> %y, ptr %p) nounwind
 ; X86-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
 ; X86-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm0[0]
 ; X86-NEXT:    movdqa %xmm2, (%esi)
-; X86-NEXT:    bsfl %ecx, %ecx
-; X86-NEXT:    movl $32, %eax
-; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    rep bsfl %ecx, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
@@ -1775,9 +1770,8 @@ define i32 @sdiv_known_nonzero_vec(<4 x i32> %xx, <4 x i32> %y, ptr %p) nounwind
 ; X64-NEXT:    idivl %ecx
 ; X64-NEXT:    vpinsrd $3, %eax, %xmm2, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rdi)
-; X64-NEXT:    vmovd %xmm0, %ecx
-; X64-NEXT:    movl $32, %eax
-; X64-NEXT:    rep bsfl %ecx, %eax
+; X64-NEXT:    vmovd %xmm0, %eax
+; X64-NEXT:    rep bsfl %eax, %eax
 ; X64-NEXT:    retq
   %x = or <4 x i32> %xx, <i32 64, i32 -1, i32 0, i32 0>
   %z = sdiv exact <4 x i32> %x, %y
@@ -2867,3 +2861,149 @@ define i32 @test_sext_demanded_elts(<4 x i32> %a0, ptr %p) {
   ret i32 %res
 }
 
+; AND is one of fallback case for isKnownNeverZero
+define i32 @and_known_nonzero(i32 %x, i32 %y) {
+; X86-LABEL: and_known_nonzero:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    orl $1, %ecx
+; X86-NEXT:    orl $1, %eax
+; X86-NEXT:    andl %ecx, %eax
+; X86-NEXT:    rep bsfl %eax, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: and_known_nonzero:
+; X64:       # %bb.0:
+; X64-NEXT:    orl $1, %edi
+; X64-NEXT:    orl $1, %esi
+; X64-NEXT:    andl %edi, %esi
+; X64-NEXT:    rep bsfl %esi, %eax
+; X64-NEXT:    retq
+  %xx = or i32 %x, 1
+  %yy = or i32 %y, 1
+  %z = and i32 %xx, %yy
+  %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
+  ret i32 %r
+}
+
+define i32 @and_known_nonzero_vec(<4 x i32> %x, <4 x i32> %y, ptr %p) {
+; X86-LABEL: and_known_nonzero_vec:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movd {{.*#+}} xmm2 = [1,0,0,0]
+; X86-NEXT:    por %xmm2, %xmm0
+; X86-NEXT:    por %xmm2, %xmm1
+; X86-NEXT:    pand %xmm0, %xmm1
+; X86-NEXT:    movdqa %xmm1, (%eax)
+; X86-NEXT:    movd %xmm1, %eax
+; X86-NEXT:    rep bsfl %eax, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: and_known_nonzero_vec:
+; X64:       # %bb.0:
+; X64-NEXT:    vpmovsxbq {{.*#+}} xmm2 = [1,0]
+; X64-NEXT:    vpor %xmm2, %xmm0, %xmm0
+; X64-NEXT:    vpor %xmm2, %xmm1, %xmm1
+; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vmovdqa %xmm0, (%rdi)
+; X64-NEXT:    vmovd %xmm0, %eax
+; X64-NEXT:    rep bsfl %eax, %eax
+; X64-NEXT:    retq
+  %xx = or <4 x i32> %x, <i32 1, i32 0, i32 0, i32 0>
+  %yy = or <4 x i32> %y, <i32 1, i32 0, i32 0, i32 0>
+  %z = and <4 x i32> %xx, %yy
+  store <4 x i32> %z, ptr %p
+  %e = extractelement <4 x i32> %z, i32 0
+  %r = call i32 @llvm.cttz.i32(i32 %e, i1 false)
+  ret i32 %r
+}
+
+define i32 @and_maybe_zero(i32 %x, i32 %y) {
+; X86-LABEL: and_maybe_zero:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    bsfl %eax, %ecx
+; X86-NEXT:    movl $32, %eax
+; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: and_maybe_zero:
+; X64:       # %bb.0:
+; X64-NEXT:    andl %esi, %edi
+; X64-NEXT:    movl $32, %eax
+; X64-NEXT:    rep bsfl %edi, %eax
+; X64-NEXT:    retq
+  %z = and i32 %x, %y
+  %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
+  ret i32 %r
+}
+
+; XOR as fallback case for isKnownNeverZero
+define i32 @xor_known_nonzero(i32 %x) {
+; X86-LABEL: xor_known_nonzero:
+; X86:       # %bb.0:
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: xor_known_nonzero:
+; X64:       # %bb.0:
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    retq
+  %xx = and i32 %x, 0
+  %z = xor i32 %xx, 1
+  %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
+  ret i32 %r
+}
+
+define i32 @xor_known_nonzero_vec(<4 x i32> %x, <4 x i32> %y, ptr %p) {
+; X86-LABEL: xor_known_nonzero_vec:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-NEXT:    pxor %xmm0, %xmm1
+; X86-NEXT:    movdqa %xmm1, (%eax)
+; X86-NEXT:    movd %xmm1, %eax
+; X86-NEXT:    rep bsfl %eax, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: xor_known_nonzero_vec:
+; X64:       # %bb.0:
+; X64-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; X64-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vmovdqa %xmm0, (%rdi)
+; X64-NEXT:    vmovd %xmm0, %eax
+; X64-NEXT:    rep bsfl %eax, %eax
+; X64-NEXT:    retq
+  %xx = and <4 x i32> %x, <i32 0, i32 1, i32 1, i32 1>
+  %yy = or <4 x i32> %y, <i32 1, i32 0, i32 0, i32 0>
+  %z = xor <4 x i32> %xx, %yy
+  store <4 x i32> %z, ptr %p
+  %e = extractelement <4 x i32> %z, i32 0
+  %r = call i32 @llvm.cttz.i32(i32 %e, i1 false)
+  ret i32 %r
+}
+
+define i32 @xor_maybe_zero(i32 %x, i32 %y) {
+; X86-LABEL: xor_maybe_zero:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    xorl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    bsfl %eax, %ecx
+; X86-NEXT:    movl $32, %eax
+; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: xor_maybe_zero:
+; X64:       # %bb.0:
+; X64-NEXT:    xorl %esi, %edi
+; X64-NEXT:    movl $32, %eax
+; X64-NEXT:    rep bsfl %edi, %eax
+; X64-NEXT:    retq
+  %z = xor i32 %x, %y
+  %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
+  ret i32 %r
+}

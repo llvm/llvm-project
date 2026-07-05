@@ -164,11 +164,10 @@ define i32 @extract_last_active_v8i32(<8 x i32> %a, <8 x i1> %c) {
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    psubusw %xmm0, %xmm1
 ; CHECK-NEXT:    paddw %xmm0, %xmm1
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
-; CHECK-NEXT:    psrld $16, %xmm0
-; CHECK-NEXT:    psubusw %xmm1, %xmm0
-; CHECK-NEXT:    paddw %xmm1, %xmm0
-; CHECK-NEXT:    movd %xmm0, %ecx
+; CHECK-NEXT:    pextrw $1, %xmm1, %ecx
+; CHECK-NEXT:    movd %xmm1, %edx
+; CHECK-NEXT:    cmpw %cx, %dx
+; CHECK-NEXT:    cmoval %edx, %ecx
 ; CHECK-NEXT:    andl $7, %ecx
 ; CHECK-NEXT:    orl -40(%rsp,%rcx,4), %eax
 ; CHECK-NEXT:    retq
@@ -231,8 +230,8 @@ define i32 @extract_last_active_v4i32_penryn(<4 x i32> %a, <4 x i1> %c) "target-
 ; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
-; CHECK-NEXT:    pmaxud %xmm1, %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; CHECK-NEXT:    pmaxud %xmm0, %xmm1
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
 ; CHECK-NEXT:    pmaxud %xmm0, %xmm1
 ; CHECK-NEXT:    movd %xmm1, %eax
 ; CHECK-NEXT:    andl $3, %eax

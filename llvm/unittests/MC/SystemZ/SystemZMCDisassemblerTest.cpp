@@ -46,7 +46,7 @@ struct Context {
     MRI.reset(TheTarget->createMCRegInfo(TT));
     MAI.reset(TheTarget->createMCAsmInfo(*MRI, TT, MCOptions));
     STI.reset(TheTarget->createMCSubtargetInfo(TT, "", ""));
-    Ctx = std::make_unique<MCContext>(TT, *MAI, MRI.get(), STI.get());
+    Ctx = std::make_unique<MCContext>(TT, *MAI, *MRI, *STI);
 
     DisAsm.reset(TheTarget->createMCDisassembler(*STI, *Ctx));
   }

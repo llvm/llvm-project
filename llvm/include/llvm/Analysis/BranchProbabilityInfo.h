@@ -213,15 +213,13 @@ public:
 
 /// Printer pass for the \c BranchProbabilityAnalysis results.
 class BranchProbabilityPrinterPass
-    : public PassInfoMixin<BranchProbabilityPrinterPass> {
+    : public RequiredPassInfoMixin<BranchProbabilityPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit BranchProbabilityPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 /// Legacy analysis pass which computes \c BranchProbabilityInfo.

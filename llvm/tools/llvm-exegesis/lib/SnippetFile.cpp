@@ -108,7 +108,7 @@ public:
       }
       MemVal.Value = APInt(HexValue.size() * 4, HexValue, 16);
       MemVal.Index = Result->Key.MemoryValues.size();
-      Result->Key.MemoryValues[Parts[0].trim().str()] = MemVal;
+      Result->Key.MemoryValues[Parts[0].trim()] = MemVal;
       return;
     }
     if (CommentText.consume_front("MEM-MAP")) {
@@ -139,7 +139,7 @@ public:
 
       // validate that the annotation refers to an already existing memory
       // definition
-      auto MemValIT = Result->Key.MemoryValues.find(Parts[0].trim().str());
+      auto MemValIT = Result->Key.MemoryValues.find(Parts[0].trim());
       if (MemValIT == Result->Key.MemoryValues.end()) {
         errs() << "invalid comment 'LLVM-EXEGESIS-MEM-MAP " << CommentText
                << "', expected <VALUE NAME> to contain the name of an already "
@@ -257,7 +257,7 @@ Expected<std::vector<BenchmarkCode>> readSnippets(const LLVMState &State,
   const std::unique_ptr<MCInstPrinter> InstPrinter(
       TM.getTarget().createMCInstPrinter(
           TM.getTargetTriple(), TM.getMCAsmInfo().getAssemblerDialect(),
-          TM.getMCAsmInfo(), *TM.getMCInstrInfo(), *TM.getMCRegisterInfo()));
+          TM.getMCAsmInfo(), *TM.getMCInstrInfo(), TM.getMCRegisterInfo()));
   // The following call will take care of calling Streamer.setTargetStreamer.
   TM.getTarget().createAsmTargetStreamer(Streamer, InstPrinterOStream,
                                          InstPrinter.get());
@@ -271,7 +271,7 @@ Expected<std::vector<BenchmarkCode>> readSnippets(const LLVMState &State,
   AsmParser->getLexer().setCommentConsumer(&Streamer);
 
   const std::unique_ptr<MCTargetAsmParser> TargetAsmParser(
-      TM.getTarget().createMCAsmParser(*TM.getMCSubtargetInfo(), *AsmParser,
+      TM.getTarget().createMCAsmParser(TM.getMCSubtargetInfo(), *AsmParser,
                                        *TM.getMCInstrInfo()));
 
   if (!TargetAsmParser)

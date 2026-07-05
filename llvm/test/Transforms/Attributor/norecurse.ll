@@ -310,7 +310,7 @@ f:
 ; TUNIT: attributes #[[ATTR2]] = { nosync memory(none) }
 ; TUNIT: attributes #[[ATTR3:[0-9]+]] = { memory(none) }
 ; TUNIT: attributes #[[ATTR4]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
-; TUNIT: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+; TUNIT: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; TUNIT: attributes #[[ATTR6]] = { norecurse nosync memory(none) }
 ; TUNIT: attributes #[[ATTR7]] = { null_pointer_is_valid }
 ; TUNIT: attributes #[[ATTR8]] = { norecurse }
@@ -322,7 +322,7 @@ f:
 ; CGSCC: attributes #[[ATTR2]] = { nosync memory(none) }
 ; CGSCC: attributes #[[ATTR3:[0-9]+]] = { memory(none) }
 ; CGSCC: attributes #[[ATTR4]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
-; CGSCC: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+; CGSCC: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR6]] = { norecurse nosync memory(none) }
 ; CGSCC: attributes #[[ATTR7]] = { null_pointer_is_valid }
 ; CGSCC: attributes #[[ATTR8]] = { norecurse }

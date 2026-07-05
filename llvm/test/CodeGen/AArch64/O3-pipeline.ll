@@ -84,6 +84,9 @@
 ; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:       Function Alias Analysis Results
 ; CHECK-NEXT:       AArch64 Stack Tagging
+; CHECK-NEXT:       Natural Loop Information
+; CHECK-NEXT:       Loop Pass Manager
+; CHECK-NEXT:         SVE Shuffle Optimizations
 ; CHECK-NEXT:       Complex Deinterleaving Pass
 ; CHECK-NEXT:       Function Alias Analysis Results
 ; CHECK-NEXT:       Memory SSA
@@ -237,6 +240,7 @@
 ; CHECK-NEXT:       Machine Copy Propagation Pass
 ; CHECK-NEXT:       AArch64 Redundant Conditional Branch Elimination
 ; CHECK-NEXT:       Workaround A53 erratum 835769 pass
+; CHECK-NEXT:       AArch64 Code Layout Optimization
 ; CHECK-NEXT:       Contiguously Lay Out Funclets
 ; CHECK-NEXT:       Remove Loads Into Fake Uses
 ; CHECK-NEXT:       StackMap Liveness Analysis

@@ -719,7 +719,8 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   QualType elementType;
   mlir::Value numElements = emitArrayLength(arrayType, elementType, arrayBegin);
   emitCXXAggrConstructorCall(ctor, numElements, arrayBegin, e,
-                             newPointerIsChecked, zeroInitialize);
+                             newPointerIsChecked, zeroInitialize,
+                             /*endOfInit=*/Address::invalid());
 }
 
 /// Emit a loop to call a particular constructor for each of several members
@@ -731,9 +732,16 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
 /// \param arrayBase a T*, where T is the type constructed by ctor
 /// \param zeroInitialize true if each element should be
 ///   zero-initialized before it is constructed
+/// \param endOfInit if valid, an alloca holding the upper bound of an
+///   already-pushed irregular partial-array EH cleanup. When valid, the
+///   loop body will update this slot before each constructor call so the
+///   caller's cleanup covers loop-constructed elements, and no
+///   partial-destruction region is attached to the resulting
+///   cir::ArrayCtor op.
 void CIRGenFunction::emitCXXAggrConstructorCall(
     const CXXConstructorDecl *ctor, mlir::Value numElements, Address arrayBase,
-    const CXXConstructExpr *e, bool newPointerIsChecked, bool zeroInitialize) {
+    const CXXConstructExpr *e, bool newPointerIsChecked, bool zeroInitialize,
+    Address endOfInit) {
   // It's legal for numElements to be zero.  This can happen both
   // dynamically, because x can be zero in 'new A[x]', and statically,
   // because of GCC extensions that permit zero-length arrays.  There
@@ -788,13 +796,23 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   {
     RunCleanupsScope scope(*this);
 
+    // When the caller has already pushed an irregular partial-array cleanup
+    // (signalled by a valid endOfInit), our loop body will keep that cleanup's
+    // upper bound up to date, so we don't need a separate per-element
+    // partial-destruction region on the cir::ArrayCtor op.
     bool needsPartialArrayCleanup =
-        getLangOpts().Exceptions && !ctor->getParent()->hasTrivialDestructor();
+        getLangOpts().Exceptions &&
+        !ctor->getParent()->hasTrivialDestructor() && !endOfInit.isValid();
 
     auto emitCtorBody = [&](mlir::OpBuilder &b, mlir::Location l) {
       mlir::BlockArgument arg =
           b.getInsertionBlock()->addArgument(ptrToElmType, l);
       Address curAddr = Address(arg, elementType, eltAlignment);
+      // Extend the caller's irregular partial-array cleanup to cover the
+      // element we're about to construct. If this constructor throws, the
+      // cleanup will destroy every element strictly below this one.
+      if (endOfInit.isValid())
+        builder.createStore(l, arg, endOfInit);
       assert(!cir::MissingFeatures::sanitizers());
       if (zeroInitialize)
         emitNullInitialization(l, curAddr, type);
@@ -909,6 +927,15 @@ void CIRGenFunction::emitForwardingCallToLambda(
       callOperator->getType()->castAs<FunctionProtoType>();
   QualType resultType = fpt->getReturnType();
   ReturnValueSlot returnSlot;
+  // This should also be tracking volatile, unused, and externally destructed.
+  assert(!cir::MissingFeatures::returnValueSlotFeatures());
+  // For aggregate returns, write the callee's result directly into the
+  // static invoker's return slot.  Otherwise emitReturnOfRValue below would
+  // aggregate-copy a temporary into returnValue, which is incorrect for
+  // types without a trivial copy/move (e.g. std::string) -- and trips an
+  // assertion in emitAggregateCopy.
+  if (!resultType->isVoidType() && hasAggregateEvaluationKind(resultType))
+    returnSlot = ReturnValueSlot(returnValue);
 
   // We don't need to separately arrange the call arguments because
   // the call can't be variadic anyway --- it's impossible to forward
@@ -919,9 +946,10 @@ void CIRGenFunction::emitForwardingCallToLambda(
       CIRGenCallee::forDirect(calleePtr, GlobalDecl(callOperator));
   RValue rv = emitCall(calleeFnInfo, callee, returnSlot, callArgs);
 
-  // If necessary, copy the returned value into the slot.
-  if (!resultType->isVoidType() && returnSlot.isNull()) {
-    if (getLangOpts().ObjCAutoRefCount && resultType->isObjCRetainableType())
+  // Forward the returned value through the function's return slot.
+  if (!resultType->isVoidType()) {
+    if (returnSlot.isNull() && getLangOpts().ObjCAutoRefCount &&
+        resultType->isObjCRetainableType())
       cgm.errorNYI(callOperator->getSourceRange(),
                    "emitForwardingCallToLambda: ObjCAutoRefCount");
     emitReturnOfRValue(*currSrcLoc, rv, resultType);

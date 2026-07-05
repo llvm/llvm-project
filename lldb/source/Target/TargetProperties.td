@@ -263,7 +263,6 @@ let Definition = "process", Path = "target.process" in {
     DefaultFalse,
     Desc<"If true, stop when a shared library is loaded or unloaded.">;
   def DisableLangRuntimeUnwindPlans: Property<"disable-language-runtime-unwindplans", "Boolean">,
-    Global,
     DefaultFalse,
     Desc<"If true, language runtime augmented/overridden backtraces will not be used when printing a stack trace.">;
   def DetachKeepsStopped: Property<"detach-keeps-stopped", "Boolean">,
@@ -283,6 +282,14 @@ let Definition = "process", Path = "target.process" in {
     Global,
     DefaultTrue,
     Desc<"If true, stop when the inferior exec's.">;
+  def StopOnFork: Property<"stop-on-fork", "Boolean">,
+    Global,
+    DefaultFalse,
+    Desc<"If true, stop when the inferior forks. The stop location depends on target.process.follow-fork-mode: 'child' stops in the child process, while 'parent' stops in the original process.">;
+  def StopOnVFork: Property<"stop-on-vfork", "Boolean">,
+    Global,
+    DefaultFalse,
+    Desc<"If true, stop when the inferior vforks. The stop location depends on target.process.follow-fork-mode: 'child' stops in the child process, while 'parent' stops in the original process.">;
   def UtilityExpressionTimeout: Property<"utility-expression-timeout", "UInt64">,
 #ifdef LLDB_SANITIZED
     DefaultUnsignedValue<60>,

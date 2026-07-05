@@ -45,7 +45,8 @@ RUN regsvr32 /S "C:\BuildTools\DIA SDK\bin\amd64\msdia140.dll" & \
 RUN choco install -y ninja --version 1.13.1 && \
     choco install -y git --version 2.50.1 && \
     choco install -y sccache --version 0.10.0 && \
-    choco install -y python3 --version 3.12.3
+    choco install -y python3 --version 3.12.3 && \
+    choco install -y make --version 4.4.1
 
 # Testing requires psutil
 RUN pip install psutil
@@ -92,7 +93,7 @@ RUN powershell -Command \
     New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" \
     -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force
 
-ARG RUNNER_VERSION=2.334.0
+ARG RUNNER_VERSION=2.335.0
 ENV RUNNER_VERSION=$RUNNER_VERSION
 
 RUN powershell -Command \

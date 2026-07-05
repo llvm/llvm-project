@@ -5448,7 +5448,7 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
   // Map the 32bit to 64bit opcodes for instructions that are not signed or zero
   // extended themselves, but may have operands who's destination registers of
   // signed or zero extended instructions.
-  std::unordered_map<unsigned, unsigned> OpcodeMap = {
+  DenseMap<unsigned, unsigned> OpcodeMap = {
       {PPC::OR, PPC::OR8},     {PPC::ISEL, PPC::ISEL8},
       {PPC::ORI, PPC::ORI8},   {PPC::XORI, PPC::XORI8},
       {PPC::ORIS, PPC::ORIS8}, {PPC::XORIS, PPC::XORIS8},
@@ -5921,7 +5921,6 @@ bool PPCInstrInfo::expandAMOCSNEPseudo(MachineInstr &MI) const {
 
   BuildMI(MBB, MI, DL, get(IsLDAT ? PPC::LDAT_CSNE : PPC::LWAT_CSNE), PPC::X8)
       .addReg(ScratchReg)
-      .addImm(16)
       .addReg(PPC::X9, RegState::Implicit)
       .addReg(PPC::X10, RegState::Implicit);
 

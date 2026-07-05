@@ -1273,10 +1273,12 @@ TEST(MetadataTest, InlinedAtMethodsWithMultipleLevels) {
     !2 = !{i32 2, !"Debug Info Version", i32 3}
 
     ; Subprograms for each function in the call chain
-    !10 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 100, unit: !0)
-    !11 = distinct !DISubprogram(name: "inline1", scope: !1, file: !1, line: 200, unit: !0)
-    !12 = distinct !DISubprogram(name: "inline2", scope: !1, file: !1, line: 300, unit: !0)
-    !13 = distinct !DISubprogram(name: "inline3", scope: !1, file: !1, line: 400, unit: !0)
+    !10 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 100, type: !14, unit: !0)
+    !11 = distinct !DISubprogram(name: "inline1", scope: !1, file: !1, line: 200, type: !14, unit: !0)
+    !12 = distinct !DISubprogram(name: "inline2", scope: !1, file: !1, line: 300, type: !14, unit: !0)
+    !13 = distinct !DISubprogram(name: "inline3", scope: !1, file: !1, line: 400, type: !14, unit: !0)
+    !14 = !DISubroutineType(types: !15)
+    !15 = !{null}
 
     ; Location in inline3 (line 401), inlined at location !21
     !20 = !DILocation(line: 401, column: 5, scope: !13, inlinedAt: !21)
@@ -1416,6 +1418,68 @@ TEST(DIBuilder, CompositeTypes) {
   DICompositeType *Enum = DIB.createEnumerationType(
       CU, "MyEnum", F, 0, 8, 8, {}, nullptr, 0, "EnumUniqueIdentifier");
   EXPECT_EQ(Enum->getTag(), dwarf::DW_TAG_enumeration_type);
+}
+
+TEST(DIBuilder, CompositeTypeAnnotations) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = std::make_unique<Module>("MyModule", Ctx);
+  DIBuilder DIB(*M);
+
+  DIFile *F = DIB.createFile("main.c", "/");
+  DICompileUnit *CU = DIB.createCompileUnit(
+      DISourceLanguageName(dwarf::DW_LANG_C), F, "Test", false, "", 0);
+
+  auto MakeAnnotations = [&](StringRef Tag, StringRef Value) {
+    Metadata *Ops[2] = {MDString::get(Ctx, Tag), MDString::get(Ctx, Value)};
+    SmallVector<Metadata *, 1> Nodes;
+    Nodes.push_back(MDNode::get(Ctx, Ops));
+    return DIB.getOrCreateArray(Nodes);
+  };
+
+  DINodeArray ClassAnnotations = MakeAnnotations("class_tag", "class_value");
+  DICompositeType *Class = DIB.createClassType(
+      CU, "MyClass", F, 0, 8, 8, 0, {}, nullptr, {}, 0, nullptr, nullptr,
+      "ClassUniqueIdentifier", ClassAnnotations);
+  EXPECT_EQ(Class->getAnnotations().get(), ClassAnnotations.get());
+
+  DINodeArray StructAnnotations = MakeAnnotations("struct_tag", "struct_value");
+  DICompositeType *Struct = DIB.createStructType(
+      CU, "MyStruct", F, 0, 8, 8, {}, {}, {}, 0, {}, "StructUniqueIdentifier",
+      nullptr, 0, StructAnnotations);
+  EXPECT_EQ(Struct->getAnnotations().get(), StructAnnotations.get());
+
+  DINodeArray DynStructAnnotations =
+      MakeAnnotations("dyn_struct_tag", "dyn_struct_value");
+  DIScope *SPScope = DISubprogram::getDistinct(
+      Ctx, nullptr, "", "", nullptr, 0, nullptr, 0, nullptr, 0, 0,
+      DINode::FlagZero, DISubprogram::SPFlagZero, nullptr);
+  DIVariable *Len = DIB.createAutoVariable(SPScope, "length", F, 0, nullptr,
+                                           false, DINode::FlagZero, 0);
+  DICompositeType *DynStruct = DIB.createStructType(
+      CU, "MyDynStruct", F, 0, Len, 8, DINode::FlagZero, nullptr, {}, 0,
+      nullptr, "DynStructUniqueIdentifier", nullptr, 0, DynStructAnnotations);
+  EXPECT_EQ(DynStruct->getAnnotations().get(), DynStructAnnotations.get());
+
+  DINodeArray UnionAnnotations = MakeAnnotations("union_tag", "union_value");
+  DICompositeType *Union =
+      DIB.createUnionType(CU, "MyUnion", F, 0, 8, 8, {}, {}, 0,
+                          "UnionUniqueIdentifier", UnionAnnotations);
+  EXPECT_EQ(Union->getAnnotations().get(), UnionAnnotations.get());
+
+  DICompositeType *NoAnnotClass =
+      DIB.createClassType(CU, "NoAnnotClass", F, 0, 8, 8, 0, {}, nullptr, {}, 0,
+                          nullptr, nullptr, "NoAnnotClassUniqueIdentifier");
+  EXPECT_EQ(NoAnnotClass->getAnnotations().get(), nullptr);
+
+  DICompositeType *NoAnnotStruct =
+      DIB.createStructType(CU, "NoAnnotStruct", F, 0, 8, 8, {}, {}, {}, 0, {},
+                           "NoAnnotStructUniqueIdentifier");
+  EXPECT_EQ(NoAnnotStruct->getAnnotations().get(), nullptr);
+
+  DICompositeType *NoAnnotUnion =
+      DIB.createUnionType(CU, "NoAnnotUnion", F, 0, 8, 8, {}, {}, 0,
+                          "NoAnnotUnionUniqueIdentifier");
+  EXPECT_EQ(NoAnnotUnion->getAnnotations().get(), nullptr);
 }
 
 TEST(DIBuilder, DynamicOffsetAndSize) {

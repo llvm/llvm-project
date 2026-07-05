@@ -245,6 +245,14 @@ func.func @fat_raw_buffer_cast_stripping_offset_affine_map(%m: memref<8xi32, aff
 
 // -----
 
+func.func @raw_buffer_load_wrong_num_indices(%src: memref<4x4xf32>, %idx: i32) -> f32 {
+  // expected-error@+1 {{'amdgpu.raw_buffer_load' op expected 2 buffer indices, got 1}}
+  %0 = amdgpu.raw_buffer_load %src[%idx] : memref<4x4xf32>, i32 -> f32
+  func.return %0 : f32
+}
+
+// -----
+
 func.func @swizzle_invalid_type(%arg0 : si32) -> si32 {
   // expected-error@+1 {{'amdgpu.swizzle_bitmode' op operand #0 must be Integer or Float or fixed-length vector of Integer or Float values of ranks 1}}
   %0 = amdgpu.swizzle_bitmode %arg0 1 2 4 : si32
@@ -286,7 +294,7 @@ func.func @transpose_load_elem_f32(%idx1 : index, %idx2 : index, %mem : memref<1
 // -----
 
 func.func @transpose_load_vector_size_f16(%idx1 : index, %idx2 : index, %mem : memref<128x32xf16, 3>) -> vector<2xf16> {
-  // expected-error@+1 {{'amdgpu.transpose_load' op Transferring type size mismatch: expected num of elements: 4}}
+  // expected-error@+1 {{'amdgpu.transpose_load' op Transferring type size mismatch: expected num of elements: 4 or 8}}
   %0 = amdgpu.transpose_load %mem[%idx1, %idx2] : memref<128x32xf16, 3> -> vector<2xf16>
   func.return %0 : vector<2xf16>
 }
@@ -317,6 +325,52 @@ func.func @transpose_load_vector_size_i8(%idx1 : index, %idx2 : index, %mem : me
 
 // -----
 
+func.func @transpose_load_wrong_num_indices(%idx : index, %mem : memref<128x32xf16, #gpu.address_space<workgroup>>) -> vector<4xf16> {
+  // expected-error@+1 {{'amdgpu.transpose_load' op expected 2 source indices, got 1}}
+  %0 = amdgpu.transpose_load %mem[%idx] : memref<128x32xf16, #gpu.address_space<workgroup>> -> vector<4xf16>
+  func.return %0 : vector<4xf16>
+}
+
+// -----
+
+func.func @global_transpose_load_wrong_addrspace(%i : index, %j : index,
+    %src : memref<128x256xf16, 3>) -> vector<8xf16> {
+  // expected-error@+1 {{'amdgpu.global_transpose_load' op source memory address space must be Global}}
+  %0 = amdgpu.global_transpose_load %src[%i, %j]
+         : memref<128x256xf16, 3> -> vector<8xf16>
+  func.return %0 : vector<8xf16>
+}
+
+// -----
+
+func.func @global_transpose_load_flat_addrspace(%i : index, %j : index,
+    %src : memref<128x256xf16>) -> vector<8xf16> {
+  // expected-error@+1 {{'amdgpu.global_transpose_load' op source memory address space must be Global}}
+  %0 = amdgpu.global_transpose_load %src[%i, %j]
+         : memref<128x256xf16> -> vector<8xf16>
+  func.return %0 : vector<8xf16>
+}
+
+// -----
+
+func.func @global_transpose_load_integer_flat_addrspace(%i : index,
+    %j : index, %src : memref<128x256xf16, 0>) -> vector<8xf16> {
+  // expected-error@+1 {{'amdgpu.global_transpose_load' op source memory address space must be Global}}
+  %0 = amdgpu.global_transpose_load %src[%i, %j]
+         : memref<128x256xf16, 0> -> vector<8xf16>
+  func.return %0 : vector<8xf16>
+}
+
+// -----
+
+func.func @global_transpose_load_wrong_num_indices(%idx : index, %mem : memref<128x32xf16, #gpu.address_space<global>>) -> vector<8xf16> {
+  // expected-error@+1 {{'amdgpu.global_transpose_load' op expected 2 source indices, got 1}}
+  %0 = amdgpu.global_transpose_load %mem[%idx] : memref<128x32xf16, #gpu.address_space<global>> -> vector<8xf16>
+  func.return %0 : vector<8xf16>
+}
+
+// -----
+
 func.func @gather_to_lds_non_lds(%idx1 : index, %mem1 : memref<32xf16>, %mem2 : memref<32xf16>) {
   // expected-error@+1 {{'amdgpu.gather_to_lds' op destination memory address space must be Workgroup}}
   amdgpu.gather_to_lds %mem1[%idx1], %mem2[%idx1] : vector<2xf16>, memref<32xf16>, memref<32xf16>
@@ -328,6 +382,26 @@ func.func @gather_to_lds_non_lds(%idx1 : index, %mem1 : memref<32xf16>, %mem2 : 
 func.func @gather_to_lds_non_lds(%idx1 : index, %mem1 : memref<32xf16>, %mem2 : memref<32xf16, strided<[?]>, #gpu.address_space<workgroup>>) {
   // expected-error@+1 {{'amdgpu.gather_to_lds' op destination type inner most dim must be contiguous}}
   amdgpu.gather_to_lds %mem1[%idx1], %mem2[%idx1] : vector<2xf16>, memref<32xf16>, memref<32xf16, strided<[?]>, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
+func.func @gather_to_lds_wrong_num_indices(%idx : index,
+    %src : memref<32x32xf16, #gpu.address_space<global>>,
+    %dst : memref<32x32xf16, #gpu.address_space<workgroup>>) {
+  // expected-error@+1 {{'amdgpu.gather_to_lds' op expected 2 source indices, got 1}}
+  amdgpu.gather_to_lds %src[%idx], %dst[%idx, %idx] : vector<2xf16>, memref<32x32xf16, #gpu.address_space<global>>, memref<32x32xf16, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
+func.func @gather_to_lds_bad_integer_address_space(%idx : index,
+    %src : memref<32xf16, 8>,
+    %dst : memref<32xf16, #gpu.address_space<workgroup>>) {
+  // expected-error@+1 {{'amdgpu.gather_to_lds' op source memory address space must be global or fat raw buffer}}
+  amdgpu.gather_to_lds %src[%idx], %dst[%idx] : vector<2xf16>, memref<32xf16, 8>, memref<32xf16, #gpu.address_space<workgroup>>
   func.return
 }
 
@@ -363,6 +437,42 @@ func.func @global_load_async_to_lds_src_not_global(%idx1 : index,
   amdgpu.global_load_async_to_lds %mem1[%idx1], %mem2[%idx1]
     : f32, memref<32xf32, #gpu.address_space<workgroup>>,
       memref<32xf32, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
+func.func @global_load_async_to_lds_src_flat(%idx1 : index,
+    %mem1 : memref<32xf32>,
+    %mem2 : memref<32xf32, #gpu.address_space<workgroup>>) {
+  // expected-error@+1 {{'amdgpu.global_load_async_to_lds' op source memory address space must be global}}
+  amdgpu.global_load_async_to_lds %mem1[%idx1], %mem2[%idx1]
+    : f32, memref<32xf32>,
+      memref<32xf32, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
+func.func @global_load_async_to_lds_src_integer_flat(%idx1 : index,
+    %mem1 : memref<32xf32, 0>,
+    %mem2 : memref<32xf32, #gpu.address_space<workgroup>>) {
+  // expected-error@+1 {{'amdgpu.global_load_async_to_lds' op source memory address space must be global}}
+  amdgpu.global_load_async_to_lds %mem1[%idx1], %mem2[%idx1]
+    : f32, memref<32xf32, 0>,
+      memref<32xf32, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
+func.func @global_load_async_to_lds_wrong_num_indices(%idx : index,
+    %src : memref<32x32xf32, #gpu.address_space<global>>,
+    %dst : memref<32x32xf32, #gpu.address_space<workgroup>>) {
+  // expected-error@+1 {{'amdgpu.global_load_async_to_lds' op expected 2 destination indices, got 1}}
+  amdgpu.global_load_async_to_lds %src[%idx, %idx], %dst[%idx]
+    : f32, memref<32x32xf32, #gpu.address_space<global>>,
+      memref<32x32xf32, #gpu.address_space<workgroup>>
   func.return
 }
 
@@ -407,6 +517,26 @@ func.func @make_dma_base_invalid_addressspace(%idx: index, %smem : memref<8xi32,
 
 // -----
 
+func.func @make_dma_base_flat_global_addressspace(%idx: index,
+    %mem: memref<8xi32>,
+    %smem: memref<8xi32, #gpu.address_space<workgroup>>) {
+  // expected-error@+1 {{'amdgpu.make_dma_base' op global memref must have global address space attribute.}}
+  amdgpu.make_dma_base %mem[%idx], %smem[%idx] : memref<8xi32>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
+  return
+}
+
+// -----
+
+func.func @make_dma_base_integer_flat_global_addressspace(%idx: index,
+    %mem: memref<8xi32, 0>,
+    %smem: memref<8xi32, #gpu.address_space<workgroup>>) {
+  // expected-error@+1 {{'amdgpu.make_dma_base' op global memref must have global address space attribute.}}
+  amdgpu.make_dma_base %mem[%idx], %smem[%idx] : memref<8xi32, 0>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
+  return
+}
+
+// -----
+
 func.func @make_gather_dma_base_invalid_addressspace(%idx: index, %mem: memref<8xi32>) {
   // expected-error@+1 {{'amdgpu.make_gather_dma_base' op lds memref must have workgroup address space attribute.}}
   amdgpu.make_gather_dma_base %mem[%idx], %mem[%idx] : memref<8xi32>, memref<8xi32> -> !amdgpu.tdm_gather_base<i32, i16>
@@ -431,9 +561,76 @@ func.func @make_gather_dma_base_invalid_addressspace(%idx: index, %smem : memref
 
 // -----
 
+func.func @make_gather_dma_base_flat_global_addressspace(%idx: index,
+    %mem: memref<8xi32>,
+    %smem: memref<8xi32, #gpu.address_space<workgroup>>) {
+  // expected-error@+1 {{'amdgpu.make_gather_dma_base' op global memref must have global address space attribute.}}
+  amdgpu.make_gather_dma_base %mem[%idx], %smem[%idx] : memref<8xi32>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_gather_base<i32, i16>
+  return
+}
+
+// -----
+
+func.func @make_gather_dma_base_integer_flat_global_addressspace(%idx: index,
+    %mem: memref<8xi32, 0>,
+    %smem: memref<8xi32, #gpu.address_space<workgroup>>) {
+  // expected-error@+1 {{'amdgpu.make_gather_dma_base' op global memref must have global address space attribute.}}
+  amdgpu.make_gather_dma_base %mem[%idx], %smem[%idx] : memref<8xi32, 0>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_gather_base<i32, i16>
+  return
+}
+
+// -----
+
+func.func @make_dma_base_wrong_num_indices(%idx: index,
+    %global: memref<8x8xi32, #gpu.address_space<global>>,
+    %lds: memref<8x8xi32, #gpu.address_space<workgroup>>) {
+  // expected-error@+1 {{'amdgpu.make_dma_base' op expected 2 global indices, got 1}}
+  amdgpu.make_dma_base %global[%idx], %lds[%idx, %idx] : memref<8x8xi32, #gpu.address_space<global>>, memref<8x8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
+  return
+}
+
+// -----
+
+func.func @make_gather_dma_base_wrong_num_indices(%idx: index,
+    %global: memref<8x8xi32, #gpu.address_space<global>>,
+    %lds: memref<8x8xi32, #gpu.address_space<workgroup>>) {
+  // expected-error@+1 {{'amdgpu.make_gather_dma_base' op expected 2 lds indices, got 1}}
+  amdgpu.make_gather_dma_base %global[%idx, %idx], %lds[%idx] : memref<8x8xi32, #gpu.address_space<global>>, memref<8x8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_gather_base<i32, i16>
+  return
+}
+
+// -----
+
 func.func @make_dma_base_invalid_barrier(%base: !amdgpu.tdm_base<i32>, %barrier: memref<8x!amdgpu.ds_barrier_state>, %idx: index) {
   // expected-error@+1 {{'amdgpu.make_dma_descriptor' op atomic barrier address must be in LDS.}}
   amdgpu.make_dma_descriptor %base globalSize [64, 64] globalStride [64, 1] sharedSize [64, 64] atomicBarrier(%barrier[%idx] : memref<8x!amdgpu.ds_barrier_state>) : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+  return
+}
+
+// -----
+
+func.func @make_dma_descriptor_barrier_wrong_num_indices(%base: !amdgpu.tdm_base<i32>,
+    %barrier: memref<8x8x!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>,
+    %idx: index) {
+  // expected-error@+1 {{'amdgpu.make_dma_descriptor' op expected 2 atomic barrier indices, got 1}}
+  amdgpu.make_dma_descriptor %base
+    globalSize [64, 64] globalStride [64, 1] sharedSize [64, 64]
+    atomicBarrier(%barrier[%idx] : memref<8x8x!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>)
+    : !amdgpu.tdm_base<i32> -> !amdgpu.tdm_descriptor
+  return
+}
+
+// -----
+
+func.func @make_dma_descriptor_barrier_indices_without_address(
+    %base: !amdgpu.tdm_base<i32>, %idx: index) {
+  // expected-error@+1 {{'amdgpu.make_dma_descriptor' op atomic barrier indices require an atomic barrier address}}
+  %0 = "amdgpu.make_dma_descriptor"(%base, %idx) <{
+    global_static_sizes = array<i64: 64, 64>,
+    global_static_strides = array<i64: 64, 1>,
+    operandSegmentSizes = array<i32: 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0>,
+    shared_static_sizes = array<i64: 64, 64>
+  }> : (!amdgpu.tdm_base<i32>, index) -> !amdgpu.tdm_descriptor
   return
 }
 
@@ -485,6 +682,35 @@ func.func @make_dma_descriptor_invalid_shared_and_global_rank(%base: !amdgpu.tdm
 func.func @make_gather_dma_descriptor_invalid_index_types(%base: !amdgpu.tdm_gather_base<i32, i16>, %indices: vector<8xi32>) {
   // expected-error@+1 {{'amdgpu.make_gather_dma_descriptor' op indices' element type must match base's element type.}}
   amdgpu.make_gather_dma_descriptor %base[%indices] globalSize [4, 4] globalStride [1, 1] sharedSize [1, 2] : !amdgpu.tdm_gather_base<i32, i16>, vector<8xi32> -> !amdgpu.tdm_descriptor
+  func.return
+}
+
+// -----
+
+func.func @make_gather_dma_descriptor_barrier_wrong_num_indices(%base: !amdgpu.tdm_gather_base<i32, i16>,
+    %indices: vector<8xi16>,
+    %barrier: memref<8x8x!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>,
+    %idx: index) {
+  // expected-error@+1 {{'amdgpu.make_gather_dma_descriptor' op expected 2 atomic barrier indices, got 1}}
+  amdgpu.make_gather_dma_descriptor %base[%indices]
+    globalSize [4, 4] globalStride [4, 1] sharedSize [1, 2]
+    atomicBarrier(%barrier[%idx] : memref<8x8x!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>)
+    : !amdgpu.tdm_gather_base<i32, i16>, vector<8xi16> -> !amdgpu.tdm_descriptor
+  func.return
+}
+
+// -----
+
+func.func @make_gather_dma_descriptor_barrier_indices_without_address(
+    %base: !amdgpu.tdm_gather_base<i32, i16>, %indices: vector<8xi16>,
+    %idx: index) {
+  // expected-error@+1 {{'amdgpu.make_gather_dma_descriptor' op atomic barrier indices require an atomic barrier address}}
+  %0 = "amdgpu.make_gather_dma_descriptor"(%base, %indices, %idx) <{
+    global_static_sizes = array<i64: 4, 4>,
+    global_static_strides = array<i64: 4, 1>,
+    operandSegmentSizes = array<i32: 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0>,
+    shared_static_sizes = array<i64: 1, 2>
+  }> : (!amdgpu.tdm_gather_base<i32, i16>, vector<8xi16>, index) -> !amdgpu.tdm_descriptor
   func.return
 }
 
@@ -610,6 +836,15 @@ func.func @ds_barrier_init_non_workgroup(%barrier: memref<!amdgpu.ds_barrier_sta
 
 // -----
 
+func.func @ds_barrier_init_wrong_num_indices(%barrier: memref<8x8x!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>,
+    %idx: index, %participants: i32) {
+  // expected-error@+1 {{'amdgpu.ds_barrier_init' op expected 2 barrier indices, got 1}}
+  amdgpu.ds_barrier_init %barrier[%idx], %participants : memref<8x8x!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>, i32
+  func.return
+}
+
+// -----
+
 func.func @ds_barrier_poll_state_non_workgroup(%barrier: memref<!amdgpu.ds_barrier_state, #gpu.address_space<global>>) -> !amdgpu.ds_barrier_state {
   // expected-error@+1 {{'amdgpu.ds_barrier_poll_state' op barrier must be in workgroup (LDS) memory}}
   %state = amdgpu.ds_barrier_poll_state %barrier[] : memref<!amdgpu.ds_barrier_state, #gpu.address_space<global>> -> !amdgpu.ds_barrier_state
@@ -618,9 +853,36 @@ func.func @ds_barrier_poll_state_non_workgroup(%barrier: memref<!amdgpu.ds_barri
 
 // -----
 
+func.func @ds_barrier_poll_state_wrong_num_indices(%barrier: memref<8x8x!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>,
+    %idx: index) -> !amdgpu.ds_barrier_state {
+  // expected-error@+1 {{'amdgpu.ds_barrier_poll_state' op expected 2 barrier indices, got 1}}
+  %state = amdgpu.ds_barrier_poll_state %barrier[%idx] : memref<8x8x!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>> -> !amdgpu.ds_barrier_state
+  func.return %state : !amdgpu.ds_barrier_state
+}
+
+// -----
+
+func.func @ds_async_barrier_arrive_wrong_num_indices(%barrier: memref<8x8x!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>,
+    %idx: index) {
+  // expected-error@+1 {{'amdgpu.ds_async_barrier_arrive' op expected 2 barrier indices, got 1}}
+  amdgpu.ds_async_barrier_arrive %barrier[%idx] : memref<8x8x!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
 func.func @ds_barrier_arrive_non_workgroup(%barrier: memref<!amdgpu.ds_barrier_state, #amdgpu.address_space<fat_raw_buffer>>, %count: i64) -> !amdgpu.ds_barrier_state {
   // expected-error@+1 {{'amdgpu.ds_barrier_arrive' op barrier must be in workgroup (LDS) memory}}
   %old_state = amdgpu.ds_barrier_arrive %barrier[], %count : memref<!amdgpu.ds_barrier_state, #amdgpu.address_space<fat_raw_buffer>>, i64 -> !amdgpu.ds_barrier_state
+  func.return %old_state : !amdgpu.ds_barrier_state
+}
+
+// -----
+
+func.func @ds_barrier_arrive_wrong_num_indices(%barrier: memref<8x8x!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>,
+    %idx: index, %count: i64) -> !amdgpu.ds_barrier_state {
+  // expected-error@+1 {{'amdgpu.ds_barrier_arrive' op expected 2 barrier indices, got 1}}
+  %old_state = amdgpu.ds_barrier_arrive %barrier[%idx], %count : memref<8x8x!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>, i64 -> !amdgpu.ds_barrier_state
   func.return %old_state : !amdgpu.ds_barrier_state
 }
 
@@ -768,7 +1030,7 @@ func.func @global_prefetch_wrong_num_indices(%src: memref<64x64xf16, #gpu.addres
 
 // GlobalPrefetchOp: number of indices must match source shape rank
 func.func @global_prefetch_wrong_num_indices(%src: memref<64x64xf16, #gpu.address_space<global>>, %i: i64) {
-  // expected-error@+1 {{'amdgpu.global_prefetch' op the number of indices must match the source shape size}}
+  // expected-error@+1 {{'amdgpu.global_prefetch' op expected 2 source indices, got 1}}
   amdgpu.global_prefetch %src[%i] RT DEV : memref<64x64xf16, #gpu.address_space<global>>
   func.return
 }

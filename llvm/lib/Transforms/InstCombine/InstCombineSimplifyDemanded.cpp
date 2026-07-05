@@ -357,9 +357,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
         SimplifyDemandedBits(I, 0, DemandedMask, LHSKnown, Q, Depth + 1))
       return I;
     Value *LHS, *RHS;
-    if (DemandedMask == 1 &&
-        match(I->getOperand(0), m_Intrinsic<Intrinsic::ctpop>(m_Value(LHS))) &&
-        match(I->getOperand(1), m_Intrinsic<Intrinsic::ctpop>(m_Value(RHS)))) {
+    if (DemandedMask == 1 && match(I->getOperand(0), m_Ctpop(m_Value(LHS))) &&
+        match(I->getOperand(1), m_Ctpop(m_Value(RHS)))) {
       // (ctpop(X) ^ ctpop(Y)) & 1 --> ctpop(X^Y) & 1
       IRBuilderBase::InsertPointGuard Guard(Builder);
       Builder.SetInsertPoint(I);
@@ -2000,10 +1999,15 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
         return nullptr;
       };
 
-      if (User *ShufBO = findShufBO(/* MatchShufAsOp0 */ true))
+      User *ShufBO = findShufBO(/* MatchShufAsOp0 */ true);
+      if (!ShufBO)
+        ShufBO = findShufBO(/* MatchShufAsOp0 */ false);
+      if (ShufBO) {
+        auto *ShufBOI = cast<Instruction>(ShufBO);
+        ShufBOI->andIRFlags(BO);
+        Worklist.add(ShufBOI);
         return ShufBO;
-      if (User *ShufBO = findShufBO(/* MatchShufAsOp0 */ false))
-        return ShufBO;
+      }
     }
 
     simplifyAndSetOp(I, 0, DemandedElts, PoisonElts);

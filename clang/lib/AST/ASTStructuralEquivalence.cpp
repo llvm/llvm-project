@@ -925,13 +925,24 @@ bool ASTStructuralEquivalence::isEquivalent(
       // type of the enumeration.
       //
       // Treat the enumeration as its underlying type and use the builtin type
-      // class comparison.
+      // class comparison. If the enumeration is invalid, e.g., it could be a
+      // forward declaration of an enumeration without a fixed underlying type,
+      // we'll default to 'int' for error recovery. If one type is an
+      // enumeration, the other must be an enumeration or integral, otherwise
+      // they're not structurally equivalent. e.g., it could be an enum in one
+      // struct and a union in another.
       if (T1->getTypeClass() == Type::Enum) {
+        if (!T2->isBuiltinType() && !T2->isEnumeralType())
+          return false;
         T1 = cast<EnumType>(T1)->getDecl()->getIntegerType();
-        assert(T2->isBuiltinType() && !T1.isNull()); // Sanity check
+        if (T1.isNull())
+          T1 = Context.FromCtx.IntTy;
       } else if (T2->getTypeClass() == Type::Enum) {
+        if (!T1->isBuiltinType() && !T1->isEnumeralType())
+          return false;
         T2 = cast<EnumType>(T2)->getDecl()->getIntegerType();
-        assert(T1->isBuiltinType() && !T2.isNull()); // Sanity check
+        if (T2.isNull())
+          T2 = Context.ToCtx.IntTy;
       }
       TC = Type::Builtin;
     } else

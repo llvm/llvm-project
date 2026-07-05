@@ -32,6 +32,16 @@ define float @test_fabs_f32(float %arg) {
   ret float %fabs
 }
 
+define float @test_fabs_f32_fastcc(float %arg) {
+; CHECK-LABEL: define float @test_fabs_f32_fastcc
+; CHECK-SAME: (float [[ARG:%.*]]) {
+; CHECK-NEXT:    [[FABS:%.*]] = tail call float @llvm.fabs.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[FABS]]
+;
+  %fabs = tail call fastcc float @_Z4fabsf(float %arg)
+  ret float %fabs
+}
+
 define <2 x float> @test_fabs_v2f32(<2 x float> %arg) {
 ; CHECK-LABEL: define <2 x float> @test_fabs_v2f32
 ; CHECK-SAME: (<2 x float> [[ARG:%.*]]) {
@@ -266,7 +276,7 @@ define <2 x float> @test_fabs_v2f32_preserve_flags(<2 x float> %arg) {
 define float @test_fabs_f32_preserve_flags_md(float %arg) {
 ; CHECK-LABEL: define float @test_fabs_f32_preserve_flags_md
 ; CHECK-SAME: (float [[ARG:%.*]]) {
-; CHECK-NEXT:    [[FABS:%.*]] = tail call nnan ninf float @llvm.fabs.f32(float [[ARG]]), !foo !0
+; CHECK-NEXT:    [[FABS:%.*]] = tail call nnan ninf float @llvm.fabs.f32(float [[ARG]]), !foo [[META0:![0-9]+]]
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
   %fabs = tail call nnan ninf float @_Z4fabsf(float %arg), !foo !0
@@ -276,7 +286,7 @@ define float @test_fabs_f32_preserve_flags_md(float %arg) {
 define <2 x float> @test_fabs_v2f32_preserve_flags_md(<2 x float> %arg) {
 ; CHECK-LABEL: define <2 x float> @test_fabs_v2f32_preserve_flags_md
 ; CHECK-SAME: (<2 x float> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[FABS:%.*]] = tail call nnan nsz contract <2 x float> @llvm.fabs.v2f32(<2 x float> [[ARG]]), !foo !0
+; CHECK-NEXT:    [[FABS:%.*]] = tail call nnan nsz contract <2 x float> @llvm.fabs.v2f32(<2 x float> [[ARG]]), !foo [[META0]]
 ; CHECK-NEXT:    ret <2 x float> [[FABS]]
 ;
   %fabs = tail call contract nsz nnan <2 x float> @_Z4fabsDv2_f(<2 x float> %arg), !foo !0

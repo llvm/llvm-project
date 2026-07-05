@@ -746,6 +746,10 @@ enum NodeType {
   /// is performed.
   ABS,
 
+  /// ABS with a poison result for INT_MIN. This corresponds to
+  /// llvm.abs(x, true) where the "int min is poison" flag is set.
+  ABS_MIN_POISON,
+
   /// Shift and rotation operations.  After legalization, the type of the
   /// shift amount is known to be TLI.getShiftAmountTy().  Before legalization
   /// the shift amount can be any type, but care must be taken to ensure it is
@@ -775,6 +779,10 @@ enum NodeType {
   CLMULR,
   CLMULH,
 
+  /// Parallel bit extract (compress) and parallel bit deposit (expand).
+  PEXT,
+  PDEP,
+
   /// Byte Swap and Counting operators.
   BSWAP,
   CTTZ,
@@ -783,9 +791,9 @@ enum NodeType {
   BITREVERSE,
   PARITY,
 
-  /// Bit counting operators with an undefined result for zero inputs.
-  CTTZ_ZERO_UNDEF,
-  CTLZ_ZERO_UNDEF,
+  /// Bit counting operators with a poisoned result for zero inputs.
+  CTTZ_ZERO_POISON,
+  CTLZ_ZERO_POISON,
 
   /// Count leading redundant sign bits. Equivalent to
   /// (sub (ctlz (x < 0 ? ~x : x)), 1).
@@ -1019,6 +1027,15 @@ enum NodeType {
   /// The first operand is the integer containing the source FP bits.
   /// The second operand is a constant indicating the source FP semantics.
   CONVERT_FROM_ARBITRARY_FP,
+
+  /// CONVERT_TO_ARBITRARY_FP - Converts a native FP value to an arbitrary
+  /// floating-point format, returning the result as an integer.
+  /// The first operand is the source value.
+  /// The second operand is a constant indicating the destination FP semantics.
+  /// The third operand is a constant indication the rounding mode.
+  /// The last operand is a boolean constant indicating whether the result has
+  /// to be saturated.
+  CONVERT_TO_ARBITRARY_FP,
 
   /// Perform various unary floating-point operations inspired by libm. For
   /// FPOWI, the result is undefined if the integer operand doesn't fit into
@@ -1643,6 +1660,12 @@ enum NodeType {
 /// Whether this is bitwise logic opcode.
 inline bool isBitwiseLogicOp(unsigned Opcode) {
   return Opcode == ISD::AND || Opcode == ISD::OR || Opcode == ISD::XOR;
+}
+
+/// Whether this is an integer absolute-value opcode (ISD::ABS or
+/// ISD::ABS_MIN_POISON).
+inline bool isAbsOpcode(unsigned Opcode) {
+  return Opcode == ISD::ABS || Opcode == ISD::ABS_MIN_POISON;
 }
 
 /// Given a \p MinMaxOpc of ISD::(U|S)MIN or ISD::(U|S)MAX, returns

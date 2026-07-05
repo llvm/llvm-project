@@ -246,7 +246,7 @@ void StackAddrEscapeChecker::checkPreCall(const CallEvent &Call,
 /// that would leak.
 class FindStackRegionsSymbolVisitor final : public SymbolVisitor {
   CheckerContext &Ctxt;
-  const StackFrameContext *PoppedStackFrame;
+  const StackFrame *PoppedStackFrame;
   SmallVectorImpl<const MemRegion *> &EscapingStackRegions;
   llvm::SmallPtrSet<const MemRegion *, 16> VisitedRegions;
 
@@ -278,9 +278,9 @@ private:
     if (!SSR)
       return;
 
-    const StackFrameContext *CapturedSFC = SSR->getStackFrame();
-    if (CapturedSFC == PoppedStackFrame ||
-        PoppedStackFrame->isParentOf(CapturedSFC))
+    const StackFrame *CapturedSF = SSR->getStackFrame();
+    if (CapturedSF == PoppedStackFrame ||
+        PoppedStackFrame->isParentOf(CapturedSF))
       EscapingStackRegions.push_back(MR);
   }
 
@@ -457,8 +457,7 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
 
   ExplodedNode *Node = Ctx.getPredecessor();
 
-  bool ExitingTopFrame =
-      Ctx.getPredecessor()->getLocationContext()->inTopFrame();
+  bool ExitingTopFrame = Ctx.getPredecessor()->getStackFrame()->inTopFrame();
 
   if (ExitingTopFrame &&
       Node->getLocation().getTag() == ExprEngine::cleanupNodeTag() &&
@@ -476,7 +475,7 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
   private:
     CheckerContext &Ctx;
     ProgramStateRef State;
-    const StackFrameContext *PoppedFrame;
+    const StackFrame *PoppedFrame;
     const bool TopFrame;
 
     /// Look for stack variables referring to popped stack variables.

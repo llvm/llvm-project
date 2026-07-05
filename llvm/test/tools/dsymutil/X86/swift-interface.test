@@ -6,8 +6,17 @@
 # RUN: dsymutil --linker classic -oso-prepend-path %t.dir -y %s \
 # RUN:    -o %t.dir/swift-interface.dSYM 2>&1 \
 # RUN:    | FileCheck %s --check-prefix=WARNINGS
+# RUN: rm -rf %t.dir/swift-interface.dSYM
+# RUN: dsymutil --linker parallel -oso-prepend-path %t.dir -y %s \
+# RUN:    -o %t.dir/swift-interface.dSYM 2>&1 \
+# RUN:    | FileCheck %s --check-prefix=WARNINGS
 # RUN: echo "// module Foo" >%t.dir/Foo/x86_64.swiftinterface
 # RUN: dsymutil --linker classic -oso-prepend-path %t.dir -y %s \
+# RUN:    -o %t.dir/swift-interface.dSYM
+# RUN: cat %t.dir/swift-interface.dSYM/Contents/Resources/Swift/x86_64/Foo.swiftinterface \
+# RUN:   | FileCheck %s --check-prefix=INTERFACE
+# RUN: rm -rf %t.dir/swift-interface.dSYM
+# RUN: dsymutil --linker parallel -oso-prepend-path %t.dir -y %s \
 # RUN:    -o %t.dir/swift-interface.dSYM
 # RUN: cat %t.dir/swift-interface.dSYM/Contents/Resources/Swift/x86_64/Foo.swiftinterface \
 # RUN:   | FileCheck %s --check-prefix=INTERFACE
@@ -24,5 +33,3 @@ objects:
     symbols:
       - { sym: _main, objAddr: 0x0, binAddr: 0x10000, size: 0x10 }
 ...
-
-## FIXME: Support --linker parallel

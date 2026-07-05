@@ -30,9 +30,7 @@ void write_to_aligned_array(int *a, int N) {
 // CHECK-AMD-NEXT:    [[N_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[N_ADDR]] to ptr
 // CHECK-AMD-NEXT:    [[APTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[APTR_ADDR]] to ptr
 // CHECK-AMD-NEXT:    [[DYN_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
-// CHECK-AMD-NEXT:    [[N_CASTED_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[N_CASTED]] to ptr
 // CHECK-AMD-NEXT:    [[DOTZERO_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTZERO_ADDR]] to ptr
-// CHECK-AMD-NEXT:    [[DOTTHREADID_TEMP__ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTTHREADID_TEMP_]] to ptr
 // CHECK-AMD-NEXT:    store i64 [[N]], ptr [[N_ADDR_ASCAST]], align 8
 // CHECK-AMD-NEXT:    store ptr [[APTR]], ptr [[APTR_ADDR_ASCAST]], align 8
 // CHECK-AMD-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
@@ -42,12 +40,13 @@ void write_to_aligned_array(int *a, int N) {
 // CHECK-AMD:       user_code.entry:
 // CHECK-AMD-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr addrspacecast (ptr addrspace(1) @[[GLOB1:[0-9]+]] to ptr))
 // CHECK-AMD-NEXT:    [[TMP2:%.*]] = load i32, ptr [[N_ADDR_ASCAST]], align 4
-// CHECK-AMD-NEXT:    store i32 [[TMP2]], ptr [[N_CASTED_ASCAST]], align 4
-// CHECK-AMD-NEXT:    [[TMP3:%.*]] = load i64, ptr [[N_CASTED_ASCAST]], align 8
+// CHECK-AMD-NEXT:    store i32 [[TMP2]], ptr addrspace(5) [[N_CASTED]], align 4
+// CHECK-AMD-NEXT:    [[TMP3:%.*]] = load i64, ptr addrspace(5) [[N_CASTED]], align 8
 // CHECK-AMD-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[APTR_ADDR_ASCAST]], align 8
 // CHECK-AMD-NEXT:    store i32 0, ptr [[DOTZERO_ADDR_ASCAST]], align 4
-// CHECK-AMD-NEXT:    store i32 [[TMP1]], ptr [[DOTTHREADID_TEMP__ASCAST]], align 4
-// CHECK-AMD-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_write_to_aligned_array_l14_omp_outlined(ptr [[DOTTHREADID_TEMP__ASCAST]], ptr [[DOTZERO_ADDR_ASCAST]], i64 [[TMP3]], ptr [[TMP4]]) #[[ATTR2:[0-9]+]]
+// CHECK-AMD-NEXT:    store i32 [[TMP1]], ptr addrspace(5) [[DOTTHREADID_TEMP_]], align 4
+// CHECK-AMD-NEXT:    [[TMP5:%.*]] = addrspacecast ptr addrspace(5) [[DOTTHREADID_TEMP_]] to ptr
+// CHECK-AMD-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_write_to_aligned_array_l14_omp_outlined(ptr [[TMP5]], ptr [[DOTZERO_ADDR_ASCAST]], i64 [[TMP3]], ptr [[TMP4]]) #[[ATTR2:[0-9]+]]
 // CHECK-AMD-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-AMD-NEXT:    ret void
 // CHECK-AMD:       worker.exit:
@@ -87,7 +86,6 @@ void write_to_aligned_array(int *a, int N) {
 // CHECK-AMD-NEXT:    [[DOTOMP_STRIDE_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_STRIDE]] to ptr
 // CHECK-AMD-NEXT:    [[DOTOMP_IS_LAST_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_IS_LAST]] to ptr
 // CHECK-AMD-NEXT:    [[I3_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I3]] to ptr
-// CHECK-AMD-NEXT:    [[N_CASTED_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[N_CASTED]] to ptr
 // CHECK-AMD-NEXT:    [[CAPTURED_VARS_ADDRS_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[CAPTURED_VARS_ADDRS]] to ptr
 // CHECK-AMD-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR_ASCAST]], align 8
 // CHECK-AMD-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR_ASCAST]], align 8
@@ -142,8 +140,8 @@ void write_to_aligned_array(int *a, int N) {
 // CHECK-AMD-NEXT:    [[TMP15:%.*]] = load i32, ptr [[DOTOMP_COMB_UB_ASCAST]], align 4
 // CHECK-AMD-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP15]] to i64
 // CHECK-AMD-NEXT:    [[TMP17:%.*]] = load i32, ptr [[N_ADDR_ASCAST]], align 4
-// CHECK-AMD-NEXT:    store i32 [[TMP17]], ptr [[N_CASTED_ASCAST]], align 4
-// CHECK-AMD-NEXT:    [[TMP18:%.*]] = load i64, ptr [[N_CASTED_ASCAST]], align 8
+// CHECK-AMD-NEXT:    store i32 [[TMP17]], ptr addrspace(5) [[N_CASTED]], align 4
+// CHECK-AMD-NEXT:    [[TMP18:%.*]] = load i64, ptr addrspace(5) [[N_CASTED]], align 8
 // CHECK-AMD-NEXT:    [[TMP19:%.*]] = load ptr, ptr [[APTR_ADDR_ASCAST]], align 8
 // CHECK-AMD-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [4 x ptr], ptr [[CAPTURED_VARS_ADDRS_ASCAST]], i64 0, i64 0
 // CHECK-AMD-NEXT:    [[TMP21:%.*]] = inttoptr i64 [[TMP14]] to ptr

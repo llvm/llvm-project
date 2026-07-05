@@ -58,10 +58,6 @@ bool Type::isByteTy(unsigned BitWidth) const {
   return isByteTy() && cast<ByteType>(this)->getBitWidth() == BitWidth;
 }
 
-bool Type::isIntegerTy(unsigned Bitwidth) const {
-  return isIntegerTy() && cast<IntegerType>(this)->getBitWidth() == Bitwidth;
-}
-
 bool Type::isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const {
   if (const auto *ATy = dyn_cast<ArrayType>(this))
     return ATy->getElementType()->isScalableTy(Visited);
@@ -338,13 +334,11 @@ Type *Type::getByteFromIntType(Type *Ty) {
 }
 
 Type *Type::getWasm_ExternrefTy(LLVMContext &C) {
-  // opaque pointer in addrspace(10)
-  return PointerType::get(C, 10);
+  return TargetExtType::get(C, "wasm.externref", {}, {});
 }
 
 Type *Type::getWasm_FuncrefTy(LLVMContext &C) {
-  // opaque pointer in addrspace(20)
-  return PointerType::get(C, 20);
+  return TargetExtType::get(C, "wasm.funcref", {}, {});
 }
 
 //===----------------------------------------------------------------------===//
@@ -1030,6 +1024,12 @@ Expected<TargetExtType *> TargetExtType::checkParams(TargetExtType *TTy) {
                              "should have no type parameters "
                              "and one integer parameter");
   }
+  if (TTy->Name == "amdgpu.stridemark" &&
+      (TTy->getNumTypeParameters() != 0 || TTy->getNumIntParameters() > 1)) {
+    return createStringError("target extension type amdgpu.stridemark "
+                             "should have no type parameters "
+                             "and at most one integer parameter");
+  }
 
   return TTy;
 }
@@ -1122,6 +1122,8 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
     return TargetTypeInfo(FixedVectorType::get(Type::getInt32Ty(C), 4),
                           TargetExtType::CanBeGlobal);
   }
+  if (Name == "amdgpu.stridemark")
+    return TargetTypeInfo(Type::getVoidTy(C), TargetExtType::IsTokenLike);
 
   // Type used to test vector element target extension property.
   // Can be removed once a public target extension type uses CanBeVectorElement.
@@ -1129,6 +1131,12 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
     return TargetTypeInfo(Type::getInt32Ty(C), TargetExtType::CanBeLocal,
                           TargetExtType::CanBeVectorElement);
   }
+
+  // Opaque types in the WebAssembly name space.
+  if (Name == "wasm.funcref" || Name == "wasm.externref")
+    return TargetTypeInfo(PointerType::getUnqual(C), TargetExtType::HasZeroInit,
+                          TargetExtType::CanBeGlobal,
+                          TargetExtType::CanBeLocal);
 
   return TargetTypeInfo(Type::getVoidTy(C));
 }

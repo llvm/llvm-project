@@ -56,8 +56,8 @@ private:
                 MachineBasicBlock::iterator &NextMBBI);
   bool expandMultiVecPseudo(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MBBI,
-                            TargetRegisterClass ContiguousClass,
-                            TargetRegisterClass StridedClass,
+                            const TargetRegisterClass &ContiguousClass,
+                            const TargetRegisterClass &StridedClass,
                             unsigned ContiguousOpc, unsigned StridedOpc);
   bool expandFormTuplePseudo(MachineBasicBlock &MBB,
                              MachineBasicBlock::iterator MBBI,
@@ -332,6 +332,13 @@ bool AArch64ExpandPseudoImpl::expandCMP_SWAP_128(
   Register NewLoReg = MI.getOperand(6).getReg();
   Register NewHiReg = MI.getOperand(7).getReg();
 
+  auto &STI = MBB.getParent()->getSubtarget<AArch64Subtarget>();
+  bool LittleEndian = STI.isLittleEndian();
+  MachineOperand &Dest0 = LittleEndian ? DestLo : DestHi;
+  MachineOperand &Dest1 = LittleEndian ? DestHi : DestLo;
+  Register New0Reg = LittleEndian ? NewLoReg : NewHiReg;
+  Register New1Reg = LittleEndian ? NewHiReg : NewLoReg;
+
   unsigned LdxpOp, StxpOp;
 
   switch (MI.getOpcode()) {
@@ -372,8 +379,8 @@ bool AArch64ExpandPseudoImpl::expandCMP_SWAP_128(
   //     sbcs xDestHi, xDesiredHi
   //     b.ne .Ldone
   BuildMI(LoadCmpBB, MIMD, TII->get(LdxpOp))
-      .addReg(DestLo.getReg(), RegState::Define)
-      .addReg(DestHi.getReg(), RegState::Define)
+      .addReg(Dest0.getReg(), RegState::Define)
+      .addReg(Dest1.getReg(), RegState::Define)
       .addReg(AddrReg);
   BuildMI(LoadCmpBB, MIMD, TII->get(AArch64::SUBSXrs), AArch64::XZR)
       .addReg(DestLo.getReg(), getKillRegState(DestLo.isDead()))
@@ -401,8 +408,8 @@ bool AArch64ExpandPseudoImpl::expandCMP_SWAP_128(
   //     stlxp wStatus, xNewLo, xNewHi, [xAddr]
   //     cbnz wStatus, .Lloadcmp
   BuildMI(StoreBB, MIMD, TII->get(StxpOp), StatusReg)
-      .addReg(NewLoReg)
-      .addReg(NewHiReg)
+      .addReg(New0Reg)
+      .addReg(New1Reg)
       .addReg(AddrReg);
   BuildMI(StoreBB, MIMD, TII->get(AArch64::CBNZW))
       .addReg(StatusReg, getKillRegState(StatusDead))
@@ -415,8 +422,8 @@ bool AArch64ExpandPseudoImpl::expandCMP_SWAP_128(
   //     stlxp wStatus, xDestLo, xDestHi, [xAddr]
   //     cbnz wStatus, .Lloadcmp
   BuildMI(FailBB, MIMD, TII->get(StxpOp), StatusReg)
-      .addReg(DestLo.getReg())
-      .addReg(DestHi.getReg())
+      .addReg(Dest0.getReg())
+      .addReg(Dest1.getReg())
       .addReg(AddrReg);
   BuildMI(FailBB, MIMD, TII->get(AArch64::CBNZW))
       .addReg(StatusReg, getKillRegState(StatusDead))
@@ -1257,8 +1264,9 @@ AArch64ExpandPseudoImpl::expandCondSMToggle(MachineBasicBlock &MBB,
 
 bool AArch64ExpandPseudoImpl::expandMultiVecPseudo(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    TargetRegisterClass ContiguousClass, TargetRegisterClass StridedClass,
-    unsigned ContiguousOp, unsigned StridedOpc) {
+    const TargetRegisterClass &ContiguousClass,
+    const TargetRegisterClass &StridedClass, unsigned ContiguousOp,
+    unsigned StridedOpc) {
   MachineInstr &MI = *MBBI;
   Register Tuple = MI.getOperand(0).getReg();
 
@@ -1539,70 +1547,88 @@ bool AArch64ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
     MI.eraseFromParent();
     return true;
   }
-  case AArch64::MOVaddrBA: {
-    MachineFunction &MF = *MI.getParent()->getParent();
-    if (MF.getSubtarget<AArch64Subtarget>().isTargetMachO()) {
-      // blockaddress expressions have to come from a constant pool because the
-      // largest addend (and hence offset within a function) allowed for ADRP is
-      // only 8MB.
-      const BlockAddress *BA = MI.getOperand(1).getBlockAddress();
-      assert(MI.getOperand(1).getOffset() == 0 && "unexpected offset");
-
-      MachineConstantPool *MCP = MF.getConstantPool();
-      unsigned CPIdx = MCP->getConstantPoolIndex(BA, Align(8));
-
-      Register DstReg = MI.getOperand(0).getReg();
-      auto MIB1 =
-          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ADRP), DstReg)
-              .addConstantPoolIndex(CPIdx, 0, AArch64II::MO_PAGE);
-      auto MIB2 = BuildMI(MBB, MBBI, MI.getDebugLoc(),
-                          TII->get(AArch64::LDRXui), DstReg)
-                      .addUse(DstReg)
-                      .addConstantPoolIndex(
-                          CPIdx, 0, AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
-      transferImpOps(MI, MIB1, MIB2);
-      MI.eraseFromParent();
-      return true;
-    }
-  }
-    [[fallthrough]];
+  case AArch64::MOVaddrBA:
   case AArch64::MOVaddr:
   case AArch64::MOVaddrJT:
   case AArch64::MOVaddrCP:
   case AArch64::MOVaddrTLS:
   case AArch64::MOVaddrEXT: {
-    // Expand into ADRP + ADD.
+    MachineFunction &MF = *MI.getParent()->getParent();
     Register DstReg = MI.getOperand(0).getReg();
     assert(DstReg != AArch64::XZR);
-    MachineInstrBuilder MIB1 =
-        BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ADRP), DstReg)
-            .add(MI.getOperand(1));
 
-    if (MI.getOperand(1).getTargetFlags() & AArch64II::MO_TAGGED) {
-      // MO_TAGGED on the page indicates a tagged address. Set the tag now.
-      // We do so by creating a MOVK that sets bits 48-63 of the register to
-      // (global address + 0x100000000 - PC) >> 48. This assumes that we're in
-      // the small code model so we can assume a binary size of <= 4GB, which
-      // makes the untagged PC relative offset positive. The binary must also be
-      // loaded into address range [0, 2^48). Both of these properties need to
-      // be ensured at runtime when using tagged addresses.
-      auto Tag = MI.getOperand(1);
-      Tag.setTargetFlags(AArch64II::MO_PREL | AArch64II::MO_G3);
-      Tag.setOffset(0x100000000);
-      BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::MOVKXi), DstReg)
-          .addReg(DstReg)
-          .add(Tag)
-          .addImm(48);
+    bool IsTargetMachO = MF.getSubtarget<AArch64Subtarget>().isTargetMachO();
+    SmallVector<AArch64_IMM::AddrInsnModel, 3> Insn;
+    AArch64_IMM::expandMOVAddr(
+        MI.getOpcode(), MI.getOperand(1).getTargetFlags(), IsTargetMachO, Insn);
+
+    // Compute the constant pool index, if any.
+    std::optional<unsigned> CPIdx;
+    if (Opcode == AArch64::MOVaddrBA && IsTargetMachO) {
+      // blockaddress expressions have to come from a constant pool because the
+      // largest addend (and hence offset within a function) allowed for ADRP is
+      // only 8MB.
+      const BlockAddress *BA = MI.getOperand(1).getBlockAddress();
+      assert(MI.getOperand(1).getOffset() == 0 && "unexpected offset");
+      MachineConstantPool *MCP = MF.getConstantPool();
+      CPIdx = MCP->getConstantPoolIndex(BA, Align(8));
     }
 
-    MachineInstrBuilder MIB2 =
-        BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ADDXri))
-            .add(MI.getOperand(0))
-            .addReg(DstReg)
-            .add(MI.getOperand(2))
-            .addImm(0);
+    MachineInstrBuilder FirstMIB;
+    MachineInstrBuilder LastMIB;
+    for (const auto &I : Insn) {
+      MachineInstrBuilder MIB;
+      switch (I.Opcode) {
+      case AArch64::ADRP:
+        MIB = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ADRP),
+                      DstReg);
+        if (CPIdx)
+          MIB.addConstantPoolIndex(*CPIdx, 0, AArch64II::MO_PAGE);
+        else
+          MIB.add(MI.getOperand(1));
+        break;
+      case AArch64::LDRXui:
+        MIB = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::LDRXui),
+                      DstReg)
+                  .addUse(DstReg)
+                  .addConstantPoolIndex(
+                      *CPIdx, 0, AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
+        break;
+      case AArch64::MOVKXi: {
+        // MO_TAGGED on the page indicates a tagged address. Set the tag now.
+        // We do so by creating a MOVK that sets bits 48-63 of the register to
+        // (global address + 0x100000000 - PC) >> 48. This assumes that we're in
+        // the small code model so we can assume a binary size of <= 4GB, which
+        // makes the untagged PC relative offset positive. The binary must also
+        // be loaded into address range [0, 2^48). Both of these properties need
+        // to be ensured at runtime when using tagged addresses.
+        auto Tag = MI.getOperand(1);
+        Tag.setTargetFlags(AArch64II::MO_PREL | AArch64II::MO_G3);
+        Tag.setOffset(0x100000000);
+        MIB = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::MOVKXi),
+                      DstReg)
+                  .addReg(DstReg)
+                  .add(Tag)
+                  .addImm(48);
+        break;
+      }
+      case AArch64::ADDXri:
+        MIB = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ADDXri))
+                  .add(MI.getOperand(0))
+                  .addReg(DstReg)
+                  .add(MI.getOperand(2))
+                  .addImm(0);
+        break;
+      default:
+        llvm_unreachable("unexpected opcode in MOVaddr expansion");
+      }
 
-    transferImpOps(MI, MIB1, MIB2);
+      if (!FirstMIB.getInstr())
+        FirstMIB = MIB;
+      LastMIB = MIB;
+    }
+
+    transferImpOps(MI, FirstMIB, LastMIB);
     MI.eraseFromParent();
     return true;
   }
