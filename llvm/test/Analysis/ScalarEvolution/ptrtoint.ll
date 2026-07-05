@@ -188,7 +188,7 @@ define void @ptrtoint_of_gep(ptr %in, ptr %out0) {
 ; X64-NEXT:    %in_adj = getelementptr inbounds i8, ptr %in, i64 42
 ; X64-NEXT:    --> (42 + %in) U: full-set S: full-set
 ; X64-NEXT:    %p0 = ptrtoint ptr %in_adj to i64
-; X64-NEXT:    --> %p0 U: full-set S: full-set
+; X64-NEXT:    --> (42 + (ptrtoaddr ptr %in to i64)) U: full-set S: full-set
 ; X64-NEXT:  Determining loop execution counts for: @ptrtoint_of_gep
 ;
 ; X32-LABEL: 'ptrtoint_of_gep'
@@ -270,7 +270,7 @@ define void @ptrtoint_of_umax(ptr %in0, ptr %in1, ptr %out0) {
 ; X64-NEXT:    %s = select i1 %c, ptr %in0, ptr %in1
 ; X64-NEXT:    --> (%in0 umax %in1) U: full-set S: full-set
 ; X64-NEXT:    %p0 = ptrtoint ptr %s to i64
-; X64-NEXT:    --> %p0 U: full-set S: full-set
+; X64-NEXT:    --> ((ptrtoaddr ptr %in0 to i64) umax (ptrtoaddr ptr %in1 to i64)) U: full-set S: full-set
 ; X64-NEXT:  Determining loop execution counts for: @ptrtoint_of_umax
 ;
 ; X32-LABEL: 'ptrtoint_of_umax'
@@ -294,7 +294,7 @@ define void @ptrtoint_of_smax(ptr %in0, ptr %in1, ptr %out0) {
 ; X64-NEXT:    %s = select i1 %c, ptr %in0, ptr %in1
 ; X64-NEXT:    --> (%in0 smax %in1) U: full-set S: full-set
 ; X64-NEXT:    %p0 = ptrtoint ptr %s to i64
-; X64-NEXT:    --> %p0 U: full-set S: full-set
+; X64-NEXT:    --> ((ptrtoaddr ptr %in0 to i64) smax (ptrtoaddr ptr %in1 to i64)) U: full-set S: full-set
 ; X64-NEXT:  Determining loop execution counts for: @ptrtoint_of_smax
 ;
 ; X32-LABEL: 'ptrtoint_of_smax'
@@ -318,7 +318,7 @@ define void @ptrtoint_of_umin(ptr %in0, ptr %in1, ptr %out0) {
 ; X64-NEXT:    %s = select i1 %c, ptr %in0, ptr %in1
 ; X64-NEXT:    --> (%in0 umin %in1) U: full-set S: full-set
 ; X64-NEXT:    %p0 = ptrtoint ptr %s to i64
-; X64-NEXT:    --> %p0 U: full-set S: full-set
+; X64-NEXT:    --> ((ptrtoaddr ptr %in0 to i64) umin (ptrtoaddr ptr %in1 to i64)) U: full-set S: full-set
 ; X64-NEXT:  Determining loop execution counts for: @ptrtoint_of_umin
 ;
 ; X32-LABEL: 'ptrtoint_of_umin'
@@ -342,7 +342,7 @@ define void @ptrtoint_of_smin(ptr %in0, ptr %in1, ptr %out0) {
 ; X64-NEXT:    %s = select i1 %c, ptr %in0, ptr %in1
 ; X64-NEXT:    --> (%in0 smin %in1) U: full-set S: full-set
 ; X64-NEXT:    %p0 = ptrtoint ptr %s to i64
-; X64-NEXT:    --> %p0 U: full-set S: full-set
+; X64-NEXT:    --> ((ptrtoaddr ptr %in0 to i64) smin (ptrtoaddr ptr %in1 to i64)) U: full-set S: full-set
 ; X64-NEXT:  Determining loop execution counts for: @ptrtoint_of_smin
 ;
 ; X32-LABEL: 'ptrtoint_of_smin'

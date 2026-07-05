@@ -8389,10 +8389,13 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
   }
 
   case Instruction::PtrToInt: {
-    // Keep ptrtoint as SCEVUnknown, except ptrtoint of a pointer add-rec to
-    // preserve the integer induction structure.
+    // Keep ptrtoint as SCEVUnknown, except when the pointer operand has SCEV
+    // structure (e.g. a pointer add-rec or an offset from a known base). In
+    // that case model it via ptrtoaddr to preserve the integer structure
+    // (induction, constant folding). A bare SCEVUnknown pointer gains no
+    // structure from wrapping it in ptrtoaddr, so leave it opaque.
     const SCEV *PtrSCEV = getSCEV(U->getOperand(0));
-    if (isa<SCEVAddRecExpr>(PtrSCEV)) {
+    if (!isa<SCEVUnknown>(PtrSCEV)) {
       const SCEV *Addr = getPtrToAddrExpr(PtrSCEV);
       if (!isa<SCEVCouldNotCompute>(Addr) &&
           getTypeSizeInBits(V->getType()) <= getTypeSizeInBits(Addr->getType()))

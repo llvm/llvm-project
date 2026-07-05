@@ -875,7 +875,7 @@ public:
   /// If the LHS and RHS are pointers which don't share a common base
   /// (according to getPointerBase()), this returns a SCEVCouldNotCompute.
   /// To compute the difference between two unrelated pointers, you can
-  /// explicitly convert the arguments using getPtrToIntExpr(), for pointer
+  /// explicitly convert the arguments using getPtrToAddrExpr(), for pointer
   /// types that support it.
   LLVM_ABI const SCEV *getMinusSCEV(SCEVUse LHS, SCEVUse RHS,
                                     SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
