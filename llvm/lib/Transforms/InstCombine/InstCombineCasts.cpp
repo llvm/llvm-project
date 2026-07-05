@@ -2511,54 +2511,50 @@ static Instruction *foldFPtoI(Instruction &FI, InstCombiner &IC) {
   if (FPClass.isKnownNever(Mask))
     return IC.replaceInstUsesWith(FI, ConstantInt::getNullValue(FI.getType()));
 
-  return nullptr;
-}
-
-/// fpto{u/s}i (fdiv ({u/s}itofp X), C) --> {u/s}div X, C
-///
-/// Given N = integer width, p = FP mantissa width, this is safe if:
-/// Unsigned: C > 0 and N <= p.
-/// Signed: C != 0, N - 1 <= p, and not (X == INT_MIN and C == -1).
-/// Then {u/s}itofp is exact and the rounded quotient never crosses an integer,
-/// i.e. floor(rne_p(X/C)) == floor(X/C).
-///
-/// See #205305 for detailed reasoning.
-static Instruction *foldFPToIOfFDiv(Instruction &FI, InstCombinerImpl &IC,
-                                    bool IsSigned) {
-  auto *FDiv = dyn_cast<BinaryOperator>(FI.getOperand(0));
-  if (!FDiv || FDiv->getOpcode() != Instruction::FDiv || !FDiv->hasOneUse())
-    return nullptr;
-
-  auto *IToFP = dyn_cast<CastInst>(FDiv->getOperand(0));
-  if (!IToFP || !IToFP->hasOneUse())
-    return nullptr;
-  if (IsSigned ? !isa<SIToFPInst>(IToFP) : !isa<UIToFPInst>(IToFP))
-    return nullptr;
-  Value *X = IToFP->getOperand(0);
+  // fpto{u/s}i (fdiv ({u/s}itofp X to F), C_fp) --> {u/s}div X, C
+  //
+  // F has precision p (significand bits incl. hidden bit); C_fp is the exact FP
+  // value of the integer constant C. Given N = integer width, this is safe if:
+  //   Unsigned: C > 0 and N <= p.
+  //   Signed:   C != 0 and N - 1 <= p, excluding (X == INT_MIN, C == -1) since
+  //             sdiv INT_MIN, -1 is UB while the FP path only yields poison.
+  //             fdiv X, -1 gets transformed to fneg in InstCombine regardless.
+  //
+  // The bounds make {u/s}itofp and C_fp exact (every |int| <= 2^p is exact),
+  // and ensure the rounded quotient never crosses an integer boundary:
+  //   Rounding lemma: for 0 <= A <= 2^p, 1 <= B <= 2^p, q = floor(A/B),
+  //     trunc(R_p(A/B)) = q.
+  //   For r = A - qB > 0, m = q+1, half-gap H(m) <= q/2^p and
+  //   m - A/B = (B-r)/B >= 1/B > q/2^p >= H(m), so R_p(A/B) < m; q = 0 is
+  //   similar (H(1) = 2^(-p-1) < 2^-p <= 1/B).
+  //   Signed case: by symmetry R_p(-z) = -R_p(z), so fptosi yields s*q = sdiv.
+  bool IsSigned = FI.getOpcode() == Instruction::FPToSI;
+  Value *X;
+  const APFloat *APF;
+  if (IsSigned) {
+    if (!match(FI.getOperand(0),
+               m_OneUse(m_FDiv(m_SIToFP(m_Value(X)), m_APFloat(APF)))))
+      return nullptr;
+  } else {
+    if (!match(FI.getOperand(0),
+               m_OneUse(m_FDiv(m_UIToFP(m_Value(X)), m_APFloat(APF)))))
+      return nullptr;
+  }
   Type *IntTy = X->getType();
-  if (!IntTy->isIntOrIntVectorTy())
+  if (!IntTy->isIntOrIntVectorTy() || FI.getType() != IntTy)
     return nullptr;
 
-  if (FI.getType() != IntTy)
-    return nullptr;
-
-  Type *FPTy = FDiv->getType();
   unsigned IntWidth = IntTy->getScalarSizeInBits();
-  int MantissaWidth = FPTy->getScalarType()->getFPMantissaWidth();
-  if (MantissaWidth < (int)IntWidth - IsSigned)
+  unsigned Precision = APFloat::semanticsPrecision(APF->getSemantics());
+  if (Precision + IsSigned < IntWidth)
     return nullptr;
 
-  auto *CFP = dyn_cast<ConstantFP>(FDiv->getOperand(1));
-  if (!CFP)
-    return nullptr;
-
-  APFloat APF = CFP->getValueAPF();
-  if (!APF.isInteger())
+  if (!APF->isInteger())
     return nullptr;
 
   APSInt Divisor(IntWidth, !IsSigned);
   bool IsExact = false;
-  APF.convertToInteger(Divisor, APFloat::rmTowardZero, &IsExact);
+  APF->convertToInteger(Divisor, APFloat::rmTowardZero, &IsExact);
   if (!IsExact)
     return nullptr;
 
@@ -2579,9 +2575,6 @@ Instruction *InstCombinerImpl::visitFPToUI(FPToUIInst &FI) {
   if (Instruction *I = foldItoFPtoI(FI))
     return I;
 
-  if (Instruction *I = foldFPToIOfFDiv(FI, *this, /*IsSigned=*/false))
-    return I;
-
   if (Instruction *I = foldFPtoI(FI, *this))
     return I;
 
@@ -2590,9 +2583,6 @@ Instruction *InstCombinerImpl::visitFPToUI(FPToUIInst &FI) {
 
 Instruction *InstCombinerImpl::visitFPToSI(FPToSIInst &FI) {
   if (Instruction *I = foldItoFPtoI(FI))
-    return I;
-
-  if (Instruction *I = foldFPToIOfFDiv(FI, *this, /*IsSigned=*/true))
     return I;
 
   if (Instruction *I = foldFPtoI(FI, *this))

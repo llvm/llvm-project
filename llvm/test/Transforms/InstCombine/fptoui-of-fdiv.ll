@@ -42,6 +42,18 @@ define <2 x i32> @vec_i32_double_const(<2 x i32> %x) {
   ret <2 x i32> %r
 }
 
+define <4 x i16> @vec_i16_float_neg_divisor(<4 x i16> %x) {
+; CHECK-LABEL: define <4 x i16> @vec_i16_float_neg_divisor(
+; CHECK-SAME: <4 x i16> [[X:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = sdiv <4 x i16> [[X]], splat (i16 -3)
+; CHECK-NEXT:    ret <4 x i16> [[R]]
+;
+  %a = sitofp <4 x i16> %x to <4 x float>
+  %d = fdiv <4 x float> %a, splat (float -3.000000e+00)
+  %r = fptosi <4 x float> %d to <4 x i16>
+  ret <4 x i16> %r
+}
+
 define i32 @divisor_one(i32 %x) {
 ; CHECK-LABEL: define i32 @divisor_one(
 ; CHECK-SAME: i32 [[X:%.*]]) {
