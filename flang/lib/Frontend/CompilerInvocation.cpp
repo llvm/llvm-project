@@ -48,7 +48,6 @@
 #include <cstdlib>
 #include <memory>
 #include <optional>
-#include <sstream>
 
 using namespace Fortran::frontend;
 

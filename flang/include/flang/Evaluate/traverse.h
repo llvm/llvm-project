@@ -41,8 +41,6 @@
 #include "flang/Common/indirection.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/type.h"
-#include <set>
-#include <type_traits>
 
 namespace Fortran::evaluate {
 template <typename Visitor, typename Result,

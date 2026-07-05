@@ -14,12 +14,10 @@
 #include "flang/Lower/MultiImageFortran.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/Support/Utils.h"
-#include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/MIFCommon.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Parser/parse-tree.h"
-#include "flang/Semantics/expression.h"
 
 //===----------------------------------------------------------------------===//
 // Synchronization statements

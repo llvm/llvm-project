@@ -33,7 +33,6 @@
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include <cinttypes>
 #include <list>
-#include <memory>
 #include <optional>
 #include <string>
 #include <tuple>
