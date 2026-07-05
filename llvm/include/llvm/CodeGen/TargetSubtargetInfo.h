@@ -43,6 +43,7 @@ class LibcallLoweringInfo;
 class MachineInstr;
 struct MachineSchedPolicy;
 struct MCReadAdvanceEntry;
+struct MCSchedModel;
 struct MCWriteLatencyEntry;
 struct MCWriteProcResEntry;
 class RegisterBankInfo;
@@ -70,7 +71,7 @@ protected: // Can only create subclasses...
   TargetSubtargetInfo(const Triple &TT, StringRef CPU, StringRef TuneCPU,
                       StringRef FS, ArrayRef<StringRef> PN,
                       ArrayRef<SubtargetFeatureKV> PF,
-                      ArrayRef<SubtargetSubTypeKV> PD,
+                      ArrayRef<SubtargetSubTypeKV> PD, const MCSchedModel *PSM,
                       const MCWriteProcResEntry *WPR,
                       const MCWriteLatencyEntry *WL,
                       const MCReadAdvanceEntry *RA, const InstrStage *IS,

@@ -77,24 +77,23 @@ struct SubtargetFeatureKVStorage {
 struct SubtargetSubTypeKV {
 private:
   const char *Key; ///< K-V key string
-  const MCSchedModel *SchedModel;
 
 public:
   FeatureBitArray Implies;              ///< K-V bit mask
   FeatureBitArray TuneImplies;          ///< K-V bit mask
+  unsigned SchedModelIdx;
 
   constexpr SubtargetSubTypeKV(const char *Key, FeatureBitArray Implies,
                                FeatureBitArray TuneImplies,
-                               const MCSchedModel *SchedModel)
-      : Key(Key), SchedModel(SchedModel), Implies(Implies),
-        TuneImplies(TuneImplies) {}
+                               unsigned SchedModelIdx)
+      : Key(Key), Implies(Implies), TuneImplies(TuneImplies),
+        SchedModelIdx(SchedModelIdx) {}
 
   // Because of relative string offsets, this type is not copyable.
   SubtargetSubTypeKV(const SubtargetSubTypeKV &) = delete;
   SubtargetSubTypeKV &operator=(const SubtargetSubTypeKV &) = delete;
 
   const char *key() const { return Key; }
-  const MCSchedModel *schedModel() const { return SchedModel; }
 
   /// Compare routine for std::lower_bound
   bool operator<(StringRef S) const { return StringRef(key()) < S; }
@@ -116,6 +115,7 @@ class LLVM_ABI MCSubtargetInfo {
   ArrayRef<StringRef> ProcNames; // Processor list, including aliases
   ArrayRef<SubtargetFeatureKV> ProcFeatures;  // Processor feature list
   ArrayRef<SubtargetSubTypeKV> ProcDesc;  // Processor descriptions
+  const MCSchedModel *ProcSchedModels;    ///< Processor scheduling models.
 
   // Scheduler machine model
   const MCWriteProcResEntry *WriteProcResTable;
@@ -134,7 +134,7 @@ public:
   MCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef TuneCPU,
                   StringRef FS, ArrayRef<StringRef> PN,
                   ArrayRef<SubtargetFeatureKV> PF,
-                  ArrayRef<SubtargetSubTypeKV> PD,
+                  ArrayRef<SubtargetSubTypeKV> PD, const MCSchedModel *PSM,
                   const MCWriteProcResEntry *WPR, const MCWriteLatencyEntry *WL,
                   const MCReadAdvanceEntry *RA, const InstrStage *IS,
                   const unsigned *OC, const unsigned *FP);
