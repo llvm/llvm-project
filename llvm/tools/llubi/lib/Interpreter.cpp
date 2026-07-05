@@ -811,7 +811,6 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   }
 
   static BooleanKind getMaskLane(const AnyValue &Mask, size_t I) {
-    assert(Mask.isAggregate());
     return Mask.asAggregate()[I].asBoolean();
   }
 
@@ -833,6 +832,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     const uint64_t AccessSize = Ctx.getEffectiveTypeStoreSize(ElemTy);
 
     SmallVector<LaneUpdate, 8> Lanes;
+    Lanes.reserve(Ptrs.size());
     for (size_t I = 0, E = Ptrs.size(); I != E; ++I) {
       switch (getMaskLane(Mask, I)) {
       case BooleanKind::False:
@@ -1768,16 +1768,12 @@ public:
         if (Cnt.getActiveBits() <= 64 && Cnt.getZExtValue() <= MaxLanes) {
           Res = Cnt.getZExtValue();
         } else {
-          auto ceilUDiv = [](const APInt &N, const APInt &D) {
-            APInt Q = N.udiv(D);
-            if (!N.urem(D).isZero())
-              ++Q;
-            return Q;
-          };
-
           APInt Max(Cnt.getBitWidth(), MaxLanes);
-          APInt NumIters = ceilUDiv(Cnt, Max);
-          uint64_t Lower = ceilUDiv(Cnt, NumIters).getZExtValue();
+          APInt NumIters =
+              APIntOps::RoundingUDiv(Cnt, Max, APInt::Rounding::UP);
+          uint64_t Lower =
+              APIntOps::RoundingUDiv(Cnt, NumIters, APInt::Rounding::UP)
+                  .getZExtValue();
           uint64_t Range = MaxLanes - Lower + 1;
           Res = Lower + Ctx.getRandomUInt64() % Range;
         }
