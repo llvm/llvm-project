@@ -27,3 +27,172 @@ define void @sitofp_v2i64_v2f64(ptr %res, ptr %in){
   store <2 x double> %v1, ptr %res
   ret void
 }
+
+define <4 x double> @sitofp_v4i64_v4f64(<4 x i64> %a) {
+; CHECK-LABEL: sitofp_v4i64_v4f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vffint.d.l $vr0, $vr0
+; CHECK-NEXT:    vffint.d.l $vr1, $vr1
+; CHECK-NEXT:    ret
+  %cvt = sitofp <4 x i64> %a to <4 x double>
+  ret <4 x double> %cvt
+}
+
+define <4 x double> @sitofp_v4i32_v4f64(<4 x i32> %a) {
+; CHECK-LABEL: sitofp_v4i32_v4f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vslti.w $vr1, $vr0, 0
+; CHECK-NEXT:    vilvl.w $vr2, $vr1, $vr0
+; CHECK-NEXT:    vffint.d.l $vr2, $vr2
+; CHECK-NEXT:    vilvh.w $vr0, $vr1, $vr0
+; CHECK-NEXT:    vffint.d.l $vr1, $vr0
+; CHECK-NEXT:    vori.b $vr0, $vr2, 0
+; CHECK-NEXT:    ret
+  %cvt = sitofp <4 x i32> %a to <4 x double>
+  ret <4 x double> %cvt
+}
+
+define <2 x float> @sitofp_v2i32_v2f32(<2 x i32> %a) {
+; CHECK-LABEL: sitofp_v2i32_v2f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vffint.s.w $vr0, $vr0
+; CHECK-NEXT:    ret
+  %cvt = sitofp <2 x i32> %a to <2 x float>
+  ret <2 x float> %cvt
+}
+
+define <2 x double> @sitofp_v4i32_v2f64(<4 x i32> %a) {
+; CHECK-LABEL: sitofp_v4i32_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vslti.w $vr1, $vr0, 0
+; CHECK-NEXT:    vilvl.w $vr0, $vr1, $vr0
+; CHECK-NEXT:    vffint.d.l $vr0, $vr0
+; CHECK-NEXT:    ret
+  %cvt = sitofp <4 x i32> %a to <4 x double>
+  %shuf = shufflevector <4 x double> %cvt, <4 x double> poison, <2 x i32> <i32 0, i32 1>
+  ret <2 x double> %shuf
+}
+
+define <2 x double> @sitofp_v2i16_v2f64(<8 x i16> %a) {
+; CHECK-LABEL: sitofp_v2i16_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vextrins.h $vr0, $vr0, 65
+; CHECK-NEXT:    vslli.d $vr0, $vr0, 48
+; CHECK-NEXT:    vsrai.d $vr0, $vr0, 48
+; CHECK-NEXT:    vffint.d.l $vr0, $vr0
+; CHECK-NEXT:    ret
+  %shuf = shufflevector <8 x i16> %a, <8 x i16> poison, <2 x i32> <i32 0, i32 1>
+  %cvt = sitofp <2 x i16> %shuf to <2 x double>
+  ret <2 x double> %cvt
+}
+
+define <2 x double> @sitofp_v8i16_v2f64(<8 x i16> %a) {
+; CHECK-LABEL: sitofp_v8i16_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vslti.h $vr1, $vr0, 0
+; CHECK-NEXT:    vilvl.h $vr0, $vr1, $vr0
+; CHECK-NEXT:    vslti.w $vr1, $vr0, 0
+; CHECK-NEXT:    vilvl.w $vr0, $vr1, $vr0
+; CHECK-NEXT:    vffint.d.l $vr0, $vr0
+; CHECK-NEXT:    ret
+  %cvt = sitofp <8 x i16> %a to <8 x double>
+  %shuf = shufflevector <8 x double> %cvt, <8 x double> poison, <2 x i32> <i32 0, i32 1>
+  ret <2 x double> %shuf
+}
+
+define <2 x double> @sitofp_v2i8_v2f64(<16 x i8> %a) {
+; CHECK-LABEL: sitofp_v2i8_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vextrins.b $vr0, $vr0, 129
+; CHECK-NEXT:    vslli.d $vr0, $vr0, 56
+; CHECK-NEXT:    vsrai.d $vr0, $vr0, 56
+; CHECK-NEXT:    vffint.d.l $vr0, $vr0
+; CHECK-NEXT:    ret
+  %shuf = shufflevector <16 x i8> %a, <16 x i8> poison, <2 x i32> <i32 0, i32 1>
+  %cvt = sitofp <2 x i8> %shuf to <2 x double>
+  ret <2 x double> %cvt
+}
+
+define <2 x double> @sitofp_v16i8_v2f64(<16 x i8> %a) {
+; CHECK-LABEL: sitofp_v16i8_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vslti.b $vr1, $vr0, 0
+; CHECK-NEXT:    vilvl.b $vr0, $vr1, $vr0
+; CHECK-NEXT:    vslti.h $vr1, $vr0, 0
+; CHECK-NEXT:    vilvl.h $vr0, $vr1, $vr0
+; CHECK-NEXT:    vslti.w $vr1, $vr0, 0
+; CHECK-NEXT:    vilvl.w $vr0, $vr1, $vr0
+; CHECK-NEXT:    vffint.d.l $vr0, $vr0
+; CHECK-NEXT:    ret
+  %cvt = sitofp <16 x i8> %a to <16 x double>
+  %shuf = shufflevector <16 x double> %cvt, <16 x double> poison, <2 x i32> <i32 0, i32 1>
+  ret <2 x double> %shuf
+}
+
+define <4 x double> @sitofp_v4i16_v4f64(<8 x i16> %a) {
+; CHECK-LABEL: sitofp_v4i16_v4f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vslti.h $vr1, $vr0, 0
+; CHECK-NEXT:    vilvl.h $vr1, $vr1, $vr0
+; CHECK-NEXT:    vslti.w $vr2, $vr1, 0
+; CHECK-NEXT:    vilvl.w $vr0, $vr2, $vr1
+; CHECK-NEXT:    vffint.d.l $vr0, $vr0
+; CHECK-NEXT:    vilvh.w $vr1, $vr2, $vr1
+; CHECK-NEXT:    vffint.d.l $vr1, $vr1
+; CHECK-NEXT:    ret
+  %shuf = shufflevector <8 x i16> %a, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %cvt = sitofp <4 x i16> %shuf to <4 x double>
+  ret <4 x double> %cvt
+}
+
+define <4 x double> @sitofp_v8i16_v4f64(<8 x i16> %a) {
+; CHECK-LABEL: sitofp_v8i16_v4f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vslti.h $vr1, $vr0, 0
+; CHECK-NEXT:    vilvl.h $vr1, $vr1, $vr0
+; CHECK-NEXT:    vslti.w $vr2, $vr1, 0
+; CHECK-NEXT:    vilvl.w $vr0, $vr2, $vr1
+; CHECK-NEXT:    vffint.d.l $vr0, $vr0
+; CHECK-NEXT:    vilvh.w $vr1, $vr2, $vr1
+; CHECK-NEXT:    vffint.d.l $vr1, $vr1
+; CHECK-NEXT:    ret
+  %cvt = sitofp <8 x i16> %a to <8 x double>
+  %shuf = shufflevector <8 x double> %cvt, <8 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x double> %shuf
+}
+
+define <4 x double> @sitofp_v4i8_v4f64(<16 x i8> %a) {
+; CHECK-LABEL: sitofp_v4i8_v4f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vilvl.b $vr0, $vr0, $vr0
+; CHECK-NEXT:    vilvl.h $vr0, $vr0, $vr0
+; CHECK-NEXT:    vslli.w $vr0, $vr0, 24
+; CHECK-NEXT:    vsrai.w $vr1, $vr0, 24
+; CHECK-NEXT:    vslti.w $vr2, $vr1, 0
+; CHECK-NEXT:    vilvl.w $vr0, $vr2, $vr1
+; CHECK-NEXT:    vffint.d.l $vr0, $vr0
+; CHECK-NEXT:    vilvh.w $vr1, $vr2, $vr1
+; CHECK-NEXT:    vffint.d.l $vr1, $vr1
+; CHECK-NEXT:    ret
+  %shuf = shufflevector <16 x i8> %a, <16 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %cvt = sitofp <4 x i8> %shuf to <4 x double>
+  ret <4 x double> %cvt
+}
+
+define <4 x double> @sitofp_v16i8_v4f64(<16 x i8> %a) {
+; CHECK-LABEL: sitofp_v16i8_v4f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vslti.b $vr1, $vr0, 0
+; CHECK-NEXT:    vilvl.b $vr0, $vr1, $vr0
+; CHECK-NEXT:    vslti.h $vr1, $vr0, 0
+; CHECK-NEXT:    vilvl.h $vr1, $vr1, $vr0
+; CHECK-NEXT:    vslti.w $vr2, $vr1, 0
+; CHECK-NEXT:    vilvl.w $vr0, $vr2, $vr1
+; CHECK-NEXT:    vffint.d.l $vr0, $vr0
+; CHECK-NEXT:    vilvh.w $vr1, $vr2, $vr1
+; CHECK-NEXT:    vffint.d.l $vr1, $vr1
+; CHECK-NEXT:    ret
+  %cvt = sitofp <16 x i8> %a to <16 x double>
+  %shuf = shufflevector <16 x double> %cvt, <16 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x double> %shuf
+}

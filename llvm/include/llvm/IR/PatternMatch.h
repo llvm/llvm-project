@@ -181,16 +181,32 @@ inline auto m_ConstantInt() { return m_Isa<ConstantInt>(); }
 /// Match an arbitrary ConstantFP and ignore it.
 inline auto m_ConstantFP() { return m_Isa<ConstantFP>(); }
 
-struct constantexpr_match {
+template <typename SPTy> struct ContainsMatchingVectorElement_match {
+  SPTy SubPattern;
+  ContainsMatchingVectorElement_match(const SPTy &SP) : SubPattern(SP) {}
+
   template <typename ITy> bool match(ITy *V) const {
     auto *C = dyn_cast<Constant>(V);
-    return C && (isa<ConstantExpr>(C) || C->containsConstantExpression());
+    return C && C->containsMatchingVectorElement(
+                    [&](Constant *E) { return SubPattern.match(E); });
   }
 };
 
+/// Match a vector constant where at least one of its elements matches the
+/// subpattern. Scalable vector constants are not matched. Any bindings in the
+/// subpattern will be bound to the first match.
+template <typename SPTy>
+inline ContainsMatchingVectorElement_match<SPTy>
+m_ContainsMatchingVectorElement(const SPTy &SubPattern) {
+  return SubPattern;
+}
+
 /// Match a constant expression or a constant that contains a constant
 /// expression.
-inline constantexpr_match m_ConstantExpr() { return constantexpr_match(); }
+inline auto m_ConstantExpr() {
+  return m_CombineOr(m_Isa<ConstantExpr>(),
+                     m_ContainsMatchingVectorElement(m_Isa<ConstantExpr>()));
+}
 
 template <typename SubPattern_t> struct Splat_match {
   SubPattern_t SubPattern;
@@ -888,13 +904,12 @@ inline match_bind<const BasicBlock> m_BasicBlock(const BasicBlock *&V) {
 struct immconstant_ty {
   template <typename ITy> static bool isImmConstant(ITy *V) {
     if (auto *CV = dyn_cast<Constant>(V)) {
-      if (!isa<ConstantExpr>(CV) && !CV->containsConstantExpression())
+      if (!match(CV, m_ConstantExpr()))
         return true;
 
       if (CV->getType()->isVectorTy()) {
         if (auto *Splat = CV->getSplatValue(/*AllowPoison=*/true)) {
-          if (!isa<ConstantExpr>(Splat) &&
-              !Splat->containsConstantExpression()) {
+          if (!match(Splat, m_ConstantExpr())) {
             return true;
           }
         }

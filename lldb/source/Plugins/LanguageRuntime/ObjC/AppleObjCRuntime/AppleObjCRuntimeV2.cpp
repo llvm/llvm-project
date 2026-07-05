@@ -3629,6 +3629,7 @@ static void RegisterObjCExceptionRecognizer(Process *process) {
 
   process->GetTarget().GetFrameRecognizerManager().AddRecognizer(
       StackFrameRecognizerSP(new ObjCExceptionThrowFrameRecognizer()),
-      module.GetFilename(), symbols, Mangled::NamePreference::ePreferDemangled,
+      ConstString(module.GetFilename()), symbols,
+      Mangled::NamePreference::ePreferDemangled,
       /*first_instruction_only*/ true);
 }

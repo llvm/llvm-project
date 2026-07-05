@@ -377,6 +377,20 @@ m_BranchOnTwoConds(const Op0_t &Op0, const Op1_t &Op1) {
   return m_VPInstruction<VPInstruction::BranchOnTwoConds>(Op0, Op1);
 }
 
+inline VPInstruction_match<VPInstruction::BranchOnCount> m_BranchOnCount() {
+  return m_VPInstruction<VPInstruction::BranchOnCount>();
+}
+
+template <typename Op0_t, typename Op1_t>
+inline VPInstruction_match<VPInstruction::BranchOnCount, Op0_t, Op1_t>
+m_BranchOnCount(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_VPInstruction<VPInstruction::BranchOnCount>(Op0, Op1);
+}
+
+inline auto m_Branch() {
+  return m_CombineOr(m_BranchOnCond(), m_BranchOnCount(), m_BranchOnTwoConds());
+}
+
 template <typename Op0_t>
 inline VPInstruction_match<VPInstruction::Broadcast, Op0_t>
 m_Broadcast(const Op0_t &Op0) {
@@ -437,16 +451,6 @@ template <typename Op0_t, typename Op1_t, typename Op2_t>
 inline VPInstruction_match<VPInstruction::ActiveLaneMask, Op0_t, Op1_t, Op2_t>
 m_ActiveLaneMask(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
   return m_VPInstruction<VPInstruction::ActiveLaneMask>(Op0, Op1, Op2);
-}
-
-inline VPInstruction_match<VPInstruction::BranchOnCount> m_BranchOnCount() {
-  return m_VPInstruction<VPInstruction::BranchOnCount>();
-}
-
-template <typename Op0_t, typename Op1_t>
-inline VPInstruction_match<VPInstruction::BranchOnCount, Op0_t, Op1_t>
-m_BranchOnCount(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_VPInstruction<VPInstruction::BranchOnCount>(Op0, Op1);
 }
 
 inline VPInstruction_match<VPInstruction::AnyOf> m_AnyOf() {
@@ -654,6 +658,12 @@ template <typename Op0_t, typename Op1_t>
 inline AllRecipe_match<Instruction::URem, Op0_t, Op1_t>
 m_URem(const Op0_t &Op0, const Op1_t &Op1) {
   return m_Binary<Instruction::URem, Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline AllRecipe_match<Instruction::SRem, Op0_t, Op1_t>
+m_SRem(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_Binary<Instruction::SRem, Op0_t, Op1_t>(Op0, Op1);
 }
 
 /// Match a binary AND operation.
@@ -1071,6 +1081,20 @@ inline auto m_WidenIntrinsic(const T &...Ops) {
   return m_Isa<VPWidenIntrinsicRecipe>(m_Intrinsic<IntrID>(Ops...));
 }
 
+/// Match VPValues that represent live-ins: VPIRValues and (plain)
+/// VPSymbolicValues. VPRegionValues (which inherit from VPSymbolicValue) are
+/// not live-ins and are excluded.
+struct LiveIn_match {
+  template <typename ITy> bool match(ITy *V) const {
+    return isa<VPIRValue>(V) ||
+           (isa<VPSymbolicValue>(V) && !isa<VPRegionValue>(V));
+  }
+};
+
+inline VPInstruction_match<VPInstruction::VScale> m_VScale() {
+  return m_VPInstruction<VPInstruction::VScale>();
+}
+
 inline auto m_LiveIn() { return m_Isa<VPIRValue, VPSymbolicValue>(); }
 
 /// Match a GEP recipe (VPWidenGEPRecipe, VPInstruction, or VPReplicateRecipe)
@@ -1151,18 +1175,18 @@ inline auto m_VPPhi(const Op0_t &Op0, const Op1_t &Op1) {
 /// If \p V is used by a recipe matching pattern \p P, return it. Otherwise
 /// return nullptr;
 template <typename MatchT>
-static VPRecipeBase *findUserOf(VPValue *V, const MatchT &P) {
+VPRecipeBase *findUserOf(VPValue *V, const MatchT &P) {
   auto It = find_if(V->users(), match_fn(P));
   return It == V->user_end() ? nullptr : cast<VPRecipeBase>(*It);
 }
 
 /// If \p V is used by a VPInstruction with \p Opcode, return it. Otherwise
 /// return nullptr.
-template <unsigned Opcode> static VPInstruction *findUserOf(VPValue *V) {
+template <unsigned Opcode> VPInstruction *findUserOf(VPValue *V) {
   return cast_or_null<VPInstruction>(findUserOf(V, m_VPInstruction<Opcode>()));
 }
 
-template <typename RecipeTy> static RecipeTy *findUserOf(VPValue *V) {
+template <typename RecipeTy> RecipeTy *findUserOf(VPValue *V) {
   return cast_or_null<RecipeTy>(findUserOf(V, m_Isa<RecipeTy>()));
 }
 } // namespace llvm::VPlanPatternMatch
