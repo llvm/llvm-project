@@ -8,8 +8,8 @@
 
 #include "CeilTest.h"
 
-#include "src/math/ceilf128.h"
 #include "src/__support/FPUtil/float128.h"
+#include "src/math/ceilf128.h"
 
 using LIBC_NAMESPACE::fputil::Float128;
 

@@ -10,8 +10,8 @@
 #define LLVM_LIBC_SRC___SUPPORT_MATH_CEILF128_H
 
 #include "src/__support/FPUtil/NearestIntegerOperations.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/FPUtil/float128.h"
+#include "src/__support/macros/config.h"
 
 using LIBC_NAMESPACE::fputil::Float128;
 
