@@ -225,6 +225,8 @@ public:
     for (auto &F : *this) {
       F.convertToNewDbgValues();
     }
+
+    removeDebugIntrinsicDeclarations();
   }
 
   /// \see BasicBlock::convertFromNewDbgValues.
@@ -1007,6 +1009,14 @@ public:
   int getStackProtectorGuardOffset() const;
   void setStackProtectorGuardOffset(int Offset);
 
+  /// Get/set the width in memory of the stack protector guard value.
+  std::optional<unsigned> getStackProtectorGuardValueWidth() const;
+  void setStackProtectorGuardValueWidth(unsigned Width);
+
+  // Get/set flag indicating whether to emit a __stack_protector_loc section.
+  bool hasStackProtectorGuardRecord() const;
+  void setStackProtectorGuardRecord(bool Flag);
+
   /// Get/set the stack alignment overridden from the default.
   unsigned getOverrideStackAlignment() const;
   void setOverrideStackAlignment(unsigned Align);
@@ -1053,9 +1063,8 @@ public:
   /// Returns target-abi from MDString, null if target-abi is absent.
   StringRef getTargetABIFromMD();
 
-  /// Get how unwind v2 (epilog) information should be generated for x64
-  /// Windows.
-  WinX64EHUnwindV2Mode getWinX64EHUnwindV2Mode() const;
+  /// Get how unwind information should be generated for x64 Windows.
+  WinX64EHUnwindMode getWinX64EHUnwindMode() const;
 
   /// Gets the Control Flow Guard mode.
   ControlFlowGuardMode getControlFlowGuardMode() const;

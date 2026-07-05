@@ -315,7 +315,7 @@ define i1 @any_of_reduction_i1_epilog2(ptr %start, ptr %end, i64 %x) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 8
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP24:%.*]] = mul i64 [[N_VEC]], 16
+; CHECK-NEXT:    [[TMP24:%.*]] = shl i64 [[N_VEC]], 4
 ; CHECK-NEXT:    [[IND_END9:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP24]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i64> poison, i64 [[X]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT]], <8 x i64> poison, <8 x i32> zeroinitializer
@@ -323,7 +323,7 @@ define i1 @any_of_reduction_i1_epilog2(ptr %start, ptr %end, i64 %x) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP42:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 16
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], 16
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], 32
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], 48
@@ -383,7 +383,7 @@ define i1 @any_of_reduction_i1_epilog2(ptr %start, ptr %end, i64 %x) {
 ; CHECK-NEXT:    [[TMP48:%.*]] = icmp ne i1 [[BC_MERGE_RDX]], true
 ; CHECK-NEXT:    [[N_MOD_VF7:%.*]] = urem i64 [[TMP3]], 4
 ; CHECK-NEXT:    [[N_VEC8:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF7]]
-; CHECK-NEXT:    [[TMP25:%.*]] = mul i64 [[N_VEC8]], 16
+; CHECK-NEXT:    [[TMP25:%.*]] = shl i64 [[N_VEC8]], 4
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP25]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT18:%.*]] = insertelement <4 x i64> poison, i64 [[X]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT19:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT18]], <4 x i64> poison, <4 x i32> zeroinitializer
@@ -393,7 +393,7 @@ define i1 @any_of_reduction_i1_epilog2(ptr %start, ptr %end, i64 %x) {
 ; CHECK:       vec.epilog.vector.body:
 ; CHECK-NEXT:    [[INDEX11:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT20:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI12:%.*]] = phi <4 x i1> [ [[MINMAX_IDENT_SPLAT]], [[VEC_EPILOG_PH]] ], [ [[TMP43:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX13:%.*]] = mul i64 [[INDEX11]], 16
+; CHECK-NEXT:    [[OFFSET_IDX13:%.*]] = shl i64 [[INDEX11]], 4
 ; CHECK-NEXT:    [[TMP27:%.*]] = add i64 [[OFFSET_IDX13]], 16
 ; CHECK-NEXT:    [[TMP28:%.*]] = add i64 [[OFFSET_IDX13]], 32
 ; CHECK-NEXT:    [[TMP29:%.*]] = add i64 [[OFFSET_IDX13]], 48

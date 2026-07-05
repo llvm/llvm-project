@@ -40,7 +40,8 @@ void AMDGCN::Linker::constructLLVMLinkCommand(
   ArgStringList LinkerInputs;
 
   for (auto Input : Inputs)
-    LinkerInputs.push_back(Input.getFilename());
+    if (Input.isFilename())
+      LinkerInputs.push_back(Input.getFilename());
 
   // Look for archive of bundled bitcode in arguments, and add temporary files
   // for the extracted archive of bitcode to inputs.
@@ -69,17 +70,17 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
 
   auto &TC = getToolChain();
   auto &D = TC.getDriver();
-  bool IsThinLTO = D.getOffloadLTOMode() == LTOK_Thin;
+  bool IsThinLTO = TC.getLTOMode(Args, Action::OFK_HIP) == LTOK_Thin;
   addLTOOptions(TC, Args, LldArgs, Output, Inputs, IsThinLTO);
 
   // Extract all the -m options
   std::vector<llvm::StringRef> Features;
-  amdgpu::getAMDGPUTargetFeatures(D, TC.getTriple(), Args, Features);
+  amdgpu::getAMDGPUTargetFeatures(D, TC.getEffectiveTriple(), Args, Features);
 
   // Add features to mattr such as cumode
   std::string MAttrString = "-plugin-opt=-mattr=";
   for (auto OneFeature : unifyTargetFeatures(Features)) {
-    MAttrString.append(Args.MakeArgString(OneFeature));
+    MAttrString.append(Args.MakeArgStringRef(OneFeature));
     if (OneFeature != Features.back())
       MAttrString.append(",");
   }
@@ -90,10 +91,9 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   // Since AMDGPU backend currently does not support ISA-level linking, all
   // called functions need to be imported.
   if (IsThinLTO) {
-    LldArgs.push_back(Args.MakeArgString("-plugin-opt=-force-import-all"));
-    LldArgs.push_back(Args.MakeArgString("-plugin-opt=-avail-extern-to-local"));
-    LldArgs.push_back(Args.MakeArgString(
-        "-plugin-opt=-avail-extern-gv-in-addrspace-to-local=3"));
+    LldArgs.push_back("-plugin-opt=-force-import-all");
+    LldArgs.push_back("-plugin-opt=-avail-extern-to-local");
+    LldArgs.push_back("-plugin-opt=-avail-extern-gv-in-addrspace-to-local=3");
   }
 
   for (const Arg *A : Args.filtered(options::OPT_mllvm)) {
@@ -125,7 +125,7 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
       LldArgs.push_back(
           Args.MakeArgString(Twine("-plugin-opt=") + SplitArg.second));
     } else {
-      LldArgs.push_back(Args.MakeArgString(ArgVal));
+      LldArgs.push_back(Args.MakeArgStringRef(ArgVal));
     }
     Arg->claim();
   }
@@ -142,7 +142,7 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
 
   LldArgs.push_back("--no-whole-archive");
 
-  const char *Lld = Args.MakeArgString(getToolChain().GetProgramPath("lld"));
+  const char *Lld = Args.MakeArgStringRef(getToolChain().GetProgramPath("lld"));
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
                                          Lld, LldArgs, Inputs, Output));
 }
@@ -162,9 +162,9 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
   const char *LinkedBCFilePath = HIP::getTempFile(C, LinkedBCFilePrefix, "bc");
   InputInfo LinkedBCFile(&JA, LinkedBCFilePath, Output.getBaseInput());
 
-  bool UseSPIRVBackend =
-      Args.hasFlag(options::OPT_use_spirv_backend,
-                   options::OPT_no_use_spirv_backend, /*Default=*/false);
+  bool UseSPIRVBackend = Args.hasFlag(options::OPT_use_spirv_backend,
+                                      options::OPT_no_use_spirv_backend,
+                                      /*Default=*/true);
 
   constructLLVMLinkCommand(C, JA, Inputs, LinkedBCFile, Args);
 
@@ -174,14 +174,13 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
     // compiled to SPIR-V.
 
     llvm::opt::ArgStringList CmdArgs;
-    const char *Triple =
-        C.getArgs().MakeArgString("-triple=spirv64-amd-amdhsa");
 
-    CmdArgs.append({"-cc1", Triple, "-emit-obj", "-disable-llvm-optzns",
-                    LinkedBCFile.getFilename(), "-o", Output.getFilename()});
+    CmdArgs.append({"-cc1", "-triple=spirv64-amd-amdhsa", "-emit-obj",
+                    "-disable-llvm-optzns", LinkedBCFile.getFilename(), "-o",
+                    Output.getFilename()});
 
     const Driver &Driver = getToolChain().getDriver();
-    const char *Exec = Driver.getClangProgramPath();
+    const char *Exec = Driver.getDriverProgramPath();
     C.addCommand(std::make_unique<Command>(
         JA, *this, ResponseFileSupport::None(), Exec, CmdArgs, LinkedBCFile,
         Output, Driver.getPrependArg()));
@@ -189,7 +188,7 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
     // Emit SPIR-V binary using the translator
     llvm::opt::ArgStringList TrArgs{
         "--spirv-max-version=1.6",
-        "--spirv-ext=+all,-SPV_KHR_untyped_pointers",
+        "--spirv-ext=+all",
         "--spirv-allow-unknown-intrinsics",
         "--spirv-lower-const-expr",
         "--spirv-preserve-auxdata",
@@ -235,9 +234,7 @@ HIPAMDToolChain::HIPAMDToolChain(const Driver &D, const llvm::Triple &Triple,
 
 void HIPAMDToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadingKind) const {
-  HostTC.addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadingKind);
-
+    BoundArch BA, Action::OffloadKind DeviceOffloadingKind) const {
   assert(DeviceOffloadingKind == Action::OFK_HIP &&
          "Only HIP offloading kinds are supported for GPUs.");
 
@@ -253,9 +250,8 @@ void HIPAMDToolChain::addClangTargetOptions(
   StringRef MaxThreadsPerBlock =
       DriverArgs.getLastArgValue(options::OPT_gpu_max_threads_per_block_EQ);
   if (!MaxThreadsPerBlock.empty()) {
-    std::string ArgStr =
-        (Twine("--gpu-max-threads-per-block=") + MaxThreadsPerBlock).str();
-    CC1Args.push_back(DriverArgs.MakeArgStringRef(ArgStr));
+    CC1Args.push_back(DriverArgs.MakeArgString(
+        Twine("--gpu-max-threads-per-block=") + MaxThreadsPerBlock));
   }
 
   // Default to "hidden" visibility, as object level linking will not be
@@ -263,7 +259,7 @@ void HIPAMDToolChain::addClangTargetOptions(
   // TODO: remove the SPIR-V bypass once it can encode (hidden) visibility.
   if (!DriverArgs.hasArg(options::OPT_fvisibility_EQ,
                          options::OPT_fvisibility_ms_compat) &&
-      !getEffectiveTriple().isSPIRV()) {
+      !getEffectiveTriple().isSPIRV() && !getDriver().IsFlangMode()) {
     CC1Args.append({"-fvisibility=hidden"});
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }
@@ -283,39 +279,19 @@ void HIPAMDToolChain::addClangTargetOptions(
     return; // No DeviceLibs for SPIR-V.
   }
 
-  for (auto BCFile : getDeviceLibs(DriverArgs, DeviceOffloadingKind)) {
+  for (auto BCFile : getDeviceLibs(DriverArgs, BA, DeviceOffloadingKind)) {
     CC1Args.push_back(BCFile.ShouldInternalize ? "-mlink-builtin-bitcode"
                                                : "-mlink-bitcode-file");
-    CC1Args.push_back(DriverArgs.MakeArgString(BCFile.Path));
+    CC1Args.push_back(DriverArgs.MakeArgStringRef(BCFile.Path));
   }
 }
 
 llvm::opt::DerivedArgList *
 HIPAMDToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
-                               StringRef BoundArch,
+                               BoundArch BA,
                                Action::OffloadKind DeviceOffloadKind) const {
-  DerivedArgList *DAL =
-      HostTC.TranslateArgs(Args, BoundArch, DeviceOffloadKind);
-  if (!DAL)
-    DAL = new DerivedArgList(Args.getBaseArgs());
-
-  const OptTable &Opts = getDriver().getOpts();
-
-  for (Arg *A : Args) {
-    // Filter unsupported sanitizers passed from the HostTC.
-    if (!handleSanitizeOption(*this, *DAL, Args, BoundArch, A))
-      DAL->append(A);
-  }
-
-  if (!BoundArch.empty()) {
-    DAL->eraseArg(options::OPT_mcpu_EQ);
-    DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_mcpu_EQ), BoundArch);
-    checkTargetID(*DAL);
-  }
-
-  if (!Args.hasArg(options::OPT_flto_partitions_EQ))
-    DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_flto_partitions_EQ),
-                      "8");
+  llvm::opt::DerivedArgList *DAL =
+      ROCMToolChain::TranslateArgs(Args, BA, DeviceOffloadKind);
 
   return DAL;
 }
@@ -324,11 +300,6 @@ Tool *HIPAMDToolChain::buildLinker() const {
   assert(getTriple().isAMDGCN() ||
          getTriple().getArch() == llvm::Triple::spirv64);
   return new tools::AMDGCN::Linker(*this);
-}
-
-void HIPAMDToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
-  AMDGPUToolChain::addClangWarningOptions(CC1Args);
-  HostTC.addClangWarningOptions(CC1Args);
 }
 
 ToolChain::CXXStdlibType
@@ -356,18 +327,6 @@ void HIPAMDToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
   RocmInstallation->AddHIPIncludeArgs(DriverArgs, CC1Args);
 }
 
-SanitizerMask HIPAMDToolChain::getSupportedSanitizers() const {
-  // The HIPAMDToolChain only supports sanitizers in the sense that it allows
-  // sanitizer arguments on the command line if they are supported by the host
-  // toolchain. The HIPAMDToolChain will later filter unsupported sanitizers
-  // from the command line arguments.
-  //
-  // This behavior is necessary because the host and device toolchains
-  // invocations often share the command line, so the device toolchain must
-  // tolerate flags meant only for the host toolchain.
-  return HostTC.getSupportedSanitizers();
-}
-
 VersionTuple HIPAMDToolChain::computeMSVCVersion(const Driver *D,
                                                  const ArgList &Args) const {
   return HostTC.computeMSVCVersion(D, Args);
@@ -375,20 +334,27 @@ VersionTuple HIPAMDToolChain::computeMSVCVersion(const Driver *D,
 
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs,
+                               BoundArch BA,
                                Action::OffloadKind DeviceOffloadingKind) const {
+  assert(BA && "Must have an explicit GPU arch.");
+
   llvm::SmallVector<BitCodeLibraryInfo, 12> BCLibs;
   const llvm::Triple &TT = getEffectiveTriple();
 
   if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
                           true) ||
-      TT.getEnvironment() == llvm::Triple::LLVM ||
-      getGPUArch(DriverArgs) == "amdgcnspirv")
+      TT.getEnvironment() == llvm::Triple::LLVM)
     return {};
+
+  StringRef GpuArch = getProcessorFromTargetID(getTriple(), BA.ArchName);
+  if (GpuArch == "amdgcnspirv")
+    return {};
+
   ArgStringList LibraryPaths;
 
   // Find in --hip-device-lib-path and HIP_LIBRARY_PATH.
   for (StringRef Path : RocmInstallation->getRocmDeviceLibPathArg())
-    LibraryPaths.push_back(DriverArgs.MakeArgString(Path));
+    LibraryPaths.push_back(DriverArgs.MakeArgStringRef(Path));
 
   addDirectoryList(DriverArgs, LibraryPaths, "", "HIP_DEVICE_LIB_PATH");
 
@@ -416,11 +382,9 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs,
       getDriver().Diag(diag::err_drv_no_rocm_device_lib) << 0;
       return {};
     }
-    StringRef GpuArch = getGPUArch(DriverArgs);
-    assert(!GpuArch.empty() && "Must have an explicit GPU arch.");
 
     // Add common device libraries like ocml etc.
-    for (auto N : getCommonDeviceLibNames(DriverArgs, GpuArch.str(),
+    for (auto N : getCommonDeviceLibNames(DriverArgs, BA.ArchName, GpuArch,
                                           DeviceOffloadingKind))
       BCLibs.emplace_back(N);
 
@@ -438,13 +402,14 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs,
   return BCLibs;
 }
 
-void HIPAMDToolChain::checkTargetID(
-    const llvm::opt::ArgList &DriverArgs) const {
+HIPAMDToolChain::ParsedTargetIDType
+HIPAMDToolChain::checkTargetID(const llvm::opt::ArgList &DriverArgs) const {
   auto PTID = getParsedTargetID(DriverArgs);
   if (PTID.OptionalTargetID && !PTID.OptionalGPUArch &&
       PTID.OptionalTargetID != "amdgcnspirv")
     getDriver().Diag(clang::diag::err_drv_bad_target_id)
         << *PTID.OptionalTargetID;
+  return PTID;
 }
 
 SPIRVAMDToolChain::SPIRVAMDToolChain(const Driver &D,

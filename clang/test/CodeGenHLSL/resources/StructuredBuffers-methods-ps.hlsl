@@ -17,7 +17,8 @@ export void TestIncrementCounter() {
 }
 
 // CHECK: define void @TestIncrementCounter()()
-// CHECK: call noundef i32 @hlsl::RasterizerOrderedStructuredBuffer<float>::IncrementCounter()(ptr {{.*}} @ROSB1)
+// CHECK: %[[TOK:.*]] = call token @llvm.experimental.convergence.entry()
+// CHECK: call noundef i32 @hlsl::RasterizerOrderedStructuredBuffer<float>::IncrementCounter()(ptr {{.*}} @ROSB1) {{.*}} [ "convergencectrl"(token %[[TOK]]) ]
 // CHECK-NEXT: ret void
 
 // CHECK: define {{.*}} i32 @hlsl::RasterizerOrderedStructuredBuffer<float>::IncrementCounter()(ptr {{.*}} %this)
@@ -31,7 +32,8 @@ export void TestDecrementCounter() {
 }
 
 // CHECK: define void @TestDecrementCounter()()
-// CHECK: call noundef i32 @hlsl::RasterizerOrderedStructuredBuffer<int vector[2]>::DecrementCounter()(ptr {{.*}} @ROSB2)
+// CHECK: %[[TOK:.*]] = call token @llvm.experimental.convergence.entry()
+// CHECK: call noundef i32 @hlsl::RasterizerOrderedStructuredBuffer<int vector[2]>::DecrementCounter()(ptr {{.*}} @ROSB2) {{.*}} [ "convergencectrl"(token %[[TOK]]) ]
 // CHECK-NEXT: ret void
 
 // CHECK: define {{.*}} i32 @hlsl::RasterizerOrderedStructuredBuffer<int vector[2]>::DecrementCounter()(ptr {{.*}} %this)
@@ -45,11 +47,12 @@ export float TestLoad() {
 }
 
 // CHECK: define {{.*}} float @TestLoad()()
-// CHECK: call {{.*}} float @hlsl::RasterizerOrderedStructuredBuffer<float>::Load(unsigned int)(ptr {{.*}} @ROSB1, i32 noundef 10)
-// CHECK: call {{.*}} <2 x i32> @hlsl::RasterizerOrderedStructuredBuffer<int vector[2]>::Load(unsigned int)(ptr {{.*}} @ROSB2, i32 noundef 20)
+// CHECK: %[[TOK:.*]] = call token @llvm.experimental.convergence.entry()
+// CHECK: call {{.*}} float @hlsl::RasterizerOrderedStructuredBuffer<float>::Load(unsigned int) const(ptr {{.*}} @ROSB1, i32 noundef 10) {{.*}} [ "convergencectrl"(token %[[TOK]]) ]
+// CHECK: call {{.*}} <2 x i32> @hlsl::RasterizerOrderedStructuredBuffer<int vector[2]>::Load(unsigned int) const(ptr {{.*}} @ROSB2, i32 noundef 20) {{.*}} [ "convergencectrl"(token %[[TOK]]) ]
 // CHECK: ret
 
-// CHECK: define {{.*}} float @hlsl::RasterizerOrderedStructuredBuffer<float>::Load(unsigned int)(ptr {{.*}} %Index)
+// CHECK: define {{.*}} float @hlsl::RasterizerOrderedStructuredBuffer<float>::Load(unsigned int) const(ptr {{.*}} %Index)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RasterizerOrderedStructuredBuffer", ptr {{.*}}, i32 0, i32 0
 // CHECK-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", float, 1, 1), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
@@ -57,7 +60,7 @@ export float TestLoad() {
 // CHECK-NEXT: %[[VAL:.*]] = load float, ptr %[[BUFPTR]]
 // CHECK-NEXT: ret float %[[VAL]]
 
-// CHECK: define {{.*}} <2 x i32> @hlsl::RasterizerOrderedStructuredBuffer<int vector[2]>::Load(unsigned int)(ptr {{.*}} %Index)
+// CHECK: define {{.*}} <2 x i32> @hlsl::RasterizerOrderedStructuredBuffer<int vector[2]>::Load(unsigned int) const(ptr {{.*}} %Index)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RasterizerOrderedStructuredBuffer.0", ptr {{.*}}, i32 0, i32 0
 // CHECK-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", <2 x i32>, 1, 1), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
@@ -73,11 +76,12 @@ export float TestLoadWithStatus() {
 }
 
 // CHECK: define {{.*}} float @TestLoadWithStatus()()
-// CHECK: call {{.*}} float @hlsl::RasterizerOrderedStructuredBuffer<float>::Load(unsigned int, unsigned int&)(ptr {{.*}} @ROSB1, i32 noundef 10, ptr {{.*}} %tmp)
-// CHECK: call {{.*}} <2 x i32> @hlsl::RasterizerOrderedStructuredBuffer<int vector[2]>::Load(unsigned int, unsigned int&)(ptr {{.*}} @ROSB2, i32 noundef 20, ptr {{.*}} %tmp2)
+// CHECK: %[[TOK:.*]] = call token @llvm.experimental.convergence.entry()
+// CHECK: call {{.*}} float @hlsl::RasterizerOrderedStructuredBuffer<float>::Load(unsigned int, unsigned int&) const(ptr {{.*}} @ROSB1, i32 noundef 10, ptr {{.*}} %tmp) {{.*}} [ "convergencectrl"(token %[[TOK]]) ]
+// CHECK: call {{.*}} <2 x i32> @hlsl::RasterizerOrderedStructuredBuffer<int vector[2]>::Load(unsigned int, unsigned int&) const(ptr {{.*}} @ROSB2, i32 noundef 20, ptr {{.*}} %tmp3) {{.*}} [ "convergencectrl"(token %[[TOK]]) ]
 // CHECK: ret
 
-// CHECK: define {{.*}} float @hlsl::RasterizerOrderedStructuredBuffer<float>::Load(unsigned int, unsigned int&)(ptr {{.*}} %this, i32 noundef %Index, ptr {{.*}} %Status)
+// CHECK: define {{.*}} float @hlsl::RasterizerOrderedStructuredBuffer<float>::Load(unsigned int, unsigned int&) const(ptr {{.*}} %this, i32 noundef %Index, ptr {{.*}} %Status)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RasterizerOrderedStructuredBuffer", ptr {{.*}}, i32 0, i32 0
 // CHECK-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", float, 1, 1), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
@@ -89,7 +93,7 @@ export float TestLoadWithStatus() {
 // CHECK-NEXT: store i32 %[[STATUS_EXT]], ptr %[[LOADED_STATUS_ADDR]], align 4
 // CHECK-NEXT: ret float %[[VALUE]]
 
-// CHECK: define {{.*}} <2 x i32> @hlsl::RasterizerOrderedStructuredBuffer<int vector[2]>::Load(unsigned int, unsigned int&)(ptr {{.*}} %this, i32 noundef %Index, ptr {{.*}} %Status)
+// CHECK: define {{.*}} <2 x i32> @hlsl::RasterizerOrderedStructuredBuffer<int vector[2]>::Load(unsigned int, unsigned int&) const(ptr {{.*}} %this, i32 noundef %Index, ptr {{.*}} %Status)
 // CHECK: %__handle = getelementptr inbounds nuw %"class.hlsl::RasterizerOrderedStructuredBuffer.0", ptr {{.*}}, i32 0, i32 0
 // CHECK-NEXT: %[[HANDLE:.*]] = load target("dx.RawBuffer", <2 x i32>, 1, 1), ptr %__handle
 // CHECK-NEXT: %[[INDEX:.*]] = load i32, ptr %Index.addr
@@ -109,8 +113,9 @@ export uint TestGetDimensions() {
     return dim1 + dim2 + stride1 + stride2;
 }
 // CHECK: define noundef i32 @TestGetDimensions()()
-// CHECK: call void @hlsl::RasterizerOrderedStructuredBuffer<float>::GetDimensions(unsigned int&, unsigned int&)(ptr {{.*}} @ROSB1, ptr {{.*}}, ptr {{.*}})
-// CHECK: call void @hlsl::RasterizerOrderedStructuredBuffer<int vector[2]>::GetDimensions(unsigned int&, unsigned int&)(ptr {{.*}} @ROSB2, ptr {{.*}}, ptr {{.*}})
+// CHECK: %[[TOK:.*]] = call token @llvm.experimental.convergence.entry()
+// CHECK: call void @hlsl::RasterizerOrderedStructuredBuffer<float>::GetDimensions(unsigned int&, unsigned int&)(ptr {{.*}} @ROSB1, ptr {{.*}}, ptr {{.*}}) {{.*}} [ "convergencectrl"(token %[[TOK]]) ]
+// CHECK: call void @hlsl::RasterizerOrderedStructuredBuffer<int vector[2]>::GetDimensions(unsigned int&, unsigned int&)(ptr {{.*}} @ROSB2, ptr {{.*}}, ptr {{.*}}) {{.*}} [ "convergencectrl"(token %[[TOK]]) ]
 // CHECK: add
 // CHECK: ret
 

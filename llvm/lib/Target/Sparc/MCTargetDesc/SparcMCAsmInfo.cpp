@@ -22,7 +22,9 @@ using namespace llvm;
 
 void SparcELFMCAsmInfo::anchor() {}
 
-SparcELFMCAsmInfo::SparcELFMCAsmInfo(const Triple &TheTriple) {
+SparcELFMCAsmInfo::SparcELFMCAsmInfo(const Triple &TheTriple,
+                                     const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
   bool isV9 = (TheTriple.getArch() == Triple::sparcv9);
   IsLittleEndian = (TheTriple.getArch() == Triple::sparcel);
 

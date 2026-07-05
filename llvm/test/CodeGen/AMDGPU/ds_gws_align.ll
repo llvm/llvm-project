@@ -53,6 +53,17 @@ bb:
   ret void
 }
 
+; GCN-LABEL: {{^}}gws_init_subreg_uses:
+; GCN-COUNT-2: ds_gws_init v{{[0-9]+}} gds
+define amdgpu_ps void @gws_init_subreg_uses(ptr addrspace(1) %p) {
+  %v = load <4 x i32>, ptr addrspace(1) %p
+  %a = extractelement <4 x i32> %v, i32 0
+  %b = extractelement <4 x i32> %v, i32 1
+  call void @llvm.amdgcn.ds.gws.init(i32 %a, i32 0)
+  call void @llvm.amdgcn.ds.gws.init(i32 %b, i32 0)
+  ret void
+}
+
 declare void @llvm.amdgcn.ds.gws.init(i32, i32)
 declare void @llvm.amdgcn.ds.gws.sema.br(i32, i32)
 declare void @llvm.amdgcn.ds.gws.barrier(i32, i32)

@@ -150,8 +150,7 @@ lldb::SectionSP MergeSections(lldb::SectionSP lhs, lldb::SectionSP rhs) {
         "mismatch addresses for section {0} when "
         "merging with {1}, expected: {2:x}, "
         "actual: {3:x}",
-        lhs->GetTypeAsCString(),
-        rhs_module_parent->GetFileSpec().GetPathAsConstString().GetCString(),
+        lhs->GetTypeAsCString(), rhs_module_parent->GetFileSpec().GetPath(),
         lhs->GetFileAddress(), rhs->GetFileAddress());
 
   // We want to take the greater of two sections. If LHS and RHS are both
@@ -363,6 +362,26 @@ static uint32_t loongarchVariantFromElfFlags(const elf::ELFHeader &header) {
   }
 }
 
+static uint32_t AMDGPUVariantFromElfFlags(const elf::ELFHeader &header) {
+  // Only HSA objects encode the exact GPU model, as an EF_AMDGPU_MACH value.
+  if (header.e_ident[EI_OSABI] == ELFOSABI_AMDGPU_HSA) {
+    switch (header.e_ident[EI_ABIVERSION]) {
+    // HSA V2 does not encode a CPU model.
+    case ELFABIVERSION_AMDGPU_HSA_V2:
+      break;
+
+    case ELFABIVERSION_AMDGPU_HSA_V3:
+    case ELFABIVERSION_AMDGPU_HSA_V4:
+    case ELFABIVERSION_AMDGPU_HSA_V5:
+    case ELFABIVERSION_AMDGPU_HSA_V6:
+      // The CPU model is the EF_AMDGPU_MACH value in the bottom byte of
+      // e_flags.
+      return header.e_flags & EF_AMDGPU_MACH;
+    }
+  }
+  return LLDB_INVALID_CPUTYPE;
+}
+
 static uint32_t subTypeFromElfHeader(const elf::ELFHeader &header) {
   if (header.e_machine == llvm::ELF::EM_MIPS)
     return mipsVariantFromElfFlags(header);
@@ -372,6 +391,8 @@ static uint32_t subTypeFromElfHeader(const elf::ELFHeader &header) {
     return riscvVariantFromElfFlags(header);
   else if (header.e_machine == llvm::ELF::EM_LOONGARCH)
     return loongarchVariantFromElfFlags(header);
+  else if (header.e_machine == llvm::ELF::EM_AMDGPU)
+    return AMDGPUVariantFromElfFlags(header);
 
   return LLDB_INVALID_CPUTYPE;
 }
@@ -585,6 +606,9 @@ static bool GetOsFromOSABI(unsigned char osabi_byte,
   case ELFOSABI_SOLARIS:
     ostype = llvm::Triple::OSType::Solaris;
     break;
+  case ELFOSABI_AMDGPU_HSA:
+    ostype = llvm::Triple::OSType::AMDHSA;
+    break;
   default:
     ostype = llvm::Triple::OSType::UnknownOS;
   }
@@ -619,7 +643,6 @@ ModuleSpecList ObjectFileELF::GetModuleSpecifications(
 
       if (spec.GetArchitecture().IsValid()) {
         llvm::Triple::OSType ostype;
-        llvm::Triple::VendorType vendor;
         llvm::Triple::OSType spec_ostype =
             spec.GetArchitecture().GetTriple().getOS();
 
@@ -627,12 +650,6 @@ ModuleSpecList ObjectFileELF::GetModuleSpecifications(
                   __FUNCTION__, file.GetPath().c_str(),
                   OSABIAsCString(header.e_ident[EI_OSABI]));
 
-        // SetArchitecture should have set the vendor to unknown
-        vendor = spec.GetArchitecture().GetTriple().getVendor();
-        assert(vendor == llvm::Triple::UnknownVendor);
-        UNUSED_IF_ASSERT_DISABLED(vendor);
-
-        //
         // Validate it is ok to remove GetOsFromOSABI
         GetOsFromOSABI(header.e_ident[EI_OSABI], ostype);
         assert(spec_ostype == ostype);
@@ -684,7 +701,7 @@ ModuleSpecList ObjectFileELF::GetModuleSpecifications(
           if (!gnu_debuglink_crc) {
             LLDB_SCOPED_TIMERF("Calculating module crc32 %s with size %" PRIu64
                                " KiB",
-                               file.GetFilename().AsCString(""),
+                               file.GetFilename().str().c_str(),
                                (length - file_offset) / 1024);
 
             // For core files - which usually don't happen to have a
@@ -1485,8 +1502,8 @@ GetAttributeValueByTag(const DataExtractor &data, lldb::offset_t offset,
   return std::nullopt;
 }
 
-void ObjectFileELF::ParseRISCVAttributes(DataExtractor &data, uint64_t length,
-                                         ArchSpec &arch_spec) {
+void ObjectFileELF::ParseRISCVAttributes(const DataExtractor &data,
+                                         uint64_t length, ArchSpec &arch_spec) {
   Log *log = GetLog(LLDBLog::Modules);
 
   lldb::offset_t offset = 0;
@@ -2185,7 +2202,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
         SectionSP module_section_sp = unified_section_list.FindSectionByType(
             eSectionTypeELFSymbolTable, true);
         if (module_section_sp)
-          unified_section_list.ReplaceSection(module_section_sp->GetID(),
+          unified_section_list.ReplaceSection(module_section_sp,
                                               symtab_section_sp);
         else
           unified_section_list.AddSection(symtab_section_sp);
@@ -3213,7 +3230,7 @@ void ObjectFileELF::ParseSymtab(Symtab &lldb_symtab) {
     return;
 
   Progress progress("Parsing symbol table",
-                    m_file.GetFilename().AsCString("<Unknown>"));
+                    m_file.GetFilename().nonEmptyOr("<Unknown>").str());
   ElapsedTime elapsed(module_sp->GetSymtabParseTime());
 
   // We always want to use the main object file so we (hopefully) only have one
@@ -3742,7 +3759,7 @@ void ObjectFileELF::DumpDependentModules(lldb_private::Stream *s) {
     s->PutCString("Dependent Modules:\n");
     for (unsigned i = 0; i < num_modules; ++i) {
       const FileSpec &spec = m_filespec_up->GetFileSpecAtIndex(i);
-      s->Printf("   %s\n", spec.GetFilename().GetCString());
+      s->Format("   {0}\n", spec.GetFilename());
     }
   }
 }

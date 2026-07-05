@@ -117,6 +117,7 @@ add_libc_test(
   SRCS
     wide_read_memory_test.cpp
   DEPENDS
+    libc.hdr.sys_mman_macros
     libc.src.string.string_utils
     libc.src.sys.mman.mmap
     libc.src.sys.mman.mprotect

@@ -465,6 +465,20 @@ def parse_args():
         action="store_true",
     )
     selection_group.add_argument(
+        "--unsupported",
+        metavar="LIST",
+        type=_semicolon_list,
+        help="Mark tests with paths in the semicolon separated list as UNSUPPORTED",
+        default=os.environ.get("LIT_UNSUPPORTED", ""),
+    )
+    selection_group.add_argument(
+        "--unsupported-not",
+        metavar="LIST",
+        type=_semicolon_list,
+        help="Do not mark tests with paths in the semicolon separated list as UNSUPPORTED",
+        default=os.environ.get("LIT_UNSUPPORTED_NOT", ""),
+    )
+    selection_group.add_argument(
         "--num-shards",
         dest="numShards",
         metavar="M",

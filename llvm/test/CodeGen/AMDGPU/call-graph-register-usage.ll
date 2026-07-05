@@ -1,11 +1,11 @@
-; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 | FileCheck -check-prefixes=GCN,CI %s
-; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 | FileCheck -check-prefixes=GCN-V5 %s
-; RUN: sed 's/CODE_OBJECT_VERSION/600/g' %s | llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 | FileCheck -check-prefixes=GCN-V5 %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -enable-ipra=0 | FileCheck -check-prefixes=GCN,CI %s
+; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -enable-ipra=0 | FileCheck -check-prefixes=GCN-V5 %s
+; RUN: sed 's/CODE_OBJECT_VERSION/600/g' %s | llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -enable-ipra=0 | FileCheck -check-prefixes=GCN-V5 %s
 ; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -enable-ipra=0 | FileCheck -check-prefixes=GCN,VI,VI-NOBUG %s
 ; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=iceland -enable-ipra=0 | FileCheck -check-prefixes=GCN,VI,VI-BUG %s
-; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 | FileCheck -check-prefixes=GCN,CI %s
-; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 | FileCheck -check-prefixes=GCN-V5 %s
-; RUN: sed 's/CODE_OBJECT_VERSION/600/g' %s | llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -enable-ipra=0 | FileCheck -check-prefixes=GCN-V5 %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -enable-ipra=0 | FileCheck -check-prefixes=GCN,CI %s
+; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -enable-ipra=0 | FileCheck -check-prefixes=GCN-V5 %s
+; RUN: sed 's/CODE_OBJECT_VERSION/600/g' %s | llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -enable-ipra=0 | FileCheck -check-prefixes=GCN-V5 %s
 ; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -enable-ipra=0 | FileCheck -check-prefixes=GCN,VI,VI-NOBUG %s
 ; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=iceland -enable-ipra=0 | FileCheck -check-prefixes=GCN,VI,VI-BUG %s
 
@@ -25,8 +25,8 @@ define void @use_vcc() #1 {
 ; GCN: v_writelane_b32 v40, s30, 0
 ; GCN: v_writelane_b32 v40, s31, 1
 ; GCN: s_swappc_b64
-; GCN: v_readlane_b32 s31, v40, 1
 ; GCN: v_readlane_b32 s30, v40, 0
+; GCN: v_readlane_b32 s31, v40, 1
 ; GCN: v_readlane_b32 s4, v40, 2
 ; GCN: s_mov_b32 s33, s4
 ; GCN: s_setpc_b64 s[30:31]

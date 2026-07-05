@@ -27,6 +27,7 @@ def OpenCL_std : InstructionSet<0>;
 def GLSL_std_450 : InstructionSet<1>;
 def SPV_AMD_shader_trinary_minmax : InstructionSet<2>;
 def NonSemantic_Shader_DebugInfo_100 : InstructionSet<3>;
+def NonSemantic_AuxData : InstructionSet<4>;
 
 // Define various builtin groups
 def BuiltinGroup : GenericEnum {
@@ -72,6 +73,7 @@ def TernaryBitwiseINTEL : BuiltinGroup;
 def Block2DLoadStore : BuiltinGroup;
 def Pipe : BuiltinGroup;
 def PredicatedLoadStore : BuiltinGroup;
+def Arithmetic : BuiltinGroup;
 def ArbitraryPrecisionFixedPoint : BuiltinGroup;
 def BlockingPipes : BuiltinGroup;
 def ImageChannelDataTypes : BuiltinGroup;
@@ -634,6 +636,18 @@ defm : DemangledNativeBuiltin<"atomic_fetch_sub_explicit", OpenCL_std, Atomic, 3
 defm : DemangledNativeBuiltin<"atomic_fetch_or_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicOr>;
 defm : DemangledNativeBuiltin<"atomic_fetch_xor_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicXor>;
 defm : DemangledNativeBuiltin<"atomic_fetch_and_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicAnd>;
+defm : DemangledNativeBuiltin<"s_atomic_fetch_min", OpenCL_std, Atomic, 2, 4, OpAtomicSMin>;
+defm : DemangledNativeBuiltin<"s_atomic_fetch_max", OpenCL_std, Atomic, 2, 4, OpAtomicSMax>;
+defm : DemangledNativeBuiltin<"u_atomic_fetch_min", OpenCL_std, Atomic, 2, 4, OpAtomicUMin>;
+defm : DemangledNativeBuiltin<"u_atomic_fetch_max", OpenCL_std, Atomic, 2, 4, OpAtomicUMax>;
+defm : DemangledNativeBuiltin<"s_atomic_fetch_min_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicSMin>;
+defm : DemangledNativeBuiltin<"s_atomic_fetch_max_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicSMax>;
+defm : DemangledNativeBuiltin<"u_atomic_fetch_min_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicUMin>;
+defm : DemangledNativeBuiltin<"u_atomic_fetch_max_explicit", OpenCL_std, Atomic, 3, 4, OpAtomicUMax>;
+defm : DemangledNativeBuiltin<"s_atom_min", OpenCL_std, Atomic, 2, 2, OpAtomicSMin>;
+defm : DemangledNativeBuiltin<"s_atom_max", OpenCL_std, Atomic, 2, 2, OpAtomicSMax>;
+defm : DemangledNativeBuiltin<"u_atom_min", OpenCL_std, Atomic, 2, 2, OpAtomicUMin>;
+defm : DemangledNativeBuiltin<"u_atom_max", OpenCL_std, Atomic, 2, 2, OpAtomicUMax>;
 defm : DemangledNativeBuiltin<"atomic_flag_test_and_set", OpenCL_std, Atomic, 1, 1, OpAtomicFlagTestAndSet>;
 defm : DemangledNativeBuiltin<"__spirv_AtomicFlagTestAndSet", OpenCL_std, Atomic, 3, 3, OpAtomicFlagTestAndSet>;
 defm : DemangledNativeBuiltin<"atomic_flag_test_and_set_explicit", OpenCL_std, Atomic, 2, 3, OpAtomicFlagTestAndSet>;
@@ -675,11 +689,18 @@ defm : DemangledNativeBuiltin<"__spirv_ControlBarrier", OpenCL_std, Barrier, 3, 
 
 // ICarryBorrow builtin record:
 defm : DemangledNativeBuiltin<"__spirv_IAddCarry", OpenCL_std, ICarryBorrow, 3, 3, OpIAddCarryS>;
+defm : DemangledNativeBuiltin<"__spirv_IAddCarry", GLSL_std_450, ICarryBorrow, 3, 3, OpIAddCarryS>;
 defm : DemangledNativeBuiltin<"__spirv_ISubBorrow", OpenCL_std, ICarryBorrow, 3, 3, OpISubBorrowS>;
+defm : DemangledNativeBuiltin<"__spirv_ISubBorrow", GLSL_std_450, ICarryBorrow, 3, 3, OpISubBorrowS>;
 
 // MulExtended builtin records:
 defm : DemangledNativeBuiltin<"__spirv_UMulExtended", OpenCL_std, MulExtended, 2, 3, OpUMulExtended>;
+defm : DemangledNativeBuiltin<"__spirv_UMulExtended", GLSL_std_450, MulExtended, 2, 3, OpUMulExtended>;
 defm : DemangledNativeBuiltin<"__spirv_SMulExtended", OpenCL_std, MulExtended, 2, 3, OpSMulExtended>;
+defm : DemangledNativeBuiltin<"__spirv_SMulExtended", GLSL_std_450, MulExtended, 2, 3, OpSMulExtended>;
+
+// Arithmetic builtin records:
+defm : DemangledNativeBuiltin<"__spirv_FMod", OpenCL_std, Arithmetic, 2, 2, OpFMod>;
 
 // cl_intel_split_work_group_barrier
 defm : DemangledNativeBuiltin<"intel_work_group_barrier_arrive", OpenCL_std, Barrier, 1, 2, OpControlBarrierArriveINTEL>;
@@ -1629,6 +1650,7 @@ defm : DemangledNativeBuiltin<"__spirv_UConvert", OpenCL_std, Convert, 1, 1, OpU
 defm : DemangledNativeBuiltin<"__spirv_SConvert", OpenCL_std, Convert, 1, 1, OpSConvert>;
 defm : DemangledNativeBuiltin<"__spirv_FConvert", OpenCL_std, Convert, 1, 1, OpFConvert>;
 defm : DemangledNativeBuiltin<"__spirv_QuantizeToF16", OpenCL_std, Convert, 1, 1, OpQuantizeToF16>;
+defm : DemangledNativeBuiltin<"__spirv_QuantizeToF16", GLSL_std_450, Convert, 1, 1, OpQuantizeToF16>;
 defm : DemangledNativeBuiltin<"__spirv_ConvertPtrToU", OpenCL_std, Convert, 1, 1, OpConvertPtrToU>;
 defm : DemangledNativeBuiltin<"__spirv_SatConvertSToU", OpenCL_std, Convert, 1, 1, OpSatConvertSToU>;
 defm : DemangledNativeBuiltin<"__spirv_SatConvertUToS", OpenCL_std, Convert, 1, 1, OpSatConvertUToS>;

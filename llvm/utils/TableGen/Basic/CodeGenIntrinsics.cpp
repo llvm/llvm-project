@@ -16,6 +16,8 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <algorithm>
@@ -275,6 +277,7 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
       R->getValueAsOptionalString("ClangBuiltinName").value_or("");
   // Ignore a missing MSBuiltinName field.
   MSBuiltinName = R->getValueAsOptionalString("MSBuiltinName").value_or("");
+  TargetFeatures = R->getValueAsString("TargetFeatures");
 
   TargetPrefix = R->getValueAsString("TargetPrefix");
   Name = R->getValueAsString("LLVMName").str();
@@ -307,6 +310,8 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
   }
 
   unsigned NumRet = R->getValueAsListInit("RetTypes")->size();
+  unsigned NumParam = R->getValueAsListInit("ParamTypes")->size();
+
   if (NumRet > MaxNumReturn)
     PrintFatalError(DefLoc, "intrinsics can only return upto " +
                                 Twine(MaxNumReturn) + " values, '" + DefName +
@@ -318,15 +323,50 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
                                 " should be of subclass of TypeInfoGen!");
 
   isOverloaded = TypeInfo->getValueAsBit("isOverloaded");
-  const ListInit *TypeList = TypeInfo->getValueAsListInit("Types");
+  std::vector<const Record *> AllTypes =
+      TypeInfo->getValueAsListOfDefs("AllTypes");
+
+  // Validate overload index values in dependent types.
+  if (isOverloaded) {
+    const ListInit *OverloadedTypes =
+        TypeInfo->getValueAsListInit("OverloadTypes");
+    unsigned NumOverloadedTypes = OverloadedTypes->size();
+    for (const auto &[Idx, Ty] : enumerate(AllTypes)) {
+      if (!Ty->isSubClassOf("LLVMDependentType"))
+        continue;
+      unsigned OverloadIndex = Ty->getValueAsInt("OverloadIndex");
+      if (OverloadIndex >= NumOverloadedTypes)
+        PrintFatalError(
+            Ty, formatv("for intrinsic {} overload index {} is invalid, "
+                        "intrinsic only has {} overloaded types",
+                        DefName, OverloadIndex, NumOverloadedTypes));
+      const Record *OTy = OverloadedTypes->getElementAsRecord(OverloadIndex);
+      if (!OTy->isSubClassOf("LLVMAnyType"))
+        PrintFatalError(Ty, formatv("for intrinsic {} overload index {} is "
+                                    "invalid, dependent types must reference "
+                                    "an overload index of an \'llvm_any\' type",
+                                    DefName, OverloadIndex));
+
+      // Replace the dependent type with the overloaded type it references.
+      AllTypes[Idx] = OTy;
+    }
+  }
+
+  ArrayRef<const Record *> AllTypesRef = AllTypes;
 
   // Types field is a concatenation of Return types followed by Param types.
-  unsigned Idx = 0;
-  for (; Idx < NumRet; ++Idx)
-    IS.RetTys.push_back(TypeList->getElementAsRecord(Idx));
+  for (const Record *RetTy : AllTypesRef.take_front(NumRet)) {
+    if (RetTy->getName() == "llvm_vararg_ty")
+      PrintFatalError(DefLoc, "cannot use llvm_vararg_ty as a return type");
+    IS.RetTys.push_back(RetTy);
+  }
 
-  for (unsigned E = TypeList->size(); Idx < E; ++Idx)
-    IS.ParamTys.push_back(TypeList->getElementAsRecord(Idx));
+  for (const auto &[Idx, ParamTy] : enumerate(AllTypesRef.drop_front(NumRet))) {
+    if (Idx != NumParam - 1 && ParamTy->getName() == "llvm_vararg_ty")
+      PrintFatalError(DefLoc,
+                      "llvm_vararg_ty can only be the last parameter type");
+    IS.ParamTys.push_back(ParamTy);
+  }
 
   // Parse the intrinsic properties.
   const ListInit *PropList = R->getValueAsListInit("IntrProperties");
@@ -347,6 +387,52 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
   // Sort the argument attributes for later benefit.
   for (auto &Attrs : ArgumentAttributes)
     llvm::sort(Attrs);
+
+  // Default values are not yet supported for overloaded intrinsics
+  // (overloaded support will come in a follow-up).
+  if (isOverloaded &&
+      llvm::any_of(ParamDefaultValues, [](const std::optional<uint64_t> &DV) {
+        return DV.has_value();
+      }))
+    PrintFatalError(TheDef->getLoc(),
+                    "default argument values are not supported for "
+                    "overloaded intrinsics");
+
+  // Validate: defaults must form a contiguous trailing block ending at
+  // the last parameter (mirrors C++ default-argument rules).
+  unsigned NumParams = IS.ParamTys.size();
+  bool SeenDefault = false;
+  for (unsigned i = 0; i < NumParams; ++i) {
+    bool HasDefault =
+        (i < ParamDefaultValues.size() && ParamDefaultValues[i].has_value());
+    if (HasDefault) {
+      SeenDefault = true;
+    } else if (SeenDefault) {
+      PrintFatalError(TheDef->getLoc(),
+                      "missing default argument on parameter " + Twine(i));
+    }
+  }
+
+  // Validate each declared default: the parameter must be an integer type and
+  // the value (an unsigned bit pattern) must fit in the declared width.
+  for (unsigned i = 0; i < ParamDefaultValues.size(); ++i) {
+    if (!ParamDefaultValues[i].has_value())
+      continue;
+    const Record *VT = IS.ParamTys[i]->getValueAsDef("VT");
+    if (!VT->getValueAsBit("isInteger")) {
+      PrintFatalError(TheDef->getLoc(),
+                      "default argument on parameter " + Twine(i) +
+                          " requires an integer parameter type");
+    }
+    unsigned Width = VT->getValueAsInt("Size");
+    uint64_t Value = *ParamDefaultValues[i];
+    if (!isUIntN(Width, Value)) {
+      PrintFatalError(TheDef->getLoc(),
+                      "default argument value " + Twine(Value) +
+                          " out of range for i" + Twine(Width) + " parameter " +
+                          Twine(i));
+    }
+  }
 }
 
 void CodeGenIntrinsic::setDefaultProperties(
@@ -451,6 +537,22 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
   } else if (R->isSubClassOf("ImmArg")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
     addArgAttribute(ArgNo, ImmArg);
+
+    // If a DefaultValue (not the NoDefault sentinel) was supplied, record it.
+    // NoDefault is recognized by its Value field being unset (?).
+    const Record *DefaultField = R->getValueAsDef("Default");
+    const RecordVal *ValueField = DefaultField->getValue("Value");
+    if (ValueField && !isa<UnsetInit>(ValueField->getValue())) {
+      int64_t Value = DefaultField->getValueAsInt("Value");
+      // Defaults are stored as an unsigned bit pattern; a negative literal
+      // would silently wrap, so reject it with a clear message.
+      if (Value < 0)
+        PrintFatalError(TheDef->getLoc(), "default argument value " +
+                                              Twine(Value) + " on parameter " +
+                                              Twine(ArgNo - 1) +
+                                              " must be non-negative");
+      addDefaultArgValue(ArgNo - 1, Value);
+    }
   } else if (R->isSubClassOf("Align")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
     uint64_t Align = R->getValueAsInt("Align");
@@ -497,6 +599,7 @@ CodeGenIntrinsic::getValueAsIRMemLocation(const Record *R) const {
   StringRef Name = R->getName();
   IRMemLocation Loc =
       StringSwitch<IRMemLocation>(Name)
+          .Case("ArgMem", IRMemLocation::ArgMem)
           .Case("TargetMem0", IRMemLocation::TargetMem0)
           .Case("TargetMem1", IRMemLocation::TargetMem1)
           .Case("InaccessibleMem", IRMemLocation::InaccessibleMem)
@@ -542,4 +645,16 @@ void CodeGenIntrinsic::addPrettyPrintFunction(unsigned ArgIdx,
                                           " is already defined as '" +
                                           It->FuncName + "'");
   PrettyPrintFunctions.emplace_back(ArgIdx, ArgName, FuncName);
+}
+
+void CodeGenIntrinsic::addDefaultArgValue(unsigned ArgIdx, uint64_t Value) {
+  if (ArgIdx >= ParamDefaultValues.size())
+    ParamDefaultValues.resize(ArgIdx + 1, std::nullopt);
+
+  if (ParamDefaultValues[ArgIdx].has_value())
+    PrintFatalError(TheDef->getLoc(), "Default value for argument " +
+                                          Twine(ArgIdx) +
+                                          " is already defined");
+
+  ParamDefaultValues[ArgIdx] = Value;
 }

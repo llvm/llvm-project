@@ -21,6 +21,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
+#include "llvm/Support/MathExtras.h"
 
 #define DEBUG_TYPE "spirv-prelegalizer"
 
@@ -39,6 +40,12 @@ public:
 void SPIRVPreLegalizer::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   MachineFunctionPass::getAnalysisUsage(AU);
+}
+
+static inline void invalidateAndEraseMI(SPIRVGlobalRegistry *GR,
+                                        MachineInstr *MI) {
+  GR->invalidateMachineInstr(MI);
+  MI->eraseFromParent();
 }
 
 static void
@@ -126,13 +133,10 @@ addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     if (!MRI.getRegClassOrNull(Reg) && RC)
       MRI.setRegClass(Reg, RC);
     MRI.replaceRegWith(MI->getOperand(0).getReg(), Reg);
-    GR->invalidateMachineInstr(MI);
-    MI->eraseFromParent();
+    invalidateAndEraseMI(GR, MI);
   }
-  for (MachineInstr *MI : ToEraseComposites) {
-    GR->invalidateMachineInstr(MI);
-    MI->eraseFromParent();
-  }
+  for (MachineInstr *MI : ToEraseComposites)
+    invalidateAndEraseMI(GR, MI);
 }
 
 static void foldConstantsIntoIntrinsics(MachineFunction &MF,
@@ -151,10 +155,8 @@ static void foldConstantsIntoIntrinsics(MachineFunction &MF,
       }
       ToErase.push_back(&MI);
     }
-    for (MachineInstr *MI : ToErase) {
-      GR->invalidateMachineInstr(MI);
-      MI->eraseFromParent();
-    }
+    for (MachineInstr *MI : ToErase)
+      invalidateAndEraseMI(GR, MI);
     ToErase.clear();
   }
 }
@@ -235,10 +237,8 @@ static void lowerBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       ToErase.push_back(&MI);
     }
   }
-  for (MachineInstr *MI : ToErase) {
-    GR->invalidateMachineInstr(MI);
-    MI->eraseFromParent();
-  }
+  for (MachineInstr *MI : ToErase)
+    invalidateAndEraseMI(GR, MI);
 }
 
 static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
@@ -279,10 +279,8 @@ static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       }
     }
   }
-  for (MachineInstr *MI : ToErase) {
-    GR->invalidateMachineInstr(MI);
-    MI->eraseFromParent();
-  }
+  for (MachineInstr *MI : ToErase)
+    invalidateAndEraseMI(GR, MI);
 }
 
 // Translating GV, IRTranslator sometimes generates following IR:
@@ -394,7 +392,7 @@ static SPIRVTypeInst propagateSPIRVType(MachineInstr *MI,
 static unsigned widenBitWidthToNextPow2(unsigned BitWidth) {
   if (BitWidth == 1)
     return 1; // No need to widen 1-bit values
-  return std::min(std::max(1u << Log2_32_Ceil(BitWidth), 8u), 128u);
+  return std::min(std::max<unsigned>(PowerOf2Ceil(BitWidth), 8u), 128u);
 }
 
 static void widenScalarType(Register Reg, MachineRegisterInfo &MRI) {
@@ -517,30 +515,44 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         Register DstReg = MI.getOperand(0).getReg();
         Register SrcReg = MI.getOperand(1).getReg();
 
-        // TODO: handle vector types.
-        if (!MRI.getType(DstReg).isScalar()) {
-          assert(!MRI.getType(SrcReg).isScalar());
-          continue;
-        }
+        LLT DstTy = MRI.getType(DstReg);
+        LLT SrcTy = MRI.getType(SrcReg);
+        assert((DstTy.isScalar() || DstTy.isVector()) &&
+               (SrcTy.isScalar() || SrcTy.isVector()) &&
+               "Expected scalar or vector G_TRUNC types");
+        assert(DstTy.isVector() == SrcTy.isVector() &&
+               "Expected matching scalar/vector G_TRUNC types");
+        assert((!DstTy.isVector() ||
+                DstTy.getElementCount() == SrcTy.getElementCount()) &&
+               "Expected equal vector element counts");
 
-        unsigned OriginalDstWidth = MRI.getType(DstReg).getScalarSizeInBits();
-        unsigned OriginalSrcWidth = MRI.getType(SrcReg).getScalarSizeInBits();
+        unsigned OriginalDstWidth = DstTy.getScalarSizeInBits();
+        unsigned OriginalSrcWidth = SrcTy.getScalarSizeInBits();
 
         unsigned NewDstWidth = widenBitWidthToNextPow2(OriginalDstWidth);
         unsigned NewSrcWidth = widenBitWidthToNextPow2(OriginalSrcWidth);
+        LLT NewDstTy = DstTy.changeElementSize(NewDstWidth);
+        LLT NewSrcTy = SrcTy.changeElementSize(NewSrcWidth);
 
-        // No Dst width change means no truncation semantics change.
-        if (OriginalDstWidth == NewDstWidth)
+        // No Dst width change means no truncation semantics change, but the
+        // source still needs a legal type.
+        if (OriginalDstWidth == NewDstWidth) {
+          MRI.setType(SrcReg, NewSrcTy);
           continue;
+        }
 
-        MRI.setType(SrcReg, LLT::scalar(NewSrcWidth));
-        MRI.setType(DstReg, LLT::scalar(NewDstWidth));
+        MRI.setType(SrcReg, NewSrcTy);
+        MRI.setType(DstReg, NewDstTy);
 
         MIB.setInsertPt(MBB, MI.getIterator());
         APInt Mask = APInt::getLowBitsSet(NewSrcWidth, OriginalDstWidth);
-        auto MaskReg = MIB.buildConstant(LLT::scalar(NewSrcWidth), Mask);
-        Register MaskedReg =
-            MRI.createGenericVirtualRegister(LLT::scalar(NewSrcWidth));
+        MachineInstrBuilder MaskReg =
+            DstTy.isVector()
+                ? MIB.buildBuildVectorConstant(
+                      NewSrcTy,
+                      SmallVector<APInt, 4>(DstTy.getNumElements(), Mask))
+                : MIB.buildConstant(NewSrcTy, Mask);
+        Register MaskedReg = MRI.createGenericVirtualRegister(NewSrcTy);
         MIB.buildAnd(MaskedReg, SrcReg, MaskReg);
 
         if (NewSrcWidth == NewDstWidth) {
@@ -582,6 +594,13 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         SPIRVTypeInst AssignedPtrType = GR->getOrCreateSPIRVPointerType(
             ElementTy, MI,
             addressSpaceToStorageClass(MI.getOperand(3).getImm(), *ST));
+        // The intrinsic also carries vector-of-pointer values produced by
+        // scalarized vector GEPs; wrap the pointer in OpTypeVector to match
+        // the vreg's LLT.
+        LLT RegTy = MRI.getType(Reg);
+        if (RegTy.isValid() && RegTy.isVector())
+          AssignedPtrType = GR->getOrCreateSPIRVVectorType(
+              AssignedPtrType, RegTy.getNumElements(), MIB, true);
         MachineInstr *Def = MRI.getVRegDef(Reg);
         assert(Def && "Expecting an instruction that defines the register");
         // G_GLOBAL_VALUE already has type info.
@@ -692,8 +711,7 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     auto It = RegsAlreadyAddedToDT.find(MI);
     if (It != RegsAlreadyAddedToDT.end())
       MRI.replaceRegWith(MI->getOperand(0).getReg(), It->second);
-    GR->invalidateMachineInstr(MI);
-    MI->eraseFromParent();
+    invalidateAndEraseMI(GR, MI);
   }
 
   // Address the case when IRTranslator introduces instructions with new
@@ -745,8 +763,7 @@ collectInlineAsmInstrOperands(MachineInstr *MI,
     if (MO.isReg() && MO.isDef()) {
       if (!Ops)
         return MO.getReg();
-      else
-        DefReg = MO.getReg();
+      DefReg = MO.getReg();
     } else if (Ops) {
       Ops->push_back(Idx);
     }
@@ -828,11 +845,31 @@ insertInlineAsmProcess(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                        .addUse(AsmReg);
     for (unsigned IntrIdx = 3; IntrIdx < I1->getNumOperands(); ++IntrIdx)
       AsmCall.addUse(I1->getOperand(IntrIdx).getReg());
+
+    // IRTranslator gets a bit confused when lowering inline ASM with outputs
+    // and inserts a spurious COPY & TRUNC as registers are assumed to be i64;
+    // we have to clean that up here to prevent erroneous trunc casts either on
+    // a struct (for multiple outputs) or same width integers to get lowered
+    // into SPIR-V
+    if (MRI.hasOneUse(DefReg)) {
+      MachineInstr &CopyMI = *MRI.use_instr_begin(DefReg);
+      if (CopyMI.getOpcode() == TargetOpcode::COPY) {
+        Register CopyDst = CopyMI.getOperand(0).getReg();
+        if (MRI.hasOneUse(CopyDst)) {
+          MachineInstr &TruncMI = *MRI.use_instr_begin(CopyDst);
+          if (TruncMI.getOpcode() == TargetOpcode::G_TRUNC) {
+            MRI.setType(DefReg, GR->getRegType(RetType));
+            Register TruncReg = TruncMI.defs().begin()->getReg();
+            MRI.replaceRegWith(TruncReg, DefReg);
+            invalidateAndEraseMI(GR, &TruncMI);
+            invalidateAndEraseMI(GR, &CopyMI);
+          }
+        }
+      }
+    }
   }
-  for (MachineInstr *MI : ToProcess) {
-    GR->invalidateMachineInstr(MI);
-    MI->eraseFromParent();
-  }
+  for (MachineInstr *MI : ToProcess)
+    invalidateAndEraseMI(GR, MI);
 }
 
 static void insertInlineAsm(MachineFunction &MF, SPIRVGlobalRegistry *GR,
@@ -857,15 +894,6 @@ static void insertInlineAsm(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   insertInlineAsmProcess(MF, GR, ST, MIRBuilder, ToProcess);
 }
 
-static uint32_t convertFloatToSPIRVWord(float F) {
-  union {
-    float F;
-    uint32_t Spir;
-  } FPMaxError;
-  FPMaxError.F = F;
-  return FPMaxError.Spir;
-}
-
 static void insertSpirvDecorations(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                                    MachineIRBuilder MIB) {
   const SPIRVSubtarget &ST = cast<SPIRVSubtarget>(MIB.getMF().getSubtarget());
@@ -884,8 +912,7 @@ static void insertSpirvDecorations(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                                 Intrinsic::spv_assign_fpmaxerror_decoration)) {
         ConstantFP *OpV = mdconst::dyn_extract<ConstantFP>(
             MI.getOperand(2).getMetadata()->getOperand(0));
-        uint32_t OpValue =
-            convertFloatToSPIRVWord(OpV->getValueAPF().convertToFloat());
+        uint32_t OpValue = OpV->getValueAPF().bitcastToAPInt().getZExtValue();
 
         buildOpDecorate(MI.getOperand(1).getReg(), MIB,
                         SPIRV::Decoration::FPMaxErrorDecorationINTEL,
@@ -899,10 +926,8 @@ static void insertSpirvDecorations(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       ToErase.push_back(&MI);
     }
   }
-  for (MachineInstr *MI : ToErase) {
-    GR->invalidateMachineInstr(MI);
-    MI->eraseFromParent();
-  }
+  for (MachineInstr *MI : ToErase)
+    invalidateAndEraseMI(GR, MI);
 }
 
 // LLVM allows the switches to use registers as cases, while SPIR-V required
@@ -952,10 +977,8 @@ static void cleanupHelperInstructions(MachineFunction &MF,
     }
   }
 
-  for (MachineInstr *MI : ToEraseMI) {
-    GR->invalidateMachineInstr(MI);
-    MI->eraseFromParent();
-  }
+  for (MachineInstr *MI : ToEraseMI)
+    invalidateAndEraseMI(GR, MI);
 }
 
 // Find all usages of G_BLOCK_ADDR in our intrinsics and replace those
@@ -1057,8 +1080,7 @@ static void processBlockAddr(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           ConstantExpr::getIntToPtr(Replacement, BA->getType()));
       BA->destroyConstant();
     }
-    GR->invalidateMachineInstr(BlockAddrI);
-    BlockAddrI->eraseFromParent();
+    invalidateAndEraseMI(GR, BlockAddrI);
   }
 }
 

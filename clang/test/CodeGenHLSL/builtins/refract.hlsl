@@ -11,17 +11,17 @@
 // CHECK:    [[MUL_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half %{{.*}}, %{{.*}}
 // CHECK:    [[MUL1_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half %{{.*}}, %{{.*}}
 // CHECK:    [[MUL2_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half %{{.*}}, %{{.*}}
-// CHECK:    [[SUB_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn half 0xH3C00, [[MUL2_I]]
+// CHECK:    [[SUB_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn half 1.000000e+00, [[MUL2_I]]
 // CHECK:    [[MUL3_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[MUL1_I]], [[SUB_I]]
-// CHECK:    [[SUB4_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn half 0xH3C00, [[MUL3_I]]
+// CHECK:    [[SUB4_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn half 1.000000e+00, [[MUL3_I]]
 // CHECK:    [[MUL5_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half %{{.*}}, %{{.*}}
 // CHECK:    [[MUL6_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half %{{.*}}, %{{.*}}
 // CHECK:    [[TMP0:%.*]] = call reassoc nnan ninf nsz arcp afn half @llvm.sqrt.f16(half %{{.*}})
 // CHECK:    [[ADD_I:%.*]] = fadd reassoc nnan ninf nsz arcp afn half [[MUL6_I]], %{{.*}}
 // CHECK:    [[MUL7_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[ADD_I]], %{{.*}}
 // CHECK:    [[SUB8_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn half %{{.*}}, [[MUL7_I]]
-// CHECK:    [[CMP_I:%.*]] = fcmp reassoc nnan ninf nsz arcp afn olt half %{{.*}}, 0xH0000
-// CHECK:    [[HLSL_SELECT_I:%.*]] = select reassoc nnan ninf nsz arcp afn i1 [[CMP_I]], half 0xH0000, half %{{.*}}
+// CHECK:    [[CMP_I:%.*]] = fcmp reassoc nnan ninf nsz arcp afn olt half %{{.*}}, 0.000000e+00
+// CHECK:    [[HLSL_SELECT_I:%.*]] = select reassoc nnan ninf nsz arcp afn i1 [[CMP_I]], half 0.000000e+00, half %{{.*}}
 // CHECK:    ret half [[HLSL_SELECT_I]]
 //
 // SPVCHECK-LABEL: define hidden spir_func noundef nofpclass(nan inf) half @_Z17test_refract_halfDhDhDh(
@@ -40,9 +40,9 @@ half test_refract_half(half I, half N, half ETA) {
 // CHECK:    [[HLSL_DOT_I:%.*]] = call reassoc nnan ninf nsz arcp afn half @llvm.dx.fdot.v2f16(<2 x half> %{{.*}}, <2 x half> %{{.*}})
 // CHECK:    [[MUL_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half %{{.*}}, %{{.*}}
 // CHECK:    [[MUL3_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn <2 x half> %{{.*}}, %{{.*}}
-// CHECK:    [[SUB_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn <2 x half> splat (half 0xH3C00), [[MUL3_I]]
+// CHECK:    [[SUB_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn <2 x half> splat (half 1.000000e+00), [[MUL3_I]]
 // CHECK:    [[MUL4_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn <2 x half> %{{.*}}, [[SUB_I]]
-// CHECK:    [[SUB5_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn <2 x half> splat (half 0xH3C00), [[MUL4_I]]
+// CHECK:    [[SUB5_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn <2 x half> splat (half 1.000000e+00), [[MUL4_I]]
 // CHECK:    [[MUL8_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn <2 x half> %{{.*}}, %{{.*}}
 // CHECK:    [[MUL11_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn <2 x half> %{{.*}}, %{{.*}}
 // CHECK:    [[TMP17:%.*]] = call reassoc nnan ninf nsz arcp afn <2 x half> @llvm.sqrt.v2f16(<2 x half> %{{.*}})
@@ -70,9 +70,9 @@ half2 test_refract_half2(half2 I, half2 N, half ETA) {
 // CHECK:    [[HLSL_DOT_I:%.*]] = call reassoc nnan ninf nsz arcp afn half @llvm.dx.fdot.v3f16(<3 x half> %{{.*}}, <3 x half> %{{.*}})
 // CHECK:    [[MUL_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half %{{.*}}, %{{.*}}
 // CHECK:    [[MUL3_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn <3 x half> %{{.*}}, %{{.*}}
-// CHECK:    [[SUB_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn <3 x half> splat (half 0xH3C00), [[MUL3_I]]
+// CHECK:    [[SUB_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn <3 x half> splat (half 1.000000e+00), [[MUL3_I]]
 // CHECK:    [[MUL4_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn <3 x half> %{{.*}}, [[SUB_I]]
-// CHECK:    [[SUB5_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn <3 x half> splat (half 0xH3C00), [[MUL4_I]]
+// CHECK:    [[SUB5_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn <3 x half> splat (half 1.000000e+00), [[MUL4_I]]
 // CHECK:    [[MUL8_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn <3 x half> %{{.*}}, %{{.*}}
 // CHECK:    [[MUL11_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn <3 x half> %{{.*}}, %{{.*}}
 // CHECK:    [[TMP17:%.*]] = call reassoc nnan ninf nsz arcp afn <3 x half> @llvm.sqrt.v3f16(<3 x half> %{{.*}})
@@ -100,9 +100,9 @@ half3 test_refract_half3(half3 I, half3 N, half ETA) {
 // CHECK:    [[HLSL_DOT_I:%.*]] = call reassoc nnan ninf nsz arcp afn half @llvm.dx.fdot.v4f16(<4 x half> %{{.*}}, <4 x half> %{{.*}})
 // CHECK:    [[MUL_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half %{{.*}}, %{{.*}}
 // CHECK:    [[MUL3_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn <4 x half> %{{.*}}, %{{.*}}
-// CHECK:    [[SUB_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn <4 x half> splat (half 0xH3C00), [[MUL3_I]]
+// CHECK:    [[SUB_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn <4 x half> splat (half 1.000000e+00), [[MUL3_I]]
 // CHECK:    [[MUL4_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn <4 x half> %{{.*}}, [[SUB_I]]
-// CHECK:    [[SUB5_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn <4 x half> splat (half 0xH3C00), [[MUL4_I]]
+// CHECK:    [[SUB5_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn <4 x half> splat (half 1.000000e+00), [[MUL4_I]]
 // CHECK:    [[MUL8_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn <4 x half> %{{.*}}, %{{.*}}
 // CHECK:    [[MUL11_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn <4 x half> %{{.*}}, %{{.*}}
 // CHECK:    [[TMP17:%.*]] = call reassoc nnan ninf nsz arcp afn <4 x half> @llvm.sqrt.v4f16(<4 x half> %{{.*}})

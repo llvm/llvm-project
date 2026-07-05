@@ -84,8 +84,6 @@ void FuncBranchData::appendFrom(const FuncBranchData &FBD, uint64_t Offset) {
     }
   }
   llvm::stable_sort(Data);
-  ExecutionCount += FBD.ExecutionCount;
-  ExternEntryCount += FBD.ExternEntryCount;
   for (auto I = FBD.EntryData.begin(), E = FBD.EntryData.end(); I != E; ++I) {
     assert(I->To.Name == FBD.Name);
     auto NewElmt = EntryData.insert(EntryData.end(), *I);
@@ -102,6 +100,23 @@ uint64_t FuncBranchData::getNumExecutedBranches() const {
     ExecutedBranches += BranchCount;
   }
   return ExecutedBranches;
+}
+
+void FuncBranchData::setEntryCounts(BinaryFunction &BF) const {
+  uint64_t ExecCount = 0;
+  uint64_t ExternEntryCount = 0;
+  // If destination is the function start - update execution count.
+  // NB: the data is skewed since we cannot tell tail recursion from
+  //     branches to the function start.
+  for (const BranchInfo &BI : EntryData) {
+    if (BI.To.Offset != 0)
+      continue;
+    ExecCount += BI.Branches;
+    if (!BI.From.IsSymbol)
+      ExternEntryCount += BI.Branches;
+  }
+  BF.setExecutionCount(ExecCount);
+  BF.setExternEntryCount(ExternEntryCount);
 }
 
 void BasicSampleInfo::mergeWith(const BasicSampleInfo &SI) { Hits += SI.Hits; }
@@ -240,8 +255,7 @@ Error DataReader::preprocessProfile(BinaryContext &BC) {
     }
     if (FuncBranchData *FuncData = getBranchDataForNames(Function.getNames())) {
       setBranchData(Function, FuncData);
-      Function.ExecutionCount = FuncData->ExecutionCount;
-      Function.ExternEntryCount = FuncData->ExternEntryCount;
+      FuncData->setEntryCounts(Function);
       FuncData->Used = true;
     }
   }
@@ -324,8 +338,9 @@ std::error_code DataReader::parseInput() {
   if (std::error_code EC = parse())
     return EC;
 
-  Diag << "WARNING: invalid profile data detected at line " << Line
-       << ". Possibly corrupted profile.\n";
+  if (!ParsingBuf.empty())
+    Diag << "WARNING: invalid profile data detected at line " << Line
+         << ". Possibly corrupted profile.\n";
 
   buildLTONameMaps();
 
@@ -333,6 +348,10 @@ std::error_code DataReader::parseInput() {
 }
 
 void DataReader::readProfile(BinaryFunction &BF) {
+  // Set entry counts for the common case.
+  if (FuncBranchData *FBD = getBranchData(BF))
+    FBD->setEntryCounts(BF);
+
   if (BF.empty())
     return;
 
@@ -350,6 +369,10 @@ void DataReader::readProfile(BinaryFunction &BF) {
   FuncBranchData *FBD = getBranchData(BF);
   if (!FBD)
     return;
+
+  // Re-set entry counts in case FBD was swapped (LTO) or merged
+  // (fetchProfileForOtherEntryPoints).
+  FBD->setEntryCounts(BF);
 
   // Assign basic block counts to function entry points. These only include
   // counts for outside entries.
@@ -397,8 +420,6 @@ void DataReader::matchProfileData(BinaryFunction &BF) {
     if (BF.ProfileMatchRatio == 1.0f) {
       if (fetchProfileForOtherEntryPoints(BF)) {
         BF.ProfileMatchRatio = evaluateProfileData(BF, *FBD);
-        BF.ExecutionCount = FBD->ExecutionCount;
-        BF.ExternEntryCount = FBD->ExternEntryCount;
         BF.RawSampleCount = FBD->getNumExecutedBranches();
       }
       return;
@@ -428,8 +449,6 @@ void DataReader::matchProfileData(BinaryFunction &BF) {
     // Update function profile data with the new set.
     setBranchData(BF, NewBranchData);
     NewBranchData->Used = true;
-    BF.ExecutionCount = NewBranchData->ExecutionCount;
-    BF.ExternEntryCount = NewBranchData->ExternEntryCount;
     BF.ProfileMatchRatio = 1.0f;
     break;
   }
@@ -883,9 +902,14 @@ ErrorOr<uint64_t> DataReader::parseHexField(char EndChar, bool EndNl) {
   StringRef NumStr = NumStrRes.get();
   uint64_t Num;
   if (NumStr.getAsInteger(16, Num)) {
-    reportError("expected hexadecimal number");
-    Diag << "Found: " << NumStr << "\n";
-    return make_error_code(llvm::errc::io_error);
+    // Accept signed input (e.g. -1) to support sentinel values like BR_ONLY.
+    int64_t SignedNum;
+    if (NumStr.getAsInteger(16, SignedNum)) {
+      reportError("expected hexadecimal number");
+      Diag << "Found: " << NumStr << "\n";
+      return make_error_code(llvm::errc::io_error);
+    }
+    return static_cast<uint64_t>(SignedNum);
   }
   return Num;
 }
@@ -1162,16 +1186,6 @@ std::error_code DataReader::parse() {
     if (BI.To.IsSymbol && (BI.From.Name != BI.To.Name || BI.To.Offset == 0)) {
       I = GetOrCreateFuncEntry(BI.To.Name);
       I->second.EntryData.emplace_back(std::move(BI));
-    }
-
-    // If destination is the function start - update execution count.
-    // NB: the data is skewed since we cannot tell tail recursion from
-    //     branches to the function start.
-    if (BI.To.IsSymbol && BI.To.Offset == 0) {
-      I = GetOrCreateFuncEntry(BI.To.Name);
-      I->second.ExecutionCount += BI.Branches;
-      if (!BI.From.IsSymbol)
-        I->second.ExternEntryCount += BI.Branches;
     }
   }
 

@@ -378,7 +378,7 @@ struct Literal { constexpr Literal() {} };
 union union6 { NonLiteral NL; Literal L; };
 static_assert(__is_literal(union6), "");
 
-#if __cplusplus >= 202003L
+#if __cplusplus >= 202002L
 struct A { A(); };
 union U {
   A a;

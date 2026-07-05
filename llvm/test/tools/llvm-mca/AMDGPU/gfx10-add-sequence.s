@@ -66,4 +66,4 @@ v_add_f32 v2, v1, v0
 # CHECK-NEXT: 0.     1     0.0    0.0    0.0       v_add_f32_e32 v0, v0, v0
 # CHECK-NEXT: 1.     1     0.0    0.0    0.0       v_add_f32_e32 v1, v1, v1
 # CHECK-NEXT: 2.     1     0.0    0.0    0.0       v_add_f32_e32 v2, v1, v0
-# CHECK-NEXT:        1     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        3     0.0    0.0    0.0       <total>

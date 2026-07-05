@@ -2149,7 +2149,7 @@ TypeIndex CodeViewDebug::lowerTypeMemberFunction(const DISubroutineType *Ty,
 
 TypeIndex CodeViewDebug::lowerTypeVFTableShape(const DIDerivedType *Ty) {
   unsigned VSlotCount =
-      Ty->getSizeInBits() / (8 * Asm->MAI->getCodePointerSize());
+      Ty->getSizeInBits() / (8 * Asm->MAI.getCodePointerSize());
   SmallVector<VFTableSlotKind, 4> Slots(VSlotCount, VFTableSlotKind::Near);
 
   VFTableShapeRecord VFTSR(Slots);
@@ -3123,12 +3123,23 @@ void CodeViewDebug::endFunctionImpl(const MachineFunction *MF) {
   CurFn = nullptr;
 }
 
-// Usable locations are valid with non-zero line numbers. A line number of zero
-// corresponds to optimized code that doesn't have a distinct source location.
+// Usable locations are valid with non-zero line numbers, or artificial
+// subprograms because they are associated to the corresponding line within the
+// inlined callee.
+//
+// A line number of zero corresponds to optimized code that doesn't have a
+// distinct source location.
+//
 // In this case, we try to use the previous or next source location depending on
 // the context.
 static bool isUsableDebugLoc(DebugLoc DL) {
-  return DL && DL.getLine() != 0;
+  if (!DL)
+    return false;
+  if (DL.getLine() != 0)
+    return true;
+  if (const DILocalScope *Scope = DL->getScope())
+    return Scope->getSubprogram()->isArtificial();
+  return false;
 }
 
 void CodeViewDebug::beginInstruction(const MachineInstr *MI) {
@@ -3178,13 +3189,6 @@ void CodeViewDebug::endCVSubsection(MCSymbol *EndLabel) {
   OS.emitValueToAlignment(Align(4));
 }
 
-static StringRef getSymbolName(SymbolKind SymKind) {
-  for (const EnumEntry<SymbolKind> &EE : getSymbolTypeNames())
-    if (EE.Value == SymKind)
-      return EE.Name;
-  return "";
-}
-
 MCSymbol *CodeViewDebug::beginSymbolRecord(SymbolKind SymKind) {
   MCSymbol *BeginLabel = MMI->getContext().createTempSymbol(),
            *EndLabel = MMI->getContext().createTempSymbol();
@@ -3192,7 +3196,7 @@ MCSymbol *CodeViewDebug::beginSymbolRecord(SymbolKind SymKind) {
   OS.emitAbsoluteSymbolDiff(EndLabel, BeginLabel, 2);
   OS.emitLabel(BeginLabel);
   if (OS.isVerboseAsm())
-    OS.AddComment("Record kind: " + getSymbolName(SymKind));
+    OS.AddComment("Record kind: " + getSymbolTypeNames().toString(SymKind));
   OS.emitInt16(unsigned(SymKind));
   return EndLabel;
 }
@@ -3210,7 +3214,7 @@ void CodeViewDebug::emitEndSymbolRecord(SymbolKind EndKind) {
   OS.AddComment("Record length");
   OS.emitInt16(2);
   if (OS.isVerboseAsm())
-    OS.AddComment("Record kind: " + getSymbolName(EndKind));
+    OS.AddComment("Record kind: " + getSymbolTypeNames().toString(EndKind));
   OS.emitInt16(uint16_t(EndKind)); // Record Kind
 }
 

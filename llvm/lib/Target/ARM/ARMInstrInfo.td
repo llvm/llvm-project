@@ -2354,6 +2354,7 @@ def HINT : AI<(outs), (ins imm0_239:$imm), MiscFrm, NoItinerary,
   let DecoderMethod = "DecodeHINTInstruction";
 }
 
+// Architectural ARM-mode NOP is a HINT from ARMv6K; plain ARMv6 uses MOV (see MOV nop alias).
 def : InstAlias<"nop$p", (HINT 0, pred:$p)>, Requires<[IsARM, HasV6K]>;
 def : InstAlias<"yield$p", (HINT 1, pred:$p)>, Requires<[IsARM, HasV6K]>;
 def : InstAlias<"wfe$p", (HINT 2, pred:$p)>, Requires<[IsARM, HasV6K]>;
@@ -6224,6 +6225,17 @@ def : ARMPat<(ARMWrapperJT tjumptable:$dst),
 
 // TODO: add,sub,and, 3-instr forms?
 
+
+// Exception Handling
+def ARMLocalRecover : SDNode<"ISD::LOCAL_RECOVER",
+                             SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
+                                                  SDTCisInt<1>]>>;
+def : ARMPat<(ARMLocalRecover mcsym:$sym), (MOVi32imm mcsym:$sym)>,
+            Requires<[IsARM, UseMovt]>;
+def : ARMPat<(ARMLocalRecover mcsym:$sym), (LDRLIT_ga_abs mcsym:$sym)>,
+            Requires<[IsARM, DontUseMovt]>;
+
+
 // Tail calls. These patterns also apply to Thumb mode.
 // Regular indirect tail call
 def : Pat<(ARMtcret tcGPR:$dst, (i32 timm:$SPDiff)),
@@ -6580,9 +6592,9 @@ def RORr : ARMAsmPseudo<"ror${s}${p} $Rd, $Rn, $Rm",
 def : ARMInstAlias<"neg${s}${p} $Rd, $Rm",
                    (RSBri GPR:$Rd, GPR:$Rm, 0, pred:$p, cc_out:$s)>;
 
-// Pre-v6, 'mov r0, r0' was used as a NOP encoding.
+// Pre-ARMv6K (including ARMv6), 'mov r0, r0' is the NOP encoding in ARM state.
 def : InstAlias<"nop${p}", (MOVr R0, R0, pred:$p, (cc_out zero_reg)), 0>,
-         Requires<[IsARM, NoV6]>;
+         Requires<[IsARM, NoV6K]>;
 
 // MUL/UMLAL/SMLAL/UMULL/SMULL are available on all arches, but
 // the instruction definitions need difference constraints pre-v6.
@@ -6728,4 +6740,10 @@ let isPseudo = 1 in {
   def SEH_EpilogStart : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
   let isTerminator = 1 in
   def SEH_EpilogEnd : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
+}
+
+// C++ Exception / SEH Pseudo Instructions
+let isTerminator = 1, isReturn = 1, isBarrier = 1, isCodeGenOnly = 1, hasNoSchedulingInfo = 1 in {
+  def CLEANUPRET : PseudoInst<(outs), (ins), NoItinerary, [(cleanupret bb)]>, Sched<[]>;
+  def CATCHRET : PseudoInst<(outs), (ins arm_br_target:$dst, arm_br_target:$src), NoItinerary, [(catchret bb:$dst, bb:$src)]>, Sched<[]>;
 }

@@ -183,6 +183,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(BreakBeforeCloseBracketSwitch);
   CHECK_PARSE_BOOL(BreakBeforeTemplateCloser);
   CHECK_PARSE_BOOL(BreakBeforeTernaryOperators);
+  CHECK_PARSE_BOOL(BreakFunctionDeclarationParameters);
   CHECK_PARSE_BOOL(BreakStringLiterals);
   CHECK_PARSE_BOOL(CompactNamespaces);
   CHECK_PARSE_BOOL(DerivePointerAlignment);
@@ -338,44 +339,44 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   do {                                                                         \
     Style.FIELD.Enabled = true;                                                \
     CHECK_PARSE(#FIELD ": None", FIELD, FormatStyle::AlignConsecutiveStyle{}); \
-    CHECK_PARSE(                                                               \
-        #FIELD ": Consecutive", FIELD,                                         \
-        FormatStyle::AlignConsecutiveStyle(                                    \
-            {/*Enabled=*/true, /*AcrossEmptyLines=*/false,                     \
-             /*AcrossComments=*/false, /*AlignCompound=*/false,                \
-             /*AlignFunctionDeclarations=*/true,                               \
-             /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
-    CHECK_PARSE(                                                               \
-        #FIELD ": AcrossEmptyLines", FIELD,                                    \
-        FormatStyle::AlignConsecutiveStyle(                                    \
-            {/*Enabled=*/true, /*AcrossEmptyLines=*/true,                      \
-             /*AcrossComments=*/false, /*AlignCompound=*/false,                \
-             /*AlignFunctionDeclarations=*/true,                               \
-             /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
-    CHECK_PARSE(                                                               \
-        #FIELD ": AcrossComments", FIELD,                                      \
-        FormatStyle::AlignConsecutiveStyle(                                    \
-            {/*Enabled=*/true, /*AcrossEmptyLines=*/false,                     \
-             /*AcrossComments=*/true, /*AlignCompound=*/false,                 \
-             /*AlignFunctionDeclarations=*/true,                               \
-             /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
-    CHECK_PARSE(                                                               \
-        #FIELD ": AcrossEmptyLinesAndComments", FIELD,                         \
-        FormatStyle::AlignConsecutiveStyle(                                    \
-            {/*Enabled=*/true, /*AcrossEmptyLines=*/true,                      \
-             /*AcrossComments=*/true, /*AlignCompound=*/false,                 \
-             /*AlignFunctionDeclarations=*/true,                               \
-             /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
+    CHECK_PARSE(#FIELD ": Consecutive", FIELD,                                 \
+                FormatStyle::AlignConsecutiveStyle(                            \
+                    {/*Enabled=*/true, /*AcrossEmptyLines=*/false,             \
+                     /*AcrossComments=*/false, /*AlignCompound=*/false,        \
+                     /*AlignFunctionDeclarations=*/true,                       \
+                     /*AlignFunctionPointers=*/false,                          \
+                     /*EnumAssignments =*/true, /*PadOperators=*/true}));      \
+    CHECK_PARSE(#FIELD ": AcrossEmptyLines", FIELD,                            \
+                FormatStyle::AlignConsecutiveStyle(                            \
+                    {/*Enabled=*/true, /*AcrossEmptyLines=*/true,              \
+                     /*AcrossComments=*/false, /*AlignCompound=*/false,        \
+                     /*AlignFunctionDeclarations=*/true,                       \
+                     /*AlignFunctionPointers=*/false,                          \
+                     /*EnumAssignments =*/true, /*PadOperators=*/true}));      \
+    CHECK_PARSE(#FIELD ": AcrossComments", FIELD,                              \
+                FormatStyle::AlignConsecutiveStyle(                            \
+                    {/*Enabled=*/true, /*AcrossEmptyLines=*/false,             \
+                     /*AcrossComments=*/true, /*AlignCompound=*/false,         \
+                     /*AlignFunctionDeclarations=*/true,                       \
+                     /*AlignFunctionPointers=*/false,                          \
+                     /*EnumAssignments =*/true, /*PadOperators=*/true}));      \
+    CHECK_PARSE(#FIELD ": AcrossEmptyLinesAndComments", FIELD,                 \
+                FormatStyle::AlignConsecutiveStyle(                            \
+                    {/*Enabled=*/true, /*AcrossEmptyLines=*/true,              \
+                     /*AcrossComments=*/true, /*AlignCompound=*/false,         \
+                     /*AlignFunctionDeclarations=*/true,                       \
+                     /*AlignFunctionPointers=*/false,                          \
+                     /*EnumAssignments =*/true, /*PadOperators=*/true}));      \
     /* For backwards compability, false / true should still parse */           \
     CHECK_PARSE(#FIELD ": false", FIELD,                                       \
                 FormatStyle::AlignConsecutiveStyle{});                         \
-    CHECK_PARSE(                                                               \
-        #FIELD ": true", FIELD,                                                \
-        FormatStyle::AlignConsecutiveStyle(                                    \
-            {/*Enabled=*/true, /*AcrossEmptyLines=*/false,                     \
-             /*AcrossComments=*/false, /*AlignCompound=*/false,                \
-             /*AlignFunctionDeclarations=*/true,                               \
-             /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
+    CHECK_PARSE(#FIELD ": true", FIELD,                                        \
+                FormatStyle::AlignConsecutiveStyle(                            \
+                    {/*Enabled=*/true, /*AcrossEmptyLines=*/false,             \
+                     /*AcrossComments=*/false, /*AlignCompound=*/false,        \
+                     /*AlignFunctionDeclarations=*/true,                       \
+                     /*AlignFunctionPointers=*/false,                          \
+                     /*EnumAssignments =*/true, /*PadOperators=*/true}));      \
                                                                                \
     CHECK_PARSE_NESTED_BOOL(FIELD, Enabled);                                   \
     CHECK_PARSE_NESTED_BOOL(FIELD, AcrossEmptyLines);                          \
@@ -383,6 +384,7 @@ TEST(ConfigParseTest, ParsesConfiguration) {
     CHECK_PARSE_NESTED_BOOL(FIELD, AlignCompound);                             \
     CHECK_PARSE_NESTED_BOOL(FIELD, AlignFunctionDeclarations);                 \
     CHECK_PARSE_NESTED_BOOL(FIELD, AlignFunctionPointers);                     \
+    CHECK_PARSE_NESTED_BOOL(FIELD, EnumAssignments);                           \
     CHECK_PARSE_NESTED_BOOL(FIELD, PadOperators);                              \
   } while (false)
 
@@ -648,8 +650,30 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               "AlignAfterOpenBracket: AlwaysBreak",
               BreakAfterOpenBracketLoop, true);
   CHECK_PARSE("AlignAfterOpenBracket: false", AlignAfterOpenBracket, false);
+  // BlockIndent implies breaking after the open bracket and before the close
+  // bracket of braced lists, function calls/declarations, and if conditions.
+  Style.BreakAfterOpenBracketBracedList = false;
+  Style.BreakAfterOpenBracketFunction = false;
+  Style.BreakAfterOpenBracketIf = false;
+  Style.BreakAfterOpenBracketLoop = true;
+  Style.BreakAfterOpenBracketSwitch = true;
+  Style.BreakBeforeCloseBracketBracedList = false;
+  Style.BreakBeforeCloseBracketFunction = false;
+  Style.BreakBeforeCloseBracketIf = false;
+  Style.BreakBeforeCloseBracketLoop = true;
+  Style.BreakBeforeCloseBracketSwitch = true;
   CHECK_PARSE("AlignAfterOpenBracket: BlockIndent", AlignAfterOpenBracket,
               true);
+  EXPECT_TRUE(Style.BreakAfterOpenBracketBracedList);
+  EXPECT_TRUE(Style.BreakAfterOpenBracketFunction);
+  EXPECT_TRUE(Style.BreakAfterOpenBracketIf);
+  EXPECT_FALSE(Style.BreakAfterOpenBracketLoop);
+  EXPECT_FALSE(Style.BreakAfterOpenBracketSwitch);
+  EXPECT_TRUE(Style.BreakBeforeCloseBracketBracedList);
+  EXPECT_TRUE(Style.BreakBeforeCloseBracketFunction);
+  EXPECT_TRUE(Style.BreakBeforeCloseBracketIf);
+  EXPECT_FALSE(Style.BreakBeforeCloseBracketLoop);
+  EXPECT_FALSE(Style.BreakBeforeCloseBracketSwitch);
   Style.AlignAfterOpenBracket = false;
   CHECK_PARSE("AlignAfterOpenBracket: true", AlignAfterOpenBracket, true);
 
@@ -924,6 +948,18 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               BreakAfterReturnType, FormatStyle::RTBS_AllDefinitions);
   CHECK_PARSE("AlwaysBreakAfterReturnType: TopLevelDefinitions",
               BreakAfterReturnType, FormatStyle::RTBS_TopLevelDefinitions);
+
+  Style.BreakBeforeReturnType = FormatStyle::BBRTS_All;
+  CHECK_PARSE("BreakBeforeReturnType: None", BreakBeforeReturnType,
+              FormatStyle::BBRTS_None);
+  CHECK_PARSE("BreakBeforeReturnType: All", BreakBeforeReturnType,
+              FormatStyle::BBRTS_All);
+  CHECK_PARSE("BreakBeforeReturnType: TopLevel", BreakBeforeReturnType,
+              FormatStyle::BBRTS_TopLevel);
+  CHECK_PARSE("BreakBeforeReturnType: AllDefinitions", BreakBeforeReturnType,
+              FormatStyle::BBRTS_AllDefinitions);
+  CHECK_PARSE("BreakBeforeReturnType: TopLevelDefinitions",
+              BreakBeforeReturnType, FormatStyle::BBRTS_TopLevelDefinitions);
 
   Style.BreakTemplateDeclarations = FormatStyle::BTDS_Yes;
   CHECK_PARSE("BreakTemplateDeclarations: Leave", BreakTemplateDeclarations,
@@ -1712,7 +1748,8 @@ TEST(ConfigParseTest, GetStyleOfFile) {
   // Test 9.8: use inheritance from a file without BasedOnStyle
   ASSERT_TRUE(FS.addFile(
       "/e/withoutbase/.clang-format", 0,
-      llvm::MemoryBuffer::getMemBuffer("BracedInitializerIndentWidth: 2\n"
+      llvm::MemoryBuffer::getMemBuffer("AlignAfterOpenBracket: false\n"
+                                       "BracedInitializerIndentWidth: 2\n"
                                        "ColumnLimit: 123")));
   ASSERT_TRUE(
       FS.addFile("/e/withoutbase/sub/.clang-format", 0,
@@ -1723,6 +1760,7 @@ TEST(ConfigParseTest, GetStyleOfFile) {
   ASSERT_TRUE(static_cast<bool>(Style9));
   ASSERT_EQ(*Style9, [] {
     auto Style = getLLVMStyle();
+    Style.AlignAfterOpenBracket = false;
     Style.BracedInitializerIndentWidth = 2;
     Style.ColumnLimit = 123;
     return Style;
@@ -1732,6 +1770,7 @@ TEST(ConfigParseTest, GetStyleOfFile) {
   ASSERT_TRUE(static_cast<bool>(Style9));
   ASSERT_EQ(*Style9, [] {
     auto Style = getLLVMStyle();
+    Style.AlignAfterOpenBracket = false;
     Style.BracedInitializerIndentWidth = 2;
     Style.ColumnLimit = 123;
     Style.IndentWidth = 7;

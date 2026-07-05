@@ -286,6 +286,9 @@ lldb::ValueObjectSP ValueObjectSynthetic::GetChildAtIndex(uint32_t idx,
       if (!synth_guy)
         return synth_guy;
 
+      if (synth_guy->IsSyntheticChildrenGenerated())
+        synth_guy->SetLogicalParent(this);
+
       {
         std::lock_guard<std::mutex> guard(m_child_mutex);
         if (synth_guy->IsSyntheticChildrenGenerated())
@@ -294,6 +297,10 @@ lldb::ValueObjectSP ValueObjectSynthetic::GetChildAtIndex(uint32_t idx,
       }
       synth_guy->SetPreferredDisplayLanguageIfNeeded(
           GetPreferredDisplayLanguage());
+
+      if (lldb::ValueObjectSP check_sp =
+              CheckValueObjectOwnership(synth_guy.get()))
+        return check_sp;
       return synth_guy;
     } else {
       LLDB_LOG(log,
@@ -310,7 +317,9 @@ lldb::ValueObjectSP ValueObjectSynthetic::GetChildAtIndex(uint32_t idx,
              "[ValueObjectSynthetic::GetChildAtIndex] name={0}, child at "
              "index {1} cached as {2}",
              GetName(), idx, static_cast<void *>(valobj));
-
+    lldb::ValueObjectSP check_sp = CheckValueObjectOwnership(valobj);
+    if (check_sp)
+      return check_sp;
     return valobj->GetSP();
   }
 }

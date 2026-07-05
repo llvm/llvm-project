@@ -21,11 +21,11 @@
 
 using namespace llvm;
 
-MCAsmInfoGOFF::MCAsmInfoGOFF() {
+MCAsmInfoGOFF::MCAsmInfoGOFF(const MCTargetOptions &Options)
+    : MCAsmInfo(Options) {
   Data64bitsDirective = "\t.quad\t";
   WeakRefDirective = "WXTRN";
   InternalSymbolPrefix = "L#";
-  PrivateLabelPrefix = "L#";
   ZeroDirective = "\t.space\t";
 }
 

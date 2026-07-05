@@ -132,13 +132,23 @@ struct OperationMoveModel : public fir::OperationMoveOpInterface::ExternalModel<
   bool canMoveOutOf(mlir::Operation *op, mlir::Operation *candidate) const;
 };
 
-struct ReductionInitOpFortranObjectViewModel
+namespace detail {
+void verifyFortranObjectViewResult(mlir::Operation *op,
+                                   mlir::OpResult resultView);
+}
+
+/// External model for acc ops whose result is a zero-offset view of an operand.
+template <typename Op>
+struct AccFortranObjectViewModel
     : public fir::FortranObjectViewOpInterface::ExternalModel<
-          ReductionInitOpFortranObjectViewModel, mlir::acc::ReductionInitOp> {
+          AccFortranObjectViewModel<Op>, Op> {
   mlir::Value getViewSource(mlir::Operation *op,
                             mlir::OpResult resultView) const;
   std::optional<std::int64_t> getViewOffset(mlir::Operation *op,
-                                            mlir::OpResult resultView) const;
+                                            mlir::OpResult resultView) const {
+    detail::verifyFortranObjectViewResult(op, resultView);
+    return 0;
+  }
 };
 
 } // namespace fir::acc

@@ -787,6 +787,7 @@ static std::optional<Procedure> CharacterizeProcedure(
     CopyAttrs<Procedure, Procedure::Attr>(symbol, *result,
         {
             {semantics::Attr::BIND_C, Procedure::Attr::BindC},
+            {semantics::Attr::SIMPLE, Procedure::Attr::Simple},
         });
     CopyAttrs<Procedure, Procedure::Attr>(DEREF(GetMainEntry(&symbol)), *result,
         {
@@ -1330,6 +1331,9 @@ bool Procedure::IsCompatibleWith(const Procedure &actual,
   Attrs actualAttrs{actual.attrs};
   if (!attrs.test(Attr::Pure)) {
     actualAttrs.reset(Attr::Pure);
+  }
+  if (!attrs.test(Attr::Simple)) {
+    actualAttrs.reset(Attr::Simple);
   }
   if (!attrs.test(Attr::Elemental) && specificIntrinsic) {
     actualAttrs.reset(Attr::Elemental);

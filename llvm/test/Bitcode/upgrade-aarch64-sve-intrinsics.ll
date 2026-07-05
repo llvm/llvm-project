@@ -198,6 +198,15 @@ define <vscale x 4 x float> @bfmlalt_lane(<vscale x 4 x float> %a, <vscale x 8 x
   ret <vscale x 4 x float> %out
 }
 
+; bfmmla
+define <vscale x 4 x float> @bfmmla_f32(<vscale x 4 x float> %a, <vscale x 8 x bfloat> %b, <vscale x 8 x bfloat> %c) {
+; CHECK-LABEL: @bfmmla_f32
+; CHECK:       %out = call <vscale x 4 x float> @llvm.aarch64.sve.fmmla.nxv4f32.nxv8bf16(<vscale x 4 x float> %a, <vscale x 8 x bfloat> %b, <vscale x 8 x bfloat> %c)
+; CHECK-NEXT:  ret <vscale x 4 x float> %out
+  %out = call <vscale x 4 x float> @llvm.aarch64.sve.bfmmla(<vscale x 4 x float> %a, <vscale x 8 x bfloat> %b, <vscale x 8 x bfloat> %c)
+  ret <vscale x 4 x float> %out
+}
+
 declare  <vscale x 32 x i8> @llvm.aarch64.sve.tuple.create2.nxv32i8.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>)
 declare  <vscale x 32 x i8> @llvm.aarch64.sve.tuple.create2.nxv32i8(<vscale x 16 x i8>, <vscale x 16 x i8>)
 declare  <vscale x 32 x i8> @llvm.aarch64.sve.tuple.create2(<vscale x 16 x i8>, <vscale x 16 x i8>)
@@ -209,3 +218,4 @@ declare <vscale x 4 x i32> @llvm.aarch64.sve.tuple.get.nxv8i32(<vscale x 8 x i32
 declare <vscale x 4 x float> @llvm.aarch64.sve.bfdot.lane(<vscale x 4 x float>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, i64)
 declare <vscale x 4 x float> @llvm.aarch64.sve.bfmlalb.lane(<vscale x 4 x float>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, i64)
 declare <vscale x 4 x float> @llvm.aarch64.sve.bfmlalt.lane(<vscale x 4 x float>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, i64)
+declare <vscale x 4 x float> @llvm.aarch64.sve.bfmmla(<vscale x 4 x float>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>)

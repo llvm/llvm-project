@@ -14,6 +14,7 @@ libc_test(
     name = "socket_test",
     srcs = ["linux/socket_test.cpp"],
     deps = [
+        "//libc:__support_cpp_scope",
         "//libc:close",
         "//libc:socket",
     ],
@@ -23,6 +24,7 @@ libc_test(
     name = "socketpair_test",
     srcs = ["linux/socketpair_test.cpp"],
     deps = [
+        "//libc:__support_cpp_scope",
         "//libc:close",
         "//libc:socketpair",
     ],
@@ -32,7 +34,9 @@ libc_test(
     name = "send_recv_test",
     srcs = ["linux/send_recv_test.cpp"],
     deps = [
+        "//libc:__support_cpp_scope",
         "//libc:close",
+        "//libc:hdr_sys_socket_macros",
         "//libc:recv",
         "//libc:send",
         "//libc:socketpair",
@@ -43,6 +47,7 @@ libc_test(
     name = "sendto_recvfrom_test",
     srcs = ["linux/sendto_recvfrom_test.cpp"],
     deps = [
+        "//libc:__support_cpp_scope",
         "//libc:close",
         "//libc:recvfrom",
         "//libc:sendto",
@@ -54,9 +59,18 @@ libc_test(
     name = "sendmsg_recvmsg_test",
     srcs = ["linux/sendmsg_recvmsg_test.cpp"],
     deps = [
+        "//libc:__support_cpp_scope",
         "//libc:close",
+        "//libc:fcntl",
+        "//libc:getsockopt",
+        "//libc:hdr_fcntl_macros",
+        "//libc:hdr_sys_socket_macros",
+        "//libc:llvm_libc_macros_sys_socket_macros",
+        "//libc:memcpy",
+        "//libc:memset",
         "//libc:recvmsg",
         "//libc:sendmsg",
         "//libc:socketpair",
+        "//libc:types_struct_cmsghdr",
     ],
 )

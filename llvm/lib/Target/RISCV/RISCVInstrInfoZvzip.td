@@ -138,3 +138,73 @@ defm : VPatBinaryV_VV<"int_riscv_vpairo", "PseudoVPAIRO", AllVectors,
 defm : VPatBinaryW_VV<"int_riscv_vzip", "PseudoVZIP", AllZvzipVectors,
                       ExtraPreds = [HasStdExtZvzip],
                       requireMinimal = true>;
+
+// (vd (op vs2, vs1, passthru, mask, vl))
+def SDT_RISCVZip_VL : SDTypeProfile<1, 5, [SDTCisVec<0>, SDTCisVec<1>,
+                                           SDTCisSubVecOfVec<1, 0>,
+                                           SDTCisSameAs<1, 2>,
+                                           SDTCisSameAs<0, 3>,
+                                           SDTCVecEltisVT<4, i1>,
+                                           SDTCisSameNumEltsAs<1, 4>,
+                                           SDTCisVT<5, XLenVT>]>;
+
+// (vd (op vs2, passthru, mask, vl))
+def SDT_RISCVUnzip_VL : SDTypeProfile<1, 4, [SDTCisVec<0>, SDTCisVec<1>,
+                                             SDTCisSubVecOfVec<0, 1>,
+                                             SDTCisSameAs<0, 2>,
+                                             SDTCVecEltisVT<3, i1>,
+                                             SDTCisSameNumEltsAs<0, 3>,
+                                             SDTCisVT<4, XLenVT>]>;
+
+def SDT_RISCVVecBinOp_VL : SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
+                                                SDTCisSameAs<0, 2>,
+                                                SDTCisVec<0>,
+                                                SDTCisSameAs<0, 3>,
+                                                SDTCVecEltisVT<4, i1>,
+                                                SDTCisSameNumEltsAs<0, 4>,
+                                                SDTCisVT<5, XLenVT>]>;
+
+let HasPassthruOp = true, HasMaskOp = true in {
+def vpaire_vl  : RVSDNode<"VPAIRE_VL", SDT_RISCVVecBinOp_VL>;
+def vpairo_vl  : RVSDNode<"VPAIRO_VL", SDT_RISCVVecBinOp_VL>;
+def vzip_vl    : RVSDNode<"VZIP_VL", SDT_RISCVZip_VL>;
+def vunzipe_vl : RVSDNode<"VUNZIPE_VL", SDT_RISCVUnzip_VL>;
+def vunzipo_vl : RVSDNode<"VUNZIPO_VL", SDT_RISCVUnzip_VL>;
+} // HasPassthruOp = true, HasMaskOp = true
+
+multiclass VPatVZIP<SDPatternOperator vop, string instruction_name> {
+  foreach VtiToWti = AllZvzipVectors in {
+    defvar vti = VtiToWti.Vti;
+    defvar wti = VtiToWti.Wti;
+    let Predicates = !listconcat([HasStdExtZvzip],
+                                 GetVTypeMinimalPredicates<vti>.Predicates) in {
+      def : VPatBinaryVL_V<vop, instruction_name, "VV",
+                           wti.Vector, vti.Vector, vti.Vector, vti.Mask,
+                           vti.Log2SEW, vti.LMul, wti.RegClass, vti.RegClass,
+                           vti.RegClass>;
+    }
+  }
+}
+
+multiclass VPatVUNZIP<SDPatternOperator op, string instruction_name> {
+  foreach VtiToWti = AllZvzipVectors in {
+    defvar vti = VtiToWti.Vti;
+    defvar wti = VtiToWti.Wti;
+    let Predicates = !listconcat([HasStdExtZvzip],
+                                 GetVTypeMinimalPredicates<vti>.Predicates) in {
+      def : VPatUnaryVL_V<op, instruction_name, "V",
+                          vti.Vector, wti.Vector, vti.Mask, vti.Log2SEW,
+                          vti.LMul, vti.RegClass, wti.RegClass>;
+    }
+  }
+}
+
+defm : VPatVZIP<vzip_vl, "PseudoVZIP">;
+defm : VPatVUNZIP<vunzipe_vl, "PseudoVUNZIPE">;
+defm : VPatVUNZIP<vunzipo_vl, "PseudoVUNZIPO">;
+defm : VPatBinaryVL_VV<vpaire_vl, "PseudoVPAIRE", AllVectors,
+                       ExtraPreds = [HasStdExtZvzip],
+                       requireMinimal = true>;
+defm : VPatBinaryVL_VV<vpairo_vl, "PseudoVPAIRO", AllVectors,
+                       ExtraPreds = [HasStdExtZvzip],
+                       requireMinimal = true>;

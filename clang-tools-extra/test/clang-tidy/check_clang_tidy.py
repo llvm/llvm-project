@@ -460,7 +460,11 @@ C_STANDARDS = ["c99", ("c11", "c1x"), "c17", ("c23", "c2x"), "c2y"]
 
 
 def expand_std(std: str) -> List[str]:
-    split_std, or_later, _ = std.partition("-or-later")
+    split_std, or_later, suffix = std.partition("-or-later")
+
+    if or_later and suffix:
+        # Keep malformed -or-later spellings unchanged so clang diagnoses them.
+        return [std]
 
     if not or_later:
         return [split_std]

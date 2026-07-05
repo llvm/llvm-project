@@ -985,6 +985,8 @@ static MachineOperand getMovOperand(const MachineOperand &MO,
   }
   case MachineOperand::MO_ExternalSymbol:
     return MachineOperand::CreateES(MO.getSymbolName(), TF);
+  case MachineOperand::MO_MCSymbol:
+    return MachineOperand::CreateMCSymbol(MO.getMCSymbol(), TF);
   case MachineOperand::MO_JumpTableIndex:
     return MachineOperand::CreateJTI(MO.getIndex(), TF);
   default:
@@ -1839,6 +1841,15 @@ void ARMExpandPseudo::CMSERestoreFPRegsV81(
   }
 }
 
+static unsigned getCmpOpcode(bool IsThumb, Register LHS, Register RHS) {
+  if (!IsThumb)
+    return ARM::CMPrr;
+  if (ARM::tGPRRegClass.contains(LHS) &&
+      ARM::tGPRRegClass.contains(RHS))
+    return ARM::tCMPr;
+  return ARM::tCMPhir;
+}
+
 /// Expand a CMP_SWAP pseudo-inst to an ldrex/strex loop as simply as
 /// possible. This only gets used at -O0 so we don't care about efficiency of
 /// the generated code.
@@ -1899,7 +1910,7 @@ bool ARMExpandPseudo::ExpandCMP_SWAP(MachineBasicBlock &MBB,
     MIB.addImm(0); // a 32-bit Thumb ldrex (only) allows an offset.
   MIB.add(predOps(ARMCC::AL));
 
-  unsigned CMPrr = IsThumb ? ARM::tCMPhir : ARM::CMPrr;
+  unsigned CMPrr = getCmpOpcode(IsThumb, Dest.getReg(), DesiredReg);
   BuildMI(LoadCmpBB, DL, TII->get(CMPrr))
       .addReg(Dest.getReg(), getKillRegState(Dest.isDead()))
       .addReg(DesiredReg)
@@ -2019,16 +2030,18 @@ bool ARMExpandPseudo::ExpandCMP_SWAP_64(MachineBasicBlock &MBB,
   addExclusiveRegPair(MIB, Dest, RegState::Define, IsThumb, TRI);
   MIB.addReg(AddrReg).add(predOps(ARMCC::AL));
 
-  unsigned CMPrr = IsThumb ? ARM::tCMPhir : ARM::CMPrr;
-  BuildMI(LoadCmpBB, DL, TII->get(CMPrr))
+  unsigned CMPrrLo = getCmpOpcode(IsThumb, DestLo, DesiredLo);
+  BuildMI(LoadCmpBB, DL, TII->get(CMPrrLo))
       .addReg(DestLo, getKillRegState(Dest.isDead()))
       .addReg(DesiredLo)
       .add(predOps(ARMCC::AL));
 
-  BuildMI(LoadCmpBB, DL, TII->get(CMPrr))
+  unsigned CMPrrHi = getCmpOpcode(IsThumb, DestHi, DesiredHi);
+  BuildMI(LoadCmpBB, DL, TII->get(CMPrrHi))
       .addReg(DestHi, getKillRegState(Dest.isDead()))
       .addReg(DesiredHi)
-      .addImm(ARMCC::EQ).addReg(ARM::CPSR, RegState::Kill);
+      .addImm(ARMCC::EQ)
+      .addReg(ARM::CPSR, RegState::Kill);
 
   unsigned Bcc = IsThumb ? ARM::tBcc : ARM::Bcc;
   BuildMI(LoadCmpBB, DL, TII->get(Bcc))
@@ -2242,6 +2255,14 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       return true;
     }
 
+    case ARM::CLEANUPRET:
+    case ARM::CATCHRET: {
+      unsigned RetOpcode = STI->isThumb() ? ARM::tBX_RET : ARM::BX_RET;
+      BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(RetOpcode))
+          .add(predOps(ARMCC::AL));
+      MI.eraseFromParent();
+      return true;
+    }
     case ARM::TCRETURNdi:
     case ARM::TCRETURNri:
     case ARM::TCRETURNrinotr12: {
@@ -2268,7 +2289,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       // Jump to label or value in register.
       if (RetOpcode == ARM::TCRETURNdi) {
         MachineFunction *MF = MBB.getParent();
-        bool NeedsWinCFI = MF->getTarget().getMCAsmInfo()->usesWindowsCFI() &&
+        bool NeedsWinCFI = MF->getTarget().getMCAsmInfo().usesWindowsCFI() &&
                            MF->getFunction().needsUnwindTableEntry();
         unsigned TCOpcode =
             STI->isThumb()

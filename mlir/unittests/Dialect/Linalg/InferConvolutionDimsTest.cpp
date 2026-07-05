@@ -176,4 +176,140 @@ TEST_F(InferConvolutionDimsTest, Conv2DPairing) {
       << "outputImage[1]=1 should pair with filterLoop[1]=2 (ow <-> kw)";
 }
 
+/// Asserts that two ConvolutionDimensions are equal across every populated
+/// field.
+static void expectConvDimsEq(const ConvolutionDimensions &lhs,
+                             const ConvolutionDimensions &rhs) {
+  EXPECT_EQ(lhs.batch, rhs.batch);
+  EXPECT_EQ(lhs.outputImage, rhs.outputImage);
+  EXPECT_EQ(lhs.outputChannel, rhs.outputChannel);
+  EXPECT_EQ(lhs.filterLoop, rhs.filterLoop);
+  EXPECT_EQ(lhs.inputChannel, rhs.inputChannel);
+  EXPECT_EQ(lhs.depth, rhs.depth);
+  EXPECT_EQ(lhs.strides, rhs.strides);
+  EXPECT_EQ(lhs.dilations, rhs.dilations);
+}
+
+/// Verify that inferring convolution dimensions from indexing maps produces
+/// same result as inferring thrm directly from the convolution op.
+TEST_F(InferConvolutionDimsTest, MapsOverloadMatchesOpOverload) {
+  OpBuilder builder(ctx.get());
+  OwningOpRef<ModuleOp> module = ModuleOp::create(builder.getUnknownLoc());
+  builder.setInsertionPointToStart(module->getBody());
+  Location loc = builder.getUnknownLoc();
+  Type f32 = builder.getF32Type();
+  auto empty = [&](ArrayRef<int64_t> shape) -> Value {
+    return tensor::EmptyOp::create(builder, loc, shape, f32);
+  };
+  auto ones = builder.getI64TensorAttr({1, 1});
+
+  SmallVector<Operation *> convs;
+  {
+    Value out = empty({1, 4, 4, 4});
+    convs.push_back(linalg::Conv2DNhwcHwcfOp::create(
+                        builder, loc, out.getType(),
+                        ValueRange{empty({1, 10, 5, 3}), empty({2, 2, 3, 4})},
+                        ValueRange{out},
+                        /*strides=*/builder.getI64TensorAttr({2, 1}),
+                        /*dilations=*/builder.getI64TensorAttr({3, 1}))
+                        .getOperation());
+  }
+  {
+    Value out = empty({1, 4, 4, 3});
+    convs.push_back(linalg::DepthwiseConv2DNhwcHwcOp::create(
+                        builder, loc, out.getType(),
+                        ValueRange{empty({1, 5, 5, 3}), empty({2, 2, 3})},
+                        ValueRange{out}, ones, ones)
+                        .getOperation());
+  }
+
+  for (Operation *op : convs) {
+    LinalgOp linalgOp = cast<LinalgOp>(op);
+    FailureOr<ConvolutionDimensions> fromOp = inferConvolutionDims(linalgOp);
+    ASSERT_TRUE(succeeded(fromOp))
+        << "op overload failed for " << op->getName().getStringRef().str();
+    FailureOr<ConvolutionDimensions> fromMaps =
+        inferConvolutionDims(linalgOp.getIndexingMapsArray());
+    ASSERT_TRUE(succeeded(fromMaps))
+        << "maps overload failed for " << op->getName().getStringRef().str();
+    expectConvDimsEq(*fromOp, *fromMaps);
+  }
+
+  // Ensure the depthwise conv populates the depth field.
+  FailureOr<ConvolutionDimensions> depthwiseDims =
+      inferConvolutionDims(cast<LinalgOp>(convs.back()).getIndexingMapsArray());
+  ASSERT_TRUE(succeeded(depthwiseDims));
+  EXPECT_FALSE(depthwiseDims->depth.empty());
+}
+
+/// The maps overload must infer the correct dimensions for a strided and
+/// dilated NHWC/HWCF convolution.
+TEST_F(InferConvolutionDimsTest, InferNhwcConvDimensions) {
+  MLIRContext *c = ctx.get();
+  AffineExpr d0, d1, d2, d3, d4, d5, d6;
+  bindDims(c, d0, d1, d2, d3, d4, d5, d6);
+  // Loop order: (n=d0, oh=d1, ow=d2, f=d3, kh=d4, kw=d5, c=d6),
+  // strides {2,1}, dilations {3,1}.
+  SmallVector<AffineMap> maps = {
+      AffineMap::get(7, 0, {d0, d1 * 2 + d4 * 3, d2 + d5, d6}, c),
+      AffineMap::get(7, 0, {d4, d5, d6, d3}, c),
+      AffineMap::get(7, 0, {d0, d1, d2, d3}, c)};
+  FailureOr<ConvolutionDimensions> dims = inferConvolutionDims(maps);
+  ASSERT_TRUE(succeeded(dims));
+  ConvolutionDimensions expected{/*batch=*/{0},
+                                 /*outputImage=*/{1, 2},
+                                 /*outputChannel=*/{3},
+                                 /*filterLoop=*/{4, 5},
+                                 /*inputChannel=*/{6},
+                                 /*depth=*/{},
+                                 /*strides=*/{2, 1},
+                                 /*dilations=*/{3, 1}};
+  expectConvDimsEq(expected, *dims);
+}
+
+/// Maps-only check that filterLoop pairing is reconstructed from the input map:
+/// the swapped layout (d0 + d3, d1 + d2) must yield filterLoop [3, 2].
+TEST_F(InferConvolutionDimsTest, MapsOverloadConv2DPairing) {
+  MLIRContext *c = ctx.get();
+  AffineExpr d0, d1, d2, d3;
+  bindDims(c, d0, d1, d2, d3);
+  SmallVector<AffineMap> maps = {AffineMap::get(4, 0, {d0 + d3, d1 + d2}, c),
+                                 AffineMap::get(4, 0, {d2, d3}, c),
+                                 AffineMap::get(4, 0, {d0, d1}, c)};
+  FailureOr<ConvolutionDimensions> dims = inferConvolutionDims(maps);
+  ASSERT_TRUE(succeeded(dims));
+  EXPECT_EQ(dims->outputImage, (SmallVector<unsigned, 2>{0, 1}));
+  EXPECT_EQ(dims->filterLoop, (SmallVector<unsigned, 2>{3, 2}));
+}
+
+/// Inputs that cannot describe a convolution must fail.
+TEST_F(InferConvolutionDimsTest, MapsOverloadRejectsInvalidInput) {
+  MLIRContext *c = ctx.get();
+  AffineExpr d0, d1, d2, d3;
+  bindDims(c, d0, d1, d2, d3);
+
+  // Wrong number of maps (must be exactly 3: input, filter, output).
+  {
+    auto m = AffineMap::get(2, 0, {d0, d1}, c);
+    EXPECT_TRUE(failed(inferConvolutionDims(SmallVector<AffineMap>{m, m})));
+  }
+
+  // Output map is not a projected permutation: iterator types are
+  // unidentifiable.
+  {
+    SmallVector<AffineMap> maps = {AffineMap::get(4, 0, {d0 + d2, d1 + d3}, c),
+                                   AffineMap::get(4, 0, {d2, d3}, c),
+                                   AffineMap::get(4, 0, {d0 + d1}, c)};
+    EXPECT_TRUE(failed(inferConvolutionDims(maps)));
+  }
+
+  // No convolved dimension (matmul-like): output_image is empty.
+  {
+    SmallVector<AffineMap> maps = {AffineMap::get(3, 0, {d0, d2}, c),
+                                   AffineMap::get(3, 0, {d2, d1}, c),
+                                   AffineMap::get(3, 0, {d0, d1}, c)};
+    EXPECT_TRUE(failed(inferConvolutionDims(maps)));
+  }
+}
+
 } // namespace

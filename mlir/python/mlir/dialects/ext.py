@@ -35,6 +35,7 @@ __all__ = [
     "Region",
     "Type",
     "Attribute",
+    "Pure",
     "result",
     "infer_result",
     "operand",
@@ -992,3 +993,22 @@ class Dialect(ir.Dialect):
         for op in cls.operations:
             _cext.register_operation(cls, replace=reload)(op)
             _cext.register_op_adaptor(op, replace=reload)(op.Adaptor)
+
+
+class Pure:
+    """Always speculatable operation that does not touch memory."""
+
+    class NoMemoryEffect(ir.MemoryEffectsOpInterface):
+        @staticmethod
+        def get_effects(op, effects):
+            pass
+
+    class AlwaysSpeculatable(ir.ConditionallySpeculatable):
+        @staticmethod
+        def get_speculatability(op):
+            return ir.Speculatability.Speculatable
+
+    @staticmethod
+    def attach(op_name):
+        Pure.NoMemoryEffect.attach(op_name)
+        Pure.AlwaysSpeculatable.attach(op_name)

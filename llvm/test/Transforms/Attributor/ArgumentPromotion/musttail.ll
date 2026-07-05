@@ -171,7 +171,7 @@ define i32 @caller2b(ptr %g) {
 ; TUNIT: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; TUNIT: attributes #[[ATTR2]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
 ; TUNIT: attributes #[[ATTR3]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
-; TUNIT: attributes #[[ATTR4]] = { nofree nosync nounwind willreturn memory(read) }
+; TUNIT: attributes #[[ATTR4]] = { nofree norecurse nosync nounwind willreturn memory(read) }
 ; TUNIT: attributes #[[ATTR5]] = { nofree nosync nounwind willreturn memory(write) }
 ; TUNIT: attributes #[[ATTR6]] = { nofree nosync nounwind willreturn }
 ;.

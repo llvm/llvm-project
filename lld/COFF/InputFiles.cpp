@@ -25,7 +25,6 @@
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/IR/Mangler.h"
-#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
@@ -150,15 +149,15 @@ static bool fixupDllMain(COFFLinkerContext &ctx, llvm::object::Archive *file,
   return false;
 }
 
-ArchiveFile::ArchiveFile(COFFLinkerContext &ctx, MemoryBufferRef m)
-    : InputFile(ctx.symtab, ArchiveKind, m) {}
+ArchiveFile::ArchiveFile(COFFLinkerContext &ctx, MemoryBufferRef m,
+                         std::unique_ptr<Archive> &f)
+    : InputFile(ctx.symtab, ArchiveKind, m) {
+  file.swap(f);
+}
 
 void ArchiveFile::parse() {
   COFFLinkerContext &ctx = symtab.ctx;
   SymbolTable *archiveSymtab = &symtab;
-
-  // Parse a MemoryBufferRef as an archive file.
-  file = CHECK(Archive::create(mb), this);
 
   // Try to read symbols from ECSYMBOLS section on ARM64EC.
   if (ctx.symtab.isEC()) {
@@ -279,19 +278,24 @@ ObjFile::ObjFile(SymbolTable &symtab, COFFObjectFile *coffObj, bool lazy)
     : InputFile(symtab, ObjectKind, coffObj->getMemoryBufferRef(), lazy),
       coffObj(coffObj) {}
 
-ObjFile *ObjFile::create(COFFLinkerContext &ctx, MemoryBufferRef m, bool lazy) {
+std::unique_ptr<COFFObjectFile>
+ObjFile::createCOFFObject(COFFLinkerContext &ctx, MemoryBufferRef m) {
   // Parse a memory buffer as a COFF file.
   Expected<std::unique_ptr<Binary>> bin = createBinary(m);
   if (!bin)
     Fatal(ctx) << "Could not parse " << m.getBufferIdentifier();
 
-  auto *obj = dyn_cast<COFFObjectFile>(bin->get());
-  if (!obj)
+  std::unique_ptr<COFFObjectFile> obj(dyn_cast<COFFObjectFile>(bin->release()));
+  if (!obj.get())
     Fatal(ctx) << m.getBufferIdentifier() << " is not a COFF file";
 
-  bin->release();
-  return make<ObjFile>(ctx.getSymtab(MachineTypes(obj->getMachine())), obj,
-                       lazy);
+  return obj;
+}
+
+ObjFile *ObjFile::create(COFFLinkerContext &ctx, COFFObjectFile *coffObj,
+                         bool lazy) {
+  return make<ObjFile>(ctx.getSymtab(MachineTypes(coffObj->getMachine())),
+                       coffObj, lazy);
 }
 
 void ObjFile::parseLazy() {
@@ -1402,8 +1406,6 @@ void BitcodeFile::parse() {
     // FIXME: Check nodeduplicate
     comdat[i] =
         symtab.addComdat(this, saver.save(obj->getComdatTable()[i].first));
-  Triple tt(obj->getTargetTriple());
-  RTLIB::RuntimeLibcallsInfo libcalls(tt);
   for (const lto::InputFile::Symbol &objSym : obj->symbols()) {
     StringRef symName = saver.save(objSym.getName());
     int comdatIndex = objSym.getComdatIndex();
@@ -1453,7 +1455,7 @@ void BitcodeFile::parse() {
           symtab.addRegular(this, symName, nullptr, fakeSC, 0, objSym.isWeak());
     }
     symbols.push_back(sym);
-    if (objSym.isUsed() || objSym.isLibcall(libcalls))
+    if (objSym.isUsed())
       symtab.ctx.config.gcroot.push_back(sym);
   }
   directives = saver.save(obj->getCOFFLinkerOpts());

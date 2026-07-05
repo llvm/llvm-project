@@ -35,7 +35,7 @@ end
 !PARSE-TREE: | | ImplicitPart ->
 !PARSE-TREE: | ExecutionPart -> Block
 !PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE: | | | OmpBeginLoopDirective
+!PARSE-TREE: | | | OmpBeginDirective
 !PARSE-TREE: | | | | OmpDirectiveName -> llvm::omp::Directive = parallel do
 !PARSE-TREE: | | | | OmpClauseList -> OmpClause -> Lastprivate -> OmpLastprivateClause
 !PARSE-TREE: | | | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'i'
@@ -51,7 +51,7 @@ end
 !PARSE-TREE: | | | | | | | | LiteralConstant -> IntLiteralConstant = '2'
 !PARSE-TREE: | | | | | Block
 !PARSE-TREE: | | | | | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE: | | | | | | | OmpBeginLoopDirective
+!PARSE-TREE: | | | | | | | OmpBeginDirective
 !PARSE-TREE: | | | | | | | | OmpDirectiveName -> llvm::omp::Directive = parallel do
 !PARSE-TREE: | | | | | | | | OmpClauseList -> OmpClause -> Lastprivate -> OmpLastprivateClause
 !PARSE-TREE: | | | | | | | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'j'

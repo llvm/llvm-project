@@ -138,6 +138,10 @@ static void format_task_type(int type, char *buffer) {
     progress += sprintf(progress, "ompt_task_target");
   if (type & ompt_task_taskwait)
     progress += sprintf(progress, "ompt_task_taskwait");
+  if (type & ompt_task_importing)
+    progress += sprintf(progress, "|ompt_task_importing");
+  if (type & ompt_task_exporting)
+    progress += sprintf(progress, "|ompt_task_exporting");
   if (type & ompt_task_undeferred)
     progress += sprintf(progress, "|ompt_task_undeferred");
   if (type & ompt_task_untied)

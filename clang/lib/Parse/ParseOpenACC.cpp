@@ -608,18 +608,18 @@ unsigned getOpenACCScopeFlags(OpenACCDirectiveKind DirKind) {
   case OpenACCDirectiveKind::Kernels:
     // Mark this as a BreakScope/ContinueScope as well as a compute construct
     // so that we can diagnose trying to 'break'/'continue' inside of one.
-    return Scope::BreakScope | Scope::ContinueScope |
+    return Scope::BreakScope | Scope::ContinueScope | Scope::DeclScope |
            Scope::OpenACCComputeConstructScope;
   case OpenACCDirectiveKind::ParallelLoop:
   case OpenACCDirectiveKind::SerialLoop:
   case OpenACCDirectiveKind::KernelsLoop:
     // Mark this as a BreakScope/ContinueScope as well as a compute construct
     // so that we can diagnose trying to 'break'/'continue' inside of one.
-    return Scope::BreakScope | Scope::ContinueScope |
+    return Scope::BreakScope | Scope::ContinueScope | Scope::DeclScope |
            Scope::OpenACCComputeConstructScope |
            Scope::OpenACCLoopConstructScope;
   case OpenACCDirectiveKind::Loop:
-    return Scope::OpenACCLoopConstructScope;
+    return Scope::DeclScope | Scope::OpenACCLoopConstructScope;
   case OpenACCDirectiveKind::Data:
   case OpenACCDirectiveKind::EnterData:
   case OpenACCDirectiveKind::ExitData:
@@ -1682,7 +1682,9 @@ StmtResult Parser::ParseOpenACCDirectiveStmt() {
         getActions().OpenACC(), DirInfo.DirKind, DirInfo.DirLoc, {},
         DirInfo.Clauses);
     ParsingOpenACCDirectiveRAII DirScope(*this, /*Value=*/false);
-    ParseScope ACCScope(this, getOpenACCScopeFlags(DirInfo.DirKind));
+
+    unsigned scopeFlags = getOpenACCScopeFlags(DirInfo.DirKind);
+    ParseScope ACCScope(this, scopeFlags, /*EnteredScope=*/scopeFlags != 0);
 
     AssocStmt = getActions().OpenACC().ActOnAssociatedStmt(
         DirInfo.StartLoc, DirInfo.DirKind, DirInfo.AtomicKind, DirInfo.Clauses,

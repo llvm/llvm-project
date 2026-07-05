@@ -30,6 +30,8 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
+#include "mlir/IR/SymbolTable.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -92,6 +94,49 @@ convertToNVVMReductionKind(gpu::AllReduceOperation mode) {
     return std::nullopt;
   }
   return std::nullopt;
+}
+
+static constexpr llvm::StringLiteral kNVVMNamedBarrierIdPrefix =
+    "__named_barrier_id";
+static constexpr int32_t kNVVMFirstNamedBarrierId = 1;
+static constexpr int32_t kNVVMLastNamedBarrierId = 15;
+static constexpr int32_t kNVVMWarpSize = 32;
+
+static FailureOr<StringAttr>
+createNVVMNamedBarrierIdGlobal(gpu::InitializeNamedBarrierOp op,
+                               ConversionPatternRewriter &rewriter) {
+  auto funcOp = op->getParentOfType<FunctionOpInterface>();
+  if (!funcOp) {
+    op.emitOpError("must be inside a function-like op");
+    return failure();
+  }
+  Operation *symbolTableOp = funcOp->getParentWithTrait<OpTrait::SymbolTable>();
+  if (!symbolTableOp) {
+    op.emitOpError(
+        "enclosing function-like op must have a symbol-table parent");
+    return failure();
+  }
+
+  int32_t numNamedBarriers = 0;
+  for (auto globalOp :
+       symbolTableOp->getRegion(0).front().getOps<LLVM::GlobalOp>())
+    if (globalOp.getSymName().starts_with(kNVVMNamedBarrierIdPrefix))
+      ++numNamedBarriers;
+
+  int32_t barrierId = kNVVMFirstNamedBarrierId + numNamedBarriers;
+  if (barrierId > kNVVMLastNamedBarrierId) {
+    op.emitOpError("NVVM supports at most 15 named barriers per CTA");
+    return failure();
+  }
+
+  OpBuilder detachedBuilder(rewriter.getContext());
+  Type i32 = rewriter.getI32Type();
+  auto globalOp = LLVM::GlobalOp::create(
+      detachedBuilder, op.getLoc(), i32, /*isConstant=*/true,
+      LLVM::Linkage::Internal, kNVVMNamedBarrierIdPrefix,
+      rewriter.getI32IntegerAttr(barrierId), /*alignment=*/0,
+      /*addrSpace=*/0);
+  return SymbolTable(symbolTableOp).insert(globalOp);
 }
 
 /// This pass lowers gpu.subgroup_reduce op into to the nvvm.redux op. The op
@@ -367,8 +412,87 @@ struct AssertOpToAssertfailLowering
   }
 };
 
-/// Import the GPU Ops to NVVM Patterns.
-#include "GPUToNVVM.cpp.inc"
+struct GPUBarrierOpToNVVMLowering final
+    : public ConvertOpToLLVMPattern<gpu::BarrierOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::BarrierOp op, gpu::BarrierOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (Value namedBarrier = adaptor.getNamedBarrier()) {
+      Location loc = op.getLoc();
+      Value barrierId =
+          LLVM::ExtractValueOp::create(rewriter, loc, namedBarrier, 0);
+      Value numberOfThreads =
+          LLVM::ExtractValueOp::create(rewriter, loc, namedBarrier, 1);
+      NVVM::BarrierOp::create(rewriter, loc, barrierId, numberOfThreads);
+      rewriter.eraseOp(op);
+      return success();
+    }
+
+    gpu::BarrierScope scope = op.getScope();
+    switch (scope) {
+    case gpu::BarrierScope::Workgroup:
+      rewriter.replaceOpWithNewOp<NVVM::BarrierOp>(op);
+      return success();
+    case gpu::BarrierScope::Subgroup: {
+      // Emit __syncwarp(0xFFFFFFFF) for full-warp sync.
+      Value mask =
+          LLVM::ConstantOp::create(rewriter, op.getLoc(), rewriter.getI32Type(),
+                                   rewriter.getI32IntegerAttr(0xFFFFFFFF));
+      rewriter.replaceOpWithNewOp<NVVM::SyncWarpOp>(op, mask);
+      return success();
+    }
+    default:
+      return rewriter.notifyMatchFailure(
+          op, "unsupported scope for NVVM barrier lowering");
+    }
+  }
+};
+
+struct GPUInitializeNamedBarrierOpToNVVMLowering final
+    : public ConvertOpToLLVMPattern<gpu::InitializeNamedBarrierOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::InitializeNamedBarrierOp op,
+                  gpu::InitializeNamedBarrierOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    MLIRContext *ctx = rewriter.getContext();
+    Type i32 = rewriter.getI32Type();
+    Type namedBarrierType =
+        getTypeConverter()->convertType(op.getResult().getType());
+    if (!namedBarrierType)
+      return rewriter.notifyMatchFailure(op, "failed to convert result type");
+
+    FailureOr<StringAttr> maybeGlobalName =
+        createNVVMNamedBarrierIdGlobal(op, rewriter);
+    if (failed(maybeGlobalName))
+      return failure();
+
+    auto addressOf = LLVM::AddressOfOp::create(
+        rewriter, loc, LLVM::LLVMPointerType::get(ctx), *maybeGlobalName);
+    Value barrierId =
+        LLVM::LoadOp::create(rewriter, loc, i32, addressOf.getResult());
+
+    Value warpSize = LLVM::ConstantOp::create(
+        rewriter, loc, i32, rewriter.getI32IntegerAttr(kNVVMWarpSize));
+    Value numberOfThreads =
+        LLVM::MulOp::create(rewriter, loc, adaptor.getMemberCount(), warpSize);
+
+    Value namedBarrier =
+        LLVM::PoisonOp::create(rewriter, loc, namedBarrierType);
+    DenseI64ArrayAttr barrierIdPos = rewriter.getDenseI64ArrayAttr({0});
+    DenseI64ArrayAttr numberOfThreadsPos = rewriter.getDenseI64ArrayAttr({1});
+    namedBarrier = LLVM::InsertValueOp::create(rewriter, loc, namedBarrier,
+                                               barrierId, barrierIdPos);
+    namedBarrier = LLVM::InsertValueOp::create(
+        rewriter, loc, namedBarrier, numberOfThreads, numberOfThreadsPos);
+    rewriter.replaceOp(op, namedBarrier);
+    return success();
+  }
+};
 
 /// A pass that replaces all occurrences of GPU device operations with their
 /// corresponding NVVM equivalent.
@@ -485,6 +609,11 @@ void mlir::configureGpuToNVVMConversionLegality(ConversionTarget &target) {
 void mlir::configureGpuToNVVMTypeConverter(LLVMTypeConverter &converter) {
   nvgpu::populateCommonGPUTypeAndAttributeConversions(converter);
 
+  converter.addConversion([&](gpu::NamedBarrierType type) -> Type {
+    Type i32 = IntegerType::get(type.getContext(), 32);
+    return LLVM::LLVMStructType::getLiteral(type.getContext(), {i32, i32});
+  });
+
   // Lowering for MMAMatrixType.
   converter.addConversion([&](gpu::MMAMatrixType type) -> Type {
     return convertMMAToLLVMType(type);
@@ -503,10 +632,9 @@ void mlir::populateGpuToNVVMConversionPatterns(
   using gpu::index_lowering::IndexKind;
   using gpu::index_lowering::IntrType;
 
-  // TODO: Pass benefit to generated patterns.
-  populateWithGenerated(patterns);
-
-  patterns.add<GPUPrintfOpToVPrintfLowering, AssertOpToAssertfailLowering>(
+  patterns.add<GPUBarrierOpToNVVMLowering,
+               GPUInitializeNamedBarrierOpToNVVMLowering,
+               GPUPrintfOpToVPrintfLowering, AssertOpToAssertfailLowering>(
       converter, benefit);
   patterns.add<
       gpu::index_lowering::OpLowering<gpu::ThreadIdOp, NVVM::ThreadIdXOp,

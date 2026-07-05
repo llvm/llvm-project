@@ -23,8 +23,6 @@ declare void @extern_func()
 ; CHECK: !amdgpu.lds.uses = !{{{![0-9]+}}}
 ; CHECK-DAG: !{ptr @helper, ptr addrspace(3) @[[STRUCT]]}
 
-; CHECK: !{i32 1, !"amdgpu-link-time-lds", i32 1}
-
 define internal void @helper() {
   %gep = getelementptr [32 x i32], ptr addrspace(3) @lds_priv, i32 0, i32 0
   store i32 1, ptr addrspace(3) %gep

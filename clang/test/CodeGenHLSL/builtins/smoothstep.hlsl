@@ -13,8 +13,8 @@
 // CHECK-NEXT:    [[SUB1_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn half [[MAX]], [[MIN]]
 // CHECK-NEXT:    [[DIV_I:%.*]] = fdiv reassoc nnan ninf nsz arcp afn half [[SUB_I]], [[SUB1_I]]
 // CHECK-NEXT:    [[HLSL_SATURATE_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn half @llvm.dx.saturate.f16(half [[DIV_I]])
-// CHECK-NEXT:    [[MUL_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[HLSL_SATURATE_I]], 0xH4000
-// CHECK-NEXT:    [[SUB2_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn half 0xH4200, [[MUL_I]]
+// CHECK-NEXT:    [[MUL_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[HLSL_SATURATE_I]], 2.000000e+00
+// CHECK-NEXT:    [[SUB2_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn half 3.000000e+00, [[MUL_I]]
 // CHECK-NEXT:    [[TMP0:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[HLSL_SATURATE_I]], [[HLSL_SATURATE_I]]
 // CHECK-NEXT:    [[MUL4_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn half [[TMP0]], [[SUB2_I]]
 // CHECK-NEXT:    ret half [[MUL4_I]]
@@ -34,8 +34,8 @@ half test_smoothstep_half(half Min, half Max, half X) { return smoothstep(Min, M
 // CHECK-NEXT:    [[SUB1_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn <2 x half> [[MAX]], [[MIN]]
 // CHECK-NEXT:    [[DIV_I:%.*]] = fdiv reassoc nnan ninf nsz arcp afn <2 x half> [[SUB_I]], [[SUB1_I]]
 // CHECK-NEXT:    [[HLSL_SATURATE_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn <2 x half> @llvm.dx.saturate.v2f16(<2 x half> [[DIV_I]])
-// CHECK-NEXT:    [[MUL_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn <2 x half> [[HLSL_SATURATE_I]], splat (half 0xH4000)
-// CHECK-NEXT:    [[SUB2_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn <2 x half> splat (half 0xH4200), [[MUL_I]]
+// CHECK-NEXT:    [[MUL_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn <2 x half> [[HLSL_SATURATE_I]], splat (half 2.000000e+00)
+// CHECK-NEXT:    [[SUB2_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn <2 x half> splat (half 3.000000e+00), [[MUL_I]]
 // CHECK-NEXT:    [[TMP0:%.*]] = fmul reassoc nnan ninf nsz arcp afn <2 x half> [[HLSL_SATURATE_I]], [[HLSL_SATURATE_I]]
 // CHECK-NEXT:    [[MUL4_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn <2 x half> [[TMP0]], [[SUB2_I]]
 // CHECK-NEXT:    ret <2 x half> [[MUL4_I]]
@@ -55,8 +55,8 @@ half2 test_smoothstep_half2(half2 Min, half2 Max, half2 X) { return smoothstep(M
 // CHECK-NEXT:    [[SUB1_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn <3 x half> [[MAX]], [[MIN]]
 // CHECK-NEXT:    [[DIV_I:%.*]] = fdiv reassoc nnan ninf nsz arcp afn <3 x half> [[SUB_I]], [[SUB1_I]]
 // CHECK-NEXT:    [[HLSL_SATURATE_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn <3 x half> @llvm.dx.saturate.v3f16(<3 x half> [[DIV_I]])
-// CHECK-NEXT:    [[MUL_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn <3 x half> [[HLSL_SATURATE_I]], splat (half 0xH4000)
-// CHECK-NEXT:    [[SUB2_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn <3 x half> splat (half 0xH4200), [[MUL_I]]
+// CHECK-NEXT:    [[MUL_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn <3 x half> [[HLSL_SATURATE_I]], splat (half 2.000000e+00)
+// CHECK-NEXT:    [[SUB2_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn <3 x half> splat (half 3.000000e+00), [[MUL_I]]
 // CHECK-NEXT:    [[TMP0:%.*]] = fmul reassoc nnan ninf nsz arcp afn <3 x half> [[HLSL_SATURATE_I]], [[HLSL_SATURATE_I]]
 // CHECK-NEXT:    [[MUL4_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn <3 x half> [[TMP0]], [[SUB2_I]]
 // CHECK-NEXT:    ret <3 x half> [[MUL4_I]]
@@ -76,8 +76,8 @@ half3 test_smoothstep_half3(half3 Min, half3 Max, half3 X) { return smoothstep(M
 // CHECK-NEXT:    [[SUB1_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn <4 x half> [[MAX]], [[MIN]]
 // CHECK-NEXT:    [[DIV_I:%.*]] = fdiv reassoc nnan ninf nsz arcp afn <4 x half> [[SUB_I]], [[SUB1_I]]
 // CHECK-NEXT:    [[HLSL_SATURATE_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn <4 x half> @llvm.dx.saturate.v4f16(<4 x half> [[DIV_I]])
-// CHECK-NEXT:    [[MUL_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn <4 x half> [[HLSL_SATURATE_I]], splat (half 0xH4000)
-// CHECK-NEXT:    [[SUB2_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn <4 x half> splat (half 0xH4200), [[MUL_I]]
+// CHECK-NEXT:    [[MUL_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn <4 x half> [[HLSL_SATURATE_I]], splat (half 2.000000e+00)
+// CHECK-NEXT:    [[SUB2_I:%.*]] = fsub reassoc nnan ninf nsz arcp afn <4 x half> splat (half 3.000000e+00), [[MUL_I]]
 // CHECK-NEXT:    [[TMP0:%.*]] = fmul reassoc nnan ninf nsz arcp afn <4 x half> [[HLSL_SATURATE_I]], [[HLSL_SATURATE_I]]
 // CHECK-NEXT:    [[MUL4_I:%.*]] = fmul reassoc nnan ninf nsz arcp afn <4 x half> [[TMP0]], [[SUB2_I]]
 // CHECK-NEXT:    ret <4 x half> [[MUL4_I]]

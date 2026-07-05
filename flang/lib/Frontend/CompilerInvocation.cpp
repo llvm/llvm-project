@@ -40,6 +40,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
@@ -121,7 +122,8 @@ static unsigned getOptimizationLevel(llvm::opt::ArgList &args,
 
 bool Fortran::frontend::parseDiagnosticArgs(clang::DiagnosticOptions &opts,
                                             llvm::opt::ArgList &args) {
-  opts.ShowColors = parseShowColorsArgs(args);
+  opts.setShowColors(parseShowColorsArgs(args) ? clang::ShowColorsKind::On
+                                               : clang::ShowColorsKind::Off);
 
   return true;
 }
@@ -176,13 +178,13 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
   return true;
 }
 
-static void parseDoConcurrentMapping(Fortran::frontend::CodeGenOptions &opts,
+static bool parseDoConcurrentMapping(Fortran::frontend::CodeGenOptions &opts,
                                      llvm::opt::ArgList &args,
                                      clang::DiagnosticsEngine &diags) {
   llvm::opt::Arg *arg =
       args.getLastArg(clang::options::OPT_fdo_concurrent_to_openmp_EQ);
   if (!arg)
-    return;
+    return true;
 
   using DoConcurrentMappingKind =
       Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
@@ -197,9 +199,11 @@ static void parseDoConcurrentMapping(Fortran::frontend::CodeGenOptions &opts,
   if (!val.has_value()) {
     diags.Report(clang::diag::err_drv_invalid_value)
         << arg->getAsString(args) << arg->getValue();
+    return false;
   }
 
   opts.setDoConcurrentMapping(val.value());
+  return true;
 }
 
 static bool parseVectorLibArg(Fortran::frontend::CodeGenOptions &opts,
@@ -357,6 +361,14 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                     clang::options::OPT_fno_integrated_as, true))
     opts.DisableIntegratedAS = 1;
 
+  opts.FunctionSections =
+      args.hasFlag(clang::options::OPT_ffunction_sections,
+                   clang::options::OPT_fno_function_sections,
+                   /*Default=*/false);
+  opts.DataSections = args.hasFlag(clang::options::OPT_fdata_sections,
+                                   clang::options::OPT_fno_data_sections,
+                                   /*Default=*/false);
+
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::options::OPT_mcode_object_version_EQ)) {
     llvm::StringRef s = a->getValue();
@@ -477,6 +489,11 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   opts.SampleProfileFile =
       args.getLastArgValue(clang::options::OPT_fprofile_sample_use_EQ);
 
+  if (args.hasFlag(clang::options::OPT_fpseudo_probe_for_profiling,
+                   clang::options::OPT_fno_pseudo_probe_for_profiling, false)) {
+    opts.PseudoProbeForProfiling = 1;
+  }
+
   // -mcmodel option.
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::options::OPT_mcmodel_EQ)) {
@@ -505,8 +522,6 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::options::OPT_funderscoring, false)) {
     opts.Underscoring = 0;
   }
-
-  parseDoConcurrentMapping(opts, args, diags);
 
   if (const llvm::opt::Arg *arg =
           args.getLastArg(clang::options::OPT_complex_range_EQ)) {
@@ -601,8 +616,6 @@ static std::optional<const char *> parseConvertArg(const char *s) {
 
 static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                               clang::DiagnosticsEngine &diags) {
-  unsigned numErrorsBefore = diags.getNumErrors();
-
   // By default the frontend driver creates a ParseSyntaxOnly action.
   opts.programAction = ParseSyntaxOnly;
 
@@ -869,6 +882,31 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                        args.hasFlag(clang::options::OPT_funsigned,
                                     clang::options::OPT_fno_unsigned, false));
 
+  // -f{no-}enumeration-type (experimental; FIR lowering is incomplete)
+  opts.features.Enable(Fortran::common::LanguageFeature::EnumerationType,
+                       args.hasFlag(clang::options::OPT_fenumeration_type,
+                                    clang::options::OPT_fno_enumeration_type,
+                                    false));
+
+  // -frelaxed-c-loc-checks
+  if (args.hasArg(clang::options::OPT_relaxed_c_loc)) {
+    opts.features.Enable(Fortran::common::LanguageFeature::RelaxedCLocChecks);
+  }
+
+  // -f{no-}openacc-default-none-scalars-strict
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::OpenAccDefaultNoneScalarsStrict,
+      args.hasFlag(clang::options::OPT_fopenacc_default_none_scalars_strict,
+                   clang::options::OPT_fno_openacc_default_none_scalars_strict,
+                   false));
+
+  // -f{no-}openacc-multiple-names-in-routine
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::OpenACCMultipleNamesInRoutine,
+      args.hasFlag(clang::options::OPT_fopenacc_multiple_names_in_routine,
+                   clang::options::OPT_fno_openacc_multiple_names_in_routine,
+                   true));
+
   // -f{no-}xor-operator
   opts.features.Enable(Fortran::common::LanguageFeature::XOROperator,
                        args.hasFlag(clang::options::OPT_fxor_operator,
@@ -905,7 +943,7 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   setUpFrontendBasedOnAction(opts);
   opts.dashX = dashX;
 
-  return diags.getNumErrors() == numErrorsBefore;
+  return !diags.hasUncompilableErrorOccurred();
 }
 
 // Generate the path to look for intrinsic modules
@@ -916,15 +954,6 @@ static std::string getIntrinsicDir(const char *argv) {
   llvm::sys::path::remove_filename(driverPath);
   driverPath.append("/../include/flang/");
   return std::string(driverPath);
-}
-
-// Generate the path to look for OpenMP headers
-static std::string getOpenMPHeadersDir(const char *argv) {
-  llvm::SmallString<128> includePath;
-  includePath.assign(llvm::sys::fs::getMainExecutable(argv, nullptr));
-  llvm::sys::path::remove_filename(includePath);
-  includePath.append("/../include/flang/OpenMP/");
-  return std::string(includePath);
 }
 
 /// Parses all preprocessor input arguments and populates the preprocessor
@@ -978,8 +1007,6 @@ static void parsePreprocessorArgs(Fortran::frontend::PreprocessorOptions &opts,
 /// options accordingly. Returns false if new errors are generated.
 static bool parseSemaArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
                           clang::DiagnosticsEngine &diags) {
-  unsigned numErrorsBefore = diags.getNumErrors();
-
   // -J/module-dir option
   std::vector<std::string> moduleDirList =
       args.getAllArgValues(clang::options::OPT_module_dir);
@@ -1021,7 +1048,7 @@ static bool parseSemaArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
       args.hasFlag(clang::options::OPT_fanalyzed_objects_for_unparse,
                    clang::options::OPT_fno_analyzed_objects_for_unparse, true));
 
-  return diags.getNumErrors() == numErrorsBefore;
+  return !diags.hasUncompilableErrorOccurred();
 }
 
 /// Parses all diagnostics related arguments and populates the variables
@@ -1029,8 +1056,6 @@ static bool parseSemaArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 /// FC1 driver entry point for parsing diagnostic arguments.
 static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
                           clang::DiagnosticsEngine &diags) {
-  unsigned numErrorsBefore = diags.getNumErrors();
-
   auto &features{res.getFrontendOpts().features};
   // The order of these flags (-pedantic -W<feature> -w) is important and is
   // chosen to match clang's behavior.
@@ -1048,14 +1073,27 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   // this has to change when other -W<opt>'s are supported.
   if (args.hasArg(clang::options::OPT_W_Joined)) {
     const auto &wArgs = args.getAllArgValues(clang::options::OPT_W_Joined);
-    for (const auto &wArg : wArgs) {
+    // TODO: Consider using std::string_view instead of llvm::StringRef
+    // when moving to C++20:
+    for (const llvm::StringRef wArg : wArgs) {
       if (wArg == "error") {
         res.setWarnAsErr(true);
         // -Wfatal-errors
       } else if (wArg == "fatal-errors") {
         res.setMaxErrors(1);
         // -W[no-]<feature>
-      } else if (!features.EnableWarning(wArg)) {
+      } else if (features.EnableWarning(wArg)) {
+        if (auto canonical{features.CheckDeprecatedSpelling(wArg)}) {
+          std::string suggestion{*canonical};
+          if (wArg.starts_with("no-")) {
+            suggestion = "no-" + suggestion;
+          }
+          const unsigned diagID =
+              diags.getCustomDiagID(clang::DiagnosticsEngine::Warning,
+                                    "-W%0 is deprecated; use -W%1 instead");
+          diags.Report(diagID) << wArg << suggestion;
+        }
+      } else {
         const unsigned diagID = diags.getCustomDiagID(
             clang::DiagnosticsEngine::Error, "Unknown diagnostic option: -W%0");
         diags.Report(diagID) << wArg;
@@ -1071,18 +1109,18 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 
   // Default to off for `flang -fc1`.
   bool showColors{parseShowColorsArgs(args, false)};
-  diags.getDiagnosticOptions().ShowColors = showColors;
-  res.getDiagnosticOpts().ShowColors = showColors;
+  auto colorsMode =
+      showColors ? clang::ShowColorsKind::On : clang::ShowColorsKind::Off;
+  diags.getDiagnosticOptions().setShowColors(colorsMode);
+  res.getDiagnosticOpts().setShowColors(colorsMode);
   res.getFrontendOpts().showColors = showColors;
-  return diags.getNumErrors() == numErrorsBefore;
+  return !diags.hasUncompilableErrorOccurred();
 }
 
 /// Parses all Dialect related arguments and populates the variables
 /// options accordingly. Returns false if new errors are generated.
 static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
                              clang::DiagnosticsEngine &diags) {
-  unsigned numErrorsBefore = diags.getNumErrors();
-
   // -fd-lines-as-code
   if (args.hasArg(clang::options::OPT_fd_lines_as_code)) {
     if (res.getFrontendOpts().fortranForm == FortranForm::FreeForm) {
@@ -1195,7 +1233,7 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     diags.Report(diagID);
   }
 
-  return diags.getNumErrors() == numErrorsBefore;
+  return !diags.hasUncompilableErrorOccurred();
 }
 
 /// Parses all OpenMP related arguments if the -fopenmp option is present,
@@ -1214,7 +1252,6 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     res.getLangOpts().OpenMPSimd = 1;
   }
 
-  unsigned numErrorsBefore = diags.getNumErrors();
   llvm::Triple t(res.getTargetOpts().triple);
 
   constexpr unsigned newestFullySupported = 31;
@@ -1240,27 +1277,15 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
       diags.Report(diagID) << value << arg->getAsString(args) << versions.str();
     };
 
-    auto reportFutureVersion = [&](llvm::StringRef value) {
-      const unsigned diagID = diags.getCustomDiagID(
-          clang::DiagnosticsEngine::Warning,
-          "The specification for OpenMP version %0 is still under development; "
-          "the syntax and semantics of new features may be subject to change");
-      std::string buffer;
-      llvm::raw_string_ostream versions(buffer);
-      llvm::interleaveComma(ompVersions, versions);
-
-      diags.Report(diagID) << value;
-    };
-
     llvm::StringRef value = arg->getValue();
     if (!value.getAsInteger(/*radix=*/10, version)) {
       if (llvm::is_contained(ompVersions, version)) {
         res.getLangOpts().OpenMPVersion = version;
 
         if (version > latestFinalized)
-          reportFutureVersion(value);
+          diags.Report(clang::diag::warn_openmp_spec_incomplete) << version;
         else if (version > newestFullySupported)
-          diags.Report(clang::diag::warn_openmp_incomplete) << version;
+          diags.Report(clang::diag::warn_openmp_impl_incomplete) << version;
       } else if (llvm::is_contained(oldVersions, version)) {
         const unsigned diagID =
             diags.getCustomDiagID(clang::DiagnosticsEngine::Warning,
@@ -1275,6 +1300,16 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
       reportBadVersion(value);
     }
   }
+
+  if (args.hasFlag(clang::options::OPT_fopenmp_assume_teams_oversubscription,
+                   clang::options::OPT_fno_openmp_assume_teams_oversubscription,
+                   /*Default=*/false))
+    res.getLangOpts().OpenMPTeamSubscription = true;
+  if (args.hasFlag(
+          clang::options::OPT_fopenmp_assume_threads_oversubscription,
+          clang::options::OPT_fno_openmp_assume_threads_oversubscription,
+          /*Default=*/false))
+    res.getLangOpts().OpenMPThreadSubscription = true;
 
   if (args.hasArg(clang::options::OPT_fopenmp_force_usm)) {
     res.getLangOpts().OpenMPForceUSM = 1;
@@ -1292,23 +1327,11 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
             << res.getLangOpts().OMPHostIRFile;
     }
 
-    if (args.hasFlag(
-            clang::options::OPT_fopenmp_assume_teams_oversubscription,
-            clang::options::OPT_fno_openmp_assume_teams_oversubscription,
-            /*Default=*/false))
-      res.getLangOpts().OpenMPTeamSubscription = true;
-
     if (args.hasArg(clang::options::OPT_fopenmp_assume_no_thread_state))
       res.getLangOpts().OpenMPNoThreadState = 1;
 
     if (args.hasArg(clang::options::OPT_fopenmp_assume_no_nested_parallelism))
       res.getLangOpts().OpenMPNoNestedParallelism = 1;
-
-    if (args.hasFlag(
-            clang::options::OPT_fopenmp_assume_threads_oversubscription,
-            clang::options::OPT_fno_openmp_assume_threads_oversubscription,
-            /*Default=*/false))
-      res.getLangOpts().OpenMPThreadSubscription = true;
 
     if ((args.hasArg(clang::options::OPT_fopenmp_target_debug) ||
          args.hasArg(clang::options::OPT_fopenmp_target_debug_EQ))) {
@@ -1364,7 +1387,7 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
         res.getLangOpts().OMPTargetTriples.push_back(tt);
     }
   }
-  return diags.getNumErrors() == numErrorsBefore;
+  return !diags.hasUncompilableErrorOccurred();
 }
 
 /// Parses signed integer overflow options and populates the
@@ -1540,6 +1563,10 @@ static bool parseLinkerOptionsArgs(CompilerInvocation &invoc,
       opts.PrepareForThinLTO = true;
   }
 
+  // -fsplit-lto-unit option
+  if (args.hasArg(clang::options::OPT_fsplit_lto_unit))
+    opts.EnableSplitLTOUnit = true;
+
   // -ffat-lto-objects
   if (const llvm::opt::Arg *arg =
           args.getLastArg(clang::options::OPT_ffat_lto_objects,
@@ -1570,11 +1597,35 @@ static bool parseLangOptionsArgs(CompilerInvocation &invoc,
   return success;
 }
 
+// Copied from clang/lib/Frontend/CompilerInvocation.cpp.
+static void addDiagnosticArgs(llvm::opt::ArgList &args,
+                              llvm::opt::OptSpecifier group,
+                              llvm::opt::OptSpecifier groupWithValue,
+                              std::vector<std::string> &diagnostics) {
+  for (auto *a : args.filtered(group)) {
+    if (a->getOption().getKind() == llvm::opt::Option::FlagClass) {
+      // The argument is a pure flag (such as OPT_Wall or OPT_Wdeprecated). Add
+      // its name (minus the "W" or "R" at the beginning) to the diagnostics.
+      diagnostics.push_back(
+          std::string(a->getOption().getName().drop_front(1)));
+    } else if (a->getOption().matches(groupWithValue)) {
+      // This is -Wfoo= or -Rfoo=, where foo is the name of the diagnostic
+      // group. Add only the group name to the diagnostics.
+      diagnostics.push_back(
+          std::string(a->getOption().getName().drop_front(1).rtrim("=-")));
+    } else {
+      // Otherwise, add its value (for OPT_W_Joined and similar).
+      diagnostics.push_back(a->getValue());
+    }
+  }
+}
+
 bool CompilerInvocation::createFromArgs(
     CompilerInvocation &invoc, llvm::ArrayRef<const char *> commandLineArgs,
     clang::DiagnosticsEngine &diags, const char *argv0) {
 
   bool success = true;
+  clang::DiagnosticOptions &diagOpts = diags.getDiagnosticOptions();
 
   // Set the default triple for this CompilerInvocation. This might be
   // overridden by users with `-triple` (see the call to `ParseTargetArgs`
@@ -1611,24 +1662,11 @@ bool CompilerInvocation::createFromArgs(
     success = false;
   }
 
-  // -flang-experimental-hlfir
-  if (args.hasArg(clang::options::OPT_flang_experimental_hlfir) ||
-      args.hasArg(clang::options::OPT_emit_hlfir)) {
-    invoc.loweringOpts.setLowerToHighLevelFIR(true);
-  }
-
-  // -flang-deprecated-no-hlfir
-  if (args.hasArg(clang::options::OPT_flang_deprecated_no_hlfir) &&
-      !args.hasArg(clang::options::OPT_emit_hlfir)) {
-    if (args.hasArg(clang::options::OPT_flang_experimental_hlfir)) {
-      const unsigned diagID = diags.getCustomDiagID(
-          clang::DiagnosticsEngine::Error,
-          "Options '-flang-experimental-hlfir' and "
-          "'-flang-deprecated-no-hlfir' cannot be both specified");
-      diags.Report(diagID);
-    }
-    invoc.loweringOpts.setLowerToHighLevelFIR(false);
-  }
+  // Handle -Wno-<warning> flags.
+  addDiagnosticArgs(args, clang::options::OPT_W_Group,
+                    clang::options::OPT_W_value_Group, diagOpts.Warnings);
+  auto vfs = llvm::vfs::getRealFileSystem();
+  clang::ProcessWarningOptions(diags, diagOpts, *vfs, /*ReportDiags=*/false);
 
   // -fno-ppc-native-vector-element-order
   if (args.hasArg(clang::options::OPT_fno_ppc_native_vec_elem_order)) {
@@ -1661,8 +1699,10 @@ bool CompilerInvocation::createFromArgs(
 
   // -frealloc-lhs is the default.
   if (!args.hasFlag(clang::options::OPT_frealloc_lhs,
-                    clang::options::OPT_fno_realloc_lhs, true))
+                    clang::options::OPT_fno_realloc_lhs, true)) {
     invoc.loweringOpts.setReallocateLHS(false);
+    invoc.getLangOpts().NoReallocateLHS = true;
+  }
 
   invoc.loweringOpts.setRepackArrays(args.hasFlag(
       clang::options::OPT_frepack_arrays, clang::options::OPT_fno_repack_arrays,
@@ -1686,6 +1726,7 @@ bool CompilerInvocation::createFromArgs(
   parseTargetArgs(invoc.getTargetOpts(), args);
   parsePreprocessorArgs(invoc.getPreprocessorOpts(), args);
   parseCodeGenArgs(invoc.getCodeGenOpts(), args, diags);
+  success &= parseDoConcurrentMapping(invoc.getCodeGenOpts(), args, diags);
   success &= parseDebugArgs(invoc.getCodeGenOpts(), args, diags);
 
   // Enable USE statement preservation for debug info if debug level is above
@@ -1708,6 +1749,9 @@ bool CompilerInvocation::createFromArgs(
   //    * `-mmlir <your-mlir-option>`.
   invoc.frontendOpts.llvmArgs = args.getAllArgValues(clang::options::OPT_mllvm);
   invoc.frontendOpts.mlirArgs = args.getAllArgValues(clang::options::OPT_mmlir);
+
+  if (args.hasArg(clang::options::OPT_foffload_device))
+    invoc.getLangOpts().OffloadDevice = 1;
 
   success &= parseLangOptionsArgs(invoc, args, diags);
 
@@ -1775,11 +1819,6 @@ void CompilerInvocation::setDefaultFortranOpts() {
 
   std::vector<std::string> searchDirectories{"."s};
   fortranOptions.searchDirectories = searchDirectories;
-
-  // Add the location of omp_lib.h to the search directories. Currently this is
-  // identical to the modules' directory.
-  fortranOptions.searchDirectories.emplace_back(
-      getOpenMPHeadersDir(getArgv0()));
 
   fortranOptions.isFixedForm = false;
 }
@@ -1891,6 +1930,12 @@ void CompilerInvocation::setFortranOpts() {
       preprocessorOptions.searchDirectoriesFromIntrModPath.begin(),
       preprocessorOptions.searchDirectoriesFromIntrModPath.end());
 
+  // Add the ordered list of -fintrinsic-modules-path
+  fortranOptions.intrinsicModuleDirectories.insert(
+      fortranOptions.intrinsicModuleDirectories.end(),
+      preprocessorOptions.searchDirectoriesFromIntrModPath.begin(),
+      preprocessorOptions.searchDirectoriesFromIntrModPath.end());
+
   //  Add the default intrinsic module directory
   fortranOptions.intrinsicModuleDirectories.emplace_back(
       getIntrinsicDir(getArgv0()));
@@ -1928,7 +1973,12 @@ CompilerInvocation::getSemanticsCtx(
       .set_maxErrors(getMaxErrors())
       .set_warningsAreErrors(getWarnAsErr())
       .set_moduleFileSuffix(getModuleFileSuffix())
-      .set_underscoring(getCodeGenOpts().Underscoring);
+      .set_underscoring(getCodeGenOpts().Underscoring)
+      .set_openAccDefaultNoneScalarsStrictDisableOption(
+          clang::getDriverOptTable()
+              .getOptionPrefixedName(
+                  clang::options::OPT_fno_openacc_default_none_scalars_strict)
+              .str());
 
   std::string compilerVersion = Fortran::common::getFlangFullVersion();
   Fortran::tools::setUpTargetCharacteristics(

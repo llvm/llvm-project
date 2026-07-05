@@ -59,3 +59,21 @@ add_integration_test(
     libc.src.pthread.pthread_create
     libc.src.pthread.pthread_join
 )
+
+add_integration_test(
+  cndvar_test
+  SUITE
+    libc-support-threads-integration-tests
+  SRCS
+    cndvar_test.cpp
+  DEPENDS
+    libc.hdr.time_macros
+    libc.src.__support.CPP.expected
+    libc.src.__support.threads.CndVar
+    libc.src.__support.threads.mutex
+    libc.src.__support.threads.mutex_common
+    libc.src.__support.threads.sleep
+    libc.src.__support.time.clock_gettime
+    libc.src.threads.thrd_create
+    libc.src.threads.thrd_join
+)

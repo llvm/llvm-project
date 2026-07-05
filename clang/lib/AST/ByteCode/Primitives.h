@@ -30,6 +30,8 @@ enum class IntegralKind : uint8_t {
   BlockAddress,
   /// A pointer to a AddrLabelExpr.
   LabelAddress,
+  /// A pointer to a FunctionDecl.
+  FunctionAddress,
   /// Difference between two AddrLabelExpr.
   AddrLabelDiff
 };

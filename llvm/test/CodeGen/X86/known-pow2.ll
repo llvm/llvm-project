@@ -353,7 +353,7 @@ define i32 @pow2_umin_vec(<4 x i32> %x, <4 x i32> %y, i32 %z, ptr %p) {
 ; CHECK-LABEL: pow2_umin_vec:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pslld $23, %xmm0
-; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1065353216,1065353216,1065353216,1065353216]
 ; CHECK-NEXT:    cvttps2dq %xmm0, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; CHECK-NEXT:    pcmpeqd %xmm2, %xmm2
@@ -557,7 +557,7 @@ define i32 @pow2_smin_vec(<4 x i32> %x, <4 x i32> %y, i32 %z, ptr %p) {
 ; CHECK-LABEL: pow2_smin_vec:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pslld $23, %xmm0
-; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1065353216,1065353216,1065353216,1065353216]
 ; CHECK-NEXT:    cvttps2dq %xmm0, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; CHECK-NEXT:    pcmpeqd %xmm2, %xmm2
@@ -816,7 +816,7 @@ define <4 x i1> @pow2_vselect_eq(<4 x i1> %c, <4 x i32> %x, <4 x i32> %y, <4 x i
 ; CHECK-NEXT:    pslld $31, %xmm0
 ; CHECK-NEXT:    psrad $31, %xmm0
 ; CHECK-NEXT:    pslld $23, %xmm2
-; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [1065353216,1065353216,1065353216,1065353216]
 ; CHECK-NEXT:    cvttps2dq %xmm2, %xmm2
 ; CHECK-NEXT:    pshuflw {{.*#+}} xmm4 = xmm3[2,3,3,3,4,5,6,7]
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm5 = [2147483648,2147483648,2147483648,2147483648]
@@ -854,7 +854,7 @@ define <4 x i1> @pow2_vselect_ne(<4 x i1> %c, <4 x i32> %x, <4 x i32> %y, <4 x i
 ; CHECK-NEXT:    pslld $31, %xmm0
 ; CHECK-NEXT:    psrad $31, %xmm0
 ; CHECK-NEXT:    pslld $23, %xmm2
-; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [1065353216,1065353216,1065353216,1065353216]
 ; CHECK-NEXT:    cvttps2dq %xmm2, %xmm2
 ; CHECK-NEXT:    pshuflw {{.*#+}} xmm4 = xmm3[2,3,3,3,4,5,6,7]
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm5 = [2147483648,2147483648,2147483648,2147483648]
@@ -893,7 +893,7 @@ define <4 x i1> @pow2_vselect_fail0_ne(<4 x i1> %c, <4 x i32> %x, <4 x i32> %y, 
 ; CHECK-NEXT:    pslld $31, %xmm0
 ; CHECK-NEXT:    psrad $31, %xmm0
 ; CHECK-NEXT:    pslld $23, %xmm2
-; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [1065353216,1065353216,1065353216,1065353216]
 ; CHECK-NEXT:    cvttps2dq %xmm2, %xmm2
 ; CHECK-NEXT:    pshuflw {{.*#+}} xmm4 = xmm3[2,3,3,3,4,5,6,7]
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm5 = [1073741824,1073741824,1073741824,1073741824]
@@ -933,7 +933,7 @@ define <4 x i1> @pow2_vselect_fail2_ne(<4 x i1> %c, <4 x i32> %x, <4 x i32> %y, 
 ; CHECK-NEXT:    pslld $31, %xmm0
 ; CHECK-NEXT:    psrad $31, %xmm0
 ; CHECK-NEXT:    pslld $23, %xmm2
-; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [1065353216,1065353216,1065353216,1065353216]
 ; CHECK-NEXT:    cvttps2dq %xmm2, %xmm2
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm4 = [4,4,4,4]
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm5 = xmm2[1,1,3,3]
@@ -997,7 +997,7 @@ define <4 x i32> @pow2_and_vector(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: pow2_and_vector:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pslld $23, %xmm1
-; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [1065353216,1065353216,1065353216,1065353216]
 ; CHECK-NEXT:    cvttps2dq %xmm1, %xmm1
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
 ; CHECK-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [1,2,4,u]
@@ -1161,12 +1161,10 @@ define i1 @pow2_and_i128(i128 %num, i128 %shift) {
 define i32 @pow2_bswap(i32 %a0, i32 %a1) {
 ; CHECK-LABEL: pow2_bswap:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    notl %edi
-; CHECK-NEXT:    shrl $31, %edi
-; CHECK-NEXT:    leal 4(,%rdi,4), %eax
-; CHECK-NEXT:    bswapl %eax
-; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    notl %eax
+; CHECK-NEXT:    shrl $5, %eax
+; CHECK-NEXT:    orl $67108863, %eax # imm = 0x3FFFFFF
 ; CHECK-NEXT:    andl %esi, %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp sgt i32 0, %a0
@@ -1213,12 +1211,10 @@ define i32 @pow2_bitreverse(i32 %a0, i32 %a1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    notl %edi
-; CHECK-NEXT:    shrl $31, %edi
-; CHECK-NEXT:    leal 4(,%rdi,4), %eax
-; CHECK-NEXT:    bswapl %eax
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    shll $3, %eax
-; CHECK-NEXT:    leal (%rax,%rcx,2), %eax
+; CHECK-NEXT:    shrl $5, %edi
+; CHECK-NEXT:    andl $67108864, %edi # imm = 0x4000000
+; CHECK-NEXT:    leal 536870912(,%rdi,8), %eax
+; CHECK-NEXT:    leal 134217728(%rax,%rdi,2), %eax
 ; CHECK-NEXT:    andl $805306368, %eax # imm = 0x30000000
 ; CHECK-NEXT:    decl %eax
 ; CHECK-NEXT:    andl %esi, %eax
@@ -1422,7 +1418,7 @@ define i32 @pow2_rotl_extract_vec(<4 x i32> %a0, <4 x i32> %rotamt, i32 %x, ptr 
 ; CHECK-NEXT:    por %xmm0, %xmm2
 ; CHECK-NEXT:    pslld $23, %xmm1
 ; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [1065353216,1065353216,1065353216,1065353216]
 ; CHECK-NEXT:    cvttps2dq %xmm1, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
 ; CHECK-NEXT:    pmuludq %xmm0, %xmm2
@@ -1464,7 +1460,7 @@ define i32 @pow2_rotr_extract_vec(<4 x i32> %a0, <4 x i32> %rotamt, i32 %x, ptr 
 ; CHECK-NEXT:    psubd %xmm1, %xmm2
 ; CHECK-NEXT:    pslld $23, %xmm2
 ; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [1065353216,1065353216,1065353216,1065353216]
 ; CHECK-NEXT:    cvttps2dq %xmm2, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,1,3,3]
 ; CHECK-NEXT:    pmuludq %xmm0, %xmm3

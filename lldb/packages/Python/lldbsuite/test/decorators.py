@@ -78,6 +78,21 @@ def _check_expected_version(comparison, expected, actual):
     return op_lookup[comparison](version.parse(actual), version.parse(expected))
 
 
+def _get_macos_sdk_version() -> str | None:
+    """ Returns the current macOS SDK version or None if this system doesn't
+    use a macOS SDK."""
+    if platform.mac_ver()[0] == "":
+        return None
+    try:
+        return (
+            subprocess.check_output(["xcrun", "--sdk", "macosx", "--show-sdk-version"])
+            .rstrip()
+            .decode("utf-8")
+        )
+    except Exception:
+        return None
+
+
 def _match_decorator_property(expected, actual):
     if expected is None:
         return True
@@ -222,7 +237,18 @@ def _skipForVariant(variant_name, expected_fn, bugnumber=None):
         if isinstance(func, type) and issubclass(func, unittest.TestCase):
             raise Exception("Decorator can only be used to decorate a test method")
         skip_dict = getattr(func, "__variant_skip__", {})
-        skip_dict[variant_name] = expected_fn
+        existing_fn = skip_dict.get(variant_name)
+        if existing_fn:
+            # Chain the decorator with the existing one.
+            def chained_fn(**kwargs):
+                reason = expected_fn(**kwargs)
+                if reason:
+                    return reason
+                return existing_fn(**kwargs)
+
+            skip_dict[variant_name] = chained_fn
+        else:
+            skip_dict[variant_name] = expected_fn
         func.__variant_skip__ = skip_dict
         return func
 
@@ -245,6 +271,7 @@ def _decorateTest(
     swig_version=None,
     py_version=None,
     macos_version=None,
+    macos_sdk_version=None,
     remote=None,
     dwarf_version=None,
     setting=None,
@@ -295,6 +322,12 @@ def _decorateTest(
                 )
             )
         )
+        _sdk_ver = _get_macos_sdk_version()
+        skip_for_macos_sdk_version = macos_sdk_version is None
+        if macos_sdk_version is not None and _sdk_ver is not None:
+            skip_for_macos_sdk_version = _check_expected_version(
+                macos_sdk_version[0], macos_sdk_version[1], _sdk_ver
+            )
         skip_for_dwarf_version = (dwarf_version is None) or (
             _check_expected_version(
                 dwarf_version[0], dwarf_version[1], lldbplatformutil.getDwarfVersion()
@@ -316,6 +349,7 @@ def _decorateTest(
             (swig_version, skip_for_swig_version, "swig version"),
             (py_version, skip_for_py_version, "python version"),
             (macos_version, skip_for_macos_version, "macOS version"),
+            (macos_sdk_version, skip_for_macos_sdk_version, "macOS SDK version"),
             (remote, skip_for_remote, "platform locality (remote/local)"),
             (dwarf_version, skip_for_dwarf_version, "dwarf version"),
             (setting, skip_for_setting, "setting"),
@@ -375,6 +409,7 @@ def expectedFailureAll(
     swig_version=None,
     py_version=None,
     macos_version=None,
+    macos_sdk_version=None,
     remote=None,
     dwarf_version=None,
     setting=None,
@@ -393,6 +428,7 @@ def expectedFailureAll(
         swig_version=swig_version,
         py_version=py_version,
         macos_version=macos_version,
+        macos_sdk_version=macos_sdk_version,
         remote=remote,
         dwarf_version=dwarf_version,
         setting=setting,
@@ -418,6 +454,7 @@ def skipIf(
     swig_version=None,
     py_version=None,
     macos_version=None,
+    macos_sdk_version=None,
     remote=None,
     dwarf_version=None,
     setting=None,
@@ -436,6 +473,7 @@ def skipIf(
         swig_version=swig_version,
         py_version=py_version,
         macos_version=macos_version,
+        macos_sdk_version=macos_sdk_version,
         remote=remote,
         dwarf_version=dwarf_version,
         setting=setting,
@@ -552,6 +590,9 @@ def apple_simulator_test(platform):
         if lldbplatformutil.getHostPlatform() not in ["darwin", "macosx"]:
             return "simulator tests are run only on darwin hosts."
 
+        if lldbplatformutil.getArchitecture() == "arm64e":
+            return "simulators do not support arm64e."
+
         # Make sure we recognize the platform.
         mapping = {
             "iphone": "ios",
@@ -659,6 +700,36 @@ def expectedFailureNetBSD(bugnumber=None):
 
 
 def expectedFailureWindows(bugnumber=None):
+    return expectedFailureOS(["windows"], bugnumber)
+
+
+def _usingLLDBServerOnWindows():
+    """Return True if Windows tests should drive lldb-server instead of the
+    in-process Win32 ``windows`` process plugin.
+
+    The choice is controlled by the ``LLDB_USE_LLDB_SERVER`` environment
+    variable: unset/off selects the default in-process plugin, on selects
+    the gdb-remote path through ``lldb-server``.
+    """
+    return os.environ.get("LLDB_USE_LLDB_SERVER", "").lower() in (
+        "on",
+        "yes",
+        "1",
+        "true",
+    )
+
+
+def expectedFailureWindowsAndLLDBServer(bugnumber=None):
+    """Mark a test as xfail on Windows when driving lldb-server."""
+    if not _usingLLDBServerOnWindows():
+        return lambda func: func
+    return expectedFailureOS(["windows"], bugnumber)
+
+
+def expectedFailureWindowsAndNoLLDBServer(bugnumber=None):
+    """Mark a test as xfail on Windows when using the in-process plugin."""
+    if _usingLLDBServerOnWindows():
+        return lambda func: func
     return expectedFailureOS(["windows"], bugnumber)
 
 
@@ -863,6 +934,16 @@ def skipIfLinux(func):
     return skipIfPlatform(["linux"])(func)
 
 
+def skipIfWasm(func):
+    """Decorate the item to skip tests that should be skipped on WebAssembly."""
+    return skipIfPlatform(["wasip1", "wasi"])(func)
+
+
+def skipIfNoSignals(func):
+    """Decorate the item to skip tests on platforms without signal support."""
+    return skipIfPlatform(["windows", "wasip1", "wasi"])(func)
+
+
 def skipIfWindows(func=None, windows_version=None):
     """Decorate the item to skip tests that should be skipped on Windows."""
 
@@ -890,6 +971,20 @@ def skipIfWindows(func=None, windows_version=None):
     if func is not None:
         return decorator(func)
     return decorator
+
+
+def skipIfWindowsAndLLDBServer(func):
+    """Skip tests on Windows when driving lldb-server."""
+    if not _usingLLDBServerOnWindows():
+        return func
+    return skipIfPlatform(["windows"])(func)
+
+
+def skipIfWindowsAndNoLLDBServer(func):
+    """Skip tests on Windows when using the in-process plugin."""
+    if _usingLLDBServerOnWindows():
+        return func
+    return skipIfPlatform(["windows"])(func)
 
 
 def skipIfWindowsAndNonEnglish(func):
@@ -992,6 +1087,15 @@ def skipIfTargetDoesNotSupportThreads():
     return unittest.skipIf(
         no_threads,
         "threads are not supported on %s" % platform,
+    )
+
+
+def skipIfTargetDoesNotSupportSharedLibraries():
+    """Skip tests that require shared library (dylib/so) support."""
+    platform = lldbplatformutil.getPlatform()
+    return unittest.skipIf(
+        platform.startswith("wasi"),
+        "shared libraries are not supported on %s" % platform,
     )
 
 
@@ -1102,11 +1206,14 @@ def skipUnlessMSVC(func):
     """Decorate the item to skip test unless msvc is available."""
 
     def is_msvc_in_path():
-        result = subprocess.run(
-            ["cl.exe"],
-            capture_output=True,
-            text=True,
-        )
+        try:
+            result = subprocess.run(
+                ["cl.exe"],
+                capture_output=True,
+                text=True,
+            )
+        except FileNotFoundError:
+            return f"Test requires MSVC to be in the Path."
         if result.returncode != 0:
             return f"Test requires MSVC to be in the Path."
         return None
@@ -1403,3 +1510,18 @@ def skipUnlessPackageAvailable(name):
         available = False
 
     return unittest.skipUnless(available, f"requires the '{name}' package")
+
+
+def skipUnlessTargetIsHost(func):
+    """Skip the test case if the test binary architecture does not match LLDB.framework."""
+
+    def check_arch_match():
+        # The lldb executable is built the same as the framework.
+        lldb_arch = lldbplatformutil.getLLDBArchitecture()
+        test_arch = lldbplatformutil.getArchitecture()
+
+        if lldb_arch != test_arch:
+            return "Test binary architecture differs from host architecture"
+        return None
+
+    return skipTestIfFn(check_arch_match)(func)

@@ -28,32 +28,16 @@ enum PartialMappingIdx {
   PMI_None = -1,
   PMI_I32 = 1,
   PMI_I64,
+  PMI_F32,
+  PMI_F64,
   PMI_Min = PMI_I32,
 };
 
-enum ValueMappingIdx {
-  InvalidIdx = 0,
-  I32Idx = 1,
-  I64Idx = 5,
-};
-
 const RegisterBankInfo::PartialMapping PartMappings[]{{0, 32, I32RegBank},
-                                                      {0, 64, I64RegBank}};
+                                                      {0, 64, I64RegBank},
+                                                      {0, 32, F32RegBank},
+                                                      {0, 64, F64RegBank}};
 
-const RegisterBankInfo::ValueMapping ValueMappings[] = {
-    // invalid
-    {nullptr, 0},
-    // up to 4 operands as I32
-    {&PartMappings[PMI_I32 - PMI_Min], 1},
-    {&PartMappings[PMI_I32 - PMI_Min], 1},
-    {&PartMappings[PMI_I32 - PMI_Min], 1},
-    {&PartMappings[PMI_I32 - PMI_Min], 1},
-    // up to 4 operands as I64
-    {&PartMappings[PMI_I64 - PMI_Min], 1},
-    {&PartMappings[PMI_I64 - PMI_Min], 1},
-    {&PartMappings[PMI_I64 - PMI_Min], 1},
-    {&PartMappings[PMI_I64 - PMI_Min], 1},
-};
 } // namespace WebAssembly
 } // namespace llvm
 
@@ -67,8 +51,6 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   unsigned Opc = MI.getOpcode();
   const MachineFunction &MF = *MI.getParent()->getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  const WebAssemblySubtarget &STI = MF.getSubtarget<WebAssemblySubtarget>();
-  const WebAssemblyRegisterInfo &TRI = *STI.getRegisterInfo();
 
   if ((Opc != TargetOpcode::COPY && !isPreISelGenericOpcode(Opc)) ||
       Opc == TargetOpcode::G_PHI) {
@@ -78,93 +60,60 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       return Mapping;
   }
 
-  const unsigned NumOperands = MI.getNumOperands();
-  const ValueMapping *OperandsMapping = nullptr;
+  const unsigned NumOperands = MI.isCopyLike() ? 1 : MI.getNumOperands();
   unsigned MappingID = DefaultMappingID;
 
-  const LLT Op0Ty = MRI.getType(MI.getOperand(0).getReg());
-  unsigned Op0Size = Op0Ty.getSizeInBits();
+  // Track the size and bank of each register.  We don't do partial mappings.
+  SmallVector<unsigned, 8> OpSize(NumOperands);
+  SmallVector<WebAssembly::PartialMappingIdx, 8> OpRegBankIdx(NumOperands);
+  for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
+    auto &MO = MI.getOperand(Idx);
+    if (!MO.isReg() || !MO.getReg())
+      continue;
 
-  auto &Op0IntValueMapping =
-      WebAssembly::ValueMappings[Op0Size == 64 ? WebAssembly::I64Idx
-                                               : WebAssembly::I32Idx];
+    LLT Ty = MRI.getType(MO.getReg());
+    if (!Ty.isValid())
+      continue;
 
-  using namespace TargetOpcode;
-  switch (Opc) {
-  case G_CONSTANT:
-    OperandsMapping = getOperandsMapping({&Op0IntValueMapping, nullptr});
-    break;
-  case G_IMPLICIT_DEF:
-    OperandsMapping = &Op0IntValueMapping;
-    break;
-  case G_ADD:
-  case G_SUB:
-  case G_MUL:
-  case G_UDIV:
-  case G_SDIV:
-  case G_UREM:
-  case G_SREM:
-  case G_AND:
-  case G_OR:
-  case G_XOR:
-  case G_ASHR:
-  case G_LSHR:
-  case G_SHL:
-  case G_CTLZ:
-  case G_CTLZ_ZERO_UNDEF:
-  case G_CTTZ:
-  case G_CTTZ_ZERO_UNDEF:
-  case G_CTPOP:
-  case G_ROTL:
-  case G_ROTR:
-    OperandsMapping = &Op0IntValueMapping;
-    break;
-  case G_ZEXT:
-  case G_ANYEXT:
-  case G_SEXT:
-  case G_TRUNC: {
-    const LLT Op1Ty = MRI.getType(MI.getOperand(1).getReg());
-    unsigned Op1Size = Op1Ty.getSizeInBits();
+    OpSize[Idx] = Ty.getSizeInBits().getKnownMinValue();
 
-    auto &Op1IntValueMapping =
-        WebAssembly::ValueMappings[Op1Size == 64 ? WebAssembly::I64Idx
-                                                 : WebAssembly::I32Idx];
-    OperandsMapping =
-        getOperandsMapping({&Op0IntValueMapping, &Op1IntValueMapping});
-    break;
-  }
-  case G_SEXT_INREG:
-    OperandsMapping =
-        getOperandsMapping({&Op0IntValueMapping, &Op0IntValueMapping, nullptr});
-    break;
-  case COPY: {
-    Register DstReg = MI.getOperand(0).getReg();
-    Register SrcReg = MI.getOperand(1).getReg();
-
-    const RegisterBank *DstRB = getRegBank(DstReg, MRI, TRI);
-    const RegisterBank *SrcRB = getRegBank(SrcReg, MRI, TRI);
-
-    if (!DstRB)
-      DstRB = SrcRB;
-    else if (!SrcRB)
-      SrcRB = DstRB;
-
-    assert(DstRB && SrcRB && "Both RegBank were nullptr");
-
-    if (DstRB != SrcRB) {
-      break; // for now, only allow no-op copies
+    if (Ty.isInteger()) {
+      if (OpSize[Idx] == 32) {
+        OpRegBankIdx[Idx] = WebAssembly::PMI_I32;
+      } else if (OpSize[Idx] == 64) {
+        OpRegBankIdx[Idx] = WebAssembly::PMI_I64;
+      }
+    } else if (Ty.isFloatIEEE()) {
+      if (OpSize[Idx] == 32) {
+        OpRegBankIdx[Idx] = WebAssembly::PMI_F32;
+      } else if (OpSize[Idx] == 64) {
+        OpRegBankIdx[Idx] = WebAssembly::PMI_F64;
+      }
     }
-
-    return getInstructionMapping(
-        MappingID, /*Cost=*/1, &Op0IntValueMapping,
-        // We only care about the mapping of the destination for COPY.
-        1);
-  }
   }
 
-  if (!OperandsMapping)
-    return getInvalidInstructionMapping();
+  SmallVector<const ValueMapping *, 8> OpdsMapping(NumOperands);
+  for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
+    if (MI.getOperand(Idx).isReg() && MI.getOperand(Idx).getReg()) {
+      LLT Ty = MRI.getType(MI.getOperand(Idx).getReg());
+      if (!Ty.isValid())
+        continue;
 
-  return getInstructionMapping(MappingID, /*Cost=*/1, OperandsMapping,
-                               NumOperands);
+      if (OpRegBankIdx[Idx] <= 0) {
+        return getInvalidInstructionMapping();
+      }
+
+      const auto &Mapping = getValueMapping(
+          &WebAssembly::PartMappings[OpRegBankIdx[Idx] - WebAssembly::PMI_Min],
+          1);
+
+      if (!Mapping.isValid())
+        return getInvalidInstructionMapping();
+
+      OpdsMapping[Idx] = &Mapping;
+    }
+  }
+
+  return getInstructionMapping(MappingID, /*Cost=*/1,
+                               getOperandsMapping(OpdsMapping), NumOperands);
 }
