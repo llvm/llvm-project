@@ -1455,6 +1455,7 @@ Value *SCEVExpander::visitPtrToAddrExpr(SCEVUseT<const SCEVPtrToAddrExpr *> S) {
 
   // ptrtoaddr and ptrtoint produce the same value if the result type matches,
   // so try to reuse either.
+  CastInst::CastOps Opcode = CastInst::PtrToAddr;
   if (!isa<Constant>(V)) {
     BasicBlock::iterator BIP = Builder.GetInsertPoint();
     for (User *U : V->users()) {
@@ -1464,9 +1465,18 @@ Value *SCEVExpander::visitPtrToAddrExpr(SCEVUseT<const SCEVPtrToAddrExpr *> S) {
            CI->getOpcode() == CastInst::PtrToInt) &&
           &*BIP != CI && SE.DT.dominates(CI, &*BIP))
         return CI;
+      // If an equivalent ptrtoint of the same pointer already exists (but does
+      // not dominate the insertion point, so cannot be reused directly), emit
+      // a ptrtoint rather than a ptrtoaddr. Both compute the same value, and
+      // materializing the same opcode lets a later CSE/GVN pass merge the two.
+      // This does not lose any alias-analysis precision: ptrtoint captures the
+      // pointer's provenance in addition to its address, but that provenance
+      // is already captured by the pre-existing ptrtoint.
+      if (CI && CI->getType() == Ty && CI->getOpcode() == CastInst::PtrToInt)
+        Opcode = CastInst::PtrToInt;
     }
   }
-  return ReuseOrCreateCast(V, Ty, CastInst::PtrToAddr,
+  return ReuseOrCreateCast(V, Ty, Opcode,
                            GetOptimalInsertionPointForCastOf(V));
 }
 
