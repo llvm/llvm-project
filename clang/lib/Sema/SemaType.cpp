@@ -10056,7 +10056,7 @@ QualType Sema::getDecltypeForExpr(Expr *E) {
   //   would have been declared if x were an odr-use of the denoted
   //   entity.
 
-  // decltype result for blocks should be the same as decltype result in 
+  // decltype result for blocks should be the same as decltype result in
   // lambdas because blocks capture variables the same as lambdas do
   // https://github.com/llvm/llvm-project/issues/207355#issuecomment-4877181419
   if (isa<ParenExpr>(IDExpr)) {
