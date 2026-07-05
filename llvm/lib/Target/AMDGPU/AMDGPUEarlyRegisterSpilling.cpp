@@ -519,6 +519,50 @@ bool AMDGPUEarlyRegisterSpilling::shouldEmitRestoreInCommonDominator(
   return true;
 }
 
+static bool shouldGroupUses(MachineLoop *CurLoop, MachineLoop *Head1Loop,
+                            MachineLoop *Head2Loop,
+                            MachineBasicBlock *RestoreBlock1,
+                            MachineBasicBlock *RestoreBlock2) {
+
+  MachineLoop *OutermostLoopOfCurLoop = nullptr;
+  if (CurLoop)
+    OutermostLoopOfCurLoop = CurLoop->getOutermostLoop();
+
+  // Do not group the restores if one of them is in a loop.
+  if ((Head1Loop && !Head2Loop) || (!Head1Loop && Head2Loop))
+    return false;
+
+  // Do not group the restores if the loops are independent.
+  if (!CurLoop && Head1Loop && Head2Loop && (RestoreBlock1 != RestoreBlock2) &&
+      !Head1Loop->contains(Head2Loop) && !Head2Loop->contains(Head1Loop))
+    return false;
+
+  // Do not group the restores if all the loops are independent.
+  if (CurLoop && Head1Loop && Head2Loop && (RestoreBlock1 != RestoreBlock2) &&
+      !OutermostLoopOfCurLoop->contains(Head1Loop) &&
+      !OutermostLoopOfCurLoop->contains(Head2Loop) &&
+      !Head1Loop->contains(Head2Loop) && !Head2Loop->contains(Head1Loop))
+    return false;
+
+  // Do not group the restores if one use is in the loop nest of the CurLoop and
+  // the other use is not in the loop nest of CurLoop.
+  if (CurLoop && ((OutermostLoopOfCurLoop->contains(Head1Loop) &&
+                   !OutermostLoopOfCurLoop->contains(Head2Loop)) ||
+                  (!OutermostLoopOfCurLoop->contains(Head1Loop) &&
+                   OutermostLoopOfCurLoop->contains(Head2Loop))))
+    return false;
+
+  // Do not group the restores if the current loop contains the loops of the
+  // uses and the loops of the uses are independent.
+  if (CurLoop && OutermostLoopOfCurLoop->contains(CurLoop) &&
+      OutermostLoopOfCurLoop->contains(Head1Loop) &&
+      OutermostLoopOfCurLoop->contains(Head2Loop) &&
+      !Head1Loop->contains(Head2Loop) && !Head2Loop->contains(Head1Loop))
+    return false;
+
+  return true;
+}
+
 void AMDGPUEarlyRegisterSpilling::groupUses(
     Register RegToSpill, MachineBasicBlock *SpillBlock, MachineInstr *CurMI,
     SetVectorType &DominatedUses, SmallVector<DomGroup> &GroupOfUses) {
@@ -638,21 +682,8 @@ void AMDGPUEarlyRegisterSpilling::groupUses(
       // Disable the grouping of the restore instructions for the following loop
       // scenarios.
       // TODO: Change this if it creates performance degradation.
-      if ((Head1Loop && !Head2Loop) || (!Head1Loop && Head2Loop) ||
-          ((Head1Loop && Head2Loop && (RestoreBlock1 != RestoreBlock2)) &&
-           (!CurLoop ||
-            (CurLoop && !OutermostLoopOfCurLoop->contains(Head1Loop) &&
-             !OutermostLoopOfCurLoop->contains(Head2Loop) &&
-             !Head1Loop->contains(Head2Loop) &&
-             !Head2Loop->contains(Head1Loop)))) ||
-          (CurLoop && ((OutermostLoopOfCurLoop->contains(Head1Loop) &&
-                        !OutermostLoopOfCurLoop->contains(Head2Loop)) ||
-                       (!OutermostLoopOfCurLoop->contains(Head1Loop) &&
-                        OutermostLoopOfCurLoop->contains(Head2Loop)))) ||
-          (CurLoop && OutermostLoopOfCurLoop->contains(CurLoop) &&
-           OutermostLoopOfCurLoop->contains(Head1Loop) &&
-           OutermostLoopOfCurLoop->contains(Head2Loop) &&
-           !Head1Loop->contains(Head2Loop) && !Head2Loop->contains(Head1Loop)))
+      if (!shouldGroupUses(CurLoop, Head1Loop, Head2Loop, RestoreBlock1,
+                           RestoreBlock2))
         continue;
       SmallVector<MachineBasicBlock *> UseBlocks;
       for (auto *Block : G1.getUseBlocks())
