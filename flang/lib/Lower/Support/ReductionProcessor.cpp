@@ -922,6 +922,56 @@ bool ReductionProcessor::processReductionArguments(
           ++idx;
           continue;
         }
+        // A user-defined reduction may shadow a built-in intrinsic reduction
+        // of the same name (max/min/iand/ior/ieor). Per the OpenMP spec, such
+        // reduction has the same visibility as a variable declared at the same
+        // location, so a visible declaration takes precedence over the
+        // intrinsic. Semantics names it "op<name>" (MangleSpecialFunctions in
+        // resolve-names). If one is visible in the current scope and supports
+        // the variable's type, bind to the omp.declare_reduction op the
+        // directive materialized for it instead of generating the intrinsic.
+        semantics::Symbol *sym = reductionIntrinsic->v.sym();
+        std::string mangledName = "op." + getRealName(sym).ToString();
+        if (const semantics::Symbol *redSym =
+                converter.getCurrentScope().FindSymbol(
+                    parser::CharBlock{mangledName})) {
+          const semantics::Symbol &ultimate = redSym->GetUltimate();
+          const semantics::UserReductionDetails *userDetails =
+              ultimate.detailsIf<semantics::UserReductionDetails>();
+          const semantics::DeclTypeSpec *varType =
+              reductionSymbols[idx]->GetUltimate().GetType();
+          // A user-defined reduction shadows the intrinsic only for the types
+          // it is declared for. If it does not cover this variable's type, the
+          // user has not redefined the reduction for that type and the
+          // implicit intrinsic reduction still applies, so fall through to it.
+          if (userDetails && varType && userDetails->SupportsType(*varType)) {
+            // The user declaration takes precedence over the intrinsic for this
+            // type. Only a locally-declared, single-declaration, single-type
+            // reduction is currently supported.
+            if (&ultimate != redSym || userDetails->GetDeclList().size() != 1 ||
+                userDetails->GetTypeList().size() != 1) {
+              TODO(currentLocation,
+                   "OpenMP user-defined reduction shadowing an intrinsic "
+                   "reduction is not yet supported for imported, renamed, or "
+                   "multiple-declaration/type reductions.");
+            }
+            std::string opName = ReductionProcessor::getScopedUserReductionName(
+                converter, ultimate);
+            mlir::ModuleOp module = builder.getModule();
+            auto existingDecl = module.lookupSymbol<OpType>(opName);
+            if (!existingDecl || fir::unwrapRefType(existingDecl.getType()) !=
+                                     fir::unwrapRefType(redType)) {
+              TODO(currentLocation,
+                   "OpenMP user-defined reduction declaration was not "
+                   "materialized for this type");
+            }
+            reductionDeclSymbols.push_back(mlir::SymbolRefAttr::get(
+                builder.getContext(), existingDecl.getSymName()));
+            ++idx;
+            continue;
+          }
+        }
+
         redId = getReductionType(*reductionIntrinsic);
         reductionName =
             getReductionName(getRealName(*reductionIntrinsic).ToString(),

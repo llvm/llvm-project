@@ -962,12 +962,15 @@ static mlir::Value emitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vrecpeq_v:
   case NEON::BI__builtin_neon_vrsqrte_v:
   case NEON::BI__builtin_neon_vrsqrteq_v:
-  case NEON::BI__builtin_neon_vrndi_v:
-  case NEON::BI__builtin_neon_vrndiq_v:
     cgf.cgm.errorNYI(expr->getSourceRange(),
                      std::string("unimplemented AArch64 builtin call: ") +
                          ctx.BuiltinInfo.getName(builtinID));
     return mlir::Value{};
+  case NEON::BI__builtin_neon_vrndi_v:
+  case NEON::BI__builtin_neon_vrndiq_v:
+    assert(!cir::MissingFeatures::emitConstrainedFPCall());
+    return emitNeonCallToOp<cir::NearbyintOp>(cgf.cgm, cgf.getBuilder(), {ty},
+                                              ops, std::nullopt, ty, loc);
   case NEON::BI__builtin_neon_vrshr_n_v:
   case NEON::BI__builtin_neon_vrshrq_n_v: {
     llvm::StringRef intrName =
@@ -1092,6 +1095,30 @@ static mlir::Value emitCommonNeonBuiltinExpr(
                      std::string("unimplemented AArch64 builtin call: ") +
                          cgf.getContext().BuiltinInfo.getName(builtinID));
     break;
+  case NEON::BI__builtin_neon_vrnd32x_f32:
+  case NEON::BI__builtin_neon_vrnd32xq_f32:
+  case NEON::BI__builtin_neon_vrnd32x_f64:
+  case NEON::BI__builtin_neon_vrnd32xq_f64:
+  case NEON::BI__builtin_neon_vrnd32z_f32:
+  case NEON::BI__builtin_neon_vrnd32zq_f32:
+  case NEON::BI__builtin_neon_vrnd32z_f64:
+  case NEON::BI__builtin_neon_vrnd32zq_f64:
+  case NEON::BI__builtin_neon_vrnd64x_f32:
+  case NEON::BI__builtin_neon_vrnd64xq_f32:
+  case NEON::BI__builtin_neon_vrnd64x_f64:
+  case NEON::BI__builtin_neon_vrnd64xq_f64:
+  case NEON::BI__builtin_neon_vrnd64z_f32:
+  case NEON::BI__builtin_neon_vrnd64zq_f32:
+  case NEON::BI__builtin_neon_vrnd64z_f64:
+  case NEON::BI__builtin_neon_vrnd64zq_f64: {
+    llvm::StringRef llvmIntrName = getLLVMIntrNameNoPrefix(
+        static_cast<llvm::Intrinsic::ID>(llvmIntrinsic));
+    mlir::Value result =
+        emitNeonCall(cgf.cgm, cgf.getBuilder(), /*argTypes=*/{vTy}, ops,
+                     llvmIntrName, /*funcResTy=*/vTy, loc);
+    mlir::Type resultType = cgf.convertType(expr->getType());
+    return cgf.getBuilder().createBitcast(result, resultType);
+  }
   case NEON::BI__builtin_neon_vhadd_v:
   case NEON::BI__builtin_neon_vhaddq_v:
   case NEON::BI__builtin_neon_vrhadd_v:
@@ -2907,45 +2934,61 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
                         loc);
   }
   case NEON::BI__builtin_neon_vrndah_f16:
+    assert(!cir::MissingFeatures::emitConstrainedFPCall());
+    return cir::RoundOp::create(builder, loc, ops[0]);
   case NEON::BI__builtin_neon_vrnda_v:
   case NEON::BI__builtin_neon_vrndaq_v:
+    assert(!cir::MissingFeatures::emitConstrainedFPCall());
+    return emitNeonCallToOp<cir::RoundOp>(cgm, builder, {ty}, ops, std::nullopt,
+                                          ty, loc);
   case NEON::BI__builtin_neon_vrndih_f16:
+    assert(!cir::MissingFeatures::emitConstrainedFPCall());
+    return cir::NearbyintOp::create(builder, loc, ops[0]);
   case NEON::BI__builtin_neon_vrndmh_f16:
+    assert(!cir::MissingFeatures::emitConstrainedFPCall());
+    return cir::FloorOp::create(builder, loc, ops[0]);
   case NEON::BI__builtin_neon_vrndm_v:
   case NEON::BI__builtin_neon_vrndmq_v:
+    assert(!cir::MissingFeatures::emitConstrainedFPCall());
+    return emitNeonCallToOp<cir::FloorOp>(cgm, builder, {ty}, ops, std::nullopt,
+                                          ty, loc);
   case NEON::BI__builtin_neon_vrndnh_f16:
+    assert(!cir::MissingFeatures::emitConstrainedFPCall());
+    return cir::RoundEvenOp::create(builder, loc, ops[0]);
   case NEON::BI__builtin_neon_vrndn_v:
   case NEON::BI__builtin_neon_vrndnq_v:
-  case NEON::BI__builtin_neon_vrndns_f32:
+    assert(!cir::MissingFeatures::emitConstrainedFPCall());
+    return emitNeonCallToOp<cir::RoundEvenOp>(cgm, builder, {ty}, ops,
+                                              std::nullopt, ty, loc);
+  case NEON::BI__builtin_neon_vrndns_f32: {
+    assert(!cir::MissingFeatures::emitConstrainedFPCall());
+    mlir::Value arg0 = emitScalarExpr(expr->getArg(0));
+    return cir::RoundEvenOp::create(builder, getLoc(expr->getExprLoc()), arg0);
+  }
   case NEON::BI__builtin_neon_vrndph_f16:
+    assert(!cir::MissingFeatures::emitConstrainedFPCall());
+    return cir::CeilOp::create(builder, loc, ops[0]);
   case NEON::BI__builtin_neon_vrndp_v:
   case NEON::BI__builtin_neon_vrndpq_v:
+    assert(!cir::MissingFeatures::emitConstrainedFPCall());
+    return emitNeonCallToOp<cir::CeilOp>(cgm, builder, {ty}, ops, std::nullopt,
+                                         ty, loc);
   case NEON::BI__builtin_neon_vrndxh_f16:
+    assert(!cir::MissingFeatures::emitConstrainedFPCall());
+    return cir::RintOp::create(builder, loc, ops[0]);
   case NEON::BI__builtin_neon_vrndx_v:
   case NEON::BI__builtin_neon_vrndxq_v:
+    assert(!cir::MissingFeatures::emitConstrainedFPCall());
+    return emitNeonCallToOp<cir::RintOp>(cgm, builder, {ty}, ops, std::nullopt,
+                                         ty, loc);
   case NEON::BI__builtin_neon_vrndh_f16:
-  case NEON::BI__builtin_neon_vrnd32x_f32:
-  case NEON::BI__builtin_neon_vrnd32xq_f32:
-  case NEON::BI__builtin_neon_vrnd32x_f64:
-  case NEON::BI__builtin_neon_vrnd32xq_f64:
-  case NEON::BI__builtin_neon_vrnd32z_f32:
-  case NEON::BI__builtin_neon_vrnd32zq_f32:
-  case NEON::BI__builtin_neon_vrnd32z_f64:
-  case NEON::BI__builtin_neon_vrnd32zq_f64:
-  case NEON::BI__builtin_neon_vrnd64x_f32:
-  case NEON::BI__builtin_neon_vrnd64xq_f32:
-  case NEON::BI__builtin_neon_vrnd64x_f64:
-  case NEON::BI__builtin_neon_vrnd64xq_f64:
-  case NEON::BI__builtin_neon_vrnd64z_f32:
-  case NEON::BI__builtin_neon_vrnd64zq_f32:
-  case NEON::BI__builtin_neon_vrnd64z_f64:
-  case NEON::BI__builtin_neon_vrnd64zq_f64:
+    assert(!cir::MissingFeatures::emitConstrainedFPCall());
+    return cir::TruncOp::create(builder, loc, ops[0]);
   case NEON::BI__builtin_neon_vrnd_v:
   case NEON::BI__builtin_neon_vrndq_v:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AArch64 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
+    assert(!cir::MissingFeatures::emitConstrainedFPCall());
+    return emitNeonCallToOp<cir::TruncOp>(cgm, builder, {ty}, ops, std::nullopt,
+                                          ty, loc);
   case NEON::BI__builtin_neon_vcvt_f64_v:
   case NEON::BI__builtin_neon_vcvtq_f64_v:
     ops[0] = builder.createBitcast(ops[0], ty);
