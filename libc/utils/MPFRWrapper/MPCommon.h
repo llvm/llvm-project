@@ -13,10 +13,10 @@
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/float128.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
 #include "test/UnitTest/RoundingModeUtils.h"
-#include "src/__support/FPUtil/float128.h"
 
 using LIBC_NAMESPACE::fputil::Float128;
 
@@ -27,10 +27,10 @@ extern "C" {
 int mpfr_set_float128(mpfr_ptr, float128, mpfr_rnd_t);
 float128 mpfr_get_float128(mpfr_srcptr, mpfr_rnd_t);
 }
-#else 
-extern "C"{
+#else
+extern "C" {
 int mpfr_set_float128(mpfr_ptr, Float128, mpfr_rnd_t);
-Float128 mpfr_get_float128(mpfr_srcptr,mpfr_rnd_t);
+Float128 mpfr_get_float128(mpfr_srcptr, mpfr_rnd_t);
 }
 #endif
 
