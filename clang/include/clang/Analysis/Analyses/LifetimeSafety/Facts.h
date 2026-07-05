@@ -171,6 +171,8 @@ public:
     Return, /// Escapes via return statement.
     Field,  /// Escapes via assignment to a field.
     Global, /// Escapes via assignment to global storage.
+    This,   /// Escapes via the enclosing object `this`, which outlives the
+            /// method.
   } EscKind;
 
   static bool classof(const Fact *F) {
@@ -238,6 +240,28 @@ public:
   const VarDecl *getGlobal() const { return Global; };
   void dump(llvm::raw_ostream &OS, const LoanManager &, const OriginManager &OM,
             const LoanPropagationAnalysis *LPA = nullptr) const override;
+};
+
+/// Represents an origin escaping through the enclosing object `this`, which
+/// outlives the current method. Emitted for `this` at function exit so a borrow
+/// still held by the object there is seen as escaping -- e.g. a borrow captured
+/// via [[clang::lifetime_capture_by(this)]] that outlived the captured local is
+/// reported as a use-after-scope.
+class ThisEscapeFact : public OriginEscapesFact {
+  SourceLocation Loc;
+
+public:
+  ThisEscapeFact(OriginID OID, SourceLocation Loc)
+      : OriginEscapesFact(OID, EscapeKind::This), Loc(Loc) {}
+
+  static bool classof(const Fact *F) {
+    return F->getKind() == Kind::OriginEscapes &&
+           static_cast<const OriginEscapesFact *>(F)->getEscapeKind() ==
+               EscapeKind::This;
+  }
+  SourceLocation getLoc() const { return Loc; }
+  void dump(llvm::raw_ostream &OS, const LoanManager &,
+            const OriginManager &OM) const override;
 };
 
 class UseFact : public Fact {
