@@ -79,6 +79,9 @@ SANITIZER("type", Type)
 // ThreadSanitizer
 SANITIZER("thread", Thread)
 
+// ConcurrencySanitizer
+SANITIZER("concurrency", Concurrency)
+
 // Numerical stability sanitizer.
 SANITIZER("numerical", NumericalStability)
 

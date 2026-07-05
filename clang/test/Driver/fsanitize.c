@@ -292,6 +292,11 @@
 // RUN: not %clang --target=i386-apple-tvos-simulator -fsanitize=thread %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-I386-TVOSSIMULATOR
 // CHECK-TSAN-I386-TVOSSIMULATOR: unsupported option '-fsanitize=thread' for target 'i386-apple-tvos-simulator'
 
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=concurrency %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CSAN-X86-64-LINUX
+// CHECK-CSAN-X86-64-LINUX: unsupported option '-fsanitize=concurrency' for target 'x86_64-unknown-linux-gnu'
+// RUN: not %clang --target=aarch64-apple-darwin -fsanitize=concurrency %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CSAN-AARCH64-DARWIN
+// CHECK-CSAN-AARCH64-DARWIN: unsupported option '-fsanitize=concurrency' for target 'arm64-apple-darwin'
+
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=thread -fsanitize-thread-memory-access %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-MEMORY-ACCESS
 // CHECK-TSAN-MEMORY-ACCESS-NOT: -cc1{{.*}}tsan-instrument-memory-accesses=0
 // CHECK-TSAN-MEMORY-ACCESS-NOT: -cc1{{.*}}tsan-instrument-memintrinsics=0
