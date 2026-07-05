@@ -124,7 +124,8 @@ static void BM_CompareSamePosition(benchmark::State &State) {
 // paths are canonicalized against ones already cached. Adding then removing an
 // absent (largest) key rebuilds only the right spine while sharing the rest of
 // Base's subtrees, so getCanonicalTree confirms equality against a structurally
-// shared equal tree -- exactly where isEqual's subtree pointer skipping matters.
+// shared equal tree -- exactly where isEqual's subtree pointer skipping
+// matters.
 static void BM_CanonicalizeSharedEqual(benchmark::State &State) {
   const size_t N = State.range(0);
   ImmutableSet<int>::Factory F(/*canonicalize=*/true);
@@ -152,6 +153,8 @@ static void BM_CanonicalizeSharedEqual(benchmark::State &State) {
 BENCHMARK(BM_Iterate)->Name("Iterate")->ITER_SIZES;
 BENCHMARK(BM_IterateWithSkips)->Name("Skip")->ITER_SIZES;
 BENCHMARK(BM_CompareSamePosition)->Name("CompareSamePos")->ITER_SIZES;
-BENCHMARK(BM_CanonicalizeSharedEqual)->Name("CanonicalizeSharedEqual")->ITER_SIZES;
+BENCHMARK(BM_CanonicalizeSharedEqual)
+    ->Name("CanonicalizeSharedEqual")
+    ->ITER_SIZES;
 
 BENCHMARK_MAIN();
