@@ -13,6 +13,8 @@
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "llvm/Support/Error.h"
 
+#include <cstdlib>
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::lldb_server;
@@ -109,4 +111,47 @@ Status
 ProcessMockAccelerator::GetFileLoadAddress(const llvm::StringRef &file_name,
                                            lldb::addr_t &load_addr) {
   return Status::FromErrorString("unimplemented");
+}
+
+std::optional<LLDBSettings> ProcessMockAccelerator::GetLLDBSettings() {
+  // Tell the client to use the accelerator dynamic loader for this target, so
+  // libraries are provided by this plugin rather than by a rendezvous
+  // breakpoint.
+  LLDBSettings settings;
+  settings.dyld_plugin_name = "accelerator-gdb-remote";
+  return settings;
+}
+
+std::optional<AcceleratorDynamicLoaderResponse>
+ProcessMockAccelerator::GetAcceleratorDynamicLoaderLibraryInfos(
+    const AcceleratorDynamicLoaderArgs &args) {
+  // The test drives which libraries to report (and where they live) via the
+  // environment, so it can build real object files and point us at them.
+  AcceleratorDynamicLoaderResponse response;
+
+  // Scenario 1: a shared library provided as a whole file on disk, loaded at a
+  // fixed base address.
+  if (const char *path = ::getenv("LLDB_MOCK_ACCELERATOR_LIB_ONDISK")) {
+    AcceleratorDynamicLoaderLibraryInfo info;
+    info.pathname = path;
+    info.load = true;
+    info.load_address = 0x10000000;
+    response.library_infos.push_back(std::move(info));
+  }
+
+  // Scenario 3: a shared library embedded in a container file (e.g. added to
+  // the executable with llvm-objcopy), located by file offset and size.
+  if (const char *path = ::getenv("LLDB_MOCK_ACCELERATOR_LIB_CONTAINER")) {
+    AcceleratorDynamicLoaderLibraryInfo info;
+    info.pathname = path;
+    info.load = true;
+    info.load_address = 0x20000000;
+    if (const char *offset = ::getenv("LLDB_MOCK_ACCELERATOR_LIB_OFFSET"))
+      info.file_offset = std::strtoull(offset, nullptr, 0);
+    if (const char *size = ::getenv("LLDB_MOCK_ACCELERATOR_LIB_SIZE"))
+      info.file_size = std::strtoull(size, nullptr, 0);
+    response.library_infos.push_back(std::move(info));
+  }
+
+  return response;
 }

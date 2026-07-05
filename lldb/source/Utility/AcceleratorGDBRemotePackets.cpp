@@ -201,4 +201,13 @@ json::Value toJSON(const AcceleratorDynamicLoaderResponse &data) {
   return Object{{"library_infos", data.library_infos}};
 }
 
+bool fromJSON(const Value &value, LLDBSettings &data, Path path) {
+  ObjectMapper o(value, path);
+  return o && o.map("dyld_plugin_name", data.dyld_plugin_name);
+}
+
+json::Value toJSON(const LLDBSettings &data) {
+  return Object{{"dyld_plugin_name", data.dyld_plugin_name}};
+}
+
 } // namespace lldb_private

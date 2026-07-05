@@ -60,6 +60,12 @@ public:
   Status GetFileLoadAddress(const llvm::StringRef &file_name,
                             lldb::addr_t &load_addr) override;
 
+  std::optional<LLDBSettings> GetLLDBSettings() override;
+
+  std::optional<AcceleratorDynamicLoaderResponse>
+  GetAcceleratorDynamicLoaderLibraryInfos(
+      const AcceleratorDynamicLoaderArgs &args) override;
+
 private:
   mutable ArchSpec m_arch;
 };

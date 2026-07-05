@@ -305,6 +305,8 @@ protected:
   PacketResult Handle_jAcceleratorPluginGetDynamicLoaderLibraryInfo(
       StringExtractorGDBRemote &packet);
 
+  PacketResult Handle_jLLDBSettings(StringExtractorGDBRemote &packet);
+
   void SetCurrentThreadID(lldb::tid_t tid);
 
   lldb::tid_t GetCurrentThreadID() const;

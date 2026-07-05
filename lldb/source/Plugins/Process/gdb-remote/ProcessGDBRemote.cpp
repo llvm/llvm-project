@@ -4525,8 +4525,16 @@ bool ProcessGDBRemote::StopNoticingNewThreads() {
 }
 
 DynamicLoader *ProcessGDBRemote::GetDynamicLoader() {
-  if (m_dyld_up.get() == nullptr)
-    m_dyld_up.reset(DynamicLoader::FindPlugin(this, ""));
+  if (m_dyld_up.get() == nullptr) {
+    // The GDB server can name a specific DynamicLoader plugin via jLLDBSettings
+    // (e.g. accelerator targets select "accelerator-gdb-remote"). Otherwise the
+    // loader is auto-selected from the target triple.
+    llvm::StringRef dyld_name;
+    std::optional<LLDBSettings> settings = m_gdb_comm.GetLLDBSettings();
+    if (settings)
+      dyld_name = settings->dyld_plugin_name;
+    m_dyld_up.reset(DynamicLoader::FindPlugin(this, dyld_name));
+  }
   return m_dyld_up.get();
 }
 

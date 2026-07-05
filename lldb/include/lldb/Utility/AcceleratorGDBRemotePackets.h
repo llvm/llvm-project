@@ -230,6 +230,18 @@ bool fromJSON(const llvm::json::Value &value,
               AcceleratorDynamicLoaderResponse &data, llvm::json::Path path);
 llvm::json::Value toJSON(const AcceleratorDynamicLoaderResponse &data);
 
+/// LLDB-specific settings a server reports for a target via the "jLLDBSettings"
+/// packet.
+struct LLDBSettings {
+  /// Name of the DynamicLoader plugin LLDB should use for this target. If
+  /// empty, the loader is auto-selected from the target triple.
+  std::string dyld_plugin_name;
+};
+
+bool fromJSON(const llvm::json::Value &value, LLDBSettings &data,
+              llvm::json::Path path);
+llvm::json::Value toJSON(const LLDBSettings &data);
+
 } // namespace lldb_private
 
 #endif // LLDB_UTILITY_ACCELERATORGDBREMOTEPACKETS_H

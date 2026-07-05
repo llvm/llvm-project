@@ -298,6 +298,56 @@ GDBRemoteCommunicationClient::AcceleratorBreakpointHit(
       response.GetStringRef(), llvm::toString(hit_response.takeError()));
 }
 
+std::optional<AcceleratorDynamicLoaderResponse>
+GDBRemoteCommunicationClient::GetAcceleratorDynamicLoaderLibraryInfos(
+    const AcceleratorDynamicLoaderArgs &args) {
+  StreamGDBRemote packet;
+  packet.PutCString("jAcceleratorPluginGetDynamicLoaderLibraryInfo:");
+  packet.PutAsJSON(args, /*hex_ascii=*/false);
+
+  StringExtractorGDBRemote response;
+  if (SendPacketAndWaitForResponse(packet.GetString(), response) !=
+          PacketResult::Success ||
+      response.IsErrorResponse())
+    return std::nullopt;
+
+  llvm::Expected<AcceleratorDynamicLoaderResponse> parsed =
+      llvm::json::parse<AcceleratorDynamicLoaderResponse>(
+          response.Peek(), "AcceleratorDynamicLoaderResponse");
+  if (!parsed) {
+    llvm::consumeError(parsed.takeError());
+    return std::nullopt;
+  }
+  return *parsed;
+}
+
+std::optional<LLDBSettings> GDBRemoteCommunicationClient::GetLLDBSettings() {
+  if (m_supports_lldb_settings == eLazyBoolNo)
+    return std::nullopt;
+  if (m_lldb_settings)
+    return m_lldb_settings;
+
+  StringExtractorGDBRemote response;
+  response.SetResponseValidatorToJSON();
+  if (SendPacketAndWaitForResponse("jLLDBSettings", response) !=
+      PacketResult::Success)
+    return std::nullopt;
+  if (response.IsUnsupportedResponse() || response.IsErrorResponse()) {
+    m_supports_lldb_settings = eLazyBoolNo;
+    return std::nullopt;
+  }
+
+  llvm::Expected<LLDBSettings> parsed =
+      llvm::json::parse<LLDBSettings>(response.Peek(), "LLDBSettings");
+  if (!parsed) {
+    llvm::consumeError(parsed.takeError());
+    return std::nullopt;
+  }
+  m_supports_lldb_settings = eLazyBoolYes;
+  m_lldb_settings = *parsed;
+  return m_lldb_settings;
+}
+
 bool GDBRemoteCommunicationClient::QueryNoAckModeSupported() {
   if (m_supports_not_sending_acks == eLazyBoolCalculate) {
     m_send_acks = true;

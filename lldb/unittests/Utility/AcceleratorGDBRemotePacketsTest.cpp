@@ -312,3 +312,12 @@ TEST(AcceleratorGDBRemotePacketsTest, AcceleratorDynamicLoaderResponse) {
   EXPECT_EQ("/path/to/lib.so", deserialized->library_infos[0].pathname);
   EXPECT_TRUE(deserialized->library_infos[0].load);
 }
+
+TEST(AcceleratorGDBRemotePacketsTest, LLDBSettings) {
+  LLDBSettings settings;
+  settings.dyld_plugin_name = "accelerator-gdb-remote";
+
+  Expected<LLDBSettings> deserialized = roundtripJSON(settings);
+  ASSERT_THAT_EXPECTED(deserialized, Succeeded());
+  EXPECT_EQ(settings.dyld_plugin_name, deserialized->dyld_plugin_name);
+}

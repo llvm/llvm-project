@@ -377,6 +377,17 @@ public:
   llvm::Expected<AcceleratorBreakpointHitResponse>
   AcceleratorBreakpointHit(const AcceleratorBreakpointHitArgs &args);
 
+  /// Send the "jAcceleratorPluginGetDynamicLoaderLibraryInfo" packet and return
+  /// the libraries the plugin (or the process) reports, or std::nullopt on
+  /// error.
+  std::optional<AcceleratorDynamicLoaderResponse>
+  GetAcceleratorDynamicLoaderLibraryInfos(
+      const AcceleratorDynamicLoaderArgs &args);
+
+  /// Send the "jLLDBSettings" packet and return the target's LLDB settings
+  /// (cached after the first query), or std::nullopt if unsupported.
+  std::optional<LLDBSettings> GetLLDBSettings();
+
   LazyBool SupportsAllocDeallocMemory() // const
   {
     // Uncomment this to have lldb pretend the debug server doesn't respond to
@@ -614,6 +625,8 @@ protected:
   LazyBool m_supports_multi_mem_read = eLazyBoolCalculate;
   LazyBool m_supports_multi_breakpoint = eLazyBoolCalculate;
   LazyBool m_supports_accelerator_plugins = eLazyBoolCalculate;
+  LazyBool m_supports_lldb_settings = eLazyBoolCalculate;
+  std::optional<LLDBSettings> m_lldb_settings;
 
   bool m_supports_qProcessInfoPID : 1, m_supports_qfProcessInfo : 1,
       m_supports_qUserName : 1, m_supports_qGroupName : 1,

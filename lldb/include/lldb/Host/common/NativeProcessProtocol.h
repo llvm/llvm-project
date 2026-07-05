@@ -14,6 +14,7 @@
 #include "NativeWatchpointList.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/MainLoop.h"
+#include "lldb/Utility/AcceleratorGDBRemotePackets.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Iterable.h"
 #include "lldb/Utility/Status.h"
@@ -160,6 +161,20 @@ public:
   virtual llvm::Expected<std::vector<LoadedLibraryInfo>> GetLoadedLibraries() {
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Not implemented");
+  }
+
+  /// Return LLDB settings for this process (e.g. which DynamicLoader plugin to
+  /// use), or std::nullopt to use the defaults. Used to answer "jLLDBSettings".
+  virtual std::optional<LLDBSettings> GetLLDBSettings() { return std::nullopt; }
+
+  /// Return the accelerator dynamic loader library infos for this process, or
+  /// std::nullopt if the process does not support address-space aware dynamic
+  /// loading. Used to answer "jAcceleratorPluginGetDynamicLoaderLibraryInfo" on
+  /// a GPU connection.
+  virtual std::optional<AcceleratorDynamicLoaderResponse>
+  GetAcceleratorDynamicLoaderLibraryInfos(
+      const AcceleratorDynamicLoaderArgs &args) {
+    return std::nullopt;
   }
 
   virtual bool HasPendingLibraryEvents() { return false; }
