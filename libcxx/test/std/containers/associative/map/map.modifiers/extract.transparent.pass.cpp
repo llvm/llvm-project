@@ -13,7 +13,7 @@
 // class map
 
 //    template<class K>
-//        constexpr node_type extract(K&& k) const;        // C++23
+//        constexpr node_type extract(K&& k) const;        // C++23, constexpr since C++26
 
 #include <map>
 #include "test_transparent_associative.h"

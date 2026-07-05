@@ -13,7 +13,7 @@
 // class map
 
 //    template<class K>
-//        constexpr size_type erase(K&& k) const;        // C++23
+//        constexpr size_type erase(K&& k) const;        // C++23, constexpr since C++26
 
 #include <map>
 #include "test_transparent_associative.h"
