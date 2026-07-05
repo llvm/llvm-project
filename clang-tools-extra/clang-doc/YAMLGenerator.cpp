@@ -32,24 +32,6 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(BaseRecordInfo)
 
 namespace llvm {
 
-template <typename T>
-static bool operator==(const llvm::simple_ilist<T> &LHS,
-                       const llvm::simple_ilist<T> &RHS) {
-  auto LIt = LHS.begin(), LEnd = LHS.end();
-  auto RIt = RHS.begin(), REnd = RHS.end();
-  for (; LIt != LEnd && RIt != REnd; ++LIt, ++RIt) {
-    if (!(*LIt == *RIt))
-      return false;
-  }
-  return LIt == LEnd && RIt == REnd;
-}
-
-template <typename T>
-static bool operator!=(const llvm::simple_ilist<T> &LHS,
-                       const llvm::simple_ilist<T> &RHS) {
-  return !(LHS == RHS);
-}
-
 namespace yaml {
 
 // Provide SequenceTraits for ArrayRef<T*> since YAMLTraits only provides it for

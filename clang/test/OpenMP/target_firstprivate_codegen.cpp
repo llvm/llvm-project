@@ -10161,15 +10161,19 @@ int bar(int n, double *ptr) {
 // TCHECK-NEXT:    [[DYN_PTR1:%.*]] = alloca ptr, align 8
 // TCHECK-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // TCHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// TCHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 0
-// TCHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 8
-// TCHECK-NEXT:    store i32 [[TMP2]], ptr [[A]], align 4
-// TCHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 1
-// TCHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 2
-// TCHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 8
-// TCHECK-NEXT:    store i32 [[TMP4]], ptr [[GA]], align 4
-// TCHECK-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 3
-// TCHECK-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// TCHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// TCHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
+// TCHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 8
+// TCHECK-NEXT:    store i32 [[TMP3]], ptr [[A]], align 4
+// TCHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// TCHECK-NEXT:    [[P:%.*]] = load ptr, ptr [[TMP4]], align 8
+// TCHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// TCHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[TMP5]], align 8
+// TCHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 8
+// TCHECK-NEXT:    store i32 [[TMP7]], ptr [[GA]], align 4
+// TCHECK-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 3
+// TCHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// TCHECK-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP8]], align 8
 // TCHECK-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 8
 // TCHECK-NEXT:    ret void
 //
@@ -10189,46 +10193,56 @@ int bar(int n, double *ptr) {
 // TCHECK-NEXT:    [[D5:%.*]] = alloca [[STRUCT_TT:%.*]], align 8
 // TCHECK-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // TCHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// TCHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 0
-// TCHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[TMP1]], align 8
-// TCHECK-NEXT:    store i16 [[TMP2]], ptr [[AA]], align 2
-// TCHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 1
-// TCHECK-NEXT:    [[B:%.*]] = load ptr, ptr [[TMP3]], align 8
-// TCHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 2
-// TCHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP4]], align 8
-// TCHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 3
-// TCHECK-NEXT:    [[BN:%.*]] = load ptr, ptr [[TMP6]], align 8
-// TCHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 4
-// TCHECK-NEXT:    [[C:%.*]] = load ptr, ptr [[TMP7]], align 8
-// TCHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 5
-// TCHECK-NEXT:    [[TMP9:%.*]] = load i64, ptr [[TMP8]], align 8
-// TCHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 6
-// TCHECK-NEXT:    [[TMP11:%.*]] = load i64, ptr [[TMP10]], align 8
-// TCHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 7
-// TCHECK-NEXT:    [[CN:%.*]] = load ptr, ptr [[TMP12]], align 8
-// TCHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 8
-// TCHECK-NEXT:    [[D:%.*]] = load ptr, ptr [[TMP13]], align 8
-// TCHECK-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 9
-// TCHECK-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// TCHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// TCHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
+// TCHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr [[TMP2]], align 8
+// TCHECK-NEXT:    store i16 [[TMP3]], ptr [[AA]], align 2
+// TCHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// TCHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
+// TCHECK-NEXT:    [[B:%.*]] = load ptr, ptr [[TMP5]], align 8
+// TCHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// TCHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
+// TCHECK-NEXT:    [[TMP8:%.*]] = load i64, ptr [[TMP7]], align 8
+// TCHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 3
+// TCHECK-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[TMP9]], align 8
+// TCHECK-NEXT:    [[BN:%.*]] = load ptr, ptr [[TMP10]], align 8
+// TCHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 4
+// TCHECK-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[TMP11]], align 8
+// TCHECK-NEXT:    [[C:%.*]] = load ptr, ptr [[TMP12]], align 8
+// TCHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 5
+// TCHECK-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[TMP13]], align 8
+// TCHECK-NEXT:    [[TMP15:%.*]] = load i64, ptr [[TMP14]], align 8
+// TCHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 6
+// TCHECK-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[TMP16]], align 8
+// TCHECK-NEXT:    [[TMP18:%.*]] = load i64, ptr [[TMP17]], align 8
+// TCHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 7
+// TCHECK-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[TMP19]], align 8
+// TCHECK-NEXT:    [[CN:%.*]] = load ptr, ptr [[TMP20]], align 8
+// TCHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 8
+// TCHECK-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[TMP21]], align 8
+// TCHECK-NEXT:    [[D:%.*]] = load ptr, ptr [[TMP22]], align 8
+// TCHECK-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 9
+// TCHECK-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// TCHECK-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP23]], align 8
 // TCHECK-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 8
 // TCHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[B2]], ptr align 4 [[B]], i64 40, i1 false)
-// TCHECK-NEXT:    [[TMP14:%.*]] = call ptr @llvm.stacksave.p0()
-// TCHECK-NEXT:    store ptr [[TMP14]], ptr [[SAVED_STACK]], align 8
-// TCHECK-NEXT:    [[VLA:%.*]] = alloca float, i64 [[TMP5]], align 4
-// TCHECK-NEXT:    store i64 [[TMP5]], ptr [[__VLA_EXPR0]], align 8
-// TCHECK-NEXT:    [[TMP15:%.*]] = mul nuw i64 [[TMP5]], 4
-// TCHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VLA]], ptr align 4 [[BN]], i64 [[TMP15]], i1 false)
+// TCHECK-NEXT:    [[TMP24:%.*]] = call ptr @llvm.stacksave.p0()
+// TCHECK-NEXT:    store ptr [[TMP24]], ptr [[SAVED_STACK]], align 8
+// TCHECK-NEXT:    [[VLA:%.*]] = alloca float, i64 [[TMP8]], align 4
+// TCHECK-NEXT:    store i64 [[TMP8]], ptr [[__VLA_EXPR0]], align 8
+// TCHECK-NEXT:    [[TMP25:%.*]] = mul nuw i64 [[TMP8]], 4
+// TCHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VLA]], ptr align 4 [[BN]], i64 [[TMP25]], i1 false)
 // TCHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[C3]], ptr align 8 [[C]], i64 400, i1 false)
-// TCHECK-NEXT:    [[TMP16:%.*]] = mul nuw i64 [[TMP9]], [[TMP11]]
-// TCHECK-NEXT:    [[VLA4:%.*]] = alloca double, i64 [[TMP16]], align 8
-// TCHECK-NEXT:    store i64 [[TMP9]], ptr [[__VLA_EXPR1]], align 8
-// TCHECK-NEXT:    store i64 [[TMP11]], ptr [[__VLA_EXPR2]], align 8
-// TCHECK-NEXT:    [[TMP17:%.*]] = mul nuw i64 [[TMP9]], [[TMP11]]
-// TCHECK-NEXT:    [[TMP18:%.*]] = mul nuw i64 [[TMP17]], 8
-// TCHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[VLA4]], ptr align 8 [[CN]], i64 [[TMP18]], i1 false)
+// TCHECK-NEXT:    [[TMP26:%.*]] = mul nuw i64 [[TMP15]], [[TMP18]]
+// TCHECK-NEXT:    [[VLA4:%.*]] = alloca double, i64 [[TMP26]], align 8
+// TCHECK-NEXT:    store i64 [[TMP15]], ptr [[__VLA_EXPR1]], align 8
+// TCHECK-NEXT:    store i64 [[TMP18]], ptr [[__VLA_EXPR2]], align 8
+// TCHECK-NEXT:    [[TMP27:%.*]] = mul nuw i64 [[TMP15]], [[TMP18]]
+// TCHECK-NEXT:    [[TMP28:%.*]] = mul nuw i64 [[TMP27]], 8
+// TCHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[VLA4]], ptr align 8 [[CN]], i64 [[TMP28]], i1 false)
 // TCHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[D5]], ptr align 8 [[D]], i64 16, i1 false)
-// TCHECK-NEXT:    [[TMP19:%.*]] = load i16, ptr [[AA]], align 2
-// TCHECK-NEXT:    [[CONV:%.*]] = sext i16 [[TMP19]] to i32
+// TCHECK-NEXT:    [[TMP29:%.*]] = load i16, ptr [[AA]], align 2
+// TCHECK-NEXT:    [[CONV:%.*]] = sext i16 [[TMP29]] to i32
 // TCHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV]], 1
 // TCHECK-NEXT:    [[CONV6:%.*]] = trunc i32 [[ADD]] to i16
 // TCHECK-NEXT:    store i16 [[CONV6]], ptr [[AA]], align 2
@@ -10239,16 +10253,16 @@ int bar(int n, double *ptr) {
 // TCHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds [5 x [10 x double]], ptr [[C3]], i64 0, i64 1
 // TCHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds [10 x double], ptr [[ARRAYIDX8]], i64 0, i64 2
 // TCHECK-NEXT:    store double 1.000000e+00, ptr [[ARRAYIDX9]], align 8
-// TCHECK-NEXT:    [[TMP20:%.*]] = mul nsw i64 1, [[TMP11]]
-// TCHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds double, ptr [[VLA4]], i64 [[TMP20]]
+// TCHECK-NEXT:    [[TMP30:%.*]] = mul nsw i64 1, [[TMP18]]
+// TCHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds double, ptr [[VLA4]], i64 [[TMP30]]
 // TCHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds double, ptr [[ARRAYIDX10]], i64 3
 // TCHECK-NEXT:    store double 1.000000e+00, ptr [[ARRAYIDX11]], align 8
 // TCHECK-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TT]], ptr [[D5]], i32 0, i32 0
 // TCHECK-NEXT:    store i64 1, ptr [[X]], align 8
 // TCHECK-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_TT]], ptr [[D5]], i32 0, i32 1
 // TCHECK-NEXT:    store i8 1, ptr [[Y]], align 8
-// TCHECK-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8
-// TCHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP21]])
+// TCHECK-NEXT:    [[TMP31:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8
+// TCHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP31]])
 // TCHECK-NEXT:    ret void
 //
 //
@@ -10259,22 +10273,25 @@ int bar(int n, double *ptr) {
 // TCHECK-NEXT:    [[DYN_PTR1:%.*]] = alloca ptr, align 8
 // TCHECK-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // TCHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// TCHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 0
-// TCHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 1
-// TCHECK-NEXT:    [[E:%.*]] = load ptr, ptr [[TMP1]], align 8
-// TCHECK-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 2
-// TCHECK-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// TCHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// TCHECK-NEXT:    [[PTR:%.*]] = load ptr, ptr [[TMP1]], align 8
+// TCHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// TCHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 8
+// TCHECK-NEXT:    [[E:%.*]] = load ptr, ptr [[TMP3]], align 8
+// TCHECK-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// TCHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// TCHECK-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP4]], align 8
 // TCHECK-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 8
 // TCHECK-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TT_0:%.*]], ptr [[E]], i32 0, i32 0
-// TCHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4
-// TCHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP2]] to double
-// TCHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[PTR]], align 8
-// TCHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i64 0
+// TCHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[X]], align 4
+// TCHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP5]] to double
+// TCHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[PTR]], align 8
+// TCHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[TMP6]], i64 0
 // TCHECK-NEXT:    store double [[CONV]], ptr [[ARRAYIDX]], align 8
-// TCHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[PTR]], align 8
-// TCHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, ptr [[TMP4]], i64 0
-// TCHECK-NEXT:    [[TMP5:%.*]] = load double, ptr [[ARRAYIDX2]], align 8
-// TCHECK-NEXT:    [[INC:%.*]] = fadd double [[TMP5]], 1.000000e+00
+// TCHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[PTR]], align 8
+// TCHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, ptr [[TMP7]], i64 0
+// TCHECK-NEXT:    [[TMP8:%.*]] = load double, ptr [[ARRAYIDX2]], align 8
+// TCHECK-NEXT:    [[INC:%.*]] = fadd double [[TMP8]], 1.000000e+00
 // TCHECK-NEXT:    store double [[INC]], ptr [[ARRAYIDX2]], align 8
 // TCHECK-NEXT:    ret void
 //
@@ -10289,29 +10306,33 @@ int bar(int n, double *ptr) {
 // TCHECK-NEXT:    [[B2:%.*]] = alloca [10 x i32], align 4
 // TCHECK-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // TCHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// TCHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 0
-// TCHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 8
-// TCHECK-NEXT:    store i32 [[TMP2]], ptr [[A]], align 4
-// TCHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 1
-// TCHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP3]], align 8
-// TCHECK-NEXT:    store i8 [[TMP4]], ptr [[AAA]], align 1
-// TCHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 2
-// TCHECK-NEXT:    [[B:%.*]] = load ptr, ptr [[TMP5]], align 8
-// TCHECK-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 3
-// TCHECK-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// TCHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// TCHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
+// TCHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 8
+// TCHECK-NEXT:    store i32 [[TMP3]], ptr [[A]], align 4
+// TCHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// TCHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
+// TCHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 8
+// TCHECK-NEXT:    store i8 [[TMP6]], ptr [[AAA]], align 1
+// TCHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// TCHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP7]], align 8
+// TCHECK-NEXT:    [[B:%.*]] = load ptr, ptr [[TMP8]], align 8
+// TCHECK-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 3
+// TCHECK-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// TCHECK-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP9]], align 8
 // TCHECK-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 8
 // TCHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[B2]], ptr align 4 [[B]], i64 40, i1 false)
-// TCHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[A]], align 4
-// TCHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP6]], 1
+// TCHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[A]], align 4
+// TCHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP10]], 1
 // TCHECK-NEXT:    store i32 [[ADD]], ptr [[A]], align 4
-// TCHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr [[AAA]], align 1
-// TCHECK-NEXT:    [[CONV:%.*]] = sext i8 [[TMP7]] to i32
+// TCHECK-NEXT:    [[TMP11:%.*]] = load i8, ptr [[AAA]], align 1
+// TCHECK-NEXT:    [[CONV:%.*]] = sext i8 [[TMP11]] to i32
 // TCHECK-NEXT:    [[ADD3:%.*]] = add nsw i32 [[CONV]], 1
 // TCHECK-NEXT:    [[CONV4:%.*]] = trunc i32 [[ADD3]] to i8
 // TCHECK-NEXT:    store i8 [[CONV4]], ptr [[AAA]], align 1
 // TCHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x i32], ptr [[B2]], i64 0, i64 2
-// TCHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-// TCHECK-NEXT:    [[ADD5:%.*]] = add nsw i32 [[TMP8]], 1
+// TCHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+// TCHECK-NEXT:    [[ADD5:%.*]] = add nsw i32 [[TMP12]], 1
 // TCHECK-NEXT:    store i32 [[ADD5]], ptr [[ARRAYIDX]], align 4
 // TCHECK-NEXT:    ret void
 //
@@ -10327,45 +10348,51 @@ int bar(int n, double *ptr) {
 // TCHECK-NEXT:    [[__VLA_EXPR1:%.*]] = alloca i64, align 8
 // TCHECK-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // TCHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// TCHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 0
-// TCHECK-NEXT:    [[THIS:%.*]] = load ptr, ptr [[TMP1]], align 8
-// TCHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 1
-// TCHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 8
-// TCHECK-NEXT:    store i32 [[TMP3]], ptr [[B]], align 4
-// TCHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 2
-// TCHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP4]], align 8
-// TCHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 3
-// TCHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr [[TMP6]], align 8
-// TCHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 4
-// TCHECK-NEXT:    [[C:%.*]] = load ptr, ptr [[TMP8]], align 8
-// TCHECK-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 5
-// TCHECK-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// TCHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// TCHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
+// TCHECK-NEXT:    [[THIS:%.*]] = load ptr, ptr [[TMP2]], align 8
+// TCHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// TCHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP3]], align 8
+// TCHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 8
+// TCHECK-NEXT:    store i32 [[TMP5]], ptr [[B]], align 4
+// TCHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// TCHECK-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
+// TCHECK-NEXT:    [[TMP8:%.*]] = load i64, ptr [[TMP7]], align 8
+// TCHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 3
+// TCHECK-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[TMP9]], align 8
+// TCHECK-NEXT:    [[TMP11:%.*]] = load i64, ptr [[TMP10]], align 8
+// TCHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 4
+// TCHECK-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[TMP12]], align 8
+// TCHECK-NEXT:    [[C:%.*]] = load ptr, ptr [[TMP13]], align 8
+// TCHECK-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 5
+// TCHECK-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// TCHECK-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP14]], align 8
 // TCHECK-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 8
-// TCHECK-NEXT:    [[TMP9:%.*]] = call ptr @llvm.stacksave.p0()
-// TCHECK-NEXT:    store ptr [[TMP9]], ptr [[SAVED_STACK]], align 8
-// TCHECK-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP5]], [[TMP7]]
-// TCHECK-NEXT:    [[VLA:%.*]] = alloca i16, i64 [[TMP10]], align 2
-// TCHECK-NEXT:    store i64 [[TMP5]], ptr [[__VLA_EXPR0]], align 8
-// TCHECK-NEXT:    store i64 [[TMP7]], ptr [[__VLA_EXPR1]], align 8
-// TCHECK-NEXT:    [[TMP11:%.*]] = mul nuw i64 [[TMP5]], [[TMP7]]
-// TCHECK-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP11]], 2
-// TCHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 2 [[VLA]], ptr align 2 [[C]], i64 [[TMP12]], i1 false)
-// TCHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[B]], align 4
-// TCHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP13]] to double
+// TCHECK-NEXT:    [[TMP15:%.*]] = call ptr @llvm.stacksave.p0()
+// TCHECK-NEXT:    store ptr [[TMP15]], ptr [[SAVED_STACK]], align 8
+// TCHECK-NEXT:    [[TMP16:%.*]] = mul nuw i64 [[TMP8]], [[TMP11]]
+// TCHECK-NEXT:    [[VLA:%.*]] = alloca i16, i64 [[TMP16]], align 2
+// TCHECK-NEXT:    store i64 [[TMP8]], ptr [[__VLA_EXPR0]], align 8
+// TCHECK-NEXT:    store i64 [[TMP11]], ptr [[__VLA_EXPR1]], align 8
+// TCHECK-NEXT:    [[TMP17:%.*]] = mul nuw i64 [[TMP8]], [[TMP11]]
+// TCHECK-NEXT:    [[TMP18:%.*]] = mul nuw i64 [[TMP17]], 2
+// TCHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 2 [[VLA]], ptr align 2 [[C]], i64 [[TMP18]], i1 false)
+// TCHECK-NEXT:    [[TMP19:%.*]] = load i32, ptr [[B]], align 4
+// TCHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP19]] to double
 // TCHECK-NEXT:    [[ADD:%.*]] = fadd double [[CONV]], 1.500000e+00
 // TCHECK-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_S1:%.*]], ptr [[THIS]], i32 0, i32 0
 // TCHECK-NEXT:    store double [[ADD]], ptr [[A]], align 8
 // TCHECK-NEXT:    [[A2:%.*]] = getelementptr inbounds nuw [[STRUCT_S1]], ptr [[THIS]], i32 0, i32 0
-// TCHECK-NEXT:    [[TMP14:%.*]] = load double, ptr [[A2]], align 8
-// TCHECK-NEXT:    [[INC:%.*]] = fadd double [[TMP14]], 1.000000e+00
+// TCHECK-NEXT:    [[TMP20:%.*]] = load double, ptr [[A2]], align 8
+// TCHECK-NEXT:    [[INC:%.*]] = fadd double [[TMP20]], 1.000000e+00
 // TCHECK-NEXT:    store double [[INC]], ptr [[A2]], align 8
 // TCHECK-NEXT:    [[CONV3:%.*]] = fptosi double [[INC]] to i16
-// TCHECK-NEXT:    [[TMP15:%.*]] = mul nsw i64 1, [[TMP7]]
-// TCHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[VLA]], i64 [[TMP15]]
+// TCHECK-NEXT:    [[TMP21:%.*]] = mul nsw i64 1, [[TMP11]]
+// TCHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[VLA]], i64 [[TMP21]]
 // TCHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i16, ptr [[ARRAYIDX]], i64 1
 // TCHECK-NEXT:    store i16 [[CONV3]], ptr [[ARRAYIDX4]], align 2
-// TCHECK-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8
-// TCHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP16]])
+// TCHECK-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8
+// TCHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP22]])
 // TCHECK-NEXT:    ret void
 //
 //
@@ -10378,21 +10405,24 @@ int bar(int n, double *ptr) {
 // TCHECK-NEXT:    [[B2:%.*]] = alloca [10 x i32], align 4
 // TCHECK-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // TCHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// TCHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 0
-// TCHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 8
-// TCHECK-NEXT:    store i32 [[TMP2]], ptr [[A]], align 4
-// TCHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 1
-// TCHECK-NEXT:    [[B:%.*]] = load ptr, ptr [[TMP3]], align 8
-// TCHECK-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 2
-// TCHECK-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// TCHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// TCHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
+// TCHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 8
+// TCHECK-NEXT:    store i32 [[TMP3]], ptr [[A]], align 4
+// TCHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// TCHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
+// TCHECK-NEXT:    [[B:%.*]] = load ptr, ptr [[TMP5]], align 8
+// TCHECK-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// TCHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// TCHECK-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP6]], align 8
 // TCHECK-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 8
 // TCHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[B2]], ptr align 4 [[B]], i64 40, i1 false)
-// TCHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
-// TCHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP4]], 1
+// TCHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[A]], align 4
+// TCHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP7]], 1
 // TCHECK-NEXT:    store i32 [[ADD]], ptr [[A]], align 4
 // TCHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x i32], ptr [[B2]], i64 0, i64 2
-// TCHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-// TCHECK-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP5]], 1
+// TCHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+// TCHECK-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP8]], 1
 // TCHECK-NEXT:    store i32 [[ADD3]], ptr [[ARRAYIDX]], align 4
 // TCHECK-NEXT:    ret void
 //
@@ -10406,15 +10436,19 @@ int bar(int n, double *ptr) {
 // TCHECK1-NEXT:    [[DYN_PTR1:%.*]] = alloca ptr, align 8
 // TCHECK1-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // TCHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// TCHECK1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 0
-// TCHECK1-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 8
-// TCHECK1-NEXT:    store i32 [[TMP2]], ptr [[A]], align 4
-// TCHECK1-NEXT:    [[P:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 1
-// TCHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 2
-// TCHECK1-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 8
-// TCHECK1-NEXT:    store i32 [[TMP4]], ptr [[GA]], align 4
-// TCHECK1-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 3
-// TCHECK1-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// TCHECK1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// TCHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
+// TCHECK1-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 8
+// TCHECK1-NEXT:    store i32 [[TMP3]], ptr [[A]], align 4
+// TCHECK1-NEXT:    [[TMP4:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// TCHECK1-NEXT:    [[P:%.*]] = load ptr, ptr [[TMP4]], align 8
+// TCHECK1-NEXT:    [[TMP5:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// TCHECK1-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[TMP5]], align 8
+// TCHECK1-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 8
+// TCHECK1-NEXT:    store i32 [[TMP7]], ptr [[GA]], align 4
+// TCHECK1-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 3
+// TCHECK1-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// TCHECK1-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP8]], align 8
 // TCHECK1-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 8
 // TCHECK1-NEXT:    ret void
 //
@@ -10434,46 +10468,56 @@ int bar(int n, double *ptr) {
 // TCHECK1-NEXT:    [[D5:%.*]] = alloca [[STRUCT_TT:%.*]], align 8
 // TCHECK1-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // TCHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// TCHECK1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 0
-// TCHECK1-NEXT:    [[TMP2:%.*]] = load i16, ptr [[TMP1]], align 8
-// TCHECK1-NEXT:    store i16 [[TMP2]], ptr [[AA]], align 2
-// TCHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 1
-// TCHECK1-NEXT:    [[B:%.*]] = load ptr, ptr [[TMP3]], align 8
-// TCHECK1-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 2
-// TCHECK1-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP4]], align 8
-// TCHECK1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 3
-// TCHECK1-NEXT:    [[BN:%.*]] = load ptr, ptr [[TMP6]], align 8
-// TCHECK1-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 4
-// TCHECK1-NEXT:    [[C:%.*]] = load ptr, ptr [[TMP7]], align 8
-// TCHECK1-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 5
-// TCHECK1-NEXT:    [[TMP9:%.*]] = load i64, ptr [[TMP8]], align 8
-// TCHECK1-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 6
-// TCHECK1-NEXT:    [[TMP11:%.*]] = load i64, ptr [[TMP10]], align 8
-// TCHECK1-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 7
-// TCHECK1-NEXT:    [[CN:%.*]] = load ptr, ptr [[TMP12]], align 8
-// TCHECK1-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 8
-// TCHECK1-NEXT:    [[D:%.*]] = load ptr, ptr [[TMP13]], align 8
-// TCHECK1-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 9
-// TCHECK1-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// TCHECK1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// TCHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
+// TCHECK1-NEXT:    [[TMP3:%.*]] = load i16, ptr [[TMP2]], align 8
+// TCHECK1-NEXT:    store i16 [[TMP3]], ptr [[AA]], align 2
+// TCHECK1-NEXT:    [[TMP4:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// TCHECK1-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
+// TCHECK1-NEXT:    [[B:%.*]] = load ptr, ptr [[TMP5]], align 8
+// TCHECK1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// TCHECK1-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
+// TCHECK1-NEXT:    [[TMP8:%.*]] = load i64, ptr [[TMP7]], align 8
+// TCHECK1-NEXT:    [[TMP9:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 3
+// TCHECK1-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[TMP9]], align 8
+// TCHECK1-NEXT:    [[BN:%.*]] = load ptr, ptr [[TMP10]], align 8
+// TCHECK1-NEXT:    [[TMP11:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 4
+// TCHECK1-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[TMP11]], align 8
+// TCHECK1-NEXT:    [[C:%.*]] = load ptr, ptr [[TMP12]], align 8
+// TCHECK1-NEXT:    [[TMP13:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 5
+// TCHECK1-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[TMP13]], align 8
+// TCHECK1-NEXT:    [[TMP15:%.*]] = load i64, ptr [[TMP14]], align 8
+// TCHECK1-NEXT:    [[TMP16:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 6
+// TCHECK1-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[TMP16]], align 8
+// TCHECK1-NEXT:    [[TMP18:%.*]] = load i64, ptr [[TMP17]], align 8
+// TCHECK1-NEXT:    [[TMP19:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 7
+// TCHECK1-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[TMP19]], align 8
+// TCHECK1-NEXT:    [[CN:%.*]] = load ptr, ptr [[TMP20]], align 8
+// TCHECK1-NEXT:    [[TMP21:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 8
+// TCHECK1-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[TMP21]], align 8
+// TCHECK1-NEXT:    [[D:%.*]] = load ptr, ptr [[TMP22]], align 8
+// TCHECK1-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 9
+// TCHECK1-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// TCHECK1-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP23]], align 8
 // TCHECK1-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 8
 // TCHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[B2]], ptr align 4 [[B]], i64 40, i1 false)
-// TCHECK1-NEXT:    [[TMP14:%.*]] = call ptr @llvm.stacksave.p0()
-// TCHECK1-NEXT:    store ptr [[TMP14]], ptr [[SAVED_STACK]], align 8
-// TCHECK1-NEXT:    [[VLA:%.*]] = alloca float, i64 [[TMP5]], align 4
-// TCHECK1-NEXT:    store i64 [[TMP5]], ptr [[__VLA_EXPR0]], align 8
-// TCHECK1-NEXT:    [[TMP15:%.*]] = mul nuw i64 [[TMP5]], 4
-// TCHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VLA]], ptr align 4 [[BN]], i64 [[TMP15]], i1 false)
+// TCHECK1-NEXT:    [[TMP24:%.*]] = call ptr @llvm.stacksave.p0()
+// TCHECK1-NEXT:    store ptr [[TMP24]], ptr [[SAVED_STACK]], align 8
+// TCHECK1-NEXT:    [[VLA:%.*]] = alloca float, i64 [[TMP8]], align 4
+// TCHECK1-NEXT:    store i64 [[TMP8]], ptr [[__VLA_EXPR0]], align 8
+// TCHECK1-NEXT:    [[TMP25:%.*]] = mul nuw i64 [[TMP8]], 4
+// TCHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VLA]], ptr align 4 [[BN]], i64 [[TMP25]], i1 false)
 // TCHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[C3]], ptr align 8 [[C]], i64 400, i1 false)
-// TCHECK1-NEXT:    [[TMP16:%.*]] = mul nuw i64 [[TMP9]], [[TMP11]]
-// TCHECK1-NEXT:    [[VLA4:%.*]] = alloca double, i64 [[TMP16]], align 8
-// TCHECK1-NEXT:    store i64 [[TMP9]], ptr [[__VLA_EXPR1]], align 8
-// TCHECK1-NEXT:    store i64 [[TMP11]], ptr [[__VLA_EXPR2]], align 8
-// TCHECK1-NEXT:    [[TMP17:%.*]] = mul nuw i64 [[TMP9]], [[TMP11]]
-// TCHECK1-NEXT:    [[TMP18:%.*]] = mul nuw i64 [[TMP17]], 8
-// TCHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[VLA4]], ptr align 8 [[CN]], i64 [[TMP18]], i1 false)
+// TCHECK1-NEXT:    [[TMP26:%.*]] = mul nuw i64 [[TMP15]], [[TMP18]]
+// TCHECK1-NEXT:    [[VLA4:%.*]] = alloca double, i64 [[TMP26]], align 8
+// TCHECK1-NEXT:    store i64 [[TMP15]], ptr [[__VLA_EXPR1]], align 8
+// TCHECK1-NEXT:    store i64 [[TMP18]], ptr [[__VLA_EXPR2]], align 8
+// TCHECK1-NEXT:    [[TMP27:%.*]] = mul nuw i64 [[TMP15]], [[TMP18]]
+// TCHECK1-NEXT:    [[TMP28:%.*]] = mul nuw i64 [[TMP27]], 8
+// TCHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[VLA4]], ptr align 8 [[CN]], i64 [[TMP28]], i1 false)
 // TCHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[D5]], ptr align 8 [[D]], i64 16, i1 false)
-// TCHECK1-NEXT:    [[TMP19:%.*]] = load i16, ptr [[AA]], align 2
-// TCHECK1-NEXT:    [[CONV:%.*]] = sext i16 [[TMP19]] to i32
+// TCHECK1-NEXT:    [[TMP29:%.*]] = load i16, ptr [[AA]], align 2
+// TCHECK1-NEXT:    [[CONV:%.*]] = sext i16 [[TMP29]] to i32
 // TCHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV]], 1
 // TCHECK1-NEXT:    [[CONV6:%.*]] = trunc i32 [[ADD]] to i16
 // TCHECK1-NEXT:    store i16 [[CONV6]], ptr [[AA]], align 2
@@ -10484,16 +10528,16 @@ int bar(int n, double *ptr) {
 // TCHECK1-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds [5 x [10 x double]], ptr [[C3]], i64 0, i64 1
 // TCHECK1-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds [10 x double], ptr [[ARRAYIDX8]], i64 0, i64 2
 // TCHECK1-NEXT:    store double 1.000000e+00, ptr [[ARRAYIDX9]], align 8
-// TCHECK1-NEXT:    [[TMP20:%.*]] = mul nsw i64 1, [[TMP11]]
-// TCHECK1-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds double, ptr [[VLA4]], i64 [[TMP20]]
+// TCHECK1-NEXT:    [[TMP30:%.*]] = mul nsw i64 1, [[TMP18]]
+// TCHECK1-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds double, ptr [[VLA4]], i64 [[TMP30]]
 // TCHECK1-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds double, ptr [[ARRAYIDX10]], i64 3
 // TCHECK1-NEXT:    store double 1.000000e+00, ptr [[ARRAYIDX11]], align 8
 // TCHECK1-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TT]], ptr [[D5]], i32 0, i32 0
 // TCHECK1-NEXT:    store i64 1, ptr [[X]], align 8
 // TCHECK1-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_TT]], ptr [[D5]], i32 0, i32 1
 // TCHECK1-NEXT:    store i8 1, ptr [[Y]], align 8
-// TCHECK1-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8
-// TCHECK1-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP21]])
+// TCHECK1-NEXT:    [[TMP31:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8
+// TCHECK1-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP31]])
 // TCHECK1-NEXT:    ret void
 //
 //
@@ -10504,22 +10548,25 @@ int bar(int n, double *ptr) {
 // TCHECK1-NEXT:    [[DYN_PTR1:%.*]] = alloca ptr, align 8
 // TCHECK1-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // TCHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// TCHECK1-NEXT:    [[PTR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 0
-// TCHECK1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 1
-// TCHECK1-NEXT:    [[E:%.*]] = load ptr, ptr [[TMP1]], align 8
-// TCHECK1-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 2
-// TCHECK1-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// TCHECK1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// TCHECK1-NEXT:    [[PTR:%.*]] = load ptr, ptr [[TMP1]], align 8
+// TCHECK1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// TCHECK1-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 8
+// TCHECK1-NEXT:    [[E:%.*]] = load ptr, ptr [[TMP3]], align 8
+// TCHECK1-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// TCHECK1-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// TCHECK1-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP4]], align 8
 // TCHECK1-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 8
 // TCHECK1-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TT_0:%.*]], ptr [[E]], i32 0, i32 0
-// TCHECK1-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4
-// TCHECK1-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP2]] to double
-// TCHECK1-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[PTR]], align 8
-// TCHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i64 0
+// TCHECK1-NEXT:    [[TMP5:%.*]] = load i32, ptr [[X]], align 4
+// TCHECK1-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP5]] to double
+// TCHECK1-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[PTR]], align 8
+// TCHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[TMP6]], i64 0
 // TCHECK1-NEXT:    store double [[CONV]], ptr [[ARRAYIDX]], align 8
-// TCHECK1-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[PTR]], align 8
-// TCHECK1-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, ptr [[TMP4]], i64 0
-// TCHECK1-NEXT:    [[TMP5:%.*]] = load double, ptr [[ARRAYIDX2]], align 8
-// TCHECK1-NEXT:    [[INC:%.*]] = fadd double [[TMP5]], 1.000000e+00
+// TCHECK1-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[PTR]], align 8
+// TCHECK1-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, ptr [[TMP7]], i64 0
+// TCHECK1-NEXT:    [[TMP8:%.*]] = load double, ptr [[ARRAYIDX2]], align 8
+// TCHECK1-NEXT:    [[INC:%.*]] = fadd double [[TMP8]], 1.000000e+00
 // TCHECK1-NEXT:    store double [[INC]], ptr [[ARRAYIDX2]], align 8
 // TCHECK1-NEXT:    ret void
 //
@@ -10534,29 +10581,33 @@ int bar(int n, double *ptr) {
 // TCHECK1-NEXT:    [[B2:%.*]] = alloca [10 x i32], align 4
 // TCHECK1-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // TCHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// TCHECK1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 0
-// TCHECK1-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 8
-// TCHECK1-NEXT:    store i32 [[TMP2]], ptr [[A]], align 4
-// TCHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 1
-// TCHECK1-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP3]], align 8
-// TCHECK1-NEXT:    store i8 [[TMP4]], ptr [[AAA]], align 1
-// TCHECK1-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 2
-// TCHECK1-NEXT:    [[B:%.*]] = load ptr, ptr [[TMP5]], align 8
-// TCHECK1-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 3
-// TCHECK1-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// TCHECK1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// TCHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
+// TCHECK1-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 8
+// TCHECK1-NEXT:    store i32 [[TMP3]], ptr [[A]], align 4
+// TCHECK1-NEXT:    [[TMP4:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// TCHECK1-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
+// TCHECK1-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 8
+// TCHECK1-NEXT:    store i8 [[TMP6]], ptr [[AAA]], align 1
+// TCHECK1-NEXT:    [[TMP7:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// TCHECK1-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP7]], align 8
+// TCHECK1-NEXT:    [[B:%.*]] = load ptr, ptr [[TMP8]], align 8
+// TCHECK1-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 3
+// TCHECK1-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// TCHECK1-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP9]], align 8
 // TCHECK1-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 8
 // TCHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[B2]], ptr align 4 [[B]], i64 40, i1 false)
-// TCHECK1-NEXT:    [[TMP6:%.*]] = load i32, ptr [[A]], align 4
-// TCHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP6]], 1
+// TCHECK1-NEXT:    [[TMP10:%.*]] = load i32, ptr [[A]], align 4
+// TCHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP10]], 1
 // TCHECK1-NEXT:    store i32 [[ADD]], ptr [[A]], align 4
-// TCHECK1-NEXT:    [[TMP7:%.*]] = load i8, ptr [[AAA]], align 1
-// TCHECK1-NEXT:    [[CONV:%.*]] = sext i8 [[TMP7]] to i32
+// TCHECK1-NEXT:    [[TMP11:%.*]] = load i8, ptr [[AAA]], align 1
+// TCHECK1-NEXT:    [[CONV:%.*]] = sext i8 [[TMP11]] to i32
 // TCHECK1-NEXT:    [[ADD3:%.*]] = add nsw i32 [[CONV]], 1
 // TCHECK1-NEXT:    [[CONV4:%.*]] = trunc i32 [[ADD3]] to i8
 // TCHECK1-NEXT:    store i8 [[CONV4]], ptr [[AAA]], align 1
 // TCHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x i32], ptr [[B2]], i64 0, i64 2
-// TCHECK1-NEXT:    [[TMP8:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-// TCHECK1-NEXT:    [[ADD5:%.*]] = add nsw i32 [[TMP8]], 1
+// TCHECK1-NEXT:    [[TMP12:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+// TCHECK1-NEXT:    [[ADD5:%.*]] = add nsw i32 [[TMP12]], 1
 // TCHECK1-NEXT:    store i32 [[ADD5]], ptr [[ARRAYIDX]], align 4
 // TCHECK1-NEXT:    ret void
 //
@@ -10572,45 +10623,51 @@ int bar(int n, double *ptr) {
 // TCHECK1-NEXT:    [[__VLA_EXPR1:%.*]] = alloca i64, align 8
 // TCHECK1-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // TCHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// TCHECK1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 0
-// TCHECK1-NEXT:    [[THIS:%.*]] = load ptr, ptr [[TMP1]], align 8
-// TCHECK1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 1
-// TCHECK1-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 8
-// TCHECK1-NEXT:    store i32 [[TMP3]], ptr [[B]], align 4
-// TCHECK1-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 2
-// TCHECK1-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP4]], align 8
-// TCHECK1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 3
-// TCHECK1-NEXT:    [[TMP7:%.*]] = load i64, ptr [[TMP6]], align 8
-// TCHECK1-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 4
-// TCHECK1-NEXT:    [[C:%.*]] = load ptr, ptr [[TMP8]], align 8
-// TCHECK1-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 5
-// TCHECK1-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// TCHECK1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// TCHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
+// TCHECK1-NEXT:    [[THIS:%.*]] = load ptr, ptr [[TMP2]], align 8
+// TCHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// TCHECK1-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP3]], align 8
+// TCHECK1-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 8
+// TCHECK1-NEXT:    store i32 [[TMP5]], ptr [[B]], align 4
+// TCHECK1-NEXT:    [[TMP6:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// TCHECK1-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
+// TCHECK1-NEXT:    [[TMP8:%.*]] = load i64, ptr [[TMP7]], align 8
+// TCHECK1-NEXT:    [[TMP9:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 3
+// TCHECK1-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[TMP9]], align 8
+// TCHECK1-NEXT:    [[TMP11:%.*]] = load i64, ptr [[TMP10]], align 8
+// TCHECK1-NEXT:    [[TMP12:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 4
+// TCHECK1-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[TMP12]], align 8
+// TCHECK1-NEXT:    [[C:%.*]] = load ptr, ptr [[TMP13]], align 8
+// TCHECK1-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 5
+// TCHECK1-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// TCHECK1-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP14]], align 8
 // TCHECK1-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 8
-// TCHECK1-NEXT:    [[TMP9:%.*]] = call ptr @llvm.stacksave.p0()
-// TCHECK1-NEXT:    store ptr [[TMP9]], ptr [[SAVED_STACK]], align 8
-// TCHECK1-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP5]], [[TMP7]]
-// TCHECK1-NEXT:    [[VLA:%.*]] = alloca i16, i64 [[TMP10]], align 2
-// TCHECK1-NEXT:    store i64 [[TMP5]], ptr [[__VLA_EXPR0]], align 8
-// TCHECK1-NEXT:    store i64 [[TMP7]], ptr [[__VLA_EXPR1]], align 8
-// TCHECK1-NEXT:    [[TMP11:%.*]] = mul nuw i64 [[TMP5]], [[TMP7]]
-// TCHECK1-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP11]], 2
-// TCHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 2 [[VLA]], ptr align 2 [[C]], i64 [[TMP12]], i1 false)
-// TCHECK1-NEXT:    [[TMP13:%.*]] = load i32, ptr [[B]], align 4
-// TCHECK1-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP13]] to double
+// TCHECK1-NEXT:    [[TMP15:%.*]] = call ptr @llvm.stacksave.p0()
+// TCHECK1-NEXT:    store ptr [[TMP15]], ptr [[SAVED_STACK]], align 8
+// TCHECK1-NEXT:    [[TMP16:%.*]] = mul nuw i64 [[TMP8]], [[TMP11]]
+// TCHECK1-NEXT:    [[VLA:%.*]] = alloca i16, i64 [[TMP16]], align 2
+// TCHECK1-NEXT:    store i64 [[TMP8]], ptr [[__VLA_EXPR0]], align 8
+// TCHECK1-NEXT:    store i64 [[TMP11]], ptr [[__VLA_EXPR1]], align 8
+// TCHECK1-NEXT:    [[TMP17:%.*]] = mul nuw i64 [[TMP8]], [[TMP11]]
+// TCHECK1-NEXT:    [[TMP18:%.*]] = mul nuw i64 [[TMP17]], 2
+// TCHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 2 [[VLA]], ptr align 2 [[C]], i64 [[TMP18]], i1 false)
+// TCHECK1-NEXT:    [[TMP19:%.*]] = load i32, ptr [[B]], align 4
+// TCHECK1-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP19]] to double
 // TCHECK1-NEXT:    [[ADD:%.*]] = fadd double [[CONV]], 1.500000e+00
 // TCHECK1-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_S1:%.*]], ptr [[THIS]], i32 0, i32 0
 // TCHECK1-NEXT:    store double [[ADD]], ptr [[A]], align 8
 // TCHECK1-NEXT:    [[A2:%.*]] = getelementptr inbounds nuw [[STRUCT_S1]], ptr [[THIS]], i32 0, i32 0
-// TCHECK1-NEXT:    [[TMP14:%.*]] = load double, ptr [[A2]], align 8
-// TCHECK1-NEXT:    [[INC:%.*]] = fadd double [[TMP14]], 1.000000e+00
+// TCHECK1-NEXT:    [[TMP20:%.*]] = load double, ptr [[A2]], align 8
+// TCHECK1-NEXT:    [[INC:%.*]] = fadd double [[TMP20]], 1.000000e+00
 // TCHECK1-NEXT:    store double [[INC]], ptr [[A2]], align 8
 // TCHECK1-NEXT:    [[CONV3:%.*]] = fptosi double [[INC]] to i16
-// TCHECK1-NEXT:    [[TMP15:%.*]] = mul nsw i64 1, [[TMP7]]
-// TCHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[VLA]], i64 [[TMP15]]
+// TCHECK1-NEXT:    [[TMP21:%.*]] = mul nsw i64 1, [[TMP11]]
+// TCHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[VLA]], i64 [[TMP21]]
 // TCHECK1-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i16, ptr [[ARRAYIDX]], i64 1
 // TCHECK1-NEXT:    store i16 [[CONV3]], ptr [[ARRAYIDX4]], align 2
-// TCHECK1-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8
-// TCHECK1-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP16]])
+// TCHECK1-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8
+// TCHECK1-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP22]])
 // TCHECK1-NEXT:    ret void
 //
 //
@@ -10623,21 +10680,24 @@ int bar(int n, double *ptr) {
 // TCHECK1-NEXT:    [[B2:%.*]] = alloca [10 x i32], align 4
 // TCHECK1-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 8
 // TCHECK1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 8
-// TCHECK1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 0
-// TCHECK1-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 8
-// TCHECK1-NEXT:    store i32 [[TMP2]], ptr [[A]], align 4
-// TCHECK1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 1
-// TCHECK1-NEXT:    [[B:%.*]] = load ptr, ptr [[TMP3]], align 8
-// TCHECK1-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i64, ptr [[TMP0]], i32 2
-// TCHECK1-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// TCHECK1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// TCHECK1-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 8
+// TCHECK1-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 8
+// TCHECK1-NEXT:    store i32 [[TMP3]], ptr [[A]], align 4
+// TCHECK1-NEXT:    [[TMP4:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// TCHECK1-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
+// TCHECK1-NEXT:    [[B:%.*]] = load ptr, ptr [[TMP5]], align 8
+// TCHECK1-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// TCHECK1-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 8
+// TCHECK1-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP6]], align 8
 // TCHECK1-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 8
 // TCHECK1-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[B2]], ptr align 4 [[B]], i64 40, i1 false)
-// TCHECK1-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
-// TCHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP4]], 1
+// TCHECK1-NEXT:    [[TMP7:%.*]] = load i32, ptr [[A]], align 4
+// TCHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP7]], 1
 // TCHECK1-NEXT:    store i32 [[ADD]], ptr [[A]], align 4
 // TCHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x i32], ptr [[B2]], i64 0, i64 2
-// TCHECK1-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-// TCHECK1-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP5]], 1
+// TCHECK1-NEXT:    [[TMP8:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+// TCHECK1-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP8]], 1
 // TCHECK1-NEXT:    store i32 [[ADD3]], ptr [[ARRAYIDX]], align 4
 // TCHECK1-NEXT:    ret void
 //
@@ -10651,15 +10711,19 @@ int bar(int n, double *ptr) {
 // TCHECK2-NEXT:    [[DYN_PTR1:%.*]] = alloca ptr, align 4
 // TCHECK2-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 4
 // TCHECK2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 4
-// TCHECK2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 0
-// TCHECK2-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
-// TCHECK2-NEXT:    store i32 [[TMP2]], ptr [[A]], align 4
-// TCHECK2-NEXT:    [[P:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 1
-// TCHECK2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 2
-// TCHECK2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
-// TCHECK2-NEXT:    store i32 [[TMP4]], ptr [[GA]], align 4
-// TCHECK2-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 3
-// TCHECK2-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// TCHECK2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// TCHECK2-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 4
+// TCHECK2-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
+// TCHECK2-NEXT:    store i32 [[TMP3]], ptr [[A]], align 4
+// TCHECK2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// TCHECK2-NEXT:    [[P:%.*]] = load ptr, ptr [[TMP4]], align 4
+// TCHECK2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// TCHECK2-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[TMP5]], align 4
+// TCHECK2-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4
+// TCHECK2-NEXT:    store i32 [[TMP7]], ptr [[GA]], align 4
+// TCHECK2-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 3
+// TCHECK2-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// TCHECK2-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP8]], align 4
 // TCHECK2-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 4
 // TCHECK2-NEXT:    ret void
 //
@@ -10679,46 +10743,56 @@ int bar(int n, double *ptr) {
 // TCHECK2-NEXT:    [[D5:%.*]] = alloca [[STRUCT_TT:%.*]], align 4
 // TCHECK2-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 4
 // TCHECK2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 4
-// TCHECK2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 0
-// TCHECK2-NEXT:    [[TMP2:%.*]] = load i16, ptr [[TMP1]], align 4
-// TCHECK2-NEXT:    store i16 [[TMP2]], ptr [[AA]], align 2
-// TCHECK2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 1
-// TCHECK2-NEXT:    [[B:%.*]] = load ptr, ptr [[TMP3]], align 4
-// TCHECK2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 2
-// TCHECK2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
-// TCHECK2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 3
-// TCHECK2-NEXT:    [[BN:%.*]] = load ptr, ptr [[TMP6]], align 4
-// TCHECK2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 4
-// TCHECK2-NEXT:    [[C:%.*]] = load ptr, ptr [[TMP7]], align 4
-// TCHECK2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 5
-// TCHECK2-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP8]], align 4
-// TCHECK2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 6
-// TCHECK2-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP10]], align 4
-// TCHECK2-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 7
-// TCHECK2-NEXT:    [[CN:%.*]] = load ptr, ptr [[TMP12]], align 4
-// TCHECK2-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 8
-// TCHECK2-NEXT:    [[D:%.*]] = load ptr, ptr [[TMP13]], align 4
-// TCHECK2-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 9
-// TCHECK2-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// TCHECK2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// TCHECK2-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 4
+// TCHECK2-NEXT:    [[TMP3:%.*]] = load i16, ptr [[TMP2]], align 4
+// TCHECK2-NEXT:    store i16 [[TMP3]], ptr [[AA]], align 2
+// TCHECK2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// TCHECK2-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 4
+// TCHECK2-NEXT:    [[B:%.*]] = load ptr, ptr [[TMP5]], align 4
+// TCHECK2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// TCHECK2-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 4
+// TCHECK2-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
+// TCHECK2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 3
+// TCHECK2-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[TMP9]], align 4
+// TCHECK2-NEXT:    [[BN:%.*]] = load ptr, ptr [[TMP10]], align 4
+// TCHECK2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 4
+// TCHECK2-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[TMP11]], align 4
+// TCHECK2-NEXT:    [[C:%.*]] = load ptr, ptr [[TMP12]], align 4
+// TCHECK2-NEXT:    [[TMP13:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 5
+// TCHECK2-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[TMP13]], align 4
+// TCHECK2-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP14]], align 4
+// TCHECK2-NEXT:    [[TMP16:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 6
+// TCHECK2-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[TMP16]], align 4
+// TCHECK2-NEXT:    [[TMP18:%.*]] = load i32, ptr [[TMP17]], align 4
+// TCHECK2-NEXT:    [[TMP19:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 7
+// TCHECK2-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[TMP19]], align 4
+// TCHECK2-NEXT:    [[CN:%.*]] = load ptr, ptr [[TMP20]], align 4
+// TCHECK2-NEXT:    [[TMP21:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 8
+// TCHECK2-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[TMP21]], align 4
+// TCHECK2-NEXT:    [[D:%.*]] = load ptr, ptr [[TMP22]], align 4
+// TCHECK2-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 9
+// TCHECK2-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// TCHECK2-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP23]], align 4
 // TCHECK2-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 4
 // TCHECK2-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[B2]], ptr align 4 [[B]], i32 40, i1 false)
-// TCHECK2-NEXT:    [[TMP14:%.*]] = call ptr @llvm.stacksave.p0()
-// TCHECK2-NEXT:    store ptr [[TMP14]], ptr [[SAVED_STACK]], align 4
-// TCHECK2-NEXT:    [[VLA:%.*]] = alloca float, i32 [[TMP5]], align 4
-// TCHECK2-NEXT:    store i32 [[TMP5]], ptr [[__VLA_EXPR0]], align 4
-// TCHECK2-NEXT:    [[TMP15:%.*]] = mul nuw i32 [[TMP5]], 4
-// TCHECK2-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[VLA]], ptr align 4 [[BN]], i32 [[TMP15]], i1 false)
+// TCHECK2-NEXT:    [[TMP24:%.*]] = call ptr @llvm.stacksave.p0()
+// TCHECK2-NEXT:    store ptr [[TMP24]], ptr [[SAVED_STACK]], align 4
+// TCHECK2-NEXT:    [[VLA:%.*]] = alloca float, i32 [[TMP8]], align 4
+// TCHECK2-NEXT:    store i32 [[TMP8]], ptr [[__VLA_EXPR0]], align 4
+// TCHECK2-NEXT:    [[TMP25:%.*]] = mul nuw i32 [[TMP8]], 4
+// TCHECK2-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[VLA]], ptr align 4 [[BN]], i32 [[TMP25]], i1 false)
 // TCHECK2-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 8 [[C3]], ptr align 8 [[C]], i32 400, i1 false)
-// TCHECK2-NEXT:    [[TMP16:%.*]] = mul nuw i32 [[TMP9]], [[TMP11]]
-// TCHECK2-NEXT:    [[VLA4:%.*]] = alloca double, i32 [[TMP16]], align 8
-// TCHECK2-NEXT:    store i32 [[TMP9]], ptr [[__VLA_EXPR1]], align 4
-// TCHECK2-NEXT:    store i32 [[TMP11]], ptr [[__VLA_EXPR2]], align 4
-// TCHECK2-NEXT:    [[TMP17:%.*]] = mul nuw i32 [[TMP9]], [[TMP11]]
-// TCHECK2-NEXT:    [[TMP18:%.*]] = mul nuw i32 [[TMP17]], 8
-// TCHECK2-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 8 [[VLA4]], ptr align 8 [[CN]], i32 [[TMP18]], i1 false)
+// TCHECK2-NEXT:    [[TMP26:%.*]] = mul nuw i32 [[TMP15]], [[TMP18]]
+// TCHECK2-NEXT:    [[VLA4:%.*]] = alloca double, i32 [[TMP26]], align 8
+// TCHECK2-NEXT:    store i32 [[TMP15]], ptr [[__VLA_EXPR1]], align 4
+// TCHECK2-NEXT:    store i32 [[TMP18]], ptr [[__VLA_EXPR2]], align 4
+// TCHECK2-NEXT:    [[TMP27:%.*]] = mul nuw i32 [[TMP15]], [[TMP18]]
+// TCHECK2-NEXT:    [[TMP28:%.*]] = mul nuw i32 [[TMP27]], 8
+// TCHECK2-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 8 [[VLA4]], ptr align 8 [[CN]], i32 [[TMP28]], i1 false)
 // TCHECK2-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[D5]], ptr align 4 [[D]], i32 12, i1 false)
-// TCHECK2-NEXT:    [[TMP19:%.*]] = load i16, ptr [[AA]], align 2
-// TCHECK2-NEXT:    [[CONV:%.*]] = sext i16 [[TMP19]] to i32
+// TCHECK2-NEXT:    [[TMP29:%.*]] = load i16, ptr [[AA]], align 2
+// TCHECK2-NEXT:    [[CONV:%.*]] = sext i16 [[TMP29]] to i32
 // TCHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV]], 1
 // TCHECK2-NEXT:    [[CONV6:%.*]] = trunc i32 [[ADD]] to i16
 // TCHECK2-NEXT:    store i16 [[CONV6]], ptr [[AA]], align 2
@@ -10729,16 +10803,16 @@ int bar(int n, double *ptr) {
 // TCHECK2-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds [5 x [10 x double]], ptr [[C3]], i32 0, i32 1
 // TCHECK2-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds [10 x double], ptr [[ARRAYIDX8]], i32 0, i32 2
 // TCHECK2-NEXT:    store double 1.000000e+00, ptr [[ARRAYIDX9]], align 8
-// TCHECK2-NEXT:    [[TMP20:%.*]] = mul nsw i32 1, [[TMP11]]
-// TCHECK2-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds double, ptr [[VLA4]], i32 [[TMP20]]
+// TCHECK2-NEXT:    [[TMP30:%.*]] = mul nsw i32 1, [[TMP18]]
+// TCHECK2-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds double, ptr [[VLA4]], i32 [[TMP30]]
 // TCHECK2-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds double, ptr [[ARRAYIDX10]], i32 3
 // TCHECK2-NEXT:    store double 1.000000e+00, ptr [[ARRAYIDX11]], align 8
 // TCHECK2-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TT]], ptr [[D5]], i32 0, i32 0
 // TCHECK2-NEXT:    store i64 1, ptr [[X]], align 4
 // TCHECK2-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_TT]], ptr [[D5]], i32 0, i32 1
 // TCHECK2-NEXT:    store i8 1, ptr [[Y]], align 4
-// TCHECK2-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[SAVED_STACK]], align 4
-// TCHECK2-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP21]])
+// TCHECK2-NEXT:    [[TMP31:%.*]] = load ptr, ptr [[SAVED_STACK]], align 4
+// TCHECK2-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP31]])
 // TCHECK2-NEXT:    ret void
 //
 //
@@ -10749,22 +10823,25 @@ int bar(int n, double *ptr) {
 // TCHECK2-NEXT:    [[DYN_PTR1:%.*]] = alloca ptr, align 4
 // TCHECK2-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 4
 // TCHECK2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 4
-// TCHECK2-NEXT:    [[PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 0
-// TCHECK2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 1
-// TCHECK2-NEXT:    [[E:%.*]] = load ptr, ptr [[TMP1]], align 4
-// TCHECK2-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 2
-// TCHECK2-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// TCHECK2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// TCHECK2-NEXT:    [[PTR:%.*]] = load ptr, ptr [[TMP1]], align 4
+// TCHECK2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// TCHECK2-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 4
+// TCHECK2-NEXT:    [[E:%.*]] = load ptr, ptr [[TMP3]], align 4
+// TCHECK2-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// TCHECK2-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// TCHECK2-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP4]], align 4
 // TCHECK2-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 4
 // TCHECK2-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TT_0:%.*]], ptr [[E]], i32 0, i32 0
-// TCHECK2-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4
-// TCHECK2-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP2]] to double
-// TCHECK2-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[PTR]], align 4
-// TCHECK2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 0
+// TCHECK2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[X]], align 4
+// TCHECK2-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP5]] to double
+// TCHECK2-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[PTR]], align 4
+// TCHECK2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[TMP6]], i32 0
 // TCHECK2-NEXT:    store double [[CONV]], ptr [[ARRAYIDX]], align 4
-// TCHECK2-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[PTR]], align 4
-// TCHECK2-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, ptr [[TMP4]], i32 0
-// TCHECK2-NEXT:    [[TMP5:%.*]] = load double, ptr [[ARRAYIDX2]], align 4
-// TCHECK2-NEXT:    [[INC:%.*]] = fadd double [[TMP5]], 1.000000e+00
+// TCHECK2-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[PTR]], align 4
+// TCHECK2-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, ptr [[TMP7]], i32 0
+// TCHECK2-NEXT:    [[TMP8:%.*]] = load double, ptr [[ARRAYIDX2]], align 4
+// TCHECK2-NEXT:    [[INC:%.*]] = fadd double [[TMP8]], 1.000000e+00
 // TCHECK2-NEXT:    store double [[INC]], ptr [[ARRAYIDX2]], align 4
 // TCHECK2-NEXT:    ret void
 //
@@ -10779,29 +10856,33 @@ int bar(int n, double *ptr) {
 // TCHECK2-NEXT:    [[B2:%.*]] = alloca [10 x i32], align 4
 // TCHECK2-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 4
 // TCHECK2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 4
-// TCHECK2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 0
-// TCHECK2-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
-// TCHECK2-NEXT:    store i32 [[TMP2]], ptr [[A]], align 4
-// TCHECK2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 1
-// TCHECK2-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP3]], align 4
-// TCHECK2-NEXT:    store i8 [[TMP4]], ptr [[AAA]], align 1
-// TCHECK2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 2
-// TCHECK2-NEXT:    [[B:%.*]] = load ptr, ptr [[TMP5]], align 4
-// TCHECK2-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 3
-// TCHECK2-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// TCHECK2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// TCHECK2-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 4
+// TCHECK2-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
+// TCHECK2-NEXT:    store i32 [[TMP3]], ptr [[A]], align 4
+// TCHECK2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// TCHECK2-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 4
+// TCHECK2-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 4
+// TCHECK2-NEXT:    store i8 [[TMP6]], ptr [[AAA]], align 1
+// TCHECK2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// TCHECK2-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP7]], align 4
+// TCHECK2-NEXT:    [[B:%.*]] = load ptr, ptr [[TMP8]], align 4
+// TCHECK2-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 3
+// TCHECK2-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// TCHECK2-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP9]], align 4
 // TCHECK2-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 4
 // TCHECK2-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[B2]], ptr align 4 [[B]], i32 40, i1 false)
-// TCHECK2-NEXT:    [[TMP6:%.*]] = load i32, ptr [[A]], align 4
-// TCHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP6]], 1
+// TCHECK2-NEXT:    [[TMP10:%.*]] = load i32, ptr [[A]], align 4
+// TCHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP10]], 1
 // TCHECK2-NEXT:    store i32 [[ADD]], ptr [[A]], align 4
-// TCHECK2-NEXT:    [[TMP7:%.*]] = load i8, ptr [[AAA]], align 1
-// TCHECK2-NEXT:    [[CONV:%.*]] = sext i8 [[TMP7]] to i32
+// TCHECK2-NEXT:    [[TMP11:%.*]] = load i8, ptr [[AAA]], align 1
+// TCHECK2-NEXT:    [[CONV:%.*]] = sext i8 [[TMP11]] to i32
 // TCHECK2-NEXT:    [[ADD3:%.*]] = add nsw i32 [[CONV]], 1
 // TCHECK2-NEXT:    [[CONV4:%.*]] = trunc i32 [[ADD3]] to i8
 // TCHECK2-NEXT:    store i8 [[CONV4]], ptr [[AAA]], align 1
 // TCHECK2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x i32], ptr [[B2]], i32 0, i32 2
-// TCHECK2-NEXT:    [[TMP8:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-// TCHECK2-NEXT:    [[ADD5:%.*]] = add nsw i32 [[TMP8]], 1
+// TCHECK2-NEXT:    [[TMP12:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+// TCHECK2-NEXT:    [[ADD5:%.*]] = add nsw i32 [[TMP12]], 1
 // TCHECK2-NEXT:    store i32 [[ADD5]], ptr [[ARRAYIDX]], align 4
 // TCHECK2-NEXT:    ret void
 //
@@ -10817,45 +10898,51 @@ int bar(int n, double *ptr) {
 // TCHECK2-NEXT:    [[__VLA_EXPR1:%.*]] = alloca i32, align 4
 // TCHECK2-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 4
 // TCHECK2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 4
-// TCHECK2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 0
-// TCHECK2-NEXT:    [[THIS:%.*]] = load ptr, ptr [[TMP1]], align 4
-// TCHECK2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 1
-// TCHECK2-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
-// TCHECK2-NEXT:    store i32 [[TMP3]], ptr [[B]], align 4
-// TCHECK2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 2
+// TCHECK2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// TCHECK2-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 4
+// TCHECK2-NEXT:    [[THIS:%.*]] = load ptr, ptr [[TMP2]], align 4
+// TCHECK2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// TCHECK2-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP3]], align 4
 // TCHECK2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
-// TCHECK2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 3
-// TCHECK2-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4
-// TCHECK2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 4
-// TCHECK2-NEXT:    [[C:%.*]] = load ptr, ptr [[TMP8]], align 4
-// TCHECK2-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 5
-// TCHECK2-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// TCHECK2-NEXT:    store i32 [[TMP5]], ptr [[B]], align 4
+// TCHECK2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// TCHECK2-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 4
+// TCHECK2-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
+// TCHECK2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 3
+// TCHECK2-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[TMP9]], align 4
+// TCHECK2-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP10]], align 4
+// TCHECK2-NEXT:    [[TMP12:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 4
+// TCHECK2-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[TMP12]], align 4
+// TCHECK2-NEXT:    [[C:%.*]] = load ptr, ptr [[TMP13]], align 4
+// TCHECK2-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 5
+// TCHECK2-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// TCHECK2-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP14]], align 4
 // TCHECK2-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 4
-// TCHECK2-NEXT:    [[TMP9:%.*]] = call ptr @llvm.stacksave.p0()
-// TCHECK2-NEXT:    store ptr [[TMP9]], ptr [[SAVED_STACK]], align 4
-// TCHECK2-NEXT:    [[TMP10:%.*]] = mul nuw i32 [[TMP5]], [[TMP7]]
-// TCHECK2-NEXT:    [[VLA:%.*]] = alloca i16, i32 [[TMP10]], align 2
-// TCHECK2-NEXT:    store i32 [[TMP5]], ptr [[__VLA_EXPR0]], align 4
-// TCHECK2-NEXT:    store i32 [[TMP7]], ptr [[__VLA_EXPR1]], align 4
-// TCHECK2-NEXT:    [[TMP11:%.*]] = mul nuw i32 [[TMP5]], [[TMP7]]
-// TCHECK2-NEXT:    [[TMP12:%.*]] = mul nuw i32 [[TMP11]], 2
-// TCHECK2-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 2 [[VLA]], ptr align 2 [[C]], i32 [[TMP12]], i1 false)
-// TCHECK2-NEXT:    [[TMP13:%.*]] = load i32, ptr [[B]], align 4
-// TCHECK2-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP13]] to double
+// TCHECK2-NEXT:    [[TMP15:%.*]] = call ptr @llvm.stacksave.p0()
+// TCHECK2-NEXT:    store ptr [[TMP15]], ptr [[SAVED_STACK]], align 4
+// TCHECK2-NEXT:    [[TMP16:%.*]] = mul nuw i32 [[TMP8]], [[TMP11]]
+// TCHECK2-NEXT:    [[VLA:%.*]] = alloca i16, i32 [[TMP16]], align 2
+// TCHECK2-NEXT:    store i32 [[TMP8]], ptr [[__VLA_EXPR0]], align 4
+// TCHECK2-NEXT:    store i32 [[TMP11]], ptr [[__VLA_EXPR1]], align 4
+// TCHECK2-NEXT:    [[TMP17:%.*]] = mul nuw i32 [[TMP8]], [[TMP11]]
+// TCHECK2-NEXT:    [[TMP18:%.*]] = mul nuw i32 [[TMP17]], 2
+// TCHECK2-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 2 [[VLA]], ptr align 2 [[C]], i32 [[TMP18]], i1 false)
+// TCHECK2-NEXT:    [[TMP19:%.*]] = load i32, ptr [[B]], align 4
+// TCHECK2-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP19]] to double
 // TCHECK2-NEXT:    [[ADD:%.*]] = fadd double [[CONV]], 1.500000e+00
 // TCHECK2-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_S1:%.*]], ptr [[THIS]], i32 0, i32 0
 // TCHECK2-NEXT:    store double [[ADD]], ptr [[A]], align 4
 // TCHECK2-NEXT:    [[A2:%.*]] = getelementptr inbounds nuw [[STRUCT_S1]], ptr [[THIS]], i32 0, i32 0
-// TCHECK2-NEXT:    [[TMP14:%.*]] = load double, ptr [[A2]], align 4
-// TCHECK2-NEXT:    [[INC:%.*]] = fadd double [[TMP14]], 1.000000e+00
+// TCHECK2-NEXT:    [[TMP20:%.*]] = load double, ptr [[A2]], align 4
+// TCHECK2-NEXT:    [[INC:%.*]] = fadd double [[TMP20]], 1.000000e+00
 // TCHECK2-NEXT:    store double [[INC]], ptr [[A2]], align 4
 // TCHECK2-NEXT:    [[CONV3:%.*]] = fptosi double [[INC]] to i16
-// TCHECK2-NEXT:    [[TMP15:%.*]] = mul nsw i32 1, [[TMP7]]
-// TCHECK2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[VLA]], i32 [[TMP15]]
+// TCHECK2-NEXT:    [[TMP21:%.*]] = mul nsw i32 1, [[TMP11]]
+// TCHECK2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[VLA]], i32 [[TMP21]]
 // TCHECK2-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i16, ptr [[ARRAYIDX]], i32 1
 // TCHECK2-NEXT:    store i16 [[CONV3]], ptr [[ARRAYIDX4]], align 2
-// TCHECK2-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[SAVED_STACK]], align 4
-// TCHECK2-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP16]])
+// TCHECK2-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[SAVED_STACK]], align 4
+// TCHECK2-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP22]])
 // TCHECK2-NEXT:    ret void
 //
 //
@@ -10868,21 +10955,24 @@ int bar(int n, double *ptr) {
 // TCHECK2-NEXT:    [[B2:%.*]] = alloca [10 x i32], align 4
 // TCHECK2-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 4
 // TCHECK2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 4
-// TCHECK2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 0
-// TCHECK2-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
-// TCHECK2-NEXT:    store i32 [[TMP2]], ptr [[A]], align 4
-// TCHECK2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 1
-// TCHECK2-NEXT:    [[B:%.*]] = load ptr, ptr [[TMP3]], align 4
-// TCHECK2-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 2
-// TCHECK2-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// TCHECK2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// TCHECK2-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 4
+// TCHECK2-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
+// TCHECK2-NEXT:    store i32 [[TMP3]], ptr [[A]], align 4
+// TCHECK2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// TCHECK2-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 4
+// TCHECK2-NEXT:    [[B:%.*]] = load ptr, ptr [[TMP5]], align 4
+// TCHECK2-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// TCHECK2-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// TCHECK2-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP6]], align 4
 // TCHECK2-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 4
 // TCHECK2-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[B2]], ptr align 4 [[B]], i32 40, i1 false)
-// TCHECK2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
-// TCHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP4]], 1
+// TCHECK2-NEXT:    [[TMP7:%.*]] = load i32, ptr [[A]], align 4
+// TCHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP7]], 1
 // TCHECK2-NEXT:    store i32 [[ADD]], ptr [[A]], align 4
 // TCHECK2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x i32], ptr [[B2]], i32 0, i32 2
-// TCHECK2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-// TCHECK2-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP5]], 1
+// TCHECK2-NEXT:    [[TMP8:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+// TCHECK2-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP8]], 1
 // TCHECK2-NEXT:    store i32 [[ADD3]], ptr [[ARRAYIDX]], align 4
 // TCHECK2-NEXT:    ret void
 //
@@ -10896,15 +10986,19 @@ int bar(int n, double *ptr) {
 // TCHECK3-NEXT:    [[DYN_PTR1:%.*]] = alloca ptr, align 4
 // TCHECK3-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 4
 // TCHECK3-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 4
-// TCHECK3-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 0
-// TCHECK3-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
-// TCHECK3-NEXT:    store i32 [[TMP2]], ptr [[A]], align 4
-// TCHECK3-NEXT:    [[P:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 1
-// TCHECK3-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 2
-// TCHECK3-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
-// TCHECK3-NEXT:    store i32 [[TMP4]], ptr [[GA]], align 4
-// TCHECK3-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 3
-// TCHECK3-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// TCHECK3-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// TCHECK3-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 4
+// TCHECK3-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
+// TCHECK3-NEXT:    store i32 [[TMP3]], ptr [[A]], align 4
+// TCHECK3-NEXT:    [[TMP4:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// TCHECK3-NEXT:    [[P:%.*]] = load ptr, ptr [[TMP4]], align 4
+// TCHECK3-NEXT:    [[TMP5:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// TCHECK3-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[TMP5]], align 4
+// TCHECK3-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4
+// TCHECK3-NEXT:    store i32 [[TMP7]], ptr [[GA]], align 4
+// TCHECK3-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 3
+// TCHECK3-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// TCHECK3-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP8]], align 4
 // TCHECK3-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 4
 // TCHECK3-NEXT:    ret void
 //
@@ -10924,46 +11018,56 @@ int bar(int n, double *ptr) {
 // TCHECK3-NEXT:    [[D5:%.*]] = alloca [[STRUCT_TT:%.*]], align 4
 // TCHECK3-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 4
 // TCHECK3-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 4
-// TCHECK3-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 0
-// TCHECK3-NEXT:    [[TMP2:%.*]] = load i16, ptr [[TMP1]], align 4
-// TCHECK3-NEXT:    store i16 [[TMP2]], ptr [[AA]], align 2
-// TCHECK3-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 1
-// TCHECK3-NEXT:    [[B:%.*]] = load ptr, ptr [[TMP3]], align 4
-// TCHECK3-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 2
-// TCHECK3-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
-// TCHECK3-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 3
-// TCHECK3-NEXT:    [[BN:%.*]] = load ptr, ptr [[TMP6]], align 4
-// TCHECK3-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 4
-// TCHECK3-NEXT:    [[C:%.*]] = load ptr, ptr [[TMP7]], align 4
-// TCHECK3-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 5
-// TCHECK3-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP8]], align 4
-// TCHECK3-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 6
-// TCHECK3-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP10]], align 4
-// TCHECK3-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 7
-// TCHECK3-NEXT:    [[CN:%.*]] = load ptr, ptr [[TMP12]], align 4
-// TCHECK3-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 8
-// TCHECK3-NEXT:    [[D:%.*]] = load ptr, ptr [[TMP13]], align 4
-// TCHECK3-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 9
-// TCHECK3-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// TCHECK3-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// TCHECK3-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 4
+// TCHECK3-NEXT:    [[TMP3:%.*]] = load i16, ptr [[TMP2]], align 4
+// TCHECK3-NEXT:    store i16 [[TMP3]], ptr [[AA]], align 2
+// TCHECK3-NEXT:    [[TMP4:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// TCHECK3-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 4
+// TCHECK3-NEXT:    [[B:%.*]] = load ptr, ptr [[TMP5]], align 4
+// TCHECK3-NEXT:    [[TMP6:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// TCHECK3-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 4
+// TCHECK3-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
+// TCHECK3-NEXT:    [[TMP9:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 3
+// TCHECK3-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[TMP9]], align 4
+// TCHECK3-NEXT:    [[BN:%.*]] = load ptr, ptr [[TMP10]], align 4
+// TCHECK3-NEXT:    [[TMP11:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 4
+// TCHECK3-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[TMP11]], align 4
+// TCHECK3-NEXT:    [[C:%.*]] = load ptr, ptr [[TMP12]], align 4
+// TCHECK3-NEXT:    [[TMP13:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 5
+// TCHECK3-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[TMP13]], align 4
+// TCHECK3-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP14]], align 4
+// TCHECK3-NEXT:    [[TMP16:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 6
+// TCHECK3-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[TMP16]], align 4
+// TCHECK3-NEXT:    [[TMP18:%.*]] = load i32, ptr [[TMP17]], align 4
+// TCHECK3-NEXT:    [[TMP19:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 7
+// TCHECK3-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[TMP19]], align 4
+// TCHECK3-NEXT:    [[CN:%.*]] = load ptr, ptr [[TMP20]], align 4
+// TCHECK3-NEXT:    [[TMP21:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 8
+// TCHECK3-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[TMP21]], align 4
+// TCHECK3-NEXT:    [[D:%.*]] = load ptr, ptr [[TMP22]], align 4
+// TCHECK3-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 9
+// TCHECK3-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// TCHECK3-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP23]], align 4
 // TCHECK3-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 4
 // TCHECK3-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[B2]], ptr align 4 [[B]], i32 40, i1 false)
-// TCHECK3-NEXT:    [[TMP14:%.*]] = call ptr @llvm.stacksave.p0()
-// TCHECK3-NEXT:    store ptr [[TMP14]], ptr [[SAVED_STACK]], align 4
-// TCHECK3-NEXT:    [[VLA:%.*]] = alloca float, i32 [[TMP5]], align 4
-// TCHECK3-NEXT:    store i32 [[TMP5]], ptr [[__VLA_EXPR0]], align 4
-// TCHECK3-NEXT:    [[TMP15:%.*]] = mul nuw i32 [[TMP5]], 4
-// TCHECK3-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[VLA]], ptr align 4 [[BN]], i32 [[TMP15]], i1 false)
+// TCHECK3-NEXT:    [[TMP24:%.*]] = call ptr @llvm.stacksave.p0()
+// TCHECK3-NEXT:    store ptr [[TMP24]], ptr [[SAVED_STACK]], align 4
+// TCHECK3-NEXT:    [[VLA:%.*]] = alloca float, i32 [[TMP8]], align 4
+// TCHECK3-NEXT:    store i32 [[TMP8]], ptr [[__VLA_EXPR0]], align 4
+// TCHECK3-NEXT:    [[TMP25:%.*]] = mul nuw i32 [[TMP8]], 4
+// TCHECK3-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[VLA]], ptr align 4 [[BN]], i32 [[TMP25]], i1 false)
 // TCHECK3-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 8 [[C3]], ptr align 8 [[C]], i32 400, i1 false)
-// TCHECK3-NEXT:    [[TMP16:%.*]] = mul nuw i32 [[TMP9]], [[TMP11]]
-// TCHECK3-NEXT:    [[VLA4:%.*]] = alloca double, i32 [[TMP16]], align 8
-// TCHECK3-NEXT:    store i32 [[TMP9]], ptr [[__VLA_EXPR1]], align 4
-// TCHECK3-NEXT:    store i32 [[TMP11]], ptr [[__VLA_EXPR2]], align 4
-// TCHECK3-NEXT:    [[TMP17:%.*]] = mul nuw i32 [[TMP9]], [[TMP11]]
-// TCHECK3-NEXT:    [[TMP18:%.*]] = mul nuw i32 [[TMP17]], 8
-// TCHECK3-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 8 [[VLA4]], ptr align 8 [[CN]], i32 [[TMP18]], i1 false)
+// TCHECK3-NEXT:    [[TMP26:%.*]] = mul nuw i32 [[TMP15]], [[TMP18]]
+// TCHECK3-NEXT:    [[VLA4:%.*]] = alloca double, i32 [[TMP26]], align 8
+// TCHECK3-NEXT:    store i32 [[TMP15]], ptr [[__VLA_EXPR1]], align 4
+// TCHECK3-NEXT:    store i32 [[TMP18]], ptr [[__VLA_EXPR2]], align 4
+// TCHECK3-NEXT:    [[TMP27:%.*]] = mul nuw i32 [[TMP15]], [[TMP18]]
+// TCHECK3-NEXT:    [[TMP28:%.*]] = mul nuw i32 [[TMP27]], 8
+// TCHECK3-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 8 [[VLA4]], ptr align 8 [[CN]], i32 [[TMP28]], i1 false)
 // TCHECK3-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[D5]], ptr align 4 [[D]], i32 12, i1 false)
-// TCHECK3-NEXT:    [[TMP19:%.*]] = load i16, ptr [[AA]], align 2
-// TCHECK3-NEXT:    [[CONV:%.*]] = sext i16 [[TMP19]] to i32
+// TCHECK3-NEXT:    [[TMP29:%.*]] = load i16, ptr [[AA]], align 2
+// TCHECK3-NEXT:    [[CONV:%.*]] = sext i16 [[TMP29]] to i32
 // TCHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV]], 1
 // TCHECK3-NEXT:    [[CONV6:%.*]] = trunc i32 [[ADD]] to i16
 // TCHECK3-NEXT:    store i16 [[CONV6]], ptr [[AA]], align 2
@@ -10974,16 +11078,16 @@ int bar(int n, double *ptr) {
 // TCHECK3-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds [5 x [10 x double]], ptr [[C3]], i32 0, i32 1
 // TCHECK3-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds [10 x double], ptr [[ARRAYIDX8]], i32 0, i32 2
 // TCHECK3-NEXT:    store double 1.000000e+00, ptr [[ARRAYIDX9]], align 8
-// TCHECK3-NEXT:    [[TMP20:%.*]] = mul nsw i32 1, [[TMP11]]
-// TCHECK3-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds double, ptr [[VLA4]], i32 [[TMP20]]
+// TCHECK3-NEXT:    [[TMP30:%.*]] = mul nsw i32 1, [[TMP18]]
+// TCHECK3-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds double, ptr [[VLA4]], i32 [[TMP30]]
 // TCHECK3-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds double, ptr [[ARRAYIDX10]], i32 3
 // TCHECK3-NEXT:    store double 1.000000e+00, ptr [[ARRAYIDX11]], align 8
 // TCHECK3-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TT]], ptr [[D5]], i32 0, i32 0
 // TCHECK3-NEXT:    store i64 1, ptr [[X]], align 4
 // TCHECK3-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_TT]], ptr [[D5]], i32 0, i32 1
 // TCHECK3-NEXT:    store i8 1, ptr [[Y]], align 4
-// TCHECK3-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[SAVED_STACK]], align 4
-// TCHECK3-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP21]])
+// TCHECK3-NEXT:    [[TMP31:%.*]] = load ptr, ptr [[SAVED_STACK]], align 4
+// TCHECK3-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP31]])
 // TCHECK3-NEXT:    ret void
 //
 //
@@ -10994,22 +11098,25 @@ int bar(int n, double *ptr) {
 // TCHECK3-NEXT:    [[DYN_PTR1:%.*]] = alloca ptr, align 4
 // TCHECK3-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 4
 // TCHECK3-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 4
-// TCHECK3-NEXT:    [[PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 0
-// TCHECK3-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 1
-// TCHECK3-NEXT:    [[E:%.*]] = load ptr, ptr [[TMP1]], align 4
-// TCHECK3-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 2
-// TCHECK3-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// TCHECK3-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// TCHECK3-NEXT:    [[PTR:%.*]] = load ptr, ptr [[TMP1]], align 4
+// TCHECK3-NEXT:    [[TMP2:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// TCHECK3-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 4
+// TCHECK3-NEXT:    [[E:%.*]] = load ptr, ptr [[TMP3]], align 4
+// TCHECK3-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// TCHECK3-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// TCHECK3-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP4]], align 4
 // TCHECK3-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 4
 // TCHECK3-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TT_0:%.*]], ptr [[E]], i32 0, i32 0
-// TCHECK3-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4
-// TCHECK3-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP2]] to double
-// TCHECK3-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[PTR]], align 4
-// TCHECK3-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 0
+// TCHECK3-NEXT:    [[TMP5:%.*]] = load i32, ptr [[X]], align 4
+// TCHECK3-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP5]] to double
+// TCHECK3-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[PTR]], align 4
+// TCHECK3-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[TMP6]], i32 0
 // TCHECK3-NEXT:    store double [[CONV]], ptr [[ARRAYIDX]], align 4
-// TCHECK3-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[PTR]], align 4
-// TCHECK3-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, ptr [[TMP4]], i32 0
-// TCHECK3-NEXT:    [[TMP5:%.*]] = load double, ptr [[ARRAYIDX2]], align 4
-// TCHECK3-NEXT:    [[INC:%.*]] = fadd double [[TMP5]], 1.000000e+00
+// TCHECK3-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[PTR]], align 4
+// TCHECK3-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, ptr [[TMP7]], i32 0
+// TCHECK3-NEXT:    [[TMP8:%.*]] = load double, ptr [[ARRAYIDX2]], align 4
+// TCHECK3-NEXT:    [[INC:%.*]] = fadd double [[TMP8]], 1.000000e+00
 // TCHECK3-NEXT:    store double [[INC]], ptr [[ARRAYIDX2]], align 4
 // TCHECK3-NEXT:    ret void
 //
@@ -11024,29 +11131,33 @@ int bar(int n, double *ptr) {
 // TCHECK3-NEXT:    [[B2:%.*]] = alloca [10 x i32], align 4
 // TCHECK3-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 4
 // TCHECK3-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 4
-// TCHECK3-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 0
-// TCHECK3-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
-// TCHECK3-NEXT:    store i32 [[TMP2]], ptr [[A]], align 4
-// TCHECK3-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 1
-// TCHECK3-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP3]], align 4
-// TCHECK3-NEXT:    store i8 [[TMP4]], ptr [[AAA]], align 1
-// TCHECK3-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 2
-// TCHECK3-NEXT:    [[B:%.*]] = load ptr, ptr [[TMP5]], align 4
-// TCHECK3-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 3
-// TCHECK3-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// TCHECK3-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// TCHECK3-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 4
+// TCHECK3-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
+// TCHECK3-NEXT:    store i32 [[TMP3]], ptr [[A]], align 4
+// TCHECK3-NEXT:    [[TMP4:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// TCHECK3-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 4
+// TCHECK3-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 4
+// TCHECK3-NEXT:    store i8 [[TMP6]], ptr [[AAA]], align 1
+// TCHECK3-NEXT:    [[TMP7:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// TCHECK3-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP7]], align 4
+// TCHECK3-NEXT:    [[B:%.*]] = load ptr, ptr [[TMP8]], align 4
+// TCHECK3-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 3
+// TCHECK3-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// TCHECK3-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP9]], align 4
 // TCHECK3-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 4
 // TCHECK3-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[B2]], ptr align 4 [[B]], i32 40, i1 false)
-// TCHECK3-NEXT:    [[TMP6:%.*]] = load i32, ptr [[A]], align 4
-// TCHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP6]], 1
+// TCHECK3-NEXT:    [[TMP10:%.*]] = load i32, ptr [[A]], align 4
+// TCHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP10]], 1
 // TCHECK3-NEXT:    store i32 [[ADD]], ptr [[A]], align 4
-// TCHECK3-NEXT:    [[TMP7:%.*]] = load i8, ptr [[AAA]], align 1
-// TCHECK3-NEXT:    [[CONV:%.*]] = sext i8 [[TMP7]] to i32
+// TCHECK3-NEXT:    [[TMP11:%.*]] = load i8, ptr [[AAA]], align 1
+// TCHECK3-NEXT:    [[CONV:%.*]] = sext i8 [[TMP11]] to i32
 // TCHECK3-NEXT:    [[ADD3:%.*]] = add nsw i32 [[CONV]], 1
 // TCHECK3-NEXT:    [[CONV4:%.*]] = trunc i32 [[ADD3]] to i8
 // TCHECK3-NEXT:    store i8 [[CONV4]], ptr [[AAA]], align 1
 // TCHECK3-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x i32], ptr [[B2]], i32 0, i32 2
-// TCHECK3-NEXT:    [[TMP8:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-// TCHECK3-NEXT:    [[ADD5:%.*]] = add nsw i32 [[TMP8]], 1
+// TCHECK3-NEXT:    [[TMP12:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+// TCHECK3-NEXT:    [[ADD5:%.*]] = add nsw i32 [[TMP12]], 1
 // TCHECK3-NEXT:    store i32 [[ADD5]], ptr [[ARRAYIDX]], align 4
 // TCHECK3-NEXT:    ret void
 //
@@ -11062,45 +11173,51 @@ int bar(int n, double *ptr) {
 // TCHECK3-NEXT:    [[__VLA_EXPR1:%.*]] = alloca i32, align 4
 // TCHECK3-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 4
 // TCHECK3-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 4
-// TCHECK3-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 0
-// TCHECK3-NEXT:    [[THIS:%.*]] = load ptr, ptr [[TMP1]], align 4
-// TCHECK3-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 1
-// TCHECK3-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
-// TCHECK3-NEXT:    store i32 [[TMP3]], ptr [[B]], align 4
-// TCHECK3-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 2
+// TCHECK3-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// TCHECK3-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 4
+// TCHECK3-NEXT:    [[THIS:%.*]] = load ptr, ptr [[TMP2]], align 4
+// TCHECK3-NEXT:    [[TMP3:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// TCHECK3-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP3]], align 4
 // TCHECK3-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
-// TCHECK3-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 3
-// TCHECK3-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4
-// TCHECK3-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 4
-// TCHECK3-NEXT:    [[C:%.*]] = load ptr, ptr [[TMP8]], align 4
-// TCHECK3-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 5
-// TCHECK3-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// TCHECK3-NEXT:    store i32 [[TMP5]], ptr [[B]], align 4
+// TCHECK3-NEXT:    [[TMP6:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// TCHECK3-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 4
+// TCHECK3-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP7]], align 4
+// TCHECK3-NEXT:    [[TMP9:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 3
+// TCHECK3-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[TMP9]], align 4
+// TCHECK3-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP10]], align 4
+// TCHECK3-NEXT:    [[TMP12:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 4
+// TCHECK3-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[TMP12]], align 4
+// TCHECK3-NEXT:    [[C:%.*]] = load ptr, ptr [[TMP13]], align 4
+// TCHECK3-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 5
+// TCHECK3-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// TCHECK3-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP14]], align 4
 // TCHECK3-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 4
-// TCHECK3-NEXT:    [[TMP9:%.*]] = call ptr @llvm.stacksave.p0()
-// TCHECK3-NEXT:    store ptr [[TMP9]], ptr [[SAVED_STACK]], align 4
-// TCHECK3-NEXT:    [[TMP10:%.*]] = mul nuw i32 [[TMP5]], [[TMP7]]
-// TCHECK3-NEXT:    [[VLA:%.*]] = alloca i16, i32 [[TMP10]], align 2
-// TCHECK3-NEXT:    store i32 [[TMP5]], ptr [[__VLA_EXPR0]], align 4
-// TCHECK3-NEXT:    store i32 [[TMP7]], ptr [[__VLA_EXPR1]], align 4
-// TCHECK3-NEXT:    [[TMP11:%.*]] = mul nuw i32 [[TMP5]], [[TMP7]]
-// TCHECK3-NEXT:    [[TMP12:%.*]] = mul nuw i32 [[TMP11]], 2
-// TCHECK3-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 2 [[VLA]], ptr align 2 [[C]], i32 [[TMP12]], i1 false)
-// TCHECK3-NEXT:    [[TMP13:%.*]] = load i32, ptr [[B]], align 4
-// TCHECK3-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP13]] to double
+// TCHECK3-NEXT:    [[TMP15:%.*]] = call ptr @llvm.stacksave.p0()
+// TCHECK3-NEXT:    store ptr [[TMP15]], ptr [[SAVED_STACK]], align 4
+// TCHECK3-NEXT:    [[TMP16:%.*]] = mul nuw i32 [[TMP8]], [[TMP11]]
+// TCHECK3-NEXT:    [[VLA:%.*]] = alloca i16, i32 [[TMP16]], align 2
+// TCHECK3-NEXT:    store i32 [[TMP8]], ptr [[__VLA_EXPR0]], align 4
+// TCHECK3-NEXT:    store i32 [[TMP11]], ptr [[__VLA_EXPR1]], align 4
+// TCHECK3-NEXT:    [[TMP17:%.*]] = mul nuw i32 [[TMP8]], [[TMP11]]
+// TCHECK3-NEXT:    [[TMP18:%.*]] = mul nuw i32 [[TMP17]], 2
+// TCHECK3-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 2 [[VLA]], ptr align 2 [[C]], i32 [[TMP18]], i1 false)
+// TCHECK3-NEXT:    [[TMP19:%.*]] = load i32, ptr [[B]], align 4
+// TCHECK3-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP19]] to double
 // TCHECK3-NEXT:    [[ADD:%.*]] = fadd double [[CONV]], 1.500000e+00
 // TCHECK3-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_S1:%.*]], ptr [[THIS]], i32 0, i32 0
 // TCHECK3-NEXT:    store double [[ADD]], ptr [[A]], align 4
 // TCHECK3-NEXT:    [[A2:%.*]] = getelementptr inbounds nuw [[STRUCT_S1]], ptr [[THIS]], i32 0, i32 0
-// TCHECK3-NEXT:    [[TMP14:%.*]] = load double, ptr [[A2]], align 4
-// TCHECK3-NEXT:    [[INC:%.*]] = fadd double [[TMP14]], 1.000000e+00
+// TCHECK3-NEXT:    [[TMP20:%.*]] = load double, ptr [[A2]], align 4
+// TCHECK3-NEXT:    [[INC:%.*]] = fadd double [[TMP20]], 1.000000e+00
 // TCHECK3-NEXT:    store double [[INC]], ptr [[A2]], align 4
 // TCHECK3-NEXT:    [[CONV3:%.*]] = fptosi double [[INC]] to i16
-// TCHECK3-NEXT:    [[TMP15:%.*]] = mul nsw i32 1, [[TMP7]]
-// TCHECK3-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[VLA]], i32 [[TMP15]]
+// TCHECK3-NEXT:    [[TMP21:%.*]] = mul nsw i32 1, [[TMP11]]
+// TCHECK3-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[VLA]], i32 [[TMP21]]
 // TCHECK3-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i16, ptr [[ARRAYIDX]], i32 1
 // TCHECK3-NEXT:    store i16 [[CONV3]], ptr [[ARRAYIDX4]], align 2
-// TCHECK3-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[SAVED_STACK]], align 4
-// TCHECK3-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP16]])
+// TCHECK3-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[SAVED_STACK]], align 4
+// TCHECK3-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP22]])
 // TCHECK3-NEXT:    ret void
 //
 //
@@ -11113,21 +11230,24 @@ int bar(int n, double *ptr) {
 // TCHECK3-NEXT:    [[B2:%.*]] = alloca [10 x i32], align 4
 // TCHECK3-NEXT:    store ptr [[__CONTEXT]], ptr [[__CONTEXT_ADDR]], align 4
 // TCHECK3-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[__CONTEXT_ADDR]], align 4
-// TCHECK3-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 0
-// TCHECK3-NEXT:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
-// TCHECK3-NEXT:    store i32 [[TMP2]], ptr [[A]], align 4
-// TCHECK3-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 1
-// TCHECK3-NEXT:    [[B:%.*]] = load ptr, ptr [[TMP3]], align 4
-// TCHECK3-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i32 2
-// TCHECK3-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// TCHECK3-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 0
+// TCHECK3-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP1]], align 4
+// TCHECK3-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
+// TCHECK3-NEXT:    store i32 [[TMP3]], ptr [[A]], align 4
+// TCHECK3-NEXT:    [[TMP4:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 1
+// TCHECK3-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 4
+// TCHECK3-NEXT:    [[B:%.*]] = load ptr, ptr [[TMP5]], align 4
+// TCHECK3-NEXT:    [[DYN_PTR_ADDR:%.*]] = getelementptr inbounds ptr, ptr [[TMP0]], i32 2
+// TCHECK3-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[DYN_PTR_ADDR]], align 4
+// TCHECK3-NEXT:    [[DYN_PTR:%.*]] = load ptr, ptr [[TMP6]], align 4
 // TCHECK3-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR1]], align 4
 // TCHECK3-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[B2]], ptr align 4 [[B]], i32 40, i1 false)
-// TCHECK3-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
-// TCHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP4]], 1
+// TCHECK3-NEXT:    [[TMP7:%.*]] = load i32, ptr [[A]], align 4
+// TCHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP7]], 1
 // TCHECK3-NEXT:    store i32 [[ADD]], ptr [[A]], align 4
 // TCHECK3-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x i32], ptr [[B2]], i32 0, i32 2
-// TCHECK3-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-// TCHECK3-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP5]], 1
+// TCHECK3-NEXT:    [[TMP8:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+// TCHECK3-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP8]], 1
 // TCHECK3-NEXT:    store i32 [[ADD3]], ptr [[ARRAYIDX]], align 4
 // TCHECK3-NEXT:    ret void
 //

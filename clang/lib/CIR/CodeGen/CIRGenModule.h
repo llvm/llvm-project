@@ -195,19 +195,8 @@ public:
   /// LabelOp. This provides the main lookup table used to resolve block
   /// addresses into their label operations.
   llvm::DenseMap<cir::BlockAddrInfoAttr, cir::LabelOp> blockAddressInfoToLabel;
-  /// Map CIR BlockAddressOps directly to their resolved LabelOps.
-  /// Used once a block address has been successfully lowered to a label.
-  llvm::MapVector<cir::BlockAddressOp, cir::LabelOp> blockAddressToLabel;
-  /// Track CIR BlockAddressOps that cannot be resolved immediately
-  /// because their LabelOp has not yet been emitted. These entries
-  /// are solved later once the corresponding label is available.
-  llvm::DenseSet<cir::BlockAddressOp> unresolvedBlockAddressToLabel;
   cir::LabelOp lookupBlockAddressInfo(cir::BlockAddrInfoAttr blockInfo);
   void mapBlockAddress(cir::BlockAddrInfoAttr blockInfo, cir::LabelOp label);
-  void mapUnresolvedBlockAddress(cir::BlockAddressOp op);
-  void mapResolvedBlockAddress(cir::BlockAddressOp op, cir::LabelOp);
-  void updateResolvedBlockAddress(cir::BlockAddressOp op,
-                                  cir::LabelOp newLabel);
 
   /// Add a global value to the llvmUsed list.
   void addUsedGlobal(cir::CIRGlobalValueInterface gv);
@@ -576,6 +565,16 @@ public:
   /// Determine whether the definition must be emitted; if this returns \c
   /// false, the definition can be emitted lazily if it's used.
   bool mustBeEmitted(const clang::ValueDecl *d);
+
+  /// Check if `fd` ends up calling itself directly through asm label or
+  /// builtin-pointer-to-self trickery (e.g., glibc's `extern inline` libc
+  /// wrappers that call `__builtin_strrchr`, which the codegen lowers to a
+  /// call on the same asm-named symbol).  Emitting an
+  /// `available_externally` body for such a function feeds the LLVM
+  /// Decide whether to emit the body of `gd` to CIR.  Returns false for
+  /// available_externally functions that are trivially recursive (PR9614).
+  /// Mirrors classic CodeGen's `CodeGenModule::shouldEmitFunction`.
+  bool shouldEmitFunction(clang::GlobalDecl gd);
 
   /// Determine whether the definition can be emitted eagerly, or should be
   /// delayed until the end of the translation unit. This is relevant for

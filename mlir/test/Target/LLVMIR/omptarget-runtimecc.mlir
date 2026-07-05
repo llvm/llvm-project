@@ -4,7 +4,7 @@ module attributes {omp.is_target_device = true,  omp.is_gpu = true, omp.target_t
 // CHECK: call spir_func i32 @__kmpc_target_init
 // CHECK: call spir_func void @__kmpc_target_deinit
   llvm.func @target_if_variable(%x : i1) {
-    omp.target if(%x) {
+    omp.target kernel_type(generic) if(%x) {
       omp.terminator
     }
     llvm.return
