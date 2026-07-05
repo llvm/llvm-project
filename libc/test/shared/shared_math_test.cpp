@@ -576,13 +576,13 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
 
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
 
-// Emulated float128 
+// Emulated float128
 // TODO: style
 #include "src/__support/FPUtil/float128.h"
 
 using LIBC_NAMESPACE::fputil::Float128;
 
-TEST(LlvmLibcSharedMathTest, AllEmuFloat128){
+TEST(LlvmLibcSharedMathTest, AllEmuFloat128) {
   EXPECT_FP_EQ(Float128(0.0), LIBC_NAMESPACE::shared::ceilf128(Float128(0.0)));
 }
 
