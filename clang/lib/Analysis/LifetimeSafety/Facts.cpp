@@ -171,12 +171,14 @@ void FactManager::dump(const CFG &Cfg, AnalysisDeclContext &AC,
 
 llvm::ArrayRef<const Fact *>
 FactManager::getBlockContaining(ProgramPoint P) const {
-  for (const auto &BlockToFactsVec : BlockToFacts) {
-    for (const Fact *F : BlockToFactsVec)
-      if (F == P)
-        return BlockToFactsVec;
-  }
-  return {};
+  return BlockToFacts[getBlockID(P)];
 }
 
+size_t FactManager::getBlockID(ProgramPoint P) const {
+  for (size_t i = 0; i < BlockToFacts.size(); ++i)
+    for (const Fact *F : BlockToFacts[i])
+      if (F == P)
+        return i;
+  llvm_unreachable("Failed to find BlockID for given ProgramPoint");
+}
 } // namespace clang::lifetimes::internal
