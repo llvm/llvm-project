@@ -8993,7 +8993,6 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
     // evaluation in a block other than then one that uses it (e.g. to hoist
     // the address of globals out of a loop).  If this is the case, we don't
     // want to forward-subst the cast.
-    
     if (auto *BCI = dyn_cast<BitCastInst>(CI)) {
       // Hoist bitcasts of illegal types to reduce cross-block register pressure
       // and prevent register splitting.
