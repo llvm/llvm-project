@@ -586,7 +586,7 @@ void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
       OS << "(" << DecodeParams << ") {\n";
       OS << "  " << TmpTypeDecl;
       OS << "  [[maybe_unused]] TmpType tmp;\n";
-      OS << Decoder;
+      OS << Decoder.second;
       OS << "  return S;\n";
       OS << "}\n\n";
     }
@@ -618,7 +618,7 @@ void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
     OS << "  default: llvm_unreachable(\"Invalid decoder index!\");\n";
     for (const auto &[Index, Decoder] : enumerate(Decoders)) {
       OS << "  case " << Index << ":\n";
-      OS << Decoder;
+      OS << Decoder.second;
       OS << "    return S;\n";
     }
     OS << "  }\n";
@@ -691,10 +691,13 @@ static std::vector<EncodingIsland> getIslands(const KnownBits &EncodingBits,
 ///   }
 static void emitCheckWithDbgMsg(raw_ostream &OS, indent Indent,
                                 const Twine &CheckCall, StringRef Helper,
-                                const Twine &Args,
-                                bool SetDecodeCompleteOnFail) {
+                                const Twine &Args, bool SetDecodeCompleteOnFail,
+                                bool WithDebug) {
   OS << Indent << "if (!Check(S, " << CheckCall << ")) {\n";
-  OS << Indent << "  LLVM_DEBUG(" << Helper << "(" << Args << "));\n";
+  // The LLVM_DEBUG line is debug-only; it is omitted from the de-duplication key
+  // so that it cannot perturb decoder sharing (see DecoderSet).
+  if (WithDebug)
+    OS << Indent << "  LLVM_DEBUG(" << Helper << "(" << Args << "));\n";
   if (SetDecodeCompleteOnFail)
     OS << Indent << "  DecodeComplete = false;\n";
   OS << Indent << "  return MCDisassembler::Fail;\n";
@@ -704,7 +707,7 @@ static void emitCheckWithDbgMsg(raw_ostream &OS, indent Indent,
 /// Operand-level decoder (emitBinaryParser).
 static void emitDecoderCheckWithOpcDebug(raw_ostream &OS, indent Indent,
                                          const OperandInfo &OpInfo,
-                                         const Twine &CheckCall) {
+                                         const Twine &CheckCall, bool WithDebug) {
   StringRef OpName = OpInfo.Name.empty() ? "opd" : OpInfo.Name;
   StringRef DecoderName = OpInfo.Decoder;
 
@@ -722,25 +725,25 @@ static void emitDecoderCheckWithOpcDebug(raw_ostream &OS, indent Indent,
   }
 
   emitCheckWithDbgMsg(OS, Indent, CheckCall, "reportOperandDecodeFailure", Args,
-                      !OpInfo.HasCompleteDecoder);
+                      !OpInfo.HasCompleteDecoder, WithDebug);
 }
 
 /// Whole-instruction \p DecoderMethod. Used when the encoding
 /// has a custom \p DecoderMethod (whole-instruction decoder).
 static void emitDecoderMethodOpcDebug(raw_ostream &OS, indent Indent,
                                       const InstructionEncoding &Encoding,
-                                      StringRef DecoderMethod) {
+                                      StringRef DecoderMethod, bool WithDebug) {
   StringRef EncName = Encoding.getName();
   emitCheckWithDbgMsg(OS, Indent,
                       formatv("{}(MI, insn, Address, Decoder)", DecoderMethod),
                       "reportInsnDecodeFailure",
                       formatv("\"{}\", \"{}\"", EncName, DecoderMethod),
-                      !Encoding.hasCompleteDecoder());
+                      !Encoding.hasCompleteDecoder(), WithDebug);
 }
 
 static void emitBinaryParser(raw_ostream &OS, indent Indent,
                              const InstructionEncoding &Encoding,
-                             const OperandInfo &OpInfo) {
+                             const OperandInfo &OpInfo, bool WithDebug) {
   if (OpInfo.HasNoEncoding) {
     // If an operand has no encoding, the old behavior is to not decode it
     // automatically and let the target do it. This is error-prone, so the
@@ -758,7 +761,8 @@ static void emitBinaryParser(raw_ostream &OS, indent Indent,
     // This avoids confusion and allows the function to be overloaded if the
     // operand does have an encoding in other instructions.
     emitDecoderCheckWithOpcDebug(OS, Indent, OpInfo,
-                                 formatv("{}(MI, Decoder)", OpInfo.Decoder));
+                                 formatv("{}(MI, Decoder)", OpInfo.Decoder),
+                                 WithDebug);
     return;
   }
 
@@ -794,13 +798,15 @@ static void emitBinaryParser(raw_ostream &OS, indent Indent,
   StringRef Decoder = OpInfo.Decoder;
   if (!Decoder.empty()) {
     emitDecoderCheckWithOpcDebug(
-        OS, Indent, OpInfo, formatv("{}(MI, tmp, Address, Decoder)", Decoder));
+        OS, Indent, OpInfo, formatv("{}(MI, tmp, Address, Decoder)", Decoder),
+        WithDebug);
   } else {
     OS << Indent << "MI.addOperand(MCOperand::createImm(tmp));\n";
   }
 }
 
-static std::string getDecoderString(const InstructionEncoding &Encoding) {
+static std::string getDecoderString(const InstructionEncoding &Encoding,
+                                    bool WithDebug) {
   std::string Decoder;
   raw_string_ostream OS(Decoder);
   indent Indent(UseFnTableInDecodeToMCInst ? 2 : 4);
@@ -808,10 +814,10 @@ static std::string getDecoderString(const InstructionEncoding &Encoding) {
   // If a custom instruction decoder was specified, use that.
   StringRef DecoderMethod = Encoding.getDecoderMethod();
   if (!DecoderMethod.empty()) {
-    emitDecoderMethodOpcDebug(OS, Indent, Encoding, DecoderMethod);
+    emitDecoderMethodOpcDebug(OS, Indent, Encoding, DecoderMethod, WithDebug);
   } else {
     for (const OperandInfo &Op : Encoding.getOperands())
-      emitBinaryParser(OS, Indent, Encoding, Op);
+      emitBinaryParser(OS, Indent, Encoding, Op, WithDebug);
   }
   return Decoder;
 }
@@ -1331,7 +1337,12 @@ DecoderTreeBuilder::convertSingleton(unsigned EncodingID,
                                                NegativeMask.getZExtValue()));
   }
 
-  unsigned DecoderIndex = Ctx.getDecoderIndex(getDecoderString(Encoding));
+  // De-duplicate on the debug-free body so that the per-operand debug logging
+  // (which is compiled out under NDEBUG) cannot change decoder sharing and thus
+  // the generated tables; emit the full body, including any LLVM_DEBUG calls.
+  unsigned DecoderIndex =
+      Ctx.getDecoderIndex(getDecoderString(Encoding, /*WithDebug=*/false),
+                          getDecoderString(Encoding, /*WithDebug=*/true));
   N->addChild(std::make_unique<DecodeNode>(
       Encoding.getName(), Encoding.getInstruction()->EnumVal, DecoderIndex));
 
