@@ -5085,12 +5085,10 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
   // If the base is a MatrixSubscriptExpr, try to create a new
   // MatrixSubscriptExpr.
   auto *matSubscriptE = dyn_cast<MatrixSubscriptExpr>(base);
-  if (matSubscriptE) {
+  if (matSubscriptE && matSubscriptE->isIncomplete()) {
     if (CheckAndReportCommaError(ArgExprs.front()))
       return ExprError();
 
-    assert(matSubscriptE->isIncomplete() &&
-           "base has to be an incomplete matrix subscript");
     return CreateBuiltinMatrixSubscriptExpr(matSubscriptE->getBase(),
                                             matSubscriptE->getRowIdx(),
                                             ArgExprs.front(), rbLoc);
