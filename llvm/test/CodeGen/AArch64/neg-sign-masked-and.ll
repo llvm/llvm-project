@@ -4,8 +4,8 @@
 define i32 @neg_and_sign_mask_i32(i32 %x, i32 %y) {
 ; CHECK-LABEL: neg_and_sign_mask_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, w1, asr #31
-; CHECK-NEXT:    neg w0, w8
+; CHECK-NEXT:    neg w8, w0
+; CHECK-NEXT:    and w0, w8, w1, asr #31
 ; CHECK-NEXT:    ret
   %s = ashr i32 %y, 31
   %a = and i32 %x, %s
@@ -16,8 +16,8 @@ define i32 @neg_and_sign_mask_i32(i32 %x, i32 %y) {
 define i64 @neg_and_sign_mask_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: neg_and_sign_mask_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and x8, x0, x1, asr #63
-; CHECK-NEXT:    neg x0, x8
+; CHECK-NEXT:    neg x8, x0
+; CHECK-NEXT:    and x0, x8, x1, asr #63
 ; CHECK-NEXT:    ret
   %s = ashr i64 %y, 63
   %a = and i64 %x, %s
@@ -28,8 +28,8 @@ define i64 @neg_and_sign_mask_i64(i64 %x, i64 %y) {
 define i32 @neg_and_sign_mask_commuted(i32 %x, i32 %y) {
 ; CHECK-LABEL: neg_and_sign_mask_commuted:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, w1, asr #31
-; CHECK-NEXT:    neg w0, w8
+; CHECK-NEXT:    neg w8, w0
+; CHECK-NEXT:    and w0, w8, w1, asr #31
 ; CHECK-NEXT:    ret
   %s = ashr i32 %y, 31
   %a = and i32 %s, %x
@@ -40,8 +40,8 @@ define i32 @neg_and_sign_mask_commuted(i32 %x, i32 %y) {
 define i32 @neg_bic_sign_mask_i32(i32 %x, i32 %y) {
 ; CHECK-LABEL: neg_bic_sign_mask_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic w8, w0, w1, asr #31
-; CHECK-NEXT:    neg w0, w8
+; CHECK-NEXT:    neg w8, w0
+; CHECK-NEXT:    bic w0, w8, w1, asr #31
 ; CHECK-NEXT:    ret
   %s = ashr i32 %y, 31
   %m = xor i32 %s, -1
@@ -53,8 +53,8 @@ define i32 @neg_bic_sign_mask_i32(i32 %x, i32 %y) {
 define i64 @neg_bic_sign_mask_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: neg_bic_sign_mask_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic x8, x0, x1, asr #63
-; CHECK-NEXT:    neg x0, x8
+; CHECK-NEXT:    neg x8, x0
+; CHECK-NEXT:    bic x0, x8, x1, asr #63
 ; CHECK-NEXT:    ret
   %s = ashr i64 %y, 63
   %m = xor i64 %s, -1
