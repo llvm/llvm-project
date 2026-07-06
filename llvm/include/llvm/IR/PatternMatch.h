@@ -44,6 +44,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/PatternMatchHelpers.h"
 #include <cstdint>
+#include <utility>
 
 using namespace llvm::PatternMatchHelpers;
 

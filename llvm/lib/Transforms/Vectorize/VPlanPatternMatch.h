@@ -18,6 +18,7 @@
 #include "VPlan.h"
 #include "VPlanUtils.h"
 #include "llvm/Support/PatternMatchHelpers.h"
+#include <utility>
 
 using namespace llvm::PatternMatchHelpers;
 
