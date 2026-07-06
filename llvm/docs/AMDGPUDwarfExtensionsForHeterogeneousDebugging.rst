@@ -4227,25 +4227,25 @@ Frame Description Entries (FDE). There is at least one CIE in every non-empty
     If a compilation unit exists for this frame, its address size must match the
     address size here.
 
-5.  ``segment_selector_size`` (ubyte)
+6.  ``segment_selector_size`` (ubyte)
 
     The size of a segment selector in this CIE and any FDEs that use it, in
     bytes.
 
-6.  ``code_alignment_factor`` (unsigned LEB128)
+7.  ``code_alignment_factor`` (unsigned LEB128)
 
     A constant that is factored out of all advance location instructions (see
     :ref:`amdgpu-dwarf-row-creation-instructions`). The resulting value is
     ``(operand * code_alignment_factor)``.
 
-7.  ``data_alignment_factor`` (signed LEB128)
+8.  ``data_alignment_factor`` (signed LEB128)
 
     A constant that is factored out of certain offset instructions (see
     :ref:`amdgpu-dwarf-cfa-definition-instructions` and
     :ref:`amdgpu-dwarf-register-rule-instructions`). The resulting value is
     ``(operand * data_alignment_factor)``.
 
-8.  ``return_address_register`` (unsigned LEB128)
+9.  ``return_address_register`` (unsigned LEB128)
 
     An unsigned LEB128 constant that indicates which column in the rule table
     represents the return address of the subprogram. Note that this column might
@@ -4255,7 +4255,7 @@ Frame Description Entries (FDE). There is at least one CIE in every non-empty
     location of the caller frame. The program location of the top frame is the
     target architecture program counter value of the current thread.
 
-9.  ``initial_instructions`` (array of ubyte)
+10. ``initial_instructions`` (array of ubyte)
 
     A sequence of rules that are interpreted to create the initial setting of
     each column in the table.
@@ -4265,7 +4265,7 @@ Frame Description Entries (FDE). There is at least one CIE in every non-empty
     compilation system authoring body may specify an alternate default value for
     any or all columns.
 
-10. ``padding`` (array of ubyte)
+11. ``padding`` (array of ubyte)
 
     Enough ``DW_CFA_nop`` instructions to make the size of this entry match the
     length value above.
