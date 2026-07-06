@@ -20,9 +20,9 @@ using namespace llvm;
 
 namespace {
 
-/// Expands FORM_TRANSPOSED_REG_TUPLE_{X2|X4}_PSEUDO instructions into a
-/// copy sequences. Note: This expansion occurs immediately before greedy
-/// regalloc and after the pre-RA scheduler.
+/// Expands FORM_TRANSPOSED_REG_TUPLE_{X2|X4}_PSEUDO instructions into copy
+/// sequences. Note: This expansion occurs immediately before greedy regalloc
+/// and after the coalescer and pre-RA scheduler.
 ///
 /// Example:
 ///
@@ -48,7 +48,7 @@ static bool expandFormTransposedRegTuple(MachineBasicBlock &MBB,
     MachineOperand &SrcOp = MI.getOperand(I + 1);
     OrigRegs.push_back(SrcOp.getReg());
 
-    // Ensure that an if operand is killed the kill flag is placed on the final
+    // Ensure that if operand is killed, the kill flag is placed on the final
     // copy for that operand. TODO: Can we remove this? Requesting the live
     // intervals seems to clear the kill flags anyway.
     if (SrcOp.isKill()) {
