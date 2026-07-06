@@ -1989,11 +1989,12 @@ bool VectorCombine::foldSingleElementStore(Instruction &I) {
         SrcAddr != SI->getPointerOperand()->stripPointerCasts())
       return false;
 
+    if (isMemModifiedBetween(Load->getIterator(), SI->getIterator(),
+                             MemoryLocation::get(SI), AA))
+      return false;
     auto ScalarizableIdx =
         canScalarizeAccess(VecTy, Idx, SQ.getWithInstruction(Load));
-    if (ScalarizableIdx.isUnsafe() ||
-        isMemModifiedBetween(Load->getIterator(), SI->getIterator(),
-                             MemoryLocation::get(SI), AA))
+    if (ScalarizableIdx.isUnsafe())
       return false;
 
     // Ensure we add the load back to the worklist BEFORE its users so they can
