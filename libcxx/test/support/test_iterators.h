@@ -1202,6 +1202,8 @@ struct forward_sized_iterator {
     return x.it_ - y.it_;
   }
 };
+static_assert(std::forward_iterator<forward_sized_iterator<>>);
+static_assert(std::sized_sentinel_for<forward_sized_iterator<>, forward_sized_iterator<>>);
 
 namespace adl {
 
