@@ -5,8 +5,6 @@
 ; CHECK-NOT: OpDecorate %[[#]] LinkageAttributes "" Export
 ; CHECK: %[[#FN]] = OpFunction
 
-target triple = "spirv64-unknown-unknown"
-
 define void @0(ptr addrspace(1) %in, ptr addrspace(1) %out, i32 %n) {
 entry:
   %ok = icmp sgt i32 %n, 0
