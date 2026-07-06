@@ -45,9 +45,9 @@ func.func @unsupported_argument_type(%arg0: vector<4xi128>) -> vector<4xi64> {
 
 // Ensure this case not crash
 func.func @unsupported_vector(%arg0: vector<2xi1>) {
-  // expected-error@+1 {{failed to legalize unresolved materialization from ('vector<2x2xi32>') to ('vector<2xi64>') that remained live after conversion}}
+  // expected-error@+1 {{miss source materialization function from ('vector<2x2xi32>') to ('vector<2xi64>')}}
   %cst_0 = arith.constant dense<0> : vector<2xi64>
-  // expected-note@+1 {{see existing live user here}}
+  // expected-note@+1 {{require this materialization is here}}
   %0 = vector.mask %arg0 { vector.multi_reduction <xor>, %cst_0, %cst_0 [] : vector<2xi64> to vector<2xi64> } : vector<2xi1> -> vector<2xi64>
   return
 }

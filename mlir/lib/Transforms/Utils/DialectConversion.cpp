@@ -3383,6 +3383,17 @@ legalizeUnresolvedMaterialization(RewriterBase &rewriter,
       rewriter.replaceOp(op, newMaterialization);
       return success();
     }
+    StringRef direction =
+        info.getMaterializationKind() == MaterializationKind::Target ? "target"
+                                                                     : "source";
+    InFlightDiagnostic diag = op.emitError()
+                              << "miss " << direction
+                              << " materialization function from ("
+                              << inputOperands.getTypes() << ") to ("
+                              << op.getResultTypes() << ")";
+    diag.attachNote(op->getUsers().begin()->getLoc())
+        << "require this materialization is here";
+    return failure();
   }
 
   InFlightDiagnostic diag = op->emitError()
