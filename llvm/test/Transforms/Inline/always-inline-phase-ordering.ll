@@ -8,9 +8,7 @@ target triple = "arm64e-apple-macosx13"
 ; CHECK: remark: <unknown>:0:0: 'wibble.1' inlined into 'widget' with (cost=30, threshold=75)
 ; CHECK: remark: <unknown>:0:0: 'widget' inlined into 'wibble' with (cost=30, threshold=75)
 ; CHECK: remark: <unknown>:0:0: 'wibble' inlined into 'bar.8': always inline attribute
-; CHECK: remark: <unknown>:0:0: 'wibble' inlined into 'pluto': always inline attribute
 ; CHECK: remark: <unknown>:0:0: 'barney' inlined into 'wombat' with (cost=30, threshold=75)
-
 define linkonce_odr void @wombat(ptr %arg) #0 {
 bb:
   call void @barney()

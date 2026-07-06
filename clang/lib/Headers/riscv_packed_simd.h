@@ -115,6 +115,21 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
     return (ty)builtin(__rs1, __rs2, __rd);                                    \
   }
 
+/* Packed Reverse: reverse the order of the elements. Lowered to a single
+ * rev8/rev16/ppairoe.* by the backend's packed reverse-shuffle handling. */
+#define __packed_reverse2(name, ty)                                            \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {           \
+    return __builtin_shufflevector(__rs1, __rs1, 1, 0);                        \
+  }
+#define __packed_reverse4(name, ty)                                            \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {           \
+    return __builtin_shufflevector(__rs1, __rs1, 3, 2, 1, 0);                  \
+  }
+#define __packed_reverse8(name, ty)                                            \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {           \
+    return __builtin_shufflevector(__rs1, __rs1, 7, 6, 5, 4, 3, 2, 1, 0);      \
+  }
+
 // clang-format off: macro call sites have no trailing semicolons, which
 // confuses clang-format into a deeply nested expression.
 
@@ -396,6 +411,20 @@ __packed_unary_op(pnot_u16x4, uint16x4_t, ~)
 __packed_unary_op(pnot_i32x2, int32x2_t, ~)
 __packed_unary_op(pnot_u32x2, uint32x2_t, ~)
 
+/* Packed Reverse (32-bit) */
+__packed_reverse4(prev_i8x4, int8x4_t)
+__packed_reverse4(prev_u8x4, uint8x4_t)
+__packed_reverse2(prev_i16x2, int16x2_t)
+__packed_reverse2(prev_u16x2, uint16x2_t)
+
+/* Packed Reverse (64-bit) */
+__packed_reverse8(prev_i8x8, int8x8_t)
+__packed_reverse8(prev_u8x8, uint8x8_t)
+__packed_reverse4(prev_i16x4, int16x4_t)
+__packed_reverse4(prev_u16x4, uint16x4_t)
+__packed_reverse2(prev_i32x2, int32x2_t)
+__packed_reverse2(prev_u32x2, uint32x2_t)
+
 /* Packed Averaging Addition and Subtraction (32-bit) */
 __packed_binary_builtin(paadd_i8x4, int8x4_t, __builtin_riscv_paadd_i8x4)
 __packed_binary_builtin(paadd_i16x2, int16x2_t, __builtin_riscv_paadd_i16x2)
@@ -489,6 +518,9 @@ __packed_merge_builtin(pmerge_i32x2, int32x2_t, uint32x2_t, __builtin_riscv_pmer
 #undef __packed_binary_builtin_cast
 #undef __packed_reduction
 #undef __packed_merge_builtin
+#undef __packed_reverse2
+#undef __packed_reverse4
+#undef __packed_reverse8
 #undef __DEFAULT_FN_ATTRS
 
 #if defined(__cplusplus)

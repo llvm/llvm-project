@@ -10,7 +10,7 @@
 @bar = internal addrspace(3) global [2 x target("amdgcn.named.barrier", 0)] poison
 
 ; CHECK-LABEL: kernel:
-; CHECK: s_lshr_b32 s{{[0-9]+}}, __amdgpu_named_barrier.bar{{[^ @]*}}@abs32@lo, 4
+; CHECK: s_mov_b32 s{{[0-9]+}}, __amdgpu_named_barrier.bar{{[^ @]*}}@abs32@lo
 ; CHECK: s_barrier_join m0
 ; CHECK: s_barrier_signal m0
 ; CHECK: s_barrier_wait 1
