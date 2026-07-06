@@ -92,9 +92,6 @@ if(LLDB_ENABLE_FORTRAN)
   # Prefer the in-tree built target if available.
   if(TARGET flang)
     set(LLDB_DEFAULT_TEST_FORTRAN_COMPILER "${LLVM_TOOLS_BINARY_DIR}/flang${CMAKE_EXECUTABLE_SUFFIX}")
-  # Fall back to the out-of-tree installation prefix if configured via find_package.
-  elif(FLANG_INSTALL_PREFIX)
-    set(LLDB_DEFAULT_TEST_FORTRAN_COMPILER "${FLANG_INSTALL_PREFIX}/bin/flang${CMAKE_EXECUTABLE_SUFFIX}")
   else()
     set(LLDB_DEFAULT_TEST_FORTRAN_COMPILER "")
   endif()
