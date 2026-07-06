@@ -618,9 +618,8 @@ LoopInfoBase<BlockT, LoopT>::getLoopsInPreorder() const {
   // FIXME: If we change the order of LoopInfo we will want to remove the
   // reverse here.
   for (LoopT *RootL : reverse(*this)) {
-    auto PreOrderLoopsInRootL = RootL->getLoopsInPreorder();
-    PreOrderLoops.append(PreOrderLoopsInRootL.begin(),
-                         PreOrderLoopsInRootL.end());
+    PreOrderLoops.push_back(RootL);
+    LoopT::getInnerLoopsInPreorder(*RootL, PreOrderLoops);
   }
 
   return PreOrderLoops;

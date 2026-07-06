@@ -5533,6 +5533,12 @@ def HLSLInterlockedAdd : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void (...)";
 }
 
+def HLSLInterlockedOr : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_interlocked_or"];
+  let Attributes = [NoThrow];
+  let Prototype = "void (...)";
+}
+
 def HLSLWaveActiveBallot : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_active_ballot"];
   let Attributes = [NoThrow, Const];

@@ -172,7 +172,7 @@ struct Derived : BFields {
 };
 
 // CHECK-LABEL: define hidden void @_Z5call47Derived(
-// CHECK-SAME: ptr noundef dead_on_return [[D:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr noundef align 1 dead_on_return [[D:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[D_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
