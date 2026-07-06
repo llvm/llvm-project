@@ -17,9 +17,8 @@
 namespace lldb_private {
 class OperatingSystemSwiftTasks : public OperatingSystem {
 public:
-  OperatingSystemSwiftTasks(
-      Process &process,
-      std::optional<SwiftLanguageRuntime::CurrentTaskStorageKind>);
+  OperatingSystemSwiftTasks(Process &process,
+                            const SwiftLanguageRuntime::ConcurrencyInfo &);
   ~OperatingSystemSwiftTasks() override;
 
   static OperatingSystem *CreateInstance(Process *process, bool force);

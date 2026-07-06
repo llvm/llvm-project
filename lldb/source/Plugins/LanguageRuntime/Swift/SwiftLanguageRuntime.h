@@ -153,6 +153,7 @@ public:
   struct ConcurrencyInfo {
     std::optional<uint32_t> version;
     std::optional<CurrentTaskStorageKind> task_storage_kind;
+    lldb::ModuleSP concurrency_module;
   };
   static ConcurrencyInfo FindConcurrencyInfo(Process &process);
   /// \}
@@ -1035,11 +1036,10 @@ struct TaskFinder {
   virtual ~TaskFinder() = default;
 };
 
-/// Returns a TaskFinder for the current storage_kind. The pointer is guaranteed
-/// to be non-null, but the returned object may be a NoTaskFinder, if the
-/// storage kind is not supported.
+/// Returns a TaskFinder for `info`. The pointer is guaranteed to be non-null,
+/// but may be a NoTaskFinder if the storage kind is unsupported or absent.
 std::unique_ptr<TaskFinder>
-    GetTaskFinder(std::optional<SwiftLanguageRuntime::CurrentTaskStorageKind>);
+GetTaskFinder(const SwiftLanguageRuntime::ConcurrencyInfo &);
 
 /// Inspects the concurrency library in the process, if any, to construct a
 /// TaskFinder. The pointer is guaranteed to be non-null, but the returned
