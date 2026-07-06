@@ -122,7 +122,7 @@ TEST(DynamicDebugging, OptimizedModuleAttributes) {
   Function *F = M->getFunction("f");
   ASSERT_TRUE(F);
 
-  EXPECT_TRUE(F->hasFnAttribute("no-func-spec"));
+  EXPECT_TRUE(F->hasFnAttribute(Attribute::NoIPA));
   EXPECT_EQ(F->getFnAttributeAsParsedInteger("tail-pad-to-size"), 5u);
   EXPECT_EQ(F->getFnAttributeAsParsedInteger("tail-pad-value"), 144u);
 }

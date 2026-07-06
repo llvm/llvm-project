@@ -63,11 +63,16 @@ llvm::prepareForDynamicDebugging(Module *M, StringRef PromotionSuffix) {
       InnerDef->removeFnAttr(Attribute::MinSize);
 
       // Add attributes to the outer-object functions to ensure they're
-      // always patchable. TODO: Add patch bytes size/value for other targets.
+      // always patchable.
+      //
+      // The debugger patches outer (optimized) functions to redirect to inner
+      // (unoptimized) functions. Block interprocedural analysis to ensure
+      // the two function implementations share the same interface.
+      OuterDef.addFnAttr(Attribute::NoIPA);
+      // TODO: Add patch bytes size/value for other targets.
       if (M->getTargetTriple().isX86_64()) {
         OuterDef.addFnAttr("tail-pad-to-size", "5");
         OuterDef.addFnAttr("tail-pad-value", "144"); // 0x90
-        OuterDef.addFnAttr("no-func-spec");
       }
     }
 
