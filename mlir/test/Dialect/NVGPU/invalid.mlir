@@ -465,3 +465,25 @@ func.func @warpgroup_mma_store_mismatched_shape(
       to memref<64x64xf32, 3>
   return
 }
+
+// -----
+
+!tResult = !nvgpu.warpgroup.accumulator<fragmented = vector<128x128xf8E4M3FN>>
+!tDescA  = !nvgpu.warpgroup.descriptor<tensor = memref<128x64xf8E4M3FN, 3>>
+!tDescB  = !nvgpu.warpgroup.descriptor<tensor = memref<64x128xf8E4M3FN, 3>>
+func.func @warpgroup_mma_unsupported_fp8_accumulator(%descA: !tDescA, %descB: !tDescB, %acc: !tResult) {
+  // expected-error @+1 {{'f8E4M3FN' += 'f8E4M3FN' * 'f8E4M3FN'}}
+  %0 = nvgpu.warpgroup.mma %descA, %descB, %acc: !tDescA, !tDescB, !tResult -> !tResult
+  return
+}
+
+// -----
+
+!tResult = !nvgpu.warpgroup.accumulator<fragmented = vector<128x128xf32>>
+!tDescA  = !nvgpu.warpgroup.descriptor<tensor = memref<128x64xf8E4M3FN, 3>>
+!tDescB  = !nvgpu.warpgroup.descriptor<tensor = memref<64x128xf16, 3>>
+func.func @warpgroup_mma_unsupported_mixed_fp8_f16_inputs(%descA: !tDescA, %descB: !tDescB, %acc: !tResult) {
+  // expected-error @+1 {{'f32' += 'f8E4M3FN' * 'f16'}}
+  %0 = nvgpu.warpgroup.mma %descA, %descB, %acc: !tDescA, !tDescB, !tResult -> !tResult
+  return
+}
