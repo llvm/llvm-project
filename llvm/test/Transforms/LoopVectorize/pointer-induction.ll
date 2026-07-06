@@ -713,7 +713,8 @@ define void @strided_ptr_iv_runtime_stride(ptr %pIn, ptr %pOut, i32 %nCols, i32 
 ; STRIDED-NEXT:    br i1 [[IDENT_CHECK]], label [[SCALAR_PH]], label [[VECTOR_MEMCHECK:%.*]]
 ; STRIDED:       vector.memcheck:
 ; STRIDED-NEXT:    [[TMP3:%.*]] = sub i64 [[POUT1]], [[PIN2]]
-; STRIDED-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], 16
+; STRIDED-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP3]], 1
+; STRIDED-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP10]], 15
 ; STRIDED-NEXT:    br i1 [[DIFF_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; STRIDED:       vector.ph:
 ; STRIDED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[UMAX]], 4

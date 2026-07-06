@@ -1868,7 +1868,7 @@ protected:
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return Opcode == Instruction::Select && Op == getOperand(0) &&
-           Op->isDefinedOutsideLoopRegions();
+           isa<VPIRValue>(Op);
   }
 };
 
