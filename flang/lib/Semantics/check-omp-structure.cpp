@@ -3966,6 +3966,59 @@ static bool CheckSymbolSupportsType(const Scope &scope,
   return omp::FindUserReductionSymbol(scope, name, &type) != nullptr;
 }
 
+// Compute the mangled reduction symbol name for a reduction identifier (a
+// defined or intrinsic operator, or a special function / named reduction), so a
+// declared reduction can be looked up. A defined operator mangles to a
+// dynamically built name kept alive in `buffer`; the other kinds return a
+// pointer to stable storage.
+static std::optional<parser::CharBlock> MangledReductionIdentifier(
+    const parser::OmpReductionIdentifier &ident, SemanticsContext &context,
+    std::string &buffer) {
+  return common::visit(
+      common::visitors{
+          [&](const parser::DefinedOperator &dOpr)
+              -> std::optional<parser::CharBlock> {
+            if (const auto *intrinsicOp{
+                    std::get_if<parser::DefinedOperator::IntrinsicOperator>(
+                        &dOpr.u)}) {
+              return MakeNameFromOperator(*intrinsicOp, context);
+            }
+            if (const auto *definedOp{
+                    std::get_if<parser::DefinedOpName>(&dOpr.u)};
+                definedOp && definedOp->v.symbol) {
+              buffer = MangleDefinedOperator(definedOp->v.symbol->name());
+              return parser::CharBlock{buffer};
+            }
+            return std::nullopt;
+          },
+          [&](const parser::ProcedureDesignator &procD)
+              -> std::optional<parser::CharBlock> {
+            if (const auto *name{std::get_if<parser::Name>(&procD.u)}) {
+              return MangleSpecialFunctions(name->source);
+            }
+            return std::nullopt;
+          },
+      },
+      ident.u);
+}
+
+// Diagnose a reduction whose identifier resolves to more than one distinct
+// user-defined reduction for `type` (e.g. an operator merged from two modules
+// that each declare a reduction for the type, or a mangled reduction name that
+// collides across modules). Without this the resolver would silently pick one
+// by USE order.
+static bool IsAmbiguousUserReduction(
+    const parser::OmpReductionIdentifier &ident, const DeclTypeSpec &type,
+    const Scope &scope, SemanticsContext &context) {
+  std::string buffer;
+  if (auto mangled{MangledReductionIdentifier(ident, context, buffer)}) {
+    bool ambiguous{false};
+    omp::FindUserReductionSymbol(scope, *mangled, &type, &ambiguous);
+    return ambiguous;
+  }
+  return false;
+}
+
 static bool IsReductionAllowedForType(
     const parser::OmpReductionIdentifier &ident, const DeclTypeSpec &type,
     bool cannotBeBuiltinReduction, const Scope &scope,
@@ -4091,6 +4144,10 @@ void OmpStructureChecker::CheckReductionObjectTypes(
               ident, *type, cannotBeBuiltinReduction, scope, context_)) {
         context_.Say(source,
             "The type of '%s' is incompatible with the reduction operator."_err_en_US,
+            symbol->name());
+      } else if (IsAmbiguousUserReduction(ident, *type, scope, context_)) {
+        context_.Say(source,
+            "The reduction for '%s' is ambiguous: more than one user-defined reduction for its type is accessible."_err_en_US,
             symbol->name());
       }
     } else {

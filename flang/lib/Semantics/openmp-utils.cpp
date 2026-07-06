@@ -39,6 +39,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Frontend/OpenMP/OMPContext.h"
 
@@ -2500,18 +2501,67 @@ static bool IsLocalReduction(const Symbol &symbol) {
   return !s->detailsIf<UseDetails>();
 }
 
-// Search for a user reduction supporting `type` by following the operator/
-// procedure symbol `opSym` through its USE associations and merged generic
-// sources. Each module the operator passes through is checked for a (possibly
-// renamed) reduction; `localName` is the operator name written at the use site,
-// used to detect renames. A locally declared reduction in a module is
-// authoritative: it is returned if it supports the type, otherwise it shadows
-// reductions reachable further along that branch.
-static const Symbol *SearchOperatorReduction(const Symbol &opSym,
+// A reduction's canonical identity is its own (mangled) name together with the
+// name of the module that defines it. Pointer identity of the ultimate symbol
+// is not sufficient: a hermetic module file embeds a private copy of its
+// dependencies, so a reduction reached both through a direct USE of its module
+// and through a facade that embeds that module has two distinct ultimate
+// symbols living in two module scopes of the same name; keying on the module
+// name and reduction name collapses them.
+//
+// Known limitation: this cannot distinguish two genuinely different versions of
+// a same-named module (a stale hermetic embed of an old module vs. a rebuilt
+// one), because the module name and mangled reduction name are identical and
+// only the combiner body differs. Such an inconsistent build collapses to one
+// candidate and the reduction is resolved by USE order without a diagnostic,
+// matching the pre-existing behavior (Flang does not reject a same-named module
+// loaded at two different versions either). The module-file hash does not help:
+// a consistent hermetic embed and its directly used module are already distinct
+// module instances with different hashes, so hashing would wrongly report the
+// common, valid case as ambiguous.
+static parser::CharBlock DefiningModuleName(const Symbol &ultimate) {
+  const Scope &owner{ultimate.owner()};
+  return owner.symbol() ? owner.symbol()->name() : parser::CharBlock{};
+}
+
+// Add `reductionSym` to `matches` unless a reduction with the same canonical
+// identity (defining module name + reduction name) is already present. Keying
+// on this identity, rather than ultimate-symbol pointer, collapses one
+// reduction reached through several USE/rename/facade paths (a diamond, or a
+// hermetic facade that embeds the defining module) to a single entry, while
+// genuinely different reductions declared in different modules remain separate.
+static void AddDistinctReduction(llvm::SmallVectorImpl<const Symbol *> &matches,
+    const Symbol &reductionSym) {
+  const Symbol &ultimate{reductionSym.GetUltimate()};
+  parser::CharBlock reductionName{ultimate.name()};
+  parser::CharBlock moduleName{DefiningModuleName(ultimate)};
+  for (const Symbol *match : matches) {
+    const Symbol &matchUltimate{match->GetUltimate()};
+    if (matchUltimate.name() == reductionName &&
+        DefiningModuleName(matchUltimate) == moduleName) {
+      return;
+    }
+  }
+  matches.push_back(&reductionSym);
+}
+
+// Collect every distinct user reduction supporting `type` reachable by
+// following the operator/procedure symbol `opSym` through its USE associations
+// and merged generic sources. Each module the operator passes through is
+// checked for a (possibly renamed) reduction; `localName` is the operator name
+// written at the use site, used to detect renames. Unlike a first-match search,
+// every branch of a merged generic is explored and the results are unioned
+// (deduped by canonical identity), so an operator merged from two modules that
+// each declare a reduction for `type` is detected as ambiguous rather than
+// silently resolved by USE order. A locally declared reduction in a module is
+// authoritative: it settles that branch (it is collected if it supports the
+// type, otherwise it shadows reductions reachable further along that branch).
+static void CollectOperatorReductions(const Symbol &opSym,
     const parser::CharBlock &mangledName, const parser::CharBlock &localName,
-    const DeclTypeSpec *type, llvm::SmallPtrSetImpl<const Symbol *> &visited) {
+    const DeclTypeSpec *type, llvm::SmallPtrSetImpl<const Symbol *> &visited,
+    llvm::SmallVectorImpl<const Symbol *> &matches) {
   if (!visited.insert(&opSym).second) {
-    return nullptr;
+    return;
   }
   const Scope &scope{opSym.owner()};
   if (scope.kind() == Scope::Kind::Module) {
@@ -2523,33 +2573,34 @@ static const Symbol *SearchOperatorReduction(const Symbol &opSym,
       const Symbol &reductionUltimate{reductionSym.GetUltimate()};
       if (!reductionUltimate.attrs().test(Attr::PRIVATE)) {
         if (AcceptReduction(reductionUltimate, type)) {
-          return &reductionSym;
+          AddDistinctReduction(matches, reductionSym);
+          return;
         }
         // A locally declared reduction here shadows reductions reachable
         // further along this branch.
         if (reductionUltimate.detailsIf<UserReductionDetails>() &&
             IsLocalReduction(reductionSym)) {
-          return nullptr;
+          return;
         }
       }
     }
   }
   // Follow a USE-associated operator to the module it was imported from.
   if (const auto *use{opSym.detailsIf<UseDetails>()}) {
-    return SearchOperatorReduction(
-        use->symbol(), mangledName, localName, type, visited);
+    CollectOperatorReductions(
+        use->symbol(), mangledName, localName, type, visited, matches);
+    return;
   }
-  // Search each module merged into a generic operator (recursing through
-  // re-exporting facade modules).
+  // Search every module merged into a generic operator (recursing through
+  // re-exporting facade modules). Every branch is explored, not just the first
+  // to match: two branches that reach distinct reductions make the merged
+  // operator ambiguous.
   if (const auto *generic{opSym.detailsIf<GenericDetails>()}) {
     for (const Symbol &useSym : generic->uses()) {
-      if (const Symbol *result{SearchOperatorReduction(
-              useSym, mangledName, localName, type, visited)}) {
-        return result;
-      }
+      CollectOperatorReductions(
+          useSym, mangledName, localName, type, visited, matches);
     }
   }
-  return nullptr;
 }
 
 // Find user reduction details for a mangled name, following USE associations
@@ -2557,21 +2608,49 @@ static const Symbol *SearchOperatorReduction(const Symbol &opSym,
 // supplied to disambiguate an operator that carries reductions for several
 // types (e.g. a generic merged from multiple modules); a candidate is accepted
 // only if it supports that type. A locally declared reduction is authoritative
-// for its operator in its scope and shadows USE-associated reductions.
+// for its operator in its scope and shadows USE-associated reductions. When
+// `ambiguous` is non-null it is set true if more than one distinct reduction
+// supports the type; the first match is still returned so that callers that do
+// not check ambiguity (lowering) are unchanged, since an ambiguous program is
+// rejected in semantics before lowering runs.
 const Symbol *FindUserReductionSymbol(const Scope &scope,
-    const parser::CharBlock &mangledName, const DeclTypeSpec *type) {
+    const parser::CharBlock &mangledName, const DeclTypeSpec *type,
+    bool *ambiguous) {
+  if (ambiguous) {
+    *ambiguous = false;
+  }
+  llvm::SmallVector<const Symbol *, 2> matches;
   // Direct lookup: a reduction directly visible via bare USE or a local
   // declaration.
   const Symbol *directSymbol{scope.FindSymbol(mangledName)};
   if (directSymbol) {
-    if (AcceptReduction(*directSymbol, type)) {
-      return directSymbol;
-    }
-    // A locally declared reduction that does not support the requested type is
-    // authoritative: it shadows USE-associated reductions (ProcessReduction-
-    // Specifier erases the latter), so do not resurrect them via the operator.
-    if (directSymbol->GetUltimate().detailsIf<UserReductionDetails>() &&
+    if (const auto *useError{directSymbol->detailsIf<UseErrorDetails>()}) {
+      // Several modules declare a reduction with the same mangled name (e.g.
+      // two modules each with `reduction(+:integer)`, or the same special
+      // function): the name collides into a USE error. Each colliding source
+      // that supports the type is a distinct candidate.
+      for (const auto &[occurrenceName, occurrenceSym] :
+          useError->occurrences()) {
+        if (occurrenceSym &&
+            AcceptReduction(occurrenceSym->GetUltimate(), type)) {
+          AddDistinctReduction(matches, *occurrenceSym);
+        }
+      }
+    } else if (AcceptReduction(*directSymbol, type)) {
+      AddDistinctReduction(matches, *directSymbol);
+      // A locally declared reduction is authoritative: it shadows any
+      // USE-associated reduction reachable through the operator, so stop here.
+      if (IsLocalReduction(*directSymbol)) {
+        return matches.front();
+      }
+      // A USE-associated direct match is only one candidate: continue through
+      // the operator to detect a second, distinct reduction merged under it.
+    } else if (directSymbol->GetUltimate().detailsIf<UserReductionDetails>() &&
         IsLocalReduction(*directSymbol)) {
+      // A locally declared reduction that does not support the requested type
+      // is authoritative: it shadows USE-associated reductions
+      // (ProcessReduction- Specifier erases the latter), so do not resurrect
+      // them via the operator.
       return nullptr;
     }
   }
@@ -2579,12 +2658,15 @@ const Symbol *FindUserReductionSymbol(const Scope &scope,
   std::string fortranName{GetReductionFortranId(mangledName)};
   const Symbol *opSymbol{
       fortranName.empty() ? nullptr : scope.FindSymbol(fortranName)};
-  if (!opSymbol) {
-    return nullptr;
+  if (opSymbol) {
+    llvm::SmallPtrSet<const Symbol *, 8> visited;
+    CollectOperatorReductions(
+        *opSymbol, mangledName, opSymbol->name(), type, visited, matches);
   }
-  llvm::SmallPtrSet<const Symbol *, 8> visited;
-  return SearchOperatorReduction(
-      *opSymbol, mangledName, opSymbol->name(), type, visited);
+  if (ambiguous) {
+    *ambiguous = matches.size() > 1;
+  }
+  return matches.empty() ? nullptr : matches.front();
 }
 
 const Symbol *FindOperatorUserReductionSymbol(

@@ -121,9 +121,14 @@ const Symbol *GetHostSymbol(const Symbol &sym);
 // generics exactly as the OpenMP semantic checks do, returning the found
 // (non-ultimate) reduction symbol, or null if none is visible. When type is
 // non-null, only a reduction that supports that type is accepted (used to
-// disambiguate an operator that carries reductions for several types).
+// disambiguate an operator that carries reductions for several types). When
+// ambiguous is non-null, it is set true if more than one distinct reduction
+// supports the type (an operator merged from several modules that each declare
+// a reduction for it, or a mangled reduction name that collides across
+// modules).
 const Symbol *FindUserReductionSymbol(const Scope &scope,
-    const parser::CharBlock &mangledName, const DeclTypeSpec *type = nullptr);
+    const parser::CharBlock &mangledName, const DeclTypeSpec *type = nullptr,
+    bool *ambiguous = nullptr);
 
 // Resolve the user-defined reduction associated with the defined-operator
 // symbol operatorSym. Delegates to FindUserReductionSymbol from scope (the
