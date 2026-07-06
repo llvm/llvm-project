@@ -9,11 +9,11 @@
 #include "clang/Tooling/DependencyScanningTool.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
-#include "clang/DependencyScanning/DependencyScannerImpl.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Frontend/FrontendActions.h"
+#include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -85,6 +85,20 @@ protected:
   std::unique_ptr<DependencyOutputOptions> Opts;
   std::vector<std::string> Dependencies;
   std::vector<std::string> DependenciesFromModules;
+};
+
+struct TextDiagnosticsPrinterWithOutput {
+  // We need to bound the lifetime of the data that supports the DiagPrinter
+  // with it together so they have the same lifetime.
+  std::string DiagnosticOutput;
+  llvm::raw_string_ostream DiagnosticsOS;
+  std::unique_ptr<DiagnosticOptions> DiagOpts;
+  TextDiagnosticPrinter DiagPrinter;
+
+  TextDiagnosticsPrinterWithOutput(ArrayRef<std::string> CommandLine)
+      : DiagnosticsOS(DiagnosticOutput),
+        DiagOpts(createDiagOptions(CommandLine)),
+        DiagPrinter(DiagnosticsOS, *DiagOpts) {}
 };
 } // anonymous namespace
 

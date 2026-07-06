@@ -9,11 +9,10 @@
 #ifndef LLVM_CLANG_DEPENDENCYSCANNING_DEPENDENCYSCANNINGWORKER_H
 #define LLVM_CLANG_DEPENDENCYSCANNING_DEPENDENCYSCANNINGWORKER_H
 
-#include "clang/Basic/AtomicLineLogger.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/DependencyScanning/DependencyScannerImpl.h"
 #include "clang/DependencyScanning/DependencyScanningService.h"
 #include "clang/DependencyScanning/ModuleDepCollector.h"
 #include "clang/Frontend/PCHContainerOperations.h"
@@ -32,7 +31,20 @@ namespace dependencies {
 
 class DependencyConsumer;
 class DependencyScanningWorkerFilesystem;
-class CompilerInstanceWithContext;
+
+std::unique_ptr<DiagnosticOptions>
+createDiagOptions(ArrayRef<std::string> CommandLine);
+
+struct DiagnosticsEngineWithDiagOpts {
+  // We need to bound the lifetime of the DiagOpts used to create the
+  // DiganosticsEngine with the DiagnosticsEngine itself.
+  std::unique_ptr<DiagnosticOptions> DiagOpts;
+  IntrusiveRefCntPtr<DiagnosticsEngine> DiagEngine;
+
+  DiagnosticsEngineWithDiagOpts(ArrayRef<std::string> CommandLine,
+                                IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
+                                DiagnosticConsumer &DC);
+};
 
 /// An individual dependency scanning worker that is able to run on its own
 /// thread.
