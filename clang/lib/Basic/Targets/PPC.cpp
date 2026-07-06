@@ -751,26 +751,10 @@ llvm::APInt PPCTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
       Feature = Feature.drop_front(1);
 
     int Priority = llvm::StringSwitch<int>(Feature)
-                       // POWER10 features (between pwr10=400 and pwr11=500)
-                       .Case("mma", 419)
-                       .Case("paired-vector-memops", 418)
-                       .Case("power10-vector", 416)
-                       .Case("prefixed", 415)
-                       // POWER9 features (between pwr9=300 and pwr10=400)
-                       .Case("float128", 312)
-                       .Case("power9-vector", 311)
-                       // POWER8 features (between pwr8=200 and pwr9=300)
-                       .Case("crypto", 214)
-                       .Case("direct-move", 213)
-                       .Case("power8-vector", 212)
-                       .Case("htm", 211)
-                       // POWER7 features (between pwr7=100 and pwr8=200)
-                       .Case("popcntd", 112)
-                       .Case("vsx", 111)
-                       // Base features: 50-99 (below pwr7=100)
-                       .Case("altivec", 50)
+#define PPC_AIX_CLONES_FEATURE(FEATURE_NAME, _, PRIORITY) \
+	                   .Case(FEATURE_NAME, PRIORITY)
+#include "llvm/TargetParser/PPCTargetParser.def"
                        .Default(0);
-
     return llvm::APInt(32, Priority);
   }
 
@@ -869,7 +853,7 @@ void PPCTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
 bool PPCTargetInfo::isValidClonesFeatureName(StringRef FeatureStr) const {
   // Only features with runtime detection are valid for target_clones
   return llvm::StringSwitch<bool>(FeatureStr)
-#define PPC_AIX_CLONES_FEATURE(FEATURE_NAME, _) .Case(FEATURE_NAME, true)
+#define PPC_AIX_CLONES_FEATURE(FEATURE_NAME, _, __) .Case(FEATURE_NAME, true)
 #include "llvm/TargetParser/PPCTargetParser.def"
       .Default(false);
 }

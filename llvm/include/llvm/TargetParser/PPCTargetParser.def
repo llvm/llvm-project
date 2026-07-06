@@ -277,22 +277,50 @@ PPC_AIX_FEATURE("vsx","CPU supports the vector-scalar extension",USE_SYS_CONF,AI
 #undef PPC_AIX_FEATURE
 
 #ifndef PPC_AIX_CLONES_FEATURE
-#define PPC_AIX_CLONES_FEATURE(TARGET_FEATURE_NAME, AIX_BUILTIN_CPU_SUPPORTS_NAME)
+#define PPC_AIX_CLONES_FEATURE(TARGET_FEATURE_NAME, AIX_BUILTIN_CPU_SUPPORTS_NAME, PRIORITY)
 #endif
 
-PPC_AIX_CLONES_FEATURE("altivec",             "altivec")
-PPC_AIX_CLONES_FEATURE("htm",                 "htm")
-PPC_AIX_CLONES_FEATURE("vsx",                 "vsx")
-PPC_AIX_CLONES_FEATURE("mma",                 "mma")
-PPC_AIX_CLONES_FEATURE("popcntd",             "arch_2_06")
-PPC_AIX_CLONES_FEATURE("crypto",              "arch_2_07")
-PPC_AIX_CLONES_FEATURE("direct-move",         "arch_2_07")
-PPC_AIX_CLONES_FEATURE("power8-vector",       "arch_2_07")
-PPC_AIX_CLONES_FEATURE("float128",            "arch_3_00")
-PPC_AIX_CLONES_FEATURE("power9-vector",       "arch_3_00")
-PPC_AIX_CLONES_FEATURE("paired-vector-memops","arch_3_1")
-PPC_AIX_CLONES_FEATURE("power10-vector",      "arch_3_1")
-PPC_AIX_CLONES_FEATURE("prefixed",            "arch_3_1")
+// Description of parameters:
+// - TARGET_FEATURE_NAME: a target-feature name that is supported (in its
+// positive or negative (i.e. no-FEATURE) form) on a target and a target_clones
+// attribute on AIX.
+// - AIX_BUILTIN_CPU_SUPPORTS_NAME: the corresponding __builtin_cpu_supports
+// testable feature.
+// - PRIORITY: an integer value that determines the order of which features are
+// tested first when selecting between clones in the resolver. Higher priority
+// items will be tested first. The function PPCTargetInfo::getFMVPriority uses
+// this table to return the priority value for a given target feature or CPU.
+// The CPU priorities are (from PPCTargetInfo::getFMVPriority):
+//   pwr7: 100
+//   pwr8: 200
+//   pwr9: 300
+//   pwr10: 400
+//   pwr11: 500
+// Some features (e.g. "prefixed") don't have an explicit bit to check at runtime,
+// instead the minimum ISA is checked.
+// Features in CPU X are given higher priority than features in CPU "X-1".
+// Eg. resolver for a target_clones("cpu=pwr8", "float128", "default") will test
+// for "float128" via __builtin_cpu_supports("arch_3_00") before testing for
+// __builtin_cpu_supports("arch_2_07") (aka cpu=pwr8).
+//
+//                    POWER10 features (between pwr10=400 and pwr11=500)
+PPC_AIX_CLONES_FEATURE("mma",                 "mma",      415)
+PPC_AIX_CLONES_FEATURE("paired-vector-memops","arch_3_1", 416)
+PPC_AIX_CLONES_FEATURE("power10-vector",      "arch_3_1", 417)
+PPC_AIX_CLONES_FEATURE("prefixed",            "arch_3_1", 418)
+//                    POWER9 features
+PPC_AIX_CLONES_FEATURE("float128",            "arch_3_00", 311)
+PPC_AIX_CLONES_FEATURE("power9-vector",       "arch_3_00", 312)
+//                    POWER8 features
+PPC_AIX_CLONES_FEATURE("crypto",              "arch_2_07", 211)
+PPC_AIX_CLONES_FEATURE("direct-move",         "arch_2_07", 212)
+PPC_AIX_CLONES_FEATURE("power8-vector",       "arch_2_07", 213)
+PPC_AIX_CLONES_FEATURE("htm",                 "htm",       214)
+//                    POWER7 features
+PPC_AIX_CLONES_FEATURE("vsx",                 "vsx",       111)
+PPC_AIX_CLONES_FEATURE("popcntd",             "arch_2_06", 112)
+//                    Base features: 50-99 (below pwr7=100)
+PPC_AIX_CLONES_FEATURE("altivec",             "altivec",   50)
 #undef PPC_AIX_CLONES_FEATURE
 
 // PPC_SYSTEMCONFIG_TYPE defines the IR data structure of kernel variable
