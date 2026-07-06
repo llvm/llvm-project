@@ -53,17 +53,13 @@
 
 #if defined(_LIBCPP_OBJECT_FORMAT_MACHO) || (defined(_LIBCPP_OBJECT_FORMAT_ELF) && !defined(__NVPTX__))
 
-// Template type can be partially specialized to dissect argument type, unlike
-// a template function.
 template <auto* _Func>
 struct ImplRef;
 
-// Partial specialization can tease out the components of the function type.
-// ImplRef<...>::Impl is expected to be defined elsewhere, so the compiler will
-// just emit assembly references to the mangled symbol with no definition.
-// This template is just saving us the trouble of doing separate manual
-// declarations for overload with some other local name for each function name
-// being overloaded (operator new, operator new[], etc.).
+// ImplRef<...>::Impl is expected to be defined elsewhere, so the compiler emits assembly
+// references to the mangled symbol with no definition. This template saves us the trouble
+// of providing manual declarations for overloads with some other local name for each
+// function name being overloaded (operator new, operator new[], etc.).
 template <typename _Ret, typename... _Args, _Ret (*_Func)(_Args...)>
 struct ImplRef<_Func> {
   [[gnu::visibility("hidden")]] static _Ret Impl(_Args...);
@@ -73,9 +69,9 @@ struct ImplRef<_Func> {
 #  define OVERRIDABLE_FUNCTION [[gnu::weak]]
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-// This takes a function type template argument first so that the second
-// non-type template argument (pointer to the public function) gets the benefit
-// of type-aware overload resolution, rather than having to use a static_cast.
+// This takes a function type template argument first so that the second non-type template
+// argument (pointer to the public function) gets the benefit of type-aware overload
+// resolution, rather than having to use a static_cast.
 template <typename T, T* _Func>
 _LIBCPP_HIDE_FROM_ABI inline bool __is_function_overridden() noexcept {
 #  if !defined(_LIBCPP_CLANG_VER) || _LIBCPP_CLANG_VER >= 2101
@@ -83,11 +79,11 @@ _LIBCPP_HIDE_FROM_ABI inline bool __is_function_overridden() noexcept {
 #  else
   __asm__("%c0 = %c1" : : "X"(ImplRef<_Func>::Impl), "X"(_Func));
 #  endif
-  // This just has the compiler compare the two symbols. For PIC mode, this will
-  // do a direct PC-relative materialization for ImplRef<...>::Impl and a GOT
-  // load for the _Func symbol. The compiler thinks ImplRef<...>::Impl is
-  // defined elsewhere at link time and will be an undefined symbol. It doesn't
-  // know that the __asm__ tells the assembler to define it as a local symbol.
+  // This just has the compiler compare the two symbols. For PIC mode, this will do
+  // a direct PC-relative materialization for ImplRef<...>::Impl and a GOT load for
+  // the _Func symbol. The compiler thinks ImplRef<...>::Impl is defined elsewhere at
+  // link time and will be an undefined symbol. It doesn't know that the __asm__ tells
+  // the assembler to define it as a local symbol.
   return _Func != ImplRef<_Func>::Impl;
 }
 _LIBCPP_END_NAMESPACE_STD
