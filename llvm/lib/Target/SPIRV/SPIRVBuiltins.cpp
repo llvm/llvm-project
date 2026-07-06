@@ -3986,7 +3986,11 @@ lowerBuiltinType(const Type *OpaqueType,
 }
 
 bool isPipeOrAddressSpaceCastBuiltin(StringRef Name) {
-  return lookupBuiltin(Name, OpenCL_std) != nullptr;
+  const DemangledBuiltin *Builtin = lookupBuiltin(Name, OpenCL_std);
+  if (!Builtin)
+    return false;
+  return Builtin->Group == Pipe || Builtin->Group == CastToPtr ||
+         Builtin->Group == BlockingPipes;
 }
 } // namespace SPIRV
 } // namespace llvm
