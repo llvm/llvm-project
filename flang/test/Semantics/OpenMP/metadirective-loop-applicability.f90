@@ -52,3 +52,67 @@ subroutine f04(n, a)
     end do
   end do
 end subroutine
+
+! A user condition that folds to a compile-time false makes the variant
+! unselectable, so its loop is skipped and DEFAULT applies.
+subroutine f05(n, a)
+  integer :: n, a(n, n), i, j
+  logical, parameter :: use_variant = .false.
+  !$omp metadirective when(user={condition(use_variant)}: do collapse(3)) default(nothing)
+  do i = 1, n
+    do j = 1, n
+      a(j, i) = i
+    end do
+  end do
+end subroutine
+
+! A user condition that folds to a compile-time true keeps the variant, so its
+! loop is still checked.
+subroutine f06(n, a)
+  integer :: n, a(n, n), i, j
+  logical, parameter :: use_variant = .true.
+  !ERROR: This construct requires a perfect nest of depth 3, but the associated nest is a perfect nest of depth 2
+  !BECAUSE: COLLAPSE clause was specified with argument 3
+  !$omp metadirective when(user={condition(use_variant)}: do collapse(3)) default(nothing)
+  do i = 1, n
+    do j = 1, n
+      a(j, i) = i
+    end do
+  end do
+end subroutine
+
+! An unknown implementation VENDOR never matches, so the variant is skipped.
+subroutine f07(n, a)
+  integer :: n, a(n, n), i, j
+  !$omp metadirective when(implementation={vendor(bogus_vendor)}: do collapse(3)) default(nothing)
+  do i = 1, n
+    do j = 1, n
+      a(j, i) = i
+    end do
+  end do
+end subroutine
+
+! An unknown device ARCH never matches, so the variant is skipped.
+subroutine f08(n, a)
+  integer :: n, a(n, n), i, j
+  !$omp metadirective when(device={arch(bogus_arch)}: do collapse(3)) default(nothing)
+  do i = 1, n
+    do j = 1, n
+      a(j, i) = i
+    end do
+  end do
+end subroutine
+
+! MATCH_NONE is satisfied by the unmatched (invalid) vendor, so the variant
+! stays selectable and its loop must still be checked.
+subroutine f09(n, a)
+  integer :: n, a(n, n), i, j
+  !ERROR: This construct requires a perfect nest of depth 3, but the associated nest is a perfect nest of depth 2
+  !BECAUSE: COLLAPSE clause was specified with argument 3
+  !$omp metadirective when(implementation={vendor(bogus_vendor), extension(match_none)}: do collapse(3)) default(nothing)
+  do i = 1, n
+    do j = 1, n
+      a(j, i) = i
+    end do
+  end do
+end subroutine

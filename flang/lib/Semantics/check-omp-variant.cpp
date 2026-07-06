@@ -609,18 +609,37 @@ void OmpStructureChecker::Leave(const parser::OmpMetadirectiveDirective &) {
   ExitDirectiveNest(MetadirectiveNest);
 }
 
-// Return true if the variant guarded by `selector` might be selected on this
-// compilation target, so its associated loop must still be checked.
+// Return true if the variant guarded by `selector` might be selected, so its
+// associated loop must still be checked. Skip it only when it is provably
+// unselectable.
 static bool mayVariantBeSelected(
     const parser::traits::OmpContextSelectorSpecification *selector,
     SemanticsContext &context, OmpVariantMatchContext &matchContext) {
-  if (context.targetTriple().empty() || !selector ||
+  if (!selector ||
       FindUnsupportedSelectorFeature(*selector, context) !=
           UnsupportedSelectorFeature::None) {
     return true;
   }
   llvm::omp::VariantMatchInfo vmi;
   (void)MakeVariantMatchInfo(vmi, *selector, context);
+  const auto &required{vmi.RequiredTraits};
+  using TP = llvm::omp::TraitProperty;
+  // In the default "match all" mode, a required trait that can never match
+  // (e.g. a compile-time-false condition or an invalid device/implementation
+  // property) makes the variant unselectable. match_any and match_none tolerate
+  // such traits, so only reject variants in the default mode.
+  bool matchAll{
+      !required.test(unsigned(TP::implementation_extension_match_any)) &&
+      !required.test(unsigned(TP::implementation_extension_match_none))};
+  if (matchAll &&
+      (required.test(unsigned(TP::user_condition_false)) ||
+          required.test(unsigned(TP::invalid)))) {
+    return false;
+  }
+  // Matching a device or implementation selector requires a known target.
+  if (context.targetTriple().empty()) {
+    return true;
+  }
   return llvm::omp::isVariantApplicableInContext(
       vmi, matchContext, /*DeviceOrImplementationSetOnly=*/true);
 }
