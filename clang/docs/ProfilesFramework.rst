@@ -742,7 +742,9 @@ for the user): the obligation is keyed on a read before assignment, not on the
 constructor's end.  A scalar *read through* a ``[[ref_to_uninit]]``
 pointer/reference is diagnosed at the lvalue-to-rvalue conversion (R7,
 ``uninit_read``); *writes* through such a pointer/reference are not yet verified
-(the paper relegates them to ``construct_at`` or suppression).
+(the paper relegates them to ``construct_at`` or suppression).  A scalar store
+to a *subobject* of a named ``[[uninit]]`` entity, by contrast, is banned as
+delayed piecemeal initialization (R10, ``uninit_write``).
 
 Dynamically-created objects are covered when bound: a ``new`` expression that
 default-initializes its allocated object and leaves a scalar subobject
@@ -1037,7 +1039,9 @@ assignment when compiled without the profile.
   in addition to the members *of* a union shown above.
 - The banned marker is retained on the declaration after it is diagnosed, so
   the ``uninit_decl`` / ``ctor_uninit_member`` rules treat the entity as
-  acknowledged and do not emit a second, contradictory diagnostic.
+  acknowledged and do not emit a second, contradictory diagnostic.  A member
+  assignment to such a marker-retaining union (the §5.6 delayed-initialization
+  ban) is caught by ``uninit_write`` (R10).
 
 An *unmarked* union left uninitialized is itself the error (paper §5.6):
 ``SemaProfiles::defaultInitLeavesScalarIndeterminate`` reports a union as indeterminate
@@ -1133,7 +1137,12 @@ recognizers symmetric.
   operator/condition operands -- all funnel through.  It reuses the recognizer
   with its read access preset (``UninitAccessOpts``), reports the shared rule
   ``uninit_read`` via ``err_init_uninit_read_through``, and exempts ``std::byte``
-  (paper §4.5).  The read preset drops the ``[[uninit]]`` marker only for the
+  (paper §4.5).  ``UninitAccessOpts`` carries two axes -- the top-level
+  ``[[uninit]]`` drop and a ``[[ref_to_uninit]]`` trust flag -- whose presets
+  distinguish a *binding* source (markers count everywhere), a value *read*
+  (this rule), and a scalar *store* (``uninit_write``, R10, which shares the
+  drop and additionally trusts the ``[[ref_to_uninit]]`` arms).
+  The read preset drops the ``[[uninit]]`` marker only for the
   *top-level* named entity -- a directly named ``[[uninit]]`` object and a
   current-object member are flow-tracked (by the CFG ``uninit_read`` pass and
   the ctor-body pass, which credit assignments), so their direct reads are left
@@ -1146,8 +1155,9 @@ recognizers symmetric.
   subobject a value.  Being Decl-less, it defers on a dependent context
   and fires once, at instantiation.  An address-of (``&*p``), a reference
   binding, a discarded-value expression (``(void)*p``), and a write (``*p = 5``
-  or ``s.x = 1``) apply no lvalue-to-rvalue conversion and so are not reads.
-  Out of scope, as remaining limitations: class-type read-through (copy
+  or ``s.x = 1``) apply no lvalue-to-rvalue conversion and so are not reads
+  (``s.x = 1`` is instead banned as a subobject store by ``uninit_write``,
+  R10).  Out of scope, as remaining limitations: class-type read-through (copy
   construction from ``*p``) and compound-assignment reads (``*p += 1``, which
   build no lvalue-to-rvalue node), consistent with the scalar slice and the
   deferred-writes stance.
@@ -1247,6 +1257,68 @@ language rule (paper §3), so it is an initialized object; marking it
   no-op (it reuses ``defaultInitLeavesScalarIndeterminate`` with
   ``HonorUninitMarkers=false``, R4's factual choice).  Exactly one diagnostic
   fires in every case.
+
+R10. ``uninit_write`` -- pattern 1
+..................................
+
+A scalar store to a *proper subobject* of a named ``[[uninit]]`` entity is
+banned delayed initialization (paper §1 "reading or writing uninitialized
+memory is an error"; §5.4 member-wise, §5.5 random-access element, §5.6
+union-member).  Writing the whole named entity is that entity's
+initialization (paper §4.5: for a built-in type, a write is its
+initialization) and stays legal -- the flow passes (R1) credit it -- as does
+the §5.2 constructor-body pattern, whose member stores reach the current
+object through ``this``.  Only whole-object ``construct_at`` could make a
+piecemeal-initialized object good, and construct_at flow is uniformly
+unmodeled, so no store below a marked entity can be part of a valid
+initialization sequence.
+
+.. code-block:: c++
+
+   struct S { int x; int y; };
+
+   void f() {
+     S s [[uninit]];
+     s.x = 1;   // error: writing a member of an [[uninit]] object (uninit_write)
+     [[uninit]] int a[2];
+     a[0] = 1;  // error: writing an element of an [[uninit]] object
+     int v [[uninit]];
+     v = 7;     // OK: the write initializes the whole entity
+   }
+
+   void g(int *p [[ref_to_uninit]]) {
+     *p = 5;    // OK: a write through the marker is the pointee's
+                // initialization (the deferred construct_at slice)
+   }
+
+- Diagnostic: ``err_init_uninit_subobject_write`` (a ``%select``
+  distinguishes a member store from an element store).
+- Recognizer: the shared classifier run with its *write* access preset
+  (``UninitAccessOpts``, see R7): the top-level drop makes a whole-entity
+  store legal, and ``TrustRefToUninit`` classifies storage reached through a
+  ``[[ref_to_uninit]]`` pointer/reference (or returned by a marked function)
+  as unknown, so a store through the marker is neither banned nor endorsed.
+  The shared arms cover member chains, array elements (``a[i]``, ``*a``,
+  member arrays -- on a named object or the current one), ``(&s)->x``, and
+  the conditional/comma/braced pass-through bases.
+- Check sites: ``Sema::CheckAssignmentOperands`` -- the funnel both simple
+  and compound assignment converge on, so ``=`` and every ``op=`` are checked
+  exactly once, and class-typed ``operator=`` (which diverts to overload
+  resolution) never reaches it -- and the built-in increment/decrement arm of
+  ``Sema::CreateBuiltinUnaryOp`` (overloaded class ``++``/``--`` never
+  reaches it).  Both are Decl-less sites: they defer on a template pattern
+  via the dependent-context guard and fire once, at instantiation.
+- A compound assignment also *reads* the old value; where its operand
+  conversion performs the load (the shift forms promote their LHS), the R7
+  read-through diagnostic fires alongside this rule's.
+- ``std::byte`` stores are exempt (paper §4.5), matching every read-side
+  rule.
+- Known gaps: whole-object assignment to a marked class object
+  (``s = S{...}``) goes through the overloaded ``operator=`` path and is not
+  checked -- class-type writes are uniformly deferred with construct_at --
+  and writes through ``[[ref_to_uninit]]`` are deliberately out of scope (for
+  a scalar the write is the initialization; verifying class-type writes needs
+  construct_at modeling).
 
 Diagnostic suppression
 ~~~~~~~~~~~~~~~~~~~~~~
