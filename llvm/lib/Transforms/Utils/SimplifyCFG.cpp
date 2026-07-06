@@ -4498,6 +4498,13 @@ static bool foldCondStoreToSelectImpl(CondBrInst *BI, DomTreeUpdater *DTU,
       !CheckLeafBlock(ElseElseBB, ElseElseStore))
     return false;
 
+  // Bail out if any of the blocks contain PHI nodes. These are single-
+  // predecessor blocks so PHIs here are degenerate and not expected in
+  // well-optimized IR.
+  if (!ThenBB->phis().empty() || !ElseBB->phis().empty() ||
+      !ElseThenBB->phis().empty() || !ElseElseBB->phis().empty())
+    return false;
+
   // All three stores must write to the same logical address and have the same
   // value type.
   Value *Addr = ThenStore->getPointerOperand();
