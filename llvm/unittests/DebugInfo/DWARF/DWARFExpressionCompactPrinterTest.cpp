@@ -214,7 +214,7 @@ TEST(NVPTXPackedRegister, Compact_DW_OP_regx_TrulyUnknown_FlushesBuffer) {
 
   std::string Result;
   raw_string_ostream OS(Result);
-  DataExtractor DE(Enc, true, 8);
+  DataExtractor DE(Enc, true);
   DWARFExpression Expr(DE, 8);
 
   std::string UnknownBuf;
