@@ -1484,14 +1484,12 @@ void CodeGenModule::Release() {
   }
   if (T.isAArch64()) {
     if (getTriple().isOSBinFormatELF())
-      getModule().addModuleFlag(
-          llvm::Module::Error, "ptrauth-elf-got",
-          static_cast<uint32_t>(LangOpts.PointerAuthELFGOT));
+      getModule().addModuleFlag(llvm::Module::Error, "ptrauth-elf-got",
+                                LangOpts.PointerAuthELFGOT);
 
     if (getTriple().isOSLinux()) {
-      getModule().addModuleFlag(
-          llvm::Module::Error, "ptrauth-sign-personality",
-          static_cast<uint32_t>(LangOpts.PointerAuthCalls));
+      getModule().addModuleFlag(llvm::Module::Error, "ptrauth-sign-personality",
+                                LangOpts.PointerAuthCalls);
 
       assert(getTriple().isOSBinFormatELF());
       using namespace llvm::ELF;

@@ -1,7 +1,17 @@
-; RUN: llc -mtriple aarch64-linux-pauthtest -mattr +pauth -filetype=asm %s -o - | \
+; RUN: rm -rf %t && split-file %s %t && cd %t
+; RUN: cat common.ll elf-got-flag-1.ll > auth.ll
+; RUN: cat common.ll elf-got-flag-0.ll > noauth1.ll
+; RUN: cat common.ll                   > noauth2.ll
+
+; RUN: llc -mtriple aarch64-linux-pauthtest -mattr +pauth -filetype=asm auth.ll -o - | \
 ; RUN:   FileCheck %s --check-prefix=ASM
-; RUN: llc -mtriple aarch64-linux-pauthtest -mattr +pauth -filetype=obj %s -o - | \
+; RUN: llc -mtriple aarch64-linux-pauthtest -mattr +pauth -filetype=obj auth.ll -o - | \
 ; RUN:   llvm-readelf -s - | FileCheck %s --check-prefix=OBJ
+
+; RUN: llc -mtriple aarch64-linux-gnu -mattr +pauth -filetype=obj noauth1.ll -o - | \
+; RUN:   llvm-readelf -s - | FileCheck %s --check-prefix=OBJ-NOAUTH
+; RUN: llc -mtriple aarch64-linux-gnu -mattr +pauth -filetype=obj noauth2.ll -o - | \
+; RUN:   llvm-readelf -s - | FileCheck %s --check-prefix=OBJ-NOAUTH
 
 ; ASM:               .type   foo,@function
 ; ASM-LABEL: foo:
@@ -28,6 +38,12 @@
 ; OBJ-NEXT:    Num:    Value          Size Type    Bind   Vis       Ndx Name
 ; OBJ:              0000000000000000     0 FUNC    GLOBAL DEFAULT   UND bar
 
+; OBJ-NOAUTH:      Symbol table '.symtab' contains [[#]] entries:
+; OBJ-NOAUTH-NEXT:    Num:    Value          Size Type    Bind   Vis       Ndx Name
+; OBJ-NOAUTH:              0000000000000000     0 NOTYPE  GLOBAL DEFAULT   UND bar
+
+;--- common.ll
+
 @fptr = private global ptr null
 
 define void @foo() {
@@ -37,6 +53,12 @@ define void @foo() {
 
 declare i32 @bar()
 
-!llvm.module.flags = !{!0}
+;--- elf-got-flag-1.ll
 
+!llvm.module.flags = !{!0}
 !0 = !{i32 8, !"ptrauth-elf-got", i32 1}
+
+;--- elf-got-flag-0.ll
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 8, !"ptrauth-elf-got", i32 0}

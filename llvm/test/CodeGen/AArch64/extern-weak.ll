@@ -1,7 +1,15 @@
+; RUN: rm -rf %t && split-file %s %t && cd %t
+
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -relocation-model=pic -o - %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-none-linux-gnu -relocation-model=pic -o - src.ll | FileCheck %s
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -relocation-model=static -o - < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-none-linux-gnu -relocation-model=static -o - < src.ll | FileCheck %s
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -code-model=large -o - %s | FileCheck --check-prefix=CHECK-LARGE %s
+; RUN: llc -mtriple=aarch64-none-linux-gnu -code-model=large -o - src.ll | FileCheck --check-prefix=CHECK-LARGE %s
 ; RUN: llc -mtriple=aarch64-none-elf -code-model=tiny -o - %s | FileCheck --check-prefix=CHECK-TINY %s
+; RUN: llc -mtriple=aarch64-none-elf -code-model=tiny -o - src.ll | FileCheck --check-prefix=CHECK-TINY %s
+
+;--- src.ll
 
 declare extern_weak dso_local i32 @var()
 
@@ -61,3 +69,8 @@ define ptr @wibble() {
 
 ; CHECK-TINY:       adr x0, defined_weak_var
 }
+
+;--- elf-got-flag.ll
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 8, !"ptrauth-elf-got", i32 0}
