@@ -6889,6 +6889,19 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
     }
 
+    // e.g.,
+    // <16 x float> @llvm.x86.avx512.mask.compress
+    //                  (<16 x float> %data, <16 x float> %passthru,
+    //                   <16 x i1> %mask)
+    // <16 x i32>   @llvm.x86.avx512.mask.compress
+    //                  (<16 x i32> %data, <16 x i32> %passthru,
+    //                   <16 x i1> %mask)
+    case Intrinsic::x86_avx512_mask_compress:
+      handleIntrinsicByApplyingToShadow(I, I.getIntrinsicID(),
+                                        /*trailingVerbatimArgs=*/1,
+                                        /*forceIntegerIntrinsic=*/true);
+      break;
+
     // AVX512/AVX10 Reciprocal
     //   <16 x float> @llvm.x86.avx512.rsqrt14.ps.512
     //                    (<16 x float>, <16 x float>, i16)
