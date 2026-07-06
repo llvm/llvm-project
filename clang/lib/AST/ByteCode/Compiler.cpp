@@ -4056,7 +4056,7 @@ bool Compiler<Emitter>::VisitCXXScalarValueInitExpr(
     PrimType ElemT = classifyPrim(ElemQT);
 
     // Initialize all fields to 0.
-    for (unsigned I = 0, N = NumElems; I != N; ++I) {
+    for (unsigned I = 0; I != NumElems; ++I) {
       if (!this->visitZeroInitializer(ElemT, ElemQT, E))
         return false;
       if (!this->emitInitElem(ElemT, I, E))
