@@ -4739,6 +4739,14 @@ SDValue AMDGPUTargetLowering::performTruncateCombine(
     }
   }
 
+  // Unroll illegal vector truncate: This is normally done by the legalizer,
+  // however patterns introduced by the dag combiner may reintroduce the illegal
+  // pattern.
+  if (DCI.isAfterLegalizeDAG() && VT.isVector() &&
+      isOperationExpand(ISD::TRUNCATE, VT)) {
+    return DAG.UnrollVectorOp(N);
+  }
+
   return SDValue();
 }
 
