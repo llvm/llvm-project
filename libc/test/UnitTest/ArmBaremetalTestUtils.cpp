@@ -1,16 +1,20 @@
-//===-- Arm bare-metal hermetic test utilities ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Arm bare-metal hermetic test utilities.
+///
+//===----------------------------------------------------------------------===//
 
 #include "hdr/stdint_proxy.h"
-
-#include <llvm-libc-types/ssize_t.h>
-#include <stddef.h>
-#include <time.h>
+#include "hdr/types/size_t.h"
+#include "hdr/types/ssize_t.h"
+#include "hdr/types/struct_timespec.h"
 
 // Redirect stdout/stderr, time and exit from libc tests to semihosting
 
@@ -62,7 +66,7 @@ static void stdio_open(struct __llvm_libc_stdio_cookie *cookie, size_t mode) {
   size_t args[3];
   args[0] = reinterpret_cast<size_t>(std_stream_name);
   args[1] = mode;
-  args[2] = static_cast<size_t>(sizeof(std_stream_name) - 1);
+  args[2] = sizeof(std_stream_name) - 1UL;
   cookie->handle = semihosting_call(SYS_OPEN, args);
 }
 
