@@ -1889,6 +1889,11 @@ ValueLatticeElement LazyValueInfoImpl::getValueAtUse(const Use &U) {
         !isSafeToSpeculativelyExecuteWithVariableReplaced(
             CurrI, /*IgnoreUBImplyingAttrs=*/false))
       break;
+    // Also stop walking at cross-lane operations, since they may rearrange
+    // lanes so that a later select per-lane condition might no longer
+    // correspond to the original value's lanes.
+    if (V->getType()->isVectorTy() && !isNotCrossLaneOperation(CurrI))
+      break;
     CurrU = &*CurrI->use_begin();
   }
   return VL;

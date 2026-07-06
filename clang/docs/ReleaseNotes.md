@@ -686,6 +686,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   by the kernel, so setting them is almost always a typo (matching the
   bionic libc `diagnose_if` check).
 
+- `-Wtautological-pointer-compare` and `-Wpointer-bool-conversion` now
+  diagnose a reference to a function (e.g. of type `void (&)()`) compared
+  against or converted to a null pointer, the same as a bare function name.
+  (#GH46362)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -963,6 +968,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - When targeting Windows x64 with EGPR (`-mapx-features=egpr`), Clang now
   automatically enables V3 unwind info (`-fwinx64-eh-unwind=v3`) if no
   explicit unwind version was specified.
+
+- Clang now supports `-std:c++26preview` for compatibility with MSVC. This enables C++26 features.
 
 #### LoongArch Support
 
