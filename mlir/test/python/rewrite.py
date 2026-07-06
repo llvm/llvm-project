@@ -316,7 +316,7 @@ def testConversionPattern():
             apply_partial_conversion(module, target, frozen)
         except MLIRError as e:
             # CHECK: caught exception: partial conversion failed
-            # CHECK: miss target materialization function
+            # CHECK: mismatch target materialization function
             print("caught exception:", e)
 
         t1 = converter.convert_type(IntegerType.get_signless(64))
