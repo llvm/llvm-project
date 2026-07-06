@@ -702,12 +702,14 @@ TEST(CompletionTest, DeclParamName) {
   // This is 1/2 regression tests to make sure signatures
   // 1) have consistent variable names between header and source file
   // 2) find variable names in other declarations
+  // See IndexActionTest.DeclParamName for the other test.
   clangd::CodeCompleteOptions Opts;
   Opts.EnableSnippets = true;
   auto FuncFromSource = completions(R"cpp(
       void sun(int);
-      void sun(int night);
       void sun(int day);
+      void sun(int night);
+      void sun(int);
       void position() {
         sun^;
       }

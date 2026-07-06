@@ -416,11 +416,12 @@ public:
   //@}
 };
 
-const FunctionDecl *BetterSingature(const FunctionDecl *Function,
+const FunctionDecl *BetterSignature(const FunctionDecl *Function,
                                     unsigned Start) {
-  // Note that `redecls()` traverses from last to first declaration.
-  for (auto *Redecl : Function->redecls())
-    for (unsigned P = Start, N = Function->getNumParams(); P != N; ++P)
+  // Note that `redecls()` traverses in a circular order from the current decl,
+  // so for consistency we have to first get the first declaration.
+  for (auto *Redecl : Function->getFirstDecl()->redecls())
+    for (unsigned P = Start, N = Redecl->getNumParams(); P != N; ++P)
       if (Redecl->getParamDecl(P)->getIdentifier())
         return Redecl;
   return Function;
@@ -3328,8 +3329,7 @@ static void AddFunctionParameterChunks(
   bool FirstParameter = true;
   bool AsInformativeChunk = !(FunctionCanBeCall || IsInDeclarationContext);
 
-  // Create consistent result between AST and Index.
-  const FunctionDecl *BetterSignatureDecl = BetterSingature(Function, Start);
+  const FunctionDecl *BetterSignatureDecl = BetterSignature(Function, Start);
 
   for (unsigned P = Start, N = Function->getNumParams(); P != N; ++P) {
     const ParmVarDecl *Param = BetterSignatureDecl->getParamDecl(P);

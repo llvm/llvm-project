@@ -265,13 +265,15 @@ TEST_F(IndexActionTest, DeclParamName) {
   // This is 2/2 regression tests to make sure signatures
   // 1) have consistent variable names between header and source file
   // 2) find variable names in other declarations
+  // See CompletionTest.DeclParamName for the other test.
   std::string MainFilePath = testPath("main.cpp");
   std::string MainCode = R"cpp( #include "zenith.hpp" )cpp";
   std::string HeaderPath = testPath("zenith.hpp");
   std::string HeaderCode = R"cpp(
       void moon(int, int);
-      void moon(int month, int night);
       void moon(int, int day);
+      void moon(int month, int day);
+      void moon(int, int);
       )cpp";
 
   addFile(MainFilePath, MainCode);
