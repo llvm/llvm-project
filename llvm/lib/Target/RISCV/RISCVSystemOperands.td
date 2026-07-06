@@ -420,7 +420,7 @@ foreach i = 0...3 in {
 }
 
 //===-----------------------------------------------
-// Mahcine Non-Maskable Interrupt Handling
+// Machine Non-Maskable Interrupt Handling
 //===-----------------------------------------------
 
 def : SysReg<"mnscratch", 0x740>;
