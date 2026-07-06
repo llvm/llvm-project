@@ -42,6 +42,22 @@ subroutine test_unformatted()
   read(10) c
 end subroutine
 
+subroutine test_component_io()
+  use enum_io_mod
+  type :: has_color
+    type(color) :: c
+  end type
+  type(has_color) :: d
+  !ERROR: List-directed output item has a component 'c' of enumeration type
+  print *, d
+  !ERROR: List-directed input item has a component 'c' of enumeration type
+  read *, d
+  !ERROR: Enumeration type may not be used in unformatted I/O
+  write(10) d
+  !ERROR: Enumeration type may not be used in unformatted I/O
+  read(10) d
+end subroutine
+
 subroutine test_namelist_enum_object()
   use enum_io_mod
   type(color) :: c

@@ -711,10 +711,10 @@ void ModFileWriter::PutEnumerationType(const Symbol &typeSymbol) {
   decls_ << "::" << typeSymbol.name() << '\n';
   // Collect the enumerator PARAMETER symbols of this enumeration type from the
   // enclosing scope, sorted by ordinal value.  The intrinsic enumerators
-  // created by the ENUMERATOR statement carry Symbol::Flag::EnumeratorParameter,
-  // which distinguishes them from user-declared PARAMETERs of the same
-  // enumeration type; only the flagged symbols are listed here and suppressed
-  // from standalone emission.
+  // created by the ENUMERATOR statement carry
+  // Symbol::Flag::EnumeratorParameter, which distinguishes them from
+  // user-declared PARAMETERs of the same enumeration type; only the flagged
+  // symbols are listed here and suppressed from standalone emission.
   struct EnumeratorInfo {
     SourceName name;
     const Symbol *sym{nullptr};

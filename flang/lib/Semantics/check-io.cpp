@@ -22,6 +22,8 @@ namespace Fortran::semantics {
 
 // TODO: C1234, C1235 -- defined I/O constraints
 
+static const Symbol *FindEnumerationTypeComponent(const DerivedTypeSpec &);
+
 class FormatErrorReporter {
 public:
   FormatErrorReporter(SemanticsContext &context,
@@ -342,6 +344,18 @@ void IoChecker::Enter(const parser::InputItem &spec) {
           if (details->isEnumerationType()) {
             context_.Say(at,
                 "Enumeration type may not appear in list-directed input"_err_en_US);
+            return;
+          }
+        }
+        // A derived type without defined input I/O expands into its
+        // components (12.6.3), so reject one reaching an enumeration
+        // effective item, which may not appear in list-directed input.
+        const Scope &scope{context_.FindScope(at)};
+        if (!HasDefinedIo(common::DefinedIo::ReadFormatted, derived, &scope)) {
+          if (const Symbol *bad{FindEnumerationTypeComponent(derived)}) {
+            context_.Say(at,
+                "List-directed input item has a component '%s' of enumeration type"_err_en_US,
+                bad->name());
             return;
           }
         }
@@ -690,6 +704,19 @@ void IoChecker::Enter(const parser::OutputItem &item) {
               if (details->isEnumerationType()) {
                 context_.Say(at,
                     "Enumeration type may not appear in list-directed output"_err_en_US);
+                return;
+              }
+            }
+            // A derived type without defined output I/O expands into its
+            // components (12.6.3), so reject one reaching an enumeration
+            // effective item, which may not appear in list-directed output.
+            const Scope &scope{context_.FindScope(at)};
+            if (!HasDefinedIo(
+                    common::DefinedIo::WriteFormatted, derived, &scope)) {
+              if (const Symbol *bad{FindEnumerationTypeComponent(derived)}) {
+                context_.Say(at,
+                    "List-directed output item has a component '%s' of enumeration type"_err_en_US,
+                    bad->name());
                 return;
               }
             }
@@ -1246,6 +1273,30 @@ static const Symbol *FindInaccessibleComponent(common::DefinedIo which,
   return FindInaccessibleComponent(which, derived, scope, visited);
 }
 
+// Returns the first direct (effective) component of `derived` whose type is an
+// enumeration type, else nullptr.  Mirrors the F2023 12.6.3 effective-item
+// expansion used to detect an enumeration effective item reached through a
+// derived-type list item.
+static const Symbol *FindEnumerationTypeComponent(
+    const DerivedTypeSpec &derived) {
+  if (!derived.GetScope()) {
+    return nullptr;
+  }
+  DirectComponentIterator directs{derived};
+  for (const Symbol &component : directs) {
+    if (auto compType{evaluate::DynamicType::From(component)};
+        compType && compType->category() == TypeCategory::Derived) {
+      if (const auto *compDetails{compType->GetDerivedTypeSpec()
+                  .typeSymbol()
+                  .detailsIf<DerivedTypeDetails>()};
+          compDetails && compDetails->isEnumerationType()) {
+        return &component;
+      }
+    }
+  }
+  return nullptr;
+}
+
 // Fortran 2018, 12.6.3 paragraphs 5 & 7
 parser::Message *IoChecker::CheckForBadIoType(const evaluate::DynamicType &type,
     common::DefinedIo which, parser::CharBlock where) const {
@@ -1266,6 +1317,20 @@ parser::Message *IoChecker::CheckForBadIoType(const evaluate::DynamicType &type,
       }
     }
     const Scope &scope{context_.FindScope(where)};
+    // An enumeration type may not be used in unformatted I/O.  A derived type
+    // that is not processed by defined I/O expands into its components
+    // (12.6.3), so reject one that reaches an enumeration effective item.
+    // This is intentional flang policy: the standard treats an unformatted
+    // derived-type item as a single value, but flang keeps enumeration values
+    // out of unformatted I/O for consistency with the bare-enum rejection.
+    if ((which == common::DefinedIo::ReadUnformatted ||
+            which == common::DefinedIo::WriteUnformatted) &&
+        !HasDefinedIo(which, derived, &scope)) {
+      if (FindEnumerationTypeComponent(derived)) {
+        return &context_.Say(where,
+            "Enumeration type may not be used in unformatted I/O"_err_en_US);
+      }
+    }
     if (const Symbol *
         bad{FindUnsafeIoDirectComponent(which, derived, scope)}) {
       return &context_.SayWithDecl(*bad, where,
