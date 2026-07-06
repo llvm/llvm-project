@@ -36,9 +36,7 @@ define i32 @sel_shl_pos_x_lt_zero_value(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @sel_shl_pos_x_lt_zero_value(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[M:%.*]] = shl nsw i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i32 0, [[M]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[NEG]], i32 [[M]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.abs.i32(i32 [[M]], i1 true)
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %m = shl nsw i32 %x, %y

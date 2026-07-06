@@ -9083,10 +9083,8 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
     auto CmpLHSOrSExt =
         m_CombineOr(m_Specific(CmpLHS), m_SExt(m_Specific(CmpLHS)));
     auto MaybeSExtOrMulCmpLHS = m_CombineOr(
-        CmpLHSOrSExt,
-        m_CombineOr(m_CombineOr(m_NSWMul(CmpLHSOrSExt, m_StrictlyPositive()),
-                                m_NSWMul(m_StrictlyPositive(), CmpLHSOrSExt)),
-                    m_NSWShl(CmpLHSOrSExt, m_NonNegative())));
+        CmpLHSOrSExt, m_CombineOr(m_NSWMul(CmpLHSOrSExt, m_StrictlyPositive()),
+                                  m_NSWShl(CmpLHSOrSExt, m_Value())));
     auto ZeroOrAllOnes = m_CombineOr(m_ZeroInt(), m_AllOnes());
     auto ZeroOrOne = m_CombineOr(m_ZeroInt(), m_One());
     if (match(TrueVal, MaybeSExtOrMulCmpLHS)) {
