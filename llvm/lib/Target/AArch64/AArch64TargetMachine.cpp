@@ -517,22 +517,8 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
 static bool scheduleFormTransposedTupleAdjacentToUsers(
     const TargetInstrInfo &TII, const TargetSubtargetInfo &TSI,
     const MachineInstr *FirstMI, const MachineInstr &SecondMI) {
-
-  auto *TRI = TSI.getRegisterInfo();
-  if (!FirstMI) {
-    // The SecondMI must be a multi-vector operation. So limit this to
-    // instructions that use full tuple registers (not a sub-register).
-    const MachineRegisterInfo &MRI = SecondMI.getMF()->getRegInfo();
-    for (const MachineOperand &Use : SecondMI.uses()) {
-      if (Use.isReg() && Use.getReg().isVirtual() && !Use.getSubReg() &&
-          TRI->isSubRegValidForRegClass(MRI.getRegClass(Use.getReg()),
-                                        AArch64::zsub0))
-        return true;
-    }
-    return false;
-  }
-
-  return FirstMI->getOpcode() == AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO ||
+  return !FirstMI ||
+         FirstMI->getOpcode() == AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO ||
          FirstMI->getOpcode() == AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO;
 }
 
