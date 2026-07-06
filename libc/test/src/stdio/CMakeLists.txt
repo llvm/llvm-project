@@ -173,6 +173,7 @@ add_fp_unittest(
   SRCS
     sprintf_test.cpp
   DEPENDS
+    libc.src.stdio.printf_core.printf_config
     libc.src.stdio.sprintf
     libc.src.__support.FPUtil.fp_bits
     libc.include.inttypes

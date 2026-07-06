@@ -560,8 +560,8 @@ void PopulateLoopsDFS<BlockT, LoopT>::insertIntoLoop(BlockT *Block) {
     Subloop->addBlockEntry(Block);
 }
 
-/// Analyze LoopInfo discovers loops during a postorder DominatorTree traversal
-/// interleaved with backward CFG traversals within each subloop
+/// Analyze LoopInfo discovers loops during a reverse preorder DominatorTree
+/// traversal interleaved with backward CFG traversals within each subloop
 /// (discoverAndMapSubloop). The backward traversal skips inner subloops, so
 /// this part of the algorithm is linear in the number of CFG edges. Subloop and
 /// Block vectors are then populated during a single forward CFG traversal
@@ -576,7 +576,6 @@ void PopulateLoopsDFS<BlockT, LoopT>::insertIntoLoop(BlockT *Block) {
 /// insertions per block.
 template <class BlockT, class LoopT>
 void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
-  // Postorder traversal of the dominator tree.
   const DomTreeNodeBase<BlockT> *DomRoot = DomTree.getRootNode();
   if constexpr (GraphHasNodeNumbers<const BlockT *>) {
     ParentPtr = DomRoot->getBlock()->getParent();
@@ -584,8 +583,16 @@ void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
     unsigned Max = GraphTraits<ParentT>::getMaxNumber(ParentPtr);
     BBMap.resize(Max);
   }
-  for (auto DomNode : post_order(DomRoot)) {
 
+  // Visit dominator tree nodes in reverse preorder: like postorder, this
+  // guarantees a sub-loop is discovered before the outer loop.
+  DomTree.updateDFSNumbers();
+  SmallVector<const DomTreeNodeBase<BlockT> *, 32> PreorderNodes(
+      DomRoot->getDFSNumOut());
+  for (const DomTreeNodeBase<BlockT> *Node : DomTree.nodes())
+    PreorderNodes[Node->getDFSNumIn()] = Node;
+
+  for (const DomTreeNodeBase<BlockT> *DomNode : llvm::reverse(PreorderNodes)) {
     BlockT *Header = DomNode->getBlock();
     SmallVector<BlockT *, 4> Backedges;
 

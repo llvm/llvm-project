@@ -230,6 +230,7 @@ MVT M68kTargetLowering::getScalarShiftAmountTy(const DataLayout &DL,
   return MVT::getIntegerVT(DL.getPointerSizeInBits(0));
 }
 
+#define GET_CALLING_CONV_IMPL
 #include "M68kGenCallingConv.inc"
 
 enum StructReturnType { NotStructReturn, RegStructReturn, StackStructReturn };

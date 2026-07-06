@@ -223,6 +223,7 @@ static bool RetCC_Sparc64_Half(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
                                  State);
 }
 
+#define GET_CALLING_CONV_IMPL
 #include "SparcGenCallingConv.inc"
 
 // The calling conventions in SparcCallingConv.td are described in terms of the
