@@ -3163,8 +3163,14 @@ void CodeGenFunction::EmitPPCAIXMultiVersionResolver(
         BaseFeature = BaseFeature.drop_front(3);
       }
 
+      // Map feature names to __builtin_cpu_supports() strings
       BuiltinCpuSupportsArg =
-          getTarget().getBuiltinCpuSupportsName(BaseFeature);
+          llvm::StringSwitch<StringRef>(BaseFeature)
+#define PPC_AIX_CLONES_FEATURE(FEATURE_NAME, AIX_BUILTIN_CPU_SUPPORTS_NAME)    \
+  .Case(FEATURE_NAME, AIX_BUILTIN_CPU_SUPPORTS_NAME)
+#include "llvm/TargetParser/PPCTargetParser.def"
+              // Features without runtime checks return empty string
+              .Default("");
 
       // All features in target_clones must have runtime detection
       assert(!BuiltinCpuSupportsArg.empty() &&

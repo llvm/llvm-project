@@ -276,6 +276,25 @@ PPC_AIX_FEATURE("ucache","CPU has unified I/D cache",USE_SYS_CONF,AIX_SYSCON_CAC
 PPC_AIX_FEATURE("vsx","CPU supports the vector-scalar extension",USE_SYS_CONF,AIX_SYSCON_VMX_IDX,0,ICmpInst::ICMP_UGT,1)
 #undef PPC_AIX_FEATURE
 
+#ifndef PPC_AIX_CLONES_FEATURE
+#define PPC_AIX_CLONES_FEATURE(TARGET_FEATURE_NAME, AIX_BUILTIN_CPU_SUPPORTS_NAME)
+#endif
+
+PPC_AIX_CLONES_FEATURE("altivec",             "altivec")
+PPC_AIX_CLONES_FEATURE("htm",                 "htm")
+PPC_AIX_CLONES_FEATURE("vsx",                 "vsx")
+PPC_AIX_CLONES_FEATURE("mma",                 "mma")
+PPC_AIX_CLONES_FEATURE("popcntd",             "arch_2_06")
+PPC_AIX_CLONES_FEATURE("crypto",              "arch_2_07")
+PPC_AIX_CLONES_FEATURE("direct-move",         "arch_2_07")
+PPC_AIX_CLONES_FEATURE("power8-vector",       "arch_2_07")
+PPC_AIX_CLONES_FEATURE("float128",            "arch_3_00")
+PPC_AIX_CLONES_FEATURE("power9-vector",       "arch_3_00")
+PPC_AIX_CLONES_FEATURE("paired-vector-memops","arch_3_1")
+PPC_AIX_CLONES_FEATURE("power10-vector",      "arch_3_1")
+PPC_AIX_CLONES_FEATURE("prefixed",            "arch_3_1")
+#undef PPC_AIX_CLONES_FEATURE
+
 // PPC_SYSTEMCONFIG_TYPE defines the IR data structure of kernel variable
 // `_system_configuration`, that is found in the AIX OS header file: </usr/include/sys/systemcfg.h>.
 #ifndef PPC_SYSTEMCONFIG_TYPE

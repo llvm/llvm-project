@@ -866,83 +866,12 @@ void PPCTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
   llvm::PPC::fillValidCPUList(Values);
 }
 
-bool PPCTargetInfo::isValidFeatureName(StringRef Name) const {
-  if (!getTriple().isOSAIX())
-    return TargetInfo::isValidFeatureName(Name);
-  return llvm::StringSwitch<bool>(Name)
-      .Case("altivec", true)
-      .Case("htm", true)
-      .Case("mma", true)
-      .Case("vsx", true)
-      .Case("crypto", true)
-      .Case("direct-move", true)
-      .Case("float128", true)
-      .Case("paired-vector-memops", true)
-      .Case("popcntd", true)
-      .Case("power8-vector", true)
-      .Case("power9-vector", true)
-      .Case("power10-vector", true)
-      .Case("prefixed", true)
-      .Case("aix-shared-lib-tls-model-opt", true)
-      .Case("aix-small-local-dynamic-tls", true)
-      .Case("aix-small-local-exec-tls", true)
-      .Case("cmpb", true)
-      .Case("crbits", true)
-      .Case("fprnd", true)
-      .Case("invariant-function-descriptors", true)
-      .Case("isel", true)
-      .Case("longcall", true)
-      .Case("mfcrf", true)
-      .Case("mfocrf", true)
-      .Case("privileged", true)
-      .Case("rop-protect", true)
-      .Case("secure-plt", true)
-      .Default(false);
-}
-
-bool PPCTargetInfo::isValidClonesFeatureName(StringRef Name) const {
+bool PPCTargetInfo::isValidClonesFeatureName(StringRef FeatureStr) const {
   // Only features with runtime detection are valid for target_clones
-  return llvm::StringSwitch<bool>(Name)
-      // Direct mappings (4 features)
-      .Case("altivec", true)
-      .Case("htm", true)
-      .Case("mma", true)
-      .Case("vsx", true)
-      // ISA level mappings
-      .Case("crypto", true)
-      .Case("direct-move", true)
-      .Case("float128", true)
-      .Case("paired-vector-memops", true)
-      .Case("popcntd", true)
-      .Case("power8-vector", true)
-      .Case("power9-vector", true)
-      .Case("power10-vector", true)
-      .Case("prefixed", true)
+  return llvm::StringSwitch<bool>(FeatureStr)
+#define PPC_AIX_CLONES_FEATURE(FEATURE_NAME, _) .Case(FEATURE_NAME, true)
+#include "llvm/TargetParser/PPCTargetParser.def"
       .Default(false);
-}
-
-StringRef
-PPCTargetInfo::getBuiltinCpuSupportsName(StringRef FeatureName) const {
-  // Map feature names to __builtin_cpu_supports() strings
-  // Only returns non-empty for features with runtime detection
-  return llvm::StringSwitch<StringRef>(FeatureName)
-      // Direct mappings (4 features)
-      .Case("altivec", "altivec")
-      .Case("htm", "htm")
-      .Case("mma", "mma")
-      .Case("vsx", "vsx")
-      // ISA LEVEL MAPPINGS
-      .Case("popcntd", "arch_2_06")
-      .Case("crypto", "arch_2_07")
-      .Case("direct-move", "arch_2_07")
-      .Case("power8-vector", "arch_2_07")
-      .Case("float128", "arch_3_00")
-      .Case("power9-vector", "arch_3_00")
-      .Case("paired-vector-memops", "arch_3_1")
-      .Case("power10-vector", "arch_3_1")
-      .Case("prefixed", "arch_3_1")
-      // Features without runtime checks return empty string
-      .Default("");
 }
 
 void PPCTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,

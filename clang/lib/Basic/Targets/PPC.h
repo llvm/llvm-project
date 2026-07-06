@@ -98,16 +98,8 @@ public:
   bool isValidCPUName(StringRef Name) const override;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
-  // Validate feature name for target attribute (all 28 features)
-  bool isValidFeatureName(StringRef Name) const override;
-
-  // Validate feature name for target_clones (only 17 features with runtime
-  // detection)
-  bool isValidClonesFeatureName(StringRef Name) const;
-
-  // Get __builtin_cpu_supports() argument for a feature (returns empty string
-  // if no runtime check)
-  StringRef getBuiltinCpuSupportsName(StringRef FeatureName) const;
+  // Validate if given feature name is supported on target_clones
+  bool isValidClonesFeatureName(StringRef Name) const override;
 
   bool setCPU(StringRef &Name) override {
     bool CPUKnown = isValidCPUName(Name);
