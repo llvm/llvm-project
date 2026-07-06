@@ -21,7 +21,6 @@
 #include "flang/Optimizer/HLFIR/Passes.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
@@ -101,11 +100,6 @@ std::optional<mlir::Value> genConformingAddressBasedDisjointnessCheck(
       mlir::Value stride = dims.getByteStride();
       extents.push_back(extent);
 
-      llvm::APInt constantExtent;
-      if (mlir::matchPattern(extent, mlir::m_ConstantInt(&constantExtent)) &&
-          constantExtent.isNonPositive())
-        return {};
-
       mlir::Value isExtentPositive = mlir::arith::CmpIOp::create(
           builder, loc, mlir::arith::CmpIPredicate::sgt, extent, zero);
       nonEmpty =
@@ -157,6 +151,10 @@ std::optional<mlir::Value> genConformingAddressBasedDisjointnessCheck(
                                   rhsRange.end, lhsRange.start);
   mlir::Value disjoint = mlir::arith::OrIOp::create(builder, loc, cond1, cond2);
 
+  // Require identical extents so a non-conforming assignment fails the guard
+  // and falls back to the runtime, which reports the element-count mismatch.
+  // This only preserves runtime reporting and should later be gated behind an
+  // option that enforces the same-shape constraint.
   mlir::Value sameShape = builder.createBool(loc, true);
   for (unsigned i = 0, e = lhsRange.extents.size(); i < e; ++i) {
     mlir::Value sameExtent = mlir::arith::CmpIOp::create(
