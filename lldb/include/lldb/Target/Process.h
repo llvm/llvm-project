@@ -40,6 +40,7 @@
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/InstrumentationRuntime.h"
 #include "lldb/Target/Memory.h"
+#include "lldb/Target/MemoryRegionInfoCache.h"
 #include "lldb/Target/MemoryTagManager.h"
 #include "lldb/Target/QueueList.h"
 #include "lldb/Target/ThreadList.h"
@@ -107,6 +108,8 @@ public:
   bool GetWarningsOptimization() const;
   bool GetWarningsUnsupportedLanguage() const;
   bool GetStopOnExec() const;
+  bool GetStopOnFork() const;
+  bool GetStopOnVFork() const;
   std::chrono::seconds GetUtilityExpressionTimeout() const;
   std::chrono::seconds GetInterruptTimeout() const;
   bool GetOSPluginReportsAllThreads() const;
@@ -3549,6 +3552,7 @@ protected:
   std::vector<std::string> m_profile_data;
   Predicate<uint32_t> m_iohandler_sync;
   MemoryCache m_memory_cache;
+  MemoryRegionInfoCache m_memory_region_infos_cache;
   AllocatedMemoryCache m_allocated_memory_cache;
   bool m_should_detach; /// Should we detach if the process object goes away
                         /// with an explicit call to Kill or Detach?

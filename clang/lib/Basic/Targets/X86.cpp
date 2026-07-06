@@ -296,6 +296,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAVX512DQ = true;
     } else if (Feature == "+avx512bitalg") {
       HasAVX512BITALG = true;
+    } else if (Feature == "+avx512bmm") {
+      HasAVX512BMM = true;
     } else if (Feature == "+avx512bw") {
       HasAVX512BW = true;
     } else if (Feature == "+avx512vl") {
@@ -733,6 +735,9 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_C86_4G_M7:
     defineCPUMacros(Builder, "c86_4g_m7");
     break;
+  case CK_C86_4G_M8:
+    defineCPUMacros(Builder, "c86_4g_m8");
+    break;
   }
 
   // Target properties.
@@ -847,6 +852,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AVX512DQ__");
   if (HasAVX512BITALG)
     Builder.defineMacro("__AVX512BITALG__");
+  if (HasAVX512BMM)
+    Builder.defineMacro("__AVX512BMM__");
   if (HasAVX512BW)
     Builder.defineMacro("__AVX512BW__");
   if (HasAVX512VL) {
@@ -1093,6 +1100,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("avx512fp16", true)
       .Case("avx512dq", true)
       .Case("avx512bitalg", true)
+      .Case("avx512bmm", true)
       .Case("avx512bw", true)
       .Case("avx512vl", true)
       .Case("avx512vbmi", true)
@@ -1214,6 +1222,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("avx512fp16", HasAVX512FP16)
       .Case("avx512dq", HasAVX512DQ)
       .Case("avx512bitalg", HasAVX512BITALG)
+      .Case("avx512bmm", HasAVX512BMM)
       .Case("avx512bw", HasAVX512BW)
       .Case("avx512vl", HasAVX512VL)
       .Case("avx512vbmi", HasAVX512VBMI)
@@ -1665,6 +1674,7 @@ std::optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     case CK_C86_4G_M4:
     case CK_C86_4G_M6:
     case CK_C86_4G_M7:
+    case CK_C86_4G_M8:
     // Deprecated
     case CK_x86_64:
     case CK_x86_64_v2:

@@ -2461,3 +2461,64 @@ define <2 x i16> @test_pasa_x_h(<2 x i16> %a, <2 x i16> %b) {
   %res = call <2 x i16> @llvm.riscv.pasa.v2i16(<2 x i16> %a, <2 x i16> %b)
   ret <2 x i16> %res
 }
+
+; Packed reduction sum
+define i32 @test_predsum_i8x4_i32(<4 x i8> %a, i32 %b) {
+; RV32-LABEL: test_predsum_i8x4_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    predsum.bs a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_predsum_i8x4_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    zext.w a0, a0
+; RV64-NEXT:    predsum.bs a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.predsum.i32.v4i8(<4 x i8> %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_predsumu_u8x4_u32(<4 x i8> %a, i32 %b) {
+; RV32-LABEL: test_predsumu_u8x4_u32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    predsumu.bs a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_predsumu_u8x4_u32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    zext.w a0, a0
+; RV64-NEXT:    predsumu.bs a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.predsumu.i32.v4i8(<4 x i8> %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_predsum_i16x2_i32(<2 x i16> %a, i32 %b) {
+; RV32-LABEL: test_predsum_i16x2_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    predsum.hs a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_predsum_i16x2_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    zext.w a0, a0
+; RV64-NEXT:    predsum.hs a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.predsum.i32.v2i16(<2 x i16> %a, i32 %b)
+  ret i32 %res
+}
+
+define i32 @test_predsumu_u16x2_u32(<2 x i16> %a, i32 %b) {
+; RV32-LABEL: test_predsumu_u16x2_u32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    predsumu.hs a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_predsumu_u16x2_u32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    zext.w a0, a0
+; RV64-NEXT:    predsumu.hs a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call i32 @llvm.riscv.predsumu.i32.v2i16(<2 x i16> %a, i32 %b)
+  ret i32 %res
+}

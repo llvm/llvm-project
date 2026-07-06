@@ -343,6 +343,7 @@ set(files
   __configuration/language.h
   __configuration/namespace.h
   __configuration/platform.h
+  __configuration/pstl.h
   __configuration/utility.h
   __coroutine/coroutine_handle.h
   __coroutine/coroutine_traits.h
@@ -961,6 +962,7 @@ set(files
   __vector/comparison.h
   __vector/container_traits.h
   __vector/erase.h
+  __vector/layout.h
   __vector/pmr.h
   __vector/swap.h
   __vector/vector.h

@@ -587,7 +587,11 @@ bool CompilerInstanceWithContext::computeDependencies(
   MDC->run(Consumer);
   MDC->applyDiscoveredDependencies(ModuleInvocation);
 
-  if (!Controller.finalize(CI, ModuleInvocation))
+  bool Success = ModuleInvocation.withCowRef<bool>(
+      [&](CowCompilerInvocation &CowModuleInvocation) {
+        return Controller.finalize(CI, CowModuleInvocation);
+      });
+  if (!Success)
     return false;
 
   Consumer.handleBuildCommand(

@@ -87,8 +87,10 @@ Potentially Breaking Changes
                                      <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>`
   ``hicpp-move-const-arg``           :doc:`performance-move-const-arg
                                      <clang-tidy/checks/performance/move-const-arg>`
-  ``hicpp-multiway-paths-covered``   :doc:`bugprone-unhandled-code-paths
-                                     <clang-tidy/checks/bugprone/unhandled-code-paths>`
+  ``hicpp-multiway-paths-covered``   | :doc:`bugprone-unhandled-code-paths
+                                       <clang-tidy/checks/bugprone/unhandled-code-paths>`
+                                     | :doc:`readability-trivial-switch
+                                       <clang-tidy/checks/readability/trivial-switch>`
   ``hicpp-named-parameter``          :doc:`readability-named-parameter
                                      <clang-tidy/checks/readability/named-parameter>`
   ``hicpp-new-delete-operators``     :doc:`misc-new-delete-overloads
@@ -569,6 +571,9 @@ Changes in existing checks
   - Fixed false positives when pointers were later passed or bound through
     ``const``-qualified pointer references.
 
+  - Fixed false positive where a pointer returned as a non-const ``void *``
+    was incorrectly diagnosed as allowing its pointee to be made ``const``.
+
 - Improved :doc:`misc-multiple-inheritance
   <clang-tidy/checks/misc/multiple-inheritance>` by avoiding false positives when
   virtual inheritance causes concrete bases to be counted more than once.
@@ -600,6 +605,11 @@ Changes in existing checks
   internal linkage to entities defined in C++ module interface units.
   Because it only sees one file at a time, the check can't be sure
   such entities aren't referenced in any other files of that module.
+
+- Improved :doc:`modernize-avoid-c-style-cast
+  <clang-tidy/checks/modernize/avoid-c-style-cast>` check by fixing an invalid
+  fix-it generated when replacing casts that directly follow a keyword or
+  identifier.
 
 - Improved :doc:`modernize-deprecated-headers
   <clang-tidy/checks/modernize/deprecated-headers>` check by avoiding false
@@ -647,6 +657,11 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-nodiscard>` check by avoiding false
   positives on functions returning specializations of class templates marked
   ``[[nodiscard]]``.
+
+- Improved :doc:`modernize-use-override
+  <clang-tidy/checks/modernize/use-override>` check by adding the
+  `AllowVirtualAndOverride` option to allow keeping ``virtual`` on methods
+  that are also marked ``override``.
 
 - Improved :doc:`modernize-use-ranges
   <clang-tidy/checks/modernize/use-ranges>` check:
