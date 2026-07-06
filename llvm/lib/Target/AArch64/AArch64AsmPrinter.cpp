@@ -3389,8 +3389,8 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   case AArch64::AUTPCPAC: {
     auto AuthSchema = PtrAuthSchema::CreateRegReg(
-        (AArch64PACKey::ID)MI->getOperand(0).getImm(),
-        AArch64::X16, AArch64::X15);
+        (AArch64PACKey::ID)MI->getOperand(0).getImm(), AArch64::X16,
+        AArch64::X15);
 
     auto SignSchema = PtrAuthSchema::CreateImmReg(
         (AArch64PACKey::ID)MI->getOperand(1).getImm(),
