@@ -32,7 +32,7 @@ void UseAfterLifetimeEnd::checkEndFunction(const ReturnStmt *RS,
   ExplodedNode *N = nullptr;
 
   std::vector<const MemRegion *> RetValRegion =
-      lifetime_modeling::checkReturnedBorrower(RetVal, State, C);
+      lifetime_modeling::getDanglingRegionsAfterReturn(RetVal, State, C);
   for (const MemRegion *Region : RetValRegion) {
     if (!N)
       N = C.generateNonFatalErrorNode();

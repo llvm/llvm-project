@@ -12,8 +12,9 @@ bool isDeallocated(ProgramStateRef State, const MemRegion *Region);
 
 /// Returns the set of lifetime sources bound to \p Source that are dangling
 /// stack regions.
-const std::vector<const MemRegion *>
-checkReturnedBorrower(SVal Source, ProgramStateRef State, CheckerContext &C);
+std::vector<const MemRegion *>
+getDanglingRegionsAfterReturn(SVal Source, ProgramStateRef State,
+                              CheckerContext &C);
 
 } // namespace clang::ento::lifetime_modeling
 

@@ -26,7 +26,7 @@ public:
 
 } // namespace
 
-static bool getDanglingStackFrame(const MemRegion *Source,
+static bool isDanglingStackSource(const MemRegion *Source,
                                   ProgramStateRef State, CheckerContext &C) {
   // FIXME: The checker currently handles stack-region sources. Other
   // region kinds require separate methodology. For example, heap
@@ -43,13 +43,12 @@ static bool getDanglingStackFrame(const MemRegion *Source,
   return false;
 }
 
-const std::vector<const MemRegion *>
-lifetime_modeling::checkReturnedBorrower(SVal Val, ProgramStateRef State,
-                                         CheckerContext &C) {
+std::vector<const MemRegion *> lifetime_modeling::getDanglingRegionsAfterReturn(
+    SVal Val, ProgramStateRef State, CheckerContext &C) {
   std::vector<const MemRegion *> Regions;
   if (auto *SourceSet = State->get<LifetimeBoundMap>(Val)) {
     for (const MemRegion *Region : *SourceSet) {
-      if (getDanglingStackFrame(Region, State, C))
+      if (isDanglingStackSource(Region, State, C))
         Regions.push_back(Region);
     }
   }
