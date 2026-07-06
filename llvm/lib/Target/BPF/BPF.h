@@ -10,6 +10,9 @@
 #define LLVM_LIB_TARGET_BPF_BPF_H
 
 #include "MCTargetDesc/BPFMCTargetDesc.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
@@ -24,10 +27,29 @@ class PassRegistry;
 
 #define BPF_TRAP "__bpf_trap"
 
-ModulePass *createBPFCheckAndAdjustIR();
+class BPFCheckAndAdjustIRPass
+    : public RequiredPassInfoMixin<BPFCheckAndAdjustIRPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+ModulePass *createBPFCheckAndAdjustIRLegacyPass();
+
+class BPFISelDAGToDAGPass : public SelectionDAGISelPass {
+public:
+  BPFISelDAGToDAGPass(BPFTargetMachine &TM);
+};
 
 FunctionPass *createBPFISelDag(BPFTargetMachine &TM);
-FunctionPass *createBPFMISimplifyPatchablePass();
+
+class BPFMISimplifyPatchablePass
+    : public OptionalPassInfoMixin<BPFMISimplifyPatchablePass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createBPFMISimplifyPatchableLegacyPass();
 FunctionPass *createBPFMIPeepholePass();
 FunctionPass *createBPFMIPreEmitPeepholePass();
 FunctionPass *createBPFMIPreEmitCheckingPass();
@@ -37,12 +59,12 @@ InstructionSelector *createBPFInstructionSelector(const BPFTargetMachine &,
                                                   const BPFRegisterBankInfo &);
 
 void initializeBPFAsmPrinterPass(PassRegistry &);
-void initializeBPFCheckAndAdjustIRPass(PassRegistry&);
+void initializeBPFCheckAndAdjustIRLegacyPass(PassRegistry &);
 void initializeBPFDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeBPFMIPeepholePass(PassRegistry &);
 void initializeBPFMIPreEmitCheckingPass(PassRegistry &);
 void initializeBPFMIPreEmitPeepholePass(PassRegistry &);
-void initializeBPFMISimplifyPatchablePass(PassRegistry &);
+void initializeBPFMISimplifyPatchableLegacyPass(PassRegistry &);
 
 class BPFAbstractMemberAccessPass
     : public RequiredPassInfoMixin<BPFAbstractMemberAccessPass> {
