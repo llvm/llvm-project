@@ -109,14 +109,15 @@ void extractAndAddSummaries(TUSummaryExtractor &Extractor,
       Contributors;
   findContributors(Ctx, Contributors);
   for (const auto &[Cano, Decls] : Contributors) {
-    assert(!Decls.empty() && !Decls[0]->isImplicit() &&
-           "guaranteed by 'findContributors'");
-    const NamedDecl *Rep = Cano->isImplicit() ? Decls[0] : Cano;
+    assert(!Decls.empty() &&
+           "'findContributors' guarantess that 'Decls' are non-empty");
+    assert(!Decls[0]->isImplicit() &&
+           "'findContributors' guarantess that 'Decls' are non-implicit");
 
     // Templates are skipped, but their instantiations are handled. The idea
     // is that we can conclude facts about a template through all of its
     // instantiations.
-    if (Rep->isTemplated())
+    if (Decls[0]->isTemplated())
       continue;
 
     auto Summary = ExtractFn(Decls);
@@ -124,13 +125,13 @@ void extractAndAddSummaries(TUSummaryExtractor &Extractor,
     if (Summary->empty())
       continue;
 
-    if (auto Id = Extractor.addEntity(Rep)) {
+    if (auto Id = Extractor.addEntity(Decls[0])) {
       if (!Builder.addSummary(*Id, std::move(Summary)).second)
         logWarningFromError(makeErrAtNode(
-            Ctx, Rep, "dropping duplicate %s summary for entity %s",
-            ExtractorName.str().c_str(), Rep->getNameAsString().c_str()));
+            Ctx, Decls[0], "dropping duplicate %s summary for entity %s",
+            ExtractorName.str().c_str(), Decls[0]->getNameAsString().c_str()));
     } else
-      logWarningFromError(makeEntityNameErr(Ctx, Rep));
+      logWarningFromError(makeEntityNameErr(Ctx, Decls[0]));
   }
 }
 

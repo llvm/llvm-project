@@ -22,13 +22,16 @@
 
 namespace clang::ssaf {
 
-/// \brief Collects specific pointer entities related to operator new and delete overloads within a contributor.
+/// \brief Collects specific pointer entities related to operator new and delete
+/// overloads within a contributor.
 ///
 /// OperatorNewDeletePointersEntitySummary collects the following entities:
 ///  -# The returned entities of `operator new` overloads.
-///  -# The parameter (optionally the second) of `operator new` overloads 
-///     representing the pointer to a memory area at which to initialize the object.
-///  -# The first parameter of `operator delete` overloads representing the pointer
+///  -# The parameter (optionally the second) of `operator new` overloads
+///     representing the pointer to a memory area at which to initialize the
+///     object.
+///  -# The first parameter of `operator delete` overloads representing the
+///  pointer
 ///     to a memory block to deallocate (or a null pointer).
 ///  -# The parameter (optionally the second) of `operator delete` overloads
 ///     representing the pointer used as the placement parameter in the matching

@@ -31,11 +31,11 @@ namespace {
 /// Look up the \p SummaryT entity summary for the contributor named
 /// \p ContributorName.
 ///
-/// \tparam SummaryT   The concrete EntitySummary subtype to return.
-/// \tparam ContributorT  The NamedDecl subtype to search for (defaults to
-///                    FunctionDecl).
+/// \tparam SummaryT        The concrete EntitySummary subtype to return.
+/// \tparam ContributorT    The NamedDecl subtype to search for (defaults to
+///                         FunctionDecl).
 /// \tparam TUSummaryDataT  The type of the TUSummary data map, deduced from
-///                    the \p TUSummaryData argument.
+///                         the \p TUSummaryData argument.
 ///
 /// Returns null without emitting a failure when no summary was recorded for
 /// the entity — that is a valid outcome in tests that assert absence.
