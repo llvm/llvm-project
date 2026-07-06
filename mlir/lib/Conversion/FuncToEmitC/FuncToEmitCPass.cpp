@@ -14,6 +14,7 @@
 
 #include "mlir/Conversion/EmitCCommon/TypeConverter.h"
 #include "mlir/Conversion/FuncToEmitC/FuncToEmitC.h"
+#include "mlir/Dialect/EmitC/Transforms/EmitCConversion.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Pass/Pass.h"
@@ -45,6 +46,7 @@ void ConvertFuncToEmitC::runOnOperation() {
   EmitCTypeConverter typeConverter(&getContext());
 
   populateFuncToEmitCPatterns(typeConverter, patterns, this->lowerToCpp);
+  populateBuiltinModuleToEmitCPatterns(typeConverter, patterns);
 
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))

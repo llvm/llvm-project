@@ -4,6 +4,7 @@ add_mlir_dialect_library(MLIREmitCTransforms
   TypeConversions.cpp
   WrapFuncInClass.cpp
   LowerNestedModuleToClass.cpp
+  EmitCConversion.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/EmitC/Transforms
@@ -16,4 +17,5 @@ add_mlir_dialect_library(MLIREmitCTransforms
   MLIRPass
   MLIREmitCDialect
   MLIRTransforms
+  MLIREmitCCommonConversion
 )
