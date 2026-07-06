@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic -Werror
 
 module submodules_03_one
    integer :: one_i
@@ -10,6 +10,7 @@ module submodules_03_one
 
  submodule (submodules_03_one) submodules_03_sub_one
  contains
+   !PORTABILITY: Subprogram 'inside_one' in this submodule hides an external interface from its parent module; did you mean 'MODULE SUBROUTINE'? [-Wportability]
    subroutine inside_one()
    one_i = 6
    end subroutine
@@ -25,6 +26,7 @@ module submodules_03_one
 
  submodule (submodules_03_two) sub_one
    contains
+   !PORTABILITY: Subprogram 'inside_one' in this submodule hides an external interface from its parent module; did you mean 'MODULE SUBROUTINE'? [-Wportability]
    subroutine inside_one()
    two_i = 6
    end subroutine
@@ -33,7 +35,6 @@ module submodules_03_one
  program p
  use submodules_03_one
  use submodules_03_two
- !ERROR: Reference to 'inside_one' is ambiguous
  call inside_one()
  end program
  

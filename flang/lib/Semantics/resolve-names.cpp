@@ -4252,27 +4252,7 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
         if (classification == ProcedureDefinitionClass::External) {
           const auto *subp1{p1.detailsIf<SubprogramDetails>()};
           const auto *subp2{p2.detailsIf<SubprogramDetails>()};
-          if (subp1 && subp1->isInterface() && subp2 && subp2->isInterface()) {
-            // Don't allow merging when either module has a submodule
-            // that provides a body for this procedure.
-            auto hasSubmoduleBody{[](const Symbol &p) {
-              const Scope &owner{p.owner()};
-              if (!owner.IsModule()) {
-                return false;
-              }
-              for (const Scope &child : owner.children()) {
-                if (child.IsSubmodule()) {
-                  auto it{child.find(p.name())};
-                  if (it != child.end() &&
-                      IsProcedure((*it->second).GetUltimate())) {
-                    return true;
-                  }
-                }
-              }
-              return false;
-            }};
-            return !hasSubmoduleBody(p1) && !hasSubmoduleBody(p2);
-          }
+          return subp1 && subp1->isInterface() && subp2 && subp2->isInterface();
         } else if (classification == ProcedureDefinitionClass::Module) {
           return AreSameModuleSymbol(p1, p2);
         }
@@ -5659,6 +5639,23 @@ const Symbol *SubprogramVisitor::CheckExtantProc(
 Symbol *SubprogramVisitor::PushSubprogramScope(const parser::Name &name,
     Symbol::Flag subpFlag, const parser::LanguageBindingSpec *bindingSpec,
     bool hasModulePrefix) {
+  if (!inInterfaceBlock() && currScope().IsSubmodule() && !hasModulePrefix) {
+    const Scope &parent{currScope().parent()};
+    if (parent.IsModule()) {
+      if (const Symbol *host{parent.FindSymbol(name.source)}) {
+        const Symbol &hostUlt{host->GetUltimate()};
+        const auto *hostSubp{hostUlt.detailsIf<SubprogramDetails>()};
+        if (hostSubp && hostSubp->isInterface() &&
+            hostUlt.attrs().test(Attr::EXTERNAL)) {
+          context().Warn(common::UsageWarning::Portability, name.source,
+              "Subprogram '%s' in this submodule hides an external interface "
+              "from its parent module; did you mean 'MODULE %s'?"_port_en_US,
+              name.source,
+              subpFlag == Symbol::Flag::Subroutine ? "SUBROUTINE" : "FUNCTION");
+        }
+      }
+    }
+  }
   Symbol *symbol{GetSpecificFromGeneric(name)};
   const DeclTypeSpec *previousImplicitType{nullptr};
   SourceName previousName;
