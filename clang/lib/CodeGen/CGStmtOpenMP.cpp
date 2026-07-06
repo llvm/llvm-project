@@ -7366,6 +7366,7 @@ static void emitCommonOMPTeamsDirective(CodeGenFunction &CGF,
           CGF, S, *CS->getCapturedDecl()->param_begin(), InnermostKind,
           CodeGen);
 
+  OMPTeamsScope Scope(CGF, S);
   auto &&ParallelLeague = [&S](CodeGenFunction &CGF, PrePostActionTy &) {
     const auto *NT = S.getSingleClause<OMPNumTeamsClause>();
     const auto *TL = S.getSingleClause<OMPThreadLimitClause>();
@@ -7409,7 +7410,6 @@ static void emitCommonOMPTeamsDirective(CodeGenFunction &CGF,
     ThenRCG(CGF);
   }
 
-  OMPTeamsScope Scope(CGF, S);
   llvm::SmallVector<llvm::Value *, 16> CapturedVars;
   CGF.GenerateOpenMPCapturedVars(*CS, CapturedVars);
   CGF.CGM.getOpenMPRuntime().emitTeamsCall(CGF, S, S.getBeginLoc(), OutlinedFn,

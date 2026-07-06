@@ -1438,8 +1438,12 @@ int main() {
 // CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB3]])
 // CHECK1-NEXT:    store i64 [[ARG]], ptr [[ARG_ADDR]], align 8
 // CHECK1-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP1:%.*]] = load i8, ptr @_ZZ4mainE14.capture_expr., align 1
-// CHECK1-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP1]], 0
+// CHECK1-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARG_ADDR]], align 4
+// CHECK1-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP1]], 0
+// CHECK1-NEXT:    [[STOREDV:%.*]] = zext i1 [[TOBOOL]] to i8
+// CHECK1-NEXT:    store i8 [[STOREDV]], ptr [[DOTCAPTURE_EXPR_]], align 1
+// CHECK1-NEXT:    [[TMP2:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1
+// CHECK1-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP2]], 0
 // CHECK1-NEXT:    br i1 [[LOADEDV]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK1:       omp_if.then:
 // CHECK1-NEXT:    br label [[OMP_IF_END:%.*]]
@@ -1447,10 +1451,6 @@ int main() {
 // CHECK1-NEXT:    call void @__kmpc_push_num_teams(ptr @[[GLOB3]], i32 [[TMP0]], i32 1, i32 0)
 // CHECK1-NEXT:    br label [[OMP_IF_END]]
 // CHECK1:       omp_if.end:
-// CHECK1-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARG_ADDR]], align 4
-// CHECK1-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP2]], 0
-// CHECK1-NEXT:    [[STOREDV:%.*]] = zext i1 [[TOBOOL]] to i8
-// CHECK1-NEXT:    store i8 [[STOREDV]], ptr [[DOTCAPTURE_EXPR_]], align 1
 // CHECK1-NEXT:    [[TMP3:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1
 // CHECK1-NEXT:    [[LOADEDV1:%.*]] = icmp ne i8 [[TMP3]], 0
 // CHECK1-NEXT:    [[STOREDV2:%.*]] = zext i1 [[LOADEDV1]] to i8
@@ -4045,8 +4045,12 @@ int main() {
 // CHECK3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB3]])
 // CHECK3-NEXT:    store i64 [[ARG]], ptr [[ARG_ADDR]], align 8
 // CHECK3-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
-// CHECK3-NEXT:    [[TMP1:%.*]] = load i8, ptr @_ZZ4mainE14.capture_expr., align 1
-// CHECK3-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP1]], 0
+// CHECK3-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARG_ADDR]], align 4
+// CHECK3-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP1]], 0
+// CHECK3-NEXT:    [[STOREDV:%.*]] = zext i1 [[TOBOOL]] to i8
+// CHECK3-NEXT:    store i8 [[STOREDV]], ptr [[DOTCAPTURE_EXPR_]], align 1
+// CHECK3-NEXT:    [[TMP2:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1
+// CHECK3-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP2]], 0
 // CHECK3-NEXT:    br i1 [[LOADEDV]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK3:       omp_if.then:
 // CHECK3-NEXT:    br label [[OMP_IF_END:%.*]]
@@ -4054,10 +4058,6 @@ int main() {
 // CHECK3-NEXT:    call void @__kmpc_push_num_teams(ptr @[[GLOB3]], i32 [[TMP0]], i32 1, i32 0)
 // CHECK3-NEXT:    br label [[OMP_IF_END]]
 // CHECK3:       omp_if.end:
-// CHECK3-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARG_ADDR]], align 4
-// CHECK3-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP2]], 0
-// CHECK3-NEXT:    [[STOREDV:%.*]] = zext i1 [[TOBOOL]] to i8
-// CHECK3-NEXT:    store i8 [[STOREDV]], ptr [[DOTCAPTURE_EXPR_]], align 1
 // CHECK3-NEXT:    [[TMP3:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1
 // CHECK3-NEXT:    [[LOADEDV1:%.*]] = icmp ne i8 [[TMP3]], 0
 // CHECK3-NEXT:    [[STOREDV2:%.*]] = zext i1 [[LOADEDV1]] to i8
@@ -7468,8 +7468,12 @@ int main() {
 // CHECK9-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB3]])
 // CHECK9-NEXT:    store i64 [[ARG]], ptr [[ARG_ADDR]], align 8
 // CHECK9-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
-// CHECK9-NEXT:    [[TMP1:%.*]] = load i8, ptr @_ZZ4mainE14.capture_expr., align 1
-// CHECK9-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP1]], 0
+// CHECK9-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARG_ADDR]], align 4
+// CHECK9-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP1]], 0
+// CHECK9-NEXT:    [[STOREDV:%.*]] = zext i1 [[TOBOOL]] to i8
+// CHECK9-NEXT:    store i8 [[STOREDV]], ptr [[DOTCAPTURE_EXPR_]], align 1
+// CHECK9-NEXT:    [[TMP2:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1
+// CHECK9-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP2]], 0
 // CHECK9-NEXT:    br i1 [[LOADEDV]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK9:       omp_if.then:
 // CHECK9-NEXT:    br label [[OMP_IF_END:%.*]]
@@ -7477,10 +7481,6 @@ int main() {
 // CHECK9-NEXT:    call void @__kmpc_push_num_teams(ptr @[[GLOB3]], i32 [[TMP0]], i32 1, i32 0)
 // CHECK9-NEXT:    br label [[OMP_IF_END]]
 // CHECK9:       omp_if.end:
-// CHECK9-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARG_ADDR]], align 4
-// CHECK9-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP2]], 0
-// CHECK9-NEXT:    [[STOREDV:%.*]] = zext i1 [[TOBOOL]] to i8
-// CHECK9-NEXT:    store i8 [[STOREDV]], ptr [[DOTCAPTURE_EXPR_]], align 1
 // CHECK9-NEXT:    [[TMP3:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1
 // CHECK9-NEXT:    [[LOADEDV1:%.*]] = icmp ne i8 [[TMP3]], 0
 // CHECK9-NEXT:    [[STOREDV2:%.*]] = zext i1 [[LOADEDV1]] to i8
@@ -10075,8 +10075,12 @@ int main() {
 // CHECK11-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB3]])
 // CHECK11-NEXT:    store i64 [[ARG]], ptr [[ARG_ADDR]], align 8
 // CHECK11-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR]], align 8
-// CHECK11-NEXT:    [[TMP1:%.*]] = load i8, ptr @_ZZ4mainE14.capture_expr., align 1
-// CHECK11-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP1]], 0
+// CHECK11-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARG_ADDR]], align 4
+// CHECK11-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP1]], 0
+// CHECK11-NEXT:    [[STOREDV:%.*]] = zext i1 [[TOBOOL]] to i8
+// CHECK11-NEXT:    store i8 [[STOREDV]], ptr [[DOTCAPTURE_EXPR_]], align 1
+// CHECK11-NEXT:    [[TMP2:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1
+// CHECK11-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP2]], 0
 // CHECK11-NEXT:    br i1 [[LOADEDV]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_ELSE:%.*]]
 // CHECK11:       omp_if.then:
 // CHECK11-NEXT:    br label [[OMP_IF_END:%.*]]
@@ -10084,10 +10088,6 @@ int main() {
 // CHECK11-NEXT:    call void @__kmpc_push_num_teams(ptr @[[GLOB3]], i32 [[TMP0]], i32 1, i32 0)
 // CHECK11-NEXT:    br label [[OMP_IF_END]]
 // CHECK11:       omp_if.end:
-// CHECK11-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARG_ADDR]], align 4
-// CHECK11-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[TMP2]], 0
-// CHECK11-NEXT:    [[STOREDV:%.*]] = zext i1 [[TOBOOL]] to i8
-// CHECK11-NEXT:    store i8 [[STOREDV]], ptr [[DOTCAPTURE_EXPR_]], align 1
 // CHECK11-NEXT:    [[TMP3:%.*]] = load i8, ptr [[DOTCAPTURE_EXPR_]], align 1
 // CHECK11-NEXT:    [[LOADEDV1:%.*]] = icmp ne i8 [[TMP3]], 0
 // CHECK11-NEXT:    [[STOREDV2:%.*]] = zext i1 [[LOADEDV1]] to i8
