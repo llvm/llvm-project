@@ -81,7 +81,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find_vectorized(_Tp* __first, _Tp* __last, 
         __lhs[__i] = std::__load_vector<__vec>(__first + __i * __vec_size);
 
       for (size_t __i = 0; __i != __unroll_count; ++__i) {
-        if (auto __cmp_res = __lhs[__i] == __values; std::__any_of(__cmp_res)) {
+        if (auto __cmp_res = std::__simd_compare_eq(__lhs[__i], __values); std::__any_of(__cmp_res)) {
           auto __offset = __i * __vec_size + std::__find_first_set(__cmp_res);
           return __first + __offset;
         }
@@ -92,7 +92,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find_vectorized(_Tp* __first, _Tp* __last, 
 
     // check the remaining 0-3 vectors
     while (static_cast<size_t>(__last - __first) >= __vec_size) {
-      if (auto __cmp_res = std::__load_vector<__vec>(__first) == __values; std::__any_of(__cmp_res)) {
+      if (auto __cmp_res = std::__simd_compare_eq(std::__load_vector<__vec>(__first), __values); std::__any_of(__cmp_res)) {
         return __first + std::__find_first_set(__cmp_res);
       }
       __first += __vec_size;
@@ -105,7 +105,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find_vectorized(_Tp* __first, _Tp* __last, 
     // (last - vector_size) to check the remaining elements
     if (static_cast<size_t>(__first - __orig_first) >= __vec_size) {
       __first = __last - __vec_size;
-      return __first + std::__find_first_set(std::__load_vector<__vec>(__first) == __values);
+      return __first + std::__find_first_set(std::__simd_compare_eq(std::__load_vector<__vec>(__first), __values));
     }
   }
 

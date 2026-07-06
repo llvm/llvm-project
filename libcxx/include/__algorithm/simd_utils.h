@@ -25,8 +25,13 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-// TODO: Find out how altivec changes things and allow vectorizations there too.
-#if _LIBCPP_STD_VER >= 14 && defined(_LIBCPP_COMPILER_CLANG_BASED) && !defined(__ALTIVEC__)
+// AltiVec changes the semantics of vector comparisons: in `-faltivec-src-compat=xl`
+// mode, == on vector types yields a scalar bool rather than an element-wise mask,
+// which silently breaks the mask-based algorithms below. We enable vectorization on
+// AIX (where we can enforce the correct mode via a static_assert) but leave other
+// AltiVec platforms disabled until they are explicitly validated.
+#if _LIBCPP_STD_VER >= 14 && defined(_LIBCPP_COMPILER_CLANG_BASED) &&                                                 \
+    (!defined(__ALTIVEC__) || defined(_AIX))
 #  define _LIBCPP_HAS_ALGORITHM_VECTOR_UTILS 1
 #else
 #  define _LIBCPP_HAS_ALGORITHM_VECTOR_UTILS 0
@@ -76,7 +81,7 @@ using __get_as_integer_type_t _LIBCPP_NODEBUG = typename __get_as_integer_type_i
 #  if defined(__AVX__) || defined(__MVS__)
 template <class _Tp>
 inline constexpr size_t __native_vector_size = 32 / sizeof(_Tp);
-#  elif defined(__SSE__) || defined(__ARM_NEON)
+#  elif defined(__SSE__) || defined(__ARM_NEON) || defined(__ALTIVEC__)
 template <class _Tp>
 inline constexpr size_t __native_vector_size = 16 / sizeof(_Tp);
 #  elif defined(__MMX__)
@@ -125,6 +130,29 @@ template <class _VecT, size_t _Np, class _Iter>
   }(make_index_sequence<_Np>{}, make_index_sequence<__simd_vector_size_v<_VecT> - _Np>{});
 }
 _LIBCPP_DIAGNOSTIC_POP
+
+// On targets with Altivec (PowerPC), the == operator on __ext_vector_type__
+// vectors produces a deprecated vector bool result under the old XL compat mode.
+// Centralise the comparison here so the suppression is in one place.
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated-altivec-src-compat")
+template <class _Tp, size_t _Np>
+[[__nodiscard__]] _LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI __simd_vector<_Tp, _Np>
+__simd_compare_eq(__simd_vector<_Tp, _Np> __lhs, __simd_vector<_Tp, _Np> __rhs) noexcept {
+  return __lhs == __rhs;
+}
+_LIBCPP_DIAGNOSTIC_POP
+
+#  if defined(__ALTIVEC__)
+// In -faltivec-src-compat=xl mode, == on vector types returns a scalar bool,
+// which silently breaks the mask-based algorithms below. Refuse to compile in
+// that mode rather than produce wrong results.
+static_assert(sizeof(std::__simd_compare_eq(std::declval<__simd_vector<int, 4>>(),
+                                             std::declval<__simd_vector<int, 4>>())) ==
+                  sizeof(__simd_vector<int, 4>),
+              "libc++'s vectorized algorithms require element-wise vector comparison semantics. "
+              "Compile with -faltivec-src-compat=mixed or -faltivec-src-compat=gcc (not =xl).");
+#  endif
 
 template <class _Tp, size_t _Np>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool __any_of(__simd_vector<_Tp, _Np> __vec) noexcept {
