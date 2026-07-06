@@ -327,6 +327,39 @@ void template_fnptr_call_arg(void (*fp)(T *)) {
 }
 template void template_fnptr_call_arg<int>(void (*)(int *)); // expected-note {{in instantiation of function template specialization 'template_fnptr_call_arg<int>' requested here}}
 
+// A variadic (...) argument never reaches parameter copy-initialization, and
+// a ... parameter cannot carry [[ref_to_uninit]], so a pointer passed through
+// it is checked as an unmarked target (paper §7.2). A *value* passed through
+// ... is promoted with an ordinary lvalue-to-rvalue load, so its read is the
+// read-through chokepoint's, not this site's.
+void vf(int, ...);
+
+void test_variadic_arguments() {
+  vf(0, &g_init);      // OK
+  vf(0, &g_uninit);    // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int *rtu [[ref_to_uninit]] = &g_uninit;
+  vf(0, rtu);          // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  vf(0, g_uninit_arr); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  vf(0, *rtu);         // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+
+  // Through a variadic function pointer: the named arguments are the
+  // no-declared-callee site's, the ... arguments this one's -- exactly one
+  // diagnostic either way.
+  void (*vfp)(int, ...) = vf;
+  vfp(0, &g_uninit);   // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init)]] { vf(0, &g_uninit); } // OK: suppressed
+  (void)rtu;
+}
+
+// Decl-less: defers on the pattern, fires once at instantiation.
+template <typename T>
+void template_variadic_arg() {
+  vf(0, &g_uninit); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}
+template void template_variadic_arg<int>(); // expected-note {{in instantiation of function template specialization 'template_variadic_arg<int>' requested here}}
+
 // An init-capture is a binding: a capture cannot carry [[ref_to_uninit]], so
 // capturing a pointer or reference to uninitialized memory is always the
 // unmarked-direction violation.

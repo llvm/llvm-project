@@ -6321,6 +6321,20 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
       for (Expr *A : Args.slice(ArgIx)) {
         ExprResult Arg = DefaultVariadicArgumentPromotion(A, CallType, FDecl);
         Invalid |= Arg.isInvalid();
+        // std::init / ref_to_uninit (paper §5): a variadic argument never
+        // reaches parameter copy-initialization, and a `...` parameter cannot
+        // carry [[ref_to_uninit]], so a pointer passed through it is checked
+        // here as an unmarked target (paper §7.2: passing uninitialized
+        // memory needs an appropriately declared callee). Value reads of the
+        // promoted argument already funnel through the lvalue-to-rvalue
+        // chokepoint; the pointer binding is the only direction added here.
+        if (!Arg.isInvalid() && getLangOpts().Profiles) {
+          Expr *E = Arg.get();
+          if (E->getType()->isPointerType())
+            Profiles().checkInitProfileRefToUninit(
+                E->getExprLoc(), /*TargetIsRefToUninit=*/false,
+                /*IsReference=*/false, E);
+        }
         AllArgs.push_back(Arg.get());
       }
     }

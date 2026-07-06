@@ -1108,7 +1108,11 @@ recognizers symmetric.
   property invisible through the pointer; suppress at the call if the flow
   is intended), arguments supplied by a parameter's default argument
   (``Sema::GatherArgumentsForCall``, which reuses the pre-built expression
-  rather than re-running copy-initialization), return statements
+  rather than re-running copy-initialization), variadic (``...``) arguments
+  (also ``GatherArgumentsForCall``, at the promotion loop -- a ``...``
+  parameter cannot carry the marker, so a pointer argument is checked as an
+  unmarked target, paper §7.2, while a promoted *value* read stays the
+  read-through chokepoint's), return statements
   (``Sema::BuildReturnStmt``), and lambda captures -- an init-capture binds
   like a variable initialization when its variable is created
   (``Sema::createLambdaInitCaptureVarDecl``), and a plain by-reference capture
@@ -1183,10 +1187,9 @@ recognizers symmetric.
   *contains* ``std::byte`` members.
 - Known gaps: recognition is purely of the source's syntactic form, so a
   binding whose underlying operand is unrecognized -- pointer arithmetic, an
-  integer-to-pointer cast, the *result* of a call through a function pointer
-  (no ``FunctionDecl`` to read a return marker from), or a variadic (``...``)
-  argument -- is classified as
-  *unknown* and diagnosed for neither direction.  A ``[[ref_to_uninit]]`` target
+  integer-to-pointer cast, or the *result* of a call through a function
+  pointer (no ``FunctionDecl`` to read a return marker from) -- is classified
+  as *unknown* and diagnosed for neither direction.  A ``[[ref_to_uninit]]`` target
   therefore accepts it (rather than the earlier *false positive*), while an
   unmarked target also accepts it (a remaining missed diagnostic).  The
   pass-through forms above forward to such an operand without laundering it, so
