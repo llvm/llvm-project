@@ -968,6 +968,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   automatically enables V3 unwind info (`-fwinx64-eh-unwind=v3`) if no
   explicit unwind version was specified.
 
+- Clang now supports `-std:c++26preview` for compatibility with MSVC. This enables C++26 features.
+
 #### LoongArch Support
 
 - DWARF fission is now compatible with linker relaxations, allowing `-gsplit-dwarf` and `-mrelax`
