@@ -21,10 +21,6 @@ def main():
     parser.add_argument(
         "--stable-abi", action="store_true", help="Target the Stable C ABI"
     )
-    parser.add_argument(
-        "--dynamic-scriptinterpreters", action="store_true",
-        help="Scriptinterpreter plugins were built as shared libraries"
-    )
     args = parser.parse_args()
     if args.variable_name == "LLDB_PYTHON_RELATIVE_PATH":
         # LLDB_PYTHON_RELATIVE_PATH is the relative path from lldb's prefix
