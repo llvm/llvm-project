@@ -1367,6 +1367,11 @@ first_trailing_one(T value) {
   return value == 0 ? 0 : cpp::countr_zero(value) + 1;
 }
 
+static_assert(LIBC_NAMESPACE::cpp::is_trivially_constructible<
+              LIBC_NAMESPACE::BigInt<128, false>>::value);
+static_assert(LIBC_NAMESPACE::cpp::is_trivially_copyable<
+              LIBC_NAMESPACE::BigInt<128, false>>::value);
+
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_BIG_INT_H
