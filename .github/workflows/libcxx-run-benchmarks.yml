@@ -99,11 +99,13 @@ jobs:
             cc: clang
             cxx: clang++
             install-python: false
+            install-macos-dependencies: true
           - platform: Linux x86_64
             runner: llvm-premerge-libcxx-next-runners
             cc: clang-22
             cxx: clang++-22
             install-python: true
+            install-macos-dependencies: false
       fail-fast: false
     permissions:
       pull-requests: write
@@ -126,6 +128,11 @@ jobs:
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: '3.14'
+
+      - name: Install Ninja and CMake
+        if: ${{ matrix.install-macos-dependencies }}
+        run: |
+          brew install ninja cmake
 
       - name: Setup virtual environment
         run: |
