@@ -272,6 +272,8 @@ namespace llvm {
         const APInt &ShiftOrRotateAmt,
         const std::optional<APInt> &AndMask) const override;
 
+    bool preferIncOfAddToSubOfNot(EVT VT) const override;
+
     bool preferScalarizeSplat(SDNode *N) const override;
 
     CondMergingParams
