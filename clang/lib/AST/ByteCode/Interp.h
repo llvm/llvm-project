@@ -146,6 +146,10 @@ bool isConstexprUnknown(const Pointer &P);
 bool isConstexprUnknown(const Block *B);
 bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestType,
                  bool IsReferenceCast);
+bool CastFloatingIntegralAP(InterpState &S, CodePtr OpPC, uint32_t BitWidth,
+                            uint32_t FPOI);
+bool CastFloatingIntegralAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth,
+                             uint32_t FPOI);
 
 enum class ShiftDir { Left, Right };
 
@@ -2945,50 +2949,6 @@ bool CastFloatingIntegral(InterpState &S, CodePtr OpPC, uint32_t FPOI) {
     S.Stk.push<T>(T(Result));
     return CheckFloatResult(S, OpPC, F, Status, FPO);
   }
-}
-
-static inline bool CastFloatingIntegralAP(InterpState &S, CodePtr OpPC,
-                                          uint32_t BitWidth, uint32_t FPOI) {
-  const Floating &F = S.Stk.pop<Floating>();
-
-  APSInt Result(BitWidth, /*IsUnsigned=*/true);
-  auto Status = F.convertToInteger(Result);
-
-  // Float-to-Integral overflow check.
-  if ((Status & APFloat::opStatus::opInvalidOp) && F.isFinite() &&
-      !handleOverflow(S, OpPC, F.getAPFloat()))
-    return false;
-
-  FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
-
-  auto ResultAP = S.allocAP<IntegralAP<false>>(BitWidth);
-  ResultAP.copy(Result);
-
-  S.Stk.push<IntegralAP<false>>(ResultAP);
-
-  return CheckFloatResult(S, OpPC, F, Status, FPO);
-}
-
-static inline bool CastFloatingIntegralAPS(InterpState &S, CodePtr OpPC,
-                                           uint32_t BitWidth, uint32_t FPOI) {
-  const Floating &F = S.Stk.pop<Floating>();
-
-  APSInt Result(BitWidth, /*IsUnsigned=*/false);
-  auto Status = F.convertToInteger(Result);
-
-  // Float-to-Integral overflow check.
-  if ((Status & APFloat::opStatus::opInvalidOp) && F.isFinite() &&
-      !handleOverflow(S, OpPC, F.getAPFloat()))
-    return false;
-
-  FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
-
-  auto ResultAP = S.allocAP<IntegralAP<true>>(BitWidth);
-  ResultAP.copy(Result);
-
-  S.Stk.push<IntegralAP<true>>(ResultAP);
-
-  return CheckFloatResult(S, OpPC, F, Status, FPO);
 }
 
 bool CheckPointerToIntegralCast(InterpState &S, CodePtr OpPC,
