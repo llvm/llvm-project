@@ -268,12 +268,8 @@ endif ()
 # on the OBJECT libray. The target-level dependency ensures that the module
 # files are built when they do not exist yet, the file-level dependency ensures
 # that dependees are rebuilt when the module file changes.
-# An actual COMMAND (that does nothing) seems to be necessary
-# on Windows for this to work.
 function (add_module_barrier barriername objlib)
-  add_custom_target(${barriername}
-    COMMAND ${CMAKE_COMMAND} -E true
-  )
+  add_custom_target(${barriername})
   add_dependencies(${barriername} ${objlib})
 endfunction ()
 
