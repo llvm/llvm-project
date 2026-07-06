@@ -10,8 +10,6 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Utility/ArchSpec.h"
 
-#include <algorithm>
-
 using namespace lldb_private;
 
 LLDB_PLUGIN_DEFINE(ArchitectureRISCV)
@@ -37,10 +35,10 @@ bool ArchitectureRISCV::IsValidTrapInstruction(
     llvm::ArrayRef<uint8_t> reference, llvm::ArrayRef<uint8_t> observed) const {
   // RISC-V has only two trap encodings here: 16-bit C.EBREAK or 32-bit EBREAK.
   // These instructions don't have any operands so check that the reference and
-  // exact bytes match.
+  // observed bytes  match.
   if ((reference.size() != 2 && reference.size() != 4) ||
       reference.size() > observed.size())
     return false;
 
-  return std::equal(reference.begin(), reference.end(), observed.begin());
+  return reference == observed.take_front(reference.size());
 }
