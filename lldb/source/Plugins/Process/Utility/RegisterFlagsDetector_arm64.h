@@ -10,6 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERFLAGSDETECTOR_ARM64_H
 
 #include "lldb/Utility/RegisterFlags.h"
+#include "lldb/Utility/RegisterInfo.h"
 #include "llvm/ADT/StringRef.h"
 #include <functional>
 

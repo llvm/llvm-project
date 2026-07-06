@@ -204,3 +204,96 @@ body:             |
     $q0 = COPY %and(<4 x s32>)
     RET_ReallyLR implicit $q0
 ...
+
+---
+name:            or_xor_or
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+    ; CHECK-LABEL: name: or_xor_or
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %y:_(s32) = COPY $w1
+    ; CHECK-NEXT: %or2:_(s32) = G_OR %x, %y
+    ; CHECK-NEXT: $w0 = COPY %or2(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %x:_(s32) = COPY $w0
+    %y:_(s32) = COPY $w1
+    %xor:_(s32) = G_XOR %x, %y
+    %or:_(s32) = G_OR %x, %y
+    %or2:_(s32) = G_OR %xor, %or
+    $w0 = COPY %or2(s32)
+    RET_ReallyLR implicit $w0
+...
+
+---
+name:            or_xor_or_vector
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $q0, $q1
+    ; CHECK-LABEL: name: or_xor_or_vector
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: %y:_(<4 x s32>) = COPY $q1
+    ; CHECK-NEXT: %or2:_(<4 x s32>) = G_OR %x, %y
+    ; CHECK-NEXT: $q0 = COPY %or2(<4 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %x:_(<4 x s32>) = COPY $q0
+    %y:_(<4 x s32>) = COPY $q1
+    %xor:_(<4 x s32>) = G_XOR %x, %y
+    %or:_(<4 x s32>) = G_OR %x, %y
+    %or2:_(<4 x s32>) = G_OR %xor, %or
+    $q0 = COPY %or2(<4 x s32>)
+    RET_ReallyLR implicit $q0
+...
+
+---
+name:            or_xor_and
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+    ; CHECK-LABEL: name: or_xor_and
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %y:_(s32) = COPY $w1
+    ; CHECK-NEXT: %or2:_(s32) = G_OR %x, %y
+    ; CHECK-NEXT: $w0 = COPY %or2(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %x:_(s32) = COPY $w0
+    %y:_(s32) = COPY $w1
+    %xor:_(s32) = G_XOR %x, %y
+    %and:_(s32) = G_AND %x, %y
+    %or2:_(s32) = G_OR %xor, %and
+    $w0 = COPY %or2(s32)
+    RET_ReallyLR implicit $w0
+...
+
+---
+name:            or_xor_and_vector
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $q0, $q1
+    ; CHECK-LABEL: name: or_xor_and_vector
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: %y:_(<4 x s32>) = COPY $q1
+    ; CHECK-NEXT: %or2:_(<4 x s32>) = G_OR %x, %y
+    ; CHECK-NEXT: $q0 = COPY %or2(<4 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %x:_(<4 x s32>) = COPY $q0
+    %y:_(<4 x s32>) = COPY $q1
+    %xor:_(<4 x s32>) = G_XOR %x, %y
+    %and:_(<4 x s32>) = G_AND %x, %y
+    %or2:_(<4 x s32>) = G_OR %xor, %and
+    $q0 = COPY %or2(<4 x s32>)
+    RET_ReallyLR implicit $q0
+...
+

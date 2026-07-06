@@ -449,7 +449,7 @@ define <4 x i64> @test_compress_v4i64(<4 x i64> %vec, <4 x i1> %mask, <4 x i64> 
 ; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm3
 ; AVX2-NEXT:    vpaddq %xmm3, %xmm2, %xmm2
 ; AVX2-NEXT:    vpextrq $1, %xmm2, %rcx
-; AVX2-NEXT:    vmovq %xmm2, %rax
+; AVX2-NEXT:    vmovd %xmm2, %eax
 ; AVX2-NEXT:    addl %ecx, %eax
 ; AVX2-NEXT:    andl $3, %eax
 ; AVX2-NEXT:    vpextrq $1, %xmm1, %rcx
@@ -521,7 +521,7 @@ define <4 x double> @test_compress_v4f64(<4 x double> %vec, <4 x i1> %mask, <4 x
 ; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
 ; AVX2-NEXT:    vpaddq %xmm2, %xmm1, %xmm1
 ; AVX2-NEXT:    vpextrq $1, %xmm1, %rax
-; AVX2-NEXT:    vmovq %xmm1, %rcx
+; AVX2-NEXT:    vmovd %xmm1, %ecx
 ; AVX2-NEXT:    addl %eax, %ecx
 ; AVX2-NEXT:    andl $3, %ecx
 ; AVX2-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
@@ -900,7 +900,7 @@ define <8 x i64> @test_compress_v8i64(<8 x i64> %vec, <8 x i1> %mask, <8 x i64> 
 ; AVX2-NEXT:    vextracti128 $1, %ymm3, %xmm4
 ; AVX2-NEXT:    vpaddq %xmm4, %xmm3, %xmm3
 ; AVX2-NEXT:    vpextrq $1, %xmm3, %rcx
-; AVX2-NEXT:    vmovq %xmm3, %rax
+; AVX2-NEXT:    vmovd %xmm3, %eax
 ; AVX2-NEXT:    addl %ecx, %eax
 ; AVX2-NEXT:    andl $7, %eax
 ; AVX2-NEXT:    vpextrw $1, %xmm2, %ecx
@@ -992,7 +992,7 @@ define <8 x double> @test_compress_v8f64(<8 x double> %vec, <8 x i1> %mask, <8 x
 ; AVX2-NEXT:    vextracti128 $1, %ymm3, %xmm4
 ; AVX2-NEXT:    vpaddq %xmm4, %xmm3, %xmm3
 ; AVX2-NEXT:    vpextrq $1, %xmm3, %rax
-; AVX2-NEXT:    vmovq %xmm3, %rcx
+; AVX2-NEXT:    vmovd %xmm3, %ecx
 ; AVX2-NEXT:    addl %eax, %ecx
 ; AVX2-NEXT:    andl $7, %ecx
 ; AVX2-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
@@ -3510,7 +3510,7 @@ define <8 x i64> @test_compress_knownbits_zext_v8i16_8i64(<8 x i16> %vec, <8 x  
 ; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm3
 ; AVX2-NEXT:    vpaddq %xmm3, %xmm2, %xmm2
 ; AVX2-NEXT:    vpextrq $1, %xmm2, %rcx
-; AVX2-NEXT:    vmovq %xmm2, %rax
+; AVX2-NEXT:    vmovd %xmm2, %eax
 ; AVX2-NEXT:    addl %ecx, %eax
 ; AVX2-NEXT:    andl $7, %eax
 ; AVX2-NEXT:    vpextrw $1, %xmm1, %ecx
@@ -3614,7 +3614,7 @@ define <8 x i64> @test_compress_knownbits_sext_v8i16_8i64(<8 x i16> %vec, <8 x i
 ; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm3
 ; AVX2-NEXT:    vpaddq %xmm3, %xmm2, %xmm2
 ; AVX2-NEXT:    vpextrq $1, %xmm2, %rcx
-; AVX2-NEXT:    vmovq %xmm2, %rax
+; AVX2-NEXT:    vmovd %xmm2, %eax
 ; AVX2-NEXT:    addl %ecx, %eax
 ; AVX2-NEXT:    andl $7, %eax
 ; AVX2-NEXT:    vpextrw $1, %xmm1, %ecx

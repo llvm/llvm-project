@@ -2142,9 +2142,43 @@ static std::optional<Instruction *> instCombineSVEDupX(InstCombiner &IC,
   return IC.replaceInstUsesWith(II, Splat);
 }
 
+// xor(cmpne(%pg, %lhs, %rhs), %pg)
+// -> cmpeq(%pg, %lhs, %rhs)
+static std::optional<Instruction *> instCombineXorSVECmpNE(InstCombiner &IC,
+                                                           IntrinsicInst &II) {
+  if (!II.hasOneUse())
+    return std::nullopt;
+  auto *User = cast<Instruction>(*II.user_begin());
+  if (!match(User, m_c_Xor(m_Specific(&II), m_Specific(II.getOperand(0)))))
+    return std::nullopt;
+
+  Intrinsic::ID IID;
+  switch (II.getIntrinsicID()) {
+  case Intrinsic::aarch64_sve_cmpne:
+    IID = Intrinsic::aarch64_sve_cmpeq;
+    break;
+  case Intrinsic::aarch64_sve_cmpne_wide:
+    IID = Intrinsic::aarch64_sve_cmpeq_wide;
+    break;
+  default:
+    return std::nullopt;
+  }
+
+  IC.Builder.SetInsertPoint(User);
+  Value *CMPEQ = IC.Builder.CreateIntrinsic(
+      IID, II.getOperand(1)->getType(),
+      {II.getOperand(0), II.getOperand(1), II.getOperand(2)});
+  IC.replaceInstUsesWith(*User, CMPEQ);
+  IC.eraseInstFromFunction(*User);
+  return &II;
+}
+
 static std::optional<Instruction *> instCombineSVECmpNE(InstCombiner &IC,
                                                         IntrinsicInst &II) {
   LLVMContext &Ctx = II.getContext();
+
+  if (auto Res = instCombineXorSVECmpNE(IC, II))
+    return Res;
 
   if (!isAllActivePredicate(II.getArgOperand(0)))
     return std::nullopt;
@@ -2596,6 +2630,32 @@ instCombineSVEVectorMlaU(InstCombiner &IC, IntrinsicInst &II) {
   }
 
   return std::nullopt;
+}
+
+static std::optional<Instruction *>
+instCombineSVEPairwiseAddLong(InstCombiner &IC, IntrinsicInst &II) {
+  assert((II.getIntrinsicID() == Intrinsic::aarch64_sve_sadalp ||
+          II.getIntrinsicID() == Intrinsic::aarch64_sve_uadalp) &&
+         "Expected SADALP or UADALP intrinsic");
+
+  // Simplify add(adalp(pg, zeroinitializer, in), wide_acc)
+  //       -> adalp(pg, wide_acc, in)
+  auto *User = dyn_cast_or_null<Instruction>(II.getUniqueUndroppableUser());
+  if (!User || !match(II.getArgOperand(1), m_Zero()))
+    return std::nullopt;
+
+  Value *Acc;
+  if (!match(User, m_c_Add(m_Specific(&II), m_Value(Acc))))
+    return std::nullopt;
+
+  IC.Builder.SetInsertPoint(User);
+  Value *PairwiseAddLong = IC.Builder.CreateIntrinsic(
+      II.getIntrinsicID(), {II.getType()},
+      {II.getArgOperand(0), Acc, II.getArgOperand(2)});
+
+  IC.replaceInstUsesWith(*User, PairwiseAddLong);
+  IC.eraseInstFromFunction(*User);
+  return &II; // II is now trivially dead and will get erased.
 }
 
 static std::optional<Instruction *> instCombineSVEVectorAdd(InstCombiner &IC,
@@ -3165,6 +3225,9 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
         IC, II, true);
   case Intrinsic::aarch64_sve_mla_u:
     return instCombineSVEVectorMlaU(IC, II);
+  case Intrinsic::aarch64_sve_sadalp:
+  case Intrinsic::aarch64_sve_uadalp:
+    return instCombineSVEPairwiseAddLong(IC, II);
   case Intrinsic::aarch64_sve_sub:
     return instCombineSVEVectorSub(IC, II);
   case Intrinsic::aarch64_sve_sub_u:
