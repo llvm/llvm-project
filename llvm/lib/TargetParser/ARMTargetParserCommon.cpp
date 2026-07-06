@@ -167,6 +167,9 @@ bool ARM::parseBranchProtection(StringRef Spec, ParsedBranchProtection &PBP,
     }
     if (Opt == "pac-ret") {
       PBP.Scope = "non-leaf";
+      if (Triple.isAArch64() && Triple.isOSWindows())
+        PBP.Key = "b_key";
+
       for (; I + 1 != E; ++I) {
         StringRef PACOpt = Opts[I + 1].trim();
         if (PACOpt == "leaf")

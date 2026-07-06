@@ -32,6 +32,7 @@ void btionly() {}
 __attribute__ ((target("branch-protection=pac-ret")))
 void paconly() {}
 // CHECK: define{{.*}} void @paconly() #[[#PAC:]]
+// WIN: define{{.*}} void @paconly() #[[#WINPAC:]]
 
 __attribute__ ((target("branch-protection=pac-ret+bti")))
 void pacbti0() {}
@@ -90,6 +91,7 @@ void gcs() {}
 // CHECK-DAG: attributes #[[#BTI]] = { {{.*}} "branch-target-enforcement"
 
 // CHECK-DAG: attributes #[[#PAC]] = { {{.*}} "sign-return-address"="non-leaf" "sign-return-address-key"="a_key"
+// WIN-DAG: attributes #[[#WINPAC]] = { {{.*}} "sign-return-address"="non-leaf" "sign-return-address-key"="b_key"
 
 // CHECK-DAG: attributes #[[#PACLEAF]] = { {{.*}} "sign-return-address"="all" "sign-return-address-key"="a_key"
 
