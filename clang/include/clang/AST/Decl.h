@@ -2059,7 +2059,7 @@ public:
     friend TrailingObjects;
     unsigned NumLookups;
     bool HasDeletedMessage;
-    uint64_t FPFeatures;
+    FPOptionsOverride FPFeatures;
 
     size_t numTrailingObjects(OverloadToken<DeclAccessPair>) const {
       return NumLookups;
@@ -2068,9 +2068,10 @@ public:
   public:
     static DefaultedOrDeletedFunctionInfo *
     Create(ASTContext &Context, ArrayRef<DeclAccessPair> Lookups,
-           StringLiteral *DeletedMessage = nullptr, uint64_t FPFeatures = 0);
+           FPOptionsOverride FPFeatures,
+           StringLiteral *DeletedMessage = nullptr);
 
-    uint64_t getFPFeatures() const { return FPFeatures; }
+    FPOptionsOverride getFPFeatures() const { return FPFeatures; }
 
     /// Get the unqualified lookup results that should be used in this
     /// defaulted function definition.

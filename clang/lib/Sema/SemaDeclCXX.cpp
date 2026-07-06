@@ -6917,8 +6917,7 @@ struct DefaultedFunctionFPFeaturesRAII {
       : SavedFPFeatures(S) {
     auto *Info = FD->getDefaultedOrDeletedInfo();
     FPOptionsOverride FPO =
-        Info ? FPOptionsOverride::getFromOpaqueInt(Info->getFPFeatures())
-             : FPOptionsOverride();
+        Info ? Info->getFPFeatures() : FPOptionsOverride();
     S.CurFPFeatures = FPO.applyOverrides(S.LangOpts);
     S.FpPragmaStack.CurrentValue = FPO;
   }
@@ -9048,10 +9047,9 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
     UnresolvedSet<32> Operators;
     lookupOperatorsForDefaultedComparison(*this, S, Operators,
                                           FD->getOverloadedOperator());
-    auto *Info = FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
-        Context, Operators.pairs(), /*DeletedMessage=*/nullptr,
-        CurFPFeatureOverrides().getAsOpaqueInt());
-    FD->setDefaultedOrDeletedInfo(Info);
+    FD->setDefaultedOrDeletedInfo(
+        FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
+            Context, Operators.pairs(), CurFPFeatureOverrides()));
   }
 
   // C++2a [class.compare.default]p1:
@@ -18812,8 +18810,7 @@ void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc) {
       CurFPFeatureOverrides().requiresTrailingStorage()) {
     FD->setDefaultedOrDeletedInfo(
         FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
-            Context, /*Lookups=*/{}, /*DeletedMessage=*/nullptr,
-            CurFPFeatureOverrides().getAsOpaqueInt()));
+            Context, /*Lookups=*/{}, CurFPFeatureOverrides()));
   }
 
   if (DefKind.isComparison()) {

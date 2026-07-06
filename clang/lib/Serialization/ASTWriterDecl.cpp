@@ -898,7 +898,7 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
       if (DeletedMessage)
         Record.AddStmt(DeletedMessage);
 
-      Record.push_back(FDI->getFPFeatures());
+      Record.push_back(FDI->getFPFeatures().getAsOpaqueInt());
 
       Record.push_back(FDI->getUnqualifiedLookups().size());
       for (DeclAccessPair P : FDI->getUnqualifiedLookups()) {
