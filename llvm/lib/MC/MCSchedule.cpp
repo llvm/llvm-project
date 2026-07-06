@@ -55,6 +55,7 @@ const MCSchedModel MCSchedModel::Default = {DefaultIssueWidth,
                                             nullptr,
                                             nullptr,
                                             nullptr,
+                                            nullptr,
                                             nullptr};
 
 int MCSchedModel::computeInstrLatency(const MCSubtargetInfo &STI,

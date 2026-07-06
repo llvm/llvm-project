@@ -33,13 +33,7 @@ let SchedModel = ModelB in {
 def ProcessorA : ProcessorModel<"processor-a", ModelA, []>;
 def ProcessorB : ProcessorModel<"processor-b", ModelB, []>;
 
-// Debug builds retain the per-processor tables so class names are available.
-// CHECK: #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-// CHECK: static const llvm::MCSchedClassDesc ModelASchedClasses[] = {
-// CHECK: static const llvm::MCSchedClassDesc ModelBSchedClasses[] = {
-
-// Release builds share identical descriptors through a compact index table.
-// CHECK: #else
+// All builds share identical descriptors through compact index tables.
 // CHECK: static const llvm::MCSchedClassDesc MyTargetSchedClassPool[] = {
 // CHECK: static_assert(sizeof(MyTargetSchedClassPool) / sizeof(MyTargetSchedClassPool[0]) <= (1ULL << 16));
 // CHECK: static const uint16_t ModelASchedClassIndices[] = {
@@ -49,26 +43,19 @@ def ProcessorB : ProcessorModel<"processor-b", ModelB, []>;
 // CHECK: static_assert(sizeof(ModelBSchedClassIndices[0]) == 2);
 // CHECK: static_assert(sizeof(ModelBSchedClassIndices) / sizeof(ModelBSchedClassIndices[0]) == 3);
 
+// Names are stored separately and indexed by the original scheduling class.
+// CHECK: static const uint32_t MyTargetSchedClassNameOffsets[] = {
+// CHECK: static_assert(sizeof(MyTargetSchedClassNameOffsets[0]) == 4);
+// CHECK: static_assert(sizeof(MyTargetSchedClassNameOffsets) / sizeof(MyTargetSchedClassNameOffsets[0]) == 3);
+
 // CHECK: static const llvm::MCSchedModel ModelA = {
-// CHECK: #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-// CHECK-NEXT:   ModelASchedClasses,
-// CHECK-NEXT: #else
-// CHECK-NEXT:   MyTargetSchedClassPool,
-// CHECK-NEXT: #endif
-// CHECK: #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-// CHECK-NEXT:   nullptr,
-// CHECK-NEXT: #else
-// CHECK-NEXT:   ModelASchedClassIndices,
-// CHECK-NEXT: #endif
+// CHECK:   MyTargetSchedClassPool,
+// CHECK:   DBGVAL_OR_NULLPTR(&MyTargetSchedClassNames), // SchedClassNames
+// CHECK-NEXT:   DBGVAL_OR_NULLPTR(MyTargetSchedClassNameOffsets), // SchedClassNameOffsets
+// CHECK:   ModelASchedClassIndices,
 
 // CHECK: static const llvm::MCSchedModel ModelB = {
-// CHECK: #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-// CHECK-NEXT:   ModelBSchedClasses,
-// CHECK-NEXT: #else
-// CHECK-NEXT:   MyTargetSchedClassPool,
-// CHECK-NEXT: #endif
-// CHECK: #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-// CHECK-NEXT:   nullptr,
-// CHECK-NEXT: #else
-// CHECK-NEXT:   ModelBSchedClassIndices,
-// CHECK-NEXT: #endif
+// CHECK:   MyTargetSchedClassPool,
+// CHECK:   DBGVAL_OR_NULLPTR(&MyTargetSchedClassNames), // SchedClassNames
+// CHECK-NEXT:   DBGVAL_OR_NULLPTR(MyTargetSchedClassNameOffsets), // SchedClassNameOffsets
+// CHECK:   ModelBSchedClassIndices,
