@@ -489,7 +489,6 @@ static void hoistLoopToNewParent(Loop &L, BasicBlock &Preheader,
   if (NewParentL)
     assert(NewParentL->contains(OldParentL) &&
            "Can only hoist this loop up the nest!");
-
   // The preheader will need to move with the body of this loop. However,
   // because it isn't in this loop we also need to update the primary loop map.
   assert(OldParentL == LI.getLoopFor(&Preheader) &&
@@ -549,34 +548,6 @@ static Loop *getTopMostExitingLoop(const BasicBlock *ExitBB,
   return TopMost;
 }
 
-/// Check whether any instruction that dominates \p BI within the loop is
-/// convergent. Trivially unswitching \p BI hoists it to the preheader, so on
-/// the unswitched-out path those instructions no longer execute. Since this is
-/// only called on trivial unswitch candidates, we can expect the path from
-/// header to branch to be a straight-line chain, thus walking the dominator
-/// tree is sufficient.
-static bool hasConvergentOpBeforeBranch(const Loop &L, const Instruction &BI,
-                                        const DominatorTree &DT) {
-  const BasicBlock *Header = L.getHeader();
-  const BasicBlock *BB = BI.getParent();
-  while (true) {
-    for (const Instruction &I : *BB) {
-      if (&I == &BI)
-        break;
-      if (const auto *CB = dyn_cast<CallBase>(&I))
-        if (CB->isConvergent())
-          return true;
-    }
-    if (BB == Header)
-      break;
-    auto *Node = DT.getNode(BB);
-    if (!Node || !Node->getIDom())
-      break;
-    BB = Node->getIDom()->getBlock();
-  }
-  return false;
-}
-
 /// Unswitch a trivial branch if the condition is loop invariant.
 ///
 /// This routine should only be called when loop code leading to the branch has
@@ -618,15 +589,6 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
       LLVM_DEBUG(dbgs() << "   Couldn't find invariant inputs!\n");
       return false;
     }
-  }
-
-  // Any instruction that currently executes before the branch is skipped on the
-  // unswitched-out path. Bail if such an instruction is convergent, as that
-  // would change whether it executes.
-  if (hasConvergentOpBeforeBranch(L, BI, DT)) {
-    LLVM_DEBUG(
-        dbgs() << "   Convergent/token op before branch; can't unswitch!\n");
-    return false;
   }
 
   std::optional<int> LatchIdx = std::nullopt;
@@ -1218,8 +1180,12 @@ static bool unswitchAllTrivialConditions(Loop &L, DominatorTree &DT,
       if (auto *Defs = MSSAU->getMemorySSA()->getBlockDefs(CurrentBB))
         if (!isa<MemoryPhi>(*Defs->begin()) || (++Defs->begin() != Defs->end()))
           return Changed;
-    if (llvm::any_of(*CurrentBB,
-                     [](Instruction &I) { return I.mayHaveSideEffects(); }))
+    if (llvm::any_of(*CurrentBB, [](Instruction &I) {
+          if (const auto *CB = dyn_cast<CallBase>(&I))
+            if (CB->isConvergent())
+              return true;
+          return I.mayHaveSideEffects();
+        }))
       return Changed;
 
     Instruction *CurrentTerm = CurrentBB->getTerminator();
