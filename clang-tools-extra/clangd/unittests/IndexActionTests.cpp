@@ -271,8 +271,8 @@ TEST_F(IndexActionTest, DeclParamName) {
   std::string HeaderPath = testPath("zenith.hpp");
   std::string HeaderCode = R"cpp(
       void moon(int, int);
-      void moon(int, int day);
       void moon(int month, int day);
+      void moon(int, int day);
       void moon(int, int);
       )cpp";
 

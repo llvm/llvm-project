@@ -707,8 +707,8 @@ TEST(CompletionTest, DeclParamName) {
   Opts.EnableSnippets = true;
   auto FuncFromSource = completions(R"cpp(
       void sun(int);
-      void sun(int day);
       void sun(int night);
+      void sun(int day);
       void sun(int);
       void position() {
         sun^;
