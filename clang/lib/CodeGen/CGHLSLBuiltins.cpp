@@ -310,6 +310,34 @@ static Value *handleElementwiseF32ToF16(CodeGenFunction &CGF,
   llvm_unreachable("Intrinsic F32ToF16 not supported by target architecture");
 }
 
+static Value *handleInterlockedOp(CodeGenFunction &CGF, const CallExpr *E,
+                                  Intrinsic::ID ID, const Twine &Name) {
+  // HLSL signatures (synthesized as overloads in HLSLExternalSemaSource):
+  //   void InterlockedOp(groupshared|device T &dest, T value);
+  //   void InterlockedOp(groupshared|device T &dest, T value,
+  //                      T &original_value);
+  // Both `dest` and `original_value` are plain references, so we can use
+  // the underlying lvalue directly without HLSLOutArgExpr unwrapping.
+  LValue DestLV = CGF.EmitLValue(E->getArg(0));
+  Value *Ptr = DestLV.getAddress().emitRawPointer(CGF);
+  Value *Val = CGF.EmitScalarExpr(E->getArg(1));
+  assert(E->getArg(1)->getType()->isIntegerType() &&
+         "Intrinsic InterlockedOp value operand must be an integer");
+
+  Value *Call = CGF.EmitRuntimeCall(
+      Intrinsic::getOrInsertDeclaration(&CGF.CGM.getModule(), ID,
+                                        {Val->getType(), Ptr->getType()}),
+      ArrayRef<Value *>{Ptr, Val}, Name);
+
+  // The 3-arg overload writes the old value (the intrinsic's return value)
+  // into the `original_value` reference parameter.
+  if (E->getNumArgs() == 3) {
+    LValue OrigLV = CGF.EmitLValue(E->getArg(2));
+    CGF.EmitStoreThroughLValue(RValue::get(Call), OrigLV);
+  }
+  return Call;
+}
+
 static Value *emitBufferStride(CodeGenFunction *CGF, const Expr *HandleExpr,
                                LValue &Stride) {
   // Figure out the stride of the buffer elements from the handle type.
@@ -1429,31 +1457,14 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                              "hlsl.wave.active.bit.and");
   }
   case Builtin::BI__builtin_hlsl_interlocked_add: {
-    // HLSL signatures (synthesized as overloads in HLSLExternalSemaSource):
-    //   void InterlockedAdd(groupshared|device T &dest, T value);
-    //   void InterlockedAdd(groupshared|device T &dest, T value,
-    //                       T &original_value);
-    // Both `dest` and `original_value` are plain references, so we can use
-    // the underlying lvalue directly without HLSLOutArgExpr unwrapping.
-    LValue DestLV = EmitLValue(E->getArg(0));
-    Value *Ptr = DestLV.getAddress().emitRawPointer(*this);
-    Value *Val = EmitScalarExpr(E->getArg(1));
-    assert(E->getArg(1)->getType()->isIntegerType() &&
-           "Intrinsic InterlockedAdd value operand must be an integer");
-
-    Intrinsic::ID ID = CGM.getHLSLRuntime().getInterlockedAddIntrinsic();
-    Value *Call = EmitRuntimeCall(
-        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID,
-                                          {Val->getType(), Ptr->getType()}),
-        ArrayRef<Value *>{Ptr, Val}, "hlsl.interlocked.add");
-
-    // The 3-arg overload writes the old value (the intrinsic's return value)
-    // into the `original_value` reference parameter.
-    if (E->getNumArgs() == 3) {
-      LValue OrigLV = EmitLValue(E->getArg(2));
-      EmitStoreThroughLValue(RValue::get(Call), OrigLV);
-    }
-    return Call;
+    return handleInterlockedOp(
+        *this, E, CGM.getHLSLRuntime().getInterlockedAddIntrinsic(),
+        "hlsl.interlocked.add");
+  }
+  case Builtin::BI__builtin_hlsl_interlocked_or: {
+    return handleInterlockedOp(*this, E,
+                               CGM.getHLSLRuntime().getInterlockedOrIntrinsic(),
+                               "hlsl.interlocked.or");
   }
   case Builtin::BI__builtin_hlsl_wave_active_ballot: {
     [[maybe_unused]] Value *Op = EmitScalarExpr(E->getArg(0));

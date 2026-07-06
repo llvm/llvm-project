@@ -343,6 +343,18 @@ bool ProcessProperties::GetUseDelayedBreakpoints() const {
       idx, g_process_properties[idx].default_uint_value != 0);
 }
 
+bool ProcessProperties::GetStopOnFork() const {
+  const uint32_t idx = ePropertyStopOnFork;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_process_properties[idx].default_uint_value != 0);
+}
+
+bool ProcessProperties::GetStopOnVFork() const {
+  const uint32_t idx = ePropertyStopOnVFork;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_process_properties[idx].default_uint_value != 0);
+}
+
 std::chrono::seconds ProcessProperties::GetUtilityExpressionTimeout() const {
   const uint32_t idx = ePropertyUtilityExpressionTimeout;
   uint64_t value = GetPropertyAtIndexAs<uint64_t>(
@@ -4372,7 +4384,7 @@ thread_result_t Process::RunPrivateStateThread(bool is_override) {
   // They must see parent frames, not provider-augmented frames.
   std::optional<PolicyStack::Guard> policy_guard;
   if (is_override)
-    policy_guard.emplace(Policy::PrivateState());
+    policy_guard = PolicyStack::Get().PushPrivateState();
 
   bool control_only = true;
 
@@ -5427,7 +5439,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
     // GetStackFrameList returns parent frames during event processing.
     std::optional<PolicyStack::Guard> policy_guard;
     if (backup_private_state_thread)
-      policy_guard.emplace(Policy::PrivateState());
+      policy_guard = PolicyStack::Get().PushPrivateState();
 
     while (true) {
       // We usually want to resume the process if we get to the top of the
@@ -5499,10 +5511,10 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
             Halt(clear_thread_plans, use_run_lock);
           }
 
-          diagnostic_manager.Printf(
-              lldb::eSeverityError,
-              "didn't get running event after initial resume, got %s instead.",
-              StateAsCString(stop_state));
+          diagnostic_manager.Printf(lldb::eSeverityError,
+                                    "didn't get running event after initial "
+                                    "resume, got %s instead.",
+                                    StateAsCString(stop_state));
           return_value = eExpressionSetupError;
           break;
         }

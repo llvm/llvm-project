@@ -11529,7 +11529,7 @@ public:
                                   ParsedType ObjectType, bool EnteringContext,
                                   TemplateTy &Template,
                                   bool &MemberOfUnknownSpecialization,
-                                  bool Disambiguation = false);
+                                  bool AllowTypoCorrection = true);
 
   /// Try to resolve an undeclared template name as a type template.
   ///
@@ -14260,11 +14260,8 @@ public:
                           LateInstantiatedAttrVec *LateAttrs = nullptr,
                           LocalInstantiationScope *OuterMostScope = nullptr);
 
-  /// In the MS ABI, we need to instantiate default arguments of dllexported
-  /// default constructors along with the constructor definition. This allows IR
-  /// gen to emit a constructor closure which calls the default constructor with
-  /// its default arguments.
-  void InstantiateDefaultCtorDefaultArgs(CXXConstructorDecl *Ctor);
+  bool BuildCtorClosureDefaultArgs(SourceLocation Loc, CXXConstructorDecl *Ctor,
+                                   bool IsCopy = false);
 
   bool InstantiateDefaultArgument(SourceLocation CallLoc, FunctionDecl *FD,
                                   ParmVarDecl *Param);

@@ -169,8 +169,13 @@ struct CodeGenIntrinsic {
   /// Vector that stores ArgInfo (ArgIndex, ArgName, FunctionName).
   SmallVector<PrettyPrintArgInfo> PrettyPrintFunctions;
 
+  /// Default values for parameters. Index = param index.
+  SmallVector<std::optional<uint64_t>> ParamDefaultValues;
+
   void addPrettyPrintFunction(unsigned ArgIdx, StringRef ArgName,
                               StringRef FuncName);
+
+  void addDefaultArgValue(unsigned ArgIdx, uint64_t Value);
 
   bool hasProperty(enum SDNP Prop) const { return Properties & (1 << Prop); }
 
