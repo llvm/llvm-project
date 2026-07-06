@@ -336,12 +336,13 @@ struct VPCostContext {
   VPCostContext(const TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
                 const VPlan &Plan, LoopVectorizationCostModel &CM,
                 TargetTransformInfo::TargetCostKind CostKind,
-                PredicatedScalarEvolution &PSE, const Loop *L)
+                PredicatedScalarEvolution &PSE, const Loop *L,
+                std::unique_ptr<VPSlotTracker> SlotTracker = nullptr)
       : TTI(TTI), TLI(TLI), LLVMCtx(Plan.getContext()), CM(CM),
         CostKind(CostKind), PSE(PSE), L(L)
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
         ,
-        Plan(Plan)
+        SlotTracker(std::move(SlotTracker))
 #endif
   {
   }
@@ -391,18 +392,12 @@ struct VPCostContext {
   static bool isFreeScalarIntrinsic(Intrinsic::ID ID);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Return a VPSlotTracker for \p Plan, shared across all recipe cost
-  /// printing, so names are assigned once instead of per-recipe.
-  VPSlotTracker &getSlotTracker();
+  /// Return SlotTracker to re-use for printing, if set.
+  VPSlotTracker *getSlotTracker() const { return SlotTracker.get(); }
 
 private:
-  /// The VPlan whose cost is being computed. Used to lazily construct the
-  /// shared VPSlotTracker for recipe cost printing; only read in dump-enabled
-  /// builds.
-  const VPlan &Plan;
-
-  /// Lazily created slot tracker, reused while printing recipe costs.
-  std::unique_ptr<VPSlotTracker> SlotTracker;
+  /// SlotTracker to re-use when printing.
+  const std::unique_ptr<VPSlotTracker> SlotTracker;
 #endif
 };
 
