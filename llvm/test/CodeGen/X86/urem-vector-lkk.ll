@@ -248,7 +248,7 @@ define <4 x i16> @dont_fold_urem_i16_smax(<4 x i16> %x) {
   ret <4 x i16> %1
 }
 
-; Fold i64 urem.
+; Fold i64 urem on AVX2+ targets.
 define <4 x i64> @fold_urem_i64(<4 x i64> %x) {
 ; SSE2-LABEL: fold_urem_i64:
 ; SSE2:       # %bb.0:

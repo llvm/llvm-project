@@ -1750,10 +1750,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     if (HasInt256) {
       setOperationAction(ISD::MULHU, MVT::v4i64, Custom);
-      // MULHS is only a win when the low multiply can use vpmullq, so gate it
-      // on AVX512DQ+VL; without it the schoolbook loses to scalar (esp. AVX2).
-      if (Subtarget.hasDQI() && Subtarget.hasVLX())
-        setOperationAction(ISD::MULHS, MVT::v4i64, Custom);
       // Custom so the combiner keeps full products as [SU]MUL_LOHI, not
       // MULH[SU].
       setOperationAction(ISD::UMUL_LOHI, MVT::v4i64, Custom);
@@ -2032,9 +2028,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::MUL, MVT::v64i8,  Custom);
 
     setOperationAction(ISD::MULHU, MVT::v8i64, Custom);
-    // MULHS needs vpmullq (AVX512DQ) for its low multiply to be a win.
-    if (Subtarget.hasDQI())
-      setOperationAction(ISD::MULHS, MVT::v8i64, Custom);
     setOperationAction(ISD::UMUL_LOHI, MVT::v8i64, Custom);
     setOperationAction(ISD::SMUL_LOHI, MVT::v8i64, Custom);
     setOperationAction(ISD::MULHU, MVT::v16i32, Custom);
@@ -2118,8 +2111,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::STRICT_FP_TO_SINT, ISD::STRICT_FP_TO_UINT})
         setOperationAction(Opc,           MVT::v8i64, Custom);
 
-    if (Subtarget.hasDQI())
+    if (Subtarget.hasDQI()) {
       setOperationAction(ISD::MUL,        MVT::v8i64, Legal);
+
+      // MULHS needs vpmullq (AVX512DQ) for its low multiply to be a win.
+      setOperationAction(ISD::MULHS, MVT::v8i64, Custom);
+    }
 
     if (Subtarget.hasCDI()) {
       // NonVLX sub-targets extend 128/256 vectors to use the 512 version.
@@ -2277,6 +2274,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       }
       setOperationAction(ISD::MUL, MVT::v2i64, Legal);
       setOperationAction(ISD::MUL, MVT::v4i64, Legal);
+
+      // MULHS is only a win when the low multiply can use vpmullq; non-VLX
+      // targets handle VPMULLQ by implicit widening.
+      setOperationAction(ISD::MULHS, MVT::v4i64, Custom);
     }
 
     if (Subtarget.hasCDI()) {
