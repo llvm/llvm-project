@@ -62,16 +62,14 @@ syncLookup(NativeDylibManager &NDM, void *Handle,
 }
 
 TEST(NativeDylibManagerTest, Create) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ST;
   auto NDM = NativeDylibManager::Create(S, ST);
   ASSERT_TRUE(!!NDM) << toString(NDM.takeError());
 }
 
 TEST(NativeDylibManagerTest, Load) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ST;
   auto NDM = cantFail(NativeDylibManager::Create(S, ST));
 
@@ -81,8 +79,7 @@ TEST(NativeDylibManagerTest, Load) {
 }
 
 TEST(NativeDylibManagerTest, LoadNonExistent) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ST;
   auto NDM = cantFail(NativeDylibManager::Create(S, ST));
 
@@ -92,8 +89,7 @@ TEST(NativeDylibManagerTest, LoadNonExistent) {
 }
 
 TEST(NativeDylibManagerTest, LoadEmptyPathReturnsGlobalHandle) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ST;
   auto NDM = cantFail(NativeDylibManager::Create(S, ST));
 
@@ -112,8 +108,7 @@ TEST(NativeDylibManagerTest, LoadEmptyPathReturnsGlobalHandle) {
 }
 
 TEST(NativeDylibManagerTest, LookupSingleSymbol) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ST;
   auto NDM = cantFail(NativeDylibManager::Create(S, ST));
 
@@ -132,8 +127,7 @@ TEST(NativeDylibManagerTest, LookupSingleSymbol) {
 }
 
 TEST(NativeDylibManagerTest, LookupMultipleSymbols) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ST;
   auto NDM = cantFail(NativeDylibManager::Create(S, ST));
 
@@ -156,8 +150,7 @@ TEST(NativeDylibManagerTest, LookupMultipleSymbols) {
 }
 
 TEST(NativeDylibManagerTest, LookupWeakMissingSymbol) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ST;
   auto NDM = cantFail(NativeDylibManager::Create(S, ST));
 
@@ -172,8 +165,7 @@ TEST(NativeDylibManagerTest, LookupWeakMissingSymbol) {
 }
 
 TEST(NativeDylibManagerTest, LookupRequiredMissingSymbol) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ST;
   auto NDM = cantFail(NativeDylibManager::Create(S, ST));
 
@@ -187,8 +179,7 @@ TEST(NativeDylibManagerTest, LookupRequiredMissingSymbol) {
 }
 
 TEST(NativeDylibManagerTest, LookupMixedRequiredAndWeak) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   SimpleSymbolTable ST;
   auto NDM = cantFail(NativeDylibManager::Create(S, ST));
 

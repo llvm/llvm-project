@@ -312,16 +312,16 @@ void Section::DumpName(llvm::raw_ostream &s) const {
     s << '.';
   } else {
     // The top most section prints the module basename
-    const char *name = nullptr;
+    llvm::StringRef name;
     ModuleSP module_sp(GetModule());
 
     if (m_obj_file) {
       const FileSpec &file_spec = m_obj_file->GetFileSpec();
-      name = file_spec.GetFilename().AsCString(nullptr);
+      name = file_spec.GetFilename();
     }
-    if ((!name || !name[0]) && module_sp)
-      name = module_sp->GetFileSpec().GetFilename().AsCString(nullptr);
-    if (name && name[0])
+    if (name.empty() && module_sp)
+      name = module_sp->GetFileSpec().GetFilename();
+    if (!name.empty())
       s << name << '.';
   }
   s << m_name;
@@ -517,18 +517,21 @@ size_t SectionList::AddUniqueSection(const lldb::SectionSP &sect_sp) {
   return sect_idx;
 }
 
-bool SectionList::ReplaceSection(user_id_t sect_id,
-                                 const lldb::SectionSP &sect_sp,
+bool SectionList::ReplaceSection(const lldb::SectionSP &remove_sect_sp,
+                                 const lldb::SectionSP &replace_sect_sp,
                                  uint32_t depth) {
+  // Make sure this isn't the same section pointer.
+  if (remove_sect_sp == replace_sect_sp)
+    return false;
   iterator sect_iter, end = m_sections.end();
   for (sect_iter = m_sections.begin(); sect_iter != end; ++sect_iter) {
-    if ((*sect_iter)->GetID() == sect_id) {
-      *sect_iter = sect_sp;
+    if (*sect_iter == remove_sect_sp) {
+      *sect_iter = replace_sect_sp;
       return true;
     } else if (depth > 0) {
       if ((*sect_iter)
               ->GetChildren()
-              .ReplaceSection(sect_id, sect_sp, depth - 1))
+              .ReplaceSection(remove_sect_sp, replace_sect_sp, depth - 1))
         return true;
     }
   }

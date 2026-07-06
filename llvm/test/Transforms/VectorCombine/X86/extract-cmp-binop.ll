@@ -246,3 +246,20 @@ define i1 @different_source_vec(<4 x i32> %a, <4 x i32> %b) {
   %r = and i1 %cmp1, %cmp2
   ret i1 %r
 }
+
+define i1 @oob_extract_index(<4 x i32> %x) {
+; CHECK-LABEL: @oob_extract_index(
+; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x i32> [[X:%.*]], i32 100
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[X]], i32 1
+; CHECK-NEXT:    [[C0:%.*]] = icmp eq i32 [[E0]], 7
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[E1]], 9
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[C0]], [[C1]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %e0 = extractelement <4 x i32> %x, i32 100
+  %e1 = extractelement <4 x i32> %x, i32 1
+  %c0 = icmp eq i32 %e0, 7
+  %c1 = icmp eq i32 %e1, 9
+  %r = and i1 %c0, %c1
+  ret i1 %r
+}

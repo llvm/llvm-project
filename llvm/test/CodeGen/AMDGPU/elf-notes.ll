@@ -11,21 +11,21 @@
 
 ; OSABI-UNK-NOT: .hsa_code_object_version
 ; OSABI-UNK-NOT: .hsa_code_object_isa
-; OSABI-UNK: .amd_amdgpu_isa "amdgcn-amd-unknown--gfx802"
+; OSABI-UNK: .amd_amdgpu_isa "amdgcn-amd-unknown-unknown-gfx802"
 ; OSABI-UNK-NOT: .amd_amdgpu_hsa_metadata
 ; OSABI-UNK-NOT: .amd_amdgpu_pal_metadata
 
 ; OSABI-UNK-ELF-NOT: Unknown note type
 ; OSABI-UNK-ELF: NT_AMD_HSA_ISA_NAME (AMD HSA ISA Name)
 ; OSABI-UNK-ELF: AMD HSA ISA Name:
-; OSABI-UNK-ELF: amdgcn-amd-unknown--gfx802
+; OSABI-UNK-ELF: amdgcn-amd-unknown-unknown-gfx802
 ; OSABI-UNK-ELF-NOT: Unknown note type
 ; OSABI-UNK-ELF-NOT: NT_AMD_HSA_METADATA (AMD HSA Metadata)
 ; OSABI-UNK-ELF-NOT: Unknown note type
 ; OSABI-UNK-ELF-NOT: NT_AMD_PAL_METADATA (AMD PAL Metadata)
 ; OSABI-UNK-ELF-NOT: Unknown note type
 
-; OSABI-HSA: amdhsa.target:   amdgcn-amd-amdhsa--gfx802
+; OSABI-HSA: amdhsa.target:   amdgcn-amd-amdhsa-unknown-gfx802
 ; OSABI-HSA: amdhsa.version:
 ; OSABI-HSA: .end_amdgpu_metadata
 ; OSABI-HSA-NOT: .amd_amdgpu_pal_metadata
@@ -46,20 +46,20 @@
 ; OSABI-HSA-ELF:     .vgpr_count:     0
 ; OSABI-HSA-ELF:     .vgpr_spill_count: 0
 ; OSABI-HSA-ELF:     .wavefront_size: 64
-; OSABI-HSA-ELF: amdhsa.target:   amdgcn-amd-amdhsa--gfx802
+; OSABI-HSA-ELF: amdhsa.target:   amdgcn-amd-amdhsa-unknown-gfx802
 ; OSABI-HSA-ELF: amdhsa.version:
 ; OSABI-HSA-ELF:   - 1
 ; OSABI-HSA-ELF:   - 1
 ; OSABI-HSA-ELF: ...
 ; OSABI-HSA-ELF-NOT: NT_AMD_PAL_METADATA (AMD PAL Metadata)
 
-; OSABI-PAL: .amd_amdgpu_isa  "amdgcn-amd-amdpal--gfx802"
+; OSABI-PAL: .amd_amdgpu_isa  "amdgcn-amd-amdpal-unknown-gfx802"
 ; OSABI-PAL: .amdgpu_pal_metadata
 ; OSABI-PAL-NOT: .amd_amdgpu_hsa_metadata
 
 ; OSABI-PAL-ELF: NT_AMD_HSA_ISA_NAME (AMD HSA ISA Name)
 ; OSABI-PAL-ELF: AMD HSA ISA Name:
-; OSABI-PAL-ELF: amdgcn-amd-amdpal--gfx802
+; OSABI-PAL-ELF: amdgcn-amd-amdpal-unknown-gfx802
 ; OSABI-PAL-ELF-NOT: NT_AMD_HSA_METADATA (AMD HSA Metadata)
 ; OSABI-PAL-ELF: NT_AMDGPU_METADATA (AMDGPU Metadata)
 ; OSABI-PAL-ELF: AMDGPU Metadata:

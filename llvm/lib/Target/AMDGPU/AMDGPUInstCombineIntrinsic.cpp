@@ -65,11 +65,13 @@ static APFloat fmed3AMDGCN(const APFloat &Src0, const APFloat &Src1,
   return maxnum(Src0, Src1);
 }
 
-// Check if a value can be converted to a 16-bit value without losing
-// precision.
+// Check if a value can be converted to a 16-bit value without losing precision.
 // The value is expected to be either a float (IsFloat = true) or an unsigned
-// integer (IsFloat = false).
-static bool canSafelyConvertTo16Bit(Value &V, bool IsFloat) {
+// integer (IsFloat = false). When AllowI16SExt is set, a sext from i16 is also
+// accepted: for unsigned addresses sext and zext only differ for a negative
+// i16, which is out of bounds anyway (see caller).
+static bool canSafelyConvertTo16Bit(Value &V, bool IsFloat,
+                                    bool AllowI16SExt = false) {
   Type *VTy = V.getType();
   if (VTy->isHalfTy() || VTy->isIntegerTy(16)) {
     // The value is already 16-bit, so we don't want to convert to 16-bit again!
@@ -97,6 +99,8 @@ static bool canSafelyConvertTo16Bit(Value &V, bool IsFloat) {
   Value *CastSrc;
   bool IsExt = IsFloat ? match(&V, m_FPExt(PatternMatch::m_Value(CastSrc)))
                        : match(&V, m_ZExt(PatternMatch::m_Value(CastSrc)));
+  if (!IsExt && !IsFloat && AllowI16SExt)
+    IsExt = match(&V, m_SExt(PatternMatch::m_Value(CastSrc)));
   if (IsExt) {
     Type *CastSrcTy = CastSrc->getType();
     if (CastSrcTy->isHalfTy() || CastSrcTy->isIntegerTy(16))
@@ -136,7 +140,8 @@ static std::optional<Instruction *> modifyIntrinsicCall(
   // Modify arguments and types
   Func(Args, OverloadTys);
 
-  CallInst *NewCall = IC.Builder.CreateIntrinsic(NewIntr, OverloadTys, Args);
+  CallInst *NewCall =
+      IC.Builder.CreateIntrinsicWithoutFolding(NewIntr, OverloadTys, Args);
   NewCall->takeName(&OldIntr);
   NewCall->copyMetadata(OldIntr);
   if (isa<FPMathOperator>(NewCall))
@@ -332,11 +337,16 @@ simplifyAMDGCNImageIntrinsic(const GCNSubtarget *ST,
   // true means derivatives can be converted to 16 bit, coordinates not
   bool OnlyDerivatives = false;
 
+  // Sampler-less addresses are unsigned, so a sext from i16 folds to a16 like a
+  // zext: they only disagree for a negative i16 (>= 0x8000), which is out of
+  // bounds while the max image dimension is <= 0x8000.
+  bool AllowI16SExt = !HasSampler;
+
   for (unsigned OperandIndex = ImageDimIntr->GradientStart;
        OperandIndex < ImageDimIntr->VAddrEnd; OperandIndex++) {
     Value *Coord = II.getOperand(OperandIndex);
     // If the values are not derived from 16-bit values, we cannot optimize.
-    if (!canSafelyConvertTo16Bit(*Coord, HasSampler)) {
+    if (!canSafelyConvertTo16Bit(*Coord, HasSampler, AllowI16SExt)) {
       if (OperandIndex < ImageDimIntr->CoordStart ||
           ImageDimIntr->GradientStart == ImageDimIntr->CoordStart) {
         return std::nullopt;
@@ -975,6 +985,11 @@ static Value *matchShuffleToHWIntrinsic(IRBuilderBase &B, Value *Src,
                                         ArrayRef<uint8_t> Ids,
                                         const GCNSubtarget &ST,
                                         const DataLayout &DL) {
+  // Identity shuffle (every lane reads itself) folds to the source value.
+  if (all_of(enumerate(Ids),
+             [](const auto &E) { return E.value() == E.index(); }))
+    return Src;
+
   // Uniform shuffle (all lanes read the same value) is handled by cheaper
   // broadcast/readlane intrinsics.
   if (all_equal(Ids))
@@ -1773,7 +1788,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
       Value *Args[] = {SrcLHS, SrcRHS,
                        ConstantInt::get(CC->getType(), SrcPred)};
-      CallInst *NewCall = IC.Builder.CreateIntrinsic(
+      Value *NewCall = IC.Builder.CreateIntrinsic(
           NewIID, {II.getType(), SrcLHS->getType()}, Args);
       NewCall->takeName(&II);
       return IC.replaceInstUsesWith(II, NewCall);
@@ -2211,7 +2226,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     Args[0] = Src0;
     Args[1] = Src1;
 
-    CallInst *NewII = IC.Builder.CreateIntrinsic(
+    Value *NewII = IC.Builder.CreateIntrinsic(
         IID, {Src0->getType(), Src1->getType()}, Args, &II);
     NewII->takeName(&II);
     return IC.replaceInstUsesWith(II, NewII);
@@ -2253,7 +2268,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     Args[1] = Src0;
     Args[3] = Src1;
 
-    CallInst *NewII = IC.Builder.CreateIntrinsic(
+    Value *NewII = IC.Builder.CreateIntrinsic(
         IID, {II.getArgOperand(5)->getType(), Src0->getType(), Src1->getType()},
         Args, &II);
     NewII->takeName(&II);
@@ -2403,8 +2418,8 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
       Args[0] = IC.Builder.CreateShuffleVector(II.getOperand(0), EltMask);
   }
 
-  CallInst *NewCall =
-      IC.Builder.CreateIntrinsic(II.getIntrinsicID(), OverloadTys, Args);
+  CallInst *NewCall = IC.Builder.CreateIntrinsicWithoutFolding(
+      II.getIntrinsicID(), OverloadTys, Args);
   NewCall->takeName(&II);
   NewCall->copyMetadata(II);
   AttributeList OldAttrList = II.getAttributes();

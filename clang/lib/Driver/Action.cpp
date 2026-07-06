@@ -59,7 +59,7 @@ const char *Action::getClassName(ActionClass AC) {
   llvm_unreachable("invalid class");
 }
 
-void Action::propagateDeviceOffloadInfo(OffloadKind OKind, const char *OArch,
+void Action::propagateDeviceOffloadInfo(OffloadKind OKind, BoundArch OArch,
                                         const ToolChain *OToolChain) {
   // Offload action set its own kinds on their dependences.
   if (Kind == OffloadClass)
@@ -79,7 +79,7 @@ void Action::propagateDeviceOffloadInfo(OffloadKind OKind, const char *OArch,
     A->propagateDeviceOffloadInfo(OffloadingDeviceKind, OArch, OToolChain);
 }
 
-void Action::propagateHostOffloadInfo(unsigned OKinds, const char *OArch) {
+void Action::propagateHostOffloadInfo(unsigned OKinds, BoundArch OArch) {
   // Offload action set its own kinds on their dependences.
   if (Kind == OffloadClass)
     return;
@@ -188,7 +188,7 @@ InputAction::InputAction(const Arg &_Input, types::ID _Type, StringRef _Id)
 
 void BindArchAction::anchor() {}
 
-BindArchAction::BindArchAction(Action *Input, StringRef ArchName)
+BindArchAction::BindArchAction(Action *Input, BoundArch ArchName)
     : Action(BindArchClass, Input), ArchName(ArchName) {}
 
 void OffloadAction::anchor() {}
@@ -198,7 +198,7 @@ OffloadAction::OffloadAction(const HostDependence &HDep)
   OffloadingArch = HDep.getBoundArch();
   ActiveOffloadKindMask = HDep.getOffloadKinds();
   HDep.getAction()->propagateHostOffloadInfo(HDep.getOffloadKinds(),
-                                             HDep.getBoundArch());
+                                             OffloadingArch);
 }
 
 OffloadAction::OffloadAction(const DeviceDependences &DDeps, types::ID Ty)
@@ -226,10 +226,9 @@ OffloadAction::OffloadAction(const HostDependence &HDep,
     : Action(OffloadClass, HDep.getAction()), HostTC(HDep.getToolChain()),
       DevToolChains(DDeps.getToolChains()) {
   // We use the kinds of the host dependence for this action.
-  OffloadingArch = HDep.getBoundArch();
+  BoundArch BA = HDep.getBoundArch();
   ActiveOffloadKindMask = HDep.getOffloadKinds();
-  HDep.getAction()->propagateHostOffloadInfo(HDep.getOffloadKinds(),
-                                             HDep.getBoundArch());
+  HDep.getAction()->propagateHostOffloadInfo(HDep.getOffloadKinds(), BA);
 
   // Add device inputs and propagate info to the device actions. Do work only if
   // we have dependencies.
@@ -314,20 +313,19 @@ OffloadAction::getSingleDeviceDependence(bool DoNotConsiderHostActions) const {
 }
 
 void OffloadAction::DeviceDependences::add(Action &A, const ToolChain &TC,
-                                           const char *BoundArch,
-                                           OffloadKind OKind) {
+                                           BoundArch BA, OffloadKind OKind) {
   DeviceActions.push_back(&A);
   DeviceToolChains.push_back(&TC);
-  DeviceBoundArchs.push_back(BoundArch);
+  DeviceBoundArchs.push_back(BA);
   DeviceOffloadKinds.push_back(OKind);
 }
 
 void OffloadAction::DeviceDependences::add(Action &A, const ToolChain &TC,
-                                           const char *BoundArch,
+                                           BoundArch BA,
                                            unsigned OffloadKindMask) {
   DeviceActions.push_back(&A);
   DeviceToolChains.push_back(&TC);
-  DeviceBoundArchs.push_back(BoundArch);
+  DeviceBoundArchs.push_back(BA);
 
   // Add each active offloading kind from a mask.
   for (OffloadKind OKind : {OFK_OpenMP, OFK_Cuda, OFK_HIP, OFK_SYCL})
@@ -336,9 +334,9 @@ void OffloadAction::DeviceDependences::add(Action &A, const ToolChain &TC,
 }
 
 OffloadAction::HostDependence::HostDependence(Action &A, const ToolChain &TC,
-                                              const char *BoundArch,
+                                              BoundArch BA,
                                               const DeviceDependences &DDeps)
-    : HostAction(A), HostToolChain(TC), HostBoundArch(BoundArch) {
+    : HostAction(A), HostToolChain(TC), HostBoundArch(BA) {
   for (auto K : DDeps.getOffloadKinds())
     HostOffloadKinds |= K;
 }

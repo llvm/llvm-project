@@ -384,7 +384,12 @@ static bool isLikelyToHaveSVEStack(const AArch64FrameLowering &AFL,
 }
 
 static bool isTargetWindows(const MachineFunction &MF) {
-  return MF.getTarget().getMCAsmInfo().usesWindowsCFI();
+  // TODO: Should this include targets like UEFI (which use Windows CFI)?
+  // Note: Currently, there is not AArch64 support for UEFI. The value returned
+  // here must align with the predicate used for returning the list of callee
+  // saved regs in AArch64RegisterInfo::getCalleeSavedRegs(), so that we use
+  // invalidateWindowsRegisterPairing() where appropriate.
+  return MF.getSubtarget<AArch64Subtarget>().isTargetWindows();
 }
 
 bool AArch64FrameLowering::hasSVECalleeSavesAboveFrameRecord(
@@ -570,6 +575,16 @@ bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   // funclets.
   if (MF.hasEHFunclets())
     return true;
+
+  // When the stack guard is mixed with the frame pointer, a dedicated FP is
+  // required so the guard value remains stable in the presence of dynamic
+  // stack allocations (e.g. _alloca on MSVCRT).
+  if (MFI.hasStackProtectorIndex()) {
+    const auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+    if (Subtarget.getTargetLowering()->useStackGuardMixFP())
+      return true;
+  }
+
   // Retain behavior of always omitting the FP for leaf functions when possible.
   if (MF.getTarget().Options.DisableFramePointerElim(MF))
     return true;

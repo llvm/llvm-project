@@ -609,8 +609,7 @@ define i32 @test_nonconstant_shuffle_w32(i32 %val, i32 %idx) {
 ; Identity shuffle: lane_id itself.
 define i32 @test_identity_shuffle_w32(i32 %val) {
 ; GFX11-LABEL: @test_identity_shuffle_w32(
-; GFX11-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL:%.*]], i32 228, i32 15, i32 15, i1 true)
-; GFX11-NEXT:    ret i32 [[RESULT]]
+; GFX11-NEXT:    ret i32 [[RESULT:%.*]]
 ;
 ; GFX11-W64-LABEL: @test_identity_shuffle_w32(
 ; GFX11-W64-NEXT:    [[LANE:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
@@ -900,13 +899,12 @@ define i32 @test_rotate_add1_full_w64(i32 %val) {
   ret i32 %result
 }
 
-; Identity shuffle (N=0 degenerate case for rotate; add %lane,0 folds to %lane).
-; On GFX11 wave32 this still folds to the identity quad-perm via DPP; on wave64
-; targets (GFX11-W64, GFX9) mbcnt.lo alone is not the full lane ID so no fold.
+; Identity shuffle (add %lane,0 folds to %lane). On GFX11 wave32 this folds to
+; the source value; on wave64 targets (GFX11-W64, GFX9) mbcnt.lo alone is not
+; the full lane ID so no fold occurs.
 define i32 @test_identity_w32(i32 %val) {
 ; GFX11-LABEL: @test_identity_w32(
-; GFX11-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL:%.*]], i32 228, i32 15, i32 15, i1 true)
-; GFX11-NEXT:    ret i32 [[RESULT]]
+; GFX11-NEXT:    ret i32 [[RESULT:%.*]]
 ;
 ; GFX11-W64-LABEL: @test_identity_w32(
 ; GFX11-W64-NEXT:    [[LANE:%.*]] = call range(i32 0, 33) i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)

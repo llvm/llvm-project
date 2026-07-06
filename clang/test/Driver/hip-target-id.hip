@@ -65,4 +65,4 @@
 // RUN:   --offload-arch=gfx906 \
 // RUN:   --no-offload-new-driver --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=MULTI %s
-// MULTI: "-targets=host-x86_64-unknown-linux-gnu,hipv4-amdgcn-amd-amdhsa--gfx900:xnack+,hipv4-amdgcn-amd-amdhsa--gfx900:xnack-,hipv4-amdgcn-amd-amdhsa--gfx906,hipv4-amdgcn-amd-amdhsa--gfx908:sramecc+,hipv4-amdgcn-amd-amdhsa--gfx908:sramecc-"
+// MULTI: "-targets=host-x86_64-unknown-linux-gnu,hipv4-amdgcn-amd-amdhsa--gfx900:xnack+,hipv4-amdgcn-amd-amdhsa--gfx900:xnack-,hipv4-amdgcn-amd-amdhsa--gfx908:sramecc+,hipv4-amdgcn-amd-amdhsa--gfx908:sramecc-,hipv4-amdgcn-amd-amdhsa--gfx906"

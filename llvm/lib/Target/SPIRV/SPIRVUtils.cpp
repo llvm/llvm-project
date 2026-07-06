@@ -13,9 +13,11 @@
 #include "SPIRVUtils.h"
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRV.h"
+#include "SPIRVBuiltins.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVInstrInfo.h"
 #include "SPIRVSubtarget.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -24,6 +26,7 @@
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
+#include "llvm/Support/MathExtras.h"
 #include <queue>
 #include <vector>
 
@@ -116,17 +119,33 @@ FunctionType *getOriginalFunctionType(const Function &F) {
       F.getName());
 }
 
+// Keyed via instruction metadata, not a name.
+static std::optional<StringRef> getMutatedCallsiteKey(const CallBase &CB) {
+  if (MDNode *MD = CB.getMetadata("spv.mutated_callsite"))
+    if (MD->getNumOperands() > 0)
+      if (auto *MDS = dyn_cast<MDString>(MD->getOperand(0)))
+        return MDS->getString();
+  return std::nullopt;
+}
+
 FunctionType *getOriginalFunctionType(const CallBase &CB) {
+  std::optional<StringRef> Key = getMutatedCallsiteKey(CB);
+  if (!Key)
+    return CB.getFunctionType();
   return extractFunctionTypeFromMetadata(
       CB.getModule()->getNamedMetadata("spv.mutated_callsites"),
-      CB.getFunctionType(), CB.getName());
+      CB.getFunctionType(), *Key);
 }
 
 StringRef getOriginalAsmConstraints(const CallBase &CB) {
+  StringRef Constraints =
+      cast<InlineAsm>(CB.getCalledOperand())->getConstraintString();
+  std::optional<StringRef> Key = getMutatedCallsiteKey(CB);
+  if (!Key)
+    return Constraints;
   return extractAsmConstraintsFromMetadata(
-      CB.getModule()->getNamedMetadata("spv.mutated_callsites"),
-      cast<InlineAsm>(CB.getCalledOperand())->getConstraintString(),
-      CB.getName());
+      CB.getModule()->getNamedMetadata("spv.mutated_callsites"), Constraints,
+      *Key);
 }
 } // Namespace SPIRV
 
@@ -149,7 +168,7 @@ static uint32_t convertCharsToWord(const StringRef &Str, unsigned i) {
 
 // Get length including padding and null terminator.
 static size_t getPaddedLen(const StringRef &Str) {
-  return (Str.size() + 4) & ~3;
+  return alignTo(Str.size() + 1, 4);
 }
 
 void addStringImm(const StringRef &Str, MCInst &Inst) {
@@ -203,15 +222,13 @@ void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB) {
     return;
   } else if (Bitwidth <= 64) {
     uint64_t FullImm = Imm.getZExtValue();
-    uint32_t LowBits = FullImm & 0xffffffff;
-    uint32_t HighBits = (FullImm >> 32) & 0xffffffff;
-    MIB.addImm(LowBits).addImm(HighBits);
+    MIB.addImm(Lo_32(FullImm)).addImm(Hi_32(FullImm));
     // Asm Printer needs this info to print 64-bit operands correctly
     MIB.getInstr()->setAsmPrinterFlag(SPIRV::ASM_PRINTER_WIDTH64);
     return;
   } else {
     // Emit ceil(Bitwidth / 32) words to conform SPIR-V spec.
-    unsigned NumWords = (Bitwidth + 31) / 32;
+    unsigned NumWords = divideCeil(Bitwidth, 32);
     for (unsigned I = 0; I < NumWords; ++I) {
       unsigned LimbIdx = I / 2;
       unsigned LimbShift = (I % 2) * 32;
@@ -241,7 +258,7 @@ void buildOpName(Register Target, const StringRef &Name, MachineInstr &I,
 }
 
 static void finishBuildOpDecorate(MachineInstrBuilder &MIB,
-                                  const std::vector<uint32_t> &DecArgs,
+                                  ArrayRef<uint32_t> DecArgs,
                                   StringRef StrImm) {
   if (!StrImm.empty())
     addStringImm(StrImm, MIB);
@@ -251,7 +268,7 @@ static void finishBuildOpDecorate(MachineInstrBuilder &MIB,
 
 void buildOpDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
                      SPIRV::Decoration::Decoration Dec,
-                     const std::vector<uint32_t> &DecArgs, StringRef StrImm) {
+                     ArrayRef<uint32_t> DecArgs, StringRef StrImm) {
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate)
                  .addUse(Reg)
                  .addImm(static_cast<uint32_t>(Dec));
@@ -260,7 +277,7 @@ void buildOpDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
 
 void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
                      SPIRV::Decoration::Decoration Dec,
-                     const std::vector<uint32_t> &DecArgs, StringRef StrImm) {
+                     ArrayRef<uint32_t> DecArgs, StringRef StrImm) {
   MachineBasicBlock &MBB = *I.getParent();
   auto MIB = BuildMI(MBB, I, I.getDebugLoc(), TII.get(SPIRV::OpDecorate))
                  .addUse(Reg)
@@ -270,8 +287,7 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
 
 void buildOpMemberDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
                            SPIRV::Decoration::Decoration Dec, uint32_t Member,
-                           const std::vector<uint32_t> &DecArgs,
-                           StringRef StrImm) {
+                           ArrayRef<uint32_t> DecArgs, StringRef StrImm) {
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpMemberDecorate)
                  .addUse(Reg)
                  .addImm(Member)
@@ -282,8 +298,7 @@ void buildOpMemberDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
 void buildOpMemberDecorate(Register Reg, MachineInstr &I,
                            const SPIRVInstrInfo &TII,
                            SPIRV::Decoration::Decoration Dec, uint32_t Member,
-                           const std::vector<uint32_t> &DecArgs,
-                           StringRef StrImm) {
+                           ArrayRef<uint32_t> DecArgs, StringRef StrImm) {
   MachineBasicBlock &MBB = *I.getParent();
   auto MIB = BuildMI(MBB, I, I.getDebugLoc(), TII.get(SPIRV::OpMemberDecorate))
                  .addUse(Reg)
@@ -521,32 +536,6 @@ Type *getMDOperandAsType(const MDNode *N, unsigned I) {
   return toTypedPointer(ElementTy);
 }
 
-// The set of names is borrowed from the SPIR-V translator.
-// TODO: may be implemented in SPIRVBuiltins.td.
-static bool isPipeOrAddressSpaceCastBI(const StringRef MangledName) {
-  return MangledName == "write_pipe_2" || MangledName == "read_pipe_2" ||
-         MangledName == "write_pipe_2_bl" || MangledName == "read_pipe_2_bl" ||
-         MangledName == "write_pipe_4" || MangledName == "read_pipe_4" ||
-         MangledName == "reserve_write_pipe" ||
-         MangledName == "reserve_read_pipe" ||
-         MangledName == "commit_write_pipe" ||
-         MangledName == "commit_read_pipe" ||
-         MangledName == "work_group_reserve_write_pipe" ||
-         MangledName == "work_group_reserve_read_pipe" ||
-         MangledName == "work_group_commit_write_pipe" ||
-         MangledName == "work_group_commit_read_pipe" ||
-         MangledName == "get_pipe_num_packets_ro" ||
-         MangledName == "get_pipe_max_packets_ro" ||
-         MangledName == "get_pipe_num_packets_wo" ||
-         MangledName == "get_pipe_max_packets_wo" ||
-         MangledName == "sub_group_reserve_write_pipe" ||
-         MangledName == "sub_group_reserve_read_pipe" ||
-         MangledName == "sub_group_commit_write_pipe" ||
-         MangledName == "sub_group_commit_read_pipe" ||
-         MangledName == "to_global" || MangledName == "to_local" ||
-         MangledName == "to_private";
-}
-
 static bool isEnqueueKernelBI(const StringRef MangledName) {
   return MangledName == "__enqueue_kernel_basic" ||
          MangledName == "__enqueue_kernel_basic_events" ||
@@ -566,7 +555,7 @@ static bool isNonMangledOCLBuiltin(StringRef Name) {
     return false;
 
   return isEnqueueKernelBI(Name) || isKernelQueryBI(Name) ||
-         isPipeOrAddressSpaceCastBI(Name.drop_front(2)) ||
+         SPIRV::isPipeOrAddressSpaceCastBuiltin(Name) ||
          Name == "__translate_sampler_initializer";
 }
 
@@ -678,12 +667,12 @@ Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx) {
   return nullptr;
 }
 
-std::unordered_set<BasicBlock *>
+SmallPtrSet<BasicBlock *, 0>
 PartialOrderingVisitor::getReachableFrom(BasicBlock *Start) {
   std::queue<BasicBlock *> ToVisit;
   ToVisit.push(Start);
 
-  std::unordered_set<BasicBlock *> Output;
+  SmallPtrSet<BasicBlock *, 0> Output;
   while (ToVisit.size() != 0) {
     BasicBlock *BB = ToVisit.front();
     ToVisit.pop();
@@ -792,7 +781,7 @@ size_t PartialOrderingVisitor::visit(BasicBlock *BB, size_t Unused) {
     QueueIndex = 0;
     size_t Rank = GetNodeRank(BB);
     OrderInfo Info = {Rank, BlockToOrder.size()};
-    BlockToOrder.emplace(BB, Info);
+    BlockToOrder.try_emplace(BB, Info);
 
     for (BasicBlock *S : successors(BB)) {
       if (Queued.count(S) != 0)
@@ -815,7 +804,7 @@ PartialOrderingVisitor::PartialOrderingVisitor(Function &F) {
   for (auto &[BB, Info] : BlockToOrder)
     Order.emplace_back(BB);
 
-  std::sort(Order.begin(), Order.end(), [&](const auto &LHS, const auto &RHS) {
+  llvm::sort(Order, [&](const auto &LHS, const auto &RHS) {
     return compare(LHS, RHS);
   });
 }
@@ -831,7 +820,7 @@ bool PartialOrderingVisitor::compare(const BasicBlock *LHS,
 
 void PartialOrderingVisitor::partialOrderVisit(
     BasicBlock &Start, std::function<bool(BasicBlock *)> Op) {
-  std::unordered_set<BasicBlock *> Reachable = getReachableFrom(&Start);
+  SmallPtrSet<BasicBlock *, 0> Reachable = getReachableFrom(&Start);
   assert(BlockToOrder.count(&Start) != 0);
 
   // Skipping blocks with a rank inferior to |Start|'s rank.
@@ -997,7 +986,7 @@ CallInst *buildIntrWithMD(Intrinsic::ID IntrID, ArrayRef<Type *> Types,
   Args.push_back(Arg2);
   Args.push_back(buildMD(Arg));
   llvm::append_range(Args, Imms);
-  return B.CreateIntrinsic(IntrID, {Types}, Args);
+  return B.CreateIntrinsicWithoutFolding(IntrID, {Types}, Args);
 }
 
 // Return true if there is an opaque pointer type nested in the argument.

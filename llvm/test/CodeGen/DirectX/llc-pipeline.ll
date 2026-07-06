@@ -23,6 +23,7 @@
 ; CHECK-NEXT:   DXIL Memory Intrinsic Elimination
 ; CHECK-NEXT:   DXIL CBuffer Access
 ; CHECK-NEXT:   FunctionPass Manager
+; CHECK-NEXT:     DXIL Remove Unused Resources
 ; CHECK-NEXT:     DXIL Resource Access
 ; CHECK-NEXT:   DXIL Intrinsic Expansion
 ; CHECK-NEXT:   DXIL Data Scalarization
@@ -56,6 +57,7 @@
 
 ; CHECK-OBJ-NEXT: DXIL Embedder
 ; CHECK-OBJ-NEXT: DXContainer Global Emitter
+; CHECK-OBJ-NEXT: DirectX PDB Emitter
 ; CHECK-OBJ-NEXT: FunctionPass Manager
 ; CHECK-OBJ-NEXT:   Lazy Machine Block Frequency Analysis
 ; CHECK-OBJ-NEXT:   Machine Optimization Remark Emitter

@@ -556,27 +556,7 @@ object allocation is also added.
 
 See :ref:`amdgpu-dwarf-memory-spaces`.
 
-2.15 Define Augmentation Strings to Support Multiple Extensions
----------------------------------------------------------------
-
-A ``DW_AT_LLVM_augmentation`` attribute is added to a compilation unit debugger
-information entry to indicate that there is additional target architecture
-specific information in the debugging information entries of that compilation
-unit. This allows a consumer to know what extensions are present in the debugger
-information entries as is possible with the augmentation string of other
-sections.
-
-The format that should be used for an augmentation string is also recommended.
-This allows a consumer to parse the string when it contains information from
-multiple vendors. Augmentation strings occur in the ``DW_AT_LLVM_augmentation``
-attribute, in the lookup by name table, and in the CFI Common Information Entry
-(CIE).
-
-See :ref:`amdgpu-dwarf-full-and-partial-compilation-unit-entries`,
-:ref:`amdgpu-dwarf-name-index-section-header`, and
-:ref:`amdgpu-dwarf-structure_of-call-frame-information`.
-
-2.16 Support Embedding Source Text for Online Compilation
+2.15 Support Embedding Source Text for Online Compilation
 ---------------------------------------------------------
 
 AMDGPU supports programming languages that include online compilation where the
@@ -586,7 +566,7 @@ text in the debug information is provided.
 
 See :ref:`amdgpu-dwarf-line-number-information`.
 
-2.17 Allow MD5 Checksums to be Optionally Present
+2.16 Allow MD5 Checksums to be Optionally Present
 -------------------------------------------------
 
 In DWARF Version 5, the file timestamp and file size can be optional, but if the
@@ -597,7 +577,7 @@ checksums to be optional.
 
 See :ref:`amdgpu-dwarf-line-number-information`.
 
-2.18 Add the HIP Programming Language
+2.17 Add the HIP Programming Language
 -------------------------------------
 
 The HIP programming language [:ref:`HIP <amdgpu-dwarf-HIP>`], which is supported
@@ -605,7 +585,7 @@ by the AMDGPU, is added.
 
 See :ref:`amdgpu-dwarf-language-names-table`.
 
-2.19 Support for Source Language Optimizations that Result in Concurrent Iteration Execution
+2.18 Support for Source Language Optimizations that Result in Concurrent Iteration Execution
 --------------------------------------------------------------------------------------------
 
 A compiler can perform loop optimizations that result in the generated code
@@ -642,7 +622,7 @@ In addition, a way is needed for the compiler to communicate how many source
 language loop iterations are executing concurrently. See
 ``DW_AT_LLVM_iterations`` in :ref:`amdgpu-dwarf-low-level-information`.
 
-2.20 DWARF Operation to Create Runtime Overlay Composite Location Description
+2.19 DWARF Operation to Create Runtime Overlay Composite Location Description
 -----------------------------------------------------------------------------
 
 It is common in SIMD vectorization for the compiler to generate code that
@@ -718,7 +698,7 @@ with a register location overlaid at a runtime offset involving ``i``:
   //    the register #2 positioned as an overlay at offset #3 of size #4:
   DW_OP_LLVM_overlay
 
-2.21 Support for Source Language Memory Spaces
+2.20 Support for Source Language Memory Spaces
 ----------------------------------------------
 
 AMDGPU supports languages, such as OpenCL, that define source language memory
@@ -730,7 +710,7 @@ spaces in defining source language pointer and reference types (see
 :ref:`amdgpu-dwarf-type-modifier-entries`) and data object allocation (see
 :ref:`amdgpu-dwarf-data-object-entries`).
 
-2.22 Expression Operation Vendor Extensibility Opcode
+2.21 Expression Operation Vendor Extensibility Opcode
 -----------------------------------------------------
 
 The vendor extension encoding space for DWARF expression operations
@@ -798,7 +778,6 @@ The following table provides the additional attributes.
    Attribute                    Usage
    ============================ ====================================
    ``DW_AT_LLVM_active_lane``   SIMT active lanes (see :ref:`amdgpu-dwarf-low-level-information`)
-   ``DW_AT_LLVM_augmentation``  Compilation unit augmentation string (see :ref:`amdgpu-dwarf-full-and-partial-compilation-unit-entries`)
    ``DW_AT_LLVM_lane_pc``       SIMT lane program location (see :ref:`amdgpu-dwarf-low-level-information`)
    ``DW_AT_LLVM_lanes``         SIMT lane count (see :ref:`amdgpu-dwarf-low-level-information`)
    ``DW_AT_LLVM_iterations``    Concurrent iteration count (see :ref:`amdgpu-dwarf-low-level-information`)
@@ -3303,38 +3282,6 @@ are defined in :ref:`amdgpu-dwarf-language-names-table`.
 The HIP language [:ref:`HIP <amdgpu-dwarf-HIP>`] can be supported by extending
 the C++ language.
 
-.. note::
-
-  The following new attribute is added.
-
-1.  A ``DW_TAG_compile_unit`` debugger information entry for a compilation unit
-    may have a ``DW_AT_LLVM_augmentation`` attribute, whose value is an
-    augmentation string.
-
-    *The augmentation string allows producers to indicate that there is
-    additional vendor or target specific information in the debugging
-    information entries. For example, this might be information about the
-    version of vendor specific extensions that are being used.*
-
-    If not present, or if the string is empty, then the compilation unit has no
-    augmentation string.
-
-    The format for the augmentation string is:
-
-      | ``[``\ *vendor*\ ``:v``\ *X*\ ``.``\ *Y*\ [\ ``:``\ *options*\ ]\ ``]``\ *
-
-    Where *vendor* is the producer, ``vX.Y`` specifies the major X and minor Y
-    version number of the extensions used, and *options* is an optional string
-    providing additional information about the extensions. The version number
-    must conform to semantic versioning [:ref:`SEMVER <amdgpu-dwarf-SEMVER>`].
-    The *options* string must not contain the "\ ``]``\ " character.
-
-    For example:
-
-      ::
-
-        [abc:v0.0][def:v1.2:feature-a=on,feature-b=3]
-
 A.3.3 Subroutine and Entry Point Entries
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -3740,9 +3687,9 @@ constant may have the following attributes:
 
 3.  ``DW_AT_LLVM_memory_space``
 
-    A ``DW_AT_memory_space`` attribute with a constant value representing a source
+    A ``DW_AT_LLVM_memory_space`` attribute with a constant value representing a source
     language specific DWARF memory space (see 2.14 "Memory Spaces"). If omitted,
-    defaults to ``DW_MSPACE_none``.
+    defaults to ``DW_MSPACE_LLVM_none``.
 
 
 A.4.2 Common Block Entries
@@ -4018,45 +3965,6 @@ following rules:
   or ``DW_OP_form_tls_address`` operation are included; otherwise, they are
   excluded.
 
-A.6.1.1.4 Data Representation of the Name Index
-###############################################
-
-.. _amdgpu-dwarf-name-index-section-header:
-
-
-A.6.1.1.4.1 Section Header
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. note::
-
-  The following provides an addition to DWARF Version 5 section 6.1.1.4.1 item
-  14 ``augmentation_string``.
-
-A null-terminated UTF-8 vendor specific augmentation string, which provides
-additional information about the contents of this index. If provided, the
-recommended format for augmentation string is:
-
-  | ``[``\ *vendor*\ ``:v``\ *X*\ ``.``\ *Y*\ [\ ``:``\ *options*\ ]\ ``]``\ *
-
-Where *vendor* is the producer, ``vX.Y`` specifies the major X and minor Y
-version number of the extensions used in the DWARF of the compilation unit, and
-*options* is an optional string providing additional information about the
-extensions. The version number must conform to semantic versioning [:ref:`SEMVER
-<amdgpu-dwarf-SEMVER>`]. The *options* string must not contain the "\ ``]``\ "
-character.
-
-For example:
-
-  ::
-
-    [abc:v0.0][def:v1.2:feature-a=on,feature-b=3]
-
-.. note::
-
-  This is different to the definition in DWARF Version 5 but is consistent with
-  the other augmentation strings and allows multiple vendor extensions to be
-  supported.
-
 .. _amdgpu-dwarf-line-number-information:
 
 A.6.2 Line Number Information
@@ -4312,22 +4220,6 @@ Frame Description Entries (FDE). There is at least one CIE in every non-empty
     *Because the* ``.debug_frame`` *section is useful independently of any*
     ``.debug_info`` *section, the augmentation string always uses UTF-8
     encoding.*
-
-    The recommended format for the augmentation string is:
-
-      | ``[``\ *vendor*\ ``:v``\ *X*\ ``.``\ *Y*\ [\ ``:``\ *options*\ ]\ ``]``\ *
-
-    Where *vendor* is the producer, ``vX.Y`` specifies the major X and minor Y
-    version number of the extensions used, and *options* is an optional string
-    providing additional information about the extensions. The version number
-    must conform to semantic versioning [:ref:`SEMVER <amdgpu-dwarf-SEMVER>`].
-    The *options* string must not contain the "\ ``]``\ " character.
-
-    For example:
-
-      ::
-
-        [abc:v0.0][def:v1.2:feature-a=on,feature-b=3]
 
 5.  ``address_size`` (ubyte)
 
@@ -4775,14 +4667,13 @@ entry attributes.
    ================================== ====== ===================================
    Attribute Name                     Value  Classes
    ================================== ====== ===================================
-   ``DW_AT_LLVM_active_lane``         0x3e08 exprloc, loclist
-   ``DW_AT_LLVM_augmentation``        0x3e09 string
-   ``DW_AT_LLVM_lanes``               0x3e0a constant
-   ``DW_AT_LLVM_lane_pc``             0x3e0b exprloc, loclist
-   ``DW_AT_LLVM_vector_size``         0x3e0c constant
-   ``DW_AT_LLVM_iterations``          0x3e0a constant, exprloc, loclist
-   ``DW_AT_LLVM_address_space``       TBA    constant
-   ``DW_AT_LLVM_memory_space``        TBA    constant
+   ``DW_AT_LLVM_memory_space``        0x3e0f constant
+   ``DW_AT_LLVM_address_space``       0x3e10 constant
+   ``DW_AT_LLVM_lanes``               0x3e11 constant
+   ``DW_AT_LLVM_lane_pc``             0x3e12 exprloc, loclist
+   ``DW_AT_LLVM_vector_size``         0x3e13 constant
+   ``DW_AT_LLVM_iterations``          TBA    constant, exprloc, loclist
+   ``DW_AT_LLVM_active_lane``         TBA    exprloc, loclist
    ================================== ====== ===================================
 
 .. _amdgpu-dwarf-classes-and-forms:
@@ -5040,7 +4931,6 @@ debugger information entries.
    ``DW_TAG_variable``                * ``DW_AT_LLVM_memory_space``
    ``DW_TAG_formal_parameter``        * ``DW_AT_LLVM_memory_space``
    ``DW_TAG_constant``                * ``DW_AT_LLVM_memory_space``
-   ``DW_TAG_compile_unit``            * ``DW_AT_LLVM_augmentation``
    ``DW_TAG_entry_point``             * ``DW_AT_LLVM_active_lane``
                                       * ``DW_AT_LLVM_lane_pc``
                                       * ``DW_AT_LLVM_lanes``

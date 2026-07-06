@@ -50,6 +50,9 @@ make_path = None
 # Allow specifying a triple for cross compilation.
 triple = None
 
+# Clang resource directory for cross compilation.
+resource_dir = None
+
 # The overriden dwarf verison.
 # Don't use this to test the current compiler's
 # DWARF version, as this won't be set if the
@@ -156,6 +159,11 @@ arm64e_debugserver = False
 
 # Whether to print the lldb version banner during test setup.
 print_lldb_version = False
+
+# Path to the directory containing the 'lldb' Python module (i.e. the directory
+# that contains 'lldb/__init__.py'). When set, dotest skips the `lldb -P`
+# subprocess used to discover this path.
+lldb_python_dir = None
 
 # the build type of lldb
 # Typical values include Debug, Release, RelWithDebInfo and MinSizeRel

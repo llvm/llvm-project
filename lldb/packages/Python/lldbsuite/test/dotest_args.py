@@ -107,6 +107,15 @@ def create_parser():
         help=textwrap.dedent("Specify which dsymutil to use."),
     )
     group.add_argument(
+        "--resource-dir",
+        metavar="dir",
+        dest="resource_dir",
+        default="",
+        help=textwrap.dedent(
+            "Specify the clang resource directory for cross-compiling test inferiors."
+        ),
+    )
+    group.add_argument(
         "--llvm-tools-dir",
         metavar="dir",
         dest="llvm_tools_dir",
@@ -234,7 +243,9 @@ def create_parser():
         "--build-dir",
         dest="test_build_dir",
         metavar="Test build directory",
-        default="lldb-test-build.noindex",
+        default=(
+            "lldb-test-build.noindex" if sys.platform == "darwin" else "lldb-test-build"
+        ),
         help="The root build directory for the tests. It will be removed before running.",
     )
     group.add_argument(
@@ -286,6 +297,12 @@ def create_parser():
         dest="print_lldb_version",
         action="store_true",
         help="Print the lldb version banner during test setup.",
+    )
+    group.add_argument(
+        "--lldb-python-dir",
+        dest="lldb_python_dir",
+        metavar="path",
+        help="Path to the directory that contains the 'lldb' Python module. ",
     )
 
     # Configuration options
