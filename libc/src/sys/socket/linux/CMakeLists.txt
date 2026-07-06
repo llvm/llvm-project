@@ -284,7 +284,6 @@ add_entrypoint_object(
   HDRS
     ../sockatmark.h
   DEPENDS
-    libc.hdr.sys_ioctl_macros
     libc.include.sys_socket
     libc.src.__support.common
     libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
