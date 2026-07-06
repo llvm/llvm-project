@@ -71,6 +71,38 @@ __global__ void test_kernel(int *p, float *f, double *d, unsigned *u) {
   i += __double2hiint(*d) + __double2loint(*d);
   *d = __hiloint2double(*p, *p);
 
+  i += __double2int_rd(*d) + __double2int_rn(*d) + __double2int_ru(*d) +
+       __double2int_rz(*d);
+  i += __double2uint_rd(*d) + __double2uint_rn(*d) + __double2uint_ru(*d) +
+       __double2uint_rz(*d);
+  i += (unsigned)(__double2ll_rd(*d) + __double2ll_rn(*d) + __double2ll_ru(*d) +
+                  __double2ll_rz(*d));
+  i += (unsigned)(__double2ull_rd(*d) + __double2ull_rn(*d) +
+                  __double2ull_ru(*d) + __double2ull_rz(*d));
+  i += __float2int_rd(*f) + __float2int_rn(*f) + __float2int_ru(*f) +
+       __float2int_rz(*f);
+  i += __float2uint_rd(*f) + __float2uint_rn(*f) + __float2uint_ru(*f) +
+       __float2uint_rz(*f);
+  i += (unsigned)(__float2ll_rd(*f) + __float2ll_rn(*f) + __float2ll_ru(*f) +
+                  __float2ll_rz(*f));
+  i += (unsigned)(__float2ull_rd(*f) + __float2ull_rn(*f) + __float2ull_ru(*f) +
+                  __float2ull_rz(*f));
+  *f = __double2float_rd(*d) + __double2float_rn(*d) + __double2float_ru(*d) +
+       __double2float_rz(*d);
+  *f = __int2float_rd(*p) + __int2float_rn(*p) + __int2float_ru(*p) +
+       __int2float_rz(*p);
+  *f = __uint2float_rd(*u) + __uint2float_rn(*u) + __uint2float_ru(*u) +
+       __uint2float_rz(*u);
+  *f = __ll2float_rd(*p) + __ll2float_rn(*p) + __ll2float_ru(*p) +
+       __ll2float_rz(*p);
+  *f = __ull2float_rd(*u) + __ull2float_rn(*u) + __ull2float_ru(*u) +
+       __ull2float_rz(*u);
+  *d = __ll2double_rd(*p) + __ll2double_rn(*p) + __ll2double_ru(*p) +
+       __ll2double_rz(*p);
+  *d = __ull2double_rd(*u) + __ull2double_rn(*u) + __ull2double_ru(*u) +
+       __ull2double_rz(*u);
+  *d = __int2double_rn(*p) + __uint2double_rn(*u);
+
   i += threadIdx.x + threadIdx.y + threadIdx.z;
   i += blockIdx.x + blockIdx.y + blockIdx.z;
   i += blockDim.x + blockDim.y + blockDim.z;

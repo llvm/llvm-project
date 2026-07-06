@@ -203,6 +203,61 @@ __GPU_DEVICE__ double __hiloint2double(int __hi, int __lo) {
 }
 
 //===----------------------------------------------------------------------===//
+// Numeric conversions with explicit rounding.
+//===----------------------------------------------------------------------===//
+
+// Floating-point to integer conversions map directly onto the rounding
+// builtins.
+#define __GPU_CVT_FP2INT(__name, __res, __arg)                                 \
+  __GPU_DEVICE__ __res __name##_rd(__arg __x) {                                \
+    return (__res)__builtin_elementwise_floor(__x);                            \
+  }                                                                            \
+  __GPU_DEVICE__ __res __name##_rn(__arg __x) {                                \
+    return (__res)__builtin_elementwise_rint(__x);                             \
+  }                                                                            \
+  __GPU_DEVICE__ __res __name##_ru(__arg __x) {                                \
+    return (__res)__builtin_elementwise_ceil(__x);                             \
+  }                                                                            \
+  __GPU_DEVICE__ __res __name##_rz(__arg __x) { return (__res)__x; }
+
+__GPU_CVT_FP2INT(__double2int, int, double)
+__GPU_CVT_FP2INT(__double2uint, unsigned int, double)
+__GPU_CVT_FP2INT(__double2ll, long long, double)
+__GPU_CVT_FP2INT(__double2ull, unsigned long long, double)
+__GPU_CVT_FP2INT(__float2int, int, float)
+__GPU_CVT_FP2INT(__float2uint, unsigned int, float)
+__GPU_CVT_FP2INT(__float2ll, long long, float)
+__GPU_CVT_FP2INT(__float2ull, unsigned long long, float)
+
+#undef __GPU_CVT_FP2INT
+
+// Round-to-nearest is a plain conversion, so the '_rn' variants are exact.
+//
+// TODO: Directed rounding (rd/ru/rz) for integer-to-float and the narrowing
+// double-to-float conversions has no portable builtin yet (need pragma STDC
+// FENV_ROUND pragma), so these are stubbed.
+#define __GPU_CVT_TO_F(__name, __res, __arg)                                   \
+  __GPU_DEVICE__ __res __name##_rd(__arg __x) { __builtin_trap(); }            \
+  __GPU_DEVICE__ __res __name##_rn(__arg __x) { return (__res)__x; }           \
+  __GPU_DEVICE__ __res __name##_ru(__arg __x) { __builtin_trap(); }            \
+  __GPU_DEVICE__ __res __name##_rz(__arg __x) { __builtin_trap(); }
+
+__GPU_CVT_TO_F(__int2float, float, int)
+__GPU_CVT_TO_F(__uint2float, float, unsigned int)
+__GPU_CVT_TO_F(__ll2float, float, long long)
+__GPU_CVT_TO_F(__ull2float, float, unsigned long long)
+__GPU_CVT_TO_F(__ll2double, double, long long)
+__GPU_CVT_TO_F(__ull2double, double, unsigned long long)
+__GPU_CVT_TO_F(__double2float, float, double)
+
+#undef __GPU_CVT_TO_F
+
+// Integer to double conversions are always exact, so only round-to-nearest is
+// defined by CUDA and HIP.
+__GPU_DEVICE__ double __int2double_rn(int __x) { return (double)__x; }
+__GPU_DEVICE__ double __uint2double_rn(unsigned int __x) { return (double)__x; }
+
+//===----------------------------------------------------------------------===//
 // Wavefront vote and lane identity.
 //===----------------------------------------------------------------------===//
 
