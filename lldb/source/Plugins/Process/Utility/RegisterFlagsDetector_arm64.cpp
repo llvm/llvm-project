@@ -32,35 +32,43 @@
 using namespace lldb_private;
 
 Arm64RegisterFlagsDetector::Fields
-Arm64RegisterFlagsDetector::DetectPORFields(uint64_t hwcap, uint64_t hwcap2,
-                                            uint64_t hwcap3) {
+Arm64RegisterFlagsDetector::DetectPOREL0Fields(uint64_t hwcap, uint64_t hwcap2,
+                                               uint64_t hwcap3) {
   (void)hwcap;
   (void)hwcap3;
 
   if (!(hwcap2 & HWCAP2_POE))
     return {};
 
-  static const FieldEnum por_perm_enum("por_perm_enum",
-                                       {
-                                           {0b0000, "No Access"},
-                                           {0b0001, "Read"},
-                                           {0b0010, "Execute"},
-                                           {0b0011, "Read, Execute"},
-                                           {0b0100, "Write"},
-                                           {0b0101, "Write, Read"},
-                                           {0b0110, "Write, Execute"},
-                                           {0b0111, "Read, Write, Execute"},
-                                       });
+  static const FieldEnum por_el0_perm_enum("por_el0_perm_enum",
+                                           {
+                                               {0b0000, "No Access"},
+                                               {0b0001, "Read"},
+                                               {0b0010, "Execute"},
+                                               {0b0011, "Read, Execute"},
+                                               {0b0100, "Write"},
+                                               {0b0101, "Write, Read"},
+                                               {0b0110, "Write, Execute"},
+                                               {0b0111, "Read, Write, Execute"},
+                                           });
 
   return {
-      {"Perm15", 60, 63, &por_perm_enum}, {"Perm14", 56, 59, &por_perm_enum},
-      {"Perm13", 52, 55, &por_perm_enum}, {"Perm12", 48, 51, &por_perm_enum},
-      {"Perm11", 44, 47, &por_perm_enum}, {"Perm10", 40, 43, &por_perm_enum},
-      {"Perm9", 36, 39, &por_perm_enum},  {"Perm8", 32, 35, &por_perm_enum},
-      {"Perm7", 28, 31, &por_perm_enum},  {"Perm6", 24, 27, &por_perm_enum},
-      {"Perm5", 20, 23, &por_perm_enum},  {"Perm4", 16, 19, &por_perm_enum},
-      {"Perm3", 12, 15, &por_perm_enum},  {"Perm2", 8, 11, &por_perm_enum},
-      {"Perm1", 4, 7, &por_perm_enum},    {"Perm0", 0, 3, &por_perm_enum},
+      {"Perm15", 60, 63, &por_el0_perm_enum},
+      {"Perm14", 56, 59, &por_el0_perm_enum},
+      {"Perm13", 52, 55, &por_el0_perm_enum},
+      {"Perm12", 48, 51, &por_el0_perm_enum},
+      {"Perm11", 44, 47, &por_el0_perm_enum},
+      {"Perm10", 40, 43, &por_el0_perm_enum},
+      {"Perm9", 36, 39, &por_el0_perm_enum},
+      {"Perm8", 32, 35, &por_el0_perm_enum},
+      {"Perm7", 28, 31, &por_el0_perm_enum},
+      {"Perm6", 24, 27, &por_el0_perm_enum},
+      {"Perm5", 20, 23, &por_el0_perm_enum},
+      {"Perm4", 16, 19, &por_el0_perm_enum},
+      {"Perm3", 12, 15, &por_el0_perm_enum},
+      {"Perm2", 8, 11, &por_el0_perm_enum},
+      {"Perm1", 4, 7, &por_el0_perm_enum},
+      {"Perm0", 0, 3, &por_el0_perm_enum},
   };
 }
 

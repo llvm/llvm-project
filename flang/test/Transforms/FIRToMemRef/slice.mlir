@@ -55,7 +55,10 @@
 // CHECK:           [[MUL2:%[0-9]+]] = arith.muli [[SUB3]], %[[C2]] : index
 // CHECK:           [[SUB4:%[0-9]+]] = arith.subi %[[C2]], %[[C1_2]] : index
 // CHECK:           [[ADD4:%[0-9]+]] = arith.addi [[MUL2]], [[SUB4]] : index
-// CHECK:           [[LOAD:%[0-9]+]] = memref.load [[CONVERT]][[[ADD4]], [[ADD3]]] : memref<7x5xi32>
+// CHECK:           %[[C1_5:.*]] = arith.constant 1 : index
+// CHECK:           %[[C0_6:.*]] = arith.constant 0 : index
+// CHECK:           [[REINTERPRET:%.*]] = memref.reinterpret_cast [[CONVERT]] to offset: [%[[C0_6]]], sizes: [%[[C7]], %[[C5]]], strides: [%[[C5]], %[[C1_5]]] : memref<7x5xi32> to memref<?x?xi32, strided<[?, ?], offset: ?>>
+// CHECK:           [[LOAD:%[0-9]+]] = memref.load [[REINTERPRET]][[[ADD4]], [[ADD3]]] : memref<?x?xi32, strided<[?, ?], offset: ?>>
 func.func @slice_2d(%arg0: !fir.ref<!fir.array<5x7xi32>>, %arg1: !fir.ref<!fir.array<5x7xi32>>) {
   %c4 = arith.constant 4 : index
   %c2 = arith.constant 2 : index
@@ -143,7 +146,11 @@ func.func @slice_2d(%arg0: !fir.ref<!fir.array<5x7xi32>>, %arg1: !fir.ref<!fir.a
 // CHECK:             [[MUL3:%[0-9]+]] = arith.muli [[SUB5]], %[[C4]] : index
 // CHECK:             [[SUB6:%[0-9]+]] = arith.subi %[[C3]], %[[C1_0]] : index
 // CHECK:             [[ADD3:%[0-9]+]] = arith.addi [[MUL3]], [[SUB6]] : index
-// CHECK:             [[LOAD:%[0-9]+]] = memref.load [[CONVERT2]][[[ADD3]], [[ADD2]], [[ADD1]]] : memref<7x7x5xi32>
+// CHECK:             %[[C1_4:.*]] = arith.constant 1 : index
+// CHECK:             %[[STRIDE0:.*]] = arith.muli %[[C7]], %[[C5]] : index
+// CHECK:             %[[C0_5:.*]] = arith.constant 0 : index
+// CHECK:             [[REINTERPRET3D:%.*]] = memref.reinterpret_cast [[CONVERT2]] to offset: [%[[C0_5]]], sizes: [%[[C7]], %[[C7]], %[[C5]]], strides: [%[[STRIDE0]], %[[C5]], %[[C1_4]]] : memref<7x7x5xi32> to memref<?x?x?xi32, strided<[?, ?, ?], offset: ?>>
+// CHECK:             [[LOAD:%[0-9]+]] = memref.load [[REINTERPRET3D]][[[ADD3]], [[ADD2]], [[ADD1]]] : memref<?x?x?xi32, strided<[?, ?, ?], offset: ?>>
 func.func @slice_3d(%arg0: !fir.ref<!fir.array<5x7x7xi32>> {fir.bindc_name = "a", llvm.nocapture}, %arg1: !fir.ref<!fir.array<5x7x7xi32>> {fir.bindc_name = "b", llvm.nocapture}) attributes {fir.internal_name = "_QPcopy"} {
   %c4 = arith.constant 4 : index
   %c2 = arith.constant 2 : index
@@ -193,7 +200,10 @@ func.func @slice_3d(%arg0: !fir.ref<!fir.array<5x7x7xi32>> {fir.bindc_name = "a"
 // CHECK:         [[MUL1:%[0-9]+]] = arith.muli [[SUB2]], %[[C1]] : index
 // CHECK:         [[SUB3:%[0-9]+]] = arith.subi %[[C1]], %[[C1_1]] : index
 // CHECK:         [[ADD2:%[0-9]+]] = arith.addi [[MUL1]], [[SUB3]] : index
-// CHECK:         [[LOAD:%[0-9]+]] = memref.load [[CONVERT]][[[ADD2]], [[SUB1]]] : memref<3x3xi32>
+// CHECK:         %[[C1_3:.*]] = arith.constant 1 : index
+// CHECK:         %[[C0_4:.*]] = arith.constant 0 : index
+// CHECK:         [[REINTERPRET2D:%.*]] = memref.reinterpret_cast [[CONVERT]] to offset: [%[[C0_4]]], sizes: [%[[C3]], %[[C3]]], strides: [%[[C3]], %[[C1_3]]] : memref<3x3xi32> to memref<?x?xi32, strided<[?, ?], offset: ?>>
+// CHECK:         [[LOAD:%[0-9]+]] = memref.load [[REINTERPRET2D]][[[ADD2]], [[SUB1]]] : memref<?x?xi32, strided<[?, ?], offset: ?>>
 func.func @extract_row(%arg0: !fir.ref<!fir.array<3x3xi32>>) {
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
@@ -241,7 +251,10 @@ func.func @extract_row(%arg0: !fir.ref<!fir.array<3x3xi32>>) {
 // CHECK:         [[MUL1:%[0-9]+]] = arith.muli [[SUB2]], %[[C11]] : index
 // CHECK:         [[SUB3:%[0-9]+]] = arith.subi %[[C1]], %[[C1_1]] : index
 // CHECK:         [[ADD2:%[0-9]+]] = arith.addi [[MUL1]], [[SUB3]] : index
-// CHECK:         memref.store %[[CST]], [[CONVERT]][[[SUB1]], [[ADD2]]] : memref<5x100xf32>
+// CHECK:         %[[C1_3:.*]] = arith.constant 1 : index
+// CHECK:         %[[C0_4:.*]] = arith.constant 0 : index
+// CHECK:         [[REINTERPRET:%.*]] = memref.reinterpret_cast [[CONVERT]] to offset: [%[[C0_4]]], sizes: [%[[C5]], %[[C100]]], strides: [%[[C100]], %[[C1_3]]] : memref<5x100xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+// CHECK:         memref.store %[[CST]], [[REINTERPRET]][[[SUB1]], [[ADD2]]] : memref<?x?xf32, strided<[?, ?], offset: ?>>
 func.func @extract_column(%arg0: !fir.ref<!fir.array<100x5xf32>> {fir.bindc_name = "tmp", llvm.nocapture}) attributes {fir.internal_name = "_QPextract_column"} {
   %c10 = arith.constant 10 : index
   %c11 = arith.constant 11 : index
@@ -289,7 +302,13 @@ func.func @extract_column(%arg0: !fir.ref<!fir.array<100x5xf32>> {fir.bindc_name
 // CHECK:         [[MUL1:%.*]] = arith.muli [[SUB1]], %[[C1_0]] : index
 // CHECK:         [[SUB2:%[0-9]+]] = arith.subi %[[C0]], %[[C0]] : index
 // CHECK:         [[ADD3:%.*]] = arith.addi [[MUL1]], [[SUB2]] : index
-// CHECK:         [[LOADVAL:%.*]] = memref.load [[CONVERT]][[[ADD3]]] : memref<7xf32>
+// CHECK:         [[ELE:%.*]] = fir.box_elesize [[EMBOX]] : (!fir.box<!fir.array<7xf32>>) -> index
+// CHECK:         %[[C0_2:.*]] = arith.constant 0 : index
+// CHECK:         [[DIMS:%.*]]:3 = fir.box_dims [[EMBOX]], %[[C0_2]] : (!fir.box<!fir.array<7xf32>>, index) -> (index, index, index)
+// CHECK:         [[DIV:%.*]] = arith.divsi [[DIMS]]#2, [[ELE]] : index
+// CHECK:         %[[C0_3:.*]] = arith.constant 0 : index
+// CHECK:         [[REINTERPRET:%.*]] = memref.reinterpret_cast [[CONVERT]] to offset: [%[[C0_3]]], sizes: [[[DIMS]]#1], strides: [[[DIV]]] : memref<7xf32> to memref<?xf32, strided<[?], offset: ?>>
+// CHECK:         [[LOADVAL:%.*]] = memref.load [[REINTERPRET]][[[ADD3]]] : memref<?xf32, strided<[?], offset: ?>>
 func.func @noslice() {
   %c7 = arith.constant 7 : index
   %c-1 = arith.constant -1 : index

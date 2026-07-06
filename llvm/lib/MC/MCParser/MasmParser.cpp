@@ -717,6 +717,7 @@ private:
     DK_END,
     DK_PUSHFRAME,
     DK_PUSHREG,
+    DK_PUSH2REGS,
     DK_SAVEREG,
     DK_SAVEXMM128,
     DK_SETFRAME,
@@ -749,6 +750,7 @@ private:
     BI_DATASIZE,
     BI_MODEL,
     BI_STACK,
+    BI_UNWINDVERSION,
   };
 
   /// Maps builtin name --> BuiltinSymbol enum, for builtins handled by this
@@ -4225,7 +4227,7 @@ bool MasmParser::emitAlignTo(int64_t Alignment) {
     const MCSection *Section = getStreamer().getCurrentSectionOnly();
     if (MAI.useCodeAlign(*Section)) {
       getStreamer().emitCodeAlignment(Align(Alignment),
-                                      &getTargetParser().getSTI(),
+                                      getTargetParser().getSTI(),
                                       /*MaxBytesToEmit=*/0);
     } else {
       // FIXME: Target specific behavior about how the "extra" bytes are filled.
@@ -5271,6 +5273,10 @@ void MasmParser::initializeDirectiveKindMap() {
   // DirectiveKindMap[".cfi_def_cfa_register"] = DK_CFI_DEF_CFA_REGISTER;
   // DirectiveKindMap[".cfi_offset"] = DK_CFI_OFFSET;
   // DirectiveKindMap[".cfi_rel_offset"] = DK_CFI_REL_OFFSET;
+  // DirectiveKindMap[".cfi_llvm_register_pair"] = DK_CFI_LLVM_REGISTER_PAIR;
+  // DirectiveKindMap[".cfi_llvm_vector_registers"] =
+  //   DK_CFI_LLVM_VECTOR_REGISTERS;
+  // DirectiveKindMap[".cfi_llvm_vector_offset"] = DK_CFI_LLVM_VECTOR_OFFSET;
   // DirectiveKindMap[".cfi_personality"] = DK_CFI_PERSONALITY;
   // DirectiveKindMap[".cfi_lsda"] = DK_CFI_LSDA;
   // DirectiveKindMap[".cfi_remember_state"] = DK_CFI_REMEMBER_STATE;
@@ -5302,9 +5308,15 @@ void MasmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".errnz"] = DK_ERRNZ;
   DirectiveKindMap[".pushframe"] = DK_PUSHFRAME;
   DirectiveKindMap[".pushreg"] = DK_PUSHREG;
+  DirectiveKindMap[".push2reg"] = DK_PUSH2REGS;
+  DirectiveKindMap[".pop2reg"] = DK_PUSH2REGS;
+  DirectiveKindMap[".popreg"] = DK_PUSHREG;
   DirectiveKindMap[".savereg"] = DK_SAVEREG;
+  DirectiveKindMap[".restorereg"] = DK_SAVEREG;
   DirectiveKindMap[".savexmm128"] = DK_SAVEXMM128;
+  DirectiveKindMap[".restorexmm128"] = DK_SAVEXMM128;
   DirectiveKindMap[".setframe"] = DK_SETFRAME;
+  DirectiveKindMap[".unsetframe"] = DK_SETFRAME;
   DirectiveKindMap[".radix"] = DK_RADIX;
   DirectiveKindMap["db"] = DK_DB;
   DirectiveKindMap["dd"] = DK_DD;
@@ -6070,7 +6082,7 @@ bool MasmParser::parseMSInlineAsm(
         OS << "]";
       break;
     case AOK_Label:
-      OS << Ctx.getAsmInfo()->getPrivateLabelPrefix() << AR.Label;
+      OS << Ctx.getAsmInfo().getInternalSymbolPrefix() << AR.Label;
       break;
     case AOK_Input:
       OS << '$' << InputIdx++;
@@ -6100,7 +6112,7 @@ bool MasmParser::parseMSInlineAsm(
       // MS alignment directives are measured in bytes. If the native assembler
       // measures alignment in bytes, we can pass it straight through.
       OS << ".align";
-      if (getContext().getAsmInfo()->getAlignmentIsInBytes())
+      if (getContext().getAsmInfo().getAlignmentIsInBytes())
         break;
 
       // Alignment is in log2 form, so print that instead and skip the original
@@ -6135,6 +6147,7 @@ void MasmParser::initializeBuiltinSymbolMaps() {
   // Numeric built-ins (supported in all versions)
   BuiltinSymbolMap["@version"] = BI_VERSION;
   BuiltinSymbolMap["@line"] = BI_LINE;
+  BuiltinSymbolMap["@unwindversion"] = BI_UNWINDVERSION;
 
   // Text built-ins (supported in all versions)
   BuiltinSymbolMap["@date"] = BI_DATE;
@@ -6182,6 +6195,9 @@ const MCExpr *MasmParser::evaluateBuiltinValue(BuiltinSymbol Symbol,
                                    ActiveMacros.front()->ExitBuffer);
     return MCConstantExpr::create(Line, getContext());
   }
+  case BI_UNWINDVERSION:
+    return MCConstantExpr::create(getStreamer().getDefaultWinCFIUnwindVersion(),
+                                  getContext());
   }
   llvm_unreachable("unhandled built-in symbol");
 }

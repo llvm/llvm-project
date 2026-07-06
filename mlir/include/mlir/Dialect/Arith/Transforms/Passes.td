@@ -21,6 +21,10 @@ def ArithExpandOpsPass : Pass<"arith-expand"> {
               "Enable the F8E8M0 expansion patterns">,
        Option<"includeF4E2M1", "include-f4e2m1", "bool", /*default=*/"false",
               "Enable the F4E2M1 expansion patterns">,
+       Option<"includeFlushDenormals", "include-flush-denormals", "bool",
+              /*default=*/"false",
+              "Enable expansion of `arith.flush_denormals` on IEEE-like "
+              "floating-point types">,
   ];
 }
 

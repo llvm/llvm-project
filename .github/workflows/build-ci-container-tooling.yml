@@ -10,6 +10,7 @@ on:
     paths:
       - .github/workflows/build-ci-container-tooling.yml
       - '.github/workflows/containers/github-action-ci-tooling/**'
+      - llvm/utils/git/github-automation.py
       - llvm/utils/git/requirements_formatting.txt
       - llvm/utils/git/requirements_linting.txt
       - '.github/actions/build-container/**'
@@ -18,6 +19,7 @@ on:
     paths:
       - .github/workflows/build-ci-container-tooling.yml
       - '.github/workflows/containers/github-action-ci-tooling/**'
+      - llvm/utils/git/github-automation.py
       - llvm/utils/git/requirements_formatting.txt
       - llvm/utils/git/requirements_linting.txt
       - '.github/actions/build-container/**'
@@ -39,15 +41,21 @@ jobs:
           - container-name: abi-tests
             test-command: 'cd $HOME && abi-compliance-checker --help'
             target: abi-tests
+          - container-name: github-automation
+            test-command: 'true'
+            target: github-automation
+            context: llvm/utils/git/
+
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
           sparse-checkout: |
             .github/workflows/containers/github-action-ci-tooling/
             llvm/utils/git/requirements_formatting.txt
             llvm/utils/git/requirements_linting.txt
+            llvm/utils/git/github-automation.py
             clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py
             .github/actions/build-container
 
@@ -58,6 +66,7 @@ jobs:
           dockerfile: .github/workflows/containers/github-action-ci-tooling/Dockerfile
           target: ci-container-${{ matrix.target || format('code-{0}', matrix.container-name) }}
           test-command: ${{ matrix.test-command }}
+          context: ${{ matrix.context }}
 
   push-ci-container:
     if: github.event_name == 'push'
@@ -68,7 +77,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
           sparse-checkout: |

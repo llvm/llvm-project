@@ -137,7 +137,7 @@ class UnexploredFirstStack : public WorkList {
   SmallVector<WorkListUnit, 20> StackOthers;
 
   using BlockID = unsigned;
-  using LocIdentifier = std::pair<BlockID, const StackFrameContext *>;
+  using LocIdentifier = std::pair<BlockID, const StackFrame *>;
 
   llvm::DenseSet<LocIdentifier> Reachable;
 
@@ -155,9 +155,8 @@ public:
       // correct.
       StackUnexplored.push_back(U);
     } else {
-      LocIdentifier LocId = std::make_pair(
-          BE->getBlock()->getBlockID(),
-          N->getLocationContext()->getStackFrame());
+      LocIdentifier LocId =
+          std::make_pair(BE->getBlock()->getBlockID(), N->getStackFrame());
       auto InsertInfo = Reachable.insert(LocId);
 
       if (InsertInfo.second) {
@@ -192,7 +191,7 @@ std::unique_ptr<WorkList> WorkList::makeUnexploredFirst() {
 namespace {
 class UnexploredFirstPriorityQueue : public WorkList {
   using BlockID = unsigned;
-  using LocIdentifier = std::pair<BlockID, const StackFrameContext *>;
+  using LocIdentifier = std::pair<BlockID, const StackFrame *>;
 
   // How many times each location was visited.
   // Is signed because we negate it later in order to have a reversed
@@ -225,9 +224,8 @@ public:
     const ExplodedNode *N = U.getNode();
     unsigned NumVisited = 0;
     if (auto BE = N->getLocation().getAs<BlockEntrance>()) {
-      LocIdentifier LocId = std::make_pair(
-          BE->getBlock()->getBlockID(),
-          N->getLocationContext()->getStackFrame());
+      LocIdentifier LocId =
+          std::make_pair(BE->getBlock()->getBlockID(), N->getStackFrame());
       NumVisited = NumReached[LocId]++;
     }
 

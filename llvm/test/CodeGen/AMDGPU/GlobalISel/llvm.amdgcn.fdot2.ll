@@ -123,6 +123,30 @@ define float @v_fdot2_inline_literal_c(<2 x half> %a, <2 x half> %b) {
   ret float %ret
 }
 
+define amdgpu_ps float @v_fdot2_sss(<2 x half> inreg %a, <2 x half> inreg %b, float inreg %c) {
+; GFX906-LABEL: v_fdot2_sss:
+; GFX906:  ; %bb.0:
+; GFX906:    v_mov_b32_e32 v0, s1
+; GFX906:    v_mov_b32_e32 v1, s2
+; GFX906:    v_dot2_f32_f16 v0, s0, v0, v1
+; GFX906:    ; return to shader part epilog
+;
+; GFX10-LABEL: v_fdot2_sss:
+; GFX10:  ; %bb.0:
+; GFX10:    v_mov_b32_e32 v0, s2
+; GFX10:    v_mov_b32_e32 v1, s1
+; GFX10:    v_dot2c_f32_f16 v0, s0, v1
+; GFX10:    ; return to shader part epilog
+;
+; GFX11-LABEL: v_fdot2_sss:
+; GFX11:  ; %bb.0:
+; GFX11:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s1
+; GFX11:    v_dot2acc_f32_f16 v0, s0, v1
+; GFX11:    ; return to shader part epilog
+  %r = call float @llvm.amdgcn.fdot2(<2 x half> %a, <2 x half> %b, float %c, i1 false)
+  ret float %r
+}
+
 declare float @llvm.amdgcn.fdot2(<2 x half>, <2 x half>, float, i1 immarg) #0
 
 attributes #0 = { nounwind readnone speculatable }

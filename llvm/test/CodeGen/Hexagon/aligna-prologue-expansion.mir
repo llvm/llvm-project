@@ -1,9 +1,12 @@
 # RUN: llc -mtriple=hexagon -run-pass prologepilog %s -o - | FileCheck %s
 # RUN: llc -mtriple=hexagon -run-pass prologepilog -spill-func-threshold=0 %s -o - | FileCheck --check-prefix=SPILL-FUNC %s
+# RUN: llc -mtriple=hexagon -run-pass prologepilog -verify-machineinstrs %s -o - | FileCheck %s
 #
 # Verify that PS_aligna is placed AFTER all CSR spills.
 #
 # CHECK-LABEL: name: test_aligna_expansion
+# CHECK: machineFunctionInfo:
+# CHECK-NEXT: stackAlignBaseReg: '$r16'
 # CHECK: S2_allocframe
 # CHECK: S2_storerd_io $r30, -8
 # CHECK: S2_storerd_io $r30, -16
@@ -15,6 +18,8 @@
 # CHECK-NOT: S2_storerd_io
 #
 # SPILL-FUNC-LABEL: name: test_aligna_expansion
+# SPILL-FUNC: machineFunctionInfo:
+# SPILL-FUNC-NEXT: stackAlignBaseReg: '$r16'
 # SPILL-FUNC: S2_allocframe
 # SPILL-FUNC: SAVE_REGISTERS_CALL_V4
 # SPILL-FUNC: PS_aligna
@@ -29,6 +34,8 @@
 name:            test_aligna_expansion
 alignment:       16
 tracksRegLiveness: true
+machineFunctionInfo:
+  stackAlignBaseReg: '$r16'
 frameInfo:
   maxAlignment:    128
   adjustsStack:    true

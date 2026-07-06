@@ -96,7 +96,7 @@ define void @test(ptr %p) {
 ; VEC:       middle.block:
 ; VEC-NEXT:    [[TMP42:%.*]] = add <4 x i16> [[STEP_ADD]], splat (i16 1)
 ; VEC-NEXT:    [[TMP28:%.*]] = zext <4 x i16> [[TMP42]] to <4 x i64>
-; VEC-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i64> [[TMP28]], i32 3
+; VEC-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i64> [[TMP28]], i64 3
 ; VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP4]], [[N_VEC]]
 ; VEC-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; VEC:       scalar.ph:

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/sps-ci/AllSPSCI.h"
+#include "orc-rt/sps-ci/SimpleNativeMemoryMapSPSCI.h"
 
 namespace orc_rt::sps_ci {
 

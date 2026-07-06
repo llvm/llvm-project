@@ -65,7 +65,8 @@ DICompileUnitAttr DebugImporter::translateImpl(llvm::DICompileUnit *node) {
         imports.push_back(nodeAttr);
   }
   return DICompileUnitAttr::get(
-      context, getOrCreateDistinctID(node),
+      context, /*recId=*/DistinctAttr{}, /*isRecSelf=*/false,
+      getOrCreateDistinctID(node),
       node->getSourceLanguage().getUnversionedName(),
       translate(node->getFile()), getStringAttrOrNull(node->getRawProducer()),
       node->isOptimized(), emissionKind.value(),
@@ -100,7 +101,9 @@ DICompositeTypeAttr DebugImporter::translateImpl(llvm::DICompositeType *node) {
       node->getAlignInBits(), translateExpression(node->getDataLocationExp()),
       translateExpression(node->getRankExp()),
       translateExpression(node->getAllocatedExp()),
-      translateExpression(node->getAssociatedExp()), elements);
+      translateExpression(node->getAssociatedExp()),
+      getStringAttrOrNull(node->getRawIdentifier()),
+      translate(node->getDiscriminator()), elements);
 }
 
 DIDerivedTypeAttr DebugImporter::translateImpl(llvm::DIDerivedType *node) {
@@ -108,8 +111,19 @@ DIDerivedTypeAttr DebugImporter::translateImpl(llvm::DIDerivedType *node) {
   DITypeAttr baseType = translate(node->getBaseType());
   if (node->getBaseType() && !baseType)
     return nullptr;
-  DINodeAttr extraData =
-      translate(dyn_cast_or_null<llvm::DINode>(node->getExtraData()));
+  llvm::Metadata *rawExtraData = node->getExtraData();
+  Attribute extraData;
+  if (auto *extraDataNode = dyn_cast_or_null<llvm::DINode>(rawExtraData)) {
+    extraData = translate(extraDataNode);
+  } else if (auto *constantAsMetadata =
+                 dyn_cast_or_null<llvm::ConstantAsMetadata>(rawExtraData)) {
+    if (auto *constantInt =
+            dyn_cast<llvm::ConstantInt>(constantAsMetadata->getValue())) {
+      const APInt &value = constantInt->getValue();
+      extraData = IntegerAttr::get(
+          IntegerType::get(context, value.getBitWidth()), value);
+    }
+  }
   return DIDerivedTypeAttr::get(
       context, node->getTag(), getStringAttrOrNull(node->getRawName()),
       translate(node->getFile()), node->getLine(), translate(node->getScope()),
@@ -434,8 +448,9 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
   return nullptr;
 }
 
-/// Get the `getRecSelf` constructor for the translated type of `node` if its
-/// translated DITypeAttr supports recursion. Otherwise, returns nullptr.
+/// Get the `getRecSelf` constructor for the translated node if it participates
+/// in CyclicReplacerCache cycle breaking (recursive composite types,
+/// subprograms, or compile units).
 static function_ref<DIRecursiveTypeAttrInterface(DistinctAttr)>
 getRecSelfConstructor(llvm::DINode *node) {
   using CtorType = function_ref<DIRecursiveTypeAttrInterface(DistinctAttr)>;
@@ -445,6 +460,9 @@ getRecSelfConstructor(llvm::DINode *node) {
       })
       .Case([&](llvm::DISubprogram *) {
         return CtorType(DISubprogramAttr::getRecSelf);
+      })
+      .Case([&](llvm::DICompileUnit *) {
+        return CtorType(DICompileUnitAttr::getRecSelf);
       })
       .Default(CtorType());
 }

@@ -1,0 +1,264 @@
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir 2> %t-before.cir
+// RUN: FileCheck --input-file=%t-before.cir %s --check-prefixes=CIR-BEFORE
+// RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefixes=LLVM,LLVMCIR
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
+// RUN: FileCheck --input-file=%t.ll %s --check-prefixes=LLVM,OGCG
+
+// Exercises lifetime-extended reference temporaries with non-trivial
+// destructors where the extending declaration has static or thread storage
+// duration, for both non-array and array temporary types.
+
+struct NonTrivial {
+  NonTrivial();
+  ~NonTrivial();
+  int x;
+};
+
+const NonTrivial &static_ref = NonTrivial();
+thread_local const NonTrivial &thread_ref = NonTrivial();
+
+typedef NonTrivial NonTrivialArr[2];
+
+const NonTrivialArr &static_arr_ref = NonTrivialArr{};
+thread_local const NonTrivialArr &thread_arr_ref = NonTrivialArr{};
+
+// CIR-BEFORE: cir.global external @static_ref = ctor : !cir.ptr<!rec_NonTrivial> {
+// CIR-BEFORE:   %[[STATIC_REF:.*]] = cir.get_global @static_ref
+// CIR-BEFORE:   %[[REF_TEMP:.*]] = cir.get_global @_ZGR10static_ref_
+// CIR-BEFORE:   cir.call @_ZN10NonTrivialC1Ev(%[[REF_TEMP]])
+// CIR-BEFORE:   cir.store{{.*}} %[[REF_TEMP]], %[[STATIC_REF]]
+// CIR-BEFORE: } dtor {
+// CIR-BEFORE:   %[[REF_TEMP_DTOR:.*]] = cir.get_global @_ZGR10static_ref_
+// CIR-BEFORE:   cir.call @_ZN10NonTrivialD1Ev(%[[REF_TEMP_DTOR]])
+// CIR-BEFORE: }
+// CIR-BEFORE: cir.global "private" internal @_ZGR10static_ref_ = #cir.zero : !rec_NonTrivial
+
+// CIR: cir.global external @static_ref = #cir.ptr<null> : !cir.ptr<!rec_NonTrivial>
+// CIR: cir.func internal private @__cxx_global_var_init()
+// CIR:   cir.get_global @static_ref
+// CIR:   cir.get_global @_ZGR10static_ref_
+// CIR:   cir.call @_ZN10NonTrivialC1Ev
+// CIR:   cir.store
+// CIR:   cir.get_global @_ZGR10static_ref_
+// CIR:   cir.get_global @_ZN10NonTrivialD1Ev
+// CIR:   cir.get_global @__dso_handle
+// CIR:   cir.call @__cxa_atexit
+// CIR: cir.global "private" internal @_ZGR10static_ref_ = #cir.zero : !rec_NonTrivial
+
+// CIR-BEFORE: cir.global external tls_dyn dyn_tls_refs = <"_ZTW10thread_ref", "_ZTH10thread_ref"> @thread_ref = ctor : !cir.ptr<!rec_NonTrivial> {
+// CIR-BEFORE:   %[[THREAD_REF:.*]] = cir.get_global thread_local @thread_ref
+// CIR-BEFORE:   %[[REF_TEMP:.*]] = cir.get_global @_ZGR10thread_ref_
+// CIR-BEFORE:   cir.call @_ZN10NonTrivialC1Ev(%[[REF_TEMP]])
+// CIR-BEFORE:   cir.store{{.*}} %[[REF_TEMP]], %[[THREAD_REF]]
+// CIR-BEFORE: } dtor {
+// CIR-BEFORE:   %[[REF_TEMP_DTOR:.*]] = cir.get_global @_ZGR10thread_ref_
+// CIR-BEFORE:   cir.call @_ZN10NonTrivialD1Ev(%[[REF_TEMP_DTOR]])
+// CIR-BEFORE: }
+// CIR-BEFORE: cir.global "private" internal tls_dyn @_ZGR10thread_ref_ = #cir.zero : !rec_NonTrivial
+
+// CIR: cir.global external tls_dyn dyn_tls_refs = <"_ZTW10thread_ref", "_ZTH10thread_ref"> @thread_ref = #cir.ptr<null> : !cir.ptr<!rec_NonTrivial>
+// CIR: cir.func internal private @__cxx_global_var_init.1()
+// CIR:   cir.get_global thread_local @thread_ref
+// CIR:   cir.get_global @_ZGR10thread_ref_
+// CIR:   cir.call @_ZN10NonTrivialC1Ev
+// CIR:   cir.store
+// CIR:   cir.get_global @_ZGR10thread_ref_
+// CIR:   cir.get_global @_ZN10NonTrivialD1Ev
+// CIR:   cir.get_global @__dso_handle
+// CIR:   cir.call @__cxa_thread_atexit
+// CIR: cir.global "private" internal tls_dyn @_ZGR10thread_ref_ = #cir.zero : !rec_NonTrivial
+
+// CIR-BEFORE: cir.global external @static_arr_ref = ctor : !cir.ptr<!cir.array<!rec_NonTrivial x 2>> {
+// CIR-BEFORE:   %[[ARRAY_INIT_TEMP:.*]] = cir.alloca {{.*}}"arrayinit.temp"
+// CIR-BEFORE:   %[[STATIC_ARR_REF:.*]] = cir.get_global @static_arr_ref
+// CIR-BEFORE:   %[[STATIC_ARR_REF_TEMP:.*]] = cir.get_global @_ZGR14static_arr_ref_
+// CIR-BEFORE:   %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[STATIC_ARR_REF_TEMP]]
+// CIR-BEFORE:   cir.store{{.*}} %[[DECAY]], %[[ARRAY_INIT_TEMP]]
+// CIR-BEFORE:   %[[TWO:.*]] = cir.const #cir.int<2> : !s64i
+// CIR-BEFORE:   %[[NEXT:.*]] = cir.ptr_stride %[[DECAY]], %[[TWO]] : (!cir.ptr<!rec_NonTrivial>, !s64i) -> !cir.ptr<!rec_NonTrivial>
+// CIR-BEFORE:   cir.do {
+// CIR-BEFORE:     cir.call @_ZN10NonTrivialC1Ev
+// CIR-BEFORE:   } while {
+// CIR-BEFORE:     cir.condition
+// CIR-BEFORE:   }
+// CIR-BEFORE:   cir.store{{.*}} %[[STATIC_ARR_REF_TEMP]], %[[STATIC_ARR_REF]] : !cir.ptr<!cir.array<!rec_NonTrivial x 2>>, !cir.ptr<!cir.ptr<!cir.array<!rec_NonTrivial x 2>>>
+// CIR-BEFORE: } dtor {
+// CIR-BEFORE:   %[[STATIC_ARR_REF_TEMP_DTOR:.*]] = cir.get_global @_ZGR14static_arr_ref_
+// CIR-BEFORE:   cir.array.dtor %[[STATIC_ARR_REF_TEMP_DTOR]] : !cir.ptr<!cir.array<!rec_NonTrivial x 2>> {
+// CIR-BEFORE:   ^bb0(%[[ELEMENT:.*]]: !cir.ptr<!rec_NonTrivial>):
+// CIR-BEFORE:     cir.call @_ZN10NonTrivialD1Ev(%[[ELEMENT]])
+// CIR-BEFORE:   }
+// CIR-BEFORE: }
+// CIR-BEFORE: cir.global "private" internal @_ZGR14static_arr_ref_ = #cir.zero : !cir.array<!rec_NonTrivial x 2>
+
+// CIR: cir.global external @static_arr_ref = #cir.ptr<null> : !cir.ptr<!cir.array<!rec_NonTrivial x 2>>
+// CIR: cir.func internal private @__cxx_global_array_dtor(
+// CIR:   cir.do {
+// CIR:     cir.call @_ZN10NonTrivialD1Ev
+// CIR:   } while {
+// CIR:     cir.condition
+// CIR:   }
+// CIR: cir.func internal private @__cxx_global_var_init.2()
+// CIR:   cir.call @_ZN10NonTrivialC1Ev
+// CIR:   cir.store
+// CIR:   cir.get_global @__cxx_global_array_dtor
+// CIR:   cir.get_global @__dso_handle
+// CIR:   cir.call @__cxa_atexit
+// CIR: cir.global "private" internal @_ZGR14static_arr_ref_ = #cir.zero : !cir.array<!rec_NonTrivial x 2>
+
+// CIR-BEFORE: cir.global external tls_dyn dyn_tls_refs = <"_ZTW14thread_arr_ref", "_ZTH14thread_arr_ref"> @thread_arr_ref = ctor : !cir.ptr<!cir.array<!rec_NonTrivial x 2>> {
+// CIR-BEFORE:   %[[ARRAY_INIT_TEMP:.*]] = cir.alloca {{.*}}"arrayinit.temp"
+// CIR-BEFORE:   %[[THREAD_ARR_REF:.*]] = cir.get_global thread_local @thread_arr_ref
+// CIR-BEFORE:   %[[THREAD_ARR_REF_TEMP:.*]] = cir.get_global @_ZGR14thread_arr_ref_
+// CIR-BEFORE:   %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[THREAD_ARR_REF_TEMP]]
+// CIR-BEFORE:   cir.store{{.*}} %[[DECAY]], %[[ARRAY_INIT_TEMP]]
+// CIR-BEFORE:   %[[TWO:.*]] = cir.const #cir.int<2> : !s64i
+// CIR-BEFORE:   %[[NEXT:.*]] = cir.ptr_stride %[[DECAY]], %[[TWO]] : (!cir.ptr<!rec_NonTrivial>, !s64i) -> !cir.ptr<!rec_NonTrivial>
+// CIR-BEFORE:   cir.do {
+// CIR-BEFORE:     cir.call @_ZN10NonTrivialC1Ev
+// CIR-BEFORE:   } while {
+// CIR-BEFORE:     cir.condition
+// CIR-BEFORE:   }
+// CIR-BEFORE:   cir.store{{.*}} %[[THREAD_ARR_REF_TEMP]], %[[THREAD_ARR_REF]] : !cir.ptr<!cir.array<!rec_NonTrivial x 2>>, !cir.ptr<!cir.ptr<!cir.array<!rec_NonTrivial x 2>>>
+// CIR-BEFORE: } dtor {
+// CIR-BEFORE:   %[[THREAD_ARR_REF_TEMP_DTOR:.*]] = cir.get_global @_ZGR14thread_arr_ref_
+// CIR-BEFORE:   cir.array.dtor %[[THREAD_ARR_REF_TEMP_DTOR]] : !cir.ptr<!cir.array<!rec_NonTrivial x 2>> {
+// CIR-BEFORE:   ^bb0(%[[ELEMENT:.*]]: !cir.ptr<!rec_NonTrivial>):
+// CIR-BEFORE:     cir.call @_ZN10NonTrivialD1Ev(%[[ELEMENT]])
+// CIR-BEFORE:   }
+// CIR-BEFORE: }
+// CIR-BEFORE: cir.global "private" internal tls_dyn @_ZGR14thread_arr_ref_ = #cir.zero : !cir.array<!rec_NonTrivial x 2>
+
+// CIR: cir.global external tls_dyn dyn_tls_refs = <"_ZTW14thread_arr_ref", "_ZTH14thread_arr_ref"> @thread_arr_ref = #cir.ptr<null> : !cir.ptr<!cir.array<!rec_NonTrivial x 2>>
+// CIR: cir.func internal private @__cxx_global_array_dtor.1(
+// CIR:   cir.do {
+// CIR:     cir.call @_ZN10NonTrivialD1Ev
+// CIR:   } while {
+// CIR:     cir.condition
+// CIR:   }
+// CIR: cir.func internal private @__cxx_global_var_init.3()
+// CIR:   cir.call @_ZN10NonTrivialC1Ev
+// CIR:   cir.store
+// CIR:   cir.get_global @__cxx_global_array_dtor.1
+// CIR:   cir.get_global @__dso_handle
+// CIR:   cir.call @__cxa_thread_atexit
+// CIR: cir.global "private" internal tls_dyn @_ZGR14thread_arr_ref_ = #cir.zero : !cir.array<!rec_NonTrivial x 2>
+
+// LLVM-DAG: @static_ref = global ptr null
+// LLVM-DAG: @_ZGR10static_ref_ = internal global %struct.NonTrivial zeroinitializer
+// LLVM-DAG: @thread_ref = thread_local global ptr null
+// LLVM-DAG: @_ZGR10thread_ref_ = internal thread_local global %struct.NonTrivial zeroinitializer
+// LLVM-DAG: @static_arr_ref = global ptr null
+// LLVM-DAG: @_ZGR14static_arr_ref_ = internal global [2 x %struct.NonTrivial] zeroinitializer
+// LLVM-DAG: @thread_arr_ref = thread_local global ptr null
+// LLVM-DAG: @_ZGR14thread_arr_ref_ = internal thread_local global [2 x %struct.NonTrivial] zeroinitializer
+
+// Static, non-array.
+
+// LLVM-LABEL: define internal void @__cxx_global_var_init()
+// LLVM:         call void @_ZN10NonTrivialC1Ev(ptr {{.*}} @_ZGR10static_ref_)
+// LLVMCIR:      store ptr @_ZGR10static_ref_, ptr @static_ref
+// LLVM:         call i32 @__cxa_atexit(ptr @_ZN10NonTrivialD1Ev, ptr @_ZGR10static_ref_, ptr @__dso_handle)
+// OGCG:         store ptr @_ZGR10static_ref_, ptr @static_ref
+
+// Thread, non-array.
+
+// LLVMCIR-LABEL: define internal void @__cxx_global_var_init.1()
+// LLVMCIR:         %[[TLS_ADDR:.*]] = call {{.*}}ptr @llvm.threadlocal.address.p0(ptr {{.*}}@thread_ref)
+// LLVMCIR:         call void @_ZN10NonTrivialC1Ev(ptr {{.*}} @_ZGR10thread_ref_)
+// LLVMCIR:         store ptr @_ZGR10thread_ref_, ptr %[[TLS_ADDR]]
+// LLVMCIR:         call i32 @__cxa_thread_atexit(ptr @_ZN10NonTrivialD1Ev, ptr @_ZGR10thread_ref_, ptr @__dso_handle)
+
+// OGCG-LABEL: define internal void @__cxx_global_var_init.1()
+// OGCG:         call void @_ZN10NonTrivialC1Ev(ptr {{.*}} @_ZGR10thread_ref_)
+// OGCG:         call i32 @__cxa_thread_atexit(ptr @_ZN10NonTrivialD1Ev, ptr @_ZGR10thread_ref_, ptr @__dso_handle)
+// OGCG:         %[[TLS_ADDR:.*]] = call {{.*}}ptr @llvm.threadlocal.address.p0(ptr {{.*}}@thread_ref)
+// OGCG:         store ptr @_ZGR10thread_ref_, ptr %[[TLS_ADDR]]
+
+// Static, array.
+
+// LLVMCIR-LABEL: define internal void @__cxx_global_array_dtor(ptr {{.*}})
+// LLVMCIR:       [[LOOP_CONDITION_BLOCK:.*]]:
+// LLVMCIR:         %[[DONE:.*]] = icmp ne ptr
+// LLVMCIR:         br i1 %[[DONE]], label %[[LOOP_BODY_BLOCK:.*]], label %[[LOOP_EXIT_BLOCK:.*]]
+// LLVMCIR:       [[LOOP_BODY_BLOCK]]:
+// LLVMCIR:         call void @_ZN10NonTrivialD1Ev(ptr
+// LLVMCIR:         br label %[[LOOP_CONDITION_BLOCK]]
+// LLVMCIR:       [[LOOP_EXIT_BLOCK]]:
+
+// LLVMCIR-LABEL: define internal void @__cxx_global_var_init.2()
+// LLVMCIR:       [[LOOP_CONDITION_BLOCK:.*]]:
+// LLVMCIR:         %[[DONE:.*]] = icmp ne ptr
+// LLVMCIR:         br i1 %[[DONE]], label %[[LOOP_BODY_BLOCK:.*]], label %[[LOOP_EXIT_BLOCK:.*]]
+// LLVMCIR:       [[LOOP_BODY_BLOCK]]:
+// LLVMCIR:         call void @_ZN10NonTrivialC1Ev
+// LLVMCIR:         br label %[[LOOP_CONDITION_BLOCK]]
+// LLVMCIR:       [[LOOP_EXIT_BLOCK]]:
+// LLVMCIR:         store ptr @_ZGR14static_arr_ref_, ptr @static_arr_ref
+// LLVMCIR:         call i32 @__cxa_atexit(ptr @__cxx_global_array_dtor, ptr @_ZGR14static_arr_ref_, ptr @__dso_handle)
+
+// OGCG-LABEL: define internal void @__cxx_global_var_init.2()
+// OGCG:       [[ENTRY:.*]]:
+// OGCG:         br label %[[LOOP_BODY_BLOCK:.*]]
+// OGCG:       [[LOOP_BODY_BLOCK]]:
+// OGCG:         call void @_ZN10NonTrivialC1Ev
+// OGCG:         %[[DONE:.*]] = icmp eq ptr
+// OGCG:         br i1 %[[DONE]], label %[[LOOP_EXIT_BLOCK:.*]], label %[[LOOP_BODY_BLOCK]]
+// OGCG:       [[LOOP_EXIT_BLOCK]]:
+// OGCG:         call i32 @__cxa_atexit(ptr @__cxx_global_array_dtor, ptr null, ptr @__dso_handle)
+// OGCG:         store ptr @_ZGR14static_arr_ref_, ptr @static_arr_ref
+
+// OGCG-LABEL: define internal void @__cxx_global_array_dtor(ptr {{.*}})
+// OGCG:       [[ENTRY:.*]]:
+// OGCG:         br label %[[LOOP_BODY_BLOCK:.*]]
+// OGCG:       [[LOOP_BODY_BLOCK:.*]]:
+// OGCG:         call void @_ZN10NonTrivialD1Ev(ptr
+// OGCG:         %[[DONE:.*]] = icmp eq ptr
+// OGCG:         br i1 %[[DONE]], label %[[LOOP_EXIT_BLOCK:.*]], label %[[LOOP_BODY_BLOCK]]
+// OGCG:       [[LOOP_EXIT_BLOCK]]:
+
+// Thread, array.
+
+// LLVMCIR-LABEL: define internal void @__cxx_global_array_dtor.1(ptr {{.*}})
+// LLVMCIR:       [[LOOP_CONDITION_BLOCK:.*]]:
+// LLVMCIR:         %[[DONE:.*]] = icmp ne ptr
+// LLVMCIR:         br i1 %[[DONE]], label %[[LOOP_BODY_BLOCK:.*]], label %[[LOOP_EXIT_BLOCK:.*]]
+// LLVMCIR:       [[LOOP_BODY_BLOCK]]:
+// LLVMCIR:         call void @_ZN10NonTrivialD1Ev(ptr
+// LLVMCIR:         br label %[[LOOP_CONDITION_BLOCK]]
+// LLVMCIR:       [[LOOP_EXIT_BLOCK]]:
+
+// LLVMCIR-LABEL: define internal void @__cxx_global_var_init.3()
+// LLVMCIR:         %[[THREAD_ARR_REF:.*]] = call ptr @_ZTW14thread_arr_ref()
+// LLVMCIR:       [[LOOP_CONDITION_BLOCK:.*]]:
+// LLVMCIR:         %[[DONE:.*]] = icmp ne ptr
+// LLVMCIR:         br i1 %[[DONE]], label %[[LOOP_BODY_BLOCK:.*]], label %[[LOOP_EXIT_BLOCK:.*]]
+// LLVMCIR:       [[LOOP_BODY_BLOCK]]:
+// LLVMCIR:         call void @_ZN10NonTrivialC1Ev
+// LLVMCIR:         br label %[[LOOP_CONDITION_BLOCK]]
+// LLVMCIR:       [[LOOP_EXIT_BLOCK]]:
+// LLVMCIR:         store ptr @_ZGR14thread_arr_ref_, ptr %[[THREAD_ARR_REF]]
+// LLVMCIR:         call i32 @__cxa_thread_atexit(ptr @__cxx_global_array_dtor.1, ptr @_ZGR14thread_arr_ref_, ptr @__dso_handle)
+
+// OGCG-LABEL: define internal void @__cxx_global_var_init.3()
+// OGCG:       [[ENTRY:.*]]:
+// OGCG:         br label %[[LOOP_BODY_BLOCK:.*]]
+// OGCG:       [[LOOP_BODY_BLOCK]]:
+// OGCG:         call void @_ZN10NonTrivialC1Ev
+// OGCG:         %[[DONE:.*]] = icmp eq ptr
+// OGCG:         br i1 %[[DONE]], label %[[LOOP_EXIT_BLOCK:.*]], label %[[LOOP_BODY_BLOCK]]
+// OGCG:       [[LOOP_EXIT_BLOCK]]:
+// OGCG:         call i32 @__cxa_thread_atexit(ptr @__cxx_global_array_dtor.4, ptr null, ptr @__dso_handle)
+// OGCG:         %[[THREAD_ARR_ADDR:.*]] = call {{.*}}ptr @llvm.threadlocal.address.p0(ptr {{.*}}@thread_arr_ref)
+// OGCG:         store ptr @_ZGR14thread_arr_ref_, ptr %[[THREAD_ARR_ADDR]]
+
+// OGCG-LABEL: define internal void @__cxx_global_array_dtor.4(ptr {{.*}})
+// OGCG:       [[ENTRY:.*]]:
+// OGCG:         br label %[[LOOP_BODY_BLOCK:.*]]
+// OGCG:       [[LOOP_BODY_BLOCK:.*]]:
+// OGCG:         call void @_ZN10NonTrivialD1Ev(ptr
+// OGCG:         %[[DONE:.*]] = icmp eq ptr
+// OGCG:         br i1 %[[DONE]], label %[[LOOP_EXIT_BLOCK:.*]], label %[[LOOP_BODY_BLOCK]]
+// OGCG:       [[LOOP_EXIT_BLOCK]]:

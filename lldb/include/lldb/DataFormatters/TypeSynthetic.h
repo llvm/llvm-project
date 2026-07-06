@@ -23,6 +23,7 @@
 #include "lldb/DataFormatters/FormatterBytecode.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/ValueObject/ValueObject.h"
+#include "llvm/Support/ErrorExtras.h"
 
 namespace lldb_private {
 class SyntheticChildrenFrontEnd {
@@ -52,8 +53,7 @@ public:
   /// subscripting behavior - for example a sparse array, disable automatic
   /// subscripting with TypeOptions::eTypeOptionCustomSubscripting.
   virtual llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) {
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+    return llvm::createStringErrorV("Type has no child named '{0}'", name);
   }
 
   /// This function is assumed to always succeed and if it fails, the front-end
@@ -88,19 +88,18 @@ public:
 
 protected:
   lldb::ValueObjectSP
-  CreateValueObjectFromExpression(llvm::StringRef name,
-                                  llvm::StringRef expression,
-                                  const ExecutionContext &exe_ctx);
+  CreateChildValueObjectFromExpression(llvm::StringRef name,
+                                       llvm::StringRef expression,
+                                       const ExecutionContext &exe_ctx);
 
   lldb::ValueObjectSP
-  CreateValueObjectFromAddress(llvm::StringRef name, uint64_t address,
-                               const ExecutionContext &exe_ctx,
-                               CompilerType type, bool do_deref = true);
+  CreateChildValueObjectFromAddress(llvm::StringRef name, uint64_t address,
+                                    const ExecutionContext &exe_ctx,
+                                    CompilerType type, bool do_deref = true);
 
-  lldb::ValueObjectSP CreateValueObjectFromData(llvm::StringRef name,
-                                                const DataExtractor &data,
-                                                const ExecutionContext &exe_ctx,
-                                                CompilerType type);
+  lldb::ValueObjectSP CreateChildValueObjectFromData(
+      llvm::StringRef name, const DataExtractor &data,
+      const ExecutionContext &exe_ctx, CompilerType type);
 
 private:
   SyntheticChildrenFrontEnd(const SyntheticChildrenFrontEnd &) = delete;
@@ -120,8 +119,7 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override { return nullptr; }
 
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
+    return llvm::createStringErrorV("Type has no child named '{0}'", name);
   }
 
   lldb::ChildCacheState Update() override {

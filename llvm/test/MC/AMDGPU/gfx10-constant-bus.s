@@ -12,7 +12,7 @@ v_add_f32 v0, s0, s1
 
 v_madak_f32 v0, s0, v1, 42.42
 // GFX10: v_madak_f32 v0, s0, v1, 0x4229ae14      ; encoding: [0x00,0x02,0x00,0x42,0x14,0xae,0x29,0x42]
-// GFX11-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+// GFX11-ERR: :[[@LINE-2]]:1: error: instruction not supported on this GPU (gfx1100): v_madak_f32
 
 v_med3_f32 v0, s0, s0, s1
 // GFX10: v_med3_f32 v0, s0, s0, s1               ; encoding: [0x00,0x00,0x57,0xd5,0x00,0x00,0x04,0x00]

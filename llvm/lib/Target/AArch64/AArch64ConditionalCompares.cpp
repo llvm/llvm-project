@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineTraceMetrics.h"
 #include "llvm/CodeGen/Passes.h"
@@ -764,7 +765,7 @@ int SSACCmpConv::expectedCodeSizeDelta() const {
 //===----------------------------------------------------------------------===//
 
 namespace {
-class AArch64ConditionalCompares : public MachineFunctionPass {
+class AArch64ConditionalComparesImpl {
   const MachineBranchProbabilityInfo *MBPI;
   const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
@@ -779,13 +780,13 @@ class AArch64ConditionalCompares : public MachineFunctionPass {
   SSACCmpConv CmpConv;
 
 public:
-  static char ID;
-  AArch64ConditionalCompares() : MachineFunctionPass(ID) {}
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-  bool runOnMachineFunction(MachineFunction &MF) override;
-  StringRef getPassName() const override {
-    return "AArch64 Conditional Compares";
-  }
+  AArch64ConditionalComparesImpl(const MachineBranchProbabilityInfo *MBPI,
+                                 MachineDominatorTree *DomTree,
+                                 MachineLoopInfo *Loops,
+                                 MachineTraceMetrics *Traces)
+      : MBPI(MBPI), DomTree(DomTree), Loops(Loops), Traces(Traces) {}
+
+  bool run(MachineFunction &MF);
 
 private:
   bool tryConvert(MachineBasicBlock *);
@@ -794,23 +795,38 @@ private:
   void invalidateTraces();
   bool shouldConvert();
 };
+
+class AArch64ConditionalComparesLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+  AArch64ConditionalComparesLegacy() : MachineFunctionPass(ID) {
+    initializeAArch64ConditionalComparesLegacyPass(
+        *PassRegistry::getPassRegistry());
+  }
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
+  StringRef getPassName() const override {
+    return "AArch64 Conditional Compares";
+  }
+};
 } // end anonymous namespace
 
-char AArch64ConditionalCompares::ID = 0;
+char AArch64ConditionalComparesLegacy::ID = 0;
 
-INITIALIZE_PASS_BEGIN(AArch64ConditionalCompares, "aarch64-ccmp",
+INITIALIZE_PASS_BEGIN(AArch64ConditionalComparesLegacy, "aarch64-ccmp",
                       "AArch64 CCMP Pass", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineTraceMetricsWrapperPass)
-INITIALIZE_PASS_END(AArch64ConditionalCompares, "aarch64-ccmp",
+INITIALIZE_PASS_END(AArch64ConditionalComparesLegacy, "aarch64-ccmp",
                     "AArch64 CCMP Pass", false, false)
 
 FunctionPass *llvm::createAArch64ConditionalCompares() {
-  return new AArch64ConditionalCompares();
+  return new AArch64ConditionalComparesLegacy();
 }
 
-void AArch64ConditionalCompares::getAnalysisUsage(AnalysisUsage &AU) const {
+void AArch64ConditionalComparesLegacy::getAnalysisUsage(
+    AnalysisUsage &AU) const {
   AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
@@ -822,7 +838,7 @@ void AArch64ConditionalCompares::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 /// Update the dominator tree after if-conversion erased some blocks.
-void AArch64ConditionalCompares::updateDomTree(
+void AArch64ConditionalComparesImpl::updateDomTree(
     ArrayRef<MachineBasicBlock *> Removed) {
   // convert() removes CmpBB which was previously dominated by Head.
   // CmpBB children should be transferred to Head.
@@ -838,8 +854,8 @@ void AArch64ConditionalCompares::updateDomTree(
 }
 
 /// Update LoopInfo after if-conversion.
-void
-AArch64ConditionalCompares::updateLoops(ArrayRef<MachineBasicBlock *> Removed) {
+void AArch64ConditionalComparesImpl::updateLoops(
+    ArrayRef<MachineBasicBlock *> Removed) {
   if (!Loops)
     return;
   for (MachineBasicBlock *RemovedMBB : Removed)
@@ -847,7 +863,7 @@ AArch64ConditionalCompares::updateLoops(ArrayRef<MachineBasicBlock *> Removed) {
 }
 
 /// Invalidate MachineTraceMetrics before if-conversion.
-void AArch64ConditionalCompares::invalidateTraces() {
+void AArch64ConditionalComparesImpl::invalidateTraces() {
   Traces->invalidate(CmpConv.Head);
   Traces->invalidate(CmpConv.CmpBB);
 }
@@ -855,7 +871,7 @@ void AArch64ConditionalCompares::invalidateTraces() {
 /// Apply cost model and heuristics to the if-conversion in IfConv.
 /// Return true if the conversion is a good idea.
 ///
-bool AArch64ConditionalCompares::shouldConvert() {
+bool AArch64ConditionalComparesImpl::shouldConvert() {
   // Stress testing mode disables all cost considerations.
   if (Stress)
     return true;
@@ -916,7 +932,7 @@ bool AArch64ConditionalCompares::shouldConvert() {
   return true;
 }
 
-bool AArch64ConditionalCompares::tryConvert(MachineBasicBlock *MBB) {
+bool AArch64ConditionalComparesImpl::tryConvert(MachineBasicBlock *MBB) {
   bool Changed = false;
   while (CmpConv.canConvert(MBB) && shouldConvert()) {
     invalidateTraces();
@@ -931,20 +947,14 @@ bool AArch64ConditionalCompares::tryConvert(MachineBasicBlock *MBB) {
   return Changed;
 }
 
-bool AArch64ConditionalCompares::runOnMachineFunction(MachineFunction &MF) {
+bool AArch64ConditionalComparesImpl::run(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** AArch64 Conditional Compares **********\n"
                     << "********** Function: " << MF.getName() << '\n');
-  if (skipFunction(MF.getFunction()))
-    return false;
 
   TII = MF.getSubtarget().getInstrInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
   SchedModel = MF.getSubtarget().getSchedModel();
   MRI = &MF.getRegInfo();
-  DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
-  Traces = &getAnalysis<MachineTraceMetricsWrapperPass>().getMTM();
   MinInstr = nullptr;
   MinSize = MF.getFunction().hasMinSize();
 
@@ -961,4 +971,44 @@ bool AArch64ConditionalCompares::runOnMachineFunction(MachineFunction &MF) {
       Changed = true;
 
   return Changed;
+}
+
+bool AArch64ConditionalComparesLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  const MachineBranchProbabilityInfo *MBPI =
+      &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
+  MachineDominatorTree *DomTree =
+      &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  MachineLoopInfo *Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  MachineTraceMetrics *Traces =
+      &getAnalysis<MachineTraceMetricsWrapperPass>().getMTM();
+
+  AArch64ConditionalComparesImpl Impl(MBPI, DomTree, Loops, Traces);
+  return Impl.run(MF);
+}
+
+PreservedAnalyses
+AArch64ConditionalComparesPass::run(MachineFunction &MF,
+                                    MachineFunctionAnalysisManager &MFAM) {
+  const MachineBranchProbabilityInfo *MBPI =
+      &MFAM.getResult<MachineBranchProbabilityAnalysis>(MF);
+  MachineDominatorTree *DomTree =
+      &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  MachineLoopInfo *Loops = &MFAM.getResult<MachineLoopAnalysis>(MF);
+  MachineTraceMetrics *Traces =
+      &MFAM.getResult<MachineTraceMetricsAnalysis>(MF);
+
+  AArch64ConditionalComparesImpl Impl(MBPI, DomTree, Loops, Traces);
+  bool Changed = Impl.run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserve<MachineDominatorTreeAnalysis>();
+  PA.preserve<MachineLoopAnalysis>();
+  PA.preserve<MachineTraceMetricsAnalysis>();
+  return PA;
 }

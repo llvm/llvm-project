@@ -76,8 +76,8 @@ protected:
 
 public:
   X86PostLegalizerCombinerImpl(
-      MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-      GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
+      MachineFunction &MF, CombinerInfo &CInfo, GISelValueTracking &VT,
+      GISelCSEInfo *CSEInfo,
       const X86PostLegalizerCombinerImplRuleConfig &RuleConfig,
       MachineDominatorTree *MDT);
 
@@ -97,11 +97,11 @@ private:
 #undef GET_GICOMBINER_IMPL
 
 X86PostLegalizerCombinerImpl::X86PostLegalizerCombinerImpl(
-    MachineFunction &MF, CombinerInfo &CInfo, const TargetPassConfig *TPC,
-    GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
+    MachineFunction &MF, CombinerInfo &CInfo, GISelValueTracking &VT,
+    GISelCSEInfo *CSEInfo,
     const X86PostLegalizerCombinerImplRuleConfig &RuleConfig,
     MachineDominatorTree *MDT)
-    : Combiner(MF, CInfo, TPC, &VT, CSEInfo),
+    : Combiner(MF, CInfo, &VT, CSEInfo),
       Helper(Observer, B, /*IsPreLegalize=*/false, &VT, MDT,
              MF.getSubtarget<X86Subtarget>().getLegalizerInfo()),
       RuleConfig(RuleConfig), STI(MF.getSubtarget<X86Subtarget>()),
@@ -171,8 +171,7 @@ bool X86PostLegalizerCombinerLegacy::runOnMachineFunction(MachineFunction &MF) {
 
   CombinerInfo CInfo = createCombinerInfo(!skipFunction(F), F);
 
-  X86PostLegalizerCombinerImpl Impl(MF, CInfo, TPC, *VT, CSEInfo, RuleConfig,
-                                    MDT);
+  X86PostLegalizerCombinerImpl Impl(MF, CInfo, *VT, CSEInfo, RuleConfig, MDT);
   return Impl.combineMachineInstrs();
 }
 
@@ -206,8 +205,8 @@ X86PostLegalizerCombinerPass::run(MachineFunction &MF,
   if (!RuleConfig.parseCommandLineOption())
     reportFatalInternalError("Invalid rule identifier");
 
-  X86PostLegalizerCombinerImpl Impl(MF, CInfo, nullptr, VT, CSEInfo.get(),
-                                    RuleConfig, &MDT);
+  X86PostLegalizerCombinerImpl Impl(MF, CInfo, VT, CSEInfo.get(), RuleConfig,
+                                    &MDT);
   if (!Impl.combineMachineInstrs())
     return PreservedAnalyses::all();
 

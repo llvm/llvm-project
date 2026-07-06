@@ -2,7 +2,6 @@
 // RUN: env LIBOMPTARGET_DEBUG=1 %libomptarget-run-generic 2>&1 \
 // RUN: | %fcheck-generic -check-prefix=DEBUG -check-prefix=CHECK
 // REQUIRES: libomptarget-debug
-// XFAIL: intelgpu
 
 // There should only be one "from" data-transfer, despite the two duplicate
 // maps.
@@ -14,9 +13,10 @@ int main() {
 #pragma omp target data map(alloc : x)
   {
 #pragma omp target enter data map(alloc : x) map(to : x)
+// DEBUG-NOT: omptarget --> Moving {{.*}} bytes (hst:0x{{.*}}) -> (tgt:0x{{.*}})
 #pragma omp target map(present, alloc : x)
     {
-      printf("In tgt: %d\n", x); // CHECK-NOT: In tgt: 111
+      printf("In tgt: %d\n", x);
       x = 222;
     }
 #pragma omp target exit data map(always, from : x) map(always, from : x)

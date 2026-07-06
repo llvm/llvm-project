@@ -36,6 +36,7 @@
 #include "lldb/lldb-private-enumerations.h"
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/SaveAndRestore.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -584,6 +585,14 @@ bool Type::WriteToMemory(ExecutionContext *exe_ctx, lldb::addr_t addr,
 const Declaration &Type::GetDeclaration() const { return m_decl; }
 
 bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
+  if (m_resolving_compiler_type) {
+    LLDB_LOG(GetLog(LLDBLog::Symbols),
+             "Cycle detected while resolving type {0:x} ({1})", GetID(),
+             m_name.AsCString("<anonymous>"));
+    return false;
+  }
+  llvm::SaveAndRestore<bool> guard(m_resolving_compiler_type, true);
+
   // TODO: This needs to consider the correct type system to use.
   Type *encoding_type = nullptr;
   if (!m_compiler_type.IsValid()) {
@@ -1239,12 +1248,12 @@ bool TypeMemberFunctionImpl::GetDescription(Stream &stream) {
                   m_type.GetTypeName().AsCString("<unknown>"));
     break;
   case lldb::eMemberFunctionKindInstanceMethod:
-    stream.Printf("instance method %s of type %s", m_name.AsCString(),
-                  m_decl.GetDeclContext().GetName().AsCString());
+    stream.Format("instance method {0} of type {1}", m_name,
+                  m_decl.GetDeclContext().GetName());
     break;
   case lldb::eMemberFunctionKindStaticMethod:
-    stream.Printf("static method %s of type %s", m_name.AsCString(),
-                  m_decl.GetDeclContext().GetName().AsCString());
+    stream.Format("static method {0} of type {1}", m_name,
+                  m_decl.GetDeclContext().GetName());
     break;
   }
   return true;

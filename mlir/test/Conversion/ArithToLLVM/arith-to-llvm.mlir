@@ -160,6 +160,30 @@ func.func @index_castui_nneg_not_set(%arg0: i1) {
 
 // -----
 
+// Memref index_cast is a no-op at the LLVM level since LLVM uses opaque
+// pointers and all memrefs with integer or index element types convert to the
+// same struct type. Verify that no sext/zext/trunc is generated.
+
+// CHECK-LABEL: @memref_index_cast
+// CHECK-NOT: llvm.sext
+// CHECK-NOT: llvm.trunc
+func.func @memref_index_cast(%arg0: memref<3xi32>) -> memref<3xindex> {
+  %0 = arith.index_cast %arg0 : memref<3xi32> to memref<3xindex>
+  return %0 : memref<3xindex>
+}
+
+// -----
+
+// CHECK-LABEL: @memref_index_castui
+// CHECK-NOT: llvm.zext
+// CHECK-NOT: llvm.trunc
+func.func @memref_index_castui(%arg0: memref<3xi32>) -> memref<3xindex> {
+  %0 = arith.index_castui %arg0 : memref<3xi32> to memref<3xindex>
+  return %0 : memref<3xindex>
+}
+
+// -----
+
 // Checking conversion of signed integer types to floating point.
 // CHECK-LABEL: @sitofp
 func.func @sitofp(%arg0 : i32, %arg1 : i64) {
@@ -377,6 +401,68 @@ func.func @experimental_constrained_fptrunc(%arg0 : f64) {
 
 // -----
 
+// CHECK-LABEL: experimental_constrained_addf
+func.func @experimental_constrained_addf(%arg0 : f64, %arg1 : f64) {
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fadd %arg0, %arg1 tonearest ignore
+  %0 = arith.addf %arg0, %arg1 to_nearest_even : f64
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fadd %arg0, %arg1 downward ignore
+  %1 = arith.addf %arg0, %arg1 downward : f64
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fadd %arg0, %arg1 upward ignore
+  %2 = arith.addf %arg0, %arg1 upward : f64
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fadd %arg0, %arg1 towardzero ignore
+  %3 = arith.addf %arg0, %arg1 toward_zero : f64
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fadd %arg0, %arg1 tonearestaway ignore
+  %4 = arith.addf %arg0, %arg1 to_nearest_away : f64
+  return
+}
+
+// -----
+
+// CHECK-LABEL: experimental_constrained_subf
+func.func @experimental_constrained_subf(%arg0 : f64, %arg1 : f64) {
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fsub %arg0, %arg1 tonearest ignore
+  %0 = arith.subf %arg0, %arg1 to_nearest_even : f64
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fsub %arg0, %arg1 downward ignore
+  %1 = arith.subf %arg0, %arg1 downward : f64
+  return
+}
+
+// -----
+
+// CHECK-LABEL: experimental_constrained_mulf
+func.func @experimental_constrained_mulf(%arg0 : f64, %arg1 : f64) {
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fmul %arg0, %arg1 upward ignore
+  %0 = arith.mulf %arg0, %arg1 upward : f64
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fmul %arg0, %arg1 towardzero ignore
+  %1 = arith.mulf %arg0, %arg1 toward_zero : f64
+  return
+}
+
+// -----
+
+// CHECK-LABEL: experimental_constrained_divf
+func.func @experimental_constrained_divf(%arg0 : f64, %arg1 : f64) {
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fdiv %arg0, %arg1 tonearest ignore
+  %0 = arith.divf %arg0, %arg1 to_nearest_even : f64
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fdiv %arg0, %arg1 tonearestaway ignore
+  %1 = arith.divf %arg0, %arg1 to_nearest_away : f64
+  return
+}
+
+// -----
+
+// Verify that fastmath flags are stripped when lowering to constrained
+// intrinsics (constrained FP and fastmath are contradictory).
+// CHECK-LABEL: constrained_addf_with_fastmath
+func.func @constrained_addf_with_fastmath(%arg0 : f64, %arg1 : f64) {
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fadd %arg0, %arg1 tonearest ignore : f64
+// CHECK-NOT: fastmath
+  %0 = arith.addf %arg0, %arg1 to_nearest_even fastmath<fast> : f64
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @convertf_f16_to_bf16
 func.func @convertf_f16_to_bf16(%arg0 : f16) -> bf16 {
 // CHECK-NEXT: %[[EXT:.*]] = llvm.fpext %arg0 : f16 to f32
@@ -518,6 +604,30 @@ func.func @addui_extended_vector1d(%arg0: vector<3xi16>, %arg1: vector<3xi16>) -
   %sum, %carry = arith.addui_extended %arg0, %arg1 : vector<3xi16>, vector<3xi1>
   // CHECK-NEXT: return [[SUM]], [[CARRY]] : vector<3xi16>, vector<3xi1>
   return %sum, %carry : vector<3xi16>, vector<3xi1>
+}
+
+// -----
+
+// CHECK-LABEL: @subui_extended_scalar
+// CHECK-SAME:    ([[ARG0:%.+]]: i32, [[ARG1:%.+]]: i32) -> (i32, i1)
+func.func @subui_extended_scalar(%arg0: i32, %arg1: i32) -> (i32, i1) {
+  // CHECK-NEXT: [[RES:%.+]] = "llvm.intr.usub.with.overflow"([[ARG0]], [[ARG1]]) : (i32, i32) -> !llvm.struct<(i32, i1)>
+  // CHECK-NEXT: [[DIFF:%.+]] = llvm.extractvalue [[RES]][0] : !llvm.struct<(i32, i1)>
+  // CHECK-NEXT: [[BORROW:%.+]] = llvm.extractvalue [[RES]][1] : !llvm.struct<(i32, i1)>
+  %diff, %borrow = arith.subui_extended %arg0, %arg1 : i32, i1
+  // CHECK-NEXT: return [[DIFF]], [[BORROW]] : i32, i1
+  return %diff, %borrow : i32, i1
+}
+
+// CHECK-LABEL: @subui_extended_vector1d
+// CHECK-SAME:    ([[ARG0:%.+]]: vector<3xi16>, [[ARG1:%.+]]: vector<3xi16>) -> (vector<3xi16>, vector<3xi1>)
+func.func @subui_extended_vector1d(%arg0: vector<3xi16>, %arg1: vector<3xi16>) -> (vector<3xi16>, vector<3xi1>) {
+  // CHECK-NEXT: [[RES:%.+]] = "llvm.intr.usub.with.overflow"([[ARG0]], [[ARG1]]) : (vector<3xi16>, vector<3xi16>) -> !llvm.struct<(vector<3xi16>, vector<3xi1>)>
+  // CHECK-NEXT: [[DIFF:%.+]] = llvm.extractvalue [[RES]][0] : !llvm.struct<(vector<3xi16>, vector<3xi1>)>
+  // CHECK-NEXT: [[BORROW:%.+]] = llvm.extractvalue [[RES]][1] : !llvm.struct<(vector<3xi16>, vector<3xi1>)>
+  %diff, %borrow = arith.subui_extended %arg0, %arg1 : vector<3xi16>, vector<3xi1>
+  // CHECK-NEXT: return [[DIFF]], [[BORROW]] : vector<3xi16>, vector<3xi1>
+  return %diff, %borrow : vector<3xi16>, vector<3xi1>
 }
 
 // -----

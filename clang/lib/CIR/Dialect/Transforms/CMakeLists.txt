@@ -1,8 +1,10 @@
 add_subdirectory(TargetLowering)
 
 add_clang_library(MLIRCIRTransforms
+  CallConvLoweringPass.cpp
   CIRCanonicalize.cpp
   CIRSimplify.cpp
+  CIRTransformUtils.cpp
   CXXABILowering.cpp
   EHABILowering.cpp
   TargetLowering.cpp
@@ -11,6 +13,7 @@ add_clang_library(MLIRCIRTransforms
   LoweringPrepare.cpp
   GotoSolver.cpp
   IdiomRecognizer.cpp
+  LibOpt.cpp
 
   DEPENDS
   MLIRCIRPassIncGen
@@ -19,7 +22,9 @@ add_clang_library(MLIRCIRTransforms
   clangAST
   clangBasic
 
+  MLIRABI
   MLIRAnalysis
+  MLIRDLTIDialect
   MLIRIR
   MLIRPass
   MLIRTransformUtils
@@ -27,4 +32,6 @@ add_clang_library(MLIRCIRTransforms
   MLIRCIR
   MLIRCIRInterfaces
   MLIRCIRTargetLowering
+  MLIROpenACCDialect
+  MLIROpenMPDialect
 )

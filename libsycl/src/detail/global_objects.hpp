@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of all the global objects of libsycl.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef _LIBSYCL_GLOBAL_OBJECTS
 #define _LIBSYCL_GLOBAL_OBJECTS
@@ -16,19 +21,6 @@
 #include <mutex>
 #include <vector>
 
-// +++ Entry points referenced by the offload wrapper object {
-
-/// Executed as a part of current module's (.exe, .dll) static initialization.
-/// Registers device executable images with the runtime.
-extern "C" _LIBSYCL_EXPORT void __sycl_register_lib(void *);
-
-/// Executed as a part of current module's (.exe, .dll) static
-/// de-initialization.
-/// Unregisters device executable images with the runtime.
-extern "C" _LIBSYCL_EXPORT void __sycl_unregister_lib(void *);
-
-// +++ }
-
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
@@ -38,8 +30,9 @@ class PlatformImpl;
 ///
 /// This vector is populated only once at the first call of get_platforms().
 ///
-/// \returns std::vector of all offload topologies.
-std::vector<detail::OffloadTopology> &getOffloadTopologies();
+/// \returns std::array of all offload topologies.
+std::array<detail::OffloadTopology, OL_PLATFORM_BACKEND_LAST> &
+getOffloadTopologies();
 
 /// Returns implementation class objects for all platforms discovered from
 /// liboffload.

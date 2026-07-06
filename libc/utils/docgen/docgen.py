@@ -149,6 +149,12 @@ def print_functions_rst(header: Header, functions: Dict):
             print("    -")
 
 
+def posix_basedefs_url(header: Header) -> str:
+    """Return the Open Group basedefs URL for a header."""
+    posix_header_name = header.name.replace("/", "_")
+    return f"https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/{posix_header_name}.html"
+
+
 def print_macros_rst(header: Header, macros: Dict):
     tbl_hdr = "Macros"
     print(tbl_hdr)
@@ -170,20 +176,13 @@ def print_macros_rst(header: Header, macros: Dict):
             print("    -")
 
         if "in-latest-posix" in macros[name]:
-            print(
-                f"    - `POSIX.1-2024 <https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/{header.name}.html>`__"
-            )
+            print(f"    - `POSIX.1-2024 <{posix_basedefs_url(header)}>`__")
         else:
             print("    -")
     print()
 
 
 def print_impl_status_rst(header: Header, api: Dict):
-    if os.sep in header.name:
-        print(".. include:: ../../check.rst\n")
-    else:
-        print(".. include:: ../check.rst\n")
-
     print("=" * len(header.name))
     print(header.name)
     print("=" * len(header.name))

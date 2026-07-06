@@ -1,9 +1,6 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK-SPIRV,CHECK-SPIRV1_4
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; TODO(#60133): Requires updates following opaque pointer migration.
-; XFAIL: *
-
 ;; TODO: We cannot check SPIR_V 1.1 and 1.4 simultaneously, implement additional
 ;;       run with CHECK-SPIRV1_1.
 
@@ -24,24 +21,26 @@
 ;;   res[tid] = kernelBlock(aa).a - 6;
 ;; }
 
-; CHECK-SPIRV1_4: OpEntryPoint Kernel %[[#]] "block_ret_struct" %[[#InterdaceId1:]] %[[#InterdaceId2:]]
-; CHECK-SPIRV1_4: OpName %[[#InterdaceId1]] "__block_literal_global"
-; CHECK-SPIRV1_4: OpName %[[#InterdaceId2]] "__spirv_BuiltInGlobalInvocationId"
+; CHECK-SPIRV1_4-DAG: OpEntryPoint Kernel %[[#]] "block_ret_struct" %[[#InterfaceId1:]] %[[#InterfaceId2:]]
+; CHECK-SPIRV1_4-DAG: OpName %[[#InterfaceId1]] "__spirv_BuiltInGlobalInvocationId"
+; CHECK-SPIRV1_4-DAG: OpName %[[#InterfaceId2]] "__block_literal_global"
 
-; CHECK-SPIRV1_1: OpEntryPoint Kernel %[[#]] "block_ret_struct" %[[#InterdaceId1:]]
-; CHECK-SPIRV1_1: OpName %[[#InterdaceId1]] "__spirv_BuiltInGlobalInvocationId"
+; CHECK-SPIRV1_1: OpEntryPoint Kernel %[[#]] "block_ret_struct" %[[#InterfaceId1:]]
+; CHECK-SPIRV1_1: OpName %[[#InterfaceId1]] "__spirv_BuiltInGlobalInvocationId"
 
 ; CHECK-SPIRV: OpName %[[#BlockInv:]] "__block_ret_struct_block_invoke"
 
-; CHECK-SPIRV: %[[#IntTy:]] = OpTypeInt 32
 ; CHECK-SPIRV: %[[#Int8Ty:]] = OpTypeInt 8
+; CHECK-SPIRV: %[[#IntTy:]] = OpTypeInt 32
 ; CHECK-SPIRV: %[[#Int8Ptr:]] = OpTypePointer Generic %[[#Int8Ty]]
+; CHECK-SPIRV: %[[#BlockStruct:]] = OpTypeStruct %[[#IntTy]] %[[#IntTy]] %[[#Int8Ptr]]
+; CHECK-SPIRV: %[[#BlockStructPtr:]] = OpTypePointer Generic %[[#BlockStruct]]
 ; CHECK-SPIRV: %[[#StructTy:]] = OpTypeStruct %[[#IntTy]]{{$}}
 ; CHECK-SPIRV: %[[#StructPtrTy:]] = OpTypePointer Function %[[#StructTy]]
 
 ; CHECK-SPIRV: %[[#StructArg:]] = OpVariable %[[#StructPtrTy]] Function
 ; CHECK-SPIRV: %[[#StructRet:]] = OpVariable %[[#StructPtrTy]] Function
-; CHECK-SPIRV: %[[#BlockLit:]] = OpPtrCastToGeneric %[[#Int8Ptr]] %[[#]]
+; CHECK-SPIRV: %[[#BlockLit:]] = OpPtrCastToGeneric %[[#BlockStructPtr]] %[[#]]
 ; CHECK-SPIRV: %[[#]] = OpFunctionCall %[[#]] %[[#BlockInv]] %[[#StructRet]] %[[#BlockLit]] %[[#StructArg]]
 
 %struct.__opencl_block_literal_generic = type { i32, i32, ptr addrspace(4) }

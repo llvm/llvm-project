@@ -233,7 +233,7 @@ public:
   ///        this visitor can prevent that without polluting the bugpath too
   ///        much.
   virtual Result track(SVal V, const MemRegion *R, TrackingOptions Opts = {},
-                       const StackFrameContext *Origin = nullptr);
+                       const StackFrame *Origin = nullptr);
 
   /// Handle the store operation and produce the note.
   ///
@@ -386,7 +386,7 @@ bool trackExpressionValue(const ExplodedNode *N, const Expr *E,
 ///        much.
 void trackStoredValue(SVal V, const MemRegion *R,
                       PathSensitiveBugReport &Report, TrackingOptions Opts = {},
-                      const StackFrameContext *Origin = nullptr);
+                      const StackFrame *Origin = nullptr);
 
 const Expr *getDerefExpr(const Stmt *S);
 
@@ -632,15 +632,15 @@ private:
   /// along the path.
   // TODO: Can't we just use a map instead? This is likely not as cheap as it
   // makes the code difficult to read.
-  llvm::SmallPtrSet<const StackFrameContext *, 32> FramesModifying;
-  llvm::SmallPtrSet<const StackFrameContext *, 32> FramesModifyingCalculated;
+  llvm::SmallPtrSet<const StackFrame *, 32> FramesModifying;
+  llvm::SmallPtrSet<const StackFrame *, 32> FramesModifyingCalculated;
 
   /// Check and lazily calculate whether the state is modified in the stack
   /// frame to which \p CallExitBeginN belongs.
   /// The calculation is cached in FramesModifying.
   bool isModifiedInFrame(const ExplodedNode *CallExitBeginN);
 
-  void markFrameAsModifying(const StackFrameContext *SCtx);
+  void markFrameAsModifying(const StackFrame *SF);
 
   /// Write to \c FramesModifying all stack frames along the path in the current
   /// stack frame which modifies the state.

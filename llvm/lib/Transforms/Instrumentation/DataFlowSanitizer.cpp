@@ -3381,8 +3381,7 @@ void DFSanVisitor::visitCallBase(CallBase &CB) {
     }
   }
 
-  DenseMap<Value *, Function *>::iterator UnwrappedFnIt =
-      DFSF.DFS.UnwrappedFnMap.find(CB.getCalledOperand());
+  auto UnwrappedFnIt = DFSF.DFS.UnwrappedFnMap.find(CB.getCalledOperand());
   if (UnwrappedFnIt != DFSF.DFS.UnwrappedFnMap.end())
     if (visitWrappedCallBase(*UnwrappedFnIt->second, CB))
       return;

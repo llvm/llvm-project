@@ -1178,8 +1178,10 @@ void RedundantExpressionCheck::checkBitwiseExpr(
         !retrieveIntegerConstantExpr(Result, "rhs", RhsValue))
       return;
 
-    const uint64_t LhsConstant = LhsValue.getZExtValue();
-    const uint64_t RhsConstant = RhsValue.getZExtValue();
+    const unsigned ConstantWidth =
+        std::max(LhsValue.getBitWidth(), RhsValue.getBitWidth());
+    const llvm::APInt LhsConstant = LhsValue.extOrTrunc(ConstantWidth);
+    const llvm::APInt RhsConstant = RhsValue.extOrTrunc(ConstantWidth);
     const SourceLocation Loc = ComparisonOperator->getOperatorLoc();
 
     // Check expression: x & k1 == k2  (i.e. x & 0xFF == 0xF00)

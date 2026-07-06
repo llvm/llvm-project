@@ -226,6 +226,8 @@ public:
 
   bool IsScalarOrUnscopedEnumerationType() const;
 
+  /// Checks if the type is eligible for integral promotion.
+  /// \see GetPromotedIntegerType
   bool IsPromotableIntegerType() const;
 
   bool IsPointerToVoid() const;
@@ -507,6 +509,11 @@ public:
   GetIntegralTemplateArgument(size_t idx, bool expand_pack = false) const;
 
   CompilerType GetTypeForFormatters() const;
+
+  /// If the type is promotable, returns the type promoted to a larger
+  /// integer type according to the type system rules.
+  /// \see IsPromotableIntegerType
+  CompilerType GetPromotedIntegerType() const;
 
   LazyBool ShouldPrintAsOneLiner(ValueObject *valobj) const;
 

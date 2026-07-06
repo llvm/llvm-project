@@ -1,0 +1,34 @@
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-translate %s -cir-to-llvmir --disable-cc-lowering | FileCheck %s -check-prefix=LLVM
+
+module {
+  // MLIR: llvm.func @default_cc()
+  // LLVM: define void @default_cc()
+  cir.func @default_cc() {
+    cir.return
+  }
+
+  // MLIR: llvm.func amdgpu_kernelcc @amdgpu_kernel_func()
+  // LLVM: define amdgpu_kernel void @amdgpu_kernel_func()
+  cir.func @amdgpu_kernel_func() cc(amdgpu_kernel) {
+    cir.return
+  }
+
+  // MLIR: llvm.func spir_kernelcc @spir_kernel_func()
+  // LLVM: define spir_kernel void @spir_kernel_func()
+  cir.func @spir_kernel_func() cc(spir_kernel) {
+    cir.return
+  }
+
+  // MLIR: llvm.func spir_funccc @spir_function_func()
+  // LLVM: define spir_func void @spir_function_func()
+  cir.func @spir_function_func() cc(spir_function) {
+    cir.return
+  }
+
+  // MLIR: llvm.func ptx_kernelcc @ptx_kernel_func()
+  // LLVM: define ptx_kernel void @ptx_kernel_func()
+  cir.func @ptx_kernel_func() cc(ptx_kernel) {
+    cir.return
+  }
+}

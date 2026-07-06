@@ -34,7 +34,7 @@ define half @log_f16_ulp180(half %x) {
 ; GFX8-LABEL: define half @log_f16_ulp180(
 ; GFX8-SAME: half [[X:%.*]]) #[[ATTR0]] {
 ; GFX8-NEXT:    [[TMP1:%.*]] = call half @llvm.log2.f16(half [[X]])
-; GFX8-NEXT:    [[RESULT:%.*]] = fmul half [[TMP1]], 0xH398C
+; GFX8-NEXT:    [[RESULT:%.*]] = fmul half [[TMP1]], 6.933590e-01
 ; GFX8-NEXT:    ret half [[RESULT]]
 ;
   %result = call half @llvm.log.f16(half %x), !fpmath !{float 0x3FFCCCCCC0000000}
@@ -67,7 +67,7 @@ define half @log_f16_ulp2(half %x) {
 ; GFX8-LABEL: define half @log_f16_ulp2(
 ; GFX8-SAME: half [[X:%.*]]) #[[ATTR0]] {
 ; GFX8-NEXT:    [[TMP1:%.*]] = call half @llvm.log2.f16(half [[X]])
-; GFX8-NEXT:    [[RESULT:%.*]] = fmul half [[TMP1]], 0xH398C
+; GFX8-NEXT:    [[RESULT:%.*]] = fmul half [[TMP1]], 6.933590e-01
 ; GFX8-NEXT:    ret half [[RESULT]]
 ;
   %result = call half @llvm.log.f16(half %x), !fpmath !0
@@ -84,7 +84,7 @@ define half @log10_f16_ulp2(half %x) {
 ; GFX8-LABEL: define half @log10_f16_ulp2(
 ; GFX8-SAME: half [[X:%.*]]) #[[ATTR0]] {
 ; GFX8-NEXT:    [[TMP1:%.*]] = call half @llvm.log2.f16(half [[X]])
-; GFX8-NEXT:    [[RESULT:%.*]] = fmul half [[TMP1]], 0xH34D1
+; GFX8-NEXT:    [[RESULT:%.*]] = fmul half [[TMP1]], 3.010250e-01
 ; GFX8-NEXT:    ret half [[RESULT]]
 ;
   %result = call half @llvm.log10.f16(half %x), !fpmath !0
@@ -133,7 +133,7 @@ define <2 x half> @log_v2f16_ulp2(<2 x half> %x) {
 ; GFX8-LABEL: define <2 x half> @log_v2f16_ulp2(
 ; GFX8-SAME: <2 x half> [[X:%.*]]) #[[ATTR0]] {
 ; GFX8-NEXT:    [[TMP1:%.*]] = call <2 x half> @llvm.log2.v2f16(<2 x half> [[X]])
-; GFX8-NEXT:    [[RESULT:%.*]] = fmul <2 x half> [[TMP1]], splat (half 0xH398C)
+; GFX8-NEXT:    [[RESULT:%.*]] = fmul <2 x half> [[TMP1]], splat (half 6.933590e-01)
 ; GFX8-NEXT:    ret <2 x half> [[RESULT]]
 ;
   %result = call <2 x half> @llvm.log.v2f16(<2 x half> %x), !fpmath !0
@@ -150,7 +150,7 @@ define <3 x half> @log_v3f16_ulp2(<3 x half> %x) {
 ; GFX8-LABEL: define <3 x half> @log_v3f16_ulp2(
 ; GFX8-SAME: <3 x half> [[X:%.*]]) #[[ATTR0]] {
 ; GFX8-NEXT:    [[TMP1:%.*]] = call <3 x half> @llvm.log2.v3f16(<3 x half> [[X]])
-; GFX8-NEXT:    [[RESULT:%.*]] = fmul <3 x half> [[TMP1]], splat (half 0xH398C)
+; GFX8-NEXT:    [[RESULT:%.*]] = fmul <3 x half> [[TMP1]], splat (half 6.933590e-01)
 ; GFX8-NEXT:    ret <3 x half> [[RESULT]]
 ;
   %result = call <3 x half> @llvm.log.v3f16(<3 x half> %x), !fpmath !0
@@ -177,10 +177,10 @@ define bfloat @log_bf16_ulp2(bfloat %x) {
 
 
 ;.
-; GFX7: [[META0]] = !{float 0x3FFCCCCCC0000000}
-; GFX7: [[META1]] = !{float 0x3FFCCCCCA0000000}
+; GFX7: [[META0]] = !{float 1.800000e+00}
+; GFX7: [[META1]] = !{float f0x3FE66665}
 ; GFX7: [[META2]] = !{float 2.000000e+00}
 ;.
-; GFX8: [[META0]] = !{float 0x3FFCCCCCA0000000}
+; GFX8: [[META0]] = !{float f0x3FE66665}
 ; GFX8: [[META1]] = !{float 2.000000e+00}
 ;.

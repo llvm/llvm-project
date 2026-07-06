@@ -118,6 +118,11 @@ void NVPTXInstPrinter::printCvtMode(const MCInst *MI, int OpNum,
     if (Imm & NVPTX::PTXCvtMode::SAT_FLAG)
       O << ".sat";
     return;
+  } else if (Modifier == "satfinite") {
+    // SATFINITE flag
+    if (Imm & NVPTX::PTXCvtMode::SATFINITE_FLAG)
+      O << ".satfinite";
+    return;
   } else if (Modifier == "relu") {
     // RELU flag
     if (Imm & NVPTX::PTXCvtMode::RELU_FLAG)
@@ -171,6 +176,20 @@ void NVPTXInstPrinter::printFTZFlag(const MCInst *MI, int OpNum,
   const int Imm = MO.getImm();
   if (Imm)
     O << ".ftz";
+}
+
+void NVPTXInstPrinter::printMultimem(const MCInst *MI, int OpNum,
+                                     const MCSubtargetInfo &, raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNum);
+  if (MO.getImm())
+    O << "multimem.";
+}
+
+void NVPTXInstPrinter::printNegatedPredicate(const MCInst *MI, int OpNum,
+                                             const MCSubtargetInfo &,
+                                             raw_ostream &O) {
+  if (MI->getOperand(OpNum).getImm())
+    O << "!";
 }
 
 void NVPTXInstPrinter::printCmpMode(const MCInst *MI, int OpNum,
@@ -433,16 +452,6 @@ void NVPTXInstPrinter::printHexu32imm(const MCInst *MI, int OpNum,
                                       const MCSubtargetInfo &, raw_ostream &O) {
   int64_t Imm = MI->getOperand(OpNum).getImm();
   O << formatHex(Imm) << "U";
-}
-
-void NVPTXInstPrinter::printProtoIdent(const MCInst *MI, int OpNum,
-                                       const MCSubtargetInfo &,
-                                       raw_ostream &O) {
-  const MCOperand &Op = MI->getOperand(OpNum);
-  assert(Op.isExpr() && "Call prototype is not an MCExpr?");
-  const MCExpr *Expr = Op.getExpr();
-  const MCSymbol &Sym = cast<MCSymbolRefExpr>(Expr)->getSymbol();
-  O << Sym.getName();
 }
 
 void NVPTXInstPrinter::printPrmtMode(const MCInst *MI, int OpNum,

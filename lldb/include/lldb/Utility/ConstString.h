@@ -178,14 +178,9 @@ public:
 
   /// Get the string value as a C string.
   ///
-  /// Get the value of the contained string as a NULL terminated C string
-  /// value.
-  ///
-  /// If \a value_if_empty is nullptr, then nullptr will be returned.
-  ///
   /// \return Returns \a value_if_empty if the string is empty, otherwise
   ///     the C string value contained in this object.
-  const char *AsCString(const char *value_if_empty = nullptr) const {
+  const char *AsCString(const char *value_if_empty) const {
     return (IsEmpty() ? value_if_empty : m_string);
   }
 
@@ -398,10 +393,7 @@ public:
 
   struct MemoryStats {
     size_t GetBytesTotal() const { return bytes_total; }
-    size_t GetBytesUsed() const { return bytes_used; }
-    size_t GetBytesUnused() const { return bytes_total - bytes_used; }
     size_t bytes_total = 0;
-    size_t bytes_used = 0;
   };
 
   static MemoryStats GetMemoryStats();
@@ -417,6 +409,8 @@ protected:
 
   const char *m_string = nullptr;
 };
+static_assert(sizeof(ConstString) <= sizeof(const char *),
+              "High-volume object, size of object must be increased with care");
 
 /// Stream the string value \a str to the stream \a s
 Stream &operator<<(Stream &s, ConstString str);
@@ -432,14 +426,6 @@ template <> struct format_provider<lldb_private::ConstString> {
 /// DenseMapInfo implementation.
 /// \{
 template <> struct DenseMapInfo<lldb_private::ConstString> {
-  static inline lldb_private::ConstString getEmptyKey() {
-    return lldb_private::ConstString::FromStringPoolPointer(
-        DenseMapInfo<const char *>::getEmptyKey());
-  }
-  static inline lldb_private::ConstString getTombstoneKey() {
-    return lldb_private::ConstString::FromStringPoolPointer(
-        DenseMapInfo<const char *>::getTombstoneKey());
-  }
   static unsigned getHashValue(lldb_private::ConstString val) {
     return DenseMapInfo<const char *>::getHashValue(val.m_string);
   }

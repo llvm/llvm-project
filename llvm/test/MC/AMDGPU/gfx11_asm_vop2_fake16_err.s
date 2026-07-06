@@ -93,58 +93,58 @@ v_ldexp_f16_e32 v5, v255, v2
 // GFX11: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
 v_max_num_f16_dpp v255, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): v_max_num_f16
 
 v_max_num_f16_dpp v255, v1, v2 quad_perm:[3,2,1,0]
-// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): v_max_num_f16
 
 v_max_num_f16_dpp v5, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): v_max_num_f16
 
 v_max_num_f16_dpp v5, v1, v255 quad_perm:[3,2,1,0]
-// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): v_max_num_f16
 
 v_max_num_f16_dpp v5, v255, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): v_max_num_f16
 
 v_max_num_f16_dpp v5, v255, v2 quad_perm:[3,2,1,0]
-// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): v_max_num_f16
 
 v_max_num_f16_e32 v255, v1, v2
-// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): v_max_num_f16
 
 v_max_num_f16_e32 v5, v1, v255
-// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): v_max_num_f16
 
 v_max_num_f16_e32 v5, v255, v2
-// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): v_max_num_f16
 
 v_min_num_f16_dpp v255, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): v_min_num_f16
 
 v_min_num_f16_dpp v255, v1, v2 quad_perm:[3,2,1,0]
-// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): v_min_num_f16
 
 v_min_num_f16_dpp v5, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): v_min_num_f16
 
 v_min_num_f16_dpp v5, v1, v255 quad_perm:[3,2,1,0]
-// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): v_min_num_f16
 
 v_min_num_f16_dpp v5, v255, v2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): v_min_num_f16
 
 v_min_num_f16_dpp v5, v255, v2 quad_perm:[3,2,1,0]
-// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): v_min_num_f16
 
 v_min_num_f16_e32 v255, v1, v2
-// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): v_min_num_f16
 
 v_min_num_f16_e32 v5, v1, v255
-// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): v_min_num_f16
 
 v_min_num_f16_e32 v5, v255, v2
-// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX11: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1100): v_min_num_f16
 
 v_mul_f16_dpp v255, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode

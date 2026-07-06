@@ -38,8 +38,20 @@ namespace mlir {
 
 using namespace mlir;
 
-static constexpr LLVM::GEPNoWrapFlags kNoWrapFlags =
-    LLVM::GEPNoWrapFlags::inbounds | LLVM::GEPNoWrapFlags::nuw;
+/// Returns GEP no-wrap flags for a memref load/store.
+/// inbounds is always valid when indices are in-bounds per the memref spec.
+/// nuw requires every index*stride term to not unsigned-wrap, which holds iff
+/// all strides are statically non-negative. Negative strides would make the
+/// intermediate mul nuw overflow (e.g., idx * (-1 as u64) wraps for idx > 0).
+static LLVM::GEPNoWrapFlags getLoadStoreNoWrapFlags(MemRefType type) {
+  auto [strides, offset] = type.getStridesAndOffset();
+  LLVM::GEPNoWrapFlags flags = LLVM::GEPNoWrapFlags::inbounds;
+  if (llvm::all_of(strides, [](int64_t s) {
+        return !ShapedType::isDynamic(s) && s >= 0;
+      }))
+    flags = flags | LLVM::GEPNoWrapFlags::nuw;
+  return flags;
+}
 
 namespace {
 
@@ -711,10 +723,20 @@ struct GenericAtomicRMWOpLowering
     auto loc = atomicOp.getLoc();
     Type valueType = typeConverter->convertType(atomicOp.getResult().getType());
 
+    // `llvm.cmpxchg` only supports integer or pointer operands. For
+    // floating-point element types, perform the CAS on a same-width integer
+    // and bitcast at the boundaries.
+    bool needsBitcast = isa<FloatType>(valueType);
+    Type cmpxchgType = valueType;
+    if (needsBitcast) {
+      unsigned bitWidth = cast<FloatType>(valueType).getWidth();
+      cmpxchgType = rewriter.getIntegerType(bitWidth);
+    }
+
     // Split the block into initial, loop, and ending parts.
     auto *initBlock = rewriter.getInsertionBlock();
     auto *loopBlock = rewriter.splitBlock(initBlock, Block::iterator(atomicOp));
-    loopBlock->addArgument(valueType, loc);
+    loopBlock->addArgument(cmpxchgType, loc);
 
     auto *endBlock =
         rewriter.splitBlock(loopBlock, Block::iterator(atomicOp)++);
@@ -727,15 +749,21 @@ struct GenericAtomicRMWOpLowering
     Value init = LLVM::LoadOp::create(
         rewriter, loc, typeConverter->convertType(memRefType.getElementType()),
         dataPtr);
+    if (needsBitcast)
+      init = LLVM::BitcastOp::create(rewriter, loc, cmpxchgType, init);
     LLVM::BrOp::create(rewriter, loc, init, loopBlock);
 
     // Prepare the body of the loop block.
     rewriter.setInsertionPointToStart(loopBlock);
 
     // Clone the GenericAtomicRMWOp region and extract the result.
-    auto loopArgument = loopBlock->getArgument(0);
+    Value loopArgument = loopBlock->getArgument(0);
+    Value loopArgForBody = loopArgument;
+    if (needsBitcast)
+      loopArgForBody =
+          LLVM::BitcastOp::create(rewriter, loc, valueType, loopArgument);
     IRMapping mapping;
-    mapping.map(atomicOp.getCurrentValue(), loopArgument);
+    mapping.map(atomicOp.getCurrentValue(), loopArgForBody);
     Block &entryBlock = atomicOp.body().front();
     for (auto &nestedOp : entryBlock.without_terminator()) {
       Operation *clone = rewriter.clone(nestedOp, mapping);
@@ -747,6 +775,8 @@ struct GenericAtomicRMWOpLowering
     if (!result) {
       return atomicOp.emitError("result not defined in region");
     }
+    if (needsBitcast)
+      result = LLVM::BitcastOp::create(rewriter, loc, cmpxchgType, result);
 
     // Prepare the epilog of the loop block.
     // Append the cmpxchg op to the end of the loop block.
@@ -763,9 +793,14 @@ struct GenericAtomicRMWOpLowering
     LLVM::CondBrOp::create(rewriter, loc, ok, endBlock, ArrayRef<Value>(),
                            loopBlock, newLoaded);
 
+    // The 'result' of the atomic_rmw op is the newly loaded value. Bitcast
+    // back to the float type if needed. Insert at the start of `endBlock` so
+    // the bitcast precedes the existing terminator (split into endBlock).
+    if (needsBitcast) {
+      rewriter.setInsertionPointToStart(endBlock);
+      newLoaded = LLVM::BitcastOp::create(rewriter, loc, valueType, newLoaded);
+    }
     rewriter.setInsertionPointToEnd(endBlock);
-
-    // The 'result' of the atomic_rmw op is the newly loaded value.
     rewriter.replaceOp(atomicOp, {newLoaded});
 
     return success();
@@ -941,12 +976,13 @@ struct LoadOpLowering : public LoadStoreOpLowering<memref::LoadOp> {
     // Per memref.load spec, the indices must be in-bounds:
     // 0 <= idx < dim_size, and additionally all offsets are non-negative,
     // hence inbounds and nuw are used when lowering to llvm.getelementptr.
-    Value dataPtr = getStridedElementPtr(rewriter, loadOp.getLoc(), type,
-                                         adaptor.getMemref(),
-                                         adaptor.getIndices(), kNoWrapFlags);
+    Value dataPtr = getStridedElementPtr(
+        rewriter, loadOp.getLoc(), type, adaptor.getMemref(),
+        adaptor.getIndices(), getLoadStoreNoWrapFlags(type));
     rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
         loadOp, typeConverter->convertType(type.getElementType()), dataPtr,
-        loadOp.getAlignment().value_or(0), false, loadOp.getNontemporal());
+        loadOp.getAlignment().value_or(0), false, loadOp.getNontemporal(),
+        /*isInvariant=*/loadOp.getInvariant());
     return success();
   }
 };
@@ -964,9 +1000,9 @@ struct StoreOpLowering : public LoadStoreOpLowering<memref::StoreOp> {
     // Per memref.store spec, the indices must be in-bounds:
     // 0 <= idx < dim_size, and additionally all offsets are non-negative,
     // hence inbounds and nuw are used when lowering to llvm.getelementptr.
-    Value dataPtr =
-        getStridedElementPtr(rewriter, op.getLoc(), type, adaptor.getMemref(),
-                             adaptor.getIndices(), kNoWrapFlags);
+    Value dataPtr = getStridedElementPtr(
+        rewriter, op.getLoc(), type, adaptor.getMemref(), adaptor.getIndices(),
+        getLoadStoreNoWrapFlags(type));
     rewriter.replaceOpWithNewOp<LLVM::StoreOp>(op, adaptor.getValue(), dataPtr,
                                                op.getAlignment().value_or(0),
                                                false, op.getNontemporal());

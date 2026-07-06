@@ -95,6 +95,7 @@ set(RISCV64 riscv64)
 set(S390X s390x)
 set(SPARC sparc)
 set(SPARCV9 sparcv9)
+set(SPIRV64 spirv64)
 set(WASM32 wasm32)
 set(WASM64 wasm64)
 set(VE ve)
@@ -109,7 +110,7 @@ endif()
 set(ALL_BUILTIN_SUPPORTED_ARCH
   ${X86} ${X86_64} ${AMDGPU} ${ARM32} ${ARM64} ${AVR}
   ${HEXAGON} ${MIPS32} ${MIPS64} ${NVPTX} ${PPC32} ${PPC64}
-  ${RISCV32} ${RISCV64} ${S390X} ${SPARC} ${SPARCV9}
+  ${RISCV32} ${RISCV64} ${S390X} ${SPARC} ${SPARCV9} ${SPIRV64}
   ${WASM32} ${WASM64} ${VE} ${LOONGARCH64} ${M68K})
 
 include(CompilerRTUtils)
@@ -283,10 +284,16 @@ else()
 
   # COMPILER_RT_HAS_${arch}_* defines that are shared between lib/builtins/ and test/builtins/
   foreach (arch ${BUILTIN_SUPPORTED_ARCH})
+    cmake_push_check_state()
+    list(APPEND CMAKE_REQUIRED_FLAGS
+      ${TARGET_${arch}_CFLAGS})
+    list(JOIN CMAKE_REQUIRED_FLAGS " " CMAKE_REQUIRED_FLAGS)
+
     # NOTE: The corresponding check for if(APPLE) is in CompilerRTDarwinUtils.cmake
     check_c_source_compiles("_Float16 foo(_Float16 x) { return x; }
                               int main(void) { return 0; }"
                             COMPILER_RT_HAS_${arch}_FLOAT16)
+    cmake_pop_check_state()
   endforeach()
 endif()
 

@@ -3,7 +3,6 @@
 integer :: i, j
 ! ERROR: This construct requires a perfect nest of depth 2, but the associated nest is a perfect nest of depth 1
 ! BECAUSE: COLLAPSE clause was specified with argument 2
-! ERROR: DO CONCURRENT loops cannot be used with the COLLAPSE clause.
 !$omp parallel do collapse(2)
 do i = 1, 1
   ! BECAUSE: DO CONCURRENT loop is not a valid affected loop
@@ -36,7 +35,6 @@ end do
 
 ! ERROR: This construct requires a perfect nest of depth 2, but the associated nest is a perfect nest of depth 1
 ! BECAUSE: COLLAPSE clause was specified with argument 2
-! ERROR: DO CONCURRENT loops cannot be used with the COLLAPSE clause.
 !$omp loop collapse(2)
 do i = 1, 1
   ! BECAUSE: DO CONCURRENT loop is not a valid affected loop

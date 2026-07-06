@@ -29,9 +29,10 @@ public:
 
   // Write out the decl info for the objects in the given map in the specified
   // format.
-  virtual llvm::Error generateDocumentation(
-      StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
-      const ClangDocContext &CDCtx, std::string DirName = "") = 0;
+  virtual llvm::Error generateDocumentation(StringRef RootDir,
+                                            llvm::StringMap<doc::Info *> Infos,
+                                            const ClangDocContext &CDCtx,
+                                            std::string DirName = "") = 0;
 
   // This function writes a file with the index previously constructed.
   // It can be overwritten by any of the inherited generators.
@@ -60,12 +61,12 @@ class MustacheTemplateFile {
   llvm::StringSaver Saver;
   llvm::mustache::MustacheContext Ctx;
   llvm::mustache::Template T;
-  OwnedPtr<llvm::MemoryBuffer> Buffer;
+  std::unique_ptr<llvm::MemoryBuffer> Buffer;
 
 public:
-  static Expected<OwnedPtr<MustacheTemplateFile>>
+  static Expected<std::unique_ptr<MustacheTemplateFile>>
   createMustacheFile(StringRef FileName) {
-    llvm::ErrorOr<OwnedPtr<llvm::MemoryBuffer>> BufferOrError =
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> BufferOrError =
         llvm::MemoryBuffer::getFile(FileName);
     if (auto EC = BufferOrError.getError())
       return createFileOpenError(FileName, EC);
@@ -74,12 +75,12 @@ public:
   }
 
   llvm::Error registerPartialFile(StringRef Name, StringRef FileName) {
-    llvm::ErrorOr<OwnedPtr<llvm::MemoryBuffer>> BufferOrError =
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> BufferOrError =
         llvm::MemoryBuffer::getFile(FileName);
     if (auto EC = BufferOrError.getError())
       return createFileOpenError(FileName, EC);
 
-    OwnedPtr<llvm::MemoryBuffer> Buffer = std::move(BufferOrError.get());
+    std::unique_ptr<llvm::MemoryBuffer> Buffer = std::move(BufferOrError.get());
     StringRef FileContent = Buffer->getBuffer();
     T.registerPartial(Name.str(), FileContent.str());
     return llvm::Error::success();
@@ -91,7 +92,7 @@ public:
     T.overrideEscapeCharacters(Characters);
   }
 
-  MustacheTemplateFile(OwnedPtr<llvm::MemoryBuffer> &&B)
+  MustacheTemplateFile(std::unique_ptr<llvm::MemoryBuffer> &&B)
       : Saver(Allocator), Ctx(Allocator, Saver), T(B->getBuffer(), Ctx),
         Buffer(std::move(B)) {}
 };
@@ -120,7 +121,7 @@ struct MustacheGenerator : public Generator {
 
   /// Registers partials to templates.
   llvm::Error
-  setupTemplate(OwnedPtr<MustacheTemplateFile> &Template,
+  setupTemplate(std::unique_ptr<MustacheTemplateFile> &Template,
                 StringRef TemplatePath,
                 std::vector<std::pair<StringRef, StringRef>> Partials);
 
@@ -131,9 +132,10 @@ struct MustacheGenerator : public Generator {
   /// 3. Iterates over the JSON files, recreates the directory structure from
   /// JSON, and calls generateDocForJSON for each file.
   /// 4. A file of the desired format is created.
-  llvm::Error generateDocumentation(
-      StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
-      const clang::doc::ClangDocContext &CDCtx, std::string DirName) override;
+  llvm::Error generateDocumentation(StringRef RootDir,
+                                    llvm::StringMap<doc::Info *> Infos,
+                                    const clang::doc::ClangDocContext &CDCtx,
+                                    std::string DirName) override;
 };
 
 // This anchor is used to force the linker to link in the generated object file

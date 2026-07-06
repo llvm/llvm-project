@@ -118,3 +118,10 @@
 // RUN:   -fprofile-generate %s 2>&1 | FileCheck -check-prefixes=PROFILE %s
 //      PROFILE: clang-nvlink-wrapper
 // PROFILE-SAME: "[[RESOURCE_DIR:.+]]{{/|\\\\}}lib{{/|\\\\}}nvptx64-nvidia-cuda{{/|\\\\}}libclang_rt.profile.a"
+
+// RUN: %clang -### --target=nvptx64-nvidia-cuda -march=sm_89 -nogpulib \
+// RUN:   -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:   -fsanitize=undefined -fsanitize-minimal-runtime %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=UBSAN %s
+//      UBSAN: clang-nvlink-wrapper
+// UBSAN-SAME: "[[RESOURCE_DIR:.+]]{{/|\\\\}}lib{{/|\\\\}}nvptx64-nvidia-cuda{{/|\\\\}}libclang_rt.ubsan_minimal.a"

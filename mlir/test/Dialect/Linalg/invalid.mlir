@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics
 
 func.func @load_number_of_indices(%v : memref<f32>) {
-  // expected-error @+2 {{incorrect number of indices for load}}
+  // expected-error @+2 {{invalid number of indices for accessed memref, expected 0 but got 1}}
   %c0 = arith.constant 0 : index
   memref.load %v[%c0] : memref<f32>
 }
@@ -9,7 +9,7 @@ func.func @load_number_of_indices(%v : memref<f32>) {
 // -----
 
 func.func @store_number_of_indices(%v : memref<f32>) {
-  // expected-error @+3 {{store index operand count not equal to memref rank}}
+  // expected-error @+3 {{invalid number of indices for accessed memref, expected 0 but got 1}}
   %c0 = arith.constant 0 : index
   %f0 = arith.constant 0.0 : f32
   memref.store %f0, %v[%c0] : memref<f32>
@@ -415,7 +415,7 @@ func.func @illegal_fill_memref_with_tensor_return
 func.func @illegal_fill_tensor_with_memref_return
   (%arg0 : tensor<?x?xf32>, %arg1 : f32) -> memref<?x?xf32>
 {
-  // expected-error @+1 {{result #0 must be variadic of ranked tensor of any type values, but got 'memref<?x?xf32>'}}
+  // expected-error @+1 {{result #0 must be variadic of ranked tensor of any non-token type values, but got 'memref<?x?xf32>'}}
   %0 = linalg.fill ins(%arg1 : f32) outs(%arg0 : tensor<?x?xf32>) -> memref<?x?xf32>
   return %0 : memref<?x?xf32>
 }
@@ -468,7 +468,7 @@ func.func @invalid_scalar_input_matmul(%arg0: f32, %arg1: memref<3x4xf32>, %arg2
 // -----
 
 func.func @invalid_scalar_output_matmul(%arg0: memref<2x3xf32>, %arg1: memref<3x4xf32>, %arg2: f32) {
-  // expected-error @+1 {{'linalg.matmul' op operand #2 must be variadic of shaped of any type values, but got 'f32'}}
+  // expected-error @+1 {{'linalg.matmul' op operand #2 must be variadic of shaped of any non-token type values, but got 'f32'}}
   linalg.matmul ins(%arg0, %arg1 : memref<2x3xf32>, memref<3x4xf32>)
                 outs(%arg2 : f32)
   return
@@ -640,6 +640,21 @@ func.func @invalid_type_matmul(%arg0 : !x86.amx.tile<16x16xbf16>)
   // expected-error @below {{custom op 'linalg.matmul' Cannot build binary Linalg operation: expects allComplex, allFloatingPoint, or allInteger, got '!x86.amx.tile<16x16xbf16>' and '!x86.amx.tile<16x16xbf16>'}}
   %0 = linalg.matmul ins(%arg0, %arg0 : !x86.amx.tile<16x16xbf16>, !x86.amx.tile<16x16xbf16>) outs(%arg0 : !x86.amx.tile<16x16xbf16>) -> !x86.amx.tile<16x16xbf16>
   return
+}
+
+// -----
+
+func.func @illegal_contract_memref_with_memref_return
+  (%arg0: memref<4x8xf32>, %arg1: memref<8x6xf32>, %arg2: memref<4x6xf32>) -> memref<4x6xf32>
+{
+  // expected-error @+1 {{result #0 must be variadic of ranked tensor of any non-token type values, but got 'memref<4x6xf32>'}}
+  %0 = linalg.contract
+      indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>,
+                       affine_map<(d0, d1, d2) -> (d2, d1)>,
+                       affine_map<(d0, d1, d2) -> (d0, d1)>]
+      ins(%arg0, %arg1 : memref<4x8xf32>, memref<8x6xf32>)
+      outs(%arg2 : memref<4x6xf32>) -> memref<4x6xf32>
+  return %0 : memref<4x6xf32>
 }
 
 // -----
@@ -2193,4 +2208,16 @@ func.func @reduce_unequal_input_output_count(
       }
   %ext = tensor.extract %reduced[] : tensor<i32>
   return %ext : i32
+}
+
+// -----
+
+func.func @reduce_no_inputs() {
+  // expected-error @+1 {{'linalg.reduce' op expected at least one input}}
+  linalg.reduce
+      dimensions = []
+      () {
+        linalg.yield
+      }
+  func.return
 }

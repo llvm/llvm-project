@@ -14,6 +14,7 @@
 #define FIR_DIALECT_FIR_ATTRS
 
 include "flang/Optimizer/Dialect/FIRDialect.td"
+include "mlir/Dialect/OpenACC/OpenACCAttributes.td"
 include "mlir/IR/EnumAttr.td"
 
 class fir_Attr<string name> : AttrDef<FIROpsDialect, name>;
@@ -260,6 +261,18 @@ def fir_UseRenameAttr : fir_Attr<"UseRename"> {
       "mlir::FlatSymbolRefAttr":$symbol);
 
   let assemblyFormat = "`<` $local_name `,` $symbol `>`";
+}
+
+// Fortran-specific variable information for OpenACC.
+// Carries metadata that cannot be recovered from the FIR type system alone
+// and is required in the FIR implementation of OpenACC type interfaces.
+def fir_OpenACCFortranVariableInfoAttr
+    : AttrDef<FIROpsDialect, "OpenACCFortranVariableInfo",
+              [OpenACC_IsVariableInfoAttr],
+              "::mlir::acc::VariableInfoAttr"> {
+  let mnemonic = "acc_var_info";
+  let parameters = (ins "bool":$mayBeOptional);
+  let assemblyFormat = "`<` struct(params) `>`";
 }
 
 #endif // FIR_DIALECT_FIR_ATTRS

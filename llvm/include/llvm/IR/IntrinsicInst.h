@@ -836,6 +836,29 @@ public:
   /// Whether the intrinsic is a smax or a umax.
   bool isMax() const { return !isMin(getIntrinsicID()); }
 
+  /// Returns the identity value for this min/max intrinsic, such
+  /// that minmax(X, Identity) == X.
+  static APInt getIdentity(Intrinsic::ID ID, unsigned NumBits) {
+    switch (ID) {
+    case Intrinsic::umin:
+      return APInt::getMaxValue(NumBits);
+    case Intrinsic::umax:
+      return APInt::getMinValue(NumBits);
+    case Intrinsic::smin:
+      return APInt::getSignedMaxValue(NumBits);
+    case Intrinsic::smax:
+      return APInt::getSignedMinValue(NumBits);
+    default:
+      llvm_unreachable("Invalid intrinsic");
+    }
+  }
+
+  /// Returns the identity value for this min/max intrinsic, such
+  /// that minmax(X, Identity) == X.
+  APInt getIdentity() const {
+    return getIdentity(getIntrinsicID(), getType()->getScalarSizeInBits());
+  }
+
   /// Min/max intrinsics are monotonic, they operate on a fixed-bitwidth values,
   /// so there is a certain threshold value, upon reaching which,
   /// their value can no longer change. Return said threshold.
@@ -1802,6 +1825,21 @@ public:
   LLVM_ABI static ConvergenceControlInst *CreateEntry(BasicBlock &BB);
   LLVM_ABI static ConvergenceControlInst *
   CreateLoop(BasicBlock &BB, ConvergenceControlInst *Parent);
+};
+
+class StructuredAllocaInst : public IntrinsicInst {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::structured_alloca;
+  }
+
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+
+  Type *getAllocationType() const {
+    return getRetAttr(Attribute::ElementType).getValueAsType();
+  }
 };
 
 class StructuredGEPInst : public IntrinsicInst {

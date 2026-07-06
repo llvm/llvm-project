@@ -8,6 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportThreads()
 @skipIfNoSBHeaders
 class SBBreakpointCallbackCase(TestBase):
     SHARED_BUILD_TESTCASE = False

@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// LLDB Python header must be included first
 #include "lldb-python.h"
 
 #include "Interfaces/ScriptInterpreterPythonInterfaces.h"
@@ -43,6 +42,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatAdapters.h"
 
@@ -299,8 +299,13 @@ void ScriptInterpreterPython::Initialize() {
   setenv("PYTHONMALLOC", "malloc", /*overwrite=*/true);
 #endif
 
+  // When the plugin is a separate shared library, the SWIG wrapper lives in
+  // the plugin library, so the path helper that redirects lookups back to
+  // liblldb is unnecessary.
+#if !LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS
   HostInfo::SetSharedLibraryDirectoryHelper(
       ScriptInterpreterPython::SharedLibraryDirectoryHelper);
+#endif
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(), GetPluginDescriptionStatic(),
       lldb::eScriptLanguagePython, ScriptInterpreterPythonImpl::CreateInstance,
@@ -421,6 +426,14 @@ ScriptInterpreterPythonImpl::ScriptInterpreterPythonImpl(Debugger &debugger)
   run_string.Printf("run_one_line (%s, 'import lldb.embedded_interpreter; from "
                     "lldb.embedded_interpreter import run_python_interpreter; "
                     "from lldb.embedded_interpreter import run_one_line')",
+                    m_dictionary_name.c_str());
+  RunSimpleString(run_string.GetData());
+  run_string.Clear();
+
+  // Configure pydoc (built-in module) to use the "plain" pager. The default one
+  // doesn't play nice with the statusline.
+  run_string.Printf("run_one_line (%s, 'import pydoc; pydoc.pager = "
+                    "pydoc.plainpager')",
                     m_dictionary_name.c_str());
   RunSimpleString(run_string.GetData());
   run_string.Clear();
@@ -589,7 +602,10 @@ bool ScriptInterpreterPythonImpl::SetStdHandle(FileSP file_sp,
 
   auto new_file = PythonFile::FromFile(file, mode);
   if (!new_file) {
-    llvm::consumeError(new_file.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Script), new_file.takeError(),
+                   "ScriptInterpreterPythonImpl::SetStdHandle failed to wrap "
+                   "sys.{1}: {0}",
+                   py_name);
     return false;
   }
 
@@ -858,8 +874,8 @@ bool ScriptInterpreterPythonImpl::ExecuteOneLine(
 
     // The one-liner failed.  Append the error message.
     if (result) {
-      result->AppendErrorWithFormat(
-          "python failed attempting to evaluate '%s'\n", command_str.c_str());
+      result->AppendErrorWithFormat("python failed attempting to evaluate '%s'",
+                                    command_str.c_str());
     }
     return false;
   }
@@ -1521,6 +1537,11 @@ ScriptInterpreterPythonImpl::CreateScriptedStopHookInterface() {
   return std::make_shared<ScriptedStopHookPythonInterface>(*this);
 }
 
+ScriptedHookInterfaceSP
+ScriptInterpreterPythonImpl::CreateScriptedHookInterface() {
+  return std::make_shared<ScriptedHookPythonInterface>(*this);
+}
+
 ScriptedBreakpointInterfaceSP
 ScriptInterpreterPythonImpl::CreateScriptedBreakpointInterface() {
   return std::make_shared<ScriptedBreakpointPythonInterface>(*this);
@@ -1957,14 +1978,17 @@ lldb::ValueObjectSP ScriptInterpreterPythonImpl::GetChildAtIndex(
 llvm::Expected<uint32_t> ScriptInterpreterPythonImpl::GetIndexOfChildWithName(
     const StructuredData::ObjectSP &implementor_sp, const char *child_name) {
   if (!implementor_sp)
-    return llvm::createStringError("Type has no child named '%s'", child_name);
+    return llvm::createStringErrorV("type has no child named '{0}'",
+                                    child_name);
 
   StructuredData::Generic *generic = implementor_sp->GetAsGeneric();
   if (!generic)
-    return llvm::createStringError("Type has no child named '%s'", child_name);
+    return llvm::createStringErrorV("type has no child named '{0}'",
+                                    child_name);
   auto *implementor = static_cast<PyObject *>(generic->GetValue());
   if (!implementor)
-    return llvm::createStringError("Type has no child named '%s'", child_name);
+    return llvm::createStringErrorV("type has no child named '{0}'",
+                                    child_name);
 
   uint32_t ret_val = UINT32_MAX;
 
@@ -1976,7 +2000,8 @@ llvm::Expected<uint32_t> ScriptInterpreterPythonImpl::GetIndexOfChildWithName(
   }
 
   if (ret_val == UINT32_MAX)
-    return llvm::createStringError("Type has no child named '%s'", child_name);
+    return llvm::createStringErrorV("type has no child named '{0}'",
+                                    child_name);
   return ret_val;
 }
 
@@ -2318,17 +2343,16 @@ bool ScriptInterpreterPythonImpl::LoadScriptingModule(
       // Not a filename, probably a package of some sort, let it go through.
       possible_package = true;
     } else if (is_directory(st) || is_regular_file(st)) {
-      if (module_file.GetDirectory().IsEmpty()) {
+      if (module_file.GetDirectory().empty()) {
         error = Status::FromErrorStringWithFormatv(
             "invalid directory name '{0}'", pathname);
         return false;
       }
-      if (llvm::Error e =
-              ExtendSysPath(module_file.GetDirectory().GetCString())) {
+      if (llvm::Error e = ExtendSysPath(module_file.GetDirectory().str())) {
         error = Status::FromError(std::move(e));
         return false;
       }
-      module_name = module_file.GetFilename().GetCString();
+      module_name = module_file.GetFilename().str();
     } else {
       error = Status::FromErrorString(
           "no known way to import this module specification");

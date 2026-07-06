@@ -4,7 +4,6 @@
 // RUN: env LIBOMPTARGET_DEBUG=1 %libomptarget-run-generic 2>&1 \
 // RUN: | %fcheck-generic -check-prefix=DEBUG
 // REQUIRES: libomptarget-debug
-// XFAIL: intelgpu
 
 // The test ensures that the FROM transfer for the full "s1" is performed, and
 // not just the FROM done via the mapper of s1.s2.

@@ -587,7 +587,7 @@ const char *SBModule::GetTriple() {
   // Unique the string so we don't run into ownership issues since the const
   // strings put the string into the string pool once and the strings never
   // comes out
-  ConstString const_triple(triple.c_str());
+  ConstString const_triple(triple);
   return const_triple.GetCString();
 }
 
@@ -640,6 +640,15 @@ lldb::SBFileSpec SBModule::GetSymbolFileSpec() const {
   return sb_file_spec;
 }
 
+lldb::SBModuleSpecList SBModule::GetSeparateDebugInfoFiles() {
+  LLDB_INSTRUMENT_VA(this);
+  ModuleSP module_sp(GetSP());
+  if (module_sp)
+    return lldb::SBModuleSpecList(module_sp->GetSeparateDebugInfoFiles());
+
+  return lldb::SBModuleSpecList();
+}
+
 lldb::SBAddress SBModule::GetObjectFileHeaderAddress() const {
   LLDB_INSTRUMENT_VA(this);
 
@@ -684,5 +693,5 @@ const char *SBModule::GetObjectName() const {
 
   if (!m_opaque_sp)
     return nullptr;
-  return m_opaque_sp->GetObjectName().AsCString();
+  return m_opaque_sp->GetObjectName().AsCString(nullptr);
 }

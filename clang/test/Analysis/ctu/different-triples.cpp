@@ -10,11 +10,8 @@
 // RUN:   -Werror=ctu \
 // RUN:   -verify %s
 
-// We expect an error in this file, but without a location.
-// expected-error-re@./different-triples.cpp:*{{imported AST from {{.*}} had been generated for a different target, current: powerpc64-montavista-linux-gnu, imported: x86_64-pc-linux-gnu}}
-
 int f(int);
 
 int main() {
-  return f(5);
+  return f(5); // expected-error-re{{imported AST from '{{.*}}' had been generated for a different target, current: powerpc64-montavista-linux-gnu, imported: x86_64-pc-linux-gnu}}
 }

@@ -1,4 +1,4 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn < %s | FileCheck -check-prefixes=FUNC,GCN,FMA_F64 %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck -check-prefixes=FUNC,GCN,FMA_F64 %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefixes=FUNC,GCN,FMA_F64 %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx90a -mattr=-flat-for-global < %s | FileCheck -check-prefixes=FUNC,GCN,FMAC_F64 %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=FUNC,GCN,FMA_F64 %s

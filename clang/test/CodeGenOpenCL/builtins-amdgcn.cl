@@ -314,6 +314,13 @@ void test_readlane(global int* out, int a, int b)
   *out = __builtin_amdgcn_readlane(a, b);
 }
 
+// CHECK-LABEL: @test_wave_shuffle
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.shuffle.i32(i32 %a, i32 %b)
+void test_wave_shuffle(global int* out, int a, int b)
+{
+  *out = __builtin_amdgcn_wave_shuffle(a, b);
+}
+
 // CHECK-LABEL: @test_fcmp_f32
 // CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.fcmp.i64.f32(float %a, float %b, i32 5)
 void test_fcmp_f32(global ulong* out, float a, float b)
@@ -1189,31 +1196,36 @@ kernel void test_ds_consume_lds(__attribute__((address_space(1))) int* out, __at
 // CHECK-LABEL: @test_gws_init(
 // CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.ds.gws.init(i32 %value, i32 %id)
 kernel void test_gws_init(uint value, uint id) {
-  __builtin_amdgcn_ds_gws_init(value, id);
+  if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_ds_gws_init))
+    __builtin_amdgcn_ds_gws_init(value, id);
 }
 
 // CHECK-LABEL: @test_gws_barrier(
 // CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.ds.gws.barrier(i32 %value, i32 %id)
 kernel void test_gws_barrier(uint value, uint id) {
-  __builtin_amdgcn_ds_gws_barrier(value, id);
+  if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_ds_gws_barrier))
+    __builtin_amdgcn_ds_gws_barrier(value, id);
 }
 
 // CHECK-LABEL: @test_gws_sema_v(
 // CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.ds.gws.sema.v(i32 %id)
 kernel void test_gws_sema_v(uint id) {
-  __builtin_amdgcn_ds_gws_sema_v(id);
+  if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_ds_gws_sema_v))
+    __builtin_amdgcn_ds_gws_sema_v(id);
 }
 
 // CHECK-LABEL: @test_gws_sema_br(
 // CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.ds.gws.sema.br(i32 %value, i32 %id)
 kernel void test_gws_sema_br(uint value, uint id) {
-  __builtin_amdgcn_ds_gws_sema_br(value, id);
+  if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_ds_gws_sema_br))
+    __builtin_amdgcn_ds_gws_sema_br(value, id);
 }
 
 // CHECK-LABEL: @test_gws_sema_p(
 // CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.ds.gws.sema.p(i32 %id)
 kernel void test_gws_sema_p(uint id) {
-  __builtin_amdgcn_ds_gws_sema_p(id);
+  if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_ds_gws_sema_p))
+    __builtin_amdgcn_ds_gws_sema_p(id);
 }
 
 // CHECK-LABEL: @test_mbcnt_lo(
@@ -1276,23 +1288,21 @@ kernel void test_cvt_pk_u8_f32(global uint* out, float src0, uint src1, uint src
   *out = __builtin_amdgcn_cvt_pk_u8_f32(src0, src1, src2);
 }
 
-// CHECK-LABEL: test_msad_u8(
-// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.msad.u8(i32 %src0, i32 %src1, i32 %src2)
+// CHECK-AMDGCN-LABEL: test_msad_u8(
+// CHECK-AMDGCN: {{.*}}call{{.*}} i32 @llvm.amdgcn.msad.u8(i32 %src0, i32 %src1, i32 %src2)
+#if !defined(__SPIRV__)
 kernel void test_msad_u8(global uint* out, uint src0, uint src1, uint src2) {
   *out = __builtin_amdgcn_msad_u8(src0, src1, src2);
 }
+#endif
 
-// CHECK-LABEL: @test_mqsad_pk_u16_u8(
-// CHECK: {{.*}}call{{.*}} i64 @llvm.amdgcn.mqsad.pk.u16.u8(i64 %src0, i32 %src1, i64 %src2)
+// CHECK-AMDGCN-LABEL: @test_mqsad_pk_u16_u8(
+// CHECK-AMDGCN: {{.*}}call{{.*}} i64 @llvm.amdgcn.mqsad.pk.u16.u8(i64 %src0, i32 %src1, i64 %src2)
+#if !defined(__SPIRV__)
 kernel void test_mqsad_pk_u16_u8(global ulong* out, ulong src0, uint src1, ulong src2) {
   *out = __builtin_amdgcn_mqsad_pk_u16_u8(src0, src1, src2);
 }
-
-// CHECK-LABEL: test_mqsad_u32_u8(
-// CHECK: {{.*}}call{{.*}} <4 x i32> @llvm.amdgcn.mqsad.u32.u8(i64 %src0, i32 %src1, <4 x i32> %src2)
-kernel void test_mqsad_u32_u8(global uint4* out, ulong src0, uint src1, uint4 src2) {
-  *out = __builtin_amdgcn_mqsad_u32_u8(src0, src1, src2);
-}
+#endif
 
 // CHECK-LABEL: test_s_setreg(
 // CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.s.setreg(i32 65535, i32 %val)

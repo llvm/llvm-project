@@ -502,7 +502,9 @@ constexpr llvm::StringLiteral constantIdEnumAttrs[] = {
     "SPIRV_MemorySemanticsAttr",
     "SPIRV_MatrixLayoutAttr",
     "SPIRV_TosaExtAccTypeAttr",
+    "SPIRV_TosaExtResizeModeAttr",
     "SPIRV_TosaExtNaNPropagationModeAttr",
+    "SPIRV_TosaExtRoundingModeAttr",
     "SPIRV_QuadSwapDirectionAttr",
 };
 
@@ -560,7 +562,7 @@ static void emitAttributeSerialization(const Attribute &attr,
     os << tabs << formatv("  {0}.push_back(attrTypeID);\n", operandList);
   } else if (llvm::is_contained({"SPIRV_BoolConstAttr",
                                  "SPIRV_TensorArmAxisAttr",
-                                 "SPIRV_TosaNumericalAttr"},
+                                 "SPIRV_I8OrI16OrF16OrF32OrBF16ConstAttr"},
                                 attr.getAttrDefName())) {
     os << tabs
        << formatv(
@@ -865,9 +867,9 @@ static void emitAttributeDeserialization(const Attribute &attr,
        << formatv("{0}.push_back(opBuilder.getNamedAttr(\"{1}\", "
                   "TypeAttr::get(getType({2}[{3}++]))));\n",
                   attrList, attrName, words, wordIndex);
-  } else if (llvm::is_contained(
-                 {"SPIRV_BoolConstAttr", "SPIRV_TosaNumericalAttr"},
-                 attr.getAttrDefName()) ||
+  } else if (llvm::is_contained({"SPIRV_BoolConstAttr",
+                                 "SPIRV_I8OrI16OrF16OrF32OrBF16ConstAttr"},
+                                attr.getAttrDefName()) ||
              attr.getAttrDefName().contains("TensorArm")) {
     os << tabs
        << formatv("std::optional<std::pair<Attribute, Type>> c = "

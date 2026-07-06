@@ -265,7 +265,7 @@ public:
                                      struct mach_o_information &inf);
   JSONGenerator::ObjectSP FormatDynamicLibrariesIntoJSON(
       const std::vector<struct binary_image_information> &image_infos,
-      bool report_load_commands);
+      DNBBinaryInformationLevel info_level);
   uint32_t GetPlatform();
   /// Get the runtime platform from DYLD via SPI.
   uint32_t GetProcessPlatformViaDYLDSPI();
@@ -279,10 +279,11 @@ public:
       std::vector<struct binary_image_information> &image_infos);
   JSONGenerator::ObjectSP
   GetLibrariesInfoForAddresses(nub_process_t pid,
+                               DNBBinaryInformationLevel info_level,
                                std::vector<uint64_t> &macho_addresses);
   JSONGenerator::ObjectSP
   GetAllLoadedLibrariesInfos(nub_process_t pid,
-                             bool fetch_report_load_commands);
+                             DNBBinaryInformationLevel info_level);
   bool GetDebugserverSharedCacheInfo(uuid_t &uuid,
                                      std::string &shared_cache_path);
   bool GetInferiorSharedCacheFilepathAndSize(std::string &inferior_sc_path,

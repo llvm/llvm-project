@@ -129,14 +129,11 @@ define i32 @test_sext_add(i32 %a, i32 %b, i32 %x, i32 %y) {
   ret i32 %res
 }
 
-; FIXME: This case could be supported with reversed operands to the CMP.
 define i32 @test_ugt(i32 %a, i32 %b, i32 %x, i32 %y) {
 ; CHECK-SD-LABEL: test_ugt:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmp w0, w1
-; CHECK-SD-NEXT:    sub w8, w2, w3
-; CHECK-SD-NEXT:    cset w9, hi
-; CHECK-SD-NEXT:    sub w0, w8, w9
+; CHECK-SD-NEXT:    cmp w1, w0
+; CHECK-SD-NEXT:    sbc w0, w2, w3
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: test_ugt:
@@ -150,6 +147,197 @@ define i32 @test_ugt(i32 %a, i32 %b, i32 %x, i32 %y) {
   %carry = zext i1 %cc to i32
   %sub = sub i32 %x, %y
   %res = sub i32 %sub, %carry
+  ret i32 %res
+}
+
+define i64 @test_ugt_mixed_i32_i64(i32 %a, i32 %b, i64 %x, i64 %y) {
+; CHECK-SD-LABEL: test_ugt_mixed_i32_i64:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    cmp w1, w0
+; CHECK-SD-NEXT:    sbc x0, x2, x3
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_ugt_mixed_i32_i64:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    cmp w0, w1
+; CHECK-GI-NEXT:    sub x9, x2, x3
+; CHECK-GI-NEXT:    cset w8, hi
+; CHECK-GI-NEXT:    sub x0, x9, x8
+; CHECK-GI-NEXT:    ret
+  %cc = icmp ugt i32 %a, %b
+  %carry = zext i1 %cc to i64
+  %sub = sub i64 %x, %y
+  %res = sub i64 %sub, %carry
+  ret i64 %res
+}
+
+define i32 @test_ugt_multi_use_flags(i32 %a, i32 %b, i32 %x, i32 %y, i32 %z) {
+; CHECK-SD-LABEL: test_ugt_multi_use_flags:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    cmp w0, w1
+; CHECK-SD-NEXT:    sub w8, w2, w3
+; CHECK-SD-NEXT:    cset w9, hi
+; CHECK-SD-NEXT:    cmp w0, w1
+; CHECK-SD-NEXT:    sub w8, w8, w9
+; CHECK-SD-NEXT:    csel w0, w8, w4, eq
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_ugt_multi_use_flags:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    cmp w0, w1
+; CHECK-GI-NEXT:    sub w9, w2, w3
+; CHECK-GI-NEXT:    cset w8, hi
+; CHECK-GI-NEXT:    sub w8, w9, w8
+; CHECK-GI-NEXT:    csel w0, w8, w4, eq
+; CHECK-GI-NEXT:    ret
+  %cc = icmp ugt i32 %a, %b
+  %carry = zext i1 %cc to i32
+  %sub = sub i32 %x, %y
+  %res = sub i32 %sub, %carry
+  %cc2 = icmp eq i32 %a, %b
+  %sel = select i1 %cc2, i32 %res, i32 %z
+  ret i32 %sel
+}
+
+define i32 @test_ugt_42(i32 %a, i32 %x, i32 %y) {
+; CHECK-SD-LABEL: test_ugt_42:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov w8, #42 // =0x2a
+; CHECK-SD-NEXT:    cmp w8, w0
+; CHECK-SD-NEXT:    sbc w0, w1, w2
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_ugt_42:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    cmp w0, #42
+; CHECK-GI-NEXT:    sub w9, w1, w2
+; CHECK-GI-NEXT:    cset w8, hi
+; CHECK-GI-NEXT:    sub w0, w9, w8
+; CHECK-GI-NEXT:    ret
+  %cc = icmp ugt i32 %a, 42
+  %carry = zext i1 %cc to i32
+  %sub = sub i32 %x, %y
+  %res = sub i32 %sub, %carry
+  ret i32 %res
+}
+
+define i32 @test_only_borrow_ugt_42(i32 %a, i32 %x) {
+; CHECK-LABEL: test_only_borrow_ugt_42:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp w0, #42
+; CHECK-NEXT:    cset w8, hi
+; CHECK-NEXT:    sub w0, w1, w8
+; CHECK-NEXT:    ret
+  %cc = icmp ugt i32 %a, 42
+  %carry = zext i1 %cc to i32
+  %res = sub i32 %x, %carry
+  ret i32 %res
+}
+
+define i32 @test_only_borrow_ugt_42_combine(i32 %a, i32 %x) {
+; CHECK-SD-LABEL: test_only_borrow_ugt_42_combine:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-SD-NEXT:    .cfi_offset w19, -8
+; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    subs w0, w0, #42
+; CHECK-SD-NEXT:    cset w8, hi
+; CHECK-SD-NEXT:    sub w19, w1, w8
+; CHECK-SD-NEXT:    bl use
+; CHECK-SD-NEXT:    mov w0, w19
+; CHECK-SD-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_only_borrow_ugt_42_combine:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-GI-NEXT:    .cfi_offset w19, -8
+; CHECK-GI-NEXT:    .cfi_offset w20, -16
+; CHECK-GI-NEXT:    .cfi_offset w30, -32
+; CHECK-GI-NEXT:    cmp w0, #42
+; CHECK-GI-NEXT:    sub w0, w0, #42
+; CHECK-GI-NEXT:    mov w19, w1
+; CHECK-GI-NEXT:    cset w20, hi
+; CHECK-GI-NEXT:    bl use
+; CHECK-GI-NEXT:    sub w0, w19, w20
+; CHECK-GI-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x30, [sp], #32 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
+  %cc = icmp ugt i32 %a, 42
+  %carry = zext i1 %cc to i32
+  %res = sub i32 %x, %carry
+  %sub42 = sub i32 %a, 42
+  call void @use(i32 %sub42)
+  ret i32 %res
+}
+
+define i32 @test_ugt_huge_imm(i32 %a, i32 %x, i32 %y) {
+; CHECK-SD-LABEL: test_ugt_huge_imm:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov w8, #52501 // =0xcd15
+; CHECK-SD-NEXT:    movk w8, #1883, lsl #16
+; CHECK-SD-NEXT:    cmp w8, w0
+; CHECK-SD-NEXT:    sbc w0, w1, w2
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_ugt_huge_imm:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #52501 // =0xcd15
+; CHECK-GI-NEXT:    sub w9, w1, w2
+; CHECK-GI-NEXT:    movk w8, #1883, lsl #16
+; CHECK-GI-NEXT:    cmp w0, w8
+; CHECK-GI-NEXT:    cset w8, hi
+; CHECK-GI-NEXT:    sub w0, w9, w8
+; CHECK-GI-NEXT:    ret
+  %cc = icmp ugt i32 %a, 123456789
+  %carry = zext i1 %cc to i32
+  %sub = sub i32 %x, %y
+  %res = sub i32 %sub, %carry
+  ret i32 %res
+}
+
+; Negative: outer SUB shared with @use + shifted cmp imm — swap costs a mov.
+define i32 @test_ugt_huge_imm_shifted(i32 %a, i32 %x, i32 %y) {
+; CHECK-SD-LABEL: test_ugt_huge_imm_shifted:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-SD-NEXT:    .cfi_offset w19, -8
+; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    cmp w0, #291, lsl #12 // =1191936
+; CHECK-SD-NEXT:    sub w0, w1, w2
+; CHECK-SD-NEXT:    cset w8, hi
+; CHECK-SD-NEXT:    sub w19, w0, w8
+; CHECK-SD-NEXT:    bl use
+; CHECK-SD-NEXT:    mov w0, w19
+; CHECK-SD-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_ugt_huge_imm_shifted:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-GI-NEXT:    .cfi_offset w19, -8
+; CHECK-GI-NEXT:    .cfi_offset w20, -16
+; CHECK-GI-NEXT:    .cfi_offset w30, -32
+; CHECK-GI-NEXT:    sub w19, w1, w2
+; CHECK-GI-NEXT:    cmp w0, #291, lsl #12 // =1191936
+; CHECK-GI-NEXT:    mov w0, w19
+; CHECK-GI-NEXT:    cset w20, hi
+; CHECK-GI-NEXT:    bl use
+; CHECK-GI-NEXT:    sub w0, w19, w20
+; CHECK-GI-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldr x30, [sp], #32 // 8-byte Folded Reload
+; CHECK-GI-NEXT:    ret
+  %cc = icmp ugt i32 %a, u0x123000
+  %carry = zext i1 %cc to i32
+  %sub = sub i32 %x, %y
+  %res = sub i32 %sub, %carry
+  call void @use(i32 %sub)
   ret i32 %res
 }
 

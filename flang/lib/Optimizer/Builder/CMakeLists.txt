@@ -12,6 +12,7 @@ add_flang_library(FIRBuilder
   HLFIRTools.cpp
   IntrinsicCall.cpp
   LowLevelIntrinsics.cpp
+  MIFCommon.cpp
   MutableBox.cpp
   PPCIntrinsicCall.cpp
   Runtime/Allocatable.cpp
@@ -52,7 +53,6 @@ add_flang_library(FIRBuilder
   FIRDialect
   FIRDialectSupport
   FIRSupport
-  FortranEvaluate
   FortranSupport
   HLFIRDialect
   MIFDialect

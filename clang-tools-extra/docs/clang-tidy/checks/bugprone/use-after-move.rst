@@ -193,7 +193,7 @@ Use
 ---
 
 Any occurrence of the moved variable that is not a reinitialization (see below)
-is considered to be a use.
+or an explicit call to the variable destructor is considered to be a use.
 
 An exception to this are objects of type ``std::unique_ptr``,
 ``std::shared_ptr``, ``std::weak_ptr``, ``std::optional``, and ``std::any``,
@@ -232,6 +232,11 @@ The check considers a variable to be reinitialized in the following cases:
 
   - A member function marked with the ``[[clang::reinitializes]]`` attribute is
     called on the variable.
+
+  - The variable is passed as an argument to ``std::tie`` on the left-hand
+    side of an assignment (e.g. ``std::tie(a, b) = f(...)``). The tuple
+    assignment operator writes back through the stored references, which
+    reinitializes each named variable.
 
 If the variable in question is a struct and an individual member variable of
 that struct is written to, the check does not consider this to be a

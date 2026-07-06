@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// ADDITIONAL_COMPILE_FLAGS: -Wno-deprecated -Wno-deprecated-copy
+// ADDITIONAL_COMPILE_FLAGS: -Wno-deprecated
 
 // hash_map::hash_map(const hash_map&)
 
@@ -22,10 +22,6 @@ int main(int, char**) {
   auto map2 = map;
 
   assert(map2.size() == 2);
-
-  map.insert(std::make_pair(3, 1));
-  map2 = map;
-  assert(map2.size() == 3);
 
   return 0;
 }

@@ -17,6 +17,15 @@ define amdgpu_cs float @cvt_var(i32 %a) {
   ret float %ret
 }
 
+define amdgpu_ps float @cvt_var_s(i32 inreg %a) {
+; CHECK-LABEL: cvt_var_s:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    v_cvt_off_f32_i4_e32 v0, s0
+; CHECK-NEXT:    ; return to shader part epilog
+  %ret = call float @llvm.amdgcn.cvt.off.f32.i4(i32 %a)
+  ret float %ret
+}
+
 define amdgpu_cs float @cvt_imm() {
 ; CHECK-LABEL: cvt_imm:
 ; CHECK:       ; %bb.0:

@@ -75,12 +75,12 @@ let Attributes = [NoThrow, Const], Features = "crc" in {
 
 // Memory Tagging Extensions (MTE)
 let Attributes = [CustomTypeChecking], Features = "mte" in {
-	def irg  : AArch64TargetBuiltin<"void * (void *, unsigned int)">;
+	def irg  : AArch64TargetBuiltin<"void * (void *, uint64_t)">;
 	def addg : AArch64TargetBuiltin<"void * (void *, unsigned int)">;
-	def gmi  : AArch64TargetBuiltin<"unsigned int (void *, unsigned int)">;
+	def gmi  : AArch64TargetBuiltin<"uint64_t (void *, uint64_t)">;
 	def ldg  : AArch64TargetBuiltin<"void * (void *)">;
 	def stg  : AArch64TargetBuiltin<"void (void *)">;
-	def subp : AArch64TargetBuiltin<"unsigned int (void *, void *)">;
+	def subp : AArch64TargetBuiltin<"int64_t (void *, void *)">;
 }
 
 // SME state function
@@ -169,11 +169,6 @@ let Attributes = [NoThrow], Features = "ls64" in {
 	def st64b   : AArch64TargetBuiltin<"void (void *, uint64_t const *)">;
 	def st64bv  : AArch64TargetBuiltin<"uint64_t (void *, uint64_t const *)">;
 	def st64bv0 : AArch64TargetBuiltin<"uint64_t (void *, uint64_t const *)">;
-}
-
-// Atomic store with PCDPHINT
-let Attributes = [CustomTypeChecking] in {
-	def atomic_store_with_stshh : AArch64TargetBuiltin<"void (...)">;
 }
 
 // Armv9.3-A Guarded Control Stack
@@ -340,6 +335,9 @@ let Attributes = [NoThrow, RequireDeclaration], Languages = "ALL_MS_LANGUAGES", 
 let Attributes = [NoThrow, RequireDeclaration], Languages = "ALL_MS_LANGUAGES", Header = "intrin.h" in {
 	def _ReadWriteBarrier       : AArch64NoPrefixTargetLibBuiltin<"void ()">;
 	def __getReg                : AArch64NoPrefixTargetLibBuiltin<"unsigned long long int (int)">;
+	def __getRegFp              : AArch64NoPrefixTargetLibBuiltin<"double (int)">;
+	def __setRegFp              : AArch64NoPrefixTargetLibBuiltin<"void (int, double)">;
+	def __setReg                : AArch64NoPrefixTargetLibBuiltin<"void (int, unsigned long long int)">;
 	def _ReadStatusReg          : AArch64NoPrefixTargetLibBuiltin<"long long int (int)">;
 	def _WriteStatusReg         : AArch64NoPrefixTargetLibBuiltin<"void (int, long long int)">;
 	def __sys                   : AArch64NoPrefixTargetLibBuiltin<"unsigned int (int, long long int)">;
@@ -399,10 +397,13 @@ let Attributes = [NoThrow, RequireDeclaration], Languages = "ALL_MS_LANGUAGES", 
 	def _CountLeadingZeros64 : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned long long int)">;
 	def _CountOneBits        : AArch64NoPrefixTargetLibBuiltin<"unsigned int (msuint32_t)">;
 	def _CountOneBits64      : AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned long long int)">;
+	def _CountTrailingZeros  : AArch64NoPrefixTargetLibBuiltin<"unsigned int (msuint32_t)">;
+	def _CountTrailingZeros64: AArch64NoPrefixTargetLibBuiltin<"unsigned int (unsigned long long int)">;
 }
 
 let Attributes = [NoThrow, RequireDeclaration], Languages = "ALL_MS_LANGUAGES", Header = "intrin.h" in {
 	def __prefetch : AArch64NoPrefixTargetLibBuiltin<"void (void const *)">;
+	def __prefetch2 : AArch64NoPrefixTargetLibBuiltin<"void (void const *, unsigned char)">;
 }
 
 let Attributes = [NoThrow, RequireDeclaration], Languages = "ALL_MS_LANGUAGES", Header = "intrin.h" in {

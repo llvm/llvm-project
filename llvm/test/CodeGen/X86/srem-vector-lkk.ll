@@ -355,13 +355,13 @@ define <4 x i16> @dont_fold_urem_i16_smax(<4 x i16> %x) {
 ; SSE4-NEXT:    movq {{.*#+}} xmm2 = [0,32767,45591,12375,0,0,0,0]
 ; SSE4-NEXT:    pmulhw %xmm0, %xmm2
 ; SSE4-NEXT:    paddw %xmm1, %xmm2
-; SSE4-NEXT:    movdqa %xmm2, %xmm3
-; SSE4-NEXT:    psrlw $15, %xmm3
-; SSE4-NEXT:    pxor %xmm4, %xmm4
-; SSE4-NEXT:    pblendw {{.*#+}} xmm4 = xmm4[0],xmm3[1,2,3],xmm4[4,5,6,7]
+; SSE4-NEXT:    movdqa %xmm2, %xmm1
+; SSE4-NEXT:    psrlw $15, %xmm1
+; SSE4-NEXT:    pxor %xmm3, %xmm3
+; SSE4-NEXT:    pblendw {{.*#+}} xmm3 = xmm3[0],xmm1[1,2,3],xmm3[4,5,6,7]
 ; SSE4-NEXT:    pmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [u,4,4096,64,u,u,u,u]
-; SSE4-NEXT:    pblendw {{.*#+}} xmm2 = xmm1[0],xmm2[1,2,3,4,5,6,7]
-; SSE4-NEXT:    paddw %xmm4, %xmm2
+; SSE4-NEXT:    pblendw {{.*#+}} xmm2 = xmm0[0],xmm2[1,2,3,4,5,6,7]
+; SSE4-NEXT:    paddw %xmm3, %xmm2
 ; SSE4-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [1,32768,23,5423,u,u,u,u]
 ; SSE4-NEXT:    psubw %xmm2, %xmm0
 ; SSE4-NEXT:    retq
@@ -370,13 +370,13 @@ define <4 x i16> @dont_fold_urem_i16_smax(<4 x i16> %x) {
 ; AVX1OR2:       # %bb.0:
 ; AVX1OR2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [1,65535,1,0,u,u,u,u]
 ; AVX1OR2-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm2 # [0,32767,45591,12375,u,u,u,u]
-; AVX1OR2-NEXT:    vpaddw %xmm1, %xmm2, %xmm2
-; AVX1OR2-NEXT:    vpsrlw $15, %xmm2, %xmm3
-; AVX1OR2-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX1OR2-NEXT:    vpblendw {{.*#+}} xmm3 = xmm4[0],xmm3[1,2,3],xmm4[4,5,6,7]
-; AVX1OR2-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2 # [u,4,4096,64,u,u,u,u]
-; AVX1OR2-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3,4,5,6,7]
-; AVX1OR2-NEXT:    vpaddw %xmm3, %xmm1, %xmm1
+; AVX1OR2-NEXT:    vpaddw %xmm1, %xmm2, %xmm1
+; AVX1OR2-NEXT:    vpsrlw $15, %xmm1, %xmm2
+; AVX1OR2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX1OR2-NEXT:    vpblendw {{.*#+}} xmm2 = xmm3[0],xmm2[1,2,3],xmm3[4,5,6,7]
+; AVX1OR2-NEXT:    vpmulhw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [u,4,4096,64,u,u,u,u]
+; AVX1OR2-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3,4,5,6,7]
+; AVX1OR2-NEXT:    vpaddw %xmm2, %xmm1, %xmm1
 ; AVX1OR2-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [1,32768,23,5423,u,u,u,u]
 ; AVX1OR2-NEXT:    vpsubw %xmm1, %xmm0, %xmm0
 ; AVX1OR2-NEXT:    retq

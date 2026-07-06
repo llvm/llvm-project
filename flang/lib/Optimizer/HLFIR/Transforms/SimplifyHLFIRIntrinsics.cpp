@@ -1128,12 +1128,13 @@ private:
         hlfir::loadElementAt(loc, builder, array, oneBasedIndices);
     mlir::Value cond =
         builder.createConvert(loc, builder.getI1Type(), elementValue);
+    mlir::Value zero =
+        builder.createIntegerConstant(loc, getResultElementType(), 0);
     mlir::Value one =
         builder.createIntegerConstant(loc, getResultElementType(), 1);
-    mlir::Value add1 =
-        mlir::arith::AddIOp::create(builder, loc, currentValue[0], one);
-    return {mlir::arith::SelectOp::create(builder, loc, cond, add1,
-                                          currentValue[0])};
+    mlir::Value addend =
+        mlir::arith::SelectOp::create(builder, loc, cond, one, zero);
+    return {mlir::arith::AddIOp::create(builder, loc, currentValue[0], addend)};
   }
 };
 

@@ -182,7 +182,7 @@ ValueObjectSP VariantFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (!head_sp)
     return nullptr;
 
-  return head_sp->Clone(ConstString("Value"));
+  return head_sp->Clone("Value");
 }
 
 SyntheticChildrenFrontEnd *formatters::MsvcStlVariantSyntheticFrontEndCreator(

@@ -9,8 +9,8 @@
 //
 // Illustrate use of -D__SANITIZER_DISABLE_CONTAINER_OVERFLOW__ flag to suppress
 // overflow checks at compile time.
-// RUN: %clang_asan -D__SANITIZER_DISABLE_CONTAINER_OVERFLOW__ -O %s -o %t-no-overflow
-// RUN: %run %t-no-overflow 2>&1 | FileCheck --check-prefix=CHECK-NOCRASH %s
+// RUN: %if !MSVC %{ %clang_asan -D__SANITIZER_DISABLE_CONTAINER_OVERFLOW__ -O %s -o %t-no-overflow %}
+// RUN: %if !MSVC %{ %run %t-no-overflow 2>&1 | FileCheck --check-prefix=CHECK-NOCRASH %s %}
 
 #include <assert.h>
 #include <stdio.h>
@@ -19,12 +19,20 @@
 // public definition of __sanitizer_annotate_contiguous_container
 #include "sanitizer/common_interface_defs.h"
 
+// compilers such as MSVC do not support `__has_feature`
+#ifndef __has_feature
+#  define __has_feature(x) 0
+#endif
+
 static volatile int one = 1;
 
 int TestCrash() {
   long t[100];
   t[60] = 0;
-#if __has_feature(address_sanitizer)
+
+// MSVC defines __SANITIZE_ADDRESS__,
+// see :https://learn.microsoft.com/en-us/cpp/sanitizers/asan-building#language-specification
+#if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
   __sanitizer_annotate_contiguous_container(&t[0], &t[0] + 100, &t[0] + 100,
                                             &t[0] + 50);
 #endif

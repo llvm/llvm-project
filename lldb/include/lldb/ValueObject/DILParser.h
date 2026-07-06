@@ -35,8 +35,8 @@ enum class ErrorCode : unsigned char {
   kUnknown,
 };
 
-llvm::Expected<lldb::TypeSystemSP>
-GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx);
+CompilerType ResolveTypeByName(const std::string &name,
+                               ExecutionContextScope &ctx_scope);
 
 // The following is modeled on class OptionParseError.
 class DILDiagnosticError
@@ -67,34 +67,26 @@ public:
 /// EBNF grammar for the parser is described in lldb/docs/dil-expr-lang.ebnf
 class DILParser {
 public:
-  static llvm::Expected<ASTNodeUP> Parse(llvm::StringRef dil_input_expr,
-                                         DILLexer lexer,
-                                         std::shared_ptr<StackFrame> frame_sp,
-                                         lldb::DynamicValueType use_dynamic,
-                                         bool use_synthetic, bool fragile_ivar,
-                                         bool check_ptr_vs_member);
+  static llvm::Expected<ASTNodeUP>
+  Parse(llvm::StringRef dil_input_expr, DILLexer lexer, StackFrame &stack_frame,
+        lldb::DynamicValueType use_dynamic, lldb::DILMode mode);
 
   ~DILParser() = default;
 
-  bool UseSynthetic() { return m_use_synthetic; }
-
-  bool UseFragileIvar() { return m_fragile_ivar; }
-
-  bool CheckPtrVsMember() { return m_check_ptr_vs_member; }
-
-  lldb::DynamicValueType UseDynamic() { return m_use_dynamic; }
-
 private:
   explicit DILParser(llvm::StringRef dil_input_expr, DILLexer lexer,
-                     std::shared_ptr<StackFrame> frame_sp,
-                     lldb::DynamicValueType use_dynamic, bool use_synthetic,
-                     bool fragile_ivar, bool check_ptr_vs_member,
-                     llvm::Error &error);
+                     StackFrame &stack_frame,
+                     lldb::DynamicValueType use_dynamic, llvm::Error &error,
+                     lldb::DILMode mode);
 
   ASTNodeUP Run();
 
   ASTNodeUP ParseExpression();
+
+  ASTNodeUP ParseAssignmentExpression();
+  ASTNodeUP ParseShiftExpression();
   ASTNodeUP ParseAdditiveExpression();
+  ASTNodeUP ParseMultiplicativeExpression();
   ASTNodeUP ParseUnaryExpression();
   ASTNodeUP ParsePostfixExpression();
   ASTNodeUP ParsePrimaryExpression();
@@ -134,7 +126,7 @@ private:
   // Parser doesn't own the evaluation context. The produced AST may depend on
   // it (for example, for source locations), so it's expected that expression
   // context will outlive the parser.
-  std::shared_ptr<StackFrame> m_ctx_scope;
+  StackFrame &m_stack_frame;
 
   llvm::StringRef m_input_expr;
 
@@ -144,9 +136,9 @@ private:
   llvm::Error &m_error;
 
   lldb::DynamicValueType m_use_dynamic;
-  bool m_use_synthetic;
-  bool m_fragile_ivar;
-  bool m_check_ptr_vs_member;
+
+  // DIL Mode requested by the caller.
+  lldb::DILMode m_mode;
 }; // class DILParser
 
 } // namespace lldb_private::dil

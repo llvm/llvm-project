@@ -19,8 +19,8 @@
 
 #include <typeinfo>
 
-// CHECK-TEST1: @_ZTVN5Test11AE = external unnamed_addr constant
-// CHECK-FORCE-EMIT-DAG: @_ZTVN5Test11AE = available_externally unnamed_addr constant
+// CHECK-TEST1: @_ZTVN5Test11AE = external constant
+// CHECK-FORCE-EMIT-DAG: @_ZTVN5Test11AE = available_externally constant
 namespace Test1 {
 
 struct A {
@@ -51,7 +51,7 @@ void g() {
 
 // CHECK-TEST2: @_ZTIN5Test21AE ={{.*}} constant
 // CHECK-TEST2: @_ZTSN5Test21AE ={{.*}} constant
-// CHECK-TEST2: @_ZTVN5Test21AE ={{.*}} unnamed_addr constant
+// CHECK-TEST2: @_ZTVN5Test21AE ={{.*}}constant
 namespace Test2 {
   struct A {
     virtual void f();
@@ -169,7 +169,7 @@ struct c28 : virtual c11{
 }
 
 namespace Test8 {
-// CHECK-TEST8: @_ZTVN5Test81YE = available_externally unnamed_addr constant
+// CHECK-TEST8: @_ZTVN5Test81YE = available_externally constant
 // vtable for X is not generated because there are no stores here
 struct X {
   X();
@@ -192,8 +192,8 @@ void f() {
 namespace Test9 {
 // All virtual functions are outline, so we can assume that it will
 // be generated in translation unit where foo is defined.
-// CHECK-TEST9-DAG: @_ZTVN5Test91AE = available_externally unnamed_addr constant
-// CHECK-TEST9-DAG: @_ZTVN5Test91BE = available_externally unnamed_addr constant
+// CHECK-TEST9-DAG: @_ZTVN5Test91AE = available_externally constant
+// CHECK-TEST9-DAG: @_ZTVN5Test91BE = available_externally constant
 struct A {
   virtual void foo();
   virtual void bar();
@@ -216,8 +216,8 @@ void g() {
 namespace Test10 {
 
 // because A's key function is defined here, vtable is generated in this TU
-// CHECK-TEST10-DAG: @_ZTVN6Test101AE ={{.*}} unnamed_addr constant
-// CHECK-FORCE-EMIT-DAG: @_ZTVN6Test101AE ={{.*}} unnamed_addr constant
+// CHECK-TEST10-DAG: @_ZTVN6Test101AE ={{.*}}constant
+// CHECK-FORCE-EMIT-DAG: @_ZTVN6Test101AE ={{.*}}constant
 struct A {
   virtual void foo();
   virtual void bar();
@@ -225,15 +225,15 @@ struct A {
 void A::foo() {}
 
 // Because key function is inline we will generate vtable as linkonce_odr.
-// CHECK-TEST10-DAG: @_ZTVN6Test101DE = linkonce_odr unnamed_addr constant
-// CHECK-FORCE-EMIT-DAG: @_ZTVN6Test101DE = linkonce_odr unnamed_addr constant
+// CHECK-TEST10-DAG: @_ZTVN6Test101DE = linkonce_odr constant
+// CHECK-FORCE-EMIT-DAG: @_ZTVN6Test101DE = linkonce_odr constant
 struct D : A {
   void bar();
 };
 inline void D::bar() {}
 
 // Because B has outline all virtual functions, we can refer to them.
-// CHECK-TEST10-DAG: @_ZTVN6Test101BE = available_externally unnamed_addr constant
+// CHECK-TEST10-DAG: @_ZTVN6Test101BE = available_externally constant
 struct B : A {
   void foo();
   void bar();
@@ -242,8 +242,8 @@ struct B : A {
 // C's key function (car) is outline, but C has inline virtual function so we
 // can't guarantee that we will be able to refer to bar from name
 // so (at the moment) we can't emit vtable available_externally.
-// CHECK-TEST10-DAG: @_ZTVN6Test101CE = external unnamed_addr constant
-// CHECK-FORCE-EMIT-DAG: @_ZTVN6Test101CE = available_externally unnamed_addr constant
+// CHECK-TEST10-DAG: @_ZTVN6Test101CE = external constant
+// CHECK-FORCE-EMIT-DAG: @_ZTVN6Test101CE = available_externally constant
 struct C : A {
   void bar() {}               // defined in body - not key function
   virtual inline void gar();  // inline in body - not key function
@@ -252,7 +252,7 @@ struct C : A {
 
 // Inline definition outside body, so we can't emit vtable available_externally
 // (see previous).
-// CHECK-TEST10-DAG: @_ZTVN6Test101FE = external unnamed_addr constant
+// CHECK-TEST10-DAG: @_ZTVN6Test101FE = external constant
 struct F : A {
   void foo();
   virtual void cat();         // inline outside body
@@ -260,8 +260,8 @@ struct F : A {
 inline void F::cat() {}
 
 // no key function, vtable will be generated everywhere it will be used
-// CHECK-TEST10-DAG: @_ZTVN6Test101EE = linkonce_odr unnamed_addr constant
-// CHECK-FORCE-EMIT-DAG: @_ZTVN6Test101EE = linkonce_odr unnamed_addr constant
+// CHECK-TEST10-DAG: @_ZTVN6Test101EE = linkonce_odr constant
+// CHECK-FORCE-EMIT-DAG: @_ZTVN6Test101EE = linkonce_odr constant
 
 struct E : A {};
 
@@ -290,13 +290,13 @@ void g() {
 namespace Test11 {
 struct D;
 // Can emit C's vtable available_externally.
-// CHECK-TEST11: @_ZTVN6Test111CE = available_externally unnamed_addr constant
+// CHECK-TEST11: @_ZTVN6Test111CE = available_externally constant
 struct C {
   virtual D& operator=(const D&);
 };
 
 // Can emit D's vtable available_externally.
-// CHECK-TEST11: @_ZTVN6Test111DE = available_externally unnamed_addr constant
+// CHECK-TEST11: @_ZTVN6Test111DE = available_externally constant
 struct D : C {
   virtual void key();
 };
@@ -317,14 +317,14 @@ void g() {
 
 namespace Test12 {
 
-// CHECK-TEST12: @_ZTVN6Test121AE = external unnamed_addr constant
-// CHECK-FORCE-EMIT-DAG: @_ZTVN6Test121AE = available_externally unnamed_addr constant
+// CHECK-TEST12: @_ZTVN6Test121AE = external constant
+// CHECK-FORCE-EMIT-DAG: @_ZTVN6Test121AE = available_externally constant
 struct A {
   virtual void foo();
   virtual ~A() {}
 };
-// CHECK-TEST12: @_ZTVN6Test121BE = external unnamed_addr constant
-// CHECK-FORCE-EMIT-DAG: @_ZTVN6Test121BE = available_externally unnamed_addr constant
+// CHECK-TEST12: @_ZTVN6Test121BE = external constant
+// CHECK-FORCE-EMIT-DAG: @_ZTVN6Test121BE = available_externally constant
 struct B : A {
   void foo();
 };
@@ -339,10 +339,10 @@ void g() {
 
 namespace Test13 {
 
-// CHECK-TEST13-DAG: @_ZTVN6Test131AE = available_externally unnamed_addr constant
-// CHECK-TEST13-DAG: @_ZTVN6Test131BE = external unnamed_addr constant
-// CHECK-FORCE-EMIT-DAG: @_ZTVN6Test131AE = available_externally unnamed_addr constant
-// CHECK-FORCE-EMIT-DAG: @_ZTVN6Test131BE = available_externally unnamed_addr constant
+// CHECK-TEST13-DAG: @_ZTVN6Test131AE = available_externally constant
+// CHECK-TEST13-DAG: @_ZTVN6Test131BE = external constant
+// CHECK-FORCE-EMIT-DAG: @_ZTVN6Test131AE = available_externally constant
+// CHECK-FORCE-EMIT-DAG: @_ZTVN6Test131BE = available_externally constant
 
 struct A {
   virtual ~A();
@@ -360,7 +360,7 @@ void g() {
 
 namespace Test14 {
 
-// CHECK-TEST14: @_ZTVN6Test141AE = available_externally unnamed_addr constant
+// CHECK-TEST14: @_ZTVN6Test141AE = available_externally constant
 struct A {
   virtual void f();
   void operator delete(void *);
@@ -376,7 +376,7 @@ void g() {
 namespace Test15 {
 // In this test D's vtable has two slots for function f(), but uses only one,
 // so the second slot is set to null.
-// CHECK-TEST15: @_ZTVN6Test151DE = available_externally unnamed_addr constant
+// CHECK-TEST15: @_ZTVN6Test151DE = available_externally constant
 struct A { virtual void f() {} };
 struct B : virtual A {};
 struct C : virtual A {};
@@ -394,9 +394,9 @@ void test() {
 namespace Test16 {
 // S has virtual method that is hidden, because of it we can't
 // generate available_externally vtable for it.
-// CHECK-TEST16-DAG: @_ZTVN6Test161SE = external unnamed_addr constant
+// CHECK-TEST16-DAG: @_ZTVN6Test161SE = external constant
 // CHECK-TEST16-DAG: @_ZTVN6Test162S2E = available_externally
-// CHECK-FORCE-EMIT-DAG: @_ZTVN6Test161SE = external unnamed_addr constant
+// CHECK-FORCE-EMIT-DAG: @_ZTVN6Test161SE = external constant
 // CHECK-FORCE-EMIT-DAG: @_ZTVN6Test162S2E = available_externally
 
 struct S {
@@ -453,7 +453,7 @@ void testcaseB() {
 namespace Test18 {
 // Here vtable will be only emitted because it is referenced by assume-load
 // after the Derived construction.
-// CHECK-FORCE-EMIT-DAG: @_ZTVN6Test187DerivedE = linkonce_odr unnamed_addr constant {{.*}} @_ZTIN6Test187DerivedE, {{.*}} @_ZN6Test184Base3funEv, {{.*}} @_ZN6Test184BaseD2Ev, {{.*}} @_ZN6Test187DerivedD0Ev
+// CHECK-FORCE-EMIT-DAG: @_ZTVN6Test187DerivedE = linkonce_odr constant {{.*}} @_ZTIN6Test187DerivedE, {{.*}} @_ZN6Test184Base3funEv, {{.*}} @_ZN6Test184BaseD2Ev, {{.*}} @_ZN6Test187DerivedD0Ev
 // CHECK-FORCE-EMIT-DAG: define linkonce_odr void @_ZN6Test187DerivedD0Ev
 // CHECK-FORCE-EMIT-DAG: define linkonce_odr void @_ZN6Test184BaseD2Ev
 // CHECK-FORCE-EMIT-DAG: define linkonce_odr noundef i32 @_ZN6Test184Base3funEv
@@ -476,7 +476,7 @@ int foo() {
 
 namespace TestTemplates {
 
-// CHECK-FORCE-EMIT-DAG: @_ZTVN13TestTemplates8TemplateIiEE = linkonce_odr unnamed_addr constant {{.*}} @_ZTIN13TestTemplates8TemplateIiEE, {{.*}} @_ZN13TestTemplates8TemplateIiE3fooEi, {{.*}}@_ZN13TestTemplates8TemplateIiE22thisShouldBeEmittedTooEi, {{.*}}@_ZN13TestTemplates8TemplateIiED1Ev, {{.*}}@_ZN13TestTemplates8TemplateIiED0Ev
+// CHECK-FORCE-EMIT-DAG: @_ZTVN13TestTemplates8TemplateIiEE = linkonce_odr constant {{.*}} @_ZTIN13TestTemplates8TemplateIiEE, {{.*}} @_ZN13TestTemplates8TemplateIiE3fooEi, {{.*}}@_ZN13TestTemplates8TemplateIiE22thisShouldBeEmittedTooEi, {{.*}}@_ZN13TestTemplates8TemplateIiED1Ev, {{.*}}@_ZN13TestTemplates8TemplateIiED0Ev
 // CHECK-FORCE-EMIT-DAG: define linkonce_odr noundef i32 @_ZN13TestTemplates8TemplateIiE22thisShouldBeEmittedTooEi
 
 template<class T>

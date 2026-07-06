@@ -342,12 +342,23 @@ void OptionValueProperties::DumpValue(const ExecutionContext *exe_ctx,
     if (property) {
       OptionValue *option_value = property->GetValue().get();
       assert(option_value);
+      if ((dump_mask & eDumpOptionOnlyChanged) && option_value->IsDefault())
+        continue;
       const bool transparent_value = option_value->ValueIsTransparent();
       property->Dump(exe_ctx, strm, dump_mask);
       if (!transparent_value)
         strm.EOL();
     }
   }
+}
+
+bool OptionValueProperties::IsDefault() const {
+  for (const Property &property : m_properties) {
+    if (OptionValue *value = property.GetValue().get())
+      if (!value->IsDefault())
+        return false;
+  }
+  return true;
 }
 
 llvm::json::Value
@@ -463,31 +474,37 @@ void OptionValueProperties::DumpAllDescriptions(CommandInterpreter &interpreter,
 }
 
 void OptionValueProperties::Apropos(
-    llvm::StringRef keyword,
-    std::vector<const Property *> &matching_properties) const {
+    llvm::StringRef keyword, std::vector<const Property *> &matching_properties,
+    std::vector<const Property *> &matching_property_paths) const {
   const size_t num_properties = m_properties.size();
-  StreamString strm;
   for (size_t i = 0; i < num_properties; ++i) {
     const Property *property = ProtectedGetPropertyAtIndex(i);
-    if (property) {
-      const OptionValueProperties *properties =
-          property->GetValue()->GetAsProperties();
-      if (properties) {
-        properties->Apropos(keyword, matching_properties);
-      } else {
-        bool match = false;
-        llvm::StringRef name = property->GetName();
-        if (name.contains_insensitive(keyword))
-          match = true;
-        else {
-          llvm::StringRef desc = property->GetDescription();
-          if (desc.contains_insensitive(keyword))
-            match = true;
-        }
-        if (match) {
-          matching_properties.push_back(property);
-        }
-      }
+    if (!property)
+      continue;
+
+    const OptionValueProperties *properties =
+        property->GetValue()->GetAsProperties();
+    if (properties)
+      properties->Apropos(keyword, matching_properties,
+                          matching_property_paths);
+
+    bool matched = false;
+
+    if (llvm::StringRef name = property->GetName();
+        !matched && name.contains_insensitive(keyword))
+      matched = true;
+
+    if (llvm::StringRef desc = property->GetDescription();
+        !matched && desc.contains_insensitive(keyword))
+      matched = true;
+
+    if (!matched)
+      continue;
+
+    if (properties) {
+      matching_property_paths.push_back(property);
+    } else {
+      matching_properties.push_back(property);
     }
   }
 }

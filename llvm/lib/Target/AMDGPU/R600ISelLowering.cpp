@@ -177,10 +177,10 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CTPOP, MVT::i64, Expand);
 
   if (Subtarget->hasFFBH())
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Custom);
+    setOperationAction(ISD::CTLZ_ZERO_POISON, MVT::i32, Custom);
 
   if (Subtarget->hasFFBL())
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32, Custom);
+    setOperationAction(ISD::CTTZ_ZERO_POISON, MVT::i32, Custom);
 
   // FIXME: This was moved from AMDGPUTargetLowering, I'm not sure if we
   // need it for R600.
@@ -189,11 +189,6 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::GlobalAddress, MVT::i32, Custom);
   setOperationAction(ISD::ADDRSPACECAST, MVT::i32, Custom);
-
-  const MVT ScalarIntVTs[] = { MVT::i32, MVT::i64 };
-  for (MVT VT : ScalarIntVTs)
-    setOperationAction({ISD::ADDC, ISD::SUBC, ISD::ADDE, ISD::SUBE}, VT,
-                       Expand);
 
   // LLVM will expand these to atomic_cmp_swap(0)
   // and atomic_swap, respectively.
@@ -791,7 +786,7 @@ bool R600TargetLowering::isZero(SDValue Op) const {
 
 bool R600TargetLowering::isHWTrueValue(SDValue Op) const {
   if (ConstantFPSDNode * CFP = dyn_cast<ConstantFPSDNode>(Op)) {
-    return CFP->isExactlyValue(1.0);
+    return CFP->isOne();
   }
   return isAllOnesConstant(Op);
 }
@@ -1586,7 +1581,7 @@ static SDValue CompactSwizzlableVector(
       if (C->isZero()) {
         RemapSwizzle[i] = 4; // SEL_0
         NewBldVec[i] = DAG.getUNDEF(MVT::f32);
-      } else if (C->isExactlyValue(1.0)) {
+      } else if (C->isOne()) {
         RemapSwizzle[i] = 5; // SEL_1
         NewBldVec[i] = DAG.getUNDEF(MVT::f32);
       }

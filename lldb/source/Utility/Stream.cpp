@@ -24,10 +24,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-Stream::Stream(uint32_t flags, uint32_t addr_size, ByteOrder byte_order,
-               bool colors)
-    : m_flags(flags), m_addr_size(addr_size), m_byte_order(byte_order),
-      m_forwarder(*this, colors) {}
+Stream::Stream(uint32_t flags, ByteOrder byte_order, bool colors)
+    : m_flags(flags), m_byte_order(byte_order), m_forwarder(*this, colors) {}
 
 Stream::Stream(bool colors)
     : m_flags(0), m_byte_order(endian::InlHostByteOrder()),
@@ -81,7 +79,9 @@ void Stream::PutCStringColorHighlighted(
     return;
   }
 
-  llvm::Regex reg_pattern(pattern_info->pattern);
+  llvm::Regex reg_pattern(pattern_info->pattern, pattern_info->ignore_case
+                                                     ? llvm::Regex::IgnoreCase
+                                                     : llvm::Regex::NoFlags);
   llvm::SmallVector<llvm::StringRef, 1> matches;
   llvm::StringRef remaining = text;
   std::string format_str = lldb_private::ansi::FormatAnsiTerminalCodes(
@@ -215,12 +215,6 @@ Stream::IndentScope Stream::MakeIndentScope(unsigned indent_amount) {
   IndentMore(indent_amount);
   return indent_scope;
 }
-
-// Get the address size in bytes
-uint32_t Stream::GetAddressByteSize() const { return m_addr_size; }
-
-// Set the address size in bytes
-void Stream::SetAddressByteSize(uint32_t addr_size) { m_addr_size = addr_size; }
 
 // The flags get accessor
 Flags &Stream::GetFlags() { return m_flags; }

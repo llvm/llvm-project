@@ -16,20 +16,20 @@ define i32 @dotp(ptr %a, ptr %b) #0 {
 ; CHECK-NOMAX: LV: Selecting VF: vscale x 4.
 ;
 ; CHECK-REGS-VP: Cost for VF vscale x 4: 6 (Estimated cost per lane: 1.
-; CHECK-REGS-VP: Cost for VF vscale x 8: 6 (Estimated cost per lane: 0.
+; CHECK-REGS-VP: Cost for VF vscale x 8: 5 (Estimated cost per lane: 0.
 ; CHECK-REGS-VP: Cost for VF vscale x 16: 5 (Estimated cost per lane: 0.
 ; CHECK-REGS-VP: LV: Selecting VF: vscale x 16.
 ;
 ; CHECK-NOREGS-VP: Cost for VF vscale x 4: 6 (Estimated cost per lane: 1.
 ; CHECK-NOREGS-VP: LV(REG): Cost of 4 from 2 spills of Generic::VectorRC
-; CHECK-NOREGS-VP-NEXT: Cost for VF vscale x 8: 14 (Estimated cost per lane: 1.
+; CHECK-NOREGS-VP-NEXT: Cost for VF vscale x 8: 13 (Estimated cost per lane: 1.
 ; CHECK-NOREGS-VP: LV(REG): Cost of 4 from 2 spills of Generic::VectorRC
 ; CHECK-NOREGS-VP-NEXT: Cost for VF vscale x 16: 13 (Estimated cost per lane: 0.
 ; CHECK-NOREGS-VP: LV: Selecting VF: vscale x 16.
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %accum = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %gep.a = getelementptr i8, ptr %a, i64 %iv
@@ -44,7 +44,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %for.exit, label %for.body
 
-for.exit:                        ; preds = %for.body
+for.exit:
   ret i32 %add
 }
 

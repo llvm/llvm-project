@@ -11,10 +11,10 @@
 // RUN: not clang-ssaf-linker %S/Inputs/tu-empty.json -o %t/output-dir/output.json 2>&1 \
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=NO-WRITE-PERM
 // RUN: chmod +w %t/output-dir
-// NO-WRITE-PERM: clang-ssaf-linker: error: failed to validate summary '{{.*}}output.json': Parent directory is not writable
+// NO-WRITE-PERM: clang-ssaf-linker: error: failed to validate path '{{.*}}output.json': Parent directory is not writable
 
 // Input summary is a broken symlink.
 // RUN: ln -sf %t/tu-nonexistent %t/tu-dangling.json
 // RUN: not clang-ssaf-linker %t/tu-dangling.json -o %t/lu.json 2>&1 \
 // RUN:   | FileCheck %s --match-full-lines --check-prefix=BROKEN-SYMLINK
-// BROKEN-SYMLINK: clang-ssaf-linker: error: failed to validate summary '{{.*}}tu-dangling.json': {{[Nn]}}o such file or directory
+// BROKEN-SYMLINK: clang-ssaf-linker: error: failed to validate path '{{.*}}tu-dangling.json': Path does not exist

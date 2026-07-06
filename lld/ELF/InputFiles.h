@@ -130,7 +130,7 @@ public:
   // checking feature. All files within the same --{start,end}-group or
   // --{start,end}-lib get the same group ID. Otherwise, each file gets a new
   // group ID. For more info, see checkDependency() in SymbolTable.cpp.
-  uint32_t groupId;
+  uint32_t groupId = 0;
 
   // If this is an architecture-specific file, the following members
   // have ELF type (i.e. ELF{32,64}{LE,BE}) and target machine type.
@@ -356,7 +356,7 @@ public:
   template <typename ELFT> void parse();
 
   // Used for --as-needed
-  bool isNeeded;
+  std::atomic<bool> isNeeded;
 
   // Non-weak undefined symbols which are not yet resolved when the SO is
   // parsed. Only filled for `--no-allow-shlib-undefined`.

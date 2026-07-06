@@ -1088,26 +1088,26 @@ func.func @test_shape_type(%arg0: !tosa.shape<-1>) -> !tosa.shape<-1> {
 
 // -----
 
-func.func @test_const_shape() -> !tosa.shape<4> {
+func.func @test_const_shape() {
   // expected-error@+1 {{'tosa.const_shape' op attribute 'values' failed to satisfy constraint: index elements attribute}}
   %cst = tosa.const_shape {values = dense<[1, 2, 3, 4]> : tensor<4xi32>} : () -> !tosa.shape<4>
-  return %cst : !tosa.shape<4>
+  return
 }
 
 // -----
 
-func.func @test_const_shape_values() -> !tosa.shape<5> {
+func.func @test_const_shape_values() {
   // expected-error@+1 {{'tosa.const_shape' op expect number of elements in attribute values (4) to be equal to the rank (5) for the result shape type}}
   %cst = tosa.const_shape {values = dense<[1, 2, 3, 4]> : tensor<4xindex>} : () -> !tosa.shape<5>
-  return %cst : !tosa.shape<5>
+  return
 }
 
 // -----
 
-func.func @test_const_shape_values() -> !tosa.shape<4> {
+func.func @test_const_shape_values() {
   // expected-error@+1 {{'tosa.const_shape' op expect elements in attribute values with rank 1}}
   %cst = tosa.const_shape {values = dense<[[1, 2], [3, 4]]> : tensor<2x2xindex>} : () -> !tosa.shape<4>
-  return %cst : !tosa.shape<4>
+  return
 }
 
 // -----
@@ -1699,46 +1699,6 @@ func.func @test_error_double_round_without_scale32(%arg0: tensor<1xi8>) -> tenso
 }
 
 // -----
-// CHECK-LABEL: test_matmul_a_zp_same_element_type
-func.func @test_matmul_a_zp_same_element_type(%arg0: tensor<1x14x19xf32>, %arg1: tensor<1x19x28xf32>) -> tensor<1x14x28xf32> {
-%azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf16>}> : () -> tensor<1xf16>
-%bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
-// expected-error@+1 {{'tosa.matmul' op expect input a and a_zp have the same element type, got 'f32' and 'f16'}}
-%0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<1x14x19xf32>, tensor<1x19x28xf32>, tensor<1xf16>, tensor<1xf32>)  -> tensor<1x14x28xf32>
-  return %0 : tensor<1x14x28xf32>
-}
-
-// -----
-// CHECK-LABEL: test_matmul_b_zp_same_element_type
-func.func @test_matmul_b_zp_same_element_type(%arg0: tensor<1x14x19xf32>, %arg1: tensor<1x19x28xf32>) -> tensor<1x14x28xf32> {
-%azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
-%bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf16>}> : () -> tensor<1xf16>
-// expected-error@+1 {{'tosa.matmul' op expect input b and b_zp have the same element type, got 'f32' and 'f16'}}
-%0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<1x14x19xf32>, tensor<1x19x28xf32>, tensor<1xf32>, tensor<1xf16>)  -> tensor<1x14x28xf32>
-  return %0 : tensor<1x14x28xf32>
-}
-
-// -----
-// CHECK-LABEL: test_matmul_a_zp_non_zero
-func.func @test_matmul_a_zp_non_zero(%arg0: tensor<1x14x19xf32>, %arg1: tensor<1x19x28xf32>) -> tensor<1x14x28xf32> {
-%azp0 = "tosa.const"() <{values = dense<1.0> : tensor<1xf32>}> : () -> tensor<1xf32>
-%bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
-// expected-error@+1 {{'tosa.matmul' op a zero point must be zero for non-int8 integer types}}
-%0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<1x14x19xf32>, tensor<1x19x28xf32>, tensor<1xf32>, tensor<1xf32>)  -> tensor<1x14x28xf32>
-  return %0 : tensor<1x14x28xf32>
-}
-
-// -----
-// CHECK-LABEL: test_matmul_b_zp_non_zero
-func.func @test_matmul_b_zp_non_zero(%arg0: tensor<1x14x19xf32>, %arg1: tensor<1x19x28xf32>) -> tensor<1x14x28xf32> {
-%azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
-%bzp0 = "tosa.const"() <{values = dense<-1.0> : tensor<1xf32>}> : () -> tensor<1xf32>
-// expected-error@+1 {{'tosa.matmul' op b zero point must be zero for non-int8 integer types}}
-%0 = tosa.matmul %arg0, %arg1, %azp0, %bzp0 : (tensor<1x14x19xf32>, tensor<1x19x28xf32>, tensor<1xf32>, tensor<1xf32>)  -> tensor<1x14x28xf32>
-  return %0 : tensor<1x14x28xf32>
-}
-
-// -----
 
 // CHECK-LABEL: test_negate_same_element_type
 func.func @test_negate_same_element_type(%arg0: tensor<1x16x16x8xf16>, %arg1: tensor<1xf16>, %arg2: tensor<1xf16>) -> tensor<1x16x16x8xf32> {
@@ -1881,6 +1841,199 @@ func.func @test_avgpool2d_unexpected_output_width(%arg0: tensor<1x32x32x8xf32>, 
   %0 = "tosa.avg_pool2d"(%arg0, %arg1, %arg2) {kernel = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>, acc_type = f32} :
          (tensor<1x32x32x8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x?x33x8xf32>
   return %0 : tensor<1x?x33x8xf32>
+}
+
+// -----
+
+func.func @test_avgpool2d_adaptive_non_const_shape_operands(%arg0: tensor<1x32x32x8xf32>, %kernel: !tosa.shape<2>, %stride: !tosa.shape<2>, %pad: !tosa.shape<4>) -> tensor<1x32x32x8xf32> {
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  // expected-error@+1 {{'tosa.avg_pool2d_adaptive' op shape operand is not compile time resolvable}}
+  %0 = "tosa.avg_pool2d_adaptive"(%arg0, %input_zp, %output_zp, %kernel, %stride, %pad) {acc_type = f32} :
+       (tensor<1x32x32x8xf32>, tensor<1xf32>, tensor<1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x32x32x8xf32>
+  return %0 : tensor<1x32x32x8xf32>
+}
+
+// -----
+
+func.func @test_avgpool2d_adaptive_invalid_kernel(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x32x32x8xf32> {
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %kernel = tosa.const_shape {values = dense<[0, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  // expected-error@+1 {{'tosa.avg_pool2d_adaptive' op expect all kernel values to be >= 1, got 0, 1}}
+  %0 = "tosa.avg_pool2d_adaptive"(%arg0, %input_zp, %output_zp, %kernel, %stride, %pad) {acc_type = f32} :
+       (tensor<1x32x32x8xf32>, tensor<1xf32>, tensor<1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x32x32x8xf32>
+  return %0 : tensor<1x32x32x8xf32>
+}
+
+// -----
+
+func.func @test_avgpool2d_adaptive_invalid_stride(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x32x32x8xf32> {
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %kernel = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %stride = tosa.const_shape {values = dense<[1, 0]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  // expected-error@+1 {{'tosa.avg_pool2d_adaptive' op expect all stride values to be >= 1, got 1, 0}}
+  %0 = "tosa.avg_pool2d_adaptive"(%arg0, %input_zp, %output_zp, %kernel, %stride, %pad) {acc_type = f32} :
+       (tensor<1x32x32x8xf32>, tensor<1xf32>, tensor<1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x32x32x8xf32>
+  return %0 : tensor<1x32x32x8xf32>
+}
+
+// -----
+
+func.func @test_avgpool2d_adaptive_invalid_pad(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x32x32x8xf32> {
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %kernel = tosa.const_shape {values = dense<[2, 2]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 0, 2, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  // expected-error@+1 {{'tosa.avg_pool2d_adaptive' op expected left/right padding to be less than the width of the kernel}}
+  %0 = "tosa.avg_pool2d_adaptive"(%arg0, %input_zp, %output_zp, %kernel, %stride, %pad) {acc_type = f32} :
+       (tensor<1x32x32x8xf32>, tensor<1xf32>, tensor<1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x32x32x8xf32>
+  return %0 : tensor<1x32x32x8xf32>
+}
+
+// -----
+
+func.func @test_avgpool2d_adaptive_unexpected_output_height(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x33x32x8xf32> {
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %kernel = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  // expected-error@+1 {{'tosa.avg_pool2d_adaptive' op calculated output height did not match expected: calculated=32, expected=33}}
+  %0 = "tosa.avg_pool2d_adaptive"(%arg0, %input_zp, %output_zp, %kernel, %stride, %pad) {acc_type = f32} :
+       (tensor<1x32x32x8xf32>, tensor<1xf32>, tensor<1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x33x32x8xf32>
+  return %0 : tensor<1x33x32x8xf32>
+}
+
+// -----
+
+func.func @test_avgpool2d_adaptive_padding_not_less_than_kernel_x(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x32x32x8xf32> {
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %kernel = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 0, 0, 1]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  // expected-error@+1 {{'tosa.avg_pool2d_adaptive' op expected left/right padding to be less than the width of the kernel, got pad_left=0, pad_right=1, kernel_x=1}}
+  %0 = "tosa.avg_pool2d_adaptive"(%arg0, %input_zp, %output_zp, %kernel, %stride, %pad) {acc_type = f32} :
+       (tensor<1x32x32x8xf32>, tensor<1xf32>, tensor<1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x32x32x8xf32>
+  return %0 : tensor<1x32x32x8xf32>
+}
+
+// -----
+
+func.func @test_avgpool2d_adaptive_padding_not_less_than_kernel_y(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x32x32x8xf32> {
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %kernel = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[2, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  // expected-error@+1 {{'tosa.avg_pool2d_adaptive' op expected top/bottom padding to be less than the height of the kernel, got pad_top=2, pad_bottom=0, kernel_y=1}}
+  %0 = "tosa.avg_pool2d_adaptive"(%arg0, %input_zp, %output_zp, %kernel, %stride, %pad) {acc_type = f32} :
+       (tensor<1x32x32x8xf32>, tensor<1xf32>, tensor<1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x32x32x8xf32>
+  return %0 : tensor<1x32x32x8xf32>
+}
+
+// -----
+
+func.func @test_avgpool2d_adaptive_wholly_divisible_height(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x32x32x8xf32> {
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %kernel = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %stride = tosa.const_shape {values = dense<[2, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  // expected-error@+1 {{'tosa.avg_pool2d_adaptive' op expected input_height + pad_top + pad_bottom - kernel_y to be wholly divisible by stride_y, got (32 + 0 + 0 - 1) / 2}}
+  %0 = "tosa.avg_pool2d_adaptive"(%arg0, %input_zp, %output_zp, %kernel, %stride, %pad) {acc_type = f32} :
+       (tensor<1x32x32x8xf32>, tensor<1xf32>, tensor<1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x32x32x8xf32>
+  return %0 : tensor<1x32x32x8xf32>
+}
+
+// -----
+
+func.func @test_avgpool2d_adaptive_wholly_divisible_width(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x32x32x8xf32> {
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %kernel = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %stride = tosa.const_shape {values = dense<[1, 2]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  // expected-error@+1 {{'tosa.avg_pool2d_adaptive' op expected input_width + pad_left + pad_right - kernel_x to be wholly divisible by stride_x, got (32 + 0 + 0 - 1) / 2}}
+  %0 = "tosa.avg_pool2d_adaptive"(%arg0, %input_zp, %output_zp, %kernel, %stride, %pad) {acc_type = f32} :
+       (tensor<1x32x32x8xf32>, tensor<1xf32>, tensor<1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x32x32x8xf32>
+  return %0 : tensor<1x32x32x8xf32>
+}
+
+// -----
+
+func.func @test_avgpool2d_adaptive_invalid_acc_type(%arg0: tensor<1x32x32x8xi8>) -> tensor<1x32x32x8xi8> {
+  %input_zp = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %output_zp = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %kernel = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  // expected-error@+1 {{'tosa.avg_pool2d_adaptive' op accumulator type for integer tensor is not i32}}
+  %0 = "tosa.avg_pool2d_adaptive"(%arg0, %input_zp, %output_zp, %kernel, %stride, %pad) {acc_type = f32} :
+       (tensor<1x32x32x8xi8>, tensor<1xi8>, tensor<1xi8>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x32x32x8xi8>
+  return %0 : tensor<1x32x32x8xi8>
+}
+
+// -----
+
+func.func @test_avgpool2d_adaptive_input_zp_type_mismatch(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x32x32x8xf32> {
+  %input_zp = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %kernel = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  // expected-error@+1 {{'tosa.avg_pool2d_adaptive' op expect both input and its zero point are the same element type, got 'f32' and 'i32'}}
+  %0 = "tosa.avg_pool2d_adaptive"(%arg0, %input_zp, %output_zp, %kernel, %stride, %pad) {acc_type = f32} :
+       (tensor<1x32x32x8xf32>, tensor<1xi32>, tensor<1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x32x32x8xf32>
+  return %0 : tensor<1x32x32x8xf32>
+}
+
+// -----
+
+func.func @test_avgpool2d_adaptive_output_zp_type_mismatch(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x32x32x8xf32> {
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %kernel = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  // expected-error@+1 {{'tosa.avg_pool2d_adaptive' op expect both output and its zero point are the same element type, got 'f32' and 'i32'}}
+  %0 = "tosa.avg_pool2d_adaptive"(%arg0, %input_zp, %output_zp, %kernel, %stride, %pad) {acc_type = f32} :
+       (tensor<1x32x32x8xf32>, tensor<1xf32>, tensor<1xi32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x32x32x8xf32>
+  return %0 : tensor<1x32x32x8xf32>
+}
+
+// -----
+
+func.func @test_avgpool2d_adaptive_input_zp_non_zero(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x32x32x8xf32> {
+  %input_zp = "tosa.const"() <{values = dense<-1.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %kernel = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  // expected-error@+1 {{'tosa.avg_pool2d_adaptive' op input zero point must be zero for non-int8 integer types}}
+  %0 = "tosa.avg_pool2d_adaptive"(%arg0, %input_zp, %output_zp, %kernel, %stride, %pad) {acc_type = f32} :
+       (tensor<1x32x32x8xf32>, tensor<1xf32>, tensor<1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x32x32x8xf32>
+  return %0 : tensor<1x32x32x8xf32>
+}
+
+// -----
+
+func.func @test_avgpool2d_adaptive_output_zp_non_zero(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x32x32x8xf32> {
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<-1.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %kernel = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %pad = tosa.const_shape {values = dense<[0, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  // expected-error@+1 {{'tosa.avg_pool2d_adaptive' op output zero point must be zero for non-int8 integer types}}
+  %0 = "tosa.avg_pool2d_adaptive"(%arg0, %input_zp, %output_zp, %kernel, %stride, %pad) {acc_type = f32} :
+       (tensor<1x32x32x8xf32>, tensor<1xf32>, tensor<1xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x32x32x8xf32>
+  return %0 : tensor<1x32x32x8xf32>
 }
 
 // -----
@@ -2070,22 +2223,22 @@ func.func @test_rfft2d(%arg0: tensor<13x8x16xbf16>) -> (tensor<13x8x9xbf16>, ten
 
 // -----
 
-func.func @test_slice_shape_non_const_start(%arg0: tensor<1xi32>) -> !tosa.shape<3> {
+func.func @test_slice_shape_non_const_start(%arg0: tensor<1xi32>) {
   %0 = tosa.const_shape {values = dense<[4, 5, 6, 7, 8, 9]> : tensor<6xindex>} : () -> !tosa.shape<6>
   %2 = "tosa.const"() {values = dense<3> : tensor<1xi32>} : () -> tensor<1xi32>
   // expected-error@+1 {{'tosa.slice_shape' op expected compile time resolvable constant, but got variable value for operand #1}}
   %3 = tosa.slice_shape %0, %arg0, %2 : (!tosa.shape<6>, tensor<1xi32>, tensor<1xi32>) -> !tosa.shape<3>
-  return %3 : !tosa.shape<3>
+  return
 }
 
 // -----
 
-func.func @test_slice_shape_non_const_size(%arg0: tensor<1xi32>) -> !tosa.shape<3> {
+func.func @test_slice_shape_non_const_size(%arg0: tensor<1xi32>) {
   %0 = tosa.const_shape {values = dense<[4, 5, 6, 7, 8, 9]> : tensor<6xindex>} : () -> !tosa.shape<6>
   %1 = "tosa.const"() {values = dense<3> : tensor<1xi32>} : () -> tensor<1xi32>
   // expected-error@+1 {{'tosa.slice_shape' op expected compile time resolvable constant, but got variable value for operand #2}}
   %3 = tosa.slice_shape %0, %1, %arg0 : (!tosa.shape<6>, tensor<1xi32>, tensor<1xi32>) -> !tosa.shape<3>
-  return %3 : !tosa.shape<3>
+  return
 }
 
 // -----
@@ -2097,4 +2250,19 @@ func.func @test_conv2d_block_scaled(%arg0: tensor<*xf4E2M1FN>, %arg1: tensor<*xf
   // expected-error@+1 {{'tosa.conv2d_block_scaled' op illegal: operation operand/result data types did not align with any profile or extension, got (fp4e2m1,fp8e8m0,fp4e2m1,fp8e8m0,f16,f16), did you mean (fp4e2m1,fp8e8m0,fp4e2m1,fp8e8m0,f32,f32)? Otherwise, please refer to the 'supported data types' for 'tosa.conv2d_block_scaled' in the specification.}}
   %3 = tosa.conv2d_block_scaled %arg0, %arg1, %arg2, %arg3, %arg4, %0, %1, %2 {block_size = BLOCK_SIZE_32} : (tensor<*xf4E2M1FN>, tensor<*xf8E8M0FNU>, tensor<*xf4E2M1FN>, tensor<*xf8E8M0FNU>, tensor<*xf16>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<*xf16>
   return %3 : tensor<*xf16>
+}
+
+// -----
+
+// expected-error@+1 {{func.func' op Function argument types must be a tensor type to be TOSA compliant, got !tosa.shape type}}
+func.func @test_shape_func_input(%arg0: !tosa.shape<1>) {
+  return
+}
+
+// -----
+
+// expected-error@+1 {{'func.func' op Function return types must be a tensor type to be TOSA compliant, got !tosa.shape type}}
+func.func @test_shape_func_output() -> !tosa.shape<4> {
+  %cst = tosa.const_shape {values = dense<[1, 2, 3, 4]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  return %cst : !tosa.shape<4>
 }

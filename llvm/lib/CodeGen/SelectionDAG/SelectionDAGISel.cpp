@@ -80,6 +80,7 @@
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassTimingInfo.h"
 #include "llvm/IR/PrintPasses.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
@@ -383,12 +384,6 @@ bool SelectionDAGISelLegacy::runOnMachineFunction(MachineFunction &MF) {
   // we change the optimisation level.
   MF.setUseDebugInstrRef(MF.shouldUseDebugInstrRef());
 
-  // Reset the target options before resetting the optimization
-  // level below.
-  // FIXME: This is a horrible hack and should be processed via
-  // codegen looking at the optimization level explicitly when
-  // it wants to look at it.
-  Selector->TM.resetTargetOptions(MF.getFunction());
   // Reset OptLevel to None for optnone functions.
   CodeGenOptLevel NewOptLevel = skipFunction(MF.getFunction())
                                     ? CodeGenOptLevel::None
@@ -456,12 +451,6 @@ SelectionDAGISelPass::run(MachineFunction &MF,
   // we change the optimisation level.
   MF.setUseDebugInstrRef(MF.shouldUseDebugInstrRef());
 
-  // Reset the target options before resetting the optimization
-  // level below.
-  // FIXME: This is a horrible hack and should be processed via
-  // codegen looking at the optimization level explicitly when
-  // it wants to look at it.
-  Selector->TM.resetTargetOptions(MF.getFunction());
   // Reset OptLevel to None for optnone functions.
   // TODO: Add a function analysis to handle this.
   Selector->MF = &MF;
@@ -668,15 +657,14 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   // registers. If we don't apply the reg fixups before, some registers may
   // appear as unused and will be skipped, resulting in bad MI.
   MachineRegisterInfo &MRI = MF->getRegInfo();
-  for (DenseMap<Register, Register>::iterator I = FuncInfo->RegFixups.begin(),
-                                              E = FuncInfo->RegFixups.end();
+  for (auto I = FuncInfo->RegFixups.begin(), E = FuncInfo->RegFixups.end();
        I != E; ++I) {
     Register From = I->first;
     Register To = I->second;
     // If To is also scheduled to be replaced, find what its ultimate
     // replacement is.
     while (true) {
-      DenseMap<Register, Register>::iterator J = FuncInfo->RegFixups.find(To);
+      auto J = FuncInfo->RegFixups.find(To);
       if (J == E)
         break;
       To = J->second;
@@ -751,7 +739,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
     // If Reg is live-in then update debug info to track its copy in a vreg.
     if (!Reg.isPhysical())
       continue;
-    DenseMap<MCRegister, Register>::iterator LDI = LiveInMap.find(Reg);
+    auto LDI = LiveInMap.find(Reg);
     if (LDI != LiveInMap.end()) {
       assert(!hasFI && "There's no handling of frame pointer updating here yet "
                        "- add if needed");

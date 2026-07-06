@@ -216,5 +216,10 @@ TEST_F(OpenACCUtilsCGTest, buildComputeRegionWithInputArgsToMap) {
   }
   EXPECT_TRUE(foundAddI);
 
+  EXPECT_EQ(cr.getOperand(crBlock.getArgument(0)), deviceBlock->getArgument(0));
+  ASSERT_TRUE(cr.getBlockArg(deviceBlock->getArgument(0)).has_value());
+  EXPECT_EQ(*cr.getBlockArg(deviceBlock->getArgument(0)),
+            crBlock.getArgument(0));
+
   func::ReturnOp::create(rewriter, loc);
 }
