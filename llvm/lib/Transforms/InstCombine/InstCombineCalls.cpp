@@ -2437,6 +2437,22 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         foldBitOrderCrossLogicOp<Intrinsic::bitreverse>(IIOperand, Builder))
       return crossLogicOpFold;
 
+    if (auto *VTy = dyn_cast<FixedVectorType>(II->getType())) {
+      Value *X;
+      if (VTy->getElementType()->isIntegerTy(8) &&
+          match(IIOperand, m_BitCast(m_Value(X))) &&
+          X->getType()->isIntegerTy() && II->hasOneUse()) {
+        auto *User = cast<Instruction>(*II->user_begin());
+        if (isa<BitCastInst>(User) && User->getType() == X->getType()) {
+          Value *BSwap = Builder.CreateUnaryIntrinsic(Intrinsic::bswap, X);
+          Value *BRev =
+              Builder.CreateUnaryIntrinsic(Intrinsic::bitreverse, BSwap);
+          User->replaceAllUsesWith(BRev);
+          return nullptr;
+        }
+      }
+    }
+
     break;
   }
   case Intrinsic::bswap: {
