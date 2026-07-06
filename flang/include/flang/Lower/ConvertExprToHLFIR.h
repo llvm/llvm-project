@@ -41,13 +41,6 @@ convertExprToHLFIR(mlir::Location loc, Fortran::lower::AbstractConverter &,
                    const Fortran::lower::SomeExpr &, Fortran::lower::SymMap &,
                    Fortran::lower::StatementContext &);
 
-/// Lower an assignment RHS to HLFIR, optionally using assignment context to
-/// choose an experimental expression tree for eligible scalar real sums.
-hlfir::EntityWithAttributes convertAssignmentRhsToHLFIR(
-    mlir::Location loc, Fortran::lower::AbstractConverter &,
-    const Fortran::lower::SomeExpr &lhs, const Fortran::lower::SomeExpr &rhs,
-    Fortran::lower::SymMap &, Fortran::lower::StatementContext &);
-
 inline fir::ExtendedValue translateToExtendedValue(
     mlir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity entity,
     Fortran::lower::StatementContext &context, bool contiguityHint = false) {

@@ -13,6 +13,8 @@
 #include "flang/Evaluate/traverse.h"
 #include "flang/Parser/message.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include <algorithm>
 #include <variant>
@@ -1380,6 +1382,91 @@ bool HasSubtract(const Expr<SomeType> &expr) {
 
 bool HasVolatileOrAsynchronousSymbol(const Expr<SomeType> &expr) {
   return HasVolatileOrAsynchronousSymbolHelper{}(expr);
+}
+
+template <int KIND> using Real = Type<common::TypeCategory::Real, KIND>;
+
+template <int KIND> using RealExpr = Expr<Real<KIND>>;
+
+template <int KIND>
+static void flattenTopLevelAdds(
+    const RealExpr<KIND> &expr, llvm::SmallVectorImpl<RealExpr<KIND>> &terms) {
+  if (const auto *add = std::get_if<Add<Real<KIND>>>(&expr.u)) {
+    flattenTopLevelAdds(add->left(), terms);
+    flattenTopLevelAdds(add->right(), terms);
+    return;
+  }
+  terms.push_back(expr);
+}
+
+template <int KIND>
+static RealExpr<KIND> buildRightAssociatedAddFold(
+    llvm::ArrayRef<RealExpr<KIND>> terms) {
+  assert(!terms.empty() && "cannot build empty add fold");
+  if (terms.size() == 1)
+    return terms.front();
+  RealExpr<KIND> result{terms.back()};
+  for (const RealExpr<KIND> &term : llvm::reverse(terms.drop_back()))
+    result = RealExpr<KIND>{Add<Real<KIND>>{term, result}};
+  return result;
+}
+
+template <typename T>
+static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(const T &) {
+  return std::nullopt;
+}
+
+template <int KIND>
+static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(
+    const RealExpr<KIND> &expr) {
+  if (!std::get_if<Add<Real<KIND>>>(&expr.u))
+    return std::nullopt;
+
+  llvm::SmallVector<RealExpr<KIND>, 8> terms;
+  flattenTopLevelAdds(expr, terms);
+  if (terms.size() <= 2)
+    return std::nullopt;
+
+  llvm::SmallVector<RealExpr<KIND>, 2> head{terms[0], terms[1]};
+  llvm::SmallVector<RealExpr<KIND>, 8> tail(terms.begin() + 2, terms.end());
+  RealExpr<KIND> headExpr = buildRightAssociatedAddFold<KIND>(head);
+  RealExpr<KIND> tailExpr = buildRightAssociatedAddFold<KIND>(tail);
+  return Expr<SomeType>{
+      RealExpr<KIND>{Add<Real<KIND>>{std::move(tailExpr), headExpr}}};
+}
+
+template <common::TypeCategory CAT>
+static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(
+    const Expr<SomeKind<CAT>> &expr) {
+  if constexpr (CAT == common::TypeCategory::Real) {
+    return common::visit(
+        [&](const auto &typedExpr) -> std::optional<Expr<SomeType>> {
+          return tryBuildSplitSumExpressionTree(typedExpr);
+        },
+        expr.u);
+  }
+  return std::nullopt;
+}
+
+bool CanBuildSplitSumExpressionTree(
+    const Expr<SomeType> &lhs, const Expr<SomeType> &rhs) {
+  // The split rewrites a top-level addition chain. Subtraction would need to
+  // be carried as signed terms; division is safe here because it remains inside
+  // an individual term rather than changing the additive chain.
+  return rhs.Rank() == 0 && lhs.Rank() == 0 && !HasVectorSubscript(rhs) &&
+      !HasVectorSubscript(lhs) && !HasParentheses(rhs) && !HasSubtract(rhs) &&
+      !HasProcedureRef(rhs) && !HasProcedureRef(lhs) &&
+      !HasVolatileOrAsynchronousSymbol(rhs) &&
+      !HasVolatileOrAsynchronousSymbol(lhs);
+}
+
+std::optional<Expr<SomeType>> TryBuildSplitSumExpressionTree(
+    const Expr<SomeType> &expr) {
+  return common::visit(
+      [&](const auto &typedExpr) -> std::optional<Expr<SomeType>> {
+        return tryBuildSplitSumExpressionTree(typedExpr);
+      },
+      expr.u);
 }
 
 bool IsArraySection(const Expr<SomeType> &expr) {
