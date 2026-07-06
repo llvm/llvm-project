@@ -301,11 +301,31 @@ Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
 
   assert(hasVectorValue(Def));
   auto *VecPart = Data.VPV2Vector[Def];
-  if (!VecPart->getType()->isVectorTy()) {
+  // If VecPart's type is the same as the initial pre-vectorisation type,
+  // Def hasn't been vectorised. We are done.
+  Type *InitialTy = Def->getScalarType();
+  if (VecPart->getType() == InitialTy) {
     assert(Lane.isFirstLane() && "cannot get lane > 0 for scalar");
     return VecPart;
   }
+
+  // Last case: Extract a lane of type InitialTy from a vectorised value.
   // TODO: Cache created scalar values.
+  if (auto *InitVTy = dyn_cast<VectorType>(InitialTy)) {
+    assert(!InitialTy->isScalableTy() && "REVEC: Unexpected scalable vector");
+    unsigned EC = InitVTy->getElementCount().getFixedValue();
+    if (Lane.getKind() == VPLane::Kind::First)
+      return Builder.CreateExtractVector(InitialTy, VecPart,
+                                         uint64_t(Lane.getKnownLane() * EC));
+
+    // Shift the demanded InitVTy-typed lane into lane 0.
+    unsigned NumLanesFromEnd =
+        VF.getKnownMinValue() - Lane.getOffsetInLastSubvec();
+    auto *ShiftLastSubvec = Builder.CreateVectorSpliceRight(
+        VecPart, PoisonValue::get(VecPart->getType()), NumLanesFromEnd * EC);
+    return Builder.CreateExtractVector(InitialTy, ShiftLastSubvec, uint64_t(0));
+  }
+
   Value *LaneV = Lane.getAsRuntimeExpr(Builder, VF);
   auto *Extract = Builder.CreateExtractElement(VecPart, LaneV);
   // set(Def, Extract, Instance);
@@ -332,7 +352,7 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
   auto GetBroadcastInstrs = [this](Value *V) {
     if (VF.isScalar())
       return V;
-    // Broadcast the scalar into all locations in the vector.
+    // Broadcast the value into all locations in the vector.
     Value *Shuf = Builder.CreateVectorSplat(VF, V, "broadcast");
     return Shuf;
   };

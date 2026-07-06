@@ -79,6 +79,13 @@ static cl::opt<bool> EnableHistogramVectorization(
     "enable-histogram-loop-vectorization", cl::init(false), cl::Hidden,
     cl::desc("Enables autovectorization of some loops containing histograms"));
 
+namespace llvm {
+cl::opt<bool>
+    VectorizeVectorLoops("vectorize-vector-loops", cl::init(false), cl::Hidden,
+                         cl::desc("Allow vectorization of loops with vector "
+                                  "instructions."));
+} // namespace llvm
+
 /// Maximum vectorization interleave count.
 static const unsigned MaxInterleaveFactor = 16;
 
@@ -982,8 +989,20 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
   if (CI && !VFDatabase::getMappings(*CI).empty())
     VecCallVariantsFound = true;
 
-  auto CanWidenInstructionTy = [](Instruction const &Inst) {
+  // REVEC: Remember that a vector instruction was found for later checks.
+  if (I.getType()->isVectorTy() ||
+      any_of(I.operand_values(),
+             [](const Value *V) { return V->getType()->isVectorTy(); }))
+    LoopContainsVectors = true;
+
+  auto CanWidenInstructionTy = [TTI = TTI](Instruction const &Inst) {
     Type *InstTy = Inst.getType();
+
+    // TODO-REVEC: To support fixed VFs, we'll need to query a diffent TTI hook.
+    if (isa<FixedVectorType>(InstTy))
+      return VectorizeVectorLoops &&
+             TTI->isElementTypeLegalForScalableVector(InstTy->getScalarType());
+
     if (!isa<StructType>(InstTy))
       return canVectorizeTy(InstTy);
 
@@ -994,13 +1013,20 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
            all_of(Inst.users(), IsaPred<ExtractValueInst>);
   };
 
+  auto CanWidenCast = [&](const Instruction &CastI) {
+    assert(isa<CastInst>(CastI));
+    assert(CanWidenInstructionTy(CastI) &&
+           "CanWidenInstructionTy was not checked beforehand.");
+    Type *FromTy = CastI.getOperand(0)->getType();
+    return VectorType::isValidElementType(FromTy) ||
+           (isa<FixedVectorType>(FromTy) && VectorizeVectorLoops &&
+            TTI->isElementTypeLegalForScalableVector(FromTy->getScalarType()));
+  };
+
   // Check that the instruction return type is vectorizable.
-  // We can't vectorize casts from vector type to scalar type.
-  // Also, we can't vectorize extractelement instructions.
-  if (!CanWidenInstructionTy(I) ||
-      (isa<CastInst>(I) &&
-       !VectorType::isValidElementType(I.getOperand(0)->getType())) ||
-      isa<ExtractElementInst>(I)) {
+  // Also, we cannot re-vectorize element or shuffle operations yet.
+  if (!CanWidenInstructionTy(I) || (isa<CastInst>(I) && !CanWidenCast(I)) ||
+      isa<ExtractElementInst, InsertElementInst, ShuffleVectorInst>(I)) {
     reportVectorizationFailure("Found unvectorizable type",
                                "instruction return type cannot be vectorized",
                                "CantVectorizeInstructionReturnType", ORE,
@@ -1011,7 +1037,11 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
   // Check that the stored type is vectorizable.
   if (auto *ST = dyn_cast<StoreInst>(&I)) {
     Type *T = ST->getValueOperand()->getType();
-    if (!VectorType::isValidElementType(T)) {
+    bool CanWidenStoreType =
+        VectorType::isValidElementType(T) ||
+        (isa<FixedVectorType>(T) && VectorizeVectorLoops &&
+         TTI->isElementTypeLegalForScalableVector(T->getScalarType()));
+    if (!CanWidenStoreType) {
       reportVectorizationFailure("Store instruction cannot be vectorized",
                                  "CantVectorizeStore", ORE, TheLoop, ST);
       return false;
@@ -1021,7 +1051,8 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
     // supported on the target.
     if (ST->getMetadata(LLVMContext::MD_nontemporal)) {
       // Arbitrarily try a vector of 2 elements.
-      auto *VecTy = FixedVectorType::get(T, /*NumElts=*/2);
+      Type *VecTy =
+          T->isVectorTy() ? T : FixedVectorType::get(T, /*NumElts=*/2);
       assert(VecTy && "did not find vectorized version of stored type");
       if (!TTI->isLegalNTStore(VecTy, ST->getAlign())) {
         reportVectorizationFailure(
@@ -1035,7 +1066,9 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
     if (LD->getMetadata(LLVMContext::MD_nontemporal)) {
       // For nontemporal loads, check that a nontemporal vector version is
       // supported on the target (arbitrarily try a vector of 2 elements).
-      auto *VecTy = FixedVectorType::get(I.getType(), /*NumElts=*/2);
+      Type *VecTy = I.getType()->isVectorTy()
+                        ? I.getType()
+                        : FixedVectorType::get(I.getType(), /*NumElts=*/2);
       assert(VecTy && "did not find vectorized version of load type");
       if (!TTI->isLegalNTLoad(VecTy, LD->getAlign())) {
         reportVectorizationFailure(
@@ -1945,6 +1978,19 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       return false;
   }
 
+  if (LoopContainsVectors && any_of(TheLoop->blocks(), [this](BasicBlock *BB) {
+        return blockNeedsPredication(BB);
+      })) {
+    reportVectorizationFailure("Cannot if-convert vector loop",
+                               "if-conversion is not supported for vector "
+                               "instructions in loop",
+                               "UnsupportedVectorInstruction", ORE, TheLoop);
+    if (DoExtraAnalysis)
+      Result = false;
+    else
+      return false;
+  }
+
   if (isa<SCEVCouldNotCompute>(PSE.getBackedgeTakenCount())) {
     if (TheLoop->getExitingBlock()) {
       reportVectorizationFailure("Cannot vectorize uncountable loop",
@@ -2013,6 +2059,14 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
   }
 
   LLVM_DEBUG(dbgs() << "LV: checking if tail can be folded by masking.\n");
+
+  // TODO-REVEC: Disable tail-folding for now. New intrinsics are needed for
+  // per-segment predication because the element count of the predicate and the
+  // data type do not match.
+  if (LoopContainsVectors) {
+    LLVM_DEBUG(dbgs() << "LV: Tail-folding disabled for REVEC.\n");
+    return false;
+  }
 
   // The list of pointers that we can safely read and write to remains empty.
   SmallPtrSet<Value *, 8> SafePointers;

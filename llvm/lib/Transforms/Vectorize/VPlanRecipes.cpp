@@ -496,13 +496,9 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
   case Instruction::Store:
     return Type::getVoidTy(Ctx);
   case Instruction::ICmp:
-    assert(Op0Ty->isIntOrPtrTy() && "expected integer or pointer operand");
-    AssertOperandType(1, Op0Ty);
-    return IntegerType::get(Ctx, 1);
   case Instruction::FCmp:
-    assert(Op0Ty->isFloatingPointTy() && "expected floating-point operand");
     AssertOperandType(1, Op0Ty);
-    return IntegerType::get(Ctx, 1);
+    return CmpInst::makeCmpResultType(Op0Ty);
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::WideActiveLaneMask:
     assert(Op0Ty->isIntegerTy() && "expected integer operand");
@@ -525,8 +521,6 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
     assert(Op0Ty->isIntegerTy() && "expected integer operand");
     return IntegerType::get(Ctx, 32);
   case Instruction::Select: {
-    assert((!Op0Ty || Op0Ty->isIntegerTy(1)) &&
-           "select condition must be bool");
     Type *Op1Ty = Operands[1]->getScalarType();
     AssertOperandType(2, Op1Ty);
     return Op1Ty;
@@ -1277,8 +1271,16 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
   }
   case Instruction::Select: {
     SelectInst *SI = cast_or_null<SelectInst>(getUnderlyingValue());
-    bool IsScalarCond = getOperand(0)->isDefinedOutsideLoopRegions();
+    Type *InitialCondTy = getOperand(0)->getScalarType();
     Type *ScalarTy = this->getScalarType();
+    bool IsScalarCond = InitialCondTy->isIntegerTy(1) &&
+                        getOperand(0)->isDefinedOutsideLoopRegions();
+
+    // TODO-REVEC: Support all kinds of InitialCondTy
+    if (ScalarTy->isVectorTy() &&
+        (!IsScalarCond &&
+         getElementCount(ScalarTy) != getElementCount(InitialCondTy)))
+      return InstructionCost::getInvalid();
 
     VPValue *Op0, *Op1;
     bool IsLogicalAnd =
@@ -1309,9 +1311,7 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
           Ctx.CostKind, {Op1VK, Op1VP}, {Op2VK, Op2VP}, Operands, SI);
     }
 
-    Type *CondTy = getOperand(0)->getScalarType();
-    if (!IsScalarCond && VF.isVector())
-      CondTy = VectorType::get(CondTy, VF);
+    Type *CondTy = IsScalarCond ? InitialCondTy : toVectorTy(InitialCondTy, VF);
 
     llvm::CmpPredicate Pred;
     if (!match(getOperand(0), m_Cmp(Pred, m_VPValue(), m_VPValue())))
@@ -1350,6 +1350,8 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     match(getOperand(0), m_Cmp(Pred, m_VPValue(), m_VPValue()));
     auto *CondTy = getOperand(0)->getScalarType();
     auto *VecTy = getOperand(1)->getScalarType();
+    assert(!CondTy->isVectorTy() &&
+           "REVEC: Unexpected VPlan-created select at this stage");
     if (!vputils::onlyFirstLaneUsed(this)) {
       CondTy = toVectorTy(CondTy, VF);
       VecTy = toVectorTy(VecTy, VF);
@@ -2863,7 +2865,13 @@ void VPWidenRecipe::execute(VPTransformState &State) {
   }
   case Instruction::Select: {
     VPValue *CondOp = getOperand(0);
-    Value *Cond = State.get(CondOp, vputils::isSingleScalar(CondOp));
+    Type *InitialCondTy = CondOp->getScalarType();
+    // REVEC: The initial CondOp might be a vector, so be sure we either
+    // generate a single i1 condition, or an i1 vector with the same EC as the
+    // data inputs.
+    bool BuildScalarCond =
+        vputils::isSingleScalar(CondOp) && InitialCondTy->isIntegerTy(1);
+    Value *Cond = State.get(CondOp, BuildScalarCond);
     Value *Op0 = State.get(getOperand(1));
     Value *Op1 = State.get(getOperand(2));
     Value *Sel = State.Builder.CreateSelect(Cond, Op0, Op1);
@@ -2885,7 +2893,7 @@ void VPWidenRecipe::execute(VPTransformState &State) {
 #if !defined(NDEBUG)
   // Verify that VPlan type inference results agree with the type of the
   // generated values.
-  assert(VectorType::get(this->getScalarType(), State.VF) ==
+  assert(toVectorTy(this->getScalarType(), State.VF) ==
              State.get(this)->getType() &&
          "inferred type and type from generated instructions do not match");
 #endif
@@ -4214,7 +4222,7 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
 
 void VPWidenLoadRecipe::execute(VPTransformState &State) {
   Type *ScalarDataTy = getScalarType();
-  auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
+  auto *DataTy = toVectorTy(ScalarDataTy, State.VF);
   bool CreateGather = !isConsecutive();
 
   auto &Builder = State.Builder;

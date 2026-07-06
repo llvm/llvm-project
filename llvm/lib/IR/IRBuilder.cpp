@@ -30,6 +30,7 @@
 #include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/IR/VectorTypeUtils.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
 #include <cstdint>
@@ -1285,6 +1286,25 @@ Value *IRBuilderBase::CreateVectorSplat(unsigned NumElts, Value *V,
 Value *IRBuilderBase::CreateVectorSplat(ElementCount EC, Value *V,
                                         const Twine &Name) {
   assert(EC.isNonZero() && "Cannot splat to an empty vector!");
+
+  if (V->getType()->isVectorTy()) {
+    auto *VectorTy = cast<VectorType>(V->getType());
+    assert(!isa<ScalableVectorType>(VectorTy));
+
+    // If the value was already a constant splat, just recreate it with a
+    // bigger element count.
+    if (auto *VectorConstant = dyn_cast<Constant>(V);
+        VectorConstant && VectorConstant->getSplatValue()) {
+      ElementCount ActualEC =
+          EC.multiplyCoefficientBy(VectorTy->getElementCount().getFixedValue());
+      return CreateVectorSplat(ActualEC, VectorConstant->getSplatValue(), Name);
+    }
+
+    // Otherwise, use vector.broadcast.
+    auto *WideVectorTy = toVectorTy(VectorTy, EC);
+    return CreateIntrinsic(Intrinsic::vector_broadcast,
+                           {WideVectorTy, VectorTy}, {V}, {}, Name);
+  }
 
   // First insert it into a poison vector so we can shuffle it.
   Value *Poison = PoisonValue::get(VectorType::get(V->getType(), EC));
