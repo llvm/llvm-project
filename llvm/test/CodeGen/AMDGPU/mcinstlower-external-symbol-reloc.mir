@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -start-after=prologepilog %s -o - | FileCheck --check-prefix=ASM %s
-# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -start-after=prologepilog -filetype=obj %s -o %t.o && llvm-readobj -r %t.o | FileCheck --check-prefix=ELF %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -start-after=prolog-epilog %s -o - | FileCheck --check-prefix=ASM %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -start-after=prolog-epilog -filetype=obj %s -o %t.o && llvm-readobj -r %t.o | FileCheck --check-prefix=ELF %s
 
 # AMDGPUMCInstLower must apply the operand's target flag specifier when
 # lowering an MO_ExternalSymbol operand, just like it does for

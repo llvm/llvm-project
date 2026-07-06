@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -enable-ipra -print-regusage -filetype=null 2>&1 < %s | FileCheck %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -enable-new-pm=1 -enable-ipra -print-regusage -filetype=null 2>&1 < %s | FileCheck %s
 
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -stop-after=prologepilog -o - %s \
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -stop-after=prolog-epilog -o - %s \
 ; RUN:   | llc -x=mir -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -passes="module(require<reg-usage>,function(machine-function(reg-usage-collector)),print<reg-usage>)" -filetype=null 2>&1 \
 ; RUN:   | FileCheck %s
 
