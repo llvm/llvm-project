@@ -14,7 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/CUDAIntrinsicCall.h"
-#include "flang/Evaluate/common.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"

@@ -760,7 +760,16 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   if (ST.hasVOP3PInsts() && ST.hasAddNoCarryInsts() && ST.hasIntClamp()) {
     // Full set of gfx9 features.
-    if (ST.hasScalarAddSub64()) {
+    if (ST.hasPackedU64Ops()) {
+      getActionDefinitionsBuilder({G_ADD, G_SUB})
+          .legalFor({S64, S32, S16, V2S16, V2S64})
+          .clampMaxNumElementsStrict(0, S16, 2)
+          .clampMaxNumElementsStrict(0, S64, 2)
+          .scalarize(0)
+          .minScalar(0, S16)
+          .widenScalarToNextMultipleOf(0, 32)
+          .maxScalar(0, S32);
+    } else if (ST.hasScalarAddSub64()) {
       getActionDefinitionsBuilder({G_ADD, G_SUB})
           .legalFor({S64, S32, S16, V2S16})
           .clampMaxNumElementsStrict(0, S16, 2)
@@ -954,6 +963,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .legalFor({PrivatePtr});
 
   getActionDefinitionsBuilder({G_GET_FPENV, G_SET_FPENV}).customFor({S64});
+
+  getActionDefinitionsBuilder({G_GET_ROUNDING, G_SET_ROUNDING}).legalFor({S32});
 
   getActionDefinitionsBuilder(G_GLOBAL_VALUE)
     .customIf(typeIsNot(0, PrivatePtr));
@@ -1204,7 +1215,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   // TODO: Split s1->s64 during regbankselect for VALU.
   auto &IToFP = getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
-                    .legalFor({{S32, S32}, {S64, S32}, {S16, S32}})
+                    .legalFor({{S32, S32}, {S64, S32}})
+                    .widenScalarFor({{S16, S32}}, changeTo(0, S32))
                     .lowerIf(typeIs(1, S1))
                     .customFor({{S32, S64}, {S64, S64}});
   if (ST.has16BitInsts())
@@ -1215,9 +1227,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
        .widenScalarToNextPow2(1);
 
   auto &FPToI = getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
-    .legalFor({{S32, S32}, {S32, S64}, {S32, S16}})
-    .customFor({{S64, S32}, {S64, S64}})
-    .narrowScalarFor({{S64, S16}}, changeTo(0, S32));
+                    .legalFor({{S32, S32}, {S32, S64}})
+                    .customFor({{S64, S32}, {S64, S64}})
+                    .widenScalarFor({{S32, S16}}, changeTo(1, S32))
+                    .narrowScalarFor({{S64, S16}}, changeTo(0, S32));
   if (ST.has16BitInsts())
     FPToI.legalFor({{S16, S16}});
   else
@@ -1230,13 +1243,17 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   // clang-format off
   auto &FPToISat = getActionDefinitionsBuilder({G_FPTOSI_SAT, G_FPTOUI_SAT})
-    .legalFor({{S32, S32}, {S32, S64}})
-    .legalFor(ST.has16BitInsts(),{{S16, S16}})
+    .legalFor({{S32, S32}, {S32, S64}, {S16, S32}})
+    .legalFor(ST.has16BitInsts(), {{S16, S16}})
+    .legalFor(ST.hasVCvtPkIU16F32(), {{V2S16, V2S32}})
     .narrowScalarFor({{S64, S16}}, changeTo(0, S32));
 
   // If available, widen width <16 to i16, intead of i32 so v_cvt_i16/u16_f16 can be used.
   if (ST.has16BitInsts())
     FPToISat.minScalarIf(typeIs(1, S16), 0, S16);
+
+  if (ST.hasVCvtPkIU16F32())
+    FPToISat.clampMaxNumElements(0, S16, 2);
 
   FPToISat.minScalar(1, S32);
   FPToISat.minScalar(0, S32)
@@ -2258,7 +2275,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         .lower();
   }
 
-  getActionDefinitionsBuilder({G_MEMCPY, G_MEMCPY_INLINE, G_MEMMOVE, G_MEMSET})
+  getActionDefinitionsBuilder(
+      {G_MEMCPY, G_MEMCPY_INLINE, G_MEMMOVE, G_MEMSET, G_MEMSET_INLINE})
       .lower();
 
   getActionDefinitionsBuilder({G_TRAP, G_DEBUGTRAP}).custom();
@@ -2284,7 +2302,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                                G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS})
       .alwaysLegal();
 
-  getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
 }
 
@@ -5504,7 +5521,7 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
     // v_rcp_f16 and v_rsq_f16 DO support denormals and 0.51ulp.
 
     // 1 / x -> RCP(x)
-    if (CLHS->isExactlyValue(1.0)) {
+    if (CLHS->isOne()) {
       B.buildIntrinsic(Intrinsic::amdgcn_rcp, Res)
           .addUse(RHS)
           .setMIFlags(Flags);
@@ -5514,7 +5531,7 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
     }
 
     // -1 / x -> RCP( FNEG(x) )
-    if (CLHS->isExactlyValue(-1.0)) {
+    if (CLHS->isMinusOne()) {
       auto FNeg = B.buildFNeg(ResTy, RHS, Flags);
       B.buildIntrinsic(Intrinsic::amdgcn_rcp, Res)
           .addUse(FNeg.getReg(0))
@@ -5556,7 +5573,7 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV64(MachineInstr &MI,
     return false;
 
   const ConstantFP *CLHS = getConstantFPVRegVal(X, MRI);
-  bool IsNegRcp = CLHS && CLHS->isExactlyValue(-1.0);
+  bool IsNegRcp = CLHS && CLHS->isMinusOne();
 
   // Pull out the negation so it folds for free into the source modifiers.
   if (IsNegRcp)
@@ -5578,7 +5595,7 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV64(MachineInstr &MI,
   R = B.buildFMA(ResTy, Tmp1, R, R);
 
   // Skip the last 2 correction terms for reciprocal.
-  if (IsNegRcp || (CLHS && CLHS->isExactlyValue(1.0))) {
+  if (IsNegRcp || (CLHS && CLHS->isOne())) {
     B.buildCopy(Res, R);
     MI.eraseFromParent();
     return true;
@@ -8216,10 +8233,14 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   }
   case Intrinsic::amdgcn_wave_reduce_min:
   case Intrinsic::amdgcn_wave_reduce_umin:
+  case Intrinsic::amdgcn_wave_reduce_fmin:
   case Intrinsic::amdgcn_wave_reduce_max:
   case Intrinsic::amdgcn_wave_reduce_umax:
+  case Intrinsic::amdgcn_wave_reduce_fmax:
   case Intrinsic::amdgcn_wave_reduce_add:
+  case Intrinsic::amdgcn_wave_reduce_fadd:
   case Intrinsic::amdgcn_wave_reduce_sub:
+  case Intrinsic::amdgcn_wave_reduce_fsub:
   case Intrinsic::amdgcn_wave_reduce_and:
   case Intrinsic::amdgcn_wave_reduce_or:
   case Intrinsic::amdgcn_wave_reduce_xor: {
@@ -8227,18 +8248,26 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     if (MRI.getType(SrcReg) != LLT::scalar(16))
       return true;
     Register DstReg = MI.getOperand(0).getReg();
+    bool IsFPOp = IntrID == Intrinsic::amdgcn_wave_reduce_fmin ||
+                  IntrID == Intrinsic::amdgcn_wave_reduce_fmax ||
+                  IntrID == Intrinsic::amdgcn_wave_reduce_fadd ||
+                  IntrID == Intrinsic::amdgcn_wave_reduce_fsub;
     bool NeedsSignExt = IntrID == Intrinsic::amdgcn_wave_reduce_min ||
                         IntrID == Intrinsic::amdgcn_wave_reduce_max ||
                         IntrID == Intrinsic::amdgcn_wave_reduce_add ||
                         IntrID == Intrinsic::amdgcn_wave_reduce_sub;
-    auto Ext = NeedsSignExt ? B.buildSExt(LLT::scalar(32), SrcReg)
-                            : B.buildZExt(LLT::scalar(32), SrcReg);
+    auto Ext = IsFPOp         ? B.buildFPExt(LLT::scalar(32), SrcReg)
+               : NeedsSignExt ? B.buildSExt(LLT::scalar(32), SrcReg)
+                              : B.buildZExt(LLT::scalar(32), SrcReg);
     auto NewDst = MRI.createGenericVirtualRegister(LLT::scalar(32));
     B.buildIntrinsic(IntrID, ArrayRef<Register>{NewDst},
                      /*hasSideEffects=*/false, /*isConvergent=*/true)
         .addUse(Ext.getReg(0))
         .addImm(MI.getOperand(3).getImm()); // strategy
-    B.buildTrunc(DstReg, NewDst);
+    if (IsFPOp)
+      B.buildFPTrunc(DstReg, NewDst);
+    else
+      B.buildTrunc(DstReg, NewDst);
     MI.eraseFromParent();
     return true;
   }

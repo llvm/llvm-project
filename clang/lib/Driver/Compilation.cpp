@@ -55,12 +55,12 @@ Compilation::~Compilation() {
 }
 
 const DerivedArgList &
-Compilation::getArgsForToolChain(const ToolChain *TC, StringRef BoundArch,
+Compilation::getArgsForToolChain(const ToolChain *TC, BoundArch BA,
                                  Action::OffloadKind DeviceOffloadKind) {
   if (!TC)
     TC = &DefaultToolChain;
 
-  DerivedArgList *&Entry = TCArgs[{TC, BoundArch, DeviceOffloadKind}];
+  DerivedArgList *&Entry = TCArgs[{TC, BA, DeviceOffloadKind}];
   if (!Entry) {
     SmallVector<Arg *, 4> AllocatedArgs;
     DerivedArgList *OpenMPArgs = nullptr;
@@ -74,10 +74,10 @@ Compilation::getArgsForToolChain(const ToolChain *TC, StringRef BoundArch,
 
     DerivedArgList *NewDAL = nullptr;
     if (!OpenMPArgs) {
-      NewDAL = TC->TranslateXarchArgs(*TranslatedArgs, BoundArch,
-                                      DeviceOffloadKind, &AllocatedArgs);
+      NewDAL = TC->TranslateXarchArgs(*TranslatedArgs, BA, DeviceOffloadKind,
+                                      &AllocatedArgs);
     } else {
-      NewDAL = TC->TranslateXarchArgs(*OpenMPArgs, BoundArch, DeviceOffloadKind,
+      NewDAL = TC->TranslateXarchArgs(*OpenMPArgs, BA, DeviceOffloadKind,
                                       &AllocatedArgs);
       if (!NewDAL)
         NewDAL = OpenMPArgs;
@@ -86,11 +86,11 @@ Compilation::getArgsForToolChain(const ToolChain *TC, StringRef BoundArch,
     }
 
     if (!NewDAL) {
-      Entry = TC->TranslateArgs(*TranslatedArgs, BoundArch, DeviceOffloadKind);
+      Entry = TC->TranslateArgs(*TranslatedArgs, BA, DeviceOffloadKind);
       if (!Entry)
         Entry = TranslatedArgs;
     } else {
-      Entry = TC->TranslateArgs(*NewDAL, BoundArch, DeviceOffloadKind);
+      Entry = TC->TranslateArgs(*NewDAL, BA, DeviceOffloadKind);
       if (!Entry)
         Entry = NewDAL;
       else

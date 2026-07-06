@@ -141,4 +141,19 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f16 = dense<16> : vector<2xi64>,
   // CHECK: fir.result %[[ZERO]], %[[MINUSONE]], %[[ZERO]], %[[ZERO]], %[[ZERO]] : index, index, index, index, index
   // CHECK: }
   // CHECK: Upper bound: %[[IF]]:5 = fir.if %[[PRESENT]] -> (index, index, index, index, index) {
+
+  // An assumed-size array (unknown trailing extent) passed without a
+  // descriptor, whose acc clause operand is not produced by an [hl]fir.declare
+  // (so no shape is recoverable). It must produce no bounds.
+  func.func @_QPassumed_size_no_descriptor(%arg0: !fir.ref<!fir.array<?x?xf32>> {fir.bindc_name = "a"}) {
+    %0 = fir.convert %arg0 : (!fir.ref<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
+    %1 = acc.copyin varPtr(%0 : !fir.ref<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> {name = "a", structured = false}
+    acc.enter_data dataOperands(%1 : !fir.ref<!fir.array<?x?xf32>>)
+    return
+  }
+  // CHECK: Visiting: %{{.*}} = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> {name = "a", structured = false}
+  // CHECK: Pointer-like and Mappable: !fir.ref<!fir.array<?x?xf32>>
+  // CHECK: Type category: array
+  // CHECK: Has unknown dimensions: true
+  // CHECK-NOT: Bound[
 }

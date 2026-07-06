@@ -10,12 +10,11 @@ define <vscale x 16 x i1> @dupq_b_0() #0 {
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    ret <vscale x 16 x i1> zeroinitializer
 ;
-  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
   %2 = tail call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> poison,
   <16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, i64 0)
   %3 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.dupq.lane.nxv16i8(<vscale x 16 x i8> %2 , i64 0)
   %4 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 0)
-  %5 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.wide.nxv16i8(<vscale x 16 x i1> %1, <vscale x 16 x i8> %3, <vscale x 2 x i64> %4)
+  %5 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.wide.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> %3, <vscale x 2 x i64> %4)
   ret <vscale x 16 x i1> %5
 }
 
@@ -25,12 +24,11 @@ define <vscale x 16 x i1> @dupq_b_d() #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> splat (i1 true))
 ; CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP2]]
 ;
-  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
   %2 = tail call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> poison,
   <16 x i8> <i8 1, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 1, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, i64 0)
   %3 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.dupq.lane.nxv16i8(<vscale x 16 x i8> %2 , i64 0)
   %4 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 0)
-  %5 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.wide.nxv16i8(<vscale x 16 x i1> %1, <vscale x 16 x i8> %3, <vscale x 2 x i64> %4)
+  %5 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.wide.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> %3, <vscale x 2 x i64> %4)
   ret <vscale x 16 x i1> %5
 }
 
@@ -40,12 +38,11 @@ define <vscale x 16 x i1> @dupq_b_w() #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> splat (i1 true))
 ; CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP2]]
 ;
-  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
   %2 = tail call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> poison,
   <16 x i8> <i8 1, i8 0, i8 0, i8 0, i8 1, i8 0, i8 0, i8 0, i8 1, i8 0, i8 0, i8 0, i8 1, i8 0, i8 0, i8 0>, i64 0)
   %3 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.dupq.lane.nxv16i8(<vscale x 16 x i8> %2 , i64 0)
   %4 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 0)
-  %5 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.wide.nxv16i8(<vscale x 16 x i1> %1, <vscale x 16 x i8> %3, <vscale x 2 x i64> %4)
+  %5 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.wide.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> %3, <vscale x 2 x i64> %4)
   ret <vscale x 16 x i1> %5
 }
 
@@ -55,12 +52,11 @@ define <vscale x 16 x i1> @dupq_b_h() #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> splat (i1 true))
 ; CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP2]]
 ;
-  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
   %2 = tail call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> poison,
   <16 x i8> <i8 1, i8 0, i8 1, i8 0, i8 1, i8 0, i8 1, i8 0, i8 1, i8 0, i8 1, i8 0, i8 1, i8 0, i8 1, i8 0>, i64 0)
   %3 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.dupq.lane.nxv16i8(<vscale x 16 x i8> %2 , i64 0)
   %4 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 0)
-  %5 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.wide.nxv16i8(<vscale x 16 x i1> %1, <vscale x 16 x i8> %3, <vscale x 2 x i64> %4)
+  %5 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.wide.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> %3, <vscale x 2 x i64> %4)
   ret <vscale x 16 x i1> %5
 }
 
@@ -69,12 +65,11 @@ define <vscale x 16 x i1> @dupq_b_b() #0 {
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    ret <vscale x 16 x i1> splat (i1 true)
 ;
-  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
   %2 = tail call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> poison,
   <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, i64 0)
   %3 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.dupq.lane.nxv16i8(<vscale x 16 x i8> %2 , i64 0)
   %4 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 0)
-  %5 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.wide.nxv16i8(<vscale x 16 x i1> %1, <vscale x 16 x i8> %3, <vscale x 2 x i64> %4)
+  %5 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.wide.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> %3, <vscale x 2 x i64> %4)
   ret <vscale x 16 x i1> %5
 }
 
@@ -85,12 +80,11 @@ define <vscale x 8 x i1> @dupq_h_0() #0 {
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    ret <vscale x 8 x i1> zeroinitializer
 ;
-  %1 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
   %2 = tail call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16> poison,
   <8 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>, i64 0)
   %3 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.dupq.lane.nxv8i16(<vscale x 8 x i16> %2 , i64 0)
   %4 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 0)
-  %5 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.cmpne.wide.nxv8i16(<vscale x 8 x i1> %1, <vscale x 8 x i16> %3, <vscale x 2 x i64> %4)
+  %5 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.cmpne.wide.nxv8i16(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x i16> %3, <vscale x 2 x i64> %4)
   ret <vscale x 8 x i1> %5
 }
 
@@ -101,12 +95,11 @@ define <vscale x 8 x i1> @dupq_h_d() #0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[TMP1]])
 ; CHECK-NEXT:    ret <vscale x 8 x i1> [[TMP3]]
 ;
-  %1 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
   %2 = tail call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16> poison,
   <8 x i16> <i16 1, i16 0, i16 0, i16 0, i16 1, i16 0, i16 0, i16 0>, i64 0)
   %3 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.dupq.lane.nxv8i16(<vscale x 8 x i16> %2 , i64 0)
   %4 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 0)
-  %5 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.cmpne.wide.nxv8i16(<vscale x 8 x i1> %1, <vscale x 8 x i16> %3, <vscale x 2 x i64> %4)
+  %5 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.cmpne.wide.nxv8i16(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x i16> %3, <vscale x 2 x i64> %4)
   ret <vscale x 8 x i1> %5
 }
 
@@ -117,12 +110,11 @@ define <vscale x 8 x i1> @dupq_h_w() #0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[TMP1]])
 ; CHECK-NEXT:    ret <vscale x 8 x i1> [[TMP3]]
 ;
-  %1 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
   %2 = tail call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16> poison,
   <8 x i16> <i16 1, i16 0, i16 1, i16 0, i16 1, i16 0, i16 1, i16 0>, i64 0)
   %3 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.dupq.lane.nxv8i16(<vscale x 8 x i16> %2 , i64 0)
   %4 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 0)
-  %5 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.cmpne.wide.nxv8i16(<vscale x 8 x i1> %1, <vscale x 8 x i16> %3, <vscale x 2 x i64> %4)
+  %5 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.cmpne.wide.nxv8i16(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x i16> %3, <vscale x 2 x i64> %4)
   ret <vscale x 8 x i1> %5
 }
 
@@ -131,12 +123,11 @@ define <vscale x 8 x i1> @dupq_h_h() #0 {
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    ret <vscale x 8 x i1> splat (i1 true)
 ;
-  %1 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
   %2 = tail call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16> poison,
   <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, i64 0)
   %3 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.dupq.lane.nxv8i16(<vscale x 8 x i16> %2 , i64 0)
   %4 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 0)
-  %5 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.cmpne.wide.nxv8i16(<vscale x 8 x i1> %1, <vscale x 8 x i16> %3, <vscale x 2 x i64> %4)
+  %5 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.cmpne.wide.nxv8i16(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x i16> %3, <vscale x 2 x i64> %4)
   ret <vscale x 8 x i1> %5
 }
 
@@ -147,12 +138,11 @@ define <vscale x 4 x i1> @dupq_w_0() #0 {
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    ret <vscale x 4 x i1> zeroinitializer
 ;
-  %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
   %2 = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison,
   <4 x i32> <i32 0, i32 0, i32 0, i32 0>, i64 0)
   %3 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32> %2 , i64 0)
   %4 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 0)
-  %5 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpne.wide.nxv4i32(<vscale x 4 x i1> %1, <vscale x 4 x i32> %3, <vscale x 2 x i64> %4)
+  %5 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpne.wide.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %3, <vscale x 2 x i64> %4)
   ret <vscale x 4 x i1> %5
 }
 
@@ -163,12 +153,11 @@ define <vscale x 4 x i1> @dupq_w_d() #0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[TMP1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i1> [[TMP3]]
 ;
-  %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
   %2 = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison,
   <4 x i32> <i32 1, i32 0, i32 1, i32 0>, i64 0)
   %3 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32> %2 , i64 0)
   %4 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 0)
-  %5 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpne.wide.nxv4i32(<vscale x 4 x i1> %1, <vscale x 4 x i32> %3, <vscale x 2 x i64> %4)
+  %5 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpne.wide.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %3, <vscale x 2 x i64> %4)
   ret <vscale x 4 x i1> %5
 }
 
@@ -177,12 +166,11 @@ define <vscale x 4 x i1> @dupq_w_w() #0 {
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    ret <vscale x 4 x i1> splat (i1 true)
 ;
-  %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
   %2 = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison,
   <4 x i32> <i32 1, i32 1, i32 1, i32 1>, i64 0)
   %3 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32> %2 , i64 0)
   %4 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 0)
-  %5 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpne.wide.nxv4i32(<vscale x 4 x i1> %1, <vscale x 4 x i32> %3, <vscale x 2 x i64> %4)
+  %5 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpne.wide.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %3, <vscale x 2 x i64> %4)
   ret <vscale x 4 x i1> %5
 }
 
@@ -193,12 +181,11 @@ define <vscale x 2 x i1> @dupq_d_0() #0 {
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    ret <vscale x 2 x i1> zeroinitializer
 ;
-  %1 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
   %2 = tail call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> poison,
   <2 x i64> <i64 0, i64 0>, i64 0)
   %3 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> %2 , i64 0)
   %4 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 0)
-  %5 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.cmpne.nxv2i64(<vscale x 2 x i1> %1, <vscale x 2 x i64> %3, <vscale x 2 x i64> %4)
+  %5 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.cmpne.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> %3, <vscale x 2 x i64> %4)
   ret <vscale x 2 x i1> %5
 }
 
@@ -207,13 +194,71 @@ define <vscale x 2 x i1> @dupq_d_d() #0 {
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    ret <vscale x 2 x i1> splat (i1 true)
 ;
-  %1 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
   %2 = tail call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> poison,
   <2 x i64> <i64 1, i64 1>, i64 0)
   %3 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> %2 , i64 0)
   %4 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 0)
-  %5 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.cmpne.nxv2i64(<vscale x 2 x i1> %1, <vscale x 2 x i64> %3, <vscale x 2 x i64> %4)
+  %5 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.cmpne.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> %3, <vscale x 2 x i64> %4)
   ret <vscale x 2 x i1> %5
+}
+
+define <vscale x 16 x i1> @not_cmpne(<vscale x 16 x i8> %vec_a, <vscale x 16 x i8> %vec_b, <vscale x 16 x i1> %pg) #0 {
+; CHECK-LABEL: define <vscale x 16 x i1> @not_cmpne(
+; CHECK-SAME: <vscale x 16 x i8> [[VEC_A:%.*]], <vscale x 16 x i8> [[VEC_B:%.*]], <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[NOT:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpeq.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[VEC_A]], <vscale x 16 x i8> [[VEC_B]])
+; CHECK-NEXT:    ret <vscale x 16 x i1> [[NOT]]
+;
+  %cmp = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %vec_a, <vscale x 16 x i8> %vec_b)
+  %not = xor <vscale x 16 x i1> %cmp, %pg
+  ret <vscale x 16 x i1> %not
+}
+
+define <vscale x 16 x i1> @not_cmpne_swapped_xor(<vscale x 16 x i8> %vec_a, <vscale x 16 x i8> %vec_b, <vscale x 16 x i1> %pg) #0 {
+; CHECK-LABEL: define <vscale x 16 x i1> @not_cmpne_swapped_xor(
+; CHECK-SAME: <vscale x 16 x i8> [[VEC_A:%.*]], <vscale x 16 x i8> [[VEC_B:%.*]], <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[NOT:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpeq.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[VEC_A]], <vscale x 16 x i8> [[VEC_B]])
+; CHECK-NEXT:    ret <vscale x 16 x i1> [[NOT]]
+;
+  %cmp = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %vec_a, <vscale x 16 x i8> %vec_b)
+  %not = xor <vscale x 16 x i1> %pg, %cmp
+  ret <vscale x 16 x i1> %not
+}
+
+define <vscale x 16 x i1> @not_cmpne_wide(<vscale x 16 x i8> %vec_a, <vscale x 2 x i64> %vec_b, <vscale x 16 x i1> %pg) #0 {
+; CHECK-LABEL: define <vscale x 16 x i1> @not_cmpne_wide(
+; CHECK-SAME: <vscale x 16 x i8> [[VEC_A:%.*]], <vscale x 2 x i64> [[VEC_B:%.*]], <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[NOT:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpeq.wide.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[VEC_A]], <vscale x 2 x i64> [[VEC_B]])
+; CHECK-NEXT:    ret <vscale x 16 x i1> [[NOT]]
+;
+  %cmp = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.wide.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %vec_a, <vscale x 2 x i64> %vec_b)
+  %not = xor <vscale x 16 x i1> %cmp, %pg
+  ret <vscale x 16 x i1> %not
+}
+
+define <vscale x 16 x i1> @not_cmpne_multiple_uses(<vscale x 16 x i8> %vec_a, <vscale x 16 x i8> %vec_b, <vscale x 16 x i1> %pg) #0 {
+; CHECK-LABEL: define <vscale x 16 x i1> @not_cmpne_multiple_uses(
+; CHECK-SAME: <vscale x 16 x i8> [[VEC_A:%.*]], <vscale x 16 x i8> [[VEC_B:%.*]], <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[CMP:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[VEC_A]], <vscale x 16 x i8> [[VEC_B]])
+; CHECK-NEXT:    call void (...) @llvm.fake.use(<vscale x 16 x i1> [[CMP]])
+; CHECK-NEXT:    [[NOT:%.*]] = xor <vscale x 16 x i1> [[CMP]], [[PG]]
+; CHECK-NEXT:    ret <vscale x 16 x i1> [[NOT]]
+;
+  %cmp = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %vec_a, <vscale x 16 x i8> %vec_b)
+  call void (...) @llvm.fake.use(<vscale x 16 x i1> %cmp)
+  %not = xor <vscale x 16 x i1> %cmp, %pg
+  ret <vscale x 16 x i1> %not
+}
+
+define <vscale x 16 x i1> @not_cmpne_wrong_xor_operand(<vscale x 16 x i8> %vec_a, <vscale x 16 x i8> %vec_b, <vscale x 16 x i1> %pg) #0 {
+; CHECK-LABEL: define <vscale x 16 x i1> @not_cmpne_wrong_xor_operand(
+; CHECK-SAME: <vscale x 16 x i8> [[VEC_A:%.*]], <vscale x 16 x i8> [[VEC_B:%.*]], <vscale x 16 x i1> [[PG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[CMP:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[VEC_A]], <vscale x 16 x i8> [[VEC_B]])
+; CHECK-NEXT:    [[NOT:%.*]] = xor <vscale x 16 x i1> [[CMP]], splat (i1 true)
+; CHECK-NEXT:    ret <vscale x 16 x i1> [[NOT]]
+;
+  %cmp = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %vec_a, <vscale x 16 x i8> %vec_b)
+  %not = xor <vscale x 16 x i1> %cmp, splat (i1 true)
+  ret <vscale x 16 x i1> %not
 }
 
 ; Cases that cannot be converted
@@ -226,12 +271,11 @@ define <vscale x 2 x i1> @dupq_neg1() #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.cmpne.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> [[TMP3]], <vscale x 2 x i64> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 2 x i1> [[TMP4]]
 ;
-  %1 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
   %2 = tail call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> poison,
   <2 x i64> <i64 1, i64 0>, i64 0)
   %3 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> %2 , i64 0)
   %4 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 0)
-  %5 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.cmpne.nxv2i64(<vscale x 2 x i1> %1, <vscale x 2 x i64> %3, <vscale x 2 x i64> %4)
+  %5 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.cmpne.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> %3, <vscale x 2 x i64> %4)
   ret <vscale x 2 x i1> %5
 }
 
@@ -243,12 +287,11 @@ define <vscale x 4 x i1> @dupq_neg2() #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpne.wide.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[TMP3]], <vscale x 2 x i64> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 4 x i1> [[TMP4]]
 ;
-  %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
   %2 = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison,
   <4 x i32> <i32 1, i32 0, i32 0, i32 1>, i64 0)
   %3 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32> %2 , i64 0)
   %4 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 0)
-  %5 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpne.wide.nxv4i32(<vscale x 4 x i1> %1, <vscale x 4 x i32> %3, <vscale x 2 x i64> %4)
+  %5 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpne.wide.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %3, <vscale x 2 x i64> %4)
   ret <vscale x 4 x i1> %5
 }
 
@@ -260,12 +303,11 @@ define <vscale x 4 x i1> @dupq_neg3() #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpne.wide.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[TMP3]], <vscale x 2 x i64> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 4 x i1> [[TMP4]]
 ;
-  %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
   %2 = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison,
   <4 x i32> <i32 0, i32 1, i32 0, i32 1>, i64 0)
   %3 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32> %2 , i64 0)
   %4 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 0)
-  %5 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpne.wide.nxv4i32(<vscale x 4 x i1> %1, <vscale x 4 x i32> %3, <vscale x 2 x i64> %4)
+  %5 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpne.wide.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %3, <vscale x 2 x i64> %4)
   ret <vscale x 4 x i1> %5
 }
 
@@ -277,12 +319,11 @@ define <vscale x 4 x i1> @dupq_neg4() #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpne.wide.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[TMP3]], <vscale x 2 x i64> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 4 x i1> [[TMP4]]
 ;
-  %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
   %2 = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison,
   <4 x i32> <i32 1, i32 1, i32 0, i32 0>, i64 0)
   %3 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32> %2 , i64 0)
   %4 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 0)
-  %5 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpne.wide.nxv4i32(<vscale x 4 x i1> %1, <vscale x 4 x i32> %3, <vscale x 2 x i64> %4)
+  %5 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpne.wide.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %3, <vscale x 2 x i64> %4)
   ret <vscale x 4 x i1> %5
 }
 
@@ -294,12 +335,11 @@ define <vscale x 4 x i1> @dupq_neg5() #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpne.wide.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[TMP3]], <vscale x 2 x i64> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 4 x i1> [[TMP4]]
 ;
-  %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
   %2 = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison,
   <4 x i32> <i32 0, i32 0, i32 0, i32 1>, i64 0)
   %3 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32> %2 , i64 0)
   %4 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 0)
-  %5 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpne.wide.nxv4i32(<vscale x 4 x i1> %1, <vscale x 4 x i32> %3, <vscale x 2 x i64> %4)
+  %5 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpne.wide.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %3, <vscale x 2 x i64> %4)
   ret <vscale x 4 x i1> %5
 }
 
@@ -313,13 +353,12 @@ define <vscale x 4 x i1> @dupq_neg6(i1 %a) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpne.wide.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[TMP5]], <vscale x 2 x i64> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 4 x i1> [[TMP6]]
 ;
-  %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
   %2 = zext i1 %a to i32
   %3 = insertelement <4 x i32> <i32 1, i32 1, i32 1, i32 poison>, i32 %2, i32 3
   %4 = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison, <4 x i32> %3, i64 0)
   %5 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32> %4 , i64 0)
   %6 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 0)
-  %7 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpne.wide.nxv4i32(<vscale x 4 x i1> %1, <vscale x 4 x i32> %5, <vscale x 2 x i64> %6)
+  %7 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.cmpne.wide.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %5, <vscale x 2 x i64> %6)
   ret <vscale x 4 x i1> %7
 }
 
@@ -331,12 +370,11 @@ define <vscale x 2 x i1> @dupq_neg7() #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.cmpne.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> [[TMP3]], <vscale x 2 x i64> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 2 x i1> [[TMP4]]
 ;
-  %1 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
   %2 = tail call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> poison,
   <2 x i64> <i64 1, i64 1>, i64 2)
   %3 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> %2 , i64 0)
   %4 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 0)
-  %5 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.cmpne.nxv2i64(<vscale x 2 x i1> %1, <vscale x 2 x i64> %3, <vscale x 2 x i64> %4)
+  %5 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.cmpne.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> %3, <vscale x 2 x i64> %4)
   ret <vscale x 2 x i1> %5
 }
 
@@ -348,12 +386,11 @@ define <vscale x 2 x i1> @dupq_neg8() #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.cmpne.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> [[TMP3]], <vscale x 2 x i64> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 2 x i1> [[TMP4]]
 ;
-  %1 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
   %2 = tail call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> poison,
   <2 x i64> <i64 1, i64 1>, i64 0)
   %3 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> %2 , i64 1)
   %4 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 0)
-  %5 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.cmpne.nxv2i64(<vscale x 2 x i1> %1, <vscale x 2 x i64> %3, <vscale x 2 x i64> %4)
+  %5 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.cmpne.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> %3, <vscale x 2 x i64> %4)
   ret <vscale x 2 x i1> %5
 }
 
@@ -365,12 +402,11 @@ define <vscale x 2 x i1> @dupq_neg9(<vscale x 2 x i64> %x) #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.cmpne.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> [[TMP3]], <vscale x 2 x i64> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 2 x i1> [[TMP4]]
 ;
-  %1 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
   %2 = tail call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> %x,
   <2 x i64> <i64 1, i64 1>, i64 0)
   %3 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> %2 , i64 0)
   %4 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 0)
-  %5 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.cmpne.nxv2i64(<vscale x 2 x i1> %1, <vscale x 2 x i64> %3, <vscale x 2 x i64> %4)
+  %5 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.cmpne.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> %3, <vscale x 2 x i64> %4)
   ret <vscale x 2 x i1> %5
 }
 
@@ -382,12 +418,11 @@ define <vscale x 2 x i1> @dupq_neg10() #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.cmpne.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> [[TMP3]], <vscale x 2 x i64> splat (i64 1))
 ; CHECK-NEXT:    ret <vscale x 2 x i1> [[TMP4]]
 ;
-  %1 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
   %2 = tail call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> poison,
   <2 x i64> <i64 1, i64 1>, i64 0)
   %3 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> %2 , i64 0)
   %4 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 1)
-  %5 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.cmpne.nxv2i64(<vscale x 2 x i1> %1, <vscale x 2 x i64> %3, <vscale x 2 x i64> %4)
+  %5 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.cmpne.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> %3, <vscale x 2 x i64> %4)
   ret <vscale x 2 x i1> %5
 }
 
@@ -433,11 +468,10 @@ define <vscale x 2 x i1> @dupq_neg13(<vscale x 2 x i64> %x) #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.cmpne.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> [[TMP3]], <vscale x 2 x i64> [[X]])
 ; CHECK-NEXT:    ret <vscale x 2 x i1> [[TMP4]]
 ;
-  %1 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
   %2 = tail call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> poison,
   <2 x i64> <i64 1, i64 1>, i64 0)
   %3 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> %2 , i64 0)
-  %4 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.cmpne.nxv2i64(<vscale x 2 x i1> %1, <vscale x 2 x i64> %3, <vscale x 2 x i64> %x)
+  %4 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.cmpne.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> %3, <vscale x 2 x i64> %x)
   ret <vscale x 2 x i1> %4
 }
 
@@ -449,18 +483,14 @@ define <vscale x 16 x i1> @dupq_b_idx(i64 %idx) #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.wide.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> [[TMP3]], <vscale x 2 x i64> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 16 x i1> [[TMP4]]
 ;
-  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
   %2 = tail call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> poison,
   <16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>, i64 0)
   %3 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.dupq.lane.nxv16i8(<vscale x 16 x i8> %2 , i64 %idx)
   %4 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 0)
-  %5 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.wide.nxv16i8(<vscale x 16 x i1> %1, <vscale x 16 x i8> %3, <vscale x 2 x i64> %4)
+  %5 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.cmpne.wide.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> %3, <vscale x 2 x i64> %4)
   ret <vscale x 16 x i1> %5
 }
 
-declare <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32)
-declare <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32)
-declare <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32)
 declare <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32)
 
 declare <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8>, <16 x i8>, i64)

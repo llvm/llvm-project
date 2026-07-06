@@ -59,6 +59,9 @@ jobs:
       image: ghcr.io/llvm/ci-ubuntu-24.04:35e958d7f0b7
     needs:
       - permission-check
+    env:
+      # llvm-nm/llvm-ar/llvm-ranlib are needed for the microbenchmarks
+      NINJA_TARGETS: clang lld llvm-size llvm-nm llvm-ar llvm-ranlib
     steps:
       - name: Get pull request
         id: get-pr
@@ -116,7 +119,7 @@ jobs:
         run: cmake -B build -C $SCRIPTS_DIR/llvm.cmake llvm -GNinja
         working-directory: llvm-project
       - name: Build Clang @ head
-        run: ninja -C build
+        run: ninja -C build $NINJA_TARGETS
         working-directory: llvm-project
       - name: Configure and build test-suite @ head
         run: |
@@ -125,7 +128,7 @@ jobs:
           configure-and-build.sh x86_64-O3-head $SCRIPTS_DIR/x86_64.cmake
         working-directory: llvm-test-suite
       - name: Build Clang @ base
-        run: git checkout $BASE_SHA && ninja -C build
+        run: git checkout $BASE_SHA && ninja -C build $NINJA_TARGETS
         working-directory: llvm-project
       - name: Configure and build test-suite @ base
         run: |

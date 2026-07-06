@@ -343,6 +343,7 @@ namespace ReadMutableInCopyCtor {
   constexpr G g1 = {};
   constexpr G g2 = g1; // both-error {{must be initialized by a constant expression}} \
                        // both-note {{read of mutable member 'u'}} \
+                       // expected-note {{in call to 'U(g1.u)'}} \
                        // both-note {{in call to 'G(g1)'}}
 }
 
@@ -469,8 +470,8 @@ namespace SubobjectCompare {
   constexpr Z z{};
   static_assert(&z.x < &z.y, ""); // both-error {{not an integral constant expression}} \
                                   // both-note {{comparison of addresses of subobjects of different base classes has unspecified value}}
-  static_assert(&z.x != &z.y, ""); // expected-error {{failed}} FIXME
+  static_assert(&z.x != &z.y, "");
   static_assert((void*)(X*)&z < (void*)(Y*)&z, ""); // both-error {{not an integral constant expression}} \
                                                     // both-note {{comparison of addresses of subobjects of different base classes has unspecified value}}
-  static_assert((void*)(X*)&z != (void*)(Y*)&z, ""); // expected-error {{failed}} FIXME
+  static_assert((void*)(X*)&z != (void*)(Y*)&z, "");
 }

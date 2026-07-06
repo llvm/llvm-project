@@ -156,7 +156,7 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    ds_read_u8 v56, v0
 ; CHECK-NEXT:    s_mov_b32 s55, exec_lo
-; CHECK-NEXT:    v_cmpx_lt_u32_e64 s4, v42
+; CHECK-NEXT:    v_cmpx_lt_u32_e32 s4, v42
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_17
 ; CHECK-NEXT:  ; %bb.6: ; %.preheader2
 ; CHECK-NEXT:    ; in Loop: Header=BB0_5 Depth=1
@@ -289,7 +289,7 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    ; in Loop: Header=BB0_5 Depth=1
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s55
 ; CHECK-NEXT:    s_mov_b32 s55, exec_lo
-; CHECK-NEXT:    v_cmpx_lt_u32_e64 v58, v42
+; CHECK-NEXT:    v_cmpx_lt_u32_e32 v58, v42
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_23
 ; CHECK-NEXT:  ; %bb.18: ; %.preheader
 ; CHECK-NEXT:    ; in Loop: Header=BB0_5 Depth=1
@@ -369,7 +369,7 @@ define protected amdgpu_kernel void @kernel_round1(ptr addrspace(1) nocapture no
 ; CHECK-NEXT:    s_mov_b32 s4, exec_lo
 ; CHECK-NEXT:    ds_read_b32 v47, v0 offset:15360
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_cmpx_gt_u32_e64 v47, v41
+; CHECK-NEXT:    v_cmpx_gt_u32_e32 v47, v41
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_33
 ; CHECK-NEXT:  ; %bb.26:
 ; CHECK-NEXT:    s_mov_b32 s52, 0
@@ -891,7 +891,7 @@ define protected amdgpu_kernel void @kernel_round1_short(ptr addrspace(1) nocapt
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    ds_read_u8 v47, v0
 ; CHECK-NEXT:    s_mov_b32 s4, exec_lo
-; CHECK-NEXT:    v_cmpx_lt_u32_e64 s5, v41
+; CHECK-NEXT:    v_cmpx_lt_u32_e32 s5, v41
 ; CHECK-NEXT:    s_cbranch_execz .LBB1_5
 ; CHECK-NEXT:  ; %bb.2: ; %.53.preheader
 ; CHECK-NEXT:    ; in Loop: Header=BB1_1 Depth=1
@@ -915,7 +915,7 @@ define protected amdgpu_kernel void @kernel_round1_short(ptr addrspace(1) nocapt
 ; CHECK-NEXT:    ; in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; CHECK-NEXT:    s_mov_b32 s54, exec_lo
-; CHECK-NEXT:    v_cmpx_lt_u32_e64 v57, v41
+; CHECK-NEXT:    v_cmpx_lt_u32_e32 v57, v41
 ; CHECK-NEXT:    s_cbranch_execz .LBB1_11
 ; CHECK-NEXT:  ; %bb.6: ; %.103.preheader
 ; CHECK-NEXT:    ; in Loop: Header=BB1_1 Depth=1

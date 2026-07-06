@@ -4,7 +4,7 @@
 ;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1010 | FileCheck %s --check-prefixes=GFX10
 ;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 | FileCheck %s --check-prefixes=GFX11
 ;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 -amdgpu-enable-delay-alu=0 | FileCheck %s --check-prefixes=GFX12,GFX12-SDAG
-;RUN: llc < %s -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1200 -amdgpu-enable-delay-alu=0 | FileCheck %s --check-prefixes=GFX12,GFX12-GISEL
+;RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1200 -amdgpu-enable-delay-alu=0 | FileCheck %s --check-prefixes=GFX12,GFX12-GISEL
 
 define amdgpu_ps {<4 x float>, <4 x float>, <4 x float>} @buffer_load(<4 x i32> inreg) {
 ; PREGFX10-LABEL: buffer_load:

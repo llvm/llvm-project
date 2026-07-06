@@ -43,7 +43,8 @@ class MachineRegisterInfo;
 class RegisterBank;
 class SIInstrInfo;
 class SIRegisterInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 
 class AMDGPUInstructionSelector final : public InstructionSelector {
 private:
@@ -52,8 +53,7 @@ private:
 
 public:
   AMDGPUInstructionSelector(const GCNSubtarget &STI,
-                            const AMDGPURegisterBankInfo &RBI,
-                            const AMDGPUTargetMachine &TM);
+                            const AMDGPURegisterBankInfo &RBI);
 
   bool select(MachineInstr &I) override;
   static const char *getName();
@@ -101,7 +101,6 @@ private:
   bool selectG_UADDO_USUBO_UADDE_USUBE(MachineInstr &I) const;
   bool selectG_AMDGPU_MAD_64_32(MachineInstr &I) const;
   bool selectG_EXTRACT(MachineInstr &I) const;
-  bool selectG_FMA_FMAD(MachineInstr &I) const;
   bool selectS16MergeToS32(MachineInstr &MI) const;
   bool selectG_MERGE_VALUES(MachineInstr &I) const;
   bool selectG_UNMERGE_VALUES(MachineInstr &I) const;
@@ -157,7 +156,6 @@ private:
   bool selectNamedBarrierInst(MachineInstr &I, Intrinsic::ID IID) const;
   bool selectSBarrierSignalIsfirst(MachineInstr &I, Intrinsic::ID IID) const;
   bool selectSGetBarrierState(MachineInstr &I, Intrinsic::ID IID) const;
-  bool selectSBarrierLeave(MachineInstr &I) const;
   bool selectWaveShuffleIntrin(MachineInstr &I) const;
 
   std::pair<Register, unsigned> selectVOP3ModsImpl(Register Src,
@@ -466,7 +464,6 @@ private:
   const SIInstrInfo &TII;
   const SIRegisterInfo &TRI;
   const AMDGPURegisterBankInfo &RBI;
-  const AMDGPUTargetMachine &TM;
   const GCNSubtarget &STI;
 #define GET_GLOBALISEL_PREDICATES_DECL
 #define AMDGPUSubtarget GCNSubtarget

@@ -128,7 +128,7 @@ define i32 @pdep32_load(i32 %x, ptr %y)   {
 define i32 @pdep32_anyext(i16 %x)   {
 ; X86-LABEL: pdep32_anyext:
 ; X86:       # %bb.0:
-; X86-NEXT:    movswl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl $-1431655766, %ecx # imm = 0xAAAAAAAA
 ; X86-NEXT:    pdepl %ecx, %eax, %eax
 ; X86-NEXT:    retl
@@ -178,7 +178,7 @@ define i32 @pdep32_demandedbits(i32 %x) {
 define i32 @pdep32_demandedbits2(i32 %x, i32 %y) {
 ; X86-LABEL: pdep32_demandedbits2:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    pdepl {{[0-9]+}}(%esp), %eax, %eax
 ; X86-NEXT:    andl $128, %eax
 ; X86-NEXT:    retl
@@ -203,9 +203,8 @@ define i32 @pdep32_demandedbits2(i32 %x, i32 %y) {
 define i32 @pdep32_demandedbits_mask(i32 %x, i16 %y) {
 ; X86-LABEL: pdep32_demandedbits_mask:
 ; X86:       # %bb.0:
-; X86-NEXT:    movswl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    pdepl %eax, %ecx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    pdepl {{[0-9]+}}(%esp), %eax, %eax
 ; X86-NEXT:    andl $32768, %eax # imm = 0x8000
 ; X86-NEXT:    retl
 ;
@@ -230,9 +229,8 @@ define i32 @pdep32_demandedbits_mask(i32 %x, i16 %y) {
 define i32 @pdep32_demandedbits_mask2(i32 %x, i16 %y) {
 ; X86-LABEL: pdep32_demandedbits_mask2:
 ; X86:       # %bb.0:
-; X86-NEXT:    movswl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    pdepl %eax, %ecx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    pdepl {{[0-9]+}}(%esp), %eax, %eax
 ; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    retl
 ;
@@ -285,22 +283,23 @@ define i32 @pdep32_knownbits(i32 %x) {
 define i32 @pdep32_knownbits2(i32 %x, i32 %y) {
 ; X86-LABEL: pdep32_knownbits2:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl $-256, %eax
-; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shll $8, %eax
 ; X86-NEXT:    pdepl {{[0-9]+}}(%esp), %eax, %eax
 ; X86-NEXT:    imull %eax, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pdep32_knownbits2:
 ; X64:       # %bb.0:
-; X64-NEXT:    andl $-256, %edi
+; X64-NEXT:    andl $16776960, %edi # imm = 0xFFFF00
 ; X64-NEXT:    pdepl %esi, %edi, %eax
 ; X64-NEXT:    imull %eax, %eax
 ; X64-NEXT:    retq
 ;
 ; EGPR-LABEL: pdep32_knownbits2:
 ; EGPR:       # %bb.0:
-; EGPR-NEXT:    andl $-256, %edi # encoding: [0x81,0xe7,0x00,0xff,0xff,0xff]
+; EGPR-NEXT:    andl $16776960, %edi # encoding: [0x81,0xe7,0x00,0xff,0xff,0x00]
+; EGPR-NEXT:    # imm = 0xFFFF00
 ; EGPR-NEXT:    pdepl %esi, %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x43,0xf5,0xc6]
 ; EGPR-NEXT:    imull %eax, %eax # encoding: [0x0f,0xaf,0xc0]
 ; EGPR-NEXT:    retq # encoding: [0xc3]

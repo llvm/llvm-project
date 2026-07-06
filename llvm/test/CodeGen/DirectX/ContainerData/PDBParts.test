@@ -1,0 +1,12 @@
+RUN: rm -rf %t && mkdir %t
+RUN: llc %S/Inputs/SourceInfo.ll --filetype=obj -o %t.dxbc --dx-pdb-file=%t/parts.pdb
+RUN: llvm-pdbutil pdb2yaml --dxcontainer %t/parts.pdb | FileCheck %s
+
+# Check that debug-related container parts are emitted into companion PDB file.
+; CHECK:           PartCount:       5
+; CHECK:         Parts:
+; CHECK-DAG:       - Name:            ILDB
+; CHECK-DAG:       - Name:            HASH
+; CHECK-DAG:       - Name:            ILDN
+; CHECK-DAG:       - Name:            VERS
+; CHECK-DAG:       - Name:            SRCI

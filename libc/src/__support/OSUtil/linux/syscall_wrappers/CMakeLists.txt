@@ -543,6 +543,20 @@ add_header_library(
 )
 
 add_header_library(
+  getcwd
+  HDRS
+    getcwd.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.ssize_t
+    libc.include.sys_syscall
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.osutil
+)
+
+add_header_library(
   link
   HDRS
     link.h
@@ -693,6 +707,19 @@ add_header_library(
 )
 
 add_header_library(
+  ioctl
+  HDRS
+    ioctl.h
+  DEPENDS
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.error_or
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
   readlink
   HDRS
     readlink.h
@@ -743,5 +770,31 @@ add_header_library(
     libc.src.__support.macros.config
     libc.hdr.stdint_proxy
     libc.hdr.types.off_t
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  prlimit
+  HDRS
+    prlimit.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.hdr.types.struct_rlimit
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  sysinfo
+  HDRS
+    sysinfo.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
     libc.include.sys_syscall
 )
