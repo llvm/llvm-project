@@ -1053,9 +1053,9 @@ struct LiveIn_match {
   }
 };
 
-inline auto m_LiveIn() { return m_Isa<VPIRValue, VPSymbolicValue>(); }
+inline auto m_VScale() { return m_Intrinsic<Intrinsic::vscale>(); }
 
-inline IntrinsicID_match m_VScale() { return m_Intrinsic<Intrinsic::vscale>(); }
+inline auto m_LiveIn() { return m_Isa<VPIRValue, VPSymbolicValue>(); }
 
 /// Match a GEP recipe (VPWidenGEPRecipe, VPInstruction, or VPReplicateRecipe)
 /// and bind the source element type and operands.
