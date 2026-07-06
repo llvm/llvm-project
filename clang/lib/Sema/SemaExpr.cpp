@@ -18344,34 +18344,38 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
   auto GetPointerBoundAttributes = [&](Expr *E) -> BoundsSafetyPointerAttributes {
     BoundsSafetyPointerAttributes FA;
     if (auto ASE = dyn_cast<ArraySubscriptExpr>(E)) {
-      if (auto PT = ASE->getBase()->getType()->getAs<PointerType>()) {
+      if (auto PT = ASE->getBase()->getType()->getAs<PointerType>())
         FA = PT->getPointerAttributes();
-      }
-    } else if (getLangOpts().BoundsSafety) {
+    } else if (E->getType()->isSizeMeaningless()) {
       // Taking the address of an object with a meaningless size results in a
-      // __single pointer.
-      if (E->getType()->isSizeMeaningless()) {
-        FA.setSingle();
-      } else {
-        FA.setBidiIndexable();
-      }
-    }
-    if (E->getType()->isCountAttributedType()) {
-      if (const auto *AT = Context.getAsIncompleteArrayType(E->getType())) {
-        Diag(OpLoc, diag::err_bounds_safety_unsupported_address_of_incomplete_array)
-            << op->getSourceRange();
-        Diag(OpLoc, diag::note_bounds_safety_remove_address_of_operator)
-            << Context.getPointerType(AT->getElementType())
-            << Context.getPointerType(OrigOp.get()->getType())
-            << FixItHint::CreateRemoval(op->getSourceRange());
-        // recover by using __bidi_indexable bounds, which are less likely
-        // to cause spurious warnings
-        FA.setBidiIndexable();
-      }
+      // __single pointer.
+      FA.setSingle();
+    } else {
+      FA.setBidiIndexable();
     }
     return FA;
   };
-  BoundsSafetyPointerAttributes FA = GetPointerBoundAttributes(op);
+
+  BoundsSafetyPointerAttributes FA;
+  if (getLangOpts().BoundsSafety)
+    FA = GetPointerBoundAttributes(op);
+
+  if (getLangOpts().BoundsSafetyAttributes &&
+      op->getType()->isCountAttributedType()) {
+    if (const auto *AT = Context.getAsIncompleteArrayType(op->getType())) {
+      Diag(OpLoc, diag::err_bounds_safety_unsupported_address_of_incomplete_array)
+          << op->getSourceRange();
+      Diag(OpLoc, diag::note_bounds_safety_remove_address_of_operator)
+          << Context.getPointerType(AT->getElementType())
+          << Context.getPointerType(OrigOp.get()->getType())
+          << FixItHint::CreateRemoval(op->getSourceRange());
+      // recover by using __bidi_indexable bounds, which are less likely
+      // to cause spurious warnings
+      if (getLangOpts().BoundsSafety)
+        FA.setBidiIndexable();
+    }
+  }
+
   QualType PT = Context.getPointerType(op->getType(), FA);
   if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(op)) {
     if (const auto *VTT =
@@ -18383,8 +18387,6 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
   }
   return PT;
   /* TO_UPSTREAM(BoundsSafety) OFF*/
-
-  return Context.getPointerType(op->getType());
 }
 
 static void RecordModifiableNonNullParam(Sema &S, const Expr *Exp) {
