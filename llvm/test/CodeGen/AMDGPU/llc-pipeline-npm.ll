@@ -55,6 +55,7 @@
 ; GCN-O0-NEXT:     safe-stack
 ; GCN-O0-NEXT:     stack-protector
 ; GCN-O0-NEXT:     verify
+; GCN-O0-NEXT: amdgpu-asm-printer-begin
 ; GCN-O0-NEXT: cgscc
 ; GCN-O0-NEXT:   function
 ; GCN-O0-NEXT:     machine-function
@@ -103,7 +104,9 @@
 ; GCN-O0-NEXT:       amdgpu-preload-kern-arg-prolog
 ; GCN-O0-NEXT:       stack-frame-layout
 ; GCN-O0-NEXT:       verify
-; GCN-O0-NEXT:     free-machine-function
+; GCN-O0-NEXT:       amdgpu-asm-printer
+; GCN-O0-NEXT:     free-machine-function 
+; GCN-O0-NEXT: amdgpu-asm-printer-end
 
 ; GCN-O2: require<MachineModuleAnalysis>
 ; GCN-O2-NEXT: require<profile-summary>
@@ -183,6 +186,7 @@
 ; GCN-O2-NEXT:     safe-stack
 ; GCN-O2-NEXT:     stack-protector
 ; GCN-O2-NEXT:     verify
+; GCN-O2-NEXT: amdgpu-asm-printer-begin
 ; GCN-O2-NEXT: cgscc
 ; GCN-O2-NEXT:   function
 ; GCN-O2-NEXT:     machine-function
@@ -289,7 +293,9 @@
 ; GCN-O2-NEXT:       amdgpu-preload-kern-arg-prolog
 ; GCN-O2-NEXT:       stack-frame-layout
 ; GCN-O2-NEXT:       verify
+; GCN-O2-NEXT:       amdgpu-asm-printer
 ; GCN-O2-NEXT:     free-machine-function
+; GCN-O2-NEXT: amdgpu-asm-printer-end
 
 ; GCN-O3: require<MachineModuleAnalysis>
 ; GCN-O3-NEXT: require<profile-summary>
@@ -369,6 +375,7 @@
 ; GCN-O3-NEXT:     safe-stack
 ; GCN-O3-NEXT:     stack-protector
 ; GCN-O3-NEXT:     verify
+; GCN-O3-NEXT: amdgpu-asm-printer-begin
 ; GCN-O3-NEXT: cgscc
 ; GCN-O3-NEXT:   function
 ; GCN-O3-NEXT:     machine-function
@@ -475,7 +482,9 @@
 ; GCN-O3-NEXT:       amdgpu-preload-kern-arg-prolog
 ; GCN-O3-NEXT:       stack-frame-layout
 ; GCN-O3-NEXT:       verify
+; GCN-O3-NEXT:       amdgpu-asm-printer
 ; GCN-O3-NEXT:     free-machine-function
+; GCN-O3-NEXT: amdgpu-asm-printer-end
 
 define void @empty() {
   ret void

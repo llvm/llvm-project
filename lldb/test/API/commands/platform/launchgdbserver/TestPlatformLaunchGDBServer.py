@@ -1,5 +1,4 @@
 import os
-import socket
 import shutil
 import lldbgdbserverutils
 from lldbsuite.test.decorators import *
@@ -13,27 +12,7 @@ class TestPlatformProcessLaunchGDBServer(TestBase):
     SHARED_BUILD_TESTCASE = False
 
     def _launch_and_connect(self, exe):
-        hostname = socket.getaddrinfo("localhost", 0, proto=socket.IPPROTO_TCP)[0][4][0]
-        listen_url = "[%s]:0" % hostname
-
-        port_file = self.getBuildArtifact("port")
-        commandline_args = [
-            "platform",
-            "--listen",
-            listen_url,
-            "--socket-file",
-            port_file,
-        ]
-
-        self.spawnSubprocess(exe, commandline_args)
-        socket_id = lldbutil.wait_for_file_on_target(self, port_file)
-
-        new_platform = lldb.SBPlatform("remote-" + self.getPlatform())
-        self.dbg.SetSelectedPlatform(new_platform)
-
-        connect_url = "connect://[%s]:%s" % (hostname, socket_id)
-        self.runCmd("platform connect %s" % connect_url)
-
+        new_platform = lldbutil.connect_to_new_remote_platform(self, exe)
         wd = self.getBuildArtifact("wd")
         os.mkdir(wd)
         new_platform.SetWorkingDirectory(wd)

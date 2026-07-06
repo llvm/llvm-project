@@ -11122,6 +11122,52 @@ bool ScalarEvolution::SimplifyICmpOperands(CmpPredicate &Pred, SCEVUse &LHS,
     Changed = true;
   }
 
+  // (K + A) pred (K + B) --> A pred B
+  // For equality, no flags are needed.
+  // For signed, both adds must be NSW. For unsigned, both must be NUW.
+  {
+    const SCEVConstant *C = nullptr;
+    if (match(LHS, m_scev_Add(m_SCEVConstant(C), m_SCEV(NewLHS))) &&
+        match(RHS, m_scev_Add(m_scev_Specific(C), m_SCEV(NewRHS)))) {
+      const auto *LAdd = cast<SCEVAddExpr>(LHS);
+      const auto *RAdd = cast<SCEVAddExpr>(RHS);
+      if (ICmpInst::isEquality(Pred) ||
+          (ICmpInst::isSigned(Pred) && LAdd->hasNoSignedWrap() &&
+           RAdd->hasNoSignedWrap()) ||
+          (ICmpInst::isUnsigned(Pred) && LAdd->hasNoUnsignedWrap() &&
+           RAdd->hasNoUnsignedWrap())) {
+        LHS = NewLHS;
+        RHS = NewRHS;
+        Changed = true;
+      }
+    }
+  }
+
+  // (C * A) pred (C * B) --> A pred B
+  // For equality predicates, both muls must be NUW or both must be NSW
+  // (either suffices to make multiplication by C injective; C == 0 is
+  // impossible because SCEV folds 0 * X to 0).
+  // For signed ordering, C must be positive and both muls must be NSW.
+  // For unsigned ordering, both muls must be NUW.
+  {
+    const SCEVConstant *C = nullptr;
+    if (match(LHS, m_scev_Mul(m_SCEVConstant(C), m_SCEV(NewLHS))) &&
+        match(RHS, m_scev_Mul(m_scev_Specific(C), m_SCEV(NewRHS)))) {
+      const auto *LMul = cast<SCEVMulExpr>(LHS);
+      const auto *RMul = cast<SCEVMulExpr>(RHS);
+      bool BothNUW = LMul->hasNoUnsignedWrap() && RMul->hasNoUnsignedWrap();
+      bool BothNSW = LMul->hasNoSignedWrap() && RMul->hasNoSignedWrap();
+      if ((ICmpInst::isEquality(Pred) && (BothNUW || BothNSW)) ||
+          (ICmpInst::isSigned(Pred) && BothNSW &&
+           C->getAPInt().isStrictlyPositive()) ||
+          (ICmpInst::isUnsigned(Pred) && BothNUW)) {
+        LHS = NewLHS;
+        RHS = NewRHS;
+        Changed = true;
+      }
+    }
+  }
+
   // If we're comparing an addrec with a value which is loop-invariant in the
   // addrec's loop, put the addrec on the left. Also make a dominance check,
   // as both operands could be addrecs loop-invariant in each other's loop.

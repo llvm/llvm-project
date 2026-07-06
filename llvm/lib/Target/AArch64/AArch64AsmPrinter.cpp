@@ -3203,7 +3203,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
         CurrentPatchableFunctionEntrySym == CurrentFnBegin &&
         MI == &MF->front().front()) {
       int64_t Imm = MI->getOperand(0).getImm();
-      if ((Imm & 32) && (Imm & 6)) {
+      if (Imm == 32 || Imm == 34 || Imm == 36 || Imm == 38) {
         MCInst Inst;
         MCInstLowering.Lower(MI, Inst);
         EmitToStreamer(*OutStreamer, Inst);
