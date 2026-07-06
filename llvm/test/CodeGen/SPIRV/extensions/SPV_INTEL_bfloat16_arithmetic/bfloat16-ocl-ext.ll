@@ -27,14 +27,15 @@
 ; COMMON-DAG: OpExtension "SPV_INTEL_bfloat16_arithmetic"
 ; COMMON-DAG: [[EXTSET:%.*]] = OpExtInstImport "OpenCL.std"
 ; COMMON-DAG: [[BFLOAT:%.*]] = OpTypeFloat 16 0
+; COMMON-DAG: [[BFLOATV:%.*]] = OpTypeVector [[BFLOAT]] 4
 
-; BF16_RESULT_OPERAND-DAG: [[BFLOATV:%.*]] = OpTypeVector [[BFLOAT]] 4
-; BF16_RESULT_OPERAND: OpExtInst [[BFLOAT]] [[EXTSET]] fabs
-; BF16_RESULT_OPERAND: OpExtInst [[BFLOATV]] [[EXTSET]] fabs
+; BF16_RESULT_OPERAND: [[OP:%.*]] = OpFunctionParameter [[BFLOAT]]
+; BF16_RESULT_OPERAND: OpExtInst [[BFLOAT]] [[EXTSET]] fabs [[OP]]
+; BF16_RESULT_OPERAND: [[OPV:%.*]] = OpFunctionParameter [[BFLOATV]]
+; BF16_RESULT_OPERAND: OpExtInst [[BFLOATV]] [[EXTSET]] fabs [[OPV]]
 
 ; BF16_RESULT-DAG: [[INT:%.*]] = OpTypeInt 16 0
 ; BF16_RESULT-DAG: [[INTV:%.*]] = OpTypeVector [[INT]] 4
-; BF16_RESULT-DAG: [[BFLOATV:%.*]] = OpTypeVector [[BFLOAT]] 4
 ; BF16_RESULT: [[OP:%.*]] = OpFunctionParameter [[INT]]
 ; BF16_RESULT: OpExtInst [[BFLOAT]] [[EXTSET]] nan [[OP]]
 ; BF16_RESULT: [[OPV:%.*]] = OpFunctionParameter [[INTV]]
@@ -42,7 +43,6 @@
 
 ; BF16_OPERAND-DAG: [[INT:%.*]] = OpTypeInt 32 0
 ; BF16_OPERAND-DAG: [[INTV:%.*]] = OpTypeVector [[INT]] 4
-; BF16_OPERAND-DAG: [[BFLOATV:%.*]] = OpTypeVector [[BFLOAT]] 4
 ; BF16_OPERAND: [[OP:%.*]] = OpFunctionParameter [[BFLOAT]]
 ; BF16_OPERAND: OpExtInst [[INT]] [[EXTSET]] ilogb [[OP]]
 ; BF16_OPERAND: [[OPV:%.*]] = OpFunctionParameter [[BFLOATV]]
