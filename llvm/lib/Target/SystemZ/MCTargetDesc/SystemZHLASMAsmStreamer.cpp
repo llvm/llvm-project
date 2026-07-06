@@ -188,6 +188,9 @@ void SystemZHLASMAsmStreamer::emitBytes(StringRef Data) {
 
 void SystemZHLASMAsmStreamer::emitInstruction(const MCInst &Inst,
                                               const MCSubtargetInfo &STI) {
+  // Show the encoding in a comment if we have a code emitter.
+  addEncodingComment(Inst, STI);
+  EmitEOL();
 
   InstPrinter->printInst(&Inst, 0, "", STI, OS);
   EmitEOL();
