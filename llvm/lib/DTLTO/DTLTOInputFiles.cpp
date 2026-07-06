@@ -207,15 +207,18 @@ Error lto::DTLTO::serializeLTOInputs() {
   for (auto &Input : InputFiles) {
     if (!Input->isThinLTO() || !Input->getSerializeForDistribution())
       continue;
+
     // Save the content of the input file to a file named after the module ID.
-    StringRef ModuleId = Input->getName();
-    TimeTraceScope TimeScope("Serialize bitcode input for DTLTO", ModuleId);
+    StringRef ModuleID = Input->getName();
+    if (!InputModuleIDsToSerialize.contains(ModuleID))
+      continue;
+    TimeTraceScope TimeScope("Serialize bitcode input for DTLTO", ModuleID);
     MemoryBufferRef Buf = Input->getFileBuffer();
-    if (Error Err = save(Buf.getBuffer(), ModuleId))
+    if (Error Err = save(Buf.getBuffer(), ModuleID))
       return Err;
     // Cleanup this file on abnormal process exit.
     if (!SaveTemps)
-      addToCleanup(ModuleId);
+      addToCleanup(ModuleID);
   }
   return Error::success();
 }

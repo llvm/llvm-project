@@ -25,7 +25,7 @@ jobs:
     if: github.repository == 'llvm/llvm-project'
     runs-on: ubuntu-24.04
     container:
-      image: "ghcr.io/llvm/amd64/ci-ubuntu-24.04-github-automation:latest@sha256:06164c484402046b0d624e5df8b3435a91ea7d204e2416201a9bac8d809b9aa6"
+      image: "ghcr.io/llvm/amd64/ci-ubuntu-24.04-github-automation:latest@sha256:82b5304c5d99cf5d75a2334885aca57490cbb04f37d07fc49a10a2649824e526"
 
     steps:
       - id: app-token

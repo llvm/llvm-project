@@ -67,7 +67,9 @@ private:
   FactManager &FactMgr;
   LifetimeSafetySemaHelper *SemaHelper;
   ASTContext &AST;
+  const CFG *Cfg;
   const Decl *FD;
+  const LifetimeSafetyOpts &LSOpts;
 
   static SourceLocation
   GetFactLoc(llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> F) {
@@ -87,10 +89,12 @@ public:
                   const MovedLoansAnalysis &MovedLoans,
                   const LiveOriginsAnalysis &LiveOrigins, FactManager &FM,
                   AnalysisDeclContext &ADC,
-                  LifetimeSafetySemaHelper *SemaHelper)
+                  LifetimeSafetySemaHelper *SemaHelper,
+                  const LifetimeSafetyOpts &LSOpts)
       : LoanPropagation(LoanPropagation), MovedLoans(MovedLoans),
         LiveOrigins(LiveOrigins), FactMgr(FM), SemaHelper(SemaHelper),
-        AST(ADC.getASTContext()), FD(ADC.getDecl()) {
+        AST(ADC.getASTContext()), Cfg(ADC.getCFG()), FD(ADC.getDecl()),
+        LSOpts(LSOpts) {
     for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>())
       for (const Fact *F : FactMgr.getFacts(B))
         if (const auto *EF = F->getAs<ExpireFact>())
@@ -134,8 +138,10 @@ public:
       if (IsMoved)
         return;
       if (PVD->hasAttr<LifetimeBoundAttr>()) {
-        // Track that this lifetimebound parameter correctly escapes.
-        if (isa<ReturnEscapeFact>(OEF))
+        // Track that this lifetimebound parameter correctly escapes
+        // (via return or via field assignment in a constructor).
+        if (isa<ReturnEscapeFact>(OEF) ||
+            (isa<FieldEscapeFact>(OEF) && isa<CXXConstructorDecl>(FD)))
           VerifiedLiftimeboundEscapes.insert(PVD);
       } else {
         // Otherwise, suggest lifetimebound for parameter escaping through
@@ -268,7 +274,7 @@ public:
           // Scope-based expiry (use-after-scope).
           SemaHelper->reportUseAfterScope(
               IssueExpr, UF->getUseExpr(), MovedExpr, ExpiryLoc,
-              getExprChain(LoanPropagation.buildOriginFlowChain(UF, LID)));
+              getExprChain(LoanPropagation.buildOriginFlowChain(UF, LID, Cfg)));
 
       } else if (const auto *OEF =
                      CausingFact.dyn_cast<const OriginEscapesFact *>()) {
@@ -396,6 +402,9 @@ public:
   void suggestAnnotations() {
     if (!SemaHelper)
       return;
+    if (!LSOpts.SuggestAnnotations)
+      return;
+    llvm::TimeTraceScope TimeTrace("SuggestAnnotations");
     for (auto [Target, EscapeTarget] : AnnotationWarningsMap) {
       if (const auto *PVD = Target.dyn_cast<const ParmVarDecl *>())
         suggestWithScopeForParmVar(PVD, EscapeTarget);
@@ -533,9 +542,10 @@ void runLifetimeChecker(const LoanPropagationAnalysis &LP,
                         const MovedLoansAnalysis &MovedLoans,
                         const LiveOriginsAnalysis &LO, FactManager &FactMgr,
                         AnalysisDeclContext &ADC,
-                        LifetimeSafetySemaHelper *SemaHelper) {
+                        LifetimeSafetySemaHelper *SemaHelper,
+                        const LifetimeSafetyOpts &LSOpts) {
   llvm::TimeTraceScope TimeProfile("LifetimeChecker");
-  LifetimeChecker Checker(LP, MovedLoans, LO, FactMgr, ADC, SemaHelper);
+  LifetimeChecker Checker(LP, MovedLoans, LO, FactMgr, ADC, SemaHelper, LSOpts);
 }
 
 } // namespace clang::lifetimes::internal

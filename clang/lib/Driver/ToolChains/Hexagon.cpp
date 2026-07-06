@@ -106,14 +106,14 @@ static void handleHVXTargetFeatures(const Driver &D, const ArgList &Args,
 
   // Handle HVX floating point flags.
   auto checkFlagHvxVersion =
-      [&](auto FlagOn, auto FlagOff,
+      [&](auto FlagOn, auto FlagOnWithModes, auto FlagOff, bool CheckMode,
           unsigned MinVerNum) -> std::optional<StringRef> {
     // Return an std::optional<StringRef>:
     // - std::nullopt indicates a verification failure, or that the flag was not
     //   present in Args.
     // - Otherwise the returned value is that name of the feature to add
     //   to Features.
-    Arg *A = Args.getLastArg(FlagOn, FlagOff);
+    Arg *A = Args.getLastArg(FlagOn, FlagOnWithModes, FlagOff);
     if (!A)
       return std::nullopt;
 
@@ -130,17 +130,34 @@ static void handleHVXTargetFeatures(const Driver &D, const ArgList &Args,
           << withMinus(OptName) << ("v" + std::to_string(HvxVerNum));
       return std::nullopt;
     }
+
+    if (CheckMode && A->getOption().matches(FlagOnWithModes)) {
+      bool ValidMode =
+          llvm::StringSwitch<bool>(StringRef(A->getValue()).lower())
+              .Cases({"strict-ieee", "ieee", "lossy", "legacy"}, true)
+              .Default(false);
+      if (!ValidMode)
+        D.Diag(diag::err_drv_invalid_value)
+            << A->getAsString(Args) << A->getValue();
+    }
     return makeFeature(OptName, true);
   };
 
-  if (auto F = checkFlagHvxVersion(options::OPT_mhexagon_hvx_qfloat,
-                                   options::OPT_mno_hexagon_hvx_qfloat, 68)) {
+  if (auto F = checkFlagHvxVersion(
+          options::OPT_mhexagon_hvx_qfloat, options::OPT_mhexagon_hvx_qfloat_EQ,
+          options::OPT_mno_hexagon_hvx_qfloat, /*CheckMode=*/true, 68)) {
     Features.push_back(*F);
   }
-  if (auto F = checkFlagHvxVersion(options::OPT_mhexagon_hvx_ieee_fp,
-                                   options::OPT_mno_hexagon_hvx_ieee_fp, 68)) {
+  if (auto F = checkFlagHvxVersion(
+          options::OPT_mhexagon_hvx_ieee_fp, options::OPT_mhexagon_hvx_ieee_fp,
+          options::OPT_mno_hexagon_hvx_ieee_fp, /*CheckMode=*/false, 68)) {
     Features.push_back(*F);
   }
+
+  // On v79 and above, there is no IEEE hardware. Treat -mhvx-ieee-fp
+  // as "qfloat mode ieee".
+  if (HvxVerNum >= 79 && Args.getLastArg(options::OPT_mhexagon_hvx_ieee_fp))
+    Features.push_back("+hvx-qfloat");
 }
 
 // Hexagon target features.
@@ -534,7 +551,6 @@ void hexagon::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 std::string HexagonToolChain::getHexagonTargetDir(
       const std::string &InstalledDir,
       const SmallVectorImpl<std::string> &PrefixDirs) const {
-  std::string InstallRelDir;
   const Driver &D = getDriver();
 
   // Locate the rest of the toolchain ...
@@ -780,7 +796,7 @@ unsigned HexagonToolChain::getOptimizationLevel(
 
 void HexagonToolChain::addClangTargetOptions(const ArgList &DriverArgs,
                                              ArgStringList &CC1Args,
-                                             StringRef BoundArch,
+                                             BoundArch BA,
                                              Action::OffloadKind) const {
 
   bool UseInitArrayDefault = getTriple().isMusl();
@@ -790,23 +806,39 @@ void HexagonToolChain::addClangTargetOptions(const ArgList &DriverArgs,
                           UseInitArrayDefault))
     CC1Args.push_back("-fno-use-init-array");
 
-  static const std::pair<options::ID, const char *> FixedRegs[] = {
-      {options::OPT_ffixed_r16, "+reserved-r16"},
-      {options::OPT_ffixed_r17, "+reserved-r17"},
-      {options::OPT_ffixed_r18, "+reserved-r18"},
-      {options::OPT_ffixed_r19, "+reserved-r19"},
-      {options::OPT_ffixed_r20, "+reserved-r20"},
-      {options::OPT_ffixed_r21, "+reserved-r21"},
-      {options::OPT_ffixed_r22, "+reserved-r22"},
-      {options::OPT_ffixed_r23, "+reserved-r23"},
-      {options::OPT_ffixed_r24, "+reserved-r24"},
-      {options::OPT_ffixed_r25, "+reserved-r25"},
-      {options::OPT_ffixed_r26, "+reserved-r26"},
-      {options::OPT_ffixed_r27, "+reserved-r27"},
-      {options::OPT_ffixed_r28, "+reserved-r28"},
+  // The bool marks caller-saved (scratch) registers in the Hexagon ABI.
+  // Reserving those only behaves correctly if every other translation unit and
+  // library reserves them too, so we warn when the user does so.
+  static const std::tuple<options::ID, const char *, bool> FixedRegs[] = {
+      {options::OPT_ffixed_r6, "+reserved-r6", true},
+      {options::OPT_ffixed_r7, "+reserved-r7", true},
+      {options::OPT_ffixed_r8, "+reserved-r8", true},
+      {options::OPT_ffixed_r9, "+reserved-r9", true},
+      {options::OPT_ffixed_r10, "+reserved-r10", true},
+      {options::OPT_ffixed_r11, "+reserved-r11", true},
+      {options::OPT_ffixed_r12, "+reserved-r12", true},
+      {options::OPT_ffixed_r13, "+reserved-r13", true},
+      {options::OPT_ffixed_r14, "+reserved-r14", true},
+      {options::OPT_ffixed_r15, "+reserved-r15", true},
+      {options::OPT_ffixed_r16, "+reserved-r16", false},
+      {options::OPT_ffixed_r17, "+reserved-r17", false},
+      {options::OPT_ffixed_r18, "+reserved-r18", false},
+      {options::OPT_ffixed_r19, "+reserved-r19", false},
+      {options::OPT_ffixed_r20, "+reserved-r20", false},
+      {options::OPT_ffixed_r21, "+reserved-r21", false},
+      {options::OPT_ffixed_r22, "+reserved-r22", false},
+      {options::OPT_ffixed_r23, "+reserved-r23", false},
+      {options::OPT_ffixed_r24, "+reserved-r24", false},
+      {options::OPT_ffixed_r25, "+reserved-r25", false},
+      {options::OPT_ffixed_r26, "+reserved-r26", false},
+      {options::OPT_ffixed_r27, "+reserved-r27", false},
+      {options::OPT_ffixed_r28, "+reserved-r28", false},
   };
-  for (const auto &[Opt, Feature] : FixedRegs) {
-    if (DriverArgs.hasArg(Opt)) {
+  for (const auto &[Opt, Feature, IsCallerSaved] : FixedRegs) {
+    if (Arg *A = DriverArgs.getLastArg(Opt)) {
+      if (IsCallerSaved)
+        getDriver().Diag(diag::warn_drv_hexagon_reserved_caller_saved_reg)
+            << A->getOption().getName();
       CC1Args.push_back("-target-feature");
       CC1Args.push_back(Feature);
     }

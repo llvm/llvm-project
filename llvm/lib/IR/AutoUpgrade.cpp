@@ -533,6 +533,10 @@ static bool shouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
             Name.starts_with("vpcom") || // Added in 3.2, Updated in 9.0
             Name.starts_with("vprot"));  // Added in 8.0
 
+  if (Name.consume_front("bmi."))
+    return (Name.starts_with("pdep.") || // Added in 23.0
+            Name.starts_with("pext."));  // Added in 23.0
+
   return (Name == "addcarry.u32" ||        // Added in 8.0
           Name == "addcarry.u64" ||        // Added in 8.0
           Name == "addcarryx.u32" ||       // Added in 8.0
@@ -1304,6 +1308,36 @@ static bool convertIntrinsicValidType(StringRef Name,
   return false;
 }
 
+static bool upgradeIntrinsicDeclWithDefaultArgs(Function *F, Function *&NewFn) {
+  Intrinsic::ID IID = Intrinsic::lookupIntrinsicID(F->getName());
+  if (IID == Intrinsic::not_intrinsic)
+    return false;
+
+  auto [FirstDefault, Defaults] = Intrinsic::getAllDefaultArgValues(IID);
+  if (Defaults.empty())
+    return false;
+
+  // Overloaded intrinsics are out of scope for the default-arg feature
+  // and will be supported in a follow-up.
+  if (Intrinsic::isOverloaded(IID))
+    return false;
+
+  // Get the canonical full declaration for this intrinsic.
+  Function *FullDecl = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
+
+  // If the existing declaration already has all args, nothing to upgrade
+  if (F->arg_size() >= FullDecl->arg_size())
+    return false;
+
+  // Defaults are a contiguous trailing block, so checking the first missing
+  // argument is enough.
+  if (F->arg_size() < FirstDefault)
+    return false;
+
+  NewFn = FullDecl;
+  return true;
+}
+
 static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
                                       bool CanUpgradeDebugIntrinsicsToRecords) {
   assert(F && "Illegal to upgrade a non-existent Function.");
@@ -1548,19 +1582,34 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       return true;
     }
     break;
-  case 'l':
-    if ((Name.starts_with("lifetime.start") ||
-         Name.starts_with("lifetime.end")) &&
-        F->arg_size() == 2) {
-      Intrinsic::ID IID = Name.starts_with("lifetime.start")
-                              ? Intrinsic::lifetime_start
-                              : Intrinsic::lifetime_end;
-      rename(F);
-      NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
-                                                F->getArg(0)->getType());
-      return true;
+  case 'l': {
+    bool IsLifetimeStart = Name.consume_front("lifetime.start");
+    bool IsLifetimeEnd = !IsLifetimeStart && Name.consume_front("lifetime.end");
+    if (IsLifetimeStart || IsLifetimeEnd) {
+      if (F->arg_size() == 2) {
+        Intrinsic::ID IID = IsLifetimeStart ? Intrinsic::lifetime_start
+                                            : Intrinsic::lifetime_end;
+        rename(F);
+        // Old 2 argument form of these intrinsics have [Size, Ptr] as
+        // arguments. Use the Ptr argument to create new declaration.
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
+                                                  F->getArg(1)->getType());
+        return true;
+      } else if (F->arg_size() == 1 && Name == ".i64") {
+        // Matches @llvm.lifetime.{start/end}.i64 which used to be created by
+        // Autoupgrade prior to
+        // https://github.com/llvm/llvm-project/pull/204601. This is an invalid
+        // intrinsic with no expected calls. To allow auto-upgrade process to
+        // delete such invalid intrinsic declaration, set NewFn = nullptr
+        // and return true here. If there are actual calls to this intrinsic
+        // (which is not expected), they will be deleted in
+        // UpgradeIntrinsicCall.
+        NewFn = nullptr;
+        return true;
+      }
     }
     break;
+  }
   case 'm': {
     // Updating the memory intrinsics (memcpy/memmove/memset) that have an
     // alignment parameter to embedding the alignment as an attribute of
@@ -1937,6 +1986,9 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
   //  to both detect an intrinsic which needs upgrading, and to provide the
   //  upgraded form of the intrinsic. We should perhaps have two separate
   //  functions for this.
+  if (upgradeIntrinsicDeclWithDefaultArgs(F, NewFn))
+    return true;
+
   return false;
 }
 
@@ -4616,6 +4668,10 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
   } else if (Name.starts_with("avx512.mask.") &&
              upgradeAVX512MaskToSelect(Name, Builder, *CI, Rep)) {
     // Rep will be updated by the call in the condition.
+  } else if (Name.starts_with("bmi.pdep.")) {
+    Rep = upgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::pdep);
+  } else if (Name.starts_with("bmi.pext.")) {
+    Rep = upgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::pext);
   } else
     reportFatalUsageErrorWithCI("Unexpected intrinsic", CI);
 
@@ -5063,6 +5119,59 @@ static Value *upgradeConvertIntrinsicCall(StringRef Name, CallBase *CI,
   return nullptr;
 }
 
+static bool upgradeIntrinsicCallWithDefaultArgs(CallBase *CI, Function *NewFn,
+                                                IRBuilder<> &Builder) {
+  Intrinsic::ID IID = NewFn->getIntrinsicID();
+
+  auto [FirstDefault, Defaults] = Intrinsic::getAllDefaultArgValues(IID);
+  if (Defaults.empty())
+    return false;
+
+  unsigned OldArgCount = CI->arg_size();
+  unsigned NewArgCount = NewFn->arg_size();
+
+  // If the caller already supplied all arguments (or more), nothing to do.
+  // This mirrors C++ semantics: an explicitly-passed value is never overridden.
+  if (OldArgCount >= NewArgCount)
+    return false;
+
+  // Start with the existing arguments from the old call.
+  SmallVector<Value *, 8> NewArgs(CI->args());
+
+  // Defaults are a contiguous trailing block, so checking the first missing
+  // argument is enough.
+  if (OldArgCount < FirstDefault)
+    return false;
+
+  // Fill in each missing trailing argument from the table.
+  FunctionType *NewFT = NewFn->getFunctionType();
+  for (unsigned Idx = OldArgCount; Idx < NewArgCount; ++Idx) {
+    assert(Idx >= FirstDefault && Idx - FirstDefault < Defaults.size() &&
+           "missing argument outside the default range");
+    Type *ParamTy = NewFT->getParamType(Idx);
+
+    // Only integer types are supported (i1, i8, i16, i32, i64).
+    if (!ParamTy->isIntegerTy())
+      return false;
+    NewArgs.push_back(ConstantInt::get(ParamTy, Defaults[Idx - FirstDefault]));
+  }
+
+  // Preserve operand bundles by creating the call with them.
+  SmallVector<OperandBundleDef, 1> OpBundles;
+  CI->getOperandBundlesAsDefs(OpBundles);
+  CallInst *NewCall = Builder.CreateCall(NewFn, NewArgs, OpBundles);
+
+  NewCall->takeName(CI);
+  NewCall->setCallingConv(CI->getCallingConv());
+  NewCall->copyMetadata(*CI);
+  if (auto *OldCI = dyn_cast<CallInst>(CI))
+    NewCall->setTailCallKind(OldCI->getTailCallKind());
+
+  CI->replaceAllUsesWith(NewCall);
+  CI->eraseFromParent();
+  return true;
+}
+
 /// Upgrade a call to an old intrinsic. All argument and return casting must be
 /// provided to seamlessly integrate with existing context.
 void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
@@ -5115,6 +5224,9 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Rep = upgradeVectorSplice(CI, Builder);
     } else if (Name.consume_front("convert.")) {
       Rep = upgradeConvertIntrinsicCall(Name, CI, F, Builder);
+    } else if (Name == "lifetime.start.i64" || Name == "lifetime.end.i64") {
+      // Delete calls to invalid @llvm.lifetime.{start,end}.i64 intrinsics.
+      Rep = nullptr;
     } else {
       llvm_unreachable("Unknown function for CallBase upgrade.");
     }
@@ -5168,6 +5280,11 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
   CallInst *NewCall = nullptr;
   switch (NewFn->getIntrinsicID()) {
   default: {
+    // Last resort: try the data-driven default-arg upgrade.
+    // Handles any intrinsic annotated with ImmArg<..., DefaultValue<...>>
+    // in its .td definition, without needing a dedicated case.
+    if (upgradeIntrinsicCallWithDefaultArgs(CI, NewFn, Builder))
+      return;
     DefaultCase();
     return;
   }

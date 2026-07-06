@@ -131,6 +131,7 @@ namespace __function {
 template <class _Fp>
 class __base;
 
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 template <class _Rp, class... _ArgTypes>
 class __base<_Rp(_ArgTypes...)> {
 public:
@@ -149,6 +150,7 @@ public:
   virtual const std::type_info& target_type() const _NOEXCEPT  = 0;
 #  endif // _LIBCPP_HAS_RTTI
 };
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 // __func implements __base for a given functor type.
 

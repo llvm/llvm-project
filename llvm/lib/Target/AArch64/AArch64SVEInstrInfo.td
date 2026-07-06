@@ -39,6 +39,7 @@
 //    _mt                  <=>     _MERGE_PASSTHRU
 //    _z                   <=>     _MERGE_ZERO
 //    _p                   <=>     _PRED
+//    _pn                  <=>     _PRED_COUNTER
 //
 //  Given the context of this file, it is not strictly necessary to use _p to
 //  distinguish predicated from unpredicated nodes given that most SVE
@@ -72,6 +73,21 @@ def SDT_AArch64_LD1Replicate : SDTypeProfile<1, 2, [
 
 def AArch64ld1rq_z : SDNode<"AArch64ISD::LD1RQ_MERGE_ZERO",  SDT_AArch64_LD1Replicate, [SDNPHasChain, SDNPMayLoad]>;
 def AArch64ld1ro_z : SDNode<"AArch64ISD::LD1RO_MERGE_ZERO",  SDT_AArch64_LD1Replicate, [SDNPHasChain, SDNPMayLoad]>;
+
+def SDT_AArch64_PredCounterWhile : SDTypeProfile<2, 4, [
+  SDTCisVT<0, aarch64svcount>, SDTCisVT<1, FlagsVT>,
+  SDTCisInt<2>, SDTCisInt<3>,
+  SDTCisInt<4>, SDTCisInt<5>
+]>;
+
+def AArch64whilege_pn_flag : SDNode<"AArch64ISD::WHILEGE_PRED_COUNTER", SDT_AArch64_PredCounterWhile>;
+def AArch64whilegt_pn_flag : SDNode<"AArch64ISD::WHILEGT_PRED_COUNTER", SDT_AArch64_PredCounterWhile>;
+def AArch64whilelt_pn_flag : SDNode<"AArch64ISD::WHILELT_PRED_COUNTER", SDT_AArch64_PredCounterWhile>;
+def AArch64whilele_pn_flag : SDNode<"AArch64ISD::WHILELE_PRED_COUNTER", SDT_AArch64_PredCounterWhile>;
+def AArch64whilehs_pn_flag : SDNode<"AArch64ISD::WHILEHS_PRED_COUNTER", SDT_AArch64_PredCounterWhile>;
+def AArch64whilehi_pn_flag : SDNode<"AArch64ISD::WHILEHI_PRED_COUNTER", SDT_AArch64_PredCounterWhile>;
+def AArch64whilelo_pn_flag : SDNode<"AArch64ISD::WHILELO_PRED_COUNTER", SDT_AArch64_PredCounterWhile>;
+def AArch64whilels_pn_flag : SDNode<"AArch64ISD::WHILELS_PRED_COUNTER", SDT_AArch64_PredCounterWhile>;
 
 // Gather loads - node definitions
 //
@@ -515,6 +531,28 @@ def AArch64bic : PatFrags<(ops node:$op1, node:$op2),
                            (and node:$op1, (xor node:$op2, (splat_vector (i64 -1)))),
                            (and node:$op1, (xor node:$op2, (SVEAllActive))),
                            (AArch64bic_node node:$op1, node:$op2)]>;
+
+def AArch64and_z  : PatFrags<(ops node:$pg, node:$op1, node:$op2),
+                             [(int_aarch64_sve_and_z node:$pg, node:$op1, node:$op2),
+                              (and node:$pg, (and node:$op1, node:$op2))]>;
+def AArch64bic_z  : PatFrags<(ops node:$pg, node:$op1, node:$op2),
+                             [(int_aarch64_sve_bic_z node:$pg, node:$op1, node:$op2),
+                              (and node:$pg, (AArch64bic node:$op1, node:$op2))]>;
+def AArch64eor_z  : PatFrags<(ops node:$pg, node:$op1, node:$op2),
+                             [(int_aarch64_sve_eor_z node:$pg, node:$op1, node:$op2),
+                              (and node:$pg, (xor node:$op1, node:$op2))]>;
+def AArch64nand_z : PatFrags<(ops node:$pg, node:$op1, node:$op2),
+                             [(int_aarch64_sve_nand_z node:$pg, node:$op1, node:$op2),
+                              (and node:$pg, (xor (and node:$op1, node:$op2), immAllOnesV))]>;
+def AArch64nor_z  : PatFrags<(ops node:$pg, node:$op1, node:$op2),
+                             [(int_aarch64_sve_nor_z node:$pg, node:$op1, node:$op2),
+                              (and node:$pg, (xor (or node:$op1, node:$op2), immAllOnesV))]>;
+def AArch64orn_z  : PatFrags<(ops node:$pg, node:$op1, node:$op2),
+                             [(int_aarch64_sve_orn_z node:$pg, node:$op1, node:$op2),
+                              (and node:$pg, (or node:$op1, (xor node:$op2, immAllOnesV)))]>;
+def AArch64orr_z  : PatFrags<(ops node:$pg, node:$op1, node:$op2),
+                             [(int_aarch64_sve_orr_z node:$pg, node:$op1, node:$op2),
+                              (and node:$pg, (or node:$op1, node:$op2))]>;
 
 def AArch64subr : PatFrag<(ops node:$op1, node:$op2),
                           (sub node:$op2, node:$op1)>;
@@ -1148,17 +1186,17 @@ let Predicates = [HasSVE_or_SME] in {
   defm PFIRST   : sve_int_pfirst<0b00000, "pfirst", int_aarch64_sve_pfirst>;
   defm PNEXT    : sve_int_pnext<0b00110, "pnext", int_aarch64_sve_pnext>;
 
-  defm AND_PPzPP   : sve_int_pred_log_v2<0b0000, "and", int_aarch64_sve_and_z, and>;
-  defm BIC_PPzPP   : sve_int_pred_log_v2<0b0001, "bic", int_aarch64_sve_bic_z, AArch64bic>;
-  defm EOR_PPzPP   : sve_int_pred_log<0b0010, "eor", int_aarch64_sve_eor_z, xor>;
+  defm AND_PPzPP   : sve_int_pred_log_v2<0b0000, "and", AArch64and_z, and>;
+  defm BIC_PPzPP   : sve_int_pred_log_v2<0b0001, "bic", AArch64bic_z, AArch64bic>;
+  defm EOR_PPzPP   : sve_int_pred_log<0b0010, "eor", AArch64eor_z, xor>;
   defm SEL_PPPP    : sve_int_pred_log_v2<0b0011, "sel", vselect, or>;
   defm ANDS_PPzPP  : sve_int_pred_log<0b0100, "ands", null_frag>;
   defm BICS_PPzPP  : sve_int_pred_log<0b0101, "bics", null_frag>;
   defm EORS_PPzPP  : sve_int_pred_log<0b0110, "eors", null_frag>;
-  defm ORR_PPzPP   : sve_int_pred_log<0b1000, "orr", int_aarch64_sve_orr_z>;
-  defm ORN_PPzPP   : sve_int_pred_log<0b1001, "orn", int_aarch64_sve_orn_z>;
-  defm NOR_PPzPP   : sve_int_pred_log<0b1010, "nor", int_aarch64_sve_nor_z>;
-  defm NAND_PPzPP  : sve_int_pred_log<0b1011, "nand", int_aarch64_sve_nand_z>;
+  defm ORR_PPzPP   : sve_int_pred_log<0b1000, "orr", AArch64orr_z>;
+  defm ORN_PPzPP   : sve_int_pred_log<0b1001, "orn", AArch64orn_z>;
+  defm NOR_PPzPP   : sve_int_pred_log<0b1010, "nor", AArch64nor_z>;
+  defm NAND_PPzPP  : sve_int_pred_log<0b1011, "nand", AArch64nand_z>;
   defm ORRS_PPzPP  : sve_int_pred_log<0b1100, "orrs", null_frag>;
   defm ORNS_PPzPP  : sve_int_pred_log<0b1101, "orns", null_frag>;
   defm NORS_PPzPP  : sve_int_pred_log<0b1110, "nors", null_frag>;
@@ -1948,6 +1986,46 @@ let Predicates = [HasSVE] in {
   defm : adrShiftPat<nxv4i32, nxv4i1, i32, ADR_LSL_ZZZ_S_2, 2>;
   defm : adrShiftPat<nxv4i32, nxv4i1, i32, ADR_LSL_ZZZ_S_3, 3>;
 
+  // Avoid MUL/MLA for small constants where ADD/ADR forms are available.
+  multiclass sveMulMlaImmAddAdrPat<ValueType Ty, ValueType PredTy,
+                                   ValueType ScalarTy,
+                                   Instruction Add, Instruction Adr1,
+                                   Instruction Adr2, Instruction Adr3> {
+    // MUL
+    def : Pat<(Ty (AArch64mul_p (PredTy (SVEAnyPredicate)), Ty:$Op,
+                                (Ty (splat_vector (ScalarTy 2))))),
+              (Add $Op, $Op)>;
+    def : Pat<(Ty (AArch64mul_p (PredTy (SVEAnyPredicate)), Ty:$Op,
+                                (Ty (splat_vector (ScalarTy 3))))),
+              (Adr1 $Op, $Op)>;
+    def : Pat<(Ty (AArch64mul_p (PredTy (SVEAnyPredicate)), Ty:$Op,
+                                (Ty (splat_vector (ScalarTy 5))))),
+              (Adr2 $Op, $Op)>;
+    def : Pat<(Ty (AArch64mul_p (PredTy (SVEAnyPredicate)), Ty:$Op,
+                                (Ty (splat_vector (ScalarTy 9))))),
+              (Adr3 $Op, $Op)>;
+
+    // MLA
+    def : Pat<(Ty (AArch64mla_p (PredTy (SVEAnyPredicate)), Ty:$Acc, Ty:$Op,
+                                (Ty (splat_vector (ScalarTy 2))))),
+              (Adr1 $Acc, $Op)>;
+    def : Pat<(Ty (AArch64mla_p (PredTy (SVEAnyPredicate)), Ty:$Acc, Ty:$Op,
+                                (Ty (splat_vector (ScalarTy 4))))),
+              (Adr2 $Acc, $Op)>;
+    def : Pat<(Ty (AArch64mla_p (PredTy (SVEAnyPredicate)), Ty:$Acc, Ty:$Op,
+                                (Ty (splat_vector (ScalarTy 8))))),
+              (Adr3 $Acc, $Op)>;
+  }
+
+  let AddedComplexity = 10 in {
+    defm : sveMulMlaImmAddAdrPat<nxv2i64, nxv2i1, i64,
+                              ADD_ZZZ_D, ADR_LSL_ZZZ_D_1,
+                              ADR_LSL_ZZZ_D_2, ADR_LSL_ZZZ_D_3>;
+    defm : sveMulMlaImmAddAdrPat<nxv4i32, nxv4i1, i32,
+                              ADD_ZZZ_S, ADR_LSL_ZZZ_S_1,
+                              ADR_LSL_ZZZ_S_2, ADR_LSL_ZZZ_S_3>;
+  }
+
   // adr z0.d, [z0.d, z0.d, uxtw #<shift>]
   // adr z0.d, [z0.d, z0.d, sxtw #<shift>]
   multiclass adrXtwShiftPat<ValueType Ty, ValueType PredTy, int ShiftAmt> {
@@ -2730,22 +2808,22 @@ let Predicates = [HasSVE_or_SME] in {
   // These get expanded to individual LDR_ZXI/STR_ZXI instructions in
   // AArch64ExpandPseudoInsts.
   let mayLoad = 1, hasSideEffects = 0 in {
-    def LDR_ZZXI_STRIDED_CONTIGUOUS   : Pseudo<(outs   ZZ_b_strided_and_contiguous:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
-    def LDR_ZZZZXI_STRIDED_CONTIGUOUS : Pseudo<(outs ZZZZ_b_strided_and_contiguous:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+    def LDR_ZZXI_STRIDED_CONTIGUOUS   : Pseudo<(outs   ZZ_b_strided_and_contiguous:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[WriteLD]>;
+    def LDR_ZZZZXI_STRIDED_CONTIGUOUS : Pseudo<(outs ZZZZ_b_strided_and_contiguous:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[WriteLD]>;
 
-    def LDR_ZZXI   : Pseudo<(outs   ZZ_b:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
-    def LDR_ZZZXI  : Pseudo<(outs  ZZZ_b:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
-    def LDR_ZZZZXI : Pseudo<(outs ZZZZ_b:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
-    def LDR_PPXI   : Pseudo<(outs   PPR2:$pp), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+    def LDR_ZZXI   : Pseudo<(outs   ZZ_b:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[WriteLD]>;
+    def LDR_ZZZXI  : Pseudo<(outs  ZZZ_b:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[WriteLD]>;
+    def LDR_ZZZZXI : Pseudo<(outs ZZZZ_b:$Zd), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[WriteLD]>;
+    def LDR_PPXI   : Pseudo<(outs   PPR2:$pp), (ins GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[WriteLD]>;
   }
   let mayStore = 1, hasSideEffects = 0 in {
-    def STR_ZZXI_STRIDED_CONTIGUOUS   : Pseudo<(outs), (ins   ZZ_b_strided_and_contiguous:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
-    def STR_ZZZZXI_STRIDED_CONTIGUOUS : Pseudo<(outs), (ins ZZZZ_b_strided_and_contiguous:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+    def STR_ZZXI_STRIDED_CONTIGUOUS   : Pseudo<(outs), (ins   ZZ_b_strided_and_contiguous:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[WriteST]>;
+    def STR_ZZZZXI_STRIDED_CONTIGUOUS : Pseudo<(outs), (ins ZZZZ_b_strided_and_contiguous:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[WriteST]>;
 
-    def STR_ZZXI   : Pseudo<(outs), (ins   ZZ_b:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
-    def STR_ZZZXI  : Pseudo<(outs), (ins  ZZZ_b:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
-    def STR_ZZZZXI : Pseudo<(outs), (ins ZZZZ_b:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
-    def STR_PPXI   : Pseudo<(outs), (ins   PPR2:$pp, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[]>;
+    def STR_ZZXI   : Pseudo<(outs), (ins   ZZ_b:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[WriteST]>;
+    def STR_ZZZXI  : Pseudo<(outs), (ins  ZZZ_b:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[WriteST]>;
+    def STR_ZZZZXI : Pseudo<(outs), (ins ZZZZ_b:$Zs, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[WriteST]>;
+    def STR_PPXI   : Pseudo<(outs), (ins   PPR2:$pp, GPR64sp:$sp, simm4s1:$offset),[]>, Sched<[WriteST]>;
   }
 
   let AddedComplexity = 1 in {
@@ -2995,18 +3073,6 @@ let Predicates = [HasSVE_or_SME] in {
   foreach VT = [ nxv16i8, nxv8i16, nxv4i32, nxv2i64, nxv8f16, nxv4f32, nxv2f64, nxv8bf16 ] in
     foreach VT2 = [ nxv16i8, nxv8i16, nxv4i32, nxv2i64, nxv8f16, nxv4f32, nxv2f64, nxv8bf16 ] in
       def : Pat<(VT (AArch64NvCast (VT2 ZPR:$src))), (VT ZPR:$src)>;
-
-  def : Pat<(nxv16i1 (and PPR:$Ps1, PPR:$Ps2)),
-            (AND_PPzPP (PTRUE_B 31), PPR:$Ps1, PPR:$Ps2)>;
-  def : Pat<(nxv8i1 (and PPR:$Ps1, PPR:$Ps2)),
-            (AND_PPzPP (PTRUE_H 31), PPR:$Ps1, PPR:$Ps2)>;
-  def : Pat<(nxv4i1 (and PPR:$Ps1, PPR:$Ps2)),
-            (AND_PPzPP (PTRUE_S 31), PPR:$Ps1, PPR:$Ps2)>;
-  def : Pat<(nxv2i1 (and PPR:$Ps1, PPR:$Ps2)),
-            (AND_PPzPP (PTRUE_D 31), PPR:$Ps1, PPR:$Ps2)>;
-  // Emulate .Q operation using a PTRUE_D when the other lanes don't matter.
-  def : Pat<(nxv1i1 (and PPR:$Ps1, PPR:$Ps2)),
-            (AND_PPzPP (PTRUE_D 31), PPR:$Ps1, PPR:$Ps2)>;
 
   // Add more complex addressing modes here as required
   multiclass pred_load<ValueType Ty, ValueType PredTy, SDPatternOperator Load,
@@ -4607,14 +4673,14 @@ defm : store_pn_x4<nxv8bf16, int_aarch64_sve_stnt1_pn_x4, STNT1H_4Z_IMM>;
 defm : store_pn_x4<nxv4f32, int_aarch64_sve_stnt1_pn_x4, STNT1W_4Z_IMM>;
 defm : store_pn_x4<nxv2f64, int_aarch64_sve_stnt1_pn_x4, STNT1D_4Z_IMM>;
 
-defm WHILEGE_CXX  : sve2p1_int_while_rr_pn<"whilege", 0b000>;
-defm WHILEGT_CXX  : sve2p1_int_while_rr_pn<"whilegt", 0b001>;
-defm WHILELT_CXX  : sve2p1_int_while_rr_pn<"whilelt", 0b010>;
-defm WHILELE_CXX  : sve2p1_int_while_rr_pn<"whilele", 0b011>;
-defm WHILEHS_CXX  : sve2p1_int_while_rr_pn<"whilehs", 0b100>;
-defm WHILEHI_CXX  : sve2p1_int_while_rr_pn<"whilehi", 0b101>;
-defm WHILELO_CXX  : sve2p1_int_while_rr_pn<"whilelo", 0b110>;
-defm WHILELS_CXX  : sve2p1_int_while_rr_pn<"whilels", 0b111>;
+defm WHILEGE_CXX : sve2p1_int_while_rr_pn<"whilege", 0b000, AArch64whilege_pn_flag>;
+defm WHILEGT_CXX : sve2p1_int_while_rr_pn<"whilegt", 0b001, AArch64whilegt_pn_flag>;
+defm WHILELT_CXX : sve2p1_int_while_rr_pn<"whilelt", 0b010, AArch64whilelt_pn_flag>;
+defm WHILELE_CXX : sve2p1_int_while_rr_pn<"whilele", 0b011, AArch64whilele_pn_flag>;
+defm WHILEHS_CXX : sve2p1_int_while_rr_pn<"whilehs", 0b100, AArch64whilehs_pn_flag>;
+defm WHILEHI_CXX : sve2p1_int_while_rr_pn<"whilehi", 0b101, AArch64whilehi_pn_flag>;
+defm WHILELO_CXX : sve2p1_int_while_rr_pn<"whilelo", 0b110, AArch64whilelo_pn_flag>;
+defm WHILELS_CXX : sve2p1_int_while_rr_pn<"whilels", 0b111, AArch64whilels_pn_flag>;
 } // End HasSVE2p1_or_StreamingSME2
 
 let Predicates = [HasSVE_or_SME] in {

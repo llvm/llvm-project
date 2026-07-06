@@ -2,15 +2,15 @@
 
 ; Test amdgpu-codegenprepare implementation of rsq formation
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=SI,SI-IR,SI-SDAG,SI-SDAG-IR %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=SI,SI-IR,SI-GISEL,SI-GISEL-IR %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=SI,SI-IR,SI-GISEL,SI-GISEL-IR %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=VI,VI-IR,VI-SDAG,VI-SDAG-IR %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=VI,VI-IR,VI-GISEL,VI-GISEL-IR %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=VI,VI-IR,VI-GISEL,VI-GISEL-IR %s
 
 ; Test codegen implementation.
 ; RUN: llc -global-isel=0 -amdgpu-codegenprepare-disable-fdiv-expansion -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=SI,SI-CG,SI-SDAG,SI-SDAG-CG %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -amdgpu-codegenprepare-disable-fdiv-expansion -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=SI,SI-CG,SI-GISEL,SI-GISEL-CG %s
+; RUN: llc -global-isel=1 -amdgpu-codegenprepare-disable-fdiv-expansion -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=SI,SI-CG,SI-GISEL,SI-GISEL-CG %s
 ; RUN: llc -global-isel=0 -amdgpu-codegenprepare-disable-fdiv-expansion -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=VI,VI-CG,VI-SDAG,VI-SDAG-CG %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -amdgpu-codegenprepare-disable-fdiv-expansion -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=VI,VI-CG,VI-GISEL,VI-GISEL-CG %s
+; RUN: llc -global-isel=1 -amdgpu-codegenprepare-disable-fdiv-expansion -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=VI,VI-CG,VI-GISEL,VI-GISEL-CG %s
 
 declare i32 @llvm.amdgcn.workitem.id.x()
 declare i32 @llvm.amdgcn.readfirstlane(i32)

@@ -507,21 +507,20 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
 
   // If ctlz/cttz is only used as a shift amount, set is_zero_poison to true.
   if (II.hasOneUse() && match(Op1, m_Zero()) &&
-      match(II.user_back(), m_Shift(m_Value(), m_Specific(&II)))) {
-    II.dropUBImplyingAttrsAndMetadata();
-    return IC.replaceOperand(II, 1, IC.Builder.getTrue());
-  }
+      match(II.user_back(), m_Shift(m_Value(), m_Specific(&II))))
+    return CallInst::Create(II.getCalledFunction(),
+                            {Op0, IC.Builder.getTrue()});
 
   Constant *C;
 
   if (IsTZ) {
     // cttz(-x) -> cttz(x)
     if (match(Op0, m_Neg(m_Value(X))))
-      return IC.replaceOperand(II, 0, X);
+      return CallInst::Create(II.getCalledFunction(), {X, Op1});
 
     // cttz(-x & x) -> cttz(x)
     if (match(Op0, m_c_And(m_Neg(m_Value(X)), m_Deferred(X))))
-      return IC.replaceOperand(II, 0, X);
+      return CallInst::Create(II.getCalledFunction(), {X, Op1});
 
     // cttz(sext(x)) -> cttz(zext(x))
     if (match(Op0, m_OneUse(m_SExt(m_Value(X))))) {
@@ -545,10 +544,10 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
     Value *Y;
     SelectPatternFlavor SPF = matchSelectPattern(Op0, X, Y).Flavor;
     if (SPF == SPF_ABS || SPF == SPF_NABS)
-      return IC.replaceOperand(II, 0, X);
+      return CallInst::Create(II.getCalledFunction(), {X, Op1});
 
     if (match(Op0, m_Intrinsic<Intrinsic::abs>(m_Value(X))))
-      return IC.replaceOperand(II, 0, X);
+      return CallInst::Create(II.getCalledFunction(), {X, Op1});
 
     // cttz(shl(%const, %val), 1) --> add(cttz(%const, 1), %val)
     if (match(Op0, m_Shl(m_ImmConstant(C), m_Value(X))) &&
@@ -638,7 +637,8 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
   if (!Known.One.isZero() ||
       isKnownNonZero(Op0, IC.getSimplifyQuery().getWithInstruction(&II))) {
     if (!match(II.getArgOperand(1), m_One()))
-      return IC.replaceOperand(II, 1, IC.Builder.getTrue());
+      return CallInst::Create(II.getCalledFunction(),
+                              {Op0, IC.Builder.getTrue()});
   }
 
   // Add range attribute since known bits can't completely reflect what we know.
@@ -665,13 +665,13 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombinerImpl &IC) {
   // ctpop(bitreverse(x)) -> ctpop(x)
   // ctpop(bswap(x)) -> ctpop(x)
   if (match(Op0, m_BitReverse(m_Value(X))) || match(Op0, m_BSwap(m_Value(X))))
-    return IC.replaceOperand(II, 0, X);
+    return CallInst::Create(II.getCalledFunction(), X);
 
   // ctpop(rot(x)) -> ctpop(x)
   if ((match(Op0, m_FShl(m_Value(X), m_Value(Y), m_Value())) ||
        match(Op0, m_FShr(m_Value(X), m_Value(Y), m_Value()))) &&
       X == Y)
-    return IC.replaceOperand(II, 0, X);
+    return CallInst::Create(II.getCalledFunction(), X);
 
   // ctpop(x | -x) -> bitwidth - cttz(x, false)
   if (Op0->hasOneUse() &&
@@ -923,6 +923,15 @@ static CallInst *canonicalizeConstantArg0ToArg1(CallInst &Call) {
   if (isa<Constant>(Arg0) && !isa<Constant>(Arg1)) {
     Call.setArgOperand(0, Arg1);
     Call.setArgOperand(1, Arg0);
+    AttributeList CallAttr = Call.getAttributes();
+    AttributeSet LHSAttr = CallAttr.getParamAttrs(0);
+    AttributeSet RHSAttr = CallAttr.getParamAttrs(1);
+    LLVMContext &Ctx = Call.getContext();
+    Call.setAttributes(CallAttr
+                           .setAttributesAtIndex(
+                               Ctx, AttributeList::FirstArgIndex + 0, RHSAttr)
+                           .setAttributesAtIndex(
+                               Ctx, AttributeList::FirstArgIndex + 1, LHSAttr));
     return &Call;
   }
   return nullptr;
@@ -1063,18 +1072,17 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
       II.getFunction()->getAttributes().hasFnAttr(Attribute::StrictFP);
 
   Value *FNegSrc;
-  if (match(Src0, m_FNeg(m_Value(FNegSrc)))) {
-    // is.fpclass (fneg x), mask -> is.fpclass x, (fneg mask)
-
-    II.setArgOperand(1, ConstantInt::get(Src1->getType(), fneg(Mask)));
-    return replaceOperand(II, 0, FNegSrc);
-  }
+  // is.fpclass (fneg x), mask -> is.fpclass x, (fneg mask)
+  if (match(Src0, m_FNeg(m_Value(FNegSrc))))
+    return CallInst::Create(
+        II.getCalledFunction(),
+        {FNegSrc, ConstantInt::get(Src1->getType(), fneg(Mask))});
 
   Value *FAbsSrc;
-  if (match(Src0, m_FAbs(m_Value(FAbsSrc)))) {
-    II.setArgOperand(1, ConstantInt::get(Src1->getType(), inverse_fabs(Mask)));
-    return replaceOperand(II, 0, FAbsSrc);
-  }
+  if (match(Src0, m_FAbs(m_Value(FAbsSrc))))
+    return CallInst::Create(
+        II.getCalledFunction(),
+        {FAbsSrc, ConstantInt::get(Src1->getType(), inverse_fabs(Mask))});
 
   if ((OrderedMask == fcInf || OrderedInvertedMask == fcInf) &&
       (IsOrdered || IsUnordered) && !IsStrict) {
@@ -2025,6 +2033,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (auto Pair = matchSymmetricPair(II->getOperand(0), II->getOperand(1))) {
       replaceOperand(*II, 0, Pair->first);
       replaceOperand(*II, 1, Pair->second);
+      II->dropPoisonGeneratingAnnotations();
+      II->dropUBImplyingAttrsAndMetadata();
       return II;
     }
 
@@ -2059,13 +2069,16 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     // abs(-x) -> abs(x)
     Value *X;
-    if (match(IIOperand, m_Neg(m_Value(X)))) {
-      if (cast<Instruction>(IIOperand)->hasNoSignedWrap() || IntMinIsPoison)
-        replaceOperand(*II, 1, Builder.getTrue());
-      return replaceOperand(*II, 0, X);
-    }
+    if (match(IIOperand, m_Neg(m_Value(X))))
+      return CallInst::Create(
+          II->getCalledFunction(),
+          {X,
+           Builder.getInt1(IntMinIsPoison ||
+                           cast<Instruction>(IIOperand)->hasNoSignedWrap())});
+
     if (match(IIOperand, m_c_Select(m_Neg(m_Value(X)), m_Deferred(X))))
-      return replaceOperand(*II, 0, X);
+      return CallInst::Create(II->getCalledFunction(),
+                              {X, II->getArgOperand(1)});
 
     Value *Y;
     // abs(a * abs(b)) -> abs(a * b)
@@ -2075,7 +2088,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       bool NSW =
           cast<Instruction>(IIOperand)->hasNoSignedWrap() && IntMinIsPoison;
       auto *XY = NSW ? Builder.CreateNSWMul(X, Y) : Builder.CreateMul(X, Y);
-      return replaceOperand(*II, 0, XY);
+      return CallInst::Create(II->getCalledFunction(),
+                              {XY, II->getArgOperand(1)});
     }
 
     if (std::optional<bool> Known =
@@ -2517,7 +2531,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
             match(II->getArgOperand(0), m_FAbs(m_Value(X))) ||
             match(II->getArgOperand(0),
                   m_Intrinsic<Intrinsic::copysign>(m_Value(X), m_Value())))
-          return replaceOperand(*II, 0, X);
+          return CallInst::Create(II->getCalledFunction(), {X, Power});
       }
     }
     if (ConstantFP *Base = dyn_cast<ConstantFP>(II->getArgOperand(0))) {
@@ -2560,7 +2574,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       if (!ModuloC)
         return nullptr;
       if (ModuloC != ShAmtC)
-        return replaceOperand(*II, 2, ModuloC);
+        return CallInst::Create(II->getCalledFunction(), {Op0, Op1, ModuloC});
 
       assert(match(ConstantFoldCompareInstOperands(ICmpInst::ICMP_UGT, WidthC,
                                                    ShAmtC, DL),
@@ -2658,6 +2672,40 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     KnownBits Op2Known(BitWidth);
     if (SimplifyDemandedBits(II, 2, Op2Demanded, Op2Known))
       return &CI;
+    break;
+  }
+  case Intrinsic::pdep: {
+    const APInt *MaskC;
+    if (match(II->getArgOperand(1), m_APInt(MaskC))) {
+      unsigned MaskIdx, MaskLen;
+      if (MaskC->isShiftedMask(MaskIdx, MaskLen)) {
+        // any single contiguous sequence of 1s anywhere in the mask simply
+        // describes a subset of the input bits shifted to the appropriate
+        // position.  Replace with the straight forward IR.
+        Value *Input = II->getArgOperand(0);
+        Value *ShiftAmt = ConstantInt::get(II->getType(), MaskIdx);
+        Value *Shifted = Builder.CreateShl(Input, ShiftAmt);
+        Value *Masked = Builder.CreateAnd(Shifted, II->getArgOperand(1));
+        return replaceInstUsesWith(*II, Masked);
+      }
+    }
+    break;
+  }
+  case Intrinsic::pext: {
+    const APInt *MaskC;
+    if (match(II->getArgOperand(1), m_APInt(MaskC))) {
+      unsigned MaskIdx, MaskLen;
+      if (MaskC->isShiftedMask(MaskIdx, MaskLen)) {
+        // any single contiguous sequence of 1s anywhere in the mask simply
+        // describes a subset of the input bits shifted to the appropriate
+        // position.  Replace with the straight forward IR.
+        Value *Input = II->getArgOperand(0);
+        Value *Masked = Builder.CreateAnd(Input, II->getArgOperand(1));
+        Value *ShiftAmt = ConstantInt::get(II->getType(), MaskIdx);
+        Value *Shifted = Builder.CreateLShr(Masked, ShiftAmt);
+        return replaceInstUsesWith(*II, Shifted);
+      }
+    }
     break;
   }
   case Intrinsic::ptrmask: {
@@ -3057,19 +3105,14 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *Src1 = II->getArgOperand(1);
     Value *Src2 = II->getArgOperand(2);
     Value *X, *Y;
-    if (match(Src0, m_FNeg(m_Value(X))) && match(Src1, m_FNeg(m_Value(Y)))) {
-      replaceOperand(*II, 0, X);
-      replaceOperand(*II, 1, Y);
-      return II;
-    }
+    if (match(Src0, m_FNeg(m_Value(X))) && match(Src1, m_FNeg(m_Value(Y))))
+      return replaceInstUsesWith(
+          *II, Builder.CreateIntrinsic(IID, II->getType(), {X, Y, Src2}, II));
 
     // fma fabs(x), fabs(x), z -> fma x, x, z
-    if (match(Src0, m_FAbs(m_Value(X))) &&
-        match(Src1, m_FAbs(m_Specific(X)))) {
-      replaceOperand(*II, 0, X);
-      replaceOperand(*II, 1, X);
-      return II;
-    }
+    if (match(Src0, m_FAbs(m_Value(X))) && match(Src1, m_FAbs(m_Specific(X))))
+      return replaceInstUsesWith(
+          *II, Builder.CreateIntrinsic(IID, II->getType(), {X, X, Src2}, II));
 
     // Try to simplify the underlying FMul. We can only apply simplifications
     // that do not require rounding.
@@ -3123,14 +3166,16 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (match(Mag, m_APFloat(MagC)) && MagC->isNegative()) {
       APFloat PosMagC = *MagC;
       PosMagC.clearSign();
-      return replaceOperand(*II, 0, ConstantFP::get(Mag->getType(), PosMagC));
+      return replaceInstUsesWith(
+          *II, Builder.CreateCopySign(ConstantFP::get(Mag->getType(), PosMagC),
+                                      Sign, II));
     }
 
     // Peek through changes of magnitude's sign-bit. This call rewrites those:
     // copysign (fabs X), Sign --> copysign X, Sign
     // copysign (fneg X), Sign --> copysign X, Sign
     if (match(Mag, m_FAbs(m_Value(X))) || match(Mag, m_FNeg(m_Value(X))))
-      return replaceOperand(*II, 0, X);
+      return replaceInstUsesWith(*II, Builder.CreateCopySign(X, Sign, II));
 
     // copysign(floor(fabs(X)), X) --> copysign(trunc(X), X)
     // copysign ignores the sign bit of its magnitude argument (implicit fabs),
@@ -3141,7 +3186,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (match(Mag, m_Intrinsic<Intrinsic::floor>(m_FAbs(m_Value(FAbsArg)))) &&
         FAbsArg == Sign) {
       Value *Trunc = Builder.CreateUnaryIntrinsic(Intrinsic::trunc, Sign, II);
-      return replaceOperand(*II, 0, Trunc);
+      return replaceInstUsesWith(*II, Builder.CreateCopySign(Trunc, Sign, II));
     }
 
     Type *SignEltTy = Sign->getType()->getScalarType();
@@ -3186,10 +3231,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
       // fabs (select Cond, -FVal, FVal) --> fabs FVal
       if (match(TVal, m_FNeg(m_Specific(FVal))))
-        return replaceOperand(*II, 0, FVal);
+        return replaceInstUsesWith(*II, Builder.CreateFAbs(FVal, II));
       // fabs (select Cond, TVal, -TVal) --> fabs TVal
       if (match(FVal, m_FNeg(m_Specific(TVal))))
-        return replaceOperand(*II, 0, TVal);
+        return replaceInstUsesWith(*II, Builder.CreateFAbs(TVal, II));
     }
 
     Value *Magnitude, *Sign;
@@ -3228,7 +3273,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       // f(fabs(x)) --> f(x)
       // f(copysign(x, y)) --> f(x)
       // for f in {cos, cosh}
-      return replaceOperand(*II, 0, X);
+      return replaceInstUsesWith(*II, Builder.CreateUnaryIntrinsic(IID, X, II));
     }
     break;
   }
@@ -3293,9 +3338,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
            signBitMustBeTheSame(Exp, InnerExp, SQ.getWithInstruction(II)))) {
         Value *NewExp =
             Builder.CreateBinaryIntrinsic(Intrinsic::sadd_sat, InnerExp, Exp);
-        II->setArgOperand(1, NewExp);
-        II->setFastMathFlags(InnerFlags); // Or the inner flags.
-        return replaceOperand(*II, 0, InnerSrc);
+        return replaceInstUsesWith(
+            *II, Builder.CreateLdexp(InnerSrc, NewExp, FMF | InnerFlags));
       }
     }
 
@@ -3667,9 +3711,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         llvm_unreachable("Unexpected Attribute");
       case BundleAttr::Align: {
         // Try to remove redundant alignment assumptions.
-        auto [Ptr, _, Alignment, Offset] = getAssumeAlignInfo(OBU);
+        auto [Ptr, _, OffsetPtr, Alignment, Offset] = getAssumeAlignInfo(OBU);
 
-        if (!Alignment || !Offset || *Offset != 0)
+        if (!Alignment)
           break;
 
         // Remove align 1 and non-power-of-two bundles; they don't add any
@@ -3681,7 +3725,25 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
             GEP &&
             GEP->getMaxPreservedAlignment(getDataLayout()) >= *Alignment) {
           Builder.CreateAlignmentAssumption(
-              getDataLayout(), GEP->getPointerOperand(), *Alignment);
+              getDataLayout(), GEP->getPointerOperand(), *Alignment,
+              OffsetPtr ? const_cast<Value *>(OffsetPtr->get()) : nullptr);
+          return RemoveBundle();
+        }
+
+        if (!Offset)
+          break;
+
+        Value *BasePtr;
+        const APInt *PtrOffset;
+        if (match(Ptr.get(), m_PtrAdd(m_Value(BasePtr), m_APInt(PtrOffset)))) {
+          auto PtrOffsetVal =
+              PtrOffset->sextOrTrunc(DL.getIndexTypeSizeInBits(Ptr->getType()))
+                  .trySExtValue();
+          if (!PtrOffsetVal)
+            break;
+          Builder.CreateAlignmentAssumption(
+              DL, BasePtr, *Alignment,
+              Builder.getInt64(*Offset - *PtrOffsetVal));
           return RemoveBundle();
         }
 
@@ -3694,10 +3756,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
         // Compute known bits for the pointer and drop the assume if the
         // known alignment isn't increased by it.
-        if (computeKnownBits(Ptr, II).countMinTrailingZeros() <
-            Log2_64(*Alignment))
-          continue;
-        return RemoveBundle();
+        auto AlignMask = (*Alignment - 1);
+        if (KnownBits KB = computeKnownBits(Ptr, II);
+            (KB.Zero & AlignMask) == (~*Offset & AlignMask) &&
+            (KB.One & AlignMask) == (*Offset & AlignMask))
+          return RemoveBundle();
+        break;
       }
 
       case BundleAttr::Dereferenceable: {
@@ -3826,30 +3890,22 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
 
     // Convert alignment assume like:
-    // %B = ptrtoint i32* %A to i64
+    // %B = ptrtoint ptr %A to i64
     // %C = and i64 %B, Constant
     // %D = icmp eq i64 %C, 0
     // call void @llvm.assume(i1 %D)
     // into
-    // call void @llvm.assume(i1 true) [ "align"(i32* [[A]], i64  Constant + 1)]
+    // call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64  Constant + 1)]
     uint64_t AlignMask = 1;
     if ((match(IIOperand, m_Not(m_Trunc(m_Value(A)))) ||
          match(IIOperand,
                m_SpecificICmp(ICmpInst::ICMP_EQ,
                               m_And(m_Value(A), m_ConstantInt(AlignMask)),
                               m_Zero())))) {
-      if (isPowerOf2_64(AlignMask + 1)) {
-        uint64_t Offset = 0;
-        match(A, m_Add(m_Value(A), m_ConstantInt(Offset)));
-        if (match(A, m_PtrToIntOrAddr(m_Value(A)))) {
-          /// Note: this doesn't preserve the offset information but merges
-          /// offset and alignment.
-          /// TODO: we can generate a GEP instead of merging the alignment with
-          /// the offset.
-          Builder.CreateAlignmentAssumption(getDataLayout(), A,
-                                            MinAlign(Offset, AlignMask + 1));
-          return eraseInstFromFunction(*II);
-        }
+      if (isPowerOf2_64(AlignMask + 1) &&
+          match(A, m_PtrToIntOrAddr(m_Value(A)))) {
+        Builder.CreateAlignmentAssumption(getDataLayout(), A, AlignMask + 1);
+        return eraseInstFromFunction(*II);
       }
     }
 

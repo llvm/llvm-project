@@ -1075,7 +1075,7 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
     if (Elem.Index != AssumptionCache::ExprResultIdx) {
       if (auto OBU = I->getOperandBundleAt(Elem.Index);
           getBundleAttrFromOBU(OBU) == BundleAttr::Align) {
-        auto [Ptr, _, Alignment, Offset] = getAssumeAlignInfo(OBU);
+        auto [Ptr, _, _2, Alignment, Offset] = getAssumeAlignInfo(OBU);
         if (Ptr == V && Alignment && Offset && isPowerOf2_64(*Alignment) &&
             isValidAssumeForContext(I, Q)) {
           Known.Zero |= (*Alignment - 1) & ~*Offset;
@@ -2088,6 +2088,16 @@ static void computeKnownBitsFromOperator(const Operator *I,
         computeKnownBits(I->getOperand(0), DemandedElts, Known, Q, Depth + 1);
         computeKnownBits(I->getOperand(1), DemandedElts, Known2, Q, Depth + 1);
         Known = KnownBits::clmul(Known, Known2);
+        break;
+      case Intrinsic::pext:
+        computeKnownBits(I->getOperand(0), DemandedElts, Known, Q, Depth + 1);
+        computeKnownBits(I->getOperand(1), DemandedElts, Known2, Q, Depth + 1);
+        Known = KnownBits::pext(Known, Known2);
+        break;
+      case Intrinsic::pdep:
+        computeKnownBits(I->getOperand(0), DemandedElts, Known, Q, Depth + 1);
+        computeKnownBits(I->getOperand(1), DemandedElts, Known2, Q, Depth + 1);
+        Known = KnownBits::pdep(Known, Known2);
         break;
       case Intrinsic::uadd_sat:
         computeKnownBits(I->getOperand(0), DemandedElts, Known, Q, Depth + 1);
@@ -8178,6 +8188,8 @@ bool llvm::intrinsicPropagatesPoison(Intrinsic::ID IID) {
   case Intrinsic::llrint:
   case Intrinsic::fshl:
   case Intrinsic::fshr:
+  case Intrinsic::frexp:
+  case Intrinsic::get_active_lane_mask:
     return true;
   default:
     return false;
@@ -10449,21 +10461,23 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
       // It should be possible to implement this for any type, but this logic
       // only computes the range assuming standard subnormal handling.
       if (APFloat::isIEEELikeFP(FltSem)) {
-        KnownFPClass KnownSrc =
-            computeKnownFPClass(FrexpSrc, fcSubnormal, SQ, Depth + 1);
+        KnownFPClass KnownSrc = computeKnownFPClass(
+            FrexpSrc, fcSubnormal | fcNan | fcInf, SQ, Depth + 1);
 
-        // Exponent result is (src == 0) ? 0 : ilogb(src) + 1, and unspecified
-        // for inf/nan.
-        int MinExp = APFloat::semanticsMinExponent(FltSem) + 1;
+        // The exponent of frexp(NaN) and frexp(Inf) is unspecified. Only
+        // constrain its range when the source can be neither.
+        if (KnownSrc.isKnownNeverInfOrNaN()) {
+          int MinExp = APFloat::semanticsMinExponent(FltSem) + 1;
 
-        // Offset to find the true minimum exponent value for a denormal.
-        if (!KnownSrc.isKnownNeverSubnormal())
-          MinExp -= (APFloat::semanticsPrecision(FltSem) - 1);
+          // Offset to find the true minimum exponent value for a denormal.
+          if (!KnownSrc.isKnownNeverSubnormal())
+            MinExp -= (APFloat::semanticsPrecision(FltSem) - 1);
 
-        int MaxExp = APFloat::semanticsMaxExponent(FltSem) + 1;
-        CR = ConstantRange::getNonEmpty(
-            APInt(BitWidth, MinExp, /*isSigned=*/true),
-            APInt(BitWidth, MaxExp + 1, /*isSigned=*/true));
+          int MaxExp = APFloat::semanticsMaxExponent(FltSem) + 1;
+          CR = ConstantRange::getNonEmpty(
+              APInt(BitWidth, MinExp, /*isSigned=*/true),
+              APInt(BitWidth, MaxExp + 1, /*isSigned=*/true));
+        }
       }
     }
   }

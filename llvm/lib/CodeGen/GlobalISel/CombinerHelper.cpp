@@ -252,6 +252,8 @@ void CombinerHelper::applyCombineCopy(MachineInstr &MI) const {
 
 bool CombinerHelper::matchFreezeOfSingleMaybePoisonOperand(
     MachineInstr &MI, BuildFnTy &MatchInfo) const {
+  assert(MI.getOpcode() == TargetOpcode::G_FREEZE && "Invalid instruction");
+
   // Ported from InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating.
   Register DstOp = MI.getOperand(0).getReg();
   Register OrigOp = MI.getOperand(1).getReg();
@@ -305,6 +307,10 @@ bool CombinerHelper::matchFreezeOfSingleMaybePoisonOperand(
 
   Register MaybePoisonOperandReg = MaybePoisonOperand->getReg();
   LLT MaybePoisonOperandRegTy = MRI.getType(MaybePoisonOperandReg);
+
+  if (!isLegalOrBeforeLegalizer(
+          {TargetOpcode::G_FREEZE, {MaybePoisonOperandRegTy}}))
+    return false;
 
   MatchInfo = [=](MachineIRBuilder &B) mutable {
     Observer.changingInstr(*OrigDef);
@@ -1721,12 +1727,25 @@ void CombinerHelper::applyOptBrCondByInvertingCond(
   Observer.changedInstr(*BrCond);
 }
 
-bool CombinerHelper::tryEmitMemcpyInlineFamily(MachineInstr &MI) const {
+bool CombinerHelper::matchCombineMemCpyFamily(
+    MachineInstr &MI, MemCpyFamilyLoweringInfo &MatchInfo,
+    unsigned MaxLen) const {
+  auto &[Dst, Src, KnownLen, Alignment, DstAlignCanChange, MemOps] = MatchInfo;
+  return canLowerMemCpyFamily(MI, MRI, MaxLen, Dst, Src, KnownLen, Alignment,
+                              DstAlignCanChange, MemOps);
+}
+
+void CombinerHelper::applyCombineMemCpyFamily(
+    MachineInstr &MI, MemCpyFamilyLoweringInfo &MatchInfo) const {
+  auto &[Dst, Src, KnownLen, Alignment, DstAlignCanChange, MemOps] = MatchInfo;
   MachineIRBuilder HelperBuilder(MI);
   GISelObserverWrapper DummyObserver;
   LegalizerHelper Helper(HelperBuilder.getMF(), DummyObserver, HelperBuilder);
-  return Helper.lowerMemCpyFamily(MI) ==
-         LegalizerHelper::LegalizeResult::Legalized;
+  bool Changed = Helper.lowerMemCpyFamily(MI, Dst, Src, KnownLen, Alignment,
+                                          DstAlignCanChange, MemOps) ==
+                 LegalizerHelper::LegalizeResult::Legalized;
+  assert(Changed && "expected memcpy-family instruction to lower");
+  (void)Changed;
 }
 
 bool CombinerHelper::tryCombineMemCpyFamily(MachineInstr &MI,
@@ -2450,8 +2469,8 @@ bool CombinerHelper::matchCombineUnmergeWithDeadLanesToTrunc(
     MachineInstr &MI) const {
   assert(MI.getOpcode() == TargetOpcode::G_UNMERGE_VALUES &&
          "Expected an unmerge");
-  if (MRI.getType(MI.getOperand(0).getReg()).isVector() ||
-      MRI.getType(MI.getOperand(MI.getNumDefs()).getReg()).isVector())
+  if (!MRI.getType(MI.getOperand(0).getReg()).isScalar() ||
+      !MRI.getType(MI.getOperand(MI.getNumDefs()).getReg()).isScalar())
     return false;
   // Check that all the lanes are dead except the first one.
   for (unsigned Idx = 1, EndIdx = MI.getNumDefs(); Idx != EndIdx; ++Idx) {
@@ -3290,7 +3309,9 @@ bool CombinerHelper::matchBinopWithNegInner(Register MInner, Register Other,
     return false;
   };
 
-  if (!TryMatch(InnerLHS, InnerRHS) && !TryMatch(InnerRHS, InnerLHS))
+  // For SUB, the not must be the LHS. For ADD, it can be either operand.
+  if (!TryMatch(InnerLHS, InnerRHS) &&
+      !(InnerOpc == TargetOpcode::G_ADD && TryMatch(InnerRHS, InnerLHS)))
     return false;
 
   // Flip add/sub
@@ -7017,7 +7038,7 @@ bool CombinerHelper::matchRepeatedFPDivisor(
 
   auto IsOne = [this](Register X) {
     auto N0CFP = isConstantOrConstantSplatVectorFP(*MRI.getVRegDef(X), MRI);
-    return N0CFP && (N0CFP->isExactlyValue(1.0) || N0CFP->isExactlyValue(-1.0));
+    return N0CFP && (N0CFP->isOne() || N0CFP->isMinusOne());
   };
 
   // Skip if current node is a reciprocal/fneg-reciprocal.

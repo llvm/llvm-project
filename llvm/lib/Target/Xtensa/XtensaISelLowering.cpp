@@ -110,6 +110,8 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
   // indirect jump.
   setOperationAction(ISD::BR_JT, MVT::Other, Custom);
 
+  setOperationAction({ISD::TRAP, ISD::DEBUGTRAP}, MVT::Other, Legal);
+
   setOperationAction(ISD::BR_CC, MVT::i32, Legal);
   setOperationAction(ISD::BR_CC, MVT::i64, Expand);
 

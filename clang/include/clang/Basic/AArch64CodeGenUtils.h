@@ -41,6 +41,10 @@ enum {
   Use64BitVectors = (1 << 7),
   Use128BitVectors = (1 << 8),
 
+  // Source operands are double-element-width of the result (e.g. vraddhn).
+  // ClangIR-only; classic code-gen derives this from the intrinsic's .td.
+  WidenArgs = (1 << 9),
+
   Vectorize1ArgType = Add1ArgType | VectorizeArgTypes,
   VectorRet = AddRetType | VectorizeRetType,
   VectorRetGetArgs01 =
@@ -312,7 +316,7 @@ const inline ARMNeonVectorIntrinsicInfo AArch64SIMDIntrinsicMap [] = {
   NEONMAP1(vqshluq_n_v, aarch64_neon_sqshlu, 0),
   NEONMAP2(vqsub_v, aarch64_neon_uqsub, aarch64_neon_sqsub, Add1ArgType | UnsignedAlts),
   NEONMAP2(vqsubq_v, aarch64_neon_uqsub, aarch64_neon_sqsub, Add1ArgType | UnsignedAlts),
-  NEONMAP1(vraddhn_v, aarch64_neon_raddhn, Add1ArgType),
+  NEONMAP1(vraddhn_v, aarch64_neon_raddhn, Add1ArgType | WidenArgs),
   NEONMAP1(vrax1q_u64, aarch64_crypto_rax1, 0),
   NEONMAP2(vrecpe_v, aarch64_neon_frecpe, aarch64_neon_urecpe, 0),
   NEONMAP2(vrecpeq_v, aarch64_neon_frecpe, aarch64_neon_urecpe, 0),
@@ -346,7 +350,7 @@ const inline ARMNeonVectorIntrinsicInfo AArch64SIMDIntrinsicMap [] = {
   NEONMAP2(vrsqrteq_v, aarch64_neon_frsqrte, aarch64_neon_ursqrte, 0),
   NEONMAP1(vrsqrts_v, aarch64_neon_frsqrts, Add1ArgType),
   NEONMAP1(vrsqrtsq_v, aarch64_neon_frsqrts, Add1ArgType),
-  NEONMAP1(vrsubhn_v, aarch64_neon_rsubhn, Add1ArgType),
+  NEONMAP1(vrsubhn_v, aarch64_neon_rsubhn, Add1ArgType | WidenArgs),
   NEONMAP1(vsha1su0q_u32, aarch64_crypto_sha1su0, 0),
   NEONMAP1(vsha1su1q_u32, aarch64_crypto_sha1su1, 0),
   NEONMAP1(vsha256h2q_u32, aarch64_crypto_sha256h2, 0),
