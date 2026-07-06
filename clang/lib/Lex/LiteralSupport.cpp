@@ -594,17 +594,12 @@ static void DiagnoseInvalidUnicodeCharacterName(
       ++P;
       continue;
     }
-    const auto *Src = reinterpret_cast<const llvm::UTF8 *>(P);
-    const auto *SrcEnd = reinterpret_cast<const llvm::UTF8 *>(E);
-    llvm::UTF32 CodePoint = 0;
-    if (llvm::convertUTF8Sequence(&Src, SrcEnd, &CodePoint,
-                                  llvm::strictConversion) != llvm::conversionOK)
-      break;
     SourceLocation CharLoc = Lexer::AdvanceToTokenCharacter(
         Loc, (TokRangeBegin - TokBegin) + (P - Name.begin()), Loc.getManager(),
         Features);
     Diags->Report(CharLoc, diag::note_invalid_ucn_name_character)
-        << DisplayCodePointForDiagnostic(CodePoint);
+        << EscapeSingleCodepointForDiagnostic(
+               StringRef(P, std::distance(P, E)));
     HasIllegalCharacter = true;
     break;
   }
@@ -640,10 +635,9 @@ static void DiagnoseInvalidUnicodeCharacterName(
         3)
       break;
     Distance = Match.Distance;
-
     Diag(Diags, Features, Loc, TokBegin, TokRangeBegin, TokRangeEnd,
          diag::note_invalid_ucn_name_candidate)
-        << Match.Name << DisplayCodePointForDiagnostic(Match.Value)
+        << Match.Name << EscapeSingleCodepointForDiagnostic(Match.Value)
         << FixItHint::CreateReplacement(
                MakeCharSourceRange(Features, Loc, TokBegin, TokRangeBegin,
                                    TokRangeEnd),
