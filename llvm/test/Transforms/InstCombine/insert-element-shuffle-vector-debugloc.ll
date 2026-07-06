@@ -10,10 +10,6 @@
 ;; second shufflevector, since it replaces a chain of instructions ending with
 ;; the insert, should use the insert's debug location.
 
-source_filename = "reduced.ll"
-target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
-
 define <4 x float> @widget(ptr %arg) !dbg !5 {
 ; CHECK-LABEL: define <4 x float> @widget(
 ; CHECK-SAME: ptr [[ARG:%.*]]) !dbg [[DBG5:![0-9]+]] {
