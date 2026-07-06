@@ -2419,4 +2419,38 @@ std::optional<DynamicUserCondition> MakeVariantMatchInfo(
   }
   return dynamicCond;
 }
+
+OmpVariantMatchContext::OmpVariantMatchContext(bool isDeviceCompilation,
+    llvm::Triple targetTriple, llvm::Triple targetOffloadTriple,
+    std::string targetFeatures,
+    llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits)
+    // No specific device is selected during variant matching; use an unknown
+    // device number so OMPContext does not inadvertently describe the host
+    // device (which would cause target-device selectors to match incorrectly).
+    : llvm::omp::OMPContext(isDeviceCompilation, std::move(targetTriple),
+          std::move(targetOffloadTriple), /*DeviceNum=*/-1),
+      features_(std::move(targetFeatures)) {
+  for (llvm::omp::TraitProperty trait : constructTraits) {
+    addTrait(trait);
+  }
+}
+
+OmpVariantMatchContext::OmpVariantMatchContext(const SemanticsContext &context,
+    llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits)
+    : OmpVariantMatchContext(context.langOptions().OpenMPIsTargetDevice,
+          llvm::Triple(context.targetTriple()),
+          context.langOptions().OMPTargetTriples.empty()
+              ? llvm::Triple()
+              : context.langOptions().OMPTargetTriples.front(),
+          context.targetFeatures(), constructTraits) {}
+
+bool OmpVariantMatchContext::matchesISATrait(llvm::StringRef rawString) const {
+  // The target feature list is a comma-separated string such as
+  // "+sse,+avx2,-foo"; an ISA trait matches when its "+" form is present.
+  std::string want{("+" + rawString).str()};
+  llvm::SmallVector<llvm::StringRef> tokens;
+  llvm::StringRef(features_).split(
+      tokens, ',', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+  return llvm::is_contained(tokens, want);
+}
 } // namespace Fortran::semantics::omp

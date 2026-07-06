@@ -3428,7 +3428,7 @@ let IntrProperties = [IntrArgMemOnly, IntrWriteMem, NoCapture<ArgIndex<0>>] in {
 }
 
 let IntrProperties = [IntrArgMemOnly, ImmArg<ArgIndex<1>>, IntrWriteMem,
-                      NoCapture<ArgIndex<0>>] in {
+                      NoCapture<ArgIndex<0>>, Range<ArgIndex<1>, 0, 5>] in {
   def int_nvvm_tensormap_replace_global_stride :
     DefaultAttrsIntrinsic<[], [llvm_anyptr_ty, llvm_i32_ty, llvm_i64_ty], []>;
   foreach tmap_field = ["box_dim", "global_dim", "element_stride"] in {

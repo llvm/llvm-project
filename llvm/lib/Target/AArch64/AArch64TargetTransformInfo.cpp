@@ -2142,9 +2142,43 @@ static std::optional<Instruction *> instCombineSVEDupX(InstCombiner &IC,
   return IC.replaceInstUsesWith(II, Splat);
 }
 
+// xor(cmpne(%pg, %lhs, %rhs), %pg)
+// -> cmpeq(%pg, %lhs, %rhs)
+static std::optional<Instruction *> instCombineXorSVECmpNE(InstCombiner &IC,
+                                                           IntrinsicInst &II) {
+  if (!II.hasOneUse())
+    return std::nullopt;
+  auto *User = cast<Instruction>(*II.user_begin());
+  if (!match(User, m_c_Xor(m_Specific(&II), m_Specific(II.getOperand(0)))))
+    return std::nullopt;
+
+  Intrinsic::ID IID;
+  switch (II.getIntrinsicID()) {
+  case Intrinsic::aarch64_sve_cmpne:
+    IID = Intrinsic::aarch64_sve_cmpeq;
+    break;
+  case Intrinsic::aarch64_sve_cmpne_wide:
+    IID = Intrinsic::aarch64_sve_cmpeq_wide;
+    break;
+  default:
+    return std::nullopt;
+  }
+
+  IC.Builder.SetInsertPoint(User);
+  Value *CMPEQ = IC.Builder.CreateIntrinsic(
+      IID, II.getOperand(1)->getType(),
+      {II.getOperand(0), II.getOperand(1), II.getOperand(2)});
+  IC.replaceInstUsesWith(*User, CMPEQ);
+  IC.eraseInstFromFunction(*User);
+  return &II;
+}
+
 static std::optional<Instruction *> instCombineSVECmpNE(InstCombiner &IC,
                                                         IntrinsicInst &II) {
   LLVMContext &Ctx = II.getContext();
+
+  if (auto Res = instCombineXorSVECmpNE(IC, II))
+    return Res;
 
   if (!isAllActivePredicate(II.getArgOperand(0)))
     return std::nullopt;

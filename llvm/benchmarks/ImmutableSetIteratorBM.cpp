@@ -19,6 +19,14 @@
 //               other node, the pattern used by ImutAVLTree::isEqual and the
 //               tree canonicalization that the clang static analyzer relies on.
 //
+// It also measures tree canonicalization directly:
+//   * CanonicalizeSharedEqual - re-canonicalize a freshly built tree that is
+//               structurally equal to, and shares subtrees with, a tree already
+//               in the factory's cache. This is the clang static analyzer's hot
+//               path when equivalent ProgramStates are re-derived on many
+//               paths, and it exercises ImutAVLFactory::getCanonicalTree ->
+//               ImutAVLTree::isEqual.
+//
 //===----------------------------------------------------------------------===//
 
 #include "benchmark/benchmark.h"
@@ -110,6 +118,34 @@ static void BM_CompareSamePosition(benchmark::State &State) {
   State.SetItemsProcessed(State.iterations() * N);
 }
 
+// Re-canonicalize a freshly built tree that is structurally equal to a tree
+// already in the factory's cache and shares most of its subtrees. This mirrors
+// the clang static analyzer, where equivalent ProgramStates re-derived on many
+// paths are canonicalized against ones already cached. Adding then removing an
+// absent (largest) key rebuilds only the right spine while sharing the rest of
+// Base's subtrees, so getCanonicalTree confirms equality against a structurally
+// shared equal tree -- exactly where isEqual's subtree pointer skipping
+// matters.
+static void BM_CanonicalizeSharedEqual(benchmark::State &State) {
+  const size_t N = State.range(0);
+  ImmutableSet<int>::Factory F(/*canonicalize=*/true);
+  ImmutableSet<int> Base = F.getEmptySet();
+  std::vector<int> Vals(N);
+  std::iota(Vals.begin(), Vals.end(), 0);
+  std::mt19937 Rng(0xC0FFEE);
+  std::shuffle(Vals.begin(), Vals.end(), Rng);
+  for (int V : Vals)
+    Base = F.add(Base, V); // Base is canonical and lives in the factory cache.
+  const int Absent = static_cast<int>(N) + 1;
+
+  for (auto _ : State) {
+    ImmutableSet<int> Tmp = F.add(Base, Absent);
+    ImmutableSet<int> Eq = F.remove(Tmp, Absent); // structurally equal to Base
+    benchmark::DoNotOptimize(Eq.getRootWithoutRetain());
+  }
+  State.SetItemsProcessed(State.iterations());
+}
+
 } // namespace
 
 #define ITER_SIZES Arg(16)->Arg(256)->Arg(4096)->Arg(65536)
@@ -117,5 +153,8 @@ static void BM_CompareSamePosition(benchmark::State &State) {
 BENCHMARK(BM_Iterate)->Name("Iterate")->ITER_SIZES;
 BENCHMARK(BM_IterateWithSkips)->Name("Skip")->ITER_SIZES;
 BENCHMARK(BM_CompareSamePosition)->Name("CompareSamePos")->ITER_SIZES;
+BENCHMARK(BM_CanonicalizeSharedEqual)
+    ->Name("CanonicalizeSharedEqual")
+    ->ITER_SIZES;
 
 BENCHMARK_MAIN();

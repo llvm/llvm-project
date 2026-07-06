@@ -2075,6 +2075,32 @@ unix
 ^^^^
 POSIX/Unix checkers.
 
+.. _unix-generic-options:
+
+unix generic options
+""""""""""""""""""""
+These are common options that affect multiple checkers in the ``unix`` group.
+
+* ``unix.DynamicMemoryModeling:Optimistic``
+
+  If set to ``true``, the static analyzer assumes that all memory allocations
+  and deallocations (like ``malloc`` or ``free``) are marked with
+  ``ownership_holds``, ``ownership_takes`` and ``ownership_returns``
+  attributes. For more information see
+  `Attributes in Clang <../AttributeReference.html#ownership-holds-ownership-returns-ownership-takes-clang-static-analyzer>`_.
+  Default value is ``false``.
+
+* ``unix.DynamicMemoryModeling:ModelAllocationFailure``
+
+  Setting this option to ``true`` enforces that the return value of memory
+  allocation functions is tested for null by the programmer (if applicable).
+  By default the analyzer does not know if a returned pointer is null or
+  non-null after an allocation and access of this pointer is not reported as
+  null pointer access. If the option is set to ``true`` the analyzer adds a
+  specific execution branch where the return value is known to be null and a
+  possible null pointer access can be found by other checkers. Default value of
+  the option is ``false``.
+
 .. _unix-API:
 
 unix.API (C)

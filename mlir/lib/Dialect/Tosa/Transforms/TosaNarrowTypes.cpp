@@ -426,10 +426,10 @@ LogicalResult convertGenericOp(Operation *op, ValueRange operands,
   }
 
   for (Region &region : op->getRegions()) {
+    if (failed(rewriter.convertRegionTypes(&region, *typeConverter)))
+      return failure();
     Region *newRegion = state.addRegion();
     rewriter.inlineRegionBefore(region, *newRegion, newRegion->begin());
-    if (failed(rewriter.convertRegionTypes(newRegion, *typeConverter)))
-      return failure();
   }
 
   Operation *newOp = rewriter.create(state);

@@ -300,6 +300,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("call-frame-size", MIToken::kw_call_frame_size)
       .Case("noconvergent", MIToken::kw_noconvergent)
       .Case("mmra", MIToken::kw_mmra)
+      .Case("lr-split", MIToken::kw_lr_split)
       .Default(MIToken::Identifier);
 }
 

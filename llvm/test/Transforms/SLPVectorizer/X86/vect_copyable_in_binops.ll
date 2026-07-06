@@ -211,18 +211,9 @@ entry:
 define void @mul(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-LABEL: @mul(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i64 2
-; CHECK-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 2
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw <2 x i32> [[TMP0]], <i32 257, i32 -3>
-; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[DST]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR5:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[INCDEC_PTR2]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR7:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 3
-; CHECK-NEXT:    store i32 [[TMP2]], ptr [[INCDEC_PTR4]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[INCDEC_PTR5]], align 4
-; CHECK-NEXT:    [[MUL9:%.*]] = mul nsw i32 [[TMP3]], -9
-; CHECK-NEXT:    store i32 [[MUL9]], ptr [[INCDEC_PTR7]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[SRC:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw <4 x i32> [[TMP0]], <i32 257, i32 -3, i32 1, i32 -9>
+; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[DST:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

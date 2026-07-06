@@ -178,6 +178,12 @@ functions:
     arguments:
       - type: int
       - type: int
+  - name: sockatmark
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: int
   - name: socket
     standards:
       - posix

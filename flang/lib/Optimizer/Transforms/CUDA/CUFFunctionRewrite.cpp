@@ -11,21 +11,23 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/DataLayout.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/ValueRange.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Debug.h"
-#include <string_view>
 
 #define DEBUG_TYPE "flang-cuf-function-rewrite"
 
@@ -52,32 +54,53 @@ public:
     auto callee = op.getCallee();
     if (!callee)
       return failure();
-    auto name = callee->getRootReference().getValue();
 
-    if (genMappings_.contains(name)) {
-      auto fct = genMappings_.find(name);
-      mlir::Value result = fct->second(rewriter, op);
-      if (result)
-        rewriter.replaceOp(op, result);
-      else
-        rewriter.eraseOp(op);
-      return success();
-    }
-    return failure();
+    // Match on the callee's Fortran leaf name rather than on its symbol name so
+    // this does not depend on the target's name-mangling convention or on where
+    // in the pipeline the pass runs. getPresentableFunctionName restores the
+    // original name saved by external-name conversion and returns the
+    // deconstructed leaf name.
+    auto func = mlir::dyn_cast_or_null<mlir::FunctionOpInterface>(
+        mlir::SymbolTable::lookupNearestSymbolFrom(op, *callee));
+    if (!func)
+      return failure();
+
+    auto fct = genMappings_.find(fir::getPresentableFunctionName(func));
+    if (fct == genMappings_.end())
+      return failure();
+
+    // Only rewrite a compiler-provided declaration, never a user-defined
+    // procedure that happens to share the name.
+    if (!func.isExternal())
+      return failure();
+
+    mlir::Value result = fct->second(rewriter, op);
+    if (!result)
+      return failure();
+    rewriter.replaceOp(op, result);
+    return success();
   }
 
 private:
   static mlir::Value genOnDevice(mlir::PatternRewriter &rewriter,
                                  fir::CallOp op) {
-    assert(op.getArgs().size() == 0 && "expect 0 arguments");
+    // Only fold calls that match the intrinsic's shape: no arguments and a
+    // single logical result.
+    if (!op.getArgs().empty() || op.getNumResults() != 1)
+      return {};
+    mlir::Type resTy = op.getResult(0).getType();
+    if (!mlir::isa<fir::LogicalType>(resTy))
+      return {};
     mlir::Location loc = op.getLoc();
     unsigned inGPUMod = op->getParentOfType<gpu::GPUModuleOp>() ? 1 : 0;
     mlir::Type i1Ty = rewriter.getIntegerType(1);
     mlir::Value t = mlir::arith::ConstantOp::create(
         rewriter, loc, i1Ty, rewriter.getIntegerAttr(i1Ty, inGPUMod));
-    return fir::ConvertOp::create(rewriter, loc, op.getResult(0).getType(), t);
+    return fir::ConvertOp::create(rewriter, loc, resTy, t);
   }
 
+  // Recognized by Fortran leaf name; see matchAndRewrite for how the leaf name
+  // is recovered independently of external name mangling.
   const llvm::StringMap<genFunctionType> genMappings_ = {
       {"on_device", &genOnDevice}};
 };

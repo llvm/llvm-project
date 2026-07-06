@@ -18,6 +18,13 @@
 #define AF_INET 2   // Internet IPv4 Protocol
 #define AF_INET6 10 // IP version 6
 
+// 4.2BSD protocol families
+#define PF_UNSPEC AF_UNSPEC
+#define PF_UNIX AF_UNIX
+#define PF_LOCAL AF_LOCAL
+#define PF_INET AF_INET
+#define PF_INET6 AF_INET6
+
 #define SOCK_STREAM 1
 #define SOCK_DGRAM 2
 #define SOCK_RAW 3

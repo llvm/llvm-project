@@ -892,6 +892,7 @@ LowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG) const {
 //                      Calling Convention Implementation
 //===----------------------------------------------------------------------===//
 
+#define GET_CALLING_CONV_IMPL
 #include "XCoreGenCallingConv.inc"
 
 //===----------------------------------------------------------------------===//

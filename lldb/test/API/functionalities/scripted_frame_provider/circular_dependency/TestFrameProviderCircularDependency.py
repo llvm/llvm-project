@@ -46,7 +46,6 @@ class FrameProviderCircularDependencyTestCase(TestBase):
 
         return target, thread
 
-    @expectedFailureAll(oslist=["linux"], archs=["arm$"])
     def test_circular_dependency_with_function_replacement(self):
         """
         Test the circular dependency fix with a provider that replaces function names.

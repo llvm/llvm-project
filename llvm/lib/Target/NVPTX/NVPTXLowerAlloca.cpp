@@ -46,7 +46,7 @@ public:
 };
 } // namespace
 
-char NVPTXLowerAlloca::ID = 1;
+char NVPTXLowerAlloca::ID = 0;
 
 INITIALIZE_PASS(NVPTXLowerAlloca, "nvptx-lower-alloca", "Lower Alloca", false,
                 false)

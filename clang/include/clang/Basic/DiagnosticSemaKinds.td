@@ -4664,7 +4664,7 @@ def warn_impcast_unicode_precision
       InGroup<CharacterConversion>;
 def warn_impcast_unicode_char_type_constant
     : Warning<"implicit conversion from %0 to %1 changes the meaning of the "
-              "%select{code unit|code point}2 '%3'">,
+              "%select{code unit|code point}2 %3">,
       InGroup<CharacterConversion>;
 
 def warn_comparison_unicode_mixed_types
@@ -4674,7 +4674,7 @@ def warn_comparison_unicode_mixed_types
 
 def warn_comparison_unicode_mixed_types_constant
     : Warning<"comparing values of different Unicode code unit types %0 and %1 "
-              "compares unrelated code units '%2' and '%3'">,
+              "compares unrelated code units %2 and %3">,
       InGroup<CharacterConversion>;
 
 def warn_xor_used_as_pow : Warning<

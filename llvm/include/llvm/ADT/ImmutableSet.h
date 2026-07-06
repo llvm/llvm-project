@@ -430,17 +430,6 @@ protected:
     return (hl > hr ? hl : hr) + 1;
   }
 
-  static bool compareTreeWithSection(TreeTy* T,
-                                     typename TreeTy::iterator& TI,
-                                     typename TreeTy::iterator& TE) {
-    typename TreeTy::iterator I = T->begin(), E = T->end();
-    for ( ; I!=E ; ++I, ++TI) {
-      if (TI == TE || !I->isElementEqual(&*TI))
-        return false;
-    }
-    return true;
-  }
-
   //===--------------------------------------------------===//
   // "createNode" is used to generate new tree roots that link
   // to other trees.  The function may also simply move links
@@ -628,12 +617,12 @@ public:
     TreeTy *&entry = Cache[maskCacheIndex(digest)];
     if (entry) {
       for (TreeTy *T = entry ; T != nullptr; T = T->next) {
-        // Compare the Contents('T') with Contents('TNew')
-        typename TreeTy::iterator TI = T->begin(), TE = T->end();
-        if (!compareTreeWithSection(TNew, TI, TE))
+        // Compare the contents of 'T' with 'TNew'. isEqual skips subtrees that
+        // are shared by pointer, so for structurally-shared persistent trees
+        // (the common case, e.g. one derived from the other) this is linear in
+        // the number of differing nodes rather than in the tree size.
+        if (!TNew->isEqual(*T))
           continue;
-        if (TI != TE)
-          continue; // T has more contents than TNew.
         // Trees did match!  Return 'T'.
         if (TNew->refCount == 0)
           TNew->destroy();

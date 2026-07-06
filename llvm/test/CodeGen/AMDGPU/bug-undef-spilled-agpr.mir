@@ -34,7 +34,7 @@ body:             |
   ; GCN-NEXT:   renamable $vgpr62 = IMPLICIT_DEF
   ; GCN-NEXT:   $vgpr62 = SI_SPILL_S32_TO_VGPR $sgpr15, 0, killed $vgpr62
   ; GCN-NEXT:   $noreg = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
-  ; GCN-NEXT:   renamable $agpr0 = COPY killed renamable $vgpr62
+  ; GCN-NEXT:   renamable $agpr0 = lr-split COPY killed renamable $vgpr62
   ; GCN-NEXT:   $exec = S_MOV_B64 killed $noreg
   ; GCN-NEXT:   renamable $vgpr62 = IMPLICIT_DEF
   ; GCN-NEXT:   dead renamable $vgpr62 = V_AND_B32_e32 1, killed $vgpr62, implicit $exec
@@ -58,7 +58,7 @@ body:             |
   ; GCN-NEXT:   liveins: $agpr0
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   $noreg = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
-  ; GCN-NEXT:   renamable $vgpr62 = COPY renamable $agpr0
+  ; GCN-NEXT:   renamable $vgpr62 = lr-split COPY renamable $agpr0
   ; GCN-NEXT:   $exec = S_MOV_B64 killed $noreg
   ; GCN-NEXT:   $sgpr14 = SI_RESTORE_S32_FROM_VGPR killed $vgpr62, 1
   ; GCN-NEXT:   S_BRANCH %bb.2

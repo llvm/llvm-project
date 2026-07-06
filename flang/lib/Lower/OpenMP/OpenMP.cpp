@@ -5098,7 +5098,8 @@ static void genMetadirective(lower::AbstractConverter &converter,
   llvm::SmallVector<llvm::omp::TraitProperty, 8> constructTraits;
   collectEnclosingConstructTraits(builder.getInsertionBlock()->getParentOp(),
                                   constructTraits);
-  FlangOMPContext ompCtx(builder.getModule(), constructTraits);
+  semantics::omp::OmpVariantMatchContext ompCtx =
+      makeVariantMatchContext(builder.getModule(), constructTraits);
 
   llvm::SmallVector<MetadirectiveCandidate, 4> candidates;
   // A null directive specification represents either the implicit `nothing`
@@ -5295,7 +5296,8 @@ static void genMetadirective(lower::AbstractConverter &converter,
   auto selectBestCandidate =
       [](llvm::ArrayRef<unsigned> candidateIndices,
          llvm::ArrayRef<MetadirectiveCandidate> candidates,
-         const FlangOMPContext &ompCtx) -> std::optional<unsigned> {
+         const semantics::omp::OmpVariantMatchContext &ompCtx)
+      -> std::optional<unsigned> {
     if (candidateIndices.empty())
       return std::nullopt;
     if (candidateIndices.size() == 1)

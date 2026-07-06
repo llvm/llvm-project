@@ -237,6 +237,33 @@ namespace interp {
 PRESERVE_NONE static bool BCP(InterpState &S, CodePtr OpPC, int32_t Offset,
                               PrimType PT);
 
+bool diagnoseShiftFailure(InterpState &S, CodePtr OpPC, ShiftFailure Failure,
+                          const APSInt *Value, unsigned Bits) {
+  switch (Failure) {
+  case ShiftFailure::NegativeCount:
+    assert(Value);
+    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_negative_shift)
+        << *Value;
+    break;
+  case ShiftFailure::TooLarge: {
+    assert(Value);
+    const Expr *E = S.Current->getExpr(OpPC);
+    S.CCEDiag(E, diag::note_constexpr_large_shift)
+        << *Value << E->getType() << Bits;
+    break;
+  }
+  case ShiftFailure::NegativeLeftOperand:
+    assert(Value);
+    S.CCEDiag(S.Current->getExpr(OpPC), diag::note_constexpr_lshift_of_negative)
+        << *Value;
+    break;
+  case ShiftFailure::DiscardsBits:
+    S.CCEDiag(S.Current->getExpr(OpPC), diag::note_constexpr_lshift_discards);
+    break;
+  }
+  return S.noteUndefinedBehavior();
+}
+
 void cleanupAfterFunctionCall(InterpState &S, const Function *Func) {
   assert(S.Current);
   assert(Func);
@@ -3086,6 +3113,39 @@ bool CopyMemberPtrPath(InterpState &S, const RecordDecl *Entry,
   S.Stk.push<MemberPointer>(
       MemberPtr.withPath(NewPathLength, NewPath, IsDerived));
   return true;
+}
+
+template <bool Signed>
+static bool floatAPCast(InterpState &S, CodePtr OpPC, const Floating &F,
+                        uint32_t BitWidth, uint32_t FPOI) {
+  APSInt Result(BitWidth, /*IsUnsigned=*/!Signed);
+  auto Status = F.convertToInteger(Result);
+
+  // Float-to-Integral overflow check.
+  if ((Status & APFloat::opStatus::opInvalidOp) && F.isFinite() &&
+      !handleOverflow(S, OpPC, F.getAPFloat()))
+    return false;
+
+  FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
+
+  auto ResultAP = S.allocAP<IntegralAP<Signed>>(BitWidth);
+  ResultAP.copy(Result);
+
+  S.Stk.push<IntegralAP<Signed>>(ResultAP);
+
+  return CheckFloatResult(S, OpPC, F, Status, FPO);
+}
+
+bool CastFloatingIntegralAP(InterpState &S, CodePtr OpPC, uint32_t BitWidth,
+                            uint32_t FPOI) {
+  Floating F = S.Stk.pop<Floating>();
+  return floatAPCast<false>(S, OpPC, F, BitWidth, FPOI);
+}
+
+bool CastFloatingIntegralAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth,
+                             uint32_t FPOI) {
+  Floating F = S.Stk.pop<Floating>();
+  return floatAPCast<true>(S, OpPC, F, BitWidth, FPOI);
 }
 
 // FIXME: Would be nice to generate this instead of hardcoding it here.

@@ -643,12 +643,16 @@ setCUDAAttributes(mlir::func::FuncOp func,
                 .detailsIf<Fortran::semantics::SubprogramDetails>()) {
       mlir::Type i64Ty = mlir::IntegerType::get(func.getContext(), 64);
       if (!details->cudaLaunchBounds().empty()) {
-        assert(details->cudaLaunchBounds().size() >= 2 &&
-               "expect at least 2 values");
+        assert(details->cudaLaunchBounds().size() >= 1 &&
+               details->cudaLaunchBounds().size() <= 3 &&
+               "expect 1, 2, or 3 values");
         auto maxTPBAttr =
             mlir::IntegerAttr::get(i64Ty, details->cudaLaunchBounds()[0]);
-        auto minBPMAttr =
-            mlir::IntegerAttr::get(i64Ty, details->cudaLaunchBounds()[1]);
+        // The minimum-blocks-per-multiprocessor operand is optional.
+        mlir::IntegerAttr minBPMAttr;
+        if (details->cudaLaunchBounds().size() > 1)
+          minBPMAttr =
+              mlir::IntegerAttr::get(i64Ty, details->cudaLaunchBounds()[1]);
         mlir::IntegerAttr ubAttr;
         if (details->cudaLaunchBounds().size() > 2)
           ubAttr =
@@ -1574,7 +1578,7 @@ Fortran::lower::CallInterface<T>::getProcedureAttrs(
     // called is recursive or not.
     if (const Fortran::semantics::Symbol *sym = side().getProcedureSymbol()) {
       // Note: By default procedures are RECURSIVE unless
-      // -fno-automatic/-save/-Msave is set. NON_RECURSIVE is is made explicit
+      // -fno-automatic/-save/-Msave is set. NON_RECURSIVE is made explicit
       // in that case in FIR.
       if (sym->attrs().test(Fortran::semantics::Attr::NON_RECURSIVE) ||
           (sym->owner().context().languageFeatures().IsEnabled(

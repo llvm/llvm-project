@@ -92,6 +92,18 @@ spirv.func @fmin(%arg0: f32, %arg1: vector<3xf16>) "None" {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.GL.FClamp
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @fclamp
+spirv.func @fclamp(%arg0: f32, %arg1: f32, %arg2: f32) "None" {
+  // CHECK: %[[MAX:.*]] = llvm.intr.maxnum(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
+  // CHECK: llvm.intr.minnum(%[[MAX]], %{{.*}}) : (f32, f32) -> f32
+  %0 = spirv.GL.FClamp %arg0, %arg1, %arg2 : f32
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.GL.Log
 //===----------------------------------------------------------------------===//
 
@@ -205,6 +217,30 @@ spirv.func @umin(%arg0: i16, %arg1: vector<3xi32>) "None" {
   %0 = spirv.GL.UMin %arg0, %arg0 : i16
   // CHECK: llvm.intr.umin(%{{.*}}, %{{.*}}) : (vector<3xi32>, vector<3xi32>) -> vector<3xi32>
   %1 = spirv.GL.UMin %arg1, %arg1 : vector<3xi32>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.SClamp
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @sclamp
+spirv.func @sclamp(%arg0: i16, %arg1: i16, %arg2: i16) "None" {
+  // CHECK: %[[MAX:.*]] = llvm.intr.smax(%{{.*}}, %{{.*}}) : (i16, i16) -> i16
+  // CHECK: llvm.intr.smin(%[[MAX]], %{{.*}}) : (i16, i16) -> i16
+  %0 = spirv.GL.SClamp %arg0, %arg1, %arg2 : i16
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.UClamp
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @uclamp
+spirv.func @uclamp(%arg0: i32, %arg1: i32, %arg2: i32) "None" {
+  // CHECK: %[[MAX:.*]] = llvm.intr.umax(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
+  // CHECK: llvm.intr.umin(%[[MAX]], %{{.*}}) : (i32, i32) -> i32
+  %0 = spirv.GL.UClamp %arg0, %arg1, %arg2 : i32
   spirv.Return
 }
 
@@ -404,5 +440,31 @@ spirv.func @fract(%arg0: f32, %arg1: vector<3xf16>) "None" {
   // CHECK: %[[FLOORV:.*]] = llvm.intr.floor(%{{.*}}) : (vector<3xf16>) -> vector<3xf16>
   // CHECK: llvm.fsub %{{.*}}, %[[FLOORV]] : vector<3xf16>
   %1 = spirv.GL.Fract %arg1 : vector<3xf16>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.FMix
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @fmix_scalar
+spirv.func @fmix_scalar(%x: f32, %y: f32, %a: f32) "None" {
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
+  // CHECK: %[[ONE_MINUS_A:.*]] = llvm.fsub %[[ONE]], %{{.*}} : f32
+  // CHECK: %[[LHS:.*]] = llvm.fmul %{{.*}}, %[[ONE_MINUS_A]] : f32
+  // CHECK: %[[RHS:.*]] = llvm.fmul %{{.*}}, %{{.*}} : f32
+  // CHECK: llvm.fadd %[[LHS]], %[[RHS]] : f32
+  %0 = spirv.GL.FMix %x : f32, %y : f32, %a : f32 -> f32
+  spirv.Return
+}
+
+// CHECK-LABEL: @fmix_vector
+spirv.func @fmix_vector(%x: vector<4xf32>, %y: vector<4xf32>, %a: vector<4xf32>) "None" {
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(dense<1.000000e+00> : vector<4xf32>) : vector<4xf32>
+  // CHECK: %[[ONE_MINUS_A:.*]] = llvm.fsub %[[ONE]], %{{.*}} : vector<4xf32>
+  // CHECK: %[[LHS:.*]] = llvm.fmul %{{.*}}, %[[ONE_MINUS_A]] : vector<4xf32>
+  // CHECK: %[[RHS:.*]] = llvm.fmul %{{.*}}, %{{.*}} : vector<4xf32>
+  // CHECK: llvm.fadd %[[LHS]], %[[RHS]] : vector<4xf32>
+  %0 = spirv.GL.FMix %x : vector<4xf32>, %y : vector<4xf32>, %a : vector<4xf32> -> vector<4xf32>
   spirv.Return
 }

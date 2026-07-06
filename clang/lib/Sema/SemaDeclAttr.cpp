@@ -4208,7 +4208,7 @@ static void handleFormatAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!S.checkUInt32Argument(AL, FirstArgExpr, FirstArg, 3))
     return;
 
-  // FirstArg == 0 is is always valid.
+  // FirstArg == 0 is always valid.
   if (FirstArg != 0) {
     if (Info.Kind == StrftimeFormat) {
       // If the kind is strftime, FirstArg must be 0 because strftime does not

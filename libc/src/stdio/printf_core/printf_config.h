@@ -36,6 +36,11 @@
 #define LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
 #endif
 
+#if defined(LIBC_TYPES_HAS_FLOAT128) &&                                        \
+    !defined(LIBC_COPT_PRINTF_NO_CONVERT_FLOAT128)
+#define LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
+#endif
+
 // TODO(michaelrj): Provide a proper interface for these options.
 // LIBC_COPT_FLOAT_TO_STR_USE_MEGA_LONG_DOUBLE_TABLE
 // LIBC_COPT_FLOAT_TO_STR_USE_DYADIC_FLOAT

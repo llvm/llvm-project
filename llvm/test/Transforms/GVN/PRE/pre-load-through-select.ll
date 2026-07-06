@@ -1148,3 +1148,75 @@ for.body:
   %res.0.lcssa = phi i32 [ 0, %entry ], [ %spec.select, %for.body ]
   ret i32 %res.0.lcssa
 }
+
+; The indvars-canonicalized form of a min-index loop: the induction variable is
+; an i64 `%iv`, `arr[i]` is addressed directly with `%iv`, while the select's
+; true value is `trunc nuw nsw %iv` and the running index is zero-extended back
+; for `arr[minloc]`.  The load through the select index should still be
+; eliminated: translating the true side yields `zext nneg (trunc nuw %iv)` which
+; folds back to `%iv`, matching the existing `arr[i]` address.
+define i32 @test_phi_select_index_loop_trunc(ptr %arr, i64 %n) {
+; MDEP-LABEL: @test_phi_select_index_loop_trunc(
+; MDEP-NEXT:  entry:
+; MDEP-NEXT:    [[DOTPRE:%.*]] = load i32, ptr [[ARR:%.*]], align 4
+; MDEP-NEXT:    br label [[FOR_BODY:%.*]]
+; MDEP:       for.body:
+; MDEP-NEXT:    [[TMP0:%.*]] = phi i32 [ [[DOTPRE]], [[ENTRY:%.*]] ], [ [[TMP3:%.*]], [[FOR_BODY]] ]
+; MDEP-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; MDEP-NEXT:    [[MINLOC:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[SEL:%.*]], [[FOR_BODY]] ]
+; MDEP-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARR]], i64 [[IV]]
+; MDEP-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; MDEP-NEXT:    [[IDXPROM:%.*]] = zext nneg i32 [[MINLOC]] to i64
+; MDEP-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARR]], i64 [[IDXPROM]]
+; MDEP-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], [[TMP0]]
+; MDEP-NEXT:    [[TMP2:%.*]] = trunc nuw nsw i64 [[IV]] to i32
+; MDEP-NEXT:    [[SEL]] = select i1 [[CMP]], i32 [[TMP2]], i32 [[MINLOC]]
+; MDEP-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; MDEP-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N:%.*]]
+; MDEP-NEXT:    [[TMP3]] = select i1 [[CMP]], i32 [[TMP1]], i32 [[TMP0]]
+; MDEP-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[FOR_BODY]]
+; MDEP:       exit:
+; MDEP-NEXT:    ret i32 [[SEL]]
+;
+; MSSA-LABEL: @test_phi_select_index_loop_trunc(
+; MSSA-NEXT:  entry:
+; MSSA-NEXT:    br label [[FOR_BODY:%.*]]
+; MSSA:       for.body:
+; MSSA-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; MSSA-NEXT:    [[MINLOC:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[SEL:%.*]], [[FOR_BODY]] ]
+; MSSA-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARR:%.*]], i64 [[IV]]
+; MSSA-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; MSSA-NEXT:    [[IDXPROM:%.*]] = zext nneg i32 [[MINLOC]] to i64
+; MSSA-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARR]], i64 [[IDXPROM]]
+; MSSA-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
+; MSSA-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP0]], [[TMP1]]
+; MSSA-NEXT:    [[TMP2:%.*]] = trunc nuw nsw i64 [[IV]] to i32
+; MSSA-NEXT:    [[SEL]] = select i1 [[CMP]], i32 [[TMP2]], i32 [[MINLOC]]
+; MSSA-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; MSSA-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N:%.*]]
+; MSSA-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[FOR_BODY]]
+; MSSA:       exit:
+; MSSA-NEXT:    ret i32 [[SEL]]
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %minloc = phi i32 [ 0, %entry ], [ %sel, %for.body ]
+  %arrayidx = getelementptr inbounds [4 x i8], ptr %arr, i64 %iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %idxprom = zext nneg i32 %minloc to i64
+  %arrayidx2 = getelementptr inbounds [4 x i8], ptr %arr, i64 %idxprom
+  %1 = load i32, ptr %arrayidx2, align 4
+  %cmp = icmp slt i32 %0, %1
+  %2 = trunc nuw nsw i64 %iv to i32
+  %sel = select i1 %cmp, i32 %2, i32 %minloc
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %for.body
+
+exit:
+  %r = phi i32 [ %sel, %for.body ]
+  ret i32 %r
+}

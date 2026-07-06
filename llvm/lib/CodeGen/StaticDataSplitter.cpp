@@ -15,6 +15,7 @@
 // For the original RFC of this pass please see
 // https://discourse.llvm.org/t/rfc-profile-guided-static-data-partitioning/83744
 
+#include "llvm/CodeGen/StaticDataSplitter.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/StaticDataProfileInfo.h"
@@ -24,9 +25,12 @@
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -42,8 +46,7 @@ STATISTIC(NumUnknownJumpTables,
           "Number of jump tables with unknown hotness. They are from functions "
           "without profile information.");
 
-class StaticDataSplitter : public MachineFunctionPass {
-  const MachineBranchProbabilityInfo *MBPI = nullptr;
+class StaticDataSplitterImpl {
   const MachineBlockFrequencyInfo *MBFI = nullptr;
   const ProfileSummaryInfo *PSI = nullptr;
   StaticDataProfileInfo *SDPI = nullptr;
@@ -73,9 +76,18 @@ class StaticDataSplitter : public MachineFunctionPass {
   void annotateStaticDataWithoutProfiles(const MachineFunction &MF);
 
 public:
+  explicit StaticDataSplitterImpl(MachineBlockFrequencyInfo *MBFI,
+                                  ProfileSummaryInfo *PSI,
+                                  StaticDataProfileInfo *SDPI)
+      : MBFI(MBFI), PSI(PSI), SDPI(SDPI) {}
+  bool runOnMachineFunction(MachineFunction &MF);
+};
+
+class StaticDataSplitterLegacy : public MachineFunctionPass {
+public:
   static char ID;
 
-  StaticDataSplitter() : MachineFunctionPass(ID) {}
+  StaticDataSplitterLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return "Static Data Splitter"; }
 
@@ -95,14 +107,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 
-bool StaticDataSplitter::runOnMachineFunction(MachineFunction &MF) {
-  MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
-  MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
-  PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-
-  SDPI = &getAnalysis<StaticDataProfileInfoWrapperPass>()
-              .getStaticDataProfileInfo();
-
+bool StaticDataSplitterImpl::runOnMachineFunction(MachineFunction &MF) {
   const bool ProfileAvailable = PSI && PSI->hasProfileSummary() && MBFI &&
                                 MF.getFunction().hasProfileData();
 
@@ -119,9 +124,9 @@ bool StaticDataSplitter::runOnMachineFunction(MachineFunction &MF) {
 }
 
 const Constant *
-StaticDataSplitter::getConstant(const MachineOperand &Op,
-                                const TargetMachine &TM,
-                                const MachineConstantPool *MCP) {
+StaticDataSplitterImpl::getConstant(const MachineOperand &Op,
+                                    const TargetMachine &TM,
+                                    const MachineConstantPool *MCP) {
   if (!Op.isGlobal() && !Op.isCPI())
     return nullptr;
 
@@ -148,7 +153,8 @@ StaticDataSplitter::getConstant(const MachineOperand &Op,
   return CPE.Val.ConstVal;
 }
 
-bool StaticDataSplitter::partitionStaticDataWithProfiles(MachineFunction &MF) {
+bool StaticDataSplitterImpl::partitionStaticDataWithProfiles(
+    MachineFunction &MF) {
   // If any of the static data (jump tables, global variables, constant pools)
   // are captured by the analysis, set `Changed` to true. Note this pass won't
   // invalidate any analysis pass (see `getAnalysisUsage` above), so the main
@@ -201,22 +207,23 @@ bool StaticDataSplitter::partitionStaticDataWithProfiles(MachineFunction &MF) {
 }
 
 const GlobalVariable *
-StaticDataSplitter::getLocalLinkageGlobalVariable(const GlobalValue *GV) {
+StaticDataSplitterImpl::getLocalLinkageGlobalVariable(const GlobalValue *GV) {
   // LLVM IR Verifier requires that a declaration must have valid declaration
   // linkage, and local linkages are not among the valid ones. So there is no
   // need to check GV is not a declaration here.
   return (GV && GV->hasLocalLinkage()) ? dyn_cast<GlobalVariable>(GV) : nullptr;
 }
 
-bool StaticDataSplitter::inStaticDataSection(const GlobalVariable &GV,
-                                             const TargetMachine &TM) {
+bool StaticDataSplitterImpl::inStaticDataSection(const GlobalVariable &GV,
+                                                 const TargetMachine &TM) {
 
   SectionKind Kind = TargetLoweringObjectFile::getKindForGlobal(&GV, TM);
   return Kind.isData() || Kind.isReadOnly() || Kind.isReadOnlyWithRel() ||
          Kind.isBSS();
 }
 
-void StaticDataSplitter::updateStatsWithProfiles(const MachineFunction &MF) {
+void StaticDataSplitterImpl::updateStatsWithProfiles(
+    const MachineFunction &MF) {
   if (!AreStatisticsEnabled())
     return;
 
@@ -234,7 +241,7 @@ void StaticDataSplitter::updateStatsWithProfiles(const MachineFunction &MF) {
   }
 }
 
-void StaticDataSplitter::annotateStaticDataWithoutProfiles(
+void StaticDataSplitterImpl::annotateStaticDataWithoutProfiles(
     const MachineFunction &MF) {
   for (const auto &MBB : MF)
     for (const MachineInstr &I : MBB)
@@ -244,7 +251,8 @@ void StaticDataSplitter::annotateStaticDataWithoutProfiles(
           SDPI->addConstantProfileCount(C, std::nullopt);
 }
 
-void StaticDataSplitter::updateStatsWithoutProfiles(const MachineFunction &MF) {
+void StaticDataSplitterImpl::updateStatsWithoutProfiles(
+    const MachineFunction &MF) {
   if (!AreStatisticsEnabled())
     return;
 
@@ -253,17 +261,50 @@ void StaticDataSplitter::updateStatsWithoutProfiles(const MachineFunction &MF) {
   }
 }
 
-char StaticDataSplitter::ID = 0;
+char StaticDataSplitterLegacy::ID = 0;
 
-INITIALIZE_PASS_BEGIN(StaticDataSplitter, DEBUG_TYPE, "Split static data",
+INITIALIZE_PASS_BEGIN(StaticDataSplitterLegacy, DEBUG_TYPE, "Split static data",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(StaticDataProfileInfoWrapperPass)
-INITIALIZE_PASS_END(StaticDataSplitter, DEBUG_TYPE, "Split static data", false,
-                    false)
+INITIALIZE_PASS_END(StaticDataSplitterLegacy, DEBUG_TYPE, "Split static data",
+                    false, false)
 
-MachineFunctionPass *llvm::createStaticDataSplitterPass() {
-  return new StaticDataSplitter();
+MachineFunctionPass *llvm::createStaticDataSplitterLegacyPass() {
+  return new StaticDataSplitterLegacy();
+}
+
+bool StaticDataSplitterLegacy::runOnMachineFunction(MachineFunction &MF) {
+  MachineBlockFrequencyInfo *MBFI =
+      &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
+  ProfileSummaryInfo *PSI =
+      &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+  StaticDataProfileInfo *SDPI = &getAnalysis<StaticDataProfileInfoWrapperPass>()
+                                     .getStaticDataProfileInfo();
+  StaticDataSplitterImpl Impl(MBFI, PSI, SDPI);
+  return Impl.runOnMachineFunction(MF);
+}
+
+PreservedAnalyses
+StaticDataSplitterPass::run(MachineFunction &MF,
+                            MachineFunctionAnalysisManager &MFAM) {
+  MachineBlockFrequencyInfo *MBFI =
+      &MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
+  auto &ModuleAnalysisManagerProxy =
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF);
+  ProfileSummaryInfo *PSI =
+      ModuleAnalysisManagerProxy.getCachedResult<ProfileSummaryAnalysis>(
+          *MF.getFunction().getParent());
+  StaticDataProfileInfo *SDPI =
+      &ModuleAnalysisManagerProxy
+           .getCachedResult<StaticDataProfileInfoAnalysis>(
+               *MF.getFunction().getParent())
+           ->getStaticDataProfileInfo();
+  StaticDataSplitterImpl Impl(MBFI, PSI, SDPI);
+  return Impl.runOnMachineFunction(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+                   .preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }

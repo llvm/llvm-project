@@ -46,6 +46,8 @@ namespace llvm {
 template <typename NodeT, bool IsPostDom>
 class DominatorTreeBase;
 
+template <class BlockT, class LoopT> class LoopInfoBase;
+
 namespace DomTreeBuilder {
 template <typename DomTreeT>
 struct SemiNCAInfo;
@@ -316,8 +318,9 @@ protected:
   unsigned BlockNumberEpoch = 0;
 
   friend struct DomTreeBuilder::SemiNCAInfo<DominatorTreeBase>;
+  template <class BlockT, class LoopT> friend class LoopInfoBase;
 
- public:
+public:
   DominatorTreeBase() = default;
 
   DominatorTreeBase(const DominatorTreeBase &) = delete;
@@ -382,6 +385,13 @@ protected:
   }
 
 private:
+  // For LoopInfoBase's use in deriving a reverse-preorder traversal.
+  auto nodes() const {
+    return make_filter_range(DomTreeNodes, [](const DomTreeNodeBase<NodeT> *N) {
+      return N != nullptr;
+    });
+  }
+
   std::optional<unsigned> getNodeIndex(const NodeT *BB) const {
     if constexpr (GraphHasNodeNumbers<NodeT *>) {
       assert(BlockNumberEpoch ==
@@ -850,7 +860,7 @@ public:
       // If we visited all of the children of this node, "recurse" back up the
       // stack setting the DFOutNum.
       if (ChildIt == Node->end()) {
-        Node->DFSNumOut = DFSNum++;
+        Node->DFSNumOut = DFSNum;
         WorkStack.pop_back();
       } else {
         // Otherwise, recursively visit this child.

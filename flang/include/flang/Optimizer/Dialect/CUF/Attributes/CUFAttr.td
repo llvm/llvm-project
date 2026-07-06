@@ -62,7 +62,7 @@ def cuf_LaunchBoundsAttr : cuf_Attr<"LaunchBounds"> {
 
   let parameters = (ins
     "mlir::IntegerAttr":$maxTPB,
-    "mlir::IntegerAttr":$minBPM,
+    OptionalParameter<"mlir::IntegerAttr">:$minBPM,
     OptionalParameter<"mlir::IntegerAttr">:$upperBoundClusterSize
   );
 

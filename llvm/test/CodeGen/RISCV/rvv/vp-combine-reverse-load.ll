@@ -161,3 +161,155 @@ define <vscale x 2 x float> @test_different_evl_splice(ptr %ptr, i32 zeroext %ev
   %splice = call <vscale x 2 x float> @llvm.vector.splice.right(<vscale x 2 x float> %rev, <vscale x 2 x float> poison, i32 %evl2)
   ret <vscale x 2 x float> %splice
 }
+
+define <vscale x 2 x float> @binop(ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: binop:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a2, a1, 2
+; CHECK-NEXT:    add a0, a2, a0
+; CHECK-NEXT:    addi a0, a0, -4
+; CHECK-NEXT:    li a2, -4
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vlse32.v v8, (a0), a2
+; CHECK-NEXT:    lui a0, 260096
+; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vfadd.vf v8, v8, fa5
+; CHECK-NEXT:    ret
+  %load = call <vscale x 2 x float> @llvm.vp.load(ptr %ptr, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  %fadd = fadd <vscale x 2 x float> %load, splat (float 1.0)
+  %rev = call <vscale x 2 x float> @llvm.experimental.vp.reverse(<vscale x 2 x float> %fadd, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  ret <vscale x 2 x float> %rev
+}
+
+define <vscale x 2 x float> @binop_2uses_1user(ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: binop_2uses_1user:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a2, a1, 2
+; CHECK-NEXT:    add a0, a2, a0
+; CHECK-NEXT:    addi a0, a0, -4
+; CHECK-NEXT:    li a2, -4
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vlse32.v v8, (a0), a2
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vfadd.vv v8, v8, v8
+; CHECK-NEXT:    ret
+  %load = call <vscale x 2 x float> @llvm.vp.load(ptr %ptr, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  %fadd = fadd <vscale x 2 x float> %load, %load
+  %rev = call <vscale x 2 x float> @llvm.experimental.vp.reverse(<vscale x 2 x float> %fadd, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  ret <vscale x 2 x float> %rev
+}
+
+define <vscale x 2 x float> @binop_chain(ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: binop_chain:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a2, a1, 2
+; CHECK-NEXT:    add a2, a2, a0
+; CHECK-NEXT:    addi a2, a2, -4
+; CHECK-NEXT:    li a3, -4
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vlse32.v v8, (a2), a3
+; CHECK-NEXT:    lui a1, 260096
+; CHECK-NEXT:    fmv.w.x fa5, a1
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vfadd.vf v8, v8, fa5
+; CHECK-NEXT:    vs1r.v v8, (a0)
+; CHECK-NEXT:    ret
+  %load = call <vscale x 2 x float> @llvm.vp.load(ptr %ptr, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  %fadd = fadd <vscale x 2 x float> %load, splat (float 1.0)
+  %rev = call <vscale x 2 x float> @llvm.experimental.vp.reverse(<vscale x 2 x float> %fadd, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  store <vscale x 2 x float> %rev, ptr %ptr
+  ret <vscale x 2 x float> %rev
+}
+
+define <vscale x 2 x float> @binop_nested(ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: binop_nested:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a2, a1, 2
+; CHECK-NEXT:    add a0, a2, a0
+; CHECK-NEXT:    addi a0, a0, -4
+; CHECK-NEXT:    li a2, -4
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vlse32.v v8, (a0), a2
+; CHECK-NEXT:    lui a0, 263168
+; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    lui a0, 260096
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vfmul.vf v8, v8, fa5
+; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    vfadd.vf v8, v8, fa5
+; CHECK-NEXT:    ret
+  %load = call <vscale x 2 x float> @llvm.vp.load(ptr %ptr, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  %fmul = fmul <vscale x 2 x float> %load, splat (float 3.0)
+  %fadd = fadd <vscale x 2 x float> %fmul, splat (float 1.0)
+  %rev = call <vscale x 2 x float> @llvm.experimental.vp.reverse(<vscale x 2 x float> %fadd, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  ret <vscale x 2 x float> %rev
+}
+
+; Negative test, we don't want to create more than one vlse.v
+
+define <vscale x 2 x float> @binop_2loads(ptr %ptr1, ptr %ptr2, i32 zeroext %evl) {
+; CHECK-LABEL: binop_2loads:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    vle32.v v10, (a1)
+; CHECK-NEXT:    addi a0, a2, -1
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vfadd.vv v10, v8, v10
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
+; CHECK-NEXT:    vrsub.vx v9, v9, a0
+; CHECK-NEXT:    vrgather.vv v8, v10, v9
+; CHECK-NEXT:    ret
+  %load1 = call <vscale x 2 x float> @llvm.vp.load(ptr %ptr1, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  %load2 = call <vscale x 2 x float> @llvm.vp.load(ptr %ptr2, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  %fadd = fadd <vscale x 2 x float> %load1, %load2
+  %rev = call <vscale x 2 x float> @llvm.experimental.vp.reverse(<vscale x 2 x float> %fadd, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  ret <vscale x 2 x float> %rev
+}
+
+; Negative test, can't combine because a leaf isn't a splat.
+
+define <vscale x 2 x float> @binop_nonsplat(ptr %ptr, <vscale x 2 x float> %v, i32 zeroext %evl) {
+; CHECK-LABEL: binop_nonsplat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    vle32.v v10, (a0)
+; CHECK-NEXT:    addi a0, a1, -1
+; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vfadd.vv v10, v10, v8
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vrsub.vx v9, v9, a0
+; CHECK-NEXT:    vrgather.vv v8, v10, v9
+; CHECK-NEXT:    ret
+  %load = call <vscale x 2 x float> @llvm.vp.load(ptr %ptr, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  %fadd = fadd <vscale x 2 x float> %load, %v
+  %rev = call <vscale x 2 x float> @llvm.experimental.vp.reverse(<vscale x 2 x float> %fadd, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  ret <vscale x 2 x float> %rev
+}
+
+; Negative test, can't combine because binary op has multiple uses.
+define <vscale x 2 x float> @binop_multiuse(ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: binop_multiuse:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a2, 260096
+; CHECK-NEXT:    fmv.w.x fa5, a2
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vle32.v v9, (a0)
+; CHECK-NEXT:    addi a2, a1, -1
+; CHECK-NEXT:    vsetvli a3, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vfadd.vf v9, v9, fa5
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vrsub.vx v10, v8, a2
+; CHECK-NEXT:    vrgather.vv v8, v9, v10
+; CHECK-NEXT:    vs1r.v v9, (a0)
+; CHECK-NEXT:    ret
+  %load = call <vscale x 2 x float> @llvm.vp.load(ptr %ptr, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  %fadd = fadd <vscale x 2 x float> %load, splat (float 1.0)
+  store <vscale x 2 x float> %fadd, ptr %ptr
+  %rev = call <vscale x 2 x float> @llvm.experimental.vp.reverse(<vscale x 2 x float> %fadd, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  ret <vscale x 2 x float> %rev
+}

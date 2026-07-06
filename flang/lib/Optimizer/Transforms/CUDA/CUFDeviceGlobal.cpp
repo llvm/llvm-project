@@ -183,10 +183,12 @@ public:
         clonedGlobal.removeInitValAttr();
         clonedGlobal.removeLinkNameAttr();
       }
-      // Registered CUDA globals must have a visible device symbol so runtime
-      // lookups (cudaGetSymbolAddress) can resolve them. Drop explicit linkage
-      // from the GPU clone so it uses default external linkage.
-      if (cuf::isRegisteredDeviceGlobal(globalOp))
+      // Registered CUDA globals with internal linkage must have a visible
+      // device symbol so runtime lookups (cudaGetSymbolAddress) can resolve
+      // them. Drop internal linkage from the GPU clone so it uses default
+      // external linkage.
+      if (cuf::isRegisteredDeviceGlobal(globalOp) &&
+          globalOp.getLinkName() == "internal")
         clonedGlobal.removeLinkNameAttr();
       gpuSymTable.insert(cloned);
     }

@@ -111,6 +111,13 @@ Makes programs 10x faster by doing Special New Thing.
   corresponding metadata) now apply only at the point of definition, instead of
   for the execution of the function (for arguments) or forever (for returns).
 
+* `alwaysinline` no longer bypasses inlining compatibility checks based on
+  target features. Inlining will only be performed if it is safe to do so.
+
+* Module-level inline assembly now accepts optional `target_features` and
+  `target_cpu` properties. This resolves errors during LTO on some
+  architectures.
+
 ### Changes to LLVM infrastructure
 
 * Removed ``Constant::isZeroValue``. It was functionally identical to

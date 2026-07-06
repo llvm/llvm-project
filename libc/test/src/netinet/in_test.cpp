@@ -23,6 +23,7 @@
 #include "hdr/types/struct_ip_mreqn.h"
 #include "hdr/types/struct_ip_msfilter.h"
 #include "hdr/types/struct_ip_opts.h"
+#include "hdr/types/struct_ipv6_mreq.h"
 #include "hdr/types/struct_sockaddr_in6.h"
 #include "src/netinet/in6addr_any.h"
 #include "src/netinet/in6addr_loopback.h"
@@ -104,6 +105,7 @@ TEST(LlvmLibcNetinetInTest, IpOptionLayout) {
   EXPECT_EQ(sizeof(struct ip_mreqn), static_cast<size_t>(12));
   EXPECT_EQ(sizeof(struct ip_msfilter), static_cast<size_t>(20));
   EXPECT_EQ(sizeof(struct ip_opts), static_cast<size_t>(44));
+  EXPECT_EQ(sizeof(struct ipv6_mreq), static_cast<size_t>(20));
 
   EXPECT_EQ(offsetof(struct ip_mreq, imr_multiaddr), static_cast<size_t>(0));
   EXPECT_EQ(offsetof(struct ip_mreq, imr_interface), static_cast<size_t>(4));
@@ -129,4 +131,9 @@ TEST(LlvmLibcNetinetInTest, IpOptionLayout) {
 
   EXPECT_EQ(offsetof(struct ip_opts, ip_dst), static_cast<size_t>(0));
   EXPECT_EQ(offsetof(struct ip_opts, ip_opts), static_cast<size_t>(4));
+
+  EXPECT_EQ(offsetof(struct ipv6_mreq, ipv6mr_multiaddr),
+            static_cast<size_t>(0));
+  EXPECT_EQ(offsetof(struct ipv6_mreq, ipv6mr_interface),
+            static_cast<size_t>(16));
 }

@@ -23,6 +23,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 using namespace llvm;
@@ -310,4 +311,17 @@ std::pair<int, int> TargetMachine::parseBinutilsVersion(StringRef Version) {
   if (!Version.consumeInteger(10, Ret.first) && Version.consume_front("."))
     Version.consumeInteger(10, Ret.second);
   return Ret;
+}
+
+const MCSubtargetInfo &TargetMachine::getMCSubtargetInfo(StringRef CPU,
+                                                         StringRef FS) {
+  if (CPU.empty() && FS.empty())
+    return *STI;
+  SmallString<128> Key = CPU;
+  Key += '/';
+  Key += FS;
+  auto &Entry = MCSubtargetMap[Key];
+  if (!Entry)
+    Entry.reset(getTarget().createMCSubtargetInfo(getTargetTriple(), CPU, FS));
+  return *Entry;
 }

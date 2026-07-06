@@ -10,52 +10,14 @@
 Introduction
 ============
 
-Asynchronous operations are operations that are completed independently at an
-unspecified scope. A thread that initiates one or more async operations can use
+Asynchronous operations are operations whose completion is not tracked
+internally by the compiler. A thread that initiates one or more async operations can use
 *asyncmarks* to track their completion.
 
-Operations
-==========
-
-Async Instructions
-------------------
-
-The following instructions initiate async operations that transfer data between
-global memory and LDS memory.
-
-.. note::
-
-   These listings are *merely representative*. The actual function signatures
-   and supported architectures are documented in the :ref:`amdgpu-usage-guide`.
-
-**GFX9 Async Instructions (LDS DMA)**
-
-.. code-block:: llvm
-
-  void @llvm.amdgcn.load.async.to.lds(ptr %src, ptr %dst)
-  void @llvm.amdgcn.global.load.async.lds(ptr %src, ptr %dst)
-  void @llvm.amdgcn.raw.buffer.load.async.lds(ptr %src, ptr %dst)
-  void @llvm.amdgcn.raw.ptr.buffer.load.async.lds(ptr %src, ptr %dst)
-  void @llvm.amdgcn.struct.buffer.load.async.lds(ptr %src, ptr %dst)
-  void @llvm.amdgcn.struct.ptr.buffer.load.async.lds(ptr %src, ptr %dst)
-
-**GFX12 Async Instructions**
-
-.. code-block:: llvm
-
-  void @llvm.amdgcn.global.load.async.to.lds.type(ptr %dst, ptr %src)
-  void @llvm.amdgcn.global.store.async.from.lds.type(ptr %dst, ptr %src)
-  void @llvm.amdgcn.cluster.load.async.to.lds.type(ptr %dst, ptr %src)
-
-**GFX1250 Tensor DMA Instructions**
-
-.. code-block:: llvm
-
-  void @llvm.amdgcn.tensor.load.to.lds(...)
-  void @llvm.amdgcn.tensor.store.from.lds(...)
+- Most :ref:`DMA operations<amdgpu-dma-operations>` are asynchronous.
 
 Asyncmarks
-----------
+==========
 
 An *asyncmark* created by a thread can be used to track async operations
 initiated by that thread. The abstract machine maintains a sequence of
@@ -65,18 +27,20 @@ executing function. The state of this sequence at each program point in the
 function is called the *current sequence*.
 
 ``@llvm.amdgcn.asyncmark()``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+----------------------------
 
 Produces an asyncmark and appends it to the current sequence.
 
 ``@llvm.amdgcn.wait.asyncmark(i16 %N)``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+---------------------------------------
 
 Ensures that the length of the current sequence is at most ``N`` by removing
 asyncmarks from the start of the sequence if it is more than ``N``.
 
-Memory Consistency Model
-========================
+.. _amdgpu-asyncmark-memory-model:
+
+Memory Model
+============
 
 An ``asyncmark()`` operation ``X`` that produces an asyncmark ``M`` is
 *completed-at* a ``wait.asyncmark()`` operation ``Y`` in the same function body
