@@ -1234,6 +1234,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::GlobalAddress);
 
   setTargetDAGCombine(ISD::CTLZ);
+  setTargetDAGCombine({ISD::CTTZ, ISD::CTTZ_ZERO_POISON});
 
   setTargetDAGCombine(ISD::GET_ACTIVE_LANE_MASK);
 
@@ -14281,6 +14282,10 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
     bool operator ==(SDValue OtherVec) { return Vec == OtherVec; }
   };
 
+  auto IsNeonSized = [](EVT VT) {
+    return VT.is128BitVector() || VT.is64BitVector();
+  };
+
   // First gather all vectors used as an immediate source for this BUILD_VECTOR
   // node.
   SmallVector<ShuffleSourceInfo, 2> Sources;
@@ -14290,11 +14295,11 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
       continue;
     else if (V.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
              !isa<ConstantSDNode>(V.getOperand(1)) ||
-             V.getOperand(0).getValueType().isScalableVector()) {
+             !IsNeonSized(V->getOperand(0).getValueType())) {
       LLVM_DEBUG(
           dbgs() << "Reshuffle failed: "
                     "a shuffle can only come from building a vector from "
-                    "various elements of other fixed-width vectors, provided "
+                    "various elements of other NEON-sized vectors, provided "
                     "their indices are constant\n");
       return SDValue();
     }
@@ -21970,6 +21975,62 @@ performExtractLastActiveCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                      Vec);
 }
 
+static bool hasSVEMultiVectorOps(const AArch64Subtarget *Subtarget) {
+  return (Subtarget->isSVEorStreamingSVEAvailable() &&
+          Subtarget->hasSVE2p1()) ||
+         (Subtarget->isStreaming() && Subtarget->hasSME2());
+}
+
+static auto m_PredicateAsCounterWhile() {
+  using namespace llvm::SDPatternMatch;
+  return m_AnyOf(m_SpecificOpc(AArch64ISD::WHILEGE_PRED_COUNTER),
+                 m_SpecificOpc(AArch64ISD::WHILEGT_PRED_COUNTER),
+                 m_SpecificOpc(AArch64ISD::WHILELT_PRED_COUNTER),
+                 m_SpecificOpc(AArch64ISD::WHILELE_PRED_COUNTER),
+                 m_SpecificOpc(AArch64ISD::WHILEHS_PRED_COUNTER),
+                 m_SpecificOpc(AArch64ISD::WHILEHI_PRED_COUNTER),
+                 m_SpecificOpc(AArch64ISD::WHILELO_PRED_COUNTER),
+                 m_SpecificOpc(AArch64ISD::WHILELS_PRED_COUNTER));
+}
+
+/// Folds extracting the first lane from the first segment of a
+/// predicate-as-counter while to a conditional set (CSET) based on the
+/// "FIRST_ACTIVE" status flag from the while.
+///
+///   %while, %flags = WHILE_*_PRED_COUNTER .. ; predicate-as-counter while
+///   %first.segment = pext(%while, 0) ; predicate extract of segment 0
+///   %first.active = extract_elt(%first.segment, 0) ; extract first lane
+///
+///   ->
+///
+///   %while, %flags = WHILE_*_PRED_COUNTER .. ; predicate-as-counter while
+///   %first.active = cset(%flags, FIRST_ACTIVE)
+static SDValue
+perfomPextFirstTrueVectorCombine(SDNode *N,
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 const AArch64Subtarget *Subtarget) {
+  using namespace llvm::SDPatternMatch;
+  assert(N->getOpcode() == ISD::EXTRACT_VECTOR_ELT);
+  if (DCI.isBeforeLegalize() || !hasSVEMultiVectorOps(Subtarget))
+    return SDValue();
+
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N0.getValueType();
+
+  if (!VT.isScalableVectorOf(MVT::i1) || !isNullConstant(N->getOperand(1)))
+    return SDValue();
+
+  if (!sd_match(N0, m_IntrinsicWOChain<Intrinsic::aarch64_sve_pext>(
+                        m_PredicateAsCounterWhile(), m_Zero())))
+    return SDValue();
+
+  // Fold: extract_elt(pext(WHILE_*_PRED_COUNTER:0, 0), 0)
+  // to cset(WHILE_*_PRED_COUNTER:1, FIRST_ACTIVE).
+  SDValue WhilePredCounter = N0->getOperand(1);
+  SDValue Flags = SDValue(WhilePredCounter.getNode(), 1);
+  return getSETCC(AArch64CC::CondCode::FIRST_ACTIVE, Flags, SDLoc(N), DCI.DAG);
+}
+
 static SDValue
 performExtractVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                const AArch64Subtarget *Subtarget) {
@@ -21979,6 +22040,8 @@ performExtractVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   if (SDValue Res = performLastTrueTestVectorCombine(N, DCI, Subtarget))
     return Res;
   if (SDValue Res = performExtractLastActiveCombine(N, DCI, Subtarget))
+    return Res;
+  if (SDValue Res = perfomPextFirstTrueVectorCombine(N, DCI, Subtarget))
     return Res;
 
   SelectionDAG &DAG = DCI.DAG;
@@ -25939,6 +26002,12 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
   SDValue Op1 = N->getOperand(1);
   EVT ResVT = N->getValueType(0);
 
+  // UZP is used to lower insert_subvector quite early. When later DAG combines
+  // run, it's possible to actually end up with an insert of UNDEF into UNDEF,
+  // i.e. UZP1 UNDEF, UNDEF.
+  if (Op0.isUndef() && Op1.isUndef())
+    return DAG.getUNDEF(ResVT);
+
   // uzp(extract_lo(x), extract_hi(x)) -> extract_lo(uzp x, x)
   if (Op0.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
       Op1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
@@ -26713,6 +26782,134 @@ static SDValue vectorToScalarBitmask(SDNode *N, SelectionDAG &DAG) {
   EVT ResultVT = MVT::getIntegerVT(std::max<unsigned>(
       NumElts, VecVT.getVectorElementType().getSizeInBits()));
   return DAG.getNode(ISD::VECREDUCE_ADD, DL, ResultVT, RepresentativeBits);
+}
+
+// When taking the trailing-zero count of a bitcast from <N x i1> to scalar
+// iN, we can pack each lane into a small bit-slot of a 64-bit scalar
+// with shrn (for byte lanes) or xtn (for wider lanes) then run a
+// scalar cttz on the result.
+static SDValue performCTTZCombine(SDNode *N,
+                                  TargetLowering::DAGCombinerInfo &DCI,
+                                  SelectionDAG &DAG) {
+  // Run before vectorToScalarBitmask() expands it.
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (!VT.isScalarInteger())
+    return SDValue();
+  SDValue BitcastNode = N->getOperand(0);
+  if (BitcastNode.getOpcode() != ISD::BITCAST)
+    return SDValue();
+  SDValue Predicate = BitcastNode.getOperand(0);
+  EVT PredVT = Predicate.getValueType();
+  if (!PredVT.isFixedLengthVector() || PredVT.getVectorElementType() != MVT::i1)
+    return SDValue();
+
+  unsigned NumLanes = PredVT.getVectorNumElements();
+  if (!isPowerOf2_32(NumLanes) || NumLanes < 2 || NumLanes > 32)
+    return SDValue();
+
+  constexpr unsigned DRegBits = 64;
+  constexpr unsigned QRegBits = 128;
+  constexpr unsigned MinLaneBits = 8;
+
+  // Pick a lane width to sext the predicate to. Prefer the original
+  // compare input width if we can find it and it fits in at most two NEON
+  // registers but otherwise pick a minimum-width type that fits.
+  EVT MaskVT = tryGetOriginalBoolVectorType(Predicate);
+  if (!MaskVT.isSimple() ||
+      MaskVT.changeVectorElementTypeToInteger().getSizeInBits() >
+          2 * QRegBits ||
+      MaskVT.changeVectorElementTypeToInteger().getSizeInBits() < DRegBits) {
+    unsigned LaneBits = std::max(DRegBits / NumLanes, MinLaneBits);
+    MaskVT = MVT::getVectorVT(MVT::getIntegerVT(LaneBits), NumLanes);
+  }
+  MaskVT = MaskVT.changeVectorElementTypeToInteger();
+
+  unsigned MaskBits = MaskVT.getSizeInBits();
+  if (MaskBits != DRegBits && MaskBits != QRegBits && MaskBits != 2 * QRegBits)
+    return SDValue();
+
+  // Target 64 bits when lanes fit, otherwise 128.
+  unsigned TargetBits = DRegBits;
+  if (MaskBits == 2 * QRegBits && NumLanes > 16)
+    TargetBits = QRegBits;
+  unsigned CompressedBits = std::min(MaskBits, TargetBits);
+
+  SDLoc DL(N);
+  SDValue Mask = DAG.getSExtOrTrunc(Predicate, DL, MaskVT);
+
+  LLVMContext &Ctx = *DAG.getContext();
+
+  // NEON's smallest vector lane type is i8 so we can't narrow further.
+  // Instead, bitcast the mask to i16 lanes and shrn by 4 to pack each
+  // input byte into 4 bits of the output
+  auto ShrnPair = [&](SDValue V) -> SDValue {
+    EVT InVT = V.getValueType();
+    EVT OutVT = InVT.getHalfNumVectorElementsVT(Ctx);
+    EVT PairedVT = OutVT.widenIntegerVectorElementType(Ctx);
+    SDValue Paired = DAG.getNode(AArch64ISD::NVCAST, DL, PairedVT, V);
+    SDValue ShAmt = DAG.getConstant(MinLaneBits / 2, DL, PairedVT);
+    SDValue Shifted = DAG.getNode(ISD::SRL, DL, PairedVT, Paired, ShAmt);
+    return DAG.getNode(ISD::TRUNCATE, DL, OutVT, Shifted);
+  };
+
+  // Trailing-zero count of the compressed result as an i64.
+  auto CompressedCttz = [&](SDValue V) -> SDValue {
+    if (V.getValueType().getSizeInBits() == DRegBits) {
+      SDValue Nv = DAG.getNode(AArch64ISD::NVCAST, DL, MVT::v1i64, V);
+      SDValue Scalar = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Nv,
+                                   DAG.getConstant(0, DL, MVT::i64));
+      return DAG.getNode(ISD::CTTZ, DL, MVT::i64, Scalar);
+    }
+    SDValue Compressed = DAG.getBitcast(MVT::i128, V);
+    // BITCAST puts lane 0 at the high end of the scalar on BE (unlike NVCAST
+    // above), so use clz instead of cttz to find the first match
+    unsigned Op = DAG.getDataLayout().isLittleEndian() ? ISD::CTTZ : ISD::CTLZ;
+    SDValue Ctz = DAG.getNode(Op, DL, MVT::i128, Compressed);
+    return DAG.getNode(ISD::TRUNCATE, DL, MVT::i64, Ctz);
+  };
+
+  SDValue Cur = Mask;
+  // Narrow wide lanes toward CompressedBits with xtn.
+  while (Cur.getValueType().getScalarSizeInBits() > MinLaneBits &&
+         Cur.getValueType().getSizeInBits() > CompressedBits) {
+    EVT CurVT = Cur.getValueType();
+    unsigned CurLaneBits = CurVT.getScalarSizeInBits();
+    EVT NarrowVT = CurVT.changeVectorElementType(
+        Ctx, EVT::getIntegerVT(Ctx, CurLaneBits / 2));
+    Cur = DAG.getNode(ISD::TRUNCATE, DL, NarrowVT, Cur);
+  }
+
+  // If still too wide, pack two lanes per byte with shrn.
+  if (Cur.getValueType().getSizeInBits() > CompressedBits) {
+    EVT CurVT = Cur.getValueType();
+    if (CurVT.getSizeInBits() <= QRegBits) {
+      Cur = ShrnPair(Cur);
+    } else {
+      // Split into Q-reg-sized halves so each ShrnPair stays in range.
+      EVT HalfVT = CurVT.getHalfNumVectorElementsVT(Ctx);
+      SDValue Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, Cur,
+                               DAG.getConstant(0, DL, MVT::i64));
+      SDValue Hi = DAG.getNode(
+          ISD::EXTRACT_SUBVECTOR, DL, HalfVT, Cur,
+          DAG.getConstant(HalfVT.getVectorNumElements(), DL, MVT::i64));
+      Cur = DAG.getNode(ISD::CONCAT_VECTORS, DL, HalfVT, ShrnPair(Lo),
+                        ShrnPair(Hi));
+    }
+  }
+
+  // Cur has been narrowed to CompressedBits.
+  assert(Cur.getValueType().getSizeInBits() == CompressedBits &&
+         "Unexpected mask width!");
+
+  SDValue Ctz = CompressedCttz(Cur);
+  unsigned LaneIndexShift = Log2_32(CompressedBits / NumLanes);
+  if (LaneIndexShift)
+    Ctz = DAG.getNode(ISD::SRL, DL, MVT::i64, Ctz,
+                      DAG.getShiftAmountConstant(LaneIndexShift, MVT::i64, DL));
+  return DAG.getSExtOrTrunc(Ctz, DL, VT);
 }
 
 static SDValue combineBoolVectorAndTruncateStore(SelectionDAG &DAG,
@@ -29042,11 +29239,17 @@ static SDValue performDUPCombine(SDNode *N,
 
 /// Get rid of unnecessary NVCASTs (that don't change the type).
 static SDValue performNVCASTCombine(SDNode *N, SelectionDAG &DAG) {
-  if (N->getValueType(0) == N->getOperand(0).getValueType())
-    return N->getOperand(0);
-  if (N->getOperand(0).getOpcode() == AArch64ISD::NVCAST)
-    return DAG.getNode(AArch64ISD::NVCAST, SDLoc(N), N->getValueType(0),
-                       N->getOperand(0).getOperand(0));
+  EVT VT = N->getValueType(0);
+  SDValue Op = N->getOperand(0);
+
+  if (VT == Op.getValueType())
+    return Op;
+
+  if (Op.isUndef())
+    return DAG.getUNDEF(VT);
+
+  if (Op.getOpcode() == AArch64ISD::NVCAST)
+    return DAG.getNode(AArch64ISD::NVCAST, SDLoc(N), VT, Op.getOperand(0));
 
   return SDValue();
 }
@@ -30280,6 +30483,9 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performMINMAXCombine(N, DAG, *this);
   case ISD::TRUNCATE:
     return performTruncateCombine(N, DAG, DCI);
+  case ISD::CTTZ:
+  case ISD::CTTZ_ZERO_POISON:
+    return performCTTZCombine(N, DCI, DAG);
   case AArch64ISD::ANDS:
     return performANDSCombine(N, DCI);
   case AArch64ISD::ADC:
@@ -31909,8 +32115,9 @@ Value *AArch64TargetLowering::emitLoadLinked(IRBuilderBase &Builder,
     Value *LoHi =
         Builder.CreateIntrinsic(Int, Addr, /*FMFSource=*/nullptr, "lohi");
 
-    Value *Lo = Builder.CreateExtractValue(LoHi, 0, "lo");
-    Value *Hi = Builder.CreateExtractValue(LoHi, 1, "hi");
+    unsigned LoPos = Subtarget->isLittleEndian() ? 0 : 1;
+    Value *Lo = Builder.CreateExtractValue(LoHi, LoPos, "lo");
+    Value *Hi = Builder.CreateExtractValue(LoHi, 1 - LoPos, "hi");
 
     auto *Int128Ty = Type::getInt128Ty(Builder.getContext());
     Lo = Builder.CreateZExt(Lo, Int128Ty, "lo64");
@@ -31961,7 +32168,10 @@ Value *AArch64TargetLowering::emitStoreConditional(IRBuilderBase &Builder,
     Value *Lo = Builder.CreateTrunc(CastVal, Int64Ty, "lo");
     Value *Hi =
         Builder.CreateTrunc(Builder.CreateLShr(CastVal, 64), Int64Ty, "hi");
-    return Builder.CreateCall(Stxr, {Lo, Hi, Addr});
+    if (Subtarget->isLittleEndian())
+      return Builder.CreateCall(Stxr, {Lo, Hi, Addr});
+    else
+      return Builder.CreateCall(Stxr, {Hi, Lo, Addr});
   }
 
   Intrinsic::ID Int =

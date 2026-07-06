@@ -24,6 +24,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
   assert((test_ordered_set_container_spaceship<std::set>()));
   return true;
 }
+
 int main(int, char**) {
   test();
 #if TEST_STD_VER >= 26

@@ -15,6 +15,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPULaneMaskUtils.h"
+#include "AMDGPUMemoryUtils.h"
 #include "AMDGPUSelectionDAGInfo.h"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
@@ -9862,6 +9863,13 @@ SDValue SITargetLowering::lowerBUILD_VECTOR(SDValue Op,
 
 bool SITargetLowering::isOffsetFoldingLegal(
     const GlobalAddressSDNode *GA) const {
+  // Named barriers have fixed, non-relocated LDS addresses, so a constant
+  // offset into an array of them can be folded into the address.
+  if (GA->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
+    const auto *GV = dyn_cast<GlobalVariable>(GA->getGlobal());
+    return GV && AMDGPU::isNamedBarrier(*GV);
+  }
+
   // OSes that use ELF REL relocations (instead of RELA) can only store a
   // 32-bit addend in the instruction, so it is not safe to allow offset folding
   // which can create arbitrary 64-bit addends. (This is only a problem for
@@ -12642,12 +12650,12 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                 0);
     // Member count should be put into M0[ShAmt:+6]
     // Barrier ID should be put into M0[5:0]
-    M0Val =
+    SDValue MemberCnt =
         SDValue(DAG.getMachineNode(AMDGPU::S_AND_B32, DL, MVT::i32, CntOp,
                                    DAG.getTargetConstant(0x3F, DL, MVT::i32)),
                 0);
     constexpr unsigned ShAmt = 16;
-    M0Val = DAG.getNode(ISD::SHL, DL, MVT::i32, CntOp,
+    M0Val = DAG.getNode(ISD::SHL, DL, MVT::i32, MemberCnt,
                         DAG.getShiftAmountConstant(ShAmt, MVT::i32, DL));
 
     M0Val = SDValue(
