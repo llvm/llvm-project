@@ -1751,7 +1751,8 @@ class Base(unittest.TestCase):
                 "EXE": exe_name,
                 "CFLAGS_EXTRAS": "%s %s %s" % (stdflag, stdlibflag, defines),
                 "FRAMEWORK_INCLUDES": "-F%s" % self.framework_dir,
-                "LD_EXTRAS": "%s -Wl,-rpath,%s" % (self.lib_lldb, self.framework_dir),
+                "LD_EXTRAS": "%s -Wl,-rpath,%s -Wl,-rpath,%s"
+                % (self.lib_lldb, self.framework_dir, lib_dir),
             }
         elif sys.platform.startswith("win"):
             d = {
