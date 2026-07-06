@@ -12300,7 +12300,7 @@ static SDValue performOrXorChainCombine(SDNode *N, SelectionDAG &DAG) {
       if (NumXors == NumLeaves)
         Limit = std::min<unsigned>(8, NumXors);
     }
-    if (F.hasOptSize() || F.hasMinSize())
+    if (F.hasMinSize())
       Limit = MaxXors;
     if (WorkList.size() > Limit)
       return SDValue();
