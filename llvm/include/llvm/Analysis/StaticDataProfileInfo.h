@@ -127,7 +127,7 @@ public:
     friend class StaticDataProfileInfoAnalysis;
 
   public:
-    const StaticDataProfileInfo &getStaticDataProfileInfo() const {
+    StaticDataProfileInfo &getStaticDataProfileInfo() {
       return *HeldInfo;
     }
 
