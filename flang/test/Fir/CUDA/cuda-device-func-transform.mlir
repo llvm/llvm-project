@@ -190,3 +190,14 @@ func.func @_QPsub_maxtnid() attributes {cuf.launch_bounds = #cuf.launch_bounds<m
 }
 
 // CHECK: gpu.func @_QPsub_maxtnid() kernel attributes {nvvm.maxntid = array<i32: 256, 1, 1>, nvvm.minctasm = 2 : i64}
+
+// -----
+
+// The minimum-blocks-per-multiprocessor operand is optional: only maxntid is set.
+func.func @_QPsub_maxtnid_only() attributes {cuf.launch_bounds = #cuf.launch_bounds<maxTPB = 256 : i64>, cuf.proc_attr = #cuf.cuda_proc<global>} {
+  %cst = arith.constant 2.000000e+00 : f32
+  return
+}
+
+// CHECK: gpu.func @_QPsub_maxtnid_only() kernel attributes {nvvm.maxntid = array<i32: 256, 1, 1>}
+// CHECK-NOT: nvvm.minctasm

@@ -2653,7 +2653,7 @@ Overview:
 
 The '``@llvm.nvvm.tensormap.replace.global.stride.*``' intrinsics replace the 
 ``%ord``-th element of the ``global_stride`` field of the tensor-map object 
-with ``%new_value``.
+with ``%new_value``. ``%ord`` must be in the range [0, 4].
 
 '``llvm.nvvm.tensormap.replace.element.stride``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2671,7 +2671,7 @@ Overview:
 
 The '``@llvm.nvvm.tensormap.replace.element.stride.*``' intrinsics replace the 
 ``%ord``-th element of the ``element_stride`` field of the tensor-map object 
-with ``%new_value``.
+with ``%new_value``. ``%ord`` must be in the range [0, 4].
 
 '``llvm.nvvm.tensormap.replace.global.dim``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2689,7 +2689,7 @@ Overview:
 
 The '``@llvm.nvvm.tensormap.replace.global.dim.*``' intrinsics replace the 
 ``%ord``-th element of the ``global_dim`` field of the tensor-map object 
-with ``%new_value``.
+with ``%new_value``. ``%ord`` must be in the range [0, 4].
 
 '``llvm.nvvm.tensormap.replace.box.dim``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2707,7 +2707,7 @@ Overview:
 
 The '``@llvm.nvvm.tensormap.replace.box.dim.*``' intrinsics replace the 
 ``%ord``-th element of the ``box_dim`` field of the tensor-map object with 
-``%new_value``.
+``%new_value``. ``%ord`` must be in the range [0, 4].
 
 '``llvm.nvvm.tensormap.replace.elemtype``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
