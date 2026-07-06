@@ -23,16 +23,17 @@
 template <typename __T>
 __GPU_DEVICE__ __T __gpu_shuffle_idx_impl(__T __v, unsigned int __idx,
                                           int __w) {
-  if constexpr (sizeof(__T) == sizeof(unsigned long long))
+  if constexpr (sizeof(__T) == sizeof(unsigned long long)) {
     return __builtin_bit_cast(
         __T, __gpu_shuffle_idx_u64(__gpu_lane_mask(), __idx,
                                    __builtin_bit_cast(unsigned long long, __v),
                                    (unsigned int)__w));
-  else
+  } else {
     return __builtin_bit_cast(
         __T, __gpu_shuffle_idx_u32(__gpu_lane_mask(), __idx,
                                    __builtin_bit_cast(unsigned int, __v),
                                    (unsigned int)__w));
+  }
 }
 
 template <typename __T>
@@ -126,12 +127,13 @@ __GPU_DEVICE__ __T __shfl_xor_sync(__MaskT __mask, MAYBE_UNDEF __T __var,
 
 template <typename __T>
 __GPU_DEVICE__ unsigned long long __match_any(__T __value) {
-  if constexpr (sizeof(__T) == sizeof(unsigned long long))
+  if constexpr (sizeof(__T) == sizeof(unsigned long long)) {
     return __gpu_match_any_u64(__gpu_lane_mask(),
                                __builtin_bit_cast(unsigned long long, __value));
-  else
+  } else {
     return __gpu_match_any_u32(__gpu_lane_mask(),
                                __builtin_bit_cast(unsigned int, __value));
+  }
 }
 template <typename __MaskT, typename __T>
 __GPU_DEVICE__ unsigned long long __match_any_sync(__MaskT __mask,
@@ -142,12 +144,13 @@ __GPU_DEVICE__ unsigned long long __match_any_sync(__MaskT __mask,
 template <typename __T>
 __GPU_DEVICE__ unsigned long long __match_all(__T __value, int *__pred) {
   unsigned long long __r;
-  if constexpr (sizeof(__T) == sizeof(unsigned long long))
+  if constexpr (sizeof(__T) == sizeof(unsigned long long)) {
     __r = __gpu_match_all_u64(__gpu_lane_mask(),
                               __builtin_bit_cast(unsigned long long, __value));
-  else
+  } else {
     __r = __gpu_match_all_u32(__gpu_lane_mask(),
                               __builtin_bit_cast(unsigned int, __value));
+  }
   *__pred = __r != 0;
   return __r;
 }

@@ -14,7 +14,7 @@
 #include <gpuintrin.h>
 
 // The warpSize is a runtime value rather than a compile-time constant.
-inline __attribute__((device)) const struct {
+static inline __attribute__((device)) const struct {
   __attribute__((device, always_inline, const)) operator int() const noexcept {
     return __gpu_num_lanes();
   }
