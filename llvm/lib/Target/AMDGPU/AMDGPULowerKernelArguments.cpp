@@ -319,7 +319,7 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM,
     if (Arg.hasAttribute(Attribute::NoUndef))
       Load->setMetadata(LLVMContext::MD_noundef, MDNode::get(Ctx, {}));
 
-    if (Arg.hasAttribute(Attribute::Range)) {
+    if (Arg.hasAttribute(Attribute::Range) && AdjustedArgTy == ArgTy) {
       const ConstantRange &Range =
           Arg.getAttribute(Attribute::Range).getValueAsConstantRange();
       Load->setMetadata(LLVMContext::MD_range,
