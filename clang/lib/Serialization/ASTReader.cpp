@@ -4314,15 +4314,20 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       SmallVector<const FileEntry *, 64> Files;
       bool Scanned = scanLoadedSLocEntries(F, Offsets, Files);
 
-      // Classify duplicates and compute the reduced allocation request.
+      // Classify each entry against the canonical map as it stands now, before
+      // this module registers any of its own files, and store the decision per
+      // entry. The build pass reads these flags, so a file that appears
+      // multiple times in this module is classified consistently.
       auto entrySize = [&](unsigned I) -> uint64_t {
         return (I + 1 < N ? Offsets[I + 1] : SLocSpaceSize) - Offsets[I];
       };
+      SmallVector<bool, 64> IsDup(N, false);
       unsigned NumDupEntries = 0;
       uint64_t DupBytes = 0;
       if (Scanned)
         for (unsigned I = 0; I != N; ++I)
           if (SourceMgr.isLoadedFileDuplicate(Files[I])) {
+            IsDup[I] = true;
             uint64_t Size = entrySize(I);
             SourceMgr.noteDuplicateLoadedFile(Size);
             DupBytes += Size;
@@ -4368,7 +4373,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
           SourceLocation::UIntTy LowEnd =
               (I + 1 < N ? Offsets[I + 1] : SLocSpaceSize) + 2;
           const FileEntry *FE = Files[I];
-          if (FE && SourceMgr.isLoadedFileDuplicate(FE)) {
+          if (IsDup[I]) {
             // Redirect this file's locations into the module that first loaded
             // it; reserve nothing here.
             const SourceManager::LoadedFileLoc *Canon =
