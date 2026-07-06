@@ -1355,7 +1355,7 @@ if the buffer resource resource has the required flags set. How ordinary
 controlled by the ``amdgpu.buffer.oob.mode`` (see :ref:`amdgpu-module-flags`). If
 that flag is set to ``1`` (relaxed), no handling to improve the expected behavior
 of OOB accesses is performed, while if it is set to ``0`` (any) or ``2`` (strict),
-oerations may be spliit to ensure correctness under stronger models of how
+operations may be split to ensure correctness under stronger models of how
 out-of-bounds accesses should behave.
 
 When operating on more than 32 bits of data, the ``voffset`` used for the access
@@ -1369,9 +1369,9 @@ that begin out of bounds but then access in-bounds elements (such as loading a
 (producing ``<0, v0, v1, v2>`` and not ``<0, 0, 0, 0>``. So, under strict OOB
 handling, such an access will be split into four ``i32`` accesses. Note this this
 can only happen for underaligned loads - such wraparound isn't possible for
-loads thatare alligned to their natural size.
+loads that are alligned to their natural size.
 
-Similarly, buffer fat pointers permit operating types such as ``<8 x i8>`` which
+Similarly, buffer fat pointers permit operating on types such as ``<8 x i8>`` which
 must be accessed (and bounds-checked) 4 bytes at a time. Non-word-aligned
 accesses to such types from near the end of a buffer resource (such as starting
 a load of an ``<8 x i8>`` from an offset of ``6`` on an 8-byte buffer) will treat
@@ -1382,8 +1382,10 @@ loads.
 
 .. note::
 
-  These transformations do not impact buffer intrinsic calls (calling
-  ``llvm.amdgcn.raw.buffer.*`` directly).
+  No attempt will be made to shrink buffer intrinsic calls (calling
+  ``llvm.amdgcn.raw.ptr.buffer.*`` directly) in order to cause them to meet the
+  requirements of strict OOB mode. However, in strict OOB mode, those intrinsics
+  will not be combined in a way that would violate the guarantees of that mode.
 
 Target Types
 ------------
