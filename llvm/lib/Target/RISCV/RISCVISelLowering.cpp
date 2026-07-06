@@ -650,7 +650,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::BSWAP, MVT::v4i16, Legal);
       setOperationAction(ISD::BITREVERSE, {MVT::v4i16, MVT::v8i8}, Legal);
       setOperationAction(ISD::VECTOR_SHUFFLE, P64VecVTs, Custom);
-      setOperationAction(ISD::VECTOR_REVERSE, P64VecVTs, Legal);
+      setOperationAction(ISD::VECTOR_REVERSE, P64VecVTs, Custom);
       setOperationAction(ISD::SPLAT_VECTOR, P64VecVTs, Legal);
       setOperationAction(ISD::BUILD_VECTOR, P64VecVTs, Legal);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2i32, Legal);
@@ -13573,6 +13573,25 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
                                                  SelectionDAG &DAG) const {
   SDLoc DL(Op);
   MVT VecVT = Op.getSimpleValueType();
+
+  // Reverse a 64-bit packed vector on RV32 by reversing each 32-bit half and
+  // swapping them.
+  if (Subtarget.hasStdExtP() && !Subtarget.hasVInstructions()) {
+    assert(!Subtarget.is64Bit() && VecVT.getSizeInBits() == 64 &&
+           "Unexpected packed VECTOR_REVERSE type");
+    SDValue V = Op.getOperand(0);
+    if (VecVT == MVT::v2i32) {
+      // A 2-element reverse is just an element swap.
+      SDValue Lo = DAG.getExtractVectorElt(DL, MVT::i32, V, 0);
+      SDValue Hi = DAG.getExtractVectorElt(DL, MVT::i32, V, 1);
+      return DAG.getBuildVector(VecVT, DL, {Hi, Lo});
+    }
+    auto [Lo, Hi] = DAG.SplitVector(V, DL);
+    Lo = DAG.getNode(ISD::VECTOR_REVERSE, DL, Lo.getSimpleValueType(), Lo);
+    Hi = DAG.getNode(ISD::VECTOR_REVERSE, DL, Hi.getSimpleValueType(), Hi);
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VecVT, Hi, Lo);
+  }
+
   if (VecVT.getVectorElementType() == MVT::i1) {
     MVT WidenVT = MVT::getVectorVT(MVT::i8, VecVT.getVectorElementCount());
     SDValue Op1 = DAG.getNode(ISD::ZERO_EXTEND, DL, WidenVT, Op.getOperand(0));

@@ -2458,19 +2458,6 @@ let append Predicates = [IsRV32] in {
                         (BuildGPRPair (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_even)),
                                       (REV_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_odd))))>;
 
-  // Element reverse (prev): swap the two halves and reverse within each.
-  def : Pat<(v8i8 (vector_reverse (v8i8 GPRPair:$rs))),
-            (BuildGPRPair (REV8_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_odd)),
-                          (REV8_RV32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_even)))>;
-  def : Pat<(v4i16 (vector_reverse (v4i16 GPRPair:$rs))),
-            (BuildGPRPair (PPAIROE_H (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_odd),
-                                     (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_odd)),
-                          (PPAIROE_H (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_even),
-                                     (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_even)))>;
-  def : Pat<(v2i32 (vector_reverse (v2i32 GPRPair:$rs))),
-            (BuildGPRPair (i32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_odd)),
-                          (i32 (EXTRACT_SUBREG GPRPair:$rs, sub_gpr_even)))>;
-
   // splat pattern
   def : Pat<(v8i8 (splat_vector (XLenVT GPR:$rs2))),
             (PADD_DBS (v8i8 X0_Pair), GPR:$rs2)>;
