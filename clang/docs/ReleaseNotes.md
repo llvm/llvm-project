@@ -683,9 +683,6 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Clang now rejects inline asm constraints and clobbers that contain an
   embedded null character, instead of silently truncating them. (#GH173900)
 
-- Added `-Wstringop-overread` to warn when `memcpy`, `memmove`, `memcmp`,
-  and related builtins read more bytes than the source buffer size (#GH83728).
-
 - Diagnostics for the C++11 range-based for statement now report the correct
   iterator type in notes for invalid iterator types.
 
