@@ -67,6 +67,19 @@ static cl::opt<bool> UseDivergentRegisterIndexing(
     cl::desc("Use indirect register addressing for divergent indexes"),
     cl::init(false));
 
+// On gfx1250 the architectural VGPR window is v0-v255; VGPRs v256-v1023 are
+// reachable only via the S_SET_VGPR_MSB addressing mode, which the
+// AMDGPULowerVGPREncoding pass cannot manage across an opaque inline-asm body.
+// Naming v256+ in an inline-asm physical-register constraint is therefore
+// off by default (and treated as out-of-bounds, matching non-gfx1250 targets).
+// This opt-in flag lets a caller bind v256+ as a cross-boundary asm operand
+// when they take responsibility for any in-asm S_SET_VGPR_MSB themselves.
+static cl::opt<bool> EnableHighVGPRInlineAsm(
+    "amdgpu-enable-high-vgpr-inline-asm", cl::Hidden,
+    cl::desc("Allow naming VGPRs v256-v1023 in inline-asm constraints on "
+             "targets with 1024 addressable VGPRs (gfx1250+)"),
+    cl::init(false));
+
 static bool denormalModeIsFlushAllF32(const MachineFunction &MF) {
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   return Info->getMode().FP32Denormals == DenormalMode::getPreserveSign();
@@ -19540,7 +19553,9 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
   auto [Kind, Idx, NumRegs] = AMDGPU::parseAsmConstraintPhysReg(Constraint);
   if (Kind != '\0') {
     if (Kind == 'v') {
-      RC = &AMDGPU::VGPR_32_Lo256RegClass;
+      RC = (Subtarget->has1024AddressableVGPRs() && EnableHighVGPRInlineAsm)
+               ? &AMDGPU::VGPR_32RegClass
+               : &AMDGPU::VGPR_32_Lo256RegClass;
     } else if (Kind == 's') {
       RC = &AMDGPU::SGPR_32RegClass;
     } else if (Kind == 'a') {
