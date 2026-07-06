@@ -657,25 +657,14 @@ bool SemaPPC::checkTargetClonesAttr(const SmallVectorImpl<StringRef> &Params,
       } else {
         // Handle feature strings
         StringRef FeatureName = LHS;
-        bool IsNegated = false;
 
         // Check for negation prefix
         if (FeatureName.starts_with("no-")) {
-          IsNegated = true;
           FeatureName = FeatureName.drop_front(3);
         }
 
-        // First check if it's a valid feature name at all
-        if (!TargetInfo.isValidFeatureName(FeatureName)) {
-          return Diag(CurLoc, diag::warn_unsupported_target_attribute)
-                 << Unknown << None << LHS << TargetClones;
-        }
-
         // Check if feature is valid for target_clones (has runtime detection)
-        // Use virtual method that defaults to isValidFeatureName for non-PPC
-        // targets
         if (!TargetInfo.isValidClonesFeatureName(FeatureName)) {
-          // Feature is valid for target attribute but not target_clones
           return Diag(CurLoc, diag::err_ppc_feature_no_runtime_detection)
                  << FeatureName;
         }
