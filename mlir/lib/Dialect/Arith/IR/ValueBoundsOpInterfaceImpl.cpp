@@ -363,7 +363,8 @@ struct MinUIOpInterface
         ValueBoundsConstraintSet::isProvablyNonNegative(minOp.getRhs(), cstr);
     if (!lhsNonNegative && !rhsNonNegative)
       return;
-
+    
+    cstr.bound(value) >= 0;
     if (lhsNonNegative) {
       AffineExpr lhs = cstr.getExpr(minOp.getLhs());
       cstr.bound(value) <= lhs;
