@@ -5,21 +5,10 @@
 ; CHECK-NOT: OpDecorate %[[#]] LinkageAttributes "" Export
 ; CHECK: %[[#FN]] = OpFunction
 
-define void @0(ptr addrspace(1) %in, ptr addrspace(1) %out, i32 %n) {
-entry:
-  %ok = icmp sgt i32 %n, 0
-  br i1 %ok, label %body, label %exit
-body:
-  %v = load i32, ptr addrspace(1) %in, align 4
-  %salt = mul i32 %n, -1640531527
-  %mix = xor i32 %v, %salt
-  store i32 %mix, ptr addrspace(1) %out, align 4
-  br label %exit
-exit:
+define void @0() {
   ret void
 }
 
-define spir_kernel void @kernel(ptr addrspace(1) %in, ptr addrspace(1) %out, i32 %n) {
-entry:
+define spir_kernel void @kernel() {
   ret void
 }
