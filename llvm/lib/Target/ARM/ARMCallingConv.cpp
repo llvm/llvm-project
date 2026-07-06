@@ -186,9 +186,10 @@ static bool CC_ARM_AAPCS_Custom_Aggregate(unsigned ValNo, MVT ValVT,
   if (!ArgFlags.isInConsecutiveRegsLast())
     return true;
 
+  const MachineFunction &MF = State.getMachineFunction();
   // Try to allocate a contiguous block of registers, each of the correct
   // size to hold one member.
-  auto &DL = State.getMachineFunction().getDataLayout();
+  auto &DL = MF.getDataLayout();
   const MaybeAlign StackAlign = DL.getStackAlignment();
   assert(StackAlign && "data layout string is missing stack alignment");
   const Align FirstMemberAlign(PendingMembers[0].getExtraInfo());
@@ -265,7 +266,7 @@ static bool CC_ARM_AAPCS_Custom_Aggregate(unsigned ValNo, MVT ValVT,
     State.AllocateReg(Reg);
 
   // Clamp the alignment between 4 and 8.
-  if (State.getMachineFunction().getSubtarget<ARMSubtarget>().isTargetAEABI())
+  if (MF.getTarget().getTargetTriple().isTargetAEABI())
     Alignment = ArgFlags.getNonZeroMemAlign() <= 4 ? Align(4) : Align(8);
 
   // After the first item has been allocated, the rest are packed as tightly as

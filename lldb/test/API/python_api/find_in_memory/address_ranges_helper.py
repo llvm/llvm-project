@@ -31,20 +31,20 @@ def GetRangeFromAddrValue(test_base, addr, shrink=False):
     If 'shrink' is True, the address range will be reduced to not exceed 2K.
     """
     region = lldb.SBMemoryRegionInfo()
+    process = test_base.process
+    addr_val = process.FixAddress(addr.GetValueAsUnsigned())
     test_base.assertTrue(
-        test_base.process.GetMemoryRegionInfo(
-            addr.GetValueAsUnsigned(), region
-        ).Success(),
+        process.GetMemoryRegionInfo(addr_val, region).Success(),
     )
 
     test_base.assertTrue(region.IsReadable())
     test_base.assertFalse(region.IsExecutable())
 
-    base = region.GetRegionBase()
-    end = region.GetRegionEnd()
+    base = process.FixAddress(region.GetRegionBase())
+    end = process.FixAddress(region.GetRegionEnd())
 
     if shrink:
-        addr2 = addr.GetValueAsUnsigned()
+        addr2 = addr_val
         addr2 -= addr2 % 512
         base = max(base, addr2 - 1024)
         end = min(end, addr2 + 1024)
@@ -55,27 +55,34 @@ def GetRangeFromAddrValue(test_base, addr, shrink=False):
     return lldb.SBAddressRange(start, size)
 
 
-def IsWithinRange(addr, size, range, target):
-    start_addr = range.GetBaseAddress().GetLoadAddress(target)
-    end_addr = start_addr + range.GetByteSize()
-    addr = addr.GetValueAsUnsigned()
-    return addr >= start_addr and addr + size <= end_addr
-
-
 def GetHeapRanges(test_base, shrink=False):
     frame = test_base.thread.GetSelectedFrame()
 
     ex = frame.EvaluateExpression("heap_pointer1")
     test_base.assertTrue(ex.IsValid())
-    range = GetRangeFromAddrValue(test_base, ex, shrink)
-    addr_ranges = lldb.SBAddressRangeList()
-    addr_ranges.Append(range)
+    range1 = GetRangeFromAddrValue(test_base, ex, shrink)
+    range1_start = range1.GetBaseAddress().GetLoadAddress(test_base.target)
+    range1_end = range1_start + range1.GetByteSize()
 
     ex = frame.EvaluateExpression("heap_pointer2")
     test_base.assertTrue(ex.IsValid())
-    size = len(DOUBLE_INSTANCE_PATTERN_HEAP)
-    if not IsWithinRange(ex, size, addr_ranges[0], test_base.target):
-        addr_ranges.Append(GetRangeFromAddrValue(test_base, ex, shrink))
+    range2 = GetRangeFromAddrValue(test_base, ex, shrink)
+    range2_start = range2.GetBaseAddress().GetLoadAddress(test_base.target)
+    range2_end = range2_start + range2.GetByteSize()
+
+    addr_ranges = lldb.SBAddressRangeList()
+
+    if range1_end < range2_start or range2_end < range1_start:
+        # The ranges do not overlap; add them both.
+        addr_ranges.Append(range1)
+        addr_ranges.Append(range2)
+    else:
+        # Merge overlapping ranges.
+        base = min(range1_start, range2_start)
+        end = max(range1_end, range2_end)
+        start = lldb.SBAddress(base, test_base.target)
+        size = end - base
+        addr_ranges.Append(lldb.SBAddressRange(start, size))
 
     return addr_ranges
 

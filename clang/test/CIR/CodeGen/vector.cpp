@@ -12,6 +12,7 @@ typedef unsigned int uvi4 __attribute__((vector_size(16)));
 typedef float vf4 __attribute__((vector_size(16)));
 typedef double vd2 __attribute__((vector_size(16)));
 typedef long long vll2 __attribute__((vector_size(16)));
+typedef _Float16 vh4 __attribute__((vector_size(8)));
 
 vi4 vec_a;
 // CIR: cir.global external @[[VEC_A:.*]] = #cir.zero : !cir.vector<4 x !s32i>
@@ -59,19 +60,15 @@ void foo() {
   vi4 g = {};
 }
 
-// CIR: %[[VEC_A:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a"]
-// CIR: %[[VEC_B:.*]] = cir.alloca !cir.vector<2 x !cir.double>, !cir.ptr<!cir.vector<2 x !cir.double>>, ["b"]
-// CIR: %[[VEC_C:.*]] = cir.alloca !cir.vector<2 x !s64i>, !cir.ptr<!cir.vector<2 x !s64i>>, ["c"]
-// CIR: %[[VEC_D:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["d", init]
-// CIR: %[[VEC_E:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["e", init]
-// CIR: %[[VEC_F:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["f", init]
-// CIR: %[[VEC_G:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["g", init]
-// CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
-// CIR: %[[CONST_2:.*]] = cir.const #cir.int<2> : !s32i
-// CIR: %[[CONST_3:.*]] = cir.const #cir.int<3> : !s32i
-// CIR: %[[CONST_4:.*]] = cir.const #cir.int<4> : !s32i
-// CIR: %[[VEC_D_VAL:.*]] = cir.vec.create(%[[CONST_1]], %[[CONST_2]], %[[CONST_3]], %[[CONST_4]] :
-// CIR-SAME: !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+// CIR: %[[VEC_A:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[VEC_B:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.vector<2 x !cir.double>>
+// CIR: %[[VEC_C:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!cir.vector<2 x !s64i>>
+// CIR: %[[VEC_D:.*]] = cir.alloca "d" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[VEC_E:.*]] = cir.alloca "e" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[VEC_F:.*]] = cir.alloca "f" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[VEC_G:.*]] = cir.alloca "g" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[VEC_D_VAL:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i,
+// CIR-SAME: #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[VEC_D_VAL]], %[[VEC_D]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[GLOBAL_X:.*]] = cir.get_global @x : !cir.ptr<!s32i>
 // CIR: %[[X_VAL:.*]] = cir.load{{.*}} %[[GLOBAL_X]] : !cir.ptr<!s32i>, !s32i
@@ -80,18 +77,15 @@ void foo() {
 // CIR: %[[GLOBAL_X:.*]] = cir.get_global @x : !cir.ptr<!s32i>
 // CIR: %[[X:.*]] = cir.load{{.*}} %[[GLOBAL_X]] : !cir.ptr<!s32i>, !s32i
 // CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
-// CIR: %[[X_PLUS_1:.*]] = cir.binop(add, %[[X]], %[[CONST_1]]) nsw : !s32i
+// CIR: %[[X_PLUS_1:.*]] = cir.add nsw %[[X]], %[[CONST_1]] : !s32i
 // CIR: %[[VEC_E_VAL:.*]] = cir.vec.create(%[[X_VAL]], %[[CONST_5]], %[[CONST_6]], %[[X_PLUS_1]] :
 // CIR-SAME: !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[VEC_E_VAL]], %[[VEC_E]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
-// CIR: %[[CONST_5:.*]] = cir.const #cir.int<5> : !s32i
-// CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
-// CIR: %[[VEC_F_VAL:.*]] = cir.vec.create(%[[CONST_5]], %[[CONST_0]], %[[CONST_0]], %[[CONST_0]] :
-// CIR-SAME: !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+// CIR: %[[VEC_F_VAL:.*]] = cir.const #cir.const_vector<[#cir.int<5> : !s32i, #cir.int<0> : !s32i,
+// CIR-SAME: #cir.int<0> : !s32i, #cir.int<0> : !s32i]> : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[VEC_F_VAL]], %[[VEC_F]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
-// CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
-// CIR: %[[VEC_G_VAL:.*]] = cir.vec.create(%[[CONST_0]], %[[CONST_0]], %[[CONST_0]], %[[CONST_0]] :
-// CIR-SAME: !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+// CIR: %[[VEC_G_VAL:.*]] = cir.const #cir.const_vector<[#cir.int<0> : !s32i, #cir.int<0> : !s32i,
+// CIR-SAME; #cir.int<0> : !s32i, #cir.int<0> : !s32i]> : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[VEC_G_VAL]], %[[VEC_G]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 
 // LLVM: %[[VEC_A:.*]] = alloca <4 x i32>, i64 1, align 16
@@ -120,7 +114,7 @@ void foo() {
 
 void foo2(vi4 p) {}
 
-// CIR: %[[VEC_A:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["p", init]
+// CIR: %[[VEC_A:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: cir.store{{.*}} %{{.*}}, %[[VEC_A]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 
 // LLVM: %[[VEC_A:.*]] = alloca <4 x i32>, i64 1, align 16
@@ -134,14 +128,10 @@ void foo3() {
   int e = a[1];
 }
 
-// CIR: %[[VEC:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a", init]
-// CIR: %[[INIT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["e", init]
-// CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
-// CIR: %[[CONST_2:.*]] = cir.const #cir.int<2> : !s32i
-// CIR: %[[CONST_3:.*]] = cir.const #cir.int<3> : !s32i
-// CIR: %[[CONST_4:.*]] = cir.const #cir.int<4> : !s32i
-// CIR: %[[VEC_VAL:.*]] = cir.vec.create(%[[CONST_1]], %[[CONST_2]], %[[CONST_3]], %[[CONST_4]] :
-// CIR-SAME: !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+// CIR: %[[VEC:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[INIT:.*]] = cir.alloca "e" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[VEC_VAL:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i,
+// CIR-SAME: #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[VEC_VAL]], %[[VEC]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[TMP:.*]] = cir.load{{.*}} %[[VEC]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CIR: %[[IDX:.*]] = cir.const #cir.int<1> : !s32i
@@ -169,15 +159,11 @@ void foo4() {
   int e = a[idx];
 }
 
-// CIR: %[[VEC:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a", init]
-// CIR: %[[IDX:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["idx", init]
-// CIR: %[[INIT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["e", init]
-// CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
-// CIR: %[[CONST_2:.*]] = cir.const #cir.int<2> : !s32i
-// CIR: %[[CONST_3:.*]] = cir.const #cir.int<3> : !s32i
-// CIR: %[[CONST_4:.*]] = cir.const #cir.int<4> : !s32i
-// CIR: %[[VEC_VAL:.*]] = cir.vec.create(%[[CONST_1]], %[[CONST_2]], %[[CONST_3]], %[[CONST_4]] :
-// CIR-SAME: !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+// CIR: %[[VEC:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[IDX:.*]] = cir.alloca "idx" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[INIT:.*]] = cir.alloca "e" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[VEC_VAL:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i,
+// CIR-SAME: #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[VEC_VAL]], %[[VEC]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[CONST_IDX:.*]] = cir.const #cir.int<2> : !s32i
 // CIR: cir.store{{.*}} %[[CONST_IDX]], %[[IDX]] : !s32i, !cir.ptr<!s32i>
@@ -212,13 +198,9 @@ void foo5() {
   a[2] = 5;
 }
 
-// CIR: %[[VEC:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a", init]
-// CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
-// CIR: %[[CONST_2:.*]] = cir.const #cir.int<2> : !s32i
-// CIR: %[[CONST_3:.*]] = cir.const #cir.int<3> : !s32i
-// CIR: %[[CONST_4:.*]] = cir.const #cir.int<4> : !s32i
-// CIR: %[[VEC_VAL:.*]] = cir.vec.create(%[[CONST_1]], %[[CONST_2]], %[[CONST_3]], %[[CONST_4]] :
-// CIR-SAME: !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+// CIR: %[[VEC:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[VEC_VAL:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i,
+// CIR-SAME: #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[VEC_VAL]], %[[VEC]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[CONST_VAL:.*]] = cir.const #cir.int<5> : !s32i
 // CIR: %[[CONST_IDX:.*]] = cir.const #cir.int<2> : !s32i
@@ -245,15 +227,11 @@ void foo6() {
   a[idx] = value;
 }
 
-// CIR: %[[VEC:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a", init]
-// CIR: %[[IDX:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["idx", init]
-// CIR: %[[VAL:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["value", init]
-// CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
-// CIR: %[[CONST_2:.*]] = cir.const #cir.int<2> : !s32i
-// CIR: %[[CONST_3:.*]] = cir.const #cir.int<3> : !s32i
-// CIR: %[[CONST_4:.*]] = cir.const #cir.int<4> : !s32i
-// CIR: %[[VEC_VAL:.*]] = cir.vec.create(%[[CONST_1]], %[[CONST_2]], %[[CONST_3]], %[[CONST_4]] :
-// CIR-SAME: !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+// CIR: %[[VEC:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[IDX:.*]] = cir.alloca "idx" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[VAL:.*]] = cir.alloca "value" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[VEC_VAL:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i,
+// CIR-SAME: #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[VEC_VAL]], %[[VEC]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[CONST_IDX:.*]] = cir.const #cir.int<2> : !s32i
 // CIR: cir.store{{.*}} %[[CONST_IDX]], %[[IDX]] : !s32i, !cir.ptr<!s32i>
@@ -294,19 +272,15 @@ void foo7() {
   a[2] += 5;
 }
 
-// CIR: %[[VEC:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a", init]
-// CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
-// CIR: %[[CONST_2:.*]] = cir.const #cir.int<2> : !s32i
-// CIR: %[[CONST_3:.*]] = cir.const #cir.int<3> : !s32i
-// CIR: %[[CONST_4:.*]] = cir.const #cir.int<4> : !s32i
-// CIR: %[[VEC_VAL:.*]] = cir.vec.create(%[[CONST_1]], %[[CONST_2]], %[[CONST_3]], %[[CONST_4]] :
-// CIR-SAME: !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+// CIR: %[[VEC:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[VEC_VAL:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i,
+// CIR-SAME: #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[VEC_VAL]], %[[VEC]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[CONST_VAL:.*]] = cir.const #cir.int<5> : !s32i
 // CIR: %[[CONST_IDX:.*]] = cir.const #cir.int<2> : !s32i
 // CIR: %[[TMP:.*]] = cir.load{{.*}} %[[VEC]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CIR: %[[ELE:.*]] = cir.vec.extract %[[TMP]][%[[CONST_IDX]] : !s32i] : !cir.vector<4 x !s32i>
-// CIR: %[[RES:.*]] = cir.binop(add, %[[ELE]], %[[CONST_VAL]]) nsw : !s32i
+// CIR: %[[RES:.*]] = cir.add nsw %[[ELE]], %[[CONST_VAL]] : !s32i
 // CIR: %[[TMP2:.*]] = cir.load{{.*}} %[[VEC]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CIR: %[[NEW_VEC:.*]] = cir.vec.insert %[[RES]], %[[TMP2]][%[[CONST_IDX]] : !s32i] : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[NEW_VEC]], %[[VEC]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
@@ -337,25 +311,20 @@ void foo8() {
   vi4 not_res = ~a;
 }
 
-// CIR: %[[VEC:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a", init]
-// CIR: %[[PLUS_RES:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["plus_res", init]
-// CIR: %[[MINUS_RES:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["minus_res", init]
-// CIR: %[[NOT_RES:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["not_res", init]
-// CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
-// CIR: %[[CONST_2:.*]] = cir.const #cir.int<2> : !s32i
-// CIR: %[[CONST_3:.*]] = cir.const #cir.int<3> : !s32i
-// CIR: %[[CONST_4:.*]] = cir.const #cir.int<4> : !s32i
-// CIR: %[[VEC_VAL:.*]] = cir.vec.create(%[[CONST_1]], %[[CONST_2]], %[[CONST_3]], %[[CONST_4]] :
-// CIR-SAME: !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+// CIR: %[[VEC:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[PLUS_RES:.*]] = cir.alloca "plus_res" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[MINUS_RES:.*]] = cir.alloca "minus_res" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[NOT_RES:.*]] = cir.alloca "not_res" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[VEC_VAL:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i,
+// CIR-SAME: #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[VEC_VAL]], %[[VEC]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[TMP1:.*]] = cir.load{{.*}} %[[VEC]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
-// CIR: %[[PLUS:.*]] = cir.unary(plus, %[[TMP1]]) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
-// CIR: cir.store{{.*}} %[[PLUS]], %[[PLUS_RES]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: cir.store{{.*}} %[[TMP1]], %[[PLUS_RES]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[TMP2:.*]] = cir.load{{.*}} %[[VEC]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
-// CIR: %[[MINUS:.*]] = cir.unary(minus, %[[TMP2]]) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+// CIR: %[[MINUS:.*]] = cir.minus %[[TMP2]] : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[MINUS]], %[[MINUS_RES]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[TMP3:.*]] = cir.load{{.*}} %[[VEC]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
-// CIR: %[[NOT:.*]] = cir.unary(not, %[[TMP3]]) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+// CIR: %[[NOT:.*]] = cir.not %[[TMP3]] : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[NOT]], %[[NOT_RES]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 
 // LLVM: %[[VEC:.*]] = alloca <4 x i32>, i64 1, align 16
@@ -394,13 +363,15 @@ void foo9() {
   vi4 shr = a >> b;
 }
 
-// CIR: %[[VEC_A:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a", init]
-// CIR: %[[VEC_B:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["b", init]
-// CIR: %[[SHL_RES:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["shl", init]
-// CIR: %[[SHR_RES:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["shr", init]
-// CIR: %[[VEC_A_VAL:.*]] = cir.vec.create(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} :  !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+// CIR: %[[VEC_A:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[VEC_B:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[SHL_RES:.*]] = cir.alloca "shl" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[SHR_RES:.*]] = cir.alloca "shr" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[VEC_A_VAL:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i,
+// CIR-SAME: #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[VEC_A_VAL]], %[[VEC_A]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
-// CIR: %[[VEC_B_VAL:.*]] = cir.vec.create(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+// CIR: %[[VEC_B_VAL:.*]] = cir.const #cir.const_vector<[#cir.int<5> : !s32i, #cir.int<6> : !s32i,
+// CIR-SAME: #cir.int<7> : !s32i, #cir.int<8> : !s32i]> : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[VEC_B_VAL]], %[[VEC_B]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[VEC_A]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[VEC_B]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
@@ -449,13 +420,15 @@ void foo10() {
   uvi4 shr = b >> a;
 }
 
-// CIR: %[[VEC_A:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a", init]
-// CIR: %[[VEC_B:.*]] = cir.alloca !cir.vector<4 x !u32i>, !cir.ptr<!cir.vector<4 x !u32i>>, ["b", init]
-// CIR: %[[SHL_RES:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["shl", init]
-// CIR: %[[SHR_RES:.*]] = cir.alloca !cir.vector<4 x !u32i>, !cir.ptr<!cir.vector<4 x !u32i>>, ["shr", init]
-// CIR: %[[VEC_A_VAL:.*]] = cir.vec.create(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : !s32i, !s32i, !s32i, !s32i) : !cir.vector<4 x !s32i>
+// CIR: %[[VEC_A:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[VEC_B:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.vector<4 x !u32i>>
+// CIR: %[[SHL_RES:.*]] = cir.alloca "shl" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[SHR_RES:.*]] = cir.alloca "shr" {{.*}} init : !cir.ptr<!cir.vector<4 x !u32i>>
+// CIR: %[[VEC_A_VAL:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i,
+// CIR-SAME: #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[VEC_A_VAL]], %[[VEC_A]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
-// CIR: %[[VEC_B_VAL:.*]] = cir.vec.create(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} :  !u32i, !u32i, !u32i, !u32i) : !cir.vector<4 x !u32i>
+// CIR: %[[VEC_B_VAL:.*]] = cir.const #cir.const_vector<[#cir.int<5> : !u32i, #cir.int<6> : !u32i,
+// CIR-SAME: #cir.int<7> : !u32i, #cir.int<8> : !u32i]> : !cir.vector<4 x !u32i>
 // CIR: cir.store{{.*}} %[[VEC_B_VAL]], %[[VEC_B]] : !cir.vector<4 x !u32i>, !cir.ptr<!cir.vector<4 x !u32i>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[VEC_A]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[VEC_B]] : !cir.ptr<!cir.vector<4 x !u32i>>, !cir.vector<4 x !u32i>
@@ -510,45 +483,45 @@ void foo11() {
   vi4 j = a ^ b;
 }
 
-// CIR: %[[VEC_A:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a", init]
-// CIR: %[[VEC_B:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["b", init]
-// CIR: %[[VEC_A_VAL:.*]] = cir.vec.create({{.*}}, {{.*}}, {{.*}}, {{.*}} : !s32i, !s32i, !s32i, !s32i) :
-// CIR-SAME: !cir.vector<4 x !s32i>
+// CIR: %[[VEC_A:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[VEC_B:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[VEC_A_VAL:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i,
+// CIR-SAME: #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[VEC_A_VAL]], %[[VEC_A]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
-// CIR: %[[VEC_B_VAL:.*]] = cir.vec.create({{.*}}, {{.*}}, {{.*}}, {{.*}} : !s32i, !s32i, !s32i, !s32i) :
-// CIR-SAME: !cir.vector<4 x !s32i>
+// CIR: %[[VEC_B_VAL:.*]] = cir.const #cir.const_vector<[#cir.int<5> : !s32i, #cir.int<6> : !s32i,
+// CIR-SAME: #cir.int<7> : !s32i, #cir.int<8> : !s32i]> : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[VEC_B_VAL]], %[[VEC_B]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[VEC_A]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[VEC_B]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
-// CIR: %[[ADD:.*]] = cir.binop(add, %[[TMP_A]], %[[TMP_B]]) : !cir.vector<4 x !s32i>
+// CIR: %[[ADD:.*]] = cir.add %[[TMP_A]], %[[TMP_B]] : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[ADD]], {{.*}} : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[VEC_A]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[VEC_B]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
-// CIR: %[[SUB:.*]] = cir.binop(sub, %[[TMP_A]], %[[TMP_B]]) : !cir.vector<4 x !s32i>
+// CIR: %[[SUB:.*]] = cir.sub %[[TMP_A]], %[[TMP_B]] : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[SUB]], {{.*}} : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[VEC_A]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[VEC_B]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
-// CIR: %[[MUL:.*]] = cir.binop(mul, %[[TMP_A]], %[[TMP_B]]) : !cir.vector<4 x !s32i>
+// CIR: %[[MUL:.*]] = cir.mul %[[TMP_A]], %[[TMP_B]] : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[MUL]], {{.*}} : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[VEC_A]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[VEC_B]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
-// CIR: %[[DIV:.*]] = cir.binop(div, %[[TMP_A]], %[[TMP_B]]) : !cir.vector<4 x !s32i>
+// CIR: %[[DIV:.*]] = cir.div %[[TMP_A]], %[[TMP_B]] : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[DIV]], {{.*}} : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[VEC_A]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[VEC_B]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
-// CIR: %[[REM:.*]] = cir.binop(rem, %[[TMP_A]], %[[TMP_B]]) : !cir.vector<4 x !s32i>
+// CIR: %[[REM:.*]] = cir.rem %[[TMP_A]], %[[TMP_B]] : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[REM]], {{.*}} : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[VEC_A]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[VEC_B]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
-// CIR: %[[AND:.*]] = cir.binop(and, %[[TMP_A]], %[[TMP_B]]) : !cir.vector<4 x !s32i>
+// CIR: %[[AND:.*]] = cir.and %[[TMP_A]], %[[TMP_B]] : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[AND]], {{.*}} : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[VEC_A]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[VEC_B]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
-// CIR: %[[OR:.*]] = cir.binop(or, %[[TMP_A]], %[[TMP_B]]) : !cir.vector<4 x !s32i>
+// CIR: %[[OR:.*]] = cir.or %[[TMP_A]], %[[TMP_B]] : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[OR]], {{.*}} : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[VEC_A]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[VEC_B]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
-// CIR: %[[XOR:.*]] = cir.binop(xor, %[[TMP_A]], %[[TMP_B]]) : !cir.vector<4 x !s32i>
+// CIR: %[[XOR:.*]] = cir.xor %[[TMP_A]], %[[TMP_B]] : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[XOR]], {{.*}} : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 
 // LLVM: %[[VEC_A:.*]] = alloca <4 x i32>, i64 1, align 16
@@ -637,13 +610,13 @@ void foo12() {
   vi4 h = a >= b;
 }
 
-// CIR: %[[VEC_A:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a", init]
-// CIR: %[[VEC_B:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["b", init]
-// CIR: %[[VEC_A_VAL:.*]] = cir.vec.create({{.*}}, {{.*}}, {{.*}}, {{.*}} : !s32i, !s32i, !s32i, !s32i) :
-// CIR-SAME: !cir.vector<4 x !s32i>
+// CIR: %[[VEC_A:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[VEC_B:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[VEC_A_VAL:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i,
+// CIR-SAME: #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[VEC_A_VAL]], %[[VEC_A]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
-// CIR: %[[VEC_B_VAL:.*]] = cir.vec.create({{.*}}, {{.*}}, {{.*}}, {{.*}} : !s32i, !s32i, !s32i, !s32i) :
-// CIR-SAME: !cir.vector<4 x !s32i>
+// CIR: %[[VEC_B_VAL:.*]] = cir.const #cir.const_vector<[#cir.int<5> : !s32i, #cir.int<6> : !s32i,
+// CIR-SAME: #cir.int<7> : !s32i, #cir.int<8> : !s32i]> : !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[VEC_B_VAL]], %[[VEC_B]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[VEC_A]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[VEC_B]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
@@ -752,13 +725,13 @@ void foo13() {
   vi4 h = a >= b;
 }
 
-// CIR: %[[VEC_A:.*]] = cir.alloca !cir.vector<4 x !u32i>, !cir.ptr<!cir.vector<4 x !u32i>>, ["a", init]
-// CIR: %[[VEC_B:.*]] = cir.alloca !cir.vector<4 x !u32i>, !cir.ptr<!cir.vector<4 x !u32i>>, ["b", init]
-// CIR: %[[VEC_A_VAL:.*]] = cir.vec.create({{.*}}, {{.*}}, {{.*}}, {{.*}} : !u32i, !u32i, !u32i, !u32i) :
-// CIR-SAME: !cir.vector<4 x !u32i>
+// CIR: %[[VEC_A:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !u32i>>
+// CIR: %[[VEC_B:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.vector<4 x !u32i>>
+// CIR: %[[VEC_A_VAL:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !u32i, #cir.int<2> : !u32i,
+// CIR-SAME: #cir.int<3> : !u32i, #cir.int<4> : !u32i]> : !cir.vector<4 x !u32i>
 // CIR: cir.store{{.*}} %[[VEC_A_VAL]], %[[VEC_A]] : !cir.vector<4 x !u32i>, !cir.ptr<!cir.vector<4 x !u32i>>
-// CIR: %[[VEC_B_VAL:.*]] = cir.vec.create({{.*}}, {{.*}}, {{.*}}, {{.*}} : !u32i, !u32i, !u32i, !u32i) :
-// CIR-SAME: !cir.vector<4 x !u32i>
+// CIR: %[[VEC_B_VAL:.*]] = cir.const #cir.const_vector<[#cir.int<5> : !u32i, #cir.int<6> : !u32i,
+// CIR-SAME: #cir.int<7> : !u32i, #cir.int<8> : !u32i]> : !cir.vector<4 x !u32i>
 // CIR: cir.store{{.*}} %[[VEC_B_VAL]], %[[VEC_B]] : !cir.vector<4 x !u32i>, !cir.ptr<!cir.vector<4 x !u32i>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[VEC_A]] : !cir.ptr<!cir.vector<4 x !u32i>>, !cir.vector<4 x !u32i>
 // CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[VEC_B]] : !cir.ptr<!cir.vector<4 x !u32i>>, !cir.vector<4 x !u32i>
@@ -867,13 +840,13 @@ void foo14() {
   vi4 h = a >= b;
 }
 
-// CIR: %[[VEC_A:.*]] = cir.alloca !cir.vector<4 x !cir.float>, !cir.ptr<!cir.vector<4 x !cir.float>>, ["a", init]
-// CIR: %[[VEC_B:.*]] = cir.alloca !cir.vector<4 x !cir.float>, !cir.ptr<!cir.vector<4 x !cir.float>>, ["b", init]
-// CIR: %[[VEC_A_VAL:.*]] = cir.vec.create({{.*}}, {{.*}}, {{.*}}, {{.*}} : !cir.float, !cir.float, !cir.float, !cir.float) :
-// CIR-SAME: !cir.vector<4 x !cir.float>
+// CIR: %[[VEC_A:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !cir.float>>
+// CIR: %[[VEC_B:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.vector<4 x !cir.float>>
+// CIR: %[[VEC_A_VAL:.*]] = cir.const #cir.const_vector<[#cir.fp<1.000000e+00> : !cir.float, #cir.fp<2.000000e+00> : !cir.float,
+// CIR-SAME: #cir.fp<3.000000e+00> : !cir.float, #cir.fp<4.000000e+00> : !cir.float]> : !cir.vector<4 x !cir.float>
 // CIR: cir.store{{.*}} %[[VEC_A_VAL]], %[[VEC_A]] : !cir.vector<4 x !cir.float>, !cir.ptr<!cir.vector<4 x !cir.float>>
-// CIR: %[[VEC_B_VAL:.*]] = cir.vec.create({{.*}}, {{.*}}, {{.*}}, {{.*}} : !cir.float, !cir.float, !cir.float, !cir.float) :
-// CIR-SAME: !cir.vector<4 x !cir.float>
+// CIR: %[[VEC_B_VAL:.*]] = cir.const #cir.const_vector<[#cir.fp<5.000000e+00> : !cir.float, #cir.fp<6.000000e+00> : !cir.float,
+// CIR-SAME: #cir.fp<7.000000e+00> : !cir.float, #cir.fp<8.000000e+00> : !cir.float]> : !cir.vector<4 x !cir.float>
 // CIR: cir.store{{.*}} %[[VEC_B_VAL]], %[[VEC_B]] : !cir.vector<4 x !cir.float>, !cir.ptr<!cir.vector<4 x !cir.float>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[VEC_A]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
 // CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[VEC_B]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
@@ -1059,9 +1032,9 @@ void foo17() {
   vus2 W = __builtin_convertvector(a, vus2);
 }
 
-// CIR: %[[VEC_A:.*]] = cir.alloca !cir.vector<2 x !cir.double>, !cir.ptr<!cir.vector<2 x !cir.double>>, ["a"]
+// CIR: %[[VEC_A:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.vector<2 x !cir.double>>
 // CIR: %[[TMP:.*]] = cir.load{{.*}} %[[VEC_A]] : !cir.ptr<!cir.vector<2 x !cir.double>>, !cir.vector<2 x !cir.double>
-// CIR: %[[RES:.*]] = cir.cast(float_to_int, %[[TMP]] : !cir.vector<2 x !cir.double>), !cir.vector<2 x !u16i>
+// CIR: %[[RES:.*]] = cir.cast float_to_int %[[TMP]] : !cir.vector<2 x !cir.double> -> !cir.vector<2 x !u16i>
 
 // LLVM: %[[VEC_A:.*]] = alloca <2 x double>, i64 1, align 16
 // LLVM: %[[TMP:.*]] = load <2 x double>, ptr %[[VEC_A]], align 16
@@ -1070,3 +1043,491 @@ void foo17() {
 // OGCG: %[[VEC_A:.*]] = alloca <2 x double>, align 16
 // OGCG: %[[TMP:.*]] = load <2 x double>, ptr %[[VEC_A]], align 16
 // OGCG: %[[RES:.*]]= fptoui <2 x double> %[[TMP]] to <2 x i16>
+
+void foo18() {
+  vi4 a = {1, 2, 3, 4};
+  vi4 shl = a << 3;
+
+  uvi4 b = {1u, 2u, 3u, 4u};
+  uvi4 shr = b >> 3u;
+}
+
+// CIR: %[[VEC_A:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[SHL_RES:.*]] = cir.alloca "shl" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[VEC_B:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.vector<4 x !u32i>>
+// CIR: %[[SHR_RES:.*]] = cir.alloca "shr" {{.*}} init : !cir.ptr<!cir.vector<4 x !u32i>>
+// CIR: %[[VEC_A_VAL:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i,
+// CIR-SAME: #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
+// CIR: cir.store{{.*}} %[[VEC_A_VAL]], %[[VEC_A]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[VEC_A]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[SH_AMOUNT:.*]] = cir.const #cir.int<3> : !s32i
+// CIR: %[[SPLAT_VEC:.*]] = cir.vec.splat %[[SH_AMOUNT]] : !s32i, !cir.vector<4 x !s32i>
+// CIR: %[[SHL:.*]] = cir.shift(left, %[[TMP_A]] : !cir.vector<4 x !s32i>, %[[SPLAT_VEC]] : !cir.vector<4 x !s32i>) -> !cir.vector<4 x !s32i>
+// CIR: cir.store{{.*}} %[[SHL]], %[[SHL_RES]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[VEC_B_VAL:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !u32i, #cir.int<2> : !u32i,
+// CIR-SAME: #cir.int<3> : !u32i, #cir.int<4> : !u32i]> : !cir.vector<4 x !u32i>
+// CIR: cir.store{{.*}} %[[VEC_B_VAL]], %[[VEC_B]] : !cir.vector<4 x !u32i>, !cir.ptr<!cir.vector<4 x !u32i>>
+// CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[VEC_B]] : !cir.ptr<!cir.vector<4 x !u32i>>, !cir.vector<4 x !u32i>
+// CIR: %[[SH_AMOUNT:.*]] = cir.const #cir.int<3> : !u32i
+// CIR: %[[SPLAT_VEC:.*]] = cir.vec.splat %[[SH_AMOUNT]] : !u32i, !cir.vector<4 x !u32i>
+// CIR: %[[SHR:.*]] = cir.shift(right, %[[TMP_B]] : !cir.vector<4 x !u32i>, %[[SPLAT_VEC]] : !cir.vector<4 x !u32i>) -> !cir.vector<4 x !u32i>
+// CIR: cir.store{{.*}} %[[SHR]], %[[SHR_RES]] : !cir.vector<4 x !u32i>, !cir.ptr<!cir.vector<4 x !u32i>>
+
+// LLVM: %[[VEC_A:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[SHL_RES:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[VEC_B:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[SHR_RES:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %[[VEC_A]], align 16
+// LLVM: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[VEC_A]], align 16
+// LLVM: %[[SHL:.*]] = shl <4 x i32> %[[TMP_A]], splat (i32 3)
+// LLVM: store <4 x i32> %[[SHL]], ptr %[[SHL_RES]], align 16
+// LLVM: store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %[[VEC_B]], align 16
+// LLVM: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[VEC_B]], align 16
+// LLVM: %[[SHR:.*]] = lshr <4 x i32> %[[TMP_B]], splat (i32 3)
+// LLVM: store <4 x i32> %[[SHR]], ptr %[[SHR_RES]], align 16
+
+// OGCG: %[[VEC_A:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[SHL_RES:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[VEC_B:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[SHR_RES:.*]] = alloca <4 x i32>, align 16
+// OGCG: store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %[[VEC_A]], align 16
+// OGCG: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[VEC_A]], align 16
+// OGCG: %[[SHL:.*]] = shl <4 x i32> %[[TMP_A]], splat (i32 3)
+// OGCG: store <4 x i32> %[[SHL]], ptr %[[SHL_RES]], align 16
+// OGCG: store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %[[VEC_B]], align 16
+// OGCG: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[VEC_B]], align 16
+// OGCG: %[[SHR:.*]] = lshr <4 x i32> %[[TMP_B]], splat (i32 3)
+// OGCG: store <4 x i32> %[[SHR]], ptr %[[SHR_RES]], align 16
+
+void foo19() {
+  vi4 a;
+  vi4 b;
+  vi4 u = __builtin_shufflevector(a, b, 7, 5, 3, 1);
+}
+
+// CIR: %[[VEC_A:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[VEC_B:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[VEC_A]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[VEC_B]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[SHUF:.*]] = cir.vec.shuffle(%[[TMP_A]], %[[TMP_B]] : !cir.vector<4 x !s32i>) [#cir.int<7> :
+// CIR-SAME: !s64i, #cir.int<5> : !s64i, #cir.int<3> : !s64i, #cir.int<1> : !s64i] : !cir.vector<4 x !s32i>
+
+// LLVM: %[[VEC_A:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[VEC_B:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[VEC_A]], align 16
+// LLVM: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[VEC_B]], align 16
+// LLVM: %[[SHUF:.*]] = shufflevector <4 x i32> %[[TMP_A]], <4 x i32> %[[TMP_B]], <4 x i32> <i32 7, i32 5, i32 3, i32 1>
+
+// OGCG: %[[VEC_A:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[VEC_B:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[VEC_A]], align 16
+// OGCG: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[VEC_B]], align 16
+// OGCG: %[[SHUF:.*]] = shufflevector <4 x i32> %[[TMP_A]], <4 x i32> %[[TMP_B]], <4 x i32> <i32 7, i32 5, i32 3, i32 1>
+
+void foo20() {
+  vi4 a;
+  vi4 b;
+  vi4 c;
+  vi4 r = c ? a : b;
+}
+
+// CIR: %[[RES:.*]] = cir.vec.ternary({{.*}}, {{.*}}, {{.*}}) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+
+// LLVM: %[[VEC_COND:.*]] = icmp ne <4 x i32> {{.*}}, zeroinitializer
+// LLVM: %[[RES:.*]] = select <4 x i1> %[[VEC_COND]], <4 x i32> {{.*}}, <4 x i32> {{.*}}
+
+// OGCG: %[[VEC_COND:.*]] = icmp ne <4 x i32> {{.*}}, zeroinitializer
+// OGCG: %[[RES:.*]] = select <4 x i1> %[[VEC_COND]], <4 x i32> {{.*}}, <4 x i32> {{.*}}
+
+void foo21() {
+  vi4 a;
+  vi4 b;
+  vi4 r = (a > b) ? (a - b) : (b - a);
+}
+
+// CIR: %[[VEC_COND:.*]] = cir.vec.cmp(gt, {{.*}}, {{.*}}) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+// CIR: %[[LHS:.*]] = cir.sub {{.*}}, {{.*}} : !cir.vector<4 x !s32i>
+// CIR: %[[RHS:.*]] = cir.sub {{.*}}, {{.*}} : !cir.vector<4 x !s32i>
+// CIR: %[[RES:.*]] = cir.vec.ternary(%[[VEC_COND]], %[[LHS]], %[[RHS]]) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+
+// LLVM: %[[CMP:.*]] = icmp sgt <4 x i32> {{.*}}, {{.*}}
+// LLVM: %[[SEXT:.*]] = sext <4 x i1> %[[CMP]] to <4 x i32>
+// LLVM: %[[LHS:.*]] = sub <4 x i32> {{.*}}, {{.*}}
+// LLVM: %[[RHS:.*]] = sub <4 x i32> {{.*}}, {{.*}}
+// LLVM: %[[VEC_COND:.*]] = icmp ne <4 x i32> %[[SEXT]], zeroinitializer
+// LLVM: %[[RES:.*]] = select <4 x i1> %[[VEC_COND]], <4 x i32> %[[LHS]], <4 x i32> %[[RHS]]
+
+// OGCG: %[[CMP:.*]] = icmp sgt <4 x i32> {{.*}}, {{.*}}
+// OGCG: %[[SEXT:.*]] = sext <4 x i1> %[[CMP]] to <4 x i32>
+// OGCG: %[[LHS:.*]] = sub <4 x i32> {{.*}}, {{.*}}
+// OGCG: %[[RHS:.*]] = sub <4 x i32> {{.*}}, {{.*}}
+// OGCG: %[[VEC_COND:.*]] = icmp ne <4 x i32> %[[SEXT]], zeroinitializer
+// OGCG: %[[RES:.*]] = select <4 x i1> %[[VEC_COND]], <4 x i32> %[[LHS]], <4 x i32> %[[RHS]]
+
+void foo22() {
+  vf4 a;
+  vf4 b;
+  vi4 c;
+  vf4 r = c ? a : b;
+}
+
+// CIR: %[[RES:.*]] = cir.vec.ternary({{.*}}, {{.*}}, {{.*}}) : !cir.vector<4 x !s32i>, !cir.vector<4 x !cir.float>
+
+// LLVM: %[[VEC_COND:.*]] = icmp ne <4 x i32> {{.*}}, zeroinitializer
+// LLVM: %[[RES:.*]] = select <4 x i1> %[[VEC_COND]], <4 x float> {{.*}}, <4 x float> {{.*}}
+
+// OGCG: %[[VEC_COND:.*]] = icmp ne <4 x i32> {{.*}}, zeroinitializer
+// OGCG: %[[RES:.*]] = select <4 x i1> %[[VEC_COND]], <4 x float> {{.*}}, <4 x float> {{.*}}
+
+void foo23() {
+  vi4 a;
+  vi4 b;
+  vi4 u = __builtin_shufflevector(a, b, -1, 1, -1, 1);
+}
+
+// CIR: %[[VEC_A:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[VEC_B:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[VEC_A]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[VEC_B]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[SHUF:.*]] = cir.vec.shuffle(%[[TMP_A]], %[[TMP_B]] : !cir.vector<4 x !s32i>) [#cir.int<-1> :
+// CIR-SAME: !s64i, #cir.int<1> : !s64i, #cir.int<-1> : !s64i, #cir.int<1> : !s64i] : !cir.vector<4 x !s32i>
+
+// LLVM: %[[VEC_A:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[VEC_B:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[VEC_A]], align 16
+// LLVM: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[VEC_B]], align 16
+// LLVM: %[[SHUF:.*]] = shufflevector <4 x i32> %[[TMP_A]], <4 x i32> %[[TMP_B]], <4 x i32> <i32 poison, i32 1, i32 poison, i32 1>
+
+// OGCG: %[[VEC_A:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[VEC_B:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[VEC_A]], align 16
+// OGCG: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[VEC_B]], align 16
+// OGCG: %[[SHUF:.*]] = shufflevector <4 x i32> %[[TMP_A]], <4 x i32> %[[TMP_B]], <4 x i32> <i32 poison, i32 1, i32 poison, i32 1>
+
+void foo24() {
+  vi4 a;
+  unsigned long size = __builtin_vectorelements(a);
+}
+
+// CIR: %[[INIT:.*]] = cir.alloca "size" {{.*}} init : !cir.ptr<!u64i>
+// CIR: %[[SIZE:.*]] = cir.const #cir.int<4> : !u64i
+// CIR: cir.store align(8) %[[SIZE]], %[[INIT]] : !u64i, !cir.ptr<!u64i>
+
+// LLVM: %[[SIZE:.*]] = alloca i64, i64 1, align 8
+// LLVM: store i64 4, ptr %[[SIZE]], align 8
+
+// OGCG: %[[SIZE:.*]] = alloca i64, align 8
+// OGCG: store i64 4, ptr %[[SIZE]], align 8
+
+void logical_or_vi4() {
+  vi4 a;
+  vi4 b;
+  vi4 c = a || b;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[ZERO_VEC:.*]] = cir.const #cir.zero : !cir.vector<4 x !s32i>
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[NE_A_ZERO:.*]] = cir.vec.cmp(ne, %[[TMP_A]], %[[ZERO_VEC]]) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+// CIR: %[[NE_B_ZERO:.*]] = cir.vec.cmp(ne, %[[TMP_B]], %[[ZERO_VEC]]) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+// CIR: %[[RESULT:.*]] = cir.or %[[NE_A_ZERO]], %[[NE_B_ZERO]] : !cir.vector<4 x !s32i>
+// CIR: cir.store{{.*}} %[[RESULT]], %[[C_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+
+// LLVM: %[[A_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[B_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[C_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[A_ADDR]], align 16
+// LLVM: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[B_ADDR]], align 16
+// LLVM: %[[NE_A_ZERO:.*]] = icmp ne <4 x i32> %[[TMP_A]], zeroinitializer
+// LLVM: %[[NE_A_ZERO_SEXT:.*]] = sext <4 x i1> %[[NE_A_ZERO]] to <4 x i32>
+// LLVM: %[[NE_B_ZERO:.*]] = icmp ne <4 x i32> %[[TMP_B]], zeroinitializer
+// LLVM: %[[NE_B_ZERO_SEXT:.*]] = sext <4 x i1> %[[NE_B_ZERO]] to <4 x i32>
+// LLVM: %[[RESULT:.*]] = or <4 x i32> %[[NE_A_ZERO_SEXT]], %[[NE_B_ZERO_SEXT]]
+// LLVM: store <4 x i32> %[[RESULT]], ptr %[[C_ADDR]], align 16
+
+// OGCG: %[[A_ADDR:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[B_ADDR:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[C_ADDR:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[A_ADDR]], align 16
+// OGCG: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[B_ADDR]], align 16
+// OGCG: %[[NE_A_ZERO:.*]] = icmp ne <4 x i32> %[[TMP_A]], zeroinitializer
+// OGCG: %[[NE_B_ZERO:.*]] = icmp ne <4 x i32> %[[TMP_B]], zeroinitializer
+// OGCG: %[[VEC_OR:.*]] = or <4 x i1> %[[NE_A_ZERO]], %[[NE_B_ZERO]]
+// OGCG: %[[RESULT:.*]] = sext <4 x i1> %[[VEC_OR]] to <4 x i32>
+// OGCG: store <4 x i32> %[[RESULT]], ptr %[[C_ADDR]], align 16
+
+void logical_or_vf4() {
+  vf4 a;
+  vf4 b;
+  vi4 c = a || b;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.vector<4 x !cir.float>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.vector<4 x !cir.float>>
+// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[ZERO_VEC:.*]] = cir.const #cir.zero : !cir.vector<4 x !cir.float>
+// CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
+// CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
+// CIR: %[[NE_A_ZERO:.*]] = cir.vec.cmp(ne, %4, %[[ZERO_VEC]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+// CIR: %[[NE_B_ZERO:.*]] = cir.vec.cmp(ne, %5, %[[ZERO_VEC]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+// CIR: %[[RESULT:.*]] = cir.or %[[NE_A_ZERO]], %[[NE_B_ZERO]] : !cir.vector<4 x !s32i>
+// CIR: cir.store {{.*}} %[[RESULT]], %[[C_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+
+// LLVM: %[[A_ADDR:.*]] = alloca <4 x float>, i64 1, align 16
+// LLVM: %[[B_ADDR:.*]] = alloca <4 x float>, i64 1, align 16
+// LLVM: %[[C_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[TMP_A:.*]] = load <4 x float>, ptr %[[A_ADDR]], align 16
+// LLVM: %[[TMP_B:.*]] = load <4 x float>, ptr %[[B_ADDR]], align 16
+// LLVM: %[[NE_A_ZERO:.*]] = fcmp une <4 x float> %[[TMP_A]], zeroinitializer
+// LLVM: %[[NE_A_ZERO_SEXT:.*]] = sext <4 x i1> %[[NE_A_ZERO]] to <4 x i32>
+// LLVM: %[[NE_B_ZERO:.*]] = fcmp une <4 x float> %[[TMP_B]], zeroinitializer
+// LLVM: %[[NE_B_ZERO_SEXT:.*]] = sext <4 x i1> %[[NE_B_ZERO]] to <4 x i32>
+// LLVM: %[[RESULT:.*]] = or <4 x i32> %[[NE_A_ZERO_SEXT]], %[[NE_B_ZERO_SEXT]]
+// LLVM: store <4 x i32> %[[RESULT]], ptr %[[C_ADDR]], align 16
+
+// OGCG: %[[A_ADDR:.*]] = alloca <4 x float>, align 16
+// OGCG: %[[B_ADDR:.*]] = alloca <4 x float>, align 16
+// OGCG: %[[C_ADDR:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[TMP_A:.*]] = load <4 x float>, ptr %[[A_ADDR]], align 16
+// OGCG: %[[TMP_B:.*]] = load <4 x float>, ptr %[[B_ADDR]], align 16
+// OGCG: %[[NE_A_ZERO:.*]] = fcmp une <4 x float> %[[TMP_A]], zeroinitializer
+// OGCG: %[[NE_B_ZERO:.*]] = fcmp une <4 x float> %[[TMP_B]], zeroinitializer
+// OGCG: %[[RESULT:.*]] = or <4 x i1> %[[NE_A_ZERO]], %[[NE_B_ZERO]]
+// OGCG: %[[RESULT_VI4:.*]] = sext <4 x i1> %2 to <4 x i32>
+// OGCG: store <4 x i32> %[[RESULT_VI4]], ptr %[[C_ADDR]], align 16
+
+void foo27() {
+  vh4 a;
+  vh4 b;
+  vh4 c = a + b;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.vector<4 x !cir.f16>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.vector<4 x !cir.f16>>
+// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.vector<4 x !cir.f16>>
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !cir.f16>>, !cir.vector<4 x !cir.f16>
+// CIR: %[[TMP_A_F16:.*]] = cir.cast floating %[[TMP_A]] : !cir.vector<4 x !cir.f16> -> !cir.vector<4 x !cir.float>
+// CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!cir.vector<4 x !cir.f16>>, !cir.vector<4 x !cir.f16>
+// CIR: %[[TMP_B_F16:.*]] = cir.cast floating %[[TMP_B]] : !cir.vector<4 x !cir.f16> -> !cir.vector<4 x !cir.float>
+// CIR: %[[RESULT:.*]] = cir.fadd %[[TMP_A_F16]], %[[TMP_B_F16]] : !cir.vector<4 x !cir.float>
+// CIR: %[[RESULT_VF16:.*]] = cir.cast floating %[[RESULT]] : !cir.vector<4 x !cir.float> -> !cir.vector<4 x !cir.f16>
+// CIR: cir.store{{.*}} %[[RESULT_VF16]], %[[C_ADDR]] : !cir.vector<4 x !cir.f16>, !cir.ptr<!cir.vector<4 x !cir.f16>>
+
+// LLVM: %[[A_ADDR:.*]] = alloca <4 x half>, i64 1, align 8
+// LLVM: %[[B_ADDR:.*]] = alloca <4 x half>, i64 1, align 8
+// LLVM: %[[C_ADDR:.*]] = alloca <4 x half>, i64 1, align 8
+// LLVM: %[[TMP_A:.*]] = load <4 x half>, ptr %[[A_ADDR]], align 8
+// LLVM: %[[TMP_A_F16:.*]] = fpext <4 x half> %[[TMP_A]] to <4 x float>
+// LLVM: %[[TMP_B:.*]] = load <4 x half>, ptr %[[B_ADDR]], align 8
+// LLVM: %[[TMP_B_F16:.*]] = fpext <4 x half> %[[TMP_B]] to <4 x float>
+// LLVM: %[[RESULT:.*]] = fadd <4 x float> %[[TMP_A_F16]], %[[TMP_B_F16]]
+// LLVM: %[[RESULT_VF16:.*]] = fptrunc <4 x float> %[[RESULT]] to <4 x half>
+// LLVM: store <4 x half> %[[RESULT_VF16]], ptr %[[C_ADDR]], align 8
+
+// OGCG: %[[A_ADDR:.*]] = alloca <4 x half>, align 8
+// OGCG: %[[B_ADDR:.*]] = alloca <4 x half>, align 8
+// OGCG: %[[C_ADDR:.*]] = alloca <4 x half>, align 8
+// OGCG: %[[TMP_A:.*]] = load <4 x half>, ptr %[[A_ADDR]], align 8
+// OGCG: %[[TMP_A_F16:.*]] = fpext <4 x half> %[[TMP_A]] to <4 x float>
+// OGCG: %[[TMP_B:.*]] = load <4 x half>, ptr %[[B_ADDR]], align 8
+// OGCG: %[[TMP_B_F16:.*]] = fpext <4 x half> %[[TMP_B]] to <4 x float>
+// OGCG: %[[RESULT:.*]] = fadd <4 x float> %[[TMP_A_F16]], %[[TMP_B_F16]]
+// OGCG: %[[RESULT_VF16:.*]] = fptrunc <4 x float> %[[RESULT]] to <4 x half>
+// OGCG: store <4 x half> %[[RESULT_VF16]], ptr %[[C_ADDR]], align 8
+
+void logical_and_vi4() {
+  vi4 a;
+  vi4 b;
+  vi4 c = a && b;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[ZERO_VEC:.*]] = cir.const #cir.zero : !cir.vector<4 x !s32i>
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[NE_A_ZERO:.*]] = cir.vec.cmp(ne, %[[TMP_A]], %[[ZERO_VEC]]) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+// CIR: %[[NE_B_ZERO:.*]] = cir.vec.cmp(ne, %[[TMP_B]], %[[ZERO_VEC]]) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+// CIR: %[[RESULT:.*]] = cir.and %[[NE_A_ZERO]], %[[NE_B_ZERO]] : !cir.vector<4 x !s32i>
+// CIR: cir.store{{.*}} %[[RESULT]], %[[C_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+
+// LLVM: %[[A_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[B_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[C_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[A_ADDR]], align 16
+// LLVM: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[B_ADDR]], align 16
+// LLVM: %[[NE_A_ZERO:.*]] = icmp ne <4 x i32> %[[TMP_A]], zeroinitializer
+// LLVM: %[[NE_A_ZERO_SEXT:.*]] = sext <4 x i1> %[[NE_A_ZERO]] to <4 x i32>
+// LLVM: %[[NE_B_ZERO:.*]] = icmp ne <4 x i32> %[[TMP_B]], zeroinitializer
+// LLVM: %[[NE_B_ZERO_SEXT:.*]] = sext <4 x i1> %[[NE_B_ZERO]] to <4 x i32>
+// LLVM: %[[RESULT:.*]] = and <4 x i32> %[[NE_A_ZERO_SEXT]], %[[NE_B_ZERO_SEXT]]
+// LLVM: store <4 x i32> %[[RESULT]], ptr %[[C_ADDR]], align 16
+
+// OGCG: %[[A_ADDR:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[B_ADDR:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[C_ADDR:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[A_ADDR]], align 16
+// OGCG: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[B_ADDR]], align 16
+// OGCG: %[[NE_A_ZERO:.*]] = icmp ne <4 x i32> %[[TMP_A]], zeroinitializer
+// OGCG: %[[NE_B_ZERO:.*]] = icmp ne <4 x i32> %[[TMP_B]], zeroinitializer
+// OGCG: %[[VEC_OR:.*]] = and <4 x i1> %[[NE_A_ZERO]], %[[NE_B_ZERO]]
+// OGCG: %[[RESULT:.*]] = sext <4 x i1> %[[VEC_OR]] to <4 x i32>
+// OGCG: store <4 x i32> %[[RESULT]], ptr %[[C_ADDR]], align 16
+
+void logical_and_vf4() {
+  vf4 a;
+  vf4 b;
+  vi4 c = a && b;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.vector<4 x !cir.float>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.vector<4 x !cir.float>>
+// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[ZERO_VEC:.*]] = cir.const #cir.zero : !cir.vector<4 x !cir.float>
+// CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
+// CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
+// CIR: %[[NE_A_ZERO:.*]] = cir.vec.cmp(ne, %4, %[[ZERO_VEC]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+// CIR: %[[NE_B_ZERO:.*]] = cir.vec.cmp(ne, %5, %[[ZERO_VEC]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+// CIR: %[[RESULT:.*]] = cir.and %[[NE_A_ZERO]], %[[NE_B_ZERO]] : !cir.vector<4 x !s32i>
+// CIR: cir.store {{.*}} %[[RESULT]], %[[C_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+
+// LLVM: %[[A_ADDR:.*]] = alloca <4 x float>, i64 1, align 16
+// LLVM: %[[B_ADDR:.*]] = alloca <4 x float>, i64 1, align 16
+// LLVM: %[[C_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[TMP_A:.*]] = load <4 x float>, ptr %[[A_ADDR]], align 16
+// LLVM: %[[TMP_B:.*]] = load <4 x float>, ptr %[[B_ADDR]], align 16
+// LLVM: %[[NE_A_ZERO:.*]] = fcmp une <4 x float> %[[TMP_A]], zeroinitializer
+// LLVM: %[[NE_A_ZERO_SEXT:.*]] = sext <4 x i1> %[[NE_A_ZERO]] to <4 x i32>
+// LLVM: %[[NE_B_ZERO:.*]] = fcmp une <4 x float> %[[TMP_B]], zeroinitializer
+// LLVM: %[[NE_B_ZERO_SEXT:.*]] = sext <4 x i1> %[[NE_B_ZERO]] to <4 x i32>
+// LLVM: %[[RESULT:.*]] = and <4 x i32> %[[NE_A_ZERO_SEXT]], %[[NE_B_ZERO_SEXT]]
+// LLVM: store <4 x i32> %[[RESULT]], ptr %[[C_ADDR]], align 16
+
+// OGCG: %[[A_ADDR:.*]] = alloca <4 x float>, align 16
+// OGCG: %[[B_ADDR:.*]] = alloca <4 x float>, align 16
+// OGCG: %[[C_ADDR:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[TMP_A:.*]] = load <4 x float>, ptr %[[A_ADDR]], align 16
+// OGCG: %[[TMP_B:.*]] = load <4 x float>, ptr %[[B_ADDR]], align 16
+// OGCG: %[[NE_A_ZERO:.*]] = fcmp une <4 x float> %[[TMP_A]], zeroinitializer
+// OGCG: %[[NE_B_ZERO:.*]] = fcmp une <4 x float> %[[TMP_B]], zeroinitializer
+// OGCG: %[[RESULT:.*]] = and <4 x i1> %[[NE_A_ZERO]], %[[NE_B_ZERO]]
+// OGCG: %[[RESULT_VI4:.*]] = sext <4 x i1> %2 to <4 x i32>
+// OGCG: store <4 x i32> %[[RESULT_VI4]], ptr %[[C_ADDR]], align 16
+
+void logical_not() {
+   vi4 a;
+   vi4 b = !a;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}}) %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[CONST_V0:.*]] = cir.const #cir.zero : !cir.vector<4 x !s32i>
+// CIR: %[[RESULT:.*]] = cir.vec.cmp(eq, %[[TMP_A]], %[[CONST_V0]]) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+// CIR: cir.store{{.*}} %[[RESULT]], %[[B_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+
+// LLVM: %[[A_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[B_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[A_ADDR]], align 16
+// LLVM: %[[RESULT:.*]] = icmp eq <4 x i32> %[[TMP_A]], zeroinitializer
+// LLVM: %[[RESULT_VI4:.*]] = sext <4 x i1> %[[RESULT]] to <4 x i32>
+// LLVM: store <4 x i32> %[[RESULT_VI4]], ptr %[[B_ADDR]], align 16
+
+// OGCG: %[[A_ADDR:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[B_ADDR:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[A_ADDR]], align 16
+// OGCG: %[[RESULT:.*]] = icmp eq <4 x i32> %[[TMP_A]], zeroinitializer
+// OGCG: %[[RESULT_VI4:.*]] = sext <4 x i1> %[[RESULT]] to <4 x i32>
+// OGCG: store <4 x i32> %[[RESULT_VI4]], ptr %[[B_ADDR]], align 16
+
+void logical_not_float() {
+  vf4 a;
+  vi4 b = !a;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.vector<4 x !cir.float>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
+// CIR: %[[CONST_V0:.*]] = cir.const #cir.zero : !cir.vector<4 x !cir.float>
+// CIR: %[[RESULT:.*]] = cir.vec.cmp(eq, %[[TMP_A]], %[[CONST_V0]]) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+// CIR: cir.store{{.*}} %[[RESULT]], %[[B_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+
+// LLVM: %[[A_ADDR:.*]] = alloca <4 x float>, i64 1, align 16
+// LLVM: %[[B_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[TMP_A:.*]] = load <4 x float>, ptr %[[A_ADDR]], align 16
+// LLVM: %[[RESULT:.*]] = fcmp oeq <4 x float> %[[TMP_A]], zeroinitializer
+// LLVM: %[[RESULT_VI4:.*]] = sext <4 x i1> %[[RESULT]] to <4 x i32>
+// LLVM: store <4 x i32> %[[RESULT_VI4]], ptr %[[B_ADDR]], align 16
+
+// OGCG: %[[A_ADDR:.*]] = alloca <4 x float>, align 16
+// OGCG: %[[B_ADDR:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[TMP_A:.*]] = load <4 x float>, ptr %[[A_ADDR]], align 16
+// OGCG: %[[RESULT:.*]] = fcmp oeq <4 x float> %[[TMP_A]], zeroinitializer
+// OGCG: %[[RESULT_VI4:.*]] = sext <4 x i1> %[[RESULT]] to <4 x i32>
+// OGCG: store <4 x i32> %[[RESULT_VI4]], ptr %[[B_ADDR]], align 16
+
+void unary_extension() {
+  vi4 a;
+  vi4 b = __extension__ a;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: cir.store{{.*}} %[[TMP_A]], %[[B_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+
+// LLVM: %[[A_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[B_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[A_ADDR]], align 16
+// LLVM: store <4 x i32> %[[TMP_A]], ptr %[[B_ADDR]], align 16
+
+// OGCG: %[[A_ADDR:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[B_ADDR:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[A_ADDR]], align 16
+// OGCG: store <4 x i32> %[[TMP_A]], ptr %[[B_ADDR]], align 16
+
+vi4 ternary_expression_with_vec_cond() {
+  vi4 a;
+  vi4 b;
+  vi4 c;
+  return c ? a : b;
+}
+
+// CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[TMP_C:.*]] = cir.load {{.*}} %[[C_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[RESULT:.*]] = cir.vec.ternary(%[[TMP_C]], %[[TMP_A]], %[[TMP_B]]) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+// CIR: cir.store %[[RESULT]], %[[RET_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
+// CIR: %[[TMP_RET:.*]] = cir.load %[[RET_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: cir.return %[[TMP_RET]] : !cir.vector<4 x !s32i>
+
+// LLVM: %[[RET_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[A_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[B_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[C_ADDR:.*]] = alloca <4 x i32>, i64 1, align 16
+// LLVM: %[[TMP_C:.*]] = load <4 x i32>, ptr %[[C_ADDR]], align 16
+// LLVM: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[A_ADDR]], align 16
+// LLVM: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[B_ADDR]], align 16
+// LLVM: %[[COND:.*]] = icmp ne <4 x i32> %[[TMP_C]], zeroinitializer
+// LLVM: %[[RESULT:.*]] = select <4 x i1> %[[COND]], <4 x i32> %[[TMP_A]], <4 x i32> %[[TMP_B]]
+// LLVM: store <4 x i32> %[[RESULT]], ptr %[[RET_ADDR]], align 16
+// LLVM: %[[TMP_RET:.*]] = load <4 x i32>, ptr %[[RET_ADDR]], align 16
+// LLVM: ret <4 x i32> %[[TMP_RET]]
+
+// OGCG: %[[A_ADDR:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[B_ADDR:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[C_ADDR:.*]] = alloca <4 x i32>, align 16
+// OGCG: %[[TMP_C:.*]] = load <4 x i32>, ptr %[[C_ADDR]], align 16
+// OGCG: %[[TMP_A:.*]] = load <4 x i32>, ptr %[[A_ADDR]], align 16
+// OGCG: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[B_ADDR]], align 16
+// OGCG: %[[COND:.*]] = icmp ne <4 x i32> %[[TMP_C]], zeroinitializer
+// OGCG: %[[RESULT:.*]] = select <4 x i1> %[[COND]], <4 x i32> %[[TMP_A]], <4 x i32> %[[TMP_B]]
+// OGCG: ret <4 x i32> %[[RESULT]]

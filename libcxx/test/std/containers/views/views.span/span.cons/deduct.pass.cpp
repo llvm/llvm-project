@@ -5,24 +5,24 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// REQUIRES: std-at-least-c++20
 
 // <span>
 
-//   template<class It, class EndOrSize>
-//     span(It, EndOrSize) -> span<remove_reference_t<iter_reference_t<_It>>>;
-//
-//   template<class T, size_t N>
-//     span(T (&)[N]) -> span<T, N>;
-//
-//   template<class T, size_t N>
-//     span(array<T, N>&) -> span<T, N>;
-//
-//   template<class T, size_t N>
-//     span(const array<T, N>&) -> span<const T, N>;
-//
-//   template<class R>
-//     span(R&&) -> span<remove_reference_t<ranges::range_reference_t<R>>>;
+// template<class It, class EndOrSize>
+//   span(It, EndOrSize) -> span<remove_reference_t<iter_reference_t<It>>>; // until C++26
+// template<class It, class EndOrSize>
+//   span(It, EndOrSize) -> span<remove_reference_t<iter_reference_t<It>>,
+//                               maybe-static-ext<EndOrSize>>; // since C++26
+// template<class T, size_t N>
+//   span(T (&)[N]) -> span<T, N>;
+// template<class T, size_t N>
+//   span(array<T, N>&) -> span<T, N>;
+// template<class T, size_t N>
+//   span(const array<T, N>&) -> span<const T, N>;
+// template<class R>
+//   span(R&&) -> span<remove_reference_t<ranges::range_reference_t<R>>>;
 
 #include <span>
 #include <array>
@@ -30,6 +30,7 @@
 #include <iterator>
 #include <memory>
 #include <string>
+#include <utility>
 #include <type_traits>
 
 #include "test_macros.h"
@@ -54,7 +55,22 @@ void test_iterator_sentinel() {
   {
     std::span s{std::begin(arr), std::integral_constant<size_t, 3>{}};
     ASSERT_SAME_TYPE(decltype(s), std::span<int, 3>);
-    assert(s.size() == std::size(arr));
+    assert(s.size() == 3);
+    assert(s.data() == std::data(arr));
+  }
+
+  {
+    std::span s{std::begin(arr), std::cw<3>};
+    ASSERT_SAME_TYPE(decltype(s), std::span<int, 3>);
+    assert(s.size() == 3);
+    assert(s.data() == std::data(arr));
+  }
+  {
+    // LWG4351 integral-constant-like needs more remove_cvref_t
+    LIBCPP_STATIC_ASSERT(!std::__integral_constant_like<decltype(std::cw<true>)>);
+    std::span s(std::begin(arr), std::cw<true>);
+    ASSERT_SAME_TYPE(decltype(s), std::span<int, std::dynamic_extent>);
+    assert(s.size() == 1);
     assert(s.data() == std::data(arr));
   }
 #endif

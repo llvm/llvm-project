@@ -1,8 +1,12 @@
 REQUIRES: system-windows, lld, (target-x86 || target-x86_64) 
-RUN: %build --compiler=clang-cl --arch=32 --nodefaultlib --output=%t.exe %S/Inputs/CallingConventionsTest.cpp \
-RUN:  && lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix 32BIT-CHECK %s
-RUN: %build --compiler=clang-cl --arch=64 --nodefaultlib --output=%t.exe %S/Inputs/CallingConventionsTest.cpp \
-RUN:  && lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix 64BIT-CHECK %s
+
+RUN: %build --compiler=clang-cl --arch=32 --nodefaultlib --output=%t-32.exe %S/Inputs/CallingConventionsTest.cpp
+RUN: lldb-test symbols -dump-ast %t-32.exe | FileCheck --check-prefix 32BIT-CHECK %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols -dump-ast %t-32.exe | FileCheck --check-prefix 32BIT-CHECK %s
+
+RUN: %build --compiler=clang-cl --arch=64 --nodefaultlib --output=%t-64.exe %S/Inputs/CallingConventionsTest.cpp
+RUN: lldb-test symbols -dump-ast %t-64.exe | FileCheck --check-prefix 64BIT-CHECK %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols -dump-ast %t-64.exe | FileCheck --check-prefix 64BIT-CHECK %s
 
 64BIT-CHECK: Module: {{.*}}
 64BIT-CHECK-DAG: int (*FuncCCallPtr)();

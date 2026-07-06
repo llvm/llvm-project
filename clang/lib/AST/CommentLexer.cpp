@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/CommentLexer.h"
+#include "clang/AST/Comment.h"
 #include "clang/AST/CommentCommandTraits.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/DiagnosticComment.h"
@@ -214,7 +215,7 @@ bool isCommandNameStartCharacter(char C) {
 }
 
 bool isCommandNameCharacter(char C) {
-  return isAlphanumeric(C);
+  return isAsciiIdentifierContinue(C, false);
 }
 
 const char *skipCommandName(const char *BufferPtr, const char *BufferEnd) {
@@ -420,7 +421,10 @@ void Lexer::lexCommentText(Token &T) {
             << FullRange << CommandName << CorrectedName
             << FixItHint::CreateReplacement(CommandRange, CorrectedName);
         } else {
-          formTokenWithChars(T, TokenPtr, tok::unknown_command);
+          formTokenWithChars(T, TokenPtr,
+                             CommandKind == tok::backslash_command
+                                 ? tok::unknown_backslash_command
+                                 : tok::unknown_at_command);
           T.setUnknownCommandName(CommandName);
           Diag(T.getLocation(), diag::warn_unknown_comment_command_name)
               << SourceRange(T.getLocation(), T.getEndLocation());
@@ -904,7 +908,7 @@ again:
 StringRef Lexer::getSpelling(const Token &Tok,
                              const SourceManager &SourceMgr) const {
   SourceLocation Loc = Tok.getLocation();
-  std::pair<FileID, unsigned> LocInfo = SourceMgr.getDecomposedLoc(Loc);
+  FileIDAndOffset LocInfo = SourceMgr.getDecomposedLoc(Loc);
 
   bool InvalidTemp = false;
   StringRef File = SourceMgr.getBufferData(LocInfo.first, &InvalidTemp);

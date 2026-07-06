@@ -1,4 +1,4 @@
-; RUN: opt -S --dxil-prepare %s | FileCheck %s
+; RUN: opt -S --dxil-translate-metadata %s | FileCheck %s
 
 ; Test that only metadata nodes that are valid in DXIL are allowed through
 
@@ -14,7 +14,7 @@ entry:
 
   %cmp.i = icmp ult i32 1, 2
   ; Ensure that the !llvm.loop metadata node gets dropped.
-  ; CHECK: br i1 %cmp.i, label %_Z4mainDv3_j.exit, label %_Z4mainDv3_j.exit{{$}}
+  ; CHECK: br i1 %cmp.i, label %_Z4mainDv3_j.exit, label %_Z4mainDv3_j.exit, !llvm.loop [[LOOPMD:![0-9]+]]
   br i1 %cmp.i, label %_Z4mainDv3_j.exit, label %_Z4mainDv3_j.exit, !llvm.loop !0
 
 _Z4mainDv3_j.exit:                                ; preds = %for.body.i, %entry
@@ -25,7 +25,8 @@ _Z4mainDv3_j.exit:                                ; preds = %for.body.i, %entry
 ; No more metadata should be necessary, the rest (the current 0 and 1)
 ; should be removed.
 ; CHECK-NOT: !{!"llvm.loop.mustprogress"}
-; CHECK: [[RANGEMD]] = !{i32 1, i32 5}
+; CHECK-DAG: [[RANGEMD]] = !{i32 1, i32 5}
+; CHECK-DAG: [[LOOPMD]] = distinct !{[[LOOPMD]]}
 ; CHECK-NOT: !{!"llvm.loop.mustprogress"}
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.mustprogress"}

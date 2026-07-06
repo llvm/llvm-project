@@ -17,8 +17,8 @@
 
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS512                                                  \
-  __attribute__((__always_inline__, __nodebug__,                               \
-                 __target__("movrs, avx10.2-512"), __min_vector_width__(512)))
+  __attribute__((__always_inline__, __nodebug__, __target__("movrs, avx10.2"), \
+                 __min_vector_width__(512)))
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS512
 _mm512_loadrs_epi8(void const *__A) {

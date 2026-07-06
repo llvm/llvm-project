@@ -17,10 +17,13 @@ static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
 // Mark all our options with this category.
 static cl::OptionCategory OffloadArchCategory("offload-arch options");
 
+extern cl::OptionCategory AMDGPUArchByHIPCategory;
+
 enum VendorName {
   all,
   amdgpu,
   nvptx,
+  intel,
 };
 
 static cl::opt<VendorName>
@@ -28,7 +31,8 @@ static cl::opt<VendorName>
          cl::init(all),
          cl::values(clEnumVal(all, "Print all GPUs (default)"),
                     clEnumVal(amdgpu, "Only print AMD GPUs"),
-                    clEnumVal(nvptx, "Only print NVIDIA GPUs")));
+                    clEnumVal(nvptx, "Only print NVIDIA GPUs"),
+                    clEnumVal(intel, "Only print Intel GPUs")));
 
 cl::opt<bool> Verbose("verbose", cl::desc("Enable verbose output"),
                       cl::init(false), cl::cat(OffloadArchCategory));
@@ -40,6 +44,7 @@ static void PrintVersion(raw_ostream &OS) {
 int printGPUsByKFD();
 int printGPUsByHIP();
 int printGPUsByCUDA();
+int printGPUsByLevelZero();
 
 static int printAMD() {
 #ifndef _WIN32
@@ -51,9 +56,15 @@ static int printAMD() {
 }
 
 static int printNVIDIA() { return printGPUsByCUDA(); }
+static int printIntel() { return printGPUsByLevelZero(); }
+
+const std::array<std::pair<VendorName, function_ref<int()>>, 3> VendorTable{
+    {{VendorName::amdgpu, printAMD},
+     {VendorName::nvptx, printNVIDIA},
+     {VendorName::intel, printIntel}}};
 
 int main(int argc, char *argv[]) {
-  cl::HideUnrelatedOptions(OffloadArchCategory);
+  cl::HideUnrelatedOptions({&OffloadArchCategory, &AMDGPUArchByHIPCategory});
 
   cl::SetVersionPrinter(PrintVersion);
   cl::ParseCommandLineOptions(
@@ -68,20 +79,17 @@ int main(int argc, char *argv[]) {
     return 0;
   }
 
-  // If this was invoked from the legacy symlinks provide the same behavior.
-  bool AMDGPUOnly = Only == VendorName::amdgpu ||
-                    sys::path::stem(argv[0]).starts_with("amdgpu-arch");
-  bool NVIDIAOnly = Only == VendorName::nvptx ||
-                    sys::path::stem(argv[0]).starts_with("nvptx-arch");
+  // Support legacy binaries.
+  if (sys::path::stem(argv[0]).starts_with("amdgpu-arch"))
+    Only = VendorName::amdgpu;
+  if (sys::path::stem(argv[0]).starts_with("nvptx-arch"))
+    Only = VendorName::nvptx;
 
-  int NVIDIAResult = 0;
-  if (!AMDGPUOnly)
-    NVIDIAResult = printNVIDIA();
+  int Result = 1;
+  for (auto [Name, Func] : VendorTable) {
+    if (Only == VendorName::all || Only == Name)
+      Result &= Func();
+  }
 
-  int AMDResult = 0;
-  if (!NVIDIAOnly)
-    AMDResult = printAMD();
-
-  // We only failed if all cases returned an error.
-  return AMDResult && NVIDIAResult;
+  return Result;
 }

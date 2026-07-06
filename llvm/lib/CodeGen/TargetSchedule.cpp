@@ -25,7 +25,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
-#include <numeric>
 
 using namespace llvm;
 
@@ -294,7 +293,7 @@ computeOutputLatency(const MachineInstr *DefMI, unsigned DefOperIdx,
     if (SCDesc->isValid()) {
       for (const MCWriteProcResEntry *PRI = STI->getWriteProcResBegin(SCDesc),
              *PRE = STI->getWriteProcResEnd(SCDesc); PRI != PRE; ++PRI) {
-        if (!SchedModel.getProcResource(PRI->ProcResourceIdx)->BufferSize)
+        if (!SchedModel.getResourceBufferSize(PRI->ProcResourceIdx))
           return 1;
       }
     }

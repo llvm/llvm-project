@@ -35,9 +35,15 @@ def MapsForPrivatizedSymbolsPass
   let dependentDialects = ["mlir::omp::OpenMPDialect"];
 }
 
-def MarkDeclareTargetPass
-    : Pass<"omp-mark-declare-target", "mlir::ModuleOp"> {
-  let summary = "Marks all functions called by an OpenMP declare target function as declare target";
+def DeleteUnreachableTargetsPass
+    : Pass<"omp-delete-unreachable-targets", "mlir::ModuleOp"> {
+  let summary = "Deletes OpenMP target operations in unreachable code";
+  let description = [{
+    Identifies and removes OpenMP target operations that reside in unreachable
+    code (e.g., inside if(.false.) blocks). This ensures consistency between
+    host and device compilation by preventing unreachable targets from being
+    processed on the device side.
+  }];
   let dependentDialects = ["mlir::omp::OpenMPDialect"];
 }
 
@@ -46,11 +52,34 @@ def FunctionFilteringPass : Pass<"omp-function-filtering"> {
                 "for the target device.";
   let dependentDialects = [
     "mlir::func::FuncDialect",
+    "fir::FIROpsDialect",
+    "mlir::omp::OpenMPDialect"
+  ];
+}
+
+def HostOpFilteringPass : Pass<"omp-host-op-filtering"> {
+  let summary =
+      "Removes host-only operations from host functions retained by the "
+      "function filtering pass when compiling for a target device.";
+  let description = [{
+    Removes operations from host functions that are not placed inside of an
+    `omp.target` region when compiling for the target device.
+    
+    It must run after any passes that might introduce new host operations,
+    especially if they belong to the 'omp' dialect, like `LowerWorkdistribute`.
+    This ensures all potentially problematic host operations are accounted for
+    prior to LLVM IR translation.
+
+    This pass works at the FIR level of abstraction.
+  }];
+  let dependentDialects = [
+    "mlir::arith::ArithDialect",
+    "mlir::func::FuncDialect",
     "fir::FIROpsDialect"
   ];
 }
 
-def DoConcurrentConversionPass : Pass<"omp-do-concurrent-conversion", "mlir::func::FuncOp"> {
+def DoConcurrentConversionPass : Pass<"omp-do-concurrent-conversion", "mlir::ModuleOp"> {
   let summary = "Map `DO CONCURRENT` loops to OpenMP worksharing loops.";
 
   let description = [{ This is an experimental pass to map `DO CONCURRENT` loops
@@ -93,6 +122,10 @@ def LowerWorkshare : Pass<"lower-workshare", "::mlir::ModuleOp"> {
   let summary = "Lower workshare construct";
 }
 
+def LowerWorkdistribute : Pass<"lower-workdistribute", "::mlir::ModuleOp"> {
+  let summary = "Lower workdistribute construct";
+}
+
 def GenericLoopConversionPass
     : Pass<"omp-generic-loop-conversion", "mlir::func::FuncOp"> {
   let summary = "Converts OpenMP generic `omp.loop` to semantically "
@@ -110,6 +143,22 @@ def GenericLoopConversionPass
   let dependentDialects = [
     "mlir::omp::OpenMPDialect"
   ];
+}
+
+def SimdOnlyPass : Pass<"omp-simd-only", "mlir::ModuleOp"> {
+  let summary = "Filters out non-simd OpenMP constructs";
+  let dependentDialects = ["mlir::omp::OpenMPDialect"];
+}
+
+def AutomapToTargetDataPass
+    : Pass<"omp-automap-to-target-data", "::mlir::ModuleOp"> {
+  let summary = "Insert OpenMP target data operations for AUTOMAP variables";
+  let description = [{
+    Inserts `omp.target_enter_data` and `omp.target_exit_data` operations to
+    map variables marked with the `AUTOMAP` modifier when their allocation
+    or deallocation is detected in the FIR.
+  }];
+  let dependentDialects = ["mlir::omp::OpenMPDialect"];
 }
 
 #endif //FORTRAN_OPTIMIZER_OPENMP_PASSES

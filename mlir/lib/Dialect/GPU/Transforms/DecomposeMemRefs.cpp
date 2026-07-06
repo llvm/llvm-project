@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -19,7 +18,6 @@
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
@@ -55,7 +53,7 @@ static bool isInsideLaunch(Operation *op) {
 static std::tuple<Value, OpFoldResult, SmallVector<OpFoldResult>>
 getFlatOffsetAndStrides(OpBuilder &rewriter, Location loc, Value source,
                         ArrayRef<OpFoldResult> subOffsets,
-                        ArrayRef<OpFoldResult> subStrides = std::nullopt) {
+                        ArrayRef<OpFoldResult> subStrides = {}) {
   auto sourceType = cast<MemRefType>(source.getType());
   auto sourceRank = static_cast<unsigned>(sourceType.getRank());
 
@@ -64,7 +62,7 @@ getFlatOffsetAndStrides(OpBuilder &rewriter, Location loc, Value source,
     OpBuilder::InsertionGuard g(rewriter);
     setInsertionPointToStart(rewriter, source);
     newExtractStridedMetadata =
-        rewriter.create<memref::ExtractStridedMetadataOp>(loc, source);
+        memref::ExtractStridedMetadataOp::create(rewriter, loc, source);
   }
 
   auto &&[sourceStrides, sourceOffset] = sourceType.getStridesAndOffset();
@@ -110,8 +108,9 @@ static Value getFlatMemref(OpBuilder &rewriter, Location loc, Value source,
   auto &&[base, offset, ignore] =
       getFlatOffsetAndStrides(rewriter, loc, source, offsetsTemp);
   MemRefType retType = inferCastResultType(base, offset);
-  return rewriter.create<memref::ReinterpretCastOp>(loc, retType, base, offset,
-                                                    std::nullopt, std::nullopt);
+  return memref::ReinterpretCastOp::create(rewriter, loc, retType, base, offset,
+                                           ArrayRef<OpFoldResult>(),
+                                           ArrayRef<OpFoldResult>());
 }
 
 static bool needFlatten(Value val) {

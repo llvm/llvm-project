@@ -7,11 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file defines Pack + Unpack Ops that have been moved from the Tensor
-// dialect. As such, these are defined as memory-effect-free and only accept
-// "tensors" as inputs.
-//
-// TODO: Once a good motivating example is identified, relax these
-// restrictions.
+// dialect.
 //
 //===----------------------------------------------------------------------===//
 
@@ -30,23 +26,27 @@ include "mlir/IR/OpAsmInterface.td"
 // RelayoutOp
 //===----------------------------------------------------------------------===//
 
-class Linalg_RelayoutOp<string mnemonic, list<Trait> traits = []> :
-      Op<Linalg_Dialect, mnemonic, !listconcat(traits, [
-        DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-        DestinationStyleOpInterface, LinalgRelayoutOpInterface,
-        ConditionallySpeculatable, NoMemoryEffect,
-        DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
-        TypesMatchWith<"result type matches type of dest",
-                   "dest", "result",
-                   "$_self">])> {
+class Linalg_RelayoutOp<string mnemonic, list<Trait> traits = []>
+    : Op<Linalg_Dialect, mnemonic,
+         !listconcat(
+             traits, [DeclareOpInterfaceMethods<
+                          OpAsmOpInterface, ["getAsmResultNames"]>,
+                      DestinationStyleOpInterface, LinalgRelayoutOpInterface,
+                      ConditionallySpeculatable,
+                      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+                      DeclareOpInterfaceMethods<
+                          ReifyRankedShapedTypeOpInterface, [
+          "reifyResultShapes"]>,
+                      OptionalTypesMatchWith<"result type matches type of dest",
+                                             "dest", "result", "$_self">])> {
 
   code commonExtraClassDeclaration = [{
     size_t getSourceRank() { return getSourceType().getRank(); };
     size_t getDestRank() { return getDestType().getRank(); };
-    RankedTensorType getSourceType() {
-      return ::llvm::cast<RankedTensorType>(getSource().getType()); };
-    RankedTensorType getDestType() {
-      return ::llvm::cast<RankedTensorType>(getDest().getType()); };
+    ShapedType getSourceType() {
+      return ::llvm::cast<ShapedType>(getSource().getType()); };
+    ShapedType getDestType() {
+      return ::llvm::cast<ShapedType>(getDest().getType()); };
 
     MutableOperandRange getDpsInitsMutable() { return getDestMutable(); }
 
@@ -57,7 +57,14 @@ class Linalg_RelayoutOp<string mnemonic, list<Trait> traits = []> :
     /// tile factors.
     DenseMap<int64_t, OpFoldResult> getDimAndTileMapping();
 
-    /// Return the tile sizes as OpFoldResult.
+    /// Return the tile sizes as OpFoldResult(s). Note, for Ops that simply
+    /// define constants (e.g. `arith.constant`), this method returns
+    /// Value/result of the Op (as opposed to the corresponding constant
+    /// Attribute). E.g., for:
+    ///   %size = arith.constant 1 : i32
+    /// it will return %size, not 1. This is intended - replacing an SSA value
+    /// with a constant attribute would require updating the corresponding dim
+    /// from dynamic to static.
     SmallVector<OpFoldResult> getMixedTiles();
 
     /// Return the tile sizes as `int64_t`. If a tile size is dynamic
@@ -93,16 +100,22 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
     tensor of rank `n + k` with a tiled and packed layout (maybe with padding)
     and optionally transposes the tiled source tensor dimensions.
 
-    `inner_dims_pos` (mandatory) specifies `k` source tensor dimensions that are
-    being tiled, where `0 < k <= n`. The order of the dimensions matters:
-     - The tiled dimensions (of size `inner_tiles`) are added to the end of the result
-    tensor in the order in which they appear in `inner_dims_pos`.
-     - `inner_dims_pos[i]` specifies the source tensor dimension tiled by
-    `inner_tiles[i]`.
-
     `inner_tiles` (mandatory) specifies `k` tile sizes. These tile sizes
     correspond to the least significant ("inner") result tensor dimension sizes,
     in the same order. Tile sizes can be static or dynamic.
+
+    `inner_dims_pos` (mandatory) specifies `k` source tensor dimensions that are
+    being tiled, where `0 <= k <= n`.
+     - `inner_dims_pos[i]` specifies the source tensor dimension tiled by
+    `inner_tiles[i]` where `0 <= i < k`. All the values in `inner_dims_pos` are
+    within [0, n).
+     - The tiled dimensions (of size `inner_tiles`) are added to the end of the
+     result tensor in the order in which they appear, i.e.
+     `shape(result)[rank(source) + i] = inner_tiles[i]` for `0 <= i < k`.
+     - The following relationship for the tiled dimensions holds:
+     `shape(result)[inner_dims_pos[i]] = shape(source)[inner_dims_pos[i]] / inner_tiles[i]`,
+     where (⌈/⌉ indicates CeilDiv).
+
 
     Example: If `inner_tiles = [16, 32]`, the result tensor has a shape of
     `...x16x32`. If `inner_dims_pos = [0, 1]`, the 0th source dimension is tiled
@@ -116,7 +129,19 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
     %0 = linalg.pack %source inner_dims_pos = [0, 1] inner_tiles = [8, 32]
         into %dest : tensor<128x256xf32> -> tensor<16x8 x 8x32 xf32>
     //                                             \  /   \  /
-    //                                       outer dims  inner dims
+    //                                 Outer Dims: 16x8   Inner Dims: 8x32
+
+    // CHW to CHWhw
+    %0 = linalg.pack %source inner_dims_pos = [2, 1] inner_tiles = [4, 2]
+        into %dest : tensor<3x20x24xf32> -> tensor<3x10x6 x 4x2 xf32>
+    //                                              \  /    \ /
+    //                                 Outer Dims: 3x10x6  Inner Dims: 4x2
+
+    // HCW to HCWhw
+    %0 = linalg.pack %source inner_dims_pos = [2, 0] inner_tiles = [4, 2]
+        into %dest : tensor<18x3x32xf32> -> tensor<9x3x8 x 4x2 xf32>
+    //                                              \  /   \ /
+    //                                 Outer Dims: 9x3x8  Inner Dims: 4x2
     ```
 
     `outer_dims_perm` (optional) specifies a permutation for the outer
@@ -134,9 +159,17 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
 
     `padding_value` specifies a padding value at the boundary on non-perfectly
     divisible dimensions. Padding is optional:
-    - If absent, it is UB if the tile does not perfectly divide the dimension.
+    - If absent, it is assumed that for all inner tiles,
+      `shape(source)[inner_dims_pos[i]] % inner_tiles[i] == 0`, i.e. all inner
+      tiles divide perfectly the corresponding outer dimension in the result
+      tensor. It is UB if the tile does not perfectly divide the dimension.
     - If present, it will pad along high dimensions (high-padding) to make the
-      tile complete.
+      tile complete. Note that it is not allowed to have artificial padding that
+      is not strictly required by linalg.pack (i.e., padding past what is needed
+      to complete the last tile along each packed dimension). It is UB if extra
+      padding is requested.
+    It is not possible to verify the requirements statically with dynamic
+    shapes, so they are treated as UB.
 
     Example:
     ```mlir
@@ -151,24 +184,24 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
     //
     // Note: Only tiled dimensions can be padded.
     ```
+
+    Invalid example that has artificial padding:
+    ```mlir
+    %0 = linalg.pack %src padding_value(%cst : f32) inner_dims_pos = [0]
+        inner_tiles = [8] into %dest
+        : tensor<9xf32> -> tensor<3x8xf32>
+    //                             \
+    //            expect tensor<2x8xf32> because CeilDiv(9, 8) = 2
+    ```
   }];
-  let arguments = (ins AnyRankedTensor:$source,
-                       AnyRankedTensor:$dest,
-                       Optional<AnyType>:$padding_value,
-                       DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$outer_dims_perm,
-                       DenseI64ArrayAttr:$inner_dims_pos,
-                       Variadic<Index>:$inner_tiles,
-                       DenseI64ArrayAttr:$static_inner_tiles);
-  let results = (outs AnyRankedTensor:$result);
-  let assemblyFormat = [{
-    $source
-    (`padding_value` `(` $padding_value^ `:` type($padding_value) `)`)?
-    (`outer_dims_perm` `=` $outer_dims_perm^)?
-    `inner_dims_pos` `=` $inner_dims_pos
-    `inner_tiles` `=`
-    custom<DynamicIndexList>($inner_tiles, $static_inner_tiles)
-    `into` $dest attr-dict `:` type($source) `->` type($dest)
-  }];
+  let arguments = (ins TensorOrMemRef<[AnyType]>:$source,
+      TensorOrMemRef<[AnyType]>:$dest, 
+      Optional<AnyType>:$padding_value,
+      DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$outer_dims_perm,
+      DenseI64ArrayAttr:$inner_dims_pos, 
+      Variadic<Index>:$inner_tiles,
+      DenseI64ArrayAttr:$static_inner_tiles);
+  let results = (outs Optional<AnyRankedTensor>:$result);
 
   let builders = [
     OpBuilder<(ins "Value":$source, "Value":$dest,
@@ -190,7 +223,21 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
     // Method to get the `RankedTensorType` of the result based on the inner
     // tiles, position of the inner tiles (innerDimsPos)  and interchange vector
     // of outer loops (outerDimsPerm).
-    static RankedTensorType inferPackedType(RankedTensorType sourceType,
+    static RankedTensorType inferPackedTensorType(RankedTensorType sourceType,
+        ArrayRef<int64_t> innerTileSizes, ArrayRef<int64_t> innerDimsPos,
+        ArrayRef<int64_t> outerDimsPerm = {});
+
+    // Method to get the `MemRefType` of the result based on the inner
+    // tiles, position of the inner tiles (innerDimsPos)  and interchange vector
+    // of outer loops (outerDimsPerm).
+    static MemRefType inferPackedMemRefType(MemRefType sourceType,
+        ArrayRef<int64_t> innerTileSizes, ArrayRef<int64_t> innerDimsPos,
+        ArrayRef<int64_t> outerDimsPerm = {});
+
+    // Returns the shape of the packed type. It is a shared helper that helps
+    // type inference methods in a way that ensures that they agree on which 
+    // dimensions are dynamic.
+    static SmallVector<int64_t> inferPackedShape(ArrayRef<int64_t> inputShape,
         ArrayRef<int64_t> innerTileSizes, ArrayRef<int64_t> innerDimsPos,
         ArrayRef<int64_t> outerDimsPerm = {});
 
@@ -203,6 +250,14 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
                                     ArrayRef<int64_t> outputShape,
                                     ArrayRef<int64_t> outerDimsPerm,
                                     ArrayRef<OpFoldResult> innerTiles);
+
+    // Same as above function but here dynamic dimensions are assumed
+    // to require padding.
+    static bool requirePaddingValueStrict(ArrayRef<int64_t> inputShape,
+                                          ArrayRef<int64_t> innerDimsPos,
+                                          ArrayRef<int64_t> outputShape,
+                                          ArrayRef<int64_t> outerDimsPerm,
+                                          ArrayRef<OpFoldResult> innerTiles);
 
     static Value createDestinationTensor(OpBuilder &b, Location loc,
         Value source, ArrayRef<OpFoldResult> innerTileSizes,
@@ -234,6 +289,8 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
   let hasCanonicalizeMethod = 1;
 
   let hasFolder = 1;
+
+  let hasCustomAssemblyFormat = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -246,13 +303,6 @@ def Linalg_UnPackOp : Linalg_RelayoutOp<"unpack"> {
     The "unpack" operation converts a source tensor of rank `n` with a tiled and
     packed layout to a result tensor of rank `n - k`.
 
-    `inner_dims_pos` (mandatory) specifies `k` source tensor dimensions with
-    which the last `k` source tensor dimensions are combined, where
-    `0 < k <= n/2`. Each `inner_dims_pos` element must be `>= 0` and `< n - k`.
-    The order of the dimensions in `inner_dims_pos` matters: dimension
-    `inner_dims_pos[i]` is combined with dimension `n - k + i` (assuming that
-    `outer_dims_perm` is not specified).
-
     `inner_tiles` (mandatory) specifies `k` tile sizes. These tile sizes
     correspond to the least significant ("inner") source tensor dimension sizes.
     The behavior of this op is undefined if:
@@ -262,38 +312,58 @@ def Linalg_UnPackOp : Linalg_RelayoutOp<"unpack"> {
       `inner_dims_pos[i]` (assuming that `outer_dims_perm` is not specified)
       evenly.
 
+    `inner_dims_pos` (mandatory) specifies `k` result tensor (i.e. unpacked
+    tensor) dimensions that were tiled with the `inner_tiles` to create the
+    packed source tensor. The source tensor (i.e. packed tensor) dimensions can
+    be unpacked given `inner_dims_pos` as follows.
+    - For `0 <= i < k` the following relationship holds:
+    `shape(result)[inner_dims_pos[i]] <= shape(source)[n-k+i] * shape(source)[inner_dims_pos[i]]`.
+    - For `0 <= j < n-k` and `j` not in `inner_dims_pos` the following relationship holds:
+    `shape(result)[j] = shape(source)[j]`.
+
     `outer_dims_perm` (optional) specifies a permutation for the outer
     dimensions. If specified, it must have `n - k` elements. If specified, this
     permutation is applied before combining any dimensions.
 
-    Example:
+    Note, the unpack operation may drop any padding introduced by the pack
+    operation and hence the following holds
+    `NumElementsOf(source) >= NumElementsOf(result)`.
+
+    Examples:
 
     ```mlir
     // NCnc to NC:
     %0 = linalg.unpack %source inner_dims_pos = [0, 1] inner_tiles = [8, 32]
-        into %dest : tensor<16x8x8x32xf32> -> tensor<128x256xf32>
+        into %dest : tensor<16x8 x 8x32 xf32> -> tensor<128x256xf32>
+    //                      \  /   \  /
+    //          Outer Dims: 16x8  Inner Dims: 8x32
 
     // CK to KCck:
     %0 = linalg.unpack %source outer_dims_perm = [1, 0] inner_dims_pos = [0, 1]
-        inner_tiles = [8, 32] into %dest
-        : tensor<8x16x8x32xf32> -> tensor<128x256xf32>
+        inner_tiles = [8, 32]
+        into %dest : tensor<8x16 x 8x32 xf32> -> tensor<128x256xf32>
+    //                      \  /   \  /
+    //          Outer Dims: 8x16  Inner Dims: 8x32
+
+    // CHW to CHWhw:
+    %0 = linalg.unpack %source inner_dims_pos = [2, 1] inner_tiles = [4, 2]
+        into %dest : tensor<3x10x6 x 4x2 xf32> -> tensor<3x20x24xf32>
+    //                       \  /    \ /
+    //          Outer Dims: 3x10x6  Inner Dims: 4x2
+
+    // HCW to HCWhw
+    %0 = linalg.unpack %source inner_dims_pos = [2, 0] inner_tiles = [4, 2]
+        into %dest : tensor<9x3x8 x 4x2 xf32> -> tensor<18x3x32xf32>
+    //                       \  /   \ /
+    //          Outer Dims: 9x3x8   Inner Dims: 4x2
     ```
   }];
-  let arguments = (ins AnyRankedTensor:$source,
-                       AnyRankedTensor:$dest,
-                       DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$outer_dims_perm,
-                       DenseI64ArrayAttr:$inner_dims_pos,
-                       Variadic<Index>:$inner_tiles,
-                       DenseI64ArrayAttr:$static_inner_tiles);
-  let results = (outs AnyRankedTensor:$result);
-  let assemblyFormat = [{
-    $source
-    (`outer_dims_perm` `=` $outer_dims_perm^)?
-    `inner_dims_pos` `=` $inner_dims_pos
-    `inner_tiles` `=`
-    custom<DynamicIndexList>($inner_tiles, $static_inner_tiles)
-    `into` $dest attr-dict `:` type($source) `->` type($dest)
-  }];
+  let arguments = (ins TensorOrMemRef<[AnyType]>:$source,
+      TensorOrMemRef<[AnyType]>:$dest,
+      DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$outer_dims_perm,
+      DenseI64ArrayAttr:$inner_dims_pos, Variadic<Index>:$inner_tiles,
+      DenseI64ArrayAttr:$static_inner_tiles);
+  let results = (outs Optional<AnyRankedTensor>:$result);
 
   let builders = [
     OpBuilder<(ins "Value":$source, "Value":$dest,
@@ -322,6 +392,10 @@ def Linalg_UnPackOp : Linalg_RelayoutOp<"unpack"> {
                                    ArrayRef<int64_t> innerPermutation,
                                    ArrayRef<int64_t> outerPermutation);
 
+    /// Returns true if it is statically known that the `sliceOp` result shape
+    /// is compatible with the `unPackOp`. I.e., it does not drop any tile.
+    bool canFoldSliceOp(tensor::ExtractSliceOp sliceOp);
+
     /// Check if this UnPackOp is like a simple unpad operation.
     /// In other words, this operation:
     /// 1. drops useless dimensions (dimension of size 1), and
@@ -332,6 +406,8 @@ def Linalg_UnPackOp : Linalg_RelayoutOp<"unpack"> {
   let hasCanonicalizeMethod = 1;
 
   let hasFolder = 1;
+
+  let hasCustomAssemblyFormat = 1;
 }
 
 #endif // LINALG_RELEAYOUT_OPS

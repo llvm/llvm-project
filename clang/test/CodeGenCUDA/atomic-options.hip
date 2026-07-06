@@ -6,6 +6,12 @@
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa \
 // RUN:   -fatomic-fine-grained-memory -fatomic-ignore-denormal-mode \
 // RUN:   -emit-llvm -o - -fcuda-is-device %s | FileCheck --check-prefix=OPT %s
+// RUN: %clang_cc1 -triple spirv64-amd-amdhsa \
+// RUN:   -emit-llvm -o - -fcuda-is-device %s | FileCheck --check-prefix=SPIRV-DEV %s
+// RUN: %clang_cc1 -triple spirv64-amd-amdhsa \
+// RUN:   -fatomic-fine-grained-memory -fatomic-ignore-denormal-mode \
+// RUN:   -emit-llvm -o - -fcuda-is-device %s | FileCheck --check-prefix=SPIRV-OPT %s
+
 
 #include "Inputs/cuda.h"
 
@@ -31,15 +37,13 @@
 // DEV-NEXT:    [[DOTATOMICTMP:%.*]] = alloca float, align 4, addrspace(5)
 // DEV-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca float, align 4, addrspace(5)
 // DEV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
-// DEV-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
-// DEV-NEXT:    [[ATOMIC_TEMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP]] to ptr
 // DEV-NEXT:    store ptr [[A]], ptr [[A_ADDR_ASCAST]], align 8
 // DEV-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
-// DEV-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// DEV-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4:![0-9]+]], !amdgpu.no.remote.memory [[META4]]
-// DEV-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP_ASCAST]], align 4
-// DEV-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP_ASCAST]], align 4
+// DEV-NEXT:    store float 1.000000e+00, ptr addrspace(5) [[DOTATOMICTMP]], align 4
+// DEV-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[DOTATOMICTMP]], align 4
+// DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3:![0-9]+]], !amdgpu.no.remote.memory [[META3]]
+// DEV-NEXT:    store float [[TMP2]], ptr addrspace(5) [[ATOMIC_TEMP]], align 4
+// DEV-NEXT:    [[TMP3:%.*]] = load float, ptr addrspace(5) [[ATOMIC_TEMP]], align 4
 // DEV-NEXT:    ret void
 //
 // OPT-LABEL: define dso_local void @_Z12test_defaultPf(
@@ -49,16 +53,46 @@
 // OPT-NEXT:    [[DOTATOMICTMP:%.*]] = alloca float, align 4, addrspace(5)
 // OPT-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca float, align 4, addrspace(5)
 // OPT-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
-// OPT-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
-// OPT-NEXT:    [[ATOMIC_TEMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP]] to ptr
 // OPT-NEXT:    store ptr [[A]], ptr [[A_ADDR_ASCAST]], align 8
 // OPT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
-// OPT-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// OPT-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.remote.memory [[META4:![0-9]+]], !amdgpu.ignore.denormal.mode [[META4]]
-// OPT-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP_ASCAST]], align 4
-// OPT-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP_ASCAST]], align 4
+// OPT-NEXT:    store float 1.000000e+00, ptr addrspace(5) [[DOTATOMICTMP]], align 4
+// OPT-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[DOTATOMICTMP]], align 4
+// OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.remote.memory [[META3:![0-9]+]], !amdgpu.ignore.denormal.mode [[META3]]
+// OPT-NEXT:    store float [[TMP2]], ptr addrspace(5) [[ATOMIC_TEMP]], align 4
+// OPT-NEXT:    [[TMP3:%.*]] = load float, ptr addrspace(5) [[ATOMIC_TEMP]], align 4
 // OPT-NEXT:    ret void
+//
+// SPIRV-DEV-LABEL: define spir_func void @_Z12test_defaultPf(
+// SPIRV-DEV-SAME: ptr addrspace(4) noundef [[A:%.*]]) addrspace(4) #[[ATTR0:[0-9]+]] {
+// SPIRV-DEV-NEXT:  [[ENTRY:.*:]]
+// SPIRV-DEV-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-DEV-NEXT:    [[DOTATOMICTMP:%.*]] = alloca float, align 4
+// SPIRV-DEV-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca float, align 4
+// SPIRV-DEV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// SPIRV-DEV-NEXT:    store ptr addrspace(4) [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// SPIRV-DEV-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// SPIRV-DEV-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP]], align 4
+// SPIRV-DEV-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP]], align 4
+// SPIRV-DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(4) [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4:![0-9]+]], !amdgpu.no.remote.memory [[META4]]
+// SPIRV-DEV-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP]], align 4
+// SPIRV-DEV-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP]], align 4
+// SPIRV-DEV-NEXT:    ret void
+//
+// SPIRV-OPT-LABEL: define spir_func void @_Z12test_defaultPf(
+// SPIRV-OPT-SAME: ptr addrspace(4) noundef [[A:%.*]]) addrspace(4) #[[ATTR0:[0-9]+]] {
+// SPIRV-OPT-NEXT:  [[ENTRY:.*:]]
+// SPIRV-OPT-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-OPT-NEXT:    [[DOTATOMICTMP:%.*]] = alloca float, align 4
+// SPIRV-OPT-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca float, align 4
+// SPIRV-OPT-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// SPIRV-OPT-NEXT:    store ptr addrspace(4) [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// SPIRV-OPT-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// SPIRV-OPT-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP]], align 4
+// SPIRV-OPT-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP]], align 4
+// SPIRV-OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(4) [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.remote.memory [[META4:![0-9]+]], !amdgpu.ignore.denormal.mode [[META4]]
+// SPIRV-OPT-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP]], align 4
+// SPIRV-OPT-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP]], align 4
+// SPIRV-OPT-NEXT:    ret void
 //
 __device__ __host__ void test_default(float *a) {
   __scoped_atomic_fetch_add(a, 1, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
@@ -86,15 +120,13 @@ __device__ __host__ void test_default(float *a) {
 // DEV-NEXT:    [[DOTATOMICTMP:%.*]] = alloca float, align 4, addrspace(5)
 // DEV-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca float, align 4, addrspace(5)
 // DEV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
-// DEV-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
-// DEV-NEXT:    [[ATOMIC_TEMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP]] to ptr
 // DEV-NEXT:    store ptr [[A]], ptr [[A_ADDR_ASCAST]], align 8
 // DEV-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
-// DEV-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// DEV-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
-// DEV-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP_ASCAST]], align 4
-// DEV-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP_ASCAST]], align 4
+// DEV-NEXT:    store float 1.000000e+00, ptr addrspace(5) [[DOTATOMICTMP]], align 4
+// DEV-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[DOTATOMICTMP]], align 4
+// DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// DEV-NEXT:    store float [[TMP2]], ptr addrspace(5) [[ATOMIC_TEMP]], align 4
+// DEV-NEXT:    [[TMP3:%.*]] = load float, ptr addrspace(5) [[ATOMIC_TEMP]], align 4
 // DEV-NEXT:    ret void
 //
 // OPT-LABEL: define dso_local void @_Z8test_onePf(
@@ -104,16 +136,46 @@ __device__ __host__ void test_default(float *a) {
 // OPT-NEXT:    [[DOTATOMICTMP:%.*]] = alloca float, align 4, addrspace(5)
 // OPT-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca float, align 4, addrspace(5)
 // OPT-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
-// OPT-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
-// OPT-NEXT:    [[ATOMIC_TEMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP]] to ptr
 // OPT-NEXT:    store ptr [[A]], ptr [[A_ADDR_ASCAST]], align 8
 // OPT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
-// OPT-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// OPT-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.remote.memory [[META4]], !amdgpu.ignore.denormal.mode [[META4]]
-// OPT-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP_ASCAST]], align 4
-// OPT-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP_ASCAST]], align 4
+// OPT-NEXT:    store float 1.000000e+00, ptr addrspace(5) [[DOTATOMICTMP]], align 4
+// OPT-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[DOTATOMICTMP]], align 4
+// OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.remote.memory [[META3]], !amdgpu.ignore.denormal.mode [[META3]]
+// OPT-NEXT:    store float [[TMP2]], ptr addrspace(5) [[ATOMIC_TEMP]], align 4
+// OPT-NEXT:    [[TMP3:%.*]] = load float, ptr addrspace(5) [[ATOMIC_TEMP]], align 4
 // OPT-NEXT:    ret void
+//
+// SPIRV-DEV-LABEL: define spir_func void @_Z8test_onePf(
+// SPIRV-DEV-SAME: ptr addrspace(4) noundef [[A:%.*]]) addrspace(4) #[[ATTR0]] {
+// SPIRV-DEV-NEXT:  [[ENTRY:.*:]]
+// SPIRV-DEV-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-DEV-NEXT:    [[DOTATOMICTMP:%.*]] = alloca float, align 4
+// SPIRV-DEV-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca float, align 4
+// SPIRV-DEV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// SPIRV-DEV-NEXT:    store ptr addrspace(4) [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// SPIRV-DEV-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// SPIRV-DEV-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP]], align 4
+// SPIRV-DEV-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP]], align 4
+// SPIRV-DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(4) [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
+// SPIRV-DEV-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP]], align 4
+// SPIRV-DEV-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP]], align 4
+// SPIRV-DEV-NEXT:    ret void
+//
+// SPIRV-OPT-LABEL: define spir_func void @_Z8test_onePf(
+// SPIRV-OPT-SAME: ptr addrspace(4) noundef [[A:%.*]]) addrspace(4) #[[ATTR0]] {
+// SPIRV-OPT-NEXT:  [[ENTRY:.*:]]
+// SPIRV-OPT-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-OPT-NEXT:    [[DOTATOMICTMP:%.*]] = alloca float, align 4
+// SPIRV-OPT-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca float, align 4
+// SPIRV-OPT-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// SPIRV-OPT-NEXT:    store ptr addrspace(4) [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// SPIRV-OPT-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// SPIRV-OPT-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP]], align 4
+// SPIRV-OPT-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP]], align 4
+// SPIRV-OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(4) [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.remote.memory [[META4]], !amdgpu.ignore.denormal.mode [[META4]]
+// SPIRV-OPT-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP]], align 4
+// SPIRV-OPT-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP]], align 4
+// SPIRV-OPT-NEXT:    ret void
 //
 __device__ __host__ void test_one(float *a) {
   [[clang::atomic(no_remote_memory)]] {
@@ -143,15 +205,13 @@ __device__ __host__ void test_one(float *a) {
 // DEV-NEXT:    [[DOTATOMICTMP:%.*]] = alloca float, align 4, addrspace(5)
 // DEV-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca float, align 4, addrspace(5)
 // DEV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
-// DEV-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
-// DEV-NEXT:    [[ATOMIC_TEMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP]] to ptr
 // DEV-NEXT:    store ptr [[A]], ptr [[A_ADDR_ASCAST]], align 8
 // DEV-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
-// DEV-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// DEV-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.ignore.denormal.mode [[META4]]
-// DEV-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP_ASCAST]], align 4
-// DEV-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP_ASCAST]], align 4
+// DEV-NEXT:    store float 1.000000e+00, ptr addrspace(5) [[DOTATOMICTMP]], align 4
+// DEV-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[DOTATOMICTMP]], align 4
+// DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.ignore.denormal.mode [[META3]]
+// DEV-NEXT:    store float [[TMP2]], ptr addrspace(5) [[ATOMIC_TEMP]], align 4
+// DEV-NEXT:    [[TMP3:%.*]] = load float, ptr addrspace(5) [[ATOMIC_TEMP]], align 4
 // DEV-NEXT:    ret void
 //
 // OPT-LABEL: define dso_local void @_Z8test_twoPf(
@@ -161,16 +221,46 @@ __device__ __host__ void test_one(float *a) {
 // OPT-NEXT:    [[DOTATOMICTMP:%.*]] = alloca float, align 4, addrspace(5)
 // OPT-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca float, align 4, addrspace(5)
 // OPT-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
-// OPT-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
-// OPT-NEXT:    [[ATOMIC_TEMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP]] to ptr
 // OPT-NEXT:    store ptr [[A]], ptr [[A_ADDR_ASCAST]], align 8
 // OPT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
-// OPT-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// OPT-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.ignore.denormal.mode [[META4]]
-// OPT-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP_ASCAST]], align 4
-// OPT-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP_ASCAST]], align 4
+// OPT-NEXT:    store float 1.000000e+00, ptr addrspace(5) [[DOTATOMICTMP]], align 4
+// OPT-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[DOTATOMICTMP]], align 4
+// OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.ignore.denormal.mode [[META3]]
+// OPT-NEXT:    store float [[TMP2]], ptr addrspace(5) [[ATOMIC_TEMP]], align 4
+// OPT-NEXT:    [[TMP3:%.*]] = load float, ptr addrspace(5) [[ATOMIC_TEMP]], align 4
 // OPT-NEXT:    ret void
+//
+// SPIRV-DEV-LABEL: define spir_func void @_Z8test_twoPf(
+// SPIRV-DEV-SAME: ptr addrspace(4) noundef [[A:%.*]]) addrspace(4) #[[ATTR0]] {
+// SPIRV-DEV-NEXT:  [[ENTRY:.*:]]
+// SPIRV-DEV-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-DEV-NEXT:    [[DOTATOMICTMP:%.*]] = alloca float, align 4
+// SPIRV-DEV-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca float, align 4
+// SPIRV-DEV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// SPIRV-DEV-NEXT:    store ptr addrspace(4) [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// SPIRV-DEV-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// SPIRV-DEV-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP]], align 4
+// SPIRV-DEV-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP]], align 4
+// SPIRV-DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(4) [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.ignore.denormal.mode [[META4]]
+// SPIRV-DEV-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP]], align 4
+// SPIRV-DEV-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP]], align 4
+// SPIRV-DEV-NEXT:    ret void
+//
+// SPIRV-OPT-LABEL: define spir_func void @_Z8test_twoPf(
+// SPIRV-OPT-SAME: ptr addrspace(4) noundef [[A:%.*]]) addrspace(4) #[[ATTR0]] {
+// SPIRV-OPT-NEXT:  [[ENTRY:.*:]]
+// SPIRV-OPT-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-OPT-NEXT:    [[DOTATOMICTMP:%.*]] = alloca float, align 4
+// SPIRV-OPT-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca float, align 4
+// SPIRV-OPT-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// SPIRV-OPT-NEXT:    store ptr addrspace(4) [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// SPIRV-OPT-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// SPIRV-OPT-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP]], align 4
+// SPIRV-OPT-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP]], align 4
+// SPIRV-OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(4) [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.ignore.denormal.mode [[META4]]
+// SPIRV-OPT-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP]], align 4
+// SPIRV-OPT-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP]], align 4
+// SPIRV-OPT-NEXT:    ret void
 //
 __device__ __host__ void test_two(float *a) {
   [[clang::atomic(remote_memory, ignore_denormal_mode)]] {
@@ -200,15 +290,13 @@ __device__ __host__ void test_two(float *a) {
 // DEV-NEXT:    [[DOTATOMICTMP:%.*]] = alloca float, align 4, addrspace(5)
 // DEV-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca float, align 4, addrspace(5)
 // DEV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
-// DEV-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
-// DEV-NEXT:    [[ATOMIC_TEMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP]] to ptr
 // DEV-NEXT:    store ptr [[A]], ptr [[A_ADDR_ASCAST]], align 8
 // DEV-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
-// DEV-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// DEV-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.remote.memory [[META4]]
-// DEV-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP_ASCAST]], align 4
-// DEV-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP_ASCAST]], align 4
+// DEV-NEXT:    store float 1.000000e+00, ptr addrspace(5) [[DOTATOMICTMP]], align 4
+// DEV-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[DOTATOMICTMP]], align 4
+// DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.remote.memory [[META3]]
+// DEV-NEXT:    store float [[TMP2]], ptr addrspace(5) [[ATOMIC_TEMP]], align 4
+// DEV-NEXT:    [[TMP3:%.*]] = load float, ptr addrspace(5) [[ATOMIC_TEMP]], align 4
 // DEV-NEXT:    ret void
 //
 // OPT-LABEL: define dso_local void @_Z10test_threePf(
@@ -218,16 +306,46 @@ __device__ __host__ void test_two(float *a) {
 // OPT-NEXT:    [[DOTATOMICTMP:%.*]] = alloca float, align 4, addrspace(5)
 // OPT-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca float, align 4, addrspace(5)
 // OPT-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
-// OPT-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
-// OPT-NEXT:    [[ATOMIC_TEMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP]] to ptr
 // OPT-NEXT:    store ptr [[A]], ptr [[A_ADDR_ASCAST]], align 8
 // OPT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
-// OPT-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// OPT-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.remote.memory [[META4]]
-// OPT-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP_ASCAST]], align 4
-// OPT-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP_ASCAST]], align 4
+// OPT-NEXT:    store float 1.000000e+00, ptr addrspace(5) [[DOTATOMICTMP]], align 4
+// OPT-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[DOTATOMICTMP]], align 4
+// OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.remote.memory [[META3]]
+// OPT-NEXT:    store float [[TMP2]], ptr addrspace(5) [[ATOMIC_TEMP]], align 4
+// OPT-NEXT:    [[TMP3:%.*]] = load float, ptr addrspace(5) [[ATOMIC_TEMP]], align 4
 // OPT-NEXT:    ret void
+//
+// SPIRV-DEV-LABEL: define spir_func void @_Z10test_threePf(
+// SPIRV-DEV-SAME: ptr addrspace(4) noundef [[A:%.*]]) addrspace(4) #[[ATTR0]] {
+// SPIRV-DEV-NEXT:  [[ENTRY:.*:]]
+// SPIRV-DEV-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-DEV-NEXT:    [[DOTATOMICTMP:%.*]] = alloca float, align 4
+// SPIRV-DEV-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca float, align 4
+// SPIRV-DEV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// SPIRV-DEV-NEXT:    store ptr addrspace(4) [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// SPIRV-DEV-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// SPIRV-DEV-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP]], align 4
+// SPIRV-DEV-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP]], align 4
+// SPIRV-DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(4) [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.remote.memory [[META4]]
+// SPIRV-DEV-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP]], align 4
+// SPIRV-DEV-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP]], align 4
+// SPIRV-DEV-NEXT:    ret void
+//
+// SPIRV-OPT-LABEL: define spir_func void @_Z10test_threePf(
+// SPIRV-OPT-SAME: ptr addrspace(4) noundef [[A:%.*]]) addrspace(4) #[[ATTR0]] {
+// SPIRV-OPT-NEXT:  [[ENTRY:.*:]]
+// SPIRV-OPT-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-OPT-NEXT:    [[DOTATOMICTMP:%.*]] = alloca float, align 4
+// SPIRV-OPT-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca float, align 4
+// SPIRV-OPT-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// SPIRV-OPT-NEXT:    store ptr addrspace(4) [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// SPIRV-OPT-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// SPIRV-OPT-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP]], align 4
+// SPIRV-OPT-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP]], align 4
+// SPIRV-OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(4) [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.remote.memory [[META4]]
+// SPIRV-OPT-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP]], align 4
+// SPIRV-OPT-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP]], align 4
+// SPIRV-OPT-NEXT:    ret void
 //
 __device__ __host__ void test_three(float *a) {
   [[clang::atomic(no_remote_memory, fine_grained_memory, no_ignore_denormal_mode)]] {
@@ -257,15 +375,13 @@ __device__ __host__ void test_three(float *a) {
 // DEV-NEXT:    [[DOTATOMICTMP:%.*]] = alloca float, align 4, addrspace(5)
 // DEV-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca float, align 4, addrspace(5)
 // DEV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
-// DEV-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
-// DEV-NEXT:    [[ATOMIC_TEMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP]] to ptr
 // DEV-NEXT:    store ptr [[A]], ptr [[A_ADDR_ASCAST]], align 8
 // DEV-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
-// DEV-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// DEV-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]]
-// DEV-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP_ASCAST]], align 4
-// DEV-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP_ASCAST]], align 4
+// DEV-NEXT:    store float 1.000000e+00, ptr addrspace(5) [[DOTATOMICTMP]], align 4
+// DEV-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[DOTATOMICTMP]], align 4
+// DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]]
+// DEV-NEXT:    store float [[TMP2]], ptr addrspace(5) [[ATOMIC_TEMP]], align 4
+// DEV-NEXT:    [[TMP3:%.*]] = load float, ptr addrspace(5) [[ATOMIC_TEMP]], align 4
 // DEV-NEXT:    ret void
 //
 // OPT-LABEL: define dso_local void @_Z19test_multiple_attrsPf(
@@ -275,16 +391,46 @@ __device__ __host__ void test_three(float *a) {
 // OPT-NEXT:    [[DOTATOMICTMP:%.*]] = alloca float, align 4, addrspace(5)
 // OPT-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca float, align 4, addrspace(5)
 // OPT-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
-// OPT-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
-// OPT-NEXT:    [[ATOMIC_TEMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP]] to ptr
 // OPT-NEXT:    store ptr [[A]], ptr [[A_ADDR_ASCAST]], align 8
 // OPT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
-// OPT-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// OPT-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.ignore.denormal.mode [[META4]]
-// OPT-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP_ASCAST]], align 4
-// OPT-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP_ASCAST]], align 4
+// OPT-NEXT:    store float 1.000000e+00, ptr addrspace(5) [[DOTATOMICTMP]], align 4
+// OPT-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[DOTATOMICTMP]], align 4
+// OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.ignore.denormal.mode [[META3]]
+// OPT-NEXT:    store float [[TMP2]], ptr addrspace(5) [[ATOMIC_TEMP]], align 4
+// OPT-NEXT:    [[TMP3:%.*]] = load float, ptr addrspace(5) [[ATOMIC_TEMP]], align 4
 // OPT-NEXT:    ret void
+//
+// SPIRV-DEV-LABEL: define spir_func void @_Z19test_multiple_attrsPf(
+// SPIRV-DEV-SAME: ptr addrspace(4) noundef [[A:%.*]]) addrspace(4) #[[ATTR0]] {
+// SPIRV-DEV-NEXT:  [[ENTRY:.*:]]
+// SPIRV-DEV-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-DEV-NEXT:    [[DOTATOMICTMP:%.*]] = alloca float, align 4
+// SPIRV-DEV-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca float, align 4
+// SPIRV-DEV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// SPIRV-DEV-NEXT:    store ptr addrspace(4) [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// SPIRV-DEV-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// SPIRV-DEV-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP]], align 4
+// SPIRV-DEV-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP]], align 4
+// SPIRV-DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(4) [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]]
+// SPIRV-DEV-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP]], align 4
+// SPIRV-DEV-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP]], align 4
+// SPIRV-DEV-NEXT:    ret void
+//
+// SPIRV-OPT-LABEL: define spir_func void @_Z19test_multiple_attrsPf(
+// SPIRV-OPT-SAME: ptr addrspace(4) noundef [[A:%.*]]) addrspace(4) #[[ATTR0]] {
+// SPIRV-OPT-NEXT:  [[ENTRY:.*:]]
+// SPIRV-OPT-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-OPT-NEXT:    [[DOTATOMICTMP:%.*]] = alloca float, align 4
+// SPIRV-OPT-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca float, align 4
+// SPIRV-OPT-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// SPIRV-OPT-NEXT:    store ptr addrspace(4) [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// SPIRV-OPT-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// SPIRV-OPT-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP]], align 4
+// SPIRV-OPT-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP]], align 4
+// SPIRV-OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(4) [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.ignore.denormal.mode [[META4]]
+// SPIRV-OPT-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP]], align 4
+// SPIRV-OPT-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP]], align 4
+// SPIRV-OPT-NEXT:    ret void
 //
 __device__ __host__ void test_multiple_attrs(float *a) {
   [[clang::atomic(no_remote_memory)]] [[clang::atomic(remote_memory)]] {
@@ -344,39 +490,31 @@ __device__ __host__ void test_multiple_attrs(float *a) {
 // DEV-NEXT:    [[DOTATOMICTMP5:%.*]] = alloca float, align 4, addrspace(5)
 // DEV-NEXT:    [[ATOMIC_TEMP6:%.*]] = alloca float, align 4, addrspace(5)
 // DEV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
-// DEV-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
-// DEV-NEXT:    [[ATOMIC_TEMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP]] to ptr
-// DEV-NEXT:    [[DOTATOMICTMP1_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP1]] to ptr
-// DEV-NEXT:    [[ATOMIC_TEMP2_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP2]] to ptr
-// DEV-NEXT:    [[DOTATOMICTMP3_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP3]] to ptr
-// DEV-NEXT:    [[ATOMIC_TEMP4_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP4]] to ptr
-// DEV-NEXT:    [[DOTATOMICTMP5_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP5]] to ptr
-// DEV-NEXT:    [[ATOMIC_TEMP6_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP6]] to ptr
 // DEV-NEXT:    store ptr [[A]], ptr [[A_ADDR_ASCAST]], align 8
 // DEV-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
-// DEV-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// DEV-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
-// DEV-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP_ASCAST]], align 4
-// DEV-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP_ASCAST]], align 4
+// DEV-NEXT:    store float 1.000000e+00, ptr addrspace(5) [[DOTATOMICTMP]], align 4
+// DEV-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[DOTATOMICTMP]], align 4
+// DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3]], !amdgpu.no.remote.memory [[META3]]
+// DEV-NEXT:    store float [[TMP2]], ptr addrspace(5) [[ATOMIC_TEMP]], align 4
+// DEV-NEXT:    [[TMP3:%.*]] = load float, ptr addrspace(5) [[ATOMIC_TEMP]], align 4
 // DEV-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
-// DEV-NEXT:    store float 2.000000e+00, ptr [[DOTATOMICTMP1_ASCAST]], align 4
-// DEV-NEXT:    [[TMP5:%.*]] = load float, ptr [[DOTATOMICTMP1_ASCAST]], align 4
+// DEV-NEXT:    store float 2.000000e+00, ptr addrspace(5) [[DOTATOMICTMP1]], align 4
+// DEV-NEXT:    [[TMP5:%.*]] = load float, ptr addrspace(5) [[DOTATOMICTMP1]], align 4
 // DEV-NEXT:    [[TMP6:%.*]] = atomicrmw fmax ptr [[TMP4]], float [[TMP5]] syncscope("agent") seq_cst, align 4
-// DEV-NEXT:    store float [[TMP6]], ptr [[ATOMIC_TEMP2_ASCAST]], align 4
-// DEV-NEXT:    [[TMP7:%.*]] = load float, ptr [[ATOMIC_TEMP2_ASCAST]], align 4
+// DEV-NEXT:    store float [[TMP6]], ptr addrspace(5) [[ATOMIC_TEMP2]], align 4
+// DEV-NEXT:    [[TMP7:%.*]] = load float, ptr addrspace(5) [[ATOMIC_TEMP2]], align 4
 // DEV-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
-// DEV-NEXT:    store float 3.000000e+00, ptr [[DOTATOMICTMP3_ASCAST]], align 4
-// DEV-NEXT:    [[TMP9:%.*]] = load float, ptr [[DOTATOMICTMP3_ASCAST]], align 4
-// DEV-NEXT:    [[TMP10:%.*]] = atomicrmw fmin ptr [[TMP8]], float [[TMP9]] syncscope("workgroup") acquire, align 4, !amdgpu.no.remote.memory [[META4]]
-// DEV-NEXT:    store float [[TMP10]], ptr [[ATOMIC_TEMP4_ASCAST]], align 4
-// DEV-NEXT:    [[TMP11:%.*]] = load float, ptr [[ATOMIC_TEMP4_ASCAST]], align 4
+// DEV-NEXT:    store float 3.000000e+00, ptr addrspace(5) [[DOTATOMICTMP3]], align 4
+// DEV-NEXT:    [[TMP9:%.*]] = load float, ptr addrspace(5) [[DOTATOMICTMP3]], align 4
+// DEV-NEXT:    [[TMP10:%.*]] = atomicrmw fmin ptr [[TMP8]], float [[TMP9]] syncscope("workgroup") acquire, align 4, !amdgpu.no.remote.memory [[META3]]
+// DEV-NEXT:    store float [[TMP10]], ptr addrspace(5) [[ATOMIC_TEMP4]], align 4
+// DEV-NEXT:    [[TMP11:%.*]] = load float, ptr addrspace(5) [[ATOMIC_TEMP4]], align 4
 // DEV-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
-// DEV-NEXT:    store float 4.000000e+00, ptr [[DOTATOMICTMP5_ASCAST]], align 4
-// DEV-NEXT:    [[TMP13:%.*]] = load float, ptr [[DOTATOMICTMP5_ASCAST]], align 4
-// DEV-NEXT:    [[TMP14:%.*]] = atomicrmw fsub ptr [[TMP12]], float [[TMP13]] syncscope("wavefront") release, align 4, !amdgpu.no.fine.grained.memory [[META4]]
-// DEV-NEXT:    store float [[TMP14]], ptr [[ATOMIC_TEMP6_ASCAST]], align 4
-// DEV-NEXT:    [[TMP15:%.*]] = load float, ptr [[ATOMIC_TEMP6_ASCAST]], align 4
+// DEV-NEXT:    store float 4.000000e+00, ptr addrspace(5) [[DOTATOMICTMP5]], align 4
+// DEV-NEXT:    [[TMP13:%.*]] = load float, ptr addrspace(5) [[DOTATOMICTMP5]], align 4
+// DEV-NEXT:    [[TMP14:%.*]] = atomicrmw fsub ptr [[TMP12]], float [[TMP13]] syncscope("wavefront") release, align 4, !amdgpu.no.fine.grained.memory [[META3]]
+// DEV-NEXT:    store float [[TMP14]], ptr addrspace(5) [[ATOMIC_TEMP6]], align 4
+// DEV-NEXT:    [[TMP15:%.*]] = load float, ptr addrspace(5) [[ATOMIC_TEMP6]], align 4
 // DEV-NEXT:    ret void
 //
 // OPT-LABEL: define dso_local void @_Z11test_nestedPf(
@@ -392,40 +530,112 @@ __device__ __host__ void test_multiple_attrs(float *a) {
 // OPT-NEXT:    [[DOTATOMICTMP5:%.*]] = alloca float, align 4, addrspace(5)
 // OPT-NEXT:    [[ATOMIC_TEMP6:%.*]] = alloca float, align 4, addrspace(5)
 // OPT-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A_ADDR]] to ptr
-// OPT-NEXT:    [[DOTATOMICTMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP]] to ptr
-// OPT-NEXT:    [[ATOMIC_TEMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP]] to ptr
-// OPT-NEXT:    [[DOTATOMICTMP1_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP1]] to ptr
-// OPT-NEXT:    [[ATOMIC_TEMP2_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP2]] to ptr
-// OPT-NEXT:    [[DOTATOMICTMP3_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP3]] to ptr
-// OPT-NEXT:    [[ATOMIC_TEMP4_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP4]] to ptr
-// OPT-NEXT:    [[DOTATOMICTMP5_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTATOMICTMP5]] to ptr
-// OPT-NEXT:    [[ATOMIC_TEMP6_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ATOMIC_TEMP6]] to ptr
 // OPT-NEXT:    store ptr [[A]], ptr [[A_ADDR_ASCAST]], align 8
 // OPT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
-// OPT-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// OPT-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP_ASCAST]], align 4
-// OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.remote.memory [[META4]], !amdgpu.ignore.denormal.mode [[META4]]
-// OPT-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP_ASCAST]], align 4
-// OPT-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP_ASCAST]], align 4
+// OPT-NEXT:    store float 1.000000e+00, ptr addrspace(5) [[DOTATOMICTMP]], align 4
+// OPT-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[DOTATOMICTMP]], align 4
+// OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.remote.memory [[META3]], !amdgpu.ignore.denormal.mode [[META3]]
+// OPT-NEXT:    store float [[TMP2]], ptr addrspace(5) [[ATOMIC_TEMP]], align 4
+// OPT-NEXT:    [[TMP3:%.*]] = load float, ptr addrspace(5) [[ATOMIC_TEMP]], align 4
 // OPT-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
-// OPT-NEXT:    store float 2.000000e+00, ptr [[DOTATOMICTMP1_ASCAST]], align 4
-// OPT-NEXT:    [[TMP5:%.*]] = load float, ptr [[DOTATOMICTMP1_ASCAST]], align 4
+// OPT-NEXT:    store float 2.000000e+00, ptr addrspace(5) [[DOTATOMICTMP1]], align 4
+// OPT-NEXT:    [[TMP5:%.*]] = load float, ptr addrspace(5) [[DOTATOMICTMP1]], align 4
 // OPT-NEXT:    [[TMP6:%.*]] = atomicrmw fmax ptr [[TMP4]], float [[TMP5]] syncscope("agent") seq_cst, align 4
-// OPT-NEXT:    store float [[TMP6]], ptr [[ATOMIC_TEMP2_ASCAST]], align 4
-// OPT-NEXT:    [[TMP7:%.*]] = load float, ptr [[ATOMIC_TEMP2_ASCAST]], align 4
+// OPT-NEXT:    store float [[TMP6]], ptr addrspace(5) [[ATOMIC_TEMP2]], align 4
+// OPT-NEXT:    [[TMP7:%.*]] = load float, ptr addrspace(5) [[ATOMIC_TEMP2]], align 4
 // OPT-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
-// OPT-NEXT:    store float 3.000000e+00, ptr [[DOTATOMICTMP3_ASCAST]], align 4
-// OPT-NEXT:    [[TMP9:%.*]] = load float, ptr [[DOTATOMICTMP3_ASCAST]], align 4
-// OPT-NEXT:    [[TMP10:%.*]] = atomicrmw fmin ptr [[TMP8]], float [[TMP9]] syncscope("workgroup") acquire, align 4, !amdgpu.no.remote.memory [[META4]]
-// OPT-NEXT:    store float [[TMP10]], ptr [[ATOMIC_TEMP4_ASCAST]], align 4
-// OPT-NEXT:    [[TMP11:%.*]] = load float, ptr [[ATOMIC_TEMP4_ASCAST]], align 4
+// OPT-NEXT:    store float 3.000000e+00, ptr addrspace(5) [[DOTATOMICTMP3]], align 4
+// OPT-NEXT:    [[TMP9:%.*]] = load float, ptr addrspace(5) [[DOTATOMICTMP3]], align 4
+// OPT-NEXT:    [[TMP10:%.*]] = atomicrmw fmin ptr [[TMP8]], float [[TMP9]] syncscope("workgroup") acquire, align 4, !amdgpu.no.remote.memory [[META3]]
+// OPT-NEXT:    store float [[TMP10]], ptr addrspace(5) [[ATOMIC_TEMP4]], align 4
+// OPT-NEXT:    [[TMP11:%.*]] = load float, ptr addrspace(5) [[ATOMIC_TEMP4]], align 4
 // OPT-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[A_ADDR_ASCAST]], align 8
-// OPT-NEXT:    store float 4.000000e+00, ptr [[DOTATOMICTMP5_ASCAST]], align 4
-// OPT-NEXT:    [[TMP13:%.*]] = load float, ptr [[DOTATOMICTMP5_ASCAST]], align 4
-// OPT-NEXT:    [[TMP14:%.*]] = atomicrmw fsub ptr [[TMP12]], float [[TMP13]] syncscope("wavefront") release, align 4, !amdgpu.no.fine.grained.memory [[META4]]
-// OPT-NEXT:    store float [[TMP14]], ptr [[ATOMIC_TEMP6_ASCAST]], align 4
-// OPT-NEXT:    [[TMP15:%.*]] = load float, ptr [[ATOMIC_TEMP6_ASCAST]], align 4
+// OPT-NEXT:    store float 4.000000e+00, ptr addrspace(5) [[DOTATOMICTMP5]], align 4
+// OPT-NEXT:    [[TMP13:%.*]] = load float, ptr addrspace(5) [[DOTATOMICTMP5]], align 4
+// OPT-NEXT:    [[TMP14:%.*]] = atomicrmw fsub ptr [[TMP12]], float [[TMP13]] syncscope("wavefront") release, align 4, !amdgpu.no.fine.grained.memory [[META3]]
+// OPT-NEXT:    store float [[TMP14]], ptr addrspace(5) [[ATOMIC_TEMP6]], align 4
+// OPT-NEXT:    [[TMP15:%.*]] = load float, ptr addrspace(5) [[ATOMIC_TEMP6]], align 4
 // OPT-NEXT:    ret void
+//
+// SPIRV-DEV-LABEL: define spir_func void @_Z11test_nestedPf(
+// SPIRV-DEV-SAME: ptr addrspace(4) noundef [[A:%.*]]) addrspace(4) #[[ATTR0]] {
+// SPIRV-DEV-NEXT:  [[ENTRY:.*:]]
+// SPIRV-DEV-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-DEV-NEXT:    [[DOTATOMICTMP:%.*]] = alloca float, align 4
+// SPIRV-DEV-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca float, align 4
+// SPIRV-DEV-NEXT:    [[DOTATOMICTMP1:%.*]] = alloca float, align 4
+// SPIRV-DEV-NEXT:    [[ATOMIC_TEMP2:%.*]] = alloca float, align 4
+// SPIRV-DEV-NEXT:    [[DOTATOMICTMP3:%.*]] = alloca float, align 4
+// SPIRV-DEV-NEXT:    [[ATOMIC_TEMP4:%.*]] = alloca float, align 4
+// SPIRV-DEV-NEXT:    [[DOTATOMICTMP5:%.*]] = alloca float, align 4
+// SPIRV-DEV-NEXT:    [[ATOMIC_TEMP6:%.*]] = alloca float, align 4
+// SPIRV-DEV-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// SPIRV-DEV-NEXT:    store ptr addrspace(4) [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// SPIRV-DEV-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// SPIRV-DEV-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP]], align 4
+// SPIRV-DEV-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP]], align 4
+// SPIRV-DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(4) [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.fine.grained.memory [[META4]], !amdgpu.no.remote.memory [[META4]]
+// SPIRV-DEV-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP]], align 4
+// SPIRV-DEV-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP]], align 4
+// SPIRV-DEV-NEXT:    [[TMP4:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// SPIRV-DEV-NEXT:    store float 2.000000e+00, ptr [[DOTATOMICTMP1]], align 4
+// SPIRV-DEV-NEXT:    [[TMP5:%.*]] = load float, ptr [[DOTATOMICTMP1]], align 4
+// SPIRV-DEV-NEXT:    [[TMP6:%.*]] = atomicrmw fmax ptr addrspace(4) [[TMP4]], float [[TMP5]] syncscope("device") seq_cst, align 4
+// SPIRV-DEV-NEXT:    store float [[TMP6]], ptr [[ATOMIC_TEMP2]], align 4
+// SPIRV-DEV-NEXT:    [[TMP7:%.*]] = load float, ptr [[ATOMIC_TEMP2]], align 4
+// SPIRV-DEV-NEXT:    [[TMP8:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// SPIRV-DEV-NEXT:    store float 3.000000e+00, ptr [[DOTATOMICTMP3]], align 4
+// SPIRV-DEV-NEXT:    [[TMP9:%.*]] = load float, ptr [[DOTATOMICTMP3]], align 4
+// SPIRV-DEV-NEXT:    [[TMP10:%.*]] = atomicrmw fmin ptr addrspace(4) [[TMP8]], float [[TMP9]] syncscope("workgroup") acquire, align 4, !amdgpu.no.remote.memory [[META4]]
+// SPIRV-DEV-NEXT:    store float [[TMP10]], ptr [[ATOMIC_TEMP4]], align 4
+// SPIRV-DEV-NEXT:    [[TMP11:%.*]] = load float, ptr [[ATOMIC_TEMP4]], align 4
+// SPIRV-DEV-NEXT:    [[TMP12:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// SPIRV-DEV-NEXT:    store float 4.000000e+00, ptr [[DOTATOMICTMP5]], align 4
+// SPIRV-DEV-NEXT:    [[TMP13:%.*]] = load float, ptr [[DOTATOMICTMP5]], align 4
+// SPIRV-DEV-NEXT:    [[TMP14:%.*]] = atomicrmw fsub ptr addrspace(4) [[TMP12]], float [[TMP13]] syncscope("subgroup") release, align 4, !amdgpu.no.fine.grained.memory [[META4]]
+// SPIRV-DEV-NEXT:    store float [[TMP14]], ptr [[ATOMIC_TEMP6]], align 4
+// SPIRV-DEV-NEXT:    [[TMP15:%.*]] = load float, ptr [[ATOMIC_TEMP6]], align 4
+// SPIRV-DEV-NEXT:    ret void
+//
+// SPIRV-OPT-LABEL: define spir_func void @_Z11test_nestedPf(
+// SPIRV-OPT-SAME: ptr addrspace(4) noundef [[A:%.*]]) addrspace(4) #[[ATTR0]] {
+// SPIRV-OPT-NEXT:  [[ENTRY:.*:]]
+// SPIRV-OPT-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(4), align 8
+// SPIRV-OPT-NEXT:    [[DOTATOMICTMP:%.*]] = alloca float, align 4
+// SPIRV-OPT-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca float, align 4
+// SPIRV-OPT-NEXT:    [[DOTATOMICTMP1:%.*]] = alloca float, align 4
+// SPIRV-OPT-NEXT:    [[ATOMIC_TEMP2:%.*]] = alloca float, align 4
+// SPIRV-OPT-NEXT:    [[DOTATOMICTMP3:%.*]] = alloca float, align 4
+// SPIRV-OPT-NEXT:    [[ATOMIC_TEMP4:%.*]] = alloca float, align 4
+// SPIRV-OPT-NEXT:    [[DOTATOMICTMP5:%.*]] = alloca float, align 4
+// SPIRV-OPT-NEXT:    [[ATOMIC_TEMP6:%.*]] = alloca float, align 4
+// SPIRV-OPT-NEXT:    [[A_ADDR_ASCAST:%.*]] = addrspacecast ptr [[A_ADDR]] to ptr addrspace(4)
+// SPIRV-OPT-NEXT:    store ptr addrspace(4) [[A]], ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// SPIRV-OPT-NEXT:    [[TMP0:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// SPIRV-OPT-NEXT:    store float 1.000000e+00, ptr [[DOTATOMICTMP]], align 4
+// SPIRV-OPT-NEXT:    [[TMP1:%.*]] = load float, ptr [[DOTATOMICTMP]], align 4
+// SPIRV-OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(4) [[TMP0]], float [[TMP1]] monotonic, align 4, !amdgpu.no.remote.memory [[META4]], !amdgpu.ignore.denormal.mode [[META4]]
+// SPIRV-OPT-NEXT:    store float [[TMP2]], ptr [[ATOMIC_TEMP]], align 4
+// SPIRV-OPT-NEXT:    [[TMP3:%.*]] = load float, ptr [[ATOMIC_TEMP]], align 4
+// SPIRV-OPT-NEXT:    [[TMP4:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// SPIRV-OPT-NEXT:    store float 2.000000e+00, ptr [[DOTATOMICTMP1]], align 4
+// SPIRV-OPT-NEXT:    [[TMP5:%.*]] = load float, ptr [[DOTATOMICTMP1]], align 4
+// SPIRV-OPT-NEXT:    [[TMP6:%.*]] = atomicrmw fmax ptr addrspace(4) [[TMP4]], float [[TMP5]] syncscope("device") seq_cst, align 4
+// SPIRV-OPT-NEXT:    store float [[TMP6]], ptr [[ATOMIC_TEMP2]], align 4
+// SPIRV-OPT-NEXT:    [[TMP7:%.*]] = load float, ptr [[ATOMIC_TEMP2]], align 4
+// SPIRV-OPT-NEXT:    [[TMP8:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// SPIRV-OPT-NEXT:    store float 3.000000e+00, ptr [[DOTATOMICTMP3]], align 4
+// SPIRV-OPT-NEXT:    [[TMP9:%.*]] = load float, ptr [[DOTATOMICTMP3]], align 4
+// SPIRV-OPT-NEXT:    [[TMP10:%.*]] = atomicrmw fmin ptr addrspace(4) [[TMP8]], float [[TMP9]] syncscope("workgroup") acquire, align 4, !amdgpu.no.remote.memory [[META4]]
+// SPIRV-OPT-NEXT:    store float [[TMP10]], ptr [[ATOMIC_TEMP4]], align 4
+// SPIRV-OPT-NEXT:    [[TMP11:%.*]] = load float, ptr [[ATOMIC_TEMP4]], align 4
+// SPIRV-OPT-NEXT:    [[TMP12:%.*]] = load ptr addrspace(4), ptr addrspace(4) [[A_ADDR_ASCAST]], align 8
+// SPIRV-OPT-NEXT:    store float 4.000000e+00, ptr [[DOTATOMICTMP5]], align 4
+// SPIRV-OPT-NEXT:    [[TMP13:%.*]] = load float, ptr [[DOTATOMICTMP5]], align 4
+// SPIRV-OPT-NEXT:    [[TMP14:%.*]] = atomicrmw fsub ptr addrspace(4) [[TMP12]], float [[TMP13]] syncscope("subgroup") release, align 4, !amdgpu.no.fine.grained.memory [[META4]]
+// SPIRV-OPT-NEXT:    store float [[TMP14]], ptr [[ATOMIC_TEMP6]], align 4
+// SPIRV-OPT-NEXT:    [[TMP15:%.*]] = load float, ptr [[ATOMIC_TEMP6]], align 4
+// SPIRV-OPT-NEXT:    ret void
 //
 __device__ __host__ void test_nested(float *a) {
   __scoped_atomic_fetch_add(a, 1, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
@@ -459,7 +669,11 @@ template<typename T> __device__ __host__ void test_template(T *a) {
 template __device__ __host__ void test_template<float>(float *a);
 
 //.
-// DEV: [[META4]] = !{}
+// DEV: [[META3]] = !{}
 //.
-// OPT: [[META4]] = !{}
+// OPT: [[META3]] = !{}
+//.
+// SPIRV-DEV: [[META4]] = !{}
+//.
+// SPIRV-OPT: [[META4]] = !{}
 //.

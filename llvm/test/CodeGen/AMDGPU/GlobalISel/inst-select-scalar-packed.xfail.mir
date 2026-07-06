@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=instruction-select -global-isel-abort=2 -pass-remarks-missed='gisel*' -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck -check-prefix=ERR %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=instruction-select -global-isel-abort=2 -pass-remarks-missed='gisel*' -verify-machineinstrs -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
 
 # Make sure v2s16 SALU operations fail to select
 

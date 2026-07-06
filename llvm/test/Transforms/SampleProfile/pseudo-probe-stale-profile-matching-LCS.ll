@@ -1,5 +1,4 @@
-; REQUIRES: x86_64-linux
-; REQUIRES: asserts
+; REQUIRES: asserts && x86-registered-target
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-matching-LCS.prof --salvage-stale-profile -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl 2>&1 | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-matching-LCS.prof --salvage-stale-profile -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl --salvage-stale-profile-max-callsites=6 2>&1 | FileCheck %s -check-prefix=CHECK-MAX-CALLSITES
 
@@ -30,9 +29,6 @@
 
 ; CHECK-MAX-CALLSITES: Skip stale profile matching for test_direct_call
 ; CHECK-MAX-CALLSITES-NOT: Skip stale profile matching for test_indirect_call
-
-target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
 
 @c = external global i32, align 4
 
@@ -119,10 +115,10 @@ if.end:                                           ; preds = %if.else, %if.then
 }
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #3
+declare void @llvm.lifetime.start.p0(ptr nocapture) #3
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #3
+declare void @llvm.lifetime.end.p0(ptr nocapture) #3
 
 ; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite)
 declare void @llvm.pseudoprobe(i64, i64, i32, i64) #4

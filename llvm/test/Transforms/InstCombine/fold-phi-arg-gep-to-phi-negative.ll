@@ -11,13 +11,13 @@ define <16 x ptr> @test(i1 %tobool) {
 ; CHECK-NEXT:    [[LANE_15:%.*]] = insertelement <16 x ptr> poison, ptr [[LANE_0]], i64 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label %[[F1:.*]], label %[[F0:.*]]
 ; CHECK:       [[F0]]:
-; CHECK-NEXT:    [[MM_VECTORGEP:%.*]] = getelementptr inbounds [[FOO]], <16 x ptr> [[LANE_15]], <16 x i64> zeroinitializer, <16 x i32> splat (i32 1)
+; CHECK-NEXT:    [[MM_VECTORGEP1:%.*]] = getelementptr inbounds i8, <16 x ptr> [[LANE_15]], i64 2
 ; CHECK-NEXT:    br label %[[MERGE:.*]]
 ; CHECK:       [[F1]]:
-; CHECK-NEXT:    [[MM_VECTORGEP2:%.*]] = getelementptr inbounds [[FOO]], <16 x ptr> [[LANE_15]], <16 x i64> zeroinitializer, <16 x i32> splat (i32 2)
+; CHECK-NEXT:    [[MM_VECTORGEP22:%.*]] = getelementptr inbounds i8, <16 x ptr> [[LANE_15]], i64 4
 ; CHECK-NEXT:    br label %[[MERGE]]
 ; CHECK:       [[MERGE]]:
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <16 x ptr> [ [[MM_VECTORGEP]], %[[F0]] ], [ [[MM_VECTORGEP2]], %[[F1]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <16 x ptr> [ [[MM_VECTORGEP1]], %[[F0]] ], [ [[MM_VECTORGEP22]], %[[F1]] ]
 ; CHECK-NEXT:    ret <16 x ptr> [[VEC_PHI]]
 ;
 entry:

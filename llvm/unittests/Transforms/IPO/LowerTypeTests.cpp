@@ -30,10 +30,10 @@ TEST(LowerTypeTests, BitSetBuilder) {
       {{0, 4}, {0, 1}, 0, 2, 2, false, true},
       {{0, uint64_t(1) << 33}, {0, 1}, 0, 2, 33, false, true},
       {{3, 7}, {0, 1}, 3, 2, 2, false, true},
-      {{0, 1, 7}, {0, 1, 7}, 0, 8, 0, false, false},
-      {{0, 2, 14}, {0, 1, 7}, 0, 8, 1, false, false},
-      {{0, 1, 8}, {0, 1, 8}, 0, 9, 0, false, false},
-      {{0, 2, 16}, {0, 1, 8}, 0, 9, 1, false, false},
+      {{0, 1, 7}, {0, 6, 7}, 0, 8, 0, false, false},
+      {{0, 2, 14}, {0, 6, 7}, 0, 8, 1, false, false},
+      {{0, 1, 8}, {0, 7, 8}, 0, 9, 0, false, false},
+      {{0, 2, 16}, {0, 7, 8}, 0, 9, 1, false, false},
       {{0, 1, 2, 3, 4, 5, 6, 7},
        {0, 1, 2, 3, 4, 5, 6, 7},
        0,
@@ -51,10 +51,7 @@ TEST(LowerTypeTests, BitSetBuilder) {
   };
 
   for (auto &&T : BSBTests) {
-    BitSetBuilder BSB;
-    for (auto Offset : T.Offsets)
-      BSB.addOffset(Offset);
-
+    BitSetBuilder BSB(T.Offsets);
     BitSetInfo BSI = BSB.build();
 
     EXPECT_EQ(T.Bits, BSI.Bits);

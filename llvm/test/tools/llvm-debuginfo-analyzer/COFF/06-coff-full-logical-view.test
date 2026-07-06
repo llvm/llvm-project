@@ -28,6 +28,7 @@
 ; ONE-EMPTY:
 ; ONE-NEXT: [0x0000000000][001]              {CompileUnit} 'test.cpp'
 ; ONE-NEXT: [0x0000000000][002]                {Producer} 'clang version 15.0.0 {{.*}}'
+; ONE-NEXT: [0x0000000000][002]                {Language} 'Cpp'
 ; ONE-NEXT:                                    {Directory} 'test.cpp'
 ; ONE-NEXT:                                    {Directory} 'x:/tests/input'
 ; ONE-NEXT:                                    {File} 'general'

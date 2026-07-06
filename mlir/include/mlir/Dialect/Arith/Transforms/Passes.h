@@ -59,8 +59,19 @@ void populateCeilFloorDivExpandOpsPatterns(RewritePatternSet &patterns);
 /// Add patterns to expand Arith bf16 patterns to lower level bitcasts/shifts.
 void populateExpandBFloat16Patterns(RewritePatternSet &patterns);
 
+/// Add patterns to expand Arith f4e2m1 patterns to lower level bitcasts/shifts.
+void populateExpandF4E2M1Patterns(RewritePatternSet &patterns);
+
 /// Add patterns to expand Arith f8e8m0 patterns to lower level bitcasts/shifts.
 void populateExpandF8E8M0Patterns(RewritePatternSet &patterns);
+
+/// Add patterns to expand scaling ExtF/TruncF ops to equivalent arith ops
+void populateExpandScalingExtTruncPatterns(RewritePatternSet &patterns);
+
+/// Add patterns to expand `arith.flush_denormals` into integer arithmetic
+/// (bitcast + bit masks + compare + select). Only matches IEEE-like
+/// floating-point types.
+void populateExpandFlushDenormalsPatterns(RewritePatternSet &patterns);
 
 /// Add patterns to expand Arith ops.
 void populateArithExpandOpsPatterns(RewritePatternSet &patterns);
@@ -80,6 +91,12 @@ std::unique_ptr<Pass> createIntRangeOptimizationsPass();
 void populateIntRangeNarrowingPatterns(RewritePatternSet &patterns,
                                        DataFlowSolver &solver,
                                        ArrayRef<unsigned> bitwidthsSupported);
+
+/// Add patterns for narrowing control flow values (loop bounds, steps, etc.)
+/// based on int range analysis.
+void populateControlFlowValuesNarrowingPatterns(
+    RewritePatternSet &patterns, DataFlowSolver &solver,
+    ArrayRef<unsigned> bitwidthsSupported);
 
 //===----------------------------------------------------------------------===//
 // Registration

@@ -3,8 +3,8 @@
 // ---------- Native Half support test -----------
 //
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type \
-// RUN:   -emit-llvm -o - | FileCheck %s -DFNATTRS="noundef nofpclass(nan inf)" \
+// RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type -fnative-int16-type \
+// RUN:   -emit-llvm -o - | FileCheck %s -DFNATTRS="hidden noundef nofpclass(nan inf)" \
 // RUN:   -DTYPE=half -DINT_TYPE=f16 --check-prefixes=DXCHECK
 
 //
@@ -12,7 +12,7 @@
 //
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm \
-// RUN:   -o - | FileCheck %s -DFNATTRS="noundef nofpclass(nan inf)" \
+// RUN:   -o - | FileCheck %s -DFNATTRS="hidden noundef nofpclass(nan inf)" \
 // RUN:   -DTYPE=float -DINT_TYPE=f32 --check-prefixes=DXCHECK
 
 
@@ -21,9 +21,9 @@
 // ---------- Native Half support test -----------
 //
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-compute %s -fnative-half-type \
+// RUN:   spirv-unknown-vulkan-compute %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -o - | FileCheck %s \
-// RUN:   -DFNATTRS="spir_func noundef nofpclass(nan inf)" -DTYPE=half
+// RUN:   -DFNATTRS="hidden spir_func noundef nofpclass(nan inf)" -DTYPE=half
 
 //
 // ---------- No Native Half support test -----------
@@ -31,7 +31,7 @@
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
 // RUN:   spirv-unknown-vulkan-compute %s -emit-llvm \
 // RUN:   -o - | FileCheck %s \
-// RUN:   -DFNATTRS="spir_func noundef nofpclass(nan inf)" -DTYPE=float
+// RUN:   -DFNATTRS="hidden spir_func noundef nofpclass(nan inf)" -DTYPE=float
 
 
 

@@ -64,13 +64,13 @@ unsigned AMDGPUELFObjectWriter::getRelocType(const MCFixup &Fixup,
     return ELF::R_AMDGPU_ABS32_LO;
   case AMDGPUMCExpr::S_ABS32_HI:
     return ELF::R_AMDGPU_ABS32_HI;
+  case AMDGPUMCExpr::S_ABS64:
+    return ELF::R_AMDGPU_ABS64;
   }
 
   MCFixupKind Kind = Fixup.getKind();
   switch (Kind) {
   default: break;
-  case FK_PCRel_4:
-    return ELF::R_AMDGPU_REL32;
   case FK_Data_4:
   case FK_SecRel_4:
     return IsPCRel ? ELF::R_AMDGPU_REL32 : ELF::R_AMDGPU_ABS32;
@@ -78,7 +78,7 @@ unsigned AMDGPUELFObjectWriter::getRelocType(const MCFixup &Fixup,
     return IsPCRel ? ELF::R_AMDGPU_REL64 : ELF::R_AMDGPU_ABS64;
   }
 
-  if (Fixup.getTargetKind() == AMDGPU::fixup_si_sopp_br) {
+  if (Fixup.getKind() == AMDGPU::fixup_si_sopp_br) {
     const auto *SymA = Target.getAddSym();
     assert(SymA);
 

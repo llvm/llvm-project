@@ -3,7 +3,8 @@
 bugprone-narrowing-conversions
 ==============================
 
-`cppcoreguidelines-narrowing-conversions` redirects here as an alias for this check.
+`cppcoreguidelines-narrowing-conversions` redirects here as an alias for
+this check.
 
 Checks for silent narrowing conversions, e.g: ``int i = 0; i += 0.1;``. While
 the issue is obvious in this former example, it might not be so in the
@@ -19,8 +20,8 @@ We flag narrowing conversions from:
    if WarnOnFloatingPointNarrowingConversion Option is set.
 
 This check will flag:
- - All narrowing conversions that are not marked by an explicit cast (c-style or
-   ``static_cast``). For example: ``int i = 0; i += 0.1;``,
+ - All narrowing conversions that are not marked by an explicit cast (c-style
+   or ``static_cast``). For example: ``int i = 0; i += 0.1;``,
    ``void f(int); f(0.1);``,
  - All applications of binary operators with a narrowing conversions.
    For example: ``int i; i+= 0.1;``.
@@ -110,17 +111,17 @@ FAQ
  - What does "narrowing conversion from 'int' to 'float'" mean?
 
 An IEEE754 Floating Point number can represent all integer values in the range
-[-2^PrecisionBits, 2^PrecisionBits] where PrecisionBits is the number of bits in
-the mantissa.
+[-2^PrecisionBits, 2^PrecisionBits] where PrecisionBits is the number of bits
+in the mantissa.
 
-For ``float`` this would be [-2^23, 2^23], where ``int`` can represent values in
-the range [-2^31, 2^31-1].
+For ``float`` this would be [-2^23, 2^23], where ``int`` can represent values
+in the range [-2^31, 2^31-1].
 
  - What does "implementation-defined" mean?
 
-You may have encountered messages like "narrowing conversion from 'unsigned int'
-to signed type 'int' is implementation-defined".
-The C/C++ standard does not mandate two's complement for signed integers, and so
-the compiler is free to define what the semantics are for converting an unsigned
-integer to signed integer. Clang's implementation uses the two's complement
-format.
+You may have encountered messages like "narrowing conversion from 'unsigned
+int' to signed type 'int' is implementation-defined".
+The C/C++ standard does not mandate two's complement for signed integers, and
+so the compiler is free to define what the semantics are for converting an
+unsigned integer to signed integer. Clang's implementation uses the two's
+complement format.

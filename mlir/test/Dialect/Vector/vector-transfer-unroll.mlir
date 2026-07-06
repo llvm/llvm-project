@@ -68,6 +68,24 @@ func.func @transfer_write_unroll(%mem : memref<4x4xf32>, %vec : vector<4x4xf32>)
 
 // -----
 
+// Ensure that cases with mismatched target and source shape ranks
+// do not lead to a crash.
+// Note: The vector unrolling target shape in `test-vector-transfer-unrolling-patterns`
+// is currently hard-coded to [2, 2].
+
+// CHECK-LABEL: func @negative_transfer_write
+//   CHECK-NOT:   vector.extract_strided_slice
+//       CHECK:   vector.transfer_write
+//       CHECK:   return
+func.func @negative_transfer_write(%vec: vector<6x34x62xi8>) {
+  %c0 = arith.constant 0 : index
+  %alloc = memref.alloc() : memref<6x34x62xi8>
+  vector.transfer_write %vec, %alloc[%c0, %c0, %c0]: vector<6x34x62xi8>, memref<6x34x62xi8>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func @transfer_readwrite_unroll
 // CHECK-DAG:     %[[C2:.*]] = arith.constant 2 : index
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
@@ -364,4 +382,37 @@ func.func @vector_gather_unroll(%mem : memref<?x?x?xf32>,
   %c0 = arith.constant 0 : index
   %res = vector.gather %mem[%c0, %c0, %c0] [%indices], %mask, %pass_thru : memref<?x?x?xf32>, vector<6x4xindex>, vector<6x4xi1>, vector<6x4xf32> into vector<6x4xf32>
   return %res : vector<6x4xf32>
+}
+
+// -----
+
+// Verify that no redundant affine.apply ops are generated for zero offsets
+// when the base indices are dynamic.
+
+// ALL-LABEL: func @transfer_read_unroll_dynamic_index(
+//  ALL-SAME:   %[[MEM:.*]]: memref<4x4xf32>,
+//  ALL-SAME:   %[[IDX:.*]]: index
+//       ALL:   vector.transfer_read %[[MEM]][%[[IDX]], %[[IDX]]], %{{.*}} : memref<4x4xf32>, vector<2x2xf32>
+//   ALL-NOT:   affine.apply
+//       ALL:   %[[MAP:.*]] = affine.apply {{.*}}(%[[IDX]])
+//       ALL:   vector.transfer_read %[[MEM]][%[[MAP]], %[[IDX]]], %{{.*}} : memref<4x4xf32>, vector<2x2xf32>
+func.func @transfer_read_unroll_dynamic_index(%mem : memref<4x4xf32>, %idx : index) -> vector<4x2xf32> {
+  %cf0 = arith.constant 0.0 : f32
+  %res = vector.transfer_read %mem[%idx, %idx], %cf0 : memref<4x4xf32>, vector<4x2xf32>
+  return %res : vector<4x2xf32>
+}
+
+// -----
+
+// ALL-LABEL: func @transfer_write_unroll_dynamic_index(
+//  ALL-SAME:   %[[MEM:.*]]: memref<4x4xf32>,
+//  ALL-SAME:   %[[VEC:.*]]: vector<4x2xf32>,
+//  ALL-SAME:   %[[IDX:.*]]: index
+//   ALL-NOT:   affine.apply
+//       ALL:   vector.transfer_write %{{.*}}, %[[MEM]][%[[IDX]], %[[IDX]]] : vector<2x2xf32>, memref<4x4xf32>
+//       ALL:   %[[MAP:.*]] = affine.apply {{.*}}(%[[IDX]])
+//       ALL:   vector.transfer_write %{{.*}}, %[[MEM]][%[[MAP]], %[[IDX]]] : vector<2x2xf32>, memref<4x4xf32>
+func.func @transfer_write_unroll_dynamic_index(%mem : memref<4x4xf32>, %vec : vector<4x2xf32>, %idx : index) {
+  vector.transfer_write %vec, %mem[%idx, %idx] : vector<4x2xf32>, memref<4x4xf32>
+  return
 }

@@ -19,9 +19,7 @@ define internal void @test() unnamed_addr nounwind {
 ; CHECK-NEXT:    ld $6, 24($sp)
 ; CHECK-NEXT:    ld $5, 16($sp)
 ; CHECK-NEXT:    ld $7, 32($sp)
-; CHECK-NEXT:    lw $1, 0($sp)
-; CHECK-NEXT:    # implicit-def: $a0_64
-; CHECK-NEXT:    move $4, $1
+; CHECK-NEXT:    lw $4, 0($sp)
 ; CHECK-NEXT:    jal use_sret
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ld $ra, 56($sp) # 8-byte Folded Reload
@@ -40,7 +38,6 @@ start:
 define internal { i32, i128, i64 } @implicit_sret_impl() unnamed_addr nounwind {
 ; CHECK-LABEL: implicit_sret_impl:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $at_64 killed $a0_64
 ; CHECK-NEXT:    daddiu $1, $zero, 20
 ; CHECK-NEXT:    sd $1, 24($4)
 ; CHECK-NEXT:    daddiu $1, $zero, 0
@@ -64,15 +61,9 @@ define internal void @test2() unnamed_addr nounwind {
 ; CHECK-NEXT:    daddiu $4, $sp, 0
 ; CHECK-NEXT:    jal implicit_sret_decl2
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    lw $1, 20($sp)
-; CHECK-NEXT:    lw $2, 12($sp)
-; CHECK-NEXT:    lw $3, 4($sp)
-; CHECK-NEXT:    # implicit-def: $a0_64
-; CHECK-NEXT:    move $4, $3
-; CHECK-NEXT:    # implicit-def: $a1_64
-; CHECK-NEXT:    move $5, $2
-; CHECK-NEXT:    # implicit-def: $a2_64
-; CHECK-NEXT:    move $6, $1
+; CHECK-NEXT:    lw $6, 20($sp)
+; CHECK-NEXT:    lw $5, 12($sp)
+; CHECK-NEXT:    lw $4, 4($sp)
 ; CHECK-NEXT:    jal use_sret2
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ld $ra, 24($sp) # 8-byte Folded Reload
@@ -92,7 +83,6 @@ start:
 define internal { i32, i32, i32, i32, i32, i32 } @implicit_sret_impl2() unnamed_addr nounwind {
 ; CHECK-LABEL: implicit_sret_impl2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $at_64 killed $a0_64
 ; CHECK-NEXT:    addiu $1, $zero, 6
 ; CHECK-NEXT:    sw $1, 20($4)
 ; CHECK-NEXT:    addiu $1, $zero, 5

@@ -30,16 +30,10 @@ private:
 public:
   /// Zero-initializes a boolean.
   Boolean() : V(false) {}
-  Boolean(const llvm::APSInt &I) : V(!I.isZero()) {}
   explicit Boolean(bool V) : V(V) {}
 
   bool operator<(Boolean RHS) const { return V < RHS.V; }
   bool operator>(Boolean RHS) const { return V > RHS.V; }
-  bool operator<=(Boolean RHS) const { return V <= RHS.V; }
-  bool operator>=(Boolean RHS) const { return V >= RHS.V; }
-  bool operator==(Boolean RHS) const { return V == RHS.V; }
-  bool operator!=(Boolean RHS) const { return V != RHS.V; }
-
   bool operator>(unsigned RHS) const { return static_cast<unsigned>(V) > RHS; }
 
   Boolean operator-() const { return Boolean(V); }
@@ -67,11 +61,10 @@ public:
   bool isMin() const { return isZero(); }
 
   constexpr static bool isMinusOne() { return false; }
-
   constexpr static bool isSigned() { return false; }
-
   constexpr static bool isNegative() { return false; }
   constexpr static bool isPositive() { return !isNegative(); }
+  constexpr static bool isNumber() { return true; }
 
   ComparisonCategoryResult compare(const Boolean &RHS) const {
     return Compare(V, RHS.V);

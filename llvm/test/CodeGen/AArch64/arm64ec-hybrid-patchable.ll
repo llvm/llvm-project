@@ -76,7 +76,7 @@ define dso_local void @caller() nounwind {
 ; CHECK-NEXT:      .p2align        2
 ; CHECK-NEXT:  "#caller":                              // @"#caller"
 ; CHECK-NEXT:      .weak_anti_dep  caller
-; CHECK-NEXT:  .set caller, "#caller"{{$}}
+; CHECK-NEXT:  caller = "#caller"{{$}}
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:      str     x30, [sp, #-16]!                // 8-byte Folded Spill
 ; CHECK-NEXT:      bl      "#func"
@@ -253,13 +253,13 @@ define dso_local void @caller() nounwind {
 ; CHECK-NEXT:      .type   32;
 ; CHECK-NEXT:      .endef
 ; CHECK-NEXT:      .weak  func
-; CHECK-NEXT:  .set func, "EXP+#func"{{$}}
+; CHECK-NEXT:  func = "EXP+#func"{{$}}
 ; CHECK-NEXT:      .weak  "#func"
 ; CHECK-NEXT:      .def    "#func";
 ; CHECK-NEXT:      .scl    2;
 ; CHECK-NEXT:      .type   32;
 ; CHECK-NEXT:      .endef
-; CHECK-NEXT:  .set "#func", "#func$hybpatch_thunk"{{$}}
+; CHECK-NEXT:  "#func" = "#func$hybpatch_thunk"{{$}}
 ; CHECK-NEXT:      .def    "EXP+#has_varargs";
 ; CHECK-NEXT:      .scl    2;
 ; CHECK-NEXT:      .type   32;
@@ -269,13 +269,13 @@ define dso_local void @caller() nounwind {
 ; CHECK-NEXT:      .type   32;
 ; CHECK-NEXT:      .endef
 ; CHECK-NEXT:      .weak   has_varargs
-; CHECK-NEXT:  .set has_varargs, "EXP+#has_varargs"
+; CHECK-NEXT:  has_varargs = "EXP+#has_varargs"
 ; CHECK-NEXT:      .weak   "#has_varargs"
 ; CHECK-NEXT:      .def    "#has_varargs";
 ; CHECK-NEXT:      .scl    2;
 ; CHECK-NEXT:      .type   32;
 ; CHECK-NEXT:      .endef
-; CHECK-NEXT:  .set "#has_varargs", "#has_varargs$hybpatch_thunk"
+; CHECK-NEXT:  "#has_varargs" = "#has_varargs$hybpatch_thunk"
 ; CHECK-NEXT:      .def    "EXP+#has_sret";
 ; CHECK-NEXT:      .scl    2;
 ; CHECK-NEXT:      .type   32;
@@ -285,13 +285,13 @@ define dso_local void @caller() nounwind {
 ; CHECK-NEXT:      .type   32;
 ; CHECK-NEXT:      .endef
 ; CHECK-NEXT:      .weak   has_sret
-; CHECK-NEXT:  .set has_sret, "EXP+#has_sret"
+; CHECK-NEXT:  has_sret = "EXP+#has_sret"
 ; CHECK-NEXT:      .weak   "#has_sret"
 ; CHECK-NEXT:      .def    "#has_sret";
 ; CHECK-NEXT:      .scl    2;
 ; CHECK-NEXT:      .type   32;
 ; CHECK-NEXT:      .endef
-; CHECK-NEXT:  .set "#has_sret", "#has_sret$hybpatch_thunk"
+; CHECK-NEXT:  "#has_sret" = "#has_sret$hybpatch_thunk"
 ; CHECK-NEXT:      .def    "EXP+#exp";
 ; CHECK-NEXT:      .scl    2;
 ; CHECK-NEXT:      .type   32;
@@ -301,13 +301,13 @@ define dso_local void @caller() nounwind {
 ; CHECK-NEXT:      .type   32;
 ; CHECK-NEXT:      .endef
 ; CHECK-NEXT:      .weak   exp
-; CHECK-NEXT:  .set exp, "EXP+#exp"
+; CHECK-NEXT:  exp = "EXP+#exp"
 ; CHECK-NEXT:      .weak   "#exp"
 ; CHECK-NEXT:      .def    "#exp";
 ; CHECK-NEXT:      .scl    2;
 ; CHECK-NEXT:      .type   32;
 ; CHECK-NEXT:      .endef
-; CHECK-NEXT:  .set "#exp", "#exp$hybpatch_thunk"
+; CHECK-NEXT:  "#exp" = "#exp$hybpatch_thunk"
 
 ; SYM:      [53](sec 15)(fl 0x00)(ty  20)(scl   2) (nx 0) 0x00000000 #func$hybpatch_thunk
 ; SYM:      [58](sec 16)(fl 0x00)(ty  20)(scl   2) (nx 0) 0x00000000 #has_varargs$hybpatch_thunk

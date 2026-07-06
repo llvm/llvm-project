@@ -7,17 +7,23 @@
  ; RUN: llc -x=mir -simplify-mir -passes='shrink-wrap' -o - %s | FileCheck %s
  ; CHECK:      name:            compiler_pop_stack
  ; CHECK:      frameInfo:
- ; CHECK:      savePoint:       '%bb.1'
- ; CHECK:      restorePoint:    '%bb.7'
+ ; CHECK:        savePoint:
+ ; CHECK-NEXT:     - point:           '%bb.1'
+ ; CHECK:        restorePoint:
+ ; CHECK-NEXT:     - point:           '%bb.7'
  ; CHECK:      name:            compiler_pop_stack_no_memoperands
  ; CHECK:      frameInfo:
- ; CHECK:      savePoint:       '%bb.1'
- ; CHECK:      restorePoint:    '%bb.7'
+ ; CHECK:        savePoint:
+ ; CHECK-NEXT:     - point:           '%bb.1'
+ ; CHECK:        restorePoint:
+ ; CHECK-NEXT:     - point:           '%bb.7'
  ; CHECK:      name:            f
  ; CHECK:      frameInfo:
- ; CHECK:      savePoint:       '%bb.2'
- ; CHECK-NEXT: restorePoint:    '%bb.4'
- ; CHECK-NEXT: stack:
+ ; CHECK:        savePoint:
+ ; CHECK-NEXT:     - point:           '%bb.2'
+ ; CHECK:        restorePoint:
+ ; CHECK-NEXT:     - point:           '%bb.4'
+ ; CHECK:      stack:
 
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64"

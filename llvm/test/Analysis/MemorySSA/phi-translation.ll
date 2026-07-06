@@ -465,7 +465,7 @@ end:                                          ; preds = %for.body
 define void @use_clobbered_by_def_in_loop() {
 entry:
   %nodeStack = alloca [12 x i32], align 4
-  call void @llvm.lifetime.start.p0(i64 48, ptr nonnull %nodeStack)
+  call void @llvm.lifetime.start.p0(ptr nonnull %nodeStack)
   br i1 false, label %cleanup, label %while.cond
 
 ; CHECK-LABEL: while.cond:
@@ -502,12 +502,12 @@ while.end:                                        ; preds = %while.cond, %land.r
   br i1 true, label %cleanup, label %while.cond.backedge
 
 cleanup:                                          ; preds = %while.body, %while.end, %entry
-  call void @llvm.lifetime.end.p0(i64 48, ptr nonnull %nodeStack)
+  call void @llvm.lifetime.end.p0(ptr nonnull %nodeStack)
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 define void @another_loop_clobber_inc() {
 ; CHECK-LABEL: void @another_loop_clobber_inc

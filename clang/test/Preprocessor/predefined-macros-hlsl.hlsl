@@ -7,7 +7,7 @@
 // RUN: %clang_cc1 %s -E -dM -o - -triple dxil-pc-shadermodel6.0-mesh | FileCheck -match-full-lines %s --check-prefixes=CHECK,MESH,NOHALF
 // RUN: %clang_cc1 %s -E -dM -o - -triple dxil-pc-shadermodel6.0-pixel | FileCheck -match-full-lines %s --check-prefixes=CHECK,PIXEL,NOHALF
 // RUN: %clang_cc1 %s -E -dM -o - -triple dxil-pc-shadermodel6.0-vertex | FileCheck -match-full-lines %s --check-prefixes=CHECK,VERTEX,NOHALF
-// RUN: %clang_cc1 %s -E -dM -o - -triple dxil-pc-shadermodel6.3-vertex -fnative-half-type | FileCheck -match-full-lines %s --check-prefixes=CHECK,VERTEX,HALF
+// RUN: %clang_cc1 %s -E -dM -o - -triple dxil-pc-shadermodel6.3-vertex -fnative-half-type -fnative-int16-type | FileCheck -match-full-lines %s --check-prefixes=CHECK,VERTEX,HALF
 
 // RUN: %clang_cc1 %s -E -dM -o - -triple spirv-unknown-vulkan-compute | FileCheck -match-full-lines %s --check-prefixes=CHECK,COMPUTE,NOHALF,SPIRV
 

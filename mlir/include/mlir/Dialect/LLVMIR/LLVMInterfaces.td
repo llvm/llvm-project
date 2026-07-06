@@ -14,6 +14,7 @@
 #define LLVMIR_INTERFACES
 
 include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/DataLayoutInterfaces.td"
 
 def FastmathFlagsInterface : OpInterface<"FastmathFlagsInterface"> {
   let description = [{
@@ -165,42 +166,6 @@ def NonNegFlagInterface : OpInterface<"NonNegFlagInterface"> {
     }], "StringRef", "getNonNegName", (ins), [{}], [{
       return "nonNeg";
     }]>,
-  ];
-}
-
-def BranchWeightOpInterface : OpInterface<"BranchWeightOpInterface"> {
-  let description = [{
-    An interface for operations that can carry branch weights metadata. It
-    provides setters and getters for the operation's branch weights attribute.
-    The default implementation of the interface methods expect the operation to
-    have an attribute of type DenseI32ArrayAttr named branch_weights.
-  }];
-
-  let cppNamespace = "::mlir::LLVM";
-
-  let methods = [
-    InterfaceMethod<
-      /*desc=*/        "Returns the branch weights attribute or nullptr",
-      /*returnType=*/  "::mlir::DenseI32ArrayAttr",
-      /*methodName=*/  "getBranchWeightsOrNull",
-      /*args=*/        (ins),
-      /*methodBody=*/  [{}],
-      /*defaultImpl=*/ [{
-        auto op = cast<ConcreteOp>(this->getOperation());
-        return op.getBranchWeightsAttr();
-      }]
-      >,
-    InterfaceMethod<
-      /*desc=*/        "Sets the branch weights attribute",
-      /*returnType=*/  "void",
-      /*methodName=*/  "setBranchWeights",
-      /*args=*/        (ins "::mlir::DenseI32ArrayAttr":$attr),
-      /*methodBody=*/  [{}],
-      /*defaultImpl=*/ [{
-        auto op = cast<ConcreteOp>(this->getOperation());
-        op.setBranchWeightsAttr(attr);
-      }]
-      >
   ];
 }
 
@@ -565,6 +530,128 @@ def LLVM_DIRecursiveTypeAttrInterface
       Build a rec-self instance using the provided `recId`.
     }], "DIRecursiveTypeAttrInterface", "getRecSelf",
     (ins "DistinctAttr":$recId)>
+  ];
+}
+
+def LLVM_LLVMAddrSpaceAttrInterface :
+    AttrInterface<"LLVMAddrSpaceAttrInterface"> {
+  let description = [{
+    An interface for attributes that represent LLVM address spaces.
+    Implementing attributes should provide access to the address space value
+    as an unsigned integer.
+  }];
+  let cppNamespace = "::mlir::LLVM";
+  let methods = [
+    InterfaceMethod<
+      /*description=*/"Returns the address space as an unsigned integer.",
+      /*retTy=*/"unsigned",
+      /*methodName=*/"getAddressSpace",
+      /*args=*/(ins)
+    >
+  ];
+}
+
+def LLVM_IntrinsicIntegerAttrInterface :
+    AttrInterface<"IntrinsicIntegerAttrInterface"> {
+  let description = [{
+    An interface for attributes that represent LLVM intrinsic integer immediate
+    arguments while using a richer dialect-specific assembly form.
+
+    The default implementation is intended for enum-style attributes whose
+    `getValue()` returns an enum with a storage type that matches the LLVM
+    immarg width. Attributes with non-enum storage or a different LLVM immarg
+    width must override `getIntegerAttr`.
+  }];
+  let cppNamespace = "::mlir::LLVM";
+  let methods = [
+    InterfaceMethod<
+      /*description=*/"Returns the integer attribute to pass to LLVM.",
+      /*retTy=*/"::mlir::IntegerAttr",
+      /*methodName=*/"getIntegerAttr",
+      /*args=*/(ins),
+      /*methodBody=*/[{}],
+      /*defaultImplementation=*/[{
+        using EnumType = decltype($_attr.getValue());
+        using StorageType = std::underlying_type_t<EnumType>;
+        auto type = ::mlir::IntegerType::get($_attr.getContext(),
+                                             sizeof(StorageType) * 8);
+        return ::mlir::IntegerAttr::get(
+            type, static_cast<StorageType>($_attr.getValue()));
+      }]
+    >
+  ];
+}
+
+def LLVM_ModuleFlagAttrInterface :
+    AttrInterface<"ModuleFlagAttrInterface"> {
+  let description = [{
+    An interface for attributes that represent LLVM module flag metadata entries.
+
+    Implementing attributes provide the module flag merge behavior, metadata key,
+    and metadata value. This lets target dialects define richer, target-specific
+    module flag attributes while still sharing `llvm.module_flags` as the common
+    operation container. Values returned by this interface must use a shape that
+    can be exported to LLVM IR: integer attributes (exported as i32 constants),
+    string attributes, attributes implementing `IntrinsicIntegerAttrInterface`,
+    supported array values, or `ModuleFlagProfileSummaryAttr`.
+  }];
+  let cppNamespace = "::mlir::LLVM";
+  let methods = [
+    InterfaceMethod<
+      /*description=*/"Returns the module flag merge behavior.",
+      /*retTy=*/"::mlir::LLVM::ModFlagBehavior",
+      /*methodName=*/"getModuleFlagBehavior",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the module flag metadata key.",
+      /*retTy=*/"::mlir::StringAttr",
+      /*methodName=*/"getModuleFlagKey",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the module flag metadata value.",
+      /*retTy=*/"::mlir::Attribute",
+      /*methodName=*/"getModuleFlagValue",
+      /*args=*/(ins)
+    >
+  ];
+}
+
+def LLVM_TargetAttrInterface
+  : AttrInterface<"TargetAttrInterface", [DLTIQueryInterface]> {
+  let description = [{
+    Interface for attributes that describe LLVM targets.
+
+    These attributes should be able to return the specified target `triple`,
+    `chip` and `features`.
+
+    Implementing attributes should provide a `DLTIQueryInterface::query()`
+    implementation which responds to keys `"triple"`, `"chip"` and `"features"`
+    by returning appropriate `StringAttr`s.
+  }];
+  let cppNamespace = "::mlir::LLVM";
+  let methods = [
+    InterfaceMethod<
+      /*description=*/"Returns the target triple identifier.",
+      /*retTy=*/"StringAttr",
+      /*methodName=*/"getTriple",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the target chip (i.e. \"cpu\") identifier.",
+      /*retTy=*/"StringAttr",
+      /*methodName=*/"getChip",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the target features as a TargetFeaturesAttr.",
+      /*retTy=*/"Attribute", // NB: will be a LLVM::TargetFeaturesAttr, though
+                             // need to work around a cyclic dependency on
+                             // LLVMInterfaces.td and LLVMAttrDefs.td.
+      /*methodName=*/"getFeatures",
+      /*args=*/(ins)
+    >
   ];
 }
 

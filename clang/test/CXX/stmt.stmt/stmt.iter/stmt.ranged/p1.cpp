@@ -75,7 +75,7 @@ namespace X {
   void test_D() {
 #if __cplusplus >= 201703L
     for (extern auto [x, y] : D()) {
-    } // expected-error@-1 {{decomposition declaration cannot be declared 'extern'}}
+    } // expected-error@-1 {{structured binding declaration cannot be declared 'extern'}}
       // expected-error@-2 {{loop variable '[x, y]' may not be declared 'extern'}}
 #endif
   }
@@ -176,7 +176,7 @@ void g() {
     void *end();
   };
   for (auto u : NoIncr()) { // expected-error {{arithmetic on a pointer to void}}\
-    expected-note {{in implicit call to 'operator++' for iterator of type 'NoIncr'}}
+    expected-note {{in implicit call to 'operator++' for iterator of type 'void *'}}
   }
 
   struct NoNotEq {

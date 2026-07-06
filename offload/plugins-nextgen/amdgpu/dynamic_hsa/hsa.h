@@ -71,9 +71,15 @@ typedef enum {
 } hsa_isa_info_t;
 
 typedef enum {
+  HSA_MACHINE_MODEL_SMALL = 0,
+  HSA_MACHINE_MODEL_LARGE = 1
+} hsa_machine_model_t;
+
+typedef enum {
   HSA_AGENT_INFO_NAME = 0,
   HSA_AGENT_INFO_VENDOR_NAME = 1,
   HSA_AGENT_INFO_FEATURE = 2,
+  HSA_AGENT_INFO_MACHINE_MODEL = 3,
   HSA_AGENT_INFO_PROFILE = 4,
   HSA_AGENT_INFO_WAVEFRONT_SIZE = 6,
   HSA_AGENT_INFO_WORKGROUP_MAX_DIM = 7,
@@ -93,6 +99,8 @@ typedef enum {
 typedef enum {
   HSA_SYSTEM_INFO_VERSION_MAJOR = 0,
   HSA_SYSTEM_INFO_VERSION_MINOR = 1,
+  HSA_SYSTEM_INFO_TIMESTAMP = 2,
+  HSA_SYSTEM_INFO_TIMESTAMP_FREQUENCY = 3,
 } hsa_system_info_t;
 
 typedef enum {
@@ -107,6 +115,13 @@ typedef struct hsa_region_s {
 typedef struct hsa_isa_s {
   uint64_t handle;
 } hsa_isa_t;
+
+typedef enum {
+  HSA_ACCESS_PERMISSION_NONE = 0,
+  HSA_ACCESS_PERMISSION_RO = 1,
+  HSA_ACCESS_PERMISSION_WO = 2,
+  HSA_ACCESS_PERMISSION_RW = 3
+} hsa_access_permission_t;
 
 hsa_status_t hsa_system_get_info(hsa_system_info_t attribute, void *value);
 

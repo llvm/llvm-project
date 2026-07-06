@@ -22,7 +22,7 @@
 # CHECK-OBJ: Contents of section .rodata:
 # CHECK-OBJ: 0000 48310048 32004833 00                 H1.H2.H3.
 
-# CHECK-LG: Starting link phase 1 for graph
+# CHECK-LG: Starting link phase 1
 # CHECK-LG: section .rodata:
 
 # CHECK-LG:       block 0x0 size = 0x00000009, align = 1, alignment-offset = 0

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/CommentParser.h"
+#include "clang/AST/Comment.h"
 #include "clang/AST/CommentCommandTraits.h"
 #include "clang/AST/CommentSema.h"
 #include "clang/Basic/CharInfo.h"
@@ -298,6 +299,8 @@ public:
       } else
         break;
     }
+    if (WordText.ends_with(':'))
+      WordText.pop_back();
     const unsigned Length = WordText.size();
     if (Length == 0) {
       Pos = SavedPos;
@@ -375,7 +378,7 @@ public:
       Pos.CurToken++;
     }
 
-    P.putBack(llvm::ArrayRef(Toks.begin() + Pos.CurToken, Toks.end()));
+    P.putBack(ArrayRef(Toks.begin() + Pos.CurToken, Toks.end()));
     Pos.CurToken = Toks.size();
 
     if (HavePartialTok)
@@ -431,7 +434,7 @@ Parser::parseCommandArgs(TextTokenRetokenizer &Retokenizer, unsigned NumArgs) {
     ParsedArgs++;
   }
 
-  return llvm::ArrayRef(Args, ParsedArgs);
+  return ArrayRef(Args, ParsedArgs);
 }
 
 ArrayRef<Comment::Argument>
@@ -448,7 +451,7 @@ Parser::parseThrowCommandArgs(TextTokenRetokenizer &Retokenizer,
     ParsedArgs++;
   }
 
-  return llvm::ArrayRef(Args, ParsedArgs);
+  return ArrayRef(Args, ParsedArgs);
 }
 
 ArrayRef<Comment::Argument>
@@ -466,7 +469,7 @@ Parser::parseParCommandArgs(TextTokenRetokenizer &Retokenizer,
     ParsedArgs++;
   }
 
-  return llvm::ArrayRef(Args, ParsedArgs);
+  return ArrayRef(Args, ParsedArgs);
 }
 
 BlockCommandComment *Parser::parseBlockCommand() {
@@ -569,6 +572,8 @@ BlockCommandComment *Parser::parseBlockCommand() {
 
 InlineCommandComment *Parser::parseInlineCommand() {
   assert(Tok.is(tok::backslash_command) || Tok.is(tok::at_command));
+  CommandMarkerKind CMK =
+      Tok.is(tok::backslash_command) ? CMK_Backslash : CMK_At;
   const CommandInfo *Info = Traits.getCommandInfo(Tok.getCommandID());
 
   const Token CommandTok = Tok;
@@ -580,7 +585,7 @@ InlineCommandComment *Parser::parseInlineCommand() {
 
   InlineCommandComment *IC = S.actOnInlineCommand(
       CommandTok.getLocation(), CommandTok.getEndLocation(),
-      CommandTok.getCommandID(), Args);
+      CommandTok.getCommandID(), CMK, Args);
 
   if (Args.size() < Info->NumArgs) {
     Diag(CommandTok.getEndLocation().getLocWithOffset(1),
@@ -638,14 +643,14 @@ HTMLStartTagComment *Parser::parseHTMLStartTag() {
     }
 
     case tok::html_greater:
-      S.actOnHTMLStartTagFinish(HST, S.copyArray(llvm::ArrayRef(Attrs)),
+      S.actOnHTMLStartTagFinish(HST, S.copyArray(ArrayRef(Attrs)),
                                 Tok.getLocation(),
                                 /* IsSelfClosing = */ false);
       consumeToken();
       return HST;
 
     case tok::html_slash_greater:
-      S.actOnHTMLStartTagFinish(HST, S.copyArray(llvm::ArrayRef(Attrs)),
+      S.actOnHTMLStartTagFinish(HST, S.copyArray(ArrayRef(Attrs)),
                                 Tok.getLocation(),
                                 /* IsSelfClosing = */ true);
       consumeToken();
@@ -663,14 +668,14 @@ HTMLStartTagComment *Parser::parseHTMLStartTag() {
           Tok.is(tok::html_slash_greater))
         continue;
 
-      S.actOnHTMLStartTagFinish(HST, S.copyArray(llvm::ArrayRef(Attrs)),
+      S.actOnHTMLStartTagFinish(HST, S.copyArray(ArrayRef(Attrs)),
                                 SourceLocation(),
                                 /* IsSelfClosing = */ false);
       return HST;
 
     default:
       // Not a token from an HTML start tag.  Thus HTML tag prematurely ended.
-      S.actOnHTMLStartTagFinish(HST, S.copyArray(llvm::ArrayRef(Attrs)),
+      S.actOnHTMLStartTagFinish(HST, S.copyArray(ArrayRef(Attrs)),
                                 SourceLocation(),
                                 /* IsSelfClosing = */ false);
       bool StartLineInvalid;
@@ -721,10 +726,12 @@ BlockContentComment *Parser::parseParagraphOrBlockCommand() {
     case tok::eof:
       break; // Block content or EOF ahead, finish this parapgaph.
 
-    case tok::unknown_command:
-      Content.push_back(S.actOnUnknownCommand(Tok.getLocation(),
-                                              Tok.getEndLocation(),
-                                              Tok.getUnknownCommandName()));
+    case tok::unknown_backslash_command:
+    case tok::unknown_at_command:
+      Content.push_back(S.actOnUnknownCommand(
+          Tok.getLocation(), Tok.getEndLocation(), Tok.getUnknownCommandName(),
+          Tok.getKind() == tok::unknown_backslash_command ? CMK_Backslash
+                                                          : CMK_At));
       consumeToken();
       continue;
 
@@ -746,9 +753,9 @@ BlockContentComment *Parser::parseParagraphOrBlockCommand() {
         continue;
       }
       if (Info->IsUnknownCommand) {
-        Content.push_back(S.actOnUnknownCommand(Tok.getLocation(),
-                                                Tok.getEndLocation(),
-                                                Info->getID()));
+        Content.push_back(S.actOnUnknownCommand(
+            Tok.getLocation(), Tok.getEndLocation(), Info->getID(),
+            Tok.getKind() == tok::backslash_command ? CMK_Backslash : CMK_At));
         consumeToken();
         continue;
       }
@@ -809,7 +816,7 @@ BlockContentComment *Parser::parseParagraphOrBlockCommand() {
     break;
   }
 
-  return S.actOnParagraphComment(S.copyArray(llvm::ArrayRef(Content)));
+  return S.actOnParagraphComment(S.copyArray(ArrayRef(Content)));
 }
 
 VerbatimBlockComment *Parser::parseVerbatimBlock() {
@@ -847,12 +854,12 @@ VerbatimBlockComment *Parser::parseVerbatimBlock() {
   if (Tok.is(tok::verbatim_block_end)) {
     const CommandInfo *Info = Traits.getCommandInfo(Tok.getVerbatimBlockID());
     S.actOnVerbatimBlockFinish(VB, Tok.getLocation(), Info->Name,
-                               S.copyArray(llvm::ArrayRef(Lines)));
+                               S.copyArray(ArrayRef(Lines)));
     consumeToken();
   } else {
     // Unterminated \\verbatim block
     S.actOnVerbatimBlockFinish(VB, SourceLocation(), "",
-                               S.copyArray(llvm::ArrayRef(Lines)));
+                               S.copyArray(ArrayRef(Lines)));
   }
 
   return VB;
@@ -887,7 +894,8 @@ VerbatimLineComment *Parser::parseVerbatimLine() {
 BlockContentComment *Parser::parseBlockContent() {
   switch (Tok.getKind()) {
   case tok::text:
-  case tok::unknown_command:
+  case tok::unknown_backslash_command:
+  case tok::unknown_at_command:
   case tok::backslash_command:
   case tok::at_command:
   case tok::html_start_tag:
@@ -928,7 +936,7 @@ FullComment *Parser::parseFullComment() {
     while (Tok.is(tok::newline))
       consumeToken();
   }
-  return S.actOnFullComment(S.copyArray(llvm::ArrayRef(Blocks)));
+  return S.actOnFullComment(S.copyArray(ArrayRef(Blocks)));
 }
 
 } // end namespace comments

@@ -74,18 +74,25 @@ cmake \
   -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
-  -DCMAKE_CXX_STANDARD=17 \
   -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
   -DCMAKE_CXX_LINK_FLAGS="-Wl,-rpath,$LD_LIBRARY_PATH" \
-  -DFLANG_ENABLE_WERROR=ON \
   -DLLVM_ENABLE_ASSERTIONS=ON \
   -DLLVM_TARGETS_TO_BUILD=host \
   -DLLVM_LIT_ARGS=-v \
-  -DLLVM_ENABLE_PROJECTS="clang;mlir;flang;openmp" \
-  -DLLVM_ENABLE_RUNTIMES="compiler-rt;flang-rt" \
+  -DLLVM_ENABLE_PROJECTS="clang;mlir;flang" \
+  -DLLVM_ENABLE_RUNTIMES="compiler-rt;flang-rt;openmp" \
   ../llvm-project/llvm
 
 ninja
+```
+
+```{note}
+  Contributions to Flang are expected not to produce any new compiler warnings.
+  This is enforced by post-commit buildbots. To do the same locally, add
+  `-DFLANG_ENABLE_WERROR=ON` to the above `cmake` command.
+
+  Only Clang builds are checked for this, so we do not recommend using this
+  option with GCC as there will be preexisting warnings.
 ```
 
 On Darwin, to make flang able to link binaries with the default sysroot without
@@ -141,10 +148,8 @@ cd build
 cmake \
   -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_CXX_STANDARD=17 \
   -DCMAKE_CXX_LINK_FLAGS="-Wl,-rpath,$LD_LIBRARY_PATH" \
   -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-  -DFLANG_ENABLE_WERROR=ON \
   -DLLVM_TARGETS_TO_BUILD=host \
   -DLLVM_ENABLE_ASSERTIONS=ON \
   -DLLVM_BUILD_MAIN_SRC_DIR=$ROOTDIR/build/lib/cmake/llvm \
@@ -156,6 +161,15 @@ cmake \
   ..
 
 ninja
+```
+
+```{note}
+  Contributions to Flang are expected not to produce any new compiler warnings.
+  This is enforced by post-commit buildbots. To do the same locally, add
+  `-DFLANG_ENABLE_WERROR=ON` to the above `cmake` command.
+
+  Only Clang builds are checked for this, so we do not recommend using this
+  option with GCC as there will be preexisting warnings.
 ```
 
 To run the flang tests on this build, execute the command in the `flang/build`
@@ -190,9 +204,18 @@ ninja install
 
 
 ### Building Flang-RT for accelerators
-Flang runtime can be built for accelerators in experimental mode, i.e.
-complete enabling is WIP.  CUDA and OpenMP target offload builds
-are currently supported.
+Flang runtime can be built for GPU targets (AMDGPU, NVPTX) using the LLVM
+runtimes build infrastructure. The recommended way to configure a build for GPU
+offloading is via the CMake cache file provided by `offload`.
+
+```bash
+cmake ../llvm -G Ninja                              \
+    -C ../offload/cmake/caches/FlangOffload.cmake   \
+    -DCMAKE_BUILD_TYPE=Release                      \
+    -DCMAKE_INSTALL_PREFIX=<PATH>
+```
+
+An experimental CUDA build of the runtime is also available.
 
 #### Building out-of-tree
 
@@ -284,33 +307,6 @@ Consider building in parallel using the `-j<jobs>` flag, where `<jobs>` is a
 number sufficiently low for all build jobs to fit into the available RAM. Using
 the number of harware threads (`nprocs`) is likely too much for most
 commodity machines.
-
-##### OpenMP target offload build
-Only Clang compiler is currently supported.
-
-```bash
-cd llvm-project
-rm -rf build_flang_runtime
-mkdir build_flang_runtime
-cd build_flang_runtime
-
-cmake \
-  -DLLVM_ENABLE_RUNTIMES=flang-rt \
-  -DFLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT="OpenMP" \
-  -DCMAKE_C_COMPILER=clang \
-  -DCMAKE_CXX_COMPILER=clang++ \
-  -DFLANG_RT_DEVICE_ARCHITECTURES=all \
-  ../runtimes/
-
-make flang-rt
-```
-
-The result of the build is a "device-only" library, i.e. the host
-part of the library is just a container for the device code.
-The resulting library may be linked to user programs using
-Clang-like device linking pipeline.
-
-The same set of CMake variables works for Flang in-tree build.
 
 ### Build options
 

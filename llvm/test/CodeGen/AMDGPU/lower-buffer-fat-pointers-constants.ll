@@ -209,7 +209,7 @@ define ptr addrspace(7) @inttoptr() {
 define <2 x ptr addrspace(7)> @inttoptr_vec() {
 ; CHECK-LABEL: define { <2 x ptr addrspace(8)>, <2 x i32> } @inttoptr_vec
 ; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    ret { <2 x ptr addrspace(8)>, <2 x i32> } { <2 x ptr addrspace(8)> zeroinitializer, <2 x i32> <i32 1, i32 2> }
+; CHECK-NEXT:    ret { <2 x ptr addrspace(8)>, <2 x i32> } { <2 x ptr addrspace(8)> splat (ptr addrspace(8) null), <2 x i32> <i32 1, i32 2> }
 ;
   ret <2 x ptr addrspace(7)> inttoptr (<2 x i160> <i160 1, i160 2> to <2 x ptr addrspace(7)>)
 }
@@ -222,4 +222,44 @@ define i32 @fancy_zero() {
   ret i32 ptrtoint (
   ptr addrspace(7) addrspacecast (ptr addrspace(8) @buf to ptr addrspace(7))
   to i32)
+}
+
+define i32 @load_null() {
+; CHECK-LABEL: define i32 @load_null
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 4 null, i32 0, i32 0, i32 0)
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  %x = load i32, ptr addrspace(7) null, align 4
+  ret i32 %x
+}
+
+define void @store_null() {
+; CHECK-LABEL: define void @store_null
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 0, ptr addrspace(8) align 4 null, i32 0, i32 0, i32 0)
+; CHECK-NEXT:    ret void
+;
+  store i32 0, ptr addrspace(7) null, align 4
+  ret void
+}
+
+define i32 @load_poison() {
+; CHECK-LABEL: define i32 @load_poison
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 4 poison, i32 poison, i32 0, i32 0)
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  %x = load i32, ptr addrspace(7) poison, align 4
+  ret i32 %x
+}
+
+define void @store_poison() {
+; CHECK-LABEL: define void @store_poison
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 0, ptr addrspace(8) align 4 poison, i32 poison, i32 0, i32 0)
+; CHECK-NEXT:    ret void
+;
+  store i32 0, ptr addrspace(7) poison, align 4
+  ret void
 }

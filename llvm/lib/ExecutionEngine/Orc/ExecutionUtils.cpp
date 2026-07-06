@@ -540,8 +540,8 @@ Error DLLImportDefinitionGenerator::tryToGenerate(
   for (auto &KV : ToLookUpSymbols)
     LookupSet.add(ES.intern(KV.first), KV.second);
 
-  auto Resolved =
-      ES.lookup(LinkOrder, LookupSet, LookupKind::DLSym, SymbolState::Resolved);
+  auto Resolved = ES.lookup(LinkOrder, LookupSet, LookupKind::Static,
+                            SymbolState::Resolved);
   if (!Resolved)
     return Resolved.takeError();
 

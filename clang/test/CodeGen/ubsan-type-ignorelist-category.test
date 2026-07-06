@@ -83,6 +83,24 @@ void truncation(char A, int B, unsigned char C, short D) {
 }
 
 
+// INT-LABEL: ignore_int_divrem
+void ignore_int_divrem(int A, int B, unsigned C, unsigned D, long E, long F) {
+// INT-NOT: handler.divrem_overflow
+  (void)(A/B);
+// INT-NOT: handler.divrem_overflow
+  (void)(A%B);
+// INT: handler.divrem_overflow
+  (void)(E/F);
+}
+
+// MYTY-LABEL: ignore_all_except_myty_divrem
+void ignore_all_except_myty_divrem(int A, int B, myty C, myty D) {
+// MYTY-NOT: handler.divrem_overflow
+  (void)(A/B);
+// MYTY-NOT: handler.divrem_overflow
+  (void)(A%B);
+}
+
 // Matches the example from clang/docs/SanitizerSpecialCaseList.rst
 typedef char T;
 typedef char U;

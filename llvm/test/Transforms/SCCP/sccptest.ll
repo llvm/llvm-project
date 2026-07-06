@@ -43,7 +43,7 @@ define i32 @test2(i32 %i0, i32 %j0) {
 ; CHECK:       BB4:
 ; CHECK-NEXT:    ret i32 1
 ; CHECK:       BB5:
-; CHECK-NEXT:    [[K3]] = add i32 [[K2]], 1
+; CHECK-NEXT:    [[K3]] = add nsw i32 [[K2]], 1
 ; CHECK-NEXT:    br label [[BB7]]
 ; CHECK:       BB7:
 ; CHECK-NEXT:    br label [[BB2]]

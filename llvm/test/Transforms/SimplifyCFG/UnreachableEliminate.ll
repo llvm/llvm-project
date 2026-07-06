@@ -244,6 +244,7 @@ declare ptr @fn_nonnull_arg(ptr nonnull %p)
 declare ptr @fn_noundef_arg(ptr noundef %p)
 declare ptr @fn_ptr_arg(ptr)
 declare ptr @fn_ptr_arg_nounwind_willreturn(ptr) nounwind willreturn
+declare void @fn_arg_vec(<2 x ptr>)
 
 define void @test9(i1 %X, ptr %Y) {
 ; CHECK-LABEL: @test9(
@@ -643,7 +644,7 @@ define i32 @test_assume_false(i32 %cond) {
 ; CHECK:       default:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       exit:
-; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 2, [[CASE1]] ], [ 3, [[CASE2]] ], [ 1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ 3, [[CASE2]] ], [ 2, [[CASE1]] ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true)
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -688,7 +689,7 @@ define i32 @test_assume_undef(i32 %cond) {
 ; CHECK:       default:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       exit:
-; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 2, [[CASE1]] ], [ 3, [[CASE2]] ], [ 1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ 3, [[CASE2]] ], [ 2, [[CASE1]] ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true)
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -733,8 +734,8 @@ define i32 @test_assume_var(i32 %cond, i1 %var) {
 ; CHECK:       default:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[BOOL:%.*]] = phi i1 [ [[VAR:%.*]], [[DEFAULT]] ], [ true, [[CASE1]] ], [ true, [[CASE2]] ], [ true, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 0, [[DEFAULT]] ], [ 2, [[CASE1]] ], [ 3, [[CASE2]] ], [ 1, [[ENTRY]] ]
+; CHECK-NEXT:    [[BOOL:%.*]] = phi i1 [ [[VAR:%.*]], [[DEFAULT]] ], [ true, [[CASE2]] ], [ true, [[CASE1]] ], [ true, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 0, [[DEFAULT]] ], [ 3, [[CASE2]] ], [ 2, [[CASE1]] ], [ 1, [[ENTRY]] ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[BOOL]])
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -779,8 +780,8 @@ define i32 @test_assume_bundle_nonnull(i32 %cond, ptr nonnull %p) {
 ; CHECK:       default:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[PTR:%.*]] = phi ptr [ null, [[DEFAULT]] ], [ [[P:%.*]], [[CASE1]] ], [ [[P]], [[CASE2]] ], [ [[P]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 0, [[DEFAULT]] ], [ 2, [[CASE1]] ], [ 3, [[CASE2]] ], [ 1, [[ENTRY]] ]
+; CHECK-NEXT:    [[PTR:%.*]] = phi ptr [ null, [[DEFAULT]] ], [ [[P:%.*]], [[CASE2]] ], [ [[P]], [[CASE1]] ], [ [[P]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 0, [[DEFAULT]] ], [ 3, [[CASE2]] ], [ 2, [[CASE1]] ], [ 1, [[ENTRY]] ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR]]) ]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -825,8 +826,8 @@ define i32 @test_assume_bundle_align(i32 %cond, ptr nonnull %p) {
 ; CHECK:       default:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[PTR:%.*]] = phi ptr [ null, [[DEFAULT]] ], [ [[P:%.*]], [[CASE1]] ], [ [[P]], [[CASE2]] ], [ [[P]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 0, [[DEFAULT]] ], [ 2, [[CASE1]] ], [ 3, [[CASE2]] ], [ 1, [[ENTRY]] ]
+; CHECK-NEXT:    [[PTR:%.*]] = phi ptr [ null, [[DEFAULT]] ], [ [[P:%.*]], [[CASE2]] ], [ [[P]], [[CASE1]] ], [ [[P]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 0, [[DEFAULT]] ], [ 3, [[CASE2]] ], [ 2, [[CASE1]] ], [ 1, [[ENTRY]] ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i32 8) ]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -917,6 +918,25 @@ bb5:                                              ; preds = %bb3, %bb
   ret i32 %i7
 }
 
+define void @test9_gep_splat(i1 %X, ptr %Y) {
+; CHECK-LABEL: @test9_gep_splat(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[X:%.*]], ptr null, ptr [[Y:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[SPEC_SELECT]], <2 x i64> zeroinitializer
+; CHECK-NEXT:    call void @fn_arg_vec(<2 x ptr> [[GEP]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %X, label %if, label %else
+if:
+  br label %else
+else:
+  %phi = phi ptr [ %Y, %entry ], [ null, %if ]
+  %gep = getelementptr i8, ptr %phi, <2 x i64> zeroinitializer
+  call void @fn_arg_vec(<2 x ptr> %gep)
+  ret void
+}
+
 declare void @side.effect()
 declare i8 @get.i8()
 
@@ -932,7 +952,7 @@ define i8 @udiv_by_zero(i8 %x, i8 %i, i8 %v) {
 ; CHECK:       sw.default:
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[Y:%.*]] = phi i8 [ 9, [[SW_BB2]] ], [ [[V:%.*]], [[SW_DEFAULT]] ], [ 2, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[Y:%.*]] = phi i8 [ [[V:%.*]], [[SW_DEFAULT]] ], [ 9, [[SW_BB2]] ], [ 2, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[R:%.*]] = udiv i8 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -974,7 +994,7 @@ define i8 @urem_by_zero(i8 %x, i8 %i, i8 %v) {
 ; CHECK:       sw.default:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       return:
-; CHECK-NEXT:    [[Y:%.*]] = phi i8 [ 2, [[SW_BB1]] ], [ 9, [[SW_BB2]] ], [ [[V:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[Y:%.*]] = phi i8 [ [[V:%.*]], [[ENTRY:%.*]] ], [ 2, [[SW_BB1]] ], [ 9, [[SW_BB2]] ]
 ; CHECK-NEXT:    [[R:%.*]] = urem i8 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -1016,7 +1036,7 @@ define i8 @udiv_of_zero_okay(i8 %x, i8 %i, i8 %v) {
 ; CHECK:       sw.default:
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[Y:%.*]] = phi i8 [ 2, [[SW_BB1]] ], [ 9, [[SW_BB2]] ], [ [[V:%.*]], [[SW_DEFAULT]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[Y:%.*]] = phi i8 [ [[V:%.*]], [[SW_DEFAULT]] ], [ 2, [[SW_BB1]] ], [ 9, [[SW_BB2]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[R:%.*]] = udiv i8 [[Y]], [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -1124,7 +1144,7 @@ define i8 @sdiv_overflow_ub(i8 %i) {
 ; CHECK:       sw.default:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       return:
-; CHECK-NEXT:    [[Y:%.*]] = phi i8 [ [[V]], [[SW_BB1]] ], [ -1, [[SW_BB2]] ], [ 4, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[Y:%.*]] = phi i8 [ -1, [[SW_BB2]] ], [ [[V]], [[SW_BB1]] ], [ 4, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[R:%.*]] = sdiv i8 -128, [[Y]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -1189,6 +1209,23 @@ return:
   %y = phi i8 [ 0, %sw.bb0 ], [ %v, %sw.bb1 ], [ -1, %sw.bb2 ]
   %r = sdiv i8 128, %y
   ret i8 %r
+}
+
+; Make sure we don't call paramHasNonNullAttr on a ptr vector argument.
+
+define void @pr207188() {
+; CHECK-LABEL: @pr207188(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @fn_arg_vec(<2 x ptr> splat (ptr null))
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %bb
+
+bb:
+  %phi = phi <2 x ptr> [ splat (ptr null), %entry ]
+  call void @fn_arg_vec(<2 x ptr> %phi)
+  ret void
 }
 
 attributes #0 = { null_pointer_is_valid }

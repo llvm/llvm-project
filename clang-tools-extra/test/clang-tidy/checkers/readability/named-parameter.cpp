@@ -1,29 +1,47 @@
 // RUN: %check_clang_tidy %s readability-named-parameter %t
+// RUN: %check_clang_tidy -check-suffix=PLAIN-NAMES %s readability-named-parameter %t -- \
+// RUN:   -config="{CheckOptions: [{key: readability-named-parameter.InsertPlainNamesInForwardDecls, value: true}]}"
 
 void Method(char *) { /* */ }
 // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: all parameters should be named in a function
 // CHECK-FIXES: void Method(char * /*unused*/) { /* */ }
+// CHECK-MESSAGES-PLAIN-NAMES: :[[@LINE-3]]:19: warning: all parameters should be named in a function
+// CHECK-FIXES-PLAIN-NAMES: void Method(char * /*unused*/) { /* */ }
 void Method2(char *) {}
 // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: all parameters should be named in a function
 // CHECK-FIXES: void Method2(char * /*unused*/) {}
+// CHECK-MESSAGES-PLAIN-NAMES: :[[@LINE-3]]:20: warning: all parameters should be named in a function
+// CHECK-FIXES-PLAIN-NAMES: void Method2(char * /*unused*/) {}
 void Method3(char *, void *) {}
 // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: all parameters should be named in a function
 // CHECK-FIXES: void Method3(char * /*unused*/, void * /*unused*/) {}
+// CHECK-MESSAGES-PLAIN-NAMES: :[[@LINE-3]]:20: warning: all parameters should be named in a function
+// CHECK-FIXES-PLAIN-NAMES: void Method3(char * /*unused*/, void * /*unused*/) {}
 void Method4(char *, int /*unused*/) {}
 // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: all parameters should be named in a function
 // CHECK-FIXES: void Method4(char * /*unused*/, int /*unused*/) {}
+// CHECK-MESSAGES-PLAIN-NAMES: :[[@LINE-3]]:20: warning: all parameters should be named in a function
+// CHECK-FIXES-PLAIN-NAMES: void Method4(char * /*unused*/, int /*unused*/) {}
 void operator delete[](void *) throw() {}
 // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: all parameters should be named in a function
 // CHECK-FIXES: void operator delete[](void * /*unused*/) throw() {}
+// CHECK-MESSAGES-PLAIN-NAMES: :[[@LINE-3]]:30: warning: all parameters should be named in a function
+// CHECK-FIXES-PLAIN-NAMES: void operator delete[](void * /*unused*/) throw() {}
 int Method5(int) { return 0; }
 // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: all parameters should be named in a function
 // CHECK-FIXES: int Method5(int /*unused*/) { return 0; }
+// CHECK-MESSAGES-PLAIN-NAMES: :[[@LINE-3]]:16: warning: all parameters should be named in a function
+// CHECK-FIXES-PLAIN-NAMES: int Method5(int /*unused*/) { return 0; }
 void Method6(void (*)(void *)) {}
 // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: all parameters should be named in a function
 // CHECK-FIXES: void Method6(void (* /*unused*/)(void *)) {}
+// CHECK-MESSAGES-PLAIN-NAMES: :[[@LINE-3]]:21: warning: all parameters should be named in a function
+// CHECK-FIXES-PLAIN-NAMES: void Method6(void (* /*unused*/)(void *)) {}
 template <typename T> void Method7(T) {}
 // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: all parameters should be named in a function
 // CHECK-FIXES: template <typename T> void Method7(T /*unused*/) {}
+// CHECK-MESSAGES-PLAIN-NAMES: :[[@LINE-3]]:37: warning: all parameters should be named in a function
+// CHECK-FIXES-PLAIN-NAMES: template <typename T> void Method7(T /*unused*/) {}
 
 // Don't warn in macros.
 #define M void MethodM(int) {}
@@ -55,6 +73,8 @@ struct Y {
   void foo(T) {}
 // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: all parameters should be named in a function
 // CHECK-FIXES: void foo(T /*unused*/) {}
+// CHECK-MESSAGES-PLAIN-NAMES: :[[@LINE-3]]:13: warning: all parameters should be named in a function
+// CHECK-FIXES-PLAIN-NAMES: void foo(T /*unused*/) {}
 };
 
 Y<int> y;
@@ -69,19 +89,27 @@ struct Derived : public Base {
   void foo(int);
 // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: all parameters should be named in a function
 // CHECK-FIXES: void foo(int /*argname*/);
+// CHECK-MESSAGES-PLAIN-NAMES: :[[@LINE-3]]:15: warning: all parameters should be named in a function
+// CHECK-FIXES-PLAIN-NAMES: void foo(int argname);
 };
 
 void FDef(int);
 // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: all parameters should be named in a function
 // CHECK-FIXES: void FDef(int /*n*/);
+// CHECK-MESSAGES-PLAIN-NAMES: :[[@LINE-3]]:14: warning: all parameters should be named in a function
+// CHECK-FIXES-PLAIN-NAMES: void FDef(int n);
 void FDef(int n) {}
 
 void FDef2(int, int);
 // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: all parameters should be named in a function
 // CHECK-FIXES: void FDef2(int /*n*/, int /*unused*/);
+// CHECK-MESSAGES-PLAIN-NAMES: :[[@LINE-3]]:15: warning: all parameters should be named in a function
+// CHECK-FIXES-PLAIN-NAMES: void FDef2(int n, int /*unused*/);
 void FDef2(int n, int) {}
 // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: all parameters should be named in a function
 // CHECK-FIXES: void FDef2(int n, int /*unused*/) {}
+// CHECK-MESSAGES-PLAIN-NAMES: :[[@LINE-3]]:22: warning: all parameters should be named in a function
+// CHECK-FIXES-PLAIN-NAMES: void FDef2(int n, int /*unused*/) {}
 
 void FNoDef(int);
 
@@ -91,18 +119,26 @@ Z the_z;
 Z &operator++(Z&) { return the_z; }
 // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: all parameters should be named in a function
 // CHECK-FIXES: Z &operator++(Z& /*unused*/) { return the_z; }
+// CHECK-MESSAGES-PLAIN-NAMES: :[[@LINE-3]]:17: warning: all parameters should be named in a function
+// CHECK-FIXES-PLAIN-NAMES: Z &operator++(Z& /*unused*/) { return the_z; }
 
 Z &operator++(Z&, int) { return the_z; }
 // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: all parameters should be named in a function
 // CHECK-FIXES: Z &operator++(Z& /*unused*/, int) { return the_z; }
+// CHECK-MESSAGES-PLAIN-NAMES: :[[@LINE-3]]:17: warning: all parameters should be named in a function
+// CHECK-FIXES-PLAIN-NAMES: Z &operator++(Z& /*unused*/, int) { return the_z; }
 
 Z &operator--(Z&) { return the_z; }
 // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: all parameters should be named in a function
 // CHECK-FIXES: Z &operator--(Z& /*unused*/) { return the_z; }
+// CHECK-MESSAGES-PLAIN-NAMES: :[[@LINE-3]]:17: warning: all parameters should be named in a function
+// CHECK-FIXES-PLAIN-NAMES: Z &operator--(Z& /*unused*/) { return the_z; }
 
 Z &operator--(Z&, int) { return the_z; }
 // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: all parameters should be named in a function
 // CHECK-FIXES: Z &operator--(Z& /*unused*/, int) { return the_z; }
+// CHECK-MESSAGES-PLAIN-NAMES: :[[@LINE-3]]:17: warning: all parameters should be named in a function
+// CHECK-FIXES-PLAIN-NAMES: Z &operator--(Z& /*unused*/, int) { return the_z; }
 
 namespace testing {
 namespace internal {

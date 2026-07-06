@@ -3,7 +3,7 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx950 < %s | FileCheck -check-prefix=GFX950-GISEL %s
 
 ; RUN: not --crash llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx942 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR-SDAG %s
-; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx942 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR-GISEL %s
+; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx942 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR-GISEL %s
 
 ; ERR-SDAG: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.load.to.lds
 
@@ -40,6 +40,27 @@ define amdgpu_ps void @global_load_lds_dwordx3_vaddr_saddr(ptr addrspace(1) noca
 ; GFX950-GISEL-NEXT:    global_load_lds_dwordx3 v[0:1], off offset:16 sc0
 ; GFX950-GISEL-NEXT:    s_endpgm
   call void @llvm.amdgcn.load.to.lds.p1(ptr addrspace(1) %gptr, ptr addrspace(3) %lptr, i32 12, i32 16, i32 1)
+  ret void
+}
+
+define amdgpu_ps void @buffer_load_lds_async(ptr addrspace(7) nocapture inreg %gptr, i32 %off, ptr addrspace(3) nocapture inreg %lptr) {
+; GFX950-SDAG-LABEL: buffer_load_lds_async:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    v_add_u32_e32 v0, s4, v0
+; GFX950-SDAG-NEXT:    s_mov_b32 m0, s5
+; GFX950-SDAG-NEXT:    s_nop 0
+; GFX950-SDAG-NEXT:    buffer_load_dwordx3 v0, s[0:3], 0 offen offset:16 sc0 lds
+; GFX950-SDAG-NEXT:    s_endpgm
+;
+; GFX950-GISEL-LABEL: buffer_load_lds_async:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    v_add_u32_e32 v0, s4, v0
+; GFX950-GISEL-NEXT:    s_mov_b32 m0, s5
+; GFX950-GISEL-NEXT:    s_nop 0
+; GFX950-GISEL-NEXT:    buffer_load_dwordx3 v0, s[0:3], 0 offen offset:16 sc0 lds
+; GFX950-GISEL-NEXT:    s_endpgm
+  %gptr.off = getelementptr i8, ptr addrspace(7) %gptr, i32 %off
+  call void @llvm.amdgcn.load.async.to.lds.p7(ptr addrspace(7) %gptr.off, ptr addrspace(3) %lptr, i32 12, i32 16, i32 1)
   ret void
 }
 

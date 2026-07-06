@@ -17,17 +17,17 @@
 pmull   {z0.q-z1.q}, z0.d, z0.d  // 01000101-00100000-11111000-00000000
 // CHECK-INST: pmull   { z0.q, z1.q }, z0.d, z0.d
 // CHECK-ENCODING: [0x00,0xf8,0x20,0x45]
-// CHECK-ERROR: instruction requires: sve2p1 or ssve-aes sve-aes2
+// CHECK-ERROR: instruction requires: sve or ssve-aes sve-aes2
 // CHECK-UNKNOWN: 4520f800 <unknown>
 
 pmull   {z22.q-z23.q}, z13.d, z8.d  // 01000101-00101000-11111001-10110110
 // CHECK-INST: pmull   { z22.q, z23.q }, z13.d, z8.d
 // CHECK-ENCODING: [0xb6,0xf9,0x28,0x45]
-// CHECK-ERROR: instruction requires: sve2p1 or ssve-aes sve-aes2
+// CHECK-ERROR: instruction requires: sve or ssve-aes sve-aes2
 // CHECK-UNKNOWN: 4528f9b6 <unknown>
 
 pmull   {z30.q-z31.q}, z31.d, z31.d  // 01000101-00111111-11111011-11111110
 // CHECK-INST: pmull   { z30.q, z31.q }, z31.d, z31.d
 // CHECK-ENCODING: [0xfe,0xfb,0x3f,0x45]
-// CHECK-ERROR: instruction requires: sve2p1 or ssve-aes sve-aes2
+// CHECK-ERROR: instruction requires: sve or ssve-aes sve-aes2
 // CHECK-UNKNOWN: 453ffbfe <unknown>

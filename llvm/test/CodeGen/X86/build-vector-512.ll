@@ -578,7 +578,7 @@ define <16 x float> @test_buildvector_16f32_2_var(float %a0, float %a1) {
 ; AVX-32-NEXT:    vpmovsxbd {{.*#+}} xmm1 = [0,17,0,0]
 ; AVX-32-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; AVX-32-NEXT:    vpermi2ps %zmm0, %zmm2, %zmm1
-; AVX-32-NEXT:    vblendps {{.*#+}} xmm3 = xmm2[0],xmm0[1,2,3]
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm3 = xmm2[0],xmm0[1,2,3]
 ; AVX-32-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
 ; AVX-32-NEXT:    vinsertps {{.*#+}} xmm3 = xmm0[0,1,2],xmm2[0]
 ; AVX-32-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[2,3]
@@ -591,12 +591,14 @@ define <16 x float> @test_buildvector_16f32_2_var(float %a0, float %a1) {
 ; AVX-64-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX-64-NEXT:    vpmovsxbd {{.*#+}} xmm2 = [0,16,0,0]
 ; AVX-64-NEXT:    vbroadcastss %xmm0, %xmm0
+; AVX-64-NEXT:    vmovaps %zmm1, %zmm3
+; AVX-64-NEXT:    vpermt2ps %zmm0, %zmm2, %zmm3
+; AVX-64-NEXT:    vmovss {{.*#+}} xmm4 = xmm1[0],xmm0[1,2,3]
+; AVX-64-NEXT:    vinsertf128 $1, %xmm4, %ymm3, %ymm3
 ; AVX-64-NEXT:    vpermi2ps %zmm1, %zmm0, %zmm2
-; AVX-64-NEXT:    vinsertps {{.*#+}} xmm3 = xmm0[0,1,2],xmm1[0]
-; AVX-64-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
-; AVX-64-NEXT:    vpmovsxbd {{.*#+}} ymm3 = [0,16,0,0,0,17,18,19]
-; AVX-64-NEXT:    vpermi2ps %zmm0, %zmm1, %zmm3
-; AVX-64-NEXT:    vinsertf64x4 $1, %ymm3, %zmm2, %zmm0
+; AVX-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
+; AVX-64-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
+; AVX-64-NEXT:    vinsertf64x4 $1, %ymm3, %zmm0, %zmm0
 ; AVX-64-NEXT:    retq
   %v0 = insertelement <16 x float> poison, float %a0, i32 0
   %v1 = insertelement <16 x float> %v0, float %a1, i32 1
@@ -626,7 +628,7 @@ define <16 x float> @test_buildvector_16f32_2_load(ptr %p0, ptr %p1) {
 ; AVX-32-NEXT:    vbroadcastss (%ecx), %xmm1
 ; AVX-32-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; AVX-32-NEXT:    vpermi2ps %zmm1, %zmm2, %zmm0
-; AVX-32-NEXT:    vblendps {{.*#+}} xmm3 = xmm2[0],xmm1[1,2,3]
+; AVX-32-NEXT:    vmovss {{.*#+}} xmm3 = xmm2[0],xmm1[1,2,3]
 ; AVX-32-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
 ; AVX-32-NEXT:    vinsertps {{.*#+}} xmm3 = xmm1[0,1,2],xmm2[0]
 ; AVX-32-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]
@@ -640,7 +642,7 @@ define <16 x float> @test_buildvector_16f32_2_load(ptr %p0, ptr %p1) {
 ; AVX-64-NEXT:    vbroadcastss (%rdi), %xmm1
 ; AVX-64-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; AVX-64-NEXT:    vpermi2ps %zmm1, %zmm2, %zmm0
-; AVX-64-NEXT:    vblendps {{.*#+}} xmm3 = xmm2[0],xmm1[1,2,3]
+; AVX-64-NEXT:    vmovss {{.*#+}} xmm3 = xmm2[0],xmm1[1,2,3]
 ; AVX-64-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
 ; AVX-64-NEXT:    vinsertps {{.*#+}} xmm3 = xmm1[0,1,2],xmm2[0]
 ; AVX-64-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]

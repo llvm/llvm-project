@@ -39,13 +39,13 @@ const char EnvPathSeparator = ';';
 typedef unsigned long procid_t; // Must match the type of DWORD on Windows.
 typedef void *process_t;        // Must match the type of HANDLE on Windows.
 #else
-typedef ::pid_t procid_t;
-typedef procid_t process_t;
+using procid_t = ::pid_t;
+using process_t = procid_t;
 #endif
 
 /// This struct encapsulates information about a process.
 struct ProcessInfo {
-  enum : procid_t { InvalidPid = 0 };
+  static constexpr procid_t InvalidPid = 0;
 
   procid_t Pid;      /// The process identifier.
   process_t Process; /// Platform-dependent process object.

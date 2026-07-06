@@ -6,6 +6,7 @@ unittest("AnalysisTests") {
     "//llvm/lib/AsmParser",
     "//llvm/lib/IR",
     "//llvm/lib/Passes",
+    "//llvm/lib/Plugins",
     "//llvm/lib/Support",
     "//llvm/lib/TargetParser",
     "//llvm/lib/Testing/Support",

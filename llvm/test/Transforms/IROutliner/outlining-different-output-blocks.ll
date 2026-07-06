@@ -14,13 +14,13 @@ define void @outline_outputs1() #0 {
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[OUTPUT:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[RESULT:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[ADD_LOC]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[DOTLOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ADD_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[DOTLOC]])
 ; CHECK-NEXT:    call void @outlined_ir_func_0(ptr [[A]], ptr [[B]], ptr [[OUTPUT]], ptr [[ADD_LOC]], ptr [[DOTLOC]], i32 0)
 ; CHECK-NEXT:    [[ADD_RELOAD:%.*]] = load i32, ptr [[ADD_LOC]], align 4
 ; CHECK-NEXT:    [[DOTRELOAD:%.*]] = load i32, ptr [[DOTLOC]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[ADD_LOC]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[DOTLOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ADD_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[DOTLOC]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[OUTPUT]], align 4
 ; CHECK-NEXT:    call void @outlined_ir_func_1(i32 [[DOTRELOAD]], i32 [[ADD_RELOAD]], ptr [[RESULT]])
 ; CHECK-NEXT:    ret void
@@ -53,13 +53,13 @@ define void @outline_outputs2() #0 {
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[OUTPUT:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[RESULT:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[SUB_LOC]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[DOTLOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[SUB_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[DOTLOC]])
 ; CHECK-NEXT:    call void @outlined_ir_func_0(ptr [[A]], ptr [[B]], ptr [[OUTPUT]], ptr [[SUB_LOC]], ptr [[DOTLOC]], i32 1)
 ; CHECK-NEXT:    [[SUB_RELOAD:%.*]] = load i32, ptr [[SUB_LOC]], align 4
 ; CHECK-NEXT:    [[DOTRELOAD:%.*]] = load i32, ptr [[DOTLOC]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[SUB_LOC]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[DOTLOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[SUB_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[DOTLOC]])
 ; CHECK-NEXT:    call void @outlined_ir_func_1(i32 [[DOTRELOAD]], i32 [[SUB_RELOAD]], ptr [[RESULT]])
 ; CHECK-NEXT:    ret void
 ;

@@ -255,7 +255,7 @@ define <vscale x 4 x float> @scalable.load.nxv4f32(ptr align 4 %p, <vscale x 4 x
 ; CHECK:       2:
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[EVL]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP3]], i64 [[TMP5]])
 ; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
 ; CHECK:       .split:
@@ -292,7 +292,7 @@ define void @scalable.store.nxv4f32(ptr align 4 %p, <vscale x 4 x float> %arg, <
 ; CHECK:       2:
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[EVL]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP3]], i64 [[TMP5]])
 ; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
 ; CHECK:       .split:
@@ -333,7 +333,7 @@ define <vscale x 4 x float> @scalable.strided.load.nxv4f32(ptr align 4 %p, i32 %
 ; CHECK:       2:
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[EVL]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP3]], i64 [[TMP5]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[STRIDE:%.*]] to i64
 ; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
@@ -372,7 +372,7 @@ define void @scalable.strided.store.nxv4f32(<vscale x 4 x float> %arg, ptr align
 ; CHECK:       2:
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[EVL]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP3]], i64 [[TMP5]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[STRIDE:%.*]] to i64
 ; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
@@ -412,7 +412,7 @@ define <vscale x 4 x float> @scalable.strided.load.nxv4f32.align(ptr align 4 %p,
 ; CHECK:       2:
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[EVL]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP3]], i64 [[TMP5]])
 ; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
 ; CHECK:       .split:
@@ -454,7 +454,7 @@ define <vscale x 4 x float> @scalable.gather.nxv4f32(<vscale x 4 x ptr> %vp, <vs
 ; CHECK:       2:
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[EVL]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP3]], i64 [[TMP5]])
 ; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
 ; CHECK:       .split:
@@ -491,7 +491,7 @@ define void @scalable.scatter.nxv4f32(<vscale x 4 x float> %arg, <vscale x 4 x p
 ; CHECK:       2:
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[EVL]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP3]], i64 [[TMP5]])
 ; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
 ; CHECK:       .split:

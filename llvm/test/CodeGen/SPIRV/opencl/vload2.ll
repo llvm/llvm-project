@@ -3,12 +3,6 @@
 
 ; CHECK-DAG: %[[#IMPORT:]] = OpExtInstImport "OpenCL.std"
 
-; CHECK-DAG: OpName %[[#CALL1:]] "call1"
-; CHECK-DAG: OpName %[[#CALL2:]] "call2"
-; CHECK-DAG: OpName %[[#CALL3:]] "call3"
-; CHECK-DAG: OpName %[[#CALL4:]] "call4"
-; CHECK-DAG: OpName %[[#CALL5:]] "call5"
-
 ; CHECK-DAG: %[[#INT8:]] = OpTypeInt 8 0
 ; CHECK-DAG: %[[#INT16:]] = OpTypeInt 16 0
 ; CHECK-DAG: %[[#INT32:]] = OpTypeInt 32 0
@@ -27,22 +21,27 @@
 
 ; CHECK: %[[#OFFSET:]] = OpFunctionParameter %[[#INT64]]
 
-define spir_kernel void @test_fn(i64 %offset, ptr addrspace(1) %address) {
+define spir_kernel void @test_fn(i64 %offset, ptr addrspace(1) %address, ptr addrspace(1) %out) {
 ; CHECK-DAG: %[[#CASTorPARAMofPTRI8:]] = {{OpBitcast|OpFunctionParameter}}{{.*}}%[[#PTRINT8]]{{.*}}
-; CHECK-DAG: %[[#CALL1]] = OpExtInst %[[#VINT8]] %[[#IMPORT]] vloadn %[[#OFFSET]] %[[#CASTorPARAMofPTRI8]] 2
+; CHECK-DAG: %[[#CALL1:]] = OpExtInst %[[#VINT8]] %[[#IMPORT]] vloadn %[[#OFFSET]] %[[#CASTorPARAMofPTRI8]] 2
   %call1 = call spir_func <2 x i8> @_Z6vload2mPU3AS1Kc(i64 %offset, ptr addrspace(1) %address)
+  store volatile <2 x i8> %call1, ptr addrspace(1) %out
 ; CHECK-DAG: %[[#CASTorPARAMofPTRI16:]] = {{OpBitcast|OpFunctionParameter}}{{.*}}%[[#PTRINT16]]{{.*}}
-; CHECK-DAG: %[[#CALL2]] = OpExtInst %[[#VINT16]] %[[#IMPORT]] vloadn %[[#OFFSET]] %[[#CASTorPARAMofPTRI16]] 2
+; CHECK-DAG: %[[#CALL2:]] = OpExtInst %[[#VINT16]] %[[#IMPORT]] vloadn %[[#OFFSET]] %[[#CASTorPARAMofPTRI16]] 2
   %call2 = call spir_func <2 x i16> @_Z6vload2mPU3AS1Ks(i64 %offset, ptr addrspace(1) %address)
+  store volatile <2 x i16> %call2, ptr addrspace(1) %out
 ; CHECK-DAG: %[[#CASTorPARAMofPTRI32:]] = {{OpBitcast|OpFunctionParameter}}{{.*}}%[[#PTRINT32]]{{.*}}
-; CHECK-DAG: %[[#CALL3]] = OpExtInst %[[#VINT32]] %[[#IMPORT]] vloadn %[[#OFFSET]] %[[#CASTorPARAMofPTRI32]] 2
+; CHECK-DAG: %[[#CALL3:]] = OpExtInst %[[#VINT32]] %[[#IMPORT]] vloadn %[[#OFFSET]] %[[#CASTorPARAMofPTRI32]] 2
   %call3 = call spir_func <2 x i32> @_Z6vload2mPU3AS1Ki(i64 %offset, ptr addrspace(1) %address)
+  store volatile <2 x i32> %call3, ptr addrspace(1) %out
 ; CHECK-DAG: %[[#CASTorPARAMofPTRI64:]] = {{OpBitcast|OpFunctionParameter}}{{.*}}%[[#PTRINT64]]{{.*}}
-; CHECK-DAG: %[[#CALL4]] = OpExtInst %[[#VINT64]] %[[#IMPORT]] vloadn %[[#OFFSET]] %[[#CASTorPARAMofPTRI64]] 2
+; CHECK-DAG: %[[#CALL4:]] = OpExtInst %[[#VINT64]] %[[#IMPORT]] vloadn %[[#OFFSET]] %[[#CASTorPARAMofPTRI64]] 2
   %call4 = call spir_func <2 x i64> @_Z6vload2mPU3AS1Kl(i64 %offset, ptr addrspace(1) %address)
+  store volatile <2 x i64> %call4, ptr addrspace(1) %out
 ; CHECK-DAG: %[[#CASTorPARAMofPTRFLOAT:]] = {{OpBitcast|OpFunctionParameter}}{{.*}}%[[#PTRFLOAT]]{{.*}}
-; CHECK-DAG: %[[#CALL5]] = OpExtInst %[[#VFLOAT]] %[[#IMPORT]] vloadn %[[#OFFSET]] %[[#CASTorPARAMofPTRFLOAT]] 2
+; CHECK-DAG: %[[#CALL5:]] = OpExtInst %[[#VFLOAT]] %[[#IMPORT]] vloadn %[[#OFFSET]] %[[#CASTorPARAMofPTRFLOAT]] 2
   %call5 = call spir_func <2 x float> @_Z6vload2mPU3AS1Kf(i64 %offset, ptr addrspace(1) %address)
+  store volatile <2 x float> %call5, ptr addrspace(1) %out
   ret void
 }
 

@@ -1,4 +1,4 @@
-//===--- ElseAfterReturnCheck.h - clang-tidy---------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,7 @@ namespace clang::tidy::readability {
 
 /// Flags the usages of `else` after `return`.
 ///
-/// http://llvm.org/docs/CodingStandards.html#don-t-use-else-after-a-return
+/// https://llvm.org/docs/CodingStandards.html#don-t-use-else-after-a-return
 class ElseAfterReturnCheck : public ClangTidyCheck {
 public:
   ElseAfterReturnCheck(StringRef Name, ClangTidyContext *Context);

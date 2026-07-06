@@ -72,6 +72,7 @@ define void @types() {
   %10 = alloca ptr addrspace(5), align 8
   %11 = alloca <5 x ptr>, align 64
   %12 = alloca <1 x i64>, align 8
+  %13 = alloca b8, align 1
   ret void
 }
 
@@ -415,6 +416,14 @@ define ptr @test_gep_no_wrap_flags(ptr %0) {
   %gep.nuw.inbounds = getelementptr inbounds nuw i8, ptr %0, i32 4
   %gep.nusw = getelementptr nusw i8, ptr %0, i32 4
   ret ptr %gep.nusw
+}
+
+define void @test_icmp_same_sign(i32 %a, i32 %b) {
+  %icmp.1 = icmp eq i32 %a, %b
+  %icmp.2 = icmp slt i32 %a, %b
+  %icmp.3 = icmp samesign eq i32 %a, %b
+  %icmp.4 = icmp samesign slt i32 %a, %b
+  ret void
 }
 
 !llvm.dbg.cu = !{!0, !2}

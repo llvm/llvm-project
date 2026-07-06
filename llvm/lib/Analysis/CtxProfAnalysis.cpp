@@ -30,6 +30,9 @@
 #define DEBUG_TYPE "ctx_prof"
 
 using namespace llvm;
+
+namespace llvm {
+
 cl::opt<std::string>
     UseCtxProfile("use-ctx-profile", cl::init(""), cl::Hidden,
                   cl::desc("Use the specified contextual profile file"));
@@ -50,7 +53,6 @@ static cl::opt<bool> ForceIsInSpecializedModule(
 
 const char *AssignGUIDPass::GUIDMetadataName = "guid";
 
-namespace llvm {
 class ProfileAnnotatorImpl final {
   friend class ProfileAnnotator;
   class BBInfo;
@@ -439,7 +441,8 @@ GlobalValue::GUID AssignGUIDPass::getGUID(const Function &F) {
     return F.getGUID();
   }
   auto *MD = F.getMetadata(GUIDMetadataName);
-  assert(MD && "guid not found for defined function");
+  if (!MD)
+    reportFatalUsageError("this pass requires GUID metadata to be available.");
   return cast<ConstantInt>(cast<ConstantAsMetadata>(MD->getOperand(0))
                                ->getValue()
                                ->stripPointerCasts())

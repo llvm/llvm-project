@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=nvptx -mcpu=sm_60 -mattr=+ptx73 | FileCheck %s --check-prefix=CHECK-32
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_60 -mattr=+ptx73 | FileCheck %s --check-prefix=CHECK-64
 ; RUN: llc < %s -mtriple=nvptx64 -nvptx-short-ptr -mcpu=sm_60 -mattr=+ptx73 | FileCheck %s --check-prefix=CHECK-MIXED
-; RUN: %if ptxas && ptxas-12.0 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_60 -mattr=+ptx73 | %ptxas-verify %}
+; RUN: %if ptxas-sm_60 && ptxas-isa-7.3 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_60 -mattr=+ptx73 | %ptxas-verify -arch=sm_60 %}
 
 target triple = "nvptx64-nvidia-cuda"
 

@@ -169,7 +169,7 @@ if __name__ == "__main__":
 
     verstr = args.version
 
-    # parse the version string with distutils.
+    # parse the version string.
     # note that -rc will end up as version.pre here
     # since it's a prerelease
     version = packaging.version.parse(verstr)

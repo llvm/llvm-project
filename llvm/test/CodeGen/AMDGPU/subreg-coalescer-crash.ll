@@ -63,12 +63,12 @@ define amdgpu_ps void @foo() #0 {
 ; GCN-NEXT:    s_branch .LBB1_5
 ; GCN-NEXT:  .LBB1_4:
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-NEXT:    v_mov_b32_e32 v0, v1
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:  .LBB1_5: ; %bb14
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_mul_f32_e32 v0, 0x41280000, v0
 ; GCN-NEXT:    v_mul_f32_e32 v1, 0x41380000, v1
-; GCN-NEXT:    exp mrt0 v1, v0, v0, v0 done vm
+; GCN-NEXT:    exp mrt0, v1, v0, v0, v0 done vm
 ; GCN-NEXT:    s_endpgm
 bb:
   %undef0 = freeze i1 poison

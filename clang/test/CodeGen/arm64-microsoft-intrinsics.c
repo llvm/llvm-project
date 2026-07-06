@@ -4,22 +4,59 @@
 // RUN: not %clang_cc1 -triple arm64-linux -Werror -S -o /dev/null %s 2>&1 \
 // RUN:    | FileCheck %s -check-prefix CHECK-LINUX
 
-// RUN: %clang_cc1 -triple arm64-darwin -Wno-implicit-function-declaration -fms-compatibility -emit-llvm -o - %s \
+// RUN: %clang_cc1 -triple arm64-darwin -Wno-implicit-function-declaration -fms-compatibility -emit-llvm -o - -DARM64_DARWIN %s \
 // RUN:    | FileCheck %s -check-prefix CHECK-MSCOMPAT
 
-long test_InterlockedAdd(long volatile *Addend, long Value) {
+// For some reason '_InterlockedAdd` on arm64-darwin takes an 'int*' rather than a 'long*'.
+#ifdef ARM64_DARWIN
+typedef int int32_t;
+#else
+typedef long int32_t;
+#endif
+
+long test_InterlockedAdd(int32_t volatile *Addend, long Value) {
   return _InterlockedAdd(Addend, Value);
 }
 
-long test_InterlockedAdd_constant(long volatile *Addend) {
+long test_InterlockedAdd_constant(int32_t volatile *Addend) {
   return _InterlockedAdd(Addend, -1);
 }
 
 // CHECK-LABEL: define {{.*}} i32 @test_InterlockedAdd(ptr %Addend, i32 %Value) {{.*}} {
-// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %1, i32 %2 seq_cst, align 4
-// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i32 %[[OLDVAL:[0-9]+]], %2
+// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %2, i32 %1 seq_cst, align 4
+// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i32 %[[OLDVAL:[0-9]+]], %1
 // CHECK-MSVC: ret i32 %[[NEWVAL:[0-9]+]]
 // CHECK-LINUX: error: call to undeclared function '_InterlockedAdd'
+
+long test_InterlockedAdd_acq(int32_t volatile *Addend, long Value) {
+  return _InterlockedAdd_acq(Addend, Value);
+}
+
+// CHECK-LABEL: define {{.*}} i32 @test_InterlockedAdd_acq(ptr %Addend, i32 %Value) {{.*}} {
+// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %2, i32 %1 acquire, align 4
+// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i32 %[[OLDVAL:[0-9]+]], %1
+// CHECK-MSVC: ret i32 %[[NEWVAL:[0-9]+]]
+// CHECK-LINUX: error: call to undeclared function '_InterlockedAdd_acq'
+
+long test_InterlockedAdd_nf(int32_t volatile *Addend, long Value) {
+  return _InterlockedAdd_nf(Addend, Value);
+}
+
+// CHECK-LABEL: define {{.*}} i32 @test_InterlockedAdd_nf(ptr %Addend, i32 %Value) {{.*}} {
+// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %2, i32 %1 monotonic, align 4
+// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i32 %[[OLDVAL:[0-9]+]], %1
+// CHECK-MSVC: ret i32 %[[NEWVAL:[0-9]+]]
+// CHECK-LINUX: error: call to undeclared function '_InterlockedAdd_nf'
+
+long test_InterlockedAdd_rel(int32_t volatile *Addend, long Value) {
+  return _InterlockedAdd_rel(Addend, Value);
+}
+
+// CHECK-LABEL: define {{.*}} i32 @test_InterlockedAdd_rel(ptr %Addend, i32 %Value) {{.*}} {
+// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %2, i32 %1 release, align 4
+// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i32 %[[OLDVAL:[0-9]+]], %1
+// CHECK-MSVC: ret i32 %[[NEWVAL:[0-9]+]]
+// CHECK-LINUX: error: call to undeclared function '_InterlockedAdd_rel'
 
 __int64 test_InterlockedAdd64(__int64 volatile *Addend, __int64 Value) {
   return _InterlockedAdd64(Addend, Value);
@@ -30,66 +67,40 @@ __int64 test_InterlockedAdd64_constant(__int64 volatile *Addend) {
 }
 
 // CHECK-LABEL: define {{.*}} i64 @test_InterlockedAdd64(ptr %Addend, i64 %Value) {{.*}} {
-// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %1, i64 %2 seq_cst, align 8
-// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i64 %[[OLDVAL:[0-9]+]], %2
+// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %2, i64 %1 seq_cst, align 8
+// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i64 %[[OLDVAL:[0-9]+]], %1
 // CHECK-MSVC: ret i64 %[[NEWVAL:[0-9]+]]
 // CHECK-LINUX: error: call to undeclared function '_InterlockedAdd64'
 
-void check__dmb(void) {
-  __dmb(0);
+__int64 test_InterlockedAdd64_acq(__int64 volatile *Addend, __int64 Value) {
+  return _InterlockedAdd64_acq(Addend, Value);
 }
 
-// CHECK-MSVC: @llvm.aarch64.dmb(i32 0)
-// CHECK-LINUX: error: call to undeclared function '__dmb'
+// CHECK-LABEL: define {{.*}} i64 @test_InterlockedAdd64_acq(ptr %Addend, i64 %Value) {{.*}} {
+// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %2, i64 %1 acquire, align 8
+// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i64 %[[OLDVAL:[0-9]+]], %1
+// CHECK-MSVC: ret i64 %[[NEWVAL:[0-9]+]]
+// CHECK-LINUX: error: call to undeclared function '_InterlockedAdd64_acq'
 
-void check__dsb(void) {
-  __dsb(0);
+__int64 test_InterlockedAdd64_nf(__int64 volatile *Addend, __int64 Value) {
+  return _InterlockedAdd64_nf(Addend, Value);
 }
 
-// CHECK-MSVC: @llvm.aarch64.dsb(i32 0)
-// CHECK-LINUX: error: call to undeclared function '__dsb'
+// CHECK-LABEL: define {{.*}} i64 @test_InterlockedAdd64_nf(ptr %Addend, i64 %Value) {{.*}} {
+// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %2, i64 %1 monotonic, align 8
+// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i64 %[[OLDVAL:[0-9]+]], %1
+// CHECK-MSVC: ret i64 %[[NEWVAL:[0-9]+]]
+// CHECK-LINUX: error: call to undeclared function '_InterlockedAdd64_nf'
 
-void check__isb(void) {
-  __isb(0);
+__int64 test_InterlockedAdd64_rel(__int64 volatile *Addend, __int64 Value) {
+  return _InterlockedAdd64_rel(Addend, Value);
 }
 
-// CHECK-MSVC: @llvm.aarch64.isb(i32 0)
-// CHECK-LINUX: error: call to undeclared function '__isb'
-
-void check__yield(void) {
-  __yield();
-}
-
-// CHECK-MSVC: @llvm.aarch64.hint(i32 1)
-// CHECK-LINUX: error: call to undeclared function '__yield'
-
-void check__wfe(void) {
-  __wfe();
-}
-
-// CHECK-MSVC: @llvm.aarch64.hint(i32 2)
-// CHECK-LINUX: error: call to undeclared function '__wfe'
-
-void check__wfi(void) {
-  __wfi();
-}
-
-// CHECK-MSVC: @llvm.aarch64.hint(i32 3)
-// CHECK-LINUX: error: call to undeclared function '__wfi'
-
-void check__sev(void) {
-  __sev();
-}
-
-// CHECK-MSVC: @llvm.aarch64.hint(i32 4)
-// CHECK-LINUX: error: call to undeclared function '__sev'
-
-void check__sevl(void) {
-  __sevl();
-}
-
-// CHECK-MSVC: @llvm.aarch64.hint(i32 5)
-// CHECK-LINUX: error: call to undeclared function '__sevl'
+// CHECK-LABEL: define {{.*}} i64 @test_InterlockedAdd64_rel(ptr %Addend, i64 %Value) {{.*}} {
+// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %2, i64 %1 release, align 8
+// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i64 %[[OLDVAL:[0-9]+]], %1
+// CHECK-MSVC: ret i64 %[[NEWVAL:[0-9]+]]
+// CHECK-LINUX: error: call to undeclared function '_InterlockedAdd64_rel'
 
 void check_ReadWriteBarrier(void) {
   _ReadWriteBarrier();
@@ -143,8 +154,48 @@ unsigned __int64 check__getReg(void) {
   return reg;
 }
 
-// CHECK-MSCOMPAT: call i64 @llvm.read_register.i64(metadata ![[MD2:.*]])
-// CHECK-MSCOMPAT: call i64 @llvm.read_register.i64(metadata ![[MD3:.*]])
+// CHECK-MSCOMPAT: call i64 @llvm.read_volatile_register.i64(metadata ![[MD2:.*]])
+// CHECK-MSCOMPAT: call i64 @llvm.read_volatile_register.i64(metadata ![[MD3:.*]])
+
+void test__setReg(unsigned __int64 v)
+{
+  __setReg(18, v);
+  __setReg(31, v);
+}
+
+// CHECK-MSCOMPAT-LABEL: define{{.*}}void @test__setReg(i64{{.*}}%v){{.*}}{
+// CHECK-MSCOMPAT: %[[DATA_ADDR1:.*]] = load i64, ptr %v.addr, align 8
+// CHECK-MSCOMPAT: call void @llvm.write_volatile_register.i64(metadata ![[MD2]], i64 %[[DATA_ADDR1]])
+// CHECK-MSCOMPAT: %[[DATA_ADDR2:.*]] = load i64, ptr %v.addr, align 8
+// CHECK-MSCOMPAT: call void @llvm.write_volatile_register.i64(metadata ![[MD3]], i64 %[[DATA_ADDR2]])
+// CHECK-LINUX: error: call to undeclared function '__setReg'
+
+double test__getRegFp(void)
+{
+  double volatile reg;
+  reg = __getRegFp(5);
+  reg = __getRegFp(31);
+  return reg;
+}
+
+// CHECK-MSCOMPAT-LABEL: define{{.*}}double @test__getRegFp(){{.*}}{
+// CHECK-MSCOMPAT:       [[BITS:%.*]] = call i64 @llvm.read_volatile_register.i64(metadata ![[MD4:.*]])
+// CHECK-MSCOMPAT:       bitcast i64 [[BITS]] to double
+// CHECK-MSCOMPAT:       [[BITS:%.*]] = call i64 @llvm.read_volatile_register.i64(metadata ![[MD5:.*]])
+// CHECK-MSCOMPAT:       bitcast i64 [[BITS]] to double
+// CHECK-LINUX: error: call to undeclared function '__getRegFp'
+
+void test__setRegFp(double v)
+{
+  __setRegFp(5, v);
+  __setRegFp(31, v);
+}
+// CHECK-MSCOMPAT-LABEL: define{{.*}}void @test__setRegFp(double{{.*}}%v){{.*}}{
+// CHECK-MSCOMPAT:       [[BITS:%.*]] = bitcast double {{.*}} to i64
+// CHECK-MSCOMPAT:       call void @llvm.write_volatile_register.i64(metadata ![[MD4:.*]], i64 [[BITS]])
+// CHECK-MSCOMPAT:       [[BITS:%.*]] = bitcast double {{.*}} to i64
+// CHECK-MSCOMPAT:       call void @llvm.write_volatile_register.i64(metadata ![[MD5:.*]], i64 [[BITS]])
+// CHECK-LINUX: error: call to undeclared function '__setRegFp'
 
 #ifdef __LP64__
 #define LONG __int32
@@ -573,6 +624,29 @@ unsigned int check_CountOneBits64(unsigned __int64 arg1) {
 // CHECK-MSCOMPAT: ret i32 %[[VAR2]]
 // CHECK-LINUX: error: call to undeclared function '_CountOneBits64'
 
+unsigned int check_CountTrailingZeros(unsigned LONG arg1) {
+  return _CountTrailingZeros(arg1);
+}
+
+// CHECK-MSCOMPAT: %[[ARG1:.*]].addr = alloca i32, align 4
+// CHECK-MSCOMPAT: store i32 %[[ARG1]], ptr %[[ARG1]].addr, align 4
+// CHECK-MSCOMPAT: %[[VAR0:.*]] = load i32, ptr %[[ARG1]].addr, align 4
+// CHECK-MSCOMPAT: %[[VAR1:.*]] = call i32 @llvm.cttz.i32(i32 %[[VAR0]], i1 false)
+// CHECK-MSCOMPAT: ret i32 %[[VAR1]]
+// CHECK-LINUX: error: call to undeclared function '_CountTrailingZeros'
+
+unsigned int check_CountTrailingZeros64(unsigned __int64 arg1) {
+  return _CountTrailingZeros64(arg1);
+}
+
+// CHECK-MSCOMPAT: %[[ARG1:.*]].addr = alloca i64, align 8
+// CHECK-MSCOMPAT: store i64 %[[ARG1]], ptr %[[ARG1]].addr, align 8
+// CHECK-MSCOMPAT: %[[VAR0:.*]] = load i64, ptr %[[ARG1]].addr, align 8
+// CHECK-MSCOMPAT: %[[VAR1:.*]] = call i64 @llvm.cttz.i64(i64 %[[VAR0]], i1 false)
+// CHECK-MSCOMPAT: %[[VAR2:.*]] = trunc i64 %[[VAR1]] to i32
+// CHECK-MSCOMPAT: ret i32 %[[VAR2]]
+// CHECK-LINUX: error: call to undeclared function '_CountTrailingZeros64'
+
 void check__prefetch(void *arg1) {
   return __prefetch(arg1);
 }
@@ -583,6 +657,18 @@ void check__prefetch(void *arg1) {
 // CHECK-MSCOMPAT: call void @llvm.prefetch.p0(ptr %[[VAR0]], i32 0, i32 3, i32 1)
 // CHECK-MSCOMPAT: ret void
 
+void check__prefetch2(void *arg1) {
+  __prefetch2(arg1, 0x00);
+  __prefetch2(arg1, 0x13);
+}
+
+// CHECK-MSCOMPAT-LABEL: define{{.*}}void @check__prefetch2(ptr{{.*}}%arg1){{.*}}{
+// CHECK-MSCOMPAT: call void @llvm.aarch64.prefetch(ptr %{{.*}}, i32 0, i32 0, i32 0, i32 1)
+// CHECK-MSCOMPAT: call void @llvm.aarch64.prefetch(ptr %{{.*}}, i32 1, i32 1, i32 1, i32 1)
+// CHECK-LINUX: error: call to undeclared function '__prefetch2'
+
 
 // CHECK-MSCOMPAT: ![[MD2]] = !{!"x18"}
 // CHECK-MSCOMPAT: ![[MD3]] = !{!"sp"}
+// CHECK-MSCOMPAT: ![[MD4]] = !{!"d5"}
+// CHECK-MSCOMPAT: ![[MD5]] = !{!"d31"}

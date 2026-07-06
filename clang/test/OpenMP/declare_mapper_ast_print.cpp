@@ -34,6 +34,28 @@ public:
 // CHECK: }
 // CHECK: ;
 
+// Verify that nested default mappers do not lead to a crash during parsing / sema.
+// CHECK: namespace N2 {
+namespace N2
+{
+// CHECK: struct inner {
+struct inner {
+  int size;
+  int *data;
+};
+#pragma omp declare mapper(struct inner i) map(i, i.data[0 : i.size])
+// CHECK: #pragma omp declare mapper (default : struct inner i) map(tofrom: N2::default::i,i.data[0:i.size]){{$}}
+
+// CHECK: struct outer {
+struct outer {
+  int a;
+  struct inner i;
+};
+#pragma omp declare mapper(struct outer o) map(o)
+// CHECK: #pragma omp declare mapper (default : struct outer o) map(tofrom: N2::default::o) map(tofrom: o.i){{$}}
+} // namespace N2
+// CHECK: }
+
 template <class T>
 class dat {
 public:
@@ -122,6 +144,7 @@ T foo(T a) {
 int main() {
   N1::vec vv, vvv;
   N1::vecchild vc;
+  N2::outer outer;
   dat<double> dd;
 #pragma omp target map(mapper(N1::id) tofrom: vv) map(mapper(dat<double>::id) alloc: vvv)
 // CHECK: #pragma omp target map(mapper(N1::id),tofrom: vv) map(mapper(dat<double>::id),alloc: vvv)
@@ -132,6 +155,9 @@ int main() {
 #pragma omp target map(mapper(default) tofrom: dd)
 // CHECK: #pragma omp target map(mapper(default),tofrom: dd)
   { dd.d++; }
+#pragma omp target map(outer)
+// CHECK: #pragma omp target map(tofrom: outer)
+  { }
 
 #pragma omp target update to(mapper(N1::id) : vc)
 // CHECK: #pragma omp target update to(mapper(N1::id): vc)

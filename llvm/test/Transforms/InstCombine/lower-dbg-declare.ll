@@ -26,7 +26,7 @@ entry:
   %retval = alloca i32, align 4
   %d1 = alloca i32, align 4
   store i32 0, ptr %retval, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %d1) #4, !dbg !17
+  call void @llvm.lifetime.start.p0(ptr %d1) #4, !dbg !17
 ; CHECK: #dbg_value(i32 42, [[METADATA_IDX1:![0-9]+]], !DIExpression(),
 ; CHECK-NEXT: store
   call void @llvm.dbg.declare(metadata ptr %d1, metadata !16, metadata !DIExpression()), !dbg !17
@@ -48,11 +48,11 @@ while.body:                                       ; preds = %while.cond
   br label %while.cond, !dbg !22, !llvm.loop !24
 
 while.end:                                        ; preds = %while.cond
-  call void @llvm.lifetime.end.p0(i64 4, ptr %d1) #4, !dbg !25
+  call void @llvm.lifetime.end.p0(ptr %d1) #4, !dbg !25
   ret i32 0, !dbg !26
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
@@ -64,7 +64,7 @@ define internal void @_ZL6escapeRi(ptr dereferenceable(4) %c) #3 !dbg !34 {
   ret void
 }
 
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!8, !9, !10}

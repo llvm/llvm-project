@@ -12,11 +12,11 @@ endif()
 if(LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS)
   message(STATUS "Enforcing strict test requirements for LLDB")
   # Lit uses psutil to do per-test timeouts.
-  set(useful_python_modules psutil packaging)
+  set(useful_python_modules psutil packaging cryptography)
 
   if(NOT WIN32)
     # We no longer vendor pexpect and it is not used on Windows.
-    list(APPEND pexpect)
+    list(APPEND useful_python_modules pexpect)
   endif()
 
   foreach(module ${useful_python_modules})
@@ -42,12 +42,16 @@ if(LLDB_BUILT_STANDALONE)
 endif()
 
 # Configure the build directory.
-# The .noindex suffix is a marker for Spotlight to never index the
-# build directory.  LLDB queries Spotlight to locate .dSYM bundles
-# based on the UUID embedded in a binary, and because the UUID is a
-# hash of filename and .text section, there *will* be conflicts inside
-# the build directory.
-set(LLDB_TEST_BUILD_DIRECTORY "${PROJECT_BINARY_DIR}/lldb-test-build.noindex" CACHE PATH "The build root for building tests.")
+if(APPLE)
+  # The .noindex suffix is a marker for Spotlight to never index the
+  # build directory.  LLDB queries Spotlight to locate .dSYM bundles
+  # based on the UUID embedded in a binary, and because the UUID is a
+  # hash of filename and .text section, there *will* be conflicts inside
+  # the build directory.
+  set(LLDB_TEST_BUILD_DIRECTORY "${PROJECT_BINARY_DIR}/lldb-test-build.noindex" CACHE PATH "The build root for building tests.")
+else()
+  set(LLDB_TEST_BUILD_DIRECTORY "${PROJECT_BINARY_DIR}/lldb-test-build" CACHE PATH "The build root for building tests.")
+endif()
 
 # Configure and create module cache directories.
 set(LLDB_TEST_MODULE_CACHE_LLDB "${LLDB_TEST_BUILD_DIRECTORY}/module-cache-lldb" CACHE PATH "The Clang module cache used by the Clang embedded in LLDB while running tests.")
@@ -128,8 +132,28 @@ if(TARGET liblldb)
   add_lldb_test_dependency(liblldb)
 endif()
 
+# When script interpreter plugins are built as separate shared libraries, they
+# are loaded by liblldb at runtime and aren't pulled in by the liblldb target.
+if(LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
+  if(TARGET lldbPluginScriptInterpreterPython)
+    add_lldb_test_dependency(lldbPluginScriptInterpreterPython)
+  endif()
+  if(TARGET lldbPluginScriptInterpreterLua)
+    add_lldb_test_dependency(lldbPluginScriptInterpreterLua)
+  endif()
+endif()
+
 if(TARGET lldb-framework)
   add_lldb_test_dependency(lldb-framework)
+endif()
+
+if(TARGET darwin-mte-launcher)
+  add_lldb_test_dependency(darwin-mte-launcher)
+  set(LLDB_LAUNCHER ${LLVM_RUNTIME_OUTPUT_INTDIR}/darwin-mte-launcher${CMAKE_EXECUTABLE_SUFFIX})
+endif()
+
+if (LLDB_CAN_USE_LLDB_RPC_SERVER)
+  add_lldb_test_dependency(lldb-rpc-generate-sources)
 endif()
 
 # Add dependencies that are not exported targets when building standalone.
@@ -160,9 +184,14 @@ if(TARGET clang)
   if (TARGET libcxx OR ("libcxx" IN_LIST LLVM_ENABLE_RUNTIMES))
     set(LLDB_HAS_LIBCXX ON)
     if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
-      set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
+      set(LIBCXX_TARGET_SUBDIR ${LLVM_DEFAULT_TARGET_TRIPLE})
+      if(LIBCXX_LIBDIR_SUBDIR)
+        string(APPEND LIBCXX_TARGET_SUBDIR /${LIBCXX_LIBDIR_SUBDIR})
+      endif()
+      cmake_path(NORMAL_PATH LIBCXX_TARGET_SUBDIR)
+      set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LIBCXX_TARGET_SUBDIR})
       set(LIBCXX_GENERATED_INCLUDE_DIR "${LLVM_BINARY_DIR}/include/c++/v1")
-      set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LLVM_BINARY_DIR}/include/${LLVM_DEFAULT_TARGET_TRIPLE}/c++/v1")
+      set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LLVM_BINARY_DIR}/include/${LIBCXX_TARGET_SUBDIR}/c++/v1")
     else()
       set(LIBCXX_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXX_LIBDIR_SUFFIX})
       set(LIBCXX_GENERATED_INCLUDE_DIR "${CMAKE_BINARY_DIR}/include/c++/v1")
@@ -191,13 +220,15 @@ if(TARGET clang)
             "LLDB_TEST_LIBCXX_ROOT_DIR to it.")
       endif()
     else()
-      # We require libcxx for the test suite, so if we aren't building it,
-      # provide a helpful error about how to resolve the situation.
-      if(NOT LLDB_HAS_LIBCXX)
-        message(SEND_ERROR
-          "LLDB test suite requires libc++, but it is currently disabled. "
-          "Please add `libcxx` to `LLVM_ENABLE_RUNTIMES` or disable tests via "
-          "`LLDB_INCLUDE_TESTS=OFF`.")
+      # The LLDB test suite uses libc++ for many tests. If it isn't being
+      # built in-tree, tests in the "libc++" category will be skipped
+      # (same behavior as Linux).
+      if(NOT LLDB_HAS_LIBCXX AND LLDB_ENABLE_LIBCXX_TESTS)
+        message(WARNING
+          "LLDB's libc++ specific tests will be skipped. Add `libcxx` to "
+          "`LLVM_ENABLE_RUNTIMES` to get full coverage, set "
+          "`LLDB_ENABLE_LIBCXX_TESTS=OFF` to silence this warning, or disable "
+          "all tests with `LLDB_INCLUDE_TESTS=OFF`.")
       endif()
     endif()
   endif()
@@ -220,6 +251,7 @@ add_lldb_test_dependency(
   llvm-pdbutil
   llvm-readobj
   llvm-ar
+  yaml2macho-core
   )
 
 if(TARGET lld)
@@ -235,21 +267,32 @@ if (CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(LLDB_IS_64_BITS 1)
 endif()
 
+if (LLDB_ENABLE_ARM64E_DEBUGSERVER OR LLDB_USE_SYSTEM_DEBUGSERVER)
+  set(LLDB_USE_ARM64E_DEBUGSERVER ON)
+endif()
+
 set(LLDB_TEST_SHELL_DISABLE_REMOTE OFF CACHE BOOL "Disable remote Shell tests execution")
+set(LLDB_TEST_USE_LLDB_SERVER OFF CACHE BOOL "If ON, run the test suites against the lldb-server backend on Windows")
 
 # These values are not canonicalized within LLVM.
 llvm_canonicalize_cmake_booleans(
   LLDB_BUILD_INTEL_PT
+  LLDB_ENABLE_MOCK_ACCELERATOR_PLUGIN
+  LLDB_ENABLE_MTE
   LLDB_ENABLE_PYTHON
   LLDB_ENABLE_LUA
   LLDB_ENABLE_LZMA
   LLVM_ENABLE_ZLIB
   LLVM_ENABLE_SHARED_LIBS
+  LLVM_ENABLE_DIA_SDK
   LLDB_HAS_LIBCXX
   LLDB_TEST_SHELL_DISABLE_REMOTE
+  LLDB_TEST_USE_LLDB_SERVER
   LLDB_TOOL_LLDB_SERVER_BUILD
   LLDB_USE_SYSTEM_DEBUGSERVER
-  LLDB_IS_64_BITS)
+  LLDB_IS_64_BITS
+  LLDB_BUILD_LLDBRPC
+  LLDB_USE_ARM64E_DEBUGSERVER)
 
 # Configure the individual test suites.
 add_subdirectory(API)

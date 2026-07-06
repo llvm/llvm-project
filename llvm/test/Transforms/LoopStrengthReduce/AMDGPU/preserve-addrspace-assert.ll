@@ -14,7 +14,7 @@ define amdgpu_kernel void @lsr_crash_preserve_addrspace_unknown_type() #0 {
 ; CHECK-NEXT:    br label %[[BB1:.*]]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    [[TMP:%.*]] = phi ptr addrspace(3) [ undef, %[[BB]] ], [ [[TMP18:%.*]], %[[BB17:.*]] ]
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP]], i32 8
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr inbounds [[TMP0:%.*]], ptr addrspace(3) [[TMP]], i64 0, i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = load double, ptr addrspace(3) [[SCEVGEP1]], align 8
 ; CHECK-NEXT:    br label %[[BB4:.*]]
 ; CHECK:       [[BB4]]:
@@ -26,14 +26,14 @@ define amdgpu_kernel void @lsr_crash_preserve_addrspace_unknown_type() #0 {
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i32 0, [[TMP10]]
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[BB12:.*]], label %[[BB17]]
 ; CHECK:       [[BB12]]:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP]], i32 16
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr inbounds [[TMP0]], ptr addrspace(3) [[TMP]], i64 0, i32 2
 ; CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr addrspace(3) [[SCEVGEP]], align 4
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i32 0, [[TMP14]]
 ; CHECK-NEXT:    br i1 [[TMP15]], label %[[BB16:.*]], label %[[BB17]]
 ; CHECK:       [[BB16]]:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB17]]:
-; CHECK-NEXT:    [[TMP18]] = getelementptr inbounds [[TMP0:%.*]], ptr addrspace(3) [[TMP]], i64 2
+; CHECK-NEXT:    [[TMP18]] = getelementptr inbounds [[TMP0]], ptr addrspace(3) [[TMP]], i64 2
 ; CHECK-NEXT:    br label %[[BB1]]
 ;
 bb:

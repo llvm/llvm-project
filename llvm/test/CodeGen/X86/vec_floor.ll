@@ -821,20 +821,18 @@ define <4 x float> @const_trunc_v4f32() {
 define <4 x float> @floor_ss(<4 x float> %x, <4 x float> %y) nounwind {
 ; SSE41-LABEL: floor_ss:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    roundss $9, %xmm0, %xmm0
-; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; SSE41-NEXT:    roundss $9, %xmm0, %xmm1
+; SSE41-NEXT:    movaps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: floor_ss:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vroundss $9, %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: floor_ss:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX512-NEXT:    vroundss $9, %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %s = extractelement <4 x float> %x, i32 0
   %call = call float @llvm.floor.f32(float %s)
@@ -846,20 +844,18 @@ declare float @llvm.floor.f32(float %s)
 define <2 x double> @floor_sd(<2 x double> %x, <2 x double> %y) nounwind {
 ; SSE41-LABEL: floor_sd:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    roundsd $9, %xmm0, %xmm0
-; SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; SSE41-NEXT:    roundsd $9, %xmm0, %xmm1
+; SSE41-NEXT:    movapd %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: floor_sd:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    vroundsd $9, %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX-NEXT:    vroundsd $9, %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: floor_sd:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vroundsd $9, %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX512-NEXT:    vroundsd $9, %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %s = extractelement <2 x double> %x, i32 0
   %call = call double @llvm.floor.f64(double %s)
@@ -1361,7 +1357,7 @@ define <4 x float> @floor_mask_ss(<4 x float> %x, <4 x float> %y, <4 x float> %w
 ; SSE41-NEXT:    xorps %xmm2, %xmm2
 ; SSE41-NEXT:    roundss $9, %xmm0, %xmm2
 ; SSE41-NEXT:  LBB52_2:
-; SSE41-NEXT:    blendps {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
+; SSE41-NEXT:    movss {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
 ; SSE41-NEXT:    movaps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -1372,7 +1368,7 @@ define <4 x float> @floor_mask_ss(<4 x float> %x, <4 x float> %y, <4 x float> %w
 ; AVX-NEXT:  ## %bb.1:
 ; AVX-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm2
 ; AVX-NEXT:  LBB52_2:
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm2[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm2[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: floor_mask_ss:
@@ -1402,7 +1398,7 @@ define <4 x float> @floor_maskz_ss(<4 x float> %x, <4 x float> %y, i8 %k) nounwi
 ; SSE41-NEXT:    xorps %xmm2, %xmm2
 ; SSE41-NEXT:    roundss $9, %xmm0, %xmm2
 ; SSE41-NEXT:  LBB53_2:
-; SSE41-NEXT:    blendps {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
+; SSE41-NEXT:    movss {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
 ; SSE41-NEXT:    movaps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -1414,7 +1410,7 @@ define <4 x float> @floor_maskz_ss(<4 x float> %x, <4 x float> %y, i8 %k) nounwi
 ; AVX-NEXT:  ## %bb.1:
 ; AVX-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm2
 ; AVX-NEXT:  LBB53_2:
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm2[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm2[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: floor_maskz_ss:
@@ -1441,7 +1437,7 @@ define <2 x double> @floor_mask_sd(<2 x double> %x, <2 x double> %y, <2 x double
 ; SSE41-NEXT:    xorps %xmm2, %xmm2
 ; SSE41-NEXT:    roundsd $9, %xmm0, %xmm2
 ; SSE41-NEXT:  LBB54_2:
-; SSE41-NEXT:    blendpd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
+; SSE41-NEXT:    movsd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
 ; SSE41-NEXT:    movapd %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -1452,7 +1448,7 @@ define <2 x double> @floor_mask_sd(<2 x double> %x, <2 x double> %y, <2 x double
 ; AVX-NEXT:  ## %bb.1:
 ; AVX-NEXT:    vroundsd $9, %xmm0, %xmm0, %xmm2
 ; AVX-NEXT:  LBB54_2:
-; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm2[0],xmm1[1]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm2[0],xmm1[1]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: floor_mask_sd:
@@ -1482,7 +1478,7 @@ define <2 x double> @floor_maskz_sd(<2 x double> %x, <2 x double> %y, i8 %k) nou
 ; SSE41-NEXT:    xorps %xmm2, %xmm2
 ; SSE41-NEXT:    roundsd $9, %xmm0, %xmm2
 ; SSE41-NEXT:  LBB55_2:
-; SSE41-NEXT:    blendpd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
+; SSE41-NEXT:    movsd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
 ; SSE41-NEXT:    movapd %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -1494,7 +1490,7 @@ define <2 x double> @floor_maskz_sd(<2 x double> %x, <2 x double> %y, i8 %k) nou
 ; AVX-NEXT:  ## %bb.1:
 ; AVX-NEXT:    vroundsd $9, %xmm0, %xmm0, %xmm2
 ; AVX-NEXT:  LBB55_2:
-; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm2[0],xmm1[1]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm2[0],xmm1[1]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: floor_maskz_sd:
@@ -1521,7 +1517,7 @@ define <4 x float> @floor_mask_ss_trunc(<4 x float> %x, <4 x float> %y, <4 x flo
 ; SSE41-NEXT:    xorps %xmm2, %xmm2
 ; SSE41-NEXT:    roundss $9, %xmm0, %xmm2
 ; SSE41-NEXT:  LBB56_2:
-; SSE41-NEXT:    blendps {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
+; SSE41-NEXT:    movss {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
 ; SSE41-NEXT:    movaps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -1532,7 +1528,7 @@ define <4 x float> @floor_mask_ss_trunc(<4 x float> %x, <4 x float> %y, <4 x flo
 ; AVX-NEXT:  ## %bb.1:
 ; AVX-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm2
 ; AVX-NEXT:  LBB56_2:
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm2[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm2[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: floor_mask_ss_trunc:
@@ -1562,7 +1558,7 @@ define <4 x float> @floor_maskz_ss_trunc(<4 x float> %x, <4 x float> %y, i16 %k)
 ; SSE41-NEXT:  LBB57_1:
 ; SSE41-NEXT:    roundss $9, %xmm0, %xmm0
 ; SSE41-NEXT:  LBB57_3:
-; SSE41-NEXT:    blendps {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
+; SSE41-NEXT:    movss {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
 ; SSE41-NEXT:    movaps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -1572,11 +1568,11 @@ define <4 x float> @floor_maskz_ss_trunc(<4 x float> %x, <4 x float> %y, i16 %k)
 ; AVX-NEXT:    jne LBB57_1
 ; AVX-NEXT:  ## %bb.2:
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
 ; AVX-NEXT:  LBB57_1:
 ; AVX-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: floor_maskz_ss_trunc:
@@ -1602,7 +1598,7 @@ define <2 x double> @floor_mask_sd_trunc(<2 x double> %x, <2 x double> %y, <2 x 
 ; SSE41-NEXT:    xorps %xmm2, %xmm2
 ; SSE41-NEXT:    roundsd $9, %xmm0, %xmm2
 ; SSE41-NEXT:  LBB58_2:
-; SSE41-NEXT:    blendpd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
+; SSE41-NEXT:    movsd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
 ; SSE41-NEXT:    movapd %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -1613,7 +1609,7 @@ define <2 x double> @floor_mask_sd_trunc(<2 x double> %x, <2 x double> %y, <2 x 
 ; AVX-NEXT:  ## %bb.1:
 ; AVX-NEXT:    vroundsd $9, %xmm0, %xmm0, %xmm2
 ; AVX-NEXT:  LBB58_2:
-; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm2[0],xmm1[1]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm2[0],xmm1[1]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: floor_mask_sd_trunc:
@@ -1643,7 +1639,7 @@ define <2 x double> @floor_maskz_sd_trunc(<2 x double> %x, <2 x double> %y, i16 
 ; SSE41-NEXT:  LBB59_1:
 ; SSE41-NEXT:    roundsd $9, %xmm0, %xmm0
 ; SSE41-NEXT:  LBB59_3:
-; SSE41-NEXT:    blendpd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
+; SSE41-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
 ; SSE41-NEXT:    movapd %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -1653,11 +1649,11 @@ define <2 x double> @floor_maskz_sd_trunc(<2 x double> %x, <2 x double> %y, i16 
 ; AVX-NEXT:    jne LBB59_1
 ; AVX-NEXT:  ## %bb.2:
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; AVX-NEXT:    retq
 ; AVX-NEXT:  LBB59_1:
 ; AVX-NEXT:    vroundsd $9, %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: floor_maskz_sd_trunc:
@@ -1689,7 +1685,7 @@ define <4 x float> @floor_mask_ss_mask8(<4 x float> %x, <4 x float> %y, <4 x flo
 ; AVX-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm3
 ; AVX-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vblendvps %xmm0, %xmm3, %xmm2, %xmm0
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: floor_mask_ss_mask8:
@@ -1723,7 +1719,7 @@ define <4 x float> @floor_maskz_ss_mask8(<4 x float> %x, <4 x float> %y) nounwin
 ; AVX-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm2
 ; AVX-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vandps %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: floor_maskz_ss_mask8:
@@ -1756,7 +1752,7 @@ define <2 x double> @floor_mask_sd_mask8(<2 x double> %x, <2 x double> %y, <2 x 
 ; AVX-NEXT:    vroundsd $9, %xmm0, %xmm0, %xmm3
 ; AVX-NEXT:    vcmpeqsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vblendvpd %xmm0, %xmm3, %xmm2, %xmm0
-; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: floor_mask_sd_mask8:
@@ -1790,7 +1786,7 @@ define <2 x double> @floor_maskz_sd_mask8(<2 x double> %x, <2 x double> %y) noun
 ; AVX-NEXT:    vroundsd $9, %xmm0, %xmm0, %xmm2
 ; AVX-NEXT:    vcmpeqsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vandpd %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: floor_maskz_sd_mask8:
@@ -1811,20 +1807,18 @@ define <2 x double> @floor_maskz_sd_mask8(<2 x double> %x, <2 x double> %y) noun
 define <4 x float> @ceil_ss(<4 x float> %x, <4 x float> %y) nounwind {
 ; SSE41-LABEL: ceil_ss:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    roundss $10, %xmm0, %xmm0
-; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; SSE41-NEXT:    roundss $10, %xmm0, %xmm1
+; SSE41-NEXT:    movaps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: ceil_ss:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    vroundss $10, %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vroundss $10, %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: ceil_ss:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vroundss $10, %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX512-NEXT:    vroundss $10, %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %s = extractelement <4 x float> %x, i32 0
   %call = call float @llvm.ceil.f32(float %s)
@@ -1836,20 +1830,18 @@ declare float @llvm.ceil.f32(float %s)
 define <2 x double> @ceil_sd(<2 x double> %x, <2 x double> %y) nounwind {
 ; SSE41-LABEL: ceil_sd:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    roundsd $10, %xmm0, %xmm0
-; SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; SSE41-NEXT:    roundsd $10, %xmm0, %xmm1
+; SSE41-NEXT:    movapd %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: ceil_sd:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    vroundsd $10, %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX-NEXT:    vroundsd $10, %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: ceil_sd:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vroundsd $10, %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX512-NEXT:    vroundsd $10, %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %s = extractelement <2 x double> %x, i32 0
   %call = call double @llvm.ceil.f64(double %s)
@@ -2351,7 +2343,7 @@ define <4 x float> @ceil_mask_ss(<4 x float> %x, <4 x float> %y, <4 x float> %w,
 ; SSE41-NEXT:    xorps %xmm2, %xmm2
 ; SSE41-NEXT:    roundss $10, %xmm0, %xmm2
 ; SSE41-NEXT:  LBB78_2:
-; SSE41-NEXT:    blendps {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
+; SSE41-NEXT:    movss {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
 ; SSE41-NEXT:    movaps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -2362,7 +2354,7 @@ define <4 x float> @ceil_mask_ss(<4 x float> %x, <4 x float> %y, <4 x float> %w,
 ; AVX-NEXT:  ## %bb.1:
 ; AVX-NEXT:    vroundss $10, %xmm0, %xmm0, %xmm2
 ; AVX-NEXT:  LBB78_2:
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm2[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm2[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: ceil_mask_ss:
@@ -2392,7 +2384,7 @@ define <4 x float> @ceil_maskz_ss(<4 x float> %x, <4 x float> %y, i8 %k) nounwin
 ; SSE41-NEXT:    xorps %xmm2, %xmm2
 ; SSE41-NEXT:    roundss $10, %xmm0, %xmm2
 ; SSE41-NEXT:  LBB79_2:
-; SSE41-NEXT:    blendps {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
+; SSE41-NEXT:    movss {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
 ; SSE41-NEXT:    movaps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -2404,7 +2396,7 @@ define <4 x float> @ceil_maskz_ss(<4 x float> %x, <4 x float> %y, i8 %k) nounwin
 ; AVX-NEXT:  ## %bb.1:
 ; AVX-NEXT:    vroundss $10, %xmm0, %xmm0, %xmm2
 ; AVX-NEXT:  LBB79_2:
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm2[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm2[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: ceil_maskz_ss:
@@ -2431,7 +2423,7 @@ define <2 x double> @ceil_mask_sd(<2 x double> %x, <2 x double> %y, <2 x double>
 ; SSE41-NEXT:    xorps %xmm2, %xmm2
 ; SSE41-NEXT:    roundsd $10, %xmm0, %xmm2
 ; SSE41-NEXT:  LBB80_2:
-; SSE41-NEXT:    blendpd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
+; SSE41-NEXT:    movsd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
 ; SSE41-NEXT:    movapd %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -2442,7 +2434,7 @@ define <2 x double> @ceil_mask_sd(<2 x double> %x, <2 x double> %y, <2 x double>
 ; AVX-NEXT:  ## %bb.1:
 ; AVX-NEXT:    vroundsd $10, %xmm0, %xmm0, %xmm2
 ; AVX-NEXT:  LBB80_2:
-; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm2[0],xmm1[1]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm2[0],xmm1[1]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: ceil_mask_sd:
@@ -2472,7 +2464,7 @@ define <2 x double> @ceil_maskz_sd(<2 x double> %x, <2 x double> %y, i8 %k) noun
 ; SSE41-NEXT:    xorps %xmm2, %xmm2
 ; SSE41-NEXT:    roundsd $10, %xmm0, %xmm2
 ; SSE41-NEXT:  LBB81_2:
-; SSE41-NEXT:    blendpd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
+; SSE41-NEXT:    movsd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
 ; SSE41-NEXT:    movapd %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -2484,7 +2476,7 @@ define <2 x double> @ceil_maskz_sd(<2 x double> %x, <2 x double> %y, i8 %k) noun
 ; AVX-NEXT:  ## %bb.1:
 ; AVX-NEXT:    vroundsd $10, %xmm0, %xmm0, %xmm2
 ; AVX-NEXT:  LBB81_2:
-; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm2[0],xmm1[1]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm2[0],xmm1[1]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: ceil_maskz_sd:
@@ -2511,7 +2503,7 @@ define <4 x float> @ceil_mask_ss_trunc(<4 x float> %x, <4 x float> %y, <4 x floa
 ; SSE41-NEXT:    xorps %xmm2, %xmm2
 ; SSE41-NEXT:    roundss $10, %xmm0, %xmm2
 ; SSE41-NEXT:  LBB82_2:
-; SSE41-NEXT:    blendps {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
+; SSE41-NEXT:    movss {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
 ; SSE41-NEXT:    movaps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -2522,7 +2514,7 @@ define <4 x float> @ceil_mask_ss_trunc(<4 x float> %x, <4 x float> %y, <4 x floa
 ; AVX-NEXT:  ## %bb.1:
 ; AVX-NEXT:    vroundss $10, %xmm0, %xmm0, %xmm2
 ; AVX-NEXT:  LBB82_2:
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm2[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm2[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: ceil_mask_ss_trunc:
@@ -2552,7 +2544,7 @@ define <4 x float> @ceil_maskz_ss_trunc(<4 x float> %x, <4 x float> %y, i16 %k) 
 ; SSE41-NEXT:  LBB83_1:
 ; SSE41-NEXT:    roundss $10, %xmm0, %xmm0
 ; SSE41-NEXT:  LBB83_3:
-; SSE41-NEXT:    blendps {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
+; SSE41-NEXT:    movss {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
 ; SSE41-NEXT:    movaps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -2562,11 +2554,11 @@ define <4 x float> @ceil_maskz_ss_trunc(<4 x float> %x, <4 x float> %y, i16 %k) 
 ; AVX-NEXT:    jne LBB83_1
 ; AVX-NEXT:  ## %bb.2:
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
 ; AVX-NEXT:  LBB83_1:
 ; AVX-NEXT:    vroundss $10, %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: ceil_maskz_ss_trunc:
@@ -2592,7 +2584,7 @@ define <2 x double> @ceil_mask_sd_trunc(<2 x double> %x, <2 x double> %y, <2 x d
 ; SSE41-NEXT:    xorps %xmm2, %xmm2
 ; SSE41-NEXT:    roundsd $10, %xmm0, %xmm2
 ; SSE41-NEXT:  LBB84_2:
-; SSE41-NEXT:    blendpd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
+; SSE41-NEXT:    movsd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
 ; SSE41-NEXT:    movapd %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -2603,7 +2595,7 @@ define <2 x double> @ceil_mask_sd_trunc(<2 x double> %x, <2 x double> %y, <2 x d
 ; AVX-NEXT:  ## %bb.1:
 ; AVX-NEXT:    vroundsd $10, %xmm0, %xmm0, %xmm2
 ; AVX-NEXT:  LBB84_2:
-; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm2[0],xmm1[1]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm2[0],xmm1[1]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: ceil_mask_sd_trunc:
@@ -2633,7 +2625,7 @@ define <2 x double> @ceil_maskz_sd_trunc(<2 x double> %x, <2 x double> %y, i16 %
 ; SSE41-NEXT:  LBB85_1:
 ; SSE41-NEXT:    roundsd $10, %xmm0, %xmm0
 ; SSE41-NEXT:  LBB85_3:
-; SSE41-NEXT:    blendpd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
+; SSE41-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
 ; SSE41-NEXT:    movapd %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -2643,11 +2635,11 @@ define <2 x double> @ceil_maskz_sd_trunc(<2 x double> %x, <2 x double> %y, i16 %
 ; AVX-NEXT:    jne LBB85_1
 ; AVX-NEXT:  ## %bb.2:
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; AVX-NEXT:    retq
 ; AVX-NEXT:  LBB85_1:
 ; AVX-NEXT:    vroundsd $10, %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: ceil_maskz_sd_trunc:
@@ -2679,7 +2671,7 @@ define <4 x float> @ceil_mask_ss_mask8(<4 x float> %x, <4 x float> %y, <4 x floa
 ; AVX-NEXT:    vroundss $10, %xmm0, %xmm0, %xmm3
 ; AVX-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vblendvps %xmm0, %xmm3, %xmm2, %xmm0
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: ceil_mask_ss_mask8:
@@ -2713,7 +2705,7 @@ define <4 x float> @ceil_maskz_ss_mask8(<4 x float> %x, <4 x float> %y) nounwind
 ; AVX-NEXT:    vroundss $10, %xmm0, %xmm0, %xmm2
 ; AVX-NEXT:    vcmpeqss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vandps %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: ceil_maskz_ss_mask8:
@@ -2746,7 +2738,7 @@ define <2 x double> @ceil_mask_sd_mask8(<2 x double> %x, <2 x double> %y, <2 x d
 ; AVX-NEXT:    vroundsd $10, %xmm0, %xmm0, %xmm3
 ; AVX-NEXT:    vcmpeqsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vblendvpd %xmm0, %xmm3, %xmm2, %xmm0
-; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: ceil_mask_sd_mask8:
@@ -2780,7 +2772,7 @@ define <2 x double> @ceil_maskz_sd_mask8(<2 x double> %x, <2 x double> %y) nounw
 ; AVX-NEXT:    vroundsd $10, %xmm0, %xmm0, %xmm2
 ; AVX-NEXT:    vcmpeqsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vandpd %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: ceil_maskz_sd_mask8:

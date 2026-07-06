@@ -140,3 +140,22 @@ void test17(void) {
   F("string literal" + 1); // both-warning {{adding}} \
                            // both-note {{use array indexing}}
 }
+
+static void foo(int i) __attribute__((__diagnose_if__(!__builtin_constant_p(i), "not constant", "error")))
+{
+}
+static void bar(int i) {
+  foo(15);
+}
+
+namespace Inactive {
+  int foo() {
+    if ((__extension__(
+            0 ? __extension__({ (1 ? 0 : (__builtin_constant_p("plane"))); })
+              : 0)) == 0) {
+    }
+
+    return 0;
+  }
+
+}

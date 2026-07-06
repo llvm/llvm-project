@@ -12,7 +12,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/JSON.h"
 
@@ -341,8 +341,7 @@ static void collectStatsForDie(DWARFDie Die, const std::string &FnPrefix,
 
   auto IsEntryValue = [&](ArrayRef<uint8_t> D) -> bool {
     DWARFUnit *U = Die.getDwarfUnit();
-    DataExtractor Data(toStringRef(D),
-                       Die.getDwarfUnit()->getContext().isLittleEndian(), 0);
+    DataExtractor Data(D, Die.getDwarfUnit()->getContext().isLittleEndian());
     DWARFExpression Expression(Data, U->getAddressByteSize(),
                                U->getFormParams().Format);
     // Consider the expression containing the DW_OP_entry_value as
@@ -878,7 +877,7 @@ bool dwarfdump::collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   DenseSet<LineTuple> UniqueLines;
   DenseSet<LineTuple> UniqueNonZeroLines;
 
-  for (const auto &CU : static_cast<DWARFContext *>(&DICtx)->compile_units()) {
+  for (const auto &CU : DICtx.compile_units()) {
     if (DWARFDie CUDie = CU->getNonSkeletonUnitDIE(false)) {
       // This variable holds variable information for functions with
       // abstract_origin, but just for the current CU.

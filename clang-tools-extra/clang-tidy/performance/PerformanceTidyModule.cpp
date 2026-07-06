@@ -1,4 +1,4 @@
-//===-- PerformanceTidyModule.cpp - clang-tidy ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,10 +8,8 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "AvoidEndlCheck.h"
 #include "EnumSizeCheck.h"
-#include "FasterStringFindCheck.h"
 #include "ForRangeCopyCheck.h"
 #include "ImplicitConversionInLoopCheck.h"
 #include "InefficientAlgorithmCheck.h"
@@ -24,20 +22,24 @@
 #include "NoexceptDestructorCheck.h"
 #include "NoexceptMoveConstructorCheck.h"
 #include "NoexceptSwapCheck.h"
+#include "PreferSingleCharOverloadsCheck.h"
+#include "StringViewConversionsCheck.h"
 #include "TriviallyDestructibleCheck.h"
 #include "TypePromotionInMathFnCheck.h"
-#include "UnnecessaryCopyInitialization.h"
+#include "UnnecessaryCopyInitializationCheck.h"
 #include "UnnecessaryValueParamCheck.h"
+#include "UseStdMoveCheck.h"
 
 namespace clang::tidy {
 namespace performance {
+namespace {
 
 class PerformanceModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<AvoidEndlCheck>("performance-avoid-endl");
     CheckFactories.registerCheck<EnumSizeCheck>("performance-enum-size");
-    CheckFactories.registerCheck<FasterStringFindCheck>(
+    CheckFactories.registerCheck<PreferSingleCharOverloadsCheck>(
         "performance-faster-string-find");
     CheckFactories.registerCheck<ForRangeCopyCheck>(
         "performance-for-range-copy");
@@ -62,16 +64,23 @@ public:
         "performance-noexcept-move-constructor");
     CheckFactories.registerCheck<NoexceptSwapCheck>(
         "performance-noexcept-swap");
+    CheckFactories.registerCheck<PreferSingleCharOverloadsCheck>(
+        "performance-prefer-single-char-overloads");
+    CheckFactories.registerCheck<StringViewConversionsCheck>(
+        "performance-string-view-conversions");
     CheckFactories.registerCheck<TriviallyDestructibleCheck>(
         "performance-trivially-destructible");
     CheckFactories.registerCheck<TypePromotionInMathFnCheck>(
         "performance-type-promotion-in-math-fn");
-    CheckFactories.registerCheck<UnnecessaryCopyInitialization>(
+    CheckFactories.registerCheck<UnnecessaryCopyInitializationCheck>(
         "performance-unnecessary-copy-initialization");
     CheckFactories.registerCheck<UnnecessaryValueParamCheck>(
         "performance-unnecessary-value-param");
+    CheckFactories.registerCheck<UseStdMoveCheck>("performance-use-std-move");
   }
 };
+
+} // namespace
 
 // Register the PerformanceModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<PerformanceModule>
@@ -81,6 +90,7 @@ static ClangTidyModuleRegistry::Add<PerformanceModule>
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the PerformanceModule.
+// NOLINTNEXTLINE(misc-use-internal-linkage)
 volatile int PerformanceModuleAnchorSource = 0;
 
 } // namespace clang::tidy

@@ -7,11 +7,16 @@ void someFunction();
 
 namespace raw_ptr {
 void foo() {
-  CheckedObj *bar;
-  // FIXME: later on we might warn on uninitialized vars too
+  CheckedObj *bar; // A local variable in a trivial context is ignored.
 }
 
 void bar(CheckedObj *) {}
+
+void baz() {
+  CheckedObj *bar;
+  // expected-warning@-1{{Local variable 'bar' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
+  someFunction();
+}
 } // namespace raw_ptr
 
 namespace reference {
@@ -289,6 +294,28 @@ void foo() {
 }
 
 } // namespace local_assignment_to_global
+
+namespace member_var {
+
+  struct WrapperObj {
+    CheckedObj checked;
+    CheckedObj& checkedRef;
+    void foo() {
+      auto *a = &checked;
+      a->method();
+      auto *b = &checkedRef;
+      // expected-warning@-1{{Local variable 'b' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
+      b->method();
+    }
+
+    void bar(WrapperObj& wrapper) {
+      CheckedObj* ptr = &wrapper.checked;
+      // expected-warning@-1{{Local variable 'ptr' is unchecked and unsafe [alpha.webkit.UncheckedLocalVarsChecker]}}
+      ptr->method();
+    }
+  };
+
+}
 
 namespace local_refcountable_checkable_object {
 

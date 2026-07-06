@@ -82,14 +82,29 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:   return matchIConstant(State.MIs[0]->getOperand(1), 0);
 // CHECK-NEXT: }
 
-// Verify we reset MatchData on each tryCombineAll
+// Verify we gate on opcodes with generated combines and reset MatchData on each
+// tryCombineAll.
+// CHECK:      static bool GenMyCombiner_canMatchOpcode(unsigned Opc) {
+// CHECK-NEXT:   switch (Opc) {
+// CHECK-DAG:    case TargetOpcode::COPY:
+// CHECK-DAG:    case TargetOpcode::G_AND:
+// CHECK-DAG:    case TargetOpcode::G_STORE:
+// CHECK-DAG:    case TargetOpcode::G_TRUNC:
+// CHECK-DAG:    case TargetOpcode::G_SEXT:
+// CHECK-DAG:    case TargetOpcode::G_ZEXT:
+// CHECK:        return true;
+// CHECK-NEXT:   default:
+// CHECK-NEXT:     return false;
+// CHECK-NEXT:   }
+// CHECK-NEXT: }
+// CHECK-EMPTY:
 // CHECK:      bool GenMyCombiner::tryCombineAll(MachineInstr &I) const {
-// CHECK-NEXT:   const TargetSubtargetInfo &ST = MF.getSubtarget();
+// CHECK-NEXT:   if (!GenMyCombiner_canMatchOpcode(I.getOpcode()))
+// CHECK-NEXT:     return false;
 // CHECK-NEXT:   const PredicateBitset AvailableFeatures = getAvailableFeatures();
-// CHECK-NEXT:   B.setInstrAndDebugLoc(I);
 // CHECK-NEXT:   State.MIs.clear();
 // CHECK-NEXT:   State.MIs.push_back(&I);
-// CHECK-NEXT:   if (executeMatchTable(*this, State, ExecInfo, B, getMatchTable(), *ST.getInstrInfo(), MRI, *MRI.getTargetRegisterInfo(), *ST.getRegBankInfo(), AvailableFeatures, /*CoverageInfo*/ nullptr))
+// CHECK-NEXT:   if (executeMatchTable(*this, State, ExecInfo, B, getMatchTable(), Helper.getTII(), MRI, Helper.getTRI(), Helper.getRBI(), AvailableFeatures, /*CoverageInfo*/ nullptr))
 // CHECK-NEXT:     return true;
 // CHECK-NEXT:   }
 // CHECK-EMPTY:
@@ -147,8 +162,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:     /*TargetOpcode::G_SEXT*//*Label 4*/ GIMT_Encode4([[L4:[0-9]+]]), GIMT_Encode4(0),
 // CHECK-NEXT:     /*TargetOpcode::G_ZEXT*//*Label 5*/ GIMT_Encode4([[L5:[0-9]+]]),
 // CHECK-NEXT:     // Label 0: @[[#%u, mul(UPPER-LOWER, 4) + 10]]
-// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 7*/ GIMT_Encode4([[L7:[0-9]+]]), // Rule ID 4 //
-// CHECK-NEXT:       GIM_CheckFeatures, GIMT_Encode2(GIFBS_HasAnswerToEverything),
+// CHECK-NEXT:     GIM_Try_CheckFeatures, /*On fail goto*//*Label 7*/ GIMT_Encode4([[L7:[0-9]+]]), GIMT_Encode2(GIFBS_HasAnswerToEverything), // Rule ID 4 //
 // CHECK-NEXT:       GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule3Enabled),
 // CHECK-NEXT:       // MIs[0] a
 // CHECK-NEXT:       // No operand predicates
@@ -181,7 +195,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       GIM_RecordInsnIgnoreCopies, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
 // CHECK-NEXT:       GIM_CheckOpcode, /*MI*/1, GIMT_Encode2(TargetOpcode::G_CONSTANT),
 // CHECK-NEXT:       // MIs[1] z
-// CHECK-NEXT:       GIM_CheckLiteralInt, /*MI*/1, /*Op*/1, GIMT_Encode8(-42),
+// CHECK-NEXT:       GIM_CheckLiteralInt, /*MI*/1, /*Op*/1, GIMT_Encode8(18446744073709551574u),
 // CHECK-NEXT:       GIM_CheckConstantInt8, /*MI*/0, /*Op*/2, 43,
 // CHECK-NEXT:       GIM_CheckIsSafeToFold, /*NumInsns*/1,
 // CHECK-NEXT:       // Combiner Rule #5: InOutInstTest1

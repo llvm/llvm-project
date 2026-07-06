@@ -13,6 +13,7 @@
 #include "PDBExtras.h"
 #include "PDBTypes.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 
 #define FORWARD_SYMBOL_METHOD(MethodName)                                      \
   decltype(auto) MethodName() const { return RawSymbol->MethodName(); }
@@ -68,7 +69,7 @@ public:                                                                        \
 /// valid for that particular symbol type, as described in the Microsoft
 /// reference "Lexical and Class Hierarchy of Symbol Types":
 /// https://msdn.microsoft.com/en-us/library/370hs6k4.aspx
-class PDBSymbol {
+class LLVM_ABI PDBSymbol {
   static std::unique_ptr<PDBSymbol> createSymbol(const IPDBSession &PDBSession,
                                                  PDB_SymType Tag);
 

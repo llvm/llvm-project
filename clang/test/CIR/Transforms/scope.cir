@@ -5,16 +5,16 @@
 module {
   cir.func @foo() {
     cir.scope {
-      %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["a", init] {alignment = 4 : i64}
+      %0 = cir.alloca "a" align(4) init : !cir.ptr<!u32i>
       %1 = cir.const #cir.int<4> : !u32i
       cir.store %1, %0 : !u32i, !cir.ptr<!u32i>
     }
     cir.return
   }
-// CHECK:  cir.func @foo() {
+// CHECK:  cir.func{{.*}} @foo() {
 // CHECK:    cir.br ^bb1
 // CHECK:  ^bb1:  // pred: ^bb0
-// CHECK:    %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["a", init] {alignment = 4 : i64}
+// CHECK:    %0 = cir.alloca "a" align(4) init : !cir.ptr<!u32i>
 // CHECK:    %1 = cir.const #cir.int<4> : !u32i
 // CHECK:    cir.store %1, %0 : !u32i, !cir.ptr<!u32i>
 // CHECK:    cir.br ^bb2
@@ -28,12 +28,12 @@ module {
     }
     cir.return
   }
-// CHECK:  cir.func @empty_scope() {
+// CHECK:  cir.func{{.*}} @empty_scope() {
 // CHECK:    cir.return
 // CHECK:  }
 
   cir.func @scope_with_return() -> !u32i {
-    %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["__retval"] {alignment = 4 : i64}
+    %0 = cir.alloca "__retval" align(4) : !cir.ptr<!u32i>
     cir.scope {
       %2 = cir.const #cir.int<0> : !u32i
       cir.store %2, %0 : !u32i, !cir.ptr<!u32i>
@@ -44,8 +44,8 @@ module {
     cir.return %1 : !u32i
   }
 
-// CHECK:  cir.func @scope_with_return() -> !u32i {
-// CHECK:    %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["__retval"] {alignment = 4 : i64}
+// CHECK:  cir.func{{.*}} @scope_with_return() -> !u32i {
+// CHECK:    %0 = cir.alloca "__retval" align(4) : !cir.ptr<!u32i>
 // CHECK:    cir.br ^bb1
 // CHECK:  ^bb1:  // pred: ^bb0
 // CHECK:    %1 = cir.const #cir.int<0> : !u32i

@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_MACROS_GPU_SIGNAL_MACROS_H
 #define LLVM_LIBC_MACROS_GPU_SIGNAL_MACROS_H
 
+#include "__llvm-libc-common.h"
+
 #define SIGINT 2
 #define SIGILL 4
 #define SIGABRT 6
@@ -16,9 +18,10 @@
 #define SIGSEGV 11
 #define SIGTERM 15
 
-#define SIG_DFL ((void (*)(int))(0))
-#define SIG_IGN ((void (*)(int))(1))
-#define SIG_ERR ((void (*)(int))(-1))
+#define SIG_ERR __LLVM_LIBC_CAST(reinterpret_cast, void (*)(int), -1)
+#define SIG_DFL __LLVM_LIBC_CAST(reinterpret_cast, void (*)(int), 0)
+#define SIG_IGN __LLVM_LIBC_CAST(reinterpret_cast, void (*)(int), 1)
+#define SIG_HOLD __LLVM_LIBC_CAST(reinterpret_cast, void (*)(int), 2)
 
 // Max signal number
 #define NSIG 64

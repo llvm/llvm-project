@@ -15,6 +15,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
+#include "llvm/CodeGen/MIRFSDiscriminatorOptions.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -37,7 +38,6 @@
 using namespace llvm;
 using namespace sampleprof;
 using namespace llvm::sampleprofutil;
-using ProfileCount = Function::ProfileCount;
 
 #define DEBUG_TYPE "fs-profile-loader"
 
@@ -62,9 +62,6 @@ static cl::opt<bool> ViewBFIAfter("fs-viewbfi-after", cl::Hidden,
                                   cl::init(false),
                                   cl::desc("View BFI after MIR loader"));
 
-namespace llvm {
-extern cl::opt<bool> ImprovedFSDiscriminator;
-}
 char MIRProfileLoaderPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(MIRProfileLoaderPass, DEBUG_TYPE,
@@ -250,7 +247,7 @@ void MIRProfileLoader::setBranchProbs(MachineFunction &F) {
       assert(BBWeight >= EdgeWeight &&
              "BBweight is larger than EdgeWeight -- should not happen.\n");
 
-      BranchProbability OldProb = BFI->getMBPI()->getEdgeProbability(BB, SI);
+      BranchProbability OldProb = BB->getSuccProbability(SI);
       BranchProbability NewProb(EdgeWeight, BBWeight);
       if (OldProb == NewProb)
         continue;
@@ -372,8 +369,6 @@ bool MIRProfileLoaderPass::runOnMachineFunction(MachineFunction &MF) {
       &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
 
   MF.RenumberBlocks();
-  MDT->updateBlockNumbers();
-  MPDT->updateBlockNumbers();
 
   MIRSampleLoader->setInitVals(
       MDT, MPDT, &getAnalysis<MachineLoopInfoWrapperPass>().getLI(), MBFI,

@@ -4,7 +4,7 @@
 ; RUN: FileCheck --check-prefixes=CHECKASM,ASM32PWR4 %s
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec \
-; RUN:  -mtriple powerpc64-ibm-aix-xcoff < %s | \
+; RUN:  -mtriple powerpc64-ibm-aix-xcoff --code-model=small < %s | \
 ; RUN: FileCheck --check-prefixes=CHECKASM,ASM64PWR4 %s
 
 define void @call_test_chars() {
@@ -1667,7 +1667,6 @@ define void @caller_fpr_stack() {
 ; ASM64PWR4-NEXT:    lis 7, 16313
 ; ASM64PWR4-NEXT:    lwz 3, 0(3)
 ; ASM64PWR4-NEXT:    ld 4, 0(4)
-; ASM64PWR4-NEXT:    lwz 5, 0(5)
 ; ASM64PWR4-NEXT:    stw 3, 152(1)
 ; ASM64PWR4-NEXT:    ld 3, L..C22(2) # %const.0
 ; ASM64PWR4-NEXT:    std 4, 160(1)
@@ -1686,6 +1685,7 @@ define void @caller_fpr_stack() {
 ; ASM64PWR4-NEXT:    ld 4, L..C29(2) # %const.7
 ; ASM64PWR4-NEXT:    lfd 9, 0(3)
 ; ASM64PWR4-NEXT:    ld 3, L..C30(2) # %const.8
+; ASM64PWR4-NEXT:    lwz 5, 0(5)
 ; ASM64PWR4-NEXT:    lfd 1, 0(4)
 ; ASM64PWR4-NEXT:    lis 4, 16320
 ; ASM64PWR4-NEXT:    ori 4, 4, 41943

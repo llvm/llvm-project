@@ -20,14 +20,14 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CBindingWrapping.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TypeSize.h"
-#include <algorithm>
 #include <cstdint>
 #include <functional>
-#include <iterator>
 #include <optional>
 #include <string>
 #include <utility>
@@ -67,6 +67,7 @@ enum DiagnosticKind {
   DK_StackSize,
   DK_Linker,
   DK_Lowering,
+  DK_LegalizationFailure,
   DK_DebugMetadataVersion,
   DK_DebugMetadataInvalid,
   DK_Instrumentation,
@@ -88,6 +89,7 @@ enum DiagnosticKind {
   DK_MIRParser,
   DK_PGOProfile,
   DK_Unsupported,
+  DK_UnsupportedTargetIntrinsic,
   DK_SrcMgr,
   DK_DontCall,
   DK_MisExpect,
@@ -103,14 +105,14 @@ enum DiagnosticKind {
 /// The returned ID will be greater than or equal to DK_FirstPluginKind.
 /// Thus, the plugin identifiers will not conflict with the
 /// DiagnosticKind values.
-int getNextAvailablePluginDiagnosticKind();
+LLVM_ABI int getNextAvailablePluginDiagnosticKind();
 
 /// This is the base abstract class for diagnostic reporting in
 /// the backend.
 /// The print method must be overloaded by the subclasses to print a
 /// user-friendly message in the client of the backend (let us call it a
 /// frontend).
-class DiagnosticInfo {
+class LLVM_ABI DiagnosticInfo {
 private:
   /// Kind defines the kind of report this is about.
   const /* DiagnosticKind */ int Kind;
@@ -138,7 +140,7 @@ public:
 
 using DiagnosticHandlerFunction = std::function<void(const DiagnosticInfo &)>;
 
-class DiagnosticInfoGeneric : public DiagnosticInfo {
+class LLVM_ABI DiagnosticInfoGeneric : public DiagnosticInfo {
   const Twine &MsgStr;
   const Instruction *Inst = nullptr;
 
@@ -168,7 +170,7 @@ public:
 
 /// Diagnostic information for inline asm reporting.
 /// This is basically a message and an optional location.
-class DiagnosticInfoInlineAsm : public DiagnosticInfo {
+class LLVM_ABI DiagnosticInfoInlineAsm : public DiagnosticInfo {
 private:
   /// Optional line information. 0 if not set.
   uint64_t LocCookie = 0;
@@ -209,7 +211,7 @@ public:
 
 /// Diagnostic information for debug metadata version reporting.
 /// This is basically a module and a version.
-class DiagnosticInfoDebugMetadataVersion : public DiagnosticInfo {
+class LLVM_ABI DiagnosticInfoDebugMetadataVersion : public DiagnosticInfo {
 private:
   /// The module that is concerned by this debug metadata version diagnostic.
   const Module &M;
@@ -236,16 +238,17 @@ public:
 };
 
 /// Diagnostic information for stripping invalid debug metadata.
-class DiagnosticInfoIgnoringInvalidDebugMetadata : public DiagnosticInfo {
+class LLVM_ABI DiagnosticInfoIgnoringInvalidDebugMetadata
+    : public DiagnosticInfo {
 private:
-  /// The module that is concerned by this debug metadata version diagnostic.
+  /// The module that is concerned by this invalid debug metadata diagnostic.
   const Module &M;
 
 public:
-  /// \p The module that is concerned by this debug metadata version diagnostic.
+  /// \p The module that is concerned by this invalid debug metadata diagnostic.
   DiagnosticInfoIgnoringInvalidDebugMetadata(
       const Module &M, DiagnosticSeverity Severity = DS_Warning)
-      : DiagnosticInfo(DK_DebugMetadataVersion, Severity), M(M) {}
+      : DiagnosticInfo(DK_DebugMetadataInvalid, Severity), M(M) {}
 
   const Module &getModule() const { return M; }
 
@@ -258,7 +261,7 @@ public:
 };
 
 /// Diagnostic information for the sample profiler.
-class DiagnosticInfoSampleProfile : public DiagnosticInfo {
+class LLVM_ABI DiagnosticInfoSampleProfile : public DiagnosticInfo {
 public:
   DiagnosticInfoSampleProfile(StringRef FileName, unsigned LineNum,
                               const Twine &Msg LLVM_LIFETIME_BOUND,
@@ -298,7 +301,7 @@ private:
 };
 
 /// Diagnostic information for the PGO profiler.
-class DiagnosticInfoPGOProfile : public DiagnosticInfo {
+class LLVM_ABI DiagnosticInfoPGOProfile : public DiagnosticInfo {
 public:
   DiagnosticInfoPGOProfile(const char *FileName,
                            const Twine &Msg LLVM_LIFETIME_BOUND,
@@ -330,20 +333,20 @@ class DiagnosticLocation {
 
 public:
   DiagnosticLocation() = default;
-  DiagnosticLocation(const DebugLoc &DL);
-  DiagnosticLocation(const DISubprogram *SP);
+  LLVM_ABI DiagnosticLocation(const DebugLoc &DL);
+  LLVM_ABI DiagnosticLocation(const DISubprogram *SP);
 
   bool isValid() const { return File; }
   /// Return the full path to the file.
-  std::string getAbsolutePath() const;
+  LLVM_ABI std::string getAbsolutePath() const;
   /// Return the file name relative to the compilation directory.
-  StringRef getRelativePath() const;
+  LLVM_ABI StringRef getRelativePath() const;
   unsigned getLine() const { return Line; }
   unsigned getColumn() const { return Column; }
 };
 
 /// Common features for diagnostics with an associated location.
-class DiagnosticInfoWithLocationBase : public DiagnosticInfo {
+class LLVM_ABI DiagnosticInfoWithLocationBase : public DiagnosticInfo {
   void anchor() override;
 public:
   /// \p Fn is the function where the diagnostic is being emitted. \p Loc is
@@ -381,7 +384,32 @@ private:
   DiagnosticLocation Loc;
 };
 
-class DiagnosticInfoGenericWithLoc : public DiagnosticInfoWithLocationBase {
+class LLVM_ABI DiagnosticInfoLegalizationFailure
+    : public DiagnosticInfoWithLocationBase {
+private:
+  /// Message to be reported.
+  const Twine &MsgStr;
+
+public:
+  DiagnosticInfoLegalizationFailure(const Twine &MsgStr LLVM_LIFETIME_BOUND,
+                                    const Function &Fn,
+                                    const DiagnosticLocation &Loc,
+                                    DiagnosticSeverity Severity = DS_Error)
+      : DiagnosticInfoWithLocationBase(DK_LegalizationFailure, Severity, Fn,
+                                       Loc),
+        MsgStr(MsgStr) {}
+
+  const Twine &getMsgStr() const { return MsgStr; }
+
+  void print(DiagnosticPrinter &DP) const override;
+
+  static bool classof(const DiagnosticInfo *DI) {
+    return DI->getKind() == DK_LegalizationFailure;
+  }
+};
+
+class LLVM_ABI DiagnosticInfoGenericWithLoc
+    : public DiagnosticInfoWithLocationBase {
 private:
   /// Message to be reported.
   const Twine &MsgStr;
@@ -406,7 +434,8 @@ public:
   }
 };
 
-class DiagnosticInfoRegAllocFailure : public DiagnosticInfoWithLocationBase {
+class LLVM_ABI DiagnosticInfoRegAllocFailure
+    : public DiagnosticInfoWithLocationBase {
 private:
   /// Message to be reported.
   const Twine &MsgStr;
@@ -434,13 +463,14 @@ public:
 
 /// Diagnostic information for stack size etc. reporting.
 /// This is basically a function and a size.
-class DiagnosticInfoResourceLimit : public DiagnosticInfoWithLocationBase {
+class LLVM_ABI DiagnosticInfoResourceLimit
+    : public DiagnosticInfoWithLocationBase {
 private:
   /// The function that is concerned by this resource limit diagnostic.
   const Function &Fn;
 
   /// Description of the resource type (e.g. stack size)
-  const char *ResourceName;
+  const Twine &ResourceName;
 
   /// The computed size usage
   uint64_t ResourceSize;
@@ -451,13 +481,14 @@ private:
 public:
   /// \p The function that is concerned by this stack size diagnostic.
   /// \p The computed stack size.
-  DiagnosticInfoResourceLimit(const Function &Fn, const char *ResourceName,
+  DiagnosticInfoResourceLimit(const Function &Fn,
+                              const Twine &ResourceName LLVM_LIFETIME_BOUND,
                               uint64_t ResourceSize, uint64_t ResourceLimit,
                               DiagnosticSeverity Severity = DS_Warning,
                               DiagnosticKind Kind = DK_ResourceLimit);
 
   const Function &getFunction() const { return Fn; }
-  const char *getResourceName() const { return ResourceName; }
+  const Twine &getResourceName() const { return ResourceName; }
   uint64_t getResourceSize() const { return ResourceSize; }
   uint64_t getResourceLimit() const { return ResourceLimit; }
 
@@ -469,15 +500,16 @@ public:
   }
 };
 
-class DiagnosticInfoStackSize : public DiagnosticInfoResourceLimit {
+class LLVM_ABI DiagnosticInfoStackSize : public DiagnosticInfoResourceLimit {
   void anchor() override;
+  const Twine ResourceNameStr{"stack frame size"};
 
 public:
   DiagnosticInfoStackSize(const Function &Fn, uint64_t StackSize,
                           uint64_t StackLimit,
                           DiagnosticSeverity Severity = DS_Warning)
-      : DiagnosticInfoResourceLimit(Fn, "stack frame size", StackSize,
-                                    StackLimit, Severity, DK_StackSize) {}
+      : DiagnosticInfoResourceLimit(Fn, ResourceNameStr, StackSize, StackLimit,
+                                    Severity, DK_StackSize) {}
 
   uint64_t getStackSize() const { return getResourceSize(); }
   uint64_t getStackLimit() const { return getResourceLimit(); }
@@ -489,7 +521,8 @@ public:
 
 /// Common features for diagnostics dealing with optimization remarks
 /// that are used by both IR and MIR passes.
-class DiagnosticInfoOptimizationBase : public DiagnosticInfoWithLocationBase {
+class LLVM_ABI DiagnosticInfoOptimizationBase
+    : public DiagnosticInfoWithLocationBase {
 public:
   /// Used to set IsVerbose via the stream interface.
   struct setIsVerbose {};
@@ -509,21 +542,22 @@ public:
     DiagnosticLocation Loc;
 
     explicit Argument(StringRef Str = "") : Key("String"), Val(Str) {}
-    Argument(StringRef Key, const Value *V);
-    Argument(StringRef Key, const Type *T);
-    Argument(StringRef Key, StringRef S);
+    LLVM_ABI Argument(StringRef Key, const Value *V);
+    LLVM_ABI Argument(StringRef Key, const Type *T);
+    LLVM_ABI Argument(StringRef Key, StringRef S);
     Argument(StringRef Key, const char *S) : Argument(Key, StringRef(S)) {};
-    Argument(StringRef Key, int N);
-    Argument(StringRef Key, float N);
-    Argument(StringRef Key, long N);
-    Argument(StringRef Key, long long N);
-    Argument(StringRef Key, unsigned N);
-    Argument(StringRef Key, unsigned long N);
-    Argument(StringRef Key, unsigned long long N);
-    Argument(StringRef Key, ElementCount EC);
+    LLVM_ABI Argument(StringRef Key, int N);
+    LLVM_ABI Argument(StringRef Key, float N);
+    LLVM_ABI Argument(StringRef Key, long N);
+    LLVM_ABI Argument(StringRef Key, long long N);
+    LLVM_ABI Argument(StringRef Key, unsigned N);
+    LLVM_ABI Argument(StringRef Key, unsigned long N);
+    LLVM_ABI Argument(StringRef Key, unsigned long long N);
+    LLVM_ABI Argument(StringRef Key, ElementCount EC);
     Argument(StringRef Key, bool B) : Key(Key), Val(B ? "true" : "false") {}
-    Argument(StringRef Key, DebugLoc dl);
-    Argument(StringRef Key, InstructionCost C);
+    LLVM_ABI Argument(StringRef Key, DebugLoc dl);
+    LLVM_ABI Argument(StringRef Key, InstructionCost C);
+    LLVM_ABI Argument(StringRef Key, BranchProbability P);
   };
 
   /// \p PassName is the name of the pass emitting this diagnostic. \p
@@ -663,7 +697,8 @@ operator<<(RemarkT &&R,
 
 /// Common features for diagnostics dealing with optimization remarks
 /// that are used by IR passes.
-class DiagnosticInfoIROptimization : public DiagnosticInfoOptimizationBase {
+class LLVM_ABI DiagnosticInfoIROptimization
+    : public DiagnosticInfoOptimizationBase {
   void anchor() override;
 public:
   /// \p PassName is the name of the pass emitting this diagnostic. \p
@@ -729,7 +764,7 @@ private:
 };
 
 /// Diagnostic information for applied optimization remarks.
-class OptimizationRemark : public DiagnosticInfoIROptimization {
+class LLVM_ABI OptimizationRemark : public DiagnosticInfoIROptimization {
 public:
   /// \p PassName is the name of the pass emitting this diagnostic. If this name
   /// matches the regular expression given in -Rpass=, then the diagnostic will
@@ -774,7 +809,7 @@ private:
 };
 
 /// Diagnostic information for missed-optimization remarks.
-class OptimizationRemarkMissed : public DiagnosticInfoIROptimization {
+class LLVM_ABI OptimizationRemarkMissed : public DiagnosticInfoIROptimization {
 public:
   /// \p PassName is the name of the pass emitting this diagnostic. If this name
   /// matches the regular expression given in -Rpass-missed=, then the
@@ -819,7 +854,8 @@ private:
 };
 
 /// Diagnostic information for optimization analysis remarks.
-class OptimizationRemarkAnalysis : public DiagnosticInfoIROptimization {
+class LLVM_ABI OptimizationRemarkAnalysis
+    : public DiagnosticInfoIROptimization {
 public:
   /// \p PassName is the name of the pass emitting this diagnostic. If this name
   /// matches the regular expression given in -Rpass-analysis=, then the
@@ -891,7 +927,8 @@ private:
 
 /// Diagnostic information for optimization analysis remarks related to
 /// floating-point non-commutativity.
-class OptimizationRemarkAnalysisFPCommute : public OptimizationRemarkAnalysis {
+class LLVM_ABI OptimizationRemarkAnalysisFPCommute
+    : public OptimizationRemarkAnalysis {
   void anchor() override;
 public:
   /// \p PassName is the name of the pass emitting this diagnostic. If this name
@@ -933,7 +970,8 @@ private:
 
 /// Diagnostic information for optimization analysis remarks related to
 /// pointer aliasing.
-class OptimizationRemarkAnalysisAliasing : public OptimizationRemarkAnalysis {
+class LLVM_ABI OptimizationRemarkAnalysisAliasing
+    : public OptimizationRemarkAnalysis {
   void anchor() override;
 public:
   /// \p PassName is the name of the pass emitting this diagnostic. If this name
@@ -974,7 +1012,7 @@ private:
 
 /// Diagnostic information for machine IR parser.
 // FIXME: Remove this, use DiagnosticInfoSrcMgr instead.
-class DiagnosticInfoMIRParser : public DiagnosticInfo {
+class LLVM_ABI DiagnosticInfoMIRParser : public DiagnosticInfo {
   const SMDiagnostic &Diagnostic;
 
 public:
@@ -992,7 +1030,7 @@ public:
 };
 
 /// Diagnostic information for IR instrumentation reporting.
-class DiagnosticInfoInstrumentation : public DiagnosticInfo {
+class LLVM_ABI DiagnosticInfoInstrumentation : public DiagnosticInfo {
   const Twine &Msg;
 
 public:
@@ -1008,7 +1046,7 @@ public:
 };
 
 /// Diagnostic information for ISel fallback path.
-class DiagnosticInfoISelFallback : public DiagnosticInfo {
+class LLVM_ABI DiagnosticInfoISelFallback : public DiagnosticInfo {
   /// The function that is concerned by this diagnostic.
   const Function &Fn;
 
@@ -1030,7 +1068,8 @@ public:
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(DiagnosticInfo, LLVMDiagnosticInfoRef)
 
 /// Diagnostic information for optimization failures.
-class DiagnosticInfoOptimizationFailure : public DiagnosticInfoIROptimization {
+class LLVM_ABI DiagnosticInfoOptimizationFailure
+    : public DiagnosticInfoIROptimization {
 public:
   /// \p Fn is the function where the diagnostic is being emitted. \p Loc is
   /// the location information to use in the diagnostic. If line table
@@ -1061,7 +1100,8 @@ public:
 };
 
 /// Diagnostic information for unsupported feature in backend.
-class DiagnosticInfoUnsupported : public DiagnosticInfoWithLocationBase {
+class LLVM_ABI DiagnosticInfoUnsupported
+    : public DiagnosticInfoWithLocationBase {
 private:
   const Twine &Msg;
 
@@ -1088,8 +1128,31 @@ public:
   void print(DiagnosticPrinter &DP) const override;
 };
 
+/// Diagnostic information for unsupported target intrinsics in backend.
+class LLVM_ABI DiagnosticInfoUnsupportedTargetIntrinsic
+    : public DiagnosticInfoWithLocationBase {
+private:
+  unsigned IntrinsicID;
+  StringRef RequiredFeatures;
+
+public:
+  DiagnosticInfoUnsupportedTargetIntrinsic(
+      const Function &Fn, unsigned IntrinsicID,
+      const DiagnosticLocation &Loc = DiagnosticLocation());
+
+  static bool classof(const DiagnosticInfo *DI) {
+    return DI->getKind() == DK_UnsupportedTargetIntrinsic;
+  }
+
+  unsigned getIntrinsicID() const { return IntrinsicID; }
+  StringRef getRequiredFeatures() const { return RequiredFeatures; }
+  std::string getMessage() const;
+
+  void print(DiagnosticPrinter &DP) const override;
+};
+
 /// Diagnostic information for MisExpect analysis.
-class DiagnosticInfoMisExpect : public DiagnosticInfoWithLocationBase {
+class LLVM_ABI DiagnosticInfoMisExpect : public DiagnosticInfoWithLocationBase {
 public:
   DiagnosticInfoMisExpect(const Instruction *Inst,
                           const Twine &Msg LLVM_LIFETIME_BOUND);
@@ -1127,7 +1190,7 @@ static DiagnosticSeverity getDiagnosticSeverity(SourceMgr::DiagKind DK) {
 }
 
 /// Diagnostic information for SMDiagnostic reporting.
-class DiagnosticInfoSrcMgr : public DiagnosticInfo {
+class LLVM_ABI DiagnosticInfoSrcMgr : public DiagnosticInfo {
   const SMDiagnostic &Diagnostic;
   StringRef ModName;
 
@@ -1153,21 +1216,43 @@ public:
   }
 };
 
-void diagnoseDontCall(const CallInst &CI);
+LLVM_ABI void diagnoseDontCall(const CallInst &CI);
 
-class DiagnosticInfoDontCall : public DiagnosticInfo {
+/// Inlining location extracted from debug info.
+struct DebugInlineInfo {
+  StringRef FuncName;
+  StringRef Filename;
+  unsigned Line;
+  unsigned Column;
+};
+
+class LLVM_ABI DiagnosticInfoDontCall : public DiagnosticInfo {
   StringRef CalleeName;
   StringRef Note;
   uint64_t LocCookie;
+  MDNode *InlinedFromMD = nullptr;
+  SmallVector<DebugInlineInfo, 4> DebugInlineChain;
 
 public:
   DiagnosticInfoDontCall(StringRef CalleeName, StringRef Note,
-                         DiagnosticSeverity DS, uint64_t LocCookie)
+                         DiagnosticSeverity DS, uint64_t LocCookie,
+                         MDNode *InlinedFromMD = nullptr)
       : DiagnosticInfo(DK_DontCall, DS), CalleeName(CalleeName), Note(Note),
-        LocCookie(LocCookie) {}
+        LocCookie(LocCookie), InlinedFromMD(InlinedFromMD) {}
+
   StringRef getFunctionName() const { return CalleeName; }
   StringRef getNote() const { return Note; }
   uint64_t getLocCookie() const { return LocCookie; }
+  MDNode *getInlinedFromMD() const { return InlinedFromMD; }
+  SmallVector<std::pair<StringRef, uint64_t>> getInliningDecisions() const;
+
+  void setDebugInlineChain(SmallVector<DebugInlineInfo, 4> &&Chain) {
+    DebugInlineChain = std::move(Chain);
+  }
+  ArrayRef<DebugInlineInfo> getDebugInlineChain() const {
+    return DebugInlineChain;
+  }
+
   void print(DiagnosticPrinter &DP) const override;
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_DontCall;

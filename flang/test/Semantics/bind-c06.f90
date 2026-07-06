@@ -40,7 +40,7 @@ program main
     procedure, nopass :: b => s
   end type
 
-  ! WARNING: A derived type with the BIND attribute should not be empty
+  ! WARNING: A derived type with the BIND attribute should not be empty [-Wempty-bind-c-derived-type]
   type, bind(c) :: t5
   end type
 
@@ -71,7 +71,7 @@ program main
   end type
 
   type, bind(c) :: t10
-    !WARNING: A CHARACTER component of an interoperable type should have length 1
+    !WARNING: A CHARACTER component of an interoperable type should have length 1 [-Wbind-c-char-length]
     character(len=2) x
   end type
   type, bind(c) :: t11
@@ -79,16 +79,18 @@ program main
     character(kind=2) x
   end type
   type, bind(c) :: t12
-    !PORTABILITY: A LOGICAL component of an interoperable type should have the interoperable KIND=C_BOOL
+    !PORTABILITY: A LOGICAL component of an interoperable type should have the interoperable KIND=C_BOOL [-Wlogical-vs-c-bool]
     logical(kind=8) x
   end type
   type, bind(c) :: t13
-    !ERROR: Each component of an interoperable derived type must have an interoperable type
-    real(kind=2) x
+    real(kind=2) x ! ok, interoperable with C _Float16
   end type
   type, bind(c) :: t14
+    complex(kind=2) x ! ok, interoperable with C _Float16 _Complex
+  end type
+  type, bind(c) :: t13b
     !ERROR: Each component of an interoperable derived type must have an interoperable type
-    complex(kind=2) x
+    complex(kind=3) x ! bfloat16 is not interoperable
   end type
   type, bind(c) :: t15
     !ERROR: An array component of an interoperable type must have at least one element

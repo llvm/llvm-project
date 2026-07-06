@@ -20,13 +20,13 @@ PROGRAM main
 !CHECK: !$OMP END TARGET
 !$OMP END TARGET
 
-!PARSE-TREE: OmpBeginBlockDirective
-!PARSE-TREE: OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: OmpBeginDirective
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: OmpClauseList -> OmpClause -> Device -> OmpDeviceClause
 !PARSE-TREE: Scalar -> Integer -> Expr = '1_4'
 !PARSE-TREE: LiteralConstant -> IntLiteralConstant = '1'
-!PARSE-TREE: OmpEndBlockDirective
-!PARSE-TREE: OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: OmpEndDirective
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: OmpClauseList ->
 
 !------------------------------------------------------
@@ -38,8 +38,8 @@ PROGRAM main
 !CHECK: !$OMP END TARGET
 !$OMP END TARGET
 
-!PARSE-TREE: OmpBeginBlockDirective
-!PARSE-TREE: OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: OmpBeginDirective
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: OmpClauseList -> OmpClause -> Device -> OmpDeviceClause
 !PARSE-TREE: Scalar -> Integer -> Expr = '1_4'
 !PARSE-TREE: Subtract
@@ -47,8 +47,8 @@ PROGRAM main
 !PARSE-TREE: LiteralConstant -> IntLiteralConstant = '2'
 !PARSE-TREE: Expr = '1_4'
 !PARSE-TREE: LiteralConstant -> IntLiteralConstant = '1'
-!PARSE-TREE: OmpEndBlockDirective
-!PARSE-TREE: OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: OmpEndDirective
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: OmpClauseList ->
 
 
@@ -61,13 +61,13 @@ PROGRAM main
 !CHECK: !$OMP END TARGET
 !$OMP END TARGET
 
-!PARSE-TREE: OmpBeginBlockDirective
-!PARSE-TREE: OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: OmpBeginDirective
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: OmpClauseList -> OmpClause -> Device -> OmpDeviceClause
 !PARSE-TREE: Scalar -> Integer -> Expr = 'x'
 !PARSE-TREE: Designator -> DataRef -> Name = 'x'
-!PARSE-TREE: OmpEndBlockDirective
-!PARSE-TREE: OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: OmpEndDirective
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: OmpClauseList ->
 
 
@@ -80,8 +80,8 @@ PROGRAM main
 !CHECK: !$OMP END TARGET
 !$OMP END TARGET
 
-!PARSE-TREE: OmpBeginBlockDirective
-!PARSE-TREE: OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: OmpBeginDirective
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: OmpClauseList -> OmpClause -> Device -> OmpDeviceClause
 !PARSE-TREE: Scalar -> Integer -> Expr = 'x+y'
 !PARSE-TREE: Add
@@ -89,8 +89,8 @@ PROGRAM main
 !PARSE-TREE: Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: Expr = 'y'
 !PARSE-TREE: Designator -> DataRef -> Name = 'y'
-!PARSE-TREE: OmpEndBlockDirective
-!PARSE-TREE: OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: OmpEndDirective
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: OmpClauseList ->
 
 !------------------------------------------------------
@@ -102,14 +102,14 @@ PROGRAM main
 !CHECK: !$OMP END TARGET
 !$OMP END TARGET
 
-!PARSE-TREE: OmpBeginBlockDirective
-!PARSE-TREE: OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: OmpBeginDirective
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: OmpClauseList -> OmpClause -> Device -> OmpDeviceClause
 !PARSE-TREE: OmpDeviceModifier -> Value = Ancestor
 !PARSE-TREE: Scalar -> Integer -> Expr = '1_4'
 !PARSE-TREE: LiteralConstant -> IntLiteralConstant = '1'
-!PARSE-TREE: OmpEndBlockDirective
-!PARSE-TREE: OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: OmpEndDirective
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: OmpClauseList ->
 
 
@@ -122,14 +122,14 @@ PROGRAM main
 !CHECK: !$OMP END TARGET
 !$OMP END TARGET
 
-!PARSE-TREE: OmpBeginBlockDirective
-!PARSE-TREE: OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: OmpBeginDirective
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: OmpClauseList -> OmpClause -> Device -> OmpDeviceClause
 !PARSE-TREE: OmpDeviceModifier -> Value = Device_Num
 !PARSE-TREE: Scalar -> Integer -> Expr = '2_4'
 !PARSE-TREE: LiteralConstant -> IntLiteralConstant = '2'
-!PARSE-TREE: OmpEndBlockDirective
-!PARSE-TREE: OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: OmpEndDirective
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: OmpClauseList ->
 
 
@@ -142,8 +142,8 @@ PROGRAM main
 !CHECK: !$OMP END TARGET
 !$OMP END TARGET
 
-!PARSE-TREE: OmpBeginBlockDirective
-!PARSE-TREE: OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: OmpBeginDirective
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: OmpClauseList -> OmpClause -> Device -> OmpDeviceClause
 !PARSE-TREE: OmpDeviceModifier -> Value = Ancestor
 !PARSE-TREE: Scalar -> Integer -> Expr = 'x+y'
@@ -152,8 +152,8 @@ PROGRAM main
 !PARSE-TREE: Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: Expr = 'y'
 !PARSE-TREE: Designator -> DataRef -> Name = 'y'
-!PARSE-TREE: OmpEndBlockDirective
-!PARSE-TREE: OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: OmpEndDirective
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: OmpClauseList ->
 
 
@@ -166,8 +166,8 @@ PROGRAM main
 !CHECK: !$OMP END TARGET
 !$OMP END TARGET
 
-!PARSE-TREE: OmpBeginBlockDirective
-!PARSE-TREE: OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: OmpBeginDirective
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: OmpClauseList -> OmpClause -> Device -> OmpDeviceClause
 !PARSE-TREE: OmpDeviceModifier -> Value = Device_Num
 !PARSE-TREE: Scalar -> Integer -> Expr = 'x-y'
@@ -176,6 +176,6 @@ PROGRAM main
 !PARSE-TREE: Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: Expr = 'y'
 !PARSE-TREE: Designator -> DataRef -> Name = 'y'
-!PARSE-TREE: OmpEndBlockDirective
-!PARSE-TREE: OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: OmpEndDirective
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = target
 END PROGRAM

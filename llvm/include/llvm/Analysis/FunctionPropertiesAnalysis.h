@@ -15,6 +15,7 @@
 #define LLVM_ANALYSIS_FUNCTIONPROPERTIESANALYSIS_H
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Analysis/IR2Vec.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
@@ -32,17 +33,19 @@ class FunctionPropertiesInfo {
   void updateAggregateStats(const Function &F, const LoopInfo &LI);
   void reIncludeBB(const BasicBlock &BB);
 
+  ir2vec::Embedding FunctionEmbedding = ir2vec::Embedding(0.0);
+  const ir2vec::Vocabulary *IR2VecVocab = nullptr;
+
 public:
   LLVM_ABI static FunctionPropertiesInfo
   getFunctionPropertiesInfo(const Function &F, const DominatorTree &DT,
-                            const LoopInfo &LI);
+                            const LoopInfo &LI,
+                            const ir2vec::Vocabulary *Vocabulary);
 
   LLVM_ABI static FunctionPropertiesInfo
   getFunctionPropertiesInfo(Function &F, FunctionAnalysisManager &FAM);
 
-  bool operator==(const FunctionPropertiesInfo &FPI) const {
-    return std::memcmp(this, &FPI, sizeof(FunctionPropertiesInfo)) == 0;
-  }
+  LLVM_ABI bool operator==(const FunctionPropertiesInfo &FPI) const;
 
   bool operator!=(const FunctionPropertiesInfo &FPI) const {
     return !(*this == FPI);
@@ -124,9 +127,15 @@ public:
   int64_t CriticalEdgeCount = 0;
   int64_t ControlFlowEdgeCount = 0;
   int64_t UnconditionalBranchCount = 0;
+  int64_t ConditionalBranchCount = 0;
+  int64_t BranchInstructionCount = 0;
+  int64_t BranchSuccessorCount = 0;
+  int64_t SwitchInstructionCount = 0;
+  int64_t SwitchSuccessorCount = 0;
 
   // Call related instructions
   int64_t IntrinsicCount = 0;
+  int64_t NoReturnCallCount = 0;
   int64_t DirectCallCount = 0;
   int64_t IndirectCallCount = 0;
   int64_t CallReturnsIntegerCount = 0;
@@ -137,6 +146,17 @@ public:
   int64_t CallReturnsVectorPointerCount = 0;
   int64_t CallWithManyArgumentsCount = 0;
   int64_t CallWithPointerArgumentCount = 0;
+
+  const ir2vec::Embedding &getFunctionEmbedding() const {
+    return FunctionEmbedding;
+  }
+
+  const ir2vec::Vocabulary *getIR2VecVocab() const { return IR2VecVocab; }
+
+  // Helper intended to be useful for unittests
+  void setFunctionEmbeddingForTest(const ir2vec::Embedding &Embedding) {
+    FunctionEmbedding = Embedding;
+  }
 };
 
 // Analysis pass
@@ -154,15 +174,25 @@ public:
 
 /// Printer pass for the FunctionPropertiesAnalysis results.
 class FunctionPropertiesPrinterPass
-    : public PassInfoMixin<FunctionPropertiesPrinterPass> {
+    : public RequiredPassInfoMixin<FunctionPropertiesPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit FunctionPropertiesPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
 
-  static bool isRequired() { return true; }
+/// Statistics pass for the FunctionPropertiesAnalysis results.
+class FunctionPropertiesStatisticsPass
+    : public PassInfoMixin<FunctionPropertiesStatisticsPass> {
+  bool IsPreOptimization;
+
+public:
+  explicit FunctionPropertiesStatisticsPass(bool IsPreOptimization = false)
+      : IsPreOptimization(IsPreOptimization) {}
+
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 /// Correctly update FunctionPropertiesInfo post-inlining. A
@@ -193,6 +223,7 @@ private:
   DominatorTree &getUpdatedDominatorTree(FunctionAnalysisManager &FAM) const;
 
   DenseSet<const BasicBlock *> Successors;
+  DenseSet<const BasicBlock *> CallUsers;
 
   // Edges we might potentially need to remove from the dominator tree.
   SmallVector<DominatorTree::UpdateType, 2> DomTreeUpdates;

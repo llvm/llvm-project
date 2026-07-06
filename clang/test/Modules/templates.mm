@@ -88,8 +88,8 @@ unsigned testMixedStruct() {
   // CHECK: call void @_Z10useListIntR4ListIiE(ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %[[r]])
   useListInt(r);
 
-  // CHECK: load i32, ptr getelementptr inbounds (i8, ptr @list_left, i64 8)
-  // CHECK: load i32, ptr getelementptr inbounds (i8, ptr @list_right, i64 8)
+  // CHECK: load i32, ptr getelementptr inbounds nuw (i8, ptr @list_left, i64 8)
+  // CHECK: load i32, ptr getelementptr inbounds nuw (i8, ptr @list_right, i64 8)
   return list_left.*size_right + list_right.*size_left;
 }
 

@@ -131,7 +131,7 @@ bb2:
 define ptr @test3_no_inbounds1(ptr %A, i32 %Offset) {
 ; CHECK-LABEL: @test3_no_inbounds1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = getelementptr i32, ptr [[A:%.*]], i32 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP:%.*]] = getelementptr [4 x i8], ptr [[A:%.*]], i32 [[OFFSET:%.*]]
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[RHS:%.*]] = phi ptr [ [[RHS_NEXT:%.*]], [[BB]] ], [ [[TMP]], [[ENTRY:%.*]] ]
@@ -160,7 +160,7 @@ bb2:
 define ptr @test3_no_inbounds2(ptr %A, i32 %Offset) {
 ; CHECK-LABEL: @test3_no_inbounds2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds [4 x i8], ptr [[A:%.*]], i32 [[OFFSET:%.*]]
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[RHS:%.*]] = phi ptr [ [[RHS_NEXT:%.*]], [[BB]] ], [ [[TMP]], [[ENTRY:%.*]] ]
@@ -189,7 +189,7 @@ bb2:
 define ptr @test3_no_inbounds3(ptr %A, i32 %Offset) {
 ; CHECK-LABEL: @test3_no_inbounds3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds [4 x i8], ptr [[A:%.*]], i32 [[OFFSET:%.*]]
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[RHS:%.*]] = phi ptr [ [[RHS_NEXT:%.*]], [[BB]] ], [ [[TMP]], [[ENTRY:%.*]] ]
@@ -376,7 +376,7 @@ define i1 @test8(ptr %in, i64 %offset) {
 ; CHECK-NEXT:    [[LD:%.*]] = load i64, ptr [[IN:%.*]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[LD]] to i32
 ; CHECK-NEXT:    [[CASTI8:%.*]] = inttoptr i32 [[TMP0]] to ptr
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[OFFSET:%.*]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nsw i64 [[OFFSET:%.*]] to i32
 ; CHECK-NEXT:    [[GEPI8:%.*]] = getelementptr inbounds i8, ptr [[CASTI8]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[LD]] to i32
 ; CHECK-NEXT:    [[PTRCAST:%.*]] = inttoptr i32 [[TMP2]] to ptr

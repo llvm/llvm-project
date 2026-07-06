@@ -6,8 +6,7 @@
 define void @multiple_extract(ptr %p) {
 ; CHECK-LABEL: @multiple_extract(
 ; CHECK-NEXT:    [[VP:%.*]] = load ptr, ptr [[P:%.*]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <2 x i32>, ptr [[VP]], i32 0, i64 0
-; CHECK-NEXT:    [[E0:%.*]] = load i32, ptr [[TMP1]], align 16
+; CHECK-NEXT:    [[E0:%.*]] = load i32, ptr [[VP]], align 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <2 x i32>, ptr [[VP]], i32 0, i64 1
 ; CHECK-NEXT:    [[E1:%.*]] = load i32, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    store i32 [[E0]], ptr [[P]], align 4
@@ -28,6 +27,8 @@ define void @multiple_extract(ptr %p) {
 ; infinite loop if we fold an extract that is waiting to be erased
 define void @unused_extract(ptr %p) {
 ; CHECK-LABEL: @unused_extract(
+; CHECK-NEXT:    [[LOAD:%.*]] = load <4 x float>, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <4 x float> [[LOAD]], i64 1
 ; CHECK-NEXT:    ret void
 ;
   %load = load <4 x float>, ptr %p, align 8
@@ -35,4 +36,27 @@ define void @unused_extract(ptr %p) {
   %shuffle1 = shufflevector <4 x float> %shuffle0, <4 x float> zeroinitializer, <4 x i32> <i32 0, i32 4, i32 poison, i32 poison>
   %extract = extractelement <4 x float> %load, i64 1
   ret void
+}
+
+; Atomic loads must not be scalarized.
+define i32 @dont_scalarize_atomic_extract(ptr %p) {
+; CHECK-LABEL: @dont_scalarize_atomic_extract(
+; CHECK-NEXT:    [[LOAD:%.*]] = load atomic <2 x i32>, ptr [[P:%.*]] seq_cst, align 8
+; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <2 x i32> [[LOAD]], i64 0
+; CHECK-NEXT:    ret i32 [[EXTRACT]]
+;
+  %load = load atomic <2 x i32>, ptr %p seq_cst, align 8
+  %extract = extractelement <2 x i32> %load, i64 0
+  ret i32 %extract
+}
+
+define i64 @dont_scalarize_atomic_bitcast(ptr %p) {
+; CHECK-LABEL: @dont_scalarize_atomic_bitcast(
+; CHECK-NEXT:    [[LOAD:%.*]] = load atomic <2 x i32>, ptr [[P:%.*]] seq_cst, align 8
+; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast <2 x i32> [[LOAD]] to i64
+; CHECK-NEXT:    ret i64 [[BITCAST]]
+;
+  %load = load atomic <2 x i32>, ptr %p seq_cst, align 8
+  %bitcast = bitcast <2 x i32> %load to i64
+  ret i64 %bitcast
 }

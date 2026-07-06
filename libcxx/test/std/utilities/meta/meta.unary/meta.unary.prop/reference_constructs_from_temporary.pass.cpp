@@ -8,9 +8,6 @@
 
 // REQUIRES: std-at-least-c++23
 
-// These compilers don't support std::reference_converts_from_temporary yet.
-// UNSUPPORTED: android, apple-clang-15, apple-clang-16, clang-19.1
-
 // <type_traits>
 
 // template<class T, class U> struct reference_constructs_from_temporary;

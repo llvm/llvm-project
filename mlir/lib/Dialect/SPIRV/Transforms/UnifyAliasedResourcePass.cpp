@@ -24,8 +24,6 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Debug.h"
-#include <algorithm>
 #include <iterator>
 
 namespace mlir {
@@ -34,8 +32,6 @@ namespace spirv {
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h.inc"
 } // namespace spirv
 } // namespace mlir
-
-#define DEBUG_TYPE "spirv-unify-aliased-resource"
 
 using namespace mlir;
 
@@ -375,8 +371,12 @@ struct ConvertAccessChain : public ConvertAliasResource<spirv::AccessChainOp> {
       // them into a buffer with vector element types. We need to scale the last
       // index for the vector as a whole, then add one level of index for inside
       // the vector.
-      int srcNumBytes = *srcElemType.getSizeInBytes();
-      int dstNumBytes = *dstElemType.getSizeInBytes();
+      std::optional<int64_t> srcBytes = srcElemType.getSizeInBytes();
+      std::optional<int64_t> dstBytes = dstElemType.getSizeInBytes();
+      if (!srcBytes || !dstBytes)
+        return rewriter.notifyMatchFailure(acOp, "unknown element byte size");
+      int srcNumBytes = *srcBytes;
+      int dstNumBytes = *dstBytes;
       assert(dstNumBytes >= srcNumBytes && dstNumBytes % srcNumBytes == 0);
 
       auto indices = llvm::to_vector<4>(acOp.getIndices());
@@ -384,13 +384,13 @@ struct ConvertAccessChain : public ConvertAliasResource<spirv::AccessChainOp> {
       Type indexType = oldIndex.getType();
 
       int ratio = dstNumBytes / srcNumBytes;
-      auto ratioValue = rewriter.create<spirv::ConstantOp>(
-          loc, indexType, rewriter.getIntegerAttr(indexType, ratio));
+      auto ratioValue = spirv::ConstantOp::create(
+          rewriter, loc, indexType, rewriter.getIntegerAttr(indexType, ratio));
 
       indices.back() =
-          rewriter.create<spirv::SDivOp>(loc, indexType, oldIndex, ratioValue);
-      indices.push_back(
-          rewriter.create<spirv::SModOp>(loc, indexType, oldIndex, ratioValue));
+          spirv::SDivOp::create(rewriter, loc, indexType, oldIndex, ratioValue);
+      indices.push_back(spirv::SModOp::create(rewriter, loc, indexType,
+                                              oldIndex, ratioValue));
 
       rewriter.replaceOpWithNewOp<spirv::AccessChainOp>(
           acOp, adaptor.getBasePtr(), indices);
@@ -402,8 +402,12 @@ struct ConvertAccessChain : public ConvertAliasResource<spirv::AccessChainOp> {
       // The source indices are for a buffer with larger bitwidth scalar/vector
       // element types. Rewrite them into a buffer with smaller bitwidth element
       // types. We only need to scale the last index.
-      int srcNumBytes = *srcElemType.getSizeInBytes();
-      int dstNumBytes = *dstElemType.getSizeInBytes();
+      std::optional<int64_t> srcBytes = srcElemType.getSizeInBytes();
+      std::optional<int64_t> dstBytes = dstElemType.getSizeInBytes();
+      if (!srcBytes || !dstBytes)
+        return rewriter.notifyMatchFailure(acOp, "unknown element byte size");
+      int srcNumBytes = *srcBytes;
+      int dstNumBytes = *dstBytes;
       assert(srcNumBytes >= dstNumBytes && srcNumBytes % dstNumBytes == 0);
 
       auto indices = llvm::to_vector<4>(acOp.getIndices());
@@ -411,11 +415,11 @@ struct ConvertAccessChain : public ConvertAliasResource<spirv::AccessChainOp> {
       Type indexType = oldIndex.getType();
 
       int ratio = srcNumBytes / dstNumBytes;
-      auto ratioValue = rewriter.create<spirv::ConstantOp>(
-          loc, indexType, rewriter.getIntegerAttr(indexType, ratio));
+      auto ratioValue = spirv::ConstantOp::create(
+          rewriter, loc, indexType, rewriter.getIntegerAttr(indexType, ratio));
 
       indices.back() =
-          rewriter.create<spirv::IMulOp>(loc, indexType, oldIndex, ratioValue);
+          spirv::IMulOp::create(rewriter, loc, indexType, oldIndex, ratioValue);
 
       rewriter.replaceOpWithNewOp<spirv::AccessChainOp>(
           acOp, adaptor.getBasePtr(), indices);
@@ -439,15 +443,15 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
     auto dstElemType = cast<spirv::SPIRVType>(dstPtrType.getPointeeType());
 
     Location loc = loadOp.getLoc();
-    auto newLoadOp = rewriter.create<spirv::LoadOp>(loc, adaptor.getPtr());
+    auto newLoadOp = spirv::LoadOp::create(rewriter, loc, adaptor.getPtr());
     if (srcElemType == dstElemType) {
       rewriter.replaceOp(loadOp, newLoadOp->getResults());
       return success();
     }
 
     if (areSameBitwidthScalarType(srcElemType, dstElemType)) {
-      auto castOp = rewriter.create<spirv::BitcastOp>(loc, srcElemType,
-                                                      newLoadOp.getValue());
+      auto castOp = spirv::BitcastOp::create(rewriter, loc, srcElemType,
+                                             newLoadOp.getValue());
       rewriter.replaceOp(loadOp, castOp->getResults());
 
       return success();
@@ -459,8 +463,12 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
       // vector types of different component counts. For such cases, we load
       // multiple smaller bitwidth values and construct a larger bitwidth one.
 
-      int srcNumBytes = *srcElemType.getSizeInBytes();
-      int dstNumBytes = *dstElemType.getSizeInBytes();
+      std::optional<int64_t> srcBytes = srcElemType.getSizeInBytes();
+      std::optional<int64_t> dstBytes = dstElemType.getSizeInBytes();
+      if (!srcBytes || !dstBytes)
+        return rewriter.notifyMatchFailure(loadOp, "unknown element byte size");
+      int srcNumBytes = *srcBytes;
+      int dstNumBytes = *dstBytes;
       assert(srcNumBytes > dstNumBytes && srcNumBytes % dstNumBytes == 0);
       int ratio = srcNumBytes / dstNumBytes;
       if (ratio > 4)
@@ -479,14 +487,14 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
       auto indices = llvm::to_vector<4>(acOp.getIndices());
       for (int i = 1; i < ratio; ++i) {
         // Load all subsequent components belonging to this element.
-        indices.back() = rewriter.create<spirv::IAddOp>(
-            loc, i32Type, indices.back(), oneValue);
-        auto componentAcOp = rewriter.create<spirv::AccessChainOp>(
-            loc, acOp.getBasePtr(), indices);
+        indices.back() = spirv::IAddOp::create(rewriter, loc, i32Type,
+                                               indices.back(), oneValue);
+        auto componentAcOp = spirv::AccessChainOp::create(
+            rewriter, loc, acOp.getBasePtr(), indices);
         // Assuming little endian, this reads lower-ordered bits of the number
         // to lower-numbered components of the vector.
         components.push_back(
-            rewriter.create<spirv::LoadOp>(loc, componentAcOp));
+            spirv::LoadOp::create(rewriter, loc, componentAcOp));
       }
 
       // Create a vector of the components and then cast back to the larger
@@ -514,15 +522,15 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
               castType = VectorType::get({count}, castType);
 
             for (Value &c : components)
-              c = rewriter.create<spirv::BitcastOp>(loc, castType, c);
+              c = spirv::BitcastOp::create(rewriter, loc, castType, c);
           }
         }
-      Value vectorValue = rewriter.create<spirv::CompositeConstructOp>(
-          loc, vectorType, components);
+      Value vectorValue = spirv::CompositeConstructOp::create(
+          rewriter, loc, vectorType, components);
 
       if (!isa<VectorType>(srcElemType))
         vectorValue =
-            rewriter.create<spirv::BitcastOp>(loc, srcElemType, vectorValue);
+            spirv::BitcastOp::create(rewriter, loc, srcElemType, vectorValue);
       rewriter.replaceOp(loadOp, vectorValue);
       return success();
     }
@@ -550,7 +558,7 @@ struct ConvertStore : public ConvertAliasResource<spirv::StoreOp> {
     Location loc = storeOp.getLoc();
     Value value = adaptor.getValue();
     if (srcElemType != dstElemType)
-      value = rewriter.create<spirv::BitcastOp>(loc, dstElemType, value);
+      value = spirv::BitcastOp::create(rewriter, loc, dstElemType, value);
     rewriter.replaceOpWithNewOp<spirv::StoreOp>(storeOp, adaptor.getPtr(),
                                                 value, storeOp->getAttrs());
     return success();

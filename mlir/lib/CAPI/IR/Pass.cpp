@@ -13,6 +13,7 @@
 #include "mlir/CAPI/Support.h"
 #include "mlir/CAPI/Utils.h"
 #include "mlir/Pass/PassManager.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <optional>
 
 using namespace mlir;
@@ -73,6 +74,24 @@ void mlirPassManagerEnableIRPrinting(MlirPassManager passManager,
 
 void mlirPassManagerEnableVerifier(MlirPassManager passManager, bool enable) {
   unwrap(passManager)->enableVerifier(enable);
+}
+
+void mlirPassManagerEnableTiming(MlirPassManager passManager) {
+  unwrap(passManager)->enableTiming();
+}
+
+void mlirPassManagerEnableStatistics(MlirPassManager passManager,
+                                     MlirPassDisplayMode displayMode) {
+  PassDisplayMode mode;
+  switch (displayMode) {
+  case MLIR_PASS_DISPLAY_MODE_LIST:
+    mode = PassDisplayMode::List;
+    break;
+  case MLIR_PASS_DISPLAY_MODE_PIPELINE:
+    mode = PassDisplayMode::Pipeline;
+    break;
+  }
+  unwrap(passManager)->enableStatistics(mode);
 }
 
 MlirOpPassManager mlirPassManagerGetNestedUnder(MlirPassManager passManager,
@@ -141,10 +160,14 @@ public:
       : Pass(passID, opName), id(passID), name(name), argument(argument),
         description(description), dependentDialects(dependentDialects),
         callbacks(callbacks), userData(userData) {
-    callbacks.construct(userData);
+    if (callbacks.construct)
+      callbacks.construct(userData);
   }
 
-  ~ExternalPass() override { callbacks.destruct(userData); }
+  ~ExternalPass() override {
+    if (callbacks.destruct)
+      callbacks.destruct(userData);
+  }
 
   StringRef getName() const override { return name; }
   StringRef getArgument() const override { return argument; }

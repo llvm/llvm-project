@@ -79,13 +79,10 @@ define internal void @bar() {
 ; CHECK-LABEL: define weak_odr amdgpu_kernel void @amdgcn.device.fini(
 ; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = ashr exact i64 sub nuw nsw (i64 ptrtoint (ptr addrspace(1) @__fini_array_end to i64), i64 ptrtoint (ptr addrspace(1) @__fini_array_start to i64)), 3
-; CHECK-NEXT:    [[TMP1:%.*]] = sub nuw nsw i64 [[TMP0]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [0 x ptr addrspace(1)], ptr addrspace(1) @__fini_array_start, i64 0, i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp uge ptr addrspace(1) [[TMP2]], @__fini_array_start
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp uge ptr addrspace(1) getelementptr inbounds (ptr addrspace(1), ptr addrspace(1) @__fini_array_end, i64 -1), @__fini_array_start
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[WHILE_ENTRY:%.*]], label [[WHILE_END:%.*]]
 ; CHECK:       while.entry:
-; CHECK-NEXT:    [[PTR:%.*]] = phi ptr addrspace(1) [ [[TMP2]], [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[WHILE_ENTRY]] ]
+; CHECK-NEXT:    [[PTR:%.*]] = phi ptr addrspace(1) [ getelementptr inbounds (ptr addrspace(1), ptr addrspace(1) @__fini_array_end, i64 -1), [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[WHILE_ENTRY]] ]
 ; CHECK-NEXT:    [[CALLBACK:%.*]] = load ptr, ptr addrspace(1) [[PTR]], align 8
 ; CHECK-NEXT:    call void [[CALLBACK]]()
 ; CHECK-NEXT:    [[NEXT]] = getelementptr ptr addrspace(1), ptr addrspace(1) [[PTR]], i64 -1

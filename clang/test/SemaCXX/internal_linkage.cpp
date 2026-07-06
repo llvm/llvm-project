@@ -41,7 +41,7 @@ int A::y;
 void A::f1() {
 }
 
-void g(int a [[clang::internal_linkage]]) { // expected-warning{{'internal_linkage' attribute only applies to variables, functions and classes}}
+void g(int a [[clang::internal_linkage]]) { // expected-warning{{'clang::internal_linkage' attribute only applies to variables, functions and classes}}
   int x [[clang::internal_linkage]]; // expected-warning{{'internal_linkage' attribute on a non-static local variable is ignored}}
   static int y [[clang::internal_linkage]];
 }

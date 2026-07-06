@@ -1,4 +1,4 @@
-//===--- AvoidPragmaOnceCheck.cpp - clang-tidy ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,13 +15,15 @@
 
 namespace clang::tidy::portability {
 
+namespace {
+
 class PragmaOnceCallbacks : public PPCallbacks {
 public:
   PragmaOnceCallbacks(AvoidPragmaOnceCheck *Check, const SourceManager &SM)
       : Check(Check), SM(SM) {}
   void PragmaDirective(SourceLocation Loc,
                        PragmaIntroducerKind Introducer) override {
-    auto Str = llvm::StringRef(SM.getCharacterData(Loc));
+    auto Str = StringRef(SM.getCharacterData(Loc));
     if (!Str.consume_front("#"))
       return;
     Str = Str.trim();
@@ -37,6 +39,8 @@ private:
   AvoidPragmaOnceCheck *Check;
   const SourceManager &SM;
 };
+
+} // namespace
 
 void AvoidPragmaOnceCheck::registerPPCallbacks(const SourceManager &SM,
                                                Preprocessor *PP,

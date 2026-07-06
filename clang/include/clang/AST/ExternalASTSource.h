@@ -51,6 +51,7 @@ class RecordDecl;
 class Selector;
 class Stmt;
 class TagDecl;
+class VarDecl;
 
 /// Abstract interface for external sources of AST nodes.
 ///
@@ -529,7 +530,7 @@ struct PointerLikeTypeTraits<
   static Ptr getFromVoidPointer(void *P) { return Ptr::getFromOpaqueValue(P); }
 
   static constexpr int NumLowBitsAvailable =
-      PointerLikeTypeTraits<T>::NumLowBitsAvailable - 1;
+      PointerLikeTypeTraits<typename Ptr::ValueType>::NumLowBitsAvailable;
 };
 
 } // namespace llvm

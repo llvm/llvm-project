@@ -631,8 +631,8 @@ Error ResourceFileWriter::writeSingleAccelerator(
   if (IsASCII && IsVirtKey)
     return createAccError("Accelerator can't be both ASCII and VIRTKEY");
 
-  if (!IsVirtKey && (Obj.Flags & (Opt::ALT | Opt::SHIFT | Opt::CONTROL)))
-    return createAccError("Can only apply ALT, SHIFT or CONTROL to VIRTKEY"
+  if (!IsVirtKey && (Obj.Flags & (Opt::SHIFT | Opt::CONTROL)))
+    return createAccError("Can only apply SHIFT or CONTROL to VIRTKEY"
                           " accelerators");
 
   if (Obj.Event.isInt()) {
@@ -1490,15 +1490,6 @@ Error ResourceFileWriter::writeVersionInfoValue(const VersionInfoValue &Val) {
   writeObjectAt(ulittle16_t(CurLoc - LengthLoc), LengthLoc);
   writeObjectAt(ulittle16_t(ValueLength), ValLengthLoc);
   return Error::success();
-}
-
-template <typename Ty>
-static Ty getWithDefault(const StringMap<Ty> &Map, StringRef Key,
-                         const Ty &Default) {
-  auto Iter = Map.find(Key);
-  if (Iter != Map.end())
-    return Iter->getValue();
-  return Default;
 }
 
 Error ResourceFileWriter::writeVersionInfoBody(const RCResource *Base) {

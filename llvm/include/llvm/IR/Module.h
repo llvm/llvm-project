@@ -31,6 +31,7 @@
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstddef>
 #include <cstdint>
@@ -214,11 +215,6 @@ private:
 /// @name Constructors
 /// @{
 public:
-  /// Is this Module using intrinsics to record the position of debugging
-  /// information, or non-intrinsic records? See IsNewDbgInfoFormat in
-  /// \ref BasicBlock.
-  bool IsNewDbgInfoFormat;
-
   /// Used when printing this module in the new debug info format; removes all
   /// declarations of debug intrinsics that are replaced by non-intrinsic
   /// records in the new format.
@@ -229,7 +225,8 @@ public:
     for (auto &F : *this) {
       F.convertToNewDbgValues();
     }
-    IsNewDbgInfoFormat = true;
+
+    removeDebugIntrinsicDeclarations();
   }
 
   /// \see BasicBlock::convertFromNewDbgValues.
@@ -237,20 +234,6 @@ public:
     for (auto &F : *this) {
       F.convertFromNewDbgValues();
     }
-    IsNewDbgInfoFormat = false;
-  }
-
-  void setIsNewDbgInfoFormat(bool UseNewFormat) {
-    if (UseNewFormat && !IsNewDbgInfoFormat)
-      convertToNewDbgValues();
-    else if (!UseNewFormat && IsNewDbgInfoFormat)
-      convertFromNewDbgValues();
-  }
-  void setNewDbgInfoFormatFlag(bool NewFlag) {
-    for (auto &F : *this) {
-      F.setNewDbgInfoFormatFlag(NewFlag);
-    }
-    IsNewDbgInfoFormat = NewFlag;
   }
 
   /// The Module constructor. Note that there is no default constructor. You
@@ -729,6 +712,17 @@ public:
     return make_range(begin(), end());
   }
 
+  /// Get an iterator range over all function definitions (excluding
+  /// declarations).
+  auto getFunctionDefs() {
+    return make_filter_range(functions(),
+                             [](Function &F) { return !F.isDeclaration(); });
+  }
+  auto getFunctionDefs() const {
+    return make_filter_range(
+        functions(), [](const Function &F) { return !F.isDeclaration(); });
+  }
+
 /// @}
 /// @name Alias Iteration
 /// @{
@@ -817,7 +811,7 @@ public:
     NamedMDNode *CUs;
     unsigned Idx;
 
-    void SkipNoDebugCUs();
+    LLVM_ABI void SkipNoDebugCUs();
 
   public:
     using iterator_category = std::input_iterator_tag;
@@ -851,8 +845,8 @@ public:
       return Idx != I.Idx;
     }
 
-    DICompileUnit *operator*() const;
-    DICompileUnit *operator->() const;
+    LLVM_ABI DICompileUnit *operator*() const;
+    LLVM_ABI DICompileUnit *operator->() const;
   };
 
   debug_compile_units_iterator debug_compile_units_begin() const {
@@ -1015,6 +1009,14 @@ public:
   int getStackProtectorGuardOffset() const;
   void setStackProtectorGuardOffset(int Offset);
 
+  /// Get/set the width in memory of the stack protector guard value.
+  std::optional<unsigned> getStackProtectorGuardValueWidth() const;
+  void setStackProtectorGuardValueWidth(unsigned Width);
+
+  // Get/set flag indicating whether to emit a __stack_protector_loc section.
+  bool hasStackProtectorGuardRecord() const;
+  void setStackProtectorGuardRecord(bool Flag);
+
   /// Get/set the stack alignment overridden from the default.
   unsigned getOverrideStackAlignment() const;
   void setOverrideStackAlignment(unsigned Align);
@@ -1060,14 +1062,20 @@ public:
 
   /// Returns target-abi from MDString, null if target-abi is absent.
   StringRef getTargetABIFromMD();
+
+  /// Get how unwind information should be generated for x64 Windows.
+  WinX64EHUnwindMode getWinX64EHUnwindMode() const;
+
+  /// Gets the Control Flow Guard mode.
+  ControlFlowGuardMode getControlFlowGuardMode() const;
 };
 
 /// Given "llvm.used" or "llvm.compiler.used" as a global name, collect the
 /// initializer elements of that global in a SmallVector and return the global
 /// itself.
-GlobalVariable *collectUsedGlobalVariables(const Module &M,
-                                           SmallVectorImpl<GlobalValue *> &Vec,
-                                           bool CompilerUsed);
+LLVM_ABI GlobalVariable *
+collectUsedGlobalVariables(const Module &M, SmallVectorImpl<GlobalValue *> &Vec,
+                           bool CompilerUsed);
 
 /// An raw_ostream inserter for modules.
 inline raw_ostream &operator<<(raw_ostream &O, const Module &M) {

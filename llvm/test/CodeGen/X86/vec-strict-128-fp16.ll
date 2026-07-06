@@ -79,7 +79,7 @@ define <8 x half> @f11(<2 x double> %a0, <8 x half> %a1) #0 {
 ; CHECK-LABEL: f11:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtsd2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovsh %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    vmovsh {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3,4,5,6,7]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ext = extractelement <2 x double> %a0, i32 0
   %cvt = call half @llvm.experimental.constrained.fptrunc.f16.f64(double %ext,
@@ -93,7 +93,7 @@ define <2 x double> @f12(<2 x double> %a0, <8 x half> %a1) #0 {
 ; CHECK-LABEL: f12:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtsh2sd %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ext = extractelement <8 x half> %a1, i32 0
   %cvt = call double @llvm.experimental.constrained.fpext.f64.f16(half %ext,
@@ -140,7 +140,7 @@ define <8 x half> @f17(<4 x float> %a0, <8 x half> %a1) #0 {
 ; CHECK-LABEL: f17:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtss2sh %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovsh %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    vmovsh {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3,4,5,6,7]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ext = extractelement <4 x float> %a0, i32 0
   %cvt = call half @llvm.experimental.constrained.fptrunc.f16.f32(float %ext,
@@ -154,7 +154,7 @@ define <4 x float> @f18(<4 x float> %a0, <8 x half> %a1) #0 {
 ; CHECK-LABEL: f18:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvtsh2ss %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %ext = extractelement <8 x half> %a1, i32 0
   %cvt = call float @llvm.experimental.constrained.fpext.f32.f16(half %ext,

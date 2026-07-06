@@ -3,6 +3,11 @@
 // RUN: %clang_cc1 -std=c++2a -verify=expected,cxx20 %s "-DNEW=::operator new" "-DDELETE=::operator delete"
 // RUN: %clang_cc1 -std=c++2c -verify=expected,cxx26 %s "-DNEW=::operator new" "-DDELETE=::operator delete"
 
+// RUN: %clang_cc1 -std=c++2a -verify=expected,cxx20 %s -DNEW=__builtin_operator_new -DDELETE=__builtin_operator_delete -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++2a -verify=expected,cxx20 %s "-DNEW=operator new" "-DDELETE=operator delete" -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++2a -verify=expected,cxx20 %s "-DNEW=::operator new" "-DDELETE=::operator delete" -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++2c -verify=expected,cxx26 %s "-DNEW=::operator new" "-DDELETE=::operator delete" -fexperimental-new-constant-interpreter
+
 constexpr bool alloc_from_user_code() {
   void *p = NEW(sizeof(int)); // expected-note {{cannot allocate untyped memory in a constant expression; use 'std::allocator<T>::allocate'}}
   DELETE(p);
@@ -84,7 +89,9 @@ constexpr int *escape = std::allocator<int>().allocate(3); // expected-error {{c
                                                            // expected-note {{heap allocation performed here}}
 constexpr int leak = (std::allocator<int>().allocate(3), 0); // expected-error {{constant expression}} \
                                                              // expected-note {{not deallocated}}
-constexpr int no_lifetime_start = (*std::allocator<int>().allocate(1) = 1); // expected-error {{constant expression}} expected-note {{assignment to object outside its lifetime}}
+constexpr int no_lifetime_start = (*std::allocator<int>().allocate(1) = 1); // expected-error {{constant expression}} \
+                                                                            // expected-note {{assignment to object outside its lifetime}} \
+                                                                            // expected-note {{heap allocation performed here}}
 constexpr int no_deallocate_nullptr = (std::allocator<int>().deallocate(nullptr), 1); // expected-error {{constant expression}} expected-note {{in call}}
 // expected-note@#dealloc {{'std::allocator<...>::deallocate' used to delete a null pointer}}
 constexpr int no_deallocate_nonalloc = (std::allocator<int>().deallocate((int*)&no_deallocate_nonalloc), 1); // expected-error {{constant expression}} expected-note {{in call}}
@@ -177,7 +184,7 @@ static_assert(construct_after_lifetime()); // expected-error {{}} expected-note 
 
 constexpr bool construct_after_lifetime_2() {
   struct A { struct B {} b; };
-  A a;
+  A a; // expected-note {{declared here}}
   a.~A();
   std::construct_at<A::B>(&a.b); // expected-note {{in call}}
   // expected-note@#new {{construction of subobject of object outside its lifetime is not allowed in a constant expression}}
@@ -241,4 +248,68 @@ void f() {
     test<string().size()>();
 }
 
+}
+
+namespace GH134820 {
+struct S {
+    char* c = new char;
+    constexpr ~S() {
+        delete c;
+    }
+    int i = 0;
+};
+
+int f() {
+    if constexpr((S{}, true)) { // expected-warning{{left operand of comma operator has no effect}}
+        return 1;
+    }
+    if constexpr(S s; (S{}, true)) { // expected-warning{{left operand of comma operator has no effect}}
+        return 1;
+    }
+    if constexpr(S s; (s, true)) { // expected-warning{{left operand of comma operator has no effect}}
+        return 1;
+    }
+    if constexpr(constexpr int _ = S{}.i; true) {
+        return 1;
+    }
+    return 0;
+}
+
+template <typename T>
+int f2() {
+    if constexpr((T{}, true)) { // expected-warning{{left operand of comma operator has no effect}}
+        return 1;
+    }
+    if constexpr(T s; (T{}, true)) { // expected-warning{{left operand of comma operator has no effect}}
+        return 1;
+    }
+    if constexpr(T s; (s, true)) { // expected-warning{{left operand of comma operator has no effect}}
+        return 1;
+    }
+    if constexpr(constexpr int _ = T{}.i; true) {
+        return 1;
+    }
+    return 0;
+}
+
+void test() {
+  f2<S>(); // expected-note {{in instantiation}}
+}
+
+}
+namespace GH120197{
+struct NonTrivialDtor {
+  NonTrivialDtor() = default;
+  NonTrivialDtor(const NonTrivialDtor&) = default;
+  NonTrivialDtor(NonTrivialDtor&&) = default;
+  NonTrivialDtor& operator=(const NonTrivialDtor&)  = default;
+  NonTrivialDtor& operator=(NonTrivialDtor&&) = default;
+  constexpr ~NonTrivialDtor() noexcept {}
+};
+
+static_assert(((void)NonTrivialDtor{}, true)); // passes
+
+void f() {
+  if constexpr ((void)NonTrivialDtor{}, true) {}
+}
 }

@@ -15,6 +15,7 @@
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
+#include "llvm/Object/DXContainer.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/Wasm.h"
@@ -162,10 +163,8 @@ ObjectFile::createObjectFile(MemoryBufferRef Object, file_magic Type,
   case file_magic::windows_resource:
   case file_magic::pdb:
   case file_magic::minidump:
-  case file_magic::goff_object:
   case file_magic::cuda_fatbinary:
   case file_magic::offload_binary:
-  case file_magic::dxcontainer_object:
   case file_magic::offload_bundle:
   case file_magic::offload_bundle_compressed:
   case file_magic::spirv_object:
@@ -201,6 +200,10 @@ ObjectFile::createObjectFile(MemoryBufferRef Object, file_magic Type,
     return createXCOFFObjectFile(Object, Binary::ID_XCOFF64);
   case file_magic::wasm_object:
     return createWasmObjectFile(Object);
+  case file_magic::dxcontainer_object:
+    return createDXContainerObjectFile(Object);
+  case file_magic::goff_object:
+    return createGOFFObjectFile(Object);
   }
   llvm_unreachable("Unexpected Object File Type");
 }

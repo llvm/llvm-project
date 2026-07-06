@@ -6,10 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/math/clc_rint.h>
-#include <clc/opencl/clc.h>
+#include "clc/math/clc_rint.h"
 
-#define FUNCTION rint
-#define __CLC_BODY <clc/shared/unary_def.inc>
+#define __CLC_FUNCTION rint
+#define __CLC_BODY "clc/shared/unary_def.inc"
 
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"

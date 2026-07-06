@@ -309,4 +309,4 @@ entry:
   %call = tail call nnan ninf afn nsz double @llvm.pow.f64(double %a, double 5.000000e-01)
   ret double %call
 }
-attributes #1 = { "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "approx-func-fp-math"="true" }
+attributes #1 = { "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" }

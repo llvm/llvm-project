@@ -21,12 +21,13 @@
 #include "NVPTXGenInstrInfo.inc"
 
 namespace llvm {
+class NVPTXSubtarget;
 
 class NVPTXInstrInfo : public NVPTXGenInstrInfo {
   const NVPTXRegisterInfo RegInfo;
   virtual void anchor();
 public:
-  explicit NVPTXInstrInfo();
+  explicit NVPTXInstrInfo(const NVPTXSubtarget &STI);
 
   const NVPTXRegisterInfo &getRegisterInfo() const { return RegInfo; }
 
@@ -46,7 +47,7 @@ public:
    * virtual void loadRegFromStackSlot(
    *    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
    *    unsigned DestReg, int FrameIndex, const TargetRegisterClass *RC,
-   *    const TargetRegisterInfo *TRI, Register VReg,
+   *    const TargetRegisterInfo *TRI, Register VReg, unsigned SubReg = 0,
    *    MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const;
    */
 
@@ -66,9 +67,16 @@ public:
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
-  bool isSchedulingBoundary(const MachineInstr &MI,
-                            const MachineBasicBlock *MBB,
-                            const MachineFunction &MF) const override;
+  bool
+  reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
+  bool findCommutedOpIndices(const MachineInstr &MI, unsigned &SrcOpIdx1,
+                             unsigned &SrcOpIdx2) const override;
+  MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
+                                       unsigned OpIdx1,
+                                       unsigned OpIdx2) const override;
+
+private:
+  bool invertPredicateBranchInstr(MachineBasicBlock &MBB) const;
 };
 
 } // namespace llvm

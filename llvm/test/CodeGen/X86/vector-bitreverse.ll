@@ -8,7 +8,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,+avx512bw | FileCheck %s --check-prefixes=ALL,AVX,AVX512,AVX512BW
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+xop,+avx | FileCheck %s --check-prefixes=ALL,XOP,XOPAVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+xop,+avx2 | FileCheck %s --check-prefixes=ALL,XOP,XOPAVX2
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+ssse3,+gfni | FileCheck %s --check-prefixes=ALL,GFNISSE
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+gfni | FileCheck %s --check-prefixes=ALL,GFNISSE,GFNISSE2
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+ssse3,+gfni | FileCheck %s --check-prefixes=ALL,GFNISSE,GFNISSSE3
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx,+gfni | FileCheck %s --check-prefixes=ALL,GFNIAVX,GFNIAVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+gfni | FileCheck %s --check-prefixes=ALL,GFNIAVX,GFNIAVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+gfni | FileCheck %s --check-prefixes=ALL,GFNIAVX,GFNIAVX512,GFNIAVX512F
@@ -63,7 +64,7 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ; GFNISSE-LABEL: test_bitreverse_i8:
 ; GFNISSE:       # %bb.0:
 ; GFNISSE-NEXT:    movd %edi, %xmm0
-; GFNISSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; GFNISSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; GFNISSE-NEXT:    movd %xmm0, %eax
 ; GFNISSE-NEXT:    # kill: def $al killed $al killed $eax
 ; GFNISSE-NEXT:    retq
@@ -71,7 +72,7 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ; GFNIAVX-LABEL: test_bitreverse_i8:
 ; GFNIAVX:       # %bb.0:
 ; GFNIAVX-NEXT:    vmovd %edi, %xmm0
-; GFNIAVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; GFNIAVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; GFNIAVX-NEXT:    vmovd %xmm0, %eax
 ; GFNIAVX-NEXT:    # kill: def $al killed $al killed $eax
 ; GFNIAVX-NEXT:    retq
@@ -137,7 +138,7 @@ define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ; GFNISSE-LABEL: test_bitreverse_i16:
 ; GFNISSE:       # %bb.0:
 ; GFNISSE-NEXT:    movd %edi, %xmm0
-; GFNISSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; GFNISSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; GFNISSE-NEXT:    movd %xmm0, %eax
 ; GFNISSE-NEXT:    rolw $8, %ax
 ; GFNISSE-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -146,7 +147,7 @@ define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ; GFNIAVX-LABEL: test_bitreverse_i16:
 ; GFNIAVX:       # %bb.0:
 ; GFNIAVX-NEXT:    vmovd %edi, %xmm0
-; GFNIAVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; GFNIAVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; GFNIAVX-NEXT:    vmovd %xmm0, %eax
 ; GFNIAVX-NEXT:    rolw $8, %ax
 ; GFNIAVX-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -210,7 +211,7 @@ define i32 @test_bitreverse_i32(i32 %a) nounwind {
 ; GFNISSE-LABEL: test_bitreverse_i32:
 ; GFNISSE:       # %bb.0:
 ; GFNISSE-NEXT:    movd %edi, %xmm0
-; GFNISSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; GFNISSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; GFNISSE-NEXT:    movd %xmm0, %eax
 ; GFNISSE-NEXT:    bswapl %eax
 ; GFNISSE-NEXT:    retq
@@ -218,7 +219,7 @@ define i32 @test_bitreverse_i32(i32 %a) nounwind {
 ; GFNIAVX-LABEL: test_bitreverse_i32:
 ; GFNIAVX:       # %bb.0:
 ; GFNIAVX-NEXT:    vmovd %edi, %xmm0
-; GFNIAVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; GFNIAVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; GFNIAVX-NEXT:    vmovd %xmm0, %eax
 ; GFNIAVX-NEXT:    bswapl %eax
 ; GFNIAVX-NEXT:    retq
@@ -285,7 +286,7 @@ define i64 @test_bitreverse_i64(i64 %a) nounwind {
 ; GFNISSE-LABEL: test_bitreverse_i64:
 ; GFNISSE:       # %bb.0:
 ; GFNISSE-NEXT:    movq %rdi, %xmm0
-; GFNISSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; GFNISSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; GFNISSE-NEXT:    movq %xmm0, %rax
 ; GFNISSE-NEXT:    bswapq %rax
 ; GFNISSE-NEXT:    retq
@@ -293,7 +294,7 @@ define i64 @test_bitreverse_i64(i64 %a) nounwind {
 ; GFNIAVX-LABEL: test_bitreverse_i64:
 ; GFNIAVX:       # %bb.0:
 ; GFNIAVX-NEXT:    vmovq %rdi, %xmm0
-; GFNIAVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; GFNIAVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; GFNIAVX-NEXT:    vmovq %xmm0, %rax
 ; GFNIAVX-NEXT:    bswapq %rax
 ; GFNIAVX-NEXT:    retq
@@ -388,12 +389,12 @@ define <16 x i8> @test_bitreverse_v16i8(<16 x i8> %a) nounwind {
 ;
 ; GFNISSE-LABEL: test_bitreverse_v16i8:
 ; GFNISSE:       # %bb.0:
-; GFNISSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; GFNISSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; GFNISSE-NEXT:    retq
 ;
 ; GFNIAVX-LABEL: test_bitreverse_v16i8:
 ; GFNIAVX:       # %bb.0:
-; GFNIAVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; GFNIAVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; GFNIAVX-NEXT:    retq
   %b = call <16 x i8> @llvm.bitreverse.v16i8(<16 x i8> %a)
   ret <16 x i8> %b
@@ -492,16 +493,25 @@ define <8 x i16> @test_bitreverse_v8i16(<8 x i16> %a) nounwind {
 ; XOP-NEXT:    vpperm {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0, %xmm0
 ; XOP-NEXT:    retq
 ;
-; GFNISSE-LABEL: test_bitreverse_v8i16:
-; GFNISSE:       # %bb.0:
-; GFNISSE-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
-; GFNISSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; GFNISSE-NEXT:    retq
+; GFNISSE2-LABEL: test_bitreverse_v8i16:
+; GFNISSE2:       # %bb.0:
+; GFNISSE2-NEXT:    movdqa %xmm0, %xmm1
+; GFNISSE2-NEXT:    psrlw $8, %xmm1
+; GFNISSE2-NEXT:    psllw $8, %xmm0
+; GFNISSE2-NEXT:    por %xmm1, %xmm0
+; GFNISSE2-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; GFNISSE2-NEXT:    retq
+;
+; GFNISSSE3-LABEL: test_bitreverse_v8i16:
+; GFNISSSE3:       # %bb.0:
+; GFNISSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
+; GFNISSSE3-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; GFNISSSE3-NEXT:    retq
 ;
 ; GFNIAVX-LABEL: test_bitreverse_v8i16:
 ; GFNIAVX:       # %bb.0:
 ; GFNIAVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
-; GFNIAVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; GFNIAVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; GFNIAVX-NEXT:    retq
   %b = call <8 x i16> @llvm.bitreverse.v8i16(<8 x i16> %a)
   ret <8 x i16> %b
@@ -605,16 +615,30 @@ define <4 x i32> @test_bitreverse_v4i32(<4 x i32> %a) nounwind {
 ; XOP-NEXT:    vpperm {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0, %xmm0
 ; XOP-NEXT:    retq
 ;
-; GFNISSE-LABEL: test_bitreverse_v4i32:
-; GFNISSE:       # %bb.0:
-; GFNISSE-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
-; GFNISSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; GFNISSE-NEXT:    retq
+; GFNISSE2-LABEL: test_bitreverse_v4i32:
+; GFNISSE2:       # %bb.0:
+; GFNISSE2-NEXT:    pxor %xmm1, %xmm1
+; GFNISSE2-NEXT:    movdqa %xmm0, %xmm2
+; GFNISSE2-NEXT:    punpckhbw {{.*#+}} xmm2 = xmm2[8],xmm1[8],xmm2[9],xmm1[9],xmm2[10],xmm1[10],xmm2[11],xmm1[11],xmm2[12],xmm1[12],xmm2[13],xmm1[13],xmm2[14],xmm1[14],xmm2[15],xmm1[15]
+; GFNISSE2-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[3,2,1,0,4,5,6,7]
+; GFNISSE2-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,7,6,5,4]
+; GFNISSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; GFNISSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,2,1,0,4,5,6,7]
+; GFNISSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,6,5,4]
+; GFNISSE2-NEXT:    packuswb %xmm2, %xmm0
+; GFNISSE2-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; GFNISSE2-NEXT:    retq
+;
+; GFNISSSE3-LABEL: test_bitreverse_v4i32:
+; GFNISSSE3:       # %bb.0:
+; GFNISSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
+; GFNISSSE3-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; GFNISSSE3-NEXT:    retq
 ;
 ; GFNIAVX-LABEL: test_bitreverse_v4i32:
 ; GFNIAVX:       # %bb.0:
 ; GFNIAVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
-; GFNIAVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; GFNIAVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; GFNIAVX-NEXT:    retq
   %b = call <4 x i32> @llvm.bitreverse.v4i32(<4 x i32> %a)
   ret <4 x i32> %b
@@ -720,16 +744,32 @@ define <2 x i64> @test_bitreverse_v2i64(<2 x i64> %a) nounwind {
 ; XOP-NEXT:    vpperm {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0, %xmm0
 ; XOP-NEXT:    retq
 ;
-; GFNISSE-LABEL: test_bitreverse_v2i64:
-; GFNISSE:       # %bb.0:
-; GFNISSE-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8]
-; GFNISSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; GFNISSE-NEXT:    retq
+; GFNISSE2-LABEL: test_bitreverse_v2i64:
+; GFNISSE2:       # %bb.0:
+; GFNISSE2-NEXT:    pxor %xmm1, %xmm1
+; GFNISSE2-NEXT:    movdqa %xmm0, %xmm2
+; GFNISSE2-NEXT:    punpckhbw {{.*#+}} xmm2 = xmm2[8],xmm1[8],xmm2[9],xmm1[9],xmm2[10],xmm1[10],xmm2[11],xmm1[11],xmm2[12],xmm1[12],xmm2[13],xmm1[13],xmm2[14],xmm1[14],xmm2[15],xmm1[15]
+; GFNISSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[2,3,0,1]
+; GFNISSE2-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[3,2,1,0,4,5,6,7]
+; GFNISSE2-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,7,6,5,4]
+; GFNISSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; GFNISSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; GFNISSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,2,1,0,4,5,6,7]
+; GFNISSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,6,5,4]
+; GFNISSE2-NEXT:    packuswb %xmm2, %xmm0
+; GFNISSE2-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; GFNISSE2-NEXT:    retq
+;
+; GFNISSSE3-LABEL: test_bitreverse_v2i64:
+; GFNISSSE3:       # %bb.0:
+; GFNISSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8]
+; GFNISSSE3-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; GFNISSSE3-NEXT:    retq
 ;
 ; GFNIAVX-LABEL: test_bitreverse_v2i64:
 ; GFNIAVX:       # %bb.0:
 ; GFNIAVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8]
-; GFNIAVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; GFNIAVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; GFNIAVX-NEXT:    retq
   %b = call <2 x i64> @llvm.bitreverse.v2i64(<2 x i64> %a)
   ret <2 x i64> %b
@@ -882,7 +922,7 @@ define <32 x i8> @test_bitreverse_v32i8(<32 x i8> %a) nounwind {
 ;
 ; GFNIAVX-LABEL: test_bitreverse_v32i8:
 ; GFNIAVX:       # %bb.0:
-; GFNIAVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; GFNIAVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; GFNIAVX-NEXT:    retq
   %b = call <32 x i8> @llvm.bitreverse.v32i8(<32 x i8> %a)
   ret <32 x i8> %b
@@ -1042,15 +1082,30 @@ define <16 x i16> @test_bitreverse_v16i16(<16 x i16> %a) nounwind {
 ; XOPAVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    retq
 ;
-; GFNISSE-LABEL: test_bitreverse_v16i16:
-; GFNISSE:       # %bb.0:
-; GFNISSE-NEXT:    movdqa {{.*#+}} xmm2 = [1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
-; GFNISSE-NEXT:    pshufb %xmm2, %xmm0
-; GFNISSE-NEXT:    movdqa {{.*#+}} xmm3 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
-; GFNISSE-NEXT:    gf2p8affineqb $0, %xmm3, %xmm0
-; GFNISSE-NEXT:    pshufb %xmm2, %xmm1
-; GFNISSE-NEXT:    gf2p8affineqb $0, %xmm3, %xmm1
-; GFNISSE-NEXT:    retq
+; GFNISSE2-LABEL: test_bitreverse_v16i16:
+; GFNISSE2:       # %bb.0:
+; GFNISSE2-NEXT:    movdqa %xmm0, %xmm2
+; GFNISSE2-NEXT:    psrlw $8, %xmm2
+; GFNISSE2-NEXT:    psllw $8, %xmm0
+; GFNISSE2-NEXT:    por %xmm2, %xmm0
+; GFNISSE2-NEXT:    movdqa {{.*#+}} xmm2 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; GFNISSE2-NEXT:    gf2p8affineqb $0, %xmm2, %xmm0
+; GFNISSE2-NEXT:    movdqa %xmm1, %xmm3
+; GFNISSE2-NEXT:    psrlw $8, %xmm3
+; GFNISSE2-NEXT:    psllw $8, %xmm1
+; GFNISSE2-NEXT:    por %xmm3, %xmm1
+; GFNISSE2-NEXT:    gf2p8affineqb $0, %xmm2, %xmm1
+; GFNISSE2-NEXT:    retq
+;
+; GFNISSSE3-LABEL: test_bitreverse_v16i16:
+; GFNISSSE3:       # %bb.0:
+; GFNISSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
+; GFNISSSE3-NEXT:    pshufb %xmm2, %xmm0
+; GFNISSSE3-NEXT:    movdqa {{.*#+}} xmm3 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; GFNISSSE3-NEXT:    gf2p8affineqb $0, %xmm3, %xmm0
+; GFNISSSE3-NEXT:    pshufb %xmm2, %xmm1
+; GFNISSSE3-NEXT:    gf2p8affineqb $0, %xmm3, %xmm1
+; GFNISSSE3-NEXT:    retq
 ;
 ; GFNIAVX1-LABEL: test_bitreverse_v16i16:
 ; GFNIAVX1:       # %bb.0:
@@ -1066,13 +1121,13 @@ define <16 x i16> @test_bitreverse_v16i16(<16 x i16> %a) nounwind {
 ; GFNIAVX2-LABEL: test_bitreverse_v16i16:
 ; GFNIAVX2:       # %bb.0:
 ; GFNIAVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14,17,16,19,18,21,20,23,22,25,24,27,26,29,28,31,30]
-; GFNIAVX2-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; GFNIAVX2-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; GFNIAVX2-NEXT:    retq
 ;
 ; GFNIAVX512-LABEL: test_bitreverse_v16i16:
 ; GFNIAVX512:       # %bb.0:
 ; GFNIAVX512-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14,17,16,19,18,21,20,23,22,25,24,27,26,29,28,31,30]
-; GFNIAVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; GFNIAVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; GFNIAVX512-NEXT:    retq
   %b = call <16 x i16> @llvm.bitreverse.v16i16(<16 x i16> %a)
   ret <16 x i16> %b
@@ -1241,15 +1296,39 @@ define <8 x i32> @test_bitreverse_v8i32(<8 x i32> %a) nounwind {
 ; XOPAVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    retq
 ;
-; GFNISSE-LABEL: test_bitreverse_v8i32:
-; GFNISSE:       # %bb.0:
-; GFNISSE-NEXT:    movdqa {{.*#+}} xmm2 = [3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
-; GFNISSE-NEXT:    pshufb %xmm2, %xmm0
-; GFNISSE-NEXT:    movdqa {{.*#+}} xmm3 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
-; GFNISSE-NEXT:    gf2p8affineqb $0, %xmm3, %xmm0
-; GFNISSE-NEXT:    pshufb %xmm2, %xmm1
-; GFNISSE-NEXT:    gf2p8affineqb $0, %xmm3, %xmm1
-; GFNISSE-NEXT:    retq
+; GFNISSE2-LABEL: test_bitreverse_v8i32:
+; GFNISSE2:       # %bb.0:
+; GFNISSE2-NEXT:    pxor %xmm2, %xmm2
+; GFNISSE2-NEXT:    movdqa %xmm0, %xmm3
+; GFNISSE2-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8],xmm2[8],xmm3[9],xmm2[9],xmm3[10],xmm2[10],xmm3[11],xmm2[11],xmm3[12],xmm2[12],xmm3[13],xmm2[13],xmm3[14],xmm2[14],xmm3[15],xmm2[15]
+; GFNISSE2-NEXT:    pshuflw {{.*#+}} xmm3 = xmm3[3,2,1,0,4,5,6,7]
+; GFNISSE2-NEXT:    pshufhw {{.*#+}} xmm3 = xmm3[0,1,2,3,7,6,5,4]
+; GFNISSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
+; GFNISSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,2,1,0,4,5,6,7]
+; GFNISSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,6,5,4]
+; GFNISSE2-NEXT:    packuswb %xmm3, %xmm0
+; GFNISSE2-NEXT:    movdqa {{.*#+}} xmm3 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; GFNISSE2-NEXT:    gf2p8affineqb $0, %xmm3, %xmm0
+; GFNISSE2-NEXT:    movdqa %xmm1, %xmm4
+; GFNISSE2-NEXT:    punpckhbw {{.*#+}} xmm4 = xmm4[8],xmm2[8],xmm4[9],xmm2[9],xmm4[10],xmm2[10],xmm4[11],xmm2[11],xmm4[12],xmm2[12],xmm4[13],xmm2[13],xmm4[14],xmm2[14],xmm4[15],xmm2[15]
+; GFNISSE2-NEXT:    pshuflw {{.*#+}} xmm4 = xmm4[3,2,1,0,4,5,6,7]
+; GFNISSE2-NEXT:    pshufhw {{.*#+}} xmm4 = xmm4[0,1,2,3,7,6,5,4]
+; GFNISSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3],xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
+; GFNISSE2-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[3,2,1,0,4,5,6,7]
+; GFNISSE2-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,7,6,5,4]
+; GFNISSE2-NEXT:    packuswb %xmm4, %xmm1
+; GFNISSE2-NEXT:    gf2p8affineqb $0, %xmm3, %xmm1
+; GFNISSE2-NEXT:    retq
+;
+; GFNISSSE3-LABEL: test_bitreverse_v8i32:
+; GFNISSSE3:       # %bb.0:
+; GFNISSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
+; GFNISSSE3-NEXT:    pshufb %xmm2, %xmm0
+; GFNISSSE3-NEXT:    movdqa {{.*#+}} xmm3 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; GFNISSSE3-NEXT:    gf2p8affineqb $0, %xmm3, %xmm0
+; GFNISSSE3-NEXT:    pshufb %xmm2, %xmm1
+; GFNISSSE3-NEXT:    gf2p8affineqb $0, %xmm3, %xmm1
+; GFNISSSE3-NEXT:    retq
 ;
 ; GFNIAVX1-LABEL: test_bitreverse_v8i32:
 ; GFNIAVX1:       # %bb.0:
@@ -1265,13 +1344,13 @@ define <8 x i32> @test_bitreverse_v8i32(<8 x i32> %a) nounwind {
 ; GFNIAVX2-LABEL: test_bitreverse_v8i32:
 ; GFNIAVX2:       # %bb.0:
 ; GFNIAVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12,19,18,17,16,23,22,21,20,27,26,25,24,31,30,29,28]
-; GFNIAVX2-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; GFNIAVX2-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; GFNIAVX2-NEXT:    retq
 ;
 ; GFNIAVX512-LABEL: test_bitreverse_v8i32:
 ; GFNIAVX512:       # %bb.0:
 ; GFNIAVX512-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12,19,18,17,16,23,22,21,20,27,26,25,24,31,30,29,28]
-; GFNIAVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; GFNIAVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; GFNIAVX512-NEXT:    retq
   %b = call <8 x i32> @llvm.bitreverse.v8i32(<8 x i32> %a)
   ret <8 x i32> %b
@@ -1444,15 +1523,43 @@ define <4 x i64> @test_bitreverse_v4i64(<4 x i64> %a) nounwind {
 ; XOPAVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    retq
 ;
-; GFNISSE-LABEL: test_bitreverse_v4i64:
-; GFNISSE:       # %bb.0:
-; GFNISSE-NEXT:    movdqa {{.*#+}} xmm2 = [7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8]
-; GFNISSE-NEXT:    pshufb %xmm2, %xmm0
-; GFNISSE-NEXT:    movdqa {{.*#+}} xmm3 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
-; GFNISSE-NEXT:    gf2p8affineqb $0, %xmm3, %xmm0
-; GFNISSE-NEXT:    pshufb %xmm2, %xmm1
-; GFNISSE-NEXT:    gf2p8affineqb $0, %xmm3, %xmm1
-; GFNISSE-NEXT:    retq
+; GFNISSE2-LABEL: test_bitreverse_v4i64:
+; GFNISSE2:       # %bb.0:
+; GFNISSE2-NEXT:    pxor %xmm2, %xmm2
+; GFNISSE2-NEXT:    movdqa %xmm0, %xmm3
+; GFNISSE2-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8],xmm2[8],xmm3[9],xmm2[9],xmm3[10],xmm2[10],xmm3[11],xmm2[11],xmm3[12],xmm2[12],xmm3[13],xmm2[13],xmm3[14],xmm2[14],xmm3[15],xmm2[15]
+; GFNISSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[2,3,0,1]
+; GFNISSE2-NEXT:    pshuflw {{.*#+}} xmm3 = xmm3[3,2,1,0,4,5,6,7]
+; GFNISSE2-NEXT:    pshufhw {{.*#+}} xmm3 = xmm3[0,1,2,3,7,6,5,4]
+; GFNISSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
+; GFNISSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; GFNISSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,2,1,0,4,5,6,7]
+; GFNISSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,6,5,4]
+; GFNISSE2-NEXT:    packuswb %xmm3, %xmm0
+; GFNISSE2-NEXT:    movdqa {{.*#+}} xmm3 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; GFNISSE2-NEXT:    gf2p8affineqb $0, %xmm3, %xmm0
+; GFNISSE2-NEXT:    movdqa %xmm1, %xmm4
+; GFNISSE2-NEXT:    punpckhbw {{.*#+}} xmm4 = xmm4[8],xmm2[8],xmm4[9],xmm2[9],xmm4[10],xmm2[10],xmm4[11],xmm2[11],xmm4[12],xmm2[12],xmm4[13],xmm2[13],xmm4[14],xmm2[14],xmm4[15],xmm2[15]
+; GFNISSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[2,3,0,1]
+; GFNISSE2-NEXT:    pshuflw {{.*#+}} xmm4 = xmm4[3,2,1,0,4,5,6,7]
+; GFNISSE2-NEXT:    pshufhw {{.*#+}} xmm4 = xmm4[0,1,2,3,7,6,5,4]
+; GFNISSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3],xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
+; GFNISSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
+; GFNISSE2-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[3,2,1,0,4,5,6,7]
+; GFNISSE2-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,7,6,5,4]
+; GFNISSE2-NEXT:    packuswb %xmm4, %xmm1
+; GFNISSE2-NEXT:    gf2p8affineqb $0, %xmm3, %xmm1
+; GFNISSE2-NEXT:    retq
+;
+; GFNISSSE3-LABEL: test_bitreverse_v4i64:
+; GFNISSSE3:       # %bb.0:
+; GFNISSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8]
+; GFNISSSE3-NEXT:    pshufb %xmm2, %xmm0
+; GFNISSSE3-NEXT:    movdqa {{.*#+}} xmm3 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; GFNISSSE3-NEXT:    gf2p8affineqb $0, %xmm3, %xmm0
+; GFNISSSE3-NEXT:    pshufb %xmm2, %xmm1
+; GFNISSSE3-NEXT:    gf2p8affineqb $0, %xmm3, %xmm1
+; GFNISSSE3-NEXT:    retq
 ;
 ; GFNIAVX1-LABEL: test_bitreverse_v4i64:
 ; GFNIAVX1:       # %bb.0:
@@ -1468,13 +1575,13 @@ define <4 x i64> @test_bitreverse_v4i64(<4 x i64> %a) nounwind {
 ; GFNIAVX2-LABEL: test_bitreverse_v4i64:
 ; GFNIAVX2:       # %bb.0:
 ; GFNIAVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,23,22,21,20,19,18,17,16,31,30,29,28,27,26,25,24]
-; GFNIAVX2-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; GFNIAVX2-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; GFNIAVX2-NEXT:    retq
 ;
 ; GFNIAVX512-LABEL: test_bitreverse_v4i64:
 ; GFNIAVX512:       # %bb.0:
 ; GFNIAVX512-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,23,22,21,20,19,18,17,16,31,30,29,28,27,26,25,24]
-; GFNIAVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; GFNIAVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; GFNIAVX512-NEXT:    retq
   %b = call <4 x i64> @llvm.bitreverse.v4i64(<4 x i64> %a)
   ret <4 x i64> %b
@@ -1749,7 +1856,7 @@ define <64 x i8> @test_bitreverse_v64i8(<64 x i8> %a) nounwind {
 ;
 ; GFNIAVX512-LABEL: test_bitreverse_v64i8:
 ; GFNIAVX512:       # %bb.0:
-; GFNIAVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; GFNIAVX512-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; GFNIAVX512-NEXT:    retq
   %b = call <64 x i8> @llvm.bitreverse.v64i8(<64 x i8> %a)
   ret <64 x i8> %b
@@ -2035,19 +2142,44 @@ define <32 x i16> @test_bitreverse_v32i16(<32 x i16> %a) nounwind {
 ; XOPAVX2-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; XOPAVX2-NEXT:    retq
 ;
-; GFNISSE-LABEL: test_bitreverse_v32i16:
-; GFNISSE:       # %bb.0:
-; GFNISSE-NEXT:    movdqa {{.*#+}} xmm4 = [1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
-; GFNISSE-NEXT:    pshufb %xmm4, %xmm0
-; GFNISSE-NEXT:    movdqa {{.*#+}} xmm5 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
-; GFNISSE-NEXT:    gf2p8affineqb $0, %xmm5, %xmm0
-; GFNISSE-NEXT:    pshufb %xmm4, %xmm1
-; GFNISSE-NEXT:    gf2p8affineqb $0, %xmm5, %xmm1
-; GFNISSE-NEXT:    pshufb %xmm4, %xmm2
-; GFNISSE-NEXT:    gf2p8affineqb $0, %xmm5, %xmm2
-; GFNISSE-NEXT:    pshufb %xmm4, %xmm3
-; GFNISSE-NEXT:    gf2p8affineqb $0, %xmm5, %xmm3
-; GFNISSE-NEXT:    retq
+; GFNISSE2-LABEL: test_bitreverse_v32i16:
+; GFNISSE2:       # %bb.0:
+; GFNISSE2-NEXT:    movdqa %xmm0, %xmm4
+; GFNISSE2-NEXT:    psrlw $8, %xmm4
+; GFNISSE2-NEXT:    psllw $8, %xmm0
+; GFNISSE2-NEXT:    por %xmm4, %xmm0
+; GFNISSE2-NEXT:    movdqa {{.*#+}} xmm4 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; GFNISSE2-NEXT:    gf2p8affineqb $0, %xmm4, %xmm0
+; GFNISSE2-NEXT:    movdqa %xmm1, %xmm5
+; GFNISSE2-NEXT:    psrlw $8, %xmm5
+; GFNISSE2-NEXT:    psllw $8, %xmm1
+; GFNISSE2-NEXT:    por %xmm5, %xmm1
+; GFNISSE2-NEXT:    gf2p8affineqb $0, %xmm4, %xmm1
+; GFNISSE2-NEXT:    movdqa %xmm2, %xmm5
+; GFNISSE2-NEXT:    psrlw $8, %xmm5
+; GFNISSE2-NEXT:    psllw $8, %xmm2
+; GFNISSE2-NEXT:    por %xmm5, %xmm2
+; GFNISSE2-NEXT:    gf2p8affineqb $0, %xmm4, %xmm2
+; GFNISSE2-NEXT:    movdqa %xmm3, %xmm5
+; GFNISSE2-NEXT:    psrlw $8, %xmm5
+; GFNISSE2-NEXT:    psllw $8, %xmm3
+; GFNISSE2-NEXT:    por %xmm5, %xmm3
+; GFNISSE2-NEXT:    gf2p8affineqb $0, %xmm4, %xmm3
+; GFNISSE2-NEXT:    retq
+;
+; GFNISSSE3-LABEL: test_bitreverse_v32i16:
+; GFNISSSE3:       # %bb.0:
+; GFNISSSE3-NEXT:    movdqa {{.*#+}} xmm4 = [1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14]
+; GFNISSSE3-NEXT:    pshufb %xmm4, %xmm0
+; GFNISSSE3-NEXT:    movdqa {{.*#+}} xmm5 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; GFNISSSE3-NEXT:    gf2p8affineqb $0, %xmm5, %xmm0
+; GFNISSSE3-NEXT:    pshufb %xmm4, %xmm1
+; GFNISSSE3-NEXT:    gf2p8affineqb $0, %xmm5, %xmm1
+; GFNISSSE3-NEXT:    pshufb %xmm4, %xmm2
+; GFNISSSE3-NEXT:    gf2p8affineqb $0, %xmm5, %xmm2
+; GFNISSSE3-NEXT:    pshufb %xmm4, %xmm3
+; GFNISSSE3-NEXT:    gf2p8affineqb $0, %xmm5, %xmm3
+; GFNISSSE3-NEXT:    retq
 ;
 ; GFNIAVX1-LABEL: test_bitreverse_v32i16:
 ; GFNIAVX1:       # %bb.0:
@@ -2084,13 +2216,13 @@ define <32 x i16> @test_bitreverse_v32i16(<32 x i16> %a) nounwind {
 ; GFNIAVX512F-NEXT:    vpshufb %ymm2, %ymm1, %ymm1
 ; GFNIAVX512F-NEXT:    vpshufb %ymm2, %ymm0, %ymm0
 ; GFNIAVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; GFNIAVX512F-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; GFNIAVX512F-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; GFNIAVX512F-NEXT:    retq
 ;
 ; GFNIAVX512BW-LABEL: test_bitreverse_v32i16:
 ; GFNIAVX512BW:       # %bb.0:
 ; GFNIAVX512BW-NEXT:    vpshufb {{.*#+}} zmm0 = zmm0[1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14,17,16,19,18,21,20,23,22,25,24,27,26,29,28,31,30,33,32,35,34,37,36,39,38,41,40,43,42,45,44,47,46,49,48,51,50,53,52,55,54,57,56,59,58,61,60,63,62]
-; GFNIAVX512BW-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; GFNIAVX512BW-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; GFNIAVX512BW-NEXT:    retq
   %b = call <32 x i16> @llvm.bitreverse.v32i16(<32 x i16> %a)
   ret <32 x i16> %b
@@ -2393,19 +2525,61 @@ define <16 x i32> @test_bitreverse_v16i32(<16 x i32> %a) nounwind {
 ; XOPAVX2-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; XOPAVX2-NEXT:    retq
 ;
-; GFNISSE-LABEL: test_bitreverse_v16i32:
-; GFNISSE:       # %bb.0:
-; GFNISSE-NEXT:    movdqa {{.*#+}} xmm4 = [3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
-; GFNISSE-NEXT:    pshufb %xmm4, %xmm0
-; GFNISSE-NEXT:    movdqa {{.*#+}} xmm5 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
-; GFNISSE-NEXT:    gf2p8affineqb $0, %xmm5, %xmm0
-; GFNISSE-NEXT:    pshufb %xmm4, %xmm1
-; GFNISSE-NEXT:    gf2p8affineqb $0, %xmm5, %xmm1
-; GFNISSE-NEXT:    pshufb %xmm4, %xmm2
-; GFNISSE-NEXT:    gf2p8affineqb $0, %xmm5, %xmm2
-; GFNISSE-NEXT:    pshufb %xmm4, %xmm3
-; GFNISSE-NEXT:    gf2p8affineqb $0, %xmm5, %xmm3
-; GFNISSE-NEXT:    retq
+; GFNISSE2-LABEL: test_bitreverse_v16i32:
+; GFNISSE2:       # %bb.0:
+; GFNISSE2-NEXT:    pxor %xmm4, %xmm4
+; GFNISSE2-NEXT:    movdqa %xmm0, %xmm5
+; GFNISSE2-NEXT:    punpckhbw {{.*#+}} xmm5 = xmm5[8],xmm4[8],xmm5[9],xmm4[9],xmm5[10],xmm4[10],xmm5[11],xmm4[11],xmm5[12],xmm4[12],xmm5[13],xmm4[13],xmm5[14],xmm4[14],xmm5[15],xmm4[15]
+; GFNISSE2-NEXT:    pshuflw {{.*#+}} xmm5 = xmm5[3,2,1,0,4,5,6,7]
+; GFNISSE2-NEXT:    pshufhw {{.*#+}} xmm5 = xmm5[0,1,2,3,7,6,5,4]
+; GFNISSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1],xmm0[2],xmm4[2],xmm0[3],xmm4[3],xmm0[4],xmm4[4],xmm0[5],xmm4[5],xmm0[6],xmm4[6],xmm0[7],xmm4[7]
+; GFNISSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,2,1,0,4,5,6,7]
+; GFNISSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,6,5,4]
+; GFNISSE2-NEXT:    packuswb %xmm5, %xmm0
+; GFNISSE2-NEXT:    movdqa {{.*#+}} xmm5 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; GFNISSE2-NEXT:    gf2p8affineqb $0, %xmm5, %xmm0
+; GFNISSE2-NEXT:    movdqa %xmm1, %xmm6
+; GFNISSE2-NEXT:    punpckhbw {{.*#+}} xmm6 = xmm6[8],xmm4[8],xmm6[9],xmm4[9],xmm6[10],xmm4[10],xmm6[11],xmm4[11],xmm6[12],xmm4[12],xmm6[13],xmm4[13],xmm6[14],xmm4[14],xmm6[15],xmm4[15]
+; GFNISSE2-NEXT:    pshuflw {{.*#+}} xmm6 = xmm6[3,2,1,0,4,5,6,7]
+; GFNISSE2-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,7,6,5,4]
+; GFNISSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[1],xmm4[1],xmm1[2],xmm4[2],xmm1[3],xmm4[3],xmm1[4],xmm4[4],xmm1[5],xmm4[5],xmm1[6],xmm4[6],xmm1[7],xmm4[7]
+; GFNISSE2-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[3,2,1,0,4,5,6,7]
+; GFNISSE2-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,7,6,5,4]
+; GFNISSE2-NEXT:    packuswb %xmm6, %xmm1
+; GFNISSE2-NEXT:    gf2p8affineqb $0, %xmm5, %xmm1
+; GFNISSE2-NEXT:    movdqa %xmm2, %xmm6
+; GFNISSE2-NEXT:    punpckhbw {{.*#+}} xmm6 = xmm6[8],xmm4[8],xmm6[9],xmm4[9],xmm6[10],xmm4[10],xmm6[11],xmm4[11],xmm6[12],xmm4[12],xmm6[13],xmm4[13],xmm6[14],xmm4[14],xmm6[15],xmm4[15]
+; GFNISSE2-NEXT:    pshuflw {{.*#+}} xmm6 = xmm6[3,2,1,0,4,5,6,7]
+; GFNISSE2-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,7,6,5,4]
+; GFNISSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1],xmm2[2],xmm4[2],xmm2[3],xmm4[3],xmm2[4],xmm4[4],xmm2[5],xmm4[5],xmm2[6],xmm4[6],xmm2[7],xmm4[7]
+; GFNISSE2-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[3,2,1,0,4,5,6,7]
+; GFNISSE2-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,7,6,5,4]
+; GFNISSE2-NEXT:    packuswb %xmm6, %xmm2
+; GFNISSE2-NEXT:    gf2p8affineqb $0, %xmm5, %xmm2
+; GFNISSE2-NEXT:    movdqa %xmm3, %xmm6
+; GFNISSE2-NEXT:    punpckhbw {{.*#+}} xmm6 = xmm6[8],xmm4[8],xmm6[9],xmm4[9],xmm6[10],xmm4[10],xmm6[11],xmm4[11],xmm6[12],xmm4[12],xmm6[13],xmm4[13],xmm6[14],xmm4[14],xmm6[15],xmm4[15]
+; GFNISSE2-NEXT:    pshuflw {{.*#+}} xmm6 = xmm6[3,2,1,0,4,5,6,7]
+; GFNISSE2-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,7,6,5,4]
+; GFNISSE2-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[1],xmm4[1],xmm3[2],xmm4[2],xmm3[3],xmm4[3],xmm3[4],xmm4[4],xmm3[5],xmm4[5],xmm3[6],xmm4[6],xmm3[7],xmm4[7]
+; GFNISSE2-NEXT:    pshuflw {{.*#+}} xmm3 = xmm3[3,2,1,0,4,5,6,7]
+; GFNISSE2-NEXT:    pshufhw {{.*#+}} xmm3 = xmm3[0,1,2,3,7,6,5,4]
+; GFNISSE2-NEXT:    packuswb %xmm6, %xmm3
+; GFNISSE2-NEXT:    gf2p8affineqb $0, %xmm5, %xmm3
+; GFNISSE2-NEXT:    retq
+;
+; GFNISSSE3-LABEL: test_bitreverse_v16i32:
+; GFNISSSE3:       # %bb.0:
+; GFNISSSE3-NEXT:    movdqa {{.*#+}} xmm4 = [3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
+; GFNISSSE3-NEXT:    pshufb %xmm4, %xmm0
+; GFNISSSE3-NEXT:    movdqa {{.*#+}} xmm5 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; GFNISSSE3-NEXT:    gf2p8affineqb $0, %xmm5, %xmm0
+; GFNISSSE3-NEXT:    pshufb %xmm4, %xmm1
+; GFNISSSE3-NEXT:    gf2p8affineqb $0, %xmm5, %xmm1
+; GFNISSSE3-NEXT:    pshufb %xmm4, %xmm2
+; GFNISSSE3-NEXT:    gf2p8affineqb $0, %xmm5, %xmm2
+; GFNISSSE3-NEXT:    pshufb %xmm4, %xmm3
+; GFNISSSE3-NEXT:    gf2p8affineqb $0, %xmm5, %xmm3
+; GFNISSSE3-NEXT:    retq
 ;
 ; GFNIAVX1-LABEL: test_bitreverse_v16i32:
 ; GFNIAVX1:       # %bb.0:
@@ -2442,13 +2616,13 @@ define <16 x i32> @test_bitreverse_v16i32(<16 x i32> %a) nounwind {
 ; GFNIAVX512F-NEXT:    vpshufb %ymm2, %ymm1, %ymm1
 ; GFNIAVX512F-NEXT:    vpshufb %ymm2, %ymm0, %ymm0
 ; GFNIAVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; GFNIAVX512F-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; GFNIAVX512F-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; GFNIAVX512F-NEXT:    retq
 ;
 ; GFNIAVX512BW-LABEL: test_bitreverse_v16i32:
 ; GFNIAVX512BW:       # %bb.0:
 ; GFNIAVX512BW-NEXT:    vpshufb {{.*#+}} zmm0 = zmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12,19,18,17,16,23,22,21,20,27,26,25,24,31,30,29,28,35,34,33,32,39,38,37,36,43,42,41,40,47,46,45,44,51,50,49,48,55,54,53,52,59,58,57,56,63,62,61,60]
-; GFNIAVX512BW-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; GFNIAVX512BW-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; GFNIAVX512BW-NEXT:    retq
   %b = call <16 x i32> @llvm.bitreverse.v16i32(<16 x i32> %a)
   ret <16 x i32> %b
@@ -2759,19 +2933,69 @@ define <8 x i64> @test_bitreverse_v8i64(<8 x i64> %a) nounwind {
 ; XOPAVX2-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; XOPAVX2-NEXT:    retq
 ;
-; GFNISSE-LABEL: test_bitreverse_v8i64:
-; GFNISSE:       # %bb.0:
-; GFNISSE-NEXT:    movdqa {{.*#+}} xmm4 = [7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8]
-; GFNISSE-NEXT:    pshufb %xmm4, %xmm0
-; GFNISSE-NEXT:    movdqa {{.*#+}} xmm5 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
-; GFNISSE-NEXT:    gf2p8affineqb $0, %xmm5, %xmm0
-; GFNISSE-NEXT:    pshufb %xmm4, %xmm1
-; GFNISSE-NEXT:    gf2p8affineqb $0, %xmm5, %xmm1
-; GFNISSE-NEXT:    pshufb %xmm4, %xmm2
-; GFNISSE-NEXT:    gf2p8affineqb $0, %xmm5, %xmm2
-; GFNISSE-NEXT:    pshufb %xmm4, %xmm3
-; GFNISSE-NEXT:    gf2p8affineqb $0, %xmm5, %xmm3
-; GFNISSE-NEXT:    retq
+; GFNISSE2-LABEL: test_bitreverse_v8i64:
+; GFNISSE2:       # %bb.0:
+; GFNISSE2-NEXT:    pxor %xmm4, %xmm4
+; GFNISSE2-NEXT:    movdqa %xmm0, %xmm5
+; GFNISSE2-NEXT:    punpckhbw {{.*#+}} xmm5 = xmm5[8],xmm4[8],xmm5[9],xmm4[9],xmm5[10],xmm4[10],xmm5[11],xmm4[11],xmm5[12],xmm4[12],xmm5[13],xmm4[13],xmm5[14],xmm4[14],xmm5[15],xmm4[15]
+; GFNISSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[2,3,0,1]
+; GFNISSE2-NEXT:    pshuflw {{.*#+}} xmm5 = xmm5[3,2,1,0,4,5,6,7]
+; GFNISSE2-NEXT:    pshufhw {{.*#+}} xmm5 = xmm5[0,1,2,3,7,6,5,4]
+; GFNISSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1],xmm0[2],xmm4[2],xmm0[3],xmm4[3],xmm0[4],xmm4[4],xmm0[5],xmm4[5],xmm0[6],xmm4[6],xmm0[7],xmm4[7]
+; GFNISSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; GFNISSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,2,1,0,4,5,6,7]
+; GFNISSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,6,5,4]
+; GFNISSE2-NEXT:    packuswb %xmm5, %xmm0
+; GFNISSE2-NEXT:    movdqa {{.*#+}} xmm5 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; GFNISSE2-NEXT:    gf2p8affineqb $0, %xmm5, %xmm0
+; GFNISSE2-NEXT:    movdqa %xmm1, %xmm6
+; GFNISSE2-NEXT:    punpckhbw {{.*#+}} xmm6 = xmm6[8],xmm4[8],xmm6[9],xmm4[9],xmm6[10],xmm4[10],xmm6[11],xmm4[11],xmm6[12],xmm4[12],xmm6[13],xmm4[13],xmm6[14],xmm4[14],xmm6[15],xmm4[15]
+; GFNISSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[2,3,0,1]
+; GFNISSE2-NEXT:    pshuflw {{.*#+}} xmm6 = xmm6[3,2,1,0,4,5,6,7]
+; GFNISSE2-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,7,6,5,4]
+; GFNISSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm4[0],xmm1[1],xmm4[1],xmm1[2],xmm4[2],xmm1[3],xmm4[3],xmm1[4],xmm4[4],xmm1[5],xmm4[5],xmm1[6],xmm4[6],xmm1[7],xmm4[7]
+; GFNISSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
+; GFNISSE2-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[3,2,1,0,4,5,6,7]
+; GFNISSE2-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,7,6,5,4]
+; GFNISSE2-NEXT:    packuswb %xmm6, %xmm1
+; GFNISSE2-NEXT:    gf2p8affineqb $0, %xmm5, %xmm1
+; GFNISSE2-NEXT:    movdqa %xmm2, %xmm6
+; GFNISSE2-NEXT:    punpckhbw {{.*#+}} xmm6 = xmm6[8],xmm4[8],xmm6[9],xmm4[9],xmm6[10],xmm4[10],xmm6[11],xmm4[11],xmm6[12],xmm4[12],xmm6[13],xmm4[13],xmm6[14],xmm4[14],xmm6[15],xmm4[15]
+; GFNISSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[2,3,0,1]
+; GFNISSE2-NEXT:    pshuflw {{.*#+}} xmm6 = xmm6[3,2,1,0,4,5,6,7]
+; GFNISSE2-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,7,6,5,4]
+; GFNISSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1],xmm2[2],xmm4[2],xmm2[3],xmm4[3],xmm2[4],xmm4[4],xmm2[5],xmm4[5],xmm2[6],xmm4[6],xmm2[7],xmm4[7]
+; GFNISSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[2,3,0,1]
+; GFNISSE2-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[3,2,1,0,4,5,6,7]
+; GFNISSE2-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,7,6,5,4]
+; GFNISSE2-NEXT:    packuswb %xmm6, %xmm2
+; GFNISSE2-NEXT:    gf2p8affineqb $0, %xmm5, %xmm2
+; GFNISSE2-NEXT:    movdqa %xmm3, %xmm6
+; GFNISSE2-NEXT:    punpckhbw {{.*#+}} xmm6 = xmm6[8],xmm4[8],xmm6[9],xmm4[9],xmm6[10],xmm4[10],xmm6[11],xmm4[11],xmm6[12],xmm4[12],xmm6[13],xmm4[13],xmm6[14],xmm4[14],xmm6[15],xmm4[15]
+; GFNISSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[2,3,0,1]
+; GFNISSE2-NEXT:    pshuflw {{.*#+}} xmm6 = xmm6[3,2,1,0,4,5,6,7]
+; GFNISSE2-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,7,6,5,4]
+; GFNISSE2-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[1],xmm4[1],xmm3[2],xmm4[2],xmm3[3],xmm4[3],xmm3[4],xmm4[4],xmm3[5],xmm4[5],xmm3[6],xmm4[6],xmm3[7],xmm4[7]
+; GFNISSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[2,3,0,1]
+; GFNISSE2-NEXT:    pshuflw {{.*#+}} xmm3 = xmm3[3,2,1,0,4,5,6,7]
+; GFNISSE2-NEXT:    pshufhw {{.*#+}} xmm3 = xmm3[0,1,2,3,7,6,5,4]
+; GFNISSE2-NEXT:    packuswb %xmm6, %xmm3
+; GFNISSE2-NEXT:    gf2p8affineqb $0, %xmm5, %xmm3
+; GFNISSE2-NEXT:    retq
+;
+; GFNISSSE3-LABEL: test_bitreverse_v8i64:
+; GFNISSSE3:       # %bb.0:
+; GFNISSSE3-NEXT:    movdqa {{.*#+}} xmm4 = [7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8]
+; GFNISSSE3-NEXT:    pshufb %xmm4, %xmm0
+; GFNISSSE3-NEXT:    movdqa {{.*#+}} xmm5 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; GFNISSSE3-NEXT:    gf2p8affineqb $0, %xmm5, %xmm0
+; GFNISSSE3-NEXT:    pshufb %xmm4, %xmm1
+; GFNISSSE3-NEXT:    gf2p8affineqb $0, %xmm5, %xmm1
+; GFNISSSE3-NEXT:    pshufb %xmm4, %xmm2
+; GFNISSSE3-NEXT:    gf2p8affineqb $0, %xmm5, %xmm2
+; GFNISSSE3-NEXT:    pshufb %xmm4, %xmm3
+; GFNISSSE3-NEXT:    gf2p8affineqb $0, %xmm5, %xmm3
+; GFNISSSE3-NEXT:    retq
 ;
 ; GFNIAVX1-LABEL: test_bitreverse_v8i64:
 ; GFNIAVX1:       # %bb.0:
@@ -2808,13 +3032,13 @@ define <8 x i64> @test_bitreverse_v8i64(<8 x i64> %a) nounwind {
 ; GFNIAVX512F-NEXT:    vpshufb %ymm2, %ymm1, %ymm1
 ; GFNIAVX512F-NEXT:    vpshufb %ymm2, %ymm0, %ymm0
 ; GFNIAVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; GFNIAVX512F-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; GFNIAVX512F-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; GFNIAVX512F-NEXT:    retq
 ;
 ; GFNIAVX512BW-LABEL: test_bitreverse_v8i64:
 ; GFNIAVX512BW:       # %bb.0:
 ; GFNIAVX512BW-NEXT:    vpshufb {{.*#+}} zmm0 = zmm0[7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,23,22,21,20,19,18,17,16,31,30,29,28,27,26,25,24,39,38,37,36,35,34,33,32,47,46,45,44,43,42,41,40,55,54,53,52,51,50,49,48,63,62,61,60,59,58,57,56]
-; GFNIAVX512BW-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; GFNIAVX512BW-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; GFNIAVX512BW-NEXT:    retq
   %b = call <8 x i64> @llvm.bitreverse.v8i64(<8 x i64> %a)
   ret <8 x i64> %b

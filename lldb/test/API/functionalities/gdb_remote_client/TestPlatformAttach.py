@@ -49,10 +49,12 @@ class TestPlatformAttach(GDBRemoteTestBase):
 
         attach_info = lldb.SBAttachInfo()
         attach_info.SetExecutable("foo")
+        attach_info.SetProcessPluginName("wasm")
 
         target = lldb.SBTarget()
         process = platform.Attach(attach_info, self.dbg, target, error)
         self.assertSuccess(error)
         self.assertEqual(process.GetProcessID(), 95117)
+        self.assertEqual(process.GetPluginName(), "wasm")
 
         platform.DisconnectRemote()

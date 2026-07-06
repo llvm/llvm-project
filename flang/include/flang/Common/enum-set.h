@@ -175,10 +175,8 @@ public:
   constexpr bool empty() const { return none(); }
   void clear() { reset(); }
   void insert(enumerationType x) { set(x); }
-  void insert(enumerationType &&x) { set(x); }
-  void emplace(enumerationType &&x) { set(x); }
+  void emplace(enumerationType x) { set(x); }
   void erase(enumerationType x) { reset(x); }
-  void erase(enumerationType &&x) { reset(x); }
 
   constexpr std::optional<enumerationType> LeastElement() const {
     if (empty()) {
@@ -219,6 +217,16 @@ public:
 private:
   bitsetType bitset_{};
 };
+
+namespace detail {
+template <typename...> struct IsEnumSetTest {
+  static constexpr bool value{false};
+};
+template <typename E, size_t B> struct IsEnumSetTest<EnumSet<E, B>> {
+  static constexpr bool value{true};
+};
+} // namespace detail
+template <typename T> constexpr bool IsEnumSet{detail::IsEnumSetTest<T>::value};
 } // namespace Fortran::common
 
 template <typename ENUM, std::size_t values>

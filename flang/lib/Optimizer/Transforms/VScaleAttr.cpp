@@ -26,16 +26,20 @@
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
+#include <string>
 
 namespace fir {
 #define GEN_PASS_DEF_VSCALEATTR
@@ -46,10 +50,18 @@ namespace fir {
 
 namespace {
 
+/// See FunctionAttr.cpp: `llvm.func` properties on `func.func` need the `llvm.`
+/// prefix for convert-func-to-llvm.
+static mlir::StringAttr getLlvmFuncPropertyAttrName(mlir::MLIRContext *ctx,
+                                                    mlir::StringAttr baseName) {
+  return mlir::StringAttr::get(ctx, llvm::Twine("llvm.") + baseName.getValue());
+}
+
 class VScaleAttrPass : public fir::impl::VScaleAttrBase<VScaleAttrPass> {
 public:
   VScaleAttrPass(const fir::VScaleAttrOptions &options) {
-    vscaleRange = options.vscaleRange;
+    vscaleMin = options.vscaleMin;
+    vscaleMax = options.vscaleMax;
   }
   VScaleAttrPass() {}
   void runOnOperation() override;
@@ -63,16 +75,32 @@ void VScaleAttrPass::runOnOperation() {
 
   LLVM_DEBUG(llvm::dbgs() << "Func-name:" << func.getSymName() << "\n");
 
-  auto context = &getContext();
+  if (!llvm::isPowerOf2_32(vscaleMin)) {
+    func->emitError(
+        "VScaleAttr: vscaleMin has to be a power-of-two greater than 0\n");
+    return signalPassFailure();
+  }
+
+  if (vscaleMax != 0 &&
+      (!llvm::isPowerOf2_32(vscaleMax) || (vscaleMin > vscaleMax))) {
+    func->emitError("VScaleAttr: vscaleMax has to be a power-of-two "
+                    "greater-than-or-equal to vscaleMin or 0 to signify "
+                    "an unbounded maximum\n");
+    return signalPassFailure();
+  }
+
+  mlir::MLIRContext *context = &getContext();
+  auto llvmFuncOpName =
+      mlir::OperationName(mlir::LLVM::LLVMFuncOp::getOperationName(), context);
 
   auto intTy = mlir::IntegerType::get(context, 32);
 
-  assert(vscaleRange.first && "VScaleRange minimum should be non-zero");
-
-  func->setAttr("vscale_range",
+  func->setAttr(getLlvmFuncPropertyAttrName(
+                    context, mlir::LLVM::LLVMFuncOp::getVscaleRangeAttrName(
+                                 llvmFuncOpName)),
                 mlir::LLVM::VScaleRangeAttr::get(
-                    context, mlir::IntegerAttr::get(intTy, vscaleRange.first),
-                    mlir::IntegerAttr::get(intTy, vscaleRange.second)));
+                    context, mlir::IntegerAttr::get(intTy, vscaleMin),
+                    mlir::IntegerAttr::get(intTy, vscaleMax)));
 
   LLVM_DEBUG(llvm::dbgs() << "=== End " DEBUG_TYPE " ===\n");
 }

@@ -1,5 +1,9 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - | FileCheck %s
-; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; Fails with:
+;   Expected input to have storage class Workgroup, CrossWorkgroup or Function: SpecConstantOp
+;   %51 = OpSpecConstantOp %_ptr_Generic_uchar PtrCastToGeneric %50
+; Likely a limitation from spirv-val
+; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpName %[[I9:.*]] "_ZN13BaseIncrement9incrementEPi"
 ; CHECK-DAG: OpName %[[I29:.*]] "_ZN12IncrementBy29incrementEPi"

@@ -39,14 +39,16 @@ StressRA("stress-regalloc", cl::Hidden, cl::init(0), cl::value_desc("N"),
 
 RegisterClassInfo::RegisterClassInfo() = default;
 
-void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf) {
+void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf,
+                                             bool Rev) {
   bool Update = false;
   MF = &mf;
 
   auto &STI = MF->getSubtarget();
 
   // Allocate new array the first time we see a new target.
-  if (STI.getRegisterInfo() != TRI) {
+  if (STI.getRegisterInfo() != TRI || Reverse != Rev) {
+    Reverse = Rev;
     TRI = STI.getRegisterInfo();
     RegClass.reset(new RCInfo[TRI->getNumRegClasses()]);
     Update = true;
@@ -83,7 +85,7 @@ void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf) {
     CalleeSavedAliases.assign(TRI->getNumRegUnits(), 0);
     for (const MCPhysReg *I = CSR; *I; ++I) {
       for (MCRegUnit U : TRI->regunits(*I))
-        CalleeSavedAliases[U] = *I;
+        CalleeSavedAliases[static_cast<unsigned>(U)] = *I;
       LastCalleeSavedRegs.push_back(*I);
     }
 
@@ -99,7 +101,7 @@ void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf) {
           STI.ignoreCSRForAllocationOrder(mf, *AI);
   if (IgnoreCSRForAllocOrder != CSRHintsForAllocOrder) {
     Update = true;
-    IgnoreCSRForAllocOrder = CSRHintsForAllocOrder;
+    IgnoreCSRForAllocOrder = std::move(CSRHintsForAllocOrder);
   }
 
   RegCosts = TRI->getRegisterCosts(*MF);
@@ -142,8 +144,8 @@ void RegisterClassInfo::compute(const TargetRegisterClass *RC) const {
 
   // FIXME: Once targets reserve registers instead of removing them from the
   // allocation order, we can simply use begin/end here.
-  ArrayRef<MCPhysReg> RawOrder = RC->getRawAllocationOrder(*MF);
-  for (unsigned PhysReg : RawOrder) {
+  ArrayRef<MCPhysReg> RawOrder = TRI->getRawAllocationOrder(*RC, *MF, Reverse);
+  for (unsigned PhysReg : reverse_conditionally(RawOrder, Reverse)) {
     // Remove reserved registers from the allocation order.
     if (Reserved.test(PhysReg))
       continue;
@@ -203,8 +205,8 @@ void RegisterClassInfo::compute(const TargetRegisterClass *RC) const {
 unsigned RegisterClassInfo::computePSetLimit(unsigned Idx) const {
   const TargetRegisterClass *RC = nullptr;
   unsigned NumRCUnits = 0;
-  for (const TargetRegisterClass *C : TRI->regclasses()) {
-    const int *PSetID = TRI->getRegClassPressureSets(C);
+  for (const TargetRegisterClass &C : TRI->regclasses()) {
+    const int *PSetID = TRI->getRegClassPressureSets(&C);
     for (; *PSetID != -1; ++PSetID) {
       if ((unsigned)*PSetID == Idx)
         break;
@@ -214,9 +216,9 @@ unsigned RegisterClassInfo::computePSetLimit(unsigned Idx) const {
 
     // Found a register class that counts against this pressure set.
     // For efficiency, only compute the set order for the largest set.
-    unsigned NUnits = TRI->getRegClassWeight(C).WeightLimit;
+    unsigned NUnits = TRI->getRegClassWeight(&C).WeightLimit;
     if (!RC || NUnits > NumRCUnits) {
-      RC = C;
+      RC = &C;
       NumRCUnits = NUnits;
     }
   }

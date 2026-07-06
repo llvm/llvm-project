@@ -1,8 +1,8 @@
 if(LIBC_CONF_SCANF_DISABLE_FLOAT)
-  list(APPEND scanf_config_copts "-DLIBC_COPT_SCANF_DISABLE_FLOAT")
+  libc_add_definition(scanf_config_copts "LIBC_COPT_SCANF_DISABLE_FLOAT")
 endif()
 if(LIBC_CONF_SCANF_DISABLE_INDEX_MODE)
-  list(APPEND scanf_config_copts "-DLIBC_COPT_SCANF_DISABLE_INDEX_MODE")
+  libc_add_definition(scanf_config_copts "LIBC_COPT_SCANF_DISABLE_INDEX_MODE")
 endif()
 if(scanf_config_copts)
   list(PREPEND scanf_config_copts "COMPILE_OPTIONS")
@@ -35,6 +35,7 @@ add_header_library(
     core_structs.h
   DEPENDS
     .scanf_config
+    libc.include.inttypes
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.bitset
     libc.src.__support.FPUtil.fp_bits
@@ -97,6 +98,7 @@ add_header_library(
   DEPENDS
     .reader
     .core_structs
+    libc.include.inttypes
     libc.src.__support.common
     libc.src.__support.ctype_utils
     libc.src.__support.CPP.bitset

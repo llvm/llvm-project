@@ -6,8 +6,8 @@ define i32 @test(ptr %a0) {
 ; CHECK-SAME: ptr [[A0:%.*]]) {
 ; CHECK-NEXT:    [[LOAD:%.*]] = load <16 x i8>, ptr [[A0]], align 1
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <16 x i8> [[LOAD]], <16 x i8> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[ELT:%.*]] = extractelement <16 x i8> [[LOAD]], i64 11
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <4 x i8> [[SHUF]], i8 [[ELT]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[LOAD]], <16 x i8> poison, <4 x i32> <i32 poison, i32 poison, i32 poison, i32 11>
+; CHECK-NEXT:    [[INS:%.*]] = shufflevector <4 x i8> [[SHUF]], <4 x i8> [[TMP1]], <4 x i32> <i32 0, i32 7, i32 2, i32 3>
 ; CHECK-NEXT:    [[RES:%.*]] = bitcast <4 x i8> [[INS]] to i32
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;

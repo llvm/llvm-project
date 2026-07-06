@@ -29,7 +29,19 @@ def UnaryFn : I32EnumAttr<"UnaryFn", "", [
   I32EnumAttrCase<"rsqrt", 9>,
   I32EnumAttrCase<"square", 10>,
   I32EnumAttrCase<"tanh", 11>,
-  I32EnumAttrCase<"erf", 12>
+  I32EnumAttrCase<"erf", 12>,
+  I32EnumAttrCase<"sin", 13>,
+  I32EnumAttrCase<"cos", 14>,
+  I32EnumAttrCase<"tan", 15>,
+  I32EnumAttrCase<"acos", 16>,
+  I32EnumAttrCase<"acosh", 17>,
+  I32EnumAttrCase<"asin", 18>,
+  I32EnumAttrCase<"asinh", 19>,
+  I32EnumAttrCase<"atan", 20>,
+  I32EnumAttrCase<"atanh", 21>,
+  I32EnumAttrCase<"log10", 22>,
+  I32EnumAttrCase<"log1p", 23>,
+  I32EnumAttrCase<"log2", 24>
 ]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::linalg";
@@ -120,6 +132,21 @@ def TypeFn : I32EnumAttr<"TypeFn", "", [
 ]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::linalg";
+}
+
+/// We use F(m, r) to define the size of minimal filtering algorithms.
+/// m is the output dimension and r is the filter dimension. We can get
+/// the input dimension, alpha, from the formula, alpha = m + r - 1.
+///
+/// For example, when m = 2 and r = 3, we know its input size is 4.
+/// The Conv2D will operate on 4x4 input data with 3x3 filter and get
+/// 2x2 output result.
+def WinogradConv2DFmr : I32EnumAttr<"WinogradConv2DFmr", "", [
+      I32EnumAttrCase<"F_2_3", 0>,
+      I32EnumAttrCase<"F_4_3", 1>,
+      I32EnumAttrCase<"F_2_5", 2>,
+]>{
+  let cppNamespace = "mlir::linalg";
 }
 
 #endif // LINALG_ENUMS

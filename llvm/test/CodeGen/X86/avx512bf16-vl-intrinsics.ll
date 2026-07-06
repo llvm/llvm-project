@@ -394,7 +394,7 @@ define <16 x i32> @pr83358() {
 ; X64-LABEL: pr83358:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vcvtneps2bf16y {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # encoding: [0x62,0xf2,0x7e,0x28,0x72,0x05,A,A,A,A]
-; X64-NEXT:    # fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; X64-NEXT:    # fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: reloc_riprel_4byte
 ; X64-NEXT:    vshufi64x2 $0, %zmm0, %zmm0, %zmm0 # encoding: [0x62,0xf3,0xfd,0x48,0x43,0xc0,0x00]
 ; X64-NEXT:    # zmm0 = zmm0[0,1,0,1,0,1,0,1]
 ; X64-NEXT:    retq # encoding: [0xc3]

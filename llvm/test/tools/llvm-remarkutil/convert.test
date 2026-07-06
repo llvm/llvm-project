@@ -1,6 +1,10 @@
-RUN: llvm-remarkutil bitstream2yaml %p/Inputs/two-remarks.bitstream -o - | FileCheck %s -strict-whitespace
-RUN: llvm-remarkutil yaml2bitstream %p/Inputs/two-remarks.yaml -o %t
-RUN: llvm-remarkutil bitstream2yaml %t -o - | FileCheck %s -strict-whitespace
+RUN: llvm-remarkutil bitstream2yaml %p/Inputs/two-remarks.bitstream -o %t.yaml
+RUN: FileCheck %s -strict-whitespace < %t.yaml
+RUN: not llvm-remarkutil bitstream2yaml %p/Inputs/two-remarks.v0.bitstream 2>&1 -o - | FileCheck %s --check-prefix=ERR
+RUN: llvm-remarkutil yaml2bitstream %p/Inputs/two-remarks.yaml -o %t.bitstream
+RUN: llvm-remarkutil bitstream2yaml %t.bitstream -o - | FileCheck %s -strict-whitespace
+
+; ERR: error: Unsupported remark container version (expected: 1, read: 0). Please upgrade/downgrade your toolchain to read this container.
 
 ; CHECK: --- !Analysis
 ; CHECK-NEXT: Pass:            prologepilog

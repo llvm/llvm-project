@@ -1,6 +1,6 @@
 ; -enable-misched=false makes the register usage more predictable
 ; -regalloc=fast just makes the test run faster
-; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -amdgpu-function-calls=false -enable-misched=false -sgpr-regalloc=fast -vgpr-regalloc=fast < %s | FileCheck %s --check-prefixes=GCN,GFX90A
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -amdgpu-function-calls=false -enable-misched=false -sgpr-regalloc=fast -vgpr-regalloc=fast -wwm-regalloc=fast < %s | FileCheck %s --check-prefixes=GCN,GFX90A
 
 define internal void @use256vgprs() {
   %v0 = call i32 asm sideeffect "; def $0", "=v"()
@@ -1264,9 +1264,9 @@ define amdgpu_kernel void @k1024_call_no_agprs_ub_callee() #1025 {
 }
 
 ; GCN-LABEL: {{^}}f1024_0:
-; GFX90A: NumVgprs: 32
+; GFX90A: NumVgprs: 1
 ; GFX90A: NumAgprs: 1
-; GFX90A: TotalNumVgprs: 33
+; GFX90A: TotalNumVgprs: 5
 define void @f1024_0() #1024 {
   call void @foo()
   ret void

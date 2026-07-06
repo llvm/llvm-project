@@ -15,8 +15,7 @@ define i32 @load_extract_idx_0(ptr %x) {
 
 define i32 @vscale_load_extract_idx_0(ptr %x) {
 ; CHECK-LABEL: @vscale_load_extract_idx_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <vscale x 4 x i32>, ptr [[X:%.*]], i32 0, i32 0
-; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[TMP1]], align 16
+; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[TMP1:%.*]], align 16
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %lv = load <vscale x 4 x i32>, ptr %x
@@ -541,15 +540,8 @@ define i32 @load_extract_clobber_store_between(ptr %x, ptr %y) {
 define i32 @load_extract_clobber_store_between_limit(ptr %x, ptr %y, <8 x i32> %z) {
 ; CHECK-LABEL: @load_extract_clobber_store_between_limit(
 ; CHECK-NEXT:    [[LV:%.*]] = load <4 x i32>, ptr [[X:%.*]], align 16
-; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <8 x i32> [[Z1:%.*]], <8 x i32> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP1:%.*]] = add <8 x i32> [[Z1]], [[SHIFT]]
-; CHECK-NEXT:    [[SHIFT1:%.*]] = shufflevector <8 x i32> [[Z1]], <8 x i32> poison, <8 x i32> <i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP2:%.*]] = add <8 x i32> [[TMP1]], [[SHIFT1]]
-; CHECK-NEXT:    [[SHIFT2:%.*]] = shufflevector <8 x i32> [[Z1]], <8 x i32> poison, <8 x i32> <i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP3:%.*]] = add <8 x i32> [[TMP2]], [[SHIFT2]]
-; CHECK-NEXT:    [[SHIFT3:%.*]] = shufflevector <8 x i32> [[Z1]], <8 x i32> poison, <8 x i32> <i32 4, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[Z:%.*]] = add <8 x i32> [[TMP3]], [[SHIFT3]]
-; CHECK-NEXT:    [[Z_0:%.*]] = extractelement <8 x i32> [[Z]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[Z:%.*]], <8 x i32> poison, <5 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    [[Z_0:%.*]] = call i32 @llvm.vector.reduce.add.v5i32(<5 x i32> [[TMP1]])
 ; CHECK-NEXT:    store i8 0, ptr [[Y:%.*]], align 1
 ; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i32> [[LV]], i32 2
 ; CHECK-NEXT:    [[ADD_4:%.*]] = add i32 [[Z_0]], [[R]]
@@ -573,15 +565,8 @@ define i32 @load_extract_clobber_store_between_limit(ptr %x, ptr %y, <8 x i32> %
 
 define i32 @load_extract_clobber_store_after_limit(ptr %x, ptr %y, <8 x i32> %z) {
 ; LIMIT-DEFAULT-LABEL: @load_extract_clobber_store_after_limit(
-; LIMIT-DEFAULT-NEXT:    [[SHIFT:%.*]] = shufflevector <8 x i32> [[Z1:%.*]], <8 x i32> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; LIMIT-DEFAULT-NEXT:    [[TMP4:%.*]] = add <8 x i32> [[Z1]], [[SHIFT]]
-; LIMIT-DEFAULT-NEXT:    [[SHIFT1:%.*]] = shufflevector <8 x i32> [[Z1]], <8 x i32> poison, <8 x i32> <i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; LIMIT-DEFAULT-NEXT:    [[TMP2:%.*]] = add <8 x i32> [[TMP4]], [[SHIFT1]]
-; LIMIT-DEFAULT-NEXT:    [[SHIFT2:%.*]] = shufflevector <8 x i32> [[Z1]], <8 x i32> poison, <8 x i32> <i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; LIMIT-DEFAULT-NEXT:    [[TMP3:%.*]] = add <8 x i32> [[TMP2]], [[SHIFT2]]
-; LIMIT-DEFAULT-NEXT:    [[SHIFT3:%.*]] = shufflevector <8 x i32> [[Z1]], <8 x i32> poison, <8 x i32> <i32 4, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; LIMIT-DEFAULT-NEXT:    [[Z:%.*]] = add <8 x i32> [[TMP3]], [[SHIFT3]]
-; LIMIT-DEFAULT-NEXT:    [[Z_0:%.*]] = extractelement <8 x i32> [[Z]], i32 0
+; LIMIT-DEFAULT-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[Z:%.*]], <8 x i32> poison, <5 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4>
+; LIMIT-DEFAULT-NEXT:    [[Z_0:%.*]] = call i32 @llvm.vector.reduce.add.v5i32(<5 x i32> [[TMP2]])
 ; LIMIT-DEFAULT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i32 0, i32 2
 ; LIMIT-DEFAULT-NEXT:    [[R:%.*]] = load i32, ptr [[TMP1]], align 8
 ; LIMIT-DEFAULT-NEXT:    store i8 0, ptr [[Y:%.*]], align 1
@@ -590,15 +575,8 @@ define i32 @load_extract_clobber_store_after_limit(ptr %x, ptr %y, <8 x i32> %z)
 ;
 ; LIMIT2-LABEL: @load_extract_clobber_store_after_limit(
 ; LIMIT2-NEXT:    [[LV:%.*]] = load <4 x i32>, ptr [[X:%.*]], align 16
-; LIMIT2-NEXT:    [[SHIFT:%.*]] = shufflevector <8 x i32> [[Z1:%.*]], <8 x i32> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; LIMIT2-NEXT:    [[TMP1:%.*]] = add <8 x i32> [[Z1]], [[SHIFT]]
-; LIMIT2-NEXT:    [[SHIFT1:%.*]] = shufflevector <8 x i32> [[Z1]], <8 x i32> poison, <8 x i32> <i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; LIMIT2-NEXT:    [[TMP2:%.*]] = add <8 x i32> [[TMP1]], [[SHIFT1]]
-; LIMIT2-NEXT:    [[SHIFT2:%.*]] = shufflevector <8 x i32> [[Z1]], <8 x i32> poison, <8 x i32> <i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; LIMIT2-NEXT:    [[TMP3:%.*]] = add <8 x i32> [[TMP2]], [[SHIFT2]]
-; LIMIT2-NEXT:    [[SHIFT3:%.*]] = shufflevector <8 x i32> [[Z1]], <8 x i32> poison, <8 x i32> <i32 4, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; LIMIT2-NEXT:    [[Z:%.*]] = add <8 x i32> [[TMP3]], [[SHIFT3]]
-; LIMIT2-NEXT:    [[Z_0:%.*]] = extractelement <8 x i32> [[Z]], i32 0
+; LIMIT2-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[Z:%.*]], <8 x i32> poison, <5 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4>
+; LIMIT2-NEXT:    [[Z_0:%.*]] = call i32 @llvm.vector.reduce.add.v5i32(<5 x i32> [[TMP1]])
 ; LIMIT2-NEXT:    [[R:%.*]] = extractelement <4 x i32> [[LV]], i32 2
 ; LIMIT2-NEXT:    store i8 0, ptr [[Y:%.*]], align 1
 ; LIMIT2-NEXT:    [[ADD_4:%.*]] = add i32 [[Z_0]], [[R]]
@@ -670,10 +648,10 @@ define i1 @load_with_non_power_of_2_element_type_2(ptr %x) {
 ; Scalarizing the load for multiple constant indices may not be profitable.
 define i32 @load_multiple_extracts_with_constant_idx(ptr %x) {
 ; CHECK-LABEL: @load_multiple_extracts_with_constant_idx(
-; CHECK-NEXT:    [[LV:%.*]] = load <4 x i32>, ptr [[X:%.*]], align 16
-; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i32> [[LV]], <4 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[LV]], [[SHIFT]]
-; CHECK-NEXT:    [[RES:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[E_0:%.*]] = load i32, ptr [[TMP1:%.*]], align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <4 x i32>, ptr [[TMP1]], i32 0, i32 1
+; CHECK-NEXT:    [[E_1:%.*]] = load i32, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[E_0]], [[E_1]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %lv = load <4 x i32>, ptr %x
@@ -687,10 +665,10 @@ define i32 @load_multiple_extracts_with_constant_idx(ptr %x) {
 ; because the vector large vector requires 2 vector registers.
 define i32 @load_multiple_extracts_with_constant_idx_profitable(ptr %x) {
 ; CHECK-LABEL: @load_multiple_extracts_with_constant_idx_profitable(
-; CHECK-NEXT:    [[LV:%.*]] = load <8 x i32>, ptr [[X:%.*]], align 16
-; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <8 x i32> [[LV]], <8 x i32> poison, <8 x i32> <i32 6, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP1:%.*]] = add <8 x i32> [[LV]], [[SHIFT]]
-; CHECK-NEXT:    [[RES:%.*]] = extractelement <8 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[E_0:%.*]] = load i32, ptr [[TMP1:%.*]], align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <8 x i32>, ptr [[TMP1]], i32 0, i32 6
+; CHECK-NEXT:    [[E_1:%.*]] = load i32, ptr [[TMP2]], align 8
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[E_0]], [[E_1]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %lv = load <8 x i32>, ptr %x, align 16

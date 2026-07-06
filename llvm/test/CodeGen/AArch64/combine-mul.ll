@@ -28,10 +28,7 @@ define <4 x i1> @PR48683_vec(<4 x i32> %x) {
 define <4 x i1> @PR48683_vec_undef(<4 x i32> %x) {
 ; CHECK-LABEL: PR48683_vec_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.4s, #2
-; CHECK-NEXT:    mul v0.4s, v0.4s, v0.4s
-; CHECK-NEXT:    cmtst v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ret
   %a = mul <4 x i32> %x, %x
   %b = and <4 x i32> %a, <i32 2, i32 2, i32 2, i32 undef>

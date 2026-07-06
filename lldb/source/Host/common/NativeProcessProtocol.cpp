@@ -344,10 +344,8 @@ Status NativeProcessProtocol::SetSoftwareBreakpoint(lldb::addr_t addr,
   LLDB_LOG(log, "addr = {0:x}, size_hint = {1}", addr, size_hint);
 
   auto it = m_software_breakpoints.find(addr);
-  if (it != m_software_breakpoints.end()) {
-    ++it->second.ref_count;
+  if (it != m_software_breakpoints.end())
     return Status();
-  }
   auto expected_bkpt = EnableSoftwareBreakpoint(addr, size_hint);
   if (!expected_bkpt)
     return Status::FromError(expected_bkpt.takeError());
@@ -362,16 +360,19 @@ Status NativeProcessProtocol::RemoveSoftwareBreakpoint(lldb::addr_t addr) {
   auto it = m_software_breakpoints.find(addr);
   if (it == m_software_breakpoints.end())
     return Status::FromErrorString("Breakpoint not found.");
-  assert(it->second.ref_count > 0);
-  if (--it->second.ref_count > 0)
-    return Status();
+
+  // Remove the entry from m_software_breakpoints rightaway, so that we don't
+  // leave behind an entry in case one of the following conditions returns an
+  // error. The breakpoint is moved so that it can be accessed below.
+  SoftwareBreakpoint bkpt = std::move(it->second);
+  m_software_breakpoints.erase(it);
 
   // This is the last reference. Let's remove the breakpoint.
   Status error;
 
   // Clear a software breakpoint instruction
-  llvm::SmallVector<uint8_t, 4> curr_break_op(
-      it->second.breakpoint_opcodes.size(), 0);
+  llvm::SmallVector<uint8_t, 4> curr_break_op(bkpt.breakpoint_opcodes.size(),
+                                              0);
 
   // Read the breakpoint opcode
   size_t bytes_read = 0;
@@ -382,10 +383,10 @@ Status NativeProcessProtocol::RemoveSoftwareBreakpoint(lldb::addr_t addr) {
         "addr=0x%" PRIx64 ": tried to read %zu bytes but only read %zu", addr,
         curr_break_op.size(), bytes_read);
   }
-  const auto &saved = it->second.saved_opcodes;
+  const auto &saved = bkpt.saved_opcodes;
   // Make sure the breakpoint opcode exists at this address
-  if (llvm::ArrayRef(curr_break_op) != it->second.breakpoint_opcodes) {
-    if (curr_break_op != it->second.saved_opcodes)
+  if (llvm::ArrayRef(curr_break_op) != bkpt.breakpoint_opcodes) {
+    if (curr_break_op != bkpt.saved_opcodes)
       return Status::FromErrorString(
           "Original breakpoint trap is no longer in memory.");
     LLDB_LOG(log,
@@ -418,7 +419,6 @@ Status NativeProcessProtocol::RemoveSoftwareBreakpoint(lldb::addr_t addr) {
                llvm::make_range(saved.begin(), saved.end()));
   }
 
-  m_software_breakpoints.erase(it);
   return Status();
 }
 
@@ -497,7 +497,7 @@ NativeProcessProtocol::EnableSoftwareBreakpoint(lldb::addr_t addr,
   }
 
   LLDB_LOG(log, "addr = {0:x}: SUCCESS", addr);
-  return SoftwareBreakpoint{1, saved_opcode_bytes, *expected_trap};
+  return SoftwareBreakpoint{saved_opcode_bytes, *expected_trap};
 }
 
 llvm::Expected<llvm::ArrayRef<uint8_t>>

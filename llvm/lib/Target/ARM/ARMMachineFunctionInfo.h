@@ -19,7 +19,6 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <utility>
 
 namespace llvm {
 
@@ -253,7 +252,7 @@ public:
   }
 
   unsigned getOriginalCPIdx(unsigned CloneIdx) const {
-    DenseMap<unsigned, unsigned>::const_iterator I = CPEClones.find(CloneIdx);
+    auto I = CPEClones.find(CloneIdx);
     if (I != CPEClones.end())
       return I->second;
     else
@@ -312,7 +311,7 @@ struct ARMFunctionInfo final : public yaml::MachineFunctionInfo {
   ARMFunctionInfo(const llvm::ARMFunctionInfo &MFI);
 
   void mappingImpl(yaml::IO &YamlIO) override;
-  ~ARMFunctionInfo() = default;
+  ~ARMFunctionInfo() override = default;
 };
 
 template <> struct MappingTraits<ARMFunctionInfo> {

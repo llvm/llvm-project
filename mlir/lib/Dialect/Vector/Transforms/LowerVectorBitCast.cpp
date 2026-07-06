@@ -64,14 +64,14 @@ public:
         VectorType::get(shape, resultType.getElementType(), scalableDims);
 
     Location loc = op.getLoc();
-    Value result = rewriter.create<ub::PoisonOp>(loc, resultType);
+    Value result = ub::PoisonOp::create(rewriter, loc, resultType);
     for (auto position : *unrollIterator) {
       Value extract =
-          rewriter.create<vector::ExtractOp>(loc, op.getSource(), position);
+          vector::ExtractOp::create(rewriter, loc, op.getSource(), position);
       Value bitcast =
-          rewriter.create<vector::BitCastOp>(loc, bitcastResType, extract);
+          vector::BitCastOp::create(rewriter, loc, bitcastResType, extract);
       result =
-          rewriter.create<vector::InsertOp>(loc, bitcast, result, position);
+          vector::InsertOp::create(rewriter, loc, bitcast, result, position);
     }
 
     rewriter.replaceOp(op, result);

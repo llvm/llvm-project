@@ -56,8 +56,6 @@
 ; ONE-NEXT: [004]                   {Code} 'local.get	11'
 ; ONE-NEXT: [004]                   {Code} 'i32.store	28'
 ; ONE-NEXT: [004]                   {Code} 'br      	1'
-; ONE-NEXT: [004]     -             {Line}
-; ONE-NEXT: [004]                   {Code} 'end'
 ; ONE-NEXT: [003]     4           {TypeAlias} 'INTEGER' -> 'int'
 ; ONE-NEXT: [003]     2           {Line}
 ; ONE-NEXT: [003]                 {Code} 'nop'
@@ -98,6 +96,8 @@
 ; ONE-NEXT: [003]                 {Code} 'local.get	9'
 ; ONE-NEXT: [003]                 {Code} 'i32.eqz'
 ; ONE-NEXT: [003]                 {Code} 'br_if   	0'
+; ONE-NEXT: [003]     -           {Line}
+; ONE-NEXT: [003]                 {Code} 'end'
 ; ONE-NEXT: [003]     8           {Line}
 ; ONE-NEXT: [003]                 {Code} 'local.get	5'
 ; ONE-NEXT: [003]                 {Code} 'i32.load	20'
@@ -115,6 +115,6 @@
 ; ONE-NEXT: [003]                 {Code} 'local.get	13'
 ; ONE-NEXT: [003]                 {Code} 'return'
 ; ONE-NEXT: [003]                 {Code} 'end'
-; ONE-NEXT: [003]     9           {Line}
-; ONE-NEXT: [003]                 {Code} 'unreachable'
 ; ONE-NEXT: [002]     1         {TypeAlias} 'INTPTR' -> '* const int'
+; ONE-NEXT: [002]     9         {Line}
+; ONE-NEXT: [002]               {Code} 'unreachable'

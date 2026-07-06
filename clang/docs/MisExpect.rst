@@ -19,7 +19,7 @@ MisExpect diagnostics are intended to help developers identify and address
 these situations, by comparing the branch weights added by the ``llvm.expect``
 intrinsic to those collected through profiling. Whenever these values are
 mismatched, a diagnostic is surfaced to the user. Details on how the checks
-operate in the LLVM backed can be found in LLVM's documentation.
+operate in the LLVM backend can be found in LLVM's documentation.
 
 By default MisExpect checking is quite strict, because the use of the
 ``llvm.expect`` intrinsic is designed for specialized cases, where the outcome

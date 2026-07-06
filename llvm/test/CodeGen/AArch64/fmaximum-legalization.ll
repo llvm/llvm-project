@@ -45,54 +45,47 @@ define <4 x half> @fmaximum_v4f16(<4 x half> %x, <4 x half> %y) {
 define fp128 @maximum_fp128(fp128 %x, fp128 %y) nounwind {
 ; CHECK-LABEL: maximum_fp128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #96
-; CHECK-NEXT:    str x30, [sp, #80] // 8-byte Folded Spill
-; CHECK-NEXT:    stp q0, q1, [sp] // 32-byte Folded Spill
-; CHECK-NEXT:    stp q1, q0, [sp, #48]
+; CHECK-NEXT:    sub sp, sp, #80
+; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Spill
+; CHECK-NEXT:    stp q1, q0, [sp, #32] // 32-byte Folded Spill
 ; CHECK-NEXT:    bl __gttf2
-; CHECK-NEXT:    ldp q0, q1, [sp] // 32-byte Folded Reload
+; CHECK-NEXT:    ldp q1, q0, [sp, #32] // 32-byte Folded Reload
 ; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    mov v2.16b, v1.16b
 ; CHECK-NEXT:    b.le .LBB1_2
 ; CHECK-NEXT:  // %bb.1:
-; CHECK-NEXT:    mov v1.16b, v0.16b
+; CHECK-NEXT:    mov v2.16b, v0.16b
 ; CHECK-NEXT:  .LBB1_2:
-; CHECK-NEXT:    str q1, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    str q2, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:    bl __unordtf2
-; CHECK-NEXT:    ldr q0, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    b.eq .LBB1_4
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    adrp x8, .LCPI1_0
 ; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI1_0]
+; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-NEXT:  .LBB1_4:
-; CHECK-NEXT:    ldrb w8, [sp, #79]
-; CHECK-NEXT:    mov v1.16b, v0.16b
+; CHECK-NEXT:    ldr q0, [sp, #48] // 16-byte Reload
+; CHECK-NEXT:    bl __trunctfsf2
+; CHECK-NEXT:    ldp q1, q2, [sp, #32] // 32-byte Folded Reload
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    b.ne .LBB1_6
 ; CHECK-NEXT:  // %bb.5:
-; CHECK-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    mov v0.16b, v2.16b
 ; CHECK-NEXT:  .LBB1_6:
-; CHECK-NEXT:    ldrb w8, [sp, #63]
-; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
+; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    bl __eqtf2
+; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    b.ne .LBB1_8
 ; CHECK-NEXT:  // %bb.7:
-; CHECK-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-NEXT:  .LBB1_8:
-; CHECK-NEXT:    adrp x8, .LCPI1_1
-; CHECK-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    str q1, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI1_1]
-; CHECK-NEXT:    ldr q0, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    bl __eqtf2
-; CHECK-NEXT:    ldr q0, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    b.ne .LBB1_10
-; CHECK-NEXT:  // %bb.9:
-; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:  .LBB1_10:
-; CHECK-NEXT:    ldr x30, [sp, #80] // 8-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #96
+; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
+; CHECK-NEXT:    add sp, sp, #80
 ; CHECK-NEXT:    ret
   %res = call fp128 @llvm.maximum.f128(fp128 %x, fp128 %y)
   ret fp128 %res

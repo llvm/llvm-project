@@ -61,6 +61,7 @@ using __sanitizer::StackTrace;
 
 void AsanInitFromRtl();
 bool TryAsanInitFromRtl();
+void ApplyFlags();
 
 // asan_win.cpp
 void InitializePlatformExceptionHandlers();

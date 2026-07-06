@@ -19,11 +19,13 @@
 #g_var_expr = #llvm.di_global_variable_expression<var = #g_var>
 #sp = #llvm.di_subprogram<id = distinct[2]<>, compileUnit = #cu, scope = #file,
   name = "test", file = #file, subprogramFlags = "Definition", type = #sp_ty>
-#var_arr = #llvm.di_local_variable<scope = #sp,
+#sp1 = #llvm.di_subprogram<id = distinct[3]<>, compileUnit = #cu, scope = #file,
+  name = "target", file = #file, subprogramFlags = "Definition", type = #sp_ty>
+#var_arr = #llvm.di_local_variable<scope = #sp1,
   name = "arr", file = #file, line = 4, type = #array_ty>
-#var_i = #llvm.di_local_variable<scope = #sp,
+#var_i = #llvm.di_local_variable<scope = #sp1,
   name = "i", file = #file, line = 13, type = #int_ty>
-#var_x = #llvm.di_local_variable<scope = #sp,
+#var_x = #llvm.di_local_variable<scope = #sp1,
  name = "x", file = #file, line = 12, type = #real_ty>
 
 module attributes {omp.is_target_device = false} {
@@ -40,12 +42,12 @@ module attributes {omp.is_target_device = false} {
     %15 = omp.map.bounds lower_bound(%7 : i64) upper_bound(%6 : i64) extent(%10 : i64) stride(%8 : i64) start_idx(%8 : i64)
     %16 = omp.map.info var_ptr(%11 : !llvm.ptr, !llvm.array<10 x i32>) map_clauses(tofrom) capture(ByRef) bounds(%15) -> !llvm.ptr
     %17 = omp.map.info var_ptr(%4 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr
-    omp.target map_entries(%14 -> %arg0, %16 -> %arg1, %17 -> %arg2 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
+    omp.target kernel_type(generic) map_entries(%14 -> %arg0, %16 -> %arg1, %17 -> %arg2 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
       llvm.intr.dbg.declare #var_x = %arg0 : !llvm.ptr
       llvm.intr.dbg.declare #var_arr = %arg1 : !llvm.ptr
       llvm.intr.dbg.declare #var_i = %arg2 : !llvm.ptr
       omp.terminator
-    }
+    }  loc(#loc5)
     llvm.return
   } loc(#loc3)
   llvm.mlir.global internal @_QFEarr() {addr_space = 0 : i32, dbg_exprs = [#g_var_expr]} : !llvm.array<10 x i32> {
@@ -55,8 +57,9 @@ module attributes {omp.is_target_device = false} {
 #loc2 = loc("target.f90":11:7)
 #loc3 = loc(fused<#sp>[#loc2])
 #loc4 = loc(fused<#g_var>[#loc1])
+#loc5 = loc(fused<#sp1>[#loc2])
 
-// CHECK: ![[SP:[0-9]+]] = distinct !DISubprogram(name: "__omp_offloading{{.*}}test{{.*}})
+// CHECK: ![[SP:[0-9]+]] = distinct !DISubprogram(name: "target"{{.*}})
 // CHECK: !DILocalVariable(name: "x", arg: 1, scope: ![[SP]]{{.*}})
 // CHECK: !DILocalVariable(name: "arr", arg: 2, scope: ![[SP]]{{.*}})
 // CHECK: !DILocalVariable(name: "i", arg: 3, scope: ![[SP]]{{.*}})

@@ -35,7 +35,7 @@ $comdat.samesize = comdat samesize
 @const.int = constant i32 zeroinitializer
 ; CHECK: @const.int = constant i32 0
 @const.float = constant double 0.0
-; CHECK: @const.float = constant double 0.0
+; CHECK: @const.float = constant double 0.000000e+00
 @const.null = constant i8* null
 ; CHECK: @const.null = constant ptr null
 %const.struct.type = type { i32, i8 }
@@ -53,7 +53,7 @@ $comdat.samesize = comdat samesize
 @constant.array.i32 = constant [3 x i32] [i32 -0, i32 1, i32 0]
 ; CHECK: @constant.array.i64 = constant [3 x i64] [i64 0, i64 1, i64 0]
 @constant.array.i64 = constant [3 x i64] [i64 -0, i64 1, i64 0]
-; CHECK: @constant.array.f16 = constant [3 x half] [half 0xH8000, half 0xH3C00, half 0xH0000]
+; CHECK: @constant.array.f16 = constant [3 x half] [half -0.000000e+00, half 1.000000e+00, half 0.000000e+00]
 @constant.array.f16 = constant [3 x half] [half -0.0, half 1.0, half 0.0]
 ; CHECK: @constant.array.f32 = constant [3 x float] [float -0.000000e+00, float 1.000000e+00, float 0.000000e+00]
 @constant.array.f32 = constant [3 x float] [float -0.0, float 1.0, float 0.0]
@@ -68,7 +68,7 @@ $comdat.samesize = comdat samesize
 @constant.vector.i32 = constant <3 x i32> <i32 -0, i32 1, i32 0>
 ; CHECK: @constant.vector.i64 = constant <3 x i64> <i64 0, i64 1, i64 0>
 @constant.vector.i64 = constant <3 x i64> <i64 -0, i64 1, i64 0>
-; CHECK: @constant.vector.f16 = constant <3 x half> <half 0xH8000, half 0xH3C00, half 0xH0000>
+; CHECK: @constant.vector.f16 = constant <3 x half> <half -0.000000e+00, half 1.000000e+00, half 0.000000e+00>
 @constant.vector.f16 = constant <3 x half> <half -0.0, half 1.0, half 0.0>
 ; CHECK: @constant.vector.f32 = constant <3 x float> <float -0.000000e+00, float 1.000000e+00, float 0.000000e+00>
 @constant.vector.f32 = constant <3 x float> <float -0.0, float 1.0, float 0.0>
@@ -1369,7 +1369,7 @@ declare void @llvm.instrprof_increment(i8*, i64, i32, i32)
 !10 = !{!"rax"}
 define void @intrinsics.codegen() {
   call i8* @llvm.returnaddress(i32 1)
-  ; CHECK: call ptr @llvm.returnaddress(i32 1)
+  ; CHECK: call ptr @llvm.returnaddress.p0(i32 1)
   call i8* @llvm.frameaddress(i32 1)
   ; CHECK: call ptr @llvm.frameaddress.p0(i32 1)
 
@@ -1397,7 +1397,7 @@ define void @intrinsics.codegen() {
   ; CHECK: call i64 @llvm.readcyclecounter()
 
   call void @llvm.clear_cache(i8* null, i8* null)
-  ; CHECK: call void @llvm.clear_cache(ptr null, ptr null)
+  ; CHECK: call void @llvm.clear_cache.p0(ptr null, ptr null)
 
   call void @llvm.instrprof_increment(i8* null, i64 0, i32 0, i32 0)
   ; CHECK: call void @llvm.instrprof_increment(ptr null, i64 0, i32 0, i32 0)

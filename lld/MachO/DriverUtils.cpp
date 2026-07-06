@@ -45,7 +45,7 @@ using namespace lld::macho;
 static constexpr OptTable::Info optInfo[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,         \
                VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR,     \
-               VALUES)                                                         \
+               VALUES, SUBCOMMANDIDS_OFFSET)                                   \
   {PREFIX,                                                                     \
    NAME,                                                                       \
    HELPTEXT,                                                                   \
@@ -59,7 +59,8 @@ static constexpr OptTable::Info optInfo[] = {
    OPT_##GROUP,                                                                \
    OPT_##ALIAS,                                                                \
    ALIASARGS,                                                                  \
-   VALUES},
+   VALUES,                                                                     \
+   SUBCOMMANDIDS_OFFSET},
 #include "Options.inc"
 #undef OPTION
 };
@@ -225,6 +226,18 @@ std::optional<StringRef> macho::resolveDylibPath(StringRef dylibPath) {
 // especially if it's a commonly re-exported core library.
 static DenseMap<CachedHashStringRef, DylibFile *> loadedDylibs;
 
+static StringRef realPathIfDifferent(StringRef path) {
+  SmallString<128> realPathBuf;
+  if (fs::real_path(path, realPathBuf))
+    return StringRef();
+
+  SmallString<128> absPathBuf = path;
+  if (!fs::make_absolute(absPathBuf) && realPathBuf == absPathBuf)
+    return StringRef();
+
+  return uniqueSaver().save(StringRef(realPathBuf));
+}
+
 DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
                             bool isBundleLoader, bool explicitlyLinked) {
   CachedHashStringRef path(mbref.getBufferIdentifier());
@@ -237,17 +250,16 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
 
   // Frameworks can be found from different symlink paths, so resolve
   // symlinks and look up in the dylib cache.
-  DylibFile *&realfile = file;
-  SmallString<128> realPath;
-  std::error_code err = fs::real_path(mbref.getBufferIdentifier(), realPath);
-  if (!err) {
-    CachedHashStringRef resolvedPath(uniqueSaver().save(StringRef(realPath)));
-    realfile = loadedDylibs[resolvedPath];
-    if (realfile) {
+  CachedHashStringRef realPath(
+      realPathIfDifferent(mbref.getBufferIdentifier()));
+  if (!realPath.val().empty()) {
+    // Avoid map insertions here so that we do not invalidate the "file"
+    // reference.
+    auto it = loadedDylibs.find(realPath);
+    if (it != loadedDylibs.end()) {
+      DylibFile *realfile = it->second;
       if (explicitlyLinked)
         realfile->setExplicitlyLinked();
-
-      file = realfile;
       return realfile;
     }
   }
@@ -263,7 +275,6 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
     }
     file =
         make<DylibFile>(**result, umbrella, isBundleLoader, explicitlyLinked);
-    realfile = file;
 
     // parseReexports() can recursively call loadDylib(). That's fine since
     // we wrote the DylibFile we just loaded to the loadDylib cache via the
@@ -279,7 +290,6 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
            magic == file_magic::macho_executable ||
            magic == file_magic::macho_bundle);
     file = make<DylibFile>(mbref, umbrella, isBundleLoader, explicitlyLinked);
-    realfile = file;
 
     // parseLoadCommands() can also recursively call loadDylib(). See comment
     // in previous block for why this means we must copy `file` here.
@@ -306,6 +316,11 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
             sys::path::filename(newFile->installName) + "' because " +
             config->clientName + " is not an allowed client");
   }
+
+  // If the load path was a symlink, cache the real path too.
+  if (!realPath.val().empty())
+    loadedDylibs[realPath] = newFile;
+
   return newFile;
 }
 

@@ -55,7 +55,6 @@ TEST(LlvmLibcStrToFltTest, SimpleDecimalConversionExtraTypes) {
   uint32_t float_output_mantissa = 0;
   uint32_t output_exp2 = 0;
 
-  LIBC_NAMESPACE::libc_errno = 0;
   auto float_result =
       internal::simple_decimal_conversion<float>("123456789012345678900");
   float_output_mantissa = float_result.num.mantissa;

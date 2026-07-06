@@ -206,11 +206,26 @@ public:
   }
 };
 
+class LifetimeEnd {
+  template <typename CHECKER>
+  static void _checkLifetimeEnd(void *checker, const VarDecl *D,
+                                CheckerContext &C) {
+    ((const CHECKER *)checker)->checkLifetimeEnd(D, C);
+  }
+
+public:
+  template <typename CHECKER>
+  static void _register(CHECKER *checker, CheckerManager &mgr) {
+    mgr._registerForLifetimeEnd(CheckerManager::CheckLifetimeEndFunc(
+        checker, _checkLifetimeEnd<CHECKER>));
+  }
+};
+
 class Bind {
   template <typename CHECKER>
   static void _checkBind(void *checker, SVal location, SVal val, const Stmt *S,
-                         CheckerContext &C) {
-    ((const CHECKER *)checker)->checkBind(location, val, S, C);
+                         bool AtDeclInit, CheckerContext &C) {
+    ((const CHECKER *)checker)->checkBind(location, val, S, AtDeclInit, C);
   }
 
 public:
@@ -346,16 +361,13 @@ public:
 class RegionChanges {
   template <typename CHECKER>
   static ProgramStateRef
-  _checkRegionChanges(void *checker,
-                      ProgramStateRef state,
+  _checkRegionChanges(void *checker, ProgramStateRef state,
                       const InvalidatedSymbols *invalidated,
                       ArrayRef<const MemRegion *> Explicits,
-                      ArrayRef<const MemRegion *> Regions,
-                      const LocationContext *LCtx,
+                      ArrayRef<const MemRegion *> Regions, const StackFrame *SF,
                       const CallEvent *Call) {
-    return ((const CHECKER *) checker)->checkRegionChanges(state, invalidated,
-                                                           Explicits, Regions,
-                                                           LCtx, Call);
+    return ((const CHECKER *)checker)
+        ->checkRegionChanges(state, invalidated, Explicits, Regions, SF, Call);
   }
 
 public:
@@ -606,20 +618,6 @@ public:
   void dispatchEvent(const EVENT &event) const {
     Mgr->_dispatchEvent(event);
   }
-};
-
-/// Tag that can use a checker name as a message provider
-/// (see SimpleProgramPointTag).
-/// FIXME: This is a cargo cult class which is copied into several checkers but
-/// does not provide anything useful.
-/// The only added functionality provided by this class (compared to
-/// SimpleProgramPointTag) is that it composes the tag description string from
-/// two arguments -- but tag descriptions only appear in debug output so there
-/// is no reason to bother with this.
-class CheckerProgramPointTag : public SimpleProgramPointTag {
-public:
-  CheckerProgramPointTag(StringRef CheckerName, StringRef Msg);
-  CheckerProgramPointTag(const CheckerBase *Checker, StringRef Msg);
 };
 
 /// We dereferenced a location that may be null.

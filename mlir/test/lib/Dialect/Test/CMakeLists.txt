@@ -68,14 +68,17 @@ add_mlir_library(MLIRTestDialect
   MLIRTestOpsIncGen
   MLIRTestOpsSyntaxIncGen
   MLIRTestOpsShardGen
+  MLIRConvertToEmitCPatternInterfaceIncGen
   )
 mlir_target_link_libraries(MLIRTestDialect PUBLIC
   MLIRControlFlowInterfaces
+  MLIRControlFlowTransforms
   MLIRDataLayoutInterfaces
   MLIRDerivedAttributeOpInterface
   MLIRDestinationStyleOpInterface
   MLIRDialect
   MLIRDLTIDialect
+  MLIREmitCDialect
   MLIRFuncDialect
   MLIRFunctionInterfaces
   MLIRFuncTransforms

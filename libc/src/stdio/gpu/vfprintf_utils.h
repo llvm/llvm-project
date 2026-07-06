@@ -10,7 +10,6 @@
 #include "src/__support/GPU/utils.h"
 #include "src/__support/RPC/rpc_client.h"
 #include "src/__support/arg_list.h"
-#include "src/__support/macros/config.h"
 #include "src/stdio/gpu/file.h"
 #include "src/string/string_utils.h"
 
@@ -52,7 +51,6 @@ LIBC_INLINE int vfprintf_impl(::FILE *__restrict file,
     port.send_n(str, size);
   }
 
-  port.close();
   return ret;
 }
 

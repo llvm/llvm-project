@@ -18,6 +18,9 @@
 #ifndef SEGV_BNDERR
 #define SEGV_BNDERR 3
 #endif
+#ifndef SEGV_PKUERR
+#define SEGV_PKUERR 4
+#endif
 #ifndef SEGV_MTEAERR
 #define SEGV_MTEAERR 8
 #endif
@@ -65,6 +68,10 @@
 // See siginfo.h in the Linux Kernel, these codes can be sent for any signal.
 #define ADD_LINUX_SIGNAL(signo, name, ...)                                     \
   AddSignal(signo, name, __VA_ARGS__);                                         \
+  ADD_SIGCODE(signo, signo, SI_USER, 0, "sent by kill, sigsend or raise",      \
+              SignalCodePrintOption::Sender);                                  \
+  ADD_SIGCODE(signo, signo, SI_KERNEL, 0x80, "sent by kernel (SI_KERNEL)",     \
+              SignalCodePrintOption::Sender);                                  \
   ADD_SIGCODE(signo, signo, SI_QUEUE, -1, "sent by sigqueue",                  \
               SignalCodePrintOption::Sender);                                  \
   ADD_SIGCODE(signo, signo, SI_TIMER, -2, "sent by timer expiration",          \
@@ -133,6 +140,7 @@ void LinuxSignals::Reset() {
   ADD_SIGCODE(SIGSEGV, 11, SEGV_MAPERR,  1, "address not mapped to object", SignalCodePrintOption::Address);
   ADD_SIGCODE(SIGSEGV, 11, SEGV_ACCERR,  2, "invalid permissions for mapped object", SignalCodePrintOption::Address);
   ADD_SIGCODE(SIGSEGV, 11, SEGV_BNDERR,  3, "failed address bounds checks", SignalCodePrintOption::Bounds);
+  ADD_SIGCODE(SIGSEGV, 11, SEGV_PKUERR,  4, "failed protection key checks", SignalCodePrintOption::Address);
   ADD_SIGCODE(SIGSEGV, 11, SEGV_MTEAERR, 8, "async tag check fault");
   ADD_SIGCODE(SIGSEGV, 11, SEGV_MTESERR, 9, "sync tag check fault", SignalCodePrintOption::Address);
   ADD_SIGCODE(SIGSEGV, 11, SEGV_CPERR,  10, "control protection fault");
@@ -156,7 +164,7 @@ void LinuxSignals::Reset() {
   ADD_LINUX_SIGNAL(25,     "SIGXFSZ",      false,    true,   true,   "file size limit exceeded");
   ADD_LINUX_SIGNAL(26,     "SIGVTALRM",    false,    true,   true,   "virtual time alarm");
   ADD_LINUX_SIGNAL(27,     "SIGPROF",      false,    false,  false,  "profiling time alarm");
-  ADD_LINUX_SIGNAL(28,     "SIGWINCH",     false,    true,   true,   "window size changes");
+  ADD_LINUX_SIGNAL(28,     "SIGWINCH",     false,    false,   false,   "window size changes");
   ADD_LINUX_SIGNAL(29,     "SIGIO",        false,    true,   true,   "input/output ready/Pollable event", "SIGPOLL");
   ADD_LINUX_SIGNAL(30,     "SIGPWR",       false,    true,   true,   "power failure");
   ADD_LINUX_SIGNAL(31,     "SIGSYS",       false,    true,   true,   "invalid system call");

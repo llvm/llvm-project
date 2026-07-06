@@ -32,3 +32,41 @@ template <typename T> void g(int n) requires requires (T m) {
 } {}
 // CHECK: define {{.*}}@_Z1gIiEviQrQT__XplfL0p_fp_E(
 template void g<int>(int);
+
+
+namespace GH147650 {
+
+template <int> int b;
+template <int b>
+void f()
+    requires requires { [] { (void)b; }; } {}
+void test() {
+    f<42>();
+}
+// CHECK-LABEL:define {{.*}} void @"_ZN8GH1476501fILi42EEEvvQrqXLNS_3$_0EEE"()
+}
+
+namespace GH123854
+{
+
+template <class T>
+constexpr auto f() {
+  return [] () requires requires (T x) { x; } {};
+}
+
+void test() {
+  f<int>()();
+}
+// CHECK-LABEL:define {{.*}} void @_ZZN8GH1238541fIiEEDavENKUlvE_clEvQrQT__Xfp_E
+}
+
+namespace GH100774 {
+
+void test_dependent() {
+  auto L = [](auto x) {
+    return [w = x](auto) requires requires { w; } {};
+  };
+  L(0)(1);
+}
+// CHECK-LABEL: define internal void @"_ZZZN8GH10077414test_dependentEvENK3$_0clIiEEDaT_ENKUlS2_E_clIiEEDaS2_QrqXL_ZZZNS_14test_dependentEvENKS0_clES2_E1wEE"
+}

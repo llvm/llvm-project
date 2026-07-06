@@ -1,6 +1,7 @@
 ! This test checks lowering of OpenACC host_data directive.
 
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
+! RUN: bbc -fopenacc -fcuda -emit-hlfir %s -o - | FileCheck %s
 
 subroutine acc_host_data()
   real, dimension(10) :: a
@@ -14,17 +15,17 @@ subroutine acc_host_data()
   !$acc host_data use_device(a)
   !$acc end host_data
 
-! CHECK: %[[DA:.*]] = acc.use_device varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "a"}
-! CHECK: acc.host_data dataOperands(%[[DA]] : !fir.ref<!fir.array<10xf32>>)
+! CHECK: %[[DA0:.*]] = acc.use_device varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "a"}
+! CHECK: acc.host_data dataOperands(%[[DA0]] : !fir.ref<!fir.array<10xf32>>)
 
   !$acc host_data use_device(a) if_present
   !$acc end host_data
 
-! CHECK: %[[DA:.*]] = acc.use_device varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "a"}
-! CHECK: acc.host_data dataOperands(%[[DA]] : !fir.ref<!fir.array<10xf32>>) {
+! CHECK: %[[DA0:.*]] = acc.use_device varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "a"}
+! CHECK: acc.host_data dataOperands(%[[DA0]] : !fir.ref<!fir.array<10xf32>>)
 ! CHECK: } attributes {ifPresent}
 
-  !$acc host_data use_device(a) if_present if_present
+  !$acc host_data use_device(a) if_present
   !$acc end host_data
 ! CHECK: acc.host_data dataOperands(%{{.*}} : !fir.ref<!fir.array<10xf32>>) {
 ! CHECK: } attributes {ifPresent}
@@ -32,10 +33,10 @@ subroutine acc_host_data()
   !$acc host_data use_device(a) if(ifCondition)
   !$acc end host_data
 
-! CHECK: %[[DA:.*]] = acc.use_device varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "a"}
+! CHECK: %[[DA0:.*]] = acc.use_device varPtr(%[[DECLA]]#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "a"}
 ! CHECK: %[[LOAD_IFCOND:.*]] = fir.load %[[DECLIFCOND]]#0 : !fir.ref<!fir.logical<4>>
 ! CHECK: %[[IFCOND_I1:.*]] = fir.convert %[[LOAD_IFCOND]] : (!fir.logical<4>) -> i1
-! CHECK: acc.host_data if(%[[IFCOND_I1]]) dataOperands(%[[DA]] : !fir.ref<!fir.array<10xf32>>)
+! CHECK: acc.host_data if(%[[IFCOND_I1]]) dataOperands(%[[DA0]] : !fir.ref<!fir.array<10xf32>>)
 
   !$acc host_data use_device(a) if(.true.)
   !$acc end host_data
@@ -47,7 +48,7 @@ subroutine acc_host_data()
     a = 1.0
   !$acc end host_data
 
-! CHECK-NOT: acc.host_data
-! CHECK: hlfir.assign %{{.*}} to %[[DECLA]]#0
+! CHECK: acc.host_data if(%{{.*}})
+! CHECK: hlfir.assign %{{.*}} to %{{.*}}#0
 
 end subroutine

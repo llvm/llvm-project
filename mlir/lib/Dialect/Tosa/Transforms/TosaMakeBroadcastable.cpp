@@ -11,12 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
-#include "mlir/Dialect/Tosa/Utils/QuantUtils.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
@@ -169,9 +166,9 @@ struct ConvertTosaOp<tosa::SelectOp> : public OpRewritePattern<tosa::SelectOp> {
   LogicalResult matchAndRewrite(tosa::SelectOp tosaOp,
                                 PatternRewriter &rewriter) const override {
 
-    Value input1 = tosaOp.getInput1();
-    Value input2 = tosaOp.getInput2();
-    Value input3 = tosaOp.getInput3();
+    Value input1 = tosaOp.getPred();
+    Value input2 = tosaOp.getOnTrue();
+    Value input3 = tosaOp.getOnFalse();
     Value output = tosaOp.getResult();
 
     auto outputType = dyn_cast<RankedTensorType>(output.getType());

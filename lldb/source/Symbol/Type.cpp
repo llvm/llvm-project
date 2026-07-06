@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <iterator>
+#include <memory>
 #include <optional>
 
 #include "lldb/Core/Module.h"
@@ -35,6 +36,7 @@
 #include "lldb/lldb-private-enumerations.h"
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/SaveAndRestore.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -246,7 +248,7 @@ public:
   TypeAppendVisitor(TypeListImpl &type_list) : m_type_list(type_list) {}
 
   bool operator()(const lldb::TypeSP &type) {
-    m_type_list.Append(TypeImplSP(new TypeImpl(type)));
+    m_type_list.Append(std::make_shared<TypeImpl>(type));
     return true;
   }
 
@@ -530,9 +532,9 @@ lldb::TypeSP Type::GetTypedefType() {
 
 lldb::Format Type::GetFormat() { return GetForwardCompilerType().GetFormat(); }
 
-lldb::Encoding Type::GetEncoding(uint64_t &count) {
+lldb::Encoding Type::GetEncoding() {
   // Make sure we resolve our type if it already hasn't been.
-  return GetForwardCompilerType().GetEncoding(count);
+  return GetForwardCompilerType().GetEncoding();
 }
 
 bool Type::ReadFromMemory(ExecutionContext *exe_ctx, lldb::addr_t addr,
@@ -583,6 +585,14 @@ bool Type::WriteToMemory(ExecutionContext *exe_ctx, lldb::addr_t addr,
 const Declaration &Type::GetDeclaration() const { return m_decl; }
 
 bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
+  if (m_resolving_compiler_type) {
+    LLDB_LOG(GetLog(LLDBLog::Symbols),
+             "Cycle detected while resolving type {0:x} ({1})", GetID(),
+             m_name.AsCString("<anonymous>"));
+    return false;
+  }
+  llvm::SaveAndRestore<bool> guard(m_resolving_compiler_type, true);
+
   // TODO: This needs to consider the correct type system to use.
   Type *encoding_type = nullptr;
   if (!m_compiler_type.IsValid()) {
@@ -816,10 +826,12 @@ Type::GetTypeScopeAndBasename(llvm::StringRef name) {
     case ':':
       if (prev_is_colon && template_depth == 0) {
         llvm::StringRef scope_name = name.slice(name_begin, pos.index() - 1);
-        // The itanium demangler uses this string to represent anonymous
+        // The demanglers use these strings to represent anonymous
         // namespaces. Convert it to a more language-agnostic form (which is
         // also used in DWARF).
-        if (scope_name == "(anonymous namespace)")
+        if (scope_name == "(anonymous namespace)" ||
+            scope_name == "`anonymous namespace'" ||
+            scope_name == "`anonymous-namespace'")
           scope_name = "";
         result.scope.push_back(scope_name);
         name_begin = pos.index() + 1;
@@ -1236,12 +1248,12 @@ bool TypeMemberFunctionImpl::GetDescription(Stream &stream) {
                   m_type.GetTypeName().AsCString("<unknown>"));
     break;
   case lldb::eMemberFunctionKindInstanceMethod:
-    stream.Printf("instance method %s of type %s", m_name.AsCString(),
-                  m_decl.GetDeclContext().GetName().AsCString());
+    stream.Format("instance method {0} of type {1}", m_name,
+                  m_decl.GetDeclContext().GetName());
     break;
   case lldb::eMemberFunctionKindStaticMethod:
-    stream.Printf("static method %s of type %s", m_name.AsCString(),
-                  m_decl.GetDeclContext().GetName().AsCString());
+    stream.Format("static method {0} of type {1}", m_name,
+                  m_decl.GetDeclContext().GetName());
     break;
   }
   return true;

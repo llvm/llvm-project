@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TargetInfo/X86TargetInfo.h"
+#include "llvm-c/Visibility.h"
 #include "llvm/MC/TargetRegistry.h"
 using namespace llvm;
 

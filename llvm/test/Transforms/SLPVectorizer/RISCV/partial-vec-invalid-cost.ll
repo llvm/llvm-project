@@ -7,27 +7,26 @@ define void @partial_vec_invalid_cost() #0 {
 ; CHECK-LABEL: define void @partial_vec_invalid_cost(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LSHR_1:%.*]] = lshr i96 0, 0
+; CHECK-NEXT:    [[LSHR_1:%.*]] = lshr i96 0, 1
 ; CHECK-NEXT:    [[LSHR_2:%.*]] = lshr i96 0, 0
-; CHECK-NEXT:    [[TRUNC_I96_1:%.*]] = trunc i96 [[LSHR_1]] to i32
-; CHECK-NEXT:    [[TRUNC_I96_2:%.*]] = trunc i96 [[LSHR_2]] to i32
-; CHECK-NEXT:    [[TRUNC_I96_3:%.*]] = trunc i96 0 to i32
-; CHECK-NEXT:    [[TRUNC_I96_4:%.*]] = trunc i96 0 to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> zeroinitializer)
-; CHECK-NEXT:    [[OP_RDX:%.*]] = or i32 [[TMP1]], [[TRUNC_I96_1]]
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = or i32 [[TRUNC_I96_2]], [[TRUNC_I96_3]]
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = or i32 [[OP_RDX]], [[OP_RDX1]]
-; CHECK-NEXT:    [[OP_RDX3:%.*]] = or i32 [[OP_RDX2]], [[TRUNC_I96_4]]
+; CHECK-NEXT:    [[ADD_1:%.*]] = add i96 -1, 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i96> poison, i96 [[LSHR_1]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i96> [[TMP0]], i96 [[LSHR_2]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i96> [[TMP1]], i96 0, i32 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i96> [[TMP2]], i96 [[ADD_1]], i32 3
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc <4 x i96> [[TMP3]] to <4 x i32>
+; CHECK-NEXT:    [[RDX_OP:%.*]] = or <4 x i32> zeroinitializer, [[TMP4]]
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[RDX_OP]])
 ; CHECK-NEXT:    [[STORE_THIS:%.*]] = zext i32 [[OP_RDX3]] to i96
 ; CHECK-NEXT:    store i96 [[STORE_THIS]], ptr null, align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
 
-  %lshr.1 = lshr i96 0, 0 ; These ops
+  %lshr.1 = lshr i96 0, 1 ; These ops
   %lshr.2 = lshr i96 0, 0 ; return an
   %add.0 = add i96 0, 0   ; invalid
-  %add.1 = add i96 0, 0   ; vector cost.
+  %add.1 = add i96 -1, 1   ; vector cost.
 
   %trunc.i96.1 = trunc i96 %lshr.1 to i32 ; These ops
   %trunc.i96.2 = trunc i96 %lshr.2 to i32 ; return an

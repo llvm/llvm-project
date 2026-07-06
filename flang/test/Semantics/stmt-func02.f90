@@ -24,11 +24,13 @@ module m2
     print *, x
   end
   subroutine test2
-    !PORTABILITY: Name 'rf' from host scope should have a type declaration before its local statement function definition
+    !PORTABILITY: Name 'rf' from host scope should have a type declaration before its local statement function definition [-Wstatement-function-extensions]
+    !PORTABILITY: An implicitly typed statement function should not appear when the same symbol is available in its host scope [-Wstatement-function-extensions]
     rf(x) = 1.
   end
   subroutine test2b
-    !PORTABILITY: Name 'rf2' from host scope should have a type declaration before its local statement function definition
+    !PORTABILITY: Name 'rf2' from host scope should have a type declaration before its local statement function definition [-Wstatement-function-extensions]
+    !PORTABILITY: An implicitly typed statement function should not appear when the same symbol is available in its host scope [-Wstatement-function-extensions]
     rf2(x) = 1.
   end
   subroutine test3
@@ -43,7 +45,7 @@ module m2
     f() = 1. ! statement function of same name as function
   end
   function g() result(r)
-    !WARNING: Name 'g' from host scope should have a type declaration before its local statement function definition
+    !WARNING: Name 'g' from host scope should have a type declaration before its local statement function definition [-Wstatement-function-extensions]
     !ERROR: 'g' is already declared in this scoping unit
     g() = 1. ! statement function of same name as function
   end

@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Timer.h"
 #include <memory>
 #include <utility>
@@ -28,13 +29,24 @@ class Pass;
 class PassInstrumentationCallbacks;
 class raw_ostream;
 
+/// If the user specifies the -time-passes argument on an LLVM tool command line
+/// then the value of this boolean will be true, otherwise false.
+/// This is the storage for the -time-passes option.
+LLVM_ABI extern bool TimePassesIsEnabled;
+/// If TimePassesPerRun is true, there would be one line of report for
+/// each pass invocation.
+/// If TimePassesPerRun is false, there would be only one line of
+/// report for each pass (even there are more than one pass objects).
+/// (For new pass manager only)
+LLVM_ABI extern bool TimePassesPerRun;
+
 /// If -time-passes has been specified, report the timings immediately and then
 /// reset the timers to zero. By default it uses the stream created by
 /// CreateInfoOutputFile().
-void reportAndResetTimings(raw_ostream *OutStream = nullptr);
+LLVM_ABI void reportAndResetTimings(raw_ostream *OutStream = nullptr);
 
 /// Request the timer for this legacy-pass-manager's pass instance.
-Timer *getPassTimer(Pass *);
+LLVM_ABI Timer *getPassTimer(Pass *);
 
 /// This class implements -time-passes functionality for new pass manager.
 /// It provides the pass-instrumentation callbacks that measure the pass
@@ -78,20 +90,20 @@ public:
   static constexpr StringRef AnalysisGroupDesc =
       "Analysis execution timing report";
 
-  TimePassesHandler();
-  TimePassesHandler(bool Enabled, bool PerRun = false);
+  LLVM_ABI TimePassesHandler();
+  LLVM_ABI TimePassesHandler(bool Enabled, bool PerRun = false);
 
   /// Prints out timing information and then resets the timers.
-  void print();
+  LLVM_ABI void print();
 
   // We intend this to be unique per-compilation, thus no copies.
   TimePassesHandler(const TimePassesHandler &) = delete;
   void operator=(const TimePassesHandler &) = delete;
 
-  void registerCallbacks(PassInstrumentationCallbacks &PIC);
+  LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC);
 
   /// Set a custom output stream for subsequent reporting.
-  void setOutStream(raw_ostream &OutStream);
+  LLVM_ABI void setOutStream(raw_ostream &OutStream);
 
 private:
   /// Dumps information for running/triggered timers, useful for debugging

@@ -83,7 +83,8 @@ private:
   void emitInlineAsmStart() const override;
 
   void emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
-                        const MCSubtargetInfo *EndInfo) const override;
+                        const MCSubtargetInfo *EndInfo,
+                        const MachineInstr *MI) override;
 
   void emitJumpTableEntry(const MachineJumpTableInfo &MJTI,
                           const MachineBasicBlock *MBB,
@@ -111,8 +112,6 @@ private:
                            Mips16HardFloatInfo::FPReturnVariant, bool LE);
 
   void EmitFPCallStub(const char *, const Mips16HardFloatInfo::FuncSignature *);
-
-  void NaClAlignIndirectJumpTargets(MachineFunction &MF);
 
   bool isLongBranchPseudo(int Opcode) const;
 

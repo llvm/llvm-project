@@ -9,6 +9,8 @@
 #include <fstream>
 
 #include "clang/Basic/FileManager.h"
+#include "clang/Driver/CreateASTUnitFromArgs.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -55,7 +57,8 @@ protected:
     if (!CInvok)
       return nullptr;
 
-    FileManager *FileMgr = new FileManager(FileSystemOptions(), VFS);
+    auto FileMgr =
+        llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(), VFS);
     PCHContainerOps = std::make_shared<PCHContainerOperations>();
 
     return ASTUnit::LoadFromCompilerInvocation(
@@ -97,7 +100,8 @@ TEST_F(ASTUnitTest, SaveLoadPreservesLangOptionsInPrintingPolicy) {
 
   std::unique_ptr<ASTUnit> AU = ASTUnit::LoadFromASTFile(
       ASTFileName, PCHContainerOps->getRawReader(), ASTUnit::LoadEverything,
-      DiagOpts, Diags, FileSystemOptions(), HSOpts);
+      llvm::vfs::getRealFileSystem(), DiagOpts, Diags, FileSystemOptions(),
+      HSOpts);
 
   if (!AU)
     FAIL() << "failed to load ASTUnit";
@@ -119,8 +123,7 @@ TEST_F(ASTUnitTest, GetBufferForFileMemoryMapping) {
 }
 
 TEST_F(ASTUnitTest, ModuleTextualHeader) {
-  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFs =
-      new llvm::vfs::InMemoryFileSystem();
+  auto InMemoryFs = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   InMemoryFs->addFile("test.cpp", 0, llvm::MemoryBuffer::getMemBuffer(R"cpp(
       #include "Textual.h"
       void foo() {}
@@ -144,7 +147,8 @@ TEST_F(ASTUnitTest, ModuleTextualHeader) {
   CInvok = createInvocation(Args, std::move(CIOpts));
   ASSERT_TRUE(CInvok);
 
-  FileManager *FileMgr = new FileManager(FileSystemOptions(), InMemoryFs);
+  auto FileMgr =
+      llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(), InMemoryFs);
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
 
   auto AU = ASTUnit::LoadFromCompilerInvocation(
@@ -171,7 +175,7 @@ TEST_F(ASTUnitTest, LoadFromCommandLineEarlyError) {
   auto PCHContainerOps = std::make_shared<PCHContainerOperations>();
   std::unique_ptr<clang::ASTUnit> ErrUnit;
 
-  std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromCommandLine(
+  std::unique_ptr<ASTUnit> AST = CreateASTUnitFromCommandLine(
       &Args[0], &Args[4], PCHContainerOps, DiagOpts, Diags, "", false, "",
       false, CaptureDiagsKind::All, {}, true, 0, TU_Complete, false, false,
       false, SkipFunctionBodiesScope::None, false, true, false, false,
@@ -199,7 +203,7 @@ TEST_F(ASTUnitTest, LoadFromCommandLineWorkingDirectory) {
   auto PCHContainerOps = std::make_shared<PCHContainerOperations>();
   std::unique_ptr<clang::ASTUnit> ErrUnit;
 
-  std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromCommandLine(
+  std::unique_ptr<ASTUnit> AST = CreateASTUnitFromCommandLine(
       &Args[0], &Args[4], PCHContainerOps, DiagOpts, Diags, "", false, "",
       false, CaptureDiagsKind::All, {}, true, 0, TU_Complete, false, false,
       false, SkipFunctionBodiesScope::None, false, true, false, false,

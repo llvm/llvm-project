@@ -107,11 +107,11 @@ source_filename = "test/DebugInfo/X86/fission-cu.ll"
 ; For COFF we should have this set of relocations for the debug info section
 ;
 ; OBJ: .debug_info
-; OBJ-NEXT: IMAGE_REL_AMD64_SECREL .debug_abbrev (6)
-; OBJ-NEXT: IMAGE_REL_AMD64_SECREL .debug_line (26)
-; OBJ-NEXT: IMAGE_REL_AMD64_SECREL .debug_str (10)
-; OBJ-NEXT: IMAGE_REL_AMD64_SECREL .debug_str (10)
-; OBJ-NEXT: IMAGE_REL_AMD64_SECREL .debug_addr (20)
+; OBJ-NEXT: IMAGE_REL_AMD64_SECREL .debug_abbrev (8)
+; OBJ-NEXT: IMAGE_REL_AMD64_SECREL .debug_line (28)
+; OBJ-NEXT: IMAGE_REL_AMD64_SECREL .debug_str (12)
+; OBJ-NEXT: IMAGE_REL_AMD64_SECREL .debug_str (12)
+; OBJ-NEXT: IMAGE_REL_AMD64_SECREL .debug_addr (22)
 ; OBJ-NEXT: }
 
 ; HDR-NOT: .debug_aranges

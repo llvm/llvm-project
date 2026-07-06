@@ -17,11 +17,6 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/IR/Operation.h"
-#include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Interfaces/LoopLikeInterface.h"
-#include "mlir/Pass/Pass.h"
-#include "llvm/ADT/SetOperations.h"
-#include "llvm/ADT/SmallString.h"
 #include <optional>
 
 using namespace mlir;
@@ -146,8 +141,9 @@ bufferization::getGlobalFor(arith::ConstantOp constantOp,
       cast<MemRefType>(getMemRefTypeWithStaticIdentityLayout(type));
   if (memorySpace)
     memrefType = MemRefType::Builder(memrefType).setMemorySpace(memorySpace);
-  auto global = globalBuilder.create<memref::GlobalOp>(
-      constantOp.getLoc(), (Twine("__constant_") + os.str()).str(),
+  auto global = memref::GlobalOp::create(
+      globalBuilder, constantOp.getLoc(),
+      (Twine("__constant_") + os.str()).str(),
       /*sym_visibility=*/globalBuilder.getStringAttr("private"),
       /*type=*/memrefType,
       /*initial_value=*/cast<ElementsAttr>(constantOp.getValue()),

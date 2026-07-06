@@ -401,11 +401,17 @@ public:
     llvm_unreachable("getting host associated type in CallerInterface");
   }
 
+  std::optional<mlir::Value> getOriginalPassArg() const {
+    return originalPassArg;
+  }
+  void setOriginalPassArg(mlir::Value x) { originalPassArg = x; }
+
 private:
   /// Check that the input vector is complete.
   bool verifyActualInputs() const;
   const Fortran::evaluate::ProcedureRef &procRef;
   llvm::SmallVector<mlir::Value> actualInputs;
+  std::optional<mlir::Value> originalPassArg;
 };
 
 //===----------------------------------------------------------------------===//
@@ -478,11 +484,17 @@ getOrDeclareFunction(const Fortran::evaluate::ProcedureDesignator &,
 mlir::Type getDummyProcedureType(const Fortran::semantics::Symbol &dummyProc,
                                  Fortran::lower::AbstractConverter &);
 
+/// Return the type of an argument that is a dummy procedure pointer. This
+/// will be a reference to a boxed procedure.
+mlir::Type
+getDummyProcedurePointerType(const Fortran::semantics::Symbol &dummyProcPtr,
+                             Fortran::lower::AbstractConverter &);
+
 /// Return !fir.boxproc<() -> ()> type.
 mlir::Type getUntypedBoxProcType(mlir::MLIRContext *context);
 
 /// Return true if \p ty is "!fir.ref<i64>", which is the interface for
-/// type(C_PTR/C_FUNPTR) passed by value.
+/// type(C_PTR/C_FUNPTR/C_DEVPTR) passed by value.
 bool isCPtrArgByValueType(mlir::Type ty);
 
 /// Is it required to pass \p proc as a tuple<function address, result length> ?

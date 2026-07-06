@@ -16,14 +16,14 @@
 #include <type_traits>
 #include <utility>
 
+#include "test_comparisons.h"
 #include "test_macros.h"
-#include "../../types.h"
 
 #if TEST_STD_VER >= 26
 // https://wg21.link/P3379R0
-static_assert(CanCompare<std::expected<int, int>, int>);
-static_assert(CanCompare<std::expected<int, int>, EqualityComparable>);
-static_assert(!CanCompare<std::expected<int, int>, NonComparable>);
+static_assert(HasOperatorEqual<std::expected<int, int>, int>);
+static_assert(HasOperatorEqual<std::expected<int, int>, EqualityComparable>);
+static_assert(!HasOperatorEqual<std::expected<int, int>, NonComparable>);
 #endif
 
 constexpr bool test() {
@@ -43,6 +43,28 @@ constexpr bool test() {
     int i3 = 5;
     assert(e1 != i2);
     assert(e1 != i3);
+  }
+
+#if TEST_STD_VER >= 26
+  // Regression test for https://llvm.org/PR160431: the constraint of this overload
+  // would recurse when ADL on the comparison found the same hidden friend through a
+  // type whose associated namespaces reach std::expected.
+  {
+    std::pair<int, std::expected<int, int>> p1, p2;
+    assert(p1 == p2);
+  }
+#endif
+  // LWG4366
+  { // x.has_value()
+    const std::expected<ImplicitBool::E1, int> e1(ImplicitBool::E1{1});
+    assert(e1 == ImplicitBool::E2{1});
+    assert(e1 != ImplicitBool::E2{3});
+  }
+
+  { // !x.has_value()
+    const std::expected<ImplicitBool::E1, int> e1(std::unexpect, 1);
+    assert(e1 != ImplicitBool::E2{1});
+    assert(e1 != ImplicitBool::E2{2});
   }
 
   return true;

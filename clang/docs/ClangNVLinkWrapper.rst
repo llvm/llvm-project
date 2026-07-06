@@ -10,7 +10,7 @@ Clang nvlink Wrapper
 Introduction
 ============
 
-This tools works as a wrapper around the NVIDIA ``nvlink`` linker. The purpose
+This tool works as a wrapper around the NVIDIA ``nvlink`` linker. The purpose
 of this wrapper is to provide an interface similar to the ``ld.lld`` linker
 while still relying on NVIDIA's proprietary linker to produce the final output.
 
@@ -37,7 +37,7 @@ only for the linker wrapper will be forwarded to ``nvlink``.
     --arch <value>       Specify the 'sm_' name of the target architecture.
     --cuda-path=<dir>    Set the system CUDA path
     --dry-run            Print generated commands without running.
-    --feature <value>    Specify the '+ptx' freature to use for LTO.
+    --feature <value>    Specify the '+ptx' feature to use for LTO.
     -g                   Specify that this was a debug compile.
     -help-hidden         Display all available options
     -help                Display available options (--help-hidden for more)

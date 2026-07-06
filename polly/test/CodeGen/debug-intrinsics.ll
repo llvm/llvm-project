@@ -1,15 +1,11 @@
-; RUN: opt %loadNPMPolly \
-; RUN: -polly-analyze-read-only-scalars=false -passes=polly-codegen -S < %s | \
-; RUN: FileCheck %s
+; RUN: opt %loadNPMPolly -polly-analyze-read-only-scalars=false '-passes=polly<no-default-opts>' -S < %s | FileCheck %s
 
-; RUN: opt %loadNPMPolly \
-; RUN: -polly-analyze-read-only-scalars=true -passes=polly-codegen -S < %s | \
-; RUN: FileCheck %s
+; RUN: opt %loadNPMPolly -polly-analyze-read-only-scalars=true '-passes=polly<no-default-opts>' -S < %s | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind uwtable
-define void @foo(ptr %A, i64 %N) #0 !dbg !4 {
+define void @foo(ptr %A, i64 %N) !dbg !4 {
 entry:
   br label %entry.split
 
@@ -49,13 +45,10 @@ for.end:                                          ; preds = %for.cond.for.end_cr
 ; CHECK-NOT: #dbg_value
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
-
-attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone }
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!11, !12}

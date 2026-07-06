@@ -33,6 +33,12 @@
 # RUN: llvm-objcopy -I binary -O elf64-littleriscv %t.txt %t.rv64.o
 # RUN: llvm-readobj --file-headers %t.rv64.o | FileCheck %s --check-prefixes=CHECK,LE,RISCV64,64
 
+# RUN: llvm-objcopy -I binary -O elf32-bigriscv %t.txt %t.rv32.o
+# RUN: llvm-readobj --file-headers %t.rv32.o | FileCheck %s --check-prefixes=CHECK,BE,RISCV32,32
+
+# RUN: llvm-objcopy -I binary -O elf64-bigriscv %t.txt %t.rv64.o
+# RUN: llvm-readobj --file-headers %t.rv64.o | FileCheck %s --check-prefixes=CHECK,BE,RISCV64,64
+
 # RUN: llvm-objcopy -I binary -O elf32-sparc %t.txt %t.sparc.o
 # RUN: llvm-readobj --file-headers %t.sparc.o | FileCheck %s --check-prefixes=CHECK,BE,SPARC,32
 

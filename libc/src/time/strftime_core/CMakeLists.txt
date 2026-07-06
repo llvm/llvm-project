@@ -5,6 +5,7 @@ add_header_library(
   DEPENDS
     libc.src.__support.CPP.string_view
     libc.hdr.types.struct_tm
+    libc.hdr.stdint_proxy
 )
 
 add_header_library(
@@ -32,6 +33,7 @@ add_header_library(
     libc.src.stdio.printf_core.writer
     libc.src.__support.CPP.string_view
     libc.src.__support.integer_to_string
+    libc.src.__support.error_or
 )
 
 add_header_library(
@@ -42,6 +44,7 @@ add_header_library(
     .core_structs
     .parser
     .converter
+    libc.src.__support.error_or
     libc.src.stdio.printf_core.writer
     libc.hdr.types.struct_tm
 )

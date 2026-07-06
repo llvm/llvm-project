@@ -58,13 +58,21 @@ SemaBase::SemaDiagnosticBuilder::getDeviceDeferredDiags() const {
   return S.DeviceDeferredDiags;
 }
 
-Sema::SemaDiagnosticBuilder SemaBase::Diag(SourceLocation Loc, unsigned DiagID,
-                                           bool DeferHint) {
+Sema::SemaDiagnosticBuilder SemaBase::Diag(SourceLocation Loc,
+                                           unsigned DiagID) {
   bool IsError =
       getDiagnostics().getDiagnosticIDs()->isDefaultMappingAsError(DiagID);
   bool ShouldDefer = getLangOpts().CUDA && getLangOpts().GPUDeferDiag &&
                      DiagnosticIDs::isDeferrable(DiagID) &&
-                     (DeferHint || SemaRef.DeferDiags || !IsError);
+                     (SemaRef.DeferDiags || !IsError);
+  // Even without -fgpu-defer-diag, defer device-side errors inside an
+  // implicit-H+D explicit instantiation so end-of-TU classification can
+  // choose between surfacing them or emitting a trap body.
+  if (!ShouldDefer && getLangOpts().CUDA && getLangOpts().CUDAIsDevice &&
+      DiagnosticIDs::isDeferrable(DiagID) &&
+      SemaCUDA::isImplicitHDExplicitInstantiation(
+          SemaRef.getCurFunctionDecl(/*AllowLambda=*/true)))
+    ShouldDefer = true;
   auto SetIsLastErrorImmediate = [&](bool Flag) {
     if (IsError)
       SemaRef.IsLastErrorImmediate = Flag;
@@ -83,16 +91,13 @@ Sema::SemaDiagnosticBuilder SemaBase::Diag(SourceLocation Loc, unsigned DiagID,
 }
 
 Sema::SemaDiagnosticBuilder SemaBase::Diag(SourceLocation Loc,
-                                           const PartialDiagnostic &PD,
-                                           bool DeferHint) {
-  return Diag(Loc, PD.getDiagID(), DeferHint) << PD;
+                                           const PartialDiagnostic &PD) {
+  return Diag(Loc, PD.getDiagID()) << PD;
 }
 
 SemaBase::SemaDiagnosticBuilder SemaBase::DiagCompat(SourceLocation Loc,
-                                                     unsigned CompatDiagId,
-                                                     bool DeferHint) {
+                                                     unsigned CompatDiagId) {
   return Diag(Loc,
-              DiagnosticIDs::getCXXCompatDiagId(getLangOpts(), CompatDiagId),
-              DeferHint);
+              DiagnosticIDs::getCXXCompatDiagId(getLangOpts(), CompatDiagId));
 }
 } // namespace clang

@@ -14,17 +14,20 @@
 
 #include "mlir/Config/mlir-config.h"
 #include "mlir/IR/Action.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Rewrite/PatternApplicator.h"
+#include "mlir/Transforms/CSE.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -179,9 +182,8 @@ static Operation *getDumpRootOp(Operation *op) {
   return op;
 }
 static void logSuccessfulFolding(Operation *op) {
-  llvm::dbgs() << "// *** IR Dump After Successful Folding ***\n";
-  op->dump();
-  llvm::dbgs() << "\n\n";
+  LDBG() << "// *** IR Dump After Successful Folding ***\n"
+         << OpWithFlags(op, OpPrintingFlags().elideLargeElementsAttrs());
 }
 #endif // NDEBUG
 
@@ -395,8 +397,12 @@ private:
                      function_ref<void(Diagnostic &)> reasonCallback) override;
 
 #ifndef NDEBUG
+  /// A raw output stream used to prefix the debug log.
+
+  llvm::impl::raw_ldbg_ostream os{(Twine("[") + DEBUG_TYPE + ":1] ").str(),
+                                  llvm::dbgs()};
   /// A logger used to emit information during the application process.
-  llvm::ScopedPrinter logger{llvm::dbgs()};
+  llvm::ScopedPrinter logger{os};
 #endif
 
   /// The low-level pattern applicator.
@@ -608,8 +614,7 @@ bool GreedyPatternRewriteDriver::processWorklist() {
     if (config.getScope()) {
       expensiveChecks.computeFingerPrints(config.getScope()->getParentOp());
     }
-    auto clearFingerprints =
-        llvm::make_scope_exit([&]() { expensiveChecks.clear(); });
+    llvm::scope_exit clearFingerprints([&]() { expensiveChecks.clear(); });
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 
     LogicalResult matchResult =
@@ -708,7 +713,7 @@ void GreedyPatternRewriteDriver::addOperandsToWorklist(Operation *op) {
 
     Operation *otherUser = nullptr;
     bool hasMoreThanTwoUses = false;
-    for (auto user : operand.getUsers()) {
+    for (auto *user : operand.getUsers()) {
       if (user == op || user == otherUser)
         continue;
       if (!otherUser) {
@@ -778,7 +783,8 @@ void GreedyPatternRewriteDriver::notifyMatchFailure(
 //===----------------------------------------------------------------------===//
 
 namespace {
-/// This driver simplfies all ops in a region.
+/// This driver simplfies all ops in a region. If a scope is set in the
+/// config, the provided region must be within that scope.
 class RegionPatternRewriteDriver : public GreedyPatternRewriteDriver {
 public:
   explicit RegionPatternRewriteDriver(MLIRContext *ctx,
@@ -804,6 +810,15 @@ RegionPatternRewriteDriver::RegionPatternRewriteDriver(
   if (config.getStrictness() != GreedyRewriteStrictness::AnyOp) {
     region.walk([&](Operation *op) { strictModeFilteredOps.insert(op); });
   }
+#ifndef NDEBUG
+  // Verify that the region is within the configured scope (if any).
+  if (Region *scope = config.getScope()) {
+    Region *r = &region;
+    while (r && r != scope)
+      r = r->getParentRegion();
+    assert(r && "provided region is not within the config scope");
+  }
+#endif
 }
 
 namespace {
@@ -872,7 +887,18 @@ LogicalResult RegionPatternRewriteDriver::simplify(bool *changed) && {
 
     ctx->executeAction<GreedyPatternRewriteIteration>(
         [&] {
-          continueRewrites = processWorklist();
+          continueRewrites = false;
+
+          // Erase unreachable blocks
+          // Operations like:
+          //   %add = arith.addi %add, %add : i64
+          // are legal in unreachable code. Unfortunately many patterns would be
+          // unsafe to apply on such IR and can lead to crashes or infinite
+          // loops.
+          continueRewrites |=
+              succeeded(eraseUnreachableBlocks(rewriter, region));
+
+          continueRewrites |= processWorklist();
 
           // After applying patterns, make sure that the CFG of each of the
           // regions is kept up to date.
@@ -882,6 +908,16 @@ LogicalResult RegionPatternRewriteDriver::simplify(bool *changed) && {
                 rewriter, region,
                 /*mergeBlocks=*/config.getRegionSimplificationLevel() ==
                     GreedySimplifyRegionLevel::Aggressive));
+          }
+
+          // Optionally run full CSE. If CSE changes the IR we iterate again so
+          // that patterns can fire on the deduplicated operations.
+          if (config.isCSEBetweenIterationsEnabled()) {
+            DominanceInfo domInfo;
+            bool cseChanged = false;
+            eliminateCommonSubExpressions(rewriter, domInfo, region,
+                                          &cseChanged);
+            continueRewrites |= cseChanged;
           }
         },
         {&region}, iteration);
@@ -918,10 +954,9 @@ mlir::applyPatternsGreedily(Region &region,
   RegionPatternRewriteDriver driver(region.getContext(), patterns, config,
                                     region);
   LogicalResult converged = std::move(driver).simplify(changed);
-  LLVM_DEBUG(if (failed(converged)) {
-    llvm::dbgs() << "The pattern rewrite did not converge after scanning "
-                 << config.getMaxIterations() << " times\n";
-  });
+  if (failed(converged))
+    LDBG() << "The pattern rewrite did not converge after scanning "
+           << config.getMaxIterations() << " times";
   return converged;
 }
 
@@ -1053,9 +1088,8 @@ LogicalResult mlir::applyOpPatternsGreedily(
   LogicalResult converged = std::move(driver).simplify(ops, changed);
   if (allErased)
     *allErased = surviving.empty();
-  LLVM_DEBUG(if (failed(converged)) {
-    llvm::dbgs() << "The pattern rewrite did not converge after "
-                 << config.getMaxNumRewrites() << " rewrites";
-  });
+  if (failed(converged))
+    LDBG() << "The pattern rewrite did not converge after "
+           << config.getMaxNumRewrites() << " rewrites";
   return converged;
 }

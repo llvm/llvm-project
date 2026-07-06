@@ -14,7 +14,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 #include <optional>
 
@@ -56,8 +55,8 @@ static bool validateFullTilesOnDims(linalg::LinalgOp linalgOp,
   // Skip the batch dimension if present.
   // Offset all dimensions accordingly.
   SmallVector<int64_t, 3> offsetDims(dims);
-  for (size_t i = 0; i < offsetDims.size(); i++)
-    offsetDims[i] += batchDimsOffset;
+  for (int64_t &offsetDim : offsetDims)
+    offsetDim += batchDimsOffset;
 
   auto tileOp = cast<TilingInterface>(linalgOp.getOperation());
   OpBuilder builder(tileOp);
@@ -91,6 +90,10 @@ transposePackedMatmul(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
                       linalg::PackOp packOp, AffineMap operandMap,
                       ArrayRef<unsigned> blocksStartDimPos,
                       bool transposeOuterBlocks, bool transposeInnerBlocks) {
+  // TODO: Support Memref PackOp. Temporarily return failure.
+  if (!packOp.hasPureTensorSemantics())
+    return failure();
+
   assert(operandMap.getNumDims() >= 4 &&
          "expected at least 4D prepacked matmul");
   assert(blocksStartDimPos.size() >= 2 &&
@@ -321,10 +324,6 @@ void linalg::populateBlockPackMatmulPatterns(
     RewritePatternSet &patterns, const ControlBlockPackMatmulFn &controlFn) {
   patterns.add<BlockPackMatmul<linalg::GenericOp>,
                BlockPackMatmul<linalg::MatmulOp>,
-               BlockPackMatmul<linalg::BatchMatmulOp>,
-               BlockPackMatmul<linalg::MatmulTransposeAOp>,
-               BlockPackMatmul<linalg::BatchMatmulTransposeAOp>,
-               BlockPackMatmul<linalg::MatmulTransposeBOp>,
-               BlockPackMatmul<linalg::BatchMatmulTransposeBOp>>(
-      patterns.getContext(), controlFn);
+               BlockPackMatmul<linalg::BatchMatmulOp>>(patterns.getContext(),
+                                                       controlFn);
 }

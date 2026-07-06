@@ -93,6 +93,7 @@ def update_test(ti: common.TestInfo):
 
     ginfo = common.make_ir_generalizer(ti.args.version, ti.args.check_globals == "none")
     global_vars_seen_dict = {}
+    global_tbaa_records_for_prefixes = {}
     builder = common.FunctionTestBuilder(
         run_list=prefix_list,
         flags=ti.args,
@@ -123,6 +124,10 @@ def update_test(ti: common.TestInfo):
             prefixes,
         )
         builder.processed_prefixes(prefixes)
+
+        # Extract TBAA metadata for later usage in check lines.
+        tbaa_map = common.get_tbaa_records(ti.args.version, raw_tool_output)
+        global_tbaa_records_for_prefixes[tuple(prefixes)] = tbaa_map
 
     prefix_set = set([prefix for prefixes, _, _ in prefix_list for prefix in prefixes])
 
@@ -165,6 +170,7 @@ def update_test(ti: common.TestInfo):
                     output_lines,
                     ginfo,
                     global_vars_seen_dict,
+                    global_tbaa_records_for_prefixes,
                     args.preserve_names,
                     True,
                     args.check_globals,
@@ -188,8 +194,10 @@ def update_test(ti: common.TestInfo):
                     args.function_signature,
                     ginfo,
                     global_vars_seen_dict,
+                    global_tbaa_records_for_prefixes,
                     is_filtered=builder.is_filtered(),
                     original_check_lines=original_check_lines.get(func, {}),
+                    check_inst_comments=args.check_inst_comments,
                 ),
             )
         )
@@ -220,8 +228,10 @@ def update_test(ti: common.TestInfo):
                         args.function_signature,
                         ginfo,
                         global_vars_seen_dict,
+                        global_tbaa_records_for_prefixes,
                         is_filtered=builder.is_filtered(),
                         original_check_lines=original_check_lines.get(func_name, {}),
+                        check_inst_comments=args.check_inst_comments,
                     )
                 )
                 is_in_function_start = False
@@ -237,6 +247,7 @@ def update_test(ti: common.TestInfo):
                             output_lines,
                             ginfo,
                             global_vars_seen_dict,
+                            global_tbaa_records_for_prefixes,
                             args.preserve_names,
                             True,
                             args.check_globals,
@@ -251,9 +262,17 @@ def update_test(ti: common.TestInfo):
                 skip_same_checks=dropped_previous_line,
             ):
                 # This input line of the function body will go as-is into the output.
-                # Except make leading whitespace uniform: 2 spaces. 4 for debug records.
+                # Except make leading whitespace uniform: 2 spaces. 4 for debug records/switch cases.
                 indent = (
-                    "  " if not common.IS_DEBUG_RECORD_RE.match(input_line) else "    "
+                    " " * 4
+                    if (
+                        common.IS_DEBUG_RECORD_RE.match(input_line)
+                        or (
+                            ti.args.version > 6
+                            and common.IS_SWITCH_CASE_RE.match(input_line)
+                        )
+                    )
+                    else " " * 2
                 )
                 input_line = common.SCRUB_LEADING_WHITESPACE_RE.sub(indent, input_line)
                 output_lines.append(input_line)
@@ -286,6 +305,7 @@ def update_test(ti: common.TestInfo):
                 output_lines,
                 ginfo,
                 global_vars_seen_dict,
+                global_tbaa_records_for_prefixes,
                 args.preserve_names,
                 False,
                 args.check_globals,
@@ -343,6 +363,12 @@ def main():
         default="default",
         choices=["none", "smart", "all"],
         help="Check global entries (global variables, metadata, attribute sets, ...) for functions",
+    )
+    parser.add_argument(
+        "--check-inst-comments",
+        action="store_true",
+        default=False,
+        help="Check the generated comments describing instructions (e.g., -print-predicate-info/print<memssa>)",
     )
     parser.add_argument(
         "--reset-variable-names",

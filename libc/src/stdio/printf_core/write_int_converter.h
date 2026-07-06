@@ -29,11 +29,11 @@ LIBC_INLINE int convert_write_int(Writer<write_mode> *writer,
     return NULLPTR_WRITE_ERROR;
 #endif // LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
 
-  int written = writer->get_chars_written();
+  size_t written = writer->get_chars_written();
 
   switch (to_conv.length_modifier) {
   case LengthModifier::none:
-    *reinterpret_cast<int *>(to_conv.conv_val_ptr) = written;
+    *reinterpret_cast<int *>(to_conv.conv_val_ptr) = static_cast<int>(written);
     break;
   case LengthModifier::l:
     *reinterpret_cast<long *>(to_conv.conv_val_ptr) = written;
@@ -57,8 +57,10 @@ LIBC_INLINE int convert_write_int(Writer<write_mode> *writer,
     *reinterpret_cast<ptrdiff_t *>(to_conv.conv_val_ptr) = written;
     break;
   case LengthModifier::j:
+#ifndef LIBC_COPT_PRINTF_DISABLE_BITINT
   case LengthModifier::w:
   case LengthModifier::wf:
+#endif // LIBC_COPT_PRINTF_DISABLE_BITINT
     *reinterpret_cast<uintmax_t *>(to_conv.conv_val_ptr) = written;
     break;
   }

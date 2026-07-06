@@ -15,6 +15,7 @@
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include <optional>
@@ -192,8 +193,11 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__riscv_muldiv");
   }
 
-  if (ISAInfo->hasExtension("a")) {
+  // The "a" extension is composed of "zalrsc" and "zaamo"
+  if (ISAInfo->hasExtension("a"))
     Builder.defineMacro("__riscv_atomic");
+
+  if (ISAInfo->hasExtension("zalrsc")) {
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
@@ -222,7 +226,7 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
   // Currently we support the v1.0 RISC-V V intrinsics.
   Builder.defineMacro("__riscv_v_intrinsic", Twine(getVersionValue(1, 0)));
 
-  auto VScale = getVScaleRange(Opts, false);
+  auto VScale = getVScaleRange(Opts, ArmStreamingKind::NotStreaming);
   if (VScale && VScale->first && VScale->first == VScale->second)
     Builder.defineMacro("__riscv_v_fixed_vlen",
                         Twine(VScale->first * llvm::RISCV::RVVBitsPerBlock));
@@ -367,7 +371,7 @@ bool RISCVTargetInfo::initFeatureMap(
 
 std::optional<std::pair<unsigned, unsigned>>
 RISCVTargetInfo::getVScaleRange(const LangOptions &LangOpts,
-                                bool IsArmStreamingFunction,
+                                ArmStreamingKind IsArmStreamingFunction,
                                 llvm::StringMap<bool> *FeatureMap) const {
   // RISCV::RVVBitsPerBlock is 64.
   unsigned VScaleMin = ISAInfo->getMinVLen() / llvm::RISCV::RVVBitsPerBlock;
@@ -427,7 +431,7 @@ bool RISCVTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     ABI = ISAInfo->computeDefaultABI().str();
 
   if (ISAInfo->hasExtension("zfh") || ISAInfo->hasExtension("zhinx"))
-    HasLegalHalfType = true;
+    HasFastHalfType = true;
 
   FastScalarUnalignedAccess =
       llvm::is_contained(Features, "+unaligned-scalar-mem");
@@ -568,7 +572,8 @@ ParsedTargetAttr RISCVTargetInfo::parseTargetAttr(StringRef Features) const {
   return Ret;
 }
 
-uint64_t RISCVTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
+llvm::APInt
+RISCVTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
   // Priority is explicitly specified on RISC-V unlike on other targets, where
   // it is derived by all the features of a specific version. Therefore if a
   // feature contains the priority string, then return it immediately.
@@ -580,12 +585,12 @@ uint64_t RISCVTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
       Feature = RHS;
     else
       continue;
-    uint64_t Priority;
+    unsigned Priority;
     if (!Feature.getAsInteger(0, Priority))
-      return Priority;
+      return llvm::APInt(32, Priority);
   }
   // Default Priority is zero.
-  return 0;
+  return llvm::APInt::getZero(32);
 }
 
 TargetInfo::CallingConvCheckResult
@@ -638,4 +643,31 @@ bool RISCVTargetInfo::validateCpuIs(StringRef CPUName) const {
          "__builtin_cpu_is() is only supported for Linux.");
 
   return llvm::RISCV::hasValidCPUModel(CPUName);
+}
+
+bool RISCVTargetInfo::checkCFBranchLabelSchemeSupported(
+    const CFBranchLabelSchemeKind Scheme, DiagnosticsEngine &Diags) const {
+  // TODO: Allow the default func-sig scheme to be selected after backend
+  // implements it
+  switch (Scheme) {
+  case CFBranchLabelSchemeKind::Default:
+    Diags.Report(diag::err_opt_not_valid_without_opt)
+        << "-fcf-protection=branch"
+        << (Twine("-mcf-branch-label-scheme=") +
+            getCFBranchLabelSchemeFlagVal(CFBranchLabelSchemeKind::Unlabeled))
+               .str();
+    return false;
+  case CFBranchLabelSchemeKind::Unlabeled:
+    return true;
+  case CFBranchLabelSchemeKind::FuncSig:
+    Diags.Report(diag::err_opt_unsupported_with_suggest)
+        << (Twine("-mcf-branch-label-scheme=") +
+            getCFBranchLabelSchemeFlagVal(CFBranchLabelSchemeKind::FuncSig))
+               .str()
+        << (Twine("-mcf-branch-label-scheme=") +
+            getCFBranchLabelSchemeFlagVal(CFBranchLabelSchemeKind::Unlabeled))
+               .str();
+    return false;
+  }
+  return TargetInfo::checkCFBranchLabelSchemeSupported(Scheme, Diags);
 }

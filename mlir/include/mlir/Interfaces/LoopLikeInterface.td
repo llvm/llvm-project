@@ -35,8 +35,10 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       serve as the region iter_arg of the next iteration.
 
     If one of the respective interface methods is implemented, so must the other
-    two. The interface verifier ensures that the number of types of the region
-    iter_args, init values and yielded values match.
+    two. The interface verifier ensures that the number of region iter_args,
+    init values and yielded values match. Note: the types are not required to
+    strictly match; if the op also implements `RegionBranchOpInterface`, type
+    compatibility is deferred to that interface's `areTypesCompatible` hook.
 
     Optionally, "loop results" can be exposed through this interface. These are
     the values that are returned from the loop op when there are no more
@@ -228,6 +230,65 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
                     "::mlir::ValueRange":$newInitOperands,
                     "bool":$replaceInitOperandUsesInLoop,
                     "const ::mlir::NewYieldValuesFn &":$newYieldValuesFn),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::failure();
+      }]
+    >,
+    InterfaceMethod<[{
+        Compute the static trip count if possible.
+      }],
+      /*retTy=*/"::std::optional<::llvm::APInt>",
+      /*methodName=*/"getStaticTripCount",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::std::nullopt;
+      }]
+    >,
+    InterfaceMethod<[{
+        Check if the given type is supported as a loop induction variable.
+        By default, only IndexType is supported.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isValidInductionVarType",
+      /*args=*/(ins "::mlir::Type":$type),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return type.isIndex();
+      }]
+    >,
+    InterfaceMethod<[{
+        Update the loop lower bounds. Returns failure if the loop doesn't
+        support updating bounds or if the number of bounds doesn't match.
+      }],
+      /*retTy=*/"::mlir::LogicalResult",
+      /*methodName=*/"setLoopLowerBounds",
+      /*args=*/(ins "::llvm::ArrayRef<::mlir::OpFoldResult>":$bounds),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::failure();
+      }]
+    >,
+    InterfaceMethod<[{
+        Update the loop upper bounds. Returns failure if the loop doesn't
+        support updating bounds or if the number of bounds doesn't match.
+      }],
+      /*retTy=*/"::mlir::LogicalResult",
+      /*methodName=*/"setLoopUpperBounds",
+      /*args=*/(ins "::llvm::ArrayRef<::mlir::OpFoldResult>":$bounds),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::failure();
+      }]
+    >,
+    InterfaceMethod<[{
+        Update the loop steps. Returns failure if the loop doesn't support
+        updating steps or if the number of steps doesn't match.
+      }],
+      /*retTy=*/"::mlir::LogicalResult",
+      /*methodName=*/"setLoopSteps",
+      /*args=*/(ins "::llvm::ArrayRef<::mlir::OpFoldResult>":$steps),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return ::mlir::failure();

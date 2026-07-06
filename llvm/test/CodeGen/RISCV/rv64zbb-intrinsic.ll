@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zbb -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64ZBB
 
-declare i32 @llvm.riscv.orc.b.i32(i32)
-
 define signext i32 @orcb32(i32 signext %a) nounwind {
 ; RV64ZBB-LABEL: orcb32:
 ; RV64ZBB:       # %bb.0:
@@ -43,8 +41,6 @@ define signext i32 @orcb32_knownbits(i32 signext %a) nounwind {
   ret i32 %tmp5
 }
 
-declare i64 @llvm.riscv.orc.b.i64(i64)
-
 define i64 @orcb64(i64 %a) nounwind {
 ; RV64ZBB-LABEL: orcb64:
 ; RV64ZBB:       # %bb.0:
@@ -62,7 +58,7 @@ define i64 @orcb64_knownbits(i64 %a) nounwind {
 ; RV64ZBB-NEXT:    lui a1, 65535
 ; RV64ZBB-NEXT:    lui a2, 4080
 ; RV64ZBB-NEXT:    slli a1, a1, 12
-; RV64ZBB-NEXT:    addiw a2, a2, 255
+; RV64ZBB-NEXT:    addi a2, a2, 255
 ; RV64ZBB-NEXT:    and a0, a0, a1
 ; RV64ZBB-NEXT:    slli a1, a2, 40
 ; RV64ZBB-NEXT:    orc.b a0, a0

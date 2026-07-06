@@ -16,6 +16,7 @@
 #define LLVM_TRANSFORMS_IPO_MERGEFUNCTIONS_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -23,12 +24,12 @@ class Module;
 class Function;
 
 /// Merge identical functions.
-class MergeFunctionsPass : public PassInfoMixin<MergeFunctionsPass> {
+class MergeFunctionsPass : public OptionalPassInfoMixin<MergeFunctionsPass> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
-  static bool runOnModule(Module &M);
-  static DenseMap<Function *, Function *>
+  LLVM_ABI static bool runOnModule(Module &M);
+  LLVM_ABI static DenseMap<Function *, Function *>
   runOnFunctions(ArrayRef<Function *> F);
 };
 

@@ -18,12 +18,12 @@ int test3(int *a) {
 }
 
 int test4(int *a, unsigned size) {
-  a = __builtin_assume_dereferenceable(a, size); // expected-error {{argument to '__builtin_assume_dereferenceable' must be a constant integer}}
+  __builtin_assume_dereferenceable(a, size);
   return a[0];
 }
 
 int test5(int *a, unsigned long long size) {
-  a = __builtin_assume_dereferenceable(a, size); // expected-error {{argument to '__builtin_assume_dereferenceable' must be a constant integer}}
+  __builtin_assume_dereferenceable(a, size);
   return a[0];
 }
 
@@ -52,4 +52,9 @@ constexpr void *l = __builtin_assume_dereferenceable(p, 4); // expected-error {{
 
 void *foo() {
   return l;
+}
+
+int test10(int *a) {
+  __builtin_assume_dereferenceable(a, a); // expected-error {{cannot initialize a parameter of type '__size_t' (aka 'unsigned long') with an lvalue of type 'int *'}}
+  return a[0];
 }

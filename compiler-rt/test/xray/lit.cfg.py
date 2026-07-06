@@ -14,7 +14,7 @@ clang_xray_cflags = ["-fxray-instrument", config.target_cflags]
 # If libc++ was used to build XRAY libraries, libc++ is needed. Fix applied
 # to Linux only since -rpath may not be portable. This can be extended to
 # other platforms.
-if config.libcxx_used == "1" and config.host_os == "Linux":
+if config.libcxx_used == "1" and config.target_os == "Linux":
     clang_xray_cflags = clang_xray_cflags + (
         ["-L%s -lc++ -Wl,-rpath=%s" % (config.llvm_shlib_dir, config.llvm_shlib_dir)]
     )
@@ -30,7 +30,7 @@ def build_invocation(compile_flags):
 llvm_xray = os.path.join(config.llvm_tools_dir, "llvm-xray")
 
 # Setup substitutions.
-if config.host_os == "Linux":
+if config.target_os == "Linux":
     libdl_flag = "-ldl"
 else:
     libdl_flag = ""
@@ -56,7 +56,7 @@ config.substitutions.append(
 # Default test suffixes.
 config.suffixes = [".c", ".cpp"]
 
-if config.host_os not in ["FreeBSD", "Linux", "NetBSD", "OpenBSD"]:
+if config.target_os not in ["FreeBSD", "Linux", "NetBSD", "OpenBSD"]:
     config.unsupported = True
 elif "64" not in config.host_arch:
     if "arm" in config.host_arch:
@@ -65,5 +65,5 @@ elif "64" not in config.host_arch:
     else:
         config.unsupported = True
 
-if config.host_os == "NetBSD":
+if config.target_os == "NetBSD":
     config.substitutions.insert(0, ("%run", config.netbsd_nomprotect_prefix))

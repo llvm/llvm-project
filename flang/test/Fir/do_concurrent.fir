@@ -63,7 +63,7 @@ func.func @dc_2d_reduction(%i_lb: index, %i_ub: index, %i_st: index,
     %j = fir.alloca i32
     fir.do_concurrent.loop
       (%i_iv, %j_iv) = (%i_lb, %j_lb) to (%i_ub, %j_ub) step (%i_st, %j_st) 
-      reduce(#fir.reduce_attr<add> -> %sum : !fir.ref<i32>) {
+      reduce(@add_reduction_i32 #fir.reduce_attr<add> %sum -> %sum_arg : !fir.ref<i32>) {
       %0 = fir.convert %i_iv : (index) -> i32
       fir.store %0 to %i : !fir.ref<i32>
 
@@ -83,7 +83,7 @@ func.func @dc_2d_reduction(%i_lb: index, %i_ub: index, %i_st: index,
 // CHECK:           %[[I:.*]] = fir.alloca i32
 // CHECK:           %[[J:.*]] = fir.alloca i32
 // CHECK:           fir.do_concurrent.loop
-// CHECK-SAME:        (%[[I_IV:.*]], %[[J_IV:.*]]) = (%[[I_LB]], %[[J_LB]]) to (%[[I_UB]], %[[J_UB]]) step (%[[I_ST]], %[[J_ST]]) reduce(#fir.reduce_attr<add> -> %[[SUM]] : !fir.ref<i32>) {
+// CHECK-SAME:        (%[[I_IV:.*]], %[[J_IV:.*]]) = (%[[I_LB]], %[[J_LB]]) to (%[[I_UB]], %[[J_UB]]) step (%[[I_ST]], %[[J_ST]]) reduce(@add_reduction_i32 #fir.reduce_attr<add> %[[SUM]] -> %{{.*}} : !fir.ref<i32>) {
 // CHECK:             %[[I_IV_CVT:.*]] = fir.convert %[[I_IV]] : (index) -> i32
 // CHECK:             fir.store %[[I_IV_CVT]] to %[[I]] : !fir.ref<i32>
 // CHECK:             %[[J_IV_CVT:.*]] = fir.convert %[[J_IV]] : (index) -> i32
@@ -161,3 +161,62 @@ func.func @do_concurrent_with_locality_specs() {
 // CHECK:           }
 // CHECK:           return
 // CHECK:         }
+
+func.func @dc_reduce() {
+  %3 = fir.alloca i32 {bindc_name = "s", uniq_name = "dc_reduce"}
+  %4:2 = hlfir.declare %3 {uniq_name = "dc_reduce"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %c1 = arith.constant 1 : index 
+  fir.do_concurrent {
+    fir.do_concurrent.loop (%arg0) = (%c1) to (%c1) step (%c1) reduce(byref @add_reduction_i32 #fir.reduce_attr<add> %4#0 -> %arg1 : !fir.ref<i32>) {
+    }
+  }
+  return
+}
+
+// CHECK-LABEL:  func.func @dc_reduce() {
+// CHECK:          %[[S_ALLOC:.*]] = fir.alloca i32 {bindc_name = "s", uniq_name = "dc_reduce"}
+// CHECK:          %[[S_DECL:.*]]:2 = hlfir.declare %[[S_ALLOC]] {uniq_name = "dc_reduce"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:          fir.do_concurrent {
+// CHECK:            fir.do_concurrent.loop (%{{.*}}) = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) reduce(byref @add_reduction_i32 #fir.reduce_attr<add> %[[S_DECL]]#0 -> %[[S_ARG:.*]] : !fir.ref<i32>) {
+// CHECK:            }
+// CHECK:          }
+// CHECK:          return
+// CHECK:        }
+
+func.func @dc_reduce_2() {
+  %3 = fir.alloca i32 {bindc_name = "s", uniq_name = "dc_reduce"}
+  %4:2 = hlfir.declare %3 {uniq_name = "dc_reduce"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+
+  %5 = fir.alloca i32 {bindc_name = "m", uniq_name = "dc_reduce"}
+  %6:2 = hlfir.declare %5 {uniq_name = "dc_reduce"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+
+  %c1 = arith.constant 1 : index 
+
+  fir.do_concurrent {
+    fir.do_concurrent.loop (%arg0) = (%c1) to (%c1) step (%c1) 
+      reduce(@add_reduction_i32 #fir.reduce_attr<add> %4#0 -> %arg1,
+             @mul_reduction_i32 #fir.reduce_attr<multiply> %6#0 -> %arg2
+             : !fir.ref<i32>, !fir.ref<i32>) {
+    }
+  }
+
+  return
+}
+
+// CHECK-LABEL:  func.func @dc_reduce_2() {
+// CHECK:          %[[S_ALLOC:.*]] = fir.alloca i32 {bindc_name = "s", uniq_name = "dc_reduce"}
+// CHECK:          %[[S_DECL:.*]]:2 = hlfir.declare %[[S_ALLOC]] {uniq_name = "dc_reduce"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+
+// CHECK:          %[[M_ALLOC:.*]] = fir.alloca i32 {bindc_name = "m", uniq_name = "dc_reduce"}
+// CHECK:          %[[M_DECL:.*]]:2 = hlfir.declare %[[M_ALLOC]] {uniq_name = "dc_reduce"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:          fir.do_concurrent {
+// CHECK:            fir.do_concurrent.loop (%{{.*}}) = (%{{.*}}) to (%{{.*}}) step (%{{[^[:space:]]+}}) 
+// CHECK-SAME:         reduce(
+// CHECK-SAME:           @add_reduction_i32 #fir.reduce_attr<add> %[[S_DECL]]#0 -> %[[S_ARG:[^,]+]],
+// CHECK-SAME:           @mul_reduction_i32 #fir.reduce_attr<multiply> %[[M_DECL]]#0 -> %[[M_ARG:[^[:space:]]+]]
+// CHECK-SAME:           : !fir.ref<i32>, !fir.ref<i32>) {
+// CHECK:            }
+// CHECK:          }
+// CHECK:          return
+// CHECK:        }
+

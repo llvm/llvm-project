@@ -45,7 +45,7 @@ that automatically carries the bounds information.
 Address compiler diagnostics
 ============================
 
-Once you pass ``-fbounds-safety`` to compiler a C file, you will see some new
+Once you pass ``-fbounds-safety`` to compile a C file, you will see some new
 compiler warnings and errors, which guide adoption of ``-fbounds-safety``.
 Consider the following example:
 

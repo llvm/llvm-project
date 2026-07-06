@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class Module;
@@ -62,7 +63,8 @@ class FunctionImportGlobalProcessing {
   DenseMap<const Comdat *, Comdat *> RenamedComdats;
 
   /// Check if we should promote the given local value to global scope.
-  bool shouldPromoteLocalToGlobal(const GlobalValue *SGV, ValueInfo VI);
+  bool shouldPromoteLocalToGlobal(const GlobalValue *SGV,
+                                  GlobalValueSummary *Summary);
 
 #ifndef NDEBUG
   /// Check if the given value is a local that can't be renamed (promoted).
@@ -102,18 +104,19 @@ class FunctionImportGlobalProcessing {
   DenseSet<GlobalValue::GUID> SymbolsToMove;
 
 public:
+  LLVM_ABI
   FunctionImportGlobalProcessing(Module &M, const ModuleSummaryIndex &Index,
                                  SetVector<GlobalValue *> *GlobalsToImport,
                                  bool ClearDSOLocalOnDeclarations);
-  void run();
+  LLVM_ABI void run();
 };
 
 /// Perform in-place global value handling on the given Module for
 /// exported local functions renamed and promoted for ThinLTO.
-void renameModuleForThinLTO(
-    Module &M, const ModuleSummaryIndex &Index,
-    bool ClearDSOLocalOnDeclarations,
-    SetVector<GlobalValue *> *GlobalsToImport = nullptr);
+LLVM_ABI void
+renameModuleForThinLTO(Module &M, const ModuleSummaryIndex &Index,
+                       bool ClearDSOLocalOnDeclarations,
+                       SetVector<GlobalValue *> *GlobalsToImport = nullptr);
 
 } // End llvm namespace
 

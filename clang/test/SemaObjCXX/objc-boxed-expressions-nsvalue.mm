@@ -81,7 +81,7 @@ int main() {
   id edge_insets_object = @(edge_insets);
 
   SomeStruct s;
-  id err = @(s); // expected-error{{illegal type 'SomeStruct' (aka '_SomeStruct') used in a boxed expression}}
+  id err = @(s); // expected-error{{illegal type 'SomeStruct' (aka 'struct _SomeStruct') used in a boxed expression}}
 
   NonTriviallyCopyable ntc;
   id ntcErr = @(ntc); // expected-error{{non-trivially copyable type 'NonTriviallyCopyable' cannot be used in a boxed expression}}
@@ -99,7 +99,7 @@ SomeStruct getSomeStruct() {
 
 void rvalue() {
   id rv_rect = @(getRect());
-  id rv_some_struct = @(getSomeStruct()); // expected-error {{illegal type 'SomeStruct' (aka '_SomeStruct') used in a boxed expression}}
+  id rv_some_struct = @(getSomeStruct()); // expected-error {{illegal type 'SomeStruct' (aka 'struct _SomeStruct') used in a boxed expression}}
 }
 
 template <class T> id box(T value) { return @(value); } // expected-error{{non-trivially copyable type 'NonTriviallyCopyable' cannot be used in a boxed expression}}

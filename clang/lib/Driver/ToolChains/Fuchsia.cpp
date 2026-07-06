@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "Fuchsia.h"
-#include "CommonArgs.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/MultilibBuilder.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -91,7 +91,9 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("--execute-only");
 
     std::string CPU = getCPUName(D, Args, Triple);
-    if (CPU.empty() || CPU == "generic" || CPU == "cortex-a53")
+    if (Args.hasFlag(options::OPT_mfix_cortex_a53_843419,
+                     options::OPT_mno_fix_cortex_a53_843419, true) &&
+        (CPU.empty() || CPU == "generic" || CPU == "cortex-a53"))
       CmdArgs.push_back("--fix-cortex-a53-843419");
   }
 
@@ -137,9 +139,8 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
-  if (D.isUsingLTO())
-    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs,
-                  D.getLTOMode() == LTOK_Thin);
+  if (auto LTO = ToolChain.getLTOMode(Args); LTO != LTOK_None)
+    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs, LTO == LTOK_Thin);
 
   addLinkerCompressDebugSectionsOption(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
@@ -329,8 +330,9 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
 }
 
 std::string Fuchsia::ComputeEffectiveClangTriple(const ArgList &Args,
+                                                 BoundArch BA,
                                                  types::ID InputType) const {
-  llvm::Triple Triple(ComputeLLVMTriple(Args, InputType));
+  llvm::Triple Triple(ComputeLLVMTriple(Args, BA, InputType));
   return Triple.str();
 }
 
@@ -342,14 +344,14 @@ Tool *Fuchsia::buildStaticLibTool() const {
 
 ToolChain::RuntimeLibType
 Fuchsia::GetRuntimeLibType(const ArgList &Args) const {
-  if (Arg *A = Args.getLastArg(clang::driver::options::OPT_rtlib_EQ)) {
+  if (Arg *A = Args.getLastArg(options::OPT_rtlib_EQ)) {
     StringRef Value = A->getValue();
-    if (Value != "compiler-rt")
-      getDriver().Diag(clang::diag::err_drv_invalid_rtlib_name)
-          << A->getAsString(Args);
+    if (Value != "compiler-rt" && Value != "platform")
+      getDriver().Diag(clang::diag::err_drv_unsupported_rtlib_for_platform)
+          << Value << "Fuchsia";
   }
 
-  return ToolChain::RLT_CompilerRT;
+  return ToolChain::GetRuntimeLibType(Args);
 }
 
 ToolChain::CXXStdlibType Fuchsia::GetCXXStdlibType(const ArgList &Args) const {
@@ -364,7 +366,7 @@ ToolChain::CXXStdlibType Fuchsia::GetCXXStdlibType(const ArgList &Args) const {
 }
 
 void Fuchsia::addClangTargetOptions(const ArgList &DriverArgs,
-                                    ArgStringList &CC1Args,
+                                    ArgStringList &CC1Args, BoundArch BA,
                                     Action::OffloadKind) const {
   if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
                           options::OPT_fno_use_init_array, true))
@@ -414,7 +416,7 @@ void Fuchsia::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
     return;
 
   const Driver &D = getDriver();
-  std::string Target = getTripleString();
+  StringRef Target = getTripleString();
 
   auto AddCXXIncludePath = [&](StringRef Path) {
     std::string Version = detectLibcxxVersion(Path);
@@ -470,8 +472,10 @@ void Fuchsia::AddCXXStdlibLibArgs(const ArgList &Args,
   }
 }
 
-SanitizerMask Fuchsia::getSupportedSanitizers() const {
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+SanitizerMask
+Fuchsia::getSupportedSanitizers(BoundArch BA,
+                                Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::HWAddress;
   Res |= SanitizerKind::PointerCompare;
@@ -479,9 +483,12 @@ SanitizerMask Fuchsia::getSupportedSanitizers() const {
   Res |= SanitizerKind::Fuzzer;
   Res |= SanitizerKind::FuzzerNoLink;
   Res |= SanitizerKind::Leak;
-  Res |= SanitizerKind::SafeStack;
   Res |= SanitizerKind::Scudo;
   Res |= SanitizerKind::Thread;
+  if (getTriple().getArch() == llvm::Triple::x86_64 ||
+      getTriple().getArch() == llvm::Triple::x86) {
+    Res |= SanitizerKind::SafeStack;
+  }
   return Res;
 }
 
@@ -492,6 +499,7 @@ SanitizerMask Fuchsia::getDefaultSanitizers() const {
   case llvm::Triple::riscv64:
     Res |= SanitizerKind::ShadowCallStack;
     break;
+  case llvm::Triple::x86:
   case llvm::Triple::x86_64:
     Res |= SanitizerKind::SafeStack;
     break;

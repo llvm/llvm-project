@@ -11,14 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/TensorToSPIRV/TensorToSPIRV.h"
-#include "../SPIRVCommon/Pattern.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/Dialect/SPIRV/Utils/LayoutUtils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/AffineMap.h"
-#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "tensor-to-spirv-pattern"
 
@@ -71,10 +68,10 @@ public:
       // We could use the initializer directly; but certain driver compilers
       // have bugs dealing with that. So for now, use spirv.Store for
       // initialization.
-      varOp = rewriter.create<spirv::VariableOp>(loc, varType,
-                                                 spirv::StorageClass::Function,
-                                                 /*initializer=*/nullptr);
-      rewriter.create<spirv::StoreOp>(loc, varOp, adaptor.getTensor());
+      varOp = spirv::VariableOp::create(rewriter, loc, varType,
+                                        spirv::StorageClass::Function,
+                                        /*initializer=*/nullptr);
+      spirv::StoreOp::create(rewriter, loc, varOp, adaptor.getTensor());
     } else {
       // Need to store the value to the local variable. It's questionable
       // whether we want to support such case though.
@@ -86,7 +83,7 @@ public:
 
     Value index = spirv::linearizeIndex(adaptor.getIndices(), strides,
                                         /*offset=*/0, indexType, loc, rewriter);
-    auto acOp = rewriter.create<spirv::AccessChainOp>(loc, varOp, index);
+    auto acOp = spirv::AccessChainOp::create(rewriter, loc, varOp, index);
 
     rewriter.replaceOpWithNewOp<spirv::LoadOp>(extractOp, acOp);
 

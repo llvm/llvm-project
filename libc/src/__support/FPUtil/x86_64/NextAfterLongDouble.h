@@ -16,16 +16,16 @@
 #error "Invalid include"
 #endif
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 
-#include <stdint.h>
-
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
-LIBC_INLINE long double nextafter(long double from, long double to) {
+LIBC_INLINE LIBC_BIT_CAST_CONSTEXPR long double nextafter(long double from,
+                                                          long double to) {
   using FPBits = FPBits<long double>;
   FPBits from_bits(from);
   if (from_bits.is_nan())

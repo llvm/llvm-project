@@ -13,7 +13,9 @@
 #ifndef LLVM_PROFILEDATA_MEMPROFSUMMARY_H
 #define LLVM_PROFILEDATA_MEMPROFSUMMARY_H
 
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace memprof {
@@ -31,13 +33,21 @@ private:
   const uint64_t NumContexts, NumColdContexts, NumHotContexts;
   const uint64_t MaxColdTotalSize, MaxWarmTotalSize, MaxHotTotalSize;
 
+  // MemProf v3 and prior versions don't have data access profile,
+  // so record the data access profile state.
+  bool HasDataAccessProfile = false;
+  size_t NumHotSymbolsAndStringLiterals = 0;
+  size_t NumKnownColdSymbols = 0;
+  size_t NumKnownColdStringLiterals = 0;
+
 public:
   MemProfSummary(uint64_t NumContexts, uint64_t NumColdContexts,
                  uint64_t NumHotContexts, uint64_t MaxColdTotalSize,
                  uint64_t MaxWarmTotalSize, uint64_t MaxHotTotalSize)
       : NumContexts(NumContexts), NumColdContexts(NumColdContexts),
         NumHotContexts(NumHotContexts), MaxColdTotalSize(MaxColdTotalSize),
-        MaxWarmTotalSize(MaxWarmTotalSize), MaxHotTotalSize(MaxHotTotalSize) {}
+        MaxWarmTotalSize(MaxWarmTotalSize), MaxHotTotalSize(MaxHotTotalSize),
+        HasDataAccessProfile(false) {}
 
   static constexpr unsigned getNumSummaryFields() { return NumSummaryFields; }
   uint64_t getNumContexts() const { return NumContexts; }
@@ -46,11 +56,18 @@ public:
   uint64_t getMaxColdTotalSize() const { return MaxColdTotalSize; }
   uint64_t getMaxWarmTotalSize() const { return MaxWarmTotalSize; }
   uint64_t getMaxHotTotalSize() const { return MaxHotTotalSize; }
-  void printSummaryYaml(raw_ostream &OS) const;
+  LLVM_ABI void printSummaryYaml(raw_ostream &OS) const;
   /// Write to indexed MemProf profile.
-  void write(ProfOStream &OS) const;
+  LLVM_ABI void write(ProfOStream &OS) const;
   /// Read from indexed MemProf profile.
-  static std::unique_ptr<MemProfSummary> deserialize(const unsigned char *&);
+  LLVM_ABI static std::unique_ptr<MemProfSummary>
+  deserialize(const unsigned char *&);
+  /// Build data access profile summary from \p DataAccessProfile.
+  /// The pointer is not owned.
+  /// TODO: Remove this function after the data access profile summary is
+  /// serialized.
+  LLVM_ABI void
+  buildDataAccessSummary(const DataAccessProfData &DataAccessProfile);
 };
 
 } // namespace memprof

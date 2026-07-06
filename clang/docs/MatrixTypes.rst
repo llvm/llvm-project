@@ -53,7 +53,7 @@ type of the *typedef* becomes a matrix type with the given dimensions and an
 element type of the former underlying type.
 
 If a declaration of a *typedef-name* has a ``matrix_type`` attribute, then all
-declaration of that *typedef-name* shall have a matrix_type attribute with the
+declarations of that *typedef-name* shall have a matrix_type attribute with the
 same element type, number of rows, and number of columns.
 
 Standard Conversions
@@ -106,7 +106,8 @@ Otherwise, the result is a glvalue with type ``cv T`` and with the same value
 category as ``E1`` which refers to the element at the given row and column in
 the matrix.
 
-Programs containing a single subscript expression into a matrix are ill-formed.
+A single subscript expression into a matrix is legal in HLSL and denotes a
+vector for the specified row lane, but is ill-formed in C and C++.
 
 **Note**: We considered providing an expression of the form
 ``postfix-expression [expression]`` to access columns of a matrix. We think
@@ -286,6 +287,10 @@ part of the draft specification.
 
 The elements of a  value of a matrix type are laid out in column-major order
 without padding.
+
+To change memory layout to row major use the `-fmatrix-memory-layout` flag.
+This flag supports two flag argument values either `column-major` or
+`row-major` used like so `-fmatrix-memory-layout=column-major`.` 
 
 We propose to provide a Clang option to override this behavior and allow
 contraction of those operations (e.g. *-ffp-contract=matrix*).

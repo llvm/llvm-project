@@ -15,15 +15,18 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDecoder.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include <cstdint>
 
 using namespace llvm;
+using namespace llvm::MCD;
 
 #define DEBUG_TYPE "bpf-disassembler"
 
@@ -82,8 +85,8 @@ static MCDisassembler *createBPFDisassembler(const Target &T,
   return new BPFDisassembler(STI, Ctx);
 }
 
-
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFDisassembler() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeBPFDisassembler() {
   // Register the disassembler.
   TargetRegistry::RegisterMCDisassembler(getTheBPFTarget(),
                                          createBPFDisassembler);
@@ -94,8 +97,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFDisassembler() {
 }
 
 static const unsigned GPRDecoderTable[] = {
-    BPF::R0,  BPF::R1,  BPF::R2,  BPF::R3,  BPF::R4,  BPF::R5,
-    BPF::R6,  BPF::R7,  BPF::R8,  BPF::R9,  BPF::R10, BPF::R11};
+    BPF::R0, BPF::R1, BPF::R2, BPF::R3, BPF::R4,  BPF::R5,
+    BPF::R6, BPF::R7, BPF::R8, BPF::R9, BPF::R10, BPF::R11};
 
 static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t /*Address*/,
@@ -109,8 +112,8 @@ static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, unsigned RegNo,
 }
 
 static const unsigned GPR32DecoderTable[] = {
-    BPF::W0,  BPF::W1,  BPF::W2,  BPF::W3,  BPF::W4,  BPF::W5,
-    BPF::W6,  BPF::W7,  BPF::W8,  BPF::W9,  BPF::W10, BPF::W11};
+    BPF::W0, BPF::W1, BPF::W2, BPF::W3, BPF::W4,  BPF::W5,
+    BPF::W6, BPF::W7, BPF::W8, BPF::W9, BPF::W10, BPF::W11};
 
 static DecodeStatus
 DecodeGPR32RegisterClass(MCInst &Inst, unsigned RegNo, uint64_t /*Address*/,
@@ -166,7 +169,7 @@ DecodeStatus BPFDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
                                              ArrayRef<uint8_t> Bytes,
                                              uint64_t Address,
                                              raw_ostream &CStream) const {
-  bool IsLittleEndian = getContext().getAsmInfo()->isLittleEndian();
+  bool IsLittleEndian = getContext().getAsmInfo().isLittleEndian();
   uint64_t Insn, Hi;
   DecodeStatus Result;
 
@@ -201,18 +204,6 @@ DecodeStatus BPFDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
       Hi = (Bytes[12] << 24) | (Bytes[13] << 16) | (Bytes[14] << 8) | (Bytes[15] << 0);
     auto& Op = Instr.getOperand(1);
     Op.setImm(Make_64(Hi, Op.getImm()));
-    break;
-  }
-  case BPF::LD_ABS_B:
-  case BPF::LD_ABS_H:
-  case BPF::LD_ABS_W:
-  case BPF::LD_IND_B:
-  case BPF::LD_IND_H:
-  case BPF::LD_IND_W: {
-    auto Op = Instr.getOperand(0);
-    Instr.clear();
-    Instr.addOperand(MCOperand::createReg(BPF::R6));
-    Instr.addOperand(Op);
     break;
   }
   }

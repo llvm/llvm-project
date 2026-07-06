@@ -12,12 +12,21 @@
 
 # RUN: ld.lld f1-s.o f2-s.o f3-s.o -o out --fatal-warnings
 # RUN: llvm-readelf -n out | FileCheck --check-prefix GCS %s
-# RUN: ld.lld f1-s.o f2.o f3-s.o -o out.force -z gcs=always --fatal-warnings
+# RUN: ld.lld f1-s.o f2.o f3-s.o -o out.force -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-GCS-WARN-F2 %s
 # RUN: llvm-readelf -n out.force | FileCheck --check-prefix GCS %s
-# RUN: ld.lld f2-s.o f3.o --shared -o out.force.so -z gcs=never -z gcs=always --fatal-warnings
+# RUN: ld.lld f2-s.o f3.o --shared -o out.force.so -z gcs=never -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-GCS-WARN-F3 %s
 # RUN: llvm-readelf -n out.force.so | FileCheck --check-prefix GCS %s
+# RUN: ld.lld --shared f3.o -o out.force-bti -z gcs=always -z force-bti 2>&1 | FileCheck --check-prefix=REPORT-BTI-GCS-WARN-F3 %s
 
 # GCS: Properties:    aarch64 feature: GCS
+
+# REPORT-GCS-WARN-F2: warning: f2.o: -z gcs: file does not have GNU_PROPERTY_AARCH64_FEATURE_1_GCS property
+# REPORT-GCS-WARN-F2-NOT: {{.}}
+# REPORT-GCS-WARN-F3: warning: f3.o: -z gcs: file does not have GNU_PROPERTY_AARCH64_FEATURE_1_GCS property
+# REPORT-GCS-WARN-F3-NOT: {{.}}
+# REPORT-BTI-GCS-WARN-F3: warning: f3.o: -z force-bti: file does not have GNU_PROPERTY_AARCH64_FEATURE_1_BTI property
+# REPORT-BTI-GCS-WARN-F3: warning: f3.o: -z gcs: file does not have GNU_PROPERTY_AARCH64_FEATURE_1_GCS property
+# REPORT-BTI-GCS-WARN-F3-NOT: {{.}}
 
 ## GCS should not be enabled if it's not enabled in at least one input.
 
@@ -35,6 +44,7 @@
 # RUN: ld.lld f1-s.o f2.o f3-s.o -z gcs-report=warning 2>&1 | FileCheck --check-prefix=REPORT-WARN %s
 # RUN: ld.lld f1-s.o f2.o f3-s.o -z gcs-report=warning -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-WARN %s
 # RUN: ld.lld f1-s.o f2.o f3-s.o -z gcs-report=warning -z gcs=never 2>&1 | FileCheck --check-prefix=REPORT-WARN %s
+# RUN: ld.lld f1-s.o f2.o f3-s.o -z gcs-report=none -z gcs=always 2>&1 | count 0
 # RUN: not ld.lld f2-s.o f3.o --shared -z gcs-report=error 2>&1 | FileCheck --check-prefix=REPORT-ERROR %s
 # RUN: ld.lld f1-s.o f2-s.o f3-s.o -z gcs-report=warning -z gcs=always 2>&1 | count 0
 

@@ -11,8 +11,8 @@ llvm.func @testenterdataop(%arg0: !llvm.ptr, %arg1 : !llvm.ptr) {
 
 // CHECK: @[[LOCSTR:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};testenterdataop;{{[0-9]*}};{{[0-9]*}};;\00", align 1
 // CHECK: @[[LOCGLOBAL:.*]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 {{[0-9]*}}, ptr @[[LOCSTR]] }, align 8
-// CHECK: @[[MAPNAME1:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};unknown;{{[0-9]*}};{{[0-9]*}};;\00", align 1
-// CHECK: @[[MAPNAME2:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};unknown;{{[0-9]*}};{{[0-9]*}};;\00", align 1
+// CHECK: @[[MAPNAME1:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";unknown;{{.*}};{{[0-9]*}};{{[0-9]*}};;\00", align 1
+// CHECK: @[[MAPNAME2:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";unknown;{{.*}};{{[0-9]*}};{{[0-9]*}};;\00", align 1
 // CHECK: @[[MAPTYPES:.*]] = private unnamed_addr constant [{{[0-9]*}} x i64] [i64 0, i64 1]
 // CHECK: @[[MAPNAMES:.*]] = private constant [{{[0-9]*}} x ptr] [ptr @[[MAPNAME1]], ptr @[[MAPNAME2]]]
 
@@ -60,8 +60,8 @@ llvm.func @testexitdataop(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
 
 // CHECK: @[[LOCSTR:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};testexitdataop;{{[0-9]*}};{{[0-9]*}};;\00"
 // CHECK: @[[LOCGLOBAL:.*]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 {{[0-9]*}}, ptr @[[LOCSTR]] }
-// CHECK: @[[MAPNAME1:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};unknown;{{[0-9]*}};{{[0-9]*}};;\00"
-// CHECK: @[[MAPNAME2:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};unknown;{{[0-9]*}};{{[0-9]*}};;\00"
+// CHECK: @[[MAPNAME1:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";unknown;{{.*}};{{[0-9]*}};{{[0-9]*}};;\00"
+// CHECK: @[[MAPNAME2:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";unknown;{{.*}};{{[0-9]*}};{{[0-9]*}};;\00"
 // CHECK: @[[MAPTYPES:.*]] = private unnamed_addr constant [{{[0-9]*}} x i64] [i64 8, i64 2]
 // CHECK: @[[MAPNAMES:.*]] = private constant [{{[0-9]*}} x ptr] [ptr @[[MAPNAME1]], ptr @[[MAPNAME2]]]
 
@@ -104,7 +104,7 @@ llvm.func @testupdateop(%arg1: !llvm.ptr) {
 
 // CHECK: [[LOCSTR:@.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};testupdateop;{{[0-9]*}};{{[0-9]*}};;\00", align 1
 // CHECK: [[LOCGLOBAL:@.*]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 {{[0-9]*}}, ptr [[LOCSTR]] }, align 8
-// CHECK: [[MAPNAME1:@.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};unknown;{{[0-9]*}};{{[0-9]*}};;\00", align 1
+// CHECK: [[MAPNAME1:@.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";unknown;{{.*}};{{[0-9]*}};{{[0-9]*}};;\00", align 1
 // CHECK: [[MAPTYPES:@.*]] = private unnamed_addr constant [{{[0-9]*}} x i64] [i64 1]
 // CHECK: [[MAPNAMES:@.*]] = private constant [{{[0-9]*}} x ptr] [ptr [[MAPNAME1]]]
 
@@ -147,8 +147,8 @@ llvm.func @testdataop(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr) {
 // CHECK: %struct.ident_t = type { i32, i32, i32, i32, ptr }
 // CHECK: @[[LOCSTR:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};testdataop;{{[0-9]*}};{{[0-9]*}};;\00"
 // CHECK: @[[LOCGLOBAL:.*]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 {{[0-9]*}}, ptr @[[LOCSTR]] }
-// CHECK: @[[MAPNAME1:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};unknown;{{[0-9]*}};{{[0-9]*}};;\00"
-// CHECK: @[[MAPNAME2:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";{{.*}};unknown;{{[0-9]*}};{{[0-9]*}};;\00"
+// CHECK: @[[MAPNAME1:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";unknown;{{.*}};{{[0-9]*}};{{[0-9]*}};;\00"
+// CHECK: @[[MAPNAME2:.*]] = private unnamed_addr constant [{{[0-9]*}} x i8] c";unknown;{{.*}};{{[0-9]*}};{{[0-9]*}};;\00"
 // CHECK: @[[MAPTYPES:.*]] = private unnamed_addr constant [{{[0-9]*}} x i64] [i64 8193, i64 8192]
 // CHECK: @[[MAPNAMES:.*]] = private constant [{{[0-9]*}} x ptr] [ptr @[[MAPNAME1]], ptr @[[MAPNAME2]]]
 

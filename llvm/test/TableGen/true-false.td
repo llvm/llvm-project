@@ -67,13 +67,18 @@ def rec7 {
   bits<3> flags = { true, false, true };
 }
 
-// `!and` and `!or` should be short-circuit such that `!tail` on empty list will never
-// be evaluated.
+// `!and` and `!or` should be short-circuited such that any of the `!head` or
+// `!tail` on empty list below will never be evaluated.
 // CHECK: def rec8
+// CHECK:   bit v = 0;
+// CHECK:   int v2 = -1;
 // CHECK:   list<int> newSeq = [];
 // CHECK:   list<int> newSeq2 = [];
 
 class Foo <list<int> seq = []> {
+  bit v = !and(false, !head(seq));
+  int v2 = !or(-1, !head(seq));
+
   bit unresolved = !ne(!find(NAME, "BAR"), -1);
   list<int> newSeq  = !if(!and(false, unresolved), !tail(seq), seq);
   list<int> newSeq2 = !if(!or(-1, unresolved), seq, !tail(seq));

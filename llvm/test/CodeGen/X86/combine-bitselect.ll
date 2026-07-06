@@ -283,7 +283,7 @@ define <2 x i64> @bitselect_v2i64_broadcast_rrm(<2 x i64> %a0, <2 x i64> %a1, pt
 ;
 ; AVX512VL-LABEL: bitselect_v2i64_broadcast_rrm:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm1 ^ (mem & (xmm0 ^ xmm1))
+; AVX512VL-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm1 ^ (m64bcst & (xmm0 ^ xmm1))
 ; AVX512VL-NEXT:    retq
   %a2 = load i64, ptr %p2
   %1 = insertelement <2 x i64> undef, i64 %a2, i32 0
@@ -604,7 +604,7 @@ define <4 x i64> @bitselect_v4i64_broadcast_rrm(<4 x i64> %a0, <4 x i64> %a1, pt
 ;
 ; AVX512VL-LABEL: bitselect_v4i64_broadcast_rrm:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm1 ^ (mem & (ymm0 ^ ymm1))
+; AVX512VL-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm1 ^ (m64bcst & (ymm0 ^ ymm1))
 ; AVX512VL-NEXT:    retq
   %a2 = load i64, ptr %p2
   %1 = insertelement <4 x i64> undef, i64 %a2, i32 0
@@ -975,7 +975,7 @@ define <8 x i64> @bitselect_v8i64_broadcast_rrm(<8 x i64> %a0, <8 x i64> %a1, pt
 ;
 ; AVX512-LABEL: bitselect_v8i64_broadcast_rrm:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm1 ^ (mem & (zmm0 ^ zmm1))
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm1 ^ (m64bcst & (zmm0 ^ zmm1))
 ; AVX512-NEXT:    retq
   %a2 = load i64, ptr %p2
   %1 = insertelement <8 x i64> undef, i64 %a2, i32 0

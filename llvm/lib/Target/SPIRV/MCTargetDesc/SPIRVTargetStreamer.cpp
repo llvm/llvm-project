@@ -15,4 +15,4 @@
 using namespace llvm;
 
 SPIRVTargetStreamer::SPIRVTargetStreamer(MCStreamer &S) : MCTargetStreamer(S) {}
-SPIRVTargetStreamer::~SPIRVTargetStreamer() {}
+SPIRVTargetStreamer::~SPIRVTargetStreamer() = default;

@@ -36,7 +36,7 @@ define amdgpu_kernel void @k0() sanitize_address {
 ; CHECK-NEXT:    store i32 [[TMP16]], ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_K0_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.k0.md, i32 0, i32 1, i32 2), align 4
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i32 [[TMP24]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = zext i32 [[TMP17]] to i64
-; CHECK-NEXT:    [[TMP22:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP22:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    [[TMP23:%.*]] = ptrtoint ptr [[TMP22]] to i64
 ; CHECK-NEXT:    [[TMP19:%.*]] = call i64 @__asan_malloc_impl(i64 [[TMP21]], i64 [[TMP23]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP19]] to ptr addrspace(1)
@@ -66,7 +66,7 @@ define amdgpu_kernel void @k0() sanitize_address {
 ; CHECK-NEXT:    [[TMP38:%.*]] = and i1 [[TMP34]], [[TMP37]]
 ; CHECK-NEXT:    [[TMP39:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 [[TMP38]])
 ; CHECK-NEXT:    [[TMP40:%.*]] = icmp ne i64 [[TMP39]], 0
-; CHECK-NEXT:    br i1 [[TMP40]], label [[ASAN_REPORT:%.*]], label [[TMP43:%.*]], !prof [[PROF2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP40]], label [[ASAN_REPORT:%.*]], label [[TMP43:%.*]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       asan.report:
 ; CHECK-NEXT:    br i1 [[TMP38]], label [[TMP41:%.*]], label [[CONDFREE:%.*]]
 ; CHECK:       41:
@@ -82,7 +82,7 @@ define amdgpu_kernel void @k0() sanitize_address {
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    br i1 [[XYZCOND]], label [[FREE:%.*]], label [[END:%.*]]
 ; CHECK:       Free:
-; CHECK-NEXT:    [[TMP25:%.*]] = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:    [[TMP25:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    [[TMP26:%.*]] = ptrtoint ptr [[TMP25]] to i64
 ; CHECK-NEXT:    [[TMP27:%.*]] = ptrtoint ptr addrspace(1) [[TMP28]] to i64
 ; CHECK-NEXT:    call void @__asan_free_impl(i64 [[TMP27]], i64 [[TMP26]])
@@ -103,11 +103,12 @@ define amdgpu_kernel void @k0() sanitize_address {
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { convergent nocallback nofree nounwind willreturn }
-; CHECK: attributes #[[ATTR4:[0-9]+]] = { convergent nocallback nofree nounwind willreturn memory(none) }
+; CHECK: attributes #[[ATTR4:[0-9]+]] = { convergent nocallback nocreateundeforpoison nofree nounwind willreturn memory(none) }
 ; CHECK: attributes #[[ATTR5:[0-9]+]] = { convergent nocallback nofree nounwind }
 ; CHECK: attributes #[[ATTR6]] = { nomerge }
 ;.
 ; CHECK: [[META0]] = !{i32 0, i32 1}
 ; CHECK: [[META1]] = !{i32 8, i32 9}
-; CHECK: [[PROF2]] = !{!"branch_weights", i32 1, i32 1048575}
+; CHECK: [[META2:![0-9]+]] = !{i32 4, !"nosanitize_address", i32 1}
+; CHECK: [[PROF3]] = !{!"branch_weights", i32 1, i32 1048575}
 ;.

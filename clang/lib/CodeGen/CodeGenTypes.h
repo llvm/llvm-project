@@ -229,12 +229,12 @@ public:
   const CGFunctionInfo &arrangeBuiltinFunctionCall(QualType resultType,
                                                    const CallArgList &args);
 
-  /// A SYCL kernel caller function is an offload device entry point function
+  /// A device kernel caller function is an offload device entry point function
   /// with a target device dependent calling convention such as amdgpu_kernel,
   /// ptx_kernel, or spir_kernel.
   const CGFunctionInfo &
-  arrangeSYCLKernelCallerDeclaration(QualType resultType,
-                                     const FunctionArgList &args);
+  arrangeDeviceKernelCallerDeclaration(QualType resultType,
+                                       const FunctionArgList &args);
 
   /// Objective-C methods are C functions with some implicit parameters.
   const CGFunctionInfo &arrangeObjCMethodDeclaration(const ObjCMethodDecl *MD);

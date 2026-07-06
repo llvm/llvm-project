@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/MBFIWrapper.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -35,6 +36,7 @@
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineSizeOpts.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -42,6 +44,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
@@ -71,8 +74,9 @@ STATISTIC(NumTailMerge , "Number of block tails merged");
 STATISTIC(NumHoist     , "Number of times common instructions are hoisted");
 STATISTIC(NumTailCalls,  "Number of tail calls optimized");
 
-static cl::opt<cl::boolOrDefault> FlagEnableTailMerge("enable-tail-merge",
-                              cl::init(cl::BOU_UNSET), cl::Hidden);
+static cl::opt<cl::boolOrDefault>
+    FlagEnableTailMerge("enable-tail-merge",
+                        cl::init(cl::boolOrDefault::BOU_UNSET), cl::Hidden);
 
 // Throttle for huge numbers of predecessors (compile speed problems)
 static cl::opt<unsigned>
@@ -137,10 +141,11 @@ PreservedAnalyses BranchFolderPass::run(MachineFunction &MF,
   MBFIWrapper MBBFreqInfo(MBFI);
   BranchFolder Folder(EnableTailMerge, /*CommonHoist=*/true, MBBFreqInfo, MBPI,
                       PSI);
-  if (!Folder.OptimizeFunction(MF, MF.getSubtarget().getInstrInfo(),
-                               MF.getSubtarget().getRegisterInfo()))
-    return PreservedAnalyses::all();
-  return getMachineFunctionPassPreservedAnalyses();
+  if (Folder.OptimizeFunction(MF, MF.getSubtarget().getInstrInfo(),
+                              MF.getSubtarget().getRegisterInfo()))
+    return getMachineFunctionPassPreservedAnalyses();
+
+  return PreservedAnalyses::all();
 }
 
 bool BranchFolderLegacy::runOnMachineFunction(MachineFunction &MF) {
@@ -169,11 +174,15 @@ BranchFolder::BranchFolder(bool DefaultEnableTailMerge, bool CommonHoist,
     : EnableHoistCommonCode(CommonHoist), MinCommonTailLength(MinTailLength),
       MBBFreqInfo(FreqInfo), MBPI(ProbInfo), PSI(PSI) {
   switch (FlagEnableTailMerge) {
-  case cl::BOU_UNSET:
+  case cl::boolOrDefault::BOU_UNSET:
     EnableTailMerge = DefaultEnableTailMerge;
     break;
-  case cl::BOU_TRUE: EnableTailMerge = true; break;
-  case cl::BOU_FALSE: EnableTailMerge = false; break;
+  case cl::boolOrDefault::BOU_TRUE:
+    EnableTailMerge = true;
+    break;
+  case cl::boolOrDefault::BOU_FALSE:
+    EnableTailMerge = false;
+    break;
   }
 }
 
@@ -195,10 +204,10 @@ void BranchFolder::RemoveDeadBlock(MachineBasicBlock *MBB) {
       MF->eraseAdditionalCallInfo(&MI);
 
   // Remove the block.
-  MF->erase(MBB);
-  EHScopeMembership.erase(MBB);
   if (MLI)
     MLI->removeBlock(MBB);
+  MF->erase(MBB);
+  EHScopeMembership.erase(MBB);
 }
 
 bool BranchFolder::OptimizeFunction(MachineFunction &MF,
@@ -781,6 +790,15 @@ bool BranchFolder::CreateCommonTailOnlyBlock(MachineBasicBlock *&PredBB,
   return true;
 }
 
+/// Ensure undef flag is preserved only when it is present in both instructions.
+static void mergeUndefFlag(MachineInstr &Merged, const MachineInstr &Other) {
+  for (unsigned I = 0, E = Merged.getNumOperands(); I != E; ++I) {
+    MachineOperand &MO = Merged.getOperand(I);
+    if (MO.isReg() && MO.isUndef() && !Other.getOperand(I).isUndef())
+      MO.setIsUndef(false);
+  }
+}
+
 static void
 mergeOperations(MachineBasicBlock::iterator MBBIStartPos,
                 MachineBasicBlock &MBBCommon) {
@@ -816,15 +834,9 @@ mergeOperations(MachineBasicBlock::iterator MBBIStartPos,
     // Merge MMOs from memory operations in the common block.
     if (MBBICommon->mayLoadOrStore())
       MBBICommon->cloneMergedMemRefs(*MBB->getParent(), {&*MBBICommon, &*MBBI});
+
     // Drop undef flags if they aren't present in all merged instructions.
-    for (unsigned I = 0, E = MBBICommon->getNumOperands(); I != E; ++I) {
-      MachineOperand &MO = MBBICommon->getOperand(I);
-      if (MO.isReg() && MO.isUndef()) {
-        const MachineOperand &OtherMO = MBBI->getOperand(I);
-        if (!OtherMO.isUndef())
-          MO.setIsUndef(false);
-      }
-    }
+    mergeUndefFlag(*MBBICommon, *MBBI);
 
     ++MBBI;
     ++MBBICommon;
@@ -862,7 +874,7 @@ void BranchFolder::mergeCommonTails(unsigned commonTailIndex) {
             "Reached BB end within common tail");
       }
       assert(MI.isIdenticalTo(*Pos) && "Expected matching MIIs!");
-      DL = DILocation::getMergedLocation(DL, Pos->getDebugLoc());
+      DL = DebugLoc::getMergedLocation(DL, Pos->getDebugLoc());
       NextCommonInsts[i] = ++Pos;
     }
     MI.setDebugLoc(DL);
@@ -933,7 +945,13 @@ bool BranchFolder::TryTailMergeBlocks(MachineBasicBlock *SuccBB,
 
   // Sort by hash value so that blocks with identical end sequences sort
   // together.
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
+  // If origin-tracking is enabled then MergePotentialElt is no longer a POD
+  // type, so we need std::sort instead.
+  std::sort(MergePotentials.begin(), MergePotentials.end());
+#else
   array_pod_sort(MergePotentials.begin(), MergePotentials.end());
+#endif
 
   // Walk through equivalence sets looking for actual exact matches.
   while (MergePotentials.size() > 1) {
@@ -1243,7 +1261,8 @@ bool BranchFolder::OptimizeBranches(MachineFunction &MF) {
     MadeChange |= OptimizeBlock(&MBB);
 
     // If it is dead, remove it.
-    if (MBB.pred_empty() && !MBB.isMachineBlockAddressTaken()) {
+    if (MBB.pred_empty() && !MBB.isMachineBlockAddressTaken() &&
+        !MBB.isEHPad()) {
       RemoveDeadBlock(&MBB);
       MadeChange = true;
       ++NumDeadBlocks;
@@ -1780,10 +1799,18 @@ ReoptimizeBlock:
       // below were performed for EH "FallThrough" blocks.  Therefore, even if
       // that appears not to be happening anymore, we should assume that it is
       // possible and not remove the "!FallThrough()->isEHPad" condition below.
+      //
+      // Similarly, the analyzeBranch call does not consider callbr, which also
+      // introduces the possibility of infinite rotation, as there may be
+      // multiple successors of PrevBB. Thus we check such case by
+      // FallThrough->isInlineAsmBrIndirectTarget().
+      // NOTE: Checking if PrevBB contains callbr is more precise, but much
+      // more expensive.
       MachineBasicBlock *PrevTBB = nullptr, *PrevFBB = nullptr;
       SmallVector<MachineOperand, 4> PrevCond;
-      if (FallThrough != MF.end() &&
-          !FallThrough->isEHPad() &&
+
+      if (FallThrough != MF.end() && !FallThrough->isEHPad() &&
+          !FallThrough->isInlineAsmBrIndirectTarget() &&
           !TII->analyzeBranch(PrevBB, PrevTBB, PrevFBB, PrevCond, true) &&
           PrevBB.isSuccessor(&*FallThrough)) {
         MBB->moveAfter(&MF.back());
@@ -1964,6 +1991,7 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
   MachineBasicBlock::iterator FIB = FBB->begin();
   MachineBasicBlock::iterator TIE = TBB->end();
   MachineBasicBlock::iterator FIE = FBB->end();
+  MachineFunction &MF = *TBB->getParent();
   while (TIB != TIE && FIB != FIE) {
     // Skip dbg_value instructions. These do not count.
     TIB = skipDebugInstructionsForward(TIB, TIE, false);
@@ -1976,6 +2004,10 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
 
     if (TII->isPredicated(*TIB))
       // Hard to reason about register liveness with predicated instruction.
+      break;
+
+    if (!TII->isSafeToMove(*TIB, TBB, MF))
+      // Don't hoist the instruction if it isn't safe to move.
       break;
 
     bool IsSafe = true;
@@ -2076,26 +2108,63 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
   if (TBB == FBB) {
     MBB->splice(Loc, TBB, TBB->begin(), TIB);
   } else {
+    // Merge the debug locations, and hoist and kill the debug instructions from
+    // both branches. FIXME: We could probably try harder to preserve some debug
+    // instructions (but at least this isn't producing wrong locations).
+    MachineInstrBuilder MIRBuilder(*MBB->getParent(), Loc);
+    auto HoistAndKillDbgInstr = [MBB, Loc](MachineBasicBlock::iterator DI) {
+      assert(DI->isDebugInstr() && "Expected a debug instruction");
+      if (DI->isDebugRef()) {
+        const TargetInstrInfo *TII =
+            MBB->getParent()->getSubtarget().getInstrInfo();
+        const MCInstrDesc &DBGV = TII->get(TargetOpcode::DBG_VALUE);
+        DI = BuildMI(*MBB->getParent(), DI->getDebugLoc(), DBGV, false, 0,
+                     DI->getDebugVariable(), DI->getDebugExpression());
+        MBB->insert(Loc, &*DI);
+        return;
+      }
+      // Deleting a DBG_PHI results in an undef at the referenced DBG_INSTR_REF.
+      if (DI->isDebugPHI()) {
+        DI->eraseFromParent();
+        return;
+      }
+      // Move DBG_LABELs without modifying them. Set DBG_VALUEs undef.
+      if (!DI->isDebugLabel())
+        DI->setDebugValueUndef();
+      DI->moveBefore(&*Loc);
+    };
+
     // TIB and FIB point to the end of the regions to hoist/merge in TBB and
     // FBB.
     MachineBasicBlock::iterator FE = FIB;
     MachineBasicBlock::iterator FI = FBB->begin();
     for (MachineBasicBlock::iterator TI :
          make_early_inc_range(make_range(TBB->begin(), TIB))) {
-      // Move debug instructions and pseudo probes without modifying them.
-      // FIXME: This is the wrong thing to do for debug locations, which
-      // should at least be killed (and hoisted from BOTH blocks).
-      if (TI->isDebugOrPseudoInstr()) {
-        TI->moveBefore(&*Loc);
+      // Hoist and kill debug instructions from FBB. After this loop FI points
+      // to the next non-debug instruction to hoist (checked in assert after the
+      // TBB debug instruction handling code).
+      while (FI != FE && FI->isDebugInstr())
+        HoistAndKillDbgInstr(FI++);
+
+      // Kill debug instructions before moving.
+      if (TI->isDebugInstr()) {
+        HoistAndKillDbgInstr(TI);
         continue;
       }
 
-      // Get the next non-meta instruction in FBB.
-      FI = skipDebugInstructionsForward(FI, FE, false);
+      // FI and TI now point to identical non-debug instructions.
+      assert(FI != FE && "Unexpected end of FBB range");
+      // Pseudo probes are excluded from the range when identifying foldable
+      // instructions, so we don't expect to see one now.
+      assert(!TI->isPseudoProbe() && "Unexpected pseudo probe in range");
       // NOTE: The loop above checks CheckKillDead but we can't do that here as
       // it modifies some kill markers after the check.
       assert(TI->isIdenticalTo(*FI, MachineInstr::CheckDefs) &&
              "Expected non-debug lockstep");
+
+      // Drop undef flag on the hoisted instruction if it was not present in
+      // both of the original ones.
+      mergeUndefFlag(*TI, *FI);
 
       // Merge debug locs on hoisted instructions.
       TI->setDebugLoc(
@@ -2104,6 +2173,7 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
       ++FI;
     }
   }
+
   FBB->erase(FBB->begin(), FIB);
 
   if (UpdateLiveIns)

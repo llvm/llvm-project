@@ -202,7 +202,7 @@ struct P {
 struct Q {
   template <typename T> int foo() {
     return T::template I<int>;
-    // expected-error@-1 {{'P::template I' is expected to be a non-type template, but instantiated to a type alias template}}
+    // expected-error@-1 {{'non_functions::PR88832::P::template I' is expected to be a non-type template, but instantiated to a type alias template}}
     // expected-note@#TypeAlias {{type alias template declared here}}
   }
 };

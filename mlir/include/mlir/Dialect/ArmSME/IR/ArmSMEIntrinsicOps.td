@@ -71,6 +71,7 @@ class ArmSME_IntrOp<string mnemonic,
           /*bit requiresAccessGroup=*/0,
           /*bit requiresAliasAnalysis=*/0,
           /*bit requiresFastmath=*/0,
+          /*bit requiresArgAndResultAttrs=*/0,
           /*bit requiresOpBundles=*/0,
           /*list<int> immArgPositions=*/immArgPositions,
           /*list<string> immArgAttrNames=*/immArgAttrNames>;
@@ -114,7 +115,8 @@ def LLVM_aarch64_sme_umops_za32 : ArmSME_IntrMopOverloadedOp<"umops.za32">;
 class ArmSME_IntrLoadStoreOp<string mnemonic>
     : ArmSME_IntrOp<mnemonic,
                     /*immArgPositions=*/[2],
-                    /*immArgAttrNames=*/["tile_id"]>;
+                    /*immArgAttrNames=*/["tile_id"],
+                    /*overloadedOperands=*/[1]>;
 
 // Loads (from memory to ZA tile slice)
 class ArmSME_IntrLoadOp<string mnemonic>
@@ -155,7 +157,10 @@ def LLVM_aarch64_sme_st1d_vert : ArmSME_IntrStoreOp<"st1d.vert">;
 def LLVM_aarch64_sme_st1q_vert : ArmSME_IntrStoreOp<"st1q.vert">;
 
 def LLVM_aarch64_sme_str
-    : ArmSME_IntrOp<"str">,
+    : ArmSME_IntrOp<"str",
+                    /*immArgPositions=*/[],
+                    /*immArgAttrNames=*/[],
+                    /*overloadedOperands=*/[1]>,
       Arguments<(ins Arg<I32, "Index">:$index,
                  Arg<LLVM_AnyPointer, "Store address", [MemWrite]>:$store_address,
                  Arg<I32, "Offset">:$offset)>;
@@ -200,9 +205,6 @@ class ArmSME_IntrCountOp<string mnemonic>
                     /*traits*/[PredOpTrait<"`res` is i64", TypeIsPred<"res", I64>>],
                     /*numResults=*/1, /*overloadedResults=*/[]>;
 
-def LLVM_aarch64_sme_cntsb : ArmSME_IntrCountOp<"cntsb">;
-def LLVM_aarch64_sme_cntsh : ArmSME_IntrCountOp<"cntsh">;
-def LLVM_aarch64_sme_cntsw : ArmSME_IntrCountOp<"cntsw">;
 def LLVM_aarch64_sme_cntsd : ArmSME_IntrCountOp<"cntsd">;
 
 #endif // ARMSME_INTRINSIC_OPS

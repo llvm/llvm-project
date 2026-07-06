@@ -16,6 +16,12 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK-NEXT: $vgpr0 = COPY [[COPY]](s32)
+    ;
+    ; WAVE32-LABEL: name: copy_s32_vgpr_to_vgpr
+    ; WAVE32: liveins: $vgpr0
+    ; WAVE32-NEXT: {{  $}}
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; WAVE32-NEXT: $vgpr0 = COPY [[COPY]](s32)
     %0:_(s32) = COPY $vgpr0
     $vgpr0 = COPY %0
 
@@ -33,6 +39,12 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK-NEXT: $sgpr0 = COPY [[COPY]](s32)
+    ;
+    ; WAVE32-LABEL: name: copy_s32_sgpr_to_sgpr
+    ; WAVE32: liveins: $sgpr0
+    ; WAVE32-NEXT: {{  $}}
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; WAVE32-NEXT: $sgpr0 = COPY [[COPY]](s32)
     %0:_(s32) = COPY $sgpr0
     $sgpr0 = COPY %0
 
@@ -50,6 +62,12 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK-NEXT: $vgpr0 = COPY [[COPY]](s32)
+    ;
+    ; WAVE32-LABEL: name: copy_s32_sgpr_to_vgpr
+    ; WAVE32: liveins: $sgpr0
+    ; WAVE32-NEXT: {{  $}}
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; WAVE32-NEXT: $vgpr0 = COPY [[COPY]](s32)
     %0:_(s32) = COPY $sgpr0
     $vgpr0 = COPY %0
 
@@ -67,6 +85,12 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK-NEXT: $agpr0 = COPY [[COPY]](s32)
+    ;
+    ; WAVE32-LABEL: name: copy_s32_vgpr_to_agpr
+    ; WAVE32: liveins: $vgpr0
+    ; WAVE32-NEXT: {{  $}}
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; WAVE32-NEXT: $agpr0 = COPY [[COPY]](s32)
     %0:_(s32) = COPY $vgpr0
     $agpr0 = COPY %0
 
@@ -84,6 +108,12 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK-NEXT: $agpr0 = COPY [[COPY]](s32)
+    ;
+    ; WAVE32-LABEL: name: copy_s32_sgpr_to_agpr
+    ; WAVE32: liveins: $sgpr0
+    ; WAVE32-NEXT: {{  $}}
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; WAVE32-NEXT: $agpr0 = COPY [[COPY]](s32)
     %0:_(s32) = COPY $sgpr0
     $agpr0 = COPY %0
 
@@ -101,6 +131,12 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:agpr(s32) = COPY $agpr0
     ; CHECK-NEXT: $vgpr0 = COPY [[COPY]](s32)
+    ;
+    ; WAVE32-LABEL: name: copy_s32_agpr_to_vgpr
+    ; WAVE32: liveins: $agpr0
+    ; WAVE32-NEXT: {{  $}}
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:agpr(s32) = COPY $agpr0
+    ; WAVE32-NEXT: $vgpr0 = COPY [[COPY]](s32)
     %0:_(s32) = COPY $agpr0
     $vgpr0 = COPY %0
 
@@ -118,6 +154,12 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:agpr(s32) = COPY $agpr0
     ; CHECK-NEXT: $agpr0 = COPY [[COPY]](s32)
+    ;
+    ; WAVE32-LABEL: name: copy_s32_agpr_to_agpr
+    ; WAVE32: liveins: $agpr0
+    ; WAVE32-NEXT: {{  $}}
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:agpr(s32) = COPY $agpr0
+    ; WAVE32-NEXT: $agpr0 = COPY [[COPY]](s32)
     %0:_(s32) = COPY $agpr0
     $agpr0 = COPY %0
 
@@ -137,6 +179,14 @@ body: |
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY]](s32)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY1]](s1)
+    ;
+    ; WAVE32-LABEL: name: copy_s1_sgpr_to_vcc_preassigned
+    ; WAVE32: liveins: $sgpr0
+    ; WAVE32-NEXT: {{  $}}
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; WAVE32-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY]](s32)
+    ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[COPY1]](s1)
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s1) = G_TRUNC %0
     %2:vcc(s1) = COPY %1
@@ -157,6 +207,14 @@ body: |
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY1]](s1)
+    ;
+    ; WAVE32-LABEL: name: copy_s1_vgpr_to_vcc_preassigned
+    ; WAVE32: liveins: $vgpr0
+    ; WAVE32-NEXT: {{  $}}
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; WAVE32-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
+    ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[COPY1]](s1)
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s1) = G_TRUNC %0
     %2:vcc(s1) = COPY %1
@@ -177,6 +235,14 @@ body: |
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY]](s32)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY1]](s1)
+    ;
+    ; WAVE32-LABEL: name: copy_s1_sgpr_to_vcc
+    ; WAVE32: liveins: $sgpr0
+    ; WAVE32-NEXT: {{  $}}
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; WAVE32-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY]](s32)
+    ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[COPY1]](s1)
     %0:_(s32) = COPY $sgpr0
     %1:_(s1) = G_TRUNC %0
     %2:vcc(s1) = COPY %1
@@ -198,6 +264,14 @@ body: |
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY1]](s1)
+    ;
+    ; WAVE32-LABEL: name: copy_s1_vgpr_to_vcc
+    ; WAVE32: liveins: $vgpr0
+    ; WAVE32-NEXT: {{  $}}
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; WAVE32-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
+    ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[COPY1]](s1)
     %0:_(s32) = COPY $vgpr0
     %1:_(s1) = G_TRUNC %0
     %2:vcc(s1) = COPY %1
@@ -215,9 +289,17 @@ body: |
     ; CHECK: liveins: $sgpr4_sgpr5
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vcc(s1) = COPY $sgpr4_sgpr5
-    ; CHECK-NEXT: [[CONST1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[CONST2:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY]](s1), [[CONST1]], [[CONST2]]
+    ; CHECK-NEXT: [[C:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY]](s1), [[C]], [[C1]]
+    ;
+    ; WAVE32-LABEL: name: wave64_copy_sgpr_64_to_s1
+    ; WAVE32: liveins: $sgpr4_sgpr5
+    ; WAVE32-NEXT: {{  $}}
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vcc(s1) = COPY $sgpr4_sgpr5
+    ; WAVE32-NEXT: [[C:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1
+    ; WAVE32-NEXT: [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
+    ; WAVE32-NEXT: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY]](s1), [[C]], [[C1]]
     %0:_(s1) = COPY $sgpr4_sgpr5
     %1:_(s32) = G_ZEXT %0:_(s1)
 ...
@@ -229,13 +311,21 @@ legalized: true
 body: |
   bb.0:
     liveins: $sgpr0
+    ; CHECK-LABEL: name: wave32_copy_sgpr_32_to_s1
+    ; CHECK: liveins: $sgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vcc(s1) = COPY $sgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY]](s1), [[C]], [[C1]]
+    ;
     ; WAVE32-LABEL: name: wave32_copy_sgpr_32_to_s1
     ; WAVE32: liveins: $sgpr0
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vcc(s1) = COPY $sgpr0
-    ; WAVE32-NEXT: [[CONST1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1
-    ; WAVE32-NEXT: [[CONST2:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
-    ; WAVE32-NEXT: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY]](s1), [[CONST1]], [[CONST2]]
+    ; WAVE32-NEXT: [[C:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1
+    ; WAVE32-NEXT: [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
+    ; WAVE32-NEXT: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY]](s1), [[C]], [[C1]]
     %0:_(s1) = COPY $sgpr0
     %1:_(s32) = G_ZEXT %0:_(s1)
 ...
@@ -250,14 +340,26 @@ body: |
     ; CHECK-LABEL: name: wave64_copy2_sgpr_64_to_s1
     ; CHECK: liveins: $sgpr4_sgpr5, $sgpr6_sgpr7
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vcc(s1) = COPY $sgpr4_sgpr5
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vcc(s1) = COPY $sgpr6_sgpr7
-    ; CHECK-NEXT: [[CONST1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[CONST2:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY1]](s1), [[CONST1]], [[CONST2]]
-    ; CHECK-NEXT: [[CONST3:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[CONST4:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[SELECT2:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY2]](s1), [[CONST3]], [[CONST4]]
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vcc(s1) = COPY $sgpr4_sgpr5
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vcc(s1) = COPY $sgpr6_sgpr7
+    ; CHECK-NEXT: [[C:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY]](s1), [[C]], [[C1]]
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY1]](s1), [[C2]], [[C3]]
+    ;
+    ; WAVE32-LABEL: name: wave64_copy2_sgpr_64_to_s1
+    ; WAVE32: liveins: $sgpr4_sgpr5, $sgpr6_sgpr7
+    ; WAVE32-NEXT: {{  $}}
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vcc(s1) = COPY $sgpr4_sgpr5
+    ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vcc(s1) = COPY $sgpr6_sgpr7
+    ; WAVE32-NEXT: [[C:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1
+    ; WAVE32-NEXT: [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
+    ; WAVE32-NEXT: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY]](s1), [[C]], [[C1]]
+    ; WAVE32-NEXT: [[C2:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1
+    ; WAVE32-NEXT: [[C3:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
+    ; WAVE32-NEXT: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY1]](s1), [[C2]], [[C3]]
     %0:_(s1) = COPY $sgpr4_sgpr5
     %1:_(s1) = COPY $sgpr6_sgpr7
     %2:_(s32) = G_ZEXT %0:_(s1)
@@ -271,17 +373,29 @@ legalized: true
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1
+    ; CHECK-LABEL: name: wave32_copy2_sgpr_32_to_s1
+    ; CHECK: liveins: $sgpr0, $sgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vcc(s1) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vcc(s1) = COPY $sgpr1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY]](s1), [[C]], [[C1]]
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[C3:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY1]](s1), [[C2]], [[C3]]
+    ;
     ; WAVE32-LABEL: name: wave32_copy2_sgpr_32_to_s1
     ; WAVE32: liveins: $sgpr0, $sgpr1
     ; WAVE32-NEXT: {{  $}}
-    ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vcc(s1) = COPY $sgpr0
-    ; WAVE32-NEXT: [[COPY2:%[0-9]+]]:vcc(s1) = COPY $sgpr1
-    ; WAVE32-NEXT: [[CONST1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1
-    ; WAVE32-NEXT: [[CONST2:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
-    ; WAVE32-NEXT: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY1]](s1), [[CONST1]], [[CONST2]]
-    ; WAVE32-NEXT: [[CONST3:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1
-    ; WAVE32-NEXT: [[CONST4:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
-    ; WAVE32-NEXT: [[SELECT2:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY2]](s1), [[CONST3]], [[CONST4]]
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vcc(s1) = COPY $sgpr0
+    ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vcc(s1) = COPY $sgpr1
+    ; WAVE32-NEXT: [[C:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1
+    ; WAVE32-NEXT: [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
+    ; WAVE32-NEXT: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY]](s1), [[C]], [[C1]]
+    ; WAVE32-NEXT: [[C2:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1
+    ; WAVE32-NEXT: [[C3:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
+    ; WAVE32-NEXT: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY1]](s1), [[C2]], [[C3]]
     %0:_(s1) = COPY $sgpr0
     %1:_(s1) = COPY $sgpr1
     %2:_(s32) = G_ZEXT %0:_(s1)
@@ -343,9 +457,17 @@ body: |
     ; CHECK: liveins: $sgpr4_sgpr5
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vcc(s1) = COPY $sgpr4_sgpr5
-    ; CHECK-NEXT: [[CONST1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[CONST2:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY]](s1), [[CONST1]], [[CONST2]]
+    ; CHECK-NEXT: [[C:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY]](s1), [[C]], [[C1]]
+    ;
+    ; WAVE32-LABEL: name: wave64_copy_sgpr_64_to_s1_vcc
+    ; WAVE32: liveins: $sgpr4_sgpr5
+    ; WAVE32-NEXT: {{  $}}
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vcc(s1) = COPY $sgpr4_sgpr5
+    ; WAVE32-NEXT: [[C:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1
+    ; WAVE32-NEXT: [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
+    ; WAVE32-NEXT: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY]](s1), [[C]], [[C1]]
     %0:vcc(s1) = COPY $sgpr4_sgpr5
     %1:_(s32) = G_ZEXT %0:vcc(s1)
 ...
@@ -357,13 +479,21 @@ legalized: true
 body: |
   bb.0:
     liveins: $sgpr0
+    ; CHECK-LABEL: name: wave32_copy_sgpr_32_to_s1_vcc
+    ; CHECK: liveins: $sgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vcc(s1) = COPY $sgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY]](s1), [[C]], [[C1]]
+    ;
     ; WAVE32-LABEL: name: wave32_copy_sgpr_32_to_s1_vcc
     ; WAVE32: liveins: $sgpr0
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vcc(s1) = COPY $sgpr0
-    ; WAVE32-NEXT: [[CONST1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1
-    ; WAVE32-NEXT: [[CONST2:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
-    ; WAVE32-NEXT: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY]](s1), [[CONST1]], [[CONST2]]
+    ; WAVE32-NEXT: [[C:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 1
+    ; WAVE32-NEXT: [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
+    ; WAVE32-NEXT: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY]](s1), [[C]], [[C1]]
     %0:vcc(s1) = COPY $sgpr0
     %1:_(s32) = G_ZEXT %0:vcc(s1)
 ...
@@ -380,14 +510,14 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s1) = COPY [[TRUNC]](s1)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s1) = COPY [[TRUNC]](s1)
     ;
     ; WAVE32-LABEL: name: copy_virt_reg_to_s1
     ; WAVE32: liveins: $vgpr0
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; WAVE32-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
-    ; WAVE32-NEXT: [[COPY2:%[0-9]+]]:vgpr(s1) = COPY [[TRUNC]](s1)
+    ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr(s1) = COPY [[TRUNC]](s1)
     %0:_(s32) = COPY $vgpr0
     %1:_(s1) = G_TRUNC %0
     %2:_(s1) = COPY %1
@@ -405,16 +535,16 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s1) = COPY [[TRUNC]](s1)
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s1) = COPY [[COPY2]](s1)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s1) = COPY [[TRUNC]](s1)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s1) = COPY [[COPY1]](s1)
     ;
     ; WAVE32-LABEL: name: copy_virt_reg_to_s1_vgpr
     ; WAVE32: liveins: $vgpr0
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; WAVE32-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
-    ; WAVE32-NEXT: [[COPY2:%[0-9]+]]:vgpr(s1) = COPY [[TRUNC]](s1)
-    ; WAVE32-NEXT: [[COPY3:%[0-9]+]]:vgpr(s1) = COPY [[COPY2]](s1)
+    ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr(s1) = COPY [[TRUNC]](s1)
+    ; WAVE32-NEXT: [[COPY2:%[0-9]+]]:vgpr(s1) = COPY [[COPY1]](s1)
     %0:_(s32) = COPY $vgpr0
     %1:_(s1) = G_TRUNC %0
     %2:vgpr(s1) = COPY %1
@@ -434,16 +564,16 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vcc(s1) = COPY [[COPY2]](s1)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vcc(s1) = COPY [[COPY1]](s1)
     ;
     ; WAVE32-LABEL: name: copy_virt_reg_to_s1_vcc
     ; WAVE32: liveins: $vgpr0
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; WAVE32-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
-    ; WAVE32-NEXT: [[COPY2:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
-    ; WAVE32-NEXT: [[COPY3:%[0-9]+]]:vcc(s1) = COPY [[COPY2]](s1)
+    ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
+    ; WAVE32-NEXT: [[COPY2:%[0-9]+]]:vcc(s1) = COPY [[COPY1]](s1)
     %0:_(s32) = COPY $vgpr0
     %1:_(s1) = G_TRUNC %0
     %2:vcc(s1) = COPY %1
@@ -498,4 +628,122 @@ body: |
     %0:_(s32) = COPY $vgpr0
     %1:_(s1) = G_TRUNC %0
     $sgpr0 = COPY %1
+...
+
+---
+name: copy_sgpr_physreg_to_vcc_s1_wave64
+legalized: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr4_sgpr5
+
+    ; CHECK-LABEL: name: copy_sgpr_physreg_to_vcc_s1_wave64
+    ; CHECK: liveins: $sgpr4_sgpr5
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vcc(s1) = COPY $sgpr4_sgpr5
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY]](s1)
+    ;
+    ; WAVE32-LABEL: name: copy_sgpr_physreg_to_vcc_s1_wave64
+    ; WAVE32: liveins: $sgpr4_sgpr5
+    ; WAVE32-NEXT: {{  $}}
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vcc(s1) = COPY $sgpr4_sgpr5
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[COPY]](s1)
+    %0:_(s1) = COPY $sgpr4_sgpr5
+    S_ENDPGM 0, implicit %0
+
+...
+
+---
+name: copy_vcc_s1_to_sgpr_physreg_wave64
+legalized: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: copy_vcc_s1_to_sgpr_physreg_wave64
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
+    ; CHECK-NEXT: $sgpr4_sgpr5 = COPY [[ICMP]](s1)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit $sgpr4_sgpr5
+    ;
+    ; WAVE32-LABEL: name: copy_vcc_s1_to_sgpr_physreg_wave64
+    ; WAVE32: liveins: $vgpr0
+    ; WAVE32-NEXT: {{  $}}
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
+    ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+    ; WAVE32-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
+    ; WAVE32-NEXT: $sgpr4_sgpr5 = COPY [[ICMP]](s1)
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit $sgpr4_sgpr5
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s32) = G_CONSTANT i32 0
+    %2:_(s1) = G_ICMP intpred(eq), %0, %1
+    $sgpr4_sgpr5 = COPY %2
+    S_ENDPGM 0, implicit $sgpr4_sgpr5
+
+...
+
+---
+name: copy_sgpr_physreg_to_vcc_s1_wave32
+legalized: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr4
+
+    ; CHECK-LABEL: name: copy_sgpr_physreg_to_vcc_s1_wave32
+    ; CHECK: liveins: $sgpr4
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vcc(s1) = COPY $sgpr4
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY]](s1)
+    ;
+    ; WAVE32-LABEL: name: copy_sgpr_physreg_to_vcc_s1_wave32
+    ; WAVE32: liveins: $sgpr4
+    ; WAVE32-NEXT: {{  $}}
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vcc(s1) = COPY $sgpr4
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[COPY]](s1)
+    %0:_(s1) = COPY $sgpr4
+    S_ENDPGM 0, implicit %0
+
+...
+
+---
+name: copy_vcc_s1_to_sgpr_physreg_wave32
+legalized: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: copy_vcc_s1_to_sgpr_physreg_wave32
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
+    ; CHECK-NEXT: $sgpr4 = COPY [[ICMP]](s1)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit $sgpr4
+    ;
+    ; WAVE32-LABEL: name: copy_vcc_s1_to_sgpr_physreg_wave32
+    ; WAVE32: liveins: $vgpr0
+    ; WAVE32-NEXT: {{  $}}
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 0
+    ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+    ; WAVE32-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
+    ; WAVE32-NEXT: $sgpr4 = COPY [[ICMP]](s1)
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit $sgpr4
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s32) = G_CONSTANT i32 0
+    %2:_(s1) = G_ICMP intpred(eq), %0, %1
+    $sgpr4 = COPY %2
+    S_ENDPGM 0, implicit $sgpr4
+
 ...

@@ -28,12 +28,11 @@ getCountAttrKind(bool CountInBytes, bool OrNull) {
 
 static const RecordDecl *GetEnclosingNamedOrTopAnonRecord(const FieldDecl *FD) {
   const auto *RD = FD->getParent();
-  // An unnamed struct is anonymous struct only if it's not instantiated.
-  // However, the struct may not be fully processed yet to determine
+  // An unnamed struct is treated as anonymous struct at this point.
+  // A struct may not be fully processed yet to determine
   // whether it's anonymous or not. In that case, this function treats it as
   // an anonymous struct and tries to find a named parent.
-  while (RD && (RD->isAnonymousStructOrUnion() ||
-                (!RD->isCompleteDefinition() && RD->getName().empty()))) {
+  while (RD && (RD->isAnonymousStructOrUnion() || RD->getName().empty())) {
     const auto *Parent = dyn_cast<RecordDecl>(RD->getParent());
     if (!Parent)
       break;
@@ -115,7 +114,7 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
     //
     // struct Handle;
     // struct Wrapper {
-    //   size_t size;
+    //   size_t count;
     //   struct Handle* __counted_by(count) handles;
     // }
     //
@@ -132,9 +131,23 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
     // `BoundsSafetyCheckUseOfCountAttrPtr`
     //
     // * When the pointee type is always an incomplete type (e.g.
-    // `void`) the attribute is disallowed by this method because we know the
-    // type can never be completed so there's no reason to allow it.
-    InvalidTypeKind = CountedByInvalidPointeeTypeKind::INCOMPLETE;
+    // `void` in strict C mode) the attribute is disallowed by this method
+    // because we know the type can never be completed so there's no reason
+    // to allow it.
+    //
+    // Exception: void has an implicit size of 1 byte for pointer arithmetic
+    // (following GNU convention). Therefore, counted_by on void* is allowed
+    // and behaves equivalently to sized_by (treating the count as bytes).
+    bool IsVoidPtr = PointeeTy->isVoidType();
+    if (IsVoidPtr) {
+      // Emit a warning that this is a GNU extension.
+      Diag(FD->getBeginLoc(), diag::ext_gnu_counted_by_void_ptr) << Kind;
+      Diag(FD->getBeginLoc(), diag::note_gnu_counted_by_void_ptr_use_sized_by)
+          << Kind;
+      assert(InvalidTypeKind == CountedByInvalidPointeeTypeKind::VALID);
+    } else {
+      InvalidTypeKind = CountedByInvalidPointeeTypeKind::INCOMPLETE;
+    }
   } else if (PointeeTy->isSizelessType()) {
     InvalidTypeKind = CountedByInvalidPointeeTypeKind::SIZELESS;
   } else if (PointeeTy->isFunctionType()) {
@@ -270,6 +283,9 @@ GetCountedByAttrOnIncompletePointee(QualType Ty, NamedDecl **ND) {
   }
 
   if (!PointeeTy->isIncompleteType(ND))
+    return {};
+
+  if (PointeeTy->isVoidType())
     return {};
 
   return {CATy, PointeeTy};

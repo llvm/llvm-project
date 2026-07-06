@@ -15,6 +15,7 @@
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
+#include "llvm/Support/Compiler.h"
 
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 
@@ -22,10 +23,10 @@ namespace llvm {
 
 namespace orc {
 
-Error preserveDebugSections(jitlink::LinkGraph &G);
+LLVM_ABI Error preserveDebugSections(jitlink::LinkGraph &G);
 // The backing stringmap is also returned, for memory liftime management.
-Expected<std::pair<std::unique_ptr<DWARFContext>,
-                   StringMap<std::unique_ptr<MemoryBuffer>>>>
+LLVM_ABI Expected<std::pair<std::unique_ptr<DWARFContext>,
+                            StringMap<std::unique_ptr<MemoryBuffer>>>>
 createDWARFContext(jitlink::LinkGraph &G);
 
 // Thin wrapper around preserveDebugSections to be used as a standalone plugin.

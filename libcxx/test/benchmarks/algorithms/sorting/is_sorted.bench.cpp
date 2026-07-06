@@ -28,13 +28,6 @@ int main(int argc, char** argv) {
       return x < y;
     });
   };
-  auto ranges_is_sorted_pred = [](auto first, auto last) {
-    return std::ranges::is_sorted(first, last, [](auto x, auto y) {
-      benchmark::DoNotOptimize(x);
-      benchmark::DoNotOptimize(y);
-      return x < y;
-    });
-  };
 
   // Benchmark {std,ranges}::is_sorted on a sorted sequence (the worst case).
   {
@@ -63,16 +56,10 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::is_sorted(vector<int>)", std_is_sorted);
     bm.operator()<std::deque<int>>("std::is_sorted(deque<int>)", std_is_sorted);
     bm.operator()<std::list<int>>("std::is_sorted(list<int>)", std_is_sorted);
-    bm.operator()<std::vector<int>>("rng::is_sorted(vector<int>)", std::ranges::is_sorted);
-    bm.operator()<std::deque<int>>("rng::is_sorted(deque<int>)", std::ranges::is_sorted);
-    bm.operator()<std::list<int>>("rng::is_sorted(list<int>)", std::ranges::is_sorted);
 
     bm.operator()<std::vector<int>>("std::is_sorted(vector<int>, pred)", std_is_sorted_pred);
     bm.operator()<std::deque<int>>("std::is_sorted(deque<int>, pred)", std_is_sorted_pred);
     bm.operator()<std::list<int>>("std::is_sorted(list<int>, pred)", std_is_sorted_pred);
-    bm.operator()<std::vector<int>>("rng::is_sorted(vector<int>, pred)", ranges_is_sorted_pred);
-    bm.operator()<std::deque<int>>("rng::is_sorted(deque<int>, pred)", ranges_is_sorted_pred);
-    bm.operator()<std::list<int>>("rng::is_sorted(list<int>, pred)", ranges_is_sorted_pred);
   }
 
   benchmark::Initialize(&argc, argv);

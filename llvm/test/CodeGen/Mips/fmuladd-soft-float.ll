@@ -49,13 +49,11 @@ define float @fmuladd_intrinsic_f32(float %a, float %b, float %c) #0 {
 ; SOFT-FLOAT-64-NEXT:    sd $16, 0($sp) # 8-byte Folded Spill
 ; SOFT-FLOAT-64-NEXT:    .cfi_offset 31, -8
 ; SOFT-FLOAT-64-NEXT:    .cfi_offset 16, -16
-; SOFT-FLOAT-64-NEXT:    move $16, $6
-; SOFT-FLOAT-64-NEXT:    sll $4, $4, 0
 ; SOFT-FLOAT-64-NEXT:    jal __mulsf3
-; SOFT-FLOAT-64-NEXT:    sll $5, $5, 0
-; SOFT-FLOAT-64-NEXT:    sll $4, $2, 0
+; SOFT-FLOAT-64-NEXT:    move $16, $6
+; SOFT-FLOAT-64-NEXT:    move $4, $2
 ; SOFT-FLOAT-64-NEXT:    jal __addsf3
-; SOFT-FLOAT-64-NEXT:    sll $5, $16, 0
+; SOFT-FLOAT-64-NEXT:    move $5, $16
 ; SOFT-FLOAT-64-NEXT:    ld $16, 0($sp) # 8-byte Folded Reload
 ; SOFT-FLOAT-64-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
 ; SOFT-FLOAT-64-NEXT:    jr $ra
@@ -69,13 +67,11 @@ define float @fmuladd_intrinsic_f32(float %a, float %b, float %c) #0 {
 ; SOFT-FLOAT-64R2-NEXT:    sd $16, 0($sp) # 8-byte Folded Spill
 ; SOFT-FLOAT-64R2-NEXT:    .cfi_offset 31, -8
 ; SOFT-FLOAT-64R2-NEXT:    .cfi_offset 16, -16
-; SOFT-FLOAT-64R2-NEXT:    move $16, $6
-; SOFT-FLOAT-64R2-NEXT:    sll $4, $4, 0
 ; SOFT-FLOAT-64R2-NEXT:    jal __mulsf3
-; SOFT-FLOAT-64R2-NEXT:    sll $5, $5, 0
-; SOFT-FLOAT-64R2-NEXT:    sll $4, $2, 0
+; SOFT-FLOAT-64R2-NEXT:    move $16, $6
+; SOFT-FLOAT-64R2-NEXT:    move $4, $2
 ; SOFT-FLOAT-64R2-NEXT:    jal __addsf3
-; SOFT-FLOAT-64R2-NEXT:    sll $5, $16, 0
+; SOFT-FLOAT-64R2-NEXT:    move $5, $16
 ; SOFT-FLOAT-64R2-NEXT:    ld $16, 0($sp) # 8-byte Folded Reload
 ; SOFT-FLOAT-64R2-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
 ; SOFT-FLOAT-64R2-NEXT:    jr $ra
@@ -203,13 +199,11 @@ define float @fmuladd_contract_f32(float %a, float %b, float %c) #0 {
 ; SOFT-FLOAT-64-NEXT:    sd $16, 0($sp) # 8-byte Folded Spill
 ; SOFT-FLOAT-64-NEXT:    .cfi_offset 31, -8
 ; SOFT-FLOAT-64-NEXT:    .cfi_offset 16, -16
-; SOFT-FLOAT-64-NEXT:    move $16, $6
-; SOFT-FLOAT-64-NEXT:    sll $4, $4, 0
 ; SOFT-FLOAT-64-NEXT:    jal __mulsf3
-; SOFT-FLOAT-64-NEXT:    sll $5, $5, 0
-; SOFT-FLOAT-64-NEXT:    sll $4, $2, 0
+; SOFT-FLOAT-64-NEXT:    move $16, $6
+; SOFT-FLOAT-64-NEXT:    move $4, $2
 ; SOFT-FLOAT-64-NEXT:    jal __addsf3
-; SOFT-FLOAT-64-NEXT:    sll $5, $16, 0
+; SOFT-FLOAT-64-NEXT:    move $5, $16
 ; SOFT-FLOAT-64-NEXT:    ld $16, 0($sp) # 8-byte Folded Reload
 ; SOFT-FLOAT-64-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
 ; SOFT-FLOAT-64-NEXT:    jr $ra
@@ -223,13 +217,11 @@ define float @fmuladd_contract_f32(float %a, float %b, float %c) #0 {
 ; SOFT-FLOAT-64R2-NEXT:    sd $16, 0($sp) # 8-byte Folded Spill
 ; SOFT-FLOAT-64R2-NEXT:    .cfi_offset 31, -8
 ; SOFT-FLOAT-64R2-NEXT:    .cfi_offset 16, -16
-; SOFT-FLOAT-64R2-NEXT:    move $16, $6
-; SOFT-FLOAT-64R2-NEXT:    sll $4, $4, 0
 ; SOFT-FLOAT-64R2-NEXT:    jal __mulsf3
-; SOFT-FLOAT-64R2-NEXT:    sll $5, $5, 0
-; SOFT-FLOAT-64R2-NEXT:    sll $4, $2, 0
+; SOFT-FLOAT-64R2-NEXT:    move $16, $6
+; SOFT-FLOAT-64R2-NEXT:    move $4, $2
 ; SOFT-FLOAT-64R2-NEXT:    jal __addsf3
-; SOFT-FLOAT-64R2-NEXT:    sll $5, $16, 0
+; SOFT-FLOAT-64R2-NEXT:    move $5, $16
 ; SOFT-FLOAT-64R2-NEXT:    ld $16, 0($sp) # 8-byte Folded Reload
 ; SOFT-FLOAT-64R2-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
 ; SOFT-FLOAT-64R2-NEXT:    jr $ra
@@ -443,149 +435,169 @@ define <4 x float> @fmuladd_contract_v4f32(<4 x float> %a, <4 x float> %b, <4 x 
 ;
 ; SOFT-FLOAT-64-LABEL: fmuladd_contract_v4f32:
 ; SOFT-FLOAT-64:       # %bb.0:
-; SOFT-FLOAT-64-NEXT:    daddiu $sp, $sp, -64
-; SOFT-FLOAT-64-NEXT:    .cfi_def_cfa_offset 64
-; SOFT-FLOAT-64-NEXT:    sd $ra, 56($sp) # 8-byte Folded Spill
-; SOFT-FLOAT-64-NEXT:    sd $22, 48($sp) # 8-byte Folded Spill
-; SOFT-FLOAT-64-NEXT:    sd $21, 40($sp) # 8-byte Folded Spill
-; SOFT-FLOAT-64-NEXT:    sd $20, 32($sp) # 8-byte Folded Spill
-; SOFT-FLOAT-64-NEXT:    sd $19, 24($sp) # 8-byte Folded Spill
-; SOFT-FLOAT-64-NEXT:    sd $18, 16($sp) # 8-byte Folded Spill
-; SOFT-FLOAT-64-NEXT:    sd $17, 8($sp) # 8-byte Folded Spill
-; SOFT-FLOAT-64-NEXT:    sd $16, 0($sp) # 8-byte Folded Spill
+; SOFT-FLOAT-64-NEXT:    daddiu $sp, $sp, -80
+; SOFT-FLOAT-64-NEXT:    .cfi_def_cfa_offset 80
+; SOFT-FLOAT-64-NEXT:    sd $ra, 72($sp) # 8-byte Folded Spill
+; SOFT-FLOAT-64-NEXT:    sd $23, 64($sp) # 8-byte Folded Spill
+; SOFT-FLOAT-64-NEXT:    sd $22, 56($sp) # 8-byte Folded Spill
+; SOFT-FLOAT-64-NEXT:    sd $21, 48($sp) # 8-byte Folded Spill
+; SOFT-FLOAT-64-NEXT:    sd $20, 40($sp) # 8-byte Folded Spill
+; SOFT-FLOAT-64-NEXT:    sd $19, 32($sp) # 8-byte Folded Spill
+; SOFT-FLOAT-64-NEXT:    sd $18, 24($sp) # 8-byte Folded Spill
+; SOFT-FLOAT-64-NEXT:    sd $17, 16($sp) # 8-byte Folded Spill
+; SOFT-FLOAT-64-NEXT:    sd $16, 8($sp) # 8-byte Folded Spill
 ; SOFT-FLOAT-64-NEXT:    .cfi_offset 31, -8
-; SOFT-FLOAT-64-NEXT:    .cfi_offset 22, -16
-; SOFT-FLOAT-64-NEXT:    .cfi_offset 21, -24
-; SOFT-FLOAT-64-NEXT:    .cfi_offset 20, -32
-; SOFT-FLOAT-64-NEXT:    .cfi_offset 19, -40
-; SOFT-FLOAT-64-NEXT:    .cfi_offset 18, -48
-; SOFT-FLOAT-64-NEXT:    .cfi_offset 17, -56
-; SOFT-FLOAT-64-NEXT:    .cfi_offset 16, -64
+; SOFT-FLOAT-64-NEXT:    .cfi_offset 23, -16
+; SOFT-FLOAT-64-NEXT:    .cfi_offset 22, -24
+; SOFT-FLOAT-64-NEXT:    .cfi_offset 21, -32
+; SOFT-FLOAT-64-NEXT:    .cfi_offset 20, -40
+; SOFT-FLOAT-64-NEXT:    .cfi_offset 19, -48
+; SOFT-FLOAT-64-NEXT:    .cfi_offset 18, -56
+; SOFT-FLOAT-64-NEXT:    .cfi_offset 17, -64
+; SOFT-FLOAT-64-NEXT:    .cfi_offset 16, -72
 ; SOFT-FLOAT-64-NEXT:    move $16, $9
-; SOFT-FLOAT-64-NEXT:    move $17, $8
-; SOFT-FLOAT-64-NEXT:    move $18, $7
-; SOFT-FLOAT-64-NEXT:    move $19, $6
-; SOFT-FLOAT-64-NEXT:    move $20, $5
+; SOFT-FLOAT-64-NEXT:    move $19, $8
+; SOFT-FLOAT-64-NEXT:    move $17, $7
+; SOFT-FLOAT-64-NEXT:    move $20, $6
+; SOFT-FLOAT-64-NEXT:    move $18, $5
 ; SOFT-FLOAT-64-NEXT:    move $21, $4
-; SOFT-FLOAT-64-NEXT:    sll $4, $4, 0
+; SOFT-FLOAT-64-NEXT:    sll $4, $21, 0
 ; SOFT-FLOAT-64-NEXT:    jal __mulsf3
-; SOFT-FLOAT-64-NEXT:    sll $5, $6, 0
+; SOFT-FLOAT-64-NEXT:    sll $5, $20, 0
+; SOFT-FLOAT-64-NEXT:    move $4, $2
+; SOFT-FLOAT-64-NEXT:    jal __addsf3
+; SOFT-FLOAT-64-NEXT:    sll $5, $19, 0
 ; SOFT-FLOAT-64-NEXT:    move $22, $2
-; SOFT-FLOAT-64-NEXT:    dsra $4, $21, 32
+; SOFT-FLOAT-64-NEXT:    sll $4, $18, 0
 ; SOFT-FLOAT-64-NEXT:    jal __mulsf3
-; SOFT-FLOAT-64-NEXT:    dsra $5, $19, 32
-; SOFT-FLOAT-64-NEXT:    sll $4, $2, 0
-; SOFT-FLOAT-64-NEXT:    jal __addsf3
-; SOFT-FLOAT-64-NEXT:    dsra $5, $17, 32
-; SOFT-FLOAT-64-NEXT:    # kill: def $v0 killed $v0 def $v0_64
-; SOFT-FLOAT-64-NEXT:    sll $4, $22, 0
 ; SOFT-FLOAT-64-NEXT:    sll $5, $17, 0
-; SOFT-FLOAT-64-NEXT:    jal __addsf3
-; SOFT-FLOAT-64-NEXT:    dsll $17, $2, 32
-; SOFT-FLOAT-64-NEXT:    dsll $1, $2, 32
-; SOFT-FLOAT-64-NEXT:    dsrl $1, $1, 32
-; SOFT-FLOAT-64-NEXT:    sll $4, $20, 0
-; SOFT-FLOAT-64-NEXT:    sll $5, $18, 0
+; SOFT-FLOAT-64-NEXT:    move $23, $2
+; SOFT-FLOAT-64-NEXT:    dsrl $1, $21, 32
+; SOFT-FLOAT-64-NEXT:    sll $4, $1, 0
+; SOFT-FLOAT-64-NEXT:    dsrl $1, $20, 32
 ; SOFT-FLOAT-64-NEXT:    jal __mulsf3
-; SOFT-FLOAT-64-NEXT:    or $17, $1, $17
-; SOFT-FLOAT-64-NEXT:    move $19, $2
-; SOFT-FLOAT-64-NEXT:    dsra $4, $20, 32
-; SOFT-FLOAT-64-NEXT:    jal __mulsf3
-; SOFT-FLOAT-64-NEXT:    dsra $5, $18, 32
-; SOFT-FLOAT-64-NEXT:    sll $4, $2, 0
+; SOFT-FLOAT-64-NEXT:    sll $5, $1, 0
+; SOFT-FLOAT-64-NEXT:    move $4, $2
+; SOFT-FLOAT-64-NEXT:    dsll $1, $22, 32
+; SOFT-FLOAT-64-NEXT:    dsrl $2, $19, 32
+; SOFT-FLOAT-64-NEXT:    sll $5, $2, 0
 ; SOFT-FLOAT-64-NEXT:    jal __addsf3
-; SOFT-FLOAT-64-NEXT:    dsra $5, $16, 32
+; SOFT-FLOAT-64-NEXT:    dsrl $19, $1, 32
 ; SOFT-FLOAT-64-NEXT:    # kill: def $v0 killed $v0 def $v0_64
-; SOFT-FLOAT-64-NEXT:    dsll $18, $2, 32
-; SOFT-FLOAT-64-NEXT:    sll $4, $19, 0
-; SOFT-FLOAT-64-NEXT:    jal __addsf3
-; SOFT-FLOAT-64-NEXT:    sll $5, $16, 0
 ; SOFT-FLOAT-64-NEXT:    dsll $1, $2, 32
-; SOFT-FLOAT-64-NEXT:    dsrl $1, $1, 32
-; SOFT-FLOAT-64-NEXT:    or $3, $1, $18
-; SOFT-FLOAT-64-NEXT:    move $2, $17
-; SOFT-FLOAT-64-NEXT:    ld $16, 0($sp) # 8-byte Folded Reload
-; SOFT-FLOAT-64-NEXT:    ld $17, 8($sp) # 8-byte Folded Reload
-; SOFT-FLOAT-64-NEXT:    ld $18, 16($sp) # 8-byte Folded Reload
-; SOFT-FLOAT-64-NEXT:    ld $19, 24($sp) # 8-byte Folded Reload
-; SOFT-FLOAT-64-NEXT:    ld $20, 32($sp) # 8-byte Folded Reload
-; SOFT-FLOAT-64-NEXT:    ld $21, 40($sp) # 8-byte Folded Reload
-; SOFT-FLOAT-64-NEXT:    ld $22, 48($sp) # 8-byte Folded Reload
-; SOFT-FLOAT-64-NEXT:    ld $ra, 56($sp) # 8-byte Folded Reload
+; SOFT-FLOAT-64-NEXT:    sll $5, $16, 0
+; SOFT-FLOAT-64-NEXT:    or $19, $19, $1
+; SOFT-FLOAT-64-NEXT:    jal __addsf3
+; SOFT-FLOAT-64-NEXT:    move $4, $23
+; SOFT-FLOAT-64-NEXT:    move $20, $2
+; SOFT-FLOAT-64-NEXT:    dsrl $1, $18, 32
+; SOFT-FLOAT-64-NEXT:    sll $4, $1, 0
+; SOFT-FLOAT-64-NEXT:    dsrl $1, $17, 32
+; SOFT-FLOAT-64-NEXT:    jal __mulsf3
+; SOFT-FLOAT-64-NEXT:    sll $5, $1, 0
+; SOFT-FLOAT-64-NEXT:    move $4, $2
+; SOFT-FLOAT-64-NEXT:    dsll $1, $20, 32
+; SOFT-FLOAT-64-NEXT:    dsrl $17, $1, 32
+; SOFT-FLOAT-64-NEXT:    dsrl $1, $16, 32
+; SOFT-FLOAT-64-NEXT:    jal __addsf3
+; SOFT-FLOAT-64-NEXT:    sll $5, $1, 0
+; SOFT-FLOAT-64-NEXT:    # kill: def $v0 killed $v0 def $v0_64
+; SOFT-FLOAT-64-NEXT:    dsll $1, $2, 32
+; SOFT-FLOAT-64-NEXT:    or $3, $17, $1
+; SOFT-FLOAT-64-NEXT:    move $2, $19
+; SOFT-FLOAT-64-NEXT:    ld $16, 8($sp) # 8-byte Folded Reload
+; SOFT-FLOAT-64-NEXT:    ld $17, 16($sp) # 8-byte Folded Reload
+; SOFT-FLOAT-64-NEXT:    ld $18, 24($sp) # 8-byte Folded Reload
+; SOFT-FLOAT-64-NEXT:    ld $19, 32($sp) # 8-byte Folded Reload
+; SOFT-FLOAT-64-NEXT:    ld $20, 40($sp) # 8-byte Folded Reload
+; SOFT-FLOAT-64-NEXT:    ld $21, 48($sp) # 8-byte Folded Reload
+; SOFT-FLOAT-64-NEXT:    ld $22, 56($sp) # 8-byte Folded Reload
+; SOFT-FLOAT-64-NEXT:    ld $23, 64($sp) # 8-byte Folded Reload
+; SOFT-FLOAT-64-NEXT:    ld $ra, 72($sp) # 8-byte Folded Reload
 ; SOFT-FLOAT-64-NEXT:    jr $ra
-; SOFT-FLOAT-64-NEXT:    daddiu $sp, $sp, 64
+; SOFT-FLOAT-64-NEXT:    daddiu $sp, $sp, 80
 ;
 ; SOFT-FLOAT-64R2-LABEL: fmuladd_contract_v4f32:
 ; SOFT-FLOAT-64R2:       # %bb.0:
-; SOFT-FLOAT-64R2-NEXT:    daddiu $sp, $sp, -64
-; SOFT-FLOAT-64R2-NEXT:    .cfi_def_cfa_offset 64
-; SOFT-FLOAT-64R2-NEXT:    sd $ra, 56($sp) # 8-byte Folded Spill
-; SOFT-FLOAT-64R2-NEXT:    sd $22, 48($sp) # 8-byte Folded Spill
-; SOFT-FLOAT-64R2-NEXT:    sd $21, 40($sp) # 8-byte Folded Spill
-; SOFT-FLOAT-64R2-NEXT:    sd $20, 32($sp) # 8-byte Folded Spill
-; SOFT-FLOAT-64R2-NEXT:    sd $19, 24($sp) # 8-byte Folded Spill
-; SOFT-FLOAT-64R2-NEXT:    sd $18, 16($sp) # 8-byte Folded Spill
-; SOFT-FLOAT-64R2-NEXT:    sd $17, 8($sp) # 8-byte Folded Spill
-; SOFT-FLOAT-64R2-NEXT:    sd $16, 0($sp) # 8-byte Folded Spill
+; SOFT-FLOAT-64R2-NEXT:    daddiu $sp, $sp, -80
+; SOFT-FLOAT-64R2-NEXT:    .cfi_def_cfa_offset 80
+; SOFT-FLOAT-64R2-NEXT:    sd $ra, 72($sp) # 8-byte Folded Spill
+; SOFT-FLOAT-64R2-NEXT:    sd $23, 64($sp) # 8-byte Folded Spill
+; SOFT-FLOAT-64R2-NEXT:    sd $22, 56($sp) # 8-byte Folded Spill
+; SOFT-FLOAT-64R2-NEXT:    sd $21, 48($sp) # 8-byte Folded Spill
+; SOFT-FLOAT-64R2-NEXT:    sd $20, 40($sp) # 8-byte Folded Spill
+; SOFT-FLOAT-64R2-NEXT:    sd $19, 32($sp) # 8-byte Folded Spill
+; SOFT-FLOAT-64R2-NEXT:    sd $18, 24($sp) # 8-byte Folded Spill
+; SOFT-FLOAT-64R2-NEXT:    sd $17, 16($sp) # 8-byte Folded Spill
+; SOFT-FLOAT-64R2-NEXT:    sd $16, 8($sp) # 8-byte Folded Spill
 ; SOFT-FLOAT-64R2-NEXT:    .cfi_offset 31, -8
-; SOFT-FLOAT-64R2-NEXT:    .cfi_offset 22, -16
-; SOFT-FLOAT-64R2-NEXT:    .cfi_offset 21, -24
-; SOFT-FLOAT-64R2-NEXT:    .cfi_offset 20, -32
-; SOFT-FLOAT-64R2-NEXT:    .cfi_offset 19, -40
-; SOFT-FLOAT-64R2-NEXT:    .cfi_offset 18, -48
-; SOFT-FLOAT-64R2-NEXT:    .cfi_offset 17, -56
-; SOFT-FLOAT-64R2-NEXT:    .cfi_offset 16, -64
+; SOFT-FLOAT-64R2-NEXT:    .cfi_offset 23, -16
+; SOFT-FLOAT-64R2-NEXT:    .cfi_offset 22, -24
+; SOFT-FLOAT-64R2-NEXT:    .cfi_offset 21, -32
+; SOFT-FLOAT-64R2-NEXT:    .cfi_offset 20, -40
+; SOFT-FLOAT-64R2-NEXT:    .cfi_offset 19, -48
+; SOFT-FLOAT-64R2-NEXT:    .cfi_offset 18, -56
+; SOFT-FLOAT-64R2-NEXT:    .cfi_offset 17, -64
+; SOFT-FLOAT-64R2-NEXT:    .cfi_offset 16, -72
 ; SOFT-FLOAT-64R2-NEXT:    move $16, $9
-; SOFT-FLOAT-64R2-NEXT:    move $17, $8
-; SOFT-FLOAT-64R2-NEXT:    move $18, $7
-; SOFT-FLOAT-64R2-NEXT:    move $19, $6
-; SOFT-FLOAT-64R2-NEXT:    move $20, $5
+; SOFT-FLOAT-64R2-NEXT:    move $19, $8
+; SOFT-FLOAT-64R2-NEXT:    move $17, $7
+; SOFT-FLOAT-64R2-NEXT:    move $20, $6
+; SOFT-FLOAT-64R2-NEXT:    move $18, $5
 ; SOFT-FLOAT-64R2-NEXT:    move $21, $4
-; SOFT-FLOAT-64R2-NEXT:    dsra $4, $4, 32
-; SOFT-FLOAT-64R2-NEXT:    jal __mulsf3
-; SOFT-FLOAT-64R2-NEXT:    dsra $5, $6, 32
-; SOFT-FLOAT-64R2-NEXT:    move $22, $2
 ; SOFT-FLOAT-64R2-NEXT:    sll $4, $21, 0
 ; SOFT-FLOAT-64R2-NEXT:    jal __mulsf3
+; SOFT-FLOAT-64R2-NEXT:    sll $5, $20, 0
+; SOFT-FLOAT-64R2-NEXT:    move $4, $2
+; SOFT-FLOAT-64R2-NEXT:    jal __addsf3
 ; SOFT-FLOAT-64R2-NEXT:    sll $5, $19, 0
-; SOFT-FLOAT-64R2-NEXT:    sll $4, $2, 0
-; SOFT-FLOAT-64R2-NEXT:    jal __addsf3
+; SOFT-FLOAT-64R2-NEXT:    move $22, $2
+; SOFT-FLOAT-64R2-NEXT:    sll $4, $18, 0
+; SOFT-FLOAT-64R2-NEXT:    jal __mulsf3
 ; SOFT-FLOAT-64R2-NEXT:    sll $5, $17, 0
-; SOFT-FLOAT-64R2-NEXT:    sll $4, $22, 0
-; SOFT-FLOAT-64R2-NEXT:    dsra $5, $17, 32
+; SOFT-FLOAT-64R2-NEXT:    move $23, $2
+; SOFT-FLOAT-64R2-NEXT:    dsrl $1, $21, 32
+; SOFT-FLOAT-64R2-NEXT:    sll $4, $1, 0
+; SOFT-FLOAT-64R2-NEXT:    dsrl $1, $20, 32
+; SOFT-FLOAT-64R2-NEXT:    jal __mulsf3
+; SOFT-FLOAT-64R2-NEXT:    sll $5, $1, 0
+; SOFT-FLOAT-64R2-NEXT:    move $4, $2
+; SOFT-FLOAT-64R2-NEXT:    dsrl $1, $19, 32
+; SOFT-FLOAT-64R2-NEXT:    sll $5, $1, 0
 ; SOFT-FLOAT-64R2-NEXT:    jal __addsf3
-; SOFT-FLOAT-64R2-NEXT:    dext $17, $2, 0, 32
+; SOFT-FLOAT-64R2-NEXT:    dext $19, $22, 0, 32
 ; SOFT-FLOAT-64R2-NEXT:    # kill: def $v0 killed $v0 def $v0_64
 ; SOFT-FLOAT-64R2-NEXT:    dsll $1, $2, 32
-; SOFT-FLOAT-64R2-NEXT:    dsra $4, $20, 32
-; SOFT-FLOAT-64R2-NEXT:    dsra $5, $18, 32
-; SOFT-FLOAT-64R2-NEXT:    jal __mulsf3
-; SOFT-FLOAT-64R2-NEXT:    or $17, $17, $1
-; SOFT-FLOAT-64R2-NEXT:    move $19, $2
-; SOFT-FLOAT-64R2-NEXT:    sll $4, $20, 0
-; SOFT-FLOAT-64R2-NEXT:    jal __mulsf3
-; SOFT-FLOAT-64R2-NEXT:    sll $5, $18, 0
-; SOFT-FLOAT-64R2-NEXT:    sll $4, $2, 0
-; SOFT-FLOAT-64R2-NEXT:    jal __addsf3
 ; SOFT-FLOAT-64R2-NEXT:    sll $5, $16, 0
-; SOFT-FLOAT-64R2-NEXT:    dext $18, $2, 0, 32
-; SOFT-FLOAT-64R2-NEXT:    sll $4, $19, 0
+; SOFT-FLOAT-64R2-NEXT:    or $19, $19, $1
 ; SOFT-FLOAT-64R2-NEXT:    jal __addsf3
-; SOFT-FLOAT-64R2-NEXT:    dsra $5, $16, 32
+; SOFT-FLOAT-64R2-NEXT:    move $4, $23
+; SOFT-FLOAT-64R2-NEXT:    move $20, $2
+; SOFT-FLOAT-64R2-NEXT:    dsrl $1, $18, 32
+; SOFT-FLOAT-64R2-NEXT:    sll $4, $1, 0
+; SOFT-FLOAT-64R2-NEXT:    dsrl $1, $17, 32
+; SOFT-FLOAT-64R2-NEXT:    jal __mulsf3
+; SOFT-FLOAT-64R2-NEXT:    sll $5, $1, 0
+; SOFT-FLOAT-64R2-NEXT:    move $4, $2
+; SOFT-FLOAT-64R2-NEXT:    dext $17, $20, 0, 32
+; SOFT-FLOAT-64R2-NEXT:    dsrl $1, $16, 32
+; SOFT-FLOAT-64R2-NEXT:    jal __addsf3
+; SOFT-FLOAT-64R2-NEXT:    sll $5, $1, 0
 ; SOFT-FLOAT-64R2-NEXT:    # kill: def $v0 killed $v0 def $v0_64
 ; SOFT-FLOAT-64R2-NEXT:    dsll $1, $2, 32
-; SOFT-FLOAT-64R2-NEXT:    or $3, $18, $1
-; SOFT-FLOAT-64R2-NEXT:    move $2, $17
-; SOFT-FLOAT-64R2-NEXT:    ld $16, 0($sp) # 8-byte Folded Reload
-; SOFT-FLOAT-64R2-NEXT:    ld $17, 8($sp) # 8-byte Folded Reload
-; SOFT-FLOAT-64R2-NEXT:    ld $18, 16($sp) # 8-byte Folded Reload
-; SOFT-FLOAT-64R2-NEXT:    ld $19, 24($sp) # 8-byte Folded Reload
-; SOFT-FLOAT-64R2-NEXT:    ld $20, 32($sp) # 8-byte Folded Reload
-; SOFT-FLOAT-64R2-NEXT:    ld $21, 40($sp) # 8-byte Folded Reload
-; SOFT-FLOAT-64R2-NEXT:    ld $22, 48($sp) # 8-byte Folded Reload
-; SOFT-FLOAT-64R2-NEXT:    ld $ra, 56($sp) # 8-byte Folded Reload
+; SOFT-FLOAT-64R2-NEXT:    or $3, $17, $1
+; SOFT-FLOAT-64R2-NEXT:    move $2, $19
+; SOFT-FLOAT-64R2-NEXT:    ld $16, 8($sp) # 8-byte Folded Reload
+; SOFT-FLOAT-64R2-NEXT:    ld $17, 16($sp) # 8-byte Folded Reload
+; SOFT-FLOAT-64R2-NEXT:    ld $18, 24($sp) # 8-byte Folded Reload
+; SOFT-FLOAT-64R2-NEXT:    ld $19, 32($sp) # 8-byte Folded Reload
+; SOFT-FLOAT-64R2-NEXT:    ld $20, 40($sp) # 8-byte Folded Reload
+; SOFT-FLOAT-64R2-NEXT:    ld $21, 48($sp) # 8-byte Folded Reload
+; SOFT-FLOAT-64R2-NEXT:    ld $22, 56($sp) # 8-byte Folded Reload
+; SOFT-FLOAT-64R2-NEXT:    ld $23, 64($sp) # 8-byte Folded Reload
+; SOFT-FLOAT-64R2-NEXT:    ld $ra, 72($sp) # 8-byte Folded Reload
 ; SOFT-FLOAT-64R2-NEXT:    jr $ra
-; SOFT-FLOAT-64R2-NEXT:    daddiu $sp, $sp, 64
+; SOFT-FLOAT-64R2-NEXT:    daddiu $sp, $sp, 80
   %product = fmul contract <4 x float> %a, %b
   %result = fadd contract <4 x float> %product, %c
   ret <4 x float> %result

@@ -3,7 +3,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck --check-prefix=GFX8 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck --check-prefix=GFX9 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck --check-prefix=GFX10 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck --check-prefixes=GFX11 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-delay-alu=0 < %s | FileCheck --check-prefix=GFX11 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -amdgpu-enable-delay-alu=0 < %s | FileCheck --check-prefix=GFX12 %s
 
 define bfloat @raw_ptr_buffer_load_bf16(ptr addrspace(8) inreg %rsrc) {
 ; GFX7-LABEL: raw_ptr_buffer_load_bf16:
@@ -11,7 +12,6 @@ define bfloat @raw_ptr_buffer_load_bf16(ptr addrspace(8) inreg %rsrc) {
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_load_ushort v0, off, s[16:19], 0
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: raw_ptr_buffer_load_bf16:
@@ -41,6 +41,14 @@ define bfloat @raw_ptr_buffer_load_bf16(ptr addrspace(8) inreg %rsrc) {
 ; GFX11-NEXT:    buffer_load_u16 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: raw_ptr_buffer_load_bf16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    buffer_load_u16 v0, off, s[0:3], null
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    s_set_pc_i64 s[30:31]
   %val = call bfloat @llvm.amdgcn.raw.ptr.buffer.load.v2bf16(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0)
   ret bfloat %val
 }
@@ -49,10 +57,8 @@ define <2 x bfloat> @raw_ptr_buffer_load_v2bf16(ptr addrspace(8) inreg %rsrc) {
 ; GFX7-LABEL: raw_ptr_buffer_load_v2bf16:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    buffer_load_dword v1, off, s[16:19], 0
+; GFX7-NEXT:    buffer_load_dword v0, off, s[16:19], 0
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 16, v1
-; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff0000, v1
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: raw_ptr_buffer_load_v2bf16:
@@ -82,6 +88,14 @@ define <2 x bfloat> @raw_ptr_buffer_load_v2bf16(ptr addrspace(8) inreg %rsrc) {
 ; GFX11-NEXT:    buffer_load_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: raw_ptr_buffer_load_v2bf16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    buffer_load_b32 v0, off, s[0:3], null
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    s_set_pc_i64 s[30:31]
   %val = call <2 x bfloat> @llvm.amdgcn.raw.ptr.buffer.load.v2bf16(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0)
   ret <2 x bfloat> %val
 }
@@ -90,12 +104,8 @@ define <4 x bfloat> @raw_ptr_buffer_load_v4bf16(ptr addrspace(8) inreg %rsrc) {
 ; GFX7-LABEL: raw_ptr_buffer_load_v4bf16:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    buffer_load_dwordx2 v[2:3], off, s[16:19], 0
+; GFX7-NEXT:    buffer_load_dwordx2 v[0:1], off, s[16:19], 0
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 16, v2
-; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff0000, v2
-; GFX7-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
-; GFX7-NEXT:    v_and_b32_e32 v3, 0xffff0000, v3
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: raw_ptr_buffer_load_v4bf16:
@@ -125,6 +135,14 @@ define <4 x bfloat> @raw_ptr_buffer_load_v4bf16(ptr addrspace(8) inreg %rsrc) {
 ; GFX11-NEXT:    buffer_load_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: raw_ptr_buffer_load_v4bf16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    buffer_load_b64 v[0:1], off, s[0:3], null
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    s_set_pc_i64 s[30:31]
   %val = call <4 x bfloat> @llvm.amdgcn.raw.ptr.buffer.load.v4bf16(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0)
   ret <4 x bfloat> %val
 }
@@ -139,16 +157,8 @@ define <8 x bfloat> @raw_ptr_buffer_load_v8bf16(ptr addrspace(8) inreg %rsrc) {
 ; GFX7-LABEL: raw_ptr_buffer_load_v8bf16:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    buffer_load_dwordx4 v[4:7], off, s[16:19], 0
+; GFX7-NEXT:    buffer_load_dwordx4 v[0:3], off, s[16:19], 0
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 16, v4
-; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff0000, v4
-; GFX7-NEXT:    v_lshlrev_b32_e32 v2, 16, v5
-; GFX7-NEXT:    v_and_b32_e32 v3, 0xffff0000, v5
-; GFX7-NEXT:    v_lshlrev_b32_e32 v4, 16, v6
-; GFX7-NEXT:    v_and_b32_e32 v5, 0xffff0000, v6
-; GFX7-NEXT:    v_lshlrev_b32_e32 v6, 16, v7
-; GFX7-NEXT:    v_and_b32_e32 v7, 0xffff0000, v7
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: raw_ptr_buffer_load_v8bf16:
@@ -178,6 +188,14 @@ define <8 x bfloat> @raw_ptr_buffer_load_v8bf16(ptr addrspace(8) inreg %rsrc) {
 ; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: raw_ptr_buffer_load_v8bf16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], null
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    s_set_pc_i64 s[30:31]
   %val = call <8 x bfloat> @llvm.amdgcn.raw.ptr.buffer.load.v8bf16(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0)
   ret <8 x bfloat> %val
 }

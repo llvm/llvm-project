@@ -352,14 +352,32 @@ static Value *MakeLdg(CodeGenFunction &CGF, const CallExpr *E) {
   return LD;
 }
 
-static Value *MakeScopedAtomic(unsigned IntrinsicID, CodeGenFunction &CGF,
-                               const CallExpr *E) {
-  Value *Ptr = CGF.EmitScalarExpr(E->getArg(0));
-  llvm::Type *ElemTy =
-      CGF.ConvertTypeForMem(E->getArg(0)->getType()->getPointeeType());
-  return CGF.Builder.CreateCall(
-      CGF.CGM.getIntrinsic(IntrinsicID, {ElemTy, Ptr->getType()}),
-      {Ptr, CGF.EmitScalarExpr(E->getArg(1))});
+// Set `Scope` to:
+//  - "block" for _cta builtins, and
+//  - "" for _sys builtins.
+static Value *MakeScopedAtomicRMW(CodeGenFunction &CGF, const CallExpr *E,
+                                  llvm::AtomicRMWInst::BinOp Kind,
+                                  StringRef Scope) {
+  Address Ptr = CGF.EmitPointerWithAlignment(E->getArg(0));
+  Value *Val = CGF.EmitScalarExpr(E->getArg(1));
+  llvm::SyncScope::ID SSID = CGF.getLLVMContext().getOrInsertSyncScopeID(Scope);
+  return CGF.Builder.CreateAtomicRMW(Kind, Ptr, Val,
+                                     llvm::AtomicOrdering::Monotonic, SSID);
+}
+
+// Set `Scope` to:
+//  - "block" for _cta builtins, and
+//  - "" for _sys builtins.
+static Value *MakeScopedAtomicCAS(CodeGenFunction &CGF, const CallExpr *E,
+                                  StringRef Scope) {
+  Address Ptr = CGF.EmitPointerWithAlignment(E->getArg(0));
+  Value *Cmp = CGF.EmitScalarExpr(E->getArg(1));
+  Value *New = CGF.EmitScalarExpr(E->getArg(2));
+  llvm::SyncScope::ID SSID = CGF.getLLVMContext().getOrInsertSyncScopeID(Scope);
+  Value *Pair = CGF.Builder.CreateAtomicCmpXchg(
+      Ptr, Cmp, New, llvm::AtomicOrdering::Monotonic,
+      llvm::AtomicOrdering::Monotonic, SSID);
+  return CGF.Builder.CreateExtractValue(Pair, 0);
 }
 
 static Value *MakeCpAsync(unsigned IntrinsicID, unsigned IntrinsicIDS,
@@ -375,28 +393,28 @@ static Value *MakeCpAsync(unsigned IntrinsicID, unsigned IntrinsicIDS,
                                        CGF.EmitScalarExpr(E->getArg(1))});
 }
 
-static Value *MakeHalfType(unsigned IntrinsicID, unsigned BuiltinID,
-                           const CallExpr *E, CodeGenFunction &CGF) {
+static bool EnsureNativeHalfSupport(unsigned BuiltinID, const CallExpr *E,
+                                    CodeGenFunction &CGF) {
   auto &C = CGF.CGM.getContext();
-  if (!(C.getLangOpts().NativeHalfType ||
-        !C.getTargetInfo().useFP16ConversionIntrinsics())) {
+  if (!C.getLangOpts().NativeHalfType &&
+      C.getTargetInfo().useFP16ConversionIntrinsics()) {
     CGF.CGM.Error(E->getExprLoc(), C.BuiltinInfo.getQuotedName(BuiltinID) +
                                        " requires native half type support.");
-    return nullptr;
+    return false;
   }
+  return true;
+}
 
-  if (BuiltinID == NVPTX::BI__nvvm_ldg_h || BuiltinID == NVPTX::BI__nvvm_ldg_h2)
-    return MakeLdg(CGF, E);
-
-  if (IntrinsicID == Intrinsic::nvvm_ldu_global_f)
-    return MakeLdu(IntrinsicID, CGF, E);
+static Value *MakeHalfType(Function *Intrinsic, unsigned BuiltinID,
+                           const CallExpr *E, CodeGenFunction &CGF) {
+  if (!EnsureNativeHalfSupport(BuiltinID, E, CGF))
+    return nullptr;
 
   SmallVector<Value *, 16> Args;
-  auto *F = CGF.CGM.getIntrinsic(IntrinsicID);
-  auto *FTy = F->getFunctionType();
+  auto *FTy = Intrinsic->getFunctionType();
   unsigned ICEArguments = 0;
   ASTContext::GetBuiltinTypeError Error;
-  C.GetBuiltinType(BuiltinID, Error, &ICEArguments);
+  CGF.CGM.getContext().GetBuiltinType(BuiltinID, Error, &ICEArguments);
   assert(Error == ASTContext::GE_None && "Should not codegen an error");
   for (unsigned i = 0, e = E->getNumArgs(); i != e; ++i) {
     assert((ICEArguments & (1 << i)) == 0);
@@ -407,8 +425,22 @@ static Value *MakeHalfType(unsigned IntrinsicID, unsigned BuiltinID,
     Args.push_back(ArgValue);
   }
 
-  return CGF.Builder.CreateCall(F, Args);
+  return CGF.Builder.CreateCall(Intrinsic, Args);
 }
+
+static Value *MakeHalfType(unsigned IntrinsicID, unsigned BuiltinID,
+                           const CallExpr *E, CodeGenFunction &CGF) {
+  return MakeHalfType(CGF.CGM.getIntrinsic(IntrinsicID), BuiltinID, E, CGF);
+}
+
+static Value *MakeFMAOOB(unsigned IntrinsicID, llvm::Type *Ty,
+                         const CallExpr *E, CodeGenFunction &CGF) {
+  return CGF.Builder.CreateCall(CGF.CGM.getIntrinsic(IntrinsicID, {Ty}),
+                                {CGF.EmitScalarExpr(E->getArg(0)),
+                                 CGF.EmitScalarExpr(E->getArg(1)),
+                                 CGF.EmitScalarExpr(E->getArg(2))});
+}
+
 } // namespace
 
 Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
@@ -417,52 +449,62 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
   case NVPTX::BI__nvvm_atom_add_gen_i:
   case NVPTX::BI__nvvm_atom_add_gen_l:
   case NVPTX::BI__nvvm_atom_add_gen_ll:
-    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Add, E);
+    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Add, E,
+                                 AtomicOrdering::Monotonic);
 
   case NVPTX::BI__nvvm_atom_sub_gen_i:
   case NVPTX::BI__nvvm_atom_sub_gen_l:
   case NVPTX::BI__nvvm_atom_sub_gen_ll:
-    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Sub, E);
+    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Sub, E,
+                                 AtomicOrdering::Monotonic);
 
   case NVPTX::BI__nvvm_atom_and_gen_i:
   case NVPTX::BI__nvvm_atom_and_gen_l:
   case NVPTX::BI__nvvm_atom_and_gen_ll:
-    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::And, E);
+    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::And, E,
+                                 AtomicOrdering::Monotonic);
 
   case NVPTX::BI__nvvm_atom_or_gen_i:
   case NVPTX::BI__nvvm_atom_or_gen_l:
   case NVPTX::BI__nvvm_atom_or_gen_ll:
-    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Or, E);
+    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Or, E,
+                                 AtomicOrdering::Monotonic);
 
   case NVPTX::BI__nvvm_atom_xor_gen_i:
   case NVPTX::BI__nvvm_atom_xor_gen_l:
   case NVPTX::BI__nvvm_atom_xor_gen_ll:
-    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Xor, E);
+    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Xor, E,
+                                 AtomicOrdering::Monotonic);
 
   case NVPTX::BI__nvvm_atom_xchg_gen_i:
   case NVPTX::BI__nvvm_atom_xchg_gen_l:
   case NVPTX::BI__nvvm_atom_xchg_gen_ll:
-    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Xchg, E);
+    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Xchg, E,
+                                 AtomicOrdering::Monotonic);
 
   case NVPTX::BI__nvvm_atom_max_gen_i:
   case NVPTX::BI__nvvm_atom_max_gen_l:
   case NVPTX::BI__nvvm_atom_max_gen_ll:
-    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Max, E);
+    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Max, E,
+                                 AtomicOrdering::Monotonic);
 
   case NVPTX::BI__nvvm_atom_max_gen_ui:
   case NVPTX::BI__nvvm_atom_max_gen_ul:
   case NVPTX::BI__nvvm_atom_max_gen_ull:
-    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::UMax, E);
+    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::UMax, E,
+                                 AtomicOrdering::Monotonic);
 
   case NVPTX::BI__nvvm_atom_min_gen_i:
   case NVPTX::BI__nvvm_atom_min_gen_l:
   case NVPTX::BI__nvvm_atom_min_gen_ll:
-    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Min, E);
+    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::Min, E,
+                                 AtomicOrdering::Monotonic);
 
   case NVPTX::BI__nvvm_atom_min_gen_ui:
   case NVPTX::BI__nvvm_atom_min_gen_ul:
   case NVPTX::BI__nvvm_atom_min_gen_ull:
-    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::UMin, E);
+    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::UMin, E,
+                                 AtomicOrdering::Monotonic);
 
   case NVPTX::BI__nvvm_atom_cas_gen_us:
   case NVPTX::BI__nvvm_atom_cas_gen_i:
@@ -470,7 +512,9 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
   case NVPTX::BI__nvvm_atom_cas_gen_ll:
     // __nvvm_atom_cas_gen_* should return the old value rather than the
     // success flag.
-    return MakeAtomicCmpXchgValue(*this, E, /*ReturnBool=*/false);
+    return MakeAtomicCmpXchgValue(*this, E, /*ReturnBool=*/false,
+                                  AtomicOrdering::Monotonic,
+                                  AtomicOrdering::Monotonic);
 
   case NVPTX::BI__nvvm_atom_add_gen_f:
   case NVPTX::BI__nvvm_atom_add_gen_d: {
@@ -478,14 +522,16 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     Value *Val = EmitScalarExpr(E->getArg(1));
 
     return Builder.CreateAtomicRMW(llvm::AtomicRMWInst::FAdd, DestAddr, Val,
-                                   AtomicOrdering::SequentiallyConsistent);
+                                   AtomicOrdering::Monotonic);
   }
 
   case NVPTX::BI__nvvm_atom_inc_gen_ui:
-    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::UIncWrap, E);
+    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::UIncWrap, E,
+                                 AtomicOrdering::Monotonic);
 
   case NVPTX::BI__nvvm_atom_dec_gen_ui:
-    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::UDecWrap, E);
+    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::UDecWrap, E,
+                                 AtomicOrdering::Monotonic);
 
   case NVPTX::BI__nvvm_ldg_c:
   case NVPTX::BI__nvvm_ldg_sc:
@@ -566,109 +612,101 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
   case NVPTX::BI__nvvm_atom_cta_add_gen_i:
   case NVPTX::BI__nvvm_atom_cta_add_gen_l:
   case NVPTX::BI__nvvm_atom_cta_add_gen_ll:
-    return MakeScopedAtomic(Intrinsic::nvvm_atomic_add_gen_i_cta, *this, E);
+    return MakeScopedAtomicRMW(*this, E, llvm::AtomicRMWInst::Add, "block");
   case NVPTX::BI__nvvm_atom_sys_add_gen_i:
   case NVPTX::BI__nvvm_atom_sys_add_gen_l:
   case NVPTX::BI__nvvm_atom_sys_add_gen_ll:
-    return MakeScopedAtomic(Intrinsic::nvvm_atomic_add_gen_i_sys, *this, E);
+    return MakeScopedAtomicRMW(*this, E, llvm::AtomicRMWInst::Add, "");
   case NVPTX::BI__nvvm_atom_cta_add_gen_f:
   case NVPTX::BI__nvvm_atom_cta_add_gen_d:
-    return MakeScopedAtomic(Intrinsic::nvvm_atomic_add_gen_f_cta, *this, E);
+    return MakeScopedAtomicRMW(*this, E, llvm::AtomicRMWInst::FAdd, "block");
   case NVPTX::BI__nvvm_atom_sys_add_gen_f:
   case NVPTX::BI__nvvm_atom_sys_add_gen_d:
-    return MakeScopedAtomic(Intrinsic::nvvm_atomic_add_gen_f_sys, *this, E);
+    return MakeScopedAtomicRMW(*this, E, llvm::AtomicRMWInst::FAdd, "");
   case NVPTX::BI__nvvm_atom_cta_xchg_gen_i:
   case NVPTX::BI__nvvm_atom_cta_xchg_gen_l:
   case NVPTX::BI__nvvm_atom_cta_xchg_gen_ll:
-    return MakeScopedAtomic(Intrinsic::nvvm_atomic_exch_gen_i_cta, *this, E);
+    return MakeScopedAtomicRMW(*this, E, llvm::AtomicRMWInst::Xchg, "block");
   case NVPTX::BI__nvvm_atom_sys_xchg_gen_i:
   case NVPTX::BI__nvvm_atom_sys_xchg_gen_l:
   case NVPTX::BI__nvvm_atom_sys_xchg_gen_ll:
-    return MakeScopedAtomic(Intrinsic::nvvm_atomic_exch_gen_i_sys, *this, E);
+    return MakeScopedAtomicRMW(*this, E, llvm::AtomicRMWInst::Xchg, "");
   case NVPTX::BI__nvvm_atom_cta_max_gen_i:
-  case NVPTX::BI__nvvm_atom_cta_max_gen_ui:
   case NVPTX::BI__nvvm_atom_cta_max_gen_l:
-  case NVPTX::BI__nvvm_atom_cta_max_gen_ul:
   case NVPTX::BI__nvvm_atom_cta_max_gen_ll:
+    return MakeScopedAtomicRMW(*this, E, llvm::AtomicRMWInst::Max, "block");
+  case NVPTX::BI__nvvm_atom_cta_max_gen_ui:
+  case NVPTX::BI__nvvm_atom_cta_max_gen_ul:
   case NVPTX::BI__nvvm_atom_cta_max_gen_ull:
-    return MakeScopedAtomic(Intrinsic::nvvm_atomic_max_gen_i_cta, *this, E);
+    return MakeScopedAtomicRMW(*this, E, llvm::AtomicRMWInst::UMax, "block");
   case NVPTX::BI__nvvm_atom_sys_max_gen_i:
-  case NVPTX::BI__nvvm_atom_sys_max_gen_ui:
   case NVPTX::BI__nvvm_atom_sys_max_gen_l:
-  case NVPTX::BI__nvvm_atom_sys_max_gen_ul:
   case NVPTX::BI__nvvm_atom_sys_max_gen_ll:
+    return MakeScopedAtomicRMW(*this, E, llvm::AtomicRMWInst::Max, "");
+  case NVPTX::BI__nvvm_atom_sys_max_gen_ui:
+  case NVPTX::BI__nvvm_atom_sys_max_gen_ul:
   case NVPTX::BI__nvvm_atom_sys_max_gen_ull:
-    return MakeScopedAtomic(Intrinsic::nvvm_atomic_max_gen_i_sys, *this, E);
+    return MakeScopedAtomicRMW(*this, E, llvm::AtomicRMWInst::UMax, "");
   case NVPTX::BI__nvvm_atom_cta_min_gen_i:
-  case NVPTX::BI__nvvm_atom_cta_min_gen_ui:
   case NVPTX::BI__nvvm_atom_cta_min_gen_l:
-  case NVPTX::BI__nvvm_atom_cta_min_gen_ul:
   case NVPTX::BI__nvvm_atom_cta_min_gen_ll:
+    return MakeScopedAtomicRMW(*this, E, llvm::AtomicRMWInst::Min, "block");
+  case NVPTX::BI__nvvm_atom_cta_min_gen_ui:
+  case NVPTX::BI__nvvm_atom_cta_min_gen_ul:
   case NVPTX::BI__nvvm_atom_cta_min_gen_ull:
-    return MakeScopedAtomic(Intrinsic::nvvm_atomic_min_gen_i_cta, *this, E);
+    return MakeScopedAtomicRMW(*this, E, llvm::AtomicRMWInst::UMin, "block");
   case NVPTX::BI__nvvm_atom_sys_min_gen_i:
-  case NVPTX::BI__nvvm_atom_sys_min_gen_ui:
   case NVPTX::BI__nvvm_atom_sys_min_gen_l:
-  case NVPTX::BI__nvvm_atom_sys_min_gen_ul:
   case NVPTX::BI__nvvm_atom_sys_min_gen_ll:
+    return MakeScopedAtomicRMW(*this, E, llvm::AtomicRMWInst::Min, "");
+  case NVPTX::BI__nvvm_atom_sys_min_gen_ui:
+  case NVPTX::BI__nvvm_atom_sys_min_gen_ul:
   case NVPTX::BI__nvvm_atom_sys_min_gen_ull:
-    return MakeScopedAtomic(Intrinsic::nvvm_atomic_min_gen_i_sys, *this, E);
+    return MakeScopedAtomicRMW(*this, E, llvm::AtomicRMWInst::UMin, "");
   case NVPTX::BI__nvvm_atom_cta_inc_gen_ui:
-    return MakeScopedAtomic(Intrinsic::nvvm_atomic_inc_gen_i_cta, *this, E);
+    return MakeScopedAtomicRMW(*this, E, llvm::AtomicRMWInst::UIncWrap,
+                               "block");
   case NVPTX::BI__nvvm_atom_cta_dec_gen_ui:
-    return MakeScopedAtomic(Intrinsic::nvvm_atomic_dec_gen_i_cta, *this, E);
+    return MakeScopedAtomicRMW(*this, E, llvm::AtomicRMWInst::UDecWrap,
+                               "block");
   case NVPTX::BI__nvvm_atom_sys_inc_gen_ui:
-    return MakeScopedAtomic(Intrinsic::nvvm_atomic_inc_gen_i_sys, *this, E);
+    return MakeScopedAtomicRMW(*this, E, llvm::AtomicRMWInst::UIncWrap, "");
   case NVPTX::BI__nvvm_atom_sys_dec_gen_ui:
-    return MakeScopedAtomic(Intrinsic::nvvm_atomic_dec_gen_i_sys, *this, E);
+    return MakeScopedAtomicRMW(*this, E, llvm::AtomicRMWInst::UDecWrap, "");
   case NVPTX::BI__nvvm_atom_cta_and_gen_i:
   case NVPTX::BI__nvvm_atom_cta_and_gen_l:
   case NVPTX::BI__nvvm_atom_cta_and_gen_ll:
-    return MakeScopedAtomic(Intrinsic::nvvm_atomic_and_gen_i_cta, *this, E);
+    return MakeScopedAtomicRMW(*this, E, llvm::AtomicRMWInst::And, "block");
   case NVPTX::BI__nvvm_atom_sys_and_gen_i:
   case NVPTX::BI__nvvm_atom_sys_and_gen_l:
   case NVPTX::BI__nvvm_atom_sys_and_gen_ll:
-    return MakeScopedAtomic(Intrinsic::nvvm_atomic_and_gen_i_sys, *this, E);
+    return MakeScopedAtomicRMW(*this, E, llvm::AtomicRMWInst::And, "");
   case NVPTX::BI__nvvm_atom_cta_or_gen_i:
   case NVPTX::BI__nvvm_atom_cta_or_gen_l:
   case NVPTX::BI__nvvm_atom_cta_or_gen_ll:
-    return MakeScopedAtomic(Intrinsic::nvvm_atomic_or_gen_i_cta, *this, E);
+    return MakeScopedAtomicRMW(*this, E, llvm::AtomicRMWInst::Or, "block");
   case NVPTX::BI__nvvm_atom_sys_or_gen_i:
   case NVPTX::BI__nvvm_atom_sys_or_gen_l:
   case NVPTX::BI__nvvm_atom_sys_or_gen_ll:
-    return MakeScopedAtomic(Intrinsic::nvvm_atomic_or_gen_i_sys, *this, E);
+    return MakeScopedAtomicRMW(*this, E, llvm::AtomicRMWInst::Or, "");
   case NVPTX::BI__nvvm_atom_cta_xor_gen_i:
   case NVPTX::BI__nvvm_atom_cta_xor_gen_l:
   case NVPTX::BI__nvvm_atom_cta_xor_gen_ll:
-    return MakeScopedAtomic(Intrinsic::nvvm_atomic_xor_gen_i_cta, *this, E);
+    return MakeScopedAtomicRMW(*this, E, llvm::AtomicRMWInst::Xor, "block");
   case NVPTX::BI__nvvm_atom_sys_xor_gen_i:
   case NVPTX::BI__nvvm_atom_sys_xor_gen_l:
   case NVPTX::BI__nvvm_atom_sys_xor_gen_ll:
-    return MakeScopedAtomic(Intrinsic::nvvm_atomic_xor_gen_i_sys, *this, E);
+    return MakeScopedAtomicRMW(*this, E, llvm::AtomicRMWInst::Xor, "");
   case NVPTX::BI__nvvm_atom_cta_cas_gen_us:
   case NVPTX::BI__nvvm_atom_cta_cas_gen_i:
   case NVPTX::BI__nvvm_atom_cta_cas_gen_l:
-  case NVPTX::BI__nvvm_atom_cta_cas_gen_ll: {
-    Value *Ptr = EmitScalarExpr(E->getArg(0));
-    llvm::Type *ElemTy =
-        ConvertTypeForMem(E->getArg(0)->getType()->getPointeeType());
-    return Builder.CreateCall(
-        CGM.getIntrinsic(
-            Intrinsic::nvvm_atomic_cas_gen_i_cta, {ElemTy, Ptr->getType()}),
-        {Ptr, EmitScalarExpr(E->getArg(1)), EmitScalarExpr(E->getArg(2))});
-  }
+  case NVPTX::BI__nvvm_atom_cta_cas_gen_ll:
+    return MakeScopedAtomicCAS(*this, E, "block");
   case NVPTX::BI__nvvm_atom_sys_cas_gen_us:
   case NVPTX::BI__nvvm_atom_sys_cas_gen_i:
   case NVPTX::BI__nvvm_atom_sys_cas_gen_l:
-  case NVPTX::BI__nvvm_atom_sys_cas_gen_ll: {
-    Value *Ptr = EmitScalarExpr(E->getArg(0));
-    llvm::Type *ElemTy =
-        ConvertTypeForMem(E->getArg(0)->getType()->getPointeeType());
-    return Builder.CreateCall(
-        CGM.getIntrinsic(
-            Intrinsic::nvvm_atomic_cas_gen_i_sys, {ElemTy, Ptr->getType()}),
-        {Ptr, EmitScalarExpr(E->getArg(1)), EmitScalarExpr(E->getArg(2))});
-  }
+  case NVPTX::BI__nvvm_atom_sys_cas_gen_ll:
+    return MakeScopedAtomicCAS(*this, E, "");
   case NVPTX::BI__nvvm_match_all_sync_i32p:
   case NVPTX::BI__nvvm_match_all_sync_i64p: {
     Value *Mask = EmitScalarExpr(E->getArg(0));
@@ -913,9 +951,14 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
   }
   // The following builtins require half type support
   case NVPTX::BI__nvvm_ex2_approx_f16:
-    return MakeHalfType(Intrinsic::nvvm_ex2_approx_f16, BuiltinID, E, *this);
+    return MakeHalfType(
+        CGM.getIntrinsic(Intrinsic::nvvm_ex2_approx, Builder.getHalfTy()),
+        BuiltinID, E, *this);
   case NVPTX::BI__nvvm_ex2_approx_f16x2:
-    return MakeHalfType(Intrinsic::nvvm_ex2_approx_f16x2, BuiltinID, E, *this);
+    return MakeHalfType(
+        CGM.getIntrinsic(Intrinsic::nvvm_ex2_approx,
+                         FixedVectorType::get(Builder.getHalfTy(), 2)),
+        BuiltinID, E, *this);
   case NVPTX::BI__nvvm_ff2f16x2_rn:
     return MakeHalfType(Intrinsic::nvvm_ff2f16x2_rn, BuiltinID, E, *this);
   case NVPTX::BI__nvvm_ff2f16x2_rn_relu:
@@ -952,6 +995,34 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     return MakeHalfType(Intrinsic::nvvm_fma_rn_sat_f16, BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fma_rn_sat_f16x2:
     return MakeHalfType(Intrinsic::nvvm_fma_rn_sat_f16x2, BuiltinID, E, *this);
+  case NVPTX::BI__nvvm_fma_rn_oob_f16:
+    return MakeFMAOOB(Intrinsic::nvvm_fma_rn_oob, Builder.getHalfTy(), E,
+                      *this);
+  case NVPTX::BI__nvvm_fma_rn_oob_f16x2:
+    return MakeFMAOOB(Intrinsic::nvvm_fma_rn_oob,
+                      llvm::FixedVectorType::get(Builder.getHalfTy(), 2), E,
+                      *this);
+  case NVPTX::BI__nvvm_fma_rn_oob_bf16:
+    return MakeFMAOOB(Intrinsic::nvvm_fma_rn_oob, Builder.getBFloatTy(), E,
+                      *this);
+  case NVPTX::BI__nvvm_fma_rn_oob_bf16x2:
+    return MakeFMAOOB(Intrinsic::nvvm_fma_rn_oob,
+                      llvm::FixedVectorType::get(Builder.getBFloatTy(), 2), E,
+                      *this);
+  case NVPTX::BI__nvvm_fma_rn_oob_relu_f16:
+    return MakeFMAOOB(Intrinsic::nvvm_fma_rn_oob_relu, Builder.getHalfTy(), E,
+                      *this);
+  case NVPTX::BI__nvvm_fma_rn_oob_relu_f16x2:
+    return MakeFMAOOB(Intrinsic::nvvm_fma_rn_oob_relu,
+                      llvm::FixedVectorType::get(Builder.getHalfTy(), 2), E,
+                      *this);
+  case NVPTX::BI__nvvm_fma_rn_oob_relu_bf16:
+    return MakeFMAOOB(Intrinsic::nvvm_fma_rn_oob_relu, Builder.getBFloatTy(), E,
+                      *this);
+  case NVPTX::BI__nvvm_fma_rn_oob_relu_bf16x2:
+    return MakeFMAOOB(Intrinsic::nvvm_fma_rn_oob_relu,
+                      llvm::FixedVectorType::get(Builder.getBFloatTy(), 2), E,
+                      *this);
   case NVPTX::BI__nvvm_fmax_f16:
     return MakeHalfType(Intrinsic::nvvm_fmax_f16, BuiltinID, E, *this);
   case NVPTX::BI__nvvm_fmax_f16x2:
@@ -1047,14 +1118,23 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateUnaryIntrinsic(Intrinsic::nvvm_fabs_ftz,
                                         EmitScalarExpr(E->getArg(0)));
   case NVPTX::BI__nvvm_fabs_d:
-    return Builder.CreateUnaryIntrinsic(Intrinsic::fabs,
+    return Builder.CreateFAbs(EmitScalarExpr(E->getArg(0)));
+  case NVPTX::BI__nvvm_ex2_approx_d:
+  case NVPTX::BI__nvvm_ex2_approx_f:
+    return Builder.CreateUnaryIntrinsic(Intrinsic::nvvm_ex2_approx,
+                                        EmitScalarExpr(E->getArg(0)));
+  case NVPTX::BI__nvvm_ex2_approx_ftz_f:
+    return Builder.CreateUnaryIntrinsic(Intrinsic::nvvm_ex2_approx_ftz,
                                         EmitScalarExpr(E->getArg(0)));
   case NVPTX::BI__nvvm_ldg_h:
   case NVPTX::BI__nvvm_ldg_h2:
-    return MakeHalfType(Intrinsic::not_intrinsic, BuiltinID, E, *this);
+    return EnsureNativeHalfSupport(BuiltinID, E, *this) ? MakeLdg(*this, E)
+                                                        : nullptr;
   case NVPTX::BI__nvvm_ldu_h:
   case NVPTX::BI__nvvm_ldu_h2:
-    return MakeHalfType(Intrinsic::nvvm_ldu_global_f, BuiltinID, E, *this);
+    return EnsureNativeHalfSupport(BuiltinID, E, *this)
+               ? MakeLdu(Intrinsic::nvvm_ldu_global_f, *this, E)
+               : nullptr;
   case NVPTX::BI__nvvm_cp_async_ca_shared_global_4:
     return MakeCpAsync(Intrinsic::nvvm_cp_async_ca_shared_global_4,
                        Intrinsic::nvvm_cp_async_ca_shared_global_4_s, *this, E,
@@ -1176,6 +1256,27 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(
         CGM.getIntrinsic(Intrinsic::nvvm_barrier_cta_sync_count),
         {EmitScalarExpr(E->getArg(0)), EmitScalarExpr(E->getArg(1))});
+  case NVPTX::BI__nvvm_bar0_and:
+    return Builder.CreateZExt(
+        Builder.CreateIntrinsic(
+            Intrinsic::nvvm_barrier_cta_red_and_aligned_all, {},
+            {Builder.getInt32(0),
+             Builder.CreateICmpNE(EmitScalarExpr(E->getArg(0)),
+                                  Builder.getInt32(0))}),
+        Builder.getInt32Ty());
+  case NVPTX::BI__nvvm_bar0_or:
+    return Builder.CreateZExt(
+        Builder.CreateIntrinsic(
+            Intrinsic::nvvm_barrier_cta_red_or_aligned_all, {},
+            {Builder.getInt32(0),
+             Builder.CreateICmpNE(EmitScalarExpr(E->getArg(0)),
+                                  Builder.getInt32(0))}),
+        Builder.getInt32Ty());
+  case NVPTX::BI__nvvm_bar0_popc:
+    return Builder.CreateIntrinsic(
+        Intrinsic::nvvm_barrier_cta_red_popc_aligned_all, {},
+        {Builder.getInt32(0), Builder.CreateICmpNE(EmitScalarExpr(E->getArg(0)),
+                                                   Builder.getInt32(0))});
   default:
     return nullptr;
   }

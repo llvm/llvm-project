@@ -31,9 +31,8 @@ body:             |
     ; GFX90A: liveins: $vgpr0_vgpr1
     ; GFX90A-NEXT: {{  $}}
     ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
-    ; GFX90A-NEXT: [[DEF:%[0-9]+]]:areg_64 = IMPLICIT_DEF
-    ; GFX90A-NEXT: [[COPY1:%[0-9]+]]:areg_64_align2 = COPY killed [[DEF]]
-    ; GFX90A-NEXT: GLOBAL_STORE_DWORDX2 [[COPY]], [[COPY1]], 0, 0, implicit $exec
+    ; GFX90A-NEXT: [[DEF:%[0-9]+]]:areg_64_align2 = IMPLICIT_DEF
+    ; GFX90A-NEXT: GLOBAL_STORE_DWORDX2 [[COPY]], [[DEF]], 0, 0, implicit $exec
     %0:vreg_64_align2 = COPY $vgpr0_vgpr1
     %1:areg_64 = IMPLICIT_DEF
     %2:areg_64_align2 = COPY killed %1
@@ -105,9 +104,8 @@ body:             |
     ; GFX90A: liveins: $vgpr0_vgpr1
     ; GFX90A-NEXT: {{  $}}
     ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
-    ; GFX90A-NEXT: [[DEF:%[0-9]+]]:areg_96 = IMPLICIT_DEF
-    ; GFX90A-NEXT: [[COPY1:%[0-9]+]]:areg_96_align2 = COPY killed [[DEF]]
-    ; GFX90A-NEXT: GLOBAL_STORE_DWORDX3 [[COPY]], [[COPY1]], 0, 0, implicit $exec
+    ; GFX90A-NEXT: [[DEF:%[0-9]+]]:areg_96_align2 = IMPLICIT_DEF
+    ; GFX90A-NEXT: GLOBAL_STORE_DWORDX3 [[COPY]], [[DEF]], 0, 0, implicit $exec
     %0:vreg_64_align2 = COPY $vgpr0_vgpr1
     %1:areg_96 = IMPLICIT_DEF
     %2:areg_96_align2 = COPY killed %1
@@ -234,9 +232,8 @@ body:             |
     ; GFX90A: liveins: $vgpr0_vgpr1
     ; GFX90A-NEXT: {{  $}}
     ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
-    ; GFX90A-NEXT: [[DEF:%[0-9]+]]:areg_128 = IMPLICIT_DEF
-    ; GFX90A-NEXT: [[COPY1:%[0-9]+]]:areg_128_align2 = COPY killed [[DEF]]
-    ; GFX90A-NEXT: GLOBAL_STORE_DWORDX4 [[COPY]], [[COPY1]], 0, 0, implicit $exec
+    ; GFX90A-NEXT: [[DEF:%[0-9]+]]:areg_128_align2 = IMPLICIT_DEF
+    ; GFX90A-NEXT: GLOBAL_STORE_DWORDX4 [[COPY]], [[DEF]], 0, 0, implicit $exec
     %0:vreg_64_align2 = COPY $vgpr0_vgpr1
     %1:areg_128 = IMPLICIT_DEF
     %2:areg_128_align2 = COPY killed %1

@@ -30,21 +30,26 @@ struct SchedulerTest : public testing::Test {
   std::unique_ptr<DominatorTree> DT;
   std::unique_ptr<BasicAAResult> BAA;
   std::unique_ptr<AAResults> AA;
+  std::unique_ptr<TargetLibraryInfoImpl> TLII;
+  std::unique_ptr<TargetLibraryInfo> TLI;
 
   void parseIR(LLVMContext &C, const char *IR) {
     SMDiagnostic Err;
     M = parseAssemblyString(IR, Err, C);
-    if (!M)
+    if (!M) {
       Err.print("SchedulerTest", errs());
+      return;
+    }
+
+    TLII = std::make_unique<TargetLibraryInfoImpl>(M->getTargetTriple());
+    TLI = std::make_unique<TargetLibraryInfo>(*TLII);
   }
 
   AAResults &getAA(llvm::Function &LLVMF) {
-    TargetLibraryInfoImpl TLII;
-    TargetLibraryInfo TLI(TLII);
-    AA = std::make_unique<AAResults>(TLI);
+    AA = std::make_unique<AAResults>(*TLI);
     AC = std::make_unique<AssumptionCache>(LLVMF);
     DT = std::make_unique<DominatorTree>(LLVMF);
-    BAA = std::make_unique<BasicAAResult>(M->getDataLayout(), LLVMF, TLI, *AC,
+    BAA = std::make_unique<BasicAAResult>(M->getDataLayout(), LLVMF, *TLI, *AC,
                                           DT.get());
     AA->addAAResult(*BAA);
     return *AA;
@@ -252,6 +257,99 @@ define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
     sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
     EXPECT_TRUE(Sched.trySchedule({Ret}));
     EXPECT_FALSE(Sched.trySchedule({S0, S1}));
+  }
+}
+
+TEST_F(SchedulerTest, Basic_TopDown) {
+  parseIR(C, R"IR(
+define void @foo(ptr noalias %ptr0, ptr noalias %ptr1) {
+  %ld0 = load i8, ptr %ptr0
+  %ld1 = load i8, ptr %ptr1
+  store i8 %ld0, ptr %ptr0
+  store i8 %ld1, ptr %ptr1
+  store i8 %ld0, ptr %ptr0
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *L0 = cast<sandboxir::LoadInst>(&*It++);
+  auto *L1 = cast<sandboxir::LoadInst>(&*It++);
+  auto *S0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S2 = cast<sandboxir::StoreInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  {
+    Ctx.save();
+    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
+    Sched.setDirection(sandboxir::SchedDirection::TopDown);
+    EXPECT_TRUE(Sched.trySchedule({L0, L1}));
+    EXPECT_TRUE(Sched.trySchedule({S0, S1}));
+    EXPECT_TRUE(Sched.trySchedule({Ret}));
+    Ctx.revert();
+  }
+  {
+    Ctx.save();
+    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
+    Sched.setDirection(sandboxir::SchedDirection::TopDown);
+    EXPECT_TRUE(Sched.trySchedule({L0, L1}));
+    EXPECT_TRUE(Sched.trySchedule({S1}));
+    EXPECT_TRUE(Sched.trySchedule({S0}));
+    EXPECT_TRUE(Sched.trySchedule({Ret}));
+    Ctx.revert();
+  }
+  {
+    Ctx.save();
+    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
+    Sched.setDirection(sandboxir::SchedDirection::TopDown);
+    EXPECT_TRUE(Sched.trySchedule({L0, L1}));
+    EXPECT_TRUE(Sched.trySchedule({S0}));
+    EXPECT_TRUE(Sched.trySchedule({S1}));
+    EXPECT_TRUE(Sched.trySchedule({S2}));
+    EXPECT_TRUE(Sched.trySchedule({Ret}));
+    Ctx.revert();
+  }
+  {
+    Ctx.save();
+    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
+    Sched.setDirection(sandboxir::SchedDirection::TopDown);
+    EXPECT_TRUE(Sched.trySchedule({L0}));
+    EXPECT_TRUE(Sched.trySchedule({L1}));
+    EXPECT_FALSE(Sched.trySchedule({S0, S2}));
+    EXPECT_TRUE(Sched.trySchedule({S0, S1}));
+    EXPECT_TRUE(Sched.trySchedule({Ret}));
+    Ctx.revert();
+  }
+  {
+    Ctx.save();
+    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
+    Sched.setDirection(sandboxir::SchedDirection::TopDown);
+    EXPECT_TRUE(Sched.trySchedule({L1}));
+    EXPECT_TRUE(Sched.trySchedule({L0}));
+    EXPECT_TRUE(Sched.trySchedule({S0, S1}));
+    EXPECT_TRUE(Sched.trySchedule({Ret}));
+    Ctx.revert();
+  }
+  {
+    Ctx.save();
+    sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx);
+    Sched.setDirection(sandboxir::SchedDirection::TopDown);
+    // Dependent instrs.
+    EXPECT_FALSE(Sched.trySchedule({L0, L1, S0, S1}));
+    EXPECT_FALSE(Sched.trySchedule({L0, L1, S0}));
+    EXPECT_FALSE(Sched.trySchedule({L0, S0}));
+    EXPECT_FALSE(Sched.trySchedule({L1, S1}));
+    EXPECT_FALSE(Sched.trySchedule({L1, S1, Ret}));
+    Sched.clear(); // TODO: Remove
+    // This should succeed.
+    EXPECT_TRUE(Sched.trySchedule({L0, L1}));
+    // Dependent instrs.
+    EXPECT_FALSE(Sched.trySchedule({S0, S2}));
+    Ctx.revert();
   }
 }
 
@@ -725,6 +823,7 @@ define void @foo(ptr noalias %ptr, ptr noalias %ptr1, ptr noalias %ptr2) {
   DAG.extend({L0});
   auto *L0N = DAG.getNode(L0);
   EXPECT_EQ(L0N->getNumUnscheduledSuccs(), 0u);
+  EXPECT_EQ(L0N->getNumUnscheduledPreds(), 0u);
   // We should have DAG nodes for all instructions at this point
 
   // Now create a new instruction below S0.
@@ -734,6 +833,11 @@ define void @foo(ptr noalias %ptr, ptr noalias %ptr1, ptr noalias %ptr2) {
   // Check that it is marked as "scheduled".
   auto *NewS1N = DAG.getNode(NewS1);
   EXPECT_TRUE(NewS1N->scheduled());
+#ifndef NDEBUG
+  // NewS1N is scheduled so unscheduled preds/succs are irrelevant.
+  EXPECT_FALSE(NewS1N->validUnscheduledPreds());
+  EXPECT_FALSE(NewS1N->validUnscheduledSuccs());
+#endif
   // Check that L0's UnscheduledSuccs are still == 0 since NewS1 is "scheduled".
   EXPECT_EQ(L0N->getNumUnscheduledSuccs(), 0u);
 
@@ -746,6 +850,7 @@ define void @foo(ptr noalias %ptr, ptr noalias %ptr1, ptr noalias %ptr2) {
   EXPECT_FALSE(NewS2N->scheduled());
   // Check that L0's UnscheduledSuccs got updated because of NewS2.
   EXPECT_EQ(L0N->getNumUnscheduledSuccs(), 1u);
+  EXPECT_EQ(NewS2N->getNumUnscheduledPreds(), 0u);
 
   sandboxir::ReadyListContainer ReadyList;
   // Check empty().

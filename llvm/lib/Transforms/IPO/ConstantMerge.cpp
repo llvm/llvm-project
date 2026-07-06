@@ -63,16 +63,10 @@ static bool IsBetterCanonical(const GlobalVariable &A,
   if (A.hasLocalLinkage() && !B.hasLocalLinkage())
     return false;
 
-  return A.hasGlobalUnnamedAddr();
-}
+  if (A.hasGlobalUnnamedAddr() != B.hasGlobalUnnamedAddr())
+    return A.hasGlobalUnnamedAddr();
 
-static bool hasMetadataOtherThanDebugLoc(const GlobalVariable *GV) {
-  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
-  GV->getAllMetadata(MDs);
-  for (const auto &V : MDs)
-    if (V.first != LLVMContext::MD_dbg)
-      return true;
-  return false;
+  return !A.hasComdat();
 }
 
 static void copyDebugLocMetadata(const GlobalVariable *From,
@@ -104,9 +98,19 @@ enum class CanMerge { No, Yes };
 static CanMerge makeMergeable(GlobalVariable *Old, GlobalVariable *New) {
   if (!Old->hasGlobalUnnamedAddr() && !New->hasGlobalUnnamedAddr())
     return CanMerge::No;
-  if (hasMetadataOtherThanDebugLoc(Old))
+  if (Old->hasMetadataOtherThanDebugLoc())
     return CanMerge::No;
-  assert(!hasMetadataOtherThanDebugLoc(New));
+  assert(!New->hasMetadataOtherThanDebugLoc());
+
+  // Merging constants with different comdats means one group cannot in general
+  // be dropped independently without the other group now having an invalid
+  // reference to the dropped constant.
+  // If we merge into a constant that does not have comdat, we can merge even
+  // when the old constant has a comdat group because it has local linkage and
+  // is therefore not the comdat key.
+  if (Old->getComdat() != New->getComdat() && New->hasComdat())
+    return CanMerge::No;
+
   if (!Old->hasGlobalUnnamedAddr())
     New->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
   return CanMerge::Yes;
@@ -172,7 +176,7 @@ static bool mergeConstants(Module &M) {
         continue;
 
       // Don't touch globals with metadata other then !dbg.
-      if (hasMetadataOtherThanDebugLoc(&GV))
+      if (GV.hasMetadataOtherThanDebugLoc())
         continue;
 
       Constant *Init = GV.getInitializer();

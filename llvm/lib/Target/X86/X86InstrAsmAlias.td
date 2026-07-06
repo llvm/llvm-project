@@ -667,6 +667,15 @@ def : InstAlias<"jmpl\t$seg, $off",  (FARJMP32i  i32imm:$off, i16imm:$seg)>, Req
 
 // Match 'movq <largeimm>, <reg>' as an alias for movabsq.
 def : InstAlias<"mov{q}\t{$imm, $reg|$reg, $imm}", (MOV64ri GR64:$reg, i64imm:$imm), 0>;
+// Match 'movX <largeimm>, <reg a>' and its reverse as an alias for movabsX.
+def : InstAlias<"mov{b}\t{$src, %al|al, $src}", (MOV8ao64 offset64const:$src), 0>;
+def : InstAlias<"mov{w}\t{$src, %ax|ax, $src}", (MOV16ao64 offset64const:$src), 0>;
+def : InstAlias<"mov{l}\t{$src, %eax|eax, $src}", (MOV32ao64 offset64const:$src), 0>;
+def : InstAlias<"mov{q}\t{$src, %rax|rax, $src}", (MOV64ao64 offset64const:$src), 0>;
+def : InstAlias<"mov{b}\t{%al, $dst|$dst, al}", (MOV8o64a offset64const:$dst), 0>;
+def : InstAlias<"mov{w}\t{%ax, $dst|$dst, ax}", (MOV16o64a offset64const:$dst), 0>;
+def : InstAlias<"mov{l}\t{%eax, $dst|$dst, eax}", (MOV32o64a offset64const:$dst), 0>;
+def : InstAlias<"mov{q}\t{%rax, $dst|$dst, rax}", (MOV64o64a offset64const:$dst), 0>;
 
 // Match 'movd GR64, MMX' as an alias for movq to be compatible with gas,
 // which supports this due to an old AMD documentation bug when 64-bit mode was

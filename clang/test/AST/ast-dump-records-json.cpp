@@ -795,8 +795,7 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "b",
 // CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "desugaredQualType": "C::(unnamed struct at {{.*}}:16:3)",
-// CHECK-NEXT:     "qualType": "struct (unnamed struct at {{.*}}:16:3)"
+// CHECK-NEXT:     "qualType": "struct (unnamed at {{.*}}:16:3)"
 // CHECK-NEXT:    }
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {
@@ -2072,8 +2071,7 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "b",
 // CHECK-NEXT:    "type": {
-// CHECK-NEXT:     "desugaredQualType": "G::(unnamed struct at {{.*}}:50:3)",
-// CHECK-NEXT:     "qualType": "struct (unnamed struct at {{.*}}:50:3)"
+// CHECK-NEXT:     "qualType": "struct (unnamed at {{.*}}:50:3)"
 // CHECK-NEXT:    }
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {

@@ -11,9 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Transform/IR/TransformAttrs.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/IR/OpDefinition.h"
 #include "mlir/Transforms/RegionUtils.h"
 
 #define GET_OP_CLASSES
@@ -32,7 +34,8 @@ transform::TestMoveOperandDeps::apply(TransformRewriter &rewriter,
   Operation *op = *state.getPayloadOps(getOp()).begin();
   Operation *moveBefore = *state.getPayloadOps(getInsertionPoint()).begin();
   if (failed(moveOperationDependencies(rewriter, op, moveBefore))) {
-    auto listener = cast<ErrorCheckingTrackingListener>(rewriter.getListener());
+    auto *listener =
+        cast<ErrorCheckingTrackingListener>(rewriter.getListener());
     std::string errorMsg = listener->getLatestMatchFailureMessage();
     (void)emitRemark(errorMsg);
   }
@@ -49,13 +52,41 @@ transform::TestMoveValueDefns::apply(TransformRewriter &rewriter,
   }
   Operation *moveBefore = *state.getPayloadOps(getInsertionPoint()).begin();
   if (failed(moveValueDefinitions(rewriter, values, moveBefore))) {
-    auto listener = cast<ErrorCheckingTrackingListener>(rewriter.getListener());
+    auto *listener =
+        cast<ErrorCheckingTrackingListener>(rewriter.getListener());
     std::string errorMsg = listener->getLatestMatchFailureMessage();
     (void)emitRemark(errorMsg);
   }
   return DiagnosedSilenceableFailure::success();
 }
 
+//===----------------------------------------------------------------------===//
+// Test affine functionality.
+//===----------------------------------------------------------------------===//
+DiagnosedSilenceableFailure
+transform::TestMakeComposedFoldedAffineApply::applyToOne(
+    TransformRewriter &rewriter, affine::AffineApplyOp affineApplyOp,
+    ApplyToEachResultList &results, TransformState &state) {
+  Location loc = affineApplyOp.getLoc();
+  OpFoldResult ofr = affine::makeComposedFoldedAffineApply(
+      rewriter, loc, affineApplyOp.getAffineMap(),
+      getAsOpFoldResult(affineApplyOp.getOperands()),
+      /*composeAffineMin=*/true);
+  Value result;
+  if (auto v = dyn_cast<Value>(ofr)) {
+    result = v;
+  } else {
+    result = arith::ConstantIndexOp::create(rewriter, loc,
+                                            getConstantIntValue(ofr).value());
+  }
+  results.push_back(result.getDefiningOp());
+  rewriter.replaceOp(affineApplyOp, result);
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// Extension
+//===----------------------------------------------------------------------===//
 namespace {
 
 class TestTransformsDialectExtension

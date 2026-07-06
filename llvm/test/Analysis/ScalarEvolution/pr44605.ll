@@ -21,12 +21,12 @@ define i32 @test() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[LOCAL_3_4]]
 ; CHECK-NEXT:    [[TMP2]] = add i32 [[TMP1]], [[LOCAL_3_31]]
 ; CHECK-NEXT:    [[TMP3]] = add nuw nsw i32 [[LOCAL_7_3]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt i32 [[LOCAL_7_3]], 4
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp samesign ugt i32 [[LOCAL_7_3]], 4
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[LATCH]], label [[INNER]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ [[TMP2]], [[INNER]] ]
 ; CHECK-NEXT:    [[TMP5]] = add nuw nsw i32 [[LOCAL_6_6]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ugt i32 [[LOCAL_6_6]], 276
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp samesign ugt i32 [[LOCAL_6_6]], 276
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[RETURN:%.*]], label [[OUTER]]
 ; CHECK:       return:
 ; CHECK-NEXT:    [[DOTLCSSA_LCSSA:%.*]] = phi i32 [ [[DOTLCSSA]], [[LATCH]] ]

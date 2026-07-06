@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/TableGen/Property.h"
-#include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/Operator.h"
 #include "mlir/TableGen/Predicate.h"
 #include "llvm/TableGen/Record.h"
@@ -111,4 +110,12 @@ Property Property::getBaseProperty() const {
     return Property(defInit).getBaseProperty();
   }
   return *this;
+}
+
+bool Property::isSubClassOf(StringRef className) const {
+  return def && def->isSubClassOf(className);
+}
+
+StringRef ConstantProp::getValue() const {
+  return def->getValueAsString("value");
 }

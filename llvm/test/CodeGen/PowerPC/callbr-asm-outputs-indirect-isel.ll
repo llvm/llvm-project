@@ -10,7 +10,7 @@ define void @strncpy_from_kernel_nofault_count() {
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000), %bb.3(0x00000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   INLINEASM_BR &"", 0 /* attdialect */, 131082 /* regdef:GPRC */, def %1, 13 /* imm */, %bb.3
+  ; CHECK-NEXT:   INLINEASM_BR &"", attdialect, regdef:GPRC, def %1, imm, %bb.3
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gprc = COPY %1
   ; CHECK-NEXT:   B %bb.1
   ; CHECK-NEXT: {{  $}}
@@ -22,7 +22,7 @@ define void @strncpy_from_kernel_nofault_count() {
   ; CHECK-NEXT: bb.2.Efault:
   ; CHECK-NEXT:   BLR8 implicit $lr8, implicit $rm
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.3.Efault.split (machine-block-address-taken, inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.3.Efault.split (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   STB %1, 0, $zero8 :: (store (s8) into `ptr null`)

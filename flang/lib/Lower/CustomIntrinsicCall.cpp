@@ -18,6 +18,7 @@
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/Fortran-features.h"
 #include <optional>
 
 /// Is this a call to MIN or MAX intrinsic with arguments that may be absent at
@@ -85,6 +86,17 @@ bool Fortran::lower::intrinsicRequiresCustomOptionalHandling(
          isAssociatedWithDynamicallyOptionalArg(name, procRef);
 }
 
+fir::IntrinsicLoweringOptions
+Fortran::lower::getIntrinsicLoweringOptions(AbstractConverter &converter) {
+  fir::IntrinsicLoweringOptions options;
+  options.coarrayEnabled =
+      converter.getFoldingContext().languageFeatures().IsEnabled(
+          Fortran::common::LanguageFeature::Coarray);
+  options.noPPCNativeVecElemOrder =
+      converter.getLoweringOptions().getNoPPCNativeVecElemOrder();
+  return options;
+}
+
 /// Generate the FIR+MLIR operations for the generic intrinsic \p name
 /// with arguments \p args and the expected result type \p resultType.
 /// Returned fir::ExtendedValue is the returned Fortran intrinsic value.
@@ -95,15 +107,18 @@ Fortran::lower::genIntrinsicCall(fir::FirOpBuilder &builder, mlir::Location loc,
                                  llvm::ArrayRef<fir::ExtendedValue> args,
                                  Fortran::lower::StatementContext &stmtCtx,
                                  Fortran::lower::AbstractConverter *converter) {
+  fir::IntrinsicLoweringOptions options;
+  if (converter)
+    options = getIntrinsicLoweringOptions(*converter);
   auto [result, mustBeFreed] =
-      fir::genIntrinsicCall(builder, loc, name, resultType, args, converter);
+      fir::genIntrinsicCall(builder, loc, name, resultType, args, options);
   if (mustBeFreed) {
     mlir::Value addr = fir::getBase(result);
     if (auto *box = result.getBoxOf<fir::BoxValue>())
       addr =
-          builder.create<fir::BoxAddrOp>(loc, box->getMemTy(), box->getAddr());
+          fir::BoxAddrOp::create(builder, loc, box->getMemTy(), box->getAddr());
     fir::FirOpBuilder *bldr = &builder;
-    stmtCtx.attachCleanup([=]() { bldr->create<fir::FreeMemOp>(loc, addr); });
+    stmtCtx.attachCleanup([=]() { fir::FreeMemOp::create(*bldr, loc, addr); });
   }
   return result;
 }
@@ -118,7 +133,7 @@ static void prepareMinOrMaxArguments(
   assert(retTy && "MIN and MAX must have a return type");
   mlir::Type resultType = *retTy;
   mlir::Location loc = converter.getCurrentLocation();
-  if (fir::isa_char(resultType))
+  if (fir::isa_char(fir::unwrapSequenceType(resultType)))
     TODO(loc, "CHARACTER MIN and MAX with dynamically optional arguments");
   for (auto arg : llvm::enumerate(procRef.arguments())) {
     const auto *expr =
@@ -171,9 +186,9 @@ lowerMinOrMax(fir::FirOpBuilder &builder, mlir::Location loc,
                 args.emplace_back(getOperand(opIndex, loadOperand));
                 fir::ExtendedValue newExtremum = genIntrinsicCall(
                     builder, loc, name, resultType, args, stmtCtx);
-                builder.create<fir::ResultOp>(loc, fir::getBase(newExtremum));
+                fir::ResultOp::create(builder, loc, fir::getBase(newExtremum));
               })
-              .genElse([&]() { builder.create<fir::ResultOp>(loc, extremum); })
+              .genElse([&]() { fir::ResultOp::create(builder, loc, extremum); })
               .getResults()[0];
     } else {
       // Argument is know to be present at compile time.
@@ -235,13 +250,13 @@ lowerIshftc(fir::FirOpBuilder &builder, mlir::Location loc,
             fir::ExtendedValue sizeExv = getOperand(2, loadOperand);
             mlir::Value size =
                 builder.createConvert(loc, resultType, fir::getBase(sizeExv));
-            builder.create<fir::ResultOp>(loc, size);
+            fir::ResultOp::create(builder, loc, size);
           })
           .genElse([&]() {
             mlir::Value bitSize = builder.createIntegerConstant(
                 loc, resultType,
                 mlir::cast<mlir::IntegerType>(resultType).getWidth());
-            builder.create<fir::ResultOp>(loc, bitSize);
+            fir::ResultOp::create(builder, loc, bitSize);
           })
           .getResults()[0]);
   return genIntrinsicCall(builder, loc, name, resultType, args, stmtCtx);
@@ -280,7 +295,7 @@ lowerAssociated(fir::FirOpBuilder &builder, mlir::Location loc,
   // while the optionality of the target pointer/allocatable is what must be
   // checked here.
   mlir::Value isPresent =
-      builder.create<fir::IsPresentOp>(loc, builder.getI1Type(), targetBase);
+      fir::IsPresentOp::create(builder, loc, builder.getI1Type(), targetBase);
   mlir::Type targetType = fir::unwrapRefType(targetBase.getType());
   mlir::Type targetValueType = fir::unwrapPassByRefType(targetType);
   mlir::Type boxType = mlir::isa<fir::BaseBoxType>(targetType)
@@ -293,11 +308,12 @@ lowerAssociated(fir::FirOpBuilder &builder, mlir::Location loc,
           .genThen([&]() {
             mlir::Value box = builder.createBox(loc, targetExv);
             mlir::Value cast = builder.createConvert(loc, boxType, box);
-            builder.create<fir::ResultOp>(loc, cast);
+            fir::ResultOp::create(builder, loc, cast);
           })
           .genElse([&]() {
-            mlir::Value absentBox = builder.create<fir::AbsentOp>(loc, boxType);
-            builder.create<fir::ResultOp>(loc, absentBox);
+            mlir::Value absentBox =
+                fir::AbsentOp::create(builder, loc, boxType);
+            fir::ResultOp::create(builder, loc, absentBox);
           })
           .getResults()[0];
   args.emplace_back(std::move(targetBox));

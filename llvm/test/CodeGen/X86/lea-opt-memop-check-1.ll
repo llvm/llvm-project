@@ -47,9 +47,9 @@ entry:
   call fastcc void @"\01?fin$0@0@test2@@"(ptr %tmp0)
   ret void
 ; CHECK-LABEL: test2:
-; CHECK:	.set Ltest2$frame_escape_0, 8
-; CHECK:	.set Ltest2$frame_escape_1, 4
-; CHECK:	.set Ltest2$frame_escape_2, 0
+; CHECK:	Ltest2$frame_escape_0 = 8
+; CHECK:	Ltest2$frame_escape_1 = 4
+; CHECK:	Ltest2$frame_escape_2 = 0
 ; CHECK:	calll "?fin$0@0@test2@@"
 }
 
@@ -92,4 +92,4 @@ if.end:
 ; CHECK:	pushl ([[REG3]])
 }
 
-attributes #0 = { nounwind optsize "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-features"="+mmx,+pclmul,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind optsize "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-features"="+mmx,+pclmul,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3" "use-soft-float"="false" }

@@ -4,9 +4,22 @@
 // RUN: %clang -### --target=spirv64 -x ir -c %s 2>&1 | FileCheck --check-prefix=SPV64 %s
 // RUN: %clang -### --target=spirv64 -x clcpp -c %s 2>&1 | FileCheck --check-prefix=SPV64 %s
 // RUN: %clang -### --target=spirv64 -x c -c %s 2>&1 | FileCheck --check-prefix=SPV64 %s
+// RUN: %clang -### --target=spirv-unknown-vulkan -x c -c %s 2>&1 | FileCheck --check-prefix=SPVVK %s
+// RUN: %clang -### --target=spirv32-unknown-vulkan -x c -c %s 2>&1 | FileCheck --check-prefix=SPV32VK %s
+// RUN: %clang -### --target=spirv64-unknown-vulkan -x c -c %s 2>&1 | FileCheck --check-prefix=SPV64VK %s
+// RUN: %clang -### --target=spirv64-unknown-vulkan1.3 -x c -c %s 2>&1 | FileCheck --check-prefix=SPV64VK %s
 
 // SPV64: "-cc1" "-triple" "spirv64"
 // SPV64-SAME: "-o" {{".*o"}}
+
+// SPVVK: "-cc1" "-triple" "spirv-unknown-vulkan"
+// SPVVK-SAME: "-o" {{".*o"}}
+
+// SPV32VK: "-cc1" "-triple" "spirv32-unknown-vulkan"
+// SPV32VK-SAME: "-o" {{".*o"}}
+
+// SPV64VK: "-cc1" "-triple" "spirv64-unknown-vulkan{{(1\.3)?}}"
+// SPV64VK-SAME: "-o" {{".*o"}}
 
 // RUN: %clang -### --target=spirv32 -x cl -c %s 2>&1 | FileCheck --check-prefix=SPV32 %s
 // RUN: %clang -### --target=spirv32 %s 2>&1 | FileCheck --check-prefix=SPV32 %s
@@ -92,7 +105,7 @@
 // RUN: mkdir -p %t/versioned
 // RUN: touch %t/versioned/spirv-as-%llvm-version-major \
 // RUN:   && chmod +x %t/versioned/spirv-as-%llvm-version-major
-// RUN: %if !system-windows %{ env "PATH=%t/versioned" %clang -### --target=spirv64 -x cl -c --save-temps %s 2>&1 \
+// RUN: %if !system-windows && !system-cygwin %{ env "PATH=%t/versioned" %clang -### --target=spirv64 -x cl -c --save-temps %s 2>&1 \
 // RUN:   | FileCheck -DVERSION=%llvm-version-major --check-prefix=VERSIONED %s %}
 
 // VERSIONED: {{.*}}spirv-as-[[VERSION]]

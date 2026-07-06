@@ -14,6 +14,8 @@ class ThreadJumpTestCase(TestBase):
         TestBase.setUp(self)
         self.build()
 
+    # Flakey on Windows on Arm, https://github.com/llvm/llvm-project/issues/201068.
+    @skipIf(oslist=["windows"], archs=["aarch64"])
     def test(self):
         """Test thread jump handling."""
         exe = self.getBuildArtifact("a.out")
@@ -65,6 +67,7 @@ class ThreadJumpTestCase(TestBase):
             substrs=["error"],
         )
 
+    @expectedFailureAll(compiler="clang", compiler_version=["<", "17.0"])
     def test_jump_offset(self):
         """Test Thread Jump by negative or positive offset"""
         exe = self.getBuildArtifact("a.out")

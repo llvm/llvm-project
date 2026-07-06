@@ -6,9 +6,9 @@ define void @test(ptr %0, i64 %1, i64 %2) {
 ; CHECK-SAME: ptr [[TMP0:%.*]], i64 [[TMP1:%.*]], i64 [[TMP2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x ptr> [[TMP4]], <4 x ptr> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint <4 x ptr> [[TMP5]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP7:%.*]] = ptrtoint <4 x ptr> [[TMP5]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i64> [[TMP7]], <4 x i64> poison, <8 x i32> <i32 0, i32 0, i32 1, i32 2, i32 2, i32 1, i32 3, i32 1>
+; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint <4 x ptr> [[TMP5]] to <4 x i64>
 ; CHECK-NEXT:    br [[DOTPREHEADER_LR_PH:label %.*]]
 ; CHECK:       [[_PREHEADER_LR_PH:.*:]]
 ; CHECK-NEXT:    br [[DOTPREHEADER_US_US_PREHEADER:label %.*]]
@@ -16,7 +16,8 @@ define void @test(ptr %0, i64 %1, i64 %2) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i64> poison, i64 [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <8 x i64> [[TMP9]], i64 [[TMP2]], i32 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i64> [[TMP10]], <8 x i64> poison, <8 x i32> <i32 0, i32 1, i32 0, i32 0, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP12:%.*]] = call <8 x i64> @llvm.vector.insert.v8i64.v4i64(<8 x i64> [[TMP11]], <4 x i64> [[TMP6]], i64 4)
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <4 x i64> [[TMP6]], <4 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <8 x i64> [[TMP11]], <8 x i64> [[TMP16]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:    [[TMP13:%.*]] = or <8 x i64> [[TMP12]], [[TMP8]]
 ; CHECK-NEXT:    br [[DOTPREHEADER_US_US:label %.*]]
 ; CHECK:       [[_PREHEADER_US_US:.*:]]

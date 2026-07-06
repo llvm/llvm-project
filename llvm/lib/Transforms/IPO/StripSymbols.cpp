@@ -22,6 +22,7 @@
 #include "llvm/Transforms/IPO/StripSymbols.h"
 
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -76,15 +77,17 @@ static void RemoveDeadConstant(Constant *C) {
 // Strip the symbol table of its names.
 //
 static void StripSymtab(ValueSymbolTable &ST, bool PreserveDbgInfo) {
-  for (ValueSymbolTable::iterator VI = ST.begin(), VE = ST.end(); VI != VE; ) {
-    Value *V = VI->getValue();
-    ++VI;
-    if (!isa<GlobalValue>(V) || cast<GlobalValue>(V)->hasLocalLinkage()) {
+  // Collect the values to rename first: setName("") removes the value from the
+  // symbol table, which invalidates iterators into it.
+  SmallVector<Value *, 0> ToStrip;
+  for (const ValueName &VN : ST) {
+    Value *V = VN.getValue();
+    if (!isa<GlobalValue>(V) || cast<GlobalValue>(V)->hasLocalLinkage())
       if (!PreserveDbgInfo || !V->getName().starts_with("llvm.dbg"))
-        // Set name to "", removing from symbol table!
-        V->setName("");
-    }
+        ToStrip.push_back(V);
   }
+  for (Value *V : ToStrip)
+    V->setName("");
 }
 
 // Strip any named types of their names.
@@ -309,8 +312,7 @@ PreservedAnalyses StripDeadCGProfilePass::run(Module &M,
   SmallVector<Metadata *, 16> ValidCGEdges;
   for (Metadata *Edge : CGProf->operands()) {
     if (auto *EdgeAsNode = dyn_cast_or_null<MDNode>(Edge))
-      if (llvm::all_of(EdgeAsNode->operands(),
-                       [](const Metadata *V) { return V != nullptr; }))
+      if (!llvm::is_contained(EdgeAsNode->operands(), nullptr))
         ValidCGEdges.push_back(Edge);
   }
   M.setModuleFlag(Module::Append, "CG Profile",

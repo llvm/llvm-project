@@ -16,6 +16,12 @@
 #  pragma GCC system_header
 #endif
 
+// <vcruntime_exception.h> defines its own std::align_val_t type,
+// which we use in order to be ABI-compatible with other STLs on Windows.
+#if _LIBCPP_HAS_LIBRARY_ALIGNED_ALLOCATION && defined(_LIBCPP_ABI_VCRUNTIME)
+#  include <vcruntime_new.h>
+#endif
+
 _LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
 #if _LIBCPP_HAS_LIBRARY_ALIGNED_ALLOCATION && !defined(_LIBCPP_ABI_VCRUNTIME)
 #  ifndef _LIBCPP_CXX03_LANG

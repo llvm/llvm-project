@@ -12,20 +12,20 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/Repeated.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "gtest/gtest.h"
 
 using namespace mlir;
 using namespace mlir::detail;
 
-static Operation *createOp(MLIRContext *context,
-                           ArrayRef<Value> operands = std::nullopt,
-                           ArrayRef<Type> resultTypes = std::nullopt,
+static Operation *createOp(MLIRContext *context, ArrayRef<Value> operands = {},
+                           ArrayRef<Type> resultTypes = {},
                            unsigned int numRegions = 0) {
   context->allowUnregisteredDialects();
   return Operation::create(
       UnknownLoc::get(context), OperationName("foo.bar", context), resultTypes,
-      operands, std::nullopt, nullptr, std::nullopt, numRegions);
+      operands, NamedAttrList(), PropertyRef(), {}, numRegions);
 }
 
 namespace {
@@ -34,7 +34,7 @@ TEST(OperandStorageTest, NonResizable) {
   Builder builder(&context);
 
   Operation *useOp =
-      createOp(&context, /*operands=*/std::nullopt, builder.getIntegerType(16));
+      createOp(&context, /*operands=*/{}, builder.getIntegerType(16));
   Value operand = useOp->getResult(0);
 
   // Create a non-resizable operation with one operand.
@@ -45,7 +45,7 @@ TEST(OperandStorageTest, NonResizable) {
   EXPECT_EQ(user->getNumOperands(), 1u);
 
   // Removing is okay.
-  user->setOperands(std::nullopt);
+  user->setOperands({});
   EXPECT_EQ(user->getNumOperands(), 0u);
 
   // Destroy the operations.
@@ -58,7 +58,7 @@ TEST(OperandStorageTest, Resizable) {
   Builder builder(&context);
 
   Operation *useOp =
-      createOp(&context, /*operands=*/std::nullopt, builder.getIntegerType(16));
+      createOp(&context, /*operands=*/{}, builder.getIntegerType(16));
   Value operand = useOp->getResult(0);
 
   // Create a resizable operation with one operand.
@@ -69,7 +69,7 @@ TEST(OperandStorageTest, Resizable) {
   EXPECT_EQ(user->getNumOperands(), 1u);
 
   // Removing is okay.
-  user->setOperands(std::nullopt);
+  user->setOperands({});
   EXPECT_EQ(user->getNumOperands(), 0u);
 
   // Adding more operands is okay.
@@ -86,7 +86,7 @@ TEST(OperandStorageTest, RangeReplace) {
   Builder builder(&context);
 
   Operation *useOp =
-      createOp(&context, /*operands=*/std::nullopt, builder.getIntegerType(16));
+      createOp(&context, /*operands=*/{}, builder.getIntegerType(16));
   Value operand = useOp->getResult(0);
 
   // Create a resizable operation with one operand.
@@ -122,7 +122,7 @@ TEST(OperandStorageTest, MutableRange) {
   Builder builder(&context);
 
   Operation *useOp =
-      createOp(&context, /*operands=*/std::nullopt, builder.getIntegerType(16));
+      createOp(&context, /*operands=*/{}, builder.getIntegerType(16));
   Value operand = useOp->getResult(0);
 
   // Create a resizable operation with one operand.
@@ -159,8 +159,7 @@ TEST(OperandStorageTest, RangeErase) {
   Builder builder(&context);
 
   Type type = builder.getNoneType();
-  Operation *useOp =
-      createOp(&context, /*operands=*/std::nullopt, {type, type});
+  Operation *useOp = createOp(&context, /*operands=*/{}, {type, type});
   Value operand1 = useOp->getResult(0);
   Value operand2 = useOp->getResult(1);
 
@@ -190,8 +189,8 @@ TEST(OperationOrderTest, OrderIsAlwaysValid) {
   MLIRContext context;
   Builder builder(&context);
 
-  Operation *containerOp = createOp(&context, /*operands=*/std::nullopt,
-                                    /*resultTypes=*/std::nullopt,
+  Operation *containerOp = createOp(&context, /*operands=*/{},
+                                    /*resultTypes=*/{},
                                     /*numRegions=*/1);
   Region &region = containerOp->getRegion(0);
   Block *block = new Block();
@@ -237,8 +236,8 @@ TEST(OperationFormatPrintTest, CanPrintNameAsPrefix) {
   context.allowUnregisteredDialects();
   Operation *op = Operation::create(
       NameLoc::get(StringAttr::get(&context, "my_named_loc")),
-      OperationName("t.op", &context), builder.getIntegerType(16), std::nullopt,
-      std::nullopt, nullptr, std::nullopt, 0);
+      OperationName("t.op", &context), builder.getIntegerType(16), {},
+      NamedAttrList(), PropertyRef(), {}, 0);
 
   std::string str;
   OpPrintingFlags flags;
@@ -304,8 +303,8 @@ TEST(OperandStorageTest, PopulateDefaultAttrs) {
   auto req1 = b.getI32IntegerAttr(10);
   auto req2 = b.getI32IntegerAttr(60);
   // Verify default attributes populated post op creation.
-  Operation *op = b.create<test::OpAttrMatch1>(b.getUnknownLoc(), req1, nullptr,
-                                               nullptr, req2);
+  Operation *op = test::OpAttrMatch1::create(b, b.getUnknownLoc(), req1,
+                                             nullptr, nullptr, req2);
   auto opt = op->getInherentAttr("default_valued_attr");
   EXPECT_NE(opt, nullptr) << *op;
 
@@ -315,6 +314,7 @@ TEST(OperandStorageTest, PopulateDefaultAttrs) {
 TEST(OperationEquivalenceTest, HashWorksWithFlags) {
   MLIRContext context;
   context.getOrLoadDialect<test::TestDialect>();
+  OpBuilder b(&context);
 
   auto *op1 = createOp(&context);
   // `op1` has an unknown loc.
@@ -325,12 +325,117 @@ TEST(OperationEquivalenceTest, HashWorksWithFlags) {
         op, OperationEquivalence::ignoreHashValue,
         OperationEquivalence::ignoreHashValue, flags);
   };
+  // Check ignore location.
   EXPECT_EQ(getHash(op1, OperationEquivalence::IgnoreLocations),
             getHash(op2, OperationEquivalence::IgnoreLocations));
   EXPECT_NE(getHash(op1, OperationEquivalence::None),
             getHash(op2, OperationEquivalence::None));
+  op1->setLoc(NameLoc::get(StringAttr::get(&context, "foo")));
+  // Check ignore discardable dictionary attributes.
+  SmallVector<NamedAttribute> newAttrs = {
+      b.getNamedAttr("foo", b.getStringAttr("f"))};
+  op1->setAttrs(newAttrs);
+  EXPECT_EQ(getHash(op1, OperationEquivalence::IgnoreDiscardableAttrs),
+            getHash(op2, OperationEquivalence::IgnoreDiscardableAttrs));
+  EXPECT_NE(getHash(op1, OperationEquivalence::None),
+            getHash(op2, OperationEquivalence::None));
   op1->destroy();
   op2->destroy();
+
+  // Check ignore properties.
+  auto req1 = b.getI32IntegerAttr(10);
+  Operation *opWithProperty1 = test::OpAttrMatch1::create(
+      b, b.getUnknownLoc(), req1, nullptr, nullptr, req1);
+  auto req2 = b.getI32IntegerAttr(60);
+  Operation *opWithProperty2 = test::OpAttrMatch1::create(
+      b, b.getUnknownLoc(), req2, nullptr, nullptr, req2);
+  EXPECT_EQ(getHash(opWithProperty1, OperationEquivalence::IgnoreProperties),
+            getHash(opWithProperty2, OperationEquivalence::IgnoreProperties));
+  EXPECT_NE(getHash(opWithProperty1, OperationEquivalence::None),
+            getHash(opWithProperty2, OperationEquivalence::None));
+  opWithProperty1->destroy();
+  opWithProperty2->destroy();
+}
+
+TEST(OperationCloneTest, CloneWithDifferentResults) {
+  MLIRContext context;
+  Builder builder(&context);
+
+  Operation *useOp = createOp(&context, {}, builder.getI32Type());
+  IRMapping map;
+  Operation *cloneOp = useOp->clone(
+      map, Operation::CloneOptions::all().withResultTypes(
+               SmallVector<Type>{builder.getI32Type(), builder.getI16Type()}));
+
+  ASSERT_EQ(cloneOp->getNumResults(), 2u);
+  EXPECT_EQ(cloneOp->getResult(0).getType(), builder.getI32Type());
+  EXPECT_EQ(cloneOp->getResult(1).getType(), builder.getI16Type());
+  EXPECT_FALSE(map.contains(useOp->getResult(0)));
+
+  useOp->destroy();
+  cloneOp->destroy();
+}
+
+TEST(RepeatedRangeTest, TypeRangeFromRepeatedType) {
+  MLIRContext context;
+  Builder builder(&context);
+  Type i32 = builder.getI32Type();
+
+  llvm::Repeated<Type> rep(3, i32);
+  TypeRange range(rep);
+
+  EXPECT_EQ(range.size(), 3u);
+  EXPECT_FALSE(range.empty());
+  for (Type t : range)
+    EXPECT_EQ(t, i32);
+
+  // Indexing and slicing exercise offset_base (which must not advance).
+  EXPECT_EQ(range[0], i32);
+  EXPECT_EQ(range[2], i32);
+  TypeRange sliced = range.drop_front(1);
+  EXPECT_EQ(sliced.size(), 2u);
+  EXPECT_EQ(sliced[0], i32);
+
+  llvm::Repeated<Type> emptyRep(0, Type{});
+  TypeRange emptyTypeRange(emptyRep);
+
+  EXPECT_EQ(emptyTypeRange.size(), 0u);
+  EXPECT_TRUE(emptyTypeRange.empty());
+}
+
+TEST(RepeatedRangeTest, ValueRangeFromRepeatedValue) {
+  Value nullVal;
+  llvm::Repeated<Value> rep(4, nullVal);
+  ValueRange range(rep);
+
+  EXPECT_EQ(range.size(), 4u);
+  EXPECT_FALSE(range.empty());
+  for (Value v : range)
+    EXPECT_EQ(v, nullVal);
+
+  llvm::Repeated<Value> emptyRep(0, nullVal);
+  ValueRange emptyRange(emptyRep);
+  EXPECT_EQ(emptyRange.size(), 0u);
+  EXPECT_TRUE(emptyRange.empty());
+}
+
+TEST(RepeatedRangeTest, TypeRangeFromRepeatedValueViaValueRange) {
+  MLIRContext context;
+  Builder builder(&context);
+
+  Operation *useOp =
+      createOp(&context, /*operands=*/{}, builder.getIntegerType(16));
+  Value operand = useOp->getResult(0);
+
+  llvm::Repeated<Value> rep(3, operand);
+  ValueRange vr(rep);
+  TypeRange tr(vr);
+
+  EXPECT_EQ(tr.size(), 3u);
+  for (Type t : tr)
+    EXPECT_EQ(t, builder.getIntegerType(16));
+
+  useOp->destroy();
 }
 
 } // namespace

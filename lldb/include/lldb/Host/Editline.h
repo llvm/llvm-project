@@ -267,6 +267,8 @@ public:
 
   size_t GetTerminalHeight() { return m_terminal_height; }
 
+  void Refresh();
+
 private:
   /// Sets the lowest line number for multi-line editing sessions.  A value of
   /// zero suppresses line number printing in the prompt.
@@ -381,6 +383,12 @@ private:
   bool CompleteCharacter(char ch, EditLineGetCharType &out);
 
   void ApplyTerminalSizeChange();
+
+  /// Apply a resize signaled by TerminalSizeChanged() if one is pending. The
+  /// output stream lock must be held. Repaints issued from the resize
+  /// notification thread call this so they draw at the new dimensions rather
+  /// than the dimensions cached before the resize.
+  void ApplyPendingTerminalSizeChange();
 
   // The following set various editline parameters.  It's not any less
   // verbose to put the editline calls into a function, but it

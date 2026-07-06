@@ -12,8 +12,7 @@ define i8 @test() {
 ; CHECK-NEXT:    [[OP_RDX2:%.*]] = or i8 [[OP_RDX1]], [[TMP0]]
 ; CHECK-NEXT:    [[OP_RDX3:%.*]] = or i8 [[OP_RDX2]], [[TMP1]]
 ; CHECK-NEXT:    [[OP_RDX5:%.*]] = or i8 [[OP_RDX3]], [[TMP3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call i8 @llvm.vector.reduce.or.v8i8(<8 x i8> zeroinitializer)
-; CHECK-NEXT:    [[OP_RDX4:%.*]] = or i8 [[OP_RDX5]], [[TMP4]]
+; CHECK-NEXT:    [[OP_RDX4:%.*]] = or i8 [[OP_RDX5]], 0
 ; CHECK-NEXT:    ret i8 [[OP_RDX4]]
 ;
 entry:

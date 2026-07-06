@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/sys_mman_macros.h"
 #include "src/sys/mman/madvise.h"
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/munmap.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include <sys/mman.h>
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;

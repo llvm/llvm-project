@@ -395,3 +395,16 @@ mlir::tosa::buildQTypeAttrFromMinMax(OpBuilder builder, Type inputDtype,
                                             maxAttr, quantBits, filterQuantDim,
                                             isSigned, narrowRange));
 }
+
+Type mlir::tosa::getStorageElementTypeFromQuantized(
+    quant::QuantizedType quantType) {
+  auto quantEty = quantType.getStorageType();
+  // StorageType doesn't capture the sign information
+  // Explicitly create unsigned type if needed
+  if (!quantType.isSigned()) {
+    quantEty = IntegerType::get(quantEty.getContext(),
+                                quantEty.getIntOrFloatBitWidth(),
+                                IntegerType::Unsigned);
+  }
+  return quantEty;
+}

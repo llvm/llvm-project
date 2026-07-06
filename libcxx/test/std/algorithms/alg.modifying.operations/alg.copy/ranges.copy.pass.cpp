@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cstdint>
 #include <deque>
 #include <ranges>
 #include <vector>
@@ -241,7 +242,7 @@ constexpr bool test() {
 
   // Validate std::ranges::copy with std::vector<bool> iterators and custom storage types.
   // Ensure that assigned bits hold the intended values, while unassigned bits stay unchanged.
-  // Related issue: https://github.com/llvm/llvm-project/issues/131692.
+  // Related issue: https://llvm.org/PR131692.
   {
     //// Tests for std::ranges::copy with aligned bits
 

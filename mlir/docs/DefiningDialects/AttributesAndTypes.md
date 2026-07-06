@@ -136,7 +136,7 @@ def My_IntegerAttr : MyDialect_Attr<"Integer", "int"> {
   /// Here we've defined two parameters, one is a "self" type parameter, and the
   /// other is the integer value of the attribute. The self type parameter is
   /// specially handled by the assembly format.
-  let parameters = (ins AttributeSelfTypeParameter<"">:$type, "APInt":$value);
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type, APIntParameter<"">:$value);
 
   /// Here we've defined a custom builder for the type, that removes the need to pass
   /// in an MLIRContext instance; as it can be infered from the `type`.
@@ -564,6 +564,11 @@ For Attributes, these methods will have the form:
 - `static Attribute MyAttr::parse(AsmParser &parser, Type attrType)`
 
 - `void MyAttr::print(AsmPrinter &p) const`
+
+It is possible to use newlines and indents in custom `print` methods.
+However, multiline Types or Attributes are not recommended nor allowed in the upstream MLIR dialects.
+They can be used in custom dialects to improve flexibility and readability, e.g. in cases of
+multiple nested Types and Attributes.
 
 #### Using `assemblyFormat`
 

@@ -424,6 +424,271 @@ join:
   ret ptr %phi
 }
 
+define void @hoist_captures_same(i1 %c, ptr %x, ptr %y) {
+; CHECK-LABEL: @hoist_captures_same(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8, !captures [[META9:![0-9]+]]
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+
+then:
+  store ptr %x, ptr %y, !captures !{!"address"}
+  br label %out
+
+else:
+  store ptr %x, ptr %y, !captures !{!"address"}
+  br label %out
+
+out:
+  ret void
+}
+
+define void @hoist_captures_different(i1 %c, ptr %x, ptr %y) {
+; CHECK-LABEL: @hoist_captures_different(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8, !captures [[META10:![0-9]+]]
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+
+then:
+  store ptr %x, ptr %y, !captures !{!"address"}
+  br label %out
+
+else:
+  store ptr %x, ptr %y, !captures !{!"read_provenance"}
+  br label %out
+
+out:
+  ret void
+}
+
+define void @hoist_captures_overlap(i1 %c, ptr %x, ptr %y) {
+; CHECK-LABEL: @hoist_captures_overlap(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8, !captures [[META10]]
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+
+then:
+  store ptr %x, ptr %y, !captures !{!"address"}
+  br label %out
+
+else:
+  store ptr %x, ptr %y, !captures !{!"address", !"read_provenance"}
+  br label %out
+
+out:
+  ret void
+}
+
+define void @hoist_captures_subsume1(i1 %c, ptr %x, ptr %y) {
+; CHECK-LABEL: @hoist_captures_subsume1(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8, !captures [[META9]]
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+
+then:
+  store ptr %x, ptr %y, !captures !{!"address_is_null"}
+  br label %out
+
+else:
+  store ptr %x, ptr %y, !captures !{!"address"}
+  br label %out
+
+out:
+  ret void
+}
+
+define void @hoist_captures_subsume2(i1 %c, ptr %x, ptr %y) {
+; CHECK-LABEL: @hoist_captures_subsume2(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8, !captures [[META11:![0-9]+]]
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+
+then:
+  store ptr %x, ptr %y, !captures !{!"provenance"}
+  br label %out
+
+else:
+  store ptr %x, ptr %y, !captures !{!"read_provenance"}
+  br label %out
+
+out:
+  ret void
+}
+
+define void @hoist_captures_full_set(i1 %c, ptr %x, ptr %y) {
+; CHECK-LABEL: @hoist_captures_full_set(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+
+then:
+  store ptr %x, ptr %y, !captures !{!"address"}
+  br label %out
+
+else:
+  store ptr %x, ptr %y, !captures !{!"provenance"}
+  br label %out
+
+out:
+  ret void
+}
+
+define void @hoist_captures_only_one1(i1 %c, ptr %x, ptr %y) {
+; CHECK-LABEL: @hoist_captures_only_one1(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+
+then:
+  store ptr %x, ptr %y, !captures !{!"address"}
+  br label %out
+
+else:
+  store ptr %x, ptr %y
+  br label %out
+
+out:
+  ret void
+}
+
+define void @hoist_captures_only_one2(i1 %c, ptr %x, ptr %y) {
+; CHECK-LABEL: @hoist_captures_only_one2(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    store ptr [[X:%.*]], ptr [[Y:%.*]], align 8
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+
+then:
+  store ptr %x, ptr %y
+  br label %out
+
+else:
+  store ptr %x, ptr %y, !captures !{!"address"}
+  br label %out
+
+out:
+  ret void
+}
+
+define void @hoist_nofpclass_intersect(i1 %c, ptr %p) {
+; CHECK-LABEL: @hoist_nofpclass_intersect(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    [[T:%.*]] = load float, ptr [[P:%.*]], align 4, !nofpclass [[META12:![0-9]+]]
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+
+then:
+  %t = load float, ptr %p, !nofpclass !{i32 3} ; nan
+  br label %out
+
+else:
+  %e = load float, ptr %p, !nofpclass !{i32 519} ; inf nan
+  br label %out
+
+out:
+  ret void
+}
+
+define void @hoist_nofpclass_drop(i1 %c, ptr %p) {
+; CHECK-LABEL: @hoist_nofpclass_drop(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    [[T:%.*]] = load float, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+
+then:
+  %t = load float, ptr %p, !nofpclass !{i32 3} ; nan
+  br label %out
+
+else:
+  %e = load float, ptr %p, !nofpclass !{i32 512} ; inf
+  br label %out
+
+out:
+  ret void
+}
+
+
+define void @hoist_mem_cache_hint_drop(i1 %c, ptr %p) {
+; CHECK-LABEL: @hoist_mem_cache_hint_drop(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    [[T:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+then:
+  %t = load i32, ptr %p, !mem.cache_hint !10
+  br label %out
+else:
+  %e = load i32, ptr %p, !mem.cache_hint !13
+  br label %out
+out:
+  ret void
+}
+
+define void @hoist_mem_cache_hint_drop2(i1 %c, ptr %p) {
+; CHECK-LABEL: @hoist_mem_cache_hint_drop2(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    [[T:%.*]] = load i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+then:
+  %t = load i32, ptr %p, !mem.cache_hint !10
+  br label %out
+else:
+  %e = load i32, ptr %p
+  br label %out
+out:
+  ret void
+}
+
+define void @hoist_mem_cache_hint_keep(i1 %c, ptr %p) {
+; CHECK-LABEL: @hoist_mem_cache_hint_keep(
+; CHECK-NEXT:  if:
+; CHECK-NEXT:    store i32 0, ptr [[P:%.*]], align 4, !mem.cache_hint [[META13:![0-9]+]]
+; CHECK-NEXT:    ret void
+;
+if:
+  br i1 %c, label %then, label %else
+then:
+  store i32 0, ptr %p, !mem.cache_hint !11
+  br label %out
+else:
+  store i32 0, ptr %p, !mem.cache_hint !11
+  br label %out
+out:
+  ret void
+}
+
 !0 = !{ i8 0, i8 1 }
 !1 = !{ i8 3, i8 5 }
 !2 = !{}
@@ -434,7 +699,11 @@ join:
 !7 = !{i32 4, i32 8, i32 20, i32 31}
 !8 = !{i32 2, i32 5}
 !9 = !{i32 2, i32 5, i32 22, i32 42, i32 45, i32 50}
-
+!10 = !{ i32 0, !12 }
+!11 = !{ i32 1, !12 }
+!12 = !{ !"nvvm.l1_eviction", !"first" }
+!13 = !{ i32 0, !14 }
+!14 = !{ !"nvvm.l1_eviction", !"last" }
 ;.
 ; CHECK: [[RNG0]] = !{i8 0, i8 1, i8 3, i8 5}
 ; CHECK: [[RNG1]] = !{i8 0, i8 1, i8 3, i8 5, i8 7, i8 9}
@@ -445,4 +714,10 @@ join:
 ; CHECK: [[META6]] = !{float 2.500000e+00}
 ; CHECK: [[META7]] = !{i32 5, i32 6}
 ; CHECK: [[META8]] = !{i32 4, i32 5}
+; CHECK: [[META9]] = !{!"address"}
+; CHECK: [[META10]] = !{!"address", !"read_provenance"}
+; CHECK: [[META11]] = !{!"provenance"}
+; CHECK: [[META12]] = !{i32 3}
+; CHECK: [[META13]] = !{i32 1, [[META14:![0-9]+]]}
+; CHECK: [[META14]] = !{!"nvvm.l1_eviction", !"first"}
 ;.

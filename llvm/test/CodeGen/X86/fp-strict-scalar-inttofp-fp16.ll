@@ -33,9 +33,9 @@ define half @sitofp_i1tof16(i1 %x) #0 {
 ; AVX-NEXT:    andb $1, %dil
 ; AVX-NEXT:    negb %dil
 ; AVX-NEXT:    movsbl %dil, %eax
-; AVX-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
@@ -45,7 +45,7 @@ define half @sitofp_i1tof16(i1 %x) #0 {
 ; X86-NEXT:    andb $1, %al
 ; X86-NEXT:    negb %al
 ; X86-NEXT:    movsbl %al, %eax
-; X86-NEXT:    vcvtsi2sh %eax, %xmm0, %xmm0
+; X86-NEXT:    vcvtsi2sh %eax, %xmm7, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: sitofp_i1tof16:
@@ -53,7 +53,7 @@ define half @sitofp_i1tof16(i1 %x) #0 {
 ; X64-NEXT:    andb $1, %dil
 ; X64-NEXT:    negb %dil
 ; X64-NEXT:    movsbl %dil, %eax
-; X64-NEXT:    vcvtsi2sh %eax, %xmm0, %xmm0
+; X64-NEXT:    vcvtsi2sh %eax, %xmm31, %xmm0
 ; X64-NEXT:    retq
   %result = call half @llvm.experimental.constrained.sitofp.f16.i1(i1 %x,
                                                metadata !"round.dynamic",
@@ -74,22 +74,22 @@ define half @sitofp_i8tof16(i8 %x) #0 {
 ; AVX-LABEL: sitofp_i8tof16:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movsbl %dil, %eax
-; AVX-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; X86-LABEL: sitofp_i8tof16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vcvtsi2sh %eax, %xmm0, %xmm0
+; X86-NEXT:    vcvtsi2sh %eax, %xmm7, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: sitofp_i8tof16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movsbl %dil, %eax
-; X64-NEXT:    vcvtsi2sh %eax, %xmm0, %xmm0
+; X64-NEXT:    vcvtsi2sh %eax, %xmm31, %xmm0
 ; X64-NEXT:    retq
   %result = call half @llvm.experimental.constrained.sitofp.f16.i8(i8 %x,
                                                metadata !"round.dynamic",
@@ -110,22 +110,22 @@ define half @sitofp_i16tof16(i16 %x) #0 {
 ; AVX-LABEL: sitofp_i16tof16:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movswl %di, %eax
-; AVX-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; X86-LABEL: sitofp_i16tof16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movswl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vcvtsi2sh %eax, %xmm0, %xmm0
+; X86-NEXT:    vcvtsi2sh %eax, %xmm7, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: sitofp_i16tof16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movswl %di, %eax
-; X64-NEXT:    vcvtsi2sh %eax, %xmm0, %xmm0
+; X64-NEXT:    vcvtsi2sh %eax, %xmm31, %xmm0
 ; X64-NEXT:    retq
   %result = call half @llvm.experimental.constrained.sitofp.f16.i16(i16 %x,
                                                metadata !"round.dynamic",
@@ -144,20 +144,20 @@ define half @sitofp_i32tof16(i32 %x) #0 {
 ;
 ; AVX-LABEL: sitofp_i32tof16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vcvtsi2ss %edi, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %edi, %xmm15, %xmm0
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; X86-LABEL: sitofp_i32tof16:
 ; X86:       # %bb.0:
-; X86-NEXT:    vcvtsi2shl {{[0-9]+}}(%esp), %xmm0, %xmm0
+; X86-NEXT:    vcvtsi2shl {{[0-9]+}}(%esp), %xmm7, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: sitofp_i32tof16:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcvtsi2sh %edi, %xmm0, %xmm0
+; X64-NEXT:    vcvtsi2sh %edi, %xmm31, %xmm0
 ; X64-NEXT:    retq
   %result = call half @llvm.experimental.constrained.sitofp.f16.i32(i32 %x,
                                                metadata !"round.dynamic",
@@ -176,9 +176,9 @@ define half @sitofp_i64tof16(i64 %x) #0 {
 ;
 ; AVX-LABEL: sitofp_i64tof16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vcvtsi2ss %rdi, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %rdi, %xmm15, %xmm0
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
@@ -190,7 +190,7 @@ define half @sitofp_i64tof16(i64 %x) #0 {
 ;
 ; X64-LABEL: sitofp_i64tof16:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcvtsi2sh %rdi, %xmm0, %xmm0
+; X64-NEXT:    vcvtsi2sh %rdi, %xmm31, %xmm0
 ; X64-NEXT:    retq
   %result = call half @llvm.experimental.constrained.sitofp.f16.i64(i64 %x,
                                                metadata !"round.dynamic",
@@ -211,9 +211,9 @@ define half @uitofp_i1tof16(i1 %x) #0 {
 ; AVX-LABEL: uitofp_i1tof16:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    andl $1, %edi
-; AVX-NEXT:    vcvtsi2ss %edi, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %edi, %xmm15, %xmm0
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
@@ -222,13 +222,13 @@ define half @uitofp_i1tof16(i1 %x) #0 {
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    andb $1, %al
 ; X86-NEXT:    movzbl %al, %eax
-; X86-NEXT:    vcvtsi2sh %eax, %xmm0, %xmm0
+; X86-NEXT:    vcvtsi2sh %eax, %xmm7, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: uitofp_i1tof16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    andl $1, %edi
-; X64-NEXT:    vcvtsi2sh %edi, %xmm0, %xmm0
+; X64-NEXT:    vcvtsi2sh %edi, %xmm31, %xmm0
 ; X64-NEXT:    retq
   %result = call half @llvm.experimental.constrained.uitofp.f16.i1(i1 %x,
                                                metadata !"round.dynamic",
@@ -249,22 +249,22 @@ define half @uitofp_i8tof16(i8 %x) #0 {
 ; AVX-LABEL: uitofp_i8tof16:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movzbl %dil, %eax
-; AVX-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; X86-LABEL: uitofp_i8tof16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vcvtsi2sh %eax, %xmm0, %xmm0
+; X86-NEXT:    vcvtsi2sh %eax, %xmm7, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: uitofp_i8tof16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    vcvtsi2sh %eax, %xmm0, %xmm0
+; X64-NEXT:    vcvtsi2sh %eax, %xmm31, %xmm0
 ; X64-NEXT:    retq
   %result = call half @llvm.experimental.constrained.uitofp.f16.i8(i8 %x,
                                                metadata !"round.dynamic",
@@ -285,22 +285,22 @@ define half @uitofp_i16tof16(i16 %x) #0 {
 ; AVX-LABEL: uitofp_i16tof16:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movzwl %di, %eax
-; AVX-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; X86-LABEL: uitofp_i16tof16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vcvtsi2sh %eax, %xmm0, %xmm0
+; X86-NEXT:    vcvtsi2sh %eax, %xmm7, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: uitofp_i16tof16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzwl %di, %eax
-; X64-NEXT:    vcvtsi2sh %eax, %xmm0, %xmm0
+; X64-NEXT:    vcvtsi2sh %eax, %xmm31, %xmm0
 ; X64-NEXT:    retq
   %result = call half @llvm.experimental.constrained.uitofp.f16.i16(i16 %x,
                                                metadata !"round.dynamic",
@@ -321,28 +321,28 @@ define half @uitofp_i32tof16(i32 %x) #0 {
 ; F16C-LABEL: uitofp_i32tof16:
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    movl %edi, %eax
-; F16C-NEXT:    vcvtsi2ss %rax, %xmm0, %xmm0
+; F16C-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm0
 ; F16C-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; F16C-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; F16C-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; F16C-NEXT:    retq
 ;
 ; AVX512-LABEL: uitofp_i32tof16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcvtusi2ss %edi, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtusi2ss %edi, %xmm15, %xmm0
 ; AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX512-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
 ;
 ; X86-LABEL: uitofp_i32tof16:
 ; X86:       # %bb.0:
-; X86-NEXT:    vcvtusi2shl {{[0-9]+}}(%esp), %xmm0, %xmm0
+; X86-NEXT:    vcvtusi2shl {{[0-9]+}}(%esp), %xmm7, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: uitofp_i32tof16:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcvtusi2sh %edi, %xmm0, %xmm0
+; X64-NEXT:    vcvtusi2sh %edi, %xmm31, %xmm0
 ; X64-NEXT:    retq
   %result = call half @llvm.experimental.constrained.uitofp.f16.i32(i32 %x,
                                                metadata !"round.dynamic",
@@ -381,21 +381,21 @@ define half @uitofp_i64tof16(i64 %x) #0 {
 ; F16C-NEXT:    orq %rax, %rcx
 ; F16C-NEXT:    testq %rdi, %rdi
 ; F16C-NEXT:    cmovnsq %rdi, %rcx
-; F16C-NEXT:    vcvtsi2ss %rcx, %xmm0, %xmm0
+; F16C-NEXT:    vcvtsi2ss %rcx, %xmm15, %xmm0
 ; F16C-NEXT:    jns .LBB9_2
 ; F16C-NEXT:  # %bb.1:
 ; F16C-NEXT:    vaddss %xmm0, %xmm0, %xmm0
 ; F16C-NEXT:  .LBB9_2:
 ; F16C-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; F16C-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; F16C-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; F16C-NEXT:    retq
 ;
 ; AVX512-LABEL: uitofp_i64tof16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcvtusi2ss %rdi, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtusi2ss %rdi, %xmm15, %xmm0
 ; AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX512-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX512-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
 ;
@@ -407,7 +407,7 @@ define half @uitofp_i64tof16(i64 %x) #0 {
 ;
 ; X64-LABEL: uitofp_i64tof16:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcvtusi2sh %rdi, %xmm0, %xmm0
+; X64-NEXT:    vcvtusi2sh %rdi, %xmm31, %xmm0
 ; X64-NEXT:    retq
   %result = call half @llvm.experimental.constrained.uitofp.f16.i64(i64 %x,
                                                metadata !"round.dynamic",

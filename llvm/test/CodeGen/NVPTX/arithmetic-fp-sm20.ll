@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=nvptx -mcpu=sm_20 -fp-contract=fast | FileCheck %s
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 -fp-contract=fast | FileCheck %s
-; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -mtriple=nvptx -mcpu=sm_20 -fp-contract=fast | %ptxas-verify %}
+; RUN: %if ptxas-ptr32 %{ llc < %s -mtriple=nvptx -mcpu=sm_20 -fp-contract=fast | %ptxas-verify %}
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 -fp-contract=fast | %ptxas-verify %}
 
 ;; These tests should run for all targets

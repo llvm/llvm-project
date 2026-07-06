@@ -14,6 +14,7 @@
 //   void insert(InputIterator first, InputIterator last);
 
 #include <flat_set>
+#include <algorithm>
 #include <cassert>
 #include <functional>
 #include <deque>
@@ -36,7 +37,7 @@ static_assert(!CanInsert<Set, int, int>);
 static_assert(!CanInsert<Set, cpp20_input_iterator<int*>, cpp20_input_iterator<int*>>);
 
 template <class KeyContainer>
-void test_one() {
+constexpr void test_one() {
   using M = std::flat_set<int, std::less<int>, KeyContainer>;
 
   int ar1[] = {
@@ -74,11 +75,22 @@ void test_one() {
   assert(m == expected2);
 }
 
-void test() {
+constexpr bool test() {
   test_one<std::vector<int>>();
-  test_one<std::deque<int>>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+    test_one<std::deque<int>>();
   test_one<MinSequenceContainer<int>>();
   test_one<std::vector<int, min_allocator<int>>>();
+  {
+    std::flat_set<int, std::less<int>, SillyReserveVector<int>> m{1, 2};
+    std::vector<int> v{3, 4};
+    m.insert(v.begin(), v.end());
+    assert(std::ranges::equal(m, std::vector<int>{1, 2, 3, 4}));
+  }
+
+  return true;
 }
 
 void test_exception() {
@@ -89,6 +101,9 @@ void test_exception() {
 int main(int, char**) {
   test();
   test_exception();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

@@ -80,6 +80,7 @@ private:
   void PutDerivedType(const Symbol &, const Scope * = nullptr);
   void PutDECStructure(const Symbol &, const Scope * = nullptr);
   void PutTypeParam(llvm::raw_ostream &, const Symbol &);
+  void PutUserReduction(llvm::raw_ostream &, const Symbol &);
   void PutSubprogram(const Symbol &);
   void PutGeneric(const Symbol &);
   void PutUse(const Symbol &);

@@ -390,10 +390,11 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
       continue;
 
     BasicBlock *BB = P.InsertPt->getParent();
-    SCEVExpander SCEVE(*SE, BB->getDataLayout(), "prefaddr");
-    const SCEV *NextLSCEV = SE->getAddExpr(P.LSCEVAddRec, SE->getMulExpr(
-      SE->getConstant(P.LSCEVAddRec->getType(), ItersAhead),
-      P.LSCEVAddRec->getStepRecurrence(*SE)));
+    SCEVExpander SCEVE(*SE, "prefaddr");
+    const SCEV *NextLSCEV = SE->getAddExpr(
+        P.LSCEVAddRec,
+        SE->getMulExpr(SE->getConstant(P.LSCEVAddRec->getType(), ItersAhead),
+                       P.LSCEVAddRec->getStepRecurrence(*SE)));
     if (!SCEVE.isSafeToExpand(NextLSCEV))
       continue;
 

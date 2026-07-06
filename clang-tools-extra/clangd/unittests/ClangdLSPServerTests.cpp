@@ -235,7 +235,8 @@ TEST_F(LSPTest, ClangTidyRename) {
             .takeValue()
             .getAsArray())[0];
 
-  ASSERT_EQ((*RenameCommand.getAsObject())["title"], "change 'foo' to 'Foo'");
+  ASSERT_EQ((*RenameCommand.getAsObject())["title"],
+            "Apply fix: change 'foo' to 'Foo'");
 
   Client.expectServerCall("workspace/applyEdit");
   Client.call("workspace/executeCommand", RenameCommand);
@@ -491,6 +492,42 @@ TEST_F(LSPTest, DiagModuleTest) {
   EXPECT_THAT(Client.diagnostics("foo.cpp"),
               llvm::ValueIs(testing::ElementsAre(diagMessage(DiagMsg))));
 }
+
+// Regression test for https://github.com/llvm/llvm-project/issues/196072.
+TEST_F(LSPTest, CompletionOutOfRangePosition) {
+  auto &Client = start();
+  Client.didOpen("foo.cpp", "int x;");
+  auto &Reply = Client.call(
+      "textDocument/completion",
+      llvm::json::Object{
+          {"textDocument", Client.documentID("foo.cpp")},
+          {"position", llvm::json::Object{{"line", 97}, {"character", 0}}},
+          {"context",
+           llvm::json::Object{
+               {"triggerKind", 2},
+               {"triggerCharacter", ">"},
+           }},
+      });
+  auto Result = Reply.take();
+  ASSERT_TRUE(!!Result) << "Expected a response, not a server crash";
+}
+
+// https://github.com/llvm/llvm-project/issues/196225
+TEST_F(LSPTest, ShutdownDuringRename) {
+  Annotations Code("void ^foo();");
+  auto &Client = start();
+  Client.didOpen("foo.cpp", Code.code());
+  auto &Reply = Client.call("textDocument/rename",
+                            llvm::json::Object{
+                                {"textDocument", Client.documentID("foo.cpp")},
+                                {"position", Code.point()},
+                                {"newName", "bar"},
+                            });
+  stop();
+  auto Result = Reply.take();
+  ASSERT_TRUE(!!Result) << "Expected a response, not a server crash";
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

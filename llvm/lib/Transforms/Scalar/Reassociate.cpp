@@ -83,10 +83,10 @@ static void PrintOps(Instruction *I, const SmallVectorImpl<ValueEntry> &Ops) {
   Module *M = I->getModule();
   dbgs() << Instruction::getOpcodeName(I->getOpcode()) << " "
        << *Ops[0].Op->getType() << '\t';
-  for (unsigned i = 0, e = Ops.size(); i != e; ++i) {
+  for (const ValueEntry &Op : Ops) {
     dbgs() << "[ ";
-    Ops[i].Op->printAsOperand(dbgs(), false, M);
-    dbgs() << ", #" << Ops[i].Rank << "] ";
+    Op.Op->printAsOperand(dbgs(), false, M);
+    dbgs() << ", #" << Op.Rank << "] ";
   }
 }
 #endif
@@ -636,12 +636,14 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
         BinaryOperator *BO = isReassociableOp(OldLHS, Opcode);
         if (BO && !NotRewritable.count(BO))
           NodesToRewrite.push_back(BO);
+        salvageDebugInfo(*Op);
         Op->setOperand(0, NewLHS);
       }
       if (NewRHS != OldRHS) {
         BinaryOperator *BO = isReassociableOp(OldRHS, Opcode);
         if (BO && !NotRewritable.count(BO))
           NodesToRewrite.push_back(BO);
+        salvageDebugInfo(*Op);
         Op->setOperand(1, NewRHS);
       }
       LLVM_DEBUG(dbgs() << "TO: " << *Op << '\n');
@@ -669,6 +671,7 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
         BinaryOperator *BO = isReassociableOp(Op->getOperand(1), Opcode);
         if (BO && !NotRewritable.count(BO))
           NodesToRewrite.push_back(BO);
+        salvageDebugInfo(*Op);
         Op->setOperand(1, NewRHS);
         ExpressionChangedStart = Op;
         if (!ExpressionChangedEnd)
@@ -707,6 +710,7 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
     }
 
     LLVM_DEBUG(dbgs() << "RA: " << *Op << '\n');
+    salvageDebugInfo(*Op);
     Op->setOperand(0, NewOp);
     LLVM_DEBUG(dbgs() << "TO: " << *Op << '\n');
     ExpressionChangedStart = Op;
@@ -727,9 +731,7 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
       // Preserve flags.
       if (ClearFlags) {
         if (isa<FPMathOperator>(I)) {
-          FastMathFlags Flags = I->getFastMathFlags();
-          ExpressionChangedStart->clearSubclassOptionalData();
-          ExpressionChangedStart->setFastMathFlags(Flags);
+          ExpressionChangedStart->copyFastMathFlags(I->getFastMathFlags());
         } else {
           Flags.applyFlags(*ExpressionChangedStart);
         }
@@ -739,13 +741,6 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
         ClearFlags = false;
       if (ExpressionChangedStart == I)
         break;
-
-      // Discard any debug info related to the expressions that has changed (we
-      // can leave debug info related to the root and any operation that didn't
-      // change, since the result of the expression tree should be the same
-      // even after reassociation).
-      if (ClearFlags)
-        replaceDbgUsesWithUndef(ExpressionChangedStart);
 
       ExpressionChangedStart->moveBefore(I->getIterator());
       ExpressionChangedStart =
@@ -878,7 +873,7 @@ static Value *NegateValue(Value *V, Instruction *BI,
 // only that it mostly looks like one.
 static bool isLoadCombineCandidate(Instruction *Or) {
   SmallVector<Instruction *, 8> Worklist;
-  SmallSet<Instruction *, 8> Visited;
+  SmallPtrSet<Instruction *, 8> Visited;
 
   auto Enqueue = [&](Value *V) {
     auto *I = dyn_cast<Instruction>(V);
@@ -964,6 +959,64 @@ static BinaryOperator *convertOrWithNoCommonBitsToAdd(Instruction *Or) {
 
   LLVM_DEBUG(dbgs() << "Converted or into an add: " << *New << '\n');
   return New;
+}
+
+/// Return true if Mul is of the form (X+Y)*C or (X-Y)*C where C is a
+/// constant, and there exists a sibling instruction of the form X*C' or Y*C'
+/// in the same expression — indicating that distribution followed by
+/// factoring will reduce the instruction count.
+static bool ShouldBreakUpDistribution(Instruction *Mul) {
+  Value *A, *B;
+  if (!match(Mul, m_OneUse(m_Mul(
+                      m_OneUse(m_CombineOr(m_Add(m_Value(A), m_Value(B)),
+                                           m_Sub(m_Value(A), m_Value(B)))),
+                      m_ImmConstant()))))
+    return false;
+
+  auto *MulUser = cast<Instruction>(Mul->user_back());
+  // The parent MUST be an Add or Sub to ensure the tree is flattened
+  if (MulUser->getOpcode() != Instruction::Add &&
+      MulUser->getOpcode() != Instruction::Sub)
+    return false;
+
+  for (Value *Sibling : MulUser->operands()) {
+    if (Sibling == Mul || !Sibling->hasOneUse())
+      continue;
+
+    // Sibling must be NonConst * C'.
+    Value *SibNC;
+    if (match(Sibling, m_Mul(m_Value(SibNC), m_ImmConstant())) &&
+        (SibNC == A || SibNC == B) && !isa<Constant>(SibNC))
+      return true;
+  }
+  return false;
+}
+
+/// Distribute Mul of the form (X+Y)*C into X*C + Y*C.
+/// For the sub case (X-Y)*C, the second term uses -C to avoid
+/// introducing a negation instruction.
+static BinaryOperator *BreakUpDistribute(Instruction *Mul,
+                                         ReassociatePass::OrderedSet &ToRedo) {
+  Instruction *AddSub = cast<Instruction>(Mul->getOperand(0));
+  Constant *C = cast<Constant>(Mul->getOperand(1));
+  Constant *C2 =
+      AddSub->getOpcode() == Instruction::Sub ? ConstantExpr::getNeg(C) : C;
+
+  BinaryOperator *M1 = BinaryOperator::CreateMul(AddSub->getOperand(0), C,
+                                                 "Mul1", Mul->getIterator());
+  BinaryOperator *M2 = BinaryOperator::CreateMul(AddSub->getOperand(1), C2,
+                                                 "Mul2", Mul->getIterator());
+  BinaryOperator *Result =
+      BinaryOperator::CreateAdd(M1, M2, "DistAdd", Mul->getIterator());
+
+  Mul->replaceAllUsesWith(Result);
+  Result->setDebugLoc(Mul->getDebugLoc());
+
+  ToRedo.insert(M1);
+  ToRedo.insert(M2);
+  ToRedo.insert(Result);
+
+  return Result;
 }
 
 /// Return true if we should break up this subtract of X-Y into (X + -Y).
@@ -1513,8 +1566,11 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
 
       // Insert a new multiply.
       Type *Ty = TheOp->getType();
-      Constant *C = Ty->isIntOrIntVectorTy() ?
-        ConstantInt::get(Ty, NumFound) : ConstantFP::get(Ty, NumFound);
+      // Truncate if NumFound overflows the type.
+      Constant *C = Ty->isIntOrIntVectorTy()
+                        ? ConstantInt::get(Ty, NumFound, /*IsSigned=*/false,
+                                           /*ImplicitTrunc=*/true)
+                        : ConstantFP::get(Ty, NumFound);
       Instruction *Mul = CreateMul(TheOp, C, "factor", I->getIterator(), I);
       Mul->setDebugLoc(I->getDebugLoc());
 
@@ -1585,9 +1641,20 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
   // where they are actually the same multiply.
   unsigned MaxOcc = 0;
   Value *MaxOccVal = nullptr;
-  for (unsigned i = 0, e = Ops.size(); i != e; ++i) {
+
+  // Prefer a non-constant factor over a constant when occurrence counts
+  // tie. Factoring out a variable (e.g., X from X*C1 + X*C2) exposes
+  // downstream constant folding; factoring out a constant does not.
+  auto IsBetterFactor = [](Value *Factor, Value *MaxOccVal, unsigned Occ,
+                           unsigned MaxOcc) {
+    return Occ > MaxOcc ||
+           (Occ == MaxOcc &&
+            (isa<Instruction>(Factor) || isa<Argument>(Factor)) &&
+            isa<Constant>(MaxOccVal) && !isa<UndefValue>(MaxOccVal));
+  };
+  for (const ValueEntry &Op : Ops) {
     BinaryOperator *BOp =
-        isReassociableOp(Ops[i].Op, Instruction::Mul, Instruction::FMul);
+        isReassociableOp(Op.Op, Instruction::Mul, Instruction::FMul);
     if (!BOp)
       continue;
 
@@ -1603,7 +1670,7 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
         continue;
 
       unsigned Occ = ++FactorOccurrences[Factor];
-      if (Occ > MaxOcc) {
+      if (IsBetterFactor(Factor, MaxOccVal, Occ, MaxOcc)) {
         MaxOcc = Occ;
         MaxOccVal = Factor;
       }
@@ -1617,7 +1684,7 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
           if (!Duplicates.insert(Factor).second)
             continue;
           unsigned Occ = ++FactorOccurrences[Factor];
-          if (Occ > MaxOcc) {
+          if (IsBetterFactor(Factor, MaxOccVal, Occ, MaxOcc)) {
             MaxOcc = Occ;
             MaxOccVal = Factor;
           }
@@ -1626,11 +1693,11 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
         if (CF->isNegative()) {
           APFloat F(CF->getValueAPF());
           F.changeSign();
-          Factor = ConstantFP::get(CF->getContext(), F);
+          Factor = ConstantFP::get(CF->getType(), F);
           if (!Duplicates.insert(Factor).second)
             continue;
           unsigned Occ = ++FactorOccurrences[Factor];
-          if (Occ > MaxOcc) {
+          if (IsBetterFactor(Factor, MaxOccVal, Occ, MaxOcc)) {
             MaxOcc = Occ;
             MaxOccVal = Factor;
           }
@@ -2197,6 +2264,15 @@ void ReassociatePass::OptimizeInst(Instruction *I) {
     I = NI;
   }
 
+  if (I->getOpcode() == Instruction::Mul && ShouldBreakUpDistribution(I)) {
+    Instruction *MulUser = cast<Instruction>(I->user_back());
+    Instruction *NI = BreakUpDistribute(I, RedoInsts);
+    RedoInsts.insert(I);
+    RedoInsts.insert(MulUser);
+    MadeChange = true;
+    I = NI;
+  }
+
   // If this is a subtract instruction which is not already in negate form,
   // see if we can convert it to X+-Y.
   if (I->getOpcode() == Instruction::Sub) {
@@ -2335,7 +2411,7 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
                cast<Instruction>(I->user_back())->getOpcode() ==
                    Instruction::FAdd &&
                isa<ConstantFP>(Ops.back().Op) &&
-               cast<ConstantFP>(Ops.back().Op)->isExactlyValue(-1.0)) {
+               cast<ConstantFP>(Ops.back().Op)->isMinusOne()) {
       ValueEntry Tmp = Ops.pop_back_val();
       Ops.insert(Ops.begin(), Tmp);
     }
@@ -2623,32 +2699,32 @@ PreservedAnalyses ReassociatePass::run(Function &F, FunctionAnalysisManager &) {
 
 namespace {
 
-  class ReassociateLegacyPass : public FunctionPass {
-    ReassociatePass Impl;
+class ReassociateLegacyPass : public FunctionPass {
+  ReassociatePass Impl;
 
-  public:
-    static char ID; // Pass identification, replacement for typeid
+public:
+  static char ID; // Pass identification, replacement for typeid
 
-    ReassociateLegacyPass() : FunctionPass(ID) {
-      initializeReassociateLegacyPassPass(*PassRegistry::getPassRegistry());
-    }
+  ReassociateLegacyPass() : FunctionPass(ID) {
+    initializeReassociateLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
 
-    bool runOnFunction(Function &F) override {
-      if (skipFunction(F))
-        return false;
+  bool runOnFunction(Function &F) override {
+    if (skipFunction(F))
+      return false;
 
-      FunctionAnalysisManager DummyFAM;
-      auto PA = Impl.run(F, DummyFAM);
-      return !PA.areAllPreserved();
-    }
+    FunctionAnalysisManager DummyFAM;
+    auto PA = Impl.run(F, DummyFAM);
+    return !PA.areAllPreserved();
+  }
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesCFG();
-      AU.addPreserved<AAResultsWrapperPass>();
-      AU.addPreserved<BasicAAWrapperPass>();
-      AU.addPreserved<GlobalsAAWrapperPass>();
-    }
-  };
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addPreserved<AAResultsWrapperPass>();
+    AU.addPreserved<BasicAAWrapperPass>();
+    AU.addPreserved<GlobalsAAWrapperPass>();
+  }
+};
 
 } // end anonymous namespace
 

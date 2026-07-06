@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -42,7 +43,8 @@ class SDNode;
 class SUnit;
 class ScheduleDAG;
 class TargetInstrInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 
   /// Scheduling dependency. This represents one direction of an edge in the
@@ -235,6 +237,15 @@ class TargetRegisterInfo;
     LLVM_ABI void dump(const TargetRegisterInfo *TRI = nullptr) const;
   };
 
+  /// Keep record of which SUnit are in the same cluster group.
+  typedef SmallPtrSet<SUnit *, 8> ClusterInfo;
+  constexpr unsigned InvalidClusterId = ~0u;
+
+  /// Return whether the input cluster ID's are the same and valid.
+  inline bool isTheSameCluster(unsigned A, unsigned B) {
+    return A != InvalidClusterId && A == B;
+  }
+
   /// Scheduling unit. This is a node in the scheduling DAG.
   class SUnit {
   private:
@@ -274,6 +285,8 @@ class TargetRegisterInfo;
     unsigned WeakSuccsLeft = 0;        ///< # of weak succs not scheduled.
     unsigned TopReadyCycle = 0; ///< Cycle relative to start when node is ready.
     unsigned BotReadyCycle = 0; ///< Cycle relative to end when node is ready.
+
+    unsigned ParentClusterIdx = InvalidClusterId; ///< The parent cluster id.
 
   private:
     unsigned Depth = 0;  ///< Node depth.
@@ -468,6 +481,8 @@ class TargetRegisterInfo;
     /// Orders this node's predecessor edges such that the critical path
     /// edge occurs first.
     LLVM_ABI void biasCriticalPath();
+
+    bool isClustered() const { return ParentClusterIdx != InvalidClusterId; }
 
     LLVM_ABI void dumpAttributes() const;
 
@@ -731,6 +746,9 @@ class TargetRegisterInfo;
     std::vector<int> Node2Index;
     /// a set of nodes visited during a DFS traversal.
     BitVector Visited;
+    /// Cache of reachability queries. {A, B} -> true if B is reachable from A.
+    /// The keys are SUnit NodeNums.
+    DenseMap<std::pair<int, int>, bool> Reachable;
 
     /// Makes a DFS traversal and mark all nodes affected by the edge insertion.
     /// These nodes will later get new topological indexes by means of the Shift

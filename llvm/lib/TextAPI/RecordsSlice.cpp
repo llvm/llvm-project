@@ -124,8 +124,7 @@ void ObjCInterfaceRecord::updateLinkageForSymbols(ObjCIFSymbolKind SymType,
   // linkages, in this case assign the largest one, when querying the linkage of
   // the record itself. This allows visitors pick whether they want to account
   // for complete symbol information.
-  Linkage =
-      std::max(Linkages.Class, std::max(Linkages.MetaClass, Linkages.EHType));
+  Linkage = std::max({Linkages.Class, Linkages.MetaClass, Linkages.EHType});
 }
 
 ObjCInterfaceRecord *RecordsSlice::findObjCInterface(StringRef Name) const {
@@ -259,7 +258,7 @@ ObjCInterfaceRecord::getObjCCategories() const {
 
 ObjCIVarRecord *ObjCContainerRecord::addObjCIVar(StringRef IVar,
                                                  RecordLinkage Linkage) {
-  auto Result = IVars.insert({IVar, nullptr});
+  auto Result = IVars.try_emplace(IVar);
   if (Result.second)
     Result.first->second = std::make_unique<ObjCIVarRecord>(IVar, Linkage);
   return Result.first->second.get();

@@ -10,15 +10,23 @@
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
+#include <stdarg.h>
 #include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, prctl,
-                   (int option, unsigned long arg2, unsigned long arg3,
-                    unsigned long arg4, unsigned long arg5)) {
+LLVM_LIBC_FUNCTION(int, prctl, (int option, ...)) {
+  va_list vargs;
+  va_start(vargs, option);
+  // Try to consume (and pass to syscall_impl) the maximum possible number of
+  // arguments, even though for some "option" values only few will be provided.
+  unsigned long arg2 = va_arg(vargs, unsigned long);
+  unsigned long arg3 = va_arg(vargs, unsigned long);
+  unsigned long arg4 = va_arg(vargs, unsigned long);
+  unsigned long arg5 = va_arg(vargs, unsigned long);
+  va_end(vargs);
   long ret =
       LIBC_NAMESPACE::syscall_impl(SYS_prctl, option, arg2, arg3, arg4, arg5);
   // The manpage states that "... return the nonnegative values described

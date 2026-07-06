@@ -14,7 +14,9 @@
 #define LLVM_EXECUTIONENGINE_ORC_SYMBOLSTRINGPOOL_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/Compiler.h"
 #include <atomic>
 #include <mutex>
 
@@ -35,7 +37,8 @@ class SymbolStringPool {
   friend class SymbolStringPoolEntryUnsafe;
 
   // Implemented in DebugUtils.h.
-  friend raw_ostream &operator<<(raw_ostream &OS, const SymbolStringPool &SSP);
+  LLVM_ABI friend raw_ostream &operator<<(raw_ostream &OS,
+                                          const SymbolStringPool &SSP);
 
 public:
   /// Destroy a SymbolStringPool.
@@ -69,6 +72,7 @@ private:
 /// from nullptr to enable comparison with these values.
 class SymbolStringPtrBase {
   friend class SymbolStringPool;
+  friend class SymbolStringPoolEntryUnsafe;
   friend struct DenseMapInfo<SymbolStringPtr>;
   friend struct DenseMapInfo<NonOwningSymbolStringPtr>;
 
@@ -92,8 +96,8 @@ public:
     return LHS.S < RHS.S;
   }
 
-  friend raw_ostream &operator<<(raw_ostream &OS,
-                                 const SymbolStringPtrBase &Sym);
+  LLVM_ABI friend raw_ostream &operator<<(raw_ostream &OS,
+                                          const SymbolStringPtrBase &Sym);
 
 #ifndef NDEBUG
   // Returns true if the pool entry's ref count is above zero (or if the entry
@@ -110,14 +114,6 @@ protected:
   using PoolEntryPtr = PoolEntry *;
 
   SymbolStringPtrBase(PoolEntryPtr S) : S(S) {}
-
-  constexpr static uintptr_t EmptyBitPattern =
-      std::numeric_limits<uintptr_t>::max()
-      << PointerLikeTypeTraits<PoolEntryPtr>::NumLowBitsAvailable;
-
-  constexpr static uintptr_t TombstoneBitPattern =
-      (std::numeric_limits<uintptr_t>::max() - 1)
-      << PointerLikeTypeTraits<PoolEntryPtr>::NumLowBitsAvailable;
 
   constexpr static uintptr_t InvalidPtrMask =
       (std::numeric_limits<uintptr_t>::max() - 3)
@@ -183,14 +179,6 @@ private:
       --S->getValue();
     }
   }
-
-  static SymbolStringPtr getEmptyVal() {
-    return SymbolStringPtr(reinterpret_cast<PoolEntryPtr>(EmptyBitPattern));
-  }
-
-  static SymbolStringPtr getTombstoneVal() {
-    return SymbolStringPtr(reinterpret_cast<PoolEntryPtr>(TombstoneBitPattern));
-  }
 };
 
 /// Provides unsafe access to ownership operations on SymbolStringPtr.
@@ -202,7 +190,7 @@ public:
   SymbolStringPoolEntryUnsafe(PoolEntry *E) : E(E) {}
 
   /// Create an unsafe pool entry ref without changing the ref-count.
-  static SymbolStringPoolEntryUnsafe from(const SymbolStringPtr &S) {
+  static SymbolStringPoolEntryUnsafe from(const SymbolStringPtrBase &S) {
     return S.S;
   }
 
@@ -258,16 +246,6 @@ public:
 
 private:
   NonOwningSymbolStringPtr(PoolEntryPtr S) : SymbolStringPtrBase(S) {}
-
-  static NonOwningSymbolStringPtr getEmptyVal() {
-    return NonOwningSymbolStringPtr(
-        reinterpret_cast<PoolEntryPtr>(EmptyBitPattern));
-  }
-
-  static NonOwningSymbolStringPtr getTombstoneVal() {
-    return NonOwningSymbolStringPtr(
-        reinterpret_cast<PoolEntryPtr>(TombstoneBitPattern));
-  }
 };
 
 inline SymbolStringPtr::SymbolStringPtr(NonOwningSymbolStringPtr Other)
@@ -296,11 +274,7 @@ inline SymbolStringPtr SymbolStringPool::intern(StringRef S) {
 
 inline void SymbolStringPool::clearDeadEntries() {
   std::lock_guard<std::mutex> Lock(PoolMutex);
-  for (auto I = Pool.begin(), E = Pool.end(); I != E;) {
-    auto Tmp = I++;
-    if (Tmp->second == 0)
-      Pool.erase(Tmp);
-  }
+  Pool.remove_if([](PoolMapEntry &E) { return E.getValue() == 0; });
 }
 
 inline bool SymbolStringPool::empty() const {
@@ -313,18 +287,17 @@ SymbolStringPool::getRefCount(const SymbolStringPtrBase &S) const {
   return S.getRefCount();
 }
 
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const SymbolStringPtrBase &Sym);
+
+inline hash_code hash_value(const orc::SymbolStringPtrBase &S) {
+  return hash_value(orc::SymbolStringPoolEntryUnsafe::from(S).rawPtr());
+}
+
 } // end namespace orc
 
 template <>
 struct DenseMapInfo<orc::SymbolStringPtr> {
-
-  static orc::SymbolStringPtr getEmptyKey() {
-    return orc::SymbolStringPtr::getEmptyVal();
-  }
-
-  static orc::SymbolStringPtr getTombstoneKey() {
-    return orc::SymbolStringPtr::getTombstoneVal();
-  }
 
   static unsigned getHashValue(const orc::SymbolStringPtrBase &V) {
     return DenseMapInfo<orc::SymbolStringPtr::PoolEntryPtr>::getHashValue(V.S);
@@ -337,14 +310,6 @@ struct DenseMapInfo<orc::SymbolStringPtr> {
 };
 
 template <> struct DenseMapInfo<orc::NonOwningSymbolStringPtr> {
-
-  static orc::NonOwningSymbolStringPtr getEmptyKey() {
-    return orc::NonOwningSymbolStringPtr::getEmptyVal();
-  }
-
-  static orc::NonOwningSymbolStringPtr getTombstoneKey() {
-    return orc::NonOwningSymbolStringPtr::getTombstoneVal();
-  }
 
   static unsigned getHashValue(const orc::SymbolStringPtrBase &V) {
     return DenseMapInfo<

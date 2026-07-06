@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs -o - %s 2>%t.err | FileCheck -implicit-check-not=error %s
+; RUN: not llc -mtriple=amdgcn -mcpu=gfx908 -o - %s 2>%t.err | FileCheck -implicit-check-not=error %s
 ; RUN: FileCheck -check-prefix=ERR %s < %t.err
 
 ; This testcase would fail on an "illegal eviction". If the assert was
@@ -9,9 +9,9 @@
 %asm.output = type { <16 x i32>, <8 x i32>, <5 x i32>, <4 x i32>, <16 x i32> }
 
 ; CHECK-LABEL: {{^}}illegal_eviction_assert:
-; CHECK: ; def v[4:19] v[20:27] v[0:4] v[0:3] a[0:15]
+; CHECK: ; def v[13:28] v[0:7] v[8:12] v[0:3] a[0:15]
 ; CHECK: ; clobber
-; CHECK: ; use v[4:19] v[20:27] v[0:4] v[0:3] a[1:16]
+; CHECK: ; use v[13:28] v[0:7] v[8:12] v[0:3] a[1:16]
 define void @illegal_eviction_assert(ptr addrspace(1) %arg) #0 {
   ;%agpr0 = call i32 asm sideeffect "; def $0","=${a0}"()
   %asm = call %asm.output asm sideeffect "; def $0 $1 $2 $3 $4","=v,=v,=v,=v,={a[0:15]}"()

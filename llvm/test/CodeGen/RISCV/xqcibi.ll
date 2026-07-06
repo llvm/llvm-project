@@ -2,7 +2,7 @@
 ; Test that we are able to generate the Xqcibi instructions
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=RV32I
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcibi -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+xqcibi -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=RV32IXQCIBI
 
 define i32 @beqimm(i32 %a) {
@@ -329,7 +329,8 @@ t:
 define i32 @bgeuimm16(i32 %a) {
 ; RV32I-LABEL: bgeuimm16:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    li a1, 99
+; RV32I-NEXT:    lui a1, 16
+; RV32I-NEXT:    addi a1, a1, -2
 ; RV32I-NEXT:    bltu a1, a0, .LBB11_2
 ; RV32I-NEXT:  # %bb.1: # %f
 ; RV32I-NEXT:    li a0, 0
@@ -340,14 +341,14 @@ define i32 @bgeuimm16(i32 %a) {
 ;
 ; RV32IXQCIBI-LABEL: bgeuimm16:
 ; RV32IXQCIBI:       # %bb.0:
-; RV32IXQCIBI-NEXT:    qc.e.bgeui a0, 100, .LBB11_2
+; RV32IXQCIBI-NEXT:    qc.e.bgeui a0, 65535, .LBB11_2
 ; RV32IXQCIBI-NEXT:  # %bb.1: # %f
 ; RV32IXQCIBI-NEXT:    li a0, 0
 ; RV32IXQCIBI-NEXT:    ret
 ; RV32IXQCIBI-NEXT:  .LBB11_2: # %t
 ; RV32IXQCIBI-NEXT:    li a0, 1
 ; RV32IXQCIBI-NEXT:    ret
-  %1 = icmp uge i32 %a, 100
+  %1 = icmp uge i32 %a, 65535
   br i1 %1, label %t, label %f, !prof !0
 f:
   ret i32 0

@@ -1,0 +1,183 @@
+name: LLVM ABI Tests
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'release/**'
+    paths:
+      - 'llvm/**'
+      - '.github/workflows/llvm-abi-tests.yml'
+  pull_request:
+    branches:
+      - 'release/**'
+    paths:
+      - 'llvm/**'
+      - '.github/workflows/llvm-abi-tests.yml'
+
+concurrency:
+  # Skip intermediate builds: always.
+  # Cancel intermediate builds: only if it is a pull request build.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+jobs:
+  abi-dump-setup:
+    if: github.repository_owner == 'llvm'
+    runs-on: ubuntu-24.04
+    outputs:
+      BASELINE_REF: ${{ steps.vars.outputs.BASELINE_REF }}
+      ABI_HEADERS: ${{ steps.vars.outputs.ABI_HEADERS }}
+      BASELINE_VERSION_MAJOR: ${{ steps.vars.outputs.BASELINE_VERSION_MAJOR }}
+      BASELINE_VERSION_MINOR: ${{ steps.vars.outputs.BASELINE_VERSION_MINOR }}
+      LLVM_VERSION_MAJOR: ${{ steps.version.outputs.major }}
+      LLVM_VERSION_MINOR: ${{ steps.version.outputs.minor }}
+      LLVM_VERSION_PATCH: ${{ steps.version.outputs.patch }}
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          fetch-depth: 250
+
+      - name: Get LLVM version
+        id: version
+        uses: ./.github/workflows/get-llvm-version
+
+      - name: Setup Variables
+        id: vars
+        env:
+          LLVM_VERSION_MAJOR: ${{ steps.version.outputs.major }}
+          LLVM_VERSION_PATCH: ${{ steps.version.outputs.patch }}
+        run: |
+          # C++ ABI:
+          # 18.1.0 we aren't doing ABI checks.
+          # 18.1.1 We want to check 18.1.0.
+          # C ABI:
+          # 18.1.0 We want to check 17.0.x
+          # 18.1.1 We want to check 18.1.0
+          echo "BASELINE_VERSION_MINOR=1" >> "$GITHUB_OUTPUT"
+          if [ $LLVM_VERSION_PATCH -eq 0 ]; then
+            {
+              echo "BASELINE_VERSION_MAJOR=$(( $LLVM_VERSION_MAJOR - 1))"
+              echo "ABI_HEADERS=llvm-c"
+            } >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo "BASELINE_VERSION_MAJOR=$LLVM_VERSION_MAJOR"
+              echo "ABI_HEADERS=."
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+  abi-dump:
+    if: github.repository_owner == 'llvm'
+    needs: abi-dump-setup
+    runs-on: ubuntu-24.04
+    container:
+      image: "ghcr.io/llvm/ci-ubuntu-24.04-abi-tests@sha256:cb3aea3ecdd521194ca12cfa239ab5a53f9e160a13a55ae3abdc1dfbf134476e" #ghcr.io/llvm/ci-ubuntu-24.04-abi-tests:bb0bd382ab2b"
+    strategy:
+      matrix:
+        name:
+          - build-baseline
+          - build-latest
+        include:
+          - name: build-baseline
+            llvm_version_major: ${{ needs.abi-dump-setup.outputs.BASELINE_VERSION_MAJOR }}
+            ref: llvmorg-${{ needs.abi-dump-setup.outputs.BASELINE_VERSION_MAJOR }}.${{ needs.abi-dump-setup.outputs.BASELINE_VERSION_MINOR }}.0
+            repo: llvm/llvm-project
+          - name: build-latest
+            llvm_version_major: ${{ needs.abi-dump-setup.outputs.LLVM_VERSION_MAJOR }}
+            ref: ${{ github.sha }}
+            repo: ${{ github.repository }}
+    steps:
+      - name: Download source code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          ref: ${{ matrix.ref }}
+          repository: ${{ matrix.repo }}
+      - name: Configure
+        run: |
+          mkdir install
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DLLVM_TARGETS_TO_BUILD="" -DLLVM_BUILD_LLVM_DYLIB=ON -DCMAKE_INSTALL_PREFIX="$(pwd)"/install llvm
+      - name: Build
+        # Need to run install-LLVM twice to ensure the symlink is installed (this is a bug).
+        run: |
+          ninja -C build install-LLVM
+          ninja -C build install-LLVM
+          ninja -C build install-llvm-headers
+      - name: Dump ABI
+        env:
+          REF: ${{ matrix.ref }}
+          ABI_HEADERS: ${{ needs.abi-dump-setup.outputs.ABI_HEADERS }}
+          LLVM_VERSION_MAJOR: ${{ matrix.llvm_version_major }}
+        run: |
+          if [ "$ABI_HEADERS" = "llvm-c" ]; then
+            nm ./install/lib/libLLVM.so | awk "/T _LLVM/ || /T LLVM/ { print $3 }" | sort -u | sed -e "s/^_//g" | cut -d ' ' -f 3 > llvm.symbols
+            # Even though the -symbols-list option doesn't seem to filter out the symbols, I believe it speeds up processing, so I'm leaving it in.
+            export EXTRA_ARGS="-symbols-list llvm.symbols"
+          else
+            touch llvm.symbols
+          fi
+          abi-dumper $EXTRA_ARGS -lver $REF -skip-cxx -public-headers ./install/include/$ABI_HEADERS -o $$REF.abi ./install/lib/libLLVM.so
+          # Remove symbol versioning from dumps, so we can compare across major versions.
+          sed -i "s/LLVM_$LLVM_VERSION_MAJOR/LLVM_NOVERSION/" $REF.abi
+      - name: Upload ABI file
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ matrix.name }}
+          path: ${{ matrix.ref }}.abi
+
+      - name: Upload symbol list file
+        if: matrix.name == 'build-baseline'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: symbol-list
+          path: llvm.symbols
+
+  abi-compare:
+    if: github.repository_owner == 'llvm'
+    runs-on: ubuntu-24.04
+    container:
+      image: "ghcr.io/llvm/ci-ubuntu-24.04-abi-tests@sha256:cb3aea3ecdd521194ca12cfa239ab5a53f9e160a13a55ae3abdc1dfbf134476e" #ghcr.io/llvm/ci-ubuntu-24.04-abi-tests:bb0bd382ab2b
+    needs:
+      - abi-dump-setup
+      - abi-dump
+    steps:
+      - name: Download baseline
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: build-baseline
+          path: build-baseline
+      - name: Download latest
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: build-latest
+          path: build-latest
+      - name: Download symbol list
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: symbol-list
+          path: symbol-list
+
+      - name: Compare ABI
+        env:
+          ABI_HEADERS: ${{ needs.abi-dump-setup.outputs.ABI_HEADERS }}
+        run: |
+          if [ -s symbol-list/llvm.symbols ]; then
+            # This option doesn't seem to work with the ABI dumper, so passing it here.
+            export EXTRA_ARGS="-symbols-list symbol-list/llvm.symbols"
+          fi
+          # FIXME: Reading of gzip'd abi files on the GitHub runners stop
+          # working some time in March of 2021, likely due to a change in the
+          # runner's environment.
+          abi-compliance-checker $EXTRA_ARGS -l libLLVM.so -old build-baseline/*.abi -new build-latest/*.abi || test "$ABI_HEADERS" = "llvm-c"
+      - name: Upload ABI Comparison
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: compat-report-${{ github.sha }}
+          path: compat_reports/

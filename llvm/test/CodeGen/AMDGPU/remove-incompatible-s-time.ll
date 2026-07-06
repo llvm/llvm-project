@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -stop-after=amdgpu-remove-incompatible-functions\
 ; RUN:   -pass-remarks=amdgpu-remove-incompatible-functions %s -o - 2>%t | FileCheck -check-prefixes=COMPATIBLE,REALTIME,MEMTIME %s
 ; RUN: FileCheck -allow-empty --check-prefixes=WARN-REALTIME,WARN-MEMTIME %s < %t
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 < %s
 
 ; RUN: llc -enable-new-pm -mtriple=amdgcn -mcpu=gfx1030 -stop-after=amdgpu-remove-incompatible-functions\
 ; RUN:   -pass-remarks=amdgpu-remove-incompatible-functions %s -o - 2>%t | FileCheck -check-prefixes=COMPATIBLE,REALTIME,MEMTIME %s
@@ -11,7 +11,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1102 -stop-after=amdgpu-remove-incompatible-functions\
 ; RUN:   -pass-remarks=amdgpu-remove-incompatible-functions %s -o - 2>%t | FileCheck -check-prefixes=INCOMPATIBLE,NOREALTIME,NOMEMTIME %s
 ; RUN: FileCheck --check-prefixes=WARN-NOREALTIME,WARN-NOMEMTIME %s < %t
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1102 -verify-machineinstrs < %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1102 < %s
 
 ; RUN: llc -enable-new-pm -mtriple=amdgcn -mcpu=gfx1102 -stop-after=amdgpu-remove-incompatible-functions\
 ; RUN:   -pass-remarks=amdgpu-remove-incompatible-functions %s -o - 2>%t | FileCheck -check-prefixes=INCOMPATIBLE,NOREALTIME,NOMEMTIME %s

@@ -5,7 +5,7 @@
 
 target triple = "x86_64-unknown-linux-gnu"
 
-; CHECK: @f = alias void (), ptr @[[JT:.*]]
+; CHECK: @f = alias [8 x i8], ptr @[[JT:.*]]
 ; CHECK: define hidden void @f.cfi() section "xxx"
 
 define void @f() section "xxx" !type !0 {
@@ -19,7 +19,7 @@ entry:
   ret i1 %0
 }
 
-; CHECK: define private void @[[JT]]() #{{.*}} align {{.*}} {
+; CHECK: define private void @[[JT]]() #{{.*}} prefalign({{.*}}) {{.*}} {
 
 declare i1 @llvm.type.test(ptr, metadata) nounwind readnone
 

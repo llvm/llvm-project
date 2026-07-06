@@ -26,10 +26,10 @@ TEST(QuantifierTest, ExistsBuilderWithPattern) {
   OpBuilder builder(&context);
   auto boolTy = BoolType::get(&context);
 
-  OwningOpRef<ExistsOp> existsOp = builder.create<ExistsOp>(
-      loc, TypeRange{boolTy, boolTy},
+  OwningOpRef<ExistsOp> existsOp = ExistsOp::create(
+      builder, loc, TypeRange{boolTy, boolTy},
       [](OpBuilder &builder, Location loc, ValueRange boundVars) {
-        return builder.create<AndOp>(loc, boundVars);
+        return AndOp::create(builder, loc, boundVars);
       },
       std::nullopt,
       [](OpBuilder &builder, Location loc, ValueRange boundVars) {
@@ -57,10 +57,10 @@ TEST(QuantifierTest, ExistsBuilderNoPattern) {
   OpBuilder builder(&context);
   auto boolTy = BoolType::get(&context);
 
-  OwningOpRef<ExistsOp> existsOp = builder.create<ExistsOp>(
-      loc, TypeRange{boolTy, boolTy},
+  OwningOpRef<ExistsOp> existsOp = ExistsOp::create(
+      builder, loc, TypeRange{boolTy, boolTy},
       [](OpBuilder &builder, Location loc, ValueRange boundVars) {
-        return builder.create<AndOp>(loc, boundVars);
+        return AndOp::create(builder, loc, boundVars);
       },
       ArrayRef<StringRef>{"a", "b"}, nullptr, /*weight=*/0, /*noPattern=*/true);
 
@@ -82,10 +82,10 @@ TEST(QuantifierTest, ExistsBuilderDefault) {
   OpBuilder builder(&context);
   auto boolTy = BoolType::get(&context);
 
-  OwningOpRef<ExistsOp> existsOp = builder.create<ExistsOp>(
-      loc, TypeRange{boolTy, boolTy},
+  OwningOpRef<ExistsOp> existsOp = ExistsOp::create(
+      builder, loc, TypeRange{boolTy, boolTy},
       [](OpBuilder &builder, Location loc, ValueRange boundVars) {
-        return builder.create<AndOp>(loc, boundVars);
+        return AndOp::create(builder, loc, boundVars);
       },
       ArrayRef<StringRef>{"a", "b"});
 
@@ -111,10 +111,10 @@ TEST(QuantifierTest, ForallBuilderWithPattern) {
   OpBuilder builder(&context);
   auto boolTy = BoolType::get(&context);
 
-  OwningOpRef<ForallOp> forallOp = builder.create<ForallOp>(
-      loc, TypeRange{boolTy, boolTy},
+  OwningOpRef<ForallOp> forallOp = ForallOp::create(
+      builder, loc, TypeRange{boolTy, boolTy},
       [](OpBuilder &builder, Location loc, ValueRange boundVars) {
-        return builder.create<AndOp>(loc, boundVars);
+        return AndOp::create(builder, loc, boundVars);
       },
       ArrayRef<StringRef>{"a", "b"},
       [](OpBuilder &builder, Location loc, ValueRange boundVars) {
@@ -142,10 +142,10 @@ TEST(QuantifierTest, ForallBuilderNoPattern) {
   OpBuilder builder(&context);
   auto boolTy = BoolType::get(&context);
 
-  OwningOpRef<ForallOp> forallOp = builder.create<ForallOp>(
-      loc, TypeRange{boolTy, boolTy},
+  OwningOpRef<ForallOp> forallOp = ForallOp::create(
+      builder, loc, TypeRange{boolTy, boolTy},
       [](OpBuilder &builder, Location loc, ValueRange boundVars) {
-        return builder.create<AndOp>(loc, boundVars);
+        return AndOp::create(builder, loc, boundVars);
       },
       ArrayRef<StringRef>{"a", "b"}, nullptr, /*weight=*/0, /*noPattern=*/true);
 
@@ -167,10 +167,10 @@ TEST(QuantifierTest, ForallBuilderDefault) {
   OpBuilder builder(&context);
   auto boolTy = BoolType::get(&context);
 
-  OwningOpRef<ForallOp> forallOp = builder.create<ForallOp>(
-      loc, TypeRange{boolTy, boolTy},
+  OwningOpRef<ForallOp> forallOp = ForallOp::create(
+      builder, loc, TypeRange{boolTy, boolTy},
       [](OpBuilder &builder, Location loc, ValueRange boundVars) {
-        return builder.create<AndOp>(loc, boundVars);
+        return AndOp::create(builder, loc, boundVars);
       },
       std::nullopt);
 

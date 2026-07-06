@@ -20,8 +20,8 @@
 #include <algorithm>
 #include <map>
 #include <optional>
-#include <vector>
 #include <utility>
+#include <vector>
 
 using namespace lldb_private;
 using namespace minidump;
@@ -75,8 +75,7 @@ UUID MinidumpParser::GetModuleUUID(const minidump::Module *module) {
     if (GetArchitecture().GetTriple().isOSBinFormatELF()) {
       if (pdb70_uuid->Age != 0)
         return UUID(pdb70_uuid, sizeof(*pdb70_uuid));
-      return UUID(&pdb70_uuid->Uuid,
-                                    sizeof(pdb70_uuid->Uuid));
+      return UUID(&pdb70_uuid->Uuid, sizeof(pdb70_uuid->Uuid));
     }
     return UUID(*pdb70_uuid);
   } else if (cv_signature == CvSignature::ElfBuildId)
@@ -109,13 +108,21 @@ MinidumpParser::GetThreadContext(const minidump::Thread &td) {
 
 llvm::ArrayRef<uint8_t>
 MinidumpParser::GetThreadContextWow64(const minidump::Thread &td) {
+  Log *log = GetLog(LLDBLog::Process);
   // On Windows, a 32-bit process can run on a 64-bit machine under WOW64. If
   // the minidump was captured with a 64-bit debugger, then the CONTEXT we just
   // grabbed from the mini_dump_thread is the one for the 64-bit "native"
   // process rather than the 32-bit "guest" process we care about.  In this
   // case, we can get the 32-bit CONTEXT from the TEB (Thread Environment
   // Block) of the 64-bit process.
-  auto teb_mem = GetMemory(td.EnvironmentBlock, sizeof(TEB64));
+  auto teb_mem_maybe = GetMemory(td.EnvironmentBlock, sizeof(TEB64));
+  if (!teb_mem_maybe) {
+    LLDB_LOG_ERROR(log, teb_mem_maybe.takeError(),
+                   "Failed to read Thread Environment Block: {0}");
+    return {};
+  }
+
+  auto teb_mem = *teb_mem_maybe;
   if (teb_mem.empty())
     return {};
 
@@ -127,8 +134,16 @@ MinidumpParser::GetThreadContextWow64(const minidump::Thread &td) {
   // Slot 1 of the thread-local storage in the 64-bit TEB points to a structure
   // that includes the 32-bit CONTEXT (after a ULONG). See:
   // https://msdn.microsoft.com/en-us/library/ms681670.aspx
-  auto context =
+  auto context_maybe =
       GetMemory(wow64teb->tls_slots[1] + 4, sizeof(MinidumpContext_x86_32));
+  if (!context_maybe) {
+    LLDB_LOG_ERROR(log, context_maybe.takeError(),
+                   "Failed to read WOW Thread Context: {0}");
+    return {};
+  }
+
+  auto context = *context_maybe;
+
   if (context.size() < sizeof(MinidumpContext_x86_32))
     return {};
 
@@ -338,7 +353,7 @@ static bool CheckForLinuxExecutable(ConstString path,
   lldb::addr_t addr = base_of_image;
   MemoryRegionInfo region = MinidumpParser::GetMemoryRegionInfo(regions, addr);
   while (region.GetName() == path) {
-    if (region.GetExecutable() == MemoryRegionInfo::eYes)
+    if (region.GetExecutable() == eLazyBoolYes)
       return true;
     addr += region.GetRange().GetByteSize();
     region = MinidumpParser::GetMemoryRegionInfo(regions, addr);
@@ -429,73 +444,83 @@ MinidumpParser::GetExceptionStreams() {
 
 std::optional<minidump::Range>
 MinidumpParser::FindMemoryRange(lldb::addr_t addr) {
-  Log *log = GetLog(LLDBLog::Modules);
+  if (m_memory_ranges.IsEmpty())
+    PopulateMemoryRanges();
 
+  const MemoryRangeVector::Entry *entry =
+      m_memory_ranges.FindEntryThatContains(addr);
+  if (!entry)
+    return std::nullopt;
+
+  return entry->data;
+}
+
+void MinidumpParser::PopulateMemoryRanges() {
+  Log *log = GetLog(LLDBLog::Modules);
   auto ExpectedMemory = GetMinidumpFile().getMemoryList();
-  if (!ExpectedMemory) {
-    LLDB_LOG_ERROR(log, ExpectedMemory.takeError(),
-                   "Failed to read memory list: {0}");
-  } else {
+  if (ExpectedMemory) {
     for (const auto &memory_desc : *ExpectedMemory) {
       const LocationDescriptor &loc_desc = memory_desc.Memory;
       const lldb::addr_t range_start = memory_desc.StartOfMemoryRange;
       const size_t range_size = loc_desc.DataSize;
-
-      if (loc_desc.RVA + loc_desc.DataSize > GetData().size())
-        return std::nullopt;
-
-      if (range_start <= addr && addr < range_start + range_size) {
-        auto ExpectedSlice = GetMinidumpFile().getRawData(loc_desc);
-        if (!ExpectedSlice) {
-          LLDB_LOG_ERROR(log, ExpectedSlice.takeError(),
-                         "Failed to get memory slice: {0}");
-          return std::nullopt;
-        }
-        return minidump::Range(range_start, *ExpectedSlice);
+      auto ExpectedSlice = GetMinidumpFile().getRawData(loc_desc);
+      if (!ExpectedSlice) {
+        LLDB_LOG_ERROR(log, ExpectedSlice.takeError(),
+                       "Failed to get memory slice: {0}");
+        continue;
       }
+      m_memory_ranges.Append(MemoryRangeVector::Entry(
+          range_start, range_size,
+          minidump::Range(range_start, *ExpectedSlice)));
     }
+  } else {
+    LLDB_LOG_ERROR(log, ExpectedMemory.takeError(),
+                   "Failed to read memory list: {0}");
   }
 
   if (!GetStream(StreamType::Memory64List).empty()) {
     llvm::Error err = llvm::Error::success();
-    for (const auto &memory_desc :  GetMinidumpFile().getMemory64List(err)) {
-      if (memory_desc.first.StartOfMemoryRange <= addr 
-          && addr < memory_desc.first.StartOfMemoryRange + memory_desc.first.DataSize) {
-        return minidump::Range(memory_desc.first.StartOfMemoryRange, memory_desc.second);
-      }
+    for (const auto &memory_desc : GetMinidumpFile().getMemory64List(err)) {
+      m_memory_ranges.Append(MemoryRangeVector::Entry(
+          memory_desc.first.StartOfMemoryRange, memory_desc.first.DataSize,
+          minidump::Range(memory_desc.first.StartOfMemoryRange,
+                          memory_desc.second)));
     }
 
     if (err)
       LLDB_LOG_ERROR(log, std::move(err), "Failed to read memory64 list: {0}");
   }
 
-  return std::nullopt;
+  m_memory_ranges.Sort();
 }
 
-llvm::ArrayRef<uint8_t> MinidumpParser::GetMemory(lldb::addr_t addr,
-                                                  size_t size) {
-  // I don't have a sense of how frequently this is called or how many memory
-  // ranges a Minidump typically has, so I'm not sure if searching for the
-  // appropriate range linearly each time is stupid.  Perhaps we should build
-  // an index for faster lookups.
+llvm::Expected<llvm::ArrayRef<uint8_t>>
+MinidumpParser::GetMemory(lldb::addr_t addr, size_t size) {
   std::optional<minidump::Range> range = FindMemoryRange(addr);
   if (!range)
-    return {};
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "No memory range found for address (0x%" PRIx64 ")", addr);
 
   // There's at least some overlap between the beginning of the desired range
-  // (addr) and the current range.  Figure out where the overlap begins and how
-  // much overlap there is.
+  // (addr) and the current range.  Figure out where the overlap begins and
+  // how much overlap there is.
 
   const size_t offset = addr - range->start;
 
   if (addr < range->start || offset >= range->range_ref.size())
-    return {};
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "Address (0x%" PRIx64 ") is not in range [0x%" PRIx64 " - 0x%" PRIx64
+        ")",
+        addr, range->start, range->start + range->range_ref.size());
 
   const size_t overlap = std::min(size, range->range_ref.size() - offset);
   return range->range_ref.slice(offset, overlap);
 }
 
-llvm::iterator_range<FallibleMemory64Iterator> MinidumpParser::GetMemory64Iterator(llvm::Error &err) {
+llvm::iterator_range<FallibleMemory64Iterator>
+MinidumpParser::GetMemory64Iterator(llvm::Error &err) {
   llvm::ErrorAsOutParameter ErrAsOutParam(&err);
   return m_file->getMemory64List(err);
 }
@@ -510,8 +535,8 @@ CreateRegionsCacheFromMemoryInfoList(MinidumpParser &parser,
                    "Failed to read memory info list: {0}");
     return false;
   }
-  constexpr auto yes = MemoryRegionInfo::eYes;
-  constexpr auto no = MemoryRegionInfo::eNo;
+  constexpr auto yes = eLazyBoolYes;
+  constexpr auto no = eLazyBoolNo;
   for (const MemoryInfo &entry : *ExpectedInfo) {
     MemoryRegionInfo region;
     region.GetRange().SetRangeBase(entry.BaseAddress);
@@ -554,8 +579,8 @@ CreateRegionsCacheFromMemoryList(MinidumpParser &parser,
       MemoryRegionInfo region;
       region.GetRange().SetRangeBase(memory_desc.StartOfMemoryRange);
       region.GetRange().SetByteSize(memory_desc.Memory.DataSize);
-      region.SetReadable(MemoryRegionInfo::eYes);
-      region.SetMapped(MemoryRegionInfo::eYes);
+      region.SetReadable(eLazyBoolYes);
+      region.SetMapped(eLazyBoolYes);
       regions.push_back(region);
     }
   }
@@ -568,8 +593,8 @@ CreateRegionsCacheFromMemoryList(MinidumpParser &parser,
       MemoryRegionInfo region;
       region.GetRange().SetRangeBase(memory_desc.first.StartOfMemoryRange);
       region.GetRange().SetByteSize(memory_desc.first.DataSize);
-      region.SetReadable(MemoryRegionInfo::eYes);
-      region.SetMapped(MemoryRegionInfo::eYes);
+      region.SetReadable(eLazyBoolYes);
+      region.SetMapped(eLazyBoolYes);
       regions.push_back(region);
     }
 
@@ -607,8 +632,7 @@ std::pair<MemoryRegionInfos, bool> MinidumpParser::BuildMemoryRegions() {
   case StreamType::ST:                                                         \
     return #ST
 
-llvm::StringRef
-MinidumpParser::GetStreamTypeAsString(StreamType stream_type) {
+llvm::StringRef MinidumpParser::GetStreamTypeAsString(StreamType stream_type) {
   switch (stream_type) {
     ENUM_TO_CSTR(Unused);
     ENUM_TO_CSTR(ThreadList);
@@ -681,9 +705,9 @@ MinidumpParser::GetMemoryRegionInfo(const MemoryRegionInfos &regions,
   else
     region.GetRange().SetRangeEnd(pos->GetRange().GetRangeBase());
 
-  region.SetReadable(MemoryRegionInfo::eNo);
-  region.SetWritable(MemoryRegionInfo::eNo);
-  region.SetExecutable(MemoryRegionInfo::eNo);
-  region.SetMapped(MemoryRegionInfo::eNo);
+  region.SetReadable(eLazyBoolNo);
+  region.SetWritable(eLazyBoolNo);
+  region.SetExecutable(eLazyBoolNo);
+  region.SetMapped(eLazyBoolNo);
   return region;
 }

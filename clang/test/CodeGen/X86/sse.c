@@ -32,6 +32,7 @@ __m128i test_mm_slli_si128_0(__m128i a) {
 // CHECK-LABEL: define dso_local <2 x i64> @test_mm_slli_si128_16(
 // CHECK-SAME: <2 x i64> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[CAST:%.*]] = bitcast <2 x i64> [[A]] to <16 x i8>
 // CHECK-NEXT:    ret <2 x i64> zeroinitializer
 //
 __m128i test_mm_slli_si128_16(__m128i a) {
@@ -65,6 +66,7 @@ __m128i test_mm_srli_si128_0(__m128i a) {
 // CHECK-LABEL: define dso_local <2 x i64> @test_mm_srli_si128_16(
 // CHECK-SAME: <2 x i64> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[CAST:%.*]] = bitcast <2 x i64> [[A]] to <16 x i8>
 // CHECK-NEXT:    ret <2 x i64> zeroinitializer
 //
 __m128i test_mm_srli_si128_16(__m128i a) {

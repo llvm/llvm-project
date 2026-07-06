@@ -18,8 +18,6 @@
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
-#include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
-#include "mlir/Pass/Pass.h"
 
 using namespace mlir;
 using namespace mlir::tosa;
@@ -51,8 +49,13 @@ public:
     if (llvm::any_of(stride, [](int64_t v) { return v != 1; }))
       return failure();
 
-    if (!inputTy.hasStaticShape() || !weightTy.hasStaticShape() ||
-        !biasTy.hasStaticShape() || !resultTy.hasStaticShape())
+    // Any dimensions other than batchSize cannot be dynamic for input/output
+    for (unsigned int i = 1; i < 4; ++i) {
+      if (inputTy.isDynamicDim(i) || resultTy.isDynamicDim(i))
+        return failure();
+    }
+
+    if (!weightTy.hasStaticShape() || !biasTy.hasStaticShape())
       return failure();
 
     int64_t kernelHeight = weightTy.getDimSize(1);
@@ -64,14 +67,16 @@ public:
     convPad[2] = kernelWidth - 1 + pad[2];
     convPad[3] = kernelWidth - 1 + pad[3];
 
-    auto reverse1 = rewriter.create<tosa::ReverseOp>(
-        loc, weightTy, weight, /* axis = */ rewriter.getI32IntegerAttr(1));
-    auto reverse2 = rewriter.create<tosa::ReverseOp>(
-        loc, weightTy, reverse1, /* axis = */ rewriter.getI32IntegerAttr(2));
+    auto reverse1 =
+        tosa::ReverseOp::create(rewriter, loc, weightTy, weight,
+                                /* axis = */ rewriter.getI32IntegerAttr(1));
+    auto reverse2 =
+        tosa::ReverseOp::create(rewriter, loc, weightTy, reverse1,
+                                /* axis = */ rewriter.getI32IntegerAttr(2));
 
-    Value conv2d = rewriter.create<tosa::Conv2DOp>(
-        loc, resultTy, input, reverse2, bias, op.getInputZp(), op.getWeightZp(),
-        rewriter.getDenseI64ArrayAttr(convPad),
+    Value conv2d = tosa::Conv2DOp::create(
+        rewriter, loc, resultTy, input, reverse2, bias, op.getInputZp(),
+        op.getWeightZp(), rewriter.getDenseI64ArrayAttr(convPad),
         rewriter.getDenseI64ArrayAttr(stride),
         rewriter.getDenseI64ArrayAttr({1, 1}),
         /* acc_type = */ op.getAccType());
@@ -113,8 +118,13 @@ public:
     if (llvm::all_of(stride, [](int64_t v) { return v == 1; }))
       return rewriter.notifyMatchFailure(op, "non-one stride found.");
 
-    if (!inputTy.hasStaticShape() || !weightTy.hasStaticShape() ||
-        !biasTy.hasStaticShape() || !resultTy.hasStaticShape())
+    // Any dimensions other than batchSize cannot be dynamic for input/output
+    for (unsigned int i = 1; i < 4; ++i) {
+      if (inputTy.isDynamicDim(i) || resultTy.isDynamicDim(i))
+        return failure();
+    }
+
+    if (!weightTy.hasStaticShape() || !biasTy.hasStaticShape())
       return failure();
 
     int64_t batch = inputTy.getDimSize(0);
@@ -218,8 +228,8 @@ public:
         inputPaddingVal, inputPadConst);
 
     // We use a zero bias as we need to broadcast the bias.
-    auto zeroBias = rewriter.create<tosa::ConstOp>(
-        loc,
+    auto zeroBias = tosa::ConstOp::create(
+        rewriter, loc,
         RankedTensorType::get({outputChannels * stride[0] * stride[1]},
                               biasETy),
         DenseElementsAttr::get(

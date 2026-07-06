@@ -21,6 +21,16 @@
 
 #include "test_macros.h"
 
+template <class T, class = void>
+struct has_time_point_cast : std::false_type {};
+
+template <class T>
+struct has_time_point_cast<T, decltype((void)std::chrono::time_point_cast<T>(std::chrono::system_clock::now()))>
+    : std::true_type {};
+
+static_assert(has_time_point_cast<std::chrono::seconds>::value, "");
+static_assert(!has_time_point_cast<int>::value, "");
+
 template <class FromDuration, class ToDuration>
 void
 test(const FromDuration& df, const ToDuration& d)

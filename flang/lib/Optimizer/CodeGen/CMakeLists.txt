@@ -6,6 +6,7 @@ add_flang_library(FIRCodeGen
   LLVMInsertChainFolder.cpp
   LowerRepackArrays.cpp
   PreCGRewrite.cpp
+  RematerializeFIRBoxOps.cpp
   TBAABuilder.cpp
   Target.cpp
   TargetRewrite.cpp
@@ -34,16 +35,21 @@ add_flang_library(FIRCodeGen
 
   MLIR_LIBS
   MLIRComplexToLLVM
+  MLIRComplexToROCDLLibraryCalls
   MLIRComplexToStandard
   MLIRGPUDialect
+  MLIRIndexToLLVM
   MLIRMathToFuncs
   MLIRMathToLLVM
   MLIRMathToLibm
+  MLIRMathToNVVM
   MLIRMathToROCDL
   MLIROpenMPToLLVM
   MLIROpenACCDialect
   MLIRBuiltinToLLVMIRTranslation
   MLIRLLVMToLLVMIRTranslation
   MLIRTargetLLVMIRExport
+  MLIRUBDialect
+  MLIRUBToLLVM
   MLIRVectorToLLVM
 )

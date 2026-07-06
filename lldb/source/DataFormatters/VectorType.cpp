@@ -55,6 +55,8 @@ static CompilerType GetCompilerTypeForFormat(lldb::Format format,
 
   case lldb::eFormatFloat:
     return type_system->GetBasicTypeFromAST(lldb::eBasicTypeFloat);
+  case lldb::eFormatFloat128:
+    return type_system->GetBasicTypeFromAST(lldb::eBasicTypeFloat128);
 
   case lldb::eFormatHex:
   case lldb::eFormatHexUppercase:
@@ -267,19 +269,6 @@ public:
             .value_or(0);
     m_item_format = GetItemFormatForFormat(m_parent_format, m_child_type);
     return lldb::ChildCacheState::eRefetch;
-  }
-
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
-    auto optional_idx = ExtractIndexFromString(name.AsCString());
-    if (!optional_idx) {
-      return llvm::createStringError("Type has no child named '%s'",
-                                     name.AsCString());
-    }
-    uint32_t idx = *optional_idx;
-    if (idx >= CalculateNumChildrenIgnoringErrors())
-      return llvm::createStringError("Type has no child named '%s'",
-                                     name.AsCString());
-    return idx;
   }
 
 private:

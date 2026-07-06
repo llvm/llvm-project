@@ -21,17 +21,15 @@ function(add_python_test_target name test_script args comment)
   add_dependencies(${name} lldb-test-depends)
 endfunction()
 
-# The default architecture with which to compile test executables is the
-# default LLVM target architecture, which itself defaults to the host
-# architecture.
-if(NOT LLDB_DEFAULT_TEST_ARCH)
-  string(REGEX MATCH "^[^-]*" LLDB_DEFAULT_TEST_ARCH ${LLVM_HOST_TRIPLE})
-endif ()
+if (DEFINED LLVM_TARGET_TRIPLE)
+  set(default_lldb_test_triple ${LLVM_TARGET_TRIPLE})
+else()
+  set(default_lldb_test_triple ${LLVM_HOST_TRIPLE})
+endif()
 
-# Allow the user to override the default by setting LLDB_TEST_ARCH
-set(LLDB_TEST_ARCH
-  ${LLDB_DEFAULT_TEST_ARCH}
-  CACHE STRING "Specify the architecture to run LLDB tests as (x86|x64).  Determines whether tests are compiled with -m32 or -m64")
+set(LLDB_TEST_TRIPLE
+  ${default_lldb_test_triple}
+  CACHE STRING "The target triple used to build test inferiors.")
 
 # Users can override LLDB_TEST_USER_ARGS to specify arbitrary arguments to pass to the script
 set(LLDB_TEST_USER_ARGS
@@ -74,6 +72,16 @@ else()
   endif()
 endif()
 
+find_program(LLDB_DIRNAME_PATH dirname)
+if(LLDB_DIRNAME_PATH)
+  message(STATUS "Found dirname: ${LLDB_DIRNAME_PATH}")
+else()
+  message(STATUS "Could NOT find 'dirname'")
+  message(WARNING
+        "Many LLDB API tests require the GNU coreutils tools. Please make "
+        "sure they are installed and in PATH.")
+endif()
+
 if (TARGET clang)
   set(LLDB_DEFAULT_TEST_COMPILER "${LLVM_TOOLS_BINARY_DIR}/clang${CMAKE_EXECUTABLE_SUFFIX}")
 else()
@@ -84,6 +92,8 @@ set(LLDB_TEST_EXECUTABLE "${LLDB_DEFAULT_TEST_EXECUTABLE}" CACHE PATH "lldb exec
 set(LLDB_TEST_COMPILER "${LLDB_DEFAULT_TEST_COMPILER}" CACHE PATH "C Compiler to use for building LLDB test inferiors")
 set(LLDB_TEST_DSYMUTIL "${LLDB_DEFAULT_TEST_DSYMUTIL}" CACHE PATH "dsymutil used for generating dSYM bundles")
 set(LLDB_TEST_MAKE "${LLDB_DEFAULT_TEST_MAKE}" CACHE PATH "make tool used for building test executables")
+set(LLDB_TEST_RESOURCE_DIR "" CACHE PATH "Clang resource directory for cross-compiling test inferiors")
+set(LLDB_TEST_SYSROOT "" CACHE PATH "Sysroot for cross-compiling test inferiors")
 
 if ("${LLDB_TEST_COMPILER}" STREQUAL "")
   message(FATAL_ERROR "LLDB test compiler not specified. Tests will not run.")
@@ -114,10 +124,6 @@ if (NOT "${LLDB_LIT_TOOLS_DIR}" STREQUAL "")
 endif()
 
 if(CMAKE_HOST_APPLE)
-  if(LLDB_BUILD_FRAMEWORK)
-    set(LLDB_FRAMEWORK_DIR ${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework)
-  endif()
-
   if(LLDB_USE_SYSTEM_DEBUGSERVER)
     lldb_find_system_debugserver(system_debugserver_path)
     if(LLDB_BUILD_FRAMEWORK)
@@ -140,7 +146,12 @@ if(CMAKE_HOST_APPLE)
 endif()
 
 if(WIN32 AND CMAKE_BUILD_TYPE STREQUAL Debug)
-  set(LLDB_PYTHON_API_TEST_EXECUTABLE "${Python3_EXECUTABLE_DEBUG}")
+  if(${CMAKE_VERSION} VERSION_LESS "3.30")
+    message(WARNING "CMake version is inferior to 3.30. Some lldb tests will fail.")
+    set(LLDB_PYTHON_API_TEST_EXECUTABLE "${Python3_EXECUTABLE}")
+  else()
+    set(LLDB_PYTHON_API_TEST_EXECUTABLE "${Python3_EXECUTABLE_DEBUG}")
+  endif()
 else()
   set(LLDB_PYTHON_API_TEST_EXECUTABLE "${Python3_EXECUTABLE}")
 endif()

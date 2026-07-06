@@ -6,13 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDSTOPHOOKPYTHONINTERFACE_H
-#define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDSTOPHOOKPYTHONINTERFACE_H
+#ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDSTOPHOOKPYTHONINTERFACE_H
+#define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDSTOPHOOKPYTHONINTERFACE_H
 
-#include "lldb/Host/Config.h"
 #include "lldb/Interpreter/Interfaces/ScriptedStopHookInterface.h"
-
-#if LLDB_ENABLE_PYTHON
 
 #include "ScriptedPythonInterface.h"
 
@@ -24,8 +21,8 @@ public:
   ScriptedStopHookPythonInterface(ScriptInterpreterPythonImpl &interpreter);
 
   llvm::Expected<StructuredData::GenericSP>
-  CreatePluginObject(llvm::StringRef class_name, lldb::TargetSP target_sp,
-                     const StructuredDataImpl &args_sp) override;
+  CreatePluginObject(const ScriptedMetadata &scripted_metadata,
+                     lldb::TargetSP target_sp) override;
 
   llvm::SmallVector<AbstractMethodRequirement>
   GetAbstractMethodRequirements() const override {
@@ -47,5 +44,4 @@ public:
 };
 } // namespace lldb_private
 
-#endif // LLDB_ENABLE_PYTHON
-#endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDSTOPHOOKPYTHONINTERFACE_H
+#endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDSTOPHOOKPYTHONINTERFACE_H

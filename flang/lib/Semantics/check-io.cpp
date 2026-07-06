@@ -16,6 +16,7 @@
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/tools.h"
 #include <unordered_map>
+#include <unordered_set>
 
 namespace Fortran::semantics {
 
@@ -136,6 +137,9 @@ void IoChecker::Enter(const parser::ConnectSpec::CharExpr &spec) {
     break;
   case ParseKind::Form:
     specKind = IoSpecKind::Form;
+    break;
+  case ParseKind::Leading_Zero:
+    specKind = IoSpecKind::Leading_Zero;
     break;
   case ParseKind::Pad:
     specKind = IoSpecKind::Pad;
@@ -327,10 +331,12 @@ void IoChecker::Enter(const parser::InputItem &spec) {
   }
   CheckForDefinableVariable(*var, "Input");
   if (auto expr{AnalyzeExpr(context_, *var)}) {
+    auto at{var->GetSource()};
+    CheckForAssumedRank(UnwrapWholeSymbolDataRef(*expr), at);
     CheckForBadIoType(*expr,
         flags_.test(Flag::FmtOrNml) ? common::DefinedIo::ReadFormatted
                                     : common::DefinedIo::ReadUnformatted,
-        var->GetSource());
+        at);
   }
 }
 
@@ -378,6 +384,9 @@ void IoChecker::Enter(const parser::InquireSpec::CharVar &spec) {
   case ParseKind::Iomsg:
     specKind = IoSpecKind::Iomsg;
     break;
+  case ParseKind::Leading_Zero:
+    specKind = IoSpecKind::Leading_Zero;
+    break;
   case ParseKind::Name:
     specKind = IoSpecKind::Name;
     break;
@@ -424,8 +433,8 @@ void IoChecker::Enter(const parser::InquireSpec::CharVar &spec) {
     specKind = IoSpecKind::Dispose;
     break;
   }
-  const parser::Variable &var{
-      std::get<parser::ScalarDefaultCharVariable>(spec.t).thing.thing};
+  const auto &var{parser::UnwrapRef<parser::Variable>(
+      std::get<parser::ScalarDefaultCharVariable>(spec.t))};
   std::string what{parser::ToUpperCaseLetters(common::EnumToString(specKind))};
   CheckForDefinableVariable(var, what);
   WarnOnDeferredLengthCharacterScalar(
@@ -478,6 +487,8 @@ void IoChecker::Enter(const parser::InquireSpec::LogVar &spec) {
     specKind = IoSpecKind::Pending;
     break;
   }
+  CheckForDefinableVariable(std::get<parser::ScalarLogicalVariable>(spec.t),
+      parser::ToUpperCaseLetters(common::EnumToString(specKind)));
   SetSpecifier(specKind);
 }
 
@@ -515,6 +526,9 @@ void IoChecker::Enter(const parser::IoControlSpec::CharExpr &spec) {
     break;
   case ParseKind::Delim:
     specKind = IoSpecKind::Delim;
+    break;
+  case ParseKind::Leading_Zero:
+    specKind = IoSpecKind::Leading_Zero;
     break;
   case ParseKind::Pad:
     specKind = IoSpecKind::Pad;
@@ -625,7 +639,7 @@ void IoChecker::Enter(const parser::IoUnit &spec) {
 }
 
 void IoChecker::Enter(const parser::MsgVariable &msgVar) {
-  const parser::Variable &var{msgVar.v.thing.thing};
+  const auto &var{parser::UnwrapRef<parser::Variable>(msgVar)};
   if (stmt_ == IoStmtKind::None) {
     // allocate, deallocate, image control
     CheckForDefinableVariable(var, "ERRMSG");
@@ -649,11 +663,14 @@ void IoChecker::Enter(const parser::OutputItem &item) {
       } else if (IsProcedure(*expr)) {
         context_.Say(parser::FindSourceLocation(*x),
             "Output item must not be a procedure"_err_en_US); // C1233
+      } else {
+        auto at{parser::FindSourceLocation(item)};
+        CheckForAssumedRank(UnwrapWholeSymbolDataRef(*expr), at);
+        CheckForBadIoType(*expr,
+            flags_.test(Flag::FmtOrNml) ? common::DefinedIo::WriteFormatted
+                                        : common::DefinedIo::WriteUnformatted,
+            at);
       }
-      CheckForBadIoType(*expr,
-          flags_.test(Flag::FmtOrNml) ? common::DefinedIo::WriteFormatted
-                                      : common::DefinedIo::WriteUnformatted,
-          parser::FindSourceLocation(item));
     }
   }
 }
@@ -820,6 +837,7 @@ void IoChecker::Leave(const parser::ReadStmt &readStmt) {
   LeaveReadWrite();
   CheckForProhibitedSpecifier(IoSpecKind::Delim); // C1212
   CheckForProhibitedSpecifier(IoSpecKind::Sign); // C1212
+  CheckForProhibitedSpecifier(IoSpecKind::Leading_Zero); // F'2023 C1212
   CheckForProhibitedSpecifier(IoSpecKind::Rec, IoSpecKind::End); // C1220
   if (specifierSet_.test(IoSpecKind::Size)) {
     // F'2023 C1214 - allow with a warning
@@ -875,6 +893,8 @@ void IoChecker::Leave(const parser::WriteStmt &writeStmt) {
   CheckForProhibitedSpecifier(IoSpecKind::Size); // C1213
   CheckForRequiredSpecifier(
       IoSpecKind::Sign, flags_.test(Flag::FmtOrNml), "FMT or NML"); // C1227
+  CheckForRequiredSpecifier(IoSpecKind::Leading_Zero,
+      flags_.test(Flag::FmtOrNml), "FMT or NML"); // F'2023 C1227
   CheckForRequiredSpecifier(IoSpecKind::Delim,
       flags_.test(Flag::StarFmt) || specifierSet_.test(IoSpecKind::Nml),
       "FMT=* or NML"); // C1228
@@ -905,6 +925,7 @@ void IoChecker::LeaveReadWrite() const {
       "an explicit format"); // C1221
   CheckForProhibitedSpecifier(IoSpecKind::Advance,
       flags_.test(Flag::InternalUnit), "UNIT=internal-file"); // C1221
+  CheckForProhibitedSpecifier(IoSpecKind::Advance, IoSpecKind::Rec); // C1221
   CheckForRequiredSpecifier(flags_.test(Flag::AsynchronousYes),
       "ASYNCHRONOUS='YES'", flags_.test(Flag::NumberUnit),
       "UNIT=number"); // C1224
@@ -949,6 +970,7 @@ void IoChecker::CheckStringValue(IoSpecKind specKind, const std::string &value,
       {IoSpecKind::Round,
           {"COMPATIBLE", "DOWN", "NEAREST", "PROCESSOR_DEFINED", "UP", "ZERO"}},
       {IoSpecKind::Sign, {"PLUS", "PROCESSOR_DEFINED", "SUPPRESS"}},
+      {IoSpecKind::Leading_Zero, {"PRINT", "PROCESSOR_DEFINED", "SUPPRESS"}},
       {IoSpecKind::Status,
           // Open values; Close values are {"DELETE", "KEEP"}.
           {"NEW", "OLD", "REPLACE", "SCRATCH", "UNKNOWN"}},
@@ -1096,12 +1118,21 @@ void IoChecker::CheckForUselessIomsg() const {
   }
 }
 
+// Set of derived-type symbols already visited on the current recursion
+// path of the component walks below.
+using VisitedSymbolSet = std::unordered_set<const Symbol *>;
+
 // Seeks out an allocatable or pointer ultimate component that is not
-// nested in a nonallocatable/nonpointer component with a specific
-// defined I/O procedure.
+// nested in a nonallocatable/nonpointer component with a specific defined I/O
+// procedure. The 'visited' set tracks derived types to break cycles caused by
+// an illegal recursive type definition (F2023 C749).
 static const Symbol *FindUnsafeIoDirectComponent(common::DefinedIo which,
-    const DerivedTypeSpec &derived, const Scope &scope) {
+    const DerivedTypeSpec &derived, const Scope &scope,
+    VisitedSymbolSet &visited) {
   if (HasDefinedIo(which, derived, &scope)) {
+    return nullptr;
+  }
+  if (!visited.insert(&derived.typeSymbol()).second) {
     return nullptr;
   }
   if (const Scope * dtScope{derived.scope()}) {
@@ -1114,9 +1145,8 @@ static const Symbol *FindUnsafeIoDirectComponent(common::DefinedIo which,
         if (const DeclTypeSpec * type{details->type()}) {
           if (type->category() == DeclTypeSpec::Category::TypeDerived) {
             const DerivedTypeSpec &componentDerived{type->derivedTypeSpec()};
-            if (const Symbol *
-                bad{FindUnsafeIoDirectComponent(
-                    which, componentDerived, scope)}) {
+            if (const Symbol *bad{FindUnsafeIoDirectComponent(
+                    which, componentDerived, scope, visited)}) {
               return bad;
             }
           }
@@ -1127,11 +1157,22 @@ static const Symbol *FindUnsafeIoDirectComponent(common::DefinedIo which,
   return nullptr;
 }
 
+static const Symbol *FindUnsafeIoDirectComponent(common::DefinedIo which,
+    const DerivedTypeSpec &derived, const Scope &scope) {
+  VisitedSymbolSet visited;
+  return FindUnsafeIoDirectComponent(which, derived, scope, visited);
+}
+
 // For a type that does not have a defined I/O subroutine, finds a direct
 // component that is a witness to an accessibility violation outside the module
-// in which the type was defined.
+// in which the type was defined.  The 'visited' set tracks derived types to
+// break cycles caused by an illegal recursive type definition (F2023 C749).
 static const Symbol *FindInaccessibleComponent(common::DefinedIo which,
-    const DerivedTypeSpec &derived, const Scope &scope) {
+    const DerivedTypeSpec &derived, const Scope &scope,
+    VisitedSymbolSet &visited) {
+  if (!visited.insert(&derived.typeSymbol()).second) {
+    return nullptr;
+  }
   if (const Scope * dtScope{derived.scope()}) {
     if (const Scope * module{FindModuleContaining(*dtScope)}) {
       for (const auto &pair : *dtScope) {
@@ -1157,9 +1198,8 @@ static const Symbol *FindInaccessibleComponent(common::DefinedIo which,
             }
           }
           if (componentDerived) {
-            if (const Symbol *
-                bad{FindInaccessibleComponent(
-                    which, *componentDerived, scope)}) {
+            if (const Symbol *bad{FindInaccessibleComponent(
+                    which, *componentDerived, scope, visited)}) {
               return bad;
             }
           }
@@ -1168,6 +1208,12 @@ static const Symbol *FindInaccessibleComponent(common::DefinedIo which,
     }
   }
   return nullptr;
+}
+
+static const Symbol *FindInaccessibleComponent(common::DefinedIo which,
+    const DerivedTypeSpec &derived, const Scope &scope) {
+  VisitedSymbolSet visited;
+  return FindInaccessibleComponent(which, derived, scope, visited);
 }
 
 // Fortran 2018, 12.6.3 paragraphs 5 & 7
@@ -1224,6 +1270,17 @@ parser::Message *IoChecker::CheckForBadIoType(const Symbol &symbol,
     }
   }
   return nullptr;
+}
+
+void IoChecker::CheckForAssumedRank(
+    const Symbol *symbol, parser::CharBlock namelistLocation) const {
+  if (symbol && IsAssumedRank(*symbol)) {
+    evaluate::AttachDeclaration(
+        context_.Say(namelistLocation,
+            "Assumed-rank object '%s' may not be an I/O list item"_err_en_US,
+            symbol->name()),
+        *symbol);
+  }
 }
 
 void IoChecker::CheckNamelist(const Symbol &namelist, common::DefinedIo which,

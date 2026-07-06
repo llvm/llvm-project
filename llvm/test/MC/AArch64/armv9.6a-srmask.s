@@ -1,102 +1,254 @@
-// RUN: llvm-mc -triple aarch64 -show-encoding %s   | FileCheck %s
+// RUN: llvm-mc -triple=aarch64 -show-encoding < %s \
+// RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
+// RUN: llvm-mc -triple=aarch64 -filetype=obj < %s \
+// RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
+// Disassemble encoding and check the re-encoding (-show-encoding) matches.
+// RUN: llvm-mc -triple=aarch64 -show-encoding < %s \
+// RUN:        | sed '/.text/d' | sed 's/.*encoding: //g' \
+// RUN:        | llvm-mc -triple=aarch64 -disassemble -show-encoding \
+// RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
+
+
 
 mrs x3, SCTLRMASK_EL1
-// CHECK: mrs	x3, SCTLRMASK_EL1               // encoding: [0x03,0x14,0x38,0xd5]
+// CHECK-INST: mrs x3, SCTLRMASK_EL1
+// CHECK-ENCODING: encoding: [0x03,0x14,0x38,0xd5]
+// CHECK-UNKNOWN:  d5381403 mrs x3, SCTLRMASK_EL1
+
 mrs x3, SCTLRMASK_EL2
-// CHECK: mrs	x3, SCTLRMASK_EL2               // encoding: [0x03,0x14,0x3c,0xd5]
+// CHECK-INST: mrs x3, SCTLRMASK_EL2
+// CHECK-ENCODING: encoding: [0x03,0x14,0x3c,0xd5]
+// CHECK-UNKNOWN:  d53c1403 mrs x3, SCTLRMASK_EL2
+
 mrs x3, SCTLRMASK_EL12
-// CHECK: mrs	x3, SCTLRMASK_EL12              // encoding: [0x03,0x14,0x3d,0xd5]
+// CHECK-INST: mrs x3, SCTLRMASK_EL12
+// CHECK-ENCODING: encoding: [0x03,0x14,0x3d,0xd5]
+// CHECK-UNKNOWN:  d53d1403 mrs x3, SCTLRMASK_EL12
+
 mrs x3, CPACRMASK_EL1
-// CHECK: mrs	x3, CPACRMASK_EL1               // encoding: [0x43,0x14,0x38,0xd5]
+// CHECK-INST: mrs x3, CPACRMASK_EL1
+// CHECK-ENCODING: encoding: [0x43,0x14,0x38,0xd5]
+// CHECK-UNKNOWN:  d5381443 mrs x3, CPACRMASK_EL1
+
 mrs x3, CPTRMASK_EL2
-// CHECK: mrs	x3, CPTRMASK_EL2                // encoding: [0x43,0x14,0x3c,0xd5]
+// CHECK-INST: mrs x3, CPTRMASK_EL2
+// CHECK-ENCODING: encoding: [0x43,0x14,0x3c,0xd5]
+// CHECK-UNKNOWN:  d53c1443 mrs x3, CPTRMASK_EL2
+
 mrs x3, CPACRMASK_EL12
-// CHECK: mrs	x3, CPACRMASK_EL12              // encoding: [0x43,0x14,0x3d,0xd5]
+// CHECK-INST: mrs x3, CPACRMASK_EL12
+// CHECK-ENCODING: encoding: [0x43,0x14,0x3d,0xd5]
+// CHECK-UNKNOWN:  d53d1443 mrs x3, CPACRMASK_EL12
+
 mrs x3, SCTLR2MASK_EL1
-// CHECK: mrs	x3, SCTLR2MASK_EL1              // encoding: [0x63,0x14,0x38,0xd5]
+// CHECK-INST: mrs x3, SCTLR2MASK_EL1
+// CHECK-ENCODING: encoding: [0x63,0x14,0x38,0xd5]
+// CHECK-UNKNOWN:  d5381463 mrs x3, SCTLR2MASK_EL1
+
 mrs x3, SCTLR2MASK_EL2
-// CHECK: mrs	x3, SCTLR2MASK_EL2              // encoding: [0x63,0x14,0x3c,0xd5]
+// CHECK-INST: mrs x3, SCTLR2MASK_EL2
+// CHECK-ENCODING: encoding: [0x63,0x14,0x3c,0xd5]
+// CHECK-UNKNOWN:  d53c1463 mrs x3, SCTLR2MASK_EL2
+
 mrs x3, SCTLR2MASK_EL12
-// CHECK: mrs	x3, SCTLR2MASK_EL12             // encoding: [0x63,0x14,0x3d,0xd5]
+// CHECK-INST: mrs x3, SCTLR2MASK_EL12
+// CHECK-ENCODING: encoding: [0x63,0x14,0x3d,0xd5]
+// CHECK-UNKNOWN:  d53d1463 mrs x3, SCTLR2MASK_EL12
+
 mrs x3, CPACRALIAS_EL1
-// CHECK: mrs	x3, CPACRALIAS_EL1              // encoding: [0x83,0x14,0x38,0xd5]
+// CHECK-INST: mrs x3, CPACRALIAS_EL1
+// CHECK-ENCODING: encoding: [0x83,0x14,0x38,0xd5]
+// CHECK-UNKNOWN:  d5381483 mrs x3, CPACRALIAS_EL1
+
 mrs x3, SCTLRALIAS_EL1
-// CHECK: mrs	x3, SCTLRALIAS_EL1              // encoding: [0xc3,0x14,0x38,0xd5]
+// CHECK-INST: mrs x3, SCTLRALIAS_EL1
+// CHECK-ENCODING: encoding: [0xc3,0x14,0x38,0xd5]
+// CHECK-UNKNOWN:  d53814c3 mrs x3, SCTLRALIAS_EL1
+
 mrs x3, SCTLR2ALIAS_EL1
-// CHECK: mrs	x3, SCTLR2ALIAS_EL1             // encoding: [0xe3,0x14,0x38,0xd5]
+// CHECK-INST: mrs x3, SCTLR2ALIAS_EL1
+// CHECK-ENCODING: encoding: [0xe3,0x14,0x38,0xd5]
+// CHECK-UNKNOWN:  d53814e3 mrs x3, SCTLR2ALIAS_EL1
+
 mrs x3, TCRMASK_EL1
-// CHECK: mrs	x3, TCRMASK_EL1                 // encoding: [0x43,0x27,0x38,0xd5]
+// CHECK-INST: mrs x3, TCRMASK_EL1
+// CHECK-ENCODING: encoding: [0x43,0x27,0x38,0xd5]
+// CHECK-UNKNOWN:  d5382743 mrs x3, TCRMASK_EL1
+
 mrs x3, TCRMASK_EL2
-// CHECK: mrs	x3, TCRMASK_EL2                 // encoding: [0x43,0x27,0x3c,0xd5]
+// CHECK-INST: mrs x3, TCRMASK_EL2
+// CHECK-ENCODING: encoding: [0x43,0x27,0x3c,0xd5]
+// CHECK-UNKNOWN:  d53c2743 mrs x3, TCRMASK_EL2
+
 mrs x3, TCRMASK_EL12
-// CHECK: mrs	x3, TCRMASK_EL12                // encoding: [0x43,0x27,0x3d,0xd5]
+// CHECK-INST: mrs x3, TCRMASK_EL12
+// CHECK-ENCODING: encoding: [0x43,0x27,0x3d,0xd5]
+// CHECK-UNKNOWN:  d53d2743 mrs x3, TCRMASK_EL12
+
 mrs x3, TCR2MASK_EL1
-// CHECK: mrs	x3, TCR2MASK_EL1                // encoding: [0x63,0x27,0x38,0xd5]
+// CHECK-INST: mrs x3, TCR2MASK_EL1
+// CHECK-ENCODING: encoding: [0x63,0x27,0x38,0xd5]
+// CHECK-UNKNOWN:  d5382763 mrs x3, TCR2MASK_EL1
+
 mrs x3, TCR2MASK_EL2
-// CHECK: mrs	x3, TCR2MASK_EL2                // encoding: [0x63,0x27,0x3c,0xd5]
+// CHECK-INST: mrs x3, TCR2MASK_EL2
+// CHECK-ENCODING: encoding: [0x63,0x27,0x3c,0xd5]
+// CHECK-UNKNOWN:  d53c2763 mrs x3, TCR2MASK_EL2
+
 mrs x3, TCR2MASK_EL12
-// CHECK: mrs	x3, TCR2MASK_EL12               // encoding: [0x63,0x27,0x3d,0xd5]
+// CHECK-INST: mrs x3, TCR2MASK_EL12
+// CHECK-ENCODING: encoding: [0x63,0x27,0x3d,0xd5]
+// CHECK-UNKNOWN:  d53d2763 mrs x3, TCR2MASK_EL12
+
 mrs x3, TCRALIAS_EL1
-// CHECK: mrs	x3, TCRALIAS_EL1                // encoding: [0xc3,0x27,0x38,0xd5]
+// CHECK-INST: mrs x3, TCRALIAS_EL1
+// CHECK-ENCODING: encoding: [0xc3,0x27,0x38,0xd5]
+// CHECK-UNKNOWN:  d53827c3 mrs x3, TCRALIAS_EL1
+
 mrs x3, TCR2ALIAS_EL1
-// CHECK: mrs	x3, TCR2ALIAS_EL1               // encoding: [0xe3,0x27,0x38,0xd5]
+// CHECK-INST: mrs x3, TCR2ALIAS_EL1
+// CHECK-ENCODING: encoding: [0xe3,0x27,0x38,0xd5]
+// CHECK-UNKNOWN:  d53827e3 mrs x3, TCR2ALIAS_EL1
+
 mrs x3, ACTLRMASK_EL1
-// CHECK: mrs	x3, ACTLRMASK_EL1               // encoding: [0x23,0x14,0x38,0xd5]
+// CHECK-INST: mrs x3, ACTLRMASK_EL1
+// CHECK-ENCODING: encoding: [0x23,0x14,0x38,0xd5]
+// CHECK-UNKNOWN:  d5381423 mrs x3, ACTLRMASK_EL1
+
 mrs x3, ACTLRMASK_EL2
-// CHECK: mrs	x3, ACTLRMASK_EL2               // encoding: [0x23,0x14,0x3c,0xd5]
+// CHECK-INST: mrs x3, ACTLRMASK_EL2
+// CHECK-ENCODING: encoding: [0x23,0x14,0x3c,0xd5]
+// CHECK-UNKNOWN:  d53c1423 mrs x3, ACTLRMASK_EL2
+
 mrs x3, ACTLRMASK_EL12
-// CHECK: mrs	x3, ACTLRMASK_EL12              // encoding: [0x23,0x14,0x3d,0xd5]
+// CHECK-INST: mrs x3, ACTLRMASK_EL12
+// CHECK-ENCODING: encoding: [0x23,0x14,0x3d,0xd5]
+// CHECK-UNKNOWN:  d53d1423 mrs x3, ACTLRMASK_EL12
+
 mrs x3, ACTLRALIAS_EL1
-// CHECK: mrs	x3, ACTLRALIAS_EL1              // encoding: [0xa3,0x14,0x38,0xd5]
+// CHECK-INST: mrs x3, ACTLRALIAS_EL1
+// CHECK-ENCODING: encoding: [0xa3,0x14,0x38,0xd5]
+// CHECK-UNKNOWN:  d53814a3 mrs x3, ACTLRALIAS_EL1
 
 msr SCTLRMASK_EL1, x3
-// CHECK: msr	SCTLRMASK_EL1, x3               // encoding: [0x03,0x14,0x18,0xd5]
+// CHECK-INST: msr SCTLRMASK_EL1, x3
+// CHECK-ENCODING: encoding: [0x03,0x14,0x18,0xd5]
+// CHECK-UNKNOWN:  d5181403 msr SCTLRMASK_EL1, x3
+
 msr SCTLRMASK_EL2, x3
-// CHECK: msr	SCTLRMASK_EL2, x3               // encoding: [0x03,0x14,0x1c,0xd5]
+// CHECK-INST: msr SCTLRMASK_EL2, x3
+// CHECK-ENCODING: encoding: [0x03,0x14,0x1c,0xd5]
+// CHECK-UNKNOWN:  d51c1403 msr SCTLRMASK_EL2, x3
+
 msr SCTLRMASK_EL12, x3
-// CHECK: msr	SCTLRMASK_EL12, x3              // encoding: [0x03,0x14,0x1d,0xd5]
+// CHECK-INST: msr SCTLRMASK_EL12, x3
+// CHECK-ENCODING: encoding: [0x03,0x14,0x1d,0xd5]
+// CHECK-UNKNOWN:  d51d1403 msr SCTLRMASK_EL12, x3
+
 msr CPACRMASK_EL1, x3
-// CHECK: msr	CPACRMASK_EL1, x3               // encoding: [0x43,0x14,0x18,0xd5]
+// CHECK-INST: msr CPACRMASK_EL1, x3
+// CHECK-ENCODING: encoding: [0x43,0x14,0x18,0xd5]
+// CHECK-UNKNOWN:  d5181443 msr CPACRMASK_EL1, x3
+
 msr CPTRMASK_EL2, x3
-// CHECK: msr	CPTRMASK_EL2, x3                // encoding: [0x43,0x14,0x1c,0xd5]
+// CHECK-INST: msr CPTRMASK_EL2, x3
+// CHECK-ENCODING: encoding: [0x43,0x14,0x1c,0xd5]
+// CHECK-UNKNOWN:  d51c1443 msr CPTRMASK_EL2, x3
+
 msr CPACRMASK_EL12, x3
-// CHECK: msr	CPACRMASK_EL12, x3              // encoding: [0x43,0x14,0x1d,0xd5]
+// CHECK-INST: msr CPACRMASK_EL12, x3
+// CHECK-ENCODING: encoding: [0x43,0x14,0x1d,0xd5]
+// CHECK-UNKNOWN:  d51d1443 msr CPACRMASK_EL12, x3
+
 msr SCTLR2MASK_EL1, x3
-// CHECK: msr	SCTLR2MASK_EL1, x3              // encoding: [0x63,0x14,0x18,0xd5]
+// CHECK-INST: msr SCTLR2MASK_EL1, x3
+// CHECK-ENCODING: encoding: [0x63,0x14,0x18,0xd5]
+// CHECK-UNKNOWN:  d5181463 msr SCTLR2MASK_EL1, x3
+
 msr SCTLR2MASK_EL2, x3
-// CHECK: msr	SCTLR2MASK_EL2, x3              // encoding: [0x63,0x14,0x1c,0xd5]
+// CHECK-INST: msr SCTLR2MASK_EL2, x3
+// CHECK-ENCODING: encoding: [0x63,0x14,0x1c,0xd5]
+// CHECK-UNKNOWN:  d51c1463 msr SCTLR2MASK_EL2, x3
+
 msr SCTLR2MASK_EL12, x3
-// CHECK: msr	SCTLR2MASK_EL12, x3             // encoding: [0x63,0x14,0x1d,0xd5]
+// CHECK-INST: msr SCTLR2MASK_EL12, x3
+// CHECK-ENCODING: encoding: [0x63,0x14,0x1d,0xd5]
+// CHECK-UNKNOWN:  d51d1463 msr SCTLR2MASK_EL12, x3
+
 msr CPACRALIAS_EL1, x3
-// CHECK: msr	CPACRALIAS_EL1, x3              // encoding: [0x83,0x14,0x18,0xd5]
+// CHECK-INST: msr CPACRALIAS_EL1, x3
+// CHECK-ENCODING: encoding: [0x83,0x14,0x18,0xd5]
+// CHECK-UNKNOWN:  d5181483 msr CPACRALIAS_EL1, x3
+
 msr SCTLRALIAS_EL1, x3
-// CHECK: msr	SCTLRALIAS_EL1, x3              // encoding: [0xc3,0x14,0x18,0xd5]
+// CHECK-INST: msr SCTLRALIAS_EL1, x3
+// CHECK-ENCODING: encoding: [0xc3,0x14,0x18,0xd5]
+// CHECK-UNKNOWN:  d51814c3 msr SCTLRALIAS_EL1, x3
+
 msr SCTLR2ALIAS_EL1, x3
-// CHECK: msr	SCTLR2ALIAS_EL1, x3             // encoding: [0xe3,0x14,0x18,0xd5]
+// CHECK-INST: msr SCTLR2ALIAS_EL1, x3
+// CHECK-ENCODING: encoding: [0xe3,0x14,0x18,0xd5]
+// CHECK-UNKNOWN:  d51814e3 msr SCTLR2ALIAS_EL1, x3
+
 msr TCRMASK_EL1, x3
-// CHECK: msr	TCRMASK_EL1, x3                 // encoding: [0x43,0x27,0x18,0xd5]
+// CHECK-INST: msr TCRMASK_EL1, x3
+// CHECK-ENCODING: encoding: [0x43,0x27,0x18,0xd5]
+// CHECK-UNKNOWN:  d5182743 msr TCRMASK_EL1, x3
+
 msr TCRMASK_EL2, x3
-// CHECK: msr	TCRMASK_EL2, x3                 // encoding: [0x43,0x27,0x1c,0xd5]
+// CHECK-INST: msr TCRMASK_EL2, x3
+// CHECK-ENCODING: encoding: [0x43,0x27,0x1c,0xd5]
+// CHECK-UNKNOWN:  d51c2743 msr TCRMASK_EL2, x3
+
 msr TCRMASK_EL12, x3
-// CHECK: msr	TCRMASK_EL12, x3                // encoding: [0x43,0x27,0x1d,0xd5]
+// CHECK-INST: msr TCRMASK_EL12, x3
+// CHECK-ENCODING: encoding: [0x43,0x27,0x1d,0xd5]
+// CHECK-UNKNOWN:  d51d2743 msr TCRMASK_EL12, x3
+
 msr TCR2MASK_EL1, x3
-// CHECK: msr	TCR2MASK_EL1, x3                // encoding: [0x63,0x27,0x18,0xd5]
+// CHECK-INST: msr TCR2MASK_EL1, x3
+// CHECK-ENCODING: encoding: [0x63,0x27,0x18,0xd5]
+// CHECK-UNKNOWN:  d5182763 msr TCR2MASK_EL1, x3
+
 msr TCR2MASK_EL2, x3
-// CHECK: msr	TCR2MASK_EL2, x3                // encoding: [0x63,0x27,0x1c,0xd5]
+// CHECK-INST: msr TCR2MASK_EL2, x3
+// CHECK-ENCODING: encoding: [0x63,0x27,0x1c,0xd5]
+// CHECK-UNKNOWN:  d51c2763 msr TCR2MASK_EL2, x3
+
 msr TCR2MASK_EL12, x3
-// CHECK: msr	TCR2MASK_EL12, x3               // encoding: [0x63,0x27,0x1d,0xd5]
+// CHECK-INST: msr TCR2MASK_EL12, x3
+// CHECK-ENCODING: encoding: [0x63,0x27,0x1d,0xd5]
+// CHECK-UNKNOWN:  d51d2763 msr TCR2MASK_EL12, x3
+
 msr TCRALIAS_EL1, x3
-// CHECK: msr	TCRALIAS_EL1, x3                // encoding: [0xc3,0x27,0x18,0xd5]
+// CHECK-INST: msr TCRALIAS_EL1, x3
+// CHECK-ENCODING: encoding: [0xc3,0x27,0x18,0xd5]
+// CHECK-UNKNOWN:  d51827c3 msr TCRALIAS_EL1, x3
+
 msr TCR2ALIAS_EL1, x3
-// CHECK: msr	TCR2ALIAS_EL1, x3               // encoding: [0xe3,0x27,0x18,0xd5]
+// CHECK-INST: msr TCR2ALIAS_EL1, x3
+// CHECK-ENCODING: encoding: [0xe3,0x27,0x18,0xd5]
+// CHECK-UNKNOWN:  d51827e3 msr TCR2ALIAS_EL1, x3
+
 msr ACTLRMASK_EL1, x3
-// CHECK: msr	ACTLRMASK_EL1, x3               // encoding: [0x23,0x14,0x18,0xd5]
+// CHECK-INST: msr ACTLRMASK_EL1, x3
+// CHECK-ENCODING: encoding: [0x23,0x14,0x18,0xd5]
+// CHECK-UNKNOWN:  d5181423 msr ACTLRMASK_EL1, x3
+
 msr ACTLRMASK_EL2, x3
-// CHECK: msr	ACTLRMASK_EL2, x3               // encoding: [0x23,0x14,0x1c,0xd5]
+// CHECK-INST: msr ACTLRMASK_EL2, x3
+// CHECK-ENCODING: encoding: [0x23,0x14,0x1c,0xd5]
+// CHECK-UNKNOWN:  d51c1423 msr ACTLRMASK_EL2, x3
+
 msr ACTLRMASK_EL12, x3
-// CHECK: msr	ACTLRMASK_EL12, x3              // encoding: [0x23,0x14,0x1d,0xd5]
+// CHECK-INST: msr ACTLRMASK_EL12, x3
+// CHECK-ENCODING: encoding: [0x23,0x14,0x1d,0xd5]
+// CHECK-UNKNOWN:  d51d1423 msr ACTLRMASK_EL12, x3
+
 msr ACTLRALIAS_EL1, x3
-// CHECK: msr	ACTLRALIAS_EL1, x3              // encoding: [0xa3,0x14,0x18,0xd5]
+// CHECK-INST: msr ACTLRALIAS_EL1, x3
+// CHECK-ENCODING: encoding: [0xa3,0x14,0x18,0xd5]
+// CHECK-UNKNOWN:  d51814a3 msr ACTLRALIAS_EL1, x3
 
 
 

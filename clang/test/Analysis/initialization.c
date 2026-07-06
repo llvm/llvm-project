@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-apple-darwin10 -analyze -analyzer-config eagerly-assume=false  -analyzer-checker=core.uninitialized.Assign,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -analyzer-config eagerly-assume=false  -analyzer-checker=core.uninitialized.Assign,debug.ExprInspection -verify %s
 
 void clang_analyzer_eval(int);
 
@@ -73,10 +73,10 @@ void glob_arr_index3(void) {
 
 void negative_index(void) {
   int x = 2, y = -2;
-  clang_analyzer_eval(glob_arr2[x][y] == 5); // expected-warning{{UNDEFINED}}
+  clang_analyzer_eval(glob_arr2[x][y] == 5); // expected-warning{{TRUE}}
   x = 3;
   y = -3;
-  clang_analyzer_eval(glob_arr2[x][y] == 7); // expected-warning{{UNDEFINED}}
+  clang_analyzer_eval(glob_arr2[x][y] == 7); // expected-warning{{TRUE}}
 }
 
 void glob_invalid_index3(void) {

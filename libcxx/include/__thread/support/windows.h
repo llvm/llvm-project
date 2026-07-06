@@ -19,6 +19,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 using __libcpp_timespec_t = ::timespec;
 
@@ -28,32 +29,30 @@ using __libcpp_timespec_t = ::timespec;
 typedef void* __libcpp_mutex_t;
 #define _LIBCPP_MUTEX_INITIALIZER 0
 
-#if defined(_M_IX86) || defined(__i386__) || defined(_M_ARM) || defined(__arm__)
-typedef void* __libcpp_recursive_mutex_t[6];
-#elif defined(_M_AMD64) || defined(__x86_64__) || defined(_M_ARM64) || defined(__aarch64__)
+#if defined(_WIN64)
 typedef void* __libcpp_recursive_mutex_t[5];
 #else
-#  error Unsupported architecture
+typedef void* __libcpp_recursive_mutex_t[6];
 #endif
 
 _LIBCPP_EXPORTED_FROM_ABI int __libcpp_recursive_mutex_init(__libcpp_recursive_mutex_t* __m);
 
-_LIBCPP_EXPORTED_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS int
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS _LIBCPP_EXPORTED_FROM_ABI int
 __libcpp_recursive_mutex_lock(__libcpp_recursive_mutex_t* __m);
 
-_LIBCPP_EXPORTED_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS bool
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS _LIBCPP_EXPORTED_FROM_ABI bool
 __libcpp_recursive_mutex_trylock(__libcpp_recursive_mutex_t* __m);
 
-_LIBCPP_EXPORTED_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS int
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS _LIBCPP_EXPORTED_FROM_ABI int
 __libcpp_recursive_mutex_unlock(__libcpp_recursive_mutex_t* __m);
 
 _LIBCPP_EXPORTED_FROM_ABI int __libcpp_recursive_mutex_destroy(__libcpp_recursive_mutex_t* __m);
 
-_LIBCPP_EXPORTED_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS int __libcpp_mutex_lock(__libcpp_mutex_t* __m);
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS _LIBCPP_EXPORTED_FROM_ABI int __libcpp_mutex_lock(__libcpp_mutex_t* __m);
 
-_LIBCPP_EXPORTED_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS bool __libcpp_mutex_trylock(__libcpp_mutex_t* __m);
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS _LIBCPP_EXPORTED_FROM_ABI bool __libcpp_mutex_trylock(__libcpp_mutex_t* __m);
 
-_LIBCPP_EXPORTED_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS int __libcpp_mutex_unlock(__libcpp_mutex_t* __m);
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS _LIBCPP_EXPORTED_FROM_ABI int __libcpp_mutex_unlock(__libcpp_mutex_t* __m);
 
 _LIBCPP_EXPORTED_FROM_ABI int __libcpp_mutex_destroy(__libcpp_mutex_t* __m);
 
@@ -67,10 +66,10 @@ _LIBCPP_EXPORTED_FROM_ABI int __libcpp_condvar_signal(__libcpp_condvar_t* __cv);
 
 _LIBCPP_EXPORTED_FROM_ABI int __libcpp_condvar_broadcast(__libcpp_condvar_t* __cv);
 
-_LIBCPP_EXPORTED_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS int
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS _LIBCPP_EXPORTED_FROM_ABI int
 __libcpp_condvar_wait(__libcpp_condvar_t* __cv, __libcpp_mutex_t* __m);
 
-_LIBCPP_EXPORTED_FROM_ABI _LIBCPP_NO_THREAD_SAFETY_ANALYSIS int
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS _LIBCPP_EXPORTED_FROM_ABI int
 __libcpp_condvar_timedwait(__libcpp_condvar_t* __cv, __libcpp_mutex_t* __m, __libcpp_timespec_t* __ts);
 
 _LIBCPP_EXPORTED_FROM_ABI int __libcpp_condvar_destroy(__libcpp_condvar_t* __cv);
@@ -128,6 +127,7 @@ _LIBCPP_EXPORTED_FROM_ABI void* __libcpp_tls_get(__libcpp_tls_key __key);
 
 _LIBCPP_EXPORTED_FROM_ABI int __libcpp_tls_set(__libcpp_tls_key __key, void* __p);
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___THREAD_SUPPORT_WINDOWS_H

@@ -432,7 +432,7 @@ public:
       }
       return success;
     }
-      
+
     template <class IntType>
     bool GetValueForKeyAsInteger(llvm::StringRef key, IntType &result) const {
       ObjectSP value_sp = GetValueForKey(key);
@@ -573,6 +573,30 @@ public:
   private:
     void *m_object;
   };
+
+  template <typename T> static ObjectSP FromInteger(T value) {
+    return std::make_shared<Integer<T>>(value);
+  }
+
+  static StructuredData::ObjectSP FromFloat(double value) {
+    return std::make_shared<StructuredData::Float>(value);
+  }
+  static StructuredData::ObjectSP FromBoolean(bool value) {
+    return std::make_shared<StructuredData::Boolean>(value);
+  }
+  static StructuredData::ObjectSP FromString(std::string value) {
+    return std::make_shared<StructuredData::String>(value);
+  }
+  static StructuredData::ObjectSP FromGeneric(void *value) {
+    return std::make_shared<StructuredData::Generic>(value);
+  }
+
+  static StructuredData::ObjectSP
+  FromKeyValue(llvm::StringRef key, const StructuredData::ObjectSP &value_sp) {
+    auto dict_sp = std::make_shared<StructuredData::Dictionary>();
+    dict_sp->AddItem(key, value_sp);
+    return dict_sp;
+  }
 
   static ObjectSP ParseJSON(llvm::StringRef json_text);
   static ObjectSP ParseJSONFromFile(const FileSpec &file, Status &error);

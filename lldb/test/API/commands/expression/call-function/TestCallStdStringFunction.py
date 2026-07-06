@@ -8,11 +8,11 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # no expression evaluation
 class ExprCommandCallFunctionTestCase(TestBase):
     @expectedFailureAll(
         compiler="icc", bugnumber="llvm.org/pr14437, fails with ICC 13.1"
     )
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     @skipIf(compiler="clang", compiler_version=["<", "9.0"])
     def test_with(self):
         """Test calling std::String member function."""
