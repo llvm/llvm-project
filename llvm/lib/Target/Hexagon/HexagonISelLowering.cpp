@@ -113,6 +113,7 @@ static bool CC_SkipOdd(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   return false;
 }
 
+#define GET_CALLING_CONV_IMPL
 #include "HexagonGenCallingConv.inc"
 
 unsigned HexagonTargetLowering::getVectorTypeBreakdownForCallingConv(
