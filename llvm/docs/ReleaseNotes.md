@@ -203,6 +203,8 @@ Makes programs 10x faster by doing Special New Thing.
   instead of the ABI names FP and LR. Note that LLVM IR produced by Clang
   always uses the ABI names, but other frontends may not.
   ([#167783](https://github.com/llvm/llvm-project/pull/167783))
+* On AArch64 Windows targets, return address signing now uses the B-key by
+  default because Windows unwind information only supports B-key signing.
 
 ### Changes to the AMDGPU Backend
 
