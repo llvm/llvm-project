@@ -662,12 +662,20 @@ def NormalizePass : InterfacePass<"normalize", "FunctionOpInterface"> {
     This pass aims to transform MLIR Modules into a normal form by reordering
     operations while preserving the same semantics. It attempts to relocate
     the defining ops of operands for any side-effecting or terminator operation
-    to their nearest dominating positions.
+    to their nearest dominating positions. In addition, it makes it easier to see
+    which SSA values an op uses just by reading its renamed name.
 
     Note: The pass trying to increase syntactic equivalence of code to reduce
     diff size while retaining semantic equivalence. It cannot replace the
     canonicalization pass (a pass that aims for increasing semantic equivalence instead).
   }];
+  let options = [
+    Option<"foldDepth", "fold-depth", "int64_t",
+          /*default=*/"0",
+          "Control the maximum depth of operands to include in the name."
+          "If less than 0, name folding is entirely disabled."
+          "If set to 0, only folds the op name itself without operands.">,
+  ];
 }
 
 #endif // MLIR_TRANSFORMS_PASSES
