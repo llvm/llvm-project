@@ -1444,13 +1444,13 @@ template <typename DomTreeT> struct SemiNCAInfo {
         return false;
       }
 
-      if (Children.back()->getDFSNumOut() + 1 != Node->getDFSNumOut()) {
+      if (Children.back()->getDFSNumOut() != Node->getDFSNumOut()) {
         PrintChildrenError(Children.back(), nullptr);
         return false;
       }
 
       for (size_t i = 0, e = Children.size() - 1; i != e; ++i) {
-        if (Children[i]->getDFSNumOut() + 1 != Children[i + 1]->getDFSNumIn()) {
+        if (Children[i]->getDFSNumOut() != Children[i + 1]->getDFSNumIn()) {
           PrintChildrenError(Children[i], Children[i + 1]);
           return false;
         }
