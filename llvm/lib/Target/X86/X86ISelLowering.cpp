@@ -34354,8 +34354,8 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::VECREDUCE_UMIN:     return LowerMINMAX_REDUCE(Op, Subtarget, DAG);
   case ISD::VECREDUCE_AND:
   case ISD::VECREDUCE_OR:
-  case ISD::VECREDUCE_XOR:      return LowerVECREDUCE(Op, Subtarget, DAG, true);
-  case ISD::VECREDUCE_MUL:      return LowerVECREDUCE(Op, Subtarget, DAG, false);
+  case ISD::VECREDUCE_XOR:
+  case ISD::VECREDUCE_MUL:      return LowerVECREDUCE(Op, Subtarget, DAG, true);
   case ISD::FMINIMUM:
   case ISD::FMAXIMUM:
   case ISD::FMINIMUMNUM:

@@ -6600,16 +6600,9 @@ define i64 @test_mm512_reduce_mul_epi64(<8 x i64> %__W) nounwind {
 ; X64-NEXT:    vpsllq $32, %xmm2, %xmm2
 ; X64-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vpaddq %xmm2, %xmm0, %xmm0
-; X64-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; X64-NEXT:    vpsrlq $32, %xmm0, %xmm2
-; X64-NEXT:    vpmuludq %xmm1, %xmm2, %xmm2
-; X64-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm0[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; X64-NEXT:    vpmuludq %xmm3, %xmm0, %xmm3
-; X64-NEXT:    vpaddq %xmm2, %xmm3, %xmm2
-; X64-NEXT:    vpsllq $32, %xmm2, %xmm2
-; X64-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vpaddq %xmm2, %xmm0, %xmm0
+; X64-NEXT:    vpextrq $1, %xmm0, %rcx
 ; X64-NEXT:    vmovq %xmm0, %rax
+; X64-NEXT:    imulq %rcx, %rax
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 entry:
@@ -6776,16 +6769,9 @@ define i64 @test_mm512_mask_reduce_mul_epi64(i8 zeroext %__M, <8 x i64> %__W) no
 ; X64-NEXT:    vpsllq $32, %xmm2, %xmm2
 ; X64-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vpaddq %xmm2, %xmm0, %xmm0
-; X64-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; X64-NEXT:    vpsrlq $32, %xmm0, %xmm2
-; X64-NEXT:    vpmuludq %xmm1, %xmm2, %xmm2
-; X64-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm0[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; X64-NEXT:    vpmuludq %xmm3, %xmm0, %xmm3
-; X64-NEXT:    vpaddq %xmm2, %xmm3, %xmm2
-; X64-NEXT:    vpsllq $32, %xmm2, %xmm2
-; X64-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vpaddq %xmm2, %xmm0, %xmm0
+; X64-NEXT:    vpextrq $1, %xmm0, %rcx
 ; X64-NEXT:    vmovq %xmm0, %rax
+; X64-NEXT:    imulq %rcx, %rax
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
 entry:
