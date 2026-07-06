@@ -1292,60 +1292,19 @@ def CIR_CXXAssignAttr : CIR_Attr<"CXXAssign", "cxx_assign"> {
   }];
 }
 
-def CIR_CXXSpecialMemberAttr : AnyAttrOf<[
-  CIR_CXXCtorAttr,
-  CIR_CXXDtorAttr,
-  CIR_CXXAssignAttr
-]>;
-
 //===----------------------------------------------------------------------===//
 // FuncInfoAttr
 //===----------------------------------------------------------------------===//
 
-def CIR_FuncInfoAttr : CIR_Attr<"FuncInfo", "func_info"> {
-  let summary = "Holds the source level identity of a function";
-  let description = [{
-    Describes the source level entity a function represents, so that
-    transformations can recognize calls to well known library functions
-    without decoding mangled symbol names.
-
-    The `name` parameter holds the function name as written in the source,
-    without qualification, template arguments, or mangling.
-
-    The `in_std_namespace` parameter is true when the function belongs to
-    the `std` namespace. Membership follows the declaration rather than
-    the spelling at any use site. Inline namespaces, such as the
-    versioning namespace of libc++, are looked through, so a function
-    declared in `std::__1` counts as a member of `std`. Using declarations
-    and namespace aliases do not move a declaration, so they do not affect
-    the value either. For a member function the enclosing record decides.
-
-    The `instance_method` parameter is true for a member function that is
-    not static.
-
-    Functions without a plain identifier, such as overloaded operators and
-    constructors, carry no attribute, and neither do static member
-    functions, which keeps a static member apart from a free function of
-    the same name.
-
-    Example:
-    ```
-    #cir.func_info<name = "find", in_std_namespace = true>
-    ```
-  }];
-
-  let parameters = (ins
-    "mlir::StringAttr":$name,
-    DefaultValuedParameter<"bool", "false">:$in_std_namespace,
-    DefaultValuedParameter<"bool", "false">:$instance_method
-  );
-
-  let assemblyFormat = [{
-    `<` struct($name, $in_std_namespace, $instance_method) `>`
-  }];
-
-  let canHaveIllegalCXXABIType = 0;
-}
+// The attributes accepted in the optional func_info slot on cir.func. Each
+// form records one kind of precomputed fact about the function. The special
+// member forms embed the record type they operate on, and the CXX ABI
+// lowering replaces them with forms holding the converted type.
+def CIR_FuncInfoAttr : AnyAttrOf<[
+  CIR_CXXCtorAttr,
+  CIR_CXXDtorAttr,
+  CIR_CXXAssignAttr
+], "function information attribute">;
 
 //===----------------------------------------------------------------------===//
 // BitfieldInfoAttr

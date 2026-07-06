@@ -3446,9 +3446,6 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
     // Mark C++ special member functions (Constructor, Destructor etc.)
     setCXXSpecialMemberAttr(func, funcDecl);
 
-    // Record the source level identity of the function.
-    setFuncInfoAttr(func, funcDecl);
-
     if (!cgf)
       theModule.push_back(func);
 
@@ -3500,7 +3497,7 @@ void CIRGenModule::setCXXSpecialMemberAttr(
     auto cxxDtor = cir::CXXDtorAttr::get(
         convertType(getASTContext().getCanonicalTagType(dtor->getParent())),
         dtor->isTrivial());
-    funcOp.setCxxSpecialMemberAttr(cxxDtor);
+    funcOp.setFuncInfoAttr(cxxDtor);
     return;
   }
 
@@ -3509,7 +3506,7 @@ void CIRGenModule::setCXXSpecialMemberAttr(
     auto cxxCtor = cir::CXXCtorAttr::get(
         convertType(getASTContext().getCanonicalTagType(ctor->getParent())),
         kind, ctor->isTrivial());
-    funcOp.setCxxSpecialMemberAttr(cxxCtor);
+    funcOp.setFuncInfoAttr(cxxCtor);
     return;
   }
 
@@ -3520,40 +3517,9 @@ void CIRGenModule::setCXXSpecialMemberAttr(
     auto cxxAssign = cir::CXXAssignAttr::get(
         convertType(getASTContext().getCanonicalTagType(method->getParent())),
         assignKind, method->isTrivial());
-    funcOp.setCxxSpecialMemberAttr(cxxAssign);
+    funcOp.setFuncInfoAttr(cxxAssign);
     return;
   }
-}
-
-void CIRGenModule::setFuncInfoAttr(cir::FuncOp funcOp,
-                                   const clang::FunctionDecl *funcDecl) {
-  // Functions without a plain identifier, for example overloaded operators
-  // and constructors, carry no information, since no pass can match a
-  // function it cannot name.
-  if (!funcDecl || !funcDecl->getIdentifier())
-    return;
-
-  // Free functions and instance methods carry the attribute. Only static
-  // member functions are skipped, so that a static member like
-  // char_traits::find can never be mistaken for the free std::find.
-  const auto *method = dyn_cast<CXXMethodDecl>(funcDecl);
-  if (method && method->isStatic())
-    return;
-
-  // A member function lives inside its record, so the record decides
-  // whether the function belongs to the std namespace.
-  bool inStdNamespace = method ? method->getParent()->isInStdNamespace()
-                               : funcDecl->isInStdNamespace();
-
-  // Only functions in the std namespace carry the attribute for now. Those
-  // are the ones upcoming passes look for, and plain C library functions
-  // can be matched through their symbol, since C names have no mangling.
-  if (!inStdNamespace)
-    return;
-
-  funcOp.setFuncInfoAttr(cir::FuncInfoAttr::get(
-      &getMLIRContext(), builder.getStringAttr(funcDecl->getName()),
-      inStdNamespace, method && method->isInstance()));
 }
 
 static void setWindowsItaniumDLLImport(CIRGenModule &cgm, bool isLocal,
