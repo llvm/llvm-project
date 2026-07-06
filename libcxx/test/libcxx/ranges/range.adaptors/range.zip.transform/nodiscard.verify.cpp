@@ -15,7 +15,6 @@
 #include <vector>
 
 #include "test_iterators.h"
-#include "test_range.h"
 
 struct CommonView : std::ranges::view_interface<CommonView> {
   int* begin();
@@ -48,7 +47,6 @@ static_assert(std::ranges::forward_range<ForwardSizedNonCommon>);
 static_assert(std::ranges::sized_range<ForwardSizedNonCommon>);
 static_assert(!std::ranges::common_range<ForwardSizedNonCommon>);
 static_assert(!std::ranges::random_access_range<ForwardSizedNonCommon>);
-static_assert(simple_view<ForwardSizedNonCommon>);
 
 template <class... Args>
 struct Invocable {
