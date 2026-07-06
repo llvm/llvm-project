@@ -364,15 +364,16 @@ struct MinUIOpInterface
     if (!lhsNonNegative && !rhsNonNegative)
       return;
 
-    // A negative signed integer bit pattern reinterpreted as an 
+    // A negative signed integer bit pattern reinterpreted as an
     // unsigned integer is greater than SIGNED_INT_MAX. If
     // one of the operands is signed non-negative, it is smaller than
     // or equal to SIGNED_INT_MAX in unsigned interpretation,
     // and `minui` will choose that operand over a negative signed
     // integer operand.
     cstr.bound(value) >= 0;
-    // If an operand is provably non-negative, its signed and unsigned value interpretations
-    // agree, so `minsi` and `minui` impose the same upper bound: `result <= operand`.
+    // If an operand is provably non-negative, its signed and unsigned value
+    // interpretations agree, so `minsi` and `minui` impose the same upper
+    // bound: `result <= operand`.
     if (lhsNonNegative) {
       AffineExpr lhs = cstr.getExpr(minOp.getLhs());
       cstr.bound(value) <= lhs;
