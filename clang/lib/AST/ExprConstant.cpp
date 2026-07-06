@@ -9299,7 +9299,7 @@ public:
     case CK_LValueBitCast:
       this->CCEDiag(E, diag::note_constexpr_invalid_cast)
           << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
-          << Info.Ctx.getLangOpts().CPlusPlus;
+          << Info.Ctx.getLangOpts().CPlusPlus << E->getSourceRange();
       if (!Visit(E->getSubExpr()))
         return false;
       Result.Designator.setInvalid();
@@ -12681,6 +12681,65 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       }
     }
 
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
+  case clang::X86::BI__builtin_ia32_bmacor16x16x16_v16hi:
+  case clang::X86::BI__builtin_ia32_bmacor16x16x16_v32hi:
+  case clang::X86::BI__builtin_ia32_bmacxor16x16x16_v16hi:
+  case clang::X86::BI__builtin_ia32_bmacxor16x16x16_v32hi: {
+    // Bit Matrix Multiply and Accumulate (AVX512BMM). Each 256-bit lane holds
+    // a 16x16 bit matrix as 16 x i16 elements; element i is row i and bit j of
+    // that element is entry [i][j]. The accumulator (third argument, src1 in
+    // the AMD ISA) provides the initial value of each result bit, into which
+    // the bit-matrix product of the first two arguments (src2 * src3) is
+    // reduced with OR (vbmacor) or XOR (vbmacxor):
+    //   for i in 0..15, j in 0..15:
+    //     bit = C[16*i+j]
+    //     for k in 0..15: bit OP= A[16*i+k] & B[16*k+j]
+    //     dest[16*i+j] = bit
+    APValue SourceA, SourceB, SourceC;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceA) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceB) ||
+        !EvaluateAsRValue(Info, E->getArg(2), SourceC))
+      return false;
+
+    bool IsXor = E->getBuiltinCallee() ==
+                     clang::X86::BI__builtin_ia32_bmacxor16x16x16_v16hi ||
+                 E->getBuiltinCallee() ==
+                     clang::X86::BI__builtin_ia32_bmacxor16x16x16_v32hi;
+
+    unsigned SourceLen = SourceA.getVectorLength();
+    assert(SourceLen % 16 == 0 && "BMM operates on 256-bit lanes of 16 x i16");
+    auto *DestTy = E->getType()->castAs<VectorType>();
+    QualType DestEltTy = DestTy->getElementType();
+    bool DestUnsigned = DestEltTy->isUnsignedIntegerOrEnumerationType();
+
+    SmallVector<APValue, 32> ResultElements(SourceLen);
+    for (unsigned Lane = 0; Lane != SourceLen; Lane += 16) {
+      for (unsigned I = 0; I != 16; ++I) {
+        uint16_t A =
+            (uint16_t)SourceA.getVectorElt(Lane + I).getInt().getZExtValue();
+        uint16_t Dst =
+            (uint16_t)SourceC.getVectorElt(Lane + I).getInt().getZExtValue();
+        for (unsigned J = 0; J != 16; ++J) {
+          // Seed the reduction with the accumulator bit, then fold in each
+          // product term with the same operator (OR for vbmacor, XOR for
+          // vbmacxor).
+          unsigned Bit = (Dst >> J) & 1u;
+          for (unsigned K = 0; K != 16; ++K) {
+            uint16_t B = (uint16_t)SourceB.getVectorElt(Lane + K)
+                             .getInt()
+                             .getZExtValue();
+            unsigned Product = ((A >> K) & 1u) & ((B >> J) & 1u);
+            Bit = IsXor ? (Bit ^ Product) : (Bit | Product);
+          }
+          Dst = (Dst & ~(uint16_t(1) << J)) | (uint16_t(Bit) << J);
+        }
+        ResultElements[Lane + I] =
+            APValue(APSInt(APInt(16, Dst), DestUnsigned));
+      }
+    }
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
 
@@ -16410,6 +16469,7 @@ static bool determineEndOffset(EvalInfo &Info, SourceLocation ExprLoc,
 static std::optional<uint64_t>
 tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type, EvalInfo &Info,
                              bool IsDynamic = false) {
+
   // Determine the denoted object.
   LValue LVal;
   {
@@ -19396,7 +19456,19 @@ bool IntExprEvaluator::VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
         return Error(OOE);
       CurrentType = AT->getElementType();
       CharUnits ElementSize = Info.Ctx.getTypeSizeInChars(CurrentType);
-      Result += IdxResult.getSExtValue() * ElementSize;
+      // Reject negative indices, indices too large to fit in int64_t,
+      // and overflow in the offset computation.
+      if (IdxResult.isNegative() || IdxResult.getActiveBits() > 63)
+        return Error(OOE);
+      int64_t IdxVal = IdxResult.getExtValue();
+      int64_t ElemSize = ElementSize.getQuantity();
+      if (IdxVal != 0 &&
+          ElemSize > std::numeric_limits<int64_t>::max() / IdxVal)
+        return Error(OOE, diag::note_constexpr_offsetof_overflow);
+      int64_t Offset = IdxVal * ElemSize;
+      if (Result.getQuantity() > std::numeric_limits<int64_t>::max() - Offset)
+        return Error(OOE, diag::note_constexpr_offsetof_overflow);
+      Result += CharUnits::fromQuantity(Offset);
       break;
     }
 
@@ -22442,6 +22514,16 @@ bool Expr::EvaluateWithSubstitution(APValue &Value, ASTContext &Ctx,
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantExpressionUnevaluated);
   Info.InConstantContext = true;
+
+  if (Info.EnableNewConstInterp) {
+    if (std::optional<bool> BoolResult =
+            Info.Ctx.getInterpContext().evaluateWithSubstitution(
+                Info, Callee, Args, This, this)) {
+      Value = APValue(APSInt(APInt(1, static_cast<uint64_t>(*BoolResult))));
+      return true;
+    }
+    return false;
+  }
 
   LValue ThisVal;
   const LValue *ThisPtr = nullptr;

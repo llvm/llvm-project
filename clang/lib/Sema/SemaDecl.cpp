@@ -16306,7 +16306,8 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
         Context.getTargetInfo().getCXXABI().isMicrosoft()) {
       // If this is an MS ABI dllexport default constructor, instantiate any
       // default arguments.
-      InstantiateDefaultCtorDefaultArgs(Ctor);
+      if (DLLExportAttr *Attr = Ctor->getAttr<DLLExportAttr>())
+        BuildCtorClosureDefaultArgs(Attr->getLocation(), Ctor);
     }
   }
 
@@ -16474,7 +16475,7 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
 
   maybeAddDeclWithEffects(FD);
 
-  if (FD && !FD->isInvalidDecl() && FD->hasAttr<SYCLKernelEntryPointAttr>() &&
+  if (!FD->isInvalidDecl() && FD->hasAttr<SYCLKernelEntryPointAttr>() &&
       FnBodyScope) {
     // An implicit call expression is synthesized for functions declared with
     // the sycl_kernel_entry_point attribute. The call may resolve to a

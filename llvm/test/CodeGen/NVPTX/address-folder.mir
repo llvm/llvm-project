@@ -1,0 +1,60 @@
+# RUN: llc -mtriple=nvptx64-nvidia-cuda -run-pass=nvptx-address-folder -verify-machineinstrs -o - %s | FileCheck %s
+
+--- |
+  target triple = "nvptx64-nvidia-cuda"
+
+  @g = addrspace(1) global [4 x i64] zeroinitializer
+  @g_shared = addrspace(3) global [4 x i64] zeroinitializer
+
+  define void @fold_global() { ret void }
+  define void @skip_shared() { ret void }
+  define void @fold_partial() { ret void }
+...
+---
+# A global address materialized into a register is folded into the address
+# operand of loads and stores, and the dead `mov` is removed.
+# CHECK-LABEL: name: fold_global
+# CHECK-NOT: MOV_B64_sym
+# CHECK: %1:b64 = LD_i64 0, 0, 1, 3, 64, -1, @g, 0
+# CHECK: %2:b64 = LD_i64 0, 0, 1, 3, 64, -1, @g, 8
+# CHECK: ST_i64 %1, 0, 0, 1, 64, @g, 16
+name: fold_global
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:b64 = MOV_B64_sym @g
+    %1:b64 = LD_i64 0, 0, 1, 3, 64, -1, %0, 0 :: (load (s64), addrspace 1)
+    %2:b64 = LD_i64 0, 0, 1, 3, 64, -1, %0, 8 :: (load (s64), addrspace 1)
+    ST_i64 %1, 0, 0, 1, 64, %0, 16 :: (store (s64), addrspace 1)
+    Return
+...
+---
+# Shared-memory accesses are not folded: the `mov` of the shared symbol must
+# stay CSE-able rather than be duplicated into every access.
+# CHECK-LABEL: name: skip_shared
+# CHECK: %0:b64 = MOV_B64_sym @g_shared
+# CHECK: %1:b64 = LD_i64 0, 0, 3, 3, 64, -1, %0, 0
+name: skip_shared
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:b64 = MOV_B64_sym @g_shared
+    %1:b64 = LD_i64 0, 0, 3, 3, 64, -1, %0, 0 :: (load (s64), addrspace 3)
+    Return
+...
+---
+# When the address has non-memory uses too, memory uses are still folded but
+# the `mov` is kept for the remaining use.
+# CHECK-LABEL: name: fold_partial
+# CHECK: %0:b64 = MOV_B64_sym @g
+# CHECK: %1:b64 = LD_i64 0, 0, 1, 3, 64, -1, @g, 0
+# CHECK: %2:b64 = MULT64rr %0, %0
+name: fold_partial
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:b64 = MOV_B64_sym @g
+    %1:b64 = LD_i64 0, 0, 1, 3, 64, -1, %0, 0 :: (load (s64), addrspace 1)
+    %2:b64 = MULT64rr %0, %0
+    Return
+...

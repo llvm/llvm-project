@@ -6,16 +6,25 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """Utilities for using debugger output to generate expected values that match that output."""
 
-from collections import Counter, OrderedDict, defaultdict
-from copy import deepcopy
-from enum import Enum, IntEnum
+from collections import defaultdict
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from dex.dextIR import DextIR, StepIR, ValueIR
-from dex.evaluation.StateMatch import get_active_where_matches
-from dex.test_script.Nodes import Expect, Then, Value, Where
+from dex.evaluation.StateMatch import StateMatchContext, get_state_match
+from dex.test_script.Nodes import (
+    DexRange,
+    Expect,
+    ExpectAll,
+    Line,
+    Step,
+    Then,
+    Type,
+    Value,
+    Where,
+)
 from dex.test_script.Script import DexterScript, Scope
 from dex.tools.Main import Context
+from dex.utils.Exceptions import Error
 
 
 class ExpectedValueRewriter:
@@ -69,26 +78,150 @@ def unique_expected_values(elements: List[ExpectedValueRewriter]):
     return result
 
 
+class ExpectedScopeRewriter:
+    """Given a list of ValueIRs for all variables in a scope, generates a set of expected values for each."""
+
+    def __init__(self, expect: Expect, step: StepIR, values: List[ValueIR]):
+        self.expect = expect
+        self.step = step
+        self.values = values
+        self.expected_values = [
+            ExpectedValueRewriter(expect, value) for value in values
+        ]
+
+
+# (StartLine, StopLine) -> [(Var, ExpectedValues)]
+ExpectedScopeRewrites = Dict[Optional[Tuple[int, int]], List[Tuple[str, Any]]]
+
+
+def collect_scope_values(
+    step_scope_values: List[ExpectedScopeRewriter],
+) -> ExpectedScopeRewrites:
+    if not step_scope_values:
+        return {}
+    assert all(
+        step_scope_values[0].step.current_location.path == sv.step.current_location.path
+        for sv in step_scope_values[1:]
+    ), "Dexter currently does not handle scope watches that span multiple files."
+    all_vars: Set[str] = set()
+    for step_scope_rewriter in step_scope_values:
+        all_vars.update(
+            ev_rewriter.root_value.expression
+            for ev_rewriter in step_scope_rewriter.expected_values
+        )
+    line_sorted_steps = sorted(
+        step_scope_values,
+        key=lambda step_scope_rewriter: step_scope_rewriter.step.current_location.lineno,
+    )
+
+    # Now we have a list of expected values for each variable sorted by the lines at which they appear; we use this to
+    # form blocks of continuous liveness. In general, for unoptimized code we expect variables to have a single
+    # continuous live range.
+    per_range_var_unique_expected_values: ExpectedScopeRewrites = defaultdict(list)
+    for var in sorted(all_vars):
+        # Now build a list of all continuous live ranges.
+        continuous_live_ranges: List[Tuple[int, int, List[ExpectedValueRewriter]]] = []
+        is_live = False
+        ever_dead = False
+        for step_scope_rewriter in line_sorted_steps:
+            line = step_scope_rewriter.step.current_location.lineno
+            var_ev_rewriter = next(
+                (
+                    ev_rewriter
+                    for ev_rewriter in step_scope_rewriter.expected_values
+                    if ev_rewriter.root_value.expression == var
+                ),
+                None,
+            )
+            if var_ev_rewriter is None or var_ev_rewriter.expected_value is None:
+                is_live = False
+                ever_dead = True
+                continue
+
+            if not is_live:
+                continuous_live_ranges.append((line, line, [var_ev_rewriter]))
+            else:
+                start, stop, range_evs = continuous_live_ranges[-1]
+                assert line >= stop
+                range_evs.append(var_ev_rewriter)
+                continuous_live_ranges[-1] = (start, line, range_evs)
+            is_live = True
+
+        if not continuous_live_ranges:
+            continue
+
+        if not ever_dead:
+            assert len(continuous_live_ranges) == 1
+            per_range_var_unique_expected_values[None].append(
+                (var, unique_expected_values(continuous_live_ranges[0][2]))
+            )
+            continue
+
+        # Finally, collect the results into the per_var map.
+        for start, stop, expected_values in continuous_live_ranges:
+            per_range_var_unique_expected_values[(start, stop)].append(
+                (var, unique_expected_values(expected_values))
+            )
+
+    return per_range_var_unique_expected_values
+
+
+def get_expected_lines(expect: Expect, lines: List[int]) -> List[int]:
+    """For a !step expect and the list of lines seen while that expect was active, returns the list of lines that should
+    be expected by that expect."""
+    assert isinstance(expect, Step), "Trying to get expected lines for non-step node?"
+    if expect.kind == "never":
+        # We can't really get useful "expected values" for a !step never node, unless we throw in some convoluted extra
+        # steps, e.g. finding all breakpoint locations within the expect's enclosing scope, and creating a list of all
+        # lines that have valid breakpoint locations but weren't seen.
+        return []
+    # Although !step order and !step exactly are evaluated differently, they both aim to match lines stepped on; since
+    # we don't have any meaningful reason to exclude any seen lines from the written expected line list, we just use the
+    # whole thing.
+    return lines
+
+
 class StepExpectRewriter:
     """Processes all active, unknown expects at a given debugger step and produces ExpectedValueRewriter results for
     each."""
 
-    def __init__(self, step: StepIR, script: DexterScript):
+    def __init__(
+        self, step: StepIR, script: DexterScript, state_match_context: StateMatchContext
+    ):
         self.step = step
         self.script = script
-        self.state_match = get_active_where_matches(script, step)
+        self.state_match = get_state_match(script, step, state_match_context)
         active_expects = {
-            expect
-            for where_match in self.state_match.values()
+            expect: where_match.frame_idx
+            for where_match in self.state_match.where_match_results.values()
             for expect in where_match.active_expects
         }
-        self.expect_matches: Dict[Expect, ExpectedValueRewriter] = {}
+        self.expect_value_matches: Dict[Expect, ExpectedValueRewriter] = {}
+        self.expect_scope_matches: Dict[Expect, ExpectedScopeRewriter] = {}
+        self.expect_step_matches: Dict[Expect, int] = {}
 
         def add_expected_values(expect: Expect, expected_value: Any, scope: Scope):
-            assert isinstance(expect, Value), "Non-Value expects currently unsupported"
-            if expect in active_expects and expected_value is None:
-                self.expect_matches[expect] = ExpectedValueRewriter(
-                    expect, step.watches[expect.get_watched_expr()]
+            if expect not in active_expects or expected_value is not None:
+                return
+            expect_frame_idx = active_expects[expect]
+            if (expr := expect.get_watched_expr()) is not None:
+                self.expect_value_matches[expect] = ExpectedValueRewriter(
+                    expect, step.frames[expect_frame_idx].watches[expr]
+                )
+            elif (scope_name := expect.get_watched_scope()) is not None:
+                scope_vars = step.frames[expect_frame_idx].scope_watches.get(
+                    scope_name, []
+                )
+                self.expect_scope_matches[expect] = ExpectedScopeRewriter(
+                    expect,
+                    step,
+                    [step.frames[expect_frame_idx].watches[var] for var in scope_vars],
+                )
+            elif isinstance(expect, Step):
+                self.expect_step_matches[expect] = step.current_location.lineno
+            else:
+                raise Error(
+                    f"Unexpected expect without watched expression or scope: {expect}"
                 )
 
         script.visit_script(visit_expect=add_expected_values)
@@ -104,8 +237,13 @@ class ScriptExpectRewriter:
         self.unknown_expect_rewrites: Dict[
             Expect, List[Tuple[int, ExpectedValueRewriter]]
         ] = {}
+        self.scope_expect_rewrites: Dict[
+            Expect, List[Tuple[int, ExpectedScopeRewriter]]
+        ] = {}
+        self.step_expect_rewrites: Dict[Expect, List[Tuple[int, int]]] = {}
         self.new_script: Optional[DexterScript] = None
         self.new_expected_values: Dict[Expect, Any] = {}
+        self.new_expected_scopes: Dict[Expect, ExpectedScopeRewrites] = {}
         self.missing_expect_rewrites: List[Expect] = []
 
         script = dext_ir.script
@@ -115,32 +253,69 @@ class ScriptExpectRewriter:
 
         # Collect every Expect with an unknown value into the `unknown_expect_rewrites` dict. We expect all Expects in
         # this dict to have observed values, and don't expect to rewrite any Expects outside of this dict.
-        def collect_unknown_expects(expect: Expect, expected_value: Any, scope: Scope):
-            assert isinstance(expect, Value), "Non-Value expects currently unsupported"
-            if expected_value is None:
-                self.unknown_expect_rewrites[expect] = []
+        def collect_expects_to_rewrite(
+            expect: Expect, expected_value: Any, scope: Scope
+        ):
+            if expected_value is not None:
+                return
+            if isinstance(expect, ExpectAll):
+                self.scope_expect_rewrites[expect] = []
+                return
+            if isinstance(expect, Step):
+                self.step_expect_rewrites[expect] = []
+                return
+            assert (
+                expect.get_watched_expr() is not None
+            ), f"Unexpected expect node kind {expect}"
+            self.unknown_expect_rewrites[expect] = []
 
-        script.visit_script(visit_expect=collect_unknown_expects)
+        script.visit_script(visit_expect=collect_expects_to_rewrite)
 
         # If there are no expects to update, then there is no rewriting to be done - exit early.
-        if not self.unknown_expect_rewrites:
+        if (
+            not self.unknown_expect_rewrites
+            and not self.scope_expect_rewrites
+            and not self.step_expect_rewrites
+        ):
             return
 
-        # Populate the `unknown_expect_rewrites` dict, mapping each expect with an unknown value to its list of observed
-        # during this run, along with the corresponding step indices.
+        def check_condition(step: StepIR, frame_idx: int, condition: str):
+            cond_value = step.frames[frame_idx].watches[condition]
+            result = cond_value.could_evaluate and cond_value.value.lower() == "true"
+            return result
+
+        state_match_context = StateMatchContext(check_condition=check_condition)
         self.step_rewriters = [
-            StepExpectRewriter(step, script) for step in dext_ir.steps
+            StepExpectRewriter(step, script, state_match_context)
+            for step in dext_ir.steps
         ]
+        # Populate the expect_rewrites dicts, mapping each expect with an unknown value to its list of observed values
+        # during this run, along with the corresponding step indices.
         for step_rewriter in self.step_rewriters:
             step_idx = step_rewriter.step.step_index
-            for expect, expected_value_rewriter in step_rewriter.expect_matches.items():
+            for (
+                expect,
+                expected_value_rewriter,
+            ) in step_rewriter.expect_value_matches.items():
                 self.unknown_expect_rewrites[expect].append(
                     (step_idx, expected_value_rewriter)
                 )
+            for (
+                expect,
+                expected_scope_rewriter,
+            ) in step_rewriter.expect_scope_matches.items():
+                self.scope_expect_rewrites[expect].append(
+                    (step_idx, expected_scope_rewriter)
+                )
+            for (
+                expect,
+                line,
+            ) in step_rewriter.expect_step_matches.items():
+                self.step_expect_rewrites[expect].append((step_idx, line))
 
         # For each unknown expect, merge the observed values into a writable "expected values" entry, which may be a
         # list or a single value.
-        self.new_expected_values = {
+        self.new_expected_values: Dict[Expect, Any] = {
             expect: expected_values
             for expect, expect_rewriters in self.unknown_expect_rewrites.items()
             if (
@@ -150,9 +325,27 @@ class ScriptExpectRewriter:
             )
             is not None
         }
+        # Do the same for unknown step expects.
+        self.new_expected_values.update(
+            {
+                expect: get_expected_lines(
+                    expect, [line for step_index, line in step_lines]
+                )
+                for expect, step_lines in self.step_expect_rewrites.items()
+            }
+        )
+        # Do the same for unknown scope expects.
+        self.new_expected_scopes = {
+            expect: collect_scope_values(
+                [rewriter for idx, rewriter in expect_rewriters]
+            )
+            for expect, expect_rewriters in self.scope_expect_rewrites.items()
+        }
 
         # Finally, use the new expected values to rewrite the script.
-        self.new_script = rewrite_script(script, self.new_expected_values)
+        self.new_script = rewrite_script(
+            script, self.new_expected_values, self.new_expected_scopes
+        )
         self.missing_expect_rewrites = [
             expect
             for expect in self.unknown_expect_rewrites
@@ -161,7 +354,10 @@ class ScriptExpectRewriter:
 
     @property
     def num_successful_rewrites(self):
-        return len(self.new_expected_values)
+        return len(self.new_expected_values) + sum(
+            sum(len(var_expects) for var_expects in new_expected_scope.values())
+            for new_expected_scope in self.new_expected_scopes.values()
+        )
 
     @property
     def num_unsuccessful_rewrites(self):
@@ -169,7 +365,9 @@ class ScriptExpectRewriter:
 
 
 def rewrite_script(
-    script: DexterScript, add_expected_values: Dict[Expect, Any]
+    script: DexterScript,
+    add_expected_values: Dict[Expect, Any],
+    expected_scope_rewrites: Dict[Expect, ExpectedScopeRewrites],
 ) -> DexterScript:
     """Given a set of updates to apply to a provided script, returns a copy of the script_obj with the updates
     applied.
@@ -194,12 +392,54 @@ def rewrite_script(
         new_node_child_map[scope.where] = then
 
     def replace_expect(expect: Expect, expected_value, scope: Scope):
-        new_expected_value = add_expected_values.get(expect) or expected_value
-        new_node_child_map[expect] = new_expected_value
         scope_where_children = new_node_child_map.setdefault(scope.where, [])
         assert isinstance(
             scope_where_children, list
         ), f"Unexpected child for state node {scope.where}: {scope_where_children}"
+        if isinstance(expect, ExpectAll):
+            assert (
+                expect in expected_scope_rewrites
+            ), "Script-rewriter error: Dexter missed rewriting !expect/all node."
+            scope_rewrites = expected_scope_rewrites[expect]
+            for line_range in sorted(
+                scope_rewrites.keys(), key=lambda lines: lines or (0, 0)
+            ):
+                var_expected_values = scope_rewrites[line_range]
+                # First we determine which node will be the parent for the new expect nodes; then we can start appending
+                # new expects to that parent's child list.
+                if line_range is None:
+                    new_expect_sibling_list = scope_where_children
+                else:
+                    start, stop = line_range
+                    lines = (
+                        Line(start)
+                        if start == stop
+                        else DexRange(Line(start), Line(stop))
+                    )
+                    new_expect_parent = Where({"lines": lines}, is_and=True)
+                    # Reuse an existing !and node if one exists...
+                    try:
+                        existing_parent = next(
+                            node
+                            for node in scope_where_children
+                            if str(node) == str(new_expect_parent)
+                        )
+                        new_expect_sibling_list = new_node_child_map.setdefault(
+                            existing_parent, []
+                        )
+                    except StopIteration:
+                        scope_where_children.append(new_expect_parent)
+                        new_expect_sibling_list = new_node_child_map.setdefault(
+                            new_expect_parent, []
+                        )
+                for var, expected_values in var_expected_values:
+                    new_expect = expect.get_base_expect(var)
+                    new_expect_sibling_list.append(new_expect)
+                    new_node_child_map[new_expect] = expected_values
+            return
+        assert isinstance(expect, (Step, Type, Value))
+        new_expected_value = add_expected_values.get(expect) or expected_value
+        new_node_child_map[expect] = new_expected_value
         scope_where_children.append(expect)
 
     script.visit_script(

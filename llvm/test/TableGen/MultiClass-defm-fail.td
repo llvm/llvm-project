@@ -1,5 +1,4 @@
 // RUN: not llvm-tblgen %s 2>&1 | FileCheck %s
-// XFAIL: vg_leak
 
 // This test verifies that tablegen does fail if it can't resolve an unresolved
 // !cast() during processing top-level defm.

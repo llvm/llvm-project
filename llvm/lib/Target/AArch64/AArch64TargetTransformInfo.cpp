@@ -2598,6 +2598,31 @@ instCombineSVEVectorMlaU(InstCombiner &IC, IntrinsicInst &II) {
   return std::nullopt;
 }
 
+static std::optional<Instruction *>
+instCombineSVEPairwiseAddLong(InstCombiner &IC, IntrinsicInst &II) {
+  assert((II.getIntrinsicID() == Intrinsic::aarch64_sve_sadalp ||
+          II.getIntrinsicID() == Intrinsic::aarch64_sve_uadalp) &&
+         "Expected SADALP or UADALP intrinsic");
+
+  // We are looking for add(adalp(%pred, zeroinitializer, %in), %acc)
+  if (!II.hasOneUse() || !match(II.getArgOperand(1), m_Zero()))
+    return std::nullopt;
+
+  auto *User = cast<Instruction>(*II.user_begin());
+  Value *Acc;
+  if (!match(User, m_c_Add(m_Specific(&II), m_Value(Acc))))
+    return std::nullopt;
+
+  IC.Builder.SetInsertPoint(User);
+  Value *PairwiseAddLong = IC.Builder.CreateIntrinsic(
+      II.getIntrinsicID(), {II.getType()},
+      {II.getArgOperand(0), Acc, II.getArgOperand(2)});
+
+  IC.replaceInstUsesWith(*User, PairwiseAddLong);
+  IC.eraseInstFromFunction(*User);
+  return &II; // II is now trivially dead and will get erased.
+}
+
 static std::optional<Instruction *> instCombineSVEVectorAdd(InstCombiner &IC,
                                                             IntrinsicInst &II) {
   if (auto MLA = instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_mul,
@@ -3165,6 +3190,9 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
         IC, II, true);
   case Intrinsic::aarch64_sve_mla_u:
     return instCombineSVEVectorMlaU(IC, II);
+  case Intrinsic::aarch64_sve_sadalp:
+  case Intrinsic::aarch64_sve_uadalp:
+    return instCombineSVEPairwiseAddLong(IC, II);
   case Intrinsic::aarch64_sve_sub:
     return instCombineSVEVectorSub(IC, II);
   case Intrinsic::aarch64_sve_sub_u:
@@ -5129,9 +5157,8 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
                                                 TTI::OperandValueInfo OpInfo,
                                                 const Instruction *I) const {
   EVT VT = TLI->getValueType(DL, Ty, true);
-  // Type legalization can't handle structs, and load latency isn't handled here
-  if (VT == MVT::Other ||
-      (Opcode == Instruction::Load && CostKind == TTI::TCK_Latency))
+  // Type legalization can't handle structs
+  if (VT == MVT::Other)
     return BaseT::getMemoryOpCost(Opcode, Ty, Alignment, AddressSpace,
                                   CostKind);
 
@@ -5155,8 +5182,73 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
   if (CostKind == TTI::TCK_CodeSize || CostKind == TTI::TCK_SizeAndLatency)
     return LT.first;
 
-  if (CostKind != TTI::TCK_RecipThroughput)
-    return 1;
+  if (CostKind == TTI::TCK_Latency) {
+    // Latency doesn't make much sense for stores, so just return 1
+    if (Opcode == Instruction::Store)
+      return 1;
+    // If the subtarget has overridden the load latency then use that instead of
+    // querying the SchedModel.
+    if (ST->getFixedLoadLatency())
+      return (LT.first - 1) + ST->getFixedLoadLatency();
+    // We expect the load to become LT.first loads of type LT.second. The
+    // latency will be the latency of the last load plus the time it gets to get
+    // there, which will be the amount of other loads before that (i.e. total
+    // loads - 1) multiplied by how long it takes to get through them (the
+    // reciprocal of the throughput). We get the latency and reciprocal
+    // throughput from the SchedModel, and assume that the loads become the
+    // variant with unsigned integer offset.
+    unsigned Inst = 0;
+    if (LT.second.isScalableVector() ||
+        ST->useSVEForFixedLengthVectors(LT.second)) {
+      Inst = AArch64::LDR_ZXI;
+    } else if (LT.second.isVector() || LT.second.isFloatingPoint()) {
+      switch (LT.second.getSizeInBits()) {
+      case 8:
+        Inst = AArch64::LDRBui;
+        break;
+      case 16:
+        Inst = AArch64::LDRHui;
+        break;
+      case 32:
+        Inst = AArch64::LDRSui;
+        break;
+      case 64:
+        Inst = AArch64::LDRDui;
+        break;
+      case 128:
+        Inst = AArch64::LDRQui;
+        break;
+      default:
+        llvm_unreachable("Unexpected float or vector type");
+      }
+    } else {
+      switch (LT.second.getSizeInBits()) {
+      case 8:
+        Inst = AArch64::LDRBBui;
+        break;
+      case 16:
+        Inst = AArch64::LDRHHui;
+        break;
+      case 32:
+        Inst = AArch64::LDRWui;
+        break;
+      case 64:
+        Inst = AArch64::LDRXui;
+        break;
+      default:
+        llvm_unreachable("Unexpected integer type");
+      }
+    }
+    const MCSchedModel &Sched = ST->getSchedModel();
+    const TargetInstrInfo *TII = ST->getInstrInfo();
+    unsigned SchedClass = TII->get(Inst).getSchedClass();
+    const MCSchedClassDesc *SCD = Sched.getSchedClassDesc(SchedClass);
+    // We need to convert the number of loads before the last to a float here,
+    // as the reciprocal throughput may be fractional.
+    float NumLoads = (LT.first - 1).getValue();
+    return NumLoads * Sched.getReciprocalThroughput(*ST, *SCD) +
+           Sched.computeInstrLatency(*ST, *SCD);
+  }
 
   if (ST->isMisaligned128StoreSlow() && Opcode == Instruction::Store &&
       LT.second.is128BitVector() && Alignment < Align(16)) {

@@ -114,21 +114,6 @@ static constexpr VMEMID toVMEMID(MCRegUnit RU) {
 
 namespace {
 
-// Enumerate different types of result-returning VMEM operations. Although
-// s_waitcnt orders them all with a single vmcnt counter, in the absence of
-// s_waitcnt only instructions of the same VmemType are guaranteed to write
-// their results in order -- so there is no need to insert an s_waitcnt between
-// two instructions of the same type that write the same vgpr.
-enum VmemType {
-  // BUF instructions and MIMG instructions without a sampler.
-  VMEM_NOSAMPLER,
-  // MIMG instructions with a sampler.
-  VMEM_SAMPLER,
-  // BVH instructions
-  VMEM_BVH,
-  NUM_VMEM_TYPES
-};
-
 // Maps values of InstCounterType to the instruction that waits on that
 // counter. Only used if GCNSubtarget::hasExtendedWaitCounts()
 // returns true, and does not cover VA_VDST or VM_VSRC.
@@ -162,26 +147,6 @@ static bool isNormalMode(AMDGPU::InstCounterType MaxCounter) {
   return MaxCounter == AMDGPU::NUM_NORMAL_INST_CNTS;
 }
 #endif // NDEBUG
-
-VmemType getVmemType(const MachineInstr &Inst) {
-  assert(updateVMCntOnly(Inst));
-  if (!SIInstrInfo::isImage(Inst))
-    return VMEM_NOSAMPLER;
-  const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(Inst.getOpcode());
-  const AMDGPU::MIMGBaseOpcodeInfo *BaseInfo =
-      AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
-
-  if (BaseInfo->BVH)
-    return VMEM_BVH;
-
-  // We have to make an additional check for isVSAMPLE here since some
-  // instructions don't have a sampler, but are still classified as sampler
-  // instructions for the purposes of e.g. waitcnt.
-  if (BaseInfo->Sampler || BaseInfo->MSAA || SIInstrInfo::isVSAMPLE(Inst))
-    return VMEM_SAMPLER;
-
-  return VMEM_NOSAMPLER;
-}
 
 class WaitcntBrackets;
 
@@ -636,20 +601,20 @@ public:
   void setPendingGDS() { LastGDS = ScoreUBs[AMDGPU::DS_CNT]; }
 
   // Return true if there might be pending writes to the vgpr-interval by VMEM
-  // instructions with types different from V.
-  bool hasOtherPendingVmemTypes(MCPhysReg Reg, VmemType V) const {
+  // instructions where the HWEvents in VGPRContext are not contained in E.
+  bool hasDifferentVGPRPendingEvents(MCPhysReg Reg, HWEvents E) const {
     for (MCRegUnit RU : regunits(Reg)) {
       auto It = VMem.find(toVMEMID(RU));
-      if (It != VMem.end() && (It->second.VMEMTypes & ~(1 << V)))
+      if (It != VMem.end() && (It->second.VGPRPendingEvents & ~E).any())
         return true;
     }
     return false;
   }
 
-  void clearVgprVmemTypes(MCPhysReg Reg) {
+  void clearVGPRPendingEvents(MCPhysReg Reg) {
     for (MCRegUnit RU : regunits(Reg)) {
       if (auto It = VMem.find(toVMEMID(RU)); It != VMem.end()) {
-        It->second.VMEMTypes = 0;
+        It->second.VGPRPendingEvents = HWEvents::NONE;
         if (It->second.empty())
           VMem.erase(It);
       }
@@ -772,10 +737,13 @@ private:
   struct VMEMInfo {
     // Scores for all instruction counters. Zero-initialized.
     CounterValueArray Scores{};
-    // Bitmask of the VmemTypes of VMEM instructions for this VGPR.
-    unsigned VMEMTypes = 0;
+    // For VGPRs, we need to track an additional fine-grained set of pending
+    // events.
+    HWEvents VGPRPendingEvents;
 
-    bool empty() const { return all_of(Scores, equal_to(0)) && !VMEMTypes; }
+    bool empty() const {
+      return all_of(Scores, equal_to(0)) && !VGPRPendingEvents;
+    }
   };
 
   /// Wait cnt scores for every sgpr, the DS_CNT (corresponding to LGKMcnt
@@ -884,7 +852,7 @@ bool WaitcntBrackets::hasPointSamplePendingVmemTypes(const MachineInstr &MI,
   if (!hasPointSampleAccel(MI))
     return false;
 
-  return hasOtherPendingVmemTypes(Reg, VMEM_NOSAMPLER);
+  return hasDifferentVGPRPendingEvents(Reg, HWEvents::VMEM_READ_ACCESS);
 }
 
 void WaitcntBrackets::updateByEvent(HWEvents E, MachineInstr &Inst) {
@@ -1025,16 +993,16 @@ void WaitcntBrackets::updateByEvent(HWEvents E, MachineInstr &Inst) {
         if (updateVMCntOnly(Inst)) {
           // updateVMCntOnly should only leave us with VGPRs
           // MUBUF, MTBUF, MIMG, FlatGlobal, and FlatScratch only have VGPR/AGPR
-          // defs. That's required for a sane index into `VgprMemTypes` below
+          // defs.
           assert(TRI.isVectorRegister(MRI, Op.getReg()));
-          VmemType V = getVmemType(Inst);
-          unsigned char TypesMask = 1 << V;
+          HWEvents VGPRContext =
+              AMDGPU::getSimplifiedVMEMEventsFor(Inst, Context->TII);
           // If instruction can have Point Sample Accel applied, we have to flag
           // this with another potential dependency
           if (hasPointSampleAccel(Inst))
-            TypesMask |= 1 << VMEM_NOSAMPLER;
+            VGPRContext |= HWEvents::VMEM_READ_ACCESS;
           for (MCRegUnit RU : regunits(Op.getReg().asMCReg()))
-            VMem[toVMEMID(RU)].VMEMTypes |= TypesMask;
+            VMem[toVMEMID(RU)].VGPRPendingEvents |= VGPRContext;
         }
       }
       setScoreByOperand(Op, T, CurrScore);
@@ -1551,6 +1519,19 @@ bool WaitcntBrackets::counterOutOfOrder(AMDGPU::InstCounterType T) const {
       return false;
 
     HWEvents Events = PendingEvents & Context->getWaitEvents(T);
+
+    // If the target does not have extended counters, VMEM_BVH/SAMPLE_READ
+    // events are equivalent to VMEM_READ_ACCESS. We do not go out of order in
+    // such cases.
+    static constexpr HWEvents ExtendedImageEvents =
+        HWEvents::VMEM_SAMPLER_READ_ACCESS | HWEvents::VMEM_BVH_READ_ACCESS;
+    if (!Context->ST.hasExtendedWaitCounts() &&
+        (Events & ExtendedImageEvents).any()) {
+      Events -= ExtendedImageEvents; // TODO: Tests pass even if I only use
+                                     // VMEM_SAMPLER_READ_ACCESS which isn't
+                                     // normal; indicates weak testing coverage
+      Events |= HWEvents::VMEM_READ_ACCESS;
+    }
 
     // GLOBAL_INV completes in-order with other LOAD_CNT events,
     // so having GLOBAL_INV_ACCESS mixed with other LOAD_CNT
@@ -2451,7 +2432,8 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
           // Additionally check instructions where Point Sample Acceleration
           // might be applied.
           if (Op.isUse() || !updateVMCntOnly(MI) ||
-              ScoreBrackets.hasOtherPendingVmemTypes(Reg, getVmemType(MI)) ||
+              ScoreBrackets.hasDifferentVGPRPendingEvents(
+                  Reg, AMDGPU::getSimplifiedVMEMEventsFor(MI, TII)) ||
               ScoreBrackets.hasPointSamplePendingVmemTypes(MI, Reg) ||
               !ST.hasVmemWriteVgprInOrder()) {
             ScoreBrackets.determineWaitForPhysReg(AMDGPU::LOAD_CNT, Reg, Wait,
@@ -2460,7 +2442,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
                                                   MI);
             ScoreBrackets.determineWaitForPhysReg(AMDGPU::BVH_CNT, Reg, Wait,
                                                   MI);
-            ScoreBrackets.clearVgprVmemTypes(Reg);
+            ScoreBrackets.clearVGPRPendingEvents(Reg);
           }
 
           if (Op.isDef() ||
@@ -2848,9 +2830,10 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
 
   for (auto &[TID, Info] : VMem) {
     if (auto It = Other.VMem.find(TID); It != Other.VMem.end()) {
-      unsigned char NewVmemTypes = Info.VMEMTypes | It->second.VMEMTypes;
-      StrictDom |= NewVmemTypes != Info.VMEMTypes;
-      Info.VMEMTypes = NewVmemTypes;
+      HWEvents NewVGPRContext =
+          Info.VGPRPendingEvents | It->second.VGPRPendingEvents;
+      StrictDom |= NewVGPRContext != Info.VGPRPendingEvents;
+      Info.VGPRPendingEvents = NewVGPRContext;
     }
   }
 
@@ -3112,8 +3095,8 @@ bool SIInsertWaitcnts::removeRedundantSoftXcnts(MachineBasicBlock &Block) {
     if (!IsLDS && (MI.mayLoad() ^ MI.mayStore()))
       LastAtomicWithSoftXcnt = nullptr;
 
-    bool IsAtomicRMW = (MI.getDesc().TSFlags & SIInstrFlags::maybeAtomic) &&
-                       MI.mayLoad() && MI.mayStore();
+    bool IsAtomicRMW =
+        SIInstrFlags::isMaybeAtomic(MI) && MI.mayLoad() && MI.mayStore();
     MachineInstr &PrevMI = *MI.getPrevNode();
     // This is an atomic with a soft xcnt.
     if (PrevMI.getOpcode() == AMDGPU::S_WAIT_XCNT_soft && IsAtomicRMW) {

@@ -1571,6 +1571,42 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
                           << FunctionName << DestinationStr << SourceStr);
 }
 
+void Sema::checkFortifiedLibcArgument(FunctionDecl *FD, CallExpr *TheCall) {
+  if (TheCall->isValueDependent() || TheCall->isTypeDependent())
+    return;
+
+  // Recognize the libc function by builtin identity rather than by name and
+  // system-header origin. umask is a LibBuiltin marked IgnoreSignature, so the
+  // builtin id is attached to any file-scope, C-linkage declaration of umask
+  // regardless of the libc's mode_t spelling -- including a hand-written
+  // forward declaration without <sys/stat.h>. A static/local lookalike or a
+  // C++ (non-extern-"C") declaration keeps a zero builtin id and is ignored.
+  if (FD->getBuiltinID() != Builtin::BIumask)
+    return;
+
+  // umask(mode_t): warn when the constant-evaluated argument has bits set
+  // outside the file-permission mask (0777). Those bits are ignored.
+  if (TheCall->getNumArgs() != 1)
+    return;
+  Expr *Arg = TheCall->getArg(0);
+  if (!Arg->getType()->isIntegerType())
+    return;
+  Expr::EvalResult R;
+  if (!Arg->EvaluateAsInt(R, getASTContext()))
+    return;
+  // Operate on the raw two's-complement bit pattern so that negative literals
+  // (which convert to large unsigned mode_t values) are caught.
+  llvm::APInt RawValue = R.Val.getInt();
+  llvm::APInt Mask(RawValue.getBitWidth(), 0777);
+  llvm::APInt Extra = RawValue & ~Mask;
+  if (Extra == 0)
+    return;
+  SmallString<16> ExtraStr;
+  Extra.toString(ExtraStr, /*Radix=*/8, /*Signed=*/false);
+  Diag(TheCall->getBeginLoc(), diag::warn_fortify_umask_unused_bits)
+      << ExtraStr;
+}
+
 static bool BuiltinSEHScopeCheck(Sema &SemaRef, CallExpr *TheCall,
                                  Scope::ScopeFlags NeededScopeFlags,
                                  unsigned DiagID) {
@@ -4641,21 +4677,6 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
       !isUnevaluatedContext())
     SYCL().DiagIfDeviceCode(Loc, diag::err_variadic_device_fn)
         << diag::OffloadLang::SYCL;
-
-  // Diagnose calls to noreturn functions from within a function declared as
-  // being const or pure; this is undefined behavior. But only if the
-  // expression is actually evaluated.
-  if ((FD && FD->isNoReturn()) || (Proto && Proto->getNoReturnAttr())) {
-    if (const Decl *D = getCurFunctionDecl(/*AllowLambda=*/true);
-        D && (D->hasAttr<ConstAttr>() || D->hasAttr<PureAttr>())) {
-      DiagRuntimeBehavior(Loc, nullptr,
-                          PDiag(diag::warn_const_pure_noreturn_call)
-                              << D->hasAttr<ConstAttr>());
-      DiagRuntimeBehavior(D->getLocation(), nullptr,
-                          PDiag(diag::note_const_pure_noreturn_call)
-                              << D->hasAttr<ConstAttr>());
-    }
-  }
 
   if (FD)
     diagnoseArgDependentDiagnoseIfAttrs(FD, ThisArg, Args, Loc);
