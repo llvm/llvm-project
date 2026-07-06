@@ -152,7 +152,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeStackMapLivenessPass(Registry);
   initializeStackProtectorPass(Registry);
   initializeStackSlotColoringLegacyPass(Registry);
-  initializeStaticDataSplitterPass(Registry);
+  initializeStaticDataSplitterLegacyPass(Registry);
   initializeStaticDataAnnotatorPass(Registry);
   initializeStripDebugMachineModulePass(Registry);
   initializeTailDuplicateLegacyPass(Registry);

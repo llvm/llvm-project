@@ -86,7 +86,7 @@ LLVM_ABI MachineFunctionPass *createMachineFunctionSplitterPass();
 
 /// createStaticDataSplitterPass - This is a machine-function pass that
 /// categorizes static data hotness using profile information.
-LLVM_ABI MachineFunctionPass *createStaticDataSplitterPass();
+LLVM_ABI MachineFunctionPass *createStaticDataSplitterLegacyPass();
 
 /// createStaticDataAnnotatorPASS - This is a module pass that reads from
 /// StaticDataProfileInfoWrapperPass and annotates the section prefix of
