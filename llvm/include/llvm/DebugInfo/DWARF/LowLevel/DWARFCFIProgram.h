@@ -123,10 +123,9 @@ public:
         addInstruction(Opcode);
         break;
       case DW_CFA_AARCH64_set_ra_state: {
-        // Operands: ULEB128 ra_state, SLEB128 offset
-        uint64_t Op1 = Data.getULEB128(C);
-        uint64_t Op2 = (uint64_t)Data.getSLEB128(C);
-        addInstruction(Opcode, Op1, Op2);
+        uint64_t RAState = Data.getULEB128(C);
+        uint64_t FactoredOffset = (uint64_t)Data.getSLEB128(C);
+        addInstruction(Opcode, RAState, FactoredOffset);
         break;
       }
       case DW_CFA_set_loc:
