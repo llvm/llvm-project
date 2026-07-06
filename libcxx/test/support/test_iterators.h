@@ -1175,7 +1175,6 @@ private:
 template <class It>
 sized_sentinel(It) -> sized_sentinel<It>;
 
-
 template <class Base = int*>
 struct forward_sized_iterator {
   Base it_ = nullptr;
