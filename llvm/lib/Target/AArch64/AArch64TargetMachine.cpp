@@ -532,13 +532,8 @@ static bool scheduleFormTransposedTupleAdjacentToUsers(
     return false;
   }
 
-  if (FirstMI->getOpcode() != AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO &&
-      FirstMI->getOpcode() != AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO)
-    return false;
-
-  Register TupleDef = FirstMI->getOperand(0).getReg();
-  return SecondMI.findRegisterUseOperandIdx(TupleDef, TSI.getRegisterInfo()) !=
-         -1;
+  return FirstMI->getOpcode() == AArch64::FORM_TRANSPOSED_REG_TUPLE_X2_PSEUDO ||
+         FirstMI->getOpcode() == AArch64::FORM_TRANSPOSED_REG_TUPLE_X4_PSEUDO;
 }
 
 ScheduleDAGInstrs *
