@@ -715,6 +715,8 @@ Changes in existing checks
   - Fixed a false positive in array subscript expressions where the types are
     not yet resolved.
 
+  - Fixed a false positive for pointer parameters used as placement-new storage.
+
 - Improved :doc:`readability-redundant-casting
   <clang-tidy/checks/readability/redundant-casting>` check by adding the
   `IgnoreImplicitCasts` option (default `false`) to flag casts as redundant

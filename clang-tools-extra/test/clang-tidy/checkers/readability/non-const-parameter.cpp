@@ -433,3 +433,22 @@ void dependentInitInGenericLambdaMultiArg() {
     DependentCtor2<T> s(p, p);
   };
 }
+
+namespace std { typedef decltype(sizeof(int)) size_t; }
+void* operator new(std::size_t, void*) noexcept;
+
+void placementNew1(char *buffer) {
+  new (buffer) int();
+}
+
+void placementNew2(int *p) {
+  new (p) float();
+}
+
+void placementNew3(void *buffer) {
+  new (buffer) int();
+}
+
+void placementNew4(char *buffer) {
+  new (buffer + 4) int();
+}

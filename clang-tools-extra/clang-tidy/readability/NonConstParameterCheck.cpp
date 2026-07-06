@@ -29,7 +29,7 @@ void NonConstParameterCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       stmt(anyOf(unaryOperator(hasAnyOperatorName("++", "--")),
                  binaryOperator(), callExpr(), returnStmt(), cxxConstructExpr(),
-                 cxxUnresolvedConstructExpr()))
+                 cxxUnresolvedConstructExpr(), cxxNewExpr()))
           .bind("Mark"),
       this);
   Finder->addMatcher(varDecl(hasInitializer(anything())).bind("Mark"), this);
@@ -94,6 +94,9 @@ void NonConstParameterCheck::check(const MatchFinder::MatchResult &Result) {
           markCanNotBeConst(Arg->IgnoreParenCasts(), false);
         }
       }
+    } else if (const auto *NE = dyn_cast<CXXNewExpr>(S)) {
+      for (const auto *Arg : NE->placement_arguments())
+        markCanNotBeConst(Arg->IgnoreParenCasts(), true);
     } else if (const auto *CE = dyn_cast<CXXUnresolvedConstructExpr>(S)) {
       markCanNotBeConst(CE, true);
     } else if (const auto *R = dyn_cast<ReturnStmt>(S)) {
