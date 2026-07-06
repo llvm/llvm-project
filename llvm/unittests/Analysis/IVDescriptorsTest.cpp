@@ -344,8 +344,9 @@ TEST(IVDescriptorsTest, VectorSMaxRednIdentity) {
   // Parse the module.
   LLVMContext Context;
 
-  std::unique_ptr<Module> M = parseIR(Context,
-                                      R"(define <4 x i32> @foo(ptr %A, i64 %ub) {
+  std::unique_ptr<Module> M =
+      parseIR(Context,
+              R"(define <4 x i32> @foo(ptr %A, i64 %ub) {
 entry:
   br label %for.body
 
