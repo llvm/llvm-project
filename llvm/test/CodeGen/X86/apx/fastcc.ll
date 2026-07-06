@@ -2175,7 +2175,7 @@ define fastcc i32 @arg22_i32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32
 ; WINEGPR-NEXT:    # kill: def $ecx killed $ecx def $rcx
 ; WINEGPR-NEXT:    movl {{[0-9]+}}(%rsp), %r10d
 ; WINEGPR-NEXT:    movl {{[0-9]+}}(%rsp), %r11d
-; WINEGPR-NEXT:    movl {{[0-9]+}}(%rsp), %r30d
+; WINEGPR-NEXT:    movl {{[0-9]+}}(%rsp), %r28d
 ; WINEGPR-NEXT:    leal (%rcx,%rdx), %eax
 ; WINEGPR-NEXT:    leal (%r8,%r9), %ecx
 ; WINEGPR-NEXT:    addl %eax, %ecx
@@ -2190,9 +2190,9 @@ define fastcc i32 @arg22_i32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32
 ; WINEGPR-NEXT:    addl %r24d, %eax
 ; WINEGPR-NEXT:    addl %r25d, %eax
 ; WINEGPR-NEXT:    addl %ecx, %eax
-; WINEGPR-NEXT:    addl {{[0-9]+}}(%rsp), %r30d
+; WINEGPR-NEXT:    addl {{[0-9]+}}(%rsp), %r28d
 ; WINEGPR-NEXT:    addl {{[0-9]+}}(%rsp), %r11d
-; WINEGPR-NEXT:    addl %r30d, %r11d
+; WINEGPR-NEXT:    addl %r28d, %r11d
 ; WINEGPR-NEXT:    addl {{[0-9]+}}(%rsp), %r10d
 ; WINEGPR-NEXT:    addl %eax, %r11d
 ; WINEGPR-NEXT:    addl %edx, %eax
