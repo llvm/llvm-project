@@ -121,9 +121,6 @@ template <typename DomTreeT> struct SemiNCAInfo {
   static SmallVector<NodePtr, 8> getChildren(NodePtr N, BatchUpdatePtr BUI) {
     if (BUI)
       return BUI->PreViewCFG.template getChildren<Inversed>(N);
-    // Force the element type to NodePtr. some graphs (clang's
-    // CFGBlock::AdjacentBlock) yield a proxy convertible to NodePtr rather than
-    // NodePtr itself.
     auto Children = getChildren<Inversed>(N);
     return SmallVector<NodePtr, 8>(Children.begin(), Children.end());
   }
@@ -133,14 +130,7 @@ template <typename DomTreeT> struct SemiNCAInfo {
   template <bool Inversed> static auto getChildren(NodePtr N) {
     using DirectedNodeT =
         std::conditional_t<Inversed, Inverse<NodePtr>, NodePtr>;
-    auto R = detail::reverse_if<!Inversed>(children<DirectedNodeT>(N));
-    // Most graphs' iterators yield NodePtr directly; return the range as is.
-    // clang's CFGBlock instead yields a CFGBlock::AdjacentBlock proxy that is
-    // convertible to NodePtr but can be null for AB_Unreachable.
-    if constexpr (std::is_same_v<std::decay_t<decltype(*R.begin())>, NodePtr>)
-      return R;
-    else
-      return llvm::make_filter_range(R, [](NodePtr C) { return C != nullptr; });
+    return detail::reverse_if<!Inversed>(children<DirectedNodeT>(N));
   }
 
   InfoRec &getNodeInfo(NodePtr BB) {
