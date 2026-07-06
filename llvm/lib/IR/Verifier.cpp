@@ -6663,8 +6663,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     if (Stride) {
       Check(Stride->getBitWidth() <= 64, "Stride bitwidth cannot exceed 64!",
             IF);
-      Check(Stride->getZExtValue() >= NumRows->getZExtValue(),
-            "Stride must be greater or equal than the number of rows!", IF);
     }
 
     break;
