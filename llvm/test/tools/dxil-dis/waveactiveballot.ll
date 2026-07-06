@@ -13,7 +13,7 @@ target triple = "dxil-unknown-shadermodel6.3-library"
 
 define <4 x i32> @wave_ballot_simple(i1 %p1) {
 entry:
-  %s = call %dx.types.fouri32 @llvm.dx.wave.ballot.i32(i1 %p1)
+  %s = call %dx.types.fouri32 @llvm.dx.wave.ballot(i1 %p1)
 
   %v0 = extractvalue %dx.types.fouri32 %s, 0
   %v1 = extractvalue %dx.types.fouri32 %s, 1
@@ -27,5 +27,3 @@ entry:
 
   ret <4 x i32> %vec3
 }
-
-declare %dx.types.fouri32 @llvm.dx.wave.ballot.i32(i1)
