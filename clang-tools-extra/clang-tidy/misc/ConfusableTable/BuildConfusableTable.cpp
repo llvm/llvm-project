@@ -13,9 +13,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <cstdint>
-#include <limits>
-
 using namespace llvm;
 
 namespace {

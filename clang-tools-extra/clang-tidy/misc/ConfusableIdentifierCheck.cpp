@@ -13,8 +13,6 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ConvertUTF.h"
 
-#include <cstdint>
-
 namespace {
 // Preprocessed version of
 // https://www.unicode.org/Public/security/latest/confusables.txt
