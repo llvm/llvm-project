@@ -111,3 +111,79 @@ body:             |
 
 ...
 
+---
+name:            peephole_cselxr_al
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1, $nzcv
+
+    ; CHECK-LABEL: name: peephole_cselxr_al
+    ; CHECK: liveins: $x0, $x1, $nzcv
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
+    ; CHECK-NEXT: [[ORRXrs:%[0-9]+]]:gpr64 = ORRXrs $xzr, [[COPY]], 0
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %0:gpr64 = COPY $x0
+    %1:gpr64 = COPY $x1
+    %2:gpr64 = CSELXr %0, %1, 14, implicit $nzcv
+    RET_ReallyLR implicit $x0
+...
+---
+name:            peephole_cselxr_nv
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1, $nzcv
+
+    ; CHECK-LABEL: name: peephole_cselxr_nv
+    ; CHECK: liveins: $x0, $x1, $nzcv
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
+    ; CHECK-NEXT: [[ORRXrs:%[0-9]+]]:gpr64 = ORRXrs $xzr, [[COPY]], 0
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %0:gpr64 = COPY $x0
+    %1:gpr64 = COPY $x1
+    %2:gpr64 = CSELXr %0, %1, 15, implicit $nzcv
+    RET_ReallyLR implicit $x0
+...
+---
+name:            peephole_cselwr_al
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $w0, $w1, $nzcv
+
+    ; CHECK-LABEL: name: peephole_cselwr_al
+    ; CHECK: liveins: $w0, $w1, $nzcv
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
+    ; CHECK-NEXT: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, [[COPY]], 0
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %0:gpr32 = COPY $w0
+    %1:gpr32 = COPY $w1
+    %2:gpr32 = CSELWr %0, %1, 14, implicit $nzcv
+    RET_ReallyLR implicit $w0
+...
+---
+name:            peephole_cselwr_nv
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $w0, $w1, $nzcv
+
+    ; CHECK-LABEL: name: peephole_cselwr_nv
+    ; CHECK: liveins: $w0, $w1, $nzcv
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
+    ; CHECK-NEXT: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, [[COPY]], 0
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %0:gpr32 = COPY $w0
+    %1:gpr32 = COPY $w1
+    %2:gpr32 = CSELWr %0, %1, 15, implicit $nzcv
+    RET_ReallyLR implicit $w0
+...

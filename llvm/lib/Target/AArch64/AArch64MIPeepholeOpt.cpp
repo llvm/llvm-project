@@ -66,12 +66,20 @@
 //
 // 9. Replace UBFMXri with UBFMWri if the instruction is equivalent to a 32 bit
 //    LSR or LSL alias of UBFM.
+// 10. Replace CSEL with unconditional MOV when condition is AL or NV.
 //
+//     CSEL Rd, Rn, Rm, AL ==> ORR Rd, ZR, Rn
+//     CSEL Rd, Rn, Rm, NV ==> ORR Rd, ZR, Rn
+//
+//     AL (always) and NV (never, treated as always by hardware) unconditionally
+//     select the first source operand, so the CSEL can be replaced with an
+//     unconditional register move.
 //===----------------------------------------------------------------------===//
 
 #include "AArch64ExpandImm.h"
 #include "AArch64InstrInfo.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "Utils/AArch64BaseInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 
@@ -116,8 +124,8 @@ private:
   ///     %tmp = <Instr>ri %src (encode half IMM) [...]
   ///     %dst = <Instr>ri %tmp (encode half IMM) [...]
   template <typename T>
-  bool splitTwoPartImm(MachineInstr &MI,
-                       SplitAndOpcFunc<T> SplitAndOpc, BuildMIFunc BuildInstr);
+  bool splitTwoPartImm(MachineInstr &MI, SplitAndOpcFunc<T> SplitAndOpc,
+                       BuildMIFunc BuildInstr);
 
   bool checkMovImmInstr(MachineInstr &MI, MachineInstr *&MovMI,
                         MachineInstr *&SubregToRegMI);
@@ -337,8 +345,7 @@ bool AArch64MIPeepholeOptImpl::visitORR(MachineInstr &MI) {
             TII->get(AArch64::FMOVSWr), SrcMI->getOperand(0).getReg())
         .addReg(CpySrc);
     SrcMI->eraseFromParent();
-  }
-  else if (SrcMI->getOpcode() <= TargetOpcode::GENERIC_OP_END)
+  } else if (SrcMI->getOpcode() <= TargetOpcode::GENERIC_OP_END)
     return false;
 
   Register DefReg = MI.getOperand(0).getReg();
@@ -352,23 +359,37 @@ bool AArch64MIPeepholeOptImpl::visitORR(MachineInstr &MI) {
 }
 
 bool AArch64MIPeepholeOptImpl::visitCSEL(MachineInstr &MI) {
-  // Replace CSEL with MOV when both inputs are the same register.
-  if (MI.getOperand(1).getReg() != MI.getOperand(2).getReg())
-    return false;
-
   auto ZeroReg =
       MI.getOpcode() == AArch64::CSELXr ? AArch64::XZR : AArch64::WZR;
   auto OrOpcode =
       MI.getOpcode() == AArch64::CSELXr ? AArch64::ORRXrs : AArch64::ORRWrs;
 
-  BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(OrOpcode))
-      .addReg(MI.getOperand(0).getReg(), RegState::Define)
-      .addReg(ZeroReg)
-      .addReg(MI.getOperand(1).getReg())
-      .addImm(0);
+  // Replace CSEL with MOV when both inputs are the same register.
+  if (MI.getOperand(1).getReg() == MI.getOperand(2).getReg()) {
+    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(OrOpcode))
+        .addReg(MI.getOperand(0).getReg(), RegState::Define)
+        .addReg(ZeroReg)
+        .addReg(MI.getOperand(1).getReg())
+        .addImm(0);
+    MI.eraseFromParent();
+    return true;
+  }
 
-  MI.eraseFromParent();
-  return true;
+  // Replace CSEL with MOV when condition is AL or NV (always true).
+  // CSEL Rd, Rn, Rm, AL --> always picks Rn --> MOV Rd, Rn
+  // CSEL Rd, Rn, Rm, NV --> always picks Rn --> MOV Rd, Rn
+  int64_t CC = MI.getOperand(3).getImm();
+  if (CC == AArch64CC::AL || CC == AArch64CC::NV) {
+    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(OrOpcode))
+        .addReg(MI.getOperand(0).getReg(), RegState::Define)
+        .addReg(ZeroReg)
+        .addReg(MI.getOperand(1).getReg()) // always Rn, not Rm
+        .addImm(0);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  return false;
 }
 
 bool AArch64MIPeepholeOptImpl::visitINSERT(MachineInstr &MI) {
@@ -758,8 +779,9 @@ bool AArch64MIPeepholeOptImpl::visitINSvi64lane(MachineInstr &MI) {
   //
   //  %1:fpr64 = nofpexcept FCVTNv4i16 %0:fpr128, implicit $fpcr
   //  %6:fpr128 = IMPLICIT_DEF
-  //  %5:fpr128 = INSERT_SUBREG %6:fpr128(tied-def 0), killed %1:fpr64, %subreg.dsub
-  //  %7:fpr128 = INSvi64lane %5:fpr128(tied-def 0), 1, killed %3:fpr128, 0
+  //  %5:fpr128 = INSERT_SUBREG %6:fpr128(tied-def 0), killed %1:fpr64,
+  //  %subreg.dsub %7:fpr128 = INSvi64lane %5:fpr128(tied-def 0), 1, killed
+  //  %3:fpr128, 0
   MachineInstr *Low64MI = MRI->getUniqueVRegDef(MI.getOperand(1).getReg());
   if (Low64MI->getOpcode() != AArch64::INSERT_SUBREG)
     return false;
@@ -772,14 +794,16 @@ bool AArch64MIPeepholeOptImpl::visitINSvi64lane(MachineInstr &MI) {
   //
   //  %2:fpr64 = MOVID 0
   //  %4:fpr128 = IMPLICIT_DEF
-  //  %3:fpr128 = INSERT_SUBREG %4:fpr128(tied-def 0), killed %2:fpr64, %subreg.dsub
-  //  %7:fpr128 = INSvi64lane %5:fpr128(tied-def 0), 1, killed %3:fpr128, 0
+  //  %3:fpr128 = INSERT_SUBREG %4:fpr128(tied-def 0), killed %2:fpr64,
+  //  %subreg.dsub %7:fpr128 = INSvi64lane %5:fpr128(tied-def 0), 1, killed
+  //  %3:fpr128, 0
   // or
   //  %5:fpr128 = MOVIv2d_ns 0
   //  %6:fpr64 = COPY %5.dsub:fpr128
   //  %8:fpr128 = IMPLICIT_DEF
-  //  %7:fpr128 = INSERT_SUBREG %8:fpr128(tied-def 0), killed %6:fpr64, %subreg.dsub
-  //  %11:fpr128 = INSvi64lane %9:fpr128(tied-def 0), 1, killed %7:fpr128, 0
+  //  %7:fpr128 = INSERT_SUBREG %8:fpr128(tied-def 0), killed %6:fpr64,
+  //  %subreg.dsub %11:fpr128 = INSvi64lane %9:fpr128(tied-def 0), 1, killed
+  //  %7:fpr128, 0
   MachineInstr *High64MI = MRI->getUniqueVRegDef(MI.getOperand(3).getReg());
   if (!High64MI || High64MI->getOpcode() != AArch64::INSERT_SUBREG)
     return false;
