@@ -963,6 +963,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "AMDGPUPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
 
+  // TODO: Move this into the base CodeGenPassBuilder once all
+  // targets that currently implement it have a ported asm-printer pass.
   if (PIC) {
     PIC->addClassToPassName(AMDGPUAsmPrinterBeginPass::name(),
                             "amdgpu-asm-printer-begin");
@@ -2424,7 +2426,7 @@ void AMDGPUCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) const {
 }
 
 void AMDGPUCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) const {
-  addModulePass(AMDGPUAsmPrinterEndPass(), PMW, /*Force=*/true);
+  addModulePass(AMDGPUAsmPrinterEndPass(), PMW);
 }
 
 Error AMDGPUCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) const {

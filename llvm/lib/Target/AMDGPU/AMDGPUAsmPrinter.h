@@ -20,7 +20,6 @@
 #include "SIProgramInfo.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/AsmPrinter.h"
-#include "llvm/Passes/CodeGenPassBuilder.h"
 
 namespace llvm {
 
@@ -166,7 +165,7 @@ protected:
 };
 
 class AMDGPUAsmPrinterBeginPass
-    : public PassInfoMixin<AMDGPUAsmPrinterBeginPass> {
+    : public RequiredPassInfoMixin<AMDGPUAsmPrinterBeginPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
@@ -178,7 +177,8 @@ public:
                         MachineFunctionAnalysisManager &MFAM);
 };
 
-class AMDGPUAsmPrinterEndPass : public PassInfoMixin<AMDGPUAsmPrinterEndPass> {
+class AMDGPUAsmPrinterEndPass
+    : public RequiredPassInfoMixin<AMDGPUAsmPrinterEndPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
