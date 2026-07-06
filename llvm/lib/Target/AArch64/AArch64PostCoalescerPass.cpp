@@ -33,7 +33,7 @@ namespace {
 ///   undef %v2.zsub0:zpr2 = COPY_INTO_TRANSPOSED_TUPLE %v0.zsub0, 2
 ///   %v2.zsub1:zpr2 = COPY_INTO_TRANSPOSED_TUPLE %v1.zsub0, 2
 static bool expandFormTransposedRegTuple(MachineBasicBlock &MBB,
-                                         MachineInstr &MI, LiveIntervals &LIS) {
+                                         MachineInstr &MI, LiveIntervals *LIS) {
   const TargetInstrInfo *TII =
       MBB.getParent()->getSubtarget<AArch64Subtarget>().getInstrInfo();
   unsigned TupleSize =
@@ -49,8 +49,7 @@ static bool expandFormTransposedRegTuple(MachineBasicBlock &MBB,
     OrigRegs.push_back(SrcOp.getReg());
 
     // Ensure that if operand is killed, the kill flag is placed on the final
-    // copy for that operand. TODO: Can we remove this? Requesting the live
-    // intervals seems to clear the kill flags anyway.
+    // copy for that operand.
     if (SrcOp.isKill()) {
       for (unsigned J = I + 2; J < MI.getNumOperands(); ++J) {
         MachineOperand &LaterOp = MI.getOperand(J);
@@ -73,14 +72,16 @@ static bool expandFormTransposedRegTuple(MachineBasicBlock &MBB,
   }
 
   MachineBasicBlock::iterator EndMBBI = std::next(MI.getIterator());
-  LIS.RemoveMachineInstrFromMaps(MI);
+  if (LIS)
+    LIS->RemoveMachineInstrFromMaps(MI);
   MI.eraseFromParent();
 
-  LIS.repairIntervalsInRange(&MBB, FirstCopyMBBI, EndMBBI, OrigRegs);
+  if (LIS)
+    LIS->repairIntervalsInRange(&MBB, FirstCopyMBBI, EndMBBI, OrigRegs);
   return true;
 }
 
-bool runAArch64PostCoalescer(MachineFunction &MF, LiveIntervals &LIS) {
+bool runAArch64PostCoalescer(MachineFunction &MF, LiveIntervals *LIS) {
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
   if (!FuncInfo->hasStreamingModeChanges() &&
       !MF.getSubtarget<AArch64Subtarget>().isStreaming())
@@ -113,11 +114,14 @@ bool runAArch64PostCoalescer(MachineFunction &MF, LiveIntervals &LIS) {
 
         // MI must be erased from the basic block before recalculating the live
         // interval.
-        LIS.RemoveMachineInstrFromMaps(MI);
+        if (LIS)
+          LIS->RemoveMachineInstrFromMaps(MI);
         MI.eraseFromParent();
 
-        LIS.removeInterval(Src);
-        LIS.createAndComputeVirtRegInterval(Src);
+        if (LIS) {
+          LIS->removeInterval(Src);
+          LIS->createAndComputeVirtRegInterval(Src);
+        }
 
         Changed = true;
         break;
@@ -142,7 +146,7 @@ struct AArch64PostCoalescerLegacy : public MachineFunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<LiveIntervalsWrapperPass>();
+    AU.addUsedIfAvailable<LiveIntervalsWrapperPass>();
     AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -163,14 +167,15 @@ bool AArch64PostCoalescerLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  auto &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
+  auto *LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
   return runAArch64PostCoalescer(MF, LIS);
 }
 
 PreservedAnalyses
 AArch64PostCoalescerPass::run(MachineFunction &MF,
                               MachineFunctionAnalysisManager &MFAM) {
-  auto &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  auto *LIS = MFAM.getCachedResult<LiveIntervalsAnalysis>(MF);
   const bool Changed = runAArch64PostCoalescer(MF, LIS);
   if (!Changed)
     return PreservedAnalyses::all();
