@@ -26,7 +26,7 @@ def main():
         # LLDB_PYTHON_RELATIVE_PATH is the relative path from lldb's prefix
         # to where lldb's python libraries will be installed.
         #
-        # This will always be lib/site-packages or lib\site-packages.
+        # This will always be lib/site-packages (or lib\site-packages).
         if os.name == "posix":
             print("lib/site-packages")
         elif os.name == "nt":
