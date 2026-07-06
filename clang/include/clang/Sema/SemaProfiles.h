@@ -215,7 +215,9 @@ public:
 
   /// std::init / ref_to_uninit (paper §5): check that binding \p Src to
   /// \p Target (a variable, data member, parameter, or function) is
-  /// consistent with the target's [[ref_to_uninit]] marking. \p T is the
+  /// consistent with the target's [[ref_to_uninit]] marking. A null \p Target
+  /// is a binding with no declaration to carry the marker (a parameter of a
+  /// call through a function pointer) and is checked as unmarked. \p T is the
   /// bound type -- the target's type, or the return type when \p Target is a
   /// function. No-op unless \p T is a non-dependent pointer or reference (a
   /// dependent type defers to instantiation, where the check site re-runs

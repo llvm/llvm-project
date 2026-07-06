@@ -1027,8 +1027,11 @@ void SemaProfiles::checkInitProfileRefToUninitBinding(SourceLocation Loc,
   if (!getLangOpts().Profiles || T.isNull() || T->isDependentType() ||
       (!T->isPointerType() && !T->isReferenceType()))
     return;
-  checkInitProfileRefToUninit(Loc, Target->hasAttr<RefToUninitAttr>(),
-                       T->isReferenceType(), Src, D);
+  // A null Target is a binding site with no declaration to carry the marker
+  // (a parameter of a call through a function pointer): always unmarked.
+  checkInitProfileRefToUninit(Loc,
+                              Target && Target->hasAttr<RefToUninitAttr>(),
+                              T->isReferenceType(), Src, D);
 }
 
 void SemaProfiles::checkInitProfileRefCapture(SourceLocation Loc,

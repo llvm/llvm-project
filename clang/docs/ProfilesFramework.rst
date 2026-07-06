@@ -1098,9 +1098,15 @@ recognizers symmetric.
   initialization (``InitListChecker``), pointer assignment
   (``Sema::CreateBuiltinBinOp``), call arguments at parameter
   copy-initialization (``Sema::PerformCopyInitialization``, the funnel for
-  every call form with a declared callee -- plain calls, constructor calls,
-  overloaded operators, and calls to objects of class type such as functors
-  and lambdas), arguments supplied by a parameter's default argument
+  every call form -- plain calls, constructor calls, overloaded operators,
+  and calls to objects of class type such as functors and lambdas; a call
+  with *no declared callee*, through a function pointer, is checked there
+  too, its parameters treated as unmarked targets since no declaration could
+  carry ``[[ref_to_uninit]]`` (paper §7.2) -- so passing uninitialized
+  memory through a function pointer diagnoses even when the pointed-to
+  function's own parameter is marked, the marker being a declaration
+  property invisible through the pointer; suppress at the call if the flow
+  is intended), arguments supplied by a parameter's default argument
   (``Sema::GatherArgumentsForCall``, which reuses the pre-built expression
   rather than re-running copy-initialization), return statements
   (``Sema::BuildReturnStmt``), and lambda captures -- an init-capture binds
@@ -1177,8 +1183,9 @@ recognizers symmetric.
   *contains* ``std::byte`` members.
 - Known gaps: recognition is purely of the source's syntactic form, so a
   binding whose underlying operand is unrecognized -- pointer arithmetic, an
-  integer-to-pointer cast, a call through a function pointer (no
-  ``FunctionDecl``), or a variadic (``...``) argument -- is classified as
+  integer-to-pointer cast, the *result* of a call through a function pointer
+  (no ``FunctionDecl`` to read a return marker from), or a variadic (``...``)
+  argument -- is classified as
   *unknown* and diagnosed for neither direction.  A ``[[ref_to_uninit]]`` target
   therefore accepts it (rather than the earlier *false positive*), while an
   unmarked target also accepts it (a remaining missed diagnostic).  The

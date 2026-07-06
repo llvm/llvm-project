@@ -296,6 +296,37 @@ void test_lambda_arguments() {
   l(&g_init);   // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
 }
 
+// A call with no declared callee (through a function pointer) has no
+// parameter declaration that could carry [[ref_to_uninit]], so its arguments
+// are checked as unmarked targets (paper §7.2: passing uninitialized memory
+// needs an appropriately declared callee). That holds even when the pointer
+// happens to point at a function whose parameter is marked -- the marker is a
+// declaration property, invisible through the pointer (paper §1.3, local
+// analysis); suppress at the call if the flow is intended.
+void test_fnptr_call_arguments(void (*fp)(int *), void (*fr)(int &)) {
+  fp(&g_init);   // OK
+  fp(&g_uninit); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int *rtu [[ref_to_uninit]] = &g_uninit;
+  fp(rtu);       // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  fr(g_init);    // OK
+  fr(g_uninit);  // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+
+  void (*marked)(int *) = take_uninit_ptr;
+  marked(&g_uninit); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init)]] { fp(&g_uninit); } // OK: suppressed
+  (void)rtu;
+}
+
+// Decl-less like the declared-callee argument site: defers on the pattern and
+// fires once, at instantiation.
+template <typename T>
+void template_fnptr_call_arg(void (*fp)(T *)) {
+  fp(&g_uninit); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}
+template void template_fnptr_call_arg<int>(void (*)(int *)); // expected-note {{in instantiation of function template specialization 'template_fnptr_call_arg<int>' requested here}}
+
 // An init-capture is a binding: a capture cannot carry [[ref_to_uninit]], so
 // capturing a pointer or reference to uninitialized memory is always the
 // unmarked-direction violation.

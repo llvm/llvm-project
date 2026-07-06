@@ -10148,13 +10148,17 @@ Sema::PerformCopyInitialization(const InitializedEntity &Entity,
   // funnel for call arguments from every call form -- GatherArgumentsForCall,
   // overloaded operators, and calls to objects of class type -- so the binding
   // check runs here, exactly once per argument. A type-only parameter entity
-  // (variadic promotion, a call with no declared callee) has no declaration to
-  // read the marking from and is skipped. A default argument does not re-run
+  // (a call with no declared callee, e.g. through a function pointer) has no
+  // declaration that could carry [[ref_to_uninit]], so it is checked as an
+  // unmarked target (paper §7.2: passing uninitialized memory needs an
+  // appropriately declared callee). A default argument does not re-run
   // copy-initialization at the call site; GatherArgumentsForCall checks those.
-  if (!Result.isInvalid() && Entity.isParameterKind())
-    if (const auto *Parm = dyn_cast_or_null<ParmVarDecl>(Entity.getDecl()))
-      Profiles().checkInitProfileRefToUninitBinding(InitE->getExprLoc(), Parm,
-                                                    Parm->getType(), InitE);
+  if (!Result.isInvalid() && Entity.isParameterKind()) {
+    const auto *Parm = dyn_cast_or_null<ParmVarDecl>(Entity.getDecl());
+    Profiles().checkInitProfileRefToUninitBinding(
+        InitE->getExprLoc(), Parm, Parm ? Parm->getType() : Entity.getType(),
+        InitE);
+  }
 
   return Result;
 }
