@@ -95,6 +95,10 @@ static llvm::cl::alias includeAlias("module-directory",
 static llvm::cl::list<std::string>
     intrinsicIncludeDirs("J", llvm::cl::desc("intrinsic module search paths"));
 
+static llvm::cl::list<std::string> implicitUseModules(
+    "implicit-use-module",
+    llvm::cl::desc("implicitly USE the named module for testing"));
+
 static llvm::cl::alias
     intrinsicIncludeAlias("intrinsic-module-directory",
                           llvm::cl::desc("intrinsic module directory"),
@@ -621,6 +625,9 @@ int main(int argc, char **argv) {
   }
 
   Fortran::parser::Options options;
+  options.implicitUseModules.insert(options.implicitUseModules.end(),
+                                    implicitUseModules.begin(),
+                                    implicitUseModules.end());
   options.predefinitions.emplace_back("__flang__"s, "1"s);
   options.predefinitions.emplace_back("__flang_major__"s,
                                       std::string{FLANG_VERSION_MAJOR_STRING});
@@ -691,6 +698,7 @@ int main(int argc, char **argv) {
       .set_moduleFileSuffix(moduleSuffix)
       .set_searchDirectories(includeDirs)
       .set_intrinsicModuleDirectories(intrinsicIncludeDirs)
+      .set_implicitUseModules(options.implicitUseModules)
       .set_warnOnNonstandardUsage(warnStdViolation)
       .set_warningsAreErrors(warnIsError);
 
