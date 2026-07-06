@@ -45,6 +45,9 @@ public:
   /// original size will not change the value.
   static unsigned numBitsSigned(SDValue Op, SelectionDAG &DAG);
 
+  virtual SDValue expandABS(SDNode *N, SelectionDAG &DAG,
+                            bool IsNegative = false) const override;
+
 protected:
   SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
