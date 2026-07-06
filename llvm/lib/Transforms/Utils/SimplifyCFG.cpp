@@ -4440,11 +4440,8 @@ static bool isBlockCheapToSpeculate(BasicBlock *BB, StoreInst *FoldedStore,
 /// The profitability check uses TTI::isExpensiveToSpeculativelyExecute on the
 /// four speculated blocks (ThenBB, ElseBB, ElseThenBB, ElseElseBB) — HeadBB
 /// instructions already execute unconditionally so they are not checked.
-static bool foldCondStoreToSelectImpl(BranchInst *BI, DomTreeUpdater *DTU,
+static bool foldCondStoreToSelectImpl(CondBrInst *BI, DomTreeUpdater *DTU,
                                       const TargetTransformInfo &TTI) {
-  if (!BI->isConditional())
-    return false;
-
   BasicBlock *HeadBB = BI->getParent();
   BasicBlock *ThenBB = BI->getSuccessor(0);
   BasicBlock *ElseBB = BI->getSuccessor(1);
@@ -4453,8 +4450,8 @@ static bool foldCondStoreToSelectImpl(BranchInst *BI, DomTreeUpdater *DTU,
   // branch to MergeBB.
   if (ThenBB->getSinglePredecessor() != HeadBB)
     return false;
-  BranchInst *ThenTerm = dyn_cast<BranchInst>(ThenBB->getTerminator());
-  if (!ThenTerm || ThenTerm->isConditional())
+  UncondBrInst *ThenTerm = dyn_cast<UncondBrInst>(ThenBB->getTerminator());
+  if (!ThenTerm)
     return false;
   BasicBlock *MergeBB = ThenTerm->getSuccessor(0);
 
@@ -4466,8 +4463,8 @@ static bool foldCondStoreToSelectImpl(BranchInst *BI, DomTreeUpdater *DTU,
   // blocks. May contain cheap instructions before the branch (e.g. icmp).
   if (ElseBB->getSinglePredecessor() != HeadBB)
     return false;
-  BranchInst *ElseTerm = dyn_cast<BranchInst>(ElseBB->getTerminator());
-  if (!ElseTerm || !ElseTerm->isConditional())
+  CondBrInst *ElseTerm = dyn_cast<CondBrInst>(ElseBB->getTerminator());
+  if (!ElseTerm)
     return false;
 
   // Collect non-terminator instructions in ElseBB to hoist into HeadBB.
@@ -4489,8 +4486,8 @@ static bool foldCondStoreToSelectImpl(BranchInst *BI, DomTreeUpdater *DTU,
   auto CheckLeafBlock = [&](BasicBlock *BB, StoreInst *&Store) -> bool {
     if (BB->getSinglePredecessor() != ElseBB)
       return false;
-    BranchInst *Term = dyn_cast<BranchInst>(BB->getTerminator());
-    if (!Term || Term->isConditional() || Term->getSuccessor(0) != MergeBB)
+    UncondBrInst *Term = dyn_cast<UncondBrInst>(BB->getTerminator());
+    if (!Term || Term->getSuccessor(0) != MergeBB)
       return false;
     Store = findUniqueSimpleStoreInBlock(BB);
     return Store != nullptr;
