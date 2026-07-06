@@ -1058,23 +1058,23 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
   return nullptr;
 }
 
-namespace {
-
-/// Returns true if \p Field is reachable from \p RD — either as a direct field
-/// or through a chain of nested record fields (including anonymous
+/// Returns true if \p Field is reachable from \p RD either as a direct field or
+/// through a chain of nested record fields (including anonymous
 /// structs/unions). This mirrors the GEP path that getGEPIndicesToField builds,
 /// and is used to identify the right anchor expression in Base.
-static bool recordContainsField(const RecordDecl *RD, const FieldDecl *Field) {
+static bool RecordContainsField(const RecordDecl *RD, const FieldDecl *Field) {
   for (const FieldDecl *FD : RD->fields()) {
     if (FD == Field)
       return true;
     QualType Ty = FD->getType();
     if (Ty->isRecordType())
-      if (recordContainsField(Ty->getAsRecordDecl(), Field))
+      if (RecordContainsField(Ty->getAsRecordDecl(), Field))
         return true;
   }
   return false;
 }
+
+namespace {
 
 /// \p StructAccessBase returns the base \p Expr of a field access. It returns
 /// either a \p DeclRefExpr, representing the base pointer to the struct, i.e.:
@@ -1107,7 +1107,7 @@ class StructAccessBase
     if (Ty->isPointerType())
       Ty = Ty->getPointeeType();
     const RecordDecl *RD = Ty->getAsRecordDecl();
-    return RD && recordContainsField(RD, CountDecl);
+    return RD && RecordContainsField(RD, CountDecl);
   }
 
 public:
