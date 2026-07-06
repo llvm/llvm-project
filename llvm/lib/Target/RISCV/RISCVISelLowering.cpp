@@ -11851,6 +11851,30 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(Opc, DL, Op.getValueType(), Op.getOperand(1),
                        Op.getOperand(2));
   }
+  case Intrinsic::riscv_pabdsumu:
+  case Intrinsic::riscv_pabdsumau: {
+    // On RV32 an i32-result absolute difference sum over a 64-bit (GPRPair)
+    // source has no paired instruction. Split into two v4i8 halves: reduce the
+    // low half (folding in rd when accumulating), then accumulate the high half
+    // into that partial sum.
+    SDValue Rs1 = Op.getOperand(Op.getNumOperands() - 2);
+    SDValue Rs2 = Op.getOperand(Op.getNumOperands() - 1);
+    if (Subtarget.is64Bit() || Rs1.getSimpleValueType() != MVT::v8i8)
+      return SDValue();
+    bool IsAcc = IntNo == Intrinsic::riscv_pabdsumau;
+    auto [Rs1Lo, Rs1Hi] = DAG.SplitVector(Rs1, DL);
+    auto [Rs2Lo, Rs2Hi] = DAG.SplitVector(Rs2, DL);
+    SDValue AbdsumuId =
+        DAG.getTargetConstant(Intrinsic::riscv_pabdsumu, DL, MVT::i32);
+    SDValue AbdsumauId =
+        DAG.getTargetConstant(Intrinsic::riscv_pabdsumau, DL, MVT::i32);
+    SDValue Lo = IsAcc ? DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+                                     AbdsumauId, Op.getOperand(1), Rs1Lo, Rs2Lo)
+                       : DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+                                     AbdsumuId, Rs1Lo, Rs2Lo);
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32, AbdsumauId, Lo,
+                       Rs1Hi, Rs2Hi);
+  }
   case Intrinsic::riscv_pmerge: {
     EVT VT = Op.getValueType();
     auto buildMerge = [&](SDValue Rs1, SDValue Rs2, SDValue Mask,

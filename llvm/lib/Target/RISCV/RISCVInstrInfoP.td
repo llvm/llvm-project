@@ -2430,22 +2430,6 @@ let append Predicates = [IsRV32] in {
   def : PatRedSumPair<int_riscv_predsum, PREDSUM_DHS, v4i16>;
   def : PatRedSumPair<int_riscv_predsumu, PREDSUMU_DHS, v4i16>;
 
-  // 8-bit absolute difference sum patterns
-  def : Pat<(i32 (int_riscv_pabdsumu (v8i8 GPRPair:$rs1), (v8i8 GPRPair:$rs2))),
-            (PABDSUMAU_B
-                (PABDSUMU_B (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_even),
-                            (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_even)),
-                (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_odd),
-                (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_odd))>;
-  def : Pat<(i32 (int_riscv_pabdsumau (i32 GPR:$rd), (v8i8 GPRPair:$rs1),
-                                      (v8i8 GPRPair:$rs2))),
-            (PABDSUMAU_B
-                (PABDSUMAU_B GPR:$rd,
-                             (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_even),
-                             (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_even)),
-                (EXTRACT_SUBREG GPRPair:$rs1, sub_gpr_odd),
-                (EXTRACT_SUBREG GPRPair:$rs2, sub_gpr_odd))>;
-
   // [s|u]min/[s|u]max patterns
   def : PatGprPairGprPair<smin, PMIN_DB, v8i8>;
   def : PatGprPairGprPair<umin, PMINU_DB, v8i8>;
