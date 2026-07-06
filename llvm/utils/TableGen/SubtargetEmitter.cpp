@@ -17,8 +17,10 @@
 #include "Common/PredicateExpander.h"
 #include "Common/SubtargetFeatureInfo.h"
 #include "Common/Utils.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -37,7 +39,6 @@
 #include <cstdint>
 #include <iterator>
 #include <limits>
-#include <map>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -48,8 +49,9 @@ using namespace llvm;
 
 namespace {
 
-using SchedClassKey = std::tuple<uint16_t, bool, bool, bool, uint16_t, uint16_t,
-                                 uint16_t, uint16_t, uint16_t, uint16_t>;
+using SchedClassKey =
+    std::tuple<uint16_t, uint8_t, uint8_t, uint8_t, uint16_t, uint16_t,
+               uint16_t, uint16_t, uint16_t, uint16_t>;
 
 static SchedClassKey getSchedClassKey(const MCSchedClassDesc &Desc) {
   return {Desc.NumMicroOps,     Desc.BeginGroup,
@@ -69,8 +71,8 @@ class SubtargetEmitter : TargetFeaturesEmitter {
     std::vector<MCWriteLatencyEntry> WriteLatencies;
     std::vector<std::string> WriterNames;
     std::vector<MCReadAdvanceEntry> ReadAdvanceEntries;
-    std::vector<MCSchedClassDesc> SchedClassPool;
-    std::vector<std::vector<uint16_t>> ProcSchedClassIndices;
+    SmallVector<MCSchedClassDesc> SchedClassPool;
+    SmallVector<SmallVector<uint16_t>> ProcSchedClassIndices;
     bool UseSchedClassPool = false;
 
     // Reserve an invalid entry at index 0
@@ -1360,7 +1362,7 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
 
 void SubtargetEmitter::buildSchedClassPool(SchedClassTables &SchedTables) {
   constexpr size_t ReleaseSchedClassDescSize = 14;
-  std::map<SchedClassKey, uint16_t> PoolIndices;
+  DenseMap<SchedClassKey, uint16_t> PoolIndices;
   size_t NumSchedClassDescs = 0;
 
   SchedTables.ProcSchedClassIndices.clear();
@@ -1372,7 +1374,7 @@ void SubtargetEmitter::buildSchedClassPool(SchedClassTables &SchedTables) {
 
     const std::vector<MCSchedClassDesc> &SCTab =
         SchedTables.ProcSchedClasses[1 + Idx];
-    std::vector<uint16_t> &Indices = SchedTables.ProcSchedClassIndices[1 + Idx];
+    SmallVector<uint16_t> &Indices = SchedTables.ProcSchedClassIndices[1 + Idx];
     Indices.reserve(SCTab.size());
     NumSchedClassDescs += SCTab.size();
 
@@ -1387,7 +1389,10 @@ void SubtargetEmitter::buildSchedClassPool(SchedClassTables &SchedTables) {
           return;
         }
         uint16_t PoolIdx = SchedTables.SchedClassPool.size();
-        It = PoolIndices.emplace(std::move(Key), PoolIdx).first;
+        auto [InsertedIt, Inserted] =
+            PoolIndices.try_emplace(std::move(Key), PoolIdx);
+        assert(Inserted && "SchedClassKey already exists");
+        It = InsertedIt;
         SchedTables.SchedClassPool.push_back(Desc);
       }
       Indices.push_back(It->second);
@@ -1465,7 +1470,7 @@ void SubtargetEmitter::emitSchedClassTables(SchedClassTables &SchedTables,
   assert(SchedModels.getSchedClass(0).Name == "NoInstrModel" &&
          "invalid class not first");
   SchedClassNameOffsets[0] = StrTab.GetOrAddStringOffset("InvalidSchedClass");
-  for (unsigned Idx = 1; Idx != SchedModels.schedClasses().size(); ++Idx)
+  for (unsigned Idx = 1, N = SchedModels.schedClasses().size(); Idx != N; ++Idx)
     SchedClassNameOffsets[Idx] =
         StrTab.GetOrAddStringOffset(SchedModels.getSchedClass(Idx).Name);
 
