@@ -2625,7 +2625,7 @@ bool CXXMethodDecl::isUsualDeallocationFunction(
     if (!PrimaryTemplate)
       return true;
 
-    // A template instance is is only a usual deallocation function if it has a
+    // A template instance is only a usual deallocation function if it has a
     // type-identity parameter, the type-identity parameter is a dependent type
     // (i.e. the type-identity parameter is of type std::type_identity<U> where
     // U shall be a dependent type), and the type-identity parameter is the only
@@ -2645,7 +2645,7 @@ bool CXXMethodDecl::isUsualDeallocationFunction(
   //   A template instance is never a usual deallocation function,
   //   regardless of its signature.
   // Post-P2719 adoption:
-  //   A template instance is is only a usual deallocation function if it has a
+  //   A template instance is only a usual deallocation function if it has a
   //   type-identity parameter
   if (getPrimaryTemplate())
     return false;
