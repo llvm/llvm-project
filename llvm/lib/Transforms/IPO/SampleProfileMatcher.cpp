@@ -693,7 +693,7 @@ void SampleProfileMatcher::computeAndReportProfileStaleness() {
   }
 
   // Count profile mismatches for profile staleness report.
-  for (auto &F : M) {
+  for (const auto &F : M) {
     if (skipProfileForFunction(F))
       continue;
     // As the stats will be merged by linker, skip reporting the metrics for
