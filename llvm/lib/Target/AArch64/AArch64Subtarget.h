@@ -236,6 +236,14 @@ public:
     return isSVEAvailable() || (isSVEorStreamingSVEAvailable() && hasSME2());
   }
 
+  /// Returns true if SVE bit-permute instructions (bext/bdep/bgrp) can be
+  /// emitted.
+  bool isSVEBitPermAvailable() const {
+    return hasSVEBitPerm() &&
+           (isSVEAvailable() ||
+            (isSVEorStreamingSVEAvailable() && hasSSVE_BitPerm()));
+  }
+
   unsigned getMinVectorRegisterBitWidth() const {
     // Don't assume any minimum vector size when PSTATE.SM may not be 0, because
     // we don't yet support streaming-compatible codegen support that we trust

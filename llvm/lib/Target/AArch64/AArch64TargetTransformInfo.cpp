@@ -864,6 +864,29 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::pdep:
+  case Intrinsic::pext: {
+    unsigned BW = RetTy->getScalarSizeInBits();
+    if (ST->isSVEBitPermAvailable() && BW <= 64) {
+      Type *VecTy = VectorType::get(RetTy, 64 / BW, false);
+      InstructionCost Cost =
+          getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind, 0,
+                             nullptr, nullptr) +
+          getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind, 0,
+                             nullptr, nullptr) +
+          1 +
+          getVectorInstrCost(Instruction::ExtractElement, VecTy, CostKind, 0,
+                             nullptr, nullptr);
+      return Cost;
+    }
+    // Without bit-permute, pdep/pext expand to the Hacker's Delight scalar
+    // sequence: O(log2(BW)) parallel-prefix stages, each a CLMUL-by-all-ones
+    // (~log2(BW) shift-xors) plus a handful of scalar ALU ops. That is
+    // O(log2(BW)^2) work; cost ~ LogBW * (LogBW + 7) matches the emitted
+    // sequence (~48/61/79 insns for i16/i32/i64).
+    unsigned LogBW = Log2_32_Ceil(BW);
+    return getTypeLegalizationCost(RetTy).first * LogBW * (LogBW + 7);
+  }
   case Intrinsic::ctpop: {
     auto LT = getTypeLegalizationCost(RetTy);
     MVT MTy = LT.second;
