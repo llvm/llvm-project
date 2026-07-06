@@ -1249,14 +1249,13 @@ static void recursivelyDeleteDeadRecipes(VPValue *V) {
 /// an intrinsic ID.
 static std::optional<std::pair<bool, unsigned>>
 getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R) {
+  if (Intrinsic::ID IID = vputils::getIntrinsicID(R))
+    return std::make_pair(true, IID);
   return TypeSwitch<const VPSingleDefRecipe *,
                     std::optional<std::pair<bool, unsigned>>>(R)
       .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe, VPWidenGEPRecipe,
             VPReplicateRecipe>(
           [](auto *I) { return std::make_pair(false, I->getOpcode()); })
-      .Case([](const VPWidenIntrinsicRecipe *I) {
-        return std::make_pair(true, I->getVectorIntrinsicID());
-      })
       .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe, VPScalarIVStepsRecipe>(
           [](auto *I) {
             // For recipes that do not directly map to LLVM IR instructions,
@@ -1294,6 +1293,10 @@ static VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
   auto FoldToIRValue = [&]() -> Value * {
     InstSimplifyFolder Folder(DL);
     if (OpcodeOrIID->first) {
+      // VPInstructions store the called intrinsic as last operand.
+      if (isa<VPInstruction>(R))
+        Ops.pop_back();
+
       auto *RFlags = dyn_cast<VPRecipeWithIRFlags>(&R);
       return Folder.FoldIntrinsic(OpcodeOrIID->second, Ops, R.getScalarType(),
                                   RFlags ? RFlags->getFastMathFlagsOrNone()
