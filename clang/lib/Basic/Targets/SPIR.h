@@ -101,9 +101,9 @@ static const unsigned SPIRDefIsGenMap[] = {
 
 // Base class for SPIR and SPIR-V target info.
 class LLVM_LIBRARY_VISIBILITY BaseSPIRTargetInfo : public TargetInfo {
+protected:
   std::unique_ptr<TargetInfo> HostTarget;
 
-protected:
   BaseSPIRTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : TargetInfo(Triple) {
     assert((Triple.isSPIR() || Triple.isSPIRV()) &&
@@ -164,6 +164,18 @@ protected:
       UseExplicitBitFieldAlignment = HostTarget->useExplicitBitFieldAlignment();
       ZeroLengthBitfieldBoundary = HostTarget->getZeroLengthBitfieldBoundary();
 
+      // Copy pointer-related type representations from host so that
+      // sizeof(size_t), sizeof(ptrdiff_t), sizeof(intptr_t) match
+      // between host and device. Without this, LLP64 hosts (Windows)
+      // get incorrect LP64-style defaults.
+      SizeType = HostTarget->getSizeType();
+      PtrDiffType = HostTarget->getPtrDiffType(LangAS::Default);
+      IntPtrType = HostTarget->getIntPtrType();
+
+      // Inherit Microsoft C mangling if the host uses it.
+      if (HostTarget->shouldUseMicrosoftCCforMangling())
+        UseMicrosoftManglingForC = true;
+
       // This is a bit of a lie, but it controls __GCC_ATOMIC_XXX_LOCK_FREE, and
       // we need those macros to be identical on host and device, because (among
       // other things) they affect which standard library classes are defined,
@@ -195,6 +207,8 @@ public:
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
+    if (HostTarget)
+      return HostTarget->getBuiltinVaListKind();
     return TargetInfo::VoidPtrBuiltinVaList;
   }
 
@@ -204,8 +218,11 @@ public:
   }
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
-    return (CC == CC_SpirFunction || CC == CC_DeviceKernel) ? CCCR_OK
-                                                            : CCCR_Warning;
+    if (CC == CC_SpirFunction || CC == CC_DeviceKernel)
+      return CCCR_OK;
+    if (HostTarget && HostTarget->checkCallingConvention(CC) == CCCR_OK)
+      return CCCR_OK;
+    return CCCR_Warning;
   }
 
   CallingConv getDefaultCallingConv() const override {
@@ -276,8 +293,10 @@ public:
     assert(Triple.getArch() == llvm::Triple::spir &&
            "Invalid architecture for 32-bit SPIR.");
     PointerWidth = PointerAlign = 32;
-    SizeType = TargetInfo::UnsignedInt;
-    PtrDiffType = IntPtrType = TargetInfo::SignedInt;
+    if (!HostTarget) {
+      SizeType = TargetInfo::UnsignedInt;
+      PtrDiffType = IntPtrType = TargetInfo::SignedInt;
+    }
     // SPIR32 has support for atomic ops if atomic extension is enabled.
     // Take the maximum because it's possible the Host supports wider types.
     MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 64);
@@ -296,8 +315,10 @@ public:
     assert(Triple.getArch() == llvm::Triple::spir64 &&
            "Invalid architecture for 64-bit SPIR.");
     PointerWidth = PointerAlign = 64;
-    SizeType = TargetInfo::UnsignedLong;
-    PtrDiffType = IntPtrType = TargetInfo::SignedLong;
+    if (!HostTarget) {
+      SizeType = TargetInfo::UnsignedLong;
+      PtrDiffType = IntPtrType = TargetInfo::SignedLong;
+    }
     // SPIR64 has support for atomic ops if atomic extension is enabled.
     // Take the maximum because it's possible the Host supports wider types.
     MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 64);
@@ -373,51 +394,57 @@ public:
                         MacroBuilder &Builder) const override;
 };
 
-class LLVM_LIBRARY_VISIBILITY SPIRV32TargetInfo : public BaseSPIRVTargetInfo {
+// Common base for physical SPIR-V targets (spirv32/spirv64). Derives pointer
+// width from the host target when available; defaults to 32 or 64 based on
+// the target architecture.
+class LLVM_LIBRARY_VISIBILITY SPIRVPhysicalTargetInfo
+    : public BaseSPIRVTargetInfo {
 public:
-  SPIRV32TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+  SPIRVPhysicalTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : BaseSPIRVTargetInfo(Triple, Opts) {
-    assert(Triple.getArch() == llvm::Triple::spirv32 &&
-           "Invalid architecture for 32-bit SPIR-V.");
+    assert((Triple.getArch() == llvm::Triple::spirv32 ||
+            Triple.getArch() == llvm::Triple::spirv64) &&
+           "Invalid architecture for physical SPIR-V.");
     assert((getTriple().getOS() == llvm::Triple::UnknownOS ||
             getTriple().getOS() == llvm::Triple::ChipStar ||
             getTriple().getOS() == llvm::Triple::Vulkan) &&
-           "32-bit SPIR-V target must use unknown, chipstar, or vulkan OS");
+           "Physical SPIR-V target must use unknown, chipstar, or vulkan OS");
     assert(getTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
-           "32-bit SPIR-V target must use unknown environment type");
-    PointerWidth = PointerAlign = 32;
-    SizeType = TargetInfo::UnsignedInt;
-    PtrDiffType = IntPtrType = TargetInfo::SignedInt;
-    // SPIR-V has core support for atomic ops, and Int32 is always available;
-    // we take the maximum because it's possible the Host supports wider types.
+           "Physical SPIR-V target must use unknown environment type");
+
+    if (HostTarget) {
+      PointerWidth = PointerAlign = HostTarget->getPointerWidth(LangAS::Default);
+    } else {
+      PointerWidth = PointerAlign =
+          (Triple.getArch() == llvm::Triple::spirv32) ? 32 : 64;
+      if (PointerWidth == 32) {
+        SizeType = TargetInfo::UnsignedInt;
+        PtrDiffType = IntPtrType = TargetInfo::SignedInt;
+      } else {
+        SizeType = TargetInfo::UnsignedLong;
+        PtrDiffType = IntPtrType = TargetInfo::SignedLong;
+      }
+    }
     MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 64);
     resetDataLayout();
   }
+};
+
+class LLVM_LIBRARY_VISIBILITY SPIRV32TargetInfo
+    : public SPIRVPhysicalTargetInfo {
+public:
+  SPIRV32TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : SPIRVPhysicalTargetInfo(Triple, Opts) {}
 
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 };
 
-class LLVM_LIBRARY_VISIBILITY SPIRV64TargetInfo : public BaseSPIRVTargetInfo {
+class LLVM_LIBRARY_VISIBILITY SPIRV64TargetInfo
+    : public SPIRVPhysicalTargetInfo {
 public:
   SPIRV64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : BaseSPIRVTargetInfo(Triple, Opts) {
-    assert(Triple.getArch() == llvm::Triple::spirv64 &&
-           "Invalid architecture for 64-bit SPIR-V.");
-    assert((getTriple().getOS() == llvm::Triple::UnknownOS ||
-            getTriple().getOS() == llvm::Triple::ChipStar ||
-            getTriple().getOS() == llvm::Triple::Vulkan) &&
-           "64-bit SPIR-V target must use unknown, chipstar, or vulkan OS");
-    assert(getTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
-           "64-bit SPIR-V target must use unknown environment type");
-    PointerWidth = PointerAlign = 64;
-    SizeType = TargetInfo::UnsignedLong;
-    PtrDiffType = IntPtrType = TargetInfo::SignedLong;
-    // SPIR-V has core support for atomic ops, and Int64 is always available;
-    // we take the maximum because it's possible the Host supports wider types.
-    MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 64);
-    resetDataLayout();
-  }
+      : SPIRVPhysicalTargetInfo(Triple, Opts) {}
 
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
