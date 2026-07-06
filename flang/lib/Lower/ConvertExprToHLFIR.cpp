@@ -87,21 +87,20 @@ buildRightAssociatedAddFold(llvm::ArrayRef<RealExpr<KIND>> terms) {
   return result;
 }
 
-template <typename L, typename R>
+template <typename T>
 static std::optional<Fortran::lower::SomeExpr>
-tryBuildSplitSumExpressionTree(const L &, const R &) {
+tryBuildSplitSumExpressionTree(const T &) {
   return std::nullopt;
 }
 
 template <int KIND>
 static std::optional<Fortran::lower::SomeExpr>
-tryBuildSplitSumExpressionTree(const RealExpr<KIND> &lhs,
-                               const RealExpr<KIND> &rhs) {
-  if (!std::get_if<Fortran::evaluate::Add<Real<KIND>>>(&rhs.u))
+tryBuildSplitSumExpressionTree(const RealExpr<KIND> &expr) {
+  if (!std::get_if<Fortran::evaluate::Add<Real<KIND>>>(&expr.u))
     return std::nullopt;
 
   llvm::SmallVector<RealExpr<KIND>, 8> terms;
-  flattenTopLevelAdds(rhs, terms);
+  flattenTopLevelAdds(expr, terms);
   if (terms.size() <= 2)
     return std::nullopt;
 
@@ -115,19 +114,13 @@ tryBuildSplitSumExpressionTree(const RealExpr<KIND> &lhs,
 
 template <Fortran::common::TypeCategory CAT>
 static std::optional<Fortran::lower::SomeExpr> tryBuildSplitSumExpressionTree(
-    const Fortran::evaluate::Expr<Fortran::evaluate::SomeKind<CAT>> &lhs,
-    const Fortran::evaluate::Expr<Fortran::evaluate::SomeKind<CAT>> &rhs) {
+    const Fortran::evaluate::Expr<Fortran::evaluate::SomeKind<CAT>> &expr) {
   if constexpr (CAT == Fortran::common::TypeCategory::Real) {
     return Fortran::common::visit(
-        [&](const auto &typedLhs) -> std::optional<Fortran::lower::SomeExpr> {
-          return Fortran::common::visit(
-              [&](const auto &typedRhs)
-                  -> std::optional<Fortran::lower::SomeExpr> {
-                return tryBuildSplitSumExpressionTree(typedLhs, typedRhs);
-              },
-              rhs.u);
+        [&](const auto &typedExpr) -> std::optional<Fortran::lower::SomeExpr> {
+          return tryBuildSplitSumExpressionTree(typedExpr);
         },
-        lhs.u);
+        expr.u);
   }
   return std::nullopt;
 }
@@ -150,18 +143,12 @@ canBuildSplitSumExpressionTree(const Fortran::lower::SomeExpr &lhs,
 }
 
 static std::optional<Fortran::lower::SomeExpr>
-tryBuildSplitSumExpressionTree(const Fortran::lower::SomeExpr &lhs,
-                               const Fortran::lower::SomeExpr &rhs) {
+tryBuildSplitSumExpressionTree(const Fortran::lower::SomeExpr &expr) {
   return Fortran::common::visit(
-      [&](const auto &typedLhs) -> std::optional<Fortran::lower::SomeExpr> {
-        return Fortran::common::visit(
-            [&](const auto &typedRhs)
-                -> std::optional<Fortran::lower::SomeExpr> {
-              return tryBuildSplitSumExpressionTree(typedLhs, typedRhs);
-            },
-            rhs.u);
+      [&](const auto &typedExpr) -> std::optional<Fortran::lower::SomeExpr> {
+        return tryBuildSplitSumExpressionTree(typedExpr);
       },
-      lhs.u);
+      expr.u);
 }
 
 /// Lower Designators to HLFIR.
@@ -2433,7 +2420,7 @@ hlfir::EntityWithAttributes Fortran::lower::convertAssignmentRhsToHLFIR(
   if (enableSplitSumExpressionTreeLowering &&
       canBuildSplitSumExpressionTree(lhs, rhs))
     if (std::optional<Fortran::lower::SomeExpr> rewritten =
-            tryBuildSplitSumExpressionTree(lhs, rhs))
+            tryBuildSplitSumExpressionTree(rhs))
       return HlfirBuilder(loc, converter, symMap, stmtCtx).gen(*rewritten);
   return convertExprToHLFIR(loc, converter, rhs, symMap, stmtCtx);
 }
