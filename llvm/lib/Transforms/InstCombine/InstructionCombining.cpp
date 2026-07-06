@@ -5629,7 +5629,7 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
     for (BasicBlock::iterator Scan = std::next(I->getIterator()),
                               E = I->getParent()->end();
          Scan != E; ++Scan)
-      if (Scan->mayWriteToMemory())
+      if (Scan->mayWriteToMemory() && !isa<AssumeInst>(Scan))
         return false;
   }
 

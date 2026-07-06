@@ -151,8 +151,10 @@ class CUFDeviceFuncTransform
       auto maxntid =
           builder.getDenseI32ArrayAttr({static_cast<int32_t>(maxTPB), 1, 1});
       deviceFuncOp->setAttr(NVVM::NVVMDialect::getMaxntidAttrName(), maxntid);
-      deviceFuncOp->setAttr(NVVM::NVVMDialect::getMinctasmAttrName(),
-                            launchBoundsAttr.getMinBPM());
+      // The minimum-blocks-per-multiprocessor operand is optional.
+      if (launchBoundsAttr.getMinBPM())
+        deviceFuncOp->setAttr(NVVM::NVVMDialect::getMinctasmAttrName(),
+                              launchBoundsAttr.getMinBPM());
       if (computeCap >= 90 && launchBoundsAttr.getUpperBoundClusterSize())
         deviceFuncOp->setAttr(NVVM::NVVMDialect::getClusterMaxBlocksAttrName(),
                               launchBoundsAttr.getUpperBoundClusterSize());
