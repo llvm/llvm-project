@@ -258,6 +258,8 @@ public:
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool is_open() const;
   basic_filebuf* open(const char* __s, ios_base::openmode __mode);
 #    if _LIBCPP_HAS_OPEN_WITH_WCHAR
+  _LIBCPP_DIAGNOSE_WARNING((__mode & ios_base::noreplace) && defined(_AIX),
+                           "fstream::open() with noreplace is not supported on AIX; open() will return failure")
   basic_filebuf* open(const wchar_t* __s, ios_base::openmode __mode);
 #    endif
   _LIBCPP_HIDE_FROM_ABI basic_filebuf* open(const string& __s, ios_base::openmode __mode);
@@ -671,8 +673,8 @@ const char* basic_filebuf<_CharT, _Traits>::__make_mdstring(ios_base::openmode _
 // existence of the file and create it, it shall fail rather than perform a
 // non-atomic check and creation. Since AIX cannot provide atomic exclusive-open
 // semantics via fopen(), returning nullptr is the correct behaviour.
-// _AIX is defined by clang on AIX; __TOS_AIX__ is defined by both clang and XLC.
-#      if !defined(_AIX) && !defined(__TOS_AIX__)
+// _AIX is defined on AIX by all supported compilers.
+#      if !defined(_AIX)
   case ios_base::out | ios_base::noreplace:
   case ios_base::out | ios_base::trunc | ios_base::noreplace:
     return "wx" _LIBCPP_FOPEN_CLOEXEC_MODE;
@@ -683,7 +685,7 @@ const char* basic_filebuf<_CharT, _Traits>::__make_mdstring(ios_base::openmode _
     return "wbx" _LIBCPP_FOPEN_CLOEXEC_MODE;
   case ios_base::in | ios_base::out | ios_base::trunc | ios_base::binary | ios_base::noreplace:
     return "w+bx" _LIBCPP_FOPEN_CLOEXEC_MODE;
-#      endif // !defined(_AIX) && !defined(__TOS_AIX__)
+#      endif // !defined(_AIX)
 #    endif // _LIBCPP_STD_VER >= 23
   default:
     return nullptr;
@@ -774,13 +776,8 @@ basic_filebuf<_CharT, _Traits>* basic_filebuf<_CharT, _Traits>::open(const wchar
   if (__file_)
     return nullptr;
   const wchar_t* __mdstr = __make_mdwstring(__mode);
-  if (!__mdstr) {
-#      if defined(_AIX) || defined(__TOS_AIX__)
-    if (__mode & ios_base::noreplace)
-      fprintf(stderr, "warning: fstream::open() with noreplace is not supported on AIX; returning failure\n");
-#      endif
+  if (!__mdstr)
     return nullptr;
-  }
   return __do_open(_wfopen(__s, __mdstr), __mode);
 }
 #    endif
@@ -1222,6 +1219,8 @@ public:
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool is_open() const;
   void open(const char* __s, ios_base::openmode __mode = ios_base::in);
 #    if _LIBCPP_HAS_OPEN_WITH_WCHAR
+  _LIBCPP_DIAGNOSE_WARNING((__mode & ios_base::noreplace) && defined(_AIX),
+                           "fstream::open() with noreplace is not supported on AIX; open() will return failure")
   void open(const wchar_t* __s, ios_base::openmode __mode = ios_base::in);
 #    endif
   void open(const string& __s, ios_base::openmode __mode = ios_base::in);
@@ -1380,6 +1379,8 @@ public:
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool is_open() const;
   void open(const char* __s, ios_base::openmode __mode = ios_base::out);
 #    if _LIBCPP_HAS_OPEN_WITH_WCHAR
+  _LIBCPP_DIAGNOSE_WARNING((__mode & ios_base::noreplace) && defined(_AIX),
+                           "fstream::open() with noreplace is not supported on AIX; open() will return failure")
   void open(const wchar_t* __s, ios_base::openmode __mode = ios_base::out);
 #    endif
   void open(const string& __s, ios_base::openmode __mode = ios_base::out);
@@ -1544,6 +1545,8 @@ public:
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool is_open() const;
   _LIBCPP_HIDE_FROM_ABI void open(const char* __s, ios_base::openmode __mode = ios_base::in | ios_base::out);
 #    if _LIBCPP_HAS_OPEN_WITH_WCHAR
+  _LIBCPP_DIAGNOSE_WARNING((__mode & ios_base::noreplace) && defined(_AIX),
+                           "fstream::open() with noreplace is not supported on AIX; open() will return failure")
   void open(const wchar_t* __s, ios_base::openmode __mode = ios_base::in | ios_base::out);
 #    endif
   _LIBCPP_HIDE_FROM_ABI void open(const string& __s, ios_base::openmode __mode = ios_base::in | ios_base::out);

@@ -143,19 +143,14 @@ int main(int, char**)
 
           {
             std::ofstream f(tmp.c_str(), mode);
-            // On AIX, fopen() does not support the 'x' (exclusive) mode suffix so open()
-            // returns nullptr for all noreplace modes. On other platforms, the file already
-            // exists so noreplace causes open() to fail.
-            assert(!f.is_open());
+            assert(!f.is_open()); // since it already exists
           }
 
           {
             std::remove(tmp.c_str());
 
             std::ofstream f(tmp.c_str(), mode);
-#  if defined(_AIX) || defined(__TOS_AIX__)
-            // AIX fopen() does not support the 'x' (exclusive) mode suffix;
-            // open() returns nullptr for all noreplace modes regardless of whether the file exists.
+#  if defined(_AIX)
             assert(!f.is_open());
 #  else
             assert(f.is_open()); // since it doesn't exist
@@ -169,19 +164,14 @@ int main(int, char**)
 
           {
             std::wofstream f(tmp.c_str(), mode);
-            // On AIX, fopen() does not support the 'x' (exclusive) mode suffix so open()
-            // returns nullptr for all noreplace modes. On other platforms, the file already
-            // exists so noreplace causes open() to fail.
-            assert(!f.is_open());
+            assert(!f.is_open()); // since it already exists
           }
 
           {
             std::remove(tmp.c_str());
 
             std::wofstream f(tmp.c_str(), mode);
-#    if defined(_AIX) || defined(__TOS_AIX__)
-            // AIX fopen() does not support the 'x' (exclusive) mode suffix;
-            // open() returns nullptr for all noreplace modes regardless of whether the file exists.
+#    if defined(_AIX)
             assert(!f.is_open());
 #    else
             assert(f.is_open()); // since it doesn't exist
