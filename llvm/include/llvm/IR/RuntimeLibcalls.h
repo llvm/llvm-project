@@ -166,11 +166,6 @@ public:
   /// to be the last argument.
   LLVM_ABI static bool hasVectorMaskArgument(RTLIB::LibcallImpl Impl);
 
-  static bool hasAEABILibcalls(const Triple &TT) {
-    return TT.isTargetAEABI() || TT.isTargetGNUAEABI() ||
-           TT.isTargetMuslAEABI() || TT.isOSFuchsia() || TT.isAndroid();
-  }
-
 private:
   LLVM_ABI static iota_range<RTLIB::LibcallImpl>
   lookupLibcallImplNameImpl(StringRef Name);
@@ -223,6 +218,11 @@ private:
     if (TT.isiOS())
       return !TT.isOSVersionLT(3, 0);
     return TT.isWatchOS();
+  }
+
+  static bool hasAEABILibcalls(const Triple &TT) {
+    return TT.isTargetAEABI() || TT.isTargetGNUAEABI() ||
+           TT.isTargetMuslAEABI() || TT.isOSFuchsia() || TT.isAndroid();
   }
 
   LLVM_READONLY
