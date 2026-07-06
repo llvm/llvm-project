@@ -65,7 +65,8 @@ TEST_P(olCreateProgramTest, ZeroSizeBinary) {
 
   ol_program_handle_t Program = nullptr;
 
-  // backend rejection of a binary is not guaranteed to map to a specific ol_errc_t, so we ASSERT_ANY_ERROR for now
+  // backend rejection of a binary is not guaranteed to map to a specific
+  // ol_errc_t, so we ASSERT_ANY_ERROR for now
   ASSERT_ANY_ERROR(
       olCreateProgram(Device, DeviceBin->getBufferStart(), 0, &Program));
   ASSERT_EQ(Program, nullptr);
