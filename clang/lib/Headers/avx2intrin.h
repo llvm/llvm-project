@@ -1810,10 +1810,9 @@ _mm256_or_si256(__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit integer vector.
 /// \returns A 256-bit integer vector containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_sad_epu8(__m256i __a, __m256i __b)
-{
-  return __builtin_ia32_psadbw256((__v32qi)__a, (__v32qi)__b);
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_sad_epu8(__m256i __a, __m256i __b) {
+  return __builtin_ia32_psadbw256((__v32qu)__a, (__v32qu)__b);
 }
 
 /// Shuffles 8-bit integers in the 256-bit integer vector \a __a according

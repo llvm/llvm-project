@@ -5188,7 +5188,7 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /showIncludes:user      Like /showIncludes but omit system headers
       /showIncludes           Print info about included files to stderr
       /source-charset:<value> Set source encoding, supports only UTF-8
-      /std:<value>            Set language version (c++14,c++17,c++20,c++23preview,c++latest,c11,c17)
+      /std:<value>            Set language version (c++14,c++17,c++20,c++23preview,c++26preview,c++latest,c11,c17)
       /TC                     Treat all source files as C
       /Tc <file>              Treat <file> as C source file
       /TP                     Treat all source files as C++
