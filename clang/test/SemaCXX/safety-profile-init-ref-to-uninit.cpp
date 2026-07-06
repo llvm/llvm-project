@@ -769,10 +769,10 @@ struct PairHolder { Pair p; };
 
 void test_member_read_of_uninit_object() {
   Pair s [[uninit]];
-  int y1 = s.x;    // expected-error {{read of a member of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
-  take_value(s.y); // expected-error {{read of a member of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
+  int y1 = s.x;    // expected-error {{read of a subobject of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
+  take_value(s.y); // expected-error {{read of a subobject of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
   PairHolder o [[uninit]];
-  int y2 = o.p.x;  // expected-error {{read of a member of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
+  int y2 = o.p.x;  // expected-error {{read of a subobject of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
   // The arrow spelling reaches the member through a pointer, so the
   // diagnostic's phrasing approximation picks the pointer wording; the read is
   // diagnosed all the same.
@@ -806,6 +806,60 @@ void test_member_read_byte_exempt() {
   (void)b;
 }
 
+// An element read of a named [[uninit]] array is a subobject read exactly like
+// s.x: neither flow pass tracks array elements (and element-wise delayed
+// initialization is banned, paper §5.5), so the marker counts below the
+// element access even for a read. *a denotes the same element as a[0].
+void test_element_read_of_uninit_array(int i) {
+  [[uninit]] int a[2];
+  int y1 = a[0];    // expected-error {{read of a subobject of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
+  take_value(a[i]); // expected-error {{read of a subobject of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
+  int y2 = *a;      // expected-error {{read of a subobject of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
+  [[uninit]] int m[2][2];
+  int y3 = m[1][0]; // expected-error {{read of a subobject of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
+  (void)y1; (void)y2; (void)y3;
+}
+
+// An [[uninit]] array *member*'s element read is flagged the same way: like
+// the class-type member in HasAggMember below, an array member has no legal
+// element-wise assignment path, so the marker counts even on the current
+// object.
+struct WithArrMember {
+  [[uninit]] int a[2];
+  int get() { return a[0]; } // expected-error {{read of a subobject of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
+};
+
+// Writes, discarded values, and address-taking apply no lvalue-to-rvalue
+// conversion and are not reads; bindings to the array or its elements stay the
+// ref_to_uninit checks' territory (regression guards, unchanged behavior).
+void test_element_read_negatives(int i) {
+  [[uninit]] int a[2];
+  a[0] = 1;                         // OK: write, not a read (writes are a deferred slice)
+  (void)a[0];                       // OK: discarded value
+  int *p [[ref_to_uninit]] = &a[0]; // OK: address-of is not a read; binding checked by ref_to_uninit
+  int *q [[ref_to_uninit]] = a;     // OK: array decay is a binding, not a read
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init, rule: "uninit_read")]] { take_value(a[i]); } // OK: rule-targeted suppress
+  (void)p; (void)q;
+}
+
+// std::byte arrays stay exempt (paper §4.5).
+void test_element_read_byte_exempt() {
+  [[uninit]] std::byte b[2];
+  std::byte v = b[0]; // OK
+  (void)v;
+}
+
+// Like the member read, the element read defers on a template pattern and
+// fires once, at instantiation.
+template <typename T>
+void template_element_read_bad() {
+  [[uninit]] T a[2];
+  int y = a[0]; // expected-error {{read of a subobject of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
+  (void)y;
+}
+template void template_element_read_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_element_read_bad<int>' requested here}}
+
 // The §5.2 trust pattern is preserved: a scalar [[uninit]] *member* of the
 // current object may be assigned in the constructor body (flow-checked by the
 // ctor-body pass), so a member-function read of it is not flagged here.
@@ -821,7 +875,7 @@ struct BodyInit {
 // the current object.
 struct HasAggMember {
   Pair agg [[uninit]];
-  int get() { return agg.x; } // expected-error {{read of a member of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
+  int get() { return agg.x; } // expected-error {{read of a subobject of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
 };
 
 // Like every Decl-less read check, the member read defers on a template
@@ -829,7 +883,7 @@ struct HasAggMember {
 template <typename T>
 void template_member_read_bad() {
   Pair s [[uninit]];
-  int y = s.x; // expected-error {{read of a member of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
+  int y = s.x; // expected-error {{read of a subobject of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
   (void)y;
 }
 template void template_member_read_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_member_read_bad<int>' requested here}}

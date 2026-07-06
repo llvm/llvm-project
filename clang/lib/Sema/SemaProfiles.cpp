@@ -805,8 +805,13 @@ static UninitStorage pointerRefersToUninitStorage(ASTContext &Ctx,
     return *PassThrough;
 
   // Array-to-pointer decay has been stripped above, leaving the array glvalue.
+  // Leave read mode here, like the member-access arm: neither the CFG
+  // uninit_read pass nor the ctor-body pass tracks array elements, and
+  // element-wise delayed initialization of an [[uninit]] array is itself
+  // banned (paper §5.5), so below an element access the marker counts even
+  // for a read.
   if (E->getType()->isArrayType())
-    return glvalueDenotesUninitStorage(Ctx, E, ForRead);
+    return glvalueDenotesUninitStorage(Ctx, E, /*ForRead=*/false);
 
   // &G, where G denotes uninitialized storage.
   if (const auto *UO = dyn_cast<UnaryOperator>(E))
@@ -1005,19 +1010,42 @@ void SemaProfiles::checkInitProfileRefCapture(SourceLocation Loc,
 // The read-through diagnostic distinguishes indirection through a
 // [[ref_to_uninit]] pointer/reference from a subobject read of a named
 // [[uninit]] object, which involves no [[ref_to_uninit]] entity. Approximate
-// but sufficient for phrasing: walk up the dot member chain; the read is the
-// latter form iff the chain reaches an [[uninit]]-marked member (e.g. the
-// class-type member in this->agg.f) or bottoms out at a named [[uninit]]
-// declaration. An arrow access reaches its object through a pointer, so the
-// pointer wording applies from there on.
+// but sufficient for phrasing: walk up the dot member / array-element chain;
+// the read is the latter form iff the chain reaches an [[uninit]]-marked
+// member (e.g. the class-type member in this->agg.f) or bottoms out at a
+// named [[uninit]] declaration. An arrow access or a subscript on a pointer
+// reaches its object through a pointer, so the pointer wording applies from
+// there on.
 static bool isMemberChainOfUninitObject(const Expr *E) {
   E = E->IgnoreParenImpCasts();
-  while (const auto *ME = dyn_cast<MemberExpr>(E)) {
-    if (ME->getMemberDecl()->hasAttr<UninitAttr>())
-      return true;
-    if (ME->isArrow())
-      return false;
-    E = ME->getBase()->IgnoreParenImpCasts();
+  while (true) {
+    if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+      if (ME->getMemberDecl()->hasAttr<UninitAttr>())
+        return true;
+      if (ME->isArrow())
+        return false;
+      E = ME->getBase()->IgnoreParenImpCasts();
+      continue;
+    }
+    // a[i] and *a on an array glvalue (decay stripped below) are subobject
+    // accesses like a dot member access; on a pointer base they reach the
+    // object through the pointer.
+    if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E)) {
+      const Expr *Base = ASE->getBase()->IgnoreParenImpCasts();
+      if (!Base->getType()->isArrayType())
+        return false;
+      E = Base;
+      continue;
+    }
+    if (const auto *UO = dyn_cast<UnaryOperator>(E);
+        UO && UO->getOpcode() == UO_Deref) {
+      const Expr *Sub = UO->getSubExpr()->IgnoreParenImpCasts();
+      if (!Sub->getType()->isArrayType())
+        return false;
+      E = Sub;
+      continue;
+    }
+    break;
   }
   const auto *DRE = dyn_cast<DeclRefExpr>(E);
   return DRE && DRE->getDecl()->hasAttr<UninitAttr>();

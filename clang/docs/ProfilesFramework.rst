@@ -1138,11 +1138,12 @@ recognizers symmetric.
   current-object member are flow-tracked (by the CFG ``uninit_read`` pass and
   the ctor-body pass, which credit assignments), so their direct reads are left
   to those passes.  A *subobject* read of a named ``[[uninit]]`` object
-  (``s.x``, ``o.agg.f``) is recognized and diagnosed here: neither flow pass
-  tracks it, and member-wise delayed initialization of an ``[[uninit]]`` object
-  is itself banned (paper §5.4; only whole-object ``construct_at``
-  re-initializes, which is uniformly unmodeled), so no assignment could have
-  given the member a value.  Being Decl-less, it defers on a dependent context
+  (``s.x``, ``o.agg.f``) or array (``a[0]``, ``*a``, ``s.a[i]``) is recognized
+  and diagnosed here: neither flow pass tracks members or array elements, and
+  subobject-wise delayed initialization of an ``[[uninit]]`` object is itself
+  banned (paper §5.4/§5.5; only whole-object ``construct_at`` re-initializes,
+  which is uniformly unmodeled), so no assignment could have given the
+  subobject a value.  Being Decl-less, it defers on a dependent context
   and fires once, at instantiation.  An address-of (``&*p``), a reference
   binding, a discarded-value expression (``(void)*p``), and a write (``*p = 5``
   or ``s.x = 1``) apply no lvalue-to-rvalue conversion and so are not reads.

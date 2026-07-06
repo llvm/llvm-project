@@ -161,14 +161,21 @@ void test_const_ptr_use_is_not_a_read() {
   take_const_ptr(&x); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
 }
 
-// A read of a member of an [[uninit]] aggregate local is the read-through
-// check's (this CFG pass does not track member accesses of record locals, and
-// member-wise delayed initialization is banned, paper section 5.4). Full
-// coverage lives in safety-profile-init-ref-to-uninit.cpp.
+// A read of a subobject of an [[uninit]] local -- an aggregate's member or an
+// array's element -- is the read-through check's (this CFG pass does not track
+// member accesses of record locals or arrays at all, and subobject-wise
+// delayed initialization is banned, paper sections 5.4/5.5). Full coverage
+// lives in safety-profile-init-ref-to-uninit.cpp.
 struct Agg { int m; };
 void test_member_read_of_uninit_aggregate() {
   Agg s [[uninit]];
-  int y = s.m; // expected-error {{read of a member of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
+  int y = s.m; // expected-error {{read of a subobject of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
+  (void)y;
+}
+
+void test_element_read_of_uninit_array() {
+  [[uninit]] int a[2];
+  int y = a[0]; // expected-error {{read of a subobject of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
   (void)y;
 }
 #endif

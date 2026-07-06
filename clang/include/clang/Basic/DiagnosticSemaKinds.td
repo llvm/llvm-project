@@ -14195,7 +14195,7 @@ def err_init_uninit_requires_ref_to_uninit : ProfileRuleError<
   "'[[ref_to_uninit]]' under profile '%0'">;
 def err_init_uninit_read_through : ProfileRuleError<
   "read %select{through a '[[ref_to_uninit]]' pointer or reference|"
-  "of a member of an '[[uninit]]' object}1 accesses "
+  "of a subobject of an '[[uninit]]' object}1 accesses "
   "uninitialized memory under profile '%0'">;
 def err_init_uninit_ref_capture : ProfileRuleError<
   "capturing %1 by reference binds a reference to uninitialized memory "
