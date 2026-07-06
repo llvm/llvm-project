@@ -56,6 +56,12 @@ def common_conf(tags: Tags, markdown=Markdown.ALWAYS) -> Dict[str, Any]:
     myst_heading_slug_func = "llvm_sphinx.make_slug"
     templates_path = ["_templates"]
     master_doc = "index"
+    # The sphinx implementation of numfig seems to be incredibly slow for
+    # larger projects, and has an outsized impact on no-op builds or builds
+    # with just a single file changed (i.e. the cases which most impact the
+    # documentation writer's experience). There were only every 2 uses in 1
+    # document, so we just forbid using it until the performance can be fixed.
+    numfig = False
 
     return locals()
 
