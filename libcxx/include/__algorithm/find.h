@@ -92,7 +92,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find_vectorized(_Tp* __first, _Tp* __last, 
 
     // check the remaining 0-3 vectors
     while (static_cast<size_t>(__last - __first) >= __vec_size) {
-      if (auto __cmp_res = std::__simd_compare_eq(std::__load_vector<__vec>(__first), __values); std::__any_of(__cmp_res)) {
+      if (auto __cmp_res = std::__simd_compare_eq(std::__load_vector<__vec>(__first), __values);
+          std::__any_of(__cmp_res)) {
         return __first + std::__find_first_set(__cmp_res);
       }
       __first += __vec_size;

@@ -30,8 +30,7 @@ _LIBCPP_PUSH_MACROS
 // which silently breaks the mask-based algorithms below. We enable vectorization on
 // AIX (where we can enforce the correct mode via a static_assert) but leave other
 // AltiVec platforms disabled until they are explicitly validated.
-#if _LIBCPP_STD_VER >= 14 && defined(_LIBCPP_COMPILER_CLANG_BASED) &&                                                 \
-    (!defined(__ALTIVEC__) || defined(_AIX))
+#if _LIBCPP_STD_VER >= 14 && defined(_LIBCPP_COMPILER_CLANG_BASED) && (!defined(__ALTIVEC__) || defined(_AIX))
 #  define _LIBCPP_HAS_ALGORITHM_VECTOR_UTILS 1
 #else
 #  define _LIBCPP_HAS_ALGORITHM_VECTOR_UTILS 0
@@ -134,11 +133,14 @@ _LIBCPP_DIAGNOSTIC_POP
 // On targets with Altivec (PowerPC), the == operator on __ext_vector_type__
 // vectors produces a deprecated vector bool result under the old XL compat mode.
 // Centralise the comparison here so the suppression is in one place.
+// The return type is deduced via decltype because under Altivec the comparison
+// result element type differs from the operand element type (e.g. char16_t
+// operands yield a short mask vector).
 _LIBCPP_DIAGNOSTIC_PUSH
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated-altivec-src-compat")
 template <class _Tp, size_t _Np>
-[[__nodiscard__]] _LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI __simd_vector<_Tp, _Np>
-__simd_compare_eq(__simd_vector<_Tp, _Np> __lhs, __simd_vector<_Tp, _Np> __rhs) noexcept {
+[[__nodiscard__]] _LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI auto
+__simd_compare_eq(__simd_vector<_Tp, _Np> __lhs, __simd_vector<_Tp, _Np> __rhs) noexcept -> decltype(__lhs == __rhs) {
   return __lhs == __rhs;
 }
 _LIBCPP_DIAGNOSTIC_POP
@@ -148,8 +150,7 @@ _LIBCPP_DIAGNOSTIC_POP
 // which silently breaks the mask-based algorithms below. Refuse to compile in
 // that mode rather than produce wrong results.
 static_assert(sizeof(std::__simd_compare_eq(std::declval<__simd_vector<int, 4>>(),
-                                             std::declval<__simd_vector<int, 4>>())) ==
-                  sizeof(__simd_vector<int, 4>),
+                                            std::declval<__simd_vector<int, 4>>())) == sizeof(__simd_vector<int, 4>),
               "libc++'s vectorized algorithms require element-wise vector comparison semantics. "
               "Compile with -faltivec-src-compat=mixed or -faltivec-src-compat=gcc (not =xl).");
 #  endif
