@@ -42,6 +42,13 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
   /// Whether having image instructions.
   bool HasImage = false;
 
+  /// Whether the target has 1024 addressable VGPRs (v0-v1023). When false, only
+  /// v0-v255 are valid register names. Gates the high VGPR names in
+  /// getGCCRegNames() so v256-v1023 cannot be named on targets with 256 VGPRs.
+  bool has1024AddressableVGPRs() const {
+    return GPUKind == llvm::AMDGPU::GK_GFX1250;
+  }
+
   /// Target ID is device name followed by optional feature name postfixed
   /// by plus or minus sign delimitted by colon, e.g. gfx908:xnack+:sramecc-.
   /// If the target ID contains feature+, map it to true.
