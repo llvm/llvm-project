@@ -150,6 +150,57 @@ end subroutine
 ! CLEAN:             %[[MLAST:.*]] = arith.addi %[[MLBI]], %[[MMUL]] overflow<nsw> : i32
 ! CLEAN:             fir.store %[[MLAST]] to %[[MK_DECL]]#0 : !fir.ref<i32>
 
+! A DO CONCURRENT nested inside one of the cleaned plain DO loops is still
+! lowered as its own fir.do_concurrent.loop; the enclosing plain DO stays clean
+! and its post-loop value is materialized.
+subroutine dc_in_clean_loop(a, n, m)
+  implicit none
+  integer :: n, m, i, j, k
+  integer :: a(n)
+  do concurrent (i=1:n)
+    do j = 1, 3
+      do concurrent (k=1:m)
+        a(i) = a(i) + j*k
+      end do
+    end do
+  end do
+end subroutine
+
+! CHECK-LABEL:   func.func @_QPdc_in_clean_loop
+! CHECK:           %[[DJ_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFdc_in_clean_loopEj"}
+! CHECK:           fir.do_concurrent.loop (%{{[^)]*}}) = (%{{[^)]*}}) to (%{{[^)]*}}) step (%{{[^)]*}}) {
+! DEFAULT:           %[[DJRES:.*]] = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%{{.*}} = %{{.*}}) -> (i32) {
+! DEFAULT:           fir.store %[[DJRES]] to %[[DJ_DECL]]#0 : !fir.ref<i32>
+! CLEAN:             fir.do_loop %{{.*}} = %{{[^ ]+}} to %{{[^ ]+}} step %{{[^ ]+}} {
+! CLEAN:               fir.do_concurrent.loop (%{{[^)]*}}) = (%{{[^)]*}}) to (%{{[^)]*}}) step (%{{[^)]*}}) {
+! CLEAN:             %{{.*}} = arith.divsi %{{.*}}, %{{.*}} : i32
+! CLEAN:             fir.store %{{.*}} to %[[DJ_DECL]]#0 : !fir.ref<i32>
+
+! Plain DO loops inside a DO CONCURRENT that is itself nested in the body are
+! cleaned at any depth.
+subroutine loop_in_nested_dc(a, n, m, p)
+  implicit none
+  integer :: n, m, p, i, j, k, l
+  integer :: a(n)
+  do concurrent (i=1:n)
+    do j = 1, 3
+      do concurrent (k=1:m)
+        do l = 1, 4
+          a(i) = a(i) + j*k*l
+        end do
+      end do
+    end do
+  end do
+end subroutine
+
+! CHECK-LABEL:   func.func @_QPloop_in_nested_dc
+! CHECK:           fir.do_concurrent.loop (%{{[^)]*}}) = (%{{[^)]*}}) to (%{{[^)]*}}) step (%{{[^)]*}}) {
+! DEFAULT:           fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%{{.*}} = %{{.*}}) -> (i32) {
+! DEFAULT:           fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%{{.*}} = %{{.*}}) -> (i32) {
+! CLEAN:             fir.do_loop %{{.*}} = %{{[^ ]+}} to %{{[^ ]+}} step %{{[^ ]+}} {
+! CLEAN:               fir.do_concurrent.loop (%{{[^)]*}}) = (%{{[^)]*}}) to (%{{[^)]*}}) step (%{{[^)]*}}) {
+! CLEAN:                 fir.do_loop %{{.*}} = %{{[^ ]+}} to %{{[^ ]+}} step %{{[^ ]+}} {
+
 ! A plain DO loop not nested in a DO CONCURRENT body keeps its iter_arg even
 ! when the option is enabled.
 subroutine not_nested(x)
