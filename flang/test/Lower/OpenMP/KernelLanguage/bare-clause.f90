@@ -7,4 +7,4 @@ program test
     !$omp end target teams
 end program
 
-! CHECK: omp.target ompx_bare
+! CHECK: omp.target kernel_type(bare)

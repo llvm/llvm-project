@@ -11,19 +11,34 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/Intrinsics.h"
 
 using namespace llvm;
 
 TargetSubtargetInfo::TargetSubtargetInfo(
     const Triple &TT, StringRef CPU, StringRef TuneCPU, StringRef FS,
-    ArrayRef<StringRef> PN, ArrayRef<SubtargetFeatureKV> PF,
-    ArrayRef<SubtargetSubTypeKV> PD, const MCWriteProcResEntry *WPR,
-    const MCWriteLatencyEntry *WL, const MCReadAdvanceEntry *RA,
-    const InstrStage *IS, const unsigned *OC, const unsigned *FP)
-    : MCSubtargetInfo(TT, CPU, TuneCPU, FS, PN, PF, PD, WPR, WL, RA, IS, OC,
-                      FP) {}
+    StringTable PN, ArrayRef<SubtargetFeatureKV> PF,
+    ArrayRef<SubtargetSubTypeKV> PD, const MCSchedModel *PSM,
+    const MCWriteProcResEntry *WPR, const MCWriteLatencyEntry *WL,
+    const MCReadAdvanceEntry *RA, const InstrStage *IS, const unsigned *OC,
+    const unsigned *FP)
+    : MCSubtargetInfo(TT, CPU, TuneCPU, FS, PN, PF, PD, PSM, WPR, WL, RA, IS,
+                      OC, FP) {}
 
 TargetSubtargetInfo::~TargetSubtargetInfo() = default;
+
+bool TargetSubtargetInfo::isIntrinsicSupported(unsigned IntrinsicID) const {
+  StringRef RequiredFeatures = Intrinsic::getRequiredTargetFeatures(
+      static_cast<Intrinsic::ID>(IntrinsicID));
+
+  if (RequiredFeatures.empty())
+    return true;
+
+  auto [It, Inserted] = IntrinsicSupportCache.try_emplace(IntrinsicID);
+  if (Inserted)
+    It->second = checkFeatureExpression(RequiredFeatures);
+  return It->second;
+}
 
 bool TargetSubtargetInfo::enableAtomicExpand() const {
   return true;

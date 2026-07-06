@@ -119,9 +119,11 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:    case TDLD_dira:
 // CHECK-NEXT:      return Association::Block;
 // CHECK-NEXT:    } // switch (Dir)
-// CHECK-NEXT:    assert(llvm::to_underlying(Dir) >= llvm::to_underlying(Directive::First_) &&
-// CHECK-NEXT:           llvm::to_underlying(Dir) <= llvm::to_underlying(Directive::Last_) &&
-// CHECK-NEXT:           "Unexpected directive");
+// CHECK-NEXT:  #if !defined(__clang__) && defined(__GNUC__) && __GNUC__ < 9
+// CHECK-NEXT:    abort();
+// CHECK-NEXT:  #else
+// CHECK-NEXT:    llvm_unreachable("Unexpected directive");
+// CHECK-NEXT:  #endif
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
 // CHECK-NEXT:  constexpr Category getDirectiveCategory(Directive Dir) {
@@ -129,9 +131,11 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:    case TDLD_dira:
 // CHECK-NEXT:      return Category::Declarative;
 // CHECK-NEXT:    } // switch (Dir)
-// CHECK-NEXT:    assert(llvm::to_underlying(Dir) >= llvm::to_underlying(Directive::First_) &&
-// CHECK-NEXT:           llvm::to_underlying(Dir) <= llvm::to_underlying(Directive::Last_) &&
-// CHECK-NEXT:           "Unexpected directive");
+// CHECK-NEXT:  #if !defined(__clang__) && defined(__GNUC__) && __GNUC__ < 9
+// CHECK-NEXT:    abort();
+// CHECK-NEXT:  #else
+// CHECK-NEXT:    llvm_unreachable("Unexpected directive");
+// CHECK-NEXT:  #endif
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
 // CHECK-NEXT:  constexpr SourceLanguage getDirectiveLanguages(Directive D) {
@@ -139,9 +143,11 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:    case TDLD_dira:
 // CHECK-NEXT:      return SourceLanguage::C | SourceLanguage::Fortran;
 // CHECK-NEXT:    } // switch(D)
-// CHECK-NEXT:    assert(llvm::to_underlying(D) >= llvm::to_underlying(Directive::First_) &&
-// CHECK-NEXT:           llvm::to_underlying(D) <= llvm::to_underlying(Directive::Last_) &&
-// CHECK-NEXT:           "Unexpected directive");
+// CHECK-NEXT:  #if !defined(__clang__) && defined(__GNUC__) && __GNUC__ < 9
+// CHECK-NEXT:    abort();
+// CHECK-NEXT:  #else
+// CHECK-NEXT:    llvm_unreachable("Unexpected directive");
+// CHECK-NEXT:  #endif
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
 // CHECK-NEXT:  // Enumeration helper functions

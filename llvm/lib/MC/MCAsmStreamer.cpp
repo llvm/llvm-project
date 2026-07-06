@@ -42,6 +42,124 @@
 
 using namespace llvm;
 
+MCAsmBaseStreamer::MCAsmBaseStreamer(MCContext &Context,
+                                     std::unique_ptr<MCCodeEmitter> Emitter,
+                                     std::unique_ptr<MCAsmBackend> AsmBackend)
+    : MCStreamer(Context),
+      Assembler(std::make_unique<MCAssembler>(
+          Context, std::move(AsmBackend), std::move(Emitter),
+          (AsmBackend) ? AsmBackend->createObjectWriter(NullStream) : nullptr)),
+      CommentStream(CommentToEmit) {}
+
+void MCAsmBaseStreamer::addEncodingComment(const MCInst &Inst,
+                                           const MCSubtargetInfo &STI) {
+  raw_ostream &OS = getCommentOS();
+  SmallString<256> Code;
+  SmallVector<MCFixup, 4> Fixups;
+
+  // If we have no code emitter, don't emit code.
+  if (!getAssembler().getEmitterPtr())
+    return;
+
+  getAssembler().getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
+
+  // RISC-V instructions are always little-endian, even on BE systems.
+  bool ForceLE = getContext().getTargetTriple().isRISCV();
+
+  const MCAsmInfo &MAI = getContext().getAsmInfo();
+
+  // If we are showing fixups, create symbolic markers in the encoded
+  // representation. We do this by making a per-bit map to the fixup item index,
+  // then trying to display it as nicely as possible.
+  SmallVector<uint8_t, 64> FixupMap;
+  FixupMap.resize(Code.size() * 8);
+  for (unsigned I = 0, E = Code.size() * 8; I != E; ++I)
+    FixupMap[I] = 0;
+
+  for (unsigned I = 0, E = Fixups.size(); I != E; ++I) {
+    MCFixup &F = Fixups[I];
+    MCFixupKindInfo Info =
+        getAssembler().getBackend().getFixupKindInfo(F.getKind());
+    for (unsigned J = 0; J != Info.TargetSize; ++J) {
+      unsigned Index = F.getOffset() * 8 + Info.TargetOffset + J;
+      assert(Index < Code.size() * 8 && "Invalid offset in fixup!");
+      FixupMap[Index] = 1 + I;
+    }
+  }
+
+  // FIXME: Note the fixup comments for Thumb2 are completely bogus since the
+  // high order halfword of a 32-bit Thumb2 instruction is emitted first.
+  OS << "encoding: [";
+  for (unsigned I = 0, E = Code.size(); I != E; ++I) {
+    if (I)
+      OS << ',';
+
+    // See if all bits are the same map entry.
+    uint8_t MapEntry = FixupMap[I * 8 + 0];
+    for (unsigned J = 1; J != 8; ++J) {
+      if (FixupMap[I * 8 + J] == MapEntry)
+        continue;
+
+      MapEntry = uint8_t(~0U);
+      break;
+    }
+
+    if (MapEntry != uint8_t(~0U)) {
+      if (MapEntry == 0) {
+        OS << format("0x%02x", uint8_t(Code[I]));
+      } else {
+        if (Code[I]) {
+          // FIXME: Some of the 8 bits require fix up.
+          OS << format("0x%02x", uint8_t(Code[I])) << '\''
+             << char('A' + MapEntry - 1) << '\'';
+        } else
+          OS << char('A' + MapEntry - 1);
+      }
+    } else {
+      // Otherwise, write out in binary.
+      OS << "0b";
+      for (unsigned J = 8; J--;) {
+        unsigned Bit = (Code[I] >> J) & 1;
+
+        unsigned FixupBit;
+        // RISC-V instructions are always little-endian.
+        // The FixupMap is indexed by actual bit positions in the LE
+        // instruction.
+        if (MAI.isLittleEndian() || ForceLE)
+          FixupBit = I * 8 + J;
+        else
+          FixupBit = I * 8 + (7 - J);
+
+        if (uint8_t MapEntry = FixupMap[FixupBit]) {
+          assert(Bit == 0 && "Encoder wrote into fixed up bit!");
+          OS << char('A' + MapEntry - 1);
+        } else
+          OS << Bit;
+      }
+    }
+  }
+  OS << "]\n";
+
+  for (unsigned I = 0, E = Fixups.size(); I != E; ++I) {
+    MCFixup &F = Fixups[I];
+    OS << "  fixup " << char('A' + I) << " - "
+       << "offset: " << F.getOffset() << ", value: ";
+    MAI.printExpr(OS, *F.getValue());
+    auto Kind = F.getKind();
+    if (mc::isRelocation(Kind))
+      OS << ", relocation type: " << Kind;
+    else {
+      OS << ", kind: ";
+      auto Info = getAssembler().getBackend().getFixupKindInfo(Kind);
+      if (F.isPCRel() && StringRef(Info.Name).starts_with("FK_Data_"))
+        OS << "FK_PCRel_" << (Info.TargetSize / 8);
+      else
+        OS << Info.Name;
+    }
+    OS << '\n';
+  }
+}
+
 namespace {
 
 class MCAsmStreamer final : public MCAsmBaseStreamer {
@@ -49,12 +167,8 @@ class MCAsmStreamer final : public MCAsmBaseStreamer {
   formatted_raw_ostream &OS;
   const MCAsmInfo *MAI;
   std::unique_ptr<MCInstPrinter> InstPrinter;
-  std::unique_ptr<MCAssembler> Assembler;
 
   SmallString<128> ExplicitCommentToEmit;
-  SmallString<128> CommentToEmit;
-  raw_svector_ostream CommentStream;
-  raw_null_ostream NullStream;
 
   bool EmittedSectionDirective = false;
 
@@ -89,13 +203,9 @@ public:
                 std::unique_ptr<MCInstPrinter> printer,
                 std::unique_ptr<MCCodeEmitter> emitter,
                 std::unique_ptr<MCAsmBackend> asmbackend)
-      : MCAsmBaseStreamer(Context), OSOwner(std::move(os)), OS(*OSOwner),
-        MAI(&Context.getAsmInfo()), InstPrinter(std::move(printer)),
-        Assembler(std::make_unique<MCAssembler>(
-            Context, std::move(asmbackend), std::move(emitter),
-            (asmbackend) ? asmbackend->createObjectWriter(NullStream)
-                         : nullptr)),
-        CommentStream(CommentToEmit) {
+      : MCAsmBaseStreamer(Context, std::move(emitter), std::move(asmbackend)),
+        OSOwner(std::move(os)), OS(*OSOwner), MAI(&Context.getAsmInfo()),
+        InstPrinter(std::move(printer)) {
     assert(InstPrinter);
     if (Assembler->getBackendPtr())
       setAllowAutoPadding(Assembler->getBackend().allowAutoPadding());
@@ -121,7 +231,6 @@ public:
     }
   }
 
-  MCAssembler &getAssembler() { return *Assembler; }
   MCAssembler *getAssemblerPtr() override { return nullptr; }
 
   inline void EmitEOL() {
@@ -149,18 +258,6 @@ public:
   /// output of the compiler more readable. This only affects the MCAsmStreamer
   /// and only when verbose assembly output is enabled.
   void AddComment(const Twine &T, bool EOL = true) override;
-
-  /// Add a comment showing the encoding of an instruction.
-  void AddEncodingComment(const MCInst &Inst, const MCSubtargetInfo &);
-
-  /// Return a raw_ostream that comments can be written to.
-  /// Unlike AddComment, you are required to terminate comments with \n if you
-  /// use this method.
-  raw_ostream &getCommentOS() override {
-    if (!IsVerboseAsm)
-      return nulls();  // Discard comments unless in verbose asm mode.
-    return CommentStream;
-  }
 
   void emitRawComment(const Twine &T, bool TabPrefix = true) override;
 
@@ -284,7 +381,7 @@ public:
                             uint8_t FillLen = 1,
                             unsigned MaxBytesToEmit = 0) override;
 
-  void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
+  void emitCodeAlignment(Align Alignment, const MCSubtargetInfo &STI,
                          unsigned MaxBytesToEmit = 0) override;
   void emitPrefAlign(Align Alignment, const MCSymbol &End, bool EmitNops,
                      uint8_t Fill, const MCSubtargetInfo &STI) override;
@@ -1573,7 +1670,7 @@ void MCAsmStreamer::emitValueToAlignment(Align Alignment, int64_t Fill,
 }
 
 void MCAsmStreamer::emitCodeAlignment(Align Alignment,
-                                      const MCSubtargetInfo *STI,
+                                      const MCSubtargetInfo &STI,
                                       unsigned MaxBytesToEmit) {
   // Emit with a text fill value.
   if (MAI->getTextAlignFillValue())
@@ -1878,7 +1975,7 @@ void MCAsmStreamer::emitCVLocDirective(unsigned FunctionId, unsigned FileNo,
                                        bool PrologueEnd, bool IsStmt,
                                        StringRef FileName, SMLoc Loc) {
   // Validate the directive.
-  if (!checkCVLocSection(FunctionId, FileNo, Loc))
+  if (!checkCVLocSection(FunctionId, Loc))
     return;
 
   OS << "\t.cv_loc\t" << FunctionId << " " << FileNo << " " << Line << " "
@@ -2496,113 +2593,6 @@ void MCAsmStreamer::emitCGProfileEntry(const MCSymbolRefExpr *From,
   EmitEOL();
 }
 
-void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
-                                       const MCSubtargetInfo &STI) {
-  raw_ostream &OS = getCommentOS();
-  SmallString<256> Code;
-  SmallVector<MCFixup, 4> Fixups;
-
-  // If we have no code emitter, don't emit code.
-  if (!getAssembler().getEmitterPtr())
-    return;
-
-  getAssembler().getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
-
-  // RISC-V instructions are always little-endian, even on BE systems.
-  bool ForceLE = getContext().getTargetTriple().isRISCV();
-
-  // If we are showing fixups, create symbolic markers in the encoded
-  // representation. We do this by making a per-bit map to the fixup item index,
-  // then trying to display it as nicely as possible.
-  SmallVector<uint8_t, 64> FixupMap;
-  FixupMap.resize(Code.size() * 8);
-  for (unsigned i = 0, e = Code.size() * 8; i != e; ++i)
-    FixupMap[i] = 0;
-
-  for (unsigned i = 0, e = Fixups.size(); i != e; ++i) {
-    MCFixup &F = Fixups[i];
-    MCFixupKindInfo Info =
-        getAssembler().getBackend().getFixupKindInfo(F.getKind());
-    for (unsigned j = 0; j != Info.TargetSize; ++j) {
-      unsigned Index = F.getOffset() * 8 + Info.TargetOffset + j;
-      assert(Index < Code.size() * 8 && "Invalid offset in fixup!");
-      FixupMap[Index] = 1 + i;
-    }
-  }
-
-  // FIXME: Note the fixup comments for Thumb2 are completely bogus since the
-  // high order halfword of a 32-bit Thumb2 instruction is emitted first.
-  OS << "encoding: [";
-  for (unsigned i = 0, e = Code.size(); i != e; ++i) {
-    if (i)
-      OS << ',';
-
-    // See if all bits are the same map entry.
-    uint8_t MapEntry = FixupMap[i * 8 + 0];
-    for (unsigned j = 1; j != 8; ++j) {
-      if (FixupMap[i * 8 + j] == MapEntry)
-        continue;
-
-      MapEntry = uint8_t(~0U);
-      break;
-    }
-
-    if (MapEntry != uint8_t(~0U)) {
-      if (MapEntry == 0) {
-        OS << format("0x%02x", uint8_t(Code[i]));
-      } else {
-        if (Code[i]) {
-          // FIXME: Some of the 8 bits require fix up.
-          OS << format("0x%02x", uint8_t(Code[i])) << '\''
-             << char('A' + MapEntry - 1) << '\'';
-        } else
-          OS << char('A' + MapEntry - 1);
-      }
-    } else {
-      // Otherwise, write out in binary.
-      OS << "0b";
-      for (unsigned j = 8; j--;) {
-        unsigned Bit = (Code[i] >> j) & 1;
-
-        unsigned FixupBit;
-        // RISC-V instructions are always little-endian.
-        // The FixupMap is indexed by actual bit positions in the LE
-        // instruction.
-        if (MAI->isLittleEndian() || ForceLE)
-          FixupBit = i * 8 + j;
-        else
-          FixupBit = i * 8 + (7-j);
-
-        if (uint8_t MapEntry = FixupMap[FixupBit]) {
-          assert(Bit == 0 && "Encoder wrote into fixed up bit!");
-          OS << char('A' + MapEntry - 1);
-        } else
-          OS << Bit;
-      }
-    }
-  }
-  OS << "]\n";
-
-  for (unsigned i = 0, e = Fixups.size(); i != e; ++i) {
-    MCFixup &F = Fixups[i];
-    OS << "  fixup " << char('A' + i) << " - "
-       << "offset: " << F.getOffset() << ", value: ";
-    MAI->printExpr(OS, *F.getValue());
-    auto Kind = F.getKind();
-    if (mc::isRelocation(Kind))
-      OS << ", relocation type: " << Kind;
-    else {
-      OS << ", kind: ";
-      auto Info = getAssembler().getBackend().getFixupKindInfo(Kind);
-      if (F.isPCRel() && StringRef(Info.Name).starts_with("FK_Data_"))
-        OS << "FK_PCRel_" << (Info.TargetSize / 8);
-      else
-        OS << Info.Name;
-    }
-    OS << '\n';
-  }
-}
-
 void MCAsmStreamer::emitInstruction(const MCInst &Inst,
                                     const MCSubtargetInfo &STI) {
   if (LFIRewriter && LFIRewriter->rewriteInst(Inst, *this, STI))
@@ -2619,7 +2609,7 @@ void MCAsmStreamer::emitInstruction(const MCInst &Inst,
     MCDwarfLineEntry::make(this, getCurrentSectionOnly());
 
   // Show the encoding in a comment if we have a code emitter.
-  AddEncodingComment(Inst, STI);
+  addEncodingComment(Inst, STI);
 
   // Show the MCInst if enabled.
   if (ShowInst) {

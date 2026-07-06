@@ -388,13 +388,13 @@ TEST(DWARFExpression, DW_OP_const) {
       Evaluate({DW_OP_const8s, 0x00, 0x11, 0x22, 0x33, 0x44, 0x42, 0x47, 0x88}),
       ExpectScalar(0x33221100));
 
-  // Don't truncate to address size for compatibility with clang (pr48087).
+  // LEB constants also push generic values, so truncate to address size.
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_constu, 0x81, 0x82, 0x84, 0x88, 0x90, 0xa0, 0x40}),
-      ExpectScalar(0x01010101010101));
+      ExpectScalar(32, 0x01010101, false));
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_consts, 0x81, 0x82, 0x84, 0x88, 0x90, 0xa0, 0x40}),
-      ExpectScalar(0xffff010101010101));
+      ExpectScalar(32, 0x01010101, true));
 }
 
 TEST(DWARFExpression, DW_OP_skip) {
@@ -574,6 +574,19 @@ DWARF:
   EXPECT_THAT_ERROR(
       t.Eval({DW_OP_const1s, 'X', DW_OP_convert, 0x1d}).takeError(),
       llvm::Failed());
+
+  // A non-zero DIE offset with no DWARF unit.
+  EXPECT_THAT_ERROR(
+      Evaluate({DW_OP_const1s, 'X', DW_OP_convert, 0x01}, nullptr, nullptr)
+          .takeError(),
+      llvm::FailedWithMessage(
+          "DW_OP_convert with a DIE offset requires a DWARF unit"));
+
+  // DW_OP_convert with an empty stack.
+  EXPECT_THAT_ERROR(
+      Evaluate({DW_OP_convert, 0x00}, nullptr, nullptr).takeError(),
+      llvm::FailedWithMessage("DW_OP_convert needs at least 1 stack entries "
+                              "(stack has 0 entries)"));
 }
 
 TEST(DWARFExpression, DW_OP_stack_value) {
@@ -1113,6 +1126,22 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_regx) {
       ExpectScalar(0xBEEF, Value::ContextType::RegisterInfo));
 }
 
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref_size_zero) {
+  // DW_OP_deref_size with size 0 must report an error instead of constructing
+  // a DataExtractor with addr_size 0 (caught by lldb-dwarf-expression-fuzzer:
+  // assertion failure in DataExtractor / DerefSizeExtractDataHelper).
+  TestContext ctx;
+  MockMemory::Map mem;
+  mem[{lldb::addr_t(0), size_t(0)}] = {};
+  ASSERT_TRUE(
+      CreateTestContext(&ctx, "i386-pc-linux", std::nullopt, MockMemory(mem)));
+  ExecutionContext exe_ctx(ctx.process_sp);
+  EXPECT_THAT_ERROR(Evaluate({DW_OP_lit0, DW_OP_deref_size, 0x00}, {}, {},
+                             &exe_ctx, ctx.reg_ctx_sp.get())
+                        .takeError(),
+                    llvm::Failed());
+}
+
 TEST_F(DWARFExpressionMockProcessTest, DW_OP_breg0) {
   TestContext ctx;
   ASSERT_TRUE(CreateTestContext(&ctx, "i386-pc-linux",
@@ -1179,10 +1208,11 @@ TEST_F(DWARFExpressionMockProcessTest, WASM_DW_OP_addr) {
   ASSERT_TRUE(CreateTestContext(&test_ctx, "wasm32-unknown-unknown-wasm"));
 
   ExecutionContext exe_ctx(test_ctx.target_sp, false);
-  // DW_OP_addr takes a single operand of address size width:
+  // DW_OP_addr takes a single operand of address size width. It denotes a
+  // location in the module's address space, i.e. a file address.
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_addr, 0x40, 0x0, 0x0, 0x0}, {}, {}, &exe_ctx),
-      ExpectLoadAddress(0x40));
+      ExpectFileAddress(0x40));
 }
 
 TEST_F(DWARFExpressionMockProcessTest, WASM_DW_OP_addr_index) {
@@ -1255,11 +1285,11 @@ DWARF:
   DWARFExpression expr(extractor);
 
   llvm::Expected<Value> result = evaluate(expr);
-  EXPECT_THAT_EXPECTED(result, ExpectLoadAddress(0x5678u));
+  EXPECT_THAT_EXPECTED(result, ExpectFileAddress(0x5678u));
 
   ASSERT_TRUE(expr.Update_DW_OP_addr(dwarf_cu, 0xdeadbeef));
   result = evaluate(expr);
-  EXPECT_THAT_EXPECTED(result, ExpectLoadAddress(0xdeadbeefu));
+  EXPECT_THAT_EXPECTED(result, ExpectFileAddress(0xdeadbeefu));
 }
 
 class CustomSymbolFileDWARF : public SymbolFileDWARF {

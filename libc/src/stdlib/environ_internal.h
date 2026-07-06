@@ -129,6 +129,11 @@ public:
   // Returns 0 on success, -1 on allocation failure (caller should set
   // errno to ENOMEM).
   int set(cpp::string_view name, cpp::string_view value, bool overwrite);
+
+  // Remove a variable by name. Frees the string if we own it, then
+  // compacts the array. Returns 0 on success (including if the variable
+  // was not found), -1 on allocation failure during array transition.
+  int unset(cpp::string_view name);
 };
 
 } // namespace internal

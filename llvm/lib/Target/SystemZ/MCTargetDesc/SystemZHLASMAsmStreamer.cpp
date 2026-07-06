@@ -154,7 +154,7 @@ void SystemZHLASMAsmStreamer::emitValueToAlignment(Align Alignment,
 }
 
 void SystemZHLASMAsmStreamer::emitCodeAlignment(Align Alignment,
-                                                const MCSubtargetInfo *STI,
+                                                const MCSubtargetInfo &STI,
                                                 unsigned MaxBytesToEmit) {
   // Emit with a text fill value.
   if (MAI->getTextAlignFillValue())
@@ -188,6 +188,9 @@ void SystemZHLASMAsmStreamer::emitBytes(StringRef Data) {
 
 void SystemZHLASMAsmStreamer::emitInstruction(const MCInst &Inst,
                                               const MCSubtargetInfo &STI) {
+  // Show the encoding in a comment if we have a code emitter.
+  addEncodingComment(Inst, STI);
+  EmitEOL();
 
   InstPrinter->printInst(&Inst, 0, "", STI, OS);
   EmitEOL();
