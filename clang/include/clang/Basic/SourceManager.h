@@ -755,22 +755,23 @@ class SourceManager : public RefCountedBase<SourceManager> {
   static const SourceLocation::UIntTy MaxLoadedOffset =
       1ULL << (8 * sizeof(SourceLocation::UIntTy) - 1);
 
-  /// --- Source-location de-duplication (prototype, Stage 2) ---
-  /// The canonical loaded location of a file: where its SLoc entry first landed
-  /// in the global address space. Lets a later module reuse it instead of
-  /// re-allocating. Keyed by FileEntry identity (the same identity Clang uses
-  /// to dedup file content).
+  // === Source location de-duplication ===
 public:
+  /// Where a file's SLoc entry first landed in the loaded address space. A file
+  /// shared by several modules is loaded once; later modules reuse this rather
+  /// than allocating their own.
   struct LoadedFileLoc {
-    SourceLocation::UIntTy Offset = 0; ///< global raw start offset
+    SourceLocation::UIntTy Offset = 0; ///< global start offset
     int ID = 0;                        ///< global SLoc entry ID
   };
 
 private:
+  /// The first loaded location of each file, keyed by the FileEntry identity
+  /// Clang already uses to share file contents.
   llvm::DenseMap<const FileEntry *, LoadedFileLoc> CanonicalLoadedFiles;
-  /// Number of loaded file SLoc entries that duplicated an already-loaded file.
+  /// Number of loaded file entries reused from an earlier module.
   unsigned NumDuplicateLoadedFiles = 0;
-  /// SLoc address-space bytes those duplicates reused instead of allocating.
+  /// Address-space bytes reused instead of allocated, for -print-stats.
   uint64_t DuplicateLoadedBytes = 0;
 
 public:
@@ -793,7 +794,7 @@ public:
       CanonicalLoadedFiles.try_emplace(FE, LoadedFileLoc{Offset, ID});
   }
 
-  /// Account for a de-duplicated file entry (for -print-stats reporting).
+  /// Record that a loaded file entry was reused from an earlier module.
   void noteDuplicateLoadedFile(uint64_t Size) {
     ++NumDuplicateLoadedFiles;
     DuplicateLoadedBytes += Size;

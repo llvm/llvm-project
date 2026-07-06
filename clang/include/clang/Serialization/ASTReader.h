@@ -2399,17 +2399,16 @@ public:
   llvm::Expected<SourceLocation::UIntTy> readSLocOffset(ModuleFile *F,
                                                         unsigned Index);
 
-  /// Walk module F's SLoc entry records (read-only). Fills Offsets[i]
-  /// with each entry's local offset and \p Files[i] with its FileEntry (null
-  /// for non-file entries). Returns false if the records couldn't be read.
+  /// Read \p F's SLoc entry records without materializing them, filling
+  /// \p Offsets[i] with each entry's local offset and \p Files[i] with its
+  /// FileEntry (null for non-file entries). Returns false on a malformed record.
   bool scanLoadedSLocEntries(ModuleFile &F,
                              SmallVectorImpl<uint32_t> &Offsets,
                              SmallVectorImpl<const FileEntry *> &Files);
 
-  /// Map a module-local SLoc entry offset (the value stored in an entry record,
-  /// i.e. Record[0]) to its global raw start offset, applying the
-  /// de-duplication remap. Equals (SLocEntryBaseOffset + LocalOffset) when the
-  /// module is not de-duplicated.
+  /// Map a local SLoc entry offset (as stored in the entry record) to its
+  /// global start offset. This is (SLocEntryBaseOffset + LocalOffset) unless a
+  /// file in this module was reused from an earlier one.
   SourceLocation::UIntTy remapSLocEntryOffset(ModuleFile &F,
                                               uint32_t LocalOffset) const;
 
@@ -2507,15 +2506,10 @@ public:
     // translated or refactor the code to make it clear that
     // TranslateSourceLocation won't be called with translated source location.
 
-    // De-duplication (Stage 2): a module's local->global offset map may be
-    // piecewise rather than a single flat shift, so look up the segment that
-    // covers this location. The seeded identity segment makes this identical to
-    // the flat shift below; redirect segments (Stage 2b) send a duplicated
-    // file's locations into the module that first loaded it.
-    //
-    // Segments are keyed by the *file-offset* part of the location, so strip
-    // the macro bit before matching and re-apply it to the result (a macro
-    // location encodes its position in the low bits with the high bit set).
+    // When a file in this module was reused from an earlier one, the map is
+    // piecewise rather than a single shift, so find the segment covering this
+    // location. A macro location keeps its offset in the low bits with the high
+    // bit set, so match on the offset part and re-apply the bit to the result.
     if (!ModuleFile.SLocRemap.empty()) {
       SourceLocation::UIntTy Raw = Loc.getRawEncoding();
       SourceLocation::UIntTy MacroBit = Raw & SourceLocation::MacroIDBit;
@@ -2550,9 +2544,9 @@ public:
     assert(FID.ID >= 0 && "Reading non-local FileID.");
     if (FID.isInvalid())
       return FID;
-    // De-duplication (Stage 2b): a local FileID may map to the canonical copy
-    // in an earlier module, so consult the explicit map when present. Local
-    // FileID N corresponds to local entry index N-1.
+    // When a file was reused from an earlier module, its local FileID maps to
+    // that module's copy, so use the explicit map. Local FileID N is local
+    // entry index N-1.
     if (!F.LocalToGlobalID.empty()) {
       assert((unsigned)(FID.ID - 1) < F.LocalToGlobalID.size() &&
              "local FileID out of range");

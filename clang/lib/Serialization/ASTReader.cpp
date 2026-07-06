@@ -1913,9 +1913,8 @@ int ASTReader::getSLocEntryID(SourceLocation::UIntTy SLocOffset) {
 
   bool Invalid = false;
 
-  // De-duplication (Stage 2b): the global table holds only this module's kept
-  // entries, so search over kept slots and translate each slot to its on-disk
-  // local entry index when reading the offset.
+  // The table holds only this module's kept entries, so search over kept slots
+  // and map each back to its on-disk local index when reading the offset.
   bool Dedup = !F->KeptSLocLocalIndex.empty();
   unsigned NumSlots =
       Dedup ? F->KeptSLocLocalIndex.size() : F->LocalNumSLocEntries;
@@ -2009,9 +2008,9 @@ bool ASTReader::ReadSLocEntry(int ID) {
   };
 
   ModuleFile *F = GlobalSLocEntryMap.find(-ID)->second;
-  // De-duplication (Stage 2b): with entries skipped, the global slot
-  // (ID - SLocEntryBaseID) is no longer the on-disk local index, so translate
-  // it through the kept-index table when present.
+  // When entries have been skipped, the global slot (ID - SLocEntryBaseID) is
+  // no longer the on-disk local index, so map it back through the kept-index
+  // table.
   unsigned LocalIndex = ID - F->SLocEntryBaseID;
   if (!F->KeptSLocLocalIndex.empty()) {
     assert(LocalIndex < F->KeptSLocLocalIndex.size() && "kept slot out of range");
@@ -2024,8 +2023,6 @@ bool ASTReader::ReadSLocEntry(int ID) {
   }
 
   BitstreamCursor &SLocEntryCursor = F->SLocEntryCursor;
-  SourceLocation::UIntTy BaseOffset = F->SLocEntryBaseOffset;
-  (void)BaseOffset;
 
   ++NumSLocEntriesRead;
   Expected<llvm::BitstreamEntry> MaybeEntry = SLocEntryCursor.advance();
@@ -4307,17 +4304,16 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       F.SLocEntryOffsetsBase = Record[2] + F.SourceManagerBlockStartOffset;
       unsigned N = F.LocalNumSLocEntries;
 
-      // De-duplication (Stage 2b): scan this module's SLoc entries *before*
-      // allocating, so we can recognize files already loaded by an earlier
-      // module and reserve less address space for them.
+      // Scan this module's SLoc entries before allocating, so files already
+      // loaded by an earlier module can be recognized and reserve no space here.
       SmallVector<uint32_t, 64> Offsets;
       SmallVector<const FileEntry *, 64> Files;
       bool Scanned = scanLoadedSLocEntries(F, Offsets, Files);
 
-      // Classify each entry against the canonical map as it stands now, before
-      // this module registers any of its own files, and store the decision per
-      // entry. The build pass reads these flags, so a file that appears
-      // multiple times in this module is classified consistently.
+      // Decide duplicates here, up front. The loop below registers each kept
+      // file as it goes, so checking against the map there would treat a file
+      // that appears more than once in this module as a duplicate of its own
+      // first occurrence.
       auto entrySize = [&](unsigned I) -> uint64_t {
         return (I + 1 < N ? Offsets[I + 1] : SLocSpaceSize) - Offsets[I];
       };
@@ -4336,8 +4332,8 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       unsigned ReducedNumEntries = N - NumDupEntries;
       SourceLocation::UIntTy ReducedSize = SLocSpaceSize - DupBytes;
 
-      // Reserve the reduced amount (equals the full amount when nothing is
-      // de-duplicated).
+      // Reserve the reduced amount (equal to the full amount when no file is
+      // reused).
       std::tie(F.SLocEntryBaseID, F.SLocEntryBaseOffset) =
           SourceMgr.AllocateLoadedSLocEntries(ReducedNumEntries, ReducedSize);
       if (!F.SLocEntryBaseID) {
@@ -4348,9 +4344,8 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       }
 
       if (NumDupEntries == 0) {
-        // No de-duplication: one identity segment (== flat shift) and a linear
-        // local->global ID mapping. Register each file as the canonical copy so
-        // later modules can reuse it.
+        // Nothing reused: a single segment equal to the flat shift, and a
+        // linear ID mapping. Record each file so later modules can reuse it.
         F.SLocRemap.push_back(
             {/*LocalBegin=*/0, /*LocalEnd=*/~SourceLocation::UIntTy(0),
              /*Delta=*/static_cast<int64_t>(F.SLocEntryBaseOffset) - 2});
@@ -4361,9 +4356,8 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
                   Files[I], F.SLocEntryBaseOffset + Offsets[I],
                   F.SLocEntryBaseID + (int)I);
       } else {
-        // De-duplication: build keep/redirect offset segments and the
-        // local->global ID map. Skipped (duplicate) entries get no slot and no
-        // address space; their references are redirected to the canonical copy.
+        // Build the offset segments and the ID map. A reused file gets no slot
+        // and no address space; its references point at the earlier copy.
         F.LocalToGlobalID.assign(N, 0);
         F.KeptSLocLocalIndex.reserve(ReducedNumEntries);
         uint64_t DupBefore = 0;

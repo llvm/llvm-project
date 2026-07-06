@@ -346,31 +346,33 @@ public:
   /// AST file.
   const uint32_t *SLocEntryOffsets = nullptr;
 
-  // === Source-location de-duplication: offset remap (prototype, Stage 2) ===
+  // === Source location de-duplication ===
 
-  /// One offset-remap segment in this module's raw SourceLocation space:
-  /// a raw local location L in [LocalBegin, LocalEnd) maps to global L + Delta.
+  /// One segment of the local-to-global source location map: a local raw
+  /// location L in [LocalBegin, LocalEnd) maps to the global location L + Delta.
   struct SLocRemapSegment {
     SourceLocation::UIntTy LocalBegin;
     SourceLocation::UIntTy LocalEnd;
     int64_t Delta;
   };
 
-  /// Piecewise local->global offset map for this module, sorted by LocalBegin.
-  /// Empty => fall back to the flat shift by (SLocEntryBaseOffset - 2).
-  /// Stage 2a seeds a single identity segment equivalent to the flat shift;
-  /// Stage 2b adds redirect/shift segments for de-duplicated files.
+  /// The local-to-global source location map for this module, sorted by
+  /// LocalBegin. A module whose files are all distinct has a single segment
+  /// equivalent to the flat shift by (SLocEntryBaseOffset - 2); when a file is
+  /// reused from an earlier module, extra segments redirect that file's
+  /// locations into the earlier module. Empty for a module that is not loaded
+  /// through this path, in which case the flat shift is used directly.
   llvm::SmallVector<SLocRemapSegment, 4> SLocRemap;
 
-  /// Maps a local SLoc entry index -> its resulting global SLoc entry ID.
-  /// Kept entries map to their own newly-allocated ID; de-duplicated entries
-  /// map to the ID of the canonical copy in an earlier module. Empty => no
-  /// de-duplication for this module (global ID is SLocEntryBaseID + index).
+  /// Maps a local SLoc entry index to its global SLoc entry ID. A kept entry
+  /// maps to its own ID; a file reused from an earlier module maps to that
+  /// module's copy. Empty when no file was reused (the global ID is then
+  /// SLocEntryBaseID + index).
   std::vector<int> LocalToGlobalID;
 
-  /// For each kept global slot j (0-based, relative to SLocEntryBaseID), the
-  /// original local entry index in this module (index into SLocEntryOffsets).
-  /// Empty => no de-duplication (kept slot j == local index j).
+  /// For each kept entry, in order, its original local index (into
+  /// SLocEntryOffsets). Reused entries have no slot, so this skips them. Empty
+  /// when no file was reused (kept slot j is then local index j).
   std::vector<unsigned> KeptSLocLocalIndex;
 
   // === Identifiers ===
