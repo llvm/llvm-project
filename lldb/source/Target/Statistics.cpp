@@ -111,6 +111,8 @@ json::Value ModuleStats::ToJSON() const {
 llvm::json::Value ConstStringStats::ToJSON() const {
   json::Object obj;
   obj.try_emplace<int64_t>("bytesTotal", stats.GetBytesTotal());
+  obj.try_emplace<int64_t>("bytesUsed", stats.GetBytesUsed());
+  obj.try_emplace<int64_t>("bytesUnused", stats.GetBytesUnused());
   return obj;
 }
 
