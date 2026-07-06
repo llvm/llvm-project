@@ -1584,18 +1584,42 @@ public:
   }
 };
 
-/// Converts `spirv.GL.FMix`/`spirv.CL.mix` to `fma(a, y - x, x)`, the linear
-/// blend `x * (1 - a) + y * a`. Operands are taken positionally because the GL
-/// and CL ops name their third operand differently (`a` vs. `z`).
-template <typename SPIRVOp>
-class MixPattern : public SPIRVToLLVMConversion<SPIRVOp> {
+/// Converts `spirv.GL.FMix` to `x * (1 - a) + y * a` as specified by
+/// GL.std.450.
+class GLFMixPattern : public SPIRVToLLVMConversion<spirv::GLFMixOp> {
 public:
-  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
+  using SPIRVToLLVMConversion<spirv::GLFMixOp>::SPIRVToLLVMConversion;
 
   LogicalResult
-  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
+  matchAndRewrite(spirv::GLFMixOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto dstType = this->getTypeConverter()->convertType(op.getType());
+    Type dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    Value x = adaptor.getX();
+    Value y = adaptor.getY();
+    Value a = adaptor.getA();
+    Value one = createFPConstant(loc, op.getType(), dstType, rewriter, 1.0);
+    Value oneMinusA = LLVM::FSubOp::create(rewriter, loc, dstType, one, a);
+    Value lhs = LLVM::FMulOp::create(rewriter, loc, dstType, x, oneMinusA);
+    Value rhs = LLVM::FMulOp::create(rewriter, loc, dstType, y, a);
+    rewriter.replaceOpWithNewOp<LLVM::FAddOp>(op, dstType, lhs, rhs);
+    return success();
+  }
+};
+
+/// Converts `spirv.CL.mix` to `fma(a, y - x, x)`. The OpenCL spec defines
+/// mix as `x + (y - x) * a` and explicitly permits FMA contractions.
+class CLMixPattern : public SPIRVToLLVMConversion<spirv::CLMixOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::CLMixOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::CLMixOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstType = getTypeConverter()->convertType(op.getType());
     if (!dstType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
 
@@ -1991,7 +2015,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::GLAcosOp, LLVM::ACosOp>,
       DirectConversionPattern<spirv::GLAtanOp, LLVM::ATanOp>,
       InverseSqrtPattern, SAbsPattern, TanPattern, TanhPattern, FractPattern,
-      MixPattern<spirv::GLFMixOp>,
+      GLFMixPattern,
 
       // OpenCL extended instruction set ops
       DirectConversionPattern<spirv::CLCeilOp, LLVM::FCeilOp>,
@@ -2024,8 +2048,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::CLSMaxOp, LLVM::SMaxOp>,
       DirectConversionPattern<spirv::CLSMinOp, LLVM::SMinOp>,
       DirectConversionPattern<spirv::CLUMaxOp, LLVM::UMaxOp>,
-      DirectConversionPattern<spirv::CLUMinOp, LLVM::UMinOp>,
-      MixPattern<spirv::CLMixOp>,
+      DirectConversionPattern<spirv::CLUMinOp, LLVM::UMinOp>, CLMixPattern,
 
       // Logical ops
       DirectConversionPattern<spirv::LogicalAndOp, LLVM::AndOp>,
