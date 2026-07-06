@@ -24,7 +24,6 @@
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
-#include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
@@ -1874,7 +1873,7 @@ void VPInstructionWithType::execute(VPTransformState &State) {
   case VPInstruction::Intrinsic: {
     SmallVector<Value *, 2> Args;
     for (VPValue *Op : drop_end(operands()))
-      Args.push_back(State.get(Op, VPLane(0)));
+      Args.push_back(State.get(Op, /*IsSingleScalar=*/true));
     Value *Call =
         State.Builder.CreateIntrinsic(ResultTy, vputils::getIntrinsicID(this),
                                       Args, /*FMFSource=*/nullptr, getName());
@@ -1938,12 +1937,12 @@ void VPInstructionWithType::printRecipe(raw_ostream &O, const Twine &Indent,
     O << "step-vector " << *ResultTy;
     break;
   case VPInstruction::Intrinsic: {
-    O << "call @" << Intrinsic::getBaseName(vputils::getIntrinsicID(this))
-      << "(";
+    O << "call " << *ResultTy << " @"
+      << Intrinsic::getBaseName(vputils::getIntrinsicID(this)) << "(";
     interleaveComma(drop_end(operands()), O, [&O, &SlotTracker](VPValue *Op) {
       Op->printAsOperand(O, SlotTracker);
     });
-    O << ") " << *ResultTy;
+    O << ")";
     break;
   }
   case Instruction::Load:

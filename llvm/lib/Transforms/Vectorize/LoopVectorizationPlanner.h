@@ -442,7 +442,7 @@ public:
                                        Type *ResultTy, DebugLoc DL) {
     VPlan &Plan = getPlan();
     SmallVector<VPValue *, 2> Ops(Operands);
-    Ops.push_back(Plan.getConstantInt(32, IntrinsicID));
+    Ops.push_back(Plan.getConstantInt(8 * sizeof(IntrinsicID), IntrinsicID));
     return tryInsertInstruction(new VPInstructionWithType(
         VPInstruction::Intrinsic, Ops, ResultTy, {}, {}, DL));
   }
