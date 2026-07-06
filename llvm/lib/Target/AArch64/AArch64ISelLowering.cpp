@@ -12295,8 +12295,11 @@ static SDValue performOrXorChainCombine(SDNode *N, SelectionDAG &DAG) {
     // prefer the smaller CCMP form unless another guard rejects it.
     const Function &F = DAG.getMachineFunction().getFunction();
     unsigned Limit = 5;
-    if (NumXors >= 6)
+    if (NumXors >= 6) {
       Limit = 6;
+      if (NumXors == NumLeaves)
+        Limit = std::min<unsigned>(8, NumXors);
+    }
     if (F.hasOptSize() || F.hasMinSize())
       Limit = MaxXors;
     if (WorkList.size() > Limit)
