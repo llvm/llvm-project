@@ -28,7 +28,6 @@ struct Options {
   common::LanguageFeatureControl features;
   std::vector<std::string> searchDirectories;
   std::vector<std::string> intrinsicModuleDirectories;
-  std::vector<std::string> implicitUseModules;
   std::vector<Predefinition> predefinitions;
   bool instrumentedParse{false};
   bool isModuleFile{false};
