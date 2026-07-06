@@ -203,12 +203,18 @@ class Builder:
         if lldbplatformutil.platformIsDarwin():
             utils.extend(["AR=%slibtool" % os.getenv("CROSS_COMPILE", "")])
 
-        return [
+        build_cmd = [
             "CC=%s" % cc,
             "CC_TYPE=%s" % cc_type,
             "CXX=%s" % cxx,
-        ] + utils
+        ]
 
+        fc = configuration.fortran_compiler
+        if fc:
+            build_cmd.append("FC=%s" % fc)  
+
+        return build_cmd + utils
+    
     def getSDKRootSpec(self):
         """
         Helper function to return the key-value string to specify the SDK root
