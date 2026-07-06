@@ -907,7 +907,7 @@ public:
   /// updateDbgUsersToReg - Update a collection of debug instructions
   /// to refer to the designated register.
   LLVM_ABI void updateDbgUsersToReg(MCRegister OldReg, MCRegister NewReg,
-                           ArrayRef<MachineInstr *> Users) const;
+                                    ArrayRef<MachineInstr *> Users) const;
 
   /// Return true if the specified register is modified in this function.
   /// This checks that no defining machine operands exist for the register or
