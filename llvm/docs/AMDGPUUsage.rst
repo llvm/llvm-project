@@ -3250,6 +3250,7 @@ if needed.
      0x2   ``FUNC_USES_FLAT_SCRATCH``  Function uses flat scratch addressing
      0x4   ``FUNC_HAS_DYN_STACK``      Function has dynamic stack allocation
      0x8   ``FUNC_WGP_MODE``           Function uses WGP execution mode
+     0x10  ``FUNC_WAVE32``             Function uses wave32; otherwise wave64
      ===== =========================== ==========================================
 
   Symbol references (``INFO_FUNC``, ``INFO_USE``, ``INFO_CALL``) generate

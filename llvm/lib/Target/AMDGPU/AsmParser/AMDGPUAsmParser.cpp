@@ -6906,6 +6906,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPUInfo() {
           !!(Flags & AMDGPU::FuncInfoFlags::FUNC_USES_FLAT_SCRATCH);
       FI.HasDynStack = !!(Flags & AMDGPU::FuncInfoFlags::FUNC_HAS_DYN_STACK);
       FI.UsesWgpMode = !!(Flags & AMDGPU::FuncInfoFlags::FUNC_WGP_MODE);
+      FI.UsesWave32 = !!(Flags & AMDGPU::FuncInfoFlags::FUNC_WAVE32);
       HasScalarAttrs = true;
     } else if (Dir == "num_sgpr") {
       int64_t Val;

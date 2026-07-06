@@ -70,7 +70,9 @@ enum class FuncInfoFlags : uint32_t {
   FUNC_HAS_DYN_STACK = 1U << 2,
   /// Function uses WGP mode. If unset, the function uses CU mode.
   FUNC_WGP_MODE = 1U << 3,
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/FUNC_WGP_MODE),
+  /// Function uses wave32. If unset, the function uses wave64.
+  FUNC_WAVE32 = 1U << 4,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/FUNC_WAVE32),
 };
 
 } // namespace AMDGPU

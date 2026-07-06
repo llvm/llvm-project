@@ -1,9 +1,9 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -amdgpu-enable-object-linking < %s | FileCheck -check-prefixes=ASM %s --implicit-check-not=.amdgpu_num_agpr
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -amdgpu-enable-object-linking -filetype=obj < %s | llvm-readobj -r --syms --sections - | FileCheck -check-prefixes=ELF %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-enable-object-linking -filetype=asm < %s | FileCheck -check-prefixes=WGP %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+wavefrontsize64 -amdgpu-enable-object-linking -filetype=asm < %s | FileCheck -check-prefixes=WGP %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+cumode -amdgpu-enable-object-linking -filetype=asm < %s | FileCheck -check-prefixes=CU %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+cumode,+wavefrontsize64 -amdgpu-enable-object-linking -filetype=asm < %s | FileCheck -check-prefixes=CU %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-enable-object-linking -filetype=asm < %s | FileCheck -check-prefixes=WGP-WAVE32 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+wavefrontsize64 -amdgpu-enable-object-linking -filetype=asm < %s | FileCheck -check-prefixes=WGP-WAVE64 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+cumode -amdgpu-enable-object-linking -filetype=asm < %s | FileCheck -check-prefixes=CU-WAVE32 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+cumode,+wavefrontsize64 -amdgpu-enable-object-linking -filetype=asm < %s | FileCheck -check-prefixes=CU-WAVE64 %s
 
 ; Test that with object linking enabled, external LDS declarations produce
 ; @abs32@lo relocations, SHN_AMDGPU_LDS symbols, .amdgpu_lds directives,
@@ -42,19 +42,19 @@
 ; ASM-DAG:   .amdgpu_call device_func
 ; ASM-DAG: .end_amdgpu_info
 
-; COM: FUNC_WGP_MODE (0x8): WGP mode is the default on a WGP-capable target
-; COM: (gfx11), so the flag is set on every function; +cumode selects CU mode
-; COM: and clears it. Checked for both +wavefrontsize32 (default) and
-; COM: +wavefrontsize64.
-; WGP:      .amdgpu_info device_func
-; WGP-NEXT:   .amdgpu_flags 8
-; WGP:      .amdgpu_info test_kernel
-; WGP-NEXT:   .amdgpu_flags 8
-
-; CU:       .amdgpu_info device_func
-; CU-NEXT:    .amdgpu_flags 0
-; CU:       .amdgpu_info test_kernel
-; CU-NEXT:    .amdgpu_flags 0
+; COM: FUNC_WGP_MODE (0x8) and FUNC_WAVE32 (0x10) track the subtarget execution
+; COM: mode and wave size. gfx11 defaults to WGP mode + wave32; +cumode selects
+; COM: CU mode and +wavefrontsize64 selects wave64. The kernel and the device
+; COM: function share the same subtarget-derived flags, so both .amdgpu_flags
+; COM: entries carry the same value in each run.
+; COM: WGP | WAVE32 = 0x8 | 0x10 = 24.
+; WGP-WAVE32-COUNT-2: .amdgpu_flags 24
+; COM: WGP only = 0x8 = 8.
+; WGP-WAVE64-COUNT-2: .amdgpu_flags 8
+; COM: WAVE32 only = 0x10 = 16.
+; CU-WAVE32-COUNT-2: .amdgpu_flags 16
+; COM: neither set = 0.
+; CU-WAVE64-COUNT-2: .amdgpu_flags 0
 
 ; SHN_AMDGPU_LDS directives.
 ; ASM-DAG: .amdgpu_lds lds_large, 256, 16

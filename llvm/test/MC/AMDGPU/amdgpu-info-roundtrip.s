@@ -31,11 +31,11 @@ addr_taken_func:
 
 	.globl	extern_func
 
-// COM: Kernel: flags=15 (VCC|FLAT_SCRATCH|HAS_DYN_STACK|WGP_MODE), resources,
-// COM: call edge, use edge, indirect call, and type ID. Non-zero AGPR to verify
-// COM: conditional emission.
+// COM: Kernel: flags=31 (VCC|FLAT_SCRATCH|HAS_DYN_STACK|WGP_MODE|WAVE32),
+// COM: resources, call edge, use edge, indirect call, and type ID. Non-zero AGPR
+// COM: to verify conditional emission.
 	.amdgpu_info my_kernel
-		.amdgpu_flags 15
+		.amdgpu_flags 31
 		.amdgpu_num_sgpr 33
 		.amdgpu_num_vgpr 32
 		.amdgpu_num_agpr 4
@@ -69,7 +69,7 @@ addr_taken_func:
 	.end_amdgpu_info
 
 // ASM: .amdgpu_info my_kernel
-// ASM: .amdgpu_flags 15
+// ASM: .amdgpu_flags 31
 // ASM: .amdgpu_num_sgpr 33
 // ASM: .amdgpu_num_vgpr 32
 // ASM: .amdgpu_num_agpr 4
