@@ -12942,8 +12942,7 @@ static bool IsKnownPredicateViaMinOrMax(ScalarEvolution &SE, CmpPredicate Pred,
         // When Op and RHS share a common base differing by a
         // constant offset D (RHS - Op = D), Op u< RHS holds iff D != 0 and
         // RHS >= D (unsigned), i.e. the subtraction doesn't underflow.
-        if (Diff && !Diff->isZero() &&
-            SE.getUnsignedRangeMin(RHS).uge(*Diff))
+        if (Diff && !Diff->isZero() && SE.getUnsignedRangeMin(RHS).uge(*Diff))
           return true;
       }
     }
