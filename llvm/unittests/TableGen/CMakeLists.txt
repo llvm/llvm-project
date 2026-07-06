@@ -13,6 +13,7 @@ add_llvm_unittest(TableGenTests
   AutomataTest.cpp
   CodeExpanderTest.cpp
   ParserEntryPointTest.cpp
+  StringToOffsetTableTest.cpp
 
   DISABLE_LLVM_LINK_LLVM_DYLIB
   )

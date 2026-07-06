@@ -118,6 +118,12 @@ void StringToOffsetTable::EmitString(raw_ostream &O) const {
       O << EscapedStr[++i];
       O << EscapedStr[++i];
       CharsPrinted += 3;
+      // MSVC C4125: If next char is a digit, close string and start new one
+      // to avoid octal escape at line-end being followed by digit at line-start
+      if (i + 1 < e && isDigit(EscapedStr[i + 1])) {
+        O << "\" \"";
+        CharsPrinted = 2; // Reset but account for the opening quote chars
+      }
     } else {
       O << EscapedStr[++i];
       ++CharsPrinted;
