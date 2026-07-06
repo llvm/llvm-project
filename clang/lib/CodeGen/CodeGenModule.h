@@ -1992,9 +1992,12 @@ private:
   void UpdateMultiVersionNames(GlobalDecl GD, const FunctionDecl *FD,
                                StringRef &CurName);
 
+public:
   bool GetCPUAndFeaturesAttributes(GlobalDecl GD,
                                    llvm::AttrBuilder &AttrBuilder,
                                    bool SetTargetFeatures = true);
+
+private:
   void setNonAliasAttributes(GlobalDecl GD, llvm::GlobalObject *GO);
 
   /// Set function attributes for a function declaration.

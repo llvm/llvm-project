@@ -1124,6 +1124,10 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
         getLLVMContext(), VScaleRange->first, VScaleRange->second));
   }
 
+  llvm::AttrBuilder Attrs(getLLVMContext());
+  CGM.GetCPUAndFeaturesAttributes(GD, Attrs);
+  Fn->addFnAttrs(Attrs);
+
   llvm::BasicBlock *EntryBB = createBasicBlock("entry", CurFn);
 
   // Create a marker to make it easy to insert allocas into the entryblock
