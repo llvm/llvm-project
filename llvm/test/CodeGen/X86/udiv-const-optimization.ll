@@ -139,3 +139,39 @@ define i32 @udiv_by_3(i32 %x) nounwind {
   %div = udiv i32 %x, 3
   ret i32 %div
 }
+
+; Even divisors with 33-bit magic. On 64-bit targets these use the widened
+; high-multiply path (i32->i64 zero-extension is free here).
+define i32 @udiv_by_14(i32 %x) nounwind {
+; X64-LABEL: udiv_by_14:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    shrl %edi
+; X64-NEXT:    movl $2454267027, %eax # imm = 0x92492493
+; X64-NEXT:    imulq %rdi, %rax
+; X64-NEXT:    shrq $34, %rax
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-NEXT:    retq
+;
+; X64-BMI2-LABEL: udiv_by_14:
+; X64-BMI2:       # %bb.0:
+; X64-BMI2-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-BMI2-NEXT:    shrl %edi
+; X64-BMI2-NEXT:    movl $2454267027, %eax # imm = 0x92492493
+; X64-BMI2-NEXT:    imulq %rdi, %rax
+; X64-BMI2-NEXT:    shrq $34, %rax
+; X64-BMI2-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-BMI2-NEXT:    retq
+;
+; X86-LABEL: udiv_by_14:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shrl %eax
+; X86-NEXT:    movl ${{-?[0-9]+}}, %ecx # imm = 0x92492493
+; X86-NEXT:    mull %ecx
+; X86-NEXT:    movl %edx, %eax
+; X86-NEXT:    shrl $2, %eax
+; X86-NEXT:    retl
+  %div = udiv i32 %x, 14
+  ret i32 %div
+}
