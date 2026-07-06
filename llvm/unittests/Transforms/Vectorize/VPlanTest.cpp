@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "../lib/Transforms/Vectorize/VPlan.h"
+#include "../lib/Transforms/Vectorize/LoopVectorizationPlanner.h"
 #include "../lib/Transforms/Vectorize/VPlanCFG.h"
 #include "../lib/Transforms/Vectorize/VPlanHelpers.h"
 #include "../lib/Transforms/Vectorize/VPlanUtils.h"
@@ -1859,8 +1860,8 @@ TEST_F(VPUtilsTest, IsUniformAcrossVFsAndUFsForSingleScalarOpcodes) {
   VPlan &Plan = getPlan();
 
   // isSingleScalar opcode without operands.
-  std::unique_ptr<VPInstruction> VScale(new VPInstructionWithType(
-      VPInstruction::VScale, {}, IntegerType::get(C, 32)));
+  std::unique_ptr<VPInstruction> VScale(
+      VPBuilder().createVScale(IntegerType::get(C, 32)));
   EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(VScale.get()));
 
   // isSingleScalar opcode with a uniform operand.
@@ -1891,6 +1892,32 @@ TEST_F(VPUtilsTest, IsUniformAcrossVFsAndUFsForSingleScalarOpcodes) {
                                 {StepVector.get()}, IntegerType::get(C, 32)));
   EXPECT_FALSE(
       vputils::isUniformAcrossVFsAndUFs(FirstActiveLaneNonUniform.get()));
+}
+
+TEST_F(VPBasicBlockTest, VPRegionValueClonePropagatesMaterialized) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *Preheader = Plan.getEntry();
+  VPBasicBlock *Header = Plan.createVPBasicBlock("header");
+  VPBasicBlock *Latch = Plan.createVPBasicBlock("latch");
+  VPRegionBlock *Region = Plan.createLoopRegion(Type::getInt32Ty(C), DebugLoc(),
+                                                "loop", Header, Latch);
+  VPBlockUtils::connectBlocks(Header, Latch);
+  VPBlockUtils::connectBlocks(Preheader, Region);
+  VPBlockUtils::connectBlocks(Region, Plan.getScalarHeader());
+
+  VPRegionValue *CanIV = Region->getCanonicalIV();
+  EXPECT_TRUE(isa<VPSymbolicValue>(CanIV));
+  EXPECT_FALSE(CanIV->isMaterialized());
+
+  // Materialize the canonical IV by replacing all uses, then verify clone
+  // propagates the materialized state.
+  CanIV->replaceAllUsesWith(Plan.getConstantInt(32, 0));
+  EXPECT_TRUE(CanIV->isMaterialized());
+
+  std::unique_ptr<VPlan> Clone(Plan.duplicate());
+  VPRegionValue *ClonedCanIV = Clone->getVectorLoopRegion()->getCanonicalIV();
+  EXPECT_NE(CanIV, ClonedCanIV);
+  EXPECT_TRUE(ClonedCanIV->isMaterialized());
 }
 
 #if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
@@ -1937,8 +1964,7 @@ TEST_F(VPRecipeTest, UFVScaleUserBeforeMaterialization) {
   VPBlockUtils::connectBlocks(Plan.getEntry(), LoopRegion);
   VPBlockUtils::connectBlocks(LoopRegion, Plan.getScalarHeader());
 
-  auto *VScale = new VPInstructionWithType(VPInstruction::VScale, {}, IVTy);
-  Plan.getVectorPreheader()->appendRecipe(VScale);
+  auto *VScale = VPBuilder(Plan.getVectorPreheader()).createVScale(IVTy);
 
   auto *Step = new VPInstruction(Instruction::Mul, {VScale, UF},
                                  VPIRFlags::getDefaultFlags(Instruction::Mul));
