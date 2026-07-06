@@ -462,9 +462,6 @@ entry:
   ret float %call13
 }
 
-declare float @llvm.vector.reduce.fmaximum.v4f32(<4 x float>)
-declare float @llvm.vector.reduce.fminimum.v4f32(<4 x float>)
-
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{i32 7, !"PIC Level", i32 2}
 !2 = !{!"clang version 11.0.0 (https://github.com/llvm/llvm-project.git a9fe69c359de653015c39e413e48630d069abe27)"}
