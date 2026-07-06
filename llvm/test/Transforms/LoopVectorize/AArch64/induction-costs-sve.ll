@@ -22,8 +22,10 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
 ; DEFAULT-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 8
 ; DEFAULT-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 2
+; DEFAULT-NEXT:    [[TMP27:%.*]] = sub i64 [[TMP5]], 1
 ; DEFAULT-NEXT:    [[TMP6:%.*]] = sub i64 [[DST1]], [[SRC2]]
-; DEFAULT-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], [[TMP5]]
+; DEFAULT-NEXT:    [[TMP14:%.*]] = sub i64 [[TMP6]], 1
+; DEFAULT-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP14]], [[TMP27]]
 ; DEFAULT-NEXT:    br i1 [[DIFF_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; DEFAULT:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
 ; DEFAULT-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP1]], 4
@@ -125,8 +127,10 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; PRED:       [[VECTOR_MEMCHECK]]:
 ; PRED-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 8
+; PRED-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP2]], 1
 ; PRED-NEXT:    [[TMP3:%.*]] = sub i64 [[DST1]], [[SRC2]]
-; PRED-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], [[TMP2]]
+; PRED-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP3]], 1
+; PRED-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], [[TMP7]]
 ; PRED-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; PRED:       [[VECTOR_PH]]:
 ; PRED-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
@@ -134,7 +138,7 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; PRED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i32> poison, i32 [[X]], i64 0
 ; PRED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 8 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 [[TMP0]])
-; PRED-NEXT:    [[TMP6:%.*]] = trunc <vscale x 8 x i32> [[BROADCAST_SPLAT]] to <vscale x 8 x i16>
+; PRED-NEXT:    [[TMP14:%.*]] = trunc <vscale x 8 x i32> [[BROADCAST_SPLAT]] to <vscale x 8 x i16>
 ; PRED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; PRED:       [[VECTOR_BODY]]:
 ; PRED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -142,7 +146,7 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; PRED-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[INDEX]]
 ; PRED-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 8 x i8> @llvm.masked.load.nxv8i8.p0(ptr align 1 [[TMP12]], <vscale x 8 x i1> [[ACTIVE_LANE_MASK]], <vscale x 8 x i8> poison)
 ; PRED-NEXT:    [[TMP8:%.*]] = zext <vscale x 8 x i8> [[WIDE_MASKED_LOAD]] to <vscale x 8 x i16>
-; PRED-NEXT:    [[TMP9:%.*]] = mul <vscale x 8 x i16> [[TMP8]], [[TMP6]]
+; PRED-NEXT:    [[TMP9:%.*]] = mul <vscale x 8 x i16> [[TMP8]], [[TMP14]]
 ; PRED-NEXT:    [[TMP10:%.*]] = or <vscale x 8 x i16> [[TMP9]], [[TMP8]]
 ; PRED-NEXT:    [[TMP11:%.*]] = lshr <vscale x 8 x i16> [[TMP10]], splat (i16 1)
 ; PRED-NEXT:    [[TMP13:%.*]] = trunc <vscale x 8 x i16> [[TMP11]] to <vscale x 8 x i8>

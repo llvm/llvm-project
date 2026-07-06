@@ -2126,10 +2126,6 @@ def : Pat<(v4f64 (sint_to_fp v4i64:$vj)), (XVFFINT_D_L v4i64:$vj)>;
 def : Pat<(v4f64 (sint_to_fp v4i32:$vj)),
           (XVFFINT_D_L (VEXT2XV_D_W (SUBREG_TO_REG v4i32:$vj,
                                                    sub_128)))>;
-def : Pat<(v4f32 (sint_to_fp v4i64:$vj)),
-          (EXTRACT_SUBREG (XVFCVT_S_D (XVPERMI_D (XVFFINT_D_L v4i64:$vj), 238),
-                                      (XVFFINT_D_L v4i64:$vj)),
-                          sub_128)>;
 
 // XVFFINT_{S_WU/D_LU}
 def : Pat<(v8f32 (uint_to_fp v8i32:$vj)), (XVFFINT_S_WU v8i32:$vj)>;
@@ -2137,10 +2133,10 @@ def : Pat<(v4f64 (uint_to_fp v4i64:$vj)), (XVFFINT_D_LU v4i64:$vj)>;
 def : Pat<(v4f64 (uint_to_fp v4i32:$vj)),
           (XVFFINT_D_LU (VEXT2XV_DU_WU (SUBREG_TO_REG v4i32:$vj,
                                                       sub_128)))>;
-def : Pat<(v4f32 (uint_to_fp v4i64:$vj)),
-          (EXTRACT_SUBREG (XVFCVT_S_D (XVPERMI_D (XVFFINT_D_LU v4i64:$vj), 238),
-                                       (XVFFINT_D_LU v4i64:$vj)),
-                          sub_128)>;
+
+// XVFFINT_S_L
+def : Pat<(v8f32 (loongarch_vffint_s_l (v4i64 LASX256:$xj), (v4i64 LASX256:$xk))),
+          (XVFFINT_S_L LASX256:$xj, LASX256:$xk)>;
 
 // XVFTINTRZ_{W_S/L_D}
 def : Pat<(v8i32 (fp_to_sint v8f32:$vj)), (XVFTINTRZ_W_S v8f32:$vj)>;
