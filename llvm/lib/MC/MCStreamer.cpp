@@ -752,7 +752,7 @@ void MCStreamer::emitCFILLVMSetRAState(unsigned State, MCSymbol *PACSym,
                                        SMLoc Loc) {
   MCSymbol *Label = emitCFILabel();
   MCCFIInstruction Instruction =
-      MCCFIInstruction::createLLVMSetRAState(Label, State, PACSym, Loc);
+      MCCFIInstruction::createSetRAState(Label, State, PACSym, Loc);
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
@@ -763,7 +763,7 @@ void MCStreamer::emitCFILLVMSetRAState(unsigned State, int64_t Offset,
                                        SMLoc Loc) {
   MCSymbol *Label = emitCFILabel();
   MCCFIInstruction Instruction =
-      MCCFIInstruction::createLLVMSetRAState(Label, State, Offset, Loc);
+      MCCFIInstruction::createSetRAState(Label, State, Offset, Loc);
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;

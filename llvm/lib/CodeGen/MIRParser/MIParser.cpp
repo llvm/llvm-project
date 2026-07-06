@@ -2862,13 +2862,13 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
       PACSym = getOrCreateMCSymbol(Token.stringValue());
       lex();
       CFIIndex = MF.addFrameInst(
-          MCCFIInstruction::createLLVMSetRAState(nullptr, State, PACSym));
+          MCCFIInstruction::createSetRAState(nullptr, State, PACSym));
     } else if (Token.is(MIToken::IntegerLiteral)) {
       int Offset;
       if (parseCFIOffset(Offset))
         return true;
       CFIIndex = MF.addFrameInst(
-          MCCFIInstruction::createLLVMSetRAState(nullptr, State, Offset));
+          MCCFIInstruction::createSetRAState(nullptr, State, Offset));
     } else {
       return error("expected '<mcsymbol ...>' or integer offset for "
                    "cfi_set_ra_state");

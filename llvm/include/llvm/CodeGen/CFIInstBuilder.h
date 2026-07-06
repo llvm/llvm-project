@@ -89,8 +89,7 @@ public:
   }
 
   void buildSetRAState(unsigned State, MCSymbol *PACSym) const {
-    insertCFIInst(
-        MCCFIInstruction::createLLVMSetRAState(nullptr, State, PACSym));
+    insertCFIInst(MCCFIInstruction::createSetRAState(nullptr, State, PACSym));
   }
 
   void buildRegister(MCRegister Reg1, MCRegister Reg2) const {

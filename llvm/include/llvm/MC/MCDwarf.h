@@ -705,16 +705,16 @@ public:
 
   /// .cfi_set_ra_state AArch64 set RA sign state,
   // with a symbolic offset to the signing instruction.
-  static MCCFIInstruction createLLVMSetRAState(MCSymbol *L, unsigned State,
-                                               MCSymbol *PACSym = nullptr,
-                                               SMLoc Loc = {}) {
+  static MCCFIInstruction createSetRAState(MCSymbol *L, unsigned State,
+                                           MCSymbol *PACSym = nullptr,
+                                           SMLoc Loc = {}) {
     return {OpLLVMSetRAState, L, LLVMSetRAStateFields{State, PACSym, 0}, Loc};
   }
 
   /// .cfi_set_ra_state AArch64 set RA sign state,
   /// with a pre-computed factored offset to the signing instruction.
-  static MCCFIInstruction createLLVMSetRAState(MCSymbol *L, unsigned State,
-                                               int64_t Offset, SMLoc Loc = {}) {
+  static MCCFIInstruction createSetRAState(MCSymbol *L, unsigned State,
+                                           int64_t Offset, SMLoc Loc = {}) {
     return {OpLLVMSetRAState, L, LLVMSetRAStateFields{State, nullptr, Offset},
             Loc};
   }
