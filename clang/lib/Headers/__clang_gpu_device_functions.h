@@ -328,8 +328,8 @@ __GPU_DEVICE__ int __fns(unsigned int __mask, unsigned int __base,
 // Synchronization and fences
 //===----------------------------------------------------------------------===//
 
-// Some targets (e.g. NVPTX) expose __syncthreads as a compiler builtin already.
-#if !__has_builtin(__syncthreads)
+// CUDA provides __syncthreads as an NVPTX compiler builtin directly.
+#if !defined(__CUDA__)
 __GPU_DEVICE__ void __syncthreads(void) { __gpu_sync_threads(); }
 #endif
 
