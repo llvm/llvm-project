@@ -4312,11 +4312,11 @@ void InstCombinerImpl::handleUnreachableFrom(
   for (Instruction &Inst : make_early_inc_range(
            make_range(std::next(BB->getTerminator()->getReverseIterator()),
                       std::next(I->getReverseIterator())))) {
-    if (!Inst.use_empty() && !Inst.getType()->isTokenTy()) {
+    if (!Inst.use_empty() && !Inst.getType()->isTokenLikeTy()) {
       replaceInstUsesWith(Inst, PoisonValue::get(Inst.getType()));
       MadeIRChange = true;
     }
-    if (Inst.isEHPad() || Inst.getType()->isTokenTy())
+    if (Inst.isEHPad() || Inst.getType()->isTokenLikeTy())
       continue;
     // RemoveDIs: erase debug-info on this instruction manually.
     Inst.dropDbgRecords();
@@ -5591,6 +5591,12 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
   // Cannot move control-flow-involving, volatile loads, vaarg, etc.
   if (isa<PHINode>(I) || I->isEHPad() || I->mayThrow() || !I->willReturn() ||
       I->isTerminator())
+    return false;
+
+  // Do not sink instructions that produce a token (or token-like) value. Such
+  // values participate in control-flow / bundle relationships and must remain
+  // in place.
+  if (I->getType()->isTokenLikeTy())
     return false;
 
   // Do not sink static or dynamic alloca instructions. Static allocas must
