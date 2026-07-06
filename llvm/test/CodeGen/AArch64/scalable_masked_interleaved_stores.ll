@@ -282,3 +282,75 @@ define void @foo_st2_nxv8i8_trunc(<vscale x 4 x i1> %mask, <vscale x 4 x i16> %v
   call void @llvm.masked.store.nxv8i8.p0(<vscale x 8 x i8> %trunc.value, ptr %p, i32 1, <vscale x 8 x i1> %interleaved.mask)
   ret void
 }
+
+define void @foo_st2_nxv16i8_zeroinitializer(<vscale x 16 x i1> %mask, ptr %p) {
+; CHECK-LABEL: foo_st2_nxv16i8_zeroinitializer:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    zip2 p1.b, p0.b, p0.b
+; CHECK-NEXT:    zip1 p0.b, p0.b, p0.b
+; CHECK-NEXT:    st1b { z0.b }, p1, [x0, #1, mul vl]
+; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
+; CHECK-NEXT:    ret
+  %interleaved.mask = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask)
+  call void @llvm.masked.store.nxv32i8.p0(<vscale x 32 x i8> zeroinitializer, ptr %p, i32 1, <vscale x 32 x i1> %interleaved.mask)
+  ret void
+}
+
+define void @foo_st4_nxv16i8_zeroinitializer(<vscale x 16 x i1> %mask, ptr %p) {
+; CHECK-LABEL: foo_st4_nxv16i8_zeroinitializer:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    zip2 p1.b, p0.b, p0.b
+; CHECK-NEXT:    zip1 p0.b, p0.b, p0.b
+; CHECK-NEXT:    zip2 p2.b, p1.b, p1.b
+; CHECK-NEXT:    zip1 p1.b, p1.b, p1.b
+; CHECK-NEXT:    zip2 p3.b, p0.b, p0.b
+; CHECK-NEXT:    st1b { z0.b }, p2, [x0, #3, mul vl]
+; CHECK-NEXT:    zip1 p0.b, p0.b, p0.b
+; CHECK-NEXT:    st1b { z0.b }, p1, [x0, #2, mul vl]
+; CHECK-NEXT:    st1b { z0.b }, p3, [x0, #1, mul vl]
+; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
+; CHECK-NEXT:    ret
+  %interleaved.mask = call <vscale x 64 x i1> @llvm.vector.interleave4.nxv64i1(<vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask)
+  call void @llvm.masked.store.nxv64i8.p0(<vscale x 64 x i8> zeroinitializer, ptr %p, i32 1, <vscale x 64 x i1> %interleaved.mask)
+  ret void
+}
+
+define void @foo_st2_nxv16i8_splat(<vscale x 16 x i1> %mask, ptr %p) {
+; CHECK-LABEL: foo_st2_nxv16i8_splat:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.b, #1 // =0x1
+; CHECK-NEXT:    zip2 p1.b, p0.b, p0.b
+; CHECK-NEXT:    zip1 p0.b, p0.b, p0.b
+; CHECK-NEXT:    st1b { z0.b }, p1, [x0, #1, mul vl]
+; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
+; CHECK-NEXT:    ret
+  %base = insertelement <vscale x 32 x i8> poison, i8 1, i32 0
+  %interleaved.value = shufflevector <vscale x 32 x i8> %base, <vscale x 32 x i8> poison, <vscale x 32 x i32> zeroinitializer
+  %interleaved.mask = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask)
+  call void @llvm.masked.store.nxv32i8.p0(<vscale x 32 x i8> %interleaved.value, ptr %p, i32 1, <vscale x 32 x i1> %interleaved.mask)
+  ret void
+}
+
+define void @foo_st4_nxv16i8_splat(<vscale x 16 x i1> %mask, ptr %p) {
+; CHECK-LABEL: foo_st4_nxv16i8_splat:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip2 p1.b, p0.b, p0.b
+; CHECK-NEXT:    mov z0.b, #1 // =0x1
+; CHECK-NEXT:    zip1 p0.b, p0.b, p0.b
+; CHECK-NEXT:    zip2 p2.b, p1.b, p1.b
+; CHECK-NEXT:    zip1 p1.b, p1.b, p1.b
+; CHECK-NEXT:    zip2 p3.b, p0.b, p0.b
+; CHECK-NEXT:    st1b { z0.b }, p2, [x0, #3, mul vl]
+; CHECK-NEXT:    zip1 p0.b, p0.b, p0.b
+; CHECK-NEXT:    st1b { z0.b }, p1, [x0, #2, mul vl]
+; CHECK-NEXT:    st1b { z0.b }, p3, [x0, #1, mul vl]
+; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
+; CHECK-NEXT:    ret
+  %base = insertelement <vscale x 64 x i8> poison, i8 1, i32 0
+  %interleaved.value = shufflevector <vscale x 64 x i8> %base, <vscale x 64 x i8> poison, <vscale x 64 x i32> zeroinitializer
+  %interleaved.mask = call <vscale x 64 x i1> @llvm.vector.interleave4.nxv64i1(<vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask, <vscale x 16 x i1> %mask)
+  call void @llvm.masked.store.nxv64i8.p0(<vscale x 64 x i8> %interleaved.value, ptr %p, i32 1, <vscale x 64 x i1> %interleaved.mask)
+  ret void
+}
