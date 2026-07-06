@@ -3533,13 +3533,15 @@ void CIRGenModule::setFuncInfoAttr(cir::FuncOp funcOp,
   if (!funcDecl || !funcDecl->getIdentifier())
     return;
 
-  // A member function lives inside its record, so the record decides
-  // whether the function belongs to the std namespace. Static member
-  // functions carry no attribute, so that a static member like
+  // Free functions and instance methods carry the attribute. Only static
+  // member functions are skipped, so that a static member like
   // char_traits::find can never be mistaken for the free std::find.
   const auto *method = dyn_cast<CXXMethodDecl>(funcDecl);
   if (method && method->isStatic())
     return;
+
+  // A member function lives inside its record, so the record decides
+  // whether the function belongs to the std namespace.
   bool inStdNamespace = method ? method->getParent()->isInStdNamespace()
                                : funcDecl->isInStdNamespace();
 
