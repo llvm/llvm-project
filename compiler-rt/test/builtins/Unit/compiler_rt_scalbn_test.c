@@ -63,11 +63,13 @@ int main() {
     defined(__i386__) || defined(__x86_64__)
 // Skip these tests on Windows because the UCRT scalbn function always behaves
 // as if the default rounding mode is set (FE_TONEAREST).
+// Also skip on Apple because the libm scalbn flushes underflow to zero
+// regardless of the rounding mode.
 // Also skip for newlib because although its scalbn function does respect the
 // rounding mode, where the tests trigger an underflow or overflow using a
 // large exponent the result is rounded in the opposite direction to that which
 // would be expected in the (FE_UPWARD) and (FE_DOWNWARD) modes.
-#  if !defined(_WIN32) && !defined(_NEWLIB_VERSION)
+#  if !defined(_WIN32) && !defined(__APPLE__) && !defined(_NEWLIB_VERSION)
   fesetround(FE_UPWARD);
   if (iterate_cases("FE_UPWARD")) return 1;
 
