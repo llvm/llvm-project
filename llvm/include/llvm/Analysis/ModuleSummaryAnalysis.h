@@ -102,7 +102,7 @@ class ImmutableModuleSummaryIndexAnalysis
 
 public:
   class Result {
-    const ModuleSummaryIndex *Index;
+    const ModuleSummaryIndex *Index = nullptr;
     Result(const ModuleSummaryIndex *Index) : Index(Index) {}
     friend class ImmutableModuleSummaryIndexAnalysis;
 
