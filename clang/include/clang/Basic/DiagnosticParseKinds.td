@@ -1896,7 +1896,7 @@ def err_profiles_expected_profile_name : Error<
 def err_profiles_expected_lparen : Error<
   "%0 attribute requires an argument clause">;
 def err_profiles_expected_rparen : Error<
-  "expected ')' in '%0' attribute">;
+  "expected ')' in %0 attribute">;
 def err_profiles_invalid_argument_token : Error<
   "invalid token in profile argument">;
 

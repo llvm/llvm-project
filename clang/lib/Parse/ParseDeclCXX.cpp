@@ -5293,6 +5293,40 @@ bool Parser::TryParseProfilesAttribute(IdentifierInfo *AttrName,
       !AttrName->isStr("require"))
     return false;
 
+  // Without -fprofiles the attributes are ignored (their LangOpts gate makes
+  // Sema emit warn_attribute_ignored), so behave like any ignored standard
+  // attribute: accept an arbitrary balanced-token argument clause -- or none
+  // -- without profile grammar checking. The attribute is still created, with
+  // default-constructed (empty) custom data, so the Sema warning path sees
+  // it; no consumer reads the custom data while the feature is off.
+  if (!getLangOpts().Profiles) {
+    SourceLocation End = AttrNameLoc;
+    if (Tok.is(tok::l_paren)) {
+      BalancedDelimiterTracker T(*this, tok::l_paren);
+      T.consumeOpen();
+      T.skipToEnd();
+      End = T.getCloseLocation();
+    }
+    if (EndLoc)
+      *EndLoc = End;
+
+    AttributePool &Pool = Attrs.getPool();
+    void *CustomData;
+    if (AttrName->isStr("enforce"))
+      CustomData = Pool.make<detail::ProfileEnforceArgs>();
+    else if (AttrName->isStr("suppress"))
+      CustomData = Pool.make<detail::ProfileSuppressArgs>();
+    else
+      CustomData = Pool.make<detail::ProfileRequireArgs>();
+
+    ParsedAttr *PA =
+        Attrs.addNew(AttrName, SourceRange(AttrNameLoc, End),
+                     AttributeScopeInfo(ScopeName, ScopeLoc), nullptr, 0,
+                     ParsedAttr::Form::CXX11());
+    PA->setCustomData(CustomData);
+    return true;
+  }
+
   if (Tok.isNot(tok::l_paren)) {
     Diag(AttrNameLoc, diag::err_profiles_expected_lparen) << AttrName;
     return true;

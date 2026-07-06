@@ -52,6 +52,12 @@ Without ``-fprofiles``:
 - ``[[profiles::enforce]]``, ``[[profiles::suppress]]``, and
   ``[[profiles::require]]`` are diagnosed as ``warn_attribute_ignored`` and
   have no semantic effect.
+- Their argument clauses are **not** checked against the P3589R2 profile
+  grammar: like any standard attribute the implementation does not act on,
+  an arbitrary balanced-token argument clause -- or none at all -- is
+  accepted, so code annotated for a profiles-enabled build compiles cleanly
+  (modulo the warning) with the feature off.  P3589R2's grammar is enforced
+  only under ``-fprofiles``.
 - No profile rule check ever fires, even at sites that call
   ``checkProfileViolation``.
 
