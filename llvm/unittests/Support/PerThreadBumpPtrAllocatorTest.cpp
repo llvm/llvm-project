@@ -26,11 +26,13 @@ TEST(PerThreadBumpPtrAllocatorTest, Simple) {
         (uint64_t *)Allocator.Allocate(sizeof(uint64_t), alignof(uint64_t));
     *Var = 0xFE;
     EXPECT_EQ(0xFEul, *Var);
-    EXPECT_LE(sizeof(uint64_t), Allocator.getTotalMemory());
+    EXPECT_EQ(sizeof(uint64_t), Allocator.getBytesAllocated());
+    EXPECT_TRUE(Allocator.getBytesAllocated() <= Allocator.getTotalMemory());
 
     PerThreadBumpPtrAllocator Allocator2(std::move(Allocator));
 
-    EXPECT_LE(sizeof(uint64_t), Allocator2.getTotalMemory());
+    EXPECT_EQ(sizeof(uint64_t), Allocator2.getBytesAllocated());
+    EXPECT_TRUE(Allocator2.getBytesAllocated() <= Allocator2.getTotalMemory());
 
     EXPECT_EQ(0xFEul, *Var);
   });
@@ -47,7 +49,7 @@ TEST(PerThreadBumpPtrAllocatorTest, ParallelAllocation) {
     *ptr = Idx;
   });
 
-  EXPECT_LE(sizeof(uint64_t) * NumAllocations, Allocator.getTotalMemory());
+  EXPECT_EQ(sizeof(uint64_t) * NumAllocations, Allocator.getBytesAllocated());
   EXPECT_EQ(Allocator.getNumberOfAllocators(), parallel::getThreadCount());
 }
 

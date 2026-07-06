@@ -18,7 +18,6 @@
 #define LLVM_SUPPORT_ALLOCATOR_H
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Config/abi-breaking.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/AllocatorBase.h"
 #include "llvm/Support/Compiler.h"
@@ -37,7 +36,9 @@ namespace detail {
 
 // We call out to an external function to actually print the message as the
 // printing code uses Allocator.h in its implementation.
-LLVM_ABI void printBumpPtrAllocatorStats(unsigned NumSlabs, size_t TotalMemory);
+LLVM_ABI void printBumpPtrAllocatorStats(unsigned NumSlabs,
+                                         size_t BytesAllocated,
+                                         size_t TotalMemory);
 
 } // end namespace detail
 
@@ -95,12 +96,11 @@ public:
   BumpPtrAllocatorImpl(BumpPtrAllocatorImpl &&Old)
       : AllocTy(std::move(Old.getAllocator())), CurPtr(Old.CurPtr),
         EndSentinel(Old.EndSentinel), Slabs(std::move(Old.Slabs)),
-        CustomSizedSlabs(std::move(Old.CustomSizedSlabs)) {
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-    RedZoneSize = Old.RedZoneSize;
-#endif
+        CustomSizedSlabs(std::move(Old.CustomSizedSlabs)),
+        BytesAllocated(Old.BytesAllocated), RedZoneSize(Old.RedZoneSize) {
     Old.CurPtr = nullptr;
     Old.EndSentinel = 0;
+    Old.BytesAllocated = 0;
     Old.Slabs.clear();
     Old.CustomSizedSlabs.clear();
   }
@@ -116,15 +116,15 @@ public:
 
     CurPtr = RHS.CurPtr;
     EndSentinel = RHS.EndSentinel;
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+    BytesAllocated = RHS.BytesAllocated;
     RedZoneSize = RHS.RedZoneSize;
-#endif
     Slabs = std::move(RHS.Slabs);
     CustomSizedSlabs = std::move(RHS.CustomSizedSlabs);
     AllocTy::operator=(std::move(RHS.getAllocator()));
 
     RHS.CurPtr = nullptr;
     RHS.EndSentinel = 0;
+    RHS.BytesAllocated = 0;
     RHS.Slabs.clear();
     RHS.CustomSizedSlabs.clear();
     return *this;
@@ -141,6 +141,7 @@ public:
       return;
 
     // Reset the state.
+    BytesAllocated = 0;
     CurPtr = (char *)Slabs.front();
     EndSentinel = uintptr_t(CurPtr) + SlabSize + 1;
 
@@ -157,10 +158,12 @@ public:
   // Allocate(0, N) is valid, it returns a non-null pointer (which should not
   // be dereferenced).
   LLVM_ATTRIBUTE_RETURNS_NONNULL void *Allocate(size_t Size, Align Alignment) {
+    // Keep track of how many bytes we've allocated.
+    BytesAllocated += Size;
+
     size_t SizeToAllocate = Size;
-#if LLVM_ADDRESS_SANITIZER_BUILD && LLVM_ENABLE_ABI_BREAKING_CHECKS
-    // Add trailing bytes as a "red zone" under ASan. RedZoneSize only exists
-    // when both conditions are true.
+#if LLVM_ADDRESS_SANITIZER_BUILD
+    // Add trailing bytes as a "red zone" under ASan.
     SizeToAllocate += RedZoneSize;
 #endif
     SizeToAllocate = alignToPowerOf2(SizeToAllocate, MinAlign);
@@ -305,14 +308,15 @@ public:
     return TotalMemory;
   }
 
-  void setRedZoneSize([[maybe_unused]] size_t NewSize) {
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+  size_t getBytesAllocated() const { return BytesAllocated; }
+
+  void setRedZoneSize(size_t NewSize) {
     RedZoneSize = NewSize;
-#endif
   }
 
   void PrintStats() const {
-    detail::printBumpPtrAllocatorStats(Slabs.size(), getTotalMemory());
+    detail::printBumpPtrAllocatorStats(Slabs.size(), BytesAllocated,
+                                       getTotalMemory());
   }
 
 private:
@@ -331,11 +335,14 @@ private:
   /// Custom-sized slabs allocated for too-large allocation requests.
   SmallVector<std::pair<void *, size_t>, 0> CustomSizedSlabs;
 
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-  /// The number of bytes to put between allocations when running under a
-  /// sanitizer.
+  /// How many bytes we've allocated.
+  ///
+  /// Used so that we can compute how much space was wasted.
+  size_t BytesAllocated = 0;
+
+  /// The number of bytes to put between allocations when running under
+  /// a sanitizer.
   size_t RedZoneSize = 1;
-#endif
 
   static size_t computeSlabSize(unsigned SlabIdx) {
     // Scale the actual allocated slab size based on the number of slabs
@@ -465,6 +472,8 @@ public:
   std::optional<int64_t> identifyObject(const void *Ptr) {
     return Allocator.identifyObject(Ptr);
   }
+
+  size_t getBytesAllocated() const { return Allocator.getBytesAllocated(); }
 };
 
 } // end namespace llvm
