@@ -137,6 +137,21 @@ RefInitListCtor refInitListCtorNoRewrite(Bar b) {
   return RefInitListCtor(b);
 }
 
+// No warning: the initializer-list constructor is inherited via `using`, so
+// braces would still select it instead of the inherited `Base(Bar)`.
+struct InitListBase {
+  InitListBase(Bar) {}
+  InitListBase(std::initializer_list<InitListBase>) {}
+};
+
+struct InheritsInitListCtor : InitListBase {
+  using InitListBase::InitListBase;
+};
+
+InheritsInitListCtor inheritedInitListCtorNoRewrite(Bar b) {
+  return InheritsInitListCtor(b);
+}
+
 Bar f8() {
   return {};
 }

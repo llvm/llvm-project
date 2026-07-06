@@ -26,7 +26,7 @@ static bool hasInitListConstructor(const CXXRecordDecl *RD) {
            utils::type_traits::isStdInitializerList(
                Ctor->getParamDecl(0)->getType().getNonReferenceType());
   };
-  return llvm::any_of(RD->decls(), [&](const Decl *D) {
+  auto TestDecl = [&](const Decl *D) {
     if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(D))
       return IsInitListCtor(Ctor);
     if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
@@ -34,6 +34,14 @@ static bool hasInitListConstructor(const CXXRecordDecl *RD) {
               dyn_cast<CXXConstructorDecl>(FTD->getTemplatedDecl()))
         return IsInitListCtor(Ctor);
     return false;
+  };
+  const ASTContext &Ctx = RD->getASTContext();
+  const DeclarationName Name =
+      Ctx.DeclarationNames.getCXXConstructorName(Ctx.getCanonicalTagType(RD));
+  return llvm::any_of(RD->lookup(Name), [&](const NamedDecl *D) {
+    if (const auto *Shadow = dyn_cast<ConstructorUsingShadowDecl>(D))
+      return TestDecl(Shadow->getTargetDecl());
+    return TestDecl(D);
   });
 }
 
