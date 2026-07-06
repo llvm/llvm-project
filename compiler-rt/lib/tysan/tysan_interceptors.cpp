@@ -53,18 +53,6 @@ INTERCEPTOR(void *, memmove, void *dst, const void *src, uptr size) {
   return res;
 }
 
-INTERCEPTOR(void *, memcpy, void *dst, const void *src, uptr size) {
-  if (!tysan_inited && REAL(memcpy) == nullptr) {
-    // memmove is used here because on some platforms this will also
-    // intercept the memmove implementation.
-    return internal_memmove(dst, src, size);
-  }
-
-  void *res = REAL(memcpy)(dst, src, size);
-  tysan_copy_types(dst, src, size);
-  return res;
-}
-
 INTERCEPTOR(void *, mmap, void *addr, SIZE_T length, int prot, int flags,
             int fd, OFF_T offset) {
   void *res = REAL(mmap)(addr, length, prot, flags, fd, offset);
@@ -238,7 +226,6 @@ void InitializeInterceptors() {
 
   INTERCEPT_FUNCTION(memset);
   INTERCEPT_FUNCTION(memmove);
-  INTERCEPT_FUNCTION(memcpy);
 
   inited = 1;
 }

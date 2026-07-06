@@ -1234,16 +1234,18 @@ VPlan *VPlan::duplicate() {
   // else NewTripCount will be created and inserted into Old2NewVPValues when
   // TripCount is cloned. In any case NewPlan->TripCount is updated below.
 
+  assert(none_of(Old2NewVPValues.keys(), IsaPred<VPSymbolicValue>) &&
+         "All VPSymbolicValues must be handled below");
+
   if (auto *LoopRegion = getVectorLoopRegion()) {
     auto *OldCanIV = LoopRegion->getCanonicalIV();
     auto *NewCanIV = NewPlan->getVectorLoopRegion()->getCanonicalIV();
     assert(OldCanIV && NewCanIV &&
            "Loop regions of both plans must have canonical IVs.");
     Old2NewVPValues[OldCanIV] = NewCanIV;
+    if (OldCanIV->isMaterialized())
+      NewCanIV->markMaterialized();
   }
-
-  assert(none_of(Old2NewVPValues.keys(), IsaPred<VPSymbolicValue>) &&
-         "All VPSymbolicValues must be handled below");
 
   if (BackedgeTakenCount)
     NewPlan->BackedgeTakenCount =
@@ -1313,13 +1315,6 @@ VPIRBasicBlock *VPlan::createVPIRBasicBlock(BasicBlock *IRBB) {
 Twine VPlanPrinter::getUID(const VPBlockBase *Block) {
   return (isa<VPRegionBlock>(Block) ? "cluster_N" : "N") +
          Twine(getOrCreateBID(Block));
-}
-
-Twine VPlanPrinter::getOrCreateName(const VPBlockBase *Block) {
-  const std::string &Name = Block->getName();
-  if (!Name.empty())
-    return Name;
-  return "VPB" + Twine(getOrCreateBID(Block));
 }
 
 void VPlanPrinter::dump() {
@@ -1660,6 +1655,27 @@ bool LoopVectorizationPlanner::getDecisionAndClampRange(
     }
 
   return PredicateAtRangeStart;
+}
+
+VPSingleDefRecipe *
+VPBuilder::createConsecutiveVectorPointer(VPValue *Ptr, Type *SourceElementTy,
+                                          bool Reverse, bool FoldTail,
+                                          DebugLoc DL) {
+  VPlan &Plan = getPlan();
+  GEPNoWrapFlags Flags = vputils::getGEPFlagsForPtr(Ptr);
+  if (Reverse) {
+    // When folding the tail, we may compute an address that we don't in the
+    // original scalar loop: drop the GEP no-wrap flags in this case. Otherwise
+    // preserve existing flags without no-unsigned-wrap, as we will emit
+    // negative indices.
+    GEPNoWrapFlags ReverseFlags =
+        FoldTail ? GEPNoWrapFlags::none() : Flags.withoutNoUnsignedWrap();
+    return tryInsertInstruction(new VPVectorEndPointerRecipe(
+        Ptr, &Plan.getVF(), SourceElementTy, /*Stride=*/-1, ReverseFlags, DL));
+  }
+  Type *StrideTy = Plan.getDataLayout().getIndexType(Ptr->getScalarType());
+  VPValue *StrideOne = Plan.getConstantInt(StrideTy, 1);
+  return createVectorPointer(Ptr, SourceElementTy, StrideOne, Flags, DL);
 }
 
 VPlan &LoopVectorizationPlanner::getPlanFor(ElementCount VF) const {

@@ -73,6 +73,15 @@ namespace {
 
 using namespace mlir;
 
+static void setLocation(Region &region, Location loc) {
+  // Since recipes are generated per type and not per variable, the location
+  // of the recipe operations which get inlined will not necessarily be the
+  // same as the location of the op that is being materialized. Force an update
+  // of the location of the recipe operations to the location of the op that is
+  // being materialized.
+  region.walk([&](Operation *op) { op->setLoc(loc); });
+}
+
 static void saveVarName(StringRef name, Value dst) {
   if (name.empty())
     return;
@@ -111,11 +120,26 @@ static void saveVarName(Value src, Value dst) {
   saveVarName(acc::getVariableName(src), dst);
 }
 
+static void resolveVarNamePlaceholders(Block *block, Block::iterator ip,
+                                       StringRef name) {
+  StringRef placeholder = acc::getVarNamePlaceholder();
+  for (auto it = block->begin(); it != std::next(ip); ++it) {
+    auto attr = it->getAttrOfType<acc::VarNameAttr>(acc::getVarNameAttrName());
+    if (attr && attr.getName() == placeholder) {
+      if (name.empty())
+        it->removeAttr(acc::getVarNameAttrName());
+      else
+        it->setAttr(acc::getVarNameAttrName(),
+                    acc::VarNameAttr::get(it->getContext(), name));
+    }
+  }
+}
+
 // Clone the destroy region of the recipe before the terminator of the provided
 // block. Values must be provided for the destroy region block arguments
 // according to the recipe specifications.
 template <typename RecipeOpTy>
-static void cloneDestroy(RecipeOpTy recipe, mlir::Block *block,
+static void cloneDestroy(Location loc, RecipeOpTy recipe, mlir::Block *block,
                          Block::iterator ip,
                          const llvm::SmallVector<mlir::Value> &arguments) {
   IRMapping mapping{};
@@ -123,6 +147,9 @@ static void cloneDestroy(RecipeOpTy recipe, mlir::Block *block,
   assert(destroyRegion.getBlocks().front().getNumArguments() ==
              arguments.size() &&
          "unexpected acc recipe destroy block arguments");
+
+  setLocation(destroyRegion, loc);
+
   mapping.map(destroyRegion.getBlocks().front().getArguments(), arguments);
   acc::cloneACCRegionInto(&destroyRegion, block, ip, mapping,
                           /*resultsToReplace=*/{});
@@ -252,6 +279,9 @@ ACCRecipeMaterialization::materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
   initArgs.append(triples);
   mapping.map(initRegion.getBlocks().front().getArguments(), initArgs);
 
+  Location loc = op.getLoc();
+  setLocation(initRegion, loc);
+
   if constexpr (std::is_same_v<OpTy, acc::PrivateOp>) {
     // Clone the init region for a private.
     Block *block = &region.front();
@@ -259,11 +289,12 @@ ACCRecipeMaterialization::materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
         &initRegion, block, block->begin(), mapping, {accPtr});
     assert(results.size() == 1 && "expected single result from init region");
     saveVarName(op.getAccVar(), results[0]);
+    resolveVarNamePlaceholders(block, ip, acc::getVariableName(op.getAccVar()));
     // Clone the destroy region for a private, if it exists.
     if (!recipe.getDestroyRegion().empty()) {
       results.insert(results.begin(), origPtr);
       results.append(triples);
-      cloneDestroy(recipe, block, std::prev(block->end()), results);
+      cloneDestroy(loc, recipe, block, std::prev(block->end()), results);
     }
   } else if constexpr (std::is_same_v<OpTy, acc::FirstprivateOp>) {
     // Clone the init region for a firstprivate.
@@ -272,6 +303,7 @@ ACCRecipeMaterialization::materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
         &initRegion, block, block->begin(), mapping, {accPtr});
     assert(results.size() == 1 && "expected single result from init region");
     saveVarName(op.getAccVar(), results[0]);
+    resolveVarNamePlaceholders(block, ip, acc::getVariableName(op.getAccVar()));
     // We want the copy to store the origPtr to private
     results.insert(results.begin(), origPtr);
     results.append(triples);
@@ -280,11 +312,12 @@ ACCRecipeMaterialization::materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
     mapping.clear();
     mapping.map(recipe.getCopyRegion().front().getArguments(), results);
     // Clone the copy region for a firstprivate.
-    acc::cloneACCRegionInto(&recipe.getCopyRegion(), block, std::next(ip),
-                            mapping, {});
+    Region &copyRegion = recipe.getCopyRegion();
+    setLocation(copyRegion, loc);
+    acc::cloneACCRegionInto(&copyRegion, block, std::next(ip), mapping, {});
     if (!recipe.getDestroyRegion().empty()) {
       // origPtr was already pushed.
-      cloneDestroy(recipe, block, std::prev(block->end()), results);
+      cloneDestroy(loc, recipe, block, std::prev(block->end()), results);
     }
   } else if constexpr (std::is_same_v<OpTy, acc::ReductionOp>) {
     auto cloneRegionIntoAccRegion = [&](Region *src, Region *dest,
@@ -313,12 +346,17 @@ ACCRecipeMaterialization::materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
     saveVarName(op.getAccVar(), reductionOp.getResult());
     cloneRegionIntoAccRegion(&initRegion, &reductionOp.getRegion(),
                              /*hasResult=*/true);
+    Block *initBlock = &reductionOp.getRegion().front();
+    resolveVarNamePlaceholders(initBlock, std::prev(initBlock->end()),
+                               acc::getVariableName(op.getAccVar()));
 
     // Update the uses within the loop to use the reduction op result.
     replaceAllUsesInRegionWith(accPtr, reductionOp.getResult(), region);
 
     // Clone the combiner region into acc.reduction_combine_region.
     Region &combinerRegion = recipe.getCombinerRegion();
+    setLocation(combinerRegion, loc);
+
     Block *entryBlock = &combinerRegion.front();
 
     if constexpr (std::is_same_v<AccOpTy, acc::ParallelOp>)
@@ -354,8 +392,9 @@ ACCRecipeMaterialization::materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
 
     if (!recipe.getDestroyRegion().empty()) {
       SmallVector<Value> results{origPtr, reductionOp.getResult()};
+      results.append(triples);
       Block::iterator ip = std::next(Block::iterator(combineRegionOp));
-      cloneDestroy(recipe, combineRegionOp->getBlock(), ip, results);
+      cloneDestroy(loc, recipe, combineRegionOp->getBlock(), ip, results);
     }
   } else {
     llvm_unreachable("unexpected op type");

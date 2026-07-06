@@ -387,3 +387,34 @@ cond.end.ptr:
   call void @llvm.lifetime.end.p0(ptr %temp)
   ret void
 }
+
+%struct.i5x2 = type { i5, i5 }
+define void @struct_i5x2_memcpy_into_alloca(ptr %c) {
+; CHECK-LABEL: define void @struct_i5x2_memcpy_into_alloca(
+; CHECK-SAME: ptr [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[E:%.*]] = alloca [[STRUCT_I5X2:%.*]], align 1
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[E]], ptr align 1 [[C]], i32 2, i1 true)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %e = alloca %struct.i5x2, align 1
+  call void @llvm.memcpy.p0.p0.i32(ptr align 1 %e, ptr align 1 %c, i32 2, i1 true)
+  ret void
+}
+
+%struct.i32x3 = type { i32, i32, i32 }
+define void @struct_i32x3_memcpy_into_alloca(ptr %c) {
+; CHECK-LABEL: define void @struct_i32x3_memcpy_into_alloca(
+; CHECK-SAME: ptr [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[E_SROA_0:%.*]] = alloca <3 x i32>, align 16
+; CHECK-NEXT:    [[E_SROA_0_0_COPYLOAD:%.*]] = load volatile <3 x i32>, ptr [[C]], align 4
+; CHECK-NEXT:    store volatile <3 x i32> [[E_SROA_0_0_COPYLOAD]], ptr [[E_SROA_0]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %e = alloca %struct.i32x3, align 4
+  call void @llvm.memcpy.p0.p0.i32(ptr align 4 %e, ptr align 4 %c, i32 12, i1 true)
+  ret void
+}

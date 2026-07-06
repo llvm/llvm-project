@@ -61,6 +61,6 @@ using TransformationRegistry =
 
 } // namespace clang::ssaf
 
-LLVM_DECLARE_REGISTRY(clang::ssaf::TransformationRegistry)
+LLVM_DECLARE_REGISTRY_EX(CLANG_ABI_EXPORT, clang::ssaf::TransformationRegistry)
 
 #endif // LLVM_CLANG_SCALABLESTATICANALYSIS_SOURCETRANSFORMATION_TRANSFORMATIONREGISTRY_H

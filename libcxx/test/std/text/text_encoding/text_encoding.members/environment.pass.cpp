@@ -11,6 +11,7 @@
 
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: availability-te-environment-missing
+// UNSUPPORTED: LLVM-LIBC-FIXME
 
 // <text_encoding>
 

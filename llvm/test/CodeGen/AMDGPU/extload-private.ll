@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}load_i8_sext_private:

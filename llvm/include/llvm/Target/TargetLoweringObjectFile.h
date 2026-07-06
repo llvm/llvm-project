@@ -132,11 +132,6 @@ public:
   static SectionKind getKindForGlobal(const GlobalObject *GO,
                                       const TargetMachine &TM);
 
-  /// Return the section name specified by '#pragma clang section' or the
-  /// section attribute.
-  static StringRef getCustomSectionName(const GlobalObject *GO,
-                                        SectionKind Kind);
-
   /// This method computes the appropriate section to emit the specified global
   /// variable or function definition. This should not be passed external (or
   /// available externally) globals.
