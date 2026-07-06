@@ -21,6 +21,10 @@ def main():
     parser.add_argument(
         "--stable-abi", action="store_true", help="Target the Stable C ABI"
     )
+    parser.add_argument(
+        "--dynamic-scriptinterpreters", action="store_true",
+        help="Scriptinterpreter plugins were built as shared libraries"
+    )
     args = parser.parse_args()
     if args.variable_name == "LLDB_PYTHON_RELATIVE_PATH":
         # LLDB_PYTHON_RELATIVE_PATH is the relative path from lldb's prefix
@@ -34,17 +38,29 @@ def main():
         # lldb's python lib will be put in the correct place for python to find it.
         # If not, you'll have to use lldb -P or lldb -print-script-interpreter-info
         # to figure out where it is.
-        try:
-            print(relpath_nodots(sysconfig.get_path("platlib"), sys.prefix))
-        except ValueError:
-            # Try to fall back to something reasonable if sysconfig's platlib
-            # is outside of sys.prefix
+        #
+        # If LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS is set, instead always
+        # use lib/site-packages
+        if args.dynamic_scriptinterpreters:
             if os.name == "posix":
-                print("lib/python%d.%d/site-packages" % sys.version_info[:2])
+                print("lib/site-packages")
             elif os.name == "nt":
                 print("Lib\\site-packages")
             else:
                 raise
+        else:
+            try:
+                print(relpath_nodots(sysconfig.get_path("platlib"), sys.prefix))
+            except ValueError:
+                # Try to fall back to something reasonable if sysconfig's
+                # platlib is outside of sys.prefix
+                if os.name == "posix":
+                    print("lib/python%d.%d/site-packages" %
+                        sys.version_info[:2])
+                elif os.name == "nt":
+                    print("Lib\\site-packages")
+                else:
+                    raise
     elif args.variable_name == "LLDB_PYTHON_EXE_RELATIVE_PATH":
         tried = list()
         exe = sys.executable
