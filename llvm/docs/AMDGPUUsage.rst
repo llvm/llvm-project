@@ -701,6 +701,12 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                                                                                 - ``gfx1103``
 
 
+     ``gfx11-7-generic``  ``amdgcn``     - ``gfx1170``     - wavefrontsize64  - Architected     No restrictions.
+                                         - ``gfx1171``     - cumode             flat scratch
+                                         - ``gfx1172``                        - Packed
+                                                                                work-item
+                                                                                IDs
+
      ``gfx12-generic``    ``amdgcn``     - ``gfx1200``     - wavefrontsize64  - Architected     No restrictions.
                                          - ``gfx1201``     - cumode             flat scratch
                                                                               - Packed
@@ -709,6 +715,12 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
 
      ``gfx12-5-generic``  ``amdgcn``     - ``gfx1250``                        - Architected     Functionally equivalent to
                                          - ``gfx1251``                          flat scratch    gfx1250.
+                                                                              - Packed
+                                                                                work-item
+                                                                                IDs
+
+     ``gfx13-generic``    ``amdgcn``     - ``gfx1310``     - wavefrontsize64  - Architected     No restrictions.
+                                                           - cumode             flat scratch
                                                                               - Packed
                                                                                 work-item
                                                                                 IDs
@@ -1508,21 +1520,6 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    The format is a 64-bit concatenation of the MODE and TRAPSTS registers.
 
   :ref:`llvm.set.fpenv<int_set_fpenv>`             Sets the floating point environment to the specified state.
-  llvm.amdgcn.load.to.lds.p<1/7>                   Loads values from global memory (either in the form of a global
-                                                   a raw fat buffer pointer) to LDS. The size of the data copied can be 1, 2,
-                                                   or 4 bytes (and gfx950 also allows 12 or 16 bytes). The LDS pointer
-                                                   argument should be wavefront-uniform; the global pointer need not be.
-                                                   The LDS pointer is implicitly offset by 4 * lane_id bytes for size <= 4 bytes
-                                                   and 16 * lane_id bytes for larger sizes. This lowers to `global_load_lds`,
-                                                   `buffer_load_* ... lds`, or `global_load__* ... lds` depending on address
-                                                   space and architecture. `amdgcn.global.load.lds` has the same semantics as
-                                                   `amdgcn.load.to.lds.p1`.
-
-  llvm.amdgcn.load.async.to.lds.p<1/7>             Same as `llvm.amdgcn.load.to.lds.p<1/7>`, but the completion of this
-                                                   :ref:`asynchronous version<amdgpu-async-operations>` is not automatically tracked
-                                                   by the compiler. The user must explicitly track the completion with `asyncmark`
-                                                   operations before using their side-effects.
-
   llvm.amdgcn.readfirstlane                        Provides direct access to v_readfirstlane_b32. Returns the value in
                                                    the lowest active lane of the input operand. Currently implemented
                                                    for i16, i32, float, half, bfloat, <2 x i16>, <2 x half>, <2 x bfloat>,
@@ -2084,6 +2081,31 @@ The 3rd operand for ``.store`` or 2nd for ``.load`` intrinsics is the
 
 The last operand of the intrinsic is the
 :ref:`synchronization scope<amdgpu-intrinsics-syncscope-metadata-operand>` of the operation.
+
+DMA Intrinsics
+~~~~~~~~~~~~~~
+
+DMA intrinsics transfer data between global memory and LDS without occupying
+registers. See :ref:`amdgpu-dma-operations` for full documentation.
+
+::
+
+  llvm.amdgcn.load[.async].to.lds
+  llvm.amdgcn.global.load[.async].lds
+  llvm.amdgcn.{raw|struct}[.ptr].buffer.load[.async].lds
+  llvm.amdgcn.{global|cluster}.load.async.to.lds.b{8,32,64,128}
+  llvm.amdgcn.global.store.async.from.lds.b{8,32,64,128}
+
+Tensor Intrinsics
+~~~~~~~~~~~~~~~~~
+
+Tensor intrinsics transfer data between global memory and LDS using a tensor
+descriptor. Despite the absence of ``.async`` in their names, these intrinsics
+are asynchronous. See :ref:`amdgpu-dma-operations` for full documentation.
+
+::
+
+  llvm.amdgcn.tensor.{load.to|store.from}.lds
 
 Intrinsic Operands
 ~~~~~~~~~~~~~~~~~~
@@ -3063,6 +3085,9 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1171``          0x05e      ``gfx1171``
      ``EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC``   0x05f      ``gfx9-4-generic``
      *reserved*                                 0x060      Reserved.
+     *reserved*                                 0x061      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX11_7_GENERIC``  0x062      ``gfx11-7-generic``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX13_GENERIC``    0x063      ``gfx13-generic``
      *reserved*                                 0x070      Reserved.
      ========================================== ========== =============================
 
@@ -7189,19 +7214,7 @@ operations.
 termed vector memory operations.
 
 ``global_load_lds`` or ``buffer/global_load`` instructions with the `lds` flag
-are LDS DMA loads. They interact with caches as if the loaded data were
-being loaded to registers and not to LDS, and so therefore support the same
-cache modifiers. They cannot be performed atomically. They implement volatile
-(via aux/cpol bit 31) and nontemporal (via metadata) as if they were loads
-from the global address space.
-
-The LDS DMA instructions are synchronous by default, which means that the
-compiler will automatically ensure that the corresponding operation has
-completed before its side-effects are used. The :ref:`asynchronous
-versions<amdgpu-async-operations>` of these same instructions perform the same
-operations, but without automatic tracking in the compiler; the user must
-explicitly track the completion of these instructions before using their
-side-effects.
+are :ref:`LDS DMA operations<amdgpu-dma-operations>`.
 
 Private address space uses ``buffer_load/store`` using the scratch V#
 (GFX6-GFX8), or ``scratch_load/store`` (GFX9-GFX11). Since only a single thread

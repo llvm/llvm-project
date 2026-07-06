@@ -20,6 +20,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -34,10 +35,11 @@ using namespace AMDGPU;
 
 RegBankLegalizeHelper::RegBankLegalizeHelper(
     MachineIRBuilder &B, const MachineUniformityInfo &MUI,
-    const RegisterBankInfo &RBI, const RegBankLegalizeRules &RBLRules)
+    GISelValueTracking *VT, const RegisterBankInfo &RBI,
+    const RegBankLegalizeRules &RBLRules)
     : MF(B.getMF()), MFI(MF.getInfo<SIMachineFunctionInfo>()),
       ST(MF.getSubtarget<GCNSubtarget>()), TII(*ST.getInstrInfo()), B(B),
-      MRI(*B.getMRI()), MUI(MUI), RBI(RBI), MORE(MF, nullptr),
+      MRI(*B.getMRI()), MUI(MUI), VT(VT), RBI(RBI), MORE(MF, nullptr),
       RBLRules(RBLRules), IsWave32(ST.isWave32()),
       SgprRB(&RBI.getRegBank(AMDGPU::SGPRRegBankID)),
       VgprRB(&RBI.getRegBank(AMDGPU::VGPRRegBankID)),
@@ -1277,6 +1279,138 @@ bool RegBankLegalizeHelper::lowerAbsToS32(MachineInstr &MI) {
   return true;
 }
 
+// Ported from SITargetLowering::lowerSET_ROUNDING in SIISelLowering.cpp.
+// Keep the mapping logic and conversion tables aligned with the SDAG lowering.
+bool RegBankLegalizeHelper::lowerSetRounding(MachineInstr &MI) {
+  Register NewMode = MI.getOperand(0).getReg();
+
+  // Index a table of 4-bit entries mapping from the C FLT_ROUNDS values to the
+  // hardware MODE.fp_round values.
+  if (auto ConstMode = getIConstantVRegValWithLookThrough(NewMode, MRI)) {
+    uint32_t ClampedVal = std::min(
+        static_cast<uint32_t>(ConstMode->Value.getZExtValue()),
+        static_cast<uint32_t>(AMDGPU::TowardZeroF32_TowardNegativeF64));
+    uint32_t DecodedVal = AMDGPU::decodeFltRoundToHWConversionTable(ClampedVal);
+    NewMode = B.buildConstant(SgprRB_S32, DecodedVal).getReg(0);
+  } else {
+    // If we know the input can only be one of the supported standard modes in
+    // the range 0-3, we can use a simplified mapping to hardware values.
+    KnownBits Known = VT->getKnownBits(NewMode);
+    const bool UseReducedTable = Known.countMinLeadingZeros() >= 30;
+    // The supported standard values are 0-3. The extended values start at 8. We
+    // need to offset by 4 if the value is in the extended range.
+
+    if (UseReducedTable) {
+      // Truncate to the low 32-bits.
+      auto BitTable = B.buildConstant(
+          SgprRB_S32, AMDGPU::FltRoundToHWConversionTable & 0xffff);
+
+      auto Two = B.buildConstant(SgprRB_S32, 2);
+      auto RoundModeTimesNumBits = B.buildShl(SgprRB_S32, NewMode, Two);
+
+      NewMode =
+          B.buildLShr(SgprRB_S32, BitTable, RoundModeTimesNumBits).getReg(0);
+
+      // TODO: A demanded-bits simplification on the setreg source here could
+      // likely reduce the table extracted bits into inline immediates.
+    } else {
+      // table_index = umin(value, value - 4)
+      // MODE.fp_round = (bit_table >> (table_index << 2)) & 0xf
+      auto NegFour = B.buildConstant(SgprRB_S32, -4);
+      auto OffsetEnum = B.buildAdd(SgprRB_S32, NewMode, NegFour);
+      auto IndexVal = B.buildUMin(SgprRB_S32, NewMode, OffsetEnum);
+
+      auto Two = B.buildConstant(SgprRB_S32, 2);
+      auto RoundModeTimesNumBits = B.buildShl(SgprRB_S32, IndexVal, Two);
+
+      auto BitTable =
+          B.buildConstant({SgprRB, S64}, AMDGPU::FltRoundToHWConversionTable);
+      auto TableValue =
+          B.buildLShr({SgprRB, S64}, BitTable, RoundModeTimesNumBits);
+      // No need to mask out the high bits since the setreg will ignore them
+      // anyway.
+      NewMode = B.buildTrunc(SgprRB_S32, TableValue).getReg(0);
+    }
+  }
+
+  // N.B. The setreg will be later folded into s_round_mode on supported
+  // targets.
+  uint32_t BothRoundHwReg =
+      AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 0, 4);
+  B.buildIntrinsic(Intrinsic::amdgcn_s_setreg, ArrayRef<DstOp>(),
+                   /*HasSideEffects=*/true, /*isConvergent=*/false)
+      .addImm(static_cast<int16_t>(BothRoundHwReg))
+      .addReg(NewMode);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+// Ported from SITargetLowering::lowerGET_ROUNDING in SIISelLowering.cpp.
+// Keep the mapping logic and conversion tables aligned with the SDAG lowering.
+bool RegBankLegalizeHelper::lowerGetRounding(MachineInstr &MI) {
+  Register Dst = MI.getOperand(0).getReg();
+
+  uint32_t BothRoundHwReg =
+      AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 0, 4);
+  auto GetReg =
+      B.buildIntrinsic(Intrinsic::amdgcn_s_getreg, {SgprRB_S32},
+                       /*HasSideEffects=*/true, /*isConvergent=*/false)
+          .addImm(BothRoundHwReg);
+
+  // There are two rounding modes, one for f32 and one for f64/f16. We only
+  // report in the standard value range if both are the same.
+  //
+  // The raw values also differ from the expected FLT_ROUNDS values. Nearest
+  // ties away from zero is not supported, and the other values are rotated by
+  // 1.
+  //
+  // If the two rounding modes are not the same, report a target defined value.
+
+  // Mode register rounding mode fields:
+  //
+  // [1:0] Single-precision round mode.
+  // [3:2] Double/Half-precision round mode.
+  //
+  // 0=nearest even; 1= +infinity; 2= -infinity, 3= toward zero.
+  //
+  //             Hardware   Spec
+  // Toward-0        3        0
+  // Nearest Even    0        1
+  // +Inf            1        2
+  // -Inf            2        3
+  //  NearestAway0  N/A       4
+  //
+  // We have to handle 16 permutations of a 4-bit value, so we create a 64-bit
+  // table we can index by the raw hardware mode.
+  //
+  // (trunc (FltRoundConversionTable >> MODE.fp_round)) & 0xf
+  auto BitTable =
+      B.buildConstant({SgprRB, S64}, AMDGPU::FltRoundConversionTable);
+
+  auto Two = B.buildConstant(SgprRB_S32, 2);
+  auto RoundModeTimesNumBits = B.buildShl(SgprRB_S32, GetReg, Two);
+
+  // TODO: We could possibly avoid a 64-bit shift and use a simpler table if we
+  // knew only one mode was demanded.
+  auto TableValue = B.buildLShr({SgprRB, S64}, BitTable, RoundModeTimesNumBits);
+  auto TruncTable = B.buildTrunc(SgprRB_S32, TableValue);
+
+  auto EntryMask = B.buildConstant(SgprRB_S32, 0xf);
+  auto TableEntry = B.buildAnd(SgprRB_S32, TruncTable, EntryMask);
+
+  // There's a gap in the 4-bit encoded table and actual enum values, so offset
+  // if it's an extended value.
+  auto Four = B.buildConstant(SgprRB_S32, 4);
+  auto EnumOffset = B.buildAdd(SgprRB_S32, TableEntry, Four);
+  auto IsStandardMode =
+      B.buildICmp(CmpInst::ICMP_ULT, SgprRB_S32, TableEntry, Four);
+  B.buildSelect(Dst, IsStandardMode, TableEntry, EnumOffset);
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool RegBankLegalizeHelper::lower(MachineInstr &MI,
                                   const RegBankLLTMapping &Mapping,
                                   WaterfallInfo &WFI) {
@@ -1653,6 +1787,10 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
   case DeletePrefetch:
     MI.eraseFromParent();
     return true;
+  case LowerSetRounding:
+    return lowerSetRounding(MI);
+  case LowerGetRounding:
+    return lowerGetRounding(MI);
   }
 
   return true;

@@ -3914,6 +3914,15 @@ let Predicates = [HasAVX512] in {
             (VMOVPQI2QIZmr addr:$dst, VR128X:$src)>;
 }
 
+//===---------------------------------------------------------------------===//
+// If the upper 32 bits of v2i64 elements are zero, we can use (v)movd instead.
+let AddedComplexity = 10 in {
+  let Predicates = [HasAVX512] in {
+    def : Pat<(i64 (extractelt (X86upperzero<v2i64, VR128X>:$src), (iPTR 0))),
+              (SUBREG_TO_REG (VMOVPDI2DIZrr VR128:$src), sub_32bit)>;
+  }
+}
+
 // Move Scalar Single to Double Int
 //
 let ExeDomain = SSEPackedInt, isCodeGenOnly = 1 in {
@@ -13815,3 +13824,29 @@ let Uses = [MXCSR] in {
   defm VFCMULCSHZ : avx512_cfmbinop_sh_common<0xD7, "vfcmulcsh", x86vfcmulcSh, x86vfcmulcShRnd, 0>,
                                     T_MAP6, XD, EVEX_CD8<32, CD8VT1>, EVEX_V128, VEX_LIG, EVEX, VVVV;
 }
+
+// VPBITREVB - BMM bit reverse instructions
+// Basic instruction patterns for BMM (Bit Matrix Multiply)
+defm VPBITREVB : avx512_unary_rm_vl<0x81, "vbitrevb", bitreverse, SchedWriteVecALU,
+                                    avx512vl_i8_info, HasBMM>, T_MAP6, PS;
+
+defm : avx512_unary_lowering<"VPBITREVB", bitreverse, avx512vl_i8_info, HasBMM>;
+
+// VBMACOR, VBMACXOR - BMM matrix multiplication instructions
+// VBMACOR: EVEX.256.NP.MAP6.W0 80 /r, EVEX.512.NP.MAP6.W0 80 /r
+let Predicates = [HasBMM, HasVLX] in
+defm VBMACORZ256 : VNNI_rmb<0x80, "vbmacor16x16x16", x86vbmacor, SchedWriteVecIMul.YMM, v16i16x_info, 0>,
+                   EVEX_V256, T_MAP6;
+
+let Predicates = [HasBMM] in
+defm VBMACORZ : VNNI_rmb<0x80, "vbmacor16x16x16", x86vbmacor, SchedWriteVecIMul.ZMM, v32i16_info, 0>,
+                EVEX_V512, T_MAP6;
+
+// VBMACXOR: EVEX.256.NP.MAP6.W1 80 /r, EVEX.512.NP.MAP6.W1 80 /r
+let Predicates = [HasBMM, HasVLX] in
+defm VBMACXORZ256 : VNNI_rmb<0x80, "vbmacxor16x16x16", x86vbmacxor, SchedWriteVecIMul.YMM, v16i16x_info, 0>,
+                    EVEX_V256, T_MAP6, REX_W;
+
+let Predicates = [HasBMM] in
+defm VBMACXORZ : VNNI_rmb<0x80, "vbmacxor16x16x16", x86vbmacxor, SchedWriteVecIMul.ZMM, v32i16_info, 0>,
+                 EVEX_V512, T_MAP6, REX_W;
