@@ -35,7 +35,7 @@ entry:
 ; CHECK-NOT: a[
 ; CHECK: v_wmma_f32_16x16x16_f16 v[{{[0-9:]+}}], v[{{[0-9:]+}}], v[{{[0-9:]+}}]
 ; CHECK-NOT: a[
-; CHECK: .set pin_agpr_noop.num_agpr, 0
+; CHECK: .set {{\.?L?}}pin_agpr_noop.num_agpr, 0
 define protected amdgpu_kernel void @pin_agpr_noop(ptr addrspace(1) nocapture readonly %A, ptr addrspace(1) nocapture readonly %B, ptr addrspace(1) nocapture writeonly %C) {
 entry:
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()

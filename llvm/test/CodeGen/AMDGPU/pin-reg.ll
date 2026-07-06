@@ -99,7 +99,7 @@ define amdgpu_kernel void @pin_agpr_wide(ptr addrspace(1) %pa, ptr addrspace(1) 
 ; It gets the target's default MFMA form (accumulator AGPR, inputs VGPR) with no
 ; pin-introduced agpr<->vgpr shuffles.
 ; CHECK-LABEL: {{^}}no_pin:
-; CHECK: v_mfma_f32_16x16x16_f16 a[{{[0-9:]+}}], v[{{[0-9:]+}}], v[
+; CHECK: v_mfma_f32_16x16x16_f16 v[{{[0-9:]+}}], v[{{[0-9:]+}}], v[
 ; CHECK-NOT: v_accvgpr
 define amdgpu_kernel void @no_pin(ptr addrspace(1) %pa, ptr addrspace(1) %pb, ptr addrspace(1) %pc) {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
