@@ -15770,11 +15770,21 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D,
   }
 
   // Incomplete resource arrays are not allowed as function parameters in HLSL
-  if (getLangOpts().HLSL && parmDeclType->isIncompleteArrayType() &&
-      parmDeclType->isHLSLResourceRecordArray()) {
-    Diag(D.getIdentifierLoc(),
-         diag::err_hlsl_incomplete_resource_array_in_function_param);
-    D.setInvalidType(true);
+  if (getLangOpts().HLSL && parmDeclType->isIncompleteArrayType()) {
+    // The `isHLSLResourceRecordArray` check uses the record's fields to
+    // determine whether the element is a resource, so the element type must be
+    // complete first. We use `isCompleteType` to force its completion in case
+    // this parameter is the first use of the resource type in the translation
+    // unit.
+    QualType EltTy = Context.getBaseElementType(parmDeclType);
+    if (!EltTy->isDependentType())
+      isCompleteType(D.getIdentifierLoc(), EltTy);
+
+    if (parmDeclType->isHLSLResourceRecordArray()) {
+      Diag(D.getIdentifierLoc(),
+           diag::err_hlsl_incomplete_resource_array_in_function_param);
+      D.setInvalidType(true);
+    }
   }
 
   // Temporarily put parameter variables in the translation unit, not
