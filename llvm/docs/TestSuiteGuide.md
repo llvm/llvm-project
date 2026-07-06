@@ -288,7 +288,7 @@ benchmarks. CMake can print a list of them:
   accumulating bugs from all C/C++ compilations in the file
   `<build-dir>/debugify-report.json`; this report can be prettified by using the
   `llvm/utils/llvm-original-di-preservation.py` script (documented
-  [here](project:HowToUpdateDebugInfo.rst#test-original-debug-info-preservation-in-optimizations)).
+  [here](project:HowToUpdateDebugInfo.rst#OriginalDI)).
   This requires the C and C++ compilers to be a version of Clang built with the
   feature `LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING=COVERAGE_AND_ORIGIN` (see
   [here](project:HowToUpdateDebugInfo.rst#using-coverage-tracking-to-remove-false-positives)
