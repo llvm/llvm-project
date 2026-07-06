@@ -646,6 +646,10 @@ void OmpStructureChecker::CheckDeclareVariantUserConditions(
   }
 }
 
+static bool IsProcedureOrFunction(const Symbol &symbol) {
+  return IsProcedure(symbol) || IsFunction(symbol);
+}
+
 // OpenMP 6.0, 9.6 (declare_variant), Fortran restriction: "The characteristic
 // of the function variant must be compatible with the characteristic of the
 // base function after the implementation defined transformation for its OpenMP
@@ -726,7 +730,7 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
 
   auto CheckProcedureSymbol{[&](const Symbol *sym, parser::CharBlock source) {
     if (sym) {
-      if (!IsProcedure(*sym) && !IsFunction(*sym)) {
+      if (!IsProcedureOrFunction(*sym)) {
         auto &msg{context_.Say(source,
             "The name '%s' should refer to a procedure"_err_en_US,
             sym->name())};
@@ -772,11 +776,11 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
     return;
   }
 
-  auto isProcedure{[](const Symbol *sym) {
-    return sym && (IsProcedure(*sym) || IsFunction(*sym));
-  }};
-
-  if (isProcedure(base) && isProcedure(variant)) {
+  // Only validate and record the pairing when both names resolve to procedures.
+  // Otherwise a diagnostic was already issued (see CheckProcedureSymbol), and
+  // proceeding would emit spurious follow-on errors.
+  if (base && variant && IsProcedureOrFunction(*base) &&
+      IsProcedureOrFunction(*variant)) {
     base = &base->GetUltimate();
     variant = &variant->GetUltimate();
     if (base == variant) {
