@@ -123,7 +123,7 @@ _DEFAULT_FN_ATTRS static __inline__ uint64_t __gpu_ballot(uint64_t __lane_mask,
 
 // Waits for all the threads in the block to converge and issues a fence.
 _DEFAULT_FN_ATTRS static __inline__ void __gpu_sync_threads(void) {
-  __syncthreads();
+  __nvvm_bar_sync(0);
 }
 
 // Waits for all threads in the warp to reconverge for independent scheduling.

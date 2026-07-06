@@ -48,11 +48,19 @@ unsigned __llvmPushCallConfiguration(dim3 gridDim, dim3 blockDim,
                                      size_t sharedMem = 0, void *stream = 0);
 }
 
-__LLVM_OFFLOAD_DEVICE_ATTR inline void __syncthreads(void) {
+__LLVM_OFFLOAD_DEVICE_ATTR inline void __llvm_offload_syncthreads(void) {
 #if __LLVM_OFFLOAD_HAS_GPU_INTRINSICS
   __gpu_sync_threads();
 #endif
 }
+
+#if defined(__NVPTX__)
+#define __syncthreads() __llvm_offload_syncthreads()
+#else
+__LLVM_OFFLOAD_DEVICE_ATTR inline void __syncthreads(void) {
+  __llvm_offload_syncthreads();
+}
+#endif
 
 // Make sure nobody can create instances of the coordinate types, take their
 // address, copy, or assign them.
