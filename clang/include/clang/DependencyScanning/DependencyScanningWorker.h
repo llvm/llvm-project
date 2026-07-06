@@ -93,6 +93,16 @@ public:
     return TracingFS.get();
   }
 
+  // MaxNumOfByNameQueries is the upper limit of the number of names the by-name
+  // scanning API (computeDependenciesByNameWithDrain) can drain per call. At
+  // the time of this commit, the estimated number of total unique importable
+  // names is around 3000 from Apple's SDKs. We usually import them in parallel,
+  // so it is unlikely that all names are all scanned by the same dependency
+  // scanning worker. Therefore the 64k (20x bigger than our estimate) size is
+  // sufficient to hold the unique source locations to report diagnostics per
+  // worker.
+  static const int32_t MaxNumOfByNameQueries = 1 << 16;
+
 private:
   /// The parent dependency scanning service.
   DependencyScanningService &Service;

@@ -6,7 +6,6 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_library(clangDependencyScanning
-  CompilerInstanceWithContext.cpp
   DependencyGraph.cpp
   DependencyScanningFilesystem.cpp
   DependencyScanningService.cpp

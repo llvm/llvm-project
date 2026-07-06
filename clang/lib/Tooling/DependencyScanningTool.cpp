@@ -9,7 +9,6 @@
 #include "clang/Tooling/DependencyScanningTool.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
-#include "clang/DependencyScanning/CompilerInstanceWithContext.h"
 #include "clang/DependencyScanning/DependencyScannerImpl.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
@@ -287,7 +286,7 @@ initVFSForByNameScanning(ArrayRef<std::string> CommandLine) {
   // locations for the diagnostics. Therefore, sharing this global buffer across
   // threads is ok.
   static const std::string FakeInput(
-      dependencies::CompilerInstanceWithContext::MaxNumOfQueries, ' ');
+      dependencies::DependencyScanningWorker::MaxNumOfByNameQueries, ' ');
 
   StringRef InputPath =
       llvm::sys::path::is_style_windows(llvm::sys::path::Style::native)
