@@ -3152,20 +3152,17 @@ void CodeGenFunction::EmitPPCAIXMultiVersionResolver(
                                   .Case("pwr11", "arch_3_1")
                                   .Default("error");
     } else {
-      // Feature string - check for "no-" negation prefix
-      StringRef BaseFeature = FeatureStr;
-
       // Feature strings arrive here already normalized:
       // - Positive features: just the name (e.g., "altivec")
       // - Negated features: "no-" prefix (e.g., "no-altivec")
-      if (BaseFeature.starts_with("no-")) {
+      if (FeatureStr.starts_with("no-")) {
         IsNegated = true;
-        BaseFeature = BaseFeature.drop_front(3);
+        FeatureStr = FeatureStr.drop_front(3);
       }
 
       // Map feature names to __builtin_cpu_supports() strings
       BuiltinCpuSupportsArg =
-          llvm::StringSwitch<StringRef>(BaseFeature)
+          llvm::StringSwitch<StringRef>(FeatureStr)
 #define PPC_AIX_CLONES_FEATURE(FEATURE_NAME, AIX_BUILTIN_CPU_SUPPORTS_NAME, _) \
   .Case(FEATURE_NAME, AIX_BUILTIN_CPU_SUPPORTS_NAME)
 #include "llvm/TargetParser/PPCTargetParser.def"
