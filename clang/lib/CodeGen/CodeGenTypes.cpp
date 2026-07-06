@@ -300,14 +300,9 @@ void CodeGenTypes::RefreshTypeCacheForClass(const CXXRecordDecl *RD) {
 }
 
 static llvm::Type *getTypeForFormat(llvm::LLVMContext &VMContext,
-                                    const llvm::fltSemantics &format,
-                                    bool UseNativeHalf = false) {
-  if (&format == &llvm::APFloat::IEEEhalf()) {
-    if (UseNativeHalf)
-      return llvm::Type::getHalfTy(VMContext);
-    else
-      return llvm::Type::getInt16Ty(VMContext);
-  }
+                                    const llvm::fltSemantics &format) {
+  if (&format == &llvm::APFloat::IEEEhalf())
+    return llvm::Type::getHalfTy(VMContext);
   if (&format == &llvm::APFloat::BFloat())
     return llvm::Type::getBFloatTy(VMContext);
   if (&format == &llvm::APFloat::IEEEsingle())
@@ -485,16 +480,14 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
 
     case BuiltinType::Float16:
       ResultType =
-          getTypeForFormat(getLLVMContext(), Context.getFloatTypeSemantics(T),
-                           /* UseNativeHalf = */ true);
+          getTypeForFormat(getLLVMContext(), Context.getFloatTypeSemantics(T));
       break;
 
     case BuiltinType::Half:
-      // Half FP can either be storage-only (lowered to i16) or native.
-      ResultType = getTypeForFormat(
-          getLLVMContext(), Context.getFloatTypeSemantics(T),
-          Context.getLangOpts().NativeHalfType ||
-              !Context.getTargetInfo().useFP16ConversionIntrinsics());
+      // Half FP can either be storage-only (lowered to i16 for ABI purposes) or
+      // native.
+      ResultType =
+          getTypeForFormat(getLLVMContext(), Context.getFloatTypeSemantics(T));
       break;
     case BuiltinType::LongDouble:
       LongDoubleReferenced = true;
@@ -504,9 +497,8 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     case BuiltinType::Double:
     case BuiltinType::Float128:
     case BuiltinType::Ibm128:
-      ResultType = getTypeForFormat(getLLVMContext(),
-                                    Context.getFloatTypeSemantics(T),
-                                    /* UseNativeHalf = */ false);
+      ResultType =
+          getTypeForFormat(getLLVMContext(), Context.getFloatTypeSemantics(T));
       break;
 
     case BuiltinType::NullPtr:
@@ -645,6 +637,10 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case Type::Pointer: {
     const PointerType *PTy = cast<PointerType>(Ty);
     QualType ETy = PTy->getPointeeType();
+    if (ETy.getAddressSpace() == LangAS::wasm_funcref) {
+      ResultType = CGM.getTargetCodeGenInfo().getWasmFuncrefReferenceType();
+      break;
+    }
     unsigned AS = getTargetAddressSpace(ETy);
     ResultType = llvm::PointerType::get(getLLVMContext(), AS);
     break;

@@ -51,6 +51,7 @@
 #include "X86TargetTransformInfo.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -232,7 +233,8 @@ unsigned X86TTIImpl::getLoadStoreVecRegBitWidth(unsigned) const {
       .getFixedValue();
 }
 
-unsigned X86TTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
+unsigned X86TTIImpl::getMaxInterleaveFactor(ElementCount VF,
+                                            bool HasUnorderedReductions) const {
   // If the loop will not be vectorized, don't interleave the loop.
   // Let regular unroll to unroll the loop, which saves the overflow
   // check and memory check cost.
@@ -2241,10 +2243,6 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       {TTI::SK_Reverse, MVT::v8f16, {1, 2, 1, 2}}, // pshufb
       {TTI::SK_Reverse, MVT::v16i8, {1, 2, 1, 2}}, // pshufb
 
-      {TTI::SK_Select, MVT::v8i16, {3, 3, 3, 3}}, // 2*pshufb + por
-      {TTI::SK_Select, MVT::v8f16, {3, 3, 3, 3}}, // 2*pshufb + por
-      {TTI::SK_Select, MVT::v16i8, {3, 3, 3, 3}}, // 2*pshufb + por
-
       {TTI::SK_Splice, MVT::v4i32, {1, 1, 1, 1}}, // palignr
       {TTI::SK_Splice, MVT::v4f32, {1, 1, 1, 1}}, // palignr
       {TTI::SK_Splice, MVT::v8i16, {1, 1, 1, 1}}, // palignr
@@ -2284,9 +2282,9 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       {TTI::SK_Select, MVT::v2i64, {1, 1, 1, 1}}, // movsd
       {TTI::SK_Select, MVT::v2f64, {1, 1, 1, 1}}, // movsd
       {TTI::SK_Select, MVT::v4i32, {2, 2, 2, 2}}, // 2*shufps
-      {TTI::SK_Select, MVT::v8i16, {3, 3, 3, 3}}, // pand + pandn + por
-      {TTI::SK_Select, MVT::v8f16, {3, 3, 3, 3}}, // pand + pandn + por
-      {TTI::SK_Select, MVT::v16i8, {3, 3, 3, 3}}, // pand + pandn + por
+      {TTI::SK_Select, MVT::v8i16, {2, 2, 3, 3}}, // pand + pandn + por
+      {TTI::SK_Select, MVT::v8f16, {2, 2, 3, 3}}, // pand + pandn + por
+      {TTI::SK_Select, MVT::v16i8, {2, 2, 3, 3}}, // pand + pandn + por
 
       {TTI::SK_Splice, MVT::v2i64, {1, 1, 1, 1}}, // shufpd
       {TTI::SK_Splice, MVT::v2f64, {1, 1, 1, 1}}, // shufpd
@@ -5669,6 +5667,18 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     { ISD::ADD,   MVT::v32i8,   4 },
   };
 
+  static const CostTblEntry AVX512FCostTbl[] = {
+    { ISD::FADD,  MVT::v8f64,   4 },
+    { ISD::FADD,  MVT::v16f32,  5 },
+    { ISD::ADD,   MVT::v8i64,   4 },
+    { ISD::ADD,   MVT::v16i32,  6 },
+  };
+
+  static const CostTblEntry AVX512BWCostTbl[] = {
+    { ISD::ADD,   MVT::v32i16,  7 },
+    { ISD::ADD,   MVT::v64i8,   4 },
+  };
+
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
@@ -5680,6 +5690,14 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     MVT MTy = VT.getSimpleVT();
     if (ST->useSLMArithCosts())
       if (const auto *Entry = CostTableLookup(SLMCostTbl, ISD, MTy))
+        return Entry->Cost;
+
+    if (ST->hasBWI())
+      if (const auto *Entry = CostTableLookup(AVX512BWCostTbl, ISD, MTy))
+        return Entry->Cost;
+
+    if (ST->hasAVX512())
+      if (const auto *Entry = CostTableLookup(AVX512FCostTbl, ISD, MTy))
         return Entry->Cost;
 
     if (ST->hasAVX())
@@ -6719,21 +6737,26 @@ bool X86TTIImpl::areInlineCompatible(const Function *Caller,
   const TargetMachine &TM = getTLI()->getTargetMachine();
 
   // Work this as a subsetting of subtarget features.
-  const FeatureBitset &CallerBits =
-      TM.getSubtargetImpl(*Caller)->getFeatureBits();
-  const FeatureBitset &CalleeBits =
-      TM.getSubtargetImpl(*Callee)->getFeatureBits();
+  const X86Subtarget &CallerSubtarget = TM.getSubtarget<X86Subtarget>(*Caller);
+  const X86Subtarget &CalleeSubtarget = TM.getSubtarget<X86Subtarget>(*Callee);
+  const FeatureBitset &CallerBits = CallerSubtarget.getFeatureBits();
+  const FeatureBitset &CalleeBits = CalleeSubtarget.getFeatureBits();
 
-  // Check whether features are the same (apart from the ignore list).
-  FeatureBitset RealCallerBits = CallerBits & ~InlineFeatureIgnoreList;
-  FeatureBitset RealCalleeBits = CalleeBits & ~InlineFeatureIgnoreList;
-  if (RealCallerBits == RealCalleeBits)
-    return true;
-
-  // If the features are a subset, we need to additionally check for calls
-  // that may become ABI-incompatible as a result of inlining.
+  // Check whether callee features are a subset of caller features
+  // (apart from the ignore list).
+  const FeatureBitset &InlineIgnoreFeatures =
+      CallerSubtarget.getInlineIgnoreFeatures();
+  FeatureBitset RealCallerBits = CallerBits & ~InlineIgnoreFeatures;
+  FeatureBitset RealCalleeBits = CalleeBits & ~InlineIgnoreFeatures;
   if ((RealCallerBits & RealCalleeBits) != RealCalleeBits)
     return false;
+
+  // If the features are not exactly the same (or there is a difference in
+  // AVX512 register usage), we need to additionally check for calls
+  // that may become ABI-incompatible as a result of inlining.
+  if (RealCallerBits == RealCalleeBits &&
+      CallerSubtarget.useAVX512Regs() == CalleeSubtarget.useAVX512Regs())
+    return true;
 
   for (const Instruction &I : instructions(Callee)) {
     if (const auto *CB = dyn_cast<CallBase>(&I)) {
@@ -6765,23 +6788,23 @@ bool X86TTIImpl::areInlineCompatible(const Function *Caller,
 bool X86TTIImpl::areTypesABICompatible(const Function *Caller,
                                        const Function *Callee,
                                        ArrayRef<Type *> Types) const {
-  if (!BaseT::areTypesABICompatible(Caller, Callee, Types))
-    return false;
-
-  // If we get here, we know the target features match. If one function
-  // considers 512-bit vectors legal and the other does not, consider them
-  // incompatible.
   const TargetMachine &TM = getTLI()->getTargetMachine();
+  const TargetLowering *CallerTLI =
+      TM.getSubtargetImpl(*Caller)->getTargetLowering();
+  const TargetLowering *CalleeTLI =
+      TM.getSubtargetImpl(*Callee)->getTargetLowering();
 
-  if (TM.getSubtarget<X86Subtarget>(*Caller).useAVX512Regs() ==
-      TM.getSubtarget<X86Subtarget>(*Callee).useAVX512Regs())
-    return true;
-
-  // Consider the arguments compatible if they aren't vectors or aggregates.
-  // FIXME: Look at the size of vectors.
-  // FIXME: Look at the element types of aggregates to see if there are vectors.
-  return llvm::none_of(Types,
-      [](Type *T) { return T->isVectorTy() || T->isAggregateType(); });
+  LLVMContext &Ctx = Caller->getContext();
+  const DataLayout &DL = Caller->getDataLayout();
+  CallingConv::ID CC = Callee->getCallingConv();
+  return all_of(Types, [&](Type *Ty) {
+    SmallVector<EVT> VTs;
+    ComputeValueVTs(*CallerTLI, DL, Ty, VTs);
+    return all_of(VTs, [&](EVT VT) {
+      return CallerTLI->getRegisterTypeForCallingConv(Ctx, CC, VT) ==
+             CalleeTLI->getRegisterTypeForCallingConv(Ctx, CC, VT);
+    });
+  });
 }
 
 X86TTIImpl::TTI::MemCmpExpansionOptions
@@ -6828,6 +6851,7 @@ bool X86TTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   switch (II->getIntrinsicID()) {
   default:
     return true;
+  case Intrinsic::vector_reduce_mul:
   case Intrinsic::vector_reduce_smax:
   case Intrinsic::vector_reduce_smin:
   case Intrinsic::vector_reduce_umax:

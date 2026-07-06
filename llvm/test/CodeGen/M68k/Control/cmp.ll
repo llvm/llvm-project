@@ -294,7 +294,7 @@ define void @test20(i32 %bf.load, i8 %x1, ptr %b_addr) {
 ; CHECK-NEXT:  ; %bb.0:
 ; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    .cfi_def_cfa_offset -8
-; CHECK-NEXT:    movem.l %d2, (0,%sp)                    ; 8-byte Folded Spill
+; CHECK-NEXT:    movem.l %d2, (0,%sp) ; 8-byte Folded Spill
 ; CHECK-NEXT:    move.l #16777215, %d0
 ; CHECK-NEXT:    and.l (8,%sp), %d0
 ; CHECK-NEXT:    sne %d1
@@ -310,8 +310,9 @@ define void @test20(i32 %bf.load, i8 %x1, ptr %b_addr) {
 ; CHECK-NEXT:    cmpi.l #0, %d0
 ; CHECK-NEXT:    sne %d0
 ; CHECK-NEXT:    and.b #1, %d0
-; CHECK-NEXT:    move.b %d0, (d,%pc)
-; CHECK-NEXT:    movem.l (0,%sp), %d2                    ; 8-byte Folded Reload
+; CHECK-NEXT:    lea (d,%pc), %a0
+; CHECK-NEXT:    move.b %d0, (%a0)
+; CHECK-NEXT:    movem.l (0,%sp), %d2 ; 8-byte Folded Reload
 ; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
   %bf.shl = shl i32 %bf.load, 8

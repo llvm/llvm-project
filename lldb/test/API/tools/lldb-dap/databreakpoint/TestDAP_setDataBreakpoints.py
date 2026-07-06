@@ -7,6 +7,7 @@ from lldbsuite.test.lldbtest import *
 import lldbdap_testcase
 
 
+@skipIfWasm  # data breakpoints map to watchpoints
 class TestDAP_setDataBreakpoints(lldbdap_testcase.DAPTestCaseBase):
     def setUp(self):
         lldbdap_testcase.DAPTestCaseBase.setUp(self)

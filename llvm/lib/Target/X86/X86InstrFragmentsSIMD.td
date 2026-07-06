@@ -1254,9 +1254,11 @@ def extloadv4f16 : PatFrag<(ops node:$ptr), (extloadvf16 node:$ptr)>;
 def extloadv8f16 : PatFrag<(ops node:$ptr), (extloadvf16 node:$ptr)>;
 def extloadv16f16 : PatFrag<(ops node:$ptr), (extloadvf16 node:$ptr)>;
 
-// Like 'store', but always requires vector size alignment.
+// Like 'store' or 'atomic_store', but always requires vector size alignment.
 class alignedstore_frag<int Alignment>
-    : PatFrag<(ops node:$val, node:$ptr), (store node:$val, node:$ptr)> {
+    : PatFrags<(ops node:$val, node:$ptr),
+               [(store node:$val, node:$ptr),
+                (atomic_store node:$val, node:$ptr)]> {
   let IsStore = true;
   let MinAlignment = Alignment;
 }
@@ -1374,6 +1376,15 @@ def bc_v16i32 : PatFrag<(ops node:$in), (v16i32 (bitconvert node:$in))>;
 def bc_v8i64 : PatFrag<(ops node:$in), (v8i64 (bitconvert node:$in))>;
 def bc_v8f64 : PatFrag<(ops node:$in), (v8f64 (bitconvert node:$in))>;
 def bc_v16f32 : PatFrag<(ops node:$in), (v16f32 (bitconvert node:$in))>;
+
+// Match node if each vector elements' upper half bits are zero.
+class X86upperzero <ValueType vt, RegisterClass rc> : PatLeaf<(vt rc:$src), [{
+  unsigned EltBits = Op.getScalarValueSizeInBits();
+  APInt UpperMask = APInt::getHighBitsSet(EltBits, EltBits / 2);
+  return CurDAG->MaskedValueIsZero(Op, UpperMask);
+}]> {
+  let GISelPredicateCode = [{return false;}]; // TODO
+}
 
 // Match node that has known zeros in every element except the lowest.
 class X86vzelts <ValueType vt, RegisterClass rc> : PatLeaf<(vt rc:$src), [{
@@ -1779,3 +1790,7 @@ def X86vpmaddwd_su : PatFrag<(ops node:$lhs, node:$rhs),
                              (X86vpmaddwd node:$lhs, node:$rhs), [{
   return N->hasOneUse();
 }]>;
+
+// BMM matrix multiplication operations
+def x86vbmacor  : SDNode<"X86ISD::VBMACOR",  SDTVnni>;
+def x86vbmacxor : SDNode<"X86ISD::VBMACXOR", SDTVnni>;

@@ -105,6 +105,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasAVX512BF16 = false;
   bool HasAVX512DQ = false;
   bool HasAVX512BITALG = false;
+  bool HasAVX512BMM = false;
   bool HasAVX512BW = false;
   bool HasAVX512VL = false;
   bool HasAVX512VBMI = false;
@@ -337,10 +338,6 @@ public:
     return "";
   }
 
-  bool useFP16ConversionIntrinsics() const override {
-    return false;
-  }
-
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
@@ -391,7 +388,7 @@ public:
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
   void fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
-  bool setCPU(const std::string &Name) override {
+  bool setCPU(StringRef Name) override {
     bool Only64Bit = getTriple().getArch() != llvm::Triple::x86;
     CPU = llvm::X86::parseArchX86(Name, Only64Bit);
     return CPU != llvm::X86::CK_None;

@@ -177,8 +177,8 @@ private:
   bool selectAtomicRMW(Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
                        unsigned NewOpcode, unsigned NegateOpcode = 0) const;
 
-  bool selectInterlockedAdd(Register ResVReg, SPIRVTypeInst ResType,
-                            MachineInstr &I) const;
+  bool selectInterlockedOp(Register ResVReg, SPIRVTypeInst ResType,
+                           MachineInstr &I, unsigned Opcode) const;
 
   bool selectAtomicCmpXchg(Register ResVReg, SPIRVTypeInst ResType,
                            MachineInstr &I) const;
@@ -203,8 +203,8 @@ private:
   bool selectBitreverse(Register ResVReg, SPIRVTypeInst ResType,
                         MachineInstr &I) const;
 
-  bool selectBitreverse16(Register ResVReg, SPIRVTypeInst ResType,
-                          MachineInstr &I, Register Op) const;
+  bool selectBitreverseViaI32(Register ResVReg, SPIRVTypeInst ResType,
+                              MachineInstr &I, Register Op) const;
 
   bool selectBitreverse64(Register ResVReg, SPIRVTypeInst ResType,
                           MachineInstr &I, Register SrcReg) const;
@@ -1042,6 +1042,7 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_MEMCPY:
   case TargetOpcode::G_MEMCPY_INLINE:
   case TargetOpcode::G_MEMSET:
+  case TargetOpcode::G_MEMSET_INLINE:
     return selectMemOperation(ResVReg, I);
 
   case TargetOpcode::G_ICMP:
@@ -2093,6 +2094,16 @@ bool SPIRVInstructionSelector::selectStore(MachineInstr &I) const {
       return selectAtomicStore(I);
   }
 
+  // Stores into a read-only storage class produce invalid SPIR-V. Reject such
+  // input with a diagnostic rather than silently emitting an OpStore that
+  // validation rejects.
+  SPIRV::StorageClass::StorageClass PtrSC = GR.getPointerStorageClass(Ptr);
+  if (PtrSC == SPIRV::StorageClass::UniformConstant ||
+      PtrSC == SPIRV::StorageClass::Input ||
+      PtrSC == SPIRV::StorageClass::PushConstant)
+    return diagnoseUnsupported(
+        I, "store into a read-only SPIR-V storage class is not allowed");
+
   MachineIRBuilder MIRBuilder(I);
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpStore).addUse(Ptr).addUse(StoreVal);
   if (!I.getNumMemOperands()) {
@@ -2381,7 +2392,8 @@ bool SPIRVInstructionSelector::selectMemOperation(Register ResVReg,
     return true;
 
   Register SrcReg = I.getOperand(1).getReg();
-  if (I.getOpcode() == TargetOpcode::G_MEMSET) {
+  if (I.getOpcode() == TargetOpcode::G_MEMSET ||
+      I.getOpcode() == TargetOpcode::G_MEMSET_INLINE) {
     Register VarReg = getOrCreateMemSetGlobal(I);
     if (!VarReg.isValid())
       return false;
@@ -2443,9 +2455,10 @@ bool SPIRVInstructionSelector::selectAtomicRMW(Register ResVReg,
   return true;
 }
 
-bool SPIRVInstructionSelector::selectInterlockedAdd(Register ResVReg,
-                                                    SPIRVTypeInst ResType,
-                                                    MachineInstr &I) const {
+bool SPIRVInstructionSelector::selectInterlockedOp(Register ResVReg,
+                                                   SPIRVTypeInst ResType,
+                                                   MachineInstr &I,
+                                                   unsigned Opcode) const {
   Register Ptr = I.getOperand(2).getReg();
   Register Value = I.getOperand(3).getReg();
 
@@ -2461,7 +2474,7 @@ bool SPIRVInstructionSelector::selectInterlockedAdd(Register ResVReg,
   uint32_t MemSem = static_cast<uint32_t>(getMemSemanticsForStorageClass(SC));
   Register MemSemReg = buildI32Constant(MemSem, I);
 
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpAtomicIAdd))
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
       .addUse(Ptr)
@@ -3770,12 +3783,14 @@ bool SPIRVInstructionSelector::selectQuadSwap(Register ResVReg,
   return true;
 }
 
-bool SPIRVInstructionSelector::selectBitreverse16(Register ResVReg,
-                                                  SPIRVTypeInst ResType,
-                                                  MachineInstr &I,
-                                                  Register Op) const {
+bool SPIRVInstructionSelector::selectBitreverseViaI32(Register ResVReg,
+                                                      SPIRVTypeInst ResType,
+                                                      MachineInstr &I,
+                                                      Register Op) const {
   SPIRVTypeInst Int32Type = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-  Register ShiftConst = GR.getOrCreateConstInt(16, I, Int32Type, TII);
+  const unsigned BitWidth = GR.getScalarOrVectorBitWidth(ResType);
+  Register ShiftConst =
+      GR.getOrCreateConstInt(32 - BitWidth, I, Int32Type, TII);
   unsigned ShiftOp = SPIRV::OpShiftRightLogicalS;
 
   const unsigned N = GR.getScalarOrVectorComponentCount(ResType);
@@ -3801,7 +3816,7 @@ bool SPIRVInstructionSelector::selectBitreverse16(Register ResVReg,
     ShiftConst = CompositeReg;
   }
 
-  // Converts the i16 input to i32 (or vector of i32)
+  // Converts the input to i32 (or vector of i32)
   Register ExtReg = MRI->createVirtualRegister(GR.getRegClass(Int32Type));
   if (!selectOpWithSrcs(ExtReg, Int32Type, I, {Op}, ExtendOpcode))
     return false;
@@ -3817,7 +3832,7 @@ bool SPIRVInstructionSelector::selectBitreverse16(Register ResVReg,
                         ShiftOp))
     return false;
 
-  // Finally, convert the result back to i16 (or vector of i16).
+  // Finally, convert the result back.
   return selectOpWithSrcs(ResVReg, ResType, I, {ShiftReg}, ExtendOpcode);
 }
 
@@ -3963,7 +3978,8 @@ bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
     switch (GR.getScalarOrVectorBitWidth(OpType)) {
     case 8:
     case 16:
-      return selectBitreverse16(ResVReg, ResType, I, OpReg);
+    case 24:
+      return selectBitreverseViaI32(ResVReg, ResType, I, OpReg);
     case 32:
       return selectBitreverseNative(ResVReg, ResType, I, OpReg);
     case 64:
@@ -5360,7 +5376,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectWaveReduceOp(ResVReg, ResType, I,
                               SPIRV::OpGroupNonUniformBitwiseAnd);
   case Intrinsic::spv_interlocked_add:
-    return selectInterlockedAdd(ResVReg, ResType, I);
+    return selectInterlockedOp(ResVReg, ResType, I, SPIRV::OpAtomicIAdd);
+  case Intrinsic::spv_interlocked_or:
+    return selectInterlockedOp(ResVReg, ResType, I, SPIRV::OpAtomicOr);
   case Intrinsic::spv_wave_reduce_umax:
     return selectWaveReduceMax(ResVReg, ResType, I, /*IsUnsigned*/ true);
   case Intrinsic::spv_wave_reduce_max:
@@ -5385,6 +5403,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   }
   case Intrinsic::spv_quad_read_across_y: {
     return selectQuadSwap(ResVReg, ResType, I, /*Direction*/ 1);
+  }
+  case Intrinsic::spv_quad_read_across_diagonal: {
+    return selectQuadSwap(ResVReg, ResType, I, /*Direction*/ 2);
   }
   case Intrinsic::spv_step:
     return selectExtInst(ResVReg, ResType, I, CL::step, GL::Step);
@@ -7118,7 +7139,6 @@ bool SPIRVInstructionSelector::selectModf(Register ResVReg,
                          .addUse(GR.getSPIRVTypeID(FloatType))
                          .addUse(Variable);
       LoadMIB.constrainAllUses(TII, TRI, RBI);
-      return true;
     }
 
     MIB.constrainAllUses(TII, TRI, RBI);

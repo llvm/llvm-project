@@ -278,7 +278,7 @@ public:
       }
 
       // Process only VALUs and SALUs
-      bool IsVALU = SIInstrInfo::isVALU(*MI);
+      bool IsVALU = SIInstrInfo::isVALU(*MI, /*AllowLDSDMA=*/true);
       bool IsSALU = SIInstrInfo::isSALU(*MI);
       if (!IsVALU && !IsSALU)
         continue;

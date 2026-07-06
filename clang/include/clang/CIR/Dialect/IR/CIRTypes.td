@@ -642,6 +642,14 @@ def CIR_StructType : CIR_Type<"Struct", "struct", [
      - Identified and incomplete: unique name and unknown body.
      - Anonymous: no name and a known body.
 
+    Typically, the full data size of a struct object is that which is calculated
+    by adding the aligned sizes of all the members. However, note that there is
+    one exception to this Flexible Array Members. When the last element is an
+    array type of size zero(in CIR), this represents the C/C++ concept of
+    'flexible array member', where as long as the type is allocated properly (or
+    a global constant), an access through the array member may access outside of
+    its bounds. This is necessary to represent C/C++ semantics.
+
     The optional `class` keyword distinguishes C++ class declarations from
     plain struct declarations.  Both are semantically identical; the keyword
     preserves the original source spelling.

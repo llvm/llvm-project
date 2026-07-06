@@ -59,6 +59,9 @@ public:
   matchAndRewrite(arith::ConstantOp arithConst,
                   arith::ConstantOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    if (isa<MemRefType>(arithConst.getType()))
+      return rewriter.notifyMatchFailure(arithConst,
+                                         "memref constants are not supported");
     Type newTy = this->getTypeConverter()->convertType(arithConst.getType());
     if (!newTy)
       return rewriter.notifyMatchFailure(arithConst, "type conversion failed");

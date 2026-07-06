@@ -254,6 +254,10 @@ void AggExprEmitter::EmitAggLoadOfLValue(const Expr *E) {
     return;
   }
 
+  if (E->getType().getAddressSpace() == LangAS::hlsl_constant)
+    if (CGF.CGM.getHLSLRuntime().emitBufferCopy(CGF, E, LV, Dest))
+      return;
+
   EmitFinalDestCopy(E->getType(), LV);
 }
 
@@ -2318,7 +2322,9 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
               Record->hasTrivialCopyAssignment() ||
               Record->hasTrivialMoveConstructor() ||
               Record->hasTrivialMoveAssignment() ||
-              Record->hasAttr<TrivialABIAttr>() || Record->isUnion()) &&
+              Record->hasAttr<TrivialABIAttr>() || Record->isUnion() ||
+              // HLSL uses aggregate-copy for user-defined record types.
+              (getLangOpts().HLSL && !Record->isHLSLBuiltinRecord())) &&
              "Trying to aggregate-copy a type without a trivial copy/move "
              "constructor or assignment operator");
       // Ignore empty classes in C++.
@@ -2339,9 +2345,9 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
     }
   }
 
-  if (getLangOpts().HLSL && Ty.getAddressSpace() == LangAS::hlsl_constant)
-    if (CGM.getHLSLRuntime().emitBufferCopy(*this, DestPtr, SrcPtr, Ty))
-      return;
+  assert(Ty.getAddressSpace() != LangAS::hlsl_constant &&
+         "copies of aggregates in hlsl_constant address space should be "
+         "handled earlier by the HLSL runtime");
 
   // Aggregate assignment turns into llvm.memcpy.  This is almost valid per
   // C99 6.5.16.1p3, which states "If the value being stored in an object is
