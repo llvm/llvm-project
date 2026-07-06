@@ -14409,8 +14409,17 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
   // the shared funnel for simple and every compound assignment, so the check
   // fires exactly once per built-in assignment; class-typed operator= never
   // reaches it.
-  if (getLangOpts().Profiles)
+  if (getLangOpts().Profiles) {
+    // A compound assignment reads the old value but builds no
+    // lvalue-to-rvalue node for it, so the DefaultLvalueConversion
+    // read-through chokepoint never sees the load; check it here. The shift
+    // forms are the exception: CheckShiftOperands promotes their LHS through
+    // DefaultLvalueConversion, which has already fired for them.
+    if (!CompoundType.isNull() && Opc != BO_ShlAssign && Opc != BO_ShrAssign)
+      Profiles().checkInitProfileReadThrough(LHSExpr->getExprLoc(), LHSExpr,
+                                             LHSExpr->getType());
     Profiles().checkInitProfileSubobjectWrite(Loc, LHSExpr);
+  }
 
   QualType LHSType = LHSExpr->getType();
   QualType RHSType = CompoundType.isNull() ? RHS.get()->getType() :
@@ -16197,8 +16206,14 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
       // than in CheckIncrementDecrementOperand, which self-recurses on
       // placeholder operands and would fire twice; overloaded class ++/--
       // never reaches CreateBuiltinUnaryOp.
-      if (getLangOpts().Profiles && !resultType.isNull())
+      if (getLangOpts().Profiles && !resultType.isNull()) {
+        // ++/-- reads the old value with no lvalue-to-rvalue node (unlike -x
+        // or !x); check the load here.
+        Profiles().checkInitProfileReadThrough(Input.get()->getExprLoc(),
+                                               Input.get(),
+                                               Input.get()->getType());
         Profiles().checkInitProfileSubobjectWrite(OpLoc, Input.get());
+      }
       break;
     case UO_AddrOf:
       resultType = CheckAddressOfOperand(Input, OpLoc);

@@ -1157,10 +1157,16 @@ recognizers symmetric.
   binding, a discarded-value expression (``(void)*p``), and a write (``*p = 5``
   or ``s.x = 1``) apply no lvalue-to-rvalue conversion and so are not reads
   (``s.x = 1`` is instead banned as a subobject store by ``uninit_write``,
-  R10).  Out of scope, as remaining limitations: class-type read-through (copy
-  construction from ``*p``) and compound-assignment reads (``*p += 1``, which
-  build no lvalue-to-rvalue node), consistent with the scalar slice and the
-  deferred-writes stance.
+  R10).  A compound assignment (``*p += 1``) and a built-in ``++``/``--``
+  also read the old value while building no lvalue-to-rvalue node; their
+  loads are checked at the operator sites instead
+  (``Sema::CheckAssignmentOperands`` for the non-shift compounds, the
+  increment/decrement arm of ``Sema::CreateBuiltinUnaryOp`` for
+  ``++``/``--``), while the shift compounds keep loading through the
+  chokepoint via their LHS promotion and are excluded from the operator hook,
+  so exactly one diagnostic fires.  Out of scope, as the remaining
+  limitation: class-type read-through (copy construction from ``*p``),
+  consistent with the scalar slice and the deferred-writes stance.
 - Known gaps: recognition is purely of the source's syntactic form, so a
   binding whose underlying operand is unrecognized -- pointer arithmetic, an
   integer-to-pointer cast, a call through a function pointer (no
@@ -1308,9 +1314,10 @@ initialization sequence.
   ``Sema::CreateBuiltinUnaryOp`` (overloaded class ``++``/``--`` never
   reaches it).  Both are Decl-less sites: they defer on a template pattern
   via the dependent-context guard and fire once, at instantiation.
-- A compound assignment also *reads* the old value; where its operand
-  conversion performs the load (the shift forms promote their LHS), the R7
-  read-through diagnostic fires alongside this rule's.
+- A compound assignment or a built-in ``++``/``--`` also *reads* the old
+  value, so on a subobject of a marked object the R7 read-through diagnostic
+  fires alongside this rule's (the shift forms load through their LHS
+  promotion, the rest through R7's operator-site hooks).
 - ``std::byte`` stores are exempt (paper §4.5), matching every read-side
   rule.
 - Known gaps: whole-object assignment to a marked class object

@@ -918,6 +918,41 @@ void template_read_never_instantiated(int *p [[ref_to_uninit]]) {
   (void)y;
 }
 
+// A compound assignment and a built-in ++/-- read the old value before
+// storing, but build no lvalue-to-rvalue node for the operand, so the
+// operator sites check the load directly. Every compound form through a
+// [[ref_to_uninit]] pointer or reference is diagnosed; the shift forms load
+// through their LHS promotion instead and must fire exactly once. Reading an
+// unmarked pointer's pointee is trusted, and ++ on the marked pointer itself
+// reads the (initialized) pointer object, not through it.
+void test_compound_read_through(int *p [[ref_to_uninit]], int *q,
+                                int &r [[ref_to_uninit]],
+                                Inner *ptr [[ref_to_uninit]], int i) {
+  *p += 1;     // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  p[i] -= 1;   // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  r *= 2;      // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  ptr->m |= 1; // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  ++*p;        // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  (*p)--;      // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  ++r;         // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  *p <<= 1;    // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+  *q += 1;     // OK: an unmarked pointer is trusted initialized
+  ++p;         // OK: reads the pointer object itself, not through it
+}
+
+void test_compound_read_suppress(int *p [[ref_to_uninit]]) {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init, rule: "uninit_read")]] { *p += 1; } // OK: rule-targeted suppress
+}
+
+// Like every Decl-less read check, the compound read defers on a template
+// pattern and fires once, at instantiation.
+template <typename T>
+void template_compound_read_bad(int *p [[ref_to_uninit]]) {
+  *p += 1; // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
+}
+template void template_compound_read_bad<int>(int *); // expected-note {{in instantiation of function template specialization 'template_compound_read_bad<int>' requested here}}
+
 // std::init / ref_to_uninit (paper §5): a pointer/reference member given a
 // *written* constructor member-initializer is checked with the enclosing
 // constructor as the Decl, so a class-template pattern defers and fires once at

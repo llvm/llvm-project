@@ -99,31 +99,39 @@ void test_union_member_store() {
   u.x = 9; // expected-error {{writing a member of an '[[uninit]]' object does not initialize it under profile 'std::init'; initialize the whole object}}
 }
 
-// Compound assignments and built-in increments store like plain assignment.
-// A compound assignment also reads the old value; where its operand
-// conversion performs the load (the shift forms promote their LHS), the
-// read-through diagnostic fires alongside.
+// Compound assignments and built-in increments store like plain assignment,
+// and every one of them also reads the old value: the shift forms load
+// through their LHS promotion (DefaultLvalueConversion), the rest are checked
+// at the operator sites, so each fires the read-through diagnostic exactly
+// once alongside the write.
 void test_compound_and_incdec_stores() {
   Pair s [[uninit]];
-  s.x += 1;  // expected-error {{writing a member of an '[[uninit]]' object does not initialize it under profile 'std::init'; initialize the whole object}}
+  s.x += 1;  // expected-error {{writing a member of an '[[uninit]]' object does not initialize it under profile 'std::init'; initialize the whole object}} \
+             // expected-error {{read of a subobject of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
   s.x <<= 1; // expected-error {{writing a member of an '[[uninit]]' object does not initialize it under profile 'std::init'; initialize the whole object}} \
              // expected-error {{read of a subobject of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
-  ++s.x;     // expected-error {{writing a member of an '[[uninit]]' object does not initialize it under profile 'std::init'; initialize the whole object}}
-  s.x--;     // expected-error {{writing a member of an '[[uninit]]' object does not initialize it under profile 'std::init'; initialize the whole object}}
+  ++s.x;     // expected-error {{writing a member of an '[[uninit]]' object does not initialize it under profile 'std::init'; initialize the whole object}} \
+             // expected-error {{read of a subobject of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
+  s.x--;     // expected-error {{writing a member of an '[[uninit]]' object does not initialize it under profile 'std::init'; initialize the whole object}} \
+             // expected-error {{read of a subobject of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
   [[uninit]] int a[2];
-  --a[0];    // expected-error {{writing an element of an '[[uninit]]' object does not initialize it under profile 'std::init'; initialize the whole object}}
+  --a[0];    // expected-error {{writing an element of an '[[uninit]]' object does not initialize it under profile 'std::init'; initialize the whole object}} \
+             // expected-error {{read of a subobject of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
 }
 
 // Writes through a [[ref_to_uninit]] pointer or reference are the deferred
 // construct_at slice: for a built-in type the write is the pointee's
-// initialization (paper §4.5), so they are neither banned nor endorsed.
+// initialization (paper §4.5), so they are neither banned nor endorsed. A
+// compound assignment through the marker still *reads* the old value, which
+// is a genuine uninit_read violation (full coverage in
+// safety-profile-init-ref-to-uninit.cpp).
 [[ref_to_uninit]] int &get_uninit_ref();
 void test_write_through_ref_to_uninit(int *p [[ref_to_uninit]],
                                       int &r [[ref_to_uninit]],
                                       Pair *ptr [[ref_to_uninit]]) {
   *p = 5;              // OK
   p[3] = 0;            // OK
-  *p += 1;             // OK
+  *p += 1;             // expected-error {{read through a '[[ref_to_uninit]]' pointer or reference accesses uninitialized memory under profile 'std::init'}}
   r = 5;               // OK
   ptr->x = 5;          // OK
   get_uninit_ref() = 5; // OK
