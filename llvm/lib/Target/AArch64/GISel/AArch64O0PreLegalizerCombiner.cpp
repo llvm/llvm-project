@@ -92,26 +92,6 @@ bool AArch64O0PreLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
   if (tryCombineAllImpl(MI))
     return true;
 
-  unsigned Opc = MI.getOpcode();
-  switch (Opc) {
-  case TargetOpcode::G_MEMCPY_INLINE:
-  case TargetOpcode::G_MEMSET_INLINE:
-    return Helper.tryEmitMemcpyInlineFamily(MI);
-  case TargetOpcode::G_MEMCPY:
-  case TargetOpcode::G_MEMMOVE:
-  case TargetOpcode::G_MEMSET: {
-    // At -O0 set a maxlen of 32 to inline;
-    unsigned MaxLen = 32;
-    // Try to inline memcpy type calls if optimizations are enabled.
-    if (Helper.tryCombineMemCpyFamily(MI, MaxLen))
-      return true;
-    if (Opc == TargetOpcode::G_MEMSET)
-      return llvm::AArch64GISelUtils::tryEmitBZero(MI, B, Libcalls,
-                                                   CInfo.EnableMinSize);
-    return false;
-  }
-  }
-
   return false;
 }
 

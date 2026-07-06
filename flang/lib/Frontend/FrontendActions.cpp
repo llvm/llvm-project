@@ -984,18 +984,26 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
         opts.ProfileInstrumentUsePath, "", opts.ProfileRemappingFile,
         opts.MemoryProfileUsePath, llvm::PGOOptions::IRUse, CSAction,
         llvm::PGOOptions::ColdFuncOpt::Default, opts.DebugInfoForProfiling);
-  } else if (opts.DebugInfoForProfiling) {
-    // -fdebug-info-for-profiling
-    pgoOpt = llvm::PGOOptions("", "", "", /*MemoryProfile=*/"",
-                              llvm::PGOOptions::NoAction,
-                              llvm::PGOOptions::NoCSAction,
-                              llvm::PGOOptions::ColdFuncOpt::Default, true);
   } else if (!opts.SampleProfileFile.empty()) {
     pgoOpt = llvm::PGOOptions(
         opts.SampleProfileFile, "", opts.ProfileRemappingFile,
         opts.MemoryProfileUsePath, llvm::PGOOptions::SampleUse,
         llvm::PGOOptions::NoCSAction, llvm::PGOOptions::ColdFuncOpt::Default,
-        opts.DebugInfoForProfiling, /*PseudoProbeForProfiling=*/false);
+        opts.DebugInfoForProfiling, opts.PseudoProbeForProfiling);
+  } else if (opts.PseudoProbeForProfiling) {
+    pgoOpt = llvm::PGOOptions(
+        /*ProfileFile=*/"", /*CSProfileGenFile=*/"",
+        /*ProfileRemappingFile=*/"",
+        /*MemoryProfile=*/"", llvm::PGOOptions::NoAction,
+        llvm::PGOOptions::NoCSAction, llvm::PGOOptions::ColdFuncOpt::Default,
+        opts.DebugInfoForProfiling, /*PseudoProbeForProfiling=*/true);
+  } else if (opts.DebugInfoForProfiling) {
+    pgoOpt = llvm::PGOOptions(/*ProfileFile=*/"", /*CSProfileGenFile=*/"",
+                              /*ProfileRemappingFile=*/"", /*MemoryProfile=*/"",
+                              llvm::PGOOptions::NoAction,
+                              llvm::PGOOptions::NoCSAction,
+                              llvm::PGOOptions::ColdFuncOpt::Default,
+                              /*DebugInfoForProfiling=*/true);
   }
 
   llvm::StandardInstrumentations si(llvmModule->getContext(),
@@ -1059,10 +1067,17 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
 
   if (action == BackendActionTy::Backend_EmitBC ||
       action == BackendActionTy::Backend_EmitLL || opts.PrepareForFatLTO) {
-    // If it is not ThinLTO, emits the module flag and sets it to be off.
-    if (!opts.PrepareForThinLTO && emitSummary &&
-        !llvmModule->getModuleFlag("ThinLTO")) {
-      llvmModule->addModuleFlag(llvm::Module::Error, "ThinLTO", uint32_t(0));
+    if (opts.PrepareForThinLTO) {
+      if (!llvmModule->getModuleFlag("EnableSplitLTOUnit"))
+        llvmModule->addModuleFlag(llvm::Module::Error, "EnableSplitLTOUnit",
+                                  opts.EnableSplitLTOUnit);
+    } else if (emitSummary && opts.PrepareForFullLTO) {
+      // If it is not ThinLTO, emits the module flag and sets it to be off.
+      if (!llvmModule->getModuleFlag("ThinLTO"))
+        llvmModule->addModuleFlag(llvm::Module::Error, "ThinLTO", uint32_t(0));
+      if (!llvmModule->getModuleFlag("EnableSplitLTOUnit"))
+        llvmModule->addModuleFlag(llvm::Module::Error, "EnableSplitLTOUnit",
+                                  uint32_t(1));
     }
 
     if (action == BackendActionTy::Backend_EmitBC) {

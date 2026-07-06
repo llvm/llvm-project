@@ -263,7 +263,19 @@ function (flang_module_target tgtname)
     ${ARGN}
   )
 
-    target_link_libraries(${tgtname} PRIVATE fortran-compile-depends)
+  target_link_libraries(${tgtname} PRIVATE fortran-compile-depends)
+
+  # Make CMake not ignore "use, intrinsic ::"-dependencies. Unfortunately,
+  # it is not universally handled by CMake s.t. we currently must not use
+  # "use, intrinsic ::" in our sources.
+  #  * CMake 3.22: Added Fortran_BUILDING_INSTRINSIC_MODULES handling "Unix Makefiles" generator
+  #  * CMake 4.0: Renamed INSTRINSIC to INTRINSIC (typo fix); INSTRINSIC spelling kept but deprecated
+  #  * CMake 4.5: Added handling by Ninja generators as well
+  set_target_properties(${tgtname}
+    PROPERTIES
+      Fortran_BUILDING_INTRINSIC_MODULES ON
+      Fortran_BUILDING_INSTRINSIC_MODULES ON
+  )
 
   if (ARG_PUBLIC)
     set_target_properties(${tgtname}

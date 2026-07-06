@@ -285,9 +285,7 @@ bool AArch64TargetInfo::isValidCPUName(StringRef Name) const {
   return llvm::AArch64::parseCpu(Name).has_value();
 }
 
-bool AArch64TargetInfo::setCPU(const std::string &Name) {
-  return isValidCPUName(Name);
-}
+bool AArch64TargetInfo::setCPU(StringRef Name) { return isValidCPUName(Name); }
 
 void AArch64TargetInfo::fillValidCPUList(
     SmallVectorImpl<StringRef> &Values) const {
@@ -962,9 +960,9 @@ void AArch64TargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
   if (!Enabled)
     return;
 
-  for (const auto *OtherArch : llvm::AArch64::ArchInfos)
-    if (ArchInfo->implies(*OtherArch))
-      Features[OtherArch->getSubArch()] = true;
+  for (const auto &OtherArch : llvm::AArch64::ArchInfos)
+    if (ArchInfo->implies(OtherArch))
+      Features[OtherArch.getSubArch()] = true;
 
   // Set any features implied by the architecture
   std::vector<StringRef> CPUFeats;

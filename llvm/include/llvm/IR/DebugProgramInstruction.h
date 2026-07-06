@@ -189,9 +189,11 @@ public:
   LLVM_ABI LLVMContext &getContext();
   LLVM_ABI const LLVMContext &getContext() const;
 
+  LLVM_ABI Instruction *getInstruction();
   LLVM_ABI const Instruction *getInstruction() const;
-  LLVM_ABI const BasicBlock *getParent() const;
+
   LLVM_ABI BasicBlock *getParent();
+  LLVM_ABI const BasicBlock *getParent() const;
 
   LLVM_ABI void removeFromParent();
   LLVM_ABI void eraseFromParent();

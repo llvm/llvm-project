@@ -887,6 +887,54 @@ def SPIRV_GLAtan2Op : SPIRV_GLBinaryArithmeticOp<"Atan2", 25, SPIRV_Float16or32>
 
 // -----
 
+def SPIRV_GLRadiansOp : SPIRV_GLUnaryArithmeticOp<"Radians", 11, SPIRV_Float16or32, [AlwaysSpeculatable]> {
+  let summary = "Convert a quantity in degrees to radians";
+
+  let description = [{
+    Result is the quantity in radians for the quantity x given in degrees, i.e.,
+    (π / 180) * x.
+
+    The operand x must be a scalar or vector whose component type is 16-bit or
+    32-bit floating-point.
+
+    Result Type and the type of x must be the same type. Results are computed
+    per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.Radians %0 : f32
+    %3 = spirv.GL.Radians %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_GLDegreesOp : SPIRV_GLUnaryArithmeticOp<"Degrees", 12, SPIRV_Float16or32, [AlwaysSpeculatable]> {
+  let summary = "Convert a quantity in radians to degrees";
+
+  let description = [{
+    Result is the quantity in degrees for the quantity x given in radians, i.e.,
+    (180 / π) * x.
+
+    The operand x must be a scalar or vector whose component type is 16-bit or
+    32-bit floating-point.
+
+    Result Type and the type of x must be the same type. Results are computed
+    per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.Degrees %0 : f32
+    %3 = spirv.GL.Degrees %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
 def SPIRV_GLExp2Op : SPIRV_GLUnaryArithmeticOp<"Exp2", 29, SPIRV_Float16or32, [AlwaysSpeculatable]> {
   let summary = "Result is 2 raised to the x power";
 
@@ -1027,6 +1075,83 @@ def SPIRV_GLSClampOp : SPIRV_GLTernaryArithmeticOp<"SClamp", 45, SPIRV_Integer> 
     ```mlir
     %2 = spirv.GL.SClamp %x, %min, %max : si32
     %3 = spirv.GL.SClamp %x, %min, %max : vector<3xsi16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_GLNMaxOp : SPIRV_GLBinaryArithmeticOp<"NMax", 80, SPIRV_Float, [AlwaysSpeculatable]> {
+  let summary = "Return maximum of two floating-point operands, NaN-aware";
+
+  let description = [{
+    Result is y if x < y; otherwise result is x, where x and y are interpreted
+    as floating-point. NMax considers a NaN argument as missing, so if one
+    operand is a NaN the result is the other operand. If both operands are NaNs,
+    the result is a NaN.
+
+    The operands must all be a scalar or vector whose component type is
+    floating-point.
+
+    Result Type and the type of all operands must be the same type. Results are
+    computed per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.NMax %0, %1 : f32
+    %3 = spirv.GL.NMax %0, %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_GLNMinOp : SPIRV_GLBinaryArithmeticOp<"NMin", 79, SPIRV_Float, [AlwaysSpeculatable]> {
+  let summary = "Return minimum of two floating-point operands, NaN-aware";
+
+  let description = [{
+    Result is y if y < x; otherwise result is x, where x and y are interpreted
+    as floating-point. NMin considers a NaN argument as missing, so if one
+    operand is a NaN the result is the other operand. If both operands are NaNs,
+    the result is a NaN.
+
+    The operands must all be a scalar or vector whose component type is
+    floating-point.
+
+    Result Type and the type of all operands must be the same type. Results are
+    computed per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.NMin %0, %1 : f32
+    %3 = spirv.GL.NMin %0, %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_GLNClampOp : SPIRV_GLTernaryArithmeticOp<"NClamp", 81, SPIRV_Float> {
+  let summary = "Clamp x between min and max values, NaN-aware";
+
+  let description = [{
+    Result is min(max(x, minVal), maxVal). The resulting value is poison if
+    minVal > maxVal. The semantics used by min() and max() are those of NMin
+    and NMax, so NaN arguments are considered missing.
+
+    The operands must all be a scalar or vector whose component type is
+    floating-point.
+
+    Result Type and the type of all operands must be the same type. Results are
+    computed per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.NClamp %x, %min, %max : f32
+    %3 = spirv.GL.NClamp %x, %min, %max : vector<3xf16>
     ```
   }];
 }
@@ -1357,6 +1482,58 @@ def SPIRV_GLReflectOp : SPIRV_GLBinaryArithmeticOp<"Reflect", 71, SPIRV_Float, [
     ```mlir
     %2 = spirv.GL.Reflect %0, %1 : f32
     %3 = spirv.GL.Reflect %0, %1 : vector<3xf32>
+    ```
+  }];
+}
+
+// ----
+
+def SPIRV_GLStepOp : SPIRV_GLBinaryArithmeticOp<"Step", 48, SPIRV_Float, [AlwaysSpeculatable]> {
+  let summary = "Return 0.0 if x < edge, else 1.0";
+
+  let description = [{
+    Result is 0.0 if x < edge; otherwise result is 1.0.
+
+    The operands must all be a scalar or vector whose component type is
+    floating-point.
+
+    Result Type and the type of all operands must be the same type. Results
+    are computed per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.Step %edge, %x : f32
+    %3 = spirv.GL.Step %edge, %x : vector<3xf32>
+    ```
+  }];
+}
+
+// ----
+
+def SPIRV_GLSmoothStepOp : SPIRV_GLTernaryArithmeticOp<"SmoothStep", 49, SPIRV_Float> {
+  let summary = "Return smooth Hermite interpolation between 0 and 1";
+
+  let description = [{
+    Result is 0.0 if x <= edge0 and 1.0 if x >= edge1 and performs smooth
+    Hermite interpolation between 0 and 1 when edge0 < x < edge1. This is
+    equivalent to:
+      t = clamp((x - edge0) / (edge1 - edge0), 0, 1)
+      t * t * (3 - 2 * t)
+
+    The resulting value is undefined if edge0 >= edge1.
+
+    The operands must all be a scalar or vector whose component type is
+    floating-point.
+
+    Result Type and the type of all operands must be the same type. Results
+    are computed per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.SmoothStep %edge0, %edge1, %x : f32
+    %3 = spirv.GL.SmoothStep %edge0, %edge1, %x : vector<3xf32>
     ```
   }];
 }

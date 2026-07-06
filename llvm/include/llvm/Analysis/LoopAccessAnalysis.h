@@ -18,6 +18,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/TypeSize.h"
 #include <optional>
 #include <variant>
 
@@ -36,7 +37,7 @@ struct VectorizerParams {
   LLVM_ABI static const unsigned MaxVectorWidth;
 
   /// VF as overridden by the user.
-  LLVM_ABI static unsigned VectorizationFactor;
+  LLVM_ABI static ElementCount VectorizationFactor;
   /// Interleave factor as overridden by the user.
   LLVM_ABI static unsigned VectorizationInterleave;
   /// True if force-vector-interleave was specified by the user.
@@ -878,6 +879,14 @@ replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
                           const DenseMap<Value *, const SCEV *> &PtrToStride,
                           Value *Ptr);
 
+/// If \p AR is an affine AddRec for \p Lp with a constant step, return the
+/// step in units of \p AccessTy's allocation size. Returns std::nullopt if the
+/// step is not constant, does not divide the access size, or \p AccessTy is a
+/// scalable vector. \p Ptr is only used for debug output and may be null.
+LLVM_ABI std::optional<int64_t>
+getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
+                    Value *Ptr, PredicatedScalarEvolution &PSE);
+
 /// If the pointer has a constant stride return it in units of the access type
 /// size. If the pointer is loop-invariant, return 0. Otherwise return
 /// std::nullopt.
@@ -887,8 +896,8 @@ replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
 ///
 /// If necessary this method will version the stride of the pointer according
 /// to \p PtrToStride and therefore add further predicates to \p PSE.
-/// The \p Assume parameter indicates if we are allowed to make additional
-/// run-time assumptions.
+///
+/// If \p Predicates is non-null, add no-wrap SCEV predicates if needed.
 ///
 /// Note that the analysis results are defined if-and-only-if the original
 /// memory access was defined.  If that access was dead, or UB, then the
@@ -898,7 +907,17 @@ getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
              const Loop *Lp, const DominatorTree &DT,
              const DenseMap<Value *, const SCEV *> &StridesMap =
                  DenseMap<Value *, const SCEV *>(),
-             bool Assume = false, bool ShouldCheckWrap = true);
+             bool ShouldCheckWrap = true,
+             SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
+
+/// Overload of \ref getPtrStride that adds the no-wrap predicates directly to
+/// \p PSE. The \p Assume parameter indicates whether such additional run-time
+/// assumptions are allowed.
+LLVM_ABI std::optional<int64_t>
+getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
+             const Loop *Lp, const DominatorTree &DT,
+             const DenseMap<Value *, const SCEV *> &StridesMap, bool Assume,
+             bool ShouldCheckWrap = true);
 
 /// Returns the distance between the pointers \p PtrA and \p PtrB iff they are
 /// compatible and it is possible to calculate the distance between them. This

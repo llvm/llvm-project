@@ -7,6 +7,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # cannot launch a gdbserver
 class TestPlatformProcessLaunchGDBServer(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     SHARED_BUILD_TESTCASE = False

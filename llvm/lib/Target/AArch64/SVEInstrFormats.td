@@ -617,10 +617,10 @@ multiclass SVE2p1_Cntp_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
   def : Pat<(vtd (op vt1:$Op1, (i32 4))), (inst $Op1, 1)>;
 }
 
-multiclass SVE2p1_While_PN_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
-                               Instruction inst> {
-  def : Pat<(vtd (op vt1:$Op1, vt1:$Op2, (i32 2))), (inst $Op1, $Op2, 0)>;
-  def : Pat<(vtd (op vt1:$Op1, vt1:$Op2, (i32 4))), (inst $Op1, $Op2, 1)>;
+multiclass SVE2p1_While_PN_Pat<int EltSize, SDPatternOperator op,
+                               ValueType vt1, Instruction inst> {
+  def : Pat<(op vt1:$Op1, vt1:$Op2, (i32 2), (i64 EltSize)), (inst $Op1, $Op2, 0)>;
+  def : Pat<(op vt1:$Op1, vt1:$Op2, (i32 4), (i64 EltSize)), (inst $Op1, $Op2, 1)>;
 }
 
 class SVE_3_Op_Imm_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
@@ -812,6 +812,7 @@ class PredTwoOpPseudo<string name, ZPRRegOp zprty,
                       FalseLanesEnum flags = FalseLanesNone>
 : SVEPseudo2Instr<name, 0>,
   Pseudo<(outs zprty:$Zd), (ins PPR3bAny:$Pg, zprty:$Zs1, zprty:$Zs2), []> {
+  let ElementSize = zprty.ElementSize;
   let FalseLanes = flags;
 }
 
@@ -819,6 +820,7 @@ class PredTwoOpImmPseudo<string name, ZPRRegOp zprty, Operand immty,
                          FalseLanesEnum flags = FalseLanesNone>
 : SVEPseudo2Instr<name, 0>,
   Pseudo<(outs zprty:$Zd), (ins PPR3bAny:$Pg, zprty:$Zs1, immty:$imm), []> {
+  let ElementSize = zprty.ElementSize;
   let FalseLanes = flags;
 }
 
@@ -826,6 +828,7 @@ class PredThreeOpPseudo<string name, ZPRRegOp zprty,
                         FalseLanesEnum flags = FalseLanesNone>
 : SVEPseudo2Instr<name, 0>,
   Pseudo<(outs zprty:$Zd), (ins PPR3bAny:$Pg, zprty:$Zs1, zprty:$Zs2, zprty:$Zs3), []> {
+  let ElementSize = zprty.ElementSize;
   let FalseLanes = flags;
 }
 
@@ -846,11 +849,13 @@ class UnpredTwoOpImmPseudo<string name, ZPRRegOp zprty, Operand immty>
 //
 
 class PredOneOpPassthruPseudo<string name, ZPRRegOp zprty,
-                              FalseLanesEnum flags = FalseLanesNone>
+                              FalseLanesEnum flags = FalseLanesNone,
+                              ElementSizeEnum size = zprty.ElementSize>
 : SVEPseudo2Instr<name, 0>,
   Pseudo<(outs zprty:$Zd), (ins zprty:$Passthru, PPR3bAny:$Pg, zprty:$Zs), []> {
-  let FalseLanes = flags;
   let Constraints = !if(!eq(flags, FalseLanesZero), "$Zd = $Passthru,@earlyclobber $Zd", "");
+  let ElementSize = size;
+  let FalseLanes = flags;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3188,7 +3193,7 @@ multiclass sve_fp_2op_p_zd<bits<7> opc, string asm,
   def : SVE_3_Op_Pat<packedvt1, int_op, packedvt1, vt2, packedvt3, !cast<Instruction>(NAME)>;
   def : SVE_1_Op_Passthru_Pat<vt1, ir_op, vt2, vt3, !cast<Instruction>(NAME)>;
 
-  def _UNDEF : PredOneOpPassthruPseudo<NAME, !cast<ZPRRegOp>(i_zprtype), FalseLanesUndef>;
+  def _UNDEF : PredOneOpPassthruPseudo<NAME, !cast<ZPRRegOp>(i_zprtype), FalseLanesUndef, Sz>;
 
   defm : SVE_1_Op_PassthruUndef_Pat<vt1, ir_op, vt2, vt3, !cast<Instruction>(NAME # _UNDEF)>;
 }
@@ -7584,7 +7589,7 @@ multiclass sve_int_perm_clast_vz<bit ab, string asm, SDPatternOperator op> {
   def : Pat<(bf16 (op nxv2i1:$Pg, bf16:$default, nxv2bf16:$vec)),
             (EXTRACT_SUBREG (!cast<Instruction>(NAME # _D) $Pg, (INSERT_SUBREG (IMPLICIT_DEF), $default, hsub), $vec), hsub)>;
   def : Pat<(f32 (op nxv2i1:$Pg, f32:$default, nxv2f32:$vec)),
-            (EXTRACT_SUBREG (!cast<Instruction>(NAME # _D) $Pg, (f64 (INSERT_SUBREG (IMPLICIT_DEF), $default, ssub)), $vec), ssub)>;            
+            (EXTRACT_SUBREG (!cast<Instruction>(NAME # _D) $Pg, (f64 (INSERT_SUBREG (IMPLICIT_DEF), $default, ssub)), $vec), ssub)>;
 }
 
 class sve_int_perm_clast_zz<bits<2> sz8_64, bit ab, string asm,
@@ -10502,10 +10507,8 @@ multiclass sve2p1_pcount_pn<string mnemonic, bits<3> opc> {
   defm : SVE2p1_Cntp_Pat<i64, int_aarch64_sve_cntp_c64, aarch64svcount, !cast<Instruction>(NAME # _D)>;
 }
 
-
 // SVE integer compare scalar count and limit (predicate-as-counter)
-class sve2p1_int_while_rr_pn<string mnemonic, bits<2> sz, bits<3> opc,
-                             PNRP8to15RegOp pnrty>
+class sve2p1_int_while_rr_pn<string mnemonic, bits<2> sz, bits<3> opc, PNRP8to15RegOp pnrty>
     : I<(outs pnrty:$PNd), (ins GPR64:$Rn, GPR64:$Rm, sve_vec_len_specifier_enum:$vl),
         mnemonic, "\t$PNd, $Rn, $Rm, $vl",
         "", []>, Sched<[]> {
@@ -10531,20 +10534,16 @@ class sve2p1_int_while_rr_pn<string mnemonic, bits<2> sz, bits<3> opc,
 }
 
 
-multiclass sve2p1_int_while_rr_pn<string mnemonic, bits<3> opc> {
- def _B : sve2p1_int_while_rr_pn<mnemonic, 0b00, opc, PNR8_p8to15>;
- def _H : sve2p1_int_while_rr_pn<mnemonic, 0b01, opc, PNR16_p8to15>;
- def _S : sve2p1_int_while_rr_pn<mnemonic, 0b10, opc, PNR32_p8to15>;
- def _D : sve2p1_int_while_rr_pn<mnemonic, 0b11, opc, PNR64_p8to15>;
+multiclass sve2p1_int_while_rr_pn<string mnemonic, bits<3> opc, SDNode OpNode> {
+  def _B : sve2p1_int_while_rr_pn<mnemonic, 0b00, opc, PNR8_p8to15>;
+  def _H : sve2p1_int_while_rr_pn<mnemonic, 0b01, opc, PNR16_p8to15>;
+  def _S : sve2p1_int_while_rr_pn<mnemonic, 0b10, opc, PNR32_p8to15>;
+  def _D : sve2p1_int_while_rr_pn<mnemonic, 0b11, opc, PNR64_p8to15>;
 
- defm : SVE2p1_While_PN_Pat<aarch64svcount, !cast<SDPatternOperator>("int_aarch64_sve_" # mnemonic # "_c8"),
-                            i64, !cast<Instruction>(NAME # _B)>;
- defm : SVE2p1_While_PN_Pat<aarch64svcount, !cast<SDPatternOperator>("int_aarch64_sve_" # mnemonic # "_c16"),
-                            i64, !cast<Instruction>(NAME # _H)>;
- defm : SVE2p1_While_PN_Pat<aarch64svcount, !cast<SDPatternOperator>("int_aarch64_sve_" # mnemonic # "_c32"),
-                            i64, !cast<Instruction>(NAME # _S)>;
- defm : SVE2p1_While_PN_Pat<aarch64svcount, !cast<SDPatternOperator>("int_aarch64_sve_" # mnemonic # "_c64"),
-                            i64, !cast<Instruction>(NAME # _D)>;
+  defm : SVE2p1_While_PN_Pat<8, OpNode, i64, !cast<Instruction>(NAME # _B)>;
+  defm : SVE2p1_While_PN_Pat<16, OpNode, i64, !cast<Instruction>(NAME # _H)>;
+  defm : SVE2p1_While_PN_Pat<32, OpNode, i64, !cast<Instruction>(NAME # _S)>;
+  defm : SVE2p1_While_PN_Pat<64, OpNode, i64, !cast<Instruction>(NAME # _D)>;
 }
 
 

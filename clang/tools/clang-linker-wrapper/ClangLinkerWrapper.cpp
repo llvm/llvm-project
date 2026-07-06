@@ -543,14 +543,6 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
   if (!Triple.isNVPTX() && !Triple.isSPIRV())
     CmdArgs.push_back("-Wl,--no-undefined");
 
-  // The device inputs are bitcode stored in files with an object extension.
-  // Force the IR input language so Clang runs the compile and backend phases
-  // instead of treating them as linker inputs, which would defer codegen to
-  // the LTO link and defeat the non-LTO pipeline.
-  // FIXME: This is a stop-gap for non-RDC. Longer term, RDC and non-RDC should
-  //        share a unified interface.
-  if (Args.hasArg(OPT_no_lto))
-    CmdArgs.append({"-x", "ir"});
   for (StringRef InputFile : InputFiles)
     CmdArgs.push_back(InputFile);
 
@@ -612,9 +604,6 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
     CmdArgs.append({"-Xlinker", Args.MakeArgString(Arg)});
   for (StringRef Arg : Args.getAllArgValues(OPT_compiler_arg_EQ))
     CmdArgs.push_back(Args.MakeArgString(Arg));
-
-  if (Args.hasArg(OPT_no_lto))
-    CmdArgs.append({"-flto=none", "-Wno-unused-command-line-argument"});
 
   if (Error Err = executeCommands(*ClangPath, CmdArgs))
     return std::move(Err);

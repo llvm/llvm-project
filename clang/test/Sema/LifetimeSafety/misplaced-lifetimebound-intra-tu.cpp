@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-intra-tu-misplaced-lifetimebound -Wlifetime-safety-annotation-placement -Wno-dangling -verify %s
 // RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-intra-tu-misplaced-lifetimebound -Wno-dangling -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-intra-tu-misplaced-lifetimebound -Wno-dangling -lifetime-safety-lifetimebound-macro=CONFIGURED_LIFETIMEBOUND_MACRO \
+// RUN:   -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s --check-prefix=CHECK-CONFIG
 // RUN: cp %s %t.intra.cpp
 // RUN: %clang_cc1 -Wlifetime-safety-intra-tu-misplaced-lifetimebound -Wno-dangling -fixit %t.intra.cpp
 // RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-intra-tu-misplaced-lifetimebound -Wno-dangling -Werror %t.intra.cpp
@@ -29,11 +31,11 @@ struct S {
   const MyObj &implicit_this_only(
                                   );  // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead}}
                                       // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:{{[0-9]+}}-[[@LINE-1]]:{{[0-9]+}}}:" {{\[\[clang::lifetimebound\]\]}}"
-  
+
   const MyObj &param_only(const MyObj & // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead}}
                           obj           // CHECK: fix-it:"{{.*}}":{[[@LINE]]:{{[0-9]+}}-[[@LINE]]:{{[0-9]+}}}:" {{\[\[clang::lifetimebound\]\]}}"
                           );
-  
+
   const MyObj &both(const MyObj &  // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead}}
                     obj,           // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE]]:{{[0-9]+}}-[[@LINE]]:{{[0-9]+}}}:" {{\[\[clang::lifetimebound\]\]}}"
                     bool
@@ -166,4 +168,49 @@ struct Derived : Base {
 
 auto Derived::virtual_get(const MyObj& obj [[clang::lifetimebound]]) const -> const MyObj& { // expected-note {{'lifetimebound' attribute appears here on the definition}}
   return obj;
+}
+
+#define GNU_LIFETIMEBOUND_MACRO __attribute__((lifetimebound))
+
+MyObj &gnu_macro_param(MyObj&  // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead}}
+                       obj     // CHECK: fix-it:"{{.*}}":{[[@LINE]]:{{[0-9]+}}-[[@LINE]]:{{[0-9]+}}}:" GNU_LIFETIMEBOUND_MACRO"
+                       );
+
+MyObj &gnu_macro_param(MyObj &obj [[clang::lifetimebound]]) { // expected-note {{'lifetimebound' attribute appears here on the definition}}
+  return obj;
+}
+
+struct OnlyGNUMember {
+  MyObj data;
+  const MyObj &only_gnu_this(
+                             ); // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead}}
+                                // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:{{[0-9]+}}-[[@LINE-1]]:{{[0-9]+}}}:" {{\[\[clang::lifetimebound\]\]}}"
+};
+
+const MyObj &OnlyGNUMember::only_gnu_this() [[clang::lifetimebound]] { // expected-note {{'lifetimebound' attribute appears here on the definition}}
+  return data;
+}
+
+#define CONFIGURED_LIFETIMEBOUND_MACRO [[clang::lifetimebound]]
+#define LATEST_VISIBLE_LIFETIMEBOUND_MACRO [[clang::lifetimebound]]
+
+MyObj &configured_macro_param(MyObj&  // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead}}
+                              obj     // CHECK: fix-it:"{{.*}}":{[[@LINE]]:{{[0-9]+}}-[[@LINE]]:{{[0-9]+}}}:" LATEST_VISIBLE_LIFETIMEBOUND_MACRO"
+                                      // CHECK-CONFIG: fix-it:"{{.*}}":{[[@LINE-1]]:{{[0-9]+}}-[[@LINE-1]]:{{[0-9]+}}}:" CONFIGURED_LIFETIMEBOUND_MACRO"
+                              );
+
+MyObj &configured_macro_param(MyObj &obj [[clang::lifetimebound]]) { // expected-note {{'lifetimebound' attribute appears here on the definition}}
+  return obj;
+}
+
+struct ConfiguredMacroMember {
+  MyObj data;
+  const MyObj &configured_this(
+                               ); // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead}}
+                                  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:{{[0-9]+}}-[[@LINE-1]]:{{[0-9]+}}}:" LATEST_VISIBLE_LIFETIMEBOUND_MACRO"
+                                  // CHECK-CONFIG: fix-it:"{{.*}}":{[[@LINE-2]]:{{[0-9]+}}-[[@LINE-2]]:{{[0-9]+}}}:" CONFIGURED_LIFETIMEBOUND_MACRO"
+};
+
+const MyObj &ConfiguredMacroMember::configured_this() [[clang::lifetimebound]] { // expected-note {{'lifetimebound' attribute appears here on the definition}}
+  return data;
 }

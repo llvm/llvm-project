@@ -3480,8 +3480,8 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, uint8_t ValueSize) {
   // Check whether we should use optimal code alignment for this .align
   // directive.
   if (MAI.useCodeAlign(*Section) && !HasFillExpr) {
-    getStreamer().emitCodeAlignment(
-        Align(Alignment), &getTargetParser().getSTI(), MaxBytesToFill);
+    getStreamer().emitCodeAlignment(Align(Alignment),
+                                    getTargetParser().getSTI(), MaxBytesToFill);
   } else {
     // FIXME: Target specific behavior about how the "extra" bytes are filled.
     getStreamer().emitValueToAlignment(Align(Alignment), FillExpr, ValueSize,

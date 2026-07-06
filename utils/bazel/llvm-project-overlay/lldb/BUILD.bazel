@@ -267,6 +267,9 @@ cc_library(
         "@platforms//os:linux": [
             "//lldb/source/Plugins:PluginProcessLinux",
         ],
+        "@platforms//os:windows": [
+            "//lldb/source/Plugins:PluginProcessWindowsCommon",
+        ],
         "//conditions:default": [],
     }),
     alwayslink = True,
