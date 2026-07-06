@@ -401,7 +401,7 @@ exception_ptr current_exception() noexcept {
   if (PER_IS_MSVC_PURE_OR_NATIVE_EH(&__cpp_record)) {
     const auto* __throw_info = __cpp_record.params.pThrowInfo;
     if (!__cpp_record.params.pExceptionObject || !__throw_info || !__throw_info->pCatchableTypeArray) {
-      std::abort();
+      terminate();
     }
 
 #if _EH_RELATIVE_TYPEINFO
@@ -413,7 +413,7 @@ exception_ptr current_exception() noexcept {
 #endif
 
     if (__catchable_type_array->nCatchableTypes <= 0) {
-      std::abort();
+      terminate();
     }
 
 #if _EH_RELATIVE_TYPEINFO
@@ -443,7 +443,7 @@ exception_ptr current_exception() noexcept {
   __p = nullptr;
   RaiseException(__record_copy.ExceptionCode, __record_copy.ExceptionFlags, __record_copy.NumberParameters,
                  __record_copy.ExceptionInformation);
-  std::abort();
+  terminate();
 }
 
 nested_exception::nested_exception() noexcept : __ptr_(current_exception()) {}
