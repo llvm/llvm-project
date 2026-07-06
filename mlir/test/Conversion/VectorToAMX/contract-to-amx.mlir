@@ -34,27 +34,27 @@ func.func @contract_vnni_f16(%A: vector<4x8x2xf16>, %B: vector<8x16x2xf16>,
 // CHECK:       vector.transfer_write %[[A]], %[[A_BUF]]
 // CHECK:       %[[A_BUF_2D:.+]] = memref.collapse_shape %[[A_BUF]]
 // CHECK-SAME:    {{\[}}[0], [1, 2]] : memref<4x8x2xf16> into memref<4x16xf16>
-// CHECK:       %[[A_TILE:.+]] = amx.tile_load %[[A_BUF_2D]]
+// CHECK:       %[[A_TILE:.+]] = x86.amx.tile_load %[[A_BUF_2D]]
 
 /// Load B vector into an AMX tile
 // CHECK:       %[[B_BUF:.+]] = memref.alloca() : memref<8x16x2xf16>
 // CHECK:       vector.transfer_write %[[B]], %[[B_BUF]]
 // CHECK:       %[[B_BUF_2D:.+]] = memref.collapse_shape %[[B_BUF]]
 // CHECK-SAME:    {{\[}}[0], [1, 2]] : memref<8x16x2xf16> into memref<8x32xf16>
-// CHECK:       %[[B_TILE:.+]] = amx.tile_load %[[B_BUF_2D]]
+// CHECK:       %[[B_TILE:.+]] = x86.amx.tile_load %[[B_BUF_2D]]
 
 /// Load C vector into an AMX tile
 // CHECK:       %[[C_BUF:.+]] = memref.alloca() : memref<4x16xf32>
 // CHECK:       vector.transfer_write %[[C]], %[[C_BUF]]
-// CHECK:       %[[C_TILE:.+]] = amx.tile_load %[[C_BUF]]
+// CHECK:       %[[C_TILE:.+]] = x86.amx.tile_load %[[C_BUF]]
 
 /// Perform tile multiplication
-// CHECK:       %[[RES:.+]] = amx.tile_mulf
+// CHECK:       %[[RES:.+]] = x86.amx.tile_mulf
 // CHECK-SAME:    %[[A_TILE]], %[[B_TILE]], %[[C_TILE]]
 
 /// Load the result back into a vector
 // CHECK:       %[[RES_BUF:.+]] = memref.alloca() : memref<4x16xf32>
-// CHECK:       amx.tile_store %[[RES_BUF]]{{.*}}, %[[RES]]
+// CHECK:       x86.amx.tile_store %[[RES_BUF]]{{.*}}, %[[RES]]
 // CHECK:       %[[RES_VEC:.+]] = vector.transfer_read %[[RES_BUF]]
 
 // CHECK:       return %[[RES_VEC]]
@@ -75,9 +75,9 @@ func.func @contract_vnni_bf16(%A: vector<4x8x2xbf16>, %B: vector<8x16x2xbf16>,
 }
 
 // CHECK-LABEL: @contract_vnni_bf16(
-// CHECK-COUNT-3: amx.tile_load
-// CHECK: amx.tile_mulf
-// CHECK: amx.tile_store
+// CHECK-COUNT-3: x86.amx.tile_load
+// CHECK: x86.amx.tile_mulf
+// CHECK: x86.amx.tile_store
 
 // -----
 
@@ -95,9 +95,9 @@ func.func @contract_vnni_i8(%A: vector<4x16x4xi8>, %B: vector<16x8x4xi8>,
 }
 
 // CHECK-LABEL: @contract_vnni_i8(
-// CHECK-COUNT-3: amx.tile_load
-// CHECK: amx.tile_muli
-// CHECK: amx.tile_store
+// CHECK-COUNT-3: x86.amx.tile_load
+// CHECK: x86.amx.tile_muli
+// CHECK: x86.amx.tile_store
 
 // -----
 
@@ -115,9 +115,9 @@ func.func @contract_shuffled_iterators(%A: vector<4x16x4xi8>, %B: vector<16x8x4x
 }
 
 // CHECK-LABEL: @contract_shuffled_iterators(
-// CHECK-COUNT-3: amx.tile_load
-// CHECK: amx.tile_muli
-// CHECK: amx.tile_store
+// CHECK-COUNT-3: x86.amx.tile_load
+// CHECK: x86.amx.tile_muli
+// CHECK: x86.amx.tile_store
 
 // -----
 

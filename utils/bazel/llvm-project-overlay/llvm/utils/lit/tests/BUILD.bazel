@@ -38,11 +38,7 @@ expand_template(
         ["**/*.py"],
         exclude = [
             "Inputs/**",
-            "discovery.py",  # TODO: debug and re-enable
-            "max-time.py",
-            "selecting.py",
-            "shtest-recursive-substitution.py",
-            "use-llvm-tool.py",
+            "use-llvm-tool.py",  # TODO: debug and re-enable
         ],
     )
 ]

@@ -310,7 +310,8 @@ class LoopPredication {
                    SmallVectorImpl<Value *> &WidenedChecks,
                    SCEVExpander &Expander, Instruction *Guard);
   bool widenGuardConditions(IntrinsicInst *II, SCEVExpander &Expander);
-  bool widenWidenableBranchGuardConditions(BranchInst *Guard, SCEVExpander &Expander);
+  bool widenWidenableBranchGuardConditions(CondBrInst *Guard,
+                                           SCEVExpander &Expander);
   // If the loop always exits through another block in the loop, we should not
   // predicate based on the latch check. For example, the latch check can be a
   // very coarse grained check and there can be more fine grained exit checks
@@ -755,7 +756,7 @@ bool LoopPredication::widenGuardConditions(IntrinsicInst *Guard,
 }
 
 bool LoopPredication::widenWidenableBranchGuardConditions(
-    BranchInst *BI, SCEVExpander &Expander) {
+    CondBrInst *BI, SCEVExpander &Expander) {
   assert(isGuardAsWidenableBranch(BI) && "Must be!");
   LLVM_DEBUG(dbgs() << "Processing guard:\n");
   LLVM_DEBUG(BI->dump());
@@ -813,8 +814,8 @@ std::optional<LoopICmp> LoopPredication::parseLoopLatchICmp() {
     return std::nullopt;
   }
 
-  auto *BI = dyn_cast<BranchInst>(LoopLatch->getTerminator());
-  if (!BI || !BI->isConditional()) {
+  auto *BI = dyn_cast<CondBrInst>(LoopLatch->getTerminator());
+  if (!BI) {
     LLVM_DEBUG(dbgs() << "Failed to match the latch terminator!\n");
     return std::nullopt;
   }
@@ -970,7 +971,7 @@ bool LoopPredication::isLoopProfitableToPredicate() {
 
 /// If we can (cheaply) find a widenable branch which controls entry into the
 /// loop, return it.
-static BranchInst *FindWidenableTerminatorAboveLoop(Loop *L, LoopInfo &LI) {
+static CondBrInst *FindWidenableTerminatorAboveLoop(Loop *L, LoopInfo &LI) {
   // Walk back through any unconditional executed blocks and see if we can find
   // a widenable condition which seems to control execution of this loop.  Note
   // that we predict that maythrow calls are likely untaken and thus that it's
@@ -990,7 +991,7 @@ static BranchInst *FindWidenableTerminatorAboveLoop(Loop *L, LoopInfo &LI) {
   } while (true);
 
   if (BasicBlock *Pred = BB->getSinglePredecessor()) {
-    if (auto *BI = dyn_cast<BranchInst>(Pred->getTerminator()))
+    if (auto *BI = dyn_cast<CondBrInst>(Pred->getTerminator()))
       if (BI->getSuccessor(0) == BB && isWidenableBranch(BI))
         return BI;
   }
@@ -1006,9 +1007,9 @@ static const SCEV *getMinAnalyzeableBackedgeTakenCount(ScalarEvolution &SE,
   SmallVector<BasicBlock *, 16> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
 
-  SmallVector<const SCEV *, 4> ExitCounts;
+  SmallVector<SCEVUse, 4> ExitCounts;
   for (BasicBlock *ExitingBB : ExitingBlocks) {
-    const SCEV *ExitCount = SE.getExitCount(L, ExitingBB);
+    SCEVUse ExitCount = SE.getExitCount(L, ExitingBB);
     if (isa<SCEVCouldNotCompute>(ExitCount))
       continue;
     assert(DT.dominates(ExitingBB, L->getLoopLatch()) &&
@@ -1076,7 +1077,7 @@ bool LoopPredication::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
     if (LI->getLoopFor(ExitingBB) != L)
       continue;
 
-    auto *BI = dyn_cast<BranchInst>(ExitingBB->getTerminator());
+    auto *BI = dyn_cast<CondBrInst>(ExitingBB->getTerminator());
     if (!BI)
       continue;
 
@@ -1121,7 +1122,7 @@ bool LoopPredication::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
       continue;
 
     // Can't rewrite non-branch yet.
-    auto *BI = dyn_cast<BranchInst>(ExitingBB->getTerminator());
+    auto *BI = dyn_cast<CondBrInst>(ExitingBB->getTerminator());
     if (!BI)
       continue;
 
@@ -1222,7 +1223,7 @@ bool LoopPredication::runOnLoop(Loop *Loop) {
   // Collect all the guards into a vector and process later, so as not
   // to invalidate the instruction iterator.
   SmallVector<IntrinsicInst *, 4> Guards;
-  SmallVector<BranchInst *, 4> GuardsAsWidenableBranches;
+  SmallVector<CondBrInst *, 4> GuardsAsWidenableBranches;
   for (const auto BB : L->blocks()) {
     for (auto &I : *BB)
       if (isGuard(&I))
@@ -1230,7 +1231,7 @@ bool LoopPredication::runOnLoop(Loop *Loop) {
     if (PredicateWidenableBranchGuards &&
         isGuardAsWidenableBranch(BB->getTerminator()))
       GuardsAsWidenableBranches.push_back(
-          cast<BranchInst>(BB->getTerminator()));
+          cast<CondBrInst>(BB->getTerminator()));
   }
 
   SCEVExpander Expander(*SE, "loop-predication");

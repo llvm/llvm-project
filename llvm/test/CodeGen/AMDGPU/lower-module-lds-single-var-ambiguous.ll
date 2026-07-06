@@ -48,14 +48,12 @@ define void @f0() {
 ;
 ; TABLE-LABEL: @f0(
 ; TABLE-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
-; TABLE-NEXT:    [[FUNCTION_LDS2:%.*]] = getelementptr inbounds [2 x [1 x i32]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
-; TABLE-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[FUNCTION_LDS2]], align 4
-; TABLE-NEXT:    [[FUNCTION_LDS3:%.*]] = inttoptr i32 [[TMP2]] to ptr addrspace(3)
+; TABLE-NEXT:    [[FUNCTION_LDS2:%.*]] = getelementptr inbounds [2 x [1 x ptr addrspace(3)]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
+; TABLE-NEXT:    [[FUNCTION_LDS3:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[FUNCTION_LDS2]], align 4
 ; TABLE-NEXT:    [[LD:%.*]] = load i16, ptr addrspace(3) [[FUNCTION_LDS3]], align 2
 ; TABLE-NEXT:    [[MUL:%.*]] = mul i16 [[LD]], 4
-; TABLE-NEXT:    [[FUNCTION_LDS:%.*]] = getelementptr inbounds [2 x [1 x i32]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
-; TABLE-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(4) [[FUNCTION_LDS]], align 4
-; TABLE-NEXT:    [[FUNCTION_LDS1:%.*]] = inttoptr i32 [[TMP3]] to ptr addrspace(3)
+; TABLE-NEXT:    [[FUNCTION_LDS:%.*]] = getelementptr inbounds [2 x [1 x ptr addrspace(3)]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
+; TABLE-NEXT:    [[FUNCTION_LDS1:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[FUNCTION_LDS]], align 4
 ; TABLE-NEXT:    store i16 [[MUL]], ptr addrspace(3) [[FUNCTION_LDS1]], align 2
 ; TABLE-NEXT:    ret void
 ;

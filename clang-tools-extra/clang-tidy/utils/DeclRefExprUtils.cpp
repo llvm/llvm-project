@@ -181,7 +181,7 @@ AST_MATCHER_P(DeclRefExpr, doesNotMutateObject, int, Indirections) {
     int Indirections;
   };
 
-  llvm::SmallVector<StackEntry, 4> Stack;
+  SmallVector<StackEntry, 4> Stack;
   Stack.emplace_back(&Node, Indirections);
   ASTContext &Ctx = Finder->getASTContext();
 
@@ -366,21 +366,24 @@ bool isOnlyUsedAsConst(const VarDecl &Var, const Stmt &Stmt,
   return isSetDifferenceEmpty(AllDeclRefs, ConstReferenceDeclRefs);
 }
 
-SmallPtrSet<const DeclRefExpr *, 16>
-allDeclRefExprs(const VarDecl &VarDecl, const Stmt &Stmt, ASTContext &Context) {
+SmallPtrSet<const DeclRefExpr *, 16> allDeclRefExprs(const ValueDecl &ValueDecl,
+                                                     const Stmt &Stmt,
+                                                     ASTContext &Context) {
   auto Matches = match(
-      findAll(declRefExpr(to(varDecl(equalsNode(&VarDecl)))).bind("declRef")),
+      findAll(
+          declRefExpr(to(valueDecl(equalsNode(&ValueDecl)))).bind("declRef")),
       Stmt, Context);
   SmallPtrSet<const DeclRefExpr *, 16> DeclRefs;
   extractNodesByIdTo(Matches, "declRef", DeclRefs);
   return DeclRefs;
 }
 
-SmallPtrSet<const DeclRefExpr *, 16>
-allDeclRefExprs(const VarDecl &VarDecl, const Decl &Decl, ASTContext &Context) {
+SmallPtrSet<const DeclRefExpr *, 16> allDeclRefExprs(const ValueDecl &ValueDecl,
+                                                     const Decl &Decl,
+                                                     ASTContext &Context) {
   auto Matches = match(
       decl(forEachDescendant(
-          declRefExpr(to(varDecl(equalsNode(&VarDecl)))).bind("declRef"))),
+          declRefExpr(to(valueDecl(equalsNode(&ValueDecl)))).bind("declRef"))),
       Decl, Context);
   SmallPtrSet<const DeclRefExpr *, 16> DeclRefs;
   extractNodesByIdTo(Matches, "declRef", DeclRefs);

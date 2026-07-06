@@ -9,6 +9,7 @@
 #include "RegisterContextWindows_i386.h"
 #include "RegisterContext_x86.h"
 #include "lldb-x86-register-enums.h"
+#include "lldb/lldb-defines.h"
 
 using namespace lldb_private;
 using namespace lldb;

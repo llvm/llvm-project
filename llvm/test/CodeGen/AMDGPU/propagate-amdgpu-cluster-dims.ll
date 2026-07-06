@@ -174,9 +174,9 @@ attributes #0 = { "amdgpu-cluster-dims"="2,2,2" }
 attributes #1 = { "amdgpu-cluster-dims"="1,2,1" }
 attributes #2 = { "amdgpu-cluster-dims"="0,0,0" }
 ;.
-; CHECK: attributes #[[ATTR0]] = { "target-cpu"="gfx1250" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR1]] = { "amdgpu-cluster-dims"="2,2,2" "target-cpu"="gfx1250" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR2]] = { "amdgpu-cluster-dims"="0,0,0" "target-cpu"="gfx1250" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR3]] = { "amdgpu-cluster-dims"="1024,1024,1024" "target-cpu"="gfx1250" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR4]] = { "amdgpu-cluster-dims"="1,2,1" "target-cpu"="gfx1250" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR0]] = { "target-cpu"="gfx1250" }
+; CHECK: attributes #[[ATTR1]] = { "amdgpu-cluster-dims"="2,2,2" "target-cpu"="gfx1250" }
+; CHECK: attributes #[[ATTR2]] = { "amdgpu-cluster-dims"="0,0,0" "target-cpu"="gfx1250" }
+; CHECK: attributes #[[ATTR3]] = { "amdgpu-cluster-dims"="1024,1024,1024" "target-cpu"="gfx1250" }
+; CHECK: attributes #[[ATTR4]] = { "amdgpu-cluster-dims"="1,2,1" "target-cpu"="gfx1250" }
 ;.

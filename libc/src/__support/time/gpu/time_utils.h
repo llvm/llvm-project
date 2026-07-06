@@ -16,7 +16,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-#if defined(LIBC_TARGET_ARCH_IS_AMDGPU)
+#if defined(LIBC_TARGET_ARCH_IS_AMDGPU) || defined(__SPIRV__)
 // AMDGPU does not have a single set frequency. Different architectures and
 // cards can have different values. The actualy frequency needs to be read from
 // the kernel driver and will be between 25 MHz and 100 MHz on most cards. All

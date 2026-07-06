@@ -22,11 +22,11 @@ define void @main() local_unnamed_addr #0 {
 ; CHECK-NEXT:    %36 = OpCopyObject %12 %31
 ; CHECK-NEXT:    %37 = OpCopyObject %10 %32
 ; CHECK-NEXT:    %38 = OpAccessChain %7 %36 %21 %21
-; CHECK-NEXT:    %39 = OpLoad %6 %38 Aligned 16
+; CHECK-NEXT:    %39 = OpLoad %6 %38
 ; CHECK-NEXT:    %40 = OpCompositeExtract %4 %39 1
 ; CHECK-NEXT:    %41 = OpAccessChain %7 %37 %21 %21
 ; CHECK-NEXT:    %42 = OpInBoundsAccessChain %5 %41 %22
-; CHECK-NEXT:    OpStore %42 %40 Aligned 4
+; CHECK-NEXT:    OpStore %42 %40
 ; CHECK-NEXT:    OpReturn
 ; CHECK-NEXT:    OpFunctionEnd
 entry:

@@ -40,9 +40,8 @@ static bool isLockGuard(const QualType &Type) {
   return false;
 }
 
-static llvm::SmallVector<const VarDecl *>
-getLockGuardsFromDecl(const DeclStmt *DS) {
-  llvm::SmallVector<const VarDecl *> LockGuards;
+static SmallVector<const VarDecl *> getLockGuardsFromDecl(const DeclStmt *DS) {
+  SmallVector<const VarDecl *> LockGuards;
 
   for (const Decl *Decl : DS->decls()) {
     if (const auto *VD = dyn_cast<VarDecl>(Decl)) {
@@ -58,12 +57,12 @@ getLockGuardsFromDecl(const DeclStmt *DS) {
 
 // Scans through the statements in a block and groups consecutive
 // 'std::lock_guard' variable declarations together.
-static llvm::SmallVector<llvm::SmallVector<const VarDecl *>>
+static SmallVector<SmallVector<const VarDecl *>>
 findLocksInCompoundStmt(const CompoundStmt *Block,
                         const ast_matchers::MatchFinder::MatchResult &Result) {
   // store groups of consecutive 'std::lock_guard' declarations
-  llvm::SmallVector<llvm::SmallVector<const VarDecl *>> LockGuardGroups;
-  llvm::SmallVector<const VarDecl *> CurrentLockGuardGroup;
+  SmallVector<SmallVector<const VarDecl *>> LockGuardGroups;
+  SmallVector<const VarDecl *> CurrentLockGuardGroup;
 
   auto AddAndClearCurrentGroup = [&]() {
     if (!CurrentLockGuardGroup.empty()) {
@@ -74,8 +73,7 @@ findLocksInCompoundStmt(const CompoundStmt *Block,
 
   for (const Stmt *Stmt : Block->body()) {
     if (const auto *DS = dyn_cast<DeclStmt>(Stmt)) {
-      const llvm::SmallVector<const VarDecl *> LockGuards =
-          getLockGuardsFromDecl(DS);
+      const SmallVector<const VarDecl *> LockGuards = getLockGuardsFromDecl(DS);
 
       if (!LockGuards.empty()) {
         CurrentLockGuardGroup.append(LockGuards);
@@ -137,7 +135,6 @@ void UseScopedLockCheck::registerMatchers(MatchFinder *Finder) {
   if (WarnOnSingleLocks) {
     Finder->addMatcher(
         compoundStmt(
-            unless(isExpansionInSystemHeader()),
             has(declStmt(has(LockVarDecl)).bind("lock-decl-single")),
             unless(has(declStmt(unless(equalsBoundNode("lock-decl-single")),
                                 has(LockVarDecl))))),
@@ -145,8 +142,7 @@ void UseScopedLockCheck::registerMatchers(MatchFinder *Finder) {
   }
 
   Finder->addMatcher(
-      compoundStmt(unless(isExpansionInSystemHeader()),
-                   has(declStmt(has(LockVarDecl)).bind("lock-decl-multiple")),
+      compoundStmt(has(declStmt(has(LockVarDecl)).bind("lock-decl-multiple")),
                    has(declStmt(unless(equalsBoundNode("lock-decl-multiple")),
                                 has(LockVarDecl))))
           .bind("block-multiple"),
@@ -154,22 +150,19 @@ void UseScopedLockCheck::registerMatchers(MatchFinder *Finder) {
 
   if (WarnOnUsingAndTypedef) {
     // Match 'typedef std::lock_guard<std::mutex> Lock'
-    Finder->addMatcher(typedefDecl(unless(isExpansionInSystemHeader()),
-                                   hasType(hasUnderlyingType(LockGuardType)))
+    Finder->addMatcher(typedefDecl(hasType(hasUnderlyingType(LockGuardType)))
                            .bind("lock-guard-typedef"),
                        this);
 
     // Match 'using Lock = std::lock_guard<std::mutex>'
-    Finder->addMatcher(typeAliasDecl(unless(isExpansionInSystemHeader()),
-                                     hasType(templateSpecializationType(
+    Finder->addMatcher(typeAliasDecl(hasType(templateSpecializationType(
                                          hasDeclaration(LockGuardClassDecl))))
                            .bind("lock-guard-using-alias"),
                        this);
 
     // Match 'using std::lock_guard'
     Finder->addMatcher(
-        usingDecl(unless(isExpansionInSystemHeader()),
-                  hasAnyUsingShadowDecl(hasTargetDecl(LockGuardClassDecl)))
+        usingDecl(hasAnyUsingShadowDecl(hasTargetDecl(LockGuardClassDecl)))
             .bind("lock-guard-using-decl"),
         this);
   }
@@ -177,7 +170,7 @@ void UseScopedLockCheck::registerMatchers(MatchFinder *Finder) {
 
 void UseScopedLockCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *DS = Result.Nodes.getNodeAs<DeclStmt>("lock-decl-single")) {
-    const llvm::SmallVector<const VarDecl *> Decls = getLockGuardsFromDecl(DS);
+    const SmallVector<const VarDecl *> Decls = getLockGuardsFromDecl(DS);
     diagOnMultipleLocks({Decls}, Result);
     return;
   }
@@ -254,9 +247,9 @@ void UseScopedLockCheck::diagOnSingleLock(
 }
 
 void UseScopedLockCheck::diagOnMultipleLocks(
-    const llvm::SmallVector<llvm::SmallVector<const VarDecl *>> &LockGroups,
+    const SmallVector<SmallVector<const VarDecl *>> &LockGroups,
     const ast_matchers::MatchFinder::MatchResult &Result) {
-  for (const llvm::SmallVector<const VarDecl *> &Group : LockGroups) {
+  for (const SmallVector<const VarDecl *> &Group : LockGroups) {
     if (Group.size() == 1) {
       if (WarnOnSingleLocks)
         diagOnSingleLock(Group[0], Result);

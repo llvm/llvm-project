@@ -1,6 +1,7 @@
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizerPassBuilder.h"
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/BottomUpVec.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/LoadStoreVec.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/NullPass.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/PackReuse.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/PrintInstructionCount.h"
@@ -16,11 +17,12 @@
 namespace llvm::sandboxir {
 
 std::unique_ptr<sandboxir::RegionPass>
-SandboxVectorizerPassBuilder::createRegionPass(StringRef Name, StringRef Args) {
+SandboxVectorizerPassBuilder::createRegionPass(StringRef Name, StringRef Args,
+                                               StringRef AuxArg) {
 #define REGION_PASS(NAME, CLASS_NAME)                                          \
   if (Name == NAME) {                                                          \
     assert(Args.empty() && "Unexpected arguments for pass '" NAME "'.");       \
-    return std::make_unique<CLASS_NAME>();                                     \
+    return std::make_unique<CLASS_NAME>(AuxArg);                               \
   }
 // TODO: Support region passes with params.
 #include "Passes/PassRegistry.def"
@@ -28,11 +30,11 @@ SandboxVectorizerPassBuilder::createRegionPass(StringRef Name, StringRef Args) {
 }
 
 std::unique_ptr<sandboxir::FunctionPass>
-SandboxVectorizerPassBuilder::createFunctionPass(StringRef Name,
-                                                 StringRef Args) {
+SandboxVectorizerPassBuilder::createFunctionPass(StringRef Name, StringRef Args,
+                                                 StringRef AuxArg) {
 #define FUNCTION_PASS_WITH_PARAMS(NAME, CLASS_NAME)                            \
   if (Name == NAME)                                                            \
-    return std::make_unique<CLASS_NAME>(Args);
+    return std::make_unique<CLASS_NAME>(Args, AuxArg);
 #include "Passes/PassRegistry.def"
   return nullptr;
 }

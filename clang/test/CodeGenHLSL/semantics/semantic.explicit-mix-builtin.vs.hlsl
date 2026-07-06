@@ -11,7 +11,7 @@ struct S1 {
 
 // CHECK: @SV_Position0 = external hidden thread_local addrspace(7) externally_initialized constant <4 x float>, !spirv.Decorations ![[#MD_0:]]
 // CHECK: @SV_Position = external hidden thread_local addrspace(8) global <4 x float>, !spirv.Decorations ![[#MD_2:]]
-// CHECK: @A0 = external hidden thread_local addrspace(8) global <4 x float>, !spirv.Decorations ![[#MD_0]]
+// CHECK: @A0 = external hidden thread_local addrspace(8) global <4 x float>, !spirv.Decorations ![[#MD_4:]]
 
 [shader("vertex")]
 S1 main1(float4 position : SV_Position) {
@@ -29,3 +29,7 @@ S1 main1(float4 position : SV_Position) {
 // CHECK: ![[#MD_3]] = !{i32 11, i32 0}
 //                            |       `-> BuiltIn 'Position'
 //                            `-> SPIR-V decoration 'BuiltIn'
+// CHECK: ![[#MD_4]] = !{![[#MD_5:]]}
+// CHECK: ![[#MD_5]] = !{i32 30, i32 3}
+//                            |       `-> Location index
+//                            `-> SPIR-V decoration 'Location'

@@ -80,10 +80,13 @@ bool objdump::DylibId;
 bool objdump::Verbose;
 bool objdump::ObjcMetaData;
 std::string objdump::DisSymName;
+bool objdump::IsOtool;
+bool objdump::UseMemberSyntax;
 bool objdump::SymbolicOperands;
-static std::vector<std::string> ArchFlags;
+std::vector<std::string> objdump::ArchFlags;
 
 static bool ArchAll = false;
+static std::string ArchiveMemberFilter;
 static std::string ThumbTripleName;
 
 static StringRef ordinalName(const object::MachOObjectFile *, int);
@@ -2310,6 +2313,18 @@ static void printCPUType(uint32_t cputype, uint32_t cpusubtype) {
       outs() << "    cputype CPU_TYPE_ARM\n";
       outs() << "    cpusubtype CPU_SUBTYPE_ARM_V7S\n";
       break;
+    case MachO::CPU_SUBTYPE_ARM_V8M_MAIN:
+      outs() << "    cputype CPU_TYPE_ARM\n";
+      outs() << "    cpusubtype CPU_SUBTYPE_ARM_V8M_MAIN\n";
+      break;
+    case MachO::CPU_SUBTYPE_ARM_V8M_BASE:
+      outs() << "    cputype CPU_TYPE_ARM\n";
+      outs() << "    cpusubtype CPU_SUBTYPE_ARM_V8M_BASE\n";
+      break;
+    case MachO::CPU_SUBTYPE_ARM_V8_1M_MAIN:
+      outs() << "    cputype CPU_TYPE_ARM\n";
+      outs() << "    cpusubtype CPU_SUBTYPE_ARM_V8_1M_MAIN\n";
+      break;
     default:
       printUnknownCPUType(cputype, cpusubtype);
       break;
@@ -2532,6 +2547,18 @@ static bool ValidateArchFlags() {
   return true;
 }
 
+static bool skipArchiveMember(const object::Archive::Child &C,
+                              StringRef Filename) {
+  if (ArchiveMemberFilter.empty())
+    return false;
+  Expected<StringRef> NameOrErr = C.getName();
+  if (!NameOrErr) {
+    reportError(NameOrErr.takeError(), Filename);
+    return true;
+  }
+  return *NameOrErr != ArchiveMemberFilter;
+}
+
 // ParseInputMachO() parses the named Mach-O file in Filename and handles the
 // -arch flags selecting just those slices as specified by them and also parses
 // archive files.  Then for each individual Mach-O file ProcessMachO() is
@@ -2539,6 +2566,19 @@ static bool ValidateArchFlags() {
 void objdump::parseInputMachO(StringRef Filename) {
   if (!ValidateArchFlags())
     return;
+
+  // In otool mode, support archive(member) syntax: if the filename ends
+  // with ')' and contains '(', split it into the archive path and member
+  // name. The -m option disables this parsing.
+  ArchiveMemberFilter.clear();
+  if (IsOtool && UseMemberSyntax && !Filename.empty() &&
+      Filename.back() == ')') {
+    auto Pos = Filename.rfind('(');
+    if (Pos != StringRef::npos && Pos > 0) {
+      ArchiveMemberFilter = Filename.substr(Pos + 1).drop_back().str();
+      Filename = Filename.substr(0, Pos);
+    }
+  }
 
   // Attempt to open the binary.
   Expected<OwningBinary<Binary>> BinaryOrErr = createBinary(Filename);
@@ -2558,8 +2598,12 @@ void objdump::parseInputMachO(StringRef Filename) {
 
     Error Err = Error::success();
     unsigned I = -1;
+    bool FoundMember = false;
     for (auto &C : A->children(Err)) {
       ++I;
+      if (skipArchiveMember(C, Filename))
+        continue;
+      FoundMember = true;
       Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
       if (!ChildOrErr) {
         if (Error E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
@@ -2574,10 +2618,18 @@ void objdump::parseInputMachO(StringRef Filename) {
     }
     if (Err)
       reportError(std::move(Err), Filename);
+    if (!FoundMember && !ArchiveMemberFilter.empty())
+      reportError(Filename, "archive does not contain a member named: " +
+                                ArchiveMemberFilter);
     return;
   }
   if (MachOUniversalBinary *UB = dyn_cast<MachOUniversalBinary>(&Bin)) {
     parseInputMachO(UB);
+    return;
+  }
+  if (!ArchiveMemberFilter.empty()) {
+    reportError(Filename, "not an archive (cannot extract member: " +
+                              ArchiveMemberFilter + ")");
     return;
   }
   if (ObjectFile *O = dyn_cast<ObjectFile>(&Bin)) {
@@ -2639,8 +2691,12 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
                                   ArchiveMemberOffsets, ArchitectureName);
             Error Err = Error::success();
             unsigned I = -1;
+            bool FoundMember = false;
             for (auto &C : A->children(Err)) {
               ++I;
+              if (skipArchiveMember(C, Filename))
+                continue;
+              FoundMember = true;
               Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
               if (!ChildOrErr) {
                 if (Error E =
@@ -2655,6 +2711,10 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
             }
             if (Err)
               reportError(std::move(Err), Filename);
+            if (!FoundMember && !ArchiveMemberFilter.empty())
+              reportError(Filename,
+                          "archive does not contain a member named: " +
+                              ArchiveMemberFilter);
           } else {
             consumeError(AOrErr.takeError());
             reportError(Filename,
@@ -2674,8 +2734,9 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
     return;
   }
   // No architecture flags were specified so if this contains a slice that
-  // matches the host architecture dump only that.
-  if (!ArchAll) {
+  // matches the host architecture dump only that. For otool -a dump all
+  // architectures to match classic otool behaviour.
+  if (!ArchAll && !(IsOtool && ArchiveHeaders)) {
     for (MachOUniversalBinary::object_iterator I = UB->begin_objects(),
                                                 E = UB->end_objects();
           I != E; ++I) {
@@ -2700,8 +2761,12 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
                                 ArchiveMemberOffsets);
           Error Err = Error::success();
           unsigned I = -1;
+          bool FoundMember = false;
           for (auto &C : A->children(Err)) {
             ++I;
+            if (skipArchiveMember(C, Filename))
+              continue;
+            FoundMember = true;
             Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
             if (!ChildOrErr) {
               if (Error E =
@@ -2715,6 +2780,9 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
           }
           if (Err)
             reportError(std::move(Err), Filename);
+          if (!FoundMember && !ArchiveMemberFilter.empty())
+            reportError(Filename, "archive does not contain a member named: " +
+                                      ArchiveMemberFilter);
         } else {
           consumeError(AOrErr.takeError());
           reportError(Filename, "Mach-O universal file for architecture " +
@@ -2753,8 +2821,12 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
                             ArchitectureName);
       Error Err = Error::success();
       unsigned I = -1;
+      bool FoundMember = false;
       for (auto &C : A->children(Err)) {
         ++I;
+        if (skipArchiveMember(C, Filename))
+          continue;
+        FoundMember = true;
         Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
         if (!ChildOrErr) {
           if (Error E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
@@ -2764,13 +2836,14 @@ void objdump::parseInputMachO(MachOUniversalBinary *UB) {
         }
         if (MachOObjectFile *O =
                 dyn_cast<MachOObjectFile>(&*ChildOrErr.get())) {
-          if (MachOObjectFile *MachOOF = dyn_cast<MachOObjectFile>(O))
-            ProcessMachO(Filename, MachOOF, MachOOF->getFileName(),
-                          ArchitectureName);
+          ProcessMachO(Filename, O, O->getFileName(), ArchitectureName);
         }
       }
       if (Err)
         reportError(std::move(Err), Filename);
+      if (!FoundMember && !ArchiveMemberFilter.empty())
+        reportError(Filename, "archive does not contain a member named: " +
+                                  ArchiveMemberFilter);
     } else {
       consumeError(AOrErr.takeError());
       reportError(Filename, "Mach-O universal file for architecture " +
@@ -7328,7 +7401,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
   std::unique_ptr<const MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TheTriple, MachOMCPU, FeaturesStr));
   CHECK_TARGET_INFO_CREATION(STI);
-  MCContext Ctx(TheTriple, AsmInfo.get(), MRI.get(), STI.get());
+  MCContext Ctx(TheTriple, *AsmInfo, *MRI, *STI);
   std::unique_ptr<MCDisassembler> DisAsm(
       TheTarget->createMCDisassembler(*STI, Ctx));
   CHECK_TARGET_INFO_CREATION(DisAsm);
@@ -7382,8 +7455,8 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
     ThumbSTI.reset(ThumbTarget->createMCSubtargetInfo(ThumbTriple, MachOMCPU,
                                                       FeaturesStr));
     CHECK_THUMB_TARGET_INFO_CREATION(ThumbSTI);
-    ThumbCtx.reset(new MCContext(ThumbTriple, ThumbAsmInfo.get(),
-                                 ThumbMRI.get(), ThumbSTI.get()));
+    ThumbCtx.reset(
+        new MCContext(ThumbTriple, *ThumbAsmInfo, *ThumbMRI, *ThumbSTI));
     ThumbDisAsm.reset(ThumbTarget->createMCDisassembler(*ThumbSTI, *ThumbCtx));
     CHECK_THUMB_TARGET_INFO_CREATION(ThumbDisAsm);
     MCContext *PtrThumbCtx = ThumbCtx.get();
@@ -7508,7 +7581,8 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
       }
     }
     if (!DisSymName.empty() && !DisSymNameFound) {
-      outs() << "Can't find -dis-symname: " << DisSymName << "\n";
+      outs() << "Can't find " << (IsOtool ? "-p symbol" : "--dis-symname")
+             << ": " << DisSymName << "\n";
       return;
     }
     // Set up the block of info used by the Symbolizer call backs.
@@ -7549,7 +7623,8 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
       bool containsSym = Sections[SectIdx].containsSymbol(Symbols[SymIdx]);
       if (!containsSym) {
         if (!DisSymName.empty() && DisSymName == SymName) {
-          outs() << "-dis-symname: " << DisSymName << " not in the section\n";
+          outs() << (IsOtool ? "-p symbol" : "--dis-symname") << ": "
+                 << DisSymName << " not in the section\n";
           return;
         }
         continue;
@@ -7560,7 +7635,8 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
       // is an N_SECT symbol in the (__TEXT,__text) but its address is before the
       // start of the section in a standard MH_EXECUTE filetype.
       if (!DisSymName.empty() && DisSymName == "__mh_execute_header") {
-        outs() << "-dis-symname: __mh_execute_header not in any section\n";
+        outs() << (IsOtool ? "-p symbol" : "--dis-symname")
+               << ": __mh_execute_header not in any section\n";
         return;
       }
       // When this code is trying to disassemble a symbol at a time and in the
@@ -8369,6 +8445,15 @@ static void PrintMachHeader(uint32_t magic, uint32_t cputype,
         break;
       case MachO::CPU_SUBTYPE_ARM_V7S:
         outs() << "        V7S";
+        break;
+      case MachO::CPU_SUBTYPE_ARM_V8M_MAIN:
+        outs() << "       V8M_MAIN";
+        break;
+      case MachO::CPU_SUBTYPE_ARM_V8M_BASE:
+        outs() << "       V8M_BASE";
+        break;
+      case MachO::CPU_SUBTYPE_ARM_V8_1M_MAIN:
+        outs() << "       V8_1M_MAIN";
         break;
       default:
         outs() << format(" %10d", cpusubtype & ~MachO::CPU_SUBTYPE_MASK);

@@ -15,6 +15,7 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCGOFFAttributes.h"
 #include "llvm/MC/MCGOFFObjectWriter.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/MC/MCValue.h"
@@ -278,6 +279,7 @@ public:
     BehavAttrs.setLinkageType(Attr.Linkage);
     BehavAttrs.setAmode(Attr.Amode);
     BehavAttrs.setBindingScope(Attr.BindingScope);
+    BehavAttrs.setIndirectReference(Attr.IsIndirectReference);
   }
 };
 
@@ -314,13 +316,13 @@ GOFFWriter::GOFFWriter(raw_pwrite_stream &OS, MCAssembler &Asm,
 
 void GOFFWriter::defineSectionSymbols(const MCSectionGOFF &Section) {
   if (Section.isSD()) {
-    GOFFSymbol SD(Section.getName(), Section.getOrdinal(),
+    GOFFSymbol SD(Section.getExternalName(), Section.getOrdinal(),
                   Section.getSDAttributes());
     writeSymbol(SD);
   }
 
   if (Section.isED()) {
-    GOFFSymbol ED(Section.getName(), Section.getOrdinal(),
+    GOFFSymbol ED(Section.getExternalName(), Section.getOrdinal(),
                   Section.getParent()->getOrdinal(), Section.getEDAttributes());
     ED.SectionLength = Asm.getSectionAddressSize(Section);
     writeSymbol(ED);
@@ -328,8 +330,9 @@ void GOFFWriter::defineSectionSymbols(const MCSectionGOFF &Section) {
 
   if (Section.isPR()) {
     MCSectionGOFF *Parent = Section.getParent();
-    GOFFSymbol PR(Section.getName(), Section.getOrdinal(), Parent->getOrdinal(),
-                  Parent->getEDAttributes(), Section.getPRAttributes());
+    GOFFSymbol PR(Section.getExternalName(), Section.getOrdinal(),
+                  Parent->getOrdinal(), Parent->getEDAttributes(),
+                  Section.getPRAttributes());
     PR.SectionLength = Asm.getSectionAddressSize(Section);
     if (Section.requiresNonZeroLength()) {
       // We cannot have a zero-length section for data.  If we do,
@@ -346,8 +349,8 @@ void GOFFWriter::defineSectionSymbols(const MCSectionGOFF &Section) {
 
 void GOFFWriter::defineLabel(const MCSymbolGOFF &Symbol) {
   MCSectionGOFF &Section = static_cast<MCSectionGOFF &>(Symbol.getSection());
-  GOFFSymbol LD(Symbol.getName(), Symbol.getIndex(), Section.getOrdinal(),
-                Section.getEDAttributes().NameSpace,
+  GOFFSymbol LD(Symbol.getExternalName(), Symbol.getIndex(),
+                Section.getOrdinal(), Section.getEDAttributes().NameSpace,
                 GOFF::LDAttr{false, Symbol.getCodeData(),
                              Symbol.getBindingStrength(), Symbol.getLinkage(),
                              GOFF::ESD_AMODE_64, Symbol.getBindingScope()});
@@ -358,11 +361,22 @@ void GOFFWriter::defineLabel(const MCSymbolGOFF &Symbol) {
 }
 
 void GOFFWriter::defineExtern(const MCSymbolGOFF &Symbol) {
-  GOFFSymbol ER(Symbol.getName(), Symbol.getIndex(), RootSD->getOrdinal(),
-                GOFF::ERAttr{Symbol.getCodeData(), Symbol.getBindingStrength(),
-                             Symbol.getLinkage(), GOFF::ESD_AMODE_64,
-                             Symbol.getBindingScope()});
-  writeSymbol(ER);
+  if (Symbol.getCodeData() == GOFF::ESD_EXE_DATA) {
+    MCSectionGOFF *ED = Symbol.getADA()->getParent();
+    GOFFSymbol PR(Symbol.getExternalName(), Symbol.getIndex(), ED->getOrdinal(),
+                  ED->getEDAttributes(),
+                  GOFF::PRAttr{/*IsRenamable*/ false, Symbol.getCodeData(),
+                               Symbol.getLinkage(), Symbol.getBindingScope(),
+                               0});
+    writeSymbol(PR);
+  } else {
+    GOFFSymbol ER(Symbol.getExternalName(), Symbol.getIndex(),
+                  RootSD->getOrdinal(),
+                  GOFF::ERAttr{Symbol.isIndirect(), Symbol.getCodeData(),
+                               Symbol.getBindingStrength(), Symbol.getLinkage(),
+                               GOFF::ESD_AMODE_64, Symbol.getBindingScope()});
+    writeSymbol(ER);
+  }
 }
 
 void GOFFWriter::defineSymbols() {
@@ -675,6 +689,12 @@ GOFFObjectWriter::GOFFObjectWriter(
 
 GOFFObjectWriter::~GOFFObjectWriter() = default;
 
+void GOFFObjectWriter::reset() {
+  Relocations.clear();
+  RootSD = nullptr;
+  MCObjectWriter::reset();
+}
+
 void GOFFObjectWriter::recordRelocation(const MCFragment &F,
                                         const MCFixup &Fixup, MCValue Target,
                                         uint64_t &FixedValue) {
@@ -694,25 +714,26 @@ void GOFFObjectWriter::recordRelocation(const MCFragment &F,
       Asm->reportError(
           Fixup.getLoc(),
           Twine("symbol ")
-              .concat(A.getName())
+              .concat(A.getExternalName())
               .concat(" must be defined for a relative immediate relocation"));
       return;
     }
     if (&A.getSection() != PSection) {
+      MCSectionGOFF &GOFFSection = static_cast<MCSectionGOFF &>(A.getSection());
       Asm->reportError(Fixup.getLoc(),
                        Twine("relative immediate relocation section mismatch: ")
-                           .concat(A.getSection().getName())
+                           .concat(GOFFSection.getExternalName())
                            .concat(" of symbol ")
-                           .concat(A.getName())
+                           .concat(A.getExternalName())
                            .concat(" <-> ")
-                           .concat(PSection->getName()));
+                           .concat(PSection->getExternalName()));
       return;
     }
     if (B) {
       Asm->reportError(
           Fixup.getLoc(),
           Twine("subtractive symbol ")
-              .concat(B->getName())
+              .concat(B->getExternalName())
               .concat(" not supported for a relative immediate relocation"));
       return;
     }
@@ -766,9 +787,11 @@ void GOFFObjectWriter::recordRelocation(const MCFragment &F,
     default:
       Con = "(unknown)";
     }
-    dbgs() << "Reloc " << N << ": " << Con << " Rptr: " << Sym->getName()
-           << " Pptr: " << PSection->getName() << " Offset: " << FixupOffset
-           << " Fixed Imm: " << FixedValue << "\n";
+    dbgs() << "Reloc " << N << ": " << Con
+           << " Rptr: " << Sym->getExternalName()
+           << " Pptr: " << PSection->getExternalName()
+           << " Offset: " << FixupOffset << " Fixed Imm: " << FixedValue
+           << "\n";
   };
   (void)DumpReloc;
 

@@ -82,6 +82,8 @@ public:
 
   const char *GetObjectDescription();
 
+  lldb::SBValue GetParent();
+
   lldb::SBValue GetDynamicValue(lldb::DynamicValueType use_dynamic);
 
   lldb::SBValue GetStaticValue();
@@ -504,6 +506,9 @@ protected:
 
   void SetSP(const lldb::ValueObjectSP &sp, lldb::DynamicValueType use_dynamic,
              bool use_synthetic, const char *name);
+
+protected:
+  friend class lldb_private::ScriptInterpreter;
 
 private:
   typedef std::shared_ptr<lldb_private::ValueImpl> ValueImplSP;

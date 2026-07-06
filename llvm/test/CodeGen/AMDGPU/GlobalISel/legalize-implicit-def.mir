@@ -135,10 +135,8 @@ body: |
   bb.0:
 
     ; CHECK-LABEL: name: test_implicit_def_s448
-    ; CHECK: [[DEF:%[0-9]+]]:_(s512) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s448) = G_TRUNC [[DEF]](s512)
-    ; CHECK-NEXT: [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[TRUNC]](s448), 0
-    ; CHECK-NEXT: $vgpr0 = COPY [[EXTRACT]](s32)
+    ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $vgpr0 = COPY [[DEF]](s32)
     %0:_(s448) = G_IMPLICIT_DEF
     %1:_(s32) = G_EXTRACT %0, 0
     $vgpr0 = COPY %1

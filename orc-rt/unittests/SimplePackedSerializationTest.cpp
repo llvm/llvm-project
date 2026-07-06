@@ -113,10 +113,56 @@ TEST(SimplePackedSerializationTest, SequenceSerialization) {
   blobSerializationRoundTrip<SPSSequence<int32_t>, std::vector<int32_t>>(V);
 }
 
+TEST(SimplePackedSerializationTest, IteratorRangeSequenceSerialization) {
+  // iterator_range only supports serialization (no deserialization), and it
+  // shares SPSSequence's wire format. Verify this by serializing from a range
+  // and deserializing into a std::vector.
+  using WireSerialization = SPSArgList<SPSSequence<int32_t>>;
+
+  // Serialize a range, deserialize into a vector, and return the result.
+  auto SerializeRangeToVector = [](const auto &R) {
+    size_t Size = WireSerialization::size(R);
+    auto Buffer = std::make_unique<char[]>(Size);
+    SPSOutputBuffer OB(Buffer.get(), Size);
+    EXPECT_TRUE(WireSerialization::serialize(OB, R));
+
+    SPSInputBuffer IB(Buffer.get(), Size);
+    std::vector<int32_t> DSValue;
+    EXPECT_TRUE(WireSerialization::deserialize(IB, DSValue));
+    return DSValue;
+  };
+
+  std::vector<int32_t> V({1, 2, -47, 139});
+
+  // A full range round-trips to the original, and its serialized size matches
+  // the equivalent vector's.
+  auto R = iterator_range(V);
+  EXPECT_EQ(WireSerialization::size(R), WireSerialization::size(V));
+  EXPECT_EQ(SerializeRangeToVector(R), V);
+
+  // A sub-range serializes only the covered elements (the distinguishing
+  // feature vs. serializing the whole container).
+  EXPECT_EQ(
+      SerializeRangeToVector(iterator_range(V.begin() + 1, V.begin() + 3)),
+      (std::vector<int32_t>{2, -47}));
+
+  // A pointer-backed range (raw pointers have no nested value_type) must also
+  // work, guarding the std::iterator_traits-based element type deduction.
+  int32_t Arr[] = {5, 6, 7};
+  EXPECT_EQ(SerializeRangeToVector(iterator_range(Arr)),
+            (std::vector<int32_t>{5, 6, 7}));
+}
+
 TEST(SimplePackedSerializationTest, ExecutorAddr) {
   int X = 42;
   auto A = ExecutorAddr::fromPtr(&X);
   blobSerializationRoundTrip<SPSExecutorAddr>(A);
+}
+
+TEST(SimplePackedSerializationTest, ExecutorAddrRange) {
+  int X = 42;
+  ExecutorAddrRange R(ExecutorAddr::fromPtr(&X), ExecutorAddr::fromPtr(&X + 1));
+  blobSerializationRoundTrip<SPSExecutorAddrRange>(R);
 }
 
 TEST(SimplePackedSerializationTest, StringViewCharSequenceSerialization) {

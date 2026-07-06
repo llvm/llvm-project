@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_TARGET_TRACE_HTR_H
-#define LLDB_TARGET_TRACE_HTR_H
+#ifndef LLDB_SOURCE_PLUGINS_TRACEEXPORTER_COMMON_TRACEHTR_H
+#define LLDB_SOURCE_PLUGINS_TRACEEXPORTER_COMMON_TRACEHTR_H
 
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/Trace.h"
@@ -406,4 +406,4 @@ HTRBlockLayerUP BasicSuperBlockMerge(IHTRLayer &layer);
 
 } // namespace lldb_private
 
-#endif // LLDB_TARGET_TRACE_HTR_H
+#endif // LLDB_SOURCE_PLUGINS_TRACEEXPORTER_COMMON_TRACEHTR_H

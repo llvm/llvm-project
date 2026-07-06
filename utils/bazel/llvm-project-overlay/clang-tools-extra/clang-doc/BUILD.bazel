@@ -41,6 +41,7 @@ cc_library(
         "//clang:index",
         "//clang:lex",
         "//clang:tooling",
+        "//clang:unified_symbol_resolution",
         "//llvm:BitstreamReader",
         "//llvm:BitstreamWriter",
         "//llvm:Support",

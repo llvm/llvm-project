@@ -459,9 +459,9 @@ TEST_F(CommandLineExtractorTest, AcceptOffloadingCompile) {
 TEST_F(CommandLineExtractorTest, AcceptOffloadingSyntaxOnly) {
   addFile("test.c", "int main() {}\n");
   const char *Args[] = {
-      "clang",         "-target",   "arm64-apple-macosx11.0.0",
-      "-fsyntax-only", "-x",        "hip",
-      "test.c",        "-nogpulib", "-nogpuinc"};
+      "clang",     "-target",  "arm64-apple-macosx11.0.0", "-fsyntax-only",
+      "-x",        "hip",      "--no-offload-new-driver",  "test.c",
+      "-nogpulib", "-nogpuinc"};
   EXPECT_NE(extractCC1Arguments(Args), nullptr);
 }
 
@@ -651,11 +651,13 @@ struct CheckColoredDiagnosticsAction : public clang::ASTFrontendAction {
       : ShouldShowColor(ShouldShowColor) {}
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &Compiler,
                                                  StringRef) override {
-    if (Compiler.getDiagnosticOpts().ShowColors != ShouldShowColor)
+    bool HasColors =
+        Compiler.getDiagnosticOpts().getShowColors() ==
+        (ShouldShowColor ? ShowColorsKind::On : ShowColorsKind::Off);
+    if (!HasColors)
       Compiler.getDiagnostics().Report(
           Compiler.getDiagnostics().getCustomDiagID(
-              DiagnosticsEngine::Fatal,
-              "getDiagnosticOpts().ShowColors != ShouldShowColor"));
+              DiagnosticsEngine::Fatal, "getShowColors() != expected"));
     return std::make_unique<ASTConsumer>();
   }
 

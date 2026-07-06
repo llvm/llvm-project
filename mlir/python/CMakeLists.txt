@@ -328,6 +328,15 @@ declare_mlir_dialect_extension_python_bindings(
 declare_mlir_dialect_extension_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/X86TransformOps.td
+  SOURCES
+    dialects/transform/x86.py
+  DIALECT_NAME transform
+  EXTENSION_NAME x86_transform)
+
+declare_mlir_dialect_extension_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/XeGPUTransformOps.td
   SOURCES
     dialects/transform/xegpu.py
@@ -513,6 +522,13 @@ declare_mlir_dialect_python_bindings(
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/X86.td
+  SOURCES dialects/x86.py
+  DIALECT_NAME x86)
+
+declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/IRDLOps.td
   SOURCES dialects/irdl.py
   DIALECT_NAME irdl
@@ -671,8 +687,10 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.Transform.Nanobind
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
     DialectTransform.cpp
+    Rewrite.h
   PRIVATE_LINK_LIBS
     LLVMSupport
+    MLIRPythonExtension.Core
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPITransformDialect

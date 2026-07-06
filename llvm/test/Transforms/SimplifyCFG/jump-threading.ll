@@ -447,3 +447,44 @@ if.then:
 if.end:
   ret void
 }
+
+define void @cleanuppad() personality ptr null {
+; CHECK-LABEL: @cleanuppad(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    invoke void @foo()
+; CHECK-NEXT:            to label [[BB1:%.*]] unwind label [[CLEANUP:%.*]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    [[C:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ false, [[BB1]] ]
+; CHECK-NEXT:    [[CP:%.*]] = cleanuppad within none []
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[C]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    cleanupret from [[CP]] unwind to caller
+; CHECK:       bb1:
+; CHECK-NEXT:    invoke void @bar()
+; CHECK-NEXT:            to label [[EXIT:%.*]] unwind label [[CLEANUP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  invoke void @foo()
+  to label %bb1 unwind label %cleanup
+
+cleanup:
+  %c = phi i1 [ true, %entry ], [ false, %bb1 ]
+  %cp = cleanuppad within none []
+  br i1 %c, label %cleanup_2, label %cpret
+
+bb1:
+  invoke void @bar()
+  to label %exit unwind label %cleanup
+
+exit:
+  ret void
+
+cpret:
+  cleanupret from %cp unwind to caller
+
+cleanup_2:
+  store i1 false, ptr null, align 1
+  br label %cpret
+}

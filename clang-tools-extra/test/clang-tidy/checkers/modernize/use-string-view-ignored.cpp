@@ -1,8 +1,6 @@
 // RUN: %check_clang_tidy \
 // RUN: -std=c++17-or-later %s modernize-use-string-view %t -- \
-// RUN: --config="{CheckOptions: {modernize-use-string-view.IgnoredFunctions: 'GoodButIgnored;GoodTooButAlsoIgnored'}}" \
-// RUN: -- -isystem %clang_tidy_headers
-
+// RUN: --config="{CheckOptions: {modernize-use-string-view.IgnoredFunctions: 'GoodButIgnored;GoodTooButAlsoIgnored'}}"
 #include <string>
 
 // ==========================================================

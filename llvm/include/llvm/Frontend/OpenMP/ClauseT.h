@@ -533,10 +533,24 @@ struct DependT {
   using Iterator = type::IteratorT<T, I, E>;
   using LocatorList = ObjectListT<I, E>;
   using DependenceType = tomp::type::DependenceType;
+  // For the (pre-5.2) doacross spelling of the depend clause on the
+  // ordered directive: depend(source) / depend(sink: vec). Empty Vector
+  // means omp_cur_iteration, matching DoacrossT::Vector. When Vector has a
+  // value, LocatorList must be empty and the dependence type must be Source or
+  // Sink.
+  using Vector = ListT<type::LoopIterationT<I, E>>;
 
   using TupleTrait = std::true_type;
   // Empty LocatorList means "omp_all_memory".
-  std::tuple<DependenceType, OPT(Iterator), LocatorList> t;
+  std::tuple<DependenceType, OPT(Iterator), OPT(Vector), LocatorList> t;
+};
+
+// [tr14:212-213]
+template <typename T, typename I, typename E> //
+struct DepthT {
+  using DepthExpr = E;
+  using WrapperTrait = std::true_type;
+  DepthExpr v;
 };
 
 // V5.2: [3.5] `destroy` clause
@@ -1416,7 +1430,7 @@ using WrapperClausesT = std::variant<
     AbsentT<T, I, E>, AlignT<T, I, E>, AllocatorT<T, I, E>,
     AtomicDefaultMemOrderT<T, I, E>, AtT<T, I, E>, BindT<T, I, E>,
     CollapseT<T, I, E>, CombinerT<T, I, E>, ContainsT<T, I, E>,
-    CopyinT<T, I, E>, CopyprivateT<T, I, E>, DefaultT<T, I, E>,
+    CopyinT<T, I, E>, CopyprivateT<T, I, E>, DefaultT<T, I, E>, DepthT<T, I, E>,
     DestroyT<T, I, E>, DetachT<T, I, E>, DeviceSafesyncT<T, I, E>,
     DeviceTypeT<T, I, E>, DynamicAllocatorsT<T, I, E>, EnterT<T, I, E>,
     ExclusiveT<T, I, E>, FailT<T, I, E>, FilterT<T, I, E>, FinalT<T, I, E>,

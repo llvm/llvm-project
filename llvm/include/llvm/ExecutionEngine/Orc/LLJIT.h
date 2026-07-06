@@ -17,6 +17,7 @@
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
+#include "llvm/ExecutionEngine/Orc/DylibManager.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/IRPartitionLayer.h"
@@ -29,6 +30,7 @@
 #include <variant>
 
 namespace llvm {
+
 namespace orc {
 
 class LLJITBuilderState;
@@ -213,6 +215,18 @@ public:
     return PS->deinitialize(JD);
   }
 
+  /// Returns a reference to the DylibManager for the target process.
+  DylibManager &getDylibMgr() {
+    assert(DylibMgr && "No DylibMgr set");
+    return *DylibMgr;
+  }
+
+  /// Returns a reference to the JITLinkMemoryManager for this instance.
+  jitlink::JITLinkMemoryManager &getMemoryManager() {
+    assert(MemMgr && "No MemMgr set");
+    return *MemMgr;
+  }
+
   /// Returns a reference to the ObjLinkingLayer
   ObjectLayer &getObjLinkingLayer() { return *ObjLinkingLayer; }
 
@@ -234,8 +248,12 @@ public:
   }
 
 protected:
+  static Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+  createMemoryManager(LLJITBuilderState &S, ExecutionSession &ES);
+
   static Expected<std::unique_ptr<ObjectLayer>>
-  createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES);
+  createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES,
+                           jitlink::JITLinkMemoryManager &MemMgr);
 
   static Expected<std::unique_ptr<IRCompileLayer::IRCompiler>>
   createCompileFunction(LLJITBuilderState &S, JITTargetMachineBuilder JTMB);
@@ -246,7 +264,9 @@ protected:
   Error applyDataLayout(Module &M);
 
   std::unique_ptr<ExecutionSession> ES;
+  std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr;
   std::unique_ptr<PlatformSupport> PS;
+  std::unique_ptr<DylibManager> DylibMgr;
 
   JITDylib *ProcessSymbols = nullptr;
   JITDylib *Platform = nullptr;
@@ -299,8 +319,13 @@ private:
 
 class LLJITBuilderState {
 public:
+  using MemoryManagerCreator =
+      std::function<Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>(
+          ExecutionSession &)>;
+
   using ObjectLinkingLayerCreator =
-      std::function<Expected<std::unique_ptr<ObjectLayer>>(ExecutionSession &)>;
+      std::function<Expected<std::unique_ptr<ObjectLayer>>(
+          ExecutionSession &, jitlink::JITLinkMemoryManager &)>;
 
   using CompileFunctionCreator =
       std::function<Expected<std::unique_ptr<IRCompileLayer::IRCompiler>>(
@@ -319,6 +344,7 @@ public:
   std::optional<DataLayout> DL;
   bool LinkProcessSymbolsByDefault = true;
   ProcessSymbolsJITDylibSetupFunction SetupProcessSymbolsJITDylib;
+  MemoryManagerCreator CreateMemoryManager;
   ObjectLinkingLayerCreator CreateObjectLinkingLayer;
   CompileFunctionCreator CreateCompileFunction;
   unique_function<Error(LLJIT &)> PrePlatformSetup;
@@ -386,6 +412,14 @@ public:
   /// in the default link order.
   SetterImpl &setLinkProcessSymbolsByDefault(bool LinkProcessSymbolsByDefault) {
     impl().LinkProcessSymbolsByDefault = LinkProcessSymbolsByDefault;
+    return impl();
+  }
+
+  /// Set a memory manager creation function. If not provided then the
+  /// ExecutorProcessControl's createDefaultMemoryManager method will be used.
+  SetterImpl &setMemoryManagerCreator(
+      LLJITBuilderState::MemoryManagerCreator CreateMemoryManager) {
+    impl().CreateMemoryManager = std::move(CreateMemoryManager);
     return impl();
   }
 

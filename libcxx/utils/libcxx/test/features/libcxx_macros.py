@@ -26,6 +26,7 @@ macros = {
     "_LIBCPP_ABI_BOUNDED_ITERATORS": "libcpp-has-abi-bounded-iterators",
     "_LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL": "libcpp-has-abi-bounded-iterators-in-optional",
     "_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING": "libcpp-has-abi-bounded-iterators-in-string",
+    "_LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL": "libcpp-has-abi-bounded-iterators-in-optional",
     "_LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR": "libcpp-has-abi-bounded-iterators-in-vector",
     "_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY": "libcpp-has-abi-bounded-iterators-in-std-array",
     "_LIBCPP_ABI_BOUNDED_UNIQUE_PTR": "libcpp-has-abi-bounded-unique_ptr",
@@ -33,6 +34,8 @@ macros = {
     "_LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR": "libcpp-deprecated-abi-disable-pair-trivial-copy-ctor",
     "_LIBCPP_ABI_NO_COMPRESSED_PAIR_PADDING": "libcpp-abi-no-compressed-pair-padding",
     "_LIBCPP_PSTL_BACKEND_LIBDISPATCH": "libcpp-pstl-backend-libdispatch",
+    "_LIBCPP_ABI_USE_SMALL_DEQUE_BLOCK_SIZE": "libcpp-abi-use-small-deque-block-size",
+    "_LIBCPP_ABI_VECTORIZED_MERSENNE_TWISTER_ENGINE": "libcpp-abi-vectorized-mersenne-twister-engine",
 }
 for macro, feature in macros.items():
     features.append(
@@ -66,7 +69,6 @@ inverted_macros = {
     "_LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS": "libcpp-has-no-availability-markup",
     "_LIBCPP_HAS_RANDOM_DEVICE": "no-random-device",
     "_LIBCPP_HAS_UNICODE": "libcpp-has-no-unicode",
-    "_LIBCPP_HAS_TERMINAL": "no-terminal",
 }
 for macro, feature in inverted_macros.items():
     features.append(

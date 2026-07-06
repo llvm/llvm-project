@@ -6,10 +6,10 @@ define void @ldist(i1 %cond, ptr %A, ptr %B, ptr %C) {
 ; CHECK-LABEL: 'ldist'
 ; CHECK-NEXT:  LDist: Found a candidate loop: for.body
 ; CHECK-NEXT:  LDist: Backward dependences:
-; CHECK-NEXT:    Unknown:
+; CHECK-NEXT:    InvariantUnsafe:
 ; CHECK-NEXT:        %lv3 = load i16, ptr %c.sink, align 2 ->
 ; CHECK-NEXT:        store i16 %add, ptr %c.sink, align 1
-; CHECK-NEXT:    Unknown:
+; CHECK-NEXT:    InvariantUnsafe:
 ; CHECK-NEXT:        %lv3 = load i16, ptr %c.sink, align 2 ->
 ; CHECK-NEXT:        store i16 %add, ptr %c.sink, align 1
 ; CHECK-NEXT:  LDist: Seeded partitions:

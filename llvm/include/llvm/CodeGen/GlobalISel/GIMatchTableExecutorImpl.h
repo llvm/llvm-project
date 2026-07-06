@@ -51,7 +51,7 @@ bool GIMatchTableExecutor::executeMatchTable(
     CodeGenCoverage *CoverageInfo) const {
 
   uint64_t CurrentIdx = 0;
-  SmallVector<uint64_t, 4> OnFailResumeAt;
+  SmallVector<uint64_t, 8> OnFailResumeAt;
   NewMIVector OutMIs;
 
   GISelChangeObserver *Observer = Builder.getObserver();
@@ -59,6 +59,15 @@ bool GIMatchTableExecutor::executeMatchTable(
   bool NoFPException = !State.MIs[0]->getDesc().mayRaiseFPException();
 
   const uint32_t Flags = State.MIs[0]->getFlags();
+  bool BuilderInitialized = false;
+  const auto initializeBuilder = [&]() {
+    if (BuilderInitialized)
+      return;
+    // Delay setting the insertion point and debug location until a successful
+    // action needs the builder.
+    Builder.setInstrAndDebugLoc(*State.MIs[0]);
+    BuilderInitialized = true;
+  };
 
   enum RejectAction { RejectAndGiveUp, RejectAndResume };
   auto handleReject = [&]() -> RejectAction {
@@ -126,6 +135,7 @@ bool GIMatchTableExecutor::executeMatchTable(
   };
 
   const auto eraseImpl = [&](MachineInstr *MI) {
+    initializeBuilder();
     // If we're erasing the insertion point, ensure we don't leave a dangling
     // pointer in the builder.
     if (Builder.getInsertPt() == MI)
@@ -145,7 +155,26 @@ bool GIMatchTableExecutor::executeMatchTable(
       OnFailResumeAt.push_back(readU32());
       break;
     }
-
+    case GIM_Try_CheckFeatures: {
+      // This is optimized so that if the feature is not present, we don't even
+      // modify OnFailResumeAt. Instead we directly jump to OnFail.
+      unsigned OnFail = readU32();
+      uint16_t ExpectedBitsetID = readU16();
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx
+                             << ": GIM_Try_CheckFeatures(ExpectedBitsetID="
+                             << ExpectedBitsetID << ")\n");
+      if ((AvailableFeatures & ExecInfo.FeatureBitsets[ExpectedBitsetID]) !=
+          ExecInfo.FeatureBitsets[ExpectedBitsetID]) {
+        DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                        dbgs() << CurrentIdx
+                               << ": Features do not match, rejected\n");
+        CurrentIdx = OnFail;
+      } else {
+        OnFailResumeAt.push_back(OnFail);
+      }
+      break;
+    }
     case GIM_RecordInsn:
     case GIM_RecordInsnIgnoreCopies: {
       uint64_t NewInsnID = readULEB();
@@ -189,20 +218,6 @@ bool GIMatchTableExecutor::executeMatchTable(
                       dbgs() << CurrentIdx << ": MIs[" << NewInsnID
                              << "] = GIM_RecordInsn(" << InsnID << ", " << OpIdx
                              << ")\n");
-      break;
-    }
-
-    case GIM_CheckFeatures: {
-      uint16_t ExpectedBitsetID = readU16();
-      DEBUG_WITH_TYPE(TgtExecutor::getName(),
-                      dbgs() << CurrentIdx
-                             << ": GIM_CheckFeatures(ExpectedBitsetID="
-                             << ExpectedBitsetID << ")\n");
-      if ((AvailableFeatures & ExecInfo.FeatureBitsets[ExpectedBitsetID]) !=
-          ExecInfo.FeatureBitsets[ExpectedBitsetID]) {
-        if (handleReject() == RejectAndGiveUp)
-          return false;
-      }
       break;
     }
     case GIM_CheckOpcode:
@@ -260,20 +275,22 @@ bool GIMatchTableExecutor::executeMatchTable(
       break;
     }
 
-    case GIM_SwitchType: {
+    case GIM_SwitchType:
+    case GIM_SwitchTypeShape: {
       uint64_t InsnID = readULEB();
       uint64_t OpIdx = readULEB();
       uint16_t LowerBound = readU16();
       uint16_t UpperBound = readU16();
       int64_t Default = readU32();
+      bool IsShape = MatcherOpcode == GIM_SwitchTypeShape;
 
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
       MachineOperand &MO = State.MIs[InsnID]->getOperand(OpIdx);
 
       DEBUG_WITH_TYPE(TgtExecutor::getName(), {
-        dbgs() << CurrentIdx << ": GIM_SwitchType(MIs[" << InsnID
-               << "]->getOperand(" << OpIdx << "), [" << LowerBound << ", "
-               << UpperBound << "), Default=" << Default
+        dbgs() << CurrentIdx << ": GIM_SwitchType" << (IsShape ? "Shape" : "")
+               << "(MIs[" << InsnID << "]->getOperand(" << OpIdx << "), ["
+               << LowerBound << ", " << UpperBound << "), Default=" << Default
                << ", JumpTable...) // Got=";
         if (!MO.isReg())
           dbgs() << "Not a VReg\n";
@@ -284,8 +301,12 @@ bool GIMatchTableExecutor::executeMatchTable(
         CurrentIdx = Default;
         break;
       }
-      const LLT Ty = MRI.getType(MO.getReg());
-      const auto TyI = ExecInfo.TypeIDMap.find(Ty);
+
+      LLT Ty = MRI.getType(MO.getReg());
+      if (IsShape)
+        Ty = Ty.changeElementType(LLT::scalar(Ty.getScalarSizeInBits()));
+
+      const auto TyI = ExecInfo.TypeIDMap.find(Ty.getUniqueRAWLLTData());
       if (TyI == ExecInfo.TypeIDMap.end()) {
         CurrentIdx = Default;
         break;
@@ -1058,7 +1079,7 @@ bool GIMatchTableExecutor::executeMatchTable(
     case GIR_MutateOpcode: {
       uint64_t OldInsnID = readULEB();
       uint64_t NewInsnID = readULEB();
-      uint16_t NewOpcode = readU16();
+      uint32_t NewOpcode = readU16();
       if (NewInsnID >= OutMIs.size())
         OutMIs.resize(NewInsnID + 1);
 
@@ -1079,10 +1100,11 @@ bool GIMatchTableExecutor::executeMatchTable(
     case GIR_BuildRootMI:
     case GIR_BuildMI: {
       uint64_t NewInsnID = (MatcherOpcode == GIR_BuildRootMI) ? 0 : readULEB();
-      uint16_t Opcode = readU16();
+      uint32_t Opcode = readU16();
       if (NewInsnID >= OutMIs.size())
         OutMIs.resize(NewInsnID + 1);
 
+      initializeBuilder();
       OutMIs[NewInsnID] = Builder.buildInstr(Opcode);
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIR_BuildMI(OutMIs["
@@ -1093,6 +1115,7 @@ bool GIMatchTableExecutor::executeMatchTable(
     case GIR_BuildConstant: {
       uint64_t TempRegID = readULEB();
       uint64_t Imm = readU64();
+      initializeBuilder();
       Builder.buildConstant(State.TempRegisters[TempRegID], Imm);
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIR_BuildConstant(TempReg["

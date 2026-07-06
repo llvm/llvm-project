@@ -164,6 +164,7 @@ source_set("sources") {
     "sanitizer_tls_get_addr.cpp",
     "sanitizer_tls_get_addr.h",
     "sanitizer_type_traits.cpp",
+    "sanitizer_unwind_aix.cpp",
     "sanitizer_unwind_fuchsia.cpp",
     "sanitizer_unwind_linux_libcdep.cpp",
     "sanitizer_unwind_win.cpp",

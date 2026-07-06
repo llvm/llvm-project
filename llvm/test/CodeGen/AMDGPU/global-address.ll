@@ -28,7 +28,7 @@ define amdgpu_kernel void @caller_internal() {
 ; GFX1250-PAL-LABEL: caller_internal:
 ; GFX1250-PAL:       ; %bb.0:
 ; GFX1250-PAL-NEXT:    s_mov_b32 s32, 0
-; GFX1250-PAL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-PAL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-PAL-NEXT:    s_mov_b64 s[0:1], internal_func@abs64
 ; GFX1250-PAL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-PAL-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
@@ -48,10 +48,10 @@ define amdgpu_kernel void @caller_internal() {
 ; GFX1250-HSA-LABEL: caller_internal:
 ; GFX1250-HSA:       ; %bb.0:
 ; GFX1250-HSA-NEXT:    s_mov_b32 s32, 0
-; GFX1250-HSA-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-HSA-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-HSA-NEXT:    s_get_pc_i64 s[0:1]
 ; GFX1250-HSA-NEXT:    s_add_nc_u64 s[0:1], s[0:1], internal_func@gotpcrel+4
-; GFX1250-HSA-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX1250-HSA-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0 nv
 ; GFX1250-HSA-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-HSA-NEXT:    s_swap_pc_i64 s[30:31], s[0:1]
 ; GFX1250-HSA-NEXT:    s_endpgm
@@ -95,7 +95,7 @@ define amdgpu_kernel void @caller_exterinal() {
 ; GFX1250-PAL-LABEL: caller_exterinal:
 ; GFX1250-PAL:       ; %bb.0:
 ; GFX1250-PAL-NEXT:    s_mov_b32 s32, 0
-; GFX1250-PAL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-PAL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-PAL-NEXT:    v_mov_b32_e32 v31, v0
 ; GFX1250-PAL-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX1250-PAL-NEXT:    s_mov_b64 s[8:9], s[4:5]
@@ -125,7 +125,7 @@ define amdgpu_kernel void @caller_exterinal() {
 ; GFX1250-HSA-LABEL: caller_exterinal:
 ; GFX1250-HSA:       ; %bb.0:
 ; GFX1250-HSA-NEXT:    s_mov_b32 s32, 0
-; GFX1250-HSA-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-HSA-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-HSA-NEXT:    v_mov_b32_e32 v31, v0
 ; GFX1250-HSA-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX1250-HSA-NEXT:    s_mov_b64 s[8:9], s[4:5]

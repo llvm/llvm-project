@@ -5,7 +5,6 @@ from __future__ import annotations
 
 from typing import Protocol
 import argparse
-import binascii
 import dataclasses
 import enum
 import json
@@ -15,7 +14,6 @@ import pathlib
 import re
 import signal
 import socket
-import string
 import subprocess
 import sys
 import threading
@@ -44,7 +42,7 @@ DEFAULT_TIMEOUT: Final[float] = 50.0 * (10.0 if ("ASAN_OPTIONS" in os.environ) e
 # A quiet period between events, used to determine if we're done receiving
 # events in a given window, otherwise 'wait_for_stopped' would need to wait
 # until the DEFAULT_TIMEOUT occurs, slows down tests significantly.
-EVENT_QUIET_PERIOD = 0.25
+EVENT_QUIET_PERIOD = 0.25 * (20.0 if ("ASAN_OPTIONS" in os.environ) else 1.0)
 
 
 # See lldbtest.Base.spawnSubprocess, which should help ensure any processes
@@ -124,57 +122,6 @@ class Breakpoint(TypedDict, total=False):
     @staticmethod
     def is_verified(src: "Breakpoint") -> bool:
         return src.get("verified", False)
-
-
-def dump_memory(base_addr, data, num_per_line, outfile):
-    data_len = len(data)
-    hex_string = binascii.hexlify(data)
-    addr = base_addr
-    ascii_str = ""
-    i = 0
-    while i < data_len:
-        outfile.write("0x%8.8x: " % (addr + i))
-        bytes_left = data_len - i
-        if bytes_left >= num_per_line:
-            curr_data_len = num_per_line
-        else:
-            curr_data_len = bytes_left
-        hex_start_idx = i * 2
-        hex_end_idx = hex_start_idx + curr_data_len * 2
-        curr_hex_str = hex_string[hex_start_idx:hex_end_idx]
-        # 'curr_hex_str' now contains the hex byte string for the
-        # current line with no spaces between bytes
-        t = iter(curr_hex_str)
-        # Print hex bytes separated by space
-        outfile.write(" ".join(a + b for a, b in zip(t, t)))
-        # Print two spaces
-        outfile.write("  ")
-        # Calculate ASCII string for bytes into 'ascii_str'
-        ascii_str = ""
-        for j in range(i, i + curr_data_len):
-            ch = data[j]
-            if ch in string.printable and ch not in string.whitespace:
-                ascii_str += "%c" % (ch)
-            else:
-                ascii_str += "."
-        # Print ASCII representation and newline
-        outfile.write(ascii_str)
-        i = i + curr_data_len
-        outfile.write("\n")
-
-
-def packet_type_is(packet, packet_type):
-    return "type" in packet and packet["type"] == packet_type
-
-
-def dump_dap_log(log_file: Optional[str]) -> None:
-    print("========= DEBUG ADAPTER PROTOCOL LOGS =========", file=sys.stderr)
-    if log_file is None:
-        print("no log file available", file=sys.stderr)
-    else:
-        with open(log_file, "r") as file:
-            print(file.read(), file=sys.stderr)
-    print("========= END =========", file=sys.stderr)
 
 
 class NotSupportedError(KeyError):
@@ -257,11 +204,9 @@ class DebugCommunication(object):
         recv: BinaryIO,
         send: BinaryIO,
         init_commands: Optional[List[str]] = None,
-        log_file: Optional[str] = None,
         spawn_helper: Optional[SpawnHelperCallback] = None,
     ):
         self._log = Log()
-        self.log_file = log_file
         self.send = send
         self.recv = recv
         self.spawn_helper = spawn_helper
@@ -287,10 +232,7 @@ class DebugCommunication(object):
         self.terminated: bool = False
         self.events: List[Event] = []
         self.progress_events: List[Event] = []
-        self.invalidated_event: Optional[Event] = None
-        self.memory_event: Optional[Event] = None
         self.reverse_requests: List[Request] = []
-        self.module_events: List[Dict] = []
         self.sequence: int = 1
         self.output: Dict[str, str] = {}
         self.reverse_process: Optional[subprocess.Popen] = None
@@ -300,6 +242,7 @@ class DebugCommunication(object):
         self.stopped_thread: Optional[dict] = None
         self.thread_stacks: Optional[Dict[int, List[dict]]]
         self.thread_stop_reasons: Dict[str, Any] = {}
+        self.focused_tid: Optional[int] = None
         self.frame_scopes: Dict[str, Any] = {}
         # keyed by breakpoint id
         self.resolved_breakpoints: dict[int, Breakpoint] = {}
@@ -309,6 +252,7 @@ class DebugCommunication(object):
 
         # trigger enqueue thread
         self._recv_thread.start()
+        self.initialized_event = None
 
     @classmethod
     def encode_content(cls, s: str) -> bytes:
@@ -515,6 +459,7 @@ class DebugCommunication(object):
                 self.output[category] = output
         elif event == "initialized":
             self.initialized = True
+            self.initialized_event = packet
         elif event == "process":
             # When a new process is attached or launched, remember the
             # details that are available in the body of the event
@@ -539,6 +484,8 @@ class DebugCommunication(object):
             self._process_stopped()
             tid = body["threadId"]
             self.thread_stop_reasons[tid] = body
+            if "preserveFocusHint" not in body or not body["preserveFocusHint"]:
+                self.focused_tid = tid
         elif event.startswith("progress"):
             # Progress events come in as 'progressStart', 'progressUpdate',
             # and 'progressEnd' events. Keep these around in case test
@@ -550,10 +497,6 @@ class DebugCommunication(object):
         elif event == "capabilities" and body:
             # Update the capabilities with new ones from the event.
             self.capabilities.update(body["capabilities"])
-        elif event == "invalidated":
-            self.invalidated_event = packet
-        elif event == "memory":
-            self.memory_event = packet
 
     def _handle_reverse_request(self, request: Request) -> None:
         if request in self.reverse_requests:
@@ -563,7 +506,11 @@ class DebugCommunication(object):
         if request["command"] == "runInTerminal" and arguments is not None:
             assert self.spawn_helper is not None, "Not configured to spawn subprocesses"
             [exe, *args] = arguments["args"]
-            env = [f"{k}={v}" for k, v in arguments.get("env", {}).items()]
+            # Per DAP spec, "env" contains additions/overrides to the
+            # default environment, not a full replacement. Merge with
+            # os.environ so the spawned process inherits PATH etc.
+            env_dict = os.environ | arguments.get("env", {})
+            env = [f"{k}={v}" for k, v in env_dict.items()]
             self.reverse_process = self.spawn_helper(
                 exe, args, env, stdout=subprocess.PIPE, stderr=subprocess.PIPE
             )
@@ -599,6 +546,7 @@ class DebugCommunication(object):
         self.frame_scopes = {}
         if all_threads_continued:
             self.thread_stop_reasons = {}
+            self.focused_tid = None
 
     def _update_verified_breakpoints(self, breakpoints: List[Breakpoint]):
         for bp in breakpoints:
@@ -740,6 +688,18 @@ class DebugCommunication(object):
             raise ValueError("didn't get terminated event")
         return event_dict
 
+    def wait_for_invalidated(self):
+        event_dict = self.wait_for_event(["invalidated"])
+        if event_dict is None:
+            raise ValueError("didn't get invalidated event")
+        return event_dict
+
+    def wait_for_memory(self):
+        event_dict = self.wait_for_event(["memory"])
+        if event_dict is None:
+            raise ValueError("didn't get memory event")
+        return event_dict
+
     def get_capability(self, key: str):
         """Get a value for the given key if it there is a key/value pair in
         the capabilities reported by the adapter.
@@ -800,12 +760,13 @@ class DebugCommunication(object):
             if scope["name"] == scope_name:
                 varRef = scope["variablesReference"]
                 variables_response = self.request_variables(varRef, is_hex=is_hex)
-                if variables_response:
-                    if "body" in variables_response:
-                        body = variables_response["body"]
-                        if "variables" in body:
-                            vars = body["variables"]
-                            return vars
+                if not variables_response["success"]:
+                    return variables_response
+                if variables_response and "body" in variables_response:
+                    body = variables_response["body"]
+                    if "variables" in body:
+                        vars = body["variables"]
+                        return vars
         return []
 
     def get_global_variables(self, frameIndex=0, threadId=None):
@@ -1137,18 +1098,24 @@ class DebugCommunication(object):
     def request_evaluate(
         self,
         expression,
-        frameIndex=0,
+        frameIndex: Optional[int] = 0,
         threadId=None,
         context=None,
         is_hex: Optional[bool] = None,
     ) -> Response:
-        stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
-        if stackFrame is None:
-            raise ValueError("invalid frameIndex")
         args_dict = {
             "expression": expression,
-            "frameId": stackFrame["id"],
         }
+
+        if frameIndex is not None:
+            if threadId is None:
+                threadId = self.get_thread_id()
+            stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
+
+            if stackFrame is None:
+                raise ValueError("invalid frameIndex")
+            args_dict["frameId"] = stackFrame["id"]
+
         if context:
             args_dict["context"] = context
         if is_hex is not None:
@@ -1171,7 +1138,9 @@ class DebugCommunication(object):
         }
         return self._send_recv(command_dict)
 
-    def request_initialize(self, sourceInitFile=False):
+    def request_initialize(
+        self, client_features: Optional[dict[str, bool]] = None, sourceInitFile=False
+    ):
         command_dict = {
             "command": "initialize",
             "type": "request",
@@ -1192,6 +1161,13 @@ class DebugCommunication(object):
                 "$__lldb_sourceInitFile": sourceInitFile,
             },
         }
+
+        if client_features is not None:
+            arguments = command_dict["arguments"]
+            # replace the default client features.
+            for key, value in client_features.items():
+                arguments[key] = value
+
         response = self._send_recv(command_dict)
         if response:
             if "body" in response:
@@ -1593,7 +1569,7 @@ class DebugCommunication(object):
                 tid = thread["id"]
                 if tid in self.thread_stop_reasons:
                     thread_stop_info = self.thread_stop_reasons[tid]
-                    copy_keys = ["reason", "description", "text"]
+                    copy_keys = ["reason", "description", "text", "hitBreakpointIds"]
                     for key in copy_keys:
                         if key in thread_stop_info:
                             thread[key] = thread_stop_info[key]
@@ -1602,7 +1578,7 @@ class DebugCommunication(object):
         return response
 
     def request_variables(
-        self, variablesReference, start=None, count=None, is_hex=None
+        self, variablesReference, start=None, count=None, is_hex: Optional[bool] = None
     ):
         args_dict = {"variablesReference": variablesReference}
         if start is not None:
@@ -1618,7 +1594,7 @@ class DebugCommunication(object):
         }
         return self._send_recv(command_dict)
 
-    def request_setVariable(self, containingVarRef, name, value, id=None):
+    def request_setVariable(self, containingVarRef, name, value, id=None, is_hex=None):
         args_dict = {
             "variablesReference": containingVarRef,
             "name": name,
@@ -1626,6 +1602,8 @@ class DebugCommunication(object):
         }
         if id is not None:
             args_dict["id"] = id
+        if is_hex is not None:
+            args_dict["format"] = {"hex": is_hex}
         command_dict = {
             "command": "setVariable",
             "type": "request",
@@ -1656,12 +1634,18 @@ class DebugCommunication(object):
         }
         return self._send_recv(command_dict)
 
+    def request_custom(self, command: str, arguments: Optional[dict[str, Any]] = None):
+        command_dict = {
+            "command": command,
+            "type": "request",
+            "arguments": {} if arguments is None else arguments,
+        }
+        return self._send_recv(command_dict)
+
     def terminate(self):
         self.send.close()
         if self._recv_thread.is_alive():
             self._recv_thread.join()
-        if self.log_file:
-            dump_dap_log(self.log_file)
 
     def request_setInstructionBreakpoints(self, memory_reference=[]):
         breakpoints = []
@@ -1685,6 +1669,7 @@ class DebugAdapterServer(DebugCommunication):
         *,
         executable: Optional[str] = None,
         connection: Optional[str] = None,
+        connection_timeout: Optional[stintr] = None,
         init_commands: Optional[list[str]] = None,
         log_file: Optional[str] = None,
         env: Optional[Dict[str, str]] = None,
@@ -1697,6 +1682,7 @@ class DebugAdapterServer(DebugCommunication):
             process, connection = DebugAdapterServer.launch(
                 executable=executable,
                 connection=connection,
+                connection_timeout=connection_timeout,
                 env=env,
                 log_file=log_file,
                 additional_args=additional_args,
@@ -1719,7 +1705,6 @@ class DebugAdapterServer(DebugCommunication):
                 s.makefile("rb"),
                 s.makefile("wb"),
                 init_commands,
-                log_file,
                 spawn_helper,
             )
             self.connection = connection
@@ -1728,7 +1713,6 @@ class DebugAdapterServer(DebugCommunication):
                 self.process.stdout,
                 self.process.stdin,
                 init_commands,
-                log_file,
                 spawn_helper,
             )
 
@@ -1854,7 +1838,7 @@ def attach_options_specified(opts):
 
 
 def run_adapter(dbg: DebugCommunication, opts: argparse.Namespace) -> None:
-    dbg.request_initialize(opts.source_init_file)
+    dbg.request_initialize(sourceInitFile=opts.source_init_file)
 
     source_to_lines: Dict[str, List[int]] = {}
     for sbp in cast(List[str], opts.source_bp):

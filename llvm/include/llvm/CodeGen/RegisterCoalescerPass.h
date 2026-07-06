@@ -12,10 +12,11 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 
 namespace llvm {
-class RegisterCoalescerPass : public PassInfoMixin<RegisterCoalescerPass> {
+class RegisterCoalescerPass
+    : public OptionalPassInfoMixin<RegisterCoalescerPass> {
 public:
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 
   MachineFunctionProperties getClearedProperties() const {
     return MachineFunctionProperties().setIsSSA();

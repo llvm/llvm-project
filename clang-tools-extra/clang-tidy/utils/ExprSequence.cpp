@@ -67,9 +67,9 @@ static bool isDescendantOfArgs(const Stmt *Descendant, const CallExpr *Call,
                       });
 }
 
-static llvm::SmallVector<const InitListExpr *>
+static SmallVector<const InitListExpr *>
 getAllInitListForms(const InitListExpr *InitList) {
-  llvm::SmallVector<const InitListExpr *> Result = {InitList};
+  SmallVector<const InitListExpr *> Result = {InitList};
   if (const InitListExpr *AltForm = InitList->getSyntacticForm())
     Result.push_back(AltForm);
   if (const InitListExpr *AltForm = InitList->getSemanticForm())

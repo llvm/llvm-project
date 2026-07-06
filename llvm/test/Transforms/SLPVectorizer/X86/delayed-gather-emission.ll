@@ -20,14 +20,9 @@ define void @test() {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[I:%.*]] = phi float [ [[DOTPRE]], [[BB1]] ], [ [[I2]], [[BB2]] ]
 ; CHECK-NEXT:    [[GULF_0]] = phi float [ [[FOXTROT_0]], [[BB1]] ], [ [[TMP6:%.*]], [[BB2]] ]
+; CHECK-NEXT:    [[TMP6]] = fdiv float [[I]], [[GULF_0]]
 ; CHECK-NEXT:    [[I1:%.*]] = load float, ptr poison, align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[I]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP0]], float [[GULF_0]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[GULF_0]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> [[TMP3]], float [[I1]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = fdiv <2 x float> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6]] = extractelement <2 x float> [[TMP5]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x float> [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = fdiv float [[GULF_0]], [[I1]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    tail call void @foo(float [[MUL]])
 ; CHECK-NEXT:    [[I2]] = load float, ptr poison, align 4

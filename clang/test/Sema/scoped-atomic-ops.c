@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -x c -triple=amdgcn-amd-amdhsa -verify -fsyntax-only %s
 // RUN: %clang_cc1 -x c -triple=x86_64-pc-linux-gnu -verify -fsyntax-only %s
 // RUN: %clang_cc1 -x c -triple=spirv64-unknown-unknown -verify -fsyntax-only %s
+// RUN: %clang_cc1 -x c -triple=spir -verify -fsyntax-only %s
 
 int fi1a(int *i) {
   int v;
@@ -92,6 +93,38 @@ void fi3e(float *a, float *b, float *c, float *d, float *e, float *f) {
   *e = __scoped_atomic_fetch_udec(e, 1u, __ATOMIC_RELAXED, 42); // expected-error {{address argument to atomic operation must be a pointer to integer ('float *' invalid)}}
 }
 
+void fi3f(float *a, float *b, float *c, float *d, double *e, double *f, double *g, double *h) {
+  *a = __scoped_atomic_fetch_fminimum(a, 1.0f, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
+  *b = __scoped_atomic_fetch_fmaximum(b, 1.0f, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
+  *c = __scoped_atomic_fetch_fminimum_num(c, 1.0f, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
+  *d = __scoped_atomic_fetch_fmaximum_num(d, 1.0f, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
+  *e = __scoped_atomic_fetch_fminimum(e, 1.0, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
+  *f = __scoped_atomic_fetch_fmaximum(f, 1.0, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
+  *g = __scoped_atomic_fetch_fminimum_num(g, 1.0, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
+  *h = __scoped_atomic_fetch_fmaximum_num(h, 1.0, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
+}
+
+void fi3g(float *a, float *b, float *c, float *d) {
+  *a = __scoped_atomic_fetch_fminimum(a, 1.0f, __ATOMIC_RELAXED); // expected-error {{too few arguments to function call, expected 4, have 3}}
+  *b = __scoped_atomic_fetch_fmaximum(b, 1.0f, __ATOMIC_RELAXED); // expected-error {{too few arguments to function call, expected 4, have 3}}
+  *c = __scoped_atomic_fetch_fminimum_num(c, 1.0f, __ATOMIC_RELAXED); // expected-error {{too few arguments to function call, expected 4, have 3}}
+  *d = __scoped_atomic_fetch_fmaximum_num(d, 1.0f, __ATOMIC_RELAXED); // expected-error {{too few arguments to function call, expected 4, have 3}}
+}
+
+void fi3h(float *a, float *b, float *c, float *d) {
+  *a = __scoped_atomic_fetch_fminimum(a, 1.0f, __ATOMIC_RELAXED, 42); // expected-error {{synchronization scope argument to atomic operation is invalid}}
+  *b = __scoped_atomic_fetch_fmaximum(b, 1.0f, __ATOMIC_RELAXED, 42); // expected-error {{synchronization scope argument to atomic operation is invalid}}
+  *c = __scoped_atomic_fetch_fminimum_num(c, 1.0f, __ATOMIC_RELAXED, 42); // expected-error {{synchronization scope argument to atomic operation is invalid}}
+  *d = __scoped_atomic_fetch_fmaximum_num(d, 1.0f, __ATOMIC_RELAXED, 42); // expected-error {{synchronization scope argument to atomic operation is invalid}}
+}
+
+void fi3i(int *a, int *b, int *c, int *d) {
+  *a = __scoped_atomic_fetch_fminimum(a, 1.0f, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM); // expected-error {{address argument to atomic operation must be a pointer to floating point type}}
+  *b = __scoped_atomic_fetch_fmaximum(b, 1.0f, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM); // expected-error {{address argument to atomic operation must be a pointer to floating point type}}
+  *c = __scoped_atomic_fetch_fminimum_num(c, 1.0f, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM); // expected-error {{address argument to atomic operation must be a pointer to floating point type}}
+  *d = __scoped_atomic_fetch_fmaximum_num(d, 1.0f, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM); // expected-error {{address argument to atomic operation must be a pointer to floating point type}}
+}
+
 int fi4a(int *i) {
   int cmp = 0;
   int desired = 1;
@@ -116,4 +149,34 @@ int fi6a(int *c, int *d) {
 int fi7a(_Bool *c) {
   return __scoped_atomic_exchange_n(c, 1, __ATOMIC_RELAXED,
                                     __MEMORY_SCOPE_SYSTEM);
+}
+
+float ff1a(float *i) {
+  float cmp = 0;
+  float desired = 1;
+  return __scoped_atomic_compare_exchange(i, &cmp, &desired, 0,
+                                          __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE,
+                                          __MEMORY_SCOPE_SYSTEM);
+}
+
+float ff2a(float *i) {
+  float cmp = 0;
+  return __scoped_atomic_compare_exchange_n(i, &cmp, 1, 1, __ATOMIC_ACQUIRE, // expected-error {{must be a pointer to integer or pointer}}
+                                            __ATOMIC_ACQUIRE,
+                                            __MEMORY_SCOPE_SYSTEM);
+}
+
+float ff3a(float *c, float *d) {
+  float ret;
+  __scoped_atomic_exchange(c, d, &ret, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
+  return ret;
+}
+
+float ff4a(_Bool *c) {
+  return __scoped_atomic_exchange_n(c, 1, __ATOMIC_RELAXED,
+                                    __MEMORY_SCOPE_SYSTEM);
+}
+
+void fi8a(long long *p) {
+  __scoped_atomic_store_n(p, 1, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);
 }

@@ -63,7 +63,7 @@ using namespace llvm;
 STATISTIC(NumCondBranchesTraced, "Number of conditional branches traced");
 STATISTIC(NumBranchesUntraced, "Number of branches unable to trace");
 STATISTIC(NumAddrRegsHardened,
-          "Number of address mode used registers hardaned");
+          "Number of address mode used registers hardened");
 STATISTIC(NumPostLoadRegsHardened,
           "Number of post-load register values hardened");
 STATISTIC(NumCallsOrJumpsHardened,
@@ -356,7 +356,6 @@ static void canonicalizePHIOperands(MachineFunction &MF) {
 
       // Now walk the duplicate indices, removing both the block and value. Note
       // that these are stored as a vector making this element-wise removal
-      // :w
       // potentially quadratic.
       //
       // FIXME: It is really frustrating that we have to use a quadratic
@@ -501,7 +500,6 @@ bool X86SpeculativeLoadHardeningImpl::run(MachineFunction &MF) {
     ZeroEFLAGSDefOp->setIsDead(true);
     BuildMI(Entry, EntryInsertPt, Loc, TII->get(X86::SUBREG_TO_REG),
             PS->InitialReg)
-        .addImm(0)
         .addReg(PredStateSubReg)
         .addImm(X86::sub_32bit);
   }

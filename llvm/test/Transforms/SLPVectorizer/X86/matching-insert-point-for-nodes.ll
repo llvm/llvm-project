@@ -6,8 +6,8 @@ define i32 @test() {
 ; CHECK-NEXT:  [[BB:.*]]:
 ; CHECK-NEXT:    br label %[[BB1:.*]]
 ; CHECK:       [[BB1]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i32> [ [[TMP16:%.*]], %[[BB24:.*]] ], [ <i32 poison, i32 poison, i32 0, i32 0>, %[[BB]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <4 x i32> [ [[TMP17:%.*]], %[[BB24]] ], [ <i32 poison, i32 poison, i32 0, i32 0>, %[[BB]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i32> [ [[TMP13:%.*]], %[[BB24:.*]] ], [ <i32 poison, i32 poison, i32 0, i32 0>, %[[BB]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ [[TMP14:%.*]], %[[BB24]] ], [ zeroinitializer, %[[BB]] ]
 ; CHECK-NEXT:    br i1 false, label %[[BB4:.*]], label %[[BB11:.*]]
 ; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x double> [ zeroinitializer, %[[BB1]] ]
@@ -16,27 +16,34 @@ define i32 @test() {
 ; CHECK:       [[BB11]]:
 ; CHECK-NEXT:    br i1 false, label %[[BB12:.*]], label %[[BB16:.*]]
 ; CHECK:       [[BB12]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = or <4 x i32> [[TMP1]], <i32 poison, i32 poison, i32 0, i32 0>
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[OR:%.*]] = or i32 0, [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[OR]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> [[TMP1]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    br label %[[BB13:.*]]
 ; CHECK:       [[BB13]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <4 x i32> [ [[TMP4]], %[[BB12]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <2 x i32> [ [[TMP6]], %[[BB12]] ]
 ; CHECK-NEXT:    br label %[[BB16]]
 ; CHECK:       [[BB16]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 0, i32 0>, %[[BB11]] ], [ [[TMP5]], %[[BB13]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x i32> [ zeroinitializer, %[[BB11]] ], [ [[TMP7]], %[[BB13]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i32> [[TMP8]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i32> [[TMP8]], i32 1
 ; CHECK-NEXT:    br label %[[BB19]]
 ; CHECK:       [[BB19]]:
+; CHECK-NEXT:    [[PHI20:%.*]] = phi i32 [ 0, %[[BB4]] ], [ [[TMP10]], %[[BB16]] ]
+; CHECK-NEXT:    [[PHI21:%.*]] = phi i32 [ 0, %[[BB4]] ], [ [[TMP9]], %[[BB16]] ]
 ; CHECK-NEXT:    [[PHI22:%.*]] = phi double [ 0.000000e+00, %[[BB4]] ], [ 0.000000e+00, %[[BB16]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 0, i32 0>, %[[BB4]] ], [ [[TMP6]], %[[BB16]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = or <4 x i32> [[TMP7]], <i32 poison, i32 poison, i32 0, i32 0>
+; CHECK-NEXT:    [[OR23:%.*]] = or i32 [[PHI21]], 0
 ; CHECK-NEXT:    br label %[[BB24]]
 ; CHECK:       [[BB24]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = lshr <4 x i32> [[TMP8]], <i32 poison, i32 poison, i32 0, i32 0>
-; CHECK-NEXT:    [[TMP10:%.*]] = and <4 x i32> [[TMP9]], <i32 poison, i32 poison, i32 0, i32 -1>
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> <i32 poison, i32 poison, i32 poison, i32 0>, <4 x i32> <i32 0, i32 1, i32 2, i32 7>
-; CHECK-NEXT:    [[TMP14:%.*]] = lshr <4 x i32> [[TMP11]], [[TMP10]]
-; CHECK-NEXT:    [[TMP15:%.*]] = or <4 x i32> [[TMP11]], [[TMP10]]
-; CHECK-NEXT:    [[TMP16]] = shufflevector <4 x i32> [[TMP14]], <4 x i32> [[TMP15]], <4 x i32> <i32 poison, i32 poison, i32 2, i32 7>
-; CHECK-NEXT:    [[TMP17]] = shufflevector <4 x i32> [[TMP16]], <4 x i32> <i32 poison, i32 poison, i32 poison, i32 0>, <4 x i32> <i32 poison, i32 poison, i32 2, i32 7>
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[PHI20]], 0
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[LSHR]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[LSHR25:%.*]] = lshr i32 [[TMP11]], [[AND]]
+; CHECK-NEXT:    [[OR26:%.*]] = or i32 0, [[OR23]]
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> poison, i32 [[OR26]], i32 2
+; CHECK-NEXT:    [[TMP13]] = insertelement <4 x i32> [[TMP12]], i32 [[LSHR25]], i32 3
+; CHECK-NEXT:    [[TMP14]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[LSHR25]], i32 1
 ; CHECK-NEXT:    br label %[[BB1]]
 ;
 bb:

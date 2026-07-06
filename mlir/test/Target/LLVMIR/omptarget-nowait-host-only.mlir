@@ -8,7 +8,7 @@ module attributes {omp.is_target_device = false} {
     %0 = llvm.mlir.constant(1 : i64) : i64
     %1 = llvm.alloca %0 x f32 {bindc_name = "x"} : (i64) -> !llvm.ptr
     %3 = omp.map.info var_ptr(%1 : !llvm.ptr, f32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "x"}
-    omp.target nowait map_entries(%3 -> %arg0 : !llvm.ptr) {
+    omp.target kernel_type(generic) nowait map_entries(%3 -> %arg0 : !llvm.ptr) {
       %4 = llvm.mlir.constant(5.000000e+00 : f32) : f32
       llvm.store %4, %arg0 : f32, !llvm.ptr
       omp.terminator
@@ -36,12 +36,12 @@ module attributes {omp.is_target_device = false} {
 // Verify that we directly emit a call to the "target" region's body from the
 // parent function of the the `omp.target` op.
 // CHECK: define internal void @omp_target_nowait_..omp_par
-// CHECK: call void @__omp_offloading_[[DEV:.*]]_[[FIL:.*]]_omp_target_nowait__l[[LINE:.*]](ptr {{.*}})
+// CHECK: call void @__omp_offloading_[[DEV:.*]]_[[FIL:.*]]_omp_target_nowait__l[[LINE:.*]](ptr {{.*}}, ptr null)
 // CHECK-NEXT: br label %[[BLOCK_AFTER_TARGET_TASK_BODY:.*]]
 // CHECK: [[BLOCK_AFTER_TARGET_TASK_BODY]]:
 // CHECK-NEXT: ret void
 
-// CHECK: define internal void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_nowait__l[[LINE]](ptr %[[ADDR_X:.*]])
+// CHECK: define internal void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_nowait__l[[LINE]](ptr %[[ADDR_X:.*]], ptr %{{.*}})
 // CHECK: store float 5{{.*}}, ptr %[[ADDR_X]], align 4
 
 // The following check test for the fix of problem #1 as described in https://github.com/llvm/llvm-project/issues/126949

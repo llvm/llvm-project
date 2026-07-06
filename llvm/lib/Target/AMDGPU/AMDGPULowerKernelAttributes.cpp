@@ -57,6 +57,8 @@ enum ImplicitArgOffsets {
   HIDDEN_REMAINDER_X = 18,
   HIDDEN_REMAINDER_Y = 20,
   HIDDEN_REMAINDER_Z = 22,
+
+  GRID_DIMS = 64
 };
 
 class AMDGPULowerKernelAttributes : public ModulePass {
@@ -82,18 +84,77 @@ Function *getBasePtrIntrinsic(Module &M, bool IsV5OrAbove) {
 
 } // end anonymous namespace
 
-static void annotateGridSizeLoadWithRangeMD(LoadInst *Load,
+static bool annotateGridSizeLoadWithRangeMD(LoadInst *Load,
                                             uint32_t MaxNumGroups) {
   if (MaxNumGroups == 0 || MaxNumGroups == std::numeric_limits<uint32_t>::max())
-    return;
+    return false;
 
   if (!Load->getType()->isIntegerTy(32))
-    return;
+    return false;
 
   // TODO: If there is existing range metadata, preserve it if it is stricter.
+  if (Load->hasMetadata(LLVMContext::MD_range))
+    return false;
+
   MDBuilder MDB(Load->getContext());
   MDNode *Range = MDB.createRange(APInt(32, 1), APInt(32, MaxNumGroups + 1));
   Load->setMetadata(LLVMContext::MD_range, Range);
+  return true;
+}
+
+static bool annotateGroupSizeLoadWithRangeMD(LoadInst *Load, bool IsRemainder) {
+  if (!Load->getType()->isIntegerTy(16))
+    return false;
+
+  // TODO: If there is existing range metadata, preserve it if it is stricter.
+  if (Load->hasMetadata(LLVMContext::MD_range))
+    return false;
+
+  MDBuilder MDB(Load->getContext());
+  MDNode *Range = MDB.createRange(
+      APInt(16, !IsRemainder),
+      APInt(16, AMDGPU::IsaInfo::getMaxFlatWorkGroupSize() + 1 - IsRemainder));
+  Load->setMetadata(LLVMContext::MD_range, Range);
+  return true;
+}
+
+static bool annotateGridDimsLoadWithRangeMD(LoadInst *Load,
+                                            unsigned KnownNumGridDims) {
+  IntegerType *Ty = dyn_cast<IntegerType>(Load->getType());
+  if (!Ty || Ty->getBitWidth() < 3)
+    return false;
+
+  if (KnownNumGridDims != 0) {
+    Load->replaceAllUsesWith(
+        ConstantInt::get(Load->getType(), KnownNumGridDims));
+    return true;
+  }
+
+  // TODO: If there is existing range metadata, preserve it if it is stricter.
+  if (Load->hasMetadata(LLVMContext::MD_range))
+    return false;
+
+  MDBuilder MDB(Load->getContext());
+  MDNode *Range =
+      MDB.createRange(APInt(Ty->getBitWidth(), 1), APInt(Ty->getBitWidth(), 4));
+  Load->setMetadata(LLVMContext::MD_range, Range);
+  return true;
+}
+
+/// Compute the number of grid dimensions based on !reqd_work_group_size
+/// metadata
+static unsigned computeNumGridDims(const MDNode *ReqdWorkGroupSize) {
+  ConstantInt *KnownZ =
+      mdconst::extract<ConstantInt>(ReqdWorkGroupSize->getOperand(2));
+  if (KnownZ->getZExtValue() != 1)
+    return 3;
+
+  ConstantInt *KnownY =
+      mdconst::extract<ConstantInt>(ReqdWorkGroupSize->getOperand(1));
+  if (KnownY->getZExtValue() != 1)
+    return 2;
+
+  return 1;
 }
 
 static bool processUse(CallInst *CI, bool IsV5OrAbove) {
@@ -103,17 +164,11 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
   const bool HasReqdWorkGroupSize = MD && MD->getNumOperands() == 3;
 
   const bool HasUniformWorkGroupSize =
-      F->getFnAttribute("uniform-work-group-size").getValueAsBool();
+      F->hasFnAttribute("uniform-work-group-size");
 
   SmallVector<unsigned> MaxNumWorkgroups =
       AMDGPU::getIntegerVecAttribute(*F, "amdgpu-max-num-workgroups",
                                      /*Size=*/3, /*DefaultVal=*/0);
-
-  if (!HasReqdWorkGroupSize && !HasUniformWorkGroupSize &&
-      !Intrinsic::getDeclarationIfExists(CI->getModule(),
-                                         Intrinsic::amdgcn_dispatch_ptr) &&
-      none_of(MaxNumWorkgroups, [](unsigned X) { return X != 0; }))
-    return false;
 
   Value *BlockCounts[3] = {nullptr, nullptr, nullptr};
   Value *GroupSizes[3] = {nullptr, nullptr, nullptr};
@@ -121,6 +176,9 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
   Value *GridSizes[3] = {nullptr, nullptr, nullptr};
 
   const DataLayout &DL = F->getDataLayout();
+  bool MadeChange = false;
+
+  unsigned KnownNumGridDims = HasReqdWorkGroupSize ? computeNumGridDims(MD) : 0;
 
   // We expect to see several GEP users, casted to the appropriate type and
   // loaded.
@@ -155,44 +213,64 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
       case HIDDEN_BLOCK_COUNT_X:
         if (LoadSize == 4) {
           BlockCounts[0] = Load;
-          annotateGridSizeLoadWithRangeMD(Load, MaxNumWorkgroups[0]);
+          MadeChange |=
+              annotateGridSizeLoadWithRangeMD(Load, MaxNumWorkgroups[0]);
         }
         break;
       case HIDDEN_BLOCK_COUNT_Y:
         if (LoadSize == 4) {
           BlockCounts[1] = Load;
-          annotateGridSizeLoadWithRangeMD(Load, MaxNumWorkgroups[1]);
+          MadeChange |=
+              annotateGridSizeLoadWithRangeMD(Load, MaxNumWorkgroups[1]);
         }
         break;
       case HIDDEN_BLOCK_COUNT_Z:
         if (LoadSize == 4) {
           BlockCounts[2] = Load;
-          annotateGridSizeLoadWithRangeMD(Load, MaxNumWorkgroups[2]);
+          MadeChange |=
+              annotateGridSizeLoadWithRangeMD(Load, MaxNumWorkgroups[2]);
         }
         break;
       case HIDDEN_GROUP_SIZE_X:
-        if (LoadSize == 2)
+        if (LoadSize == 2) {
           GroupSizes[0] = Load;
+          MadeChange |= annotateGroupSizeLoadWithRangeMD(Load, false);
+        }
         break;
       case HIDDEN_GROUP_SIZE_Y:
-        if (LoadSize == 2)
+        if (LoadSize == 2) {
           GroupSizes[1] = Load;
+          MadeChange |= annotateGroupSizeLoadWithRangeMD(Load, false);
+        }
         break;
       case HIDDEN_GROUP_SIZE_Z:
-        if (LoadSize == 2)
+        if (LoadSize == 2) {
           GroupSizes[2] = Load;
+          MadeChange |= annotateGroupSizeLoadWithRangeMD(Load, false);
+        }
         break;
       case HIDDEN_REMAINDER_X:
-        if (LoadSize == 2)
+        if (LoadSize == 2) {
           Remainders[0] = Load;
+          MadeChange |= annotateGroupSizeLoadWithRangeMD(Load, true);
+        }
         break;
       case HIDDEN_REMAINDER_Y:
-        if (LoadSize == 2)
+        if (LoadSize == 2) {
           Remainders[1] = Load;
+          MadeChange |= annotateGroupSizeLoadWithRangeMD(Load, true);
+        }
         break;
       case HIDDEN_REMAINDER_Z:
-        if (LoadSize == 2)
+        if (LoadSize == 2) {
           Remainders[2] = Load;
+          MadeChange |= annotateGroupSizeLoadWithRangeMD(Load, true);
+        }
+        break;
+
+      case GRID_DIMS:
+        if (LoadSize <= 2)
+          MadeChange |= annotateGridDimsLoadWithRangeMD(Load, KnownNumGridDims);
         break;
       default:
         break;
@@ -229,7 +307,6 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
     }
   }
 
-  bool MadeChange = false;
   if (IsV5OrAbove && HasUniformWorkGroupSize) {
     // Under v5  __ockl_get_local_size returns the value computed by the
     // expression:

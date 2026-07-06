@@ -1,4 +1,4 @@
-; RUN: opt --Os -pass-remarks=inline -S < %s 2>&1 | FileCheck %s
+; RUN: opt -O2 -pass-remarks=inline -S < %s 2>&1 | FileCheck %s
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "arm64e-apple-macosx13"
 
@@ -36,13 +36,13 @@ bb:
   ret void
 }
 
-define linkonce_odr void @widget() {
+define linkonce_odr void @widget() optsize {
 bb:
   call void @wibble.1()
   ret void
 }
 
-define linkonce_odr void @wibble.1() {
+define linkonce_odr void @wibble.1() optsize {
 bb:
   %0 = call i32 @foo.2()
   call void @blam()
@@ -51,7 +51,7 @@ bb:
 
 declare i32 @foo.2()
 
-define linkonce_odr void @blam() {
+define linkonce_odr void @blam() optsize {
 bb:
   %tmp = call i32 @snork()
   %tmpv1 = call ptr @wombat.3()
@@ -73,7 +73,7 @@ declare void @eggs()
 
 declare ptr @wombat.3()
 
-define linkonce_odr i32 @spam() {
+define linkonce_odr i32 @spam() optsize {
 bb:
   %tmpv1 = call i32 @wombat.6()
   %tmpv2 = call i64 @wobble.5(i8 0)
@@ -104,22 +104,22 @@ declare i32 @wombat.6()
 
 declare i64 @eggs.7()
 
-define linkonce_odr void @barney() {
+define linkonce_odr void @barney() optsize {
 bb:
   call void @bar.8()
   call void @pluto()
   unreachable
 }
 
-define linkonce_odr void @bar.8() {
+define linkonce_odr void @bar.8() optsize {
 bb:
   call void @wibble()
   ret void
 }
 
-attributes #0 = { "frame-pointer"="non-leaf" }
-attributes #1 = { "target-cpu"="apple-m1" }
-attributes #2 = { alwaysinline }
+attributes #0 = { optsize "frame-pointer"="non-leaf" }
+attributes #1 = { optsize "target-cpu"="apple-m1" }
+attributes #2 = { optsize alwaysinline }
 
 !llvm.module.flags = !{!0, !1, !30, !31, !32, !36, !37}
 

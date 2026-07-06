@@ -1,6 +1,4 @@
 .. title:: clang-tidy - cert-dcl59-cpp
-.. meta::
-   :http-equiv=refresh: 5;URL=../misc/anonymous-namespace-in-header.html
 
 cert-dcl59-cpp
 ==============

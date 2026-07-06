@@ -59,6 +59,11 @@ typedef enum {
 DEFINE_C_API_STRUCT(MlirRewritePatternSet, void);
 DEFINE_C_API_STRUCT(MlirPatternRewriter, void);
 DEFINE_C_API_STRUCT(MlirRewritePattern, const void);
+DEFINE_C_API_STRUCT(MlirConversionTarget, void);
+DEFINE_C_API_STRUCT(MlirConversionPattern, const void);
+DEFINE_C_API_STRUCT(MlirTypeConverter, void);
+DEFINE_C_API_STRUCT(MlirConversionPatternRewriter, void);
+DEFINE_C_API_STRUCT(MlirConversionConfig, void);
 
 //===----------------------------------------------------------------------===//
 /// RewriterBase API inherited from OpBuilder
@@ -155,6 +160,11 @@ mlirRewriterBaseClone(MlirRewriterBase rewriter, MlirOperation op);
 /// empty.
 MLIR_CAPI_EXPORTED MlirOperation mlirRewriterBaseCloneWithoutRegions(
     MlirRewriterBase rewriter, MlirOperation op);
+
+/// Clones the given operation using the rewriter and the provided IRMapping.
+/// The mapping is updated with the results of the cloned operation.
+MLIR_CAPI_EXPORTED MlirOperation mlirRewriterBaseCloneWithMapping(
+    MlirRewriterBase rewriter, MlirOperation op, MlirIRMapping mapping);
 
 /// Clone the blocks that belong to "region" before the given position in
 /// another region "parent".
@@ -423,6 +433,51 @@ MLIR_CAPI_EXPORTED void
 mlirWalkAndApplyPatterns(MlirOperation op,
                          MlirFrozenRewritePatternSet patterns);
 
+/// Apply a partial conversion on the given operation.
+MLIR_CAPI_EXPORTED MlirLogicalResult mlirApplyPartialConversion(
+    MlirOperation op, MlirConversionTarget target,
+    MlirFrozenRewritePatternSet patterns, MlirConversionConfig config);
+
+/// Apply a full conversion on the given operation.
+MLIR_CAPI_EXPORTED MlirLogicalResult mlirApplyFullConversion(
+    MlirOperation op, MlirConversionTarget target,
+    MlirFrozenRewritePatternSet patterns, MlirConversionConfig config);
+
+//===----------------------------------------------------------------------===//
+/// ConversionConfig API
+//===----------------------------------------------------------------------===//
+
+/// Create a default ConversionConfig.
+MLIR_CAPI_EXPORTED MlirConversionConfig mlirConversionConfigCreate(void);
+
+/// Destroy the given ConversionConfig.
+MLIR_CAPI_EXPORTED void
+mlirConversionConfigDestroy(MlirConversionConfig config);
+
+typedef enum {
+  MLIR_DIALECT_CONVERSION_FOLDING_MODE_NEVER,
+  MLIR_DIALECT_CONVERSION_FOLDING_MODE_BEFORE_PATTERNS,
+  MLIR_DIALECT_CONVERSION_FOLDING_MODE_AFTER_PATTERNS,
+} MlirDialectConversionFoldingMode;
+
+/// Set the folding mode for the given ConversionConfig.
+MLIR_CAPI_EXPORTED void
+mlirConversionConfigSetFoldingMode(MlirConversionConfig config,
+                                   MlirDialectConversionFoldingMode mode);
+
+/// Get the folding mode for the given ConversionConfig.
+MLIR_CAPI_EXPORTED MlirDialectConversionFoldingMode
+mlirConversionConfigGetFoldingMode(MlirConversionConfig config);
+
+/// Enable or disable building materializations during conversion.
+MLIR_CAPI_EXPORTED void
+mlirConversionConfigEnableBuildMaterializations(MlirConversionConfig config,
+                                                bool enable);
+
+/// Check if building materializations during conversion is enabled.
+MLIR_CAPI_EXPORTED bool
+mlirConversionConfigIsBuildMaterializationsEnabled(MlirConversionConfig config);
+
 //===----------------------------------------------------------------------===//
 /// PatternRewriter API
 //===----------------------------------------------------------------------===//
@@ -430,6 +485,161 @@ mlirWalkAndApplyPatterns(MlirOperation op,
 /// Cast the PatternRewriter to a RewriterBase
 MLIR_CAPI_EXPORTED MlirRewriterBase
 mlirPatternRewriterAsBase(MlirPatternRewriter rewriter);
+
+//===----------------------------------------------------------------------===//
+/// ConversionPatternRewriter API
+//===----------------------------------------------------------------------===//
+
+/// Cast the ConversionPatternRewriter to a PatternRewriter
+MLIR_CAPI_EXPORTED MlirPatternRewriter
+mlirConversionPatternRewriterAsPatternRewriter(
+    MlirConversionPatternRewriter rewriter);
+
+/// Apply a signature conversion to each block in the given region.
+MLIR_CAPI_EXPORTED MlirLogicalResult
+mlirConversionPatternRewriterConvertRegionTypes(
+    MlirConversionPatternRewriter rewriter, MlirRegion region,
+    MlirTypeConverter typeConverter);
+
+//===----------------------------------------------------------------------===//
+/// ConversionTarget API
+//===----------------------------------------------------------------------===//
+
+/// Create an empty ConversionTarget.
+MLIR_CAPI_EXPORTED MlirConversionTarget
+mlirConversionTargetCreate(MlirContext context);
+
+/// Destroy the given ConversionTarget.
+MLIR_CAPI_EXPORTED void
+mlirConversionTargetDestroy(MlirConversionTarget target);
+
+/// Register the given operations as legal.
+MLIR_CAPI_EXPORTED void
+mlirConversionTargetAddLegalOp(MlirConversionTarget target,
+                               MlirStringRef opName);
+
+/// Register the given operations as illegal.
+MLIR_CAPI_EXPORTED void
+mlirConversionTargetAddIllegalOp(MlirConversionTarget target,
+                                 MlirStringRef opName);
+
+/// Register the operations of the given dialect as legal.
+MLIR_CAPI_EXPORTED void
+mlirConversionTargetAddLegalDialect(MlirConversionTarget target,
+                                    MlirStringRef dialectName);
+
+/// Register the operations of the given dialect as illegal.
+MLIR_CAPI_EXPORTED void
+mlirConversionTargetAddIllegalDialect(MlirConversionTarget target,
+                                      MlirStringRef dialectName);
+
+/// Result of a dynamic legality callback.
+typedef enum {
+  /// The operation instance is legal.
+  MLIR_CONVERSION_TARGET_LEGALITY_LEGAL,
+  /// The operation instance is illegal.
+  MLIR_CONVERSION_TARGET_LEGALITY_ILLEGAL,
+  /// The callback has no opinion on this instance. The decision is deferred to
+  /// other registered callbacks (legality callbacks are composed) or, failing
+  /// that, to the operation's static legality action.
+  MLIR_CONVERSION_TARGET_LEGALITY_NO_OPINION
+} MlirConversionTargetLegality;
+
+/// Callback for dynamic legality checks. Returns the legality of the given
+/// operation instance (see MlirConversionTargetLegality).
+typedef MlirConversionTargetLegality (
+    *MlirConversionTargetDynamicLegalityCallback)(MlirOperation op,
+                                                  void *userData);
+
+/// Register the given operation as dynamically legal, with a callback to
+/// determine per-instance legality. The callback must not be NULL.
+MLIR_CAPI_EXPORTED void mlirConversionTargetAddDynamicallyLegalOp(
+    MlirConversionTarget target, MlirStringRef opName,
+    MlirConversionTargetDynamicLegalityCallback callback, void *userData);
+
+/// Register the given dialect as dynamically legal, with a callback to
+/// determine per-instance legality for all operations in the dialect. The
+/// callback must not be NULL.
+MLIR_CAPI_EXPORTED void mlirConversionTargetAddDynamicallyLegalDialect(
+    MlirConversionTarget target, MlirStringRef dialectName,
+    MlirConversionTargetDynamicLegalityCallback callback, void *userData);
+
+/// Mark the given operation as recursively legal. The optional callback (may
+/// be NULL) determines whether a specific instance is recursively legal; a NULL
+/// callback marks the operation as unconditionally recursively legal.
+MLIR_CAPI_EXPORTED void mlirConversionTargetMarkOpRecursivelyLegal(
+    MlirConversionTarget target, MlirStringRef opName,
+    MlirConversionTargetDynamicLegalityCallback callback, void *userData);
+
+/// Mark unknown operations as dynamically legal, with a callback. The callback
+/// must not be NULL.
+MLIR_CAPI_EXPORTED void mlirConversionTargetMarkUnknownOpDynamicallyLegal(
+    MlirConversionTarget target,
+    MlirConversionTargetDynamicLegalityCallback callback, void *userData);
+
+//===----------------------------------------------------------------------===//
+/// TypeConverter API
+//===----------------------------------------------------------------------===//
+
+/// Create a TypeConverter.
+MLIR_CAPI_EXPORTED MlirTypeConverter mlirTypeConverterCreate(void);
+
+/// Destroy the given TypeConverter.
+MLIR_CAPI_EXPORTED void
+mlirTypeConverterDestroy(MlirTypeConverter typeConverter);
+
+/// Callback type for type conversion functions.
+/// Returns failure or sets convertedType to MlirType{NULL} to indicate failure.
+/// If failure is returned, the converter is allowed to try another
+/// conversion function to perform the conversion.
+typedef MlirLogicalResult (*MlirTypeConverterConversionCallback)(
+    MlirType type, MlirType *convertedType, void *userData);
+
+/// Add a type conversion function to the given TypeConverter.
+MLIR_CAPI_EXPORTED void
+mlirTypeConverterAddConversion(MlirTypeConverter typeConverter,
+                               MlirTypeConverterConversionCallback convertType,
+                               void *userData);
+
+/// Convert the given type using the given TypeConverter.
+MLIR_CAPI_EXPORTED MlirType
+mlirTypeConverterConvertType(MlirTypeConverter typeConverter, MlirType type);
+
+//===----------------------------------------------------------------------===//
+/// ConversionPattern API
+//===----------------------------------------------------------------------===//
+
+typedef struct {
+  /// Optional constructor for the user data.
+  /// Set to nullptr to disable it.
+  void (*construct)(void *userData);
+  /// Optional destructor for the user data.
+  /// Set to nullptr to disable it.
+  void (*destruct)(void *userData);
+  /// The callback function to match against code rooted at the specified
+  /// operation, and perform the conversion rewrite if the match is successful,
+  /// corresponding to ConversionPattern::matchAndRewrite.
+  MlirLogicalResult (*matchAndRewrite)(MlirConversionPattern pattern,
+                                       MlirOperation op, intptr_t nOperands,
+                                       MlirValue *operands,
+                                       MlirConversionPatternRewriter rewriter,
+                                       void *userData);
+} MlirConversionPatternCallbacks;
+
+/// Create a conversion pattern that matches the operation with the given
+/// rootName, corresponding to mlir::OpConversionPattern.
+MLIR_CAPI_EXPORTED MlirConversionPattern mlirOpConversionPatternCreate(
+    MlirStringRef rootName, unsigned benefit, MlirContext context,
+    MlirTypeConverter typeConverter, MlirConversionPatternCallbacks callbacks,
+    void *userData, size_t nGeneratedNames, MlirStringRef *generatedNames);
+
+/// Get the type converter used by this conversion pattern.
+MLIR_CAPI_EXPORTED MlirTypeConverter
+mlirConversionPatternGetTypeConverter(MlirConversionPattern pattern);
+
+/// Cast the ConversionPattern to a RewritePattern.
+MLIR_CAPI_EXPORTED MlirRewritePattern
+mlirConversionPatternAsRewritePattern(MlirConversionPattern pattern);
 
 //===----------------------------------------------------------------------===//
 /// RewritePattern API
@@ -466,6 +676,10 @@ MLIR_CAPI_EXPORTED MlirRewritePattern mlirOpRewritePatternCreate(
 /// Create an empty MlirRewritePatternSet.
 MLIR_CAPI_EXPORTED MlirRewritePatternSet
 mlirRewritePatternSetCreate(MlirContext context);
+
+/// Get the context associated with a MlirRewritePatternSet.
+MLIR_CAPI_EXPORTED MlirContext
+mlirRewritePatternSetGetContext(MlirRewritePatternSet set);
 
 /// Destruct the given MlirRewritePatternSet.
 MLIR_CAPI_EXPORTED void mlirRewritePatternSetDestroy(MlirRewritePatternSet set);

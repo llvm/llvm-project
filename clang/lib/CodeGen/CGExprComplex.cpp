@@ -39,9 +39,9 @@ static const ComplexType *getComplexType(QualType type) {
   }
 }
 
-namespace  {
+namespace {
 class ComplexExprEmitter
-  : public StmtVisitor<ComplexExprEmitter, ComplexPairTy> {
+    : public StmtVisitor<ComplexExprEmitter, ComplexPairTy> {
   CodeGenFunction &CGF;
   CGBuilderTy &Builder;
   bool IgnoreReal;
@@ -108,7 +108,9 @@ public:
                            Result->getAggregateElement(1U));
     return Visit(E->getSubExpr());
   }
-  ComplexPairTy VisitParenExpr(ParenExpr *PE) { return Visit(PE->getSubExpr());}
+  ComplexPairTy VisitParenExpr(ParenExpr *PE) {
+    return Visit(PE->getSubExpr());
+  }
   ComplexPairTy VisitGenericSelectionExpr(GenericSelectionExpr *GE) {
     return Visit(GE->getResultExpr());
   }
@@ -185,15 +187,15 @@ public:
     if (const auto *ECE = dyn_cast<ExplicitCastExpr>(E))
       CGF.CGM.EmitExplicitCastExprType(ECE, &CGF);
     if (E->changesVolatileQualification())
-       return EmitLoadOfLValue(E);
+      return EmitLoadOfLValue(E);
     return EmitCast(E->getCastKind(), E->getSubExpr(), E->getType());
   }
   ComplexPairTy VisitCallExpr(const CallExpr *E);
   ComplexPairTy VisitStmtExpr(const StmtExpr *E);
 
   // Operators.
-  ComplexPairTy VisitPrePostIncDec(const UnaryOperator *E,
-                                   bool isInc, bool isPre) {
+  ComplexPairTy VisitPrePostIncDec(const UnaryOperator *E, bool isInc,
+                                   bool isPre) {
     LValue LV = CGF.EmitLValue(E->getSubExpr());
     return CGF.EmitComplexPrePostIncDec(E, LV, isInc, isPre);
   }
@@ -217,7 +219,7 @@ public:
   ComplexPairTy VisitUnaryMinus(const UnaryOperator *E,
                                 QualType PromotionType = QualType());
   ComplexPairTy VisitMinus(const UnaryOperator *E, QualType PromotionType);
-  ComplexPairTy VisitUnaryNot      (const UnaryOperator *E);
+  ComplexPairTy VisitUnaryNot(const UnaryOperator *E);
   // LNot,Real,Imag never return complex.
   ComplexPairTy VisitUnaryExtension(const UnaryOperator *E) {
     return Visit(E->getSubExpr());
@@ -247,15 +249,14 @@ public:
   ComplexPairTy VisitImplicitValueInitExpr(ImplicitValueInitExpr *E) {
     assert(E->getType()->isAnyComplexType() && "Expected complex type!");
     QualType Elem = E->getType()->castAs<ComplexType>()->getElementType();
-    llvm::Constant *Null =
-                       llvm::Constant::getNullValue(CGF.ConvertType(Elem));
+    llvm::Constant *Null = llvm::Constant::getNullValue(CGF.ConvertType(Elem));
     return ComplexPairTy(Null, Null);
   }
 
   struct BinOpInfo {
     ComplexPairTy LHS;
     ComplexPairTy RHS;
-    QualType Ty;  // Computation Type.
+    QualType Ty; // Computation Type.
     FPOptions FPFeatures;
   };
 
@@ -263,13 +264,13 @@ public:
                        QualType PromotionTy = QualType());
   ComplexPairTy EmitPromoted(const Expr *E, QualType PromotionTy);
   ComplexPairTy EmitPromotedComplexOperand(const Expr *E, QualType PromotionTy);
-  LValue EmitCompoundAssignLValue(const CompoundAssignOperator *E,
-                                  ComplexPairTy (ComplexExprEmitter::*Func)
-                                  (const BinOpInfo &),
-                                  RValue &Val);
-  ComplexPairTy EmitCompoundAssign(const CompoundAssignOperator *E,
-                                   ComplexPairTy (ComplexExprEmitter::*Func)
-                                   (const BinOpInfo &));
+  LValue EmitCompoundAssignLValue(
+      const CompoundAssignOperator *E,
+      ComplexPairTy (ComplexExprEmitter::*Func)(const BinOpInfo &),
+      RValue &Val);
+  ComplexPairTy EmitCompoundAssign(
+      const CompoundAssignOperator *E,
+      ComplexPairTy (ComplexExprEmitter::*Func)(const BinOpInfo &));
 
   ComplexPairTy EmitBinAdd(const BinOpInfo &Op);
   ComplexPairTy EmitBinSub(const BinOpInfo &Op);
@@ -381,11 +382,9 @@ public:
 
   // No comparisons produce a complex result.
 
-  LValue EmitBinAssignLValue(const BinaryOperator *E,
-                             ComplexPairTy &Val);
-  ComplexPairTy VisitBinAssign     (const BinaryOperator *E);
-  ComplexPairTy VisitBinComma      (const BinaryOperator *E);
-
+  LValue EmitBinAssignLValue(const BinaryOperator *E, ComplexPairTy &Val);
+  ComplexPairTy VisitBinAssign(const BinaryOperator *E);
+  ComplexPairTy VisitBinComma(const BinaryOperator *E);
 
   ComplexPairTy
   VisitAbstractConditionalOperator(const AbstractConditionalOperator *CO);
@@ -407,7 +406,7 @@ public:
     return Visit(E->getSelectedExpr());
   }
 };
-}  // end anonymous namespace.
+} // end anonymous namespace.
 
 //===----------------------------------------------------------------------===//
 //                                Utilities
@@ -469,8 +468,6 @@ void ComplexExprEmitter::EmitStoreOfComplex(ComplexPairTy Val, LValue lvalue,
   CGF.addInstToCurrentSourceAtom(I, Val.second);
 }
 
-
-
 //===----------------------------------------------------------------------===//
 //                            Visitor Methods
 //===----------------------------------------------------------------------===//
@@ -478,17 +475,16 @@ void ComplexExprEmitter::EmitStoreOfComplex(ComplexPairTy Val, LValue lvalue,
 ComplexPairTy ComplexExprEmitter::VisitExpr(Expr *E) {
   CGF.ErrorUnsupported(E, "complex expression");
   llvm::Type *EltTy =
-    CGF.ConvertType(getComplexType(E->getType())->getElementType());
+      CGF.ConvertType(getComplexType(E->getType())->getElementType());
   llvm::Value *U = llvm::PoisonValue::get(EltTy);
   return ComplexPairTy(U, U);
 }
 
-ComplexPairTy ComplexExprEmitter::
-VisitImaginaryLiteral(const ImaginaryLiteral *IL) {
+ComplexPairTy
+ComplexExprEmitter::VisitImaginaryLiteral(const ImaginaryLiteral *IL) {
   llvm::Value *Imag = CGF.EmitScalarExpr(IL->getSubExpr());
   return ComplexPairTy(llvm::Constant::getNullValue(Imag->getType()), Imag);
 }
-
 
 ComplexPairTy ComplexExprEmitter::VisitCallExpr(const CallExpr *E) {
   if (E->getCallReturnType(CGF.getContext())->isReferenceType())
@@ -511,8 +507,12 @@ ComplexPairTy ComplexExprEmitter::EmitComplexToComplexCast(ComplexPairTy Val,
                                                            QualType DestType,
                                                            SourceLocation Loc) {
   // Get the src/dest element type.
-  SrcType = SrcType->castAs<ComplexType>()->getElementType();
-  DestType = DestType->castAs<ComplexType>()->getElementType();
+  SrcType = SrcType.getAtomicUnqualifiedType()
+                ->castAs<ComplexType>()
+                ->getElementType();
+  DestType = DestType.getAtomicUnqualifiedType()
+                 ->castAs<ComplexType>()
+                 ->getElementType();
 
   // C99 6.3.1.6: When a value of complex type is converted to another
   // complex type, both the real and imaginary parts follow the conversion
@@ -538,8 +538,10 @@ ComplexPairTy ComplexExprEmitter::EmitScalarToComplexCast(llvm::Value *Val,
 
 ComplexPairTy ComplexExprEmitter::EmitCast(CastKind CK, Expr *Op,
                                            QualType DestTy) {
+  DestTy = DestTy.getAtomicUnqualifiedType();
   switch (CK) {
-  case CK_Dependent: llvm_unreachable("dependent cast kind in IR gen!");
+  case CK_Dependent:
+    llvm_unreachable("dependent cast kind in IR gen!");
 
   // Atomic to non-atomic casts may be more than a no-op for some platforms and
   // for some types.
@@ -691,10 +693,10 @@ ComplexPairTy ComplexExprEmitter::VisitMinus(const UnaryOperator *E,
 
   llvm::Value *ResR, *ResI;
   if (Op.first->getType()->isFloatingPointTy()) {
-    ResR = Builder.CreateFNeg(Op.first,  "neg.r");
+    ResR = Builder.CreateFNeg(Op.first, "neg.r");
     ResI = Builder.CreateFNeg(Op.second, "neg.i");
   } else {
-    ResR = Builder.CreateNeg(Op.first,  "neg.r");
+    ResR = Builder.CreateNeg(Op.first, "neg.r");
     ResI = Builder.CreateNeg(Op.second, "neg.i");
   }
   return ComplexPairTy(ResR, ResI);
@@ -719,14 +721,14 @@ ComplexPairTy ComplexExprEmitter::EmitBinAdd(const BinOpInfo &Op) {
 
   if (Op.LHS.first->getType()->isFloatingPointTy()) {
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, Op.FPFeatures);
-    ResR = Builder.CreateFAdd(Op.LHS.first,  Op.RHS.first,  "add.r");
+    ResR = Builder.CreateFAdd(Op.LHS.first, Op.RHS.first, "add.r");
     if (Op.LHS.second && Op.RHS.second)
       ResI = Builder.CreateFAdd(Op.LHS.second, Op.RHS.second, "add.i");
     else
       ResI = Op.LHS.second ? Op.LHS.second : Op.RHS.second;
     assert(ResI && "Only one operand may be real!");
   } else {
-    ResR = Builder.CreateAdd(Op.LHS.first,  Op.RHS.first,  "add.r");
+    ResR = Builder.CreateAdd(Op.LHS.first, Op.RHS.first, "add.r");
     assert(Op.LHS.second && Op.RHS.second &&
            "Both operands of integer complex operators must be complex!");
     ResI = Builder.CreateAdd(Op.LHS.second, Op.RHS.second, "add.i");
@@ -884,11 +886,13 @@ ComplexPairTy ComplexExprEmitter::EmitBinMul(const BinOpInfo &Op) {
       // Finally continue execution by phi-ing together the different
       // computation paths.
       CGF.EmitBlock(ContBB);
-      llvm::PHINode *RealPHI = Builder.CreatePHI(ResR->getType(), 3, "real_mul_phi");
+      llvm::PHINode *RealPHI =
+          Builder.CreatePHI(ResR->getType(), 3, "real_mul_phi");
       RealPHI->addIncoming(ResR, OrigBB);
       RealPHI->addIncoming(ResR, INaNBB);
       RealPHI->addIncoming(LibCallR, LibCallBB);
-      llvm::PHINode *ImagPHI = Builder.CreatePHI(ResI->getType(), 3, "imag_mul_phi");
+      llvm::PHINode *ImagPHI =
+          Builder.CreatePHI(ResI->getType(), 3, "imag_mul_phi");
       ImagPHI->addIncoming(ResI, OrigBB);
       ImagPHI->addIncoming(ResI, INaNBB);
       ImagPHI->addIncoming(LibCallI, LibCallBB);
@@ -945,10 +949,7 @@ ComplexPairTy ComplexExprEmitter::EmitAlgebraicDiv(llvm::Value *LHSr,
 
 // EmitFAbs - Emit a call to @llvm.fabs.
 static llvm::Value *EmitllvmFAbs(CodeGenFunction &CGF, llvm::Value *Value) {
-  llvm::Function *Func =
-      CGF.CGM.getIntrinsic(llvm::Intrinsic::fabs, Value->getType());
-  llvm::Value *Call = CGF.Builder.CreateCall(Func, Value);
-  return Call;
+  return CGF.Builder.CreateFAbs(Value);
 }
 
 // EmitRangeReductionDiv - Implements Smith's algorithm for complex division.
@@ -1097,7 +1098,9 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
     llvm::Value *Tmp8 = Builder.CreateMul(LHSr, RHSi); // a*d
     llvm::Value *Tmp9 = Builder.CreateSub(Tmp7, Tmp8); // bc-ad
 
-    if (Op.Ty->castAs<ComplexType>()->getElementType()->isUnsignedIntegerType()) {
+    if (Op.Ty->castAs<ComplexType>()
+            ->getElementType()
+            ->isUnsignedIntegerType()) {
       DSTr = Builder.CreateUDiv(Tmp3, Tmp6);
       DSTi = Builder.CreateUDiv(Tmp9, Tmp6);
     } else {
@@ -1209,16 +1212,12 @@ ComplexExprEmitter::EmitBinOps(const BinaryOperator *E,
   return Ops;
 }
 
-
-LValue ComplexExprEmitter::
-EmitCompoundAssignLValue(const CompoundAssignOperator *E,
-          ComplexPairTy (ComplexExprEmitter::*Func)(const BinOpInfo&),
-                         RValue &Val) {
+LValue ComplexExprEmitter::EmitCompoundAssignLValue(
+    const CompoundAssignOperator *E,
+    ComplexPairTy (ComplexExprEmitter::*Func)(const BinOpInfo &), RValue &Val) {
   TestAndClearIgnoreReal();
   TestAndClearIgnoreImag();
-  QualType LHSTy = E->getLHS()->getType();
-  if (const AtomicType *AT = LHSTy->getAs<AtomicType>())
-    LHSTy = AT->getValueType();
+  QualType LHSTy = E->getLHS()->getType().getAtomicUnqualifiedType();
 
   BinOpInfo OpInfo;
   OpInfo.FPFeatures = E->getFPFeaturesInEffect(CGF.getLangOpts());
@@ -1323,9 +1322,9 @@ EmitCompoundAssignLValue(const CompoundAssignOperator *E,
 }
 
 // Compound assignments.
-ComplexPairTy ComplexExprEmitter::
-EmitCompoundAssign(const CompoundAssignOperator *E,
-                   ComplexPairTy (ComplexExprEmitter::*Func)(const BinOpInfo&)){
+ComplexPairTy ComplexExprEmitter::EmitCompoundAssign(
+    const CompoundAssignOperator *E,
+    ComplexPairTy (ComplexExprEmitter::*Func)(const BinOpInfo &)) {
   RValue Val;
   LValue LV = EmitCompoundAssignLValue(E, Func, Val);
 
@@ -1381,8 +1380,8 @@ ComplexPairTy ComplexExprEmitter::VisitBinComma(const BinaryOperator *E) {
   return Visit(E->getRHS());
 }
 
-ComplexPairTy ComplexExprEmitter::
-VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
+ComplexPairTy ComplexExprEmitter::VisitAbstractConditionalOperator(
+    const AbstractConditionalOperator *E) {
   TestAndClearIgnoreReal();
   TestAndClearIgnoreImag();
   llvm::BasicBlock *LHSBlock = CGF.createBasicBlock("cond.true");
@@ -1391,7 +1390,6 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
 
   // Bind the common expression if necessary.
   CodeGenFunction::OpaqueValueMapping binding(CGF, E);
-
 
   CodeGenFunction::ConditionalEvaluation eval(CGF);
   CGF.EmitBranchOnBoolExpr(E->getCond(), LHSBlock, RHSBlock,
@@ -1431,12 +1429,12 @@ ComplexPairTy ComplexExprEmitter::VisitChooseExpr(ChooseExpr *E) {
 }
 
 ComplexPairTy ComplexExprEmitter::VisitInitListExpr(InitListExpr *E) {
-    bool Ignore = TestAndClearIgnoreReal();
-    (void)Ignore;
-    assert (Ignore == false && "init list ignored");
-    Ignore = TestAndClearIgnoreImag();
-    (void)Ignore;
-    assert (Ignore == false && "init list ignored");
+  bool Ignore = TestAndClearIgnoreReal();
+  (void)Ignore;
+  assert(Ignore == false && "init list ignored");
+  Ignore = TestAndClearIgnoreImag();
+  (void)Ignore;
+  assert(Ignore == false && "init list ignored");
 
   if (E->getNumInits() == 2) {
     llvm::Value *Real = CGF.EmitScalarExpr(E->getInit(0));
@@ -1449,8 +1447,8 @@ ComplexPairTy ComplexExprEmitter::VisitInitListExpr(InitListExpr *E) {
   // Empty init list initializes to null
   assert(E->getNumInits() == 0 && "Unexpected number of inits");
   QualType Ty = E->getType()->castAs<ComplexType>()->getElementType();
-  llvm::Type* LTy = CGF.ConvertType(Ty);
-  llvm::Value* zeroConstant = llvm::Constant::getNullValue(LTy);
+  llvm::Type *LTy = CGF.ConvertType(Ty);
+  llvm::Value *zeroConstant = llvm::Constant::getNullValue(LTy);
   return ComplexPairTy(zeroConstant, zeroConstant);
 }
 
@@ -1461,7 +1459,7 @@ ComplexPairTy ComplexExprEmitter::VisitVAArgExpr(VAArgExpr *E) {
   if (!ArgValue.isValid()) {
     CGF.ErrorUnsupported(E, "complex va_arg expression");
     llvm::Type *EltTy =
-      CGF.ConvertType(E->getType()->castAs<ComplexType>()->getElementType());
+        CGF.ConvertType(E->getType()->castAs<ComplexType>()->getElementType());
     llvm::Value *U = llvm::PoisonValue::get(EltTy);
     return ComplexPairTy(U, U);
   }
@@ -1489,7 +1487,7 @@ void CodeGenFunction::EmitComplexExprIntoLValue(const Expr *E, LValue dest,
   assert(E && getComplexType(E->getType()) &&
          "Invalid complex expression to emit");
   ComplexExprEmitter Emitter(*this);
-  ComplexPairTy Val = Emitter.Visit(const_cast<Expr*>(E));
+  ComplexPairTy Val = Emitter.Visit(const_cast<Expr *>(E));
   Emitter.EmitStoreOfComplex(Val, dest, isInit);
 }
 
@@ -1520,26 +1518,29 @@ typedef ComplexPairTy (ComplexExprEmitter::*CompoundFunc)(
 
 static CompoundFunc getComplexOp(BinaryOperatorKind Op) {
   switch (Op) {
-  case BO_MulAssign: return &ComplexExprEmitter::EmitBinMul;
-  case BO_DivAssign: return &ComplexExprEmitter::EmitBinDiv;
-  case BO_SubAssign: return &ComplexExprEmitter::EmitBinSub;
-  case BO_AddAssign: return &ComplexExprEmitter::EmitBinAdd;
+  case BO_MulAssign:
+    return &ComplexExprEmitter::EmitBinMul;
+  case BO_DivAssign:
+    return &ComplexExprEmitter::EmitBinDiv;
+  case BO_SubAssign:
+    return &ComplexExprEmitter::EmitBinSub;
+  case BO_AddAssign:
+    return &ComplexExprEmitter::EmitBinAdd;
   default:
     llvm_unreachable("unexpected complex compound assignment");
   }
 }
 
-LValue CodeGenFunction::
-EmitComplexCompoundAssignmentLValue(const CompoundAssignOperator *E) {
+LValue CodeGenFunction::EmitComplexCompoundAssignmentLValue(
+    const CompoundAssignOperator *E) {
   ApplyAtomGroup Grp(getDebugInfo());
   CompoundFunc Op = getComplexOp(E->getOpcode());
   RValue Val;
   return ComplexExprEmitter(*this).EmitCompoundAssignLValue(E, Op, Val);
 }
 
-LValue CodeGenFunction::
-EmitScalarCompoundAssignWithComplex(const CompoundAssignOperator *E,
-                                    llvm::Value *&Result) {
+LValue CodeGenFunction::EmitScalarCompoundAssignWithComplex(
+    const CompoundAssignOperator *E, llvm::Value *&Result) {
   // Key Instructions: Don't need to create an atom group here; one will already
   // be active through scalar handling code.
   CompoundFunc Op = getComplexOp(E->getOpcode());

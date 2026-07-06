@@ -129,6 +129,26 @@ define i32 @v_sdot4_fnegv2f16_a(<2 x half> %a, i32 %b, i32 %c) {
   ret i32 %r
 }
 
+define amdgpu_ps i32 @v_sdot4_s_s_s(i32 inreg %a, i32 inreg %b, i32 inreg %c) {
+; GFX906-LABEL: v_sdot4_s_s_s:
+; GFX906:       ; %bb.0:
+; GFX906-NEXT:    v_mov_b32_e32 v0, s1
+; GFX906-NEXT:    v_mov_b32_e32 v1, s2
+; GFX906-NEXT:    v_dot4_i32_i8 v0, s0, v0, v1
+; GFX906-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX906-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: v_sdot4_s_s_s:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_mov_b32_e32 v0, s1
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    v_dot4c_i32_i8 v1, s0, v0
+; GFX10-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX10-NEXT:    ; return to shader part epilog
+  %r = call i32 @llvm.amdgcn.sdot4(i32 %a, i32 %b, i32 %c, i1 false)
+  ret i32 %r
+}
+
 declare i32 @llvm.amdgcn.sdot4(i32, i32, i32, i1 immarg) #0
 
 attributes #0 = { nounwind readnone speculatable }

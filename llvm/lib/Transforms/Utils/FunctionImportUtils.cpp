@@ -28,6 +28,8 @@ static cl::opt<bool> UseSourceFilenameForPromotedLocals(
              "This requires that the source filename has a unique name / "
              "path to avoid name collisions."));
 
+extern cl::opt<bool> AlwaysRenamePromotedLocals;
+
 cl::list<GlobalValue::GUID> MoveSymbolGUID(
     "thinlto-move-symbols",
     cl::desc(
@@ -81,7 +83,7 @@ bool FunctionImportGlobalProcessing::doImportAsDefinition(
 }
 
 bool FunctionImportGlobalProcessing::shouldPromoteLocalToGlobal(
-    const GlobalValue *SGV, ValueInfo VI) {
+    const GlobalValue *SGV, GlobalValueSummary *Summary) {
   assert(SGV->hasLocalLinkage());
 
   // Ifuncs and ifunc alias does not have summary.
@@ -112,8 +114,6 @@ bool FunctionImportGlobalProcessing::shouldPromoteLocalToGlobal(
   // same-named source files that were compiled in their respective directories
   // (so the source file name and resulting GUID is the same). Find the one
   // in this module.
-  auto Summary = ImportIndex.findSummaryInModule(
-      VI, SGV->getParent()->getModuleIdentifier());
   assert(Summary && "Missing summary for global value when exporting");
   auto Linkage = Summary->linkage();
   if (!GlobalValue::isLocalLinkage(Linkage)) {
@@ -306,10 +306,22 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
     }
   }
 
-  if (GV.hasLocalLinkage() && shouldPromoteLocalToGlobal(&GV, VI)) {
+  GlobalValueSummary *Summary = nullptr;
+  if (VI && GV.hasLocalLinkage())
+    Summary = ImportIndex.findSummaryInModule(
+        VI, GV.getParent()->getModuleIdentifier());
+
+  assert((!Summary || !Summary->noRenameOnPromotion() ||
+          shouldPromoteLocalToGlobal(&GV, Summary)) &&
+         "noRenameOnPromotion requires promotion to external linkage");
+
+  if (GV.hasLocalLinkage() && shouldPromoteLocalToGlobal(&GV, Summary)) {
     // Save the original name string before we rename GV below.
     auto Name = GV.getName().str();
-    GV.setName(getPromotedName(&GV));
+    if (AlwaysRenamePromotedLocals || !Summary ||
+        !Summary->noRenameOnPromotion())
+      GV.setName(getPromotedName(&GV));
+
     GV.setLinkage(getLinkage(&GV, /* DoPromote */ true));
     assert(!GV.hasLocalLinkage());
     GV.setVisibility(GlobalValue::HiddenVisibility);

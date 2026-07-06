@@ -25,8 +25,7 @@ subroutine test_int
 ! CHECK:           fir.store %[[C5]] to %[[DECLARE_1]] : !fir.ref<i32>
 ! CHECK:           %[[LOAD_0:.*]] = fir.load %[[DECLARE_1]] : !fir.ref<i32>
 ! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[LOAD_0]] : (i32) -> index
-! CHECK:           %[[CMPI_0:.*]] = arith.cmpi sgt, %[[CONVERT_0]], %[[C0]] : index
-! CHECK:           %[[SELECT_0:.*]] = arith.select %[[CMPI_0]], %[[CONVERT_0]], %[[C0]] : index
+! CHECK:           %[[SELECT_0:.*]] = arith.maxsi %[[CONVERT_0]], %[[C0]] : index
 ! CHECK:           %[[ALLOCMEM_0:.*]] = fir.allocmem !fir.array<?xi32>, %[[SELECT_0]] {fir.must_be_heap = true, uniq_name = "_QMtest_show_descriptorFtest_intEa.alloc"}
 
   call show_descriptor(a)

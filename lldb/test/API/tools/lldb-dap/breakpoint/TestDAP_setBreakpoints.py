@@ -11,13 +11,17 @@ import lldbdap_testcase
 import os
 
 
+@skipIfWasm  # inferior built without exception support
 class TestDAP_setBreakpoints(lldbdap_testcase.DAPTestCaseBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         lldbdap_testcase.DAPTestCaseBase.setUp(self)
 
         self.main_basename = "main-copy.cpp"
         self.main_path = os.path.realpath(self.getBuildArtifact(self.main_basename))
 
+    @skipIfTargetDoesNotSupportSharedLibraries()
     @skipIfWindows
     def test_source_map(self):
         """

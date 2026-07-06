@@ -8,8 +8,8 @@
 
 #include "lldb/DataFormatters/TypeSummary.h"
 
-#include "FormatterBytecode.h"
 #include "lldb/Core/FormatEntity.h"
+#include "lldb/DataFormatters/FormatterBytecode.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
 
@@ -261,11 +261,10 @@ bool BytecodeSummaryFormat::FormatObject(ValueObject *valobj,
     return false;
   }
 
-  std::vector<FormatterBytecode::ControlStackElement> control(
-      {m_bytecode->getBuffer()});
+  FormatterBytecode::ControlStack control({m_bytecode->getBuffer()});
   FormatterBytecode::DataStack data({valobj->GetSP()});
   llvm::Error error = FormatterBytecode::Interpret(
-      control, data, FormatterBytecode::sel_summary);
+      control, data, FormatterBytecode::sig_summary);
   if (error) {
     retval = llvm::toString(std::move(error));
     return false;

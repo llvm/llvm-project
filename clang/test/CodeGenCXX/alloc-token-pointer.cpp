@@ -187,6 +187,26 @@ uptr *test_uintptr_isptr2() {
   return new uptr;
 }
 
+struct StructWithAtomic {
+  _Atomic(int *) val;
+};
+
+// CHECK-LABEL: define dso_local noundef ptr @_Z23test_struct_with_atomicv(
+// CHECK: call noalias noundef nonnull ptr @_Znwm(i64 noundef 8){{.*}} !alloc_token [[META_STRUCTWITHATOMIC:![0-9]+]]
+StructWithAtomic *test_struct_with_atomic() {
+  return new StructWithAtomic;
+}
+
+struct StructWithAtomicNonPtr {
+  _Atomic(int) val;
+};
+
+// CHECK-LABEL: define dso_local noundef ptr @_Z30test_struct_with_atomic_nonptrv(
+// CHECK: call noalias noundef nonnull ptr @_Znwm(i64 noundef 4){{.*}} !alloc_token [[META_STRUCTWITHATOMICNONPTR:![0-9]+]]
+StructWithAtomicNonPtr *test_struct_with_atomic_nonptr() {
+  return new StructWithAtomicNonPtr;
+}
+
 // CHECK: [[META_INT]] = !{!"int", i1 false}
 // CHECK: [[META_INTPTR]] = !{!"int *", i1 true}
 // CHECK: [[META_ULONG]] = !{!"unsigned long", i1 false}
@@ -195,3 +215,5 @@ uptr *test_uintptr_isptr2() {
 // CHECK: [[META_VIRTUALTESTCLASS]] = !{!"VirtualTestClass", i1 true}
 // CHECK: [[META_MYSTRUCTUINTPTR]] = !{!"MyStructUintptr", i1 true}
 // CHECK: [[META_UINTPTR]] = !{!"unsigned long", i1 true}
+// CHECK: [[META_STRUCTWITHATOMIC]] = !{!"StructWithAtomic", i1 true}
+// CHECK: [[META_STRUCTWITHATOMICNONPTR]] = !{!"StructWithAtomicNonPtr", i1 false}

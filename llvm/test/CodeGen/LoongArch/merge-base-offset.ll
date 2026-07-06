@@ -959,7 +959,7 @@ label:
   ret ptr %0
 }
 
-@g_a64 = dso_local global [614750729487779976 x i64] zeroinitializer, align 8
+@g_a64 = dso_local global [536870911 x i64] zeroinitializer, align 8
 
 define dso_local ptr @load_addr_offset_1() nounwind {
 ; LA32-LABEL: load_addr_offset_1:

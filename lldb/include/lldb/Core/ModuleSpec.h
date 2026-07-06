@@ -12,6 +12,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Target/PathMappingList.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Iterable.h"
 #include "lldb/Utility/Stream.h"
@@ -30,14 +31,15 @@ class ModuleSpec {
 public:
   ModuleSpec() = default;
 
-  /// If the \c data argument is passed, its contents will be used
+  /// If the \c extractor_sp argument is passed, its contents will be used
   /// as the module contents instead of trying to read them from
   /// \c file_spec .
   ModuleSpec(const FileSpec &file_spec, const UUID &uuid = UUID(),
-             lldb::DataBufferSP data = lldb::DataBufferSP())
-      : m_file(file_spec), m_uuid(uuid), m_object_offset(0), m_data(data) {
-    if (data)
-      m_object_size = data->GetByteSize();
+             lldb::DataExtractorSP extractor_sp = lldb::DataExtractorSP())
+      : m_file(file_spec), m_uuid(uuid), m_object_offset(0),
+        m_extractor_sp(extractor_sp) {
+    if (extractor_sp)
+      m_object_size = extractor_sp->GetByteSize();
     else if (m_file)
       m_object_size = FileSystem::Instance().GetByteSize(file_spec);
   }
@@ -116,6 +118,15 @@ public:
 
   void SetObjectSize(uint64_t object_size) { m_object_size = object_size; }
 
+  /// Get the load address of a module in process memory. If the optional
+  /// has no value, there is no load address for this module spec.
+  std::optional<lldb::addr_t> GetLoadAddress() const { return m_load_addr; }
+
+  /// Set the load address of a module in process memory.
+  void SetLoadAddress(lldb::addr_t addr) { m_load_addr = addr; }
+
+  void ClearLoadAddress() { m_load_addr.reset(); }
+
   llvm::sys::TimePoint<> &GetObjectModificationTime() {
     return m_object_mod_time;
   }
@@ -126,7 +137,7 @@ public:
 
   PathMappingList &GetSourceMappingList() const { return m_source_mappings; }
 
-  lldb::DataBufferSP GetData() const { return m_data; }
+  lldb::DataExtractorSP GetExtractor() const { return m_extractor_sp; }
 
   lldb::TargetSP GetTargetSP() const { return m_target_wp.lock(); }
 
@@ -157,9 +168,11 @@ public:
     m_object_offset = 0;
     m_object_size = 0;
     m_source_mappings.Clear(false);
+    m_extractor_sp.reset();
     m_object_mod_time = llvm::sys::TimePoint<>();
     m_target_wp.reset();
     m_platform_wp.reset();
+    m_load_addr.reset();
   }
 
   explicit operator bool() const {
@@ -178,6 +191,8 @@ public:
     if (m_object_size)
       return true;
     if (m_object_mod_time != llvm::sys::TimePoint<>())
+      return true;
+    if (m_load_addr.has_value())
       return true;
     return false;
   }
@@ -243,6 +258,13 @@ public:
         strm.PutCString(", ");
       strm.Format("object_mod_time = {0:x+}",
                   uint64_t(llvm::sys::toTimeT(m_object_mod_time)));
+      dumped_something = true;
+    }
+    if (m_load_addr.has_value()) {
+      if (dumped_something)
+        strm.PutCString(", ");
+      strm.Printf("load_addr = 0x%" PRIx64, m_load_addr.value());
+      dumped_something = true;
     }
   }
 
@@ -278,6 +300,10 @@ public:
           return false;
       }
     }
+    // Only match on load address if they both have a valid value.
+    if (m_load_addr.has_value() && match_module_spec.m_load_addr.has_value() &&
+        match_module_spec.GetLoadAddress() != GetLoadAddress())
+      return false;
     return true;
   }
 
@@ -300,7 +326,13 @@ protected:
   uint64_t m_object_size = 0;
   llvm::sys::TimePoint<> m_object_mod_time;
   mutable PathMappingList m_source_mappings;
-  lldb::DataBufferSP m_data = {};
+  lldb::DataExtractorSP m_extractor_sp = {};
+  /// The load address of the module in a process. This allows for modules
+  /// to be uniquely identified and created by reading an object file from
+  /// memory when we can't locate the correct file on disk. Useful for post
+  /// mortem debugging when we might not be able to locate symbols for the
+  /// core file, but we can read the object file from memory.
+  std::optional<lldb::addr_t> m_load_addr = std::nullopt;
 };
 
 class ModuleSpecList {

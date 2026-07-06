@@ -53,7 +53,7 @@ public:
   EhFrameSection(Ctx &);
   void writeTo(uint8_t *buf) override;
   void finalizeContents() override;
-  bool isNeeded() const override { return !sections.empty(); }
+  bool isNeeded() const override { return isLive() && !sections.empty(); }
   size_t getSize() const override { return size; }
 
   static bool classof(const SectionBase *d) {
@@ -64,8 +64,8 @@ public:
   size_t numFdes = 0;
 
   struct FdeData {
-    uint32_t pcRel;
-    uint32_t fdeVARel;
+    int64_t pcRel;
+    int64_t fdeVARel;
   };
 
   ArrayRef<CieRecord *> getCieRecords() const { return cieRecords; }
@@ -86,8 +86,6 @@ private:
   CieRecord *addCie(EhSectionPiece &piece, ArrayRef<Relocation> rels);
   Defined *isFdeLive(EhSectionPiece &piece, ArrayRef<Relocation> rels);
 
-  uint64_t getFdePc(uint8_t *buf, size_t off, uint8_t enc) const;
-
   SmallVector<CieRecord *, 0> cieRecords;
 
   // CIE records are uniquified by their contents and personality functions.
@@ -101,8 +99,16 @@ class EhFrameHeader final : public SyntheticSection {
 public:
   EhFrameHeader(Ctx &);
   void writeTo(uint8_t *buf) override;
-  size_t getSize() const override;
+  size_t getSize() const override { return size; }
   bool isNeeded() const override;
+  void finalizeContents() override;
+  bool updateAllocSize(Ctx &) override;
+
+  // Cached FDE data computed by updateAllocSize, used by
+  // EhFrameSection::writeTo.
+  SmallVector<EhFrameSection::FdeData, 0> fdes;
+  bool large = false; // Whether to use sdata8 encoding.
+  size_t size = 0;
 };
 
 class GotSection final : public SyntheticSection {
@@ -489,7 +495,10 @@ public:
   /// This overload can be used if the addends are written directly instead of
   /// using relocations on the input section (e.g. MipsGotSection::writeTo()).
   template <bool shard = false> void addReloc(const DynamicReloc &reloc) {
-    relocs.push_back(reloc);
+    if (reloc.type == relativeRel)
+      relativeRelocs.push_back(reloc);
+    else
+      relocs.push_back(reloc);
   }
   /// Add a dynamic relocation against \p sym with an optional addend.
   void addSymbolReloc(RelType dynType, InputSectionBase &isec,
@@ -526,11 +535,11 @@ public:
         {dynType, &sec, offsetInSec, isAgainstSymbol, sym, addend, expr});
   }
   bool isNeeded() const override {
-    return !relocs.empty() ||
+    return !relocs.empty() || !relativeRelocs.empty() ||
            llvm::any_of(relocsVec, [](auto &v) { return !v.empty(); });
   }
   size_t getSize() const override {
-    size_t count = relocs.size();
+    size_t count = relocs.size() + relativeRelocs.size();
     for (const auto &v : relocsVec)
       count += v.size();
     return count * this->entsize;
@@ -539,16 +548,16 @@ public:
   void finalizeContents() override;
 
   int32_t dynamicTag, sizeDynamicTag;
-  SmallVector<DynamicReloc, 0> relocs;
+  SmallVector<DynamicReloc, 0> relocs, relativeRelocs;
 
 protected:
   void mergeRels();
-  void partitionRels();
   void computeRels();
   // Used when parallel relocation scanning adds relocations. The elements
-  // will be moved into relocs by mergeRel().
+  // will be classified into relativeRelocs or relocs by mergeRels().
   SmallVector<SmallVector<DynamicReloc, 0>, 0> relocsVec;
   size_t numRelativeRelocs = 0; // used by -z combreloc
+  RelType relativeRel;
   bool combreloc;
 };
 
@@ -1135,67 +1144,6 @@ private:
   size_t shardOffsets[numShards];
 };
 
-// .MIPS.abiflags section.
-template <class ELFT>
-class MipsAbiFlagsSection final : public SyntheticSection {
-  using Elf_Mips_ABIFlags = llvm::object::Elf_Mips_ABIFlags<ELFT>;
-
-public:
-  static std::unique_ptr<MipsAbiFlagsSection> create(Ctx &);
-
-  MipsAbiFlagsSection(Ctx &, Elf_Mips_ABIFlags flags);
-  size_t getSize() const override { return sizeof(Elf_Mips_ABIFlags); }
-  void writeTo(uint8_t *buf) override;
-
-private:
-  Elf_Mips_ABIFlags flags;
-};
-
-// .MIPS.options section.
-template <class ELFT> class MipsOptionsSection final : public SyntheticSection {
-  using Elf_Mips_Options = llvm::object::Elf_Mips_Options<ELFT>;
-  using Elf_Mips_RegInfo = llvm::object::Elf_Mips_RegInfo<ELFT>;
-
-public:
-  static std::unique_ptr<MipsOptionsSection<ELFT>> create(Ctx &);
-
-  MipsOptionsSection(Ctx &, Elf_Mips_RegInfo reginfo);
-  void writeTo(uint8_t *buf) override;
-
-  size_t getSize() const override {
-    return sizeof(Elf_Mips_Options) + sizeof(Elf_Mips_RegInfo);
-  }
-
-private:
-  Elf_Mips_RegInfo reginfo;
-};
-
-// MIPS .reginfo section.
-template <class ELFT> class MipsReginfoSection final : public SyntheticSection {
-  using Elf_Mips_RegInfo = llvm::object::Elf_Mips_RegInfo<ELFT>;
-
-public:
-  static std::unique_ptr<MipsReginfoSection> create(Ctx &);
-
-  MipsReginfoSection(Ctx &, Elf_Mips_RegInfo reginfo);
-  size_t getSize() const override { return sizeof(Elf_Mips_RegInfo); }
-  void writeTo(uint8_t *buf) override;
-
-private:
-  Elf_Mips_RegInfo reginfo;
-};
-
-// This is a MIPS specific section to hold a space within the data segment
-// of executable file which is pointed to by the DT_MIPS_RLD_MAP entry.
-// See "Dynamic section" in Chapter 5 in the following document:
-// ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-class MipsRldMapSection final : public SyntheticSection {
-public:
-  MipsRldMapSection(Ctx &);
-  size_t getSize() const override { return ctx.arg.wordsize; }
-  void writeTo(uint8_t *buf) override {}
-};
-
 // Representation of the combined .ARM.Exidx input sections. We process these
 // as a SyntheticSection like .eh_frame as we need to merge duplicate entries
 // and add terminating sentinel entries.
@@ -1300,56 +1248,6 @@ private:
   size_t size = 0;
 };
 
-// Cortex-M Security Extensions. Prefix for functions that should be exported
-// for the non-secure world.
-const char ACLESESYM_PREFIX[] = "__acle_se_";
-const int ACLESESYM_SIZE = 8;
-
-class ArmCmseSGVeneer {
-public:
-  ArmCmseSGVeneer(Symbol *sym, Symbol *acleSeSym,
-                  std::optional<uint64_t> addr = std::nullopt)
-      : sym(sym), acleSeSym(acleSeSym), entAddr{addr} {}
-  static const size_t size{ACLESESYM_SIZE};
-  std::optional<uint64_t> getAddr() const { return entAddr; };
-
-  Symbol *sym;
-  Symbol *acleSeSym;
-  uint64_t offset = 0;
-
-private:
-  const std::optional<uint64_t> entAddr;
-};
-
-class ArmCmseSGSection final : public SyntheticSection {
-public:
-  ArmCmseSGSection(Ctx &ctx);
-  bool isNeeded() const override { return !entries.empty(); }
-  size_t getSize() const override;
-  void writeTo(uint8_t *buf) override;
-  void addSGVeneer(Symbol *sym, Symbol *ext_sym);
-  void addMappingSymbol();
-  void finalizeContents() override;
-  void exportEntries(SymbolTableBaseSection *symTab);
-  uint64_t impLibMaxAddr = 0;
-
-private:
-  SmallVector<std::pair<Symbol *, Symbol *>, 0> entries;
-  SmallVector<std::unique_ptr<ArmCmseSGVeneer>, 0> sgVeneers;
-  uint64_t newEntries = 0;
-};
-
-// Used to compute outSecOff of .got2 in each object file. This is needed to
-// synthesize PLT entries for PPC32 Secure PLT ABI.
-class PPC32Got2Section final : public SyntheticSection {
-public:
-  PPC32Got2Section(Ctx &);
-  size_t getSize() const override { return 0; }
-  bool isNeeded() const override;
-  void finalizeContents() override;
-  void writeTo(uint8_t *buf) override {}
-};
-
 // This section is used to store the addresses of functions that are called
 // in range-extending thunks on PowerPC64. When producing position dependent
 // code the addresses are link-time constants and the table is written out to
@@ -1369,30 +1267,6 @@ private:
   SmallVector<std::pair<const Symbol *, int64_t>, 0> entries;
   llvm::DenseMap<std::pair<const Symbol *, int64_t>, uint32_t> entry_index;
   bool finalized = false;
-};
-
-template <typename ELFT>
-class PartitionElfHeaderSection final : public SyntheticSection {
-public:
-  PartitionElfHeaderSection(Ctx &);
-  size_t getSize() const override;
-  void writeTo(uint8_t *buf) override;
-};
-
-template <typename ELFT>
-class PartitionProgramHeadersSection final : public SyntheticSection {
-public:
-  PartitionProgramHeadersSection(Ctx &);
-  size_t getSize() const override;
-  void writeTo(uint8_t *buf) override;
-};
-
-class PartitionIndexSection final : public SyntheticSection {
-public:
-  PartitionIndexSection(Ctx &);
-  size_t getSize() const override;
-  void finalizeContents() override;
-  void writeTo(uint8_t *buf) override;
 };
 
 // See the following link for the Android-specific loader code that operates on
@@ -1449,8 +1323,8 @@ void combineEhSections(Ctx &);
 bool hasMemtag(Ctx &);
 bool canHaveMemtagGlobals(Ctx &);
 
-template <typename ELFT> void writeEhdr(Ctx &, uint8_t *buf, Partition &part);
-template <typename ELFT> void writePhdrs(uint8_t *buf, Partition &part);
+template <typename ELFT> void writeEhdr(Ctx &, uint8_t *buf);
+template <typename ELFT> void writePhdrs(Ctx &, uint8_t *buf);
 
 Defined *addSyntheticLocal(Ctx &ctx, StringRef name, uint8_t type,
                            uint64_t value, uint64_t size,
@@ -1482,44 +1356,6 @@ struct PhdrEntry {
 
   uint64_t lmaOffset = 0;
 };
-
-// Linker generated per-partition sections.
-struct Partition {
-  Ctx &ctx;
-  StringRef name;
-  uint64_t nameStrTab;
-
-  std::unique_ptr<SyntheticSection> elfHeader;
-  std::unique_ptr<SyntheticSection> programHeaders;
-  SmallVector<std::unique_ptr<PhdrEntry>, 0> phdrs;
-
-  std::unique_ptr<ARMExidxSyntheticSection> armExidx;
-  std::unique_ptr<BuildIdSection> buildId;
-  std::unique_ptr<SyntheticSection> dynamic;
-  std::unique_ptr<StringTableSection> dynStrTab;
-  std::unique_ptr<SymbolTableBaseSection> dynSymTab;
-  std::unique_ptr<EhFrameHeader> ehFrameHdr;
-  std::unique_ptr<EhFrameSection> ehFrame;
-  std::unique_ptr<GnuHashTableSection> gnuHashTab;
-  std::unique_ptr<HashTableSection> hashTab;
-  std::unique_ptr<MemtagAndroidNote> memtagAndroidNote;
-  std::unique_ptr<MemtagGlobalDescriptors> memtagGlobalDescriptors;
-  std::unique_ptr<PackageMetadataNote> packageMetadataNote;
-  std::unique_ptr<RelocationBaseSection> relaDyn;
-  std::unique_ptr<RelrBaseSection> relrDyn;
-  std::unique_ptr<RelrBaseSection> relrAuthDyn;
-  std::unique_ptr<VersionDefinitionSection> verDef;
-  std::unique_ptr<SyntheticSection> verNeed;
-  std::unique_ptr<VersionTableSection> verSym;
-
-  Partition(Ctx &ctx) : ctx(ctx) {}
-  unsigned getNumber(Ctx &ctx) const { return this - &ctx.partitions[0] + 1; }
-};
-
-inline Partition &SectionBase::getPartition(Ctx &ctx) const {
-  assert(isLive());
-  return ctx.partitions[partition - 1];
-}
 
 } // namespace lld::elf
 

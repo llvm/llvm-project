@@ -30,7 +30,7 @@ llvm::Expected<CompileUnitsResponseBody> CompileUnitsRequestHandler::Run(
   int num_modules = dap.target.GetNumModules();
   for (int i = 0; i < num_modules; i++) {
     auto curr_module = dap.target.GetModuleAtIndex(i);
-    if (args->moduleId == llvm::StringRef(curr_module.GetUUIDString())) {
+    if (args->moduleId == curr_module.GetUUIDString()) {
       int num_units = curr_module.GetNumCompileUnits();
       for (int j = 0; j < num_units; j++) {
         auto curr_unit = curr_module.GetCompileUnitAtIndex(j);

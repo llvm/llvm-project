@@ -14,6 +14,7 @@
 #ifndef FORTRAN_DIALECT_CUF_CUF_OPS
 #define FORTRAN_DIALECT_CUF_CUF_OPS
 
+include "flang/Optimizer/Dialect/CUDAKernelOpInterface.td"
 include "flang/Optimizer/Dialect/CUF/CUFDialect.td"
 include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.td"
 include "flang/Optimizer/Dialect/FIRAttr.td"
@@ -176,9 +177,10 @@ def cuf_DataTransferOp : cuf_Op<"data_transfer", []> {
   }];
 
   let arguments = (ins Arg<AnyType, "", [MemRead]>:$src,
-                       Arg<AnyRefOrBoxType, "", [MemWrite]>:$dst,
-                       Optional<AnyShapeOrShiftType>:$shape,
-                       cuf_DataTransferKindAttr:$transfer_kind);
+      Arg<AnyRefOrBoxType, "", [MemWrite]>:$dst,
+      Optional<AnyShapeOrShiftType>:$shape,
+      cuf_DataTransferKindAttr:$transfer_kind,
+      UnitAttr:$hasManagedOrUnifedSymbols);
 
   let assemblyFormat = [{
     $src `to` $dst (`,` $shape^ `:` type($shape) )? attr-dict `:` type($src) `,` type($dst)
@@ -245,7 +247,7 @@ def cuf_KernelLaunchOp : cuf_Op<"kernel_launch", [CallOpInterface,
 }
 
 def cuf_KernelOp
-    : cuf_Op<"kernel", [AttrSizedOperandSegments,
+    : cuf_Op<"kernel", [AttrSizedOperandSegments, CUDAKernelOpInterface,
                         DeclareOpInterfaceMethods<LoopLikeOpInterface>,
                         DeclareOpInterfaceMethods<OperationMoveOpInterface>]> {
 

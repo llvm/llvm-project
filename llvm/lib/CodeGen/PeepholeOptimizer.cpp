@@ -444,7 +444,8 @@ public:
   using RecurrenceCycle = SmallVector<RecurrenceInstr, 4>;
 
 private:
-  bool optimizeCmpInstr(MachineInstr &MI);
+  bool optimizeCmpInstr(MachineInstr &MI, MachineFunction &MF,
+                        SmallPtrSet<MachineInstr *, 16> &LocalMIs);
   bool optimizeExtInstr(MachineInstr &MI, MachineBasicBlock &MBB,
                         SmallPtrSetImpl<MachineInstr *> &LocalMIs);
   bool optimizeSelect(MachineInstr &MI,
@@ -493,6 +494,13 @@ private:
 
   bool isLoadFoldable(MachineInstr &MI,
                       SmallSet<Register, 16> &FoldAsLoadDefCandidates);
+
+  /// Try to fold the load defined by \p FoldReg into \p MI using
+  /// TII->optimizeLoadInstr. On success, updates \p LocalMIs, erases the old
+  /// instructions, and returns the replacement; returns nullptr otherwise.
+  MachineInstr *foldLoadInto(MachineFunction &MF, MachineInstr &MI,
+                             Register FoldReg,
+                             SmallPtrSet<MachineInstr *, 16> &LocalMIs);
 
   /// Check whether \p MI is understood by the register coalescer
   /// but may require some rewriting.
@@ -833,14 +841,14 @@ bool PeepholeOptimizer::optimizeExtInstr(
     //
     //    %reg1025 = <sext> %reg1024
     //     ...
-    //    %reg1026 = SUBREG_TO_REG 0, %reg1024, 4
+    //    %reg1026 = SUBREG_TO_REG %reg1024, 4
     //
     // into this:
     //
     //    %reg1025 = <sext> %reg1024
     //     ...
     //    %reg1027 = COPY %reg1025:4
-    //    %reg1026 = SUBREG_TO_REG 0, %reg1027, 4
+    //    %reg1026 = SUBREG_TO_REG %reg1027, 4
     //
     // The problem here is that SUBREG_TO_REG is there to assert that an
     // implicit zext occurs. It doesn't insert a zext instruction. If we allow
@@ -936,7 +944,9 @@ bool PeepholeOptimizer::optimizeExtInstr(
 /// against already sets (or could be modified to set) the same flag as the
 /// compare, then we can remove the comparison and use the flag from the
 /// previous instruction.
-bool PeepholeOptimizer::optimizeCmpInstr(MachineInstr &MI) {
+bool PeepholeOptimizer::optimizeCmpInstr(
+    MachineInstr &MI, MachineFunction &MF,
+    SmallPtrSet<MachineInstr *, 16> &LocalMIs) {
   // If this instruction is a comparison against zero and isn't comparing a
   // physical register, we can try to optimize it.
   Register SrcReg, SrcReg2;
@@ -947,26 +957,34 @@ bool PeepholeOptimizer::optimizeCmpInstr(MachineInstr &MI) {
 
   // Attempt to optimize the comparison instruction.
   LLVM_DEBUG(dbgs() << "Attempting to optimize compare: " << MI);
-  if (TII->optimizeCompareInstr(MI, SrcReg, SrcReg2, CmpMask, CmpValue, MRI)) {
-    LLVM_DEBUG(dbgs() << "  -> Successfully optimized compare!\n");
-    ++NumCmps;
-    return true;
+  if (!TII->optimizeCompareInstr(MI, SrcReg, SrcReg2, CmpMask, CmpValue, MRI))
+    return false;
+
+  LLVM_DEBUG(dbgs() << "  -> Successfully optimized compare!\n");
+  ++NumCmps;
+
+  // The eliminated compare may have been the extra use preventing a
+  // load from being folded into the flag-setting instruction.
+  if (SrcReg.isVirtual() && MRI->hasOneNonDBGUser(SrcReg)) {
+    MachineInstr *FlagProducer = MRI->use_nodbg_begin(SrcReg)->getParent();
+    MachineInstr *LoadMI = MRI->getVRegDef(SrcReg);
+    // No store between LoadMI and FlagProducer that could change the value.
+    if (LocalMIs.count(FlagProducer) && LoadMI && LoadMI->canFoldAsLoad() &&
+        LoadMI->mayLoad() && LocalMIs.count(LoadMI) &&
+        llvm::none_of(
+            make_range(std::next(LoadMI->getIterator()),
+                       FlagProducer->getIterator()),
+            [](const MachineInstr &I) { return I.isLoadFoldBarrier(); }))
+      foldLoadInto(MF, *FlagProducer, SrcReg, LocalMIs);
   }
 
-  return false;
+  return true;
 }
 
 /// Optimize a select instruction.
 bool PeepholeOptimizer::optimizeSelect(
     MachineInstr &MI, SmallPtrSetImpl<MachineInstr *> &LocalMIs) {
-  unsigned TrueOp = 0;
-  unsigned FalseOp = 0;
-  bool Optimizable = false;
-  SmallVector<MachineOperand, 4> Cond;
-  if (TII->analyzeSelect(MI, Cond, TrueOp, FalseOp, Optimizable))
-    return false;
-  if (!Optimizable)
-    return false;
+  assert(MI.isSelect() && "Should only be called when MI->isSelect() is true");
   if (!TII->optimizeSelect(MI, LocalMIs))
     return false;
   LLVM_DEBUG(dbgs() << "Deleting select: " << MI);
@@ -1399,6 +1417,31 @@ bool PeepholeOptimizer::isLoadFoldable(
   return false;
 }
 
+MachineInstr *
+PeepholeOptimizer::foldLoadInto(MachineFunction &MF, MachineInstr &MI,
+                                Register FoldReg,
+                                SmallPtrSet<MachineInstr *, 16> &LocalMIs) {
+  Register Reg = FoldReg;
+  MachineInstr *DefMI = nullptr;
+  MachineInstr *CopyMI = nullptr;
+  MachineInstr *FoldMI = TII->optimizeLoadInstr(MI, MRI, Reg, DefMI, CopyMI);
+  if (!FoldMI)
+    return nullptr;
+  LLVM_DEBUG(dbgs() << "Replacing: " << MI << "     With: " << *FoldMI);
+  LocalMIs.erase(&MI);
+  LocalMIs.erase(DefMI);
+  LocalMIs.insert(FoldMI);
+  if (CopyMI)
+    LocalMIs.insert(CopyMI);
+  if (MI.shouldUpdateAdditionalCallInfo())
+    MF.moveAdditionalCallInfo(&MI, FoldMI);
+  MI.eraseFromParent();
+  DefMI->eraseFromParent();
+  MRI->markUsesInDebugValueAsUndef(FoldReg);
+  ++NumLoadFold;
+  return FoldMI;
+}
+
 bool PeepholeOptimizer::isMoveImmediate(
     MachineInstr &MI, SmallSet<Register, 4> &ImmDefRegs,
     DenseMap<Register, MachineInstr *> &ImmDefMIs) {
@@ -1434,7 +1477,7 @@ bool PeepholeOptimizer::foldImmediate(
       continue;
     if (ImmDefRegs.count(Reg) == 0)
       continue;
-    DenseMap<Register, MachineInstr *>::iterator II = ImmDefMIs.find(Reg);
+    auto II = ImmDefMIs.find(Reg);
     assert(II != ImmDefMIs.end() && "couldn't find immediate definition");
     if (TII->foldImmediate(MI, *II->second, Reg, MRI)) {
       ++NumImmFold;
@@ -1447,6 +1490,7 @@ bool PeepholeOptimizer::foldImmediate(
         if (DstReg.isVirtual() &&
             MRI->getRegClass(DstReg) == MRI->getRegClass(Reg)) {
           MRI->replaceRegWith(DstReg, Reg);
+          MRI->clearKillFlags(Reg);
           MI.eraseFromParent();
           Deleted = true;
         }
@@ -1774,14 +1818,13 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
             }
           } else if (MO.isRegMask()) {
             const uint32_t *RegMask = MO.getRegMask();
-            for (auto &RegMI : NAPhysToVirtMIs) {
-              Register Def = RegMI.first;
-              if (MachineOperand::clobbersPhysReg(RegMask, Def)) {
-                LLVM_DEBUG(dbgs()
-                           << "NAPhysCopy: invalidating because of " << *MI);
-                NAPhysToVirtMIs.erase(Def);
-              }
-            }
+            NAPhysToVirtMIs.remove_if([&](const auto &RegMI) {
+              if (!MachineOperand::clobbersPhysReg(RegMask, RegMI.first))
+                return false;
+              LLVM_DEBUG(dbgs()
+                         << "NAPhysCopy: invalidating because of " << *MI);
+              return true;
+            });
           }
         }
       }
@@ -1799,9 +1842,14 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
         NAPhysToVirtMIs.clear();
       }
 
+      if (MI->isCompare() && optimizeCmpInstr(*MI, MF, LocalMIs)) {
+        LocalMIs.erase(MI);
+        Changed = true;
+        continue;
+      }
+
       if ((isUncoalescableCopy(*MI) &&
            optimizeUncoalescableCopy(*MI, LocalMIs)) ||
-          (MI->isCompare() && optimizeCmpInstr(*MI)) ||
           (MI->isSelect() && optimizeSelect(*MI, LocalMIs))) {
         // MI is deleted.
         LocalMIs.erase(MI);
@@ -1868,28 +1916,10 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
           if (FoldAsLoadDefCandidates.count(FoldAsLoadDefReg)) {
             // We need to fold load after optimizeCmpInstr, since
             // optimizeCmpInstr can enable folding by converting SUB to CMP.
-            // Save FoldAsLoadDefReg because optimizeLoadInstr() resets it and
-            // we need it for markUsesInDebugValueAsUndef().
             Register FoldedReg = FoldAsLoadDefReg;
-            MachineInstr *DefMI = nullptr;
             if (MachineInstr *FoldMI =
-                    TII->optimizeLoadInstr(*MI, MRI, FoldAsLoadDefReg, DefMI)) {
-              // Update LocalMIs since we replaced MI with FoldMI and deleted
-              // DefMI.
-              LLVM_DEBUG(dbgs() << "Replacing: " << *MI);
-              LLVM_DEBUG(dbgs() << "     With: " << *FoldMI);
-              LocalMIs.erase(MI);
-              LocalMIs.erase(DefMI);
-              LocalMIs.insert(FoldMI);
-              // Update the call info.
-              if (MI->shouldUpdateAdditionalCallInfo())
-                MI->getMF()->moveAdditionalCallInfo(MI, FoldMI);
-              MI->eraseFromParent();
-              DefMI->eraseFromParent();
-              MRI->markUsesInDebugValueAsUndef(FoldedReg);
+                    foldLoadInto(MF, *MI, FoldAsLoadDefReg, LocalMIs)) {
               FoldAsLoadDefCandidates.erase(FoldedReg);
-              ++NumLoadFold;
-
               // MI is replaced with FoldMI so we can continue trying to fold
               Changed = true;
               MI = FoldMI;
@@ -1937,9 +1967,7 @@ ValueTrackerResult ValueTracker::getNextSourceFromCopy() {
     if (SrcReg.isVirtual()) {
       // TODO: Try constraining on rewrite if we can
       const TargetRegisterClass *RegRC = MRI.getRegClass(SrcReg);
-      const TargetRegisterClass *SrcWithSubRC =
-          TRI->getSubClassWithSubReg(RegRC, SubReg);
-      if (RegRC != SrcWithSubRC)
+      if (!TRI->isSubRegValidForRegClass(RegRC, SubReg))
         return ValueTrackerResult();
     } else {
       if (!TRI->getSubReg(SrcReg, SubReg))
@@ -2047,9 +2075,7 @@ ValueTrackerResult ValueTracker::getNextSourceFromRegSequence() {
     //
     // TODO: Should we modify the register class to support the index?
     const TargetRegisterClass *SrcRC = MRI.getRegClass(RegSeqInput.Reg);
-    const TargetRegisterClass *SrcWithSubRC =
-        TRI->getSubClassWithSubReg(SrcRC, ComposedDefInSrcReg1);
-    if (SrcRC != SrcWithSubRC)
+    if (!TRI->isSubRegValidForRegClass(SrcRC, ComposedDefInSrcReg1))
       return ValueTrackerResult();
 
     return ValueTrackerResult(RegSeqInput.Reg, ComposedDefInSrcReg1);
@@ -2131,21 +2157,21 @@ ValueTrackerResult ValueTracker::getNextSourceFromExtractSubreg() {
 ValueTrackerResult ValueTracker::getNextSourceFromSubregToReg() {
   assert(Def->isSubregToReg() && "Invalid definition");
   // We are looking at:
-  // Def = SUBREG_TO_REG Imm, v0, sub0
+  // Def = SUBREG_TO_REG v0, sub0
 
   // Bail if we have to compose sub registers.
   // If DefSubReg != sub0, we would have to check that all the bits
   // we track are included in sub0 and if yes, we would have to
   // determine the right subreg in v0.
-  if (DefSubReg != Def->getOperand(3).getImm())
+  if (DefSubReg != Def->getOperand(2).getImm())
     return ValueTrackerResult();
   // Bail if we have to compose sub registers.
   // Likewise, if v0.subreg != 0, we would have to compose it with sub0.
-  if (Def->getOperand(2).getSubReg())
+  if (Def->getOperand(1).getSubReg())
     return ValueTrackerResult();
 
-  return ValueTrackerResult(Def->getOperand(2).getReg(),
-                            Def->getOperand(3).getImm());
+  return ValueTrackerResult(Def->getOperand(1).getReg(),
+                            Def->getOperand(2).getImm());
 }
 
 /// Explore each PHI incoming operand and return its sources.

@@ -261,7 +261,7 @@ static void emitGetInstructionIndexForOpLookup(
     ArrayRef<unsigned> InstructionIndex) {
   StringRef Type = OperandMap.size() <= UINT8_MAX + 1 ? "uint8_t" : "uint16_t";
   OS << "LLVM_READONLY static " << Type
-     << " getInstructionIndexForOpLookup(uint16_t Opcode) {\n"
+     << " getInstructionIndexForOpLookup(uint32_t Opcode) {\n"
         "  static constexpr "
      << Type << " InstructionIndex[] = {";
   for (auto [TableIndex, Entry] : enumerate(InstructionIndex))
@@ -275,7 +275,7 @@ static void
 emitGetNamedOperandIdx(raw_ostream &OS,
                        const MapVector<SmallVector<int>, unsigned> &OperandMap,
                        unsigned MaxOperandNo, unsigned NumOperandNames) {
-  OS << "LLVM_READONLY int16_t getNamedOperandIdx(uint16_t Opcode, OpName "
+  OS << "LLVM_READONLY int16_t getNamedOperandIdx(uint32_t Opcode, OpName "
         "Name) {\n";
   OS << "  assert(Name != OpName::NUM_OPERAND_NAMES);\n";
   if (!NumOperandNames) {
@@ -307,7 +307,7 @@ emitGetOperandIdxName(raw_ostream &OS,
                       const MapVector<StringRef, unsigned> &OperandNameToID,
                       const MapVector<SmallVector<int>, unsigned> &OperandMap,
                       unsigned MaxNumOperands, unsigned NumOperandNames) {
-  OS << "LLVM_READONLY OpName getOperandIdxName(uint16_t Opcode, int16_t Idx) "
+  OS << "LLVM_READONLY OpName getOperandIdxName(uint32_t Opcode, int16_t Idx) "
         "{\n";
   OS << "  assert(Idx >= 0 && Idx < " << MaxNumOperands << ");\n";
   if (!MaxNumOperands) {
@@ -347,11 +347,11 @@ emitGetOperandIdxName(raw_ostream &OS,
 /// - An enum in the llvm::TargetNamespace::OpName namespace, with one entry
 ///   for each operand name.
 /// - A 2-dimensional table for mapping OpName enum values to operand indices.
-/// - A function called getNamedOperandIdx(uint16_t Opcode, OpName Name)
+/// - A function called getNamedOperandIdx(uint32_t Opcode, OpName Name)
 ///   for looking up the operand index for an instruction, given a value from
 ///   OpName enum
 /// - A 2-dimensional table for mapping operand indices to OpName enum values.
-/// - A function called getOperandIdxName(uint16_t Opcode, int16_t Idx)
+/// - A function called getOperandIdxName(uint32_t Opcode, int16_t Idx)
 ///   for looking up the OpName enum for an instruction, given the operand
 ///   index. This is the inverse of getNamedOperandIdx().
 ///
@@ -414,9 +414,9 @@ void InstrInfoEmitter::emitOperandNameMappings(
     OS << "  NUM_OPERAND_NAMES = " << NumOperandNames << ",\n";
     OS << "}; // enum class OpName\n\n";
 
-    OS << "LLVM_READONLY int16_t getNamedOperandIdx(uint16_t Opcode, OpName "
+    OS << "LLVM_READONLY int16_t getNamedOperandIdx(uint32_t Opcode, OpName "
           "Name);\n";
-    OS << "LLVM_READONLY OpName getOperandIdxName(uint16_t Opcode, int16_t "
+    OS << "LLVM_READONLY OpName getOperandIdxName(uint32_t Opcode, int16_t "
           "Idx);\n";
   }
 
@@ -476,7 +476,7 @@ void InstrInfoEmitter::emitOperandTypeMappings(
     IfDefEmitter IfDef(OS, "GET_INSTRINFO_OPERAND_TYPE");
     NamespaceEmitter NS(OS, ("llvm::" + Namespace).str());
     OS << "LLVM_READONLY\n";
-    OS << "static int getOperandType(uint16_t Opcode, uint16_t OpIdx) {\n";
+    OS << "static int getOperandType(uint32_t Opcode, uint16_t OpIdx) {\n";
     auto getInstrName = [&](int I) -> StringRef {
       return NumberedInstructions[I]->getName();
     };
@@ -604,7 +604,7 @@ void InstrInfoEmitter::emitLogicalOperandSizeMappings(
   IfDefEmitter IfDef(OS, "GET_INSTRINFO_LOGICAL_OPERAND_SIZE_MAP");
   NamespaceEmitter NS(OS, ("llvm::" + Namespace).str());
   OS << "LLVM_READONLY static unsigned\n";
-  OS << "getLogicalOperandSize(uint16_t Opcode, uint16_t LogicalOpIdx) {\n";
+  OS << "getLogicalOperandSize(uint32_t Opcode, uint16_t LogicalOpIdx) {\n";
   if (!InstMap.empty()) {
     std::vector<const std::vector<unsigned> *> LogicalOpSizeList(
         LogicalOpSizeMap.size());
@@ -644,7 +644,7 @@ void InstrInfoEmitter::emitLogicalOperandSizeMappings(
   OS << "}\n";
 
   OS << "LLVM_READONLY static inline unsigned\n";
-  OS << "getLogicalOperandIdx(uint16_t Opcode, uint16_t LogicalOpIdx) {\n";
+  OS << "getLogicalOperandIdx(uint32_t Opcode, uint16_t LogicalOpIdx) {\n";
   OS << "  auto S = 0U;\n";
   OS << "  for (auto i = 0U; i < LogicalOpIdx; ++i)\n";
   OS << "    S += getLogicalOperandSize(Opcode, i);\n";
@@ -1079,20 +1079,16 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
     }
 
     if (HasComplexDeprecationInfos) {
-      OS << "extern const MCInstrInfo::ComplexDeprecationPredicate "
-         << TargetName << "InstrComplexDeprecationInfos[] = {";
-      Num = 0;
+      OS << "bool " << TargetName << "InstrComplexDeprecationInfo("
+         << "MCInst &Inst, const MCSubtargetInfo &STI, std::string &Info) {\n"
+         << "  switch (Inst.getOpcode()) {\n";
       for (const CodeGenInstruction *Inst : NumberedInstructions) {
-        if (Num % 8 == 0)
-          OS << "\n    ";
-        if (Inst->HasComplexDeprecationPredicate)
-          // Emit a function pointer to the complex predicate method.
-          OS << "&get" << Inst->DeprecatedReason << "DeprecationInfo, ";
-        else
-          OS << "nullptr, ";
-        ++Num;
+        if (!Inst->HasComplexDeprecationPredicate)
+          continue;
+        OS << "  case " << getQualifiedName(Inst->TheDef) << ": return get"
+           << Inst->DeprecatedReason << "DeprecationInfo(Inst, STI, Info);\n";
       }
-      OS << "\n};\n\n";
+      OS << "  }\n  return false;\n}\n\n";
     }
 
     // MCInstrInfo initialization routine.
@@ -1141,7 +1137,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
     else
       OS << "nullptr, ";
     if (HasComplexDeprecationInfos)
-      OS << TargetName << "InstrComplexDeprecationInfos, ";
+      OS << TargetName << "InstrComplexDeprecationInfo, ";
     else
       OS << "nullptr, ";
     OS << NumberedInstructions.size() << ", ";
@@ -1216,8 +1212,8 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
       OS << "extern const uint8_t " << TargetName
          << "InstrDeprecationFeatures[];\n";
     if (HasComplexDeprecationInfos)
-      OS << "extern const MCInstrInfo::ComplexDeprecationPredicate "
-         << TargetName << "InstrComplexDeprecationInfos[];\n";
+      OS << "bool " << TargetName << "InstrComplexDeprecationInfo("
+         << "MCInst &Inst, const MCSubtargetInfo &STI, std::string &Info);\n";
     Twine ClassName = TargetName + "GenInstrInfo";
     OS << ClassName << "::" << ClassName
        << "(const TargetSubtargetInfo &STI, const TargetRegisterInfo &TRI, "
@@ -1239,7 +1235,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
     else
       OS << "nullptr, ";
     if (HasComplexDeprecationInfos)
-      OS << TargetName << "InstrComplexDeprecationInfos, ";
+      OS << TargetName << "InstrComplexDeprecationInfo, ";
     else
       OS << "nullptr, ";
     OS << NumberedInstructions.size();

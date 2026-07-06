@@ -2,16 +2,23 @@ import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test import configuration
 import os
 
 
 class TestMacCatalyst(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     @skipIf(macos_version=["<", "10.15"])
     @skipUnlessDarwin
     @skipIfDarwinEmbedded
     def test_macabi(self):
         """Test the x86_64-apple-ios-macabi target linked against a macos dylib"""
-        self.build()
+        self.build(
+            dictionary={
+                "TRIPLE": self.getArchitecture() + "-apple-ios13.1-macabi",
+            }
+        )
         log = self.getBuildArtifact("packets.log")
         self.expect("log enable gdb-remote packets -f " + log)
         lldbutil.run_to_source_breakpoint(self, "break here", lldb.SBFileSpec("main.c"))

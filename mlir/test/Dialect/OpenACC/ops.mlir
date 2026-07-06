@@ -2494,3 +2494,77 @@ func.func @test_kernel_environment_with_async(%arg0: memref<1024xf32>) {
 // CHECK:           gpu.launch
 // CHECK:             memref.store %{{.*}}, %[[CREATE]]
 // CHECK:         acc.copyout accPtr(%[[CREATE]] : memref<1024xf32>) async(%[[ASYNC]] : i32) to varPtr(%{{.*}} : memref<1024xf32>)
+
+// -----
+
+func.func @test_acc_reduction_combine(%arg0 : memref<i32>, %arg1 : memref<i32>) {
+  acc.reduction_combine %arg0 into %arg1 <add> : memref<i32>
+  return
+}
+
+// CHECK-LABEL: func @test_acc_reduction_combine
+// CHECK:       acc.reduction_combine %arg0 into %arg1 <add> : memref<i32>
+
+// -----
+
+// Test that acc.getdeviceptr with an opaque pointer (!llvm.ptr, which has no
+// element type) can be parsed and printed without an explicit varType clause.
+// This is a regression test for a crash where getElementType() returned null
+// for opaque pointers and was passed to TypeAttr::get() without a null check.
+
+func.func @test_getdeviceptr_opaque_ptr(%a: !llvm.ptr) -> () {
+  %0 = acc.getdeviceptr varPtr(%a : !llvm.ptr) -> !llvm.ptr
+  acc.declare_enter dataOperands(%0 : !llvm.ptr)
+  return
+}
+
+// CHECK-LABEL: func @test_getdeviceptr_opaque_ptr(
+// CHECK-SAME:    %[[A:.*]]: !llvm.ptr)
+// CHECK:         %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[A]] : !llvm.ptr) -> !llvm.ptr
+// CHECK:         acc.declare_enter dataOperands(%[[DEVPTR]] : !llvm.ptr)
+
+// -----
+
+acc.reduction.recipe @reduction_maximum_memref_f32 : memref<f32> reduction_operator <maximumf> init {
+^bb0(%arg0: memref<f32>):
+  %alloca = memref.alloca() : memref<f32>
+  acc.yield %alloca : memref<f32>
+} combiner {
+^bb0(%arg0: memref<f32>, %arg1: memref<f32>):
+  acc.yield %arg0 : memref<f32>
+}
+
+// CHECK-LABEL: acc.reduction.recipe @reduction_maximum_memref_f32 : memref<f32> reduction_operator <maximumf>
+
+acc.reduction.recipe @reduction_maxnum_memref_f32 : memref<f32> reduction_operator <maxnumf> init {
+^bb0(%arg0: memref<f32>):
+  %alloca = memref.alloca() : memref<f32>
+  acc.yield %alloca : memref<f32>
+} combiner {
+^bb0(%arg0: memref<f32>, %arg1: memref<f32>):
+  acc.yield %arg0 : memref<f32>
+}
+
+// CHECK-LABEL: acc.reduction.recipe @reduction_maxnum_memref_f32 : memref<f32> reduction_operator <maxnumf>
+
+acc.reduction.recipe @reduction_minimum_memref_f32 : memref<f32> reduction_operator <minimumf> init {
+^bb0(%arg0: memref<f32>):
+  %alloca = memref.alloca() : memref<f32>
+  acc.yield %alloca : memref<f32>
+} combiner {
+^bb0(%arg0: memref<f32>, %arg1: memref<f32>):
+  acc.yield %arg0 : memref<f32>
+}
+
+// CHECK-LABEL: acc.reduction.recipe @reduction_minimum_memref_f32 : memref<f32> reduction_operator <minimumf>
+
+acc.reduction.recipe @reduction_minnum_memref_f32 : memref<f32> reduction_operator <minnumf> init {
+^bb0(%arg0: memref<f32>):
+  %alloca = memref.alloca() : memref<f32>
+  acc.yield %alloca : memref<f32>
+} combiner {
+^bb0(%arg0: memref<f32>, %arg1: memref<f32>):
+  acc.yield %arg0 : memref<f32>
+}
+
+// CHECK-LABEL: acc.reduction.recipe @reduction_minnum_memref_f32 : memref<f32> reduction_operator <minnumf>

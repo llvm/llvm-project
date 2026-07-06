@@ -35,12 +35,14 @@ static_library("LLVMNVPTXCodeGen") {
   ]
   include_dirs = [ "." ]
   sources = [
+    "NVPTXAddressFolder.cpp",
     "NVPTXAliasAnalysis.cpp",
     "NVPTXAllocaHoisting.cpp",
     "NVPTXAsmPrinter.cpp",
     "NVPTXAssignValidGlobalNames.cpp",
     "NVPTXAtomicLower.cpp",
     "NVPTXCtorDtorLowering.cpp",
+    "NVPTXDwarfDebug.cpp",
     "NVPTXForwardParams.cpp",
     "NVPTXFrameLowering.cpp",
     "NVPTXGenericToNVVM.cpp",
@@ -54,18 +56,21 @@ static_library("LLVMNVPTXCodeGen") {
     "NVPTXLowerArgs.cpp",
     "NVPTXLowerUnreachable.cpp",
     "NVPTXMCExpr.cpp",
+    "NVPTXMarkKernelPtrsGlobal.cpp",
     "NVPTXPeephole.cpp",
     "NVPTXPrologEpilogPass.cpp",
     "NVPTXProxyRegErasure.cpp",
     "NVPTXRegisterInfo.cpp",
     "NVPTXReplaceImageHandles.cpp",
     "NVPTXSelectionDAGInfo.cpp",
+    "NVPTXSetByValParamAlign.cpp",
     "NVPTXSubtarget.cpp",
     "NVPTXTagInvariantLoads.cpp",
     "NVPTXTargetMachine.cpp",
     "NVPTXTargetTransformInfo.cpp",
     "NVPTXUtilities.cpp",
     "NVVMIntrRange.cpp",
+    "NVVMProperties.cpp",
     "NVVMReflect.cpp",
   ]
 }

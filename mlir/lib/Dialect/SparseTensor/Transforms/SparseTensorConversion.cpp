@@ -383,6 +383,9 @@ public:
     const auto stt = getSparseTensorType(op);
     if (!stt.hasEncoding())
       return failure();
+    // Verify that the element type is supported by the runtime library.
+    if (!isValidPrimaryType(stt.getElementType()))
+      return rewriter.notifyMatchFailure(op, "unsupported element type");
     // Construct the `reader` opening method calls.
     SmallVector<Value> dimSizesValues;
     Value dimSizesBuffer;

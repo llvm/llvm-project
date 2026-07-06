@@ -509,9 +509,10 @@ enum RelocationInfoType {
   // not support no-PIC). Note: the compiler places the distance to
   // the paired AUIPC in the imm12 (e.g. if previous instruction is
   // the AUIPC, the imm12 is -4 or 0xFFC).  NOTE: this mean that the
-  // separation between hi/lo has to fit in (signed) 12 bits. FIXME:
-  // this needs addressing for code models that go beyond 4k
-  // functions.
+  // separation between hi/lo has to fit in (signed) 12 bits. Beyond
+  // 12-bits, the pc-relative offset is not inlined in the imm12, but
+  // it is instead stored in the 24-bits of a RISCV_RELOC_ADDEND
+  // record.
   RISCV_RELOC_LO12 = 4,
   // High 20 bits of GOT slot. r_pcrel=1 means this is paired with an
   // AUIPC.  r_pcrel=0 means this is paired with a LUI (the compiler
@@ -527,8 +528,8 @@ enum RelocationInfoType {
   // section). Not currently used, but added for completeness.
   RISCV_RELOC_POINTER_TO_GOT = 7,
   // Adds a static offset to a relocation.  Must be followed by
-  // RISCV_RELOC_PCREL_HI or RISCV_RELOC_BRANCH21. For example, the 16
-  // bytes offset in:
+  // RISCV_RELOC_PCREL_HI, RISCV_RELOC_BRANCH21 or
+  // RISCV_RELOC_LO12. For example, the 16 bytes offset in:
   //
   //         auipc a0, %pcrel_hi(var+16)
   RISCV_RELOC_ADDEND = 8,
@@ -1692,7 +1693,10 @@ enum CPUSubTypeARM {
   CPU_SUBTYPE_ARM_V7K = 12,
   CPU_SUBTYPE_ARM_V6M = 14,
   CPU_SUBTYPE_ARM_V7M = 15,
-  CPU_SUBTYPE_ARM_V7EM = 16
+  CPU_SUBTYPE_ARM_V7EM = 16,
+  CPU_SUBTYPE_ARM_V8M_MAIN = 17,
+  CPU_SUBTYPE_ARM_V8M_BASE = 18,
+  CPU_SUBTYPE_ARM_V8_1M_MAIN = 19,
 };
 
 enum CPUSubTypeARM64 : uint32_t {

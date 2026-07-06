@@ -1773,12 +1773,13 @@ bool MachineConstEvaluator::evaluateEXTRACTi(const APInt &A1, unsigned Bits,
     return true;
   }
   if (BW <= 64) {
-    int64_t V = A1.getZExtValue();
-    V <<= (64-Bits-Offset);
+    uint64_t U = A1.getZExtValue();
+    U <<= (64 - Bits - Offset);
+    int64_t V;
     if (Signed)
-      V >>= (64-Bits);
+      V = static_cast<int64_t>(U) >> (64 - Bits);
     else
-      V = static_cast<uint64_t>(V) >> (64-Bits);
+      V = static_cast<int64_t>(U >> (64 - Bits));
     Result = APInt(BW, V, Signed);
     return true;
   }
@@ -1990,7 +1991,8 @@ bool HexagonConstEvaluator::evaluate(const MachineInstr &MI,
         return false;
       IntegerType *Ty = (W == 32) ? Type::getInt32Ty(CX)
                                   : Type::getInt64Ty(CX);
-      const ConstantInt *CI = ConstantInt::get(Ty, V, true);
+      const ConstantInt *CI =
+          ConstantInt::get(Ty, V, /*IsSigned=*/true, /*ImplicitTrunc=*/true);
       LatticeCell RC = Outputs.get(DefR.Reg);
       RC.add(CI);
       Outputs.update(DefR.Reg, RC);

@@ -206,7 +206,7 @@ module Opcode : sig
   | Invalid (** Not an instruction *)
 
   | Ret (** Terminator Instructions *)
-  | Br
+  | Invalid3
   | Switch
   | IndirectBr
   | Invoke
@@ -278,6 +278,9 @@ module Opcode : sig
   | FNeg
   | CallBr
   | Freeze
+  | PtrToAddr
+  | UncondBr
+  | CondBr
 end
 
 (** The type of a clause of a [landingpad] instruction.
@@ -463,9 +466,6 @@ val create_context : unit -> llcontext
 (** [destroy_context ()] destroys a context. See the destructor
     [llvm::LLVMContext::~LLVMContext]. *)
 val dispose_context : llcontext -> unit
-
-(** See the function [LLVMGetGlobalContext]. *)
-val global_context : unit -> llcontext
 
 (** [mdkind_id context name] returns the MDKind ID that corresponds to the
     name [name] in the context [context].  See the function

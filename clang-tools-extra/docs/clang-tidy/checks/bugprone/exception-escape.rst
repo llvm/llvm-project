@@ -28,7 +28,10 @@ Functions declared explicitly with ``noexcept(false)`` or ``throw(exception)``
 will be excluded from the analysis, as even though it is not recommended for
 functions like ``swap()``, ``main()``, move constructors, move assignment
 operators and destructors, it is a clear indication of the developer's
-intention and should be respected.
+intention and should be respected. To check if these special functions are
+marked as potentially throwing, the check
+:doc:`bugprone-unsafe-to-allow-exceptions <unsafe-to-allow-exceptions>` can be
+used.
 
 WARNING! This check may be expensive on large source files.
 
@@ -71,3 +74,22 @@ Options
 
    Comma separated list containing type names which are not counted as thrown
    exceptions in the check. Default value is an empty string.
+
+.. option:: TreatFunctionsWithoutSpecificationAsThrowing
+
+   Determines which functions are considered as throwing if they do not have
+   an explicit exception specification. It can be set to the following values:
+
+   - `None`
+      The check will consider functions without an explicit exception
+      specification as throwing only if they have a visible definition which
+      can be deduced to throw.
+   - `OnlyUndefined`
+      The check will consider functions with only a declaration available and
+      no visible definition as throwing.
+   - `All`
+      The check will consider all functions without an explicit exception
+      specification (such as ``noexcept``) as throwing, even if they have a
+      visible definition and do not contain any throwing statements.
+
+   Default value is `None`.

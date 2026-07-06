@@ -71,3 +71,140 @@ void ignoreStdMaxMin() {
   (std::max)(1,2);
   (std::min)(1,2);
 }
+
+struct Foo
+{
+  bool x;
+  struct Y {
+    bool z;
+  } y;
+  void foo()
+  {
+   if ((x)) {
+     // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: redundant parentheses around expression [readability-redundant-parentheses]
+     // CHECK-FIXES:    if (x) {
+   }
+   if((this->x)) {
+     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
+     // CHECK-FIXES:    if(this->x) {
+   }
+  }
+  bool bar() {
+    return true;
+  }
+
+  Y fooBar() {
+    Y y{};
+    return y;
+  }
+};
+
+void memberExpr() {
+  Foo foo{};
+  if ((foo.x)) {
+   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
+   // CHECK-FIXES:    if (foo.x) {
+  }
+
+  if ((foo.y.z)) {
+   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
+   // CHECK-FIXES:    if (foo.y.z) {
+  }
+
+  if ((foo.bar())) {
+   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
+   // CHECK-FIXES:    if (foo.bar()) {
+  }
+
+  if ((foo.fooBar().z)) {
+   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant parentheses around expression [readability-redundant-parentheses]
+   // CHECK-FIXES:    if (foo.fooBar().z) {
+  }
+}
+
+enum class FoldLevel {
+  None = 0x0,
+  HeaderFlag = 0x2000,
+};
+
+int FoldLevelToInt(FoldLevel l) {
+  return static_cast<int>(l);
+}
+
+constexpr FoldLevel operator&(FoldLevel lhs, FoldLevel rhs) {
+  return static_cast<FoldLevel>(static_cast<int>(lhs) & static_cast<int>(rhs));
+}
+
+constexpr FoldLevel operator*(FoldLevel lhs, FoldLevel rhs) {
+  return static_cast<FoldLevel>(static_cast<int>(lhs) * static_cast<int>(rhs));
+}
+
+constexpr FoldLevel operator!(FoldLevel operand) {
+  return static_cast<FoldLevel>(!static_cast<int>(operand));
+}
+
+
+constexpr FoldLevel operator+(FoldLevel lhs, FoldLevel rhs) {
+  return lhs;
+}
+
+constexpr bool UseOperatorAmpersand1(FoldLevel level) {
+  return (level & FoldLevel::HeaderFlag) != FoldLevel::None;
+}
+
+constexpr bool UseOperatorAmpersand2(FoldLevel level) {
+  const FoldLevel l = level & FoldLevel::HeaderFlag;
+  return (l != FoldLevel::None);
+}
+
+constexpr bool UseOperatorAmpersand3(FoldLevel level) {
+  return ((level & FoldLevel::HeaderFlag) != FoldLevel::None);
+}
+
+constexpr bool UseOperatorAmpersand4(FoldLevel level) {
+  return FoldLevel::None != (level & FoldLevel::HeaderFlag);
+}
+
+constexpr bool UseOperatorAmpersand5(FoldLevel level) {
+  FoldLevel hf = FoldLevel::HeaderFlag;
+  // currently this check doesn't take into account order of operations, so the
+  // parentheses around `left & rhs` is needed
+  return ((level & hf) * hf) != FoldLevel::None;
+}
+
+constexpr bool UseOperatorAmpersand6(FoldLevel level) {
+  FoldLevel hf = FoldLevel::HeaderFlag;
+  return (!(level & hf) * hf) != FoldLevel::None;
+}
+
+constexpr FoldLevel UseOperatorAmpersand7(FoldLevel level) {
+  FoldLevel hf = FoldLevel::HeaderFlag;
+  return !(level & hf) * hf;
+}
+
+constexpr FoldLevel UseOperatorAmpersand8(FoldLevel level) {
+  FoldLevel hf = FoldLevel::HeaderFlag;
+  return hf * !(level & hf);
+}
+
+constexpr FoldLevel UseOperatorAmpersand9(FoldLevel level) {
+  FoldLevel hf = FoldLevel::HeaderFlag;
+  return !(level & hf);
+}
+
+constexpr bool UseOperatorPlus1(FoldLevel level) {
+  return (FoldLevelToInt(level + FoldLevel::None)) != 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: redundant parentheses around expression [readability-redundant-parentheses]
+  // CHECK-FIXES:    return FoldLevelToInt(level + FoldLevel::None) != 1;
+}
+
+constexpr bool UseOperatorPlus2(FoldLevel level) {
+  return (FoldLevelToInt(!(level + FoldLevel::None))) != 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: redundant parentheses around expression [readability-redundant-parentheses]
+  // CHECK-FIXES:    return FoldLevelToInt(!(level + FoldLevel::None)) != 1;
+}
+
+
+const int bracket_int_plus_num = (4) + 5;
+// CHECK-MESSAGES: :[[@LINE-1]]:34: warning: redundant parentheses around expression [readability-redundant-parentheses]
+// CHECK-FIXES:    const int bracket_int_plus_num = 4 + 5;

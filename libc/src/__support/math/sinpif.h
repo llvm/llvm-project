@@ -21,7 +21,8 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE static float sinpif(float x) {
+LIBC_INLINE float sinpif(float x) {
+  using namespace sincosf_utils_internal;
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);
 

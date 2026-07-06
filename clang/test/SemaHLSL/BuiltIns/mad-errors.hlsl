@@ -20,9 +20,11 @@ float2 test_mad_no_second_arg(float2 p0) {
   // expected-error@-1 {{no matching function for call to 'mad'}}
 }
 
+// With implicit conversions, the float2 overload is selected and float3 args
+// are implicitly truncated to float2 (warnings instead of type-mismatch error).
 float2 test_mad_vector_size_mismatch(float3 p0, float2 p1) {
   return mad(p0, p0, p1);
-  // expected-error@-1 {{arguments are of different types ('vector<[...], 3>' vs 'vector<[...], 2>')}}
+  // expected-warning@-1 2{{implicit conversion truncates vector: 'float3' (aka 'vector<float, 3>') to 'vector<float, 2>' (vector of 2 'float' values)}}
 }
 
 float2 test_mad_builtin_vector_size_mismatch(float3 p0, float2 p1) {

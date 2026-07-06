@@ -33,16 +33,35 @@ using namespace Fortran::runtime;
 
 namespace {
 
-static mlir::Value createKernelArgArray(mlir::Location loc,
-                                        mlir::ValueRange operands,
-                                        mlir::PatternRewriter &rewriter) {
+// Build the kernel argument array used for the CUDA kernel launch.
+//
+// Per-operand flattening is delegated to LLVMTypeConverter::promoteOperands so
+// the host-side parameter list follows the same calling convention as the
+// device kernel produced by gpu-to-nvvm using the same type converter:
+//   - ranked memrefs are unpacked into their descriptor scalar fields
+//     (allocatedPtr, alignedPtr, offset, sizes..., strides...);
+//   - unranked memrefs are unpacked via UnrankedMemRefDescriptor::unpack;
+//   - the useBarePtrCallConv case (single aligned pointer per memref) is
+//     honored via the type converter's configured option;
+//   - all other operands are passed through unchanged.
+//
+// The flattened values are materialized on the stack in a single struct
+// (preserving argument order), and a companion pointer array is populated with
+// the address of each field. That pointer array is what the CUDA launch
+// interface expects as kernelParams.
+static mlir::Value
+createKernelArgArray(mlir::Location loc, mlir::ValueRange origOperands,
+                     mlir::ValueRange adaptedOperands,
+                     const mlir::LLVMTypeConverter &typeConverter,
+                     mlir::PatternRewriter &rewriter) {
 
   auto *ctx = rewriter.getContext();
-  llvm::SmallVector<mlir::Type> structTypes(operands.size(), nullptr);
 
-  for (auto [i, arg] : llvm::enumerate(operands))
-    structTypes[i] = arg.getType();
+  llvm::SmallVector<mlir::Value, 4> flatValues = typeConverter.promoteOperands(
+      loc, origOperands, adaptedOperands, rewriter);
 
+  auto structTypes = llvm::map_to_vector(
+      flatValues, [](mlir::Value v) { return v.getType(); });
   auto structTy = mlir::LLVM::LLVMStructType::getLiteral(ctx, structTypes);
   auto ptrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
   mlir::Type i32Ty = rewriter.getI32Type();
@@ -57,7 +76,7 @@ static mlir::Value createKernelArgArray(mlir::Location loc,
   mlir::Value argArray =
       mlir::LLVM::AllocaOp::create(rewriter, loc, ptrTy, ptrTy, size);
 
-  for (auto [i, arg] : llvm::enumerate(operands)) {
+  for (auto [i, arg] : llvm::enumerate(flatValues)) {
     auto indice = mlir::LLVM::ConstantOp::create(
         rewriter, loc, i32Ty, rewriter.getIntegerAttr(i32Ty, i));
     mlir::Value structMember =
@@ -98,8 +117,9 @@ struct GPULaunchKernelConversion
       dynamicMemorySize = mlir::LLVM::ConstantOp::create(
           rewriter, loc, i32Ty, rewriter.getIntegerAttr(i32Ty, 0));
 
-    mlir::Value kernelArgs =
-        createKernelArgArray(loc, adaptor.getKernelOperands(), rewriter);
+    mlir::Value kernelArgs = createKernelArgArray(
+        loc, op.getKernelOperands(), adaptor.getKernelOperands(),
+        *this->getTypeConverter(), rewriter);
 
     auto ptrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
     auto kernel = mod.lookupSymbol<mlir::LLVM::LLVMFuncOp>(op.getKernelName());
@@ -244,10 +264,6 @@ struct CUFSharedMemoryOpConversion
   matchAndRewrite(cuf::SharedMemoryOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Location loc = op->getLoc();
-    if (!op.getOffset())
-      mlir::emitError(loc,
-                      "cuf.shared_memory must have an offset for code gen");
-
     auto gpuMod = op->getParentOfType<gpu::GPUModuleOp>();
 
     std::string sharedGlobalName =
@@ -266,7 +282,10 @@ struct CUFSharedMemoryOpConversion
         rewriter, loc, mlir::LLVM::LLVMPointerType::get(rewriter.getContext()),
         sharedGlobalAddr);
     mlir::Type baseType = castPtr->getResultTypes().front();
-    llvm::SmallVector<mlir::LLVM::GEPArg> gepArgs = {op.getOffset()};
+    mlir::LLVM::GEPArg offsetArg =
+        op.getOffset() ? mlir::LLVM::GEPArg(op.getOffset())
+                       : mlir::LLVM::GEPArg(static_cast<int32_t>(0));
+    llvm::SmallVector<mlir::LLVM::GEPArg> gepArgs = {offsetArg};
     mlir::Value shmemPtr = mlir::LLVM::GEPOp::create(
         rewriter, loc, baseType, rewriter.getI8Type(), castPtr, gepArgs);
     rewriter.replaceOp(op, {shmemPtr});

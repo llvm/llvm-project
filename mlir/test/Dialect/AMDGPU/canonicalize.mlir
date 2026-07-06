@@ -123,12 +123,14 @@ func.func @dead_store(%arg0: memref<4xf32>, %arg1: f32) {
 
 // -----
 
-// CHECK-LABEL: func @dead_atomic_add
-func.func @dead_atomic_add(%arg0: memref<4xf32>, %arg1: f32) {
+// CHECK-LABEL: func @oob_atomic_add
+func.func @oob_atomic_add(%arg0: memref<4xf32>, %arg1: f32) -> f32 {
   // CHECK-NOT: amdgpu.raw_buffer_atomic_fadd
+  // CHECK: %[[zero:.*]] = arith.constant 0.000000e+00 : f32
+  // CHECK: return %[[zero]] : f32
   %c4_i32 = arith.constant 4 : i32
-  amdgpu.raw_buffer_atomic_fadd {boundsCheck = true} %arg1 -> %arg0[%c4_i32] : f32 -> memref<4xf32>, i32
-  func.return
+  %0 = amdgpu.raw_buffer_atomic_fadd {boundsCheck = true} %arg1 -> %arg0[%c4_i32] : f32 -> memref<4xf32>, i32
+  func.return %0 : f32
 }
 
 // -----
@@ -157,6 +159,35 @@ func.func @fold_gather_to_lds_of_cast_dest(%global: memref<128x72xf32, 1>, %lds:
   // CHECK-SAME: : f32, memref<128x72xf32, 1>, memref<64x64xf32, 3>
   amdgpu.gather_to_lds %global[%c0, %c0], %0[%c0, %c0]
     : f32, memref<128x72xf32, 1>, memref<?x?xf32, 3>
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @global_load_async_to_lds_true_mask
+// CHECK-SAME: %[[SRC:.*]]: memref<16xf32, #gpu.address_space<global>>, %[[DST:.*]]: memref<16xf32, #gpu.address_space<workgroup>>
+func.func @global_load_async_to_lds_true_mask(%src: memref<16xf32, #gpu.address_space<global>>, %dst: memref<16xf32, #gpu.address_space<workgroup>>) {
+  // CHECK-NEXT: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK-NEXT: amdgpu.global_load_async_to_lds %[[SRC]][%[[C0]]], %[[DST]][%[[C0]]] : f32, memref<16xf32, #gpu.address_space<global>>, memref<16xf32, #gpu.address_space<workgroup>>
+  // CHECK-NEXT: return
+  %c0 = arith.constant 0 : index
+  %true = arith.constant true
+  amdgpu.global_load_async_to_lds %src[%c0], %dst[%c0], %true
+    : f32, memref<16xf32, #gpu.address_space<global>>,
+      memref<16xf32, #gpu.address_space<workgroup>>
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @global_load_async_to_lds_false_mask
+func.func @global_load_async_to_lds_false_mask(%src: memref<16xf32, #gpu.address_space<global>>, %dst: memref<16xf32, #gpu.address_space<workgroup>>) {
+  // CHECK-NEXT: return
+  %c0 = arith.constant 0 : index
+  %false = arith.constant false
+  amdgpu.global_load_async_to_lds %src[%c0], %dst[%c0], %false
+    : f32, memref<16xf32, #gpu.address_space<global>>,
+      memref<16xf32, #gpu.address_space<workgroup>>
   func.return
 }
 
@@ -199,6 +230,21 @@ func.func @scaled_mfma_less_than_4(%opA: vector<32xf4E2M1FN>, %opB: vector<32xf4
   %scaleA = vector.extract %scalesA[0] : f8E8M0FNU from vector<2xf8E8M0FNU>
   %sA = vector.insert %scaleA, %cst_1 [0] : f8E8M0FNU into vector<4xf8E8M0FNU>
   %scaleB = vector.extract %scalesB[1] : f8E8M0FNU from vector<2xf8E8M0FNU>
+  %sB = vector.insert %scaleB, %cst_1 [0] : f8E8M0FNU into vector<4xf8E8M0FNU>
+  %res_0 = amdgpu.scaled_mfma 16x16x128 (%sA[0] * %opA) * (%sB[0] * %opB) + %cst_0 : vector<4xf8E8M0FNU>, vector<32xf4E2M1FN>, vector<4xf8E8M0FNU>, vector<32xf4E2M1FN>, vector<4xf32>
+  return %res_0 : vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @scaled_mfma_exactly_4
+// CHECK: amdgpu.scaled_mfma 16x16x128 ({{.*}}[0] * {{.*}}) * ({{.*}}[1] * {{.*}}
+func.func @scaled_mfma_exactly_4(%opA: vector<32xf4E2M1FN>, %opB: vector<32xf4E2M1FN>, %scalesA: vector<4xf8E8M0FNU>, %scalesB: vector<4xf8E8M0FNU>) -> vector<4xf32> {
+  %cst_0 = arith.constant dense<0.000000e+00> : vector<4xf32>
+  %cst_1 = arith.constant dense<5.877470e-39> : vector<4xf8E8M0FNU>
+  %scaleA = vector.extract %scalesA[0] : f8E8M0FNU from vector<4xf8E8M0FNU>
+  %sA = vector.insert %scaleA, %cst_1 [0] : f8E8M0FNU into vector<4xf8E8M0FNU>
+  %scaleB = vector.extract %scalesB[1] : f8E8M0FNU from vector<4xf8E8M0FNU>
   %sB = vector.insert %scaleB, %cst_1 [0] : f8E8M0FNU into vector<4xf8E8M0FNU>
   %res_0 = amdgpu.scaled_mfma 16x16x128 (%sA[0] * %opA) * (%sB[0] * %opB) + %cst_0 : vector<4xf8E8M0FNU>, vector<32xf4E2M1FN>, vector<4xf8E8M0FNU>, vector<32xf4E2M1FN>, vector<4xf32>
   return %res_0 : vector<4xf32>

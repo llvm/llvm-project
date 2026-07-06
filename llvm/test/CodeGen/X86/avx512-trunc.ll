@@ -44,6 +44,54 @@ define <8 x i8> @trunc_qb_512(<8 x i64> %i) #0 {
   ret <8 x i8> %x
 }
 
+define <8 x i8> @trunc_qb_512_maskz(<8 x i64> %i, i8 %m) #0 {
+; KNL-LABEL: trunc_qb_512_maskz:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    vpmovqb %zmm0, %xmm0
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} {z} = -1
+; KNL-NEXT:    vpmovdb %zmm1, %xmm1
+; KNL-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; KNL-NEXT:    vzeroupper
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: trunc_qb_512_maskz:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vpmovqb %zmm0, %xmm0
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vmovdqu8 %xmm0, %xmm0 {%k1} {z}
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
+  %x = trunc <8 x i64> %i to <8 x i8>
+  %mask = bitcast i8 %m to <8 x i1>
+  %r = select <8 x i1> %mask, <8 x i8> %x, <8 x i8> zeroinitializer
+  ret <8 x i8> %r
+}
+
+define <8 x i8> @trunc_qb_512_mask(<8 x i64> %i, <8 x i8> %p, i8 %m) #0 {
+; KNL-LABEL: trunc_qb_512_mask:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    vpmovqb %zmm0, %xmm0
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vpternlogd {{.*#+}} zmm2 {%k1} {z} = -1
+; KNL-NEXT:    vpmovdb %zmm2, %xmm2
+; KNL-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
+; KNL-NEXT:    vzeroupper
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: trunc_qb_512_mask:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vpmovqb %zmm0, %xmm0
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpblendmb %xmm0, %xmm1, %xmm0 {%k1}
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
+  %x = trunc <8 x i64> %i to <8 x i8>
+  %mask = bitcast i8 %m to <8 x i1>
+  %r = select <8 x i1> %mask, <8 x i8> %x, <8 x i8> %p
+  ret <8 x i8> %r
+}
+
 define void @trunc_qb_512_mem(<8 x i64> %i, ptr %res) #0 {
 ; ALL-LABEL: trunc_qb_512_mem:
 ; ALL:       ## %bb.0:
@@ -129,6 +177,48 @@ define <8 x i16> @trunc_qw_512(<8 x i64> %i) #0 {
 ; ALL-NEXT:    retq
   %x = trunc <8 x i64> %i to <8 x i16>
   ret <8 x i16> %x
+}
+
+define <8 x i16> @trunc_qw_512_maskz(<8 x i64> %i, i8 %m) #0 {
+; KNL-LABEL: trunc_qw_512_maskz:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vpmovqw %zmm0, %xmm0 {%k1} {z}
+; KNL-NEXT:    vzeroupper
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: trunc_qw_512_maskz:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpmovqw %zmm0, %xmm0 {%k1} {z}
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
+  %x = trunc <8 x i64> %i to <8 x i16>
+  %mask = bitcast i8 %m to <8 x i1>
+  %r = select <8 x i1> %mask, <8 x i16> %x, <8 x i16> zeroinitializer
+  ret <8 x i16> %r
+}
+
+define <8 x i16> @trunc_qw_512_mask(<8 x i64> %i, <8 x i16> %p, i8 %m) #0 {
+; KNL-LABEL: trunc_qw_512_mask:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vpmovqw %zmm0, %xmm1 {%k1}
+; KNL-NEXT:    vmovdqa %xmm1, %xmm0
+; KNL-NEXT:    vzeroupper
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: trunc_qw_512_mask:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpmovqw %zmm0, %xmm1 {%k1}
+; SKX-NEXT:    vmovdqa %xmm1, %xmm0
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
+  %x = trunc <8 x i64> %i to <8 x i16>
+  %mask = bitcast i8 %m to <8 x i1>
+  %r = select <8 x i1> %mask, <8 x i16> %x, <8 x i16> %p
+  ret <8 x i16> %r
 }
 
 define void @trunc_qw_512_mem(<8 x i64> %i, ptr %res) #0 {
@@ -219,6 +309,44 @@ define <8 x i32> @trunc_qd_512(<8 x i64> %i) #0 {
   ret <8 x i32> %x
 }
 
+define <8 x i32> @trunc_qd_512_maskz(<8 x i64> %i, i8 %m) #0 {
+; KNL-LABEL: trunc_qd_512_maskz:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vpmovqd %zmm0, %ymm0 {%k1} {z}
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: trunc_qd_512_maskz:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpmovqd %zmm0, %ymm0 {%k1} {z}
+; SKX-NEXT:    retq
+  %x = trunc <8 x i64> %i to <8 x i32>
+  %mask = bitcast i8 %m to <8 x i1>
+  %r = select <8 x i1> %mask, <8 x i32> %x, <8 x i32> zeroinitializer
+  ret <8 x i32> %r
+}
+
+define <8 x i32> @trunc_qd_512_mask(<8 x i64> %i, <8 x i32> %p, i8 %m) #0 {
+; KNL-LABEL: trunc_qd_512_mask:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vpmovqd %zmm0, %ymm1 {%k1}
+; KNL-NEXT:    vmovdqa %ymm1, %ymm0
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: trunc_qd_512_mask:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpmovqd %zmm0, %ymm1 {%k1}
+; SKX-NEXT:    vmovdqa %ymm1, %ymm0
+; SKX-NEXT:    retq
+  %x = trunc <8 x i64> %i to <8 x i32>
+  %mask = bitcast i8 %m to <8 x i1>
+  %r = select <8 x i1> %mask, <8 x i32> %x, <8 x i32> %p
+  ret <8 x i32> %r
+}
+
 define void @trunc_qd_512_mem(<8 x i64> %i, ptr %res) #0 {
 ; ALL-LABEL: trunc_qd_512_mem:
 ; ALL:       ## %bb.0:
@@ -300,6 +428,48 @@ define <16 x i8> @trunc_db_512(<16 x i32> %i) #0 {
 ; ALL-NEXT:    retq
   %x = trunc <16 x i32> %i to <16 x i8>
   ret <16 x i8> %x
+}
+
+define <16 x i8> @trunc_db_512_maskz(<16 x i32> %i, i16 %m) #0 {
+; KNL-LABEL: trunc_db_512_maskz:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vpmovdb %zmm0, %xmm0 {%k1} {z}
+; KNL-NEXT:    vzeroupper
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: trunc_db_512_maskz:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpmovdb %zmm0, %xmm0 {%k1} {z}
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
+  %x = trunc <16 x i32> %i to <16 x i8>
+  %mask = bitcast i16 %m to <16 x i1>
+  %r = select <16 x i1> %mask, <16 x i8> %x, <16 x i8> zeroinitializer
+  ret <16 x i8> %r
+}
+
+define <16 x i8> @trunc_db_512_mask(<16 x i32> %i, <16 x i8> %p, i16 %m) #0 {
+; KNL-LABEL: trunc_db_512_mask:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vpmovdb %zmm0, %xmm1 {%k1}
+; KNL-NEXT:    vmovdqa %xmm1, %xmm0
+; KNL-NEXT:    vzeroupper
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: trunc_db_512_mask:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpmovdb %zmm0, %xmm1 {%k1}
+; SKX-NEXT:    vmovdqa %xmm1, %xmm0
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
+  %x = trunc <16 x i32> %i to <16 x i8>
+  %mask = bitcast i16 %m to <16 x i1>
+  %r = select <16 x i1> %mask, <16 x i8> %x, <16 x i8> %p
+  ret <16 x i8> %r
 }
 
 define void @trunc_db_512_mem(<16 x i32> %i, ptr %res) #0 {
@@ -388,6 +558,44 @@ define <16 x i16> @trunc_dw_512(<16 x i32> %i) #0 {
   ret <16 x i16> %x
 }
 
+define <16 x i16> @trunc_dw_512_maskz(<16 x i32> %i, i16 %m) #0 {
+; KNL-LABEL: trunc_dw_512_maskz:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vpmovdw %zmm0, %ymm0 {%k1} {z}
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: trunc_dw_512_maskz:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpmovdw %zmm0, %ymm0 {%k1} {z}
+; SKX-NEXT:    retq
+  %x = trunc <16 x i32> %i to <16 x i16>
+  %mask = bitcast i16 %m to <16 x i1>
+  %r = select <16 x i1> %mask, <16 x i16> %x, <16 x i16> zeroinitializer
+  ret <16 x i16> %r
+}
+
+define <16 x i16> @trunc_dw_512_mask(<16 x i32> %i, <16 x i16> %p, i16 %m) #0 {
+; KNL-LABEL: trunc_dw_512_mask:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    vpmovdw %zmm0, %ymm1 {%k1}
+; KNL-NEXT:    vmovdqa %ymm1, %ymm0
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: trunc_dw_512_mask:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpmovdw %zmm0, %ymm1 {%k1}
+; SKX-NEXT:    vmovdqa %ymm1, %ymm0
+; SKX-NEXT:    retq
+  %x = trunc <16 x i32> %i to <16 x i16>
+  %mask = bitcast i16 %m to <16 x i1>
+  %r = select <16 x i1> %mask, <16 x i16> %x, <16 x i16> %p
+  ret <16 x i16> %r
+}
+
 define void @trunc_dw_512_mem(<16 x i32> %i, ptr %res) #0 {
 ; ALL-LABEL: trunc_dw_512_mem:
 ; ALL:       ## %bb.0:
@@ -469,6 +677,69 @@ define <32 x i8> @trunc_wb_512(<32 x i16> %i) #0 {
 ; SKX-NEXT:    retq
   %x = trunc <32 x i16> %i to <32 x i8>
   ret <32 x i8> %x
+}
+
+define <32 x i8> @trunc_wb_512_maskz(<32 x i16> %i, i32 %m) #0 {
+; KNL-LABEL: trunc_wb_512_maskz:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    shrl $16, %edi
+; KNL-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
+; KNL-NEXT:    vpmovdb %zmm1, %xmm1
+; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
+; KNL-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
+; KNL-NEXT:    vpmovdb %zmm0, %xmm0
+; KNL-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; KNL-NEXT:    kmovw %edi, %k2
+; KNL-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} {z} = -1
+; KNL-NEXT:    vpmovdb %zmm1, %xmm1
+; KNL-NEXT:    vpternlogd {{.*#+}} zmm2 {%k2} {z} = -1
+; KNL-NEXT:    vpmovdb %zmm2, %xmm2
+; KNL-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; KNL-NEXT:    vpand %ymm0, %ymm1, %ymm0
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: trunc_wb_512_maskz:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpmovwb %zmm0, %ymm0 {%k1} {z}
+; SKX-NEXT:    retq
+  %x = trunc <32 x i16> %i to <32 x i8>
+  %mask = bitcast i32 %m to <32 x i1>
+  %r = select <32 x i1> %mask, <32 x i8> %x, <32 x i8> zeroinitializer
+  ret <32 x i8> %r
+}
+
+define <32 x i8> @trunc_wb_512_mask(<32 x i16> %i, <32 x i8> %p, i32 %m) #0 {
+; KNL-LABEL: trunc_wb_512_mask:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    kmovw %edi, %k1
+; KNL-NEXT:    shrl $16, %edi
+; KNL-NEXT:    vpmovzxwd {{.*#+}} zmm2 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
+; KNL-NEXT:    vpmovdb %zmm2, %xmm2
+; KNL-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
+; KNL-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
+; KNL-NEXT:    vpmovdb %zmm0, %xmm0
+; KNL-NEXT:    vinserti128 $1, %xmm0, %ymm2, %ymm0
+; KNL-NEXT:    kmovw %edi, %k2
+; KNL-NEXT:    vpternlogd {{.*#+}} zmm2 {%k1} {z} = -1
+; KNL-NEXT:    vpmovdb %zmm2, %xmm2
+; KNL-NEXT:    vpternlogd {{.*#+}} zmm3 {%k2} {z} = -1
+; KNL-NEXT:    vpmovdb %zmm3, %xmm3
+; KNL-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
+; KNL-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: trunc_wb_512_mask:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    kmovd %edi, %k1
+; SKX-NEXT:    vpmovwb %zmm0, %ymm1 {%k1}
+; SKX-NEXT:    vmovdqa %ymm1, %ymm0
+; SKX-NEXT:    retq
+  %x = trunc <32 x i16> %i to <32 x i8>
+  %mask = bitcast i32 %m to <32 x i1>
+  %r = select <32 x i1> %mask, <32 x i8> %x, <32 x i8> %p
+  ret <32 x i8> %r
 }
 
 define void @trunc_wb_512_mem(<32 x i16> %i, ptr %res) #0 {
@@ -1074,3 +1345,122 @@ define void @ssat_trunc_db_1024_mem(<32 x i32> %i, ptr %p) {
   ret void
 }
 
+; Test load-trunc-store pattern optimization for v4i16 -> v4i8
+define void @test_trunc_v4i16_v4i8(ptr %dst, ptr %src) {
+; KNL-LABEL: test_trunc_v4i16_v4i8:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; KNL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,u,u,u,u,u,u,u,u,u,u,u,u]
+; KNL-NEXT:    vmovd %xmm0, (%rdi)
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_trunc_v4i16_v4i8:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vpmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; SKX-NEXT:    vpmovdb %xmm0, (%rdi)
+; SKX-NEXT:    retq
+  %1 = load <4 x i16>, ptr %src
+  %2 = trunc <4 x i16> %1 to <4 x i8>
+  store <4 x i8> %2, ptr %dst
+  ret void
+}
+
+define void @test_truncs_v4i16_v4i8(ptr %dst, ptr %src) {
+; ALL-LABEL: test_truncs_v4i16_v4i8:
+; ALL:       ## %bb.0:
+; ALL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; ALL-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
+; ALL-NEXT:    vmovd %xmm0, (%rdi)
+; ALL-NEXT:    retq
+  %1 = load <4 x i16>, ptr %src
+  %2 = icmp sgt <4 x i16> %1, <i16 -128, i16 -128, i16 -128, i16 -128>
+  %3 = select <4 x i1> %2, <4 x i16> %1, <4 x i16> <i16 -128, i16 -128, i16 -128, i16 -128>
+  %4 = icmp slt <4 x i16> %3, <i16 127, i16 127, i16 127, i16 127>
+  %5 = select <4 x i1> %4, <4 x i16> %3, <4 x i16> <i16 127, i16 127, i16 127, i16 127>
+  %6 = trunc <4 x i16> %5 to <4 x i8>
+  store <4 x i8> %6, ptr %dst
+  ret void
+}
+
+define void @test_truncus_v4i16_v4i8(ptr %dst, ptr %src) {
+; KNL-LABEL: test_truncus_v4i16_v4i8:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; KNL-NEXT:    vpminuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; KNL-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
+; KNL-NEXT:    vmovd %xmm0, (%rdi)
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_truncus_v4i16_v4i8:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; SKX-NEXT:    vpmovuswb %xmm0, %xmm0
+; SKX-NEXT:    vmovd %xmm0, (%rdi)
+; SKX-NEXT:    retq
+  %1 = load <4 x i16>, ptr %src
+  %2 = icmp ult <4 x i16> %1, <i16 255, i16 255, i16 255, i16 255>
+  %3 = select <4 x i1> %2, <4 x i16> %1, <4 x i16> <i16 255, i16 255, i16 255, i16 255>
+  %4 = trunc <4 x i16> %3 to <4 x i8>
+  store <4 x i8> %4, ptr %dst
+  ret void
+}
+
+; Test load-trunc-store pattern optimization for v2i32 -> v2i8
+define void @test_trunc_v2i32_v2i8(ptr %dst, ptr %src) {
+; KNL-LABEL: test_trunc_v2i32_v2i8:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; KNL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
+; KNL-NEXT:    vpextrw $0, %xmm0, (%rdi)
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_trunc_v2i32_v2i8:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vpmovzxdq {{.*#+}} xmm0 = mem[0],zero,mem[1],zero
+; SKX-NEXT:    vpmovqb %xmm0, (%rdi)
+; SKX-NEXT:    retq
+  %1 = load <2 x i32>, ptr %src
+  %2 = trunc <2 x i32> %1 to <2 x i8>
+  store <2 x i8> %2, ptr %dst
+  ret void
+}
+
+; Test load-trunc-store pattern optimization for v2i32 -> v2i16
+define void @test_trunc_v2i32_v2i16(ptr %dst, ptr %src) {
+; KNL-LABEL: test_trunc_v2i32_v2i16:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; KNL-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
+; KNL-NEXT:    vmovd %xmm0, (%rdi)
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_trunc_v2i32_v2i16:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vpmovzxdq {{.*#+}} xmm0 = mem[0],zero,mem[1],zero
+; SKX-NEXT:    vpmovqw %xmm0, (%rdi)
+; SKX-NEXT:    retq
+  %1 = load <2 x i32>, ptr %src
+  %2 = trunc <2 x i32> %1 to <2 x i16>
+  store <2 x i16> %2, ptr %dst
+  ret void
+}
+
+; Test load-trunc-store pattern optimization for v2i16 -> v2i8
+define void @test_trunc_v2i16_v2i8(ptr %dst, ptr %src) {
+; KNL-LABEL: test_trunc_v2i16_v2i8:
+; KNL:       ## %bb.0:
+; KNL-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; KNL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
+; KNL-NEXT:    vpextrw $0, %xmm0, (%rdi)
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: test_trunc_v2i16_v2i8:
+; SKX:       ## %bb.0:
+; SKX-NEXT:    vpmovzxwq {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero
+; SKX-NEXT:    vpmovqb %xmm0, (%rdi)
+; SKX-NEXT:    retq
+  %1 = load <2 x i16>, ptr %src
+  %2 = trunc <2 x i16> %1 to <2 x i8>
+  store <2 x i8> %2, ptr %dst
+  ret void
+}

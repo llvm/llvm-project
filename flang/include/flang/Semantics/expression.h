@@ -169,6 +169,7 @@ public:
   MaybeExpr Analyze(const parser::DataStmtValue &);
   MaybeExpr Analyze(const parser::AllocateObject &);
   MaybeExpr Analyze(const parser::PointerObject &);
+  MaybeExpr Analyze(const parser::ConditionalExpr &);
 
   template <typename A> MaybeExpr Analyze(const common::Indirection<A> &x) {
     return Analyze(x.value());
@@ -251,6 +252,8 @@ public:
   MaybeExpr Analyze(const parser::InitialDataTarget &);
   MaybeExpr Analyze(const parser::NullInit &);
   MaybeExpr Analyze(const parser::StmtFunctionStmt &);
+  MaybeExpr Analyze(const parser::FunctionReference &,
+      std::optional<parser::StructureConstructor> * = nullptr);
 
   void Analyze(const parser::CallStmt &);
   const Assignment *Analyze(const parser::AssignmentStmt &);
@@ -292,8 +295,6 @@ private:
   MaybeExpr Analyze(const parser::CharLiteralConstantSubstring &);
   MaybeExpr Analyze(const parser::SubstringInquiry &);
   MaybeExpr Analyze(const parser::ArrayConstructor &);
-  MaybeExpr Analyze(const parser::FunctionReference &,
-      std::optional<parser::StructureConstructor> * = nullptr);
   MaybeExpr Analyze(const parser::Expr::Parentheses &);
   MaybeExpr Analyze(const parser::Expr::UnaryPlus &);
   MaybeExpr Analyze(const parser::Expr::Negate &);
@@ -377,7 +378,8 @@ private:
       const AdjustActuals &, bool isSubroutine, SymbolVector &&tried,
       bool mightBeStructureConstructor = false);
   void EmitGenericResolutionError(const Symbol &, bool dueToNullActuals,
-      bool isSubroutine, ActualArguments &, const SymbolVector &);
+      bool isSubroutine, const ActualArguments &, const SymbolVector &,
+      const AdjustActuals &);
   const Symbol &AccessSpecific(
       const Symbol &originalGeneric, const Symbol &specific);
   std::optional<CalleeAndArguments> GetCalleeAndArguments(const parser::Name &,
@@ -412,6 +414,9 @@ private:
   };
   MaybeExpr CheckStructureConstructor(parser::CharBlock typeName,
       const semantics::DerivedTypeSpec &, std::list<ComponentSpec> &&);
+  MaybeExpr AnalyzeEnumerationConstructor(parser::CharBlock typeName,
+      const semantics::DerivedTypeSpec &,
+      const std::list<parser::ComponentSpec> &);
 
   MaybeExpr IterativelyAnalyzeSubexpressions(const parser::Expr &);
 
@@ -465,12 +470,11 @@ evaluate::Expr<evaluate::SubscriptInteger> AnalyzeKindSelector(
     SemanticsContext &, common::TypeCategory,
     const std::optional<parser::KindSelector> &);
 
-void NoteUsedSymbols(SemanticsContext &, const SomeExpr &);
-void NoteUsedSymbols(SemanticsContext &, const evaluate::ProcedureRef &);
-void NoteUsedSymbols(SemanticsContext &, const evaluate::Assignment &);
-void NoteUsedSymbols(SemanticsContext &, const parser::TypedExpr &);
-void NoteUsedSymbols(SemanticsContext &, const parser::TypedCall &);
-void NoteUsedSymbols(SemanticsContext &, const parser::TypedAssignment &);
+void NoteUsedSymbols(
+    SemanticsContext &, const SomeExpr &, bool isDefinition = false);
+
+bool CheckMisparsedArrayElement(
+    SemanticsContext &, const parser::FunctionReference &);
 
 // Semantic analysis of all expressions in a parse tree, which becomes
 // decorated with typed representations for top-level expressions.
@@ -499,11 +503,11 @@ public:
     return false;
   }
   bool Pre(const parser::AllocateObject &x) {
-    AnalyzeAndNoteUses(x);
+    AnalyzeAndNoteUses(x, /*isDefinition=*/true);
     return false;
   }
   bool Pre(const parser::PointerObject &x) {
-    AnalyzeAndNoteUses(x);
+    AnalyzeAndNoteUses(x, /*isDefinition=*/true);
     return false;
   }
   bool Pre(const parser::DataStmtObject &);
@@ -583,14 +587,24 @@ public:
   }
 
 private:
-  template <typename A> void AnalyzeAndNoteUses(const A &x) {
+  template <typename A>
+  void AnalyzeAndNoteUses(
+      const A &x, [[maybe_unused]] bool isDefinition = false) {
     exprAnalyzer_.Analyze(x);
     if constexpr (parser::HasTypedExpr<A>::value) {
-      NoteUsedSymbols(context_, x.typedExpr);
+      if (x.typedExpr && x.typedExpr->v) {
+        NoteUsedSymbols(context_, *x.typedExpr->v, isDefinition);
+      }
     } else if constexpr (parser::HasTypedCall<A>::value) {
-      NoteUsedSymbols(context_, x.typedCall);
+      if (x.typedCall) {
+        context_.NoteUsedSymbols(
+            evaluate::CollectUsedSymbolValues(context_, *x.typedCall));
+      }
     } else if constexpr (parser::HasTypedAssignment<A>::value) {
-      NoteUsedSymbols(context_, x.typedAssignment);
+      if (x.typedAssignment && x.typedAssignment->v) {
+        context_.NoteUsedSymbols(
+            evaluate::CollectUsedSymbolValues(context_, *x.typedAssignment->v));
+      }
     }
   }
   bool InWhereBody() const { return whereDepth_ > 0; }

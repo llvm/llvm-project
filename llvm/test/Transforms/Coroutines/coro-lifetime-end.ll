@@ -13,21 +13,21 @@ declare void @consume.i8.array(ptr)
 define void @HasNoLifetimeEnd() presplitcoroutine {
 ; CHECK-LABEL: define void @HasNoLifetimeEnd() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @HasNoLifetimeEnd.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @HasNoLifetimeEnd, ptr @HasNoLifetimeEnd.resumers)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i64 16)
 ; CHECK-NEXT:    [[VFRAME:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @HasNoLifetimeEnd.resume, ptr [[VFRAME]], align 8
-; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds nuw [[HASNOLIFETIMEEND_FRAME:%.*]], ptr [[VFRAME]], i32 0, i32 1
+; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[VFRAME]], i64 8
 ; CHECK-NEXT:    store ptr @HasNoLifetimeEnd.destroy, ptr [[DESTROY_ADDR]], align 8
-; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds [[HASNOLIFETIMEEND_FRAME]], ptr [[VFRAME]], i32 0, i32 2
+; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds i8, ptr [[VFRAME]], i64 16
 ; CHECK-NEXT:    call void @consume.i8.array(ptr [[INDEX_ADDR1]])
-; CHECK-NEXT:    [[INDEX_ADDR2:%.*]] = getelementptr inbounds nuw [[HASNOLIFETIMEEND_FRAME]], ptr [[VFRAME]], i32 0, i32 3
+; CHECK-NEXT:    [[INDEX_ADDR2:%.*]] = getelementptr inbounds i8, ptr [[VFRAME]], i64 116
 ; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR2]], align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %testval = alloca %i8.array
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @HasNoLifetimeEnd, ptr null)
   %alloc = call ptr @malloc(i64 16) #3
   %vFrame = call noalias nonnull ptr @llvm.coro.begin(token %id, ptr %alloc)
 
@@ -50,21 +50,21 @@ exit:
 define void @LifetimeEndAfterCoroEnd() presplitcoroutine {
 ; CHECK-LABEL: define void @LifetimeEndAfterCoroEnd() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @LifetimeEndAfterCoroEnd.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @LifetimeEndAfterCoroEnd, ptr @LifetimeEndAfterCoroEnd.resumers)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i64 16)
 ; CHECK-NEXT:    [[VFRAME:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @LifetimeEndAfterCoroEnd.resume, ptr [[VFRAME]], align 8
-; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds nuw [[LIFETIMEENDAFTERCOROEND_FRAME:%.*]], ptr [[VFRAME]], i32 0, i32 1
+; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[VFRAME]], i64 8
 ; CHECK-NEXT:    store ptr @LifetimeEndAfterCoroEnd.destroy, ptr [[DESTROY_ADDR]], align 8
-; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds [[LIFETIMEENDAFTERCOROEND_FRAME]], ptr [[VFRAME]], i32 0, i32 2
+; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds i8, ptr [[VFRAME]], i64 16
 ; CHECK-NEXT:    call void @consume.i8.array(ptr [[INDEX_ADDR1]])
-; CHECK-NEXT:    [[INDEX_ADDR2:%.*]] = getelementptr inbounds nuw [[LIFETIMEENDAFTERCOROEND_FRAME]], ptr [[VFRAME]], i32 0, i32 3
+; CHECK-NEXT:    [[INDEX_ADDR2:%.*]] = getelementptr inbounds i8, ptr [[VFRAME]], i64 116
 ; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR2]], align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %testval = alloca %i8.array
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @LifetimeEndAfterCoroEnd, ptr null)
   %alloc = call ptr @malloc(i64 16) #3
   %vFrame = call noalias nonnull ptr @llvm.coro.begin(token %id, ptr %alloc)
 
@@ -88,22 +88,22 @@ exit:
 define void @BranchWithoutLifetimeEnd() presplitcoroutine {
 ; CHECK-LABEL: define void @BranchWithoutLifetimeEnd() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @BranchWithoutLifetimeEnd.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @BranchWithoutLifetimeEnd, ptr @BranchWithoutLifetimeEnd.resumers)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i64 16)
 ; CHECK-NEXT:    [[VFRAME:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @BranchWithoutLifetimeEnd.resume, ptr [[VFRAME]], align 8
-; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds nuw [[BRANCHWITHOUTLIFETIMEEND_FRAME:%.*]], ptr [[VFRAME]], i32 0, i32 1
+; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[VFRAME]], i64 8
 ; CHECK-NEXT:    store ptr @BranchWithoutLifetimeEnd.destroy, ptr [[DESTROY_ADDR]], align 8
-; CHECK-NEXT:    [[TESTVAL:%.*]] = getelementptr inbounds [[BRANCHWITHOUTLIFETIMEEND_FRAME]], ptr [[VFRAME]], i32 0, i32 2
+; CHECK-NEXT:    [[TESTVAL:%.*]] = getelementptr inbounds i8, ptr [[VFRAME]], i64 16
 ; CHECK-NEXT:    call void @consume.i8.array(ptr [[TESTVAL]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr @testbool, align 1
-; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds nuw [[BRANCHWITHOUTLIFETIMEEND_FRAME]], ptr [[VFRAME]], i32 0, i32 3
+; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds i8, ptr [[VFRAME]], i64 116
 ; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR1]], align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %testval = alloca %i8.array
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @BranchWithoutLifetimeEnd, ptr null)
   %alloc = call ptr @malloc(i64 16) #3
   %vFrame = call noalias nonnull ptr @llvm.coro.begin(token %id, ptr %alloc)
 

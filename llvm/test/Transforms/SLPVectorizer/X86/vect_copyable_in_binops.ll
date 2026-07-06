@@ -36,7 +36,7 @@ define void @add1(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-LABEL: @add1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[SRC:%.*]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[TMP0]], <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <4 x i32> [[TMP0]], <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[DST:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -211,18 +211,9 @@ entry:
 define void @mul(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-LABEL: @mul(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INCDEC_PTR2:%.*]] = getelementptr inbounds i32, ptr [[SRC:%.*]], i64 2
-; CHECK-NEXT:    [[INCDEC_PTR4:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 2
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw <2 x i32> [[TMP0]], <i32 257, i32 -3>
-; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[DST]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR5:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[INCDEC_PTR2]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR7:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 3
-; CHECK-NEXT:    store i32 [[TMP2]], ptr [[INCDEC_PTR4]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[INCDEC_PTR5]], align 4
-; CHECK-NEXT:    [[MUL9:%.*]] = mul nsw i32 [[TMP3]], -9
-; CHECK-NEXT:    store i32 [[MUL9]], ptr [[INCDEC_PTR7]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[SRC:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw <4 x i32> [[TMP0]], <i32 257, i32 -3, i32 1, i32 -9>
+; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[DST:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -339,7 +330,7 @@ define void @add1f(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-LABEL: @add1f(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[SRC:%.*]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd <4 x float> [[TMP0]], <float -0.000000e+00, float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz arcp contract afn <4 x float> [[TMP0]], <float -0.000000e+00, float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>
 ; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[DST:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -368,7 +359,7 @@ define void @sub0f(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-LABEL: @sub0f(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[SRC:%.*]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd fast <4 x float> [[TMP0]], <float -1.000000e+00, float -0.000000e+00, float -2.000000e+00, float -3.000000e+00>
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz arcp contract afn <4 x float> [[TMP0]], <float -1.000000e+00, float -0.000000e+00, float -2.000000e+00, float -3.000000e+00>
 ; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[DST:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -537,7 +528,7 @@ define void @mulf(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-LABEL: @mulf(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[SRC:%.*]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast <4 x float> [[TMP0]], <float 2.570000e+02, float -3.000000e+00, float 1.000000e+00, float -9.000000e+00>
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc nsz arcp contract afn <4 x float> [[TMP0]], <float 2.570000e+02, float -3.000000e+00, float 1.000000e+00, float -9.000000e+00>
 ; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[DST:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;

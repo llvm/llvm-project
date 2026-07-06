@@ -116,27 +116,5 @@ ErrorOr<int> fcntl(int fd, int cmd, void *arg) {
   return ret;
 }
 
-ErrorOr<int> open(const char *path, int flags, mode_t mode_flags) {
-#ifdef SYS_open
-  int fd = LIBC_NAMESPACE::syscall_impl<int>(SYS_open, path, flags, mode_flags);
-#else
-  int fd = LIBC_NAMESPACE::syscall_impl<int>(SYS_openat, AT_FDCWD, path, flags,
-                                             mode_flags);
-#endif
-  if (fd < 0)
-    return Error(-fd);
-
-  return fd;
-}
-
-ErrorOr<int> close(int fd) {
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_close, fd);
-
-  if (ret < 0)
-    return Error(-ret);
-
-  return ret;
-}
-
 } // namespace internal
 } // namespace LIBC_NAMESPACE_DECL

@@ -28,8 +28,6 @@ public:
 
   void Dump(Stream *s, bool show_context);
 
-  TypeList FindTypes(ConstString name);
-
   void Insert(const lldb::TypeSP &type);
 
   uint32_t GetSize() const;

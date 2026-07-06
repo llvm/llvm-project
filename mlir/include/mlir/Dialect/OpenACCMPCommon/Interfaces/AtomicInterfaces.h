@@ -14,6 +14,7 @@
 #ifndef OPENACC_MP_COMMON_INTERFACES_ATOMICINTERFACES_H_
 #define OPENACC_MP_COMMON_INTERFACES_ATOMICINTERFACES_H_
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 

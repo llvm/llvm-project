@@ -112,23 +112,23 @@ define void @no_pointer_vector(ptr nocapture align 16 %rd0) {
 ; CHECK-LABEL: define void @no_pointer_vector(
 ; CHECK-SAME: ptr align 16 captures(none) [[RD0:%.*]]) {
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load <2 x ptr>, ptr [[RD0]], align 16
-; CHECK-NEXT:    [[P1:%.*]] = icmp ne <2 x ptr> [[LOAD1]], zeroinitializer
-; CHECK-NEXT:    [[S1:%.*]] = select <2 x i1> [[P1]], <2 x ptr> [[LOAD1]], <2 x ptr> zeroinitializer
+; CHECK-NEXT:    [[P1:%.*]] = icmp ne <2 x ptr> [[LOAD1]], splat (ptr null)
+; CHECK-NEXT:    [[S1:%.*]] = select <2 x i1> [[P1]], <2 x ptr> [[LOAD1]], <2 x ptr> splat (ptr null)
 ; CHECK-NEXT:    store <2 x ptr> [[S1]], ptr [[RD0]], align 16
 ; CHECK-NEXT:    [[IN2:%.*]] = getelementptr ptr, ptr [[RD0]], i64 2
 ; CHECK-NEXT:    [[LOAD2:%.*]] = load <2 x ptr>, ptr [[IN2]], align 4
-; CHECK-NEXT:    [[P2:%.*]] = icmp ne <2 x ptr> [[LOAD2]], zeroinitializer
-; CHECK-NEXT:    [[S2:%.*]] = select <2 x i1> [[P2]], <2 x ptr> [[LOAD2]], <2 x ptr> zeroinitializer
+; CHECK-NEXT:    [[P2:%.*]] = icmp ne <2 x ptr> [[LOAD2]], splat (ptr null)
+; CHECK-NEXT:    [[S2:%.*]] = select <2 x i1> [[P2]], <2 x ptr> [[LOAD2]], <2 x ptr> splat (ptr null)
 ; CHECK-NEXT:    store <2 x ptr> [[S2]], ptr [[IN2]], align 4
 ; CHECK-NEXT:    [[IN3:%.*]] = getelementptr ptr, ptr [[RD0]], i64 4
 ; CHECK-NEXT:    [[LOAD3:%.*]] = load <2 x ptr>, ptr [[IN3]], align 4
-; CHECK-NEXT:    [[P3:%.*]] = icmp ne <2 x ptr> [[LOAD3]], zeroinitializer
-; CHECK-NEXT:    [[S3:%.*]] = select <2 x i1> [[P3]], <2 x ptr> [[LOAD3]], <2 x ptr> zeroinitializer
+; CHECK-NEXT:    [[P3:%.*]] = icmp ne <2 x ptr> [[LOAD3]], splat (ptr null)
+; CHECK-NEXT:    [[S3:%.*]] = select <2 x i1> [[P3]], <2 x ptr> [[LOAD3]], <2 x ptr> splat (ptr null)
 ; CHECK-NEXT:    store <2 x ptr> [[S3]], ptr [[IN3]], align 4
 ; CHECK-NEXT:    [[IN4:%.*]] = getelementptr ptr, ptr [[RD0]], i64 6
 ; CHECK-NEXT:    [[LOAD4:%.*]] = load <2 x ptr>, ptr [[IN4]], align 4
-; CHECK-NEXT:    [[P4:%.*]] = icmp ne <2 x ptr> [[LOAD4]], zeroinitializer
-; CHECK-NEXT:    [[S4:%.*]] = select <2 x i1> [[P4]], <2 x ptr> [[LOAD4]], <2 x ptr> zeroinitializer
+; CHECK-NEXT:    [[P4:%.*]] = icmp ne <2 x ptr> [[LOAD4]], splat (ptr null)
+; CHECK-NEXT:    [[S4:%.*]] = select <2 x i1> [[P4]], <2 x ptr> [[LOAD4]], <2 x ptr> splat (ptr null)
 ; CHECK-NEXT:    store <2 x ptr> [[S4]], ptr [[IN4]], align 4
 ; CHECK-NEXT:    ret void
 ;

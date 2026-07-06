@@ -11,17 +11,17 @@ define i32 @foo(ptr %p) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    store i8 0, ptr [[P]], align 1, !dbg [[DBG3:![0-9]+]]
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[EXIT:.*]], !dbg [[DBG3]]
+; CHECK-NEXT:    store i8 0, ptr [[P]], align 1, !dbg [[DBG3:![0-9]+]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
   br label %loop
 
-loop:                                          ; preds = %loop, %entry
+loop:
   %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ], !dbg !3
   %conv = trunc i64 0 to i8, !dbg !4
   store i8 %conv, ptr %p, align 1, !dbg !5
@@ -29,7 +29,7 @@ loop:                                          ; preds = %loop, %entry
   %exitcond = icmp eq i64 %iv, 1, !dbg !7
   br i1 %exitcond, label %exit, label %loop, !dbg !8
 
-exit:                              ; preds = %loop
+exit:
   ret i32 0
 }
 

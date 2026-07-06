@@ -135,7 +135,7 @@ static bool isRematerializationCandidate(Value val,
   // Trace through view-like operations to find the original value.
   Value origVal = getOriginalValue(val);
   Operation *definingOp = origVal.getDefiningOp();
-  if (!definingOp)
+  if (!definingOp && !(definingOp = val.getDefiningOp()))
     return false;
 
   LLVM_DEBUG(llvm::dbgs() << "\tChecking candidate: " << *definingOp << "\n");
@@ -178,6 +178,19 @@ static bool isRematerializationCandidate(Value val,
           return true;
         }
       }
+    }
+  }
+
+  // An op implementing both ViewLikeOpInterface and
+  // OutlineRematerializationOpInterface may have been traced through by
+  // getOriginalValue. If the traced op is not a candidate, check the direct
+  // defining op of the live-in value.
+  if (origVal != val) {
+    if (isa_and_nonnull<acc::OutlineRematerializationOpInterface>(
+            val.getDefiningOp())) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "\t\t-> OutlineRematerializationOpInterface (direct)\n");
+      return true;
     }
   }
 

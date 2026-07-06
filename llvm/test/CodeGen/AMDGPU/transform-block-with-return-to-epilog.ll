@@ -32,7 +32,7 @@ define amdgpu_ps float @test_return_to_epilog_into_end_block(i32 inreg %a, float
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; GCN-NEXT:   GLOBAL_STORE_DWORD undef renamable $vgpr0_vgpr1, killed renamable $vgpr0, 0, 0, implicit $exec :: (volatile store (s32) into `ptr addrspace(1) poison`, addrspace 1)
-  ; GCN-NEXT:   S_WAITCNT 3952
+  ; GCN-NEXT:   S_WAITCNT .Vmcnt_0
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.3:
 entry:
@@ -79,7 +79,7 @@ define amdgpu_ps float @test_unify_return_to_epilog_into_end_block(i32 inreg %a,
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; GCN-NEXT:   GLOBAL_STORE_DWORD undef renamable $vgpr0_vgpr1, killed renamable $vgpr0, 0, 0, implicit $exec :: (volatile store (s32) into `ptr addrspace(1) poison`, addrspace 1)
-  ; GCN-NEXT:   S_WAITCNT 3952
+  ; GCN-NEXT:   S_WAITCNT .Vmcnt_0
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.5:
 entry:
@@ -105,7 +105,7 @@ define amdgpu_ps { <4 x float> } @test_return_to_epilog_with_optimized_kill(floa
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   renamable $vgpr1 = nofpexcept V_RCP_F32_e32 $vgpr0, implicit $mode, implicit $exec
   ; GCN-NEXT:   $sgpr0_sgpr1 = S_MOV_B64 $exec
-  ; GCN-NEXT:   nofpexcept V_CMP_NGT_F32_e32 0, killed $vgpr1, implicit-def $vcc, implicit $mode, implicit $exec
+  ; GCN-NEXT:   nofpexcept V_CMP_LE_F32_e32 0, killed $vgpr1, implicit-def $vcc, implicit $mode, implicit $exec
   ; GCN-NEXT:   $sgpr2_sgpr3 = S_AND_SAVEEXEC_B64 killed $vcc, implicit-def $exec, implicit-def $scc, implicit $exec
   ; GCN-NEXT:   renamable $sgpr2_sgpr3 = S_XOR_B64 $exec, killed renamable $sgpr2_sgpr3, implicit-def dead $scc
   ; GCN-NEXT:   S_CBRANCH_EXECNZ %bb.3, implicit $exec

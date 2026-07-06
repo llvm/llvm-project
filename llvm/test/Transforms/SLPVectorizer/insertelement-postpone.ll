@@ -16,7 +16,7 @@ define <4 x double> @test(ptr %p2, double %i1754, double %i1781, double %i1778) 
 ; X86-NEXT:    [[TMP11:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 poison, i32 poison, i32 poison, i32 1>
 ; X86-NEXT:    [[TMP8:%.*]] = shufflevector <4 x double> [[TMP4]], <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double poison>, <4 x i32> <i32 4, i32 5, i32 6, i32 1>
 ; X86-NEXT:    [[TMP9:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double poison>, <4 x i32> <i32 4, i32 5, i32 6, i32 2>
-; X86-NEXT:    [[TMP6:%.*]] = fmul <4 x double> [[TMP8]], [[TMP9]]
+; X86-NEXT:    [[TMP6:%.*]] = fmul fast <4 x double> [[TMP8]], [[TMP9]]
 ; X86-NEXT:    [[TMP7:%.*]] = fadd fast <4 x double> [[TMP5]], [[TMP6]]
 ; X86-NEXT:    ret <4 x double> [[TMP7]]
 ;
@@ -33,7 +33,7 @@ define <4 x double> @test(ptr %p2, double %i1754, double %i1781, double %i1778) 
 ; AARCH86-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 poison, i32 poison, i32 poison, i32 1>
 ; AARCH86-NEXT:    [[TMP8:%.*]] = shufflevector <4 x double> [[TMP4]], <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double poison>, <4 x i32> <i32 4, i32 5, i32 6, i32 1>
 ; AARCH86-NEXT:    [[TMP9:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double poison>, <4 x i32> <i32 4, i32 5, i32 6, i32 2>
-; AARCH86-NEXT:    [[TMP6:%.*]] = fmul <4 x double> [[TMP8]], [[TMP9]]
+; AARCH86-NEXT:    [[TMP6:%.*]] = fmul fast <4 x double> [[TMP8]], [[TMP9]]
 ; AARCH86-NEXT:    [[I1994:%.*]] = fadd fast <4 x double> [[TMP5]], [[TMP6]]
 ; AARCH86-NEXT:    ret <4 x double> [[I1994]]
 ;

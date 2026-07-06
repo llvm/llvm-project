@@ -14,6 +14,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PointerUnion.h"
 #include <optional>
+#include <string>
 
 namespace clang {
 class CXXBaseSpecifier;
@@ -28,6 +29,7 @@ class Stmt;
 class TranslationUnitDecl;
 class Type;
 class TypedefDecl;
+class VarDecl;
 
 // Ref-countability of a type is implicitly defined by Ref<T> and RefPtr<T>
 // implementation. It can be modeled as: type T having public methods ref() and
@@ -58,6 +60,10 @@ bool isCheckedPtr(const clang::CXXRecordDecl *Class);
 
 /// \returns true if \p Class is a RetainPtr, false if not.
 bool isRetainPtrOrOSPtr(const clang::CXXRecordDecl *Class);
+
+/// \returns true if \p Class is a weak smart pointer (WeakPtr, InlineWeakPtr,
+/// etc...), false if not.
+bool isWeakPtr(const clang::CXXRecordDecl *Class);
 
 /// \returns true if \p Class is a smart pointer (RefPtr, WeakPtr, etc...),
 /// false if not.
@@ -138,7 +144,7 @@ bool isCheckedPtr(const std::string &Name);
 /// \returns true if \p Name is RetainPtr or its variant, false if not.
 bool isRetainPtrOrOSPtr(const std::string &Name);
 
-/// \returns true if \p Name is an owning smar pointer such as Ref, CheckedPtr,
+/// \returns true if \p Name is an owning smart pointer such as Ref, CheckedPtr,
 /// and unique_ptr.
 bool isOwnerPtr(const std::string &Name);
 
@@ -167,8 +173,15 @@ bool isSingleton(const NamedDecl *F);
 class TrivialFunctionAnalysis {
 public:
   /// \returns true if \p D is a "trivial" function.
-  bool isTrivial(const Decl *D) const { return isTrivialImpl(D, TheCache); }
-  bool isTrivial(const Stmt *S) const { return isTrivialImpl(S, TheCache); }
+  bool isTrivial(const Decl *D, const Stmt **OffendingStmt = nullptr) const {
+    return isTrivialImpl(D, TheCache, OffendingStmt);
+  }
+  bool isTrivial(const Stmt *S, const Stmt **OffendingStmt = nullptr) const {
+    return isTrivialImpl(S, TheCache, OffendingStmt);
+  }
+  bool hasTrivialDtor(const VarDecl *VD) const {
+    return hasTrivialDtorImpl(VD, TheCache);
+  }
 
 private:
   friend class TrivialFunctionAnalysisVisitor;
@@ -177,8 +190,9 @@ private:
       llvm::DenseMap<llvm::PointerUnion<const Decl *, const Stmt *>, bool>;
   mutable CacheTy TheCache{};
 
-  static bool isTrivialImpl(const Decl *D, CacheTy &Cache);
-  static bool isTrivialImpl(const Stmt *S, CacheTy &Cache);
+  static bool isTrivialImpl(const Decl *D, CacheTy &Cache, const Stmt **);
+  static bool isTrivialImpl(const Stmt *S, CacheTy &Cache, const Stmt **);
+  static bool hasTrivialDtorImpl(const VarDecl *VD, CacheTy &Cache);
 };
 
 } // namespace clang

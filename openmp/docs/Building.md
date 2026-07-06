@@ -20,11 +20,12 @@ for those requirements.
 ### Requirements for Building with Nvidia GPU support
 
 The CUDA SDK is required on the machine that will build and execute the
-offloading application. Normally this is only required at runtime by dynamically
-opening the CUDA driver API. This can be disabled in the build by omitting
-`cuda` from the [`LIBOMPTARGET_DLOPEN_PLUGINS`](LIBOMPTARGET_DLOPEN_PLUGINS)
-list which is present by default. With this setting we will instead find the
-CUDA library at LLVM build time and link against it directly.
+offloading application. The CUDA driver must support CUDA 11.8.0 or later.
+Normally this is only required at runtime when the CUDA driver API is
+dynamically opened. This can be disabled in the build by omitting `cuda` from
+the [`LIBOMPTARGET_DLOPEN_PLUGINS`](LIBOMPTARGET_DLOPEN_PLUGINS) list which is
+present by default. With this setting we will instead find the CUDA library at
+LLVM build time and link against it directly.
 
 
 ### Requirements for Building with AMD GPU support
@@ -136,8 +137,8 @@ is expected to have been built from the same Git commit as OpenMP. It will,
 however, use the compiler detected by CMake, usually gcc.
 To also make it use Clang, add
 `-DCMAKE_C_COMPILER=../build/bin/clang -DCMAKE_C_COMPILER=../build/bin/clang++`.
-In any case, it will use Clang from `LLVM_BINARY_DIR` for running the regression
-tests. `LLVM_BINARY_DIR` can also be omitted in which case testing
+Clang/Flang from `LLVM_BINARY_DIR` will be used for testing if available, otherwise `CMAKE_C_COMPILER`/`CMAKE_CXX_COMPILER`/`CMAKE_Fortran_COMPILER`. Tests are also only expected to work with Clang/Flang built from the same Git commit, so `OPENMP_TEST_C_COMPILER`/`OPENMP_TEST_CXX_COMPILER`/`OPENMP_TEST_Fortran_COMPILER` can be used to explicitly set the test compilers.
+`LLVM_BINARY_DIR` can also be omitted in which case testing
 (`ninja check-openmp`) is disabled.
 
 The `CMAKE_INSTALL_PREFIX` can be the same, but does not need to. Using the same
@@ -269,6 +270,14 @@ tests.
 : Location, relative to [`CMAKE_INSTALL_PREFIX`][CMAKE_INSTALL_PREFIX], where to
 install the OpenMP libraries (`.a` and `.so`)
 
+**OPENMP_TEST_C_COMPILER**:STRING (default: Clang built in the same build configuration, or **CMAKE_C_COMPILER**)
+: C compiler to use for testing OpenMP runtime libraries.
+
+**OPENMP_TEST_CXX_COMPILER**:STRING (default: Clang built in the same build configuration, or **CMAKE_CXX_COMPILER**)
+: C++ compiler to use for testing OpenMP runtime libraries.
+
+**OPENMP_TEST_Fortran_COMPILER**:STRING (default: Flang built in the same build configuration, or **CMAKE_Fortran_COMPILER**)
+: Fortran compiler to use for testing OpenMP runtime libraries.
 
 ### Options for `libomp`
 

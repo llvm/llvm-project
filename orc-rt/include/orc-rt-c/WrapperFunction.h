@@ -14,10 +14,11 @@
 #ifndef ORC_RT_C_WRAPPERFUNCTION_H
 #define ORC_RT_C_WRAPPERFUNCTION_H
 
+#include "orc-rt-c/Compiler.h"
 #include "orc-rt-c/CoreTypes.h"
-#include "orc-rt-c/ExternC.h"
 
 #include <assert.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 

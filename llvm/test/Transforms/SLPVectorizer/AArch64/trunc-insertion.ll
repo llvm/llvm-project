@@ -9,7 +9,7 @@ define dso_local void @l(i1 %arg) local_unnamed_addr {
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i16> [ undef, [[BB:%.*]] ], [ [[TMP9:%.*]], [[BB25:%.*]] ]
-; CHECK-NEXT:    br i1 %arg, label [[BB3:%.*]], label [[BB11:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[BB3:%.*]], label [[BB11:%.*]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[I4:%.*]] = zext i1 undef to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i16> [[TMP0]], undef
@@ -34,7 +34,7 @@ define dso_local void @l(i1 %arg) local_unnamed_addr {
 ; CHECK-NEXT:    [[TMP13:%.*]] = zext i1 [[TMP12]] to i32
 ; CHECK-NEXT:    [[I32:%.*]] = and i32 [[I31]], [[TMP13]]
 ; CHECK-NEXT:    [[I33:%.*]] = and i32 [[I32]], [[I28]]
-; CHECK-NEXT:    br i1 %arg, label [[BB34:%.*]], label [[BB1]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[BB34:%.*]], label [[BB1]]
 ; CHECK:       bb34:
 ; CHECK-NEXT:    [[I35:%.*]] = phi i32 [ [[I33]], [[BB25]] ]
 ; CHECK-NEXT:    br label [[BB36:%.*]]

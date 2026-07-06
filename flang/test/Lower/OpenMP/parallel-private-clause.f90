@@ -1,7 +1,7 @@
 ! This test checks lowering of OpenMP parallel Directive with
 ! `PRIVATE` clause present.
 
-! RUN: bbc --use-desc-for-alloc=false -fopenmp -emit-hlfir %s -o - \
+! RUN: bbc -fopenmp -emit-hlfir %s -o - \
 ! RUN: | FileCheck %s --check-prefix=FIRDialect
 
 ! FIRDialect: omp.private {type = private} @_QFsimd_loop_1Er_private_box_heap_f32 : !fir.box<!fir.heap<f32>> init {
@@ -349,7 +349,7 @@ subroutine simd_loop_1
   ! FIRDialect:     %[[UB:.*]] = arith.constant 9 : i32
   ! FIRDialect:     %[[STEP:.*]] = arith.constant 1 : i32
 
-  ! FIRDialect: omp.simd linear({{.*}} = %[[STEP]] : !fir.ref<i32>) private({{.*}}) {
+  ! FIRDialect: omp.simd linear({{.*}} : !fir.ref<i32> = %[[STEP]] : i32) private({{.*}}) {
   ! FIRDialect-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
   !$OMP SIMD PRIVATE(r)
   do i=1, 9

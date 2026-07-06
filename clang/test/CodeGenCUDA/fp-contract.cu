@@ -15,7 +15,7 @@
 // RUN:   -disable-llvm-passes -o - %s \
 // RUN:   | FileCheck -check-prefixes=COMMON,NV-ON %s
 // RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -S \
-// RUN:   -target-cpu gfx906 -disable-llvm-passes -o - -x hip %s \
+// RUN:   -O1 -target-cpu gfx906 -disable-llvm-passes -o - -x hip %s \
 // RUN:   | FileCheck -check-prefixes=COMMON,AMD-ON %s
 // RUN: %clang_cc1 -fcuda-is-device -triple nvptx-nvidia-cuda -S \
 // RUN:   -O3 -o - %s \
@@ -44,7 +44,7 @@
 // RUN:   -ffp-contract=fast -disable-llvm-passes -o - %s \
 // RUN:   | FileCheck -check-prefixes=COMMON,NV-ON %s
 // RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -S \
-// RUN:   -target-cpu gfx906 -disable-llvm-passes -o - -x hip %s \
+// RUN:   -O1 -target-cpu gfx906 -disable-llvm-passes -o - -x hip %s \
 // RUN:   -ffp-contract=fast \
 // RUN:   | FileCheck -check-prefixes=COMMON,AMD-ON %s
 // RUN: %clang_cc1 -fcuda-is-device -triple nvptx-nvidia-cuda -S \
@@ -79,7 +79,7 @@
 // RUN:   -ffp-contract=fast-honor-pragmas -disable-llvm-passes -o - %s \
 // RUN:   | FileCheck -check-prefixes=COMMON,NV-ON %s
 // RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -S \
-// RUN:   -target-cpu gfx906 -disable-llvm-passes -o - -x hip %s \
+// RUN:   -O1 -target-cpu gfx906 -disable-llvm-passes -o - -x hip %s \
 // RUN:   -ffp-contract=fast-honor-pragmas \
 // RUN:   | FileCheck -check-prefixes=COMMON,AMD-ON %s
 // RUN: %clang_cc1 -fcuda-is-device -triple nvptx-nvidia-cuda -S \
@@ -117,7 +117,7 @@
 // RUN:   -ffp-contract=on -disable-llvm-passes -o - %s \
 // RUN:   | FileCheck -check-prefixes=COMMON,NV-ON %s
 // RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -S \
-// RUN:   -target-cpu gfx906 -disable-llvm-passes -o - -x hip %s \
+// RUN:   -O1 -target-cpu gfx906 -disable-llvm-passes -o - -x hip %s \
 // RUN:   -ffp-contract=on \
 // RUN:   | FileCheck -check-prefixes=COMMON,AMD-ON %s
 // RUN: %clang_cc1 -fcuda-is-device -triple nvptx-nvidia-cuda -S \
@@ -180,7 +180,7 @@ __host__ __device__ float func(float a, float b, float c) { return a + b * c; }
 // COMMON-LABEL: _Z4funcfff
 // NV-ON:       fma.rn.f32
 // NV-ON-NEXT:  st.param.b32
-// AMD-ON:       v_fmac_f32_e64
+// AMD-ON:       v_fmac_f32_e32
 // AMD-ON-NEXT:  s_setpc_b64
 
 // NV-OFF:      mul.rn.f32

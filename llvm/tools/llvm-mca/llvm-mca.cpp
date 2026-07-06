@@ -38,6 +38,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSchedule.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -374,7 +375,7 @@ int main(int argc, char **argv) {
   // Enable printing of available targets when flag --version is specified.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
-  cl::HideUnrelatedOptions({&ToolOptions, &ViewOptions});
+  cl::HideUnrelatedOptions({&ToolOptions, &ViewOptions, &MCScheduleOptions});
 
   // Parse flags and initialize target options.
   cl::ParseCommandLineOptions(argc, argv,
@@ -424,6 +425,11 @@ int main(int argc, char **argv) {
     WithColor::error() << "unable to create subtarget info\n";
     return 1;
   }
+
+  if (TheTriple.isAArch64() && STI->checkFeatures("+mca-streaming-sched"))
+    WithColor::warning()
+        << "AArch64 streaming SVE scheduling is enabled via "
+           "'-mattr=+mca-streaming-sched'; llvm-mca results are approximate.\n";
 
   if (WantsCPUHelp)
     return 0;
@@ -486,7 +492,7 @@ int main(int argc, char **argv) {
   }
 
   // Parse the input and create CodeRegions that llvm-mca can analyze.
-  MCContext ACtx(TheTriple, MAI.get(), MRI.get(), STI.get(), &SrcMgr);
+  MCContext ACtx(TheTriple, *MAI, *MRI, *STI, &SrcMgr);
   std::unique_ptr<MCObjectFileInfo> AMOFI(
       TheTarget->createMCObjectFileInfo(ACtx, /*PIC=*/false));
   ACtx.setObjectFileInfo(AMOFI.get());
@@ -534,7 +540,7 @@ int main(int argc, char **argv) {
 
   // Parse the input and create InstrumentRegion that llvm-mca
   // can use to improve analysis.
-  MCContext ICtx(TheTriple, MAI.get(), MRI.get(), STI.get(), &SrcMgr);
+  MCContext ICtx(TheTriple, *MAI, *MRI, *STI, &SrcMgr);
   std::unique_ptr<MCObjectFileInfo> IMOFI(
       TheTarget->createMCObjectFileInfo(ICtx, /*PIC=*/false));
   ICtx.setObjectFileInfo(IMOFI.get());

@@ -191,8 +191,8 @@ STRING_EXTENSION_LEVEL_OUTSIDE(SBTarget, lldb::eDescriptionLevelBrief)
         addr_size = property(GetAddressByteSize, None, doc='''A read only property that returns the size in bytes of an address for this target.''')
         triple = property(GetTriple, None, doc='''A read only property that returns the target triple (arch-vendor-os) for this target as a string.''')
         arch_name = property(GetArchName, None, doc='''A read only property that returns the architecture name for this target as a string.''')
-        data_byte_size = property(GetDataByteSize, None, doc='''A read only property that returns the size in host bytes of a byte in the data address space for this target.''')
-        code_byte_size = property(GetCodeByteSize, None, doc='''A read only property that returns the size in host bytes of a byte in the code address space for this target.''')
+        data_byte_size = property(GetDataByteSize, None, doc='''Deprecated. Always returns 1.''')
+        code_byte_size = property(GetCodeByteSize, None, doc='''Deprecated. Always returns 1.''')
         platform = property(GetPlatform, None, doc='''A read only property that returns the platform associated with with this target.''')
     %}
 #endif

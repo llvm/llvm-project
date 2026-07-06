@@ -42,6 +42,7 @@ add_llvm_unittest(CodeGenTests
   RegAllocScoreTest.cpp
   RegisterTest.cpp
   PassManagerTest.cpp
+  RematerializerTest.cpp
   ScalableVectorMVTsTest.cpp
   SchedBoundary.cpp
   SelectionDAGAddressAnalysisTest.cpp

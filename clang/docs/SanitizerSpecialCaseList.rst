@@ -134,6 +134,40 @@ precedence. Here are a few examples.
   fun:*bar
   fun:bad_bar=sanitize
 
+Interaction with Overflow Behavior Types
+----------------------------------------
+
+The ``overflow_behavior`` attribute provides a more granular, source-level
+control that takes precedence over the Sanitizer Special Case List. If a type
+is given an ``overflow_behavior`` attribute, it will override any matching
+``type:`` entry in a special case list.
+
+This allows developers to enforce a specific overflow behavior for a critical
+type, even if a broader rule in the special case list would otherwise disable
+instrumentation for it.
+
+.. code-block:: bash
+
+  $ cat ignorelist.txt
+  # Disable signed overflow checks for all types by default.
+  [signed-integer-overflow]
+  type:*
+
+  $ cat foo.c
+  // Force 'critical_type' to always have overflow checks,
+  // overriding the ignorelist.
+  typedef int __attribute__((overflow_behavior(trap))) critical_type;
+
+  void foo(int x) {
+    critical_type a = x;
+    a++; // Overflow is checked here due to the 'trap' attribute.
+
+    int b = x;
+    b++; // Overflow is NOT checked here due to the ignorelist.
+  }
+
+For more details on overflow behavior types, see :doc:`OverflowBehaviorTypes`.
+
 Format
 ======
 
@@ -195,6 +229,39 @@ tool-specific docs.
     # Section names are globs
     [{cfi-vcall,cfi-icall}]
     fun:*BadCfiCall
+
+
+.. note::
+
+  By default, ``src`` and ``mainfile`` are matched against the filename as seen
+  by LLVM. On Windows, this might involve a mix of forward and backslashes as
+  file separators, and writing patterns to match both variants can be
+  inconvenient.
+
+  Starting with version 4 (indicated by ``#!special-case-list-v4``), path matching
+  on Windows hosts is slash-agnostic: both forward slashes (``/``) and backslashes
+  (``\``) match either path separator in both patterns and paths.
+
+.. note::
+
+  By default, path matching (for ``src`` and ``mainfile``) matches the query
+  path as-is. For example, a query with ``./foo.c`` will not match a rule
+  defined as ``src:foo.c``.
+
+  Starting with version 3 (indicated by ``#!special-case-list-v3``), leading
+  ``./`` is canonicalized (removed) from paths before matching. This means
+  a rule like ``src:foo.c`` will match both ``foo.c`` and ``./foo.c``, while
+  a rule like ``src:./foo.c`` will no longer match.
+
+  Version 4 (indicated by ``#!special-case-list-v4``) is a transition version
+  that maintains backward compatibility by matching both canonicalized and
+  non-canonicalized paths, but emits a warning if a match would be lost in
+  Version 5 (i.e., if it only matches because of the deprecated leading ``./``
+  in the rule).
+
+  Version 5 (indicated by ``#!special-case-list-v5``) drops backward
+  compatibility and behaves like Version 3.
+
 
 ``mainfile`` is similar to applying ``-fno-sanitize=`` to a set of files but
 does not need plumbing into the build system. This works well for internal

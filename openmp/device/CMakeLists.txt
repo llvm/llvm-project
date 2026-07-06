@@ -2,7 +2,7 @@
 set(req_ver "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
 if(LLVM_VERSION_MAJOR AND NOT (CMAKE_CXX_COMPILER_ID MATCHES "[Cc]lang" AND
    ${CMAKE_CXX_COMPILER_VERSION} VERSION_EQUAL "${req_ver}"))
-  message(FATAL_ERROR "Cannot build GPU device runtime. CMake compiler "
+   message(WARNING "openmp for GPU requires an up-to-date clang. CMake compiler "
                       "'${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}' "
                       " is not 'Clang ${req_ver}'.")
 endif()
@@ -16,7 +16,6 @@ set(src_files
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Mapping.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Misc.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Parallelism.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/Profiling.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Reduction.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/State.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Synchronization.cpp
@@ -61,7 +60,7 @@ endif()
 # Trick to combine these into a bitcode file via the linker's LTO pass.
 add_executable(libompdevice ${src_files})
 set_target_properties(libompdevice PROPERTIES
-  RUNTIME_OUTPUT_DIRECTORY "${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE}"
+  RUNTIME_OUTPUT_DIRECTORY "${LLVM_LIBRARY_OUTPUT_INTDIR}/${OPENMP_TARGET_SUBDIR}"
   LINKER_LANGUAGE CXX
   BUILD_RPATH ""
   INSTALL_RPATH ""
@@ -92,18 +91,22 @@ if(LLVM_DEFAULT_TARGET_TRIPLE)
 endif()
 install(TARGETS libompdevice
         PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ WORLD_READ
-        DESTINATION ${OPENMP_INSTALL_LIBDIR})
+        DESTINATION ${OPENMP_INSTALL_LIBDIR}
+        COMPONENT openmp)
 
 add_library(ompdevice.all_objs OBJECT IMPORTED)
 set_property(TARGET ompdevice.all_objs APPEND PROPERTY IMPORTED_OBJECTS
-             ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE}/libomptarget-${target_name}.bc)
+             ${LLVM_LIBRARY_OUTPUT_INTDIR}/${OPENMP_TARGET_SUBDIR}/libomptarget-${target_name}.bc)
 
 # Archive all the object files generated above into a static library
 add_library(ompdevice STATIC)
 add_dependencies(ompdevice libompdevice)
 set_target_properties(ompdevice PROPERTIES
-  ARCHIVE_OUTPUT_DIRECTORY "${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE}"
+  ARCHIVE_OUTPUT_DIRECTORY "${LLVM_LIBRARY_OUTPUT_INTDIR}/${OPENMP_TARGET_SUBDIR}"
   LINKER_LANGUAGE CXX
 )
 target_link_libraries(ompdevice PRIVATE ompdevice.all_objs)
-install(TARGETS ompdevice ARCHIVE DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+install(TARGETS ompdevice ARCHIVE DESTINATION "${OPENMP_INSTALL_LIBDIR}"
+        COMPONENT openmp)
+
+openmp_register_meta_dep(ompdevice)

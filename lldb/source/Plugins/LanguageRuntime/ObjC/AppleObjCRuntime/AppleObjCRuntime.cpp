@@ -332,8 +332,7 @@ uint32_t AppleObjCRuntime::GetFoundationVersion() {
       lldb::ModuleSP module_sp = modules.GetModuleAtIndex(idx);
       if (!module_sp)
         continue;
-      if (strcmp(module_sp->GetFileSpec().GetFilename().AsCString(""),
-                 "Foundation") == 0) {
+      if (module_sp->GetFileSpec().GetFilename() == "Foundation") {
         m_Foundation_major = module_sp->GetVersion().getMajor();
         return *m_Foundation_major;
       }
@@ -402,8 +401,7 @@ AppleObjCRuntime::GetObjCVersion(Process *process, ModuleSP &objc_module_sp) {
       SectionList *sections = module_sp->GetSectionList();
       if (!sections)
         return ObjCRuntimeVersions::eObjC_VersionUnknown;
-      SectionSP v1_telltale_section_sp =
-          sections->FindSectionByName(ConstString("__OBJC"));
+      SectionSP v1_telltale_section_sp = sections->FindSectionByName("__OBJC");
       if (v1_telltale_section_sp) {
         return ObjCRuntimeVersions::eAppleObjC_V1;
       }
@@ -459,21 +457,21 @@ bool AppleObjCRuntime::CalculateHasNewLiteralsAndIndexing() {
   if (!m_process)
     return false;
 
-  Target &target(m_process->GetTarget());
-
   static ConstString s_method_signature(
       "-[NSDictionary objectForKeyedSubscript:]");
-  static ConstString s_arclite_method_signature(
-      "__arclite_objectForKeyedSubscript");
+  // NSDictionary is toll-free bridged with CFDictionary, so the
+  // implementation lives in CoreFoundation, not Foundation.
+  static ModuleSpec corefoundation_module_spec(FileSpec("CoreFoundation"));
 
-  SymbolContextList sc_list;
+  Target &target = m_process->GetTarget();
+  if (ModuleSP corefoundation_module_sp =
+          target.GetImages().FindFirstModule(corefoundation_module_spec)) {
+    if (corefoundation_module_sp->FindFirstSymbolWithNameAndType(
+            s_method_signature, eSymbolTypeCode))
+      return true;
+  }
 
-  target.GetImages().FindSymbolsWithNameAndType(s_method_signature,
-                                                eSymbolTypeCode, sc_list);
-  if (sc_list.IsEmpty())
-    target.GetImages().FindSymbolsWithNameAndType(s_arclite_method_signature,
-                                                  eSymbolTypeCode, sc_list);
-  return !sc_list.IsEmpty();
+  return false;
 }
 
 lldb::SearchFilterSP AppleObjCRuntime::CreateExceptionSearchFilter() {

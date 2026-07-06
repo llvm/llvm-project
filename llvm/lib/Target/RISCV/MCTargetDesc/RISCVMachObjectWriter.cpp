@@ -186,6 +186,8 @@ void RISCVMachObjectWriter::recordRelocation(
   unsigned Type = 0;
   const unsigned Kind = Fixup.getKind();
   const MCSymbol *RelSymbol = nullptr;
+  bool RequireExtraAddend = false;
+  uint64_t ExtraAddendValue = 0;
 
   FixupOffset += Fixup.getOffset();
 
@@ -213,11 +215,15 @@ void RISCVMachObjectWriter::recordRelocation(
     // will be put into the instruction itself.
     FixedValue =
         Asm.getFragmentOffset(*AUIPCDF) + AUIPCFixup->getOffset() - FixupOffset;
-    if (!isValidInt<12>(
-            FixedValue,
-            "AUIPC out of range of corresponding %pcrel_lo instruction", Asm,
-            Fixup.getLoc()))
-      return;
+    if (!isInt<12>(FixedValue)) {
+      RequireExtraAddend = true;
+      ExtraAddendValue = FixedValue;
+      if (!isValidInt<24>(
+              ExtraAddendValue,
+              "AUIPC out of range of corresponding %pcrel_lo instruction", Asm,
+              Fixup.getLoc()))
+        return;
+    }
 
     // Retarget the rest of this function to reference the AUIPC's symbol.
     MCValue RealTarget;
@@ -260,9 +266,11 @@ void RISCVMachObjectWriter::recordRelocation(
   Value = Target.getConstant();
 
   // Only .word and %pcrel_lo instructions inline the pc-relative
-  // offset in the instruction.
-  if (Type != MachO::RISCV_RELOC_UNSIGNED && Type != MachO::RISCV_RELOC_LO12 &&
-      Type != MachO::RISCV_RELOC_GOT_LO12)
+  // offset in the instruction, but only if such offset fits the
+  // 12-bit immediate of an addi or an lw instrucion.
+  if ((Type != MachO::RISCV_RELOC_UNSIGNED && Type != MachO::RISCV_RELOC_LO12 &&
+       Type != MachO::RISCV_RELOC_GOT_LO12) ||
+      RequireExtraAddend)
     FixedValue = 0;
 
   // Emit relocations.
@@ -418,6 +426,12 @@ void RISCVMachObjectWriter::recordRelocation(
 
     emitRelocation(Writer, Fragment, FixupOffset, RelSymbol, Index, IsPCRel,
                    Log2Size, Type);
+  }
+
+  if (RequireExtraAddend) {
+    emitRelocation(Writer, Fragment, FixupOffset, /*RelSymbol*/ nullptr,
+                   ExtraAddendValue & 0xffffff, /*IsPCRel*/ false,
+                   /*Log2Size*/ 2, /*Type*/ MachO::RISCV_RELOC_ADDEND);
   }
 }
 

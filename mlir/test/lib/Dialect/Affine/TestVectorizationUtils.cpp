@@ -247,6 +247,8 @@ void VectorizerTestPass::testVecAffineLoopNest(llvm::raw_ostream &outs) {
     outs << "Outermost loop cannot be parallel\n";
     return;
   }
+  if (!reductions.empty())
+    strategy.reductionLoops[outermostLoop] = reductions;
   std::vector<SmallVector<AffineForOp, 2>> loopsToVectorize;
   loopsToVectorize.push_back({outermostLoop});
   (void)vectorizeAffineLoopNest(loopsToVectorize, strategy);

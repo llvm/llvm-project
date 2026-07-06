@@ -484,12 +484,12 @@ define <4 x half> @maxnum_intrinsic_nnan_fmf_f432(<4 x half> %a, <4 x half> %b) 
   ret <4 x half> %r
 }
 
-define half @maxnum_intrinsic_nnan_attr_f16(half %a, half %b) #0 {
+define half @maxnum_intrinsic_nnan_attr_f16(half %a, half %b) {
 ; CHECK-LABEL: maxnum_intrinsic_nnan_attr_f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmaxsh %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf5,0x7e,0x08,0x5f,0xc1]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
-  %r = tail call half @llvm.maxnum.f16(half %a, half %b)
+  %r = tail call nnan nsz half @llvm.maxnum.f16(half %a, half %b)
   ret half %r
 }
 
@@ -520,5 +520,3 @@ define half @test_maxnum_const_nan(half %x) {
   %r = call half @llvm.maxnum.f16(half %x, half 0x7fff000000000000)
   ret half %r
 }
-
-attributes #0 = { "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true"}

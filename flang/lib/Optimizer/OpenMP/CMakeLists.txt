@@ -5,9 +5,10 @@ add_flang_library(FlangOpenMPTransforms
   DoConcurrentConversion.cpp
   FunctionFiltering.cpp
   GenericLoopConversion.cpp
+  HostOpFiltering.cpp
   MapsForPrivatizedSymbols.cpp
   MapInfoFinalization.cpp
-  MarkDeclareTarget.cpp
+  DeleteUnreachableTargets.cpp
   LowerWorkdistribute.cpp
   LowerWorkshare.cpp
   LowerNontemporal.cpp
@@ -35,6 +36,7 @@ add_flang_library(FlangOpenMPTransforms
   MLIR_LIBS
   MLIRFuncDialect
   MLIROpenMPDialect
+  MLIROpenMPTransforms
   MLIRIR
   MLIRPass
   MLIRTransformUtils

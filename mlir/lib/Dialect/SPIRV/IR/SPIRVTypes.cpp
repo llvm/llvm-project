@@ -46,9 +46,10 @@ public:
       return;
 
     TypeSwitch<SPIRVType>(type)
-        .Case<CooperativeMatrixType, PointerType, ScalarType, TensorArmType>(
+        .Case<CooperativeMatrixType, ImageType, PointerType, ScalarType,
+              TensorArmType>(
             [this](auto concreteType) { addConcrete(concreteType); })
-        .Case<ArrayType, ImageType, MatrixType, RuntimeArrayType, VectorType>(
+        .Case<ArrayType, MatrixType, RuntimeArrayType, VectorType>(
             [this](auto concreteType) { add(concreteType.getElementType()); })
         .Case([this](SampledImageType concreteType) {
           add(concreteType.getImageType());
@@ -57,6 +58,7 @@ public:
           for (Type elementType : concreteType.getElementTypes())
             add(elementType);
         })
+        .Case<SamplerType, NamedBarrierType>([](auto) { /* no extensions */ })
         .DefaultUnreachable("Unhandled type");
   }
 
@@ -65,9 +67,16 @@ public:
 private:
   // Types that add unique extensions.
   void addConcrete(CooperativeMatrixType type);
+  void addConcrete(ImageType type);
   void addConcrete(PointerType type);
   void addConcrete(ScalarType type);
   void addConcrete(TensorArmType type);
+
+  template <Extension... Es>
+  void pushExts() {
+    static constexpr Extension exts[] = {Es...};
+    extensions.push_back(exts);
+  }
 
   SPIRVType::ExtensionArrayRefVector &extensions;
   std::optional<StorageClass> storage;
@@ -107,6 +116,9 @@ public:
           for (Type elementType : concreteType.getElementTypes())
             add(elementType);
         })
+        .Case([](SamplerType) { /* no capabilities */ })
+        .Case(
+            [this](NamedBarrierType) { pushCaps<Capability::NamedBarrier>(); })
         .DefaultUnreachable("Unhandled type");
   }
 
@@ -122,6 +134,12 @@ private:
   void addConcrete(ScalarType type);
   void addConcrete(TensorArmType type);
   void addConcrete(VectorType type);
+
+  template <Capability... Cs>
+  void pushCaps() {
+    static constexpr Capability caps[] = {Cs...};
+    capabilities.push_back(caps);
+  }
 
   SPIRVType::CapabilityArrayRefVector &capabilities;
   std::optional<StorageClass> storage;
@@ -188,7 +206,8 @@ bool CompositeType::classof(Type type) {
 bool CompositeType::isValid(VectorType type) {
   return type.getRank() == 1 &&
          llvm::is_contained({2, 3, 4, 8, 16}, type.getNumElements()) &&
-         isa<ScalarType>(type.getElementType());
+         (isa<ScalarType>(type.getElementType()) ||
+          isa<PointerType>(type.getElementType()));
 }
 
 Type CompositeType::getElementType(unsigned index) const {
@@ -216,10 +235,8 @@ void TypeCapabilityVisitor::addConcrete(VectorType type) {
   add(type.getElementType());
 
   int64_t vecSize = type.getNumElements();
-  if (vecSize == 8 || vecSize == 16) {
-    static constexpr auto cap = Capability::Vector16;
-    capabilities.push_back(cap);
-  }
+  if (vecSize == 8 || vecSize == 16)
+    pushCaps<Capability::Vector16>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -299,14 +316,17 @@ CooperativeMatrixUseKHR CooperativeMatrixType::getUse() const {
 
 void TypeExtensionVisitor::addConcrete(CooperativeMatrixType type) {
   add(type.getElementType());
-  static constexpr auto ext = Extension::SPV_KHR_cooperative_matrix;
-  extensions.push_back(ext);
+  pushExts<Extension::SPV_KHR_cooperative_matrix>();
 }
 
 void TypeCapabilityVisitor::addConcrete(CooperativeMatrixType type) {
-  add(type.getElementType());
-  static constexpr auto caps = Capability::CooperativeMatrixKHR;
-  capabilities.push_back(caps);
+  Type elementType = type.getElementType();
+  add(elementType);
+  pushCaps<Capability::CooperativeMatrixKHR>();
+  if (elementType.isBF16())
+    pushCaps<Capability::BFloat16CooperativeMatrixKHR>();
+  if (elementType.isF8E4M3FN() || elementType.isF8E5M2())
+    pushCaps<Capability::Float8CooperativeMatrixEXT>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -411,12 +431,72 @@ ImageSamplerUseInfo ImageType::getSamplerUseInfo() const {
 
 ImageFormat ImageType::getImageFormat() const { return getImpl()->format; }
 
+void TypeExtensionVisitor::addConcrete(ImageType type) {
+  // OpTypeImage with a 64-bit integer Sampled Type requires the
+  // SPV_EXT_shader_image_int64 extension (companion to Int64ImageEXT).
+  if (auto intTy = dyn_cast<IntegerType>(type.getElementType());
+      intTy && intTy.getWidth() == 64)
+    pushExts<Extension::SPV_EXT_shader_image_int64>();
+  add(type.getElementType());
+}
+
 void TypeCapabilityVisitor::addConcrete(ImageType type) {
-  if (auto dimCaps = spirv::getCapabilities(type.getDim()))
-    capabilities.push_back(*dimCaps);
+  // Capability requirements for OpTypeImage are determined jointly by Dim,
+  // Sampled, MS, and Arrayed - see the SPIR-V spec's "Capabilities" column on
+  // OpTypeImage.
+  Dim dim = type.getDim();
+  bool isMultisampled =
+      type.getSamplingInfo() == ImageSamplingInfo::MultiSampled;
+  bool isArrayed = type.getArrayedInfo() == ImageArrayedInfo::Arrayed;
+  ImageSamplerUseInfo sampler = type.getSamplerUseInfo();
+  bool noSampler = sampler == ImageSamplerUseInfo::NoSampler;
+  bool needSampler = sampler == ImageSamplerUseInfo::NeedSampler;
+
+  switch (dim) {
+  case Dim::Dim1D:
+    if (needSampler)
+      pushCaps<Capability::Sampled1D>();
+    else if (noSampler)
+      pushCaps<Capability::Image1D>();
+    else
+      pushCaps<Capability::Image1D, Capability::Sampled1D>();
+    break;
+  case Dim::Dim2D:
+    if (isMultisampled && noSampler)
+      pushCaps<Capability::StorageImageMultisample>();
+    if (isMultisampled && isArrayed)
+      pushCaps<Capability::ImageMSArray>();
+    break;
+  case Dim::Dim3D:
+    break;
+  case Dim::Cube:
+    pushCaps<Capability::Shader>();
+    if (isArrayed)
+      pushCaps<Capability::ImageCubeArray>();
+    break;
+  case Dim::Rect:
+    pushCaps<Capability::ImageRect, Capability::SampledRect>();
+    break;
+  case Dim::Buffer:
+    if (needSampler)
+      pushCaps<Capability::SampledBuffer>();
+    else if (noSampler)
+      pushCaps<Capability::ImageBuffer>();
+    else
+      pushCaps<Capability::ImageBuffer, Capability::SampledBuffer>();
+    break;
+  case Dim::SubpassData:
+    pushCaps<Capability::InputAttachment>();
+    break;
+  }
 
   if (auto fmtCaps = spirv::getCapabilities(type.getImageFormat()))
     capabilities.push_back(*fmtCaps);
+
+  // OpTypeImage with a 64-bit integer Sampled Type requires Int64ImageEXT.
+  if (auto intTy = dyn_cast<IntegerType>(type.getElementType());
+      intTy && intTy.getWidth() == 64)
+    pushCaps<Capability::Int64ImageEXT>();
 
   add(type.getElementType());
 }
@@ -519,8 +599,7 @@ unsigned RuntimeArrayType::getArrayStride() const { return getImpl()->stride; }
 
 void TypeCapabilityVisitor::addConcrete(RuntimeArrayType type) {
   add(type.getElementType());
-  static constexpr auto cap = Capability::Shader;
-  capabilities.push_back(cap);
+  pushCaps<Capability::Shader>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -538,6 +617,8 @@ bool ScalarType::classof(Type type) {
 }
 
 bool ScalarType::isValid(FloatType type) {
+  if (type.isF8E4M3FN() || type.isF8E5M2())
+    return true;
   return llvm::is_contained({16u, 32u, 64u}, type.getWidth());
 }
 
@@ -546,10 +627,11 @@ bool ScalarType::isValid(IntegerType type) {
 }
 
 void TypeExtensionVisitor::addConcrete(ScalarType type) {
-  if (isa<BFloat16Type>(type)) {
-    static constexpr auto ext = Extension::SPV_KHR_bfloat16;
-    extensions.push_back(ext);
-  }
+  if (type.isBF16())
+    pushExts<Extension::SPV_KHR_bfloat16>();
+
+  if (type.isF8E4M3FN() || type.isF8E5M2())
+    pushExts<Extension::SPV_EXT_float8>();
 
   // 8- or 16-bit integer/floating-point numbers will require extra extensions
   // to appear in interface storage classes. See SPV_KHR_16bit_storage and
@@ -561,17 +643,13 @@ void TypeExtensionVisitor::addConcrete(ScalarType type) {
   case StorageClass::PushConstant:
   case StorageClass::StorageBuffer:
   case StorageClass::Uniform:
-    if (type.getIntOrFloatBitWidth() == 8) {
-      static constexpr auto ext = Extension::SPV_KHR_8bit_storage;
-      extensions.push_back(ext);
-    }
+    if (type.getIntOrFloatBitWidth() == 8)
+      pushExts<Extension::SPV_KHR_8bit_storage>();
     [[fallthrough]];
   case StorageClass::Input:
   case StorageClass::Output:
-    if (type.getIntOrFloatBitWidth() == 16) {
-      static constexpr auto ext = Extension::SPV_KHR_16bit_storage;
-      extensions.push_back(ext);
-    }
+    if (type.getIntOrFloatBitWidth() == 16)
+      pushExts<Extension::SPV_KHR_16bit_storage>();
     break;
   default:
     break;
@@ -588,13 +666,11 @@ void TypeCapabilityVisitor::addConcrete(ScalarType type) {
 #define STORAGE_CASE(storage, cap8, cap16)                                     \
   case StorageClass::storage: {                                                \
     if (bitwidth == 8) {                                                       \
-      static constexpr auto cap = Capability::cap8;                            \
-      capabilities.push_back(cap);                                             \
+      pushCaps<Capability::cap8>();                                            \
       return;                                                                  \
     }                                                                          \
     if (bitwidth == 16) {                                                      \
-      static constexpr auto cap = Capability::cap16;                           \
-      capabilities.push_back(cap);                                             \
+      pushCaps<Capability::cap16>();                                           \
       return;                                                                  \
     }                                                                          \
     /* For 64-bit integers/floats, Int64/Float64 enables support for all */    \
@@ -613,8 +689,7 @@ void TypeCapabilityVisitor::addConcrete(ScalarType type) {
     case StorageClass::Input:
     case StorageClass::Output: {
       if (bitwidth == 16) {
-        static constexpr auto cap = Capability::StorageInputOutput16;
-        capabilities.push_back(cap);
+        pushCaps<Capability::StorageInputOutput16>();
         return;
       }
       break;
@@ -629,10 +704,9 @@ void TypeCapabilityVisitor::addConcrete(ScalarType type) {
   // capabilities for special bitwidths.
 
 #define WIDTH_CASE(type, width)                                                \
-  case width: {                                                                \
-    static constexpr auto cap = Capability::type##width;                       \
-    capabilities.push_back(cap);                                               \
-  } break
+  case width:                                                                  \
+    pushCaps<Capability::type##width>();                                       \
+    break
 
   if (auto intType = dyn_cast<IntegerType>(type)) {
     switch (bitwidth) {
@@ -648,14 +722,18 @@ void TypeCapabilityVisitor::addConcrete(ScalarType type) {
   } else {
     assert(isa<FloatType>(type));
     switch (bitwidth) {
+    case 8: {
+      if (type.isF8E4M3FN() || type.isF8E5M2())
+        pushCaps<Capability::Float8EXT>();
+      else
+        llvm_unreachable("invalid 8-bit float type to getCapabilities");
+      break;
+    }
     case 16: {
-      if (isa<BFloat16Type>(type)) {
-        static constexpr auto cap = Capability::BFloat16TypeKHR;
-        capabilities.push_back(cap);
-      } else {
-        static constexpr auto cap = Capability::Float16;
-        capabilities.push_back(cap);
-      }
+      if (type.isBF16())
+        pushCaps<Capability::BFloat16TypeKHR>();
+      else
+        pushCaps<Capability::Float16>();
       break;
     }
       WIDTH_CASE(Float, 64);
@@ -778,6 +856,22 @@ SampledImageType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
     return emitError() << "Dim must not be SubpassData or Buffer";
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// SamplerType
+//===----------------------------------------------------------------------===//
+
+SamplerType SamplerType::get(MLIRContext *context) {
+  return Base::get(context);
+}
+
+//===----------------------------------------------------------------------===//
+// NamedBarrierType
+//===----------------------------------------------------------------------===//
+
+NamedBarrierType NamedBarrierType::get(MLIRContext *context) {
+  return Base::get(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1148,25 +1242,30 @@ llvm::hash_code spirv::hash_value(
 //===----------------------------------------------------------------------===//
 
 struct spirv::detail::MatrixTypeStorage : public TypeStorage {
-  MatrixTypeStorage(Type columnType, uint32_t columnCount)
-      : columnType(columnType), columnCount(columnCount) {}
+  // Use a 64-bit integer as a column count internally to better support a
+  // `ShapedType` interface. See comment in `CooperativeMatrixType` for more
+  // context.
+  using KeyTy = std::tuple<Type, int64_t>;
 
-  using KeyTy = std::tuple<Type, uint32_t>;
+  MatrixTypeStorage(const KeyTy &key)
+      : columnType(std::get<0>(key)),
+        shape({cast<VectorType>(std::get<0>(key)).getShape()[0],
+               std::get<1>(key)}) {}
 
   static MatrixTypeStorage *construct(TypeStorageAllocator &allocator,
                                       const KeyTy &key) {
 
     // Initialize the memory using placement new.
-    return new (allocator.allocate<MatrixTypeStorage>())
-        MatrixTypeStorage(std::get<0>(key), std::get<1>(key));
+    return new (allocator.allocate<MatrixTypeStorage>()) MatrixTypeStorage(key);
   }
 
   bool operator==(const KeyTy &key) const {
-    return key == KeyTy(columnType, columnCount);
+    return key == KeyTy(columnType, shape[1]);
   }
 
   Type columnType;
-  const uint32_t columnCount;
+  // [#rows, #columns]
+  std::array<int64_t, 2> shape;
 };
 
 MatrixType MatrixType::get(Type columnType, uint32_t columnCount) {
@@ -1214,20 +1313,27 @@ Type MatrixType::getElementType() const {
   return cast<VectorType>(getImpl()->columnType).getElementType();
 }
 
-unsigned MatrixType::getNumColumns() const { return getImpl()->columnCount; }
+unsigned MatrixType::getNumColumns() const {
+  assert(getImpl()->shape[1] >= 0); // Also includes ShapedType::kDynamic.
+  assert(getImpl()->shape[1] <= std::numeric_limits<unsigned>::max());
+  return static_cast<uint32_t>(getImpl()->shape[1]);
+}
 
 unsigned MatrixType::getNumRows() const {
-  return cast<VectorType>(getImpl()->columnType).getShape()[0];
+  assert(getImpl()->shape[0] >= 0); // Also includes ShapedType::kDynamic.
+  assert(getImpl()->shape[0] <= std::numeric_limits<unsigned>::max());
+  return static_cast<uint32_t>(getImpl()->shape[0]);
 }
 
 unsigned MatrixType::getNumElements() const {
-  return (getImpl()->columnCount) * getNumRows();
+  return getNumColumns() * getNumRows();
 }
+
+ArrayRef<int64_t> MatrixType::getShape() const { return getImpl()->shape; }
 
 void TypeCapabilityVisitor::addConcrete(MatrixType type) {
   add(type.getColumnType());
-  static constexpr auto cap = Capability::Matrix;
-  capabilities.push_back(cap);
+  pushCaps<Capability::Matrix>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1275,14 +1381,12 @@ ArrayRef<int64_t> TensorArmType::getShape() const { return getImpl()->shape; }
 
 void TypeExtensionVisitor::addConcrete(TensorArmType type) {
   add(type.getElementType());
-  static constexpr auto ext = Extension::SPV_ARM_tensors;
-  extensions.push_back(ext);
+  pushExts<Extension::SPV_ARM_tensors>();
 }
 
 void TypeCapabilityVisitor::addConcrete(TensorArmType type) {
   add(type.getElementType());
-  static constexpr auto cap = Capability::TensorsARM;
-  capabilities.push_back(cap);
+  pushCaps<Capability::TensorsARM>();
 }
 
 LogicalResult
@@ -1303,6 +1407,7 @@ TensorArmType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
 //===----------------------------------------------------------------------===//
 
 void SPIRVDialect::registerTypes() {
-  addTypes<ArrayType, CooperativeMatrixType, ImageType, MatrixType, PointerType,
-           RuntimeArrayType, SampledImageType, StructType, TensorArmType>();
+  addTypes<ArrayType, CooperativeMatrixType, ImageType, MatrixType,
+           NamedBarrierType, PointerType, RuntimeArrayType, SampledImageType,
+           SamplerType, StructType, TensorArmType>();
 }

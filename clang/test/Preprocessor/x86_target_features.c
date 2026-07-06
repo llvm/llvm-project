@@ -738,11 +738,13 @@
 // RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapx-features=nf -x c -E -dM -o - %s | FileCheck --check-prefix=NF %s
 // RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapx-features=cf -x c -E -dM -o - %s | FileCheck --check-prefix=CF %s
 // RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapx-features=zu -x c -E -dM -o - %s | FileCheck --check-prefix=ZU %s
-// RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapxf -x c -E -dM -o - %s | FileCheck --check-prefixes=EGPR,PUSH2POP2,PPX,NDD,CCMP,NF,ZU,APXF %s
+// RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapx-features=jmpabs -x c -E -dM -o - %s | FileCheck --check-prefix=JMPABS %s
+// RUN: %clang -target x86_64-unknown-unknown -march=x86-64 -mapxf -x c -E -dM -o - %s | FileCheck --check-prefixes=EGPR,PUSH2POP2,PPX,NDD,CCMP,NF,ZU,JMPABS,APXF %s
 // APXF: #define __APX_F__ 1
 // CCMP: #define __CCMP__ 1
 // CF: #define __CF__ 1
 // EGPR: #define __EGPR__ 1
+// JMPABS: #define __JMPABS__ 1
 // NDD: #define __NDD__ 1
 // NF: #define __NF__ 1
 // PPX: #define __PPX__ 1

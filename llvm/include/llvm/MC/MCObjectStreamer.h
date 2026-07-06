@@ -79,6 +79,7 @@ public:
   bool isIntegratedAssemblerRequired() const override { return true; }
 
   void emitFrames();
+  void generateCompactUnwindEncodings();
   MCSymbol *emitCFILabel() override;
   void emitCFISections(bool EH, bool Debug, bool SFrame) override;
 
@@ -136,9 +137,10 @@ public:
   void emitValueToAlignment(Align Alignment, int64_t Fill = 0,
                             uint8_t FillLen = 1,
                             unsigned MaxBytesToEmit = 0) override;
-  void emitCodeAlignment(Align ByteAlignment, const MCSubtargetInfo *STI,
+  void emitCodeAlignment(Align ByteAlignment, const MCSubtargetInfo &STI,
                          unsigned MaxBytesToEmit = 0) override;
-  void emitPrefAlign(Align Alignment) override;
+  void emitPrefAlign(Align Alignment, const MCSymbol &End, bool EmitNops,
+                     uint8_t Fill, const MCSubtargetInfo &STI) override;
   void emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                          SMLoc Loc) override;
   void emitDwarfLocDirective(unsigned FileNo, unsigned Line, unsigned Column,

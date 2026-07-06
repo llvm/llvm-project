@@ -11,6 +11,7 @@ from lldbsuite.test import lldbutil
 exe_name = "AttachResume"  # Must match Makefile
 
 
+@skipIfTargetDoesNotSupportThreads()
 class AttachResumeTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

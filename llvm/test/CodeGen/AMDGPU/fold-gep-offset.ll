@@ -495,34 +495,31 @@ define void @flat_offset_inbounds_very_wide(ptr %p, ptr %pout, i32 %i) {
 ; GFX90A-SDAG-MUBUF-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v4
 ; GFX90A-SDAG-MUBUF-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v5, vcc
 ; GFX90A-SDAG-MUBUF-NEXT:    v_add_co_u32_e64 v6, s[4:5], 28, v0
-; GFX90A-SDAG-MUBUF-NEXT:    v_addc_co_u32_e64 v7, s[4:5], 0, v1, s[4:5]
-; GFX90A-SDAG-MUBUF-NEXT:    v_add_co_u32_e64 v8, s[4:5], 44, v0
 ; GFX90A-SDAG-MUBUF-NEXT:    v_add_co_u32_e32 v4, vcc, 0x8c, v0
-; GFX90A-SDAG-MUBUF-NEXT:    v_addc_co_u32_e64 v9, s[4:5], 0, v1, s[4:5]
-; GFX90A-SDAG-MUBUF-NEXT:    flat_load_dwordx4 v[10:13], v[8:9] offset:16
-; GFX90A-SDAG-MUBUF-NEXT:    flat_load_dwordx4 v[14:17], v[8:9] offset:32
-; GFX90A-SDAG-MUBUF-NEXT:    flat_load_dwordx4 v[18:21], v[8:9] offset:48
-; GFX90A-SDAG-MUBUF-NEXT:    flat_load_dwordx4 v[22:25], v[8:9] offset:64
-; GFX90A-SDAG-MUBUF-NEXT:    flat_load_dwordx4 v[26:29], v[8:9] offset:80
-; GFX90A-SDAG-MUBUF-NEXT:    flat_load_dwordx4 v[30:33], v[6:7]
-; GFX90A-SDAG-MUBUF-NEXT:    s_nop 0
-; GFX90A-SDAG-MUBUF-NEXT:    flat_load_dwordx4 v[6:9], v[8:9]
+; GFX90A-SDAG-MUBUF-NEXT:    v_addc_co_u32_e64 v7, s[4:5], 0, v1, s[4:5]
+; GFX90A-SDAG-MUBUF-NEXT:    flat_load_dwordx4 v[8:11], v[6:7] offset:32
+; GFX90A-SDAG-MUBUF-NEXT:    flat_load_dwordx4 v[12:15], v[6:7] offset:48
+; GFX90A-SDAG-MUBUF-NEXT:    flat_load_dwordx4 v[16:19], v[6:7] offset:64
+; GFX90A-SDAG-MUBUF-NEXT:    flat_load_dwordx4 v[20:23], v[6:7] offset:80
+; GFX90A-SDAG-MUBUF-NEXT:    flat_load_dwordx4 v[24:27], v[6:7] offset:96
+; GFX90A-SDAG-MUBUF-NEXT:    flat_load_dwordx4 v[28:31], v[6:7]
+; GFX90A-SDAG-MUBUF-NEXT:    flat_load_dwordx4 v[32:35], v[6:7] offset:16
 ; GFX90A-SDAG-MUBUF-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
-; GFX90A-SDAG-MUBUF-NEXT:    flat_load_dwordx4 v[34:37], v[0:1] offset:12
+; GFX90A-SDAG-MUBUF-NEXT:    flat_load_dwordx4 v[36:39], v[0:1] offset:12
 ; GFX90A-SDAG-MUBUF-NEXT:    flat_load_dwordx4 v[48:51], v[4:5]
 ; GFX90A-SDAG-MUBUF-NEXT:    v_add_co_u32_e32 v0, vcc, 48, v2
 ; GFX90A-SDAG-MUBUF-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
 ; GFX90A-SDAG-MUBUF-NEXT:    v_add_co_u32_e32 v4, vcc, 0x88, v2
 ; GFX90A-SDAG-MUBUF-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v3, vcc
 ; GFX90A-SDAG-MUBUF-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX90A-SDAG-MUBUF-NEXT:    flat_store_dwordx4 v[0:1], v[22:25] offset:48
-; GFX90A-SDAG-MUBUF-NEXT:    flat_store_dwordx4 v[0:1], v[26:29] offset:64
-; GFX90A-SDAG-MUBUF-NEXT:    flat_store_dwordx4 v[2:3], v[14:17] offset:64
-; GFX90A-SDAG-MUBUF-NEXT:    flat_store_dwordx4 v[0:1], v[18:21] offset:32
-; GFX90A-SDAG-MUBUF-NEXT:    flat_store_dwordx4 v[2:3], v[6:9] offset:32
-; GFX90A-SDAG-MUBUF-NEXT:    flat_store_dwordx4 v[0:1], v[10:13]
-; GFX90A-SDAG-MUBUF-NEXT:    flat_store_dwordx4 v[2:3], v[30:33] offset:16
-; GFX90A-SDAG-MUBUF-NEXT:    flat_store_dwordx4 v[2:3], v[34:37]
+; GFX90A-SDAG-MUBUF-NEXT:    flat_store_dwordx4 v[0:1], v[20:23] offset:48
+; GFX90A-SDAG-MUBUF-NEXT:    flat_store_dwordx4 v[0:1], v[24:27] offset:64
+; GFX90A-SDAG-MUBUF-NEXT:    flat_store_dwordx4 v[2:3], v[12:15] offset:64
+; GFX90A-SDAG-MUBUF-NEXT:    flat_store_dwordx4 v[0:1], v[16:19] offset:32
+; GFX90A-SDAG-MUBUF-NEXT:    flat_store_dwordx4 v[2:3], v[32:35] offset:32
+; GFX90A-SDAG-MUBUF-NEXT:    flat_store_dwordx4 v[0:1], v[8:11]
+; GFX90A-SDAG-MUBUF-NEXT:    flat_store_dwordx4 v[2:3], v[28:31] offset:16
+; GFX90A-SDAG-MUBUF-NEXT:    flat_store_dwordx4 v[2:3], v[36:39]
 ; GFX90A-SDAG-MUBUF-NEXT:    flat_store_dword v[4:5], v50
 ; GFX90A-SDAG-MUBUF-NEXT:    flat_store_dwordx2 v[2:3], v[48:49] offset:128
 ; GFX90A-SDAG-MUBUF-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -536,34 +533,31 @@ define void @flat_offset_inbounds_very_wide(ptr %p, ptr %pout, i32 %i) {
 ; GFX90A-SDAG-FLATSCR-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v4
 ; GFX90A-SDAG-FLATSCR-NEXT:    v_addc_co_u32_e32 v1, vcc, v1, v5, vcc
 ; GFX90A-SDAG-FLATSCR-NEXT:    v_add_co_u32_e64 v6, s[0:1], 28, v0
-; GFX90A-SDAG-FLATSCR-NEXT:    v_addc_co_u32_e64 v7, s[0:1], 0, v1, s[0:1]
-; GFX90A-SDAG-FLATSCR-NEXT:    v_add_co_u32_e64 v8, s[0:1], 44, v0
 ; GFX90A-SDAG-FLATSCR-NEXT:    v_add_co_u32_e32 v4, vcc, 0x8c, v0
-; GFX90A-SDAG-FLATSCR-NEXT:    v_addc_co_u32_e64 v9, s[0:1], 0, v1, s[0:1]
-; GFX90A-SDAG-FLATSCR-NEXT:    flat_load_dwordx4 v[10:13], v[8:9] offset:16
-; GFX90A-SDAG-FLATSCR-NEXT:    flat_load_dwordx4 v[14:17], v[8:9] offset:32
-; GFX90A-SDAG-FLATSCR-NEXT:    flat_load_dwordx4 v[18:21], v[8:9] offset:48
-; GFX90A-SDAG-FLATSCR-NEXT:    flat_load_dwordx4 v[22:25], v[8:9] offset:64
-; GFX90A-SDAG-FLATSCR-NEXT:    flat_load_dwordx4 v[26:29], v[8:9] offset:80
-; GFX90A-SDAG-FLATSCR-NEXT:    flat_load_dwordx4 v[30:33], v[6:7]
-; GFX90A-SDAG-FLATSCR-NEXT:    s_nop 0
-; GFX90A-SDAG-FLATSCR-NEXT:    flat_load_dwordx4 v[6:9], v[8:9]
+; GFX90A-SDAG-FLATSCR-NEXT:    v_addc_co_u32_e64 v7, s[0:1], 0, v1, s[0:1]
+; GFX90A-SDAG-FLATSCR-NEXT:    flat_load_dwordx4 v[8:11], v[6:7] offset:32
+; GFX90A-SDAG-FLATSCR-NEXT:    flat_load_dwordx4 v[12:15], v[6:7] offset:48
+; GFX90A-SDAG-FLATSCR-NEXT:    flat_load_dwordx4 v[16:19], v[6:7] offset:64
+; GFX90A-SDAG-FLATSCR-NEXT:    flat_load_dwordx4 v[20:23], v[6:7] offset:80
+; GFX90A-SDAG-FLATSCR-NEXT:    flat_load_dwordx4 v[24:27], v[6:7] offset:96
+; GFX90A-SDAG-FLATSCR-NEXT:    flat_load_dwordx4 v[28:31], v[6:7]
+; GFX90A-SDAG-FLATSCR-NEXT:    flat_load_dwordx4 v[32:35], v[6:7] offset:16
 ; GFX90A-SDAG-FLATSCR-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
-; GFX90A-SDAG-FLATSCR-NEXT:    flat_load_dwordx4 v[34:37], v[0:1] offset:12
+; GFX90A-SDAG-FLATSCR-NEXT:    flat_load_dwordx4 v[36:39], v[0:1] offset:12
 ; GFX90A-SDAG-FLATSCR-NEXT:    flat_load_dwordx4 v[48:51], v[4:5]
 ; GFX90A-SDAG-FLATSCR-NEXT:    v_add_co_u32_e32 v0, vcc, 48, v2
 ; GFX90A-SDAG-FLATSCR-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
 ; GFX90A-SDAG-FLATSCR-NEXT:    v_add_co_u32_e32 v4, vcc, 0x88, v2
 ; GFX90A-SDAG-FLATSCR-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v3, vcc
 ; GFX90A-SDAG-FLATSCR-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX90A-SDAG-FLATSCR-NEXT:    flat_store_dwordx4 v[0:1], v[22:25] offset:48
-; GFX90A-SDAG-FLATSCR-NEXT:    flat_store_dwordx4 v[0:1], v[26:29] offset:64
-; GFX90A-SDAG-FLATSCR-NEXT:    flat_store_dwordx4 v[2:3], v[14:17] offset:64
-; GFX90A-SDAG-FLATSCR-NEXT:    flat_store_dwordx4 v[0:1], v[18:21] offset:32
-; GFX90A-SDAG-FLATSCR-NEXT:    flat_store_dwordx4 v[2:3], v[6:9] offset:32
-; GFX90A-SDAG-FLATSCR-NEXT:    flat_store_dwordx4 v[0:1], v[10:13]
-; GFX90A-SDAG-FLATSCR-NEXT:    flat_store_dwordx4 v[2:3], v[30:33] offset:16
-; GFX90A-SDAG-FLATSCR-NEXT:    flat_store_dwordx4 v[2:3], v[34:37]
+; GFX90A-SDAG-FLATSCR-NEXT:    flat_store_dwordx4 v[0:1], v[20:23] offset:48
+; GFX90A-SDAG-FLATSCR-NEXT:    flat_store_dwordx4 v[0:1], v[24:27] offset:64
+; GFX90A-SDAG-FLATSCR-NEXT:    flat_store_dwordx4 v[2:3], v[12:15] offset:64
+; GFX90A-SDAG-FLATSCR-NEXT:    flat_store_dwordx4 v[0:1], v[16:19] offset:32
+; GFX90A-SDAG-FLATSCR-NEXT:    flat_store_dwordx4 v[2:3], v[32:35] offset:32
+; GFX90A-SDAG-FLATSCR-NEXT:    flat_store_dwordx4 v[0:1], v[8:11]
+; GFX90A-SDAG-FLATSCR-NEXT:    flat_store_dwordx4 v[2:3], v[28:31] offset:16
+; GFX90A-SDAG-FLATSCR-NEXT:    flat_store_dwordx4 v[2:3], v[36:39]
 ; GFX90A-SDAG-FLATSCR-NEXT:    flat_store_dword v[4:5], v50
 ; GFX90A-SDAG-FLATSCR-NEXT:    flat_store_dwordx2 v[2:3], v[48:49] offset:128
 ; GFX90A-SDAG-FLATSCR-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)

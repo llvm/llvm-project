@@ -134,6 +134,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ControlFlowUtils.h"
@@ -290,11 +291,15 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
   }
 
   for (BasicBlock *P : Predecessors) {
-    if (BranchInst *Branch = dyn_cast<BranchInst>(P->getTerminator())) {
-      // Exactly one of the two successors is the header.
+    if (isa<UncondBrInst>(P->getTerminator())) {
+      assert(P->getTerminator()->getSuccessor(0) == Header);
+      CHub.addBranch(P, Header);
+
+      LLVM_DEBUG(dbgs() << "Added internal branch: " << printBasicBlock(P)
+                        << " -> " << printBasicBlock(Header) << '\n');
+    } else if (CondBrInst *Branch = dyn_cast<CondBrInst>(P->getTerminator())) {
       BasicBlock *Succ0 = Branch->getSuccessor(0) == Header ? Header : nullptr;
-      BasicBlock *Succ1 = Succ0 ? nullptr : Header;
-      assert(Succ0 || Branch->getSuccessor(1) == Header);
+      BasicBlock *Succ1 = Branch->getSuccessor(1) == Header ? Header : nullptr;
       assert(Succ0 || Succ1);
       CHub.addBranch(P, Succ0, Succ1);
 
@@ -314,7 +319,8 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
                           << printBasicBlock(Succ) << '\n');
       }
     } else {
-      llvm_unreachable("unsupported block terminator");
+      reportFatalUsageError("unsupported block terminator: fix-irreducible "
+                            "only supports br and callbr instructions");
     }
   }
 
@@ -328,12 +334,18 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
   }
 
   for (BasicBlock *P : Predecessors) {
-    if (BranchInst *Branch = dyn_cast<BranchInst>(P->getTerminator()); Branch) {
+    if (UncondBrInst *Branch = dyn_cast<UncondBrInst>(P->getTerminator())) {
+      BasicBlock *Succ0 = Branch->getSuccessor();
+      Succ0 = C.contains(Succ0) ? Succ0 : nullptr;
+      CHub.addBranch(P, Succ0);
+
+      LLVM_DEBUG(dbgs() << "Added external branch: " << printBasicBlock(P)
+                        << " -> " << printBasicBlock(Succ0) << '\n');
+    } else if (CondBrInst *Branch = dyn_cast<CondBrInst>(P->getTerminator())) {
       BasicBlock *Succ0 = Branch->getSuccessor(0);
       Succ0 = C.contains(Succ0) ? Succ0 : nullptr;
-      BasicBlock *Succ1 =
-          Branch->isUnconditional() ? nullptr : Branch->getSuccessor(1);
-      Succ1 = Succ1 && C.contains(Succ1) ? Succ1 : nullptr;
+      BasicBlock *Succ1 = Branch->getSuccessor(1);
+      Succ1 = C.contains(Succ1) ? Succ1 : nullptr;
       CHub.addBranch(P, Succ0, Succ1);
 
       LLVM_DEBUG(dbgs() << "Added external branch: " << printBasicBlock(P)
@@ -352,7 +364,8 @@ static bool fixIrreducible(Cycle &C, CycleInfo &CI, DominatorTree &DT,
                           << printBasicBlock(Succ) << '\n');
       }
     } else {
-      llvm_unreachable("unsupported block terminator");
+      reportFatalUsageError("unsupported block terminator: fix-irreducible "
+                            "only supports br and callbr instructions");
     }
   }
 

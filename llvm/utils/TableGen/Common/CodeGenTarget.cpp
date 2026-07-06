@@ -116,11 +116,11 @@ const Record *CodeGenTarget::getInstructionSet() const {
 }
 
 bool CodeGenTarget::getAllowRegisterRenaming() const {
-  return TargetRec->getValueAsInt("AllowRegisterRenaming");
+  return TargetRec->getValueAsBit("AllowRegisterRenaming");
 }
 
 bool CodeGenTarget::getRegistersAreIntervals() const {
-  return TargetRec->getValueAsInt("RegistersAreIntervals");
+  return TargetRec->getValueAsBit("RegistersAreIntervals");
 }
 
 /// getAsmParser - Return the AssemblyParser definition for this target.

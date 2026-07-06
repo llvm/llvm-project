@@ -8,10 +8,13 @@ set(LLVM_LINK_COMPONENTS
 set(LIBS
   CUFDialect
   FIRBuilder
+  FIRAnalysis
   FIRCodeGenDialect
   FIRDialect
   FIRDialectSupport
+  FIROpenACCSupport
   FIRSupport
+  FIRTransforms
   HLFIRDialect
   MIFDialect
 )
@@ -33,6 +36,8 @@ add_flang_unittest(FlangOptimizerTests
   Builder/Runtime/ReductionTest.cpp
   Builder/Runtime/StopTest.cpp
   Builder/Runtime/TransformationalTest.cpp
+  OpenACC/FIROpenACCPointerLikeTypeInterfaceTest.cpp
+  FIRCallInterfaceTest.cpp
   FIRContextTest.cpp
   FIRTypesTest.cpp
   FortranVariableTest.cpp
@@ -58,4 +63,5 @@ mlir_target_link_libraries(FlangOptimizerTests
   PRIVATE
   ${dialect_libs}
   ${extension_libs}
+  MLIROpenACCDialect
   )

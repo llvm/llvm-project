@@ -36,6 +36,11 @@ struct ScriptedFrameProviderDescriptor {
   /// satisfies ANY of the specs in this vector (OR logic).
   std::vector<ThreadSpec> thread_specs;
 
+  /// Monotonically increasing ID assigned by Target when this descriptor is
+  /// registered. LLDB_INVALID_FRAME_PROVIDER_ID (UINT32_MAX) means no ID has
+  /// been assigned yet.
+  uint32_t m_id = LLDB_INVALID_FRAME_PROVIDER_ID;
+
   ScriptedFrameProviderDescriptor() = default;
 
   ScriptedFrameProviderDescriptor(lldb::ScriptedMetadataSP metadata_sp)
@@ -83,11 +88,18 @@ struct ScriptedFrameProviderDescriptor {
   /// Check if this descriptor has valid metadata for script-based providers.
   bool IsValid() const { return scripted_metadata_sp != nullptr; }
 
-  /// Get a unique identifier for this descriptor based on its contents.
-  /// The ID is computed from the class name and arguments dictionary,
-  /// not from the pointer address, so two descriptors with the same
-  /// contents will have the same ID.
-  uint32_t GetID() const;
+  /// Get a unique identifier for this descriptor.
+  /// Returns the monotonically increasing ID assigned by Target if set,
+  /// otherwise returns LLDB_INVALID_FRAME_PROVIDER_ID (UINT32_MAX).
+  uint32_t GetID() const { return m_id; }
+
+  /// Set the monotonically increasing ID for this descriptor. Called by Target
+  /// when the descriptor is registered.
+  void SetID(uint32_t id) { m_id = id; }
+
+  /// Get the content-based hash from ScriptedMetadata.
+  /// Used for duplicate detection (same class name + args).
+  uint32_t GetHash() const;
 
   /// Dump a description of this descriptor to the given stream.
   void Dump(Stream *s) const;

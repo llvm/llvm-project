@@ -26,11 +26,16 @@ jobs:
   build-and-push:
     runs-on: ubuntu-24.04
     if: github.repository_owner == 'llvm'
+    strategy:
+      matrix:
+        image_name: ['libcxx-linux-builder-base', 'libcxx-linux-builder', 'libcxx-android-builder']
     permissions:
       packages: write
 
     steps:
-    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      with:
+        persist-credentials: false
 
     # The default Docker storage location for GitHub Actions doesn't have
     # enough disk space, so change it to /mnt, which has more disk space.
@@ -40,45 +45,20 @@ jobs:
         echo '{ "data-root": "/mnt/docker" }' | sudo tee /etc/docker/daemon.json
         sudo systemctl restart docker
 
-    - name: Build the base image
-      run: docker compose --file libcxx/utils/ci/docker/docker-compose.yml build libcxx-linux-builder-base
-      env:
-        TAG: ${{ github.sha }}
-
-    - name: Build the Linux Github Actions image
-      run: docker compose --file libcxx/utils/ci/docker/docker-compose.yml build libcxx-linux-builder
-      env:
-        TAG: ${{ github.sha }}
-
-    - name: Build the Android builder image
-      run: docker compose --file libcxx/utils/ci/docker/docker-compose.yml build libcxx-android-builder
+    - name: Build the image
+      run: docker compose --file libcxx/utils/ci/docker/docker-compose.yml build "${{ matrix.image_name }}"
       env:
         TAG: ${{ github.sha }}
 
     - name: Log in to GitHub Container Registry
-      uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+      uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Push the images
+    - name: Push the image
       if: github.event_name == 'push'
-      run: docker compose --file libcxx/utils/ci/docker/docker-compose.yml push libcxx-linux-builder-base libcxx-linux-builder libcxx-android-builder
+      run: docker compose --file libcxx/utils/ci/docker/docker-compose.yml push "${{ matrix.image_name }}"
       env:
         TAG: ${{ github.sha }}
-
-    # We create tarballs with the images and upload them as artifacts, since that's useful for testing
-    # the images when making changes.
-    - name: Create image tarballs
-      run: |
-        docker image save ghcr.io/llvm/libcxx-linux-builder-base:${{ github.sha }} | gzip > libcxx-linux-builder-base.tar.gz
-        docker image save ghcr.io/llvm/libcxx-linux-builder:${{ github.sha }} | gzip > libcxx-linux-builder.tar.gz
-        docker image save ghcr.io/llvm/libcxx-android-builder:${{ github.sha }} | gzip > libcxx-android-builder.tar.gz
-    - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
-      with:
-          name: libcxx-docker-images
-          path: |
-            libcxx-linux-builder-base.tar.gz
-            libcxx-linux-builder.tar.gz
-            libcxx-android-builder.tar.gz

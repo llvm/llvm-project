@@ -288,3 +288,33 @@ auto t() {
   return [](auto w = [&] { return x; }) { }; // expected-error {{lambda expression in default argument cannot capture any entity}}
 };
 }
+
+namespace GH176534 {
+struct S {
+  // expected-error@+9 {{reference to local variable 'x' declared in enclosing function 'GH176534::S::a'}}
+  // expected-error@+8 {{variable 'x' cannot be implicitly captured in a lambda with no capture-default specified}}
+  // expected-note@+7 {{'x' declared here}}
+  // expected-note@+6 {{'x' declared here}}
+  // expected-note@+5 {{lambda expression begins here}}
+  // expected-note@+4 {{capture 'x' by value}}
+  // expected-note@+3 {{capture 'x' by reference}}
+  // expected-note@+2 {{default capture by value}}
+  // expected-note@+1 {{default capture by reference}}
+  void a(int x, int = sizeof([x] { return x; }()));
+
+  // expected-error@+8 {{'this' cannot be captured in this context}}
+  // expected-error@+7 {{variable 'x' cannot be implicitly captured in a lambda with no capture-default specified}}
+  // expected-note@+6 {{default capture by reference}}
+  // expected-note@+5 {{lambda expression begins here}}
+  // expected-note@+4 {{capture 'x' by value}}
+  // expected-note@+3 {{capture 'x' by reference}}
+  // expected-note@+2 {{'x' declared here}}
+  // expected-note@+1 {{default capture by value}}
+  void b(int x, int = sizeof([this] { return x; }));
+
+  // expected-error@+3 {{non-local lambda expression cannot have a capture-default}}
+  // expected-error@+2 {{reference to local variable 'x' declared in enclosing function 'GH176534::S::c'}}
+  // expected-note@+1 {{'x' declared here}}
+  void c(int x, int = sizeof([=] { return x; }));
+};
+}

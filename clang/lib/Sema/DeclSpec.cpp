@@ -616,6 +616,18 @@ const char *DeclSpec::getSpecifierName(TQ T) {
   llvm_unreachable("Unknown typespec!");
 }
 
+const char *DeclSpec::getSpecifierName(OverflowBehaviorState S) {
+  switch (S) {
+  case OverflowBehaviorState::Unspecified:
+    return "unspecified";
+  case OverflowBehaviorState::Wrap:
+    return "__ob_wrap";
+  case OverflowBehaviorState::Trap:
+    return "__ob_trap";
+  }
+  llvm_unreachable("Unknown overflow behavior state!");
+}
+
 bool DeclSpec::SetStorageClassSpec(Sema &S, SCS SC, SourceLocation Loc,
                                    const char *&PrevSpec,
                                    unsigned &DiagID,
@@ -1003,6 +1015,25 @@ bool DeclSpec::SetTypeQual(TQ T, SourceLocation Loc) {
   llvm_unreachable("Unknown type qualifier!");
 }
 
+bool DeclSpec::SetOverflowBehavior(
+    OverflowBehaviorType::OverflowBehaviorKind Kind, SourceLocation Loc,
+    const char *&PrevSpec, unsigned &DiagID) {
+  OverflowBehaviorState NewState =
+      (Kind == OverflowBehaviorType::OverflowBehaviorKind::Wrap)
+          ? OverflowBehaviorState::Wrap
+          : OverflowBehaviorState::Trap;
+
+  OverflowBehaviorState CurrentState = getOverflowBehaviorState();
+
+  if (CurrentState != OverflowBehaviorState::Unspecified) {
+    return BadSpecifier(NewState, CurrentState, PrevSpec, DiagID);
+  }
+
+  OB_state = static_cast<unsigned>(NewState);
+  OB_Loc = Loc;
+  return false;
+}
+
 bool DeclSpec::setFunctionSpecInline(SourceLocation Loc, const char *&PrevSpec,
                                      unsigned &DiagID) {
   // 'inline inline' is ok.  However, since this is likely not what the user
@@ -1131,6 +1162,20 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
 
   // Check the type specifier components first. No checking for an invalid
   // type.
+  CheckTypeSpec(S, Policy);
+
+  CheckFriendSpec(S, Policy);
+
+  assert(!TypeSpecOwned || isDeclRep((TST)TypeSpecType));
+
+  // Okay, now we can infer the real type.
+
+  // TODO: return "auto function" and other bad things based on the real type.
+
+  // 'data definition has no type or storage class'?
+}
+
+void DeclSpec::CheckTypeSpec(Sema &S, const PrintingPolicy &Policy) {
   if (TypeSpecType == TST_error)
     return;
 
@@ -1367,13 +1412,12 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
     }
   }
 
-  if (S.getLangOpts().C23 &&
+  if (S.getLangOpts().C23 && getTypeSpecType() != DeclSpec::TST_unspecified &&
       getConstexprSpecifier() == ConstexprSpecKind::Constexpr &&
-      getTypeSpecType() != TST_unspecified &&
       (StorageClassSpec == SCS_extern || StorageClassSpec == SCS_auto)) {
-    S.Diag(ConstexprLoc, diag::err_invalid_decl_spec_combination)
-        << DeclSpec::getSpecifierName(getStorageClassSpec())
-        << SourceRange(getStorageClassSpecLoc());
+    S.Diag(getStorageClassSpecLoc(), diag::err_invalid_decl_spec_combination)
+        << DeclSpec::getSpecifierName(getConstexprSpecifier())
+        << SourceRange(getConstexprSpecLoc());
   }
 
   // If no type specifier was provided and we're parsing a language where
@@ -1411,6 +1455,9 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
     S.Diag(ConstexprLoc, diag::warn_cxx20_compat_consteval);
   else if (getConstexprSpecifier() == ConstexprSpecKind::Constinit)
     S.Diag(ConstexprLoc, diag::warn_cxx20_compat_constinit);
+}
+
+void DeclSpec::CheckFriendSpec(Sema &S, const PrintingPolicy &Policy) {
   // C++ [class.friend]p6:
   //   No storage-class-specifier shall appear in the decl-specifier-seq
   //   of a friend declaration.
@@ -1468,14 +1515,6 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
     FS_explicit_specifier = ExplicitSpecifier();
     FS_virtualLoc = FS_explicitLoc = SourceLocation();
   }
-
-  assert(!TypeSpecOwned || isDeclRep((TST) TypeSpecType));
-
-  // Okay, now we can infer the real type.
-
-  // TODO: return "auto function" and other bad things based on the real type.
-
-  // 'data definition has no type or storage class'?
 }
 
 bool DeclSpec::isMissingDeclaratorOk() {

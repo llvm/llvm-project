@@ -130,9 +130,9 @@ __m256i test_mm256_mul_epu32(__m256i a, __m256i b) {
   // CIR: [[BC_B:%.*]] = cir.cast bitcast %{{.*}} : {{.*}} -> !cir.vector<4 x !s64i>
   // CIR: [[MASK_SCALAR:%.*]] = cir.const #cir.int<4294967295> : !s64i
   // CIR: [[MASK_VEC:%.*]] = cir.vec.splat [[MASK_SCALAR]] : !s64i, !cir.vector<4 x !s64i>
-  // CIR: [[AND_A:%.*]] = cir.binop(and, [[BC_A]], [[MASK_VEC]])
-  // CIR: [[AND_B:%.*]] = cir.binop(and, [[BC_B]], [[MASK_VEC]])
-  // CIR: [[MUL:%.*]]   = cir.binop(mul, [[AND_A]], [[AND_B]])
+  // CIR: [[AND_A:%.*]] = cir.and [[BC_A]], [[MASK_VEC]]
+  // CIR: [[AND_B:%.*]] = cir.and [[BC_B]], [[MASK_VEC]]
+  // CIR: [[MUL:%.*]]   = cir.mul [[AND_A]], [[AND_B]]
 
   // LLVM-LABEL: _mm256_mul_epu32
   // LLVM: and <4 x i64> %{{.*}}, splat (i64 4294967295)
@@ -157,7 +157,7 @@ __m256i test_mm256_mul_epi32(__m256i a, __m256i b) {
   // CIR: [[ASHR_A:%.*]] = cir.shift(right, [[SHL_A]] : !cir.vector<4 x !s64i>, [[SV]] : !cir.vector<4 x !s64i>)
   // CIR: [[SHL_B:%.*]]  = cir.shift(left, [[B64]] : !cir.vector<4 x !s64i>, [[SV]] : !cir.vector<4 x !s64i>)
   // CIR: [[ASHR_B:%.*]] = cir.shift(right, [[SHL_B]] : !cir.vector<4 x !s64i>, [[SV]] : !cir.vector<4 x !s64i>)
-  // CIR: [[MUL:%.*]]    = cir.binop(mul, [[ASHR_A]], [[ASHR_B]])
+  // CIR: [[MUL:%.*]]    = cir.mul [[ASHR_A]], [[ASHR_B]]
 
   // LLVM-LABEL: _mm256_mul_epi32
   // LLVM: shl <4 x i64> %{{.*}}, splat (i64 32)

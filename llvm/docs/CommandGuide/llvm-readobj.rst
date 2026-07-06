@@ -47,14 +47,14 @@ GENERAL AND MULTI-FORMAT OPTIONS
 These options are applicable to more than one file format, or are unrelated to
 file formats.
 
+.. option:: --addrsig
+
+ Display the address-significance table.
+
 .. option:: --all
 
  Equivalent to specifying all the main display options relevant to the file
  format.
-
-.. option:: --addrsig
-
- Display the address-significance table.
 
 .. option:: --decompress, -z
 
@@ -89,12 +89,6 @@ file formats.
  Display the specified section(s) as hexadecimal bytes. ``section`` may be a
  section index or section name.
 
- .. option:: --memtag
-
- Display information about memory tagging present in the binary. This includes
- various memtag-specific dynamic entries, decoded global descriptor sections,
- and decoded Android-specific ELF notes.
-
 .. option:: --needed-libs
 
  Display the needed libraries.
@@ -112,10 +106,6 @@ file formats.
 
  Display the relocation entries in the file.
 
-.. option:: --sections, --section-headers, -S
-
- Display all sections.
-
 .. option:: --section-data, --sd
 
  When used with :option:`--sections`, display section data for each section
@@ -125,6 +115,10 @@ file formats.
 
  When used with :option:`--sections`, display relocations for each section
  shown. This option has no effect for GNU style output.
+
+.. option:: --sections, --section-headers, -S
+
+ Display all sections.
 
 .. option:: --section-symbols, --st
 
@@ -181,6 +175,14 @@ The following options are implemented only for the ELF file format.
  When pgo analysis maps are present, all analyses are printed as their raw
  value.
 
+.. option:: --call-graph-info
+
+  Display the call graph section entries i.e. for each function
+  its identifying information, each of its direct callees' information
+  and for each indirect callee a 64-bit number representing the callee's
+  function signature. This information can be used to reconstruct
+  the program call graph.
+
 .. option:: --cg-profile
 
  Display the callgraph profile section.
@@ -189,6 +191,10 @@ The following options are implemented only for the ELF file format.
 
  Display the dependent libraries section.
 
+.. option:: --dynamic-table, --dynamic, -d
+
+ Display the dynamic table.
+
 .. option:: --dyn-relocations
 
  Display the dynamic relocation entries.
@@ -196,10 +202,6 @@ The following options are implemented only for the ELF file format.
 .. option:: --dyn-symbols, --dyn-syms, --dt
 
  Display the dynamic symbol table.
-
-.. option:: --dynamic-table, --dynamic, -d
-
- Display the dynamic table.
 
 .. option:: --elf-linker-options
 
@@ -331,10 +333,6 @@ The following options are implemented only for the PE/COFF file format.
 
  Display the debug directory.
 
-.. option:: --coff-tls-directory
-
- Display the TLS directory.
-
 .. option:: --coff-directives
 
  Display the .drectve section.
@@ -355,6 +353,10 @@ The following options are implemented only for the PE/COFF file format.
 
  Display the .rsrc section.
 
+.. option:: --coff-tls-directory
+
+ Display the TLS directory.
+
 XCOFF SPECIFIC OPTIONS
 ----------------------
 
@@ -372,13 +374,13 @@ The following options are implemented only for the XCOFF file format.
 
   Display XCOFF loader section header.
 
-.. option:: --loader-section-symbols
-
-  Display symbol table of loader section.
-
 .. option:: --loader-section-relocations
 
   Display relocation entries of loader section.
+
+.. option:: --loader-section-symbols
+
+  Display symbol table of loader section.
 
 EXIT STATUS
 -----------

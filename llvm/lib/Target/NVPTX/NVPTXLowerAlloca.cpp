@@ -46,7 +46,7 @@ public:
 };
 } // namespace
 
-char NVPTXLowerAlloca::ID = 1;
+char NVPTXLowerAlloca::ID = 0;
 
 INITIALIZE_PASS(NVPTXLowerAlloca, "nvptx-lower-alloca", "Lower Alloca", false,
                 false)
@@ -75,7 +75,7 @@ bool NVPTXLowerAlloca::runOnFunction(Function &F) {
         // We need to make sure that LLVM has info that alloca needs to go to
         // ADDRESS_SPACE_LOCAL for InferAddressSpace pass.
         //
-        // For allocas in ADDRESS_SPACE_LOCAL, we add addrspacecast to
+        // For allocas in ADDRESS_SPACE_GENERIC, we add addrspacecast to
         // ADDRESS_SPACE_LOCAL and back to ADDRESS_SPACE_GENERIC, so that
         // the alloca's users still use a generic pointer to operate on.
         //
