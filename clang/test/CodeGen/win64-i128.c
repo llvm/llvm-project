@@ -44,3 +44,29 @@ void vararg(int a, ...) {
   // ARM64EC: load i128, ptr [[P]], align 16
   __builtin_va_end(ap);
 }
+
+struct Align16 {
+  char x[16];
+} __attribute__((aligned(16)));
+
+void vararg_struct(int a, ...) {
+  // CHECK: define{{.*}} void @vararg_struct
+  __builtin_va_list ap;
+  __builtin_va_start(ap, a);
+  struct Align16 i = __builtin_va_arg(ap, struct Align16);
+
+  // X64,ARM64EC: %argp.cur = load ptr, ptr %ap
+  // X64,ARM64EC: %argp.next = getelementptr inbounds i8, ptr %argp.cur, i64 8
+  // X64,ARM64EC: store ptr %argp.next, ptr %ap
+  // X64,ARM64EC: [[P:%.*]] = load ptr, ptr %argp.cur
+  // X64,ARM64EC: call void @llvm.memcpy.p0.p0.i64(ptr align 16 %i, ptr align 16 [[P]], i64 16, i1 false)
+
+  // ARM64: %argp.cur = load ptr, ptr %ap
+  // ARM64: [[ADD:%.*]] = getelementptr inbounds i8, ptr %argp.cur, i32 15
+  // ARM64: %argp.cur.aligned = call ptr @llvm.ptrmask.p0.i64(ptr [[ADD]], i64 -16)
+  // ARM64: %argp.next = getelementptr inbounds i8, ptr %argp.cur.aligned, i64 16
+  // ARM64: store ptr %argp.next, ptr %ap
+  // ARM64: call void @llvm.memcpy.p0.p0.i64(ptr align 16 %i, ptr align 16 %argp.cur.aligned, i64 16, i1 false)
+
+  __builtin_va_end(ap);
+}
