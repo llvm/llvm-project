@@ -235,7 +235,6 @@ enum ProcessorFeatures {
   FEATURE_AVX10_1 = 114,
   FEATURE_AVX10_2 = 116,
   FEATURE_AMX_AVX512,
-  FEATURE_AMX_TF32,
   FEATURE_AMX_FP8 = 120,
   FEATURE_MOVRS,
   FEATURE_AMX_MOVRS,
@@ -1146,8 +1145,6 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
                    !getX86CpuIDAndInfoEx(0x1e, 0x1, &EAX, &EBX, &ECX, &EDX);
   if (HasLeaf1E && (EAX & 0x10))
     setFeature(FEATURE_AMX_FP8);
-  if (HasLeaf1E && (EAX & 0x40))
-    setFeature(FEATURE_AMX_TF32);
   if (HasLeaf1E && (EAX & 0x80))
     setFeature(FEATURE_AMX_AVX512);
   if (HasLeaf1E && (EAX & 0x100))

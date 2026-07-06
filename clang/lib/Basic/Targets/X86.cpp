@@ -400,8 +400,6 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAMXMOVRS = true;
     } else if (Feature == "+amx-avx512") {
       HasAMXAVX512 = true;
-    } else if (Feature == "+amx-tf32") {
-      HasAMXTF32 = true;
     } else if (Feature == "+cmpccxadd") {
       HasCMPCCXADD = true;
     } else if (Feature == "+raoint") {
@@ -946,8 +944,6 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AMX_MOVRS__");
   if (HasAMXAVX512)
     Builder.defineMacro("__AMX_AVX512__");
-  if (HasAMXTF32)
-    Builder.defineMacro("__AMX_TF32__");
   if (HasCMPCCXADD)
     Builder.defineMacro("__CMPCCXADD__");
   if (HasRAOINT)
@@ -1086,7 +1082,6 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("amx-fp8", true)
       .Case("amx-int8", true)
       .Case("amx-movrs", true)
-      .Case("amx-tf32", true)
       .Case("amx-tile", true)
       .Case("avx", true)
       .Case("avx10.1", true)
@@ -1208,7 +1203,6 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("amx-fp8", HasAMXFP8)
       .Case("amx-int8", HasAMXINT8)
       .Case("amx-movrs", HasAMXMOVRS)
-      .Case("amx-tf32", HasAMXTF32)
       .Case("amx-tile", HasAMXTILE)
       .Case("avx", SSELevel >= AVX)
       .Case("avx10.1", HasAVX10_1)
