@@ -130,12 +130,8 @@ template <class _VecT, size_t _Np, class _Iter>
 }
 _LIBCPP_DIAGNOSTIC_POP
 
-// On targets with Altivec (PowerPC), the == operator on __ext_vector_type__
-// vectors produces a deprecated vector bool result under the old XL compat mode.
-// Centralise the comparison here so the suppression is in one place.
-// The return type is deduced via decltype because under Altivec the comparison
-// result element type differs from the operand element type (e.g. char16_t
-// operands yield a short mask vector).
+// The return type uses decltype because under Altivec the comparison result
+// element type differs from the operand type (e.g. char16_t -> short mask).
 _LIBCPP_DIAGNOSTIC_PUSH
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated-altivec-src-compat")
 template <class _Tp, size_t _Np>
@@ -145,14 +141,14 @@ __simd_compare_eq(__simd_vector<_Tp, _Np> __lhs, __simd_vector<_Tp, _Np> __rhs) 
 }
 _LIBCPP_DIAGNOSTIC_POP
 
+// On non-Altivec targets this is always true. On Altivec targets it is false
+// when -faltivec-src-compat=xl is active (== returns scalar bool, not a mask).
 #  if defined(__ALTIVEC__)
-// In -faltivec-src-compat=xl mode, == on vector types returns a scalar bool,
-// which silently breaks the mask-based algorithms below. Refuse to compile in
-// that mode rather than produce wrong results.
-static_assert(sizeof(std::__simd_compare_eq(std::declval<__simd_vector<int, 4>>(),
-                                            std::declval<__simd_vector<int, 4>>())) == sizeof(__simd_vector<int, 4>),
-              "libc++'s vectorized algorithms require element-wise vector comparison semantics. "
-              "Compile with -faltivec-src-compat=mixed or -faltivec-src-compat=gcc (not =xl).");
+inline constexpr bool __altivec_has_element_wise_compare =
+    sizeof(std::__simd_compare_eq(std::declval<__simd_vector<int, 4>>(),
+                                  std::declval<__simd_vector<int, 4>>())) == sizeof(__simd_vector<int, 4>);
+#  else
+inline constexpr bool __altivec_has_element_wise_compare = true;
 #  endif
 
 template <class _Tp, size_t _Np>

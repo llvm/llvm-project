@@ -66,7 +66,7 @@ __find(_Iter __first, _Sent __last, const _Tp& __value, _Proj& __proj) {
 template <class _Tp, class _Up>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI
 _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find_vectorized(_Tp* __first, _Tp* __last, _Up __value) {
-  if (!__libcpp_is_constant_evaluated()) {
+  if (!__libcpp_is_constant_evaluated() && std::__altivec_has_element_wise_compare) {
     constexpr size_t __unroll_count = 4;
     constexpr size_t __vec_size     = __native_vector_size<_Tp>;
     using __vec                     = __simd_vector<_Tp, __vec_size>;
