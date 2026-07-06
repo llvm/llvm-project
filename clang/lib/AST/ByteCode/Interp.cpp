@@ -3088,6 +3088,39 @@ bool CopyMemberPtrPath(InterpState &S, const RecordDecl *Entry,
   return true;
 }
 
+template <bool Signed>
+static bool floatAPCast(InterpState &S, CodePtr OpPC, const Floating &F,
+                        uint32_t BitWidth, uint32_t FPOI) {
+  APSInt Result(BitWidth, /*IsUnsigned=*/!Signed);
+  auto Status = F.convertToInteger(Result);
+
+  // Float-to-Integral overflow check.
+  if ((Status & APFloat::opStatus::opInvalidOp) && F.isFinite() &&
+      !handleOverflow(S, OpPC, F.getAPFloat()))
+    return false;
+
+  FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
+
+  auto ResultAP = S.allocAP<IntegralAP<Signed>>(BitWidth);
+  ResultAP.copy(Result);
+
+  S.Stk.push<IntegralAP<Signed>>(ResultAP);
+
+  return CheckFloatResult(S, OpPC, F, Status, FPO);
+}
+
+bool CastFloatingIntegralAP(InterpState &S, CodePtr OpPC, uint32_t BitWidth,
+                            uint32_t FPOI) {
+  Floating F = S.Stk.pop<Floating>();
+  return floatAPCast<false>(S, OpPC, F, BitWidth, FPOI);
+}
+
+bool CastFloatingIntegralAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth,
+                             uint32_t FPOI) {
+  Floating F = S.Stk.pop<Floating>();
+  return floatAPCast<true>(S, OpPC, F, BitWidth, FPOI);
+}
+
 // FIXME: Would be nice to generate this instead of hardcoding it here.
 constexpr bool OpReturns(Opcode Op) {
   return Op == OP_RetVoid || Op == OP_RetValue || Op == OP_NoRet ||
