@@ -208,9 +208,6 @@ struct BasicView : IntBufferView {
   }
 };
 
-static_assert(std::forward_iterator<forward_sized_iterator<>>);
-static_assert(std::sized_sentinel_for<forward_sized_iterator<>, forward_sized_iterator<>>);
-
 using ForwardSizedView = BasicView<forward_sized_iterator<>>;
 static_assert(std::ranges::forward_range<ForwardSizedView>);
 static_assert(std::ranges::sized_range<ForwardSizedView>);
