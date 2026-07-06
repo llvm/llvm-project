@@ -589,6 +589,7 @@ def get_run_handler(triple):
         "thumb": (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
         "thumb-macho": (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_MACHO_RE),
         "thumbv5-macho": (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_MACHO_RE),
+        "thumbv7em-apple-none-macho": (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_MACHO_RE),
         "thumbv7s-apple-darwin": (scrub_asm_arm_eabi, ASM_FUNCTION_THUMBS_DARWIN_RE),
         "thumbv7-apple-darwin": (scrub_asm_arm_eabi, ASM_FUNCTION_THUMB_DARWIN_RE),
         "thumbv7-apple-ios": (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_IOS_RE),

@@ -82,6 +82,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -9817,7 +9818,9 @@ ARMTargetLowering::LowerAEABIUnalignedLoad(SDValue Op,
   bool AllowsUnaligned = Subtarget->allowsUnalignedMem();
 
   if (MF.getFunction().hasMinSize() && !AllowsUnaligned &&
-      Alignment <= llvm::Align(2)) {
+      Alignment <= llvm::Align(2) &&
+      RTLIB::RuntimeLibcallsInfo::hasAEABILibcalls(
+          Subtarget->getTargetTriple())) {
 
     RTLIB::Libcall LC =
         (MemVT == MVT::i32) ? RTLIB::AEABI_UREAD4 : RTLIB::AEABI_UREAD8;
@@ -9862,7 +9865,9 @@ SDValue ARMTargetLowering::LowerAEABIUnalignedStore(SDValue Op,
   bool AllowsUnaligned = Subtarget->allowsUnalignedMem();
 
   if (MF.getFunction().hasMinSize() && !AllowsUnaligned &&
-      Alignment <= llvm::Align(2)) {
+      Alignment <= llvm::Align(2) &&
+      RTLIB::RuntimeLibcallsInfo::hasAEABILibcalls(
+          Subtarget->getTargetTriple())) {
 
     SDLoc dl(Op);
 
