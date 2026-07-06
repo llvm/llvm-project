@@ -1064,8 +1064,7 @@ namespace {
 /// or through a chain of nested record fields (including anonymous
 /// structs/unions). This mirrors the GEP path that getGEPIndicesToField builds,
 /// and is used to identify the right anchor expression in Base.
-static bool recordContainsField(const RecordDecl *RD,
-                                const FieldDecl *Field) {
+static bool recordContainsField(const RecordDecl *RD, const FieldDecl *Field) {
   for (const FieldDecl *FD : RD->fields()) {
     if (FD == Field)
       return true;
