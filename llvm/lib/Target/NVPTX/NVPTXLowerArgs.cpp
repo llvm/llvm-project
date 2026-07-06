@@ -83,7 +83,7 @@ public:
 };
 } // namespace
 
-char NVPTXLowerArgsLegacyPass::ID = 1;
+char NVPTXLowerArgsLegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(NVPTXLowerArgsLegacyPass, "nvptx-lower-args",
                       "Lower arguments (NVPTX)", false, false)

@@ -1745,6 +1745,14 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
     return;
   }
 
+  // Replace uses of a BuildVector by users that only use its first lane with
+  // its first operand directly.
+  if (match(Def, m_BuildVector())) {
+    Def->replaceUsesWithIf(Def->getOperand(0), [Def](VPUser &U, unsigned) {
+      return U.usesFirstLaneOnly(Def);
+    });
+  }
+
   // Look through broadcast of single-scalar when used as select conditions; in
   // that case the scalar condition can be used directly.
   if (match(Def,
@@ -3460,8 +3468,10 @@ void VPlanTransforms::addExplicitVectorLength(
 
   // Replace all uses of the canonical IV with VPCurrentIterationPHIRecipe
   // except for the canonical IV increment.
-  CanonicalIV->replaceAllUsesWith(CurrentIteration);
-  CanonicalIVIncrement->setOperand(0, CanonicalIV);
+  CanonicalIV->replaceUsesWithIf(CurrentIteration,
+                                 [CanonicalIVIncrement](VPUser &U, unsigned) {
+                                   return &U != CanonicalIVIncrement;
+                                 });
   // TODO: support unroll factor > 1.
   Plan.setUF(1);
 }

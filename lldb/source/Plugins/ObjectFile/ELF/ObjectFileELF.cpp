@@ -362,6 +362,26 @@ static uint32_t loongarchVariantFromElfFlags(const elf::ELFHeader &header) {
   }
 }
 
+static uint32_t AMDGPUVariantFromElfFlags(const elf::ELFHeader &header) {
+  // Only HSA objects encode the exact GPU model, as an EF_AMDGPU_MACH value.
+  if (header.e_ident[EI_OSABI] == ELFOSABI_AMDGPU_HSA) {
+    switch (header.e_ident[EI_ABIVERSION]) {
+    // HSA V2 does not encode a CPU model.
+    case ELFABIVERSION_AMDGPU_HSA_V2:
+      break;
+
+    case ELFABIVERSION_AMDGPU_HSA_V3:
+    case ELFABIVERSION_AMDGPU_HSA_V4:
+    case ELFABIVERSION_AMDGPU_HSA_V5:
+    case ELFABIVERSION_AMDGPU_HSA_V6:
+      // The CPU model is the EF_AMDGPU_MACH value in the bottom byte of
+      // e_flags.
+      return header.e_flags & EF_AMDGPU_MACH;
+    }
+  }
+  return LLDB_INVALID_CPUTYPE;
+}
+
 static uint32_t subTypeFromElfHeader(const elf::ELFHeader &header) {
   if (header.e_machine == llvm::ELF::EM_MIPS)
     return mipsVariantFromElfFlags(header);
@@ -371,6 +391,8 @@ static uint32_t subTypeFromElfHeader(const elf::ELFHeader &header) {
     return riscvVariantFromElfFlags(header);
   else if (header.e_machine == llvm::ELF::EM_LOONGARCH)
     return loongarchVariantFromElfFlags(header);
+  else if (header.e_machine == llvm::ELF::EM_AMDGPU)
+    return AMDGPUVariantFromElfFlags(header);
 
   return LLDB_INVALID_CPUTYPE;
 }
@@ -584,6 +606,9 @@ static bool GetOsFromOSABI(unsigned char osabi_byte,
   case ELFOSABI_SOLARIS:
     ostype = llvm::Triple::OSType::Solaris;
     break;
+  case ELFOSABI_AMDGPU_HSA:
+    ostype = llvm::Triple::OSType::AMDHSA;
+    break;
   default:
     ostype = llvm::Triple::OSType::UnknownOS;
   }
@@ -618,7 +643,6 @@ ModuleSpecList ObjectFileELF::GetModuleSpecifications(
 
       if (spec.GetArchitecture().IsValid()) {
         llvm::Triple::OSType ostype;
-        llvm::Triple::VendorType vendor;
         llvm::Triple::OSType spec_ostype =
             spec.GetArchitecture().GetTriple().getOS();
 
@@ -626,12 +650,6 @@ ModuleSpecList ObjectFileELF::GetModuleSpecifications(
                   __FUNCTION__, file.GetPath().c_str(),
                   OSABIAsCString(header.e_ident[EI_OSABI]));
 
-        // SetArchitecture should have set the vendor to unknown
-        vendor = spec.GetArchitecture().GetTriple().getVendor();
-        assert(vendor == llvm::Triple::UnknownVendor);
-        UNUSED_IF_ASSERT_DISABLED(vendor);
-
-        //
         // Validate it is ok to remove GetOsFromOSABI
         GetOsFromOSABI(header.e_ident[EI_OSABI], ostype);
         assert(spec_ostype == ostype);
@@ -2197,8 +2215,7 @@ std::shared_ptr<ObjectFileELF> ObjectFileELF::GetGnuDebugDataObjectFile() {
   if (m_gnu_debug_data_object_file != nullptr)
     return m_gnu_debug_data_object_file;
 
-  SectionSP section =
-      GetSectionList()->FindSectionByName(ConstString(".gnu_debugdata"));
+  SectionSP section = GetSectionList()->FindSectionByName(".gnu_debugdata");
   if (!section)
     return nullptr;
 
@@ -3247,8 +3264,7 @@ void ObjectFileELF::ParseSymtab(Symtab &lldb_symtab) {
   // section, nomatter if .symtab was already parsed or not. This is because
   // minidebuginfo normally removes the .symtab symbols which have their
   // matching .dynsym counterparts.
-  if (!symtab ||
-      GetSectionList()->FindSectionByName(ConstString(".gnu_debugdata"))) {
+  if (!symtab || GetSectionList()->FindSectionByName(".gnu_debugdata")) {
     Section *dynsym =
         section_list->FindSectionByType(eSectionTypeELFDynamicSymbols, true)
             .get();
@@ -3800,6 +3816,16 @@ std::string static getDynamicTagAsString(uint16_t Arch, uint64_t Type) {
 #undef RISCV_DYNAMIC_TAG
     }
     break;
+
+  case llvm::ELF::EM_SPARC:
+  case llvm::ELF::EM_SPARC32PLUS:
+  case llvm::ELF::EM_SPARCV9:
+    switch (Type) {
+#define SPARC_DYNAMIC_TAG(name, value) DYNAMIC_STRINGIFY_ENUM(name, value)
+#include "llvm/BinaryFormat/DynamicTags.def"
+#undef SPARC_DYNAMIC_TAG
+    }
+    break;
   }
 #undef DYNAMIC_TAG
   switch (Type) {
@@ -3810,6 +3836,7 @@ std::string static getDynamicTagAsString(uint16_t Arch, uint64_t Type) {
 #define PPC_DYNAMIC_TAG(name, value)
 #define PPC64_DYNAMIC_TAG(name, value)
 #define RISCV_DYNAMIC_TAG(name, value)
+#define SPARC_DYNAMIC_TAG(name, value)
 // Also ignore marker tags such as DT_HIOS (maps to DT_VERNEEDNUM), etc.
 #define DYNAMIC_TAG_MARKER(name, value)
 #define DYNAMIC_TAG(name, value)                                               \
@@ -3823,6 +3850,7 @@ std::string static getDynamicTagAsString(uint16_t Arch, uint64_t Type) {
 #undef PPC_DYNAMIC_TAG
 #undef PPC64_DYNAMIC_TAG
 #undef RISCV_DYNAMIC_TAG
+#undef SPARC_DYNAMIC_TAG
 #undef DYNAMIC_TAG_MARKER
 #undef DYNAMIC_STRINGIFY_ENUM
   default:
@@ -3920,7 +3948,7 @@ ObjectFile::Strata ObjectFileELF::CalculateStrata() {
     {
       SectionList *section_list = GetSectionList();
       if (section_list) {
-        static ConstString loader_section_name(".interp");
+        llvm::StringRef loader_section_name(".interp");
         SectionSP loader_section =
             section_list->FindSectionByName(loader_section_name);
         if (loader_section) {

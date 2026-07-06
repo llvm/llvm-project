@@ -153,7 +153,7 @@ define i64 @test_v4i64_v4i16(<4 x i16> %a0) nounwind {
 ; X64-SSE4-NEXT:    paddq %xmm1, %xmm0
 ; X64-SSE4-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; X64-SSE4-NEXT:    paddq %xmm0, %xmm1
-; X64-SSE4-NEXT:    movq %xmm1, %rax
+; X64-SSE4-NEXT:    movd %xmm1, %eax
 ; X64-SSE4-NEXT:    retq
 ;
 ; X86-AVX1-LABEL: test_v4i64_v4i16:
@@ -176,7 +176,7 @@ define i64 @test_v4i64_v4i16(<4 x i16> %a0) nounwind {
 ; X64-AVX1-NEXT:    vpaddq %xmm0, %xmm1, %xmm0
 ; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; X64-AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vmovq %xmm0, %rax
+; X64-AVX1-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX1-NEXT:    retq
 ;
 ; X86-AVX2-LABEL: test_v4i64_v4i16:
@@ -230,7 +230,7 @@ define i64 @test_v8i64_v8i8(<8 x i8> %a0) nounwind {
 ; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    pxor %xmm1, %xmm1
 ; X64-SSE-NEXT:    psadbw %xmm0, %xmm1
-; X64-SSE-NEXT:    movq %xmm1, %rax
+; X64-SSE-NEXT:    movd %xmm1, %eax
 ; X64-SSE-NEXT:    retq
 ;
 ; X86-SSE4-LABEL: test_v8i64_v8i8:
@@ -253,7 +253,7 @@ define i64 @test_v8i64_v8i8(<8 x i8> %a0) nounwind {
 ; X64-AVX1:       # %bb.0:
 ; X64-AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-AVX1-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vmovq %xmm0, %rax
+; X64-AVX1-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX1-NEXT:    retq
 ;
 ; X86-AVX2-LABEL: test_v8i64_v8i8:
@@ -268,14 +268,14 @@ define i64 @test_v8i64_v8i8(<8 x i8> %a0) nounwind {
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-AVX2-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vmovq %xmm0, %rax
+; X64-AVX2-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_v8i64_v8i8:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vmovq %xmm0, %rax
+; AVX512-NEXT:    vmovd %xmm0, %eax
 ; AVX512-NEXT:    retq
   %1 = zext <8 x i8> %a0 to <8 x i64>
   %2 = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> %1)
@@ -300,7 +300,7 @@ define i64 @test_v16i64_v16i8(<16 x i8> %a0) nounwind {
 ; X64-SSE-NEXT:    psadbw %xmm0, %xmm1
 ; X64-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; X64-SSE-NEXT:    paddq %xmm1, %xmm0
-; X64-SSE-NEXT:    movq %xmm0, %rax
+; X64-SSE-NEXT:    movd %xmm0, %eax
 ; X64-SSE-NEXT:    retq
 ;
 ; X86-SSE4-LABEL: test_v16i64_v16i8:
@@ -329,7 +329,7 @@ define i64 @test_v16i64_v16i8(<16 x i8> %a0) nounwind {
 ; X64-AVX1-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; X64-AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vmovq %xmm0, %rax
+; X64-AVX1-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX1-NEXT:    retq
 ;
 ; X86-AVX2-LABEL: test_v16i64_v16i8:
@@ -348,7 +348,7 @@ define i64 @test_v16i64_v16i8(<16 x i8> %a0) nounwind {
 ; X64-AVX2-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; X64-AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vmovq %xmm0, %rax
+; X64-AVX2-NEXT:    vmovd %xmm0, %eax
 ; X64-AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_v16i64_v16i8:
@@ -357,7 +357,7 @@ define i64 @test_v16i64_v16i8(<16 x i8> %a0) nounwind {
 ; AVX512-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX512-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vmovq %xmm0, %rax
+; AVX512-NEXT:    vmovd %xmm0, %eax
 ; AVX512-NEXT:    retq
   %1 = zext <16 x i8> %a0 to <16 x i64>
   %2 = call i64 @llvm.vector.reduce.add.v16i64(<16 x i64> %1)

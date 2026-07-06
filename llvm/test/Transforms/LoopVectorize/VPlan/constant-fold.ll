@@ -260,6 +260,62 @@ exit:
   ret void
 }
 
+define void @fold_replicating_umax_equal_live_ins(ptr noalias %dst, ptr %cond, i32 %x) {
+; CHECK-LABEL: VPlan for loop in 'fold_replicating_umax_equal_live_ins' after VPlanTransforms::simplifyRecipes
+; CHECK-NEXT:  VPlan ' for UF>=1' {
+; CHECK-NEXT:  Live-in ir<1024> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:  Successor(s): loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  loop:
+; CHECK-NEXT:    EMIT-SCALAR ir<%iv> = phi [ ir<0>, vector.ph ], [ ir<%iv.next>, latch ]
+; CHECK-NEXT:    EMIT ir<%cond.gep> = getelementptr ir<%cond>, ir<%iv>
+; CHECK-NEXT:    EMIT-SCALAR ir<%c> = load ir<%cond.gep>
+; CHECK-NEXT:    EMIT ir<%tobool> = icmp ne ir<%c>, ir<0>
+; CHECK-NEXT:    EMIT branch-on-cond ir<%tobool>
+; CHECK-NEXT:  Successor(s): then, latch
+; CHECK-EMPTY:
+; CHECK-NEXT:  then:
+; CHECK-NEXT:    EMIT ir<%m> = call ir<%x>, ir<%x>, ir<@llvm.umax.i32>
+; CHECK-NEXT:    EMIT ir<%gep> = getelementptr ir<%dst>, ir<%iv>
+; CHECK-NEXT:    EMIT store ir<%m>, ir<%gep>
+; CHECK-NEXT:  Successor(s): latch
+; CHECK-EMPTY:
+; CHECK-NEXT:  latch:
+; CHECK-NEXT:    EMIT ir<%iv.next> = add ir<%iv>, ir<1>
+; CHECK-NEXT:    EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<1024>
+; CHECK-NEXT:    EMIT branch-on-cond ir<%ec>
+; CHECK-NEXT:  Successor(s): middle.block, loop
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %cond.gep = getelementptr i8, ptr %cond, i64 %iv
+  %c = load i8, ptr %cond.gep, align 1
+  %tobool = icmp ne i8 %c, 0
+  br i1 %tobool, label %then, label %latch
+
+then:
+  %m = call i32 @llvm.umax.i32(i32 %x, i32 %x)
+  %gep = getelementptr i32, ptr %dst, i64 %iv
+  store i32 %m, ptr %gep, align 4
+  br label %latch
+
+latch:
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 1024
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 !1 = distinct !{!1, !2, !3, !4}
 !2 = !{!"llvm.loop.vectorize.width", i32 4}
 !3 = !{!"llvm.loop.vectorize.enable", i1 true}

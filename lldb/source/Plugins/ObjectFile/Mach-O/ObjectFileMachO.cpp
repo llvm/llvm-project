@@ -5510,8 +5510,7 @@ ObjectFile::Strata ObjectFileMachO::CalculateStrata() {
     } else {
       SectionList *section_list = GetSectionList();
       if (section_list) {
-        static ConstString g_kld_section_name("__KLD");
-        if (section_list->FindSectionByName(g_kld_section_name))
+        if (section_list->FindSectionByName("__KLD"))
           return eStrataKernel;
       }
     }

@@ -15104,6 +15104,7 @@ libc_function(
         ":__support_libc_errno",
         ":__support_macros_config",
         ":errno",
+        ":printf_config",
         ":printf_core_structs",
         ":printf_error_mapper",
         ":printf_main",
