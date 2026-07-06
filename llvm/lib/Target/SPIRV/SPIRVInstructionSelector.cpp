@@ -180,6 +180,9 @@ private:
   bool selectInterlockedOp(Register ResVReg, SPIRVTypeInst ResType,
                            MachineInstr &I, unsigned Opcode) const;
 
+  bool selectAtomicIncDec(Register ResVReg, SPIRVTypeInst ResType,
+                          MachineInstr &I, unsigned NewOpcode) const;
+
   bool selectAtomicCmpXchg(Register ResVReg, SPIRVTypeInst ResType,
                            MachineInstr &I) const;
 
@@ -1392,6 +1395,11 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_ATOMICRMW_FMAX:
     return selectAtomicRMW(ResVReg, ResType, I, SPIRV::OpAtomicFMaxEXT);
 
+  case TargetOpcode::G_ATOMICRMW_UINC_WRAP:
+    return selectAtomicIncDec(ResVReg, ResType, I, SPIRV::OpAtomicIIncrement);
+  case TargetOpcode::G_ATOMICRMW_UDEC_WRAP:
+    return selectAtomicIncDec(ResVReg, ResType, I, SPIRV::OpAtomicIDecrement);
+
   case TargetOpcode::G_FENCE:
     return selectFence(I);
 
@@ -2452,6 +2460,40 @@ bool SPIRVInstructionSelector::selectAtomicRMW(Register ResVReg,
       .addUse(MemSemReg)
       .addUse(ValueReg)
       .constrainAllUses(TII, TRI, RBI);
+  return true;
+}
+
+bool SPIRVInstructionSelector::selectAtomicIncDec(Register ResVReg,
+                                                  SPIRVTypeInst ResType,
+                                                  MachineInstr &I,
+                                                  unsigned NewOpcode) const {
+  assert(I.hasOneMemOperand());
+  const MachineMemOperand *MemOp = *I.memoperands_begin();
+  uint32_t Scope = static_cast<uint32_t>(getMemScope(
+      GR.CurMF->getFunction().getContext(), MemOp->getSyncScopeID()));
+  Register ScopeReg = buildI32Constant(Scope, I);
+
+  Register Ptr = I.getOperand(1).getReg();
+  uint32_t ScSem = static_cast<uint32_t>(
+      getMemSemanticsForStorageClass(GR.getPointerStorageClass(Ptr)));
+  AtomicOrdering AO = MemOp->getSuccessOrdering();
+  uint32_t MemSem = static_cast<uint32_t>(getMemSemantics(AO)) | ScSem;
+  Register MemSemReg = buildI32Constant(MemSem, I);
+
+  Register WrapReg = I.getOperand(2).getReg();
+
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(NewOpcode))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(Ptr)
+      .addUse(ScopeReg)
+      .addUse(MemSemReg)
+      .constrainAllUses(TII, TRI, RBI);
+
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpDecorate))
+      .addUse(ResVReg)
+      .addImm(static_cast<uint32_t>(SPIRV::Decoration::MaxByteOffsetId))
+      .addUse(WrapReg);
   return true;
 }
 

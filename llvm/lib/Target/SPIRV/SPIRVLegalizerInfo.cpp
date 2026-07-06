@@ -441,7 +441,8 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder({G_ATOMICRMW_OR, G_ATOMICRMW_ADD, G_ATOMICRMW_AND,
                                G_ATOMICRMW_MAX, G_ATOMICRMW_MIN,
                                G_ATOMICRMW_SUB, G_ATOMICRMW_XOR,
-                               G_ATOMICRMW_UMAX, G_ATOMICRMW_UMIN})
+                               G_ATOMICRMW_UMAX, G_ATOMICRMW_UMIN,
+                               G_ATOMICRMW_UINC_WRAP, G_ATOMICRMW_UDEC_WRAP})
       .legalForCartesianProduct(allIntScalars, allPtrs);
 
   getActionDefinitionsBuilder(
