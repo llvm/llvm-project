@@ -297,6 +297,15 @@
 // CHECK-HIP-DEV: #define __HIPCC__ 1
 // CHECK-HIP-DEV: #define __HIP_DEVICE_COMPILE__ 1
 // CHECK-HIP-DEV: #define __HIP__ 1
+// CHECK-HIP-DEV-NOT: #define __HIP_LLVM__ 1
+
+// RUN: %clang_cc1 %s -E -dM -o - -x hip -triple amdgcn-amd-amdhsa-llvm \
+// RUN:   -fcuda-is-device \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-HIP-LLVM
+// CHECK-HIP-LLVM: #define __HIPCC__ 1
+// CHECK-HIP-LLVM: #define __HIP_DEVICE_COMPILE__ 1
+// CHECK-HIP-LLVM: #define __HIP_LLVM__ 1
+// CHECK-HIP-LLVM: #define __HIP__ 1
 
 // RUN: %clang_cc1 %s -E -dM -o - -x cuda -triple nvptx \
 // RUN:   -fcuda-is-device \

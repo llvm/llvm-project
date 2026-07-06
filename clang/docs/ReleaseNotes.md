@@ -145,6 +145,12 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   break on i686, MIPS O32, PowerPC64 ELFv1, and Lanai.
 - Fixed incorrect struct return when single large vector (256/512-bit) used on
   x86-64 targets. (#GH203760) The bug was introduced since Clang 21. (#GH120670)
+- Clang now applies MSVC's MD5 shortening to over-long Microsoft C++ RTTI type
+  descriptor name strings, matching the behavior already used for the RTTI
+  symbol names. Previously the full name string was always emitted, so deeply
+  nested template types (for example, ones containing local lambdas) could
+  produce very large writable `.data` sections. Emitted RTTI name strings
+  change only for types whose name exceeds the length limit. (#GH206313)
 
 ### AST Dumping Potentially Breaking Changes
 
@@ -678,9 +684,6 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Clang now rejects inline asm constraints and clobbers that contain an
   embedded null character, instead of silently truncating them. (#GH173900)
 
-- Added `-Wstringop-overread` to warn when `memcpy`, `memmove`, `memcmp`,
-  and related builtins read more bytes than the source buffer size (#GH83728).
-
 - Diagnostics for the C++11 range-based for statement now report the correct
   iterator type in notes for invalid iterator types.
 
@@ -807,6 +810,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fixed an alias template CTAD crash.
 - Correctly diagnose uses of `co_await` / `co_yield` in the default argument of nested function declarations. (#GH98923)
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
+- Fixed clang incorrectly rejecting several cases of out-of-line definitions. (#GH101330)
 - Clang incorrectly instantiated variable specializations outside of the immediate context. (#GH54439)
 - Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
 - Fixed crash instantiating class member specializations.
