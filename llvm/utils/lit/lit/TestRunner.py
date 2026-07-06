@@ -712,7 +712,9 @@ def executeScriptInternal(
     results = []
     timeoutInfo = None
     prefer_fs = getattr(test.config, "llvm_windows_prefer_forward_slash", "")
-    normalize_slashes = (prefer_fs in ("1", "ON", "True")) or litConfig.params.get("use_normalized_slashes", False)
+    normalize_slashes = (prefer_fs in ("1", "ON", "True")) or litConfig.params.get(
+        "use_normalized_slashes", False
+    )
     shenv = ShellEnvironment(
         cwd, test.config.environment, normalize_slashes=normalize_slashes
     )
@@ -1944,7 +1946,10 @@ def executeShTest(
         tmpDir,
         tmpBase,
         normalize_slashes=useExternalSh
-        or (getattr(test.config, "llvm_windows_prefer_forward_slash", "") in ("1", "ON", "True"))
+        or (
+            getattr(test.config, "llvm_windows_prefer_forward_slash", "")
+            in ("1", "ON", "True")
+        )
         or litConfig.params.get("use_normalized_slashes", False),
     )
     conditions = {feature: True for feature in test.config.available_features}

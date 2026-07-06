@@ -112,12 +112,14 @@ else:
 # Tweak the PATH to include the tools dir.
 llvm_config.with_environment("PATH", config.llvm_tools_dir, append_path=True)
 
-llvm_config.with_system_environment(["HOME", "INCLUDE", "LIB", "TMP", "TEMP", "LLVM_WINDOWS_PREFER_FORWARD_SLASH"])
+llvm_config.with_system_environment(
+    ["HOME", "INCLUDE", "LIB", "TMP", "TEMP", "LLVM_WINDOWS_PREFER_FORWARD_SLASH"]
+)
 
 prefer_forward_slash = getattr(config, "llvm_windows_prefer_forward_slash", "")
 if prefer_forward_slash in ("1", "ON", "True"):
     config.environment["LLVM_WINDOWS_PREFER_FORWARD_SLASH"] = "1"
-    
+
     # Restrict forward-slash testing to a reasonable subset
     # by excluding directories that don't deal with file paths or formatting
     forward_slash_subsets = {"DebugInfo", "MC", "Support", "tools", "Unit"}
