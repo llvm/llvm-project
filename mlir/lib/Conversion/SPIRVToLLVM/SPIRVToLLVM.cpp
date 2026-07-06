@@ -1624,9 +1624,9 @@ public:
       return rewriter.notifyMatchFailure(op, "type conversion failed");
 
     Location loc = op.getLoc();
-    Value x = adaptor.getOperands()[0];
-    Value y = adaptor.getOperands()[1];
-    Value a = adaptor.getOperands()[2];
+    Value x = adaptor.getX();
+    Value y = adaptor.getY();
+    Value a = adaptor.getZ();
     Value diff = LLVM::FSubOp::create(rewriter, loc, dstType, y, x);
     rewriter.replaceOpWithNewOp<LLVM::FMAOp>(op, dstType, a, diff, x);
     return success();
