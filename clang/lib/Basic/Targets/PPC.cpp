@@ -751,8 +751,8 @@ llvm::APInt PPCTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
       Feature = Feature.drop_front(1);
 
     int Priority = llvm::StringSwitch<int>(Feature)
-#define PPC_AIX_CLONES_FEATURE(FEATURE_NAME, _, PRIORITY) \
-	                   .Case(FEATURE_NAME, PRIORITY)
+#define PPC_AIX_CLONES_FEATURE(FEATURE_NAME, _, PRIORITY)                      \
+  .Case(FEATURE_NAME, PRIORITY)
 #include "llvm/TargetParser/PPCTargetParser.def"
                        .Default(0);
     return llvm::APInt(32, Priority);
