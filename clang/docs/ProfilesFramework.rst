@@ -1164,9 +1164,17 @@ recognizers symmetric.
   increment/decrement arm of ``Sema::CreateBuiltinUnaryOp`` for
   ``++``/``--``), while the shift compounds keep loading through the
   chokepoint via their LHS promotion and are excluded from the operator hook,
-  so exactly one diagnostic fires.  Out of scope, as the remaining
-  limitation: class-type read-through (copy construction from ``*p``),
-  consistent with the scalar slice and the deferred-writes stance.
+  so exactly one diagnostic fires.  A *class-type* copy from ``*p`` (copy-,
+  direct-, braced-, argument-, or return-copy) never reaches the chokepoint --
+  record glvalues undergo no lvalue-to-rvalue conversion -- but is caught all
+  the same by the *binding* rule at the copy constructor's reference
+  parameter, so the diagnostic is
+  ``err_init_uninit_requires_ref_to_uninit`` rather than
+  ``err_init_uninit_read_through``.  The escape is the paper's own (§7.2): a
+  copy constructor declared with a ``[[ref_to_uninit]]`` reference parameter
+  accepts the uninitialized source.  Because this is a binding, not a read,
+  the ``std::byte`` exemption does not apply to a record that merely
+  *contains* ``std::byte`` members.
 - Known gaps: recognition is purely of the source's syntactic form, so a
   binding whose underlying operand is unrecognized -- pointer arithmetic, an
   integer-to-pointer cast, a call through a function pointer (no

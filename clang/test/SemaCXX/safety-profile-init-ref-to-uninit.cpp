@@ -809,6 +809,48 @@ void test_member_read_byte_exempt() {
   (void)b;
 }
 
+// A whole-record copy from *pp reads the uninitialized pointee (paper
+// abstract: an object marked [[ref_to_uninit]] cannot be read through), but
+// class types never reach the lvalue-to-rvalue chokepoint. The copy is caught
+// all the same, by the binding rule at the copy constructor's reference
+// parameter -- so the diagnostic is the binding one, not the read-through
+// one. This holds for copy-, direct-, braced-, argument-, and return-copies
+// alike.
+void take_pair(Pair v);
+
+Pair test_record_copy_through(Pair *pp [[ref_to_uninit]]) {
+  Pair v = *pp;   // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  Pair w(*pp);    // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  Pair b = {*pp}; // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  take_pair(*pp); // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  (void)v; (void)w; (void)b;
+  return *pp;     // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}
+
+// The escape is the paper's own (§7.2): a copy constructor declared with a
+// [[ref_to_uninit]] parameter accepts the uninitialized source -- and then,
+// symmetrically, rejects an initialized one.
+struct MarkedCopy {
+  int x;
+  MarkedCopy();
+  MarkedCopy(const MarkedCopy &q [[ref_to_uninit]]);
+};
+
+void test_record_copy_marked_ctor(MarkedCopy *mp [[ref_to_uninit]],
+                                  const MarkedCopy &init) {
+  MarkedCopy v = *mp;  // OK: the marked parameter accepts the uninit pointee
+  MarkedCopy w = init; // expected-error {{reference marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  (void)v; (void)w;
+}
+
+// A record *containing* std::byte members is not std::byte, so the §4.5 read
+// exemption does not extend to the whole-record binding.
+struct ByteBox { std::byte b; };
+void test_record_copy_byte_member(ByteBox *bp [[ref_to_uninit]]) {
+  ByteBox v = *bp; // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  (void)v;
+}
+
 // An element read of a named [[uninit]] array is a subobject read exactly like
 // s.x: neither flow pass tracks array elements (and element-wise delayed
 // initialization is banned, paper §5.5), so the marker counts below the
