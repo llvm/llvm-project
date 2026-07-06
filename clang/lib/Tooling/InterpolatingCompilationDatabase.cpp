@@ -148,9 +148,9 @@ static LangStandard::Kind latestLangStandardC() {
 // flag in clang-CL mode.
 static LangStandard::Kind latestLangStandardCXX() {
   // FIXME: Have a single source of truth for the mapping from
-  // c++latest --> c++26 that's shared by the driver code
+  // c++latest --> c++29 that's shared by the driver code
   // (clang/lib/Driver/ToolChains/Clang.cpp) and this file.
-  return LangStandard::lang_cxx26;
+  return LangStandard::lang_cxx29;
 }
 
 // A CompileCommand that can be applied to another file.

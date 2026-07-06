@@ -14,13 +14,19 @@ sfence.w.inval 0x10 # CHECK: :[[@LINE]]:1: error: invalid instruction
 
 sfence.inval.ir 0x10 # CHECK: :[[@LINE]]:1: error: invalid instruction
 
-hfence.vvma zero, a1, a2 # CHECK: :[[@LINE]]:1: error: invalid instruction
+hfence.vvma zero, a1, a2
+# CHECK: :[[#@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK: :[[#@LINE-2]]:13: note: invalid operand for instruction
+# CHECK: :[[#@LINE-3]]:19: note: invalid operand for instruction
 
-hfence.vvma a0, 0x10 # CHECK: :[[@LINE]]:17: error: invalid operand for instruction
+hfence.vvma a0, 0x10 # CHECK: :[[@LINE]]:13: error: invalid operand for instruction
 
-hfence.gvma zero, a1, a2 # CHECK: :[[@LINE]]:1: error: invalid instruction
+hfence.gvma zero, a1, a2
+# CHECK: :[[#@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK: :[[#@LINE-2]]:13: note: invalid operand for instruction
+# CHECK: :[[#@LINE-3]]:19: note: invalid operand for instruction
 
-hfence.gvma a0, 0x10 # CHECK: :[[@LINE]]:17: error: invalid operand for instruction
+hfence.gvma a0, 0x10 # CHECK: :[[@LINE]]:13: error: invalid operand for instruction
 
 hinval.vvma zero, a1, a2 # CHECK: :[[@LINE]]:1: error: invalid instruction
 

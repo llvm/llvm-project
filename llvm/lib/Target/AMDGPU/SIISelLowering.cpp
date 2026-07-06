@@ -12650,12 +12650,12 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                 0);
     // Member count should be put into M0[ShAmt:+6]
     // Barrier ID should be put into M0[5:0]
-    M0Val =
+    SDValue MemberCnt =
         SDValue(DAG.getMachineNode(AMDGPU::S_AND_B32, DL, MVT::i32, CntOp,
                                    DAG.getTargetConstant(0x3F, DL, MVT::i32)),
                 0);
     constexpr unsigned ShAmt = 16;
-    M0Val = DAG.getNode(ISD::SHL, DL, MVT::i32, CntOp,
+    M0Val = DAG.getNode(ISD::SHL, DL, MVT::i32, MemberCnt,
                         DAG.getShiftAmountConstant(ShAmt, MVT::i32, DL));
 
     M0Val = SDValue(
