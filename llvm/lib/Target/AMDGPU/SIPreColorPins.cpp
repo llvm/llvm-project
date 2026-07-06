@@ -600,7 +600,8 @@ bool SIPreColorPins::runOnMachineFunction(MachineFunction &MF) {
   if (unsigned Req = ReqVGPRs) {
     // Occupancy achievable while reserving `Req` registers per wave; cap the
     // waves-per-EU (and hence the RA's VGPR budget) so the pinned range fits.
-    unsigned Occ = ST.getOccupancyWithNumVGPRs(Req);
+    unsigned Occ =
+        ST.getOccupancyWithNumVGPRs(Req, MFI->getDynamicVGPRBlockSize());
     auto WPE = MFI->getWavesPerEU();
     unsigned NewMax = WPE.second ? std::min(WPE.second, Occ) : Occ;
     // Only cap the *max* occupancy; keep the min low (1 unless the function
