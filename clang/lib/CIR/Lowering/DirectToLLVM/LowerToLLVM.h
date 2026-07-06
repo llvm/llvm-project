@@ -81,6 +81,32 @@ private:
   int32_t blockTagOpIndex;
 };
 
+// Lower a floating-point operation with an fenv attribute to a call to the
+// matching experimental constrained floating-point intrinsic. The value
+// operands are followed by metadata operands for the rounding mode (only when
+// `hasRoundingMode` is set) and the exception behavior. Used by the hand-written
+// lowering patterns whose no-fenv path needs custom handling (e.g. fmaxnum).
+mlir::LogicalResult lowerToConstrainedFPIntrinsic(
+    mlir::Operation *op, mlir::ValueRange operands, cir::FenvAttr fenv,
+    mlir::Type llvmResTy, mlir::ConversionPatternRewriter &rewriter,
+    llvm::StringRef constrainedMnemonic, bool hasRoundingMode);
+
+// Shared lowering for floating-point operations that carry an optional `fenv`
+// attribute. Without the attribute, the operation is lowered to the plain LLVM
+// operation `LLVMOp`. With the attribute, it is lowered to a call to the
+// matching experimental constrained floating-point intrinsic (identified by
+// `constrainedMnemonic`) using the generic `llvm.call_intrinsic` form. It
+// handles both unary and binary operations and is invoked by the table-generated
+// LLVM lowering patterns below.
+template <typename LLVMOp>
+mlir::LogicalResult
+lowerConstrainableFPOp(mlir::Operation *op, mlir::ValueRange operands,
+                       cir::FenvAttr fenv,
+                       const mlir::TypeConverter &typeConverter,
+                       mlir::ConversionPatternRewriter &rewriter,
+                       llvm::StringRef constrainedMnemonic,
+                       bool hasRoundingMode);
+
 #define GET_LLVM_LOWERING_PATTERNS
 #include "clang/CIR/Dialect/IR/CIRLowering.inc"
 #undef GET_LLVM_LOWERING_PATTERNS

@@ -1,0 +1,166 @@
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s
+
+// Lowering of floating-point operations that carry an `fenv` attribute. Such
+// operations are lowered to calls to the experimental constrained
+// floating-point intrinsics using the generic `llvm.call_intrinsic` form, with
+// the rounding mode and exception behavior passed as metadata operands. The
+// overloaded type suffix is intentionally omitted from the intrinsic name; it
+// is resolved from the operand types during translation to LLVM IR.
+
+module {
+  // An operation with a fully-specified fenv attribute lowers to a constrained
+  // intrinsic call. An operation without an fenv attribute keeps the plain LLVM
+  // binary operation. An empty fenv attribute lowers to a constrained call with
+  // the default rounding mode and ignored exceptions.
+  // CHECK-LABEL: llvm.func @fadd_variants
+  cir.func @fadd_variants(%a: !cir.float, %b: !cir.float) {
+    // CHECK: %[[RM:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"round.tonearest">
+    // CHECK: %[[EB:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"(%{{.*}}, %{{.*}}, %[[RM]], %[[EB]]) : (f32, f32, !llvm.metadata, !llvm.metadata) -> f32
+    %0 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+
+    // CHECK: llvm.fadd %{{.*}}, %{{.*}} : f32
+    // CHECK-NOT: constrained
+    %1 = cir.fadd %a, %b : !cir.float
+
+    // CHECK: %[[RM2:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"round.tonearest">
+    // CHECK: %[[EB2:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.ignore">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"(%{{.*}}, %{{.*}}, %[[RM2]], %[[EB2]]) : (f32, f32, !llvm.metadata, !llvm.metadata) -> f32
+    %2 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<>}
+    cir.return
+  }
+
+  // Each dynamic rounding mode maps to the corresponding LLVM metadata string.
+  // An unknown dynamic rounding mode maps to "round.dynamic".
+  // CHECK-LABEL: llvm.func @rounding_modes
+  cir.func @rounding_modes(%a: !cir.float, %b: !cir.float) {
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"round.tonearest">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
+    %0 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = tonearest>}
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"round.downward">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
+    %1 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = downward>}
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"round.upward">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
+    %2 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = upward>}
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"round.towardzero">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
+    %3 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = upwardzero>}
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"round.tonearestaway">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
+    %4 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = tonearestaway>}
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"round.dynamic">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
+    %5 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = unknown>}
+    cir.return
+  }
+
+  // The exception behavior is derived from the strict_except field: true maps to
+  // "fpexcept.strict", false maps to "fpexcept.maytrap", and an absent value
+  // maps to "fpexcept.ignore".
+  // CHECK-LABEL: llvm.func @exception_behaviors
+  cir.func @exception_behaviors(%a: !cir.float, %b: !cir.float) {
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
+    %0 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.maytrap">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
+    %1 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<strict_except = false>}
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.ignore">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
+    %2 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = tonearest>}
+    cir.return
+  }
+
+  // Every floating-point binary op maps to the matching constrained intrinsic.
+  // CHECK-LABEL: llvm.func @all_binops
+  cir.func @all_binops(%a: !cir.double, %b: !cir.double) {
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, !llvm.metadata, !llvm.metadata) -> f64
+    %0 = cir.fadd %a, %b : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fsub"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, !llvm.metadata, !llvm.metadata) -> f64
+    %1 = cir.fsub %a, %b : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fmul"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, !llvm.metadata, !llvm.metadata) -> f64
+    %2 = cir.fmul %a, %b : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fdiv"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, !llvm.metadata, !llvm.metadata) -> f64
+    %3 = cir.fdiv %a, %b : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.frem"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, !llvm.metadata, !llvm.metadata) -> f64
+    %4 = cir.frem %a, %b : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    cir.return
+  }
+
+  // Vector floating-point operations are lowered the same way; the vector type
+  // is carried through to the intrinsic call signature.
+  // CHECK-LABEL: llvm.func @vector_binop
+  cir.func @vector_binop(%a: !cir.vector<4 x !cir.float>,
+                         %b: !cir.vector<4 x !cir.float>) {
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<4xf32>, vector<4xf32>, !llvm.metadata, !llvm.metadata) -> vector<4xf32>
+    %0 = cir.fadd %a, %b : !cir.vector<4 x !cir.float> {fenv = #cir.fenv<strict_except = true>}
+    cir.return
+  }
+
+  // Unary floating-point builtins with an fenv attribute lower to the matching
+  // constrained intrinsic. Transcendental/arithmetic builtins take a rounding
+  // mode operand; builtins whose rounding is implied (e.g. ceil) take only the
+  // exception-behavior operand. Builtins with no constrained variant (e.g.
+  // fabs) keep the plain LLVM operation.
+  // CHECK-LABEL: llvm.func @unary_fp_builtins
+  cir.func @unary_fp_builtins(%a: !cir.double) {
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.cos"(%{{.*}}, %{{.*}}, %{{.*}}) : (f64, !llvm.metadata, !llvm.metadata) -> f64
+    %0 = cir.cos %a : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.sqrt"(%{{.*}}, %{{.*}}, %{{.*}}) : (f64, !llvm.metadata, !llvm.metadata) -> f64
+    %1 = cir.sqrt %a : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // Rounding-implied builtin: no rounding-mode operand, only exception
+    // behavior.
+    // CHECK: %[[EB:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.ceil"(%{{.*}}, %[[EB]]) : (f64, !llvm.metadata) -> f64
+    %2 = cir.ceil %a : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // fabs has no constrained variant, so the fenv attribute is dropped.
+    // CHECK: llvm.intr.fabs(%{{.*}}) : (f64) -> f64
+    // CHECK-NOT: constrained
+    %3 = cir.fabs %a : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // Without an fenv attribute the plain builtin lowering is used.
+    // CHECK: llvm.intr.cos(%{{.*}}) : (f64) -> f64
+    %4 = cir.cos %a : !cir.double
+    cir.return
+  }
+
+  // Binary floating-point builtins behave analogously.
+  // CHECK-LABEL: llvm.func @binary_fp_builtins
+  cir.func @binary_fp_builtins(%a: !cir.double, %b: !cir.double) {
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.pow"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, !llvm.metadata, !llvm.metadata) -> f64
+    %0 = cir.pow %a, %b : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.atan2"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, !llvm.metadata, !llvm.metadata) -> f64
+    %1 = cir.atan2 %a, %b : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // fmod maps to the constrained frem intrinsic.
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.frem"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, !llvm.metadata, !llvm.metadata) -> f64
+    %2 = cir.fmod %a, %b : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // fmaximum/fminimum are rounding-implied: only the exception-behavior
+    // operand is passed.
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.maximum"(%{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, !llvm.metadata) -> f64
+    %3 = cir.fmaximum %a, %b : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.minimum"(%{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, !llvm.metadata) -> f64
+    %4 = cir.fminimum %a, %b : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // copysign has no constrained variant, so the fenv attribute is dropped.
+    // CHECK: llvm.intr.copysign(%{{.*}}, %{{.*}}) : (f64, f64) -> f64
+    // CHECK-NOT: constrained
+    %5 = cir.copysign %a, %b : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    cir.return
+  }
+
+  // fmaxnum/fminnum have a custom no-fenv lowering (llvm.intr.maxnum/minnum with
+  // the nsz fast-math flag). With an fenv attribute they lower to the
+  // constrained maxnum/minnum intrinsics (exception behavior only).
+  // CHECK-LABEL: llvm.func @minmax_num
+  cir.func @minmax_num(%a: !cir.double, %b: !cir.double) {
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.maxnum"(%{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, !llvm.metadata) -> f64
+    %0 = cir.fmaxnum %a, %b : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.minnum"(%{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, !llvm.metadata) -> f64
+    %1 = cir.fminnum %a, %b : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.intr.maxnum(%{{.*}}, %{{.*}}) {{.*}}: (f64, f64) -> f64
+    // CHECK-NOT: constrained
+    %2 = cir.fmaxnum %a, %b : !cir.double
+    // CHECK: llvm.intr.minnum(%{{.*}}, %{{.*}}) {{.*}}: (f64, f64) -> f64
+    %3 = cir.fminnum %a, %b : !cir.double
+    cir.return
+  }
+}

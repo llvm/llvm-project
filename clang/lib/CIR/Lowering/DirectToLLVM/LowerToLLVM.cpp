@@ -402,6 +402,109 @@ static mlir::LLVM::CallIntrinsicOp replaceOpWithCallLLVMIntrinsicOp(
   return callIntrinOp;
 }
 
+// Return the LLVM metadata string that encodes the rounding mode described by
+// the given fenv attribute, in the form expected by the constrained
+// floating-point intrinsics (e.g. "round.tonearest"). An unknown dynamic
+// rounding mode maps to "round.dynamic". When no rounding mode is specified,
+// the default constant rounding mode ("round.tonearest") is used.
+static llvm::StringRef getConstrainedRoundingMetadata(cir::FenvAttr fenv) {
+  std::optional<cir::FPDynamicRoundingMode> rounding =
+      fenv.getDynamicRoundingMode();
+  if (!rounding)
+    return "round.tonearest";
+  switch (*rounding) {
+  case cir::FPDynamicRoundingMode::ToNearest:
+    return "round.tonearest";
+  case cir::FPDynamicRoundingMode::Downward:
+    return "round.downward";
+  case cir::FPDynamicRoundingMode::Upward:
+    return "round.upward";
+  case cir::FPDynamicRoundingMode::UpwardZero:
+    return "round.towardzero";
+  case cir::FPDynamicRoundingMode::ToNearestAway:
+    return "round.tonearestaway";
+  case cir::FPDynamicRoundingMode::Unknown:
+    return "round.dynamic";
+  }
+  llvm_unreachable("unknown FP dynamic rounding mode");
+}
+
+// Return the LLVM metadata string that encodes the exception behavior described
+// by the given fenv attribute, in the form expected by the constrained
+// floating-point intrinsics (e.g. "fpexcept.strict"). A strict exception
+// behavior maps to "fpexcept.strict"; a non-strict (non-deterministic)
+// exception behavior maps to "fpexcept.maytrap"; and the absence of an
+// exception behavior maps to "fpexcept.ignore".
+static llvm::StringRef getConstrainedExceptMetadata(cir::FenvAttr fenv) {
+  mlir::BoolAttr strictExcept = fenv.getStrictExcept();
+  if (!strictExcept)
+    return "fpexcept.ignore";
+  return strictExcept.getValue() ? "fpexcept.strict" : "fpexcept.maytrap";
+}
+
+// Materialize an !llvm.metadata SSA value wrapping the given metadata string so
+// that it can be passed as a metadata operand to a constrained
+// floating-point intrinsic call.
+static mlir::Value
+createFenvMetadataValue(mlir::ConversionPatternRewriter &rewriter,
+                        mlir::Location loc, llvm::StringRef str) {
+  auto mdString = mlir::LLVM::MDStringAttr::get(
+      rewriter.getContext(), mlir::StringAttr::get(rewriter.getContext(), str));
+  return mlir::LLVM::MetadataAsValueOp::create(rewriter, loc, mdString);
+}
+
+// Lower a floating-point operation with an fenv attribute to a call to the
+// matching experimental constrained floating-point intrinsic, using the generic
+// llvm.call_intrinsic form rather than a specialized LLVM dialect operation. The
+// value operands are followed by metadata operands describing the rounding mode
+// (only when `hasRoundingMode` is set) and the exception behavior, taken from
+// the fenv attribute. The overloaded type suffix (e.g. ".f32") is intentionally
+// omitted; it is resolved from the operand types when the LLVM dialect is
+// translated to LLVM IR.
+mlir::LogicalResult lowerToConstrainedFPIntrinsic(
+    mlir::Operation *op, mlir::ValueRange operands, cir::FenvAttr fenv,
+    mlir::Type llvmResTy, mlir::ConversionPatternRewriter &rewriter,
+    llvm::StringRef constrainedMnemonic, bool hasRoundingMode) {
+  mlir::Location loc = op->getLoc();
+  llvm::SmallVector<mlir::Value> callOperands(operands.begin(), operands.end());
+  if (hasRoundingMode)
+    callOperands.push_back(createFenvMetadataValue(
+        rewriter, loc, getConstrainedRoundingMetadata(fenv)));
+  callOperands.push_back(createFenvMetadataValue(
+      rewriter, loc, getConstrainedExceptMetadata(fenv)));
+
+  replaceOpWithCallLLVMIntrinsicOp(
+      rewriter, op, "llvm.experimental.constrained." + constrainedMnemonic,
+      llvmResTy, callOperands);
+  return mlir::success();
+}
+
+// Shared lowering for floating-point operations that carry an optional fenv
+// attribute. Without an fenv attribute the operation is lowered to the plain
+// LLVM operation `LLVMOp`. With an fenv attribute it is lowered to a call to the
+// matching experimental constrained floating-point intrinsic. This handles both
+// unary and binary operations: the value operands are passed through `operands`.
+template <typename LLVMOp>
+mlir::LogicalResult
+lowerConstrainableFPOp(mlir::Operation *op, mlir::ValueRange operands,
+                       cir::FenvAttr fenv,
+                       const mlir::TypeConverter &typeConverter,
+                       mlir::ConversionPatternRewriter &rewriter,
+                       llvm::StringRef constrainedMnemonic,
+                       bool hasRoundingMode) {
+  mlir::Type llvmResTy = typeConverter.convertType(op->getResultTypes()[0]);
+  if (!llvmResTy)
+    return op->emitError("expected LLVM result type for floating-point op");
+
+  if (!fenv) {
+    rewriter.replaceOpWithNewOp<LLVMOp>(op, llvmResTy, operands);
+    return mlir::success();
+  }
+
+  return lowerToConstrainedFPIntrinsic(op, operands, fenv, llvmResTy, rewriter,
+                                       constrainedMnemonic, hasRoundingMode);
+}
+
 mlir::LogicalResult CIRToLLVMLLVMIntrinsicCallOpLowering::matchAndRewrite(
     cir::LLVMIntrinsicCallOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -1778,6 +1881,11 @@ mlir::LogicalResult CIRToLLVMFMaxNumOpLowering::matchAndRewrite(
     cir::FMaxNumOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type resTy = typeConverter->convertType(op.getType());
+  // constrained.maxnum takes only the exception-behavior metadata operand.
+  if (cir::FenvAttr fenv = op.getFenvAttr())
+    return lowerToConstrainedFPIntrinsic(op, adaptor.getOperands(), fenv, resTy,
+                                         rewriter, "maxnum",
+                                         /*hasRoundingMode=*/false);
   rewriter.replaceOpWithNewOp<mlir::LLVM::MaxNumOp>(
       op, resTy, adaptor.getLhs(), adaptor.getRhs(),
       mlir::LLVM::FastmathFlags::nsz);
@@ -1788,6 +1896,11 @@ mlir::LogicalResult CIRToLLVMFMinNumOpLowering::matchAndRewrite(
     cir::FMinNumOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type resTy = typeConverter->convertType(op.getType());
+  // constrained.minnum takes only the exception-behavior metadata operand.
+  if (cir::FenvAttr fenv = op.getFenvAttr())
+    return lowerToConstrainedFPIntrinsic(op, adaptor.getOperands(), fenv, resTy,
+                                         rewriter, "minnum",
+                                         /*hasRoundingMode=*/false);
   rewriter.replaceOpWithNewOp<mlir::LLVM::MinNumOp>(
       op, resTy, adaptor.getLhs(), adaptor.getRhs(),
       mlir::LLVM::FastmathFlags::nsz);
