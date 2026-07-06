@@ -1357,7 +1357,11 @@ Currently, only the following parameter attributes are defined:
     ``byval`` parameters). This is not a valid attribute for return
     values.
 
-    The byval type argument indicates the in-memory value type.
+    The byval type argument is only used for its allocation size and alignment
+    (if there is no explicit align attribute). That is, the hidden copy is
+    interpreted as a call to memcpy with the allocation size of the specified type,
+    instead of loading from the pointee and storing back into the copy in the type.
+    In particular, the padding between field types of a struct type is still copied.
 
     The byval attribute also supports specifying an alignment with the
     ``align`` attribute. It indicates the alignment of the stack slot to
@@ -1615,6 +1619,12 @@ Currently, only the following parameter attributes are defined:
     ``n`` should be a positive number. The pointer should be well defined,
     otherwise it is undefined behavior. This means ``dereferenceable(<n>)``
     implies ``noundef``.
+
+    The ``dereferenceable`` attribute only implies dereferenceability at the
+    point of the attribute (i.e. on function entry for arguments or at the
+    point of the call for return values). The underlying object may still get
+    freed after that point. Other attributes such as ``nofree`` can be used
+    to exclude frees.
 
 .. _attr_dereferenceable_or_null:
 
@@ -2292,8 +2302,9 @@ For example:
     - ``errnomem``: This refers to accesses to the ``errno`` variable.
     - ``target_mem#`` : These refer to target specific state that cannot be
       accessed by any other means. # is a number between 0 and 1 inclusive.
-      Note: The target_mem locations are experimental and intended for internal
-      testing only. They must not be used in production code.
+      Note: The following target_mem locations are implemented in AArch64.
+      target_mem0 represents SME ZT0 state, target_mem1 represents SME ZA
+      state.
 
     - The default access kind (specified without a location prefix) applies to
       all locations that haven't been specified explicitly, including those that
@@ -2390,6 +2401,14 @@ For example:
     This attribute indicates that the inliner should never inline this
     function in any situation. This attribute may not be used together
     with the ``alwaysinline`` attribute.
+``noipa``
+    Disables any interprocedural analysis that inspects the definition of this
+    function. This attribute is equivalent to moving this function definition to
+    a separate, optimizer-opaque, module. Any attributes on the function are
+    still respected (as they would be if they remained on a function declaration
+    in this module). This attribute does *not* control inlining or outlining.
+    Add the ``noinline`` and ``nooutline`` attributes as well in cases where
+    inlining and outlining should additionally be disabled.
 ``nomerge``
     This attribute indicates that calls to this function should never be merged
     during optimization. For example, it will prevent tail merging otherwise
@@ -3339,18 +3358,33 @@ Module-Level Inline Assembly
 ----------------------------
 
 Modules may contain "module-level inline asm" blocks, which corresponds
-to the GCC "file scope inline asm" blocks. These blocks are internally
-concatenated by LLVM and treated as a single unit, but may be separated
-in the ``.ll`` file if desired. The syntax is very simple:
+to the GCC "file scope inline asm" blocks:
 
 .. code-block:: llvm
 
-    module asm "inline asm code goes here"
-    module asm "more can go here"
+    module asm
+        "inline asm code goes here"
+        "more can go here"
 
-The strings can contain any character by escaping non-printable
+The sequence of string literals is internally concatenated using newlines as
+separators. The strings can contain any character by escaping non-printable
 characters. The escape sequence used is simply "\\xx" where "xx" is the
 two digit hex code for the number.
+
+Additionally, module-level inline assembly can specify an optional list of
+properties:
+
+.. code-block:: llvm
+
+    module asm(target_features: "+foo", target_cpu: "bar")
+        "inline asm code goes here"
+        "more can go here"
+
+Currently, the only supported properties are ``target_features`` and
+``target_cpu``, with the same meaning as the ``"target-features"`` and
+``"target-cpu"`` function attributes.
+
+Consecutive blocks with identical properties will be concatenated into one.
 
 Note that the assembly string *must* be parseable by LLVM's integrated assembler
 (unless it is disabled), even when emitting a ``.s`` file.
@@ -7826,11 +7860,14 @@ it is attached to is completely unpredictable.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The existence of the ``!dereferenceable`` metadata on the instruction
-tells the optimizer that the value loaded is known to be dereferenceable,
-otherwise the behavior is undefined.
+tells the optimizer that the value loaded is known to be dereferenceable
+at the current program point, otherwise the behavior is undefined.
 The number of bytes known to be dereferenceable is specified by the integer
 value in the metadata node. This is analogous to the ''dereferenceable''
 attribute on parameters and return values.
+
+The ``!deferenceable`` metadata can be combined with the ``!nofree`` metadata
+to indicate that the pointer will stay dereferenceable forever.
 
 .. _md_dereferenceable_or_null:
 
@@ -7839,7 +7876,8 @@ attribute on parameters and return values.
 
 The existence of the ``!dereferenceable_or_null`` metadata on the
 instruction tells the optimizer that the value loaded is known to be either
-dereferenceable or null, otherwise the behavior is undefined.
+dereferenceable at the current program point or null, otherwise the behavior is
+undefined.
 The number of bytes known to be dereferenceable is specified by the integer
 value in the metadata node. This is analogous to the ''dereferenceable_or_null''
 attribute on parameters and return values.
@@ -8688,10 +8726,81 @@ change in the future.
 
 See :doc:`TypeMetadata`.
 
+.. _metadata_callee_type:
+
 '``callee_type``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-See :doc:`CalleeTypeMetadata`.
+The ``!callee_type`` metadata is introduced to support the generation of a call graph
+section in the object file. The ``!callee_type`` metadata is used
+to identify the types of the intended callees of indirect call instructions. The ``!callee_type`` metadata is a
+list of one or more generalized ``!callgraph`` metadata objects (See the :ref:`metadata_callgraph` section) with each ``!callgraph``
+metadata pointing to a callee's :ref:`type identifier <calleetype-type-identifier>`.
+
+While ``!callee_type`` and ``!callgraph`` are private to the Call Graph Section pipeline and contain no offsets,
+LLVM's `Control Flow Integrity (CFI)
+<https://clang.org/docs/ControlFlowIntegrity.html>`_ uses a structurally similar ``!type`` metadata in its implementation (See :doc:`TypeMetadata`),
+which shares the same type identifier format but includes a leading offset for vtable compatibility.
+
+.. _calleetype-type-identifier:
+
+Type identifier
+"""""""""""""""
+
+The type for an indirect call target is the callee's function signature.
+Mapping from a type to an identifier is an ABI detail.
+In the current implementation, an identifier of type T is
+computed as follows:
+
+  -  Obtain the generalized mangled name for “typeinfo name for T”.
+  -  Compute MD5 hash of the name as a string.
+  -  Reinterpret the first 8 bytes of the hash as a little-endian 64-bit integer.
+
+To avoid mismatched pointer types, generalizations are applied.
+Pointers in return and argument types are treated as equivalent as long as the qualifiers for the 
+type they point to match. For example, ``char*``, ``char**``, and ``int*`` are considered equivalent
+types. However, ``char*`` and ``const char*`` are considered distinct types.
+
+.. _metadata_callgraph:
+
+'``callgraph``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``!callgraph`` metadata associates a function definition with its type
+identifier. It uses the same generalized type encoding as the ``!type`` metadata
+used for CFI and WPD, and allows us to emit a call graph section in the object
+file that can be used to compute a conservative and precise static call graph
+in a linked binary.
+
+Syntax:
+"""""""
+
+A ``!callgraph`` metadata node is attached to a function definition as follows:
+
+.. code-block:: llvm
+
+  define void @foo() !callgraph !0
+  !0 = !{!"_ZTSFvvE.generalized"}
+
+The metadata node is a 1-element tuple containing only the generalized type
+identifier as ``MDString``.
+
+Relation to Control Flow Integrity (CFI)
+""""""""""""""""""""""""""""""""""""""""
+
+While ``!callgraph`` metadata is structurally similar to LLVM's ``!type``
+metadata (which is used by `Control Flow Integrity (CFI)
+<https://clang.org/docs/ControlFlowIntegrity.html>`_ and Whole Program
+Devirtualization), they serve different purposes:
+
+* ``!type`` (CFI): Contains an offset (e.g., ``!{i64 0, !"_ZTSFvvE.generalized"}``)
+  to support virtual table offset calculations and devirtualization.
+* ``!callgraph`` (Call Graph Section): Does not contain an offset. This is
+  private to the Call Graph Section pipeline.
+
+The generalized type identifier format used by both is identical. For more
+details on the generalized type identifier format and CFI's metadata, see
+:doc:`TypeMetadata` and :ref:`metadata_callee_type`.
 
 '``associated``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -22138,7 +22247,7 @@ Arguments:
 The first argument is the vector to be counted. This argument must be a vector
 with integer element type. The return type must also be an integer type which is
 wide enough to hold the maximum number of elements of the source vector. The
-behavior of this intrinsic is undefined if the return type is not wide enough
+result is a :ref:`poison value <poisonvalues>` if the return type is not wide enough
 for the number of elements in the input vector.
 
 The second argument is a constant flag that indicates whether the intrinsic
@@ -27654,7 +27763,7 @@ Arguments:
 The first argument is the vector to be counted. This argument must be a vector
 with integer element type. The return type must also be an integer type which is
 wide enough to hold the maximum number of elements of the source vector. The
-behavior of this intrinsic is undefined if the return type is not wide enough
+result is a :ref:`poison value <poisonvalues>` if the return type is not wide enough
 for the number of elements in the input vector.
 
 The second argument is a constant flag that indicates whether the intrinsic

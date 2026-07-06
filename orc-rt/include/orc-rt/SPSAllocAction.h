@@ -15,8 +15,27 @@
 #define ORC_RT_SPSALLOCACTION_H
 
 #include "orc-rt/AllocAction.h"
+#include "orc-rt/MacroUtils.h"
 #include "orc-rt/SPSWrapperFunctionBuffer.h"
 #include "orc-rt/SimplePackedSerialization.h"
+
+/// Define an allocation-action wrapper function with the given Name that
+/// uses SPS to deserialize its arguments and dispatches to Handle.
+///
+/// SPSArgs is a parenthesized comma-separated list of SPS argument types
+/// (the parens are stripped by ORC_RT_DEPAREN before being expanded into
+/// the SPSAllocActionFunction template instantiation):
+///
+///     static Error checkEq(int32_t X, int32_t Y);
+///     ORC_RT_SPS_ALLOC_ACTION(check_eq_action, (int32_t, int32_t), checkEq)
+///
+#define ORC_RT_SPS_ALLOC_ACTION(Name, SPSArgs, Handle)                         \
+  static orc_rt_WrapperFunctionBuffer Name(const char *ArgData,                \
+                                           size_t ArgSize) {                   \
+    return orc_rt::SPSAllocActionFunction<ORC_RT_DEPAREN(SPSArgs)>::handle(    \
+               ArgData, ArgSize, Handle)                                       \
+        .release();                                                            \
+  }
 
 namespace orc_rt {
 

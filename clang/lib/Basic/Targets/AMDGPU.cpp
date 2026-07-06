@@ -295,8 +295,12 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
                         Twine("__"));
     Builder.defineMacro("__amdgcn_processor__",
                         Twine("\"") + Twine(CanonName) + Twine("\""));
-    Builder.defineMacro("__amdgcn_target_id__",
-                        Twine("\"") + Twine(*getTargetID()) + Twine("\""));
+    Builder.defineMacro(
+        "__amdgcn_target_id__",
+        Twine("\"") +
+            Twine(getCanonicalTargetID(getArchNameAMDGCN(GPUKind),
+                                       OffloadArchFeatures)) +
+            Twine("\""));
     for (auto F : getAllPossibleTargetIDFeatures(getTriple(), CanonName)) {
       auto Loc = OffloadArchFeatures.find(F);
       if (Loc != OffloadArchFeatures.end()) {

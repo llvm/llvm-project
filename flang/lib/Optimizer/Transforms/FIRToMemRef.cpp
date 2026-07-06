@@ -773,20 +773,9 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   //
   //   box_dims path: query the descriptor at runtime. Required when:
   //     (a) we have no shape information at all; or
-  //     (b) the array_coor base is a fir.box that is NOT a fir.embox result;
-  //         or a fir.box with a projected slice (layout in the descriptor); or
-  //     (c) embox cannot supply layout for this coor (non-embox box above).
-  //         getFIRConvert materializes fir.box_addr(box) -- an opaque pointer
-  //         with no layout in its type -- so strides must come from the
-  //         descriptor. This matches CodeGen XArrayCoorOp's boxed branch
-  //         (getStrideFromBox); shape/shape_shift on array_coor is
-  //         informational only (lower bounds for index translation).
-  //     Projected complex %re/%im on a bare ref uses the shapeVec path with
-  //     strides scaled by two scalar slots per complex.
-  const bool boxNeedsDescriptorStrides =
-      firMemrefIsBox && (!firMemrefIsEmbox || sliceInfo.hasProjectedSlice);
+  //     (b) the array_coor base is a fir.box that is NOT a fir.embox result.
   const bool descriptorOwnsLayout =
-      shapeVec.empty() || boxNeedsDescriptorStrides;
+      shapeVec.empty() || (firMemrefIsBox && !firMemrefIsEmbox);
   if (descriptorOwnsLayout) {
     // Plain `!fir.ref` without recoverable shape extents cannot use fir.box_*.
     if (shapeVec.empty() && !sliceInfo.hasProjectedSlice && !isDescriptor &&

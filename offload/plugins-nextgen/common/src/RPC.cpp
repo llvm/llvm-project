@@ -261,6 +261,12 @@ Error RPCServerTy::deinitDevice(plugin::GenericDeviceTy &Device) {
   return Error::success();
 }
 
+void RPCServerTy::flushDevice(plugin::GenericDeviceTy &Device) {
+  std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
+  if (void *Buffer = Buffers[Device.getDeviceId()])
+    flushServer(Device, Buffer, Callbacks);
+}
+
 void RPCServerTy::registerCallback(RPCServerCallbackTy FnPtr) {
   std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
   Callbacks.insert(FnPtr);

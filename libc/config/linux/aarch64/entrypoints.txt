@@ -109,6 +109,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.inttypes.strtoimax
     libc.src.inttypes.strtoumax
 
+    # libgen.h entrypoints
+    libc.src.libgen.basename
+    libc.src.libgen.dirname
+
     # stdbit.h entrypoints
     libc.src.stdbit.stdc_bit_ceil_uc
     libc.src.stdbit.stdc_bit_ceil_ui
@@ -299,6 +303,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.socket.sendto
     libc.src.sys.socket.setsockopt
     libc.src.sys.socket.shutdown
+    libc.src.sys.socket.sockatmark
     libc.src.sys.socket.socket
     libc.src.sys.socket.socketpair
     # TODO: These functions are not compatible with 64-bit musl. They need to
@@ -440,6 +445,10 @@ endif()
 
 set(TARGET_LIBM_ENTRYPOINTS
     # complex.h entrypoints
+    libc.src.complex.cabs
+    libc.src.complex.cabsf
+    libc.src.complex.carg
+    libc.src.complex.cargf
     libc.src.complex.creal
     libc.src.complex.crealf
     libc.src.complex.creall
@@ -933,6 +942,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.canonicalizebf16
   libc.src.math.ceilbf16
   libc.src.math.copysignbf16
+  libc.src.math.expbf16
   libc.src.math.fabsbf16
   libc.src.math.fdimbf16
   libc.src.math.floorbf16
@@ -980,6 +990,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.setpayloadbf16
   libc.src.math.setpayloadsigbf16
   libc.src.math.sqrtbf16
+  libc.src.math.tanbf16
   libc.src.math.truncbf16
   libc.src.math.totalorderbf16
   libc.src.math.totalordermagbf16
@@ -1101,12 +1112,17 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_setspecific
 
     # sched.h entrypoints
+    libc.src.sched.__sched_andcpuset
+    libc.src.sched.__sched_clrcpuset
     libc.src.sched.__sched_cpualloc
+    libc.src.sched.__sched_cpuequal
     libc.src.sched.__sched_cpufree
     libc.src.sched.__sched_getcpucount
-    libc.src.sched.__sched_setcpuzero
-    libc.src.sched.__sched_setcpuset
     libc.src.sched.__sched_getcpuisset
+    libc.src.sched.__sched_orcpuset
+    libc.src.sched.__sched_setcpuset
+    libc.src.sched.__sched_setcpuzero
+    libc.src.sched.__sched_xorcpuset
 
     # strings.h entrypoints
     libc.src.strings.strcasecmp_l
@@ -1170,6 +1186,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdlib.exit
     libc.src.stdlib.getenv
     libc.src.stdlib.setenv
+    libc.src.stdlib.unsetenv
     libc.src.stdlib.quick_exit
 
     # signal.h entrypoints

@@ -444,3 +444,29 @@ func.func @graph_region_skip(%fill: tensor<2xf32>, %output: tensor<2xf32>) {
   }
   return
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/205717:
+// Block erasure in skip callbacks must drop uses of values defined in the block
+// before erasing it.
+// CHECK-LABEL: gpu.module @issue205717
+module attributes {gpu.container_module, llvm.data_layout = ""} {
+  gpu.module @issue205717 {
+    func.func @test_skip_block_erasure_nested_uses(%arg0: i32) -> i32 {
+      %c0 = arith.constant 0 : i32
+      %c1 = arith.constant 1 : i32
+      %cond = arith.cmpi eq, %arg0, %c0 : i32
+      cf.cond_br %cond, ^bb1, ^bb2
+    ^bb1:
+      gpu.barrier
+      cf.br ^bb3(%c1 : i32)
+    ^bb2:
+      gpu.barrier
+      %plus = arith.addi %arg0, %c1 : i32
+      cf.br ^bb3(%plus : i32)
+    ^bb3(%result: i32):
+      return %result : i32
+    }
+  }
+}

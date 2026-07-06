@@ -40,7 +40,6 @@ namespace llvm {
 template <typename ImutInfo> class ImutAVLFactory;
 template <typename ImutInfo> class ImutIntervalAVLFactory;
 template <typename ImutInfo> class ImutAVLTreeInOrderIterator;
-template <typename ImutInfo> class ImutAVLTreeGenericIterator;
 
 template <typename ImutInfo >
 class ImutAVLTree {
@@ -53,7 +52,6 @@ public:
 
   friend class ImutAVLFactory<ImutInfo>;
   friend class ImutIntervalAVLFactory<ImutInfo>;
-  friend class ImutAVLTreeGenericIterator<ImutInfo>;
 
   //===----------------------------------------------------===//
   // Public Interface.
@@ -432,17 +430,6 @@ protected:
     return (hl > hr ? hl : hr) + 1;
   }
 
-  static bool compareTreeWithSection(TreeTy* T,
-                                     typename TreeTy::iterator& TI,
-                                     typename TreeTy::iterator& TE) {
-    typename TreeTy::iterator I = T->begin(), E = T->end();
-    for ( ; I!=E ; ++I, ++TI) {
-      if (TI == TE || !I->isElementEqual(&*TI))
-        return false;
-    }
-    return true;
-  }
-
   //===--------------------------------------------------===//
   // "createNode" is used to generate new tree roots that link
   // to other trees.  The function may also simply move links
@@ -630,12 +617,12 @@ public:
     TreeTy *&entry = Cache[maskCacheIndex(digest)];
     if (entry) {
       for (TreeTy *T = entry ; T != nullptr; T = T->next) {
-        // Compare the Contents('T') with Contents('TNew')
-        typename TreeTy::iterator TI = T->begin(), TE = T->end();
-        if (!compareTreeWithSection(TNew, TI, TE))
+        // Compare the contents of 'T' with 'TNew'. isEqual skips subtrees that
+        // are shared by pointer, so for structurally-shared persistent trees
+        // (the common case, e.g. one derived from the other) this is linear in
+        // the number of differing nodes rather than in the tree size.
+        if (!TNew->isEqual(*T))
           continue;
-        if (TI != TE)
-          continue; // T has more contents than TNew.
         // Trees did match!  Return 'T'.
         if (TNew->refCount == 0)
           TNew->destroy();
@@ -652,128 +639,24 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-// Immutable AVL-Tree Iterators.
+// Immutable AVL-Tree Iterator.
 //===----------------------------------------------------------------------===//
 
-template <typename ImutInfo> class ImutAVLTreeGenericIterator {
-  SmallVector<uintptr_t,20> stack;
-
-public:
-  using iterator_category = std::bidirectional_iterator_tag;
-  using value_type = ImutAVLTree<ImutInfo>;
-  using difference_type = std::ptrdiff_t;
-  using pointer = value_type *;
-  using reference = value_type &;
-
-  enum VisitFlag { VisitedNone=0x0, VisitedLeft=0x1, VisitedRight=0x3,
-                   Flags=0x3 };
-
-  using TreeTy = ImutAVLTree<ImutInfo>;
-
-  ImutAVLTreeGenericIterator() = default;
-  ImutAVLTreeGenericIterator(const TreeTy *Root) {
-    if (Root) stack.push_back(reinterpret_cast<uintptr_t>(Root));
-  }
-
-  TreeTy &operator*() const {
-    assert(!stack.empty());
-    return *reinterpret_cast<TreeTy *>(stack.back() & ~Flags);
-  }
-  TreeTy *operator->() const { return &*this; }
-
-  uintptr_t getVisitState() const {
-    assert(!stack.empty());
-    return stack.back() & Flags;
-  }
-
-  bool atEnd() const { return stack.empty(); }
-
-  bool atBeginning() const {
-    return stack.size() == 1 && getVisitState() == VisitedNone;
-  }
-
-  void skipToParent() {
-    assert(!stack.empty());
-    stack.pop_back();
-    if (stack.empty())
-      return;
-    switch (getVisitState()) {
-      case VisitedNone:
-        stack.back() |= VisitedLeft;
-        break;
-      case VisitedLeft:
-        stack.back() |= VisitedRight;
-        break;
-      default:
-        llvm_unreachable("Unreachable.");
-    }
-  }
-
-  bool operator==(const ImutAVLTreeGenericIterator &x) const {
-    return stack == x.stack;
-  }
-
-  bool operator!=(const ImutAVLTreeGenericIterator &x) const {
-    return !(*this == x);
-  }
-
-  ImutAVLTreeGenericIterator &operator++() {
-    assert(!stack.empty());
-    TreeTy* Current = reinterpret_cast<TreeTy*>(stack.back() & ~Flags);
-    assert(Current);
-    switch (getVisitState()) {
-      case VisitedNone:
-        if (TreeTy* L = Current->getLeft())
-          stack.push_back(reinterpret_cast<uintptr_t>(L));
-        else
-          stack.back() |= VisitedLeft;
-        break;
-      case VisitedLeft:
-        if (TreeTy* R = Current->getRight())
-          stack.push_back(reinterpret_cast<uintptr_t>(R));
-        else
-          stack.back() |= VisitedRight;
-        break;
-      case VisitedRight:
-        skipToParent();
-        break;
-      default:
-        llvm_unreachable("Unreachable.");
-    }
-    return *this;
-  }
-
-  ImutAVLTreeGenericIterator &operator--() {
-    assert(!stack.empty());
-    TreeTy* Current = reinterpret_cast<TreeTy*>(stack.back() & ~Flags);
-    assert(Current);
-    switch (getVisitState()) {
-      case VisitedNone:
-        stack.pop_back();
-        break;
-      case VisitedLeft:
-        stack.back() &= ~Flags; // Set state to "VisitedNone."
-        if (TreeTy* L = Current->getLeft())
-          stack.push_back(reinterpret_cast<uintptr_t>(L) | VisitedRight);
-        break;
-      case VisitedRight:
-        stack.back() &= ~Flags;
-        stack.back() |= VisitedLeft;
-        if (TreeTy* R = Current->getRight())
-          stack.push_back(reinterpret_cast<uintptr_t>(R) | VisitedRight);
-        break;
-      default:
-        llvm_unreachable("Unreachable.");
-    }
-    return *this;
-  }
-};
-
+/// Bidirectional in-order iterator over the nodes of an ImutAVLTree.
+///
+/// The iterator keeps the chain of ancestors from the root down to the current
+/// node on an explicit stack of plain node pointers, and decides which way to
+/// move next by inspecting whether it is ascending from a node's left or right
+/// child. This avoids storing any per-node visit-state: there is no need to
+/// remember "have I already visited this node's left/right subtree", because
+/// that is recovered by comparing the child we just left against the parent's
+/// left and right pointers.
+///
+/// A node's parent cannot be cached in the node itself, because these trees are
+/// persistent and structurally shared: a single node may appear as the child of
+/// different parents across different tree versions. The ancestor stack is
+/// therefore the per-traversal parent chain.
 template <typename ImutInfo> class ImutAVLTreeInOrderIterator {
-  using InternalIteratorTy = ImutAVLTreeGenericIterator<ImutInfo>;
-
-  InternalIteratorTy InternalItr;
-
 public:
   using iterator_category = std::bidirectional_iterator_tag;
   using value_type = ImutAVLTree<ImutInfo>;
@@ -783,46 +666,97 @@ public:
 
   using TreeTy = ImutAVLTree<ImutInfo>;
 
-  ImutAVLTreeInOrderIterator(const TreeTy* Root) : InternalItr(Root) {
-    if (Root)
-      ++*this; // Advance to first element.
+private:
+  // Path[0] is the root and Path.back() is the current node. An empty path is
+  // the end iterator. The invariant is that Path always holds the exact chain
+  // of ancestors of the current node, root-most first.
+  SmallVector<TreeTy *, 20> Path;
+
+  // Descend along left children, pushing each node; lands on the minimum of the
+  // subtree rooted at T (i.e. the first node in an in-order traversal of T).
+  void descendToMin(TreeTy *T) {
+    for (; T; T = T->getLeft())
+      Path.push_back(T);
   }
 
-  ImutAVLTreeInOrderIterator() : InternalItr() {}
+  // Descend along right children, pushing each node; lands on the maximum of
+  // the subtree rooted at T (i.e. the last node in an in-order traversal of T).
+  void descendToMax(TreeTy *T) {
+    for (; T; T = T->getRight())
+      Path.push_back(T);
+  }
 
+  // Pop the current node and ascend until we reach an ancestor from its *left*
+  // child, i.e. the first ancestor whose subtree is not yet fully visited. That
+  // ancestor is the in-order successor of the subtree we just left; if there is
+  // none, Path is emptied (the end iterator). Shared by operator++ and
+  // skipSubTree, whose only difference is whether the current node's right
+  // subtree is descended into first.
+  void ascendFromRightChild() {
+    TreeTy *Child = Path.pop_back_val();
+    while (!Path.empty() && Path.back()->getRight() == Child)
+      Child = Path.pop_back_val();
+  }
+
+  // Mirror of ascendFromRightChild for reverse traversal (operator--).
+  void ascendFromLeftChild() {
+    TreeTy *Child = Path.pop_back_val();
+    while (!Path.empty() && Path.back()->getLeft() == Child)
+      Child = Path.pop_back_val();
+  }
+
+public:
+  ImutAVLTreeInOrderIterator() = default; // end() iterator.
+  ImutAVLTreeInOrderIterator(const TreeTy *Root) {
+    descendToMin(const_cast<TreeTy *>(Root));
+  }
+
+  // Two iterators are equal iff they sit on the same node (or are both end()).
+  // Within a single tree a node has a unique root-to-node path, so the current
+  // node alone identifies the position; comparing the whole path is therefore
+  // unnecessary. Comparing iterators from different trees is not meaningful, as
+  // for any standard container.
   bool operator==(const ImutAVLTreeInOrderIterator &x) const {
-    return InternalItr == x.InternalItr;
+    if (Path.empty() || x.Path.empty())
+      return Path.empty() == x.Path.empty();
+    return Path.back() == x.Path.back();
   }
-
   bool operator!=(const ImutAVLTreeInOrderIterator &x) const {
     return !(*this == x);
   }
 
-  TreeTy &operator*() const { return *InternalItr; }
-  TreeTy *operator->() const { return &*InternalItr; }
+  TreeTy &operator*() const { return *Path.back(); }
+  TreeTy *operator->() const { return Path.back(); }
 
   ImutAVLTreeInOrderIterator &operator++() {
-    do ++InternalItr;
-    while (!InternalItr.atEnd() &&
-           InternalItr.getVisitState() != InternalIteratorTy::VisitedLeft);
-
+    assert(!Path.empty() && "Incrementing the end iterator");
+    if (TreeTy *R = Path.back()->getRight())
+      // The in-order successor is the minimum of the right subtree.
+      descendToMin(R);
+    else
+      // No right subtree: the successor is the nearest ancestor reached from a
+      // left child.
+      ascendFromRightChild();
     return *this;
   }
 
   ImutAVLTreeInOrderIterator &operator--() {
-    do --InternalItr;
-    while (!InternalItr.atBeginning() &&
-           InternalItr.getVisitState() != InternalIteratorTy::VisitedLeft);
-
+    assert(!Path.empty() && "Decrementing the end iterator");
+    if (TreeTy *L = Path.back()->getLeft())
+      // The in-order predecessor is the maximum of the left subtree.
+      descendToMax(L);
+    else
+      // Mirror of operator++.
+      ascendFromLeftChild();
     return *this;
   }
 
+  /// Move to the in-order successor of the entire subtree rooted at the current
+  /// node, i.e. skip the current node together with its right subtree. This is
+  /// exactly the ascent half of operator++.
   void skipSubTree() {
-    InternalItr.skipToParent();
-
-    while (!InternalItr.atEnd() &&
-           InternalItr.getVisitState() != InternalIteratorTy::VisitedLeft)
-      ++InternalItr;
+    assert(!Path.empty() && "Skipping past the end iterator");
+    ascendFromRightChild();
   }
 };
 

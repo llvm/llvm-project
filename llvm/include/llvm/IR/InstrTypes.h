@@ -2359,12 +2359,6 @@ public:
     });
   }
 
-  /// Return whether there exists an operand bundle of type ID
-  bool hasOperandBundle(uint32_t ID) const {
-    return any_of(operand_bundles(),
-                  [&](OperandBundleUse OBU) { return OBU.getTagID() == ID; });
-  }
-
   /// Populate the BundleOpInfo instances and the Use& vector from \p
   /// Bundles.  Return the op_iterator pointing to the Use& one past the last
   /// last bundle operand use.

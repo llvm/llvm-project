@@ -482,8 +482,7 @@ std::string PlatformAndroid::GetRunAs() {
 }
 
 static bool NeedsCmdlineSupplement(const ProcessInstanceInfo &proc_info) {
-  llvm::StringRef name =
-      proc_info.GetExecutableFile().GetFilename().GetStringRef();
+  llvm::StringRef name = proc_info.GetExecutableFile().GetFilename();
   return name.contains("app_process") || name.contains("zygote");
 }
 

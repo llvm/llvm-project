@@ -244,7 +244,8 @@ define ptr @std_find_caller(ptr noundef %first, ptr noundef %last) {
 ; CHECK-LABEL: define noundef ptr @std_find_caller(
 ; CHECK-SAME: ptr noundef [[FIRST:%.*]], ptr noundef [[LAST:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[FIRST]], i64 2), "align"(ptr [[LAST]], i64 2) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[FIRST]], i64 2) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[LAST]], i64 2) ]
 ; CHECK-NEXT:    [[PRE_I:%.*]] = icmp eq ptr [[FIRST]], [[LAST]]
 ; CHECK-NEXT:    br i1 [[PRE_I]], label %[[STD_FIND_GENERIC_IMPL_EXIT:.*]], label %[[LOOP_HEADER_I_PREHEADER:.*]]
 ; CHECK:       [[LOOP_HEADER_I_PREHEADER]]:

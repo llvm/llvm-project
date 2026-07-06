@@ -651,7 +651,13 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
   // Replace live-out extracts of WideIV's backedge value by ExitingIVValue
   // recipes. optimizeInductionLiveOutUsers will later compute the proper
   // DerivedIV.
-  auto ReplaceExtractsWithExitingIVValue = [&](VPHeaderPHIRecipe *WideIV) {
+  //
+  // For an IV that requires SCEV predicate, keep extracting the exit values
+  // from the loop directly, as the pre-computed exit value as-is would  be
+  // incorrect outside the loop.
+  auto ReplaceExtractsWithExitingIVValueIfPossible = [&](VPWidenInductionRecipe
+                                                             *WideIV) {
+    bool IsPredicated = !WideIV->getNoWrapPredicates().empty();
     for (VPUser *U : to_vector(BackedgeVal->users())) {
       if (!match(U, m_ExtractLastPart(m_VPValue())))
         continue;
@@ -664,6 +670,14 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
       assert(is_contained(ExtractLastLane->getParent()->successors(),
                           Plan.getScalarPreheader()) &&
              "last lane must be extracted in the middle block");
+      // Keep the vector extract for exit-block live-out uses of a predicated
+      // IV.
+      if (IsPredicated &&
+          any_of(ExtractLastLane->users(), [&](VPUser *LaneUser) {
+            auto *R = cast<VPRecipeBase>(LaneUser);
+            return Plan.isExitBlock(R->getParent());
+          }))
+        continue;
       VPBuilder Builder(ExtractLastLane);
       ExtractLastLane->replaceAllUsesWith(
           Builder.createNaryOp(VPInstruction::ExitingIVValue, {WideIV}));
@@ -675,7 +689,7 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
   if (IndDesc.getKind() == InductionDescriptor::IK_PtrInduction) {
     auto *WideIV = new VPWidenPointerInductionRecipe(
         Phi, Start, Step, &Plan.getVFxUF(), IndDesc, DL);
-    ReplaceExtractsWithExitingIVValue(WideIV);
+    ReplaceExtractsWithExitingIVValueIfPossible(WideIV);
     return WideIV;
   }
 
@@ -697,7 +711,7 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
   auto *WideIV = new VPWidenIntOrFpInductionRecipe(
       Phi, Start, Step, &Plan.getVF(), IndDesc, Flags, DL);
 
-  ReplaceExtractsWithExitingIVValue(WideIV);
+  ReplaceExtractsWithExitingIVValueIfPossible(WideIV);
   return WideIV;
 }
 
@@ -1002,28 +1016,6 @@ bool VPlanTransforms::finalizeSCEVPredicates(VPlan &Plan,
     for (const auto *P : WideIV->getNoWrapPredicates())
       PSE.addPredicate(*P);
   }
-
-  // Bail out if exit phis use predicated IVs via ExitingIVValue, as the
-  // predicated SCEV may not hold outside the loop (PR33706). Check each IV's
-  // predicates directly, regardless of whether PSE was already non-trivial
-  // from other sources (e.g., LAI predicates).
-  // TODO: Overly conservative; the pre-computed exit values are not correct
-  // outside the loop, but the exit values could be extracted from the vector
-  // loop.
-  if (!PredicatedIVs.empty())
-    for (auto *EB : Plan.getExitBlocks())
-      for (VPRecipeBase &R : EB->phis())
-        for (VPValue *Op : R.operands()) {
-          VPValue *Inner;
-          if (!match(Op, m_ExitingIVValue(m_VPValue(Inner))))
-            continue;
-          auto *WideIV = dyn_cast<VPWidenInductionRecipe>(Inner);
-          if (!WideIV || !PredicatedIVs.contains(WideIV))
-            continue;
-          LLVM_DEBUG(dbgs() << "LV: Not vectorizing: Predicated IV has "
-                               "outside-loop use via ExitingIVValue\n");
-          return false;
-        }
 
   unsigned TotalComplexity = PSE.getPredicate().getComplexity();
   if (TotalComplexity && OptForSize) {
@@ -1767,7 +1759,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
       continue;
     if (auto *DerivedIV = dyn_cast<VPDerivedIVRecipe>(VecV)) {
       VPValue *DIVTC = DerivedIV->getOperand(1);
-      if (DerivedIV->getNumUsers() == 1 && IsTC(DIVTC)) {
+      if (DerivedIV->hasOneUse() && IsTC(DIVTC)) {
         auto *NewSel = MiddleBuilder.createSelect(
             AnyNaNLane, LoopRegion->getCanonicalIV(), DIVTC);
         DerivedIV->moveAfter(&*MiddleBuilder.getInsertPoint());

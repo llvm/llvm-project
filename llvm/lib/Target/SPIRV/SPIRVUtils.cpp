@@ -13,9 +13,11 @@
 #include "SPIRVUtils.h"
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRV.h"
+#include "SPIRVBuiltins.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVInstrInfo.h"
 #include "SPIRVSubtarget.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -24,6 +26,7 @@
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
+#include "llvm/Support/MathExtras.h"
 #include <queue>
 #include <vector>
 
@@ -165,7 +168,7 @@ static uint32_t convertCharsToWord(const StringRef &Str, unsigned i) {
 
 // Get length including padding and null terminator.
 static size_t getPaddedLen(const StringRef &Str) {
-  return (Str.size() + 4) & ~3;
+  return alignTo(Str.size() + 1, 4);
 }
 
 void addStringImm(const StringRef &Str, MCInst &Inst) {
@@ -219,15 +222,13 @@ void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB) {
     return;
   } else if (Bitwidth <= 64) {
     uint64_t FullImm = Imm.getZExtValue();
-    uint32_t LowBits = FullImm & 0xffffffff;
-    uint32_t HighBits = (FullImm >> 32) & 0xffffffff;
-    MIB.addImm(LowBits).addImm(HighBits);
+    MIB.addImm(Lo_32(FullImm)).addImm(Hi_32(FullImm));
     // Asm Printer needs this info to print 64-bit operands correctly
     MIB.getInstr()->setAsmPrinterFlag(SPIRV::ASM_PRINTER_WIDTH64);
     return;
   } else {
     // Emit ceil(Bitwidth / 32) words to conform SPIR-V spec.
-    unsigned NumWords = (Bitwidth + 31) / 32;
+    unsigned NumWords = divideCeil(Bitwidth, 32);
     for (unsigned I = 0; I < NumWords; ++I) {
       unsigned LimbIdx = I / 2;
       unsigned LimbShift = (I % 2) * 32;
@@ -535,32 +536,6 @@ Type *getMDOperandAsType(const MDNode *N, unsigned I) {
   return toTypedPointer(ElementTy);
 }
 
-// The set of names is borrowed from the SPIR-V translator.
-// TODO: may be implemented in SPIRVBuiltins.td.
-static bool isPipeOrAddressSpaceCastBI(const StringRef MangledName) {
-  return MangledName == "write_pipe_2" || MangledName == "read_pipe_2" ||
-         MangledName == "write_pipe_2_bl" || MangledName == "read_pipe_2_bl" ||
-         MangledName == "write_pipe_4" || MangledName == "read_pipe_4" ||
-         MangledName == "reserve_write_pipe" ||
-         MangledName == "reserve_read_pipe" ||
-         MangledName == "commit_write_pipe" ||
-         MangledName == "commit_read_pipe" ||
-         MangledName == "work_group_reserve_write_pipe" ||
-         MangledName == "work_group_reserve_read_pipe" ||
-         MangledName == "work_group_commit_write_pipe" ||
-         MangledName == "work_group_commit_read_pipe" ||
-         MangledName == "get_pipe_num_packets_ro" ||
-         MangledName == "get_pipe_max_packets_ro" ||
-         MangledName == "get_pipe_num_packets_wo" ||
-         MangledName == "get_pipe_max_packets_wo" ||
-         MangledName == "sub_group_reserve_write_pipe" ||
-         MangledName == "sub_group_reserve_read_pipe" ||
-         MangledName == "sub_group_commit_write_pipe" ||
-         MangledName == "sub_group_commit_read_pipe" ||
-         MangledName == "to_global" || MangledName == "to_local" ||
-         MangledName == "to_private";
-}
-
 static bool isEnqueueKernelBI(const StringRef MangledName) {
   return MangledName == "__enqueue_kernel_basic" ||
          MangledName == "__enqueue_kernel_basic_events" ||
@@ -580,7 +555,7 @@ static bool isNonMangledOCLBuiltin(StringRef Name) {
     return false;
 
   return isEnqueueKernelBI(Name) || isKernelQueryBI(Name) ||
-         isPipeOrAddressSpaceCastBI(Name.drop_front(2)) ||
+         SPIRV::isPipeOrAddressSpaceCastBuiltin(Name) ||
          Name == "__translate_sampler_initializer";
 }
 
@@ -829,7 +804,7 @@ PartialOrderingVisitor::PartialOrderingVisitor(Function &F) {
   for (auto &[BB, Info] : BlockToOrder)
     Order.emplace_back(BB);
 
-  std::sort(Order.begin(), Order.end(), [&](const auto &LHS, const auto &RHS) {
+  llvm::sort(Order, [&](const auto &LHS, const auto &RHS) {
     return compare(LHS, RHS);
   });
 }
