@@ -62,7 +62,6 @@ ompt_get_callback_t llvm::omp::target::ompt::lookupCallbackByCode = nullptr;
 ompt_function_lookup_t llvm::omp::target::ompt::lookupCallbackByName = nullptr;
 ompt_get_target_task_data_t ompt_get_target_task_data_fn = nullptr;
 ompt_get_task_data_t ompt_get_task_data_fn = nullptr;
-ompt_set_frame_enter_t ompt_set_frame_enter_fn = nullptr;
 
 /// Unique correlation id
 static std::atomic<uint64_t> IdCounter(1);
@@ -518,7 +517,6 @@ int llvm::omp::target::ompt::initializeLibrary(ompt_function_lookup_t lookup,
   bindOmptFunctionName(ompt_get_callback, lookupCallbackByCode);
   bindOmptFunctionName(ompt_get_task_data, ompt_get_task_data_fn);
   bindOmptFunctionName(ompt_get_target_task_data, ompt_get_target_task_data_fn);
-  bindOmptFunctionName(ompt_set_frame_enter, ompt_set_frame_enter_fn);
 #undef bindOmptFunctionName
 
   // Store pointer of 'ompt_libomp_target_fn_lookup' for use by libomptarget
@@ -529,8 +527,6 @@ int llvm::omp::target::ompt::initializeLibrary(ompt_function_lookup_t lookup,
   assert(ompt_get_task_data_fn && "ompt_get_task_data_fn should be non-null");
   assert(ompt_get_target_task_data_fn &&
          "ompt_get_target_task_data_fn should be non-null");
-  assert(ompt_set_frame_enter_fn &&
-         "ompt_set_frame_enter_fn should be non-null");
   assert(LibraryFinalizer == nullptr &&
          "LibraryFinalizer should not be initialized yet");
 

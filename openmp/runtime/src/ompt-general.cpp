@@ -892,10 +892,6 @@ static ompt_interface_fn_t ompt_fn_lookup(const char *s) {
   return (ompt_interface_fn_t)0;
 }
 
-static int ompt_set_frame_enter(void *addr, int flags, int state) {
-  return __ompt_set_frame_enter_internal(addr, flags, state);
-}
-
 static ompt_data_t *ompt_get_task_data() { return __ompt_get_task_data(); }
 
 static ompt_data_t *ompt_get_target_task_data() {
@@ -911,7 +907,6 @@ static ompt_interface_fn_t ompt_libomp_target_fn_lookup(const char *s) {
   provide_fn(ompt_get_callback);
   provide_fn(ompt_get_task_data);
   provide_fn(ompt_get_target_task_data);
-  provide_fn(ompt_set_frame_enter);
 #undef provide_fn
 
 #define ompt_interface_fn(fn, type, code)                                      \

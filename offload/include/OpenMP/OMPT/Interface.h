@@ -38,7 +38,6 @@
 /// target_task_data representing the target task region.
 typedef ompt_data_t *(*ompt_get_task_data_t)();
 typedef ompt_data_t *(*ompt_get_target_task_data_t)();
-typedef int (*ompt_set_frame_enter_t)(void *Address, int Flags, int State);
 
 namespace llvm {
 namespace omp {
@@ -49,7 +48,6 @@ namespace ompt {
 /// target_task_data.
 static ompt_get_task_data_t ompt_get_task_data_fn;
 static ompt_get_target_task_data_t ompt_get_target_task_data_fn;
-static ompt_set_frame_enter_t ompt_set_frame_enter_fn;
 
 /// OMPT global tracing status. Indicates if at least one device is traced.
 extern bool TracingActive;
