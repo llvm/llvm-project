@@ -143,3 +143,70 @@ define i32 @g_multi_use_i32(i32 %a, i32 %b, ptr %out) nounwind {
   %r   = add i32 %sbc, 10
   ret i32 %r
 }
+
+define i64 @g_i64_add1(i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: g_i64_add1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    subs x9, x0, x1
+; CHECK-NEXT:    sbc x0, x9, x8
+; CHECK-NEXT:    ret
+  %ov  = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %a, i64 %b)
+  %val = extractvalue { i64, i1 } %ov, 0
+  %bit = extractvalue { i64, i1 } %ov, 1
+  %ext = sext i1 %bit to i64
+  %r   = add i64 %val, %ext
+  %r2  = add i64 %r, 1
+  ret i64 %r2
+}
+
+define i32 @g_i32_add1(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: g_i32_add1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
+; CHECK-NEXT:    subs w9, w0, w1
+; CHECK-NEXT:    sbc w0, w9, w8
+; CHECK-NEXT:    ret
+  %ov  = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 %b)
+  %val = extractvalue { i32, i1 } %ov, 0
+  %bit = extractvalue { i32, i1 } %ov, 1
+  %ext = sext i1 %bit to i32
+  %r   = add i32 %val, %ext
+  %r2  = add i32 %r, 1
+  ret i32 %r2
+}
+
+define i64 @g_i64_sub1(i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: g_i64_sub1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    adds x9, x0, x1
+; CHECK-NEXT:    adc x0, x9, x8
+; CHECK-NEXT:    ret
+  %ov  = call {i64, i1} @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
+  %val = extractvalue { i64, i1 } %ov, 0
+  %bit = extractvalue { i64, i1 } %ov, 1
+  %ext = zext i1 %bit to i64
+  %r   = add i64 %val, %ext
+  %r2  = sub i64 %r, 1
+  ret i64 %r2
+}
+
+define i32 @g_i32_sub1(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: g_i32_sub1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
+; CHECK-NEXT:    adds w9, w0, w1
+; CHECK-NEXT:    adc w0, w9, w8
+; CHECK-NEXT:    ret
+  %ov  = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
+  %val = extractvalue { i32, i1 } %ov, 0
+  %bit = extractvalue { i32, i1 } %ov, 1
+  %ext = zext i1 %bit to i32
+  %r   = add i32 %val, %ext
+  %r2  = sub i32 %r, 1
+  ret i32 %r2
+}
+
+declare {i64, i1} @llvm.uadd.with.overflow.i64(i64, i64)
+declare {i32, i1} @llvm.uadd.with.overflow.i32(i32, i32)
