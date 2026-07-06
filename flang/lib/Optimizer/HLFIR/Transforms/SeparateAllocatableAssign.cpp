@@ -76,6 +76,14 @@ public:
     if (!fir::isBoxAddress(lhs.getType()))
       return rewriter.notifyMatchFailure(assign, "LHS is not a box address");
 
+    // If the LHS allocatable is backed by a non-default (CUF) allocator
+    // (pinned/device/managed/unified), its (re)allocation must go through the
+    // Fortran runtime so the allocator recorded in the descriptor is honored.
+    if (mlir::Operation *lhsDef = assign.getLhs().getDefiningOp())
+      if (cuf::getDataAttr(lhsDef))
+        return rewriter.notifyMatchFailure(
+            assign, "LHS uses a non-default allocator; keep runtime realloc");
+
     mlir::Location loc = assign->getLoc();
     fir::FirOpBuilder builder(rewriter, assign.getOperation());
     builder.setInsertionPoint(assign);
