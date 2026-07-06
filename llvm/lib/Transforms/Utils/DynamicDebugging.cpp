@@ -69,6 +69,10 @@ llvm::prepareForDynamicDebugging(Module *M, StringRef PromotionSuffix) {
       // (unoptimized) functions. Block interprocedural analysis to ensure
       // the two function implementations share the same interface.
       OuterDef.addFnAttr(Attribute::NoIPA);
+      // Outlining creates specialized functions in the outer (optimized)
+      // module without an inner (unoptimized) equivalent, meaning the debugger
+      // can't switch to an unoptimized version, so block outlining.
+      OuterDef.addFnAttr(Attribute::NoOutline);
       // TODO: Add patch bytes size/value for other targets.
       if (M->getTargetTriple().isX86_64()) {
         OuterDef.addFnAttr("tail-pad-to-size", "5");
