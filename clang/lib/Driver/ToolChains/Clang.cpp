@@ -5171,8 +5171,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_no_offload_new_driver,
                     C.getActiveOffloadKinds() != Action::OFK_None));
 
-  bool IsRDCMode =
-      Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false);
+  // SYCL defaults to RDC; CUDA/HIP default to non-RDC.
+  bool IsRDCMode = Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
+                                /*Default=*/IsSYCL);
 
   auto LTOMode = TC.getLTOMode(Args, JA.getOffloadingDeviceKind());
   bool IsUsingLTO = LTOMode != LTOK_None;
@@ -7397,6 +7398,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-fgpu-defer-diag");
     }
   }
+
+  if (IsSYCLDevice && IsRDCMode)
+    CmdArgs.push_back("-fgpu-rdc");
 
   // Forward --no-offloadlib to -cc1.
   if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib, true))

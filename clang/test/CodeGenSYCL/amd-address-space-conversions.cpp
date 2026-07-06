@@ -121,8 +121,8 @@ void tmpl(T t) {}
   // CHECK-DAG: call void @_Z4tmplIPiEvT_(ptr noundef [[NoAS_LOAD5]])
 }
 
-// CHECK-DAG: define linkonce_odr void @_Z4tmplIPU3AS1iEvT_(ptr addrspace(1) noundef %
-// CHECK-DAG: define linkonce_odr void @_Z4tmplIPU3AS3iEvT_(ptr addrspace(3) noundef %
-// CHECK-DAG: define linkonce_odr void @_Z4tmplIPU3AS5iEvT_(ptr addrspace(5) noundef %
-// CHECK-DAG: define linkonce_odr void @_Z4tmplIPiEvT_(ptr noundef %
+// CHECK-DAG: define {{.*}} void @_Z4tmplIPU3AS1iEvT_(ptr addrspace(1) noundef %
+// CHECK-DAG: define {{.*}} void @_Z4tmplIPU3AS3iEvT_(ptr addrspace(3) noundef %
+// CHECK-DAG: define {{.*}} void @_Z4tmplIPU3AS5iEvT_(ptr addrspace(5) noundef %
+// CHECK-DAG: define {{.*}} void @_Z4tmplIPiEvT_(ptr noundef %
 

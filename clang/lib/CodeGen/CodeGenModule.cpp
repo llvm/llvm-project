@@ -6821,6 +6821,19 @@ CodeGenModule::getLLVMLinkageForDeclarator(const DeclaratorDecl *D,
   if (Linkage == GVA_AvailableExternally)
     return llvm::GlobalValue::AvailableExternallyLinkage;
 
+  // SYCL device symbols that are not part of the module interface (i.e. not
+  // SYCL kernels and not marked with [[clang::sycl_external]]) are not
+  // externally visible. In RDC mode they are emitted with linkonce_odr linkage
+  // so equivalent definitions can be deduplicated across translation units.
+  // In non-RDC mode the whole device program lives in a single translation
+  // unit, so they are given internal linkage to enable more aggressive
+  // optimization.
+  if (getLangOpts().SYCLIsDevice && !D->hasAttr<SYCLKernelAttr>() &&
+      !D->hasAttr<SYCLExternalAttr>())
+    return getLangOpts().GPURelocatableDeviceCode
+               ? llvm::Function::LinkOnceODRLinkage
+               : llvm::Function::InternalLinkage;
+
   // Note that Apple's kernel linker doesn't support symbol
   // coalescing, so we need to avoid linkonce and weak linkages there.
   // Normally, this means we just map to internal, but for explicit
