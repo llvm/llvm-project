@@ -358,9 +358,9 @@ struct SgToLaneElementWise : public ConversionPattern {
 /// ConstantOp.
 ///
 /// Splat constants are rebuilt with the lane-local vector type. Non-splat
-/// constants are distributed by extracting the elements each lane owns from
-/// the full constant and assembling them with vector.from_elements (or
-/// vector.broadcast for a single element).
+/// constants are distributed by extracting each lane_data-sized block from
+/// the full constant and inserting it at the correct position in the
+/// distributed vector using insert_strided_slice.
 struct SgToLaneArithConstant : public OpConversionPattern<arith::ConstantOp> {
   using OpConversionPattern<arith::ConstantOp>::OpConversionPattern;
 
@@ -418,54 +418,55 @@ struct SgToLaneArithConstant : public OpConversionPattern<arith::ConstantOp> {
           op, "failed to compute distributed coordinates from layout");
 
     SmallVector<SmallVector<Value>> coordsVec = maybeCoordsVec.value();
-    int64_t numElements = newResultType.getNumElements();
-
-    // computeDistributedCoords returns the block start each lane owns. With
-    // all-ones lane_data the block is a single element. Otherwise expand each
-    // block start into its lane_data-sized element coordinates (row-major, to
-    // match vector.from_elements below).
     SmallVector<int64_t> laneData = layout.getEffectiveLaneDataAsInt();
-    bool unitLaneData =
-        llvm::all_of(laneData, [](int64_t d) { return d == 1; });
+    ArrayRef<int64_t> distShape = newResultType.getShape();
+    int64_t rank = newResultType.getRank();
 
-    SmallVector<SmallVector<Value>> elementCoords;
-    if (unitLaneData) {
-      elementCoords = std::move(coordsVec);
-    } else {
-      SmallVector<int64_t> unitTile(laneData.size(), 1);
-      for (const SmallVector<Value> &start : coordsVec) {
-        for (SmallVector<int64_t> off :
-             StaticTileOffsetRange(laneData, unitTile)) {
-          SmallVector<Value> coord(start.size());
-          for (size_t i = 0; i < start.size(); ++i)
-            coord[i] = arith::AddIOp::create(
-                rewriter, loc, start[i],
-                arith::ConstantIndexOp::create(rewriter, loc, off[i]));
-          elementCoords.push_back(std::move(coord));
-        }
+    // Each lane owns one lane_data-sized block per distribution unit.
+    // computeDistributedCoords returns those block starts in row-major order
+    // over the block grid (distShape / laneData).
+    SmallVector<int64_t> blockGridShape(rank);
+    for (int64_t d = 0; d < rank; d++)
+      blockGridShape[d] = distShape[d] / laneData[d];
+    SmallVector<int64_t> blockGridStrides = computeStrides(blockGridShape);
+
+    auto blockType = VectorType::get(laneData, newResultType.getElementType());
+    SmallVector<int64_t> unitTile(rank, 1);
+    SmallVector<int64_t> strides(rank, 1);
+
+    Value result = arith::ConstantOp::create(
+        rewriter, loc, newResultType, rewriter.getZeroAttr(newResultType));
+
+    for (auto [blockIdx, blockStart] : llvm::enumerate(coordsVec)) {
+      // Gather the block's elements from the full constant. The block start is
+      // lane-dynamic, so extract element-by-element (row-major over lane_data)
+      // instead.
+      SmallVector<Value> blockElems;
+      for (SmallVector<int64_t> off :
+           StaticTileOffsetRange(laneData, unitTile)) {
+        SmallVector<OpFoldResult> pos(rank);
+        for (int64_t d = 0; d < rank; d++)
+          pos[d] = getAsOpFoldResult(arith::AddIOp::create(
+              rewriter, loc, blockStart[d],
+              arith::ConstantIndexOp::create(rewriter, loc, off[d])));
+        blockElems.push_back(vector::ExtractOp::create(
+            rewriter, loc, fullConst.getResult(), pos));
       }
+
+      // Rebuild the block keeping its lane_data shape, then place it with
+      // insert_strided_slice so the block keeps its orientation in the
+      // distributed vector (e.g. a [2, 1] block stays a vertical 2x1 slice).
+      Value block =
+          vector::FromElementsOp::create(rewriter, loc, blockType, blockElems);
+      SmallVector<int64_t> blockGridPos =
+          delinearize(blockIdx, blockGridStrides);
+      SmallVector<int64_t> offsets(rank);
+      for (int64_t d = 0; d < rank; d++)
+        offsets[d] = blockGridPos[d] * laneData[d];
+      result = vector::InsertStridedSliceOp::create(rewriter, loc, block,
+                                                    result, offsets, strides);
     }
 
-    assert(static_cast<int64_t>(elementCoords.size()) == numElements &&
-           "number of coordinate sets must match number of distributed "
-           "elements");
-
-    SmallVector<Value> elements;
-    for (auto &coords : elementCoords) {
-      SmallVector<OpFoldResult> mixedPos = getAsOpFoldResult(coords);
-      elements.push_back(vector::ExtractOp::create(
-          rewriter, loc, fullConst.getResult(), mixedPos));
-    }
-
-    // Assemble the distributed vector.
-    Value result;
-    if (numElements == 1) {
-      result = vector::BroadcastOp::create(rewriter, loc, newResultType,
-                                           elements[0]);
-    } else {
-      result = vector::FromElementsOp::create(rewriter, loc, newResultType,
-                                              elements);
-    }
     rewriter.replaceOp(op, result);
     return success();
   }
