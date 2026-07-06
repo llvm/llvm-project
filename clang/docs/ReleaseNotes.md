@@ -139,6 +139,10 @@ features cannot lower the translation-unit ABI level;
 - New option `-fdefined-pointer-subtraction` added to preserve stable semantics
   when subtracting pointers to unrelated objects.
 
+- Added `--print-cxx-stdlib` and `--print-cxx-stdlib-include-dirs` to print
+  the C++ standard library selected by the driver and the include directories
+  added for it.
+
 ### Deprecated Compiler Flags
 
 ### Modified Compiler Flags
