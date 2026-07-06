@@ -292,7 +292,7 @@ Error assembleToStream(const ExegesisTarget &ET,
   }
 
   const bool IsSnippetSetupComplete = generateSnippetSetupCode(
-      ET, TM->getMCSubtargetInfo(), Entry, Key, GenerateMemoryInstructions);
+      ET, &TM->getMCSubtargetInfo(), Entry, Key, GenerateMemoryInstructions);
 
   // If the snippet setup is not complete, we disable liveliness tracking. This
   // means that we won't know what values are in the registers.
@@ -381,7 +381,8 @@ Expected<ExecutableFunction> ExecutableFunction::create(
          "Cannot find the symbol for FunctionID");
   uintptr_t CodeSize = SymbolIt->second;
 
-  auto EJITOrErr = orc::LLJITBuilder().create();
+  auto EJITOrErr =
+      orc::LLJITBuilder().setDataLayout(TM->createDataLayout()).create();
   if (!EJITOrErr)
     return EJITOrErr.takeError();
 

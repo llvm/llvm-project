@@ -105,6 +105,18 @@ TEST_F(IRBuilderTest, Intrinsics) {
   EXPECT_TRUE(II->hasNoInfs());
   EXPECT_FALSE(II->hasNoNaNs());
 
+  Result = Builder.CreateFAbs(V);
+  II = cast<IntrinsicInst>(Result);
+  EXPECT_EQ(II->getIntrinsicID(), Intrinsic::fabs);
+  EXPECT_FALSE(II->hasNoInfs());
+  EXPECT_FALSE(II->hasNoNaNs());
+
+  Result = Builder.CreateFAbs(V, I);
+  II = cast<IntrinsicInst>(Result);
+  EXPECT_EQ(II->getIntrinsicID(), Intrinsic::fabs);
+  EXPECT_TRUE(II->hasNoInfs());
+  EXPECT_FALSE(II->hasNoNaNs());
+
   Result = Builder.CreateBinaryIntrinsic(Intrinsic::pow, V, V);
   II = cast<IntrinsicInst>(Result);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::pow);
@@ -157,17 +169,19 @@ TEST_F(IRBuilderTest, IntrinsicMangling) {
   CallInst *Call;
 
   // Mangled return type, no arguments.
-  Call = Builder.CreateIntrinsic(Int64Ty, Intrinsic::coro_size, {});
+  Call =
+      Builder.CreateIntrinsicWithoutFolding(Int64Ty, Intrinsic::coro_size, {});
   EXPECT_EQ(Call->getCalledFunction()->getName(), "llvm.coro.size.i64");
 
   // Void return type, mangled argument type.
-  Call =
-      Builder.CreateIntrinsic(VoidTy, Intrinsic::set_loop_iterations, Int64Val);
+  Call = Builder.CreateIntrinsicWithoutFolding(
+      VoidTy, Intrinsic::set_loop_iterations, Int64Val);
   EXPECT_EQ(Call->getCalledFunction()->getName(),
             "llvm.set.loop.iterations.i64");
 
   // Mangled return type and argument type.
-  Call = Builder.CreateIntrinsic(Int64Ty, Intrinsic::lround, DoubleVal);
+  Call = Builder.CreateIntrinsicWithoutFolding(Int64Ty, Intrinsic::lround,
+                                               DoubleVal);
   EXPECT_EQ(Call->getCalledFunction()->getName(), "llvm.lround.i64.f64");
 }
 
@@ -187,8 +201,9 @@ TEST_F(IRBuilderTest, IntrinsicsWithScalableVectors) {
   Args.push_back(UndefValue::get(PredTy));
   Args.push_back(UndefValue::get(SrcVecTy));
 
-  Call = Builder.CreateIntrinsic(Intrinsic::aarch64_sve_fcvtzs_i32f16, Args,
-                                 nullptr, "aarch64.sve.fcvtzs.i32f16");
+  Call = Builder.CreateIntrinsicWithoutFolding(
+      Intrinsic::aarch64_sve_fcvtzs_i32f16, Args, nullptr,
+      "aarch64.sve.fcvtzs.i32f16");
   FTy = Call->getFunctionType();
   EXPECT_EQ(FTy->getReturnType(), DstVecTy);
   for (unsigned i = 0; i != Args.size(); ++i)
@@ -206,8 +221,9 @@ TEST_F(IRBuilderTest, IntrinsicsWithScalableVectors) {
   Args.push_back(UndefValue::get(PredTy));
   Args.push_back(UndefValue::get(VecTy));
 
-  Call = Builder.CreateIntrinsic(Intrinsic::masked_load, {VecTy, PtrToVecTy},
-                                 Args, nullptr, "masked.load");
+  Call = Builder.CreateIntrinsicWithoutFolding(Intrinsic::masked_load,
+                                               {VecTy, PtrToVecTy}, Args,
+                                               nullptr, "masked.load");
   FTy = Call->getFunctionType();
   EXPECT_EQ(FTy->getReturnType(), VecTy);
   for (unsigned i = 0; i != Args.size(); ++i)
@@ -348,12 +364,12 @@ TEST_F(IRBuilderTest, ConstrainedFP) {
   ASSERT_TRUE(isa<IntrinsicInst>(V));
   II = cast<IntrinsicInst>(V);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::experimental_constrained_fmul);
-  
+
   V = Builder.CreateFDiv(V, V);
   ASSERT_TRUE(isa<IntrinsicInst>(V));
   II = cast<IntrinsicInst>(V);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::experimental_constrained_fdiv);
-  
+
   V = Builder.CreateFRem(V, V);
   ASSERT_TRUE(isa<IntrinsicInst>(V));
   II = cast<IntrinsicInst>(V);
@@ -448,8 +464,8 @@ TEST_F(IRBuilderTest, ConstrainedFP) {
 
   // Now override the defaults.
   Call = Builder.CreateConstrainedFPBinOp(
-        Intrinsic::experimental_constrained_fadd, V, V, nullptr, "", nullptr,
-        RoundingMode::TowardNegative, fp::ebMayTrap);
+      Intrinsic::experimental_constrained_fadd, V, V, nullptr, "", nullptr,
+      RoundingMode::TowardNegative, fp::ebMayTrap);
   CII = cast<ConstrainedFPIntrinsic>(Call);
   EXPECT_EQ(CII->getIntrinsicID(), Intrinsic::experimental_constrained_fadd);
   EXPECT_EQ(fp::ebMayTrap, CII->getExceptionBehavior());
@@ -684,7 +700,7 @@ TEST_F(IRBuilderTest, FastMathFlags) {
   ASSERT_TRUE(isa<Instruction>(F));
   FDiv = cast<Instruction>(F);
   EXPECT_FALSE(FDiv->hasAllowReciprocal());
- 
+
   // Try individual flags.
   FMF.clear();
   FMF.setAllowReciprocal();
@@ -743,7 +759,7 @@ TEST_F(IRBuilderTest, FastMathFlags) {
   EXPECT_TRUE(FAdd->hasApproxFunc());
   EXPECT_TRUE(FAdd->hasAllowContract());
   EXPECT_FALSE(FAdd->hasAllowReassoc());
-  
+
   FMF.setAllowReassoc();
   Builder.clearFastMathFlags();
   Builder.setFastMathFlags(FMF);

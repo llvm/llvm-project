@@ -26,7 +26,7 @@ define void @masked_scatter3() {
 ; CHECK-LABEL: define void @masked_scatter3() {
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.masked.scatter.v2i32.v2p0(<2 x i32> zeroinitializer, <2 x ptr> splat (ptr @c), i32 4, <2 x i1> undef)
+  call void @llvm.masked.scatter.v2i32.v2p0(<2 x i32> zeroinitializer, <2 x ptr> splat (ptr @c), i32 4, <2 x i1> poison)
   ret void
 }
 
@@ -51,7 +51,7 @@ define void @masked_scatter6() {
 ; CHECK-LABEL: define void @masked_scatter6() {
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.masked.scatter.v2i32.v2p0(<2 x i32> zeroinitializer, <2 x ptr> splat (ptr @c), i32 4, <2 x i1> <i1 undef, i1 false>)
+  call void @llvm.masked.scatter.v2i32.v2p0(<2 x i32> zeroinitializer, <2 x ptr> splat (ptr @c), i32 4, <2 x i1> <i1 poison, i1 false>)
   ret void
 }
 

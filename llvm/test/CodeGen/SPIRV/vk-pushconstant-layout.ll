@@ -3,11 +3,9 @@
 ; FIXME(168401): fix the offset of last struct S field.
 
 %struct.T = type { [3 x <2 x float>] }
-%struct.S = type <{ float, <3 x float>, %struct.T }>
+%struct.S = type { float, <3 x float>, %struct.T }
 
 ; CHECK-NOT: OpCapability Linkage
-
-; CHECK-DAG: %[[#PTR_PCS:]] = OpTypePointer PushConstant %[[#S_S:]]
 
 ; CHECK-DAG: %[[#F32:]] = OpTypeFloat 32
 ; CHECK-DAG: %[[#V3F32:]] = OpTypeVector %[[#F32]] 3
@@ -26,6 +24,7 @@
 ; CHECK-DAG: OpDecorate %[[#S_S]] Block
 ; CHECK-DAG: OpDecorate %[[#ARR]] ArrayStride 8
 
+; CHECK-DAG: %[[#PTR_PCS:]] = OpTypePointer PushConstant %[[#S_S:]]
 
 @pcs = external hidden addrspace(13) externally_initialized global %struct.S, align 1
 ; CHECK: %[[#PCS:]] = OpVariable %[[#PTR_PCS]] PushConstant

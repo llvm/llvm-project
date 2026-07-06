@@ -70,11 +70,11 @@ static uint64_t computeResourceSizeMask(uint64_t Mask, bool IsAGroup,
 }
 
 ResourceState::ResourceState(const MCProcResourceDesc &Desc, unsigned Index,
-                             uint64_t Mask)
+                             uint64_t Mask, const MCSchedModel &SM)
     : ProcResourceDescIndex(Index), ResourceMask(Mask),
       IsAGroup(llvm::popcount(ResourceMask) > 1),
       ResourceSizeMask(computeResourceSizeMask(Mask, IsAGroup, Desc.NumUnits)),
-      BufferSize(Desc.BufferSize) {
+      BufferSize(SM.getResourceBufferSize(Index)) {
   ReadyMask = ResourceSizeMask;
   AvailableSlots = BufferSize == -1 ? 0U : static_cast<unsigned>(BufferSize);
   Unavailable = false;
@@ -131,9 +131,27 @@ ResourceManager::ResourceManager(const MCSchedModel &SM)
     uint64_t Mask = ProcResID2Mask[I];
     unsigned Index = getResourceStateIndex(Mask);
     Resources[Index] =
-        std::make_unique<ResourceState>(*SM.getProcResource(I), I, Mask);
+        std::make_unique<ResourceState>(*SM.getProcResource(I), I, Mask, SM);
     Strategies[Index] = getStrategyFor(*Resources[Index]);
   }
+
+  // Print static resource information on debug mode
+  LLVM_DEBUG({
+    dbgs() << "\nProcessor resources:\n";
+    // Print InvalidUnit first to be consistent with scheduling model indexing
+    // schema
+    const MCProcResourceDesc &InvalidUnit = *SM.getProcResource(0);
+    dbgs() << "[ 0]  - " << format_hex(ProcResID2Mask[0], 16) << " - "
+           << InvalidUnit.Name << "\n";
+    for (unsigned I = 0, E = Resources.size(); I < E; ++I) {
+      const ResourceState &RS = *Resources[I];
+      const unsigned ProcResID = RS.getProcResourceID();
+      const MCProcResourceDesc &Desc = *SM.getProcResource(ProcResID);
+      dbgs() << '[' << format_decimal(ProcResID, 2) << "] "
+             << " - " << format_hex(RS.getResourceMask(), 16) << " - "
+             << Desc.Name << " (BufferSize=" << RS.getBufferSize() << ")\n";
+    }
+  });
 
   for (unsigned I = 1, E = SM.getNumProcResourceKinds(); I < E; ++I) {
     uint64_t Mask = ProcResID2Mask[I];

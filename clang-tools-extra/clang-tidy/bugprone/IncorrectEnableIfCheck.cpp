@@ -47,8 +47,8 @@ void IncorrectEnableIfCheck::check(const MatchFinder::MatchResult &Result) {
       Result.Nodes.getNodeAs<TemplateSpecializationTypeLoc>(
           "enable_if_specialization");
 
-  if (!EnableIf || !EnableIfSpecializationLoc)
-    return;
+  assert(EnableIf);
+  assert(EnableIfSpecializationLoc);
 
   const SourceManager &SM = *Result.SourceManager;
   const SourceLocation RAngleLoc =
@@ -57,9 +57,8 @@ void IncorrectEnableIfCheck::check(const MatchFinder::MatchResult &Result) {
   auto Diag = diag(EnableIf->getBeginLoc(),
                    "incorrect std::enable_if usage detected; use "
                    "'typename std::enable_if<...>::type'");
-  // FIXME: This should handle the enable_if specialization already having an
-  // elaborated keyword.
-  if (!getLangOpts().CPlusPlus20) {
+  if (!getLangOpts().CPlusPlus20 &&
+      EnableIfSpecializationLoc->getElaboratedKeywordLoc().isInvalid()) {
     Diag << FixItHint::CreateInsertion(EnableIfSpecializationLoc->getBeginLoc(),
                                        "typename ");
   }

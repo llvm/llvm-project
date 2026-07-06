@@ -65,8 +65,8 @@ template <typename OpTy>
 class ConvertOpToGpuRuntimeCallPattern : public ConvertOpToLLVMPattern<OpTy> {
 public:
   explicit ConvertOpToGpuRuntimeCallPattern(
-      const LLVMTypeConverter &typeConverter)
-      : ConvertOpToLLVMPattern<OpTy>(typeConverter) {}
+      const LLVMTypeConverter &typeConverter, PatternBenefit benefit = 1)
+      : ConvertOpToLLVMPattern<OpTy>(typeConverter, benefit) {}
 
 protected:
   Value getNumElements(ConversionPatternRewriter &rewriter, Location loc,
@@ -382,8 +382,9 @@ class ConvertAsyncYieldToGpuRuntimeCallPattern
     : public ConvertOpToGpuRuntimeCallPattern<async::YieldOp> {
 public:
   ConvertAsyncYieldToGpuRuntimeCallPattern(
-      const LLVMTypeConverter &typeConverter)
-      : ConvertOpToGpuRuntimeCallPattern<async::YieldOp>(typeConverter) {}
+      const LLVMTypeConverter &typeConverter, PatternBenefit benefit = 1)
+      : ConvertOpToGpuRuntimeCallPattern<async::YieldOp>(typeConverter,
+                                                         benefit) {}
 
 private:
   LogicalResult
@@ -770,8 +771,9 @@ LogicalResult ConvertAllocOpToGpuRuntimeCallPattern::matchAndRewrite(
   if (isShared && allocOp.getAsyncToken())
     return rewriter.notifyMatchFailure(
         allocOp, "Host Shared allocation cannot be done async");
-  if (!isShared && failed(isAsyncWithOneDependency(rewriter, allocOp)))
-    return failure();
+  if (adaptor.getAsyncDependencies().size() > 1)
+    return rewriter.notifyMatchFailure(
+        allocOp, "Can convert with at most one async dependency.");
 
   // Get shape of the memref as values: static sizes are constant
   // values and dynamic sizes are passed to 'alloc' as operands.
@@ -795,6 +797,18 @@ LogicalResult ConvertAllocOpToGpuRuntimeCallPattern::matchAndRewrite(
       allocCallBuilder.create(loc, rewriter, {sizeBytes, stream, isHostShared})
           .getResult();
 
+  // Cast the runtime-returned pointer to the memref's address space if it
+  // isn't there already, so it fits the descriptor's pointer slots.
+  unsigned dstAddrSpace = memRefType.getMemorySpaceAsInt();
+  unsigned srcAddrSpace =
+      cast<LLVM::LLVMPointerType>(allocatedPtr.getType()).getAddressSpace();
+  if (dstAddrSpace != srcAddrSpace) {
+    auto targetPtrTy =
+        LLVM::LLVMPointerType::get(rewriter.getContext(), dstAddrSpace);
+    allocatedPtr =
+        LLVM::AddrSpaceCastOp::create(rewriter, loc, targetPtrTy, allocatedPtr);
+  }
+
   // No alignment.
   Value alignedPtr = allocatedPtr;
 
@@ -815,18 +829,29 @@ LogicalResult ConvertAllocOpToGpuRuntimeCallPattern::matchAndRewrite(
 LogicalResult ConvertDeallocOpToGpuRuntimeCallPattern::matchAndRewrite(
     gpu::DeallocOp deallocOp, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
-  if (failed(areAllLLVMTypes(deallocOp, adaptor.getOperands(), rewriter)) ||
-      failed(isAsyncWithOneDependency(rewriter, deallocOp)))
+  if (failed(areAllLLVMTypes(deallocOp, adaptor.getOperands(), rewriter)))
     return failure();
+  if (adaptor.getAsyncDependencies().size() > 1)
+    return rewriter.notifyMatchFailure(
+        deallocOp, "Can convert with at most one async dependency.");
 
   Location loc = deallocOp.getLoc();
 
   Value pointer =
       MemRefDescriptor(adaptor.getMemref()).allocatedPtr(rewriter, loc);
-  Value stream = adaptor.getAsyncDependencies().front();
+  auto nullPtr = mlir::LLVM::ZeroOp::create(rewriter, loc, llvmPointerType);
+  Value stream = adaptor.getAsyncDependencies().empty()
+                     ? nullPtr
+                     : adaptor.getAsyncDependencies().front();
   deallocCallBuilder.create(loc, rewriter, {pointer, stream});
 
-  rewriter.replaceOp(deallocOp, {stream});
+  if (deallocOp.getAsyncToken()) {
+    // Async dealloc: propagate the stream as the async token replacement.
+    rewriter.replaceOp(deallocOp, {stream});
+  } else {
+    // Sync dealloc: no results to replace, just remove the op.
+    rewriter.eraseOp(deallocOp);
+  }
   return success();
 }
 
@@ -838,6 +863,14 @@ static bool isGpuAsyncTokenType(Value value) {
 // !gpu.async.token are lowered to stream within the async.execute region, but
 // are passed as events between them. For each !gpu.async.token operand, we
 // create an event and record it on the stream.
+//
+// This pattern is registered with a higher benefit than the structural
+// async.yield rewriter from populateAsyncStructuralTypeConversionsAndLegality
+// so it wins when both match. Without that benefit override, the structural
+// pattern can win and silently retype gpu.async.token operands without
+// recording an event, leaving the host await to call cuEventSynchronize on
+// a stream pointer (a no-op that returns an error), racing the host against
+// the GPU.
 LogicalResult ConvertAsyncYieldToGpuRuntimeCallPattern::matchAndRewrite(
     async::YieldOp yieldOp, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
@@ -1061,7 +1094,7 @@ LogicalResult LegalizeLaunchFuncOpPattern::matchAndRewrite(
         gpu::KernelDim3{adaptor.getClusterSizeX(), adaptor.getClusterSizeY(),
                         adaptor.getClusterSizeZ()};
   }
-  gpu::LaunchFuncOp::create(
+  auto newLaunchOp = gpu::LaunchFuncOp::create(
       rewriter, launchOp.getLoc(), launchOp.getKernelAttr(),
       gpu::KernelDim3{adaptor.getGridSizeX(), adaptor.getGridSizeY(),
                       adaptor.getGridSizeZ()},
@@ -1070,6 +1103,8 @@ LogicalResult LegalizeLaunchFuncOpPattern::matchAndRewrite(
       adaptor.getDynamicSharedMemorySize(),
       llvmArgumentsWithSizes.empty() ? llvmArguments : llvmArgumentsWithSizes,
       stream, clusterSize);
+  if (launchOp.getCooperative())
+    newLaunchOp.setCooperative(true);
   if (launchOp.getAsyncToken())
     rewriter.replaceOp(launchOp, {stream});
   else
@@ -1828,6 +1863,13 @@ void mlir::populateGpuToLLVMConversionPatterns(
   addOpaquePointerConversion<gpu::SparseSpMatHandleType>(converter);
   addOpaquePointerConversion<gpu::SparseSpGEMMOpHandleType>(converter);
 
+  // Higher benefit so this pattern wins over the structural async.yield
+  // rewriter from populateAsyncStructuralTypeConversionsAndLegality on yields
+  // with gpu.async.token operands. The structural rewriter would silently
+  // retype operands without recording an event on the underlying stream.
+  patterns.add<ConvertAsyncYieldToGpuRuntimeCallPattern>(converter,
+                                                         /*benefit=*/2);
+
   patterns.add<ConvertAllocOpToGpuRuntimeCallPattern,
                ConvertDeallocOpToGpuRuntimeCallPattern,
                ConvertHostRegisterOpToGpuRuntimeCallPattern,
@@ -1837,7 +1879,6 @@ void mlir::populateGpuToLLVMConversionPatterns(
                ConvertSetDefaultDeviceOpToGpuRuntimeCallPattern,
                ConvertWaitAsyncOpToGpuRuntimeCallPattern,
                ConvertWaitOpToGpuRuntimeCallPattern,
-               ConvertAsyncYieldToGpuRuntimeCallPattern,
                ConvertCreateDnTensorOpToGpuRuntimeCallPattern,
                ConvertDestroyDnTensorOpToGpuRuntimeCallPattern,
                ConvertCreateCooOpToGpuRuntimeCallPattern,

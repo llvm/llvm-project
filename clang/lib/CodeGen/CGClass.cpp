@@ -247,7 +247,7 @@ static Address ApplyNonVirtualAndVirtualOffset(
   if (!nonVirtualOffset.isZero()) {
     llvm::Type *OffsetType =
         (CGF.CGM.getTarget().getCXXABI().isItaniumFamily() &&
-         CGF.CGM.getItaniumVTableContext().isRelativeLayout())
+         CGF.CGM.getLangOpts().RelativeCXXABIVTables)
             ? CGF.Int32Ty
             : CGF.PtrDiffTy;
     baseOffset =
@@ -1796,7 +1796,7 @@ public:
 
 class DeclAsInlineDebugLocation {
   CGDebugInfo *DI;
-  llvm::MDNode *InlinedAt;
+  llvm::DILocation *InlinedAt;
   std::optional<ApplyDebugLocation> Location;
 
 public:
@@ -2282,7 +2282,7 @@ void CodeGenFunction::EmitCXXConstructorCall(
     assert(E->getNumArgs() == 1 && "unexpected argcount for trivial ctor");
 
     const Expr *Arg = E->getArg(0);
-    LValue Src = EmitLValue(Arg);
+    LValue Src = EmitCheckedLValue(Arg, TCK_Load);
     CanQualType DestTy = getContext().getCanonicalTagType(D->getParent());
     LValue Dest = MakeAddrLValue(This, DestTy);
     EmitAggregateCopyCtor(Dest, Src, ThisAVS.mayOverlap());
@@ -3081,7 +3081,7 @@ llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
   llvm::Metadata *MD = CGM.CreateMetadataIdentifierForType(T);
   llvm::Value *TypeId = llvm::MetadataAsValue::get(CGM.getLLVMContext(), MD);
 
-  auto CheckedLoadIntrinsic = CGM.getVTables().useRelativeLayout()
+  auto CheckedLoadIntrinsic = CGM.getLangOpts().RelativeCXXABIVTables
                                   ? llvm::Intrinsic::type_checked_load_relative
                                   : llvm::Intrinsic::type_checked_load;
   llvm::Value *CheckedLoad = Builder.CreateCall(
@@ -3190,7 +3190,7 @@ void CodeGenFunction::EmitLambdaStaticInvokeBody(const CXXMethodDecl *MD) {
 
   CanQualType LambdaType = getContext().getCanonicalTagType(Lambda);
   CanQualType ThisType = getContext().getPointerType(LambdaType);
-  Address ThisPtr = CreateMemTemp(LambdaType, "unused.capture");
+  Address ThisPtr = CreateMemTempWithoutCast(LambdaType, "unused.capture");
   CallArgs.add(RValue::get(ThisPtr.emitRawPointer(*this)), ThisType);
 
   EmitLambdaDelegatingInvokeBody(MD, CallArgs);

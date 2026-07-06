@@ -22,10 +22,10 @@
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/Hash.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
+#include "llvm/Transforms/Utils/KCFIHash.h"
 #include <map>
 #include <memory>
 #include <string>
@@ -66,7 +66,8 @@ public:
   using AsanDtorKind = llvm::AsanDtorKind;
   using VectorLibrary = llvm::driver::VectorLibrary;
   using ZeroCallUsedRegsKind = llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind;
-  using WinX64EHUnwindV2Mode = llvm::WinX64EHUnwindV2Mode;
+  using WinX64EHUnwindMode = llvm::WinX64EHUnwindMode;
+  using ControlFlowGuardMechanism = llvm::ControlFlowGuardMechanism;
 
   using DebugCompressionType = llvm::DebugCompressionType;
   using EmitDwarfUnwindType = llvm::EmitDwarfUnwindType;
@@ -216,6 +217,16 @@ public:
               ///< larger debug info than `Basic`.
   };
 
+  enum class BoolFromMem {
+    Strict,   ///< In-memory bool values are assumed to be 0 or 1, and any other
+              ///< value is UB.
+    Truncate, ///< Convert in-memory bools to i1 by checking if the least
+              ///< significant bit is 1.
+    NonZero,  ///< Convert in-memory bools to i1 by checking if any bit is set
+              ///< to 1.
+    NonStrictDefault = NonZero
+  };
+
   /// The code model to use (-mcmodel).
   std::string CodeModel;
 
@@ -256,6 +267,14 @@ public:
   /// The string containing the commandline for the llvm.commandline metadata,
   /// if non-empty.
   std::string RecordCommandLine;
+
+  /// The string containing the commandline for the dx.source.args metadata,
+  /// if non-empty.
+  std::string HLSLRecordCommandLine;
+
+  /// The vector contains parsed commandline for the dx.source.args metadata,
+  /// if parsing was successful.
+  llvm::SmallVector<llvm::SmallString<8>> HLSLParsedCommandLine;
 
   llvm::SmallVector<std::pair<std::string, std::string>, 0> DebugPrefixMap;
 
@@ -661,6 +680,25 @@ public:
   // loader?
   bool isLoaderReplaceableFunctionName(StringRef FuncName) const {
     return llvm::is_contained(LoaderReplaceableFunctionNames, FuncName);
+  }
+
+  /// Are we building at -O1 or higher?
+  bool isOptimizedBuild() const { return OptimizationLevel > 0; }
+
+  /// When loading a bool from a storage unit larger than i1, should it
+  /// be converted to i1 by comparing to 0 or by truncating to i1?
+  bool isConvertingBoolWithCmp0() const {
+    switch (getLoadBoolFromMem()) {
+    case BoolFromMem::Strict:
+      return !isOptimizedBuild();
+
+    case BoolFromMem::Truncate:
+      return false;
+
+    case BoolFromMem::NonZero:
+      return true;
+    }
+    llvm_unreachable("Unknown BoolFromMem enum");
   }
 };
 

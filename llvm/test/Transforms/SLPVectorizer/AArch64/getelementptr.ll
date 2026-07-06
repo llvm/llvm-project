@@ -36,7 +36,7 @@
 ; YAML-NEXT: Function:        getelementptr_4x32
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'SLP vectorized with cost '
-; YAML-NEXT:   - Cost:            '12'
+; YAML-NEXT:   - Cost:            '10'
 ; YAML-NEXT:   - String:          ' and with tree size '
 ; YAML-NEXT:   - TreeSize:        '3'
 
@@ -47,6 +47,8 @@ define i32 @getelementptr_4x32(ptr nocapture readonly %g, i32 %n, i32 %x, i32 %y
 ; CHECK-NEXT:    br i1 [[CMP31]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[X:%.*]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> poison, i32 [[Y:%.*]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> [[TMP4]], i32 [[Z:%.*]], i32 1
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
@@ -66,10 +68,11 @@ define i32 @getelementptr_4x32(ptr nocapture readonly %g, i32 %n, i32 %x, i32 %y
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i32> [[TMP3]], i32 1
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i32, ptr [[G]], i32 [[TMP11]]
 ; CHECK-NEXT:    [[T8:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4
-; CHECK-NEXT:    [[TMP13:%.*]] = add nsw i32 [[T4]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP16:%.*]] = add nsw <2 x i32> [[TMP2]], [[TMP5]]
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i32> [[TMP16]], i32 0
 ; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i32, ptr [[G]], i32 [[TMP13]]
 ; CHECK-NEXT:    [[T10:%.*]] = load i32, ptr [[ARRAYIDX10]], align 4
-; CHECK-NEXT:    [[TMP14:%.*]] = add nsw i32 [[T4]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i32> [[TMP16]], i32 1
 ; CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i32, ptr [[G]], i32 [[TMP14]]
 ; CHECK-NEXT:    [[T12:%.*]] = load i32, ptr [[ARRAYIDX15]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> poison, i32 [[T6]], i32 0
@@ -128,7 +131,7 @@ for.body:
 ; YAML:      Function:        getelementptr_2x32
 ; YAML:     Args:
 ; YAML:        - String:          'SLP vectorized with cost '
-; YAML:        - Cost:            '12'
+; YAML:        - Cost:            '10'
 ; YAML-NEXT:   - String:          ' and with tree size '
 ; YAML-NEXT:   - TreeSize:        '3'
 

@@ -2,18 +2,22 @@
 
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -triple=amdgcn-amd-amdhsa -x hip -fclangir \
+// RUN:            -Wno-deprecated-declarations \
 // RUN:            -fcuda-is-device -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR %s --input-file=%t.cir
 
 // RUN: %clang_cc1 -triple=amdgcn-amd-amdhsa -x hip -fclangir \
+// RUN:            -Wno-deprecated-declarations \
 // RUN:            -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM %s --input-file=%t.ll
 
 // RUN: %clang_cc1 -triple=amdgcn-amd-amdhsa -x hip \
+// RUN:            -Wno-deprecated-declarations \
 // RUN:            -fcuda-is-device -emit-llvm %s -o %t.ogcg.ll
 // RUN: FileCheck --check-prefix=LLVM %s --input-file=%t.ogcg.ll
 
 // RUN: %clang_cc1 -triple=amdgcn-amd-amdhsa -x hip -fclangir \
+// RUN:            -Wno-deprecated-declarations \
 // RUN:            -fcuda-is-device -mamdgpu-expand-waitcnt-profiling \
 // RUN:            -emit-cir %s -o %t.prof.cir
 // RUN: FileCheck --check-prefix=PROF %s --input-file=%t.prof.cir
@@ -21,8 +25,8 @@
 // Test that AMDGPU-specific attributes are generated for HIP kernels
 
 // Test: Default attributes for simple kernel
-// CIR: cir.func{{.*}} @_Z13kernel_simplev(){{.*}}"cir.amdgpu-flat-work-group-size" = "1,1024"
-// LLVM: define{{.*}} void @_Z13kernel_simplev(){{.*}} #[[SIMPLE_ATTR:[0-9]+]]
+// CIR: cir.func{{.*}} @_Z13kernel_simplev() cc(amdgpu_kernel){{.*}}"cir.amdgpu-flat-work-group-size" = "1,1024"
+// LLVM: define{{.*}} amdgpu_kernel void @_Z13kernel_simplev(){{.*}} #[[SIMPLE_ATTR:[0-9]+]]
 __global__ void kernel_simple() {}
 
 // Test: Explicit flat work group size attribute

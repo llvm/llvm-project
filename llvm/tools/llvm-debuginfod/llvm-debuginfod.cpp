@@ -18,10 +18,10 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Debuginfod/Debuginfod.h"
+#include "llvm/HTTP/HTTPClient.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/HTTP/HTTPClient.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/ThreadPool.h"
 
@@ -138,7 +138,7 @@ int llvm_debuginfod_main(int argc, char **argv, const llvm::ToolContext &) {
   else
     ExitOnErr(Server.Server.bind(Port, HostInterface.c_str()));
 
-  Log.push("Listening on port " + Twine(Port).str());
+  Log.push("Listening on port " + Twine(Port));
 
   Pool.async([&]() { ExitOnErr(Server.Server.listen()); });
   Pool.async([&]() {

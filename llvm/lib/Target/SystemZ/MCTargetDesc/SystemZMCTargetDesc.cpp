@@ -162,9 +162,9 @@ static MCAsmInfo *createSystemZMCAsmInfo(const MCRegisterInfo &MRI,
                                          const Triple &TT,
                                          const MCTargetOptions &Options) {
   if (TT.isOSzOS())
-    return new SystemZMCAsmInfoGOFF(TT);
+    return new SystemZMCAsmInfoGOFF(TT, Options);
 
-  MCAsmInfo *MAI = new SystemZMCAsmInfoELF(TT);
+  MCAsmInfo *MAI = new SystemZMCAsmInfoELF(TT, Options);
   MCCFIInstruction Inst = MCCFIInstruction::cfiDefCfa(
       nullptr, MRI.getDwarfRegNum(SystemZ::R15D, true),
       SystemZMC::ELFCFAOffsetFromInitialSP);

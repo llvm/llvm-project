@@ -8,9 +8,6 @@
 
 #include "platform.h"
 
-// Skip this compilation unit if compiled as part of Bionic.
-#if !SCUDO_ANDROID || !_BIONIC
-
 #include "allocator_config.h"
 #include "internal_defs.h"
 #include "platform.h"
@@ -18,6 +15,9 @@
 #include "wrappers_c.h"
 
 #include <stdint.h>
+
+extern "C" void malloc_postinit();
+extern HIDDEN scudo::Allocator<scudo::Config, malloc_postinit> Allocator;
 
 namespace std {
 struct nothrow_t {};
@@ -146,5 +146,3 @@ INTERFACE WEAK void operator delete[](void *ptr, size_t size,
   Allocator.deallocateSizedAligned(ptr, scudo::Chunk::Origin::NewArray, size,
                                    static_cast<scudo::uptr>(align));
 }
-
-#endif // !SCUDO_ANDROID || !_BIONIC

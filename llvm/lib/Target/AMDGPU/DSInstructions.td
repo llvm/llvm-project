@@ -1004,7 +1004,10 @@ defm : DSReadPat_mc <DS_READ_U16, i32, "atomic_load_aext_16_local">;
 defm : DSReadPat_mc <DS_READ_U16, i32, "atomic_load_zext_16_local">;
 defm : DSReadPat_mc <DS_READ_I16, i32, "atomic_load_sext_16_local">;
 defm : DSReadPat_mc <DS_READ_B32, i32, "atomic_load_nonext_32_local">;
+defm : DSReadPat_mc <DS_READ_B32, v2i16, "atomic_load_nonext_32_local">;
 defm : DSReadPat_mc <DS_READ_B64, i64, "atomic_load_nonext_64_local">;
+defm : DSReadPat_mc <DS_READ_B64, v2i32, "atomic_load_nonext_64_local">;
+defm : DSReadPat_mc <DS_READ_B64, v4i16, "atomic_load_nonext_64_local">;
 
 let OtherPredicates = [D16PreservesUnusedBits] in {
 // TODO: Atomic loads
@@ -1067,7 +1070,10 @@ defm : DSWritePat_mc <DS_WRITE_B8, i32, "atomic_store_8_local">;
 defm : DSWritePat_t16 <DS_WRITE_B16, i16, "atomic_store_16_local">;
 defm : DSWritePat_mc <DS_WRITE_B16, i32, "atomic_store_16_local">;
 defm : DSWritePat_mc <DS_WRITE_B32, i32, "atomic_store_32_local">;
+defm : DSWritePat_mc <DS_WRITE_B32, v2i16, "atomic_store_32_local">;
 defm : DSWritePat_mc <DS_WRITE_B64, i64, "atomic_store_64_local">;
+defm : DSWritePat_mc <DS_WRITE_B64, v2i32, "atomic_store_64_local">;
+defm : DSWritePat_mc <DS_WRITE_B64, v4i16, "atomic_store_64_local">;
 
 let OtherPredicates = [HasD16LoadStore] in {
 def : DSWritePat <DS_WRITE_B16_D16_HI, i32, store_hi16_local>;

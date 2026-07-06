@@ -61,6 +61,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/PassTimingInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/BranchProbability.h"
@@ -648,6 +649,8 @@ void RAGreedy::evictInterference(const LiveInterval &VirtReg,
 
     Matrix->unassign(*Intf);
     assert((ExtraInfo->getCascade(Intf->reg()) < Cascade ||
+            (Cascade < ExtraInfo->getCascade(Intf->reg()) &&
+             EvictAdvisor->isUrgentEviction(VirtReg, *Intf)) ||
             VirtReg.isSpillable() < Intf->isSpillable()) &&
            "Cannot decrease cascade number, illegal eviction");
     ExtraInfo->setCascade(Intf->reg(), Cascade);

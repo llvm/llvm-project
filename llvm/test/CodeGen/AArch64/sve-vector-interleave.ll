@@ -834,3 +834,58 @@ define <vscale x 8 x i16> @interleave4_same_const_splat_nxv8i16() {
   %retval = call <vscale x 8 x i16> @llvm.vector.interleave4.nxv8i16(<vscale x 2 x i16> splat(i16 3), <vscale x 2 x i16> splat(i16 3), <vscale x 2 x i16> splat(i16 3), <vscale x 2 x i16> splat(i16 3))
   ret <vscale x 8 x i16> %retval
 }
+
+define <vscale x 12 x i64> @interleave6_nxv12i64(<vscale x 2 x i64> %vec0, <vscale x 2 x i64> %vec1, <vscale x 2 x i64> %vec2, <vscale x 2 x i64> %vec3, <vscale x 2 x i64> %vec4, <vscale x 2 x i64> %vec5) {
+; SVE-LABEL: interleave6_nxv12i64:
+; SVE:       // %bb.0:
+; SVE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; SVE-NEXT:    addvl sp, sp, #-6
+; SVE-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x30, 0x1e, 0x22 // sp + 16 + 48 * VG
+; SVE-NEXT:    .cfi_offset w29, -16
+; SVE-NEXT:    zip1 z26.d, z2.d, z5.d
+; SVE-NEXT:    zip1 z25.d, z1.d, z4.d
+; SVE-NEXT:    zip1 z24.d, z0.d, z3.d
+; SVE-NEXT:    zip2 z2.d, z2.d, z5.d
+; SVE-NEXT:    zip2 z1.d, z1.d, z4.d
+; SVE-NEXT:    zip2 z0.d, z0.d, z3.d
+; SVE-NEXT:    ptrue p0.d
+; SVE-NEXT:    st3d { z24.d - z26.d }, p0, [sp]
+; SVE-NEXT:    st3d { z0.d - z2.d }, p0, [sp, #3, mul vl]
+; SVE-NEXT:    ldr z0, [sp]
+; SVE-NEXT:    ldr z1, [sp, #1, mul vl]
+; SVE-NEXT:    ldr z2, [sp, #2, mul vl]
+; SVE-NEXT:    ldr z3, [sp, #3, mul vl]
+; SVE-NEXT:    ldr z4, [sp, #4, mul vl]
+; SVE-NEXT:    ldr z5, [sp, #5, mul vl]
+; SVE-NEXT:    addvl sp, sp, #6
+; SVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; SVE-NEXT:    ret
+;
+; SME2-LABEL: interleave6_nxv12i64:
+; SME2:       // %bb.0:
+; SME2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; SME2-NEXT:    addvl sp, sp, #-6
+; SME2-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x30, 0x1e, 0x22 // sp + 16 + 48 * VG
+; SME2-NEXT:    .cfi_offset w29, -16
+; SME2-NEXT:    zip { z6.d, z7.d }, z2.d, z5.d
+; SME2-NEXT:    zip { z24.d, z25.d }, z1.d, z4.d
+; SME2-NEXT:    zip { z0.d, z1.d }, z0.d, z3.d
+; SME2-NEXT:    mov z4.d, z0.d
+; SME2-NEXT:    mov z5.d, z24.d
+; SME2-NEXT:    mov z2.d, z25.d
+; SME2-NEXT:    mov z3.d, z7.d
+; SME2-NEXT:    ptrue p0.d
+; SME2-NEXT:    st3d { z4.d - z6.d }, p0, [sp]
+; SME2-NEXT:    st3d { z1.d - z3.d }, p0, [sp, #3, mul vl]
+; SME2-NEXT:    ldr z0, [sp]
+; SME2-NEXT:    ldr z1, [sp, #1, mul vl]
+; SME2-NEXT:    ldr z2, [sp, #2, mul vl]
+; SME2-NEXT:    ldr z3, [sp, #3, mul vl]
+; SME2-NEXT:    ldr z4, [sp, #4, mul vl]
+; SME2-NEXT:    ldr z5, [sp, #5, mul vl]
+; SME2-NEXT:    addvl sp, sp, #6
+; SME2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; SME2-NEXT:    ret
+  %retval = call <vscale x 12 x i64> @llvm.vector.interleave6.nxv12i64(<vscale x 2 x i64> %vec0, <vscale x 2 x i64> %vec1, <vscale x 2 x i64> %vec2, <vscale x 2 x i64> %vec3, <vscale x 2 x i64> %vec4, <vscale x 2 x i64> %vec5)
+  ret <vscale x 12 x i64> %retval
+}

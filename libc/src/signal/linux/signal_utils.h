@@ -14,11 +14,13 @@
 #include "hdr/types/sigset_t.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/struct_sigaction.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/rt_sigprocmask.h"
 #include "src/__support/OSUtil/linux/vdso.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/threads/raw_rwlock.h"
 
 #include <sys/syscall.h> // For syscall numbers.
 
@@ -102,20 +104,58 @@ LIBC_INLINE constexpr bool delete_signal(sigset_t &set, int signal) {
   return true;
 }
 
-LIBC_INLINE int block_all_signals(sigset_t &set) {
+LIBC_INLINE ErrorOr<int> block_all_signals(sigset_t &set) {
   sigset_t full = full_set();
-  return LIBC_NAMESPACE::syscall_impl<int>(SYS_rt_sigprocmask, SIG_BLOCK, &full,
-                                           &set, sizeof(sigset_t));
+  return linux_syscalls::rt_sigprocmask(SIG_BLOCK, &full, &set);
 }
 
-LIBC_INLINE int restore_signals(const sigset_t &set) {
-  return LIBC_NAMESPACE::syscall_impl<int>(SYS_rt_sigprocmask, SIG_SETMASK,
-                                           &set, nullptr, sizeof(sigset_t));
+LIBC_INLINE ErrorOr<int> restore_signals(const sigset_t &set) {
+  return linux_syscalls::rt_sigprocmask(SIG_SETMASK, &set, nullptr);
 }
+
+LIBC_INLINE ErrorOr<int> unblock_signal(int signal) {
+  sigset_t set = empty_set();
+  if (!add_signal(set, signal))
+    return Error(EINVAL);
+  return linux_syscalls::rt_sigprocmask(SIG_UNBLOCK, &set, nullptr);
+}
+
+// This guard is used to:
+// 1. temporarily block the all signal, avoid post fork invalid state to be
+//    exposed to async signal handlers.
+// 2. ensure the ordering between sigaction and fork/spawn, so that forked
+//    processes can see modification from a just returned concurrent call.
+class SigAbortGuard {
+private:
+  sigset_t old_mask;
+  LIBC_INLINE_VAR static RawRwLock abort_lock;
+
+public:
+  LIBC_INLINE SigAbortGuard(bool exclusive) : old_mask{} {
+    RawRwLock::LockResult result = RawRwLock::LockResult::Success;
+    do {
+      if (exclusive)
+        result = abort_lock.write_lock(cpp::nullopt);
+      else
+        result = abort_lock.read_lock(cpp::nullopt);
+    } while (result == RawRwLock::LockResult::Overflow);
+
+    // This uses a valid sigset_t size and internal storage. A failure here
+    // would indicate a kernel ABI mismatch, which is not actionable here.
+    (void)block_all_signals(old_mask);
+  }
+
+  LIBC_INLINE ~SigAbortGuard() {
+    // This restores a previously saved mask from internal storage. A failure
+    // here would likewise be a non-recoverable kernel ABI issue.
+    (void)restore_signals(old_mask);
+    (void)abort_lock.unlock();
+  }
+};
 
 LIBC_INLINE ErrorOr<int>
-do_sigaction(int signal, const struct sigaction *__restrict libc_new,
-             struct sigaction *__restrict libc_old) {
+unchecked_sigaction(int signal, const struct sigaction *__restrict libc_new,
+                    struct sigaction *__restrict libc_old) {
   vdso::TypedSymbol<vdso::VDSOSym::RTSigReturn> rt_sigreturn;
   KernelSigaction kernel_new;
   if (libc_new) {
@@ -136,6 +176,18 @@ do_sigaction(int signal, const struct sigaction *__restrict libc_new,
   if (libc_old)
     *libc_old = kernel_old;
   return 0;
+}
+
+LIBC_INLINE ErrorOr<int>
+checked_sigaction(int signal, const struct sigaction *__restrict libc_new,
+                  struct sigaction *__restrict libc_old) {
+  if (signal <= 0 || signal >= NSIG)
+    return Error(EINVAL);
+  if (signal == SIGABRT) {
+    SigAbortGuard guard(true);
+    return unchecked_sigaction(signal, libc_new, libc_old);
+  }
+  return unchecked_sigaction(signal, libc_new, libc_old);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

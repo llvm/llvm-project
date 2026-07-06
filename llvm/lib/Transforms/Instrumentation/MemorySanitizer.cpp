@@ -1268,7 +1268,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     MS.initializeCallbacks(*F.getParent(), TLI);
     FnPrologueEnd =
         IRBuilder<>(&F.getEntryBlock(), F.getEntryBlock().getFirstNonPHIIt())
-            .CreateIntrinsic(Intrinsic::donothing, {});
+            .CreateIntrinsicWithoutFolding(Intrinsic::donothing, {});
 
     if (MS.CompileKernel) {
       IRBuilder<> IRB(FnPrologueEnd);
@@ -2616,10 +2616,63 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, getOrigin(&I, 0));
   }
 
-  void visitFPToSIInst(CastInst &I) { handleShadowOr(I); }
-  void visitFPToUIInst(CastInst &I) { handleShadowOr(I); }
-  void visitSIToFPInst(CastInst &I) { handleShadowOr(I); }
-  void visitUIToFPInst(CastInst &I) { handleShadowOr(I); }
+  /// Handle LLVM and NEON vector convert intrinsics.
+  ///
+  /// e.g., <4 x i32> @llvm.aarch64.neon.fcvtpu.v4i32.v4f32(<4 x float>)
+  ///       i32       @llvm.aarch64.neon.fcvtms.i32.f64    (double)
+  ///       <2 x i32> @fptoui (<2 x float>)
+  ///       i64       @llvm.fptosi.sat.i64.f64(double)
+  ///
+  /// Note that the size of input/output elements can differ e.g.,
+  ///       double    @sitofp(i32)
+  /// but the number of elements must be the same.
+  ///
+  /// For conversions to or from fixed-point, there is a trailing argument to
+  /// indicate the fixed-point precision:
+  /// - <4 x float> llvm.aarch64.neon.vcvtfxs2fp.v4f32.v4i32(<4 x i32>,   i32)
+  /// - <4 x i32>   llvm.aarch64.neon.vcvtfp2fxu.v4i32.v4f32(<4 x float>, i32)
+  ///
+  /// For x86 SSE vector convert intrinsics, see
+  /// handleSSEVectorConvertIntrinsic().
+  void handleGenericVectorConvertIntrinsic(Instruction &I, bool FixedPoint) {
+    [[maybe_unused]] unsigned NumArgs = I.getNumOperands();
+    if (auto *CI = dyn_cast<CallInst>(&I))
+      NumArgs = CI->arg_size();
+
+    if (FixedPoint) {
+      assert(NumArgs == 2);
+      Value *Precision = I.getOperand(1);
+      insertCheckShadowOf(Precision, &I);
+    } else {
+      assert(NumArgs == 1);
+    }
+
+    IRBuilder<> IRB(&I);
+    Value *S0 = getShadow(&I, 0);
+
+    /// For scalars:
+    /// Since they are converting from floating-point to integer, the output is
+    /// - fully uninitialized if *any* bit of the input is uninitialized
+    /// - fully ininitialized if all bits of the input are ininitialized
+    /// We apply the same principle on a per-field basis for vectors.
+    Value *OutShadow = IRB.CreateSExt(IRB.CreateICmpNE(S0, getCleanShadow(S0)),
+                                      getShadowTy(&I));
+    setShadow(&I, OutShadow);
+    setOriginForNaryOp(I);
+  }
+
+  void visitFPToSIInst(CastInst &I) {
+    handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
+  }
+  void visitFPToUIInst(CastInst &I) {
+    handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
+  }
+  void visitSIToFPInst(CastInst &I) {
+    handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
+  }
+  void visitUIToFPInst(CastInst &I) {
+    handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
+  }
   void visitFPExtInst(CastInst &I) { handleShadowOr(I); }
   void visitFPTruncInst(CastInst &I) { handleShadowOr(I); }
 
@@ -3280,6 +3333,31 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  // Instrument bit manipulation intrinsics.
+  // All of these intrinsics are Z = I(SRC, MASK)
+  // where the types of all operands and the result match.
+  // The following instrumentation happens to work for all of them:
+  //   Sz = I(Ssrc, MASK) | (sext (Smask != 0))
+  void handleGenericBitManipulation(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Type *ShadowTy = getShadowTy(&I);
+
+    // If any bit of the mask operand is poisoned, then the whole thing is.
+    Value *SMask = getShadow(&I, 1);
+    SMask = IRB.CreateSExt(IRB.CreateICmpNE(SMask, getCleanShadow(ShadowTy)),
+                           ShadowTy);
+    // Apply the same intrinsic to the shadow of the first operand.
+    Value *S;
+    if (Function *Func = I.getCalledFunction())
+      S = IRB.CreateCall(Func, {getShadow(&I, 0), I.getOperand(1)});
+    else
+      S = IRB.CreateIntrinsic(I.getIntrinsicID(), ShadowTy,
+                              {getShadow(&I, 0), I.getOperand(1)});
+
+    setShadow(&I, IRB.CreateOr(SMask, S));
+    setOriginForNaryOp(I);
+  }
+
   /// Instrument llvm.memmove
   ///
   /// At this point we don't know if llvm.memmove will be inlined or not.
@@ -3558,43 +3636,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     OutputShadow = IRB.CreateSExt(OutputShadow, getShadowTy(Src), "_mscz_os");
 
     setShadow(&I, OutputShadow);
-    setOriginForNaryOp(I);
-  }
-
-  /// Handle Arm NEON vector convert intrinsics.
-  ///
-  /// e.g., <4 x i32> @llvm.aarch64.neon.fcvtpu.v4i32.v4f32(<4 x float>)
-  ///      i32        @llvm.aarch64.neon.fcvtms.i32.f64    (double)
-  ///
-  /// For conversions to or from fixed-point, there is a trailing argument to
-  /// indicate the fixed-point precision:
-  /// - <4 x float> llvm.aarch64.neon.vcvtfxs2fp.v4f32.v4i32(<4 x i32>,   i32)
-  /// - <4 x i32>   llvm.aarch64.neon.vcvtfp2fxu.v4i32.v4f32(<4 x float>, i32)
-  ///
-  /// For x86 SSE vector convert intrinsics, see
-  /// handleSSEVectorConvertIntrinsic().
-  void handleNEONVectorConvertIntrinsic(IntrinsicInst &I, bool FixedPoint) {
-    if (FixedPoint)
-      assert(I.arg_size() == 2);
-    else
-      assert(I.arg_size() == 1);
-
-    IRBuilder<> IRB(&I);
-    Value *S0 = getShadow(&I, 0);
-
-    if (FixedPoint) {
-      Value *Precision = I.getOperand(1);
-      insertCheckShadowOf(Precision, &I);
-    }
-
-    /// For scalars:
-    /// Since they are converting from floating-point to integer, the output is
-    /// - fully uninitialized if *any* bit of the input is uninitialized
-    /// - fully ininitialized if all bits of the input are ininitialized
-    /// We apply the same principle on a per-field basis for vectors.
-    Value *OutShadow = IRB.CreateSExt(IRB.CreateICmpNE(S0, getCleanShadow(S0)),
-                                      getShadowTy(&I));
-    setShadow(&I, OutShadow);
     setOriginForNaryOp(I);
   }
 
@@ -4626,8 +4667,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // copy them.
     ShadowArgs.append(1, IRB.CreateBitCast(SrcShadow, Src->getType()));
 
-    CallInst *CI =
-        IRB.CreateIntrinsic(IRB.getVoidTy(), I.getIntrinsicID(), ShadowArgs);
+    CallInst *CI = IRB.CreateIntrinsicWithoutFolding(
+        IRB.getVoidTy(), I.getIntrinsicID(), ShadowArgs);
     setShadow(&I, CI);
 
     if (!MS.TrackOrigins)
@@ -4681,8 +4722,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     ShadowArgs.append(1, SrcShadowPtr);
     ShadowArgs.append(1, Mask);
 
-    CallInst *CI =
-        IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(), ShadowArgs);
+    CallInst *CI = IRB.CreateIntrinsicWithoutFolding(
+        I.getType(), I.getIntrinsicID(), ShadowArgs);
     // The AVX masked load intrinsics do not have integer variants. We use the
     // floating-point variants, which will happily copy the shadows even if
     // they are interpreted as "invalid" floating-point values (NaN etc.).
@@ -4731,8 +4772,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Shadows are integer-ish types but some intrinsics require a
     // different (e.g., floating-point) type.
     Shadow = IRB.CreateBitCast(Shadow, I.getArgOperand(0)->getType());
-    CallInst *CI = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
-                                       {Shadow, I.getArgOperand(1)});
+    CallInst *CI = IRB.CreateIntrinsicWithoutFolding(
+        I.getType(), I.getIntrinsicID(), {Shadow, I.getArgOperand(1)});
 
     setShadow(&I, IRB.CreateBitCast(CI, getShadowTy(&I)));
     setOriginForNaryOp(I);
@@ -4765,8 +4806,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // different (e.g., floating-point) type.
     AShadow = IRB.CreateBitCast(AShadow, I.getArgOperand(0)->getType());
     BShadow = IRB.CreateBitCast(BShadow, I.getArgOperand(2)->getType());
-    CallInst *CI = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
-                                       {AShadow, Idx, BShadow});
+    CallInst *CI = IRB.CreateIntrinsicWithoutFolding(
+        I.getType(), I.getIntrinsicID(), {AShadow, Idx, BShadow});
     setShadow(&I, IRB.CreateBitCast(CI, getShadowTy(&I)));
     setOriginForNaryOp(I);
   }
@@ -4885,27 +4926,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                      "_ms_writethru_select");
 
     setShadow(&I, Shadow);
-    setOriginForNaryOp(I);
-  }
-
-  // Instrument BMI / BMI2 intrinsics.
-  // All of these intrinsics are Z = I(X, Y)
-  // where the types of all operands and the result match, and are either i32 or
-  // i64. The following instrumentation happens to work for all of them:
-  //   Sz = I(Sx, Y) | (sext (Sy != 0))
-  void handleBmiIntrinsic(IntrinsicInst &I) {
-    IRBuilder<> IRB(&I);
-    Type *ShadowTy = getShadowTy(&I);
-
-    // If any bit of the mask operand is poisoned, then the whole thing is.
-    Value *SMask = getShadow(&I, 1);
-    SMask = IRB.CreateSExt(IRB.CreateICmpNE(SMask, getCleanShadow(ShadowTy)),
-                           ShadowTy);
-    // Apply the same intrinsic to the shadow of the first operand.
-    Value *S = IRB.CreateCall(I.getCalledFunction(),
-                              {getShadow(&I, 0), I.getOperand(1)});
-    S = IRB.CreateOr(SMask, S);
-    setShadow(&I, S);
     setOriginForNaryOp(I);
   }
 
@@ -5378,12 +5398,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *XShadow = getShadow(X);
     Value *BZeroShadow = getCleanShadow(B);
 
-    CallInst *AShadowXShadow = IRB.CreateIntrinsic(
+    Value *AShadowXShadow = IRB.CreateIntrinsic(
         I.getType(), I.getIntrinsicID(), {XShadow, AShadow, BZeroShadow});
-    CallInst *AShadowX = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
-                                             {X, AShadow, BZeroShadow});
-    CallInst *XShadowA = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
-                                             {XShadow, A, BZeroShadow});
+    Value *AShadowX = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
+                                          {X, AShadow, BZeroShadow});
+    Value *XShadowA = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
+                                          {XShadow, A, BZeroShadow});
 
     unsigned NumElements = cast<FixedVectorType>(I.getType())->getNumElements();
     Value *BShadow = getShadow(B);
@@ -5461,8 +5481,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // The NEON vector load instructions handled by this function all have
     // integer variants. It is easier to use those rather than trying to cast
     // a struct of vectors of floats into a struct of vectors of integers.
-    CallInst *CI =
-        IRB.CreateIntrinsic(getShadowTy(&I), I.getIntrinsicID(), ShadowArgs);
+    CallInst *CI = IRB.CreateIntrinsicWithoutFolding(
+        getShadowTy(&I), I.getIntrinsicID(), ShadowArgs);
     setShadow(&I, CI);
 
     if (!MS.TrackOrigins)
@@ -5544,8 +5564,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         Addr, IRB, OutputShadowTy, Align(1), /*isStore*/ true);
     ShadowArgs.append(1, OutputShadowPtr);
 
-    CallInst *CI =
-        IRB.CreateIntrinsic(IRB.getVoidTy(), I.getIntrinsicID(), ShadowArgs);
+    CallInst *CI = IRB.CreateIntrinsicWithoutFolding(
+        IRB.getVoidTy(), I.getIntrinsicID(), ShadowArgs);
     setShadow(&I, CI);
 
     if (MS.TrackOrigins) {
@@ -5741,8 +5761,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       ShadowArgs.push_back(Arg);
     }
 
-    CallInst *CI =
-        IRB.CreateIntrinsic(I.getType(), shadowIntrinsicID, ShadowArgs);
+    Value *CI = IRB.CreateIntrinsic(I.getType(), shadowIntrinsicID, ShadowArgs);
     Value *CombinedShadow = CI;
 
     // Combine the computed shadow with the shadow of trailing args
@@ -5858,10 +5877,24 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleFunnelShift(I);
       break;
 
+    case Intrinsic::pdep:
+    case Intrinsic::pext:
+      handleGenericBitManipulation(I);
+      break;
+
     case Intrinsic::is_constant:
       // The result of llvm.is.constant() is always defined.
       setShadow(&I, getCleanShadow(&I));
       setOrigin(&I, getCleanOrigin());
+      break;
+
+    // The non-saturating versions are handled by visitFPTo[US]IInst().
+    //
+    // N.B. some platform-specific intrinsics, such as AArch64 fcvtz[us], are
+    //      lowered to these cross-platform intrinsics.
+    case Intrinsic::fptosi_sat:
+    case Intrinsic::fptoui_sat:
+      handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
       break;
 
     default:
@@ -6479,11 +6512,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_bmi_bextr_64:
     case Intrinsic::x86_bmi_bzhi_32:
     case Intrinsic::x86_bmi_bzhi_64:
-    case Intrinsic::x86_bmi_pdep_32:
-    case Intrinsic::x86_bmi_pdep_64:
-    case Intrinsic::x86_bmi_pext_32:
-    case Intrinsic::x86_bmi_pext_64:
-      handleBmiIntrinsic(I);
+      handleGenericBitManipulation(I);
       break;
 
     case Intrinsic::x86_pclmulqdq:
@@ -7161,10 +7190,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::aarch64_neon_fcvtzu:
     // Floating-point convert to lower precision narrow, rounding to odd
     case Intrinsic::aarch64_neon_fcvtxn:
-    // Vector Conversions Between Half-Precision and Single-Precision
-    case Intrinsic::aarch64_neon_vcvthf2fp:
-    case Intrinsic::aarch64_neon_vcvtfp2hf:
-      handleNEONVectorConvertIntrinsic(I, /*FixedPoint=*/false);
+      handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
       break;
 
     // Vector Conversions Between Fixed-Point and Floating-Point
@@ -7172,7 +7198,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::aarch64_neon_vcvtfp2fxs:
     case Intrinsic::aarch64_neon_vcvtfxu2fp:
     case Intrinsic::aarch64_neon_vcvtfp2fxu:
-      handleNEONVectorConvertIntrinsic(I, /*FixedPoint=*/true);
+      handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/true);
       break;
 
     // TODO: bfloat conversions

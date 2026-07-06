@@ -13,6 +13,7 @@
 #include "lldb/API/SBCommandReturnObject.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBFrame.h"
+#include "lldb/API/SBMutex.h"
 #include "lldb/API/SBStringList.h"
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBThread.h"
@@ -31,10 +32,10 @@
 
 namespace lldb_dap {
 
-bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
-                     const llvm::ArrayRef<protocol::String> &commands,
-                     llvm::raw_ostream &strm, bool parse_command_directives,
-                     bool echo_commands) {
+static bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
+                            const llvm::ArrayRef<protocol::String> &commands,
+                            llvm::raw_ostream &strm,
+                            bool parse_command_directives, bool echo_commands) {
   if (commands.empty())
     return true;
 
@@ -47,12 +48,9 @@ bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
 
     // Get the current prompt from settings.
     if (const lldb::SBStructuredData prompt = debugger.GetSetting("prompt")) {
-      const size_t prompt_length = prompt.GetStringValue(nullptr, 0);
-
-      if (prompt_length != 0) {
-        prompt_string.resize(prompt_length + 1);
-        prompt.GetStringValue(prompt_string.data(), prompt_string.length());
-      }
+      std::string tmp_prompt = GetStringValue(prompt);
+      if (!tmp_prompt.empty())
+        prompt_string = std::move(tmp_prompt);
     }
   }
 
@@ -74,15 +72,8 @@ bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
       }
     }
 
-    {
-      // Prevent simultaneous calls to HandleCommand, e.g. EventThreadFunction
-      // may asynchronously call RunExitCommands when we are already calling
-      // RunTerminateCommands.
-      static std::mutex handle_command_mutex;
-      std::lock_guard<std::mutex> locker(handle_command_mutex);
-      interp.HandleCommand(command.str().c_str(), result,
-                           /*add_to_history=*/true);
-    }
+    interp.HandleCommand(command.str().c_str(), result,
+                         /*add_to_history=*/true);
 
     const bool got_error = !result.Succeeded();
     // The if statement below is assuming we always print out `!` prefixed
@@ -114,10 +105,13 @@ bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
   return true;
 }
 
-std::string RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
+std::string RunLLDBCommands(lldb::SBDebugger &debugger, lldb::SBMutex mutex,
+                            llvm::StringRef prefix,
                             const llvm::ArrayRef<protocol::String> &commands,
                             bool &required_command_failed,
                             bool parse_command_directives, bool echo_commands) {
+  // Ensure a single command is evaluated at a time.
+  std::lock_guard<lldb::SBMutex> guard(mutex);
   required_command_failed = false;
   std::string s;
   llvm::raw_string_ostream strm(s);
@@ -182,29 +176,17 @@ uint64_t MakeDAPFrameID(lldb::SBFrame &frame) {
 
 lldb::StopDisassemblyType
 GetStopDisassemblyDisplay(lldb::SBDebugger &debugger) {
-  lldb::StopDisassemblyType result =
-      lldb::StopDisassemblyType::eStopDisassemblyTypeNoDebugInfo;
   lldb::SBStructuredData string_result =
       debugger.GetSetting("stop-disassembly-display");
-  const size_t result_length = string_result.GetStringValue(nullptr, 0);
-  if (result_length > 0) {
-    std::string result_string(result_length, '\0');
-    string_result.GetStringValue(result_string.data(), result_length + 1);
-
-    result =
-        llvm::StringSwitch<lldb::StopDisassemblyType>(result_string)
-            .Case("never", lldb::StopDisassemblyType::eStopDisassemblyTypeNever)
-            .Case("always",
-                  lldb::StopDisassemblyType::eStopDisassemblyTypeAlways)
-            .Case("no-source",
-                  lldb::StopDisassemblyType::eStopDisassemblyTypeNoSource)
-            .Case("no-debuginfo",
-                  lldb::StopDisassemblyType::eStopDisassemblyTypeNoDebugInfo)
-            .Default(
-                lldb::StopDisassemblyType::eStopDisassemblyTypeNoDebugInfo);
-  }
-
-  return result;
+  return llvm::StringSwitch<lldb::StopDisassemblyType>(
+             GetStringValue(string_result))
+      .Case("never", lldb::StopDisassemblyType::eStopDisassemblyTypeNever)
+      .Case("always", lldb::StopDisassemblyType::eStopDisassemblyTypeAlways)
+      .Case("no-source",
+            lldb::StopDisassemblyType::eStopDisassemblyTypeNoSource)
+      .Case("no-debuginfo",
+            lldb::StopDisassemblyType::eStopDisassemblyTypeNoDebugInfo)
+      .Default(lldb::StopDisassemblyType::eStopDisassemblyTypeNoDebugInfo);
 }
 
 llvm::Error ToError(const lldb::SBError &error, bool show_user) {

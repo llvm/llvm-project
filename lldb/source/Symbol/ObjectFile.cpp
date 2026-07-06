@@ -603,17 +603,17 @@ void ObjectFile::ClearSymtab() {
 }
 
 SectionList *ObjectFile::GetSectionList(bool update_module_section_list) {
-  if (m_sections_up == nullptr) {
-    if (update_module_section_list) {
-      ModuleSP module_sp(GetModule());
-      if (module_sp) {
-        std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-        CreateSections(*module_sp->GetUnifiedSectionList());
-      }
-    } else {
-      SectionList unified_section_list;
-      CreateSections(unified_section_list);
+  std::lock_guard<std::recursive_mutex> guard(m_sections_mutex);
+  if (m_sections_up)
+    return m_sections_up.get();
+  if (update_module_section_list) {
+    if (ModuleSP module_sp = GetModule()) {
+      std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+      CreateSections(*module_sp->GetUnifiedSectionList());
     }
+  } else {
+    SectionList unified_section_list;
+    CreateSections(unified_section_list);
   }
   return m_sections_up.get();
 }
@@ -814,10 +814,10 @@ uint32_t ObjectFile::GetCacheHash() {
 std::string ObjectFile::GetObjectName() const {
   if (ModuleSP module_sp = GetModule())
     if (ConstString object_name = module_sp->GetObjectName())
-      return llvm::formatv("{0}({1})", GetFileSpec().GetFilename().GetString(),
+      return llvm::formatv("{0}({1})", GetFileSpec().GetFilename(),
                            object_name.GetString())
           .str();
-  return GetFileSpec().GetFilename().GetString();
+  return GetFileSpec().GetFilename().str();
 }
 
 namespace llvm {

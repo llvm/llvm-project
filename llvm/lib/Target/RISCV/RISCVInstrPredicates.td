@@ -180,6 +180,15 @@ def isFaultOnlyFirstLoad
                        !instances<Pseudo>(
                           "^PseudoVL(SEG[2-8])?E(8|16|32|64)FF_V.*")>>>;
 
+def isLoadImmediate
+    : TIIPredicate<"isLoadImmediate",
+                   MCReturnStatement<CheckAll<[
+                     CheckOpcode<[ADDI]>,
+                     CheckIsRegOperand<1>,
+                     CheckRegOperand<1, X0>,
+                     CheckIsImmOperand<2>
+                   ]>>>;
+
 def isNonZeroLoadImmediate
     : TIIPredicate<"isNonZeroLoadImmediate",
                    MCReturnStatement<CheckAll<[
@@ -208,3 +217,28 @@ def ignoresVXRM
                         ]),
                         MCReturnStatement<CheckImmOperand<3, 0>>>],
                       MCReturnStatement<FalsePred>>>;
+
+// RVI Base Loads, only those using simm12(reg) for addressing
+def isBaseLoad
+    : TIIPredicate<"isBaseLoad",
+                   MCReturnStatement<
+                     CheckOpcode<[
+                       LD,
+                       LW,
+                       LWU,
+                       LH,
+                       LHU,
+                       LB,
+                       LBU
+                     ]>>>;
+
+// RVI Base Stores, only those using simm12(reg) for addressing
+def isBaseStore
+    : TIIPredicate<"isBaseStore",
+                   MCReturnStatement<
+                     CheckOpcode<[
+                       SD,
+                       SW,
+                       SH,
+                       SB,
+                     ]>>>;

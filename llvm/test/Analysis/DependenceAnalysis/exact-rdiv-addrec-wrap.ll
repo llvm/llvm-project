@@ -22,15 +22,12 @@
 ;  A[a*i]        |        | A[14]
 ;  A[5*i + 14]   | A[14]  |
 ;
-; FIXME: DependenceAnalysis fails to detect the dependency between the two
-; stores.
-;
 define void @exact_rdiv_no_nsw(ptr %A) {
 ; CHECK-ALL-LABEL: 'exact_rdiv_no_nsw'
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 0, ptr %gep.0, align 1
 ; CHECK-ALL-NEXT:    da analyze - output [*]!
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
-; CHECK-ALL-NEXT:    da analyze - none!
+; CHECK-ALL-NEXT:    da analyze - output [|<]!
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %gep.1, align 1 --> Dst: store i8 1, ptr %gep.1, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ;

@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=loop-vectorize -prefer-predicate-over-epilogue=predicate-dont-vectorize -force-vector-width=4 -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -tail-folding-policy=must-fold-tail -force-vector-width=4 -S | FileCheck %s
 
 ; Check that a counting-down loop which has no primary induction variable
 ; is vectorized with preferred predication.
@@ -45,7 +45,7 @@ while.end:
 ;
 define void @reuse_const_btc(ptr %A) {
 ; CHECK-LABEL: @reuse_const_btc
-; CHECK: {{%.*}} = icmp ule <4 x i32> {{%.*}}, splat (i32 13)
+; CHECK: {{%.*}} = icmp ule <4 x i8> {{%.*}}, splat (i8 13)
 ; CHECK: {{%.*}} = select <4 x i1> {{%.*}}, <4 x i32> splat (i32 13), <4 x i32> splat (i32 12)
 ;
 entry:

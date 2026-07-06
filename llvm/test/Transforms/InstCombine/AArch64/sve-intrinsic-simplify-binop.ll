@@ -207,7 +207,7 @@ define <vscale x 4 x float> @constant_fdiv(<vscale x 4 x i1> %pg) #0 {
 define <vscale x 4 x float> @constant_fdiv_u(<vscale x 4 x i1> %pg) #0 {
 ; CHECK-LABEL: define <vscale x 4 x float> @constant_fdiv_u(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    ret <vscale x 4 x float> splat (float 0x3FF2AAAAA0000000)
+; CHECK-NEXT:    ret <vscale x 4 x float> splat (float f0x3F955555)
 ;
   %r = call <vscale x 4 x float> @llvm.aarch64.sve.fdiv.u.nxv4f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> splat (float 7.0), <vscale x 4 x float> splat (float 6.0))
   ret <vscale x 4 x float> %r

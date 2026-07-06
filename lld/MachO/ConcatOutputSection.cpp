@@ -15,6 +15,7 @@
 #include "Target.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include <deque>
 
 using namespace llvm;
 using namespace llvm::MachO;
@@ -53,66 +54,8 @@ void ConcatOutputSection::addInput(ConcatInputSection *input) {
 // The optimal approach is to mix islands for destinations within two hops,
 // and use thunks for destinations at greater distance. For now, we only
 // implement thunks. TODO: Adding support for branch islands!
-//
-// Internally -- as expressed in LLD's data structures -- a
-// branch-range-extension thunk consists of:
-//
-// (1) new Defined symbol for the thunk named
-//     <FUNCTION>.thunk.<SEQUENCE>, which references ...
-// (2) new InputSection, which contains ...
-// (3.1) new data for the instructions to load & branch to the far address +
-// (3.2) new Relocs on instructions to load the far address, which reference ...
-// (4.1) existing Defined symbol for the real function in __text, or
-// (4.2) existing DylibSymbol for the real function in a dylib
-//
-// Nearly-optimal thunk-placement algorithm features:
-//
-// * Single pass: O(n) on the number of call sites.
-//
-// * Accounts for the exact space overhead of thunks - no heuristics
-//
-// * Exploits the full range of call instructions - forward & backward
-//
-// Data:
-//
-// * DenseMap<Symbol *, ThunkInfo> thunkMap: Maps the function symbol
-//   to its thunk bookkeeper.
-//
-// * struct ThunkInfo (bookkeeper): Call instructions have limited range, and
-//   distant call sites might be unable to reach the same thunk, so multiple
-//   thunks are necessary to serve all call sites in a very large program. A
-//   thunkInfo stores state for all thunks associated with a particular
-//   function:
-//     (a) thunk symbol
-//     (b) input section containing stub code, and
-//     (c) sequence number for the active thunk incarnation.
-//   When an old thunk goes out of range, we increment the sequence number and
-//   create a new thunk named <FUNCTION>.thunk.<SEQUENCE>.
-//
-// * A thunk consists of
-//     (a) a Defined symbol pointing to
-//     (b) an InputSection holding machine code (similar to a MachO stub), and
-//     (c) relocs referencing the real function for fixing up the stub code.
-//
-// * std::vector<InputSection *> MergedInputSection::thunks: A vector parallel
-//   to the inputs vector. We store new thunks via cheap vector append, rather
-//   than costly insertion into the inputs vector.
-//
-// Control Flow:
-//
-// * During address assignment, MergedInputSection::finalize() examines call
-//   sites by ascending address and creates thunks.  When a function is beyond
-//   the range of a call site, we need a thunk. Place it at the largest
-//   available forward address from the call site. Call sites increase
-//   monotonically and thunks are always placed as far forward as possible;
-//   thus, we place thunks at monotonically increasing addresses. Once a thunk
-//   is placed, it and all previous input-section addresses are final.
-//
-// * ConcatInputSection::finalize() and ConcatInputSection::writeTo() merge
-//   the inputs and thunks vectors (both ordered by ascending address), which
-//   is simple and cheap.
 
-DenseMap<Symbol *, ThunkInfo, ThunkMapKeyInfo> lld::macho::thunkMap;
+DenseMap<ThunkKey, ThunkInfo, ThunkMapKeyInfo> lld::macho::thunkMap;
 
 // Determine whether we need thunks, which depends on the target arch -- RISC
 // (i.e., ARM) generally does because it has limited-range branch/call
@@ -122,6 +65,9 @@ DenseMap<Symbol *, ThunkInfo, ThunkMapKeyInfo> lld::macho::thunkMap;
 bool TextOutputSection::needsThunks() const {
   if (!target->usesThunks())
     return false;
+  // FIXME: It is not enough to just estimate the size of this section. We
+  // should compute parent->needsThunks by estimating the size of all __text
+  // sections. See https://github.com/llvm/llvm-project/issues/195387
   uint64_t isecAddr = addr;
   for (ConcatInputSection *isec : inputs)
     isecAddr = alignToPowerOf2(isecAddr, isec->align) + isec->getSize();
@@ -144,113 +90,9 @@ bool TextOutputSection::needsThunks() const {
           std::min(target->backwardBranchRange, target->forwardBranchRange))
     return false;
   // Yes, this program is large enough to need thunks.
-  if (parent) {
+  if (parent)
     parent->needsThunks = true;
-  }
-  for (ConcatInputSection *isec : inputs) {
-    for (Relocation &r : isec->relocs) {
-      if (!target->hasAttr(r.type, RelocAttrBits::BRANCH))
-        continue;
-      auto *sym = cast<Symbol *>(r.referent);
-      // Pre-populate the thunkMap and memoize call site counts for every
-      // InputSection and ThunkInfo. We do this for the benefit of
-      // estimateBranchTargetThresholdVA().
-      ThunkInfo &thunkInfo = thunkMap[sym];
-      // Knowing ThunkInfo call site count will help us know whether or not we
-      // might need to create more for this referent at the time we are
-      // estimating distance to __stubs in estimateBranchTargetThresholdVA().
-      ++thunkInfo.callSiteCount;
-      // We can avoid work on InputSections that have no BRANCH relocs.
-      isec->hasCallSites = true;
-    }
-  }
   return true;
-}
-
-// Estimate the address beyond which branch targets (like __stubs and
-// __objc_stubs) are within range of a simple forward branch. This is called
-// exactly once, when the last input section has been finalized.
-uint64_t
-TextOutputSection::estimateBranchTargetThresholdVA(size_t callIdx) const {
-  // Tally the functions which still have call sites remaining to process,
-  // which yields the maximum number of thunks we might yet place.
-  size_t maxPotentialThunks = 0;
-  for (auto &tp : thunkMap) {
-    ThunkInfo &ti = tp.second;
-    // This overcounts: Only sections that are in forward jump range from the
-    // currently-active section get finalized, and all input sections are
-    // finalized when estimateBranchTargetThresholdVA() is called. So only
-    // backward jumps will need thunks, but we count all jumps.
-    if (ti.callSitesUsed < ti.callSiteCount)
-      maxPotentialThunks += 1;
-  }
-  // Tally the total size of input sections remaining to process.
-  uint64_t isecVA = inputs[callIdx]->getVA();
-  uint64_t isecEnd = isecVA;
-  for (size_t i = callIdx; i < inputs.size(); i++) {
-    InputSection *isec = inputs[i];
-    isecEnd = alignToPowerOf2(isecEnd, isec->align) + isec->getSize();
-  }
-
-  // Tally up any thunks that have already been placed that have VA higher than
-  // inputs[callIdx]. First, find the index of the first thunk that is beyond
-  // the current inputs[callIdx].
-  auto itPostcallIdxThunks =
-      llvm::partition_point(thunks, [isecVA](const ConcatInputSection *t) {
-        return t->getVA() <= isecVA;
-      });
-  uint64_t existingForwardThunks = thunks.end() - itPostcallIdxThunks;
-
-  uint64_t forwardBranchRange = target->forwardBranchRange;
-  assert(isecEnd > forwardBranchRange &&
-         "should not run thunk insertion if all code fits in jump range");
-  assert(isecEnd - isecVA <= forwardBranchRange &&
-         "should only finalize sections in jump range");
-
-  // Estimate the maximum size of the code, right before the branch target
-  // sections.
-  uint64_t maxTextSize = 0;
-  // Add the size of all the inputs, including the unprocessed ones.
-  maxTextSize += isecEnd;
-
-  // Add the size of the thunks that have already been created that are ahead of
-  // inputs[callIdx]. These are already created thunks that will be interleaved
-  // with inputs[callIdx...end].
-  maxTextSize += existingForwardThunks * target->thunkSize;
-
-  // Add the size of the thunks that may be created in the future. Since
-  // 'maxPotentialThunks' overcounts, this is an estimate of the upper limit.
-  maxTextSize += maxPotentialThunks * target->thunkSize;
-
-  // Calculate the total size of all late branch target sections
-  uint64_t branchTargetsSize = 0;
-
-  // Add the size of __stubs section
-  branchTargetsSize += in.stubs->getSize();
-
-  // Add the size of __objc_stubs section if it exists
-  if (in.objcStubs && in.objcStubs->isNeeded())
-    branchTargetsSize += in.objcStubs->getSize();
-
-  // Estimated maximum VA of the last branch target.
-  uint64_t maxVAOfLastBranchTarget = maxTextSize + branchTargetsSize;
-
-  // Estimate the address after which call sites can safely call branch targets
-  // directly rather than through intermediary thunks.
-  uint64_t branchTargetThresholdVA =
-      maxVAOfLastBranchTarget - forwardBranchRange;
-
-  log("thunks = " + std::to_string(thunkMap.size()) +
-      ", potential = " + std::to_string(maxPotentialThunks) +
-      ", stubs = " + std::to_string(in.stubs->getSize()) +
-      (in.objcStubs && in.objcStubs->isNeeded()
-           ? ", objc_stubs = " + std::to_string(in.objcStubs->getSize())
-           : "") +
-      ", isecVA = " + utohexstr(isecVA) + ", threshold = " +
-      utohexstr(branchTargetThresholdVA) + ", isecEnd = " + utohexstr(isecEnd) +
-      ", tail = " + utohexstr(isecEnd - isecVA) +
-      ", slop = " + utohexstr(forwardBranchRange - (isecEnd - isecVA)));
-  return branchTargetThresholdVA;
 }
 
 void ConcatOutputSection::finalizeOne(ConcatInputSection *isec) {
@@ -267,6 +109,142 @@ void ConcatOutputSection::finalizeContents() {
     finalizeOne(isec);
 }
 
+bool TextOutputSection::isTargetKnownInRange(const ConcatInputSection &isec,
+                                             const Relocation &r) const {
+  uint64_t callVA = isec.getVA() + r.offset;
+  uint64_t lowVA = target->backwardBranchRange < callVA
+                       ? callVA - target->backwardBranchRange
+                       : 0;
+  uint64_t highVA = callVA + target->forwardBranchRange;
+  auto *funcSym = cast<Symbol *>(r.referent);
+  uint64_t funcVA = resolveSymbolOffsetVA(funcSym, r.type, r.addend);
+  // Check if the referent is reachable with a simple call instruction.
+  return lowVA <= funcVA && funcVA <= highVA;
+}
+
+Defined *TextOutputSection::getThunkInRange(const ConcatInputSection &isec,
+                                            const Relocation &r,
+                                            const ThunkInfo &thunkInfo) const {
+  assert(!isTargetKnownInRange(isec, r));
+  if (!thunkInfo.sym)
+    return nullptr;
+  uint64_t callVA = isec.getVA() + r.offset;
+  uint64_t lowVA = target->backwardBranchRange < callVA
+                       ? callVA - target->backwardBranchRange
+                       : 0;
+  uint64_t highVA = callVA + target->forwardBranchRange;
+  uint64_t thunkVA = thunkInfo.isec->getVA();
+  if (lowVA <= thunkVA && thunkVA <= highVA)
+    return thunkInfo.sym;
+  return nullptr;
+}
+
+void TextOutputSection::updateBranchTargetToThunk(Relocation &r,
+                                                  Defined *thunk) {
+  r.referent = thunk;
+  // The thunk itself bakes in the addend, so the call-site reloc must
+  // branch to the thunk start with no extra offset.
+  r.addend = 0;
+  ++thunkCallCount;
+}
+
+void TextOutputSection::createThunk(const ConcatInputSection &isec,
+                                    Relocation &r, ThunkInfo &thunkInfo) {
+  assert(getThunkInRange(isec, r, thunkInfo) == nullptr);
+  assert(isec.isFinal);
+  uint64_t highVA = isec.getVA() + r.offset + target->forwardBranchRange;
+  if (addr + size > highVA) {
+    // There were too many consecutive branch instructions for `slop`
+    // below. If you hit this: For the current algorithm, just bumping up
+    // slop below and trying again is probably simplest. (See also PR51578
+    // comment 5).
+    fatal(Twine(__FUNCTION__) +
+          ": FIXME: thunk range overrun. Consider increasing the "
+          "slop-scale with `--slop-scale=<unsigned_int>`.");
+  }
+  thunkInfo.isec = makeSyntheticInputSection(isec.getSegName(), isec.getName());
+  thunkInfo.isec->parent = this;
+  assert(thunkInfo.isec->live);
+
+  std::string addendSuffix;
+  if (r.addend != 0)
+    addendSuffix = "+" + std::to_string(r.addend);
+  size_t thunkSize = target->thunkSize;
+  auto *funcSym = cast<Symbol *>(r.referent);
+  StringRef thunkName =
+      saver().save(funcSym->getName() + addendSuffix + ".thunk." +
+                   std::to_string(thunkInfo.sequence++));
+  if (!isa<Defined>(funcSym) || cast<Defined>(funcSym)->isExternal()) {
+    thunkInfo.sym = symtab->addDefined(
+        thunkName, /*file=*/nullptr, thunkInfo.isec, /*value=*/0, thunkSize,
+        /*isWeakDef=*/false, /*isPrivateExtern=*/true,
+        /*isReferencedDynamically=*/false, /*noDeadStrip=*/false,
+        /*isWeakDefCanBeHidden=*/false);
+  } else {
+    thunkInfo.sym = make<Defined>(
+        thunkName, /*file=*/nullptr, thunkInfo.isec, /*value=*/0, thunkSize,
+        /*isWeakDef=*/false, /*isExternal=*/false, /*isPrivateExtern=*/true,
+        /*includeInSymtab=*/true, /*isReferencedDynamically=*/false,
+        /*noDeadStrip=*/false, /*isWeakDefCanBeHidden=*/false);
+  }
+  thunkInfo.sym->used = true;
+  target->populateThunk(thunkInfo.isec, funcSym, r.addend);
+  updateBranchTargetToThunk(r, thunkInfo.sym);
+  finalizeOne(thunkInfo.isec);
+  thunks.push_back(thunkInfo.isec);
+}
+
+std::optional<uint64_t>
+TextOutputSection::estimateStubsEndVA(unsigned numPotentialThunks) const {
+  if (!parent)
+    return std::nullopt;
+
+  auto sections =
+      ArrayRef(parent->getSections())
+          .drop_until([&](const OutputSection *osec) { return osec == this; });
+
+  // Walk backwards to find the last stubs section
+  while (!sections.empty()) {
+    auto *osec = sections.back();
+    if (osec->isNeeded() && (osec == in.stubs || osec == in.objcStubs))
+      break;
+    sections.consume_back();
+  }
+  if (sections.empty())
+    return std::nullopt;
+
+  assert(inputs.empty() || inputs.back()->isFinal);
+  uint64_t estimatedStubsEnd =
+      addr + size + numPotentialThunks * target->thunkSize;
+  for (auto *osec : sections) {
+    if (osec == this)
+      continue;
+    if (!osec->isNeeded())
+      continue;
+    // Check if we will emit any more sections before the last stubs section
+    if (osec != in.stubs && osec != in.stubHelper && osec != in.objcStubs)
+      return std::nullopt;
+    estimatedStubsEnd =
+        alignToPowerOf2(estimatedStubsEnd, osec->align) + osec->getSize();
+  }
+  return estimatedStubsEnd;
+}
+
+bool TextOutputSection::isTargetStubsAndInRange(
+    const ConcatInputSection &isec, const Relocation &r,
+    std::optional<uint64_t> estimatedStubsEnd) const {
+  if (!estimatedStubsEnd.has_value())
+    return false;
+  auto *funcSym = cast<Symbol *>(r.referent);
+  if (!funcSym->isInStubs() && !(in.objcStubs && in.objcStubs->isNeeded() &&
+                                 ObjCStubsSection::isObjCStubSymbol(funcSym)))
+    return false;
+  if (r.addend)
+    return false;
+  uint64_t highVA = isec.getVA() + r.offset + target->forwardBranchRange;
+  return *estimatedStubsEnd <= highVA;
+}
+
 void TextOutputSection::finalize() {
   if (!needsThunks()) {
     for (ConcatInputSection *isec : inputs)
@@ -274,155 +252,113 @@ void TextOutputSection::finalize() {
     return;
   }
 
-  uint64_t forwardBranchRange = target->forwardBranchRange;
-  uint64_t backwardBranchRange = target->backwardBranchRange;
-  uint64_t branchTargetThresholdVA = TargetInfo::outOfRangeVA;
-  size_t thunkSize = target->thunkSize;
-  size_t relocCount = 0;
-  size_t callSiteCount = 0;
-  size_t thunkCallCount = 0;
-  size_t thunkCount = 0;
+  // Branches whose target sections are out of range or have not yet been
+  // finalized. We may need to emit thunks for them.
+  std::deque<std::pair<ConcatInputSection *, Relocation *>> branchesToProcess;
+  // Branches whose targets have not yet be finalized, but a thunk for that
+  // target exists. We defer processing these branches because it's possible we
+  // can still direct call to their targets after they have all been finalized.
+  SmallVector<std::tuple<ConcatInputSection *, Relocation *, Defined *>>
+      deferredBranchRedirects;
 
-  // Walk all sections in order. Finalize all sections that are less than
-  // forwardBranchRange in front of it.
-  // isecVA is the address of the current section.
-  // addr + size is the start address of the first non-finalized section.
-
-  // inputs[finalIdx] is for finalization (address-assignment)
-  size_t finalIdx = 0;
-  // Kick-off by ensuring that the first input section has an address
-  for (size_t callIdx = 0, endIdx = inputs.size(); callIdx < endIdx;
-       ++callIdx) {
-    if (finalIdx == callIdx)
-      finalizeOne(inputs[finalIdx++]);
-    ConcatInputSection *isec = inputs[callIdx];
-    assert(isec->isFinal);
-    uint64_t isecVA = isec->getVA();
-
-    // Assign addresses up-to the forward branch-range limit.
-    // Every call instruction needs a small number of bytes (on Arm64: 4),
-    // and each inserted thunk needs a slightly larger number of bytes
-    // (on Arm64: 12). If a section starts with a branch instruction and
-    // contains several branch instructions in succession, then the distance
-    // from the current position to the position where the thunks are inserted
-    // grows. So leave room for a bunch of thunks.
-    unsigned slop = config->slopScale * thunkSize;
-    while (finalIdx < endIdx) {
-      uint64_t expectedNewSize =
-          alignToPowerOf2(addr + size, inputs[finalIdx]->align) +
-          inputs[finalIdx]->getSize();
-      if (expectedNewSize >= isecVA + forwardBranchRange - slop)
+  const uint64_t slop = config->slopScale * target->thunkSize;
+  for (auto *isec : inputs) {
+    while (!branchesToProcess.empty()) {
+      auto [callerIsec, r] = branchesToProcess.front();
+      assert(callerIsec->isFinal);
+      auto &thunkInfo = thunkMap[*r];
+      if (isTargetKnownInRange(*callerIsec, *r)) {
+        branchesToProcess.pop_front();
+        continue;
+      }
+      if (auto *thunk = getThunkInRange(*callerIsec, *r, thunkInfo)) {
+        deferredBranchRedirects.emplace_back(callerIsec, r, thunk);
+        branchesToProcess.pop_front();
+        continue;
+      }
+      uint64_t highVA =
+          callerIsec->getVA() + r->offset + target->forwardBranchRange;
+      uint64_t nextEnd =
+          alignToPowerOf2(addr + size, isec->align) + isec->getSize();
+      // If we were to emit this section, would we have enough space for more
+      // thunks? If we do, then we can delay processing this thunk so we may
+      // finalize more potencial target sections. Otherwise we must emit thunks
+      // until we have enough space.
+      if (nextEnd + slop <= highVA)
         break;
-      finalizeOne(inputs[finalIdx++]);
-    }
 
-    if (!isec->hasCallSites)
+      createThunk(*callerIsec, *r, thunkInfo);
+      branchesToProcess.pop_front();
+    }
+    finalizeOne(isec);
+
+    // TODO: Remove this check and the assert below. In fact, I don't believe
+    // the relocation iteration order matters for correctness.
+    bool hasCallsite = llvm::any_of(isec->relocs, [](Relocation &r) {
+      return target->hasAttr(r.type, RelocAttrBits::BRANCH);
+    });
+    if (!hasCallsite)
       continue;
 
-    if (finalIdx == endIdx &&
-        branchTargetThresholdVA == TargetInfo::outOfRangeVA) {
-      // When we have finalized all input sections, branch target sections (like
-      // __stubs and __objc_stubs) (destined to follow __text) come within range
-      // of forward branches and we can estimate the threshold address after
-      // which we can reach any branch target with a forward branch. Note that
-      // although it sits in the middle of a loop, this code executes only once.
-      // It is in the loop because we need to call it at the proper
-      // time: the earliest call site from which the end of __text
-      // (and start of branch target sections) comes within range of a forward
-      // branch.
-      branchTargetThresholdVA = estimateBranchTargetThresholdVA(callIdx);
-    }
     // Process relocs by ascending address, i.e., ascending offset within isec
-    std::vector<Relocation> &relocs = isec->relocs;
     // FIXME: This property does not hold for object files produced by ld64's
     // `-r` mode.
-    assert(is_sorted(relocs, [](Relocation &a, Relocation &b) {
+    assert(is_sorted(isec->relocs, [](Relocation &a, Relocation &b) {
       return a.offset > b.offset;
     }));
-    for (Relocation &r : reverse(relocs)) {
-      ++relocCount;
+    for (Relocation &r : reverse(isec->relocs)) {
       if (!target->hasAttr(r.type, RelocAttrBits::BRANCH))
         continue;
-      ++callSiteCount;
-      // Calculate branch reachability boundaries
-      uint64_t callVA = isecVA + r.offset;
-      uint64_t lowVA =
-          backwardBranchRange < callVA ? callVA - backwardBranchRange : 0;
-      uint64_t highVA = callVA + forwardBranchRange;
-      // Calculate our call referent address
-      auto *funcSym = cast<Symbol *>(r.referent);
-      ThunkInfo &thunkInfo = thunkMap[funcSym];
-      // The referent is not reachable, so we need to use a thunk ...
-      if ((funcSym->isInStubs() ||
-           (in.objcStubs && in.objcStubs->isNeeded() &&
-            ObjCStubsSection::isObjCStubSymbol(funcSym))) &&
-          callVA >= branchTargetThresholdVA) {
-        assert(callVA != TargetInfo::outOfRangeVA);
-        // ... Oh, wait! We are close enough to the end that branch target
-        // sections (__stubs, __objc_stubs) are now within range of a simple
-        // forward branch.
+      if (isTargetKnownInRange(*isec, r))
+        continue;
+      auto &thunkInfo = thunkMap[r];
+      if (auto *thunk = getThunkInRange(*isec, r, thunkInfo)) {
+        deferredBranchRedirects.emplace_back(isec, &r, thunk);
         continue;
       }
-      uint64_t funcVA = funcSym->resolveBranchVA();
-      ++thunkInfo.callSitesUsed;
-      if (lowVA <= funcVA && funcVA <= highVA) {
-        // The referent is reachable with a simple call instruction.
-        continue;
-      }
-      ++thunkInfo.thunkCallCount;
-      ++thunkCallCount;
-      // If an existing thunk is reachable, use it ...
-      if (thunkInfo.sym) {
-        uint64_t thunkVA = thunkInfo.isec->getVA();
-        if (lowVA <= thunkVA && thunkVA <= highVA) {
-          r.referent = thunkInfo.sym;
-          continue;
-        }
-      }
-      // ... otherwise, create a new thunk.
-      if (addr + size > highVA) {
-        // There were too many consecutive branch instructions for `slop`
-        // above. If you hit this: For the current algorithm, just bumping up
-        // slop above and trying again is probably simplest. (See also PR51578
-        // comment 5).
-        fatal(Twine(__FUNCTION__) +
-              ": FIXME: thunk range overrun. Consider increasing the "
-              "slop-scale with `--slop-scale=<unsigned_int>`.");
-      }
-      thunkInfo.isec =
-          makeSyntheticInputSection(isec->getSegName(), isec->getName());
-      thunkInfo.isec->parent = this;
-      assert(thunkInfo.isec->live);
-
-      StringRef thunkName = saver().save(funcSym->getName() + ".thunk." +
-                                         std::to_string(thunkInfo.sequence++));
-      if (!isa<Defined>(funcSym) || cast<Defined>(funcSym)->isExternal()) {
-        r.referent = thunkInfo.sym = symtab->addDefined(
-            thunkName, /*file=*/nullptr, thunkInfo.isec, /*value=*/0, thunkSize,
-            /*isWeakDef=*/false, /*isPrivateExtern=*/true,
-            /*isReferencedDynamically=*/false, /*noDeadStrip=*/false,
-            /*isWeakDefCanBeHidden=*/false);
-      } else {
-        r.referent = thunkInfo.sym = make<Defined>(
-            thunkName, /*file=*/nullptr, thunkInfo.isec, /*value=*/0, thunkSize,
-            /*isWeakDef=*/false, /*isExternal=*/false, /*isPrivateExtern=*/true,
-            /*includeInSymtab=*/true, /*isReferencedDynamically=*/false,
-            /*noDeadStrip=*/false, /*isWeakDefCanBeHidden=*/false);
-      }
-      thunkInfo.sym->used = true;
-      target->populateThunk(thunkInfo.isec, funcSym);
-      finalizeOne(thunkInfo.isec);
-      thunks.push_back(thunkInfo.isec);
-      ++thunkCount;
+      branchesToProcess.emplace_back(isec, &r);
     }
   }
 
-  log("thunks for " + parent->name + "," + name +
-      ": funcs = " + std::to_string(thunkMap.size()) +
-      ", relocs = " + std::to_string(relocCount) +
-      ", all calls = " + std::to_string(callSiteCount) +
-      ", thunk calls = " + std::to_string(thunkCallCount) +
-      ", thunks = " + std::to_string(thunkCount));
+  llvm::erase_if(branchesToProcess, [&](auto &pair) {
+    auto [callerIsec, r] = pair;
+    return isTargetKnownInRange(*callerIsec, *r);
+  });
+  // Count distinct unresolved branch targets that still lack an in-range thunk.
+  // We use this as an upper bound on the number of thunks we may still create
+  // when estimating where __stubs / __objc_stubs could end up.
+  DenseSet<ThunkKey, ThunkMapKeyInfo> branchTargets;
+  for (auto [callerIsec, r] : branchesToProcess) {
+    ThunkKey thunkKey(*r);
+    auto &thunkInfo = thunkMap[thunkKey];
+    if (!getThunkInRange(*callerIsec, *r, thunkInfo))
+      branchTargets.insert(thunkKey);
+  }
+
+  auto estimatedStubsEnd = estimateStubsEndVA(branchTargets.size());
+  for (auto [isec, r, thunk] : deferredBranchRedirects) {
+    if (isTargetKnownInRange(*isec, *r))
+      continue;
+    if (isTargetStubsAndInRange(*isec, *r, estimatedStubsEnd))
+      continue;
+    updateBranchTargetToThunk(*r, thunk);
+  }
+
+  for (auto [isec, r] : branchesToProcess) {
+    if (isTargetStubsAndInRange(*isec, *r, estimatedStubsEnd))
+      continue;
+    auto &thunkInfo = thunkMap[*r];
+    if (auto *thunk = getThunkInRange(*isec, *r, thunkInfo)) {
+      updateBranchTargetToThunk(*r, thunk);
+      continue;
+    }
+    createThunk(*isec, *r, thunkInfo);
+  }
+
+  if (!thunks.empty())
+    log(name + ": Created " + Twine(thunks.size()) + " (" +
+        Twine(thunks.size() * target->thunkSize / 1024) +
+        " KB) thunks and updated " + Twine(thunkCallCount) + " branch targets");
 }
 
 void ConcatOutputSection::writeTo(uint8_t *buf) const {

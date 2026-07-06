@@ -260,11 +260,6 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
     // draw a relation between %linear and %arg0. Hence skip.
     if (sym->test(Fortran::semantics::Symbol::Flag::OmpLinear))
       return true;
-
-    // `OmpPreDetermined` symbols cannot be exceptions since
-    // their privatized symbols are heavily used in FIR.
-    if (sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined))
-      return false;
     return false;
   };
 
@@ -345,7 +340,7 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
     return;
 
   if (mlir::isa<mlir::omp::WsloopOp>(op) || mlir::isa<mlir::omp::SimdOp>(op) ||
-      mlir::isa<mlir::omp::TaskloopOp>(op)) {
+      mlir::isa<mlir::omp::TaskloopWrapperOp>(op)) {
     mlir::omp::LoopRelatedClauseOps result;
     llvm::SmallVector<const semantics::Symbol *> iv;
     collectLoopRelatedInfo(converter, converter.getCurrentLocation(), eval,
@@ -422,7 +417,6 @@ static parser::CharBlock getSource(const semantics::SemanticsContext &semaCtx,
         return parser::omp::GetOmpDirectiveName(x).source;
       },
       [&](const parser::OpenMPDeclarativeConstruct &x) { return x.source; },
-      [&](const parser::OmpEndLoopDirective &x) { return x.source; },
       [&](const auto &x) { return parser::CharBlock{}; },
   });
 }
@@ -498,6 +492,17 @@ void DataSharingProcessor::collectPrivatizedSymbols(
   }
 
   auto shouldCollectSymbol = [&](const semantics::Symbol *sym) {
+    // Linear symbols are privatized by OpenMP IRBuilder, except when they are
+    // enclosed within TARGET.
+    mlir::Operation *currentOp =
+        firOpBuilder.getInsertionBlock()->getParentOp();
+    bool inTarget =
+        currentOp && (mlir::isa<mlir::omp::TargetOp>(currentOp) ||
+                      currentOp->getParentOfType<mlir::omp::TargetOp>());
+
+    if (sym->test(semantics::Symbol::Flag::OmpLinear) && !inTarget)
+      return false;
+
     if (collectImplicit) {
       // If we're a combined construct with a target region, implicit
       // firstprivate captures, should only belong to the target region
@@ -539,9 +544,6 @@ void DataSharingProcessor::collectPrivatizedSymbols(
 
   for (const auto *sym : allSymbols) {
     if (semantics::omp::IsPrivatizable(*sym) &&
-        // Linear symbols are privatized by OpenMP IRBuilder. See comments
-        // in collectSymbolsForPrivatization() for more details.
-        !sym->test(semantics::Symbol::Flag::OmpLinear) &&
         !symbolsInNestedRegions.contains(sym) &&
         !explicitlyPrivatizedSymbols.contains(sym) &&
         shouldCollectSymbol(sym) && clauseScopes.contains(&sym->owner())) {
@@ -708,7 +710,8 @@ void DataSharingProcessor::privatizeSymbol(
   Fortran::lower::privatizeSymbol<mlir::omp::PrivateClauseOp,
                                   mlir::omp::PrivateClauseOps>(
       converter, firOpBuilder, symTable, allPrivatizedSymbols,
-      mightHaveReadHostSym, symToPrivatize, clauseOps, dir);
+      mightHaveReadHostSym, symToPrivatize, clauseOps, dir,
+      forceHeapAllocationForPrivateDynamicArrays);
 }
 } // namespace omp
 } // namespace lower

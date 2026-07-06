@@ -8,12 +8,29 @@
 
 #include "RandomGeneratorSeedCheck.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ParentMapContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/ADT/STLExtras.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
+
+namespace {
+AST_MATCHER_P(CXXConstructExpr, hasImplicitCtorInitField,
+              ast_matchers::internal::Matcher<Decl>, InnerMatcher) {
+  const DynTypedNodeList Parents =
+      Finder->getASTContext().getParentMapContext().getParents(Node);
+  if (Parents.empty())
+    return false;
+  if (const auto *Ctor = Parents[0].get<CXXConstructorDecl>()) {
+    for (const CXXCtorInitializer *Init : Ctor->inits())
+      if (!Init->isWritten() && Init->getInit() == &Node && Init->getMember())
+        return InnerMatcher.matches(*Init->getMember(), Finder, Builder);
+  }
+  return false;
+}
+} // namespace
 
 RandomGeneratorSeedCheck::RandomGeneratorSeedCheck(StringRef Name,
                                                    ClangTidyContext *Context)
@@ -59,8 +76,10 @@ void RandomGeneratorSeedCheck::registerMatchers(MatchFinder *Finder) {
   // std::mt19937 engine(x);
   //              ^
   Finder->addMatcher(
-      traverse(TK_AsIs,
-               cxxConstructExpr(RandomGeneratorEngineTypeMatcher).bind("ctor")),
+      traverse(TK_AsIs, cxxConstructExpr(RandomGeneratorEngineTypeMatcher,
+                                         optionally(hasImplicitCtorInitField(
+                                             fieldDecl().bind("field"))))
+                            .bind("ctor")),
       this);
 
   // srand();
@@ -77,7 +96,7 @@ void RandomGeneratorSeedCheck::registerMatchers(MatchFinder *Finder) {
 void RandomGeneratorSeedCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Ctor = Result.Nodes.getNodeAs<CXXConstructExpr>("ctor");
   if (Ctor)
-    checkSeed(Result, Ctor);
+    checkSeed(Result, Ctor, Result.Nodes.getNodeAs<FieldDecl>("field"));
 
   const auto *Func = Result.Nodes.getNodeAs<CXXMemberCallExpr>("seed");
   if (Func)
@@ -90,11 +109,18 @@ void RandomGeneratorSeedCheck::check(const MatchFinder::MatchResult &Result) {
 
 template <class T>
 void RandomGeneratorSeedCheck::checkSeed(const MatchFinder::MatchResult &Result,
-                                         const T *Func) {
+                                         const T *Func,
+                                         const FieldDecl *Field) {
   if (Func->getNumArgs() == 0 || Func->getArg(0)->isDefaultArgument()) {
     diag(Func->getExprLoc(),
          "random number generator seeded with a default argument will generate "
          "a predictable sequence of values");
+    if (Field)
+      diag(Field->getLocation(),
+           "field %0 is implicitly initialized with a default seed argument",
+           DiagnosticIDs::Note)
+          << Field;
+
     return;
   }
 

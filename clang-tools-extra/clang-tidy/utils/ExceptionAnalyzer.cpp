@@ -12,7 +12,6 @@ namespace clang::tidy::utils {
 
 void ExceptionAnalyzer::ExceptionInfo::registerException(
     const Type *ExceptionType, const ThrowInfo &ThrowInfo) {
-  assert(ExceptionType != nullptr && "Only valid types are accepted");
   Behaviour = State::Throwing;
   ThrownExceptions.insert({ExceptionType, ThrowInfo});
 }
@@ -331,6 +330,12 @@ static bool canThrow(const FunctionDecl *Func) {
   if (!FunProto)
     return true;
 
+  // Clang evaluates unresolved exception specs before generating any call to
+  // the function, so these functions cannot appear at a call site and cannot
+  // throw.
+  if (isUnresolvedExceptionSpec(FunProto->getExceptionSpecType()))
+    return false;
+
   switch (FunProto->canThrow()) {
   case CT_Cannot:
     return false;
@@ -432,6 +437,8 @@ ExceptionAnalyzer::ExceptionInfo::filterIgnoredExceptions(
   // Therefore this slightly hacky implementation is required.
   for (const auto &ThrownException : ThrownExceptions) {
     const Type *T = ThrownException.getFirst();
+    if (!T)
+      continue;
     if (const auto *TD = T->getAsTagDecl()) {
       if (TD->getDeclName().isIdentifier()) {
         if ((IgnoreBadAlloc &&
@@ -484,19 +491,28 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
       }
     }
 
-    CallStack.erase(Func);
     // Optionally treat unannotated functions as potentially throwing if they
     // are not explicitly non-throwing and no throw was discovered.
     if (AssumeUnannotatedFunctionsAsThrowing &&
         Result.getBehaviour() == State::NotThrowing && canThrow(Func)) {
-      Result.registerUnknownException();
+      Result.registerException(nullptr, {Func->getLocation(), CallStack});
     }
+
+    CallStack.erase(Func);
     return Result;
   }
+
+  // Functions without a visible body can still be known non-throwing from their
+  // exception specification.
+  if (!canThrow(Func))
+    return ExceptionInfo::createNonThrowing();
 
   auto Result = ExceptionInfo::createUnknown();
 
   if (const auto *FPT = Func->getType()->getAs<FunctionProtoType>()) {
+    if (isUnresolvedExceptionSpec(FPT->getExceptionSpecType()))
+      return ExceptionInfo::createNonThrowing();
+
     for (const QualType &Ex : FPT->exceptions()) {
       CallStack.insert({Func, CallLoc});
       Result.registerException(
@@ -507,8 +523,11 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
   }
 
   if (AssumeMissingDefinitionsFunctionsAsThrowing &&
-      Result.getBehaviour() == State::Unknown)
-    Result.registerUnknownException();
+      Result.getBehaviour() == State::Unknown) {
+    CallStack.insert({Func, CallLoc});
+    Result.registerException(nullptr, {Func->getLocation(), CallStack});
+    CallStack.erase(Func);
+  }
 
   return Result;
 }

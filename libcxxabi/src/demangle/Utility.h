@@ -31,7 +31,7 @@ class Node;
 
 // Stream that AST nodes write their string representation into after the AST
 // has been parsed.
-class OutputBuffer {
+class DEMANGLE_ABI OutputBuffer {
   char *Buffer = nullptr;
   size_t CurrentPosition = 0;
   size_t BufferCapacity = 0;

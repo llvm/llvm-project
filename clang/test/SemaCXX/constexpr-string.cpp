@@ -8,6 +8,7 @@
 // RUN: %clang_cc1 %s -triple armebv7-unknown-linux -std=c++2a -fsyntax-only -verify -pedantic -Wno-vla-extension -fno-wchar -DNO_PREDEFINED_WCHAR_T
 
 // RUN: %clang_cc1 %s -triple armebv7-unknown-linux -std=c++2a -fsyntax-only -verify -pedantic -Wno-vla-extension -fno-signed-char -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 %s -triple armebv7-unknown-linux -std=c++2a -fsyntax-only -verify -pedantic -Wno-vla-extension -fno-wchar -DNO_PREDEFINED_WCHAR_T -fexperimental-new-constant-interpreter
 
 # 9 "/usr/include/string.h" 1 3 4  // expected-warning {{this style of line directive is a GNU extension}}
 extern "C" {

@@ -2,7 +2,7 @@
 
 # GCN-LABEL: name: buffer_load_dword_lds_ds_read
 # GCN:      BUFFER_LOAD_DWORD_LDS_IDXEN
-# GCN-NEXT: S_WAITCNT 3952
+# GCN-NEXT: S_WAITCNT .Vmcnt_0
 #                     vmcnt(0)
 # GCN-NEXT: DS_READ_B32_gfx9
 ---
@@ -19,7 +19,7 @@ body:             |
 # GCN-LABEL: name: buffer_load_dword_lds_vmcnt_1
 # GCN:      BUFFER_LOAD_DWORD_LDS_IDXEN
 # GCN-NEXT: BUFFER_LOAD_DWORD_IDXEN
-# GCN-NEXT: S_WAITCNT 3953
+# GCN-NEXT: S_WAITCNT .Vmcnt_1
 #                     vmcnt(1)
 # GCN-NEXT: DS_READ_B32_gfx9
 ---
@@ -36,7 +36,7 @@ body:             |
 
 # GCN-LABEL: name: buffer_load_dword_lds_flat_read
 # GCN:      BUFFER_LOAD_DWORD_LDS_IDXEN
-# GCN-NEXT: S_WAITCNT 3952
+# GCN-NEXT: S_WAITCNT .Vmcnt_0
 #                     vmcnt(0)
 # GCN-NEXT: FLAT_LOAD_DWORD
 ---
@@ -53,7 +53,7 @@ body:             |
 
 # GCN-LABEL: name: global_load_lds_dword_ds_read
 # GCN:      GLOBAL_LOAD_LDS_DWORD
-# GCN-NEXT: S_WAITCNT 3952
+# GCN-NEXT: S_WAITCNT .Vmcnt_0
 #                     vmcnt(0)
 # GCN-NEXT: DS_READ_B32_gfx9
 ---
@@ -71,7 +71,7 @@ body:             |
 # GCN-LABEL: name: ds_read_global_load_lds_use_ds_data
 # GCN:      DS_READ_B32_gfx9
 # GCN-NEXT: GLOBAL_LOAD_LDS_DWORD
-# GCN-NEXT: S_WAITCNT 49279
+# GCN-NEXT: S_WAITCNT .Lgkmcnt_0
 #                     lgkmcnt(0)
 # GCN-NEXT: V_ADD_U32_e32
 ---
@@ -91,7 +91,7 @@ body:             |
 # GCN-LABEL: name: ds_read_buffer_load_lds_use_ds_data
 # GCN:      DS_READ_B32_gfx9
 # GCN-NEXT: BUFFER_LOAD_DWORD_LDS_IDXEN
-# GCN-NEXT: S_WAITCNT 49279
+# GCN-NEXT: S_WAITCNT .Lgkmcnt_0
 #                     lgkmcnt(0)
 # GCN-NEXT: V_ADD_U32_e32
 ---
@@ -108,7 +108,7 @@ body:             |
 
 # GCN-LABEL: name: scratch_load_lds_dword_ds_read
 # GCN:      SCRATCH_LOAD_LDS_DWORD
-# GCN-NEXT: S_WAITCNT 3952
+# GCN-NEXT: S_WAITCNT .Vmcnt_0
 #                     vmcnt(0)
 # GCN-NEXT: DS_READ_B32_gfx9
 ---
@@ -141,7 +141,7 @@ body:             |
 # GCN:      BUFFER_LOAD_DWORD_LDS_IDXEN
 # GCN-NEXT: BUFFER_LOAD_DWORD_LDS_IDXEN
 # GCN-NEXT: BUFFER_LOAD_DWORD_LDS_IDXEN
-# GCN-NEXT: S_WAITCNT 3952
+# GCN-NEXT: S_WAITCNT .Vmcnt_0
 #                     vmcnt(0)
 # GCN-NEXT: DS_READ_B32_gfx9
 ---

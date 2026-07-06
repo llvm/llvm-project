@@ -81,18 +81,15 @@ void ReportStringFunctionMemoryRangesOverlap(const char *function,
                                              const char *offset1, uptr length1,
                                              const char *offset2, uptr length2,
                                              BufferedStackTrace *stack);
-void ReportStringFunctionSizeOverflow(uptr offset, uptr size,
-                                      BufferedStackTrace *stack);
+void ReportStringFunctionSizeOverflow(uptr offset, uptr size, bool is_write,
+                                      BufferedStackTrace* stack);
 void ReportBadParamsToAnnotateContiguousContainer(uptr beg, uptr end,
                                                   uptr old_mid, uptr new_mid,
                                                   BufferedStackTrace *stack);
 void ReportBadParamsToAnnotateDoubleEndedContiguousContainer(
     uptr storage_beg, uptr storage_end, uptr old_container_beg,
     uptr old_container_end, uptr new_container_beg, uptr new_container_end,
-    BufferedStackTrace *stack);
-void ReportBadParamsToCopyContiguousContainerAnnotations(
-    uptr old_storage_beg, uptr old_storage_end, uptr new_storage_beg,
-    uptr new_storage_end, BufferedStackTrace *stack);
+    BufferedStackTrace* stack);
 
 void ReportODRViolation(const __asan_global *g1, u32 stack_id1,
                         const __asan_global *g2, u32 stack_id2);

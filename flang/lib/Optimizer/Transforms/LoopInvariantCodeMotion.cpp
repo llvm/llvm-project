@@ -13,11 +13,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Analysis/AliasAnalysis.h"
+#include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIROperationMoveOpInterface.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -48,6 +51,7 @@ using namespace mlir;
 ///     (see isSafeToHoistLoad() comments below).
 struct LoopInvariantCodeMotion
     : fir::impl::LoopInvariantCodeMotionBase<LoopInvariantCodeMotion> {
+  using LoopInvariantCodeMotionBase::LoopInvariantCodeMotionBase;
   void runOnOperation() override;
 };
 
@@ -102,9 +106,10 @@ static bool isNonOptionalScalar(Value location) {
       return false;
     }
 
-    // Scalars "defined" by fir.alloca and fir.address_of
-    // are present.
-    if (isa<fir::AllocaOp, fir::AddrOfOp>(defOp)) {
+    // Scalars "defined" by fir.address_of or that are new
+    // allocations (e.g. fir.alloca, cuf.alloc, etc.) are present.
+    if (isa<fir::AddrOfOp>(defOp) ||
+        fir::isNewAllocationResult(cast<OpResult>(location)).value_or(false)) {
       LDBG() << "Success: is non optional scalar";
       return true;
     }
@@ -139,13 +144,13 @@ static bool isNonOptionalScalar(Value location) {
 
       // TODO: we can probably use FIR AliasAnalysis' getSource()
       // method to identify the storage in more cases.
-      Value memref = llvm::TypeSwitch<Operation *, Value>(defOp)
-                         .Case<fir::DeclareOp, hlfir::DeclareOp>(
-                             [](auto op) { return op.getMemref(); })
-                         .Default([](auto) { return nullptr; });
+      location = llvm::TypeSwitch<Operation *, Value>(defOp)
+                     .Case<fir::DeclareOp, hlfir::DeclareOp>(
+                         [](auto op) { return op.getMemref(); })
+                     .Default([](auto) { return nullptr; });
 
-      if (memref)
-        return isNonOptionalScalar(memref);
+      if (location)
+        continue;
 
       LDBG() << "Failure: cannot reason about variable storage";
       return false;
@@ -162,26 +167,37 @@ static bool isNonOptionalScalar(Value location) {
 /// Returns true iff it is safe to hoist the given load-like operation 'op',
 /// which access given memory 'locations', out of the operation 'loopLike'.
 /// The current safety conditions are:
-///   * The loop runs at least one iteration, OR
+///   * The load is known to be unconditionally executed in the loop and the
+///     loop runs at least one iteration, OR
 ///   * all the accessed locations are inside scalar non-OPTIONAL
 ///     Fortran objects (Fortran descriptors are considered to be scalars).
+///
+/// When \p maybeConditionallyExecuted is true, the load may be inside a
+/// conditional region (e.g. scf.if) within the loop, so the trip count
+/// shortcut cannot be used: even if the loop runs, the condition might never
+/// be true and the load might access an invalid location.
+/// TODO: analyze the parent operation to determine whether it truly
+/// conditionally executes its body (e.g. scf.execute_region always does).
 static bool isSafeToHoistLoad(Operation *op, ArrayRef<Value> locations,
                               LoopLikeOpInterface loopLike,
-                              AliasAnalysis &aliasAnalysis) {
+                              AliasAnalysis &aliasAnalysis,
+                              bool maybeConditionallyExecuted) {
   for (Value location : locations)
-    if (aliasAnalysis.getModRef(loopLike.getOperation(), location)
-            .isModAndRef()) {
+    if (aliasAnalysis.getModRef(loopLike.getOperation(), location).isMod()) {
       LDBG() << "Failure: reads location:\n"
              << location << "\nwhich is modified inside the loop";
       return false;
     }
 
   // Check that it is safe to read from all the locations before the loop.
-  std::optional<llvm::APInt> tripCount = loopLike.getStaticTripCount();
-  if (tripCount && !tripCount->isZero()) {
-    // Loop executes at least one iteration, so it is safe to hoist.
-    LDBG() << "Success: loop has non-zero iterations";
-    return true;
+  if (!maybeConditionallyExecuted) {
+    std::optional<llvm::APInt> tripCount = loopLike.getStaticTripCount();
+    if (tripCount && !tripCount->isZero()) {
+      // Loop executes at least one iteration and the load is unconditionally
+      // executed in the loop body, so it is safe to hoist.
+      LDBG() << "Success: loop has non-zero iterations";
+      return true;
+    }
   }
 
   // Check whether the access must always be valid.
@@ -193,8 +209,10 @@ static bool isSafeToHoistLoad(Operation *op, ArrayRef<Value> locations,
 
 /// Returns true iff the given 'op' is a load-like operation,
 /// and it can be hoisted out of 'loopLike' operation.
+/// See isSafeToHoistLoad for the meaning of \p maybeConditionallyExecuted.
 static bool canHoistLoad(Operation *op, LoopLikeOpInterface loopLike,
-                         AliasAnalysis &aliasAnalysis) {
+                         AliasAnalysis &aliasAnalysis,
+                         bool maybeConditionallyExecuted) {
   LDBG() << "Checking operation:\n" << *op;
   if (auto effectInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
     SmallVector<MemoryEffects::EffectInstance> effects;
@@ -216,10 +234,27 @@ static bool canHoistLoad(Operation *op, LoopLikeOpInterface loopLike,
       locations.insert(location);
     }
     return isSafeToHoistLoad(op, locations.getArrayRef(), loopLike,
-                             aliasAnalysis);
+                             aliasAnalysis, maybeConditionallyExecuted);
   }
   LDBG() << "Failure: has unknown effects";
   return false;
+}
+
+/// Recursively collect regions from operations inside \p region, skipping
+/// IsolatedFromAbove operations (whose regions form a separate scope) and
+/// LoopLikeOpInterface operations (which have their own LICM invocation).
+static void collectNestedRegions(Region &region,
+                                 SmallVectorImpl<Region *> &result) {
+  for (Operation &op : region.getOps()) {
+    if (op.hasTrait<OpTrait::IsIsolatedFromAbove>())
+      continue;
+    if (isa<LoopLikeOpInterface>(&op))
+      continue;
+    for (Region &nested : op.getRegions()) {
+      result.push_back(&nested);
+      collectNestedRegions(nested, result);
+    }
+  }
 }
 
 void LoopInvariantCodeMotion::runOnOperation() {
@@ -233,8 +268,9 @@ void LoopInvariantCodeMotion::runOnOperation() {
   auto &aliasAnalysis = getAnalysis<AliasAnalysis>();
   aliasAnalysis.addAnalysisImplementation(fir::AliasAnalysis{});
 
-  std::function<bool(Operation *, LoopLikeOpInterface loopLike)>
-      shouldMoveOutOfLoop = [&](Operation *op, LoopLikeOpInterface loopLike) {
+  std::function<bool(Operation *, LoopLikeOpInterface, bool)>
+      shouldMoveOutOfLoop = [&](Operation *op, LoopLikeOpInterface loopLike,
+                                bool maybeConditionallyExecuted) {
         if (isPure(op)) {
           LDBG() << "Pure operation: " << *op;
           return true;
@@ -255,7 +291,8 @@ void LoopInvariantCodeMotion::runOnOperation() {
                   nestedOps.push_back(&nestedOp);
 
             bool result = llvm::all_of(nestedOps, [&](Operation *nestedOp) {
-              return shouldMoveOutOfLoop(nestedOp, loopLike);
+              return shouldMoveOutOfLoop(nestedOp, loopLike,
+                                         maybeConditionallyExecuted);
             });
             LDBG() << "Recursive operation can" << (result ? "" : "not")
                    << " be hoisted";
@@ -268,7 +305,8 @@ void LoopInvariantCodeMotion::runOnOperation() {
               return result;
           }
         }
-        return canHoistLoad(op, loopLike, aliasAnalysis);
+        return canHoistLoad(op, loopLike, aliasAnalysis,
+                            maybeConditionallyExecuted);
       };
 
   getOperation()->walk([&](LoopLikeOpInterface loopLike) {
@@ -297,26 +335,112 @@ void LoopInvariantCodeMotion::runOnOperation() {
       });
       return;
     }
+    auto isDefinedOutsideRegion = [&](Value value, Region *) {
+      return loopLike.isDefinedOutsideOfLoop(value);
+    };
+    // Check canMoveOutOf for the candidate and all its nested operations.
+    // Moving an operation with regions also moves its contents, so
+    // restrictions like cuf.kernel blocking !fir.ref operands must be
+    // checked transitively.
+    auto canMoveOutOfOp = [&](Operation *regionOwner, Operation *candidate) {
+      if (!fir::canMoveOutOf(regionOwner, candidate))
+        return false;
+      bool blocked = false;
+      candidate->walk([&](Operation *nested) {
+        if (nested != candidate && !fir::canMoveOutOf(regionOwner, nested))
+          blocked = true;
+        return blocked ? WalkResult::interrupt() : WalkResult::advance();
+      });
+      return !blocked;
+    };
+    auto canMoveOutOfLoop = [&](Operation *op) {
+      if (!canMoveOutOfOp(loopLike, op)) {
+        LDBG() << "Cannot hoist " << *op << " out of the loop";
+        return false;
+      }
+      if (!fir::canMoveFromDescendant(parentOp, loopLike, op)) {
+        LDBG() << "Cannot hoist " << *op << " into the parent of the loop";
+        return false;
+      }
+      return true;
+    };
+    auto moveOutOfRegion = [&](Operation *op, Region *) {
+      loopLike.moveOutOfLoop(op);
+    };
+
     moveLoopInvariantCode(
-        loopLike.getLoopRegions(),
-        /*isDefinedOutsideRegion=*/
-        [&](Value value, Region *) {
-          return loopLike.isDefinedOutsideOfLoop(value);
-        },
+        loopLike.getLoopRegions(), isDefinedOutsideRegion,
         /*shouldMoveOutOfRegion=*/
         [&](Operation *op, Region *) {
-          if (!fir::canMoveOutOf(loopLike, op)) {
-            LDBG() << "Cannot hoist " << *op << " out of the loop";
-            return false;
-          }
-          if (!fir::canMoveFromDescendant(parentOp, loopLike, op)) {
-            LDBG() << "Cannot hoist " << *op << " into the parent of the loop";
-            return false;
-          }
-          return shouldMoveOutOfLoop(op, loopLike);
+          return canMoveOutOfLoop(op) &&
+                 shouldMoveOutOfLoop(op, loopLike,
+                                     /*maybeConditionallyExecuted=*/false);
         },
-        /*moveOutOfRegion=*/
-        [&](Operation *op, Region *) { loopLike.moveOutOfLoop(op); });
+        moveOutOfRegion);
+
+    if (hoistFromNestedRegions == fir::LICMNestedHoistingMode::None)
+      return;
+
+    // Hoist loop-invariant ops from nested regions (e.g., fir.convert
+    // inside scf.if) out of the loop. This enables CSE to deduplicate
+    // converted memrefs, which improves alias analysis for parallelization.
+    // The callbacks close over loopLike (ignoring the Region* parameter),
+    // so invariance and movement are evaluated against the loop, not the
+    // nested region.
+    // Loads hoisted from nested regions are treated as maybe-conditionally
+    // executed: we do not know whether the parent operation always executes
+    // its body (e.g. scf.execute_region does, scf.if might not), so the
+    // trip count shortcut cannot prove safety.
+    // TODO: analyze the parent operation to determine whether it truly
+    // conditionally executes its body.
+    SmallVector<Region *> nestedRegions;
+    for (Region *loopRegion : loopLike.getLoopRegions())
+      collectNestedRegions(*loopRegion, nestedRegions);
+
+    if (nestedRegions.empty())
+      return;
+
+    auto shouldMoveFromNestedRegion = [&](Operation *op, Region *) {
+      // Check that all intermediate operations between op and the loop
+      // allow the candidate to be moved out.  For example, cuf.kernel
+      // restricts hoisting of operations with !fir.ref operands.
+      for (Operation *ancestor = op->getParentOp();
+           ancestor != loopLike.getOperation();
+           ancestor = ancestor->getParentOp()) {
+        if (!ancestor) {
+          // The operation is no longer nested inside the loop (a parent
+          // operation was already hoisted out). Nothing to do.
+          return false;
+        }
+        if (!canMoveOutOfOp(ancestor, op)) {
+          LDBG() << "Cannot hoist " << *op
+                 << " out of intermediate operation: ";
+          LDBG_OS([&](llvm::raw_ostream &os) {
+            ancestor->print(os, OpPrintingFlags().skipRegions());
+          });
+          return false;
+        }
+      }
+      return canMoveOutOfLoop(op) &&
+             shouldMoveOutOfLoop(op, loopLike,
+                                 /*maybeConditionallyExecuted=*/true);
+    };
+    if (hoistFromNestedRegions == fir::LICMNestedHoistingMode::Aggressive) {
+      moveLoopInvariantCode(nestedRegions, isDefinedOutsideRegion,
+                            shouldMoveFromNestedRegion, moveOutOfRegion);
+    } else {
+      // "cheap" mode: only hoist fir.convert.
+      // TODO: refine the cost model for "cheap" hoisting to include
+      // other inexpensive operations.
+      moveLoopInvariantCode(
+          nestedRegions, isDefinedOutsideRegion,
+          /*shouldMoveOutOfRegion=*/
+          [&](Operation *op, Region *region) {
+            return isa<fir::ConvertOp>(op) &&
+                   shouldMoveFromNestedRegion(op, region);
+          },
+          moveOutOfRegion);
+    }
   });
 
   LDBG() << "Exit [HL]FIR LoopInvariantCodeMotion()";

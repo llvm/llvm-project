@@ -36,6 +36,7 @@ using ReductionOpsSet =
 
 static ReductionOpsSet reductionIntegerSet{
     Fortran::parser::ReductionOperator::Operator::Plus,
+    Fortran::parser::ReductionOperator::Operator::Minus,
     Fortran::parser::ReductionOperator::Operator::Multiply,
     Fortran::parser::ReductionOperator::Operator::Max,
     Fortran::parser::ReductionOperator::Operator::Min,
@@ -45,12 +46,14 @@ static ReductionOpsSet reductionIntegerSet{
 
 static ReductionOpsSet reductionRealSet{
     Fortran::parser::ReductionOperator::Operator::Plus,
+    Fortran::parser::ReductionOperator::Operator::Minus,
     Fortran::parser::ReductionOperator::Operator::Multiply,
     Fortran::parser::ReductionOperator::Operator::Max,
     Fortran::parser::ReductionOperator::Operator::Min};
 
 static ReductionOpsSet reductionComplexSet{
     Fortran::parser::ReductionOperator::Operator::Plus,
+    Fortran::parser::ReductionOperator::Operator::Minus,
     Fortran::parser::ReductionOperator::Operator::Multiply};
 
 static ReductionOpsSet reductionLogicalSet{
@@ -347,6 +350,75 @@ void AccStructureChecker::CheckNotInSameOrSubLevelLoopConstruct() {
   }
 }
 
+void AccStructureChecker::Enter(const parser::CallStmt &call) {
+  if (dirContext_.empty() || !call.typedCall) {
+    return;
+  }
+  const Symbol *sym{call.typedCall->proc().GetSymbol()};
+  if (!sym) {
+    return;
+  }
+  const Symbol &ult{sym->GetUltimate()};
+  const auto *subp{ult.detailsIf<SubprogramDetails>()};
+  if (!subp || subp->openACCRoutineInfos().empty()) {
+    return;
+  }
+  std::string routineParDim;
+  unsigned routineGangDim = 0;
+  for (const OpenACCRoutineInfo &ri : subp->openACCRoutineInfos()) {
+    if (ri.isGang()) {
+      if (unsigned gangDim = ri.gangDim()) {
+        routineGangDim = gangDim;
+        routineParDim = "GANG(" + std::to_string(gangDim) + ")";
+      } else {
+        routineGangDim = 1;
+        routineParDim = "GANG";
+      }
+    } else if (ri.isWorker()) {
+      routineParDim = "WORKER";
+    } else if (ri.isVector()) {
+      routineParDim = "VECTOR";
+    } else if (ri.isSeq()) {
+      routineParDim = "SEQ";
+    }
+  }
+
+  DirectiveContext &inner{dirContext_.back()};
+  for (llvm::acc::Clause cl : inner.actualClauses) {
+    if (cl == llvm::acc::Clause::ACCC_vector) {
+      if (!routineParDim.empty() && routineParDim != "SEQ") {
+        context_.Say(GetContext().clauseSource,
+            "Calling %s routine inside VECTOR loop is not allowed"_err_en_US,
+            routineParDim);
+      }
+    }
+    if (cl == llvm::acc::Clause::ACCC_worker) {
+      if (!routineParDim.empty() &&
+          (routineParDim != "SEQ" && routineParDim != "VECTOR")) {
+        context_.Say(GetContext().clauseSource,
+            "Calling %s routine inside WORKER loop is not allowed"_err_en_US,
+            routineParDim);
+      }
+    }
+    if (cl == llvm::acc::Clause::ACCC_gang) {
+      const std::optional<std::int64_t> loopGangDim{
+          getGangDimensionSize(inner)};
+      const std::int64_t loopDimNum{loopGangDim.value_or(1)};
+      if (routineGangDim && routineGangDim >= loopDimNum) {
+        if (loopGangDim) {
+          context_.Say(GetContext().clauseSource,
+              "Calling %s routine inside GANG(%s) loop is not allowed"_err_en_US,
+              routineParDim, std::to_string(*loopGangDim));
+        } else {
+          context_.Say(GetContext().clauseSource,
+              "Calling %s routine inside GANG loop is not allowed"_err_en_US,
+              routineParDim);
+        }
+      }
+    }
+  }
+}
+
 void AccStructureChecker::Enter(const parser::OpenACCLoopConstruct &x) {
   const auto &beginDir{std::get<parser::AccBeginLoopDirective>(x.t)};
   const auto &loopDir{std::get<parser::AccLoopDirective>(beginDir.t)};
@@ -411,8 +483,8 @@ void AccStructureChecker::Leave(const parser::OpenACCStandaloneConstruct &x) {
 
 void AccStructureChecker::Enter(const parser::OpenACCRoutineConstruct &x) {
   PushContextAndClauseSets(x.source, llvm::acc::Directive::ACCD_routine);
-  const auto &optName{std::get<std::optional<parser::Name>>(x.t)};
-  if (!optName) {
+  const auto &names{std::get<std::list<parser::Name>>(x.t)};
+  if (names.empty()) {
     const auto &verbatim{std::get<parser::Verbatim>(x.t)};
     const auto &scope{context_.FindScope(verbatim.source)};
     const Scope &containingScope{GetProgramUnitContaining(scope)};
@@ -1014,6 +1086,11 @@ void AccStructureChecker::Enter(const parser::AccClause::Reduction &reduction) {
   const parser::AccObjectListWithReduction &list{reduction.v};
   const auto &op{std::get<parser::ReductionOperator>(list.t)};
   const auto &objects{std::get<parser::AccObjectList>(list.t)};
+
+  if (op.v == parser::ReductionOperator::Operator::Minus) {
+    context_.Warn(common::UsageWarning::OpenAccUsage, GetContext().clauseSource,
+        "The minus '-' reduction operator is non-standard and is treated as '+'"_warn_en_US);
+  }
 
   for (const auto &object : objects.v) {
     common::visit(

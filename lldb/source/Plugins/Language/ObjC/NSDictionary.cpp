@@ -16,6 +16,8 @@
 #include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
+#include "llvm/Support/ErrorExtras.h"
+
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/StackFrame.h"
@@ -688,8 +690,8 @@ lldb_private::formatters::NSDictionaryISyntheticFrontEnd::GetChildAtIndex(
     StreamString idx_name;
     idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
     DataExtractor data(buffer_sp, m_order, m_ptr_size);
-    dict_item.valobj_sp = CreateValueObjectFromData(idx_name.GetString(), data,
-                                                    m_exe_ctx_ref, m_pair_type);
+    dict_item.valobj_sp = CreateChildValueObjectFromData(
+        idx_name.GetString(), data, m_exe_ctx_ref, m_pair_type);
   }
   return dict_item.valobj_sp;
 }
@@ -811,8 +813,8 @@ lldb_private::formatters::NSCFDictionarySyntheticFrontEnd::GetChildAtIndex(
     StreamString idx_name;
     idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
     DataExtractor data(buffer_sp, m_order, m_ptr_size);
-    dict_item.valobj_sp = CreateValueObjectFromData(idx_name.GetString(), data,
-                                                    m_exe_ctx_ref, m_pair_type);
+    dict_item.valobj_sp = CreateChildValueObjectFromData(
+        idx_name.GetString(), data, m_exe_ctx_ref, m_pair_type);
   }
   return dict_item.valobj_sp;
 }
@@ -914,8 +916,8 @@ lldb::ValueObjectSP lldb_private::formatters::
     StreamString idx_name;
     idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
     DataExtractor data(buffer_sp, m_order, m_ptr_size);
-    dict_item.valobj_sp = CreateValueObjectFromData(idx_name.GetString(), data,
-                                                    m_exe_ctx_ref, m_pair_type);
+    dict_item.valobj_sp = CreateChildValueObjectFromData(
+        idx_name.GetString(), data, m_exe_ctx_ref, m_pair_type);
   }
   return dict_item.valobj_sp;
 }
@@ -929,8 +931,7 @@ llvm::Expected<size_t> lldb_private::formatters::
   static const ConstString g_zero("[0]");
   if (name == g_zero)
     return 0;
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 llvm::Expected<uint32_t> lldb_private::formatters::
@@ -988,7 +989,7 @@ lldb_private::formatters::NSDictionary1SyntheticFrontEnd::GetChildAtIndex(
   }
 
   DataExtractor data(buffer_sp, process_sp->GetByteOrder(), ptr_size);
-  m_pair = CreateValueObjectFromData(
+  m_pair = CreateChildValueObjectFromData(
       "[0]", data, m_backend.GetExecutionContextRef(), pair_type);
 
   return m_pair;
@@ -1140,8 +1141,8 @@ lldb_private::formatters::GenericNSDictionaryMSyntheticFrontEnd<
     StreamString idx_name;
     idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
     DataExtractor data(buffer_sp, m_order, m_ptr_size);
-    dict_item.valobj_sp = CreateValueObjectFromData(idx_name.GetString(), data,
-                                                    m_exe_ctx_ref, m_pair_type);
+    dict_item.valobj_sp = CreateChildValueObjectFromData(
+        idx_name.GetString(), data, m_exe_ctx_ref, m_pair_type);
   }
   return dict_item.valobj_sp;
 }
@@ -1276,8 +1277,8 @@ lldb_private::formatters::Foundation1100::
     StreamString idx_name;
     idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
     DataExtractor data(buffer_sp, m_order, m_ptr_size);
-    dict_item.valobj_sp = CreateValueObjectFromData(idx_name.GetString(), data,
-                                                    m_exe_ctx_ref, m_pair_type);
+    dict_item.valobj_sp = CreateChildValueObjectFromData(
+        idx_name.GetString(), data, m_exe_ctx_ref, m_pair_type);
   }
   return dict_item.valobj_sp;
 }

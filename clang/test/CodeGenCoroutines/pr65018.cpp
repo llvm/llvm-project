@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 \
 // RUN:      -O1 -emit-llvm %s -o - | FileCheck %s
 
+// FIXME: Generate wrappers with correct target features.
+// REQUIRES: x86-registered-target
+
 #include "Inputs/coroutine.h"
 
 // A simple awaiter type with an await_suspend method that can't be
@@ -45,6 +48,6 @@ MyTask FooBar() {
 
 // CHECK: %[[RET:.+]] = {{.*}}call{{.*}}@_ZN7Awaiter13await_suspendESt16coroutine_handleIvE
 // CHECK: %[[RESUME_ADDR:.+]] = load ptr, ptr %[[RET]],
-// CHECK: musttail call fastcc void %[[RESUME_ADDR]]({{.*}}%[[RET]]
+// CHECK: musttail call void %[[RESUME_ADDR]]({{.*}}%[[RET]]
 // CHECK: ret
 

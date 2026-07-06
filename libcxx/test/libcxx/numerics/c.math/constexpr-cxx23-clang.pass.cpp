@@ -22,6 +22,9 @@
 // We don't control the implementation of these functions on windows
 // UNSUPPORTED: windows
 
+// Missing some math functions.
+// XFAIL: LLVM-LIBC-FIXME
+
 #include <cmath>
 #include <cstdlib>
 #include <cassert>

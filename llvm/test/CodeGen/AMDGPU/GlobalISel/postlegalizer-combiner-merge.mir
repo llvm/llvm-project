@@ -1,4 +1,4 @@
-# RUN: llc -mtriple amdgcn-amd-amdhsa -run-pass=amdgpu-postlegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -run-pass=amdgpu-postlegalizer-combiner -verify-machineinstrs %s -o - | FileCheck %s
 
 ---
 name:            merge_unmerge

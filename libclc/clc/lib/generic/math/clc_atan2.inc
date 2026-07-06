@@ -22,7 +22,13 @@ _CLC_OVERLOAD _CLC_CONST _CLC_DEF __CLC_FLOATN __clc_atan2(__CLC_FLOATN y,
   __CLC_FLOATN v = __clc_fmin(ax, ay);
   __CLC_FLOATN u = __clc_fmax(ax, ay);
 
-  __CLC_FLOATN vbyu = v / u;
+  __CLC_FLOATN vbyu;
+  if (__clc_denormals_are_zero_fp32()) {
+    __CLC_FLOATN s = u > 0x1.0p+96f ? 0x1.0p-32f : 1.0f;
+    vbyu = s * __clc_div_fast(v, s * u);
+  } else {
+    vbyu = v / u;
+  }
 
   __CLC_FLOATN a = __clc_atan_reduced(vbyu);
 

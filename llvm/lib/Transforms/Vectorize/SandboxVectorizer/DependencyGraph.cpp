@@ -71,6 +71,63 @@ bool PredIterator::operator==(const PredIterator &Other) const {
   return OpIt == Other.OpIt && MemIt == Other.MemIt;
 }
 
+User::user_iterator SuccIterator::skipOutOfScope(User::user_iterator UserIt,
+                                                 User::user_iterator UserItE,
+                                                 const DependencyGraph &DAG) {
+  auto Skip = [&DAG](User::user_iterator UserIt) {
+    auto *I = dyn_cast<Instruction>(*UserIt);
+    return I == nullptr || DAG.getNode(I) == nullptr;
+  };
+  while (UserIt != UserItE && Skip(UserIt))
+    ++UserIt;
+  return UserIt;
+}
+
+SuccIterator::value_type SuccIterator::operator*() {
+  // If it's a DGNode then we dereference the user iterator.
+  if (!isa<MemDGNode>(N)) {
+    assert(UserIt != UserItE && "Can't dereference end iterator!");
+    return DAG->getNode(cast<Instruction>((Value *)*UserIt));
+  }
+  // It's a MemDGNode, so we check if we return either the def-use operand,
+  // or a mem predecessor.
+  if (UserIt != UserItE)
+    return DAG->getNode(cast<Instruction>((Value *)*UserIt));
+  // It's a MemDGNode with UserIt == end, so we need to use MemIt.
+  assert(MemIt != cast<MemDGNode>(N)->MemSuccs.end() &&
+         "Cant' dereference end iterator!");
+  return *MemIt;
+}
+
+SuccIterator &SuccIterator::operator++() {
+  // If it's a DGNode then we increment the use-def iterator.
+  if (!isa<MemDGNode>(N)) {
+    assert(UserIt != UserItE && "Already at end!");
+    ++UserIt;
+    // Skip users that are not instructions or are outside the DAG.
+    UserIt = SuccIterator::skipOutOfScope(UserIt, UserItE, *DAG);
+    return *this;
+  }
+  // It's a MemDGNode, so if we are not at the end of the def-use iterator we
+  // need to first increment that.
+  if (UserIt != UserItE) {
+    ++UserIt;
+    // Skip operands that are not instructions or are outside the DAG.
+    UserIt = SuccIterator::skipOutOfScope(UserIt, UserItE, *DAG);
+    return *this;
+  }
+  // It's a MemDGNode with UserIt == end, so we need to increment MemIt.
+  assert(MemIt != cast<MemDGNode>(N)->MemSuccs.end() && "Already at end!");
+  ++MemIt;
+  return *this;
+}
+
+bool SuccIterator::operator==(const SuccIterator &Other) const {
+  assert(DAG == Other.DAG && "Iterators of different DAGs!");
+  assert(N == Other.N && "Iterators of different nodes!");
+  return UserIt == Other.UserIt && MemIt == Other.MemIt;
+}
+
 void DGNode::setSchedBundle(SchedBundle &SB) {
   if (this->SB != nullptr)
     this->SB->eraseFromBundle(this);
@@ -85,7 +142,8 @@ DGNode::~DGNode() {
 
 #ifndef NDEBUG
 void DGNode::print(raw_ostream &OS, bool PrintDeps) const {
-  OS << *I << " USuccs:" << UnscheduledSuccs << " Sched:" << Scheduled << "\n";
+  OS << *I << " USuccs:" << UnscheduledSuccs << " UPreds:" << UnscheduledPreds
+     << " Sched:" << Scheduled << "\n";
 }
 void DGNode::dump() const { print(dbgs()); }
 void MemDGNode::print(raw_ostream &OS, bool PrintDeps) const {
@@ -248,6 +306,7 @@ void DependencyGraph::setDefUseUnscheduledSuccs(
   // +---+
   // Set the intra-interval counters in NewInterval.
   for (Instruction &I : NewInterval) {
+    unsigned CntUnschedPreds = 0;
     for (Value *Op : I.operands()) {
       auto *OpI = dyn_cast<Instruction>(Op);
       if (OpI == nullptr)
@@ -261,7 +320,10 @@ void DependencyGraph::setDefUseUnscheduledSuccs(
       if (OpN == nullptr)
         continue;
       OpN->incrUnscheduledSuccs();
+      if (!OpN->scheduled())
+        ++CntUnschedPreds;
     }
+    getNode(&I)->UnscheduledPreds = CntUnschedPreds;
   }
 
   // Now handle the cross-interval edges.
@@ -283,6 +345,7 @@ void DependencyGraph::setDefUseUnscheduledSuccs(
     // Skip scheduled nodes.
     if (BotN->scheduled())
       continue;
+    unsigned CntUnscheduledPreds = 0;
     for (Value *Op : BotI.operands()) {
       auto *OpI = dyn_cast<Instruction>(Op);
       if (OpI == nullptr)
@@ -292,8 +355,12 @@ void DependencyGraph::setDefUseUnscheduledSuccs(
         continue;
       if (!TopInterval.contains(OpI))
         continue;
-      OpN->incrUnscheduledSuccs();
+      if (!OpN->scheduled()) {
+        OpN->incrUnscheduledSuccs();
+        ++CntUnscheduledPreds;
+      }
     }
+    *BotN->UnscheduledPreds += CntUnscheduledPreds;
   }
 }
 
@@ -514,9 +581,12 @@ void DependencyGraph::notifyEraseInstr(Instruction *I) {
     // NOTE: The unscheduled succs for MemNodes get updated be setMemPred().
   } else {
     // If this is a non-mem node we only need to update UnscheduledSuccs.
-    if (!N->scheduled())
+    if (!N->scheduled()) {
       for (auto *PredN : N->preds(*this))
         PredN->decrUnscheduledSuccs();
+      for (auto *SuccN : N->succs(*this))
+        SuccN->decrUnscheduledPreds();
+    }
   }
   // Finally erase the Node.
   InstrToNodeMap.erase(I);
@@ -545,15 +615,19 @@ void DependencyGraph::notifySetUse(const Use &U, Value *NewSrc) {
   if (auto *CurrSrcI = dyn_cast<Instruction>(U.get())) {
     if (auto *CurrSrcN = getNode(CurrSrcI)) {
       // If CurrSrcN is scheduled there is no point in updating UnscheduleSuccs.
-      if (!CurrSrcN->scheduled())
+      if (!CurrSrcN->scheduled()) {
         CurrSrcN->decrUnscheduledSuccs();
+        UserN->decrUnscheduledPreds();
+      }
     }
   }
   if (auto *NewSrcI = dyn_cast<Instruction>(NewSrc)) {
     if (auto *NewSrcN = getNode(NewSrcI)) {
       // If CurrSrcN is scheduled there is no point in updating UnscheduleSuccs.
-      if (!NewSrcN->scheduled())
+      if (!NewSrcN->scheduled()) {
         NewSrcN->incrUnscheduledSuccs();
+        UserN->incrUnscheduledPreds();
+      }
     }
   }
 }

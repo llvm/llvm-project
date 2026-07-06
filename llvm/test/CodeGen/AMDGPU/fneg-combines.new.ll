@@ -721,8 +721,6 @@ define amdgpu_ps double @fneg_fadd_0_nsz_f64(double inreg %tmp2, double inreg %t
 ; SI-NEXT:    v_fma_f64 v[2:3], -s[2:3], v[0:1], 1.0
 ; SI-NEXT:    v_fma_f64 v[0:1], v[2:3], v[0:1], v[0:1]
 ; SI-NEXT:    v_fma_f64 v[2:3], -s[2:3], v[0:1], 1.0
-; SI-NEXT:    v_fma_f64 v[0:1], v[2:3], v[0:1], v[0:1]
-; SI-NEXT:    v_fma_f64 v[2:3], -s[2:3], v[0:1], 1.0
 ; SI-NEXT:    s_mov_b32 s2, 0
 ; SI-NEXT:    v_fma_f64 v[0:1], v[2:3], v[0:1], v[0:1]
 ; SI-NEXT:    s_brev_b32 s3, 1
@@ -741,8 +739,6 @@ define amdgpu_ps double @fneg_fadd_0_nsz_f64(double inreg %tmp2, double inreg %t
 ; VI-LABEL: fneg_fadd_0_nsz_f64:
 ; VI:       ; %bb.0: ; %.entry
 ; VI-NEXT:    v_rcp_f64_e32 v[0:1], s[2:3]
-; VI-NEXT:    v_fma_f64 v[2:3], -s[2:3], v[0:1], 1.0
-; VI-NEXT:    v_fma_f64 v[0:1], v[2:3], v[0:1], v[0:1]
 ; VI-NEXT:    v_fma_f64 v[2:3], -s[2:3], v[0:1], 1.0
 ; VI-NEXT:    v_fma_f64 v[0:1], v[2:3], v[0:1], v[0:1]
 ; VI-NEXT:    v_fma_f64 v[2:3], -s[2:3], v[0:1], 1.0

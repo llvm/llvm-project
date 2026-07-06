@@ -758,7 +758,7 @@ TEST_F(TestTypeSystemClang, TemplateArguments) {
   CompilerType double_type(m_ast->weak_from_this(),
                            m_ast->getASTContext().DoubleTy.getAsOpaquePtr());
   for (CompilerType t : {type, typedef_type, auto_type}) {
-    SCOPED_TRACE(t.GetTypeName().AsCString());
+    SCOPED_TRACE(t.GetTypeName().GetString());
 
     const bool expand_pack = false;
     EXPECT_EQ(

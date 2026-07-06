@@ -435,9 +435,11 @@ ProcessState get_initial_state(const char *mode, const char *za,
 }
 
 int main(int argc, char *argv[]) {
-  if (argc != 4) {
-    printf("Expected 3 arguments, process mode, za on or off, streaming vector "
-           "length\n");
+  if (argc != 4 && argc != 5) {
+    printf(
+        "Expected at least 3 arguments, process mode, za on or off, streaming "
+        "vector length. Optionally ending with \"crash\" to generate a core "
+        "file.\n");
     exit(1);
   }
 
@@ -472,6 +474,9 @@ int main(int argc, char *argv[]) {
     SMSTART_ZA;
     write_sme_regs(svl_b);
   }
+
+  if ((argc == 5) && strcmp("crash", argv[4]) == 0)
+    __builtin_trap();
 
   // The number of these is greater than or equal to the number of "next"
   // each lldb test issues. The

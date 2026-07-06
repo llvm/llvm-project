@@ -775,8 +775,7 @@ IndirectCallPromotion::rewriteCall(
   InstructionListType TailInsts;
   const MCInst *TailInst = &CallInst;
   if (IsTailCallOrJT)
-    while (TailInst + 1 < &(*IndCallBlock.end()) &&
-           MIB->isPseudo(*(TailInst + 1)))
+    while (TailInst != &IndCallBlock.back() && MIB->isPseudo(*(TailInst + 1)))
       TailInsts.push_back(*++TailInst);
 
   InstructionListType MovedInst = IndCallBlock.splitInstructions(&CallInst);
@@ -1142,6 +1141,11 @@ void IndirectCallPromotion::printCallsiteInfo(
 Error IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
   if (opts::ICP == ICP_NONE)
     return Error::success();
+
+  if (!BC.isX86()) {
+    BC.errs() << "BOLT-ERROR: " << getName() << " is supported only on X86\n";
+    exit(1);
+  }
 
   auto &BFs = BC.getBinaryFunctions();
 

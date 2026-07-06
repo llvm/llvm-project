@@ -11,7 +11,7 @@ typedef struct {
     int c : 17;
 } S;
 
-// CIR:  !rec_S = !cir.record<struct "S" {!u32i}>
+// CIR:  !rec_S = !cir.struct<"S" {!u32i}>
 // LLVM: %struct.S = type { i32 }
 // OGCG: %struct.S = type { i32 }
 void def() {
@@ -22,7 +22,7 @@ int init(S* s) {
 }
 
 //CIR: cir.func {{.*}} @init
-//CIR:   [[TMP0:%.*]] = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["s", init] {alignment = 8 : i64}
+//CIR:   [[TMP0:%.*]] = cir.alloca "s" align(8) init : !cir.ptr<!cir.ptr<!rec_S>>
 //CIR:   [[TMP1:%.*]] = cir.load align(8) [[TMP0]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
 //CIR:   [[TMP2:%.*]] = cir.get_member [[TMP1]][0] {name = "c"} : !cir.ptr<!rec_S> -> !cir.ptr<!u32i>
 //CIR:   [[TMP3:%.*]] = cir.get_bitfield align(4) (#bfi_c, [[TMP2]] : !cir.ptr<!u32i>) -> !s32i
@@ -31,7 +31,7 @@ int init(S* s) {
 //LLVM:   [[TMP0:%.*]] = alloca ptr, i64 1, align 8
 //LLVM:   [[TMP1:%.*]] = alloca i32, i64 1, align 4
 //LLVM:   [[TMP2:%.*]] = load ptr, ptr [[TMP0]], align 8
-//LLVM:   [[TMP3:%.*]] = getelementptr %struct.S, ptr [[TMP2]], i32 0, i32 0
+//LLVM:   [[TMP3:%.*]] = getelementptr inbounds nuw %struct.S, ptr [[TMP2]], i32 0, i32 0
 //LLVM:   [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
 //LLVM:   [[TMP5:%.*]] = shl i32 [[TMP4]], 15
 //LLVM:   [[TMP6:%.*]] = ashr i32 [[TMP5]], 15
@@ -52,7 +52,7 @@ void load(S* s) {
 
 // field 'a'
 // CIR: cir.func {{.*}} @load
-// CIR:    %[[PTR0:.*]] = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["s", init]
+// CIR:    %[[PTR0:.*]] = cir.alloca "s" {{.*}} init : !cir.ptr<!cir.ptr<!rec_S>>
 // CIR:    %[[CONST1:.*]] = cir.const #cir.int<-4> : !s32i
 // CIR:    %[[VAL0:.*]] = cir.load align(8) %[[PTR0]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
 // CIR:    %[[GET0:.*]] = cir.get_member %[[VAL0]][0] {name = "a"} : !cir.ptr<!rec_S> -> !cir.ptr<!u32i>
@@ -60,7 +60,7 @@ void load(S* s) {
 
 // LLVM: define dso_local void @load{{.*}}{{.*}}
 // LLVM:   %[[PTR0:.*]] = load ptr
-// LLVM:   %[[GET0:.*]] = getelementptr %struct.S, ptr %[[PTR0]], i32 0, i32 0
+// LLVM:   %[[GET0:.*]] = getelementptr inbounds nuw %struct.S, ptr %[[PTR0]], i32 0, i32 0
 // LLVM:   %[[VAL0:.*]] = load i32, ptr %[[GET0]], align 4
 // LLVM:   %[[AND0:.*]] = and i32 %[[VAL0]], 268435455
 // LLVM:   %[[OR0:.*]] = or i32 %[[AND0]], -1073741824
@@ -80,7 +80,7 @@ void load(S* s) {
 // CIR:    %[[SET1:.*]] = cir.set_bitfield align(4) (#bfi_b, %[[GET1]] : !cir.ptr<!u32i>, %[[CONST2]] : !s32i) -> !s32i
 
 // LLVM:  %[[PTR1:.*]] = load ptr
-// LLVM:  %[[GET1:.*]] = getelementptr %struct.S, ptr %[[PTR1]], i32 0, i32 0
+// LLVM:  %[[GET1:.*]] = getelementptr inbounds nuw %struct.S, ptr %[[PTR1]], i32 0, i32 0
 // LLVM:  %[[VAL1:.*]] = load i32, ptr %[[GET1]], align 4
 // LLVM:  %[[AND1:.*]] = and i32 %[[VAL1]], -268304385
 // LLVM:  %[[OR1:.*]] = or i32 %[[AND1]], 5505024
@@ -99,7 +99,7 @@ void load(S* s) {
 // CIR:    %[[SET2:.*]] = cir.set_bitfield align(4) (#bfi_c, %[[GET2]] : !cir.ptr<!u32i>, %[[CONST3]] : !s32i) -> !s32i
 
 // LLVM:  %[[PTR2:.*]] = load ptr
-// LLVM:  %[[GET2:.*]] = getelementptr %struct.S, ptr  %[[PTR2]], i32 0, i32 0
+// LLVM:  %[[GET2:.*]] = getelementptr inbounds nuw %struct.S, ptr  %[[PTR2]], i32 0, i32 0
 // LLVM:  %[[VAL2:.*]] = load i32, ptr %[[GET2]], align 4
 // LLVM:  %[[AND2:.*]] = and i32 %[[VAL2]], -131072
 // LLVM:  %[[OR2:.*]] = or i32 %[[AND2]], 118727

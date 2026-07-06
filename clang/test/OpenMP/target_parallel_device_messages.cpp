@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp -ferror-limit 100 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp -fopenmp-version=52 -ferror-limit 100 -o - %s -Wuninitialized
 
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp-simd -ferror-limit 100 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp-simd -fopenmp-version=52 -ferror-limit 100 -o - %s -Wuninitialized
 
 void foo() {
 }
@@ -31,7 +31,11 @@ int main(int argc, char **argv) {
   foo();
   #pragma omp target parallel device (S1) // expected-error {{'S1' does not refer to a value}}
   foo();
-  #pragma omp target parallel device (-2) // expected-error {{argument to 'device' clause must be a non-negative integer value}}
+  #pragma omp target parallel device (-3) // expected-error {{argument to 'device' clause must be a non-negative integer value, 'omp_initial_device' (-1), or 'omp_invalid_device' (-2)}}
+  foo();
+  #pragma omp target parallel device (-2) // OK: omp_invalid_device
+  foo();
+  #pragma omp target parallel device (-1) // OK: omp_initial_device
   foo();
   #pragma omp target parallel device (-10u)
   foo();

@@ -71,6 +71,8 @@ public:
   LocateExecutableScriptingResourcesForPlatform(
       Target *target, Module &module_spec, Stream &feedback_stream) override;
 
+  bool IsSymbolFileTrusted(Module &module) override;
+
   Status GetSharedModule(const ModuleSpec &module_spec, Process *process,
                          lldb::ModuleSP &module_sp,
                          llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
@@ -133,6 +135,9 @@ public:
   llvm::Expected<std::string>
   ResolveSDKPathFromDebugInfo(CompileUnit &unit) override;
 
+  /// Resolve an XcodeSDK to an on-disk path under a Progress event.
+  static llvm::Expected<FileSpec> ResolveXcodeSDK(XcodeSDK sdk);
+
   /// Helper function for \c LocateExecutableScriptingResources
   /// which gathers FileSpecs for executable scripts (currently
   /// just Python) from a .dSYM Python directory.
@@ -156,6 +161,9 @@ public:
                                              FileSpec module_spec,
                                              const Target &target,
                                              const FileSpec &symfile_spec);
+
+  llvm::Expected<FileSpecList>
+  GetSafeAutoLoadPaths(const Target &target) const override;
 
 protected:
   static const char *GetCompatibleArch(ArchSpec::Core core, size_t idx);

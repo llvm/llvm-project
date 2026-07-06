@@ -2219,8 +2219,7 @@ define i56 @select_undef_rhs(i64 %x, i1 %cmp) {
 ; ATHLON-LABEL: select_undef_rhs:
 ; ATHLON:       ## %bb.0:
 ; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; ATHLON-NEXT:    movzwl %cx, %edx
+; ATHLON-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; ATHLON-NEXT:    retl
 ;
 ; MCU-LABEL: select_undef_rhs:
@@ -2253,8 +2252,7 @@ define i56 @select_undef_lhs(i64 %x, i1 %cmp) {
 ; ATHLON-LABEL: select_undef_lhs:
 ; ATHLON:       ## %bb.0:
 ; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; ATHLON-NEXT:    movzwl %cx, %edx
+; ATHLON-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; ATHLON-NEXT:    retl
 ;
 ; MCU-LABEL: select_undef_lhs:

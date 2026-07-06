@@ -79,10 +79,10 @@
   ; GCN-NEXT:    ; implicit-def: $vgpr211
   ; GCN-NEXT:    v_max_f32_e32 v212, v211, v211
   ; GCN-NEXT:    ; implicit-def: $vgpr198
-  ; GCN-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
   ; GCN-NEXT:    ; implicit-def: $vgpr32
   ; GCN-NEXT:    ; implicit-def: $vgpr33
   ; GCN-NEXT:    ; implicit-def: $vgpr34
+  ; GCN-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
   ; GCN-NEXT:    v_add_u32_e32 v210, v19, v34
   ; GCN-NEXT:    v_add_u32_e32 v206, v19, v33
   ; GCN-NEXT:    v_add_u32_e32 v205, v19, v32
@@ -510,45 +510,44 @@
   ; GCN-NEXT:    v_fma_f32 v113, s4, v116, -v128
   ; GCN-NEXT:    v_mul_f32_e32 v141, 0x3fb8aa3b, v113
   ; GCN-NEXT:    v_fma_f32 v113, s4, v117, -v128
+  ; GCN-NEXT:    v_fma_f32 v112, s4, v112, -v128
   ; GCN-NEXT:    v_mul_f32_e32 v142, 0x3fb8aa3b, v113
   ; GCN-NEXT:    v_fma_f32 v113, s4, v118, -v128
-  ; GCN-NEXT:    v_fma_f32 v112, s4, v112, -v128
+  ; GCN-NEXT:    v_mul_f32_e32 v112, 0x3fb8aa3b, v112
   ; GCN-NEXT:    v_mul_f32_e32 v143, 0x3fb8aa3b, v113
   ; GCN-NEXT:    v_fma_f32 v113, s4, v119, -v128
-  ; GCN-NEXT:    v_fma_f32 v118, s4, v120, -v128
-  ; GCN-NEXT:    v_fma_f32 v120, s4, v121, -v128
-  ; GCN-NEXT:    v_mul_f32_e32 v112, 0x3fb8aa3b, v112
   ; GCN-NEXT:    v_mul_f32_e32 v144, 0x3fb8aa3b, v113
-  ; GCN-NEXT:    v_mul_f32_e32 v149, 0x3fb8aa3b, v120
-  ; GCN-NEXT:    v_fma_f32 v120, s4, v122, -v128
+  ; GCN-NEXT:    v_exp_f32_e32 v113, v112
   ; GCN-NEXT:    v_exp_f32_e32 v114, v138
   ; GCN-NEXT:    v_exp_f32_e32 v115, v139
   ; GCN-NEXT:    v_exp_f32_e32 v116, v140
+  ; GCN-NEXT:    v_cvt_f16_f32_e32 v112, v113
+  ; GCN-NEXT:    v_cvt_f16_f32_e32 v119, v114
+  ; GCN-NEXT:    v_fma_f32 v118, s4, v120, -v128
+  ; GCN-NEXT:    v_fma_f32 v120, s4, v121, -v128
+  ; GCN-NEXT:    v_cvt_f16_f32_e32 v121, v116
+  ; GCN-NEXT:    v_pack_b32_f16 v146, v112, v119
+  ; GCN-NEXT:    v_cvt_f16_f32_e32 v112, v115
+  ; GCN-NEXT:    v_sub_f32_e32 v129, v211, v128
+  ; GCN-NEXT:    v_mul_f32_e32 v129, 0x3fb8aa3b, v129
+  ; GCN-NEXT:    v_mul_f32_e32 v149, 0x3fb8aa3b, v120
+  ; GCN-NEXT:    v_fma_f32 v120, s4, v122, -v128
   ; GCN-NEXT:    v_exp_f32_e32 v117, v141
   ; GCN-NEXT:    v_mul_f32_e32 v148, 0x3fb8aa3b, v118
   ; GCN-NEXT:    v_exp_f32_e32 v118, v142
+  ; GCN-NEXT:    v_exp_f32_e32 v119, v143
   ; GCN-NEXT:    v_mul_f32_e32 v150, 0x3fb8aa3b, v120
   ; GCN-NEXT:    v_exp_f32_e32 v120, v144
-  ; GCN-NEXT:    v_exp_f32_e32 v113, v112
-  ; GCN-NEXT:    v_cvt_f16_f32_e32 v119, v114
-  ; GCN-NEXT:    v_cvt_f16_f32_e32 v121, v116
-  ; GCN-NEXT:    v_sub_f32_e32 v129, v211, v128
-  ; GCN-NEXT:    v_cvt_f16_f32_e32 v112, v113
-  ; GCN-NEXT:    v_mul_f32_e32 v129, 0x3fb8aa3b, v129
+  ; GCN-NEXT:    v_pack_b32_f16 v147, v112, v121
+  ; GCN-NEXT:    v_exp_f32_e32 v112, v129
   ; GCN-NEXT:    ds_read_b128 v[138:141], v198 offset:1152
   ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
   ; GCN-NEXT:    buffer_inv sc0 sc1
+  ; GCN-NEXT:    ds_read_b128 v[142:145], v198 offset:1728
+  ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+  ; GCN-NEXT:    buffer_inv sc0 sc1
   ; GCN-NEXT:    v_fma_f32 v122, s4, v123, -v128
-  ; GCN-NEXT:    v_pack_b32_f16 v146, v112, v119
-  ; GCN-NEXT:    v_cvt_f16_f32_e32 v112, v115
   ; GCN-NEXT:    v_mul_f32_e32 v151, 0x3fb8aa3b, v122
-  ; GCN-NEXT:    v_cvt_f16_f32_e32 v123, v117
-  ; GCN-NEXT:    v_fma_f32 v122, s4, v124, -v128
-  ; GCN-NEXT:    v_pack_b32_f16 v147, v112, v121
-  ; GCN-NEXT:    v_exp_f32_e32 v112, v129
-  ; GCN-NEXT:    v_cvt_f16_f32_e32 v124, v118
-  ; GCN-NEXT:    v_mul_f32_e32 v129, 0x3fb8aa3b, v122
-  ; GCN-NEXT:    v_fma_f32 v125, s4, v125, -v128
   ; GCN-NEXT:    v_pk_mul_f32 v[0:1], v[0:1], v[112:113] op_sel_hi:[1,0]
   ; GCN-NEXT:    v_pk_mul_f32 v[2:3], v[2:3], v[112:113] op_sel_hi:[1,0]
   ; GCN-NEXT:    v_pk_mul_f32 v[4:5], v[4:5], v[112:113] op_sel_hi:[1,0]
@@ -559,30 +558,30 @@
   ; GCN-NEXT:    v_pk_mul_f32 v[14:15], v[14:15], v[112:113] op_sel_hi:[1,0]
   ; GCN-NEXT:    v_pk_mul_f32 v[32:33], v[32:33], v[112:113] op_sel_hi:[1,0]
   ; GCN-NEXT:    v_pk_mul_f32 v[34:35], v[34:35], v[112:113] op_sel_hi:[1,0]
-  ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[0:15], v[130:131], v[146:147], v[0:15]
-  ; GCN-NEXT:    v_exp_f32_e32 v119, v143
-  ; GCN-NEXT:    ds_read_b128 v[142:145], v198 offset:1728
-  ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-  ; GCN-NEXT:    buffer_inv sc0 sc1
   ; GCN-NEXT:    v_pk_mul_f32 v[36:37], v[36:37], v[112:113] op_sel_hi:[1,0]
   ; GCN-NEXT:    v_pk_mul_f32 v[38:39], v[38:39], v[112:113] op_sel_hi:[1,0]
   ; GCN-NEXT:    v_pk_mul_f32 v[40:41], v[40:41], v[112:113] op_sel_hi:[1,0]
   ; GCN-NEXT:    v_pk_mul_f32 v[42:43], v[42:43], v[112:113] op_sel_hi:[1,0]
   ; GCN-NEXT:    v_pk_mul_f32 v[44:45], v[44:45], v[112:113] op_sel_hi:[1,0]
   ; GCN-NEXT:    v_pk_mul_f32 v[46:47], v[46:47], v[112:113] op_sel_hi:[1,0]
+  ; GCN-NEXT:    v_cvt_f16_f32_e32 v123, v117
+  ; GCN-NEXT:    v_fma_f32 v122, s4, v124, -v128
+  ; GCN-NEXT:    v_cvt_f16_f32_e32 v124, v118
+  ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[0:15], v[130:131], v[146:147], v[0:15]
+  ; GCN-NEXT:    v_exp_f32_e32 v121, v148
   ; GCN-NEXT:    v_pk_mul_f32 v[16:17], v[16:17], v[112:113] op_sel_hi:[1,0]
   ; GCN-NEXT:    v_pk_mul_f32 v[18:19], v[18:19], v[112:113] op_sel_hi:[1,0]
-  ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[32:47], v[134:135], v[146:147], v[32:47]
-  ; GCN-NEXT:    v_mul_f32_e64 v20, v20, v112
-  ; GCN-NEXT:    v_mul_f32_e64 v21, v21, v112
-  ; GCN-NEXT:    v_mul_f32_e64 v22, v22, v112
-  ; GCN-NEXT:    v_mul_f32_e64 v23, v23, v112
-  ; GCN-NEXT:    v_mul_f32_e64 v24, v24, v112
-  ; GCN-NEXT:    v_mul_f32_e64 v25, v25, v112
+  ; GCN-NEXT:    v_pk_mul_f32 v[20:21], v[20:21], v[112:113] op_sel_hi:[1,0]
+  ; GCN-NEXT:    v_pk_mul_f32 v[22:23], v[22:23], v[112:113] op_sel_hi:[1,0]
+  ; GCN-NEXT:    v_pk_mul_f32 v[24:25], v[24:25], v[112:113] op_sel_hi:[1,0]
   ; GCN-NEXT:    v_pk_mul_f32 v[26:27], v[26:27], v[112:113] op_sel_hi:[1,0]
-  ; GCN-NEXT:    v_pk_mul_f32 v[28:29], v[28:29], v[112:113] op_sel_hi:[1,0]
-  ; GCN-NEXT:    v_pk_mul_f32 v[30:31], v[30:31], v[112:113] op_sel_hi:[1,0]
-  ; GCN-NEXT:    v_pk_mul_f32 v[48:49], v[48:49], v[112:113] op_sel_hi:[1,0]
+  ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[32:47], v[134:135], v[146:147], v[32:47]
+  ; GCN-NEXT:    v_mul_f32_e64 v28, v28, v112
+  ; GCN-NEXT:    v_mul_f32_e64 v29, v29, v112
+  ; GCN-NEXT:    v_mul_f32_e64 v30, v30, v112
+  ; GCN-NEXT:    v_mul_f32_e64 v31, v31, v112
+  ; GCN-NEXT:    v_mul_f32_e64 v48, v48, v112
+  ; GCN-NEXT:    v_mul_f32_e64 v49, v49, v112
   ; GCN-NEXT:    v_pk_mul_f32 v[50:51], v[50:51], v[112:113] op_sel_hi:[1,0]
   ; GCN-NEXT:    v_pk_mul_f32 v[52:53], v[52:53], v[112:113] op_sel_hi:[1,0]
   ; GCN-NEXT:    v_pk_mul_f32 v[54:55], v[54:55], v[112:113] op_sel_hi:[1,0]
@@ -594,47 +593,48 @@
   ; GCN-NEXT:    v_cvt_f16_f32_e32 v130, v119
   ; GCN-NEXT:    v_fma_f32 v124, s4, v126, -v128
   ; GCN-NEXT:    v_cvt_f16_f32_e32 v126, v120
-  ; GCN-NEXT:    v_exp_f32_e32 v121, v148
-  ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[16:31], v[138:139], v[146:147], v[16:31]
+  ; GCN-NEXT:    v_mul_f32_e32 v129, 0x3fb8aa3b, v122
   ; GCN-NEXT:    v_exp_f32_e32 v122, v149
+  ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[16:31], v[138:139], v[146:147], v[16:31]
+  ; GCN-NEXT:    v_exp_f32_e32 v123, v150
   ; GCN-NEXT:    v_pack_b32_f16 v135, v130, v126
   ; GCN-NEXT:    v_mul_f32_e32 v138, 0x3fb8aa3b, v124
   ; GCN-NEXT:    v_cvt_f16_f32_e32 v126, v121
-  ; GCN-NEXT:    v_mul_f32_e32 v125, 0x3fb8aa3b, v125
   ; GCN-NEXT:    v_fma_f32 v139, s4, v96, -v128
-  ; GCN-NEXT:    v_fma_f32 v127, s4, v127, -v128
+  ; GCN-NEXT:    v_fma_f32 v125, s4, v125, -v128
+  ; GCN-NEXT:    v_mul_f32_e32 v125, 0x3fb8aa3b, v125
   ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[48:63], v[142:143], v[146:147], v[48:63]
-  ; GCN-NEXT:    v_exp_f32_e32 v123, v150
+  ; GCN-NEXT:    v_exp_f32_e32 v124, v151
+  ; GCN-NEXT:    v_fma_f32 v127, s4, v127, -v128
   ; GCN-NEXT:    v_mul_f32_e32 v127, 0x3fb8aa3b, v127
   ; GCN-NEXT:    v_fma_f32 v143, s4, v101, -v128
   ; GCN-NEXT:    v_fma_f32 v64, s4, v64, -v128
   ; GCN-NEXT:    v_fma_f32 v65, s4, v65, -v128
   ; GCN-NEXT:    v_fma_f32 v68, s4, v68, -v128
-  ; GCN-NEXT:    v_fma_f32 v69, s4, v69, -v128
   ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[0:15], v[132:133], v[134:135], v[0:15]
-  ; GCN-NEXT:    v_exp_f32_e32 v124, v151
+  ; GCN-NEXT:    v_exp_f32_e32 v96, v129
   ; GCN-NEXT:    ds_read_b128 v[130:133], v197
   ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
   ; GCN-NEXT:    buffer_inv sc0 sc1
   ; GCN-NEXT:    ds_read_b128 v[146:149], v197 offset:576
   ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
   ; GCN-NEXT:    buffer_inv sc0 sc1
+  ; GCN-NEXT:    v_mul_f32_e32 v129, 0x3fb8aa3b, v139
+  ; GCN-NEXT:    v_fma_f32 v69, s4, v69, -v128
   ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[32:47], v[136:137], v[134:135], v[32:47]
   ; GCN-NEXT:    v_cvt_f16_f32_e32 v136, v122
-  ; GCN-NEXT:    v_exp_f32_e32 v96, v129
   ; GCN-NEXT:    v_fma_f32 v137, s4, v97, -v128
-  ; GCN-NEXT:    v_mul_f32_e32 v129, 0x3fb8aa3b, v139
-  ; GCN-NEXT:    v_pack_b32_f16 v126, v126, v136
-  ; GCN-NEXT:    v_cvt_f16_f32_e32 v136, v123
-  ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[16:31], v[140:141], v[134:135], v[16:31]
   ; GCN-NEXT:    v_exp_f32_e32 v97, v125
   ; GCN-NEXT:    v_mul_f32_e32 v125, 0x3fb8aa3b, v137
+  ; GCN-NEXT:    v_pack_b32_f16 v126, v126, v136
+  ; GCN-NEXT:    v_cvt_f16_f32_e32 v136, v123
   ; GCN-NEXT:    v_fma_f32 v137, s4, v98, -v128
+  ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[16:31], v[140:141], v[134:135], v[16:31]
+  ; GCN-NEXT:    v_exp_f32_e32 v98, v138
   ; GCN-NEXT:    v_mul_f32_e32 v142, 0x3fb8aa3b, v137
   ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[48:63], v[144:145], v[134:135], v[48:63]
   ; GCN-NEXT:    v_cvt_f16_f32_e32 v134, v124
   ; GCN-NEXT:    v_fma_f32 v135, s4, v99, -v128
-  ; GCN-NEXT:    v_exp_f32_e32 v98, v138
   ; GCN-NEXT:    v_exp_f32_e32 v99, v127
   ; GCN-NEXT:    v_mul_f32_e32 v150, 0x3fb8aa3b, v135
   ; GCN-NEXT:    v_pack_b32_f16 v127, v136, v134
@@ -1243,7 +1243,7 @@ body:             |
     %608:vreg_128_align2 = BUFFER_LOAD_DWORDX4_OFFEN %599:vgpr_32, %443:sgpr_128, 0, 64, 0, 0, implicit $exec
     %610:vgpr_32 = V_ADD_U32_e32 64, %602:vgpr_32, implicit $exec
     %611:vreg_128_align2 = BUFFER_LOAD_DWORDX4_OFFEN %610:vgpr_32, %443:sgpr_128, 0, 0, 0, 0, implicit $exec
-    INLINEASM &"s_waitcnt vmcnt($0)", 57 /* sideeffect mayload maystore isconvergent attdialect */, 13 /* imm */, 8, !0
+    INLINEASM &"s_waitcnt vmcnt($0)", sideeffect mayload maystore isconvergent attdialect, imm, 8, !0
     %612:vreg_128_align2 = DS_READ_B128_gfx9 %23:vgpr_32, 0, 0, implicit $exec
     early-clobber %668:vreg_512_align2 = contract V_MFMA_F32_32X32X8F16_vgprcd_e64 %612.sub0_sub1:vreg_128_align2, %391.sub0_sub1:vreg_128_align2, 0, 0, 0, 0, implicit $mode, implicit $exec
     %668:vreg_512_align2 = contract V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %612.sub2_sub3:vreg_128_align2, %391.sub2_sub3:vreg_128_align2, %668:vreg_512_align2, 0, 0, 0, implicit $mode, implicit $exec
@@ -1268,13 +1268,13 @@ body:             |
     %695:vreg_128_align2 = DS_READ_B128_gfx9 %24:vgpr_32, 1536, 0, implicit $exec
     %701:vreg_512_align2 = contract V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %695.sub0_sub1:vreg_128_align2, %392.sub0_sub1:vreg_128_align2, %701:vreg_512_align2, 0, 0, 0, implicit $mode, implicit $exec
     %701:vreg_512_align2 = contract V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %695.sub2_sub3:vreg_128_align2, %392.sub2_sub3:vreg_128_align2, %701:vreg_512_align2, 0, 0, 0, implicit $mode, implicit $exec
-    INLINEASM &"s_waitcnt vmcnt($0)", 57 /* sideeffect mayload maystore isconvergent attdialect */, 13 /* imm */, 8, !0
+    INLINEASM &"s_waitcnt vmcnt($0)", sideeffect mayload maystore isconvergent attdialect, imm, 8, !0
     DS_WRITE_B128_gfx9 %606:vgpr_32, %608:vreg_128_align2, 0, 0, implicit $exec
     DS_WRITE_B128_gfx9 %606:vgpr_32, %611:vreg_128_align2, 1024, 0, implicit $exec
     %706:vreg_128_align2 = BUFFER_LOAD_DWORDX4_OFFEN %599:vgpr_32, %443:sgpr_128, 0, 128, 0, 0, implicit $exec
     %708:vgpr_32 = V_ADD_U32_e32 128, %602:vgpr_32, implicit $exec
     %709:vreg_128_align2 = BUFFER_LOAD_DWORDX4_OFFEN %708:vgpr_32, %443:sgpr_128, 0, 0, 0, 0, implicit $exec
-    INLINEASM &"s_waitcnt vmcnt($0)", 57 /* sideeffect mayload maystore isconvergent attdialect */, 13 /* imm */, 8, !0
+    INLINEASM &"s_waitcnt vmcnt($0)", sideeffect mayload maystore isconvergent attdialect, imm, 8, !0
     %710:vreg_128_align2 = DS_READ_B128_gfx9 %23:vgpr_32, 0, 0, implicit $exec
     %668:vreg_512_align2 = contract V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %710.sub0_sub1:vreg_128_align2, %401.sub0_sub1:vreg_128_align2, %668:vreg_512_align2, 0, 0, 0, implicit $mode, implicit $exec
     %668:vreg_512_align2 = contract V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %710.sub2_sub3:vreg_128_align2, %401.sub2_sub3:vreg_128_align2, %668:vreg_512_align2, 0, 0, 0, implicit $mode, implicit $exec
@@ -1299,7 +1299,7 @@ body:             |
     %787:vreg_128_align2 = DS_READ_B128_gfx9 %24:vgpr_32, 1536, 0, implicit $exec
     %701:vreg_512_align2 = contract V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %787.sub0_sub1:vreg_128_align2, %406.sub0_sub1:vreg_128_align2, %701:vreg_512_align2, 0, 0, 0, implicit $mode, implicit $exec
     %701:vreg_512_align2 = contract V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %787.sub2_sub3:vreg_128_align2, %406.sub2_sub3:vreg_128_align2, %701:vreg_512_align2, 0, 0, 0, implicit $mode, implicit $exec
-    INLINEASM &"s_waitcnt vmcnt($0)", 57 /* sideeffect mayload maystore isconvergent attdialect */, 13 /* imm */, 8, !0
+    INLINEASM &"s_waitcnt vmcnt($0)", sideeffect mayload maystore isconvergent attdialect, imm, 8, !0
     DS_WRITE_B128_gfx9 %606:vgpr_32, %706:vreg_128_align2, 0, 0, implicit $exec
     DS_WRITE_B128_gfx9 %606:vgpr_32, %709:vreg_128_align2, 1024, 0, implicit $exec
     %798:vreg_128_align2 = BUFFER_LOAD_DWORDX4_OFFEN %599:vgpr_32, %443:sgpr_128, 0, 192, 0, 0, implicit $exec
@@ -1313,7 +1313,7 @@ body:             |
     %807:vreg_64_align2 = BUFFER_LOAD_DWORDX2_OFFEN %806:vgpr_32, %473:sgpr_128, 0, 0, 0, 0, implicit $exec
     %808:vgpr_32 = V_ADD_U32_e32 %48:vgpr_32, %3333:vgpr_32, implicit $exec
     %809:vreg_64_align2 = BUFFER_LOAD_DWORDX2_OFFEN %808:vgpr_32, %473:sgpr_128, 0, 0, 0, 0, implicit $exec
-    INLINEASM &"s_waitcnt vmcnt($0)", 57 /* sideeffect mayload maystore isconvergent attdialect */, 13 /* imm */, 8, !0
+    INLINEASM &"s_waitcnt vmcnt($0)", sideeffect mayload maystore isconvergent attdialect, imm, 8, !0
     %810:vreg_128_align2 = DS_READ_B128_gfx9 %23:vgpr_32, 0, 0, implicit $exec
     %668:vreg_512_align2 = contract V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %810.sub0_sub1:vreg_128_align2, %411.sub0_sub1:vreg_128_align2, %668:vreg_512_align2, 0, 0, 0, implicit $mode, implicit $exec
     %668:vreg_512_align2 = contract V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %810.sub2_sub3:vreg_128_align2, %411.sub2_sub3:vreg_128_align2, %668:vreg_512_align2, 0, 0, 0, implicit $mode, implicit $exec
@@ -1338,10 +1338,10 @@ body:             |
     %887:vreg_128_align2 = DS_READ_B128_gfx9 %24:vgpr_32, 1536, 0, implicit $exec
     %701:vreg_512_align2 = contract V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %887.sub0_sub1:vreg_128_align2, %416.sub0_sub1:vreg_128_align2, %701:vreg_512_align2, 0, 0, 0, implicit $mode, implicit $exec
     %701:vreg_512_align2 = contract V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %887.sub2_sub3:vreg_128_align2, %416.sub2_sub3:vreg_128_align2, %701:vreg_512_align2, 0, 0, 0, implicit $mode, implicit $exec
-    INLINEASM &"s_waitcnt vmcnt($0)", 57 /* sideeffect mayload maystore isconvergent attdialect */, 13 /* imm */, 8, !0
+    INLINEASM &"s_waitcnt vmcnt($0)", sideeffect mayload maystore isconvergent attdialect, imm, 8, !0
     DS_WRITE_B128_gfx9 %606:vgpr_32, %798:vreg_128_align2, 0, 0, implicit $exec
     DS_WRITE_B128_gfx9 %606:vgpr_32, %801:vreg_128_align2, 1024, 0, implicit $exec
-    INLINEASM &"s_waitcnt vmcnt($0)", 57 /* sideeffect mayload maystore isconvergent attdialect */, 13 /* imm */, 8, !0
+    INLINEASM &"s_waitcnt vmcnt($0)", sideeffect mayload maystore isconvergent attdialect, imm, 8, !0
     %898:vreg_128_align2 = DS_READ_B128_gfx9 %23:vgpr_32, 0, 0, implicit $exec
     %668:vreg_512_align2 = contract V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %898.sub0_sub1:vreg_128_align2, %421.sub0_sub1:vreg_128_align2, %668:vreg_512_align2, 0, 0, 0, implicit $mode, implicit $exec
     %668:vreg_512_align2 = contract V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %898.sub2_sub3:vreg_128_align2, %421.sub2_sub3:vreg_128_align2, %668:vreg_512_align2, 0, 0, 0, implicit $mode, implicit $exec
@@ -1733,7 +1733,7 @@ body:             |
     %1417:vgpr_32 = contract nofpexcept V_SUB_F32_e32 %3346:vgpr_32, %151:vgpr_32, implicit $mode, implicit $exec
     %1418:vgpr_32 = afn nofpexcept V_MUL_F32_e32 1069066811, %1417:vgpr_32, implicit $mode, implicit $exec
     undef %1455.sub0:vreg_64_align2 = afn nofpexcept V_EXP_F32_e32 %1418:vgpr_32, implicit $mode, implicit $exec
-    INLINEASM &"s_waitcnt vmcnt($0)", 57 /* sideeffect mayload maystore isconvergent attdialect */, 13 /* imm */, 8, !0
+    INLINEASM &"s_waitcnt vmcnt($0)", sideeffect mayload maystore isconvergent attdialect, imm, 8, !0
     undef %3037.sub0:vreg_64_align2 = V_PERM_B32_e64 %805.sub0:vreg_64_align2, %803.sub0:vreg_64_align2, %1422:sreg_32, implicit $exec
     undef %3021.sub0:vreg_64_align2 = V_PERM_B32_e64 %805.sub0:vreg_64_align2, %803.sub0:vreg_64_align2, %1424:sreg_32, implicit $exec
     %3037.sub1:vreg_64_align2 = V_PERM_B32_e64 %809.sub0:vreg_64_align2, %807.sub0:vreg_64_align2, %1422:sreg_32, implicit $exec
@@ -1830,7 +1830,7 @@ body:             |
     %1595:vreg_64_align2 = BUFFER_LOAD_DWORDX2_OFFEN %1594:vgpr_32, %473:sgpr_128, 0, 0, 0, 0, implicit $exec
     %1596:vgpr_32 = V_ADD_U32_e32 %48:vgpr_32, %3336:vgpr_32, implicit $exec
     %1597:vreg_64_align2 = BUFFER_LOAD_DWORDX2_OFFEN %1596:vgpr_32, %473:sgpr_128, 0, 0, 0, 0, implicit $exec
-    INLINEASM &"s_waitcnt vmcnt($0)", 57 /* sideeffect mayload maystore isconvergent attdialect */, 13 /* imm */, 8, !0
+    INLINEASM &"s_waitcnt vmcnt($0)", sideeffect mayload maystore isconvergent attdialect, imm, 8, !0
     %1598:vreg_128_align2 = DS_READ_B128_gfx9 %44:vgpr_32, 0, 0, implicit $exec
     %1605:vreg_128_align2 = DS_READ_B128_gfx9 %44:vgpr_32, 576, 0, implicit $exec
     %1612:vreg_128_align2 = DS_READ_B128_gfx9 %44:vgpr_32, 1152, 0, implicit $exec
@@ -1839,7 +1839,7 @@ body:             |
     %1633:vreg_128_align2 = DS_READ_B128_gfx9 %45:vgpr_32, 576, 0, implicit $exec
     %1640:vreg_128_align2 = DS_READ_B128_gfx9 %45:vgpr_32, 1152, 0, implicit $exec
     %1647:vreg_128_align2 = DS_READ_B128_gfx9 %45:vgpr_32, 1728, 0, implicit $exec
-    INLINEASM &"s_waitcnt vmcnt($0)", 57 /* sideeffect mayload maystore isconvergent attdialect */, 13 /* imm */, 8, !0
+    INLINEASM &"s_waitcnt vmcnt($0)", sideeffect mayload maystore isconvergent attdialect, imm, 8, !0
     undef %3161.sub0:vreg_64_align2 = V_PERM_B32_e64 %1593.sub0:vreg_64_align2, %1591.sub0:vreg_64_align2, %1422:sreg_32, implicit $exec
     undef %3145.sub0:vreg_64_align2 = V_PERM_B32_e64 %1593.sub0:vreg_64_align2, %1591.sub0:vreg_64_align2, %1424:sreg_32, implicit $exec
     %3161.sub1:vreg_64_align2 = V_PERM_B32_e64 %1597.sub0:vreg_64_align2, %1595.sub0:vreg_64_align2, %1422:sreg_32, implicit $exec
@@ -1860,7 +1860,7 @@ body:             |
     %1683:vreg_64_align2 = BUFFER_LOAD_DWORDX2_OFFEN %1682:vgpr_32, %473:sgpr_128, 0, 0, 0, 0, implicit $exec
     %1684:vgpr_32 = V_ADD_U32_e32 %48:vgpr_32, %3339:vgpr_32, implicit $exec
     %1685:vreg_64_align2 = BUFFER_LOAD_DWORDX2_OFFEN %1684:vgpr_32, %473:sgpr_128, 0, 0, 0, 0, implicit $exec
-    INLINEASM &"s_waitcnt vmcnt($0)", 57 /* sideeffect mayload maystore isconvergent attdialect */, 13 /* imm */, 8, !0
+    INLINEASM &"s_waitcnt vmcnt($0)", sideeffect mayload maystore isconvergent attdialect, imm, 8, !0
     %1686:vreg_128_align2 = DS_READ_B128_gfx9 %44:vgpr_32, 0, 0, implicit $exec
     %1693:vreg_128_align2 = DS_READ_B128_gfx9 %44:vgpr_32, 576, 0, implicit $exec
     %1700:vreg_128_align2 = DS_READ_B128_gfx9 %44:vgpr_32, 1152, 0, implicit $exec
@@ -1869,7 +1869,7 @@ body:             |
     %1721:vreg_128_align2 = DS_READ_B128_gfx9 %45:vgpr_32, 576, 0, implicit $exec
     %1728:vreg_128_align2 = DS_READ_B128_gfx9 %45:vgpr_32, 1152, 0, implicit $exec
     %1735:vreg_128_align2 = DS_READ_B128_gfx9 %45:vgpr_32, 1728, 0, implicit $exec
-    INLINEASM &"s_waitcnt vmcnt($0)", 57 /* sideeffect mayload maystore isconvergent attdialect */, 13 /* imm */, 8, !0
+    INLINEASM &"s_waitcnt vmcnt($0)", sideeffect mayload maystore isconvergent attdialect, imm, 8, !0
     undef %3062.sub0:vreg_64_align2 = V_PERM_B32_e64 %1681.sub0:vreg_64_align2, %1679.sub0:vreg_64_align2, %1422:sreg_32, implicit $exec
     undef %3046.sub0:vreg_64_align2 = V_PERM_B32_e64 %1681.sub0:vreg_64_align2, %1679.sub0:vreg_64_align2, %1424:sreg_32, implicit $exec
     %3062.sub1:vreg_64_align2 = V_PERM_B32_e64 %1685.sub0:vreg_64_align2, %1683.sub0:vreg_64_align2, %1422:sreg_32, implicit $exec
@@ -1890,7 +1890,7 @@ body:             |
     %1771:vreg_64_align2 = BUFFER_LOAD_DWORDX2_OFFEN %1770:vgpr_32, %473:sgpr_128, 0, 0, 0, 0, implicit $exec
     %1772:vgpr_32 = V_ADD_U32_e32 %48:vgpr_32, %3342:vgpr_32, implicit $exec
     %1773:vreg_64_align2 = BUFFER_LOAD_DWORDX2_OFFEN %1772:vgpr_32, %473:sgpr_128, 0, 0, 0, 0, implicit $exec
-    INLINEASM &"s_waitcnt vmcnt($0)", 57 /* sideeffect mayload maystore isconvergent attdialect */, 13 /* imm */, 8, !0
+    INLINEASM &"s_waitcnt vmcnt($0)", sideeffect mayload maystore isconvergent attdialect, imm, 8, !0
     %1774:vreg_128_align2 = DS_READ_B128_gfx9 %44:vgpr_32, 0, 0, implicit $exec
     %1781:vreg_128_align2 = DS_READ_B128_gfx9 %44:vgpr_32, 576, 0, implicit $exec
     %1788:vreg_128_align2 = DS_READ_B128_gfx9 %44:vgpr_32, 1152, 0, implicit $exec
@@ -1899,7 +1899,7 @@ body:             |
     %1809:vreg_128_align2 = DS_READ_B128_gfx9 %45:vgpr_32, 576, 0, implicit $exec
     %1816:vreg_128_align2 = DS_READ_B128_gfx9 %45:vgpr_32, 1152, 0, implicit $exec
     %1823:vreg_128_align2 = DS_READ_B128_gfx9 %45:vgpr_32, 1728, 0, implicit $exec
-    INLINEASM &"s_waitcnt vmcnt($0)", 57 /* sideeffect mayload maystore isconvergent attdialect */, 13 /* imm */, 8, !0
+    INLINEASM &"s_waitcnt vmcnt($0)", sideeffect mayload maystore isconvergent attdialect, imm, 8, !0
     undef %3185.sub0:vreg_64_align2 = V_PERM_B32_e64 %1769.sub0:vreg_64_align2, %1767.sub0:vreg_64_align2, %1422:sreg_32, implicit $exec
     undef %3169.sub0:vreg_64_align2 = V_PERM_B32_e64 %1769.sub0:vreg_64_align2, %1767.sub0:vreg_64_align2, %1424:sreg_32, implicit $exec
     %3185.sub1:vreg_64_align2 = V_PERM_B32_e64 %1773.sub0:vreg_64_align2, %1771.sub0:vreg_64_align2, %1422:sreg_32, implicit $exec
@@ -2012,7 +2012,7 @@ body:             |
     %2067:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %1314:vgpr_32, implicit $mode, implicit $exec
     %2068:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %1308:vgpr_32, implicit $mode, implicit $exec
     %2069:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %1302:vgpr_32, implicit $mode, implicit $exec
-    INLINEASM &"s_waitcnt vmcnt($0)", 57 /* sideeffect mayload maystore isconvergent attdialect */, 13 /* imm */, 8, !0
+    INLINEASM &"s_waitcnt vmcnt($0)", sideeffect mayload maystore isconvergent attdialect, imm, 8, !0
     undef %3082.sub1:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %2068:vgpr_32, 0, %2060:vgpr_32, 0, 0, implicit $mode, implicit $exec
     %3082.sub0:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %2069:vgpr_32, 0, %2061:vgpr_32, 0, 0, implicit $mode, implicit $exec
     undef %3066.sub1:vreg_64_align2 = nofpexcept V_PACK_B32_F16_e64 0, %2066:vgpr_32, 0, %2058:vgpr_32, 0, 0, implicit $mode, implicit $exec
@@ -2045,7 +2045,7 @@ body:             |
     %2170:vreg_128_align2 = DS_READ_B128_gfx9 %45:vgpr_32, 1728, 0, implicit $exec
     %3003:vreg_512_align2 = contract V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %2170.sub0_sub1:vreg_128_align2, %3050:vreg_64_align2, %3003:vreg_512_align2, 0, 0, 0, implicit $mode, implicit $exec
     %3003:vreg_512_align2 = contract V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %2170.sub2_sub3:vreg_128_align2, %3033:vreg_64_align2, %3003:vreg_512_align2, 0, 0, 0, implicit $mode, implicit $exec
-    INLINEASM &"s_waitcnt vmcnt($0)", 57 /* sideeffect mayload maystore isconvergent attdialect */, 13 /* imm */, 8, !0
+    INLINEASM &"s_waitcnt vmcnt($0)", sideeffect mayload maystore isconvergent attdialect, imm, 8, !0
     %3345:vgpr_32 = V_ADD_U32_e32 %50:sreg_32, %3345:vgpr_32, implicit $exec
     %3344:vgpr_32 = V_ADD_U32_e32 %50:sreg_32, %3344:vgpr_32, implicit $exec
     %3343:vgpr_32 = V_ADD_U32_e32 %50:sreg_32, %3343:vgpr_32, implicit $exec

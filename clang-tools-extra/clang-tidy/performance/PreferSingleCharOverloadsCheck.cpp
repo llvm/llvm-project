@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PreferSingleCharOverloadsCheck.h"
+#include "../utils/CheckUtils.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "llvm/Support/raw_ostream.h"
@@ -15,6 +16,15 @@
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::performance {
+
+namespace {
+
+constexpr llvm::StringLiteral DeprecatedCheckName =
+    "performance-faster-string-find";
+constexpr llvm::StringLiteral CanonicalCheckName =
+    "performance-prefer-single-char-overloads";
+
+} // namespace
 
 static std::optional<std::string>
 makeCharacterLiteral(const StringLiteral *Literal) {
@@ -46,7 +56,11 @@ PreferSingleCharOverloadsCheck::PreferSingleCharOverloadsCheck(
     : ClangTidyCheck(Name, Context),
       StringLikeClasses(utils::options::parseStringList(
           Options.get("StringLikeClasses",
-                      "::std::basic_string;::std::basic_string_view"))) {}
+                      "::std::basic_string;::std::basic_string_view"))) {
+  if (Name == DeprecatedCheckName)
+    utils::diagDeprecatedCheckAlias(*this, *Context, DeprecatedCheckName,
+                                    CanonicalCheckName);
+}
 
 void PreferSingleCharOverloadsCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {

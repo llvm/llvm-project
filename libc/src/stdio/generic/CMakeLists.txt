@@ -124,6 +124,19 @@ add_generic_entrypoint_object(
 )
 
 add_generic_entrypoint_object(
+  rewind
+  SRCS
+    rewind.cpp
+  HDRS
+    ../rewind.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+    libc.src.__support.macros.null_check
+)
+
+add_generic_entrypoint_object(
   ftell
   SRCS
     ftell.cpp

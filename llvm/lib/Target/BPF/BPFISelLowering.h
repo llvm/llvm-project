@@ -54,6 +54,14 @@ public:
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                          EVT VT) const override;
 
+  // Exception handling support.
+  Register getExceptionPointerRegister(const Constant *) const override {
+    return BPF::R0;
+  }
+  Register getExceptionSelectorRegister(const Constant *) const override {
+    return BPF::R0;
+  }
+
   MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override;
 
   unsigned getJumpTableEncoding() const override;
@@ -69,10 +77,12 @@ private:
   bool AllowsMisalignedMemAccess;
 
   SDValue LowerSDIVSREM(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerShiftParts(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerATOMIC_LOAD_STORE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerTRAP(SDValue Op, SelectionDAG &DAG) const;
@@ -88,9 +98,6 @@ private:
                           const SmallVectorImpl<ISD::InputArg> &Ins,
                           const SDLoc &DL, SelectionDAG &DAG,
                           SmallVectorImpl<SDValue> &InVals) const;
-
-  // Maximum number of arguments to a call
-  static const size_t MaxArgs;
 
   // Lower a call into CALLSEQ_START - BPFISD:CALL - CALLSEQ_END chain
   SDValue LowerCall(TargetLowering::CallLoweringInfo &CLI,
@@ -110,11 +117,6 @@ private:
 
   void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;
-
-  EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
-                          const AttributeList &FuncAttributes) const override {
-    return Op.size() >= 8 ? MVT::i64 : MVT::i32;
-  }
 
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override {
     return false;
@@ -163,6 +165,11 @@ private:
   MachineBasicBlock *
   EmitInstrWithCustomInserterLDimm64(MachineInstr &MI,
                                      MachineBasicBlock *BB) const;
+
+  bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
+                      bool IsVarArg,
+                      const SmallVectorImpl<ISD::OutputArg> &Outs,
+                      LLVMContext &Context, const Type *RetTy) const override;
 };
 }
 

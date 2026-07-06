@@ -867,18 +867,7 @@ struct AAMDNodes {
 };
 
 // Specialize DenseMapInfo for AAMDNodes.
-template<>
-struct DenseMapInfo<AAMDNodes> {
-  static inline AAMDNodes getEmptyKey() {
-    return AAMDNodes(DenseMapInfo<MDNode *>::getEmptyKey(), nullptr, nullptr,
-                     nullptr, nullptr);
-  }
-
-  static inline AAMDNodes getTombstoneKey() {
-    return AAMDNodes(DenseMapInfo<MDNode *>::getTombstoneKey(), nullptr,
-                     nullptr, nullptr, nullptr);
-  }
-
+template <> struct DenseMapInfo<AAMDNodes> {
   static unsigned getHashValue(const AAMDNodes &Val) {
     return DenseMapInfo<MDNode *>::getHashValue(Val.TBAA) ^
            DenseMapInfo<MDNode *>::getHashValue(Val.TBAAStruct) ^
@@ -1266,13 +1255,6 @@ public:
   bool isReplaceable() const { return isTemporary() || isAlwaysReplaceable(); }
   bool isAlwaysReplaceable() const { return getMetadataID() == DIAssignIDKind; }
 
-  /// Check if this is a valid generalized type metadata node.
-  bool hasGeneralizedMDString() {
-    if (getNumOperands() < 2 || !isa<MDString>(getOperand(1)))
-      return false;
-    return cast<MDString>(getOperand(1))->getString().ends_with(".generalized");
-  }
-
   unsigned getNumTemporaryUses() const {
     assert(isTemporary() && "Only for temporaries");
     return Context.getReplaceableUses()->getNumUses();
@@ -1625,7 +1607,7 @@ template <class T> class TypedMDOperandIterator {
   MDNode::op_iterator I = nullptr;
 
 public:
-  using iterator_category = std::input_iterator_tag;
+  using iterator_category = std::forward_iterator_tag;
   using value_type = T *;
   using difference_type = std::ptrdiff_t;
   using pointer = void;

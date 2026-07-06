@@ -52,7 +52,10 @@ AMDGPUSubtarget::getMaxLocalMemSizeWithWaveCount(unsigned NWaves,
 std::pair<unsigned, unsigned> AMDGPUSubtarget::getOccupancyWithWorkGroupSizes(
     uint32_t LDSBytes, std::pair<unsigned, unsigned> FlatWorkGroupSizes) const {
 
-  // FIXME: We should take into account the LDS allocation granularity.
+  // LDS granularity accounted for by aligning the queried LDS size to the
+  // allocation block size.
+  const unsigned Granularity = std::max(LDSAllocationGranularity, 1u);
+  LDSBytes = alignTo(LDSBytes, Granularity);
   const unsigned MaxWGsLDS = getLocalMemorySize() / std::max(LDSBytes, 1u);
 
   // Queried LDS size may be larger than available on a CU, in which case we
@@ -173,6 +176,10 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getFlatWorkGroupSizes(
   return Requested;
 }
 
+bool AMDGPUSubtarget::isSingleWavefrontWorkgroup(const Function &F) const {
+  return getFlatWorkGroupSizes(F).second <= getWavefrontSize();
+}
+
 std::pair<unsigned, unsigned> AMDGPUSubtarget::getEffectiveWavesPerEU(
     std::pair<unsigned, unsigned> RequestedWavesPerEU,
     std::pair<unsigned, unsigned> FlatWorkGroupSizes, unsigned LDSBytes) const {
@@ -267,6 +274,11 @@ bool AMDGPUSubtarget::isSingleLaneExecution(const Function &Func) const {
     if (getMaxWorkitemID(Func, I) > 0)
       return false;
   }
+
+  // If the function may call the WWM intrinsic, just return false as
+  // all threads will be active at some point
+  if (!Func.hasFnAttribute("amdgpu-no-wwm"))
+    return false;
 
   return true;
 }
@@ -420,11 +432,4 @@ const AMDGPUSubtarget &AMDGPUSubtarget::get(const TargetMachine &TM, const Funct
     return static_cast<const AMDGPUSubtarget&>(TM.getSubtarget<GCNSubtarget>(F));
   return static_cast<const AMDGPUSubtarget &>(
       TM.getSubtarget<R600Subtarget>(F));
-}
-
-// FIXME: This has no reason to be in subtarget
-SmallVector<unsigned>
-AMDGPUSubtarget::getMaxNumWorkGroups(const Function &F) const {
-  return AMDGPU::getIntegerVecAttribute(F, "amdgpu-max-num-workgroups", 3,
-                                        std::numeric_limits<uint32_t>::max());
 }
