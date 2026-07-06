@@ -43,7 +43,7 @@ char access(struct Outer *bar, int index) {
 
 
 // CHECK-LABEL: define dso_local ptr @assign(
-// CHECK-SAME: ptr nofree noundef readonly captures(none) dead_on_return [[BAR:%.*]], i32 noundef [[LEN:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+// CHECK-SAME: ptr nofree noundef readonly align 8 captures(none) dead_on_return [[BAR:%.*]], i32 noundef [[LEN:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_0_0_COPYLOAD:%.*]] = load ptr, ptr [[BAR]], align 8
 // CHECK-NEXT:    [[AGG_TEMP1_SROA_2_0_BAR_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[BAR]], i64 8
@@ -71,18 +71,18 @@ char access(struct Outer *bar, int index) {
 // CHECK-NEXT:    [[FLEX_AVAIL_COUNT:%.*]] = sub nuw i64 [[UPPER_INTPTR]], [[FAM_INTPTR]], !annotation {{![0-9]+}}
 // CHECK-NEXT:    [[FLEX_COUNT_INTPTR:%.*]] = zext nneg i32 [[LEN]] to i64, !annotation {{![0-9]+}}
 // CHECK-NEXT:    [[FLEX_COUNT_CHECK:%.*]] = icmp uge i64 [[FLEX_AVAIL_COUNT]], [[FLEX_COUNT_INTPTR]], !annotation {{![0-9]+}}
-// CHECK-NEXT:    [[OR_COND49:%.*]] = select i1 [[FLEX_COUNT_MINUS]], i1 [[FLEX_COUNT_CHECK]], i1 false, !prof {{![0-9]+}}, !annotation {{![0-9]+}}
+// CHECK-NEXT:    [[OR_COND51:%.*]] = select i1 [[FLEX_COUNT_MINUS]], i1 [[FLEX_COUNT_CHECK]], i1 false, !prof {{![0-9]+}}, !annotation {{![0-9]+}}
 // CHECK-NEXT:    [[TMP3:%.*]] = icmp ult ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], [[AGG_TEMP1_SROA_2_0_COPYLOAD]], !annotation {{![0-9]+}}
-// CHECK-NEXT:    [[OR_COND60:%.*]] = select i1 [[OR_COND49]], i1 [[TMP3]], i1 false, !prof {{![0-9]+}}, !annotation {{![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND60]], label [[BOUNDSCHECK_CONT:%.*]], label [[TRAP]], !prof {{![0-9]+}}, !annotation {{![0-9]+}}
+// CHECK-NEXT:    [[OR_COND62:%.*]] = select i1 [[OR_COND51]], i1 [[TMP3]], i1 false, !prof {{![0-9]+}}, !annotation {{![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND62]], label [[BOUNDSCHECK_CONT:%.*]], label [[TRAP]], !prof {{![0-9]+}}, !annotation {{![0-9]+}}
 // CHECK:       boundscheck.cont.thread:
 // CHECK-NEXT:    store i32 [[LEN]], ptr inttoptr (i64 4 to ptr), align 4, !tbaa {{![0-9]+}}
-// CHECK-NEXT:    br label [[BOUNDSCHECK_NULL:%.*]]
+// CHECK-NEXT:    br label [[BOUNDSCHECK_NULL48:%.*]]
 // CHECK:       boundscheck.cont:
 // CHECK-NEXT:    [[LEN31:%.*]] = getelementptr inbounds nuw i8, ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], i64 4
 // CHECK-NEXT:    store i32 [[LEN]], ptr [[LEN31]], align 4, !tbaa {{![0-9]+}}
-// CHECK-NEXT:    br label [[BOUNDSCHECK_NULL]]
-// CHECK:       {{boundscheck.null[0-9]+}}:
+// CHECK-NEXT:    br label [[BOUNDSCHECK_NULL48]]
+// CHECK:       boundscheck.null48:
 // CHECK-NEXT:    ret ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]]
 //
 struct Outer * assign(void * __bidi_indexable bar, int len) {

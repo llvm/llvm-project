@@ -237,7 +237,7 @@ int addrof_deref_g(void) {
 }
 
 // CHECK-LABEL: define dso_local void @assigning_array_single(
-// CHECK-SAME: ptr noundef dead_on_return [[P:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: ptr noundef align 8 dead_on_return [[P:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[P_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[FLEX:%.*]] = alloca ptr, align 8
