@@ -422,7 +422,7 @@ struct alignas(
   constexpr __contention_state_native() : __waiter_count(0) {}
 };
 
-static __contention_state_native __contention_table_native[__contention_table_size];
+static constinit __contention_state_native __contention_table_native[__contention_table_size];
 
 static __cxx_atomic_contention_t* __get_native_waiter_count(void const* p) {
   return &__contention_table_native[__contention_hasher(p) & (__contention_table_size - 1)].__waiter_count;
@@ -438,7 +438,7 @@ struct alignas(
   constexpr __contention_state_global() : __waiter_count(0), __platform_state(0) {}
 };
 
-static __contention_state_global __contention_table_global[__contention_table_size];
+static constinit __contention_state_global __contention_table_global[__contention_table_size];
 
 static __contention_state_global* __get_global_contention_state(void const* p) {
   return &__contention_table_global[__contention_hasher(p) & (__contention_table_size - 1)];
