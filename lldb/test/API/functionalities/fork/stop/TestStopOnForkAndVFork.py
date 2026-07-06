@@ -8,7 +8,6 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 
 
-@skipIfRemote
 class TestStopOnForkAndVFork(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
