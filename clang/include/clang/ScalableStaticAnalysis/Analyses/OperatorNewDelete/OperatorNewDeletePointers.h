@@ -10,6 +10,7 @@
 // operator new/delete overloads that must have a 'void*' type
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef LLVM_CLANG_SCALABLESTATICANALYSIS_ANALYSES_OPERATORNEWDELETE_OPERATORNEWDELETEPOINTERS_H
 #define LLVM_CLANG_SCALABLESTATICANALYSIS_ANALYSES_OPERATORNEWDELETE_OPERATORNEWDELETEPOINTERS_H
 
