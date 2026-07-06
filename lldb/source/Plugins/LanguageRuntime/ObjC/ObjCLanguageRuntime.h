@@ -281,7 +281,8 @@ public:
 
   lldb::TypeSP LookupInCompleteClassCache(ConstString &name);
 
-  std::optional<CompilerType> GetRuntimeType(CompilerType base_type) override;
+  std::optional<CompilerType>
+  GetRuntimeType(CompilerType base_type, ExecutionContextRef exe_ctx) override;
 
   virtual llvm::Expected<std::unique_ptr<UtilityFunction>>
   CreateObjectChecker(std::string name, ExecutionContext &exe_ctx) = 0;

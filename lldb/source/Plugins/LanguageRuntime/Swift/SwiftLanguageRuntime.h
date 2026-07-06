@@ -308,6 +308,20 @@ public:
   };
   /// \}
 
+  /// Import a Swift type into a scratch typesystem
+  /// (TypeSystemSwiftTypeRefForExpressions). This works with all
+  /// types, but only makes sense for types in the per-module
+  /// TypeSystemSwiftTypeRef. In contrast to the per-module
+  /// (lldb_private::Module) typesystems the scratch typesystem is
+  /// bound to a process and can therefore answer queries that need
+  /// runtime information.
+  static llvm::Expected<CompilerType>
+  GetScratchTypeSystemType(CompilerType module_type,
+                           ExecutionContextRef exe_ctx_ref);
+
+  std::optional<CompilerType>
+  GetRuntimeType(CompilerType base_type, ExecutionContextRef exe_ctx) override;
+
   bool GetDynamicTypeAndAddress(ValueObject &in_value,
                                 lldb::DynamicValueType use_dynamic,
                                 TypeAndOrName &class_type_or_name,
@@ -490,7 +504,8 @@ public:
                                       ExecutionContextScope *exe_scope);
 
   /// Ask Remote mirrors for the stride of a Swift type.
-  std::optional<uint64_t> GetByteStride(CompilerType type);
+  std::optional<uint64_t>
+  GetByteStride(CompilerType type, ExecutionContextScope *exe_scope = nullptr);
 
   /// Ask Remote mirrors for the alignment of a Swift type.
   std::optional<size_t> GetBitAlignment(CompilerType type,

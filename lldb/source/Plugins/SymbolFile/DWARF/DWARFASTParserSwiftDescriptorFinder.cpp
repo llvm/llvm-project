@@ -26,9 +26,10 @@
 #include "swift/RemoteInspection/DescriptorFinder.h"
 #include "swift/RemoteInspection/TypeLowering.h"
 
+#include "lldb/Target/Target.h"
+#include "lldb/Utility/Flags.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Target/Target.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -151,6 +152,18 @@ getTypeAndDie(TypeSystemSwiftTypeRef &ts,
               const swift::reflection::TypeRef *TR) {
   swift::Demangle::Demangler dem;
   swift::Demangle::NodePointer node = TR->getDemangling(dem);
+  // FIXME: Use Transform instead.  TypeRefs use a normalized
+  // representation where bare protocols are wrapped in a
+  // ProtocolList.
+  if (node && node->getKind() == swift::Demangle::Node::Kind::Protocol) {
+    auto type_node = dem.createNode(swift::Demangle::Node::Kind::Type);
+    type_node->addChild(node, dem);
+    auto type_list = dem.createNode(swift::Demangle::Node::Kind::TypeList);
+    type_list->addChild(type_node, dem);
+    auto proto_list = dem.createNode(swift::Demangle::Node::Kind::ProtocolList);
+    proto_list->addChild(type_list, dem);
+    node = proto_list;
+  }
   // TODO: mangling flavor should come from the TypeRef.
   auto type =
       ts.RemangleAsType(dem, node, swift::Mangle::ManglingFlavor::Embedded);
@@ -207,6 +220,8 @@ getFieldDescriptorKindForDie(CompilerType type) {
   case lldb::eTypeClassUnion:
     return swift::reflection::FieldDescriptorKind::Enum;
   default:
+    if (Flags(type.GetTypeInfo()).AnySet(lldb::eTypeIsProtocol))
+      return swift::reflection::FieldDescriptorKind::Protocol;
     LLDB_LOG(GetLog(LLDBLog::Types),
              "Could not determine file descriptor kind for type: {0}",
              type.GetMangledTypeName());

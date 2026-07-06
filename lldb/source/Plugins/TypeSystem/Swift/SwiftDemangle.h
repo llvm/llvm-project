@@ -313,6 +313,31 @@ inline bool IsFloat(swift::Demangle::NodePointer node) {
   return false;
 }
 
+/// Determine whether \p kind denotes a nominal type: a class, struct, enum,
+/// protocol, type alias, or one of their symbolic-reference forms (and the
+/// builtin tuple type). This mirrors the demangler's own
+/// swift::Demangle::isAnyGeneric(), which is file-local (not exported), so it
+/// cannot be called from here; keep the two in sync. To also accept the
+/// specialized BoundGeneric* forms, normalize with
+/// swift::Demangle::isSpecialized()/getUnspecialized() first.
+inline bool IsAnyGeneric(Node::Kind kind) {
+  switch (kind) {
+  case Node::Kind::Structure:
+  case Node::Kind::Class:
+  case Node::Kind::Enum:
+  case Node::Kind::Protocol:
+  case Node::Kind::ProtocolSymbolicReference:
+  case Node::Kind::ObjectiveCProtocolSymbolicReference:
+  case Node::Kind::OtherNominalType:
+  case Node::Kind::TypeAlias:
+  case Node::Kind::TypeSymbolicReference:
+  case Node::Kind::BuiltinTupleType:
+    return true;
+  default:
+    return false;
+  }
+}
+
 } // namespace swift_demangle
 } // namespace lldb_private
 

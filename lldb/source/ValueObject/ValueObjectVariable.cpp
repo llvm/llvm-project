@@ -31,6 +31,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-types.h"
+#include "llvm/Support/Error.h"
 
 #if defined(LLDB_ENABLE_SWIFT)
 #include "Plugins/TypeSystem/Swift/TypeSystemSwift.h"
@@ -139,8 +140,9 @@ bool ValueObjectVariable::UpdateValue() {
   // Check if the type has size 0. If so, there is nothing to update,
   // unless the type is C++ where even empty structs have a non-zero
   // size.
-  CompilerType var_type(GetCompilerTypeImpl());
-  if (var_type.IsValid() && var_type.GetMinimumLanguage() == lldb::eLanguageTypeSwift) {
+  CompilerType var_type(GetCompilerType());
+  if (var_type.IsValid() &&
+      var_type.GetMinimumLanguage() == lldb::eLanguageTypeSwift) {
     ExecutionContext exe_ctx(GetExecutionContextRef());
     auto size_or_err =
         var_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());

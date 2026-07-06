@@ -286,6 +286,9 @@ TEST_F(ClangArgs, DoubleDash) {
   EXPECT_EQ(dest, std::vector<std::string>({"-v"}));
 }
 
+#ifndef NDEBUG
+// These tests rely on SwiftASTContextTester's default constructor, which is
+// only available in assert builds (see SwiftASTContext::SwiftASTContext()).
 TEST_F(TestSwiftASTContext, IVFS) {
   const auto *Info = testing::UnitTest::GetInstance()->current_test_info();
   llvm::SmallString<128> name;
@@ -336,3 +339,4 @@ TEST_F(TestSwiftASTContext, GetTypeNameFatalError) {
   EXPECT_EQ(context->GetTypeName(nullptr, false),
             ConstString("<invalid Swift context>"));
 }
+#endif // NDEBUG

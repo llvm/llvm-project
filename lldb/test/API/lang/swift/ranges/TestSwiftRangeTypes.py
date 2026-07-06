@@ -27,10 +27,10 @@ class TestSwiftRangeType(TestBase):
         self.build()
         lldbutil.run_to_source_breakpoint(
                 self, 'Set breakpoint here', lldb.SBFileSpec("main.swift"))
-        self.expect("frame variable a", substrs=[
+        self.expect("frame variable -d no-run-target a", substrs=[
                     '(ClosedRange<Int>) a = 1...100'])
-        self.expect("frame variable b", substrs=['(Range<Int>) b = 1..<100'])
-        self.expect("frame variable c", substrs=[
+        self.expect("frame variable -d no-run-target b", substrs=['(Range<Int>) b = 1..<100'])
+        self.expect("frame variable -d no-run-target c", substrs=[
                     '(ClosedRange<Int>) c = 1...100'])
-        self.expect("frame variable d", substrs=[
+        self.expect("frame variable -d no-run-target d", substrs=[
                     '(Range<Int>) d = 1..<100'])

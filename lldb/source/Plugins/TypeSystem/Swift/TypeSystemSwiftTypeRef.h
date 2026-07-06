@@ -52,6 +52,7 @@ class ClangNameImporter;
 class SwiftASTContext;
 class SwiftASTContextForExpressions;
 class SwiftDWARFImporterForClangTypes;
+class SwiftLanguageRuntime;
 class SwiftPersistentExpressionState;
 
 /// A Swift TypeSystem that does not own a swift::ASTContext.
@@ -80,6 +81,12 @@ public:
   /// Convenience helpers.
   SymbolContext GetSymbolContext(ExecutionContextScope *exe_scope) const;
   SymbolContext GetSymbolContext(const ExecutionContext *exe_ctx) const;
+  /// Like GetSymbolContext(exe_ctx), but for an expression-defined type with no
+  /// Swift frame, recover the context the type was imported with (side table).
+  SymbolContext GetSymbolContextForType(lldb::opaque_compiler_type_t type,
+                                        const ExecutionContext *exe_ctx);
+  SymbolContext GetSymbolContextForType(lldb::opaque_compiler_type_t type,
+                                        ExecutionContextScope *exe_scope);
   /// Return SwiftASTContext, iff one has already been created.
   virtual SwiftASTContextSP
   GetSwiftASTContextOrNull(const SymbolContext &sc) const;
@@ -325,10 +332,9 @@ public:
   /// Marker protocols are compile-time concepts only and the reflection
   /// context does not expect them as input. Note: this mutates \p node
   /// in place.
-  llvm::Expected<swift::Demangle::NodePointer>
-  RemoveMarkerProtocols(swift::Demangle::Demangler &dem,
-                        swift::Demangle::NodePointer node,
-                        swift::Mangle::ManglingFlavor flavor);
+  llvm::Expected<swift::Demangle::NodePointer> RemoveMarkerProtocols(
+      swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node,
+      swift::Mangle::ManglingFlavor flavor, ExecutionContext &exe_ctx);
   bool IsImportedType(lldb::opaque_compiler_type_t type,
                       CompilerType *original_type) override;
   /// Determine whether this is a builtin SIMD type.
@@ -501,8 +507,11 @@ public:
                               swift::Mangle::ManglingFlavor flavor) override;
 
   /// Gets the descriptor finder belonging to this instance's
-  /// module.
-  swift::reflection::DescriptorFinder *GetDescriptorFinder();
+  /// module. If exe_scope is provided and this is a scratch
+  /// typesystem, returns the per-module descriptor finder instead
+  /// (which has access to the SymbolFileDWARF).
+  swift::reflection::DescriptorFinder *
+  GetDescriptorFinder(ExecutionContextScope *exe_scope = nullptr);
 
   /// Lookup a type in the debug info.
   lldb::TypeSP FindTypeInModule(lldb::opaque_compiler_type_t type);
@@ -511,7 +520,24 @@ public:
   /// their types in the debug info.
   CompilerType Canonicalize(CompilerType type);
 
+  /// Determine if this type contains a type from a module that looks
+  /// like it was JIT-compiled by LLDB.
+  bool IsExpressionEvaluatorDefined(lldb::opaque_compiler_type_t type);
+
 protected:
+  /// A temporary object that keeps the process alive.
+  struct SwiftLanguageRuntimeHolder {
+    lldb::ProcessSP process_sp;
+    SwiftLanguageRuntime *runtime;
+
+    explicit operator bool() const { return runtime; }
+    SwiftLanguageRuntime *operator->() { return runtime; }
+  };
+  /// Get the SwiftLanguageRuntime. For per-module typesystems (which aren't
+  /// bound to a target) the process is taken from \p exe_scope when provided.
+  SwiftLanguageRuntimeHolder
+  GetRuntime(ExecutionContextScope *exe_scope = nullptr);
+
   /// Determine whether the fallback is enabled via setting.
   bool UseSwiftASTContextFallback(const char *func_name,
                                   lldb::opaque_compiler_type_t type);
@@ -520,7 +546,9 @@ protected:
                                        lldb::opaque_compiler_type_t type);
 
   /// Looks for the type using the provided compiler context.
-  lldb::TypeSP FindTypeInModule(std::vector<CompilerContext> context);
+  lldb::TypeSP FindTypeInModule(std::vector<CompilerContext> context,
+                                lldb_private::Module *M,
+                                swift::Mangle::ManglingFlavor flavor);
 
   /// Helper that creates an AST type from \p type.
   ///
@@ -624,9 +652,10 @@ protected:
   GetClangTypeTypeNode(swift::Demangle::Demangler &dem,
                        CompilerType clang_type);
 
-  /// Determine if this type contains a type from a module that looks
-  /// like it was JIT-compiled by LLDB.
-  bool IsExpressionEvaluatorDefined(lldb::opaque_compiler_type_t type);
+  virtual ExecutionContextRef
+  GetExecutionContextForType(lldb::opaque_compiler_type_t type) {
+    return {};
+  }
 
 #ifndef NDEBUG
   /// Check whether the type being dealt with is tricky to validate due to
@@ -729,8 +758,15 @@ public:
                                llvm::ArrayRef<CompilerContext> decl_context,
                                bool ignore_modules,
                                SymbolContext sc = {}) override;
+  /// Import type into this typesystem and register it in the fallback
+  /// sidetable.
+  CompilerType ImportType(CompilerType type, ExecutionContextRef exe_ctx);
+
+  ExecutionContextRef
+  GetExecutionContextForType(lldb::opaque_compiler_type_t type) override;
 
   friend class SwiftASTContextForExpressions;
+
 protected:
   lldb::TargetWP m_target_wp;
   unsigned m_generation = 0;
@@ -751,6 +787,13 @@ protected:
   /// Map ConstString Clang type identifiers and the concatenation of the
   /// compiler context used to find them to Clang types.
   ThreadSafeStringMap<lldb::TypeSP> m_clang_type_cache;
+  /// In order to do a SwiftASTContext fallback, we need to have a
+  /// precise ExecutionContext to initialize the matching
+  /// SwiftASTContext. This information isn't part of CompilerType, so
+  /// this table keeps track of all types we imported into this
+  /// typesystem.
+  /// This can be removed when the fallback is removed.
+  ThreadSafeDenseMap<const char *, ExecutionContextRef> m_exectx_sidetable;
 };
 
 } // namespace lldb_private

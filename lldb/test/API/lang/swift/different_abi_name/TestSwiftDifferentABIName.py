@@ -14,7 +14,7 @@ class TestSwiftDifferentABIName(TestBase):
             self, "break here", lldb.SBFileSpec("main.swift")
         )
 
-        self.expect("frame variable s", 
+        self.expect("frame variable -d no-run-target s",
                     substrs=["Struct", "s = ", "field = 42"])
         self.expect("expr s", substrs=["Struct", "field = 42"])
         self.expect("expr -O -- s", substrs=["Struct", "- field : 42"])

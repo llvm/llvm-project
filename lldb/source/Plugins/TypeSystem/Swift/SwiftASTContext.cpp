@@ -5337,7 +5337,7 @@ SwiftASTContext::ReconstructType(ConstString mangled_typename) {
   assert(!found_type || &found_type->getASTContext() == *ast_ctx);
 
   // This type might have been been found in reflection and annotated with
-  // @_originallyDefinedIn. The compiler emits a typelias for these type
+  // @_originallyDefinedIn. The compiler emits a typealias for these type
   // pointing them back to the types with the real module name.
   if (!found_type) {
     auto adjusted =
@@ -6250,19 +6250,28 @@ bool SwiftASTContext::IsArrayType(opaque_compiler_type_t type,
     swift::StructDecl *struct_decl = struct_type->getDecl();
     llvm::StringRef name = struct_decl->getName().get();
     // This is sketchy, but it matches the behavior of GetArrayElementType().
-    if (name != "Array" && name != "ContiguousArray" && name != "ArraySlice")
+    if (name != "Array" && name != "ContiguousArray" && name != "InlineArray" &&
+        name != "ArraySlice")
       return false;
     if (!struct_decl->getModuleContext()->isStdlibModule())
       return false;
     const llvm::ArrayRef<swift::Type> &args = struct_type->getGenericArgs();
-    if (args.size() != 1)
-      return false;
+    if (name == "InlineArray") {
+      if (args.size() != 2)
+        return false;
+      // In an inline array args[0] is the array length.
+      if (element_type_ptr)
+        *element_type_ptr = ToCompilerType(args[1].getPointer());
+    } else {
+      if (args.size() != 1)
+        return false;
+      if (element_type_ptr)
+        *element_type_ptr = ToCompilerType(args[0].getPointer());
+    }
     if (is_incomplete)
       *is_incomplete = true;
     if (size)
       *size = 0;
-    if (element_type_ptr)
-      *element_type_ptr = ToCompilerType(args[0].getPointer());
     return true;
   }
 
@@ -6727,9 +6736,12 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
         eTypeIsBuiltIn | eTypeIsPointer | eTypeIsScalar | eTypeHasValue;
     break;
   case swift::TypeKind::BuiltinFixedArray:
-    return eTypeIsBuiltIn | eTypeHasChildren;
+    swift_flags |= eTypeIsBuiltIn | eTypeHasChildren;
+    // Don't recurse into the array *element* type.
+    return swift_flags;
   case swift::TypeKind::BuiltinBorrow:
-    return eTypeIsBuiltIn;
+    swift_flags |= eTypeIsBuiltIn;
+    return swift_flags;
   case swift::TypeKind::BuiltinVector:
     // TODO: OR in eTypeIsFloat or eTypeIsInteger as needed
     return eTypeIsBuiltIn | eTypeHasChildren | eTypeIsVector;
@@ -7303,7 +7315,7 @@ SwiftASTContext::GetByteStride(opaque_compiler_type_t type,
   if (!exe_scope)
     return {};
   if (auto *runtime = SwiftLanguageRuntime::Get(exe_scope->CalculateProcess()))
-    return runtime->GetByteStride({weak_from_this(), type});
+    return runtime->GetByteStride({weak_from_this(), type}, exe_scope);
   return {};
 }
 

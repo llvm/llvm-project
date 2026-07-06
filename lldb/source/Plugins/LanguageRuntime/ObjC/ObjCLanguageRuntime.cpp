@@ -468,7 +468,8 @@ CompilerType ObjCLanguageRuntime::LookupInRuntime(ConstString class_name) {
 }
 
 std::optional<CompilerType>
-ObjCLanguageRuntime::GetRuntimeType(CompilerType base_type) {
+ObjCLanguageRuntime::GetRuntimeType(CompilerType base_type,
+                                    ExecutionContextRef exe_ctx) {
   CompilerType class_type;
   bool is_pointer_type = false;
 

@@ -26,9 +26,8 @@ class TestSwiftLateSwiftDylibClangDeps(TestBase):
 
         self.expect("v fromClang", substrs=['42'])
         self.expect("frame select 1")
-        # Note that in earlier versions the lookup was a global one and
-        # thus re-evaluating the variable after adding dylib would
-        # have produced a different result. Currently these lookups
-        # are per-module so this expectedly still fails.
-        self.expect("v fromClang",
-                    substrs=["missing debug info", "FromClang"])
+        # After the dylib is loaded, its reflection metadata for FromClang
+        # becomes available in the (process-global) reflection context, so
+        # re-evaluating the variable in the loader frame now resolves its
+        # layout.
+        self.expect("v fromClang", substrs=["x = 23"])
