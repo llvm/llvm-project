@@ -1115,6 +1115,26 @@ void SemaProfiles::checkInitProfileReadThrough(SourceLocation Loc,
       << "std::init" << (isMemberChainOfUninitObject(Glvalue) ? 1 : 0);
 }
 
+void SemaProfiles::checkInitProfileSubobjectWrite(SourceLocation Loc,
+                                                  const Expr *LHS) {
+  // A RecoveryExpr is a placeholder for an expression that already failed, not
+  // a store the user wrote, so it must not drive this rule.
+  if (!LHS || isa<RecoveryExpr>(LHS->IgnoreParens()))
+    return;
+  if (deferUninitCheckOnTemplatePattern(SemaRef, /*D=*/nullptr))
+    return;
+  // Paper §4.5: an uninitialized std::byte may be manipulated freely.
+  if (getASTContext().getBaseElementType(LHS->getType())->isStdByteType())
+    return;
+  if (!shouldEmitProfileViolation("std::init", "uninit_write", Loc))
+    return;
+  if (glvalueDenotesUninitStorage(getASTContext(), LHS, UninitWriteAccess) !=
+      UninitStorage::Uninitialized)
+    return;
+  Diag(Loc, diag::err_init_uninit_subobject_write)
+      << "std::init" << !isa<MemberExpr>(LHS->IgnoreParenImpCasts());
+}
+
 
 namespace {
 // Row for the unified finalization dispatch shared by class-finalization

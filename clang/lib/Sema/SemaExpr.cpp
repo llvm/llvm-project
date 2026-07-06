@@ -14404,6 +14404,14 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
   if (CheckForModifiableLvalue(LHSExpr, Loc, *this))
     return QualType();
 
+  // std::init / uninit_write (paper §5.4-§5.6): a scalar store to a subobject
+  // of a named [[uninit]] object is banned delayed initialization. This is
+  // the shared funnel for simple and every compound assignment, so the check
+  // fires exactly once per built-in assignment; class-typed operator= never
+  // reaches it.
+  if (getLangOpts().Profiles)
+    Profiles().checkInitProfileSubobjectWrite(Loc, LHSExpr);
+
   QualType LHSType = LHSExpr->getType();
   QualType RHSType = CompoundType.isNull() ? RHS.get()->getType() :
                                              CompoundType;
@@ -16184,6 +16192,13 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
                                          Opc == UO_PreInc || Opc == UO_PostInc,
                                          Opc == UO_PreInc || Opc == UO_PreDec);
       CanOverflow = isOverflowingIntegerType(Context, resultType);
+      // std::init / uninit_write (paper §5.4-§5.6): a built-in ++/-- stores to
+      // its operand like an assignment does to its LHS. Checked here rather
+      // than in CheckIncrementDecrementOperand, which self-recurses on
+      // placeholder operands and would fire twice; overloaded class ++/--
+      // never reaches CreateBuiltinUnaryOp.
+      if (getLangOpts().Profiles && !resultType.isNull())
+        Profiles().checkInitProfileSubobjectWrite(OpLoc, Input.get());
       break;
     case UO_AddrOf:
       resultType = CheckAddressOfOperand(Input, OpLoc);

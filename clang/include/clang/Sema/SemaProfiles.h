@@ -237,6 +237,19 @@ public:
   void checkInitProfileReadThrough(SourceLocation Loc, const Expr *Glvalue,
                             QualType ValueType);
 
+  /// std::init / uninit_write (paper §5.4-§5.6): diagnose a scalar store to a
+  /// proper subobject of a named [[uninit]] entity -- delayed piecemeal
+  /// initialization, which only whole-object construct_at could make good.
+  /// Called from Sema::CheckAssignmentOperands (the shared simple/compound
+  /// assignment funnel) and from the built-in increment/decrement arm of
+  /// Sema::CreateBuiltinUnaryOp, with \p LHS the store target. Reuses the
+  /// recognizer with its write access preset: a store to the whole named
+  /// entity is its initialization (paper §4.5), and storage reached through
+  /// [[ref_to_uninit]] is trusted (the deferred construct_at slice), so only
+  /// a below-top-level [[uninit]] marker fires. A std::byte store is exempt
+  /// (paper §4.5).
+  void checkInitProfileSubobjectWrite(SourceLocation Loc, const Expr *LHS);
+
   /// std::init / ref_to_uninit (paper §4.3): a by-reference lambda capture of
   /// \p Var binds a reference to its storage, and a capture cannot carry
   /// [[ref_to_uninit]], so capturing an entity that denotes uninitialized

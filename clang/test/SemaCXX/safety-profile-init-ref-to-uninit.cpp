@@ -780,12 +780,15 @@ void test_member_read_of_uninit_object() {
   (void)y1; (void)y2; (void)y3;
 }
 
-// Writes, discarded values, and address-taking apply no lvalue-to-rvalue
-// conversion and are not reads; taking the member's address is the binding
-// checks' territory (unchanged behavior, retested as a regression guard).
+// Discarded values and address-taking apply no lvalue-to-rvalue conversion
+// and are not reads; taking the member's address is the binding checks'
+// territory (unchanged behavior, retested as a regression guard). A write is
+// not a read either, but a subobject store of an [[uninit]] object is itself
+// banned as delayed initialization (uninit_write; full coverage in
+// safety-profile-init-write.cpp).
 void test_member_read_negatives() {
   Pair s [[uninit]];
-  s.x = 1;                         // OK: write, not a read (writes are a deferred slice)
+  s.x = 1;                         // expected-error {{writing a member of an '[[uninit]]' object does not initialize it under profile 'std::init'; initialize the whole object}}
   (void)s.x;                       // OK: discarded value
   int *p = &s.x;                   // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
   int *q [[ref_to_uninit]] = &s.x; // OK: binding checked by ref_to_uninit
@@ -829,12 +832,15 @@ struct WithArrMember {
   int get() { return a[0]; } // expected-error {{read of a subobject of an '[[uninit]]' object accesses uninitialized memory under profile 'std::init'}}
 };
 
-// Writes, discarded values, and address-taking apply no lvalue-to-rvalue
-// conversion and are not reads; bindings to the array or its elements stay the
-// ref_to_uninit checks' territory (regression guards, unchanged behavior).
+// Discarded values and address-taking apply no lvalue-to-rvalue conversion
+// and are not reads; bindings to the array or its elements stay the
+// ref_to_uninit checks' territory (regression guards, unchanged behavior). An
+// element store is not a read either, but is itself banned as delayed
+// initialization (uninit_write; full coverage in
+// safety-profile-init-write.cpp).
 void test_element_read_negatives(int i) {
   [[uninit]] int a[2];
-  a[0] = 1;                         // OK: write, not a read (writes are a deferred slice)
+  a[0] = 1;                         // expected-error {{writing an element of an '[[uninit]]' object does not initialize it under profile 'std::init'; initialize the whole object}}
   (void)a[0];                       // OK: discarded value
   int *p [[ref_to_uninit]] = &a[0]; // OK: address-of is not a read; binding checked by ref_to_uninit
   int *q [[ref_to_uninit]] = a;     // OK: array decay is a binding, not a read
