@@ -145,6 +145,12 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   break on i686, MIPS O32, PowerPC64 ELFv1, and Lanai.
 - Fixed incorrect struct return when single large vector (256/512-bit) used on
   x86-64 targets. (#GH203760) The bug was introduced since Clang 21. (#GH120670)
+- Clang now applies MSVC's MD5 shortening to over-long Microsoft C++ RTTI type
+  descriptor name strings, matching the behavior already used for the RTTI
+  symbol names. Previously the full name string was always emitted, so deeply
+  nested template types (for example, ones containing local lambdas) could
+  produce very large writable `.data` sections. Emitted RTTI name strings
+  change only for types whose name exceeds the length limit. (#GH206313)
 
 ### AST Dumping Potentially Breaking Changes
 
