@@ -172,4 +172,54 @@ INSTANTIATE_TEST_SUITE_P(
         DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_data8, 8u},
         DIETestParams{4, dwarf::DWARF64, dwarf::DW_FORM_sec_offset, 8u}));
 
+TEST(DIEValueListTest, DeleteValue) {
+  SmallVector<dwarf::Attribute, 4> Expected = {
+      dwarf::DW_AT_name, dwarf::DW_AT_type, dwarf::DW_AT_location,
+      dwarf::DW_AT_ranges};
+  SmallVector<dwarf::Attribute, 4> Result;
+
+  BumpPtrAllocator Alloc;
+  DIEValueList List;
+  for (auto [I, Attr] : enumerate(Expected))
+    List.addValue(Alloc, Attr, dwarf::DW_FORM_data1, DIEInteger(I));
+
+  auto readResult = [&List, &Result] {
+    Result.clear();
+    for (const DIEValue &V : List.values())
+      Result.push_back(V.getAttribute());
+  };
+
+  // Delete non-existing
+  EXPECT_FALSE(List.deleteValue(dwarf::DW_AT_high_pc));
+  readResult();
+  EXPECT_EQ(Result, Expected);
+
+  // Delete back
+  EXPECT_TRUE(List.deleteValue(dwarf::DW_AT_ranges));
+  Expected.pop_back();
+  readResult();
+  EXPECT_EQ(Result, Expected);
+
+  // Delete middle
+  EXPECT_TRUE(List.deleteValue(dwarf::DW_AT_type));
+  Expected.erase(Expected.begin() + 1);
+  readResult();
+  EXPECT_EQ(Result, Expected);
+
+  // Delete front
+  EXPECT_TRUE(List.deleteValue(dwarf::DW_AT_name));
+  Expected.erase(Expected.begin());
+  readResult();
+  EXPECT_EQ(Result, Expected);
+
+  // Delete last
+  EXPECT_TRUE(List.deleteValue(dwarf::DW_AT_location));
+  Expected.pop_back();
+  readResult();
+  EXPECT_EQ(Result, Expected);
+
+  // Delete empty
+  EXPECT_FALSE(List.deleteValue(dwarf::DW_AT_high_pc));
+}
+
 } // end namespace
