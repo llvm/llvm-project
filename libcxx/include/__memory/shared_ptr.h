@@ -33,6 +33,7 @@
 #include <__memory/pointer_traits.h>
 #include <__memory/shared_count.h>
 #include <__memory/uninitialized_algorithms.h>
+#include <__memory/uninitialized_multidimensional_algorithms.h>
 #include <__memory/unique_ptr.h>
 #include <__type_traits/add_reference.h>
 #include <__type_traits/conditional.h>
