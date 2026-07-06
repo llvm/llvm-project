@@ -5,7 +5,7 @@
 //
 // RUN: %clang -std=gnu11 --driver-mode=gcc -O0 -glldb -fblocks -arch x86_64 \
 // RUN:     -fsanitize=address %s -o %t
-// RUN: %dexter -w --use-script \
+// RUN: %dexter -w \
 // RUN:     --binary %t %dexter_lldb_args -- %s | FileCheck %s
 
 struct S {

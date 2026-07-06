@@ -806,23 +806,39 @@ void HexagonToolChain::addClangTargetOptions(const ArgList &DriverArgs,
                           UseInitArrayDefault))
     CC1Args.push_back("-fno-use-init-array");
 
-  static const std::pair<options::ID, const char *> FixedRegs[] = {
-      {options::OPT_ffixed_r16, "+reserved-r16"},
-      {options::OPT_ffixed_r17, "+reserved-r17"},
-      {options::OPT_ffixed_r18, "+reserved-r18"},
-      {options::OPT_ffixed_r19, "+reserved-r19"},
-      {options::OPT_ffixed_r20, "+reserved-r20"},
-      {options::OPT_ffixed_r21, "+reserved-r21"},
-      {options::OPT_ffixed_r22, "+reserved-r22"},
-      {options::OPT_ffixed_r23, "+reserved-r23"},
-      {options::OPT_ffixed_r24, "+reserved-r24"},
-      {options::OPT_ffixed_r25, "+reserved-r25"},
-      {options::OPT_ffixed_r26, "+reserved-r26"},
-      {options::OPT_ffixed_r27, "+reserved-r27"},
-      {options::OPT_ffixed_r28, "+reserved-r28"},
+  // The bool marks caller-saved (scratch) registers in the Hexagon ABI.
+  // Reserving those only behaves correctly if every other translation unit and
+  // library reserves them too, so we warn when the user does so.
+  static const std::tuple<options::ID, const char *, bool> FixedRegs[] = {
+      {options::OPT_ffixed_r6, "+reserved-r6", true},
+      {options::OPT_ffixed_r7, "+reserved-r7", true},
+      {options::OPT_ffixed_r8, "+reserved-r8", true},
+      {options::OPT_ffixed_r9, "+reserved-r9", true},
+      {options::OPT_ffixed_r10, "+reserved-r10", true},
+      {options::OPT_ffixed_r11, "+reserved-r11", true},
+      {options::OPT_ffixed_r12, "+reserved-r12", true},
+      {options::OPT_ffixed_r13, "+reserved-r13", true},
+      {options::OPT_ffixed_r14, "+reserved-r14", true},
+      {options::OPT_ffixed_r15, "+reserved-r15", true},
+      {options::OPT_ffixed_r16, "+reserved-r16", false},
+      {options::OPT_ffixed_r17, "+reserved-r17", false},
+      {options::OPT_ffixed_r18, "+reserved-r18", false},
+      {options::OPT_ffixed_r19, "+reserved-r19", false},
+      {options::OPT_ffixed_r20, "+reserved-r20", false},
+      {options::OPT_ffixed_r21, "+reserved-r21", false},
+      {options::OPT_ffixed_r22, "+reserved-r22", false},
+      {options::OPT_ffixed_r23, "+reserved-r23", false},
+      {options::OPT_ffixed_r24, "+reserved-r24", false},
+      {options::OPT_ffixed_r25, "+reserved-r25", false},
+      {options::OPT_ffixed_r26, "+reserved-r26", false},
+      {options::OPT_ffixed_r27, "+reserved-r27", false},
+      {options::OPT_ffixed_r28, "+reserved-r28", false},
   };
-  for (const auto &[Opt, Feature] : FixedRegs) {
-    if (DriverArgs.hasArg(Opt)) {
+  for (const auto &[Opt, Feature, IsCallerSaved] : FixedRegs) {
+    if (Arg *A = DriverArgs.getLastArg(Opt)) {
+      if (IsCallerSaved)
+        getDriver().Diag(diag::warn_drv_hexagon_reserved_caller_saved_reg)
+            << A->getOption().getName();
       CC1Args.push_back("-target-feature");
       CC1Args.push_back(Feature);
     }
