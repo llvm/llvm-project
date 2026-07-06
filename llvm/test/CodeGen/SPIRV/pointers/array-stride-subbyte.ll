@@ -1,5 +1,5 @@
-; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv1.6-vulkan1.3-library %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.6-vulkan1.3-library %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv1.6-vulkan1.3-library < %s | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.6-vulkan1.3-library -filetype=obj < %s | spirv-val %}
 
 ; A sub-byte element (i1) must not truncate its ArrayStride to 0.
 
