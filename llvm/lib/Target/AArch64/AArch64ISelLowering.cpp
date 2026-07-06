@@ -12219,10 +12219,10 @@ static bool hasCheapXorImmediateThatNeedsCondCmpReg(
 
 // Check whether the continuous comparison sequence.
 static bool
-isOrXorChain(SDValue N, SelectionDAG &DAG, unsigned &Num, bool &SawXor,
-             bool RequireLegalCmpImmediates,
+isOrXorChain(SDValue N, SelectionDAG &DAG, unsigned &NumLeaves,
+             unsigned &NumXors, bool &SawXor, bool RequireLegalCmpImmediates,
              SmallVectorImpl<std::pair<SDValue, SDValue>> &WorkList) {
-  if (Num == MaxXors)
+  if (NumLeaves == MaxXors)
     return false;
 
   // Skip the one-use zext
@@ -12234,16 +12234,17 @@ isOrXorChain(SDValue N, SelectionDAG &DAG, unsigned &Num, bool &SawXor,
         !hasLegalCmpImmediate(N->getOperand(0), N->getOperand(1)))
       return false;
     WorkList.push_back(std::make_pair(N->getOperand(0), N->getOperand(1)));
-    Num++;
+    NumLeaves++;
+    NumXors++;
     SawXor = true;
     return true;
   }
 
   // All the non-leaf nodes must be OR.
   if (N->getOpcode() == ISD::OR && N->hasOneUse())
-    return isOrXorChain(N->getOperand(0), DAG, Num, SawXor,
+    return isOrXorChain(N->getOperand(0), DAG, NumLeaves, NumXors, SawXor,
                         RequireLegalCmpImmediates, WorkList) &&
-           isOrXorChain(N->getOperand(1), DAG, Num, SawXor,
+           isOrXorChain(N->getOperand(1), DAG, NumLeaves, NumXors, SawXor,
                         RequireLegalCmpImmediates, WorkList);
   if (N->getOpcode() == ISD::OR)
     return false;
@@ -12257,7 +12258,7 @@ isOrXorChain(SDValue N, SelectionDAG &DAG, unsigned &Num, bool &SawXor,
   // type-legalized wide integer equality compares converge to the same SETCC
   // tree.
   WorkList.push_back(std::make_pair(N, DAG.getConstant(0, SDLoc(N), VT)));
-  Num++;
+  NumLeaves++;
   return true;
 }
 
@@ -12276,6 +12277,7 @@ static SDValue performOrXorChainCombine(SDNode *N, SelectionDAG &DAG) {
   ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
   // Try to express conjunction "cmp 0 (or (xor A0 A1) (xor B0 B1))" as:
   // sub A0, A1; ccmp B0, B1, 0, eq; cmp inv(Cond) flag
+  unsigned NumLeaves = 0;
   unsigned NumXors = 0;
   bool SawXor = false;
   bool RequireLegalCmpImmediates = any_of(N->users(), [](SDNode *User) {
@@ -12284,13 +12286,20 @@ static SDValue performOrXorChainCombine(SDNode *N, SelectionDAG &DAG) {
   });
   if ((Cond == ISD::SETEQ || Cond == ISD::SETNE) && isNullConstant(RHS) &&
       LHS->getOpcode() == ISD::OR && LHS->hasOneUse() &&
-      isOrXorChain(LHS, DAG, NumXors, SawXor, RequireLegalCmpImmediates,
-                   WorkList) &&
+      isOrXorChain(LHS, DAG, NumLeaves, NumXors, SawXor,
+                   RequireLegalCmpImmediates, WorkList) &&
       SawXor) {
     // A CCMP sequence serializes the comparisons through NZCV. Keep the
-    // transform to short chains where the instruction-count reduction outweighs
-    // the longer dependency chain.
-    if (WorkList.size() > 5)
+    // default transform to short chains, but account for real XOR leaves: each
+    // one removed is a code-size and front-end win. Under size optimization,
+    // prefer the smaller CCMP form unless another guard rejects it.
+    const Function &F = DAG.getMachineFunction().getFunction();
+    unsigned Limit = 5;
+    if (NumXors >= 6)
+      Limit = 6;
+    if (F.hasOptSize() || F.hasMinSize())
+      Limit = MaxXors;
+    if (WorkList.size() > Limit)
       return SDValue();
 
     if (WorkList.size() > 2 &&
