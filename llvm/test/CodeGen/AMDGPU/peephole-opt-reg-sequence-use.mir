@@ -282,18 +282,34 @@ body: |
 
 ...
 ---
-# NOTE: This test case is commented out because it exposes a pre-existing bug
-# in SIFoldOperands which crashes on REG_SEQUENCE with physical register inputs.
-# TODO: Re-enable once SIFoldOperands is fixed.
-# name: test_regseq_fold_skip_phys_source
-# tracksRegLiveness: true
-# body: |
-#   bb.0:
-#     liveins: $vgpr0, $vgpr2
-#     %0:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
-#     %1:vreg_64 = REG_SEQUENCE $vgpr0, %subreg.sub0, %0, %subreg.sub1
-#     %2:vgpr_32 = V_ADD_CO_U32_e32 %1.sub0, $vgpr2, implicit-def $vcc, implicit $exec
-#     S_ENDPGM 0, implicit %2
+---
+name: test_regseq_fold_skip_phys_source
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-PEEPHOLE-LABEL: name: test_regseq_fold_skip_phys_source
+    ; CHECK-PEEPHOLE: liveins: $vgpr0, $vgpr2
+    ; CHECK-PEEPHOLE-NEXT: {{  $}}
+    ; CHECK-PEEPHOLE-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    ; CHECK-PEEPHOLE-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE $vgpr0, %subreg.sub0, [[V_MOV_B32_e32_]], %subreg.sub1
+    ; CHECK-PEEPHOLE-NEXT: [[V_ADD_CO_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_CO_U32_e32 [[REG_SEQUENCE]].sub0, $vgpr2, implicit-def $vcc, implicit $exec
+    ; CHECK-PEEPHOLE-NEXT: S_ENDPGM 0, implicit [[V_ADD_CO_U32_e32_]]
+    ;
+    ; CHECK-FOLD-LABEL: name: test_regseq_fold_skip_phys_source
+    ; CHECK-FOLD: liveins: $vgpr0, $vgpr2
+    ; CHECK-FOLD-NEXT: {{  $}}
+    ; CHECK-FOLD-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    ; CHECK-FOLD-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE $vgpr0, %subreg.sub0, [[V_MOV_B32_e32_]], %subreg.sub1
+    ; CHECK-FOLD-NEXT: [[V_ADD_CO_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_CO_U32_e32 [[REG_SEQUENCE]].sub0, $vgpr2, implicit-def $vcc, implicit $exec
+    ; CHECK-FOLD-NEXT: S_ENDPGM 0, implicit [[V_ADD_CO_U32_e32_]]
+    ; REG_SEQUENCE with physical register source - should NOT optimize
+    liveins: $vgpr0, $vgpr2
+    %0:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    %1:vreg_64 = REG_SEQUENCE $vgpr0, %subreg.sub0, %0, %subreg.sub1
+    %2:vgpr_32 = V_ADD_CO_U32_e32 %1.sub0, $vgpr2, implicit-def $vcc, implicit $exec
+    S_ENDPGM 0, implicit %2
+...
+
 ---
 name: test_regseq_fold_with_subreg_source
 tracksRegLiveness: true
