@@ -2822,9 +2822,10 @@ IGroupLPDAGMutation::invertSchedBarrierMask(SchedGroupMask Mask) const {
   if ((InvertedMask & SchedGroupMask::DS) == SchedGroupMask::NONE)
     InvertedMask &= ~SchedGroupMask::DS_READ & ~SchedGroupMask::DS_WRITE &
                     ~SchedGroupMask::LDSDMA;
-  // DS_READ, DS_WRITE implies DS.
+  // DS_READ, DS_WRITE, LDSDMA implies DS.
   else if ((InvertedMask & SchedGroupMask::DS_READ) == SchedGroupMask::NONE ||
-           (InvertedMask & SchedGroupMask::DS_WRITE) == SchedGroupMask::NONE)
+           (InvertedMask & SchedGroupMask::DS_WRITE) == SchedGroupMask::NONE ||
+           (InvertedMask & SchedGroupMask::LDSDMA) == SchedGroupMask::NONE)
     InvertedMask &= ~SchedGroupMask::DS;
 
   LLVM_DEBUG(dbgs() << "After Inverting, SchedGroup Mask: " << (int)InvertedMask
