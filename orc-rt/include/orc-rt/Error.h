@@ -233,7 +233,7 @@ template <typename RetT, typename ArgT> struct ErrorHandlerTraitsImpl;
 
 // Specialization for Error(ErrT&).
 template <typename ErrT> struct ErrorHandlerTraitsImpl<Error, ErrT &> {
-  static bool appliesTo(const ErrorInfoBase &E) {
+  static bool appliesTo(const ErrorInfoBase &E) noexcept {
     return E.template isA<ErrT>();
   }
   template <typename HandlerT>
@@ -245,7 +245,7 @@ template <typename ErrT> struct ErrorHandlerTraitsImpl<Error, ErrT &> {
 
 // Specialization for void(ErrT&).
 template <typename ErrT> struct ErrorHandlerTraitsImpl<void, ErrT &> {
-  static bool appliesTo(const ErrorInfoBase &E) {
+  static bool appliesTo(const ErrorInfoBase &E) noexcept {
     return E.template isA<ErrT>();
   }
   template <typename HandlerT>
@@ -259,7 +259,7 @@ template <typename ErrT> struct ErrorHandlerTraitsImpl<void, ErrT &> {
 // Specialization for Error(std::unique_ptr<ErrT>).
 template <typename ErrT>
 struct ErrorHandlerTraitsImpl<Error, std::unique_ptr<ErrT>> {
-  static bool appliesTo(const ErrorInfoBase &E) {
+  static bool appliesTo(const ErrorInfoBase &E) noexcept {
     return E.template isA<ErrT>();
   }
   template <typename HandlerT>
@@ -273,7 +273,7 @@ struct ErrorHandlerTraitsImpl<Error, std::unique_ptr<ErrT>> {
 // Specialization for void(std::unique_ptr<ErrT>).
 template <typename ErrT>
 struct ErrorHandlerTraitsImpl<void, std::unique_ptr<ErrT>> {
-  static bool appliesTo(const ErrorInfoBase &E) {
+  static bool appliesTo(const ErrorInfoBase &E) noexcept {
     return E.template isA<ErrT>();
   }
   template <typename HandlerT>
@@ -334,15 +334,15 @@ void handleAllErrors(Error E, HandlerTs &&...Handlers) {
 /// Sets the 'checked' flag on construction, resets it on destruction.
 class ErrorAsOutParameter {
 public:
-  ErrorAsOutParameter(Error *Err) : Err(Err) {
+  ErrorAsOutParameter(Error *Err) noexcept : Err(Err) {
     // Raise the checked bit if Err is success.
     if (Err)
       (void)!!*Err;
   }
 
-  ErrorAsOutParameter(Error &Err) : Err(&Err) { (void)!!Err; }
+  ErrorAsOutParameter(Error &Err) noexcept : Err(&Err) { (void)!!Err; }
 
-  ~ErrorAsOutParameter() {
+  ~ErrorAsOutParameter() noexcept {
     // Clear the checked bit.
     if (Err && !*Err)
       *Err = Error::success();
@@ -373,7 +373,7 @@ template <typename T> class ORC_RT_NODISCARD Expected {
 
 public:
   /// Create an Expected from a failure value.
-  Expected(Error Err) : HasError(true), Unchecked(true) {
+  Expected(Error Err) noexcept : HasError(true), Unchecked(true) {
     assert(Err && "Cannot create Expected<T> from Error success value");
     new (getErrorStorage()) error_type(Err.takePayload());
   }
@@ -564,7 +564,7 @@ inline void consumeError(Error Err) {
 
 /// Consumes success values. It is a programmatic error to call this function
 /// on a failure value.
-inline void cantFail(Error Err) {
+inline void cantFail(Error Err) noexcept {
 #ifndef NDEBUG
   // TODO: Log unhandled error.
   if (Err)
@@ -603,7 +603,7 @@ inline std::string toString(Error Err) noexcept {
 /// Simple string error type.
 class StringError : public ErrorExtends<StringError, ErrorInfoBase> {
 public:
-  StringError(std::string ErrMsg) : ErrMsg(std::move(ErrMsg)) {}
+  StringError(std::string ErrMsg) noexcept : ErrMsg(std::move(ErrMsg)) {}
   std::string toString() const noexcept override { return ErrMsg; }
 
 private:
@@ -615,7 +615,7 @@ private:
 
 class ExceptionError : public ErrorExtends<ExceptionError, ErrorInfoBase> {
 public:
-  ExceptionError(std::exception_ptr E) : E(std::move(E)) {}
+  ExceptionError(std::exception_ptr E) noexcept : E(std::move(E)) {}
   std::string toString() const noexcept override;
   void throwAsException() override { std::rethrow_exception(E); }
 
