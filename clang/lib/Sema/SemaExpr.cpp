@@ -18691,8 +18691,7 @@ static ExprResult convertHalfVecBinOp(Sema &S, ExprResult LHS, ExprResult RHS,
 /// is needed.
 static bool needsConversionOfHalfVec(bool OpRequiresConversion, ASTContext &Ctx,
                                      Expr *E0, Expr *E1 = nullptr) {
-  if (!OpRequiresConversion || Ctx.getLangOpts().NativeHalfType ||
-      Ctx.getTargetInfo().useFP16ConversionIntrinsics())
+  if (!OpRequiresConversion || Ctx.getLangOpts().NativeHalfType)
     return false;
 
   auto HasVectorOfHalfType = [&Ctx](Expr *E) {
