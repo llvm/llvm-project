@@ -1456,8 +1456,7 @@ public:
     return true;
   }
 
-  /// Validate feature name for target_clones attribute (subset with runtime
-  /// detection) Default implementation delegates to isValidFeatureName
+  /// Does this TargetInfo support the given feature on target_clones?
   virtual bool isValidClonesFeatureName(StringRef Feature) const {
     return isValidFeatureName(Feature);
   }
