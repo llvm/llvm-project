@@ -3059,7 +3059,7 @@ void CodeGenFunction::EmitPPCAIXMultiVersionResolver(
       // Map feature names to __builtin_cpu_supports() strings
       BuiltinCpuSupportsArg =
           llvm::StringSwitch<StringRef>(BaseFeature)
-#define PPC_AIX_CLONES_FEATURE(FEATURE_NAME, AIX_BUILTIN_CPU_SUPPORTS_NAME)    \
+#define PPC_AIX_CLONES_FEATURE(FEATURE_NAME, AIX_BUILTIN_CPU_SUPPORTS_NAME, _)    \
   .Case(FEATURE_NAME, AIX_BUILTIN_CPU_SUPPORTS_NAME)
 #include "llvm/TargetParser/PPCTargetParser.def"
               // Features without runtime checks return empty string
@@ -3070,6 +3070,8 @@ void CodeGenFunction::EmitPPCAIXMultiVersionResolver(
              "feature without runtime detection should have been rejected in "
              "Sema");
     }
+
+    assert(getContext().getTargetInfo().validateCpuSupports(BuiltinCpuSupportsArg));
 
     llvm::Value *Condition =
         EmitPPCBuiltinCpu(Builtin::BI__builtin_cpu_supports,
