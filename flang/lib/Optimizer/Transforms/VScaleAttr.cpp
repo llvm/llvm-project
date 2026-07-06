@@ -27,7 +27,6 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
-
 namespace fir {
 #define GEN_PASS_DEF_VSCALEATTR
 #include "flang/Optimizer/Transforms/Passes.h.inc"

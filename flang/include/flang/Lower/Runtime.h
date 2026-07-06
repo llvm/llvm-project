@@ -16,7 +16,6 @@
 #ifndef FORTRAN_LOWER_RUNTIME_H
 #define FORTRAN_LOWER_RUNTIME_H
 
-
 namespace mlir {
 class Location;
 class Value;
