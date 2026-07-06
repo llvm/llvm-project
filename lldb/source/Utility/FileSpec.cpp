@@ -292,16 +292,16 @@ int FileSpec::Compare(const FileSpec &a, const FileSpec &b, bool full) {
 }
 
 bool FileSpec::Equal(const FileSpec &a, const FileSpec &b, bool full) {
-  if (full || (a.GetDirectory() && b.GetDirectory()))
+  if (full || (!a.GetDirectory().empty() && !b.GetDirectory().empty()))
     return a == b;
 
   return a.FileEquals(b);
 }
 
 bool FileSpec::Match(const FileSpec &pattern, const FileSpec &file) {
-  if (pattern.GetDirectory())
+  if (!pattern.GetDirectory().empty())
     return pattern == file;
-  if (pattern.GetFilename())
+  if (!pattern.GetFilename().empty())
     return pattern.FileEquals(file);
   return true;
 }
@@ -532,8 +532,8 @@ void llvm::format_provider<FileSpec>::format(const FileSpec &F,
           Style.equals_insensitive("D")) &&
          "Invalid FileSpec style!");
 
-  StringRef dir = F.GetDirectory().GetStringRef();
-  StringRef file = F.GetFilename().GetStringRef();
+  StringRef dir = F.GetDirectory();
+  StringRef file = F.GetFilename();
 
   if (dir.empty() && file.empty()) {
     Stream << "(empty)";
