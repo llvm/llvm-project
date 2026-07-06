@@ -111,8 +111,6 @@ public:
   bool GetWarningsToolchainMismatch() const;
 #endif
   bool GetStopOnExec() const;
-  bool GetStopOnFork() const;
-  bool GetStopOnVFork() const;
   std::chrono::seconds GetUtilityExpressionTimeout() const;
   std::chrono::seconds GetInterruptTimeout() const;
   bool GetOSPluginReportsAllThreads() const;
