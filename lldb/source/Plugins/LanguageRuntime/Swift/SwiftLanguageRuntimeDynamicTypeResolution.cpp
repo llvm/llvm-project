@@ -2030,15 +2030,82 @@ SwiftLanguageRuntime::BindGenericPackType(StackFrame &frame,
                               swift::Mangle::ManglingFlavor flavor)
       -> llvm::Expected<swift::Demangle::NodePointer> {
     // Find pack_type in the pack_expansions.
-    unsigned i = 0;
+    //
+    // Try comparing the full mangled pattern string first. It's fast
+    // and can also match when the pack expansion has been substituted
+    // to a concrete pattern with no remaining generic parameter to
+    // derive a shape from.
+    unsigned pack_count_index = 0;
     SwiftLanguageRuntime::GenericSignature::PackExpansion *pack_expansion =
         nullptr;
-    for (auto &pe : signature->pack_expansions) {
+    for (auto [idx, pe] : llvm::enumerate(signature->pack_expansions)) {
       if (pe.mangled_type == mangled_pack_type) {
         pack_expansion = &pe;
+        pack_count_index = idx;
         break;
       }
-      ++i;
+    }
+    // Now match by shape. The pattern of a pack expansion in the
+    // variable's type can differ from its pattern in the function
+    // signature (for example, the function takes `repeat (each
+    // T).Type` while the variable uses `Pack{repeat each T}`).
+    swift::Demangle::NodePointer dem_pack_type =
+        dem.demangleSymbol(mangled_pack_type.GetStringRef());
+    if (!dem_pack_type)
+      return llvm::createStringError(
+          "cannot decode pack_expansion type: failed to demangle \"%s\"",
+          mangled_pack_type.GetCString());
+    if (!pack_expansion) {
+      std::optional<std::pair<unsigned, unsigned>> shape;
+
+      // Descend to the first pack expansion and read its shape from the
+      // generic parameters in its pattern (the last child).
+      auto find_shape = [&](swift::Demangle::NodePointer n) {
+        if (shape)
+          return false;
+        if (n->getKind() != swift::Demangle::Node::Kind::PackExpansion)
+          return true;
+        if (n->getNumChildren() != 2)
+          return false;
+        ForEachGenericParameter(n->getLastChild(),
+                                [&](unsigned depth, unsigned index) {
+                                  if (!shape)
+                                    shape = {depth, index};
+                                });
+        return false;
+      };
+
+      llvm::cantFail(
+          TypeSystemSwiftTypeRef::PreOrderTraversal(dem_pack_type, find_shape));
+      if (shape) {
+        auto [shape_depth, shape_index] = *shape;
+        for (auto [idx, pe] : llvm::enumerate(signature->pack_expansions)) {
+          assert(pe.shape < signature->generic_params.size() &&
+                 "pack expansion shape index out of range");
+          const auto &shape_param = signature->generic_params[pe.shape];
+          if (shape_param.depth == shape_depth &&
+              shape_param.index == shape_index) {
+            pack_expansion = &pe;
+            pack_count_index = idx;
+            break;
+          }
+          // Honor same-shape requirements: a pack expansion whose shape
+          // parameter shares its same_shape group with the requested
+          // (depth, index) describes the same count and type-pack metadata.
+          for (unsigned p : shape_param.same_shape.set_bits()) {
+            assert(p < signature->generic_params.size() &&
+                   "same_shape bit out of range");
+            const auto &sib = signature->generic_params[p];
+            if (sib.depth == shape_depth && sib.index == shape_index) {
+              pack_expansion = &pe;
+              pack_count_index = idx;
+              break;
+            }
+          }
+          if (pack_expansion)
+            break;
+        }
+      }
     }
     if (!pack_expansion)
       return llvm::createStringError(
@@ -2048,7 +2115,7 @@ SwiftLanguageRuntime::BindGenericPackType(StackFrame &frame,
     // Extract the count.
     llvm::SmallString<16> buf;
     llvm::raw_svector_ostream os(buf);
-    os << "$pack_count_" << signature->GetCountForValuePack(i);
+    os << "$pack_count_" << signature->GetCountForValuePack(pack_count_index);
     StringRef count_var = os.str();
     std::optional<lldb::addr_t> count =
         GetTypeMetadataForTypeNameAndFrame(count_var, frame);
@@ -2060,8 +2127,6 @@ SwiftLanguageRuntime::BindGenericPackType(StackFrame &frame,
 
     // Extract the metadata for the type packs in this value pack.
     llvm::SmallDenseMap<std::pair<unsigned, unsigned>, lldb::addr_t> type_packs;
-    swift::Demangle::NodePointer dem_pack_type =
-        dem.demangleSymbol(mangled_pack_type.GetStringRef());
     auto shape = signature->generic_params[pack_expansion->shape];
     // Filter out all type packs in this value pack.
     bool error = false;
@@ -2076,7 +2141,7 @@ SwiftLanguageRuntime::BindGenericPackType(StackFrame &frame,
         if (generic_param.depth == depth && generic_param.index == index) {
           llvm::SmallString<16> buf;
           llvm::raw_svector_ostream os(buf);
-          os << u8"$\u03C4_" << shape.depth << '_' << shape.index;
+          os << u8"$\u03C4_" << depth << '_' << index;
           StringRef mds_var = os.str();
           std::optional<lldb::addr_t> mds_ptr =
               GetTypeMetadataForTypeNameAndFrame(mds_var, frame);
