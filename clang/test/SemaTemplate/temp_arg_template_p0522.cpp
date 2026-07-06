@@ -175,3 +175,13 @@ namespace GH181166 {
   template <class ...Ts> struct B {};
   using T = decltype(f<B>());
 } // namespace GH181166
+
+namespace CWG2398_DependentNonType {
+  template<typename T, T V> struct my_constant {}; 
+  template <template<typename U, int> class Constant> void f(Constant<int, 1>); 
+  using go = decltype(f(my_constant<int, 1>()));
+
+  template<typename T, int V> struct my_constant2 {}; 
+  template <template<typename U, U> class Constant> void f2(Constant<int, 1>); 
+  using go2 = decltype(f2(my_constant2<int, 1>()));
+}

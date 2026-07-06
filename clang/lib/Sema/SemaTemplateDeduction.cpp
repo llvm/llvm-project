@@ -1833,10 +1833,20 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
     }
   }
 
+  // In the context of partial ordering (where TDF_SkipNonDependent is set),
+  // we may be matching a dependent parameter type (like `T` from `template<typename T, T V>`)
+  // against a non-dependent argument type (like `int` from `template<typename U, int>`).
+  // If we try to deduce `T` from `int`, we'll incorrectly deduce `T = int`, which
+  // conflicts with the deduction of `T = U` from the type parameter. By skipping 
+  // deduction when either type is non-dependent, we prevent this spurious conflict 
+  // and allow CheckTemplateArgumentList to perform the final validity check.
+  if (TDF & TDF_SkipNonDependent) {
+    if (!P->isDependentType() || !A->isDependentType())
+      return TemplateDeductionResult::Success;
+  }
+
   // If the parameter type is not dependent, there is nothing to deduce.
   if (!P->isDependentType()) {
-    if (TDF & TDF_SkipNonDependent)
-      return TemplateDeductionResult::Success;
     if ((TDF & TDF_IgnoreQualifiers) ? S.Context.hasSameUnqualifiedType(P, A)
                                      : S.Context.hasSameType(P, A))
       return TemplateDeductionResult::Success;
