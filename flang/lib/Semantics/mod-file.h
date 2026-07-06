@@ -52,8 +52,6 @@ private:
   std::string containsBuf_;
   // Tracks nested DEC structures and fields of that type
   UnorderedSymbolSet emittedDECStructures_, emittedDECFields_;
-  // Tracks enumerator PARAMETER symbols emitted within ENUMERATION TYPE blocks
-  UnorderedSymbolSet emittedEnumerators_;
   UnorderedSymbolSet usedNonIntrinsicModules_;
   // Modules already re-exported by a plain USE for an operator-less declare
   // reduction, so the USE is written once even when several such reductions

@@ -82,3 +82,41 @@ end
 !use m1,only:blue
 !use m1,only:c
 !end
+
+! Accessibility statement for an enumerator appearing BEFORE the enumeration
+! type definition. The enumerator must still be emitted only inside the
+! ENUMERATION TYPE block (never as a standalone forward-referencing PARAMETER),
+! regardless of the earlier source position of the accessibility statement.
+module m6
+  private :: green
+  enumeration type :: color
+    enumerator :: red, green, blue
+  end enumeration type
+end
+
+!Expect: m6.mod
+!module m6
+!enumeration type::color
+!enumerator::red,green,blue
+!end enumeration type
+!private::green
+!end
+
+! Accessibility statement for the enumeration type NAME appearing BEFORE its
+! definition (valid Fortran; distinct from the C7116 forward-reference
+! prohibition, which only concerns enumeration-type-specs). The type block
+! must be emitted correctly and no enumerator may leak out ahead of it.
+module m7
+  private :: color
+  enumeration type :: color
+    enumerator :: red, green, blue
+  end enumeration type
+end
+
+!Expect: m7.mod
+!module m7
+!enumeration type,private::color
+!enumerator::red,green,blue
+!end enumeration type
+!end
+

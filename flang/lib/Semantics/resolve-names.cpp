@@ -6520,6 +6520,7 @@ bool DeclarationVisitor::Pre(const parser::EnumerationEnumeratorStmt &x) {
         MakeSymbol(enclosingScope, name.source, Attrs{Attr::PARAMETER})};
     Resolve(name, enumerator);
     enumerator.set_details(ObjectEntityDetails{});
+    enumerator.set(Symbol::Flag::EnumeratorParameter);
     enumerator.SetType(declType);
     // Store the init as a StructureConstructor of the enumeration type with
     // the ordinal in the hidden __ordinal component.  This gives each

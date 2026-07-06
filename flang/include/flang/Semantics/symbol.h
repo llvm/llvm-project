@@ -927,6 +927,11 @@ public:
       // For compiler created symbols that are constant but cannot legally have
       // the PARAMETER attribute.
       ReadOnly,
+      // A named constant created by an ENUMERATOR statement within an
+      // ENUMERATION TYPE definition (F2023 R768).  Distinguishes the intrinsic
+      // enumerators of an enumeration type from user-declared PARAMETERs of
+      // that type.
+      EnumeratorParameter,
       // OpenACC data-sharing attribute
       AccPrivate, AccFirstPrivate, AccShared,
       // OpenACC data-mapping attribute

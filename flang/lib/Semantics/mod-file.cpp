@@ -709,26 +709,22 @@ void ModFileWriter::PutEnumerationType(const Symbol &typeSymbol) {
   auto &details{typeSymbol.get<DerivedTypeDetails>()};
   PutAttrs(decls_ << "enumeration type", typeSymbol.attrs());
   decls_ << "::" << typeSymbol.name() << '\n';
-  // Collect enumerator PARAMETER symbols from the enclosing scope that have
-  // this enumeration type, sorted by ordinal value. Only the first
-  // enumeratorCount PARAMETERs (by ordinal) are true enumerators created by
-  // the ENUMERATOR statement; any additional PARAMETERs of this type are
-  // user-declared and should not be included here.
+  // Collect the enumerator PARAMETER symbols of this enumeration type from the
+  // enclosing scope, sorted by ordinal value.  The intrinsic enumerators
+  // created by the ENUMERATOR statement carry Symbol::Flag::EnumeratorParameter,
+  // which distinguishes them from user-declared PARAMETERs of the same
+  // enumeration type; only the flagged symbols are listed here and suppressed
+  // from standalone emission.
   struct EnumeratorInfo {
     SourceName name;
     const Symbol *sym{nullptr};
     int ordinal{0};
   };
-  // GetSymbols() returns symbols in source-position order. The real
-  // enumerators are created inside the ENUMERATION TYPE block and appear
-  // before any user-declared PARAMETERs of the same type. For each ordinal
-  // 1..N, take only the first PARAMETER seen (by source order) — that is
-  // the real enumerator.
   int count{details.enumeratorCount()};
   std::vector<EnumeratorInfo> enumerators(count); // indexed by ordinal-1
   std::vector<bool> filled(count, false);
   for (const auto &ref : typeSymbol.owner().GetSymbols()) {
-    if (ref->attrs().test(Attr::PARAMETER)) {
+    if (ref->test(Symbol::Flag::EnumeratorParameter)) {
       if (const auto *obj{ref->detailsIf<ObjectEntityDetails>()}) {
         if (obj->type() &&
             obj->type()->category() == DeclTypeSpec::TypeDerived &&
@@ -751,7 +747,6 @@ void ModFileWriter::PutEnumerationType(const Symbol &typeSymbol) {
           if (ordinal >= 1 && ordinal <= count && !filled[ordinal - 1]) {
             enumerators[ordinal - 1] = {ref->name(), &*ref, ordinal};
             filled[ordinal - 1] = true;
-            emittedEnumerators_.insert(*ref);
           }
         }
       }
@@ -1223,7 +1218,11 @@ void ModFileWriter::PutObjectEntity(
     }
     // Enumerator PARAMETERs are emitted as part of the ENUMERATION TYPE
     // block — suppress standalone emission to avoid duplicates on USE.
-    if (emittedEnumerators_.find(symbol) != emittedEnumerators_.end()) {
+    // Keyed on Symbol::Flag::EnumeratorParameter so this is independent of
+    // whether the enumeration type block has already been emitted (the
+    // enumerator may sort before its type, e.g. when an accessibility
+    // statement precedes the ENUMERATION TYPE definition).
+    if (symbol.test(Symbol::Flag::EnumeratorParameter)) {
       return;
     }
   }
