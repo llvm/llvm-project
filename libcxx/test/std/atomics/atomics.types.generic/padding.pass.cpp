@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: c++03
 
 // atomic_init is deprecated
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
@@ -24,8 +24,7 @@ struct Foo {
   char c;
 };
 
-static_assert(!std::has_unique_object_representations_v<Foo>);
-static_assert(sizeof(Foo) > sizeof(int) + sizeof(char));
+static_assert(sizeof(Foo) > sizeof(int) + sizeof(char), "");
 
 Foo make_foo(int i, char c, unsigned char pad_byte) {
   Foo f;

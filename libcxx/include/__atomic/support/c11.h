@@ -9,8 +9,8 @@
 #ifndef _LIBCPP___ATOMIC_SUPPORT_C11_H
 #define _LIBCPP___ATOMIC_SUPPORT_C11_H
 
+#include <__atomic/clear_padding.h>
 #include <__atomic/memory_order.h>
-#include <__atomic/support/common.h>
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
 #include <__memory/addressof.h>
@@ -30,29 +30,14 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <typename _Tp>
 struct __cxx_atomic_base_impl {
-  _LIBCPP_HIDE_FROM_ABI
-#ifndef _LIBCPP_CXX03_LANG
-  __cxx_atomic_base_impl() _NOEXCEPT = default;
-
-#  if _LIBCPP_STD_VER >= 20 && __has_builtin(__builtin_clear_padding)
-  __cxx_atomic_base_impl() noexcept
-    requires __needs_clear_padding<_Tp>::value
-      : __a_value() {
-    if (!__builtin_is_constant_evaluated()) {
-      __builtin_clear_padding(__a_value);
-    }
-  }
-#  endif // _LIBCPP_STD_VER >= 20 && __has_builtin(__builtin_clear_padding)
-
-#else
-  __cxx_atomic_base_impl() _NOEXCEPT : __a_value() {
-  }
-#endif // _LIBCPP_CXX03_LANG
-  _LIBCPP_CONSTEXPR explicit __cxx_atomic_base_impl(_Tp __value) _NOEXCEPT : __a_value(__value) {
-#if _LIBCPP_STD_VER >= 20 && __has_builtin(__builtin_clear_padding)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __cxx_atomic_base_impl() _NOEXCEPT : __a_value() {
     std::__clear_padding_if_needed(__a_value);
-#endif
   }
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __cxx_atomic_base_impl(_Tp __value) _NOEXCEPT : __a_value(__value) {
+    std::__clear_padding_if_needed(__a_value);
+  }
+
   _Atomic(_Tp) __a_value;
 };
 

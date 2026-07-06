@@ -9,8 +9,8 @@
 #ifndef _LIBCPP___ATOMIC_SUPPORT_GCC_H
 #define _LIBCPP___ATOMIC_SUPPORT_GCC_H
 
+#include <__atomic/clear_padding.h>
 #include <__atomic/memory_order.h>
-#include <__atomic/support/common.h>
 #include <__atomic/to_gcc_order.h>
 #include <__config>
 #include <__memory/addressof.h>
@@ -46,23 +46,9 @@ _LIBCPP_HIDE_FROM_ABI void __cxx_atomic_assign_volatile(_Tp volatile& __a_value,
 
 template <typename _Tp>
 struct __cxx_atomic_base_impl {
-  _LIBCPP_HIDE_FROM_ABI
-#ifndef _LIBCPP_CXX03_LANG
-  __cxx_atomic_base_impl() _NOEXCEPT = default;
+  _LIBCPP_HIDE_FROM_ABI __cxx_atomic_base_impl() _NOEXCEPT : __a_value() { std::__clear_padding_if_needed(__a_value); }
 
-#  if _LIBCPP_STD_VER >= 20 && __has_builtin(__builtin_clear_padding)
-  __cxx_atomic_base_impl() noexcept
-    requires __needs_clear_padding<_Tp>::value
-      : __a_value() {
-    if (!__builtin_is_constant_evaluated()) {
-      __builtin_clear_padding(__a_value);
-    }
-  }
-#  endif // _LIBCPP_STD_VER >= 20 && __has_builtin(__builtin_clear_padding)
-#else
-  __cxx_atomic_base_impl() _NOEXCEPT : __a_value() {
-  }
-#endif // _LIBCPP_CXX03_LANG
+  _LIBCPP_HIDE_FROM_ABI
   _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __cxx_atomic_base_impl(_Tp __value) _NOEXCEPT : __a_value(__value) {
     std::__clear_padding_if_needed(__a_value);
   }

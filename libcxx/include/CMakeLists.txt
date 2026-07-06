@@ -219,6 +219,7 @@ set(files
   __atomic/atomic_sync_timed.h
   __atomic/atomic_waitable_traits.h
   __atomic/check_memory_order.h
+  __atomic/clear_padding.h
   __atomic/contention_t.h
   __atomic/fence.h
   __atomic/floating_point_helper.h
@@ -227,7 +228,6 @@ set(files
   __atomic/memory_order.h
   __atomic/support.h
   __atomic/support/c11.h
-  __atomic/support/common.h
   __atomic/support/gcc.h
   __atomic/to_gcc_order.h
   __bit/bit_cast.h
