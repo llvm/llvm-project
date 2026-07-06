@@ -18,11 +18,11 @@ import yaml
 
 from dex.test_script.Nodes import (
     Expect,
+    ExpectAll,
     FileLabels,
     Label,
     Where,
     Then,
-    ValueAll,
     Step,
     setup_yaml_parser,
 )
@@ -184,13 +184,11 @@ class DexterScript:
 
     def _validate(self):
         def validate_expect(expect: Expect, expected_value, scope: Scope):
-            if isinstance(expect, ValueAll) and expected_value is not None:
+            if isinstance(expect, ExpectAll) and expected_value is not None:
                 raise DexterScriptError(
                     f"!expect/all node {expect} should not have an expected value."
                 )
-            if isinstance(expect, Step):
-                if expected_value is None:
-                    raise DexterScriptError(f"rewriting !step nodes not yet supported.")
+            if isinstance(expect, Step) and expected_value is not None:
                 if not (
                     isinstance(expected_value, list)
                     and all(isinstance(l, (int, Label)) for l in expected_value)
