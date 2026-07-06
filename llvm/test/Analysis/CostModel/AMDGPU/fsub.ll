@@ -30,6 +30,16 @@ define amdgpu_kernel void @fsub_f32() #0 {
 ; NOPACKEDF32-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %v9f32 = fsub <9 x float> poison, poison
 ; NOPACKEDF32-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
+; GFX1250-LABEL: 'fsub_f32'
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f32 = fsub float poison, poison
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f32 = fsub <2 x float> poison, poison
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3f32 = fsub <3 x float> poison, poison
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f32 = fsub <4 x float> poison, poison
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v5f32 = fsub <5 x float> poison, poison
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v8f32 = fsub <8 x float> poison, poison
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v9f32 = fsub <9 x float> poison, poison
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
 ; GFX90A-FASTF64-SIZE-LABEL: 'fsub_f32'
 ; GFX90A-FASTF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f32 = fsub float poison, poison
 ; GFX90A-FASTF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f32 = fsub <2 x float> poison, poison
@@ -85,6 +95,14 @@ define amdgpu_kernel void @fsub_f64() #0 {
 ; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v5f64 = fsub <5 x double> poison, poison
 ; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
+; GFX1250-LABEL: 'fsub_f64'
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %f64 = fsub double poison, poison
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f64 = fsub <2 x double> poison, poison
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v3f64 = fsub <3 x double> poison, poison
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f64 = fsub <4 x double> poison, poison
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v5f64 = fsub <5 x double> poison, poison
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
 ; GFX90A-FASTF64-SIZE-LABEL: 'fsub_f64'
 ; GFX90A-FASTF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f64 = fsub double poison, poison
 ; GFX90A-FASTF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f64 = fsub <2 x double> poison, poison
@@ -130,6 +148,16 @@ define amdgpu_kernel void @fsub_f16() #0 {
 ; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v17f16 = fsub <17 x half> poison, poison
 ; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
+; GFX1250-LABEL: 'fsub_f16'
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = fsub half poison, poison
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16 = fsub <2 x half> poison, poison
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3f16 = fsub <3 x half> poison, poison
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f16 = fsub <4 x half> poison, poison
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v5f16 = fsub <5 x half> poison, poison
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16f16 = fsub <16 x half> poison, poison
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v17f16 = fsub <17 x half> poison, poison
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
 ; FASTF16-SIZE-LABEL: 'fsub_f16'
 ; FASTF16-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = fsub half poison, poison
 ; FASTF16-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16 = fsub <2 x half> poison, poison
@@ -161,6 +189,26 @@ define amdgpu_kernel void @fsub_f16() #0 {
 }
 
 define amdgpu_kernel void @fsub_bf16() #0 {
+; FASTF16-LABEL: 'fsub_bf16'
+; FASTF16-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = fsub bfloat poison, poison
+; FASTF16-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2bf16 = fsub <2 x bfloat> poison, poison
+; FASTF16-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v3bf16 = fsub <3 x bfloat> poison, poison
+; FASTF16-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4bf16 = fsub <4 x bfloat> poison, poison
+; FASTF16-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v5bf16 = fsub <5 x bfloat> poison, poison
+; FASTF16-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16bf16 = fsub <16 x bfloat> poison, poison
+; FASTF16-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v17bf16 = fsub <17 x bfloat> poison, poison
+; FASTF16-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
+; SLOWF64-LABEL: 'fsub_bf16'
+; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = fsub bfloat poison, poison
+; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2bf16 = fsub <2 x bfloat> poison, poison
+; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v3bf16 = fsub <3 x bfloat> poison, poison
+; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4bf16 = fsub <4 x bfloat> poison, poison
+; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v5bf16 = fsub <5 x bfloat> poison, poison
+; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16bf16 = fsub <16 x bfloat> poison, poison
+; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v17bf16 = fsub <17 x bfloat> poison, poison
+; SLOWF64-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+;
 ; GFX1250-LABEL: 'fsub_bf16'
 ; GFX1250-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = fsub bfloat poison, poison
 ; GFX1250-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2bf16 = fsub <2 x bfloat> poison, poison
@@ -171,6 +219,26 @@ define amdgpu_kernel void @fsub_bf16() #0 {
 ; GFX1250-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v17bf16 = fsub <17 x bfloat> poison, poison
 ; GFX1250-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
+; FASTF16-SIZE-LABEL: 'fsub_bf16'
+; FASTF16-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = fsub bfloat poison, poison
+; FASTF16-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2bf16 = fsub <2 x bfloat> poison, poison
+; FASTF16-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v3bf16 = fsub <3 x bfloat> poison, poison
+; FASTF16-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4bf16 = fsub <4 x bfloat> poison, poison
+; FASTF16-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v5bf16 = fsub <5 x bfloat> poison, poison
+; FASTF16-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16bf16 = fsub <16 x bfloat> poison, poison
+; FASTF16-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v17bf16 = fsub <17 x bfloat> poison, poison
+; FASTF16-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; SLOWF64-SIZE-LABEL: 'fsub_bf16'
+; SLOWF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = fsub bfloat poison, poison
+; SLOWF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2bf16 = fsub <2 x bfloat> poison, poison
+; SLOWF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v3bf16 = fsub <3 x bfloat> poison, poison
+; SLOWF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4bf16 = fsub <4 x bfloat> poison, poison
+; SLOWF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v5bf16 = fsub <5 x bfloat> poison, poison
+; SLOWF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16bf16 = fsub <16 x bfloat> poison, poison
+; SLOWF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v17bf16 = fsub <17 x bfloat> poison, poison
+; SLOWF64-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
 ; GFX1250-SIZE-LABEL: 'fsub_bf16'
 ; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bf16 = fsub bfloat poison, poison
 ; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2bf16 = fsub <2 x bfloat> poison, poison
@@ -180,7 +248,6 @@ define amdgpu_kernel void @fsub_bf16() #0 {
 ; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16bf16 = fsub <16 x bfloat> poison, poison
 ; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v17bf16 = fsub <17 x bfloat> poison, poison
 ; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
-;
   %bf16 = fsub bfloat poison, poison
   %v2bf16 = fsub <2 x bfloat> poison, poison
   %v3bf16 = fsub <3 x bfloat> poison, poison

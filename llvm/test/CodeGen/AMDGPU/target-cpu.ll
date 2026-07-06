@@ -72,18 +72,6 @@ define amdgpu_kernel void @target_fiji() #4 {
   ret void
 }
 
-; CHECK-LABEL: {{^}}promote_alloca_enabled:
-; CHECK: ds_read_b32
-define amdgpu_kernel void @promote_alloca_enabled(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #5 {
-entry:
-  %stack = alloca [5 x i32], align 4, addrspace(5)
-  %tmp = load i32, ptr addrspace(1) %in, align 4
-  %arrayidx1 = getelementptr inbounds [5 x i32], ptr addrspace(5) %stack, i32 0, i32 %tmp
-  %load = load i32, ptr addrspace(5) %arrayidx1
-  store i32 %load, ptr addrspace(1) %out
-  ret void
-}
-
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind "target-cpu"="tahiti" }

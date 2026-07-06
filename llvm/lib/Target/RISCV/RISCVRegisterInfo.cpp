@@ -827,11 +827,15 @@ Register RISCVRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
 bool RISCVRegisterInfo::isArgumentRegister(const MachineFunction &MF,
                                            MCRegister Reg) const {
   auto const &STI = MF.getSubtarget<RISCVSubtarget>();
-  if (!STI.getRegisterInfo()->isGeneralPurposeRegister(MF, Reg))
-    llvm::reportFatalInternalError(
-        "isArgumentRegister is not implemented for non-GPR registers");
+  const RISCVRegisterInfo *TRI = STI.getRegisterInfo();
 
-  return llvm::is_contained(RISCV::getArgGPRs(STI.getTargetABI()), Reg);
+  if (TRI->isGeneralPurposeRegister(MF, Reg))
+    return llvm::is_contained(RISCV::getArgGPRs(STI), Reg);
+
+  if (TRI->isFPRegister(Reg))
+    return llvm::is_contained(RISCV::getArgFPRs(STI), Reg);
+
+  return false;
 }
 
 StringRef RISCVRegisterInfo::getRegAsmName(MCRegister Reg) const {

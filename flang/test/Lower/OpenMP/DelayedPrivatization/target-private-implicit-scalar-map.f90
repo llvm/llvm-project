@@ -1,7 +1,7 @@
 ! Tests delayed privatization works for implicit capture of scalars similarly to
 ! the way it works for explicitly firstprivitized scalars.
 
-! RUN: %flang_fc1 -emit-mlir -fopenmp \
+! RUN: %flang_fc1 -emit-mlir -fopenmp -mmlir --enable-delayed-privatization-staging \
 ! RUN:   -o - %s 2>&1 | FileCheck %s
 
 ! CHECK-LABEL:   omp.private {type = firstprivate} @_QFExdgfx_firstprivate_i32 : i32 copy {

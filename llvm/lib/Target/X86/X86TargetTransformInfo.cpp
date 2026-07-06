@@ -233,7 +233,8 @@ unsigned X86TTIImpl::getLoadStoreVecRegBitWidth(unsigned) const {
       .getFixedValue();
 }
 
-unsigned X86TTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
+unsigned X86TTIImpl::getMaxInterleaveFactor(ElementCount VF,
+                                            bool HasUnorderedReductions) const {
   // If the loop will not be vectorized, don't interleave the loop.
   // Let regular unroll to unroll the loop, which saves the overflow
   // check and memory check cost.
@@ -2242,10 +2243,6 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       {TTI::SK_Reverse, MVT::v8f16, {1, 2, 1, 2}}, // pshufb
       {TTI::SK_Reverse, MVT::v16i8, {1, 2, 1, 2}}, // pshufb
 
-      {TTI::SK_Select, MVT::v8i16, {3, 3, 3, 3}}, // 2*pshufb + por
-      {TTI::SK_Select, MVT::v8f16, {3, 3, 3, 3}}, // 2*pshufb + por
-      {TTI::SK_Select, MVT::v16i8, {3, 3, 3, 3}}, // 2*pshufb + por
-
       {TTI::SK_Splice, MVT::v4i32, {1, 1, 1, 1}}, // palignr
       {TTI::SK_Splice, MVT::v4f32, {1, 1, 1, 1}}, // palignr
       {TTI::SK_Splice, MVT::v8i16, {1, 1, 1, 1}}, // palignr
@@ -2285,9 +2282,9 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       {TTI::SK_Select, MVT::v2i64, {1, 1, 1, 1}}, // movsd
       {TTI::SK_Select, MVT::v2f64, {1, 1, 1, 1}}, // movsd
       {TTI::SK_Select, MVT::v4i32, {2, 2, 2, 2}}, // 2*shufps
-      {TTI::SK_Select, MVT::v8i16, {3, 3, 3, 3}}, // pand + pandn + por
-      {TTI::SK_Select, MVT::v8f16, {3, 3, 3, 3}}, // pand + pandn + por
-      {TTI::SK_Select, MVT::v16i8, {3, 3, 3, 3}}, // pand + pandn + por
+      {TTI::SK_Select, MVT::v8i16, {2, 2, 3, 3}}, // pand + pandn + por
+      {TTI::SK_Select, MVT::v8f16, {2, 2, 3, 3}}, // pand + pandn + por
+      {TTI::SK_Select, MVT::v16i8, {2, 2, 3, 3}}, // pand + pandn + por
 
       {TTI::SK_Splice, MVT::v2i64, {1, 1, 1, 1}}, // shufpd
       {TTI::SK_Splice, MVT::v2f64, {1, 1, 1, 1}}, // shufpd
@@ -5670,6 +5667,18 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     { ISD::ADD,   MVT::v32i8,   4 },
   };
 
+  static const CostTblEntry AVX512FCostTbl[] = {
+    { ISD::FADD,  MVT::v8f64,   4 },
+    { ISD::FADD,  MVT::v16f32,  5 },
+    { ISD::ADD,   MVT::v8i64,   4 },
+    { ISD::ADD,   MVT::v16i32,  6 },
+  };
+
+  static const CostTblEntry AVX512BWCostTbl[] = {
+    { ISD::ADD,   MVT::v32i16,  7 },
+    { ISD::ADD,   MVT::v64i8,   4 },
+  };
+
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
@@ -5681,6 +5690,14 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     MVT MTy = VT.getSimpleVT();
     if (ST->useSLMArithCosts())
       if (const auto *Entry = CostTableLookup(SLMCostTbl, ISD, MTy))
+        return Entry->Cost;
+
+    if (ST->hasBWI())
+      if (const auto *Entry = CostTableLookup(AVX512BWCostTbl, ISD, MTy))
+        return Entry->Cost;
+
+    if (ST->hasAVX512())
+      if (const auto *Entry = CostTableLookup(AVX512FCostTbl, ISD, MTy))
         return Entry->Cost;
 
     if (ST->hasAVX())
@@ -6834,6 +6851,7 @@ bool X86TTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   switch (II->getIntrinsicID()) {
   default:
     return true;
+  case Intrinsic::vector_reduce_mul:
   case Intrinsic::vector_reduce_smax:
   case Intrinsic::vector_reduce_smin:
   case Intrinsic::vector_reduce_umax:

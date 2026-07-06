@@ -1561,13 +1561,68 @@ bb21:                                             ; preds = %bb10
           to label %common.ret unwind label %bb16
 }
 
+; NOSORT-LABEL: nested_cleanup_unwind_to_caller:
+; NOSORT:      block     exnref
+; NOSORT:        try_table    (catch_all_ref 0)             # 0: down to label[[L0:[0-9]+]]
+; NOSORT:          block     exnref
+; NOSORT:            block     exnref
+; NOSORT:              try_table    (catch_all_ref 0)       # 0: down to label[[L1:[0-9]+]]
+; NOSORT:                call  throwing_func
+; NOSORT:                try_table    (catch_all_ref 2)     # 2: down to label[[L2:[0-9]+]]
+; NOSORT:                  call  throwing_func
+; NOSORT:                end_try_table
+; NOSORT:                try_table    (catch_all_ref 5)     # 5: down to label[[L4:[0-9]+]]
+; NOSORT:                  call  cleanup_dtor
+; NOSORT:                end_try_table
+; NOSORT:                return
+; NOSORT:              end_try_table
+; NOSORT:              unreachable
+; NOSORT:            end_block                              # label[[L1]]:
+; NOSORT:            try_table    (catch_all_ref 3)         # 3: down to label[[L4]]
+; NOSORT:              call  cleanup_dtor
+; NOSORT:              throw_ref
+; NOSORT:      .LBB{{[0-9]+}}_{{[0-9]+}}:
+; NOSORT-NEXT:       end_try_table
+; NOSORT-NEXT: .LBB{{[0-9]+}}_{{[0-9]+}}:
+; NOSORT-NEXT:       unreachable
+; NOSORT-NEXT: .LBB{{[0-9]+}}_{{[0-9]+}}:
+; NOSORT-NEXT:     end_block                           # label[[L2]]:
+define hidden void @nested_cleanup_unwind_to_caller() personality ptr @__gxx_wasm_personality_v0 {
+entry:
+  %c = alloca i8, align 1
+  %dummy1 = alloca i32, align 4
+  %dummy2 = alloca i32, align 4
+  invoke void @throwing_func()
+          to label %invoke.cont unwind label %ehcleanup
+
+invoke.cont:                                      ; preds = %entry
+  invoke void @throwing_func()
+          to label %invoke.cont2 unwind label %ehcleanup2
+
+invoke.cont2:                                     ; preds = %invoke.cont
+  %ignore1 = call ptr @cleanup_dtor(ptr %c)
+  ret void
+
+ehcleanup:                                        ; preds = %entry
+  %pad = cleanuppad within none []
+  %ignore2 = call ptr @cleanup_dtor(ptr %c) [ "funclet"(token %pad) ]
+  cleanupret from %pad unwind to caller
+
+ehcleanup2:                                       ; preds = %invoke.cont
+  %pad2 = cleanuppad within none []
+  %ignore3 = call ptr @cleanup_dtor(ptr %c) [ "funclet"(token %pad2) ]
+  cleanupret from %pad2 unwind to caller
+}
+
 ; Check if the unwind destination mismatch stats are correct
-; NOSORT: 25 wasm-cfg-stackify    - Number of call unwind mismatches found
+; NOSORT: 28 wasm-cfg-stackify    - Number of call unwind mismatches found
 ; NOSORT:  5 wasm-cfg-stackify    - Number of catch unwind mismatches found
 
 declare void @foo()
 declare void @bar()
 declare i32 @baz()
+declare void @throwing_func()
+declare ptr @cleanup_dtor(ptr)
 declare i32 @qux(i32)
 declare void @quux(i32)
 declare void @fun(i32)

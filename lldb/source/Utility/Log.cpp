@@ -10,11 +10,14 @@
 #include "lldb/Utility/VASPrintf.h"
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator.h"
 
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/ErrorExtras.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
@@ -47,6 +50,10 @@ llvm::ManagedStatic<Log::ChannelMap> Log::g_channel_map;
 // LLDB_LOG_ERROR is not enabled, error messages are logged to the error log.
 static std::atomic<Log *> g_error_log = nullptr;
 
+// Shared sequence counter used by both the text and JSON header writers so
+// sequence numbers stay consistent regardless of output format.
+static uint32_t g_sequence_id = 0;
+
 void Log::ForEachCategory(
     const Log::ChannelMap::value_type &entry,
     llvm::function_ref<void(llvm::StringRef, llvm::StringRef)> lambda) {
@@ -65,11 +72,11 @@ void Log::ListCategories(llvm::raw_ostream &stream,
                   });
 }
 
-Log::MaskType Log::GetFlags(llvm::raw_ostream &stream,
-                            const ChannelMap::value_type &entry,
-                            llvm::ArrayRef<const char *> categories) {
-  bool list_categories = false;
+llvm::Expected<Log::MaskType>
+Log::GetFlags(const ChannelMap::value_type &entry,
+              llvm::ArrayRef<const char *> categories) {
   Log::MaskType flags = 0;
+  llvm::SmallVector<std::string> unrecognized_categories;
   for (const char *category : categories) {
     if (llvm::StringRef("all").equals_insensitive(category)) {
       flags |= std::numeric_limits<Log::MaskType>::max();
@@ -87,12 +94,22 @@ Log::MaskType Log::GetFlags(llvm::raw_ostream &stream,
       flags |= cat->flag;
       continue;
     }
-    stream << llvm::formatv("error: unrecognized log category '{0}'\n",
-                            category);
-    list_categories = true;
+    unrecognized_categories.push_back(llvm::formatv("'{}'", category));
   }
-  if (list_categories)
-    ListCategories(stream, entry);
+
+  if (unrecognized_categories.size()) {
+    std::string error_str;
+    llvm::raw_string_ostream error_stream(error_str);
+    error_stream << "error: unrecognized log "
+                 << ((unrecognized_categories.size() == 1) ? "category "
+                                                           : "categories ")
+                 << llvm::join(unrecognized_categories.begin(),
+                               unrecognized_categories.end(), ", ")
+                 << "\n";
+    ListCategories(error_stream, entry);
+    return llvm::createStringError(error_str);
+  }
+
   return flags;
 }
 
@@ -145,6 +162,10 @@ Log::MaskType Log::GetMask() const {
 void Log::PutCString(const char *cstr) { PutString(cstr); }
 
 void Log::PutString(llvm::StringRef str) {
+  if (GetOptions().Test(LLDB_LOG_OPTION_JSON)) {
+    EmitJSONMessage("", "", str);
+    return;
+  }
   std::string FinalMessage;
   llvm::raw_string_ostream Stream(FinalMessage);
   WriteHeader(Stream, "", "");
@@ -205,21 +226,25 @@ void Log::Unregister(llvm::StringRef name) {
   g_channel_map->erase(iter);
 }
 
-bool Log::EnableLogChannel(const std::shared_ptr<LogHandler> &log_handler_sp,
-                           uint32_t log_options, llvm::StringRef channel,
-                           llvm::ArrayRef<const char *> categories,
-                           llvm::raw_ostream &error_stream) {
+llvm::Error
+Log::EnableLogChannel(const std::shared_ptr<LogHandler> &log_handler_sp,
+                      uint32_t log_options, llvm::StringRef channel,
+                      llvm::ArrayRef<const char *> categories) {
   auto iter = g_channel_map->find(channel);
-  if (iter == g_channel_map->end()) {
-    error_stream << llvm::formatv("Invalid log channel '{0}'.\n", channel);
-    return false;
+  if (iter == g_channel_map->end())
+    return llvm::createStringErrorV("Invalid log channel '{0}'.\n", channel);
+
+  if (categories.empty()) {
+    iter->second.Enable(log_handler_sp, std::nullopt, log_options);
+    return llvm::Error::success();
   }
 
-  auto flags = categories.empty() ? std::optional<MaskType>{}
-                                  : GetFlags(error_stream, *iter, categories);
+  llvm::Expected<MaskType> flags = GetFlags(*iter, categories);
+  if (!flags)
+    return flags.takeError();
 
-  iter->second.Enable(log_handler_sp, flags, log_options);
-  return true;
+  iter->second.Enable(log_handler_sp, *flags, log_options);
+  return llvm::Error::success();
 }
 
 bool Log::DisableLogChannel(llvm::StringRef channel,
@@ -231,10 +256,18 @@ bool Log::DisableLogChannel(llvm::StringRef channel,
     return false;
   }
 
-  auto flags = categories.empty() ? std::optional<MaskType>{}
-                                  : GetFlags(error_stream, *iter, categories);
+  if (categories.empty()) {
+    iter->second.Disable(std::nullopt);
+    return true;
+  }
 
-  iter->second.Disable(flags);
+  llvm::Expected<MaskType> flags = GetFlags(*iter, categories);
+  if (!flags) {
+    error_stream << toString(flags.takeError()) << "\n";
+    return false;
+  }
+
+  iter->second.Disable(*flags);
   return true;
 }
 
@@ -304,7 +337,6 @@ bool Log::GetVerbose() const {
 void Log::WriteHeader(llvm::raw_ostream &OS, llvm::StringRef file,
                       llvm::StringRef function) {
   Flags options = GetOptions();
-  static uint32_t g_sequence_id = 0;
   // Add a sequence ID if requested
   if (options.Test(LLDB_LOG_OPTION_PREPEND_SEQUENCE))
     OS << ++g_sequence_id << " ";
@@ -343,6 +375,45 @@ void Log::WriteHeader(llvm::raw_ostream &OS, llvm::StringRef file,
   }
 }
 
+void Log::WriteJSONHeader(llvm::json::Object &obj, llvm::StringRef file,
+                          llvm::StringRef function) {
+  Flags options = GetOptions();
+  if (options.Test(LLDB_LOG_OPTION_PREPEND_SEQUENCE))
+    obj["sequence"] = ++g_sequence_id;
+
+  if (options.Test(LLDB_LOG_OPTION_PREPEND_TIMESTAMP)) {
+    auto now = std::chrono::duration<double>(
+        std::chrono::system_clock::now().time_since_epoch());
+    obj["timestamp"] = now.count();
+  }
+
+  if (options.Test(LLDB_LOG_OPTION_PREPEND_PROC_AND_THREAD)) {
+    obj["pid"] = static_cast<int64_t>(getpid());
+    obj["tid"] = static_cast<int64_t>(llvm::get_threadid());
+  }
+
+  if (options.Test(LLDB_LOG_OPTION_PREPEND_THREAD_NAME)) {
+    llvm::SmallString<32> thread_name;
+    llvm::get_thread_name(thread_name);
+    // Value(StringRef) stores by reference; copy into a std::string so the
+    // Value owns the data and we don't dangle once `thread_name` goes away.
+    obj["thread_name"] = std::string(thread_name);
+  }
+
+  if (options.Test(LLDB_LOG_OPTION_BACKTRACE)) {
+    std::string backtrace;
+    llvm::raw_string_ostream backtrace_os(backtrace);
+    llvm::sys::PrintStackTrace(backtrace_os);
+    obj["backtrace"] = std::move(backtrace);
+  }
+
+  if (options.Test(LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION) &&
+      (!file.empty() || !function.empty())) {
+    obj["file"] = llvm::sys::path::filename(file);
+    obj["function"] = function;
+  }
+}
+
 // If we have a callback registered, then we call the logging callback. If we
 // have a valid file handle, we also log to the file.
 void Log::WriteMessage(llvm::StringRef message) {
@@ -356,11 +427,26 @@ void Log::WriteMessage(llvm::StringRef message) {
 
 void Log::Format(llvm::StringRef file, llvm::StringRef function,
                  const llvm::formatv_object_base &payload) {
+  if (GetOptions().Test(LLDB_LOG_OPTION_JSON)) {
+    EmitJSONMessage(file, function, payload.str());
+    return;
+  }
   std::string message_string;
   llvm::raw_string_ostream message(message_string);
   WriteHeader(message, file, function);
   message << payload << "\n";
   WriteMessage(message_string);
+}
+
+void Log::EmitJSONMessage(llvm::StringRef file, llvm::StringRef function,
+                          llvm::StringRef message) {
+  llvm::json::Object obj;
+  WriteJSONHeader(obj, file, function);
+  obj["message"] = message;
+  std::string out;
+  llvm::raw_string_ostream os(out);
+  os << llvm::json::Value(std::move(obj)) << "\n";
+  WriteMessage(out);
 }
 
 StreamLogHandler::StreamLogHandler(int fd, bool should_close,
@@ -378,12 +464,8 @@ void StreamLogHandler::Flush() {
 }
 
 void StreamLogHandler::Emit(llvm::StringRef message) {
-  if (m_stream.GetBufferSize() > 0) {
-    std::lock_guard<std::mutex> guard(m_mutex);
-    m_stream << message;
-  } else {
-    m_stream << message;
-  }
+  std::lock_guard<std::mutex> guard(m_mutex);
+  m_stream << message;
 }
 
 CallbackLogHandler::CallbackLogHandler(lldb::LogOutputCallback callback,

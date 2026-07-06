@@ -6,10 +6,10 @@ extern volatile int i;
 // CHECK-LABEL: define dso_local void @_Z8OneCaseLv(
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA2:![0-9]+]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA6:![0-9]+]]
 // CHECK-NEXT:    switch i32 [[TMP0]], label %[[SW_EPILOG:.*]] [
 // CHECK-NEXT:      i32 1, label %[[SW_EPILOG]]
-// CHECK-NEXT:    ], !prof [[PROF6:![0-9]+]]
+// CHECK-NEXT:    ], !prof [[PROF7:![0-9]+]]
 // CHECK:       [[SW_EPILOG]]:
 // CHECK-NEXT:    ret void
 //
@@ -22,14 +22,14 @@ void OneCaseL() {
 // CHECK-LABEL: define dso_local void @_Z8OneCaseUv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    switch i32 [[TMP0]], label %[[SW_EPILOG:.*]] [
 // CHECK-NEXT:      i32 1, label %[[SW_BB:.*]]
-// CHECK-NEXT:    ], !prof [[PROF7:![0-9]+]]
+// CHECK-NEXT:    ], !prof [[PROF8:![0-9]+]]
 // CHECK:       [[SW_BB]]:
-// CHECK-NEXT:    [[TMP1:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP1]], 1
-// CHECK-NEXT:    store volatile i32 [[INC]], ptr @i, align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    store volatile i32 [[INC]], ptr @i, align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    br label %[[SW_EPILOG]]
 // CHECK:       [[SW_EPILOG]]:
 // CHECK-NEXT:    ret void
@@ -43,11 +43,11 @@ void OneCaseU() {
 // CHECK-LABEL: define dso_local void @_Z10TwoCasesLNv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    switch i32 [[TMP0]], label %[[SW_EPILOG:.*]] [
 // CHECK-NEXT:      i32 1, label %[[SW_EPILOG]]
 // CHECK-NEXT:      i32 2, label %[[SW_EPILOG]]
-// CHECK-NEXT:    ], !prof [[PROF8:![0-9]+]]
+// CHECK-NEXT:    ], !prof [[PROF9:![0-9]+]]
 // CHECK:       [[SW_EPILOG]]:
 // CHECK-NEXT:    ret void
 //
@@ -61,11 +61,11 @@ void TwoCasesLN() {
 // CHECK-LABEL: define dso_local void @_Z10TwoCasesUNv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    switch i32 [[TMP0]], label %[[SW_EPILOG:.*]] [
 // CHECK-NEXT:      i32 1, label %[[SW_EPILOG]]
 // CHECK-NEXT:      i32 2, label %[[SW_EPILOG]]
-// CHECK-NEXT:    ], !prof [[PROF9:![0-9]+]]
+// CHECK-NEXT:    ], !prof [[PROF10:![0-9]+]]
 // CHECK:       [[SW_EPILOG]]:
 // CHECK-NEXT:    ret void
 //
@@ -79,11 +79,11 @@ void TwoCasesUN() {
 // CHECK-LABEL: define dso_local void @_Z10TwoCasesLUv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    switch i32 [[TMP0]], label %[[SW_EPILOG:.*]] [
 // CHECK-NEXT:      i32 1, label %[[SW_EPILOG]]
 // CHECK-NEXT:      i32 2, label %[[SW_EPILOG]]
-// CHECK-NEXT:    ], !prof [[PROF10:![0-9]+]]
+// CHECK-NEXT:    ], !prof [[PROF11:![0-9]+]]
 // CHECK:       [[SW_EPILOG]]:
 // CHECK-NEXT:    ret void
 //
@@ -97,13 +97,13 @@ void TwoCasesLU() {
 // CHECK-LABEL: define dso_local void @_Z20CasesFallthroughNNLNv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    switch i32 [[TMP0]], label %[[SW_EPILOG:.*]] [
 // CHECK-NEXT:      i32 1, label %[[SW_BB:.*]]
 // CHECK-NEXT:      i32 2, label %[[SW_BB]]
 // CHECK-NEXT:      i32 3, label %[[SW_BB1:.*]]
 // CHECK-NEXT:      i32 4, label %[[SW_BB1]]
-// CHECK-NEXT:    ], !prof [[PROF11:![0-9]+]]
+// CHECK-NEXT:    ], !prof [[PROF12:![0-9]+]]
 // CHECK:       [[SW_BB]]:
 // CHECK-NEXT:    br label %[[SW_BB1]]
 // CHECK:       [[SW_BB1]]:
@@ -123,13 +123,13 @@ void CasesFallthroughNNLN() {
 // CHECK-LABEL: define dso_local void @_Z20CasesFallthroughNNUNv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    switch i32 [[TMP0]], label %[[SW_EPILOG:.*]] [
 // CHECK-NEXT:      i32 1, label %[[SW_BB:.*]]
 // CHECK-NEXT:      i32 2, label %[[SW_BB]]
 // CHECK-NEXT:      i32 3, label %[[SW_BB1:.*]]
 // CHECK-NEXT:      i32 4, label %[[SW_BB1]]
-// CHECK-NEXT:    ], !prof [[PROF12:![0-9]+]]
+// CHECK-NEXT:    ], !prof [[PROF13:![0-9]+]]
 // CHECK:       [[SW_BB]]:
 // CHECK-NEXT:    br label %[[SW_BB1]]
 // CHECK:       [[SW_BB1]]:
@@ -149,7 +149,7 @@ void CasesFallthroughNNUN() {
 // CHECK-LABEL: define dso_local void @_Z28CasesFallthroughRangeSmallLNv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    switch i32 [[TMP0]], label %[[SW_EPILOG:.*]] [
 // CHECK-NEXT:      i32 1, label %[[SW_BB:.*]]
 // CHECK-NEXT:      i32 2, label %[[SW_BB]]
@@ -159,11 +159,11 @@ void CasesFallthroughNNUN() {
 // CHECK-NEXT:      i32 102, label %[[SW_BB1:.*]]
 // CHECK-NEXT:      i32 103, label %[[SW_BB2:.*]]
 // CHECK-NEXT:      i32 104, label %[[SW_BB2]]
-// CHECK-NEXT:    ], !prof [[PROF13:![0-9]+]]
+// CHECK-NEXT:    ], !prof [[PROF14:![0-9]+]]
 // CHECK:       [[SW_BB]]:
-// CHECK-NEXT:    [[TMP1:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP1]], 1
-// CHECK-NEXT:    store volatile i32 [[INC]], ptr @i, align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    store volatile i32 [[INC]], ptr @i, align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    br label %[[SW_BB1]]
 // CHECK:       [[SW_BB1]]:
 // CHECK-NEXT:    br label %[[SW_BB2]]
@@ -184,7 +184,7 @@ void CasesFallthroughRangeSmallLN() {
 // CHECK-LABEL: define dso_local void @_Z28CasesFallthroughRangeSmallUNv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    switch i32 [[TMP0]], label %[[SW_EPILOG:.*]] [
 // CHECK-NEXT:      i32 1, label %[[SW_BB:.*]]
 // CHECK-NEXT:      i32 2, label %[[SW_BB]]
@@ -194,11 +194,11 @@ void CasesFallthroughRangeSmallLN() {
 // CHECK-NEXT:      i32 102, label %[[SW_BB1:.*]]
 // CHECK-NEXT:      i32 103, label %[[SW_BB2:.*]]
 // CHECK-NEXT:      i32 104, label %[[SW_BB2]]
-// CHECK-NEXT:    ], !prof [[PROF14:![0-9]+]]
+// CHECK-NEXT:    ], !prof [[PROF15:![0-9]+]]
 // CHECK:       [[SW_BB]]:
-// CHECK-NEXT:    [[TMP1:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP1]], 1
-// CHECK-NEXT:    store volatile i32 [[INC]], ptr @i, align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    store volatile i32 [[INC]], ptr @i, align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    br label %[[SW_BB1]]
 // CHECK:       [[SW_BB1]]:
 // CHECK-NEXT:    br label %[[SW_BB2]]
@@ -219,11 +219,11 @@ void CasesFallthroughRangeSmallUN() {
 // CHECK-LABEL: define dso_local void @_Z29CasesFallthroughRangeLargeLLNv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    switch i32 [[TMP0]], label %[[SW_CASERANGE:.*]] [
 // CHECK-NEXT:      i32 1003, label %[[SW_BB1:.*]]
 // CHECK-NEXT:      i32 104, label %[[SW_BB1]]
-// CHECK-NEXT:    ], !prof [[PROF8]]
+// CHECK-NEXT:    ], !prof [[PROF9]]
 // CHECK:       [[SW_BB:.*]]:
 // CHECK-NEXT:    br label %[[SW_BB1]]
 // CHECK:       [[SW_BB1]]:
@@ -247,11 +247,11 @@ void CasesFallthroughRangeLargeLLN() {
 // CHECK-LABEL: define dso_local void @_Z29CasesFallthroughRangeLargeUUNv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    switch i32 [[TMP0]], label %[[SW_CASERANGE:.*]] [
 // CHECK-NEXT:      i32 1003, label %[[SW_BB1:.*]]
 // CHECK-NEXT:      i32 104, label %[[SW_BB1]]
-// CHECK-NEXT:    ], !prof [[PROF9]]
+// CHECK-NEXT:    ], !prof [[PROF10]]
 // CHECK:       [[SW_BB:.*]]:
 // CHECK-NEXT:    br label %[[SW_BB1]]
 // CHECK:       [[SW_BB1]]:
@@ -275,10 +275,10 @@ void CasesFallthroughRangeLargeUUN() {
 // CHECK-LABEL: define dso_local void @_Z15OneCaseDefaultLv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    switch i32 [[TMP0]], label %[[SW_DEFAULT:.*]] [
 // CHECK-NEXT:      i32 1, label %[[SW_EPILOG:.*]]
-// CHECK-NEXT:    ], !prof [[PROF15:![0-9]+]]
+// CHECK-NEXT:    ], !prof [[PROF16:![0-9]+]]
 // CHECK:       [[SW_DEFAULT]]:
 // CHECK-NEXT:    br label %[[SW_EPILOG]]
 // CHECK:       [[SW_EPILOG]]:
@@ -294,10 +294,10 @@ void OneCaseDefaultL() {
 // CHECK-LABEL: define dso_local void @_Z15OneCaseDefaultUv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    switch i32 [[TMP0]], label %[[SW_DEFAULT:.*]] [
 // CHECK-NEXT:      i32 1, label %[[SW_EPILOG:.*]]
-// CHECK-NEXT:    ], !prof [[PROF16:![0-9]+]]
+// CHECK-NEXT:    ], !prof [[PROF17:![0-9]+]]
 // CHECK:       [[SW_DEFAULT]]:
 // CHECK-NEXT:    br label %[[SW_EPILOG]]
 // CHECK:       [[SW_EPILOG]]:
@@ -313,11 +313,11 @@ void OneCaseDefaultU() {
 // CHECK-LABEL: define dso_local void @_Z18TwoCasesDefaultLNLv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    switch i32 [[TMP0]], label %[[SW_DEFAULT:.*]] [
 // CHECK-NEXT:      i32 1, label %[[SW_EPILOG:.*]]
 // CHECK-NEXT:      i32 2, label %[[SW_EPILOG]]
-// CHECK-NEXT:    ], !prof [[PROF17:![0-9]+]]
+// CHECK-NEXT:    ], !prof [[PROF18:![0-9]+]]
 // CHECK:       [[SW_DEFAULT]]:
 // CHECK-NEXT:    br label %[[SW_EPILOG]]
 // CHECK:       [[SW_EPILOG]]:
@@ -334,11 +334,11 @@ void TwoCasesDefaultLNL() {
 // CHECK-LABEL: define dso_local void @_Z18TwoCasesDefaultLNNv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    switch i32 [[TMP0]], label %[[SW_DEFAULT:.*]] [
 // CHECK-NEXT:      i32 1, label %[[SW_EPILOG:.*]]
 // CHECK-NEXT:      i32 2, label %[[SW_EPILOG]]
-// CHECK-NEXT:    ], !prof [[PROF8]]
+// CHECK-NEXT:    ], !prof [[PROF9]]
 // CHECK:       [[SW_DEFAULT]]:
 // CHECK-NEXT:    br label %[[SW_EPILOG]]
 // CHECK:       [[SW_EPILOG]]:
@@ -355,11 +355,11 @@ void TwoCasesDefaultLNN() {
 // CHECK-LABEL: define dso_local void @_Z18TwoCasesDefaultLNUv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA6]]
 // CHECK-NEXT:    switch i32 [[TMP0]], label %[[SW_DEFAULT:.*]] [
 // CHECK-NEXT:      i32 1, label %[[SW_EPILOG:.*]]
 // CHECK-NEXT:      i32 2, label %[[SW_EPILOG]]
-// CHECK-NEXT:    ], !prof [[PROF18:![0-9]+]]
+// CHECK-NEXT:    ], !prof [[PROF19:![0-9]+]]
 // CHECK:       [[SW_DEFAULT]]:
 // CHECK-NEXT:    br label %[[SW_EPILOG]]
 // CHECK:       [[SW_EPILOG]]:
@@ -373,21 +373,21 @@ void TwoCasesDefaultLNU() {
   }
 }
 //.
-// CHECK: [[INT_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// CHECK: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}
+// CHECK: [[META3:![0-9]+]] = !{!"int", [[META4:![0-9]+]], i64 0}
 // CHECK: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // CHECK: [[META5]] = !{!"Simple C++ TBAA"}
-// CHECK: [[PROF6]] = !{!"branch_weights", i32 357913942, i32 715827883}
-// CHECK: [[PROF7]] = !{!"branch_weights", i32 536870912, i32 1}
-// CHECK: [[PROF8]] = !{!"branch_weights", i32 238609295, i32 715827883, i32 238609295}
-// CHECK: [[PROF9]] = !{!"branch_weights", i32 357913942, i32 1, i32 357913942}
-// CHECK: [[PROF10]] = !{!"branch_weights", i32 357913942, i32 715827883, i32 1}
-// CHECK: [[PROF11]] = !{!"branch_weights", i32 143165577, i32 143165577, i32 143165577, i32 715827883, i32 143165577}
-// CHECK: [[PROF12]] = !{!"branch_weights", i32 214748365, i32 214748365, i32 214748365, i32 1, i32 214748365}
-// CHECK: [[PROF13]] = !{!"branch_weights", i32 79536432, i32 79536432, i32 79536432, i32 79536432, i32 79536432, i32 79536432, i32 79536432, i32 715827883, i32 79536432}
-// CHECK: [[PROF14]] = !{!"branch_weights", i32 119304648, i32 119304648, i32 119304648, i32 119304648, i32 119304648, i32 119304648, i32 119304648, i32 1, i32 119304648}
-// CHECK: [[PROF15]] = !{!"branch_weights", i32 715827883, i32 357913942}
-// CHECK: [[PROF16]] = !{!"branch_weights", i32 1, i32 536870912}
-// CHECK: [[PROF17]] = !{!"branch_weights", i32 536870912, i32 536870912, i32 268435456}
-// CHECK: [[PROF18]] = !{!"branch_weights", i32 1, i32 715827883, i32 357913942}
+// CHECK: [[INT_TBAA6]] = !{[[META3]], [[META3]], i64 0}
+// CHECK: [[PROF7]] = !{!"branch_weights", i32 357913942, i32 715827883}
+// CHECK: [[PROF8]] = !{!"branch_weights", i32 536870912, i32 1}
+// CHECK: [[PROF9]] = !{!"branch_weights", i32 238609295, i32 715827883, i32 238609295}
+// CHECK: [[PROF10]] = !{!"branch_weights", i32 357913942, i32 1, i32 357913942}
+// CHECK: [[PROF11]] = !{!"branch_weights", i32 357913942, i32 715827883, i32 1}
+// CHECK: [[PROF12]] = !{!"branch_weights", i32 143165577, i32 143165577, i32 143165577, i32 715827883, i32 143165577}
+// CHECK: [[PROF13]] = !{!"branch_weights", i32 214748365, i32 214748365, i32 214748365, i32 1, i32 214748365}
+// CHECK: [[PROF14]] = !{!"branch_weights", i32 79536432, i32 79536432, i32 79536432, i32 79536432, i32 79536432, i32 79536432, i32 79536432, i32 715827883, i32 79536432}
+// CHECK: [[PROF15]] = !{!"branch_weights", i32 119304648, i32 119304648, i32 119304648, i32 119304648, i32 119304648, i32 119304648, i32 119304648, i32 1, i32 119304648}
+// CHECK: [[PROF16]] = !{!"branch_weights", i32 715827883, i32 357913942}
+// CHECK: [[PROF17]] = !{!"branch_weights", i32 1, i32 536870912}
+// CHECK: [[PROF18]] = !{!"branch_weights", i32 536870912, i32 536870912, i32 268435456}
+// CHECK: [[PROF19]] = !{!"branch_weights", i32 1, i32 715827883, i32 357913942}
 //.

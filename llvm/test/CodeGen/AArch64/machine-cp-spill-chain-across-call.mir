@@ -1,0 +1,60 @@
+# RUN: llc -mtriple=aarch64 -run-pass=machine-cp -enable-spill-copy-elim -o - %s | FileCheck %s
+
+# eliminateSpillageCopies must not fold a spill-reload chain that straddles a
+# call if source is a caller preserved register.
+# Here the spill copy "$x23 = COPY $x16" sits *before* the call and its
+# source $x16 (caller-saved) may be clobbered by the call, while its
+# destination $x23 is callee-saved. Because $x23 stays available in the
+# If not checked with regmask, the chain builder could otherwise pair this
+# spill with the post-call reload "$x16 = COPY $x23" # and fold the whole chain
+# leaving $x16 not preserved across the call.
+# Check that the chain is left untouched.
+
+--- |
+  declare void @callee()
+  define void @no_fold_spill_chain_across_call() {
+    ret void
+  }
+...
+---
+name:            no_fold_spill_chain_across_call
+alignment:       4
+tracksRegLiveness: true
+frameInfo:
+  adjustsStack:    true
+stack:
+  - { id: 0, size: 8, alignment: 8 }
+body:             |
+  bb.0:
+    liveins: $lr, $x16, $x20, $x23, $x26
+
+    ; CHECK-LABEL: name: no_fold_spill_chain_across_call
+    ; The value of $x16 must still be spilled into the callee-saved $x23 before
+    ; the call (this copy is erased if the chain is wrongly folded).
+    ; CHECK:      $x26 = COPY {{.*}}$x23
+    ; CHECK:      $x23 = COPY {{.*}}$x16
+    ; CHECK:      BL @callee
+    ; The inner spill must stay "$x16 = COPY $x20" and must not be rewritten to
+    ; target the outermost temporary as "$x23 = COPY $x20".
+    ; CHECK:      $x16 = COPY {{.*}}$x20
+    ; CHECK:      $x20 = COPY {{.*}}$x16
+    ; And $x16 must be restored from $x23 after the inner reload.
+    ; CHECK:      $x16 = COPY {{.*}}$x23
+
+    renamable $x26 = COPY killed renamable $x23
+    renamable $x23 = COPY killed renamable $x16
+
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    BL @callee, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+
+    renamable $x16 = COPY killed renamable $x20
+    renamable $x20 = LDRXui %stack.0, 0 :: (load (s64) from %stack.0)
+    STRXui killed renamable $x20, %stack.0, 0 :: (store (s64) into %stack.0)
+
+    renamable $x20 = COPY killed renamable $x16
+    renamable $x16 = COPY killed renamable $x23
+    renamable $x23 = COPY killed renamable $x26
+
+    RET_ReallyLR implicit $x16, implicit $x20
+...
