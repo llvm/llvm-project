@@ -436,8 +436,9 @@ private:
   llvm::PointerIntPair<Region *, /*IntBits=*/1, bool> parentValidOpOrderPair;
 
   /// Unique number of this block within its parent region, assigned when the
-  /// block is added to a region. See getNumber().
-  unsigned blockNumber = 0;
+  /// block is added to a region; -1u while the block has no parent. See
+  /// getNumber().
+  unsigned blockNumber = -1u;
 
   /// This is the list of operations in the block.
   OpListType operations;

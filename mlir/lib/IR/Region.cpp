@@ -204,6 +204,8 @@ void llvm::ilist_traits<::mlir::Block>::addNodeToList(Block *block) {
 void llvm::ilist_traits<::mlir::Block>::removeNodeFromList(Block *block) {
   assert(block->getParent() && "not already in a region!");
   block->parentValidOpOrderPair.setPointer(nullptr);
+  // The number is invalid until the block is added to a region again.
+  block->blockNumber = -1u;
 }
 
 /// This is a trait method invoked when an operation is moved from one block
