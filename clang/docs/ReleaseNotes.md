@@ -145,6 +145,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   break on i686, MIPS O32, PowerPC64 ELFv1, and Lanai.
 - Fixed incorrect struct return when single large vector (256/512-bit) used on
   x86-64 targets. (#GH203760) The bug was introduced since Clang 21. (#GH120670)
+- `va_arg` on clang aarch64 msvc now sets `AllowHigherAlign=true`, meaning that
+  `__int128` and similar structs are read with their actual alignment (instead
+  of an alignment of 8 which was used before). Such c-variadic arguments are
+  already passed as aligned, so previously reading the argument could read
+  padding. Clang now matches how MSVC reads such c-variadic arguments.
 
 ### AST Dumping Potentially Breaking Changes
 
