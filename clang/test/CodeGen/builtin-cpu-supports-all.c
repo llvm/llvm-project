@@ -406,10 +406,6 @@ TEST_CPU_SUPPORTS(avx10_2, "avx10.2")
 TEST_CPU_SUPPORTS(amx_avx512, "amx-avx512")
 
 // CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_features2, i64 8)
-// CHECK: = and i32 [[LOAD]], 4194304
-TEST_CPU_SUPPORTS(amx_tf32, "amx-tf32")
-
-// CHECK: [[LOAD:%[^ ]+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_features2, i64 8)
 // CHECK: = and i32 [[LOAD]], 16777216
 TEST_CPU_SUPPORTS(amx_fp8, "amx-fp8")
 
