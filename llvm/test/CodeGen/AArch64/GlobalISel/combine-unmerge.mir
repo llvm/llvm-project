@@ -340,6 +340,32 @@ body:             |
     $h0 = COPY %1(s16)
 ...
 
+---
+name:            test_combine_unmerge_dead_to_trunc_ptr_out
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_combine_unmerge_dead_to_trunc_ptr_out
+    ; CHECK: [[COPY:%[0-9]+]]:_(i128) = COPY $q0
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(p0), [[UV1:%[0-9]+]]:_(p0) = G_UNMERGE_VALUES [[COPY]](i128)
+    ; CHECK-NEXT: $x0 = COPY [[UV]](p0)
+    %0:_(i128) = COPY $q0
+    %1:_(p0), %2:_(p0) = G_UNMERGE_VALUES %0(i128)
+    $x0 = COPY %1(p0)
+...
+
+---
+name:            test_combine_unmerge_dead_to_trunc_ptr_in
+body:             |
+  bb.1:
+    ; CHECK-LABEL: name: test_combine_unmerge_dead_to_trunc_ptr_in
+    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY]](p0)
+    ; CHECK-NEXT: $w0 = COPY [[UV]](i32)
+    %0:_(p0) = COPY $x0
+    %1:_(i32), %2:_(i32) = G_UNMERGE_VALUES %0(p0)
+    $w0 = COPY %1(i32)
+...
+
 # Transform unmerge(zext) into zext.
 # In that test, the source of the zext is same size as the first definition
 # of the unmerge. Therefore a we can just reuse the input of the zext for

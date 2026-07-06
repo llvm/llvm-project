@@ -739,6 +739,19 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
     }
   }
 
+  // When in OpenMP offloading mode, forward assumptions information about
+  // thread and team counts in the target device. The host needs to know about
+  // this to prevent the SPMD to SPMD-no-loop promotion being done differently
+  // for host and device on the same target region.
+  if (Args.hasFlag(options::OPT_fopenmp_assume_teams_oversubscription,
+                   options::OPT_fno_openmp_assume_teams_oversubscription,
+                   /*Default=*/false))
+    CmdArgs.push_back("-fopenmp-assume-teams-oversubscription");
+  if (Args.hasFlag(options::OPT_fopenmp_assume_threads_oversubscription,
+                   options::OPT_fno_openmp_assume_threads_oversubscription,
+                   /*Default=*/false))
+    CmdArgs.push_back("-fopenmp-assume-threads-oversubscription");
+
   if (IsOpenMPDevice) {
     // -fopenmp-is-target-device is passed along to tell the frontend that it is
     // generating code for a device, so that only the relevant code is emitted.
@@ -749,17 +762,6 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
     if (Args.hasFlag(options::OPT_fopenmp_target_debug,
                      options::OPT_fno_openmp_target_debug, /*Default=*/false))
       CmdArgs.push_back("-fopenmp-target-debug");
-
-    // When in OpenMP offloading mode, forward assumptions information about
-    // thread and team counts in the device.
-    if (Args.hasFlag(options::OPT_fopenmp_assume_teams_oversubscription,
-                     options::OPT_fno_openmp_assume_teams_oversubscription,
-                     /*Default=*/false))
-      CmdArgs.push_back("-fopenmp-assume-teams-oversubscription");
-    if (Args.hasFlag(options::OPT_fopenmp_assume_threads_oversubscription,
-                     options::OPT_fno_openmp_assume_threads_oversubscription,
-                     /*Default=*/false))
-      CmdArgs.push_back("-fopenmp-assume-threads-oversubscription");
     if (Args.hasArg(options::OPT_fopenmp_assume_no_thread_state))
       CmdArgs.push_back("-fopenmp-assume-no-thread-state");
     if (Args.hasArg(options::OPT_fopenmp_assume_no_nested_parallelism))

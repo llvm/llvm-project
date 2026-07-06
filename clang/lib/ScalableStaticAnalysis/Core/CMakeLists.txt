@@ -17,6 +17,8 @@ add_clang_library(clangScalableStaticAnalysisCore
   Serialization/JSONFormat/JSONFormatImpl.cpp
   Serialization/JSONFormat/LUSummary.cpp
   Serialization/JSONFormat/LUSummaryEncoding.cpp
+  Serialization/JSONFormat/MultiArchStaticLibrary.cpp
+  Serialization/JSONFormat/MultiArchSharedLibrary.cpp
   Serialization/JSONFormat/StaticLibrary.cpp
   Serialization/JSONFormat/TUSummary.cpp
   Serialization/JSONFormat/TUSummaryEncoding.cpp
