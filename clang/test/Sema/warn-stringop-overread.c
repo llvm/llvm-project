@@ -172,4 +172,18 @@ void test_memcpy_dependent_dest_uninstantiated() {
   memcpy(dst, &src, sizeof(src) + 1); // missing-warning {{'memcpy' reading 5 bytes from a region of size 4}}
 }
 
+// Taking the address of a static constexpr local inside a template is
+// value-dependent but not instantiation-dependent. This regression test
+// ensures stringop-overread doesn't crash when trying to constant-evaluate
+// such an operand (via an assert in the constant evaluator).
+template <typename T>
+void test_addr_of_static_constexpr_local() {
+  static constexpr bool true_value = true;
+  memcmp(&true_value, &true_value, 1);
+}
+
+void call_test_addr_of_static_constexpr_local() {
+  test_addr_of_static_constexpr_local<int>();
+}
+
 #endif

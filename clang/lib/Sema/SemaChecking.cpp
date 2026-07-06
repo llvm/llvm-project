@@ -1271,8 +1271,9 @@ public:
 
     const Expr *SrcArg = TheCall->getArg(SrcArgIdx);
     const Expr *SizeArg = TheCall->getArg(SizeArgIdx);
-    if (SrcArg->isInstantiationDependent() ||
-        SizeArg->isInstantiationDependent())
+    // Need to check both value-dependence and instantiation-dependence.
+    if (SrcArg->isInstantiationDependent() || SrcArg->isValueDependent() ||
+        SizeArg->isInstantiationDependent() || SizeArg->isValueDependent())
       return;
 
     std::optional<llvm::APSInt> CopyLen =
@@ -1303,7 +1304,8 @@ private:
 
 void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
                                                CallExpr *TheCall) {
-  if (TheCall->isInstantiationDependent() || isConstantEvaluatedContext())
+  if (TheCall->isInstantiationDependent() || TheCall->isValueDependent() ||
+      TheCall->isTypeDependent() || isConstantEvaluatedContext())
     return;
 
   FortifiedBufferChecker Checker(*this, FD, TheCall);
