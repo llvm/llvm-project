@@ -1131,9 +1131,9 @@ recognizers symmetric.
   (``Sema::DefaultLvalueConversion`` calling ``SemaProfiles::checkInitProfileReadThrough``),
   which by-value reads -- copy-initialization, by-value arguments, returns, and
   operator/condition operands -- all funnel through.  It reuses the recognizer
-  in a read-only mode (a ``ForRead`` flag), reports the shared rule
+  with its read access preset (``UninitAccessOpts``), reports the shared rule
   ``uninit_read`` via ``err_init_uninit_read_through``, and exempts ``std::byte``
-  (paper §4.5).  Read-only mode drops the ``[[uninit]]`` marker only for the
+  (paper §4.5).  The read preset drops the ``[[uninit]]`` marker only for the
   *top-level* named entity -- a directly named ``[[uninit]]`` object and a
   current-object member are flow-tracked (by the CFG ``uninit_read`` pass and
   the ctor-body pass, which credit assignments), so their direct reads are left

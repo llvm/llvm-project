@@ -721,13 +721,29 @@ bool SemaProfiles::diagnoseInvalidRefToUninitMarker(const Decl *D,
 // treat
 // Unknown as not uninitialized.
 //
-// \p ForRead selects read-through mode
-// (SemaProfiles::checkInitProfileReadThrough): a
-// directly named [[uninit]] object is then not treated as uninitialized,
-// because a read of such a named object is the flow-based uninit_read pass's
-// responsibility; only indirection through a [[ref_to_uninit]]
-// pointer/reference still counts.
+// How the classified expression is being accessed is carried by
+// UninitAccessOpts below.
 enum class UninitStorage { Initialized, Uninitialized, Unknown };
+
+// How an expression is being used, for the uninit recognizers.
+//
+// DropTopLevelUninit: a *directly named* [[uninit]] entity does not count as
+// uninitialized. A value access of such an entity is the flow-based passes'
+// responsibility (the CFG uninit_read pass and the ctor-body pass credit
+// assignments), so the read-through check must not second-guess them. The
+// flag is cleared at the first subobject step (member access, array element),
+// where no flow pass tracks the storage; only indirection through a
+// [[ref_to_uninit]] pointer/reference and below-top-level markers still count.
+struct UninitAccessOpts {
+  bool DropTopLevelUninit = false;
+
+  UninitAccessOpts withoutTopLevelDrop() const { return {}; }
+};
+
+// Presets: a binding source (markers count everywhere) and a value read (the
+// top-level drop applies).
+constexpr UninitAccessOpts UninitBindAccess{};
+constexpr UninitAccessOpts UninitReadAccess{/*DropTopLevelUninit=*/true};
 
 // Combine the arms of a conditional: Uninitialized dominates (either arm may be
 // taken), then Unknown, else Initialized.
@@ -739,8 +755,9 @@ static UninitStorage combineArms(UninitStorage A, UninitStorage B) {
   return UninitStorage::Initialized;
 }
 
-static UninitStorage glvalueDenotesUninitStorage(ASTContext &Ctx, const Expr *E,
-                                                 bool ForRead = false);
+static UninitStorage
+glvalueDenotesUninitStorage(ASTContext &Ctx, const Expr *E,
+                            UninitAccessOpts Opts = UninitBindAccess);
 
 const ValueDecl *SemaProfiles::getDirectlyNamedDecl(const Expr *E) {
   E = E->IgnoreParenImpCasts();
@@ -790,9 +807,9 @@ static UninitStorage classifyRefToUninitCallee(const CallExpr *CE) {
 
 // \p E is a pointer prvalue. Classifies whether it points to uninitialized
 // storage.
-static UninitStorage pointerRefersToUninitStorage(ASTContext &Ctx,
-                                                  const Expr *E,
-                                                  bool ForRead = false) {
+static UninitStorage
+pointerRefersToUninitStorage(ASTContext &Ctx, const Expr *E,
+                             UninitAccessOpts Opts = UninitBindAccess) {
   if (!E)
     return UninitStorage::Unknown;
   E = E->IgnoreParenImpCasts();
@@ -800,23 +817,23 @@ static UninitStorage pointerRefersToUninitStorage(ASTContext &Ctx,
   if (auto PassThrough = classifyUninitPassThrough(
           E, /*EmptyListState=*/UninitStorage::Initialized,
           [&](const Expr *Sub) {
-            return pointerRefersToUninitStorage(Ctx, Sub, ForRead);
+            return pointerRefersToUninitStorage(Ctx, Sub, Opts);
           }))
     return *PassThrough;
 
   // Array-to-pointer decay has been stripped above, leaving the array glvalue.
-  // Leave read mode here, like the member-access arm: neither the CFG
+  // Clear the top-level drop here, like the member-access arm: neither the CFG
   // uninit_read pass nor the ctor-body pass tracks array elements, and
   // element-wise delayed initialization of an [[uninit]] array is itself
   // banned (paper §5.5), so below an element access the marker counts even
-  // for a read.
+  // for a value access.
   if (E->getType()->isArrayType())
-    return glvalueDenotesUninitStorage(Ctx, E, /*ForRead=*/false);
+    return glvalueDenotesUninitStorage(Ctx, E, Opts.withoutTopLevelDrop());
 
   // &G, where G denotes uninitialized storage.
   if (const auto *UO = dyn_cast<UnaryOperator>(E))
     if (UO->getOpcode() == UO_AddrOf)
-      return glvalueDenotesUninitStorage(Ctx, UO->getSubExpr(), ForRead);
+      return glvalueDenotesUninitStorage(Ctx, UO->getSubExpr(), Opts);
 
   // A value of a [[ref_to_uninit]] pointer is Uninitialized; an unmarked
   // named pointer is a trusted Initialized pointer (paper §4.3).
@@ -852,14 +869,14 @@ static UninitStorage pointerRefersToUninitStorage(ASTContext &Ctx,
   // manufactured from an integer (operand not a pointer) is Unknown.
   if (const auto *CE = dyn_cast<ExplicitCastExpr>(E))
     if (CE->getSubExpr()->getType()->isPointerType())
-      return pointerRefersToUninitStorage(Ctx, CE->getSubExpr(), ForRead);
+      return pointerRefersToUninitStorage(Ctx, CE->getSubExpr(), Opts);
 
   return UninitStorage::Unknown;
 }
 
 // \p E is a glvalue. Classifies whether it denotes uninitialized storage.
-static UninitStorage glvalueDenotesUninitStorage(ASTContext &Ctx,
-                                                 const Expr *E, bool ForRead) {
+static UninitStorage glvalueDenotesUninitStorage(ASTContext &Ctx, const Expr *E,
+                                                 UninitAccessOpts Opts) {
   if (!E)
     return UninitStorage::Unknown;
   E = E->IgnoreParenImpCasts();
@@ -867,7 +884,7 @@ static UninitStorage glvalueDenotesUninitStorage(ASTContext &Ctx,
   if (auto PassThrough = classifyUninitPassThrough(
           E, /*EmptyListState=*/UninitStorage::Unknown,
           [&](const Expr *Sub) {
-            return glvalueDenotesUninitStorage(Ctx, Sub, ForRead);
+            return glvalueDenotesUninitStorage(Ctx, Sub, Opts);
           }))
     return *PassThrough;
 
@@ -875,11 +892,12 @@ static UninitStorage glvalueDenotesUninitStorage(ASTContext &Ctx,
   // if it is a reference marked [[ref_to_uninit]] (the glvalue is its referent,
   // which is uninitialized). A [[ref_to_uninit]] *pointer* named here denotes
   // the pointer object itself -- which is initialized -- so it does not count.
-  // In read mode the [[uninit]] arm is dropped: a direct read of a named
-  // [[uninit]] object is left to the flow-based uninit_read pass, so only a
-  // [[ref_to_uninit]] reference (or indirection, handled below) still counts.
+  // Under the top-level drop the [[uninit]] arm is skipped: a value access of
+  // a directly named [[uninit]] object is the flow-based passes' territory, so
+  // only a [[ref_to_uninit]] reference (or indirection, handled below) still
+  // counts.
   auto DeclDenotesUninit = [&](const ValueDecl *VD) {
-    return (!ForRead && VD->hasAttr<UninitAttr>()) ||
+    return (!Opts.DropTopLevelUninit && VD->hasAttr<UninitAttr>()) ||
            (VD->getType()->isReferenceType() && VD->hasAttr<RefToUninitAttr>());
   };
   if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
@@ -888,38 +906,38 @@ static UninitStorage glvalueDenotesUninitStorage(ASTContext &Ctx,
   if (const auto *ME = dyn_cast<MemberExpr>(E)) {
     // a->m reaches m through the pointer a (object *a); a.m through the
     // glvalue a. When m does not itself denote uninit storage, the subobject is
-    // uninit exactly when its base is. The base recursion leaves read mode:
-    // the ForRead drop exists because a *directly named* [[uninit]] object and
+    // uninit exactly when its base is. The base recursion clears the top-level
+    // drop: the drop exists because a *directly named* [[uninit]] object and
     // a current-object member are flow-tracked (by the CFG uninit_read pass
     // and the ctor-body pass, which credit assignments), but neither pass
     // tracks a subobject reached through a member access -- and member-wise
     // delayed initialization of an [[uninit]] object is itself banned (paper
     // §5.4; only whole-object construct_at re-initializes, which is uniformly
-    // unmodeled) -- so below the top level the marker counts even for a read.
+    // unmodeled) -- so below the top level the marker counts for every access.
     if (DeclDenotesUninit(ME->getMemberDecl()))
       return UninitStorage::Uninitialized;
-    return ME->isArrow() ? pointerRefersToUninitStorage(Ctx, ME->getBase(),
-                                                        /*ForRead=*/false)
-                         : glvalueDenotesUninitStorage(Ctx, ME->getBase(),
-                                                       /*ForRead=*/false);
+    return ME->isArrow() ? pointerRefersToUninitStorage(
+                               Ctx, ME->getBase(), Opts.withoutTopLevelDrop())
+                         : glvalueDenotesUninitStorage(
+                               Ctx, ME->getBase(), Opts.withoutTopLevelDrop());
   }
   // A call to a [[ref_to_uninit]]-returning reference function: the referent
   // it returns is uninitialized.
   if (const auto *CE = dyn_cast<CallExpr>(E))
     return classifyRefToUninitCallee(CE);
   if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
-    return pointerRefersToUninitStorage(Ctx, ASE->getBase(), ForRead);
+    return pointerRefersToUninitStorage(Ctx, ASE->getBase(), Opts);
 
   // *p, where p points to uninitialized storage.
   if (const auto *UO = dyn_cast<UnaryOperator>(E))
     if (UO->getOpcode() == UO_Deref)
-      return pointerRefersToUninitStorage(Ctx, UO->getSubExpr(), ForRead);
+      return pointerRefersToUninitStorage(Ctx, UO->getSubExpr(), Opts);
 
   // A reference cast (an explicit cast yielding a glvalue) denotes the same
   // storage as its operand; propagate. Symmetric to the pointer-cast arm.
   if (const auto *CE = dyn_cast<ExplicitCastExpr>(E))
     if (CE->getSubExpr()->isGLValue())
-      return glvalueDenotesUninitStorage(Ctx, CE->getSubExpr(), ForRead);
+      return glvalueDenotesUninitStorage(Ctx, CE->getSubExpr(), Opts);
 
   return UninitStorage::Unknown;
 }
@@ -1065,7 +1083,7 @@ void SemaProfiles::checkInitProfileReadThrough(SourceLocation Loc,
     return;
   if (!shouldEmitProfileViolation("std::init", "uninit_read", Loc))
     return;
-  if (glvalueDenotesUninitStorage(getASTContext(), Glvalue, /*ForRead=*/true) !=
+  if (glvalueDenotesUninitStorage(getASTContext(), Glvalue, UninitReadAccess) !=
       UninitStorage::Uninitialized)
     return;
   Diag(Loc, diag::err_init_uninit_read_through)

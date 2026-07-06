@@ -230,10 +230,10 @@ public:
   /// [[ref_to_uninit]] pointer or reference, whose result is itself
   /// uninitialized. Called from Sema::DefaultLvalueConversion at the single
   /// lvalue-to-rvalue chokepoint, with \p Glvalue the operand being loaded
-  /// and \p ValueType its value type. Reuses the ref_to_uninit recognizer in
-  /// read-only mode, so a direct read of a named [[uninit]] object is left to
-  /// the flow-based uninit_read pass. A std::byte read is exempt (paper
-  /// §4.5).
+  /// and \p ValueType its value type. Reuses the ref_to_uninit recognizer
+  /// with its read access preset, so a direct read of a named [[uninit]]
+  /// object is left to the flow-based uninit_read pass. A std::byte read is
+  /// exempt (paper §4.5).
   void checkInitProfileReadThrough(SourceLocation Loc, const Expr *Glvalue,
                             QualType ValueType);
 
