@@ -56,6 +56,14 @@ set(LLDB_LIBXML2_VERSION "2.8" CACHE STRING
   static builds of libxml 2. Use at your own risk.")
 mark_as_advanced(LLDB_LIBXML2_VERSION)
 
+set(LLDB_DEFAULT_ENABLE_FORTRAN OFF)
+
+if("flang" IN_LIST LLVM_ENABLE_PROJECTS)
+  set(LLDB_DEFAULT_ENABLE_FORTRAN ON)
+endif()
+
+option(LLDB_ENABLE_FORTRAN "Enable Fortran support in LLDB" ${LLDB_DEFAULT_ENABLE_FORTRAN})
+
 add_optional_dependency(LLDB_ENABLE_SWIG "Enable SWIG to generate LLDB bindings" SWIG SWIG_FOUND VERSION 4)
 add_optional_dependency(LLDB_ENABLE_LIBEDIT "Enable editline support in LLDB" LibEdit LibEdit_FOUND)
 add_optional_dependency(LLDB_ENABLE_CURSES "Enable curses support in LLDB" CursesAndPanel CURSESANDPANEL_FOUND)
@@ -64,7 +72,6 @@ add_optional_dependency(LLDB_ENABLE_LUA "Enable Lua scripting support in LLDB" L
 add_optional_dependency(LLDB_ENABLE_PYTHON "Enable Python scripting support in LLDB" PythonAndSwig PYTHONANDSWIG_FOUND)
 add_optional_dependency(LLDB_ENABLE_LIBXML2 "Enable Libxml 2 support in LLDB" LibXml2 LIBXML2_FOUND VERSION ${LLDB_LIBXML2_VERSION})
 add_optional_dependency(LLDB_ENABLE_TREESITTER "Enable Tree-sitter syntax highlighting" TreeSitter TREESITTER_FOUND)
-add_optional_dependency(LLDB_ENABLE_FORTRAN "Enable Fortran support in lldb" Flang Flang_FOUND)
 
 option(LLDB_USE_ENTITLEMENTS "When codesigning, use entitlements if available" ON)
 option(LLDB_BUILD_FRAMEWORK "Build LLDB.framework (Darwin only)" OFF)
