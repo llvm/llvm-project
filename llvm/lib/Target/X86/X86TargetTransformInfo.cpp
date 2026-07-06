@@ -450,6 +450,9 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SREM, MVT::v16i32, {  8 } }, // pmuludq+mul+sub sequence
     { ISD::UDIV, MVT::v16i32, {  5 } }, // pmuludq sequence
     { ISD::UREM, MVT::v16i32, {  7 } }, // pmuludq+mul+sub sequence
+
+    { ISD::UDIV, MVT::v8i64,  { 15 } }, // pmuludq-based MULHU sequence
+    { ISD::UREM, MVT::v8i64,  { 21 } }, // pmuludq-based MULHU+mul+sub sequence
   };
 
   if (Op2Info.isUniform() && Op2Info.isConstant() && ST->hasAVX512())
@@ -491,6 +494,9 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SREM, MVT::v8i32, {  8 } }, // pmuludq+mul+sub sequence
     { ISD::UDIV, MVT::v8i32, {  5 } }, // pmuludq sequence
     { ISD::UREM, MVT::v8i32, {  7 } }, // pmuludq+mul+sub sequence
+
+    { ISD::UDIV, MVT::v4i64, { 15 } }, // pmuludq-based MULHU sequence
+    { ISD::UREM, MVT::v4i64, { 21 } }, // pmuludq-based MULHU+mul+sub sequence
   };
 
   if (Op2Info.isUniform() && Op2Info.isConstant() && ST->hasAVX2())
@@ -606,6 +612,9 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SREM, MVT::v16i32, { 17 } }, // vpmuldq+mul+sub sequence
     { ISD::UDIV, MVT::v16i32, { 15 } }, // vpmuludq sequence
     { ISD::UREM, MVT::v16i32, { 17 } }, // vpmuludq+mul+sub sequence
+
+    { ISD::UDIV, MVT::v8i64,  { 22 } }, // vpmuludq-based MULHU sequence
+    { ISD::UREM, MVT::v8i64,  { 28 } }, // vpmuludq-based MULHU+mul+sub sequence
   };
 
   if (Op2Info.isConstant() && ST->hasAVX512())
@@ -629,6 +638,9 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SREM, MVT::v8i32,  { 19 } }, // vpmuldq+mul+sub sequence
     { ISD::UDIV, MVT::v8i32,  { 15 } }, // vpmuludq sequence
     { ISD::UREM, MVT::v8i32,  { 19 } }, // vpmuludq+mul+sub sequence
+
+    { ISD::UDIV, MVT::v4i64,  { 22 } }, // vpmuludq-based MULHU sequence
+    { ISD::UREM, MVT::v4i64,  { 28 } }, // vpmuludq-based MULHU+mul+sub sequence
   };
 
   if (Op2Info.isConstant() && ST->hasAVX2())
