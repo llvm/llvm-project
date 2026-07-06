@@ -621,7 +621,7 @@ std::string_view ReturnStringView(std::string_view abc [[clang::lifetimebound]])
 void test() {
   std::string_view svjkk1 = ReturnStringView(StrCat("bar", "x")); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
                                                                   // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
-                                                                  // cfg-note {{result of call to 'ReturnStringView' aliases the storage of temporary object}}
+                                                                  // cfg-note {{result of call to 'ReturnStringView' aliases the storage of temporary object because parameter 'abc' is marked 'lifetimebound'}}
   use(svjkk1);                                                    // cfg-note {{later used here}}
 }
 } // namespace GH100549
@@ -872,11 +872,11 @@ std::string_view TakeStr(std::string abc [[clang::lifetimebound]]);
 std::string_view test1_1() {
   std::string_view t1 = Ref(std::string()); // expected-warning {{object backing}} \
                                             // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
-                                            // cfg-note {{result of call to 'Ref' aliases the storage of temporary object}}
+                                            // cfg-note {{result of call to 'Ref' aliases the storage of temporary object because parameter 'abc' is marked 'lifetimebound'}}
   use(t1);                                  // cfg-note {{later used here}}
   t1 = Ref(std::string()); // expected-warning {{object backing}} \
                            // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
-                           // cfg-note {{result of call to 'Ref' aliases the storage of temporary object}}
+                           // cfg-note {{result of call to 'Ref' aliases the storage of temporary object because parameter 'abc' is marked 'lifetimebound'}}
   use(t1);                 // cfg-note {{later used here}}
   return Ref(std::string()); // expected-warning {{returning address}} \
                              // cfg-warning {{stack memory associated with temporary object is returned}} cfg-note {{returned here}}
@@ -885,11 +885,11 @@ std::string_view test1_1() {
 std::string_view test1_2() {
   std::string_view t2 = TakeSv(std::string()); // expected-warning {{object backing}} \
                                             // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
-                                            // cfg-note {{result of call to 'TakeSv' aliases the storage of temporary object}}
+                                            // cfg-note {{result of call to 'TakeSv' aliases the storage of temporary object because parameter 'abc' is marked 'lifetimebound'}}
   use(t2);                                  // cfg-note {{later used here}}
   t2 = TakeSv(std::string()); // expected-warning {{object backing}} \
                               // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
-                              // cfg-note {{result of call to 'TakeSv' aliases the storage of temporary object}}
+                              // cfg-note {{result of call to 'TakeSv' aliases the storage of temporary object because parameter 'abc' is marked 'lifetimebound'}}
   use(t2);                    // cfg-note {{later used here}}
 
   return TakeSv(std::string()); // expected-warning {{returning address}} \
@@ -899,11 +899,11 @@ std::string_view test1_2() {
 std::string_view test1_3() {
   std::string_view t3 = TakeStrRef(std::string()); // expected-warning {{temporary}} \
                                                    // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
-                                                   // cfg-note {{result of call to 'TakeStrRef' aliases the storage of temporary object}}
+                                                   // cfg-note {{result of call to 'TakeStrRef' aliases the storage of temporary object because parameter 'abc' is marked 'lifetimebound'}}
   use(t3);                                         // cfg-note {{later used here}}
   t3 = TakeStrRef(std::string()); // expected-warning {{object backing}} \
                                   // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
-                                  // cfg-note {{result of call to 'TakeStrRef' aliases the storage of temporary object}}
+                                  // cfg-note {{result of call to 'TakeStrRef' aliases the storage of temporary object because parameter 'abc' is marked 'lifetimebound'}}
   use(t3);                        // cfg-note {{later used here}}
   return TakeStrRef(std::string()); // expected-warning {{returning address}} \
                                     // cfg-warning {{stack memory associated with temporary object is returned}} cfg-note {{returned here}}
@@ -926,11 +926,11 @@ struct Foo {
 std::string_view test2_1(Foo<std::string> r1, Foo<std::string_view> r2) {
   std::string_view t1 = Foo<std::string>().get(); // expected-warning {{object backing}} \
                                                   // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
-                                                  // cfg-note {{result of call to 'get' aliases the storage of temporary object}}
+                                                  // cfg-note {{result of call to 'get' aliases the storage of temporary object because the implicit object parameter is marked 'lifetimebound'}}
   use(t1);                                        // cfg-note {{later used here}}
   t1 = Foo<std::string>().get(); // expected-warning {{object backing}} \
                                  // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
-                                 // cfg-note {{result of call to 'get' aliases the storage of temporary object}}
+                                 // cfg-note {{result of call to 'get' aliases the storage of temporary object because the implicit object parameter is marked 'lifetimebound'}}
   use(t1);                       // cfg-note {{later used here}}
   return r1.get(); // expected-warning {{address of stack}} \
                    // cfg-warning {{stack memory associated with parameter 'r1' is returned}} cfg-note {{returned here}}
@@ -1136,19 +1136,19 @@ void test1() {
   std::string_view k3 = Q().get()->sv; // OK
   std::string_view k4  = Q().get()->s; // expected-warning {{object backing the pointer will}} \
                                        // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
-                                       // cfg-note {{result of call to 'get' aliases the storage of temporary object}} \
+                                       // cfg-note {{result of call to 'get' aliases the storage of temporary object because the implicit object parameter is marked 'lifetimebound'}} \
                                        // cfg-note {{expression aliases the storage of temporary object}}
 
 
   std::string_view lb1 = foo(S().s); // expected-warning {{object backing the pointer will}} \
                                      // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
                                      // cfg-note {{expression aliases the storage of temporary object}} \
-                                     // cfg-note {{result of call to 'foo' aliases the storage of temporary object}}
+                                     // cfg-note {{result of call to 'foo' aliases the storage of temporary object because parameter 'sv' is marked 'lifetimebound'}}
   std::string_view lb2 = foo(Q().get()->s); // expected-warning {{object backing the pointer will}} \
                                             // cfg-warning {{temporary object does not live long enough}} cfg-note {{destroyed here}} \
-                                            // cfg-note {{result of call to 'get' aliases the storage of temporary object}} \
+                                            // cfg-note {{result of call to 'get' aliases the storage of temporary object because the implicit object parameter is marked 'lifetimebound'}} \
                                             // cfg-note {{expression aliases the storage of temporary object}} \
-                                            // cfg-note {{result of call to 'foo' aliases the storage of temporary object}}
+                                            // cfg-note {{result of call to 'foo' aliases the storage of temporary object because parameter 'sv' is marked 'lifetimebound'}}
 
   use(k1, k2, k3, k4, lb1, lb2);  // cfg-note 4 {{later used here}}
 }

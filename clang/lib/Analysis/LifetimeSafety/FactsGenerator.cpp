@@ -1096,28 +1096,45 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
     flow(CallList, getOriginsList(*Args[0]), /*Kill=*/true);
     return;
   }
-  auto IsArgLifetimeBound = [FD, &Args](unsigned I) -> bool {
+  auto GetLifetimeBoundParamInfo =
+      [FD](unsigned I) -> std::optional<LifetimeBoundParamInfo> {
     const ParmVarDecl *PVD = nullptr;
     if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
         Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD)) {
       if (I == 0)
         // For the 'this' argument, the attribute is on the method itself.
-        return implicitObjectParamIsLifetimeBound(Method) ||
-               shouldTrackImplicitObjectArg(
-                   *Args[0], Method, /*RunningUnderLifetimeSafety=*/true);
+        return implicitObjectParamIsLifetimeBound(Method)
+                   ? std::optional<LifetimeBoundParamInfo>(
+                         LifetimeBoundParamInfo{/*Param=*/nullptr,
+                                                /*IsImplicitObject=*/true})
+                   : std::nullopt;
       if ((I - 1) < Method->getNumParams())
         // For explicit arguments, find the corresponding parameter
         // declaration.
         PVD = Method->getParamDecl(I - 1);
-    } else if (I == 0 && shouldTrackFirstArgument(FD)) {
-      return true;
-    } else if (I == 1 && shouldTrackSecondArgument(FD)) {
-      return true;
     } else if (I < FD->getNumParams()) {
       // For free functions or static methods.
       PVD = FD->getParamDecl(I);
     }
-    return PVD ? PVD->hasAttr<clang::LifetimeBoundAttr>() : false;
+    if (PVD && PVD->hasAttr<clang::LifetimeBoundAttr>())
+      return LifetimeBoundParamInfo{PVD, /*IsImplicitObject=*/false};
+    return std::nullopt;
+  };
+  auto ShouldTrackArg =
+      [FD, &Args](unsigned I,
+                  std::optional<LifetimeBoundParamInfo> Info) -> bool {
+    if (Info)
+      return true;
+    if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
+        Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD))
+      if (I == 0)
+        return shouldTrackImplicitObjectArg(
+            *Args[0], Method, /*RunningUnderLifetimeSafety=*/true);
+    if (I == 0 && shouldTrackFirstArgument(FD))
+      return true;
+    if (I == 1 && shouldTrackSecondArgument(FD))
+      return true;
+    return false;
   };
   auto shouldTrackPointerImplicitObjectArg = [FD, &Args](unsigned I) -> bool {
     const auto *Method = dyn_cast<CXXMethodDecl>(FD);
@@ -1135,6 +1152,9 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
     OriginList *ArgList = getOriginsList(*Args[I]);
     if (!ArgList)
       continue;
+    std::optional<LifetimeBoundParamInfo> LifetimeBoundInfo =
+        GetLifetimeBoundParamInfo(I);
+    bool TrackArg = ShouldTrackArg(I, LifetimeBoundInfo);
     if (IsGslConstruction) {
       // TODO: document with code example.
       // std::string_view(const std::string_view& from)
@@ -1150,16 +1170,18 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
             CallList->getOuterOriginID(), ArgList->getOuterOriginID(),
             KillSrc));
         KillSrc = false;
-      } else if (IsArgLifetimeBound(I)) {
+      } else if (TrackArg) {
         // Only flow the outer origin here. For lifetimebound args in
         // gsl::Pointer construction, we do not have enough information to
         // safely match inner origins, so the source and
         // destination origin lists may have different lengths.
         // FIXME: Handle origin-shape mismatches gracefully so we can also flow
         // inner origins.
-        CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
-            CallList->getOuterOriginID(), ArgList->getOuterOriginID(),
-            KillSrc));
+        auto *F = FactMgr.createFact<OriginFlowFact>(
+            CallList->getOuterOriginID(), ArgList->getOuterOriginID(), KillSrc);
+        if (LifetimeBoundInfo)
+          FactMgr.setLifetimeBoundParamInfo(F, *LifetimeBoundInfo);
+        CurrentBlockFacts.push_back(F);
         KillSrc = false;
       }
     } else if (shouldTrackPointerImplicitObjectArg(I)) {
@@ -1170,12 +1192,15 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
           CallList->getOuterOriginID(),
           ArgList->peelOuterOrigin()->getOuterOriginID(), KillSrc));
       KillSrc = false;
-    } else if (IsArgLifetimeBound(I)) {
+    } else if (TrackArg) {
       // Lifetimebound on a non-GSL-ctor function means the returned
       // pointer/reference itself must not outlive the arguments. This
       // only constrains the top-level origin.
-      CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
-          CallList->getOuterOriginID(), ArgList->getOuterOriginID(), KillSrc));
+      auto *F = FactMgr.createFact<OriginFlowFact>(
+          CallList->getOuterOriginID(), ArgList->getOuterOriginID(), KillSrc);
+      if (LifetimeBoundInfo)
+        FactMgr.setLifetimeBoundParamInfo(F, *LifetimeBoundInfo);
+      CurrentBlockFacts.push_back(F);
       KillSrc = false;
     }
   }
